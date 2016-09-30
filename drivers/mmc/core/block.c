@@ -361,6 +361,47 @@ out:
 	return ERR_PTR(err);
 }
 
+static struct mmc_blk_ioc_data *mmc_blk_ioctl_copy_from_kernel(
+	struct mmc_ioc_cmd *icmd)
+{
+	struct mmc_blk_ioc_data *idata;
+	int err;
+
+	idata = kmalloc(sizeof(*idata), GFP_KERNEL);
+	if (!idata) {
+		err = -ENOMEM;
+		goto out;
+	}
+
+	memcpy(&idata->ic, icmd, sizeof(idata->ic));
+
+	idata->buf_bytes = (u64) idata->ic.blksz * idata->ic.blocks;
+	if (idata->buf_bytes > MMC_IOC_MAX_BYTES) {
+		err = -EOVERFLOW;
+		goto idata_err;
+	}
+
+	if (!idata->buf_bytes) {
+		idata->buf = NULL;
+		return idata;
+	}
+
+	idata->buf = kmalloc(idata->buf_bytes, GFP_KERNEL);
+	if (!idata->buf) {
+		err = -ENOMEM;
+		goto idata_err;
+	}
+
+	memcpy(idata->buf, (void *)idata->ic.data_ptr, idata->buf_bytes);
+
+	return idata;
+
+idata_err:
+	kfree(idata);
+out:
+	return ERR_PTR(err);
+}
+
 static int mmc_blk_ioctl_copy_to_user(struct mmc_ioc_cmd __user *ic_ptr,
 				      struct mmc_blk_ioc_data *idata)
 {
@@ -375,6 +416,19 @@ static int mmc_blk_ioctl_copy_to_user(struct mmc_ioc_cmd __user *ic_ptr,
 				 idata->buf, idata->buf_bytes))
 			return -EFAULT;
 	}
+
+	return 0;
+}
+
+static int mmc_blk_ioctl_copy_to_kernel(struct mmc_ioc_cmd *icmd,
+				      struct mmc_blk_ioc_data *idata)
+{
+	struct mmc_ioc_cmd *ic = &idata->ic;
+
+	memcpy(icmd->response, ic->response, sizeof(ic->response));
+
+	if (!idata->ic.write_flag)
+		memcpy((void *)icmd->data_ptr, idata->buf, idata->buf_bytes);
 
 	return 0;
 }
@@ -582,7 +636,9 @@ static int __mmc_blk_ioctl_cmd(struct mmc_card *card, struct mmc_blk_data *md,
 }
 
 static int mmc_blk_ioctl_cmd(struct mmc_blk_data *md,
-			     struct mmc_ioc_cmd __user *ic_ptr)
+			     struct mmc_ioc_cmd __user *ic_ptr,
+			     struct mmc_ioc_cmd *icmd)
+
 {
 	struct mmc_blk_ioc_data *idata;
 	struct mmc_blk_ioc_data *idatas[1];
@@ -590,8 +646,15 @@ static int mmc_blk_ioctl_cmd(struct mmc_blk_data *md,
 	struct mmc_card *card;
 	int err = 0, ioc_err = 0;
 	struct request *req;
+	bool srpmb = false;
 
-	idata = mmc_blk_ioctl_copy_from_user(ic_ptr);
+	if (!ic_ptr && icmd)
+		srpmb = true;
+
+	if (!srpmb)
+		idata = mmc_blk_ioctl_copy_from_user(ic_ptr);
+	else
+		idata = mmc_blk_ioctl_copy_from_kernel(icmd);
 	if (IS_ERR(idata))
 		return PTR_ERR(idata);
 
@@ -618,7 +681,10 @@ static int mmc_blk_ioctl_cmd(struct mmc_blk_data *md,
 	req_to_mmc_queue_req(req)->ioc_count = 1;
 	blk_execute_rq(mq->queue, NULL, req, 0);
 	ioc_err = req_to_mmc_queue_req(req)->drv_op_result;
-	err = mmc_blk_ioctl_copy_to_user(ic_ptr, idata);
+	if (!srpmb)
+		err = mmc_blk_ioctl_copy_to_user(ic_ptr, idata);
+	else
+		err = mmc_blk_ioctl_copy_to_kernel(icmd, idata);
 	blk_put_request(req);
 
 cmd_done:
@@ -727,7 +793,7 @@ static int mmc_blk_ioctl(struct block_device *bdev, fmode_t mode,
 		if (!md)
 			return -EINVAL;
 		ret = mmc_blk_ioctl_cmd(md,
-					(struct mmc_ioc_cmd __user *)arg);
+					(struct mmc_ioc_cmd __user *)arg, NULL);
 		mmc_blk_put(md);
 		return ret;
 	case MMC_IOC_MULTI_CMD:
@@ -746,6 +812,24 @@ static int mmc_blk_ioctl(struct block_device *bdev, fmode_t mode,
 	}
 }
 
+#ifdef CONFIG_MMC_SRPMB
+static int mmc_blk_srpmb_access(struct block_device *bdev, struct mmc_ioc_cmd *icmd)
+{
+	struct mmc_blk_data *md;
+	int ret;
+
+	ret = mmc_blk_check_blkdev(bdev);
+	if (ret)
+		return ret;
+	md = mmc_blk_get(bdev->bd_disk);
+	if (!md)
+		return -EINVAL;
+
+	ret = mmc_blk_ioctl_cmd(md, NULL, icmd);
+	return ret;
+}
+#endif
+
 #ifdef CONFIG_COMPAT
 static int mmc_blk_compat_ioctl(struct block_device *bdev, fmode_t mode,
 	unsigned int cmd, unsigned long arg)
@@ -762,6 +846,9 @@ static const struct block_device_operations mmc_bdops = {
 	.ioctl			= mmc_blk_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl		= mmc_blk_compat_ioctl,
+#endif
+#ifdef CONFIG_MMC_SRPMB
+	.srpmb_access		= mmc_blk_srpmb_access,
 #endif
 };
 

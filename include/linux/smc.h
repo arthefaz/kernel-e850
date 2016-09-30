@@ -136,6 +136,11 @@
  */
 #define SMC_SRPMB_WSM			(0x82003811)
 
+/*
+ * For SMC CMD for SRPMB
+ */
+#define SMC_SRPMB_WSM			(0x82003811)
+
 /* For DTRNG Access */
 #define HWRNG_INIT			(0x0)
 #define HWRNG_EXIT			(0x1)

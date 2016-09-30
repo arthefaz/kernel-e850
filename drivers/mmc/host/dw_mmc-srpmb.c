@@ -36,14 +36,14 @@ static void dump_packet(u8 *data, int len)
 	u8 s[17];
 	int i, j;
 
-	s[16] = '\0';
+	s[16]='\0';
 	for (i = 0; i < len; i += 16) {
 		printk("%06x :", i);
-		for (j = 0; j < 16; j++) {
+		for (j=0; j<16; j++) {
 			printk(" %02x", data[i+j]);
-			s[j] = (data[i+j] < ' ' ? '.' : (data[i+j] > '}' ? '.' : data[i+j]));
+			s[j] = (data[i+j]<' ' ? '.' : (data[i+j]>'}' ? '.' : data[i+j]));
 		}
-		printk(" |%s|\n", s);
+		printk(" |%s|\n",s);
 	}
 	printk("\n");
 }
@@ -52,7 +52,6 @@ static void dump_packet(u8 *data, int len)
 static void swap_packet(u8 *p, u8 *d)
 {
 	int i;
-
 	for (i = 0; i < RPMB_PACKET_SIZE; i++)
 		d[i] = p[RPMB_PACKET_SIZE - 1 - i];
 }
@@ -74,7 +73,7 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 {
 	int ret;
 	struct device *dev = ctx->dev;
-	static struct block_device *bdev;
+	static struct block_device *bdev = NULL;
 	struct gendisk *disk;
 	static const struct block_device_operations *fops;
 	struct mmc_ioc_cmd icmd;
@@ -103,7 +102,7 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 	/* Initialize mmc ioc command */
 	mmc_cmd_init(&icmd);
 
-	switch (req->type) {
+	switch(req->type) {
 	case GET_WRITE_COUNTER:
 		icmd.write_flag = true;
 		icmd.flags = MMC_RSP_R1;

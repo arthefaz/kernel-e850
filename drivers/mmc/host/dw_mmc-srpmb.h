@@ -21,7 +21,7 @@
 #define RESULT_READ_REQ				0x0005
 #define RPMB_END_ADDRESS			0x4000
 
-#define RPMB_PACKET_SIZE			512
+#define RPMB_PACKET_SIZE 			512
 
 #define WRITE_COUNTER_DATA_LEN_ERROR		0x601
 #define WRITE_COUNTER_SECURITY_OUT_ERROR	0x602
@@ -34,7 +34,7 @@
 #define READ_DATA_SECURITY_OUT_ERROR		0x609
 #define READ_DATA_SECURITY_IN_ERROR		0x60A
 
-#define PASS_STATUS				0xBABA
+#define PASS_STATUS 				0xBABA
 
 #define IS_INCLUDE_RPMB_DEVICE			"0:0:0:1"
 
@@ -57,7 +57,6 @@ struct _mmc_rpmb_ctx {
 
 struct _mmc_rpmb_req {
 	uint32_t cmd;
-
 	volatile uint32_t status_flag;
 	uint32_t type;
 	uint32_t data_len;
