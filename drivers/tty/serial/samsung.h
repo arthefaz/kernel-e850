@@ -50,6 +50,12 @@ struct s3c24xx_serial_drv_data {
 	unsigned int			fifosize[CONFIG_SERIAL_SAMSUNG_UARTS];
 };
 
+struct uart_local_buf {
+	unsigned char *buffer;
+	unsigned int size;
+	unsigned int index;
+};
+
 struct s3c24xx_uart_port {
 	struct list_head		node;
 	unsigned char			rx_claimed;
@@ -94,6 +100,8 @@ struct s3c24xx_uart_port {
 	unsigned int dbg_uart_ch;
 	unsigned int dbg_uart_baud;
 	unsigned int dbg_word_len;
+	unsigned int			uart_logging;
+	struct uart_local_buf		uart_local_buf;
 };
 
 /* conversion functions */
