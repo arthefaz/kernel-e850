@@ -25,6 +25,7 @@
 #include <linux/of_address.h>
 #include <linux/clocksource.h>
 #include <linux/sched_clock.h>
+#include <linux/notifier.h>
 
 #define EXYNOS4_MCTREG(x)		(x)
 #define EXYNOS4_MCT_G_CNT_L		EXYNOS4_MCTREG(0x100)
@@ -43,6 +44,7 @@
 
 #define MCT_L_TCNTB_OFFSET		(0x00)
 #define MCT_L_ICNTB_OFFSET		(0x08)
+#define MCT_L_ICNTO_OFFSET		(0x0C)
 #define MCT_L_TCON_OFFSET		(0x20)
 #define MCT_L_INT_CSTAT_OFFSET		(0x30)
 #define MCT_L_INT_ENB_OFFSET		(0x34)
@@ -81,6 +83,7 @@ static void __iomem *reg_base;
 static unsigned long clk_rate;
 static unsigned int mct_int_type;
 static int mct_irqs[MCT_NR_IRQS];
+extern struct atomic_notifier_head hardlockup_notifier_list;
 
 struct mct_clock_event_device {
 	struct clock_event_device evt;
@@ -405,9 +408,11 @@ static int exynos4_tick_set_next_event(unsigned long cycles,
 static int set_state_shutdown(struct clock_event_device *evt)
 {
 	struct mct_clock_event_device *mevt;
+	unsigned int cpu = smp_processor_id();
 
 	mevt = container_of(evt, struct mct_clock_event_device, evt);
 	exynos4_mct_tick_stop(mevt, 1);
+	pr_info("%s: mct_tick_stop (cpu%d)\n", __func__, cpu);
 	return 0;
 }
 
@@ -427,9 +432,11 @@ static int set_state_periodic(struct clock_event_device *evt)
 static int set_state_resume(struct clock_event_device *evt)
 {
 	struct mct_clock_event_device *mevt;
+	unsigned int cpu = smp_processor_id();
 
 	mevt = container_of(evt, struct mct_clock_event_device, evt);
 	exynos4_mct_tick_stop(mevt, 1);
+	pr_info("%s: mct_tick_stop(cpu%d)\n", __func__, cpu);
 
 	exynos4_mct_write(TICK_BASE_CNT, mevt->base + MCT_L_TCNTB_OFFSET);
 	return 0;
@@ -445,6 +452,36 @@ static irqreturn_t exynos4_mct_tick_isr(int irq, void *dev_id)
 	evt->event_handler(evt);
 
 	return IRQ_HANDLED;
+}
+
+static void exynos4_mct_tick_dump(unsigned int cpu)
+{
+	unsigned int icntb, icnto, tcon, intenb, intcstat;
+	int i;
+
+	if (cpu > CONFIG_NR_CPUS)
+		return;
+
+	/* 5 times to verify */
+	for (i = 0; i < 5; i++) {
+		/* count buffer */
+		icntb = readl_relaxed(reg_base + EXYNOS4_MCT_L_BASE(cpu) + MCT_L_ICNTB_OFFSET);
+		icnto = readl_relaxed(reg_base + EXYNOS4_MCT_L_BASE(cpu) + MCT_L_ICNTO_OFFSET);
+		intenb = readl_relaxed(reg_base + EXYNOS4_MCT_L_BASE(cpu) + MCT_L_INT_ENB_OFFSET);
+		intcstat = readl_relaxed(reg_base + EXYNOS4_MCT_L_BASE(cpu) + MCT_L_INT_CSTAT_OFFSET);
+		tcon = readl_relaxed(reg_base + EXYNOS4_MCT_L_BASE(cpu) + MCT_L_TCON_OFFSET);
+		pr_info("%s(%d): ICNTB:0x%X, ICNTO: 0x%X, INTENB:0x%X, INTCSTAT:0x%X, TCON:0x%X\n",
+				__func__, cpu, icntb, icnto, intenb, intcstat, tcon);
+	}
+}
+
+static int exynos4_mct_hardlockup_handler(struct notifier_block *nb,
+					   unsigned long l, void *p)
+{
+	unsigned int *cpu = (int *)p;
+
+	exynos4_mct_tick_dump(*cpu);
+	return 0;
 }
 
 static int exynos4_mct_starting_cpu(unsigned int cpu)
@@ -501,6 +538,10 @@ static int exynos4_mct_dying_cpu(unsigned int cpu)
 	}
 	return 0;
 }
+
+static struct notifier_block nb_hardlockup_block = {
+	.notifier_call = exynos4_mct_hardlockup_handler,
+};
 
 static int __init exynos4_timer_resources(struct device_node *np, void __iomem *base)
 {
@@ -572,6 +613,8 @@ static int __init mct_init_dt(struct device_node *np, unsigned int int_type)
 	int ret;
 
 	mct_int_type = int_type;
+
+	atomic_notifier_chain_register(&hardlockup_notifier_list, &nb_hardlockup_block);
 
 	/* This driver uses only one global timer interrupt */
 	mct_irqs[MCT_G0_IRQ] = irq_of_parse_and_map(np, MCT_G0_IRQ);
