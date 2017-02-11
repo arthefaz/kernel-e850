@@ -1283,14 +1283,83 @@ static void decon_set_afbc_recovery_time(struct decon_device *decon)
 	decon->prev_aclk_khz = aclk_khz;
 }
 
-static void __decon_update_regs(struct decon_device *decon, struct decon_reg_data *regs)
+static void decon_save_vgf_connected_win_id(struct decon_device *decon,
+		struct decon_reg_data *regs)
+{
+	int i;
+
+	decon->d.prev_vgf_win_id[0] = -1;
+	decon->d.prev_vgf_win_id[1] = -1;
+
+	for (i = 0; i < decon->dt.max_win; ++i) {
+		if (regs->dpp_config[i].idma_type == IDMA_VGF0)
+			decon->d.prev_vgf_win_id[0] = i;
+		if (regs->dpp_config[i].idma_type == IDMA_VGF1)
+			decon->d.prev_vgf_win_id[1] = i;
+	}
+}
+
+static void decon_dump_afbc_handle(struct decon_device *decon,
+		struct decon_dma_buf_data (*dma_bufs)[MAX_PLANE_CNT])
+{
+	int size;
+	int win_id = 0;
+	void *v_addr;
+
+	decon_info("%s +\n", __func__);
+
+	if (test_bit(IDMA_VGF0, &decon->prev_used_dpp)) {
+		win_id = decon->d.prev_vgf_win_id[0];
+		decon->d.handle[win_id][0] = dma_bufs[win_id][0].ion_handle;
+		decon_info("VGF0(WIN%d): handle=0x%p\n",
+				win_id, decon->d.handle[win_id][0]);
+
+		v_addr = ion_map_kernel(
+			decon->ion_client,
+			dma_bufs[win_id][0].ion_handle);
+		size = dma_bufs[win_id][0].dma_buf->size;
+
+		decon_info("DV(0x%p), KV(0x%p), size(%d)\n",
+				(void *)dma_bufs[win_id][0].dma_addr,
+				v_addr, size);
+	}
+
+	if (test_bit(IDMA_VGF1, &decon->prev_used_dpp)) {
+		win_id = decon->d.prev_vgf_win_id[1];
+		decon->d.handle[win_id][0] = dma_bufs[win_id][0].ion_handle;
+		decon_info("VGF1(WIN%d): handle=0x%p\n",
+				win_id, decon->d.handle[win_id][0]);
+
+		v_addr = ion_map_kernel(
+			decon->ion_client,
+			dma_bufs[win_id][0].ion_handle);
+		size = dma_bufs[win_id][0].dma_buf->size;
+
+		decon_info("DV(0x%p), KV(0x%p), size(%d)\n",
+				(void *)dma_bufs[win_id][0].dma_addr,
+				v_addr, size);
+	}
+
+	decon_info("%s -\n", __func__);
+}
+
+static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data *regs)
 {
 	int err_cnt = 0;
 	unsigned short i, j;
 	struct decon_mode_info psr;
 
 	decon_to_psr_info(decon, &psr);
-	decon_reg_wait_for_update_timeout(decon->id, SHADOW_UPDATE_TIMEOUT);
+	/*
+	 * Shadow update bit must be cleared before setting window configuration,
+	 * If shadow update bit is not cleared, decon initial state or previous
+	 * window configuration has problem.
+	 */
+	if (decon_reg_wait_for_update_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
+		decon_warn("decon SHADOW_UPDATE_TIMEOUT\n");
+		return -ETIMEDOUT;
+	}
+
 	if (psr.trig_mode == DECON_HW_TRIG)
 		decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_DISABLE);
 
@@ -1315,7 +1384,7 @@ static void __decon_update_regs(struct decon_device *decon, struct decon_reg_dat
 	if (!regs->num_of_window) {
 		decon_err("decon%d: num_of_window=0 during dpp_config(err_cnt:%d)\n",
 			decon->id, err_cnt);
-		return;
+		return 0;
 	}
 
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
@@ -1332,6 +1401,8 @@ static void __decon_update_regs(struct decon_device *decon, struct decon_reg_dat
 		BUG();
 	}
 	DPU_EVENT_LOG(DPU_EVT_TRIG_UNMASK, &decon->sd, ktime_set(0, 0));
+
+	return 0;
 }
 
 void decon_wait_for_vstatus(struct decon_device *decon, u32 timeout)
@@ -1492,7 +1563,11 @@ static void decon_update_regs(struct decon_device *decon,
 
 	decon_to_psr_info(decon, &psr);
 	if (regs->num_of_window) {
-		__decon_update_regs(decon, regs);
+		if (__decon_update_regs(decon, regs) < 0) {
+			decon_dump_afbc_handle(decon, old_dma_bufs);
+			decon_dump(decon);
+			BUG();
+		}
 		if (!regs->num_of_window) {
 			__decon_update_clear(decon, regs);
 			decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
@@ -1509,6 +1584,7 @@ static void decon_update_regs(struct decon_device *decon,
 	decon_wait_for_vstatus(decon, 50);
 	if (decon_reg_wait_for_update_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
 		decon_up_list_saved();
+		decon_dump_afbc_handle(decon, old_dma_bufs);
 		decon_dump(decon);
 		BUG();
 	}
@@ -1523,6 +1599,8 @@ end:
 	decon_signal_fence(decon);
 
 	DPU_EVENT_LOG(DPU_EVT_FENCE_RELEASE, &decon->sd, ktime_set(0, 0));
+
+	decon_save_vgf_connected_win_id(decon, regs);
 
 #if defined(CONFIG_EXYNOS8895_BTS)
 	/* add update bw : cur < prev */
