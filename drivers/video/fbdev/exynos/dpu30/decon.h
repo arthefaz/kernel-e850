@@ -792,6 +792,8 @@ struct decon_debug {
 	dpu_log_level_t event_log_level;
 #endif
 	struct dpu_afbc_info afbc_info;
+	struct ion_handle *handle[MAX_DECON_WIN][MAX_PLANE_CNT];
+	int prev_vgf_win_id[2];
 };
 
 struct decon_update_regs {
