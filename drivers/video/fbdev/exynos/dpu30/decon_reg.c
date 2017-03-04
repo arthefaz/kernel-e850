@@ -2125,8 +2125,8 @@ int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
 		/* timeout : 20ms @ 60Hz */
 		ret = decon_reg_wait_run_is_off_timeout(id, 20 * 1000);
 	} else {
-		/* timeout : 1 / fps + 20% margin */
-		timeout_value = 1000 / decon->lcd_info->fps * 12 / 10;
+		/* timeout : 1 / fps + 20% margin + 5ms for UHD */
+		timeout_value = 1000 / decon->lcd_info->fps * 12 / 10 + 5;
 		ret = decon_reg_wait_run_is_off_timeout(id, timeout_value * 1000);
 	}
 
