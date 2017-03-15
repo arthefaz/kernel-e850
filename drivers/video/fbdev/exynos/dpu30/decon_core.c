@@ -161,21 +161,7 @@ static void decon_win_conig_to_regs_param
 	 int idx)
 {
 	u8 alpha0 = 0, alpha1 = 0;
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	if ((win_config->plane_alpha > 0) && (win_config->plane_alpha < 0xFF)) {
-		alpha0 = win_config->plane_alpha;
-		alpha1 = 0;
-		/*
-		 * If there is no pixel alpha value in case of pre-multiplied
-		 * blending mode, foreground and background pixel are just added.
-		 */
-		if (!transp_length && (win_config->blending == DECON_BLENDING_PREMULT))
-			win_config->blending = DECON_BLENDING_COVERAGE;
-	} else {
-		alpha0 = 0xFF;
-		alpha1 = 0xff;
-	}
-#endif
+
 	win_regs->wincon = wincon(transp_length, alpha0, alpha1,
 			win_config->plane_alpha, win_config->blending, idx);
 	win_regs->start_pos = win_start_pos(win_config->dst.x, win_config->dst.y);
@@ -207,54 +193,6 @@ u32 wincon(u32 transp_len, u32 a0, u32 a1,
 	u32 data = 0;
 
 	data |= WIN_EN_F(idx);
-
-	return data;
-}
-#else
-u32 wincon(u32 transp_len, u32 a0, u32 a1,
-	int plane_alpha, enum decon_blending blending, int idx)
-{
-	u32 data = 0;
-	int is_plane_alpha = (plane_alpha < 255 && plane_alpha > 0) ? 1 : 0;
-
-	if (transp_len == 1 && blending == DECON_BLENDING_PREMULT)
-		blending = DECON_BLENDING_COVERAGE;
-
-	if (is_plane_alpha) {
-		if (transp_len) {
-			if (blending != DECON_BLENDING_NONE)
-				data |= WIN_CONTROL_ALPHA_MUL_F;
-		} else {
-			if (blending == DECON_BLENDING_PREMULT)
-				blending = DECON_BLENDING_COVERAGE;
-		}
-	}
-
-	if (transp_len > 1)
-		data |= WIN_CONTROL_ALPHA_SEL_F(W_ALPHA_SEL_F_BYAEN);
-
-	switch (blending) {
-	case DECON_BLENDING_NONE:
-		data |= WIN_CONTROL_FUNC_F(PD_FUNC_COPY);
-		break;
-
-	case DECON_BLENDING_PREMULT:
-		if (!is_plane_alpha) {
-			data |= WIN_CONTROL_FUNC_F(PD_FUNC_SOURCE_OVER);
-		} else {
-			/* need to check the eq: it is SPEC-OUT */
-			data |= WIN_CONTROL_FUNC_F(PD_FUNC_LEGACY2);
-		}
-		break;
-
-	case DECON_BLENDING_COVERAGE:
-	default:
-		data |= WIN_CONTROL_FUNC_F(PD_FUNC_LEGACY);
-		break;
-	}
-
-	data |= WIN_CONTROL_ALPHA0_F(a0) | WIN_CONTROL_ALPHA1_F(a1);
-	data |= WIN_CONTROL_EN_F;
 
 	return data;
 }
@@ -1260,10 +1198,6 @@ void decon_reg_chmap_validate(struct decon_device *decon,
 		if (!(regs->win_regs[i].wincon & WIN_EN_F(i)) ||
 				(regs->win_regs[i].winmap_state))
 			continue;
-#else
-		if (!(regs->win_regs[i].wincon & WIN_CONTROL_EN_F) ||
-				(regs->win_regs[i].winmap_state))
-			continue;
 #endif
 
 		if (bitmap & (1 << regs->dpp_config[i].idma_type)) {
@@ -1271,8 +1205,6 @@ void decon_reg_chmap_validate(struct decon_device *decon,
 					regs->dpp_config[i].idma_type);
 #if defined(CONFIG_SOC_EXYNOS8895)
 			regs->win_regs[i].wincon &= (~WIN_EN_F(i));
-#else
-			regs->win_regs[i].wincon &= (~WIN_CONTROL_EN_F);
 #endif
 		}
 		bitmap |= 1 << regs->dpp_config[i].idma_type;
@@ -1294,9 +1226,6 @@ static void decon_check_used_dpp(struct decon_device *decon,
 
 #if defined(CONFIG_SOC_EXYNOS8895)
 		if ((regs->win_regs[i].wincon & WIN_EN_F(i)) &&
-			(!regs->win_regs[i].winmap_state)) {
-#else
-		if ((regs->win_regs[i].wincon & WIN_CONTROL_EN_F) &&
 			(!regs->win_regs[i].winmap_state)) {
 #endif
 			set_bit(win->dpp_id, &decon->cur_using_dpp);
@@ -1342,10 +1271,6 @@ static int decon_set_dpp_config(struct decon_device *decon,
 			decon_reg_set_win_enable(decon->id, i, false);
 			if (regs->num_of_window != 0)
 				regs->num_of_window--;
-#else
-			regs->win_regs[i].wincon &= (~WIN_CONTROL_EN_F);
-			decon_write(decon->id, WIN_CONTROL(i),
-					regs->win_regs[i].wincon);
 #endif
 			clear_bit(win->dpp_id, &decon->cur_using_dpp);
 			set_bit(win->dpp_id, &decon->dpp_err_stat);
@@ -1783,8 +1708,6 @@ static int decon_prepare_win_config(struct decon_device *decon,
 		case DECON_WIN_STATE_DISABLED:
 #if defined(CONFIG_SOC_EXYNOS8895)
 			win_regs->wincon &= ~WIN_EN_F(i);
-#else
-			win_regs->wincon &= ~WIN_CONTROL_EN_F;
 #endif
 			break;
 		case DECON_WIN_STATE_COLOR:
@@ -1810,8 +1733,6 @@ static int decon_prepare_win_config(struct decon_device *decon,
 		default:
 #if defined(CONFIG_SOC_EXYNOS8895)
 			win_regs->wincon &= ~WIN_EN_F(i);
-#else
-			win_regs->wincon &= ~WIN_CONTROL_EN_F;
 #endif
 			decon_warn("unrecognized window state %u",
 					config->state);
@@ -2136,16 +2057,6 @@ static struct fb_ops decon_fb_ops = {
 /* ---------- POWER MANAGEMENT ----------- */
 void decon_clocks_info(struct decon_device *decon)
 {
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	decon_info("%s: %ld Mhz\n", __clk_get_name(decon->res.pclk),
-				clk_get_rate(decon->res.pclk) / MHZ);
-	decon_info("%s: %ld Mhz\n", __clk_get_name(decon->res.eclk_leaf),
-				clk_get_rate(decon->res.eclk_leaf) / MHZ);
-	if (decon->id != 2) {
-		decon_info("%s: %ld Mhz\n", __clk_get_name(decon->res.vclk_leaf),
-				clk_get_rate(decon->res.vclk_leaf) / MHZ);
-	}
-#endif
 }
 
 void decon_put_clocks(struct decon_device *decon)
@@ -2164,6 +2075,7 @@ int decon_runtime_resume(struct device *dev)
 {
 	struct decon_device *decon = dev_get_drvdata(dev);
 
+	decon_dbg("decon%d %s +\n", decon->id, __func__);
 	clk_prepare_enable(decon->res.aclk);
 
 	if (decon->id == 1 || decon->id == 2) {
@@ -2177,30 +2089,6 @@ int decon_runtime_resume(struct device *dev)
 	}
 
 	DPU_EVENT_LOG(DPU_EVT_DECON_RESUME, &decon->sd, ktime_set(0, 0));
-	decon_dbg("decon%d %s +\n", decon->id, __func__);
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	mutex_lock(&decon->pm_lock);
-
-	if (decon->id != 2) {
-		clk_prepare_enable(decon->res.dpll);
-		clk_prepare_enable(decon->res.vclk);
-		clk_prepare_enable(decon->res.vclk_leaf);
-	}
-	clk_prepare_enable(decon->res.pclk);
-	clk_prepare_enable(decon->res.eclk);
-	clk_prepare_enable(decon->res.eclk_leaf);
-
-	if (decon->dt.out_type == DECON_OUT_DSI) {
-		decon_set_clocks(decon);
-	} else if (decon->dt.out_type == DECON_OUT_WB) {
-		decon_wb_set_clocks(decon);
-	}
-
-	if (decon->state == DECON_STATE_INIT)
-		decon_clocks_info(decon);
-
-	mutex_unlock(&decon->pm_lock);
-#endif
 	decon_dbg("decon%d %s -\n", decon->id, __func__);
 
 	return 0;
@@ -2210,6 +2098,7 @@ int decon_runtime_suspend(struct device *dev)
 {
 	struct decon_device *decon = dev_get_drvdata(dev);
 
+	decon_dbg("decon%d %s +\n", decon->id, __func__);
 	clk_disable_unprepare(decon->res.aclk);
 
 	if (decon->id == 1 || decon->id == 2) {
@@ -2223,21 +2112,6 @@ int decon_runtime_suspend(struct device *dev)
 	}
 
 	DPU_EVENT_LOG(DPU_EVT_DECON_SUSPEND, &decon->sd, ktime_set(0, 0));
-	decon_dbg("decon%d %s +\n", decon->id, __func__);
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	mutex_lock(&decon->pm_lock);
-
-	clk_disable_unprepare(decon->res.eclk);
-	clk_disable_unprepare(decon->res.eclk_leaf);
-	clk_disable_unprepare(decon->res.pclk);
-	if (decon->id != 2) {
-		clk_disable_unprepare(decon->res.vclk);
-		clk_disable_unprepare(decon->res.vclk_leaf);
-		clk_disable_unprepare(decon->res.dpll);
-	}
-
-	mutex_unlock(&decon->pm_lock);
-#endif
 	decon_dbg("decon%d %s -\n", decon->id, __func__);
 
 	return 0;

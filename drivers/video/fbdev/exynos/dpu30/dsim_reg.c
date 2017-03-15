@@ -1465,20 +1465,6 @@ int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		clks->esc_clk = clks->word_clk / esc_div;
 		dsim_dbg("escape clock divider is 0x%x\n", esc_div);
 		dsim_dbg("escape clock is %u MHz\n", clks->esc_clk);
-#else
-		/* requeseted escape clock */
-		dsim_dbg("requested escape clock %u MHz\n", clks->esc_clk);
-
-		/* escape clock divider */
-		esc_div = clks->word_clk / clks->esc_clk;
-
-		/* adjust escape clock */
-		if ((clks->word_clk / esc_div) > clks->esc_clk)
-			esc_div += 1;
-		/* adjusted escape clock */
-		clks->esc_clk = clks->word_clk / esc_div;
-		dsim_dbg("escape clock divider is 0x%x\n", esc_div);
-		dsim_dbg("escape clock is %u MHz\n", clks->esc_clk);
 #endif
 
 		dsim_reg_set_esc_clk_prescaler(id, 1, esc_div);

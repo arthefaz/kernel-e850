@@ -257,8 +257,6 @@ void DPU_EVENT_LOG_WINCON(struct v4l2_subdev *sd, struct decon_reg_data *regs)
 	for (win = 0; win < MAX_DECON_WIN; win++) {
 #if defined(CONFIG_SOC_EXYNOS8895)
 		if (regs->win_regs[win].wincon & WIN_EN_F(win)) {
-#else
-		if (regs->win_regs[win].wincon & WIN_CONTROL_EN_F) {
 #endif
 			memcpy(&log->data.reg.win_regs[win], &regs->win_regs[win],
 				sizeof(struct decon_window_regs));

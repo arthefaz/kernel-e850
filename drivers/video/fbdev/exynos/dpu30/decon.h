@@ -31,8 +31,6 @@
 
 #if defined(CONFIG_SOC_EXYNOS8895)
 #include "regs-decon.h"
-#else
-#include "regs-decon_8890.h"
 #endif
 #include "./panels/decon_lcd.h"
 #include "dsim.h"
@@ -65,8 +63,6 @@ extern struct decon_bts_ops decon_bts_control;
 
 #if defined(CONFIG_SOC_EXYNOS8895)
 #define DECON_WIN_UPDATE_IDX	(6)
-#else
-#define DECON_WIN_UPDATE_IDX	(8)
 #endif
 
 #ifndef KHZ
@@ -186,25 +182,6 @@ enum decon_win_func {
 	PD_FUNC_PLUS			= 0xc,
 	PD_FUNC_USER_DEFINED		= 0xd,
 };
-#else
-/* Porter Duff Compositing Operators */
-enum decon_win_func {
-	PD_FUNC_CLEAR			= 0x0,
-	PD_FUNC_COPY			= 0x1,
-	PD_FUNC_DESTINATION		= 0x2,
-	PD_FUNC_SOURCE_OVER		= 0x3,
-	PD_FUNC_DESTINATION_OVER	= 0x4,
-	PD_FUNC_SOURCE_IN		= 0x5,
-	PD_FUNC_DESTINATION_IN		= 0x6,
-	PD_FUNC_SOURCE_OUT		= 0x7,
-	PD_FUNC_DESTINATION_OUT		= 0x8,
-	PD_FUNC_SOURCE_A_TOP		= 0x9,
-	PD_FUNC_DESTINATION_A_TOP	= 0xa,
-	PD_FUNC_XOR			= 0xb,
-	PD_FUNC_PLUS			= 0xc,
-	PD_FUNC_LEGACY			= 0xd,
-	PD_FUNC_LEGACY2			= 0xe,
-};
 #endif
 
 #if defined(CONFIG_SOC_EXYNOS8895)
@@ -228,16 +205,6 @@ enum decon_win_alpha_sel {
 	ALPHA_MULT_SRC_SEL_ALPHA1 = 1,
 	ALPHA_MULT_SRC_SEL_AF = 2,
 	ALPHA_MULT_SRC_SEL_AB = 3,
-};
-#else
-enum decon_win_alpha_sel {
-	/*  for plane blending */
-	W_ALPHA_SEL_F_ALPAH0 = 0,
-	W_ALPHA_SEL_F_ALPAH1 = 1,
-	/*  for pixel blending */
-	W_ALPHA_SEL_F_BYAEN = 2,
-	/*  for multiplied alpha */
-	W_ALPHA_SEL_F_BYMUL = 4,
 };
 #endif
 
@@ -276,19 +243,6 @@ enum decon_idma_type {
 	IDMA_VG1,
 	IDMA_VGF0,
 	IDMA_VGF1,
-	ODMA_WB,
-	IDMA_G0_S,
-};
-#else
-enum decon_idma_type {
-	IDMA_G0 = 0,	/* Dedicated to WIN7 */
-	IDMA_G1,
-	IDMA_VG0,
-	IDMA_VG1,
-	IDMA_G2,
-	IDMA_G3,
-	IDMA_VGR0,
-	IDMA_VGR1,
 	ODMA_WB,
 	IDMA_G0_S,
 };
@@ -378,74 +332,6 @@ enum decon2_data_path {
 enum decon_dsc_id {
 	DECON_DSC_ENC0 = 0x0,
 	DECON_DSC_ENC1 = 0x1,
-};
-#else
-enum decon_data_path {
-	/* BLENDER-OUT -> No Comp -> SPLITTER(bypass) -> u0_FF -> u0_DISPIF */
-	DATAPATH_NOCOMP_SPLITTERBYPASS_U0FF_DISP0		= 0x01,
-	/* BLENDER-OUT -> No Comp -> SPLITTER(bypass) -> u1_FF -> u1_DISPIF */
-	DATAPATH_NOCOMP_SPLITTERBYPASS_U1FF_DISP1		= 0x02,
-	/* BLENDER-OUT -> No Comp -> SPLITTER(split) -> u0_FF/u1_FF -> u0_DISPIF/u1_DISPIF */
-	DATAPATH_NOCOMP_SPLITTER_U0FFU1FF_DISP0DISP1		= 0x03,
-	/* BLENDER-OUT -> MIC -> SPLITTER(bypass) -> u0_FF -> u0_DISPIF */
-	DATAPATH_MIC_SPLITTERBYPASS_U0FF_DISP0			= 0x09,
-	/* BLENDER-OUT -> MIC -> SPLITTER(bypass) -> u1_FF -> u1_DISPIF */
-	DATAPATH_MIC_SPLITTERBYPASS_U1FF_DISP1			= 0x0A,
-	/* BLENDER-OUT -> MIC -> SPLITTER(split) -> u0_FF/u1_FF -> u0_DISPIF/u1_DISPIF */
-	DATAPATH_MIC_SPLITTER_U0FFU1FF_DISP0DISP1		= 0x0B,
-	/* BLENDER-OUT -> DSCC,ENC0/1 -> u0_FF/u1_FF -> u_MERGER -> u0_DISPIF */
-	DATAPATH_DSCC_ENC0ENC1_U0FFU1FF_MERGER_DISP0		= 0x11,
-	/* BLENDER-OUT -> DSCC,ENC0/1 -> u0_FF/u1_FF -> u_MERGER -> u1_DISPIF */
-	DATAPATH_DSCC_ENC0ENC1_U0FFU1FF_MERGER_DISP1		= 0x12,
-	/* BLENDER-OUT -> DSCC,ENC0/1 -> u0_FF/u1_FF -> u0_DISPIF/u1_DISPIF */
-	DATAPATH_DSCC_ENC0ENC1_U0FFU1FF_DISP0DISP1		= 0x13,
-	/* BLENDER-OUT -> ENC0 -> SPLITTER(bypass) -> u0_FF u0_DISPIF */
-	DATAPATH_ENC0_SPLITTERBYPASS_U0FF_DISP0			= 0x21,
-	/* BLENDER-OUT -> ENC0 -> SPLITTER(bypass) -> u1_FF u1_DISPIF */
-	DATAPATH_ENC0_SPLITTERBYPASS_U1FF_DISP1			= 0x22,
-	/* BLENDER-OUT -> ENC0 -> SPLITTER(split) -> u0_FF/u1_FF -> u0_DISPIF/u1_DISPIF */
-	DATAPATH_ENC0_SPLITTER_U0FFU1FF_DISP0DISP1		= 0x23,
-	/* BLENDER-OUT -> No Comp -> SPLITTER(bypass) -> u0_FF -> POST-WB */
-	DATAPATH_NOCOMP_SPLITTERBYPASS_U0FF_POSTWB		= 0x04,
-	/* BLENDER-OUT -> MIC -> SPLITTER(bypass) -> u0_FF -> POST-WB */
-	DATAPATH_MIC_SPLITTERBYPASS_U0FF_POSTWB			= 0x0C,
-	/* BLENDER-OUT -> DSCC,ENC0/1 -> u0_FF/u1_FF -> u_MERGER -> POST-WB */
-	DATAPATH_DSCC_ENC0ENC1_U0FFU1FF_MERGER_POSTWB		= 0x14,
-	/* BLENDER-OUT -> ENC0 -> SPLITTER(bypass) -> u0_FF -> POST-WB */
-	DATAPATH_ENC0_SPLITTERBYPASS_U0FF_POSTWB		= 0x24,
-	/* u0_DISPIF (mapcolor mode) */
-	DATAPATH_DISP0_COLORMAP					= 0x41,
-	/* u1_DISPIF (mapcolor mode) */
-	DATAPATH_DISP1_COLORMAP					= 0x42,
-	/* u0_DISPIF/u1_DISPIF (mapcolor mode) */
-	DATAPATH_DISP0DISP1_ColorMap				= 0x43,
-
-	/* PRE-WB & BLENDER-OUT -> No Comp -> SPLITTER(bypass) -> u0_FF -> u0_DISPIF */
-	DATAPATH_PREWB_NOCOMP_SPLITTERBYPASS_U0FF_DISP0		= 0x81,
-	/* PRE-WB & BLENDER-OUT -> No Comp -> SPLITTER(bypass) -> u1_FF -> u1_DISPIF */
-	DATAPATH_PREWB_NOCOMP_SPLITTERBYPASS_U1FF_DISP1		= 0x82,
-	/* PRE-WB & BLENDER-OUT -> No Comp -> SPLITTER(split) -> u0_FF/u1_FF -> u0_DISPIF/u1_DISPIF */
-	DATAPATH_PREWB_NOCOMP_SPLITTER_U0FFU1FF_DISP0DISP1	= 0x83,
-	/* PRE-WB & BLENDER-OUT -> MIC -> SPLITTER(bypass) -> u0_FF -> u0_DISPIF */
-	DATAPATH_PREWB_MIC_SPLITTERBYPASS_U0FF_DISP0		= 0x89,
-	/* PRE-WB & BLENDER-OUT -> MIC -> SPLITTER(bypass) -> u1_FF -> u1_DISPIF */
-	DATAPATH_PREWB_MIC_SPLITTERBYPASS_U1FF_DISP1		= 0x8A,
-	/* PRE-WB & BLENDER-OUT -> MIC -> SPLITTER(split) -> u0_FF/u1_FF -> u0_DISPIF/u1_DISPIF */
-	DATAPATH_PREWB_MIC_SPLITTER_U0FFU1FF_DISP0DISP1		= 0x8B,
-	/* PRE-WB & BLENDER-OUT -> DSCC,ENC0/1 -> u0_FF/u1_FF -> u_MERGER -> u0_DISPIF */
-	DATAPATH_PREWB_DSCC_ENC0ENC1_U0FFU1FF_MERGER_DISP0	= 0x91,
-	/* PRE-WB & BLENDER-OUT -> DSCC,ENC0/1 -> u0_FF/u1_FF -> u_MERGER -> u1_DISPIF */
-	DATAPATH_PREWB_DSCC_ENC0ENC1_U0FFU1FF_MERGER_DISP1	= 0x92,
-	/* PRE-WB & BLENDER-OUT -> DSCC,ENC0/1 -> u0_FF/u1_FF -> u0_DISPIF/u1_DISPIF */
-	DATAPATH_PREWB_DSCC_ENC0ENC1_U0FFU1FF_DISP0DISP1	= 0x93,
-	/* PRE-WB & BLENDER-OUT -> ENC0 -> SPLITTER(bypass) -> u0_FF -> u0_DISPIF */
-	DATAPATH_PREWB_ENC0_SPLITTERBYPASS_U0FF_DISP0		= 0xA1,
-	/* PRE-WB & BLENDER-OUT -> ENC0 -> SPLITTER(bypass) -> u1_FF -> u1_DISPIF */
-	DATAPATH_PREWB_ENC0_SPLITTERBYPASS_U1FF_DISP1		= 0xA2,
-	/* PRE-WB & BLENDER-OUT -> ENC0 -> SPLITTER(split) -> u0_FF/u1_FF -> u0_DISPIF/u1_DISPIF */
-	DATAPATH_PREWB_ENC0_SPLITTER_U0FFU1FF_DISP0DISP1	= 0xA3,
-	/* PRE-WB only */
-	DATAPATH_PREWB_ONLY					= 0xC0,
 };
 #endif
 enum decon_s_data_path {
@@ -585,21 +471,6 @@ struct decon_window_regs {
 	int plane_alpha;
 	enum decon_pixel_format format;
 	enum decon_blending blend;
-};
-#else
-struct decon_window_regs {
-	u32 wincon;
-	u32 start_pos;
-	u32 end_pos;
-	u32 colormap;
-	u32 start_time;
-	u32 pixel_count;
-	u32 whole_w;
-	u32 whole_h;
-	u32 offset_x;
-	u32 offset_y;
-	u32 winmap_state;
-	enum decon_idma_type type;
 };
 #endif
 
@@ -1303,8 +1174,6 @@ void decon_reg_set_trigger(u32 id, struct decon_mode_info *psr,
 int decon_reg_wait_for_update_timeout(u32 id, unsigned long timeout);
 #if defined(CONFIG_SOC_EXYNOS8895)
 int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq);
-#else
-int decon_reg_get_interrupt_and_clear(u32 id);
 #endif
 void decon_reg_set_blender_bg_image_size(u32 id, enum decon_dsi_mode dsi_mode,
 		struct decon_lcd *lcd_info);

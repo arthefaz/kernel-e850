@@ -36,8 +36,6 @@
 
 #if defined(CONFIG_SOC_EXYNOS8895)
 #include "regs-dsim.h"
-#else
-#include "regs-dsim_8890.h"
 #endif
 
 int dsim_log_level = 6;
@@ -143,9 +141,6 @@ static int dsim_wait_for_cmd_fifo_empty(struct dsim_device *dsim, bool must_wait
 	if ((dsim->state == DSIM_STATE_ON) && (ret == -ETIMEDOUT)) {
 		dsim_err("%s have timed out\n", __func__);
 		__dsim_dump(dsim);
-#if !defined(CONFIG_SOC_EXYNOS8895)
-		dsim_reg_set_fifo_ctrl(dsim->id, DSIM_FIFOCTRL_INIT_SFR);
-#endif
 	}
 	return ret;
 }
@@ -277,9 +272,6 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 	reinit_completion(&dsim->rd_comp);
 
 	/* Init RX FIFO before read and clear DSIM_INTSRC */
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	dsim_reg_set_fifo_ctrl(dsim->id, DSIM_FIFOCTRL_INIT_RX);
-#endif
 	dsim_reg_clear_int(dsim->id, DSIM_INTSRC_RX_DATA_DONE);
 
 	/* Set the maximum packet size returned */
@@ -455,14 +447,6 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 
 static void dsim_clocks_info(struct dsim_device *dsim)
 {
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	dsim_info("%s: %ld Mhz\n", __clk_get_name(dsim->res.pclk),
-				clk_get_rate(dsim->res.pclk) / MHZ);
-	dsim_info("%s: %ld Mhz\n", __clk_get_name(dsim->res.dphy_esc),
-				clk_get_rate(dsim->res.dphy_esc) / MHZ);
-	dsim_info("%s: %ld Mhz\n", __clk_get_name(dsim->res.dphy_byte),
-				clk_get_rate(dsim->res.dphy_byte) / MHZ);
-#endif
 }
 
 
@@ -481,26 +465,6 @@ static void dsim_check_version(struct dsim_device *dsim)
 
 static int dsim_get_clocks(struct dsim_device *dsim)
 {
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	struct device *dev = dsim->dev;
-
-	dsim->res.pclk = devm_clk_get(dev, "dsim_pclk");
-	if (IS_ERR_OR_NULL(dsim->res.pclk)) {
-		dsim_err("failed to get dsim_pclk\n");
-		return -ENODEV;
-	}
-	dsim->res.dphy_esc = devm_clk_get(dev, "dphy_escclk");
-	if (IS_ERR_OR_NULL(dsim->res.dphy_esc)) {
-		dsim_err("failed to get dphy_escclk\n");
-		return -ENODEV;
-	}
-
-	dsim->res.dphy_byte = devm_clk_get(dev, "dphy_byteclk");
-	if (IS_ERR_OR_NULL(dsim->res.dphy_byte)) {
-		dsim_err("failed to get dphy_byteclk\n");
-		return -ENODEV;
-	}
-#endif
 	return 0;
 }
 
@@ -685,24 +649,6 @@ static int dsim_enable(struct dsim_device *dsim)
 		/* Panel reset should be set after LP-11 */
 		dsim_reset_panel(dsim);
 	}
-
-#else
-	enable_irq(dsim->res.irq);
-	/* DPHY power on */
-	phy_power_on(dsim->phy);
-
-	dsim_reg_set_clocks(dsim->id, &dsim->clks, &dsim->lcd_info.dphy_pms, 1);
-	dsim_reg_set_lanes(dsim->id, dsim->data_lane, 1);
-
-	if (dsim_reg_init(dsim->id, &dsim->lcd_info, dsim->data_lane_cnt,
-			&dsim->clks) < 0) {
-		dsim_info("dsim_%d already enabled", dsim->id);
-		ret = -EBUSY;
-	} else {
-		/* Panel reset should be set after LP-11 */
-		dsim_reset_panel(dsim);
-	}
-
 #endif
 
 init_end:
@@ -1358,12 +1304,6 @@ static int dsim_runtime_suspend(struct device *dev)
 
 	DPU_EVENT_LOG(DPU_EVT_DSIM_SUSPEND, &dsim->sd, ktime_set(0, 0));
 	dsim_dbg("%s +\n", __func__);
-
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	clk_disable_unprepare(dsim->res.pclk);
-	clk_disable_unprepare(dsim->res.dphy_esc);
-	clk_disable_unprepare(dsim->res.dphy_byte);
-#endif
 	dsim_dbg("%s -\n", __func__);
 	return 0;
 }
@@ -1375,11 +1315,6 @@ static int dsim_runtime_resume(struct device *dev)
 	DPU_EVENT_LOG(DPU_EVT_DSIM_RESUME, &dsim->sd, ktime_set(0, 0));
 	dsim_dbg("%s: +\n", __func__);
 
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	clk_prepare_enable(dsim->res.pclk);
-	clk_prepare_enable(dsim->res.dphy_esc);
-	clk_prepare_enable(dsim->res.dphy_byte);
-#endif
 	dsim_dbg("%s -\n", __func__);
 	return 0;
 }

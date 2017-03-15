@@ -21,8 +21,6 @@
 #include "./panels/decon_lcd.h"
 #if defined(CONFIG_SOC_EXYNOS8895)
 #include "regs-dsim.h"
-#else
-#include "regs-dsim_8890.h"
 #endif
 
 #include <video/mipi_display.h>
@@ -42,10 +40,6 @@ extern int dsim_log_level;
 #define DSIM_PIXEL_FORMAT_RGB24		0x0
 #define DSIM_PIXEL_FORMAT_RGB18_PACKED	0x1
 #define DSIM_PIXEL_FORMAT_RGB18		0x2
-#else
-#define DSIM_PIXEL_FORMAT_RGB24		0x7
-#define DSIM_PIXEL_FORMAT_RGB18		0x6
-#define DSIM_PIXEL_FORMAT_RGB18_PACKED	0x5
 #endif
 #define DSIM_RX_FIFO_MAX_DEPTH		64
 #define MAX_DSIM_CNT			2
