@@ -30,8 +30,6 @@
 #include "decon.h"
 #if defined(CONFIG_SOC_EXYNOS8895)
 #include "regs-dpp.h"
-#else
-#include "regs-dpp_8890.h"
 #endif
 
 extern int dpp_log_level;
@@ -39,8 +37,6 @@ extern int dpp_log_level;
 #define DPP_MODULE_NAME		"exynos-dpp"
 #if defined(CONFIG_SOC_EXYNOS8895)
 #define MAX_DPP_CNT		7
-#else
-#define MAX_DPP_CNT		9
 #endif
 
 /* about 1msec @ ACLK=630MHz */

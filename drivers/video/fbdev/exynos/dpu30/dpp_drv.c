@@ -868,51 +868,10 @@ irq_end:
 	spin_unlock(&dpp->dma_slock);
 	return IRQ_HANDLED;
 }
-#else
-static irqreturn_t dpp_irq_handler(int irq, void *priv)
-{
-	struct dpp_device *dpp = priv;
-	u32 dpp_irq = 0;
-
-	spin_lock(&dpp->slock);
-	if (dpp->state == DPP_STATE_OFF)
-		goto irq_end;
-
-	dpp_irq = dpp_reg_get_irq_status(dpp->id);
-	dpp_reg_clear_irq(dpp->id, dpp_irq);
-
-	if ((dpp_irq & VG_IRQ_DEADLOCK_STATUS) ||
-			(dpp_irq & VG_IRQ_READ_SLAVE_ERROR)) {
-		dpp_err("dpp%d error irq occur(0x%x)\n", dpp->id, dpp_irq);
-		dpp_dump_registers(dpp);
-		exynos_sysmmu_show_status(dpp->dev);
-		goto irq_end;
-	}
-
-	if (dpp_irq & VG_IRQ_FRAMEDONE) {
-		dpp->d.done_count++;
-		if (dpp->id == ODMA_WB)
-			wake_up_interruptible_all(&dpp->framedone_wq);
-		DPU_EVENT_LOG(DPU_EVT_DPP_FRAMEDONE, &dpp->sd, ktime_set(0, 0));
-	}
-
-irq_end:
-	del_timer(&dpp->d.op_timer);
-	spin_unlock(&dpp->slock);
-	return IRQ_HANDLED;
-}
 #endif
+
 static int dpp_get_clocks(struct dpp_device *dpp)
 {
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	struct device *dev = dpp->dev;
-
-	dpp->res.gate = devm_clk_get(dev, "dpp_clk");
-	if (IS_ERR_OR_NULL(dpp->res.gate)) {
-		dpp_err("failed to get dpp%d clock\n", dpp->id);
-		return PTR_ERR(dpp->res.gate);
-	}
-#endif
 	return 0;
 }
 
@@ -1096,9 +1055,6 @@ static int dpp_runtime_suspend(struct device *dev)
 	struct dpp_device *dpp = dev_get_drvdata(dev);
 
 	dpp_dbg("%s(%d) +\n", __func__, dpp->id);
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	clk_disable_unprepare(dpp->res.gate);
-#endif
 	dpp_dbg("%s -\n", __func__);
 
 	return 0;
@@ -1110,13 +1066,6 @@ static int dpp_runtime_resume(struct device *dev)
 	struct dpp_device *dpp = dev_get_drvdata(dev);
 
 	dpp_dbg("%s(%d) +\n", __func__, dpp->id);
-#if !defined(CONFIG_SOC_EXYNOS8895)
-	ret = clk_prepare_enable(dpp->res.gate);
-	if (ret) {
-		dpp_err("failed to enable dpp%d gate clock\n", dpp->id);
-		return ret;
-	}
-#endif
 	dpp_dbg("%s -\n", __func__);
 
 	return ret;
