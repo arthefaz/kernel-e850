@@ -54,6 +54,11 @@ static inline void dpu_event_log_decon
 	case DPU_EVT_UNDERRUN:
 	case DPU_EVT_LINECNT_ZERO:
 		break;
+	case DPU_EVT_CURSOR_POS:	/* cursor async */
+		log->data.cursor.xpos = decon->cursor.xpos;
+		log->data.cursor.ypos = decon->cursor.ypos;
+		log->data.cursor.elapsed = ktime_sub(ktime_get(), log->time);
+		break;
 	default:
 		/* Any remaining types will be log just time and type */
 		break;
@@ -131,11 +136,15 @@ static inline void dpu_event_log_dpp
 		break;
 	case DPU_EVT_DPP_FRAMEDONE:
 	case DPU_EVT_DPP_STOP:
-	case DPU_EVT_DPP_WINCON:
 	case DPU_EVT_DMA_FRAMEDONE:
 	case DPU_EVT_DMA_RECOVERY:
 		log->data.dpp.id = dpp->id;
 		log->data.dpp.done_cnt = dpp->d.done_count;
+		break;
+	case DPU_EVT_DPP_WINCON:
+		log->data.dpp.id = dpp->id;
+		memcpy(&log->data.dpp.src, &dpp->config->src, sizeof(struct decon_frame));
+		memcpy(&log->data.dpp.dst, &dpp->config->dst, sizeof(struct decon_frame));
 		break;
 	default:
 		log->data.dpp.id = dpp->id;
@@ -200,6 +209,7 @@ void DPU_EVENT_LOG(dpu_event_t type, struct v4l2_subdev *sd, ktime_t time)
 	case DPU_EVT_DECON_SHUTDOWN:
 	case DPU_EVT_RSC_CONFLICT:
 	case DPU_EVT_DECON_FRAMESTART:
+	case DPU_EVT_CURSOR_POS:	/* cursor async */
 		dpu_event_log_decon(type, sd, time);
 		break;
 	case DPU_EVT_DSIM_FRAMEDONE:
@@ -314,6 +324,32 @@ void DPU_EVENT_LOG_CMD(struct v4l2_subdev *sd, u32 cmd_id, unsigned long data)
 
 	for (i = 0; i < DPU_CALLSTACK_MAX; i++)
 		log->data.cmd_buf.caller[i] = (void *)((size_t)return_address(i + 1));
+}
+
+/* cursor async */
+void DPU_EVENT_LOG_CURSOR(struct v4l2_subdev *sd, struct decon_reg_data *regs)
+{
+	struct decon_device *decon = container_of(sd, struct decon_device, sd);
+	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
+	struct dpu_log *log = &decon->d.event_log[idx];
+	int win = 0;
+
+	log->time = ktime_get();
+	log->type = DPU_EVT_CURSOR_UPDATE;
+
+	for (win = 0; win < MAX_DECON_WIN; win++) {
+		if (regs->is_cursor_win[win] && regs->win_regs[win].wincon & WIN_EN_F(win)) {
+			memcpy(&log->data.reg.win_regs[win], &regs->win_regs[win],
+				sizeof(struct decon_window_regs));
+			memcpy(&log->data.reg.win_config[win], &regs->dpp_config[win],
+				sizeof(struct decon_win_config));
+		} else {
+			log->data.reg.win_config[win].state =
+						DECON_WIN_STATE_DISABLED;
+		}
+	}
+	win  = DECON_WIN_UPDATE_IDX;
+	log->data.reg.win_config[win].state = DECON_WIN_STATE_DISABLED;
 }
 
 /* display logged events related with DECON */

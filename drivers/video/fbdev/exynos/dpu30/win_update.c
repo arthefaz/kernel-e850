@@ -131,6 +131,11 @@ static void win_update_check_limitation(struct decon_device *decon,
 			if (adj_src_x & 0x1 || adj_src_y & 0x1)
 				goto change_full;
 		}
+		/* cursor async */
+		if (((r.right - r.left) > decon->lcd_info->xres) ||
+			((r.bottom - r.top) > decon->lcd_info->yres)) {
+			goto change_full;
+		}
 	}
 
 	return;
@@ -422,6 +427,8 @@ void dpu_init_win_update(struct decon_device *decon)
 	struct decon_lcd *lcd = decon->lcd_info;
 
 	decon->win_up.enabled = false;
+	decon->cursor.xpos = lcd->xres / 2;
+	decon->cursor.ypos = lcd->yres / 2;
 
 	if (!IS_ENABLED(CONFIG_FB_WINDOW_UPDATE)) {
 		decon_info("window update feature is disabled\n");

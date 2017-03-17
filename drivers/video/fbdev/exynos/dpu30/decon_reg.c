@@ -619,6 +619,15 @@ void decon_reg_update_req_window(u32 id, u32 win_idx)
 	decon_write_mask(id, SHADOW_REG_UPDATE_REQ, ~0, mask);
 }
 
+void decon_reg_update_req_window_mask(u32 id, u32 win_idx)
+{
+	u32 mask;
+
+	mask = SHADOW_REG_UPDATE_REQ_FOR_DECON;
+	mask &= ~(SHADOW_REG_UPDATE_REQ_WIN(win_idx));
+	decon_write_mask(id, SHADOW_REG_UPDATE_REQ, ~0, mask);
+}
+
 void decon_reg_all_win_shadow_update_req(u32 id)
 {
 	u32 mask;
