@@ -526,6 +526,7 @@ struct decon_win_config {
 		DECON_WIN_STATE_COLOR,
 		DECON_WIN_STATE_BUFFER,
 		DECON_WIN_STATE_UPDATE,
+		DECON_WIN_STATE_CURSOR,
 	} state;
 
 	/* Reusability:This struct is used for IDMA and ODMA */
@@ -579,6 +580,9 @@ struct decon_reg_data {
 	struct decon_rect up_region;
 	/* protected contents playback */
 	bool protection[MAX_DECON_WIN + 1];
+	/* cursor async */
+	bool is_cursor_win[MAX_DECON_WIN];
+	int cursor_win;
 };
 
 struct decon_win_config_data {
@@ -656,9 +660,19 @@ typedef enum dpu_event_type {
 	DPU_EVT_DMA_RECOVERY,
 
 	DPU_EVT_DECON_SET_BUFFER,
+	/* cursor async */
+	DPU_EVT_CURSOR_POS,
+	DPU_EVT_CURSOR_UPDATE,
 
 	DPU_EVT_MAX, /* End of EVENT */
 } dpu_event_t;
+
+/* Related with Cursor */
+struct disp_log_cursor {
+	u32 xpos;
+	u32 ypos;
+	ktime_t elapsed;	/* End time - Start time */
+};
 
 /* Related with Fence */
 struct disp_log_fence {
@@ -693,6 +707,8 @@ struct disp_log_dpp {
 	u32 start_cnt;
 	u32 done_cnt;
 	u32 comp_src;
+	struct decon_frame src;
+	struct decon_frame dst;
 };
 
 /**
@@ -708,6 +724,7 @@ struct dpu_log {
 		struct dsim_log_cmd_buf cmd_buf;
 		struct disp_log_pm pm;
 		struct disp_log_fence fence;
+		struct disp_log_cursor cursor;
 	} data;
 };
 
@@ -730,6 +747,7 @@ typedef enum dpu_event_log_level_type {
 void DPU_EVENT_LOG(dpu_event_t type, struct v4l2_subdev *sd, ktime_t time);
 void DPU_EVENT_LOG_WINCON(struct v4l2_subdev *sd, struct decon_reg_data *regs);
 void DPU_EVENT_LOG_CMD(struct v4l2_subdev *sd, u32 cmd_id, unsigned long data);
+void DPU_EVENT_LOG_CURSOR(struct v4l2_subdev *sd, struct decon_reg_data *regs); /* cursor async */
 void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon);
 int decon_create_debugfs(struct decon_device *decon);
 void decon_destroy_debugfs(struct decon_device *decon);
@@ -738,6 +756,7 @@ void decon_destroy_debugfs(struct decon_device *decon);
 #define DPU_EVENT_LOG(...) do { } while(0)
 #define DPU_EVENT_LOG_WINCON(...) do { } while(0)
 #define DPU_EVENT_LOG_CMD(...) do { } while(0)
+#define DPU_EVENT_LOG_CURSOR(...) do { } while (0)
 #define DPU_EVENT_SHOW(...) do { } while(0)
 #define decon_create_debugfs(...) do { } while(0)
 #define decon_destroy_debugfs(..) do { } while(0)
@@ -804,6 +823,11 @@ struct decon_win {
 	int idx;
 	int dpp_id;
 	u32 pseudo_palette[16];
+};
+/* cursor async */
+struct decon_user_window {
+	int x;
+	int y;
 };
 
 struct dpu_afbc_info {
@@ -900,6 +924,15 @@ struct decon_bts {
 	u32 scen_updated;
 };
 
+/* cursor async */
+struct decon_cursor {
+	struct decon_reg_data regs;
+	struct mutex lock;
+	u32 xpos;
+	u32 ypos;
+	bool unmask;	/* if true, cursor unmask period */
+};
+
 struct decon_device {
 	int id;
 	enum decon_state state;
@@ -935,6 +968,7 @@ struct decon_device {
 	struct decon_win_update win_up;
 	struct decon_hiber hiber;
 	struct decon_bts bts;
+	struct decon_cursor cursor;
 
 	int frame_cnt;
 	int frame_cnt_target;
@@ -1087,6 +1121,9 @@ void dpu_set_win_update_config(struct decon_device *decon,
 		struct decon_reg_data *regs);
 void dpu_set_win_update_partial_size(struct decon_device *decon,
 		struct decon_rect *up_region);
+/* cursor async */
+void dpu_cursor_win_update_config(struct decon_device *decon,
+		struct decon_reg_data *regs);
 
 /* internal only function API */
 int decon_check_var(struct fb_var_screeninfo *var, struct fb_info *info);
@@ -1227,6 +1264,7 @@ void decon_reg_get_clock_ratio(struct decon_clocks *clks,
 void decon_reg_clear_int_all(u32 id);
 void decon_reg_all_win_shadow_update_req(u32 id);
 void decon_reg_update_req_window(u32 id, u32 win_idx);
+void decon_reg_update_req_window_mask(u32 id, u32 win_idx);
 void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
 		struct decon_lcd *lcd_info, bool in_slice[],
 		u32 partial_w, u32 partial_h);
@@ -1281,6 +1319,14 @@ int decon_runtime_suspend(struct device *dev);
 int decon_runtime_resume(struct device *dev);
 void decon_dpp_stop(struct decon_device *decon, bool do_reset);
 
+/* cursor async mode functions */
+void decon_set_cursor_reset(struct decon_device *decon,
+		struct decon_reg_data *regs);
+void decon_set_cursor_unmask(struct decon_device *decon, bool unmask);
+void dpu_cursor_win_update_config(struct decon_device *decon,
+		struct decon_reg_data *regs);
+int decon_set_cursor_win_config(struct decon_device *decon, int x, int y);
+
 /* IOCTL commands */
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, __u32)
 #define S3CFB_DECON_SELF_REFRESH	_IOW('F', 207, __u32)
@@ -1303,4 +1349,6 @@ void decon_dpp_stop(struct decon_device *decon, bool do_reset);
 #define S3CFB_GET_HDR_CAPABILITIES _IOW('F', 400, struct decon_hdr_capabilities)
 #define S3CFB_GET_HDR_CAPABILITIES_NUM _IOW('F', 401, struct decon_hdr_capabilities_info)
 
+/* cursor async */
+#define DECON_WIN_CURSOR_POS		_IOW('F', 222, struct decon_user_window)
 #endif /* ___SAMSUNG_DECON_H__ */
