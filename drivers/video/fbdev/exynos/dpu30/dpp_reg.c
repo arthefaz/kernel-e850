@@ -24,140 +24,6 @@
 #define DPP_SC_RATIO_4_8	((1 << 20) * 8 / 4)
 #define DPP_SC_RATIO_3_8	((1 << 20) * 8 / 3)
 
-
-/* DPU_WB_MUX */
-
-/* dpp_reg_get_op_status() function will be used */
-u32 wb_reg_get_op_status(u32 id)
-{
-	u32 val;
-
-	val = dpp_read(id, DPU_WB_ENABLE);
-	if (val & WB_OP_STATUS)
-		return OP_STATUS_BUSY;
-
-	return OP_STATUS_IDLE;
-}
-
-int wb_reg_set_sw_reset(u32 id)
-{
-	u32 cfg = 0;
-	unsigned long cnt = 100000;
-
-	dpp_write_mask(id, DPU_WB_ENABLE, ~0, WB_SRSET);
-
-	do {
-		cfg = dpp_read(id, DPU_WB_ENABLE);
-		if (!(cfg & (WB_SRSET)))
-			return 0;
-		udelay(10);
-	} while (--cnt);
-
-	dpp_err("[wb] timeout sw-reset\n");
-
-	return -EBUSY;
-}
-
-void wb_reg_set_clock_gate_en_all(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-	dpp_write_mask(id, DPU_WB_ENABLE, val, WB_ALL_CLOCK_GATE_EN_MASK);
-}
-
-void wb_reg_set_sfr_update_force(u32 id)
-{
-	dpp_write_mask(id, DPU_WB_ENABLE, ~0, WB_SFR_UPDATE_FORCE);
-}
-
-/* Setting value : 0=Qch-enable, 1=Qch-disable */
-void wb_reg_set_qch(u32 id, u32 en)
-{
-	u32 val = en ? 0 : ~0;
-	dpp_write_mask(id, DPU_WB_ENABLE, val, WB_QCHANNEL_EN);
-}
-
-/* rgb_type : {601, 709} x {narrow, wide} */
-void wb_reg_set_rgb_type(u32 id, u32 rgb_type)
-{
-	u32 val, mask;
-
-	val = WB_RGB_TYPE(rgb_type);
-	mask = WB_RGB_TYPE_MASK;
-	dpp_write_mask(id, DPU_WB_OUT_CON0, val, mask);
-}
-
-void wb_reg_set_csc_r2y_en(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-	dpp_write_mask(id, DPU_WB_OUT_CON0, val, WB_CSC_R2Y_MASK);
-}
-
-void wb_reg_set_out_frame_alpha(u32 id, u32 alpha)
-{
-	u32 val, mask;
-
-	val = WB_OUT_FRAME_ALPHA(alpha);
-	mask = WB_OUT_FRAME_ALPHA_MASK;
-	dpp_write_mask(id, DPU_WB_OUT_CON1, val, mask);
-}
-
-void wb_reg_set_uv_offset(u32 id, u32 off_x, u32 off_y)
-{
-	u32 val, mask;
-
-	val = WB_UV_OFFSET_Y(off_y) | WB_UV_OFFSET_X(off_x);
-	mask = WB_UV_OFFSET_Y_MASK | WB_UV_OFFSET_X_MASK;
-	dpp_write_mask(id, DPU_WB_OUT_CON1, val, mask);
-}
-
-void wb_reg_set_dst_size(u32 id, u32 w, u32 h)
-{
-	u32 val;
-	val = (WB_DST_HEIGHT(h) | WB_DST_WIDTH(w));
-	dpp_write(id, DPU_WB_DST_SIZE, val);
-}
-
-void wb_reg_set_usb_tv_wb_size(u32 id, u32 byte_cnt)
-{
-	u32 val, mask;
-
-	val = WB_FRAME_BYTE_CNT(byte_cnt);
-	mask = WB_FRAME_BYTE_CNT_MASK;
-	dpp_write_mask(id, DPU_WB_USB_TV_WB_SIZE, val, mask);
-}
-
-void wb_reg_set_usb_tv_wb_en(u32 id, u32 en)
-{
-	u32 val, mask;
-
-	val = WB_USB_WB_EN(en);
-	mask = WB_USB_WB_EN_MASK;
-	dpp_write_mask(id, DPU_WB_USB_TV_WB_CON, val, mask);
-}
-
-/*
-* [opt]
-* 0= 543210, 1= 345012, 2= 210543, 3= 012345
-*/
-void wb_reg_set_usb_tv_wb_swap(u32 id, u32 opt)
-{
-	u32 val, mask;
-
-	val = WB_SWAP_OPTION(opt);
-	mask = WB_SWAP_OPTION_MASK;
-	dpp_write_mask(id, DPU_WB_USB_TV_WB_CON, val, mask);
-}
-
-void wb_reg_set_dynamic_gating_en_all(u32 id, u32 en)
-{
-	u32 val, mask;
-
-	val = en ? ~0 : 0;
-	mask = WB_DG_EN_ALL;
-	dpp_write_mask(id, DPU_WB_DYNAMIC_GATING_EN, val, mask);
-}
-
-
 /*
  * DPU_DMA APIs
  *
@@ -272,14 +138,7 @@ u32 dma_reg_get_op_status(u32 id)
 {
 	u32 val;
 
-	/**
-	 * IDMA_OP_STATUS was commonly used at ODMA_WB
-	 *   because bit-field is same with ODMA_OP_STATUS
-	 */
-	if (id == ODMA_WB)
-		val = dma_read(id, ODMA_ENABLE);
-	else
-		val = dma_read(id, IDMA_ENABLE);
+	val = dma_read(id, IDMA_ENABLE);
 	if (val & IDMA_OP_STATUS)
 		return OP_STATUS_BUSY;
 
@@ -330,31 +189,21 @@ u32 dma_reg_get_irq_status(u32 id)
 {
 	u32 val, mask;
 
-	if (id == ODMA_WB) {
-		val = dma_read(id, ODMA_IRQ);
-		mask = ODMA_ALL_IRQ_CLEAR;
-	} else {
-		val = dma_read(id, IDMA_IRQ);
-		mask = IDMA_ALL_IRQ_CLEAR;
-	}
+	val = dma_read(id, IDMA_IRQ);
+	mask = IDMA_ALL_IRQ_CLEAR;
 
 	return val & mask;
 }
 
 void dma_reg_clear_irq(u32 id, u32 irq)
 {
-	if (id == ODMA_WB)
-		dma_write_mask(id, ODMA_IRQ, ~0, irq);
-	else
-		dma_write_mask(id, IDMA_IRQ, ~0, irq);
+	dma_write_mask(id, IDMA_IRQ, ~0, irq);
 }
 
 void dma_reg_clear_irq_all(u32 id)
 {
 	u32 val = IDMA_ALL_IRQ_CLEAR;
 
-	if (id == ODMA_WB)
-		val = ODMA_ALL_IRQ_CLEAR;
 	dma_write_mask(id, IDMA_IRQ, val, val);
 }
 
@@ -400,13 +249,6 @@ void dma_reg_set_irq_mask_framedone(u32 id, u32 en)
 	dma_write_mask(id, IDMA_IRQ, val, IDMA_IRQ_FRAMEDONE_MASK);
 }
 
-/* for ODMA SLICE_DONE */
-void dma_reg_set_irq_mask_slice_done_all(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-	dma_write_mask(id, ODMA_IRQ, val, ODMA_ALL_SLICE_DONE_MASK);
-}
-
 void dma_reg_set_irq_mask_all(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
@@ -424,10 +266,7 @@ void dma_reg_set_in_ic_max(u32 id, u32 ic_num)
 
 	val = IDMA_IN_IC_MAX(ic_num);
 	mask = IDMA_IN_IC_MAX_MASK;
-	if (id == ODMA_WB)
-		dma_write_mask(id, ODMA_OUT_CON0, val, mask);
-	else
-		dma_write_mask(id, IDMA_IN_CON, val, mask);
+	dma_write_mask(id, IDMA_IN_CON, val, mask);
 }
 
 void dma_reg_set_img_format(u32 id, u32 fmt)
@@ -436,18 +275,13 @@ void dma_reg_set_img_format(u32 id, u32 fmt)
 
 	val = IDMA_IMG_FORMAT(fmt);
 	mask = IDMA_IMG_FORMAT_MASK;
-	if (id == ODMA_WB)
-		dma_write_mask(id, ODMA_OUT_CON0, val, mask);
-	else
-		dma_write_mask(id, IDMA_IN_CON, val, mask);
+	dma_write_mask(id, IDMA_IN_CON, val, mask);
 }
 
 void dma_reg_set_in_flip(u32 id, u32 flip)
 {
 	u32 val, mask;
 
-	if (id == ODMA_WB)
-		return;
 	val = IDMA_IN_FLIP(flip);
 	mask = IDMA_IN_FLIP_MASK;
 	dma_write_mask(id, IDMA_IN_CON, val, mask);
@@ -477,18 +311,13 @@ void dma_reg_set_in_chroma_stride_sel(u32 id, u32 en)
 
 	val = en ? ~0 : 0;
 	mask = IDMA_IN_CHROMINANCE_STRIDE_SEL;
-	if (id == ODMA_WB)
-		dma_write_mask(id, ODMA_OUT_CON0, val, mask);
-	else
-		dma_write_mask(id, IDMA_IN_CON, val, mask);
+	dma_write_mask(id, IDMA_IN_CON, val, mask);
 }
 
 void dma_reg_set_block_en(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	if (id == ODMA_WB)
-		return;
 	dma_write_mask(id, IDMA_IN_CON, val, IDMA_BLOCK_EN);
 }
 
@@ -498,52 +327,34 @@ void dma_reg_set_out_frame_alpha(u32 id, u32 alpha)
 
 	val = IDMA_OUT_FRAME_ALPHA(alpha);
 	mask = IDMA_OUT_FRAME_ALPHA_MASK;
-	if (id == ODMA_WB)
-		dma_write_mask(id, ODMA_OUT_CON1, val, mask);
-	else
-		dma_write_mask(id, IDMA_OUT_CON, val, mask);
+	dma_write_mask(id, IDMA_OUT_CON, val, mask);
 }
 
-/* IDMA : SRC_SIZE, ODMA : DST_SIZE */
 void dma_reg_set_buf_size(u32 id, u32 w, u32 h)
 {
 	u32 val;
 	val = (IDMA_SRC_HEIGHT(h) | IDMA_SRC_WIDTH(w));
-	if (id == ODMA_WB)
-		dma_write(id, ODMA_DST_SIZE, val);
-	else
-		dma_write(id, IDMA_SRC_SIZE, val);
+	dma_write(id, IDMA_SRC_SIZE, val);
 }
 
-/* IDMA : SRC_OFFSET, ODMA : DST_OFFSET */
 void dma_reg_set_buf_offset(u32 id, u32 x, u32 y)
 {
 	u32 val;
 	val = (IDMA_SRC_OFFSET_Y(y) | IDMA_SRC_OFFSET_X(x));
-	if (id == ODMA_WB)
-		dma_write(id, ODMA_DST_OFFSET, val);
-	else
-		dma_write(id, IDMA_SRC_OFFSET, val);
+	dma_write(id, IDMA_SRC_OFFSET, val);
 }
 
 void dma_reg_set_img_size(u32 id, u32 w, u32 h)
 {
 	u32 val;
 	val = (IDMA_IMG_HEIGHT(h) | IDMA_IMG_WIDTH(w));
-	if (id == ODMA_WB) {
-		dma_write(id, ODMA_OUT_IMG_SIZE, val);
-		wb_reg_set_dst_size(id, w, h);
-	} else {
-		dma_write(id, IDMA_IMG_SIZE, val);
-	}
+	dma_write(id, IDMA_IMG_SIZE, val);
 }
 
 void dma_reg_set_chroma_stride(u32 id, u32 stride)
 {
 	u32 val, mask;
 
-	if (id == ODMA_WB)
-		return;
 	val = IDMA_CHROMA_STRIDE(stride);
 	mask = IDMA_CHROMA_STRIDE_MASK;
 	dma_write_mask(id, IDMA_CHROMINANCE_STRIDE, val, mask);
@@ -553,8 +364,6 @@ void dma_reg_set_block_offset(u32 id, u32 x, u32 y)
 {
 	u32 val;
 
-	if (id == ODMA_WB)
-		return;
 	val = (IDMA_BLK_OFFSET_Y(y) | IDMA_BLK_OFFSET_X(x));
 	dma_write(id, IDMA_BLOCK_OFFSET, val);
 }
@@ -563,8 +372,6 @@ void dma_reg_set_block_size(u32 id, u32 w, u32 h)
 {
 	u32 val;
 
-	if (id == ODMA_WB)
-		return;
 	val = (IDMA_BLK_HEIGHT(h) | IDMA_BLK_WIDTH(w));
 	dma_write(id, IDMA_BLOCK_SIZE, val);
 }
@@ -588,72 +395,17 @@ void dma_reg_set_in_qos_lut(u32 id, u32 lut_id, u32 qos_t)
 {
 	u32 reg_id;
 
-	if (id == ODMA_WB) {
-		if (lut_id == 0)
-			reg_id = ODMA_OUT_QOS_LUT07_00;
-		else
-			reg_id = ODMA_OUT_QOS_LUT15_08;
-	} else {
-		if (lut_id == 0)
-			reg_id = IDMA_IN_QOS_LUT07_00;
-		else
-			reg_id = IDMA_IN_QOS_LUT15_08;
-	}
+	if (lut_id == 0)
+		reg_id = IDMA_IN_QOS_LUT07_00;
+	else
+		reg_id = IDMA_IN_QOS_LUT15_08;
 	dma_write(id, reg_id, qos_t);
 }
 
 void dma_reg_set_in_base_addr(u32 id, u32 addr_y, u32 addr_c)
 {
-	if (id == ODMA_WB) {
-		dma_write(id, ODMA_IN_BASE_ADDR_Y, addr_y);
-		dma_write(id, ODMA_IN_BASE_ADDR_C, addr_c);
-	} else {
-		dma_write(id, IDMA_IN_BASE_ADDR_Y, addr_y);
-		dma_write(id, IDMA_IN_BASE_ADDR_C, addr_c);
-	}
-}
-
-/* (ODMA only) for SLICE_BYTE(n) */
-void dma_reg_set_slice_byte_cnt(u32 id, u32 s_id, u32 b_cnt)
-{
-	if (id != ODMA_WB)
-		return;
-	dma_write(id, ODMA_SLICE_BYTE_CNT(s_id), b_cnt);
-}
-
-/* (ODMA only) b_cnt[8] : 0=slice0_cnt, ..., 6=slice6_cnt, 7=frame_cnt */
-void dma_reg_set_slice_byte_cnt_all(u32 id, u32 b_cnt[8])
-{
-	u32 i;
-
-	if (id != ODMA_WB)
-		return;
-	for (i = 0; i < 8; i++)
-		dma_write(id, ODMA_SLICE_BYTE_CNT(i), b_cnt[i]);
-}
-
-/* ODMA only */
-void dma_reg_set_usb_wb_path_sel(u32 id, u32 p_sel)
-{
-	u32 val;
-
-	if (id != ODMA_WB)
-		return;
-
-	if (p_sel == USB_WB_PATH_OTF)
-		val = ~0;
-	else
-		val = 0;
-	dma_write_mask(id, ODMA_USB_TV_WB_CON, val, ODMA_USB_WB_PATH_SEL);
-}
-
-/* ODMA only */
-void dma_reg_set_usb_wb_en(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-	if (id != ODMA_WB)
-		return;
-	dma_write_mask(id, ODMA_USB_TV_WB_CON, val, ODMA_USB_WB_EN);
+	dma_write(id, IDMA_IN_BASE_ADDR_Y, addr_y);
+	dma_write(id, IDMA_IN_BASE_ADDR_C, addr_c);
 }
 
 void dma_reg_set_deadlock_num(u32 id, u32 dl_num)
@@ -662,20 +414,14 @@ void dma_reg_set_deadlock_num(u32 id, u32 dl_num)
 
 	val = IDMA_DEADLOCK_VAL(dl_num);
 	mask = IDMA_DEADLOCK_VAL_MASK;
-	if (id == ODMA_WB)
-		dma_write_mask(id, ODMA_DEADLOCK_NUM, val, mask);
-	else
-		dma_write_mask(id, IDMA_DEADLOCK_NUM, val, mask);
+	dma_write_mask(id, IDMA_DEADLOCK_NUM, val, mask);
 }
 
 void dma_reg_set_deadlock_en(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	if (id == ODMA_WB)
-		dma_write_mask(id, ODMA_DEADLOCK_NUM, val, IDMA_DEADLOCK_EN);
-	else
-		dma_write_mask(id, IDMA_DEADLOCK_NUM, val, IDMA_DEADLOCK_EN);
+	dma_write_mask(id, IDMA_DEADLOCK_NUM, val, IDMA_DEADLOCK_EN);
 }
 
 void dma_reg_set_dynamic_gating_en_all(u32 id, u32 en)
@@ -684,13 +430,8 @@ void dma_reg_set_dynamic_gating_en_all(u32 id, u32 en)
 
 	val = en ? ~0 : 0;
 
-	if (id == ODMA_WB) {
-		mask = ODMA_DG_EN_ALL;
-		dma_write_mask(id, ODMA_DYNAMIC_GATING_EN, val, mask);
-	} else {
-		mask = IDMA_DG_EN_ALL;
-		dma_write_mask(id, IDMA_DYNAMIC_GATING_EN, val, mask);
-	}
+	mask = IDMA_DG_EN_ALL;
+	dma_write_mask(id, IDMA_DYNAMIC_GATING_EN, val, mask);
 }
 
 void dma_reg_set_recovery_num(u32 id, u32 rcv_num)
@@ -712,13 +453,8 @@ u32 dma_reg_get_cfg_err_state(u32 id)
 {
 	u32 val;
 
-	if (id == ODMA_WB) {
-		val = dma_read(id, ODMA_CFG_ERR_STATE);
-		return ODMA_CFG_ERR_GET(val);
-	} else {
-		val = dma_read(id, IDMA_CFG_ERR_STATE);
-		return IDMA_CFG_ERR_GET(val);
-	}
+	val = dma_read(id, IDMA_CFG_ERR_STATE);
+	return IDMA_CFG_ERR_GET(val);
 }
 
 int dpp_reg_wait_op_status(u32 id)
@@ -746,10 +482,7 @@ u32 dpp_reg_get_op_status(u32 id)
 	 * DPP_OP_STATUS is commonly used at WB_MUX
 	 *   because bit-field is same with WB_OP_STATUS
 	 */
-	if (id == ODMA_WB)
-		val = dpp_read(id, DPU_WB_ENABLE);
-	else
-		val = dpp_read(id, DPP_ENABLE);
+	val = dpp_read(id, DPP_ENABLE);
 	if (val & DPP_OP_STATUS)
 		return OP_STATUS_BUSY;
 
@@ -903,7 +636,6 @@ void dpp_reg_set_csc_config(u32 id, u32 type)
 {
 	u32 csc_std = CSC_BT_601;
 	u32 csc_rng = CSC_RANGE_FULL;
-	u32 csc_type = (CSC_BT_601 | CSC_RANGE_LIMITED);
 	u32 coef_mode = CSC_COEF_HARDWIRED;
 
 	if ((id == IDMA_G0) || (id == IDMA_G1) || (id == IDMA_G0_S))
@@ -916,18 +648,6 @@ void dpp_reg_set_csc_config(u32 id, u32 type)
 		coef_mode = CSC_COEF_HARDWIRED;
 	else
 		coef_mode = CSC_COEF_CUSTOMIZED;
-
-	if (id == ODMA_WB) {
-		/* only support {601, 709, N, W} */
-		csc_type = (csc_std << 1) | (csc_rng << 0);
-		if (csc_type > 3) {
-			dpp_info("[WB] Unsupported CSC(%d) !\n", csc_type);
-			dpp_info("[WB] -> forcing BT_601_LIMITTED\n");
-			csc_type = ((CSC_BT_601 << 1) | CSC_RANGE_LIMITED);
-		}
-		wb_reg_set_rgb_type(id, csc_type);
-		return;
-	}
 
 	dpp_reg_set_csc_type(id, csc_std, csc_rng, coef_mode);
 	if (coef_mode != CSC_COEF_HARDWIRED)
@@ -1241,9 +961,6 @@ int dpp_reg_set_format(u32 id, struct dpp_params_info *p)
 	u32 a_sel = 0;
 	/* 0=ARGB, 1=YUV */
 	u32 fmt_type = 0;
-	/* [WB] chroma x-/y-offset when R2Y : [0, 4] */
-	u32 off_x = 0;
-	u32 off_y = 0;
 
 	switch (p->format) {
 	case DECON_PIXEL_FORMAT_ARGB_8888:
@@ -1297,15 +1014,6 @@ int dpp_reg_set_format(u32 id, struct dpp_params_info *p)
 	dma_reg_set_img_format(id, fmt);
 	dpp_reg_set_alpha_sel(id, a_sel);
 	dpp_reg_set_img_format(id, fmt_type);
-	if (id == ODMA_WB) {
-		if (fmt_type) {
-			wb_reg_set_csc_r2y_en(id, 1);
-			wb_reg_set_uv_offset(id, off_x, off_y);
-		} else {
-			wb_reg_set_csc_r2y_en(id, 0);
-			wb_reg_set_uv_offset(id, 0, 0);
-		}
-	}
 
 	dma_reg_set_afbc_en(id, p->is_comp);
 	if (p->is_comp)
@@ -1364,15 +1072,11 @@ void dpp_reg_set_plane_alpha(u32 id, u32 plane_alpha)
 	if (plane_alpha > 0xFF)
 		dpp_info("%d is too big value\n", plane_alpha);
 	dma_reg_set_out_frame_alpha(id, plane_alpha);
-	if (id == ODMA_WB)
-		wb_reg_set_out_frame_alpha(id, plane_alpha);
 }
 
 void dpp_reg_set_plane_alpha_fixed(u32 id)
 {
 	dma_reg_set_out_frame_alpha(id, 0xFF);
-	if (id == ODMA_WB)
-		wb_reg_set_out_frame_alpha(id, 0xFF);
 }
 
 void dpp_reg_set_lookup_table(u32 id)
@@ -1385,8 +1089,6 @@ void dpp_reg_set_dynamic_clock_gating(u32 id)
 {
 	dma_reg_set_dynamic_gating_en_all(id, 1);
 	dpp_reg_set_dynamic_gating_en_all(id, 1);
-	if (id == ODMA_WB)
-		wb_reg_set_dynamic_gating_en_all(id, 1);
 }
 
 u32 dpp_reg_get_irq_status(u32 id)
@@ -1437,24 +1139,6 @@ void dpp_constraints_params(struct dpp_size_constraints *vc,
 	vc->blk_h_max = BLK_HEIGHT_MAX;
 	vc->blk_mul_w = BLK_SIZE_MULTIPLE;
 	vc->blk_mul_h = BLK_SIZE_MULTIPLE;
-
-	if (vi->wb) {
-		vc->src_mul_w = DST_SIZE_MULTIPLE * sz_align;
-		vc->src_mul_h = DST_SIZE_MULTIPLE * sz_align;
-		vc->src_w_min = DST_SIZE_WIDTH_MIN;
-		vc->src_w_max = DST_SIZE_WIDTH_MAX;
-		vc->src_h_min = DST_SIZE_HEIGHT_MIN;
-		vc->src_h_max = DST_SIZE_HEIGHT_MAX;
-		vc->img_mul_w = DST_IMG_MULTIPLE * sz_align;
-		vc->img_mul_h = DST_IMG_MULTIPLE * sz_align;
-		vc->img_w_min = DST_IMG_WIDTH_MIN;
-		vc->img_w_max = DST_IMG_WIDTH_MAX;
-		vc->img_h_min = DST_IMG_HEIGHT_MIN;
-		vc->img_h_max = DST_IMG_HEIGHT_MAX;
-		vc->src_mul_x = DST_OFFSET_MULTIPLE * sz_align;
-		vc->src_mul_y = DST_OFFSET_MULTIPLE * sz_align;
-	}
-
 }
 
 int dpp_reg_wait_idle_status(int id, unsigned long timeout)
@@ -1495,8 +1179,6 @@ void dpp_reg_init(u32 id)
 	dpp_reg_set_irq_enable(id);
 
 	dma_reg_set_clock_gate_en_all(id, 1);
-	if (id == ODMA_WB)
-		wb_reg_set_clock_gate_en_all(id, 1);
 	dpp_reg_set_clock_gate_en_all(id, 1);
 
 	dpp_reg_set_lookup_table(id);
@@ -1522,8 +1204,6 @@ int dpp_reg_deinit(u32 id, bool reset)
 		if (dpp_reg_wait_sw_reset_status(id)
 			&& dma_reg_wait_sw_reset_status(id))
 			return -EBUSY;
-		if (id == ODMA_WB)
-			wb_reg_set_sw_reset(id);
 	}
 
 	return 0;
