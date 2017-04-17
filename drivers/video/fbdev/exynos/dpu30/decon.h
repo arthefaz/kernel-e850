@@ -57,7 +57,7 @@ extern struct decon_bts_ops decon_bts_control;
 #define VSYNC_TIMEOUT_MSEC	200
 #define DEFAULT_BPP		32
 #define MAX_DECON_WIN		6
-#define MAX_DPP_SUBDEV		7
+#define MAX_DPP_SUBDEV		6
 #define MIN_WIN_BLOCK_WIDTH	8
 #define MIN_WIN_BLOCK_HEIGHT	1
 
@@ -136,7 +136,6 @@ enum decon_out_type {
 	DECON_OUT_DSI = 0,
 	DECON_OUT_EDP,
 	DECON_OUT_DP,
-	DECON_OUT_WB
 };
 
 enum decon_dsi_mode {
@@ -243,7 +242,6 @@ enum decon_idma_type {
 	IDMA_VG1,
 	IDMA_VGF0,
 	IDMA_VGF1,
-	ODMA_WB,
 	IDMA_G0_S,
 };
 #endif
@@ -1018,13 +1016,6 @@ void decon_destroy_vsync_thread(struct decon_device *decon);
 int decon_create_psr_info(struct decon_device *decon);
 void decon_destroy_psr_info(struct decon_device *decon);
 
-/* DECON to writeback interface functions */
-int decon_wb_register_irq(struct decon_device *decon);
-void decon_wb_free_irq(struct decon_device *decon);
-int decon_wb_get_clocks(struct decon_device *decon);
-void decon_wb_set_clocks(struct decon_device *decon);
-int decon_wb_get_out_sd(struct decon_device *decon);
-
 /* DECON to DISPLAYPORT interface functions */
 int decon_displayport_register_irq(struct decon_device *decon);
 void decon_displayport_free_irq(struct decon_device *decon);
@@ -1206,8 +1197,7 @@ u32 dpu_translate_fmt_to_dpp(u32 format);
 u32 dpu_get_bpp(enum decon_pixel_format fmt);
 int dpu_get_plane_cnt(enum decon_pixel_format format);
 u32 dpu_get_alpha_len(int format);
-void dpu_unify_rect(struct decon_rect *r1, struct decon_rect *r2,
-		struct decon_rect *dst);
+
 void decon_dump(struct decon_device *decon);
 void decon_to_psr_info(struct decon_device *decon, struct decon_mode_info *psr);
 void decon_to_init_param(struct decon_device *decon, struct decon_param *p);

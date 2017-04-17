@@ -319,15 +319,7 @@ void decon_to_init_param(struct decon_device *decon, struct decon_param *p)
 void decon_create_timeline(struct decon_device *decon, char *name)
 {
 	decon->timeline = sync_timeline_create(name);
-
-	if (decon->dt.out_type == DECON_OUT_DSI)
-		decon->timeline_max = 1;
-	else if (decon->dt.out_type == DECON_OUT_WB)
-		decon->timeline_max = 0;
-	else if (decon->dt.out_type == DECON_OUT_DP)
-		decon->timeline_max = 1;
-	else
-		decon->timeline_max = 1;
+	decon->timeline_max = 1;
 }
 
 int decon_create_fence(struct decon_device *decon)
@@ -513,9 +505,6 @@ static int decon_get_protect_id(int dma_id)
 	case IDMA_VGF1:
 		prot_id = PROT_VGR1;
 		break;
-	case ODMA_WB:
-		prot_id = PROT_WB1;
-		break;
 	default:
 		decon_err("Unknown DMA_ID (%d)\n", dma_id);
 		break;
@@ -559,11 +548,6 @@ void decon_set_protected_content(struct decon_device *decon,
 		cur_protect_bits |=
 			(regs->protection[i] << regs->dpp_config[i].idma_type);
 	}
-
-	/* ODMA protection config (WB: writeback) */
-	if (decon->dt.out_type == DECON_OUT_WB)
-		if (regs)
-			cur_protect_bits |= (regs->protection[MAX_DECON_WIN] << ODMA_WB);
 
 	if (decon->prev_protection_bitmask != cur_protect_bits) {
 

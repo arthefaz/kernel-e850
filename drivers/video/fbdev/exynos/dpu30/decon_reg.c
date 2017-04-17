@@ -1970,7 +1970,6 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 {
 	struct decon_lcd *lcd_info = p->lcd_info;
 	struct decon_mode_info *psr = &p->psr;
-	enum decon_enhance_path e_path = ENHANCEPATH_ENHANCE_ALL_OFF;
 
 	/* DECON does not need to start, if DECON is already
 	 * running(enabled in LCD_ON_UBOOT) */
@@ -2000,9 +1999,7 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 		 * Interrupt of DECON-T should be set to video mode,
 		 * because of malfunction of I80 frame done interrupt.
 		 */
-		if (psr->out_type == DECON_OUT_WB)
-			psr->psr_mode = DECON_MIPI_COMMAND_MODE;
-		else if (psr->out_type == DECON_OUT_DP)
+		if (psr->out_type == DECON_OUT_DP)
 			psr->psr_mode = DECON_VIDEO_MODE;
 		decon_reg_set_int(id, psr, 1);
 		decon_reg_set_underrun_scheme(id, DECON_VCLK_NOT_AFFECTED);
@@ -2016,10 +2013,6 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 			decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
 		}
 	}
-
-	/* FIXME: DECON_T dedicated to PRE_WB */
-	if (p->psr.out_type == DECON_OUT_WB)
-		decon_reg_set_data_path(id, DPATH_WBPRE_ONLY, e_path);
 
 	/* asserted interrupt should be cleared before initializing decon hw */
 	decon_reg_clear_int_all(id);
