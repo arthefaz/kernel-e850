@@ -378,6 +378,10 @@ static int decon_enable(struct decon_device *decon)
 #else
 	decon_runtime_resume(decon->dev);
 #endif
+
+	pm_stay_awake(decon->dev);
+	dev_warn(decon->dev, "pm_stay_awake");
+
 	if (decon->dt.out_type == DECON_OUT_DP) {
 		decon_info("DECON_OUT_DP %s timeline:%d, max:%d\n",
 			decon->timeline->name, decon->timeline->value, decon->timeline_max);
@@ -411,8 +415,6 @@ static int decon_enable(struct decon_device *decon)
 		}
 	}
 
-	pm_stay_awake(decon->dev);
-	dev_warn(decon->dev, "pm_stay_awake");
 	ret = v4l2_subdev_call(decon->out_sd[0], video, s_stream, 1);
 	if (ret) {
 		decon_err("starting stream failed for %s\n",
@@ -2511,7 +2513,6 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	struct decon_mode_info psr;
 	struct dsim_device *dsim;
 	struct dsim_device *dsim1;
-	int ret;
 
 	if (decon->id || (decon->dt.out_type != DECON_OUT_DSI)) {
 		decon->state = DECON_STATE_INIT;
@@ -2524,6 +2525,9 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 #else
 	decon_runtime_resume(decon->dev);
 #endif
+
+	pm_stay_awake(decon->dev);
+	dev_warn(decon->dev, "pm_stay_awake");
 
 	if (decon->dt.psr_mode != DECON_VIDEO_MODE) {
 		if (decon->res.pinctrl && decon->res.hw_te_on) {
@@ -2610,15 +2614,6 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 decon_init_done:
 
 	decon->state = DECON_STATE_INIT;
-
-	/* [W/A] prevent sleep enter during LCD on */
-	ret = device_init_wakeup(decon->dev, true);
-	if (ret) {
-		dev_err(decon->dev, "failed to init wakeup device\n");
-		return -EINVAL;
-	}
-	pm_stay_awake(decon->dev);
-	dev_warn(decon->dev, "pm_stay_awake");
 
 	return 0;
 }
@@ -2709,6 +2704,13 @@ static int decon_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, decon);
 	pm_runtime_enable(dev);
+
+	/* prevent sleep enter during display(LCD, DP) on */
+	ret = device_init_wakeup(decon->dev, true);
+	if (ret) {
+		dev_err(decon->dev, "failed to init wakeup device\n");
+		goto err_display;
+	}
 
 	if (decon->id != 2) {	/* for decon2 + displayport start in winconfig. */
 		ret = decon_initial_display(decon, false);
