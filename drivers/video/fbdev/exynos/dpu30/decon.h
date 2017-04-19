@@ -368,6 +368,65 @@ enum decon_share_path {
 	SHAREPATH_VGF0_USE		= 0x4,
 };
 
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+enum decon_pixel_format {
+	/* RGB 8bit display */
+	/* 4byte */
+	DECON_PIXEL_FORMAT_ARGB_8888 = 0,
+	DECON_PIXEL_FORMAT_ABGR_8888,
+	DECON_PIXEL_FORMAT_RGBA_8888,
+	DECON_PIXEL_FORMAT_BGRA_8888,
+	DECON_PIXEL_FORMAT_XRGB_8888,
+	DECON_PIXEL_FORMAT_XBGR_8888,
+	DECON_PIXEL_FORMAT_RGBX_8888,
+	DECON_PIXEL_FORMAT_BGRX_8888,
+	/* 2byte */
+	DECON_PIXEL_FORMAT_RGBA_5551,
+	DECON_PIXEL_FORMAT_BGRA_5551,
+	DECON_PIXEL_FORMAT_ABGR_4444,
+	DECON_PIXEL_FORMAT_RGBA_4444,
+	DECON_PIXEL_FORMAT_BGRA_4444,
+	DECON_PIXEL_FORMAT_RGB_565,
+	DECON_PIXEL_FORMAT_RGB_565,
+	DECON_PIXEL_FORMAT_BGR_565,
+
+	/* RGB 10bit display */
+	/* 4byte */
+	DECON_PIXEL_FORMAT_ARGB_2101010,
+	DECON_PIXEL_FORMAT_ABGR_2101010,
+	DECON_PIXEL_FORMAT_RGBA_1010102,
+	DECON_PIXEL_FORMAT_BGRA_1010102,
+
+	/* YUV 8bit display */
+	/* YUV422 2P */
+	DECON_PIXEL_FORMAT_NV16,
+	DECON_PIXEL_FORMAT_NV61,
+	/* YUV422 3P */
+	DECON_PIXEL_FORMAT_YVU422_3P,
+	/* YUV420 2P */
+	DECON_PIXEL_FORMAT_NV12,
+	DECON_PIXEL_FORMAT_NV21,
+	DECON_PIXEL_FORMAT_NV12M,
+	DECON_PIXEL_FORMAT_NV21M,
+	/* YUV420 3P */
+	DECON_PIXEL_FORMAT_YUV420,
+	DECON_PIXEL_FORMAT_YVU420,
+	DECON_PIXEL_FORMAT_YUV420M,
+	DECON_PIXEL_FORMAT_YVU420M,
+	DECON_PIXEL_FORMAT_NV12N,
+
+	/* YUV 10bit display */
+	/* YUV420 2P */
+	DECON_PIXEL_FORMAT_YUV_P010,
+	DECON_PIXEL_FORMAT_YVU_P010,
+
+	/* YUV420(P8+2) 4P */
+	DECON_PIXEL_FORMAT_NV12M_S10B,
+	DECON_PIXEL_FORMAT_NV21M_S10B,
+
+	DECON_PIXEL_FORMAT_MAX,
+};
+#else
 enum decon_pixel_format {
 	/* RGB 32bit */
 	DECON_PIXEL_FORMAT_ARGB_8888 = 0,
@@ -400,6 +459,7 @@ enum decon_pixel_format {
 
 	DECON_PIXEL_FORMAT_MAX,
 };
+#endif
 
 enum decon_blending {
 	DECON_BLENDING_NONE = 0,
@@ -408,12 +468,25 @@ enum decon_blending {
 	DECON_BLENDING_MAX = 3,
 };
 
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+enum dpp_rotate {
+	DPP_ROT_NORMAL = 0x0,
+	DPP_ROT_XFLIP,
+	DPP_ROT_YFLIP,
+	DPP_ROT_180,
+	DPP_ROT_90,
+	DPP_ROT_90_XFLIP,
+	DPP_ROT_90_YFLIP,
+	DPP_ROT_270,
+};
+#else
 enum dpp_flip {
 	DPP_FLIP_NONE = 0x0,
 	DPP_FLIP_X,
 	DPP_FLIP_Y,
 	DPP_FLIP_XY,
 };
+#endif
 
 enum dpp_csc_eq {
 	/* eq_mode : 6bits [5:0] */
@@ -433,6 +506,14 @@ enum dpp_comp_src {
 	DPP_COMP_SRC_G2D,
 	DPP_COMP_SRC_GPU
 };
+
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+enum dpp_hdr_standard {
+	DPP_HDR_OFF = 0,
+	DPP_HDR_ST2084,
+	DPP_HDR_HLG,
+};
+#endif
 
 struct decon_clocks {
 	unsigned long decon[CLK_ID_DPLL + 1];
@@ -497,9 +578,16 @@ struct decon_rect {
 
 struct dpp_params {
 	dma_addr_t addr[MAX_PLANE_CNT];
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+	enum dpp_rotate rot;
+#else
 	enum dpp_flip flip;
+#endif
 	enum dpp_csc_eq eq_mode;
 	enum dpp_comp_src comp_src;
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+	enum dpp_hdr_standard hdr_std;
+#endif
 };
 
 struct decon_frame {
@@ -524,7 +612,12 @@ struct decon_win_config {
 		__u32 color;
 		struct {
 			int				fd_idma[3];
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+			int				acq_fence;
+			int				rel_fence;
+#else
 			int				fence_fd;
+#endif
 			int				plane_alpha;
 			enum decon_blending		blending;
 			enum decon_idma_type		idma_type;
@@ -572,7 +665,11 @@ struct decon_reg_data {
 };
 
 struct decon_win_config_data {
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+	int	retire_fence;
+#else
 	int	fence;
+#endif
 	int	fd_odma;
 	struct decon_win_config config[MAX_DECON_WIN + 1];
 };

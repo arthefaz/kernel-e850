@@ -56,6 +56,12 @@ config DECON_HIBER
 	bool "DECON hiber mode"
         depends on EXYNOS_DECON_8895
         default n
+
+config DPU_2_0_INTERFACE
+	bool "Support DPU 2.0 Interface"
+        depends on EXYNOS_DECON_8895
+        default n
+
 endif
 
 source "drivers/video/fbdev/exynos/dpu/panels/Kconfig"
