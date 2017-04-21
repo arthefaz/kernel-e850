@@ -137,6 +137,7 @@
 #define IDMA_IMG_FORMAT_YVU420_4P		(27)	/*8bit + 2bit*/
 #define IDMA_IMG_FORMAT_YUV420_P010		(28)
 #define IDMA_IMG_FORMAT_YVU420_P010		(29)
+#define IDMA_ROTATION(_v)		((_v) << 8)
 #define IDMA_ROTATION_MASK		(7 << 8)
 #define IDMA_ROTATION_X_FLIP		(1 << 8)
 #define IDMA_ROTATION_Y_FLIP		(2 << 8)
