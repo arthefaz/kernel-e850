@@ -2466,9 +2466,13 @@ static int decon_get_disp_ss_addr(struct decon_device *decon)
 {
 	if (of_have_populated_dt()) {
 		struct device_node *nd;
-
+#if defined(CONFIG_SOC_EXYNOS9810)
+		nd = of_find_compatible_node(NULL, NULL,
+				"samsung,exynos9-disp_ss");
+#else
 		nd = of_find_compatible_node(NULL, NULL,
 				"samsung,exynos8-disp_ss");
+#endif
 		if (!nd) {
 			decon_err("failed find compatible node(sysreg-disp)");
 			return -ENODEV;
@@ -2850,7 +2854,11 @@ static void decon_shutdown(struct platform_device *pdev)
 }
 
 static const struct of_device_id decon_of_match[] = {
+#if defined(CONFIG_SOC_EXYNOS9810)
+	{ .compatible = "samsung,exynos9-decon" },
+#else
 	{ .compatible = "samsung,exynos8-decon" },
+#endif
 	{},
 };
 MODULE_DEVICE_TABLE(of, decon_of_match);

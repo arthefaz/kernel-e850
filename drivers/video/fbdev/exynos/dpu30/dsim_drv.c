@@ -1298,7 +1298,11 @@ static int dsim_runtime_resume(struct device *dev)
 }
 
 static const struct of_device_id dsim_of_match[] = {
+#if defined(CONFIG_SOC_EXYNOS9810)
+	{ .compatible = "samsung,exynos9-dsim" },
+#else
 	{ .compatible = "samsung,exynos8-dsim" },
+#endif
 	{},
 };
 MODULE_DEVICE_TABLE(of, dsim_of_match);
