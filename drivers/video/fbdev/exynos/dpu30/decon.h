@@ -244,7 +244,7 @@ enum decon_idma_type {
 	IDMA_VG0,
 	IDMA_VG1,
 	IDMA_VGF0,
-	IDMA_VGF1,
+	IDMA_VGF1, /* VGRF in case of Exynos9810 */
 	IDMA_G0_S,
 };
 #endif
