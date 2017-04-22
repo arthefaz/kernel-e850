@@ -879,11 +879,12 @@ void displayport_hpd_changed(int state)
 		if (!timeout)
 			displayport_err("enable timeout\n");
 	} else {
+#if defined(CONFIG_EXYNOS_HDCP2)
 		if (displayport->hdcp_ver == HDCP_VERSION_2_2) {
 			hdcp_dplink_set_integrity_fail();
 			displayport_hdcp22_enable(0);
 		}
-
+#endif
 		cancel_delayed_work_sync(&displayport->hpd_plug_work);
 		cancel_delayed_work_sync(&displayport->hpd_unplug_work);
 		cancel_delayed_work_sync(&displayport->hpd_irq_work);
@@ -1166,6 +1167,7 @@ static int displayport_Automated_Test_Request(void)
 
 static int displayport_hdcp22_irq_handler(void)
 {
+#if defined(CONFIG_EXYNOS_HDCP2)
 	struct displayport_device *displayport = get_displayport_drvdata();
 	uint8_t rxstatus = 0;
 	int ret = 0;
@@ -1202,6 +1204,10 @@ static int displayport_hdcp22_irq_handler(void)
 	}
 
 	return ret;
+#else
+	displayport_info("Not compiled EXYNOS_HDCP2 driver\n");
+	return 0;
+#endif
 }
 
 static void displayport_hpd_irq_work(struct work_struct *work)
@@ -1545,6 +1551,7 @@ static void displayport_hdcp13_run(struct work_struct *work)
 
 static void displayport_hdcp22_run(struct work_struct *work)
 {
+#if defined(CONFIG_EXYNOS_HDCP2)
 	u8 val[2] = {0, };
 
 	if (hdcp_dplink_authenticate() != 0)
@@ -1554,6 +1561,9 @@ static void displayport_hdcp22_run(struct work_struct *work)
 
 	displayport_dpcd_read_for_hdcp22(DPCD_HDCP22_RX_INFO, 2, val);
 	displayport_info("HDCP2.2 rx_info: 0:0x%X, 8:0x%X\n", val[1], val[0]);
+#else
+	displayport_info("Not compiled EXYNOS_HDCP2 driver\n");
+#endif
 }
 
 static int displayport_check_hdcp_version(void)
