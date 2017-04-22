@@ -85,26 +85,6 @@ static int displayport_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int displayport_get_gpios(struct displayport_device *displayport)
-{
-	struct device *dev = displayport->dev;
-	struct displayport_resources *res = &displayport->res;
-
-	displayport_info("%s +\n", __func__);
-
-	if (of_get_property(dev->of_node, "gpios", NULL) != NULL)  {
-		/* panel reset */
-		res->aux_ch_mux_gpio = of_get_gpio(dev->of_node, 0);
-		if (res->aux_ch_mux_gpio < 0) {
-			displayport_err("failed to get aux ch mux GPIO");
-			return -ENODEV;
-		}
-	}
-
-	displayport_info("%s -\n", __func__);
-	return 0;
-}
-
 static u64 displayport_find_edid_max_pixelclock(void)
 {
 	int i;
@@ -1924,28 +1904,29 @@ static int displayport_parse_dt(struct displayport_device *displayport, struct d
 	}
 
 	displayport->dev = dev;
-	displayport_get_gpios(displayport);
-
-	/*if (of_property_read_string(np, "dp,aux_vdd",
-				&displayport->aux_vdd) < 0) {
-		displayport_err("failed to get displayport aux vdd\n");
-		displayport->aux_vdd = NULL;
-	}*/
 
 	displayport->gpio_sw_oe = of_get_named_gpio(np, "dp,aux_sw_oe", 0);
-	ret = gpio_request(displayport->gpio_sw_oe, "dp_aux_sw_oe");
-	if (ret)
+	if (gpio_is_valid(displayport->gpio_sw_oe)) {
+		ret = gpio_request(displayport->gpio_sw_oe, "dp_aux_sw_oe");
+		if (ret)
+			displayport_err("failed to get gpio dp_aux_sw_oe\n");
+		else
+			gpio_direction_output(displayport->gpio_sw_oe, 1);
+	} else
 		displayport_err("failed to get gpio dp_aux_sw_oe\n");
-	gpio_direction_output(displayport->gpio_sw_oe, 1);
 
 	displayport->gpio_sw_sel = of_get_named_gpio(np, "dp,sbu_sw_sel", 0);
 	if (gpio_is_valid(displayport->gpio_sw_sel)) {
 		ret = gpio_request(displayport->gpio_sw_sel, "dp_sbu_sw_sel");
 		if (ret)
 			displayport_err("failed to get gpio dp_sbu_sw_sel\n");
-	}
+	} else
+		displayport_err("failed to get gpio dp_sbu_sw_sel\n");
 
 	displayport->gpio_usb_dir = of_get_named_gpio(np, "dp,usb_con_sel", 0);
+	if (!gpio_is_valid(displayport->gpio_usb_dir))
+		displayport_err("failed to get gpio dp_usb_con_sel\n");
+
 	displayport_info("%s done\n", __func__);
 
 	return 0;
@@ -2552,6 +2533,7 @@ static int displayport_probe(struct platform_device *pdev)
 #ifdef DISPLAYPORT_TEST
 	struct class *dp_class;
 #endif
+	dev_info(dev, "%s start\n", __func__);
 
 	displayport = devm_kzalloc(dev, sizeof(struct displayport_device), GFP_KERNEL);
 	if (!displayport) {
