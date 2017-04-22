@@ -383,7 +383,7 @@ static int decon_enable(struct decon_device *decon)
 		decon_info("DECON_OUT_DP %s timeline:%d, max:%d\n",
 			decon->timeline->name, decon->timeline->value, decon->timeline_max);
 
-#if 0 //defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS_DISPLAYPORT) && defined(CONFIG_EXYNOS8895_BTS)
 		if (videoformat_parameters[g_displayport_videoformat].pixel_clock >= PIXEL_CLOCK_533_000) {
 			decon->bts.ops->bts_update_qos_mif(decon, 1540*1000);
 			decon->bts.ops->bts_update_qos_int(decon, 533*1000);
@@ -2149,7 +2149,7 @@ static int decon_register_subdevs(struct decon_device *decon)
 	ret = dpu_get_sd_by_drvname(decon, DSIM_MODULE_NAME);
 	if (ret)
 		return ret;
-#if 0
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	ret = dpu_get_sd_by_drvname(decon, DISPLAYPORT_MODULE_NAME);
 	if (ret)
 		return ret;
@@ -2176,7 +2176,7 @@ static int decon_register_subdevs(struct decon_device *decon)
 				return ret;
 			}
 		}
-#if 0
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		ret = v4l2_device_register_subdev(v4l2_dev, decon->displayport_sd);
 		if (ret) {
 			decon_err("failed to register displayport sd\n");
@@ -2195,7 +2195,7 @@ static int decon_register_subdevs(struct decon_device *decon)
 
 	if (decon->dt.out_type == DECON_OUT_DSI)
 		ret = decon_get_out_sd(decon);
-#if 0
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	else if (decon->dt.out_type == DECON_OUT_DP)
 		ret = decon_displayport_get_out_sd(decon);
 #endif
@@ -2761,7 +2761,8 @@ static int decon_probe(struct platform_device *pdev)
 	ret = decon_create_vsync_thread(decon);
 	if (ret)
 		goto err_vsync;
-#if 0
+
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	ret = decon_displayport_create_vsync_thread(decon);
 	if (ret)
 		goto err_vsync;

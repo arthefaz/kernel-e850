@@ -265,9 +265,9 @@ err:
 	return ret;
 }
 
-#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 static int decon_displayport_set_lcd_info(struct decon_device *decon)
 {
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct decon_lcd *lcd_info;
 
 	if (decon->lcd_info == NULL) {
@@ -297,10 +297,11 @@ static int decon_displayport_set_lcd_info(struct decon_device *decon)
 
 	decon_info("decon_%d output size for displayport %dx%d\n", decon->id,
 			decon->lcd_info->width, decon->lcd_info->height);
-
+#else
+	decon_info("Not compiled displayport driver\n");
+#endif
 	return 0;
 }
-#endif
 
 int decon_displayport_get_out_sd(struct decon_device *decon)
 {
@@ -311,9 +312,7 @@ int decon_displayport_get_out_sd(struct decon_device *decon)
 	}
 	decon->out_sd[1] = NULL;
 
-#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	decon_displayport_set_lcd_info(decon);
-#endif
 
 	return 0;
 }
