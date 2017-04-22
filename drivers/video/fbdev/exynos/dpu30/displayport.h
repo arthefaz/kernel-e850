@@ -17,8 +17,9 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <media/v4l2-subdev.h>
-//#include <linux/switch.h>
-//#include <linux/wakelock.h>
+#if defined(CONFIG_EXTCON)
+#include <linux/extcon.h>
+#endif
 #if defined(CONFIG_CCIC_NOTIFIER)
 #include <linux/usb/manager/usb_typec_manager_notifier.h>
 #include <linux/notifier.h>
@@ -511,6 +512,14 @@ enum hotplug_state{
 	HPD_IRQ,
 };
 
+#if defined(CONFIG_EXTCON)
+static const unsigned int extcon_id[] = {
+	EXTCON_DISP_DP,
+
+	EXTCON_NONE,
+};
+#endif
+
 struct displayport_device {
 	enum displayport_state state;
 	struct device *dev;
@@ -532,9 +541,10 @@ struct displayport_device {
 	struct delayed_work hpd_plug_work;
 	struct delayed_work hpd_unplug_work;
 	struct delayed_work hpd_irq_work;
-	//struct switch_dev hpd_switch;
-	//struct switch_dev audio_switch;
-
+#if defined(CONFIG_EXTCON)
+	struct extcon_dev *extcon_displayport;
+	//struct extcon_dev audio_switch;
+#endif
 	struct delayed_work hdcp13_work;
 	struct delayed_work hdcp22_work;
 	struct delayed_work hdcp13_integrity_check_work;

@@ -68,9 +68,11 @@ static int displayport_remove(struct platform_device *pdev)
 	struct displayport_device *displayport = platform_get_drvdata(pdev);
 
 	pm_runtime_disable(&pdev->dev);
-#if defined(CONFIG_SWITCH)
-	switch_dev_unregister(&displayport->hpd_switch);
-	switch_dev_unregister(&displayport->audio_switch);
+#if defined(CONFIG_EXTCON)
+	devm_extcon_dev_unregister(displayport->dev, displayport->extcon_displayport);
+	//devm_extcon_dev_unregister(displayport->dev, displayport->audio_switch);
+#else
+	displayport_info("Not compiled EXTCON driver\n");
 #endif
 	mutex_destroy(&displayport->cmd_lock);
 	mutex_destroy(&displayport->hpd_lock);
@@ -809,15 +811,18 @@ static int displayport_link_training(void)
 
 static void displayport_set_switch_state(struct displayport_device *displayport, int state)
 {
-#if defined(CONFIG_SWITCH)
+#if defined(CONFIG_EXTCON)
 	if (state) {
-		switch_set_state(&displayport->hpd_switch, 1);
-		switch_set_state(&displayport->audio_switch, edid_audio_informs());
+		extcon_set_state_sync(displayport->extcon_displayport, EXTCON_DISP_DP, 1);
+		//extcon_set_state_sync(displayport->audio_switch, edid_audio_informs(), 0);
 	} else {
-		switch_set_state(&displayport->audio_switch, -1);
-		switch_set_state(&displayport->hpd_switch, 0);
+		//extcon_set_state_sync(displayport->audio_switch, -1, 0);
+		extcon_set_state_sync(displayport->extcon_displayport, EXTCON_DISP_DP, 0);
 	}
+#else
+	displayport_info("Not compiled EXTCON driver\n");
 #endif
+
 	displayport_info("HPD status = %d\n", state);
 }
 
@@ -2599,21 +2604,36 @@ static int displayport_probe(struct platform_device *pdev)
 		usb_typec_displayport_notification, CCIC_NOTIFY_DEV_DP);
 #endif
 
-#if defined(CONFIG_SWITCH)
-	/* register the switch device for HPD */
-	displayport->hpd_switch.name = "hdmi";
-	ret = switch_dev_register(&displayport->hpd_switch);
-	if (ret) {
-		displayport_err("hdmi switch register failed.\n");
+#if defined(CONFIG_EXTCON)
+	/* register the extcon device for HPD */
+	displayport->extcon_displayport = devm_extcon_dev_allocate(displayport->dev, extcon_id);
+	if (IS_ERR(displayport->extcon_displayport)) {
+		displayport_err("displayport extcon dev_allocate failed.\n");
 		goto err_dt;
 	}
+
+	ret = devm_extcon_dev_register(displayport->dev, displayport->extcon_displayport);
+	if (ret) {
+		displayport_err("hdmi extcon register failed.\n");
+		goto err_dt;
+	}
+#if 0
 	displayport->audio_switch.name = "ch_hdmi_audio";
-	ret = switch_dev_register(&displayport->audio_switch);
+
+	ret = devm_extcon_dev_allocate(displayport->dev, 2);
 	if (ret) {
-		displayport_err("audio switch register failed.\n");
+		displayport_err("audio extcon dev_allocate failed.\n");
 		goto err_dt;
 	}
-	displayport_info("success register switch device\n");
+
+	ret = devm_extcon_dev_register(displayport->dev, extcon_id);
+	if (ret) {
+		displayport_err("audio extcon register failed.\n");
+		goto err_dt;
+	}
+#endif
+#else
+	displayport_info("Not compiled EXTCON driver\n");
 #endif
 	displayport->hpd_state = HPD_UNPLUG;
 
