@@ -231,7 +231,7 @@ static void edid_use_default_preset(void)
 	for (i = 0; i < displayport_pre_cnt; i++) {
 		displayport_supported_presets[i].edid_support_match =
 			v4l2_match_dv_timings(&displayport_supported_presets[i].dv_timings,
-					&preferred_preset, 0);
+					&preferred_preset, 0, 0);
 	}
 
 	audio_channels = 2;
@@ -245,7 +245,7 @@ void edid_set_preferred_preset(int mode)
 	for (i = 0; i < displayport_pre_cnt; i++) {
 		displayport_supported_presets[i].edid_support_match =
 			v4l2_match_dv_timings(&displayport_supported_presets[i].dv_timings,
-					&preferred_preset, 0);
+					&preferred_preset, 0, 0);
 	}
 }
 
