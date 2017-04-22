@@ -551,7 +551,6 @@ struct displayport_device {
 #endif
 	int hpd_current_state;
 	enum hotplug_state hpd_state;
-	//struct wake_lock dp_wake_lock;
 	int dp_sw_sel;
 	int gpio_sw_oe;
 	int gpio_sw_sel;
