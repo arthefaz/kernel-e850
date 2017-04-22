@@ -838,8 +838,7 @@ void displayport_hpd_changed(int state)
 	displayport->hpd_current_state = state;
 
 	if (state) {
-		if (!wake_lock_active(&displayport->dp_wake_lock))
-			wake_lock(&displayport->dp_wake_lock);
+		pm_stay_awake(displayport->dev);
 
 		displayport->bpc = BPC_8;	/*default setting*/
 		displayport->bist_used = 0;
@@ -893,8 +892,9 @@ void displayport_hpd_changed(int state)
 		cancel_delayed_work_sync(&displayport->hdcp13_integrity_check_work);
 		displayport->hpd_state = HPD_UNPLUG;
 		g_displayport_videoformat = v640x480p_60Hz;
-		if (wake_lock_active(&displayport->dp_wake_lock))
-			wake_unlock(&displayport->dp_wake_lock);
+
+		pm_relax(displayport->dev);
+
 		displayport_set_switch_state(displayport, 0);
 		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
 			(displayport->state == DISPLAYPORT_STATE_INIT), msecs_to_jiffies(1000));
@@ -908,8 +908,8 @@ void displayport_hpd_changed(int state)
 HPD_FAIL:
 	displayport_reg_phy_off();
 	phy_power_off(displayport->phy);
-	if (wake_lock_active(&displayport->dp_wake_lock))
-			wake_unlock(&displayport->dp_wake_lock);
+	pm_relax(displayport->dev);
+
 	mutex_unlock(&displayport->hpd_lock);
 
 	return;
@@ -2623,7 +2623,11 @@ static int displayport_probe(struct platform_device *pdev)
 
 	displayport->state = DISPLAYPORT_STATE_INIT;
 
-	wake_lock_init(&displayport->dp_wake_lock, WAKE_LOCK_SUSPEND, "dp_wake_lock");
+	ret = device_init_wakeup(displayport->dev, true);
+	if (ret) {
+		dev_err(displayport->dev, "failed to init wakeup device\n");
+		return -EINVAL;
+	}
 
 #ifdef DISPLAYPORT_TEST
 	dp_class = class_create(THIS_MODULE, "dp_sec");
