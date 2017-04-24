@@ -699,7 +699,6 @@ static int dpp_dump_buffer_data(struct dpp_device *dpp)
 }
 #endif
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 static irqreturn_t dpp_irq_handler(int irq, void *priv)
 {
 	struct dpp_device *dpp = priv;
@@ -810,7 +809,6 @@ irq_end:
 	spin_unlock(&dpp->dma_slock);
 	return IRQ_HANDLED;
 }
-#endif
 
 static int dpp_get_clocks(struct dpp_device *dpp)
 {
@@ -860,7 +858,6 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 		return -EINVAL;
 	}
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (!res) {
 		dpp_err("failed to get mem resource\n");
@@ -887,7 +884,7 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 		dpp_err("failed to remap DPU_DMA COMMON SFR region\n");
 		return -EINVAL;
 	}
-#endif
+
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!res) {
 		dpp_err("failed to get dpu dma irq resource\n");
@@ -903,7 +900,7 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 		return -EINVAL;
 	}
 	disable_irq(dpp->res.dma_irq);
-#if defined(CONFIG_SOC_EXYNOS8895)
+
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
 	if (!res) {
 		dpp_err("failed to get dpp irq resource\n");
@@ -919,7 +916,6 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 		return -EINVAL;
 	}
 	disable_irq(dpp->res.irq);
-#endif
 
 	return 0;
 }

@@ -19,20 +19,16 @@
 #include <media/v4l2-subdev.h>
 
 #include "./panels/decon_lcd.h"
-#if defined(CONFIG_SOC_EXYNOS8895)
 #include "regs-dsim.h"
-#endif
 
 extern int dsim_log_level;
 
 #define DSIM_MODULE_NAME		"exynos-dsim"
 #define DSIM_DDI_ID_LEN			3
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 #define DSIM_PIXEL_FORMAT_RGB24		0x0
 #define DSIM_PIXEL_FORMAT_RGB18_PACKED	0x1
 #define DSIM_PIXEL_FORMAT_RGB18		0x2
-#endif
 #define DSIM_RX_FIFO_MAX_DEPTH		64
 #define MAX_DSIM_CNT			2
 #define MAX_DSIM_DATALANE_CNT		4
@@ -75,7 +71,6 @@ extern struct dsim_lcd_driver emul_disp_mipi_lcd_driver;
 extern struct dsim_lcd_driver s6e3hf4_mipi_lcd_driver;
 extern struct dsim_lcd_driver s6e3ha6_mipi_lcd_driver;
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 /* define video timer interrupt */
 enum {
 	DSIM_VBP = 0,
@@ -91,7 +86,6 @@ enum {
 	DSIM_USER_DEFINED,
 	DSIM_PRB7_RANDOM,
 };
-#endif
 
 /* define DSI lane types. */
 enum {
@@ -137,7 +131,6 @@ enum dsim_state {
 	DSIM_STATE_OFF		/* DSIM is suspend state */
 };
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 enum dphy_charic_value {
 	M_PLL_CTRL1,
 	M_PLL_CTRL2,
@@ -149,7 +142,6 @@ enum dphy_charic_value {
 	M_DPHY_CTRL3,
 	M_DPHY_CTRL4
 };
-#endif
 
 struct dsim_pll_param {
 	u32 p;
@@ -162,9 +154,7 @@ struct dsim_clks {
 	u32 hs_clk;
 	u32 esc_clk;
 	u32 byte_clk;
-#if defined(CONFIG_SOC_EXYNOS8895)
 	u32 word_clk;
-#endif
 };
 
 struct dphy_timing_value {

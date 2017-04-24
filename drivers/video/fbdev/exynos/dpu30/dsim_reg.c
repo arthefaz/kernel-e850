@@ -349,7 +349,6 @@ void dsim_reg_pll_stable_time(u32 id)
 	dsim_write(id, DSIM_PLLTMR, DSIM_PLL_STABLE_TIME);
 }
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 void dsim_reg_set_b_dphy_ctrl1(u32 id, u32 b_dphy_ctrl1)
 {
 	dsim_write(id, DSIM_PHYCTRL_B1, b_dphy_ctrl1);
@@ -389,7 +388,6 @@ void dsim_reg_set_m_dphy_ctrl4(u32 id, u32 m_dphy_ctrl4)
 {
 	dsim_write(id, DSIM_PHYCTRL_M4, m_dphy_ctrl4);
 }
-#endif
 
 void dsim_reg_set_dphy_timing_values(u32 id, struct dphy_timing_value *t)
 {
@@ -1448,7 +1446,6 @@ int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		clks->word_clk = clks->hs_clk / 16;
 		dsim_dbg("byte clock is %u MHz\n", clks->word_clk);
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 		clks->word_clk = clks->hs_clk / 16;
 		dsim_dbg("word clock is %u MHz\n", clks->word_clk);
 
@@ -1465,7 +1462,6 @@ int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		clks->esc_clk = clks->word_clk / esc_div;
 		dsim_dbg("escape clock divider is 0x%x\n", esc_div);
 		dsim_dbg("escape clock is %u MHz\n", clks->esc_clk);
-#endif
 
 		dsim_reg_set_esc_clk_prescaler(id, 1, esc_div);
 		/* get DPHY timing values using hs clock and escape clock */

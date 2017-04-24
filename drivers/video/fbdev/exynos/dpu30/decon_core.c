@@ -167,11 +167,9 @@ static void decon_win_conig_to_regs_param
 	win_regs->offset_x = win_config->dst.x;
 	win_regs->offset_y = win_config->dst.y;
 	win_regs->type = idma_type;
-#if defined(CONFIG_SOC_EXYNOS8895)
 	win_regs->plane_alpha = win_config->plane_alpha;
 	win_regs->format = win_config->format;
 	win_regs->blend = win_config->blending;
-#endif
 
 	decon_dbg("DMATYPE_%d@ SRC:(%d,%d) %dx%d  DST:(%d,%d) %dx%d\n",
 			idma_type,
@@ -180,7 +178,7 @@ static void decon_win_conig_to_regs_param
 			win_config->dst.x, win_config->dst.y,
 			win_config->dst.w, win_config->dst.h);
 }
-#if defined(CONFIG_SOC_EXYNOS8895)
+
 u32 wincon(u32 transp_len, u32 a0, u32 a1,
 	int plane_alpha, enum decon_blending blending, int idx)
 {
@@ -190,7 +188,6 @@ u32 wincon(u32 transp_len, u32 a0, u32 a1,
 
 	return data;
 }
-#endif
 
 bool decon_validate_x_alignment(struct decon_device *decon, int x, u32 w,
 		u32 bits_per_pixel)
@@ -1185,18 +1182,14 @@ void decon_reg_chmap_validate(struct decon_device *decon,
 	unsigned short i, bitmap = 0;
 
 	for (i = 0; i < decon->dt.max_win; i++) {
-#if defined(CONFIG_SOC_EXYNOS8895)
 		if (!(regs->win_regs[i].wincon & WIN_EN_F(i)) ||
 				(regs->win_regs[i].winmap_state))
 			continue;
-#endif
 
 		if (bitmap & (1 << regs->dpp_config[i].idma_type)) {
 			decon_warn("Channel-%d is mapped to multiple windows\n",
 					regs->dpp_config[i].idma_type);
-#if defined(CONFIG_SOC_EXYNOS8895)
 			regs->win_regs[i].wincon &= (~WIN_EN_F(i));
-#endif
 		}
 		bitmap |= 1 << regs->dpp_config[i].idma_type;
 	}
@@ -1215,10 +1208,8 @@ static void decon_check_used_dpp(struct decon_device *decon,
 		else
 			win->dpp_id = 0xF;
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 		if ((regs->win_regs[i].wincon & WIN_EN_F(i)) &&
 			(!regs->win_regs[i].winmap_state)) {
-#endif
 			set_bit(win->dpp_id, &decon->cur_using_dpp);
 			set_bit(win->dpp_id, &decon->prev_used_dpp);
 		}
@@ -1243,12 +1234,10 @@ static int decon_set_dpp_config(struct decon_device *decon,
 		if (ret) {
 			decon_err("failed to config (WIN%d : DPP%d)\n",
 					i, win->dpp_id);
-#if defined(CONFIG_SOC_EXYNOS8895)
 			regs->win_regs[i].wincon &= (~WIN_EN_F(i));
 			decon_reg_set_win_enable(decon->id, i, false);
 			if (regs->num_of_window != 0)
 				regs->num_of_window--;
-#endif
 			clear_bit(win->dpp_id, &decon->cur_using_dpp);
 			set_bit(win->dpp_id, &decon->dpp_err_stat);
 			err_cnt++;
@@ -1707,9 +1696,7 @@ static int decon_prepare_win_config(struct decon_device *decon,
 
 		switch (config->state) {
 		case DECON_WIN_STATE_DISABLED:
-#if defined(CONFIG_SOC_EXYNOS8895)
 			win_regs->wincon &= ~WIN_EN_F(i);
-#endif
 			break;
 		case DECON_WIN_STATE_COLOR:
 			regs->num_of_window++;
@@ -1732,9 +1719,7 @@ static int decon_prepare_win_config(struct decon_device *decon,
 			}
 			break;
 		default:
-#if defined(CONFIG_SOC_EXYNOS8895)
 			win_regs->wincon &= ~WIN_EN_F(i);
-#endif
 			decon_warn("unrecognized window state %u",
 					config->state);
 			ret = -EINVAL;

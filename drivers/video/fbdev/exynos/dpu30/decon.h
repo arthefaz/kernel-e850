@@ -31,10 +31,10 @@
 
 #if defined(CONFIG_SOC_EXYNOS8895)
 #include "regs-decon_8895.h"
-#endif
-#if defined(CONFIG_SOC_EXYNOS9810)
+#else
 #include "regs-decon.h"
 #endif
+
 #include "./panels/decon_lcd.h"
 #include "dsim.h"
 #include "displayport.h"
@@ -64,9 +64,7 @@ extern struct decon_bts_ops decon_bts_control;
 #define MIN_WIN_BLOCK_WIDTH	8
 #define MIN_WIN_BLOCK_HEIGHT	1
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 #define DECON_WIN_UPDATE_IDX	(6)
-#endif
 
 #ifndef KHZ
 #define KHZ (1000)
@@ -167,7 +165,6 @@ enum decon_rgb_order {
 	DECON_GRB = 0x6,
 };
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 enum decon_win_func {
 	PD_FUNC_CLEAR			= 0x0,
 	PD_FUNC_COPY			= 0x1,
@@ -184,9 +181,7 @@ enum decon_win_func {
 	PD_FUNC_PLUS			= 0xc,
 	PD_FUNC_USER_DEFINED		= 0xd,
 };
-#endif
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 enum decon_win_alpha_coef {
 	BND_COEF_ZERO			= 0x0,
 	BND_COEF_ONE			= 0x1,
@@ -208,7 +203,6 @@ enum decon_win_alpha_sel {
 	ALPHA_MULT_SRC_SEL_AF = 2,
 	ALPHA_MULT_SRC_SEL_AB = 3,
 };
-#endif
 
 enum decon_fifo_mode {
 	DECON_FIFO_00K = 0,
@@ -237,7 +231,6 @@ enum decon_set_trig {
 	DECON_TRIG_ENABLE
 };
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 enum decon_idma_type {
 	IDMA_G0 = 0,	/* Dedicated to WIN5 */
 	IDMA_G1,
@@ -247,7 +240,6 @@ enum decon_idma_type {
 	IDMA_VGF1, /* VGRF in case of Exynos9810 */
 	IDMA_G0_S,
 };
-#endif
 
 /*
  * DECON_STATE_ON : disp power on, decon/dsim clock on & lcd on
@@ -274,7 +266,7 @@ enum decon_clk_id {
 	CLK_ID_DSC_RATIO,
 	CLK_ID_MAX,
 };
-#if defined(CONFIG_SOC_EXYNOS8895)
+
 enum decon_path_cfg {
 	PATH_CON_ID_DSIM_IF0 = 0,
 	PATH_CON_ID_DSIM_IF1 = 1,
@@ -334,7 +326,7 @@ enum decon_dsc_id {
 	DECON_DSC_ENC0 = 0x0,
 	DECON_DSC_ENC1 = 0x1,
 };
-#endif
+
 enum decon_s_data_path {
 	/*  BLENDER-OUT -> No Comp -> u0_FF -> u0_DISPIF */
 	DECONS_DATAPATH_NOCOMP_U0FF_DISP0			= 0x01,
@@ -535,7 +527,6 @@ struct decon_param {
 	void __iomem *disp_ss_regs;
 };
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 struct decon_window_regs {
 	u32 wincon;
 	u32 start_pos;
@@ -553,7 +544,6 @@ struct decon_window_regs {
 	enum decon_pixel_format format;
 	enum decon_blending blend;
 };
-#endif
 
 struct decon_dma_buf_data {
 	struct ion_handle		*ion_handle;
@@ -1263,9 +1253,7 @@ int decon_reg_wait_update_done_and_mask(u32 id, struct decon_mode_info *psr,
 void decon_reg_set_trigger(u32 id, struct decon_mode_info *psr,
 		enum decon_set_trig en);
 int decon_reg_wait_for_update_timeout(u32 id, unsigned long timeout);
-#if defined(CONFIG_SOC_EXYNOS8895)
 int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq);
-#endif
 void decon_reg_set_blender_bg_image_size(u32 id, enum decon_dsi_mode dsi_mode,
 		struct decon_lcd *lcd_info);
 void decon_reg_config_data_path_size(u32 id,

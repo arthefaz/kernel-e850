@@ -11,7 +11,6 @@ obj-$(CONFIG_EXYNOS_MIPI_DSIM) += dsim.o
 dsim-y += dsim_drv.o
 obj-$(CONFIG_EXYNOS_MIPI_DISPLAYPORT) += displayport.o
 displayport-y += displayport_drv.o displayport_edid.o displayport_hdcp13.o displayport_reg.o
-obj-$(CONFIG_SOC_EXYNOS8890) += dsim_reg_8890.o dpp_reg_8890.o decon_reg_8890.o
 obj-$(CONFIG_SOC_EXYNOS8895) += dsim_reg.o dpp_reg_8895.o decon_reg_8895.o
 obj-$(CONFIG_SOC_EXYNOS9810) += dsim_reg.o dpp_reg.o decon_reg.o
 obj-$(CONFIG_EXYNOS_DECON_8895) += decon.o
