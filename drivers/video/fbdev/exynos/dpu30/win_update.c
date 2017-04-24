@@ -47,7 +47,11 @@ static void win_update_adjust_region(struct decon_device *decon,
 	for (i = 0; i < decon->dt.max_win; i++) {
 		config = &win_config[i];
 		if (config->state != DECON_WIN_STATE_DISABLED) {
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+			if (config->dpp_parm.rot || is_scaling(config)) {
+#else
 			if (config->dpp_parm.flip || is_scaling(config)) {
+#endif
 				update_config->state = DECON_WIN_STATE_DISABLED;
 				return;
 			}

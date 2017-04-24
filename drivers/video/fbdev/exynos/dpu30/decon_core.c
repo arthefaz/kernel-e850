@@ -877,9 +877,15 @@ static int decon_set_win_blocking_mode(struct decon_device *decon,
 	if (!is_rgb32(config->format))
 		return ret;
 
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+	/* Blocking Mode is not supported if there is a rotation */
+	if (config->dpp_parm.rot || is_scaling(config))
+		return ret;
+#else
 	/* Blocking Mode is not supported if there is a rotation */
 	if (config->dpp_parm.flip || is_scaling(config))
 		return ret;
+#endif
 
 	/* Initialization */
 	memset(&block_rect, 0, sizeof(struct decon_rect));
@@ -1111,6 +1117,19 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	if (ret)
 		goto err;
 
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+	if (config->acq_fence >= 0) {
+		/* fence is managed by buffer not plane */
+		fence = sync_file_fdget(config->acq_fence);
+		regs->dma_buf_data[idx][0].fence = fence;
+		if (!fence) {
+			decon_err("failed to import fence fd\n");
+			ret = -EINVAL;
+			goto err_fdget;
+		}
+		decon_dbg("acq_fence(%d), fence(%p)\n", config->acq_fence, fence);
+	}
+#else
 	if (config->fence_fd >= 0) {
 		/* fence is managed by buffer not plane */
 		fence = sync_file_fdget(config->fence_fd);
@@ -1122,6 +1141,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 		}
 		decon_dbg("fence_fd(%d), fence(%p)\n", config->fence_fd, fence);
 	}
+#endif
 
 	/*
 	 * To avoid SysMMU page fault due to small buffer allocation
@@ -1748,7 +1768,11 @@ static int decon_set_win_config(struct decon_device *decon,
 
 	if (decon->state == DECON_STATE_OFF ||
 		decon->state == DECON_STATE_TUI) {
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+		win_data->retire_fence = decon_create_fence(decon);
+#else
 		win_data->fence = decon_create_fence(decon);
+#endif
 		decon_signal_fence(decon);
 		goto err;
 	}
@@ -1761,6 +1785,16 @@ static int decon_set_win_config(struct decon_device *decon,
 	}
 
 	num_of_window = decon_get_active_win_count(decon, win_data);
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+	if (num_of_window) {
+		win_data->retire_fence = decon_create_fence(decon);
+		if (win_data->retire_fence < 0)
+			goto err_prepare;
+	} else {
+		decon->timeline_max++;
+		win_data->retire_fence = -1;
+	}
+#else
 	if (num_of_window) {
 		win_data->fence = decon_create_fence(decon);
 		if (win_data->fence < 0)
@@ -1769,6 +1803,7 @@ static int decon_set_win_config(struct decon_device *decon,
 		decon->timeline_max++;
 		win_data->fence = -1;
 	}
+#endif
 
 	dpu_prepare_win_update_config(decon, win_data, regs);
 
@@ -1791,7 +1826,11 @@ static int decon_set_win_config(struct decon_device *decon,
 
 err_prepare:
 	kfree(regs);
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+	win_data->retire_fence = -1;
+#else
 	win_data->fence = -1;
+#endif
 err:
 	mutex_unlock(&decon->lock);
 	return ret;
@@ -1847,11 +1886,19 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		if (ret)
 			break;
 
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+		if (copy_to_user(&((struct decon_win_config_data __user *)arg)->retire_fence,
+				 &win_data.retire_fence, sizeof(int))) {
+			ret = -EFAULT;
+			break;
+		}
+#else
 		if (copy_to_user(&((struct decon_win_config_data __user *)arg)->fence,
 				 &win_data.fence, sizeof(int))) {
 			ret = -EFAULT;
 			break;
 		}
+#endif
 		break;
 
 	case S3CFB_START_CRC:

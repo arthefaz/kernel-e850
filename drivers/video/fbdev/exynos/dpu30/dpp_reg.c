@@ -278,6 +278,26 @@ void dma_reg_set_img_format(u32 id, u32 fmt)
 	dma_write_mask(id, IDMA_IN_CON, val, mask);
 }
 
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+void dma_reg_set_rotation(u32 id, u32 rot)
+{
+	u32 val, mask;
+
+	val = IDMA_ROTATION(rot);
+	mask = IDMA_ROTATION_MASK;
+	dpp_write_mask(id, IDMA_IN_CON, val, mask);
+}
+#else
+void dma_reg_set_in_flip(u32 id, u32 flip)
+{
+	u32 val, mask;
+
+	val = IDMA_IN_FLIP(flip);
+	mask = IDMA_IN_FLIP_MASK;
+	dma_write_mask(id, IDMA_IN_CON, val, mask);
+}
+#endif
+
 void dma_reg_set_afbc_en(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
@@ -750,15 +770,6 @@ void dpp_reg_set_v_coef(u32 id, u32 v_ratio)
 	}
 }
 
-void dma_reg_set_rotation(u32 id, u32 rot)
-{
-	u32 val, mask;
-
-	val = IDMA_ROTATION(rot);
-	mask = IDMA_ROTATION_MASK;
-	dpp_write_mask(id, IDMA_IN_CON, val, mask);
-}
-
 void dpp_reg_set_scale_ratio(u32 id, struct dpp_params_info *p)
 {
 	dpp_reg_set_h_ratio(id, p->h_ratio);
@@ -1209,7 +1220,11 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p)
 	dpp_reg_set_csc_config(id, p->eq_mode);
 	dpp_reg_set_scale_ratio(id, p);
 	dpp_reg_set_size(id, p);
-	dma_reg_set_rotation(u32 id, u32 rot);
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+	dma_reg_set_rotation(id, rot);
+#else
+	dma_reg_set_in_flip(id, p->flip);
+#endif
 	dpp_reg_set_buf_addr(id, p);
 	dpp_reg_set_block_area(id, p);
 	dpp_reg_set_format(id, p);
