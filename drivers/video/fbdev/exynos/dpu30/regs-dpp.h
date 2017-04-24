@@ -137,6 +137,8 @@
 #define IDMA_IMG_FORMAT_YVU420_4P		(27)	/*8bit + 2bit*/
 #define IDMA_IMG_FORMAT_YUV420_P010		(28)
 #define IDMA_IMG_FORMAT_YVU420_P010		(29)
+
+#if defined(CONFIG_DPU_2_0_INTERFACE)
 #define IDMA_ROTATION(_v)		((_v) << 8)
 #define IDMA_ROTATION_MASK		(7 << 8)
 #define IDMA_ROTATION_X_FLIP		(1 << 8)
@@ -146,6 +148,11 @@
 #define IDMA_ROTATION_90_X_FLIP		(5 << 8)
 #define IDMA_ROTATION_90_Y_FLIP		(6 << 8)
 #define IDMA_ROTATION_270		(7 << 8)
+#else
+#define IDMA_IN_FLIP(_v)			((_v) << 8)
+#define IDMA_IN_FLIP_MASK			(0x3 << 8)
+#endif
+
 #define IDMA_AFBC_EN				(1 << 7)
 #define IDMA_AFBC_TO_EN			(1 << 6)
 #define IDMA_IN_CHROMINANCE_STRIDE_SEL	(1 << 4)

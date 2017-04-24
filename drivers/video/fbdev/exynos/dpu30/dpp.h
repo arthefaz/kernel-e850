@@ -85,7 +85,13 @@ extern int dpp_log_level;
 
 #define check_align(width, height, align_w, align_h)\
 	(IS_ALIGNED(width, align_w) && IS_ALIGNED(height, align_h))
+
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+#define is_normal(config) (DPP_ROT_NORMAL)
+#else
 #define is_normal(config) (DPP_FLIP_NONE)
+#endif
+
 #define is_yuv(config) ((config->format >= DECON_PIXEL_FORMAT_NV16) \
 			&& (config->format < DECON_PIXEL_FORMAT_MAX))
 #define is_yuv422(config) ((config->format >= DECON_PIXEL_FORMAT_NV16) \
