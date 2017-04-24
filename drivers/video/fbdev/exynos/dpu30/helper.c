@@ -558,20 +558,8 @@ void decon_set_protected_content(struct decon_device *decon,
 			change = (cur_protect_bits & (1 << dma_id)) ^
 				(decon->prev_protection_bitmask & (1 << dma_id));
 
-			if (change) {
-				if (decon->version == 0) {
-					/**
-					 * if the shadowed-TZPC is supported,
-					 * DPP_WAIT_IDLE is not necessary
-					 */
-					struct v4l2_subdev *sd = NULL;
-					unsigned long wait_to = 20*1000; /* 20ms */
-					sd = decon->dpp_sd[dma_id];
-					v4l2_subdev_call(sd, core, ioctl,
-						DPP_WAIT_IDLE, (void *)wait_to);
-				}
+			if (change)
 				ret = decon_control_protection(dma_id, en);
-			}
 		}
 	}
 

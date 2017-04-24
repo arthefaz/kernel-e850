@@ -2669,7 +2669,6 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	}
 
 	dsim = container_of(decon->out_sd[0], struct dsim_device, sd);
-	decon->version = dsim->version;
 	call_panel_ops(dsim, displayon, dsim);
 	decon_reg_start(decon->id, &psr);
 	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
