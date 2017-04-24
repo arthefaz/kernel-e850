@@ -1192,7 +1192,6 @@ int decon_reg_stop_nreset(u32 id, struct decon_mode_info *psr);
 void decon_reg_update_req_global(u32 id);
 
 /* helper functions */
-void __iomem *dpu_get_version_addr(void);
 int dpu_get_sd_by_drvname(struct decon_device *decon, char *drvname);
 u32 dpu_translate_fmt_to_dpp(u32 format);
 u32 dpu_get_bpp(enum decon_pixel_format fmt);

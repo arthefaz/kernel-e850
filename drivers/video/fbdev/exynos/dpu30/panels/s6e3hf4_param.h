@@ -23,7 +23,7 @@
 #define S6E3HF4_MAX_BRIGHTNESS	360
 #define S6E3HF4_HBM_BRIGHTNESS	600
 
-static unsigned char SEQ_TEST_KEY_ON_F0[] = {
+static const unsigned char SEQ_TEST_KEY_ON_F0[] = {
 	0xF0,
 	0x5A, 0x5A
 };
@@ -222,7 +222,7 @@ static const unsigned char SEQ_GAMMA_UPDATE_L[] = {
 	0x00,
 };
 
-static unsigned char SEQ_TSET_GLOBAL[] = {
+static const unsigned char SEQ_TSET_GLOBAL[] = {
 	0xB0,
 	0x01
 };

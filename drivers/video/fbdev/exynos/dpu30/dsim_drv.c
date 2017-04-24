@@ -449,20 +449,6 @@ static void dsim_clocks_info(struct dsim_device *dsim)
 {
 }
 
-
-
-static void dsim_check_version(struct dsim_device *dsim)
-{
-	int version;
-
-	version = readl(dsim->res.ver_regs);
-
-	version = (version >> 20) & 0xf;
-
-	dsim->version = version;
-
-}
-
 static int dsim_get_clocks(struct dsim_device *dsim)
 {
 	return 0;
@@ -1195,12 +1181,6 @@ static int dsim_init_resources(struct dsim_device *dsim, struct platform_device 
 		return -EINVAL;
 	}
 
-	dsim->res.ver_regs = dpu_get_version_addr();
-	if (IS_ERR_OR_NULL(dsim->res.ver_regs)) {
-		dsim_err("failed to get version addr\n");
-		return -EINVAL;
-	}
-
 	return 0;
 }
 
@@ -1234,8 +1214,6 @@ static int dsim_probe(struct platform_device *pdev)
 	ret = dsim_init_resources(dsim, pdev);
 	if (ret)
 		goto err_dt;
-
-	dsim_check_version(dsim);
 
 	dsim_init_subdev(dsim);
 	platform_set_drvdata(pdev, dsim);
