@@ -25,7 +25,7 @@ config EXYNOS_MIPI_DSIM
 	help
 	  Enable MIPI-DSI driver.
 
-config EXYNOS_MIPI_DISPLAYPORT
+config EXYNOS_DISPLAYPORT
 	bool "Samsung Exynos DISPLAYPORT driver"
 	depends on EXYNOS_DECON_8895
 	default y

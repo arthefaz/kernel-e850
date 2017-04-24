@@ -265,7 +265,7 @@ err:
 	return ret;
 }
 
-#if defined(CONFIG_EXYNOS_MIPI_DISPLAYPORT)
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 static int decon_displayport_set_lcd_info(struct decon_device *decon)
 {
 	struct decon_lcd *lcd_info;
@@ -311,7 +311,7 @@ int decon_displayport_get_out_sd(struct decon_device *decon)
 	}
 	decon->out_sd[1] = NULL;
 
-#if defined(CONFIG_EXYNOS_MIPI_DISPLAYPORT)
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	decon_displayport_set_lcd_info(decon);
 #endif
 
