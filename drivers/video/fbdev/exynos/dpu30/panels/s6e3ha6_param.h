@@ -92,7 +92,7 @@ static const unsigned char SEQ_DISPLAY_ON[] = {
 	0x29
 };
 
-static unsigned char SEQ_TSET_GLOBAL[] = {
+static const unsigned char SEQ_TSET_GLOBAL[] = {
 	0xB0,
 	0x01
 };

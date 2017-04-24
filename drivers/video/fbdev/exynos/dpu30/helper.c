@@ -415,35 +415,6 @@ void __iomem *dpu_get_sysreg_addr(void)
 	return regs;
 }
 
-void __iomem *dpu_get_version_addr(void)
-{
-	void __iomem *regs;
-
-	if (of_have_populated_dt()) {
-		struct device_node *nd;
-
-		nd = of_find_compatible_node(NULL, NULL,
-				"samsung,exynos8-disp-ver");
-		if (!nd) {
-			decon_err("failed find compatible node(disp-ver)");
-			return NULL;
-		}
-
-		regs = of_iomap(nd, 0);
-		if (!regs) {
-			decon_err("Failed to get disp-ver address.");
-			return NULL;
-		}
-	} else {
-		decon_err("failed have populated device tree");
-		return NULL;
-	}
-
-	decon_dbg("%s: default ver value(0x%x)\n", __func__, readl(regs));
-
-	return regs;
-}
-
 /*
  * DMA_CH0 : VGF0/VGF1
  * DMA_CH1 : G0-VG0

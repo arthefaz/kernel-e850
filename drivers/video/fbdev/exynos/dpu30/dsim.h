@@ -23,14 +23,6 @@
 #include "regs-dsim.h"
 #endif
 
-#include <video/mipi_display.h>
-#if defined(CONFIG_EXYNOS_DECON_LCD_S6E3HA6)
-#include "./panels/s6e3ha6_param.h"
-#elif defined(CONFIG_EXYNOS_DECON_LCD_S6E3HF4)
-#include "./panels/s6e3hf4_param.h"
-#endif
-
-
 extern int dsim_log_level;
 
 #define DSIM_MODULE_NAME		"exynos-dsim"
@@ -200,7 +192,6 @@ struct dsim_resources {
 	int irq;
 	void __iomem *regs;
 	void __iomem *ss_regs;
-	void __iomem *ver_regs;
 };
 
 struct dsim_device {
@@ -227,7 +218,6 @@ struct dsim_device {
 	struct completion rd_comp;
 
 	int total_underrun_cnt;
-	int version;
 };
 
 struct dsim_lcd_driver {
@@ -263,97 +253,11 @@ static inline int dsim_wr_data(u32 id, u32 cmd_id, unsigned long d0, u32 d1)
 {
 	int ret;
 	struct dsim_device *dsim = get_dsim_drvdata(id);
-	u32 max_pl_size = 60;
-	u8 *param;
-	int cmd_cnt, i, j;
-	u8 offset_addr;
-	u8 pl_data[60] = {0, };
 
-	if (dsim->version) {
-		ret = dsim_write_data(dsim, cmd_id, d0, d1);
-		if (ret)
-			return ret;
+	ret = dsim_write_data(dsim, cmd_id, d0, d1);
+	if (ret)
+		return ret;
 
-	} else {
-		switch (cmd_id) {
-		case MIPI_DSI_GENERIC_LONG_WRITE:
-		case MIPI_DSI_DCS_LONG_WRITE:
-		case MIPI_DSI_DSC_PPS:
-			if (d1 > max_pl_size) {
-				param = (u8 *)d0;
-				cmd_cnt = d1 / max_pl_size;
-				ret = dsim_write_data(dsim,
-						MIPI_DSI_DCS_LONG_WRITE,
-						(unsigned long)SEQ_TEST_KEY_ON_F0,
-						sizeof(SEQ_TEST_KEY_ON_F0));
-				if (ret)
-					return ret;
-
-				if (cmd_id == MIPI_DSI_DSC_PPS)
-					offset_addr = 0x9E;
-				else
-					offset_addr = *param;
-
-				for (i = 0; i < cmd_cnt; i++) {
-					for (j = 0; j < max_pl_size; j++) {
-						if (!i) {
-							pl_data[j] = *param++;
-						} else {
-							cmd_id = MIPI_DSI_DCS_LONG_WRITE;
-							if (j == 0)
-								pl_data[j] = offset_addr;
-							else
-								pl_data[j] = *param++;
-							/* send global command with next number of param*/
-							SEQ_TSET_GLOBAL[1] = (i * max_pl_size) - (i - 1);
-							ret = dsim_write_data(dsim,
-									MIPI_DSI_DCS_LONG_WRITE,
-									(unsigned long) SEQ_TSET_GLOBAL,
-									sizeof(SEQ_TSET_GLOBAL));
-							if (ret)
-								return ret;
-						}
-					}
-
-					ret = dsim_write_data(dsim, cmd_id,
-							(unsigned long)pl_data, max_pl_size);
-					if (ret)
-						return ret;
-				}
-
-				if (d1 % max_pl_size) {
-					cmd_id = MIPI_DSI_DCS_LONG_WRITE;
-					for (j = 0; j < (d1 % max_pl_size + i); j++) {
-						if (j == 0)
-							pl_data[j] = offset_addr;
-						else
-							pl_data[j] = *param++;
-					}
-					/* send global command with next number of param*/
-					SEQ_TSET_GLOBAL[1] = i * max_pl_size - (i - 1);
-					ret = dsim_write_data(dsim,
-							MIPI_DSI_DCS_LONG_WRITE,
-							(unsigned long) SEQ_TSET_GLOBAL, sizeof(SEQ_TSET_GLOBAL));
-					if (ret)
-						return ret;
-
-					ret = dsim_write_data(dsim, cmd_id,
-							(unsigned long)pl_data, (d1 % max_pl_size) + i);
-					if (ret)
-						return ret;
-				}
-			} else {
-				ret = dsim_write_data(dsim, cmd_id, d0, d1);
-			}
-			break;
-
-		default:
-			ret = dsim_write_data(dsim, cmd_id, d0, d1);
-			if (ret)
-				return ret;
-			break;
-		}
-	}
 	return 0;
 }
 
