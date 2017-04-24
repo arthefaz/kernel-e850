@@ -34,8 +34,6 @@
 struct task_struct *devfreq_change_task;
 #endif
 
-#if defined(CONFIG_SOC_EXYNOS8895)
-
 /* DECON irq handler for DSI interface */
 static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 {
@@ -79,8 +77,6 @@ irq_end:
 	spin_unlock(&decon->slock);
 	return IRQ_HANDLED;
 }
-#endif
-
 
 #ifdef CONFIG_EXYNOS_WD_DVFS
 static int decon_devfreq_change_task(void *data)

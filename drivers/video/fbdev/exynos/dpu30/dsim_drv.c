@@ -34,9 +34,7 @@
 #include "decon.h"
 #include "dsim.h"
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 #include "regs-dsim.h"
-#endif
 
 int dsim_log_level = 6;
 
@@ -424,7 +422,7 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 		dsim_dbg("dsim%d framedone irq occurs\n", dsim->id);
 	if (int_src & DSIM_INTSRC_ERR_RX_ECC)
 		dsim_err("RX ECC Multibit error was detected!\n");
-#if defined(CONFIG_SOC_EXYNOS8895)
+
 	if (int_src & DSIM_INTSRC_UNDER_RUN) {
 		dsim->total_underrun_cnt++;
 		dsim_info("dsim%d underrun irq occurs(%d)\n", dsim->id,
@@ -436,7 +434,6 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 		decon->vsync.timestamp = ktime_get();
 		wake_up_interruptible_all(&decon->vsync.wait);
 	}
-#endif
 
 	dsim_reg_clear_int(dsim->id, int_src);
 
@@ -612,7 +609,6 @@ static int dsim_enable(struct dsim_device *dsim)
 	/* Panel power on */
 	dsim_set_panel_power(dsim, 1);
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 	dsim_reg_sw_reset(dsim->id);
 
 	dsim_reg_set_clocks(dsim->id, &dsim->clks, &dsim->lcd_info.dphy_pms, 1);
@@ -635,7 +631,6 @@ static int dsim_enable(struct dsim_device *dsim)
 		/* Panel reset should be set after LP-11 */
 		dsim_reset_panel(dsim);
 	}
-#endif
 
 init_end:
 	dsim_reg_start(dsim->id);

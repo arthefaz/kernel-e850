@@ -260,7 +260,6 @@ const s16 v_coef_4t[7][16][4] = {
 	}
 };
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 /* 3x3 CSC Coefficient for BT2020 : 3.9 format */
 const u16 csc_3x3_t[4][3][3] = {
 	/* CSC_ID = 0 : BT_2020_LIMITTED */
@@ -291,4 +290,3 @@ const u16 csc_3x3_t[4][3][3] = {
 
 	/* CSC_ID = 2 : Add if necessary */
 };
-#endif

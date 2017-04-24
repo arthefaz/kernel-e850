@@ -28,10 +28,10 @@
 #endif
 
 #include "decon.h"
+
 #if defined(CONFIG_SOC_EXYNOS8895)
 #include "regs-dpp_8895.h"
-#endif
-#if defined(CONFIG_SOC_EXYNOS9810)
+#else
 #include "regs-dpp.h"
 #endif
 
@@ -40,6 +40,8 @@ extern int dpp_log_level;
 #define DPP_MODULE_NAME		"exynos-dpp"
 #if defined(CONFIG_SOC_EXYNOS8895)
 #define MAX_DPP_CNT		7
+#elif defined(CONFIG_SOC_EXYNOS9810)
+#define MAX_DPP_CNT		6
 #endif
 
 /* about 1msec @ ACLK=630MHz */
@@ -293,7 +295,6 @@ static inline void dpp_write_mask(u32 id, u32 reg_id, u32 val, u32 mask)
 	writel(val, dpp->res.regs + reg_id);
 }
 
-#if defined(CONFIG_SOC_EXYNOS8895)
 /* DPU_DMA Common part */
 static inline u32 dma_com_read(u32 id, u32 reg_id)
 {
@@ -352,7 +353,6 @@ static inline void dma_write_mask(u32 id, u32 reg_id, u32 val, u32 mask)
 	val = (val & mask) | (old & ~mask);
 	writel(val, dpp->res.dma_regs + reg_id);
 }
-#endif
 
 static inline void dpp_select_format(struct dpp_device *dpp,
 			struct dpp_img_format *vi, struct dpp_params_info *p)
