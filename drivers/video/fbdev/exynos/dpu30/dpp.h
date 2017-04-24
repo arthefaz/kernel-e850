@@ -29,6 +29,9 @@
 
 #include "decon.h"
 #if defined(CONFIG_SOC_EXYNOS8895)
+#include "regs-dpp_8895.h"
+#endif
+#if defined(CONFIG_SOC_EXYNOS9810)
 #include "regs-dpp.h"
 #endif
 

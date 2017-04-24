@@ -1,16 +1,15 @@
 /*
- * drivers/video/exynos_8890/decon/regs-decon.h
+ * drivers/video/fbdev/exynos/dpu_9810/regs-decon.h
  *
  * Register definition file for Samsung DECON driver
  *
- * Copyright (c) 2014 Samsung Electronics
- * Sewoon Park <seuni.park@samsung.com>
+ * Copyright (c) 2017 Samsung Electronics
+ * Hwangjae Lee <hj-yo.lee@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
 */
-
 
 #ifndef _REGS_DISP_SS_H
 #define _REGS_DISP_SS_H
@@ -128,6 +127,14 @@
 
 #define GLOBAL_CONTROL					0x0000
 #define GLOBAL_CONTROL_SRESET				(1 << 28)
+#define GLOBAL_CONTROL_PSLVERR_EN			(1 << 24)
+#define GLOBAL_CONTROL_MASTER_SLAVE_MODE(_v)	((_v) << 12)
+/*
+ * [0]:Standalone mode
+ * [1]:DECON is a master with a slave0
+ * [3]:DECON is a master with two slave0 and slave1
+ * [4]:DECON is a slave with a master0
+ */
 #define GLOBAL_CONTROL_OPERATION_MODE_F		(1 << 8)
 #define GLOBAL_CONTROL_OPERATION_MODE_RGBIF_F	(0 << 8)
 #define GLOBAL_CONTROL_OPERATION_MODE_I80IF_F	(1 << 8)
@@ -141,135 +148,141 @@
 #define RESOURCE_OCCUPANCY_INFO_2			0x0018
 
 #define SRAM_SHARE_ENABLE				0x0030
-#define FLOATING_SRAM_SHARE_ENABLE_F		(1 << 24)
-#define FF2_SRAM_SHARE_ENABLE_F		(1 << 20)
-#define FF1_SRAM_SHARE_ENABLE_F		(1 << 16)
-#define FF0_SRAM_SHARE_ENABLE_F		(1 << 12)
+#define SRAM3_SHARE_ENABLE_F			(1 << 24)
+#define SRAM2_SHARE_ENABLE_F			(1 << 20)
+#define SRAM1_SHARE_ENABLE_F			(1 << 16)
+#define SRAM0_SHARE_ENABLE_F			(1 << 12)
 #define ALL_SRAM_SHARE_ENABLE			(0x1111 << 12)
-#define ALL_SRAM_SHARE_DISABLE		(0x0000 << 12)
+#define ALL_SRAM_SHARE_DISABLE			(0x0000 << 12)
 
 #define INTERRUPT_ENABLE				0x0040
-#define DPU_MDNIE_DIMMING_END_INT_EN		(1 << 25)
-#define DPU_MDNIE_DIMMING_START_INT_EN	(1 << 24)
-#define DPU_DQE_DIMMING_END_INT_EN		(1 << 21)
-#define DPU_DQE_DIMMING_START_INT_EN		(1 << 20)
 #define DPU_FRAME_DONE_INT_EN			(1 << 13)
-#define DPU_FRAME_START_INT_EN		(1 << 12)
-#define DPU_FIFO_SEL_FIFO0			(0 << 9)
-#define DPU_FIFO_SEL_FIFO1			(1 << 9)
-#define DPU_UNDER_FLOW_INT_EN			(1 << 8)
-#define DPU_EXTRA_INT_EN			(1 << 4)
-#define DPU_INT_EN				(1 << 0)
-#define INTERRUPT_ENABLE_MASK			0x3303711
+#define DPU_FRAME_START_INT_EN			(1 << 12)
+#define DPU_EXTRA_INT_EN				(1 << 4)
+#define DPU_INT_EN						(1 << 0)
+#define INTERRUPT_ENABLE_MASK			(0x3011 < 0)
 
 #define EXTRA_INTERRUPT_ENABLE			0x0044
-#define DPU_RESOURCE_CONFLICT_INT_EN		(1 << 8)
-#define DPU_TIME_OUT_INT_EN			(1 << 4)
-#define DPU_ERROR_INT_EN			(1 << 0)
+#define DPU_RESOURCE_CONFLICT_INT_EN	(1 << 8)
+#define DPU_TIME_OUT_INT_EN				(1 << 4)
 
 #define TIME_OUT_VALUE					0x0048
 
 #define INTERRUPT_PENDING				0x004C
-#define DPU_MDNIE_DIMMING_END_INT_PEND	(1 << 25)
-#define DPU_MDNIE_DIMMING_START_INT_PEND	(1 << 24)
-#define DPU_DQE_DIMMING_END_INT_PEND		(1 << 21)
-#define DPU_DQE_DIMMING_START_INT_PEND	(1 << 20)
-#define DPU_FRAME_DONE_INT_PEND		(1 << 13)
+#define DPU_FRAME_DONE_INT_PEND			(1 << 13)
 #define DPU_FRAME_START_INT_PEND		(1 << 12)
-#define DPU_UNDER_FLOW_INT_PEND		(1 << 8)
-#define DPU_EXTRA_INT_PEND			(1 << 4)
+#define DPU_EXTRA_INT_PEND				(1 << 4)
 
 #define EXTRA_INTERRUPT_PENDING			0x0050
 #define DPU_RESOURCE_CONFLICT_INT_PEND	(1 << 8)
 #define DPU_TIME_OUT_INT_PEND			(1 << 4)
-#define DPU_ERROR_INT_PEND			(1 << 0)
 
 #define SHADOW_REG_UPDATE_REQ				0x0060
 #define SHADOW_REG_UPDATE_REQ_GLOBAL		(1 << 31)
-#define SHADOW_REG_UPDATE_REQ_DQE		(1 << 28)
-#define SHADOW_REG_UPDATE_REQ_MDNIE		(1 << 24)
-#define SHADOW_REG_UPDATE_REQ_WIN(_win)	(1 << (_win))
-#define SHADOW_REG_UPDATE_REQ_FOR_DECON0	(0x3f)
-#define SHADOW_REG_UPDATE_REQ_FOR_DECON2	(0x1f)
+#define SHADOW_REG_UPDATE_REQ_WIN(_win)		(1 << (_win))
+#define SHADOW_REG_UPDATE_REQ_FOR_DECON0	(0x3F)
+#define SHADOW_REG_UPDATE_REQ_FOR_DECON2	(0x1F)
+
+#define SECURE_CONTROL					0x0064
+#define SECURE_CONTROL_TZPC_FLAG(_win)	(1 << (_win))
 
 #define HW_SW_TRIG_CONTROL				0x0070
 #define HW_TRIG_SEL(_v)			((_v) << 24)
-#define HW_TRIG_SEL_MASK			(0x3 << 24)
+#define HW_TRIG_SEL_MASK				(0x3 << 24)
 #define HW_TRIG_SEL_FROM_USB			(3 << 24)
 #define HW_TRIG_SEL_FROM_DDI2			(2 << 24)
 #define HW_TRIG_SEL_FROM_DDI1			(1 << 24)
 #define HW_TRIG_SEL_FROM_DDI0			(0 << 24)
-#define HW_TRIG_SKIP(_v)			((_v) << 16)
-#define HW_TRIG_SKIP_MASK			(0xff << 16)
-#define TRIG_AUTO_MASK_EN			(1 << 12)
-#define SW_TRIG_EN				(1 << 8)
-#define HW_TRIG_EDGE_POLARITY			(1 << 7)
-#define HW_TRIG_MASK_DECON			(1 << 4)
-#define HW_SW_TRIG_TIMER_CLEAR		(1 << 3)
-#define HW_SW_TRIG_TIMER_EN			(1 << 2)
-#define HW_TRIG_EN				(1 << 0)
+#define HW_TRIG_SKIP(_v)				((_v) << 16)
+#define HW_TRIG_SKIP_MASK				(0xFF << 16)
+#define HW_TRIG_ACTIVE_VALUE(_v)		((_v) << 13)
+#define HW_TRIG_EDGE_POLARITY			(1 << 12)
+#define SW_TRIG_EN						(1 << 8)
+#define HW_TRIG_MASK_DECON				(1 << 4)
+#define HW_SW_TRIG_TIMER_CLEAR			(1 << 3)
+#define HW_SW_TRIG_TIMER_EN				(1 << 2)
+#define HW_TRIG_EN						(1 << 0)
 
 #define HW_SW_TRIG_TIMER				0x0074
+#define HW_TE_CNT						0x0078
 
 #define CLOCK_CONTROL_0				0x00F0
+#define QACTIVE_PLL_VALUE			(1 << 28)
 /* [24] QACTIVE_VALUE = 0
  * 0: QACTIVE is dynamically changed by DECON h/w,
  * 1: QACTIVE is stuck to 1'b1
  * [22][20][16][12]+[8][0] AUTO_CG_EN_xxx
 */
-#define CLOCK_CONTROL_0_F_MASK		(0x00511101)
-#define CLOCK_CONTROL_0_S_MASK		(0x00511000)
-#define CLOCK_CONTROL_0_T_MASK		(0x00511000)
+#define QACTIVE_VALUE				(1 << 24)
+#define AUTO_CG_EN_CTRL				(1 << 16)
+#define AUTO_CG_EN_OUTIF			(1 << 12)
+#define AUTO_CG_EN_COMPRESSION		(1 << 8)
+#define AUTO_CG_EN_BLENDER_TOP		(1 << 0)
+#define CLOCK_CONTROL_0_F_MASK		(0)
+#define CLOCK_CONTROL_0_S_MASK		(0)
+#define CLOCK_CONTROL_0_T_MASK		(0)
 
+#define SCALED_SIZE_CONTROL_0               0x00A0
+#define SCALED_SIZE_HEIGHT_F(_v)            ((_v) << 16)
+#define SCALED_SIZE_HEIGHT_MASK         (0x3FFF << 16)
+#define SCALED_SIZE_HEIGHT_GET(_v)      (((_v) >> 16) & 0x3FFF)
+#define SCALED_SIZE_WIDTH_F(_v)         ((_v) << 0)
+#define SCALED_SIZE_WIDTH_MASK          (0x3FFF << 0)
+#define SCALED_SIZE_WIDTH_GET(_v)       (((_v) >> 0) & 0x3FFF)
 
 #define SPLITTER_SIZE_CONTROL_0			0x0100
 #define SPLITTER_HEIGHT_F(_v)			((_v) << 16)
-#define SPLITTER_HEIGHT_MASK			(0x3fff << 16)
-#define SPLITTER_HEIGHT_GET(_v)		(((_v) >> 16) & 0x3fff)
+#define SPLITTER_HEIGHT_MASK			(0x3FFF << 16)
+#define SPLITTER_HEIGHT_GET(_v)		(((_v) >> 16) & 0x3FFF)
 #define SPLITTER_WIDTH_F(_v)			((_v) << 0)
-#define SPLITTER_WIDTH_MASK			(0x3fff << 0)
-#define SPLITTER_WIDTH_GET(_v)		(((_v) >> 0) & 0x3fff)
+#define SPLITTER_WIDTH_MASK			(0x3FFF << 0)
+#define SPLITTER_WIDTH_GET(_v)		(((_v) >> 0) & 0x3FFF)
 
-#define SPLITTER_SIZE_CONTROL_1			0x0104
-
-#define SPLITTER_SPLIT_IDX_CONTROL			0x0108
+#define SPLITTER_SPLIT_IDX_CONTROL			0x0104
+#define SPLITTER_SPLIT_OVERLAP_F(_v)	((_v) << 16)
+#define SPLITTER_SPLIT_OVERLAP_MASK		(0x7F << 16)
 #define SPLITTER_SPLIT_IDX_F(_v)		((_v) << 0)
-#define SPLITTER_SPLIT_IDX_MASK		(0x3fff << 0)
+#define SPLITTER_SPLIT_IDX_MASK			(0x3FFF << 0)
 
-#define SPLITTER_OVERLAP_CONTROL			0x010C
-#define SPLITTER_OVERLAP_F(_v)		((_v) << 0)
-#define SPLITTER_OVERLAP_MASK			(0x3fff << 0)
+#define FRAME_FIFO_0_SIZE_CONTROL_0		0x0120
+#define FRAME_FIFO_0_SIZE_CONTROL_1		0x0124
+#define FRAME_FIFO_HEIGHT_F(_v)			((_v) << 16)
+#define FRAME_FIFO_HEIGHT_MASK			(0x3FFF << 16)
+#define FRAME_FIFO_HEIGHT_GET(_v)		(((_v) >> 16) & 0x3FFF)
+#define FRAME_FIFO_WIDTH_F(_v)			((_v) << 0)
+#define FRAME_FIFO_WIDTH_MASK			(0x3FFF << 0)
+#define FRAME_FIFO_WIDTH_GET(_v)		(((_v) >> 0) & 0x3FFF)
 
-#define FRAME_FIFO_0_MONITOR_CONTROL			0x0114
-#define FRAME_FIFO_1_MONITOR_CONTROL			0x0118
+#define FRAME_FIFO_1_SIZE_CONTROL_2			0x0128
+#define FRAME_FIFO_COMPRESSED_SLICE_HEIGHT_F(_v)		((_v) << 16)
+#define FRAME_FIFO_COMPRESSED_SLICE_HEIGHT_MASK			(0x3FFF << 16)
+#define FRAME_FIFO_COMPRESSED_SLICE_HEIGHT_GET(_v)		(((_v) >> 16) & 0x3FFF)
+#define FRAME_FIFO_COMPRESSED_SLICE_WIDTH_F(_v)			((_v) << 0)
+#define FRAME_FIFO_COMPRESSED_SLICE_WIDTH_MASK			(0x3FFF << 0)
+#define FRAME_FIFO_COMPRESSED_SLICE_WIDTH_GET(_v)		(((_v) >> 0) & 0x3FFF)
 
-#define FRAME_FIFO_0_SIZE_CONTROL_0			0x0120
-#define FRAME_FIFO_HEIGHT_F(_v)		((_v) << 16)
-#define FRAME_FIFO_HEIGHT_MASK		(0x3fff << 16)
-#define FRAME_FIFO_HEIGHT_GET(_v)		(((_v) >> 16) & 0x3fff)
-#define FRAME_FIFO_WIDTH_F(_v)		((_v) << 0)
-#define FRAME_FIFO_WIDTH_MASK			(0x3fff << 0)
-#define FRAME_FIFO_WIDTH_GET(_v)		(((_v) >> 0) & 0x3fff)
-
-#define FRAME_FIFO_0_SIZE_CONTROL_1			0x0124
-/* same field with FRAME_FIFO_0_SIZE_CONTROL_0 */
-#define FRAME_FIFO_1_SIZE_CONTROL_0			0x0128
-#define FRAME_FIFO_1_SIZE_CONTROL_1			0x012C
-
-#define FRAME_FIFO_TH_CONTROL_0			0x0130
-#define FRAME_FIFO_1_TH_F(_v)			((_v) << 16)
-#define FRAME_FIFO_1_TH_MASK			(0xffff << 16)
-#define FRAME_FIFO_1_TH_GET(_v)		(((_v) >> 16) & 0xffff)
-#define FRAME_FIFO_0_TH_F(_v)			((_v) << 0)
-#define FRAME_FIFO_0_TH_MASK			(0xffff << 0)
-#define FRAME_FIFO_0_TH_GET(_v)		(((_v) >> 0) & 0xffff)
-
-#define FRAME_FIFO_0_LEVEL				0x0134
-#define FRAME_FIFO_1_LEVEL				0x0138
+#define FRAME_FIFO_TH_CONTROL_0			0x012C
+#define	FRAME_FIFO_TH_TYPE_F(_v)		((_v) << 0)
+/*
+ * FRAME_FIFO_TH_TYPE
+ * 3'b101 : 1H transfer
+ * 3'b110 : 2H transfer
+ */
+#define FRAME_FIFO_DATA_ORDER_CONTROL		0x0130
+#define FRAME_FIFO_PIXEL_ORDER_SWAP_F(_v)	((_v) << 4)
+/*
+ * FIFO_PIXEL_ORDER
+ * 3'b000 = RGB
+ * 3'b001 = GBR
+ * 3'b010 = BRG
+ * 3'b100 = BGR
+ * 3'b101 = RBG
+ * 3'b110 = GRB
+ */
 
 /*
  * DECON2 Only
-*/
+ */
 #define DPU_DISPIF_VSTATUS_INT_SEL_MASK		(3 << 17)	/* INTERRUPT_ENABLE */
 #define DPU_DISPIF_VSTATUS_INT_SEL(_v)		((_v) << 17)
 #define DPU_DISPIF_VSTATUS_INT_EN		(1 << 16)
@@ -292,103 +305,65 @@
 
 #define DISPIF_TIMING_CONTROL_0			0x0150
 #define DISPIF_VBPD_F(_v)			((_v) << 16)
-#define DISPIF_VBPD_MASK			(0xffff << 16)
-#define DISPIF_VBPD_GET(_v)			(((_v) >> 16) & 0xffff)
+#define DISPIF_VBPD_MASK			(0xFFFF << 16)
+#define DISPIF_VBPD_GET(_v)			(((_v) >> 16) & 0xFFFF)
 #define DISPIF_VFPD_F(_v)			((_v) << 0)
-#define DISPIF_VFPD_MASK			(0xffff << 0)
-#define DISPIF_VFPD_GET(_v)			(((_v) >> 0) & 0xffff)
+#define DISPIF_VFPD_MASK			(0xFFFF << 0)
+#define DISPIF_VFPD_GET(_v)			(((_v) >> 0) & 0xFFFF)
 
 #define DISPIF_TIMING_CONTROL_1			0x0154
 #define DISPIF_VSPD_F(_v)			((_v) << 0)
-#define DISPIF_VSPD_MASK			(0xffff << 0)
-#define DISPIF_VSPD_GET(_v)			(((_v) >> 0) & 0xffff)
+#define DISPIF_VSPD_MASK			(0xFFFF << 0)
+#define DISPIF_VSPD_GET(_v)			(((_v) >> 0) & 0xFFFF)
 
 #define DISPIF_TIMING_CONTROL_2			0x0158
 #define DISPIF_HBPD_F(_v)			((_v) << 16)
-#define DISPIF_HBPD_MASK			(0xffff << 16)
-#define DISPIF_HBPD_GET(_v)			(((_v) >> 16) & 0xffff)
+#define DISPIF_HBPD_MASK			(0xFFFF << 16)
+#define DISPIF_HBPD_GET(_v)			(((_v) >> 16) & 0xFFFF)
 #define DISPIF_HFPD_F(_v)			((_v) << 0)
-#define DISPIF_HFPD_MASK			(0xffff << 0)
-#define DISPIF_HFPD_GET(_v)			(((_v) >> 0) & 0xffff)
+#define DISPIF_HFPD_MASK			(0xFFFF << 0)
+#define DISPIF_HFPD_GET(_v)			(((_v) >> 0) & 0xFFFF)
 
 #define DISPIF_TIMING_CONTROL_3			0x015C
 #define DISPIF_HSPD_F(_v)			((_v) << 0)
-#define DISPIF_HSPD_MASK			(0xffff << 0)
-#define DISPIF_HSPD_GET(_v)			(((_v) >> 0) & 0xffff)
+#define DISPIF_HSPD_MASK			(0xFFFF << 0)
+#define DISPIF_HSPD_GET(_v)			(((_v) >> 0) & 0xFFFF)
 
 #define DISPIF_SIZE_CONTROL_0				0x0160
 #define DISPIF_HEIGHT_F(_v)			((_v) << 16)
-#define DISPIF_HEIGHT_MASK			(0xffff << 16)
-#define DISPIF_HEIGHT_GET(_v)			(((_v) >> 16) & 0x3fff)
+#define DISPIF_HEIGHT_MASK			(0xFFFF << 16)
+#define DISPIF_HEIGHT_GET(_v)			(((_v) >> 16) & 0x3FFF)
 #define DISPIF_WIDTH_F(_v)			((_v) << 0)
-#define DISPIF_WIDTH_MASK			(0xffff << 0)
-#define DISPIF_WIDTH_GET(_v)			(((_v) >> 0) & 0x3fff)
+#define DISPIF_WIDTH_MASK			(0xFFFF << 0)
+#define DISPIF_WIDTH_GET(_v)			(((_v) >> 0) & 0x3FFF)
 
 #define DISPIF_SIZE_CONTROL_1				0x0164
 #define DISPIF_PIXEL_COUNT_F(_v)		((_v) << 0)
 
 /*************************************************************/
-
-#define HYSTERESIS_CONTROL				0x0180
-#define HYSTERESIS_ENABLE_F			(1 << 0)
-
-#define HYSTERESIS_THRESHOLD				0x0184
-#define HYSTERESIS_HIGH_TH_F(_v)		((_v) << 16)
-#define HYSTERESIS_HIGH_TH_MASK		(0xffff << 16)
-#define HYSTERESIS_HIGH_TH_GET(_v)		(((_v) >> 16) & 0xffff)
-#define HYSTERESIS_LOW_TH_F(_v)		((_v) << 0)
-#define HYSTERESIS_LOW_TH_MASK		(0xffff << 0)
-#define HYSTERESIS_LOW_TH_GET(_v)		(((_v) >> 0) & 0xffff)
-
-
-#define FORMATTER_CONTROL				0x0190
-#define FORMATTER_PIXEL0123_ORDER_SWAP_F	(1 << 16)
-#define FORMATTER_PIXEL23_ORDER_SWAP_F	(1 << 12)
-#define FORMATTER_PIXEL01_ORDER_SWAP_F	(1 << 8)
-#define FORMATTER_PIXEL_ORDER_SWAP(_a, _b, _c)	(_a << 16) | (_b << 12) | (_c << 8)
-#define FORMATTER_PIXEL_ORDER_SWAP_MASK	((1 << 16) | (1 << 12) | (1 << 8))
-#define FORMATTER_OUT_RGB_ORDER_F(_v)	((_v) << 4)
-#define FORMATTER_OUT_RGB_ORDER_MASK		(0x7 << 4)
-
-#define FORMATTER0_SIZE_CONTROL_0			0x01A0
-#define FORMATTER_HEIGHT_F(_v)		((_v) << 16)
-#define FORMATTER_HEIGHT_MASK		(0x3fff << 16)
-#define FORMATTER_HEIGHT_GET(_v)		(((_v) >> 16) & 0x3fff)
-#define FORMATTER_WIDTH_F(_v)		((_v) << 0)
-#define FORMATTER_WIDTH_MASK			(0x3fff << 0)
-#define FORMATTER_WIDTH_GET(_v)		(((_v) >> 0) & 0x3fff)
-
-#define FORMATTER0_SIZE_CONTROL_1			0x01A4
-/* same field with FORMATTER0_SIZE_CONTROL_0 */
-#define FORMATTER1_SIZE_CONTROL_0			0x01B0
-#define FORMATTER1_SIZE_CONTROL_1			0x01B4
-
-
 #define BLENDER_BG_IMAGE_SIZE_0			0x0200
 #define BLENDER_BG_HEIGHT_F(_v)		((_v) << 16)
-#define BLENDER_BG_HEIGHT_MASK		(0x3fff << 16)
-#define BLENDER_BG_HEIGHT_GET(_v)		(((_v) >> 16) & 0x3fff)
+#define BLENDER_BG_HEIGHT_MASK		(0x3FFF << 16)
+#define BLENDER_BG_HEIGHT_GET(_v)		(((_v) >> 16) & 0x3FFF)
 #define BLENDER_BG_WIDTH_F(_v)		((_v) << 0)
-#define BLENDER_BG_WIDTH_MASK			(0x3fff << 0)
-#define BLENDER_BG_WIDTH_GET(_v)		(((_v) >> 0) & 0x3fff)
-
-#define BLENDER_BG_IMAGE_SIZE_1			0x0204
+#define BLENDER_BG_WIDTH_MASK			(0x3FFF << 0)
+#define BLENDER_BG_WIDTH_GET(_v)		(((_v) >> 0) & 0x3FFF)
 
 #define BLENDER_BG_IMAGE_COLOR_0			0x0208
 #define BLENDER_BG_A_F(_v)			((_v) << 16)
-#define BLENDER_BG_A_MASK			(0xff << 16)
-#define BLENDER_BG_A_GET(_v)			(((_v) >> 16) & 0xff)
+#define BLENDER_BG_A_MASK			(0xFF << 16)
+#define BLENDER_BG_A_GET(_v)			(((_v) >> 16) & 0xFF)
 #define BLENDER_BG_R_F(_v)			((_v) << 0)
-#define BLENDER_BG_R_MASK			(0xff << 0)
-#define BLENDER_BG_R_GET(_v)			(((_v) >> 0) & 0xff)
+#define BLENDER_BG_R_MASK			(0x3FF << 0)
+#define BLENDER_BG_R_GET(_v)			(((_v) >> 0) & 0x3FF)
 
 #define BLENDER_BG_IMAGE_COLOR_1			0x020C
 #define BLENDER_BG_G_F(_v)			((_v) << 16)
-#define BLENDER_BG_G_MASK			(0xff << 16)
-#define BLENDER_BG_G_GET(_v)			(((_v) >> 16) & 0xff)
+#define BLENDER_BG_G_MASK			(0x3FF << 16)
+#define BLENDER_BG_G_GET(_v)			(((_v) >> 16) & 0x3FF)
 #define BLENDER_BG_B_F(_v)			((_v) << 0)
-#define BLENDER_BG_B_MASK			(0xff << 0)
-#define BLENDER_BG_B_GET(_v)			(((_v) >> 0) & 0xff)
+#define BLENDER_BG_B_MASK			(0x3FF << 0)
+#define BLENDER_BG_B_GET(_v)			(((_v) >> 0) & 0x3FF)
 
 #define LRMERGER_MODE_CONTROL				0x0210
 #define LRM23_MODE_F(_v)			((_v) << 16)
@@ -402,43 +377,78 @@
 #define WIN_EN_F(_win)				(1 << (4*_win + 0))
 
 #define DATA_PATH_CONTROL_1				0x0218
-/* WIN5_CHMAP_F [22:20]=5 :  dedicated to channel5 */
 #define WIN_CHMAP_F(_win, _ch)		(((_ch) & 0x7) << (4*_win))
 #define WIN_CHMAP_MASK(_win)			(0x7 << (4*_win))
 
-#define DATA_PATH_CONTROL_2				0x0230
-#define DQE_LPD_EXIT_CTRL			(1 << 24)
-#define HSC_PATH_F(_v)				((_v) << 20)
-#define HSC_PATH_MASK				(0x7 << 20)
-#define APS_PATH_F(_v)				((_v) << 16)
-#define APS_PATH_MASK				(0x7 << 16)
-#define ENHANCE_LOGIC_PATH_F(_v)		((_v) << 12)
-#define ENHANCE_LOGIC_PATH_MASK		(0x7 << 12)
-#define ENHANCE_LOGIC_PATH_GET(_v)		(((_v) >> 12) & 0x7)
-#define COMP_LINKIF_WB_PATH_F(_v)		((_v) << 0)
-#define COMP_LINKIF_WB_PATH_MASK		(0x1ff << 0)
-#define COMP_LINKIF_WB_PATH_GET(_v)		(((_v) >> 0) & 0x1ff)
+#define DATA_PATH_CONTROL_2			0x0230
+#define DATA_SCALER_PATCH_F(_v)		((_v) << 24)
+/*
+ * SCALER_PATH_F
+ * 2'b01:DECON uses a SCALER in VGF
+ * 2'b10:DECON uses a SCALER in VGRF
+ */
+#define DATA_COMP_OUTIF_PATH_F(_v)	((_v) << 0)
+/*
+ * COMP_OUTIF_PATH
+ * 8'b 0000 0001:No comp - OUTFIFO0 - DSIM_IF0
+ * 8'b 0000 0010:No comp - OUTFIFO0 - DSIM_IF1
+ * 8'b 0000 0011:No comp - SPLITTER - OUTFIFO0/1 - DSIM_IF0/1
+ * 8'b 0001 0001:DSC_ENC0 - OUTFIFO0 - DSIM_IF0
+ * 8'b 0001 0010:DSC_ENC0 - OUTFIFO0 - DSIM_IF1
+ * 8'b 1011 0001:DSCC,DSC_ENC0/1 - OUTFIFO0/1 - DSIM_IF0
+ * 8'b 1011 0001:DSCC,DSC_ENC0/1 - OUTFIFO0/1 - DSIM_IF1
+ * 8'b 1011 0011:DSCC,DSC_ENC0/1 - OUTFIFO0/1 - DSIM_IF0/1
+ */
+
+#define DSIM_CONNECTION_CONTROl			0x0250
+#define DSIM_CONNECTION_SEL_DSIM1(_v)	((_v) << 4)
+/*
+ * 3'b000 : DECON0/DSIMIF0 is connected to DSIM1
+ * 3'b001 : DECON0/DSIMIF1 is connected to DSIM1
+ * 3'b010 : DECON1/DSIMIF0 is connected to DSIM1
+ */
+#define DSIM_CONNECTION_SEL_DSIM0(_v)	((_v) << 0)
+/*
+ * 3'b000 : DECON0/DSIMIF0 is connected to DSIM0
+ * 3'b001 : DECON0/DSIMIF1 is connected to DSIM0
+ * 3'b010 : DECON1/DSIMIF0 is connected to DSIM0
+ */
+
+#define DP_CONNECTION_CONTROL_0		0x0270
+#define DP_CONNECTION_SEL_DP1(_v)	((_v) << 4)
+/*
+ * 3'b001 : DECON1/DPIF is connected to DP1
+ * 3'b010 : DECON2/DPIF is connected to DP1
+ */
+#define DP_CONNECTION_SEL_DP0(_v)	((_v) << 0)
+/*
+ * 3'b001 : DECON1/DPIF is connected to DP0
+ * 3'b010 : DECON2/DPIF is connected to DP0
+ */
+
+#define CRC_DATA_0					0x0280
+#define CRC_DATA_WCLK1_GET(_v)		(((_v) >> 16) & 0xFFFF)
+#define CRC_DATA_WCLK0_GET(_v)		(((_v) >> 0) & 0xFFFF)
+
+#define CRC_DATA_1					0x0288
+#define CRC_DATA_WCLK1_GET(_v)		(((_v) >> 16) & 0xFFFF)
+#define CRC_DATA_WCLK0_GET(_v)		(((_v) >> 0) & 0xFFFF)
+
+#define CRC_CONTROL					0x028C
+#define CRC_COLOR_COMPONENT_SEL(_v)	((_v) << 16)
+#define CRC_COOR_COMPONENT_SEL_MASK	(0x3 << 16)
+/*
+ * 2'd0: B
+ * 2'd1: G
+ * 2'd2: R
+ */
+#define CRC_START					(1 << 0)
 
 
-#define CRC_DATA					0x0280
-#define CRC_DATA_WCLK1_GET(_v)		(((_v) >> 16) & 0xffff)
-#define CRC_DATA_WCLK0_GET(_v)		(((_v) >> 0) & 0xffff)
-
-#define CRC_CONTROL					0x0288
-#define CRC_BITS_SEL(_v)			((_v) << 16)
-#define CRC_BITS_SEL_MASK			(0xf << 16)
-#define CRC_START				(1 << 0)
-
-
-#define FRAME_ID					0x02A0
+#define FRAME_COUNT					0x02A0
 
 /* hidden for customer */
 #define WAIT_CYCLE_AFTER_SFR_UPDATE			0x02A4
-
-#define DITHER_CONTROL					0x0300
-#define DITHER_CONTROL_F(_v)			((_v) << 0)
-#define DITHER_CONTROL_MASK			(0x3 << 0)
-
 
 #define WIN_CONTROL_0(_win)			(0x1000 + ((_win) * 0x30))
 #define WIN_ALPHA1_F(_v)			(((_v) & 0xFF) << 24)
@@ -463,7 +473,7 @@
 #define WIN_BG_ALPHA_A_SEL_F(_v)		(((_v) & 0xF) << 0)
 #define WIN_BG_ALPHA_A_SEL_MASK		(0xF << 0)
 
-#define WIN_START_POSITION(_win)		(0x1008 + ((_win) * 0x30))
+#define WIN_START_POSITION(_win)	(0x1008 + ((_win) * 0x30))
 #define WIN_STRPTR_Y_F(_v)			(((_v) & 0x3FFF) << 16)
 #define WIN_STRPTR_X_F(_v)			(((_v) & 0x3FFF) << 0)
 
@@ -471,37 +481,21 @@
 #define WIN_ENDPTR_Y_F(_v)			(((_v) & 0x3FFF) << 16)
 #define WIN_ENDPTR_X_F(_v)			(((_v) & 0x3FFF) << 0)
 
-#define WIN_COLORMAP_0(_win)			(0x1010 + ((_win) * 0x30))
-#define WIN_MAPCOLOR_A_F(_v)			((_v) << 16)
-#define WIN_MAPCOLOR_A_MASK			(0xff << 16)
-#define WIN_MAPCOLOR_R_F(_v)			((_v) << 0)
-#define WIN_MAPCOLOR_R_MASK			(0xff << 0)
+#define WIN_COLORMAP_0(_win)		(0x1010 + ((_win) * 0x30))
+#define WIN_MAPCOLOR_A_F(_v)		((_v) << 16)
+#define WIN_MAPCOLOR_A_MASK			(0xFF << 16)
+#define WIN_MAPCOLOR_R_F(_v)		((_v) << 0)
+#define WIN_MAPCOLOR_R_MASK			(0x3FF << 0)
 
-#define WIN_COLORMAP_1(_win)			(0x1014 + ((_win) * 0x30))
-#define WIN_MAPCOLOR_G_F(_v)			((_v) << 16)
-#define WIN_MAPCOLOR_G_MASK			(0xff << 16)
-#define WIN_MAPCOLOR_B_F(_v)			((_v) << 0)
-#define WIN_MAPCOLOR_B_MASK			(0xff << 0)
+#define WIN_COLORMAP_1(_win)		(0x1014 + ((_win) * 0x30))
+#define WIN_MAPCOLOR_G_F(_v)		((_v) << 16)
+#define WIN_MAPCOLOR_G_MASK			(0x3FF << 16)
+#define WIN_MAPCOLOR_B_F(_v)		((_v) << 0)
+#define WIN_MAPCOLOR_B_MASK			(0x3FF << 0)
 
 #define WIN_START_TIME_CONTROL(_win)		(0x1018 + ((_win) * 0x30))
 #define WIN_START_TIME_CONTROL_F(_v)		((_v) << 0)
-#define WIN_START_TIME_CONTROL_MASK		(0x3fff << 0)
-
-#define WIN_PIXEL_COUNT(_win)			(0x101C + ((_win) * 0x30))
-
-
-/*
-* DQE registers
-* ->
-* 0x2000 ~
-*  updated by SHADOW_REG_UPDATE_REQ[28] : SHADOW_REG_UPDATE_REQ_DQE
-*
-* @ regs-dqe.h
-*
-* <-
-* DQE registers
-*/
-
+#define WIN_START_TIME_CONTROL_MASK		(0x3FFF << 0)
 
 /*
 * DSC registers
@@ -530,7 +524,6 @@
 #define DSC_DCG_EN_REF(_v)			((_v) << 19)
 #define DSC_DCG_EN_SSM(_v)			((_v) << 18)
 #define DSC_DCG_EN_ICH(_v)			((_v) << 17)
-#define DSC_DCG_EN_BYPASS(_v)			((_v) << 16)
 #define DSC_DCG_EN_ALL_OFF			(0x0 << 16)
 #define DSC_DCG_EN_ALL_MASK			(0xf << 16)
 #define DSC_BIT_SWAP(_v)			((_v) << 10)
@@ -542,25 +535,30 @@
 #define DSC_FLATNESS_DET_TH_F(_v)		((_v) << 4)
 #define DSC_SLICE_MODE_CH_MASK		(0x1 << 3)
 #define DSC_SLICE_MODE_CH_F(_v)		((_v) << 3)
-#define DSC_BYPASS_MASK			(0x1 << 2)
-#define DSC_BYPASS_F(_v)			((_v) << 2)
 #define DSC_CG_EN_MASK				(0x1 << 1)
 #define DSC_CG_EN_F(_v)			((_v) << 1)
 #define DSC_DUAL_SLICE_EN_MASK		(0x1 << 0)
 #define DSC_DUAL_SLICE_EN_F(_v)		((_v) << 0)
 
-#define DSC_CONTROL1					0x0004
-#define DSC_V_FRONT_F(_v)			((_v) << 16)
-#define DSC_V_SYNC_F(_v)			((_v) << 8)
-#define DSC_V_BACK_F(_v)			((_v) << 0)
-#define DSC_V_BLANK_MASK			(0xFFFFFF)
+#define DSC_CONTROL3				0x000C
+#define DSC_REMAINDER_F(_v)		((_v) << 12)
+#define DSC_GRPCNTLINE(_v)		((_v) << 0)
 
-#define DSC_CONTROL2					0x0008
-#define DSC_H_FRONT_F(_v)			((_v) << 16)
-#define DSC_H_SYNC_F(_v)			((_v) << 8)
-#define DSC_H_BACK_F(_v)			((_v) << 0)
-#define DSC_H_BLANK_MASK			(0xFFFFFF)
+#define DSC_CRC_0					0x0010
+#define DSC_CRC_EN_F				(1 << 16)
+#define DSC_CRC_CODE_F(_v)			((_v) << 15)
 
+#define DSC_CRC_1					0x0014
+#define DSC_CRC_Y_S0_F(_v)			((_v) << 16)
+#define DSC_CRC_CO_S0_F(_v)			((_v) << 0)
+
+#define DSC_CRC_2					0x0018
+#define DSC_CRC_CG_S0_F(_v)			((_v) << 16)
+#define DSC_CRC_Y_S1_F(_v)			((_v) << 0)
+
+#define DSC_CRC_3					0x001C
+#define DSC_CRC_CO_S1_F(_v)			((_v) << 16)
+#define DSC_CRC_CG_S1_F(_v)			((_v) << 0)
 
 #define DSC_PPS00_03					0x0020
 
@@ -649,4 +647,4 @@
 
 #define SHADOW_OFFSET					0x7000
 
-#endif /* _REGS_DECON_H */
+#endif	/* _REGS_DECON_H */
