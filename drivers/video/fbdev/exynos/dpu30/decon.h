@@ -30,6 +30,9 @@
 #endif
 
 #if defined(CONFIG_SOC_EXYNOS8895)
+#include "regs-decon_8895.h"
+#endif
+#if defined(CONFIG_SOC_EXYNOS9810)
 #include "regs-decon.h"
 #endif
 #include "./panels/decon_lcd.h"
