@@ -911,7 +911,6 @@ struct decon_device {
 
 	u32 prev_protection_bitmask;
 	unsigned long prev_aclk_khz;
-	int version;
 
 	atomic_t is_shutdown;
 	bool up_list_saved;
