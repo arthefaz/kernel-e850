@@ -386,14 +386,6 @@ static int decon_enable(struct decon_device *decon)
 		decon_info("DECON_OUT_DP %s timeline:%d, max:%d\n",
 			decon->timeline->name, decon->timeline->value, decon->timeline_max);
 
-		ret = v4l2_subdev_call(decon->displayport_sd, video, s_stream, 1);
-		decon_info("decon id = %d\n", decon->id);
-		decon_info("v4l2_subdev_call displayport\n");
-		if (ret) {
-			decon_err("starting stream failed for %s\n",
-				decon->displayport_sd->name);
-		}
-
 #if 0 //defined(CONFIG_EXYNOS8895_BTS)
 		if (videoformat_parameters[g_displayport_videoformat].pixel_clock >= PIXEL_CLOCK_533_000) {
 			decon->bts.ops->bts_update_qos_mif(decon, 1540*1000);
@@ -595,10 +587,6 @@ static int decon_disable(struct decon_device *decon)
 	}
 
 	if (decon->dt.out_type == DECON_OUT_DP) {
-		ret = v4l2_subdev_call(decon->displayport_sd, video, s_stream, 0);
-		if (ret) {
-			decon_err("displayport stopping stream failed\n");
-		}
 		decon_info("DECON_OUT_DP %s timeline:%d, max:%d\n",
 			decon->timeline->name, decon->timeline->value, decon->timeline_max);
 
