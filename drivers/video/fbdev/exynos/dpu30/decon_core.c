@@ -534,12 +534,6 @@ static int decon_disable(struct decon_device *decon)
 		goto err;
 	}
 
-	if ((decon->id == 2) && (decon->dt.out_type == DECON_OUT_DP) &&
-				(decon->state == DECON_STATE_INIT)) {
-		decon_info("decon%d init state\n", decon->id);
-		goto err;
-	}
-
 	kthread_flush_worker(&decon->up.worker);
 
 	decon_to_psr_info(decon, &psr);
@@ -2630,7 +2624,7 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	struct dsim_device *dsim1;
 
 	if (decon->id || (decon->dt.out_type != DECON_OUT_DSI)) {
-		decon->state = DECON_STATE_INIT;
+		decon->state = DECON_STATE_OFF;
 		decon_info("decon%d doesn't need to display\n", decon->id);
 		return 0;
 	}
@@ -2827,11 +2821,9 @@ static int decon_probe(struct platform_device *pdev)
 		goto err_display;
 	}
 
-	if (decon->id != 2) {	/* for decon2 + displayport start in winconfig. */
-		ret = decon_initial_display(decon, false);
-		if (ret)
-			goto err_display;
-	}
+	ret = decon_initial_display(decon, false);
+	if (ret)
+		goto err_display;
 
 	decon_info("decon%d registered successfully", decon->id);
 
