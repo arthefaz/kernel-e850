@@ -2393,6 +2393,9 @@ static int decon_acquire_window(struct decon_device *decon, int idx)
 	fbinfo->fbops		= &decon_fb_ops;
 	fbinfo->flags		= FBINFO_FLAG_DEFAULT;
 	fbinfo->pseudo_palette  = &win->pseudo_palette;
+	/* 'divide by 8' means converting bit to byte number */
+	fbinfo->fix.line_length = fbinfo->var.width * fbinfo->var.bits_per_pixel / 8;
+	fbinfo->fix.ypanstep = 1;
 	decon_info("default_win %d win_idx %d xres %d yres %d\n",
 			decon->dt.dft_win, idx,
 			fbinfo->var.xres, fbinfo->var.yres);
