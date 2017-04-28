@@ -19,7 +19,11 @@
 #include <media/v4l2-subdev.h>
 
 #include "./panels/decon_lcd.h"
+#if defined(CONFIG_SOC_EXYNOS9810)
 #include "regs-dsim.h"
+#else
+#include "regs-dsim_8895.h"
+#endif
 
 extern int dsim_log_level;
 
