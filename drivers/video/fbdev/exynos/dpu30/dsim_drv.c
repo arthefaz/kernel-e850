@@ -589,7 +589,9 @@ static int dsim_enable(struct dsim_device *dsim)
 #endif
 
 	/* Config link to DPHY configuration */
+#if defined(CONFIG_SOC_EXYNOS8895)
 	dpu_sysreg_set_lpmux(dsim->res.ss_regs);
+#endif
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
 
@@ -734,7 +736,9 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 #else
 	dsim_runtime_resume(dsim->dev);
 #endif
+#if defined(CONFIG_SOC_EXYNOS8895)
 	dpu_sysreg_set_lpmux(dsim->res.ss_regs);
+#endif
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
 

@@ -1,9 +1,8 @@
-/* linux/drivers/video/exynos/decon_8890/decon_reg_8890.c
+/* linux/drivers/video/exynos/decon/decon_reg.c
  *
- * Copyright 2013-2015 Samsung Electronics
+ * Copyright 2013-2017 Samsung Electronics
  *      Jiun Yu <jiun.yu@samsung.com>
- *
- * Jiun Yu <jiun.yu@samsung.com>
+ *	  SeungBeom Park <sb1.park@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,77 +20,6 @@ u32 decon_reg_get_cam_status(void __iomem *cam_status)
 		return readl(cam_status);
 	else
 		return 0xF;
-}
-
-/* DECON2 only */
-void decon_reg_set_vclk_freerun(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	if (id != 2)
-		return;
-
-	decon_write_mask(id, DISPIF_CONTROL, val, DISPIF_CLOCK_FREE_RUN_EN);
-}
-
-/* DECON2 only */
-void decon_reg_set_underrun_scheme(u32 id, enum decon_hold_scheme mode)
-{
-	u32 val, mask;
-
-	if (id != 2)
-		return;
-
-	val = DISPIF_CLOCK_UNDERRUN_SCHEME_F(mode);
-	mask = DISPIF_CLOCK_UNDERRUN_SCHEME_MASK;
-	decon_write_mask(id, DISPIF_CONTROL, val, mask);
-}
-
-/* DECON2 only */
-void decon_reg_set_dispif_porch(u32 id, struct decon_lcd *lcd_info)
-{
-	u32 val;
-
-	if (id != 2)
-		return;
-
-	val = DISPIF_VBPD_F(lcd_info->vbp) | DISPIF_VFPD_F(lcd_info->vfp);
-	decon_write(id, DISPIF_TIMING_CONTROL_0, val);
-	val = DISPIF_VSPD_F(lcd_info->vsa);
-	decon_write(id, DISPIF_TIMING_CONTROL_1, val);
-
-	val = DISPIF_HBPD_F(lcd_info->hbp) | DISPIF_HFPD_F(lcd_info->hfp);
-	decon_write(id, DISPIF_TIMING_CONTROL_2, val);
-	val = DISPIF_HSPD_F(lcd_info->hsa);
-	decon_write(id, DISPIF_TIMING_CONTROL_3, val);
-}
-
-/* DECON2 only */
-void decon_reg_set_dispif_size(u32 id, u32 width, u32 height)
-{
-	u32 val;
-
-	if (id != 2)
-		return;
-
-	val = DISPIF_HEIGHT_F(height) | DISPIF_WIDTH_F(width);
-	decon_write(id, DISPIF_SIZE_CONTROL_0, val);
-
-	val = width * height;
-	decon_write(id, DISPIF_SIZE_CONTROL_1, val);
-}
-
-/* DECON2 only */
-void decon_reg_get_dispif_size(u32 id, u32 *w, u32 *h)
-{
-	u32 val;
-
-	if (id != 2)
-		return;
-
-	val = decon_read(id, DISPIF_SIZE_CONTROL_0);
-	*w = DISPIF_WIDTH_GET(val);
-	*h = DISPIF_HEIGHT_GET(val);
 }
 
 int decon_reg_reset(u32 id)
@@ -113,15 +41,19 @@ int decon_reg_reset(u32 id)
 	return 0;
 }
 
+/* implement 8/10 bits selection code */
+
+
+/* select op mode */
 void decon_reg_set_operation_mode(u32 id, enum decon_psr_mode mode)
 {
 	u32 val, mask;
 
 	mask = GLOBAL_CONTROL_OPERATION_MODE_F;
 	if (mode == DECON_MIPI_COMMAND_MODE)
-		val = GLOBAL_CONTROL_OPERATION_MODE_I80IF_F;
+		val = GLOBAL_CONTROL_OPERATION_MODE_CMD_F;
 	else
-		val = GLOBAL_CONTROL_OPERATION_MODE_RGBIF_F;
+		val = GLOBAL_CONTROL_OPERATION_MODE_VIDEO_F;
 	decon_write_mask(id, GLOBAL_CONTROL, val, mask);
 }
 
@@ -137,642 +69,6 @@ void decon_reg_direct_on_off(u32 id, u32 en)
 void decon_reg_per_frame_off(u32 id)
 {
 	decon_write_mask(id, GLOBAL_CONTROL, 0, GLOBAL_CONTROL_DECON_EN_F);
-}
-
-void decon_reg_set_clkgate_mode(u32 id, u32 en)
-{
-	u32 val, mask;
-
-	val = en ? ~0 : 0;
-
-	if (id == 1)
-		mask = CLOCK_CONTROL_0_S_MASK;
-	else if (id == 2)
-		mask = CLOCK_CONTROL_0_T_MASK;
-	else
-		mask = CLOCK_CONTROL_0_F_MASK;
-	decon_write_mask(id, CLOCK_CONTROL_0, val, mask);
-}
-
-/*
- * API is considering real possible Display Scenario
- * such as following examples
- *  < Single display >          D0=16K, D1=0K, D2=0K
- *  < Dual/Triple display >     D0=8K,  D1=8K, D2=0K
- *  < Single display + USB TV > D0=8K,  D1=8K, D2=0K
- *  < Dual display + DP >       D0=4K,  D1=4K, D2=8K
- *  < Dual display + WB-PRE >   D0=8K,  D1=8K, D2=0K
- *   --> Not necessary OutFIFO @preWB ( need @postWB )
- *
- * Current API does not configure various 8K case fully!
- * Therefore, modify/add configuration cases if necessary
- * "Resource Confliction" will happen if enabled simultaneously
-*/
-void decon_reg_set_sram_share(u32 id, enum decon_fifo_mode fifo_mode)
-{
-	u32 val = 0;
-
-	switch (fifo_mode) {
-	case DECON_FIFO_00K:
-		val = ALL_SRAM_SHARE_DISABLE;
-		break;
-	case DECON_FIFO_04K:
-		if (id == 0)
-			val = FF0_SRAM_SHARE_ENABLE_F;
-		else if (id == 1)
-			val = FF1_SRAM_SHARE_ENABLE_F;
-		else if (id == 2)
-			val = FF2_SRAM_SHARE_ENABLE_F;
-		break;
-	case DECON_FIFO_08K:
-		/* [HACK] only available for D0+D1 or D0+D2 */
-		if (id == 0)
-			val = (FLOATING_SRAM_SHARE_ENABLE_F
-				| FF0_SRAM_SHARE_ENABLE_F);
-		else if (id == 1)
-			val = 0;
-		else if (id == 2)
-			val = (FF1_SRAM_SHARE_ENABLE_F
-				| FF2_SRAM_SHARE_ENABLE_F);
-		break;
-	case DECON_FIFO_16K:
-		val = ALL_SRAM_SHARE_ENABLE;
-		break;
-	default:
-		break;
-	}
-	decon_write(id, SRAM_SHARE_ENABLE, val);
-}
-
-void decon_reg_set_splitter(u32 id, u32 width, u32 height,
-	u32 split_idx, u32 overlap_w)
-{
-	u32 val;
-
-	if (id != 0)
-		return;
-
-	val = SPLITTER_HEIGHT_F(height) | SPLITTER_WIDTH_F(width * 2);
-	decon_write(id, SPLITTER_SIZE_CONTROL_0, val);
-
-	val = height * width;
-	decon_write(id, SPLITTER_SIZE_CONTROL_1, val);
-
-	/* dual-DSI only */
-	decon_write(id, SPLITTER_SPLIT_IDX_CONTROL, split_idx);
-	val = SPLITTER_OVERLAP_F(overlap_w);
-	decon_write(id, SPLITTER_OVERLAP_CONTROL, val);
-}
-
-void decon_reg_get_splitter_size(u32 id, u32 *w, u32 *h)
-{
-	u32 val;
-
-	val = decon_read(id, SPLITTER_SIZE_CONTROL_0);
-	*w = SPLITTER_WIDTH_GET(val);
-	*h = SPLITTER_HEIGHT_GET(val);
-}
-
-void decon_reg_set_frame_fifo_threshold(u32 id, u32 ff0_th, u32 ff1_th)
-{
-	u32 val;
-
-	if (id == 0)
-		val = FRAME_FIFO_1_TH_F(ff1_th) | FRAME_FIFO_0_TH_F(ff0_th);
-	else
-		val = FRAME_FIFO_0_TH_F(ff0_th);
-
-	decon_write(id, FRAME_FIFO_TH_CONTROL_0, val);
-}
-
-/*
-* frame_fifo0 : must be set always
-* frame_fifo1 : must be set for dual-dsi or dual-dsc
-*/
-void decon_reg_set_frame_fifo_size(u32 id, u32 ff_id, u32 width, u32 height)
-{
-	u32 val, cnt;
-	u32 th, mask;
-
-	val = FRAME_FIFO_HEIGHT_F(height) | FRAME_FIFO_WIDTH_F(width);
-	cnt = height * width;
-
-	if (ff_id == 0) {
-		decon_write(id, FRAME_FIFO_0_SIZE_CONTROL_0, val);
-		decon_write(id, FRAME_FIFO_0_SIZE_CONTROL_1, cnt);
-		th = FRAME_FIFO_0_TH_F(width);
-		mask = FRAME_FIFO_0_TH_MASK;
-	} else {
-		decon_write(id, FRAME_FIFO_1_SIZE_CONTROL_0, val);
-		decon_write(id, FRAME_FIFO_1_SIZE_CONTROL_1, cnt);
-		th = FRAME_FIFO_1_TH_F(width);
-		mask = FRAME_FIFO_1_TH_MASK;
-	}
-
-	decon_write_mask(id, FRAME_FIFO_TH_CONTROL_0, th, mask);
-}
-
-void decon_reg_get_frame_fifo_size(u32 id, u32 ff_id, u32 *w, u32 *h)
-{
-	u32 val;
-
-	if (ff_id == 0)
-		val = decon_read(id, FRAME_FIFO_0_SIZE_CONTROL_0);
-	else {
-		if (id == 0)
-			val = decon_read(id, FRAME_FIFO_1_SIZE_CONTROL_0);
-		else
-			val = 0;
-	}
-
-	*w = FRAME_FIFO_WIDTH_GET(val);
-	*h = FRAME_FIFO_HEIGHT_GET(val);
-}
-
-void decon_reg_get_frame_fifo_threshold(u32 id, u32 *ff0_th, u32 *ff1_th)
-{
-	u32 val;
-
-	val = decon_read(id, FRAME_FIFO_TH_CONTROL_0);
-	*ff0_th = FRAME_FIFO_0_TH_GET(val);
-	*ff1_th = FRAME_FIFO_1_TH_GET(val);
-}
-
-void decon_reg_get_frame_fifo_level(u32 id, u32 *ff0_lv, u32 *ff1_lv)
-{
-	if (id == 0) {
-		*ff0_lv = decon_read(id, FRAME_FIFO_0_LEVEL);
-		*ff1_lv = decon_read(id, FRAME_FIFO_1_LEVEL);
-	} else {
-		*ff1_lv = decon_read(id, FRAME_FIFO_0_LEVEL);
-		*ff1_lv = 0;
-	}
-}
-
-void decon_reg_set_hysteresis(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	decon_write_mask(id, HYSTERESIS_CONTROL, val, HYSTERESIS_ENABLE_F);
-}
-
-void decon_reg_set_hysteresis_threshold(u32 id, u32 high_th, u32 low_th)
-{
-	u32 val;
-
-	val = HYSTERESIS_HIGH_TH_F(high_th) | HYSTERESIS_LOW_TH_F(low_th);
-	decon_write(id, HYSTERESIS_THRESHOLD, val);
-}
-
-void decon_reg_set_formatter_pixel_order_swap(u32 id,
-		u32 en_p0123, u32 en_p23, u32 en_p01)
-{
-	u32 val, mask;
-
-	val = FORMATTER_PIXEL_ORDER_SWAP(en_p0123, en_p23, en_p01);
-	mask = FORMATTER_PIXEL_ORDER_SWAP_MASK;
-	decon_write_mask(id, FORMATTER_CONTROL, val, mask);
-}
-
-void decon_reg_set_rgb_order(u32 id, enum decon_rgb_order order)
-{
-	u32 val, mask;
-
-	if (id == 2) {
-		val = DISPIF_RGB_ORDER_F(order);
-		mask = DISPIF_RGB_ORDER_MASK;
-		decon_write_mask(id, DISPIF_CONTROL, val, mask);
-	} else {
-		val = FORMATTER_OUT_RGB_ORDER_F(order);
-		mask = FORMATTER_OUT_RGB_ORDER_MASK;
-		decon_write_mask(id, FORMATTER_CONTROL, val, mask);
-	}
-}
-
-/*
-* formatter0/1 setting depends on DSIM_IFx
-* 1. dual-dsi      : both
-* 2. dsim_if0 only : formatter0
-* 3. dsim_if1 only : formatter1
-*/
-void decon_reg_set_formatter_size(u32 id, u32 fmt_id, u32 width, u32 height)
-{
-	u32 val, cnt;
-
-	if (id && (fmt_id == 1))
-		return;
-
-	val = FORMATTER_HEIGHT_F(height) | FORMATTER_WIDTH_F(width);
-	cnt = height * width;
-
-	if (fmt_id == 0) {
-		decon_write(id, FORMATTER0_SIZE_CONTROL_0, val);
-		decon_write(id, FORMATTER0_SIZE_CONTROL_1, cnt);
-	} else {
-		decon_write(id, FORMATTER1_SIZE_CONTROL_0, val);
-		decon_write(id, FORMATTER1_SIZE_CONTROL_1, cnt);
-	}
-}
-
-void decon_reg_get_formatter_size(u32 id, u32 fmt_id, u32 *w, u32 *h)
-{
-	u32 val;
-
-	if (fmt_id == 0)
-		val = decon_read(id, FORMATTER0_SIZE_CONTROL_0);
-	else {
-		if (id == 0)
-			val = decon_read(id, FORMATTER1_SIZE_CONTROL_0);
-		else
-			val = 0;
-	}
-
-	*w = FORMATTER_WIDTH_GET(val);
-	*h = FORMATTER_HEIGHT_GET(val);
-}
-
-void decon_reg_set_blender_bg_image_size(u32 id,
-		enum decon_dsi_mode dsi_mode, struct decon_lcd *lcd_info)
-{
-	u32 width, val, mask;
-
-	width = lcd_info->xres;
-
-	if (dsi_mode == DSI_MODE_DUAL_DSI)
-		width = width * 2;
-
-	val = BLENDER_BG_HEIGHT_F(lcd_info->yres) | BLENDER_BG_WIDTH_F(width);
-	mask = BLENDER_BG_HEIGHT_MASK | BLENDER_BG_WIDTH_MASK;
-	decon_write_mask(id, BLENDER_BG_IMAGE_SIZE_0, val, mask);
-
-	val = (lcd_info->yres) * width;
-	decon_write(id, BLENDER_BG_IMAGE_SIZE_1, val);
-}
-
-void decon_reg_get_blender_bg_image_size(u32 id, u32 *p_width, u32 *p_height)
-{
-	u32 val;
-
-	val = decon_read(id, BLENDER_BG_IMAGE_SIZE_0);
-	*p_width = BLENDER_BG_WIDTH_GET(val);
-	*p_height = BLENDER_BG_HEIGHT_GET(val);
-}
-
-/*
- * argb_color : 32-bit
- * A[31:24] - R[23:16] - G[15:8] - B[7:0]
-*/
-void decon_reg_set_blender_bg_image_color(u32 id, u32 argb_color)
-{
-	u32 val, mask;
-	u32 bg_alpha = 0, bg_red = 0;
-	u32 bg_green = 0, bg_blue = 0;
-
-	bg_alpha = (argb_color >> 24) & 0xFF;
-	bg_red = (argb_color >> 16) & 0xFF;
-	bg_green = (argb_color >> 8) & 0xFF;
-	bg_blue = (argb_color >> 0) & 0xFF;
-
-	val = BLENDER_BG_A_F(bg_alpha) | BLENDER_BG_R_F(bg_red);
-	mask = BLENDER_BG_A_MASK | BLENDER_BG_R_MASK;
-	decon_write_mask(id, BLENDER_BG_IMAGE_COLOR_0, val, mask);
-
-	val = BLENDER_BG_G_F(bg_green) | BLENDER_BG_B_F(bg_blue);
-	mask = BLENDER_BG_G_MASK | BLENDER_BG_B_MASK;
-	decon_write_mask(id, BLENDER_BG_IMAGE_COLOR_1, val, mask);
-}
-
-void decon_reg_set_lrmerger_mode(u32 id, u32 win_idx,
-		enum decon_merger_mode lrm_mode)
-{
-	u32 val, mask;
-
-	if (win_idx == 0 || win_idx == 1) {
-		val = LRM01_MODE_F(lrm_mode);
-		mask = LRM01_MODE_MASK;
-	} else if (win_idx == 2 || win_idx == 3) {
-		val = LRM23_MODE_F(lrm_mode);
-		mask = LRM23_MODE_MASK;
-	}
-	if  (win_idx < 4)
-		decon_write_mask(id, LRMERGER_MODE_CONTROL, val, mask);
-}
-
-void decon_reg_set_dqe_lpd_exit_control(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	decon_write_mask(id, DATA_PATH_CONTROL_2, val, DQE_LPD_EXIT_CTRL);
-}
-
-void decon_reg_set_dqe_hsc_path(u32 id, enum decon_share_path hsc_path)
-{
-	u32 val;
-
-	val = HSC_PATH_F(hsc_path);
-	decon_write_mask(id, DATA_PATH_CONTROL_2, val, HSC_PATH_MASK);
-}
-
-void decon_reg_set_dqe_aps_path(u32 id, enum decon_share_path aps_path)
-{
-	u32 val;
-
-	val = APS_PATH_F(aps_path);
-	decon_write_mask(id, DATA_PATH_CONTROL_2, val, APS_PATH_MASK);
-}
-
-void decon_reg_set_data_path(u32 id, enum decon_data_path d_path,
-		enum decon_enhance_path e_path)
-{
-	u32 val, mask;
-
-	val = ENHANCE_LOGIC_PATH_F(e_path) | COMP_LINKIF_WB_PATH_F(d_path);
-	mask = ENHANCE_LOGIC_PATH_MASK | COMP_LINKIF_WB_PATH_MASK;
-	decon_write_mask(id, DATA_PATH_CONTROL_2, val, mask);
-}
-
-void decon_reg_get_data_path(u32 id, enum decon_data_path *d_path,
-		enum decon_enhance_path *e_path)
-{
-	u32 val;
-
-	val = decon_read(id, DATA_PATH_CONTROL_2);
-	*d_path = COMP_LINKIF_WB_PATH_GET(val);
-	*e_path = ENHANCE_LOGIC_PATH_GET(val);
-}
-
-/*
-* Check major configuration of data_path_control
-*    PRE-WB[8]
-*    DSCC[7]
-*    DSC_ENC1[5] DSC_ENC0[4]
-*    POST_WB[2]
-*    DSIM_IF1[1] DSIM_IF0[0]
-*/
-u32 decon_reg_get_data_path_cfg(u32 id, enum decon_path_cfg con_id)
-{
-	u32 val;
-	u32 d_path;
-	u32 bRet = 0;
-
-	val = decon_read(id, DATA_PATH_CONTROL_2);
-	d_path = COMP_LINKIF_WB_PATH_GET(val);
-
-	switch (con_id) {
-	case PATH_CON_ID_DSCC_EN:
-		if (d_path & (0x1 << PATH_CON_ID_DSCC_EN))
-			bRet = 1;
-		break;
-	case PATH_CON_ID_DUAL_DSC:
-		if ((d_path & (0x3 << PATH_CON_ID_DUAL_DSC)) == 0x30)
-			bRet = 1;
-		break;
-	case PATH_CON_ID_DSIM_IF0:
-		if (d_path & (0x1 << PATH_CON_ID_DSIM_IF0))
-			bRet = 1;
-		break;
-	case PATH_CON_ID_DSIM_IF1:
-		if (d_path & (0x1 << PATH_CON_ID_DSIM_IF1))
-			bRet = 1;
-		break;
-	default:
-		break;
-	}
-
-	return bRet;
-}
-
-/*
-* 'DATA_PATH_CONTROL_2' SFR must be set before calling this function!!
-* [width]
-* - no compression  : x-resolution
-* - dsc compression : width_per_enc
-*/
-void decon_reg_config_data_path_size(u32 id,
-	u32 width, u32 height, u32 overlap_w)
-{
-	u32 dual_dsc = 1;
-	u32 dual_dsi = 0;
-	u32 dsim_if0 = 1;
-	u32 dsim_if1 = 0;
-
-	dual_dsc = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DUAL_DSC);
-	dsim_if0 = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DSIM_IF0);
-	dsim_if1 = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DSIM_IF1);
-	if (dsim_if0 && dsim_if1)
-		dual_dsi = 1;
-
-	/* 1. SPLITTER */
-	if (dual_dsi && !dual_dsc)
-		decon_reg_set_splitter(id, width*2, height, width, overlap_w);
-	else
-		decon_reg_set_splitter(id, width, height, width, 0);
-
-	/* 2. FRAME_FIFO */
-	decon_reg_set_frame_fifo_size(id, 0, width, height);
-	if (dual_dsi || dual_dsc)
-		decon_reg_set_frame_fifo_size(id, 1, width, height);
-
-	/* 3. FORMATTER */
-	if (dsim_if0 && !dsim_if1) {
-		/* Single-DSI : DSIM0 */
-		if (dual_dsc)
-			decon_reg_set_formatter_size(id, 0, width*2, height);
-		else
-			decon_reg_set_formatter_size(id, 0, width, height);
-	} else if (!dsim_if0 && dsim_if1) {
-		/* Single-DSI : DSIM1 */
-		if (dual_dsc)
-			decon_reg_set_formatter_size(id, 1, width*2, height);
-		else
-			decon_reg_set_formatter_size(id, 1, width, height);
-	} else if (dual_dsi) {
-		/* Dual-DSI */
-		decon_reg_set_formatter_size(id, 0, width, height);
-		decon_reg_set_formatter_size(id, 1, width, height);
-	} else {
-		decon_err("decon%d : not specified case for FORMATTER\n", id);
-		decon_reg_set_formatter_size(id, 0, width, height);
-	}
-}
-
-void decon_reg_print_data_path_size(u32 id)
-{
-	u32 w, h;
-
-	decon_reg_get_splitter_size(id, &w, &h);
-	decon_dbg("SPLITTER size: w(%d), h(%d)\n", w, h);
-	decon_reg_get_frame_fifo_size(id, 0, &w, &h);
-	decon_dbg("FIFO0 size: w(%d), h(%d)\n", w, h);
-	decon_reg_get_formatter_size(id, 0, &w, &h);
-	decon_dbg("FORMATTER0 size: w(%d), h(%d)\n", w, h);
-
-	if (id == 0) {
-		decon_reg_get_frame_fifo_size(id, 1, &w, &h);
-		decon_dbg("FIFO1 size: w(%d), h(%d)\n", w, h);
-		decon_reg_get_formatter_size(id, 1, &w, &h);
-		decon_dbg("FORMATTER1 size: w(%d), h(%d)\n", w, h);
-	}
-}
-
-/* TODO: This will be modified in the future */
-void dpu_sysreg_set_lpmux(void __iomem *sysreg)
-{
-	writel(0x1201, sysreg + DISP_LPMUX_CFG);
-}
-
-/*
-* te_sel
-*    0 = TE_FROM_SPEEDY
-*    1 = TE_FROM_GPIO
-*/
-void dpu_sysreg_set_te_sel(u32 id, u32 te_sel)
-{
-	u32 val;
-
-	/* TE_SEL : GPIO -> change SPEEDY if necessary */
-	val = SEL_TE_PATH(0, te_sel)
-		| SEL_TE_PATH(1, te_sel)
-		| SEL_TE_PATH(2, te_sel);
-	sysreg_write(id, DISP_DPU_TE_SEL, val);
-	decon_dbg("%s: TE_SEL = 0x%x\n", __func__, val);
-}
-
-/*
-* [ CAUTION ]
-* 'DATA_PATH_CONTROL_2' SFR must be set before calling this function!!
-*
-* [ Implementation Info about CONNECTION ]
-* 1) dsim_if0@DECON0 - DSIM0
-* 2) dsim_if1@DECON0 - DSIM1
-* 3) dsim_if0@DECON1 - DSIM1 (description for 'dsim_if2')
-* --> modify code if you want to change connection between dsim_if and dsim
-*/
-void decon_reg_set_disp_ss_cfg(u32 id, struct decon_mode_info *psr)
-{
-	u32 val;
-	u32 dsim_if0 = 0;
-	u32 dsim_if1 = 0;
-
-	if (psr->out_type != DECON_OUT_DSI) {
-		decon_err("%s: [decon%d] output is not DSI\n",
-			__func__, id);
-		return;
-	}
-
-	/* dsim_if2 is equal to dsim_if0 at DECON1 */
-	dsim_if0 = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DSIM_IF0);
-	dsim_if1 = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DSIM_IF1);
-	if (!dsim_if0 && !dsim_if1) {
-		decon_err("%s: [decon%d] both dsim_if are not used\n",
-			__func__, id);
-		return;
-	}
-
-	/* DPMUX_CFG configuration : DECON(DISPIF) - DSIM connnection */
-	val = sysreg_read(id, DISP_DLMUX_CFG);
-
-	/*
-	* [Caution]
-	* - SEL_DSIM2DISPIF must be set as 'Reserved Value(=4)'
-	*   when connection is not necessary.
-	*   Otherwise, abnormal operation will happen!
-	*/
-	switch (id) {
-	case 0:
-		/* [ dsim_if0-dsim0 ] + [ dsim_if1-dsim1 ] */
-		val = val & (~(SEL_DISPIF2DSIM_MASK(0) | SEL_DSIM2DISPIF_MASK(0)
-			| SEL_DISPIF2DSIM_MASK(1) | SEL_DSIM2DISPIF_MASK(1)));
-		if (dsim_if0)
-			val |= SEL_DISPIF2DSIM(0, 0) | SEL_DSIM2DISPIF(0, 0);
-		else
-			/* for setting Reserved Value */
-			val |= SEL_DISPIF2DSIM(0, 0) | SEL_DSIM2DISPIF(3, 0);
-
-		if (dsim_if1)
-			val |= SEL_DISPIF2DSIM(1, 1) | SEL_DSIM2DISPIF(1, 1);
-		else
-			/* for setting Reserved Value */
-			val |= SEL_DISPIF2DSIM(1, 1) | SEL_DSIM2DISPIF(3, 1);
-		break;
-
-	case 1:
-		/* dsim_if2-dsim1 */
-		val = val & (~(SEL_DISPIF2DSIM_MASK(1)
-			| SEL_DSIM2DISPIF_MASK(2)));
-		if (dsim_if0)
-			val |= SEL_DISPIF2DSIM(2, 1) | SEL_DSIM2DISPIF(1, 2);
-		else
-			/* for setting Reserved Value */
-			val |= SEL_DISPIF2DSIM(2, 1) | SEL_DSIM2DISPIF(3, 2);
-		break;
-
-	case 2:
-		break;
-	}
-
-	sysreg_write(id, DISP_DLMUX_CFG, val);
-	decon_dbg("%s: DLMUX_CFG = 0x%x\n", __func__, val);
-
-	/*
-	* LPMUX_CFG configuration : DSIM - MIPI_DPHY connection
-	* -> will be configured at DSIM
-	*/
-}
-
-void decon_reg_set_start_crc(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	decon_write_mask(id, CRC_CONTROL, val, CRC_START);
-}
-
-/* bit_sel : 0=B, 1=G, 2=R */
-void decon_reg_set_select_crc_bits(u32 id, u32 bit_sel)
-{
-	u32 val;
-
-	val = CRC_BITS_SEL(bit_sel);
-	decon_write_mask(id, CRC_CONTROL, val, CRC_BITS_SEL_MASK);
-}
-
-void decon_reg_get_crc_data(u32 id, u32 *w0_data, u32 *w1_data)
-{
-	u32 val;
-
-	val = decon_read(id, CRC_DATA);
-	*w0_data = CRC_DATA_WCLK0_GET(val);
-	*w1_data = CRC_DATA_WCLK1_GET(val);
-}
-
-void decon_reg_update_req_global(u32 id)
-{
-	u32 mask;
-
-	mask = SHADOW_REG_UPDATE_REQ_GLOBAL;
-	decon_write_mask(id, SHADOW_REG_UPDATE_REQ, ~0, mask);
-}
-
-void decon_reg_update_req_window(u32 id, u32 win_idx)
-{
-	u32 mask;
-
-	mask = SHADOW_REG_UPDATE_REQ_WIN(win_idx);
-	decon_write_mask(id, SHADOW_REG_UPDATE_REQ, ~0, mask);
-}
-
-void decon_reg_all_win_shadow_update_req(u32 id)
-{
-	u32 mask;
-
-	/* DECON0 has 6 windows */
-	if (id == 0)
-		mask = SHADOW_REG_UPDATE_REQ_FOR_DECON0;
-	/* DECON1/2 has 5 windows */
-	else
-		mask = SHADOW_REG_UPDATE_REQ_FOR_DECON2;
-
-	decon_write_mask(id, SHADOW_REG_UPDATE_REQ, ~0, mask);
 }
 
 u32 decon_reg_get_idle_status(u32 id)
@@ -817,6 +113,26 @@ u32 decon_reg_get_run_status(u32 id)
 	return 0;
 }
 
+int decon_reg_wait_run_status_timeout(u32 id, unsigned long timeout)
+{
+	unsigned long delay_time = 10;
+	unsigned long cnt = timeout / delay_time;
+	u32 status;
+
+	do {
+		status = decon_reg_get_run_status(id);
+		cnt--;
+		udelay(delay_time);
+	} while (!status && cnt);
+
+	if (!cnt) {
+		decon_err("decon%d wait timeout decon run status(%u)\n", id, status);
+		return -EBUSY;
+	}
+
+	return 0;
+}
+
 /* Determine that DECON is perfectly shuttled off through checking this * function */
 int decon_reg_wait_run_is_off_timeout(u32 id, unsigned long timeout)
 {
@@ -838,24 +154,405 @@ int decon_reg_wait_run_is_off_timeout(u32 id, unsigned long timeout)
 	return 0;
 }
 
-int decon_reg_wait_run_status_timeout(u32 id, unsigned long timeout)
+/* In bring-up, all bits are disabled */
+void decon_reg_set_clkgate_mode(u32 id, u32 en)
 {
-	unsigned long delay_time = 10;
-	unsigned long cnt = timeout / delay_time;
-	u32 status;
+	u32 val, mask;
 
-	do {
-		status = decon_reg_get_run_status(id);
-		cnt--;
-		udelay(delay_time);
-	} while (!status && cnt);
+	val = en ? ~0 : 0;
 
-	if (!cnt) {
-		decon_err("decon%d wait timeout decon run status(%u)\n", id, status);
-		return -EBUSY;
+	mask = CLOCK_CONTROL_0_CG_MASK | CLOCK_CONTROL_0_QACTIVE_MASK ;	/* all unmask */
+	decon_write_mask(id, CLOCK_CONTROL_0, val, mask);
+}
+
+/*
+ * API is considering real possible Display Scenario
+ * such as following examples
+ *  < Single display >
+ *  < Dual/Triple display >
+ *  < Dual display + DP >
+ *
+ * Current API does not configure various 8K case fully!
+ * Therefore, modify/add configuration cases if necessary
+ * "Resource Confliction" will happen if enabled simultaneously
+*/
+void decon_reg_set_sram_share(u32 id, enum decon_fifo_mode fifo_mode)
+{
+	u32 val = 0;
+
+	switch (fifo_mode) {
+	case DECON_FIFO_04K:
+		if (id == 0)
+			val = SRAM0_SHARE_ENABLE_F;
+		else if (id == 1)
+			val = SRAM1_SHARE_ENABLE_F;
+		else if (id == 2)
+			val = SRAM2_SHARE_ENABLE_F;
+		break;
+	case DECON_FIFO_08K:
+		if (id == 0)
+			val = SRAM0_SHARE_ENABLE_F | SRAM1_SHARE_ENABLE_F;
+		else if (id == 1)
+			val = 0;
+		else if (id == 2)
+			val = SRAM2_SHARE_ENABLE_F | SRAM3_SHARE_ENABLE_F;
+		break;
+	case DECON_FIFO_16K:
+		val = ALL_SRAM_SHARE_ENABLE;
+		break;
+	case DECON_FIFO_00K:
+	default:
+		break;
 	}
 
-	return 0;
+	decon_write(id, SRAM_SHARE_ENABLE, val);
+}
+
+void decon_reg_set_scaled_image_size(u32 id,
+		enum decon_dsi_mode dsi_mode, struct decon_lcd *lcd_info)
+{
+	u32 val, mask;
+
+	val = SCALED_SIZE_HEIGHT_F(lcd_info->yres) | SCALED_SIZE_WIDTH_F(lcd_info->xres);
+	mask = SCALED_SIZE_HEIGHT_MASK | SCALED_SIZE_WIDTH_MASK;
+	decon_write_mask(id, SCALED_SIZE_CONTROL_0, val, mask);
+}
+
+void decon_reg_set_splitter(u32 id, u32 width, u32 height,
+	u32 split_idx, u32 overlap_w)
+{
+	u32 val, mask;
+
+	/* DUAL DSI can be used only for DECON0 */
+	if (id != 0)
+		return;
+
+	val = SPLITTER_HEIGHT_F(height) | SPLITTER_WIDTH_F(width * 2);
+	decon_write(id, SPLITTER_SIZE_CONTROL_0, val);
+
+	val = SPLITTER_SPLIT_IDX_F(overlap_w) | SPLITTER_OVERLAP_F(split_idx);
+	mask = SPLITTER_SPLIT_IDX_MASK | SPLITTER_OVERLAP_MASK;
+	decon_write_mask(id, SPLITTER_SPLIT_IDX_CONTROL, val, mask);
+}
+
+void decon_reg_get_splitter_size(u32 id, u32 *w, u32 *h)
+{
+	u32 val;
+
+	val = decon_read(id, SPLITTER_SIZE_CONTROL_0);
+	*w = SPLITTER_WIDTH_GET(val);
+	*h = SPLITTER_HEIGHT_GET(val);
+}
+
+void decon_reg_set_outfifo_size_ctl0(u32 id, u32 width, u32 height)
+{
+	u32 val;
+	u32 th, mask;
+
+	/* OUTFIFO_0 */
+	val = OUTFIFO_HEIGHT_F(height) | OUTFIFO_WIDTH_F(width);
+	mask = OUTFIFO_HEIGHT_MASK | OUTFIFO_WIDTH_MASK;
+	decon_write(id, OUTFIFO_SIZE_CONTROL_0, val);
+
+	/* may be implemented later by considering 1/2H transfer */
+	th = OUTFIFO_TH_1H_F; /* 1H transfer */
+	mask = OUTFIFO_TH_MASK;
+	decon_write_mask(id, OUTFIFO_TH_CONTROL_0, th, mask);
+}
+
+void decon_reg_set_outfifo_size_ctl1(u32 id, u32 width, u32 height)
+{
+	u32 val, mask;
+
+	val = OUTFIFO_1_WIDTH_F(width);
+	mask = OUTFIFO_1_WIDTH_MASK;
+
+	/* OUTFIFO_1 */
+	decon_write_mask(id, OUTFIFO_SIZE_CONTROL_1, val, mask);
+}
+
+void decon_reg_set_outfifo_size_ctl2(u32 id, u32 width, u32 height)
+{
+	u32 val, mask;
+
+	val = OUTFIFO_COMPRESSED_SLICE_HEIGHT_F(height) | OUTFIFO_COMPRESSED_SLICE_WIDTH_F(width);
+	mask = OUTFIFO_COMPRESSED_SLICE_HEIGHT_MASK | OUTFIFO_COMPRESSED_SLICE_WIDTH_MASK;
+
+	/* OUTFIFO_2 */
+	decon_write_mask(id, OUTFIFO_SIZE_CONTROL_2, val, mask);
+}
+
+void decon_reg_set_rgb_order(u32 id, enum decon_rgb_order order)
+{
+	u32 val, mask;
+
+	val = OUTFIFO_PIXEL_ORDER_SWAP_F(order);
+	mask = OUTFIFO_PIXEL_ORDER_SWAP_MASK;
+	decon_write_mask(id, OUTFIFO_DATA_ORDER_CONTROL, val, mask);
+}
+
+void decon_reg_set_blender_bg_image_size(u32 id,
+		enum decon_dsi_mode dsi_mode, struct decon_lcd *lcd_info)
+{
+	u32 width, val, mask;
+
+	width = lcd_info->xres;
+
+	if (dsi_mode == DSI_MODE_DUAL_DSI)
+		width = width * 2;
+
+	val = BLENDER_BG_HEIGHT_F(lcd_info->yres) | BLENDER_BG_WIDTH_F(width);
+	mask = BLENDER_BG_HEIGHT_MASK | BLENDER_BG_WIDTH_MASK;
+	decon_write_mask(id, BLENDER_BG_IMAGE_SIZE_0, val, mask);
+
+}
+
+void decon_reg_get_blender_bg_image_size(u32 id, u32 *p_width, u32 *p_height)
+{
+	u32 val;
+
+	val = decon_read(id, BLENDER_BG_IMAGE_SIZE_0);
+	*p_width = BLENDER_BG_WIDTH_GET(val);
+	*p_height = BLENDER_BG_HEIGHT_GET(val);
+}
+
+/*
+ * argb_color : for RGB101010
+ *
+*/
+void decon_reg_set_blender_bg_image_color(u32 id, u32 argb_color, u32 red, u32 green, u32 blue)
+{
+	u32 val, mask;
+	u32 bg_alpha = 0, bg_red = 0;
+	u32 bg_green = 0, bg_blue = 0;
+
+	bg_alpha = argb_color & 0xFF;
+	bg_red = red & 0x3FF;
+	bg_green = green & 0x3FF;
+	bg_blue = blue & 0x3FF;
+
+	val = BLENDER_BG_A_F(bg_alpha) | BLENDER_BG_R_F(bg_red);
+	mask = BLENDER_BG_A_MASK | BLENDER_BG_R_MASK;
+	decon_write_mask(id, BLENDER_BG_IMAGE_COLOR_0, val, mask);
+
+	val = BLENDER_BG_G_F(bg_green) | BLENDER_BG_B_F(bg_blue);
+	mask = BLENDER_BG_G_MASK | BLENDER_BG_B_MASK;
+	decon_write_mask(id, BLENDER_BG_IMAGE_COLOR_1, val, mask);
+}
+
+void decon_reg_set_data_path(u32 id, enum decon_data_path d_path,
+		enum decon_scaler_path s_path)
+{
+	u32 val, mask;
+
+	val = SCALRE_PATH_F(s_path) | COMP_OUTIF_PATH_F(d_path);
+	mask = SCALRE_PATH_MASK | COMP_OUTIF_PATH_MASK;
+	decon_write_mask(id, DATA_PATH_CONTROL_2, val, mask);
+}
+
+void decon_reg_get_data_path(u32 id, enum decon_data_path *d_path,
+		enum decon_scaler_path *s_path)
+{
+	u32 val;
+
+	val = decon_read(id, DATA_PATH_CONTROL_2);
+	*d_path = COMP_OUTIF_PATH_GET(val);
+	*s_path = SCALRE_PATH_GET(val);
+}
+
+/*
+* Check major configuration of data_path_control
+*    DSCC[7]
+*    DSC_ENC1[5] DSC_ENC0[4]
+*    DP_IF[3]
+*    DSIM_IF1[1] DSIM_IF0[0]
+*/
+u32 decon_reg_get_data_path_cfg(u32 id, enum decon_path_cfg con_id)
+{
+	u32 val;
+	u32 d_path;
+	u32 bRet = 0;
+
+	val = decon_read(id, DATA_PATH_CONTROL_2);
+	d_path = COMP_OUTIF_PATH_GET(val);
+
+	switch (con_id) {
+	case PATH_CON_ID_DSCC_EN:
+		if (d_path & (0x1 << PATH_CON_ID_DSCC_EN))
+			bRet = 1;
+		break;
+	case PATH_CON_ID_DUAL_DSC:
+		if ((d_path & (0x3 << PATH_CON_ID_DUAL_DSC)) == 0x30)
+			bRet = 1;
+		break;
+	case PATH_CON_ID_DP:
+		if (d_path & (0x3 << PATH_CON_ID_DP))
+			bRet = 1;
+		break;
+	case PATH_CON_ID_DSIM_IF0:
+		if (d_path & (0x1 << PATH_CON_ID_DSIM_IF0))
+			bRet = 1;
+		break;
+	case PATH_CON_ID_DSIM_IF1:
+		if (d_path & (0x1 << PATH_CON_ID_DSIM_IF1))
+			bRet = 1;
+		break;
+	default:
+		break;
+	}
+
+	return bRet;
+}
+
+/*
+* 'DATA_PATH_CONTROL_2' SFR must be set before calling this function!!
+* [width]
+* - no compression  : x-resolution
+* - dsc compression : width_per_enc
+*/
+void decon_reg_config_data_path_size(u32 id,
+	u32 width, u32 height, u32 overlap_w, struct decon_dsc *p, struct decon_param *param)
+{
+	u32 dual_dsc = 0;
+	u32 dual_dsi = 0;
+	u32 dsim_if0 = 1;
+	u32 dsim_if1 = 0;
+	u32 width_f;
+	u32 sw, ds_en;
+
+	dual_dsc = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DUAL_DSC);
+	dsim_if0 = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DSIM_IF0);
+	dsim_if1 = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DSIM_IF1);
+	if (dsim_if0 && dsim_if1)
+		dual_dsi = 1;
+
+/* TBD */
+#if 0
+	/* 1. SPLITTER */
+	if (dual_dsi && !dual_dsc)
+		decon_reg_set_splitter(id, width*2, height, width, overlap_w);
+	else
+		decon_reg_set_splitter(id, width, height, width, 0);
+#endif
+
+	/* 2. OUTFIFO */
+	if (param->lcd_info->dsc_enabled) {
+		ds_en = dsc_get_dual_slice_mode(param->lcd_info);
+		sw = CEIL(p->slice_width / 6) * 2;	/*  only 8bpp case : check ceil */
+		width_f = (ds_en) ? sw * 2 : sw;
+		if (param->lcd_info->dsc_cnt == 1) {	/* DSC 1EA */
+			decon_reg_set_outfifo_size_ctl0(id, width_f, height);
+			decon_reg_set_outfifo_size_ctl2(id, sw, p->slice_height);	/* confirm width */
+		} else if (param->lcd_info->dsc_cnt == 2) {	/* DSC 2EA */
+			decon_reg_set_outfifo_size_ctl0(id, width_f, height);		/* confirm width */
+			decon_reg_set_outfifo_size_ctl1(id, width_f, 0);			/* confirm width */
+			decon_reg_set_outfifo_size_ctl2(id, sw, p->slice_height);	/* confirm width */
+		}
+	} else {
+		if (dual_dsi) {
+			/* TBD */
+			/* DUAL dsi connection should be implented later */
+		} else
+			decon_reg_set_outfifo_size_ctl0(id, width, height);
+	}
+}
+
+void decon_reg_print_data_path_size(u32 id)
+{
+	/* TBD */
+}
+
+ /*
+* [ CAUTION ]
+* 'DATA_PATH_CONTROL_2' SFR must be set before calling this function!!
+*
+* [ Implementation Info about CONNECTION ]
+* 1) DECON 0 - DSIMIF0
+* 2) DECON 0 - DSIMIF1
+* 3) DECON 1 - DSIMIF0
+* --> modify code if you want to change connection between dsim_if and dsim
+*/
+
+/*
+ * later check.
+ * Dual DSI connection
+ * DP connection
+ *
+ */
+
+void decon_reg_set_interface(u32 id, struct decon_mode_info *psr)
+{
+	/* connection sfrs are changed in Lhotse */
+	u32 val, mask;
+	enum decon_path_cfg d_path;
+
+	val = decon_read(id, DATA_PATH_CONTROL_2);
+	d_path = COMP_OUTIF_PATH_GET(val);
+
+	/* only for dsim0 case */
+	if (psr->out_type == DECON_OUT_DSI) {
+		if ((id == 0) && (d_path & (0x1 << PATH_CON_ID_DSIM_IF0))) {
+			/* single DSI DECON0 - dsim if0 */
+			val = DSIM_CONNECTION_DSIM0_F(0); /* DECON 0 - DSIMIF0 - DSIM0 */
+			mask =  DSIM_CONNECTION_DSIM0_MASK;
+		} else if ((id == 0) && (d_path & (0x1 << PATH_CON_ID_DSIM_IF1))) {
+			/* single DSI DECON0 - dsim if1 */
+			val = DSIM_CONNECTION_DSIM0_F(1); /* DECON 0 - DSIMIF1 - DSIM0 */
+			mask =  DSIM_CONNECTION_DSIM0_MASK;
+		} else if ((id == 1) && (d_path & (0x1 << PATH_CON_ID_DSIM_IF1))) {
+			/* single DSI DECON1 - dsim if1 */
+			val = DSIM_CONNECTION_DSIM1_F(2); /* DECON 1 - DSIMIF0 - DSIM1 */
+			mask =	DSIM_CONNECTION_DSIM0_MASK;
+		}
+
+		decon_write_mask(id, DSIM_CONNECTION_CONTROL, val, mask);
+	} else if (psr->out_type == DECON_OUT_DP) {
+		/* TBD */
+		/* DE CONNECTION case should be considered */
+	}
+
+	return;
+}
+
+void decon_reg_set_start_crc(u32 id, u32 en)
+{
+	/* TBD */
+}
+
+/* bit_sel : 0=B, 1=G, 2=R */
+void decon_reg_set_select_crc_bits(u32 id, u32 bit_sel)
+{
+	/* TBD */
+}
+
+void decon_reg_get_crc_data(u32 id, u32 *w0_data, u32 *w1_data)
+{
+	/* TBD */
+}
+
+void decon_reg_update_req_global(u32 id)
+{
+	u32 mask;
+
+	mask = SHADOW_REG_UPDATE_REQ_GLOBAL;
+	decon_write_mask(id, SHADOW_REG_UPDATE_REQ, ~0, mask);
+}
+
+void decon_reg_update_req_window(u32 id, u32 win_idx)
+{
+	u32 mask;
+
+	mask = SHADOW_REG_UPDATE_REQ_WIN(win_idx);
+	decon_write_mask(id, SHADOW_REG_UPDATE_REQ, ~0, mask);
+}
+
+void decon_reg_all_win_shadow_update_req(u32 id)
+{
+	u32 mask;
+
+	mask = SHADOW_REG_UPDATE_REQ_FOR_DECON;
+
+	decon_write_mask(id, SHADOW_REG_UPDATE_REQ, ~0, mask);
 }
 
 void decon_reg_config_win_channel(u32 id, u32 win_idx,
@@ -870,7 +567,6 @@ void decon_reg_config_win_channel(u32 id, u32 win_idx,
 	mask = WIN_CHMAP_MASK(win_idx);
 	decon_write_mask(id, DATA_PATH_CONTROL_1, val, mask);
 }
-
 
 /* wait until shadow update is finished */
 int decon_reg_wait_for_update_timeout(u32 id, unsigned long timeout)
@@ -888,7 +584,6 @@ int decon_reg_wait_for_update_timeout(u32 id, unsigned long timeout)
 
 	return 0;
 }
-
 
 /* wait until shadow update is finished */
 int decon_reg_wait_for_window_update_timeout(u32 id, u32 win_idx,
@@ -931,7 +626,6 @@ void decon_reg_configure_trigger(u32 id, enum decon_trig_mode mode)
 	u32 val, mask;
 
 	mask = HW_TRIG_EN;
-	/* Using TRIG_AUTO_MASK_EN=1'b0 is strictly prohibited! (SPEC-OUT) */
 
 	if (mode == DECON_SW_TRIG)
 		val = 0;
@@ -962,7 +656,6 @@ void decon_reg_set_trigger(u32 id, struct decon_mode_info *psr,
 	decon_write_mask(id, HW_SW_TRIG_CONTROL, val, mask);
 }
 
-/****************** DSC related functions ********************/
 void dsc_reg_swreset(u32 dsc_id)
 {
 	dsc_write_mask(dsc_id, DSC_CONTROL0, 1, DSC_SW_RESET);
@@ -1001,14 +694,6 @@ void dsc_reg_set_slice_mode_change(u32 dsc_id, u32 en)
 	dsc_write_mask(dsc_id, DSC_CONTROL0, val, DSC_SLICE_MODE_CH_MASK);
 }
 
-void dsc_reg_set_encoder_bypass(u32 dsc_id, u32 en)
-{
-	u32 val;
-
-	val = DSC_BYPASS_F(en);
-	dsc_write_mask(dsc_id, DSC_CONTROL0, val, DSC_BYPASS_MASK);
-}
-
 void dsc_reg_set_auto_clock_gate(u32 dsc_id, u32 en)
 {
 	u32 val;
@@ -1025,24 +710,21 @@ void dsc_reg_set_dual_slice(u32 dsc_id, u32 en)
 	dsc_write_mask(dsc_id, DSC_CONTROL0, val, DSC_DUAL_SLICE_EN_MASK);
 }
 
-/* V-porch setting is unnecessary : use reset values */
-void dsc_reg_set_vertical_porch(u32 dsc_id, u32 vfp, u32 vsw, u32 vbp)
+void dsc_reg_set_remainder(u32 dsc_id, u32 remain)
 {
 	u32 val;
 
-	val = (DSC_V_FRONT_F(vfp) | DSC_V_SYNC_F(vsw) | DSC_V_BACK_F(vbp));
-	dsc_write_mask(dsc_id, DSC_CONTROL1, val, DSC_V_BLANK_MASK);
+	val = DSC_REMAINDER_F(remain);
+	dsc_write_mask(dsc_id, DSC_CONTROL3, val, DSC_REMAINDER_MASK);
 }
 
-/* H-porch setting is unnecessary : use reset values */
-void dsc_reg_set_horizontal_porch(u32 dsc_id, u32 hfp, u32 hsw, u32 hbp)
+void dsc_reg_set_grpcntline(u32 dsc_id, u32 line)
 {
 	u32 val;
 
-	val = (DSC_H_FRONT_F(hfp) | DSC_H_SYNC_F(hsw) | DSC_H_BACK_F(hbp));
-	dsc_write_mask(dsc_id, DSC_CONTROL2, val, DSC_H_BLANK_MASK);
+	val = DSC_GRPCNTLINE_F(line);
+	dsc_write_mask(dsc_id, DSC_CONTROL3, val, DSC_GRPCNTLINE_MASK);
 }
-
 
 /*
 ###############################################################################
@@ -1324,14 +1006,29 @@ void dsc_get_partial_update_info(struct decon_lcd *lcd,
 
 void dsc_reg_config_control(u32 dsc_id, u32 ds_en, u32 sm_ch)
 {
-	dsc_reg_set_dcg_all(dsc_id, 1);
+	dsc_reg_set_dcg_all(dsc_id, 0);	/* No clock gating */
 	dsc_reg_set_swap(dsc_id, 0x0, 0x1, 0x0);
 	/* flatness detection is fixed 2@8bpc / 8@10bpc / 32@12bpc */
 	dsc_reg_set_flatness_det_th(dsc_id, 0x2);
-	dsc_reg_set_auto_clock_gate(dsc_id, 1);
+	dsc_reg_set_auto_clock_gate(dsc_id, 0);	/* No auto clock gating */
 	dsc_reg_set_dual_slice(dsc_id, ds_en);
-	dsc_reg_set_encoder_bypass(dsc_id, 0);
 	dsc_reg_set_slice_mode_change(dsc_id, sm_ch);
+}
+
+void dsc_reg_config_control_width(u32 dsc_id, u32 slice_width)
+{
+
+	u32 dsc_remainder;
+	u32 dsc_grpcntline;
+
+	if (slice_width % 3)
+		dsc_remainder = slice_width % 3;
+	else
+		dsc_remainder = 3;
+
+	dsc_reg_set_remainder(dsc_id, dsc_remainder);
+	dsc_grpcntline = (slice_width + 2) / 3;
+	dsc_reg_set_grpcntline(dsc_id, dsc_grpcntline);
 }
 
 /*
@@ -1792,10 +1489,16 @@ void dsc_reg_set_encoder(u32 id, struct decon_param *p,
 
 	if (id == 1) {
 		dsc_reg_config_control(DECON_DSC_ENC1, ds_en, sm_ch);
+		dsc_reg_config_control_width(DECON_DSC_ENC1, dsc_enc->slice_width);
 		dsc_reg_set_pps(DECON_DSC_ENC1, dsc_enc);
+	} else if (id == 2) {	/* only for DP */
+		dsc_reg_config_control(DECON_DSC_ENC2, ds_en, sm_ch);
+		dsc_reg_config_control_width(DECON_DSC_ENC2, dsc_enc->slice_width);
+		dsc_reg_set_pps(DECON_DSC_ENC2, dsc_enc);
 	} else {
 		for (dsc_id = 0; dsc_id < lcd_info->dsc_cnt; dsc_id++) {
 			dsc_reg_config_control(dsc_id, ds_en, sm_ch);
+			dsc_reg_config_control_width(dsc_id, dsc_enc->slice_width);
 			dsc_reg_set_pps(dsc_id, dsc_enc);
 		}
 	}
@@ -1823,7 +1526,7 @@ int dsc_reg_init(u32 id, struct decon_param *p, u32 overlap_w, u32 swrst)
 	dsc_enc.overlap_w = overlap_w;
 	dsc_reg_set_encoder(id, p, &dsc_enc, 0);
 	decon_reg_config_data_path_size(id,
-		dsc_enc.width_per_enc, lcd_info->yres, overlap_w);
+		dsc_enc.width_per_enc, lcd_info->yres, overlap_w, &dsc_enc, p);
 
 	/* To check SFR size configurations */
 	decon_reg_print_data_path_size(id);
@@ -1833,126 +1536,101 @@ int dsc_reg_init(u32 id, struct decon_param *p, u32 overlap_w, u32 swrst)
 
 void decon_reg_configure_lcd(u32 id, struct decon_param *p)
 {
-	/*
-	* overlap
-	* 1. available when DDI is supporting
-	* 1. non-zero value is only valid at dual-DSI extension display
-	* 2. default=0 : range=[0, 32] & (multiples of 2)
-	*/
 	u32 overlap_w = 0;
-	enum decon_data_path d_path = DPATH_DSCC_DSCENC01_FF01_FORMATTER0_DSIMIF0;
-	enum decon_enhance_path e_path = ENHANCEPATH_ENHANCE_ALL_OFF;
-	enum decon_share_path aps_path = SHAREPATH_DQE_USE;
-	enum decon_share_path hsc_path = SHAREPATH_DQE_USE;
+	enum decon_data_path d_path;
+	enum decon_scaler_path s_path = SCALERPATH_OFF;
 
 	struct decon_lcd *lcd_info = p->lcd_info;
 	struct decon_mode_info *psr = &p->psr;
 	enum decon_dsi_mode dsi_mode = psr->dsi_mode;
 	enum decon_rgb_order rgb_order = DECON_RGB;
 
-	if (lcd_info->dsc_enabled || (id == 2))
+	if (lcd_info->dsc_enabled)
 		rgb_order = DECON_RGB;
 	else
 		rgb_order = DECON_BGR;
 	decon_reg_set_rgb_order(id, rgb_order);
-	decon_reg_set_dispif_porch(id, lcd_info);
 
-	/*
-	* Following setting sequence must be kept
-	* 1. decon_reg_set_data_path
-	* 2. decon_reg_config_data_path_size
-	* --> because fn2 refer to SFR of fn1
-	*/
 	if (lcd_info->dsc_enabled) {
 		if (lcd_info->dsc_cnt == 1)
-			d_path = DPATH_DSCENC0_FF0_FORMATTER0_DSIMIF0;
-		else if (lcd_info->dsc_cnt == 2)
-			d_path = DPATH_DSCC_DSCENC01_FF01_FORMATTER0_DSIMIF0;
+			d_path = (id == 0) ? DPATH_DSCENC0_OUTFIFO0_DSIMIF0 : DECON2_DSCENC2_OUTFIFO0_DPIF;
+		else if (lcd_info->dsc_cnt == 2 && !id)
+			d_path = DPATH_DSCC_DSCENC01_OUTFIFO01_DSIMIF0;
 		else
 			decon_err("[decon%d] dsc_cnt=%d : not supported\n",
 				id, lcd_info->dsc_cnt);
 
-		decon_reg_set_data_path(id, d_path, e_path);
+		decon_reg_set_data_path(id, d_path, s_path);
 
-		dsc_reg_init(id, p, overlap_w, 0);
+		dsc_reg_init(id, p, overlap_w, 0); /* call decon_reg_config_data_path_size () inside */
 	} else {
 		if (dsi_mode == DSI_MODE_DUAL_DSI)
-			d_path = DPATH_NOCOMP_SPLITTER_FF0FF1_FORMATTER01_DSIMIF01;
-		else if (id == 2)
-			d_path = DECON2_NOCOMP_FF0_FORMATTER0_DISPIF;
+			d_path = DPATH_NOCOMP_SPLITTER_OUTFIFO01_DSIMIF01;
 		else
-			d_path = DPATH_NOCOMP_FF0_FORMATTER0_DSIMIF0;
-		decon_reg_set_data_path(id, d_path, e_path);
+			d_path = (id == 0) ? DPATH_NOCOMP_OUTFIFO0_DSIMIF0 : DECON2_NOCOMP_OUTFIFO0_DPIF;
+
+		decon_reg_set_data_path(id, d_path, s_path);
 
 		decon_reg_config_data_path_size(id,
-			lcd_info->xres, lcd_info->yres, overlap_w);
-
-		decon_reg_set_dispif_size(id, lcd_info->xres, lcd_info->yres);
+			lcd_info->xres, lcd_info->yres, overlap_w, NULL, p);
 	}
-
-	decon_reg_set_dqe_aps_path(id, aps_path);
-	decon_reg_set_dqe_hsc_path(id, hsc_path);
 
 	decon_reg_per_frame_off(id);
 }
 
-/***************** CAL APIs implementation *******************/
 static void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p)
 {
 	struct decon_lcd *lcd_info = p->lcd_info;
 	struct decon_mode_info *psr = &p->psr;
-	enum decon_data_path d_path = DPATH_NOCOMP_FF0_FORMATTER0_DSIMIF0;
-	enum decon_enhance_path e_path = ENHANCEPATH_ENHANCE_ALL_OFF;
-	u32 overlap_w = 0; /* default=0 : range=[0, 32] & (multiples of 2) */
+	enum decon_data_path d_path;
+	enum decon_scaler_path s_path = SCALERPATH_OFF;
 	enum decon_rgb_order rgb_order = DECON_RGB;
+	enum decon_dsi_mode dsi_mode = psr->dsi_mode;
+	u32 overlap_w = 0; /* default=0 : range=[0, 32] & (multiples of 2) */
 
-	if (lcd_info->dsc_enabled || (id == 2))
-		rgb_order = DECON_RGB;
-	else
-		rgb_order = DECON_BGR;
+	decon_reg_set_clkgate_mode(id, 0);
 
-	decon_reg_set_clkgate_mode(id, 1);
-
-	decon_reg_set_sram_share(id, DECON_FIFO_08K);
+	decon_reg_set_sram_share(id, DECON_FIFO_04K);
 
 	decon_reg_set_operation_mode(id, psr->psr_mode);
 
 	decon_reg_set_blender_bg_image_size(id, psr->dsi_mode, lcd_info);
 
-	/* valid only for DECON2-DP */
-	decon_reg_set_underrun_scheme(id, DECON_VCLK_NOT_AFFECTED);
+	decon_reg_set_scaled_image_size(id, psr->dsi_mode, lcd_info);
 
 	/*
 	 * same as decon_reg_configure_lcd(...) function
 	 * except using decon_reg_update_req_global(id)
 	 * instead of decon_reg_direct_on_off(id, 0)
 	 */
+	if (lcd_info->dsc_enabled)
+		rgb_order = DECON_RGB;
+	else
+		rgb_order = DECON_BGR;
 	decon_reg_set_rgb_order(id, rgb_order);
-	decon_reg_set_dispif_porch(id, lcd_info);
 
 	if (lcd_info->dsc_enabled) {
 		if (lcd_info->dsc_cnt == 1)
-			d_path = DPATH_DSCENC0_FF0_FORMATTER0_DSIMIF0;
-		else if (lcd_info->dsc_cnt == 2)
-			d_path = DPATH_DSCC_DSCENC01_FF01_FORMATTER0_DSIMIF0;
+			d_path = (id == 0) ? DPATH_DSCENC0_OUTFIFO0_DSIMIF0 : DECON2_DSCENC2_OUTFIFO0_DPIF;
+		else if (lcd_info->dsc_cnt == 2 && !id)
+			d_path = DPATH_DSCC_DSCENC01_OUTFIFO01_DSIMIF0;
 		else
 			decon_err("[decon%d] dsc_cnt=%d : not supported\n",
 				id, lcd_info->dsc_cnt);
 
-		decon_reg_set_data_path(id, d_path, e_path);
+		decon_reg_set_data_path(id, d_path, s_path);
 
-		dsc_reg_init(id, p, overlap_w, 0);
+		dsc_reg_init(id, p, overlap_w, 0); /* call decon_reg_config_data_path_size () inside */
 	} else {
-		if (psr->dsi_mode == DSI_MODE_DUAL_DSI)
-			d_path = DPATH_NOCOMP_SPLITTER_FF0FF1_FORMATTER01_DSIMIF01;
+		if (dsi_mode == DSI_MODE_DUAL_DSI)
+			d_path = DPATH_NOCOMP_SPLITTER_OUTFIFO01_DSIMIF01;
 		else
-			d_path = DPATH_NOCOMP_FF0_FORMATTER0_DSIMIF0;
-		decon_reg_set_data_path(id, d_path, e_path);
+			d_path = (id == 0) ? DPATH_NOCOMP_OUTFIFO0_DSIMIF0 : DECON2_NOCOMP_OUTFIFO0_DPIF;
+
+		decon_reg_set_data_path(id, d_path, s_path);
 
 		decon_reg_config_data_path_size(id,
-			lcd_info->xres, lcd_info->yres, overlap_w);
-
-		decon_reg_set_dispif_size(id, lcd_info->xres, lcd_info->yres);
+			lcd_info->xres, lcd_info->yres, overlap_w, NULL, p);
 	}
 
 	decon_reg_update_req_global(id);
@@ -1961,9 +1639,6 @@ static void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p)
 		decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
 	}
 
-	decon_reg_get_data_path(id, &d_path, &e_path);
-	decon_dbg("%s: decon%d, enhance path(0x%x), data path(0x%x)\n",
-			__func__, id, e_path, d_path);
 }
 
 int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
@@ -1981,34 +1656,22 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 		return -EBUSY;
 	}
 
-	dpu_sysreg_set_te_sel(id, TE_FROM_GPIO);
+	decon_reg_set_clkgate_mode(id, 0);
 
-	decon_reg_set_clkgate_mode(id, 1);
-
-	decon_reg_set_sram_share(id, DECON_FIFO_08K);
+	decon_reg_set_sram_share(id, DECON_FIFO_04K);
 
 	decon_reg_set_operation_mode(id, psr->psr_mode);
 
 	decon_reg_set_blender_bg_image_size(id, psr->dsi_mode, lcd_info);
 
+	decon_reg_set_scaled_image_size(id, psr->dsi_mode, lcd_info);
+
 	if (id == 2) {
 		/* Set a TRIG mode */
 		decon_reg_configure_trigger(id, psr->trig_mode);
-
-		/*
-		 * Interrupt of DECON-T should be set to video mode,
-		 * because of malfunction of I80 frame done interrupt.
-		 */
-		if (psr->out_type == DECON_OUT_DP)
-			psr->psr_mode = DECON_VIDEO_MODE;
-		decon_reg_set_int(id, psr, 1);
-		decon_reg_set_underrun_scheme(id, DECON_VCLK_NOT_AFFECTED);
-		decon_reg_set_vclk_freerun(id, 1);
-
 		decon_reg_configure_lcd(id, p);
 	} else {
 		decon_reg_configure_lcd(id, p);
-
 		if (psr->psr_mode == DECON_MIPI_COMMAND_MODE) {
 			decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
 		}
@@ -2017,8 +1680,8 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	/* asserted interrupt should be cleared before initializing decon hw */
 	decon_reg_clear_int_all(id);
 
-	/* Configure DISP_SS : 'data_path' setting is required */
-	decon_reg_set_disp_ss_cfg(id, psr);
+	/* Configure DECON dsim connection  : 'data_path' setting is required */
+	decon_reg_set_interface(id, psr);
 
 	return 0;
 }
@@ -2042,68 +1705,10 @@ int decon_reg_start(u32 id, struct decon_mode_info *psr)
 void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
 		struct decon_lcd *lcd_info, bool in_slice[])
 {
-	u32 overlap_w = 0; /* default=0 : range=[0, 32] & (multiples of 2) */
-	u32 dual_slice_en[2] = {1, 1};
-	u32 slice_mode_ch[2] = {0, 0};
-	u32 width = lcd_info->xres;
-	u32 dscc_en = 1;
-	u32 ds_en = 1;
-	u32 comp_slice_w = 0;
-
 	/* Here, lcd_info contains the size to be updated */
 	decon_reg_set_blender_bg_image_size(id, dsi_mode, lcd_info);
-	decon_reg_set_dispif_porch(id, lcd_info);
 
-	if (lcd_info->dsc_enabled) {
-		/* for DECON SFR setting */
-		ds_en = dsc_get_dual_slice_mode(lcd_info);
-		dscc_en = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DSCC_EN);
-		comp_slice_w = dsc_get_compressed_slice_width(width,
-			dscc_en, ds_en);
-
-		/* get correct DSC configuration */
-		dsc_get_partial_update_info(lcd_info, in_slice,
-			dual_slice_en, slice_mode_ch);
-
-		/* To support dual-display : DECON1 have to set DSC1 */
-		dsc_reg_set_partial_update(id, dual_slice_en[0],
-			slice_mode_ch[0], lcd_info->yres);
-		if (lcd_info->dsc_cnt == 2)
-			dsc_reg_set_partial_update(1, dual_slice_en[1],
-				slice_mode_ch[1], lcd_info->yres);
-
-		/* for full width update */
-		if (ds_en)
-			width = comp_slice_w * 2;
-		else
-			width = comp_slice_w;
-	}
-
-	decon_reg_config_data_path_size(id, width, lcd_info->yres, overlap_w);
-	decon_reg_set_dispif_size(id, width, lcd_info->yres);
-}
-
-int decon_reg_stop_nreset(u32 id, struct decon_mode_info *psr)
-{
-	int ret = 0;
-
-	if ((psr->psr_mode == DECON_MIPI_COMMAND_MODE) &&
-			(psr->trig_mode == DECON_HW_TRIG)) {
-		decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
-	}
-
-	decon_reg_per_frame_off(id);
-	decon_reg_update_req_global(id);
-
-	/* timeout : 20ms */
-	ret = decon_reg_wait_run_is_off_timeout(id, 20 * 1000);
-
-	if (ret) {
-		decon_err("decon_reg_stop_nreset failed!\n");
-		ret = -EBUSY;
-	}
-
-	return ret;
+	/* outfifo size should be changed ??? */
 }
 
 int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
@@ -2112,24 +1717,23 @@ int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
 	int timeout_value = 0;
 	struct decon_device *decon = get_decon_drvdata(id);
 
+	decon_dbg("%s +\n", __func__);
+
 	if ((psr->psr_mode == DECON_MIPI_COMMAND_MODE) &&
 			(psr->trig_mode == DECON_HW_TRIG)) {
 		decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
 	}
 
+	/* perframe stop */
 	decon_reg_per_frame_off(id);
 
 	decon_reg_update_req_global(id);
 
-	if (id != 2 || psr->out_type != DECON_OUT_DP) {
-		/* timeout : 20ms @ 60Hz */
-		ret = decon_reg_wait_run_is_off_timeout(id, 20 * 1000);
-	} else {
-		/* timeout : 1 / fps + 20% margin + 5ms for UHD */
-		timeout_value = 1000 / decon->lcd_info->fps * 12 / 10 + 5;
-		ret = decon_reg_wait_run_is_off_timeout(id, timeout_value * 1000);
-	}
+	/* timeout : 1 / fps + 20% margin */
+	timeout_value = 1000 / decon->lcd_info->fps * 12 / 10 + 5;
+	ret = decon_reg_wait_run_is_off_timeout(id, timeout_value * MSEC);
 
+	decon_dbg("%s -\n", __func__);
 	return ret;
 }
 
@@ -2144,28 +1748,12 @@ void decon_reg_clear_int_all(u32 id)
 {
 	u32 mask;
 
-	if (id != 2) {
-		mask = (DPU_MDNIE_DIMMING_END_INT_EN
-			| DPU_MDNIE_DIMMING_START_INT_EN
-			| DPU_DQE_DIMMING_END_INT_EN
-			| DPU_DQE_DIMMING_START_INT_EN
-			| DPU_FRAME_DONE_INT_EN
-			| DPU_FRAME_START_INT_EN
-			| DPU_FIFO_SEL_FIFO0
-			| DPU_UNDER_FLOW_INT_EN);
-	} else {
-		mask = (DPU_DISPIF_VSTATUS_INT_SEL_MASK
-			| DPU_DISPIF_VSTATUS_INT_EN
-			| DPU_FRAME_DONE_INT_EN
-			| DPU_FRAME_START_INT_EN
-			| DPU_FIFO_SEL_MASK
-			| DPU_UNDER_FLOW_INT_EN);
-	}
+	mask = (DPU_FRAME_DONE_INT_EN
+			| DPU_FRAME_START_INT_EN);
 	decon_write_mask(id, INTERRUPT_PENDING, ~0, mask);
 
 	mask = (DPU_RESOURCE_CONFLICT_INT_EN
-		| DPU_TIME_OUT_INT_EN
-		| DPU_ERROR_INT_EN);
+		| DPU_TIME_OUT_INT_EN);
 	decon_write_mask(id, EXTRA_INTERRUPT_PENDING, ~0, mask);
 }
 
@@ -2176,34 +1764,16 @@ void decon_reg_set_int(u32 id, struct decon_mode_info *psr, u32 en)
 	decon_reg_clear_int_all(id);
 
 	if (en) {
-		val = (DPU_DQE_DIMMING_END_INT_EN
-			| DPU_DQE_DIMMING_START_INT_EN
-			| DPU_FRAME_DONE_INT_EN
+		val = (DPU_FRAME_DONE_INT_EN
 			| DPU_FRAME_START_INT_EN
 			| DPU_EXTRA_INT_EN
 			| DPU_INT_EN);
-		/* DPU_UNDER_FLOW_INT_EN : don't use when DSIM and WB-POST */
-		if (psr->psr_mode == DECON_VIDEO_MODE)
-			val |= DPU_UNDER_FLOW_INT_EN;
 
-		if (psr->psr_mode == DECON_VIDEO_MODE && psr->out_type == DECON_OUT_DP) {
-			val = (DPU_FIFO_SEL_DISPIF
-				| DPU_UNDER_FLOW_INT_EN
-				| DPU_DISPIF_VSTATUS_INT_EN
-				| DPU_DISPIF_VSTATUS_INT_SEL(DPU_VERTICAL_VSYNC_START)
-				| DPU_INT_EN);
-		}
-
-		if (id != 2)
-			decon_write_mask(id, INTERRUPT_ENABLE, val, INTERRUPT_ENABLE_MASK);
-		else
-			decon_write_mask(id, INTERRUPT_ENABLE, val, INTERRUPT_ENABLE_MASK_DECON2);
-
+		decon_write_mask(id, INTERRUPT_ENABLE, val, INTERRUPT_ENABLE_MASK);
 		decon_dbg("decon %d, interrupt val = %x\n", id, val);
 
 		val = (DPU_RESOURCE_CONFLICT_INT_EN
-			| DPU_TIME_OUT_INT_EN
-			| DPU_ERROR_INT_EN);
+			| DPU_TIME_OUT_INT_EN);
 		decon_write(id, EXTRA_INTERRUPT_ENABLE, val);
 	} else {
 		mask = (DPU_EXTRA_INT_EN | DPU_INT_EN);
@@ -2218,6 +1788,7 @@ void decon_reg_set_win_enable(u32 id, u32 win_idx, u32 en)
 	val = en ? ~0 : 0;
 	mask = WIN_EN_F(win_idx);
 	decon_write_mask(id, DATA_PATH_CONTROL_0, val, mask);
+	decon_dbg("%s: 0x%x\n", __func__, decon_read(id, DATA_PATH_CONTROL_0));
 }
 
 /*
@@ -2244,15 +1815,28 @@ void decon_reg_set_win_mapcolor(u32 id, u32 win_idx, u32 argb_color)
 	decon_write_mask(id, WIN_COLORMAP_1(win_idx), val, mask);
 }
 
+void decon_reg_set_win_plane_alpha(u32 id, u32 win_idx, u32 a0, u32 a1)
+{
+	u32 val, mask;
+
+	val = WIN_ALPHA1_F(a1) | WIN_ALPHA0_F(a0);
+	mask = WIN_ALPHA1_MASK | WIN_ALPHA0_MASK;
+	decon_write_mask(id, WIN_CONTROL_0(win_idx), val, mask);
+}
+
 void decon_reg_set_winmap(u32 id, u32 win_idx, u32 color, u32 en)
 {
 	u32 val, mask;
+	u8 alpha0 = 0xff;
+	u8 alpha1 = 0xff;
 
 	/* Enable */
 	val = en ? ~0 : 0;
 	mask = WIN_MAPCOLOR_EN_F(win_idx);
 	decon_write_mask(id, DATA_PATH_CONTROL_0, val, mask);
+	decon_dbg("%s: 0x%x\n", __func__, decon_read(id, DATA_PATH_CONTROL_0));
 
+	decon_reg_set_win_plane_alpha(id, win_idx, alpha0, alpha1);
 	/* Color Set */
 	decon_reg_set_win_mapcolor(0, win_idx, color);
 }
@@ -2295,24 +1879,6 @@ void decon_reg_set_win_sub_coeff(u32 id, u32 win_idx,
 	decon_write_mask(id, WIN_CONTROL_1(win_idx), val, mask);
 }
 
-void decon_reg_set_win_plane_alpha(u32 id, u32 win_idx, u32 a0, u32 a1)
-{
-	u32 val, mask;
-
-	val = WIN_ALPHA1_F(a1) | WIN_ALPHA0_F(a0);
-	mask = WIN_ALPHA1_MASK | WIN_ALPHA0_MASK;
-	decon_write_mask(id, WIN_CONTROL_0(win_idx), val, mask);
-}
-
-void decon_reg_get_win_plane_alpha(u32 id, u32 win_idx, u32 *a0, u32 *a1)
-{
-	u32 val;
-
-	val = decon_read(id, WIN_CONTROL_0(win_idx));
-	*a0 = WIN_ALPHA_GET(val, 0);
-	*a1 = WIN_ALPHA_GET(val, 1);
-}
-
 void decon_reg_set_win_func(u32 id, u32 win_idx, enum decon_win_func pd_func)
 {
 	u32 val, mask;
@@ -2331,8 +1897,7 @@ void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 	u8 alpha0 = 0xff;
 	u8 alpha1 = 0xff;
 	bool is_plane_a = false;
-	u32 af_d = BND_COEF_ONE, ab_d = BND_COEF_ZERO,
-		af_a = BND_COEF_ONE, ab_a = BND_COEF_ZERO;
+	u32 af_d, ab_d, af_a, ab_a;
 
 	if (blend == DECON_BLENDING_NONE)
 		pd_func = PD_FUNC_COPY;
@@ -2363,10 +1928,6 @@ void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 		ab_d = BND_COEF_1_M_ALPHA_MULT;
 		af_a = BND_COEF_PLNAE_ALPHA0;
 		ab_a = BND_COEF_1_M_ALPHA_MULT;
-	} else if (blend == DECON_BLENDING_NONE) {
-		decon_dbg("%s:%d none blending mode\n", __func__, __LINE__);
-	} else {
-		decon_warn("%s:%d undefined blending mode\n", __func__, __LINE__);
 	}
 
 	decon_reg_set_win_plane_alpha(id, win_idx, alpha0, alpha1);
@@ -2381,21 +1942,22 @@ void decon_reg_set_window_control(u32 id, int win_idx,
 {
 	u32 win_en = regs->wincon & WIN_EN_F(win_idx) ? 1 : 0;
 
-	if (win_en) {
+	if (win_en == true) {
+		decon_info("%s: win id = %d \n", __func__, win_idx);
 		decon_reg_set_win_bnd_function(0, win_idx, regs);
 		decon_write(0, WIN_START_POSITION(win_idx), regs->start_pos);
 		decon_write(0, WIN_END_POSITION(win_idx), regs->end_pos);
 		decon_write(0, WIN_START_TIME_CONTROL(win_idx), regs->start_time);
-		decon_write(0, WIN_PIXEL_COUNT(win_idx), regs->pixel_count);
 	}
 
 	decon_reg_set_win_enable(id, win_idx, win_en);
-	if (win_en)
-		decon_reg_set_winmap(id, win_idx, regs->colormap, winmap_en);
+	decon_reg_set_winmap(id, win_idx, regs->colormap, winmap_en);
 	decon_reg_config_win_channel(id, win_idx, regs->type);
 
-	decon_dbg("%s: regs->type(%d)\n", __func__, regs->type);
+	/* decon_dbg("%s: regs->type(%d)\n", __func__, regs->type); */
+	decon_info("%s: regs->type(%d)\n", __func__, regs->type);
 }
+
 
 void decon_reg_update_req_and_unmask(u32 id, struct decon_mode_info *psr)
 {
@@ -2426,29 +1988,11 @@ int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq)
 	reg_id = INTERRUPT_PENDING;
 	val = decon_read(id, reg_id);
 
-	if (val & DPU_UNDER_FLOW_INT_PEND)
-		decon_write(id, reg_id, DPU_UNDER_FLOW_INT_PEND);
-
-	if (val & DPU_DISPIF_VSTATUS_INT_PEND)
-		decon_write(id, reg_id, DPU_DISPIF_VSTATUS_INT_PEND);
-
 	if (val & DPU_FRAME_START_INT_PEND)
 		decon_write(id, reg_id, DPU_FRAME_START_INT_PEND);
 
 	if (val & DPU_FRAME_DONE_INT_PEND)
 		decon_write(id, reg_id, DPU_FRAME_DONE_INT_PEND);
-
-	if (val & DPU_DQE_DIMMING_START_INT_PEND)
-		decon_write(id, reg_id, DPU_DQE_DIMMING_START_INT_PEND);
-
-	if (val & DPU_DQE_DIMMING_END_INT_PEND)
-		decon_write(id, reg_id, DPU_DQE_DIMMING_END_INT_PEND);
-
-	if (val & DPU_MDNIE_DIMMING_START_INT_PEND)
-		decon_write(id, reg_id, DPU_MDNIE_DIMMING_START_INT_PEND);
-
-	if (val & DPU_MDNIE_DIMMING_END_INT_PEND)
-		decon_write(id, reg_id, DPU_MDNIE_DIMMING_END_INT_PEND);
 
 	if (val & DPU_EXTRA_INT_PEND) {
 		decon_write(id, reg_id, DPU_EXTRA_INT_PEND);
@@ -2459,7 +2003,7 @@ int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq)
 
 		if (val1 & DPU_RESOURCE_CONFLICT_INT_PEND) {
 			decon_write(id, reg_id, DPU_RESOURCE_CONFLICT_INT_PEND);
-			decon_warn("decon%d INFO0: SRAM_RSC= 0x%x\n",
+			decon_warn("decon%d INFO0: SRAM_RSC & DSC = 0x%x\n",
 				id,
 				decon_read(id, RESOURCE_OCCUPANCY_INFO_0));
 			decon_warn("decon%d INFO1: DMA_CH_RSC= 0x%x\n",
@@ -2472,9 +2016,6 @@ int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq)
 
 		if (val1 & DPU_TIME_OUT_INT_PEND)
 			decon_write(id, reg_id, DPU_TIME_OUT_INT_PEND);
-
-		if (val1 & DPU_ERROR_INT_PEND)
-			decon_write(id, reg_id, DPU_ERROR_INT_PEND);
 	}
 
 	return val;
@@ -2491,18 +2032,14 @@ int decon_reg_is_win_enabled(u32 id, int win_idx)
 
 u32 decon_reg_get_width(u32 id, int dsi_mode)
 {
-	u32 val = 0;
-
-	val = decon_read(id, FORMATTER0_SIZE_CONTROL_0);
-	return (FORMATTER_WIDTH_GET(val));
+	/* TBD */
+	return 0;
 }
 
 u32 decon_reg_get_height(u32 id, int dsi_mode)
 {
-	u32 val = 0;
-
-	val = decon_read(id, FORMATTER0_SIZE_CONTROL_0);
-	return (FORMATTER_HEIGHT_GET(val));
+	/* TBD */
+	return 0;
 }
 
 const unsigned long decon_clocks_table[][CLK_ID_MAX] = {
