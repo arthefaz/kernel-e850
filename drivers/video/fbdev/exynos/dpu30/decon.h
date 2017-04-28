@@ -72,6 +72,9 @@ extern struct decon_bts_ops decon_bts_control;
 #ifndef MHZ
 #define MHZ (1000*1000)
 #endif
+#ifndef MSEC
+#define MSEC (1000)
+#endif
 
 #define SHADOW_UPDATE_TIMEOUT	(300 * 1000) /* 300ms */
 #define IDLE_WAIT_TIMEOUT	(50 * 1000) /* 50ms */
@@ -267,6 +270,7 @@ enum decon_clk_id {
 	CLK_ID_MAX,
 };
 
+#if defined(CONFIG_SOC_EXYNOS8895)
 enum decon_path_cfg {
 	PATH_CON_ID_DSIM_IF0 = 0,
 	PATH_CON_ID_DSIM_IF1 = 1,
@@ -354,6 +358,66 @@ enum decon_enhance_path {
 	ENHANCEPATH_MDNIE_ON		= 0x4,
 	ENHANCEPATH_MDNIE_DITHER_ON	= 0x5,
 };
+#else
+enum decon_path_cfg {
+	PATH_CON_ID_DSIM_IF0 = 0,
+	PATH_CON_ID_DSIM_IF1 = 1,
+	PATH_CON_ID_DP = 3,
+	PATH_CON_ID_DUAL_DSC = 4,
+	PATH_CON_ID_DSCC_EN = 7,
+};
+
+enum decon_data_path {
+	/* No comp - OUTFIFO0 DSIM_IF0 */
+	DPATH_NOCOMP_OUTFIFO0_DSIMIF0			= 0x001,
+	/* No comp - FF0 - FORMATTER1 - DSIM_IF1 */
+	DPATH_NOCOMP_OUTFIFO0_DSIMIF1			= 0x002,
+	/* No comp - SPLITTER - FF0/1 - FORMATTER0/1 - DSIM_IF0/1 */
+	DPATH_NOCOMP_SPLITTER_OUTFIFO01_DSIMIF01	= 0x003,
+
+	/* DSC_ENC0 - OUTFIFO0 - DSIM_IF0 */
+	DPATH_DSCENC0_OUTFIFO0_DSIMIF0		= 0x011,
+	/* DSC_ENC0 - OUTFIFO0 - DSIM_IF1 */
+	DPATH_DSCENC0_OUTFIFO0_DSIMIF1		= 0x012,
+
+	/* DSCC,DSC_ENC0/1 - OUTFIFO01 DSIM_IF0 */
+	DPATH_DSCC_DSCENC01_OUTFIFO01_DSIMIF0	= 0x0B1,
+	/* DSCC,DSC_ENC0/1 - OUTFIFO01 DSIM_IF1 */
+	DPATH_DSCC_DSCENC01_OUTFIFO01_DSIMIF1	= 0x0B2,
+	/* DSCC,DSC_ENC0/1 - OUTFIFO01 DSIM_IF0/1*/
+	DPATH_DSCC_DSCENC01_OUTFIFO01_DSIMIF01	= 0x0B3,
+};
+
+enum decon1_data_path {
+	/* No comp - OUTFIFO0 DSIM_IF0 */
+	DECON1_NOCOMP_OUTFIFO0_DSIMIF0	= 0x001,
+	/* No comp - OUTFIFO0 DP_IF */
+	DECON1_NOCOMP_OUTFIFO0_DPIF		= 0x008,
+	/* DSC_ENC1 - OUTFIFO0 - DSIM_IF0 */
+	DECON1_DSCENC1_OUTFIFO0_DSIMIF0	= 0x021,
+	/* DSC_ENC1 - OUTFIFO0 - DP_IF */
+	DECON1_DSCENC1_OUTFIFO0_DPIF	= 0x028,
+};
+
+enum decon2_data_path {
+	/* No comp - OUTFIFO0 DP_IF */
+	DECON2_NOCOMP_OUTFIFO0_DPIF		= 0x008,
+	/* DSC_ENC2 - OUTFIFO0 - DP_IF0 */
+	DECON2_DSCENC2_OUTFIFO0_DPIF	= 0x048,
+};
+
+enum decon_dsc_id {
+	DECON_DSC_ENC0 = 0x0,
+	DECON_DSC_ENC1 = 0x1,
+	DECON_DSC_ENC2 = 0x2,
+};
+
+enum decon_scaler_path {
+	SCALERPATH_OFF	= 0x0,
+	SCALERPATH_VGF	= 0x1,
+	SCALERPATH_VGRF	= 0x2,
+};
+#endif
 
 enum decon_share_path {
 	SHAREPATH_DQE_USE		= 0x0,
@@ -1254,10 +1318,17 @@ void decon_reg_set_trigger(u32 id, struct decon_mode_info *psr,
 		enum decon_set_trig en);
 int decon_reg_wait_for_update_timeout(u32 id, unsigned long timeout);
 int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq);
-void decon_reg_set_blender_bg_image_size(u32 id, enum decon_dsi_mode dsi_mode,
-		struct decon_lcd *lcd_info);
+#if defined(CONFIG_SOC_EYXNOS8895)
 void decon_reg_config_data_path_size(u32 id,
 	u32 width, u32 height, u32 overlap_w);
+void decon_reg_set_blender_bg_image_size(u32 id, enum decon_dsi_mode dsi_mode,
+		struct decon_lcd *lcd_info);
+#elif defined(CONFIG_SOC_EXYNOS9810)
+void decon_reg_config_data_path_size(u32 id, u32 width, u32 height,
+		u32 overlap_w, struct decon_dsc *p, struct decon_param *param);
+u32 dsc_get_dual_slice_mode(struct decon_lcd *lcd_info);
+u32 dsc_get_slice_mode_change(struct decon_lcd *lcd_info);
+#endif
 void decon_reg_set_dispif_size(u32 id, u32 width, u32 height);
 void decon_reg_get_clock_ratio(struct decon_clocks *clks,
 		struct decon_lcd *lcd_info);

@@ -301,7 +301,11 @@ int decon_tui_protection(bool tui_en)
 			dpu_set_win_update_config(decon, NULL);
 #endif
 		decon_to_psr_info(decon, &psr);
+#if defined(CONFIG_SOC_EXYNOS9810)
+		decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr);
+#else
 		decon_reg_stop_nreset(decon->id, &psr);
+#endif
 
 		decon->cur_using_dpp = 0;
 		decon_dpp_stop(decon, false);

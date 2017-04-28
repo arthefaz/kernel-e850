@@ -17,6 +17,7 @@
 #include "decon.h"
 #include "displayport.h"
 
+#if defined(CONFIG_SOC_EXYNOS8895)
 static void decon_displayport_underrun_info(void)
 {
 #if defined(CONFIG_EXYNOS8895_BTS)
@@ -31,9 +32,11 @@ static void decon_displayport_underrun_info(void)
 			decon->bts.total_bw);
 #endif
 }
+#endif
 
 static irqreturn_t decon_displayport_irq_handler(int irq, void *dev_data)
 {
+#if defined(CONFIG_SOC_EXYNOS8895)
 	struct decon_device *decon = dev_data;
 	ktime_t timestamp = ktime_get();
 	u32 irq_sts_reg;
@@ -79,6 +82,10 @@ static irqreturn_t decon_displayport_irq_handler(int irq, void *dev_data)
 irq_end:
 	spin_unlock(&decon->slock);
 	return IRQ_HANDLED;
+#else
+	/* TODO: This will be implemented */
+	return IRQ_HANDLED;
+#endif
 }
 
 int decon_displayport_register_irq(struct decon_device *decon)

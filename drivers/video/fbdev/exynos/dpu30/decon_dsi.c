@@ -70,9 +70,6 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 	if (ext_irq & DPU_TIME_OUT_INT_PEND)
 		decon_err("%s: DECON%d timeout irq occurs\n", __func__, decon->id);
 
-	if (ext_irq & DPU_ERROR_INT_PEND)
-		decon_err("%s: DECON%d error irq occurs\n", __func__, decon->id);
-
 irq_end:
 	spin_unlock(&decon->slock);
 	return IRQ_HANDLED;
