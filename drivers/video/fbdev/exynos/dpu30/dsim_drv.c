@@ -48,6 +48,12 @@ static void __dsim_dump(struct dsim_device *dsim)
 	dsim_reg_enable_shadow_read(dsim->id, 0);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			dsim->res.regs, 0xFC, false);
+
+#if defined(CONFIG_SOC_EXYNOS9810)
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+		dsim->res.phy_regs, 0x4000, false);
+#endif
+
 	/* restore to avoid size mismatch (possible config error at DECON) */
 	dsim_reg_enable_shadow_read(dsim->id, 1);
 }
@@ -440,6 +446,15 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+/* DPHY RESET is controlled by IP */
+void dpu_sysreg_set_dphy(struct dsim_device *dsim, void __iomem *sysreg)
+{
+	u32 val;
+
+	val = SEL_RESET_DPHY_MASK(dsim->id);
+	writel(val, sysreg + DISP_DPU_MIPI_PHY_CON);
+}
+
 static void dsim_clocks_info(struct dsim_device *dsim)
 {
 }
@@ -589,6 +604,8 @@ static int dsim_enable(struct dsim_device *dsim)
 	/* Config link to DPHY configuration */
 #if defined(CONFIG_SOC_EXYNOS8895)
 	dpu_sysreg_set_lpmux(dsim->res.ss_regs);
+#elif defined(CONFIG_SOC_EXYNOS9810)
+	dpu_sysreg_set_dphy(dsim, dsim->res.ss_regs);
 #endif
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
@@ -603,6 +620,10 @@ static int dsim_enable(struct dsim_device *dsim)
 		}
 	}
 
+#if defined(CONFIG_SOC_EXYNOS9810)
+	/* choose OSC_CLK */
+	dsim_reg_set_link_clock(dsim->id, 0);
+#endif
 	/* Enable DPHY reset : DPHY reset start */
 	dsim_reg_dphy_resetn(dsim->id, 1);
 
@@ -614,12 +635,12 @@ static int dsim_enable(struct dsim_device *dsim)
 	dsim_reg_set_clocks(dsim->id, &dsim->clks, &dsim->lcd_info.dphy_pms, 1);
 
 	dsim_reg_set_lanes(dsim->id, dsim->data_lane, 1);
-	/* Wait for 200us~ for Dphy stable time and slave acknowlegement */
-	udelay(300);
-
+	dsim_reg_dphy_resetn(dsim->id, 0); /* Release DPHY reset */
+#if defined(CONFIG_SOC_EXYNOS9810)
+	dsim_reg_set_link_clock(dsim->id, 1);	/* Selection to word clock */
+#endif
 	dsim_reg_set_esc_clk_on_lane(dsim->id, 1, dsim->data_lane);
 	dsim_reg_enable_word_clock(dsim->id, 1);
-	dsim_reg_dphy_resetn(dsim->id, 0); /* Release DPHY reset */
 
 	if (dsim_reg_init(dsim->id, &dsim->lcd_info, dsim->data_lane_cnt,
 				&dsim->clks) < 0 ) {
@@ -736,25 +757,34 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 #endif
 #if defined(CONFIG_SOC_EXYNOS8895)
 	dpu_sysreg_set_lpmux(dsim->res.ss_regs);
+#elif defined(CONFIG_SOC_EXYNOS9810)
+	dpu_sysreg_set_dphy(dsim, dsim->res.ss_regs);
 #endif
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
 
-	dsim_reg_dphy_resetn(dsim->id, 1);
-
-	dsim_reg_sw_reset(dsim->id);
 	enable_irq(dsim->res.irq);
+
+#if defined(CONFIG_SOC_EXYNOS9810)
+	/* choose OSC_CLK */
+	dsim_reg_set_link_clock(dsim->id, 0);
+#endif
+	/* Enable DPHY reset : DPHY reset start */
+	dsim_reg_dphy_resetn(dsim->id, 1);
+	/* DSIM Link SW reset */
+	dsim_reg_sw_reset(dsim->id);
 
 	dsim_reg_set_clocks(dsim->id, &dsim->clks,
 			&dsim->lcd_info.dphy_pms, 1);
 
 	dsim_reg_set_lanes(dsim->id, dsim->data_lane, 1);
-	/* Wait for 200us~ for Dphy stable time and slave acknowlegement */
-	udelay(300);
+	dsim_reg_dphy_resetn(dsim->id, 0); /* release DPHY reset */
+#if defined(CONFIG_SOC_EXYNOS9810)
+	dsim_reg_set_link_clock(dsim->id, 1);	/* Selection to word clock */
+#endif
 
 	dsim_reg_set_esc_clk_on_lane(dsim->id, 1, dsim->data_lane);
 	dsim_reg_enable_word_clock(dsim->id, 1);
-	dsim_reg_dphy_resetn(dsim->id, 0); /* release DPHY reset */
 
 	if (dsim_reg_init(dsim->id, &dsim->lcd_info, dsim->data_lane_cnt,
 				&dsim->clks) < 0 ) {
@@ -939,7 +969,7 @@ int dsim_create_cmd_rw_sysfs(struct dsim_device *dsim)
 
 static void dsim_parse_lcd_info(struct dsim_device *dsim)
 {
-	u32 res[3];
+	u32 res[4];
 	struct device_node *node;
 	unsigned int mres_num = 1;
 	u32 mres_w[3] = {0, };
@@ -951,7 +981,7 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 	node = of_parse_phandle(dsim->dev->of_node, "lcd_info", 0);
 
 	of_property_read_u32(node, "mode", &dsim->lcd_info.mode);
-	dsim_dbg("%s mode\n", dsim->lcd_info.mode ? "command" : "video");
+	dsim_info("%s mode\n", dsim->lcd_info.mode ? "command" : "video");
 
 	of_property_read_u32_array(node, "resolution", res, 2);
 	dsim->lcd_info.xres = res[0];
@@ -983,11 +1013,16 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 	dsim->clks.hs_clk = dsim->lcd_info.hs_clk;
 	dsim_dbg("requested hs clock(%d)\n", dsim->lcd_info.hs_clk);
 
-	of_property_read_u32_array(node, "timing,pms", res, 3);
+	of_property_read_u32_array(node, "timing,pms", res, 4);
 	dsim->lcd_info.dphy_pms.p = res[0];
 	dsim->lcd_info.dphy_pms.m = res[1];
 	dsim->lcd_info.dphy_pms.s = res[2];
+#if defined(CONFIG_SOC_EXYNOS9810)
+	dsim->lcd_info.dphy_pms.k = res[3];
+	dsim_dbg("p(%d), m(%d), s(%d), k(%d)\n", res[0], res[1], res[2], res[3]);
+#else
 	dsim_dbg("p(%d), m(%d), s(%d)\n", res[0], res[1], res[2]);
+#endif
 
 	of_property_read_u32(node, "timing,dsi-escape-clk",
 			&dsim->lcd_info.esc_clk);
@@ -1157,6 +1192,21 @@ static int dsim_init_resources(struct dsim_device *dsim, struct platform_device 
 		return -EINVAL;
 	}
 
+#if defined(CONFIG_SOC_EXYNOS9810)
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (!res) {
+		dsim_err("failed to get mem resource\n");
+		return -ENOENT;
+	}
+	dsim_info("dphy res: start(0x%x), end(0x%x)\n", (u32)res->start, (u32)res->end);
+
+	dsim->res.phy_regs = devm_ioremap_resource(dsim->dev, res);
+	if (!dsim->res.phy_regs) {
+		dsim_err("failed to remap DSIM DPHY SFR region\n");
+		return -EINVAL;
+	}
+#endif
+
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!res) {
 		dsim_err("failed to get irq resource\n");
@@ -1231,11 +1281,16 @@ static int dsim_probe(struct platform_device *pdev)
 
 	/* TODO: If you want to enable DSIM BIST mode. you must turn on LCD here */
 
+#if !defined(BRINGUP_DSIM_BIST)
 	call_panel_ops(dsim, probe, dsim);
-	/* call_panel_ops(dsim, displayon, dsim); */
-
+#else
 	/* TODO: This is for dsim BIST mode in zebu emulator. only for test*/
-	dsim_set_bist(dsim->id, false);
+	call_panel_ops(dsim, displayon, dsim);
+	dsim_set_bist(dsim->id, true);
+#endif
+
+	/* for debug */
+	/* dsim_dump(dsim); */
 
 	dsim_clocks_info(dsim);
 	dsim_create_cmd_rw_sysfs(dsim);
