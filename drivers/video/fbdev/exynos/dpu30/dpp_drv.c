@@ -163,6 +163,7 @@ static void dpp_dma_dump_registers(struct dpp_device *dpp)
 	dpp_dma_read_ch_data(dpp->id);
 }
 
+#if defined(CONFIG_SOC_EXYNOS8895)
 static void dpp_read_ch_data(int id)
 {
 	u32 data[17] = {0,};
@@ -182,6 +183,7 @@ static void dpp_read_ch_data(int id)
 		dpp_info("[0x%08x: %08x]\n", sel[i], data[i]);
 	}
 }
+#endif
 
 static void dpp_dump_registers(struct dpp_device *dpp)
 {
@@ -212,7 +214,9 @@ static void dpp_dump_registers(struct dpp_device *dpp)
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			dpp->res.regs + 0xD00, 0xC, false);
 
+#if defined(CONFIG_SOC_EXYNOS8895)
 	dpp_read_ch_data(dpp->id);
+#endif
 }
 
 void dpp_op_timer_handler(unsigned long arg)

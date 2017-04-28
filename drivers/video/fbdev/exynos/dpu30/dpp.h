@@ -381,6 +381,7 @@ void dma_reg_clear_irq(u32 id, u32 irq);
 /* BIST mode */
 void dma_reg_set_test_pattern(u32 id, u32 pat_id, u32 pat_dat[4]);
 void dma_reg_set_ch_map(u32 id, u32 dpp_id, u32 to_pat);
+void dma_reg_set_test_en(u32 id,u32 en);
 
 /* DPP low-level APIs exposed to DPP driver */
 void dpp_reg_init(u32 id);
@@ -396,6 +397,7 @@ void dma_reg_set_recovery_num(u32 id, u32 rcv_num);
 /* DPU DMA DEBUG */
 void dma_reg_set_debug(u32 id);
 void dma_reg_set_common_debug(u32 id);
+
 
 #define DPP_WIN_CONFIG			_IOW('P', 0, struct decon_win_config)
 #define DPP_STOP			_IOW('P', 1, unsigned long)
