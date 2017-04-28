@@ -30,9 +30,16 @@ extern int dsim_log_level;
 #define DSIM_MODULE_NAME		"exynos-dsim"
 #define DSIM_DDI_ID_LEN			3
 
+#if defined(CONFIG_SOC_EXYNOS9810)
+#define DSIM_PIXEL_FORMAT_RGB24		0x3E
+#define DSIM_PIXEL_FORMAT_RGB18_PACKED	0x1E
+#define DSIM_PIXEL_FORMAT_RGB18		0x2E
+#define DSIM_PIXEL_FORMAT_RGB30_PACKED		0x0D
+#else
 #define DSIM_PIXEL_FORMAT_RGB24		0x0
 #define DSIM_PIXEL_FORMAT_RGB18_PACKED	0x1
 #define DSIM_PIXEL_FORMAT_RGB18		0x2
+#endif
 #define DSIM_RX_FIFO_MAX_DEPTH		64
 #define MAX_DSIM_CNT			2
 #define MAX_DSIM_DATALANE_CNT		4
@@ -151,6 +158,9 @@ struct dsim_pll_param {
 	u32 p;
 	u32 m;
 	u32 s;
+#if defined(CONFIG_SOC_EXYNOS9810)
+	u32 k;
+#endif
 	u32 pll_freq; /* in/out parameter: Mhz */
 };
 
@@ -186,6 +196,9 @@ struct dsim_resources {
 	int irq;
 	void __iomem *regs;
 	void __iomem *ss_regs;
+#if defined(CONFIG_SOC_EXYNOS9810)
+	void __iomem *phy_regs;
+#endif
 };
 
 struct dsim_device {
@@ -294,6 +307,40 @@ static inline void dsim_write_mask(u32 id, u32 reg_id, u32 val, u32 mask)
 	writel(val, dsim->res.regs + reg_id);
 }
 
+#if defined(CONFIG_SOC_EXYNOS9810)
+/* DPHY register access subroutines */
+static inline u32 dsim_phy_read(u32 id, u32 reg_id)
+{
+	struct dsim_device *dsim = get_dsim_drvdata(id);
+
+	return readl(dsim->res.phy_regs + reg_id);
+}
+
+static inline u32 dsim_phy_read_mask(u32 id, u32 reg_id, u32 mask)
+{
+	u32 val = dsim_phy_read(id, reg_id);
+
+	val &= (mask);
+	return val;
+}
+static inline void dsim_phy_write(u32 id, u32 reg_id, u32 val)
+{
+	struct dsim_device *dsim = get_dsim_drvdata(id);
+
+	writel(val, dsim->res.phy_regs + reg_id);
+}
+
+static inline void dsim_phy_write_mask(u32 id, u32 reg_id, u32 val, u32 mask)
+{
+	struct dsim_device *dsim = get_dsim_drvdata(id);
+	u32 old = dsim_phy_read(id, reg_id);
+
+	val = (val & mask) | (old & ~mask);
+	writel(val, dsim->res.phy_regs + reg_id);
+	/* printk("offset : 0x%8x, value : 0x%x\n", reg_id, val); */
+}
+#endif
+
 /* CAL APIs list */
 int dsim_reg_init(u32 id, struct decon_lcd *lcd_info,
 			u32 data_lane_cnt, struct dsim_clks *clks);
@@ -329,9 +376,19 @@ void dsim_reg_enable_word_clock(u32 id, u32 en);
 void dsim_reg_set_esc_clk_prescaler(u32 id, u32 en, u32 p);
 u32 dsim_reg_is_pll_stable(u32 id);
 
+#if defined(CONFIG_SOC_EXYNOS9810)
+void dsim_reg_set_link_clock(u32 id, u32 en);
+void dsim_reg_set_video_mode(u32 id, u32 mode);
+void dsim_reg_enable_shadow(u32 id, u32 en);
+#endif
+
 #define DSIM_IOC_ENTER_ULPS		_IOW('D', 0, u32)
 #define DSIM_IOC_GET_LCD_INFO		_IOW('D', 5, struct decon_lcd *)
 #define DSIM_IOC_DUMP			_IOW('D', 8, u32)
 #define DSIM_IOC_GET_WCLK		_IOW('D', 9, u32)
+
+#if defined(CONFIG_SOC_EXYNOS9810)
+#define DSIM_IOC_SET_CONFIG		_IOW('D', 10, u32)
+#endif
 
 #endif /* __SAMSUNG_DSIM_H__ */
