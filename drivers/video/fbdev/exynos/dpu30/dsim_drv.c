@@ -34,8 +34,6 @@
 #include "decon.h"
 #include "dsim.h"
 
-#include "regs-dsim.h"
-
 int dsim_log_level = 6;
 
 struct dsim_device *dsim_drvdata[MAX_DSIM_CNT];
