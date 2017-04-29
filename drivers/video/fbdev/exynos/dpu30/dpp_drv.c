@@ -20,6 +20,20 @@
 #include "decon.h"
 
 int dpp_log_level = 6;
+
+#if defined(DMA_BIST)
+u32 pattern_data[] = {
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0x000000ff,
+	0x000000ff,
+	0x000000ff,
+	0x000000ff,
+};
+#endif
+
 struct dpp_device *dpp_drvdata[MAX_DPP_CNT];
 
 static int dpp_runtime_suspend(struct device *dev);
@@ -188,9 +202,10 @@ static void dpp_read_ch_data(int id)
 static void dpp_dump_registers(struct dpp_device *dpp)
 {
 	dpp_dma_dump_registers(dpp);
-
+	/*
 	dpp_write(dpp->id, 0x0B00, 0x1);
 	dpp_write(dpp->id, 0x0C00, 0x1);
+	*/
 	dpp_info("=== DPP%d SFR DUMP ===\n", dpp->id);
 
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
@@ -205,7 +220,7 @@ static void dpp_dump_registers(struct dpp_device *dpp)
 			dpp->res.regs + 0xA54, 0x4, false);
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			dpp->res.regs + 0xB00, 0x58, false);
-	if (dpp->id == IDMA_VGF0 || dpp->id == IDMA_VGF0) {
+	if (dpp->id == IDMA_VGF0 || dpp->id == IDMA_VGF1) {
 		print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			dpp->res.regs + 0xBB0, 0x10, false);
 	}
@@ -518,9 +533,11 @@ static int dpp_set_config(struct dpp_device *dpp)
 		enable_irq(dpp->res.dma_irq);
 		enable_irq(dpp->res.irq);
 
-		/* DMA_debug sfrs enable */
+		/* DMA_debug registers enable */
+		/*
 		dma_reg_set_debug(dpp->id);
 		dma_reg_set_common_debug(dpp->id);
+		*/
 	}
 
 	/* parameters from decon driver are translated for dpp driver */
@@ -539,12 +556,14 @@ static int dpp_set_config(struct dpp_device *dpp)
 
 	DPU_EVENT_LOG(DPU_EVT_DPP_WINCON, &dpp->sd, ktime_set(0, 0));
 
-	/*
-	 * It's only for DPP BIST mode test
-	 * dma_reg_set_ch_map(0, dpp->id, true);
-	 * dma_reg_set_test_pattern(0, 0, pat_dat[0]);
-	 * dma_reg_set_test_pattern(0, 1, pat_dat[1]);
-	 */
+	/* It's only for DPP BIST mode test */
+#if defined(DMA_BIST)
+	dma_reg_set_test_en(dpp->id, 1);
+	dma_reg_set_test_pattern(0, 0, &pattern_data[0]);
+	dma_reg_set_test_pattern(0, 1, &pattern_data[0]);
+#endif
+
+	dpp_info("dpp%d configuration\n", dpp->id);
 
 	dpp->state = DPP_STATE_ON;
 err:
@@ -894,7 +913,7 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 		dpp_err("failed to get dpu dma irq resource\n");
 		return -ENOENT;
 	}
-	dpp_info("irq no = %lld\n", res->start);
+	dpp_info("dma irq no = %lld\n", res->start);
 
 	dpp->res.dma_irq = res->start;
 	ret = devm_request_irq(dpp->dev, res->start, dma_irq_handler, 0,
