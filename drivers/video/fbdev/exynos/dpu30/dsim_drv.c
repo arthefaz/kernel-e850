@@ -1013,7 +1013,7 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 	dsim->clks.hs_clk = dsim->lcd_info.hs_clk;
 	dsim_dbg("requested hs clock(%d)\n", dsim->lcd_info.hs_clk);
 
-	of_property_read_u32_array(node, "timing,pms", res, 4);
+	of_property_read_u32_array(node, "timing,pmsk", res, 4);
 	dsim->lcd_info.dphy_pms.p = res[0];
 	dsim->lcd_info.dphy_pms.m = res[1];
 	dsim->lcd_info.dphy_pms.s = res[2];
