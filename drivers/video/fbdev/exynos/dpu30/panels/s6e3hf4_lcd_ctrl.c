@@ -26,7 +26,7 @@
  */
 void lcd_init(int id, struct decon_lcd *lcd)
 {
-	dsim_dbg("%s +\n", __func__);
+	dsim_info("%s +\n", __func__);
 
 	/* DSC setting */
 	if (dsim_wr_data(id, MIPI_DSI_DSC_PRA, (unsigned long)SEQ_DSC_EN[0],
@@ -74,15 +74,15 @@ void lcd_init(int id, struct decon_lcd *lcd)
 	if (dsim_wr_data(id, MIPI_DSI_DCS_SHORT_WRITE, SEQ_TE_ON[0], 0) < 0)
 		dsim_err("fail to write SEQ_TE_ON init command.\n");
 
-	dsim_dbg("%s -\n", __func__);
+	dsim_info("%s -\n", __func__);
 }
 
 void lcd_enable(int id)
 {
-	dsim_dbg("%s +\n", __func__);
+	dsim_info("%s +\n", __func__);
 	if (dsim_wr_data(id, MIPI_DSI_DCS_SHORT_WRITE, SEQ_DISPLAY_ON[0], 0) < 0)
 		dsim_err("fail to send SEQ_DISPLAY_ON command.\n");
-	dsim_dbg("%s -\n", __func__);
+	dsim_info("%s -\n", __func__);
 }
 
 void lcd_disable(int id)
