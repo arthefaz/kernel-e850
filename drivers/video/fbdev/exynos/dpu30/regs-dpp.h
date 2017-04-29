@@ -117,6 +117,22 @@
 #define IDMA_IMG_FORMAT_ARGB4444		(13)
 #define IDMA_IMG_FORMAT_YUV420_2P		(24)
 #define IDMA_IMG_FORMAT_YVU420_2P		(25)
+
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+#define IDMA_ROTATION(_v)		((_v) << 8)
+#define IDMA_ROTATION_MASK		(7 << 8)
+#define IDMA_ROTATION_X_FLIP		(1 << 8)
+#define IDMA_ROTATION_Y_FLIP		(2 << 8)
+#define IDMA_ROTATION_180		(3 << 8)
+#define IDMA_ROTATION_90		(4 << 8)
+#define IDMA_ROTATION_90_X_FLIP		(5 << 8)
+#define IDMA_ROTATION_90_Y_FLIP		(6 << 8)
+#define IDMA_ROTATION_270		(7 << 8)
+#else
+#define IDMA_IN_FLIP(_v)			((_v) << 8)
+#define IDMA_IN_FLIP_MASK			(0x3 << 8)
+#endif
+
 #define IDMA_IN_FLIP(_v)			((_v) << 8)
 #define IDMA_IN_FLIP_MASK			(0x3 << 8)
 #define IDMA_AFBC_EN				(1 << 7)

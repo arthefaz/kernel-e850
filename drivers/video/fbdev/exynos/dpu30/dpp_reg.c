@@ -1250,7 +1250,11 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p)
 	dpp_reg_set_csc_config(id, p->eq_mode);
 	dpp_reg_set_scale_ratio(id, p);
 	dpp_reg_set_size(id, p);
+#if defined(CONFIG_DPU_2_0_INTERFACE)
+	dma_reg_set_rotation(id, p->rot);
+#else
 	dma_reg_set_in_flip(id, p->flip);
+#endif
 	dpp_reg_set_buf_addr(id, p);
 	dpp_reg_set_block_area(id, p);
 	dpp_reg_set_format(id, p);
