@@ -321,10 +321,10 @@
 /************************************* DPHY  registers  ***************************************/
 
 /* DPHY BIAS setting */
-#define DSIM_PHY_BIAS_CTRL(_id)		(0x0400 + (4*_id))
+#define DSIM_PHY_BIAS_CTRL(_id)		(0x0400 + (4 * (_id)))
 
 /* DPHY DTB setting */
-#define DSIM_PHY_DTB_CTRL(_id)		(0x0800 + (4*_id))
+#define DSIM_PHY_DTB_CTRL(_id)		(0x0800 + (4 * (_id)))
 
 /* PMSK setting */
 #define DSIM_PHY_PLL_CTRL_01		(0x0C04)
@@ -360,7 +360,7 @@
 #define DSIM_PHY_PMS_S_2_0_MASK		(0x7 << 5)
 
 /* master clock lane  setting */
-#define DSIM_PHY_ACTRL_MC(_id)		(0x1000 + (4*_id))
+#define DSIM_PHY_ACTRL_MC(_id)		(0x1000 + (4 * (_id)))
 
 #define DSIM_PHY_DCTRL_MC_01		(0x1080)
 #define DSIM_PHY_DCTRL_MC_02		(0x1084)
@@ -378,7 +378,7 @@
 #define DSIM_PHY_DCTRL_MC_0E		(0x10B4)
 
 /* master data lane  setting : D0 */
-#define DSIM_PHY_ACTRL_MD0(_id)		(0x1400 + (4*_id))
+#define DSIM_PHY_ACTRL_MD0(_id)		(0x1400 + (4 * (_id)))
 
 #define DSIM_PHY_DCTRL_MD0_01		(0x1480)
 #define DSIM_PHY_DCTRL_MD0_02		(0x1484)
@@ -394,7 +394,7 @@
 #define DSIM_PHY_DCTRL_MD0_0C		(0x14AC)
 
 /* master data lane  setting : D1 */
-#define DSIM_PHY_ACTRL_MD1(_id)		(0x1800 + (4*_id))
+#define DSIM_PHY_ACTRL_MD1(_id)		(0x1800 + (4 * (_id)))
 
 #define DSIM_PHY_DCTRL_MD1_01		(0x1880)
 #define DSIM_PHY_DCTRL_MD1_02		(0x1884)
@@ -410,7 +410,7 @@
 #define DSIM_PHY_DCTRL_MD1_0C		(0x18AC)
 
 /* master data lane  setting : D2 */
-#define DSIM_PHY_ACTRL_MD2(_id)		(0x1C00 + (4*_id))
+#define DSIM_PHY_ACTRL_MD2(_id)		(0x1C00 + (4 * (_id)))
 
 #define DSIM_PHY_DCTRL_MD2_01		(0x1C80)
 #define DSIM_PHY_DCTRL_MD2_02		(0x1C84)
@@ -426,7 +426,7 @@
 #define DSIM_PHY_DCTRL_MD2_0C		(0x1CAC)
 
 /* master data lane  setting : D3 */
-#define DSIM_PHY_ACTRL_MD3(_id)		(0x2000 + (4*_id))
+#define DSIM_PHY_ACTRL_MD3(_id)		(0x2000 + (4 * (_id)))
 
 #define DSIM_PHY_DCTRL_MD3_01		(0x2080)
 #define DSIM_PHY_DCTRL_MD3_02		(0x2084)
