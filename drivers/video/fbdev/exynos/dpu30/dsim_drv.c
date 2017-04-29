@@ -590,6 +590,8 @@ static int dsim_set_panel_power(struct dsim_device *dsim, bool on)
 static int dsim_enable(struct dsim_device *dsim)
 {
 	int ret = 0;
+	int val;
+	void __iomem *dphy_isolation;
 	enum dsim_state state = dsim->state;
 
 	if (dsim->state == DSIM_STATE_ON)
@@ -607,8 +609,15 @@ static int dsim_enable(struct dsim_device *dsim)
 #elif defined(CONFIG_SOC_EXYNOS9810)
 	dpu_sysreg_set_dphy(dsim, dsim->res.ss_regs);
 #endif
+#if 0
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
+#else
+	/* for DPHY isolation release */
+	dphy_isolation = ioremap(0x1406070c, 0x4);
+	val = (0x1<<0);
+	writel(val, dphy_isolation);
+#endif
 
 	enable_irq(dsim->res.irq);
 
@@ -1125,13 +1134,13 @@ static int dsim_parse_dt(struct dsim_device *dsim, struct device *dev)
 
 	dsim->id = of_alias_get_id(dev->of_node, "dsim");
 	dsim_info("dsim(%d) probe start..\n", dsim->id);
-
+#if 0
 	dsim->phy = devm_phy_get(dev, "dsim_dphy");
 	if (IS_ERR_OR_NULL(dsim->phy)) {
 		dsim_err("failed to get phy\n");
 		return PTR_ERR(dsim->phy);
 	}
-
+#endif
 	dsim->dev = dev;
 	dsim_get_gpios(dsim);
 
@@ -1273,16 +1282,17 @@ static int dsim_probe(struct platform_device *pdev)
 	ret = dsim_get_data_lanes(dsim);
 	if (ret)
 		goto err_dt;
-
+#if 0
 	/* HACK */
 	phy_init(dsim->phy);
+#endif
 	dsim->state = DSIM_STATE_INIT;
 	dsim_enable(dsim);
 
 	/* TODO: If you want to enable DSIM BIST mode. you must turn on LCD here */
 
 #if !defined(BRINGUP_DSIM_BIST)
-	call_panel_ops(dsim, probe, dsim);
+	call_panel_ops(dsim, displayon, dsim);
 #else
 	/* TODO: This is for dsim BIST mode in zebu emulator. only for test*/
 	call_panel_ops(dsim, displayon, dsim);
