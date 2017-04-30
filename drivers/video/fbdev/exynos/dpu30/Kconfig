@@ -1,12 +1,12 @@
-config EXYNOS_DECON_8895
-	bool "Samsung Exynos8895 Display system (DPP, DECON, MIPI, HDMI)"
+config EXYNOS_DECON_9810
+	bool "Samsung Exynos9810 Display system (DPP, DECON, MIPI, HDMI)"
 	default y
 	depends on FB
 
-if EXYNOS_DECON_8895
+if EXYNOS_DECON_9810
 config EXYNOS_DECON_FB
 	bool "Samsung DECON Framebuffer driver"
-	depends on EXYNOS_DECON_8895
+	depends on EXYNOS_DECON_9810
 	select MEDIA_EXYNOS
 	default y
 	help
@@ -15,51 +15,51 @@ config EXYNOS_DECON_FB
 
 config EXYNOS_DPP
 	bool "Samsung Exynos Display Post Processor driver"
-	depends on EXYNOS_DECON_8895
+	depends on EXYNOS_DECON_9810
 	default y
 
 config EXYNOS_MIPI_DSIM
 	bool "Samsung Exynos MIPI-DSI driver"
-	depends on EXYNOS_DECON_8895
+	depends on EXYNOS_DECON_9810
 	default y
 	help
 	  Enable MIPI-DSI driver.
 
 config EXYNOS_DISPLAYPORT
 	bool "Samsung Exynos DISPLAYPORT driver"
-	depends on EXYNOS_DECON_8895
+	depends on EXYNOS_DECON_9810
 	default y
 	help
 	  Enable DISPLAYPORT driver.
 
 config EXYNOS_ZEBU_EMUL_DISP
 	bool "Zebu Emulator Display driver"
-	depends on EXYNOS_DECON_8895
-	default y
+	depends on EXYNOS_DECON_9810
+	default n
 
 config FB_WINDOW_UPDATE
         bool "DECON window update mode"
-        depends on EXYNOS_DECON_8895
+        depends on EXYNOS_DECON_9810
         default n
 
 config DECON_BLOCKING_MODE
 	bool "DECON blocking mode"
-        depends on EXYNOS_DECON_8895
+        depends on EXYNOS_DECON_9810
         default y
 
 config DECON_EVENT_LOG
 	bool "Display sub-system event logger (DECON/DSIM/DPP)"
-        depends on DEBUG_INFO && EXYNOS_DECON_8895
+        depends on DEBUG_INFO && EXYNOS_DECON_9810
         default y
 
 config DECON_HIBER
 	bool "DECON hiber mode"
-        depends on EXYNOS_DECON_8895
+        depends on EXYNOS_DECON_9810
         default n
 
 config DPU_2_0_INTERFACE
 	bool "Support DPU 2.0 Interface"
-        depends on EXYNOS_DECON_8895
+        depends on EXYNOS_DECON_9810
         default n
 
 endif
