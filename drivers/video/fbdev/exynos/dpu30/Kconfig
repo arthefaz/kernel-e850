@@ -64,4 +64,4 @@ config DPU_2_0_INTERFACE
 
 endif
 
-source "drivers/video/fbdev/exynos/dpu/panels/Kconfig"
+source "drivers/video/fbdev/exynos/dpu_9810/panels/Kconfig"
