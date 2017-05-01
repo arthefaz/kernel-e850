@@ -676,8 +676,7 @@ static void dpp_init_subdev(struct dpp_device *dpp)
 	v4l2_set_subdevdata(sd, dpp);
 }
 
-//#if defined(CONFIG_ION_EXYNOS)
-#if 0
+#if defined(CONFIG_ION_EXYNOS)
 static int dpp_dump_buffer_data(struct dpp_device *dpp)
 {
 	int i;
@@ -839,8 +838,7 @@ static int dpp_get_clocks(struct dpp_device *dpp)
 	return 0;
 }
 
-//#if defined(CONFIG_ION_EXYNOS)
-#if 0
+#if defined(CONFIG_ION_EXYNOS)
 static int dpp_sysmmu_fault_handler(struct iommu_domain *domain,
 	struct device *dev, unsigned long iova, int flags, void *token)
 {
@@ -982,9 +980,9 @@ static int dpp_probe(struct platform_device *pdev)
 	ret = iovmm_activate(dev);
 	if (ret) {
 		dpp_err("failed to activate iovmm\n");
-	//	goto err_clk;
+		goto err_clk;
 	}
-	//iovmm_set_fault_handler(dev, dpp_sysmmu_fault_handler, NULL);
+	iovmm_set_fault_handler(dev, dpp_sysmmu_fault_handler, NULL);
 #endif
 
 	dpp->state = DPP_STATE_OFF;

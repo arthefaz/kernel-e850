@@ -2248,9 +2248,8 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	struct decon_lcd *lcd_info = decon->lcd_info;
 	struct fb_info *fbi = win->fbinfo;
 	unsigned int real_size, virt_size, size;
-	dma_addr_t map_dma = 0x10000000;
-//#if defined(CONFIG_ION_EXYNOS)
-#if 0
+	dma_addr_t map_dma;
+#if defined(CONFIG_ION_EXYNOS)
 	struct ion_handle *handle;
 	struct dma_buf *buf;
 	struct dpp_device *dpp;
@@ -2276,7 +2275,6 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 
 	dev_info(decon->dev, "want %u bytes for window[%d]\n", size, win->idx);
 
-#if 0
 #if defined(CONFIG_ION_EXYNOS)
 	handle = ion_alloc(decon->ion_client, (size_t)size, 0,
 					EXYNOS_ION_HEAP_SYSTEM_MASK, 0);
@@ -2320,7 +2318,6 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 
 	memset(fbi->screen_base, 0x0, size);
 #endif
-#endif
 	fbi->fix.smem_start = map_dma;
 
 	dev_info(decon->dev, "fb start addr = 0x%x\n", (u32)fbi->fix.smem_start);
@@ -2329,8 +2326,7 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 
 	return 0;
 
-//#ifdef CONFIG_ION_EXYNOS
-#if 0
+#ifdef CONFIG_ION_EXYNOS
 err_map:
 	dma_buf_put(buf);
 err_share_dma_buf:
@@ -2664,7 +2660,7 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 			decon->dt.dft_win);
 	win_regs.start_pos = win_start_pos(0, 0);
 	win_regs.end_pos = win_end_pos(0, 0, fbinfo->var.xres, fbinfo->var.yres);
-	decon_info("xres %d yres %d win_start_pos %x win_end_pos %x\n",
+	decon_dbg("xres %d yres %d win_start_pos %x win_end_pos %x\n",
 			fbinfo->var.xres, fbinfo->var.yres, win_regs.start_pos,
 			win_regs.end_pos);
 	win_regs.colormap = 0x00ff00;
@@ -2674,7 +2670,7 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	win_regs.offset_x = fbinfo->var.xoffset;
 	win_regs.offset_y = fbinfo->var.yoffset;
 	win_regs.type = decon->dt.dft_idma;
-	decon_info("pixel_count(%d), whole_w(%d), whole_h(%d), x(%d), y(%d)\n",
+	decon_dbg("pixel_count(%d), whole_w(%d), whole_h(%d), x(%d), y(%d)\n",
 			win_regs.pixel_count, win_regs.whole_w,
 			win_regs.whole_h, win_regs.offset_x,
 			win_regs.offset_y);
@@ -2695,14 +2691,12 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	config.dst.f_w = config.src.f_w;
 	config.dst.f_h = config.src.f_h;
 	sd = decon->dpp_sd[decon->dt.dft_idma];
-#if 0
 	if (v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG, &config)) {
 		decon_err("Failed to config DPP-%d\n",
 				decon->dt.dft_idma);
 		clear_bit(decon->dt.dft_idma, &decon->cur_using_dpp);
 		set_bit(decon->dt.dft_idma, &decon->dpp_err_stat);
 	}
-#endif
 	decon_reg_update_req_window(decon->id, decon->dt.dft_win);
 
 	decon_to_psr_info(decon, &psr);
@@ -2743,8 +2737,7 @@ static int decon_probe(struct platform_device *pdev)
 	int ret = 0;
 	char device_name[MAX_NAME_SIZE];
 
-	//dev_info(dev, "%s start\n", __func__);
-	printk("@@@@@@%s START\n", __func__);
+	dev_info(dev, "%s start\n", __func__);
 
 	decon = devm_kzalloc(dev, sizeof(struct decon_device), GFP_KERNEL);
 	if (!decon) {
@@ -2832,7 +2825,7 @@ static int decon_probe(struct platform_device *pdev)
 	}
 
 	if (decon->id != 2) {	/* for decon2 + displayport start in winconfig. */
-		ret = decon_initial_display(decon, true);
+		ret = decon_initial_display(decon, false);
 		if (ret)
 			goto err_display;
 	}
