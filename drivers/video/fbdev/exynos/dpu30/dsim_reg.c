@@ -1759,7 +1759,7 @@ int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		dsim_dbg("escape clock divider is 0x%x\n", esc_div);
 		dsim_dbg("escape clock is %u MHz\n", clks->esc_clk);
 
-		if (clks->hs_clk >= 1500)
+		if (clks->hs_clk < 1500)
 			hsmode = 1;
 
 		dsim_reg_set_esc_clk_prescaler(id, 1, esc_div);
