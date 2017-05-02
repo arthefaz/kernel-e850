@@ -1,9 +1,9 @@
-/* linux/drivers/video/exynos/decon/dpp/dpp_regs.c
+/* linux/drivers/video/exynos/fbdev/dpu_9810/dpp_regs.c
  *
- * Copyright (c) 2011 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2017 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
- * Samsung EXYNOS5 SoC series G-scaler driver
+ * Samsung EXYNOS9 SoC series Display Pre Processor driver
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published
@@ -27,10 +27,10 @@
 /*
  * DPU_DMA APIs
  *
-*/
+ */
 
 /* DMA pattern */
-void dma_reg_set_test_en(u32 id,u32 en)
+void dma_reg_set_test_en(u32 id, u32 en)
 {
 	u32 val, mask;
 
@@ -49,7 +49,7 @@ void dma_reg_set_debug(u32 id)
 
 	val = dma_read(id, IDMA_CHAN_CONTROL);
 	val |= IDMA_CHAN_DEBUG_ENABLE;
-	dma_write(id, IDMA_CHAN_CONTROL,val);
+	dma_write(id, IDMA_CHAN_CONTROL, val);
 }
 
 void dma_reg_set_common_debug(u32 id)
@@ -85,14 +85,18 @@ void dma_reg_set_ch_map(u32 id, u32 dpp_id, u32 to_pat)
 
 void dma_reg_set_lpi_period(u32 id, u32 period)
 {
-	u32 val = DMA_LPI_PERIOD(period);
+	u32 val = 0;
+
+	val = DMA_LPI_PERIOD(period);
 	dma_com_write_mask(id, DPU_DMA_LPI_PERIOD, val, DMA_LPI_PERIOD_MASK);
 }
 
 /* Setting value : 0=Qch-enable, 1=Qch-disable */
 void dma_reg_set_qch(u32 id, u32 en)
 {
-	u32 val = en ? 0 : ~0;
+	u32 val =  0;
+
+	val = en ? 0 : ~0;
 	dma_com_write_mask(id, DPU_DMA_QCH_EN, val, DMA_QCH_EN);
 }
 
@@ -110,7 +114,9 @@ void dma_reg_set_swrst(u32 id, u32 ch)
 
 void dma_reg_set_glb_clock_gate_en_all(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val =  0;
+
+	val = en ? ~0 : 0;
 	dma_com_write_mask(id, DPU_DMA_GLB_CGEN, val, DMA_ALL_CGEN_MASK);
 }
 
@@ -182,7 +188,9 @@ int dma_reg_wait_sw_reset_status(u32 id)
 
 void dma_reg_set_clock_gate_en_all(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_ENABLE, val, IDMA_ALL_CLOCK_GATE_EN_MASK);
 }
 
@@ -194,7 +202,9 @@ void dma_reg_set_sfr_update_force(u32 id)
 /* G0_S only */
 void dma_reg_set_secure_mode(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_ENABLE, val, IDMA_SECURE_MODE);
 }
 
@@ -222,56 +232,74 @@ void dma_reg_clear_irq_all(u32 id)
 
 void dma_reg_set_irq_mask_afbc_timeout(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_IRQ, val, IDMA_AFBC_TIMEOUT_MASK);
 }
 
 void dma_reg_set_irq_mask_recovery_start(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_IRQ, val, IDMA_RECOVERY_START_MASK);
 }
 
 void dma_reg_set_irq_mask_config_err(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val =  0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_IRQ, val, IDMA_CONFIG_ERROR_MASK);
 }
 
 void dma_reg_set_irq_mask_local_hw_reset_done(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_IRQ, val, IDMA_LOCAL_HW_RESET_DONE_MASK);
 }
 
 void dma_reg_set_irq_mask_read_slave_err(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_IRQ, val, IDMA_READ_SLAVE_ERROR_MASK);
 }
 
 void dma_reg_set_irq_mask_deadlock(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_IRQ, val, IDMA_IRQ_DEADLOCK_MASK);
 }
 
 void dma_reg_set_irq_mask_framedone(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_IRQ, val, IDMA_IRQ_FRAMEDONE_MASK);
 }
 
 /* for ODMA SLICE_DONE */
 void dma_reg_set_irq_mask_slice_done_all(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, ODMA_IRQ, val, ODMA_ALL_SLICE_DONE_MASK);
 }
 
 void dma_reg_set_irq_mask_all(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_IRQ, val, IDMA_ALL_IRQ_MASK);
 }
 
@@ -320,7 +348,9 @@ void dma_reg_set_in_flip(u32 id, u32 flip)
 
 void dma_reg_set_afbc_en(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 
 	if ((id != IDMA_VGF0) && (id != IDMA_VGF1))
 		return;
@@ -329,7 +359,9 @@ void dma_reg_set_afbc_en(u32 id, u32 en)
 
 void dma_reg_set_afbc_timeout_en(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 
 	if ((id != IDMA_VGF0) && (id != IDMA_VGF1))
 		return;
@@ -347,8 +379,9 @@ void dma_reg_set_in_chroma_stride_sel(u32 id, u32 en)
 
 void dma_reg_set_block_en(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
 
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_IN_CON, val, IDMA_BLOCK_EN);
 }
 
@@ -365,6 +398,7 @@ void dma_reg_set_out_frame_alpha(u32 id, u32 alpha)
 void dma_reg_set_buf_size(u32 id, u32 w, u32 h)
 {
 	u32 val;
+
 	val = (IDMA_SRC_HEIGHT(h) | IDMA_SRC_WIDTH(w));
 	dma_write(id, IDMA_SRC_SIZE, val);
 }
@@ -373,6 +407,7 @@ void dma_reg_set_buf_size(u32 id, u32 w, u32 h)
 void dma_reg_set_buf_offset(u32 id, u32 x, u32 y)
 {
 	u32 val;
+
 	val = (IDMA_SRC_OFFSET_Y(y) | IDMA_SRC_OFFSET_X(x));
 	dma_write(id, IDMA_SRC_OFFSET, val);
 }
@@ -380,6 +415,7 @@ void dma_reg_set_buf_offset(u32 id, u32 x, u32 y)
 void dma_reg_set_img_size(u32 id, u32 w, u32 h)
 {
 	u32 val;
+
 	val = (IDMA_IMG_HEIGHT(h) | IDMA_IMG_WIDTH(w));
 	dma_write(id, IDMA_IMG_SIZE, val);
 }
@@ -420,7 +456,9 @@ void dma_reg_set_perf_degradation_cfg(u32 id, u32 time, u32 ic_num)
 
 void dma_reg_set_perf_degradation_en(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_PERFORMANCE_CON0, val, IDMA_DEGRADATION_EN);
 }
 
@@ -452,8 +490,9 @@ void dma_reg_set_deadlock_num(u32 id, u32 dl_num)
 
 void dma_reg_set_deadlock_en(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
 
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_DEADLOCK_NUM, val, IDMA_DEADLOCK_EN);
 }
 
@@ -462,7 +501,6 @@ void dma_reg_set_dynamic_gating_en_all(u32 id, u32 en)
 	u32 val, mask;
 
 	val = en ? ~0 : 0;
-
 	mask = IDMA_DG_EN_ALL;
 	dma_write_mask(id, IDMA_DYNAMIC_GATING_EN, val, mask);
 }
@@ -478,7 +516,9 @@ void dma_reg_set_recovery_num(u32 id, u32 rcv_num)
 
 void dma_reg_set_recovery_en(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dma_write_mask(id, IDMA_RECOVERY_CTRL, val, IDMA_RECOVERY_EN);
 }
 
@@ -511,9 +551,9 @@ u32 dpp_reg_get_op_status(u32 id)
 {
 	u32 val;
 
-	/**
+	/*
 	 * DPP_OP_STATUS is commonly used at WB_MUX
-	 *   because bit-field is same with WB_OP_STATUS
+	 * because bit-field is same with WB_OP_STATUS
 	 */
 	val = dpp_read(id, DPP_ENABLE);
 	if (val & DPP_OP_STATUS)
@@ -547,7 +587,9 @@ int dpp_reg_wait_sw_reset_status(u32 id)
 
 void dpp_reg_set_clock_gate_en_all(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dpp_write_mask(id, DPP_ENABLE, val, DPP_ALL_CLOCK_GATE_EN_MASK);
 }
 
@@ -559,14 +601,18 @@ void dpp_reg_set_sfr_update_force(u32 id)
 /* Setting value : 0=Qch-enable, 1=Qch-disable */
 void dpp_reg_set_qchannel_en(u32 id, u32 en)
 {
-	u32 val = en ? 0 : ~0;
+	u32 val = 0;
+
+	val = en ? 0 : ~0;
 	dpp_write_mask(id, DPP_ENABLE, val, DPP_QCHANNEL_EN);
 }
 
 /* G0_S only */
 void dpp_reg_set_secure_mode(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dpp_write_mask(id, DPP_ENABLE, val, DPP_SECURE_MODE);
 }
 
@@ -582,19 +628,25 @@ void dpp_reg_set_irq_clear_all(u32 id)
 
 void dpp_reg_set_irq_mask_config_err(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dpp_write_mask(id, DPP_IRQ, val, DPP_CONFIG_ERROR_MASK);
 }
 
 void dpp_reg_set_irq_mask_framedone(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dpp_write_mask(id, DPP_IRQ, val, DPP_IRQ_FRAMEDONE_MASK);
 }
 
 void dpp_reg_set_irq_mask_all(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dpp_write_mask(id, DPP_IRQ, val, DPP_ALL_IRQ_MASK);
 }
 
@@ -692,6 +744,7 @@ void dpp_reg_set_csc_config(u32 id, u32 type)
 void dpp_reg_set_img_format(u32 id, u32 fmt)
 {
 	u32 val;
+
 	val = DPP_IMG_FORMAT(fmt);
 	dpp_write_mask(id, DPP_IN_CON, val, DPP_IMG_FORMAT_MASK);
 }
@@ -700,6 +753,7 @@ void dpp_reg_set_img_format(u32 id, u32 fmt)
 void dpp_reg_set_alpha_sel(u32 id, u32 type)
 {
 	u32 val;
+
 	val = DPP_ALPHA_SEL(type);
 	dpp_write_mask(id, DPP_IN_CON, val, DPP_ALPHA_SEL_MASK);
 }
@@ -707,6 +761,7 @@ void dpp_reg_set_alpha_sel(u32 id, u32 type)
 void dpp_reg_set_img_size(u32 id, u32 w, u32 h)
 {
 	u32 val;
+
 	val = (DPP_IMG_HEIGHT(h) | DPP_IMG_WIDTH(w));
 	dpp_write(id, DPP_IMG_SIZE, val);
 }
@@ -714,6 +769,7 @@ void dpp_reg_set_img_size(u32 id, u32 w, u32 h)
 void dpp_reg_set_scaled_img_size(u32 id, u32 w, u32 h)
 {
 	u32 val;
+
 	val = (DPP_SCALED_IMG_HEIGHT(h) | DPP_SCALED_IMG_WIDTH(w));
 	dpp_write(id, DPP_SCALED_IMG_SIZE, val);
 }
@@ -812,6 +868,7 @@ void dpp_reg_set_scale_ratio(u32 id, struct dpp_params_info *p)
 void dpp_reg_set_yh_pos(u32 id, u32 i_part, u32 f_part)
 {
 	u32 val;
+
 	val = (DPP_POS_I(i_part) | DPP_POS_F(f_part));
 	dpp_write(id, DPP_YHPOSITION, val);
 }
@@ -819,6 +876,7 @@ void dpp_reg_set_yh_pos(u32 id, u32 i_part, u32 f_part)
 void dpp_reg_set_yv_pos(u32 id, u32 i_part, u32 f_part)
 {
 	u32 val;
+
 	val = (DPP_POS_I(i_part) | DPP_POS_F(f_part));
 	dpp_write(id, DPP_YVPOSITION, val);
 }
@@ -826,6 +884,7 @@ void dpp_reg_set_yv_pos(u32 id, u32 i_part, u32 f_part)
 void dpp_reg_set_ch_pos(u32 id, u32 i_part, u32 f_part)
 {
 	u32 val;
+
 	val = (DPP_POS_I(i_part) | DPP_POS_F(f_part));
 	dpp_write(id, DPP_CHPOSITION, val);
 }
@@ -833,6 +892,7 @@ void dpp_reg_set_ch_pos(u32 id, u32 i_part, u32 f_part)
 void dpp_reg_set_cv_pos(u32 id, u32 i_part, u32 f_part)
 {
 	u32 val;
+
 	val = (DPP_POS_I(i_part) | DPP_POS_F(f_part));
 	dpp_write(id, DPP_CVPOSITION, val);
 }
@@ -862,7 +922,7 @@ void dpp_reg_set_scale_start_position(u32 id, u32 yh, u32 yv, u32 ch, u32 cv)
  *   yc_phase[1] : YV
  *   yc_phase[2] : CH
  *   yc_phase[3] : CV
-*/
+ */
 void dpp_calc_recommend_initial_phase(u32 fmt_id,
 		u32 sw, u32 sh, u32 dw, u32 dh, u32 yc_phase[4])
 {
@@ -889,7 +949,9 @@ void dpp_calc_recommend_initial_phase(u32 fmt_id,
 
 void dpp_reg_set_she_on(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dpp_write_mask(id, DPP_SHE_CON0, val, DPP_SHE_ON_MASK);
 }
 
@@ -900,7 +962,9 @@ void dpp_reg_set_she_gain(u32 id, u32 val)
 
 void dpp_reg_set_she_ec_en(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dpp_write_mask(id, DPP_SHE_CON0, val, DPP_EC_EN_MASK);
 }
 
@@ -919,7 +983,9 @@ void dpp_reg_set_she_ec_threshold(u32 id, u32 n32, u32 n16,
 
 void dpp_reg_set_she_sc_en(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dpp_write_mask(id, DPP_SHE_CON2, val, DPP_SC_EN_MASK);
 }
 
@@ -934,19 +1000,25 @@ void dpp_reg_set_she_sc_threshold(u32 id, u32 th1, u32 th2, u32 th3)
 
 void dpp_reg_set_dynamic_gating_en_all(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dpp_write_mask(id, DPP_DYNAMIC_GATING_EN, val, DPP_DG_EN_ALL);
 }
 
 void dpp_reg_set_linecnt_capture(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dpp_write_mask(id, DPP_LINECNT_CON, val, DPP_LC_CAPTURE_MASK);
 }
 
 void dpp_reg_set_linecnt_en(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
 	dpp_write_mask(id, DPP_LINECNT_CON, val, DPP_LC_ENABLE_MASK);
 }
 
@@ -960,19 +1032,25 @@ void dpp_reg_set_linecnt_counter(u32 id, u32 cnt)
 
 u32 dpp_reg_get_linecnt_counter(u32 id)
 {
-	u32 val = dpp_read(id, DPP_LINECNT_VAL);
+	u32 val = 0;
+
+	val = dpp_read(id, DPP_LINECNT_VAL);
 	return DPP_LC_COUNTER_GET(val);
 }
 
 u32 dpp_reg_get_cfg_err_state(u32 id)
 {
-	u32 val = dpp_read(id, DPP_CFG_ERR_STATE);
+	u32 val = 0;
+
+	val = dpp_read(id, DPP_CFG_ERR_STATE);
 	return DPP_CFG_ERR_GET(val);
 }
 
 bool dpp_reg_check_cfg_err(u32 id, enum dpp_cfg_err err_id)
 {
-	u32 val = dpp_read(id, DPP_CFG_ERR_STATE);
+	u32 val = 0;
+
+	val = dpp_read(id, DPP_CFG_ERR_STATE);
 
 	if (DPP_CFG_ERR_GET(val) & err_id)
 		return 1;
@@ -1059,7 +1137,7 @@ int dpp_reg_set_format(u32 id, struct dpp_params_info *p)
 
 void dpp_reg_set_buf_addr(u32 id, struct dpp_params_info *p)
 {
-	dpp_info("dpp id : %d, y : %llu, cb : %llu, cr : %llu\n", id, 
+	dpp_info("dpp id : %d, y : %llu, cb : %llu, cr : %llu\n", id,
 			p->addr[0], p->addr[1], p->addr[2]);
 
 	/* For AFBC stream, BASE_ADDR_C must be same with BASE_ADDR_Y */
@@ -1126,7 +1204,9 @@ void dpp_reg_set_dynamic_clock_gating(u32 id)
 
 u32 dpp_reg_get_irq_status(u32 id)
 {
-	u32 cfg = dpp_read(id, DPP_IRQ);
+	u32 cfg = 0;
+
+	cfg = dpp_read(id, DPP_IRQ);
 	cfg &= DPP_ALL_IRQ_CLEAR;
 	return cfg;
 }
@@ -1219,9 +1299,7 @@ void dpp_reg_init(u32 id)
 	dpp_reg_set_plane_alpha_fixed(id);
 
 	dpp_reg_control_linecnt(id, 1, 0);
-	/*
-	dma_reg_set_recovery_num(id, INIT_RCV_NUM);
-	*/
+	/* dma_reg_set_recovery_num(id, INIT_RCV_NUM); */
 }
 
 int dpp_reg_deinit(u32 id, bool reset)
