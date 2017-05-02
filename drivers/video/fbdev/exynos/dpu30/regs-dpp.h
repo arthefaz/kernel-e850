@@ -1,6 +1,6 @@
-/* linux/drivers/video/decon_2.0/regs-dpp.h
+/* linux/drivers/video/fbdev/dpu_9810/regs-dpp.h
  *
- * Copyright (c) 2014 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2017 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
  * Register definition file for Samsung dpp driver
@@ -556,12 +556,13 @@
 
 #define DPP_CFG_ERR_STATE			0x0d08
 /*
-#define DPP_CFG_ERR_SCL_POS			(1 << 4)
-#define DPP_CFG_ERR_SCALE_RATIO		(1 << 3)
-#define DPP_CFG_ERR_ODD_SIZE			(1 << 2)
-#define DPP_CFG_ERR_MAX_SIZE			(1 << 1)
-#define DPP_CFG_ERR_MIN_SIZE			(1 << 0)
+ * #define DPP_CFG_ERR_SCL_POS			(1 << 4)
+ * #define DPP_CFG_ERR_SCALE_RATIO		(1 << 3)
+ * #define DPP_CFG_ERR_ODD_SIZE			(1 << 2)
+ * #define DPP_CFG_ERR_MAX_SIZE			(1 << 1)
+ * #define DPP_CFG_ERR_MIN_SIZE			(1 << 0)
  */
+
 #define DPP_CFG_ERR_GET(_v)			(((_v) >> 0) & 0x1F)
 
 #endif
