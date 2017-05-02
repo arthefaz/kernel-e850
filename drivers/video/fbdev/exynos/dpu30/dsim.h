@@ -381,7 +381,6 @@ void dsim_reg_set_link_clock(u32 id, u32 en);
 void dsim_reg_set_video_mode(u32 id, u32 mode);
 void dsim_reg_enable_shadow(u32 id, u32 en);
 #endif
-void dsim_reg_set_cmd_transfer_mode(u32 id, u32 lp);
 
 #define DSIM_IOC_ENTER_ULPS		_IOW('D', 0, u32)
 #define DSIM_IOC_GET_LCD_INFO		_IOW('D', 5, struct decon_lcd *)
