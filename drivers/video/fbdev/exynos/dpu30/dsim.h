@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2017 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
  * Header file for Samsung EXYNOS SoC MIPI-DSI Master driver.

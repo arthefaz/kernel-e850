@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2017 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
  * SFR access functions for Samsung EXYNOS SoC MIPI-DSI Master driver.
@@ -7,7 +7,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
-*/
+ */
 
 #include "dsim.h"
 
@@ -20,7 +20,8 @@
 #define DSIM_FIFOCTRL_THRESHOLD		0x1 /* 1 ~ 32 */
 
 /* If below values depend on panel. These values wil be move to panel file.
- * And these values are valid in case of video mode only. */
+ * And these values are valid in case of video mode only.
+ */
 #define DSIM_CMD_ALLOW_VALUE		4
 #define DSIM_STABLE_VFP_VALUE		2
 #define TE_PROTECT_ON_TIME		158 /* 15.8ms*/
@@ -101,7 +102,8 @@ u32 DSIM_PHY_ACTRL_MD3_VAL[] = {
 /*below table have to be changed to meet LT DPHY spec*/
 const u32 dphy_timing[][10] = {
 	/* bps, clk_prepare, clk_zero, clk_post, clk_trail,
-	hs_prepare, hs_zero, hs_trail, lpx, hs_exit */
+	 * hs_prepare, hs_zero, hs_trail, lpx, hs_exit
+	 */
 	{2500, 12, 42, 15, 10, 11, 19, 9, 9, 16},
 	{2490, 12, 42, 15, 10, 11, 19, 9, 9, 16},
 	{2480, 12, 41, 15, 10, 11, 19, 9, 9, 16},
@@ -326,6 +328,7 @@ void dsim_reg_sw_reset(u32 id)
 {
 	u32 cnt = 1000;
 	u32 state;
+
 	dsim_write_mask(id, DSIM_SWRST, ~0, DSIM_SWRST_RESET);
 
 	do {
@@ -340,20 +343,22 @@ void dsim_reg_sw_reset(u32 id)
 
 void dsim_reg_dphy_reset(u32 id)
 {
-	dsim_write_mask(id, DSIM_SWRST, 0, DSIM_DPHY_RST); /* reset active low */
+	dsim_write_mask(id, DSIM_SWRST, 0, DSIM_DPHY_RST); /* reset low */
 	dsim_write_mask(id, DSIM_SWRST, ~0, DSIM_DPHY_RST); /* reset release */
 }
 
 void dsim_reg_dphy_resetn(u32 id, u32 en)
 {
 	u32 val = en ? 1 : 0;
-	dsim_write_mask(id, DSIM_SWRST, val, DSIM_DPHY_RST); /* reset active high */
+
+	dsim_write_mask(id, DSIM_SWRST, val, DSIM_DPHY_RST); /* reset high */
 }
 
 void dsim_reg_function_reset(u32 id)
 {
 	u32 cnt = 1000;
 	u32 state;
+
 	dsim_write_mask(id, DSIM_SWRST, ~0,  DSIM_SWRST_FUNCRST);
 
 	do {
@@ -371,7 +376,8 @@ void dsim_reg_set_num_of_lane(u32 id, u32 lane)
 {
 	u32 val = DSIM_CONFIG_NUM_OF_DATA_LANE(lane);
 
-	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_NUM_OF_DATA_LANE_MASK);
+	dsim_write_mask(id, DSIM_CONFIG, val,
+				DSIM_CONFIG_NUM_OF_DATA_LANE_MASK);
 }
 
 void dsim_reg_enable_lane(u32 id, u32 lane, u32 en)
@@ -439,7 +445,8 @@ void dsim_reg_set_pll_freq(u32 id, u32 p, u32 m, u32 s, u32 k)
 
 }
 
-void dsim_reg_set_dphy_timing_values(u32 id, struct dphy_timing_value *t, u32 hsmode)
+void dsim_reg_set_dphy_timing_values(u32 id,
+			struct dphy_timing_value *t, u32 hsmode)
 {
 	u32 val, mask;
 	u32 hs_en;
@@ -764,14 +771,16 @@ void dsim_reg_set_esc_clk_on_lane(u32 id, u32 en, u32 lane)
 	lane = (lane >> 1) | (1 << 4);
 
 	val = en ? DSIM_CLK_CTRL_LANE_ESCCLK_EN(lane) : 0;
-	dsim_write_mask(id, DSIM_CLK_CTRL, val, DSIM_CLK_CTRL_LANE_ESCCLK_EN_MASK);
+	dsim_write_mask(id, DSIM_CLK_CTRL, val,
+				DSIM_CLK_CTRL_LANE_ESCCLK_EN_MASK);
 }
 
 void dsim_reg_set_stop_state_cnt(u32 id)
 {
 	u32 val = DSIM_ESCMODE_STOP_STATE_CNT(DSIM_STOP_STATE_CNT);
 
-	dsim_write_mask(id, DSIM_ESCMODE, val, DSIM_ESCMODE_STOP_STATE_CNT_MASK);
+	dsim_write_mask(id, DSIM_ESCMODE, val,
+				DSIM_ESCMODE_STOP_STATE_CNT_MASK);
 }
 
 void dsim_reg_set_bta_timeout(u32 id)
@@ -791,7 +800,9 @@ void dsim_reg_set_lpdr_timeout(u32 id)
 void dsim_reg_set_packet_ctrl(u32 id)
 {
 	u32 val = DSIM_CMD_CONFIG_MULTI_PKT_CNT(DSIM_MULTI_PACKET_CNT);
-	dsim_write_mask(id, DSIM_CMD_CONFIG, val, DSIM_CMD_CONFIG_MULTI_PKT_CNT_MASK);
+
+	dsim_write_mask(id, DSIM_CMD_CONFIG, val,
+				DSIM_CMD_CONFIG_MULTI_PKT_CNT_MASK);
 }
 
 void dsim_reg_disable_hsa(u32 id, u32 en)
@@ -975,7 +986,8 @@ void dsim_reg_set_num_of_slice(u32 id, u32 num_of_slice)
 {
 	u32 val = DSIM_CPRS_CTRL_NUM_OF_SLICE(num_of_slice);
 
-	dsim_write_mask(id, DSIM_CPRS_CTRL, val, DSIM_CPRS_CTRL_NUM_OF_SLICE_MASK);
+	dsim_write_mask(id, DSIM_CPRS_CTRL, val,
+				DSIM_CPRS_CTRL_NUM_OF_SLICE_MASK);
 }
 
 void dsim_reg_get_num_of_slice(u32 id, u32 *num_of_slice)
@@ -990,16 +1002,21 @@ void dsim_reg_set_multi_slice(u32 id, struct decon_lcd *lcd_info)
 	u32 multi_slice, val;
 
 	/* if multi-slice(2~4 slices) DSC compression is used in video mode
-	 * MULTI_SLICE_PACKET configuration must be matched to DDI's configuration */
+	 * MULTI_SLICE_PACKET configuration must be matched
+	 * to DDI's configuration
+	 */
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE)
 		multi_slice = 1;
 	else if (lcd_info->mode == DECON_VIDEO_MODE)
 		multi_slice = lcd_info->dsc_slice_num > 1 ? 1 : 0;
 
-	/* if MULTI_SLICE_PACKET is enabled, only one packet header is transferred
-	 * for multi slice */
+	/* if MULTI_SLICE_PACKET is enabled,
+	 * only one packet header is transferred
+	 * for multi slice
+	 */
 	val = multi_slice ? ~0 : 0;
-	dsim_write_mask(id, DSIM_CPRS_CTRL, val, DSIM_CPRS_CTRL_MULI_SLICE_PACKET);
+	dsim_write_mask(id, DSIM_CPRS_CTRL, val,
+				DSIM_CPRS_CTRL_MULI_SLICE_PACKET);
 }
 
 void dsim_reg_set_size_of_slice(u32 id, struct decon_lcd *lcd_info)
@@ -1059,7 +1076,8 @@ void dsim_reg_set_multi_packet_count(u32 id, u32 multipacketcnt)
 {
 	u32 val = DSIM_CMD_CONFIG_MULTI_PKT_CNT(multipacketcnt);
 
-	dsim_write_mask(id, DSIM_CMD_CONFIG, val, DSIM_CMD_CONFIG_MULTI_PKT_CNT_MASK);
+	dsim_write_mask(id, DSIM_CMD_CONFIG, val,
+				DSIM_CMD_CONFIG_MULTI_PKT_CNT_MASK);
 }
 
 void dsim_reg_set_time_stable_vfp(u32 id, u32 stablevfp)
@@ -1067,7 +1085,7 @@ void dsim_reg_set_time_stable_vfp(u32 id, u32 stablevfp)
 	u32 val = DSIM_CMD_TE_CTRL0_TIME_STABLE_VFP(stablevfp);
 
 	dsim_write_mask(id, DSIM_CMD_TE_CTRL0, val,
-			DSIM_CMD_TE_CTRL0_TIME_STABLE_VFP_MASK);
+				DSIM_CMD_TE_CTRL0_TIME_STABLE_VFP_MASK);
 }
 
 void dsim_reg_set_time_te_protect_on(u32 id, u32 teprotecton)
@@ -1083,10 +1101,11 @@ void dsim_reg_set_time_te_timeout(u32 id, u32 tetout)
 	u32 val = DSIM_CMD_TE_CTRL1_TIME_TE_TOUT(tetout);
 
 	dsim_write_mask(id, DSIM_CMD_TE_CTRL1, val,
-			DSIM_CMD_TE_CTRL1_TIME_TE_TOUT_MASK);
+				DSIM_CMD_TE_CTRL1_TIME_TE_TOUT_MASK);
 }
 
-void dsim_reg_set_cmd_ctrl(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks)
+void dsim_reg_set_cmd_ctrl(u32 id, struct decon_lcd *lcd_info,
+						struct dsim_clks *clks)
 {
 	unsigned int time_stable_vfp;
 	unsigned int time_te_protect_on;
@@ -1104,47 +1123,54 @@ void dsim_reg_enable_noncont_clock(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	dsim_write_mask(id, DSIM_CLK_CTRL, val, DSIM_CLK_CTRL_NONCONT_CLOCK_LANE);
+	dsim_write_mask(id, DSIM_CLK_CTRL, val,
+				DSIM_CLK_CTRL_NONCONT_CLOCK_LANE);
 }
 
 void dsim_reg_enable_clocklane(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	dsim_write_mask(id, DSIM_CLK_CTRL, val, DSIM_CLK_CTRL_CLKLANE_ONOFF);
+	dsim_write_mask(id, DSIM_CLK_CTRL, val,
+				DSIM_CLK_CTRL_CLKLANE_ONOFF);
 }
 
 void dsim_reg_enable_packetgo(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	dsim_write_mask(id, DSIM_CMD_CONFIG, val, DSIM_CMD_CONFIG_PKT_GO_EN);
+	dsim_write_mask(id, DSIM_CMD_CONFIG, val,
+				DSIM_CMD_CONFIG_PKT_GO_EN);
 }
 
 void dsim_reg_set_packetgo_ready(u32 id)
 {
-	dsim_write_mask(id, DSIM_CMD_CONFIG, ~0, DSIM_CMD_CONFIG_PKT_GO_RDY);
+	dsim_write_mask(id, DSIM_CMD_CONFIG, ~0,
+				DSIM_CMD_CONFIG_PKT_GO_RDY);
 }
 
 void dsim_reg_enable_multi_cmd_packet(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	dsim_write_mask(id, DSIM_CMD_CONFIG, val, DSIM_CMD_CONFIG_MULTI_CMD_PKT_EN);
+	dsim_write_mask(id, DSIM_CMD_CONFIG, val,
+				DSIM_CMD_CONFIG_MULTI_CMD_PKT_EN);
 }
 
 void dsim_reg_enable_shadow_read(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	dsim_write_mask(id, DSIM_SFR_CTRL, val, DSIM_SFR_CTRL_SHADOW_REG_READ_EN);
+	dsim_write_mask(id, DSIM_SFR_CTRL, val,
+				DSIM_SFR_CTRL_SHADOW_REG_READ_EN);
 }
 
 void dsim_reg_enable_shadow(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	dsim_write_mask(id, DSIM_SFR_CTRL, val, DSIM_SFR_CTRL_SHADOW_EN);
+	dsim_write_mask(id, DSIM_SFR_CTRL, val,
+				DSIM_SFR_CTRL_SHADOW_EN);
 }
 
 void dsim_reg_set_link_clock(u32 id, u32 en)
@@ -1246,6 +1272,7 @@ int dsim_reg_wait_hs_clk_disable(u32 id)
 u32 dsim_reg_is_writable_fifo_state(u32 id)
 {
 	u32 val = dsim_read(id, DSIM_FIFOCTRL);
+
 	if (DSIM_FIFOCTRL_NUMBER_OF_PH_SFR_GET(val) < DSIM_FIFOCTRL_THRESHOLD)
 		return 1;
 	else
@@ -1264,9 +1291,10 @@ void dsim_reg_force_dphy_stop_state(u32 id, u32 en)
 	dsim_write_mask(id, DSIM_ESCMODE, val, DSIM_ESCMODE_FORCE_STOP_STATE);
 }
 
-void dsim_reg_wr_tx_header(u32 id, u32 data_id, unsigned long data0, u32 data1, u32 bta_type)
+void dsim_reg_wr_tx_header(u32 id, u32 data_id, unsigned long data0,
+							u32 data1, u32 bta_type)
 {
-	u32 val = DSIM_PKTHDR_BTA_TYPE(bta_type) |DSIM_PKTHDR_ID(data_id) |
+	u32 val = DSIM_PKTHDR_BTA_TYPE(bta_type) | DSIM_PKTHDR_ID(data_id) |
 		DSIM_PKTHDR_DATA0(data0) | DSIM_PKTHDR_DATA1(data1);
 
 	dsim_write_mask(id, DSIM_PKTHDR, val, DSIM_PKTHDR_DATA);
@@ -1288,7 +1316,8 @@ void dsim_reg_enter_ulps(u32 id, u32 enter)
 void dsim_reg_exit_ulps(u32 id, u32 exit)
 {
 	u32 val = exit ? ~0 : 0;
-	u32 mask = DSIM_ESCMODE_TX_ULPS_CLK_EXIT | DSIM_ESCMODE_TX_ULPS_DATA_EXIT;
+	u32 mask = DSIM_ESCMODE_TX_ULPS_CLK_EXIT |
+			DSIM_ESCMODE_TX_ULPS_DATA_EXIT;
 
 	dsim_write_mask(id, DSIM_ESCMODE, val, mask);
 }
@@ -1297,9 +1326,11 @@ void dsim_reg_set_num_of_transfer(u32 id, u32 num_of_transfer)
 {
 	u32 val = DSIM_NUM_OF_TRANSFER_PER_FRAME(num_of_transfer);
 
-	dsim_write_mask(id, DSIM_NUM_OF_TRANSFER, val, DSIM_NUM_OF_TRANSFER_PER_FRAME_MASK);
+	dsim_write_mask(id, DSIM_NUM_OF_TRANSFER, val,
+				DSIM_NUM_OF_TRANSFER_PER_FRAME_MASK);
 
-	dsim_info("%s, write value : 0x%x, read value : 0x%x\n", __func__, val, dsim_read(id, DSIM_NUM_OF_TRANSFER));
+	dsim_info("%s, write value : 0x%x, read value : 0x%x\n", __func__,
+			val, dsim_read(id, DSIM_NUM_OF_TRANSFER));
 }
 
 static u32 dsim_reg_is_ulps_state(u32 id, u32 lanes)
@@ -1326,7 +1357,8 @@ static void dsim_reg_set_deskew_hw_position(u32 id, u32 position)
 {
 	u32 val = position ? ~0 : 0;
 
-	dsim_write_mask(id, DSIM_DESKEW_CTRL, val, DSIM_DESKEW_CTRL_HW_POSITION);
+	dsim_write_mask(id, DSIM_DESKEW_CTRL, val,
+				DSIM_DESKEW_CTRL_HW_POSITION);
 }
 
 static void dsim_reg_enable_deskew_hw_enable(u32 id, u32 en)
@@ -1467,9 +1499,9 @@ int dsim_reg_wait_enter_ulps_state(u32 id, u32 lanes)
 	if (!cnt) {
 		dsim_err("DSI Master is not ULPS state.\n");
 		return -EBUSY;
-	} else {
-		dsim_dbg("DSI Master is ULPS state.\n");
 	}
+
+	dsim_dbg("DSI Master is ULPS state.\n");
 
 	return 0;
 }
@@ -1499,9 +1531,9 @@ int dsim_reg_wait_exit_ulps_state(u32 id)
 	if (!cnt) {
 		dsim_err("DSI Master is not stop state.\n");
 		return -EBUSY;
-	} else {
-		dsim_dbg("DSI Master is stop state.\n");
 	}
+
+	dsim_dbg("DSI Master is stop state.\n");
 
 	return 0;
 }
@@ -1509,8 +1541,11 @@ int dsim_reg_wait_exit_ulps_state(u32 id)
 static int dsim_reg_get_dphy_timing(u32 hs_clk, u32 esc_clk,
 		struct dphy_timing_value *t)
 {
-	int i = sizeof(dphy_timing) / sizeof(dphy_timing[0]) - 1;
-	for(; i >= 0; i--) {
+	int i;
+
+	i = ARRAY_SIZE(dphy_timing) - 1;
+
+	for (; i >= 0; i--) {
 		if (dphy_timing[i][0] < hs_clk) {
 			continue;
 		} else {
@@ -1529,12 +1564,14 @@ static int dsim_reg_get_dphy_timing(u32 hs_clk, u32 esc_clk,
 	}
 
 	if (i < 0) {
-		dsim_err("%u Mhz hs clock can't find proper dphy timing values\n", hs_clk);
+		dsim_err("%u Mhz hs clock can't find proper dphy timing values\n",
+				hs_clk);
 		return -EINVAL;
 	}
 
 	dsim_info("%s: bps(%u) clk_prepare(%u) clk_zero(%u) clk_post(%u)\n",
-			__func__, t->bps, t->clk_prepare, t->clk_zero, t->clk_post);
+			__func__, t->bps, t->clk_prepare, t->clk_zero,
+			t->clk_post);
 	dsim_info("clk_trail(%u) hs_prepare(%u) hs_zero(%u) hs_trail(%u)\n",
 			t->clk_trail, t->hs_prepare, t->hs_zero, t->hs_trail);
 	dsim_info("lpx(%u) hs_exit(%u)\n", t->lpx, t->hs_exit);
@@ -1561,7 +1598,7 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	dsim_reg_enable_shadow_read(id, 1);
 	/* dsim_reg_enable_shadow(id, 1); */
 
-	if(lcd_info->mode == DECON_VIDEO_MODE)
+	if (lcd_info->mode == DECON_VIDEO_MODE)
 		dsim_reg_enable_clocklane(id, 0);
 	else
 		dsim_reg_enable_noncont_clock(id, 0);
@@ -1573,7 +1610,8 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	dsim_reg_set_stop_state_cnt(id);
 
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE)
-		dsim_reg_set_cm_underrun_lp_ref(id, lcd_info->cmd_underrun_lp_ref);
+		dsim_reg_set_cm_underrun_lp_ref(id,
+						lcd_info->cmd_underrun_lp_ref);
 
 	if (lcd_info->dsc_enabled)
 		threshold = lcd_info->xres / 3;
@@ -1586,15 +1624,16 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	dsim_reg_set_hresol(id, lcd_info->xres, lcd_info);
 	dsim_reg_set_porch(id, lcd_info);
 
-	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE){
+	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
 		if (lcd_info->dsc_enabled)
-			num_of_transfer = lcd_info->xres * lcd_info->yres / threshold / 3;
+			num_of_transfer = lcd_info->xres * lcd_info->yres
+							/ threshold / 3;
 		else
-			num_of_transfer = lcd_info->xres * lcd_info->yres / threshold;
+			num_of_transfer = lcd_info->xres * lcd_info->yres
+							/ threshold;
 
 		dsim_reg_set_num_of_transfer(id, num_of_transfer);
-	}
-	else{
+	} else {
 		num_of_transfer = lcd_info->xres * lcd_info->yres / threshold;
 		dsim_reg_set_num_of_transfer(id, num_of_transfer);
 	}
@@ -1608,11 +1647,10 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	/* CPSR & VIDEO MODE can be set when shadow enable on */
 	/* shadow enable */
 	dsim_reg_enable_shadow(id, 1);
-	if (lcd_info->mode == DECON_VIDEO_MODE){
+	if (lcd_info->mode == DECON_VIDEO_MODE) {
 		dsim_reg_set_video_mode(id, DSIM_CONFIG_VIDEO_MODE);
 		dsim_info("%s: video mode set\n", __func__);
-	}
-	else{
+	} else {
 		dsim_reg_set_video_mode(id, 0);
 		dsim_info("%s: command mode set\n", __func__);
 	}
@@ -1652,7 +1690,6 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
 		dsim_reg_set_cmd_ctrl(id, lcd_info, clks);
 	} else if (lcd_info->mode == DECON_VIDEO_MODE) {
-		/* TODO: vt compensation value will be replaced to calculated value */
 		dsim_reg_set_vt_compensate(id, lcd_info->vt_compensation);
 		dsim_reg_set_vstatus_int(id, DSIM_VSYNC);
 	}
@@ -1665,7 +1702,6 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 void dsim_reg_init_probe(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 		struct dsim_clks *clks)
 {
-	return;
 }
 
 int dsim_reg_init(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
@@ -1681,8 +1717,10 @@ int dsim_reg_init(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	if (dsim_read_mask(id, DSIM_CLK_CTRL, DSIM_CLK_CTRL_TX_REQUEST_HSCLK)) {
 		dsim_info("dsim%d is probed with LCD ON UBOOT\n", id);
 		dsim_reg_init_probe(id, lcd_info, data_lane_cnt, clks);
-		/* If reg_init_probe() sequence is not equal to reg_init()
-		   then just return. */
+		/*
+		 * If reg_init_probe() sequence is not equal to reg_init()
+		 * then just return.
+		 */
 		ret = -EBUSY;
 		return ret;
 	}
@@ -1695,7 +1733,8 @@ int dsim_reg_init(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 
 /*
  * configure and set DPHY PLL, byte clock, escape clock and hs clock
- *	- PMS value have to be optained by using PMS Gen. tool (MSC_PLL_WIZARD2_00.exe)
+ *	- PMS value have to be optained by using PMS Gen.
+ *      tool (MSC_PLL_WIZARD2_00.exe)
  *	- PLL out is source clock of HS clock
  *	- byte clock = HS clock / 16
  *	- calculate divider of escape clock using requested escape clock
@@ -1814,7 +1853,9 @@ int dsim_reg_set_lanes(u32 id, u32 lanes, u32 en)
 u32 dsim_reg_is_noncont_clk_enabled(u32 id)
 {
 	int ret;
-	ret = dsim_read_mask(id, DSIM_CLK_CTRL, DSIM_CLK_CTRL_NONCONT_CLOCK_LANE);
+
+	ret = dsim_read_mask(id, DSIM_CLK_CTRL,
+					DSIM_CLK_CTRL_NONCONT_CLOCK_LANE);
 	return ret;
 }
 
@@ -1846,7 +1887,7 @@ void dsim_reg_set_int(u32 id, u32 en)
 	 */
 	mask = DSIM_INTMSK_SW_RST_RELEASE | DSIM_INTMSK_SFR_PL_FIFO_EMPTY |
 		DSIM_INTMSK_SFR_PH_FIFO_EMPTY |
-		DSIM_INTMSK_FRAME_DONE | DSIM_INTMSK_INVALID_SFR_VALUE | 
+		DSIM_INTMSK_FRAME_DONE | DSIM_INTMSK_INVALID_SFR_VALUE |
 		DSIM_INTMSK_UNDER_RUN | DSIM_INTMSK_RX_DATA_DONE |
 		DSIM_INTMSK_ERR_RX_ECC | DSIM_INTMSK_VT_STATUS;
 
@@ -1934,7 +1975,9 @@ int dsim_reg_set_ulps(u32 id, u32 en, u32 lanes)
 		ret = dsim_reg_wait_exit_ulps_state(id);
 		if (ret)
 			return ret;
-		udelay(1000);   /* wait at least 1ms : Twakeup time for MARK1 state  */
+
+		/* wait at least 1ms : Twakeup time for MARK1 state  */
+		udelay(1000);
 
 		/* Clear ULPS exit request */
 		dsim_reg_exit_ulps(id, 0);
@@ -2026,12 +2069,12 @@ int dsim_reg_set_ulps_by_ddi(u32 id, u32 ddi_type, u32 lanes, u32 en)
 int dsim_reg_exit_ulps_and_start(u32 id, u32 ddi_type, u32 lanes)
 {
 	int ret = 0;
-	/* just for test */
+
 	#if 0
 	/*
 	 * Guarantee 1.2v signal level for data lane(positive) when exit ULPS.
 	 * DSIM Should be set standby. If not, lane goes to 600mv sometimes.
-	*/
+	 */
 	dsim_reg_set_hs_clock(id, 1);
 	dsim_reg_set_hs_clock(id, 0);
 	#endif
@@ -2046,24 +2089,16 @@ int dsim_reg_exit_ulps_and_start(u32 id, u32 ddi_type, u32 lanes)
 int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes)
 {
 	int ret = 0;
-#if 0
-	u32 cnt = 100;
-	u32 val;
 
-	val = dsim_read(id, DSIM_LINK_STATUS1);
-	do {
-		if (DSIM_LINK_STATUS1_CMD_MODE_STATUS_GET(val) == 0)
-			break;
-	} while (cnt--);
-#endif
 	ret = dsim_reg_set_hs_clock(id, 0);
-	if (ret < 0) {
+	if (ret < 0)
 		dsim_err("The CLK lane doesn't be switched to LP mode\n");
-	}
+
 	dsim_reg_set_ulps_by_ddi(id, ddi_type, lanes, 1);
 	dsim_reg_set_lanes(id, lanes, 0);
 	dsim_reg_set_esc_clk_on_lane(id, 0, lanes);
-//	dsim_reg_enable_word_clock(id, 0);	// 20161201 guide from DIP Team
+	/* 20161201 guide from DIP Team */
+	/* dsim_reg_enable_word_clock(id, 0); */
 	dsim_reg_set_clocks(id, NULL, NULL, 0);
 	dsim_reg_sw_reset(id);
 	return ret;
@@ -2085,9 +2120,8 @@ void dsim_reg_stop(u32 id, u32 lanes)
 
 	/* first disable HS clock */
 	if (dsim_reg_set_hs_clock(id, 0) < 0)
-	{
 		dsim_err("The CLK lane doesn't be switched to LP mode\n");
-	}
+
 	dsim_reg_set_lanes(id, lanes, 0);
 	dsim_reg_set_esc_clk_on_lane(id, 0, lanes);
 	dsim_reg_enable_word_clock(id, 0);
