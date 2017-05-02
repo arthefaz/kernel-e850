@@ -1,5 +1,5 @@
 /*
- * drivers/video/exynos_8890/decon/regs-decon.h
+ * linux/drivers/video/fbdev/exynos/dpu_9810/regs_decon.h
  *
  * Register definition file for Samsung DECON driver
  *
@@ -9,7 +9,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
-*/
+ */
 
 #ifndef _REGS_DISP_SS_H
 #define _REGS_DISP_SS_H
@@ -51,7 +51,7 @@
  * - PPMU_DPUD2		0x1612_0000
  * - DCPHY_TOP_M4S4		0x1616_0000
  * - DCPHY_MODULE_M4S4		0x1617_0000
-*/
+ */
 
 /*
  *	IP			start_offset	end_offset
@@ -71,7 +71,7 @@
  *	SHD_DSC1		0xC000		0xCFFF
  *	SHD_DSC2		0xD000		0xCFFF
  *-------------------------------------------------
-*/
+ */
 
 
 /*
@@ -79,7 +79,7 @@
  * ->
  * updated by SHADOW_REG_UPDATE_REQ[31] : SHADOW_REG_UPDATE_REQ
  *	(0x0000~0x011C, 0x0230~0x209C )
-*/
+ */
 
 #define GLOBAL_CONTROL					0x0000
 #define GLOBAL_CONTROL_SRESET				(1 << 28)
@@ -181,10 +181,11 @@
  * 0: QACTIVE is dynamically changed by DECON h/w,
  * 1: QACTIVE is stuck to 1'b1
  * [16][12][8][0] AUTO_CG_EN_xxx
-*/
+ */
 
 /* clock gating is disabled on bringup */
-#define CLOCK_CONTROL_0_CG_MASK			((0x1 << 0) | (0x1 << 8) | (0x1 << 12) | (0x1 << 16))
+#define CLOCK_CONTROL_0_CG_MASK			((0x1 << 0) | (0x1 << 8) |\
+						(0x1 << 12) | (0x1 << 16))
 #define CLOCK_CONTROL_0_QACTIVE_MASK	((0x1 << 24) | (0x1 << 28))
 
 #define SPLITTER_SIZE_CONTROL_0			0x0100
@@ -215,12 +216,12 @@
 #define OUTFIFO_1_WIDTH_GET(_v)			(((_v) >> 0) & 0x3fff)
 
 #define OUTFIFO_SIZE_CONTROL_2			0x0128
-#define OUTFIFO_COMPRESSED_SLICE_HEIGHT_F(_v)			((_v) << 16)
-#define OUTFIFO_COMPRESSED_SLICE_HEIGHT_MASK				(0x3fff << 16)
-#define OUTFIFO_COMPRESSED_SLICE_HEIGHT_GET(_v)			(((_v) >> 16) & 0x3fff)
-#define OUTFIFO_COMPRESSED_SLICE_WIDTH_F(_v)				((_v) << 0)
-#define OUTFIFO_COMPRESSED_SLICE_WIDTH_MASK				(0x3fff << 0)
-#define OUTFIFO_COMPRESSED_SLICE_WIDTH_GET(_v)			(((_v) >> 0) & 0x3fff)
+#define OUTFIFO_COMPRESSED_SLICE_HEIGHT_F(_v)		((_v) << 16)
+#define OUTFIFO_COMPRESSED_SLICE_HEIGHT_MASK		(0x3fff << 16)
+#define OUTFIFO_COMPRESSED_SLICE_HEIGHT_GET(_v)		(((_v) >> 16) & 0x3fff)
+#define OUTFIFO_COMPRESSED_SLICE_WIDTH_F(_v)		((_v) << 0)
+#define OUTFIFO_COMPRESSED_SLICE_WIDTH_MASK			(0x3fff << 0)
+#define OUTFIFO_COMPRESSED_SLICE_WIDTH_GET(_v)		(((_v) >> 0) & 0x3fff)
 
 #define OUTFIFO_TH_CONTROL_0			0x012C
 #define OUTFIFO_TH_1H_F					(0x5 << 0)
@@ -392,16 +393,16 @@
 #define WIN_START_TIME_CONTROL_MASK		(0x3fff << 0)
 
 /*
-* DSC registers
-* ->
-* 0x4000 ~
-* DSC 0 : 0x4000
-* DSC 1 : 0x5000
-* DSC 2 : 0x6000
-*
-* <-
-* DSC registers
-*/
+ * DSC registers
+ * ->
+ * 0x4000 ~
+ * DSC 0 : 0x4000
+ * DSC 1 : 0x5000
+ * DSC 2 : 0x6000
+ *
+ * <-
+ * DSC registers
+ */
 
 #define DSC0_OFFSET					0x4000
 #define DSC1_OFFSET					0x5000
@@ -417,8 +418,10 @@
 #define DSC_BIT_SWAP(_v)			((_v) << 10)
 #define DSC_BYTE_SWAP(_v)			((_v) << 9)
 #define DSC_WORD_SWAP(_v)			((_v) << 8)
-#define DSC_SWAP(_b, _c, _w)		((_b << 10) | (_c << 9) | (_w << 8))
-#define DSC_SWAP_MASK				((1 << 10) | (1 << 9) | (1 << 8))
+#define DSC_SWAP(_b, _c, _w)		((_b << 10) |\
+							(_c << 9) | (_w << 8))
+#define DSC_SWAP_MASK				((1 << 10) |\
+							(1 << 9) | (1 << 8))
 #define DSC_FLATNESS_DET_TH_MASK	(0xf << 4)
 #define DSC_FLATNESS_DET_TH_F(_v)	((_v) << 4)
 #define DSC_SLICE_MODE_CH_MASK		(0x1 << 3)
