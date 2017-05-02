@@ -10,7 +10,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
-*/
+ */
 
 #ifndef _REGS_DSIM_H
 #define _REGS_DSIM_H
@@ -270,8 +270,8 @@
 
 /* TE based command register*/
 #define DSIM_CMD_TE_CTRL1				(0x88)
-#define DSIM_CMD_TE_CTRL1_TIME_TE_PROTECT_ON(_x) 	((_x) << 16)
-#define DSIM_CMD_TE_CTRL1_TIME_TE_PROTECT_ON_MASK 	(0xffff << 16)
+#define DSIM_CMD_TE_CTRL1_TIME_TE_PROTECT_ON(_x)	((_x) << 16)
+#define DSIM_CMD_TE_CTRL1_TIME_TE_PROTECT_ON_MASK	(0xffff << 16)
 #define DSIM_CMD_TE_CTRL1_TIME_TE_TOUT(_x)		((_x) << 0)
 #define DSIM_CMD_TE_CTRL1_TIME_TE_TOUT_MASK		(0xffff << 0)
 
@@ -318,7 +318,9 @@
 /* PLL timer register */
 #define DSIM_PLLTMR					(0xac)
 
-/************************************* DPHY  registers  ***************************************/
+/*
+ * DPHY  registers
+ */
 
 /* DPHY BIAS setting */
 #define DSIM_PHY_BIAS_CTRL(_id)		(0x0400 + (4 * (_id)))
