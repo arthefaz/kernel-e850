@@ -2095,6 +2095,8 @@ int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes)
 		dsim_err("The CLK lane doesn't be switched to LP mode\n");
 
 	dsim_reg_set_ulps_by_ddi(id, ddi_type, lanes, 1);
+	/* clock source to OSC */
+	dsim_reg_set_link_clock(id, 0);
 	dsim_reg_set_lanes(id, lanes, 0);
 	dsim_reg_set_esc_clk_on_lane(id, 0, lanes);
 	/* 20161201 guide from DIP Team */
@@ -2121,7 +2123,8 @@ void dsim_reg_stop(u32 id, u32 lanes)
 	/* first disable HS clock */
 	if (dsim_reg_set_hs_clock(id, 0) < 0)
 		dsim_err("The CLK lane doesn't be switched to LP mode\n");
-
+	/* clock source to OSC */
+	dsim_reg_set_link_clock(id, 0);
 	dsim_reg_set_lanes(id, lanes, 0);
 	dsim_reg_set_esc_clk_on_lane(id, 0, lanes);
 	dsim_reg_enable_word_clock(id, 0);
