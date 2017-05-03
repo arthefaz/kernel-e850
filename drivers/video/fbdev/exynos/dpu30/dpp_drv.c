@@ -563,7 +563,7 @@ static int dpp_set_config(struct dpp_device *dpp)
 	dma_reg_set_test_pattern(0, 1, &pattern_data[0]);
 #endif
 
-	dpp_info("dpp%d configuration\n", dpp->id);
+	dpp_dbg("dpp%d configuration\n", dpp->id);
 
 	dpp->state = DPP_STATE_ON;
 err:
