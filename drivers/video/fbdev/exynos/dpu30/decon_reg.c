@@ -1979,7 +1979,7 @@ void decon_reg_set_window_control(u32 id, int win_idx,
 	u32 win_en = regs->wincon & WIN_EN_F(win_idx) ? 1 : 0;
 
 	if (win_en == true) {
-		decon_info("%s: win id = %d\n", __func__, win_idx);
+		decon_dbg("%s: win id = %d\n", __func__, win_idx);
 		decon_reg_set_win_bnd_function(0, win_idx, regs);
 		decon_write(0, WIN_START_POSITION(win_idx), regs->start_pos);
 		decon_write(0, WIN_END_POSITION(win_idx), regs->end_pos);
@@ -1992,7 +1992,7 @@ void decon_reg_set_window_control(u32 id, int win_idx,
 	decon_reg_config_win_channel(id, win_idx, regs->type);
 
 	/* decon_dbg("%s: regs->type(%d)\n", __func__, regs->type); */
-	decon_info("%s: regs->type(%d)\n", __func__, regs->type);
+	decon_dbg("%s: regs->type(%d)\n", __func__, regs->type);
 }
 
 
