@@ -130,16 +130,17 @@ void displayport_get_voltage_and_pre_emphasis_max_reach(u8 *drive_current, u8 *p
 	int i;
 
 	for (i = 0; i < 4; i++) {
-		if (drive_current[i] + pre_emphasis[i] >= MAX_REACHED_CNT) {
-			if (!((max_reach_value[i] >> MAX_SWING_REACHED_BIT_POS) & 0x01))
-				max_reach_value[i] |= (1 << MAX_SWING_REACHED_BIT_POS);
+		if (drive_current[i] >= MAX_REACHED_CNT) {
+			max_reach_value[i] &= ~(1 << MAX_SWING_REACHED_BIT_POS);
+			max_reach_value[i] |= (1 << MAX_SWING_REACHED_BIT_POS);
+		} else
+			max_reach_value[i] &= ~(1 << MAX_SWING_REACHED_BIT_POS);
 
-			if (!((max_reach_value[i] >> MAX_PRE_EMPHASIS_REACHED_BIT_POS) & 0x01))
-				max_reach_value[i] |= (1 << MAX_PRE_EMPHASIS_REACHED_BIT_POS);
-		} else if (pre_emphasis[i] >= MAX_PRE_EMPHASIS_REACHED_CNT) {
-			if (!((max_reach_value[i] >> MAX_PRE_EMPHASIS_REACHED_BIT_POS) & 0x01))
-				max_reach_value[i] |= (1 << MAX_PRE_EMPHASIS_REACHED_BIT_POS);
-		}
+		if (pre_emphasis[i] >= MAX_REACHED_CNT) {
+			max_reach_value[i] &= ~(1 << MAX_PRE_EMPHASIS_REACHED_BIT_POS);
+			max_reach_value[i] |= (1 << MAX_PRE_EMPHASIS_REACHED_BIT_POS);
+		} else
+			max_reach_value[i] &= ~(1 << MAX_PRE_EMPHASIS_REACHED_BIT_POS);
 	}
 }
 
@@ -193,6 +194,7 @@ Reduce_Link_Rate_Retry:
 	for (i = 0; i < 4; i++) {
 		pre_emphasis[i] = 0;
 		drive_current[i] = 0;
+		max_reach_value[i] = 0;
 	}
 
 	training_retry_no = 0;
@@ -203,8 +205,14 @@ Reduce_Link_Rate_Retry:
 
 	displayport_reg_set_lane_count(lane_cnt);
 
+	if (enhanced_frame_cap)
+		displayport_write_mask(SST1_MAIN_CONTROL, 1, ENHANCED_MODE);
+
 	displayport_info("link_rate = %x\n", link_rate);
 	displayport_info("lane_cnt = %x\n", lane_cnt);
+
+	/* wait for 60us */
+	udelay(60);
 
 	displayport_reg_phy_reset(0);
 
@@ -519,6 +527,8 @@ static int displayport_fast_link_training(void)
 	displayport_info("link_rate = %x\n", link_rate);
 	displayport_info("lane_cnt = %x\n", lane_cnt);
 
+	/* wait for 60us */
+	udelay(60);
 	displayport_reg_phy_reset(0);
 
 	displayport_reg_dpcd_write(DPCD_ADD_LINK_BW_SET, 1, &link_rate);
