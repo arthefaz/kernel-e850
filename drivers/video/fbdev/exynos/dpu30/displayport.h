@@ -17,6 +17,7 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <media/v4l2-subdev.h>
+#include <linux/phy/phy.h>
 #if defined(CONFIG_EXTCON)
 #include <linux/extcon.h>
 #endif
@@ -903,6 +904,8 @@ void displayport_reg_set_aux_pn_inv(u32 val);
 void displayport_hpd_changed(int state);
 int displayport_get_hpd_state(void);
 
+int displayport_reg_stand_alone_crc_sorting(void);
+
 int edid_read(struct displayport_device *hdev, u8 **data);
 int edid_update(struct displayport_device *hdev);
 struct v4l2_dv_timings edid_preferred_preset(void);
@@ -930,4 +933,5 @@ extern int hdcp_dplink_set_integrity_fail(void);
 #define DISPLAYPORT_IOC_DUMP			_IOW('V', 0, u32)
 #define DISPLAYPORT_IOC_GET_ENUM_DV_TIMINGS	_IOW('V', 1, u8)
 #define DISPLAYPORT_IOC_SET_RECONNECTION	_IOW('V', 2, u8)
+#define DISPLAYPORT_IOC_DP_SA_SORTING		_IOW('V', 3, int)
 #endif

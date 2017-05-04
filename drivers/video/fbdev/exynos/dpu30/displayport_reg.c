@@ -536,42 +536,43 @@ void displayport_reg_enable_interface_crc(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write_mask(IF_CRC_Control_1, val, IF_CRC_EN);
-	displayport_write_mask(IF_CRC_Control_1, val, IF_CRC_SW_COMPARE);
+	displayport_write_mask(SST1_STREAM_IF_CRC_CONTROL_1, val, IF_CRC_EN);
+	displayport_write_mask(SST1_STREAM_IF_CRC_CONTROL_1, val, IF_CRC_SW_COMPARE);
 
 	if (val == 0) {
-		displayport_write_mask(IF_CRC_Control_1, 1, IF_CRC_CLEAR);
-		displayport_write_mask(IF_CRC_Control_1, 0, IF_CRC_CLEAR);
+		displayport_write_mask(SST1_STREAM_IF_CRC_CONTROL_1, 1, IF_CRC_CLEAR);
+		displayport_write_mask(SST1_STREAM_IF_CRC_CONTROL_1, 0, IF_CRC_CLEAR);
 	}
 }
 
 void displayport_reg_get_interface_crc(u32 *crc_r_result, u32 *crc_g_result, u32 *crc_b_result)
 {
-	*crc_r_result = displayport_read_mask(IF_CRC_Control_2, IF_CRC_R_RESULT);
-	*crc_g_result = displayport_read_mask(IF_CRC_Control_3, IF_CRC_G_RESULT);
-	*crc_b_result = displayport_read_mask(IF_CRC_Control_4, IF_CRC_B_RESULT);
+	*crc_r_result = displayport_read_mask(SST1_STREAM_IF_CRC_CONTROL_2, IF_CRC_R_RESULT);
+	*crc_g_result = displayport_read_mask(SST1_STREAM_IF_CRC_CONTROL_3, IF_CRC_G_RESULT);
+	*crc_b_result = displayport_read_mask(SST1_STREAM_IF_CRC_CONTROL_4, IF_CRC_B_RESULT);
 }
 
 void displayport_reg_enable_stand_alone_crc(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write_mask(SA_CRC_Control_1, val,
-		SA_CRC_LN0_EN|SA_CRC_LN1_EN|SA_CRC_LN2_EN|SA_CRC_LN3_EN);
-	displayport_write_mask(SA_CRC_Control_1, val, SA_CRC_SW_COMPARE);
+	displayport_write_mask(PCS_SA_CRC_CONTROL_1, val,
+		SA_CRC_LANE_0_ENABLE | SA_CRC_LANE_1_ENABLE |
+		SA_CRC_LANE_2_ENABLE | SA_CRC_LANE_3_ENABLE);
+	displayport_write_mask(PCS_SA_CRC_CONTROL_1, val, SA_CRC_SW_COMPARE);
 
 	if (val == 0) {
-		displayport_write_mask(SA_CRC_Control_1, 1, SA_CRC_CLEAR);
-		displayport_write_mask(SA_CRC_Control_1, 0, SA_CRC_CLEAR);
+		displayport_write_mask(PCS_SA_CRC_CONTROL_1, 1, SA_CRC_CLEAR);
+		displayport_write_mask(PCS_SA_CRC_CONTROL_1, 0, SA_CRC_CLEAR);
 	}
 }
 
 void displayport_reg_get_stand_alone_crc(u32 *ln0, u32 *ln1, u32 *ln2, u32 *ln3)
 {
-	*ln0 = displayport_read_mask(SA_CRC_Control_2, SA_CRC_LN0_RESULT);
-	*ln1 = displayport_read_mask(SA_CRC_Control_3, SA_CRC_LN1_RESULT);
-	*ln2 = displayport_read_mask(SA_CRC_Control_4, SA_CRC_LN2_RESULT);
-	*ln3 = displayport_read_mask(SA_CRC_Control_5, SA_CRC_LN3_RESULT);
+	*ln0 = displayport_read_mask(PCS_SA_CRC_CONTROL_2, SA_CRC_LN0_RESULT);
+	*ln1 = displayport_read_mask(PCS_SA_CRC_CONTROL_3, SA_CRC_LN1_RESULT);
+	*ln2 = displayport_read_mask(PCS_SA_CRC_CONTROL_4, SA_CRC_LN2_RESULT);
+	*ln3 = displayport_read_mask(PCS_SA_CRC_CONTROL_5, SA_CRC_LN3_RESULT);
 }
 
 void displayport_reg_aux_ch_buf_clr(void)
@@ -1094,25 +1095,26 @@ void displayport_reg_stop(void)
 /* Set SA CRC, For Sorting Vector */
 void displayport_reg_set_stand_alone_crc(u32 crc_ln0_ref, u32 crc_ln1_ref, u32 crc_ln2_ref, u32 crc_ln3_ref)
 {
-	displayport_write_mask(SA_CRC_Control_2, crc_ln0_ref, SA_CRC_LN0_REF);
-	displayport_write_mask(SA_CRC_Control_3, crc_ln1_ref, SA_CRC_LN1_REF);
-	displayport_write_mask(SA_CRC_Control_4, crc_ln2_ref, SA_CRC_LN2_REF);
-	displayport_write_mask(SA_CRC_Control_5, crc_ln3_ref, SA_CRC_LN3_REF);
+	displayport_write_mask(PCS_SA_CRC_CONTROL_2, crc_ln0_ref, SA_CRC_LN0_REF);
+	displayport_write_mask(PCS_SA_CRC_CONTROL_3, crc_ln1_ref, SA_CRC_LN1_REF);
+	displayport_write_mask(PCS_SA_CRC_CONTROL_4, crc_ln2_ref, SA_CRC_LN2_REF);
+	displayport_write_mask(PCS_SA_CRC_CONTROL_5, crc_ln3_ref, SA_CRC_LN3_REF);
+}
+
+void displayport_reg_set_result_flag_clear(void)
+{
+	displayport_write_mask(PCS_SA_CRC_CONTROL_1, 1, SA_CRC_CLEAR);
+	displayport_write_mask(PCS_SA_CRC_CONTROL_1, 0, SA_CRC_CLEAR);
 }
 
 void displayport_reg_enable_stand_alone_crc_hw(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write_mask(SA_CRC_Control_1, val,
-		SA_CRC_LN0_EN|SA_CRC_LN1_EN|SA_CRC_LN2_EN|SA_CRC_LN3_EN);
-	displayport_write_mask(SA_CRC_Control_1, 0, SA_CRC_SW_COMPARE);	/* use H/W compare */
-}
+	displayport_write_mask(PCS_SA_CRC_CONTROL_1, 0, SA_CRC_SW_COMPARE);	/* use H/W compare */
 
-void displayport_reg_clear_stand_alone_crc(void)
-{
-	displayport_write_mask(SA_CRC_Control_1, 1, SA_CRC_CLEAR);
-	displayport_write_mask(SA_CRC_Control_1, 0, SA_CRC_CLEAR);
+	displayport_write_mask(PCS_SA_CRC_CONTROL_1, val,
+		SA_CRC_LANE_0_ENABLE | SA_CRC_LANE_1_ENABLE | SA_CRC_LANE_2_ENABLE | SA_CRC_LANE_3_ENABLE);
 }
 
 int displayport_reg_get_stand_alone_crc_result(void)
@@ -1120,42 +1122,46 @@ int displayport_reg_get_stand_alone_crc_result(void)
 	u32 val;
 	int err = 0;
 
-	val = displayport_read_mask(SA_CRC_Control_1, 0x00000FF0);
-	val = val>>4;
+	val = displayport_read_mask(PCS_SA_CRC_CONTROL_1, 0x00000FF0);
+	val = val >> 4;
 
-	if (val == 0xf0) {
-		displayport_info(" Display Port SA CRC Pass !!!\n");
+	if (val == 0xF0) {
+		displayport_info("DisplayPort SA CRC Pass !!!\n");
 	} else {
 		err = -1;
-		displayport_err(" Display Port SA CRC Fail : 0x%02X !!!\n", val);
+		displayport_info("DisplayPort SA CRC Fail : 0x%02X !!!\n", val);
 	}
 
 	return  err;
-}
-
-/* Set Bist enable, Color bar */
-/* D_range change from CEA_RANGE to VESA_RANGE */
-void displayport_reg_set_sa_bist_mode(u32 en)
-{
-}
-
-void displayport_reg_set_sa_bist_video_configuration(videoformat video_format, u32 bist_type, u32 bist_width)
-{
 }
 
 /* SA CRC Condition : 8bpc, 4lane, 640x10 size, BIST_TYPE=0, BIST_WIDTH =0 */
 int displayport_reg_stand_alone_crc_sorting(void)
 {
 	int ret;
+	struct displayport_device *displayport = get_displayport_drvdata();
 
+	phy_power_on(displayport->phy);
+	displayport_reg_init();
+	displayport_reg_set_lane_count(4);
+	displayport_reg_set_bist_video_configuration(sa_crc_640x10_60Hz, BPC_8, COLOR_BAR, VESA_RANGE);
 	displayport_reg_set_stand_alone_crc(0x135E, 0x135E, 0x135E, 0x135E);
 	displayport_reg_enable_stand_alone_crc_hw(1);
-	displayport_reg_set_sa_bist_video_configuration(sa_crc_640x10_60Hz, 0, 0);
 	displayport_reg_start();
 
-	mdelay(10); /* wait for 10ms + 10% margin */
+	mdelay(20);
+
+	displayport_reg_set_result_flag_clear();
+
+	mdelay(20);
 
 	ret =  displayport_reg_get_stand_alone_crc_result();
+
+	displayport_reg_set_result_flag_clear();
+	displayport_reg_enable_stand_alone_crc_hw(0);
+
+	displayport_reg_set_video_bist_mode(0);
+	displayport_reg_stop();
 
 	return ret;
 }

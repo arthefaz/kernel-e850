@@ -237,19 +237,8 @@
 #define GTC_TX_VALUE_MONITOR			(0x1110)
 #define GTC_TX_VAL				(0xFFFFFFFF << 0)
 
-#define IF_CRC_Control_1                        (0x1114)
-#define IF_CRC_CLEAR                            (1 << 13)
-#define IF_CRC_PASS                             (1 << 12)
-#define IF_CRC_FAIL                             (1 << 8)
-#define IF_CRC_SW_COMPARE                       (1 << 4)
-#define IF_CRC_EN                               (1 << 0)
-
 #define GTC_RX_VALUE_MONITOR			(0x1114)
 #define GTC_RX_VAL				(0xFFFFFFFF << 0)
-
-#define IF_CRC_Control_2                        (0x1118)
-#define IF_CRC_R_REF                            (0xFFFF << 16)
-#define IF_CRC_R_RESULT                         (0xFFFF << 0)
 
 #define GTC_STATUS_MONITOR			(0x1118)
 #define FREQ_ADJ_10_3				(0xFF << 8)
@@ -257,60 +246,9 @@
 #define TXGTC_LOCK_DONE_FLAG			(0x01 << 1)
 #define RXGTC_LOCK_DONE_FLAG			(0x01 << 0)
 
-#define IF_CRC_Control_3                        (0x111C)
-#define IF_CRC_G_REF                            (0xFFFF << 16)
-#define IF_CRC_G_RESULT                         (0xFFFF << 0)
-
-#define IF_CRC_Control_4                        (0x1120)
-#define IF_CRC_B_REF                            (0xFFFF << 16)
-#define IF_CRC_B_RESULT                         (0xFFFF << 0)
-
-#define SA_CRC_Control_1                        (0x1124)
-#define SA_CRC_CLEAR                            (1 << 13)
-#define SA_CRC_SW_COMPARE                       (1 << 12)
-#define SA_CRC_LN3_PASS                         (1 << 11)
-#define SA_CRC_LN2_PASS                         (1 << 10)
-#define SA_CRC_LN1_PASS                         (1 << 9)
-#define SA_CRC_LN0_PASS                         (1 << 8)
-#define SA_CRC_LN3_FAIL                         (1 << 7)
-#define SA_CRC_LN2_FAIL                         (1 << 6)
-#define SA_CRC_LN1_FAIL                         (1 << 5)
-#define SA_CRC_LN0_FAIL                         (1 << 4)
-#define SA_CRC_LN3_EN                           (1 << 3)
-#define SA_CRC_LN2_EN                           (1 << 2)
-#define SA_CRC_LN1_EN                           (1 << 1)
-#define SA_CRC_LN0_EN                           (1 << 0)
-
-#define SA_CRC_Control_2                        (0x1128)
-#define SA_CRC_LN0_REF                          (0xFFFF << 16)
-#define SA_CRC_LN0_RESULT                       (0xFFFF << 0)
-
-#define SA_CRC_Control_3                        (0x112C)
-#define SA_CRC_LN1_REF                          (0xFFFF << 16)
-#define SA_CRC_LN1_RESULT                       (0xFFFF << 0)
-
-#define SA_CRC_Control_4                        (0x1130)
-#define SA_CRC_LN2_REF                          (0xFFFF << 16)
-#define SA_CRC_LN2_RESULT                       (0xFFFF << 0)
-
-#define SA_CRC_Control_5                        (0x1134)
-#define SA_CRC_LN3_REF                          (0xFFFF << 16)
-#define SA_CRC_LN3_RESULT                       (0xFFFF << 0)
-
 #define AUX_GTC_DEBUG				(0x1200)
 #define DEBUG_STATE_SEL				(0xFF << 8)
 #define DEBUG_STATE				(0xFF << 0)
-
-#define CRC_Control_4                           (0x1890)
-#define AUD_CRC_PK_NUM                          (0x3FF << 16)
-#define AUD_CRC_FLUSH                           (1 << 3)
-#define VID_CRC_FLUSH                           (1 << 2)
-#define AUD_CRC_EN                              (1 << 1)
-#define VID_CRC_EN                              (1 << 0)
-
-#define CRC_Result                              (0x1894)
-#define AUD_CRC_RESULT                          (0xFFFF << 16)
-#define VID_CRC_RESULT                          (0xFFFF << 0)
 
 #define MST_ENABLE				(0x2000)
 #define MST_EN					(0x01 << 0)
@@ -477,6 +415,38 @@
 #define PCS_HBR2_EYE_SR_CONTROL			(0x3020)
 #define HBR2_EYE_SR_CTRL			(0x03 << 16)
 #define HBR2_EYE_SR_COUNT			(0xFFFF << 0)
+
+#define PCS_SA_CRC_CONTROL_1			(0x3100)
+#define SA_CRC_CLEAR				(0x01 << 13)
+#define SA_CRC_SW_COMPARE			(0x01 << 12)
+#define SA_CRC_LN3_PASS				(0x01 << 11)
+#define SA_CRC_LN2_PASS				(0x01 << 10)
+#define SA_CRC_LN1_PASS				(0x01 << 9)
+#define SA_CRC_LN0_PASS				(0x01 << 8)
+#define SA_CRC_LN3_FAIL				(0x01 << 7)
+#define SA_CRC_LN2_FAIL				(0x01 << 6)
+#define SA_CRC_LN1_FAIL				(0x01 << 5)
+#define SA_CRC_LN0_FAIL				(0x01 << 4)
+#define SA_CRC_LANE_3_ENABLE			(0x01 << 3)
+#define SA_CRC_LANE_2_ENABLE			(0x01 << 2)
+#define SA_CRC_LANE_1_ENABLE			(0x01 << 1)
+#define SA_CRC_LANE_0_ENABLE			(0x01 << 0)
+
+#define PCS_SA_CRC_CONTROL_2			(0x3104)
+#define SA_CRC_LN0_REF				(0xFFFF << 16)
+#define SA_CRC_LN0_RESULT			(0xFFFF << 0)
+
+#define PCS_SA_CRC_CONTROL_3			(0x3108)
+#define SA_CRC_LN1_REF				(0xFFFF << 16)
+#define SA_CRC_LN1_RESULT			(0xFFFF << 0)
+
+#define PCS_SA_CRC_CONTROL_4			(0x310C)
+#define SA_CRC_LN2_REF				(0xFFFF << 16)
+#define SA_CRC_LN2_RESULT			(0xFFFF << 0)
+
+#define PCS_SA_CRC_CONTROL_5			(0x3110)
+#define SA_CRC_LN3_REF				(0xFFFF << 16)
+#define SA_CRC_LN3_RESULT			(0xFFFF << 0)
 
 #define HDCP13_STATUS				(0x4000)
 #define REAUTH_REQUEST				(0x01 << 7)
@@ -1095,6 +1065,24 @@
 #define SST1_AUDIO_CHANNEL_31_32_STATUS_CTRL_1	(0x58DC)
 #define MASTER_AUD_GP15_STA_4			(0xFF << 0)
 
+#define SST1_STREAM_IF_CRC_CONTROL_1		(0x58E0)
+#define IF_CRC_CLEAR				(0x01 << 13)
+#define IF_CRC_PASS				(0x01 << 12)
+#define IF_CRC_FAIL				(0x01 << 8)
+#define IF_CRC_SW_COMPARE			(0x01 << 4)
+#define IF_CRC_EN				(0x01 << 0)
+
+#define SST1_STREAM_IF_CRC_CONTROL_2		(0x58E4)
+#define IF_CRC_R_REF				(0xFF << 16)
+#define IF_CRC_R_RESULT				(0xFF << 0)
+
+#define SST1_STREAM_IF_CRC_CONTROL_3		(0x58E8)
+#define IF_CRC_G_REF				(0xFF << 16)
+#define IF_CRC_G_RESULT				(0xFF << 0)
+
+#define SST1_STREAM_IF_CRC_CONTROL_4		(0x58EC)
+#define IF_CRC_B_REF				(0xFF << 16)
+#define IF_CRC_B_RESULT				(0xFF << 0)
 
 #define SST1_AUDIO_DEBUG_MARGIN_CONTROL		(0x5900)
 #define AUDIO_DEBUG_MARGIN_EN			(0x01 << 6)

@@ -1968,6 +1968,11 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		decon_dbg("DECON DISPLAYPORT IOCTL EXYNOS_SET_DISPLAYPORT_CONFIG\n");
 		break;
 
+	case DISPLAYPORT_IOC_DP_SA_SORTING:
+		decon_info("DISPLAY_IOC_DP_SA_SORTING is called\n");
+		ret = displayport_reg_stand_alone_crc_sorting();
+		break;
+
 	case EXYNOS_DPU_DUMP:
 		mutex_lock(&decon->lock);
 		if (decon->state != DECON_STATE_ON) {
