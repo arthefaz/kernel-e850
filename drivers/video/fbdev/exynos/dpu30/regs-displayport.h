@@ -1578,16 +1578,4 @@
 
 #define SEC_DP_HDCP22_AES_KEY_3                 (0x721C)
 #define AES_Pairing_Key_3_Register              (0xFFFFFFFF << 0)
-
-#define PLL_CON0_PLL_DPU                        (0x0140)
-#define ENABLE                                  (1 << 31)
-#define USE_HW_LOCK_DET                         (1 << 28)
-#define DIV_M                                   (0x3FF << 16)
-#define DIV_P                                   (0x3F << 8)
-#define MUX_SEL                                 (1 << 4)
-#define DIV_S                                   (0x7 << 0)
-
-#define CLK_CON_DIV_DIV_CLKCMU_DPU1_DECON2      (0x1800)
-#define BUSY                                    (1 << 16)
-#define DIVRATIO                                (7 << 0)
 #endif

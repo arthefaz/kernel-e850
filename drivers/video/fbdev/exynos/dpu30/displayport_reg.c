@@ -11,24 +11,6 @@
 
 #include "displayport.h"
 
-/* phy setting with 26MHz oscclk */
-pms_info pms_parameters[] = {    /*  P     M     S   Divide */
-	/* PIXEL_CLOCK_25_200 */  {0x0D, 0x1F8, 0x03, 0x05},
-	/* PIXEL_CLOCK_27_000 */  {0x0D, 0x1B0, 0x05, 0x01},
-	/* PIXEL_CLOCK_27_027 */  {0x0A, 0x123, 0x02, 0x07},
-	/* PIXEL_CLOCK_33_750 */  {0x0D, 0x21C, 0x05, 0x01},
-	/* PIXEL_CLOCK_71_000 */  {0x0D, 0x238, 0x04, 0x01},
-	/* PIXEL_CLOCK_74_250 */  {0x0D, 0x252, 0x04, 0x01},
-	/* PIXEL_CLOCK_108_000 */ {0x0D, 0x1B0, 0x03, 0x01},
-	/* PIXEL_CLOCK_148_500 */ {0x0D, 0x252, 0x03, 0x01},
-	/* PIXEL_CLOCK_234_000 */ {0x07, 0x0FC, 0x02, 0x01},
-	/* PIXEL_CLOCK_241_500 */ {0x0D, 0x1E3, 0x02, 0x01},
-	/* PIXEL_CLOCK_297_000 */ {0x0D, 0x252, 0x02, 0x01},
-	/* PIXEL_CLOCK_312_000 */ {0x07, 0x0A8, 0x01, 0x01},
-	/* PIXEL_CLOCK_533_000 */ {0x07, 0x11F, 0x01, 0x01},
-	/* PIXEL_CLOCK_594_000 */ {0x0D, 0x252, 0x01, 0x01},
-};
-
 u32 phy_lane_parameters[4][4] = {
 	/* Swing Level_0(400mV) */  {0x01040508, 0x03045408, 0x0104A008, 0x0104A008},
 	/* Swing Level_1(600mV) */  {0x03040408, 0x01046008, 0x0304A008, 0x0304A008},
@@ -98,51 +80,6 @@ u32 audio_sync_m_n[2][3][7] = {
 u32 m_aud_master[7] = {32000, 44100, 48000, 88200, 96000, 176000, 192000};
 
 u32 n_aud_master[3] = {81000000, 135000000, 270000000};
-
-static u32 displayport_cmu_read(u32 reg_id)
-{
-	void __iomem *pll_dpu_cmu_address;
-
-	pll_dpu_cmu_address = ioremap(0x12a00000, 0x2000);
-
-	return readl(pll_dpu_cmu_address + reg_id);
-}
-
-static void displayport_cmu_write_mask(u32 reg_id, u32 val, u32 mask)
-{
-	u32 old, bit_shift;
-	void __iomem *pll_dpu_cmu_address;
-
-	pll_dpu_cmu_address = ioremap(0x12a00000, 0x2000);
-
-	old = displayport_cmu_read(reg_id);
-
-	for (bit_shift = 0; bit_shift < 32; bit_shift++) {
-		if ((mask >> bit_shift) & 0x00000001)
-			break;
-	}
-
-	val = ((val<<bit_shift) & mask) | (old & ~mask);
-	writel(val, pll_dpu_cmu_address + reg_id);
-}
-
-void displayport_reg_set_pixel_clock(videoformat video_format)
-{
-	u32 val;
-
-	val = ((pms_parameters[videoformat_parameters[video_format].pixel_clock].divide)-1);
-	displayport_cmu_write_mask(CLK_CON_DIV_DIV_CLKCMU_DPU1_DECON2, val, DIVRATIO);
-
-	val = (pms_parameters[videoformat_parameters[video_format].pixel_clock].p);
-	displayport_cmu_write_mask(PLL_CON0_PLL_DPU, val, DIV_P);
-	val = (pms_parameters[videoformat_parameters[video_format].pixel_clock].m);
-	displayport_cmu_write_mask(PLL_CON0_PLL_DPU, val, DIV_M);
-	val = (pms_parameters[videoformat_parameters[video_format].pixel_clock].s);
-	displayport_cmu_write_mask(PLL_CON0_PLL_DPU, val, DIV_S);
-	displayport_cmu_write_mask(PLL_CON0_PLL_DPU, ~0, USE_HW_LOCK_DET|ENABLE);
-	udelay(10);
-	displayport_cmu_write_mask(PLL_CON0_PLL_DPU, 1, MUX_SEL);
-}
 
 void displayport_reg_sw_reset(void)
 {
