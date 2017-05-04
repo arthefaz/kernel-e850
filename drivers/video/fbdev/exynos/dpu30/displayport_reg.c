@@ -525,39 +525,34 @@ void displayport_reg_get_stand_alone_crc(u32 *ln0, u32 *ln1, u32 *ln2, u32 *ln3)
 
 void displayport_reg_aux_ch_buf_clr(void)
 {
-	displayport_write_mask(Req_Op_En, 1, BUF_CLR);
+	displayport_write_mask(AUX_BUFFER_CLEAR, 1, AUX_BUF_CLR);
 }
 
 void displayport_reg_aux_defer_ctrl(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write_mask(AUX_Ch_Defer_Ctrl, val, DEFER_CTRL_EN);
+	displayport_write_mask(AUX_COMMAND_CONTROL, val, DEFER_CTRL_EN);
 }
 
 void displayport_reg_set_aux_reply_timeout(void)
 {
-	displayport_write_mask(AUX_Ch_MISC_Ctrl_1, AUX_TIMEOUT_1800us, AUX_TC);
-}
-
-void displayport_reg_aux_error_clr(void)
-{
-	displayport_write_mask(Read_Error_Ctrl, 1, ERROR_CLR);
+	displayport_write_mask(AUX_CONTROL, AUX_TIMEOUT_1800us, AUX_REPLY_TIMER_MODE);
 }
 
 void displayport_reg_set_aux_ch_command(enum displayport_aux_ch_command_type aux_ch_mode)
 {
-	displayport_write_mask(Req_Addr_0, aux_ch_mode, REG_REQ_COMM);
+	displayport_write_mask(AUX_REQUEST_CONTROL, aux_ch_mode, REQ_COMM);
 }
 
 void displayport_reg_set_aux_ch_address(u32 aux_ch_address)
 {
-	displayport_write_mask(Req_Addr_0, aux_ch_address, REG_REQ_ADDR);
+	displayport_write_mask(AUX_REQUEST_CONTROL, aux_ch_address, REQ_ADDR);
 }
 
 void displayport_reg_set_aux_ch_length(u32 aux_ch_length)
 {
-	displayport_write_mask(Req_Addr_0, aux_ch_length-1, REG_REQ_LENGTH);
+	displayport_write_mask(AUX_REQUEST_CONTROL, aux_ch_length - 1, REQ_LENGTH);
 }
 
 void displayport_reg_aux_ch_send_buf(u8 *aux_ch_send_buf, u32 aux_ch_length)
@@ -565,7 +560,7 @@ void displayport_reg_aux_ch_send_buf(u8 *aux_ch_send_buf, u32 aux_ch_length)
 	int i;
 
 	for (i = 0; i < aux_ch_length; i++) {
-		displayport_write_mask(SEND_DATA_0_1_2_3 + ((i / 4) * 4),
+		displayport_write_mask(AUX_TX_DATA_SET0 + ((i / 4) * 4),
 			aux_ch_send_buf[i], (0x000000FF << ((i % 4) * 8)));
 	}
 }
@@ -576,8 +571,8 @@ void displayport_reg_aux_ch_received_buf(u8 *aux_ch_received_buf, u32 aux_ch_len
 
 	for (i = 0; i < aux_ch_length; i++) {
 		aux_ch_received_buf[i] =
-			(displayport_read_mask(RECEIVED_DATA_0_1_2_3+((i/4)*4),
-			0xFF<<((i%4)*8)) >> (i%4)*8);
+			(displayport_read_mask(AUX_RX_DATA_SET0 + ((i / 4) * 4),
+			0xFF << ((i % 4) * 8)) >> (i % 4) * 8);
 	}
 }
 
@@ -587,34 +582,28 @@ int displayport_reg_set_aux_ch_operation_enable(void)
 	u32 state;
 	u32 val0, val1;
 
-	displayport_write_mask(Req_Op_En, 1, AUX_OP_EN);
+	displayport_write_mask(AUX_TRANSACTION_START, 1, AUX_TRAN_START);
 
 	do {
-		state = displayport_read(Req_Op_En) & AUX_OP_EN;
+		state = displayport_read(AUX_TRANSACTION_START) & AUX_TRAN_START;
 		cnt--;
 		udelay(10);
 	} while (state && cnt);
 
 	if (!cnt) {
-		displayport_err("AUX Req_Op_En waiting timeout.\n");
+		displayport_err("AUX_TRAN_START waiting timeout.\n");
 		return -ETIME;
 	}
 
-	val0 = displayport_read(AUX_Status_0);
-	val1 = displayport_read(AUX_Status_1);
+	val0 = displayport_read(AUX_MONITOR_1);
+	val1 = displayport_read(AUX_MONITOR_2);
 
-	if ((val0 & AUX_STATUS) != 0x00 || val1 != 0x00) {
-		displayport_info("AUX stat 0:0x%X, 1:0x%X, 2:0x%X, 3:0x%X, err:0x%X\n",
-				val0, val1, displayport_read(AUX_Status_2),
-				displayport_read(AUX_Status_3),
-				displayport_read(Read_Error_Ctrl));
-		displayport_info("AUX ctrl 0:0x%X, 1:0x%X, 2:0x%X, def:0x%X, Addr:0x%X, OP_en:0x%X\n",
-				displayport_read(AUX_Ch_MISC_Ctrl_0),
-				displayport_read(AUX_Ch_MISC_Ctrl_1),
-				displayport_read(AUX_Ch_MISC_Ctrl_2),
-				displayport_read(AUX_Ch_Defer_Ctrl),
-				displayport_read(Req_Addr_0),
-				displayport_read(Req_Op_En));
+	if ((val0 & AUX_CMD_STATUS) != 0x00 || val1 != 0x00) {
+		displayport_info("AUX_MONITOR_1 : 0x%X, AUX_MONITOR_2 : 0x%X\n", val0, val1);
+		displayport_info("AUX_CONTROL : 0x%X, AUX_REQUEST_CONTROL : 0x%X, AUX_COMMAND_CONTROL : 0x%X\n",
+				displayport_read(AUX_CONTROL),
+				displayport_read(AUX_REQUEST_CONTROL),
+				displayport_read(AUX_COMMAND_CONTROL));
 
 		udelay(400);
 		return -EIO;
@@ -625,7 +614,7 @@ int displayport_reg_set_aux_ch_operation_enable(void)
 
 void displayport_reg_set_aux_ch_address_only_command(u32 en)
 {
-	displayport_write_mask(Req_Op_En, en, ADDR_ONLY);
+	displayport_write_mask(AUX_ADDR_ONLY_COMMAND, en, ADDR_ONLY_CMD);
 }
 
 int displayport_reg_dpcd_write(u32 address, u32 length, u8 *data)
@@ -1322,5 +1311,5 @@ void displayport_reg_set_hdcp22_encryption_enable(u32 en)
 
 void displayport_reg_set_aux_pn_inv(u32 val)
 {
-	displayport_write_mask(AUX_Ch_MISC_Ctrl_0, val, AUX_PN_INV);
+	displayport_write_mask(AUX_CONTROL, val, AUX_PN_INV);
 }
