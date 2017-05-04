@@ -931,24 +931,44 @@ void displayport_reg_set_bist_video_configuration_for_blue_screen(videoformat vi
 
 void displayport_reg_set_avi_infoframe(struct infoframe avi_infoframe)
 {
-	int i;
+	u32 avi_infoframe_data = 0;
 
-	for (i = 0; i < avi_infoframe.length; i++)
-		displayport_write(AVI_infoFrame_Packet_Register_AVI_Data_Byte_1 + i * 4, avi_infoframe.data[i]);
+	avi_infoframe_data = ((u32)avi_infoframe.data[3] << 24) || ((u32)avi_infoframe.data[2] << 16)
+			|| ((u32)avi_infoframe.data[1] << 8) || (u32)avi_infoframe.data[0];
+	displayport_write(SST1_INFOFRAME_AVI_PACKET_DATA_SET0, avi_infoframe_data);
 
-	displayport_write_mask(Packet_Send_Control, 1, AVI_UD);
-	displayport_write_mask(Packet_Send_Control, 1, AVI_EN);
+	avi_infoframe_data = ((u32)avi_infoframe.data[7] << 24) || ((u32)avi_infoframe.data[6] << 16)
+			|| ((u32)avi_infoframe.data[5] << 8) || (u32)avi_infoframe.data[4];
+	displayport_write(SST1_INFOFRAME_AVI_PACKET_DATA_SET1, avi_infoframe_data);
+
+	avi_infoframe_data = ((u32)avi_infoframe.data[11] << 24) || ((u32)avi_infoframe.data[10] << 16)
+			|| ((u32)avi_infoframe.data[9] << 8) || (u32)avi_infoframe.data[8];
+	displayport_write(SST1_INFOFRAME_AVI_PACKET_DATA_SET2, avi_infoframe_data);
+
+	avi_infoframe_data = (u32)avi_infoframe.data[12];
+	displayport_write(SST1_INFOFRAME_AVI_PACKET_DATA_SET3, avi_infoframe_data);
+
+	displayport_write_mask(SST1_INFOFRAME_UPDATE_CONTROL, 1, AVI_INFO_UPDATE);
+	displayport_write_mask(SST1_INFOFRAME_SEND_CONTROL, 1, AVI_INFO_SEND);
 }
 
 void displayport_reg_set_audio_infoframe(struct infoframe audio_infoframe, u32 en)
 {
-	int i;
+	u32 audio_infoframe_data = 0;
 
-	for (i = 0; i < audio_infoframe.length; i++)
-		displayport_write(Audio_infoFrame_Packet_Register_AVI_Data_Byte_1 + i * 4, audio_infoframe.data[i]);
+	audio_infoframe_data = ((u32)audio_infoframe.data[3] << 24) || ((u32)audio_infoframe.data[2] << 16)
+			|| ((u32)audio_infoframe.data[1] << 8) || (u32)audio_infoframe.data[0];
+	displayport_write(SST1_INFOFRAME_AUDIO_PACKET_DATA_SET0, audio_infoframe_data);
 
-	displayport_write_mask(Packet_Send_Control, en, AUDIO_INFO_UP);
-	displayport_write_mask(Packet_Send_Control, en, AUDIO_INFOR_EN);
+	audio_infoframe_data = ((u32)audio_infoframe.data[7] << 24) || ((u32)audio_infoframe.data[6] << 16)
+			|| ((u32)audio_infoframe.data[5] << 8) || (u32)audio_infoframe.data[4];
+	displayport_write(SST1_INFOFRAME_AUDIO_PACKET_DATA_SET1, audio_infoframe_data);
+
+	audio_infoframe_data = ((u32)audio_infoframe.data[10] << 8) || (u32)audio_infoframe.data[9];
+	displayport_write(SST1_INFOFRAME_AUDIO_PACKET_DATA_SET2, audio_infoframe_data);
+
+	displayport_write_mask(SST1_INFOFRAME_UPDATE_CONTROL, en, AUDIO_INFO_UPDATE);
+	displayport_write_mask(SST1_INFOFRAME_SEND_CONTROL, en, AUDIO_INFO_SEND);
 }
 
 void displayport_reg_start(void)
