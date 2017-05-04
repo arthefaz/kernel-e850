@@ -39,6 +39,11 @@
 #define Function_En_4                           (0x24)
 #define STRM_CLK_EN		                (1 << 0)
 
+#define SYSTEM_PLL_LOCK_CONTROL			(0x002C)
+#define PLL_LOCK_STATUS				(0x01 << 4)
+#define PLL_LOCK_FORCE				(0x01 << 3)
+#define PLL_LOCK_FORCE_EN			(0x01 << 2)
+
 #define SW_Reset                                (0x100)
 #define DP_TX_SW_RESET		                (1 << 0)
 
@@ -242,302 +247,14 @@
 #define HBR2_Eye_SR_High                        (0x7B0)
 #define HBR2_EYE_SR_H                           (0xFF << 0)
 
-#define Serdes_Polarity_Control                 (0x7B4)
-#define PN_INV3                                 (1 << 5)
-#define PN_INV2                                 (1 << 4)
-#define PN_INV1                                 (1 << 3)
-#define PN_INV0                                 (1 << 2)
-#define POLARITY_INV                            (1 << 1)
-#define SCRAM_RST_VALUE                         (1 << 0)
-
-#define Serdes_Fifo_Read_Control                (0x7B8)
-#define SERDES_FIFO_READ_START_VAL              (0xF << 0)
-
-#define Phy_Cmn_Ctl_RBR_9                       (0x800)
-#define CMN_CTL_RBR_9                           (0xFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_RBR_8                       (0x804)
-#define CMN_CTL_RBR_8                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_RBR_7                       (0x808)
-#define CMN_CTL_RBR_7                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_RBR_6                       (0x80C)
-#define CMN_CTL_RBR_6                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_RBR_5                       (0x810)
-#define CMN_CTL_RBR_5                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_RBR_4                       (0x814)
-#define CMN_CTL_RBR_4                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_RBR_3                       (0x818)
-#define CMN_CTL_RBR_3                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_RBR_2                       (0x81C)
-#define CMN_CTL_RBR_2                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_RBR_1                       (0x820)
-#define CMN_CTL_RBR_1                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_RBR_0                       (0x824)
-#define CMN_CTL_RBR_0                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Dummy_Ctl_RBR                   (0x828)
-#define CMN_DUMMY_CTL_RBR                       (0xFFFFFFFF << 0)
-
 #define MASTER_AUDIO_DATA_FROM_APB_ADD          (0x838)
 #define MASTER_AUDIO_DATA_FROM_APB              (0xFFFFFFFF << 0)
 
-#define Phy_Cmn_Ctl_HBR_9                       (0x840)
-#define CMN_CTL_HBR_9                           (0xFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR_8                       (0x844)
-#define CMN_CTL_HBR_8                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR_7                       (0x848)
-#define CMN_CTL_HBR_7                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR_6                       (0x84C)
-#define CMN_CTL_HBR_6                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR_5                       (0x850)
-#define CMN_CTL_HBR_5                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR_4                       (0x854)
-#define CMN_CTL_HBR_4                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR_3                       (0x858)
-#define CMN_CTL_HBR_3                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR_2                       (0x85C)
-#define CMN_CTL_HBR_2                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR_1                       (0x860)
-#define CMN_CTL_HBR_1                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR_0                       (0x864)
-#define CMN_CTL_HBR_0                           (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Dummy_Ctl_HBR                   (0x868)
-#define CMN_DUMMY_CTL_HBR                       (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR2_9                      (0x86C)
-#define CMN_CTL_HBR2_9                          (0xFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR2_8                      (0x870)
-#define CMN_CTL_HBR2_8                          (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR2_7                      (0x874)
-#define CMN_CTL_HBR2_7                          (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR2_6                      (0x878)
-#define CMN_CTL_HBR2_6                          (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR2_5                      (0x87C)
-#define CMN_CTL_HBR2_5                          (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR2_4                      (0x880)
-#define CMN_CTL_HBR2_4                          (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR2_3                      (0x884)
-#define CMN_CTL_HBR2_3                          (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR2_2                      (0x888)
-#define CMN_CTL_HBR2_2                          (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR2_1                      (0x88C)
-#define CMN_CTL_HBR2_1                          (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_HBR2_0                      (0x890)
-#define CMN_CTL_HBR2_0                          (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Dummy_Ctl_HBR2                  (0x894)
-#define CMN_DUMMY_CTL_HBR2                      (0xFFFFFFFF << 0)
 
 #define Test_Pattern_Register                   (0x8A0)
 #define TEST_PATTERN                            (0x3F << 0)
 
-#define Phy_Enable                              (0x900)
-#define AUX_EN                                  (1 << 7)
-#define BGR_EN                                  (1 << 6)
-#define BIAS_EN                                 (1 << 5)
-#define PLL_EN                                  (1 << 4)
-#define LN0_LANE_EN                             (1 << 3)
-#define LN1_LANE_EN                             (1 << 2)
-#define LN2_LANE_EN                             (1 << 1)
-#define LN3_LANE_EN                             (1 << 0)
 
-#define Phy_Resetn                              (0x904)
-#define CMN_PHY_RSTN                            (1 << 5)
-#define CMN_INIT_RSTN                           (1 << 4)
-#define LN0_PHY_RSTN                            (1 << 3)
-#define LN1_PHY_RSTN                            (1 << 2)
-#define LN2_PHY_RSTN                            (1 << 1)
-#define LN3_PHY_RSTN                            (1 << 0)
-
-#define Phy_Refclk_Sel                          (0x908)
-#define REFCLK_SEL                              (3 << 0)
-
-#define Phy_Swap_Ctl                            (0x90C)
-#define LN0_SWAP_BIT_ORDER                      (1 << 7)
-#define LN1_SWAP_BIT_ORDER                      (1 << 6)
-#define LN2_SWAP_BIT_ORDER                      (1 << 5)
-#define LN3_SWAP_BIT_ORDER                      (1 << 4)
-#define LN0_SWAP_BIT_PHASE                      (1 << 3)
-#define LN1_SWAP_BIT_PHASE                      (1 << 2)
-#define LN2_SWAP_BIT_PHASE                      (1 << 1)
-#define LN3_SWAP_BIT_PHASE                      (1 << 0)
-
-#define Phy_Cmn_Ctl_9                           (0x910)
-#define CMN_DTB_EN                              (1 << 29)
-#define CMN_DTB_SEL                             (0x1F << 24)
-#define CMN_CTL_9                               (0xFFFFFF << 5)
-
-#define Phy_Cmn_Ctl_8                           (0x914)
-#define CMN_CTL_8                               (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_7                           (0x918)
-#define CMN_CTL_7                               (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_6                           (0x91C)
-#define CMN_CTL_6                               (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_5                           (0x920)
-#define CMN_CTL_5                               (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_4                           (0x924)
-#define CMN_CTL_4                               (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_3                           (0x928)
-#define CMN_CTL_3                               (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_2                           (0x92C)
-#define CMN_CTL_2                               (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_1                           (0x930)
-#define CMN_CTL_1                               (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Ctl_0                           (0x934)
-#define CMN_CTL_0                               (0xFFFFFFFF << 0)
-
-#define Phy_Cmn_Dummy_Ctl                       (0x938)
-#define CMN_DUMMY_CTL                           (0xFFFFFFFF << 0)
-
-#define Phy_LN0_Lane_Ctl                        (0x940)
-#define LN0_LANE_CTL                            (0xFFFFFFFF << 0)
-
-#define Phy_LN1_Lane_Ctl                        (0x944)
-#define LN1_LANE_CTL                            (0xFFFFFFFF << 0)
-
-#define Phy_LN2_Lane_Ctl                        (0x948)
-#define LN2_LANE_CTL                            (0xFFFFFFFF << 0)
-
-#define Phy_LN3_Lane_Ctl                        (0x94C)
-#define LN3_LANE_CTL                            (0xFFFFFFFF << 0)
-
-#define Phy_Lock_Mon                            (0x950)
-#define AFC_DONE                                (1 << 1)
-#define PLL_LOCK_DONE                           (1 << 0)
-
-#define Phy_Cmn_Debug_Mon                       (0x954)
-#define CMN_DEBUG_MON                           (0xFFFFFFFF << 0)
-
-#define Phy_BIST_Mode                           (0x960)
-#define BIST_MODE                               (7 << 0)
-
-#define Phy_BIST_Comp_Start                     (0x964)
-#define BIST_COMP_START                         (1 << 0)
-
-#define Phy_BIST_User_Data                      (0x968)
-#define BIST_USER_DATA                          (0x3FF << 0)
-
-#define Phy_BIST_Swap_Ctl                       (0x96C)
-#define BIST_SWAP_BIT_ORDER                     (1 << 5)
-#define BIST_SWAP_BIT_PHASE                     (1 << 4)
-#define BIST_PHASE_INV                          (1 << 3)
-#define BIST_PHASE_CTL                          (7 << 0)
-
-#define Phy_BIST_Result_Mon                     (0x970)
-#define LN0_BIST_PASS                           (1 << 7)
-#define LN1_BIST_PASS                           (1 << 6)
-#define LN2_BIST_PASS                           (1 << 5)
-#define LN3_BIST_PASS                           (1 << 4)
-#define LN0_BIST_FAIL                           (1 << 3)
-#define LN1_BIST_FAIL                           (1 << 2)
-#define LN2_BIST_FAIL                           (1 << 1)
-#define LN3_BIST_FAIL                           (1 << 0)
-
-#define Phy_Lane_SFR_Ctl_Mode                   (0x980)
-#define PHY_CLK_BW_SET                          (3 << 12)
-#define LN_GTC_CLK_SFR_CTL                      (1 << 9)
-#define CMN_CTL_SFR_CTL_MODE                    (1 << 8)
-#define LN0_EMP_SFR_CTL_MODE                    (1 << 7)
-#define LN1_EMP_SFR_CTL_MODE                    (1 << 6)
-#define LN2_EMP_SFR_CTL_MODE                    (1 << 5)
-#define LN3_EMP_SFR_CTL_MODE                    (1 << 4)
-#define LN0_AMP_SFR_CTL_MODE                    (1 << 3)
-#define LN1_AMP_SFR_CTL_MODE                    (1 << 2)
-#define LN2_AMP_SFR_CTL_MODE                    (1 << 1)
-#define LN3_AMP_SFR_CTL_MODE                    (1 << 0)
-
-#define Phy_Lane01_Emphasis                     (0x984)
-#define LN0_EMP_LEVEL_0                         (0xF << 28)
-#define LN0_EMP_LEVEL_1                         (0xF << 24)
-#define LN0_EMP_LEVEL_2                         (0xF << 20)
-#define LN0_EMP_LEVEL_3                         (0xF << 16)
-#define LN1_EMP_LEVEL_0                         (0xF << 12)
-#define LN1_EMP_LEVEL_1                         (0xF << 8)
-#define LN1_EMP_LEVEL_2                         (0xF << 4)
-#define LN1_EMP_LEVEL_3                         (0xF << 0)
-
-#define Phy_Lane23_Emphasis                     (0x988)
-#define LN2_EMP_LEVEL_0                         (0xF << 28)
-#define LN2_EMP_LEVEL_1                         (0xF << 24)
-#define LN2_EMP_LEVEL_2                         (0xF << 20)
-#define LN2_EMP_LEVEL_3                         (0xF << 16)
-#define LN3_EMP_LEVEL_0                         (0xF << 12)
-#define LN3_EMP_LEVEL_1                         (0xF << 8)
-#define LN3_EMP_LEVEL_2                         (0xF << 4)
-#define LN3_EMP_LEVEL_3                         (0xF << 0)
-
-#define Phy_Lane0_Amplitude                     (0x98C)
-#define LN0_AMP_LEVEL_0                         (0xF << 24)
-#define LN0_AMP_LEVEL_1                         (0xF << 16)
-#define LN0_AMP_LEVEL_2                         (0xF << 8)
-#define LN0_AMP_LEVEL_3                         (0xF << 0)
-
-#define Phy_Lane1_Amplitude                     (0x990)
-#define LN1_AMP_LEVEL_0                         (0xF << 24)
-#define LN1_AMP_LEVEL_1                         (0xF << 16)
-#define LN1_AMP_LEVEL_2                         (0xF << 8)
-#define LN1_AMP_LEVEL_3                         (0xF << 0)
-
-#define Phy_Lane2_Amplitude                     (0x994)
-#define LN2_AMP_LEVEL_0                         (0xF << 24)
-#define LN2_AMP_LEVEL_1                         (0xF << 16)
-#define LN2_AMP_LEVEL_2                         (0xF << 8)
-#define LN2_AMP_LEVEL_3                         (0xF << 0)
-
-#define Phy_Lane3_Amplitude                     (0x998)
-#define LN3_AMP_LEVEL_0                         (0xF << 24)
-#define LN3_AMP_LEVEL_1                         (0xF << 16)
-#define LN3_AMP_LEVEL_2                         (0xF << 8)
-#define LN3_AMP_LEVEL_3                         (0xF << 0)
-
-#define GTC_CLK_Selection                       (0x99C)
-#define SFR_GTC_CLK_SEL_RBR                     (1 << 2)
-#define SFR_GTC_CLK_SEL_HBR                     (1 << 1)
-#define SFR_GTC_CLK_SEL_HBR2                    (1 << 0)
-
-#define PHY_Link_Clock_Selection                (0x9A0)
-#define SFR_EXT_PHY_GTC_CLK_SEL                 (1 << 10)
-#define SFR_EXT_PHY_GTC_CLK_STATUS              (3 << 8)
-#define SFR_GTC_OSC_CLK_STATUS                  (3 << 6)
-#define SFR_LS_CLK_DIV2_STATUS                  (3 << 4)
-#define SFR_LS_CLK_STATUS                       (3 << 2)
-#define SFR_PHY_LINK_CLK_SEL                    (1 << 1)
-#define SFR_PHY_LINK_CLK_MODE                   (1 << 0)
 
 #define Video_Control_1                         (0x1020)
 #define VIDEO_EN                                (1 << 7)
@@ -1578,4 +1295,62 @@
 
 #define SEC_DP_HDCP22_AES_KEY_3                 (0x721C)
 #define AES_Pairing_Key_3_Register              (0xFFFFFFFF << 0)
+
+#define CMN_REG2C				(0x00B0)
+#define MAN_USBDP_MODE				(0x03 << 1)
+#define MAN_USBDP_MODE_EN			(0x01 << 0)
+
+#define CMN_REG2D				(0x00B4)
+#define USB_TX1_SEL				(0x01 << 5)
+#define USB_TX3_SEL				(0x01 << 4)
+
+#define DP_REG_0				(0x0800)
+#define AUX_EN                                  (1 << 7)
+#define BGR_EN                                  (1 << 6)
+#define BIAS_EN                                 (1 << 5)
+#define ROPLL_EN				(1 << 4)
+#define LN0_LANE_EN                             (1 << 3)
+#define LN1_LANE_EN                             (1 << 2)
+#define LN2_LANE_EN                             (1 << 1)
+#define LN3_LANE_EN                             (1 << 0)
+
+#define DP_REG_1				(0x0804)
+#define CMN_INIT_RSTN				(0x01 << 0)
+
+#define DP_REG_3				(0x080C)
+#define LN0_TX_AMP_CTRL				(3 << 6)
+#define LN0_TX_AMP_CTRL_BIT_POS			(6)
+#define LN1_TX_AMP_CTRL				(3 << 4)
+#define LN1_TX_AMP_CTRL_BIT_POS			(4)
+#define LN2_TX_AMP_CTRL				(3 << 2)
+#define LN2_TX_AMP_CTRL_BIT_POS			(2)
+#define LN3_TX_AMP_CTRL				(3 << 0)
+#define LN3_TX_AMP_CTRL_BIT_POS			(0)
+
+#define DP_REG_4				(0x0810)
+#define LN0_TX_EMP_CTRL				(3 << 6)
+#define LN0_TX_EMP_CTRL_BIT_POS			(6)
+#define LN1_TX_EMP_CTRL				(3 << 4)
+#define LN1_TX_EMP_CTRL_BIT_POS			(4)
+#define LN2_TX_EMP_CTRL				(3 << 2)
+#define LN2_TX_EMP_CTRL_BIT_POS			(2)
+#define LN3_TX_EMP_CTRL				(3 << 0)
+#define LN3_TX_EMP_CTRL_BIT_POS			(0)
+
+#define DP_REG_B				(0x082C)
+#define LN_TXCLK_SOURCE_LANE			(0x03 << 0)
+
+#define DP_REG_13				(0x084C)
+#define DP_REG_16				(0x0858)
+#define DP_REG_17				(0x085C)
+#define DP_REG_18				(0x0860)
+#define DP_REG_19				(0x0864)
+#define DP_REG_1A				(0x0868)
+#define DP_REG_1B				(0x086C)
+#define DP_REG_1C				(0x0870)
+#define DP_REG_1D				(0x0874)
+
+#define DP_REG_B3				(0x0ACC)
+#define CMN_DUMMY_CTRL_7_6			(0x03 << 6)
+#define CMN_DUMMY_CTRL_1_0			(0x03 << 0)
 #endif
