@@ -1198,10 +1198,8 @@ void displayport_reg_set_audio_m_n(audio_sync_mode audio_sync_mode,
 
 void displayport_reg_set_audio_function_enable(u32 en)
 {
-	u32 val = en ? 0 : ~0; /* 0 is enable */
-
-	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, val, SST1_AUDIO_FIFO_FUNC_EN);
-	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, val, SST1_AUDIO_FUNC_EN);
+	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, en, SST1_AUDIO_FIFO_FUNC_EN);
+	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, en, SST1_AUDIO_FUNC_EN);
 }
 
 void displayport_reg_set_dma_burst_size(enum audio_dma_word_length word_length)
@@ -1251,9 +1249,7 @@ void displayport_reg_set_audio_ch_mapping(u8 pkt_1, u8 pkt_2, u8 pkt_3, u8 pkt_4
 
 void displayport_reg_set_audio_fifo_function_enable(u32 en)
 {
-	u32 val = en ? 0 : ~0; /* 0 is enable */
-
-	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, val, SST1_AUDIO_FIFO_FUNC_EN);
+	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, en, SST1_AUDIO_FIFO_FUNC_EN);
 }
 
 void displayport_reg_set_audio_sampling_frequency(enum audio_sampling_frequency audio_sampling_freq)
