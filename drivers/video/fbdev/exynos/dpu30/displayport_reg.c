@@ -409,6 +409,128 @@ void displayport_reg_video_format_register_setting(videoformat video_format)
 	displayport_write_mask(SST1_VIDEO_CONTROL, val, HSYNC_POLARITY);
 }
 
+u32 displayport_reg_get_video_clk(void)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	return videoformat_parameters[displayport->current_videoformat].pixel_clock;
+}
+
+u32 displayport_reg_get_ls_clk(void)
+{
+	u32 val;
+	u32 ls_clk;
+
+	val = displayport_reg_get_link_bw();
+
+	if (val == LINK_RATE_5_4Gbps)
+		ls_clk = 540000000;
+	else if (val == LINK_RATE_2_7Gbps)
+		ls_clk = 270000000;
+	else /* LINK_RATE_1_62Gbps */
+		ls_clk = 162000000;
+
+	return ls_clk;
+}
+
+void displayport_reg_set_video_clock(void)
+{
+	u32 stream_clk = 0;
+	u32 ls_clk = 0;
+	u32 mvid_master = 0;
+	u32 nvid_master = 0;
+
+	stream_clk = displayport_reg_get_video_clk() / 1000;
+	ls_clk = displayport_reg_get_ls_clk() / 1000;
+
+	mvid_master = stream_clk >> 1;
+	nvid_master = ls_clk;
+
+	displayport_write(SST1_MVID_MASTER_MODE, mvid_master);
+	displayport_write(SST1_NVID_MASTER_MODE, nvid_master);
+
+	displayport_write_mask(SST1_MAIN_CONTROL, 1, MVID_MODE);
+
+	displayport_write(SST1_MVID_SFR_CONFIGURE, stream_clk);
+	displayport_write(SST1_NVID_SFR_CONFIGURE, ls_clk);
+}
+
+void displayport_reg_set_active_symbol(void)
+{
+	u64 TU_off = 0;	/* TU Size when FEC is off*/
+	u64 TU_on = 0;	/* TU Size when FEC is on*/
+	u32 bpp = 0;	/* Bit Per Pixel */
+	u32 lanecount = 0;
+	u32 bandwidth = 0;
+	u32 integer_fec_off = 0;
+	u32 fraction_fec_off = 0;
+	u32 threshold_fec_off = 0;
+	u32 integer_fec_on = 0;
+	u32 fraction_fec_on = 0;
+	u32 threshold_fec_on = 0;
+	u32 clk = 0;
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	displayport_write_mask(SST1_ACTIVE_SYMBOL_MODE_CONTROL, 1, ACTIVE_SYMBOL_MODE_CONTROL);
+	displayport_write_mask(SST1_ACTIVE_SYMBOL_THRESHOLD_SEL_FEC_OFF, 1, ACTIVE_SYMBOL_THRESHOLD_SEL_FEC_OFF);
+	displayport_write_mask(SST1_ACTIVE_SYMBOL_THRESHOLD_SEL_FEC_ON, 1, ACTIVE_SYMBOL_THRESHOLD_SEL_FEC_ON);
+
+	switch (displayport->bpc) {
+	case BPC_8:
+		bpp = 24;
+		break;
+	case BPC_10:
+		bpp = 30;
+		break;
+	default:
+		bpp = 18;
+		break;
+	} /* if DSC on, bpp / 3 */
+
+	/* change to Mbps from bps of pixel clock*/
+	clk = displayport_reg_get_video_clk() / 1000;
+
+	bandwidth = displayport_reg_get_ls_clk() / 1000;
+	lanecount = displayport_reg_get_lane_count();
+
+	TU_off = ((clk * bpp * 32) * 10000000000) / (lanecount * bandwidth * 8);
+	TU_on = (TU_off * 1000) / 976;
+
+	integer_fec_off = (u32)(TU_off / 10000000000);
+	fraction_fec_off = (u32)((TU_off - (integer_fec_off * 10000000000)) / 10);
+	integer_fec_on = (u32)(TU_on / 10000000000);
+	fraction_fec_on = (u32)((TU_on - (integer_fec_on * 10000000000)) / 10);
+
+	if (integer_fec_off <= 2)
+		threshold_fec_off = 7;
+	else if (integer_fec_off > 2 && integer_fec_off <= 5)
+		threshold_fec_off = 8;
+	else if (integer_fec_off > 5)
+		threshold_fec_off = 9;
+
+	if (integer_fec_on <= 2)
+		threshold_fec_on = 7;
+	else if (integer_fec_on > 2 && integer_fec_on <= 5)
+		threshold_fec_on = 8;
+	else if (integer_fec_on > 5)
+		threshold_fec_on = 9;
+
+	displayport_info("integer_fec_off = %d\n", integer_fec_off);
+	displayport_info("fraction_fec_off = %d\n", fraction_fec_off);
+	displayport_info("threshold_fec_off = %d\n", threshold_fec_off);
+	displayport_info("integer_fec_on = %d\n", integer_fec_on);
+	displayport_info("fraction_fec_on = %d\n", fraction_fec_on);
+	displayport_info("threshold_fec_on = %d\n", threshold_fec_on);
+
+	displayport_write_mask(SST1_ACTIVE_SYMBOL_INTEGER_FEC_OFF, integer_fec_off, ACTIVE_SYMBOL_INTEGER_FEC_OFF);
+	displayport_write_mask(SST1_ACTIVE_SYMBOL_FRACTION_FEC_OFF, fraction_fec_off, ACTIVE_SYMBOL_FRACTION_FEC_OFF);
+	displayport_write_mask(SST1_ACTIVE_SYMBOL_THRESHOLD_FEC_OFF, threshold_fec_off, ACTIVE_SYMBOL_FRACTION_FEC_OFF);
+
+	displayport_write_mask(SST1_ACTIVE_SYMBOL_INTEGER_FEC_ON, integer_fec_on, ACTIVE_SYMBOL_INTEGER_FEC_ON);
+	displayport_write_mask(SST1_ACTIVE_SYMBOL_FRACTION_FEC_ON, fraction_fec_on, ACTIVE_SYMBOL_FRACTION_FEC_OFF);
+	displayport_write_mask(SST1_ACTIVE_SYMBOL_THRESHOLD_FEC_ON, threshold_fec_on, ACTIVE_SYMBOL_THRESHOLD_FEC_ON);
+}
+
 void displayport_reg_enable_interface_crc(u32 en)
 {
 	u32 val = en ? ~0 : 0;
@@ -881,6 +1003,8 @@ void displayport_reg_set_video_configuration(videoformat video_format, u8 bpc, u
 	displayport_write_mask(SST1_VIDEO_CONTROL, bpc, BPC);	/* 0 : 6bits, 1 : 8bits */
 	displayport_write_mask(SST1_VIDEO_CONTROL, 0, COLOR_FORMAT);	/* RGB */
 	displayport_reg_video_format_register_setting(video_format);
+	displayport_reg_set_video_clock();
+	displayport_reg_set_active_symbol();
 	displayport_write_mask(SST1_VIDEO_MASTER_TIMING_GEN, 1, VIDEO_MASTER_TIME_GEN);
 	displayport_write_mask(SST1_MAIN_CONTROL, 0, VIDEO_MODE);
 }
