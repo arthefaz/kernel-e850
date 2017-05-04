@@ -202,9 +202,6 @@
 #define R_SEND_SR_EN                            (1 << 10)
 #define R_SR_START_NUMBER                       (0x1F << 0)
 
-#define AUX_Detected_Period_Monitoring          (0x6F0)
-#define AUX_DETECTED_PERIOD_MON                 (0x1FF << 0)
-
 #define DP_TOP_GNS_Control                      (0x72C)
 #define TPS3_EN                                 (1 << 7)
 #define EQ_LOOP_COUNT                           (1 << 6)
@@ -307,6 +304,92 @@
 
 #define Vertical_Sync_Width                     (0x105C)
 #define V_SYNC_CFG                              (0xFFF << 0)
+
+#define AUX_CONTROL				(0x1000)
+#define AUX_POWER_DOWN				(0x01 << 16)
+#define AUX_REPLY_TIMER_MODE			(0x03 << 12)
+#define AUX_RETRY_TIMER				(0x07 << 8)
+#define AUX_PN_INV				(0x01 << 1)
+#define REG_MODE_SEL				(0x01 << 0)
+
+#define AUX_TRANSACTION_START			(0x1004)
+#define AUX_TRAN_START				(0x01 << 0)
+
+#define AUX_BUFFER_CLEAR			(0x1008)
+#define AUX_BUF_CLR				(0x01 << 0)
+
+#define AUX_ADDR_ONLY_COMMAND			(0x100C)
+#define ADDR_ONLY_CMD				(0x01 << 0)
+
+#define AUX_REQUEST_CONTROL			(0x1010)
+#define REQ_COMM				(0x0F << 28)
+#define REQ_ADDR				(0xFFFFF << 8)
+#define REQ_LENGTH				(0x3F << 0)
+
+#define AUX_COMMAND_CONTROL			(0x1014)
+#define DEFER_CTRL_EN				(0x01 << 8)
+#define DEFER_COUNT				(0x7F << 0)
+
+#define AUX_MONITOR_1				(0x1018)
+#define AUX_BUF_DATA_COUNT			(0x7F << 24)
+#define AUX_DETECTED_PERIOD_MON			(0x1FF << 12)
+#define AUX_CMD_STATUS				(0x0F << 8)
+#define AUX_RX_COMM				(0x0F << 4)
+#define AUX_LAST_MODE				(0x01 << 3)
+#define AUX_BUSY				(0x01 << 2)
+#define AUX_REQ_WAIT_GRANT			(0x01 << 1)
+#define AUX_REQ_SIGNAL				(0x01 << 0)
+
+#define AUX_MONITOR_2				(0x101C)
+#define AUX_ERROR_NUMBER			(0xFF << 0)
+
+#define AUX_TX_DATA_SET0			(0x1030)
+#define TX_DATA_3				(0xFF << 24)
+#define TX_DATA_2				(0xFF << 16)
+#define TX_DATA_1				(0xFF << 8)
+#define TX_DATA_0				(0xFF << 0)
+
+#define AUX_TX_DATA_SET1			(0x1034)
+#define TX_DATA_7				(0xFF << 24)
+#define TX_DATA_6				(0xFF << 16)
+#define TX_DATA_5				(0xFF << 8)
+#define TX_DATA_4				(0xFF << 0)
+
+#define AUX_TX_DATA_SET2			(0x1038)
+#define TX_DATA_11				(0xFF << 24)
+#define TX_DATA_10				(0xFF << 16)
+#define TX_DATA_9				(0xFF << 8)
+#define TX_DATA_8				(0xFF << 0)
+
+#define AUX_TX_DATA_SET3			(0x103C)
+#define TX_DATA_15				(0xFF << 24)
+#define TX_DATA_14				(0xFF << 16)
+#define TX_DATA_13				(0xFF << 8)
+#define TX_DATA_12				(0xFF << 0)
+
+#define AUX_RX_DATA_SET0			(0x1040)
+#define RX_DATA_3				(0xFF << 24)
+#define RX_DATA_2				(0xFF << 16)
+#define RX_DATA_1				(0xFF << 8)
+#define RX_DATA_0				(0xFF << 0)
+
+#define AUX_RX_DATA_SET1			(0x1044)
+#define RX_DATA_7				(0xFF << 24)
+#define RX_DATA_6				(0xFF << 16)
+#define RX_DATA_5				(0xFF << 8)
+#define RX_DATA_4				(0xFF << 0)
+
+#define AUX_RX_DATA_SET2			(0x1048)
+#define RX_DATA_11				(0xFF << 24)
+#define RX_DATA_10				(0xFF << 16)
+#define RX_DATA_9				(0xFF << 8)
+#define RX_DATA_8				(0xFF << 0)
+
+#define AUX_RX_DATA_SET3			(0x104C)
+#define RX_DATA_15				(0xFF << 24)
+#define RX_DATA_14				(0xFF << 16)
+#define RX_DATA_13				(0xFF << 8)
+#define RX_DATA_12				(0xFF << 0)
 
 #define Vertical_Back_Porch                     (0x1060)
 #define V_B_PORCH_CFG                           (0xFFF << 0)
@@ -874,73 +957,6 @@
 #define AUD_DMA_FORCE_REQ_SEL                   (1 << 16)
 #define MASTER_DMA_REQ_LTNCY_CONFIG             (0xFFFF << 0)
 
-#define AUX_Ch_MISC_Ctrl_0                      (0x3000)
-#define AUX_PN_INV                              (1 << 7)
-#define GTC_TX_MASTER                           (1 << 5)
-#define GTC_WORK_EN                             (1 << 4)
-#define AUX_POWER_DOWN                          (1 << 1)
-
-#define AUX_Ch_MISC_Ctrl_1                      (0x3004)
-#define AUX_TC                                  (3 << 6)
-#define NEW_PRBS7_INIT_VAL                      (1 << 2)
-#define PRBS_ERR_GEN_EN                         (1 << 1)
-
-#define AUX_Ch_MISC_Ctrl_2                      (0x3008)
-#define SCRAMBLER_CONTRL_IN                     (1 << 7)
-#define SCRAMBLER_IN_EX_IN                      (1 << 6)
-
-#define AUX_Ch_Defer_Ctrl                       (0x3010)
-#define DEFER_CTRL_EN                           (1 << 7)
-#define DEFER_COUNT                             (0x7F << 0)
-
-#define Req_Addr_0                              (0x3030)
-#define REG_REQ_LENGTH                          (0x3F << 24)
-#define REG_REQ_COMM                            (0xF << 20)
-#define REG_REQ_ADDR                            (0xFFFFF << 0)
-
-#define Req_Op_En                               (0x3040)
-#define BUF_CLR                                 (1 << 7)
-#define ADDR_ONLY                               (1 << 6)
-#define REG_MODE_SEL                            (1 << 5)
-#define AUX_OP_EN                               (1 << 4)
-#define AUX_REQ_WAIT_GRAND                      (1 << 3)
-#define AUX_REQ_SIGNAL                          (1 << 2)
-
-#define AUX_Status_0                            (0x3044)
-#define AUX_BUSY                                (1 << 4)
-#define AUX_STATUS                              (0xF << 0)
-
-#define AUX_Status_1                            (0x3048)
-#define AUX_ERR_NUM                             (0xFF << 0)
-
-#define AUX_Status_2                            (0x304C)
-#define LAST_TRANSACTION_MODE                   (1 << 4)
-#define AUX_RX_COMM                             (0xF << 0)
-
-#define AUX_Status_3                            (0x3050)
-#define BUF_DATA_COUNT                          (0x3F << 0)
-
-#define Read_Error_Ctrl                         (0x3054)
-#define READ_ERROR_DATA_TYPE                    (3 << 6)
-#define READ_ERROR_TYPE                         (3 << 4)
-#define ERROR_CLR                               (1 << 0)
-
-#define RX_CRC_DATAH                            (0x3060)
-#define RX_CRC_DATAH_1                          (0xFF << 0)
-
-#define RX_CRC_DATAL                            (0x3064)
-#define RX_CRC_DATAL_1                          (0xFF << 0)
-
-#define AUX_FAUX_PDN_CTRL                       (0x3090)
-#define PD_FAUX_TX                              (1 << 7)
-#define PD_RX_FAUX                              (1 << 6)
-#define PD_RX_AUX                               (1 << 5)
-#define PD_FAUX_PLL                             (1 << 4)
-#define PD_FAUX_TX_AUTO_EN                      (1 << 3)
-#define PD_RX_FAUX_AUTO_EN                      (1 << 2)
-#define PD_RX_AUX_AUTO_EN                       (1 << 1)
-#define PD_FAUX_PLL_AUTO_EN                     (1 << 0)
-
 #define DP_IRQ_VECTOR                           (0x30A0)
 #define IRQ_VECTOR                              (0x3F << 0)
 
@@ -996,68 +1012,6 @@
 
 #define RX_GTC_VAL4                             (0x30DC)
 #define RX_GTC_VAL_4                            (0xFF << 0)
-
-#define FAUX_GTC_STATUS                         (0x30F0)
-#define FREQ_ADJ_10_8                           (0x7 << 5)
-#define TXGTC_LOCK_DONE_FLAG                    (1 << 1)
-#define RXGTC_LOCK_DONE_FLAG                    (1 << 0)
-
-#define FAUX_GTC_FREQ                           (0x30F4)
-#define FREQ_ADJ_1                              (0xFF << 0)
-
-#define DEBUG_STATE_SEL_ADD                     (0x30F8)
-#define DEBUG_STATE_SEL                         (0xFF << 0)
-
-#define DEBUG_STATE_ADD                         (0x30FC)
-#define DEBUG_STATE                             (0xFF << 0)
-
-#define SEND_DATA_0_1_2_3                       (0x3100)
-#define SEND_DATA_3                             (0xFF << 24)
-#define SEND_DATA_2                             (0xFF << 16)
-#define SEND_DATA_1                             (0xFF << 8)
-#define SEND_DATA_0                             (0xFF << 0)
-
-#define SEND_DATA_4_5_6_7                       (0x3104)
-#define SEND_DATA_7                             (0xFF << 24)
-#define SEND_DATA_6                             (0xFF << 16)
-#define SEND_DATA_5                             (0xFF << 8)
-#define SEND_DATA_4                             (0xFF << 0)
-
-#define SEND_DATA_8_9_10_11                     (0x3108)
-#define SEND_DATA_11                            (0xFF << 24)
-#define SEND_DATA_10                            (0xFF << 16)
-#define SEND_DATA_9                             (0xFF << 8)
-#define SEND_DATA_8                             (0xFF << 0)
-
-#define SEND_DATA_12_13_14_15                   (0x310C)
-#define SEND_DATA_15                            (0xFF << 24)
-#define SEND_DATA_14                            (0xFF << 16)
-#define SEND_DATA_13                            (0xFF << 8)
-#define SEND_DATA_12                            (0xFF << 0)
-
-#define RECEIVED_DATA_0_1_2_3                   (0x3200)
-#define RECEIVED_DATA_3                         (0xFF << 24)
-#define RECEIVED_DATA_2                         (0xFF << 16)
-#define RECEIVED_DATA_1                         (0xFF << 8)
-#define RECEIVED_DATA_0                         (0xFF << 0)
-
-#define RECEIVED_DATA_4_5_6_7                   (0x3204)
-#define RECEIVED_DATA_7                         (0xFF << 24)
-#define RECEIVED_DATA_6                         (0xFF << 16)
-#define RECEIVED_DATA_5                         (0xFF << 8)
-#define RECEIVED_DATA_4                         (0xFF << 0)
-
-#define RECEIVED_DATA_8_9_10_11                 (0x3208)
-#define RECEIVED_DATA_11                        (0xFF << 24)
-#define RECEIVED_DATA_10                        (0xFF << 16)
-#define RECEIVED_DATA_9                         (0xFF << 8)
-#define RECEIVED_DATA_8                         (0xFF << 0)
-
-#define RECEIVED_DATA_12_13_14_15               (0x320C)
-#define RECEIVED_DATA_15                        (0xFF << 24)
-#define RECEIVED_DATA_14                        (0xFF << 16)
-#define RECEIVED_DATA_13                        (0xFF << 8)
-#define RECEIVED_DATA_12                        (0xFF << 0)
 
 #define GTC_TP_Control_Register_0               (0x3300)
 #define I_SPEC_GTC_IMPLEMENTATION               (1 << 29)
