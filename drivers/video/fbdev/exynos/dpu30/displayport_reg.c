@@ -1303,21 +1303,21 @@ void displayport_reg_set_hdcp22_system_enable(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write_mask(SEC_DP_HDCP22_SYS_EN_APB4, val, System_Enable);
+	displayport_write_mask(HDCP22_SYS_EN, val, SYSTEM_ENABLE);
 }
 
 void displayport_reg_set_hdcp22_mode(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write_mask(Function_En_3, val, HDCP22_MODE);
+	displayport_write_mask(SYSTEM_COMMON_FUNCTION_ENABLE, val, HDCP22_FUNC_EN);
 }
 
 void displayport_reg_set_hdcp22_encryption_enable(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write_mask(Function_En_3, val, HDCP22_ENC_EN);
+	displayport_write_mask(HDCP22_CONTROL, val, HDCP22_ENC_EN);
 }
 
 void displayport_reg_set_aux_pn_inv(u32 val)

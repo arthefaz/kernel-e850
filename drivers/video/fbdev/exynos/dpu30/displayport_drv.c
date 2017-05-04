@@ -184,9 +184,6 @@ static int displayport_full_link_training(void)
 		lane_cnt = g_displayport_debug_param.lane_cnt;
 	}
 
-	if (enhanced_frame_cap)
-		displayport_write_mask(DP_System_Control_4, 1, Enhanced_Framing_Mode);
-
 	displayport_reg_dpcd_read(DPCD_ADD_TRAINING_AUX_RD_INTERVAL, 1, val);
 	training_aux_rd_interval = val[0];
 
