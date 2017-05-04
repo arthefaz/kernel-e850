@@ -41,7 +41,6 @@
 /*#define HDCP_2_2*/
 
 int displayport_log_level = 6;
-videoformat g_displayport_videoformat = v640x480p_60Hz;
 static u8 max_lane_cnt;
 static u8 max_link_rate;
 static u64 reduced_resolution;
@@ -876,7 +875,7 @@ void displayport_hpd_changed(int state)
 		cancel_delayed_work_sync(&displayport->hdcp22_work);
 		cancel_delayed_work_sync(&displayport->hdcp13_integrity_check_work);
 		displayport->hpd_state = HPD_UNPLUG;
-		g_displayport_videoformat = v640x480p_60Hz;
+		displayport->current_videoformat = v640x480p_60Hz;
 
 		pm_relax(displayport->dev);
 
@@ -1345,7 +1344,9 @@ irq_end:
 
 static u8 displayport_get_vic(void)
 {
-	return videoformat_parameters[g_displayport_videoformat].vic;
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	return videoformat_parameters[displayport->current_videoformat].vic;
 }
 
 static int displayport_make_avi_infoframe_data(struct infoframe *avi_infoframe)
@@ -1611,7 +1612,7 @@ static int displayport_enable(struct displayport_device *displayport)
 
 	displayport_info("displayport_enable\n");
 
-	displayport_reg_set_pixel_clock(g_displayport_videoformat);
+	displayport_reg_set_pixel_clock(displayport->current_videoformat);
 #if defined(CONFIG_PM_RUNTIME)
 	pm_runtime_get_sync(displayport->dev);
 #else
@@ -1619,8 +1620,10 @@ static int displayport_enable(struct displayport_device *displayport)
 #endif
 	/*enable_irq(displayport->res.irq);*/
 
+	displayport_info("displayport->current_videoformat = %d in displayport_enable!!!\n", displayport->current_videoformat);
+
 	if (displayport->bist_used)
-		displayport_reg_set_bist_video_configuration(g_displayport_videoformat,
+		displayport_reg_set_bist_video_configuration(displayport->current_videoformat,
 				bpc, bist_type, dyn_range);
 	else {
 		if(displayport->dfp_type != DFP_TYPE_DP)
@@ -1700,8 +1703,8 @@ bool displayport_match_timings(const struct v4l2_dv_timings *t1,
 
 bool displayport_match_video_params(u32 i, u32 j)
 {
-	if (displayport_supported_presets[i].xres == videoformat_parameters[j].active_pixel &&
-			displayport_supported_presets[i].yres == videoformat_parameters[j].active_line &&
+	if (displayport_supported_presets[i].xres == videoformat_parameters[j].h_active &&
+			displayport_supported_presets[i].yres == videoformat_parameters[j].v_active &&
 			displayport_supported_presets[i].refresh == videoformat_parameters[j].fps)
 		return true;
 
@@ -1748,12 +1751,12 @@ static int displayport_s_dv_timings(struct v4l2_subdev *sd,
 			displayport->bpc = BPC_6;
 	}
 
-	g_displayport_videoformat = displayport_setting_videoformat;
+	displayport->current_videoformat = displayport_setting_videoformat;
 	displayport->cur_timings = *timings;
 
 	decon_displayport_get_out_sd(decon);
 
-	displayport_dbg("New g_displayport_videoformat = %d\n", g_displayport_videoformat);
+	displayport_dbg("New current_videoformat = %d\n", displayport->current_videoformat);
 
 	return 0;
 }
@@ -2264,13 +2267,13 @@ static ssize_t displayport_test_edid_show(struct class *class,
 {
 	struct v4l2_dv_timings edid_preset;
 	int i;
-	/*struct displayport_device *displayport = get_displayport_drvdata();*/
+	struct displayport_device *displayport = get_displayport_drvdata();
 
 	edid_preset = edid_preferred_preset();
 
 	i = displayport_timing2conf(&edid_preset);
 	if (i < 0) {
-		i = g_displayport_videoformat;
+		i = displayport->current_videoformat;
 		pr_err("displayport timings not supported\n");
 	}
 
@@ -2287,7 +2290,7 @@ static ssize_t displayport_test_edid_store(struct class *dev,
 	struct v4l2_dv_timings edid_preset;
 	int i;
 	int mode = 0;
-	/*struct displayport_device *displayport = get_displayport_drvdata(); */
+	struct displayport_device *displayport = get_displayport_drvdata();
 
 	if (kstrtoint(buf, 10, &mode))
 		return size;
@@ -2297,7 +2300,7 @@ static ssize_t displayport_test_edid_store(struct class *dev,
 	edid_preset = edid_preferred_preset();
 	i = displayport_timing2conf(&edid_preset);
 	if (i < 0) {
-		i = g_displayport_videoformat;
+		i = displayport->current_videoformat;
 		pr_err("displayport timings not supported\n");
 	}
 

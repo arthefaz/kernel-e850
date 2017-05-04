@@ -37,33 +37,34 @@ u32 phy_lane_parameters[4][4] = {
 };
 
 videoformat_info videoformat_parameters[] = {
-	{v640x480p_60Hz,       800,  640, 10,  2, 33,  525,  480,   16,  96,  48, 60, PIXEL_CLOCK_25_200,    1, SYNC_NEGATIVE, SYNC_NEGATIVE},
-	{v720x480p_60Hz,       858,  720,  9,  6, 30,  525,  480,   16,  62,  60, 59, PIXEL_CLOCK_27_027,    2, SYNC_NEGATIVE, SYNC_NEGATIVE},
-	{v720x576p_50Hz,       864,  720,  5,  5, 39,  625,  576,   12,  64,  68, 50, PIXEL_CLOCK_27_000,   17, SYNC_NEGATIVE, SYNC_NEGATIVE},
-	{v1280x720p_50Hz,     1980, 1280,  5,  5, 20,  750,  720,  440,  40, 220, 50, PIXEL_CLOCK_74_250,   19, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1280x720p_60Hz,     1650, 1280,  5,  5, 20,  750,  720,  110,  40, 220, 60, PIXEL_CLOCK_74_250,    4, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1280x800p_RB_60Hz,  1440, 1280,  3,  6, 14,  823,  800,   48,  32,  80, 60, PIXEL_CLOCK_71_000,    0, SYNC_NEGATIVE, SYNC_POSITIVE},
-	{v1280x1024p_60Hz,    1688, 1280,  1,  3, 38, 1066, 1024,   48, 112, 248, 60, PIXEL_CLOCK_108_000,   4, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1080p_24Hz,    2750, 1920,  4,  5, 36, 1125, 1080,  638,  44, 148, 24, PIXEL_CLOCK_74_250,   32, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1080p_25Hz,    2640, 1920,  4,  5, 36, 1125, 1080,  528,  44, 148, 25, PIXEL_CLOCK_74_250,   33, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1080p_30Hz,    2200, 1920,  4,  5, 36, 1125, 1080,   88,  44, 148, 30, PIXEL_CLOCK_74_250,   34, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1080p_50Hz,    2640, 1920,  4,  5, 36, 1125, 1080,  528,  44, 148, 50, PIXEL_CLOCK_148_500,  31, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1080p_60Hz,    2200, 1920,  4,  5, 36, 1125, 1080,   88,  44, 148, 60, PIXEL_CLOCK_148_500,  16, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1440p_60Hz,    2600, 1920,  1,  3, 56, 1500, 1440,  128, 208, 344, 60, PIXEL_CLOCK_234_000,  16, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v2560x1440p_59Hz,    2720, 2560,  3,  5, 33, 1481, 1440,   48,  32,  80, 59, PIXEL_CLOCK_241_500,   0, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v2560x1440p_60Hz,    3488, 2560,  3,  5, 45, 1493, 1440,  192, 272, 464, 60, PIXEL_CLOCK_312_000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_24Hz,    5500, 3840,  8, 10, 72, 2250, 2160, 1276,  88, 296, 24, PIXEL_CLOCK_297_000,  93, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_25Hz,    5280, 3840,  8, 10, 72, 2250, 2160, 1056,  88, 296, 25, PIXEL_CLOCK_297_000,  94, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_30Hz,    4400, 3840,  8, 10, 72, 2250, 2160,  176,  88, 296, 30, PIXEL_CLOCK_297_000,  95, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_50Hz,    5280, 3840,  8, 10, 72, 2250, 2160, 1056,  88, 296, 50, PIXEL_CLOCK_594_000,  96, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_RB_59Hz, 4000, 3840,  3,  5, 54, 2222, 2160,   48,  32,  80, 59, PIXEL_CLOCK_533_000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_60Hz,    4400, 3840,  8, 10, 72, 2250, 2160,  176,  88, 296, 60, PIXEL_CLOCK_594_000,  97, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v4096x2160p_24Hz,    5500, 4096,  8, 10, 72, 2250, 2160, 1020,  88, 296, 24, PIXEL_CLOCK_297_000,  98, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v4096x2160p_25Hz,    5280, 4096,  8, 10, 72, 2250, 2160,  968,  88, 128, 25, PIXEL_CLOCK_297_000,  99, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v4096x2160p_30Hz,    4400, 4096,  8, 10, 72, 2250, 2160,   88,  88, 128, 30, PIXEL_CLOCK_297_000, 100, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v4096x2160p_50Hz,    5280, 4096,  8, 10, 72, 2250, 2160,  968,  88, 128, 50, PIXEL_CLOCK_594_000, 101, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v4096x2160p_60Hz,    4400, 4096,  8, 10, 72, 2250, 2160,   88,  88, 128, 60, PIXEL_CLOCK_594_000, 102, SYNC_POSITIVE, SYNC_POSITIVE},
-	{sa_crc_640x10_60Hz,   800,  640,  2,  2, 12,   26,   10,   16,  96,  48, 60, PIXEL_CLOCK_27_000,    0, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v640x480p_60Hz,       800,  640,   16,  96,  48,  525,  480, 10,  2, 33, 60,  25200000,   1, SYNC_NEGATIVE, SYNC_NEGATIVE},
+	{v720x480p_60Hz,       858,  720,   16,  62,  60,  525,  480,  9,  6, 30, 59,  27027000,   2, SYNC_NEGATIVE, SYNC_NEGATIVE},
+	{v720x576p_50Hz,       864,  720,   12,  64,  68,  625,  576,  5,  5, 39, 50,  27000000,  17, SYNC_NEGATIVE, SYNC_NEGATIVE},
+	{v1280x720p_50Hz,     1980, 1280,  440,  40, 220,  750,  720,  5,  5, 20, 50,  74250000,  19, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v1280x720p_60Hz,     1650, 1280,  110,  40, 220,  750,  720,  5,  5, 20, 60,  74250000,   4, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v1280x800p_RB_60Hz,  1440, 1280,   48,  32,  80,  823,  800,  3,  6, 14, 60,  71000000,   0, SYNC_NEGATIVE, SYNC_POSITIVE},
+	{v1280x1024p_60Hz,    1688, 1280,   48, 112, 248, 1066, 1024,  1,  3, 38, 60, 108000000,   4, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v1920x1080p_24Hz,    2750, 1920,  638,  44, 148, 1125, 1080,  4,  5, 36, 24,  74250000,  32, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v1920x1080p_25Hz,    2640, 1920,  528,  44, 148, 1125, 1080,  4,  5, 36, 25,  74250000,  33, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v1920x1080p_30Hz,    2200, 1920,   88,  44, 148, 1125, 1080,  4,  5, 36, 30,  74250000,  34, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v1920x1080p_59Hz,    2080, 1920,   48,  44,  68, 1111, 1080,  3,  5, 23, 59, 138500000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v1920x1080p_50Hz,    2640, 1920,  528,  44, 148, 1125, 1080,  4,  5, 36, 50, 148500000,  31, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v1920x1080p_60Hz,    2200, 1920,   88,  44, 148, 1125, 1080,  4,  5, 36, 60, 148500000,  16, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v1920x1440p_60Hz,    2600, 1920,  128, 208, 344, 1500, 1440,  1,  3, 56, 60, 234000000,  16, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v2560x1440p_59Hz,    2720, 2560,   48,  32,  80, 1481, 1440,  3,  5, 33, 59, 241500000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v2560x1440p_60Hz,    3488, 2560,  192, 272, 464, 1493, 1440,  3,  5, 45, 60, 312000000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v3840x2160p_24Hz,    5500, 3840, 1276,  88, 296, 2250, 2160,  8, 10, 72, 24, 297000000,  93, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v3840x2160p_25Hz,    5280, 3840, 1056,  88, 296, 2250, 2160,  8, 10, 72, 25, 297000000,  94, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v3840x2160p_30Hz,    4400, 3840,  176,  88, 296, 2250, 2160,  8, 10, 72, 30, 297000000,  95, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v3840x2160p_50Hz,    5280, 3840, 1056,  88, 296, 2250, 2160,  8, 10, 72, 50, 594000000,  96, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v3840x2160p_RB_59Hz, 4000, 3840,   48,  32,  80, 2222, 2160,  3,  5, 54, 59, 533000000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v3840x2160p_60Hz,    4400, 3840,  176,  88, 296, 2250, 2160,  8, 10, 72, 60, 594000000,  97, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v4096x2160p_24Hz,    5500, 4096, 1020,  88, 296, 2250, 2160,  8, 10, 72, 24, 297000000,  98, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v4096x2160p_25Hz,    5280, 4096,  968,  88, 128, 2250, 2160,  8, 10, 72, 25, 297000000,  99, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v4096x2160p_30Hz,    4400, 4096,   88,  88, 128, 2250, 2160,  8, 10, 72, 30, 297000000, 100, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v4096x2160p_50Hz,    5280, 4096,  968,  88, 128, 2250, 2160,  8, 10, 72, 50, 594000000, 101, SYNC_POSITIVE, SYNC_POSITIVE},
+	{v4096x2160p_60Hz,    4400, 4096,   88,  88, 128, 2250, 2160,  8, 10, 72, 60, 594000000, 102, SYNC_POSITIVE, SYNC_POSITIVE},
+	{sa_crc_640x10_60Hz,   800,  640,   16,  96,  48,   26,   10,  2,  2, 12, 60,  27000000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
 };
 
 const int videoformat_parameters_cnt = ARRAY_SIZE(videoformat_parameters);
@@ -739,14 +740,14 @@ void displayport_reg_video_format_register_setting(videoformat video_format)
 {
 	u32 val;
 
-	val = videoformat_parameters[video_format].total_line & TOTAL_LINE_CFG_L;
+	val = videoformat_parameters[video_format].v_total & TOTAL_LINE_CFG_L;
 	displayport_write_mask(Total_Line_Low_Byte, val, TOTAL_LINE_CFG_L);
-	val = (videoformat_parameters[video_format].total_line >> 8) & TOTAL_LINE_CFG_H;
+	val = (videoformat_parameters[video_format].v_total >> 8) & TOTAL_LINE_CFG_H;
 	displayport_write_mask(Total_Line_High_Byte, val, TOTAL_LINE_CFG_H);
 
-	val = videoformat_parameters[video_format].active_line & ACTIVE_LINE_CFG_L;
+	val = videoformat_parameters[video_format].v_active & ACTIVE_LINE_CFG_L;
 	displayport_write_mask(Active_Line_Low_Byte, val, ACTIVE_LINE_CFG_L);
-	val = (videoformat_parameters[video_format].active_line >> 8) & ACTIVE_LINE_CFG_H;
+	val = (videoformat_parameters[video_format].v_active >> 8) & ACTIVE_LINE_CFG_H;
 	displayport_write_mask(Active_Line_High_Byte, val, ACTIVE_LINE_CFG_H);
 
 	val = videoformat_parameters[video_format].v_f_porch;
@@ -758,14 +759,14 @@ void displayport_reg_video_format_register_setting(videoformat video_format)
 	val = videoformat_parameters[video_format].v_b_porch;
 	displayport_write_mask(Vertical_Back_Porch, val, V_B_PORCH_CFG);
 
-	val = videoformat_parameters[video_format].total_pixel & TOTAL_PIXEL_CFG_L;
+	val = videoformat_parameters[video_format].h_total & TOTAL_PIXEL_CFG_L;
 	displayport_write_mask(Total_Pixel_Low_Byte, val, TOTAL_PIXEL_CFG_L);
-	val = (videoformat_parameters[video_format].total_pixel >> 8) & TOTAL_PIXEL_CFG_H;
+	val = (videoformat_parameters[video_format].h_total >> 8) & TOTAL_PIXEL_CFG_H;
 	displayport_write_mask(Total_Pixel_High_Byte, val, TOTAL_PIXEL_CFG_H);
 
-	val = videoformat_parameters[video_format].active_pixel & ACTIVE_PIXEL_CFG_L;
+	val = videoformat_parameters[video_format].h_active & ACTIVE_PIXEL_CFG_L;
 	displayport_write_mask(Active_Pixel_Low_Byte, val, ACTIVE_PIXEL_CFG_L);
-	val = (videoformat_parameters[video_format].active_pixel >> 8) & ACTIVE_PIXEL_CFG_H;
+	val = (videoformat_parameters[video_format].h_active >> 8) & ACTIVE_PIXEL_CFG_H;
 	displayport_write_mask(Active_Pixel_High_Byte, val, ACTIVE_PIXEL_CFG_H);
 
 	val = videoformat_parameters[video_format].h_f_porch & H_F_PORCH_CFG_L;
