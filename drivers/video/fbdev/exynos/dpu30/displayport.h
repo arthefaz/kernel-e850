@@ -850,6 +850,8 @@ void displayport_reg_set_dma_pack_mode(enum audio_16bit_dma_mode dma_mode);
 void displayport_reg_set_pcm_size(enum audio_bit_per_channel audio_bit_size);
 void displayport_reg_set_audio_ch_status_same(u32 en);
 void displayport_reg_set_audio_ch(u32 audio_ch_cnt);
+void displayport_reg_set_audio_ch_mapping(u8 pkt_1, u8 pkt_2, u8 pkt_3, u8 pkt_4,
+						u8 pkt_5, u8 pkt_6, u8 pkt_7, u8 pkt_8);
 void displayport_reg_set_audio_fifo_function_enable(u32 en);
 void displayport_reg_set_audio_sampling_frequency
 		(enum audio_sampling_frequency audio_sampling_freq);
