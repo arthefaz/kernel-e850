@@ -198,7 +198,7 @@ bool edid_find_max_resolution(const struct v4l2_dv_timings *t1,
 	return false;
 }
 
-static bool edid_find_preset(const struct fb_videomode *mode, bool first)
+static void edid_find_preset(const struct fb_videomode *mode)
 {
 	int i;
 
@@ -211,12 +211,9 @@ static bool edid_find_preset(const struct fb_videomode *mode, bool first)
 				displayport_info("EDID: found %s\n", displayport_supported_presets[i].name);
 				displayport_supported_presets[i].edid_support_match = true;
 				preferred_preset = displayport_supported_presets[i].dv_timings;
-				first = false;
 			}
 		}
 	}
-
-	return first;
 }
 
 static void edid_use_default_preset(void)
@@ -397,7 +394,7 @@ void edid_extension_update(struct fb_vendor *vsdb)
 			displayport_dbg("EDID: udmode_idx = %d\n", udmode_idx);
 
 			if (udmode_idx >= 0)
-				edid_find_preset(&ud_mode_h14b_vsdb[udmode_idx], false);
+				edid_find_preset(&ud_mode_h14b_vsdb[udmode_idx]);
 		}
 	}
 }
@@ -439,7 +436,7 @@ int edid_update(struct displayport_device *hdev)
 
 	/* find 2D preset */
 	for (i = 0; i < specs.modedb_len; i++)
-		first = edid_find_preset(&specs.modedb[i], first);
+		edid_find_preset(&specs.modedb[i]);
 
 	/* number of 128bytes blocks to follow */
 	if (block_cnt <= 1)
@@ -459,9 +456,13 @@ int edid_update(struct displayport_device *hdev)
 	if (!edid_misc)
 		edid_misc = specs.misc;
 
-	for (i = 0; i < displayport_pre_cnt; i++)
+	for (i = 0; i < displayport_pre_cnt; i++) {
 		displayport_dbg("displayport_supported_presets[%d].edid_support_match = %d\n",
 				i, displayport_supported_presets[i].edid_support_match);
+
+		if (displayport_supported_presets[i].edid_support_match)
+			first = false;
+	}
 
 	if (edid_misc & FB_MISC_HDMI) {
 		audio_speaker_alloc = sad.speaker;
@@ -481,7 +482,7 @@ int edid_update(struct displayport_device *hdev)
 
 out:
 	/* No supported preset found, use default */
-	if (forced_resolution >= 0 || first) {
+	if (forced_resolution >= 0 || first == true) {
 		displayport_info("edid_use_default_preset\n");
 		edid_use_default_preset();
 	}
