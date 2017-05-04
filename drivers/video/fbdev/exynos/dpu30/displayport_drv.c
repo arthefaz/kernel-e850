@@ -1411,9 +1411,7 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 			audio_config_data->audio_packed_mode, audio_config_data->audio_word_length);
 
 	/* channel mapping: FL, FR, C, SW, RL, RR */
-	displayport_write(Audio_Packet_Data_Re_arrangement_Register, 0x87653421);
-	displayport_dbg("audio channel mapping = 0x%X\n",
-			displayport_read(Audio_Packet_Data_Re_arrangement_Register));
+	displayport_reg_set_audio_ch_mapping(1, 2, 4, 3, 5, 6, 7, 8);
 
 	displayport_reg_set_audio_m_n(SYNC_MODE, audio_config_data->audio_fs);
 	displayport_reg_set_audio_function_enable(audio_config_data->audio_enable);

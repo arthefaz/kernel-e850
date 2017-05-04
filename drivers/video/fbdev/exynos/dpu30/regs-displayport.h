@@ -41,6 +41,13 @@
 #define Function_En_4                           (0x24)
 #define STRM_CLK_EN		                (1 << 0)
 
+#define SYSTEM_SST1_FUNCTION_ENABLE		(0x001C)
+#define SST1_LH_PWR_ON_STATUS			(0x01 << 5)
+#define SST1_LH_PWR_ON				(0x01 << 4)
+#define SST1_AUDIO_FIFO_FUNC_EN			(0x01 << 2)
+#define SST1_AUDIO_FUNC_EN			(0x01 << 1)
+#define SST1_VIDEO_FUNC_EN			(0x01 << 0)
+
 #define SYSTEM_PLL_LOCK_CONTROL			(0x002C)
 #define PLL_LOCK_STATUS				(0x01 << 4)
 #define PLL_LOCK_FORCE				(0x01 << 3)
@@ -246,14 +253,8 @@
 #define HBR2_Eye_SR_High                        (0x7B0)
 #define HBR2_EYE_SR_H                           (0xFF << 0)
 
-#define MASTER_AUDIO_DATA_FROM_APB_ADD          (0x838)
-#define MASTER_AUDIO_DATA_FROM_APB              (0xFFFFFFFF << 0)
-
-
 #define Test_Pattern_Register                   (0x8A0)
 #define TEST_PATTERN                            (0x3F << 0)
-
-
 
 #define Video_Control_1                         (0x1020)
 #define VIDEO_EN                                (1 << 7)
@@ -481,22 +482,6 @@
 #define Horizon_Back_Porch_Status_High_Byte     (0x10D0)
 #define H_B_PORCH_STA_H                         (0xF << 0)
 
-#define Audio_BIST_Control_Register             (0x10F0)
-#define SIN_AMPL                                (0xF << 4)
-#define AUD_BIST_EN                             (1 << 0)
-
-#define Audio_Input_Clock_Frequency_Counter_Low_Byte_Register   (0x10F4)
-#define AUD_FREQ_CNT_L                          (0xFF << 0)
-
-#define Audio_Input_Clock_Frequency_Counter_High_Byte_Register  (0x10F8)
-#define AUD_FREQ_CNT_H                          (0xF << 0)
-
-#define Video_Input_Clock_Frequency_Counter_Low_Byte            (0x1100)
-#define VID_FREQ_CNT_L                          (0xFF << 0)
-
-#define Video_Input_Clock_Frequency_Counter_High_Byte           (0x1104)
-#define VID_FREQ_CNT_H                          (0xFF << 0)
-
 #define Active_Frame_Parameters                 (0x110C)
 #define ACTIVE_LINE_COUNT                       (0x3FFF << 16)
 #define ACTIVE_PIXEL_COUNT                      (0x3FFF << 0)
@@ -633,42 +618,6 @@
 #define Audio_infoFrame_Packet_Register_AVI_Data_Byte_10        (0x1240)
 #define Audio_DB10                              (0xFF << 0)
 
-#define Audio_GTC_Delta_Register_1              (0x1330)
-#define AUD_GTC_DELTA_1                         (0xFF << 0)
-
-#define Audio_GTC_Delta_Register_2              (0x1334)
-#define AUD_GTC_DELTA_2                         (0xFF << 0)
-
-#define Audio_GTC_Delta_Register_3              (0x1338)
-#define AUD_GTC_DELTA_3                         (0xFF << 0)
-
-#define Audio_GTC_Delta_Register_4              (0x133C)
-#define AUD_GTC_DELTA_4                         (0xFF << 0)
-
-#define Audio_BIST_Channel_Status_Register_1    (0x1340)
-#define MODE                                    (3 << 6)
-#define PCM_MODE                                (7 << 3)
-#define SW_CPRGT                                (1 << 2)
-#define NON_PCM                                 (1 << 1)
-#define PROF_APP                                (1 << 0)
-
-#define Audio_BIST_Channel_Status_Register_2    (0x1344)
-#define CAT_CODE                                (0xFF << 0)
-
-#define Audio_BIST_Channel_Status_Register_3    (0x1348)
-#define CH_NUM                                  (0xF << 4)
-#define SOURCE_NUM                              (0xF << 0)
-
-#define Audio_BIST_Channel_Status_Register_4    (0x134C)
-#define CHNL_BIT1                               (0x3 << 6)
-#define CLK_ACCUR                               (0x3 << 4)
-#define FS_FREQ                                 (0xF << 0)
-
-#define Audio_BIST_Channel_Status_Register_5    (0x1350)
-#define CHNL_BIT2                               (0xF << 4)
-#define WORD_LENGTH                             (0x7 << 1)
-#define WORD_MAX                                (1 << 0)
-
 #define Interrupt_Status                        (0x13C0)
 #define INT_STATE                               (1 << 0)
 
@@ -690,12 +639,6 @@
 
 #define Interrupt_Mask_3                        (0x13E8)
 #define COMMON_INT_MASK_3                       (3 << 6)
-
-#define DP_INFO_WAIT_TIMER_Register             (0x1500)
-#define DP_INFO_WAIT_TIMER                      (0xFF << 0)
-
-#define DP_AUDIO_WAIT_TIMER_Register            (0x1504)
-#define DP_AUDIO_WAIT_TIMER                     (0xFF << 0)
 
 #define DP_System_Control_1                     (0x1600)
 #define DET_STA                                 (1 << 2)
@@ -724,10 +667,6 @@
 #define YC_COEFF                                (1 << 4)
 #define D_RANGE                                 (1 << 3)
 #define COLOR_F                                 (3 << 1)
-
-#define DP_Audio_Control_Register               (0x1618)
-#define AUD_GTC_CHST_EN                         (1 << 1)
-#define DP_AUDIO_EN                             (1 << 0)
 
 #define Packet_Send_Control                     (0x1640)
 #define AUDIO_INFO_UP                           (1 << 7)
@@ -768,28 +707,6 @@
 #define VIDEO_MAP_CTRL                          (1 << 1)
 #define RS_CTRL                                 (1 << 0)
 
-#define DP_Audio_Margin_Register                (0x173C)
-#define FORCE_AUDIO_MARGIN                      (1 << 7)
-#define AUDIO_MARGIN                            (0x7F << 0)
-
-#define DP_Maud_Configure_Register_0            (0x1748)
-#define M_AUD_0                                 (0xFF << 0)
-
-#define DP_Maud_Configure_Register_1            (0x174C)
-#define M_AUD_1                                 (0xFF << 0)
-
-#define DP_Maud_Configure_Register_2            (0x1750)
-#define M_AUD_2                                 (0xFF << 0)
-
-#define DP_Naud_Configure_Register_0            (0x1754)
-#define N_AUD_0                                 (0xFF << 0)
-
-#define DP_Naud_Configure_Register_1            (0x1758)
-#define N_AUD_1                                 (0xFF << 0)
-
-#define DP_Naud_Configure_Register_2            (0x175C)
-#define N_AUD_2                                 (0xFF << 0)
-
 #define DP_M_Value_Calculation_Control          (0x1760)
 #define M_AUD_GEN_FILTER_EN                     (1 << 3)
 #define M_VID_GEN_FILTER_EN                     (1 << 2)
@@ -798,26 +715,6 @@
 #define DP_Mvid_Value_Calculation_Control       (0x1764)
 #define M_VID_GEN_FILTER_TH                     (0xFF << 0)
 
-#define DP_Maud_Value_Calculation_Control       (0x1778)
-#define M_AUD_GEN_FILTER_TH                     (0xFF << 0)
-
-#define General_Control                         (0x1800)
-#define SW_AUD_CODING_TYPE                      (1 << 29)
-#define SW_AUD_CODING_TYPE_EN                   (1 << 28)
-#define AUD_CODING_TYPE                         (1 << 27)
-#define AUD_DMA_IF_LTNCY_TRG_MODE               (1 << 26)
-#define AUD_DMA_IF_MODE_CONFIG                  (1 << 25)
-#define AUD_ODD_CHANNEL_DUMMY                   (1 << 24)
-#define AUD_M_VALUE_CMP_SPD_MASTER              (7 << 21)
-#define DMA_BURST_SEL                           (7 << 18)
-#define AUDIO_BIT_MAPPING_TYPE                  (3 << 16)
-#define PCM_SIZE                                (3 << 13)
-#define AUDIO_MASTER_MODE_EN                    (1 << 9)
-#define AUDIO_MODE                              (1 << 8)
-#define AUDIO_CH_STATUS_SAME                    (1 << 5)
-#define MASTER_VIDEO_INTERLACE_EN               (1 << 4)
-#define VIDEO_MASTER_MODE_EN                    (1 << 1)
-#define VID_MODE                                (1 << 0)
 
 #define Video_Horizontal_Total_pixels_register  (0x1804)
 #define H_TOTAL_MASTER                          (0xFFFFFFFF << 0)
@@ -849,94 +746,6 @@
 #define Nvid_register_in_video_master_mode      (0x1828)
 #define N_VID_MASTER                            (0xFFFFFFFF << 0)
 
-#define Maud_register_in_audio_master_mode      (0x182C)
-#define M_AUD_MASTER                            (0xFFFFFFFF << 0)
-
-#define Naud_register_in_audio_master_mode      (0x1830)
-#define N_AUD_MASTER                            (0xFFFFFFFF << 0)
-
-#define Master_audio_Buffer_control_register    (0x1834)
-#define MASTER_AUDIO_INIT_BUFFER_THRD           (0xFF << 24)
-#define MASTER_AUDIO_BUFFER_THRD                (0x3F << 17)
-#define MASTER_AUDIO_BUFFER_EMPTY_INT_MASK      (1 << 16)
-#define MASTER_AUDIO_CHANNEL_COUNT              (7 << 13)
-#define MASTER_AUDIO_BUFFER_LEVEL               (0xFF << 5)
-#define AUD_DMA_NOISE_INT_MASK                  (1 << 4)
-#define AUD_DMA_NOISE_INT                       (1 << 3)
-#define AUDO_DMA_NOISE_INT_EN                   (1 << 2)
-#define MASTER_AUDIO_BUFFER_EMPTY_INT           (1 << 1)
-#define MASTER_AUDIO_BUFFER_EMPTY_INT_EN        (1 << 0)
-
-#define Audio_Packet_Data_Re_arrangement_Register       (0x183C)
-#define AUD_8TH_PACKET                          (0xF << 28)
-#define AUD_7TH_PACKET                          (0xF << 24)
-#define AUD_6TH_PACKET                          (0xF << 20)
-#define AUD_5TH_PACKET                          (0xF << 16)
-#define AUD_4TH_PACKET                          (0xF << 12)
-#define AUD_3RD_PACKET                          (0xF << 8)
-#define AUD_2ND_PACKET                          (0xF << 4)
-#define AUD_1ST_PACKET                          (0xF << 0)
-
-#define Master_audio_Packet_GP0_Status_Register_0       (0x1840)
-#define MASTER_AUD_GP0_STA_0                    (0xFF << 0)
-
-#define Master_audio_Packet_GP0_Status_Register_1       (0x1844)
-#define MASTER_AUD_GP0_STA_1                    (0xFF << 0)
-
-#define Master_audio_Packet_GP0_Status_Register_2       (0x1848)
-#define MASTER_AUD_GP0_STA_2                    (0xFF << 0)
-
-#define Master_audio_Packet_GP0_Status_Register_3       (0x184C)
-#define MASTER_AUD_GP0_STA_3                    (0xFF << 0)
-
-#define Master_audio_Packet_GP0_Status_Register_4       (0x1850)
-#define MASTER_AUD_GP0_STA_4                    (0xFF << 0)
-
-#define Master_audio_Packet_GP1_Status_Register_0       (0x1854)
-#define MASTER_AUD_GP1_STA_0                    (0xFF << 0)
-
-#define Master_audio_Packet_GP1_Status_Register_1       (0x1858)
-#define MASTER_AUD_GP1_STA_1                    (0xFF << 0)
-
-#define Master_audio_Packet_GP1_Status_Register_2       (0x185C)
-#define MASTER_AUD_GP1_STA_2                    (0xFF << 0)
-
-#define Master_audio_Packet_GP1_Status_Register_3       (0x1860)
-#define MASTER_AUD_GP1_STA_3                    (0xFF << 0)
-
-#define Master_audio_Packet_GP1_Status_Register_4       (0x1864)
-#define MASTER_AUD_GP1_STA_4                    (0xFF << 0)
-
-#define Master_audio_Packet_GP2_Status_Register_0       (0x1868)
-#define MASTER_AUD_GP2_STA_0                    (0xFF << 0)
-
-#define Master_audio_Packet_GP2_Status_Register_1       (0x186C)
-#define MASTER_AUD_GP2_STA_1                    (0xFF << 0)
-
-#define Master_audio_Packet_GP2_Status_Register_2       (0x1870)
-#define MASTER_AUD_GP2_STA_2                    (0xFF << 0)
-
-#define Master_audio_Packet_GP2_Status_Register_3       (0x1874)
-#define MASTER_AUD_GP2_STA_3                    (0xFF << 0)
-
-#define Master_audio_Packet_GP2_Status_Register_4       (0x1878)
-#define MASTER_AUD_GP2_STA_4                    (0xFF << 0)
-
-#define Master_audio_Packet_GP3_Status_Register_0       (0x187C)
-#define MASTER_AUD_GP3_STA_0                    (0xFF << 0)
-
-#define Master_audio_Packet_GP3_Status_Register_1       (0x1880)
-#define MASTER_AUD_GP3_STA_1                    (0xFF << 0)
-
-#define Master_audio_Packet_GP3_Status_Register_2       (0x1884)
-#define MASTER_AUD_GP3_STA_2                    (0xFF << 0)
-
-#define Master_audio_Packet_GP3_Status_Register_3       (0x1888)
-#define MASTER_AUD_GP3_STA_3                    (0xFF << 0)
-
-#define Master_audio_Packet_GP3_Status_Register_4       (0x188C)
-#define MASTER_AUD_GP3_STA_4                    (0xFF << 0)
-
 #define CRC_Control_4                           (0x1890)
 #define AUD_CRC_PK_NUM                          (0x3FF << 16)
 #define AUD_CRC_FLUSH                           (1 << 3)
@@ -947,15 +756,6 @@
 #define CRC_Result                              (0x1894)
 #define AUD_CRC_RESULT                          (0xFFFF << 16)
 #define VID_CRC_RESULT                          (0xFFFF << 0)
-
-#define AUDIO_DMA_Request_Latency_Config        (0x1898)
-#define AUD_DMA_ACK_STATUS                      (1 << 21)
-#define AUD_DMA_FORCE_ACK                       (1 << 20)
-#define AUD_DMA_FORCE_ACK_SEL                   (1 << 19)
-#define AUD_DMA_REQ_STATUS                      (1 << 18)
-#define AUD_DMA_FORCE_REQ_VAL                   (1 << 17)
-#define AUD_DMA_FORCE_REQ_SEL                   (1 << 16)
-#define MASTER_DMA_REQ_LTNCY_CONFIG             (0xFFFF << 0)
 
 #define DP_IRQ_VECTOR                           (0x30A0)
 #define IRQ_VECTOR                              (0x3F << 0)
@@ -1155,6 +955,300 @@
 
 #define HDCP22_RIV_1				(0x4504)
 #define RIV_KEY_1				(0xFFFFFFFF << 0)
+
+#define SST1_MAIN_CONTROL			(0x5000)
+
+#define MAUD_MODE				(0x01 << 10)
+
+
+#define ENHANCED_MODE				(0x01 << 5)
+
+#define SST1_MAUD_MASTER_MODE			(0x505C)
+#define MAUD_MASTER				(0xFFFFFFFF << 0)
+
+#define SST1_NAUD_MASTER_MODE			(0x5060)
+#define NAUD_MASTER				(0xFFFFFF << 0)
+
+#define SST1_MAUD_SFR_CONFIGURE			(0x5064)
+#define MAUD_SFR_CONFIG				(0xFFFFFF << 0)
+
+#define SST1_NAUD_SFR_CONFIGURE			(0x5068)
+#define NAUD_SFR_CONFIG				(0xFFFFFF << 0)
+
+#define SST1_AUDIO_CONTROL			(0x5800)
+#define SW_AUD_CODING_TYPE			(0x07 << 27)
+#define AUD_DMA_IF_LTNCY_TRG_MODE		(0x01 << 26)
+#define AUD_DMA_IF_MODE_CONFIG			(0x01 << 25)
+#define AUD_ODD_CHANNEL_DUMMY			(0x01 << 24)
+#define AUD_M_VALUE_CMP_SPD_MASTER		(0x07 << 21)
+#define DMA_BURST_SEL				(0x07 << 18)
+#define AUDIO_BIT_MAPPING_TYPE			(0x03 << 16)
+#define PCM_SIZE				(0x03 << 13)
+#define AUDIO_CH_STATUS_SAME			(0x01 << 5)
+#define AUD_GTC_CHST_EN				(0x01 << 1)
+
+#define SST1_AUDIO_ENABLE			(0x5804)
+#define AUDIO_EN				(0x01 << 0)
+
+#define SST1_AUDIO_MASTER_TIMING_GEN		(0x5808)
+#define AUDIO_MASTER_TIME_GEN			(0x01 << 0)
+
+#define SST1_AUDIO_DMA_REQUEST_LATENCY_CONFIG	(0x580C)
+#define AUD_DMA_ACK_STATUS			(0x01 << 21)
+#define AUD_DMA_FORCE_ACK			(0x01 << 20)
+#define AUD_DMA_FORCE_ACK_SEL			(0x01 << 19)
+#define AUD_DMA_REQ_STATUS			(0x01 << 18)
+#define AUD_DMA_FORCE_REQ_VAL			(0x01 << 17)
+#define AUD_DMA_FORCE_REQ_SEL			(0x01 << 16)
+#define MASTER_DMA_REQ_LTNCY_CONFIG		(0xFF << 0)
+
+#define SST1_AUDIO_MUTE_CONTROL			(0x5810)
+#define AUD_MUTE_UNDRUN_EN			(0x01 << 5)
+#define AUD_MUTE_OVFLOW_EN			(0x01 << 4)
+#define AUD_MUTE_CLKCHG_EN			(0x01 << 1)
+
+#define SST1_AUDIO_MARGIN_CONTROL		(0x5814)
+#define FORCE_AUDIO_MARGIN			(0x01 << 16)
+#define AUDIO_MARGIN				(0x1FFF << 0)
+
+#define SST1_AUDIO_DATA_WRITE_FIFO		(0x5818)
+#define AUDIO_DATA_FIFO				(0xFFFFFFFF << 0)
+
+#define SST1_AUDIO_GTC_CONTROL			(0x5824)
+#define AUD_GTC_DELTA				(0xFFFFFFFF << 0)
+
+#define SST1_AUDIO_GTC_VALID_BIT_CONTROL	(0x5828)
+#define AUDIO_GTC_VALID_CONTROL			(0x01 << 1)
+#define AUDIO_GTC_VALID				(0x01 << 0)
+
+#define SST1_AUDIO_3DLPCM_PACKET_WAIT_TIMER	(0x582C)
+#define AUDIO_3D_PKT_WAIT_TIMER			(0x3F << 0)
+
+#define SST1_AUDIO_BIST_CONTROL			(0x5830)
+#define SIN_AMPL				(0x0F << 4)
+#define AUD_BIST_EN				(0x01 << 0)
+
+#define SST1_AUDIO_BIST_CHANNEL_STATUS_SET0	(0x5834)
+#define CHNL_BIT1				(0x03 << 30)
+#define CLK_ACCUR				(0x03 << 28)
+#define FS_FREQ					(0x0F << 24)
+#define CH_NUM					(0x0F << 20)
+#define SOURCE_NUM				(0x0F << 16)
+#define CAT_CODE				(0xFF << 8)
+#define MODE					(0x03 << 6)
+#define PCM_MODE				(0x07 << 3)
+#define SW_CPRGT				(0x01 << 2)
+#define NON_PCM					(0x01 << 1)
+#define PROF_APP				(0x01 << 0)
+
+#define SST1_AUDIO_BIST_CHANNEL_STATUS_SET1	(0x5838)
+#define CHNL_BIT2				(0x0F << 4)
+#define WORD_LENGTH				(0x07 << 1)
+#define WORD_MAX				(0x01 << 0)
+
+#define SST1_AUDIO_BUFFER_CONTROL		(0x583C)
+#define MASTER_AUDIO_INIT_BUFFER_THRD		(0x7F << 24)
+#define MASTER_AUDIO_BUFFER_THRD		(0x3F << 18)
+#define MASTER_AUDIO_BUFFER_EMPTY_INT_MASK	(0x01 << 17)
+#define MASTER_AUDIO_CHANNEL_COUNT		(0x1F << 12)
+#define MASTER_AUDIO_BUFFER_LEVEL		(0x7F << 5)
+#define AUD_DMA_NOISE_INT_MASK			(0x01 << 4)
+#define AUD_DMA_NOISE_INT			(0x01 << 3)
+#define AUD_DMA_NOISE_INT_EN			(0x01 << 2)
+#define MASTER_AUDIO_BUFFER_EMPTY_INT		(0x01 << 1)
+#define MASTER_AUDIO_BUFFER_EMPTY_INT_EN	(0x01 << 0)
+
+#define SST1_AUDIO_CHANNEL_1_4_REMAP		(0x5840)
+#define AUD_CH_04_REMAP				(0x3F << 24)
+#define AUD_CH_03_REMAP				(0x3F << 16)
+#define AUD_CH_02_REMAP				(0x3F << 8)
+#define AUD_CH_01_REMAP				(0x3F << 0)
+
+#define SST1_AUDIO_CHANNEL_5_8_REMAP		(0x5844)
+#define AUD_CH_08_REMAP				(0x3F << 24)
+#define AUD_CH_07_REMAP				(0x3F << 16)
+#define AUD_CH_06_REMAP				(0x3F << 8)
+#define AUD_CH_05_REMAP				(0x3F << 0)
+
+#define SST1_AUDIO_CHANNEL_9_12_REMAP		(0x5848)
+#define AUD_CH_12_REMAP				(0x3F << 24)
+#define AUD_CH_11_REMAP				(0x3F << 16)
+#define AUD_CH_10_REMAP				(0x3F << 8)
+#define AUD_CH_09_REMAP				(0x3F << 0)
+
+#define SST1_AUDIO_CHANNEL_13_16_REMAP		(0x584C)
+#define AUD_CH_16_REMAP				(0x3F << 24)
+#define AUD_CH_15_REMAP				(0x3F << 16)
+#define AUD_CH_14_REMAP				(0x3F << 8)
+#define AUD_CH_13_REMAP				(0x3F << 0)
+
+#define SST1_AUDIO_CHANNEL_17_20_REMAP		(0x5850)
+#define AUD_CH_20_REMAP				(0x3F << 24)
+#define AUD_CH_19_REMAP				(0x3F << 16)
+#define AUD_CH_18_REMAP				(0x3F << 8)
+#define AUD_CH_17_REMAP				(0x3F << 0)
+
+#define SST1_AUDIO_CHANNEL_21_24_REMAP		(0x5854)
+#define AUD_CH_24_REMAP				(0x3F << 24)
+#define AUD_CH_23_REMAP				(0x3F << 16)
+#define AUD_CH_22_REMAP				(0x3F << 8)
+#define AUD_CH_21_REMAP				(0x3F << 0)
+
+#define SST1_AUDIO_CHANNEL_25_28_REMAP		(0x5858)
+#define AUD_CH_28_REMAP				(0x3F << 24)
+#define AUD_CH_27_REMAP				(0x3F << 16)
+#define AUD_CH_26_REMAP				(0x3F << 8)
+#define AUD_CH_25_REMAP				(0x3F << 0)
+
+#define SST1_AUDIO_CHANNEL_29_32_REMAP		(0x585C)
+#define AUD_CH_32_REMAP				(0x3F << 24)
+#define AUD_CH_31_REMAP				(0x3F << 16)
+#define AUD_CH_30_REMAP				(0x3F << 8)
+#define AUD_CH_29_REMAP				(0x3F << 0)
+
+#define SST1_AUDIO_CHANNEL_1_2_STATUS_CTRL_0	(0x5860)
+#define MASTER_AUD_GP0_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP0_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP0_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP0_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_1_2_STATUS_CTRL_1	(0x5864)
+#define MASTER_AUD_GP0_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_3_4_STATUS_CTRL_0	(0x5868)
+#define MASTER_AUD_GP1_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP1_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP1_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP1_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_3_4_STATUS_CTRL_1	(0x586C)
+#define MASTER_AUD_GP1_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_5_6_STATUS_CTRL_0	(0x5870)
+#define MASTER_AUD_GP2_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP2_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP2_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP2_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_5_6_STATUS_CTRL_1	(0x5874)
+#define MASTER_AUD_GP2_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_7_8_STATUS_CTRL_0	(0x5878)
+#define MASTER_AUD_GP3_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP3_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP3_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP3_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_7_8_STATUS_CTRL_1	(0x587C)
+#define MASTER_AUD_GP3_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_9_10_STATUS_CTRL_0	(0x5880)
+#define MASTER_AUD_GP4_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP4_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP4_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP4_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_9_10_STATUS_CTRL_1	(0x5884)
+#define MASTER_AUD_GP4_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_11_12_STATUS_CTRL_0	(0x5888)
+#define MASTER_AUD_GP5_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP5_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP5_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP5_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_11_12_STATUS_CTRL_1	(0x588C)
+#define MASTER_AUD_GP5_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_13_14_STATUS_CTRL_0	(0x5890)
+#define MASTER_AUD_GP6_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP6_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP6_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP6_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_13_14_STATUS_CTRL_1	(0x5894)
+#define MASTER_AUD_GP6_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_15_16_STATUS_CTRL_0	(0x5898)
+#define MASTER_AUD_GP7_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP7_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP7_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP7_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_15_16_STATUS_CTRL_1	(0x589C)
+#define MASTER_AUD_GP7_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_17_18_STATUS_CTRL_0	(0x58A0)
+#define MASTER_AUD_GP8_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP8_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP8_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP8_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_17_18_STATUS_CTRL_1	(0x58A4)
+#define MASTER_AUD_GP8_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_19_20_STATUS_CTRL_0	(0x58A8)
+#define MASTER_AUD_GP9_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP9_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP9_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP9_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_19_20_STATUS_CTRL_1	(0x58AC)
+#define MASTER_AUD_GP9_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_21_22_STATUS_CTRL_0	(0x58B0)
+#define MASTER_AUD_GP10_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP10_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP10_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP10_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_21_22_STATUS_CTRL_1	(0x58B4)
+#define MASTER_AUD_GP10_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_23_24_STATUS_CTRL_0	(0x58B8)
+#define MASTER_AUD_GP11_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP11_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP11_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP11_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_23_24_STATUS_CTRL_1	(0x58BC)
+#define MASTER_AUD_GP11_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_25_26_STATUS_CTRL_0	(0x58C0)
+#define MASTER_AUD_GP12_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP12_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP12_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP12_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_25_26_STATUS_CTRL_1	(0x58C4)
+#define MASTER_AUD_GP12_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_27_28_STATUS_CTRL_0	(0x58C8)
+#define MASTER_AUD_GP13_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP13_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP13_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP13_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_27_28_STATUS_CTRL_1	(0x58CC)
+#define MASTER_AUD_GP13_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_29_30_STATUS_CTRL_0	(0x58D0)
+#define MASTER_AUD_GP14_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP14_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP14_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP14_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_29_30_STATUS_CTRL_1	(0x58D4)
+#define MASTER_AUD_GP14_STA_4			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_31_32_STATUS_CTRL_0	(0x58D8)
+#define MASTER_AUD_GP15_STA_3			(0xFF << 24)
+#define MASTER_AUD_GP15_STA_2			(0xFF << 16)
+#define MASTER_AUD_GP15_STA_1			(0xFF << 8)
+#define MASTER_AUD_GP15_STA_0			(0xFF << 0)
+
+#define SST1_AUDIO_CHANNEL_31_32_STATUS_CTRL_1	(0x58DC)
+#define MASTER_AUD_GP15_STA_4			(0xFF << 0)
 
 #define CMN_REG2C				(0x00B0)
 #define MAN_USBDP_MODE				(0x03 << 1)

@@ -422,8 +422,8 @@ void displayport_reg_set_audio_bist_mode(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write_mask(Audio_BIST_Control_Register, 0x0F, SIN_AMPL);
-	displayport_write_mask(Audio_BIST_Control_Register, val, AUD_BIST_EN);
+	displayport_write_mask(SST1_AUDIO_BIST_CONTROL, 0x0F, SIN_AMPL);
+	displayport_write_mask(SST1_AUDIO_BIST_CONTROL, val, AUD_BIST_EN);
 }
 
 void displayport_reg_video_format_register_setting(videoformat video_format)
@@ -1100,65 +1100,75 @@ void displayport_reg_set_audio_m_n(audio_sync_mode audio_sync_mode,
 	if (audio_sync_mode == ASYNC_MODE) {
 		m_value = audio_async_m_n[0][array_set][audio_sampling_freq];
 		n_value = audio_async_m_n[1][array_set][audio_sampling_freq];
-		displayport_write_mask(DP_System_Control_4, 0, FIX_M_AUD);
+		displayport_write_mask(SST1_MAIN_CONTROL, 0, MAUD_MODE);
 	} else {
 		m_value = audio_sync_m_n[0][array_set][audio_sampling_freq];
 		n_value = audio_sync_m_n[1][array_set][audio_sampling_freq];
-		displayport_write_mask(DP_System_Control_4, 1, FIX_M_AUD);
+		displayport_write_mask(SST1_MAIN_CONTROL, 1, MAUD_MODE);
 	}
 
-	displayport_write(DP_Maud_Configure_Register_0, m_value&0xFF);
-	displayport_write(DP_Maud_Configure_Register_1, (m_value>>8)&0xFF);
-	displayport_write(DP_Maud_Configure_Register_2, (m_value>>16)&0xFF);
-
-	displayport_write(DP_Naud_Configure_Register_0, n_value&0xFF);
-	displayport_write(DP_Naud_Configure_Register_1, (n_value>>8)&0xFF);
-	displayport_write(DP_Naud_Configure_Register_2, (n_value>>16)&0xFF);
+	displayport_write(SST1_MAUD_SFR_CONFIGURE, m_value);
+	displayport_write(SST1_NAUD_SFR_CONFIGURE, n_value);
 }
 
 void displayport_reg_set_audio_function_enable(u32 en)
 {
 	u32 val = en ? 0 : ~0; /* 0 is enable */
 
-	displayport_write_mask(Function_En_1, val, AUDIO_FUNC_EN_N_STR0);
-}
-
-void displayport_reg_set_audio_master_mode(void)
-{
-	displayport_write_mask(General_Control, 0, AUDIO_MODE);
+	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, val, SST1_AUDIO_FIFO_FUNC_EN);
+	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, val, SST1_AUDIO_FUNC_EN);
 }
 
 void displayport_reg_set_dma_burst_size(enum audio_dma_word_length word_length)
 {
-	displayport_write_mask(General_Control, word_length, DMA_BURST_SEL);
+	displayport_write_mask(SST1_AUDIO_CONTROL, word_length, DMA_BURST_SEL);
 }
 
 void displayport_reg_set_dma_pack_mode(enum audio_16bit_dma_mode dma_mode)
 {
-	displayport_write_mask(General_Control, dma_mode, AUDIO_BIT_MAPPING_TYPE);
+	displayport_write_mask(SST1_AUDIO_CONTROL, dma_mode, AUDIO_BIT_MAPPING_TYPE);
 }
 
 void displayport_reg_set_pcm_size(enum audio_bit_per_channel audio_bit_size)
 {
-	displayport_write_mask(General_Control, audio_bit_size, PCM_SIZE);
+	displayport_write_mask(SST1_AUDIO_CONTROL, audio_bit_size, PCM_SIZE);
 }
 
 void displayport_reg_set_audio_ch_status_same(u32 en)
 {
-	displayport_write_mask(General_Control, en, AUDIO_CH_STATUS_SAME);
+	displayport_write_mask(SST1_AUDIO_CONTROL, en, AUDIO_CH_STATUS_SAME);
 }
 
 void displayport_reg_set_audio_ch(u32 audio_ch_cnt)
 {
-	displayport_write_mask(Master_audio_Buffer_control_register,
+	displayport_write_mask(SST1_AUDIO_BUFFER_CONTROL,
 				audio_ch_cnt - 1, MASTER_AUDIO_CHANNEL_COUNT);
+}
+
+void displayport_reg_set_audio_ch_mapping(u8 pkt_1, u8 pkt_2, u8 pkt_3, u8 pkt_4,
+						u8 pkt_5, u8 pkt_6, u8 pkt_7, u8 pkt_8)
+{
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_1, AUD_CH_01_REMAP);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_2, AUD_CH_02_REMAP);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_3, AUD_CH_03_REMAP);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_4, AUD_CH_04_REMAP);
+
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_5, AUD_CH_05_REMAP);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_6, AUD_CH_06_REMAP);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_7, AUD_CH_07_REMAP);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_8, AUD_CH_08_REMAP);
+
+	displayport_dbg("audio 1~4 channel mapping = 0x%X\n",
+			displayport_read(SST1_AUDIO_CHANNEL_1_4_REMAP));
+	displayport_dbg("audio 5~8 channel mapping = 0x%X\n",
+			displayport_read(SST1_AUDIO_CHANNEL_5_8_REMAP));
 }
 
 void displayport_reg_set_audio_fifo_function_enable(u32 en)
 {
 	u32 val = en ? 0 : ~0; /* 0 is enable */
 
-	displayport_write_mask(Function_En_1, val, AUDIO_FIFO_FUNC_EN_N_STR0);
+	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, val, SST1_AUDIO_FIFO_FUNC_EN);
 }
 
 void displayport_reg_set_audio_sampling_frequency(enum audio_sampling_frequency audio_sampling_freq)
@@ -1174,36 +1184,36 @@ void displayport_reg_set_audio_sampling_frequency(enum audio_sampling_frequency 
 	else/* if (link_bandwidth_set == LINK_RATE_5_4Gbps)*/
 		n_aud_master_set = 2;
 
-	displayport_write(Maud_register_in_audio_master_mode, m_aud_master[audio_sampling_freq]);
-	displayport_write(Naud_register_in_audio_master_mode, n_aud_master[n_aud_master_set]);
+	displayport_write(SST1_MAUD_MASTER_MODE, m_aud_master[audio_sampling_freq]);
+	displayport_write(SST1_NAUD_MASTER_MODE, n_aud_master[n_aud_master_set]);
 }
 
 void displayport_reg_set_dp_audio_enable(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write_mask(DP_Audio_Control_Register, val, DP_AUDIO_EN);
+	displayport_write_mask(SST1_AUDIO_ENABLE, val, AUDIO_EN);
 }
 
 void displayport_reg_set_audio_master_mode_enable(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write_mask(General_Control, val, AUDIO_MASTER_MODE_EN);
+	displayport_write_mask(SST1_AUDIO_MASTER_TIMING_GEN, val, AUDIO_MASTER_TIME_GEN);
 }
 
 void displayport_reg_set_ch_status_ch_cnt(u32 audio_ch_cnt)
 {
-	displayport_write_mask(Audio_BIST_Channel_Status_Register_3,
+	displayport_write_mask(SST1_AUDIO_BIST_CHANNEL_STATUS_SET0,
 				audio_ch_cnt, CH_NUM);
 
-	displayport_write_mask(Audio_BIST_Channel_Status_Register_3,
+	displayport_write_mask(SST1_AUDIO_BIST_CHANNEL_STATUS_SET0,
 				audio_ch_cnt, SOURCE_NUM);
 
-	displayport_write_mask(Master_audio_Packet_GP0_Status_Register_2,
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_2_STATUS_CTRL_0,
 				audio_ch_cnt, CH_NUM);
 
-	displayport_write_mask(Master_audio_Packet_GP0_Status_Register_2,
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_2_STATUS_CTRL_0,
 				audio_ch_cnt, SOURCE_NUM);
 }
 
@@ -1234,16 +1244,16 @@ void displayport_reg_set_ch_status_word_length(enum audio_bit_per_channel audio_
 		break;
 	}
 
-	displayport_write_mask(Audio_BIST_Channel_Status_Register_5,
+	displayport_write_mask(SST1_AUDIO_BIST_CHANNEL_STATUS_SET1,
 		word_max, WORD_MAX);
 
-	displayport_write_mask(Audio_BIST_Channel_Status_Register_5,
+	displayport_write_mask(SST1_AUDIO_BIST_CHANNEL_STATUS_SET1,
 		sample_word_length, WORD_LENGTH);
 
-	displayport_write_mask(Master_audio_Packet_GP0_Status_Register_4,
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_2_STATUS_CTRL_1,
 		word_max, WORD_MAX);
 
-	displayport_write_mask(Master_audio_Packet_GP0_Status_Register_4,
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_2_STATUS_CTRL_1,
 		sample_word_length, WORD_LENGTH);
 }
 
@@ -1278,14 +1288,14 @@ void displayport_reg_set_ch_status_sampling_frequency(enum audio_sampling_freque
 		break;
 	}
 
-	displayport_write_mask(Audio_BIST_Channel_Status_Register_4, fs_freq, FS_FREQ);
-	displayport_write_mask(Master_audio_Packet_GP0_Status_Register_3, fs_freq, FS_FREQ);
+	displayport_write_mask(SST1_AUDIO_BIST_CHANNEL_STATUS_SET0, fs_freq, FS_FREQ);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_2_STATUS_CTRL_0, fs_freq, FS_FREQ);
 }
 
 void displayport_reg_set_ch_status_clock_accuracy(enum audio_clock_accuracy clock_accuracy)
 {
-	displayport_write_mask(Audio_BIST_Channel_Status_Register_4, clock_accuracy, CLK_ACCUR);
-	displayport_write_mask(Master_audio_Packet_GP0_Status_Register_3, clock_accuracy, CLK_ACCUR);
+	displayport_write_mask(SST1_AUDIO_BIST_CHANNEL_STATUS_SET0, clock_accuracy, CLK_ACCUR);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_1_2_STATUS_CTRL_0, clock_accuracy, CLK_ACCUR);
 }
 
 void displayport_reg_set_hdcp22_system_enable(u32 en)
