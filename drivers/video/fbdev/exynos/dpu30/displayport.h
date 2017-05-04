@@ -826,9 +826,7 @@ int displayport_reg_dpcd_write_burst(u32 address, u32 length, u8 *data);
 int displayport_reg_dpcd_read_burst(u32 address, u32 length, u8 *data);
 int displayport_reg_edid_write(u8 edid_addr_offset, u32 length, u8 *data);
 int displayport_reg_edid_read(u8 edid_addr_offset, u32 length, u8 *data);
-void displayport_reg_phy_off(void);
 void displayport_reg_phy_reset(u32 en);
-void displayport_reg_lane_reset(u32 en);
 void displayport_reg_set_link_bw(u8 link_rate);
 u32 displayport_reg_get_link_bw(void);
 void displayport_reg_set_lane_count(u8 lane_cnt);
@@ -837,22 +835,16 @@ void displayport_reg_wait_phy_pll_lock(void);
 void displayport_reg_set_training_pattern(displayport_training_pattern pattern);
 void displayport_reg_set_qual_pattern(displayport_qual_pattern pattern, displayport_scrambling scramble);
 void displayport_reg_set_hbr2_scrambler_reset(u32 uResetCount);
-void displayport_reg_set_PN_Inverse_PHY_Lane(u32 enable);
 void displayport_reg_set_pattern_PLTPAT(void);
-void displayport_reg_serdes_enable(u32 en);
 void displayport_reg_set_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_emphasis);
-void displayport_reg_get_voltage_and_pre_emphasis_max_reach(u8 *max_reach_value);
 void displayport_reg_set_bist_video_configuration(videoformat video_format, u8 bpc, u8 type, u8 range);
 void displayport_reg_set_bist_video_configuration_for_blue_screen(videoformat video_format);
 void displayport_reg_set_video_bist_mode(u32 en);
 void displayport_reg_set_audio_bist_mode(u32 en);
-void displayport_reg_set_phy_clk_bw(u8 link_rate);
-u32 displayport_reg_get_cmn_ctl_sfr_ctl_mode(void);
 
 void displayport_reg_set_audio_m_n(audio_sync_mode audio_sync_mode,
 		enum audio_sampling_frequency audio_sampling_freq);
 void displayport_reg_set_audio_function_enable(u32 en);
-void displayport_reg_set_audio_master_mode(void);
 void displayport_reg_set_dma_burst_size(enum audio_dma_word_length word_length);
 void displayport_reg_set_dma_pack_mode(enum audio_16bit_dma_mode dma_mode);
 void displayport_reg_set_pcm_size(enum audio_bit_per_channel audio_bit_size);
@@ -863,14 +855,12 @@ void displayport_reg_set_audio_sampling_frequency
 		(enum audio_sampling_frequency audio_sampling_freq);
 void displayport_reg_set_dp_audio_enable(u32 en);
 void displayport_reg_set_audio_master_mode_enable(u32 en);
-void displayport_reg_set_ch_status_sw_audio_coding(u32 en);
 void displayport_reg_set_ch_status_ch_cnt(u32 audio_ch_cnt);
 void displayport_reg_set_ch_status_word_length(enum audio_bit_per_channel audio_bit_size);
 void displayport_reg_set_ch_status_sampling_frequency(enum audio_sampling_frequency audio_sampling_freq);
 void displayport_reg_set_ch_status_clock_accuracy(enum audio_clock_accuracy clock_accuracy);
 
 void HDCP13_Link_integrity_check(void);
-void displayport_reg_set_hdcp22_lane_count(void);
 void displayport_reg_set_hdcp22_system_enable(u32 en);
 void displayport_reg_set_hdcp22_mode(u32 en);
 void displayport_reg_set_hdcp22_encryption_enable(u32 en);

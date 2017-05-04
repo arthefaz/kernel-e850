@@ -11,13 +11,6 @@
 
 #include "displayport.h"
 
-u32 phy_lane_parameters[4][4] = {
-	/* Swing Level_0(400mV) */  {0x01040508, 0x03045408, 0x0104A008, 0x0104A008},
-	/* Swing Level_1(600mV) */  {0x03040408, 0x01046008, 0x0304A008, 0x0304A008},
-	/* Swing Level_2(800mV) */  {0x03242108, 0x03247008, 0x0304A008, 0x0304A008},
-	/* Swing Level_3(1000mV) */ {0x03040008, 0x03045008, 0x0304A008, 0x0304A008},
-};
-
 videoformat_info videoformat_parameters[] = {
 	{v640x480p_60Hz,       800,  640,   16,  96,  48,  525,  480, 10,  2, 33, 60,  25200000,   1, SYNC_NEGATIVE, SYNC_NEGATIVE},
 	{v720x480p_60Hz,       858,  720,   16,  62,  60,  525,  480,  9,  6, 30, 59,  27027000,   2, SYNC_NEGATIVE, SYNC_NEGATIVE},
@@ -98,65 +91,12 @@ void displayport_reg_sw_reset(void)
 		displayport_err("%s is timeout.\n", __func__);
 }
 
-void displayport_reg_phy_init_settings(void)
+void displayport_reg_phy_reset(u32 en)
 {
-	displayport_write(Phy_Cmn_Ctl_RBR_9, 0x00000000);
-	displayport_write(Phy_Cmn_Ctl_RBR_8, 0x01918888);
-	displayport_write(Phy_Cmn_Ctl_RBR_7, 0x88063202);
-	displayport_write(Phy_Cmn_Ctl_RBR_6, 0x00C48829);
-	displayport_write(Phy_Cmn_Ctl_RBR_5, 0xBAC00080);
-	displayport_write(Phy_Cmn_Ctl_RBR_4, 0xC00044F6);
-	displayport_write(Phy_Cmn_Ctl_RBR_3, 0x25852400);
-	displayport_write(Phy_Cmn_Ctl_RBR_2, 0x20653372);
-	displayport_write(Phy_Cmn_Ctl_RBR_1, 0x88448720);
-	displayport_write(Phy_Cmn_Ctl_RBR_0, 0x5B113E41);
-	displayport_write(Phy_Cmn_Ctl_HBR_9, 0x0);
-	displayport_write(Phy_Cmn_Ctl_HBR_8, 0x01918888);
-	displayport_write(Phy_Cmn_Ctl_HBR_7, 0x88061F62);
-	displayport_write(Phy_Cmn_Ctl_HBR_6, 0x00C48829);
-	displayport_write(Phy_Cmn_Ctl_HBR_5, 0xBAC00080);
-	displayport_write(Phy_Cmn_Ctl_HBR_4, 0xC00044F6);
-	displayport_write(Phy_Cmn_Ctl_HBR_3, 0x25852400);
-	displayport_write(Phy_Cmn_Ctl_HBR_2, 0x20653372);
-	displayport_write(Phy_Cmn_Ctl_HBR_1, 0x88448810);
-	displayport_write(Phy_Cmn_Ctl_HBR_0, 0x681468C1);
-	displayport_write(Phy_Cmn_Ctl_HBR2_9, 0x0);
-	displayport_write(Phy_Cmn_Ctl_HBR2_8, 0x01918888);
-	displayport_write(Phy_Cmn_Ctl_HBR2_7, 0x88061F62);
-	displayport_write(Phy_Cmn_Ctl_HBR2_6, 0x00C48829);
-	displayport_write(Phy_Cmn_Ctl_HBR2_5, 0xBAC00080);
-	displayport_write(Phy_Cmn_Ctl_HBR2_4, 0xC00044F6);
-	displayport_write(Phy_Cmn_Ctl_HBR2_3, 0x25852400);
-	displayport_write(Phy_Cmn_Ctl_HBR2_2, 0x20653372);
-	displayport_write(Phy_Cmn_Ctl_HBR2_1, 0x88448810);
-	displayport_write(Phy_Cmn_Ctl_HBR2_0, 0x680468C1);
-	displayport_write(Phy_Cmn_Ctl_9, 0x0);
-	displayport_write(Phy_Cmn_Ctl_8, 0x01918888);
-	displayport_write(Phy_Cmn_Ctl_7, 0x88060002);
-	displayport_write(Phy_Cmn_Ctl_6, 0x00C48829);
-	displayport_write(Phy_Cmn_Ctl_5, 0xBAC00080);
-	displayport_write(Phy_Cmn_Ctl_4, 0xC00044F6);
-	displayport_write(Phy_Cmn_Ctl_3, 0x25852400);
-	displayport_write(Phy_Cmn_Ctl_2, 0x20653372);
-	displayport_write(Phy_Cmn_Ctl_1, 0x88448810);
-	displayport_write(Phy_Cmn_Ctl_0, 0x680468C1);
-	displayport_write(Phy_LN0_Lane_Ctl, 0x01040008);
-	displayport_write(Phy_LN1_Lane_Ctl, 0x01040008);
-	displayport_write(Phy_LN2_Lane_Ctl, 0x01040008);
-	displayport_write(Phy_LN3_Lane_Ctl, 0x01040008);
-
-	displayport_write(Phy_Lane01_Emphasis, 0x05AD05AD);
-	displayport_write(Phy_Lane23_Emphasis, 0x05AD05AD);
-	displayport_write(Phy_Lane0_Amplitude, 0x05030100);
-	displayport_write(Phy_Lane1_Amplitude, 0x05030100);
-	displayport_write(Phy_Lane2_Amplitude, 0x05030100);
-	displayport_write(Phy_Lane3_Amplitude, 0x05030100);
-
-	displayport_write_mask(Phy_Lane_SFR_Ctl_Mode, ~0, CMN_CTL_SFR_CTL_MODE
-			| LN0_EMP_SFR_CTL_MODE | LN1_EMP_SFR_CTL_MODE
-			| LN2_EMP_SFR_CTL_MODE | LN3_EMP_SFR_CTL_MODE
-			| LN0_AMP_SFR_CTL_MODE | LN1_AMP_SFR_CTL_MODE
-			| LN2_AMP_SFR_CTL_MODE | LN3_AMP_SFR_CTL_MODE);
+	if (en)
+		displayport_write_mask(Phy_Resetn, 0, CMN_PHY_RSTN);
+	else
+		displayport_write_mask(Phy_Resetn, ~0, CMN_PHY_RSTN);
 }
 
 void displayport_reg_turn_on_phy(struct displayport_device *displayport)
@@ -193,89 +133,6 @@ void displayport_reg_turn_on_phy(struct displayport_device *displayport)
 	displayport_write(Phy_Enable, val);
 }
 
-void displayport_reg_check_ls_clk_status(void)
-{
-	u32 cnt = 100;
-	u32 val = 0;
-
-	while (cnt) {
-		val = displayport_read(PHY_Link_Clock_Selection);
-
-		if ((val & SFR_LS_CLK_STATUS) && (val & SFR_LS_CLK_DIV2_STATUS))
-			break;
-
-		cnt--;
-		udelay(1);
-	}
-
-	if (!cnt)
-		displayport_err("%s is timeout.\n", __func__);
-}
-
-void displayport_reg_phy_off(void)
-{
-	displayport_write_mask(PHY_Link_Clock_Selection, 1, SFR_PHY_LINK_CLK_MODE);
-	displayport_reg_check_ls_clk_status();
-
-	displayport_write(Phy_Resetn, 0);
-	displayport_write(Phy_Enable, 0);
-
-	displayport_write_mask(PHY_Link_Clock_Selection, 0, SFR_PHY_LINK_CLK_MODE);
-}
-
-void displayport_reg_phy_reset(u32 en)
-{
-	if (en)
-		displayport_write_mask(Phy_Resetn, 0, CMN_PHY_RSTN);
-	else
-		displayport_write_mask(Phy_Resetn, ~0, CMN_PHY_RSTN);
-}
-
-void displayport_reg_lane_reset(u32 en)
-{
-	u32 val = 0;
-#if defined(CONFIG_CCIC_NOTIFIER)
-	struct displayport_device *displayport = get_displayport_drvdata();
-
-	switch (displayport->ccic_notify_dp_conf) {
-	case CCIC_NOTIFY_DP_PIN_UNKNOWN:
-		break;
-
-	case CCIC_NOTIFY_DP_PIN_A:
-	case CCIC_NOTIFY_DP_PIN_C:
-	case CCIC_NOTIFY_DP_PIN_E:
-		val = LN0_PHY_RSTN | LN1_PHY_RSTN | LN2_PHY_RSTN | LN3_PHY_RSTN;
-		break;
-
-	case CCIC_NOTIFY_DP_PIN_B:
-	case CCIC_NOTIFY_DP_PIN_D:
-	case CCIC_NOTIFY_DP_PIN_F:
-		if (displayport->dp_sw_sel)
-			val = LN0_PHY_RSTN | LN1_PHY_RSTN;
-		else
-			val = LN2_PHY_RSTN | LN3_PHY_RSTN;
-		break;
-
-	default:
-		break;
-	}
-#endif
-	if (en)
-		displayport_write_mask(Phy_Resetn, 0, val);
-	else
-		displayport_write_mask(Phy_Resetn, ~0, val);
-}
-
-void displayport_reg_phy_init_1(void)
-{
-	displayport_write_mask(Phy_Resetn, ~0, CMN_INIT_RSTN);
-}
-
-void displayport_reg_phy_init_2(void)
-{
-	displayport_write_mask(Phy_Resetn, ~0, CMN_PHY_RSTN);
-}
-
 void displayport_reg_wait_phy_pll_lock(void)
 {
 	u32 cnt = 165;	/* wait for 150us + 10% margin */
@@ -289,11 +146,6 @@ void displayport_reg_wait_phy_pll_lock(void)
 
 	if (!cnt)
 		displayport_err("%s is timeout.\n", __func__);
-}
-
-void displayport_reg_phy_init_3(void)
-{
-	displayport_reg_lane_reset(0);
 }
 
 void displayport_reg_set_link_bw(u8 link_rate)
@@ -314,25 +166,6 @@ void displayport_reg_set_lane_count(u8 lane_cnt)
 u32 displayport_reg_get_lane_count(void)
 {
 	return displayport_read(DP_Main_Link_Lane_Count);
-}
-
-u32 displayport_reg_get_cmn_ctl_sfr_ctl_mode(void)
-{
-	return displayport_read_mask(Phy_Lane_SFR_Ctl_Mode, CMN_CTL_SFR_CTL_MODE);
-}
-
-void displayport_reg_set_phy_clk_bw(u8 link_rate)
-{
-	u32 val;
-
-	if (link_rate == LINK_RATE_5_4Gbps)
-		val = 0x02;
-	else if (link_rate == LINK_RATE_2_7Gbps)
-		val = 0x01;
-	else
-		val = 0x00;
-
-	displayport_write_mask(Phy_Lane_SFR_Ctl_Mode, val, PHY_CLK_BW_SET);
 }
 
 void displayport_reg_set_training_pattern(displayport_training_pattern pattern)
@@ -360,14 +193,6 @@ void displayport_reg_set_hbr2_scrambler_reset(u32 uResetCount)
 	displayport_write(HBR2_Eye_SR_High, (uResetCount>>8)&0xff);
 }
 
-void displayport_reg_set_PN_Inverse_PHY_Lane(u32 enable)
-{
-	if(enable)
-		displayport_write_mask(Phy_Swap_Ctl, 0xf, 0xf<<0);
-	else
-		displayport_write_mask(Phy_Swap_Ctl, 0x0, 0xf<<0);
-}
-
 void displayport_reg_set_pattern_PLTPAT(void)
 {
 	displayport_write(DP_Test_Pattern_0, 0xe0);     /* 11100000 */
@@ -380,114 +205,6 @@ void displayport_reg_set_pattern_PLTPAT(void)
 	displayport_write(DP_Test_Pattern_7, 0x0f);     /* 00001111 */
 	displayport_write(DP_Test_Pattern_8, 0x3e);     /* 00111110 */
 	displayport_write(DP_Test_Pattern_9, 0xf8);     /* 11111000 */
-}
-
-void displayport_reg_serdes_enable(u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	displayport_write_mask(Function_En_2, val, SERDES_FIFO_FUNC_EN_N);
-}
-
-void displayport_reg_set_phy_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_emphasis)
-{
-#if defined(CONFIG_CCIC_NOTIFIER)
-	struct displayport_device *displayport = get_displayport_drvdata();
-
-	switch (displayport->ccic_notify_dp_conf) {
-	case CCIC_NOTIFY_DP_PIN_UNKNOWN:
-		break;
-
-	case CCIC_NOTIFY_DP_PIN_A:
-		if (displayport->dp_sw_sel) {
-			displayport_write(Phy_LN0_Lane_Ctl, phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-			displayport_dbg("Phy_LN0_Lane_Ctl = %x\n", phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-
-			displayport_write(Phy_LN1_Lane_Ctl, phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-			displayport_dbg("Phy_LN1_Lane_Ctl = %x\n", phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-
-			displayport_write(Phy_LN2_Lane_Ctl, phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-			displayport_dbg("Phy_LN2_Lane_Ctl = %x\n", phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-
-			displayport_write(Phy_LN3_Lane_Ctl, phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-			displayport_dbg("Phy_LN3_Lane_Ctl = %x\n", phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-		} else {
-			displayport_write(Phy_LN0_Lane_Ctl, phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-			displayport_dbg("Phy_LN0_Lane_Ctl = %x\n", phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-
-			displayport_write(Phy_LN1_Lane_Ctl, phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-			displayport_dbg("Phy_LN1_Lane_Ctl = %x\n", phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-
-			displayport_write(Phy_LN2_Lane_Ctl, phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-			displayport_dbg("Phy_LN2_Lane_Ctl = %x\n", phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-
-			displayport_write(Phy_LN3_Lane_Ctl, phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-			displayport_dbg("Phy_LN3_Lane_Ctl = %x\n", phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-		}
-		break;
-	case CCIC_NOTIFY_DP_PIN_B:
-		if (displayport->dp_sw_sel) {
-			displayport_write(Phy_LN0_Lane_Ctl, phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-			displayport_dbg("Phy_LN0_Lane_Ctl = %x\n", phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-
-			displayport_write(Phy_LN1_Lane_Ctl, phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-			displayport_dbg("Phy_LN1_Lane_Ctl = %x\n", phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-
-			displayport_write(Phy_LN2_Lane_Ctl, phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-			displayport_dbg("Phy_LN2_Lane_Ctl = %x\n", phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-
-			displayport_write(Phy_LN3_Lane_Ctl, phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-			displayport_dbg("Phy_LN3_Lane_Ctl = %x\n", phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-		} else {
-			displayport_write(Phy_LN0_Lane_Ctl, phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-			displayport_dbg("Phy_LN0_Lane_Ctl = %x\n", phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-
-			displayport_write(Phy_LN1_Lane_Ctl, phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-			displayport_dbg("Phy_LN1_Lane_Ctl = %x\n", phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-
-			displayport_write(Phy_LN2_Lane_Ctl, phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-			displayport_dbg("Phy_LN2_Lane_Ctl = %x\n", phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-
-			displayport_write(Phy_LN3_Lane_Ctl, phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-			displayport_dbg("Phy_LN3_Lane_Ctl = %x\n", phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-		}
-		break;
-
-	case CCIC_NOTIFY_DP_PIN_C:
-	case CCIC_NOTIFY_DP_PIN_E:
-	case CCIC_NOTIFY_DP_PIN_D:
-	case CCIC_NOTIFY_DP_PIN_F:
-		if (displayport->dp_sw_sel) {
-			displayport_write(Phy_LN0_Lane_Ctl, phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-			displayport_dbg("Phy_LN0_Lane_Ctl = %x\n", phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-
-			displayport_write(Phy_LN1_Lane_Ctl, phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-			displayport_dbg("Phy_LN1_Lane_Ctl = %x\n", phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-
-			displayport_write(Phy_LN2_Lane_Ctl, phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-			displayport_dbg("Phy_LN2_Lane_Ctl = %x\n", phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-
-			displayport_write(Phy_LN3_Lane_Ctl, phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-			displayport_dbg("Phy_LN3_Lane_Ctl = %x\n", phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-		} else {
-			displayport_write(Phy_LN0_Lane_Ctl, phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-			displayport_dbg("Phy_LN0_Lane_Ctl = %x\n", phy_lane_parameters[voltage[3]][pre_emphasis[3]]);
-
-			displayport_write(Phy_LN1_Lane_Ctl, phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-			displayport_dbg("Phy_LN1_Lane_Ctl = %x\n", phy_lane_parameters[voltage[2]][pre_emphasis[2]]);
-
-			displayport_write(Phy_LN2_Lane_Ctl, phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-			displayport_dbg("Phy_LN2_Lane_Ctl = %x\n", phy_lane_parameters[voltage[1]][pre_emphasis[1]]);
-
-			displayport_write(Phy_LN3_Lane_Ctl, phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-			displayport_dbg("Phy_LN3_Lane_Ctl = %x\n", phy_lane_parameters[voltage[0]][pre_emphasis[0]]);
-		}
-		break;
-
-	default:
-		break;
-	}
-#endif
 }
 
 void displayport_reg_set_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_emphasis)
@@ -505,8 +222,6 @@ void displayport_reg_set_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_emphasis)
 
 	val = voltage[3] | (pre_emphasis[3] << 3);
 	displayport_write(DP_Lane_3_Link_Training_Control, val);
-
-	displayport_reg_set_phy_voltage_and_pre_emphasis((u8 *)voltage, (u8 *)pre_emphasis);
 }
 
 void displayport_reg_get_voltage_and_pre_emphasis_max_reach(u8 *max_reach_value)
@@ -884,7 +599,6 @@ int displayport_reg_dpcd_write(u32 address, u32 length, u8 *data)
 	mutex_lock(&displayport->aux_lock);
 	while(retry_cnt > 0) {
 		displayport_reg_aux_ch_buf_clr();
-		displayport_reg_aux_error_clr();
 		displayport_reg_aux_defer_ctrl(1);
 		displayport_reg_set_aux_reply_timeout();
 		displayport_reg_set_aux_ch_command(DPCD_WRITE);
@@ -915,7 +629,6 @@ int displayport_reg_dpcd_read(u32 address, u32 length, u8 *data)
 		displayport_reg_set_aux_ch_address(address);
 		displayport_reg_set_aux_ch_length(length);
 		displayport_reg_aux_ch_buf_clr();
-		displayport_reg_aux_error_clr();
 		displayport_reg_aux_defer_ctrl(1);
 		displayport_reg_set_aux_reply_timeout();
 		ret = displayport_reg_set_aux_ch_operation_enable();
@@ -993,7 +706,6 @@ int displayport_reg_edid_write(u8 edid_addr_offset, u32 length, u8 *data)
 
 	while(retry_cnt > 0) {
 		displayport_reg_aux_ch_buf_clr();
-		displayport_reg_aux_error_clr();
 		displayport_reg_aux_defer_ctrl(1);
 		displayport_reg_set_aux_reply_timeout();
 		displayport_reg_set_aux_ch_command(I2C_WRITE);
@@ -1058,7 +770,6 @@ int displayport_reg_edid_read(u8 edid_addr_offset, u32 length, u8 *data)
 		displayport_dbg("1st address only request in EDID read\n");
 
 		displayport_reg_aux_ch_buf_clr();
-		displayport_reg_aux_error_clr();
 		displayport_reg_aux_defer_ctrl(1);
 		displayport_reg_set_aux_reply_timeout();
 		displayport_reg_set_aux_ch_address_only_command(0);
@@ -1170,15 +881,10 @@ void displayport_reg_init(void)
 	struct displayport_device *displayport = get_displayport_drvdata();
 
 	displayport_reg_sw_reset();
-	displayport_reg_phy_init_settings();
 	displayport_reg_turn_on_phy(displayport);
 	udelay(110);	/* wait for 100us + 10% margin */
-	displayport_reg_phy_init_1();
-	udelay(22);	/* wait for 20us + 10% margin */
-	displayport_reg_phy_init_2();
 	displayport_reg_wait_phy_pll_lock();
 	udelay(165);	/* wait for 150us + 10% margin */
-	displayport_reg_phy_init_3();
 	displayport_reg_init_function_enable();
 	displayport_reg_set_interrupt(0);	/*disable irq*/
 	displayport_reg_set_lane_map_config(displayport);
@@ -1459,11 +1165,6 @@ void displayport_reg_set_audio_master_mode_enable(u32 en)
 	displayport_write_mask(General_Control, val, AUDIO_MASTER_MODE_EN);
 }
 
-void displayport_reg_set_ch_status_sw_audio_coding(u32 en)
-{
-	displayport_write_mask(General_Control, en, SW_AUD_CODING_TYPE_EN);
-}
-
 void displayport_reg_set_ch_status_ch_cnt(u32 audio_ch_cnt)
 {
 	displayport_write_mask(Audio_BIST_Channel_Status_Register_3,
@@ -1558,23 +1259,6 @@ void displayport_reg_set_ch_status_clock_accuracy(enum audio_clock_accuracy cloc
 {
 	displayport_write_mask(Audio_BIST_Channel_Status_Register_4, clock_accuracy, CLK_ACCUR);
 	displayport_write_mask(Master_audio_Packet_GP0_Status_Register_3, clock_accuracy, CLK_ACCUR);
-}
-
-void displayport_reg_set_hdcp22_lane_count(void)
-{
-	u32 link_lane_cnt;
-	u32 val = 0;
-
-	link_lane_cnt = displayport_reg_get_lane_count();
-
-	if (link_lane_cnt == 1)
-		val = 0;
-	else if (link_lane_cnt == 2)
-		val = 1;
-	else if (link_lane_cnt == 4)
-		val = 2;
-
-	displayport_write(SEC_DP_HDCP22_LANE_COUNT_APB4, val);
 }
 
 void displayport_reg_set_hdcp22_system_enable(u32 en)
