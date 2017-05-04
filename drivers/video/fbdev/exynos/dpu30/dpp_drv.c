@@ -459,7 +459,7 @@ static int dpp_set_config(struct dpp_device *dpp)
 
 	if (dpp->state == DPP_STATE_OFF) {
 		dpp_dbg("dpp%d is started\n", dpp->id);
-#if defined(CONFIG_PM)
+#if defined(CONFIG_EXYNOS_PD)
 		pm_runtime_get_sync(dpp->dev);
 #else
 		dpp_runtime_resume(dpp->dev);
@@ -526,7 +526,7 @@ static int dpp_stop(struct dpp_device *dpp, bool reset)
 	del_timer(&dpp->d.op_timer);
 	dpp_reg_deinit(dpp->id, reset);
 
-#if defined(CONFIG_PM)
+#if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_put_sync(dpp->dev);
 #else
 	dpp_runtime_suspend(dpp->dev);
