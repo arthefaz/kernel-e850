@@ -831,14 +831,46 @@ void displayport_reg_set_lane_map_config(void)
 #endif
 }
 
+void displayport_reg_lh_p_ch_power(u32 en)
+{
+	u32 cnt = 1000;	/* wait 1ms */
+	u32 state;
+
+	if (en) {
+		displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, 1, SST1_LH_PWR_ON);
+
+		do {
+			state = displayport_read_mask(SYSTEM_SST1_FUNCTION_ENABLE, SST1_LH_PWR_ON_STATUS);
+			cnt--;
+			udelay(1);
+		} while (!state && cnt);
+
+		if (!cnt)
+			displayport_err("%s is timeout.\n", __func__);
+	} else
+		displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, 0, SST1_LH_PWR_ON);
+}
+
+void displayport_reg_sw_function_en(void)
+{
+	displayport_write_mask(SYSTEM_SW_FUNCTION_ENABLE, 1, SW_FUNC_EN);
+}
+
 void displayport_reg_init(void)
 {
 	displayport_reg_sw_reset();
+
+	/* phy initialization */
+	displayport_reg_phy_reset(1);
 	displayport_reg_phy_mode_setting();
-	udelay(110);	/* wait for 100us + 10% margin */
+	displayport_reg_phy_reset(0);
 	displayport_reg_wait_phy_pll_lock();
-	udelay(165);	/* wait for 150us + 10% margin */
+
+	/* link initialization */
 	displayport_reg_function_enable();
+	displayport_reg_lh_p_ch_power(1);
+	displayport_reg_sw_function_en();
+
 	displayport_reg_set_interrupt(0);	/*disable irq*/
 	displayport_reg_set_lane_map_config();
 }
