@@ -94,25 +94,26 @@ void displayport_reg_sw_reset(void)
 void displayport_reg_phy_reset(u32 en)
 {
 	if (en)
-		displayport_write_mask(DP_REG_1, 0, CMN_INIT_RSTN);
+		displayport_phy_write_mask(DP_REG_1, 0, CMN_INIT_RSTN);
 	else
-		displayport_write_mask(DP_REG_1, ~0, CMN_INIT_RSTN);
+		displayport_phy_write_mask(DP_REG_1, ~0, CMN_INIT_RSTN);
 }
 
 void displayport_reg_phy_txclk_source_setting(u8 lane_num)
 {
-	displayport_write_mask(DP_REG_B, lane_num, LN_TXCLK_SOURCE_LANE);
+	displayport_phy_write_mask(DP_REG_B, lane_num, LN_TXCLK_SOURCE_LANE);
 }
 
 void displayport_reg_phy_mode_setting(void)
 {
-	u32 val = 0;
-
-	displayport_write_mask(CMN_REG2C, 1, MAN_USBDP_MODE_EN);
-
 #if defined(CONFIG_CCIC_NOTIFIER)
 	struct displayport_device *displayport = get_displayport_drvdata();
+#endif
+	u32 val = 0;
 
+	displayport_phy_write_mask(CMN_REG2C, 1, MAN_USBDP_MODE_EN);
+
+#if defined(CONFIG_CCIC_NOTIFIER)
 	switch (displayport->ccic_notify_dp_conf) {
 	case CCIC_NOTIFY_DP_PIN_UNKNOWN:
 		displayport_dbg("CCIC_NOTIFY_DP_PIN_UNKNOWN\n");
@@ -121,13 +122,13 @@ void displayport_reg_phy_mode_setting(void)
 	case CCIC_NOTIFY_DP_PIN_A:
 	case CCIC_NOTIFY_DP_PIN_C:
 	case CCIC_NOTIFY_DP_PIN_E:
-		displayport_write_mask(CMN_REG2C, 0x02, MAN_USBDP_MODE);
+		displayport_phy_write_mask(CMN_REG2C, 0x02, MAN_USBDP_MODE);
 
-		displayport_write_mask(CMN_REG2D, 0, USB_TX1_SEL);
-		displayport_write_mask(CMN_REG2D, 0, USB_TX3_SEL);
+		displayport_phy_write_mask(CMN_REG2D, 0, USB_TX1_SEL);
+		displayport_phy_write_mask(CMN_REG2D, 0, USB_TX3_SEL);
 
-		displayport_write_mask(DP_REG_B3, 0x02, CMN_DUMMY_CTRL_1_0);
-		displayport_write_mask(DP_REG_B3, 0x00, CMN_DUMMY_CTRL_7_6);
+		displayport_phy_write_mask(DP_REG_B3, 0x02, CMN_DUMMY_CTRL_1_0);
+		displayport_phy_write_mask(DP_REG_B3, 0x00, CMN_DUMMY_CTRL_7_6);
 
 		val = LN0_LANE_EN | LN1_LANE_EN | LN2_LANE_EN | LN3_LANE_EN;
 		displayport_reg_phy_txclk_source_setting(0);
@@ -137,24 +138,24 @@ void displayport_reg_phy_mode_setting(void)
 	case CCIC_NOTIFY_DP_PIN_D:
 	case CCIC_NOTIFY_DP_PIN_F:
 		if (displayport->dp_sw_sel) {
-			displayport_write_mask(CMN_REG2C, 0x00, MAN_USBDP_MODE);
+			displayport_phy_write_mask(CMN_REG2C, 0x00, MAN_USBDP_MODE);
 
-			displayport_write_mask(CMN_REG2D, 0, USB_TX1_SEL);
-			displayport_write_mask(CMN_REG2D, 1, USB_TX3_SEL);
+			displayport_phy_write_mask(CMN_REG2D, 0, USB_TX1_SEL);
+			displayport_phy_write_mask(CMN_REG2D, 1, USB_TX3_SEL);
 
-			displayport_write_mask(DP_REG_B3, 0x00, CMN_DUMMY_CTRL_1_0);
-			displayport_write_mask(DP_REG_B3, 0x02, CMN_DUMMY_CTRL_7_6);
+			displayport_phy_write_mask(DP_REG_B3, 0x00, CMN_DUMMY_CTRL_1_0);
+			displayport_phy_write_mask(DP_REG_B3, 0x02, CMN_DUMMY_CTRL_7_6);
 
 			val = LN0_LANE_EN | LN1_LANE_EN;
 			displayport_reg_phy_txclk_source_setting(0);
 		} else {
-			displayport_write_mask(CMN_REG2C, 0x03, MAN_USBDP_MODE);
+			displayport_phy_write_mask(CMN_REG2C, 0x03, MAN_USBDP_MODE);
 
-			displayport_write_mask(CMN_REG2D, 1, USB_TX1_SEL);
-			displayport_write_mask(CMN_REG2D, 0, USB_TX3_SEL);
+			displayport_phy_write_mask(CMN_REG2D, 1, USB_TX1_SEL);
+			displayport_phy_write_mask(CMN_REG2D, 0, USB_TX3_SEL);
 
-			displayport_write_mask(DP_REG_B3, 0x03, CMN_DUMMY_CTRL_1_0);
-			displayport_write_mask(DP_REG_B3, 0x01, CMN_DUMMY_CTRL_7_6);
+			displayport_phy_write_mask(DP_REG_B3, 0x03, CMN_DUMMY_CTRL_1_0);
+			displayport_phy_write_mask(DP_REG_B3, 0x01, CMN_DUMMY_CTRL_7_6);
 
 			val = LN2_LANE_EN | LN3_LANE_EN;
 			displayport_reg_phy_txclk_source_setting(3);
@@ -168,7 +169,7 @@ void displayport_reg_phy_mode_setting(void)
 #endif
 
 	val |= 0xF0;
-	displayport_write(DP_REG_0, val);
+	displayport_phy_write(DP_REG_0, val);
 }
 
 void displayport_reg_wait_phy_pll_lock(void)
@@ -243,11 +244,11 @@ void displayport_reg_set_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_emphasis)
 
 	val = (voltage[0] << LN0_TX_AMP_CTRL_BIT_POS) | (voltage[1] << LN1_TX_AMP_CTRL_BIT_POS)
 		| (voltage[2] << LN2_TX_AMP_CTRL_BIT_POS) | (voltage[3] << LN3_TX_AMP_CTRL_BIT_POS);
-	displayport_write(DP_REG_3, val);
+	displayport_phy_write(DP_REG_3, val);
 
 	val = (pre_emphasis[0] << LN0_TX_EMP_CTRL_BIT_POS) | (pre_emphasis[1] << LN1_TX_EMP_CTRL_BIT_POS)
 		| (pre_emphasis[2] << LN2_TX_EMP_CTRL_BIT_POS) | (pre_emphasis[3] << LN3_TX_EMP_CTRL_BIT_POS);
-	displayport_write(DP_REG_4, val);
+	displayport_phy_write(DP_REG_4, val);
 }
 
 void displayport_reg_function_enable(void)

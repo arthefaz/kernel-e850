@@ -59,7 +59,7 @@ static void displayport_dump_registers(struct displayport_device *displayport)
 	displayport_info("=== DisplayPort SFR DUMP ===\n");
 
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			displayport->res.regs, 0xC0, false);
+			displayport->res.link_regs, 0xC0, false);
 }
 
 static int displayport_remove(struct platform_device *pdev)
@@ -1926,11 +1926,25 @@ static int displayport_init_resources(struct displayport_device *displayport, st
 		return -ENOENT;
 	}
 
-	displayport_info("res: start(0x%x), end(0x%x)\n", (u32)res->start, (u32)res->end);
+	displayport_info("link_regs: start(0x%x), end(0x%x)\n", (u32)res->start, (u32)res->end);
 
-	displayport->res.regs = devm_ioremap_resource(displayport->dev, res);
-	if (!displayport->res.regs) {
-		displayport_err("failed to remap DisplayPort SFR region\n");
+	displayport->res.link_regs = devm_ioremap_resource(displayport->dev, res);
+	if (!displayport->res.link_regs) {
+		displayport_err("failed to remap DisplayPort LINK SFR region\n");
+		return -EINVAL;
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (!res) {
+		displayport_err("failed to get mem resource\n");
+		return -ENOENT;
+	}
+
+	displayport_info("phy_regs: start(0x%x), end(0x%x)\n", (u32)res->start, (u32)res->end);
+
+	displayport->res.phy_regs = devm_ioremap_resource(displayport->dev, res);
+	if (!displayport->res.phy_regs) {
+		displayport_err("failed to remap DisplayPort PHY SFR region\n");
 		return -EINVAL;
 	}
 

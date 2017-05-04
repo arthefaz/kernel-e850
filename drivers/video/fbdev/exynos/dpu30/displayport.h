@@ -75,7 +75,8 @@ enum displayport_dynamic_range_type {
 struct displayport_resources {
 	int aux_ch_mux_gpio;
 	int irq;
-	void __iomem *regs;
+	void __iomem *link_regs;
+	void __iomem *phy_regs;
 };
 
 enum displayport_aux_ch_command_type {
@@ -776,7 +777,7 @@ static inline u32 displayport_read(u32 reg_id)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
 
-	return readl(displayport->res.regs + reg_id);
+	return readl(displayport->res.link_regs + reg_id);
 }
 
 static inline u32 displayport_read_mask(u32 reg_id, u32 mask)
@@ -791,7 +792,7 @@ static inline void displayport_write(u32 reg_id, u32 val)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
 
-	writel(val, displayport->res.regs + reg_id);
+	writel(val, displayport->res.link_regs + reg_id);
 }
 
 static inline void displayport_write_mask(u32 reg_id, u32 val, u32 mask)
@@ -806,7 +807,44 @@ static inline void displayport_write_mask(u32 reg_id, u32 val, u32 mask)
 	}
 
 	val = ((val<<bit_shift) & mask) | (old & ~mask);
-	writel(val, displayport->res.regs + reg_id);
+	writel(val, displayport->res.link_regs + reg_id);
+}
+
+static inline u32 displayport_phy_read(u32 reg_id)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	return readl(displayport->res.phy_regs + reg_id);
+}
+
+static inline u32 displayport_phy_read_mask(u32 reg_id, u32 mask)
+{
+	u32 val = displayport_phy_read(reg_id);
+
+	val &= (mask);
+	return val;
+}
+
+static inline void displayport_phy_write(u32 reg_id, u32 val)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	writel(val, displayport->res.phy_regs + reg_id);
+}
+
+static inline void displayport_phy_write_mask(u32 reg_id, u32 val, u32 mask)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 old = displayport_phy_read(reg_id);
+	u32 bit_shift;
+
+	for (bit_shift = 0; bit_shift < 32; bit_shift++) {
+		if ((mask >> bit_shift) & 0x00000001)
+			break;
+	}
+
+	val = ((val<<bit_shift) & mask) | (old & ~mask);
+	writel(val, displayport->res.phy_regs + reg_id);
 }
 
 void displayport_reg_init(void);
