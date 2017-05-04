@@ -73,9 +73,10 @@ void HDCP13_dump(char *str, u8 *buf, int size)
 
 void HDCP13_Func_En(u32 en)
 {
-	u32 val = en ? 0 : ~0; /* 0 is enable */
-
-	displayport_write_mask(SYSTEM_COMMON_FUNCTION_ENABLE, val, HDCP13_FUNC_EN);
+	displayport_write_mask(SYSTEM_HPD_CONTROL, en, HPD_EVENT_CTRL_EN);
+	displayport_write_mask(SYSTEM_HPD_CONTROL, en, HPD_FORCE_EN);
+	displayport_write_mask(SYSTEM_HPD_CONTROL, en, HPD_FORCE);
+	displayport_write_mask(SYSTEM_COMMON_FUNCTION_ENABLE, en, HDCP13_FUNC_EN);
 }
 
 u8 HDCP13_Read_Bcap(void)
@@ -167,11 +168,11 @@ void HDCP13_Write_An_val(void)
 
 	HDCP13_Set_An_val();
 
-	val = displayport_read(HDCP13_AKSV_0);
+	val = displayport_read(HDCP13_AN_0);
 	for (i = 0; i < 4; i++)
 		HDCP13_DPCD.HDCP13_AN[i] = (u8)((val >> (i * 8)) & 0xFF);
 
-	val = displayport_read(HDCP13_AKSV_1);
+	val = displayport_read(HDCP13_AN_1);
 	for (i = 0; i < 4; i++)
 		HDCP13_DPCD.HDCP13_AN[i + 4] = (u8)((val >> (i * 8)) & 0xFF);
 
@@ -233,7 +234,7 @@ u8 HDCP13_CMP_Ri(void)
 
 		mdelay(RI_AVAILABLE_WAITING);
 		cnt++;
-		}
+	}
 
 	if (cnt >= RI_WAIT_COUNT) {
 		displayport_info("[HDCP 1.3] R0 not available in RX part\n");
@@ -261,6 +262,7 @@ u8 HDCP13_CMP_Ri(void)
 
 		displayport_info("[HDCP 1.3] Ri_Tx(0x%02x%02x) != Ri_Rx(0x%02x%02x)\n",
 				ri[1], ri[0], HDCP13_DPCD.HDCP13_R0[1], HDCP13_DPCD.HDCP13_R0[0]);
+
 		mdelay(RI_DELAY);
 		ret = -EFAULT;
 	}
@@ -498,7 +500,6 @@ repeater_err:
 void HDCP13_run(void)
 {
 	int retry_cnt = HDCP_RETRY_COUNT;
-	struct decon_device *decon = get_decon_drvdata(2);
 
 	while ((hdcp13_info.auth_state != HDCP13_STATE_AUTHENTICATED)
 			&& (hdcp13_info.auth_state != HDCP13_STATE_SECOND_AUTH_DONE)
@@ -513,7 +514,6 @@ void HDCP13_run(void)
 		HDCP13_Repeater_Set();
 
 		displayport_dbg("[HDCP 1.3] SW Auth.\n");
-		/*displayport_reg_set_interrupt_mask(HDCP_R0_READY_INT_MASK, 1);*/
 
 		if (HDCP13_Read_Bksv() != 0) {
 			displayport_info("[HDCP 1.3] ReAuthentication Start!!!\n");
@@ -538,10 +538,6 @@ void HDCP13_run(void)
 			displayport_reg_video_mute(0);
 		}
 
-		/* wait 2 frames for hdcp 1.3 encryption enable */
-		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
-		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
-
 		HDCP13_Encryption_con(1);
 		displayport_dbg("[HDCP 1.3] HDCP 1st Authentication done!!!\n");
 
@@ -561,6 +557,4 @@ HDCP13_END:
 		HDCP13_Encryption_con(0);
 		displayport_dbg("[HDCP 1.3] HDCP Authentication fail!!!\n");
 	}
-
-	/*HDCP3_IRQ_Mask();*/
 }
