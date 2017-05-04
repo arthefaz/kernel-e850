@@ -815,7 +815,7 @@ int decon_exit_hiber(struct decon_device *decon)
 	if (decon->state != DECON_STATE_HIBER)
 		goto err;
 
-#if defined(CONFIG_PM)
+#if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_get_sync(decon->dev);
 #else
 	decon_runtime_resume(decon->dev);
@@ -942,7 +942,7 @@ int decon_enter_hiber(struct decon_device *decon)
 		}
 	}
 
-#if defined(CONFIG_PM)
+#if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_put_sync(decon->dev);
 #else
 	decon_runtime_suspend(decon->dev);
