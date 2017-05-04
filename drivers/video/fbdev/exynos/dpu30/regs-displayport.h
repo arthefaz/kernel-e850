@@ -22,6 +22,13 @@
 #define HDCP_FUNC_EN_N				(1 << 2)
 #define SOFTWARE_FUNC_EN_N			(1 << 0)
 
+#define SYSTEM_COMMON_FUNCTION_ENABLE		(0x0018)
+#define HDCP22_FUNC_EN				(0x01 << 4)
+#define HDCP13_FUNC_EN				(0x01 << 3)
+#define GTC_FUNC_EN				(0x01 << 2)
+#define PCS_FUNC_EN				(0x01 << 1)
+#define AUX_FUNC_EN				(0x01 << 0)
+
 #define Function_En_2                           (0x1C)
 #define VIDEO_CAPTURE_FUNC_EN_N_STR1		(1 << 6)
 #define VIDEO_FUNC_EN_N_STR1			(1 << 5)
@@ -30,11 +37,6 @@
 #define AUX_FUNC_EN_N		                (1 << 2)
 #define SERDES_FIFO_FUNC_EN_N			(1 << 1)
 #define LS_CLOCK_DOMAIN_FUNC_EN_N		(1 << 0)
-
-#define Function_En_3                           (0x20)
-#define HDCP22_BYPASS_MODE		        (1 << 2)
-#define HDCP22_ENC_EN				(1 << 1)
-#define HDCP22_MODE		                (1 << 0)
 
 #define Function_En_4                           (0x24)
 #define STRM_CLK_EN		                (1 << 0)
@@ -1065,236 +1067,140 @@
 #define TP_INT1                                 (0xF << 4)
 #define TP_INT2                                 (0xF << 0)
 
-#define HDCP_Status_Register                    (0x6400)
-#define REAUTH_REQUEST                          (1 << 7)
-#define AUTH_FAIL                               (1 << 6)
-#define HW_1ST_AUTHEN_PASS                      (1 << 5)
-#define BKSV_VALID                              (1 << 3)
-#define ENCRYPT                                 (1 << 2)
-#define HW_AUTHEN_PASS                          (1 << 1)
-#define AKSV_VALID                              (1 << 0)
+#define HDCP13_STATUS				(0x4000)
+#define REAUTH_REQUEST				(0x01 << 7)
+#define AUTH_FAIL				(0x01 << 6)
+#define HW_1ST_AUTHEN_PASS			(0x01 << 5)
+#define BKSV_VALID				(0x01 << 3)
+#define ENCRYPT					(0x01 << 2)
+#define HW_AUTHEN_PASS				(0x01 << 1)
+#define AKSV_VALID				(0x01 << 0)
 
-#define HDCP_Control_Register_0                 (0x6404)
-#define SW_STORE_AN                             (1 << 7)
-#define SW_RX_REPEATER                          (1 << 6)
-#define HW_RE_AUTHEN                            (1 << 5)
-#define SW_AUTH_OK                              (1 << 4)
-#define HW_AUTH_EN                              (1 << 3)
-#define HDCP_ENC_EN                             (1 << 2)
-#define HW_1ST_PART_ATHENTICATION_EN            (1 << 1)
-#define HW_2ND_PART_ATHENTICATION_EN            (1 << 0)
+#define HDCP13_CONTROL_0			(0x4004)
+#define SW_STORE_AN				(0x01 << 7)
+#define SW_RX_REPEATER				(0x01 << 6)
+#define HW_RE_AUTHEN				(0x01 << 5)
+#define SW_AUTH_OK				(0x01 << 4)
+#define HW_AUTH_EN				(0x01 << 3)
+#define HDCP13_ENC_EN				(0x01 << 2)
+#define HW_1ST_PART_ATHENTICATION_EN		(0x01 << 1)
+#define HW_2ND_PART_ATHENTICATION_EN		(0x01 << 0)
 
-#define HDCP_Control_Register_1                 (0x6408)
-#define DPCD_REV_1_2                            (1 << 3)
-#define HW_AUTH_POLLING_MODE                    (1 << 1)
-#define HDCP_INT                                (1 << 0)
+#define HDCP13_CONTROL_1			(0x4008)
+#define DPCD_REV_1_2				(0x01 << 3)
+#define HW_AUTH_POLLING_MODE			(0x01 << 1)
+#define HDCP_INT				(0x01 << 0)
 
-#define HDCP_AKSV_Register_0                    (0x6414)
-#define AKSV0                                   (0xFF << 0)
+#define HDCP13_AKSV_0				(0x4010)
+#define AKSV0					(0xFFFFFFFF << 0)
 
-#define HDCP_AKSV_Register_1                    (0x6418)
-#define AKSV1                                   (0xFF << 0)
+#define HDCP13_AKSV_1				(0x4014)
+#define AKSV1					(0xFF << 0)
 
-#define HDCP_AKSV_Register_2                    (0x641C)
-#define AKSV2                                   (0xFF << 0)
+#define HDCP13_AN_0				(0x4018)
+#define AN0					(0xFFFFFFFF << 0)
 
-#define HDCP_AKSV_Register_3                    (0x6420)
-#define AKSV3                                   (0xFF << 0)
+#define HDCP13_AN_1				(0x401C)
+#define AN1					(0xFFFFFFFF << 0)
 
-#define HDCP_AKSV_Register_4                    (0x6424)
-#define AKSV3                                   (0xFF << 0)
+#define HDCP13_BKSV_0				(0x4020)
+#define BKSV0					(0xFFFFFFFF << 0)
 
-#define HDCP_AN_Register_0                      (0x6428)
-#define AN0                                     (0xFF << 0)
+#define HDCP13_BKSV_1				(0x4024)
+#define BKSV1					(0xFF << 0)
 
-#define HDCP_AN_Register_1                      (0x642C)
-#define AN1                                     (0xFF << 0)
+#define HDCP13_R0_REG				(0x4028)
+#define R0					(0xFFFF << 0)
 
-#define HDCP_AN_Register_2                      (0x6430)
-#define AN2                                     (0xFF << 0)
+#define HDCP13_BCAPS				(0x4030)
+#define BCAPS					(0xFF << 0)
 
-#define HDCP_AN_Register_3                      (0x6434)
-#define AN3                                     (0xFF << 0)
+#define HDCP13_BINFO_REG			(0x4034)
+#define BINFO					(0xFF << 0)
 
-#define HDCP_AN_Register_4                      (0x6438)
-#define AN4                                     (0xFF << 0)
+#define HDCP13_DEBUG_CONTROL			(0x4038)
+#define CHECK_KSV				(0x01 << 2)
+#define REVOCATION_CHK_DONE			(0x01 << 1)
+#define HW_SKIP_RPT_ZERO_DEV			(0x01 << 0)
 
-#define HDCP_AN_Register_5                      (0x643C)
-#define AN5                                     (0xFF << 0)
+#define HDCP13_AUTH_DBG				(0x4040)
+#define DDC_STATE				(0x07 << 5)
+#define AUTH_STATE				(0x1F << 0)
 
-#define HDCP_AN_Register_6                      (0x6440)
-#define AN6                                     (0xFF << 0)
+#define HDCP13_ENC_DBG				(0x4044)
+#define ENC_STATE				(0x07 << 3)
 
-#define HDCP_AN_Register_7                      (0x6444)
-#define AN7                                     (0xFF << 0)
+#define HDCP13_AM0_0				(0x4048)
+#define AM0_0					(0xFFFFFFFF << 0)
 
-#define HDCP_BKSV_Register_0                    (0x6448)
-#define BKSV0                                   (0xFF << 0)
+#define HDCP13_AM0_1				(0x4048)
+#define AM0_1					(0xFFFFFFFF << 0)
 
-#define HDCP_BKSV_Register_1                    (0x644C)
-#define BKSV1                                   (0xFF << 0)
+#define HDCP13_WAIT_R0_TIME			(0x4054)
+#define HW_WRITE_AKSV_WAIT			(0xFF << 0)
 
-#define HDCP_BKSV_Register_2                    (0x6450)
-#define BKSV2                                   (0xFF << 0)
+#define HDCP13_LINK_CHK_TIME			(0x4058)
+#define LINK_CHK_TIMER				(0xFF << 0)
 
-#define HDCP_BKSV_Register_3                    (0x6454)
-#define BKSV3                                   (0xFF << 0)
+#define HDCP13_REPEATER_READY_WAIT_TIME		(0x405C)
+#define HW_RPTR_RDY_TIMER			(0xFF << 0)
 
-#define HDCP_BKSV_Register_4                    (0x6458)
-#define BKSV4                                   (0xFF << 0)
+#define HDCP13_READY_POLL_TIME			(0x4060)
+#define POLLING_TIMER_TH			(0xFF << 0)
 
-#define HDCP_R0_Register_0                      (0x645C)
-#define R0_0                                    (0xFF << 0)
+#define HDCP13_STREAM_ID_ENCRYPTION_CONTROL	(0x4068)
+#define STRM_ID_ENC_UPDATE			(0x01 << 7)
+#define STRM_ID_ENC				(0x7F << 0)
 
-#define HDCP_R0_Register_1                      (0x6460)
-#define R0_1                                    (0xFF << 0)
+#define HDCP22_SYS_EN				(0x4400)
+#define SYSTEM_ENABLE				(0x01 << 0)
 
-#define HDCP_PJ_Register_0                      (0x6464)
-#define PJ_0                                    (0xFF << 0)
+#define HDCP22_CONTROL				(0x4404)
+#define HDCP22_BYPASS_MODE			(0x01 << 1)
+#define HDCP22_ENC_EN				(0x01 << 0)
 
-#define Receiver_BCAPS_Register                 (0x6468)
-#define BCAPS                                   (0xFF << 0)
+#define HDCP22_CONTROL				(0x4404)
+#define HDCP22_BYPASS_MODE			(0x01 << 1)
+#define HDCP22_ENC_EN				(0x01 << 0)
 
-#define HDCP_BINFO_Register_0                   (0x646C)
-#define BINFO0                                  (0xFF << 0)
+#define HDCP22_STREAM_TYPE			(0x4454)
+#define STREAM_TYPE				(0x01 << 0)
 
-#define HDCP_BINFO_Register_1                   (0x6470)
-#define BINFO1                                  (0xFF << 0)
+#define HDCP22_LVP				(0x4460)
+#define LINK_VERIFICATION_PATTERN		(0xFFFF << 0)
 
-#define HDCP_Debug_Control_Register             (0x6474)
-#define CHECK_KSV                               (1 << 2)
-#define REVOCATION_CHK_DONE                     (1 << 1)
-#define HW_SKIP_RPT_ZERO_DEV                    (1 << 0)
+#define HDCP22_LVP_GEN				(0x4464)
+#define LVP_GEN					(0x01 << 0)
 
-#define HDCP_Debug_Control_Register             (0x6474)
-#define CHECK_KSV                               (1 << 2)
-#define REVOCATION_CHK_DONE                     (1 << 1)
-#define HW_SKIP_RPT_ZERO_DEV                    (1 << 0)
+#define HDCP22_LVP_CNT_KEEP			(0x4468)
+#define LVP_COUNT_KEEP_ENABLE			(0x01 << 0)
 
-#define SPSRAM_Access_Configure_Register_0      (0x6488)
-#define BYPASS_HDCP                             (1 << 7)
-#define KEY_MODE                                (1 << 6)
+#define HDCP22_LANE_DECODE_CTRL			(0x4470)
+#define ENHANCED_FRAMING_MODE			(0x01 << 3)
+#define LVP_EN_DECODE_ENABLE			(0x01 << 2)
+#define ENCRYPTION_SIGNAL_DECODE_ENABLE		(0x01 << 1)
+#define LANE_DECODE_ENABLE			(0x01 << 0)
 
-#define HDCP_AUTH_DBG_Register                  (0x649C)
-#define HDCP_DDC_STATE                          (7 << 5)
-#define HDCP_AUCH_STATE                         (0x1F << 0)
+#define HDCP22_SR_VALUE				(0x4480)
+#define SR_VALUE				(0xFF << 0)
 
-#define HDCP_ENC_DBG_Register                   (0x64A0)
-#define HDCP_ENC_STATE                          (7 << 3)
+#define HDCP22_CP_VALUE				(0x4484)
+#define CP_VALUE				(0xFF << 0)
 
-#define HDCP_AM0_Register_0                     (0x64C0)
-#define HDCP_AM0_0                              (0xFF << 0)
+#define HDCP22_BF_VALUE				(0x4488)
+#define BF_VALUE				(0xFF << 0)
 
-#define HDCP_AM0_Register_1                     (0x64C4)
-#define HDCP_AM0_1                              (0xFF << 0)
+#define HDCP22_BS_VALUE				(0x448C)
+#define BS_VALUE				(0xFF << 0)
 
-#define HDCP_AM0_Register_2                     (0x64C8)
-#define HDCP_AM0_2                              (0xFF << 0)
+#define HDCP22_RIV_XOR				(0x4490)
+#define RIV_XOR_LOCATION			(0x01 << 0)
 
-#define HDCP_AM0_Register_3                     (0x64CC)
-#define HDCP_AM0_3                              (0xFF << 0)
+#define HDCP22_RIV_0				(0x4500)
+#define RIV_KEY_0				(0xFFFFFFFF << 0)
 
-#define HDCP_AM0_Register_4                     (0x64D0)
-#define HDCP_AM0_4                              (0xFF << 0)
-
-#define HDCP_AM0_Register_5                     (0x64D4)
-#define HDCP_AM0_5                              (0xFF << 0)
-
-#define HDCP_AM0_Register_6                     (0x64D8)
-#define HDCP_AM0_6                              (0xFF << 0)
-
-#define HDCP_AM0_Register_7                     (0x64DC)
-#define HDCP_AM0_7                              (0xFF << 0)
-
-#define HDCP_KEY_VALID_STATUS                   (0x64E0)
-#define HDCP_KEY_VALID_SYNC_IN_I2C_CLK          (1 << 0)
-
-#define HDCP_Wait_R0_Timing_Register            (0x6500)
-#define HW_WRITE_AKSV_WAIT                      (0xFF << 0)
-
-#define Link_Chk_Timer_Register                 (0x6504)
-#define LINK_CHK_TIMER                          (0xFF << 0)
-
-#define HDCP_Repeater_Ready_Wait_Timer_Register (0x6508)
-#define HW_RPTR_RDY_TIMER                       (0xFF << 0)
-
-#define Ready_Poll_Timer_Register               (0x650C)
-#define POLLING_TIMER_TH                        (0xFF << 0)
-
-#define Stream_ID_Encryption_Control_Register   (0x6514)
-#define STRM_ID_ENC                             (0x7F << 0)
-
-#define SEC_DP_HDCP22_SYS_EN_APB4               (0x7000)
-#define System_Enable                           (1 << 0)
-
-#define SEC_DP_HDCP22_MST_MODE_APB4             (0x7050)
-#define MST_Mode                                (1 << 0)
-
-#define SEC_DP_HDCP22_LVP_APB4                  (0x7054)
-#define link_verification_pattern               (0xFFFF << 0)
-
-#define SEC_DP_HDCP22_LVP_GEN_APB4              (0x7058)
-#define lvp_gen                                 (1 << 0)
-
-#define SEC_DP_HDCP22_LANE_COUNT_APB4           (0x705C)
-#define lane_count                              (3 << 0)
-
-#define SEC_DP_HDCP22_STREAM_TYPE_APB4          (0x7060)
-#define Stream_type                             (1 << 0)
-
-#define SEC_DP_HDCP22_LVP_CNT_KEEP_APB4         (0x7080)
-#define LVP_Count_Keep_Enable                   (1 << 0)
-
-#define SEC_DP_HDCP22_LANE_DECODE_CTRL          (0x7084)
-#define Enhanced_Framing_Mode                   (1 << 3)
-#define LVP_En_Decode_Enable                    (1 << 2)
-#define Encryption_Signal_Decode_Enable         (1 << 1)
-#define Lane_Decode_Enable                      (1 << 0)
-
-#define SEC_DP_HDCP22_SR_VALUE                  (0x7088)
-#define SR_Value                                (0xFF << 0)
-
-#define SEC_DP_HDCP22_CP_VALUE                  (0x708C)
-#define CP_Value                                (0xFF << 0)
-
-#define SEC_DP_HDCP22_BF_VALUE                  (0x7090)
-#define BF_Value                                (0xFF << 0)
-
-#define SEC_DP_HDCP22_BS_VALUE                  (0x7094)
-#define BS_Value                                (0xFF << 0)
-
-#define SEC_DP_HDCP22_RIV_XOR                   (0x7098)
-#define Riv_Xor_Location                        (1 << 0)
-
-#define SEC_DP_HDCP22_RIV_0_APB4                (0x7100)
-#define Riv_Key_0_Register                      (0xFFFFFFFF << 0)
-
-#define SEC_DP_HDCP22_RIV_1_APB4                (0x7104)
-#define Riv_Key_1_Register                      (0xFFFFFFFF << 0)
-
-#define SEC_DP_HDCP22_KS_KEY_0_APB4_SECURE      (0x7200)
-#define Ks_Key_0_Register                       (0xFFFFFFFF << 0)
-
-#define SEC_DP_HDCP22_KS_KEY_1_APB4_SECURE      (0x7204)
-#define Ks_Key_1_Register                       (0xFFFFFFFF << 0)
-
-#define SEC_DP_HDCP22_KS_KEY_2_APB4_SECURE      (0x7208)
-#define Ks_Key_2_Register                       (0xFFFFFFFF << 0)
-
-#define SEC_DP_HDCP22_KS_KEY_3_APB4_SECURE      (0x720C)
-#define Ks_Key_3_Register                       (0xFFFFFFFF << 0)
-
-#define SEC_DP_HDCP22_AES_KEY_0                 (0x7210)
-#define AES_Pairing_Key_0_Register              (0xFFFFFFFF << 0)
-
-#define SEC_DP_HDCP22_AES_KEY_1                 (0x7214)
-#define AES_Pairing_Key_1_Register              (0xFFFFFFFF << 0)
-
-#define SEC_DP_HDCP22_AES_KEY_2                 (0x7218)
-#define AES_Pairing_Key_2_Register              (0xFFFFFFFF << 0)
-
-#define SEC_DP_HDCP22_AES_KEY_3                 (0x721C)
-#define AES_Pairing_Key_3_Register              (0xFFFFFFFF << 0)
+#define HDCP22_RIV_1				(0x4504)
+#define RIV_KEY_1				(0xFFFFFFFF << 0)
 
 #define CMN_REG2C				(0x00B0)
 #define MAN_USBDP_MODE				(0x03 << 1)
