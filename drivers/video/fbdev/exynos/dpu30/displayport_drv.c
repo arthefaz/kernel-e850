@@ -16,7 +16,6 @@
 #include <linux/mutex.h>
 #include <linux/wait.h>
 #include <linux/platform_device.h>
-#include <linux/phy/phy.h>
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/delay.h>
