@@ -1602,7 +1602,7 @@ static int displayport_enable(struct displayport_device *displayport)
 		if(displayport->dfp_type != DFP_TYPE_DP)
 			bpc = BPC_8;
 
-		displayport_reg_set_video_configuration(bpc);
+		displayport_reg_set_video_configuration(displayport->current_videoformat, bpc, dyn_range);
 	}
 
 	displayport_set_avi_infoframe();

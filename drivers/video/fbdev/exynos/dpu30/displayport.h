@@ -819,7 +819,7 @@ u32 displayport_reg_get_interrupt_and_clear(u32 interrupt_status_register);
 void displayport_reg_start(void);
 void displayport_reg_video_mute(u32 en);
 void displayport_reg_stop(void);
-void displayport_reg_set_video_configuration(u8 bpc);
+void displayport_reg_set_video_configuration(videoformat video_format, u8 bpc, u8 range);
 int displayport_reg_dpcd_write(u32 address, u32 length, u8 *data);
 int displayport_reg_dpcd_read(u32 address, u32 length, u8 *data);
 int displayport_reg_dpcd_write_burst(u32 address, u32 length, u8 *data);

@@ -407,15 +407,15 @@ u32 displayport_reg_get_interrupt_and_clear(u32 interrupt_status_register)
 
 void displayport_reg_set_daynamic_range(enum displayport_dynamic_range_type dynamic_range)
 {
-	displayport_write_mask(Video_Control_2, dynamic_range, IN_D_RANGE);
+	displayport_write_mask(SST1_VIDEO_CONTROL, dynamic_range, DYNAMIC_RANGE_MODE);
 }
 
 void displayport_reg_set_video_bist_mode(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write_mask(DP_System_Control_3, val, F_VALID|VALID_CTRL);
-	displayport_write_mask(Video_Control_4, val, BIST_EN);
+	displayport_write_mask(SST1_VIDEO_CONTROL, val, STRM_VALID_FORCE | STRM_VALID_CTRL);
+	displayport_write_mask(SST1_VIDEO_BIST_CONTROL, val, BIST_EN);
 }
 
 void displayport_reg_set_audio_bist_mode(u32 en)
@@ -430,55 +430,35 @@ void displayport_reg_video_format_register_setting(videoformat video_format)
 {
 	u32 val;
 
-	val = videoformat_parameters[video_format].v_total & TOTAL_LINE_CFG_L;
-	displayport_write_mask(Total_Line_Low_Byte, val, TOTAL_LINE_CFG_L);
-	val = (videoformat_parameters[video_format].v_total >> 8) & TOTAL_LINE_CFG_H;
-	displayport_write_mask(Total_Line_High_Byte, val, TOTAL_LINE_CFG_H);
+	val = videoformat_parameters[video_format].v_total;
+	displayport_write(SST1_VIDEO_VERTICAL_TOTAL_PIXELS, val);
 
-	val = videoformat_parameters[video_format].v_active & ACTIVE_LINE_CFG_L;
-	displayport_write_mask(Active_Line_Low_Byte, val, ACTIVE_LINE_CFG_L);
-	val = (videoformat_parameters[video_format].v_active >> 8) & ACTIVE_LINE_CFG_H;
-	displayport_write_mask(Active_Line_High_Byte, val, ACTIVE_LINE_CFG_H);
+	val = videoformat_parameters[video_format].h_total;
+	displayport_write(SST1_VIDEO_HORIZONTAL_TOTAL_PIXELS, val);
+
+	val = videoformat_parameters[video_format].v_active;
+	displayport_write(SST1_VIDEO_VERTICAL_ACTIVE, val);
 
 	val = videoformat_parameters[video_format].v_f_porch;
-	displayport_write_mask(Vertical_Front_Porch, val, V_F_PORCH_CFG);
-
-	val = videoformat_parameters[video_format].v_sync;
-	displayport_write_mask(Vertical_Sync_Width, val, V_SYNC_CFG);
+	displayport_write(SST1_VIDEO_VERTICAL_FRONT_PORCH, val);
 
 	val = videoformat_parameters[video_format].v_b_porch;
-	displayport_write_mask(Vertical_Back_Porch, val, V_B_PORCH_CFG);
+	displayport_write(SST1_VIDEO_VERTICAL_BACK_PORCH, val);
 
-	val = videoformat_parameters[video_format].h_total & TOTAL_PIXEL_CFG_L;
-	displayport_write_mask(Total_Pixel_Low_Byte, val, TOTAL_PIXEL_CFG_L);
-	val = (videoformat_parameters[video_format].h_total >> 8) & TOTAL_PIXEL_CFG_H;
-	displayport_write_mask(Total_Pixel_High_Byte, val, TOTAL_PIXEL_CFG_H);
+	val = videoformat_parameters[video_format].h_active;
+	displayport_write(SST1_VIDEO_HORIZONTAL_ACTIVE, val);
 
-	val = videoformat_parameters[video_format].h_active & ACTIVE_PIXEL_CFG_L;
-	displayport_write_mask(Active_Pixel_Low_Byte, val, ACTIVE_PIXEL_CFG_L);
-	val = (videoformat_parameters[video_format].h_active >> 8) & ACTIVE_PIXEL_CFG_H;
-	displayport_write_mask(Active_Pixel_High_Byte, val, ACTIVE_PIXEL_CFG_H);
+	val = videoformat_parameters[video_format].h_f_porch;
+	displayport_write(SST1_VIDEO_HORIZONTAL_FRONT_PORCH, val);
 
-	val = videoformat_parameters[video_format].h_f_porch & H_F_PORCH_CFG_L;
-	displayport_write_mask(Horizon_Front_Porch_Low_Byte, val, H_F_PORCH_CFG_L);
-	val = (videoformat_parameters[video_format].h_f_porch >> 8) & H_F_PORCH_CFG_H;
-	displayport_write_mask(Horizon_Front_Porch_High_Byte, val, H_F_PORCH_CFG_H);
-
-	val = videoformat_parameters[video_format].h_sync & H_SYNC_CFG_L;
-	displayport_write_mask(Horizon_Sync_Width_Low_Byte, val, H_SYNC_CFG_L);
-	val = (videoformat_parameters[video_format].h_sync >> 8) & H_SYNC_CFG_H;
-	displayport_write_mask(Horizon_Sync_Width_High_Byte, val, H_SYNC_CFG_H);
-
-	val = videoformat_parameters[video_format].h_b_porch & H_B_PORCH_CFG_L;
-	displayport_write_mask(Horizon_Back_Porch_Low_Byte, val, H_B_PORCH_CFG_L);
-	val = (videoformat_parameters[video_format].h_b_porch >> 8) & H_B_PORCH_CFG_H;
-	displayport_write_mask(Horizon_Back_Porch_High_Byte, val, H_B_PORCH_CFG_H);
+	val = videoformat_parameters[video_format].h_b_porch;
+	displayport_write(SST1_VIDEO_HORIZONTAL_BACK_PORCH, val);
 
 	val = videoformat_parameters[video_format].v_sync_pol;
-	displayport_write_mask(Video_Control_10, val, VSYNC_P_CFG);
+	displayport_write_mask(SST1_VIDEO_CONTROL, val, VSYNC_POLARITY);
 
 	val = videoformat_parameters[video_format].h_sync_pol;
-	displayport_write_mask(Video_Control_10, val, HSYNC_P_CFG);
+	displayport_write_mask(SST1_VIDEO_CONTROL, val, HSYNC_POLARITY);
 }
 
 void displayport_reg_enable_interface_crc(u32 en)
@@ -917,26 +897,20 @@ void displayport_reg_init(void)
 	displayport_reg_set_lane_map_config(displayport);
 }
 
-void displayport_reg_set_video_configuration(u8 bpc)
+void displayport_reg_set_video_configuration(videoformat video_format, u8 bpc, u8 range)
 {
-	displayport_reg_set_daynamic_range(CEA_RANGE);
-	displayport_write_mask(Video_Control_2, (bpc)?1:0, IN_BPC);	/* 0:6bits, 1:8bits */
-	displayport_write_mask(Video_Control_2, 0, IN_COLOR_F);		/* RGB */
-	displayport_write_mask(Video_Control_10, 0, F_SEL);		/* Video Format Auto Calculation mode */
-	displayport_write_mask(DP_System_Control_4, 0, FIX_M_VID);	/* M_VID Auto Calculation mode */
+	displayport_reg_set_daynamic_range((range)?CEA_RANGE:VESA_RANGE);
+	displayport_write_mask(SST1_VIDEO_CONTROL, bpc, BPC);	/* 0 : 6bits, 1 : 8bits */
+	displayport_write_mask(SST1_VIDEO_CONTROL, 0, COLOR_FORMAT);	/* RGB */
+	displayport_reg_video_format_register_setting(video_format);
+	displayport_write_mask(SST1_VIDEO_MASTER_TIMING_GEN, 1, VIDEO_MASTER_TIME_GEN);
+	displayport_write_mask(SST1_MAIN_CONTROL, 0, VIDEO_MODE);
 }
 
 void displayport_reg_set_bist_video_configuration(videoformat video_format, u8 bpc, u8 type, u8 range)
 {
-	displayport_reg_set_daynamic_range((range)?CEA_RANGE:VESA_RANGE);
-	displayport_write_mask(Video_Control_2, (bpc)?1:0, IN_BPC);	/* 0:6bits, 1:8bits */
-	displayport_write_mask(Video_Control_2, 0, IN_COLOR_F);		/* RGB */
-	displayport_write_mask(Video_Control_10, 0, F_SEL);		/* 0 in bist mode */
-	/*displayport_write_mask(Video_Control_10, 1, VSYNC_P_CFG);*/	/*Vertical Pulse Polarity: negative*/
-	/*displayport_write_mask(Video_Control_10, 1, HSYNC_P_CFG);*/	/*Horizontal Pulse Polarity: negative*/
-	displayport_reg_video_format_register_setting(video_format);
-	displayport_write_mask(DP_System_Control_4, 0, FIX_M_VID);	/* M_VID Auto Calculation mode */
-	displayport_write_mask(Video_Control_4, type, BIST_TYPE);	/* Display BIST type */
+	displayport_reg_set_video_configuration(video_format, bpc, range);
+	displayport_write_mask(SST1_VIDEO_BIST_CONTROL, type, BIST_TYPE);	/* Display BIST type */
 	displayport_reg_set_video_bist_mode(1);
 
 	displayport_info("set bist video config format:%d range:%d bpc:%d type:%d\n",
@@ -945,17 +919,13 @@ void displayport_reg_set_bist_video_configuration(videoformat video_format, u8 b
 
 void displayport_reg_set_bist_video_configuration_for_blue_screen(videoformat video_format)
 {
-	displayport_reg_set_daynamic_range(CEA_RANGE);
-	displayport_write_mask(Video_Control_2, 1, IN_BPC);		/* 8 bits */
-	displayport_write_mask(Video_Control_2, 0, IN_COLOR_F);		/* RGB */
-	displayport_write_mask(Video_Control_10, 0, F_SEL);		/* 0 in bist mode */
-	displayport_reg_video_format_register_setting(video_format);
-	displayport_write_mask(DP_System_Control_4, 0, FIX_M_VID);	/* M_VID Auto Calculation mode */
-	displayport_write(HOST_BIST_DATA_R_ADD, 0x00);
-	displayport_write(HOST_BIST_DATA_G_ADD, 0x00);
-	displayport_write(HOST_BIST_DATA_B_ADD, 0xFF);
-	displayport_write_mask(Video_Control_4, 1, USER_BIST_DATA_EN);
+	displayport_reg_set_video_configuration(video_format, BPC_8, CEA_RANGE); /* 8 bits */
+	displayport_write(SST1_VIDEO_BIST_USER_DATA_R, 0x00);
+	displayport_write(SST1_VIDEO_BIST_USER_DATA_G, 0x00);
+	displayport_write(SST1_VIDEO_BIST_USER_DATA_B, 0xFF);
+	displayport_write_mask(SST1_VIDEO_BIST_CONTROL, 1, BIST_USER_DATA_EN);
 	displayport_reg_set_video_bist_mode(1);
+
 	displayport_dbg("set bist video config for blue screen\n");
 }
 
@@ -983,9 +953,8 @@ void displayport_reg_set_audio_infoframe(struct infoframe audio_infoframe, u32 e
 
 void displayport_reg_start(void)
 {
-	displayport_write_mask(Video_Control_1, 1, VIDEO_EN);
+	displayport_write_mask(SST1_VIDEO_ENABLE, 1, VIDEO_EN);
 }
-
 
 void displayport_reg_video_mute(u32 en)
 {
@@ -996,7 +965,7 @@ void displayport_reg_video_mute(u32 en)
 
 void displayport_reg_stop(void)
 {
-	displayport_write_mask(Video_Control_1, 0, VIDEO_EN);
+	displayport_write_mask(SST1_VIDEO_ENABLE, 0, VIDEO_EN);
 }
 
 /* Set SA CRC, For Sorting Vector */
@@ -1045,23 +1014,10 @@ int displayport_reg_get_stand_alone_crc_result(void)
 /* D_range change from CEA_RANGE to VESA_RANGE */
 void displayport_reg_set_sa_bist_mode(u32 en)
 {
-	u32 val = en ? ~0 : 0;
-
-	displayport_write_mask(DP_System_Control_3, val, F_VALID|VALID_CTRL);
-	displayport_write_mask(Video_Control_4, val, BIST_EN);
 }
 
 void displayport_reg_set_sa_bist_video_configuration(videoformat video_format, u32 bist_type, u32 bist_width)
 {
-	displayport_reg_set_daynamic_range(VESA_RANGE);
-	displayport_write_mask(Video_Control_2, 1, IN_BPC);		/* 8 bits */
-	displayport_write_mask(Video_Control_2, 0, IN_COLOR_F);		/* RGB */
-	displayport_write_mask(Video_Control_10, 0, F_SEL);		/* 0 in bist mode */
-	displayport_reg_video_format_register_setting(video_format);
-	displayport_write_mask(DP_System_Control_4, 0, FIX_M_VID);	/* M_VID Auto Calculation mode */
-	displayport_write_mask(Video_Control_4, bist_type, BIST_TYPE);
-	displayport_write_mask(Video_Control_4, bist_width, BIST_WIDTH);
-	displayport_reg_set_sa_bist_mode(1);
 }
 
 /* SA CRC Condition : 8bpc, 4lane, 640x10 size, BIST_TYPE=0, BIST_WIDTH =0 */

@@ -256,56 +256,6 @@
 #define Test_Pattern_Register                   (0x8A0)
 #define TEST_PATTERN                            (0x3F << 0)
 
-#define Video_Control_1                         (0x1020)
-#define VIDEO_EN                                (1 << 7)
-#define VIDEO_MUTE                              (1 << 6)
-
-#define Video_Control_2                         (0x1024)
-#define IN_D_RANGE                              (1 << 7)
-#define IN_BPC                                  (7 << 4)
-#define IN_COLOR_F                              (3 << 0)
-
-#define Video_Control_3                         (0x1024)
-#define IN_YC_COEFFI                            (1 << 7)
-#define THREE_D_FIELD_SEQUENTIAL_EN             (1 << 6)
-#define THREE_D_FIELD_INV                       (1 << 5)
-#define VID_CHK_UPDATE_EN                       (1 << 4)
-
-#define Video_Control_4                         (0x102C)
-#define USER_BIST_DATA_EN                       (1 << 5)
-#define ODD_TU_CONTROL                          (1 << 4)
-#define BIST_EN                                 (1 << 3)
-#define BIST_WIDTH                              (1 << 2)
-#define BIST_TYPE                               (3 << 0)
-
-#define Video_Control_8                         (0x103C)
-#define VID_HRES_TH                             (0xF << 4)
-#define VID_VRES_TH                             (0xF << 0)
-
-#define Video_Control_10                        (0x1044)
-#define F_SEL                                   (1 << 4)
-#define I_SCAN_CFG                              (1 << 2)
-#define VSYNC_P_CFG                             (1 << 1)
-#define HSYNC_P_CFG                             (1 << 0)
-
-#define Total_Line_Low_Byte                     (0x1048)
-#define TOTAL_LINE_CFG_L                        (0xFF << 0)
-
-#define Total_Line_High_Byte                    (0x104C)
-#define TOTAL_LINE_CFG_H                        (0x3F << 0)
-
-#define Active_Line_Low_Byte                    (0x1050)
-#define ACTIVE_LINE_CFG_L                       (0xFF << 0)
-
-#define Active_Line_High_Byte                   (0x1054)
-#define ACTIVE_LINE_CFG_H                       (0x3F << 0)
-
-#define Vertical_Front_Porch                    (0x1058)
-#define V_F_PORCH_CFG                           (0xFFF << 0)
-
-#define Vertical_Sync_Width                     (0x105C)
-#define V_SYNC_CFG                              (0xFFF << 0)
-
 #define AUX_CONTROL				(0x1000)
 #define AUX_POWER_DOWN				(0x01 << 16)
 #define AUX_REPLY_TIMER_MODE			(0x03 << 12)
@@ -391,103 +341,6 @@
 #define RX_DATA_14				(0xFF << 16)
 #define RX_DATA_13				(0xFF << 8)
 #define RX_DATA_12				(0xFF << 0)
-
-#define Vertical_Back_Porch                     (0x1060)
-#define V_B_PORCH_CFG                           (0xFFF << 0)
-
-#define Total_Pixel_Low_Byte                    (0x1064)
-#define TOTAL_PIXEL_CFG_L                       (0xFF << 0)
-
-#define Total_Pixel_High_Byte                   (0x1068)
-#define TOTAL_PIXEL_CFG_H                       (0x3F << 0)
-
-#define Active_Pixel_Low_Byte                   (0x106C)
-#define ACTIVE_PIXEL_CFG_L                      (0xFF << 0)
-
-#define Active_Pixel_High_Byte                  (0x1070)
-#define ACTIVE_PIXEL_CFG_H                      (0x3F << 0)
-
-#define Horizon_Front_Porch_Low_Byte            (0x1074)
-#define H_F_PORCH_CFG_L                         (0xFF << 0)
-
-#define Horizon_Front_Porch_High_Byte           (0x1078)
-#define H_F_PORCH_CFG_H                         (0xF << 0)
-
-#define Horizon_Sync_Width_Low_Byte             (0x107C)
-#define H_SYNC_CFG_L                            (0xFF << 0)
-
-#define Horizon_Sync_Width_High_Byte            (0x1080)
-#define H_SYNC_CFG_H                            (0xF << 0)
-
-#define Horizon_Back_Porch_Low_Byte             (0x1084)
-#define H_B_PORCH_CFG_L                         (0xFF << 0)
-
-#define Horizon_Back_Porch_High_Byte            (0x1088)
-#define H_B_PORCH_CFG_H                         (0xF << 0)
-
-#define Video_Status                            (0x108C)
-#define FIELD_S                                 (1 << 3)
-#define I_SCAN_S                                (1 << 2)
-#define VSYNC_P_S                               (1 << 1)
-#define HSYNC_P_S                               (1 << 0)
-
-#define Total_Line_Status_Low_Byte              (0x1090)
-#define TOTAL_LINE_STA_L                        (0xFF << 0)
-
-#define Total_Line_Status_High_Byte             (0x1094)
-#define TOTAL_LINE_STA_H                        (0x3F << 0)
-
-#define Active_Line_Status_Low_Byte             (0x1098)
-#define ACTIVE_LINE_STA_L                       (0xFF << 0)
-
-#define Active_Line_Status_High_Byte            (0x109C)
-#define ACTIVE_LINE_STA_H                       (0x3F << 0)
-
-#define Vertical_Front_Porch_Status             (0x10A0)
-#define V_F_PORCH_STA                           (0xFFF << 0)
-
-#define Vertical_Sync_Width_Status              (0x10A4)
-#define V_SYNC_STA                              (0xFFF << 0)
-
-#define Vertical_Back_Porch_Status              (0x10A8)
-#define V_B_PORCH_STA                           (0xFFF << 0)
-
-#define Total_Pixel_Status_Low_Byte             (0x10AC)
-#define TOTAL_PIXEL_STA_L                       (0xFF << 0)
-
-#define Total_Pixel_Status_High_Byte            (0x10B0)
-#define TOTAL_PIXEL_STA_H                       (0x3F << 0)
-
-#define Active_Pixel_Status_Low_Byte            (0x10B4)
-#define ACTIVE_PIXEL_STA_L                      (0xFF << 0)
-
-#define Active_Pixel_Status_High_Byte           (0x10B8)
-#define ACTIVE_PIXEL_STA_H                      (0x3F << 0)
-
-#define Horizon_Front_Porch_Status_Low_Byte     (0x10BC)
-#define H_F_PORCH_STA_L                         (0xFF << 0)
-
-#define Horizon_Front_Porch_Status_High_Byte    (0x10C0)
-#define H_F_PORCH_STA_H                         (0xF << 0)
-
-#define Horizon_Sync_Width_Status_Low_Byte      (0x10C4)
-#define H_SYNC_STA_L                            (0xFF << 0)
-
-#define Horizon_Sync_Width_Status_High_Byte     (0x10C8)
-#define H_SYNC_STA_H                            (0xF << 0)
-
-#define Horizon_Back_Porch_Status_Low_Byte      (0x10CC)
-#define H_B_PORCH_STA_L                         (0xFF << 0)
-
-#define Horizon_Back_Porch_Status_High_Byte     (0x10D0)
-#define H_B_PORCH_STA_H                         (0xF << 0)
-
-#define Active_Frame_Parameters                 (0x110C)
-#define ACTIVE_LINE_COUNT                       (0x3FFF << 16)
-#define ACTIVE_PIXEL_COUNT                      (0x3FFF << 0)
-
-#define BIST_PRBS7_SEED_ADD                     (0x1110)
-#define BIST_PRBS7_SEED                         (0x7F << 0)
 
 #define IF_CRC_Control_1                        (0x1114)
 #define IF_CRC_CLEAR                            (1 << 13)
@@ -656,18 +509,6 @@
 #define F_VALID                                 (1 << 1)
 #define VALID_CTRL                              (1 << 0)
 
-#define DP_System_Control_4                     (0x160C)
-#define FIX_M_AUD                               (1 << 4)
-#define ENHANCED                                (1 << 3)
-#define FIX_M_VID                               (1 << 2)
-#define M_VID_UPDATE_CTRL                       (3 << 0)
-
-#define DP_Video_Control                        (0x1610)
-#define BPC                                     (7 << 5)
-#define YC_COEFF                                (1 << 4)
-#define D_RANGE                                 (1 << 3)
-#define COLOR_F                                 (3 << 1)
-
 #define Packet_Send_Control                     (0x1640)
 #define AUDIO_INFO_UP                           (1 << 7)
 #define AVI_UD                                  (1 << 6)
@@ -678,27 +519,6 @@
 #define MPEG_EN                                 (1 << 1)
 #define SPD_INFO_EN                             (1 << 0)
 
-#define DP_Mvid_0                               (0x1700)
-#define M_VID_0                                 (0xFF << 0)
-
-#define DP_Mvid_1                               (0x1704)
-#define M_VID_1                                 (0xFF << 0)
-
-#define DP_Mvid_2                               (0x1708)
-#define M_VID_2                                 (0xFF << 0)
-
-#define DP_Nvid_0                               (0x170C)
-#define N_VID_0                                 (0xFF << 0)
-
-#define DP_Nvid_1                               (0x1710)
-#define N_VID_1                                 (0xFF << 0)
-
-#define DP_Nvid_2                               (0x1714)
-#define N_VID_2                                 (0xFF << 0)
-
-#define DP_M_Value_Calculation                  (0x1718)
-#define M_VID_MON                               (0xFFFFFF << 0)
-
 #define DP_FIFO_Threshold                       (0x1730)
 #define TH_CTRL                                 (1 << 5)
 #define TH_VALUE                                (0x1F << 0)
@@ -706,45 +526,6 @@
 #define DP_GNS_Control                          (0x1734)
 #define VIDEO_MAP_CTRL                          (1 << 1)
 #define RS_CTRL                                 (1 << 0)
-
-#define DP_M_Value_Calculation_Control          (0x1760)
-#define M_AUD_GEN_FILTER_EN                     (1 << 3)
-#define M_VID_GEN_FILTER_EN                     (1 << 2)
-#define M_GEN_CLK_SEL                           (1 << 0)
-
-#define DP_Mvid_Value_Calculation_Control       (0x1764)
-#define M_VID_GEN_FILTER_TH                     (0xFF << 0)
-
-
-#define Video_Horizontal_Total_pixels_register  (0x1804)
-#define H_TOTAL_MASTER                          (0xFFFFFFFF << 0)
-
-#define Video_Vertical_Total_pixels_register    (0x1808)
-#define V_TOTAL_MASTER                          (0xFFFFFFFF << 0)
-
-#define Video_Horizontal_front_porch_register   (0x180C)
-#define H_F_PORCH_MASTER                        (0xFFFFFFFF << 0)
-
-#define Video_Horizontal_back_porch_register    (0x1810)
-#define H_B_PORCH_MASTER                        (0xFFFFFFFF << 0)
-
-#define Video_Horizontal_Active_register        (0x1814)
-#define H_ACTIVE_MASTER                         (0xFFFFFFFF << 0)
-
-#define Video_Vertical_front_porch_register     (0x1818)
-#define V_F_PORCH_MASTER                        (0xFFFFFFFF << 0)
-
-#define Video_Vertical_back_porch_register      (0x181C)
-#define V_B_PORCH_MASTER                        (0xFFFFFFFF << 0)
-
-#define Video_Vertical_Active_register          (0x1820)
-#define V_ACTIVE_MASTER                         (0xFFFFFFFF << 0)
-
-#define Mvid_register_in_video_master_mode      (0x1824)
-#define M_VID_MASTER                            (0xFFFFFFFF << 0)
-
-#define Nvid_register_in_video_master_mode      (0x1828)
-#define N_VID_MASTER                            (0xFFFFFFFF << 0)
 
 #define CRC_Control_4                           (0x1890)
 #define AUD_CRC_PK_NUM                          (0x3FF << 16)
@@ -957,11 +738,12 @@
 #define RIV_KEY_1				(0xFFFFFFFF << 0)
 
 #define SST1_MAIN_CONTROL			(0x5000)
-
+#define MVID_MODE				(0x01 << 11)
 #define MAUD_MODE				(0x01 << 10)
-
-
+#define MVID_UPDATE_RATE			(0x03 << 8)
+#define VIDEO_MODE				(0x01 << 6)
 #define ENHANCED_MODE				(0x01 << 5)
+#define ODD_TU_CONTROL				(0x01 << 4)
 
 #define SST1_MAUD_MASTER_MODE			(0x505C)
 #define MAUD_MASTER				(0xFFFFFFFF << 0)
@@ -974,6 +756,96 @@
 
 #define SST1_NAUD_SFR_CONFIGURE			(0x5068)
 #define NAUD_SFR_CONFIG				(0xFFFFFF << 0)
+
+#define SST1_VIDEO_CONTROL			(0x5400)
+#define STRM_VALID_MON				(0x01 << 10)
+#define STRM_VALID_FORCE			(0x01 << 9)
+#define STRM_VALID_CTRL				(0x01 << 8)
+#define DYNAMIC_RANGE_MODE			(0x01 << 7)
+#define BPC					(0x07 << 4)
+#define COLOR_FORMAT				(0x03 << 2)
+#define VSYNC_POLARITY				(0x01 << 1)
+#define HSYNC_POLARITY				(0x01 << 0)
+
+#define SST1_VIDEO_ENABLE			(0x5404)
+#define VIDEO_EN				(0x01 << 0)
+
+#define SST1_VIDEO_MASTER_TIMING_GEN		(0x5408)
+#define VIDEO_MASTER_TIME_GEN			(0x01 << 0)
+
+#define SST1_VIDEO_MUTE				(0x540C)
+#define VIDEO_MUTE				(0x01 << 0)
+
+#define SST1_VIDEO_FIFO_THRESHOLD_CONTROL	(0x5410)
+#define GL_FIFO_TH_CTRL				(0x01 << 5)
+#define GL_FIFO_TH_VALUE			(0x1F << 0)
+
+#define SST1_VIDEO_HORIZONTAL_TOTAL_PIXELS	(0x5414)
+#define H_TOTAL_MASTER				(0xFFFFFFFF << 0)
+
+#define SST1_VIDEO_VERTICAL_TOTAL_PIXELS	(0x5418)
+#define V_TOTAL_MASTER				(0xFFFFFFFF << 0)
+
+#define SST1_VIDEO_HORIZONTAL_FRONT_PORCH	(0x541C)
+#define H_F_PORCH_MASTER			(0xFFFFFFFF << 0)
+
+#define SST1_VIDEO_HORIZONTAL_BACK_PORCH	(0x5420)
+#define H_B_PORCH_MASTER			(0xFFFFFFFF << 0)
+
+#define SST1_VIDEO_HORIZONTAL_ACTIVE		(0x5424)
+#define H_ACTIVE_MASTER				(0xFFFFFFFF << 0)
+
+#define SST1_VIDEO_VERTICAL_FRONT_PORCH		(0x5428)
+#define V_F_PORCH_MASTER			(0xFFFFFFFF << 0)
+
+#define SST1_VIDEO_VERTICAL_BACK_PORCH		(0x542C)
+#define V_B_PORCH_MASTER			(0xFFFFFFFF << 0)
+
+#define SST1_VIDEO_VERTICAL_ACTIVE		(0x5430)
+#define V_ACTIVE_MASTER				(0xFFFFFFFF << 0)
+
+#define SST1_VIDEO_DSC_STREAM_CONTROL_0		(0x5434)
+#define DSC_ENABLE				(0x01 << 4)
+#define SLICE_COUNT_PER_LINE			(0x07 << 0)
+
+#define SST1_VIDEO_DSC_STREAM_CONTROL_1		(0x5438)
+#define CHUNK_SIZE_1				(0xFFFF << 16)
+#define CHUNK_SIZE_0				(0xFFFF << 0)
+
+#define SST1_VIDEO_DSC_STREAM_CONTROL_2		(0x543C)
+#define CHUNK_SIZE_3				(0xFFFF << 16)
+#define CHUNK_SIZE_2				(0xFFFF << 0)
+
+#define SST1_VIDEO_BIST_CONTROL			(0x5450)
+#define BIST_PRBS7_SEED				(0x7F << 8)
+#define BIST_USER_DATA_EN			(0x01 << 4)
+#define BIST_EN					(0x01 << 3)
+#define BIST_WIDTH				(0x01 << 2)
+#define BIST_TYPE				(0x03 << 0)
+
+#define SST1_VIDEO_BIST_USER_DATA_R		(0x5454)
+#define BIST_USER_DATA_R			(0x3FF << 0)
+
+#define SST1_VIDEO_BIST_USER_DATA_G		(0x5458)
+#define BIST_USER_DATA_G			(0x3FF << 0)
+
+#define SST1_VIDEO_BIST_USER_DATA_B		(0x545C)
+#define BIST_USER_DATA_B			(0x3FF << 0)
+
+#define SST1_VIDEO_DEBUG_FSM_STATE		(0x5460)
+#define DATA_PACK_FSM_STATE			(0x3F << 16)
+#define LINE_FSM_STATE				(0x07 << 8)
+#define PIXEL_FSM_STATE				(0x07 << 0)
+
+#define SST1_VIDEO_DEBUG_MAPI			(0x5464)
+#define MAPI_UNDERFLOW_STATUS			(0x01 << 0)
+
+#define SST1_VIDEO_DEBUG_ACTV_SYM_STEP_CNTL	(0x5468)
+#define ACTV_SYM_STEP_CNT_VAL			(0x3FF << 1)
+#define ACTV_SYM_STEP_CNT_EN			(0x01 << 0)
+
+#define SST1_VIDEO_DEBUG_HOR_BLANK_AUD_BW_ADJ	(0x546C)
+#define HOR_BLANK_AUD_BW_ADJ			(0x01 << 0)
 
 #define SST1_AUDIO_CONTROL			(0x5800)
 #define SW_AUD_CODING_TYPE			(0x07 << 27)
