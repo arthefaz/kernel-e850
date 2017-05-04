@@ -402,75 +402,6 @@
 #define HOST_BIST_DATA_B_ADD			(0x1140)
 #define HOST_BIST_DATA_B                        (0xFF << 0)
 
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_1   (0x11D0)
-#define AVI_DB1                                 (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_2   (0x11D4)
-#define AVI_DB2                                 (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_3   (0x11D8)
-#define AVI_DB3                                 (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_4   (0x11DC)
-#define AVI_DB4                                 (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_5   (0x11E0)
-#define AVI_DB5                                 (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_6   (0x11E4)
-#define AVI_DB6                                 (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_7   (0x11E8)
-#define AVI_DB7                                 (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_8   (0x11EC)
-#define AVI_DB8                                 (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_9   (0x11F0)
-#define AVI_DB9                                 (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_10  (0x11F4)
-#define AVI_DB10                                (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_11  (0x11F8)
-#define AVI_DB11                                (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_12  (0x11FC)
-#define AVI_DB12                                (0xFF << 0)
-
-#define AVI_infoFrame_Packet_Register_AVI_Data_Byte_13  (0x1200)
-#define AVI_DB13                                (0xFF << 0)
-
-#define Audio_infoFrame_Packet_Register_AVI_Data_Byte_1         (0x121C)
-#define Audio_DB1                               (0xFF << 0)
-
-#define Audio_infoFrame_Packet_Register_AVI_Data_Byte_2         (0x1220)
-#define Audio_DB2                               (0xFF << 0)
-
-#define Audio_infoFrame_Packet_Register_AVI_Data_Byte_3         (0x1224)
-#define Audio_DB3                               (0xFF << 0)
-
-#define Audio_infoFrame_Packet_Register_AVI_Data_Byte_4         (0x1228)
-#define Audio_DB4                               (0xFF << 0)
-
-#define Audio_infoFrame_Packet_Register_AVI_Data_Byte_5         (0x122C)
-#define Audio_DB5                               (0xFF << 0)
-
-#define Audio_infoFrame_Packet_Register_AVI_Data_Byte_6         (0x1230)
-#define Audio_DB6                               (0xFF << 0)
-
-#define Audio_infoFrame_Packet_Register_AVI_Data_Byte_7         (0x1234)
-#define Audio_DB7                               (0xFF << 0)
-
-#define Audio_infoFrame_Packet_Register_AVI_Data_Byte_8         (0x1238)
-#define Audio_DB8                               (0xFF << 0)
-
-#define Audio_infoFrame_Packet_Register_AVI_Data_Byte_9         (0x123C)
-#define Audio_DB9                               (0xFF << 0)
-
-#define Audio_infoFrame_Packet_Register_AVI_Data_Byte_10        (0x1240)
-#define Audio_DB10                              (0xFF << 0)
-
 #define Interrupt_Status                        (0x13C0)
 #define INT_STATE                               (1 << 0)
 
@@ -508,16 +439,6 @@
 #define STRM_VALID                              (1 << 2)
 #define F_VALID                                 (1 << 1)
 #define VALID_CTRL                              (1 << 0)
-
-#define Packet_Send_Control                     (0x1640)
-#define AUDIO_INFO_UP                           (1 << 7)
-#define AVI_UD                                  (1 << 6)
-#define MPEG_UD                                 (1 << 5)
-#define SPD_INFO_UP                             (1 << 4)
-#define AUDIO_INFOR_EN                          (1 << 3)
-#define AVI_EN									(1 << 2)
-#define MPEG_EN                                 (1 << 1)
-#define SPD_INFO_EN                             (1 << 0)
 
 #define DP_FIFO_Threshold                       (0x1730)
 #define TH_CTRL                                 (1 << 5)
@@ -1121,6 +1042,283 @@
 
 #define SST1_AUDIO_CHANNEL_31_32_STATUS_CTRL_1	(0x58DC)
 #define MASTER_AUD_GP15_STA_4			(0xFF << 0)
+
+#define SST1_INFOFRAME_UPDATE_CONTROL		(0x5C04)
+#define HDR_INFO_UPDATE				(0x01 << 4)
+#define AUDIO_INFO_UPDATE			(0x01 << 3)
+#define AVI_INFO_UPDATE				(0x01 << 2)
+#define MPEG_INFO_UPDATE			(0x01 << 1)
+#define SPD_INFO_UPDATE				(0x01 << 0)
+
+#define SST1_INFOFRAME_SEND_CONTROL		(0x5C08)
+#define HDR_INFO_SEND				(0x01 << 4)
+#define AUDIO_INFO_SEND				(0x01 << 3)
+#define AVI_INFO_SEND				(0x01 << 2)
+#define MPEG_INFO_SEND				(0x01 << 1)
+#define SPD_INFO_SEND				(0x01 << 0)
+
+#define SST1_INFOFRAME_SDP_VERSION_CONTROL	(0x5C0C)
+#define INFOFRAME_SDP_HB3_SEL			(0x01 << 1)
+#define INFOFRAME_SDP_VERSION_SEL		(0x01 << 0)
+
+#define SST1_INFOFRAME_SPD_PACKET_TYPE		(0x5C10)
+#define SPD_TYPE				(0xFF << 0)
+
+#define SST1_INFOFRAME_SPD_REUSE_PACKET_CONTROL	(0x5C14)
+#define SPD_REUSE_EN				(0x01 << 0)
+
+#define SST1_PPS_SDP_CONTROL			(0x5C20)
+#define PPS_SDP_CHANGE_STATUS			(0x01 << 2)
+#define PPS_SDP_FRAME_SEND_ENABLE		(0x01 << 1)
+#define PPS_SDP_UPDATE				(0x01 << 0)
+
+#define SST1_VSC_SDP_CONTROL_1			(0x5C24)
+#define VSC_TOTAL_BYTES_IN_SDP			(0xFFF << 8)
+#define VSC_CHANGE_STATUS			(0x01 << 5)
+#define VSC_FORCE_PACKET_MARGIN			(0x01 << 4)
+#define VSC_FIX_PACKET_SEQUENCE			(0x01 << 3)
+#define VSC_EXT_VESA_CEA			(0x01 << 2)
+#define VSC_SDP_FRAME_SEND_ENABLE		(0x01 << 1)
+#define VSC_SDP_UPDATE				(0x01 << 0)
+
+#define SST1_VSC_SDP_CONTROL_2			(0x5C28)
+#define VSC_SETUP_TIME				(0xFFF << 20)
+#define VSC_PACKET_MARGIN			(0x1FFF << 0)
+
+#define SST1_MST_WAIT_TIMER_CONTROL_1		(0x5C2C)
+#define AUDIO_WAIT_TIMER			(0x1FFF << 16)
+#define INFOFRAME_WAIT_TIMER			(0x1FFF << 0)
+
+#define SST1_MST_WAIT_TIMER_CONTROL_2		(0x5C30)
+#define PPS_WAIT_TIMER				(0x1FFF << 16)
+#define VSC_PACKET_WAIT_TIMER			(0x1FFF << 0)
+
+#define SST1_INFOFRAME_AVI_PACKET_DATA_SET0	(0x5C40)
+#define AVI_DB4					(0xFF << 24)
+#define AVI_DB3					(0xFF << 16)
+#define AVI_DB2					(0xFF << 8)
+#define AVI_DB1					(0xFF << 0)
+
+#define SST1_INFOFRAME_AVI_PACKET_DATA_SET1	(0x5C44)
+#define AVI_DB8					(0xFF << 24)
+#define AVI_DB7					(0xFF << 16)
+#define AVI_DB6					(0xFF << 8)
+#define AVI_DB5					(0xFF << 0)
+
+#define SST1_INFOFRAME_AVI_PACKET_DATA_SET2	(0x5C48)
+#define AVI_DB12				(0xFF << 24)
+#define AVI_DB11				(0xFF << 16)
+#define AVI_DB10				(0xFF << 8)
+#define AVI_DB9					(0xFF << 0)
+
+#define SST1_INFOFRAME_AVI_PACKET_DATA_SET3	(0x5C4C)
+#define AVI_DB13				(0xFF << 0)
+
+#define SST1_INFOFRAME_AUDIO_PACKET_DATA_SET0	(0x5C50)
+#define AUDIO_DB4				(0xFF << 24)
+#define AUDIO_DB3				(0xFF << 16)
+#define AUDIO_DB2				(0xFF << 8)
+#define AUDIO_DB1				(0xFF << 0)
+
+#define SST1_INFOFRAME_AUDIO_PACKET_DATA_SET1	(0x5C54)
+#define AUDIO_DB8				(0xFF << 24)
+#define AUDIO_DB7				(0xFF << 16)
+#define AUDIO_DB6				(0xFF << 8)
+#define AUDIO_DB5				(0xFF << 0)
+
+#define SST1_INFOFRAME_AUDIO_PACKET_DATA_SET2	(0x5C58)
+#define AVI_DB10				(0xFF << 8)
+#define AVI_DB9					(0xFF << 0)
+
+#define SST1_INFOFRAME_SPD_PACKET_DATA_SET0	(0x5C60)
+#define SPD_DB4					(0xFF << 24)
+#define SPD_DB3					(0xFF << 16)
+#define SPD_DB2					(0xFF << 8)
+#define SPD_DB1					(0xFF << 0)
+
+#define SST1_INFOFRAME_SPD_PACKET_DATA_SET1	(0x5C64)
+#define SPD_DB8					(0xFF << 24)
+#define SPD_DB7					(0xFF << 16)
+#define SPD_DB6					(0xFF << 8)
+#define SPD_DB5					(0xFF << 0)
+
+#define SST1_INFOFRAME_SPD_PACKET_DATA_SET2	(0x5C68)
+#define SPD_DB12				(0xFF << 24)
+#define SPD_DB11				(0xFF << 16)
+#define SPD_DB10				(0xFF << 8)
+#define SPD_DB9					(0xFF << 0)
+
+#define SST1_INFOFRAME_SPD_PACKET_DATA_SET3	(0x5C6C)
+#define SPD_DB16				(0xFF << 24)
+#define SPD_DB15				(0xFF << 16)
+#define SPD_DB14				(0xFF << 8)
+#define SPD_DB13				(0xFF << 0)
+
+#define SST1_INFOFRAME_SPD_PACKET_DATA_SET4	(0x5C70)
+#define SPD_DB20				(0xFF << 24)
+#define SPD_DB19				(0xFF << 16)
+#define SPD_DB18				(0xFF << 8)
+#define SPD_DB17				(0xFF << 0)
+
+#define SST1_INFOFRAME_SPD_PACKET_DATA_SET5	(0x5C74)
+#define SPD_DB24				(0xFF << 24)
+#define SPD_DB23				(0xFF << 16)
+#define SPD_DB22				(0xFF << 8)
+#define SPD_DB21				(0xFF << 0)
+
+#define SST1_INFOFRAME_SPD_PACKET_DATA_SET6	(0x5C78)
+#define SPD_DB25				(0xFF << 0)
+
+#define SST1_INFOFRAME_MPEG_PACKET_DATA_SET0	(0x5C80)
+#define MPEG_DB4				(0xFF << 24)
+#define MPEG_DB3				(0xFF << 16)
+#define MPEG_DB2				(0xFF << 8)
+#define MPEG_DB1				(0xFF << 0)
+
+#define SST1_INFOFRAME_MPEG_PACKET_DATA_SET1	(0x5C84)
+#define MPEG_DB8				(0xFF << 24)
+#define MPEG_DB7				(0xFF << 16)
+#define MPEG_DB6				(0xFF << 8)
+#define MPEG_DB5				(0xFF << 0)
+
+#define SST1_INFOFRAME_MPEG_PACKET_DATA_SET2	(0x5C88)
+#define MPEG_DB10				(0xFF << 8)
+#define MPEG_DB9				(0xFF << 0)
+
+#define SST1_INFOFRAME_SPD_REUSE_PACKET_HEADER_SET	(0x5C90)
+#define SPD_REUSE_HB3				(0xFF << 24)
+#define SPD_REUSE_HB2				(0xFF << 16)
+#define SPD_REUSE_HB1				(0xFF << 8)
+#define SPD_REUSE_HB0				(0xFF << 0)
+
+#define SST1_INFOFRAME_SPD_REUSE_PACKET_PARITY_SET	(0x5C94)
+#define SPD_REUSE_PB3				(0xFF << 24)
+#define SPD_REUSE_PB2				(0xFF << 16)
+#define SPD_REUSE_PB1				(0xFF << 8)
+#define SPD_REUSE_PB0				(0xFF << 0)
+
+#define SST1_HDR_PACKET_DATA_SET_0		(0x5CA0)
+#define HDR_INFOFRAME_DATA_0			(0xFFFFFFFF << 0)
+
+#define SST1_HDR_PACKET_DATA_SET_1		(0x5CA4)
+#define HDR_INFOFRAME_DATA_1			(0xFFFFFFFF << 0)
+
+#define SST1_HDR_PACKET_DATA_SET_2		(0x5CA8)
+#define HDR_INFOFRAME_DATA_2			(0xFFFFFFFF << 0)
+
+#define SST1_HDR_PACKET_DATA_SET_3		(0x5CAC)
+#define HDR_INFOFRAME_DATA_3			(0xFFFFFFFF << 0)
+
+#define SST1_HDR_PACKET_DATA_SET_4		(0x5CB0)
+#define HDR_INFOFRAME_DATA_4			(0xFFFFFFFF << 0)
+
+#define SST1_HDR_PACKET_DATA_SET_5		(0x5CB4)
+#define HDR_INFOFRAME_DATA_5			(0xFFFFFFFF << 0)
+
+#define SST1_HDR_PACKET_DATA_SET_6		(0x5CB8)
+#define HDR_INFOFRAME_DATA_6			(0xFFFFFFFF << 0)
+
+#define SST1_HDR_PACKET_DATA_SET_7		(0x5CBC)
+#define HDR_INFOFRAME_DATA_7			(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_0			(0x5D00)
+#define PPS_SDP_DATA_0				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_1			(0x5D04)
+#define PPS_SDP_DATA_1				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_2			(0x5D08)
+#define PPS_SDP_DATA_2				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_3			(0x5D0C)
+#define PPS_SDP_DATA_3				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_4			(0x5D10)
+#define PPS_SDP_DATA_4				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_5			(0x5D14)
+#define PPS_SDP_DATA_5				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_6			(0x5D18)
+#define PPS_SDP_DATA_6				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_7			(0x5D1C)
+#define PPS_SDP_DATA_7				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_8			(0x5D20)
+#define PPS_SDP_DATA_8				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_9			(0x5D24)
+#define PPS_SDP_DATA_9				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_10			(0x5D28)
+#define PPS_SDP_DATA_10				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_11			(0x5D2C)
+#define PPS_SDP_DATA_11				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_12			(0x5D30)
+#define PPS_SDP_DATA_12				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_13			(0x5D34)
+#define PPS_SDP_DATA_13				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_14			(0x5D38)
+#define PPS_SDP_DATA_14				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_15			(0x5D3C)
+#define PPS_SDP_DATA_15				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_16			(0x5D40)
+#define PPS_SDP_DATA_16				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_17			(0x5D44)
+#define PPS_SDP_DATA_17				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_18			(0x5D48)
+#define PPS_SDP_DATA_18				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_19			(0x5D4C)
+#define PPS_SDP_DATA_19				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_20			(0x5D50)
+#define PPS_SDP_DATA_20				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_21			(0x5D54)
+#define PPS_SDP_DATA_21				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_22			(0x5D58)
+#define PPS_SDP_DATA_22				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_23			(0x5D5C)
+#define PPS_SDP_DATA_23				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_24			(0x5D60)
+#define PPS_SDP_DATA_24				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_25			(0x5D64)
+#define PPS_SDP_DATA_25				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_26			(0x5D68)
+#define PPS_SDP_DATA_26				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_27			(0x5D6C)
+#define PPS_SDP_DATA_27				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_28			(0x5D70)
+#define PPS_SDP_DATA_28				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_29			(0x5D74)
+#define PPS_SDP_DATA_29				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_30			(0x5D78)
+#define PPS_SDP_DATA_30				(0xFFFFFFFF << 0)
+
+#define SST1_PPS_SDP_PAYLOAD_31			(0x5D7C)
+#define PPS_SDP_DATA_31				(0xFFFFFFFF << 0)
+
+#define SST1_VSC_SDP_DATA_PAYLOAD_FIFO		(0x5D80)
+#define VSC_SDP_DATA_PAYLOAD_FIFO		(0xFFFFFFFF << 0)
 
 #define CMN_REG2C				(0x00B0)
 #define MAN_USBDP_MODE				(0x03 << 1)
