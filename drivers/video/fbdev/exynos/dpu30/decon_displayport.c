@@ -36,9 +36,7 @@ static void decon_displayport_underrun_info(void)
 
 static irqreturn_t decon_displayport_irq_handler(int irq, void *dev_data)
 {
-#if defined(CONFIG_SOC_EXYNOS8895)
 	struct decon_device *decon = dev_data;
-	ktime_t timestamp = ktime_get();
 	u32 irq_sts_reg;
 	u32 ext_irq = 0;
 
@@ -48,44 +46,15 @@ static irqreturn_t decon_displayport_irq_handler(int irq, void *dev_data)
 
 	irq_sts_reg = decon_reg_get_interrupt_and_clear(decon->id, &ext_irq);
 
-	if (irq_sts_reg & DPU_UNDER_FLOW_INT_PEND) {
-		decon_dbg("decon%d underrun %s timeline:%d, max:%d\n",
-			decon->id, decon->timeline->name, decon->timeline->value,
-			decon->timeline_max);
-		decon_displayport_underrun_info();
-		DPU_EVENT_LOG(DPU_EVT_UNDERRUN, &decon->sd, ktime_set(0, 0));
-	}
-
-	if (irq_sts_reg & DPU_DISPIF_VSTATUS_INT_PEND) {
-		/* VSYNC interrupt, accept it */
-		decon->frame_cnt++;
-		wake_up_interruptible_all(&decon->wait_vstatus);
-
-		if (decon->dt.psr_mode == DECON_VIDEO_MODE) {
-			decon->vsync.timestamp = timestamp;
-			wake_up_interruptible_all(&decon->vsync.wait);
-		}
-		decon_dbg("decon%d vsync %s timeline:%d, max:%d\n", decon->id,
-				decon->timeline->name, decon->timeline->value,
-				decon->timeline_max);
-	}
-
 	if (irq_sts_reg & DPU_FRAME_DONE_INT_PEND)
 		DPU_EVENT_LOG(DPU_EVT_DECON_FRAMEDONE, &decon->sd, ktime_set(0, 0));
 
 	if (ext_irq & DPU_TIME_OUT_INT_PEND)
 		decon_err("%s: DECON%d timeout irq occurs\n", __func__, decon->id);
 
-	if (ext_irq & DPU_ERROR_INT_PEND)
-		decon_err("%s: DECON%d error irq occurs\n", __func__, decon->id);
-
 irq_end:
 	spin_unlock(&decon->slock);
 	return IRQ_HANDLED;
-#else
-	/* TODO: This will be implemented */
-	return IRQ_HANDLED;
-#endif
 }
 
 int decon_displayport_register_irq(struct decon_device *decon)
