@@ -1612,7 +1612,6 @@ static int displayport_enable(struct displayport_device *displayport)
 
 	displayport_info("displayport_enable\n");
 
-	displayport_reg_set_pixel_clock(displayport->current_videoformat);
 #if defined(CONFIG_PM_RUNTIME)
 	pm_runtime_get_sync(displayport->dev);
 #else

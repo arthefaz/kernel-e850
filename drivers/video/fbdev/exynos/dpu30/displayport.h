@@ -374,13 +374,6 @@ struct fb_vendor {
 #define SYNC_POSITIVE 0
 #define SYNC_NEGATIVE 1
 
-typedef struct {
-	u32 p;
-	u32 m;
-	u32 s;
-	u32 divide;
-} pms_info;
-
 typedef enum {
 	v640x480p_60Hz,
 	v720x480p_60Hz,
@@ -567,7 +560,6 @@ struct displayport_debug_param {
 };
 
 extern videoformat_info videoformat_parameters[];
-extern pms_info pms_parameters[];
 
 /* EDID functions */
 /* default preset configured on probe */
@@ -821,7 +813,6 @@ static inline void displayport_write_mask(u32 reg_id, u32 val, u32 mask)
 	writel(val, displayport->res.regs + reg_id);
 }
 
-void displayport_reg_set_pixel_clock(videoformat video_format);
 void displayport_reg_init(void);
 void displayport_reg_set_interrupt_mask(enum displayport_interrupt_mask param, u8 set);
 u32 displayport_reg_get_interrupt_and_clear(u32 interrupt_status_register);
