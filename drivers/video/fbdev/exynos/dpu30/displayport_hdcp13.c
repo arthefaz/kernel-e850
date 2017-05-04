@@ -71,16 +71,6 @@ void HDCP13_dump(char *str, u8 *buf, int size)
 	}
 }
 
-void HDCP13_AUTH_Select(void)
-{
-	displayport_write_mask(HDCP_Control_Register_0, hdcp13_info.is_repeater, HW_AUTH_EN);
-
-	if (hdcp13_info.is_repeater)
-		displayport_dbg("[HDCP 1.3] HW Authentication Select\n");
-	else
-		displayport_dbg("[HDCP 1.3] SW Authentication Select\n");
-}
-
 void HDCP13_Func_En(u32 en)
 {
 	u32 val = en ? 0 : ~0; /* 0 is enable */
@@ -273,13 +263,6 @@ void HDCP13_Encryption_con(u8 enable)
 	}
 }
 
-void HDCP13_HW_ReAuth(void)
-{
-	displayport_write_mask(HDCP_Control_Register_0, 1, HW_RE_AUTHEN);
-
-	displayport_write_mask(HDCP_Control_Register_0, 0, HW_RE_AUTHEN);
-}
-
 void HDCP13_Link_integrity_check(void)
 {
 	int i;
@@ -312,86 +295,6 @@ void HDCP13_Link_integrity_check(void)
 			msleep(20);
 		}
 	}
-}
-
-void HDCP13_HW_Revocation_set(u8 param)
-{
-	displayport_write_mask(HDCP_Debug_Control_Register, param, REVOCATION_CHK_DONE);
-}
-
-void HDCP13_HW_AUTH_set(u8 Auth_type)
-{
-	if (Auth_type == FIRST_AUTH)
-		displayport_write_mask(HDCP_Control_Register_0, 1, HW_1ST_PART_ATHENTICATION_EN);
-	else
-		displayport_write_mask(HDCP_Control_Register_0, 1, HW_2ND_PART_ATHENTICATION_EN);
-}
-
-u8 HDCP13_HW_KSV_read(void)
-{
-	u32 KSV_bytes = 0;
-	u32 read_count = 0;
-	u32 i = 0;
-	u8 ret = 0;
-
-	displayport_reg_dpcd_read_burst(ADDR_HDCP13_BINFO,
-		sizeof(HDCP13_DPCD.HDCP13_BINFO), HDCP13_DPCD.HDCP13_BINFO);
-
-	hdcp13_info.device_cnt = HDCP13_DPCD.HDCP13_BINFO[1] & 0x7F;
-
-	KSV_bytes = hdcp13_info.device_cnt;
-
-	displayport_dbg("[HDCP 1.3] Total KSV bytes = %d", KSV_bytes);
-
-	read_count = (hdcp13_info.device_cnt - 1) / 3 + 1;
-
-	for (i = 0; i < read_count; i++) {
-		if (displayport_reg_dpcd_read_burst(ADDR_HDCP13_KSV_FIFO,
-					sizeof(HDCP13_DPCD.HDCP13_KSV_FIFO),
-					HDCP13_DPCD.HDCP13_KSV_FIFO) != 0) {
-			ret =  -EFAULT;
-			break;
-		}
-
-		HDCP13_dump("KSV List read", HDCP13_DPCD.HDCP13_KSV_FIFO,
-				sizeof(HDCP13_DPCD.HDCP13_KSV_FIFO));
-	}
-
-	return ret;
-}
-
-u8 HDCP13_HW_KSV_check(void)
-{
-	if (displayport_read_mask(HDCP_Debug_Control_Register, CHECK_KSV))
-		return 0;
-	else
-		return -EFAULT;
-}
-
-u8 HDCP13_HW_1st_Auth_check(void)
-{
-	if (displayport_read_mask(HDCP_Status_Register, HW_1ST_AUTHEN_PASS))
-		return 0;
-	else
-		return -EFAULT;
-}
-
-u8 HDCP13_HW_Auth_pass_check(void)
-{
-	if (displayport_read_mask(HDCP_Status_Register, HW_AUTHEN_PASS)) {
-		displayport_info("[HDCP 1.3] HDCP13 HW Authectication PASS in no revocation mode\n");
-		return 0;
-	} else
-		return -EFAULT;
-}
-
-u8 HDCP13_HW_Auth_check(void)
-{
-	if (displayport_read_mask(HDCP_Status_Register, AUTH_FAIL)) {
-		displayport_info("[HDCP 1.3] HDCP13 HW Authectication FAIL\n");
-		return 0;
-	} else
-		return -EFAULT;
 }
 
 void HDCP3_IRQ_Mask(void)

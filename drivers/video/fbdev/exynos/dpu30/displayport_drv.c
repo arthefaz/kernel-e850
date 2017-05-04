@@ -129,8 +129,6 @@ void displayport_get_voltage_and_pre_emphasis_max_reach(u8 *drive_current, u8 *p
 {
 	int i;
 
-	displayport_reg_get_voltage_and_pre_emphasis_max_reach((u8 *)max_reach_value);
-
 	for (i = 0; i < 4; i++) {
 		if (drive_current[i] + pre_emphasis[i] >= MAX_REACHED_CNT) {
 			if (!((max_reach_value[i] >> MAX_SWING_REACHED_BIT_POS) & 0x01))
@@ -205,11 +203,6 @@ Reduce_Link_Rate_Retry:
 	displayport_reg_phy_reset(1);
 
 	displayport_reg_set_link_bw(link_rate);
-
-	if (displayport_reg_get_cmn_ctl_sfr_ctl_mode()) {
-		displayport_reg_set_phy_clk_bw(link_rate);
-		displayport_dbg("displayport_reg_set_phy_clk_bw\n");
-	}
 
 	displayport_reg_set_lane_count(lane_cnt);
 
@@ -524,11 +517,6 @@ static int displayport_fast_link_training(void)
 
 	displayport_reg_set_link_bw(link_rate);
 
-	if (displayport_reg_get_cmn_ctl_sfr_ctl_mode()) {
-		displayport_reg_set_phy_clk_bw(link_rate);
-		displayport_dbg("displayport_reg_set_phy_clk_bw\n");
-	}
-
 	displayport_reg_set_lane_count(lane_cnt);
 
 	displayport_info("link_rate = %x\n", link_rate);
@@ -539,13 +527,9 @@ static int displayport_fast_link_training(void)
 	displayport_reg_dpcd_write(DPCD_ADD_LINK_BW_SET, 1, &link_rate);
 	displayport_reg_dpcd_write(DPCD_ADD_LANE_COUNT_SET, 1, &lane_cnt);
 
-	displayport_reg_lane_reset(1);
-
 	displayport_reg_set_voltage_and_pre_emphasis((u8 *)drive_current, (u8 *)pre_emphasis);
 	displayport_get_voltage_and_pre_emphasis_max_reach((u8 *)drive_current,
 			(u8 *)pre_emphasis, (u8 *)max_reach_value);
-
-	displayport_reg_lane_reset(0);
 
 	val = (pre_emphasis[0]<<3) | drive_current[0] | max_reach_value[0];
 	displayport_reg_dpcd_write(DPCD_ADD_TRANING_LANE0_SET, 1, &val);
@@ -890,7 +874,6 @@ void displayport_hpd_changed(int state)
 
 	return;
 HPD_FAIL:
-	displayport_reg_phy_off();
 	phy_power_off(displayport->phy);
 	pm_relax(displayport->dev);
 
@@ -1413,7 +1396,6 @@ static int displayport_set_audio_infoframe(struct displayport_audio_config_data 
 
 static int displayport_set_audio_ch_status(struct displayport_audio_config_data *audio_config_data)
 {
-	displayport_reg_set_ch_status_sw_audio_coding(1);
 	displayport_reg_set_ch_status_ch_cnt(audio_config_data->audio_channel_cnt);
 	displayport_reg_set_ch_status_word_length(audio_config_data->audio_bit);
 	displayport_reg_set_ch_status_sampling_frequency(audio_config_data->audio_fs);
@@ -1438,7 +1420,6 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 
 	displayport_reg_set_audio_m_n(SYNC_MODE, audio_config_data->audio_fs);
 	displayport_reg_set_audio_function_enable(audio_config_data->audio_enable);
-	displayport_reg_set_audio_master_mode();
 	displayport_reg_set_dma_burst_size(audio_config_data->audio_word_length);
 	displayport_reg_set_dma_pack_mode(audio_config_data->audio_packed_mode);
 	displayport_reg_set_pcm_size(audio_config_data->audio_bit);
@@ -1466,7 +1447,6 @@ int displayport_audio_bist_enable(struct displayport_audio_config_data audio_con
 
 	displayport_reg_set_audio_m_n(SYNC_MODE, audio_config_data.audio_fs);
 	displayport_reg_set_audio_function_enable(audio_config_data.audio_enable);
-	displayport_reg_set_audio_master_mode();
 
 	displayport_reg_set_audio_ch(audio_config_data.audio_channel_cnt);
 	displayport_reg_set_audio_fifo_function_enable(audio_config_data.audio_enable);
@@ -1508,7 +1488,6 @@ int displayport_dpcd_write_for_hdcp22(u32 address, u32 length, u8 *data)
 void displayport_hdcp22_enable(u32 en)
 {
 	if (en) {
-		displayport_reg_set_hdcp22_lane_count();
 		displayport_reg_set_hdcp22_system_enable(1);
 		displayport_reg_set_hdcp22_mode(1);
 		displayport_reg_set_hdcp22_encryption_enable(1);
@@ -1659,7 +1638,6 @@ static int displayport_disable(struct displayport_device *displayport)
 	displayport_reg_stop();
 	disable_irq(displayport->res.irq);
 
-	displayport_reg_phy_off();
 	phy_power_off(displayport->phy);
 
 #if defined(CONFIG_PM_RUNTIME)
