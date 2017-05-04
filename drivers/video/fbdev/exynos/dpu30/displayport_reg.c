@@ -293,91 +293,66 @@ void displayport_reg_set_interrupt_mask(enum displayport_interrupt_mask param, u
 	u32 val = set ? ~0 : 0;
 
 	switch (param) {
-	case VSYNC_DET_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_1, val, VSYNC_DET);
-		break;
-
-	case PLL_LOCK_CHG_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_2, val, PLL_LOCK_CHG);
-		break;
-
-	case VID_FORMAT_CHG_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_1, val, VID_FORMAT_CHG);
-		break;
-
-	case VID_CLK_CHG_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_1, val, VID_CLK_CHG);
-		break;
-
 	case HOTPLUG_CHG_INT_MASK:
-		displayport_write_mask(Common_Interrupt_Mask_4, val, HPD_CHG);
+		displayport_write_mask(SYSTEM_IRQ_COMMON_STATUS_MASK, val, HPD_CHG_MASK);
 		break;
 
 	case HPD_LOST_INT_MASK:
-		displayport_write_mask(Common_Interrupt_Mask_4, val, HPD_LOST);
+		displayport_write_mask(SYSTEM_IRQ_COMMON_STATUS_MASK, val, HPD_LOST_MASK);
 		break;
 
 	case PLUG_INT_MASK:
-		displayport_write_mask(Common_Interrupt_Mask_4, val, PLUG);
+		displayport_write_mask(SYSTEM_IRQ_COMMON_STATUS_MASK, val, HPD_PLUG_MASK);
 		break;
 
-	case INT_HPD_INT_MASK:
-		displayport_write_mask(DP_Interrupt_Status_Mask_1, val, HOT_PLUG_DET_MASK);
+	case HPD_IRQ_INT_MASK:
+		displayport_write_mask(SYSTEM_IRQ_COMMON_STATUS_MASK, val, HPD_IRQ_MASK);
 		break;
 
 	case RPLY_RECEIV_INT_MASK:
-		displayport_write_mask(DP_Interrupt_Status_Mask_1, val, RPLY_RECEIV_MASK);
+		displayport_write_mask(SYSTEM_IRQ_COMMON_STATUS_MASK, val, AUX_REPLY_RECEIVED_MASK);
 		break;
 
 	case AUX_ERR_INT_MASK:
-		displayport_write_mask(DP_Interrupt_Status_Mask_1, val, AUX_ERR_MASK);
+		displayport_write_mask(SYSTEM_IRQ_COMMON_STATUS_MASK, val, AUX_ERR_MASK);
 		break;
 
 	case HDCP_LINK_CHECK_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_2, val, R0_CHECK_FLAG);
+		displayport_write_mask(SYSTEM_IRQ_COMMON_STATUS_MASK, val, HDCP_R0_CHECK_FLAG_MASK);
 		break;
 
 	case HDCP_LINK_FAIL_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_2, val, HDCP_LINK_CHK_FAIL);
-		break;
-
-	case HW_HDCP_DONE_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_2, val, AUTH_DONE);
-		break;
-
-	case HW_AUTH_CHG_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_2, val, AUTH_STATE_CHG);
+		displayport_write_mask(SYSTEM_IRQ_COMMON_STATUS_MASK, val, HDCP_LINK_CHK_FAIL_MASK);
 		break;
 
 	case HDCP_R0_READY_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_2, val, R0_CHECK_FLAG);
+		displayport_write_mask(SYSTEM_IRQ_COMMON_STATUS_MASK, val, HDCP_R0_CHECK_FLAG_MASK);
 		break;
-/*
+
+	case PLL_LOCK_CHG_INT_MASK:
+		displayport_write_mask(SYSTEM_IRQ_COMMON_STATUS_MASK, val, PLL_LOCK_CHG_MASK);
+		break;
+
+	case VIDEO_FIFO_UNDER_FLOW_MASK:
+		displayport_write_mask(SST1_INTERRUPT_MASK_SET0, val, MAPI_FIFO_UNDER_FLOW_MASK);
+		break;
+
+	case VSYNC_DET_INT_MASK:
+		displayport_write_mask(SST1_INTERRUPT_MASK_SET0, val, VSYNC_DET_MASK);
+		break;
+
 	case AUDIO_FIFO_UNDER_RUN_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_3, val, AFIFO_UNDER);
+		displayport_write_mask(SST1_INTERRUPT_STATUS_SET1, val, AFIFO_UNDER);
 		break;
 
 	case AUDIO_FIFO_OVER_RUN_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_3, val, AFIFO_OVER);
+		displayport_write_mask(SST1_INTERRUPT_STATUS_SET1, val, AFIFO_OVER);
 		break;
-*/
+
 	case ALL_INT_MASK:
-		displayport_write_mask(Interrupt_Mask_1, val,
-				VSYNC_DET | VID_FORMAT_CHG | VID_CLK_CHG);
-
-		displayport_write_mask(Interrupt_Mask_2, val,
-				PLL_LOCK_CHG | R0_CHECK_FLAG | HDCP_LINK_CHK_FAIL
-				| AUTH_STATE_CHG | AUTH_DONE);
-/*
-		displayport_write_mask(Interrupt_Mask_3, val,
-				AFIFO_UNDER | AFIFO_OVER);
-*/
-		displayport_write_mask(Common_Interrupt_Mask_4, val,
-				HPD_CHG | HPD_LOST | PLUG);
-
-		displayport_write_mask(DP_Interrupt_Status_Mask_1, val,
-				SOFT_INTERRUPT_MASK | HOT_PLUG_DET_MASK
-				| RPLY_RECEIV_MASK | AUX_ERR_MASK);
+		displayport_write(SYSTEM_IRQ_COMMON_STATUS_MASK, 0xFF);
+		displayport_write(SST1_INTERRUPT_MASK_SET0, 0xFF);
+		displayport_write(SST1_INTERRUPT_STATUS_SET1, 0xFF);
 		break;
 	}
 }
@@ -386,14 +361,18 @@ void displayport_reg_set_interrupt(u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	displayport_write(DP_Interrupt_Status, ~0);
-	displayport_write(Common_Interrupt_Status_2, ~0);
-	displayport_write(Common_Interrupt_Status_4, ~0);
+	displayport_write(SYSTEM_IRQ_COMMON_STATUS, ~0);
+	displayport_write(SST1_INTERRUPT_STATUS_SET0, ~0);
+	displayport_write(SST1_INTERRUPT_STATUS_SET1, ~0);
+	displayport_write(SST2_INTERRUPT_STATUS_SET0, ~0);
+	displayport_write(SST2_INTERRUPT_STATUS_SET1, ~0);
 
+	displayport_reg_set_interrupt_mask(HPD_IRQ_INT_MASK, val);
 	displayport_reg_set_interrupt_mask(HOTPLUG_CHG_INT_MASK, val);
 	displayport_reg_set_interrupt_mask(HPD_LOST_INT_MASK, val);
 	displayport_reg_set_interrupt_mask(PLUG_INT_MASK, val);
-	displayport_reg_set_interrupt_mask(INT_HPD_INT_MASK, val);
+	displayport_reg_set_interrupt_mask(VIDEO_FIFO_UNDER_FLOW_MASK, val);
+	displayport_reg_set_interrupt_mask(AUDIO_FIFO_UNDER_RUN_INT_MASK, val);
 }
 
 u32 displayport_reg_get_interrupt_and_clear(u32 interrupt_status_register)

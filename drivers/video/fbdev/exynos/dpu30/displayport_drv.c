@@ -1281,27 +1281,24 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 	if (displayport->state != DISPLAYPORT_STATE_ON)
 		goto irq_end;
 
-	irq_status_reg = displayport_reg_get_interrupt_and_clear(DP_Interrupt_Status);
+	/* Common interrupt */
+	irq_status_reg = displayport_reg_get_interrupt_and_clear(SYSTEM_IRQ_COMMON_STATUS);
 
-	if (irq_status_reg & HOT_PLUG_DET) {
+	if (irq_status_reg & HPD_IRQ_FLAG) {
 		displayport->hpd_state = HPD_IRQ;
 		/*queue_delayed_work(displayport->dp_wq, &displayport->hpd_irq_work, 0);*/
 		displayport_info("HPD IRQ detect\n");
 	}
-
-	irq_status_reg = displayport_reg_get_interrupt_and_clear(Common_Interrupt_Status_2);
 
 	if (irq_status_reg & HDCP_LINK_CHK_FAIL) {
 		queue_delayed_work(displayport->dp_wq, &displayport->hdcp13_integrity_check_work, 0);
 		displayport_info("HDCP_LINK_CHK detect\n");
 	}
 
-	if (irq_status_reg & R0_CHECK_FLAG) {
+	if (irq_status_reg & HDCP_R0_CHECK_FLAG) {
 		hdcp13_info.r0_read_flag = 1;
 		displayport_info("R0_CHECK_FLAG detect\n");
 	}
-
-	irq_status_reg = displayport_reg_get_interrupt_and_clear(Common_Interrupt_Status_4);
 
 	if (irq_status_reg & HPD_CHG)
 		displayport_info("HPD_CHG detect\n");
@@ -1311,10 +1308,21 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 		displayport_info("HPD_LOST detect\n");
 	}
 
-	if (irq_status_reg & PLUG) {
+	if (irq_status_reg & HPD_PLUG_INT) {
 		/*queue_delayed_work(displayport->dp_wq, &displayport->hpd_plug_work, 0);*/
 		displayport_info("HPD_PLUG detect\n");
 	}
+
+	/* SST1 interrupt */
+	irq_status_reg = displayport_reg_get_interrupt_and_clear(SST1_INTERRUPT_STATUS_SET0);
+
+	if (irq_status_reg & MAPI_FIFO_UNDER_FLOW)
+		displayport_info("VIDEO FIFO_UNDER_FLOW detect\n");
+
+	irq_status_reg = displayport_reg_get_interrupt_and_clear(SST1_INTERRUPT_STATUS_SET1);
+
+	if (irq_status_reg & AFIFO_UNDER)
+		displayport_info("AFIFO_UNDER detect\n");
 
 irq_end:
 	spin_unlock(&displayport->slock);
