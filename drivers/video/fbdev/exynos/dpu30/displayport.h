@@ -374,23 +374,6 @@ struct fb_vendor {
 #define SYNC_POSITIVE 0
 #define SYNC_NEGATIVE 1
 
-typedef enum {
-	PIXEL_CLOCK_25_200,
-	PIXEL_CLOCK_27_000,
-	PIXEL_CLOCK_27_027,
-	PIXEL_CLOCK_33_750,
-	PIXEL_CLOCK_71_000,
-	PIXEL_CLOCK_74_250,
-	PIXEL_CLOCK_108_000,
-	PIXEL_CLOCK_148_500,
-	PIXEL_CLOCK_234_000,
-	PIXEL_CLOCK_241_500,
-	PIXEL_CLOCK_297_000,
-	PIXEL_CLOCK_312_000,
-	PIXEL_CLOCK_533_000,
-	PIXEL_CLOCK_594_000,
-} pixelclock;
-
 typedef struct {
 	u32 p;
 	u32 m;
@@ -409,6 +392,7 @@ typedef enum {
 	v1920x1080p_24Hz,
 	v1920x1080p_25Hz,
 	v1920x1080p_30Hz,
+	v1920x1080p_59Hz,
 	v1920x1080p_50Hz,
 	v1920x1080p_60Hz,
 	v1920x1440p_60Hz,
@@ -430,18 +414,18 @@ typedef enum {
 
 typedef struct {
 	videoformat video_format;
-	u32 total_pixel;
-	u32 active_pixel;
-	u32 v_f_porch;
-	u32 v_sync;
-	u32 v_b_porch;
-	u32 total_line;
-	u32 active_line;
+	u32 h_total;
+	u32 h_active;
 	u32 h_f_porch;
 	u32 h_sync;
 	u32 h_b_porch;
+	u32 v_total;
+	u32 v_active;
+	u32 v_f_porch;
+	u32 v_sync;
+	u32 v_b_porch;
 	u32 fps;
-	pixelclock pixel_clock;
+	u32 pixel_clock;
 	u8 vic;
 	u8 v_sync_pol;
 	u8 h_sync_pol;
@@ -573,6 +557,7 @@ struct displayport_device {
 	u8 bist_used;
 	enum test_pattern bist_type;
 	enum displayport_dynamic_range_type dyn_range;
+	videoformat current_videoformat;
 };
 
 struct displayport_debug_param {
@@ -583,7 +568,6 @@ struct displayport_debug_param {
 
 extern videoformat_info videoformat_parameters[];
 extern pms_info pms_parameters[];
-extern videoformat g_displayport_videoformat;
 
 /* EDID functions */
 /* default preset configured on probe */

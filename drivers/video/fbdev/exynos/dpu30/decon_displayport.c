@@ -276,6 +276,7 @@ static int decon_displayport_set_lcd_info(struct decon_device *decon)
 {
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct decon_lcd *lcd_info;
+	struct displayport_device *displayport = get_displayport_drvdata();
 
 	if (decon->lcd_info == NULL) {
 		lcd_info = kzalloc(sizeof(struct decon_lcd), GFP_KERNEL);
@@ -287,17 +288,17 @@ static int decon_displayport_set_lcd_info(struct decon_device *decon)
 		decon->lcd_info = lcd_info;
 	}
 
-	decon->lcd_info->width = videoformat_parameters[g_displayport_videoformat].active_pixel;
-	decon->lcd_info->height = videoformat_parameters[g_displayport_videoformat].active_line;
-	decon->lcd_info->xres = videoformat_parameters[g_displayport_videoformat].active_pixel;
-	decon->lcd_info->yres = videoformat_parameters[g_displayport_videoformat].active_line;
-	decon->lcd_info->vfp = videoformat_parameters[g_displayport_videoformat].v_f_porch;
-	decon->lcd_info->vbp = videoformat_parameters[g_displayport_videoformat].v_b_porch;
-	decon->lcd_info->hfp = videoformat_parameters[g_displayport_videoformat].h_f_porch;
-	decon->lcd_info->hbp = videoformat_parameters[g_displayport_videoformat].h_b_porch;
-	decon->lcd_info->vsa = videoformat_parameters[g_displayport_videoformat].v_sync;
-	decon->lcd_info->hsa = videoformat_parameters[g_displayport_videoformat].h_sync;
-	decon->lcd_info->fps = videoformat_parameters[g_displayport_videoformat].fps;
+	decon->lcd_info->width = videoformat_parameters[displayport->current_videoformat].h_active;
+	decon->lcd_info->height = videoformat_parameters[displayport->current_videoformat].v_active;
+	decon->lcd_info->xres = videoformat_parameters[displayport->current_videoformat].h_active;
+	decon->lcd_info->yres = videoformat_parameters[displayport->current_videoformat].v_active;
+	decon->lcd_info->vfp = videoformat_parameters[displayport->current_videoformat].v_f_porch;
+	decon->lcd_info->vbp = videoformat_parameters[displayport->current_videoformat].v_b_porch;
+	decon->lcd_info->hfp = videoformat_parameters[displayport->current_videoformat].h_f_porch;
+	decon->lcd_info->hbp = videoformat_parameters[displayport->current_videoformat].h_b_porch;
+	decon->lcd_info->vsa = videoformat_parameters[displayport->current_videoformat].v_sync;
+	decon->lcd_info->hsa = videoformat_parameters[displayport->current_videoformat].h_sync;
+	decon->lcd_info->fps = videoformat_parameters[displayport->current_videoformat].fps;
 	decon->dt.psr_mode = DECON_VIDEO_MODE;
 	decon->dt.trig_mode = DECON_HW_TRIG;
 	decon->dt.out_type = DECON_OUT_DP;
