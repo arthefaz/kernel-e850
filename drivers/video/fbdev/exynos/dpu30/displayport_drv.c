@@ -36,7 +36,7 @@
 #define PIXELCLK_1080P60HZ 148500000 /* FHD 60Hz */
 #define PIXELCLK_1080P30HZ 74250000 /* FHD 30Hz */
 
-/*#define HDCP_SUPPORT*/
+#define HDCP_SUPPORT
 /*#define HDCP_2_2*/
 
 int displayport_log_level = 6;
