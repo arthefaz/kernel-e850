@@ -66,29 +66,8 @@ int decon_displayport_register_irq(struct decon_device *decon)
 
 	pdev = container_of(dev, struct platform_device, dev);
 
-	if (decon->dt.psr_mode == DECON_VIDEO_MODE) {
-		/* Get IRQ resource and register IRQ handler. */
-		/* 0: FIFO irq */
-		res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-		ret = devm_request_irq(dev, res->start, decon_displayport_irq_handler, 0,
-				pdev->name, decon);
-		if (ret) {
-			decon_err("failed to install FIFO irq\n");
-			return ret;
-		}
-	}
-
-	/* 1: VSTATUS */
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
-	ret = devm_request_irq(dev, res->start, decon_displayport_irq_handler,
-			0, pdev->name, decon);
-	if (ret) {
-		decon_err("failed to install VSTATUS irq\n");
-		return ret;
-	}
-
-	/* 2: FRAME START */
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 2);
+	/* 1: FRAME START */
+	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	ret = devm_request_irq(dev, res->start, decon_displayport_irq_handler,
 			0, pdev->name, decon);
 	if (ret) {
@@ -96,8 +75,8 @@ int decon_displayport_register_irq(struct decon_device *decon)
 		return ret;
 	}
 
-	/* 3: FRAME DONE */
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 3);
+	/* 2: FRAME DONE */
+	res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
 	ret = devm_request_irq(dev, res->start, decon_displayport_irq_handler,
 			0, pdev->name, decon);
 	if (ret) {
@@ -105,8 +84,8 @@ int decon_displayport_register_irq(struct decon_device *decon)
 		return ret;
 	}
 
-	/* 4: EXTRA: resource conflict, timeout and error irq */
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 4);
+	/* 3: EXTRA: resource conflict, timeout and error irq */
+	res = platform_get_resource(pdev, IORESOURCE_IRQ, 2);
 	ret = devm_request_irq(dev, res->start, decon_displayport_irq_handler,
 			0, pdev->name, decon);
 	if (ret) {
@@ -125,24 +104,16 @@ void decon_displayport_free_irq(struct decon_device *decon)
 
 	pdev = container_of(dev, struct platform_device, dev);
 
-	/* 0: FIFO irq */
+	/* 1: FRAME START */
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	devm_free_irq(dev, res->start, decon);
 
-	/* 1: VSTATUS */
+	/* 2: FRAME DONE */
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
 	devm_free_irq(dev, res->start, decon);
 
-	/* 2: FRAME START */
+	/* 3: EXTRA: resource conflict, timeout and error irq */
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 2);
-	devm_free_irq(dev, res->start, decon);
-
-	/* 3: FRAME DONE */
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 3);
-	devm_free_irq(dev, res->start, decon);
-
-	/* 4: EXTRA: resource conflict, timeout and error irq */
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 4);
 	devm_free_irq(dev, res->start, decon);
 }
 
@@ -152,30 +123,6 @@ int decon_displayport_get_clocks(struct decon_device *decon)
 	if (IS_ERR_OR_NULL(decon->res.aclk)) {
 		decon_err("failed to get aclk\n");
 		return PTR_ERR(decon->res.aclk);
-	}
-
-	decon->res.busd = devm_clk_get(decon->dev, "busd");
-	if (IS_ERR_OR_NULL(decon->res.busd)) {
-		decon_err("failed to get decon_busd\n");
-		return PTR_ERR(decon->res.busd);
-	}
-
-	decon->res.busp = devm_clk_get(decon->dev, "busp");
-	if (IS_ERR_OR_NULL(decon->res.busp)) {
-		decon_err("failed to get decon_busp\n");
-		return PTR_ERR(decon->res.busp);
-	}
-
-	decon->res.busc = devm_clk_get(decon->dev, "busc");
-	if (IS_ERR_OR_NULL(decon->res.busc)) {
-		decon_err("failed to get busc\n");
-		return PTR_ERR(decon->res.busc);
-	}
-
-	decon->res.core = devm_clk_get(decon->dev, "core");
-	if (IS_ERR_OR_NULL(decon->res.core)) {
-		decon_err("failed to get core\n");
-		return PTR_ERR(decon->res.core);
 	}
 
 	return 0;
