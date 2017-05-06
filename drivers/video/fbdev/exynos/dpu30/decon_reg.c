@@ -520,11 +520,9 @@ void decon_reg_set_interface(u32 id, struct decon_mode_info *psr)
 			mask =	DSIM_CONNECTION_DSIM0_MASK;
 		}
 
-		decon_write_mask(id, DSIM_CONNECTION_CONTROL, val, mask);
-	} else if (psr->out_type == DECON_OUT_DP) {
-		/* TBD */
-		/* DE CONNECTION case should be considered */
-	}
+		decon_write_mask(0, DSIM_CONNECTION_CONTROL, val, mask);
+	} else if (psr->out_type == DECON_OUT_DP)
+		decon_write_mask(0, DP_CONNECTION_CONTROL, 2, DP_CONNECTION_SEL_DP0_MASK);
 }
 
 void decon_reg_set_start_crc(u32 id, u32 en)
