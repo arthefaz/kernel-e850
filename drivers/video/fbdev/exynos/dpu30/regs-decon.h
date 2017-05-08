@@ -328,21 +328,21 @@
 #define DP_CONNECTION_SEL_DP0_MASK		(0x7 << 0)
 #define DP_CONNECTION_SEL_DP0_GET(_v)	(((_v) >> 0) & 0x7)
 
-
-#define CRC_DATA_0					0x0280
+/* DECON CRC for ASB */
+#define CRC_DATA_0				0x0280
 #define CRC_DATA_DSIMIF1_GET(_v)		(((_v) >> 16) & 0xffff)
 #define CRC_DATA_DSIMIF0_GET(_v)		(((_v) >> 0) & 0xffff)
 
-#define CRC_DATA_2					0x0288
-#define CRC_DATA_DP1_GET(_v)		(((_v) >> 16) & 0xffff)
-#define CRC_DATA_DP0_GET(_v)		(((_v) >> 0) & 0xffff)
+#define CRC_DATA_2				0x0288
+#define CRC_DATA_DP1_GET(_v)			(((_v) >> 16) & 0xffff)
+#define CRC_DATA_DP0_GET(_v)			(((_v) >> 0) & 0xffff)
 
-#define CRC_CONTROL					0x0288
+#define CRC_CONTROL				0x028C
 #define CRC_COLOR_SEL(_v)			((_v) << 16)
 #define CRC_COLOR_SEL_MASK			(0x3 << 16)
-#define CRC_START					(1 << 0)
+#define CRC_START				(1 << 0)
 
-#define FRAME_COUNT					0x02A0
+#define FRAME_COUNT				0x02A0
 
 /* BLENDER */
 #define WIN_CONTROL_0(_win)			(0x1000 + ((_win) * 0x30))
