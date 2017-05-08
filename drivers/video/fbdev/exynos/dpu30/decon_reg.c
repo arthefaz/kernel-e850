@@ -527,18 +527,28 @@ void decon_reg_set_interface(u32 id, struct decon_mode_info *psr)
 
 void decon_reg_set_start_crc(u32 id, u32 en)
 {
-	/* TBD */
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
+	decon_write_mask(id, CRC_CONTROL, val, CRC_START);
 }
 
 /* bit_sel : 0=B, 1=G, 2=R */
 void decon_reg_set_select_crc_bits(u32 id, u32 bit_sel)
 {
-	/* TBD */
+	u32 val;
+
+	val = CRC_COLOR_SEL(bit_sel);
+	decon_write_mask(id, CRC_CONTROL, val, CRC_COLOR_SEL_MASK);
 }
 
 void decon_reg_get_crc_data(u32 id, u32 *w0_data, u32 *w1_data)
 {
-	/* TBD */
+	u32 val;
+
+	val = decon_read(id, CRC_DATA_0);
+	*w0_data = CRC_DATA_DSIMIF0_GET(val);
+	*w1_data = CRC_DATA_DSIMIF1_GET(val);
 }
 
 void decon_reg_update_req_global(u32 id)
