@@ -431,15 +431,18 @@ static int decon_enable(struct decon_device *decon)
 	decon_to_psr_info(decon, &psr);
 
 	if (decon->dt.out_type == DECON_OUT_DSI) {
-		decon_set_black_window(decon);
-		/*
-		 * Blender configuration must be set before DECON start.
-		 * If DECON goes to start without window and blender configuration,
-		 * DECON will go into abnormal state.
-		 * DECON2(for DISPLAYPORT) start in winconfig
-		 */
-		decon_reg_start(decon->id, &psr);
-		decon_reg_update_req_and_unmask(decon->id, &psr);
+		if (psr.trig_mode == DECON_HW_TRIG) {
+			decon_set_black_window(decon);
+			/*
+			 * Blender configuration must be set before DECON start.
+			 * If DECON goes to start without window and
+			 * blender configuration,
+			 * DECON will go into abnormal state.
+			 * DECON2(for DISPLAYPORT) start in winconfig
+			 */
+			decon_reg_start(decon->id, &psr);
+			decon_reg_update_req_and_unmask(decon->id, &psr);
+		}
 	}
 
 	/*
@@ -747,7 +750,13 @@ static void decon_deactivate_vsync(struct decon_device *decon)
 int decon_wait_for_vsync(struct decon_device *decon, u32 timeout)
 {
 	ktime_t timestamp;
+	struct decon_mode_info psr;
 	int ret;
+
+	decon_to_psr_info(decon, &psr);
+
+	if (psr.trig_mode != DECON_HW_TRIG)
+		return 0;
 
 	timestamp = decon->vsync.timestamp;
 	decon_activate_vsync(decon);
