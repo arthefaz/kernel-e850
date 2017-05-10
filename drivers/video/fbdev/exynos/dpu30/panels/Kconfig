@@ -9,12 +9,12 @@ config EXYNOS_DECON_LCD_S6E3HA2K
 config EXYNOS_DECON_LCD_S6E3HF4
 	depends on EXYNOS_DECON_LCD && EXYNOS_MIPI_DSIM
 	tristate "S6E3HF4 AMOLED WQHD LCD driver(1440 x 2560)"
-	default y
+	default n
 
 config EXYNOS_DECON_LCD_S6E3HA6
 	depends on EXYNOS_DECON_LCD && EXYNOS_MIPI_DSIM
 	tristate "S6E3HA6 AMOLED WQHD LCD driver(1440 x 2960)"
-	default n
+	default y
 
 config EXYNOS_DECON_LCD_EMUL_DISP
 	depends on EXYNOS_DECON_LCD && EXYNOS_MIPI_DSIM
