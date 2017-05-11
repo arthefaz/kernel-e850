@@ -237,7 +237,7 @@ enum decon_idma_type {
 	IDMA_VG1,
 	IDMA_VGF0,
 	IDMA_VGF1, /* VGRF in case of Exynos9810 */
-	IDMA_G0_S,
+	MAX_DECON_DMA_TYPE,
 };
 
 /*
@@ -376,12 +376,14 @@ enum decon_pixel_format {
 	DECON_PIXEL_FORMAT_YVU420,
 	DECON_PIXEL_FORMAT_YUV420M,
 	DECON_PIXEL_FORMAT_YVU420M,
+	/* YUV - 2 planes but 1 buffer */
 	DECON_PIXEL_FORMAT_NV12N,
+	DECON_PIXEL_FORMAT_NV12N_10B,
 
 	/* YUV 10bit display */
 	/* YUV420 2P */
-	DECON_PIXEL_FORMAT_YUV_P010,
-	DECON_PIXEL_FORMAT_YVU_P010,
+	DECON_PIXEL_FORMAT_NV12M_P010,
+	DECON_PIXEL_FORMAT_NV21M_P010,
 
 	/* YUV420(P8+2) 4P */
 	DECON_PIXEL_FORMAT_NV12M_S10B,
@@ -1233,6 +1235,7 @@ void decon_dpp_stop(struct decon_device *decon, bool do_reset);
 
 /* IOCTL commands */
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, __u32)
+#define S3CFB_DECON_SELF_REFRESH	_IOW('F', 207, __u32)
 #define S3CFB_WIN_CONFIG		_IOW('F', 209, \
 						struct decon_win_config_data)
 
