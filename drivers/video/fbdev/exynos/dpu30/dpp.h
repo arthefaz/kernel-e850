@@ -28,21 +28,12 @@
 #endif
 
 #include "decon.h"
-
-#if defined(CONFIG_SOC_EXYNOS8895)
-#include "regs-dpp_8895.h"
-#else
 #include "regs-dpp.h"
-#endif
 
 extern int dpp_log_level;
 
 #define DPP_MODULE_NAME		"exynos-dpp"
-#if defined(CONFIG_SOC_EXYNOS8895)
-#define MAX_DPP_CNT		7
-#elif defined(CONFIG_SOC_EXYNOS9810)
 #define MAX_DPP_CNT		6
-#endif
 
 /* about 1msec @ ACLK=630MHz */
 #define INIT_RCV_NUM		630000

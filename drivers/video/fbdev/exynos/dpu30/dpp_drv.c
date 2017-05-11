@@ -177,28 +177,6 @@ static void dpp_dma_dump_registers(struct dpp_device *dpp)
 	dpp_dma_read_ch_data(dpp->id);
 }
 
-#if defined(CONFIG_SOC_EXYNOS8895)
-static void dpp_read_ch_data(int id)
-{
-	u32 data[17] = {0,};
-	u32 sel[17] = {
-		0x00000000, 0x00000100, 0x00000200, 0x00000300, 0x00000400,
-		0x00000500,
-		0x00000101, 0x00000102, 0x00000103, 0x00000104, 0x00000105,
-		0x00000106, 0x00000107, 0x00000108, 0x00000109, 0x0000010A,
-		0x0000010B};
-	int i;
-
-	dpp_info("-< DPP%d_CH_DATA >-\n", id);
-	for (i = 0; i < 17; i++) {
-		dpp_write(id, DPP_CHAN_CONTROL, sel[i]);
-		data[i] = dpp_read(id, DPP_CHAN_DATA);
-
-		dpp_info("[0x%08x: %08x]\n", sel[i], data[i]);
-	}
-}
-#endif
-
 static void dpp_dump_registers(struct dpp_device *dpp)
 {
 	dpp_dma_dump_registers(dpp);
@@ -228,10 +206,6 @@ static void dpp_dump_registers(struct dpp_device *dpp)
 			dpp->res.regs + 0xC00, 0x14, false);
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			dpp->res.regs + 0xD00, 0xC, false);
-
-#if defined(CONFIG_SOC_EXYNOS8895)
-	dpp_read_ch_data(dpp->id);
-#endif
 }
 
 void dpp_op_timer_handler(unsigned long arg)
