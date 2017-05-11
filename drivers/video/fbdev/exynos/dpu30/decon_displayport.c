@@ -17,7 +17,7 @@
 #include "decon.h"
 #include "displayport.h"
 
-#if defined(CONFIG_SOC_EXYNOS8895)
+#if !defined(CONFIG_SOC_EXYNOS9810)
 static void decon_displayport_underrun_info(void)
 {
 #if defined(CONFIG_EXYNOS8895_BTS)

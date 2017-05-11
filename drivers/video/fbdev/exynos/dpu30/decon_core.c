@@ -2026,16 +2026,6 @@ void decon_clocks_info(struct decon_device *decon)
 
 void decon_put_clocks(struct decon_device *decon)
 {
-#if defined(CONFIG_SOC_EXYNOS8895)
-	if (decon->id != 2) {
-		clk_put(decon->res.dpll);
-		clk_put(decon->res.vclk);
-		clk_put(decon->res.vclk_leaf);
-	}
-	clk_put(decon->res.pclk);
-	clk_put(decon->res.eclk);
-	clk_put(decon->res.eclk_leaf);
-#endif
 }
 
 int decon_runtime_resume(struct device *dev)
@@ -2044,18 +2034,11 @@ int decon_runtime_resume(struct device *dev)
 
 	decon_dbg("decon%d %s +\n", decon->id, __func__);
 	clk_prepare_enable(decon->res.aclk);
-
-#if defined(CONFIG_SOC_EXYNOS8895)
-	if (decon->id == 1 || decon->id == 2) {
-		clk_prepare_enable(decon->res.busd);
-		clk_prepare_enable(decon->res.busp);
-	}
-
-	if (decon->id == 2) {
-		clk_prepare_enable(decon->res.busc);
-		clk_prepare_enable(decon->res.core);
-	}
-#endif
+/*
+ * TODO :
+ * There was an under-run issue when DECON suspend/resume
+ * was operating while DP was operating.
+ */
 
 	DPU_EVENT_LOG(DPU_EVT_DECON_RESUME, &decon->sd, ktime_set(0, 0));
 	decon_dbg("decon%d %s -\n", decon->id, __func__);
@@ -2070,17 +2053,11 @@ int decon_runtime_suspend(struct device *dev)
 	decon_dbg("decon%d %s +\n", decon->id, __func__);
 	clk_disable_unprepare(decon->res.aclk);
 
-#if defined(CONFIG_SOC_EXYNOS8895)
-	if (decon->id == 1 || decon->id == 2) {
-		clk_disable_unprepare(decon->res.busd);
-		clk_disable_unprepare(decon->res.busp);
-	}
-
-	if (decon->id == 2) {
-		clk_disable_unprepare(decon->res.busc);
-		clk_disable_unprepare(decon->res.core);
-	}
-#endif
+/*
+ * TODO :
+ * There was an under-run issue when DECON suspend/resume
+ * was operating while DP was operating.
+ */
 
 	DPU_EVENT_LOG(DPU_EVT_DECON_SUSPEND, &decon->sd, ktime_set(0, 0));
 	decon_dbg("decon%d %s -\n", decon->id, __func__);
