@@ -429,7 +429,6 @@ u32 dpu_dma_type_to_channel(enum decon_idma_type type)
 	u32 ch_id;
 
 	switch (type) {
-	case IDMA_G0_S:
 	case IDMA_G0:
 		ch_id = 5;
 		break;

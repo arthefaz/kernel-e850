@@ -712,7 +712,7 @@ void dpp_reg_set_csc_config(u32 id, u32 type)
 	u32 csc_rng = CSC_RANGE_FULL;
 	u32 coef_mode = CSC_COEF_HARDWIRED;
 
-	if ((id == IDMA_G0) || (id == IDMA_G1) || (id == IDMA_G0_S))
+	if ((id == IDMA_G0) || (id == IDMA_G1))
 		return;
 
 	csc_std = (type >> CSC_STANDARD_SHIFT) & 0x3F;
