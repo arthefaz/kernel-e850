@@ -256,11 +256,7 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	memcpy(&p->src, &config->src, sizeof(struct decon_frame));
 	memcpy(&p->dst, &config->dst, sizeof(struct decon_frame));
 	memcpy(&p->block, &config->block_area, sizeof(struct decon_win_rect));
-#if defined(CONFIG_DPU_2_0_INTERFACE)
 	p->rot = config->dpp_parm.rot;
-#else
-	p->flip = config->dpp_parm.flip;
-#endif
 	p->is_comp = config->compression;
 	p->format = config->format;
 	p->addr[0] = config->dpp_parm.addr[0];
@@ -284,21 +280,12 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	else
 		p->is_scale = false;
 
-#if defined(CONFIG_DPU_2_0_INTERFACE)
 	if ((config->dpp_parm.rot != DPP_ROT_NORMAL) || (p->is_scale) ||
 		(p->format >= DECON_PIXEL_FORMAT_NV16) ||
 		(p->block.w < BLK_WIDTH_MIN) || (p->block.h < BLK_HEIGHT_MIN))
 		p->is_block = false;
 	else
 		p->is_block = true;
-#else
-	if ((config->dpp_parm.flip != DPP_FLIP_NONE) || (p->is_scale) ||
-		(p->format >= DECON_PIXEL_FORMAT_NV16) ||
-		(p->block.w < BLK_WIDTH_MIN) || (p->block.h < BLK_HEIGHT_MIN))
-		p->is_block = false;
-	else
-		p->is_block = true;
-#endif
 }
 
 static int dpp_check_size(struct dpp_device *dpp, struct dpp_img_format *vi)
@@ -340,13 +327,8 @@ err:
 	dpp_err("img_mul_w : %d, img_mul_h : %d\n", vc.img_mul_w, vc.img_mul_h);
 	dpp_err("dst w : %d, dst h: %d\n", dst->w, dst->h);
 	dpp_err("sca_mul_w : %d, sca_mul_h : %d\n", vc.sca_mul_w, vc.sca_mul_h);
-#if defined(CONFIG_DPU_2_0_INTERFACE)
 	dpp_err("rotation : %d, color_format : %d\n",
 				config->dpp_parm.rot, config->format);
-#else
-	dpp_err("flip : %d, color_format : %d\n",
-				config->dpp_parm.flip, config->format);
-#endif
 	return -EINVAL;
 }
 
@@ -372,25 +354,19 @@ static int dpp_check_scale_ratio(struct dpp_params_info *p)
 
 	return 0;
 err:
-#if defined(CONFIG_DPU_2_0_INTERFACE)
 	dpp_err("src w(%d) h(%d), dst w(%d) h(%d), rotation(%d)\n",
 			p->src.w, p->src.h, p->dst.w, p->dst.h, p->rot);
-#else
-	dpp_err("src w(%d) h(%d), dst w(%d) h(%d), flip(%d)\n",
-			p->src.w, p->src.h, p->dst.w, p->dst.h, p->flip);
-#endif
 	return -EINVAL;
 }
 
 static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 {
-#if defined(CONFIG_DPU_2_0_INTERFACE)
 	if ((dpp->id != IDMA_VGF1) && (p->rot > DPP_ROT_180)) {
 		dpp_err("Not support rotation in DPP%d - VGRF only!\n",
 				p->rot);
 		return -EINVAL;
 	}
-#endif
+
 	if ((dpp->id == IDMA_G0 || dpp->id == IDMA_G1) &&
 			(p->format >= DECON_PIXEL_FORMAT_NV16)) {
 		dpp_err("Not support YUV format(%d) in DPP%d - VG & VGF only!\n",
@@ -456,19 +432,12 @@ static int dpp_check_limitation(struct dpp_device *dpp, struct dpp_params_info *
 	if (ret)
 		return -EINVAL;
 
-#if defined(CONFIG_DPU_2_0_INTERFACE)
 	if (p->is_comp && p->rot) {
 		dpp_err("Not support [AFBC+ROTATION] at the same time in DPP%d\n",
 			dpp->id);
 		return -EINVAL;
 	}
-#else
-	if (p->is_comp && p->flip) {
-		dpp_err("Not support [AFBC+FLIP] at the same time in DPP%d\n",
-			dpp->id);
-		return -EINVAL;
-	}
-#endif
+
 	if (p->is_comp && p->is_block) {
 		dpp_err("Not support [AFBC+BLOCK] at the same time in DPP%d\n",
 			dpp->id);
@@ -494,19 +463,12 @@ static int dpp_check_limitation(struct dpp_device *dpp, struct dpp_params_info *
 	}
 
 	/* FIXME */
-#if defined(CONFIG_DPU_2_0_INTERFACE)
 	if (p->is_block && p->rot) {
 		dpp_err("Not support [BLOCK+ROTATION] at the same time in DPP%d\n",
 			dpp->id);
 		return -EINVAL;
 	}
-#else
-	if (p->is_block && p->flip) {
-		dpp_err("Not support [BLOCK+FLIP] at the same time in DPP%d\n",
-			dpp->id);
-		return -EINVAL;
-	}
-#endif
+
 	ret = dpp_check_size(dpp, &vi);
 	if (ret)
 		return -EINVAL;
