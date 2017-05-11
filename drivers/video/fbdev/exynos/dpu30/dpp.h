@@ -88,11 +88,7 @@ extern int dpp_log_level;
 #define check_align(width, height, align_w, align_h)\
 	(IS_ALIGNED(width, align_w) && IS_ALIGNED(height, align_h))
 
-#if defined(CONFIG_DPU_2_0_INTERFACE)
 #define is_normal(config) (DPP_ROT_NORMAL)
-#else
-#define is_normal(config) (DPP_FLIP_NONE)
-#endif
 
 #define is_yuv(config) ((config->format >= DECON_PIXEL_FORMAT_NV16) \
 			&& (config->format < DECON_PIXEL_FORMAT_MAX))
@@ -169,11 +165,7 @@ struct dpp_size_constraints {
 struct dpp_img_format {
 	u32		vgr;
 	u32		normal;
-#if defined(CONFIG_DPU_2_0_INTERFACE)
 	u32		rot;
-#else
-	u32		flip;
-#endif
 	u32		scale;
 	u32		format;
 	u32		afbc_en;
@@ -242,11 +234,7 @@ struct dpp_params_info {
 	struct decon_frame src;
 	struct decon_frame dst;
 	struct decon_win_rect block;
-#if defined(CONFIG_DPU_2_0_INTERFACE)
 	u32 rot;
-#else
-	u32 flip;
-#endif
 	bool is_comp;
 	bool is_scale;
 	bool is_block;
@@ -361,11 +349,7 @@ static inline void dpp_select_format(struct dpp_device *dpp,
 
 	vi->vgr = is_vgr(dpp);
 	vi->normal = is_normal(dpp);
-#if defined(CONFIG_DPU_2_0_INTERFACE)
 	vi->rot = p->rot;
-#else
-	vi->flip = p->flip;
-#endif
 	vi->scale = p->is_scale;
 	vi->format = p->format;
 	vi->afbc_en = p->is_comp;
