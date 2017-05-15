@@ -67,6 +67,10 @@ static void dpp_dump_regs(struct dpp_device *dpp)
 		print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
 				dpp->res.regs + 0x5B0, 0x10, false);
 	}
+	if (dpp->id == IDMA_VGF1) {
+		print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dpp->res.regs + 0x600, 0x1E0, false);
+	}
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			dpp->res.regs + 0xA54, 0x4, false);
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
@@ -276,11 +280,20 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	p->format = config->format;
 	p->addr[0] = config->dpp_parm.addr[0];
 	p->addr[1] = config->dpp_parm.addr[1];
-	p->addr[2] = config->dpp_parm.addr[2];
+	p->addr[2] = 0;
+	p->addr[3] = 0;
 	p->eq_mode = config->dpp_parm.eq_mode;
-
-	if (p->format == DECON_PIXEL_FORMAT_NV12N)
+	p->hdr = config->dpp_parm.hdr_std;
+	p->is_4p = false;
+	if (p->format == DECON_PIXEL_FORMAT_NV12N) {
 		p->addr[1] = NV12N_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
+	}
+
+	if (p->format == DECON_PIXEL_FORMAT_NV12M_S10B || p->format == DECON_PIXEL_FORMAT_NV21M_S10B) {
+		p->addr[2] = p->addr[0] + NV12N_Y_SIZE(p->src.f_w, p->src.f_h);
+		p->addr[3] = p->addr[1] + NV12N_CBCR_SIZE(p->src.f_w, p->src.f_h);
+		p->is_4p = true;
+	}
 
 	if (is_rotation(config)) {
 		src_w = p->src.h;
@@ -349,6 +362,8 @@ err:
 	dpp_err("sca_mul_w : %d, sca_mul_h : %d\n", vc.sca_mul_w, vc.sca_mul_h);
 	dpp_err("rotation : %d, color_format : %d\n",
 				config->dpp_parm.rot, config->format);
+	dpp_err("hdr : %d, color_format : %d\n",
+				config->dpp_parm.hdr_std, config->format);
 	return -EINVAL;
 }
 
@@ -395,6 +410,12 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 		return -EINVAL;
 	}
 
+	if ((dpp->id != IDMA_VGF1) && (p->hdr > DPP_HDR_OFF)) {
+		dpp_err("Not support hdr in DPP%d - VGRF only!\n",
+				dpp->id);
+		return -EINVAL;
+	}
+
 	if ((dpp->id == IDMA_G0 || dpp->id == IDMA_G1) &&
 			(p->format >= DECON_PIXEL_FORMAT_NV16)) {
 		dpp_err("Not support YUV format(%d) in DPP%d - VG & VGF only!\n",
@@ -436,6 +457,8 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 	case DECON_PIXEL_FORMAT_RGBA_1010102:
 	case DECON_PIXEL_FORMAT_BGRA_1010102:
 
+	case DECON_PIXEL_FORMAT_NV12M_P010:
+	case DECON_PIXEL_FORMAT_NV21M_P010:
 	case DECON_PIXEL_FORMAT_NV12M_S10B:
 	case DECON_PIXEL_FORMAT_NV21M_S10B:
 		break;
@@ -501,6 +524,20 @@ static int dpp_check_limitation(struct dpp_device *dpp, struct dpp_params_info *
 	/* FIXME */
 	if (p->is_block && p->rot) {
 		dpp_err("Not support [BLOCK+ROTATION] at the same time in DPP%d\n",
+			dpp->id);
+		return -EINVAL;
+	}
+
+	/* HDR channel limitation */
+	if ((p->hdr != DPP_HDR_OFF) && p->is_comp) {
+		dpp_err("Not support [HDR+AFBC] at the same time in DPP%d\n",
+			dpp->id);
+		return -EINVAL;
+	}
+
+	/* HDR channel limitation */
+	if ((p->hdr != DPP_HDR_OFF) && p->is_scale) {
+		dpp_err("Not support [HDR+SCALE] at the same time in DPP%d\n",
 			dpp->id);
 		return -EINVAL;
 	}

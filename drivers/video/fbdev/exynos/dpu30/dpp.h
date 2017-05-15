@@ -232,11 +232,15 @@ struct dpp_params_info {
 	struct decon_frame dst;
 	struct decon_win_rect block;
 	u32 rot;
+
+	enum dpp_hdr_standard hdr;
+	bool is_4p;
+
 	bool is_comp;
 	bool is_scale;
 	bool is_block;
 	enum decon_pixel_format format;
-	dma_addr_t addr[MAX_PLANE_CNT];
+	dma_addr_t addr[MAX_PLANE_ADDR_CNT];
 	enum dpp_csc_eq eq_mode;
 	int h_ratio;
 	int v_ratio;
