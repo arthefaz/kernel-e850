@@ -377,7 +377,7 @@ static int decon_enable(struct decon_device *decon)
 		goto err;
 	}
 
-#if defined(CONFIG_EXYNOS_PD)
+#if defined(CONFIG_PM)
 	pm_runtime_get_sync(decon->dev);
 #else
 	decon_runtime_resume(decon->dev);
@@ -608,7 +608,7 @@ static int decon_disable(struct decon_device *decon)
 		}
 	}
 
-#if defined(CONFIG_EXYNOS_PD)
+#if defined(CONFIG_PM)
 	pm_runtime_put_sync(decon->dev);
 #else
 	decon_runtime_suspend(decon->dev);
@@ -661,7 +661,7 @@ static int decon_dp_disable(struct decon_device *decon)
 	decon->bts.ops->bts_release_bw(decon);
 #endif
 
-#if defined(CONFIG_EXYNOS_PD)
+#if defined(CONFIG_PM)
 	pm_runtime_put_sync(decon->dev);
 #else
 	decon_runtime_suspend(decon->dev);
@@ -2566,7 +2566,7 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 		return 0;
 	}
 
-#if defined(CONFIG_EXYNOS_PD)
+#if defined(CONFIG_PM)
 	pm_runtime_get_sync(decon->dev);
 #else
 	decon_runtime_resume(decon->dev);
