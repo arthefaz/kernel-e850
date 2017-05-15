@@ -1124,11 +1124,14 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	/*
 	 * To avoid SysMMU page fault due to small buffer allocation
 	 * bpp = 12 : (NV12, NV21) check LUMA side for simplication
+	 * bpp = 15 : (8+2_10bit)
 	 * bpp = 16 : (RGB16 formats)
 	 * bpp = 32 : (RGB32 formats)
 	 */
 	if (dpu_get_bpp(config->format) == 12)
 		byte_per_pixel = 1;
+	else if (dpu_get_bpp(config->format) == 15)
+		byte_per_pixel = 2;
 	else if (dpu_get_bpp(config->format) == 16)
 		byte_per_pixel = 2;
 	else

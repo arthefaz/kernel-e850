@@ -16,6 +16,7 @@
 #include <linux/ktime.h>
 #include "dpp.h"
 #include "dpp_coef.h"
+#include "hdr_lut.h"
 
 #define DPP_SC_RATIO_MAX	((1 << 20) * 8 / 8)
 #define DPP_SC_RATIO_7_8	((1 << 20) * 8 / 7)
@@ -433,6 +434,12 @@ void dma_reg_set_in_base_addr(u32 id, u32 addr_y, u32 addr_c)
 {
 	dma_write(id, IDMA_IN_BASE_ADDR_Y, addr_y);
 	dma_write(id, IDMA_IN_BASE_ADDR_C, addr_c);
+}
+
+void dma_reg_set_in_2b_base_addr(u32 id, u32 addr_y, u32 addr_c)
+{
+	dma_write(id, IDMA_IN_BASE_ADDR_Y2, addr_y);
+	dma_write(id, IDMA_IN_BASE_ADDR_C2, addr_c);
 }
 
 void dma_reg_set_deadlock_num(u32 id, u32 dl_num)
@@ -1077,16 +1084,39 @@ int dpp_reg_set_format(u32 id, struct dpp_params_info *p)
 	return 0;
 }
 
+void dpp_reg_set_buf_1p_addr(u32 id, struct dpp_params_info *p)
+{
+	/* For AFBC stream, BASE_ADDR_C must be same with BASE_ADDR_Y */
+	dma_reg_set_in_base_addr(id, p->addr[0], p->addr[0]);
+}
+
+void dpp_reg_set_buf_2p_addr(u32 id, struct dpp_params_info *p)
+{
+	dma_reg_set_in_base_addr(id, p->addr[0], p->addr[1]);
+}
+
+void dpp_reg_set_buf_4p_addr(u32 id, struct dpp_params_info *p)
+{
+	dma_reg_set_in_base_addr(id, p->addr[0], p->addr[1]);
+	dma_reg_set_in_2b_base_addr(id, p->addr[2], p->addr[3]);
+}
+
 void dpp_reg_set_buf_addr(u32 id, struct dpp_params_info *p)
 {
-	dpp_dbg("dpp id : %d, y : %llu, cb : %llu, cr : %llu\n", id,
-			p->addr[0], p->addr[1], p->addr[2]);
+	if (p->is_4p) {
+		dpp_reg_set_buf_4p_addr(id, p);
+	} else {
+		if (p->is_comp) {
+			dpp_reg_set_buf_1p_addr(id, p);
+		} else {
+			dpp_reg_set_buf_2p_addr(id, p);
+		}
+	}
+	dpp_dbg("dpp id : %d, 1st-plane : 0x%p, 2nd-plane : 0x%p ",
+		id, (void *)p->addr[0], (void *)p->addr[1]);
+	dpp_dbg("3rd-plane : 0x%p, 4th-plane : 0x%p\n",
+		(void *)p->addr[2], (void *)p->addr[3]);
 
-	/* For AFBC stream, BASE_ADDR_C must be same with BASE_ADDR_Y */
-	if (p->is_comp == 0)
-		dma_reg_set_in_base_addr(id, p->addr[0], p->addr[1]);
-	else
-		dma_reg_set_in_base_addr(id, p->addr[0], p->addr[0]);
 }
 
 void dpp_reg_set_size(u32 id, struct dpp_params_info *p)
@@ -1269,6 +1299,136 @@ int dpp_reg_deinit(u32 id, bool reset)
 	return 0;
 }
 
+/*
+ * DPU_HDR APIs
+ */
+void dpp_reg_set_hdr_en(u32 id, bool en)
+{
+	u32 val =  0;
+
+	val = en ? ~0 : 0;
+	dpp_write_mask(id, DPP_VGRF_HDR_CON, val, DPP_HDR_ON_MASK);
+}
+
+void dpp_reg_set_eotf_en(u32 id, bool en)
+{
+	u32 val =  0;
+
+	val = en ? ~0 : 0;
+	dpp_write_mask(id, DPP_VGRF_HDR_CON, val, DPP_EOTF_ON_MASK);
+}
+
+void dpp_reg_set_gm_en(u32 id, bool en)
+{
+	u32 val =  0;
+
+	val = en ? ~0 : 0;
+	dpp_write_mask(id, DPP_VGRF_HDR_CON, val,  DPP_GM_ON_MASK);
+}
+
+void dpp_reg_set_tm_en(u32 id, bool en)
+{
+	u32 val =  0;
+
+	val = en ? ~0 : 0;
+	dpp_write_mask(id, DPP_VGRF_HDR_CON, val, DPP_TM_ON_MASK);
+}
+
+void dpp_reg_set_eotf_lut(u32 id, struct dpp_params_info *p)
+{
+	u32 i = 0;
+	u32 *lut_x = NULL;
+	u32 *lut_y = NULL;
+
+	if (p->hdr == DPP_HDR_ST2084) {
+		lut_x = eotf_x_axis_st2084;
+		lut_y = eotf_y_axis_st2084;
+	} else {
+		lut_x = eotf_x_axis_hlg;
+		lut_y = eotf_y_axis_hlg;
+	}
+
+	for (i = 0; i < MAX_EOTF; i++) {
+		dpp_write_mask(id,
+			DPP_HDR_EOTF_X_AXIS_ADDR(i),
+			DPP_HDR_EOTF_X_AXIS_VAL(i, lut_x[i]),
+			DPP_HDR_EOTF_MASK(i));
+		dpp_write_mask(id,
+			DPP_HDR_EOTF_Y_AXIS_ADDR(i),
+			DPP_HDR_EOTF_Y_AXIS_VAL(i, lut_y[i]),
+			DPP_HDR_EOTF_MASK(i));
+	}
+}
+
+void dpp_reg_set_gm_lut(u32 id, struct dpp_params_info *p)
+{
+	u32 i = 0;
+	u32 *lut_gm = NULL;
+
+	if (p->eq_mode == CSC_BT_2020)
+		lut_gm = gm_coef_2020_p3;
+	else if (p->eq_mode == CSC_DCI_P3)
+		lut_gm = gm_coef_bypass;
+	else
+		dpp_err("Undefined HDR CSC Type!!!\n");
+
+	for (i = 0; i < MAX_GM; i++) {
+		dpp_write_mask(id,
+			DPP_HDR_GM_COEF_ADDR(i),
+			lut_gm[i],
+			DPP_HDR_GM_COEF_MASK);
+	}
+}
+
+void dpp_reg_set_tm_lut(u32 id, struct dpp_params_info *p)
+{
+	u32 i = 0;
+	u32 *lut_x = NULL;
+	u32 *lut_y = NULL;
+
+	lut_x = tm_x_axis_p3_gamma2_2;
+	lut_y = tm_y_axis_p3_gamma2_2;
+
+	for (i = 0; i < MAX_TM; i++) {
+		dpp_write_mask(id,
+			DPP_HDR_TM_X_AXIS_ADDR(i),
+			DPP_HDR_TM_X_AXIS_VAL(i, lut_x[i]),
+			DPP_HDR_TM_MASK(i));
+		dpp_write_mask(id,
+			DPP_HDR_TM_Y_AXIS_ADDR(i),
+			DPP_HDR_TM_Y_AXIS_VAL(i, lut_y[i]),
+			DPP_HDR_TM_MASK(i));
+	}
+}
+
+void dpp_reg_set_hdr_lut(u32 id, bool en, struct dpp_params_info *p)
+{
+	if (en == true) {
+		dpp_reg_set_eotf_lut(id, p);
+		dpp_reg_set_gm_lut(id, p);
+		dpp_reg_set_tm_lut(id, p);
+	}
+}
+
+
+void dpp_reg_set_hdr(u32 id, struct dpp_params_info *p)
+{
+	bool en = false;
+
+	if (id != IDMA_VGF1)
+		return;
+
+	if (p->hdr > DPP_HDR_OFF) {
+		en = true;
+
+		dpp_reg_set_hdr_en(id, en);
+		dpp_reg_set_eotf_en(id, en);
+		dpp_reg_set_gm_en(id, en);
+		dpp_reg_set_tm_en(id, en);
+		dpp_reg_set_hdr_lut(id, en, p);
+	}
+}
+
 void dpp_reg_configure_params(u32 id, struct dpp_params_info *p)
 {
 	dpp_reg_set_csc_config(id, p->eq_mode);
@@ -1278,4 +1438,7 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p)
 	dpp_reg_set_buf_addr(id, p);
 	dpp_reg_set_block_area(id, p);
 	dpp_reg_set_format(id, p);
+	if (id == IDMA_VGF1)
+		dpp_reg_set_hdr(id, p);
 }
+

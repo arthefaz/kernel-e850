@@ -49,6 +49,7 @@ extern struct decon_bts_ops decon_bts_control;
 #define DECON_MODULE_NAME	"exynos-decon"
 #define MAX_NAME_SIZE		32
 #define MAX_PLANE_CNT		3
+#define MAX_PLANE_ADDR_CNT	4
 #define DECON_ENTER_HIBER_CNT	3
 #define DECON_ENTER_LPD_CNT	3
 #define MIN_BLK_MODE_WIDTH	144
