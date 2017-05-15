@@ -1603,7 +1603,7 @@ static int displayport_enable(struct displayport_device *displayport)
 
 	displayport_info("displayport_enable\n");
 
-#if defined(CONFIG_EXYNOS_PD)
+#if defined(CONFIG_PM_RUNTIME)
 	pm_runtime_get_sync(displayport->dev);
 #else
 	displayport_runtime_resume(displayport->dev);
@@ -1652,7 +1652,7 @@ static int displayport_disable(struct displayport_device *displayport)
 
 	phy_power_off(displayport->phy);
 
-#if defined(CONFIG_EXYNOS_PD)
+#if defined(CONFIG_PM_RUNTIME)
 	pm_runtime_put_sync(displayport->dev);
 #else
 	displayport_runtime_suspend(displayport->dev);
