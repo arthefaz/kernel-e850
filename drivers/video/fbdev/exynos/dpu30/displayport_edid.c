@@ -10,9 +10,6 @@
 */
 
 #include <linux/fb.h>
-#include <media/v4l2-dv-timings.h>
-#include <uapi/linux/v4l2-dv-timings.h>
-
 #include "displayport.h"
 
 #define EDID_SEGMENT_ADDR	(0x60 >> 1)
@@ -27,44 +24,12 @@
 
 int forced_resolution = -1;
 
-/* displayport_supported_presets[] is to be arranged in the order of pixel clock */
-struct displayport_supported_preset displayport_supported_presets[] = {
-	{V4L2_DV_BT_DMT_640X480P60,      640, 480,  60, FB_VMODE_NONINTERLACED,   1, "640x480p@60"},
-	{V4L2_DV_BT_CEA_720X480P59_94,	 720, 480,  59, FB_VMODE_NONINTERLACED,   2, "720x480p@60"},
-	{V4L2_DV_BT_CEA_720X576P50,      720, 576,  50, FB_VMODE_NONINTERLACED,  17, "720x576p@50"},
-	{V4L2_DV_BT_CEA_1280X720P50,	1280, 720,  50, FB_VMODE_NONINTERLACED,  19, "1280x720p@50"},
-	{V4L2_DV_BT_CEA_1280X720P60,	1280, 720,  60, FB_VMODE_NONINTERLACED,   4, "1280x720p@60"},
-	{V4L2_DV_BT_DMT_1280X800P60_RB,	    1280,  800, 60, FB_VMODE_NONINTERLACED,   0, "1280x800p@60_RB"},
-	{V4L2_DV_BT_DMT_1280X1024P60,	    1280, 1024, 60, FB_VMODE_NONINTERLACED,   0, "1280x1024p@60"},
-	{V4L2_DV_BT_CEA_1920X1080P24,	1920, 1080, 24, FB_VMODE_NONINTERLACED,  32, "1920x1080p@24"},
-	{V4L2_DV_BT_CEA_1920X1080P25,	1920, 1080, 25, FB_VMODE_NONINTERLACED,  33, "1920x1080p@25"},
-	{V4L2_DV_BT_CEA_1920X1080P30,	1920, 1080, 30, FB_VMODE_NONINTERLACED,  34, "1920x1080p@30"},
-	{V4L2_DV_BT_CEA_1920X1080P50,	1920, 1080, 50, FB_VMODE_NONINTERLACED,  31, "1920x1080p@50"},
-	{V4L2_DV_BT_CEA_1920X1080P60,	1920, 1080, 60, FB_VMODE_NONINTERLACED,  16, "1920x1080p@60"},
-	{V4L2_DV_BT_DMT_1920X1440P60,	    1920, 1440, 60, FB_VMODE_NONINTERLACED,   0, "1920x1440p@60"},
-	{V4L2_DV_BT_CVT_2560X1440P59_ADDED, 2560, 1440, 59, FB_VMODE_NONINTERLACED,   0, "2560x1440p@59"},
-	{V4L2_DV_BT_CVT_2560X1440P60_ADDED, 2560, 1440, 60, FB_VMODE_NONINTERLACED,   0, "2560x1440p@60"},
-	{V4L2_DV_BT_CEA_3840X2160P24,	3840, 2160, 24, FB_VMODE_NONINTERLACED,  93, "3840x2160p@24"},
-	{V4L2_DV_BT_CEA_3840X2160P25,	3840, 2160, 25, FB_VMODE_NONINTERLACED,  94, "3840x2160p@25"},
-	{V4L2_DV_BT_CEA_3840X2160P30,	3840, 2160, 30, FB_VMODE_NONINTERLACED,  95, "3840x2160p@30"},
-	{V4L2_DV_BT_CEA_4096X2160P24,	4096, 2160, 24, FB_VMODE_NONINTERLACED,  98, "4096x2160p@24"},
-	{V4L2_DV_BT_CEA_4096X2160P25,	4096, 2160, 25, FB_VMODE_NONINTERLACED,  99, "4096x2160p@25"},
-	{V4L2_DV_BT_CEA_4096X2160P30,	4096, 2160, 30, FB_VMODE_NONINTERLACED, 100, "4096x2160p@30"},
-	{V4L2_DV_BT_CVT_3840X2160P59_ADDED, 3840, 2160, 59, FB_VMODE_NONINTERLACED, 0, "3840x2160p@59_RB"},
-	{V4L2_DV_BT_CEA_3840X2160P50,	3840, 2160, 50, FB_VMODE_NONINTERLACED,  96, "3840x2160p@50"},
-	{V4L2_DV_BT_CEA_3840X2160P60,	3840, 2160, 60, FB_VMODE_NONINTERLACED,  97, "3840x2160p@60"},
-	{V4L2_DV_BT_CEA_4096X2160P50,	4096, 2160, 50, FB_VMODE_NONINTERLACED, 101, "4096x2160p@50"},
-	{V4L2_DV_BT_CEA_4096X2160P60,	4096, 2160, 60, FB_VMODE_NONINTERLACED, 102, "4096x2160p@60"},
-};
-
 static struct fb_videomode ud_mode_h14b_vsdb[] = {
 	{"3840x2160p@30", 30, 3840, 2160, 297000000, 0, 0, 0, 0, 0, 0, 0, FB_VMODE_NONINTERLACED, 0},
 	{"3840x2160p@25", 25, 3840, 2160, 297000000, 0, 0, 0, 0, 0, 0, 0, FB_VMODE_NONINTERLACED, 0},
 	{"3840x2160p@24", 24, 3840, 2160, 297000000, 0, 0, 0, 0, 0, 0, 0, FB_VMODE_NONINTERLACED, 0},
 	{"4096x2160p@24", 24, 4096, 2160, 297000000, 0, 0, 0, 0, 0, 0, 0, FB_VMODE_NONINTERLACED, 0},
 };
-
-const int displayport_pre_cnt = ARRAY_SIZE(displayport_supported_presets);
 
 static struct v4l2_dv_timings preferred_preset = V4L2_DV_BT_DMT_640X480P60;
 static u32 edid_misc;
@@ -202,15 +167,14 @@ static void edid_find_preset(const struct fb_videomode *mode)
 {
 	int i;
 
-	for (i = 0; i < displayport_pre_cnt; i++) {
-		if (mode->refresh == displayport_supported_presets[i].refresh &&
-			mode->xres == displayport_supported_presets[i].xres &&
-			mode->yres == displayport_supported_presets[i].yres &&
-			mode->vmode == displayport_supported_presets[i].vmode) {
-			if (displayport_supported_presets[i].edid_support_match == false) {
-				displayport_info("EDID: found %s\n", displayport_supported_presets[i].name);
-				displayport_supported_presets[i].edid_support_match = true;
-				preferred_preset = displayport_supported_presets[i].dv_timings;
+	for (i = 0; i < supported_videos_pre_cnt; i++) {
+		if (mode->refresh == supported_videos[i].fps &&
+			mode->xres == supported_videos[i].dv_timings.bt.width &&
+			mode->yres == supported_videos[i].dv_timings.bt.height) {
+			if (supported_videos[i].edid_support_match == false) {
+				displayport_info("EDID: found supported_videos : %s\n", supported_videos[i].name);
+				supported_videos[i].edid_support_match = true;
+				preferred_preset = supported_videos[i].dv_timings;
 			}
 		}
 	}
@@ -221,13 +185,13 @@ static void edid_use_default_preset(void)
 	int i;
 
 	if (forced_resolution >= 0)
-		preferred_preset = displayport_supported_presets[forced_resolution].dv_timings;
+		preferred_preset = supported_videos[forced_resolution].dv_timings;
 	else
-		preferred_preset = displayport_supported_presets[EDID_DEFAULT_TIMINGS_IDX].dv_timings;
+		preferred_preset = supported_videos[EDID_DEFAULT_TIMINGS_IDX].dv_timings;
 
-	for (i = 0; i < displayport_pre_cnt; i++) {
-		displayport_supported_presets[i].edid_support_match =
-			v4l2_match_dv_timings(&displayport_supported_presets[i].dv_timings,
+	for (i = 0; i < supported_videos_pre_cnt; i++) {
+		supported_videos[i].edid_support_match =
+			v4l2_match_dv_timings(&supported_videos[i].dv_timings,
 					&preferred_preset, 0, 0);
 	}
 
@@ -238,24 +202,23 @@ void edid_set_preferred_preset(int mode)
 {
 	int i;
 
-	preferred_preset = displayport_supported_presets[mode].dv_timings;
-	for (i = 0; i < displayport_pre_cnt; i++) {
-		displayport_supported_presets[i].edid_support_match =
-			v4l2_match_dv_timings(&displayport_supported_presets[i].dv_timings,
+	preferred_preset = supported_videos[mode].dv_timings;
+	for (i = 0; i < supported_videos_pre_cnt; i++) {
+		supported_videos[i].edid_support_match =
+			v4l2_match_dv_timings(&supported_videos[i].dv_timings,
 					&preferred_preset, 0, 0);
 	}
 }
 
-int edid_find_resolution(u16 xres, u16 yres, u16 refresh, u16 vmode)
+int edid_find_resolution(u16 xres, u16 yres, u16 refresh)
 {
 	int i;
 	int ret=0;
 
-	for (i = 0; i < displayport_pre_cnt; i++) {
-		if (refresh == displayport_supported_presets[i].refresh &&
-			xres == displayport_supported_presets[i].xres &&
-			yres == displayport_supported_presets[i].yres &&
-			vmode == displayport_supported_presets[i].vmode) {
+	for (i = 0; i < supported_videos_pre_cnt; i++) {
+		if (refresh == supported_videos[i].fps &&
+			xres == supported_videos[i].dv_timings.bt.width &&
+			yres == supported_videos[i].dv_timings.bt.height) {
 			return i;
 		}
 	}
@@ -318,9 +281,9 @@ void edid_find_preset_in_video_data_block(u8 vic)
 {
 	int i;
 
-	for (i = 0; i < displayport_pre_cnt; i++) {
-		if ((vic != 0) && (displayport_supported_presets[i].vic == vic))
-			displayport_supported_presets[i].edid_support_match = true;
+	for (i = 0; i < supported_videos_pre_cnt; i++) {
+		if ((vic != 0) && (supported_videos[i].vic == vic))
+			supported_videos[i].edid_support_match = true;
 	}
 }
 
@@ -366,7 +329,8 @@ static int edid_parse_audio_video_db(unsigned char *edid, struct fb_audio *sad)
 			for (i = pos; i < pos + len; i++) {
 				u8 vic = edid[i] & SVD_VIC_MASK;
 				edid_find_preset_in_video_data_block(vic);
-				displayport_dbg("EDID: Video data block vic:%d\n", vic);
+				displayport_dbg("EDID: Video data block vic:%d %s\n",
+					vic, supported_videos[i].name);
 			}
 		} else if (type == SPEAKER_DATA_BLOCK) {
 			sad->speaker |= edid[pos] & 0xff;
@@ -424,10 +388,10 @@ int edid_update(struct displayport_device *hdev)
 	if (block_cnt < 0)
 		goto out;
 
-	preferred_preset = displayport_supported_presets[EDID_DEFAULT_TIMINGS_IDX].dv_timings;
+	preferred_preset = supported_videos[EDID_DEFAULT_TIMINGS_IDX].dv_timings;
 
-	for (i = 0; i < displayport_pre_cnt; i++)
-		displayport_supported_presets[i].edid_support_match = false;
+	for (i = 0; i < supported_videos_pre_cnt; i++)
+		supported_videos[i].edid_support_match = false;
 
 	fb_edid_to_monspecs(edid, &specs);
 
@@ -456,11 +420,11 @@ int edid_update(struct displayport_device *hdev)
 	if (!edid_misc)
 		edid_misc = specs.misc;
 
-	for (i = 0; i < displayport_pre_cnt; i++) {
-		displayport_dbg("displayport_supported_presets[%d].edid_support_match = %d\n",
-				i, displayport_supported_presets[i].edid_support_match);
+	for (i = 0; i < supported_videos_pre_cnt; i++) {
+		displayport_dbg("%s edid_support_match = %d\n",
+				supported_videos[i].name, supported_videos[i].edid_support_match);
 
-		if (displayport_supported_presets[i].edid_support_match)
+		if (supported_videos[i].edid_support_match)
 			first = false;
 	}
 

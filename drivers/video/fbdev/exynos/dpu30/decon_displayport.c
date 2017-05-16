@@ -216,17 +216,17 @@ static int decon_displayport_set_lcd_info(struct decon_device *decon)
 		decon->lcd_info = lcd_info;
 	}
 
-	decon->lcd_info->width = videoformat_parameters[displayport->current_videoformat].h_active;
-	decon->lcd_info->height = videoformat_parameters[displayport->current_videoformat].v_active;
-	decon->lcd_info->xres = videoformat_parameters[displayport->current_videoformat].h_active;
-	decon->lcd_info->yres = videoformat_parameters[displayport->current_videoformat].v_active;
-	decon->lcd_info->vfp = videoformat_parameters[displayport->current_videoformat].v_f_porch;
-	decon->lcd_info->vbp = videoformat_parameters[displayport->current_videoformat].v_b_porch;
-	decon->lcd_info->hfp = videoformat_parameters[displayport->current_videoformat].h_f_porch;
-	decon->lcd_info->hbp = videoformat_parameters[displayport->current_videoformat].h_b_porch;
-	decon->lcd_info->vsa = videoformat_parameters[displayport->current_videoformat].v_sync;
-	decon->lcd_info->hsa = videoformat_parameters[displayport->current_videoformat].h_sync;
-	decon->lcd_info->fps = videoformat_parameters[displayport->current_videoformat].fps;
+	decon->lcd_info->width = supported_videos[displayport->cur_video].dv_timings.bt.width;
+	decon->lcd_info->height = supported_videos[displayport->cur_video].dv_timings.bt.height;
+	decon->lcd_info->xres = supported_videos[displayport->cur_video].dv_timings.bt.width;
+	decon->lcd_info->yres = supported_videos[displayport->cur_video].dv_timings.bt.height;
+	decon->lcd_info->vfp = supported_videos[displayport->cur_video].dv_timings.bt.vfrontporch;
+	decon->lcd_info->vbp = supported_videos[displayport->cur_video].dv_timings.bt.vbackporch;
+	decon->lcd_info->hfp = supported_videos[displayport->cur_video].dv_timings.bt.hfrontporch;
+	decon->lcd_info->hbp = supported_videos[displayport->cur_video].dv_timings.bt.hbackporch;
+	decon->lcd_info->vsa = supported_videos[displayport->cur_video].dv_timings.bt.vsync;
+	decon->lcd_info->hsa = supported_videos[displayport->cur_video].dv_timings.bt.hsync;
+	decon->lcd_info->fps = supported_videos[displayport->cur_video].fps;
 	decon->dt.psr_mode = DECON_VIDEO_MODE;
 	decon->dt.trig_mode = DECON_HW_TRIG;
 	decon->dt.out_type = DECON_OUT_DP;

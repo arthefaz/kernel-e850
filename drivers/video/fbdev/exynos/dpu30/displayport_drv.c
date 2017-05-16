@@ -87,15 +87,15 @@ static u64 displayport_find_edid_max_pixelclock(void)
 {
 	int i;
 
-	for (i = displayport_pre_cnt - 1;i > 0; i--) {
-		if (displayport_supported_presets[i].edid_support_match) {
-			displayport_info("max resolution: %s\n",
-				displayport_supported_presets[i].name);
+	for (i = supported_videos_pre_cnt - 1; i > 0; i--) {
+		if (supported_videos[i].edid_support_match) {
+			displayport_info("max video_format : %s\n",
+				supported_videos[i].name);
 			break;
 		}
 	}
 
-	return displayport_supported_presets[i].dv_timings.bt.pixelclock;
+	return supported_videos[i].dv_timings.bt.pixelclock;
 }
 
 static int displayport_get_min_link_rate(u8 rx_link_rate, u8 lane_cnt)
@@ -865,7 +865,7 @@ void displayport_hpd_changed(int state)
 		cancel_delayed_work_sync(&displayport->hdcp22_work);
 		cancel_delayed_work_sync(&displayport->hdcp13_integrity_check_work);
 		displayport->hpd_state = HPD_UNPLUG;
-		displayport->current_videoformat = v640x480p_60Hz;
+		displayport->cur_video = V640X480P60;
 
 		pm_relax(displayport->dev);
 
@@ -1059,7 +1059,7 @@ static int displayport_Automated_Test_Request(void)
 		displayport->bist_used = 1;
 		displayport->bist_type = COLOR_BAR;
 
-		edid_preset = edid_find_resolution(hactive, vactive, fps, vmode);
+		edid_preset = edid_find_resolution(hactive, vactive, fps);
 		edid_set_preferred_preset(edid_preset);
 
 		displayport_set_switch_state(displayport, 1);
@@ -1343,7 +1343,7 @@ static u8 displayport_get_vic(void)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
 
-	return videoformat_parameters[displayport->current_videoformat].vic;
+	return supported_videos[displayport->cur_video].vic;
 }
 
 static int displayport_make_avi_infoframe_data(struct infoframe *avi_infoframe)
@@ -1610,16 +1610,18 @@ static int displayport_enable(struct displayport_device *displayport)
 #endif
 	/*enable_irq(displayport->res.irq);*/
 
-	displayport_info("displayport->current_videoformat = %d in displayport_enable!!!\n", displayport->current_videoformat);
+	displayport_info("cur_video = %s in displayport_enable!!!\n",
+			supported_videos[displayport->cur_video].name);
 
 	if (displayport->bist_used)
-		displayport_reg_set_bist_video_configuration(displayport->current_videoformat,
+		displayport_reg_set_bist_video_configuration(displayport->cur_video,
 				bpc, bist_type, dyn_range);
 	else {
 		if(displayport->dfp_type != DFP_TYPE_DP)
 			bpc = BPC_8;
 
-		displayport_reg_set_video_configuration(displayport->current_videoformat, bpc, dyn_range);
+		displayport_reg_set_video_configuration(displayport->cur_video,
+				bpc, dyn_range);
 	}
 
 	displayport_set_avi_infoframe();
@@ -1690,28 +1692,14 @@ bool displayport_match_timings(const struct v4l2_dv_timings *t1,
 	return false;
 }
 
-bool displayport_match_video_params(u32 i, u32 j)
-{
-	if (displayport_supported_presets[i].xres == videoformat_parameters[j].h_active &&
-			displayport_supported_presets[i].yres == videoformat_parameters[j].v_active &&
-			displayport_supported_presets[i].refresh == videoformat_parameters[j].fps)
-		return true;
-
-	return false;
-}
-
 static int displayport_timing2conf(struct v4l2_dv_timings *timings)
 {
-	int i, j;
+	int i;
 
-	for (i = 0; i < displayport_pre_cnt; i++) {
-		if (displayport_match_timings(&displayport_supported_presets[i].dv_timings,
-					timings, 0)) {
-			for (j = 0; j < videoformat_parameters_cnt; j++) {
-				if (displayport_match_video_params(i, j))
-					return j; /* eum matching between displayport_conf and videoformat */
-			}
-		}
+	for (i = 0; i < supported_videos_pre_cnt; i++) {
+		if (displayport_match_timings(&supported_videos[i].dv_timings,
+					timings, 0))
+			return i;
 	}
 
 	return -EINVAL;
@@ -1736,16 +1724,17 @@ static int displayport_s_dv_timings(struct v4l2_subdev *sd,
 	if (displayport->bist_used == 0) {
 		displayport->bpc = BPC_8;
 		/*fail safe mode (640x480) with 6 bpc*/
-		if (displayport_setting_videoformat == v640x480p_60Hz)
+		if (displayport_setting_videoformat == V640X480P60)
 			displayport->bpc = BPC_6;
 	}
 
-	displayport->current_videoformat = displayport_setting_videoformat;
+	displayport->cur_video = displayport_setting_videoformat;
 	displayport->cur_timings = *timings;
 
 	decon_displayport_get_out_sd(decon);
 
-	displayport_dbg("New current_videoformat = %d\n", displayport->current_videoformat);
+	displayport_dbg("New cur_video = %s\n",
+		supported_videos[displayport->cur_video].name);
 
 	return 0;
 }
@@ -1783,13 +1772,13 @@ static u64 displayport_get_max_pixelclock(void)
 static int displayport_enum_dv_timings(struct v4l2_subdev *sd,
 		struct v4l2_enum_dv_timings *timings)
 {
-	if (timings->index >= displayport_pre_cnt) {
+	if (timings->index >= supported_videos_pre_cnt) {
 		displayport_dbg("displayport_enum_dv_timings -EOVERFLOW\n");
 		return -E2BIG;
 	}
 
 	/* reduce the timing by lane count and link rate */
-	if (displayport_supported_presets[timings->index].dv_timings.bt.pixelclock >
+	if (supported_videos[timings->index].dv_timings.bt.pixelclock >
 			displayport_get_max_pixelclock()) {
 		displayport_info("Max pixelclock = %llu, lane:%d, rate:0x%x\n",
 				displayport_get_max_pixelclock(), max_lane_cnt, max_link_rate);
@@ -1797,15 +1786,15 @@ static int displayport_enum_dv_timings(struct v4l2_subdev *sd,
 	}
 
 	if (reduced_resolution && reduced_resolution <
-			displayport_supported_presets[timings->index].dv_timings.bt.pixelclock) {
+			supported_videos[timings->index].dv_timings.bt.pixelclock) {
 		displayport_info("reduced_resolution: %llu\n", reduced_resolution);
 		return -E2BIG;
 	}
 
-	if (displayport_supported_presets[timings->index].edid_support_match) {
-		displayport_info("matched %d(%s)\n", timings->index,
-				displayport_supported_presets[timings->index].name);
-		timings->timings = displayport_supported_presets[timings->index].dv_timings;
+	if (supported_videos[timings->index].edid_support_match) {
+		displayport_info("matched video_format : %s\n",
+			supported_videos[timings->index].name);
+		timings->timings = supported_videos[timings->index].dv_timings;
 	} else {
 		return -EINVAL;
 	}
@@ -2276,7 +2265,7 @@ static ssize_t displayport_test_edid_show(struct class *class,
 
 	i = displayport_timing2conf(&edid_preset);
 	if (i < 0) {
-		i = displayport->current_videoformat;
+		i = displayport->cur_video;
 		pr_err("displayport timings not supported\n");
 	}
 
@@ -2303,7 +2292,7 @@ static ssize_t displayport_test_edid_store(struct class *dev,
 	edid_preset = edid_preferred_preset();
 	i = displayport_timing2conf(&edid_preset);
 	if (i < 0) {
-		i = displayport->current_videoformat;
+		i = displayport->cur_video;
 		pr_err("displayport timings not supported\n");
 	}
 
@@ -2405,10 +2394,10 @@ static ssize_t displayport_forced_resolution_show(struct class *class,
 	int ret = 0;
 	int i;
 
-	for (i = 0; i < displayport_pre_cnt; i++) {
+	for (i = 0; i < supported_videos_pre_cnt; i++) {
 		ret += scnprintf(buf + ret, PAGE_SIZE - ret, "%c %2d : %s\n",
 				forced_resolution == i ? '*':' ', i,
-				displayport_supported_presets[i].name);
+				supported_videos[i].name);
 	}
 
 	return ret;
@@ -2423,7 +2412,7 @@ static ssize_t displayport_forced_resolution_store(struct class *dev,
 
 	reduced_resolution = 0;
 
-	if (val[1] < 0 || val[1] >= displayport_pre_cnt || val[0] < 1)
+	if (val[1] < 0 || val[1] >= supported_videos_pre_cnt || val[0] < 1)
 		forced_resolution = -1;
 	else {
 		struct displayport_device *displayport = get_displayport_drvdata();
@@ -2461,7 +2450,7 @@ static ssize_t displayport_reduced_resolution_store(struct class *dev,
 
 	forced_resolution = -1;
 
-	if (val[1] < 0 || val[1] >= displayport_pre_cnt || val[0] < 1)
+	if (val[1] < 0 || val[1] >= supported_videos_pre_cnt || val[0] < 1)
 		reduced_resolution = 0;
 	else {
 		switch (val[1]) {

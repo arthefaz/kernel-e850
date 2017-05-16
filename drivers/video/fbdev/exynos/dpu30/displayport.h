@@ -17,6 +17,8 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <media/v4l2-subdev.h>
+#include <media/v4l2-dv-timings.h>
+#include <uapi/linux/v4l2-dv-timings.h>
 #include <linux/phy/phy.h>
 #if defined(CONFIG_EXTCON)
 #include <linux/extcon.h>
@@ -372,54 +374,35 @@ struct fb_vendor {
 #define SYNC_NEGATIVE 1
 
 typedef enum {
-	v640x480p_60Hz,
-	v720x480p_60Hz,
-	v720x576p_50Hz,
-	v1280x720p_50Hz,
-	v1280x720p_60Hz,
-	v1280x800p_RB_60Hz,
-	v1280x1024p_60Hz,
-	v1920x1080p_24Hz,
-	v1920x1080p_25Hz,
-	v1920x1080p_30Hz,
-	v1920x1080p_59Hz,
-	v1920x1080p_50Hz,
-	v1920x1080p_60Hz,
-	v1920x1440p_60Hz,
-	v2560x1440p_59Hz,
-	v2560x1440p_60Hz,
-	v3840x2160p_24Hz,
-	v3840x2160p_25Hz,
-	v3840x2160p_30Hz,
-	v3840x2160p_50Hz,
-	v3840x2160p_RB_59Hz,
-	v3840x2160p_60Hz,
-	v4096x2160p_24Hz,
-	v4096x2160p_25Hz,
-	v4096x2160p_30Hz,
-	v4096x2160p_50Hz,
-	v4096x2160p_60Hz,
-	sa_crc_640x10_60Hz,
+	V640X480P60,
+	V720X480P60,
+	V720X576P50,
+	V1280X720P50,
+	V1280X720P60,
+	V1280X800P60RB,
+	V1280X1024P60,
+	V1920X1080P24,
+	V1920X1080P25,
+	V1920X1080P30,
+	V1920X1080P50,
+	V1920X1080P60,
+	V2048X1536P60,
+	V1920X1440P60,
+	V2560X1440P59,
+	V2560X1440P60,
+	V3840X2160P24,
+	V3840X2160P25,
+	V3840X2160P30,
+	V4096X2160P24,
+	V4096X2160P25,
+	V4096X2160P30,
+	V3840X2160P59RB,
+	V3840X2160P50,
+	V3840X2160P60,
+	V4096X2160P50,
+	V4096X2160P60,
+	V640X10P60SACRC,
 } videoformat;
-
-typedef struct {
-	videoformat video_format;
-	u32 h_total;
-	u32 h_active;
-	u32 h_f_porch;
-	u32 h_sync;
-	u32 h_b_porch;
-	u32 v_total;
-	u32 v_active;
-	u32 v_f_porch;
-	u32 v_sync;
-	u32 v_b_porch;
-	u32 fps;
-	u32 pixel_clock;
-	u8 vic;
-	u8 v_sync_pol;
-	u8 h_sync_pol;
-} videoformat_info;
 
 typedef enum{
 	ASYNC_MODE = 0,
@@ -547,7 +530,7 @@ struct displayport_device {
 	u8 bist_used;
 	enum test_pattern bist_type;
 	enum displayport_dynamic_range_type dyn_range;
-	videoformat current_videoformat;
+	videoformat cur_video;
 };
 
 struct displayport_debug_param {
@@ -555,8 +538,6 @@ struct displayport_debug_param {
 	u8 link_rate;
 	u8 lane_cnt;
 };
-
-extern videoformat_info videoformat_parameters[];
 
 /* EDID functions */
 /* default preset configured on probe */
@@ -590,11 +571,11 @@ extern videoformat_info videoformat_parameters[];
 #define SVD_VIC_MASK 0x7F
 
 struct displayport_supported_preset {
+	videoformat video_format;
 	struct v4l2_dv_timings dv_timings;
-	u16 xres;
-	u16 yres;
-	u16 refresh;
-	u32 vmode;
+	u32 fps;
+	u32 v_sync_pol;
+	u32 h_sync_pol;
 	u8 vic;
 	char *name;
 	bool edid_support_match;
@@ -622,9 +603,22 @@ struct displayport_supported_preset {
 		V4L2_DV_BT_STD_DMT | V4L2_DV_BT_STD_CVT, 0) \
 }
 
-extern const int displayport_pre_cnt;
-extern struct displayport_supported_preset displayport_supported_presets[];
-extern const int videoformat_parameters_cnt;
+#define V4L2_DV_BT_CVT_2048X1536P60_ADDED { \
+	.type = V4L2_DV_BT_656_1120, \
+	V4L2_INIT_BT_TIMINGS(2048, 1536, 0, V4L2_DV_HSYNC_POS_POL, \
+		209250000, 48, 32, 80, 3, 4, 37, 0, 0, 0, \
+		V4L2_DV_BT_STD_DMT | V4L2_DV_BT_STD_CVT, 0) \
+}
+
+#define V4L2_DV_BT_CVT_640x10P60_ADDED { \
+	.type = V4L2_DV_BT_656_1120, \
+	V4L2_INIT_BT_TIMINGS(640, 10, 0, V4L2_DV_HSYNC_POS_POL, \
+		27000000, 16, 96, 48, 2, 2, 12, 0, 0, 0, \
+		V4L2_DV_BT_STD_DMT | V4L2_DV_BT_STD_CVT, 0) \
+}
+
+extern const int supported_videos_pre_cnt;
+extern struct displayport_supported_preset supported_videos[];
 
 struct exynos_displayport_data {
 	enum {
@@ -910,7 +904,7 @@ int edid_read(struct displayport_device *hdev, u8 **data);
 int edid_update(struct displayport_device *hdev);
 struct v4l2_dv_timings edid_preferred_preset(void);
 void edid_set_preferred_preset(int mode);
-int edid_find_resolution(u16 xres, u16 yres, u16 refresh, u16 vmode);
+int edid_find_resolution(u16 xres, u16 yres, u16 refresh);
 u8 edid_read_checksum(void);
 u32 edid_audio_informs(void);
 
