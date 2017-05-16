@@ -11,6 +11,13 @@
 
 #include "displayport.h"
 
+u32 phy_tune_parameters[4][4][3] = {
+	/* Swing Level_0 */ { {4, 0, 0}, {0, 7, 0}, {2,  9, 1}, {0, 13, 1} },
+	/* Swing Level_1 */ { {1, 0, 0}, {2, 6, 1}, {0, 10, 1}, {0, 10, 1} },
+	/* Swing Level_2 */ { {2, 0, 1}, {0, 6, 1}, {0,  6, 1}, {0,  6, 1} },
+	/* Swing Level_3 */ { {0, 0, 1}, {0, 0, 1}, {0,  0, 1}, {0,  0, 1} },
+};
+
 /* supported_videos[] is to be arranged in the order of pixel clock */
 struct displayport_supported_preset supported_videos[] = {
 	{V640X480P60,      V4L2_DV_BT_DMT_640X480P60,         60, SYNC_NEGATIVE, SYNC_NEGATIVE,   1, "V640X480P60"},
@@ -239,9 +246,113 @@ void displayport_reg_set_pattern_PLTPAT(void)
 	displayport_write(PCS_TEST_PATTERN_SET2, 0x0000F83E);	/* 11111000 00111110 */
 }
 
+void displayport_reg_set_phy_tune(u32 phy_lane_num, u32 amplitude_level, u32 emphasis_level)
+{
+	u32 amplitude_address = 0;
+	u32 emphasis_address = 0;
+	u32 val = 0;
+
+	switch (phy_lane_num) {
+	case 0:
+		amplitude_address = DP_REG_16;
+		emphasis_address = DP_REG_1A;
+		break;
+
+	case 1:
+		amplitude_address = DP_REG_36;
+		emphasis_address = DP_REG_3A;
+		break;
+
+	case 2:
+		amplitude_address = DP_REG_56;
+		emphasis_address = DP_REG_5A;
+		break;
+
+	case 3:
+		amplitude_address = DP_REG_76;
+		emphasis_address = DP_REG_7A;
+		break;
+
+	default:
+		break;
+	}
+
+	amplitude_address += amplitude_level * 4;
+	val = phy_tune_parameters[amplitude_level][emphasis_level][PHY_AMP_PARAM]
+		| (phy_tune_parameters[amplitude_level][emphasis_level][PHY_IDRV_EN_PARAM] << TX_DRV_IDRV_EN_CTRL_BIT_POS);
+	displayport_phy_write(amplitude_address, val);
+	displayport_dbg("DP_REG_%02x = 0x%02x\n", amplitude_address, val);
+
+	emphasis_address += emphasis_level * 4;
+	val = phy_tune_parameters[amplitude_level][emphasis_level][PHY_EMP_PARAM];
+	displayport_phy_write(emphasis_address, val);
+	displayport_dbg("DP_REG_%02x = 0x%02x\n", emphasis_address, val);
+}
+
+void displayport_reg_set_phy_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_emphasis)
+{
+#if defined(CONFIG_CCIC_NOTIFIER)
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	switch (displayport->ccic_notify_dp_conf) {
+	case CCIC_NOTIFY_DP_PIN_UNKNOWN:
+		break;
+
+	case CCIC_NOTIFY_DP_PIN_A:
+		if (displayport->dp_sw_sel) {
+			displayport_reg_set_phy_tune(0, voltage[1], pre_emphasis[1]);
+			displayport_reg_set_phy_tune(1, voltage[2], pre_emphasis[2]);
+			displayport_reg_set_phy_tune(2, voltage[3], pre_emphasis[3]);
+			displayport_reg_set_phy_tune(3, voltage[0], pre_emphasis[0]);
+		} else {
+			displayport_reg_set_phy_tune(0, voltage[0], pre_emphasis[0]);
+			displayport_reg_set_phy_tune(1, voltage[3], pre_emphasis[3]);
+			displayport_reg_set_phy_tune(2, voltage[2], pre_emphasis[2]);
+			displayport_reg_set_phy_tune(3, voltage[1], pre_emphasis[1]);
+		}
+		break;
+	case CCIC_NOTIFY_DP_PIN_B:
+		if (displayport->dp_sw_sel) {
+			displayport_reg_set_phy_tune(0, voltage[3], pre_emphasis[3]);
+			displayport_reg_set_phy_tune(1, voltage[2], pre_emphasis[2]);
+			displayport_reg_set_phy_tune(2, voltage[1], pre_emphasis[1]);
+			displayport_reg_set_phy_tune(3, voltage[0], pre_emphasis[0]);
+		} else {
+			displayport_reg_set_phy_tune(0, voltage[0], pre_emphasis[0]);
+			displayport_reg_set_phy_tune(1, voltage[1], pre_emphasis[1]);
+			displayport_reg_set_phy_tune(2, voltage[2], pre_emphasis[2]);
+			displayport_reg_set_phy_tune(3, voltage[3], pre_emphasis[3]);
+		}
+		break;
+
+	case CCIC_NOTIFY_DP_PIN_C:
+	case CCIC_NOTIFY_DP_PIN_E:
+	case CCIC_NOTIFY_DP_PIN_D:
+	case CCIC_NOTIFY_DP_PIN_F:
+		if (displayport->dp_sw_sel) {
+			displayport_reg_set_phy_tune(0, voltage[2], pre_emphasis[2]);
+			displayport_reg_set_phy_tune(1, voltage[3], pre_emphasis[3]);
+			displayport_reg_set_phy_tune(2, voltage[1], pre_emphasis[1]);
+			displayport_reg_set_phy_tune(3, voltage[0], pre_emphasis[0]);
+		} else {
+			displayport_reg_set_phy_tune(0, voltage[0], pre_emphasis[0]);
+			displayport_reg_set_phy_tune(1, voltage[1], pre_emphasis[1]);
+			displayport_reg_set_phy_tune(2, voltage[3], pre_emphasis[3]);
+			displayport_reg_set_phy_tune(3, voltage[2], pre_emphasis[2]);
+		}
+		break;
+
+	default:
+		break;
+	}
+#endif
+}
+
 void displayport_reg_set_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_emphasis)
 {
 	u32 val = 0;
+
+	displayport_reg_set_phy_voltage_and_pre_emphasis(voltage, pre_emphasis);
 
 	val = (voltage[0] << LN0_TX_AMP_CTRL_BIT_POS) | (voltage[1] << LN1_TX_AMP_CTRL_BIT_POS)
 		| (voltage[2] << LN2_TX_AMP_CTRL_BIT_POS) | (voltage[3] << LN3_TX_AMP_CTRL_BIT_POS);

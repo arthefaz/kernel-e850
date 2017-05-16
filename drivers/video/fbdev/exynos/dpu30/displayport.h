@@ -373,6 +373,12 @@ struct fb_vendor {
 #define SYNC_POSITIVE 0
 #define SYNC_NEGATIVE 1
 
+enum phy_tune_info {
+	PHY_AMP_PARAM = 0,
+	PHY_EMP_PARAM = 1,
+	PHY_IDRV_EN_PARAM = 2,
+};
+
 typedef enum {
 	V640X480P60,
 	V720X480P60,

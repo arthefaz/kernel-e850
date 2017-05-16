@@ -1601,6 +1601,7 @@
 
 #define DP_REG_13				(0x084C)
 #define DP_REG_16				(0x0858)
+#define TX_DRV_IDRV_EN_CTRL_BIT_POS		(4)
 #define DP_REG_17				(0x085C)
 #define DP_REG_18				(0x0860)
 #define DP_REG_19				(0x0864)
@@ -1608,6 +1609,12 @@
 #define DP_REG_1B				(0x086C)
 #define DP_REG_1C				(0x0870)
 #define DP_REG_1D				(0x0874)
+#define DP_REG_36				(0x08D8)
+#define DP_REG_3A				(0x08E8)
+#define DP_REG_56				(0x0958)
+#define DP_REG_5A				(0x0868)
+#define DP_REG_76				(0x09D8)
+#define DP_REG_7A				(0x09E8)
 
 #define DP_REG_B3				(0x0ACC)
 #define CMN_DUMMY_CTRL_7_6			(0x03 << 6)
