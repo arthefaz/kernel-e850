@@ -38,9 +38,7 @@ void dma_reg_set_test_en(u32 id, u32 en)
 	mask = IDMA_IN_REG_DEST_SEL_MASK;
 
 	dma_write_mask(id, IDMA_IN_REQ_DEST, val, mask);
-
 }
-
 
 /* DMA debug */
 void dma_reg_set_debug(u32 id)
@@ -59,36 +57,6 @@ void dma_reg_set_common_debug(u32 id)
 	val = dma_com_read(id, DPU_DMA_GLB_CONTROL);
 	val |= IDMA_CHAN_DEBUG_ENABLE;
 	dma_com_write(id, DPU_DMA_GLB_CONTROL, val);
-}
-
-/* [to_pat] 0=dedicated, 1=pattern */
-void dma_reg_set_ch_map(u32 id, u32 dpp_id, u32 to_pat)
-{
-	u32 val, mask;
-	u32 ch = 3;
-	u32 ch_bit[6] = {0, 2, 4, 6, 10, 8};
-
-	if (!to_pat) {
-		if (dpp_id == IDMA_G1 || dpp_id == IDMA_VG1)
-			ch = 2;
-		else if (dpp_id == IDMA_G0 || dpp_id == IDMA_VG0)
-			ch = 1;
-		else if (dpp_id == IDMA_VGF0 || dpp_id == IDMA_VGF1)
-			ch = 0;
-		else
-			dpp_err("unknown DMA_ID\n");
-	}
-	val = DMA_CH_MAP(ch, ch_bit[dpp_id]);
-	mask = DMA_CH_MAP_MASK(ch_bit[dpp_id]);
-	dma_com_write_mask(id, DPU_DMA_CH_MAP, val, mask);
-}
-
-void dma_reg_set_lpi_period(u32 id, u32 period)
-{
-	u32 val = 0;
-
-	val = DMA_LPI_PERIOD(period);
-	dma_com_write_mask(id, DPU_DMA_LPI_PERIOD, val, DMA_LPI_PERIOD_MASK);
 }
 
 /* Setting value : 0=Qch-enable, 1=Qch-disable */
@@ -199,15 +167,6 @@ void dma_reg_set_sfr_update_force(u32 id)
 	dma_write_mask(id, IDMA_ENABLE, ~0, IDMA_SFR_UPDATE_FORCE);
 }
 
-/* G0_S only */
-void dma_reg_set_secure_mode(u32 id, u32 en)
-{
-	u32 val = 0;
-
-	val = en ? ~0 : 0;
-	dma_write_mask(id, IDMA_ENABLE, val, IDMA_SECURE_MODE);
-}
-
 u32 dma_reg_get_irq_status(u32 id)
 {
 	u32 val, mask;
@@ -228,6 +187,14 @@ void dma_reg_clear_irq_all(u32 id)
 	u32 val = IDMA_ALL_IRQ_CLEAR;
 
 	dma_write_mask(id, IDMA_IRQ, val, val);
+}
+
+void dma_reg_set_irq_mo_conflict(u32 id, u32 en)
+{
+	u32 val = 0;
+
+	val = en ? ~0 : 0;
+	dma_write_mask(id, IDMA_IRQ, val, IDMA_MO_CONFLICT_MASK);
 }
 
 void dma_reg_set_irq_mask_afbc_timeout(u32 id, u32 en)
@@ -286,15 +253,6 @@ void dma_reg_set_irq_mask_framedone(u32 id, u32 en)
 	dma_write_mask(id, IDMA_IRQ, val, IDMA_IRQ_FRAMEDONE_MASK);
 }
 
-/* for ODMA SLICE_DONE */
-void dma_reg_set_irq_mask_slice_done_all(u32 id, u32 en)
-{
-	u32 val = 0;
-
-	val = en ? ~0 : 0;
-	dma_write_mask(id, ODMA_IRQ, val, ODMA_ALL_SLICE_DONE_MASK);
-}
-
 void dma_reg_set_irq_mask_all(u32 id, u32 en)
 {
 	u32 val = 0;
@@ -306,6 +264,14 @@ void dma_reg_set_irq_mask_all(u32 id, u32 en)
 void dma_reg_set_irq_enable(u32 id)
 {
 	dma_write_mask(id, IDMA_IRQ, ~0, IDMA_IRQ_ENABLE);
+}
+
+void dma_reg_set_in_vr_mode(u32 id, u32 en)
+{
+	u32 val;
+
+	val = en ? ~0 : 0;
+	dma_write_mask(id, IDMA_IN_CON, val, IDMA_VR_MODE_EN);
 }
 
 void dma_reg_set_in_ic_max(u32 id, u32 ic_num)
@@ -332,7 +298,7 @@ void dma_reg_set_rotation(u32 id, u32 rot)
 
 	val = IDMA_ROTATION(rot);
 	mask = IDMA_ROTATION_MASK;
-	dpp_write_mask(id, IDMA_IN_CON, val, mask);
+	dma_write_mask(id, IDMA_IN_CON, val, mask);
 }
 
 void dma_reg_set_afbc_en(u32 id, u32 en)
@@ -438,9 +404,9 @@ void dma_reg_set_perf_degradation_cfg(u32 id, u32 time, u32 ic_num)
 {
 	u32 val, mask;
 
-	val = (IDMA_DEGRADATION_TIME(time) | IDMA_IN_IC_MAX_DEG(ic_num));
-	mask = (IDMA_DEGRADATION_TIME_MASK | IDMA_IN_IC_MAX_DEG_MASK);
-	dma_write_mask(id, IDMA_PERFORMANCE_CON0, val, mask);
+	val = (DPU_DMA_DEGRADATION_TIME(time) | DPU_DMA_IN_IC_MAX_DEG(ic_num));
+	mask = (DPU_DMA_DEGRADATION_TIME_MASK | DPU_DMA_IN_IC_MAX_DEG_MASK);
+	dma_com_write_mask(id, DPU_DMA_PERFORMANCE_CON0, val, mask);
 }
 
 void dma_reg_set_perf_degradation_en(u32 id, u32 en)
@@ -448,7 +414,8 @@ void dma_reg_set_perf_degradation_en(u32 id, u32 en)
 	u32 val = 0;
 
 	val = en ? ~0 : 0;
-	dma_write_mask(id, IDMA_PERFORMANCE_CON0, val, IDMA_DEGRADATION_EN);
+	dma_com_write_mask(id, DPU_DMA_PERFORMANCE_CON0,
+			val, DPU_DMA_DEGRADATION_EN);
 }
 
 void dma_reg_set_in_qos_lut(u32 id, u32 lut_id, u32 qos_t)
@@ -456,10 +423,10 @@ void dma_reg_set_in_qos_lut(u32 id, u32 lut_id, u32 qos_t)
 	u32 reg_id;
 
 	if (lut_id == 0)
-		reg_id = IDMA_IN_QOS_LUT07_00;
+		reg_id = DPU_DMA_IN_QOS_LUT07_00;
 	else
-		reg_id = IDMA_IN_QOS_LUT15_08;
-	dma_write(id, reg_id, qos_t);
+		reg_id = DPU_DMA_IN_QOS_LUT15_08;
+	dma_com_write(id, reg_id, qos_t);
 }
 
 void dma_reg_set_in_base_addr(u32 id, u32 addr_y, u32 addr_c)
@@ -498,9 +465,9 @@ void dma_reg_set_recovery_num(u32 id, u32 rcv_num)
 {
 	u32 val, mask;
 
-	val = IDMA_RECOVERY_NUM(rcv_num);
-	mask = IDMA_RECOVERY_NUM_MASK;
-	dma_write_mask(id, IDMA_RECOVERY_CTRL, val, mask);
+	val = DPU_DMA_RECOVERY_NUM(rcv_num);
+	mask = DPU_DMA_RECOVERY_NUM_MASK;
+	dma_com_write_mask(id, DPU_DMA_RECOVERY_NUM_CTRL, val, mask);
 }
 
 void dma_reg_set_recovery_en(u32 id, u32 en)
@@ -596,20 +563,6 @@ void dpp_reg_set_qchannel_en(u32 id, u32 en)
 	dpp_write_mask(id, DPP_ENABLE, val, DPP_QCHANNEL_EN);
 }
 
-/* G0_S only */
-void dpp_reg_set_secure_mode(u32 id, u32 en)
-{
-	u32 val = 0;
-
-	val = en ? ~0 : 0;
-	dpp_write_mask(id, DPP_ENABLE, val, DPP_SECURE_MODE);
-}
-
-void dpp_reg_wait_pingpong_clear(u32 id)
-{
-	/* removed */
-}
-
 void dpp_reg_set_irq_clear_all(u32 id)
 {
 	dpp_write_mask(id, DPP_IRQ, DPP_ALL_IRQ_CLEAR, DPP_ALL_IRQ_CLEAR);
@@ -655,6 +608,7 @@ void dpp_reg_set_csc_type(u32 id, u32 type, u32 range, u32 mode)
 
 void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 {
+#if defined(SUPPORT_USER_COEF)
 	u32 val, mask;
 	u32 csc_id = DPP_CSC_ID_BT_2020 + CSC_RANGE_LIMITED;
 	u32 c00, c01, c02;
@@ -703,7 +657,7 @@ void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 	dpp_dbg("0x%3x  0x%3x  0x%3x\n", c00, c01, c02);
 	dpp_dbg("0x%3x  0x%3x  0x%3x\n", c10, c11, c12);
 	dpp_dbg("0x%3x  0x%3x  0x%3x\n", c20, c21, c22);
-
+#endif
 }
 
 void dpp_reg_set_csc_config(u32 id, u32 type)
@@ -718,7 +672,7 @@ void dpp_reg_set_csc_config(u32 id, u32 type)
 	csc_std = (type >> CSC_STANDARD_SHIFT) & 0x3F;
 	csc_rng = (type >> CSC_RANGE_SHIFT) & 0x7;
 
-	if (csc_std < CSC_BT_2020)
+	if (csc_std <= CSC_DCI_P3)
 		coef_mode = CSC_COEF_HARDWIRED;
 	else
 		coef_mode = CSC_COEF_CUSTOMIZED;
@@ -936,57 +890,6 @@ void dpp_calc_recommend_initial_phase(u32 fmt_id,
 	}
 }
 
-void dpp_reg_set_she_on(u32 id, u32 en)
-{
-	u32 val = 0;
-
-	val = en ? ~0 : 0;
-	dpp_write_mask(id, DPP_SHE_CON0, val, DPP_SHE_ON_MASK);
-}
-
-void dpp_reg_set_she_gain(u32 id, u32 val)
-{
-	dpp_write_mask(id, DPP_SHE_CON0, DPP_GAIN(val), DPP_GAIN_MASK);
-}
-
-void dpp_reg_set_she_ec_en(u32 id, u32 en)
-{
-	u32 val = 0;
-
-	val = en ? ~0 : 0;
-	dpp_write_mask(id, DPP_SHE_CON0, val, DPP_EC_EN_MASK);
-}
-
-void dpp_reg_set_she_ec_threshold(u32 id, u32 n32, u32 n16,
-		u32 zr, u32 p16, u32 p32)
-{
-	u32 val;
-
-	val = DPP_EC_TH_N32(n32);
-	dpp_write_mask(id, DPP_SHE_CON0, val, DPP_EC_TH_N32_MASK);
-
-	val = (DPP_EC_TH_N16(n16) | DPP_EC_TH_0(zr)
-		| DPP_EC_TH_P16(p16) | DPP_EC_TH_P32(p32));
-	dpp_write(id, DPP_SHE_CON1, val);
-}
-
-void dpp_reg_set_she_sc_en(u32 id, u32 en)
-{
-	u32 val = 0;
-
-	val = en ? ~0 : 0;
-	dpp_write_mask(id, DPP_SHE_CON2, val, DPP_SC_EN_MASK);
-}
-
-void dpp_reg_set_she_sc_threshold(u32 id, u32 th1, u32 th2, u32 th3)
-{
-	u32 val, mask;
-
-	val = (DPP_SC_TH1(th1) | DPP_SC_TH2(th2) | DPP_SC_TH3(th3));
-	mask = (DPP_SC_TH1_MASK | DPP_SC_TH2_MASK | DPP_SC_TH3_MASK);
-	dpp_write(id, DPP_SHE_CON2, val);
-}
-
 void dpp_reg_set_dynamic_gating_en_all(u32 id, u32 en)
 {
 	u32 val = 0;
@@ -1065,47 +968,95 @@ int dpp_reg_set_format(u32 id, struct dpp_params_info *p)
 	switch (p->format) {
 	case DECON_PIXEL_FORMAT_ARGB_8888:
 		fmt = IDMA_IMG_FORMAT_ARGB8888;
+		fmt_type = DPP_IMG_FORMAT_ARGB8888;
 		a_sel = 1;
 		break;
 	case DECON_PIXEL_FORMAT_ABGR_8888:
 		fmt = IDMA_IMG_FORMAT_ABGR8888;
+		fmt_type = DPP_IMG_FORMAT_ARGB8888;
 		a_sel = 1;
 		break;
 	case DECON_PIXEL_FORMAT_RGBA_8888:
 		fmt = IDMA_IMG_FORMAT_RGBA8888;
+		fmt_type = DPP_IMG_FORMAT_ARGB8888;
 		a_sel = 1;
 		break;
 	case DECON_PIXEL_FORMAT_BGRA_8888:
 		fmt = IDMA_IMG_FORMAT_BGRA8888;
+		fmt_type = DPP_IMG_FORMAT_ARGB8888;
 		a_sel = 1;
 		break;
 	case DECON_PIXEL_FORMAT_XRGB_8888:
 		fmt = IDMA_IMG_FORMAT_XRGB8888;
+		fmt_type = DPP_IMG_FORMAT_ARGB8888;
 		break;
 	case DECON_PIXEL_FORMAT_XBGR_8888:
 		fmt = IDMA_IMG_FORMAT_XBGR8888;
+		fmt_type = DPP_IMG_FORMAT_ARGB8888;
 		break;
 	case DECON_PIXEL_FORMAT_RGBX_8888:
 		fmt = IDMA_IMG_FORMAT_RGBX8888;
+		fmt_type = DPP_IMG_FORMAT_ARGB8888;
 		break;
 	case DECON_PIXEL_FORMAT_BGRX_8888:
 		fmt = IDMA_IMG_FORMAT_BGRX8888;
+		fmt_type = DPP_IMG_FORMAT_ARGB8888;
 		break;
 	case DECON_PIXEL_FORMAT_RGB_565:
 		fmt = IDMA_IMG_FORMAT_RGB565;
+		fmt_type = DPP_IMG_FORMAT_ARGB8888;
 		break;
 	/* TODO: add ARGB1555 & ARGB4444 */
+	case DECON_PIXEL_FORMAT_ARGB_2101010:
+		fmt = IDMA_IMG_FORMAT_ARGB2101010;
+		fmt_type = DPP_IMG_FORMAT_ARGB8101010;
+		a_sel = 1;
+		break;
+	case DECON_PIXEL_FORMAT_ABGR_2101010:
+		fmt = IDMA_IMG_FORMAT_ABGR2101010;
+		fmt_type = DPP_IMG_FORMAT_ARGB8101010;
+		a_sel = 1;
+		break;
+	case DECON_PIXEL_FORMAT_RGBA_1010102:
+		fmt = IDMA_IMG_FORMAT_RGBA2101010;
+		fmt_type = DPP_IMG_FORMAT_ARGB8101010;
+		a_sel = 1;
+		break;
+	case DECON_PIXEL_FORMAT_BGRA_1010102:
+		fmt = IDMA_IMG_FORMAT_BGRA2101010;
+		fmt_type = DPP_IMG_FORMAT_ARGB8101010;
+		a_sel = 1;
+		break;
+
 	case DECON_PIXEL_FORMAT_NV12:
 	case DECON_PIXEL_FORMAT_NV12M:
 		fmt = IDMA_IMG_FORMAT_YUV420_2P;
-		fmt_type = 1;
+		fmt_type = DPP_IMG_FORMAT_YUV420_8P;
 		break;
 	case DECON_PIXEL_FORMAT_NV21:
 	case DECON_PIXEL_FORMAT_NV21M:
 	case DECON_PIXEL_FORMAT_NV12N:
 		fmt = IDMA_IMG_FORMAT_YVU420_2P;
-		fmt_type = 1;
+		fmt_type = DPP_IMG_FORMAT_YUV420_8P;
 		break;
+
+	case DECON_PIXEL_FORMAT_NV12M_P010:
+		fmt = IDMA_IMG_FORMAT_YUV420_P010;
+		fmt_type = DPP_IMG_FORMAT_YUV420_P010;
+		break;
+	case DECON_PIXEL_FORMAT_NV21M_P010:
+		fmt = IDMA_IMG_FORMAT_YVU420_P010;
+		fmt_type = DPP_IMG_FORMAT_YUV420_P010;
+		break;
+	case DECON_PIXEL_FORMAT_NV12M_S10B:
+		fmt = IDMA_IMG_FORMAT_YUV420_8P2;
+		fmt_type = DPP_IMG_FORMAT_YUV420_8P2;
+		break;
+	case DECON_PIXEL_FORMAT_NV21M_S10B:
+		fmt = IDMA_IMG_FORMAT_YVU420_8P2;
+		fmt_type = DPP_IMG_FORMAT_YUV420_8P2;
+		break;
+
 	default:
 		dpp_err("Unsupported Format\n");
 		return -EINVAL;
@@ -1115,12 +1066,13 @@ int dpp_reg_set_format(u32 id, struct dpp_params_info *p)
 	dpp_reg_set_alpha_sel(id, a_sel);
 	dpp_reg_set_img_format(id, fmt_type);
 
-	dma_reg_set_afbc_en(id, p->is_comp);
-	if (p->is_comp)
-		dma_reg_set_recovery_en(id, 1);
-	else
-		dma_reg_set_recovery_en(id, 0);
-
+	/*
+	 * dma_reg_set_afbc_en(id, p->is_comp);
+	 * if (p->is_comp)
+	 *	dma_reg_set_recovery_en(id, 1);
+	 * else
+	 *	dma_reg_set_recovery_en(id, 0);
+	 */
 	return 0;
 }
 
@@ -1185,10 +1137,10 @@ void dpp_reg_set_lookup_table(u32 id)
 	dma_reg_set_in_qos_lut(id, 1, 0x44444444);
 }
 
-void dpp_reg_set_dynamic_clock_gating(u32 id)
+void dpp_reg_set_dynamic_clock_gating(u32 id, u32 en)
 {
-	dma_reg_set_dynamic_gating_en_all(id, 1);
-	dpp_reg_set_dynamic_gating_en_all(id, 1);
+	dma_reg_set_dynamic_gating_en_all(id, en);
+	dpp_reg_set_dynamic_gating_en_all(id, en);
 }
 
 u32 dpp_reg_get_irq_status(u32 id)
@@ -1280,14 +1232,15 @@ void dpp_reg_init(u32 id)
 	dma_reg_set_irq_enable(id);
 	dpp_reg_set_irq_enable(id);
 
-	/* dma_reg_set_clock_gate_en_all(id, 1); */
-	/* dpp_reg_set_clock_gate_en_all(id, 1); */
+	dma_reg_set_clock_gate_en_all(id, 0);
+	dpp_reg_set_clock_gate_en_all(id, 0);
 
 	dpp_reg_set_lookup_table(id);
-	/* dpp_reg_set_dynamic_clock_gating(id); */
+	dpp_reg_set_dynamic_clock_gating(id, 0);
 	dpp_reg_set_plane_alpha_fixed(id);
 
 	dpp_reg_control_linecnt(id, 1, 0);
+	/* Revovery Function is enabled on EVT1 */
 	/* dma_reg_set_recovery_num(id, INIT_RCV_NUM); */
 }
 
