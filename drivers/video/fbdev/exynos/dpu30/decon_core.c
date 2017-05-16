@@ -390,13 +390,14 @@ static int decon_enable(struct decon_device *decon)
 			decon->timeline->name, decon->timeline->value, decon->timeline_max);
 
 #if defined(CONFIG_EXYNOS_DISPLAYPORT) && defined(CONFIG_EXYNOS8895_BTS)
-		if (videoformat_parameters[displayport->current_videoformat].pixel_clock >= 533000000) {
+		if (supported_videos[displayport->cur_video].dv_timings.bt.pixelclock
+			>= 533000000) {
 			decon->bts.ops->bts_update_qos_mif(decon, 1540*1000);
 			decon->bts.ops->bts_update_qos_int(decon, 533*1000);
 			decon->bts.ops->bts_update_qos_scen(decon, 1);
-		} else if (videoformat_parameters[displayport->current_videoformat].pixel_clock > 148500000) {
+		} else if (supported_videos[displayport->cur_video].dv_timings.bt.pixelclock
+			> 148500000)
 			decon->bts.ops->bts_update_qos_mif(decon, 1352*1000);
-		}
 #endif
 	}
 

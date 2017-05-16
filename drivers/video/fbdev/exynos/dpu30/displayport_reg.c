@@ -11,38 +11,39 @@
 
 #include "displayport.h"
 
-videoformat_info videoformat_parameters[] = {
-	{v640x480p_60Hz,       800,  640,   16,  96,  48,  525,  480, 10,  2, 33, 60,  25200000,   1, SYNC_NEGATIVE, SYNC_NEGATIVE},
-	{v720x480p_60Hz,       858,  720,   16,  62,  60,  525,  480,  9,  6, 30, 59,  27027000,   2, SYNC_NEGATIVE, SYNC_NEGATIVE},
-	{v720x576p_50Hz,       864,  720,   12,  64,  68,  625,  576,  5,  5, 39, 50,  27000000,  17, SYNC_NEGATIVE, SYNC_NEGATIVE},
-	{v1280x720p_50Hz,     1980, 1280,  440,  40, 220,  750,  720,  5,  5, 20, 50,  74250000,  19, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1280x720p_60Hz,     1650, 1280,  110,  40, 220,  750,  720,  5,  5, 20, 60,  74250000,   4, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1280x800p_RB_60Hz,  1440, 1280,   48,  32,  80,  823,  800,  3,  6, 14, 60,  71000000,   0, SYNC_NEGATIVE, SYNC_POSITIVE},
-	{v1280x1024p_60Hz,    1688, 1280,   48, 112, 248, 1066, 1024,  1,  3, 38, 60, 108000000,   4, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1080p_24Hz,    2750, 1920,  638,  44, 148, 1125, 1080,  4,  5, 36, 24,  74250000,  32, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1080p_25Hz,    2640, 1920,  528,  44, 148, 1125, 1080,  4,  5, 36, 25,  74250000,  33, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1080p_30Hz,    2200, 1920,   88,  44, 148, 1125, 1080,  4,  5, 36, 30,  74250000,  34, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1080p_59Hz,    2080, 1920,   48,  44,  68, 1111, 1080,  3,  5, 23, 59, 138500000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1080p_50Hz,    2640, 1920,  528,  44, 148, 1125, 1080,  4,  5, 36, 50, 148500000,  31, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1080p_60Hz,    2200, 1920,   88,  44, 148, 1125, 1080,  4,  5, 36, 60, 148500000,  16, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v1920x1440p_60Hz,    2600, 1920,  128, 208, 344, 1500, 1440,  1,  3, 56, 60, 234000000,  16, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v2560x1440p_59Hz,    2720, 2560,   48,  32,  80, 1481, 1440,  3,  5, 33, 59, 241500000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v2560x1440p_60Hz,    3488, 2560,  192, 272, 464, 1493, 1440,  3,  5, 45, 60, 312000000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_24Hz,    5500, 3840, 1276,  88, 296, 2250, 2160,  8, 10, 72, 24, 297000000,  93, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_25Hz,    5280, 3840, 1056,  88, 296, 2250, 2160,  8, 10, 72, 25, 297000000,  94, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_30Hz,    4400, 3840,  176,  88, 296, 2250, 2160,  8, 10, 72, 30, 297000000,  95, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_50Hz,    5280, 3840, 1056,  88, 296, 2250, 2160,  8, 10, 72, 50, 594000000,  96, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_RB_59Hz, 4000, 3840,   48,  32,  80, 2222, 2160,  3,  5, 54, 59, 533000000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v3840x2160p_60Hz,    4400, 3840,  176,  88, 296, 2250, 2160,  8, 10, 72, 60, 594000000,  97, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v4096x2160p_24Hz,    5500, 4096, 1020,  88, 296, 2250, 2160,  8, 10, 72, 24, 297000000,  98, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v4096x2160p_25Hz,    5280, 4096,  968,  88, 128, 2250, 2160,  8, 10, 72, 25, 297000000,  99, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v4096x2160p_30Hz,    4400, 4096,   88,  88, 128, 2250, 2160,  8, 10, 72, 30, 297000000, 100, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v4096x2160p_50Hz,    5280, 4096,  968,  88, 128, 2250, 2160,  8, 10, 72, 50, 594000000, 101, SYNC_POSITIVE, SYNC_POSITIVE},
-	{v4096x2160p_60Hz,    4400, 4096,   88,  88, 128, 2250, 2160,  8, 10, 72, 60, 594000000, 102, SYNC_POSITIVE, SYNC_POSITIVE},
-	{sa_crc_640x10_60Hz,   800,  640,   16,  96,  48,   26,   10,  2,  2, 12, 60,  27000000,   0, SYNC_POSITIVE, SYNC_POSITIVE},
+/* supported_videos[] is to be arranged in the order of pixel clock */
+struct displayport_supported_preset supported_videos[] = {
+	{V640X480P60,      V4L2_DV_BT_DMT_640X480P60,         60, SYNC_NEGATIVE, SYNC_NEGATIVE,   1, "V640X480P60"},
+	{V720X480P60,      V4L2_DV_BT_CEA_720X480P59_94,      60, SYNC_NEGATIVE, SYNC_NEGATIVE,   2, "V720X480P60"},
+	{V720X576P50,      V4L2_DV_BT_CEA_720X576P50,         50, SYNC_NEGATIVE, SYNC_NEGATIVE,  17, "V720X576P50"},
+	{V1280X720P50,     V4L2_DV_BT_CEA_1280X720P50,        50, SYNC_POSITIVE, SYNC_POSITIVE,  19, "V1280X720P50"},
+	{V1280X720P60,     V4L2_DV_BT_CEA_1280X720P60,        60, SYNC_POSITIVE, SYNC_POSITIVE,   4, "V1280X720P60"},
+	{V1280X800P60RB,   V4L2_DV_BT_DMT_1280X800P60_RB,     60, SYNC_POSITIVE, SYNC_NEGATIVE,   0, "V1280X800P60RB"},
+	{V1280X1024P60,    V4L2_DV_BT_DMT_1280X1024P60,       60, SYNC_POSITIVE, SYNC_POSITIVE,   0, "V1280X1024P60"},
+	{V1920X1080P24,    V4L2_DV_BT_CEA_1920X1080P24,       24, SYNC_POSITIVE, SYNC_POSITIVE,  32, "V1920X1080P24"},
+	{V1920X1080P25,    V4L2_DV_BT_CEA_1920X1080P25,       25, SYNC_POSITIVE, SYNC_POSITIVE,  33, "V1920X1080P25"},
+	{V1920X1080P30,    V4L2_DV_BT_CEA_1920X1080P30,       30, SYNC_POSITIVE, SYNC_POSITIVE,  34, "V1920X1080P30"},
+	{V1920X1080P50,    V4L2_DV_BT_CEA_1920X1080P50,       50, SYNC_POSITIVE, SYNC_POSITIVE,  31, "V1920X1080P50"},
+	{V1920X1080P60,    V4L2_DV_BT_CEA_1920X1080P60,       60, SYNC_POSITIVE, SYNC_POSITIVE,  16, "V1920X1080P60"},
+	{V2048X1536P60,    V4L2_DV_BT_CVT_2048X1536P60_ADDED, 60, SYNC_POSITIVE, SYNC_POSITIVE,   0, "V2048X1536P60"},
+	{V1920X1440P60,    V4L2_DV_BT_DMT_1920X1440P60,       60, SYNC_POSITIVE, SYNC_POSITIVE,   0, "V1920X1440P60"},
+	{V2560X1440P59,    V4L2_DV_BT_CVT_2560X1440P59_ADDED, 59, SYNC_POSITIVE, SYNC_POSITIVE,   0, "V2560X1440P59"},
+	{V2560X1440P60,    V4L2_DV_BT_CVT_2560X1440P60_ADDED, 60, SYNC_POSITIVE, SYNC_POSITIVE,   0, "V2560X1440P60"},
+	{V3840X2160P24,    V4L2_DV_BT_CEA_3840X2160P24,       24, SYNC_POSITIVE, SYNC_POSITIVE,  93, "V3840X2160P24"},
+	{V3840X2160P25,    V4L2_DV_BT_CEA_3840X2160P25,       25, SYNC_POSITIVE, SYNC_POSITIVE,  94, "V3840X2160P25"},
+	{V3840X2160P30,    V4L2_DV_BT_CEA_3840X2160P30,       30, SYNC_POSITIVE, SYNC_POSITIVE,  95, "V3840X2160P30"},
+	{V4096X2160P24,    V4L2_DV_BT_CEA_4096X2160P24,       24, SYNC_POSITIVE, SYNC_POSITIVE,  98, "V4096X2160P24"},
+	{V4096X2160P25,    V4L2_DV_BT_CEA_4096X2160P25,       25, SYNC_POSITIVE, SYNC_POSITIVE,  99, "V4096X2160P25"},
+	{V4096X2160P30,    V4L2_DV_BT_CEA_4096X2160P30,       30, SYNC_POSITIVE, SYNC_POSITIVE, 100, "V4096X2160P30"},
+	{V3840X2160P59RB,  V4L2_DV_BT_CVT_3840X2160P59_ADDED, 59, SYNC_POSITIVE, SYNC_POSITIVE,   0, "V3840X2160P59RB"},
+	{V3840X2160P50,    V4L2_DV_BT_CEA_3840X2160P50,       50, SYNC_POSITIVE, SYNC_POSITIVE,  96, "V3840X2160P50"},
+	{V3840X2160P60,    V4L2_DV_BT_CEA_3840X2160P60,       60, SYNC_POSITIVE, SYNC_POSITIVE,  97, "V3840X2160P60"},
+	{V4096X2160P50,    V4L2_DV_BT_CEA_4096X2160P50,       50, SYNC_POSITIVE, SYNC_POSITIVE, 101, "V4096X2160P50"},
+	{V4096X2160P60,    V4L2_DV_BT_CEA_4096X2160P60,       60, SYNC_POSITIVE, SYNC_POSITIVE, 102, "V4096X2160P60"},
+	{V640X10P60SACRC,  V4L2_DV_BT_CVT_640x10P60_ADDED,    60, SYNC_POSITIVE, SYNC_POSITIVE,   0, "V640X10P60SACRC"},
 };
 
-const int videoformat_parameters_cnt = ARRAY_SIZE(videoformat_parameters);
+const int supported_videos_pre_cnt = ARRAY_SIZE(supported_videos);
 
 u32 audio_async_m_n[2][3][7] = {
 	{	/* M value set */
@@ -377,36 +378,43 @@ void displayport_reg_set_audio_bist_mode(u32 en)
 
 void displayport_reg_video_format_register_setting(videoformat video_format)
 {
-	u32 val;
+	u32 val = 0;
 
-	val = videoformat_parameters[video_format].v_total;
+	val += supported_videos[video_format].dv_timings.bt.height;
+	val += supported_videos[video_format].dv_timings.bt.vfrontporch;
+	val += supported_videos[video_format].dv_timings.bt.vsync;
+	val += supported_videos[video_format].dv_timings.bt.vbackporch;
 	displayport_write(SST1_VIDEO_VERTICAL_TOTAL_PIXELS, val);
 
-	val = videoformat_parameters[video_format].h_total;
+	val = 0;
+	val += supported_videos[video_format].dv_timings.bt.width;
+	val += supported_videos[video_format].dv_timings.bt.hfrontporch;
+	val += supported_videos[video_format].dv_timings.bt.hsync;
+	val += supported_videos[video_format].dv_timings.bt.hbackporch;
 	displayport_write(SST1_VIDEO_HORIZONTAL_TOTAL_PIXELS, val);
 
-	val = videoformat_parameters[video_format].v_active;
+	val = supported_videos[video_format].dv_timings.bt.height;
 	displayport_write(SST1_VIDEO_VERTICAL_ACTIVE, val);
 
-	val = videoformat_parameters[video_format].v_f_porch;
+	val = supported_videos[video_format].dv_timings.bt.vfrontporch;
 	displayport_write(SST1_VIDEO_VERTICAL_FRONT_PORCH, val);
 
-	val = videoformat_parameters[video_format].v_b_porch;
+	val = supported_videos[video_format].dv_timings.bt.vbackporch;
 	displayport_write(SST1_VIDEO_VERTICAL_BACK_PORCH, val);
 
-	val = videoformat_parameters[video_format].h_active;
+	val = supported_videos[video_format].dv_timings.bt.width;
 	displayport_write(SST1_VIDEO_HORIZONTAL_ACTIVE, val);
 
-	val = videoformat_parameters[video_format].h_f_porch;
+	val = supported_videos[video_format].dv_timings.bt.hfrontporch;
 	displayport_write(SST1_VIDEO_HORIZONTAL_FRONT_PORCH, val);
 
-	val = videoformat_parameters[video_format].h_b_porch;
+	val = supported_videos[video_format].dv_timings.bt.hbackporch;
 	displayport_write(SST1_VIDEO_HORIZONTAL_BACK_PORCH, val);
 
-	val = videoformat_parameters[video_format].v_sync_pol;
+	val = supported_videos[video_format].v_sync_pol;
 	displayport_write_mask(SST1_VIDEO_CONTROL, val, VSYNC_POLARITY);
 
-	val = videoformat_parameters[video_format].h_sync_pol;
+	val = supported_videos[video_format].h_sync_pol;
 	displayport_write_mask(SST1_VIDEO_CONTROL, val, HSYNC_POLARITY);
 }
 
@@ -414,7 +422,7 @@ u32 displayport_reg_get_video_clk(void)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
 
-	return videoformat_parameters[displayport->current_videoformat].pixel_clock;
+	return supported_videos[displayport->cur_video].dv_timings.bt.pixelclock;
 }
 
 u32 displayport_reg_get_ls_clk(void)
@@ -1144,7 +1152,7 @@ int displayport_reg_stand_alone_crc_sorting(void)
 	phy_power_on(displayport->phy);
 	displayport_reg_init();
 	displayport_reg_set_lane_count(4);
-	displayport_reg_set_bist_video_configuration(sa_crc_640x10_60Hz, BPC_8, COLOR_BAR, VESA_RANGE);
+	displayport_reg_set_bist_video_configuration(V640X10P60SACRC, BPC_8, COLOR_BAR, VESA_RANGE);
 	displayport_reg_set_stand_alone_crc(0x135E, 0x135E, 0x135E, 0x135E);
 	displayport_reg_enable_stand_alone_crc_hw(1);
 	displayport_reg_start();
