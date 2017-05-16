@@ -231,7 +231,7 @@ enum decon_set_trig {
 };
 
 enum decon_idma_type {
-	IDMA_G0 = 0,	/* Dedicated to WIN5 */
+	IDMA_G0 = 0,
 	IDMA_G1,
 	IDMA_VG0,
 	IDMA_VG1,

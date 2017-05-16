@@ -1043,14 +1043,6 @@ fail:
 static int decon_check_limitation(struct decon_device *decon, int idx,
 		struct decon_win_config *config)
 {
-	/* IDMA_G0 channel is dedicated to WIN5 */
-	if (!decon->id && ((config->idma_type == IDMA_G0) &&
-				(idx != MAX_DECON_WIN - 1))) {
-		decon_err("%s: idma_type %d win-id %d\n",
-				__func__, config->idma_type, idx);
-		return -EINVAL;
-	}
-
 	if (config->format >= DECON_PIXEL_FORMAT_MAX) {
 		decon_err("unknown pixel format %u\n", config->format);
 		return -EINVAL;
