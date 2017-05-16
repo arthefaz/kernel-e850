@@ -1578,10 +1578,11 @@ void decon_reg_configure_lcd(u32 id, struct decon_param *p)
 	enum decon_dsi_mode dsi_mode = psr->dsi_mode;
 	enum decon_rgb_order rgb_order = DECON_RGB;
 
-	if (lcd_info->dsc_enabled)
-		rgb_order = DECON_RGB;
-	else
+	if ((psr->out_type == DECON_OUT_DSI)
+		&& !(lcd_info->dsc_enabled))
 		rgb_order = DECON_BGR;
+	else
+		rgb_order = DECON_RGB;
 	decon_reg_set_rgb_order(id, rgb_order);
 
 	if (lcd_info->dsc_enabled) {
