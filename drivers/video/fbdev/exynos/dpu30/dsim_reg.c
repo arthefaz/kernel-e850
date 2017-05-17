@@ -1329,7 +1329,7 @@ void dsim_reg_set_num_of_transfer(u32 id, u32 num_of_transfer)
 	dsim_write_mask(id, DSIM_NUM_OF_TRANSFER, val,
 				DSIM_NUM_OF_TRANSFER_PER_FRAME_MASK);
 
-	dsim_info("%s, write value : 0x%x, read value : 0x%x\n", __func__,
+	dsim_dbg("%s, write value : 0x%x, read value : 0x%x\n", __func__,
 			val, dsim_read(id, DSIM_NUM_OF_TRANSFER));
 }
 
@@ -1569,12 +1569,12 @@ static int dsim_reg_get_dphy_timing(u32 hs_clk, u32 esc_clk,
 		return -EINVAL;
 	}
 
-	dsim_info("%s: bps(%u) clk_prepare(%u) clk_zero(%u) clk_post(%u)\n",
+	dsim_dbg("%s: bps(%u) clk_prepare(%u) clk_zero(%u) clk_post(%u)\n",
 			__func__, t->bps, t->clk_prepare, t->clk_zero,
 			t->clk_post);
-	dsim_info("clk_trail(%u) hs_prepare(%u) hs_zero(%u) hs_trail(%u)\n",
+	dsim_dbg("clk_trail(%u) hs_prepare(%u) hs_zero(%u) hs_trail(%u)\n",
 			t->clk_trail, t->hs_prepare, t->hs_zero, t->hs_trail);
-	dsim_info("lpx(%u) hs_exit(%u)\n", t->lpx, t->hs_exit);
+	dsim_dbg("lpx(%u) hs_exit(%u)\n", t->lpx, t->hs_exit);
 
 	if ((esc_clk > 20) || (esc_clk < 7)) {
 		dsim_err("%u Mhz cann't be used as escape clock\n", esc_clk);
@@ -1649,10 +1649,10 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	dsim_reg_enable_shadow(id, 1);
 	if (lcd_info->mode == DECON_VIDEO_MODE) {
 		dsim_reg_set_video_mode(id, DSIM_CONFIG_VIDEO_MODE);
-		dsim_info("%s: video mode set\n", __func__);
+		dsim_dbg("%s: video mode set\n", __func__);
 	} else {
 		dsim_reg_set_video_mode(id, 0);
-		dsim_info("%s: command mode set\n", __func__);
+		dsim_dbg("%s: command mode set\n", __func__);
 	}
 
 	dsim_reg_enable_dsc(id, lcd_info->dsc_enabled);
