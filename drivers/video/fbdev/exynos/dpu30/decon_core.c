@@ -120,7 +120,6 @@ void decon_dump(struct decon_device *decon)
 		decon_info("\n=== DECON PM USAGE_COUNT %d ===",
 				atomic_read(&decon->dev->power.usage_count));
 
-	decon_write(decon->id, 0x400, 0x80170005);
 	decon_info("\n=== DECON%d SFR DUMP ===\n", decon->id);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			decon->res.regs, 0x620, false);

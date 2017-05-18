@@ -72,8 +72,11 @@
 #define DPU_DMA_PSLV_ERR_CTRL		0x0090
 #define DPU_DMA_PSLV_ERR_EN			(1 << 0)
 
-#define DPU_DMA_GLB_CONTROL		0x0100
-#define DPU_DMA_GLB_DATA		0x0104
+#define DPU_DMA_DEBUG_CONTROL			0x0100
+#define DPU_DMA_DEBUG_CONTROL_SEL(_v)		((_v) << 16)
+#define DPU_DMA_DEBUG_CONTROL_EN		(0x1 << 0)
+
+#define DPU_DMA_DEBUG_DATA			0x0104
 
 /*
  * 1.1 - IDMA Register
@@ -226,10 +229,11 @@
 #define IDMA_RECOVERY_CTRL			0x005C
 #define IDMA_RECOVERY_EN			(1 << 0)
 
-#define IDMA_CHAN_CONTROL			0x0060
-#define IDMA_CHAN_DEBUG_ENABLE		(1 << 0)
+#define IDMA_DEBUG_CONTROL			0x0060
+#define IDMA_DEBUG_CONTROL_SEL(_v)		((_v) << 16)
+#define IDMA_DEBUG_CONTROL_EN			(0x1 << 0)
 
-#define IDMA_CHAN_DATA				0x0064
+#define IDMA_DEBUG_DATA				0x0064
 
 #define IDMA_IN_REQ_DEST			0x0068
 #define IDMA_IN_REG_DEST_SEL(_v)			((_v) << 0)

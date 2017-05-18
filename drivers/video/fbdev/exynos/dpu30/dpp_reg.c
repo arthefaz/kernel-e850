@@ -45,18 +45,18 @@ void dma_reg_set_debug(u32 id)
 {
 	u32 val;
 
-	val = dma_read(id, IDMA_CHAN_CONTROL);
-	val |= IDMA_CHAN_DEBUG_ENABLE;
-	dma_write(id, IDMA_CHAN_CONTROL, val);
+	val = dma_read(id, IDMA_DEBUG_CONTROL);
+	val |= IDMA_DEBUG_CONTROL_EN;
+	dma_write(id, IDMA_DEBUG_CONTROL, val);
 }
 
 void dma_reg_set_common_debug(u32 id)
 {
 	u32 val;
 
-	val = dma_com_read(id, DPU_DMA_GLB_CONTROL);
-	val |= IDMA_CHAN_DEBUG_ENABLE;
-	dma_com_write(id, DPU_DMA_GLB_CONTROL, val);
+	val = dma_com_read(id, DPU_DMA_DEBUG_CONTROL);
+	val |= IDMA_DEBUG_CONTROL_EN;
+	dma_com_write(id, DPU_DMA_DEBUG_CONTROL, val);
 }
 
 /* Setting value : 0=Qch-enable, 1=Qch-disable */

@@ -193,6 +193,12 @@ enum dpp_state {
 	DPP_STATE_OFF,
 };
 
+enum dpp_reg_area {
+	REG_AREA_DPP = 0,
+	REG_AREA_DMA,
+	REG_AREA_DMA_COM,
+};
+
 struct dpp_resources {
 	struct clk *gate;
 	void __iomem *regs;
