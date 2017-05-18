@@ -1228,6 +1228,7 @@ static int decon_set_dpp_config(struct decon_device *decon,
 	return err_cnt;
 }
 
+#if defined(CONFIG_EXYNOS_AFBC)
 static void decon_set_afbc_recovery_time(struct decon_device *decon)
 {
 	int i, ret;
@@ -1260,6 +1261,7 @@ static void decon_set_afbc_recovery_time(struct decon_device *decon)
 
 	decon->prev_aclk_khz = aclk_khz;
 }
+#endif
 
 static void decon_save_vgf_connected_win_id(struct decon_device *decon,
 		struct decon_reg_data *regs)
@@ -1369,7 +1371,9 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 	decon_set_protected_content(decon, regs);
 #endif
 
+#if defined(CONFIG_EXYNOS_AFBC)
 	decon_set_afbc_recovery_time(decon);
+#endif
 
 	decon_reg_all_win_shadow_update_req(decon->id);
 	decon_to_psr_info(decon, &psr);
