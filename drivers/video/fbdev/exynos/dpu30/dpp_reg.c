@@ -1066,13 +1066,14 @@ int dpp_reg_set_format(u32 id, struct dpp_params_info *p)
 	dpp_reg_set_alpha_sel(id, a_sel);
 	dpp_reg_set_img_format(id, fmt_type);
 
-	/*
-	 * dma_reg_set_afbc_en(id, p->is_comp);
-	 * if (p->is_comp)
-	 *	dma_reg_set_recovery_en(id, 1);
-	 * else
-	 *	dma_reg_set_recovery_en(id, 0);
-	 */
+#if defined(CONFIG_EXYNOS_AFBC)
+	dma_reg_set_afbc_en(id, p->is_comp);
+	if (p->is_comp)
+		dma_reg_set_recovery_en(id, 1);
+	else
+		dma_reg_set_recovery_en(id, 0);
+#endif
+
 	return 0;
 }
 
@@ -1240,8 +1241,9 @@ void dpp_reg_init(u32 id)
 	dpp_reg_set_plane_alpha_fixed(id);
 
 	dpp_reg_control_linecnt(id, 1, 0);
-	/* Revovery Function is enabled on EVT1 */
-	/* dma_reg_set_recovery_num(id, INIT_RCV_NUM); */
+#if defined(CONFIG_EXYNOS_AFBC)
+	dma_reg_set_recovery_num(id, INIT_RCV_NUM);
+#endif
 }
 
 int dpp_reg_deinit(u32 id, bool reset)
@@ -1263,7 +1265,6 @@ int dpp_reg_deinit(u32 id, bool reset)
 
 	return 0;
 }
-
 
 void dpp_reg_configure_params(u32 id, struct dpp_params_info *p)
 {
