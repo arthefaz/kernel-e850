@@ -522,7 +522,8 @@ void decon_reg_set_interface(u32 id, struct decon_mode_info *psr)
 
 		decon_write_mask(0, DSIM_CONNECTION_CONTROL, val, mask);
 	} else if (psr->out_type == DECON_OUT_DP)
-		decon_write_mask(0, DP_CONNECTION_CONTROL, 2, DP_CONNECTION_SEL_DP0_MASK);
+		decon_write_mask(0, DP_CONNECTION_CONTROL, 2,
+						DP_CONNECTION_SEL_DP0_MASK);
 }
 
 void decon_reg_set_start_crc(u32 id, u32 en)
@@ -1870,8 +1871,6 @@ void decon_reg_set_win_plane_alpha(u32 id, u32 win_idx, u32 a0, u32 a1)
 void decon_reg_set_winmap(u32 id, u32 win_idx, u32 color, u32 en)
 {
 	u32 val, mask;
-	u8 alpha0 = 0xff;
-	u8 alpha1 = 0xff;
 
 	/* Enable */
 	val = en ? ~0 : 0;
@@ -1879,7 +1878,6 @@ void decon_reg_set_winmap(u32 id, u32 win_idx, u32 color, u32 en)
 	decon_write_mask(id, DATA_PATH_CONTROL_0, val, mask);
 	decon_dbg("%s: 0x%x\n", __func__, decon_read(id, DATA_PATH_CONTROL_0));
 
-	decon_reg_set_win_plane_alpha(id, win_idx, alpha0, alpha1);
 	/* Color Set */
 	decon_reg_set_win_mapcolor(0, win_idx, color);
 }
@@ -1940,7 +1938,8 @@ void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 	u8 alpha0 = 0xff;
 	u8 alpha1 = 0xff;
 	bool is_plane_a = false;
-	u32 af_d, ab_d, af_a, ab_a;
+	u32 af_d = BND_COEF_ONE, ab_d = BND_COEF_ZERO,
+		af_a = BND_COEF_ONE, ab_a = BND_COEF_ZERO;
 
 	if (blend == DECON_BLENDING_NONE)
 		pd_func = PD_FUNC_COPY;
@@ -1971,6 +1970,11 @@ void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 		ab_d = BND_COEF_1_M_ALPHA_MULT;
 		af_a = BND_COEF_PLNAE_ALPHA0;
 		ab_a = BND_COEF_1_M_ALPHA_MULT;
+	} else if (blend == DECON_BLENDING_NONE) {
+		decon_dbg("%s:%d none blending mode\n", __func__, __LINE__);
+	} else {
+		decon_warn("%s:%d undefined blending mode\n",
+				__func__, __LINE__);
 	}
 
 	decon_reg_set_win_plane_alpha(id, win_idx, alpha0, alpha1);
@@ -1986,7 +1990,7 @@ void decon_reg_set_window_control(u32 id, int win_idx,
 {
 	u32 win_en = regs->wincon & WIN_EN_F(win_idx) ? 1 : 0;
 
-	if (win_en == true) {
+	if (win_en) {
 		decon_dbg("%s: win id = %d\n", __func__, win_idx);
 		decon_reg_set_win_bnd_function(0, win_idx, regs);
 		decon_write(0, WIN_START_POSITION(win_idx), regs->start_pos);
@@ -1996,7 +2000,8 @@ void decon_reg_set_window_control(u32 id, int win_idx,
 	}
 
 	decon_reg_set_win_enable(id, win_idx, win_en);
-	decon_reg_set_winmap(id, win_idx, regs->colormap, winmap_en);
+	if (win_en)
+		decon_reg_set_winmap(id, win_idx, regs->colormap, winmap_en);
 	decon_reg_config_win_channel(id, win_idx, regs->type);
 
 	/* decon_dbg("%s: regs->type(%d)\n", __func__, regs->type); */
