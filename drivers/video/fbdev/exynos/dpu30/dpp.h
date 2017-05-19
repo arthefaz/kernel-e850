@@ -297,7 +297,7 @@ static inline void dma_com_write(u32 id, u32 reg_id, u32 val)
 
 static inline void dma_com_write_mask(u32 id, u32 reg_id, u32 val, u32 mask)
 {
-	struct dpp_device *dpp = get_dpp_drvdata(id);
+	struct dpp_device *dpp = get_dpp_drvdata(0);
 	u32 old = dma_com_read(id, reg_id);
 
 	val = (val & mask) | (old & ~mask);
