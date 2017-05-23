@@ -282,8 +282,13 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	if (p->format == DECON_PIXEL_FORMAT_NV12N)
 		p->addr[1] = NV12N_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
 
-	src_w = p->src.w;
-	src_h = p->src.h;
+	if (is_rotation(config)) {
+		src_w = p->src.h;
+		src_h = p->src.w;
+	} else {
+		src_w = p->src.w;
+		src_h = p->src.h;
+	}
 	dst_w = p->dst.w;
 	dst_h = p->dst.h;
 
@@ -351,18 +356,26 @@ static int dpp_check_scale_ratio(struct dpp_params_info *p)
 {
 	u32 sc_down_max_w, sc_down_max_h;
 	u32 sc_up_min_w, sc_up_min_h;
+	u32 sc_src_w, sc_src_h;
 
 	sc_down_max_w = p->dst.w * 2;
 	sc_down_max_h = p->dst.h * 2;
 	sc_up_min_w = (p->dst.w + 7) / 8;
 	sc_up_min_h = (p->dst.h + 7) / 8;
+	if (p->rot > DPP_ROT_180) {
+		sc_src_w = p->src.h;
+		sc_src_h = p->src.w;
+	} else {
+		sc_src_w = p->src.w;
+		sc_src_h = p->src.h;
+	}
 
-	if (p->src.w > sc_down_max_w || p->src.h > sc_down_max_h) {
+	if (sc_src_w > sc_down_max_w || sc_src_h > sc_down_max_h) {
 		dpp_err("Not support under 1/2x scale-down!\n");
 		goto err;
 	}
 
-	if (p->src.w < sc_up_min_w || p->src.h < sc_up_min_h) {
+	if (sc_src_w < sc_up_min_w || sc_src_h < sc_up_min_h) {
 		dpp_err("Not support over 8x scale-up\n");
 		goto err;
 	}

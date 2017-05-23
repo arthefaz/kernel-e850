@@ -1099,7 +1099,10 @@ void dpp_reg_set_size(u32 id, struct dpp_params_info *p)
 
 	/* source cropped size */
 	dma_reg_set_img_size(id, p->src.w, p->src.h);
-	dpp_reg_set_img_size(id, p->src.w, p->src.h);
+	if (p->rot > DPP_ROT_180)
+		dpp_reg_set_img_size(id, p->src.h, p->src.w);
+	else
+		dpp_reg_set_img_size(id, p->src.w, p->src.h);
 
 	if ((id == IDMA_VGF0) || (id == IDMA_VGF1))
 		dpp_reg_set_scaled_img_size(id, p->dst.w, p->dst.h);
