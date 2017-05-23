@@ -80,7 +80,7 @@ extern int dpp_log_level;
 	(IS_ALIGNED(width, align_w) && IS_ALIGNED(height, align_h))
 
 #define is_normal(config) (DPP_ROT_NORMAL)
-
+#define is_rotation(config) (config->dpp_parm.rot > DPP_ROT_180)
 #define is_yuv(config) ((config->format >= DECON_PIXEL_FORMAT_NV16) \
 			&& (config->format < DECON_PIXEL_FORMAT_MAX))
 #define is_yuv422(config) ((config->format >= DECON_PIXEL_FORMAT_NV16) \
