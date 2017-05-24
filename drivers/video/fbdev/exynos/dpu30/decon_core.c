@@ -320,7 +320,7 @@ int decon_tui_protection(bool tui_en)
 		decon->state = DECON_STATE_TUI;
 		aclk_khz = clk_get_rate(decon->res.aclk) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
 				cal_dfs_get_rate(ACPM_DVFS_MIF),
 				cal_dfs_get_rate(ACPM_DVFS_INT),
@@ -333,7 +333,7 @@ int decon_tui_protection(bool tui_en)
 		mutex_lock(&decon->lock);
 		aclk_khz = clk_get_rate(decon->res.aclk) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
 				cal_dfs_get_rate(ACPM_DVFS_MIF),
 				cal_dfs_get_rate(ACPM_DVFS_INT),
@@ -356,7 +356,7 @@ static int decon_enable(struct decon_device *decon)
 	struct decon_mode_info psr;
 	struct decon_param p;
 	int ret = 0;
-#if defined(CONFIG_EXYNOS_DISPLAYPORT) && defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS_DISPLAYPORT) && defined(CONFIG_EXYNOS9810_BTS)
 	struct displayport_device *displayport = get_displayport_drvdata();
 #endif
 
@@ -389,7 +389,7 @@ static int decon_enable(struct decon_device *decon)
 		decon_info("DECON_OUT_DP %s timeline:%d, max:%d\n",
 			decon->timeline->name, decon->timeline->value, decon->timeline_max);
 
-#if defined(CONFIG_EXYNOS_DISPLAYPORT) && defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS_DISPLAYPORT) && defined(CONFIG_EXYNOS9810_BTS)
 		if (supported_videos[displayport->cur_video].dv_timings.bt.pixelclock
 			>= 533000000) {
 			decon->bts.ops->bts_update_qos_mif(decon, 1540*1000);
@@ -569,7 +569,7 @@ static int decon_disable(struct decon_device *decon)
 	decon->cur_using_dpp = 0;
 	decon_dpp_stop(decon, false);
 
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops->bts_release_bw(decon);
 #endif
 
@@ -590,7 +590,7 @@ static int decon_disable(struct decon_device *decon)
 		decon_info("DECON_OUT_DP %s timeline:%d, max:%d\n",
 			decon->timeline->name, decon->timeline->value, decon->timeline_max);
 
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 		decon->bts.ops->bts_update_qos_mif(decon, 0);
 		decon->bts.ops->bts_update_qos_int(decon, 0);
 		decon->bts.ops->bts_update_qos_scen(decon, 0);
@@ -660,7 +660,7 @@ static int decon_dp_disable(struct decon_device *decon)
 	decon->cur_using_dpp = 0;
 	decon_dpp_stop(decon, false);
 
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops->bts_release_bw(decon);
 #endif
 
@@ -1535,7 +1535,7 @@ static void decon_update_regs(struct decon_device *decon,
 
 	decon_update_vgf_info(decon, regs);
 
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 	/* add calc and update bw : cur > prev */
 	decon->bts.ops->bts_calc_bw(decon, regs);
 	decon->bts.ops->bts_update_bw(decon, regs, 0);
@@ -1584,7 +1584,7 @@ end:
 
 	decon_save_vgf_connected_win_id(decon, regs);
 
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 	/* add update bw : cur < prev */
 	decon->bts.ops->bts_update_bw(decon, regs, 1);
 #endif
@@ -2748,7 +2748,7 @@ static int decon_probe(struct platform_device *pdev)
 
 	dpu_init_win_update(decon);
 
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops = &decon_bts_control;
 	decon->bts.ops->bts_init(decon);
 #endif
@@ -2795,7 +2795,7 @@ static int decon_remove(struct platform_device *pdev)
 	struct decon_device *decon = platform_get_drvdata(pdev);
 	int i;
 
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops->bts_deinit(decon);
 #endif
 

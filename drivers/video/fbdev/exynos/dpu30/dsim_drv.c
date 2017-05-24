@@ -384,7 +384,7 @@ exit:
 
 static void dsim_underrun_info(struct dsim_device *dsim)
 {
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 	struct decon_device *decon = get_decon_drvdata(0);
 
 	dsim_info("dsim%d: MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
