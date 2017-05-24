@@ -25,7 +25,7 @@
 #include <linux/platform_device.h>
 #include <media/v4l2-device.h>
 #include <media/videobuf2-core.h>
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 #include <soc/samsung/bts.h>
 #endif
 
@@ -42,7 +42,7 @@
 extern struct ion_device *ion_exynos;
 extern struct decon_device *decon_drvdata[MAX_DECON_CNT];
 extern int decon_log_level;
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 extern struct decon_bts_ops decon_bts_control;
 #endif
 
@@ -835,7 +835,7 @@ struct decon_win_update {
 	struct decon_rect prev_up_region;
 };
 
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 struct decon_bts_ops {
 	void (*bts_init)(struct decon_device *decon);
 	void (*bts_calc_bw)(struct decon_device *decon, struct decon_reg_data *regs);
@@ -901,7 +901,7 @@ struct decon_device {
 	struct decon_lcd *lcd_info;
 	struct decon_win_update win_up;
 	struct decon_hiber hiber;
-#if defined(CONFIG_EXYNOS8895_BTS)
+#if defined(CONFIG_EXYNOS9810_BTS)
 	struct decon_bts bts;
 #endif
 
