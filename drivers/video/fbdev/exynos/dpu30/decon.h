@@ -1184,7 +1184,8 @@ void decon_reg_clear_int_all(u32 id);
 void decon_reg_all_win_shadow_update_req(u32 id);
 void decon_reg_update_req_window(u32 id, u32 win_idx);
 void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
-		struct decon_lcd *lcd_info, bool in_slice[]);
+		struct decon_lcd *lcd_info, bool in_slice[],
+		u32 partial_w, u32 partial_h);
 int decon_reg_wait_idle_status_timeout(u32 id, unsigned long timeout);
 void decon_reg_set_start_crc(u32 id, u32 en);
 void decon_reg_set_select_crc_bits(u32 id, u32 bit_sel);
