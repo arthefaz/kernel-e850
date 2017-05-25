@@ -30,6 +30,7 @@
 #include <media/v4l2-dv-timings.h>
 #include <soc/samsung/exynos-powermode.h>
 
+#include "../../../drivers/phy/phy-exynos-usbdrd.h"
 #include "displayport.h"
 #include "decon.h"
 
@@ -1954,17 +1955,9 @@ static int displayport_init_resources(struct displayport_device *displayport, st
 		return -EINVAL;
 	}
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (!res) {
-		displayport_err("failed to get mem resource\n");
-		return -ENOENT;
-	}
-
-	displayport_info("phy_regs: start(0x%x), end(0x%x)\n", (u32)res->start, (u32)res->end);
-
-	displayport->res.phy_regs = devm_ioremap_resource(displayport->dev, res);
+	displayport->res.phy_regs = phy_exynos_usbdp_get_address();
 	if (!displayport->res.phy_regs) {
-		displayport_err("failed to remap DisplayPort PHY SFR region\n");
+		displayport_err("failed to get USBDP combo PHY SFR region\n");
 		return -EINVAL;
 	}
 
