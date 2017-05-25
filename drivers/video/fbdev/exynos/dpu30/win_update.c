@@ -355,8 +355,9 @@ static void win_update_set_partial_size(struct decon_device *decon,
 	dsim_reg_set_partial_update(dsim->id, &lcd_info);
 
 	win_update_find_included_slice(decon->lcd_info, rect, in_slice);
-	decon_reg_set_partial_update(decon->id, decon->dt.dsi_mode, &lcd_info,
-			in_slice);
+	decon_reg_set_partial_update(decon->id, decon->dt.dsi_mode,
+			decon->lcd_info, in_slice,
+			lcd_info.xres, lcd_info.yres);
 	DPU_DEBUG_WIN("SET: vfp %d vbp %d vsa %d hfp %d hbp %d hsa %d w %d h %d\n",
 			lcd_info.vfp, lcd_info.vbp, lcd_info.vsa,
 			lcd_info.hfp, lcd_info.hbp, lcd_info.hsa,

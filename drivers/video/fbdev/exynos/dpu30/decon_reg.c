@@ -236,7 +236,7 @@ void decon_reg_set_splitter(u32 id, u32 width, u32 height,
 	val = SPLITTER_HEIGHT_F(height) | SPLITTER_WIDTH_F(width * 2);
 	decon_write(id, SPLITTER_SIZE_CONTROL_0, val);
 
-	val = SPLITTER_SPLIT_IDX_F(overlap_w) | SPLITTER_OVERLAP_F(split_idx);
+	val = SPLITTER_SPLIT_IDX_F(split_idx) | SPLITTER_OVERLAP_F(overlap_w);
 	mask = SPLITTER_SPLIT_IDX_MASK | SPLITTER_OVERLAP_MASK;
 	decon_write_mask(id, SPLITTER_SPLIT_IDX_CONTROL, val, mask);
 }
@@ -411,6 +411,45 @@ u32 decon_reg_get_data_path_cfg(u32 id, enum decon_path_cfg con_id)
 	}
 
 	return bRet;
+}
+
+void decon_reg_set_scaled_size(u32 id, u32 scaled_w, u32 scaled_h)
+{
+	u32 val, mask;
+
+	val = SCALED_SIZE_HEIGHT_F(scaled_h) |
+			SCALED_SIZE_WIDTH_F(scaled_w);
+	mask = SCALED_SIZE_HEIGHT_MASK | SCALED_SIZE_WIDTH_MASK;
+	decon_write_mask(id, SCALED_SIZE_CONTROL_0, val, mask);
+}
+
+/*
+ * width : width of updated LCD region
+ * height : height of updated LCD region
+ * is_dsc : 1: DSC is enabled 0: DSC is disabled
+ */
+void decon_reg_set_data_path_size(u32 id, u32 width, u32 height, bool is_dsc,
+		u32 dsc_cnt, u32 slice_w, u32 slice_h)
+{
+	u32 outfifo_w;
+
+	if (is_dsc)
+		outfifo_w = width / 3 / dsc_cnt;
+	else
+		outfifo_w = width;
+
+	/* OUTFIFO size is compressed size if DSC is enabled */
+	decon_reg_set_outfifo_size_ctl0(id, outfifo_w, height);
+	if (dsc_cnt == 2)
+		decon_reg_set_outfifo_size_ctl1(id, outfifo_w, 0);
+	if (is_dsc)
+		decon_reg_set_outfifo_size_ctl2(id, slice_w / 3, slice_h);
+
+	/*
+	 * SCALED size is updated LCD size if partial update is operating,
+	 * this indicates partial size.
+	 */
+	decon_reg_set_scaled_size(id, width, height);
 }
 
 /*
@@ -966,10 +1005,10 @@ u32 dsc_get_slice_mode_change(struct decon_lcd *lcd_info)
 	return slice_mode_ch;
 }
 
-void dsc_get_partial_update_info(struct decon_lcd *lcd,
-	bool in_slice[4], u32 ds_en[2], u32 sm_ch[2])
+void dsc_get_partial_update_info(u32 slice_cnt, u32 dsc_cnt, bool in_slice[4],
+		u32 ds_en[2], u32 sm_ch[2])
 {
-	switch (lcd->dsc_slice_num) {
+	switch (slice_cnt) {
 	case 4:
 		if ((in_slice[0] + in_slice[1]) % 2) {
 			ds_en[DECON_DSC_ENC0] = 0;
@@ -989,7 +1028,7 @@ void dsc_get_partial_update_info(struct decon_lcd *lcd,
 
 		break;
 	case 2:
-		if (lcd->dsc_cnt == 2) {
+		if (dsc_cnt == 2) {
 			ds_en[DECON_DSC_ENC0] = 0;
 			sm_ch[DECON_DSC_ENC0] = 1;
 
@@ -1022,7 +1061,6 @@ void dsc_get_partial_update_info(struct decon_lcd *lcd,
 		decon_err("Not specified case for Partial Update in DSC!\n");
 		break;
 	}
-
 }
 
 void dsc_reg_config_control(u32 dsc_id, u32 ds_en, u32 sm_ch)
@@ -1746,13 +1784,49 @@ int decon_reg_start(u32 id, struct decon_mode_info *psr)
 	return ret;
 }
 
-void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
-		struct decon_lcd *lcd_info, bool in_slice[])
+void decon_reg_set_blender_bg_size(u32 id, enum decon_dsi_mode dsi_mode,
+		u32 bg_w, u32 bg_h)
 {
-	/* Here, lcd_info contains the size to be updated */
-	decon_reg_set_blender_bg_image_size(id, dsi_mode, lcd_info);
+	u32 width, val, mask;
 
-	/* outfifo size should be changed ??? */
+	width = bg_w;
+
+	if (dsi_mode == DSI_MODE_DUAL_DSI)
+		width = width * 2;
+
+	val = BLENDER_BG_HEIGHT_F(bg_h) | BLENDER_BG_WIDTH_F(width);
+	mask = BLENDER_BG_HEIGHT_MASK | BLENDER_BG_WIDTH_MASK;
+	decon_write_mask(id, BLENDER_BG_IMAGE_SIZE_0, val, mask);
+}
+
+void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
+		struct decon_lcd *lcd_info, bool in_slice[],
+		u32 partial_w, u32 partial_h)
+{
+	u32 slice_w;
+	u32 dual_slice_en[2] = {1, 1};
+	u32 slice_mode_ch[2] = {0, 0};
+
+	/* Here, lcd_info contains the size to be updated */
+	decon_reg_set_blender_bg_size(id, dsi_mode, partial_w, partial_h);
+
+	slice_w = lcd_info->xres / lcd_info->dsc_slice_num;
+	decon_reg_set_data_path_size(id, partial_w, partial_h,
+			lcd_info->dsc_enabled, lcd_info->dsc_cnt, slice_w,
+			lcd_info->dsc_slice_h);
+
+	if (lcd_info->dsc_enabled) {
+		/* get correct DSC configuration */
+		dsc_get_partial_update_info(lcd_info->dsc_slice_num,
+				lcd_info->dsc_cnt, in_slice,
+				dual_slice_en, slice_mode_ch);
+		/* To support dual-display : DECON1 have to set DSC1 */
+		dsc_reg_set_partial_update(id, dual_slice_en[0],
+				slice_mode_ch[0], partial_h);
+		if (lcd_info->dsc_cnt == 2)
+			dsc_reg_set_partial_update(1, dual_slice_en[1],
+					slice_mode_ch[1], partial_h);
+	}
 }
 
 int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr)

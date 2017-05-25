@@ -200,7 +200,7 @@
 #define SPLITTER_SPLIT_IDX_F(_v)		((_v) << 0)
 #define SPLITTER_SPLIT_IDX_MASK			(0x3fff << 0)
 #define SPLITTER_OVERLAP_F(_v)			((_v) << 16)
-#define SPLITTER_OVERLAP_MASK			(0x7f << 16)
+#define SPLITTER_OVERLAP_MASK			(0x3f << 16)
 
 #define OUTFIFO_SIZE_CONTROL_0			0x0120
 #define OUTFIFO_HEIGHT_F(_v)			((_v) << 16)
