@@ -1292,6 +1292,8 @@ static void displayport_hdcp13_integrity_check_work(struct work_struct *work)
 static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 {
 	struct displayport_device *displayport = dev_data;
+	struct decon_device *decon = get_decon_drvdata(2);
+	ktime_t timestamp = ktime_get();
 	u32 irq_status_reg;
 
 	spin_lock(&displayport->slock);
@@ -1302,22 +1304,7 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 	/* Common interrupt */
 	irq_status_reg = displayport_reg_get_interrupt_and_clear(SYSTEM_IRQ_COMMON_STATUS);
 
-	if (irq_status_reg & HPD_IRQ_FLAG) {
-		displayport->hpd_state = HPD_IRQ;
-		/*queue_delayed_work(displayport->dp_wq, &displayport->hpd_irq_work, 0);*/
-		displayport_info("HPD IRQ detect\n");
-	}
-
-	if (irq_status_reg & HDCP_LINK_CHK_FAIL) {
-		queue_delayed_work(displayport->dp_wq, &displayport->hdcp13_integrity_check_work, 0);
-		displayport_info("HDCP_LINK_CHK detect\n");
-	}
-
-	if (irq_status_reg & HDCP_R0_CHECK_FLAG) {
-		hdcp13_info.r0_read_flag = 1;
-		displayport_info("R0_CHECK_FLAG detect\n");
-	}
-
+#if !defined(CONFIG_CCIC_NOTIFIER)
 	if (irq_status_reg & HPD_CHG)
 		displayport_info("HPD_CHG detect\n");
 
@@ -1331,11 +1318,39 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 		displayport_info("HPD_PLUG detect\n");
 	}
 
+	if (irq_status_reg & HPD_IRQ_FLAG) {
+		displayport->hpd_state = HPD_IRQ;
+		/*queue_delayed_work(displayport->dp_wq, &displayport->hpd_irq_work, 0);*/
+		displayport_info("HPD IRQ detect\n");
+	}
+#endif
+
+	if (irq_status_reg & HDCP_LINK_CHK_FAIL) {
+		queue_delayed_work(displayport->dp_wq, &displayport->hdcp13_integrity_check_work, 0);
+		displayport_info("HDCP_LINK_CHK detect\n");
+	}
+
+	if (irq_status_reg & HDCP_R0_CHECK_FLAG) {
+		hdcp13_info.r0_read_flag = 1;
+		displayport_info("R0_CHECK_FLAG detect\n");
+	}
+
 	/* SST1 interrupt */
 	irq_status_reg = displayport_reg_get_interrupt_and_clear(SST1_INTERRUPT_STATUS_SET0);
 
 	if (irq_status_reg & MAPI_FIFO_UNDER_FLOW)
 		displayport_info("VIDEO FIFO_UNDER_FLOW detect\n");
+
+	if (irq_status_reg & VSYNC_DET) {
+		/* VSYNC interrupt, accept it */
+		decon->frame_cnt++;
+		wake_up_interruptible_all(&decon->wait_vstatus);
+
+		if (decon->dt.psr_mode == DECON_VIDEO_MODE) {
+			decon->vsync.timestamp = timestamp;
+			wake_up_interruptible_all(&decon->vsync.wait);
+		}
+	}
 
 	irq_status_reg = displayport_reg_get_interrupt_and_clear(SST1_INTERRUPT_STATUS_SET1);
 
@@ -1620,7 +1635,7 @@ static int displayport_enable(struct displayport_device *displayport)
 #else
 	displayport_runtime_resume(displayport->dev);
 #endif
-	/*enable_irq(displayport->res.irq);*/
+	enable_irq(displayport->res.irq);
 
 	displayport_info("cur_video = %s in displayport_enable!!!\n",
 			supported_videos[displayport->cur_video].name);
