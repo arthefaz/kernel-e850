@@ -1250,7 +1250,7 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 			displayport_info("detect CP_IRQ\n");
 			hdcp13_info.cp_irq_flag = 1;
 			hdcp13_info.link_check = LINK_CHECK_NEED;
-			HDCP13_Link_integrity_check();
+			hdcp13_link_integrity_check();
 
 			if (hdcp13_info.auth_state == HDCP13_STATE_FAIL) {
 				queue_delayed_work(displayport->dp_wq,
@@ -1285,7 +1285,7 @@ static void displayport_hdcp13_integrity_check_work(struct work_struct *work)
 
 	if (displayport->hdcp_ver == HDCP_VERSION_1_3) {
 		hdcp13_info.link_check = LINK_CHECK_NEED;
-		HDCP13_Link_integrity_check();
+		hdcp13_link_integrity_check();
 	}
 }
 
@@ -1543,7 +1543,7 @@ static void displayport_hdcp13_run(struct work_struct *work)
 		return;
 
 	displayport_dbg("[HDCP 1.3] run\n");
-	HDCP13_run();
+	hdcp13_run();
 	if (hdcp13_info.auth_state == HDCP13_STATE_FAIL) {
 		queue_delayed_work(displayport->dp_wq, &displayport->hdcp13_work,
 				msecs_to_jiffies(2000));
@@ -1574,9 +1574,9 @@ static int displayport_check_hdcp_version(void)
 	u32 rx_caps = 0;
 	int i;
 
-	HDCP13_DPCD_BUFFER();
+	hdcp13_dpcd_buffer();
 
-	if (HDCP13_Read_Bcap() != 0)
+	if (hdcp13_read_bcap() != 0)
 		displayport_dbg("[HDCP 1.3] NONE HDCP CAPABLE\n");
 #if defined(HDCP_SUPPORT)
 	else
