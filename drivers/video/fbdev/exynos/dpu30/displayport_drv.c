@@ -1523,6 +1523,12 @@ int displayport_dpcd_write_for_hdcp22(u32 address, u32 length, u8 *data)
 
 void displayport_hdcp22_enable(u32 en)
 {
+	struct decon_device *decon = get_decon_drvdata(2);
+
+	/* wait 2 frames for hdcp encryption enable/disable */
+	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+
 	if (en) {
 		displayport_reg_set_hdcp22_system_enable(1);
 		displayport_reg_set_hdcp22_mode(1);
