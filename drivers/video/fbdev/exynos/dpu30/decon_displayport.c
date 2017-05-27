@@ -37,7 +37,6 @@ static void decon_displayport_underrun_info(void)
 static irqreturn_t decon_displayport_irq_handler(int irq, void *dev_data)
 {
 	struct decon_device *decon = dev_data;
-	ktime_t timestamp = ktime_get();
 	u32 irq_sts_reg;
 	u32 ext_irq = 0;
 
@@ -46,17 +45,6 @@ static irqreturn_t decon_displayport_irq_handler(int irq, void *dev_data)
 		goto irq_end;
 
 	irq_sts_reg = decon_reg_get_interrupt_and_clear(decon->id, &ext_irq);
-
-	if (irq_sts_reg & DPU_FRAME_START_INT_PEND) {
-		/* VSYNC interrupt, accept it */
-		decon->frame_cnt++;
-		wake_up_interruptible_all(&decon->wait_vstatus);
-
-		if (decon->dt.psr_mode == DECON_VIDEO_MODE) {
-			decon->vsync.timestamp = timestamp;
-			wake_up_interruptible_all(&decon->vsync.wait);
-		}
-	}
 
 	if (irq_sts_reg & DPU_FRAME_DONE_INT_PEND)
 		DPU_EVENT_LOG(DPU_EVT_DECON_FRAMEDONE, &decon->sd, ktime_set(0, 0));

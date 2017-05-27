@@ -449,10 +449,13 @@ void displayport_reg_set_interrupt(u32 en)
 	displayport_write(SST2_INTERRUPT_STATUS_SET0, ~0);
 	displayport_write(SST2_INTERRUPT_STATUS_SET1, ~0);
 
+#if !defined(CONFIG_CCIC_NOTIFIER)
 	displayport_reg_set_interrupt_mask(HPD_IRQ_INT_MASK, val);
 	displayport_reg_set_interrupt_mask(HOTPLUG_CHG_INT_MASK, val);
 	displayport_reg_set_interrupt_mask(HPD_LOST_INT_MASK, val);
 	displayport_reg_set_interrupt_mask(PLUG_INT_MASK, val);
+#endif
+	displayport_reg_set_interrupt_mask(VSYNC_DET_INT_MASK, val);
 	displayport_reg_set_interrupt_mask(VIDEO_FIFO_UNDER_FLOW_MASK, val);
 	displayport_reg_set_interrupt_mask(AUDIO_FIFO_UNDER_RUN_INT_MASK, val);
 }
@@ -1114,7 +1117,7 @@ void displayport_reg_init(void)
 	displayport_reg_lh_p_ch_power(1);
 	displayport_reg_sw_function_en();
 
-	displayport_reg_set_interrupt(0);	/*disable irq*/
+	displayport_reg_set_interrupt(1);
 	displayport_reg_set_lane_map_config();
 }
 
