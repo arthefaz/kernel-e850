@@ -14,7 +14,7 @@
 HDCP13 HDCP13_DPCD;
 struct hdcp13_info hdcp13_info;
 
-void HDCP13_DPCD_BUFFER(void)
+void hdcp13_dpcd_buffer(void)
 {
 	u8 i = 0;
 
@@ -57,21 +57,20 @@ void HDCP13_DPCD_BUFFER(void)
 	HDCP13_DPCD.HDCP13_AINFO[0] = 0x0;
 }
 
-void HDCP13_dump(char *str, u8 *buf, int size)
+void hdcp13_dump(char *str, u8 *buf, int size)
 {
 	int i;
 	u8 *buffer = buf;
 
 	displayport_dbg("[HDCP 1.3] %s = 0x", str);
-	if (displayport_log_level >=7) {
-	for (i = 0; i < size; i++)
-			pr_info("%02x ", *(buffer+i));
 
-		pr_info("\n");
-	}
+	for (i = 0; i < size; i++)
+		displayport_dbg("%02x ", *(buffer+i));
+
+	displayport_dbg("\n");
 }
 
-void HDCP13_Func_En(u32 en)
+void hdcp13_func_en(u32 en)
 {
 	displayport_write_mask(SYSTEM_HPD_CONTROL, en, HPD_EVENT_CTRL_EN);
 	displayport_write_mask(SYSTEM_HPD_CONTROL, en, HPD_FORCE_EN);
@@ -79,7 +78,7 @@ void HDCP13_Func_En(u32 en)
 	displayport_write_mask(SYSTEM_COMMON_FUNCTION_ENABLE, en, HDCP13_FUNC_EN);
 }
 
-u8 HDCP13_Read_Bcap(void)
+u8 hdcp13_read_bcap(void)
 {
 	u8 return_val = 0;
 	u8 hdcp_capa = 0;
@@ -103,12 +102,12 @@ u8 HDCP13_Read_Bcap(void)
 	return return_val;
 }
 
-void HDCP13_Repeater_Set(void)
+void hdcp13_repeater_set(void)
 {
 	displayport_write_mask(HDCP13_CONTROL_0, hdcp13_info.is_repeater, SW_RX_REPEATER);
 }
 
-void HDCP13_Write_Bksv(void)
+void hdcp13_write_bksv(void)
 {
 	int i;
 	u32 val = 0;
@@ -123,7 +122,7 @@ void HDCP13_Write_Bksv(void)
 	displayport_write(HDCP13_BKSV_1, val);
 }
 
-u8 HDCP13_Read_Bksv(void)
+u8 hdcp13_read_bksv(void)
 {
 	u8 i = 0;
 	u8 j = 0;
@@ -132,7 +131,7 @@ u8 HDCP13_Read_Bksv(void)
 
 	displayport_reg_dpcd_read_burst(ADDR_HDCP13_BKSV, sizeof(HDCP13_DPCD.HDCP13_BKSV), HDCP13_DPCD.HDCP13_BKSV);
 
-	HDCP13_dump("BKSV", &(HDCP13_DPCD.HDCP13_BKSV[0]), 5);
+	hdcp13_dump("BKSV", &(HDCP13_DPCD.HDCP13_BKSV[0]), 5);
 
 	for (i = 0; i < sizeof(HDCP13_DPCD.HDCP13_BKSV); i++) {
 		for (j = 0; j < 8; j++) {
@@ -142,7 +141,7 @@ u8 HDCP13_Read_Bksv(void)
 	}
 
 	if (one == 20) {
-		HDCP13_Write_Bksv();
+		hdcp13_write_bksv();
 
 		displayport_dbg("[HDCP 1.3] Valid Bksv\n");
 		ret = 0;
@@ -154,19 +153,19 @@ u8 HDCP13_Read_Bksv(void)
 	return ret;
 }
 
-void HDCP13_Set_An_val(void)
+void hdcp13_set_an_val(void)
 {
 	displayport_write_mask(HDCP13_CONTROL_0, 1, SW_STORE_AN);
 
 	displayport_write_mask(HDCP13_CONTROL_0, 0, SW_STORE_AN);
 }
 
-void HDCP13_Write_An_val(void)
+void hdcp13_write_an_val(void)
 {
 	u8 i = 0;
 	u32 val = 0;
 
-	HDCP13_Set_An_val();
+	hdcp13_set_an_val();
 
 	val = displayport_read(HDCP13_AN_0);
 	for (i = 0; i < 4; i++)
@@ -179,7 +178,7 @@ void HDCP13_Write_An_val(void)
 	displayport_reg_dpcd_write_burst(ADDR_HDCP13_AN, 8, HDCP13_DPCD.HDCP13_AN);
 }
 
-u8 HDCP13_Write_Aksv(void)
+u8 hdcp13_write_aksv(void)
 {
 	u8 i = 0;
 	u32 val = 0;
@@ -206,7 +205,7 @@ u8 HDCP13_Write_Aksv(void)
 	return ret;
 }
 
-u8 HDCP13_CMP_Ri(void)
+u8 hdcp13_cmp_ri(void)
 {
 	u8 cnt = 0;
 	u8 ri_retry_cnt = 0;
@@ -270,7 +269,7 @@ u8 HDCP13_CMP_Ri(void)
 	return ret;
 }
 
-void HDCP13_Encryption_con(u8 enable)
+void hdcp13_encryption_con(u8 enable)
 {
 	if (enable == 1) {
 		displayport_write_mask(HDCP13_CONTROL_0, ~0, SW_AUTH_OK | HDCP13_ENC_EN);
@@ -283,7 +282,7 @@ void HDCP13_Encryption_con(u8 enable)
 	}
 }
 
-void HDCP13_Link_integrity_check(void)
+void hdcp13_link_integrity_check(void)
 {
 	int i;
 	if (hdcp13_info.link_check == LINK_CHECK_NEED) {
@@ -298,17 +297,17 @@ void HDCP13_Link_integrity_check(void)
 				displayport_info("[HDCP 1.3] HDCP13_DPCD.HDCP13_BSTATUS = %02x : retry(%d)\n",
 						HDCP13_DPCD.HDCP13_BSTATUS[0], i);
 				hdcp13_info.link_check = LINK_CHECK_FAIL;
-				HDCP13_DPCD_BUFFER();
+				hdcp13_dpcd_buffer();
 				hdcp13_info.auth_state = HDCP13_STATE_FAIL;
 				displayport_reg_video_mute(1);
 				hdcp13_info.cp_irq_flag = 0;
 
-				if (HDCP13_Read_Bcap() != 0) {
+				if (hdcp13_read_bcap() != 0) {
 					displayport_info("[HDCP 1.3] NOT HDCP CAPABLE\n");
-					HDCP13_Encryption_con(0);
+					hdcp13_encryption_con(0);
 				} else {
 					displayport_info("[HDCP 1.3] ReAuth\n");
-					HDCP13_run();
+					hdcp13_run();
 				}
 				break;
 			}
@@ -317,13 +316,13 @@ void HDCP13_Link_integrity_check(void)
 	}
 }
 
-void HDCP3_IRQ_Mask(void)
+void hdcp13_irq_mask(void)
 {
 	displayport_reg_set_interrupt_mask(HDCP_LINK_CHECK_INT_MASK, 1);
 	displayport_reg_set_interrupt_mask(HDCP_LINK_FAIL_INT_MASK, 1);
 }
 
-void HDCP13_make_sha1_input_buf(u8 *sha1_input_buf, u8 *binfo, u8 device_cnt)
+void hdcp13_make_sha1_input_buf(u8 *sha1_input_buf, u8 *binfo, u8 device_cnt)
 {
 	int i = 0;
 	u32 val = 0;
@@ -342,7 +341,7 @@ void HDCP13_make_sha1_input_buf(u8 *sha1_input_buf, u8 *binfo, u8 device_cnt)
 			(u8)((val >> (i * 8)) & 0xFF);
 }
 
-void HDCP13_v_value_order_swap(u8 *v_value)
+void hdcp13_v_value_order_swap(u8 *v_value)
 {
 	int i;
 	u8 temp;
@@ -357,7 +356,7 @@ void HDCP13_v_value_order_swap(u8 *v_value)
 	}
 }
 
-int HDCP13_compare_v(u8 *tx_v_value)
+int hdcp13_compare_v(u8 *tx_v_value)
 {
 	int i = 0;
 	int ret = 0;
@@ -378,10 +377,10 @@ int HDCP13_compare_v(u8 *tx_v_value)
 
 		v_read_retry_cnt++;
 
-	for (i = 0; i < SHA1_SIZE; i++) {
-				if (*(tx_v_value_address++) != *(rx_v_value_address++))
-			ret = -EFAULT;
-	}
+		for (i = 0; i < SHA1_SIZE; i++) {
+			if (*(tx_v_value_address++) != *(rx_v_value_address++))
+				ret = -EFAULT;
+		}
 
 		if (ret == 0)
 			break;
@@ -390,7 +389,7 @@ int HDCP13_compare_v(u8 *tx_v_value)
 	return ret;
 }
 
-static int HDCP13_proceed_repeater(void)
+static int hdcp13_proceed_repeater(void)
 {
 	int retry_cnt = HDCP_RETRY_COUNT;
 	int cnt = 0;
@@ -452,7 +451,7 @@ static int HDCP13_proceed_repeater(void)
 		device_cnt = b_info & BINFO_DEVICE_COUNT;
 
 		if (device_cnt != 0) {
-			displayport_info("[HDCP 1.3] device count = %d", device_cnt);
+			displayport_info("[HDCP 1.3] device count = %d\n", device_cnt);
 
 			offset = 0;
 
@@ -474,15 +473,15 @@ static int HDCP13_proceed_repeater(void)
 		}
 
 		/* need calculation of V = SHA-1(KSV list || Binfo || M0) */
-		HDCP13_make_sha1_input_buf(sha1_input_buf, HDCP13_DPCD.HDCP13_BINFO, device_cnt);
+		hdcp13_make_sha1_input_buf(sha1_input_buf, HDCP13_DPCD.HDCP13_BINFO, device_cnt);
 #if defined(CONFIG_EXYNOS_HDCP2)
 		hdcp_calc_sha1(v_value, sha1_input_buf, BINFO_SIZE + M0_SIZE + KSV_SIZE * device_cnt);
 #else
 		displayport_info("Not compiled EXYNOS_HDCP2 driver\n");
 #endif
-		HDCP13_v_value_order_swap(v_value);
+		hdcp13_v_value_order_swap(v_value);
 
-		if (HDCP13_compare_v(v_value) == 0) {
+		if (hdcp13_compare_v(v_value) == 0) {
 			hdcp13_info.auth_state = HDCP13_STATE_SECOND_AUTH_DONE;
 			displayport_reg_video_mute(0);
 			displayport_info("[HDCP 1.3] 2nd Auth done!!!\n");
@@ -497,7 +496,7 @@ repeater_err:
 	return -EINVAL;
 }
 
-void HDCP13_run(void)
+void hdcp13_run(void)
 {
 	int retry_cnt = HDCP_RETRY_COUNT;
 
@@ -508,29 +507,29 @@ void HDCP13_run(void)
 
 		hdcp13_info.auth_state = HDCP13_STATE_AUTH_PROCESS;
 
-		HDCP13_Encryption_con(0);
-		HDCP13_Func_En(1);
+		hdcp13_encryption_con(0);
+		hdcp13_func_en(1);
 
-		HDCP13_Repeater_Set();
+		hdcp13_repeater_set();
 
 		displayport_dbg("[HDCP 1.3] SW Auth.\n");
 
-		if (HDCP13_Read_Bksv() != 0) {
+		if (hdcp13_read_bksv() != 0) {
 			displayport_info("[HDCP 1.3] ReAuthentication Start!!!\n");
 			continue;
 		}
 
-		HDCP13_Write_An_val();
+		hdcp13_write_an_val();
 
-		if (HDCP13_Write_Aksv() != 0) {
+		if (hdcp13_write_aksv() != 0) {
 			displayport_info("[HDCP 1.3] ReAuthentication Start!!!\n");
 			continue;
 		}
 
 		/* BKSV Rewrite */
-		HDCP13_Write_Bksv();
+		hdcp13_write_bksv();
 
-		if (HDCP13_CMP_Ri() != 0)
+		if (hdcp13_cmp_ri() != 0)
 			continue;
 
 		if (!hdcp13_info.is_repeater) {
@@ -538,11 +537,11 @@ void HDCP13_run(void)
 			displayport_reg_video_mute(0);
 		}
 
-		HDCP13_Encryption_con(1);
+		hdcp13_encryption_con(1);
 		displayport_dbg("[HDCP 1.3] HDCP 1st Authentication done!!!\n");
 
 		if (hdcp13_info.is_repeater) {
-			if (HDCP13_proceed_repeater())
+			if (hdcp13_proceed_repeater())
 				goto HDCP13_END;
 			else
 				continue;
@@ -554,7 +553,7 @@ HDCP13_END:
 			(hdcp13_info.auth_state != HDCP13_STATE_SECOND_AUTH_DONE)) {
 		hdcp13_info.auth_state = HDCP13_STATE_FAIL;
 		displayport_reg_video_mute(1);
-		HDCP13_Encryption_con(0);
+		hdcp13_encryption_con(0);
 		displayport_dbg("[HDCP 1.3] HDCP Authentication fail!!!\n");
 	}
 }

@@ -899,7 +899,6 @@ void displayport_reg_set_ch_status_word_length(enum audio_bit_per_channel audio_
 void displayport_reg_set_ch_status_sampling_frequency(enum audio_sampling_frequency audio_sampling_freq);
 void displayport_reg_set_ch_status_clock_accuracy(enum audio_clock_accuracy clock_accuracy);
 
-void HDCP13_Link_integrity_check(void);
 void displayport_reg_set_hdcp22_system_enable(u32 en);
 void displayport_reg_set_hdcp22_mode(u32 en);
 void displayport_reg_set_hdcp22_encryption_enable(u32 en);
@@ -921,9 +920,11 @@ int displayport_audio_bist_enable(struct displayport_audio_config_data audio_con
 void displayport_reg_set_avi_infoframe(struct infoframe avi_infofrmae);
 void displayport_reg_set_audio_infoframe(struct infoframe audio_infofrmae, u32 en);
 
-void HDCP13_run(void);
-void HDCP13_DPCD_BUFFER(void);
-u8 HDCP13_Read_Bcap(void);
+void hdcp13_run(void);
+void hdcp13_dpcd_buffer(void);
+u8 hdcp13_read_bcap(void);
+void hdcp13_link_integrity_check(void);
+
 extern int hdcp_calc_sha1(u8 *digest, const u8 *buf, unsigned int buflen);
 extern int hdcp_dplink_authenticate(void); /* hdcp 2.2 */
 extern int hdcp_dplink_get_rxstatus(uint8_t *status);
