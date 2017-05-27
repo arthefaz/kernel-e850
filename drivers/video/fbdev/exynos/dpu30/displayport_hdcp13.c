@@ -271,6 +271,12 @@ u8 hdcp13_cmp_ri(void)
 
 void hdcp13_encryption_con(u8 enable)
 {
+	struct decon_device *decon = get_decon_drvdata(2);
+
+	/* wait 2 frames for hdcp encryption enable/disable */
+	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+
 	if (enable == 1) {
 		displayport_write_mask(HDCP13_CONTROL_0, ~0, SW_AUTH_OK | HDCP13_ENC_EN);
 		/*displayport_reg_video_mute(0);*/
