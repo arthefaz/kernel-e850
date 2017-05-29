@@ -2002,11 +2002,16 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 {
 	struct decon_win *win = info->par;
 	struct decon_device *decon = win->decon;
+	struct decon_lcd *lcd_info = decon->lcd_info;
+	struct lcd_mres_info *mres_info = &lcd_info->dt_lcd_mres;
 	struct decon_win_config_data win_data;
+	struct decon_disp_info disp_info;
 	struct exynos_displayport_data displayport_data;
 	struct decon_hdr_capabilities hdr_capa;
 	struct decon_hdr_capabilities_info hdr_capa_info;
 	struct decon_user_window user_window;	/* cursor async */
+	struct decon_win_config_data __user *argp;
+	struct decon_disp_info __user *argp_info;
 	int ret = 0;
 	u32 crtc;
 	bool active;
@@ -2078,6 +2083,26 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		if (copy_to_user((struct decon_hdr_capabilities_info __user *)arg,
 				&hdr_capa_info,
 				sizeof(struct decon_hdr_capabilities_info))) {
+			ret = -EFAULT;
+			break;
+		}
+		break;
+
+	case EXYNOS_DISP_INFO:
+		argp_info = (struct decon_disp_info  __user *)arg;
+		if (copy_from_user(&disp_info, argp_info,
+				   sizeof(struct decon_disp_info))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		decon->hwc_ver = disp_info.ver;
+		disp_info.psr_mode = decon->dt.psr_mode;
+		disp_info.chip_ver = CHIP_VER;
+		disp_info.mres_info = *mres_info;
+
+		if (copy_to_user(argp_info,
+				 &disp_info, sizeof(struct decon_disp_info))) {
 			ret = -EFAULT;
 			break;
 		}
