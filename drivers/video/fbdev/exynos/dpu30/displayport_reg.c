@@ -112,6 +112,21 @@ void displayport_reg_phy_txclk_source_setting(u8 lane_num)
 	displayport_phy_write_mask(DP_REG_B, lane_num, LN_TXCLK_SOURCE_LANE);
 }
 
+void displayport_reg_phy_init_setting(void)
+{
+	displayport_phy_write(DP_REG_11, 0x00);
+	displayport_phy_write(DP_REG_31, 0x00);
+	displayport_phy_write(DP_REG_51, 0x00);
+	displayport_phy_write(DP_REG_71, 0x00);
+	displayport_phy_write(DP_REG_C6, 0x20);
+	displayport_phy_write(DP_REG_C9, 0x1E);
+	displayport_phy_write(DP_REG_D9, 0x30);
+	displayport_phy_write(DP_REG_E9, 0x30);
+	displayport_phy_write(DP_REG_CF, 0x0D);
+	displayport_phy_write(DP_REG_DF, 0x08);
+	displayport_phy_write(DP_REG_EF, 0x08);
+}
+
 void displayport_reg_phy_mode_setting(void)
 {
 #if defined(CONFIG_CCIC_NOTIFIER)
@@ -178,6 +193,11 @@ void displayport_reg_phy_mode_setting(void)
 
 	val |= 0xF0;
 	displayport_phy_write(DP_REG_0, val);
+}
+
+void displayport_reg_phy_ssc_enable(u32 en)
+{
+	displayport_phy_write_mask(DP_REG_97, en, SSC_EN);
 }
 
 void displayport_reg_wait_phy_pll_lock(void)
@@ -1102,17 +1122,21 @@ void displayport_reg_sw_function_en(void)
 	displayport_write_mask(SYSTEM_SW_FUNCTION_ENABLE, 1, SW_FUNC_EN);
 }
 
+void displayport_reg_phy_init(void)
+{
+	displayport_reg_phy_reset(1);
+	displayport_reg_phy_init_setting();
+	displayport_reg_phy_mode_setting();
+	displayport_reg_phy_reset(0);
+	displayport_reg_wait_phy_pll_lock();
+}
+
 void displayport_reg_init(void)
 {
 	displayport_reg_sw_reset();
 
-	/* phy initialization */
-	displayport_reg_phy_reset(1);
-	displayport_reg_phy_mode_setting();
-	displayport_reg_phy_reset(0);
-	displayport_reg_wait_phy_pll_lock();
+	displayport_reg_phy_init();
 
-	/* link initialization */
 	displayport_reg_function_enable();
 	displayport_reg_lh_p_ch_power(1);
 	displayport_reg_sw_function_en();
