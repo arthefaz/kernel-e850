@@ -1555,6 +1555,7 @@
 #define SST2_PPS_SDP_PAYLOAD_31			(0x6D7C)
 #define SST2_VSC_SDP_DATA_PAYLOAD_FIFO		(0x6D80)
 
+/* PHY register */
 #define CMN_REG2C				(0x00B0)
 #define MAN_USBDP_MODE				(0x03 << 1)
 #define MAN_USBDP_MODE_EN			(0x01 << 0)
@@ -1599,6 +1600,7 @@
 #define DP_REG_B				(0x082C)
 #define LN_TXCLK_SOURCE_LANE			(0x03 << 0)
 
+#define DP_REG_11				(0x0844)
 #define DP_REG_13				(0x084C)
 #define DP_REG_16				(0x0858)
 #define TX_DRV_IDRV_EN_CTRL_BIT_POS		(4)
@@ -1609,14 +1611,28 @@
 #define DP_REG_1B				(0x086C)
 #define DP_REG_1C				(0x0870)
 #define DP_REG_1D				(0x0874)
+#define DP_REG_31				(0x08C4)
 #define DP_REG_36				(0x08D8)
 #define DP_REG_3A				(0x08E8)
+#define DP_REG_51				(0x0944)
 #define DP_REG_56				(0x0958)
 #define DP_REG_5A				(0x0868)
+#define DP_REG_71				(0x09C4)
 #define DP_REG_76				(0x09D8)
 #define DP_REG_7A				(0x09E8)
+
+#define DP_REG_97				(0x0A5C)
+#define SSC_EN					(0x01 << 4)
 
 #define DP_REG_B3				(0x0ACC)
 #define CMN_DUMMY_CTRL_7_6			(0x03 << 6)
 #define CMN_DUMMY_CTRL_1_0			(0x03 << 0)
+
+#define DP_REG_C6				(0x0B18)
+#define DP_REG_C9				(0x0B24)
+#define DP_REG_CF				(0x0B3C)
+#define DP_REG_D9				(0x0B64)
+#define DP_REG_DF				(0x0B7C)
+#define DP_REG_E9				(0x0BA4)
+#define DP_REG_EF				(0x0BBC)
 #endif
