@@ -63,6 +63,8 @@ extern struct decon_bts_ops decon_bts_control;
 #define MIN_WIN_BLOCK_WIDTH	8
 #define MIN_WIN_BLOCK_HEIGHT	1
 
+#define CHIP_VER	(9810)
+
 #define DECON_WIN_UPDATE_IDX	(6)
 
 #ifndef KHZ
@@ -591,6 +593,20 @@ struct decon_win_config_data {
 	struct decon_win_config config[MAX_DECON_WIN + 1];
 };
 
+enum hwc_ver {
+	HWC_INIT = 0,
+	HWC_1_0 = 1,
+	HWC_2_0 = 2,
+};
+
+struct decon_disp_info {
+	enum hwc_ver ver;
+	enum decon_psr_mode psr_mode;
+	struct lcd_mres_info mres_info;
+	u32 chip_ver;
+	unsigned char reverved[128];
+};
+
 struct dpu_size_info {
 	u32 w_in;
 	u32 h_in;
@@ -612,6 +628,7 @@ typedef enum dpu_event_type {
 	DPU_EVT_ACT_VSYNC,
 	DPU_EVT_DEACT_VSYNC,
 	DPU_EVT_WIN_CONFIG,
+	DPU_EVT_DISP_INFO,
 
 	/* Related with interrupt */
 	DPU_EVT_TE_INTERRUPT,
@@ -995,6 +1012,7 @@ struct decon_device {
 #endif
 	unsigned long prev_hdr_bits;
 	struct exynos_hdr_static_info prev_hdr_info;
+	enum hwc_ver ver;
 };
 
 static inline struct decon_device *get_decon_drvdata(u32 id)
@@ -1342,6 +1360,8 @@ int decon_set_cursor_win_config(struct decon_device *decon, int x, int y);
 #define S3CFB_DECON_SELF_REFRESH	_IOW('F', 207, __u32)
 #define S3CFB_WIN_CONFIG		_IOW('F', 209, \
 						struct decon_win_config_data)
+#define EXYNOS_DISP_INFO		_IOW('F', 260, \
+						struct decon_disp_info)
 
 #define S3CFB_START_CRC			_IOW('F', 270, u32)
 #define S3CFB_SEL_CRC_BITS		_IOW('F', 271, u32)
