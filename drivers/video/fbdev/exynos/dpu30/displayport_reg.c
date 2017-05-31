@@ -129,14 +129,14 @@ void displayport_reg_phy_init_setting(void)
 
 void displayport_reg_phy_mode_setting(void)
 {
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	struct displayport_device *displayport = get_displayport_drvdata();
 #endif
 	u32 val = 0;
 
 	displayport_phy_write_mask(CMN_REG2C, 1, MAN_USBDP_MODE_EN);
 
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	switch (displayport->ccic_notify_dp_conf) {
 	case CCIC_NOTIFY_DP_PIN_UNKNOWN:
 		displayport_dbg("CCIC_NOTIFY_DP_PIN_UNKNOWN\n");
@@ -311,7 +311,7 @@ void displayport_reg_set_phy_tune(u32 phy_lane_num, u32 amplitude_level, u32 emp
 
 void displayport_reg_set_phy_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_emphasis)
 {
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	struct displayport_device *displayport = get_displayport_drvdata();
 
 	switch (displayport->ccic_notify_dp_conf) {
@@ -469,7 +469,7 @@ void displayport_reg_set_interrupt(u32 en)
 	displayport_write(SST2_INTERRUPT_STATUS_SET0, ~0);
 	displayport_write(SST2_INTERRUPT_STATUS_SET1, ~0);
 
-#if !defined(CONFIG_CCIC_NOTIFIER)
+#if !defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	displayport_reg_set_interrupt_mask(HPD_IRQ_INT_MASK, val);
 	displayport_reg_set_interrupt_mask(HOTPLUG_CHG_INT_MASK, val);
 	displayport_reg_set_interrupt_mask(HPD_LOST_INT_MASK, val);
@@ -1060,7 +1060,7 @@ void displayport_reg_set_lane_map(u32 lane0, u32 lane1, u32 lane2, u32 lane3)
 
 void displayport_reg_set_lane_map_config(void)
 {
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	struct displayport_device *displayport = get_displayport_drvdata();
 
 	switch (displayport->ccic_notify_dp_conf) {
