@@ -530,8 +530,12 @@ struct displayport_device {
 	struct mutex training_lock;
 	wait_queue_head_t dp_wait;
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
+	struct delayed_work notifier_register_work;
 	struct notifier_block dp_typec_nb;
 	ccic_notifier_dp_pinconf_t ccic_notify_dp_conf;
+	int notifier_registered;
+	bool ccic_link_conf;
+	bool ccic_hpd;
 #endif
 	int hpd_current_state;
 	enum hotplug_state hpd_state;

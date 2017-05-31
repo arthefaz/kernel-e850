@@ -827,7 +827,7 @@ void displayport_hpd_changed(int state)
 		/* PHY power on */
 		phy_power_on(displayport->phy);
 		displayport_reg_init(); /* for AUX ch read/write. */
-		msleep(10);
+		usleep_range(10000, 11000);
 
 		/* for Link CTS : (4.2.2.3) EDID Read */
 		if (displayport_link_status_read()) {
@@ -2141,6 +2141,9 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 			struct displayport_device, dp_typec_nb);
 	CC_NOTI_TYPEDEF usb_typec_info = *(CC_NOTI_TYPEDEF *)data;
 
+	if (usb_typec_info.dest != CCIC_NOTIFY_DEV_DP)
+		return 0;
+
 	displayport_dbg("%s: action (%ld) dump(0x%01x, 0x%01x, 0x%02x, 0x%04x, 0x%04x, 0x%04x)\n",
 			__func__, action, usb_typec_info.src, usb_typec_info.dest, usb_typec_info.id,
 			usb_typec_info.sub1, usb_typec_info.sub2, usb_typec_info.sub3);
@@ -2151,6 +2154,8 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 		switch (usb_typec_info.sub1) {
 		case CCIC_NOTIFY_DETACH:
 			displayport->ccic_notify_dp_conf = CCIC_NOTIFY_DP_PIN_UNKNOWN;
+			displayport->ccic_link_conf = false;
+			displayport->ccic_hpd = false;
 			displayport_hpd_changed(0);
 			displayport_aux_onoff(displayport, 0);
 			break;
@@ -2203,7 +2208,10 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 			displayport->ccic_notify_dp_conf = CCIC_NOTIFY_DP_PIN_UNKNOWN;
 			break;
 		}
-		displayport->hpd_state = HPD_UNPLUG;
+		displayport->ccic_link_conf = true;
+		if (displayport->ccic_hpd) {
+			displayport_hpd_changed(1);
+		}
 		break;
 
 	case CCIC_NOTIFY_ID_DP_HPD:
@@ -2213,14 +2221,19 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 		case CCIC_NOTIFY_IRQ:
 			break;
 		case CCIC_NOTIFY_LOW:
+			displayport->ccic_hpd = false;
 			displayport_hpd_changed(0);
 			break;
 		case CCIC_NOTIFY_HIGH:
 			if (displayport->hpd_current_state &&
 					usb_typec_info.sub2 == CCIC_NOTIFY_IRQ) {
 				queue_delayed_work(displayport->dp_wq, &displayport->hpd_irq_work, 0);
+				return 0;
 			} else {
-				displayport_hpd_changed(1);
+				displayport->ccic_hpd = true;
+				if (displayport->ccic_link_conf) {
+					displayport_hpd_changed(1);
+				}
 			}
 			break;
 		default:
@@ -2235,7 +2248,19 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 
 	return 0;
 }
+
+static void displayport_notifier_register_work(struct work_struct *work)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	if (!displayport->notifier_registered) {
+		displayport->notifier_registered = 1;
+		manager_notifier_register(&displayport->dp_typec_nb,
+			usb_typec_displayport_notification, MANAGER_NOTIFY_CCIC_DP);
+	}
+}
 #endif
+
 #ifdef DISPLAYPORT_TEST
 static ssize_t displayport_link_show(struct class *class,
 		struct class_attribute *attr,
@@ -2702,8 +2727,10 @@ static int displayport_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&displayport->hdcp13_integrity_check_work, displayport_hdcp13_integrity_check_work);
 
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
-	manager_notifier_register(&displayport->dp_typec_nb,
-		usb_typec_displayport_notification, CCIC_NOTIFY_DEV_DP);
+	INIT_DELAYED_WORK(&displayport->notifier_register_work,
+			displayport_notifier_register_work);
+	queue_delayed_work(displayport->dp_wq, &displayport->notifier_register_work,
+			msecs_to_jiffies(30000));
 #endif
 
 #if defined(CONFIG_EXTCON)
