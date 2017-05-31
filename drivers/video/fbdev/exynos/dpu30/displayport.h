@@ -23,7 +23,7 @@
 #if defined(CONFIG_EXTCON)
 #include <linux/extcon.h>
 #endif
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 #include <linux/usb/manager/usb_typec_manager_notifier.h>
 #include <linux/notifier.h>
 #include <linux/ccic/ccic_notifier.h>
@@ -529,7 +529,7 @@ struct displayport_device {
 	struct mutex aux_lock;
 	struct mutex training_lock;
 	wait_queue_head_t dp_wait;
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	struct notifier_block dp_typec_nb;
 	ccic_notifier_dp_pinconf_t ccic_notify_dp_conf;
 #endif

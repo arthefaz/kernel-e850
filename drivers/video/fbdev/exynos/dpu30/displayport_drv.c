@@ -1299,7 +1299,7 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 	/* Common interrupt */
 	irq_status_reg = displayport_reg_get_interrupt_and_clear(SYSTEM_IRQ_COMMON_STATUS);
 
-#if !defined(CONFIG_CCIC_NOTIFIER)
+#if !defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	if (irq_status_reg & HPD_CHG)
 		displayport_info("HPD_CHG detect\n");
 
@@ -2089,7 +2089,7 @@ static int displayport_init_resources(struct displayport_device *displayport, st
 	return 0;
 }
 
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 static int displayport_aux_onoff(struct displayport_device *displayport, int
 		onoff)
 {
@@ -2133,7 +2133,7 @@ static int displayport_aux_onoff(struct displayport_device *displayport, int
 }
 #endif
 
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 static int usb_typec_displayport_notification(struct notifier_block *nb,
 		unsigned long action, void *data)
 {
@@ -2701,7 +2701,7 @@ static int displayport_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&displayport->hdcp22_work, displayport_hdcp22_run);
 	INIT_DELAYED_WORK(&displayport->hdcp13_integrity_check_work, displayport_hdcp13_integrity_check_work);
 
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	manager_notifier_register(&displayport->dp_typec_nb,
 		usb_typec_displayport_notification, CCIC_NOTIFY_DEV_DP);
 #endif
