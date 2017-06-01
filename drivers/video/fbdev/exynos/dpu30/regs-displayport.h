@@ -514,7 +514,7 @@
 #define HDCP13_AM0_0				(0x4048)
 #define AM0_0					(0xFFFFFFFF << 0)
 
-#define HDCP13_AM0_1				(0x4048)
+#define HDCP13_AM0_1				(0x404C)
 #define AM0_1					(0xFFFFFFFF << 0)
 
 #define HDCP13_WAIT_R0_TIME			(0x4054)
