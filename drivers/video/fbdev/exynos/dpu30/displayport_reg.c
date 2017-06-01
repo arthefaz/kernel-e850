@@ -1069,16 +1069,16 @@ void displayport_reg_set_lane_map_config(void)
 
 	case CCIC_NOTIFY_DP_PIN_A:
 		if (displayport->dp_sw_sel)
-			displayport_reg_set_lane_map(1, 2, 3, 0);
+			displayport_reg_set_lane_map(3, 1, 2, 0);
 		else
-			displayport_reg_set_lane_map(0, 3, 2, 1);
+			displayport_reg_set_lane_map(2, 0, 3, 1);
 		break;
 
 	case CCIC_NOTIFY_DP_PIN_B:
 		if (displayport->dp_sw_sel)
 			displayport_reg_set_lane_map(3, 2, 1, 0);
 		else
-			displayport_reg_set_lane_map(0, 1, 2, 3);
+			displayport_reg_set_lane_map(1, 0, 2, 3);
 		break;
 
 	case CCIC_NOTIFY_DP_PIN_C:
@@ -1086,7 +1086,7 @@ void displayport_reg_set_lane_map_config(void)
 	case CCIC_NOTIFY_DP_PIN_D:
 	case CCIC_NOTIFY_DP_PIN_F:
 		if (displayport->dp_sw_sel)
-			displayport_reg_set_lane_map(2, 3, 1, 0);
+			displayport_reg_set_lane_map(3, 2, 0, 1);
 		else
 			displayport_reg_set_lane_map(0, 1, 3, 2);
 		break;
