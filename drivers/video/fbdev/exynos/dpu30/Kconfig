@@ -61,6 +61,12 @@ config EXYNOS_AFBC
 	bool "Display sub-system AFBC stream"
         depends on EXYNOS_DECON_9810
         default n
+
+config DECON_BTS_LEGACY
+	bool "Legacy BTS scheme of display"
+        depends on EXYNOS_DECON_9810
+        default n
+
 endif
 
 source "drivers/video/fbdev/exynos/dpu_9810/panels/Kconfig"

@@ -25,9 +25,7 @@
 #include <linux/platform_device.h>
 #include <media/v4l2-device.h>
 #include <media/videobuf2-core.h>
-#if defined(CONFIG_EXYNOS9810_BTS)
 #include <soc/samsung/bts.h>
-#endif
 
 #include "regs-decon.h"
 
@@ -42,9 +40,7 @@
 extern struct ion_device *ion_exynos;
 extern struct decon_device *decon_drvdata[MAX_DECON_CNT];
 extern int decon_log_level;
-#if defined(CONFIG_EXYNOS9810_BTS)
 extern struct decon_bts_ops decon_bts_control;
-#endif
 
 #define DECON_MODULE_NAME	"exynos-decon"
 #define MAX_NAME_SIZE		32
@@ -113,19 +109,26 @@ void dpu_debug_printk(const char *function_name, const char *format, ...);
 #define DPU_DEBUG_WIN(fmt, args...)						\
 	do {									\
 		if (decon_log_level >= 7)					\
-			dpu_debug_printk("WIN_UPDATE", fmt,  ##args);		\
+			dpu_debug_printk("WIN_UPDATE", fmt, ##args);		\
 	} while (0)
 
-#define DPU_DEBUG_BTS(fmt, args...)							\
+#define DPU_DEBUG_BTS(fmt, args...)						\
 	do {									\
 		if (decon_log_level >= 7)					\
-			dpu_debug_printk("BTS", fmt,  ##args);			\
+			dpu_debug_printk("BTS", fmt, ##args);			\
 	} while (0)
 
-#define DPU_INFO_BTS(fmt, args...)							\
+#define DPU_INFO_BTS(fmt, args...)						\
 	do {									\
 		if (decon_log_level >= 6)					\
-			dpu_debug_printk("BTS", fmt,  ##args);			\
+			dpu_debug_printk("BTS", fmt, ##args);			\
+	} while (0)
+
+#define DPU_ERR_BTS(fmt, args...)						\
+	do {									\
+		if (decon_log_level >= 3) {					\
+			dpu_debug_printk("BTS", fmt, ##args);			\
+		}								\
 	} while (0)
 
 enum decon_trig_mode {
@@ -836,20 +839,19 @@ struct decon_win_update {
 	struct decon_rect prev_up_region;
 };
 
-#if defined(CONFIG_EXYNOS9810_BTS)
 struct decon_bts_ops {
 	void (*bts_init)(struct decon_device *decon);
-	void (*bts_calc_bw)(struct decon_device *decon, struct decon_reg_data *regs);
-	void (*bts_update_bw)(struct decon_device *decon, struct decon_reg_data *regs,
-			u32 is_after);
+	void (*bts_calc_bw)(struct decon_device *decon,
+			struct decon_reg_data *regs);
+	void (*bts_update_bw)(struct decon_device *decon,
+			struct decon_reg_data *regs, u32 is_after);
+	void (*bts_acquire_bw)(struct decon_device *decon);
 	void (*bts_release_bw)(struct decon_device *decon);
-	void (*bts_update_qos_mif)(struct decon_device *decon, u32 mif_freq);
-	void (*bts_update_qos_int)(struct decon_device *decon, u32 int_freq);
-	void (*bts_update_qos_scen)(struct decon_device *decon, u32 val);
 	void (*bts_deinit)(struct decon_device *decon);
 };
 
 struct decon_bts {
+	bool enabled;
 	u32 resol_clk;
 	u32 bw[BTS_DPP_MAX];
 	/* each decon must know other decon's BW to get overall BW */
@@ -866,7 +868,6 @@ struct decon_bts {
 	struct pm_qos_request disp_qos;
 	u32 scen_updated;
 };
-#endif
 
 struct decon_device {
 	int id;
@@ -902,9 +903,7 @@ struct decon_device {
 	struct decon_lcd *lcd_info;
 	struct decon_win_update win_up;
 	struct decon_hiber hiber;
-#if defined(CONFIG_EXYNOS9810_BTS)
 	struct decon_bts bts;
-#endif
 
 	int frame_cnt;
 	int frame_cnt_target;
