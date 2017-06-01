@@ -356,9 +356,6 @@ static int decon_enable(struct decon_device *decon)
 	struct decon_mode_info psr;
 	struct decon_param p;
 	int ret = 0;
-#if defined(CONFIG_EXYNOS_DISPLAYPORT) && defined(CONFIG_EXYNOS9810_BTS)
-	struct displayport_device *displayport = get_displayport_drvdata();
-#endif
 
 	decon_dbg("enable decon-%d\n", decon->id);
 
@@ -385,21 +382,7 @@ static int decon_enable(struct decon_device *decon)
 	pm_stay_awake(decon->dev);
 	dev_warn(decon->dev, "pm_stay_awake");
 
-	if (decon->dt.out_type == DECON_OUT_DP) {
-		decon_info("DECON_OUT_DP %s timeline:%d, max:%d\n",
-			decon->timeline->name, decon->timeline->value, decon->timeline_max);
-
-#if defined(CONFIG_EXYNOS_DISPLAYPORT) && defined(CONFIG_EXYNOS9810_BTS)
-		if (supported_videos[displayport->cur_video].dv_timings.bt.pixelclock
-			>= 533000000) {
-			decon->bts.ops->bts_update_qos_mif(decon, 1540*1000);
-			decon->bts.ops->bts_update_qos_int(decon, 533*1000);
-			decon->bts.ops->bts_update_qos_scen(decon, 1);
-		} else if (supported_videos[displayport->cur_video].dv_timings.bt.pixelclock
-			> 148500000)
-			decon->bts.ops->bts_update_qos_mif(decon, 1352*1000);
-#endif
-	}
+	decon->bts.ops->bts_acquire_bw(decon);
 
 	if (decon->dt.psr_mode != DECON_VIDEO_MODE) {
 		if (decon->res.pinctrl && decon->res.hw_te_on) {
@@ -569,9 +552,7 @@ static int decon_disable(struct decon_device *decon)
 	decon->cur_using_dpp = 0;
 	decon_dpp_stop(decon, false);
 
-#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops->bts_release_bw(decon);
-#endif
 
 	ret = v4l2_subdev_call(decon->out_sd[0], video, s_stream, 0);
 	if (ret) {
@@ -584,17 +565,6 @@ static int decon_disable(struct decon_device *decon)
 			decon_err("stopping stream failed for %s\n",
 					decon->out_sd[1]->name);
 		}
-	}
-
-	if (decon->dt.out_type == DECON_OUT_DP) {
-		decon_info("DECON_OUT_DP %s timeline:%d, max:%d\n",
-			decon->timeline->name, decon->timeline->value, decon->timeline_max);
-
-#if defined(CONFIG_EXYNOS9810_BTS)
-		decon->bts.ops->bts_update_qos_mif(decon, 0);
-		decon->bts.ops->bts_update_qos_int(decon, 0);
-		decon->bts.ops->bts_update_qos_scen(decon, 0);
-#endif
 	}
 
 	if (decon->dt.out_type == DECON_OUT_DSI) {
@@ -660,9 +630,7 @@ static int decon_dp_disable(struct decon_device *decon)
 	decon->cur_using_dpp = 0;
 	decon_dpp_stop(decon, false);
 
-#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops->bts_release_bw(decon);
-#endif
 
 #if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_put_sync(decon->dev);
@@ -1538,11 +1506,9 @@ static void decon_update_regs(struct decon_device *decon,
 
 	decon_update_vgf_info(decon, regs);
 
-#if defined(CONFIG_EXYNOS9810_BTS)
 	/* add calc and update bw : cur > prev */
 	decon->bts.ops->bts_calc_bw(decon, regs);
 	decon->bts.ops->bts_update_bw(decon, regs, 0);
-#endif
 
 	DPU_EVENT_LOG_WINCON(&decon->sd, regs);
 
@@ -1587,10 +1553,8 @@ end:
 
 	decon_save_vgf_connected_win_id(decon, regs);
 
-#if defined(CONFIG_EXYNOS9810_BTS)
 	/* add update bw : cur < prev */
 	decon->bts.ops->bts_update_bw(decon, regs, 1);
-#endif
 
 	decon_dpp_stop(decon, false);
 }
@@ -2751,10 +2715,8 @@ static int decon_probe(struct platform_device *pdev)
 
 	dpu_init_win_update(decon);
 
-#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops = &decon_bts_control;
 	decon->bts.ops->bts_init(decon);
-#endif
 
 	platform_set_drvdata(pdev, decon);
 	pm_runtime_enable(dev);
@@ -2798,9 +2760,7 @@ static int decon_remove(struct platform_device *pdev)
 	struct decon_device *decon = platform_get_drvdata(pdev);
 	int i;
 
-#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops->bts_deinit(decon);
-#endif
 
 	pm_runtime_disable(&pdev->dev);
 	decon_put_clocks(decon);

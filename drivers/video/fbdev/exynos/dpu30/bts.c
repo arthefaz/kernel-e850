@@ -225,6 +225,9 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 	struct bts_decon_info bts_info;
 	int idx, i;
 
+	if (!decon->bts.enabled)
+		return;
+
 	memset(&bts_info, 0, sizeof(struct bts_decon_info));
 	for (i = 0; i < MAX_DECON_WIN; ++i) {
 		idx = config[i].idma_type;
@@ -278,6 +281,9 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 
 	DPU_DEBUG_BTS("%s +\n", __func__);
 
+	if (!decon->bts.enabled)
+		return;
+
 	/* update peak & read bandwidth per DPU port */
 	bw.peak = decon->bts.peak;
 	bw.read = decon->bts.total_bw;
@@ -308,46 +314,46 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 	DPU_DEBUG_BTS("%s -\n", __func__);
 }
 
-void dpu_bts_update_qos_mif(struct decon_device *decon, u32 mif_freq)
+void dpu_bts_acquire_bw(struct decon_device *decon)
 {
-	if (decon->id != 2)
+#if defined(CONFIG_DECON_BTS_LEGACY)
+	struct displayport_device *displayport = get_displayport_drvdata();
+	videoformat cur = displayport->cur_video;
+	__u64 pixelclock = supported_videos[cur].dv_timings.bt.pixelclock;
+
+	DPU_DEBUG_BTS("%s +\n", __func__);
+
+	if (!decon->bts.enabled)
 		return;
 
-	if (pm_qos_request_active(&decon->bts.mif_qos)) {
-		pm_qos_update_request(&decon->bts.mif_qos, mif_freq);
-	} else {
-		decon_err( "%s: error (%d)\n", __func__, decon->id);
-	}
-
-	DPU_INFO_BTS("%s: decon%d, freq(Khz): mif %u\n", __func__, decon->id, mif_freq);
-}
-
-void dpu_bts_update_qos_int(struct decon_device *decon, u32 int_freq)
-{
-	if (decon->id != 2)
+	if (decon->dt.out_type != DECON_OUT_DP)
 		return;
 
-	if (pm_qos_request_active(&decon->bts.int_qos)) {
-		pm_qos_update_request(&decon->bts.int_qos, int_freq);
-	} else {
-		decon_err( "%s: error (%d)\n", __func__, decon->id);
-	}
+	if (pixelclock >= 533000000) {
+		if (pm_qos_request_active(&decon->bts.mif_qos))
+			pm_qos_update_request(&decon->bts.mif_qos, 1540 * 1000);
+		else
+			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
 
-	DPU_INFO_BTS("%s: decon%d, freq(Khz): int %u\n", __func__, decon->id, int_freq);
-}
+		if (pm_qos_request_active(&decon->bts.int_qos))
+			pm_qos_update_request(&decon->bts.int_qos, 533 * 1000);
+		else
+			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
-void dpu_bts_update_qos_scen(struct decon_device *decon, u32 val)
-{
-	if (decon->id != 2)
-		return;
+		if (!decon->bts.scen_updated) {
+			decon->bts.scen_updated = 1;
+			bts_update_scen(BS_DP_DEFAULT, 1);
+		}
+	} else if (pixelclock > 148500000) { /* pixelclock < 533000000 ? */
+		if (pm_qos_request_active(&decon->bts.mif_qos))
+			pm_qos_update_request(&decon->bts.mif_qos, 1352 * 1000);
+		else
+			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
+	} /* pixelclock <= 148500000 ? */
 
-	if ((val && decon->bts.scen_updated) || (!val && !decon->bts.scen_updated))
-		return;
-
-	decon->bts.scen_updated = val;
-	bts_update_scen(BS_DP_DEFAULT, val);
-
-	DPU_INFO_BTS("%s: decon%d, BS_DP_DEFAULT set %d\n", __func__, decon->id, val);
+	DPU_DEBUG_BTS("%s: decon%d, pixelclock(%u)\n", __func__, decon->id,
+			pixelclock);
+#endif
 }
 
 void dpu_bts_release_bw(struct decon_device *decon)
@@ -355,10 +361,32 @@ void dpu_bts_release_bw(struct decon_device *decon)
 	struct bts_bw bw = { 0, };
 	DPU_DEBUG_BTS("%s +\n", __func__);
 
-	bts_update_bw(decon->bts.type, bw);
-	decon->bts.prev_total_bw = 0;
-	pm_qos_update_request(&decon->bts.disp_qos, 0);
-	decon->bts.prev_max_disp_freq = 0;
+	if (!decon->bts.enabled)
+		return;
+
+	if (decon->dt.out_type == DECON_OUT_DSI) {
+		bts_update_bw(decon->bts.type, bw);
+		decon->bts.prev_total_bw = 0;
+		pm_qos_update_request(&decon->bts.disp_qos, 0);
+		decon->bts.prev_max_disp_freq = 0;
+	} else if (decon->dt.out_type == DECON_OUT_DP) {
+#if defined(CONFIG_DECON_BTS_LEGACY)
+		if (pm_qos_request_active(&decon->bts.mif_qos))
+			pm_qos_update_request(&decon->bts.mif_qos, 0);
+		else
+			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
+
+		if (pm_qos_request_active(&decon->bts.int_qos))
+			pm_qos_update_request(&decon->bts.int_qos, 0);
+		else
+			DPU_ERR_BTS("%s int qos setting error\n", __func__);
+
+		if (decon->bts.scen_updated) {
+			decon->bts.scen_updated = 0;
+			bts_update_scen(BS_DP_DEFAULT, 0);
+		}
+#endif
+	}
 
 	DPU_DEBUG_BTS("%s -\n", __func__);
 }
@@ -369,6 +397,13 @@ void dpu_bts_init(struct decon_device *decon)
 	int i;
 
 	DPU_DEBUG_BTS("%s +\n", __func__);
+
+	decon->bts.enabled = false;
+
+	if (!IS_ENABLED(CONFIG_EXYNOS9810_BTS)) {
+		DPU_ERR_BTS("decon%d bts feature is disabled\n", decon->id);
+		return;
+	}
 
 	if (decon->id == 1)
 		decon->bts.type = BTS_BW_DECON1;
@@ -411,10 +446,17 @@ void dpu_bts_init(struct decon_device *decon)
 	pm_qos_add_request(&decon->bts.int_qos, PM_QOS_DEVICE_THROUGHPUT, 0);
 	pm_qos_add_request(&decon->bts.disp_qos, PM_QOS_DISPLAY_THROUGHPUT, 0);
 	decon->bts.scen_updated = 0;
+
+	decon->bts.enabled = true;
+
+	DPU_INFO_BTS("decon%d bts feature is enabled\n", decon->id);
 }
 
 void dpu_bts_deinit(struct decon_device *decon)
 {
+	if (!decon->bts.enabled)
+		return;
+
 	DPU_DEBUG_BTS("%s +\n", __func__);
 	pm_qos_remove_request(&decon->bts.disp_qos);
 	pm_qos_remove_request(&decon->bts.int_qos);
@@ -426,9 +468,7 @@ struct decon_bts_ops decon_bts_control = {
 	.bts_init		= dpu_bts_init,
 	.bts_calc_bw		= dpu_bts_calc_bw,
 	.bts_update_bw		= dpu_bts_update_bw,
+	.bts_acquire_bw		= dpu_bts_acquire_bw,
 	.bts_release_bw		= dpu_bts_release_bw,
-	.bts_update_qos_mif	= dpu_bts_update_qos_mif,
-	.bts_update_qos_int	= dpu_bts_update_qos_int,
-	.bts_update_qos_scen	= dpu_bts_update_qos_scen,
 	.bts_deinit		= dpu_bts_deinit,
 };
