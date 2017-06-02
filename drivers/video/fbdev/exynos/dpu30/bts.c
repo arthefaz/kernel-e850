@@ -223,6 +223,7 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 {
 	struct decon_win_config *config = regs->dpp_config;
 	struct bts_decon_info bts_info;
+	enum dpp_rotate rot;
 	int idx, i;
 
 	if (!decon->bts.enabled)
@@ -245,14 +246,19 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 		bts_info.dpp[idx].dst.x2 = config[i].dst.x + config[i].dst.w;
 		bts_info.dpp[idx].dst.y1 = config[i].dst.y;
 		bts_info.dpp[idx].dst.y2 = config[i].dst.y + config[i].dst.h;
+		rot = config[i].dpp_parm.rot;
+		bts_info.dpp[idx].rotation = (rot > DPP_ROT_180) ? true : false;
 
-		DPU_DEBUG_BTS("%s:used(%d), bpp(%d), src_w(%d), src_h(%d)\n",
+		DPU_DEBUG_BTS("%s: used(%d) bpp(%d) src w(%d) h(%d) rot(%d)\n",
 				__func__,
 				bts_info.dpp[idx].used, bts_info.dpp[idx].bpp,
-				bts_info.dpp[idx].src_w, bts_info.dpp[idx].src_h);
-		DPU_DEBUG_BTS("\t\t\t\tdst x(%d), right(%d), y(%d), bottom(%d)\n",
-				bts_info.dpp[idx].dst.x1, bts_info.dpp[idx].dst.x2,
-				bts_info.dpp[idx].dst.y1, bts_info.dpp[idx].dst.y2);
+				bts_info.dpp[idx].src_w, bts_info.dpp[idx].src_h,
+				bts_info.dpp[idx].rotation);
+		DPU_DEBUG_BTS("\t\t\tdst x(%d) right(%d) y(%d) bottom(%d)\n",
+				bts_info.dpp[idx].dst.x1,
+				bts_info.dpp[idx].dst.x2,
+				bts_info.dpp[idx].dst.y1,
+				bts_info.dpp[idx].dst.y2);
 	}
 
 	bts_info.vclk = decon->bts.resol_clk;
