@@ -36,6 +36,7 @@
 #include "dsim.h"
 #include "displayport.h"
 #include "../../../../dma-buf/sync_debug.h"
+#include "hdr_metadata.h"
 
 #define MAX_DECON_CNT		3
 #define SUCCESS_EXYNOS_SMC	0
