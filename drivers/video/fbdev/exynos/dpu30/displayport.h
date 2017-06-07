@@ -537,6 +537,8 @@ struct displayport_device {
 	enum test_pattern bist_type;
 	enum displayport_dynamic_range_type dyn_range;
 	videoformat cur_video;
+
+	int idle_ip_index;
 };
 
 struct displayport_debug_param {
