@@ -28,6 +28,7 @@
 #include <video/mipi_display.h>
 #include <linux/regulator/consumer.h>
 #include <media/v4l2-dv-timings.h>
+#include <soc/samsung/exynos-powermode.h>
 
 #include "displayport.h"
 #include "decon.h"
@@ -1603,6 +1604,9 @@ static int displayport_enable(struct displayport_device *displayport)
 
 	displayport_info("displayport_enable\n");
 
+	/* block to enter SICD mode */
+	exynos_update_ip_idle_status(displayport->idle_ip_index, 0);
+
 #if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_get_sync(displayport->dev);
 #else
@@ -1662,6 +1666,9 @@ static int displayport_disable(struct displayport_device *displayport)
 	displayport->state = DISPLAYPORT_STATE_INIT;
 	wake_up_interruptible(&displayport->dp_wait);
 	displayport_info("displayport_disable\n");
+
+	/* unblock to enter SICD mode */
+	exynos_update_ip_idle_status(displayport->idle_ip_index, 1);
 
 	return 0;
 }
@@ -2615,6 +2622,12 @@ static int displayport_probe(struct platform_device *pdev)
 	displayport->hpd_state = HPD_UNPLUG;
 
 	pm_runtime_enable(dev);
+
+	displayport->idle_ip_index =
+		exynos_get_idle_ip_index(dev_name(&pdev->dev));
+	if (displayport->idle_ip_index < 0)
+		displayport_warn("idle ip index is not provided for DP\n");
+	exynos_update_ip_idle_status(displayport->idle_ip_index, 1);
 
 	phy_init(displayport->phy);
 
