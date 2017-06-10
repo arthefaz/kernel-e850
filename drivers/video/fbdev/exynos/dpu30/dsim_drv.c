@@ -29,7 +29,7 @@
 #include <linux/exynos-ss.h>
 #include <video/mipi_display.h>
 #include <soc/samsung/cal-if.h>
-#include <dt-bindings/clock/exynos8895.h>
+#include <dt-bindings/clock/exynos9810.h>
 
 #include "decon.h"
 #include "dsim.h"
@@ -387,13 +387,19 @@ static void dsim_underrun_info(struct dsim_device *dsim)
 #if defined(CONFIG_EXYNOS9810_BTS)
 	struct decon_device *decon = get_decon_drvdata(0);
 
-	dsim_info("dsim%d: MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
+	dsim_info("dsim%d: MIF(%lu), INT(%lu), DISP(%lu)\n",
 			dsim->id,
 			cal_dfs_get_rate(ACPM_DVFS_MIF),
 			cal_dfs_get_rate(ACPM_DVFS_INT),
-			cal_dfs_get_rate(ACPM_DVFS_DISP),
-			decon->bts.prev_total_bw,
-			decon->bts.total_bw);
+			cal_dfs_get_rate(ACPM_DVFS_DISP));
+
+	if (decon) {
+		dsim_info("dsim%d:total bw(%u, %u)\n",
+				dsim->id,
+				decon->bts.prev_total_bw,
+				decon->bts.total_bw);
+	}
+
 #endif
 }
 
@@ -435,8 +441,10 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 	}
 	if (int_src & DSIM_INTSRC_VT_STATUS) {
 		dsim_dbg("dsim%d vt_status(vsync) irq occurs\n", dsim->id);
-		decon->vsync.timestamp = ktime_get();
-		wake_up_interruptible_all(&decon->vsync.wait);
+		if (decon) {
+			decon->vsync.timestamp = ktime_get();
+			wake_up_interruptible_all(&decon->vsync.wait);
+		}
 	}
 
 	dsim_reg_clear_int(dsim->id, int_src);
