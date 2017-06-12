@@ -1895,6 +1895,54 @@ err:
 	return ret;
 }
 
+static int decon_get_hdr_capa(struct decon_device *decon,
+		struct decon_hdr_capabilities *hdr_capa)
+{
+	int ret = 0;
+	int k;
+
+	decon_dbg("%s +\n", __func__);
+	mutex_lock(&decon->lock);
+
+	if (decon->dt.out_type == DECON_OUT_DSI) {
+		for (k = 0; k < decon->lcd_info->dt_lcd_hdr.hdr_num; k++)
+			hdr_capa->out_types[k] =
+				decon->lcd_info->dt_lcd_hdr.hdr_type[k];
+	} else
+		memset(hdr_capa, 0, sizeof(struct decon_hdr_capabilities));
+
+	mutex_unlock(&decon->lock);
+	decon_dbg("%s -\n", __func__);
+
+	return ret;
+}
+
+static int decon_get_hdr_capa_info(struct decon_device *decon,
+		struct decon_hdr_capabilities_info *hdr_capa_info)
+{
+	int ret = 0;
+
+	decon_dbg("%s +\n", __func__);
+	mutex_lock(&decon->lock);
+
+	if (decon->dt.out_type == DECON_OUT_DSI) {
+		hdr_capa_info->out_num =
+			decon->lcd_info->dt_lcd_hdr.hdr_num;
+		hdr_capa_info->max_luminance =
+			decon->lcd_info->dt_lcd_hdr.hdr_max_luma;
+		hdr_capa_info->max_average_luminance =
+			decon->lcd_info->dt_lcd_hdr.hdr_max_avg_luma;
+		hdr_capa_info->min_luminance =
+			decon->lcd_info->dt_lcd_hdr.hdr_min_luma;
+	} else
+		memset(hdr_capa_info, 0, sizeof(struct decon_hdr_capabilities_info));
+
+	mutex_unlock(&decon->lock);
+	decon_dbg("%s -\n", __func__);
+
+	return ret;
+
+}
 static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			unsigned long arg)
 {
@@ -1902,6 +1950,8 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	struct decon_device *decon = win->decon;
 	struct decon_win_config_data win_data;
 	struct exynos_displayport_data displayport_data;
+	struct decon_hdr_capabilities hdr_capa;
+	struct decon_hdr_capabilities_info hdr_capa_info;
 	int ret = 0;
 	u32 crtc;
 	bool active;
@@ -1947,6 +1997,32 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 
 		if (copy_to_user(&((struct decon_win_config_data __user *)arg)->retire_fence,
 				 &win_data.retire_fence, sizeof(int))) {
+			ret = -EFAULT;
+			break;
+		}
+		break;
+
+	case S3CFB_GET_HDR_CAPABILITIES:
+		ret = decon_get_hdr_capa(decon, &hdr_capa);
+		if (ret)
+			break;
+
+		if (copy_to_user((struct decon_hdr_capabilities __user *)arg,
+				&hdr_capa,
+				sizeof(struct decon_hdr_capabilities))) {
+			ret = -EFAULT;
+			break;
+		}
+		break;
+
+	case S3CFB_GET_HDR_CAPABILITIES_NUM:
+		ret = decon_get_hdr_capa_info(decon, &hdr_capa_info);
+		if (ret)
+			break;
+
+		if (copy_to_user((struct decon_hdr_capabilities_info __user *)arg,
+				&hdr_capa_info,
+				sizeof(struct decon_hdr_capabilities_info))) {
 			ret = -EFAULT;
 			break;
 		}

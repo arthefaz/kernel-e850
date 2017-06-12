@@ -1001,6 +1001,12 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 	u32 mres_dsc_w[3] = {0, };
 	u32 mres_dsc_h[3] = {0, };
 	u32 mres_dsc_en[3] = {0, };
+	u32 hdr_num = 0;
+	u32 hdr_type[HDR_CAPA_NUM] = {0, };
+	u32 hdr_mxl = 0;
+	u32 hdr_mal = 0;
+	u32 hdr_mnl = 0;
+	int k;
 
 	node = of_parse_phandle(dsim->dev->of_node, "lcd_info", 0);
 
@@ -1137,6 +1143,28 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 	} else {
 		dsim->lcd_info.dt_lcd_mres.res_info[0].width = dsim->lcd_info.width;
 		dsim->lcd_info.dt_lcd_mres.res_info[0].height = dsim->lcd_info.height;
+	}
+
+	/* HDR info */
+	of_property_read_u32(node, "hdr_num", &hdr_num);
+	dsim->lcd_info.dt_lcd_hdr.hdr_num = hdr_num;
+	dsim_info("hdr_num(%d)\n", hdr_num);
+
+	if (hdr_num != 0) {
+		of_property_read_u32_array(node, "hdr_type", hdr_type, hdr_num);
+		for (k = 0; k < hdr_num; k++) {
+			dsim->lcd_info.dt_lcd_hdr.hdr_type[k] = hdr_type[k];
+			dsim_info("hdr_type[%d] = %d\n", k, hdr_type[k]);
+		}
+
+		of_property_read_u32(node, "hdr_max_luma", &hdr_mxl);
+		of_property_read_u32(node, "hdr_max_avg_luma", &hdr_mal);
+		of_property_read_u32(node, "hdr_min_luma", &hdr_mnl);
+		dsim->lcd_info.dt_lcd_hdr.hdr_max_luma = hdr_mxl;
+		dsim->lcd_info.dt_lcd_hdr.hdr_max_avg_luma = hdr_mal;
+		dsim->lcd_info.dt_lcd_hdr.hdr_min_luma = hdr_mnl;
+		dsim_info("hdr_max_luma(%d), hdr_max_avg_luma(%d), hdr_min_luma(%d)\n",
+				hdr_mxl, hdr_mal, hdr_mnl);
 	}
 }
 

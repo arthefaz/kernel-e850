@@ -743,6 +743,25 @@ void decon_destroy_debugfs(struct decon_device *decon);
 #define decon_destroy_debugfs(..) do { } while(0)
 #endif
 
+/* HDR information of panel */
+enum decon_hdr_type {
+	HDR_NONE = 0,
+	HDR_DOLBY_VISION = 1,
+	HDR_HDR10 = 2,
+	HDR_HLG = 3,
+};
+
+struct decon_hdr_capabilities {
+	unsigned int out_types[HDR_CAPA_NUM];
+};
+
+struct decon_hdr_capabilities_info {
+	int out_num;
+	int max_luminance;
+	int max_average_luminance;
+	int min_luminance;
+};
+
 struct decon_resources {
 	int irq;
 	void __iomem *regs;
@@ -1269,4 +1288,9 @@ void decon_dpp_stop(struct decon_device *decon, bool do_reset);
 
 #define EXYNOS_DPU_DUMP		_IOW('F', 302, \
 						struct decon_win_config_data)
+
+/* HDR support */
+#define S3CFB_GET_HDR_CAPABILITIES _IOW('F', 400, struct decon_hdr_capabilities)
+#define S3CFB_GET_HDR_CAPABILITIES_NUM _IOW('F', 401, struct decon_hdr_capabilities_info)
+
 #endif /* ___SAMSUNG_DECON_H__ */
