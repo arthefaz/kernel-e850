@@ -931,6 +931,8 @@ struct decon_device {
 	struct notifier_block itmon_nb;
 	bool notified;
 #endif
+	unsigned long prev_hdr_bits;
+	struct exynos_hdr_static_info prev_hdr_info;
 };
 
 static inline struct decon_device *get_decon_drvdata(u32 id)
@@ -1218,7 +1220,7 @@ void decon_reg_update_req_global(u32 id);
 int dpu_get_sd_by_drvname(struct decon_device *decon, char *drvname);
 u32 dpu_translate_fmt_to_dpp(u32 format);
 u32 dpu_get_bpp(enum decon_pixel_format fmt);
-int dpu_get_plane_cnt(enum decon_pixel_format format);
+int dpu_get_plane_cnt(enum decon_pixel_format format, bool is_hdr);
 u32 dpu_get_alpha_len(int format);
 
 void decon_dump(struct decon_device *decon);

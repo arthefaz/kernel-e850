@@ -108,7 +108,7 @@ static void win_update_check_limitation(struct decon_device *decon,
 		if (!(r.right - r.left) && !(r.bottom - r.top))
 			continue;
 
-		if (dpu_get_plane_cnt(config->format) == 1) {
+		if (dpu_get_plane_cnt(config->format, false) == 1) {
 			if (((r.right - r.left) < SRC_WIDTH_MIN) ||
 				((r.bottom - r.top) < SRC_HEIGHT_MIN)) {
 				goto change_full;

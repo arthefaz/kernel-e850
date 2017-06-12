@@ -889,6 +889,13 @@ HPD_FAIL:
 	return;
 }
 
+int displayport_set_hdr_config(struct exynos_hdr_static_info *hdr_info)
+{
+	int ret = 0;
+
+	return ret;
+}
+
 void displayport_set_reconnection(void)
 {
 	int ret;
@@ -1824,6 +1831,7 @@ static long displayport_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *ar
 	struct displayport_device *displayport = container_of(sd, struct displayport_device, sd);
 	int ret = 0;
 	struct v4l2_enum_dv_timings *enum_timings;
+	struct exynos_hdr_static_info *hdr_info;
 
 	switch (cmd) {
 	case DISPLAYPORT_IOC_DUMP:
@@ -1838,7 +1846,14 @@ static long displayport_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *ar
 
 	case DISPLAYPORT_IOC_SET_RECONNECTION:	/* for restart without hpd change */
 		displayport_set_reconnection();
-		displayport_info("DISPLAYPORT_IOC_SET_RECONNECTION ioctl\n");
+		break;
+
+	case DISPLAYPORT_IOC_SET_HDR_METADATA:
+		hdr_info = (struct exynos_hdr_static_info *)arg;
+		/* set info frame for hdr contents */
+		ret = displayport_set_hdr_config(hdr_info);
+		if (ret)
+			displayport_err("failed to configure hdr info\n");
 		break;
 
 	default:

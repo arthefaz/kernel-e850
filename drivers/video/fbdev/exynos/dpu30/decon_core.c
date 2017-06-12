@@ -981,7 +981,9 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 
 	DPU_EVENT_LOG(DPU_EVT_DECON_SET_BUFFER, &decon->sd, ktime_set(0, 0));
 
-	regs->plane_cnt[idx] = dpu_get_plane_cnt(config->format);
+	regs->plane_cnt[idx] =
+		dpu_get_plane_cnt(config->format, config->dpp_parm.hdr_std);
+
 	for (i = 0; i < regs->plane_cnt[idx]; ++i) {
 		handle = ion_import_dma_buf_fd(decon->ion_client,
 				config->fd_idma[i]);
@@ -1443,6 +1445,133 @@ static void decon_save_afbc_info(struct decon_device *decon,
 	}
 }
 
+static int decon_set_hdr_info(struct decon_device *decon,
+		struct decon_reg_data *regs, int win_num, bool on)
+{
+	struct exynos_video_meta *video_meta;
+	int ret = 0, hdr_cmp = 0;
+
+	if (!on) {
+		struct exynos_hdr_static_info hdr_static_info;
+
+		hdr_static_info.mid = -1;
+		decon->prev_hdr_info.mid = -1;
+		ret = v4l2_subdev_call(decon->displayport_sd, core, ioctl,
+				DISPLAYPORT_IOC_SET_HDR_METADATA,
+				&hdr_static_info);
+		if (ret)
+			goto err_hdr_io;
+
+		return 0;
+	}
+
+	if (!regs->dma_buf_data[win_num][2].dma_addr) {
+		decon_err("hdr metadata address is NULL\n");
+		return -EINVAL;
+	}
+
+	video_meta = (struct exynos_video_meta *)regs->dma_buf_data[win_num][2].dma_addr;
+	hdr_cmp = memcmp(&decon->prev_hdr_info,
+			&video_meta->data.dec.shdr_static_info,
+			sizeof(struct exynos_hdr_static_info));
+
+	/* HDR metadata is same, so skip subdev call.
+	 * Also current hdr_static_info is not copied.
+	 */
+	if (hdr_cmp == 0)
+		return 0;
+
+	ret = v4l2_subdev_call(decon->displayport_sd, core, ioctl,
+			DISPLAYPORT_IOC_SET_HDR_METADATA,
+			&video_meta->data.dec.shdr_static_info);
+	if (ret)
+		goto err_hdr_io;
+
+	memcpy(&decon->prev_hdr_info,
+			&video_meta->data.dec.shdr_static_info,
+			sizeof(struct exynos_hdr_static_info));
+	return 0;
+
+err_hdr_io:
+	/* When the subdev call is failed,
+	 * current hdr_static_info is not copied to prev.
+	 */
+	decon_err("hdr metadata info subdev call is failed\n");
+
+	return -EFAULT;
+}
+
+static void decon_update_hdr_info(struct decon_device *decon,
+		struct decon_reg_data *regs)
+{
+
+	int i, ret = 0, win_num = 0, hdr_cnt = 0;
+	unsigned long cur_hdr_bits = 0;
+
+	/* On only DP case, hdr static info could be transfered to DP */
+	if (decon->dt.out_type != DECON_OUT_DP)
+		return;
+
+	decon_dbg("%s +\n", __func__);
+	/* Check hdr configuration of enabled window */
+	for (i = 0; i < decon->dt.max_win; i++) {
+		if (regs->dpp_config[i].state == DECON_WIN_STATE_BUFFER
+			&& regs->dpp_config[i].dpp_parm.hdr_std) {
+			set_bit(i, &cur_hdr_bits);
+
+			if (cur_hdr_bits)
+				win_num = i;
+
+			hdr_cnt++;
+			if (hdr_cnt > 1) {
+				decon_err("DP support Only signle HDR\n");
+				ret = -EINVAL;
+				goto err_hdr;
+			}
+		}
+	}
+
+	/* Check hdr configuration or hdr window is chagned */
+	if (decon->prev_hdr_bits != cur_hdr_bits) {
+		if (cur_hdr_bits == 0) {
+			/* Case : HDR ON -> HDR OFF, turn off hdr */
+			ret = decon_set_hdr_info(decon, regs, win_num, false);
+			if (ret)
+				goto err_hdr;
+		} else {
+			/* Case : HDR OFF -> HDR ON, turn on hdr*/
+			/* Case : HDR ON -> HDR ON, hdr window is changed */
+			ret = decon_set_hdr_info(decon, regs, win_num, true);
+			if (ret)
+				goto err_hdr;
+		}
+		/* Save current hdr configuration information */
+		decon->prev_hdr_bits = cur_hdr_bits;
+	} else {
+		if (cur_hdr_bits == 0) {
+			/* Case : HDR OFF -> HDR OFF, Do nothing */
+		} else {
+			/* Case : HDR ON -> HDR ON, compare hdr metadata with prev info */
+			ret = decon_set_hdr_info(decon, regs, win_num, true);
+			if (ret)
+				goto err_hdr;
+		}
+	}
+	decon_dbg("%s -\n", __func__);
+
+err_hdr:
+	/* HDR STANDARD information should be changed to OFF.
+	 * Because DP doesn't use the HDR engine
+	 */
+	for (i = 0; i < decon->dt.max_win; i++)
+		if (regs->dpp_config[i].dpp_parm.hdr_std != DPP_HDR_OFF)
+			regs->dpp_config[i].dpp_parm.hdr_std = DPP_HDR_OFF;
+	if (ret) {
+		decon_err("set hdr metadata is failed, err no is %d\n", ret);
+		decon->prev_hdr_bits = 0;
+	}
+}
+
 static void decon_update_vgf_info(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
@@ -1515,6 +1644,8 @@ static void decon_update_regs(struct decon_device *decon,
 	decon_check_used_dpp(decon, regs);
 
 	decon_update_vgf_info(decon, regs);
+
+	decon_update_hdr_info(decon, regs);
 
 	/* add calc and update bw : cur > prev */
 	decon->bts.ops->bts_calc_bw(decon, regs);
