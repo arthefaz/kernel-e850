@@ -532,6 +532,30 @@ static const struct file_operations decon_event_fops = {
 	.release = seq_release,
 };
 
+static int decon_debug_dump_show(struct seq_file *s, void *unused)
+{
+	struct decon_device *decon = s->private;
+
+	if (decon->state != DECON_STATE_ON) {
+		decon_info("%s: decon is not ON(%d)\n", __func__, decon->state);
+		return 0;
+	}
+	decon_dump(decon);
+	return 0;
+}
+
+static int decon_debug_dump_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, decon_debug_dump_show, inode->i_private);
+}
+
+static const struct file_operations decon_dump_fops = {
+	.open = decon_debug_dump_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+
 int decon_create_debugfs(struct decon_device *decon)
 {
 	char name[MAX_NAME_SIZE];
@@ -541,8 +565,7 @@ int decon_create_debugfs(struct decon_device *decon)
 		decon->d.debug_root = debugfs_create_dir("decon", NULL);
 		if (!decon->d.debug_root) {
 			decon_err("failed to create debugfs root directory.\n");
-			ret = -ENOENT;
-			goto err;
+			return -ENOENT;
 		}
 	}
 
@@ -559,10 +582,20 @@ int decon_create_debugfs(struct decon_device *decon)
 		goto err_debugfs;
 	}
 
+	snprintf(name, MAX_NAME_SIZE, "dump%d", decon->id);
+	decon->d.debug_dump = debugfs_create_file(name, 0444,
+			decon->d.debug_root, decon, &decon_dump_fops);
+	if (!decon->d.debug_dump) {
+		decon_err("failed to create SFR dump debugfs file(%d)\n",
+				decon->id);
+		ret = -ENOENT;
+		goto err_debugfs;
+	}
+
+	return 0;
+
 err_debugfs:
-	if (decon->d.debug_root)
-		debugfs_remove(decon->d.debug_root);
-err:
+	debugfs_remove_recursive(decon->d.debug_root);
 	return ret;
 }
 
