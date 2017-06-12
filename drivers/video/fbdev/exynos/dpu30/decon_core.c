@@ -969,7 +969,7 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 
 	decon_dbg("%s +\n", __func__);
 
-	DPU_EVENT_LOG(DPU_EVT_WB_SET_BUFFER, &decon->sd, ktime_set(0, 0));
+	DPU_EVENT_LOG(DPU_EVT_DECON_SET_BUFFER, &decon->sd, ktime_set(0, 0));
 
 	regs->plane_cnt[idx] = dpu_get_plane_cnt(config->format);
 	for (i = 0; i < regs->plane_cnt[idx]; ++i) {
