@@ -31,6 +31,7 @@
 
 #include "regs-displayport.h"
 #include "./panels/decon_lcd.h"
+#include "hdr_metadata.h"
 
 extern int displayport_log_level;
 
@@ -936,4 +937,5 @@ extern int hdcp_dplink_set_integrity_fail(void);
 #define DISPLAYPORT_IOC_GET_ENUM_DV_TIMINGS	_IOW('V', 1, u8)
 #define DISPLAYPORT_IOC_SET_RECONNECTION	_IOW('V', 2, u8)
 #define DISPLAYPORT_IOC_DP_SA_SORTING		_IOW('V', 3, int)
+#define DISPLAYPORT_IOC_SET_HDR_METADATA	_IOW('V', 4, struct exynos_hdr_static_info *)
 #endif
