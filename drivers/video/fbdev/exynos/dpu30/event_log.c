@@ -227,6 +227,7 @@ void DPU_EVENT_LOG(dpu_event_t type, struct v4l2_subdev *sd, ktime_t time)
 	case DPU_EVT_ACT_VSYNC:
 	case DPU_EVT_DEACT_VSYNC:
 	case DPU_EVT_WB_SET_BUFFER:
+	case DPU_EVT_DECON_SET_BUFFER:
 		dpu_event_log_decon(type, sd, time);
 		break;
 	case DPU_EVT_DSIM_SUSPEND:
@@ -392,6 +393,12 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 		case DPU_EVT_DECON_FRAMEDONE:
 			seq_printf(s, "%20s  %20s", "DECON_FRAME_DONE", "-\n");
 			break;
+		case DPU_EVT_DSIM_FRAMEDONE:
+			seq_printf(s, "%20s  %20s", "DSIM_FRAME_DONE", "-\n");
+			break;
+		case DPU_EVT_RSC_CONFLICT:
+			seq_printf(s, "%20s  %20s", "RSC_CONFLICT", "-\n");
+			break;
 		case DPU_EVT_UPDATE_HANDLER:
 			seq_printf(s, "%20s  ", "UPDATE_HANDLER");
 			seq_printf(s, "Partial Size (%d,%d,%d,%d)\n",
@@ -411,6 +418,18 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 			break;
 		case DPU_EVT_TRIG_UNMASK:
 			seq_printf(s, "%20s  %20s", "TRIG_UNMASK", "-\n");
+			break;
+		case DPU_EVT_FENCE_RELEASE:
+			seq_printf(s, "%20s  %20s", "FENCE_RELEASE", "-\n");
+			break;
+		case DPU_EVT_DECON_SHUTDOWN:
+			seq_printf(s, "%20s  %20s", "DECON_SHUTDOWN", "-\n");
+			break;
+		case DPU_EVT_DSIM_SHUTDOWN:
+			seq_printf(s, "%20s  %20s", "DSIM_SHUTDOWN", "-\n");
+			break;
+		case DPU_EVT_DECON_FRAMESTART:
+			seq_printf(s, "%20s  %20s", "DECON_FRAMESTART", "-\n");
 			break;
 		case DPU_EVT_DPP_WINCON:
 			seq_printf(s, "%20s  ", "DPP_WINCON");
@@ -475,6 +494,13 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 			seq_printf(s, "pm=%s, elapsed=[%ld.%03lds]\n",
 					log->data.pm.pm_status ? "active " : "suspend",
 					tv.tv_sec, tv.tv_usec/1000);
+			break;
+		case DPU_EVT_DMA_FRAMEDONE:
+			seq_printf(s, "%20s  ", "DPP_FRAMEDONE");
+			seq_printf(s, "ID:%d\n", log->data.dpp.id);
+			break;
+		case DPU_EVT_DMA_RECOVERY:
+			seq_printf(s, "%20s  %20s", "DMA_FRAMEDONE", "-\n");
 			break;
 		default:
 			seq_printf(s, "%20s  (%2d)\n", "NO_DEFINED", log->type);

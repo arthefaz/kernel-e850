@@ -650,6 +650,8 @@ typedef enum dpu_event_type {
 	DPU_EVT_DMA_FRAMEDONE,
 	DPU_EVT_DMA_RECOVERY,
 
+	DPU_EVT_DECON_SET_BUFFER,
+
 	DPU_EVT_MAX, /* End of EVENT */
 } dpu_event_t;
 
