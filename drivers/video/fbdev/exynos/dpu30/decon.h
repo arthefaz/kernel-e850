@@ -40,6 +40,8 @@
 extern struct ion_device *ion_exynos;
 extern struct decon_device *decon_drvdata[MAX_DECON_CNT];
 extern int decon_log_level;
+extern int dpu_bts_log_level;
+extern int win_update_log_level;
 extern struct decon_bts_ops decon_bts_control;
 
 #define DECON_MODULE_NAME	"exynos-decon"
@@ -108,27 +110,26 @@ void dpu_debug_printk(const char *function_name, const char *format, ...);
 
 #define DPU_DEBUG_WIN(fmt, args...)						\
 	do {									\
-		if (decon_log_level >= 7)					\
-			dpu_debug_printk("WIN_UPDATE", fmt, ##args);		\
+		if (win_update_log_level >= 7)					\
+			dpu_debug_printk("WIN_UPDATE", fmt,  ##args);		\
 	} while (0)
 
 #define DPU_DEBUG_BTS(fmt, args...)						\
 	do {									\
-		if (decon_log_level >= 7)					\
-			dpu_debug_printk("BTS", fmt, ##args);			\
+		if (dpu_bts_log_level >= 7)					\
+			dpu_debug_printk("BTS", fmt,  ##args);			\
 	} while (0)
 
 #define DPU_INFO_BTS(fmt, args...)						\
 	do {									\
-		if (decon_log_level >= 6)					\
-			dpu_debug_printk("BTS", fmt, ##args);			\
+		if (dpu_bts_log_level >= 6)					\
+			dpu_debug_printk("BTS", fmt,  ##args);			\
 	} while (0)
 
 #define DPU_ERR_BTS(fmt, args...)						\
 	do {									\
-		if (decon_log_level >= 3) {					\
+		if (dpu_bts_log_level >= 3)					\
 			dpu_debug_printk("BTS", fmt, ##args);			\
-		}								\
 	} while (0)
 
 enum decon_trig_mode {
@@ -795,6 +796,8 @@ struct decon_debug {
 #ifdef CONFIG_DECON_EVENT_LOG
 	struct dentry *debug_event;
 	struct dentry *debug_dump;
+	struct dentry *debug_bts;
+	struct dentry *debug_win;
 	struct dpu_log event_log[DPU_EVENT_LOG_MAX];
 	atomic_t event_log_idx;
 	dpu_log_level_t event_log_level;
