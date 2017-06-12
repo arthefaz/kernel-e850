@@ -35,6 +35,7 @@ enum type_of_ddi {
 };
 
 #define MAX_RES_NUMBER		5
+#define HDR_CAPA_NUM		4
 
 struct lcd_res_info {
 	unsigned int width;
@@ -49,6 +50,14 @@ struct lcd_mres_info {
 	unsigned int mres_en;
 	unsigned int mres_number;
 	struct lcd_res_info res_info[MAX_RES_NUMBER];
+};
+
+struct lcd_hdr_info {
+	unsigned int hdr_num;
+	unsigned int hdr_type[HDR_CAPA_NUM];
+	unsigned int hdr_max_luma;
+	unsigned int hdr_max_avg_luma;
+	unsigned int hdr_min_luma;
 };
 
 struct stdphy_pms {
@@ -94,6 +103,7 @@ struct decon_lcd {
 	unsigned int vt_compensation;
 	unsigned int mres_mode;
 	struct lcd_mres_info dt_lcd_mres;
+	struct lcd_hdr_info dt_lcd_hdr;
 };
 
 struct decon_dsc {
