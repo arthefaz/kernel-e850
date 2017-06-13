@@ -382,24 +382,48 @@ exit:
 	return;
 }
 
+static void dsim_bts_print_info(struct bts_decon_info *info)
+{
+	int i;
+
+	for (i = 0; i < BTS_DPP_MAX; ++i) {
+		if (!info->dpp[i].used)
+			continue;
+
+		dsim_info("\t\tDPP[%d] b(%d) s(%d %d) d(%d %d %d %d) r(%d)\n",
+				i, info->dpp[i].bpp,
+				info->dpp[i].src_w, info->dpp[i].src_h,
+				info->dpp[i].dst.x1, info->dpp[i].dst.x2,
+				info->dpp[i].dst.y1, info->dpp[i].dst.y2,
+				info->dpp[i].rotation);
+	}
+}
+
 static void dsim_underrun_info(struct dsim_device *dsim)
 {
 #if defined(CONFIG_EXYNOS9810_BTS)
-	struct decon_device *decon = get_decon_drvdata(0);
+	struct decon_device *decon;
+	int i;
 
-	dsim_info("dsim%d: MIF(%lu), INT(%lu), DISP(%lu)\n",
-			dsim->id,
+	dsim_info("\tMIF(%lu), INT(%lu), DISP(%lu)\n",
 			cal_dfs_get_rate(ACPM_DVFS_MIF),
 			cal_dfs_get_rate(ACPM_DVFS_INT),
 			cal_dfs_get_rate(ACPM_DVFS_DISP));
 
-	if (decon) {
-		dsim_info("dsim%d:total bw(%u, %u)\n",
-				dsim->id,
-				decon->bts.prev_total_bw,
-				decon->bts.total_bw);
-	}
+	for (i = 0; i < MAX_DECON_CNT; ++i) {
+		decon = get_decon_drvdata(i);
 
+		if (decon) {
+			dsim_info("\tDECON%d: bw(%u %u), disp(%u %u), p(%u)\n",
+					decon->id,
+					decon->bts.prev_total_bw,
+					decon->bts.total_bw,
+					decon->bts.prev_max_disp_freq,
+					decon->bts.max_disp_freq,
+					decon->bts.peak);
+			dsim_bts_print_info(&decon->bts.bts_info);
+		}
+	}
 #endif
 }
 

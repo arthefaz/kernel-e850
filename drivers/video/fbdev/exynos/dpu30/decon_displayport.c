@@ -13,7 +13,7 @@
 #include <linux/videodev2_exynos_media.h>
 #include <media/v4l2-subdev.h>
 #include <soc/samsung/cal-if.h>
-#include <dt-bindings/clock/exynos8895.h>
+#include <dt-bindings/clock/exynos9810.h>
 #include "decon.h"
 #include "displayport.h"
 
