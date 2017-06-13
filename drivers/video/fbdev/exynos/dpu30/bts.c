@@ -111,7 +111,8 @@ static void dpu_bts_find_max_disp_freq(struct decon_device *decon,
 	dpu_bts_sum_all_decon_bw(decon, disp_ch_bw);
 
 	for (i = 0; i < BTS_DPU_MAX; ++i)
-		DPU_DEBUG_BTS("CH%d = %d\n", i, disp_ch_bw[i]);
+		if (disp_ch_bw[i])
+			DPU_DEBUG_BTS("\tCH%d = %d\n", i, disp_ch_bw[i]);
 
 	max_disp_ch_bw = disp_ch_bw[0];
 	for (i = 1; i < BTS_DPU_MAX; ++i)
@@ -129,7 +130,7 @@ static void dpu_bts_find_max_disp_freq(struct decon_device *decon,
 		op_fps * 11 / 10 / 1000 + 1;
 	decon->bts.resol_clk = resol_clock;
 
-	DPU_DEBUG_BTS("[Run: D%d]  resol clock = %d Khz\n",
+	DPU_DEBUG_BTS("\tDECON%d : resol clock = %d Khz\n",
 		decon->id, decon->bts.resol_clk);
 
 	for (i = 0; i < MAX_DECON_WIN; ++i) {
@@ -142,13 +143,13 @@ static void dpu_bts_find_max_disp_freq(struct decon_device *decon,
 			disp_op_freq = freq;
 	}
 
-	DPU_DEBUG_BTS("DISP bus freq(%d), operating freq(%d)\n",
+	DPU_DEBUG_BTS("\tDISP bus freq(%d), operating freq(%d)\n",
 			decon->bts.max_disp_freq, disp_op_freq);
 
 	if (decon->bts.max_disp_freq < disp_op_freq)
 		decon->bts.max_disp_freq = disp_op_freq;
 
-	DPU_DEBUG_BTS("MAX DISP CH FREQ = %d\n", decon->bts.max_disp_freq);
+	DPU_DEBUG_BTS("\tMAX DISP CH FREQ = %d\n", decon->bts.max_disp_freq);
 }
 
 static void dpu_bts_share_bw_info(int id)
@@ -229,6 +230,9 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 	if (!decon->bts.enabled)
 		return;
 
+	DPU_DEBUG_BTS("\n");
+	DPU_DEBUG_BTS("%s + : DECON%d\n", __func__, decon->id);
+
 	memset(&bts_info, 0, sizeof(struct bts_decon_info));
 	for (i = 0; i < MAX_DECON_WIN; ++i) {
 		idx = config[i].idma_type;
@@ -249,12 +253,11 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 		rot = config[i].dpp_parm.rot;
 		bts_info.dpp[idx].rotation = (rot > DPP_ROT_180) ? true : false;
 
-		DPU_DEBUG_BTS("%s: used(%d) bpp(%d) src w(%d) h(%d) rot(%d)\n",
-				__func__,
-				bts_info.dpp[idx].used, bts_info.dpp[idx].bpp,
+		DPU_DEBUG_BTS("\tDPP%d : bpp(%d) src w(%d) h(%d) rot(%d)\n",
+				idx, bts_info.dpp[idx].bpp,
 				bts_info.dpp[idx].src_w, bts_info.dpp[idx].src_h,
 				bts_info.dpp[idx].rotation);
-		DPU_DEBUG_BTS("\t\t\tdst x(%d) right(%d) y(%d) bottom(%d)\n",
+		DPU_DEBUG_BTS("\t\t\t\tdst x(%d) right(%d) y(%d) bottom(%d)\n",
 				bts_info.dpp[idx].dst.x1,
 				bts_info.dpp[idx].dst.x2,
 				bts_info.dpp[idx].dst.y1,
@@ -268,16 +271,20 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 
 	for (i = 0; i < BTS_DPP_MAX; ++i) {
 		decon->bts.bw[i] = bts_info.dpp[i].bw;
-		DPU_DEBUG_BTS("DPP%d bandwidth = %d\n", i, decon->bts.bw[i]);
+		if (decon->bts.bw[i])
+			DPU_DEBUG_BTS("\tDPP%d bandwidth = %d\n",
+					i, decon->bts.bw[i]);
 	}
 
-	DPU_DEBUG_BTS("DECON%d total bandwidth = %d\n", decon->id,
+	DPU_DEBUG_BTS("\tDECON%d total bandwidth = %d\n", decon->id,
 			decon->bts.total_bw);
 
 	dpu_bts_find_max_disp_freq(decon, regs);
 
 	/* update bw for other decons */
 	dpu_bts_share_bw_info(decon->id);
+
+	DPU_DEBUG_BTS("%s -\n", __func__);
 }
 
 void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
@@ -293,7 +300,7 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 	/* update peak & read bandwidth per DPU port */
 	bw.peak = decon->bts.peak;
 	bw.read = decon->bts.total_bw;
-	DPU_DEBUG_BTS("peak=%d, read=%d\n", bw.peak, bw.read);
+	DPU_DEBUG_BTS("\tpeak = %d, read = %d\n", bw.peak, bw.read);
 
 	if (bw.read == 0)
 		bw.peak = 0;
