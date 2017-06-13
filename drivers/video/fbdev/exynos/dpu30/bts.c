@@ -235,11 +235,10 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 
 	memset(&bts_info, 0, sizeof(struct bts_decon_info));
 	for (i = 0; i < MAX_DECON_WIN; ++i) {
-		idx = config[i].idma_type;
 		if (config[i].state == DECON_WIN_STATE_BUFFER) {
+			idx = config[i].idma_type;
 			bts_info.dpp[idx].used = true;
 		} else {
-			bts_info.dpp[idx].used = false;
 			continue;
 		}
 
