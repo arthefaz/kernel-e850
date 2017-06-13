@@ -869,6 +869,7 @@ struct decon_bts {
 	u32 prev_max_disp_freq;
 	enum bts_bw_type type;
 	struct decon_bts_ops *ops;
+	struct bts_decon_info bts_info;
 	struct pm_qos_request mif_qos;
 	struct pm_qos_request int_qos;
 	struct pm_qos_request disp_qos;

@@ -267,6 +267,7 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 	bts_info.lcd_w = decon->lcd_info->xres;
 	bts_info.lcd_h = decon->lcd_info->yres;
 	decon->bts.total_bw = bts_calc_bw(decon->bts.type, &bts_info);
+	memcpy(&decon->bts.bts_info, &bts_info, sizeof(struct bts_decon_info));
 
 	for (i = 0; i < BTS_DPP_MAX; ++i) {
 		decon->bts.bw[i] = bts_info.dpp[i].bw;
