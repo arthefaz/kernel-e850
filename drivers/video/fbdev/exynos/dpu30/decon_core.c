@@ -120,10 +120,15 @@ static void __decon_dump(bool en_dsc)
 void decon_dump(struct decon_device *decon)
 {
 	int acquired = console_trylock();
+	int usage_count = 0;
 
-	if (pm_runtime_enabled(decon->dev))
-		decon_info("\n=== DECON PM USAGE_COUNT %d ===",
-				atomic_read(&decon->dev->power.usage_count));
+	if (pm_runtime_enabled(decon->dev)) {
+		usage_count = atomic_read(&decon->dev->power.usage_count);
+		decon_info("\n=== DECON PM USAGE_COUNT %d ===", usage_count);
+		/* If power is off, SFR access cause abort */
+		if (usage_count <= 0)
+			return;
+	}
 
 	decon_info("\n=== DECON%d SFR DUMP ===\n", decon->id);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
@@ -2526,6 +2531,41 @@ static int decon_create_update_thread(struct decon_device *decon, char *name)
 	return 0;
 }
 
+#if defined(CONFIG_EXYNOS_ITMON)
+static int decon_itmon_notifier(struct notifier_block *nb,
+		unsigned long action, void *nb_data)
+{
+	struct decon_device *decon;
+	struct itmon_notifier *itmon_data = nb_data;
+
+	decon = container_of(nb, struct decon_device, itmon_nb);
+
+	decon_info("%s: DECON%d +\n", __func__, decon->id);
+
+	if (decon->notified)
+		return NOTIFY_DONE;
+
+	if (IS_ERR_OR_NULL(itmon_data))
+		return NOTIFY_DONE;
+
+	/* port is master and dest is target */
+	if ((itmon_data->port && (strncmp("DPU", itmon_data->port,
+					sizeof("DPU") - 1) == 0)) ||
+			(itmon_data->dest && (strncmp("DPU", itmon_data->dest,
+					sizeof("DPU") - 1) == 0))) {
+		decon_info("%s: port: %s, dest: %s, action: %lu\n", __func__,
+				itmon_data->port, itmon_data->dest, action);
+		decon_dump(decon);
+		decon->notified = true;
+		return NOTIFY_OK;
+	}
+
+	decon_info("%s -\n", __func__);
+
+	return NOTIFY_DONE;
+}
+#endif
+
 static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 {
 	struct decon_param p;
@@ -2732,6 +2772,11 @@ static int decon_probe(struct platform_device *pdev)
 		dev_err(decon->dev, "failed to init wakeup device\n");
 		goto err_display;
 	}
+
+#if defined(CONFIG_EXYNOS_ITMON)
+	decon->itmon_nb.notifier_call = decon_itmon_notifier;
+	itmon_notifier_chain_register(&decon->itmon_nb);
+#endif
 
 	ret = decon_initial_display(decon, false);
 	if (ret)
