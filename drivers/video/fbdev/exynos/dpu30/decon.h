@@ -26,6 +26,9 @@
 #include <media/v4l2-device.h>
 #include <media/videobuf2-core.h>
 #include <soc/samsung/bts.h>
+#if defined(CONFIG_EXYNOS_ITMON)
+#include <soc/samsung/exynos-itmon.h>
+#endif
 
 #include "regs-decon.h"
 
@@ -922,6 +925,11 @@ struct decon_device {
 
 	atomic_t is_shutdown;
 	bool up_list_saved;
+
+#if defined(CONFIG_EXYNOS_ITMON)
+	struct notifier_block itmon_nb;
+	bool notified;
+#endif
 };
 
 static inline struct decon_device *get_decon_drvdata(u32 id)
