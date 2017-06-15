@@ -690,7 +690,13 @@ void dpp_reg_set_csc_config(u32 id, u32 type)
 
 }
 
-/* [fmt] 0=ARGB8888, 1=NV12/NV21 */
+/* [fmt]
+ * Gx	0=ARGB8888, 1=ARGB8101010
+ * VGx	0=ARGB8888, 1=ARGB8101010, 2=YUV420(8bpc),
+ *	3=YUV420(P010), 4=YUV420(8+2)
+ * VGFx	0=ARGB8888, 1=ARGB8101010, 2=YUV420(8bpc),
+ *	3=YUV420(P010), 4=YUV420(8+2)
+ */
 void dpp_reg_set_img_format(u32 id, u32 fmt)
 {
 	u32 val;
