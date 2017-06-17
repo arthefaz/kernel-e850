@@ -892,13 +892,6 @@ HPD_FAIL:
 	return;
 }
 
-int displayport_set_hdr_config(struct exynos_hdr_static_info *hdr_info)
-{
-	int ret = 0;
-
-	return ret;
-}
-
 void displayport_set_reconnection(void)
 {
 	int ret;
@@ -1414,6 +1407,73 @@ static int displayport_make_audio_infoframe_data(struct infoframe *audio_infofra
 	return 0;
 }
 
+static int displayport_make_hdr_infoframe_data
+	(struct infoframe *hdr_infoframe, struct exynos_hdr_static_info *hdr_info)
+{
+	int i;
+
+	hdr_infoframe->type_code = INFOFRAME_PACKET_TYPE_HDR;
+	hdr_infoframe->version_number = HDR_INFOFRAME_VERSION;
+	hdr_infoframe->length = HDR_INFOFRAME_LENGTH;
+
+	for (i = 0; i < HDR_INFOFRAME_LENGTH; i++)
+		hdr_infoframe->data[i] = 0x00;
+
+	hdr_infoframe->data[HDR_INFOFRAME_EOTF_BYTE_NUM] = SMPTE_ST_2084;
+	hdr_infoframe->data[HDR_INFOFRAME_METADATA_ID_BYTE_NUM]
+		= STATIC_MATADATA_TYPE_1;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_X_0_LSB]
+		= hdr_info->stype1.mr.x & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_X_0_MSB]
+		= (hdr_info->stype1.mr.x & MSB_MASK) >> SHIFT_8BIT;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_Y_0_LSB]
+		= hdr_info->stype1.mr.y & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_Y_0_MSB]
+		= (hdr_info->stype1.mr.y & MSB_MASK) >> SHIFT_8BIT;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_X_1_LSB]
+		= hdr_info->stype1.mg.x & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_X_1_MSB]
+		= (hdr_info->stype1.mg.x & MSB_MASK) >> SHIFT_8BIT;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_Y_1_LSB]
+		= hdr_info->stype1.mg.y & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_Y_1_MSB]
+		= (hdr_info->stype1.mg.y & MSB_MASK) >> SHIFT_8BIT;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_X_2_LSB]
+		= hdr_info->stype1.mb.x & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_X_2_MSB]
+		= (hdr_info->stype1.mb.x & MSB_MASK) >> SHIFT_8BIT;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_Y_2_LSB]
+		= hdr_info->stype1.mb.y & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_Y_2_MSB]
+		= (hdr_info->stype1.mb.y & MSB_MASK) >> SHIFT_8BIT;
+	hdr_infoframe->data[HDR_INFOFRAME_WHITE_POINT_X_LSB]
+		= hdr_info->stype1.mw.x & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_WHITE_POINT_X_MSB]
+		= (hdr_info->stype1.mw.x & MSB_MASK) >> SHIFT_8BIT;
+	hdr_infoframe->data[HDR_INFOFRAME_WHITE_POINT_Y_LSB]
+		= hdr_info->stype1.mw.y & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_WHITE_POINT_Y_MSB]
+		= (hdr_info->stype1.mw.y & MSB_MASK) >> SHIFT_8BIT;
+	hdr_infoframe->data[HDR_INFOFRAME_MAX_LUMI_LSB]
+		= hdr_info->stype1.mmax_display_luminance & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_MAX_LUMI_MSB]
+		= (hdr_info->stype1.mmax_display_luminance & MSB_MASK) >> SHIFT_8BIT;
+	hdr_infoframe->data[HDR_INFOFRAME_MIN_LUMI_LSB]
+		= hdr_info->stype1.mmin_display_luminance & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_MIN_LUMI_MSB]
+		= (hdr_info->stype1.mmin_display_luminance & MSB_MASK) >> SHIFT_8BIT;
+	hdr_infoframe->data[HDR_INFOFRAME_MAX_LIGHT_LEVEL_LSB]
+		= hdr_info->stype1.mmax_content_light_level & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_MAX_LIGHT_LEVEL_MSB]
+		= (hdr_info->stype1.mmax_content_light_level & MSB_MASK) >> SHIFT_8BIT;
+	hdr_infoframe->data[HDR_INFOFRAME_MAX_AVERAGE_LEVEL_LSB]
+		= hdr_info->stype1.mmax_frame_average_light_level & LSB_MASK;
+	hdr_infoframe->data[HDR_INFOFRAME_MAX_AVERAGE_LEVEL_MSB]
+		= (hdr_info->stype1.mmax_frame_average_light_level & MSB_MASK) >> SHIFT_8BIT;
+
+	return 0;
+}
+
 static int displayport_set_avi_infoframe(void)
 {
 	struct infoframe avi_infoframe;
@@ -1430,6 +1490,16 @@ static int displayport_set_audio_infoframe(struct displayport_audio_config_data 
 
 	displayport_make_audio_infoframe_data(&audio_infoframe, audio_config_data);
 	displayport_reg_set_audio_infoframe(audio_infoframe, audio_config_data->audio_enable);
+
+	return 0;
+}
+
+static int displayport_set_hdr_infoframe(struct exynos_hdr_static_info *hdr_info)
+{
+	struct infoframe hdr_infoframe;
+
+	displayport_make_hdr_infoframe_data(&hdr_infoframe, hdr_info);
+	displayport_reg_set_hdr_infoframe(hdr_infoframe, 1);
 
 	return 0;
 }
@@ -1652,7 +1722,7 @@ static int displayport_enable(struct displayport_device *displayport)
 		displayport_reg_set_bist_video_configuration(displayport->cur_video,
 				bpc, bist_type, dyn_range);
 	else {
-		if(displayport->dfp_type != DFP_TYPE_DP)
+		if (displayport->bpc == BPC_6 && displayport->dfp_type != DFP_TYPE_DP)
 			bpc = BPC_8;
 
 		displayport_reg_set_video_configuration(displayport->cur_video,
@@ -1849,6 +1919,15 @@ static int displayport_s_stream(struct v4l2_subdev *sd, int enable)
 		return displayport_enable(displayport);
 	else
 		return displayport_disable(displayport);
+}
+
+int displayport_set_hdr_config(struct exynos_hdr_static_info *hdr_info)
+{
+	int ret = 0;
+
+	displayport_set_hdr_infoframe(hdr_info);
+
+	return ret;
 }
 
 static long displayport_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)

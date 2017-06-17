@@ -484,6 +484,16 @@ static const unsigned int extcon_id[] = {
 };
 #endif
 
+struct edid_data {
+	int max_support_clk;
+	bool support_10bpc;
+	bool hdr_support;
+	u8 eotf;
+	u8 max_lumi_data;
+	u8 max_average_lumi_data;
+	u8 min_lumi_data;
+};
+
 struct displayport_device {
 	enum displayport_state state;
 	struct device *dev;
@@ -539,6 +549,8 @@ struct displayport_device {
 	enum displayport_dynamic_range_type dyn_range;
 	videoformat cur_video;
 
+	struct edid_data rx_edid_data;
+
 	int idle_ip_index;
 };
 
@@ -558,20 +570,42 @@ struct displayport_debug_param {
 #define AUX_RETRY_COUNT 3
 #define AUX_TIMEOUT_1800us 0x03
 
+#define EDID_BLOCK_SIZE 128
 #define DATA_BLOCK_TAG_CODE_MASK 0xE0
 #define DATA_BLOCK_LENGTH_MASK 0x1F
 #define DATA_BLOCK_TAG_CODE_BIT_POSITION 5
 
 #define VSDB_TAG_CODE 3
+#define HDMI14_IEEE_OUI_0 0x03
+#define HDMI14_IEEE_OUI_1 0x0C
+#define HDMI14_IEEE_OUI_2 0x00
+#define IEEE_OUI_0_BYTE_NUM 1
+#define IEEE_OUI_1_BYTE_NUM 2
+#define IEEE_OUI_2_BYTE_NUM 3
 #define VSDB_LATENCY_FILEDS_PRESETNT_MASK 0x80
 #define VSDB_I_LATENCY_FILEDS_PRESETNT_MASK 0x40
 #define VSDB_HDMI_VIDEO_PRESETNT_MASK 0x20
 #define VSDB_VIC_FIELD_OFFSET 14
 #define VSDB_VIC_LENGTH_MASK 0xE0
 #define VSDB_VIC_LENGTH_BIT_POSITION 5
-#define IEEE_REGISTRATION_IDENTIFIER_0 0x03
-#define IEEE_REGISTRATION_IDENTIFIER_1 0x0C
-#define IEEE_REGISTRATION_IDENTIFIER_2 0x00
+
+#define HDMI20_IEEE_OUI_0 0xD8
+#define HDMI20_IEEE_OUI_1 0x5D
+#define HDMI20_IEEE_OUI_2 0xC4
+#define MAX_TMDS_RATE_BYTE_NUM 5
+#define DC_SUPPORT_BYTE_NUM 7
+#define DC_30BIT (0x01 << 0)
+
+#define USE_EXTENDED_TAG_CODE 7
+#define EXTENDED_HDR_TAG_CODE 6
+#define EXTENDED_TAG_CODE_BYTE_NUM 2
+#define SUPPORTED_EOTF_BYTE_NUM 3
+#define SDR_LUMI (0x01 << 0)
+#define HDR_LUMI (0x01 << 1)
+#define SMPTE_ST_2084 (0x01 << 2)
+#define MAX_LUMI_BYTE_NUM 5
+#define MAX_AVERAGE_LUMI_BYTE_NUM 6
+#define MIN_LUMI_BYTE_NUM 7
 
 #define DETAILED_TIMING_DESCRIPTION_SIZE 18
 #define AUDIO_DATA_BLOCK 1
@@ -654,8 +688,12 @@ struct displayport_audio_config_data {
 
 /* InfoFrame */
 #define	INFOFRAME_PACKET_TYPE_AVI 0x82		/** Auxiliary Video information InfoFrame */
-#define	INFOFRAME_PACKET_TYPE_AUDIO 0x84	/** Audio information InfoFrame */
+#define INFOFRAME_PACKET_TYPE_AUDIO 0x84	/** Audio information InfoFrame */
+#define INFOFRAME_PACKET_TYPE_HDR 0x87		/** HDR Metadata InfoFrame */
 #define MAX_INFOFRAME_LENGTH 27
+#define INFOFRAME_REGISTER_SIZE 32
+#define INFOFRAME_DATA_SIZE 8
+#define DATA_NUM_PER_REG (INFOFRAME_REGISTER_SIZE / INFOFRAME_DATA_SIZE)
 
 #define AVI_INFOFRAME_VERSION 0x02
 #define AVI_INFOFRAME_LENGTH 0x0D
@@ -666,6 +704,39 @@ struct displayport_audio_config_data {
 #define AUDIO_INFOFRAME_LENGTH 0x0A
 #define AUDIO_INFOFRAME_PCM (1 << 4)
 #define AUDIO_INFOFRAME_SF_BIT_POSITION 2
+
+#define HDR_INFOFRAME_VERSION 0x01
+#define HDR_INFOFRAME_LENGTH 0x19
+#define HDR_INFOFRAME_EOTF_BYTE_NUM 0
+#define STATIC_MATADATA_TYPE_1 0
+#define HDR_INFOFRAME_METADATA_ID_BYTE_NUM 1
+#define HDR_INFOFRAME_DISP_PRI_X_0_LSB 2
+#define HDR_INFOFRAME_DISP_PRI_X_0_MSB 3
+#define HDR_INFOFRAME_DISP_PRI_Y_0_LSB 4
+#define HDR_INFOFRAME_DISP_PRI_Y_0_MSB 5
+#define HDR_INFOFRAME_DISP_PRI_X_1_LSB 6
+#define HDR_INFOFRAME_DISP_PRI_X_1_MSB 7
+#define HDR_INFOFRAME_DISP_PRI_Y_1_LSB 8
+#define HDR_INFOFRAME_DISP_PRI_Y_1_MSB 9
+#define HDR_INFOFRAME_DISP_PRI_X_2_LSB 10
+#define HDR_INFOFRAME_DISP_PRI_X_2_MSB 11
+#define HDR_INFOFRAME_DISP_PRI_Y_2_LSB 12
+#define HDR_INFOFRAME_DISP_PRI_Y_2_MSB 13
+#define HDR_INFOFRAME_WHITE_POINT_X_LSB 14
+#define HDR_INFOFRAME_WHITE_POINT_X_MSB 15
+#define HDR_INFOFRAME_WHITE_POINT_Y_LSB 16
+#define HDR_INFOFRAME_WHITE_POINT_Y_MSB 17
+#define HDR_INFOFRAME_MAX_LUMI_LSB 18
+#define HDR_INFOFRAME_MAX_LUMI_MSB 19
+#define HDR_INFOFRAME_MIN_LUMI_LSB 20
+#define HDR_INFOFRAME_MIN_LUMI_MSB 21
+#define HDR_INFOFRAME_MAX_LIGHT_LEVEL_LSB 22
+#define HDR_INFOFRAME_MAX_LIGHT_LEVEL_MSB 23
+#define HDR_INFOFRAME_MAX_AVERAGE_LEVEL_LSB 24
+#define HDR_INFOFRAME_MAX_AVERAGE_LEVEL_MSB 25
+#define LSB_MASK 0x00FF
+#define MSB_MASK 0xFF00
+#define SHIFT_8BIT 8
 
 struct infoframe {
 	u8 type_code;
@@ -923,6 +994,7 @@ u32 edid_audio_informs(void);
 int displayport_audio_bist_enable(struct displayport_audio_config_data audio_config_data);
 void displayport_reg_set_avi_infoframe(struct infoframe avi_infofrmae);
 void displayport_reg_set_audio_infoframe(struct infoframe audio_infofrmae, u32 en);
+void displayport_reg_set_hdr_infoframe(struct infoframe hdr_infofrmae, u32 en);
 
 void hdcp13_run(void);
 void hdcp13_dpcd_buffer(void);

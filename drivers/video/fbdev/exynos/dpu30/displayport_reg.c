@@ -1227,6 +1227,33 @@ void displayport_reg_set_audio_infoframe(struct infoframe audio_infoframe, u32 e
 	displayport_write_mask(SST1_INFOFRAME_SEND_CONTROL, en, AUDIO_INFO_SEND);
 }
 
+void displayport_reg_set_hdr_infoframe(struct infoframe hdr_infoframe, u32 en)
+{
+	int i, j;
+	u32 hdr_infoframe_data = 0;
+
+	for (i = 0; i <= HDR_INFOFRAME_LENGTH; i++) {
+		for (j = 0; j < DATA_NUM_PER_REG; j++) {
+			hdr_infoframe_data =
+				(u32)hdr_infoframe.data[i]
+				<< ((j % DATA_NUM_PER_REG) * INFOFRAME_DATA_SIZE);
+
+			if (i >= HDR_INFOFRAME_LENGTH)
+				break;
+			i++;
+		}
+
+		displayport_write(SST1_HDR_PACKET_DATA_SET_0 +
+			i / DATA_NUM_PER_REG * DATA_NUM_PER_REG,
+			hdr_infoframe_data);
+
+		hdr_infoframe_data = 0;
+	}
+
+	displayport_write_mask(SST1_INFOFRAME_UPDATE_CONTROL, en, HDR_INFO_UPDATE);
+	displayport_write_mask(SST1_INFOFRAME_SEND_CONTROL, en, HDR_INFO_SEND);
+}
+
 void displayport_reg_start(void)
 {
 	displayport_write_mask(SST1_VIDEO_ENABLE, 1, VIDEO_EN);

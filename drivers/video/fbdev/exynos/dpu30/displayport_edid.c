@@ -225,18 +225,20 @@ int edid_find_resolution(u16 xres, u16 yres, u16 refresh)
 	return ret;
 }
 
-void edid_parse_vsdb(unsigned char *edid_ext_blk, struct fb_vendor *vsdb, int block_cnt)
+void edid_parse_hdmi14_vsdb(unsigned char *edid_ext_blk,
+	struct fb_vendor *vsdb, int block_cnt)
 {
 	int i, j;
 	int hdmi_vic_len;
 	int vsdb_offset_calc = VSDB_VIC_FIELD_OFFSET;
 
 	for (i = 0; i < (block_cnt - 1) * EDID_BLOCK_SIZE; i++) {
-		if ((edid_ext_blk[i] & DATA_BLOCK_TAG_CODE_MASK) == (VSDB_TAG_CODE << DATA_BLOCK_TAG_CODE_BIT_POSITION)
-				&& edid_ext_blk[i + 1] == IEEE_REGISTRATION_IDENTIFIER_0
-				&& edid_ext_blk[i + 2] == IEEE_REGISTRATION_IDENTIFIER_1
-				&& edid_ext_blk[i + 3] == IEEE_REGISTRATION_IDENTIFIER_2) {
-			displayport_dbg("EDID: find vsdb\n");
+		if ((edid_ext_blk[i] & DATA_BLOCK_TAG_CODE_MASK)
+			== (VSDB_TAG_CODE << DATA_BLOCK_TAG_CODE_BIT_POSITION)
+				&& edid_ext_blk[i + IEEE_OUI_0_BYTE_NUM] == HDMI14_IEEE_OUI_0
+				&& edid_ext_blk[i + IEEE_OUI_1_BYTE_NUM] == HDMI14_IEEE_OUI_1
+				&& edid_ext_blk[i + IEEE_OUI_2_BYTE_NUM] == HDMI14_IEEE_OUI_2) {
+			displayport_dbg("EDID: find VSDB for HDMI 1.4\n");
 
 			if (edid_ext_blk[i + 8] & VSDB_HDMI_VIDEO_PRESETNT_MASK) {
 				displayport_dbg("EDID: Find HDMI_Video_present in VSDB\n");
@@ -271,10 +273,115 @@ void edid_parse_vsdb(unsigned char *edid_ext_blk, struct fb_vendor *vsdb, int bl
 		}
 	}
 
-	if (i >= block_cnt * 128) {
+	if (i >= block_cnt * EDID_BLOCK_SIZE) {
 		vsdb->vic_len = 0;
-		displayport_dbg("EDID: can't find vsdb block\n");
+		displayport_dbg("EDID: can't find VSDB for HDMI 1.4 block\n");
 	}
+}
+
+void edid_find_hdmi14_vsdb_update(struct fb_vendor *vsdb)
+{
+	int udmode_idx, vic_idx;
+
+	if (!vsdb)
+		return;
+
+	/* find UHD preset in HDMI 1.4 vsdb block*/
+	if (vsdb->vic_len) {
+		for (vic_idx = 0; vic_idx < vsdb->vic_len; vic_idx++) {
+			udmode_idx = get_ud_timing(vsdb, vic_idx);
+
+			displayport_dbg("EDID: udmode_idx = %d\n", udmode_idx);
+
+			if (udmode_idx >= 0)
+				edid_find_preset(&ud_mode_h14b_vsdb[udmode_idx]);
+		}
+	}
+}
+
+void edid_parse_hdmi20_vsdb(unsigned char *edid_ext_blk,
+	struct fb_vendor *vsdb, int block_cnt)
+{
+	int i;
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	displayport->rx_edid_data.max_support_clk = 0;
+	displayport->rx_edid_data.support_10bpc = 0;
+
+	for (i = 0; i < (block_cnt - 1) * EDID_BLOCK_SIZE; i++) {
+		if ((edid_ext_blk[i] & DATA_BLOCK_TAG_CODE_MASK)
+			== (VSDB_TAG_CODE << DATA_BLOCK_TAG_CODE_BIT_POSITION)
+				&& edid_ext_blk[i + IEEE_OUI_0_BYTE_NUM] == HDMI20_IEEE_OUI_0
+				&& edid_ext_blk[i + IEEE_OUI_1_BYTE_NUM] == HDMI20_IEEE_OUI_1
+				&& edid_ext_blk[i + IEEE_OUI_2_BYTE_NUM] == HDMI20_IEEE_OUI_2) {
+			displayport_dbg("EDID: find VSDB for HDMI 2.0\n");
+
+			/* Max_TMDS_Character_Rate * 5Mhz */
+			displayport->rx_edid_data.max_support_clk =
+				edid_ext_blk[i + MAX_TMDS_RATE_BYTE_NUM] * 5;
+			displayport_dbg("EDID: Max_TMDS_Character_Rate = %d Mhz\n",
+				displayport->rx_edid_data.max_support_clk);
+
+			if (edid_ext_blk[i + DC_SUPPORT_BYTE_NUM] & DC_30BIT)
+				displayport->rx_edid_data.support_10bpc = 1;
+			else
+				displayport->rx_edid_data.support_10bpc = 0;
+
+			displayport_dbg("EDID: 10 bpc support = %d\n",
+				displayport->rx_edid_data.support_10bpc);
+		}
+	}
+
+	if (i >= block_cnt * EDID_BLOCK_SIZE) {
+		vsdb->vic_len = 0;
+		displayport_dbg("EDID: can't find VSDB for HDMI 2.0 block\n");
+	}
+}
+
+void edid_parse_hdr_metadata(unsigned char *edid_ext_blk,  int block_cnt)
+{
+	int i;
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	displayport->rx_edid_data.hdr_support = 0;
+	displayport->rx_edid_data.eotf = 0;
+	displayport->rx_edid_data.max_lumi_data = 0;
+	displayport->rx_edid_data.max_average_lumi_data = 0;
+	displayport->rx_edid_data.min_lumi_data = 0;
+
+	for (i = 0; i < (block_cnt - 1) * EDID_BLOCK_SIZE; i++) {
+		if ((edid_ext_blk[i] & DATA_BLOCK_TAG_CODE_MASK)
+			== (USE_EXTENDED_TAG_CODE << DATA_BLOCK_TAG_CODE_BIT_POSITION)
+				&& edid_ext_blk[i + EXTENDED_TAG_CODE_BYTE_NUM]
+				== EXTENDED_HDR_TAG_CODE) {
+			displayport_dbg("EDID: find HDR Metadata Data Block\n");
+
+			displayport->rx_edid_data.hdr_support = 1;
+
+			displayport->rx_edid_data.eotf =
+				edid_ext_blk[i + SUPPORTED_EOTF_BYTE_NUM];
+			displayport_dbg("EDID: SUPPORTED_EOTF = 0x%x\n",
+				displayport->rx_edid_data.eotf);
+
+			displayport->rx_edid_data.max_lumi_data =
+				edid_ext_blk[i + MAX_LUMI_BYTE_NUM];
+			displayport_dbg("EDID: MAX_LUMI = 0x%x\n",
+				displayport->rx_edid_data.max_lumi_data);
+
+			displayport->rx_edid_data.max_average_lumi_data =
+				edid_ext_blk[i + MAX_AVERAGE_LUMI_BYTE_NUM];
+			displayport_dbg("EDID: MAX_AVERAGE_LUMI = 0x%x\n",
+				displayport->rx_edid_data.max_average_lumi_data);
+
+			displayport->rx_edid_data.min_lumi_data =
+				edid_ext_blk[i + MIN_LUMI_BYTE_NUM];
+			displayport_dbg("EDID: MIN_LUMI = 0x%x\n",
+				displayport->rx_edid_data.min_lumi_data);
+		}
+	}
+
+	if (i >= block_cnt * EDID_BLOCK_SIZE)
+		displayport_dbg("EDID: can't find HDR Metadata Data Block\n");
 }
 
 void edid_find_preset_in_video_data_block(u8 vic)
@@ -343,26 +450,6 @@ static int edid_parse_audio_video_db(unsigned char *edid, struct fb_audio *sad)
 	return 0;
 }
 
-void edid_extension_update(struct fb_vendor *vsdb)
-{
-	int udmode_idx, vic_idx;
-
-	if (!vsdb)
-		return;
-
-	/* find UHD preset in HDMI 1.4 vsdb block*/
-	if (vsdb->vic_len) {
-		for (vic_idx = 0; vic_idx < vsdb->vic_len; vic_idx++) {
-			udmode_idx = get_ud_timing(vsdb, vic_idx);
-
-			displayport_dbg("EDID: udmode_idx = %d\n", udmode_idx);
-
-			if (udmode_idx >= 0)
-				edid_find_preset(&ud_mode_h14b_vsdb[udmode_idx]);
-		}
-	}
-}
-
 int edid_update(struct displayport_device *hdev)
 {
 	struct fb_monspecs specs;
@@ -411,8 +498,12 @@ int edid_update(struct displayport_device *hdev)
 		edid_misc = FB_MISC_HDMI;
 	}
 
-	edid_parse_vsdb(edid + EDID_BLOCK_SIZE, &vsdb, block_cnt);
-	edid_extension_update(&vsdb);
+	edid_parse_hdmi14_vsdb(edid + EDID_BLOCK_SIZE, &vsdb, block_cnt);
+	edid_find_hdmi14_vsdb_update(&vsdb);
+
+	edid_parse_hdmi20_vsdb(edid + EDID_BLOCK_SIZE, &vsdb, block_cnt);
+
+	edid_parse_hdr_metadata(edid + EDID_BLOCK_SIZE, block_cnt);
 
 	for (i = 1; i < block_cnt; i++)
 		edid_parse_audio_video_db(edid + (EDID_BLOCK_SIZE * i), &sad);
