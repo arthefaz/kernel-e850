@@ -45,13 +45,36 @@ static int dsim_runtime_resume(struct device *dev);
 static void __dsim_dump(struct dsim_device *dsim)
 {
 	/* change to updated register read mode (meaning: SHADOW in DECON) */
+	dsim_info("=== DSIM %d LINK SFR DUMP ===\n", dsim->id);
 	dsim_reg_enable_shadow_read(dsim->id, 0);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			dsim->res.regs, 0xFC, false);
 
 #if defined(CONFIG_SOC_EXYNOS9810)
+	dsim_info("=== DSIM %d DPHY SFR DUMP ===\n", dsim->id);
+	/* DPHY dump */
+	/* PMSK */
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-		dsim->res.phy_regs, 0x4000, false);
+		dsim->res.phy_regs + 0x0c00, 0x40, false);
+	/* CLOCK lane */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+		dsim->res.phy_regs + 0x1080, 0x40, false);
+
+	/* Data lane : D0 */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+		dsim->res.phy_regs + 0x1480, 0x30, false);
+
+	/* Data lane : D1 */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+		dsim->res.phy_regs + 0x1880, 0x30, false);
+
+	/* Data lane : D2 */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+		dsim->res.phy_regs + 0x1C80, 0x30, false);
+
+	/* Data lane : D3 */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+		dsim->res.phy_regs + 0x2080, 0x30, false);
 #endif
 
 	/* restore to avoid size mismatch (possible config error at DECON) */
