@@ -1908,6 +1908,8 @@ static int decon_get_hdr_capa(struct decon_device *decon,
 		for (k = 0; k < decon->lcd_info->dt_lcd_hdr.hdr_num; k++)
 			hdr_capa->out_types[k] =
 				decon->lcd_info->dt_lcd_hdr.hdr_type[k];
+	} else if (decon->dt.out_type == DECON_OUT_DP) {
+		decon_displayport_get_hdr_capa(decon, hdr_capa);
 	} else
 		memset(hdr_capa, 0, sizeof(struct decon_hdr_capabilities));
 
@@ -1934,6 +1936,8 @@ static int decon_get_hdr_capa_info(struct decon_device *decon,
 			decon->lcd_info->dt_lcd_hdr.hdr_max_avg_luma;
 		hdr_capa_info->min_luminance =
 			decon->lcd_info->dt_lcd_hdr.hdr_min_luma;
+	} else if (decon->dt.out_type == DECON_OUT_DP) {
+		decon_displayport_get_hdr_capa_info(decon, hdr_capa_info);
 	} else
 		memset(hdr_capa_info, 0, sizeof(struct decon_hdr_capabilities_info));
 
