@@ -1349,9 +1349,12 @@ void dpp_reg_set_eotf_lut(u32 id, struct dpp_params_info *p)
 	if (p->hdr == DPP_HDR_ST2084) {
 		lut_x = eotf_x_axis_st2084;
 		lut_y = eotf_y_axis_st2084;
-	} else {
+	} else if (p->hdr == DPP_HDR_HLG) {
 		lut_x = eotf_x_axis_hlg;
 		lut_y = eotf_y_axis_hlg;
+	} else {
+		dpp_err("Undefined HDR standard Type!!!\n");
+		return;
 	}
 
 	for (i = 0; i < MAX_EOTF; i++) {
@@ -1371,12 +1374,14 @@ void dpp_reg_set_gm_lut(u32 id, struct dpp_params_info *p)
 	u32 i = 0;
 	u32 *lut_gm = NULL;
 
-	if (p->eq_mode == CSC_BT_2020)
+	if (p->eq_mode == CSC_BT_2020) {
 		lut_gm = gm_coef_2020_p3;
-	else if (p->eq_mode == CSC_DCI_P3)
+	} else if (p->eq_mode == CSC_DCI_P3) {
 		lut_gm = gm_coef_bypass;
-	else
+	} else {
 		dpp_err("Undefined HDR CSC Type!!!\n");
+		return;
+	}
 
 	for (i = 0; i < MAX_GM; i++) {
 		dpp_write_mask(id,
