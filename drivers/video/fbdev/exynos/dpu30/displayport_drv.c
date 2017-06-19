@@ -1687,6 +1687,7 @@ static int displayport_disable(struct displayport_device *displayport)
 	displayport_reg_stop();
 	disable_irq(displayport->res.irq);
 
+	displayport_reg_phy_disable();
 	phy_power_off(displayport->phy);
 
 #if defined(CONFIG_EXYNOS_PD)
