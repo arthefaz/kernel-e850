@@ -591,6 +591,18 @@ void decon_reg_get_crc_data(u32 id, u32 *w0_data, u32 *w1_data)
 	*w1_data = CRC_DATA_DSIMIF1_GET(val);
 }
 
+void decon_reg_set_bpc(u32 id, struct decon_lcd *lcd_info)
+{
+	u32 val = 0, mask;
+
+	if (lcd_info->bpc == 10)
+		val = GLOBAL_CONTROL_TEN_BPC_MODE_F;
+
+	mask = GLOBAL_CONTROL_TEN_BPC_MODE_MASK;
+
+	decon_write_mask(id, GLOBAL_CONTROL, val, mask);
+}
+
 void decon_reg_update_req_global(u32 id)
 {
 	u32 mask;
@@ -1649,6 +1661,9 @@ void decon_reg_configure_lcd(u32 id, struct decon_param *p)
 
 		decon_reg_config_data_path_size(id,
 			lcd_info->xres, lcd_info->yres, overlap_w, NULL, p);
+
+		if (id == 2)
+			decon_reg_set_bpc(id, lcd_info);
 	}
 
 	decon_reg_per_frame_off(id);
