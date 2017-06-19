@@ -1131,6 +1131,12 @@ void displayport_reg_phy_init(void)
 	displayport_reg_wait_phy_pll_lock();
 }
 
+void displayport_reg_phy_disable(void)
+{
+	displayport_reg_phy_reset(1);
+	displayport_phy_write(DP_REG_0, 0x00);
+}
+
 void displayport_reg_init(void)
 {
 	displayport_reg_sw_reset();
