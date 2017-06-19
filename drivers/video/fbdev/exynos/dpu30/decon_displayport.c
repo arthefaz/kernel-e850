@@ -241,6 +241,58 @@ int decon_displayport_get_out_sd(struct decon_device *decon)
 	return 0;
 }
 
+int decon_displayport_get_hdr_capa(struct decon_device *decon,
+		struct decon_hdr_capabilities *hdr_capa)
+{
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	if (displayport->rx_edid_data.hdr_support)
+		hdr_capa->out_types[0] = HDR_HDR10;
+#else
+	decon_info("Not compiled displayport driver\n");
+#endif
+	return 0;
+}
+
+int decon_displayport_get_hdr_capa_info(struct decon_device *decon,
+		struct decon_hdr_capabilities_info *hdr_capa_info)
+{
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	struct displayport_device *displayport = get_displayport_drvdata();
+	int max_lumi_val = 0;
+	int max_average_lumi_val = 0;
+	int min_lumi_val = 0;
+
+	if (displayport->rx_edid_data.hdr_support)
+		hdr_capa_info->out_num = 1;
+	else
+		hdr_capa_info->out_num = 0;
+
+	max_lumi_val = displayport->rx_edid_data.max_lumi_data;
+	/* CEA-861.3 EDID value calcuation */
+	max_lumi_val = 50 * 2 ^ (max_lumi_val / 32) * 10000;
+	hdr_capa_info->max_luminance = max_lumi_val;
+
+	max_average_lumi_val = displayport->rx_edid_data.max_average_lumi_data;
+	/* CEA-861.3 EDID value calcuation */
+	max_average_lumi_val = 50 * 2 ^ (max_average_lumi_val / 32) * 10000;
+	hdr_capa_info->max_average_luminance = max_average_lumi_val;
+
+	min_lumi_val = displayport->rx_edid_data.min_lumi_data;
+	/* CEA-861.3 EDID value calcuation */
+	min_lumi_val = max_lumi_val * (min_lumi_val / 255) ^ 2 / 100;
+	hdr_capa_info->min_luminance = min_lumi_val;
+
+	displayport_dbg("max_lumi_val = %d\n", max_lumi_val);
+	displayport_dbg("max_average_lumi_val = %d\n", max_average_lumi_val);
+	displayport_dbg("min_lumi_val = %d\n", min_lumi_val);
+#else
+	decon_info("Not compiled displayport driver\n");
+#endif
+	return 0;
+}
+
 int decon_displayport_get_config(struct decon_device *decon,
 		struct exynos_displayport_data *displayport_data)
 {

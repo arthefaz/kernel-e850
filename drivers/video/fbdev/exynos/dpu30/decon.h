@@ -1061,6 +1061,10 @@ void decon_displayport_free_irq(struct decon_device *decon);
 int decon_displayport_create_vsync_thread(struct decon_device *decon);
 int decon_displayport_get_clocks(struct decon_device *decon);
 int decon_displayport_get_out_sd(struct decon_device *decon);
+int decon_displayport_get_hdr_capa(struct decon_device *decon,
+		struct decon_hdr_capabilities *hdr_capa);
+int decon_displayport_get_hdr_capa_info(struct decon_device *decon,
+		struct decon_hdr_capabilities_info *hdr_capa_info);
 int decon_displayport_get_config(struct decon_device *dex,
 		struct exynos_displayport_data *displayport_data);
 int decon_displayport_set_config(struct decon_device *dex,
