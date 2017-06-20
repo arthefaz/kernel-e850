@@ -273,7 +273,7 @@ void edid_parse_hdmi14_vsdb(unsigned char *edid_ext_blk,
 		}
 	}
 
-	if (i >= block_cnt * EDID_BLOCK_SIZE) {
+	if (i >= (block_cnt - 1) * EDID_BLOCK_SIZE) {
 		vsdb->vic_len = 0;
 		displayport_dbg("EDID: can't find VSDB for HDMI 1.4 block\n");
 	}
@@ -329,10 +329,12 @@ void edid_parse_hdmi20_vsdb(unsigned char *edid_ext_blk,
 
 			displayport_dbg("EDID: 10 bpc support = %d\n",
 				displayport->rx_edid_data.support_10bpc);
+
+			break;
 		}
 	}
 
-	if (i >= block_cnt * EDID_BLOCK_SIZE) {
+	if (i >= (block_cnt - 1) * EDID_BLOCK_SIZE) {
 		vsdb->vic_len = 0;
 		displayport_dbg("EDID: can't find VSDB for HDMI 2.0 block\n");
 	}
@@ -356,12 +358,15 @@ void edid_parse_hdr_metadata(unsigned char *edid_ext_blk,  int block_cnt)
 				== EXTENDED_HDR_TAG_CODE) {
 			displayport_dbg("EDID: find HDR Metadata Data Block\n");
 
-			displayport->rx_edid_data.hdr_support = 1;
-
 			displayport->rx_edid_data.eotf =
 				edid_ext_blk[i + SUPPORTED_EOTF_BYTE_NUM];
 			displayport_dbg("EDID: SUPPORTED_EOTF = 0x%x\n",
 				displayport->rx_edid_data.eotf);
+
+			if (displayport->rx_edid_data.eotf & SMPTE_ST_2084) {
+				displayport->rx_edid_data.hdr_support = 1;
+				displayport_dbg("EDID: SMPTE_ST_2084 support\n");
+			}
 
 			displayport->rx_edid_data.max_lumi_data =
 				edid_ext_blk[i + MAX_LUMI_BYTE_NUM];
@@ -377,10 +382,12 @@ void edid_parse_hdr_metadata(unsigned char *edid_ext_blk,  int block_cnt)
 				edid_ext_blk[i + MIN_LUMI_BYTE_NUM];
 			displayport_dbg("EDID: MIN_LUMI = 0x%x\n",
 				displayport->rx_edid_data.min_lumi_data);
+
+			break;
 		}
 	}
 
-	if (i >= block_cnt * EDID_BLOCK_SIZE)
+	if (i >= (block_cnt - 1) * EDID_BLOCK_SIZE)
 		displayport_dbg("EDID: can't find HDR Metadata Data Block\n");
 }
 
