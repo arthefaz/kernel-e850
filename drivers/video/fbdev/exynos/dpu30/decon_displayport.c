@@ -219,6 +219,11 @@ static int decon_displayport_set_lcd_info(struct decon_device *decon)
 	decon->dt.trig_mode = DECON_HW_TRIG;
 	decon->dt.out_type = DECON_OUT_DP;
 
+	if (displayport->bpc == BPC_10)
+		decon->lcd_info->bpc = 10; /* 10pbc */
+	else
+		decon->lcd_info->bpc = 8; /* 8pbc */
+
 	decon_info("decon_%d output size for displayport %dx%d\n", decon->id,
 			decon->lcd_info->width, decon->lcd_info->height);
 #else
