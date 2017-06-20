@@ -1831,7 +1831,11 @@ static int displayport_s_dv_timings(struct v4l2_subdev *sd,
 	displayport_setting_videoformat = ret;
 
 	if (displayport->bist_used == 0) {
-		displayport->bpc = BPC_8;
+		if (displayport->rx_edid_data.hdr_support)
+			displayport->bpc = BPC_10;
+		else
+			displayport->bpc = BPC_8;
+
 		/*fail safe mode (640x480) with 6 bpc*/
 		if (displayport_setting_videoformat == V640X480P60)
 			displayport->bpc = BPC_6;
