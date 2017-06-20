@@ -723,15 +723,31 @@ static int displayport_read_branch_revision(struct displayport_device *displaypo
 static int displayport_link_status_read(void)
 {
 	u8 val[DPCP_LINK_SINK_STATUS_FIELD_LENGTH] = {0, };
+	int count = 200;
 
-	displayport_reg_dpcd_read_burst(DPCD_ADD_SINK_COUNT,
-			DPCP_LINK_SINK_STATUS_FIELD_LENGTH, val);
+	/* for Link CTS : Branch Device Detection*/
+	displayport_link_sink_status_read();
+	do {
+		displayport_reg_dpcd_read(DPCD_ADD_SINK_COUNT, 1, val);
+		if ((val[0] & (SINK_COUNT1 | SINK_COUNT2)) != 0)
+			break;
+		msleep(20);
+	} while (--count > 0);
+
+	displayport_reg_dpcd_read_burst(DPCD_ADD_DEVICE_SERVICE_IRQ_VECTOR,
+			DPCP_LINK_SINK_STATUS_FIELD_LENGTH - 1, &val[1]);
 
 	displayport_info("Read link status %02x %02x %02x %02x %02x %02x\n",
-			val[0], val[1], val[2], val[3], val[4], val[5]);
+				val[0], val[1], val[2], val[3], val[4], val[5]);
 
 	if ((val[0] & val[1] & val[2] & val[3] & val[4] & val[5]) == 0xff)
 		return -EINVAL;
+
+	if (count == 0)
+		return -EINVAL;
+
+	if (count < 10 && count > 0)
+		usleep_range(10000, 11000); /* need delay after SINK count is changed to 1 */
 
 	if (val[1] == AUTOMATED_TEST_REQUEST) {
 		u8 data = 0;
@@ -770,14 +786,14 @@ static int displayport_link_training(void)
 	displayport_reg_dpcd_read(DPCD_ADD_MAX_DOWNSPREAD, 1, &val);
 	displayport_dbg("DPCD_ADD_MAX_DOWNSPREAD = %x\n", val);
 
-	if (val & NO_AUX_HANDSHAKE_LINK_TRANING)
+	if (val & NO_AUX_HANDSHAKE_LINK_TRANING) {
 		ret = displayport_fast_link_training();
-	else
+		if (ret < 0)
+			ret = displayport_full_link_training();
+	} else
 		ret = displayport_full_link_training();
 
 	mutex_unlock(&displayport->training_lock);
-
-	displayport_link_sink_status_read(); /* for Link CTS : (4.2.2.7) Branch Device Detection*/
 
 	return ret;
 }
@@ -821,7 +837,7 @@ void displayport_hpd_changed(int state)
 		displayport->bpc = BPC_8;	/*default setting*/
 		displayport->bist_used = 0;
 		displayport->bist_type = COLOR_BAR;
-		displayport->dyn_range = CEA_RANGE;
+		displayport->dyn_range = VESA_RANGE;
 		displayport->hpd_state = HPD_PLUG;
 		displayport->auto_test_mode = 0;
 		/* PHY power on */
@@ -845,11 +861,13 @@ void displayport_hpd_changed(int state)
 			goto HPD_FAIL;
 		}
 		displayport->dfp_type = displayport_check_dfp_type();
-		if (displayport->dfp_type != DFP_TYPE_DP &&
-				displayport->dfp_type != DFP_TYPE_HDMI) {
-			displayport_err("not supported DFT type\n");
-			goto HPD_FAIL;
-		}
+		/* Enable it! if you want to prevent output according to type
+		 * if (displayport->dfp_type != DFP_TYPE_DP &&
+		 *		displayport->dfp_type != DFP_TYPE_HDMI) {
+		 *	displayport_err("not supported DFT type\n");
+		 *	goto HPD_FAIL;
+		 * }
+		 */
 		displayport_set_switch_state(displayport, 1);
 		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
 			(displayport->state == DISPLAYPORT_STATE_ON), msecs_to_jiffies(1000));
@@ -884,9 +902,11 @@ void displayport_hpd_changed(int state)
 
 	return;
 HPD_FAIL:
+	displayport_reg_phy_disable();
 	phy_power_off(displayport->phy);
 	pm_relax(displayport->dev);
-
+	displayport->hpd_current_state = 0;
+	displayport->hpd_state = HPD_UNPLUG;
 	mutex_unlock(&displayport->hpd_lock);
 
 	return;
@@ -986,6 +1006,47 @@ static int displayport_check_dpcd_lane_status(u8 lane0_1_status,
 	return 0;
 }
 
+static int displayport_automated_test_set_lane_req(u8 *val)
+{
+	u8 drive_current[MAX_LANE_CNT];
+	u8 pre_emphasis[MAX_LANE_CNT];
+	u8 voltage_swing_lane[MAX_LANE_CNT];
+	u8 pre_emphasis_lane[MAX_LANE_CNT];
+	u8 max_reach_value[MAX_LANE_CNT];
+	u8 val2[MAX_LANE_CNT];
+	int i;
+
+	voltage_swing_lane[0] = (val[0] & VOLTAGE_SWING_LANE0);
+	pre_emphasis_lane[0] = (val[0] & PRE_EMPHASIS_LANE0) >> 2;
+	voltage_swing_lane[1] = (val[0] & VOLTAGE_SWING_LANE1) >> 4;
+	pre_emphasis_lane[1] = (val[0] & PRE_EMPHASIS_LANE1) >> 6;
+
+	voltage_swing_lane[2] = (val[1] & VOLTAGE_SWING_LANE2);
+	pre_emphasis_lane[2] = (val[1] & PRE_EMPHASIS_LANE2) >> 2;
+	voltage_swing_lane[3] = (val[1] & VOLTAGE_SWING_LANE3) >> 4;
+	pre_emphasis_lane[3] = (val[1] & PRE_EMPHASIS_LANE3) >> 6;
+
+	for (i = 0; i < 4; i++) {
+		drive_current[i] = voltage_swing_lane[i];
+		pre_emphasis[i] = pre_emphasis_lane[i];
+
+		displayport_info("AutoTest: swing[%d] = %x\n", i, drive_current[i]);
+		displayport_info("AutoTest: pre_emphasis[%d] = %x\n", i, pre_emphasis[i]);
+	}
+	displayport_reg_set_voltage_and_pre_emphasis((u8 *)drive_current, (u8 *)pre_emphasis);
+	displayport_get_voltage_and_pre_emphasis_max_reach((u8 *)drive_current,
+			(u8 *)pre_emphasis, (u8 *)max_reach_value);
+
+	val2[0] = (pre_emphasis[0]<<3) | drive_current[0] | max_reach_value[0];
+	val2[1] = (pre_emphasis[1]<<3) | drive_current[1] | max_reach_value[1];
+	val2[2] = (pre_emphasis[2]<<3) | drive_current[2] | max_reach_value[2];
+	val2[3] = (pre_emphasis[3]<<3) | drive_current[3] | max_reach_value[3];
+	displayport_info("AutoTest: set %02x %02x %02x %02x\n", val2[0], val2[1], val2[2], val2[3]);
+	displayport_reg_dpcd_write_burst(DPCD_ADD_TRANING_LANE0_SET, 4, val2);
+
+	return 0;
+}
+
 static int displayport_Automated_Test_Request(void)
 {
 	u8 data = 0;
@@ -1073,6 +1134,9 @@ static int displayport_Automated_Test_Request(void)
 		msleep(120);
 		displayport_reg_dpcd_read(DPCD_ADD_ADJUST_REQUEST_LANE0_1, 2, val);
 		displayport_info("ADJUST_REQUEST_LANE0_1 %02x %02x\n", val[0], val[1]);
+
+		/*set swing, preemp*/
+		displayport_automated_test_set_lane_req(val);
 
 		displayport_reg_dpcd_read(DCDP_ADD_PHY_TEST_PATTERN, 4, val);
 		displayport_info("PHY_TEST_PATTERN %02x %02x %02x %02x\n", val[0], val[1], val[2], val[3]);
@@ -1177,7 +1241,7 @@ static int displayport_hdcp22_irq_handler(void)
 		ret = hdcp_dplink_set_rp_ready();
 	} else {
 		displayport_info("undefined RxStatus(0x%x). ignore\n", rxstatus);
-		ret = 0;
+		ret = -EINVAL;
 	}
 
 	return ret;
@@ -1213,7 +1277,9 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 
 		if ((val[1] & CP_IRQ) == CP_IRQ) {
 			displayport_info("hdcp22: detect CP_IRQ\n");
-			displayport_hdcp22_irq_handler();
+			ret = displayport_hdcp22_irq_handler();
+			if (ret == 0)
+				return;
 		} else {
 			displayport_info("hdcp22: detect hpd_irq!!!!\n");
 
@@ -1250,8 +1316,8 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 			if (hdcp13_info.auth_state == HDCP13_STATE_FAIL) {
 				queue_delayed_work(displayport->dp_wq,
 					&displayport->hdcp13_work, msecs_to_jiffies(2000));
-			}
-			return;
+			} else
+				return;
 		}
 
 		if ((val[1] & AUTOMATED_TEST_REQUEST) == AUTOMATED_TEST_REQUEST) {
@@ -2302,7 +2368,6 @@ static ssize_t displayport_link_store(struct class *dev,
 				link_rate = LINK_RATE_1_62Gbps;
 
 			pr_info("%s: %02x %02x\n", __func__, link_rate, lane_cnt);
-			displayport->hpd_current_state = 1;
 			phy_power_on(displayport->phy);
 			displayport_reg_init(); /* for AUX ch read/write. */
 
@@ -2317,6 +2382,7 @@ static ssize_t displayport_link_store(struct class *dev,
 			g_displayport_debug_param.param_used = 0;
 
 			displayport_set_switch_state(displayport, 1);
+			displayport_info("HPD status = %d\n", 1);
 		} else {
 			pr_err("%s: Not support command[%d]\n",
 					__func__, mode);

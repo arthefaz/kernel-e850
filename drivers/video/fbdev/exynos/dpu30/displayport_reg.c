@@ -793,8 +793,8 @@ int displayport_reg_set_aux_ch_operation_enable(void)
 	val1 = displayport_read(AUX_MONITOR_2);
 
 	if ((val0 & AUX_CMD_STATUS) != 0x00 || val1 != 0x00) {
-		displayport_info("AUX_MONITOR_1 : 0x%X, AUX_MONITOR_2 : 0x%X\n", val0, val1);
-		displayport_info("AUX_CONTROL : 0x%X, AUX_REQUEST_CONTROL : 0x%X, AUX_COMMAND_CONTROL : 0x%X\n",
+		displayport_dbg("AUX_MONITOR_1 : 0x%X, AUX_MONITOR_2 : 0x%X\n", val0, val1);
+		displayport_dbg("AUX_CONTROL : 0x%X, AUX_REQUEST_CONTROL : 0x%X, AUX_COMMAND_CONTROL : 0x%X\n",
 				displayport_read(AUX_CONTROL),
 				displayport_read(AUX_REQUEST_CONTROL),
 				displayport_read(AUX_COMMAND_CONTROL));
