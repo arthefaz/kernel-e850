@@ -1053,6 +1053,10 @@ int dpp_reg_set_format(u32 id, struct dpp_params_info *p)
 		fmt_type = DPP_IMG_FORMAT_YUV420_8P;
 		break;
 
+	case DECON_PIXEL_FORMAT_NV12N_10B:
+		fmt = IDMA_IMG_FORMAT_YVU420_8P2;
+		fmt_type = DPP_IMG_FORMAT_YUV420_8P2;
+		break;
 	case DECON_PIXEL_FORMAT_NV12M_P010:
 		fmt = IDMA_IMG_FORMAT_YUV420_P010;
 		fmt_type = DPP_IMG_FORMAT_YUV420_P010;
