@@ -1498,8 +1498,11 @@ static int displayport_set_hdr_infoframe(struct exynos_hdr_static_info *hdr_info
 {
 	struct infoframe hdr_infoframe;
 
-	displayport_make_hdr_infoframe_data(&hdr_infoframe, hdr_info);
-	displayport_reg_set_hdr_infoframe(hdr_infoframe, 1);
+	if (hdr_info->mid >= 0) {
+		displayport_make_hdr_infoframe_data(&hdr_infoframe, hdr_info);
+		displayport_reg_set_hdr_infoframe(hdr_infoframe, 1);
+	} else
+		displayport_reg_set_hdr_infoframe(hdr_infoframe, 0);
 
 	return 0;
 }
