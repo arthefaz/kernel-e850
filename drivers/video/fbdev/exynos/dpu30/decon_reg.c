@@ -1727,11 +1727,6 @@ static void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p)
 		decon_reg_config_data_path_size(id,
 			lcd_info->xres, lcd_info->yres, overlap_w, NULL, p);
 	}
-
-	decon_reg_update_req_global(id);
-
-	if (psr->psr_mode == DECON_MIPI_COMMAND_MODE)
-		decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
 }
 
 int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
@@ -1763,6 +1758,7 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 
 	if (id == 2) {
 		/* Set a TRIG mode */
+		/* This code is for only DECON 2 s/w trigger mode */
 		decon_reg_configure_trigger(id, psr->trig_mode);
 		decon_reg_configure_lcd(id, p);
 	} else {
