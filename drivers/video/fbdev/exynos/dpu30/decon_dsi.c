@@ -59,6 +59,12 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 
 	if (irq_sts_reg & DPU_FRAME_DONE_INT_PEND) {
 		DPU_EVENT_LOG(DPU_EVT_DECON_FRAMEDONE, &decon->sd, ktime_set(0, 0));
+#if defined(CONFIG_EXYNOS_AFBC)
+		if (dpu_detect_afbc_error()) {
+			dpu_dump_afbc_info();
+			BUG();
+		}
+#endif
 		decon_hiber_trig_reset(decon);
 		if (decon->state == DECON_STATE_TUI)
 			decon_info("%s:%d TUI Frame Done\n", __func__, __LINE__);
@@ -67,8 +73,13 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 	if (ext_irq & DPU_RESOURCE_CONFLICT_INT_PEND)
 		DPU_EVENT_LOG(DPU_EVT_RSC_CONFLICT, &decon->sd, ktime_set(0, 0));
 
-	if (ext_irq & DPU_TIME_OUT_INT_PEND)
+	if (ext_irq & DPU_TIME_OUT_INT_PEND) {
 		decon_err("%s: DECON%d timeout irq occurs\n", __func__, decon->id);
+#if defined(CONFIG_EXYNOS_AFBC)
+		dpu_dump_afbc_info();
+		BUG();
+#endif
+	}
 
 irq_end:
 	spin_unlock(&decon->slock);

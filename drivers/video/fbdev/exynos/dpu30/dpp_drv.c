@@ -237,7 +237,7 @@ static void dpp_dump_debug_regs(int id)
 	__dpp_dump_ch_data(id, REG_AREA_DPP, sel, cnt);
 }
 
-static void dpp_dump(struct dpp_device *dpp)
+void dpp_dump(struct dpp_device *dpp)
 {
 	int acquired = console_trylock();
 
@@ -731,7 +731,7 @@ static int dpp_dump_buffer_data(struct dpp_device *dpp)
 			if (dpp->id == IDMA_VGF1)
 				id_idx = 1;
 
-			afbc_info = &decon->d.afbc_info;
+			afbc_info = &decon->d.cur_afbc_info;
 			if (!afbc_info->is_afbc[id_idx])
 				continue;
 
