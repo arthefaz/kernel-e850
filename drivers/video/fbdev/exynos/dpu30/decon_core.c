@@ -54,7 +54,7 @@ module_param(win_update_log_level, int, 0644);
 struct decon_device *decon_drvdata[MAX_DECON_CNT];
 EXPORT_SYMBOL(decon_drvdata);
 
-static void dpp_dump(struct decon_device *decon)
+static void decon_dump_using_dpp(struct decon_device *decon)
 {
 	int i;
 
@@ -151,7 +151,7 @@ void decon_dump(struct decon_device *decon)
 	if (decon->dt.out_type == DECON_OUT_DSI)
 		v4l2_subdev_call(decon->out_sd[0], core, ioctl,
 				DSIM_IOC_DUMP, NULL);
-	dpp_dump(decon);
+	decon_dump_using_dpp(decon);
 
 	if (acquired)
 		console_unlock();
@@ -1440,19 +1440,6 @@ static void decon_release_old_bufs(struct decon_device *decon,
 			decon_free_dma_buf(decon, &dma_bufs[i][j]);
 }
 
-static void decon_save_afbc_info(struct decon_device *decon,
-		struct dpu_afbc_info *afbc_info)
-{
-	int id;
-
-	for (id = 0; id < 2; id++) {
-		decon->d.afbc_info.is_afbc[id] = afbc_info->is_afbc[id];
-		decon->d.afbc_info.v_addr[id] = afbc_info->v_addr[id];
-		decon->d.afbc_info.size[id] = afbc_info->size[id];
-		decon->d.afbc_info.dma_addr[id] = afbc_info->dma_addr[id];
-	}
-}
-
 static int decon_set_hdr_info(struct decon_device *decon,
 		struct decon_reg_data *regs, int win_num, bool on)
 {
@@ -1584,53 +1571,58 @@ err_hdr:
 }
 
 static void decon_update_vgf_info(struct decon_device *decon,
-		struct decon_reg_data *regs)
+		struct decon_reg_data *regs, bool cur)
 {
-	struct dpu_afbc_info afbc_info;
 	int i;
+	struct dpu_afbc_info *afbc_info;
 
 	decon_dbg("%s +\n", __func__);
 
-	memset(&afbc_info, 0, sizeof(struct dpu_afbc_info));
+	if (cur) /* save current AFBC information */
+		afbc_info = &decon->d.cur_afbc_info;
+	else /* save previous AFBC information */
+		afbc_info = &decon->d.prev_afbc_info;
+
+	memset(afbc_info, 0, sizeof(struct dpu_afbc_info));
 
 	for (i = 0; i < decon->dt.max_win; i++) {
 		if (!regs->dpp_config[i].compression)
 			continue;
 
 		if (test_bit(IDMA_VGF0, &decon->cur_using_dpp)) {
-			afbc_info.is_afbc[0] = true;
-			afbc_info.dma_addr[0] = regs->dma_buf_data[i][0].dma_addr;
+			afbc_info->is_afbc[0] = true;
+			afbc_info->dma_addr[0] =
+				regs->dma_buf_data[i][0].dma_addr;
 			if (regs->dma_buf_data[i][0].dma_buf == NULL)
 				continue;
 			else
-				afbc_info.size[0] =
+				afbc_info->size[0] =
 					regs->dma_buf_data[i][0].dma_buf->size;
 
 #if defined(CONFIG_ION_EXYNOS)
-			afbc_info.v_addr[0] = ion_map_kernel(
+			afbc_info->v_addr[0] = ion_map_kernel(
 				decon->ion_client,
 				regs->dma_buf_data[i][0].ion_handle);
 #endif
 		}
 
 		if (test_bit(IDMA_VGF1, &decon->cur_using_dpp)) {
-			afbc_info.is_afbc[1] = true;
-			afbc_info.dma_addr[1] = regs->dma_buf_data[i][0].dma_addr;
+			afbc_info->is_afbc[1] = true;
+			afbc_info->dma_addr[1] =
+				regs->dma_buf_data[i][0].dma_addr;
 			if (regs->dma_buf_data[i][0].dma_buf == NULL)
 				continue;
 			else
-				afbc_info.size[1] =
+				afbc_info->size[1] =
 					regs->dma_buf_data[i][0].dma_buf->size;
 
 #if defined(CONFIG_ION_EXYNOS)
-			afbc_info.v_addr[1] = ion_map_kernel(
+			afbc_info->v_addr[1] = ion_map_kernel(
 				decon->ion_client,
 				regs->dma_buf_data[i][0].ion_handle);
 #endif
 		}
 	}
-
-	decon_save_afbc_info(decon, &afbc_info);
 
 	decon_dbg("%s -\n", __func__);
 }
@@ -1654,7 +1646,7 @@ static void decon_update_regs(struct decon_device *decon,
 
 	decon_check_used_dpp(decon, regs);
 
-	decon_update_vgf_info(decon, regs);
+	decon_update_vgf_info(decon, regs, true);
 
 	decon_update_hdr_info(decon, regs);
 
@@ -1704,6 +1696,7 @@ end:
 	DPU_EVENT_LOG(DPU_EVT_FENCE_RELEASE, &decon->sd, ktime_set(0, 0));
 
 	decon_save_vgf_connected_win_id(decon, regs);
+	decon_update_vgf_info(decon, regs, false);
 
 	/* add update bw : cur < prev */
 	decon->bts.ops->bts_update_bw(decon, regs, 1);

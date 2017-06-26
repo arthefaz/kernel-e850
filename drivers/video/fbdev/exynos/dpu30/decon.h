@@ -825,7 +825,8 @@ struct decon_debug {
 	atomic_t event_log_idx;
 	dpu_log_level_t event_log_level;
 #endif
-	struct dpu_afbc_info afbc_info;
+	struct dpu_afbc_info prev_afbc_info;
+	struct dpu_afbc_info cur_afbc_info;
 	struct ion_handle *handle[MAX_DECON_WIN][MAX_PLANE_CNT];
 	int prev_vgf_win_id[2];
 };
@@ -1266,6 +1267,8 @@ bool is_full(struct decon_rect *r, struct decon_lcd *lcd);
 bool is_decon_opaque_format(int format);
 void __iomem *dpu_get_sysreg_addr(void);
 u32 dpu_dma_type_to_channel(enum decon_idma_type type);
+void dpu_dump_afbc_info(void);
+unsigned long dpu_detect_afbc_error(void);
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 void decon_set_protected_content(struct decon_device *decon,
 		struct decon_reg_data *regs);

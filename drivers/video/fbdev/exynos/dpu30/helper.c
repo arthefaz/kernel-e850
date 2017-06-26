@@ -588,3 +588,83 @@ void dpu_dump_data_to_console(void *v_addr, int buf_size, int id)
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			v_addr, buf_size, false);
 }
+
+void dpu_dump_afbc_info(void)
+{
+	int i, j;
+	struct decon_device *decon;
+	struct dpu_afbc_info *afbc_info;
+
+	for (i = 0; i < MAX_DECON_CNT; i++) {
+		decon = get_decon_drvdata(i);
+		if (decon == NULL)
+			continue;
+
+		afbc_info = &decon->d.prev_afbc_info;
+		decon_info("%s: previous AFBC channel information\n", __func__);
+		for (j = 0; j < 2; ++j) { /* VGF0(0), VGF1(1) */
+			if (!afbc_info->is_afbc[j])
+				continue;
+
+			decon_info("\t[%s] Base(0x%p), KV(0x%p), size(%d)\n",
+					j ? "VGF1" : "VGF0",
+					(void *)afbc_info->dma_addr[j],
+					afbc_info->v_addr[j],
+					afbc_info->size[j]);
+		}
+
+		afbc_info = &decon->d.cur_afbc_info;
+		decon_info("%s: current AFBC channel information\n", __func__);
+		for (j = 0; j < 2; ++j) { /* VGF0(0), VGF1(1) */
+			if (!afbc_info->is_afbc[j])
+				continue;
+
+			decon_info("\t[%s] Base(0x%p), KV(0x%p), size(%d)\n",
+					j ? "VGF1" : "VGF0",
+					(void *)afbc_info->dma_addr[j],
+					afbc_info->v_addr[j],
+					afbc_info->size[j]);
+		}
+	}
+}
+
+unsigned long dpu_detect_afbc_error(void)
+{
+	struct dpp_device *dpp;
+	u32 data[2];
+	unsigned long ret = 0;
+
+	dpp = get_dpp_drvdata(IDMA_VGF0);
+	if (dpp->state == DPP_STATE_ON) {
+		dma_write(IDMA_VGF0, IDMA_DEBUG_CONTROL, IDMA_DEBUG_CONTROL_EN);
+		data[0] = dma_read(IDMA_VGF0, IDMA_DEBUG_DATA);
+		dma_write(IDMA_VGF0, IDMA_DEBUG_CONTROL,
+				IDMA_DEBUG_CONTROL_SEL(0x4) |
+				IDMA_DEBUG_CONTROL_EN);
+		data[1] = dma_read(IDMA_VGF0, IDMA_DEBUG_DATA);
+		if ((data[0] & 0x80000000) || (data[1] & 0xFF000)) {
+			dpp_info("[VGF0] AFBC error detected(0x%x, 0x%x)\n",
+					data[0], data[1]);
+			set_bit(IDMA_VGF0, &ret);
+			dpp_dump(dpp);
+		}
+	}
+
+	dpp = get_dpp_drvdata(IDMA_VGF1);
+	if (dpp->state == DPP_STATE_ON) {
+		dma_write(IDMA_VGF1, IDMA_DEBUG_CONTROL, IDMA_DEBUG_CONTROL_EN);
+		data[0] = dma_read(IDMA_VGF1, IDMA_DEBUG_DATA);
+		dma_write(IDMA_VGF1, IDMA_DEBUG_CONTROL,
+				IDMA_DEBUG_CONTROL_SEL(0x4) |
+				IDMA_DEBUG_CONTROL_EN);
+		data[1] = dma_read(IDMA_VGF1, IDMA_DEBUG_DATA);
+		if ((data[0] & 0x80000000) || (data[1] & 0xFF000)) {
+			dpp_info("[VGF1] AFBC error detected(0x%x, 0x%x)\n",
+					data[0], data[1]);
+			set_bit(IDMA_VGF1, &ret);
+			dpp_dump(dpp);
+		}
+	}
+
+	return ret;
+}

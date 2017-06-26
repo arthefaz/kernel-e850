@@ -358,6 +358,8 @@ static inline void dpp_select_format(struct dpp_device *dpp,
 	vi->yuv420 = is_yuv420(config);
 }
 
+void dpp_dump(struct dpp_device *dpp);
+
 /* DPU DMA low-level APIs exposed to DPP driver */
 u32 dma_reg_get_irq_status(u32 id);
 void dma_reg_clear_irq(u32 id, u32 irq);
