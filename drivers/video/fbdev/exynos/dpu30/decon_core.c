@@ -1108,14 +1108,22 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	 * bpp = 16 : (RGB16 formats)
 	 * bpp = 32 : (RGB32 formats)
 	 */
-	if (dpu_get_bpp(config->format) == 12)
+	/* TODO : We should check also YUV format, because YUV has more than 2 palnes.
+	 * Also bpp macro is not matched with this. In case of YUV format, each plane's
+	 * bpp is needed.
+	 */
+	if (dpu_get_bpp(config->format) == 12) {
 		byte_per_pixel = 1;
-	else if (dpu_get_bpp(config->format) == 15)
+	} else if (dpu_get_bpp(config->format) == 15) {
+		/* It should be 1.25 byte per pixel of Y plane.
+		 * So 1 byte is used instead of floating point.
+		 */
+		byte_per_pixel = 1;
+	} else if (dpu_get_bpp(config->format) == 16) {
 		byte_per_pixel = 2;
-	else if (dpu_get_bpp(config->format) == 16)
-		byte_per_pixel = 2;
-	else
+	} else {
 		byte_per_pixel = 4;
+	}
 
 	config_size = config->src.f_w * config->src.f_h * byte_per_pixel;
 	alloc_size = (u32)(regs->dma_buf_data[idx][0].dma_buf->size);
@@ -1470,7 +1478,10 @@ static int decon_set_hdr_info(struct decon_device *decon,
 		return -EINVAL;
 	}
 
-	video_meta = (struct exynos_video_meta *)regs->dma_buf_data[win_num][2].dma_addr;
+	video_meta = (struct exynos_video_meta *)ion_map_kernel(
+			decon->ion_client,
+			regs->dma_buf_data[win_num][2].ion_handle);
+
 	hdr_cmp = memcmp(&decon->prev_hdr_info,
 			&video_meta->data.dec.shdr_static_info,
 			sizeof(struct exynos_hdr_static_info));
