@@ -339,7 +339,8 @@ static int dpp_check_size(struct dpp_device *dpp, struct dpp_img_format *vi)
 	}
 
 	if (src->w > vc.src_w_max || src->w < vc.src_w_min ||
-		src->h > vc.src_h_max || src->h < vc.src_h_min) {
+		src->h > vc.src_h_max || src->h < vc.src_h_min ||
+		src->h > vc.img_h_max || src->h < vc.img_h_min) {
 		dpp_err("Unsupported SRC size!\n");
 		goto err;
 	}

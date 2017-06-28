@@ -46,6 +46,7 @@ extern int dpp_log_level;
 #define IMG_WIDTH_MAX		4096
 #define IMG_HEIGHT_MIN		16
 #define IMG_HEIGHT_MAX		4096
+#define IMG_ROT_HEIGHT_MAX	2160
 #define SRC_OFFSET_MULTIPLE	1
 
 #define SCALED_WIDTH_MIN	16
