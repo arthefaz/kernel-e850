@@ -330,7 +330,6 @@ get_irq_fail:
 	dma_free_coherent(dev, RPMB_BUF_MAX_SIZE, ctx->wsm_virtaddr,
 				ctx->wsm_phyaddr);
 alloc_wsm_fail:
-	kfree(ctx);
 	ret = -ENOMEM;
 	return ret;
 }
