@@ -317,10 +317,6 @@ static int init_mmc_srpmb(struct platform_device *pdev, struct _mmc_rpmb_ctx *ct
 
 	/* Get hwirq from irq_data */
 	hwirq = irqd_to_hwirq(rpmb_irqd);
-	if (hwirq < 0) {
-		dev_err(dev, "Fail to get hwirq from irq data\n");
-		goto get_irq_fail;
-	}
 
 	/* Smc call to transfer wsm address to secure world */
 	ret = exynos_smc(SMC_SRPMB_WSM, ctx->wsm_phyaddr, hwirq, 0);
