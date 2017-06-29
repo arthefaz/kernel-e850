@@ -248,11 +248,6 @@ static void mmc_rpmb_worker(struct work_struct *work)
 	}
 
 	ctx = container_of(work, struct _mmc_rpmb_ctx, work);
-	if (!ctx) {
-		printk(KERN_ERR "Fail to get mmc rpmb context\n");
-		return;
-	}
-
 	dev = ctx->dev;
 	req = (struct _mmc_rpmb_req *)ctx->wsm_virtaddr;
 	if (!req) {
