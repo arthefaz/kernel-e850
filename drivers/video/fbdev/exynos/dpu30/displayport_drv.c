@@ -2160,46 +2160,31 @@ static int displayport_aux_onoff(struct displayport_device *displayport, int
 		onoff)
 {
 	int rc = 0;
-	/*struct regulator *regulator_aux_vdd;
-
-	if (displayport->aux_vdd == NULL) {
-		gpio_direction_output(displayport->gpio_sw_oe, !onoff);
-		displayport_info("aux_vdd is not used rev (onoff = %d)\n", onoff);
-		return rc;
-	}
-	regulator_aux_vdd = regulator_get(NULL, displayport->aux_vdd);
-	if (IS_ERR_OR_NULL(regulator_aux_vdd)) {
-		displayport_err("aux_vdd regulator get fail\n");
-		return -ENODEV;
-	}*/
 
 	displayport_info("aux vdd onoff = %d\n", onoff);
 
-	if (onoff == 1) {
-		/*rc = regulator_enable(regulator_aux_vdd);
-		if (rc) {
-			displayport_err("aux vdd enable failed(%d).\n", rc);
-			goto done;
-		}*/
+	if (onoff == 1)
 		gpio_direction_output(displayport->gpio_sw_oe, 0);
-
-	} else {
-		/*rc = regulator_disable(regulator_aux_vdd);
-		if (rc) {
-			displayport_err("aux vdd disable failed(%d).\n", rc);
-			goto done;
-		}*/
+	else
 		gpio_direction_output(displayport->gpio_sw_oe, 1);
-	}
-
-/*done:
-	regulator_put(regulator_aux_vdd);*/
 
 	return rc;
 }
-#endif
 
-#if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
+static void displayport_aux_sel(struct displayport_device *displayport)
+{
+	if (gpio_is_valid(displayport->gpio_usb_dir) &&
+			gpio_is_valid(displayport->gpio_sw_sel)) {
+		displayport->dp_sw_sel = gpio_get_value(displayport->gpio_usb_dir);
+		gpio_direction_output(displayport->gpio_sw_sel, !(displayport->dp_sw_sel));
+		displayport_info("Get direction from ccic %d\n", displayport->dp_sw_sel);
+	} else if (gpio_is_valid(displayport->gpio_usb_dir)) {
+		/* for old H/W - AUX switch is controlled by CCIC */
+		displayport->dp_sw_sel = !gpio_get_value(displayport->gpio_usb_dir);
+		displayport_info("Get Direction From CCIC %d\n", !displayport->dp_sw_sel);
+	}
+}
+
 static int usb_typec_displayport_notification(struct notifier_block *nb,
 		unsigned long action, void *data)
 {
@@ -2237,16 +2222,7 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 	case CCIC_NOTIFY_ID_DP_LINK_CONF:
 		displayport_info("CCIC_NOTIFY_ID_DP_LINK_CONF %x\n",
 				usb_typec_info.sub1);
-		if (gpio_is_valid(displayport->gpio_usb_dir) &&
-				gpio_is_valid(displayport->gpio_sw_sel)) {
-			displayport->dp_sw_sel = gpio_get_value(displayport->gpio_usb_dir);
-			gpio_direction_output(displayport->gpio_sw_sel, !(displayport->dp_sw_sel));
-			displayport_info("Get direction from ccic %d\n", displayport->dp_sw_sel);
-		} else if (gpio_is_valid(displayport->gpio_usb_dir)) {
-			/* for old H/W - AUX switch is controlled by CCIC */
-			displayport->dp_sw_sel = !gpio_get_value(displayport->gpio_usb_dir);
-			displayport_info("Get Direction From CCIC %d\n", !displayport->dp_sw_sel);
-		}
+		displayport_aux_sel(displayport);
 		switch (usb_typec_info.sub1) {
 		case CCIC_NOTIFY_DP_PIN_UNKNOWN:
 			displayport->ccic_notify_dp_conf = CCIC_NOTIFY_DP_PIN_UNKNOWN;
