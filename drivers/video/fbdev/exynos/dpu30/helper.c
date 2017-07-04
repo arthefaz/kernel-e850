@@ -352,7 +352,11 @@ void decon_to_init_param(struct decon_device *decon, struct decon_param *p)
 void decon_create_timeline(struct decon_device *decon, char *name)
 {
 	decon->timeline = sync_timeline_create(name);
+#if defined(CONFIG_DPU_2_0_FENCE)
+	decon->timeline_max = 0;
+#else
 	decon->timeline_max = 1;
+#endif
 }
 
 int decon_create_fence(struct decon_device *decon)
