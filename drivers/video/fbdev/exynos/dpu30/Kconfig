@@ -67,6 +67,11 @@ config DECON_BTS_LEGACY
         depends on EXYNOS_DECON_9810
         default n
 
+config DPU_2_0_FENCE
+	bool "fence is signaled at the beginning of a frame"
+        depends on EXYNOS_DECON_9810
+        default n
+
 endif
 
 source "drivers/video/fbdev/exynos/dpu_9810/panels/Kconfig"
