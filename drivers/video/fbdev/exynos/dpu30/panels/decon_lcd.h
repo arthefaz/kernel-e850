@@ -67,6 +67,18 @@ struct stdphy_pms {
 #if defined(CONFIG_SOC_EXYNOS9810)
 	unsigned int k;
 #endif
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+	unsigned int mfr;
+	unsigned int mrr;
+	unsigned int sel_pf;
+	unsigned int icp;
+	unsigned int afc_enb;
+	unsigned int extafc;
+	unsigned int feed_en;
+	unsigned int fsel;
+	unsigned int fout_mask;
+	unsigned int rsel;
+#endif
 };
 
 struct decon_lcd {

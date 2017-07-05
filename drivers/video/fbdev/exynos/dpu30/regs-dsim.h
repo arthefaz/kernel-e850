@@ -361,6 +361,36 @@
 #define DSIM_PHY_PMS_S_2_0(_x)		(((_x) & 0x7) << 5)
 #define DSIM_PHY_PMS_S_2_0_MASK		(0x7 << 5)
 
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+#define DSIM_PHY_DITHER_EN			(0x1 << 1)
+
+#define DSIM_PHY_DITHER_MFR(_x)		(((_x) & 0xff))
+#define DSIM_PHY_DITHER_MFR_MASK	(0xff << 0)
+
+#define DSIM_PHY_DITHER_MRR(_x)		(((_x) & 0x3f) << 2)
+#define DSIM_PHY_DITHER_MRR_MASK	(0x3f << 2)
+
+#define DSIM_PHY_DITHER_SEL_PF(_x)	(((_x) & 0x3) << 0)
+#define DSIM_PHY_DITHER_SEL_PF_MASK	(0x3 << 0)
+
+#define DSIM_PHY_DITHER_ICP(_x)		(((_x) & 0x3) << 6)
+#define DSIM_PHY_DITHER_ICP_MASK	(0x3 << 6)
+
+#define DSIM_PHY_DITHER_AFC_ENB		(0x1 << 3)
+
+#define DSIM_PHY_DITHER_EXTAFC(_x)	(((_x) & 0x1f) << 0)
+#define DSIM_PHY_DITHER_EXTAFC_MASK	(0x1f << 0)
+
+#define DSIM_PHY_DITHER_FEED_EN		(0x1 << 4)
+
+#define DSIM_PHY_DITHER_FSEL		(0x1 << 4)
+
+#define DSIM_PHY_DITHER_FOUT_MASK	(0x1 << 5)
+
+#define DSIM_PHY_DITHER_RSEL(_x)	(((_x) & 0xf) << 0)
+#define DSIM_PHY_DITHER_RSEL_MASK	(0xf << 0)
+#endif
+
 /* master clock lane  setting */
 #define DSIM_PHY_ACTRL_MC(_id)		(0x1000 + (4 * (_id)))
 

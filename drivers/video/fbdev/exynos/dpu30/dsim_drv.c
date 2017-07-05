@@ -1020,7 +1020,7 @@ int dsim_create_cmd_rw_sysfs(struct dsim_device *dsim)
 
 static void dsim_parse_lcd_info(struct dsim_device *dsim)
 {
-	u32 res[4];
+	u32 res[14];
 	struct device_node *node;
 	unsigned int mres_num = 1;
 	u32 mres_w[3] = {0, };
@@ -1070,15 +1070,32 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 	dsim->clks.hs_clk = dsim->lcd_info.hs_clk;
 	dsim_dbg("requested hs clock(%d)\n", dsim->lcd_info.hs_clk);
 
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+	of_property_read_u32_array(node, "timing,pmsk", res, 14);
+#else
 	of_property_read_u32_array(node, "timing,pmsk", res, 4);
+#endif
 	dsim->lcd_info.dphy_pms.p = res[0];
 	dsim->lcd_info.dphy_pms.m = res[1];
 	dsim->lcd_info.dphy_pms.s = res[2];
-#if defined(CONFIG_SOC_EXYNOS9810)
 	dsim->lcd_info.dphy_pms.k = res[3];
 	dsim_dbg("p(%d), m(%d), s(%d), k(%d)\n", res[0], res[1], res[2], res[3]);
-#else
-	dsim_dbg("p(%d), m(%d), s(%d)\n", res[0], res[1], res[2]);
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+	dsim->lcd_info.dphy_pms.mfr = res[4];
+	dsim->lcd_info.dphy_pms.mrr = res[5];
+	dsim->lcd_info.dphy_pms.sel_pf = res[6];
+	dsim->lcd_info.dphy_pms.icp = res[7];
+	dsim->lcd_info.dphy_pms.afc_enb = res[8];
+	dsim->lcd_info.dphy_pms.extafc = res[9];
+	dsim->lcd_info.dphy_pms.feed_en = res[10];
+	dsim->lcd_info.dphy_pms.fsel = res[11];
+	dsim->lcd_info.dphy_pms.fout_mask = res[12];
+	dsim->lcd_info.dphy_pms.rsel = res[13];
+	dsim_dbg(" mfr(%d), mrr(0x%x), sel_pf(%d), icp(%d)\n",
+				res[4], res[5], res[6], res[7]);
+	dsim_dbg(" afc_enb(%d), extafc(%d), feed_en(%d), fsel(%d)\n",
+				res[8], res[9], res[10], res[11]);
+	dsim_dbg(" fout_mask(%d), rsel(%d)\n", res[12], res[13]);
 #endif
 
 	of_property_read_u32(node, "timing,dsi-escape-clk",

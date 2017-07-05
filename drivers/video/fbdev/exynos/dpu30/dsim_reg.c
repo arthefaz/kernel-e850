@@ -398,6 +398,15 @@ void dsim_reg_dp_dn_swap(u32 id, u32 en)
 	/* TBD */
 }
 
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+void dsim_reg_set_dphy_dither_en(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0A, val, DSIM_PHY_DITHER_EN);
+}
+#endif
+
 /* DPHY setting */
 void dsim_reg_set_pll_freq(u32 id, u32 p, u32 m, u32 s, u32 k)
 {
@@ -437,10 +446,12 @@ void dsim_reg_set_pll_freq(u32 id, u32 p, u32 m, u32 s, u32 k)
 	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_01, DSIM_PHY_PLL_CTRL_VAL[0]);
 	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_02, DSIM_PHY_PLL_CTRL_VAL[1]);
 	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_03, DSIM_PHY_PLL_CTRL_VAL[2]);
+#if !defined(CONFIG_EXYNOS_DSIM_DITHER)
 	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_09, DSIM_PHY_PLL_CTRL_VAL[8]);
 	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_0A, DSIM_PHY_PLL_CTRL_VAL[9]);
 	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_0B, DSIM_PHY_PLL_CTRL_VAL[10]);
 	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_0C, DSIM_PHY_PLL_CTRL_VAL[11]);
+#endif
 	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_0D, DSIM_PHY_PLL_CTRL_VAL[12]);
 
 }
@@ -635,6 +646,64 @@ void dsim_reg_set_dphy_timing_values(u32 id,
 	/* DCTRL_MC_X */
 
 }
+
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+void dsim_reg_set_dphy_param_dither(u32 id,
+			struct stdphy_pms *dphy_pms)
+{
+	u32 val, mask;
+
+	/* MFR */
+	val = DSIM_PHY_DITHER_MFR(dphy_pms->mfr);
+	mask = DSIM_PHY_DITHER_MFR_MASK;
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0B, val, mask);
+
+	/* MRR */
+	val = DSIM_PHY_DITHER_MRR(dphy_pms->mrr);
+	mask = DSIM_PHY_DITHER_MRR_MASK;
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0C, val, mask);
+
+	/* SEL_PF */
+	val = DSIM_PHY_DITHER_SEL_PF(dphy_pms->sel_pf);
+	mask = DSIM_PHY_DITHER_SEL_PF_MASK;
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0C, val, mask);
+
+	/* ICP */
+	val = DSIM_PHY_DITHER_ICP(dphy_pms->icp);
+	mask = DSIM_PHY_DITHER_ICP_MASK;
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_09, val, mask);
+
+	/* AFC_ENB */
+	val = (dphy_pms->afc_enb) ? ~0 : 0;
+	mask = DSIM_PHY_DITHER_AFC_ENB;
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0A, val, mask);
+
+	/* EXTAFC */
+	val = DSIM_PHY_DITHER_EXTAFC(dphy_pms->extafc);
+	mask = DSIM_PHY_DITHER_EXTAFC_MASK;
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_08, val, mask);
+
+	/* FEED_EN */
+	val = (dphy_pms->feed_en) ? ~0 : 0;
+	mask = DSIM_PHY_DITHER_FEED_EN;
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0A, val, mask);
+
+	/* FSEL */
+	val = (dphy_pms->fsel) ? ~0 : 0;
+	mask = DSIM_PHY_DITHER_FSEL;
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_09, val, mask);
+
+	/* FOUT_MASK */
+	val = (dphy_pms->fout_mask) ? ~0 : 0;
+	mask = DSIM_PHY_DITHER_FOUT_MASK;
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0A, val, mask);
+
+	/* RSEL */
+	val = DSIM_PHY_DITHER_RSEL(dphy_pms->rsel);
+	mask = DSIM_PHY_DITHER_RSEL_MASK;
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_09, val, mask);
+}
+#endif
 
 /* BIAS Block Control Register */
 void dsim_reg_set_bias_ctrl(u32 id, u32 *blk_ctl)
@@ -1808,6 +1877,11 @@ int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		/* get DPHY timing values using hs clock and escape clock */
 		dsim_reg_get_dphy_timing(clks->hs_clk, clks->esc_clk, &t);
 		dsim_reg_set_dphy_timing_values(id, &t, hsmode);
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+		/* check dither sequence */
+		dsim_reg_set_dphy_param_dither(id, dphy_pms);
+		dsim_reg_set_dphy_dither_en(id, 1);
+#endif
 
 		/* set BIAS ctrl */
 		/* DSI & CSI need this setting */
@@ -1839,6 +1913,10 @@ int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		/* check disable PHY timing */
 		/* TBD */
 		dsim_reg_set_esc_clk_prescaler(id, 0, 0xff);
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+		/* check dither sequence */
+		dsim_reg_set_dphy_dither_en(id, 0);
+#endif
 		dsim_reg_enable_pll(id, 0);
 	}
 
