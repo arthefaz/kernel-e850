@@ -62,6 +62,11 @@ config EXYNOS_AFBC
         depends on EXYNOS_DECON_9810
         default n
 
+config EXYNOS_DSIM_DITHER
+	bool "DSIM SSCG feature"
+        depends on EXYNOS_MIPI_DSIM
+        default y
+
 config DECON_BTS_LEGACY
 	bool "Legacy BTS scheme of display"
         depends on EXYNOS_DECON_9810
