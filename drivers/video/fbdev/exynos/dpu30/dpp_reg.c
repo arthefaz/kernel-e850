@@ -1216,7 +1216,7 @@ void dpp_constraints_params(struct dpp_size_constraints *vc,
 	vc->img_w_min = IMG_WIDTH_MIN * sz_align;
 	vc->img_w_max = IMG_WIDTH_MAX;
 	vc->img_h_min = IMG_HEIGHT_MIN;
-	if (vi->rot)
+	if (vi->rot > DPP_ROT_180)
 		vc->img_h_max = IMG_ROT_HEIGHT_MAX;
 	else
 		vc->img_h_max = IMG_HEIGHT_MAX;
