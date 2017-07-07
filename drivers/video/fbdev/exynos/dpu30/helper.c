@@ -373,9 +373,9 @@ int decon_create_fence(struct decon_device *decon)
 	}
 
 	sync_file = sync_file_create(&pt->base);
+	fence_put(&pt->base);
 	if (!sync_file) {
 		decon_err("%s: failed to create sync file\n", __func__);
-		fence_put(&pt->base);
 		goto err;
 	}
 
