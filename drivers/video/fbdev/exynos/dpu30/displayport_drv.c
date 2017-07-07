@@ -1354,13 +1354,19 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 {
 	struct displayport_device *displayport = dev_data;
 	struct decon_device *decon = get_decon_drvdata(2);
+	int active;
 	ktime_t timestamp = ktime_get();
 	u32 irq_status_reg;
 
 	spin_lock(&displayport->slock);
 
-	if (displayport->state != DISPLAYPORT_STATE_ON)
-		goto irq_end;
+	active = pm_runtime_active(displayport->dev);
+	if (!active) {
+		displayport_info("displayport power(%d), state(%d)\n",
+			active, displayport->state);
+		spin_unlock(&displayport->slock);
+		return IRQ_HANDLED;
+	}
 
 	/* Common interrupt */
 	irq_status_reg = displayport_reg_get_interrupt_and_clear(SYSTEM_IRQ_COMMON_STATUS);
@@ -1418,7 +1424,6 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 	if (irq_status_reg & AFIFO_UNDER)
 		displayport_info("AFIFO_UNDER detect\n");
 
-irq_end:
 	spin_unlock(&displayport->slock);
 
 	return IRQ_HANDLED;
