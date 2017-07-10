@@ -1056,6 +1056,11 @@ static int decon_check_limitation(struct decon_device *decon, int idx,
 		return -EINVAL;
 	}
 
+	if (config->idma_type < IDMA_G0 || config->idma_type > IDMA_VGF1) {
+		decon_err("idma_type(%d) is wrong\n", config->idma_type);
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
