@@ -1429,18 +1429,15 @@ void dpp_reg_set_hdr(u32 id, struct dpp_params_info *p)
 {
 	bool en = false;
 
-	if (id != IDMA_VGF1)
-		return;
-
-	if (p->hdr > DPP_HDR_OFF) {
+	if (p->hdr == DPP_HDR_ST2084 || p->hdr == DPP_HDR_HLG)
 		en = true;
 
-		dpp_reg_set_hdr_en(id, en);
-		dpp_reg_set_eotf_en(id, en);
-		dpp_reg_set_gm_en(id, en);
-		dpp_reg_set_tm_en(id, en);
-		dpp_reg_set_hdr_lut(id, en, p);
-	}
+	dpp_reg_set_hdr_en(id, en);
+	dpp_reg_set_eotf_en(id, en);
+	dpp_reg_set_gm_en(id, en);
+	dpp_reg_set_tm_en(id, en);
+	dpp_reg_set_hdr_lut(id, en, p);
+
 }
 
 void dpp_reg_configure_params(u32 id, struct dpp_params_info *p)
