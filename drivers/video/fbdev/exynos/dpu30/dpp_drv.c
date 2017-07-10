@@ -479,6 +479,12 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 		return -EINVAL;
 	}
 
+	if ((p->hdr < DPP_HDR_OFF) || (p->hdr > DPP_HDR_HLG)) {
+		dpp_err("Unsupported HDR standard in DPP%d, HDR std(%d)\n",
+				dpp->id, p->hdr);
+		return -EINVAL;
+	}
+
 	if ((dpp->id == IDMA_G0 || dpp->id == IDMA_G1) &&
 			(p->format >= DECON_PIXEL_FORMAT_NV16)) {
 		dpp_err("Not support YUV format(%d) in DPP%d - VG & VGF only!\n",
