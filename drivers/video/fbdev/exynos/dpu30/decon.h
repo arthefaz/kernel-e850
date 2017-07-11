@@ -1253,7 +1253,7 @@ void decon_dump(struct decon_device *decon);
 void decon_to_psr_info(struct decon_device *decon, struct decon_mode_info *psr);
 void decon_to_init_param(struct decon_device *decon, struct decon_param *p);
 void decon_create_timeline(struct decon_device *decon, char *name);
-int decon_create_fence(struct decon_device *decon);
+int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file);
 void decon_wait_fence(struct sync_file *fence);
 void decon_signal_fence(struct decon_device *decon);
 

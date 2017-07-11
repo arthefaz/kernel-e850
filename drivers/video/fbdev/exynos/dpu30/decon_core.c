@@ -1836,6 +1836,7 @@ static int decon_set_win_config(struct decon_device *decon,
 {
 	int num_of_window = 0;
 	struct decon_reg_data *regs;
+	struct sync_file *sync_file;
 	int ret = 0;
 
 	decon_dbg("%s +\n", __func__);
@@ -1844,7 +1845,8 @@ static int decon_set_win_config(struct decon_device *decon,
 
 	if (decon->state == DECON_STATE_OFF ||
 		decon->state == DECON_STATE_TUI) {
-		win_data->retire_fence = decon_create_fence(decon);
+		win_data->retire_fence = decon_create_fence(decon, &sync_file);
+		fd_install(win_data->retire_fence, sync_file->file);
 		decon_signal_fence(decon);
 		goto err;
 	}
@@ -1858,7 +1860,7 @@ static int decon_set_win_config(struct decon_device *decon,
 
 	num_of_window = decon_get_active_win_count(decon, win_data);
 	if (num_of_window) {
-		win_data->retire_fence = decon_create_fence(decon);
+		win_data->retire_fence = decon_create_fence(decon, &sync_file);
 		if (win_data->retire_fence < 0)
 			goto err_prepare;
 	} else {
@@ -1871,6 +1873,9 @@ static int decon_set_win_config(struct decon_device *decon,
 	ret = decon_prepare_win_config(decon, win_data, regs);
 	if (ret)
 		goto err_prepare;
+
+	if (num_of_window)
+		fd_install(win_data->retire_fence, sync_file->file);
 
 	decon_hiber_block(decon);
 
@@ -1886,6 +1891,13 @@ static int decon_set_win_config(struct decon_device *decon,
 	return ret;
 
 err_prepare:
+	if (win_data->retire_fence >= 0) {
+		/* video mode should keep previous buffer object */
+		if (decon->lcd_info->mode == DECON_MIPI_COMMAND_MODE)
+			decon_signal_fence(decon);
+		fput(sync_file->file);
+		put_unused_fd(win_data->retire_fence);
+	}
 	kfree(regs);
 	win_data->retire_fence = -1;
 err:
