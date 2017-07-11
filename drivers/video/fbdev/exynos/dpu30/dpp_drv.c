@@ -402,6 +402,57 @@ err:
 	return -EINVAL;
 }
 
+static int dpp_check_addr(struct dpp_device *dpp, struct dpp_params_info *p)
+{
+	int cnt = 0;
+
+	cnt = dpu_get_plane_cnt(p->format, false);
+
+	switch (cnt) {
+	case 1:
+		if (IS_ERR_OR_NULL((void *)p->addr[0])) {
+			dpp_err("Address[0] is 0x0 DPP%d\n", dpp->id);
+			return -EINVAL;
+		}
+		break;
+	case 2:
+	case 3:
+		if (IS_ERR_OR_NULL((void *)p->addr[0])) {
+			dpp_err("Address[0] is 0x0 DPP%d\n", dpp->id);
+			return -EINVAL;
+		}
+		if (IS_ERR_OR_NULL((void *)p->addr[1])) {
+			dpp_err("Address[1] is 0x0 DPP%d\n", dpp->id);
+			return -EINVAL;
+		}
+		break;
+	case 4:
+		if (IS_ERR_OR_NULL((void *)p->addr[0])) {
+			dpp_err("Address[0] is 0x0 DPP%d\n", dpp->id);
+			return -EINVAL;
+		}
+		if (IS_ERR_OR_NULL((void *)p->addr[1])) {
+			dpp_err("Address[1] is 0x0 DPP%d\n", dpp->id);
+			return -EINVAL;
+		}
+		if (IS_ERR_OR_NULL((void *)p->addr[2])) {
+			dpp_err("Address[2] is 0x0 DPP%d\n", dpp->id);
+			return -EINVAL;
+		}
+		if (IS_ERR_OR_NULL((void *)p->addr[3])) {
+			dpp_err("Address[3] is 0x0 DPP%d\n", dpp->id);
+			return -EINVAL;
+		}
+		break;
+	default:
+		dpp_err("Unsupport plane cnt\n");
+			return -EINVAL;
+		break;
+	}
+
+	return 0;
+}
+
 static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 {
 	if ((dpp->id != IDMA_VGF1) && (p->rot > DPP_ROT_180)) {
@@ -488,6 +539,10 @@ static int dpp_check_limitation(struct dpp_device *dpp, struct dpp_params_info *
 	dpp_select_format(dpp, &vi, p);
 
 	ret = dpp_check_format(dpp, p);
+	if (ret)
+		return -EINVAL;
+
+	ret = dpp_check_addr(dpp, p);
 	if (ret)
 		return -EINVAL;
 
