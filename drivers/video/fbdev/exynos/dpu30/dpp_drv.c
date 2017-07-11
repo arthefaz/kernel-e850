@@ -557,6 +557,14 @@ static int dpp_set_config(struct dpp_device *dpp)
 
 	mutex_lock(&dpp->lock);
 
+	/* parameters from decon driver are translated for dpp driver */
+	dpp_get_params(dpp, &params);
+
+	/* all parameters must be passed dpp hw limitation */
+	ret = dpp_check_limitation(dpp, &params);
+	if (ret)
+		goto err;
+
 	if (dpp->state == DPP_STATE_OFF) {
 		dpp_dbg("dpp%d is started\n", dpp->id);
 #if defined(CONFIG_EXYNOS_PD)
@@ -575,14 +583,6 @@ static int dpp_set_config(struct dpp_device *dpp)
 		dma_reg_set_common_debug(dpp->id);
 		*/
 	}
-
-	/* parameters from decon driver are translated for dpp driver */
-	dpp_get_params(dpp, &params);
-
-	/* all parameters must be passed dpp hw limitation */
-	ret = dpp_check_limitation(dpp, &params);
-	if (ret)
-		goto err;
 
 	/* set all parameters to dpp hw */
 	dpp_reg_configure_params(dpp->id, &params);
