@@ -359,10 +359,9 @@ void decon_create_timeline(struct decon_device *decon, char *name)
 #endif
 }
 
-int decon_create_fence(struct decon_device *decon)
+int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file)
 {
 	struct sync_pt *pt;
-	struct sync_file *sync_file;
 	int fd = -EMFILE;
 
 	decon->timeline_max++;
@@ -372,9 +371,9 @@ int decon_create_fence(struct decon_device *decon)
 		goto err;
 	}
 
-	sync_file = sync_file_create(&pt->base);
+	*sync_file = sync_file_create(&pt->base);
 	fence_put(&pt->base);
-	if (!sync_file) {
+	if (!(*sync_file)) {
 		decon_err("%s: failed to create sync file\n", __func__);
 		goto err;
 	}
@@ -382,10 +381,9 @@ int decon_create_fence(struct decon_device *decon)
 	fd = get_unused_fd_flags(0);
 	if (fd < 0) {
 		decon_err("%s: failed to get unused fd\n", __func__);
+		fput((*sync_file)->file);
 		goto err;
 	}
-
-	fd_install(fd, sync_file->file);
 
 	return fd;
 
