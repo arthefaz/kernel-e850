@@ -350,6 +350,18 @@ static int dpp_check_size(struct dpp_device *dpp, struct dpp_img_format *vi)
 		goto err;
 	}
 
+	/* check boundary */
+	if (src->x + src->w > vc.src_w_max || src->y + src->h > vc.src_h_max) {
+		dpp_err("Unsupported src boundary size!\n");
+		goto err;
+	}
+
+	if (src->x < 0 || src->y < 0 ||
+		dst->x < 0 || dst->y < 0) {
+		dpp_err("Unsupported src/dst x,y position!\n");
+		goto err;
+	}
+
 	return 0;
 err:
 	dpp_err("offset x : %d, offset y: %d\n", src->x, src->y);
