@@ -1439,6 +1439,7 @@ static int decon_set_hdr_info(struct decon_device *decon,
 {
 	struct exynos_video_meta *video_meta;
 	int ret = 0, hdr_cmp = 0;
+	int meta_plane = 0;
 
 	if (!on) {
 		struct exynos_hdr_static_info hdr_static_info;
@@ -1454,14 +1455,20 @@ static int decon_set_hdr_info(struct decon_device *decon,
 		return 0;
 	}
 
-	if (!regs->dma_buf_data[win_num][2].dma_addr) {
+	meta_plane = dpu_get_meta_plane_cnt(regs->dpp_config[win_num].format);
+	if (meta_plane < 0) {
+		decon_err("Unsupported hdr metadata format\n");
+		return -EINVAL;
+	}
+
+	if (!regs->dma_buf_data[win_num][meta_plane].dma_addr) {
 		decon_err("hdr metadata address is NULL\n");
 		return -EINVAL;
 	}
 
 	video_meta = (struct exynos_video_meta *)ion_map_kernel(
 			decon->ion_client,
-			regs->dma_buf_data[win_num][2].ion_handle);
+			regs->dma_buf_data[win_num][meta_plane].ion_handle);
 
 	hdr_cmp = memcmp(&decon->prev_hdr_info,
 			&video_meta->data.dec.shdr_static_info,
