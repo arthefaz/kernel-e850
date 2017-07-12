@@ -861,7 +861,7 @@ int decon_exit_hiber(struct decon_device *decon)
 	if (!decon->id && !decon->eint_status) {
 		struct irq_desc *desc = irq_to_desc(decon->res.irq);
 		/* Pending IRQ clear */
-		if ((!IS_ERR_OR_NULL(desc))&&(desc->irq_data.chip->irq_ack)) {
+		if ((!IS_ERR_OR_NULL(desc)) && (desc->irq_data.chip->irq_ack)) {
 			desc->irq_data.chip->irq_ack(&desc->irq_data);
 			desc->istate &= ~IRQS_PENDING;
 		}
@@ -901,9 +901,8 @@ int decon_enter_hiber(struct decon_device *decon)
 		goto err2;
 
 	decon_hiber_block(decon);
-	if (decon->state != DECON_STATE_ON) {
+	if (decon->state != DECON_STATE_ON)
 		goto err;
-	}
 
 	decon_hiber_trig_reset(decon);
 
@@ -918,13 +917,10 @@ int decon_enter_hiber(struct decon_device *decon)
 		decon->eint_status = 0;
 	}
 
-	decon_to_psr_info(decon, &psr);
 	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr);
-	if (ret < 0) {
-		decon_err("%s, failed to decon_reg_stop\n", __func__);
-		/* call decon instant off */
-		decon_reg_direct_on_off(decon->id, 0);
-	}
+	if (ret < 0)
+		decon_dump(decon);
+
 	decon_reg_clear_int_all(decon->id);
 
 	/* DMA protection disable must be happen on dpp domain is alive */
@@ -940,9 +936,8 @@ int decon_enter_hiber(struct decon_device *decon)
 
 	ret = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
 			DSIM_IOC_ENTER_ULPS, (unsigned long *)1);
-	if (ret) {
+	if (ret)
 		decon_warn("failed to stop %s\n", decon->out_sd[0]->name);
-	}
 
 	if (decon->dt.dsi_mode == DSI_MODE_DUAL_DSI) {
 		ret = v4l2_subdev_call(decon->out_sd[1], core, ioctl,
