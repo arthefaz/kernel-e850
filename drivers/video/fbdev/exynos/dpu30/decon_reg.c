@@ -1840,7 +1840,7 @@ void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
 	}
 }
 
-int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
+int decon_reg_stop_perframe(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
 {
 	int ret = 0;
 	int timeout_value = 0;
@@ -1863,6 +1863,58 @@ int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
 	ret = decon_reg_wait_run_is_off_timeout(id, timeout_value * MSEC);
 
 	decon_dbg("%s -\n", __func__);
+	return ret;
+}
+
+int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
+{
+	int ret = 0;
+	int timeout_value = 0;
+	struct decon_device *decon = get_decon_drvdata(id);
+
+	decon_dbg("%s +\n", __func__);
+
+	if ((psr->psr_mode == DECON_MIPI_COMMAND_MODE) &&
+			(psr->trig_mode == DECON_HW_TRIG)) {
+		decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
+	}
+
+	/* instant stop */
+	decon_reg_direct_on_off(id, 0);
+
+	decon_reg_update_req_global(id);
+
+	/* timeout : 1 / fps + 20% margin */
+	timeout_value = 1000 / decon->lcd_info->fps * 12 / 10 + 5;
+	ret = decon_reg_wait_run_is_off_timeout(id, timeout_value * MSEC);
+
+	decon_dbg("%s -\n", __func__);
+	return ret;
+}
+
+/*
+ * stop sequence should be carefully for stability
+ * try sequecne
+ *	1. perframe off
+ *	2. instant off
+ */
+int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
+{
+	int ret = 0;
+
+	/* call perframe stop */
+	ret = decon_reg_stop_perframe(id, dsi_idx, psr);
+	if (ret < 0) {
+		decon_err("%s, failed to perframe_stop\n", __func__);
+		/* if fails, call decon instant off */
+		ret = decon_reg_stop_inst(id, dsi_idx, psr);
+		if (ret < 0)
+			decon_err("%s, failed to instant_stop\n", __func__);
+	}
+
+	if (!ret)
+		decon_reg_reset(id);
+
 	return ret;
 }
 

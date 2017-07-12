@@ -543,16 +543,10 @@ static int decon_disable(struct decon_device *decon)
 		decon->eint_status = 0;
 	}
 
-	decon_to_psr_info(decon, &psr);
 	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr);
-	if (ret < 0) {
-		decon_err("%s, failed to decon_reg_stop\n", __func__);
-		/* call decon instant off */
-		decon_reg_direct_on_off(decon->id, 0);
-		if (decon->dt.out_type == DECON_OUT_DP) {
-			decon_reg_reset(decon->id);
-		}
-	}
+	if (ret < 0)
+		decon_dump(decon);
+
 	decon_reg_clear_int_all(decon->id);
 
 	/* DMA protection disable must be happen on dpp domain is alive */
@@ -622,15 +616,10 @@ static int decon_dp_disable(struct decon_device *decon)
 
 	decon_to_psr_info(decon, &psr);
 	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr);
-	if (ret < 0) {
-		decon_err("%s, failed to decon_reg_stop\n", __func__);
+	if (ret < 0)
 		decon_dump(decon);
-		/* call decon instant off */
-		decon_reg_direct_on_off(decon->id, 0);
-	}
-	decon_reg_set_int(decon->id, &psr, 0);
 
-	decon_to_psr_info(decon, &psr);
+	decon_reg_set_int(decon->id, &psr, 0);
 	decon_reg_clear_int_all(decon->id);
 
 	/* DMA protection disable must be happen on dpp domain is alive */
