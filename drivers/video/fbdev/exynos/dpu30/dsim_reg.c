@@ -1601,7 +1601,7 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	if (lcd_info->mode == DECON_VIDEO_MODE)
 		dsim_reg_enable_clocklane(id, 0);
 	else
-		dsim_reg_enable_noncont_clock(id, 0);
+		dsim_reg_enable_noncont_clock(id, 1);
 
 	dsim_set_hw_deskew(id, 0); /* second param is to control enable bit */
 
