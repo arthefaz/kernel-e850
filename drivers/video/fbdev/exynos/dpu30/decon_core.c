@@ -1031,11 +1031,6 @@ static int decon_check_limitation(struct decon_device *decon, int idx,
 		return -EINVAL;
 	}
 
-	if (idx == 0 && config->blending != DECON_BLENDING_NONE) {
-		decon_err("blending not allowed on window 0\n");
-		return -EINVAL;
-	}
-
 	if ((config->plane_alpha < 0) || (config->plane_alpha > 0xff)) {
 		decon_err("plane alpha value(%d) is out of range(0~255)\n",
 				config->plane_alpha);
