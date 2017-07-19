@@ -367,13 +367,15 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 	/* TITLE */
 	seq_printf(s, "-------------------DECON%d EVENT LOGGER ----------------------\n",
 			decon->id);
-	seq_printf(s, "-- STATUS: LPD(%s) ",
+	seq_printf(s, "-- STATUS: Hibernation(%s) ",
 			IS_ENABLED(CONFIG_DECON_HIBER) ? "on" : "off");
 	seq_printf(s, "BlockMode(%s) ",
 			IS_ENABLED(CONFIG_DECON_BLOCKING_MODE) ? "on" : "off");
 	seq_printf(s, "Window_Update(%s)\n",
 			IS_ENABLED(CONFIG_FB_WINDOW_UPDATE) ? "on" : "off");
 	seq_printf(s, "-- Total underrun count(%d)\n", dsim->total_underrun_cnt);
+	seq_printf(s, "-- Hibernation enter/exit count(%d %d)\n",
+			decon->hiber.enter_cnt, decon->hiber.exit_cnt);
 	seq_puts(s, "-------------------------------------------------------------\n");
 	seq_printf(s, "%14s  %20s  %20s\n",
 		"Time", "Event ID", "Remarks");

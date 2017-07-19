@@ -881,6 +881,8 @@ struct decon_hiber {
 	atomic_t block_cnt;
 	bool init_status;
 	void __iomem *cam_status;
+	u32 enter_cnt;
+	u32 exit_cnt;
 };
 
 struct decon_win_update {
