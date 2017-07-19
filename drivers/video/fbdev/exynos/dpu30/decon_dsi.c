@@ -875,6 +875,7 @@ int decon_exit_hiber(struct decon_device *decon)
 
 	decon_hiber_trig_reset(decon);
 
+	decon->hiber.exit_cnt++;
 	DPU_EVENT_LOG(DPU_EVT_EXIT_HIBER, &decon->sd, start);
 
 err:
@@ -954,6 +955,7 @@ int decon_enter_hiber(struct decon_device *decon)
 	decon_runtime_suspend(decon->dev);
 #endif
 
+	decon->hiber.enter_cnt++;
 	DPU_EVENT_LOG(DPU_EVT_ENTER_HIBER, &decon->sd, start);
 
 err:
