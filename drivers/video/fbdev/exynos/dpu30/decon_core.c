@@ -1051,6 +1051,14 @@ static int decon_check_limitation(struct decon_device *decon, int idx,
 		return -EINVAL;
 	}
 
+	if ((config->dst.x + config->dst.w > config->dst.f_w) ||
+			(config->dst.y + config->dst.h > config->dst.f_h)) {
+		decon_err("dst coordinate is out of range(%d %d %d %d %d %d)\n",
+				config->dst.x, config->dst.w, config->dst.f_w,
+				config->dst.y, config->dst.h, config->dst.f_h);
+		return -EINVAL;
+	}
+
 	if (config->idma_type < IDMA_G0 || config->idma_type > IDMA_VGF1) {
 		decon_err("idma_type(%d) is wrong\n", config->idma_type);
 		return -EINVAL;
