@@ -197,13 +197,13 @@ int dpu_get_meta_plane_cnt(enum decon_pixel_format format)
 	case DECON_PIXEL_FORMAT_ABGR_2101010:
 	case DECON_PIXEL_FORMAT_RGBA_1010102:
 	case DECON_PIXEL_FORMAT_BGRA_1010102:
-		return 2;
+		return 1;
 
 	case DECON_PIXEL_FORMAT_NV12M_P010:
 	case DECON_PIXEL_FORMAT_NV21M_P010:
 	case DECON_PIXEL_FORMAT_NV12M_S10B:
 	case DECON_PIXEL_FORMAT_NV21M_S10B:
-		return 3;
+		return 2;
 
 	default:
 		decon_err("invalid format(%d)\n", format);
