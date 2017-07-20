@@ -955,17 +955,26 @@ static int dpp_get_clocks(struct dpp_device *dpp)
 }
 
 #if defined(CONFIG_ION_EXYNOS)
+static bool dumped;
 static int dpp_sysmmu_fault_handler(struct iommu_domain *domain,
 	struct device *dev, unsigned long iova, int flags, void *token)
 {
 	struct dpp_device *dpp = dev_get_drvdata(dev);
+	struct decon_device *decon = get_decon_drvdata(0);
+
+	dpp_info("dpp%d sysmmu fault handler\n", dpp->id);
 
 	if (dpp->state == DPP_STATE_ON) {
-		dpp_info("dpp%d sysmmu fault handler\n", dpp->id);
 		dpp_dump(dpp);
-
 		dpp_dump_buffer_data(dpp);
 	}
+
+	if (dumped)
+		return 0;
+
+	decon_dump(decon);
+
+	dumped = true;
 
 	return 0;
 }
