@@ -1378,7 +1378,6 @@ void displayport_reg_set_audio_m_n(audio_sync_mode audio_sync_mode,
 
 void displayport_reg_set_audio_function_enable(u32 en)
 {
-	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, en, SST1_AUDIO_FIFO_FUNC_EN);
 	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, en, SST1_AUDIO_FUNC_EN);
 }
 
