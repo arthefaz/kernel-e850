@@ -1194,7 +1194,14 @@ static int decon_set_dpp_config(struct decon_device *decon,
 
 	for (i = 0; i < decon->dt.max_win; i++) {
 		win = decon->win[i];
-		if (!test_bit(win->dpp_id, &decon->cur_using_dpp))
+		/*
+		 * Although DPP number is set in cur_using_dpp, connected window
+		 * can be disabled. If window related parameter has problem,
+		 * requested window from user will be disabled because of
+		 * error handling code.
+		 */
+		if (!test_bit(win->dpp_id, &decon->cur_using_dpp) ||
+				!(regs->win_regs[i].wincon & WIN_EN_F(i)))
 			continue;
 
 		sd = decon->dpp_sd[win->dpp_id];
