@@ -477,7 +477,6 @@ void displayport_reg_set_interrupt(u32 en)
 #endif
 	displayport_reg_set_interrupt_mask(VSYNC_DET_INT_MASK, val);
 	displayport_reg_set_interrupt_mask(VIDEO_FIFO_UNDER_FLOW_MASK, val);
-	displayport_reg_set_interrupt_mask(AUDIO_FIFO_UNDER_RUN_INT_MASK, val);
 }
 
 u32 displayport_reg_get_interrupt_and_clear(u32 interrupt_status_register)

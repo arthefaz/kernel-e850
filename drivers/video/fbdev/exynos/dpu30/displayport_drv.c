@@ -1422,7 +1422,7 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 	irq_status_reg = displayport_reg_get_interrupt_and_clear(SST1_INTERRUPT_STATUS_SET1);
 
 	if (irq_status_reg & AFIFO_UNDER)
-		displayport_info("AFIFO_UNDER detect\n");
+		displayport_dbg("AFIFO_UNDER detect\n");
 
 	spin_unlock(&displayport->slock);
 
