@@ -1415,10 +1415,10 @@ void displayport_reg_set_audio_ch_mapping(u8 pkt_1, u8 pkt_2, u8 pkt_3, u8 pkt_4
 	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_3, AUD_CH_03_REMAP);
 	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_4, AUD_CH_04_REMAP);
 
-	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_5, AUD_CH_05_REMAP);
-	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_6, AUD_CH_06_REMAP);
-	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_7, AUD_CH_07_REMAP);
-	displayport_write_mask(SST1_AUDIO_CHANNEL_1_4_REMAP, pkt_8, AUD_CH_08_REMAP);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_5_8_REMAP, pkt_5, AUD_CH_05_REMAP);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_5_8_REMAP, pkt_6, AUD_CH_06_REMAP);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_5_8_REMAP, pkt_7, AUD_CH_07_REMAP);
+	displayport_write_mask(SST1_AUDIO_CHANNEL_5_8_REMAP, pkt_8, AUD_CH_08_REMAP);
 
 	displayport_dbg("audio 1~4 channel mapping = 0x%X\n",
 			displayport_read(SST1_AUDIO_CHANNEL_1_4_REMAP));
