@@ -1232,15 +1232,17 @@ void displayport_reg_set_hdr_infoframe(struct infoframe hdr_infoframe, u32 en)
 	u32 hdr_infoframe_data = 0;
 
 	if (en == 1) {
-		for (i = 0; i <= HDR_INFOFRAME_LENGTH; i++) {
+		for (i = 0; i < HDR_INFOFRAME_LENGTH; i++) {
 			for (j = 0; j < DATA_NUM_PER_REG; j++) {
-				hdr_infoframe_data =
+				hdr_infoframe_data |=
 					(u32)hdr_infoframe.data[i]
 					<< ((j % DATA_NUM_PER_REG) * INFOFRAME_DATA_SIZE);
 
+				if (j < DATA_NUM_PER_REG - 1)
+					i++;
+
 				if (i >= HDR_INFOFRAME_LENGTH)
 					break;
-				i++;
 			}
 
 			displayport_write(SST1_HDR_PACKET_DATA_SET_0 +
@@ -1249,6 +1251,13 @@ void displayport_reg_set_hdr_infoframe(struct infoframe hdr_infoframe, u32 en)
 
 			hdr_infoframe_data = 0;
 		}
+	}
+
+	for (i = 0; i <= SST1_HDR_PACKET_DATA_SET_7 - SST1_HDR_PACKET_DATA_SET_0;
+		i += DATA_NUM_PER_REG) {
+		displayport_dbg("SST1_HDR_PACKET_DATA_SET_%d = 0x%x",
+			i / DATA_NUM_PER_REG,
+			displayport_read(SST1_HDR_PACKET_DATA_SET_0 + i));
 	}
 
 	displayport_write_mask(SST1_INFOFRAME_UPDATE_CONTROL, en, HDR_INFO_UPDATE);
