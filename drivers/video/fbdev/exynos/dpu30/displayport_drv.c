@@ -29,6 +29,7 @@
 #include <linux/regulator/consumer.h>
 #include <media/v4l2-dv-timings.h>
 #include <soc/samsung/exynos-powermode.h>
+#include <sound/samsung/dp_ado.h>
 
 #include "../../../drivers/phy/phy-exynos-usbdrd.h"
 #include "displayport.h"
@@ -803,9 +804,9 @@ static void displayport_set_switch_state(struct displayport_device *displayport,
 #if defined(CONFIG_EXTCON)
 	if (state) {
 		extcon_set_state_sync(displayport->extcon_displayport, EXTCON_DISP_DP, 1);
-		//extcon_set_state_sync(displayport->audio_switch, edid_audio_informs(), 0);
+		dp_ado_switch_set_state(edid_audio_informs());
 	} else {
-		//extcon_set_state_sync(displayport->audio_switch, -1, 0);
+		dp_ado_switch_set_state(-1);
 		extcon_set_state_sync(displayport->extcon_displayport, EXTCON_DISP_DP, 0);
 	}
 #else
