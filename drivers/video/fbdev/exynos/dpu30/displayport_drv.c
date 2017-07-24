@@ -1491,7 +1491,7 @@ static int displayport_make_hdr_infoframe_data
 	for (i = 0; i < HDR_INFOFRAME_LENGTH; i++)
 		hdr_infoframe->data[i] = 0x00;
 
-	hdr_infoframe->data[HDR_INFOFRAME_EOTF_BYTE_NUM] = SMPTE_ST_2084;
+	hdr_infoframe->data[HDR_INFOFRAME_EOTF_BYTE_NUM] = HDR_INFOFRAME_SMPTE_ST_2084;
 	hdr_infoframe->data[HDR_INFOFRAME_METADATA_ID_BYTE_NUM]
 		= STATIC_MATADATA_TYPE_1;
 	hdr_infoframe->data[HDR_INFOFRAME_DISP_PRI_X_0_LSB]
@@ -1543,6 +1543,11 @@ static int displayport_make_hdr_infoframe_data
 	hdr_infoframe->data[HDR_INFOFRAME_MAX_AVERAGE_LEVEL_MSB]
 		= (hdr_info->stype1.mmax_frame_average_light_level & MSB_MASK) >> SHIFT_8BIT;
 
+	for (i = 0; i < HDR_INFOFRAME_LENGTH; i++) {
+		displayport_dbg("hdr_infoframe->data[%d] = 0x%02x", i,
+			hdr_infoframe->data[i]);
+	}
+
 	return 0;
 }
 
@@ -1571,10 +1576,13 @@ static int displayport_set_hdr_infoframe(struct exynos_hdr_static_info *hdr_info
 	struct infoframe hdr_infoframe;
 
 	if (hdr_info->mid >= 0) {
+		displayport_dbg("displayport_set_hdr_infoframe 1\n");
 		displayport_make_hdr_infoframe_data(&hdr_infoframe, hdr_info);
 		displayport_reg_set_hdr_infoframe(hdr_infoframe, 1);
-	} else
+	} else {
+		displayport_dbg("displayport_set_hdr_infoframe 0\n");
 		displayport_reg_set_hdr_infoframe(hdr_infoframe, 0);
+	}
 
 	return 0;
 }
