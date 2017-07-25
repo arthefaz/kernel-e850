@@ -798,8 +798,11 @@ int decon_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	int ret;
 	struct decon_win *win = info->par;
 	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
-
+#if defined(CONFIG_FB_TEST)
+	ret = dma_buf_mmap(win->fb_buf_data.dma_buf, vma, 0);
+#else
 	ret = dma_buf_mmap(win->dma_buf_data[0].dma_buf, vma, 0);
+#endif
 
 	return ret;
 #else

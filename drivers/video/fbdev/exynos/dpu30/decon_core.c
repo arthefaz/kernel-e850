@@ -2528,6 +2528,69 @@ err_share_dma_buf:
 #endif
 }
 
+#if defined(CONFIG_FB_TEST)
+static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
+{
+	struct fb_info *fbi = decon->win[decon->dt.dft_win]->fbinfo;
+	struct decon_win *win = decon->win[decon->dt.dft_win];
+	dma_addr_t map_dma;
+	struct ion_handle *handle;
+	struct dma_buf *buf;
+	struct dpp_device *dpp;
+	void *vaddr;
+	unsigned int ret;
+
+	decon_dbg("%s +\n", __func__);
+	dev_info(decon->dev, "allocating memory for fb test\n");
+
+	size = PAGE_ALIGN(size);
+	fbi->fix.smem_len = size;
+
+	dev_info(decon->dev, "want %u bytes for window[%d]\n", size, win->idx);
+
+	handle = ion_alloc(decon->ion_client, (size_t)size, 0,
+					EXYNOS_ION_HEAP_SYSTEM_MASK, 0);
+	if (IS_ERR(handle)) {
+		dev_err(decon->dev, "failed to ion_alloc\n");
+		return -ENOMEM;
+	}
+
+	buf = ion_share_dma_buf(decon->ion_client, handle);
+	if (IS_ERR_OR_NULL(buf)) {
+		dev_err(decon->dev, "ion_share_dma_buf() failed\n");
+		goto err_share_dma_buf;
+	}
+
+	vaddr = ion_map_kernel(decon->ion_client, handle);
+
+	memset(vaddr, 0x00, size);
+
+	fbi->screen_base = vaddr;
+
+	dpp = v4l2_get_subdevdata(decon->dpp_sd[decon->dt.dft_idma]);
+	ret = decon_map_ion_handle(decon, dpp->dev,
+			&win->fb_buf_data, handle, buf, win->idx);
+	if (!ret)
+		goto err_map;
+	map_dma = win->fb_buf_data.dma_addr;
+
+	dev_info(decon->dev, "alloated memory\n");
+	fbi->fix.smem_start = map_dma;
+
+	dev_info(decon->dev, "fb start addr = 0x%x\n", (u32)fbi->fix.smem_start);
+
+	decon_dbg("%s -\n", __func__);
+
+	return 0;
+
+err_map:
+	dma_buf_put(buf);
+err_share_dma_buf:
+	ion_free(decon->ion_client, handle);
+	return -ENOMEM;
+}
+#endif
+
 static int decon_acquire_window(struct decon_device *decon, int idx)
 {
 	struct decon_win *win;
@@ -2571,9 +2634,17 @@ static int decon_acquire_window(struct decon_device *decon, int idx)
 			&& (idx == decon->dt.dft_win)) {
 		ret = decon_fb_alloc_memory(decon, win);
 		if (ret) {
-			dev_err(decon->dev, "failed to allocate display memory\n");
+			dev_err(decon->dev, "failed to alloc display memory\n");
 			return ret;
 		}
+#if defined(CONFIG_FB_TEST)
+		ret = decon_fb_test_alloc_memory(decon,
+				win->fbinfo->fix.smem_len);
+		if (ret) {
+			dev_err(decon->dev, "failed to alloc test fb memory\n");
+			return ret;
+		}
+#endif
 	}
 
 	fbinfo->fix.type	= FB_TYPE_PACKED_PIXELS;
