@@ -414,6 +414,75 @@ void decon_create_timeline(struct decon_device *decon, char *name)
 #endif
 }
 
+int decon_get_valid_fd(void)
+{
+	int fd = 0;
+	int fd_idx = 0;
+	int unused_fd[FD_TRY_CNT] = {0};
+
+	fd = get_unused_fd_flags(O_CLOEXEC);
+	if (fd < 0)
+		return -EINVAL;
+
+	if (fd < VALID_FD_VAL) {
+		/*
+		 * If fd from get_unused_fd() has value between 0 and 2,
+		 * fd is tried to get value again except current fd vlaue.
+		 */
+		while (fd < VALID_FD_VAL) {
+			unused_fd[fd_idx++] = fd;
+			fd = get_unused_fd_flags(O_CLOEXEC);
+			if (fd < 0) {
+				decon_warn("unvalid fd[%d]\n", fd);
+				break;
+			}
+		}
+
+		while (--fd_idx > 0)
+			put_unused_fd(unused_fd[fd_idx]);
+
+		if (fd < 0)
+			return -EINVAL;
+	}
+	return fd;
+}
+
+#if defined(CONFIG_DPU_2_0_RELEASE_FENCES)
+void decon_create_release_fences(struct decon_device *decon,
+		struct decon_win_config_data *win_data,
+		struct sync_file *sync_file)
+{
+	int i = 0;
+
+	for (i = 0; i < MAX_DECON_WIN; i++) {
+		int state = win_data->config[i].state;
+		int rel_fence = -1;
+
+		if (state == DECON_WIN_STATE_BUFFER) {
+			rel_fence = decon_get_valid_fd();
+			if (rel_fence < 0) {
+				decon_err("%s: failed to get unused fd\n",
+						__func__);
+				goto err;
+			}
+
+			fd_install(rel_fence,
+					get_file(sync_file->file));
+		}
+		win_data->config[i].rel_fence = rel_fence;
+	}
+	return;
+err:
+	while (--i > 0) {
+		if (win_data->config[i].state == DECON_WIN_STATE_BUFFER) {
+			put_unused_fd(win_data->config[i].rel_fence);
+			win_data->config[i].rel_fence = -1;
+		}
+	}
+	return;
+}
+#endif
+
 int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file)
 {
 	struct sync_pt *pt;
@@ -433,7 +502,7 @@ int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file)
 		goto err;
 	}
 
-	fd = get_unused_fd_flags(0);
+	fd = decon_get_valid_fd();
 	if (fd < 0) {
 		decon_err("%s: failed to get unused fd\n", __func__);
 		fput((*sync_file)->file);

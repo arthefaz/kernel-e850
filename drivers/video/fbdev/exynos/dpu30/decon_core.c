@@ -1877,7 +1877,6 @@ static int decon_set_win_config(struct decon_device *decon,
 	struct decon_reg_data *regs;
 	struct sync_file *sync_file;
 	int ret = 0;
-
 	decon_dbg("%s +\n", __func__);
 
 	mutex_lock(&decon->lock);
@@ -1913,8 +1912,12 @@ static int decon_set_win_config(struct decon_device *decon,
 	if (ret)
 		goto err_prepare;
 
-	if (num_of_window)
+	if (num_of_window) {
 		fd_install(win_data->retire_fence, sync_file->file);
+#if defined(CONFIG_DPU_2_0_RELEASE_FENCES)
+		decon_create_release_fences(decon, win_data, sync_file);
+#endif
+	}
 
 	decon_hiber_block(decon);
 
@@ -2043,6 +2046,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		break;
 
 	case S3CFB_WIN_CONFIG:
+		argp = (struct decon_win_config_data __user *)arg;
 		DPU_EVENT_LOG(DPU_EVT_WIN_CONFIG, &decon->sd, ktime_set(0, 0));
 		if (copy_from_user(&win_data,
 				   (struct decon_win_config_data __user *)arg,
@@ -2055,13 +2059,20 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		if (ret)
 			break;
 
+#if defined(CONFIG_DPU_2_0_RELEASE_FENCES)
+		if (copy_to_user((void __user *)arg, &win_data, _IOC_SIZE(cmd))) {
+			ret = -EFAULT;
+			break;
+		}
+		break;
+#else
 		if (copy_to_user(&((struct decon_win_config_data __user *)arg)->retire_fence,
 				 &win_data.retire_fence, sizeof(int))) {
 			ret = -EFAULT;
 			break;
 		}
 		break;
-
+#endif
 	case S3CFB_GET_HDR_CAPABILITIES:
 		ret = decon_get_hdr_capa(decon, &hdr_capa);
 		if (ret)
@@ -2096,7 +2107,17 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 
-		decon->hwc_ver = disp_info.ver;
+		if ((decon->ver == HWC_INIT) ||
+				(decon->ver != disp_info.ver)) {
+			decon->ver = disp_info.ver;
+			if (decon->ver == HWC_2_0) {
+				decon->timeline_max = 0;
+				decon_info("decon is setting by HWC%d.0\n",
+						decon->ver);
+			} else {
+				decon->timeline_max = 1;
+			}
+		}
 		disp_info.psr_mode = decon->dt.psr_mode;
 		disp_info.chip_ver = CHIP_VER;
 		disp_info.mres_info = *mres_info;
