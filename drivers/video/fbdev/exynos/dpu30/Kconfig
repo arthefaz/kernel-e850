@@ -82,6 +82,10 @@ config DSIM_CMD_TEST
         depends on EXYNOS_DECON_9810
         default n
 
+config DPU_2_0_RELEASE_FENCES
+	bool "Release fence FD is created per each enable window"
+        depends on EXYNOS_DECON_9810
+        default n
 endif
 
 source "drivers/video/fbdev/exynos/dpu_9810/panels/Kconfig"
