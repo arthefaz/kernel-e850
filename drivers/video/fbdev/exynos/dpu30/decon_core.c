@@ -2654,6 +2654,7 @@ static int decon_acquire_window(struct decon_device *decon, int idx)
 	fbinfo->var.bits_per_pixel = DEFAULT_BPP;
 	fbinfo->var.width	= lcd_info->xres;
 	fbinfo->var.height	= lcd_info->yres;
+	fbinfo->var.yres_virtual = lcd_info->yres * 2;
 	fbinfo->fbops		= &decon_fb_ops;
 	fbinfo->flags		= FBINFO_FLAG_DEFAULT;
 	fbinfo->pseudo_palette  = &win->pseudo_palette;

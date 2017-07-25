@@ -759,16 +759,16 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	}
 
 	config.dpp_parm.addr[0] = info->fix.smem_start;
-	config.src.x =  var->xoffset >> shift;
+	config.src.x =  var->xoffset;
 	config.src.y =  var->yoffset;
 	config.src.w = var->xres;
 	config.src.h = var->yres;
-	config.src.f_w = var->xres;
-	config.src.f_h = var->yres;
+	config.src.f_w = var->xres_virtual;
+	config.src.f_h = var->yres_virtual;
 	config.dst.w = config.src.w;
 	config.dst.h = config.src.h;
-	config.dst.f_w = config.src.f_w;
-	config.dst.f_h = config.src.f_h;
+	config.dst.f_w = var->xres;
+	config.dst.f_h = var->yres;
 	sd = decon->dpp_sd[decon->dt.dft_idma];
 
 	if (v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG, &config)) {
