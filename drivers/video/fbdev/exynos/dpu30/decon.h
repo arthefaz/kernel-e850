@@ -818,6 +818,9 @@ struct decon_win {
 
 	struct fb_videomode videomode;
 	struct decon_dma_buf_data dma_buf_data[MAX_PLANE_CNT];
+#if defined(CONFIG_FB_TEST)
+	struct decon_dma_buf_data fb_buf_data;
+#endif
 	int plane_cnt;
 
 	int idx;

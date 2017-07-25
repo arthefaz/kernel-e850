@@ -72,6 +72,11 @@ config DPU_2_0_FENCE
         depends on EXYNOS_DECON_9810
         default n
 
+config FB_TEST
+	bool "FB test only"
+        depends on EXYNOS_DECON_9810
+        default n
+
 endif
 
 source "drivers/video/fbdev/exynos/dpu_9810/panels/Kconfig"
