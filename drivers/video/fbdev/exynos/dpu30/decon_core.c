@@ -2652,14 +2652,14 @@ static int decon_acquire_window(struct decon_device *decon, int idx)
 	fbinfo->var.activate	= FB_ACTIVATE_NOW;
 	fbinfo->var.vmode	= FB_VMODE_NONINTERLACED;
 	fbinfo->var.bits_per_pixel = DEFAULT_BPP;
-	fbinfo->var.width	= lcd_info->xres;
-	fbinfo->var.height	= lcd_info->yres;
+	fbinfo->var.width	= lcd_info->width;
+	fbinfo->var.height	= lcd_info->height;
 	fbinfo->var.yres_virtual = lcd_info->yres * 2;
 	fbinfo->fbops		= &decon_fb_ops;
 	fbinfo->flags		= FBINFO_FLAG_DEFAULT;
 	fbinfo->pseudo_palette  = &win->pseudo_palette;
 	/* 'divide by 8' means converting bit to byte number */
-	fbinfo->fix.line_length = fbinfo->var.width * fbinfo->var.bits_per_pixel / 8;
+	fbinfo->fix.line_length = fbinfo->var.xres * fbinfo->var.bits_per_pixel / 8;
 	fbinfo->fix.ypanstep = 1;
 	decon_info("default_win %d win_idx %d xres %d yres %d\n",
 			decon->dt.dft_win, idx,
