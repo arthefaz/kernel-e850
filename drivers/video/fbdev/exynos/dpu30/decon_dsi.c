@@ -737,6 +737,15 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 		return 0;
 	}
 
+	/*
+	 * info->var is old parameters and var is new requested parameters.
+	 * var must be copied to info->var before decon_set_par function
+	 * is called.
+	 *
+	 * If not, old parameters are set to window configuration
+	 * and new parameters are set to DMA and DPP configuration.
+	 */
+	memcpy(&info->var, var, sizeof(struct fb_var_screeninfo));
 	decon_set_par(info);
 
 	decon_hiber_block_exit(decon);
