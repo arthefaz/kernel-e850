@@ -782,14 +782,17 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 
 	if (v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG, &config)) {
 		decon_err("%s: Failed to config DPP-%d\n", __func__, win->dpp_id);
-		clear_bit(win->dpp_id, &decon->cur_using_dpp);
-		set_bit(win->dpp_id, &decon->dpp_err_stat);
+		decon_reg_set_win_enable(decon->id, decon->dt.dft_win, false);
+		clear_bit(decon->dt.dft_idma, &decon->cur_using_dpp);
+		set_bit(decon->dt.dft_idma, &decon->dpp_err_stat);
+		goto err;
 	}
 
 	decon_reg_update_req_window(decon->id, win->idx);
 
 	decon_to_psr_info(decon, &psr);
 	decon_reg_start(decon->id, &psr);
+err:
 	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 
 	if (decon_reg_wait_update_done_and_mask(decon->id, &psr, SHADOW_UPDATE_TIMEOUT)
