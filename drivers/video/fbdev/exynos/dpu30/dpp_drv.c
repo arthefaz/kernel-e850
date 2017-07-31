@@ -363,6 +363,11 @@ static int dpp_check_size(struct dpp_device *dpp, struct dpp_img_format *vi)
 		goto err;
 	}
 
+	if (src->x + src->w > src->f_w || src->y + src->h > src->f_h) {
+		dpp_err("Unsupported src range!\n");
+		goto err;
+	}
+
 	if (src->x < 0 || src->y < 0 ||
 		dst->x < 0 || dst->y < 0) {
 		dpp_err("Unsupported src/dst x,y position!\n");
