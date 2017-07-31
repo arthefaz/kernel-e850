@@ -1082,6 +1082,8 @@ static inline void sysreg_write_mask(u32 id, u32 reg_id, u32 val, u32 mask)
 bool decon_validate_x_alignment(struct decon_device *decon, int x, u32 w,
 		u32 bits_per_pixel);
 int decon_wait_for_vsync(struct decon_device *decon, u32 timeout);
+int decon_check_limitation(struct decon_device *decon, int idx,
+		struct decon_win_config *config);
 
 /* DECON to DSI interface functions */
 int decon_register_irq(struct decon_device *decon);

@@ -1018,7 +1018,7 @@ fail:
 #endif
 }
 
-static int decon_check_limitation(struct decon_device *decon, int idx,
+int decon_check_limitation(struct decon_device *decon, int idx,
 		struct decon_win_config *config)
 {
 	if (config->format >= DECON_PIXEL_FORMAT_MAX) {
