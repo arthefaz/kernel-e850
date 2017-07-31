@@ -726,7 +726,6 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	struct v4l2_subdev *sd = NULL;
 	struct decon_win_config config;
 	int ret = 0;
-	int shift = 0;
 	struct decon_mode_info psr;
 
 	if ((decon->dt.out_type == DECON_OUT_DSI &&
@@ -736,6 +735,42 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 				__func__, decon->id, decon->state);
 		return 0;
 	}
+
+	decon_dbg("%s: [%d %d %d %d %d %d]\n", __func__,
+			var->xoffset, var->yoffset,
+			var->xres, var->yres,
+			var->xres_virtual, var->yres_virtual);
+
+	memset(&config, 0, sizeof(struct decon_win_config));
+	switch (var->bits_per_pixel) {
+	case 16:
+		config.format = DECON_PIXEL_FORMAT_RGB_565;
+		break;
+	case 24:
+	case 32:
+		config.format = DECON_PIXEL_FORMAT_BGRA_8888;
+		break;
+	default:
+		decon_err("%s: Not supported bpp %d\n", __func__,
+				var->bits_per_pixel);
+		return -EINVAL;
+	}
+
+	config.dpp_parm.addr[0] = info->fix.smem_start;
+	config.src.x =  var->xoffset;
+	config.src.y =  var->yoffset;
+	config.src.w = var->xres;
+	config.src.h = var->yres;
+	config.src.f_w = var->xres_virtual;
+	config.src.f_h = var->yres_virtual;
+	config.dst.w = config.src.w;
+	config.dst.h = config.src.h;
+	config.dst.f_w = decon->lcd_info->xres;
+	config.dst.f_h = decon->lcd_info->yres;
+	if (decon_check_limitation(decon, decon->dt.dft_win, &config) < 0)
+		return -EINVAL;
+
+	decon_hiber_block_exit(decon);
 
 	/*
 	 * info->var is old parameters and var is new requested parameters.
@@ -748,38 +783,9 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	memcpy(&info->var, var, sizeof(struct fb_var_screeninfo));
 	decon_set_par(info);
 
-	decon_hiber_block_exit(decon);
-
 	set_bit(decon->dt.dft_idma, &decon->cur_using_dpp);
 	set_bit(decon->dt.dft_idma, &decon->prev_used_dpp);
-	memset(&config, 0, sizeof(struct decon_win_config));
-	switch (var->bits_per_pixel) {
-	case 16:
-		config.format = DECON_PIXEL_FORMAT_RGB_565;
-		shift = 2;
-		break;
-	case 24:
-	case 32:
-		config.format = DECON_PIXEL_FORMAT_BGRA_8888;
-		shift = 4;
-		break;
-	default:
-		decon_err("%s: bits_per_pixel %d\n", __func__, var->bits_per_pixel);
-	}
-
-	config.dpp_parm.addr[0] = info->fix.smem_start;
-	config.src.x =  var->xoffset;
-	config.src.y =  var->yoffset;
-	config.src.w = var->xres;
-	config.src.h = var->yres;
-	config.src.f_w = var->xres_virtual;
-	config.src.f_h = var->yres_virtual;
-	config.dst.w = config.src.w;
-	config.dst.h = config.src.h;
-	config.dst.f_w = var->xres;
-	config.dst.f_h = var->yres;
 	sd = decon->dpp_sd[decon->dt.dft_idma];
-
 	if (v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG, &config)) {
 		decon_err("%s: Failed to config DPP-%d\n", __func__, win->dpp_id);
 		decon_reg_set_win_enable(decon->id, decon->dt.dft_win, false);
