@@ -27,8 +27,7 @@ static const unsigned char SEQ_DISPLAY_ON[] = {
 };
 
 static const unsigned char SEQ_DISPLAY_OFF[] = {
-	0x28,
-	0x00, 0x00
+	0x28
 };
 
 static const unsigned char SEQ_SLEEP_IN[] = {
@@ -44,6 +43,31 @@ static const unsigned char CA_SET_600[] = {
 static const unsigned char PA_SET_1280[] = {
 	0x2b,
 	0x0, 0x0, 0x4, 0xff
+};
+
+static const unsigned char SEQ_ESD_FG[] = {
+	0xED,
+	0x01, 0x04
+};
+
+static const unsigned char SEQ_ALLPOFF[] = {
+	0x22
+};
+
+static const unsigned char SEQ_ALLPON[] = {
+	0x23
+};
+
+static const unsigned char SEQ_NOP[] = {
+	0x00,
+};
+
+static const unsigned char SEQ_TEST_KEY_OFF_F0[] = {
+	0xF0, 0xA5, 0xA5
+};
+
+static const unsigned char SEQ_TEST_KEY_OFF_F1[] = {
+	0xF1, 0xA5, 0xA5
 };
 
 #endif /* __EMUL_DISP_PARAM_H__ */

@@ -120,6 +120,10 @@ static const unsigned char SEQ_TEST_KEY_OFF_F0[] = {
 	0xA5, 0xA5
 };
 
+static const unsigned char SEQ_TEST_KEY_OFF_F1[] = {
+	0xF1, 0xA5, 0xA5
+};
+
 static const unsigned char SEQ_DISPLAY_ON[] = {
 	0x29,
 };
@@ -127,6 +131,27 @@ static const unsigned char SEQ_DISPLAY_ON[] = {
 static const unsigned char SEQ_TE_ON[] = {
 	0x35,
 	0x00
+};
+
+static const unsigned char SEQ_ESD_FG[] = {
+	0xED,
+	0x01, 0x04
+};
+
+static const unsigned char SEQ_ALLPOFF[] = {
+	0x22
+};
+
+static const unsigned char SEQ_ALLPON[] = {
+	0x23
+};
+
+static const unsigned char SEQ_NOP[] = {
+	0x00,
+};
+
+static const unsigned char SEQ_DISPLAY_OFF[] = {
+	0x28
 };
 
 #endif /* __S6E3HA0K_PARAM_H__ */

@@ -848,6 +848,9 @@ struct decon_debug {
 	struct dentry *debug_dump;
 	struct dentry *debug_bts;
 	struct dentry *debug_win;
+#if defined(CONFIG_DSIM_CMD_TEST)
+	struct dentry *debug_cmd;
+#endif
 	struct dpu_log event_log[DPU_EVENT_LOG_MAX];
 	atomic_t event_log_idx;
 	dpu_log_level_t event_log_level;

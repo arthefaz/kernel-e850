@@ -77,6 +77,11 @@ config FB_TEST
         depends on EXYNOS_DECON_9810
         default n
 
+config DSIM_CMD_TEST
+	bool "DSIM command test only"
+        depends on EXYNOS_DECON_9810
+        default n
+
 endif
 
 source "drivers/video/fbdev/exynos/dpu_9810/panels/Kconfig"

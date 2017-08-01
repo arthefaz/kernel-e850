@@ -680,6 +680,107 @@ static const struct file_operations decon_win_fops = {
 	.release = seq_release,
 };
 
+#if defined(CONFIG_DSIM_CMD_TEST)
+static int decon_debug_cmd_show(struct seq_file *s, void *unused)
+{
+	return 0;
+}
+
+static int decon_debug_cmd_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, decon_debug_cmd_show, inode->i_private);
+}
+
+static ssize_t decon_debug_cmd_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *f_ops)
+{
+	char *buf_data;
+	int ret;
+	unsigned int cmd;
+	struct dsim_device *dsim;
+	u32 id, d1;
+	unsigned long d0;
+
+	buf_data = kmalloc(count, GFP_KERNEL);
+	if (buf_data == NULL)
+		return count;
+
+	ret = copy_from_user(buf_data, buf, count);
+	if (ret < 0)
+		goto out;
+
+	ret = sscanf(buf_data, "%u", &cmd);
+	if (ret < 0)
+		goto out;
+
+	dsim = get_dsim_drvdata(0);
+
+	switch (cmd) {
+	case 1:
+		id = MIPI_DSI_DCS_SHORT_WRITE;
+		d0 = (unsigned long)SEQ_DISPLAY_ON[0];
+		d1 = 0;
+		break;
+	case 2:
+		id = MIPI_DSI_DCS_SHORT_WRITE;
+		d0 = (unsigned long)SEQ_DISPLAY_OFF[0];
+		d1 = 0;
+		break;
+	case 3:
+		id = MIPI_DSI_DCS_SHORT_WRITE;
+		d0 = (unsigned long)SEQ_ALLPOFF[0];
+		d1 = 0;
+		break;
+	case 4:
+		id = MIPI_DSI_DCS_SHORT_WRITE;
+		d0 = (unsigned long)SEQ_ALLPON[0];
+		d1 = 0;
+		break;
+	case 5:
+		id = MIPI_DSI_DCS_LONG_WRITE;
+		d0 = (unsigned long)SEQ_ESD_FG;
+		d1 = ARRAY_SIZE(SEQ_ESD_FG);
+		break;
+	case 6:
+		id = MIPI_DSI_DCS_LONG_WRITE;
+		d0 = (unsigned long)SEQ_TEST_KEY_OFF_F0;
+		d1 = ARRAY_SIZE(SEQ_TEST_KEY_OFF_F0);
+		break;
+	case 7:
+		id = MIPI_DSI_DCS_LONG_WRITE;
+		d0 = (unsigned long)SEQ_TEST_KEY_OFF_F1;
+		d1 = ARRAY_SIZE(SEQ_TEST_KEY_OFF_F1);
+		break;
+	default:
+		dsim_info("unsupported command(%d)\n", cmd);
+		goto out;
+	}
+
+	ret = dsim_write_data(dsim, id, d0, d1);
+	if (ret < 0) {
+		decon_err("failed to write DSIM command(0x%lx)\n",
+				(id == MIPI_DSI_DCS_LONG_WRITE) ?
+				*(u8 *)(d0) : d0);
+		goto out;
+	}
+
+	decon_info("success to write DSIM command(0x%lx, %d)\n",
+			(id == MIPI_DSI_DCS_LONG_WRITE) ?
+			*(u8 *)(d0) : d0, d1);
+out:
+	kfree(buf_data);
+	return count;
+}
+
+static const struct file_operations decon_cmd_fops = {
+	.open = decon_debug_cmd_open,
+	.write = decon_debug_cmd_write,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+#endif
+
 int decon_create_debugfs(struct decon_device *decon)
 {
 	char name[MAX_NAME_SIZE];
@@ -731,6 +832,15 @@ int decon_create_debugfs(struct decon_device *decon)
 			ret = -ENOENT;
 			goto err_debugfs;
 		}
+#if defined(CONFIG_DSIM_CMD_TEST)
+		decon->d.debug_cmd = debugfs_create_file("cmd", 0444,
+				decon->d.debug_root, NULL, &decon_cmd_fops);
+		if (!decon->d.debug_cmd) {
+			decon_err("failed to create cmd_rw file\n");
+			ret = -ENOENT;
+			goto err_debugfs;
+		}
+#endif
 	}
 
 	return 0;
