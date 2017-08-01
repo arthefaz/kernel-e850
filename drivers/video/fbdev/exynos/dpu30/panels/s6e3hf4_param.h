@@ -398,4 +398,21 @@ static const unsigned char SEQ_WQXGA_PARTIAL_UPDATE[] = {
 	0x00, 0x00, 0x05, 0x9F,
 };
 
+static const unsigned char SEQ_ESD_FG[] = {
+	0xED,
+	0x01, 0x04
+};
+
+static const unsigned char SEQ_ALLPOFF[] = {
+	0x22
+};
+
+static const unsigned char SEQ_ALLPON[] = {
+	0x23
+};
+
+static const unsigned char SEQ_NOP[] = {
+	0x00,
+};
+
 #endif /* __S6E3HF4_PARAM_H__ */

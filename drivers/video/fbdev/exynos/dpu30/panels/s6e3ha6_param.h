@@ -88,12 +88,38 @@ static const unsigned char SEQ_TEST_KEY_OFF_F0[] = {
 	0xF0, 0xA5, 0xA5
 };
 
+static const unsigned char SEQ_TEST_KEY_OFF_F1[] = {
+	0xF1, 0xA5, 0xA5
+};
+
 static const unsigned char SEQ_DISPLAY_ON[] = {
 	0x29
+};
+
+static const unsigned char SEQ_DISPLAY_OFF[] = {
+	0x28
 };
 
 static const unsigned char SEQ_TSET_GLOBAL[] = {
 	0xB0,
 	0x01
 };
+
+static const unsigned char SEQ_ESD_FG[] = {
+	0xED,
+	0x01, 0x04
+};
+
+static const unsigned char SEQ_ALLPOFF[] = {
+	0x22
+};
+
+static const unsigned char SEQ_ALLPON[] = {
+	0x23
+};
+
+static const unsigned char SEQ_NOP[] = {
+	0x00,
+};
+
 #endif /* __S6E3HA6_PARAM_H__ */
