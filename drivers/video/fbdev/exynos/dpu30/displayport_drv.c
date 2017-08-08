@@ -40,7 +40,7 @@
 #define PIXELCLK_1080P30HZ 74250000 /* FHD 30Hz */
 
 #define HDCP_SUPPORT
-/*#define HDCP_2_2*/
+#define HDCP_2_2
 
 int displayport_log_level = 6;
 static u8 max_lane_cnt;
