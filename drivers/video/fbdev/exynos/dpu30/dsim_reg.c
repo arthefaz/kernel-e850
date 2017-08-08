@@ -28,8 +28,8 @@
 #define TE_TIMEOUT_TIME			180 /* 18ms */
 
 u32 DSIM_PHY_PLL_CTRL_VAL[] = {
-	0x00000000,
-	0x00000000,
+	0x00000088,
+	0x00000088,
 	0x000000A1,
 	0x00000027,
 	0x00000062,
@@ -40,7 +40,7 @@ u32 DSIM_PHY_PLL_CTRL_VAL[] = {
 	0x00000000,
 	0x00000000,
 	0x00000000,
-	0x00000000,
+	0x000000e0,
 	0x00000000,
 	0x00000000,
 	0x00000000,
@@ -52,7 +52,7 @@ u32 DSIM_PHY_BIAS_VAL[] = {
 	0x00000005,
 	0x00000000,
 	0x00000068,
-	0x0000006C,
+	0x0000004C,
 };
 
 u32 DSIM_PHY_DTB_VAL[] = {
@@ -65,14 +65,14 @@ u32 DSIM_PHY_DTB_VAL[] = {
 };
 
 u32 DSIM_PHY_ACTRL_MC_VAL[] = {
-	0x000000BC,
+	0x00000088,
 	0x00000000,
 	0x00000020,
 	0x00000000,
 };
 
 u32 DSIM_PHY_ACTRL_MD0_VAL[] = {
-	0x000000BC,
+	0x00000088,
 	0x00000000,
 	0x00000020,
 	0x00000000,
@@ -81,19 +81,19 @@ u32 DSIM_PHY_ACTRL_MD0_VAL[] = {
 };
 
 u32 DSIM_PHY_ACTRL_MD1_VAL[] = {
-	0x000000BC,
+	0x00000088,
 	0x00000000,
 	0x00000020,
 };
 
 u32 DSIM_PHY_ACTRL_MD2_VAL[] = {
-	0x000000BC,
+	0x00000088,
 	0x00000000,
 	0x00000020,
 };
 
 u32 DSIM_PHY_ACTRL_MD3_VAL[] = {
-	0x000000BC,
+	0x00000088,
 	0x00000000,
 	0x00000020,
 };
@@ -470,7 +470,10 @@ void dsim_reg_set_dphy_timing_values(u32 id,
 	mask = DSIM_PHY_ULPS_EXIT_CNT_9_8_MASK | DSIM_PHY_HS_MODE_SEL;
 	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MC_05, val, mask);
 
-	/* skew cal implementation later */
+	/* skew cal implementation : disable */
+	val = 0;
+	mask = DSIM_PHY_SKEWCAL_EN;
+	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MC_06, val, mask);
 
 	val = DSIM_PHY_TLPXCTRL(t->lpx);
 	mask = DSIM_PHY_TLPXCTRL_MASK;
