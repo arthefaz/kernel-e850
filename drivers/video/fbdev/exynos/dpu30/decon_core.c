@@ -3184,8 +3184,14 @@ static int decon_remove(struct platform_device *pdev)
 static void decon_shutdown(struct platform_device *pdev)
 {
 	struct decon_device *decon = platform_get_drvdata(pdev);
+	struct fb_info *fbinfo = decon->win[decon->dt.dft_win]->fbinfo;
 
 	decon_enter_shutdown(decon);
+
+	if (!lock_fb_info(fbinfo)) {
+		decon_warn("%s: fblock is failed\n", __func__);
+		return;
+	}
 
 	decon_info("%s + state:%d\n", __func__, decon->state);
 	DPU_EVENT_LOG(DPU_EVT_DECON_SHUTDOWN, &decon->sd, ktime_set(0, 0));
@@ -3194,6 +3200,8 @@ static void decon_shutdown(struct platform_device *pdev)
 	/* Unused DECON state is DECON_STATE_INIT */
 	if (decon->state == DECON_STATE_ON)
 		decon_disable(decon);
+
+	unlock_fb_info(fbinfo);
 
 	decon_info("%s -\n", __func__);
 	return;
