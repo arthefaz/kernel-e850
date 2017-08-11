@@ -455,16 +455,20 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 	unsigned int int_src;
 	struct dsim_device *dsim = dev_id;
 	struct decon_device *decon = get_decon_drvdata(0);
+#ifdef CONFIG_EXYNOS_PD
 	int active;
+#endif
 
 	spin_lock(&dsim->slock);
 
+#ifdef CONFIG_EXYNOS_PD
 	active = pm_runtime_active(dsim->dev);
 	if (!active) {
 		dsim_info("dsim power(%d), state(%d)\n", active, dsim->state);
 		spin_unlock(&dsim->slock);
 		return IRQ_HANDLED;
 	}
+#endif
 
 	int_src = readl(dsim->res.regs + DSIM_INTSRC);
 
