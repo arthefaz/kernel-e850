@@ -17,7 +17,7 @@
 #define DEVICE_VERSION				(0xFFFFFFFF << 0)
 
 #define SYSTEM_SW_RESET_CONTROL			(0x0004)
-#define SW_RESET				(0x00 << 0)
+#define SW_RESET				(0x01 << 0)
 
 #define SYSTEM_CLK_CONTROL			(0x0008)
 #define GFMUX_STATUS_TXCLK			(0x03 << 8)
