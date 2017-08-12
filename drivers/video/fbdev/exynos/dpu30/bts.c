@@ -291,6 +291,9 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 		u32 is_after)
 {
 	struct bts_bw bw = { 0, };
+	struct displayport_device *displayport = get_displayport_drvdata();
+	videoformat cur = displayport->cur_video;
+	__u64 pixelclock = supported_videos[cur].dv_timings.bt.pixelclock;
 
 	DPU_DEBUG_BTS("%s +\n", __func__);
 
@@ -309,6 +312,10 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 		if (decon->bts.total_bw <= decon->bts.prev_total_bw)
 			bts_update_bw(decon->bts.type, bw);
 
+		if ((displayport->state == DISPLAYPORT_STATE_ON)
+			&& (pixelclock >= 533000000)) /* 4K DP case */
+			return;
+
 		if (decon->bts.max_disp_freq <= decon->bts.prev_max_disp_freq)
 			pm_qos_update_request(&decon->bts.disp_qos,
 					decon->bts.max_disp_freq);
@@ -318,6 +325,10 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 	} else {
 		if (decon->bts.total_bw > decon->bts.prev_total_bw)
 			bts_update_bw(decon->bts.type, bw);
+
+		if ((displayport->state == DISPLAYPORT_STATE_ON)
+			&& (pixelclock >= 533000000)) /* 4K DP case */
+			return;
 
 		if (decon->bts.max_disp_freq > decon->bts.prev_max_disp_freq)
 			pm_qos_update_request(&decon->bts.disp_qos,
@@ -344,12 +355,17 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 
 	if (pixelclock >= 533000000) {
 		if (pm_qos_request_active(&decon->bts.mif_qos))
-			pm_qos_update_request(&decon->bts.mif_qos, 1540 * 1000);
+			pm_qos_update_request(&decon->bts.mif_qos, 1794 * 1000);
 		else
 			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
 
 		if (pm_qos_request_active(&decon->bts.int_qos))
-			pm_qos_update_request(&decon->bts.int_qos, 533 * 1000);
+			pm_qos_update_request(&decon->bts.int_qos, 534 * 1000);
+		else
+			DPU_ERR_BTS("%s int qos setting error\n", __func__);
+
+		if (pm_qos_request_active(&decon->bts.disp_qos))
+			pm_qos_update_request(&decon->bts.disp_qos, 400 * 1000);
 		else
 			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
@@ -391,6 +407,11 @@ void dpu_bts_release_bw(struct decon_device *decon)
 
 		if (pm_qos_request_active(&decon->bts.int_qos))
 			pm_qos_update_request(&decon->bts.int_qos, 0);
+		else
+			DPU_ERR_BTS("%s int qos setting error\n", __func__);
+
+		if (pm_qos_request_active(&decon->bts.disp_qos))
+			pm_qos_update_request(&decon->bts.disp_qos, 0);
 		else
 			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
