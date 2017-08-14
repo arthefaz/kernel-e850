@@ -1600,6 +1600,9 @@
 #define DP_REG_B				(0x082C)
 #define LN_TXCLK_SOURCE_LANE			(0x03 << 0)
 
+#define DP_REG_F				(0x083C)
+#define AUX_TX_LVL_CTRL				(0x0F << 0)
+
 #define DP_REG_11				(0x0844)
 #define DP_REG_13				(0x084C)
 #define DP_REG_16				(0x0858)
