@@ -1122,6 +1122,11 @@ void displayport_reg_sw_function_en(void)
 	displayport_write_mask(SYSTEM_SW_FUNCTION_ENABLE, 1, SW_FUNC_EN);
 }
 
+void displayport_reg_phy_aux_level_setting(void)
+{
+	displayport_phy_write_mask(DP_REG_F, 0x0F, AUX_TX_LVL_CTRL);
+}
+
 void displayport_reg_phy_init(void)
 {
 	displayport_reg_phy_reset(1);
@@ -1129,6 +1134,7 @@ void displayport_reg_phy_init(void)
 	displayport_reg_phy_mode_setting();
 	displayport_reg_phy_reset(0);
 	displayport_reg_wait_phy_pll_lock();
+	displayport_reg_phy_aux_level_setting();
 }
 
 void displayport_reg_phy_disable(void)
