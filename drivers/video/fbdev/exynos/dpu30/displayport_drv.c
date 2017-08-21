@@ -101,6 +101,21 @@ static u64 displayport_find_edid_max_pixelclock(void)
 	return supported_videos[i].dv_timings.bt.pixelclock;
 }
 
+static int displayport_check_edid_max_clock(struct displayport_device *displayport,
+				videoformat video_format)
+{
+	int ret_val = 0;
+
+	if (supported_videos[video_format].dv_timings.bt.pixelclock * 12 / 10 <
+		displayport->rx_edid_data.max_support_clk * 5 * MHZ) {
+		displayport_info("RX support Max TMDS Clock = %d Mhz\n",
+			displayport->rx_edid_data.max_support_clk * 5);
+		ret_val = -EINVAL;
+	}
+
+	return ret_val;
+}
+
 static int displayport_get_min_link_rate(u8 rx_link_rate, u8 lane_cnt)
 {
 	int i;
@@ -1914,7 +1929,9 @@ static int displayport_s_dv_timings(struct v4l2_subdev *sd,
 	displayport_setting_videoformat = ret;
 
 	if (displayport->bist_used == 0) {
-		if (displayport->rx_edid_data.hdr_support)
+		if (displayport->rx_edid_data.hdr_support &&
+			!(displayport_check_edid_max_clock(displayport,
+			displayport_setting_videoformat) < 0))
 			displayport->bpc = BPC_10;
 		else
 			displayport->bpc = BPC_8;
