@@ -234,6 +234,8 @@ struct dpp_params_info {
 
 	enum dpp_hdr_standard hdr;
 	bool is_4p;
+	u32 y_2b_strd;
+	u32 c_2b_strd;
 
 	bool is_comp;
 	bool is_scale;

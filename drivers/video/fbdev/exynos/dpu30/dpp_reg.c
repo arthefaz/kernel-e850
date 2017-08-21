@@ -1111,10 +1111,30 @@ void dpp_reg_set_buf_4p_addr(u32 id, struct dpp_params_info *p)
 	dma_reg_set_in_2b_base_addr(id, p->addr[2], p->addr[3]);
 }
 
+void dma_reg_set_luma_2bit_stride(u32 id, u32 stride)
+{
+	u32 val, mask;
+
+	val = IDMA_LUMA_2B_STRIDE(stride);
+	mask = IDMA_LUMA_2B_STRIDE_MASK;
+	dma_write_mask(id, IDMA_2BIT_STRIDE, val, mask);
+}
+
+void dma_reg_set_chroma_2bit_stride(u32 id, u32 stride)
+{
+	u32 val, mask;
+
+	val = IDMA_CHROMA_2B_STRIDE(stride);
+	mask = IDMA_CHROMA_2B_STRIDE_MASK;
+	dma_write_mask(id, IDMA_2BIT_STRIDE, val, mask);
+}
+
 void dpp_reg_set_buf_addr(u32 id, struct dpp_params_info *p)
 {
 	if (p->is_4p) {
 		dpp_reg_set_buf_4p_addr(id, p);
+		dma_reg_set_luma_2bit_stride(id, p->y_2b_strd);
+		dma_reg_set_chroma_2bit_stride(id, p->c_2b_strd);
 	} else {
 		if (p->is_comp) {
 			dpp_reg_set_buf_1p_addr(id, p);

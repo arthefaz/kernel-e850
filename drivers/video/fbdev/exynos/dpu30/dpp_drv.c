@@ -285,6 +285,9 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	p->eq_mode = config->dpp_parm.eq_mode;
 	p->hdr = config->dpp_parm.hdr_std;
 	p->is_4p = false;
+	p->y_2b_strd = 0;
+	p->c_2b_strd = 0;
+
 	if (p->format == DECON_PIXEL_FORMAT_NV12N) {
 		p->addr[1] = NV12N_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
 	}
@@ -293,6 +296,8 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 		p->addr[2] = p->addr[0] + NV12M_Y_SIZE(p->src.f_w, p->src.f_h);
 		p->addr[3] = p->addr[1] + NV12M_CBCR_SIZE(p->src.f_w, p->src.f_h);
 		p->is_4p = true;
+		p->y_2b_strd = S10B_2B_STRIDE(p->src.f_w);
+		p->c_2b_strd = S10B_2B_STRIDE(p->src.f_w);
 	}
 
 	if (p->format == DECON_PIXEL_FORMAT_NV12N_10B) {
@@ -300,6 +305,8 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 		p->addr[2] = p->addr[0] + NV12N_Y_SIZE(p->src.f_w, p->src.f_h);
 		p->addr[3] = p->addr[1] + NV12N_CBCR_SIZE(p->src.f_w, p->src.f_h);
 		p->is_4p = true;
+		p->y_2b_strd = S10B_2B_STRIDE(p->src.f_w);
+		p->c_2b_strd = S10B_2B_STRIDE(p->src.f_w);
 	}
 
 	if (is_rotation(config)) {
