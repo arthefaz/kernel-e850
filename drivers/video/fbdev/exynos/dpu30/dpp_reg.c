@@ -1424,8 +1424,8 @@ void dpp_reg_set_tm_lut(u32 id, struct dpp_params_info *p)
 	u32 *lut_x = NULL;
 	u32 *lut_y = NULL;
 
-	lut_x = tm_x_axis_p3_gamma2_2;
-	lut_y = tm_y_axis_p3_gamma2_2;
+	lut_x = tm_x_axis_gamma_2P2;
+	lut_y = tm_y_axis_gamma_2P2;
 
 	for (i = 0; i < MAX_TM; i++) {
 		dpp_write_mask(id,
