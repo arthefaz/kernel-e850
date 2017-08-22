@@ -334,22 +334,20 @@ void displayport_reg_set_phy_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_empha
 		break;
 	case CCIC_NOTIFY_DP_PIN_B:
 		if (displayport->dp_sw_sel) {
-			displayport_reg_set_phy_tune(0, voltage[3], pre_emphasis[3]);
-			displayport_reg_set_phy_tune(1, voltage[2], pre_emphasis[2]);
-			displayport_reg_set_phy_tune(2, voltage[1], pre_emphasis[1]);
-			displayport_reg_set_phy_tune(3, voltage[0], pre_emphasis[0]);
+			displayport_reg_set_phy_tune(2, voltage[0], pre_emphasis[0]);
+			displayport_reg_set_phy_tune(3, voltage[1], pre_emphasis[1]);
+			displayport_phy_write(DP_REG_16, 0x00);
+			displayport_phy_write(DP_REG_1A, 0x00);
 		} else {
-			displayport_reg_set_phy_tune(0, voltage[0], pre_emphasis[0]);
-			displayport_reg_set_phy_tune(1, voltage[1], pre_emphasis[1]);
-			displayport_reg_set_phy_tune(2, voltage[2], pre_emphasis[2]);
-			displayport_reg_set_phy_tune(3, voltage[3], pre_emphasis[3]);
+			displayport_reg_set_phy_tune(0, voltage[1], pre_emphasis[1]);
+			displayport_reg_set_phy_tune(1, voltage[0], pre_emphasis[0]);
+			displayport_phy_write(DP_REG_56, 0x00);
+			displayport_phy_write(DP_REG_5A, 0x00);
 		}
 		break;
 
 	case CCIC_NOTIFY_DP_PIN_C:
 	case CCIC_NOTIFY_DP_PIN_E:
-	case CCIC_NOTIFY_DP_PIN_D:
-	case CCIC_NOTIFY_DP_PIN_F:
 		if (displayport->dp_sw_sel) {
 			displayport_reg_set_phy_tune(0, voltage[2], pre_emphasis[2]);
 			displayport_reg_set_phy_tune(1, voltage[3], pre_emphasis[3]);
@@ -360,6 +358,21 @@ void displayport_reg_set_phy_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_empha
 			displayport_reg_set_phy_tune(1, voltage[1], pre_emphasis[1]);
 			displayport_reg_set_phy_tune(2, voltage[3], pre_emphasis[3]);
 			displayport_reg_set_phy_tune(3, voltage[2], pre_emphasis[2]);
+		}
+		break;
+
+	case CCIC_NOTIFY_DP_PIN_D:
+	case CCIC_NOTIFY_DP_PIN_F:
+		if (displayport->dp_sw_sel) {
+			displayport_reg_set_phy_tune(2, voltage[1], pre_emphasis[1]);
+			displayport_reg_set_phy_tune(3, voltage[0], pre_emphasis[0]);
+			displayport_phy_write(DP_REG_16, 0x00);
+			displayport_phy_write(DP_REG_1A, 0x00);
+		} else {
+			displayport_reg_set_phy_tune(0, voltage[0], pre_emphasis[0]);
+			displayport_reg_set_phy_tune(1, voltage[1], pre_emphasis[1]);
+			displayport_phy_write(DP_REG_56, 0x00);
+			displayport_phy_write(DP_REG_5A, 0x00);
 		}
 		break;
 
