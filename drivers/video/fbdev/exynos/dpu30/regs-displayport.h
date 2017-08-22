@@ -1619,7 +1619,7 @@
 #define DP_REG_3A				(0x08E8)
 #define DP_REG_51				(0x0944)
 #define DP_REG_56				(0x0958)
-#define DP_REG_5A				(0x0868)
+#define DP_REG_5A				(0x0968)
 #define DP_REG_71				(0x09C4)
 #define DP_REG_76				(0x09D8)
 #define DP_REG_7A				(0x09E8)
