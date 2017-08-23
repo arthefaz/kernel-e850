@@ -1404,7 +1404,7 @@ void dpp_reg_set_gm_lut(u32 id, struct dpp_params_info *p)
 	if (p->eq_mode == CSC_BT_2020) {
 		lut_gm = gm_coef_2020_p3;
 	} else if (p->eq_mode == CSC_DCI_P3) {
-		lut_gm = gm_coef_bypass;
+		return;
 	} else {
 		dpp_err("Undefined HDR CSC Type!!!\n");
 		return;
@@ -1458,7 +1458,10 @@ void dpp_reg_set_hdr(u32 id, struct dpp_params_info *p)
 
 	dpp_reg_set_hdr_en(id, en);
 	dpp_reg_set_eotf_en(id, en);
-	dpp_reg_set_gm_en(id, en);
+	if (p->eq_mode != CSC_DCI_P3)
+		dpp_reg_set_gm_en(id, true);
+	else
+		dpp_reg_set_gm_en(id, false);
 	dpp_reg_set_tm_en(id, en);
 	dpp_reg_set_hdr_lut(id, en, p);
 
