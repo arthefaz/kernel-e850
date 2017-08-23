@@ -1642,7 +1642,7 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	}
 
 	dsim_reg_set_num_of_lane(id, (data_lane_cnt-1));
-	dsim_reg_enable_eotp(id, 0);
+	dsim_reg_enable_eotp(id, 1);
 	dsim_reg_enable_per_frame_read(id, 0);
 	dsim_reg_set_pixel_format(id, DSIM_PIXEL_FORMAT_RGB24);
 	dsim_reg_set_vc_id(id, 0);
