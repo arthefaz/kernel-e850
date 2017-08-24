@@ -20,6 +20,9 @@
 #define M_RESETN_M4S4_MODULE_MASK		(0x1 << 1)
 #define M_RESETN_M4S4_TOP_MASK			(0x1 << 0)
 
+#define DISP_DPU_TE_QACTIVE_PLL_EN			0x0010
+#define TE_QACTIVE_PLL_EN				(0x1 << 0)
+
 #endif /* _REGS_DISP_SS_H */
 
 #ifndef _REGS_DECON_H

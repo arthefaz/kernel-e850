@@ -14,6 +14,16 @@
 /* #define VESA_SCR_V4 */
 /******************* CAL raw functions implementation *************************/
 
+void dpu_reg_set_qactive_pll(u32 id, u32 en)
+{
+	u32 val;
+
+	val = en ? ~0 : 0;
+
+	sysreg_write_mask(id, DISP_DPU_TE_QACTIVE_PLL_EN,
+				val, TE_QACTIVE_PLL_EN);
+}
+
 u32 decon_reg_get_cam_status(void __iomem *cam_status)
 {
 	if (cam_status)
@@ -1688,6 +1698,8 @@ static void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p)
 	enum decon_dsi_mode dsi_mode = psr->dsi_mode;
 	u32 overlap_w = 0; /* default=0 : range=[0, 32] & (multiples of 2) */
 
+	dpu_reg_set_qactive_pll(id, true);
+
 	decon_reg_set_clkgate_mode(id, 0);
 
 	decon_reg_set_sram_share(id, DECON_FIFO_04K);
@@ -1754,6 +1766,8 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 			decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
 		return -EBUSY;
 	}
+
+	dpu_reg_set_qactive_pll(id, true);
 
 	decon_reg_set_clkgate_mode(id, 0);
 
