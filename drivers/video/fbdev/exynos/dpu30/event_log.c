@@ -781,6 +781,33 @@ static const struct file_operations decon_cmd_fops = {
 };
 #endif
 
+static int decon_debug_rec_show(struct seq_file *s, void *unused)
+{
+	seq_printf(s, "VGF0[%u] VGF1[%u]\n",
+			get_dpp_drvdata(IDMA_VGF0)->d.recovery_cnt,
+			get_dpp_drvdata(IDMA_VGF1)->d.recovery_cnt);
+	return 0;
+}
+
+static int decon_debug_rec_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, decon_debug_rec_show, inode->i_private);
+}
+
+static ssize_t decon_debug_rec_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *f_ops)
+{
+	return count;
+}
+
+static const struct file_operations decon_rec_fops = {
+	.open = decon_debug_rec_open,
+	.write = decon_debug_rec_write,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+
 int decon_create_debugfs(struct decon_device *decon)
 {
 	char name[MAX_NAME_SIZE];
@@ -841,6 +868,13 @@ int decon_create_debugfs(struct decon_device *decon)
 			goto err_debugfs;
 		}
 #endif
+		decon->d.debug_recovery_cnt = debugfs_create_file("recovery_cnt",
+				0444, decon->d.debug_root, NULL, &decon_rec_fops);
+		if (!decon->d.debug_recovery_cnt) {
+			decon_err("failed to create recovery_cnt file\n");
+			ret = -ENOENT;
+			goto err_debugfs;
+		}
 	}
 
 	return 0;

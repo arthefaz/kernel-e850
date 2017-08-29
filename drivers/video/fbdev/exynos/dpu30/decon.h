@@ -870,6 +870,7 @@ struct decon_debug {
 #if defined(CONFIG_DSIM_CMD_TEST)
 	struct dentry *debug_cmd;
 #endif
+	struct dentry *debug_recovery_cnt;
 	struct dpu_log event_log[DPU_EVENT_LOG_MAX];
 	atomic_t event_log_idx;
 	dpu_log_level_t event_log_level;
