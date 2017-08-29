@@ -46,6 +46,7 @@ extern struct decon_device *decon_drvdata[MAX_DECON_CNT];
 extern int decon_log_level;
 extern int dpu_bts_log_level;
 extern int win_update_log_level;
+extern int decon_systrace_enable;
 extern struct decon_bts_ops decon_bts_control;
 
 #define DECON_MODULE_NAME	"exynos-decon"
@@ -64,7 +65,7 @@ extern struct decon_bts_ops decon_bts_control;
 #define MIN_WIN_BLOCK_HEIGHT	1
 #define FD_TRY_CNT		3
 #define VALID_FD_VAL		3
-
+#define DECON_TRACE_BUF_SIZE	40
 #define CHIP_VER	(9810)
 
 #define DECON_WIN_UPDATE_IDX	(6)
@@ -138,6 +139,15 @@ void dpu_debug_printk(const char *function_name, const char *format, ...);
 	do {									\
 		if (dpu_bts_log_level >= 3)					\
 			dpu_debug_printk("BTS", fmt, ##args);			\
+	} while (0)
+
+
+/* DECON systrace related */
+void tracing_mark_write(struct decon_device *decon, char id, char *str1, int value);
+#define decon_systrace(decon, id, str1, value)					\
+	do {									\
+		if (decon_systrace_enable)					\
+			tracing_mark_write(decon, id, str1, value);		\
 	} while (0)
 
 enum decon_trig_mode {
@@ -867,6 +877,7 @@ struct decon_debug {
 	struct dentry *debug_dump;
 	struct dentry *debug_bts;
 	struct dentry *debug_win;
+	struct dentry *debug_systrace;
 #if defined(CONFIG_DSIM_CMD_TEST)
 	struct dentry *debug_cmd;
 #endif
@@ -961,6 +972,11 @@ struct decon_cursor {
 	bool unmask;	/* if true, cursor unmask period */
 };
 
+/* systrace */
+struct decon_systrace_data {
+	pid_t pid;
+};
+
 struct decon_device {
 	int id;
 	enum decon_state state;
@@ -1016,6 +1032,8 @@ struct decon_device {
 	unsigned long prev_hdr_bits;
 	struct exynos_hdr_static_info prev_hdr_info;
 	enum hwc_ver ver;
+	/* systrace */
+	struct decon_systrace_data systrace;
 };
 
 static inline struct decon_device *get_decon_drvdata(u32 id)
