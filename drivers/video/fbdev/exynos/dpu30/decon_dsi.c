@@ -317,7 +317,9 @@ static irqreturn_t decon_ext_irq_handler(int irq, void *dev_id)
 	struct decon_mode_info psr;
 	ktime_t timestamp = ktime_get();
 
+	decon_systrace(decon, 'C', "decon_te_signal", 1);
 	DPU_EVENT_LOG(DPU_EVT_TE_INTERRUPT, &decon->sd, timestamp);
+
 	spin_lock(&decon->slock);
 
 	if (decon->dt.trig_mode == DECON_SW_TRIG) {
@@ -331,7 +333,7 @@ static irqreturn_t decon_ext_irq_handler(int irq, void *dev_id)
 			queue_work(decon->hiber.wq, &decon->hiber.work);
 	}
 #endif
-
+	decon_systrace(decon, 'C', "decon_te_signal", 0);
 	decon->vsync.timestamp = timestamp;
 	wake_up_interruptible_all(&decon->vsync.wait);
 

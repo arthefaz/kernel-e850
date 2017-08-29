@@ -50,9 +50,37 @@ int dpu_bts_log_level = 6;
 module_param(dpu_bts_log_level, int, 0644);
 int win_update_log_level = 6;
 module_param(win_update_log_level, int, 0644);
+int decon_systrace_enable;
 
 struct decon_device *decon_drvdata[MAX_DECON_CNT];
 EXPORT_SYMBOL(decon_drvdata);
+
+void tracing_mark_write(struct decon_device *decon, char id, char *str1, int value)
+{
+	char buf[DECON_TRACE_BUF_SIZE] = {0,};
+
+	if (!decon->systrace.pid)
+		return;
+
+	switch (id) {
+	case 'B': /* B : Begin */
+		snprintf(buf, DECON_TRACE_BUF_SIZE, "B|%d|%s",
+				decon->systrace.pid, str1);
+		break;
+	case 'E': /* E : End */
+		strcpy(buf, "E");
+		break;
+	case 'C': /* C : Category */
+		snprintf(buf, DECON_TRACE_BUF_SIZE,
+				"C|%d|%s|%d", decon->systrace.pid, str1, value);
+		break;
+	default:
+		decon_err("%s:argument fail\n", __func__);
+		return;
+	}
+	trace_puts(buf);
+
+}
 
 static void decon_dump_using_dpp(struct decon_device *decon)
 {
@@ -1397,9 +1425,11 @@ void decon_wait_for_vstatus(struct decon_device *decon, u32 timeout)
 	if (decon->id)
 		return;
 
+	decon_systrace(decon, 'C', "decon_frame_start", 1);
 	ret = wait_event_interruptible_timeout(decon->wait_vstatus,
 			(decon->frame_cnt_target <= decon->frame_cnt),
 			msecs_to_jiffies(timeout));
+	decon_systrace(decon, 'C', "decon_frame_start", 0);
 	DPU_EVENT_LOG(DPU_EVT_DECON_FRAMESTART, &decon->sd, ktime_set(0, 0));
 	if (!ret)
 		decon_warn("%s:timeout\n", __func__);
@@ -1654,14 +1684,22 @@ static void decon_update_regs(struct decon_device *decon,
 	struct decon_mode_info psr;
 	int i;
 
+	if (!decon->systrace.pid)
+		decon->systrace.pid = current->pid;
+
+	decon_systrace(decon, 'B', "decon_update_regs", 0);
+
 	decon_exit_hiber(decon);
 
 	decon_acquire_old_bufs(decon, regs, old_dma_bufs, old_plane_cnt);
 
+	decon_systrace(decon, 'C', "decon_fence_wait", 1);
 	for (i = 0; i < decon->dt.max_win; i++) {
 		if (regs->dma_buf_data[i][0].fence)
 			decon_wait_fence(regs->dma_buf_data[i][0].fence);
 	}
+
+	decon_systrace(decon, 'C', "decon_fence_wait", 0);
 
 	decon_check_used_dpp(decon, regs);
 
@@ -1694,7 +1732,10 @@ static void decon_update_regs(struct decon_device *decon,
 	}
 
 	decon->frame_cnt_target = decon->frame_cnt + 1;
+
+	decon_systrace(decon, 'C', "decon_wait_vsync", 1);
 	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+	decon_systrace(decon, 'C', "decon_wait_vsync", 0);
 
 	if (decon->cursor.unmask)
 		decon_set_cursor_unmask(decon, false);
@@ -1715,6 +1756,7 @@ end:
 	decon_release_old_bufs(decon, regs, old_dma_bufs, old_plane_cnt);
 	/* signal to acquire fence */
 	decon_signal_fence(decon);
+	decon_systrace(decon, 'E', "decon_update_regs", 0);
 
 	DPU_EVENT_LOG(DPU_EVT_FENCE_RELEASE, &decon->sd, ktime_set(0, 0));
 
@@ -1747,11 +1789,15 @@ static void decon_update_regs_handler(struct kthread_work *work)
 	mutex_unlock(&decon->up.lock);
 
 	list_for_each_entry_safe(data, next, &saved_list, list) {
+		decon_systrace(decon, 'C', "update_regs_list", 1);
+
 		decon_set_cursor_reset(decon, data);
 		decon_update_regs(decon, data);
 		decon_hiber_unblock(decon);
 		if (!decon->up_list_saved) {
 			list_del(&data->list);
+			decon_systrace(decon, 'C',
+					"update_regs_list", 0);
 			kfree(data);
 		}
 	}
@@ -1927,6 +1973,7 @@ static int decon_set_win_config(struct decon_device *decon,
 	kthread_queue_work(&decon->up.worker, &decon->up.work);
 
 	mutex_unlock(&decon->lock);
+	decon_systrace(decon, 'C', "decon_win_config", 0);
 
 	decon_dbg("%s -\n", __func__);
 
@@ -2048,6 +2095,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	case S3CFB_WIN_CONFIG:
 		argp = (struct decon_win_config_data __user *)arg;
 		DPU_EVENT_LOG(DPU_EVT_WIN_CONFIG, &decon->sd, ktime_set(0, 0));
+		decon_systrace(decon, 'C', "decon_win_config", 1);
 		if (copy_from_user(&win_data,
 				   (struct decon_win_config_data __user *)arg,
 				   sizeof(struct decon_win_config_data))) {
@@ -3117,6 +3165,10 @@ static int decon_probe(struct platform_device *pdev)
 
 	snprintf(device_name, MAX_NAME_SIZE, "decon%d", decon->id);
 	decon_create_timeline(decon, device_name);
+
+	/* systrace */
+	decon_systrace_enable = 0;
+	decon->systrace.pid = 0;
 
 	ret = decon_init_resources(decon, pdev, device_name);
 	if (ret)
