@@ -912,9 +912,12 @@ static irqreturn_t dma_irq_handler(int irq, void *priv)
 		DPU_EVENT_LOG(DPU_EVT_DMA_RECOVERY, &dpp->sd,
 				ktime_set(0, 0));
 		val = (u32)dpp->config->dpp_parm.comp_src;
-		dpp_info("dma%d recovery start(0x%x)...[src=%s]\n",
+		dpp->d.recovery_cnt++;
+		dpp_info("dma%d recovery start(0x%x).. [src=%s], cnt[%d %d]\n",
 				dpp->id, irqs,
-				val == DPP_COMP_SRC_G2D ? "G2D" : "GPU");
+				val == DPP_COMP_SRC_G2D ? "G2D" : "GPU",
+				get_dpp_drvdata(IDMA_VGF0)->d.recovery_cnt,
+				get_dpp_drvdata(IDMA_VGF1)->d.recovery_cnt);
 		goto irq_end;
 	}
 

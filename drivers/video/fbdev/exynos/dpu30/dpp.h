@@ -210,6 +210,7 @@ struct dpp_resources {
 struct dpp_debug {
 	struct timer_list op_timer;
 	u32 done_count;
+	u32 recovery_cnt;
 };
 
 struct dpp_device {
