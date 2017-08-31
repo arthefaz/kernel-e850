@@ -1788,7 +1788,7 @@ static int decon_get_active_win_count(struct decon_device *decon,
 	return win_cnt;
 }
 
-static void decon_set_full_size_win(struct decon_device *decon,
+void decon_set_full_size_win(struct decon_device *decon,
 	struct decon_win_config *config)
 {
 	config->dst.x = 0;
@@ -1825,7 +1825,7 @@ static int decon_prepare_win_config(struct decon_device *decon,
 			config->color |= (0xFF << 24);
 			win_regs->colormap = config->color;
 
-			decon_set_full_size_win(decon, config);
+			/* decon_set_full_size_win(decon, config); */
 			decon_win_conig_to_regs_param(0, config, win_regs,
 					config->idma_type, i);
 			ret = 0;
