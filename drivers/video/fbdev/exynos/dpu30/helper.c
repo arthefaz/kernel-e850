@@ -430,16 +430,22 @@ int decon_get_valid_fd(void)
 		 * fd is tried to get value again except current fd vlaue.
 		 */
 		while (fd < VALID_FD_VAL) {
+			decon_warn("%s, unvalid fd[%d] is assigned to DECON\n",
+					__func__, fd);
 			unused_fd[fd_idx++] = fd;
 			fd = get_unused_fd_flags(O_CLOEXEC);
 			if (fd < 0) {
-				decon_warn("unvalid fd[%d]\n", fd);
+				decon_err("%s, unvalid fd[%d]\n", __func__,
+						fd);
 				break;
 			}
 		}
 
-		while (--fd_idx > 0)
+		while (fd_idx-- > 0) {
+			decon_warn("%s, unvalid fd[%d] is released by DECON\n",
+					__func__, unused_fd[fd_idx]);
 			put_unused_fd(unused_fd[fd_idx]);
+		}
 
 		if (fd < 0)
 			return -EINVAL;
@@ -473,7 +479,7 @@ void decon_create_release_fences(struct decon_device *decon,
 	}
 	return;
 err:
-	while (--i > 0) {
+	while (i-- > 0) {
 		if (win_data->config[i].state == DECON_WIN_STATE_BUFFER) {
 			put_unused_fd(win_data->config[i].rel_fence);
 			win_data->config[i].rel_fence = -1;
