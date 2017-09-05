@@ -438,7 +438,7 @@ int decon_get_valid_fd(void)
 			}
 		}
 
-		while (--fd_idx > 0)
+		while (fd_idx-- > 0)
 			put_unused_fd(unused_fd[fd_idx]);
 
 		if (fd < 0)
@@ -473,7 +473,7 @@ void decon_create_release_fences(struct decon_device *decon,
 	}
 	return;
 err:
-	while (--i > 0) {
+	while (i-- > 0) {
 		if (win_data->config[i].state == DECON_WIN_STATE_BUFFER) {
 			put_unused_fd(win_data->config[i].rel_fence);
 			win_data->config[i].rel_fence = -1;
