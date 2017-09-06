@@ -831,6 +831,16 @@ static void displayport_set_switch_state(struct displayport_device *displayport,
 	displayport_info("HPD status = %d\n", state);
 }
 
+void displayport_audio_init_config(void)
+{
+	displayport_reg_set_audio_m_n(ASYNC_MODE, FS_48KHZ);
+	displayport_reg_set_audio_function_enable(1);
+	displayport_reg_set_audio_sampling_frequency(FS_48KHZ);
+	displayport_reg_set_dp_audio_enable(1);
+	displayport_reg_set_audio_master_mode_enable(1);
+	displayport_info("displayport_audio_init_config\n");
+}
+
 void displayport_hpd_changed(int state)
 {
 	int ret;
@@ -876,6 +886,9 @@ void displayport_hpd_changed(int state)
 			displayport_dbg("link training fail\n");
 			goto HPD_FAIL;
 		}
+
+		displayport_audio_init_config();
+
 		displayport->dfp_type = displayport_check_dfp_type();
 		/* Enable it! if you want to prevent output according to type
 		 * if (displayport->dfp_type != DFP_TYPE_DP &&
@@ -1624,7 +1637,7 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 	/* channel mapping: FL, FR, C, SW, RL, RR */
 	displayport_reg_set_audio_ch_mapping(1, 2, 4, 3, 5, 6, 7, 8);
 
-	displayport_reg_set_audio_m_n(SYNC_MODE, audio_config_data->audio_fs);
+	displayport_reg_set_audio_m_n(ASYNC_MODE, audio_config_data->audio_fs);
 	displayport_reg_set_audio_function_enable(audio_config_data->audio_enable);
 	displayport_reg_set_dma_burst_size(audio_config_data->audio_word_length);
 	displayport_reg_set_dma_pack_mode(audio_config_data->audio_packed_mode);
@@ -1651,7 +1664,7 @@ int displayport_audio_bist_enable(struct displayport_audio_config_data audio_con
 	displayport_info("audio_channel_cnt = %d\n", audio_config_data.audio_channel_cnt);
 	displayport_info("audio_fs = %d\n", audio_config_data.audio_fs);
 
-	displayport_reg_set_audio_m_n(SYNC_MODE, audio_config_data.audio_fs);
+	displayport_reg_set_audio_m_n(ASYNC_MODE, audio_config_data.audio_fs);
 	displayport_reg_set_audio_function_enable(audio_config_data.audio_enable);
 
 	displayport_reg_set_audio_ch(audio_config_data.audio_channel_cnt);
