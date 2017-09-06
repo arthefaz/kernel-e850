@@ -665,8 +665,6 @@ static int dsim_enable(struct dsim_device *dsim)
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
 
-	enable_irq(dsim->res.irq);
-
 	/* check whether the bootloader init has been done */
 	if (dsim->state == DSIM_STATE_INIT) {
 		if (dsim_reg_is_pll_stable(dsim->id)) {
@@ -713,6 +711,8 @@ init_end:
 	dsim->state = DSIM_STATE_ON;
 	if (state != DSIM_STATE_INIT)
 		call_panel_ops(dsim, displayon, dsim);
+
+	enable_irq(dsim->res.irq);
 
 	return ret;
 }
