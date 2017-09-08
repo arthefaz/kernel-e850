@@ -222,6 +222,16 @@ void decon_reg_set_sram_share(u32 id, enum decon_fifo_mode fifo_mode)
 		else if (id == 2)
 			val = SRAM2_SHARE_ENABLE_F | SRAM3_SHARE_ENABLE_F;
 		break;
+	case DECON_FIFO_12K:
+			if (id == 2) {
+				val = SRAM1_SHARE_ENABLE_F | SRAM2_SHARE_ENABLE_F
+					| SRAM3_SHARE_ENABLE_F;
+			} else {
+				decon_err("decon%d can't support SRAM 12KB\n",
+										id);
+			}
+			break;
+
 	case DECON_FIFO_16K:
 		val = ALL_SRAM_SHARE_ENABLE;
 		break;
@@ -1785,7 +1795,10 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	if (psr->out_type == DECON_OUT_DP)
 		decon_reg_set_te_qactive_pll_mode(id, 1);
 
-	decon_reg_set_sram_share(id, DECON_FIFO_04K);
+	if (id == 0)
+		decon_reg_set_sram_share(id, DECON_FIFO_04K);
+	else if (id == 2)
+		decon_reg_set_sram_share(id, DECON_FIFO_12K);
 
 	decon_reg_set_operation_mode(id, psr->psr_mode);
 

@@ -230,6 +230,7 @@ enum decon_fifo_mode {
 	DECON_FIFO_00K = 0,
 	DECON_FIFO_04K,
 	DECON_FIFO_08K,
+	DECON_FIFO_12K,
 	DECON_FIFO_16K,
 };
 
