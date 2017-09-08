@@ -775,6 +775,8 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 
 	decon_hiber_block_exit(decon);
 
+	decon_to_psr_info(decon, &psr);
+
 	/*
 	 * info->var is old parameters and var is new requested parameters.
 	 * var must be copied to info->var before decon_set_par function
@@ -799,7 +801,6 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 
 	decon_reg_update_req_window(decon->id, win->idx);
 
-	decon_to_psr_info(decon, &psr);
 	decon_reg_start(decon->id, &psr);
 err:
 	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);

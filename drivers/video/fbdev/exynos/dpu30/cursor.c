@@ -158,6 +158,8 @@ int decon_set_cursor_win_config(struct decon_device *decon, int x, int y)
 
 	mutex_lock(&decon->cursor.lock);
 
+	decon_to_psr_info(decon, &psr);
+
 	if (decon->state == DECON_STATE_OFF ||
 		decon->state == DECON_STATE_TUI) {
 		decon_info("decon%d: cursor win is not active :%d\n",
@@ -187,8 +189,6 @@ int decon_set_cursor_win_config(struct decon_device *decon, int x, int y)
 		ret = -EINVAL;
 		goto end;
 	}
-
-	decon_to_psr_info(decon, &psr);
 
 	if (psr.trig_mode == DECON_HW_TRIG)
 		decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_DISABLE);

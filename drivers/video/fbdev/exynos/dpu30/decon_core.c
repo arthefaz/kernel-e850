@@ -1929,7 +1929,10 @@ static int decon_set_win_config(struct decon_device *decon,
 
 	if (decon->state == DECON_STATE_OFF ||
 		decon->state == DECON_STATE_TUI) {
-		win_data->retire_fence = decon_create_fence(decon, &sync_file);
+		ret = decon_create_fence(decon, &sync_file);
+		if (ret < 0)
+			goto err;
+		win_data->retire_fence = ret;
 		fd_install(win_data->retire_fence, sync_file->file);
 		decon_signal_fence(decon);
 		goto err;
@@ -2797,6 +2800,7 @@ static void decon_parse_dt(struct decon_device *decon)
 	struct device_node *te_eint;
 	struct device_node *cam_stat;
 	struct device *dev = decon->dev;
+	int ret;
 
 	if (!dev->of_node) {
 		decon_warn("no device tree information\n");
@@ -2831,14 +2835,22 @@ static void decon_parse_dt(struct decon_device *decon)
 			decon->dt.out_type);
 
 	if (decon->dt.out_type == DECON_OUT_DSI) {
-		of_property_read_u32_index(dev->of_node, "out_idx", 0,
+		ret = of_property_read_u32_index(dev->of_node, "out_idx", 0,
 				&decon->dt.out_idx[0]);
+		if (ret) {
+			decon->dt.out_idx[0] = 0;
+			decon_info("failed to parse out_idx[0].\n");
+		}
 		decon_info("out idx(%d). 0: DSI0 1: DSI1 2: DSI2\n",
 				decon->dt.out_idx[0]);
 
 		if (decon->dt.dsi_mode == DSI_MODE_DUAL_DSI) {
-			of_property_read_u32_index(dev->of_node, "out_idx", 1,
-					&decon->dt.out_idx[1]);
+			ret = of_property_read_u32_index(dev->of_node,
+					"out_idx", 1, &decon->dt.out_idx[1]);
+			if (ret) {
+				decon->dt.out_idx[1] = 1;
+				decon_info("failed to parse out_idx[1].\n");
+			}
 			decon_info("out1 idx(%d). 0: DSI0 1: DSI1 2: DSI2\n",
 					decon->dt.out_idx[1]);
 		}
