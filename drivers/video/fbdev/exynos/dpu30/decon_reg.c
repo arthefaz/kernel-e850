@@ -541,7 +541,8 @@ void decon_reg_print_data_path_size(u32 id)
 void decon_reg_set_interface(u32 id, struct decon_mode_info *psr)
 {
 	/* connection sfrs are changed in Lhotse */
-	u32 val, mask;
+	u32 val;
+	u32 mask = DSIM_CONNECTION_DSIM0_MASK;
 	enum decon_path_cfg d_path;
 
 	val = decon_read(id, DATA_PATH_CONTROL_2);
@@ -1639,7 +1640,7 @@ int dsc_reg_init(u32 id, struct decon_param *p, u32 overlap_w, u32 swrst)
 void decon_reg_configure_lcd(u32 id, struct decon_param *p)
 {
 	u32 overlap_w = 0;
-	enum decon_data_path d_path;
+	enum decon_data_path d_path = DPATH_DSCENC0_OUTFIFO0_DSIMIF0;
 	enum decon_scaler_path s_path = SCALERPATH_OFF;
 
 	struct decon_lcd *lcd_info = p->lcd_info;
@@ -1692,7 +1693,7 @@ static void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p)
 {
 	struct decon_lcd *lcd_info = p->lcd_info;
 	struct decon_mode_info *psr = &p->psr;
-	enum decon_data_path d_path;
+	enum decon_data_path d_path = DPATH_DSCENC0_OUTFIFO0_DSIMIF0;
 	enum decon_scaler_path s_path = SCALERPATH_OFF;
 	enum decon_rgb_order rgb_order = DECON_RGB;
 	enum decon_dsi_mode dsi_mode = psr->dsi_mode;
