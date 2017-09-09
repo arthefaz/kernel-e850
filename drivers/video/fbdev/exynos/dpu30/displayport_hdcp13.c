@@ -30,20 +30,8 @@ void hdcp13_dpcd_buffer(void)
 	for (i = 0; i < sizeof(HDCP13_DPCD.HDCP13_AN); i++)
 		HDCP13_DPCD.HDCP13_AN[i] = 0x0;
 
-	for (i = 0; i < sizeof(HDCP13_DPCD.HDCP13_V_H0); i++)
-		HDCP13_DPCD.HDCP13_V_H0[i] = 0x0;
-
-	for (i = 0; i < sizeof(HDCP13_DPCD.HDCP13_V_H1); i++)
-		HDCP13_DPCD.HDCP13_V_H1[i] = 0x0;
-
-	for (i = 0; i < sizeof(HDCP13_DPCD.HDCP13_V_H2); i++)
-		HDCP13_DPCD.HDCP13_V_H2[i] = 0x0;
-
-	for (i = 0; i < sizeof(HDCP13_DPCD.HDCP13_V_H3); i++)
-		HDCP13_DPCD.HDCP13_V_H3[i] = 0x0;
-
-	for (i = 0; i < sizeof(HDCP13_DPCD.HDCP13_V_H4); i++)
-		HDCP13_DPCD.HDCP13_V_H4[i] = 0x0;
+	for (i = 0; i < sizeof(HDCP13_DPCD.HDCP13_V_H); i++)
+		HDCP13_DPCD.HDCP13_V_H[i] = 0x0;
 
 	HDCP13_DPCD.HDCP13_BCAP[0] = 0x0;
 	HDCP13_DPCD.HDCP13_BSTATUS[0] = 0x0;
@@ -367,24 +355,16 @@ int hdcp13_compare_v(u8 *tx_v_value)
 	int i = 0;
 	int ret = 0;
 	u8 v_read_retry_cnt = 0;
-	u8 *tx_v_value_address;
-	u8 *rx_v_value_address;
 
 	while(v_read_retry_cnt < V_READ_RETRY_CNT) {
 		ret = 0;
-		tx_v_value_address = tx_v_value;
-		rx_v_value_address = HDCP13_DPCD.HDCP13_V_H0;
 
-		displayport_reg_dpcd_read(ADDR_HDCP13_V_H0, 4, HDCP13_DPCD.HDCP13_V_H0);
-		displayport_reg_dpcd_read(ADDR_HDCP13_V_H1, 4, HDCP13_DPCD.HDCP13_V_H1);
-		displayport_reg_dpcd_read(ADDR_HDCP13_V_H2, 4, HDCP13_DPCD.HDCP13_V_H2);
-		displayport_reg_dpcd_read(ADDR_HDCP13_V_H3, 4, HDCP13_DPCD.HDCP13_V_H3);
-		displayport_reg_dpcd_read(ADDR_HDCP13_V_H4, 4, HDCP13_DPCD.HDCP13_V_H4);
+		displayport_reg_dpcd_read_burst(ADDR_HDCP13_V_H0, SHA1_SIZE, HDCP13_DPCD.HDCP13_V_H);
 
 		v_read_retry_cnt++;
 
 		for (i = 0; i < SHA1_SIZE; i++) {
-			if (*(tx_v_value_address++) != *(rx_v_value_address++))
+			if (tx_v_value[i] != HDCP13_DPCD.HDCP13_V_H[i])
 				ret = -EFAULT;
 		}
 
