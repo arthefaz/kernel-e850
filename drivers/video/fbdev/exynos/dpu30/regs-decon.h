@@ -191,6 +191,7 @@
 #define CLOCK_CONTROL_0_CG_MASK			((0x1 << 0) | (0x1 << 8) |\
 						(0x1 << 12) | (0x1 << 16))
 #define CLOCK_CONTROL_0_QACTIVE_MASK	((0x1 << 24) | (0x1 << 28))
+#define CLOCK_CONTROL_0_TE_QACTIVE_PLL_ON (0x1 << 28)
 
 #define SPLITTER_SIZE_CONTROL_0			0x0100
 #define SPLITTER_HEIGHT_F(_v)			((_v) << 16)

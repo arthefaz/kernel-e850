@@ -180,6 +180,16 @@ void decon_reg_set_clkgate_mode(u32 id, u32 en)
 	decon_write_mask(id, CLOCK_CONTROL_0, val, mask);
 }
 
+void decon_reg_set_te_qactive_pll_mode(u32 id, u32 en)
+{
+	u32 val, mask;
+
+	val = en ? ~0 : 0;
+	/* all unmask */
+	mask = CLOCK_CONTROL_0_TE_QACTIVE_PLL_ON;
+	decon_write_mask(0, CLOCK_CONTROL_0, val, mask);
+}
+
 /*
  * API is considering real possible Display Scenario
  * such as following examples
@@ -1771,6 +1781,9 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	dpu_reg_set_qactive_pll(id, true);
 
 	decon_reg_set_clkgate_mode(id, 0);
+
+	if (psr->out_type == DECON_OUT_DP)
+		decon_reg_set_te_qactive_pll_mode(id, 1);
 
 	decon_reg_set_sram_share(id, DECON_FIFO_04K);
 

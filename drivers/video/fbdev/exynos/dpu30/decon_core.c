@@ -604,6 +604,9 @@ static int decon_disable(struct decon_device *decon)
 		dev_warn(decon->dev, "pm_relax");
 	}
 
+	if (psr.out_type == DECON_OUT_DP)
+		decon_reg_set_te_qactive_pll_mode(decon->id, 0);
+
 	if (decon->dt.psr_mode != DECON_VIDEO_MODE) {
 		if (decon->res.pinctrl && decon->res.hw_te_off) {
 			if (pinctrl_select_state(decon->res.pinctrl,
@@ -658,6 +661,9 @@ static int decon_dp_disable(struct decon_device *decon)
 	decon_dpp_stop(decon, false);
 
 	decon->bts.ops->bts_release_bw(decon);
+
+	if (psr.out_type == DECON_OUT_DP)
+		decon_reg_set_te_qactive_pll_mode(decon->id, 0);
 
 #if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_put_sync(decon->dev);
