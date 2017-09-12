@@ -1381,6 +1381,7 @@ void decon_set_cursor_unmask(struct decon_device *decon, bool unmask);
 void dpu_cursor_win_update_config(struct decon_device *decon,
 		struct decon_reg_data *regs);
 int decon_set_cursor_win_config(struct decon_device *decon, int x, int y);
+void decon_reg_set_te_qactive_pll_mode(u32 id, u32 en);
 
 /* IOCTL commands */
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, __u32)
