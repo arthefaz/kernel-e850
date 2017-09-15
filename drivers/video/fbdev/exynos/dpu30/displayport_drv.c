@@ -2047,6 +2047,16 @@ int displayport_set_hdr_config(struct exynos_hdr_static_info *hdr_info)
 	return ret;
 }
 
+bool is_displayport_not_running(void)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	if (displayport->state == DISPLAYPORT_STATE_ON)
+		return false;
+	else
+		return true;
+}
+
 static long displayport_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	struct displayport_device *displayport = container_of(sd, struct displayport_device, sd);

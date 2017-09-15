@@ -982,6 +982,7 @@ void displayport_reg_set_hdcp22_encryption_enable(u32 en);
 void displayport_reg_set_aux_pn_inv(u32 val);
 void displayport_hpd_changed(int state);
 int displayport_get_hpd_state(void);
+bool is_displayport_not_running(void);
 
 int displayport_reg_stand_alone_crc_sorting(void);
 

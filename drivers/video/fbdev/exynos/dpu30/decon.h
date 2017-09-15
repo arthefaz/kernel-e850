@@ -1258,6 +1258,7 @@ static inline bool decon_hiber_enter_cond(struct decon_device *decon)
 {
 	return ((atomic_read(&decon->hiber.block_cnt) <= 0)
 		&& is_cam_not_running(decon)
+		&& is_displayport_not_running()
 		&& (atomic_inc_return(&decon->hiber.trig_cnt) >
 			DECON_ENTER_HIBER_CNT));
 }
