@@ -162,17 +162,6 @@ void displayport_reg_phy_mode_setting(void)
 	case CCIC_NOTIFY_DP_PIN_D:
 	case CCIC_NOTIFY_DP_PIN_F:
 		if (displayport->dp_sw_sel) {
-			displayport_phy_write_mask(CMN_REG2C, 0x00, MAN_USBDP_MODE);
-
-			displayport_phy_write_mask(CMN_REG2D, 0, USB_TX1_SEL);
-			displayport_phy_write_mask(CMN_REG2D, 1, USB_TX3_SEL);
-
-			displayport_phy_write_mask(DP_REG_B3, 0x00, CMN_DUMMY_CTRL_1_0);
-			displayport_phy_write_mask(DP_REG_B3, 0x02, CMN_DUMMY_CTRL_7_6);
-
-			val = LN0_LANE_EN | LN1_LANE_EN;
-			displayport_reg_phy_txclk_source_setting(0);
-		} else {
 			displayport_phy_write_mask(CMN_REG2C, 0x03, MAN_USBDP_MODE);
 
 			displayport_phy_write_mask(CMN_REG2D, 1, USB_TX1_SEL);
@@ -183,6 +172,17 @@ void displayport_reg_phy_mode_setting(void)
 
 			val = LN2_LANE_EN | LN3_LANE_EN;
 			displayport_reg_phy_txclk_source_setting(3);
+		} else {
+			displayport_phy_write_mask(CMN_REG2C, 0x00, MAN_USBDP_MODE);
+
+			displayport_phy_write_mask(CMN_REG2D, 0, USB_TX1_SEL);
+			displayport_phy_write_mask(CMN_REG2D, 1, USB_TX3_SEL);
+
+			displayport_phy_write_mask(DP_REG_B3, 0x00, CMN_DUMMY_CTRL_1_0);
+			displayport_phy_write_mask(DP_REG_B3, 0x02, CMN_DUMMY_CTRL_7_6);
+
+			val = LN0_LANE_EN | LN1_LANE_EN;
+			displayport_reg_phy_txclk_source_setting(0);
 		}
 		break;
 
