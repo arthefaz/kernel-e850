@@ -75,7 +75,7 @@ static const unsigned char SEQ_ERR_FG[] = {
 };
 
 static const unsigned char SEQ_TE_START_SETTING[] = {
-	0xB9, 0x00, 0x0B, 0x8F, 0x00, 0x09
+	0xB9, 0x01, 0xB0, 0x96, 0x09
 };
 
 static const unsigned char SEQ_FFC[] = {
