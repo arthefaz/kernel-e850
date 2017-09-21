@@ -339,7 +339,7 @@ int decon_tui_protection(bool tui_en)
 #endif
 		decon_to_psr_info(decon, &psr);
 #if defined(CONFIG_SOC_EXYNOS9810)
-		decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr);
+		decon_reg_stop_tui(decon->id, decon->dt.out_idx[0], &psr);
 #else
 		decon_reg_stop_nreset(decon->id, &psr);
 #endif
