@@ -1935,10 +1935,9 @@ static int decon_set_win_config(struct decon_device *decon,
 
 	if (decon->state == DECON_STATE_OFF ||
 		decon->state == DECON_STATE_TUI) {
-		ret = decon_create_fence(decon, &sync_file);
-		if (ret < 0)
+		win_data->retire_fence = decon_create_fence(decon, &sync_file);
+		if (win_data->retire_fence < 0)
 			goto err;
-		win_data->retire_fence = ret;
 		fd_install(win_data->retire_fence, sync_file->file);
 		decon_signal_fence(decon);
 		goto err;
