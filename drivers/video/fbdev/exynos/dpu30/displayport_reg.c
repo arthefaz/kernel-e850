@@ -1617,6 +1617,11 @@ void displayport_reg_set_hdcp22_encryption_enable(u32 en)
 	displayport_write_mask(HDCP22_CONTROL, val, HDCP22_ENC_EN);
 }
 
+u32 displayport_reg_get_hdcp22_encryption_enable(void)
+{
+	return displayport_read_mask(HDCP22_CONTROL, HDCP22_ENC_EN);
+}
+
 void displayport_reg_set_aux_pn_inv(u32 val)
 {
 	displayport_write_mask(AUX_CONTROL, val, AUX_PN_INV);
