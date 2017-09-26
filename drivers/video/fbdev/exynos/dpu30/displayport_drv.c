@@ -1244,15 +1244,32 @@ static int displayport_hdcp22_irq_handler(void)
 		ret = hdcp_dplink_set_integrity_fail();
 		displayport_hdcp22_enable(0);
 
-		queue_delayed_work(displayport->hdcp2_wq, &displayport->hdcp22_work,
-				msecs_to_jiffies(2000));
+		if (displayport_reg_get_hdcp22_encryption_enable()) {
+			queue_delayed_work(displayport->dp_wq,
+				&displayport->hpd_unplug_work, 0);
+
+			displayport_info("LINK_INTEGRITY_FAIL HDCP2 enc on\n");
+		} else {
+			queue_delayed_work(displayport->hdcp2_wq,
+				&displayport->hdcp22_work, msecs_to_jiffies(2000));
+
+			displayport_info("LINK_INTEGRITY_FAIL HDCP2 enc off\n");
+		}
 	} else if (rxstatus & DPCD_HDCP22_RXSTATUS_REAUTH_REQ) {
 		/* hdcp22 disable while re-authentication */
 		ret = hdcp_dplink_set_reauth();
 		displayport_hdcp22_enable(0);
 
-		queue_delayed_work(displayport->hdcp2_wq, &displayport->hdcp22_work,
-				msecs_to_jiffies(1000));
+		if (displayport_reg_get_hdcp22_encryption_enable()) {
+			queue_delayed_work(displayport->dp_wq, &displayport->hpd_unplug_work, 0);
+
+			displayport_info("REAUTH_REQ HDCP2 enc on\n");
+		} else {
+			queue_delayed_work(displayport->hdcp2_wq,
+				&displayport->hdcp22_work, msecs_to_jiffies(1000));
+
+			displayport_info("REAUTH_REQ HDCP2 enc off\n");
+		}
 	} else if (rxstatus & DPCD_HDCP22_RXSTATUS_PAIRING_AVAILABLE) {
 		/* set pairing avaible flag */
 		ret = hdcp_dplink_set_paring_available();
@@ -1790,7 +1807,7 @@ static void hdcp_start(struct displayport_device *displayport)
 #if defined(HDCP_SUPPORT)
 	if (displayport->hdcp_ver == HDCP_VERSION_2_2)
 		queue_delayed_work(displayport->hdcp2_wq, &displayport->hdcp22_work,
-				msecs_to_jiffies(3500));
+				msecs_to_jiffies(2500));
 	else if (displayport->hdcp_ver == HDCP_VERSION_1_3)
 		queue_delayed_work(displayport->dp_wq, &displayport->hdcp13_work,
 						msecs_to_jiffies(4500));

@@ -979,6 +979,7 @@ void displayport_reg_set_ch_status_clock_accuracy(enum audio_clock_accuracy cloc
 void displayport_reg_set_hdcp22_system_enable(u32 en);
 void displayport_reg_set_hdcp22_mode(u32 en);
 void displayport_reg_set_hdcp22_encryption_enable(u32 en);
+u32 displayport_reg_get_hdcp22_encryption_enable(void);
 void displayport_reg_set_aux_pn_inv(u32 val);
 void displayport_hpd_changed(int state);
 int displayport_get_hpd_state(void);
