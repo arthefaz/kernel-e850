@@ -1016,7 +1016,10 @@ int dpp_reg_set_format(u32 id, struct dpp_params_info *p)
 		fmt_type = DPP_IMG_FORMAT_ARGB8888;
 		break;
 	case DECON_PIXEL_FORMAT_RGB_565:
-		fmt = IDMA_IMG_FORMAT_RGB565;
+		if (p->is_comp)
+			fmt = IDMA_IMG_FORMAT_BGR565;
+		else
+			fmt = IDMA_IMG_FORMAT_RGB565;
 		fmt_type = DPP_IMG_FORMAT_ARGB8888;
 		break;
 	/* TODO: add ARGB1555 & ARGB4444 */
@@ -1136,11 +1139,10 @@ void dpp_reg_set_buf_addr(u32 id, struct dpp_params_info *p)
 		dma_reg_set_luma_2bit_stride(id, p->y_2b_strd);
 		dma_reg_set_chroma_2bit_stride(id, p->c_2b_strd);
 	} else {
-		if (p->is_comp) {
+		if (p->is_comp)
 			dpp_reg_set_buf_1p_addr(id, p);
-		} else {
+		else
 			dpp_reg_set_buf_2p_addr(id, p);
-		}
 	}
 	dpp_dbg("dpp id : %d, 1st-plane : 0x%p, 2nd-plane : 0x%p ",
 		id, (void *)p->addr[0], (void *)p->addr[1]);
