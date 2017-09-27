@@ -357,8 +357,7 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 			break;
 		default:
 			dsim_err("Packet format is invaild.\n");
-			ret = -EBUSY;
-			break;
+			return -EBUSY;
 		}
 	} while (!dsim_reg_rx_fifo_is_empty(dsim->id) && --rx_fifo_depth);
 
