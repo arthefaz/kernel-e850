@@ -915,8 +915,9 @@ struct decon_vsync {
 
 struct decon_hiber {
 	struct mutex lock;
-	struct work_struct work;
-	struct workqueue_struct *wq;
+	struct task_struct *thread;
+	struct kthread_worker worker;
+	struct kthread_work work;
 	atomic_t trig_cnt;
 	atomic_t block_cnt;
 	bool init_status;

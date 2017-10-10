@@ -330,7 +330,7 @@ static irqreturn_t decon_ext_irq_handler(int irq, void *dev_id)
 #ifdef CONFIG_DECON_HIBER
 	if (decon->state == DECON_STATE_ON && (decon->dt.out_type == DECON_OUT_DSI)) {
 		if (decon_min_lock_cond(decon))
-			queue_work(decon->hiber.wq, &decon->hiber.work);
+			kthread_queue_work(&decon->hiber.worker, &decon->hiber.work);
 	}
 #endif
 	decon_systrace(decon, 'C', "decon_te_signal", 0);
@@ -845,7 +845,7 @@ int decon_exit_hiber(struct decon_device *decon)
 	decon_dbg("enable decon-%d\n", decon->id);
 
 	decon_hiber_block(decon);
-	flush_workqueue(decon->hiber.wq);
+	kthread_flush_worker(&decon->hiber.worker);
 	mutex_lock(&decon->hiber.lock);
 
 	if (decon->state != DECON_STATE_HIBER)
@@ -1005,7 +1005,7 @@ int decon_hiber_block_exit(struct decon_device *decon)
 	return ret;
 }
 
-static void decon_hiber_handler(struct work_struct *work)
+static void decon_hiber_handler(struct kthread_work *work)
 {
 	struct decon_hiber *hiber =
 		container_of(work, struct decon_hiber, work);
@@ -1021,18 +1021,25 @@ static void decon_hiber_handler(struct work_struct *work)
 
 int decon_register_hiber_work(struct decon_device *decon)
 {
+	struct sched_param param;
+
 	mutex_init(&decon->hiber.lock);
 
 	atomic_set(&decon->hiber.trig_cnt, 0);
 	atomic_set(&decon->hiber.block_cnt, 0);
 
-	decon->hiber.wq = create_singlethread_workqueue("decon_hiber");
-	if (decon->hiber.wq == NULL) {
-		decon_err("%s:failed to create workqueue for HIBER\n", __func__);
-		return -ENOMEM;
+	kthread_init_worker(&decon->hiber.worker);
+	decon->hiber.thread = kthread_run(kthread_worker_fn,
+			&decon->hiber.worker, "decon_hiber");
+	if (IS_ERR(decon->hiber.thread)) {
+		decon->hiber.thread = NULL;
+		decon_err("failed to run hibernation thread\n");
+		return PTR_ERR(decon->hiber.thread);
 	}
+	param.sched_priority = 20;
+	sched_setscheduler_nocheck(decon->hiber.thread, SCHED_FIFO, &param);
+	kthread_init_work(&decon->hiber.work, decon_hiber_handler);
 
-	INIT_WORK(&decon->hiber.work, decon_hiber_handler);
 	decon->hiber.init_status = true;
 
 	return 0;
