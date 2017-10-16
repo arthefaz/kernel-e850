@@ -14,6 +14,8 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/ktime.h>
+#include <video/exynos_hdr_tunables.h>
+
 #include "dpp.h"
 #include "dpp_coef.h"
 #include "hdr_lut.h"
@@ -1376,8 +1378,13 @@ void dpp_reg_set_eotf_lut(u32 id, struct dpp_params_info *p)
 	u32 *lut_y = NULL;
 
 	if (p->hdr == DPP_HDR_ST2084) {
-		lut_x = eotf_x_axis_st2084;
-		lut_y = eotf_y_axis_st2084;
+		if (p->max_luminance > 1000) {
+			lut_x = eotf_x_axis_st2084_4000;
+			lut_y = eotf_y_axis_st2084_4000;
+		} else {
+			lut_x = eotf_x_axis_st2084_1000;
+			lut_y = eotf_y_axis_st2084_1000;
+		}
 	} else if (p->hdr == DPP_HDR_HLG) {
 		lut_x = eotf_x_axis_hlg;
 		lut_y = eotf_y_axis_hlg;
@@ -1426,8 +1433,18 @@ void dpp_reg_set_tm_lut(u32 id, struct dpp_params_info *p)
 	u32 *lut_x = NULL;
 	u32 *lut_y = NULL;
 
-	lut_x = tm_x_axis_gamma_2P2;
-	lut_y = tm_y_axis_gamma_2P2;
+	if (!exynos_hdr_get_tm_lut_xy(tm_x_tune, tm_y_tune)) {
+		if (p->max_luminance > 1000) {
+			lut_x = tm_x_axis_gamma_2P2_4000;
+			lut_y = tm_y_axis_gamma_2P2_4000;
+		} else {
+			lut_x = tm_x_axis_gamma_2P2_1000;
+			lut_y = tm_y_axis_gamma_2P2_1000;
+		}
+	} else {
+		lut_x = tm_x_tune;
+		lut_y = tm_y_tune;
+	}
 
 	for (i = 0; i < MAX_TM; i++) {
 		dpp_write_mask(id,
