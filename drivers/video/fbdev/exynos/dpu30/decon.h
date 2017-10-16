@@ -524,6 +524,8 @@ struct dpp_params {
 	enum dpp_csc_eq eq_mode;
 	enum dpp_comp_src comp_src;
 	enum dpp_hdr_standard hdr_std;
+	u32 min_luminance;
+	u32 max_luminance;
 };
 
 struct decon_frame {
