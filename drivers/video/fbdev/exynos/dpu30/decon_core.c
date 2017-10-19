@@ -103,13 +103,15 @@ static void decon_up_list_saved(void)
 
 	for (i = 0; i < 3; i++) {
 		decon = get_decon_drvdata(i);
-		if (!list_empty(&decon->up.list) || !list_empty(&decon->up.saved_list)) {
-			decon->up_list_saved = true;
-			decon_info("\n=== DECON%d TIMELINE %d MAX %d ===\n",
-				decon->id, decon->timeline->value,
-				decon->timeline_max);
-		} else {
-			decon->up_list_saved = false;
+		if (decon) {
+			if (!list_empty(&decon->up.list) || !list_empty(&decon->up.saved_list)) {
+				decon->up_list_saved = true;
+				decon_info("\n=== DECON%d TIMELINE %d MAX %d ===\n",
+						decon->id, decon->timeline->value,
+						decon->timeline_max);
+			} else {
+				decon->up_list_saved = false;
+			}
 		}
 	}
 }
