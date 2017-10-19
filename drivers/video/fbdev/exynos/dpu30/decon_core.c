@@ -546,6 +546,31 @@ int cmu_dpu_dump(void)
 	return 0;
 }
 
+static int out_sd_dump(void)
+{
+	void __iomem	*dbg_regs;
+
+	decon_info("\n=== DEBUG register dump : DPHY iso ===\n");
+	dbg_regs = ioremap(0x1406070c, 0x10);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dbg_regs, 0x04, false);
+
+	decon_info("\n=== DEBUG register dump : DPHY clock ===\n");
+	dbg_regs = ioremap(0x16000800, 0x10);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dbg_regs, 0x04, false);
+
+	dbg_regs = ioremap(0x16003030, 0x10);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dbg_regs, 0x04, false);
+
+	dbg_regs = ioremap(0x160060a8, 0x10);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dbg_regs, 0x04, false);
+
+	return 0;
+}
+
 static int decon_disable(struct decon_device *decon)
 {
 	struct decon_mode_info psr;
@@ -3024,6 +3049,7 @@ static int decon_itmon_notifier(struct notifier_block *nb,
 					sizeof("DPU") - 1) == 0))) {
 		decon_info("%s: port: %s, dest: %s, action: %lu\n", __func__,
 				itmon_data->port, itmon_data->dest, action);
+		out_sd_dump();
 		decon_dump(decon);
 		decon->notified = true;
 		return NOTIFY_OK;
