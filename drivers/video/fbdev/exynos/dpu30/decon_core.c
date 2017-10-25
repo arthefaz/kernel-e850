@@ -1033,7 +1033,9 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 	struct ion_handle *handle;
 	struct dma_buf *buf;
 	struct decon_dma_buf_data dma_buf_data[MAX_PLANE_CNT];
-	struct dpp_device *dpp;
+	struct displayport_device *displayport;
+	struct dsim_device *dsim;
+	struct device *dev;
 	int ret = 0, i;
 	size_t buf_size = 0;
 
@@ -1059,10 +1061,15 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 			ret = PTR_ERR(buf);
 			goto fail_buf;
 		}
-		/* idma_type Should be ODMA_WB */
-		dpp = v4l2_get_subdevdata(decon->dpp_sd[config->idma_type]);
-		buf_size = decon_map_ion_handle(decon, dpp->dev,
-				&dma_buf_data[i], handle, buf, idx);
+		if (decon->dt.out_type == DECON_OUT_DP) {
+			displayport = v4l2_get_subdevdata(decon->out_sd[0]);
+			dev = displayport->dev;
+		} else { /* DSI case */
+			dsim = v4l2_get_subdevdata(decon->out_sd[0]);
+			dev = dsim->dev;
+		}
+		buf_size = decon_map_ion_handle(decon, dev, &dma_buf_data[i],
+				handle, buf, idx);
 		if (!buf_size) {
 			decon_err("failed to map buffer\n");
 			ret = -ENOMEM;
@@ -2602,12 +2609,14 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 {
 	struct decon_lcd *lcd_info = decon->lcd_info;
 	struct fb_info *fbi = win->fbinfo;
+	struct displayport_device *displayport;
+	struct dsim_device *dsim;
+	struct device *dev;
 	unsigned int real_size, virt_size, size;
 	dma_addr_t map_dma;
 #if defined(CONFIG_ION_EXYNOS)
 	struct ion_handle *handle;
 	struct dma_buf *buf;
-	struct dpp_device *dpp;
 	void *vaddr;
 	unsigned int ret;
 #endif
@@ -2654,9 +2663,15 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	win->dma_buf_data[2].fence = NULL;
 	win->plane_cnt = 1;
 
-	dpp = v4l2_get_subdevdata(decon->dpp_sd[decon->dt.dft_idma]);
-	ret = decon_map_ion_handle(decon, dpp->dev, &win->dma_buf_data[0],
-			handle, buf, win->idx);
+	if (decon->dt.out_type == DECON_OUT_DP) {
+		displayport = v4l2_get_subdevdata(decon->out_sd[0]);
+		dev = displayport->dev;
+	} else { /* DSI case */
+		dsim = v4l2_get_subdevdata(decon->out_sd[0]);
+		dev = dsim->dev;
+	}
+	ret = decon_map_ion_handle(decon, dev, &win->dma_buf_data[0], handle,
+			buf, win->idx);
 	if (!ret)
 		goto err_map;
 	map_dma = win->dma_buf_data[0].dma_addr;
@@ -2695,10 +2710,12 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 {
 	struct fb_info *fbi = decon->win[decon->dt.dft_win]->fbinfo;
 	struct decon_win *win = decon->win[decon->dt.dft_win];
+	struct displayport_device *displayport;
+	struct dsim_device *dsim;
+	struct device *dev;
 	dma_addr_t map_dma;
 	struct ion_handle *handle;
 	struct dma_buf *buf;
-	struct dpp_device *dpp;
 	void *vaddr;
 	unsigned int ret;
 
@@ -2729,9 +2746,15 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 
 	fbi->screen_base = vaddr;
 
-	dpp = v4l2_get_subdevdata(decon->dpp_sd[decon->dt.dft_idma]);
-	ret = decon_map_ion_handle(decon, dpp->dev,
-			&win->fb_buf_data, handle, buf, win->idx);
+	if (decon->dt.out_type == DECON_OUT_DP) {
+		displayport = v4l2_get_subdevdata(decon->out_sd[0]);
+		dev = displayport->dev;
+	} else { /* DSI case */
+		dsim = v4l2_get_subdevdata(decon->out_sd[0]);
+		dev = dsim->dev;
+	}
+	ret = decon_map_ion_handle(decon, dev, &win->fb_buf_data, handle,
+			buf, win->idx);
 	if (!ret)
 		goto err_map;
 	map_dma = win->fb_buf_data.dma_addr;

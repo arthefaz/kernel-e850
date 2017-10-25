@@ -659,11 +659,6 @@ static int dpp_set_config(struct dpp_device *dpp)
 
 	if (dpp->state == DPP_STATE_OFF) {
 		dpp_dbg("dpp%d is started\n", dpp->id);
-#if defined(CONFIG_EXYNOS_PD)
-		pm_runtime_get_sync(dpp->dev);
-#else
-		dpp_runtime_resume(dpp->dev);
-#endif
 		dpp_reg_init(dpp->id);
 
 		enable_irq(dpp->res.dma_irq);
@@ -718,11 +713,6 @@ static int dpp_stop(struct dpp_device *dpp, bool reset)
 	del_timer(&dpp->d.op_timer);
 	dpp_reg_deinit(dpp->id, reset);
 
-#if defined(CONFIG_EXYNOS_PD)
-	pm_runtime_put_sync(dpp->dev);
-#else
-	dpp_runtime_suspend(dpp->dev);
-#endif
 	dpp_dbg("dpp%d is stopped\n", dpp->id);
 
 	dpp->state = DPP_STATE_OFF;
@@ -804,6 +794,8 @@ static void dpp_init_subdev(struct dpp_device *dpp)
 	v4l2_set_subdevdata(sd, dpp);
 }
 
+/* TODO: This will be moved to DECON driver */
+#if 0
 #if defined(CONFIG_ION_EXYNOS)
 static int dpp_dump_buffer_data(struct dpp_device *dpp)
 {
@@ -848,6 +840,7 @@ static int dpp_dump_buffer_data(struct dpp_device *dpp)
 
 	return 0;
 }
+#endif
 #endif
 
 static irqreturn_t dpp_irq_handler(int irq, void *priv)
@@ -969,6 +962,8 @@ static int dpp_get_clocks(struct dpp_device *dpp)
 	return 0;
 }
 
+/* TODO: This will be moved to DECON driver */
+#if 0
 #if defined(CONFIG_ION_EXYNOS)
 static bool dumped;
 static int dpp_sysmmu_fault_handler(struct iommu_domain *domain,
@@ -993,6 +988,7 @@ static int dpp_sysmmu_fault_handler(struct iommu_domain *domain,
 
 	return 0;
 }
+#endif
 #endif
 
 static void dpp_parse_dt(struct dpp_device *dpp, struct device *dev)
@@ -1120,15 +1116,6 @@ static int dpp_probe(struct platform_device *pdev)
 	setup_timer(&dpp->d.op_timer, dpp_op_timer_handler, (unsigned long)dpp);
 
 	pm_runtime_enable(dev);
-
-#if defined(CONFIG_ION_EXYNOS)
-	ret = iovmm_activate(dev);
-	if (ret) {
-		dpp_err("failed to activate iovmm\n");
-		goto err_clk;
-	}
-	iovmm_set_fault_handler(dev, dpp_sysmmu_fault_handler, NULL);
-#endif
 
 	dpp->state = DPP_STATE_OFF;
 	dpp_info("dpp%d is probed successfully\n", dpp->id);

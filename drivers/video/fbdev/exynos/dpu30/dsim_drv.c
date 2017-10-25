@@ -30,6 +30,9 @@
 #include <video/mipi_display.h>
 #include <soc/samsung/cal-if.h>
 #include <dt-bindings/clock/exynos9810.h>
+#if defined(CONFIG_ION_EXYNOS)
+#include <linux/exynos_iovmm.h>
+#endif
 
 #include "decon.h"
 #include "dsim.h"
@@ -1366,6 +1369,14 @@ static int dsim_probe(struct platform_device *pdev)
 			(unsigned long)dsim);
 
 	pm_runtime_enable(dev);
+
+#if defined(CONFIG_ION_EXYNOS)
+	ret = iovmm_activate(dev);
+	if (ret) {
+		dsim_err("failed to activate iovmm\n");
+		goto err_dt;
+	}
+#endif
 
 	ret = dsim_get_data_lanes(dsim);
 	if (ret)
