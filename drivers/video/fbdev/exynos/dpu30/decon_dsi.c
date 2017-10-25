@@ -219,11 +219,6 @@ int decon_register_irq(struct decon_device *decon)
 
 int decon_get_clocks(struct decon_device *decon)
 {
-	decon->res.aclk = devm_clk_get(decon->dev, "aclk");
-	if (IS_ERR_OR_NULL(decon->res.aclk)) {
-		decon_err("failed to get aclk\n");
-		return PTR_ERR(decon->res.aclk);
-	}
 	return 0;
 }
 
@@ -845,11 +840,6 @@ int decon_exit_hiber(struct decon_device *decon)
 	if (decon->state != DECON_STATE_HIBER)
 		goto err;
 
-#if defined(CONFIG_EXYNOS_PD)
-	pm_runtime_get_sync(decon->dev);
-#else
-	decon_runtime_resume(decon->dev);
-#endif
 	ret = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
 			DSIM_IOC_ENTER_ULPS, (unsigned long *)0);
 	if (ret) {
@@ -967,12 +957,6 @@ int decon_enter_hiber(struct decon_device *decon)
 					decon->out_sd[1]->name);
 		}
 	}
-
-#if defined(CONFIG_EXYNOS_PD)
-	pm_runtime_put_sync(decon->dev);
-#else
-	decon_runtime_suspend(decon->dev);
-#endif
 
 	decon->hiber.enter_cnt++;
 	DPU_EVENT_LOG(DPU_EVT_ENTER_HIBER, &decon->sd, start);

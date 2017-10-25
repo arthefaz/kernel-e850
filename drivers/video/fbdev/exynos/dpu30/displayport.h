@@ -81,6 +81,7 @@ struct displayport_resources {
 	int irq;
 	void __iomem *link_regs;
 	void __iomem *phy_regs;
+	struct clk *aclk;
 };
 
 enum displayport_aux_ch_command_type {

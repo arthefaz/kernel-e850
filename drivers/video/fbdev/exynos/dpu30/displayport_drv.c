@@ -2332,6 +2332,12 @@ static int displayport_init_resources(struct displayport_device *displayport, st
 	}
 	disable_irq(displayport->res.irq);
 
+	displayport->res.aclk = devm_clk_get(displayport->dev, "aclk");
+	if (IS_ERR_OR_NULL(displayport->res.aclk)) {
+		displayport_err("failed to get aclk\n");
+		return PTR_ERR(displayport->res.aclk);
+	}
+
 	return 0;
 }
 
@@ -3074,22 +3080,22 @@ static void displayport_shutdown(struct platform_device *pdev)
 
 static int displayport_runtime_suspend(struct device *dev)
 {
-	/* struct displayport_device *displayport = dev_get_drvdata(dev); */
+	struct displayport_device *displayport = dev_get_drvdata(dev);
 
 	/* DPU_EVENT_LOG(DPU_EVT_DP_SUSPEND, &displayport->sd, ktime_set(0, 0)); */
 	displayport_dbg("%s +\n", __func__);
-
+	clk_disable_unprepare(displayport->res.aclk);
 	displayport_dbg("%s -\n", __func__);
 	return 0;
 }
 
 static int displayport_runtime_resume(struct device *dev)
 {
-	/* struct displayport_device *displayport = dev_get_drvdata(dev); */
+	struct displayport_device *displayport = dev_get_drvdata(dev);
 
 	/* DPU_EVENT_LOG(DPU_EVT_DP_RESUME, &displayport->sd, ktime_set(0, 0)); */
 	displayport_dbg("%s: +\n", __func__);
-
+	clk_prepare_enable(displayport->res.aclk);
 	displayport_dbg("%s -\n", __func__);
 	return 0;
 }
