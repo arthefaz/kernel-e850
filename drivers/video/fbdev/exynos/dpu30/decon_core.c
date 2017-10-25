@@ -420,12 +420,6 @@ static int decon_enable(struct decon_device *decon)
 		goto err;
 	}
 
-#if defined(CONFIG_EXYNOS_PD)
-	pm_runtime_get_sync(decon->dev);
-#else
-	decon_runtime_resume(decon->dev);
-#endif
-
 	pm_stay_awake(decon->dev);
 	dev_warn(decon->dev, "pm_stay_awake");
 
@@ -623,6 +617,9 @@ static int decon_disable(struct decon_device *decon)
 	decon->cur_using_dpp = 0;
 	decon_dpp_stop(decon, false);
 
+	if (psr.out_type == DECON_OUT_DP)
+		decon_reg_set_te_qactive_pll_mode(decon->id, 0);
+
 	decon->bts.ops->bts_release_bw(decon);
 
 	ret = v4l2_subdev_call(decon->out_sd[0], video, s_stream, 0);
@@ -638,9 +635,6 @@ static int decon_disable(struct decon_device *decon)
 		}
 	}
 
-	if (psr.out_type == DECON_OUT_DP)
-		decon_reg_set_te_qactive_pll_mode(decon->id, 0);
-
 	pm_relax(decon->dev);
 	dev_warn(decon->dev, "pm_relax");
 
@@ -652,12 +646,6 @@ static int decon_disable(struct decon_device *decon)
 			}
 		}
 	}
-
-#if defined(CONFIG_EXYNOS_PD)
-	pm_runtime_put_sync(decon->dev);
-#else
-	decon_runtime_suspend(decon->dev);
-#endif
 
 	decon->state = DECON_STATE_OFF;
 
@@ -701,12 +689,6 @@ static int decon_dp_disable(struct decon_device *decon)
 
 	if (psr.out_type == DECON_OUT_DP)
 		decon_reg_set_te_qactive_pll_mode(decon->id, 0);
-
-#if defined(CONFIG_EXYNOS_PD)
-	pm_runtime_put_sync(decon->dev);
-#else
-	decon_runtime_suspend(decon->dev);
-#endif
 
 	decon->state = DECON_STATE_OFF;
 err:
@@ -3133,12 +3115,6 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 		decon_info("decon%d doesn't need to display\n", decon->id);
 		return 0;
 	}
-
-#if defined(CONFIG_EXYNOS_PD)
-	pm_runtime_get_sync(decon->dev);
-#else
-	decon_runtime_resume(decon->dev);
-#endif
 
 	pm_stay_awake(decon->dev);
 	dev_warn(decon->dev, "pm_stay_awake");

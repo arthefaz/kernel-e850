@@ -524,6 +524,12 @@ static void dsim_clocks_info(struct dsim_device *dsim)
 
 static int dsim_get_clocks(struct dsim_device *dsim)
 {
+	dsim->res.aclk = devm_clk_get(dsim->dev, "aclk");
+	if (IS_ERR_OR_NULL(dsim->res.aclk)) {
+		dsim_err("failed to get aclk\n");
+		return PTR_ERR(dsim->res.aclk);
+	}
+
 	return 0;
 }
 
@@ -1442,6 +1448,7 @@ static int dsim_runtime_suspend(struct device *dev)
 
 	DPU_EVENT_LOG(DPU_EVT_DSIM_SUSPEND, &dsim->sd, ktime_set(0, 0));
 	dsim_dbg("%s +\n", __func__);
+	clk_disable_unprepare(dsim->res.aclk);
 	dsim_dbg("%s -\n", __func__);
 	return 0;
 }
@@ -1452,7 +1459,7 @@ static int dsim_runtime_resume(struct device *dev)
 
 	DPU_EVENT_LOG(DPU_EVT_DSIM_RESUME, &dsim->sd, ktime_set(0, 0));
 	dsim_dbg("%s: +\n", __func__);
-
+	clk_prepare_enable(dsim->res.aclk);
 	dsim_dbg("%s -\n", __func__);
 	return 0;
 }

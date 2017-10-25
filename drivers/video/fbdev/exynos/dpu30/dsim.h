@@ -202,6 +202,7 @@ struct dsim_resources {
 	struct clk *dphy_byte;
 	struct clk *rgb_vclk0;
 	struct clk *pclk_disp;
+	struct clk *aclk;
 	int lcd_power[2];
 	int lcd_reset;
 	int irq;
