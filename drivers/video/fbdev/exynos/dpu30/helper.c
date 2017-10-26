@@ -755,3 +755,78 @@ void dpu_dump_afbc_info(void)
 		}
 	}
 }
+
+#if defined(CONFIG_ION_EXYNOS)
+static int dpu_dump_buffer_data(struct dpp_device *dpp)
+{
+	int i;
+	int id_idx = 0;
+	int dump_size = 128;
+	struct decon_device *decon;
+	struct dpu_afbc_info *afbc_info;
+
+	if (dpp->state == DPP_STATE_ON) {
+
+		for (i = 0; i < 3; i++) {
+			decon = get_decon_drvdata(i);
+			if (decon == NULL)
+				continue;
+
+			if (dpp->id == IDMA_VGF1)
+				id_idx = 1;
+
+			afbc_info = &decon->d.cur_afbc_info;
+			if (!afbc_info->is_afbc[id_idx])
+				continue;
+
+			if (afbc_info->size[id_idx] > 2048)
+				dump_size = 128;
+			else
+				dump_size = afbc_info->size[id_idx] / 16;
+
+			decon_info("Base(0x%p), KV(0x%p), size(%d)\n",
+				(void *)afbc_info->dma_addr[id_idx],
+				afbc_info->v_addr[id_idx],
+				dump_size);
+
+			if (!afbc_info->v_addr[id_idx])
+				continue;
+
+			dpu_dump_data_to_console(
+				afbc_info->v_addr[id_idx],
+				dump_size, dpp->id);
+		}
+	}
+
+	return 0;
+}
+
+int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
+	struct device *dev, unsigned long iova, int flags, void *token)
+{
+	struct decon_device *decon = NULL;
+	struct dpp_device *dpp = NULL;
+	int i;
+
+	if (!strcmp(DSIM_MODULE_NAME, dev->driver->name)) {
+		decon = get_decon_drvdata(0);
+	} else if (!strcmp(DISPLAYPORT_MODULE_NAME, dev->driver->name)) {
+		decon = get_decon_drvdata(2);
+	} else {
+		decon_err("unknown driver for dpu sysmmu falut handler(%s)\n",
+				dev->driver->name);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < MAX_DPP_SUBDEV; i++) {
+		if (test_bit(i, &decon->prev_used_dpp)) {
+			dpp = get_dpp_drvdata(i);
+			dpu_dump_buffer_data(dpp);
+		}
+	}
+
+	decon_dump(decon);
+
+	return 0;
+}
+#endif

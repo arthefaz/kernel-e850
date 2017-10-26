@@ -794,55 +794,6 @@ static void dpp_init_subdev(struct dpp_device *dpp)
 	v4l2_set_subdevdata(sd, dpp);
 }
 
-/* TODO: This will be moved to DECON driver */
-#if 0
-#if defined(CONFIG_ION_EXYNOS)
-static int dpp_dump_buffer_data(struct dpp_device *dpp)
-{
-	int i;
-	int id_idx = 0;
-	int dump_size = 128;
-	struct decon_device *decon;
-	struct dpu_afbc_info *afbc_info;
-
-	if (dpp->state == DPP_STATE_ON) {
-
-		for (i = 0; i < 3; i++) {
-			decon = get_decon_drvdata(i);
-			if (decon == NULL)
-				continue;
-
-			if (dpp->id == IDMA_VGF1)
-				id_idx = 1;
-
-			afbc_info = &decon->d.cur_afbc_info;
-			if (!afbc_info->is_afbc[id_idx])
-				continue;
-
-			if (afbc_info->size[id_idx] > 2048)
-				dump_size = 128;
-			else
-				dump_size = afbc_info->size[id_idx] / 16;
-
-			decon_info("Base(0x%p), KV(0x%p), size(%d)\n",
-				(void *)afbc_info->dma_addr[id_idx],
-				afbc_info->v_addr[id_idx],
-				dump_size);
-
-			if (!afbc_info->v_addr[id_idx])
-				continue;
-
-			dpu_dump_data_to_console(
-				afbc_info->v_addr[id_idx],
-				dump_size, dpp->id);
-		}
-	}
-
-	return 0;
-}
-#endif
-#endif
-
 static irqreturn_t dpp_irq_handler(int irq, void *priv)
 {
 	struct dpp_device *dpp = priv;
@@ -961,35 +912,6 @@ static int dpp_get_clocks(struct dpp_device *dpp)
 {
 	return 0;
 }
-
-/* TODO: This will be moved to DECON driver */
-#if 0
-#if defined(CONFIG_ION_EXYNOS)
-static bool dumped;
-static int dpp_sysmmu_fault_handler(struct iommu_domain *domain,
-	struct device *dev, unsigned long iova, int flags, void *token)
-{
-	struct dpp_device *dpp = dev_get_drvdata(dev);
-	struct decon_device *decon = get_decon_drvdata(0);
-
-	dpp_info("dpp%d sysmmu fault handler\n", dpp->id);
-
-	if (dpp->state == DPP_STATE_ON) {
-		dpp_dump(dpp);
-		dpp_dump_buffer_data(dpp);
-	}
-
-	if (dumped)
-		return 0;
-
-	decon_dump(decon);
-
-	dumped = true;
-
-	return 0;
-}
-#endif
-#endif
 
 static void dpp_parse_dt(struct dpp_device *dpp, struct device *dev)
 {

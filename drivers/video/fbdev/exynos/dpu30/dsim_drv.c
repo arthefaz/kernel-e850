@@ -1382,6 +1382,7 @@ static int dsim_probe(struct platform_device *pdev)
 		dsim_err("failed to activate iovmm\n");
 		goto err_dt;
 	}
+	iovmm_set_fault_handler(dev, dpu_sysmmu_fault_handler, NULL);
 #endif
 
 	ret = dsim_get_data_lanes(dsim);
