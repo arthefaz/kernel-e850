@@ -3005,6 +3005,7 @@ static int displayport_probe(struct platform_device *pdev)
 		displayport_err("failed to activate iovmm\n");
 		goto err_dt;
 	}
+	iovmm_set_fault_handler(dev, dpu_sysmmu_fault_handler, NULL);
 #endif
 
 	displayport->idle_ip_index =

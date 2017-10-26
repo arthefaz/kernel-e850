@@ -157,14 +157,11 @@ static void __decon_dump(bool en_dsc)
 void decon_dump(struct decon_device *decon)
 {
 	int acquired = console_trylock();
-	int usage_count = 0;
 
-	if (pm_runtime_enabled(decon->dev)) {
-		usage_count = atomic_read(&decon->dev->power.usage_count);
-		decon_info("\n=== DECON PM USAGE_COUNT %d ===", usage_count);
-		/* If power is off, SFR access cause abort */
-		if (usage_count <= 0)
-			return;
+	if (decon->state != DECON_STATE_ON) {
+		decon_info("%s: DECON%d is disabled, state(%d)\n",
+				__func__, decon->id, decon->state);
+		return;
 	}
 
 	decon_info("\n=== DECON%d SFR DUMP ===\n", decon->id);
