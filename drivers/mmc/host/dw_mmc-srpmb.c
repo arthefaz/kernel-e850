@@ -115,7 +115,7 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 		if (ret != 0) {
 			req->status_flag = WRITE_COUNTER_SECURITY_OUT_ERROR;
 			dev_err(dev, "Fail to execute for srpmb write counter \
-				security out: %x\n", ret);
+				security out: %d\n", ret);
 			break;
 		}
 
@@ -128,7 +128,7 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 		if (ret != 0) {
 			req->status_flag = WRITE_COUNTER_SECURITY_IN_ERROR;
 			dev_err(dev, "Fail to execute for srpmb write counter \
-				security in: %x\n", ret);
+				security in: %d\n", ret);
 			break;
 		}
 		req->status_flag = PASS_STATUS;
@@ -140,11 +140,19 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 		icmd.opcode = MMC_WRITE_MULTIPLE_BLOCK;
 		icmd.data_ptr = (unsigned long)req->rpmb_data;
 
+		if (icmd.blocks == 0) {
+			dev_err(dev, "Invalid block size from secure world\n"
+					"cmd(%d), type(%d), data length(%d)\n",
+					req->cmd, req->type, req->data_len);
+			ret = -EINVAL;
+			break;
+		}
+
 		/* program data packet */
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
 			req->status_flag = WRITE_DATA_SECURITY_OUT_ERROR;
-			dev_err(dev, "Fail to write block for program data: %x\n", ret);
+			dev_err(dev, "Fail to write block for program data: %d\n", ret);
 			break;
 		}
 
@@ -165,7 +173,7 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
 			req->status_flag = WRITE_DATA_SECURITY_OUT_ERROR;
-			dev_err(dev, "Fail to write block for result: %x\n", ret);
+			dev_err(dev, "Fail to write block for result: %d\n", ret);
 			goto wout;
 		}
 
@@ -178,7 +186,7 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
 			req->status_flag = WRITE_DATA_SECURITY_IN_ERROR;
-			dev_err(dev, "Fail to read block for response: %x\n", ret);
+			dev_err(dev, "Fail to read block for response: %d\n", ret);
 			goto wout;
 		}
 		memcpy(req->rpmb_data, result_buf, RPMB_PACKET_SIZE);
@@ -210,7 +218,7 @@ wout:
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
 			req->status_flag = READ_DATA_SECURITY_OUT_ERROR;
-			dev_err(dev, "Fail to write block for read data: %x\n", ret);
+			dev_err(dev, "Fail to write block for read data: %d\n", ret);
 			break;
 		}
 
@@ -219,11 +227,19 @@ wout:
 		icmd.opcode = MMC_READ_MULTIPLE_BLOCK;
 		icmd.blocks = req->data_len/RPMB_PACKET_SIZE;
 
+		if (icmd.blocks == 0) {
+			dev_err(dev, "Invalid block size from secure world\n"
+					"cmd(%d), type(%d), data length(%d)\n",
+					req->cmd, req->type, req->data_len);
+			ret = -EINVAL;
+			break;
+		}
+
 		/* read multiple block for response */
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
 			req->status_flag = READ_DATA_SECURITY_IN_ERROR;
-			dev_err(dev, "Fail to read block for response: %x\n", ret);
+			dev_err(dev, "Fail to read block for response: %d\n", ret);
 			break;
 		}
 		req->status_flag = PASS_STATUS;
