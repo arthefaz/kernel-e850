@@ -79,6 +79,7 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 	struct mmc_ioc_cmd icmd;
 	struct rpmb_packet packet;
 	u8 *result_buf = NULL;
+	unsigned long flags;
 
 	/* get block device for mmc rpmb */
 	if (bdev == NULL) {
@@ -98,6 +99,7 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 	}
 
 	wake_lock(&ctx->wakelock);
+	spin_lock_irqsave(&ctx->lock, flags);
 
 	/* Initialize mmc ioc command */
 	mmc_cmd_init(&icmd);
@@ -231,6 +233,7 @@ wout:
 		ret = -EINVAL;
 	}
 
+	spin_unlock_irqrestore(&ctx->lock, flags);
 	wake_unlock(&ctx->wakelock);
 
 	return ret;

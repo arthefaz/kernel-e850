@@ -53,6 +53,7 @@ struct _mmc_rpmb_ctx {
 	struct work_struct work;
 	struct block_device *bdev;
 	struct wake_lock wakelock;
+	spinlock_t lock;
 };
 
 struct _mmc_rpmb_req {
