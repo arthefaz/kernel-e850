@@ -88,6 +88,7 @@ static void win_update_check_limitation(struct decon_device *decon,
 	struct decon_win_rect update;
 	struct decon_rect r;
 	int i;
+	int sz_align = 1;
 	int adj_src_x = 0, adj_src_y = 0;
 
 	for (i = 0; i < decon->dt.max_win; i++) {
@@ -108,20 +109,11 @@ static void win_update_check_limitation(struct decon_device *decon,
 		if (!(r.right - r.left) && !(r.bottom - r.top))
 			continue;
 
-		if (dpu_get_plane_cnt(config->format, false) == 1) {
-			if (((r.right - r.left) < SRC_WIDTH_MIN) ||
-				((r.bottom - r.top) < SRC_HEIGHT_MIN)) {
-				goto change_full;
-			}
-		} else {
-			if (((r.right - r.left) < (SRC_WIDTH_MIN * 2)) ||
-				((r.bottom - r.top) < (SRC_HEIGHT_MIN))) {
-				goto change_full;
-			}
-
+		if (is_yuv(config)) {
 			/* check alignment for NV12/NV21 format */
 			update.x = regs->up_region.left;
 			update.y = regs->up_region.top;
+			sz_align = 2;
 
 			if (update.y > config->dst.y)
 				adj_src_y = config->src.y + (update.y - config->dst.y);
@@ -131,6 +123,12 @@ static void win_update_check_limitation(struct decon_device *decon,
 			if (adj_src_x & 0x1 || adj_src_y & 0x1)
 				goto change_full;
 		}
+
+		if (((r.right - r.left) < (SRC_WIDTH_MIN * sz_align)) ||
+				((r.bottom - r.top) < (SRC_HEIGHT_MIN * sz_align))) {
+			goto change_full;
+		}
+
 		/* cursor async */
 		if (((r.right - r.left) > decon->lcd_info->xres) ||
 			((r.bottom - r.top) > decon->lcd_info->yres)) {
