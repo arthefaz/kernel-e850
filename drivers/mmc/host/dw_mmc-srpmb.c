@@ -69,6 +69,18 @@ static void mmc_cmd_init(struct mmc_ioc_cmd *icmd)
 	icmd->cmd_timeout_ms = 0;
 }
 
+static void update_rpmb_status_flag(struct _mmc_rpmb_ctx *ctx,
+				struct _mmc_rpmb_req *req, int status)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&ctx->lock, flags);
+	req->status_flag = status;
+	spin_unlock_irqrestore(&ctx->lock, flags);
+
+	return;
+}
+
 static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 {
 	int ret = 0;
@@ -79,7 +91,6 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 	struct mmc_ioc_cmd icmd;
 	struct rpmb_packet packet;
 	u8 *result_buf = NULL;
-	unsigned long flags;
 
 	/* get block device for mmc rpmb */
 	if (bdev == NULL) {
@@ -99,7 +110,6 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 	}
 
 	wake_lock(&ctx->wakelock);
-	spin_lock_irqsave(&ctx->lock, flags);
 
 	/* Initialize mmc ioc command */
 	mmc_cmd_init(&icmd);
@@ -113,7 +123,8 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
-			req->status_flag = WRITE_COUNTER_SECURITY_OUT_ERROR;
+			update_rpmb_status_flag(ctx, req,
+					WRITE_COUNTER_SECURITY_OUT_ERROR);
 			dev_err(dev, "Fail to execute for srpmb write counter \
 				security out: %d\n", ret);
 			break;
@@ -126,12 +137,13 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
-			req->status_flag = WRITE_COUNTER_SECURITY_IN_ERROR;
+			update_rpmb_status_flag(ctx, req,
+					WRITE_COUNTER_SECURITY_IN_ERROR);
 			dev_err(dev, "Fail to execute for srpmb write counter \
 				security in: %d\n", ret);
 			break;
 		}
-		req->status_flag = PASS_STATUS;
+		update_rpmb_status_flag(ctx, req, RPMB_PASSED);
 		break;
 	case WRITE_DATA:
 		icmd.write_flag = RELIABLE_WRITE_REQ_SET;
@@ -151,7 +163,7 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 		/* program data packet */
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
-			req->status_flag = WRITE_DATA_SECURITY_OUT_ERROR;
+			update_rpmb_status_flag(ctx, req, WRITE_DATA_SECURITY_OUT_ERROR);
 			dev_err(dev, "Fail to write block for program data: %d\n", ret);
 			break;
 		}
@@ -172,7 +184,7 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 		/* result read request */
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
-			req->status_flag = WRITE_DATA_SECURITY_OUT_ERROR;
+			update_rpmb_status_flag(ctx, req, WRITE_DATA_SECURITY_OUT_ERROR);
 			dev_err(dev, "Fail to write block for result: %d\n", ret);
 			goto wout;
 		}
@@ -185,12 +197,12 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 		/* read multiple block for response */
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
-			req->status_flag = WRITE_DATA_SECURITY_IN_ERROR;
+			update_rpmb_status_flag(ctx, req, WRITE_DATA_SECURITY_IN_ERROR);
 			dev_err(dev, "Fail to read block for response: %d\n", ret);
 			goto wout;
 		}
 		memcpy(req->rpmb_data, result_buf, RPMB_PACKET_SIZE);
-		req->status_flag = PASS_STATUS;
+		update_rpmb_status_flag(ctx, req, RPMB_PASSED);
 wout:
 		kfree(result_buf);
 		break;
@@ -217,7 +229,7 @@ wout:
 		/* read data packet */
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
-			req->status_flag = READ_DATA_SECURITY_OUT_ERROR;
+			update_rpmb_status_flag(ctx, req, READ_DATA_SECURITY_OUT_ERROR);
 			dev_err(dev, "Fail to write block for read data: %d\n", ret);
 			break;
 		}
@@ -238,18 +250,18 @@ wout:
 		/* read multiple block for response */
 		ret = fops->srpmb_access(bdev, &icmd);
 		if (ret != 0) {
-			req->status_flag = READ_DATA_SECURITY_IN_ERROR;
+			update_rpmb_status_flag(ctx, req, READ_DATA_SECURITY_IN_ERROR);
 			dev_err(dev, "Fail to read block for response: %d\n", ret);
 			break;
 		}
-		req->status_flag = PASS_STATUS;
+		update_rpmb_status_flag(ctx, req, RPMB_PASSED);
 		break;
 	default:
 		dev_err(dev, "Fail to invalid command: %x\n", req->type);
+		update_rpmb_status_flag(ctx, req, RPMB_INVALID_COMMAND);
 		ret = -EINVAL;
 	}
 
-	spin_unlock_irqrestore(&ctx->lock, flags);
 	wake_unlock(&ctx->wakelock);
 
 	return ret;
@@ -287,7 +299,17 @@ static void mmc_rpmb_worker(struct work_struct *work)
 static irqreturn_t mmc_rpmb_interrupt(int intr, void *arg)
 {
 	struct _mmc_rpmb_ctx *ctx = (struct _mmc_rpmb_ctx *)arg;
+	struct device *dev;
+	struct _mmc_rpmb_req *req;
 
+	dev = ctx->dev;
+	req = (struct _mmc_rpmb_req *)ctx->wsm_virtaddr;
+	if (!req) {
+		dev_err(dev, "Invalid wsm address for rpmb\n");
+		return IRQ_HANDLED;
+	}
+
+	update_rpmb_status_flag(ctx, req, RPMB_IN_PROGRESS);
 	queue_work(ctx->srpmb_queue, &ctx->work);
 
 	return IRQ_HANDLED;
