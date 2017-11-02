@@ -867,7 +867,6 @@ void displayport_hpd_changed(int state)
 		displayport->hpd_state = HPD_PLUG;
 		displayport->auto_test_mode = 0;
 		/* PHY power on */
-		phy_power_on(displayport->phy);
 		displayport_reg_init(); /* for AUX ch read/write. */
 		usleep_range(10000, 11000);
 
@@ -932,7 +931,6 @@ void displayport_hpd_changed(int state)
 	return;
 HPD_FAIL:
 	displayport_reg_phy_disable();
-	phy_power_off(displayport->phy);
 	pm_relax(displayport->dev);
 	displayport->hpd_current_state = 0;
 	displayport->hpd_state = HPD_UNPLUG;
@@ -944,10 +942,8 @@ HPD_FAIL:
 void displayport_set_reconnection(void)
 {
 	int ret;
-	struct displayport_device *displayport = get_displayport_drvdata();
 
 	/* PHY power on */
-	phy_power_on(displayport->phy);
 	displayport_reg_init(); /* for AUX ch read/write. */
 
 	displayport_info("link training in reconnection\n");
@@ -1113,7 +1109,6 @@ static int displayport_Automated_Test_Request(void)
 		msleep(300);
 
 		/* PHY power on */
-		phy_power_on(displayport->phy);
 		displayport_reg_init(); /* for AUX ch read/write. */
 
 		g_displayport_debug_param.param_used = 1;
@@ -1869,7 +1864,6 @@ static int displayport_disable(struct displayport_device *displayport)
 	disable_irq(displayport->res.irq);
 
 	displayport_reg_phy_disable();
-	phy_power_off(displayport->phy);
 
 #if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_put_sync(displayport->dev);
@@ -2398,7 +2392,6 @@ static ssize_t displayport_link_store(struct class *dev,
 				link_rate = LINK_RATE_1_62Gbps;
 
 			pr_info("%s: %02x %02x\n", __func__, link_rate, lane_cnt);
-			phy_power_on(displayport->phy);
 			displayport_reg_init(); /* for AUX ch read/write. */
 
 			displayport_link_status_read();

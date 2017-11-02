@@ -10,6 +10,8 @@
 */
 
 #include "displayport.h"
+#include "../../../drivers/phy/phy-samsung-usb-cal.h"
+#include "../../../drivers/phy/phy-exynos-usbdp.h"
 
 u32 phy_tune_parameters[4][4][3] = {
 	/* Swing Level_0 */ { {4, 0, 0}, {0, 7, 0}, {2,  9, 1}, {0, 13, 1} },
@@ -135,8 +137,6 @@ void displayport_reg_phy_mode_setting(void)
 #endif
 	u32 val = 0;
 
-	displayport_phy_write_mask(CMN_REG2C, 1, MAN_USBDP_MODE_EN);
-
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	switch (displayport->ccic_notify_dp_conf) {
 	case CCIC_NOTIFY_DP_PIN_UNKNOWN:
@@ -146,6 +146,10 @@ void displayport_reg_phy_mode_setting(void)
 	case CCIC_NOTIFY_DP_PIN_A:
 	case CCIC_NOTIFY_DP_PIN_C:
 	case CCIC_NOTIFY_DP_PIN_E:
+		exynos_usbdrd_inform_dp_use(1, 4);
+
+		displayport_phy_write_mask(CMN_REG2C, 1, MAN_USBDP_MODE_EN);
+
 		displayport_phy_write_mask(CMN_REG2C, 0x02, MAN_USBDP_MODE);
 
 		displayport_phy_write_mask(CMN_REG2D, 0, USB_TX1_SEL);
@@ -161,6 +165,10 @@ void displayport_reg_phy_mode_setting(void)
 	case CCIC_NOTIFY_DP_PIN_B:
 	case CCIC_NOTIFY_DP_PIN_D:
 	case CCIC_NOTIFY_DP_PIN_F:
+		exynos_usbdrd_inform_dp_use(1, 2);
+
+		displayport_phy_write_mask(CMN_REG2C, 1, MAN_USBDP_MODE_EN);
+
 		if (displayport->dp_sw_sel) {
 			displayport_phy_write_mask(CMN_REG2C, 0x03, MAN_USBDP_MODE);
 
@@ -1154,6 +1162,9 @@ void displayport_reg_phy_disable(void)
 {
 	displayport_reg_phy_reset(1);
 	displayport_phy_write(DP_REG_0, 0x00);
+
+	exynos_usbdrd_inform_dp_use(0, displayport_reg_get_lane_count());
+	exynos_usbdrd_request_phy_isol();
 }
 
 void displayport_reg_init(void)
@@ -1348,9 +1359,7 @@ int displayport_reg_get_stand_alone_crc_result(void)
 int displayport_reg_stand_alone_crc_sorting(void)
 {
 	int ret;
-	struct displayport_device *displayport = get_displayport_drvdata();
 
-	phy_power_on(displayport->phy);
 	displayport_reg_init();
 	displayport_reg_set_lane_count(4);
 	displayport_reg_set_bist_video_configuration(V640X10P60SACRC, BPC_8, COLOR_BAR, VESA_RANGE);
