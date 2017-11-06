@@ -408,7 +408,7 @@ static int mmc_srpmb_probe(struct platform_device *pdev)
 
 	/* initialize workqueue for mmc rpmb handler */
 	ctx->srpmb_queue = alloc_workqueue("srpmb_wq",
-		WQ_MEM_RECLAIM | WQ_UNBOUND, 1);
+		WQ_MEM_RECLAIM | WQ_UNBOUND | WQ_HIGHPRI, 1);
 	if (!ctx->srpmb_queue) {
 		dev_err(dev, "Fail to alloc workqueue for mmc srpmb\n");
 		goto dma_free;
