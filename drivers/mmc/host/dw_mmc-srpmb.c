@@ -24,6 +24,7 @@
 #include <linux/mmc/mmc.h>
 #include <linux/delay.h>
 #include <linux/wakelock.h>
+#include <linux/suspend.h>
 
 #include "dw_mmc-srpmb.h"
 
@@ -91,6 +92,8 @@ static int mmc_rpmb_access(struct _mmc_rpmb_ctx *ctx, struct _mmc_rpmb_req *req)
 	struct mmc_ioc_cmd icmd;
 	struct rpmb_packet packet;
 	u8 *result_buf = NULL;
+
+	dev_info(dev, "start rpmb workqueue with command(%d)\n", req->type);
 
 	/* get block device for mmc rpmb */
 	if (bdev == NULL) {
@@ -263,6 +266,7 @@ wout:
 	}
 
 	wake_unlock(&ctx->wakelock);
+	dev_info(dev, "finish rpmb workqueue with command(%d)\n", req->type);
 
 	return ret;
 }
@@ -294,6 +298,45 @@ static void mmc_rpmb_worker(struct work_struct *work)
 	}
 
 	return;
+}
+
+static int mmc_rpmb_pm_notifier(struct notifier_block *nb, unsigned long event,
+				void *dummy)
+{
+	struct device *dev;
+	struct _mmc_rpmb_ctx *ctx;
+	struct _mmc_rpmb_req *req;
+
+	if (!nb) {
+		printk(KERN_ERR "noti_blk work_struct data invalid\n");
+		return -EINVAL;
+	}
+
+	ctx = container_of(nb, struct _mmc_rpmb_ctx, pm_notifier);
+	dev = ctx->dev;
+	req = (struct _mmc_rpmb_req *)ctx->wsm_virtaddr;
+	if (!req) {
+		dev_err(dev, "Invalid wsm address for rpmb\n");
+		return -EINVAL;
+	}
+
+	switch (event) {
+	case PM_HIBERNATION_PREPARE:
+	case PM_SUSPEND_PREPARE:
+	case PM_RESTORE_PREPARE:
+		flush_workqueue(ctx->srpmb_queue);
+		update_rpmb_status_flag(ctx, req, RPMB_FAIL_SUSPEND_STATUS);
+		break;
+	case PM_POST_SUSPEND:
+	case PM_POST_HIBERNATION:
+	case PM_POST_RESTORE:
+		update_rpmb_status_flag(ctx, req, 0);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
 }
 
 static irqreturn_t mmc_rpmb_interrupt(int intr, void *arg)
@@ -336,6 +379,9 @@ static int init_mmc_srpmb(struct platform_device *pdev, struct _mmc_rpmb_ctx *ct
 		dev_err(dev, "Fail to alloc for srpmb wsm (world shared memory)\n");
 		goto alloc_wsm_fail;
 	}
+
+	dev_info(dev, "srpmb dma addr: virt(%llx), phy(%llx)\n",
+			(uint64_t)ctx->wsm_virtaddr, (uint64_t)ctx->wsm_phyaddr);
 
 	/* get mmc srpmb irq number */
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
@@ -404,6 +450,14 @@ static int mmc_srpmb_probe(struct platform_device *pdev)
 	}
 
 	ctx->dev = dev;
+	ctx->pm_notifier.notifier_call = mmc_rpmb_pm_notifier;
+
+	ret = register_pm_notifier(&ctx->pm_notifier);
+	if (ret) {
+		dev_err(dev, "Fail to setup pm notifier\n");
+		goto dma_free;
+	}
+
 	INIT_WORK(&ctx->work, mmc_rpmb_worker);
 
 	/* initialize workqueue for mmc rpmb handler */
@@ -411,7 +465,7 @@ static int mmc_srpmb_probe(struct platform_device *pdev)
 		WQ_MEM_RECLAIM | WQ_UNBOUND | WQ_HIGHPRI, 1);
 	if (!ctx->srpmb_queue) {
 		dev_err(dev, "Fail to alloc workqueue for mmc srpmb\n");
-		goto dma_free;
+		goto notifier_free;
 	}
 
 	platform_set_drvdata(pdev, ctx);
@@ -419,6 +473,8 @@ static int mmc_srpmb_probe(struct platform_device *pdev)
 
 	return 0;
 
+notifier_free:
+	unregister_pm_notifier(&ctx->pm_notifier);
 dma_free:
 	dma_free_coherent(dev, RPMB_BUF_MAX_SIZE, ctx->wsm_virtaddr,
 				ctx->wsm_phyaddr);
@@ -435,6 +491,7 @@ static int mmc_srpmb_remove(struct platform_device *pdev)
 	if (ctx->srpmb_queue)
 		destroy_workqueue(ctx->srpmb_queue);
 
+	unregister_pm_notifier(&ctx->pm_notifier);
 	dma_free_coherent(dev, RPMB_BUF_MAX_SIZE, ctx->wsm_virtaddr,
 			ctx->wsm_phyaddr);
 

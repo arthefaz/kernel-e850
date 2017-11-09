@@ -34,6 +34,7 @@
 #define READ_DATA_SECURITY_OUT_ERROR		0x609
 #define READ_DATA_SECURITY_IN_ERROR		0x60A
 #define RPMB_INVALID_COMMAND			0x60B
+#define RPMB_FAIL_SUSPEND_STATUS		0x60C
 
 #define RPMB_IN_PROGRESS			0xDCDC
 #define RPMB_PASSED				0xBABA
@@ -56,6 +57,7 @@ struct _mmc_rpmb_ctx {
 	struct block_device *bdev;
 	struct wake_lock wakelock;
 	spinlock_t lock;
+	struct notifier_block pm_notifier;
 };
 
 struct _mmc_rpmb_req {
