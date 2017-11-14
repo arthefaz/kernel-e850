@@ -42,11 +42,15 @@
 #define HDCP_SUPPORT
 #define HDCP_2_2
 
+#define HDCP_2_2_AUTH_DONE     1
+#define HDCP_2_2_NOT_AUTH      0
+
 int displayport_log_level = 6;
 static u8 max_lane_cnt;
 static u8 max_link_rate;
 static u64 reduced_resolution;
 struct displayport_debug_param g_displayport_debug_param;
+int auth_done = HDCP_2_2_NOT_AUTH;
 
 struct displayport_device *displayport_drvdata;
 EXPORT_SYMBOL(displayport_drvdata);
@@ -904,6 +908,7 @@ void displayport_hpd_changed(int state)
 	} else {
 #if defined(CONFIG_EXYNOS_HDCP2)
 		if (displayport->hdcp_ver == HDCP_VERSION_2_2) {
+
 			hdcp_dplink_set_integrity_fail();
 			displayport_hdcp22_enable(0);
 		}
@@ -1280,6 +1285,16 @@ static int displayport_hdcp22_irq_handler(void)
 		/* set ready avaible flag */
 		/* todo update stream Management */
 		ret = hdcp_dplink_set_rp_ready();
+		if (auth_done) {
+			if (hdcp_dplink_authenticate() != 0) {
+				auth_done = HDCP_2_2_NOT_AUTH;
+				displayport_reg_video_mute(1);
+			}
+			else {
+				auth_done = HDCP_2_2_AUTH_DONE;
+				displayport_reg_video_mute(0);
+			}
+		}
 	} else {
 		displayport_info("undefined RxStatus(0x%x). ignore\n", rxstatus);
 		ret = -EINVAL;
@@ -1756,11 +1771,14 @@ static void displayport_hdcp22_run(struct work_struct *work)
 #if defined(CONFIG_EXYNOS_HDCP2)
 	u8 val[2] = {0, };
 
-	if (hdcp_dplink_authenticate() != 0)
+	if (hdcp_dplink_authenticate() != 0) {
+		auth_done = HDCP_2_2_NOT_AUTH;
 		displayport_reg_video_mute(1);
-	else
+	}
+	else {
+		auth_done = HDCP_2_2_AUTH_DONE;
 		displayport_reg_video_mute(0);
-
+	}
 	displayport_dpcd_read_for_hdcp22(DPCD_HDCP22_RX_INFO, 2, val);
 	displayport_info("HDCP2.2 rx_info: 0:0x%X, 8:0x%X\n", val[1], val[0]);
 #else
