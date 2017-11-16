@@ -1370,7 +1370,6 @@ bool is_decon_opaque_format(int format);
 void __iomem *dpu_get_sysreg_addr(void);
 u32 dpu_dma_type_to_channel(enum decon_idma_type type);
 void dpu_dump_afbc_info(void);
-unsigned long dpu_detect_afbc_error(void);
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 void decon_set_protected_content(struct decon_device *decon,
 		struct decon_reg_data *regs);
