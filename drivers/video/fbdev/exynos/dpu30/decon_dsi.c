@@ -463,26 +463,27 @@ static ssize_t decon_show_psr_info(struct device *dev,
 	int i;
 	char *p = buf;
 	struct lcd_mres_info *mres_info = &lcd_info->dt_lcd_mres;
+	int len;
 
-	p += sprintf(p, "%d\n", decon->dt.psr_mode);
-	p += sprintf(p, "%d\n", mres_info->mres_number);
+	len = sprintf(p, "%d\n", decon->dt.psr_mode);
+	len += sprintf(p + len, "%d\n", mres_info->mres_number);
 	for (i = 0; i < mres_info->mres_number; i++) {
 		if (mres_info->res_info[i].dsc_en)
-			p += sprintf(p, "%d\n%d\n%d\n%d\n%d\n",
+			len += sprintf(p + len, "%d\n%d\n%d\n%d\n%d\n",
 				mres_info->res_info[i].width,
 				mres_info->res_info[i].height,
 				mres_info->res_info[i].dsc_width,
 				mres_info->res_info[i].dsc_height,
 				mres_info->res_info[i].dsc_en);
 		else
-			p += sprintf(p, "%d\n%d\n%d\n%d\n%d\n",
+			len += sprintf(p + len, "%d\n%d\n%d\n%d\n%d\n",
 				mres_info->res_info[i].width,
 				mres_info->res_info[i].height,
 				MIN_WIN_BLOCK_WIDTH,
 				MIN_WIN_BLOCK_HEIGHT,
 				mres_info->res_info[i].dsc_en);
 	}
-	return (p - buf);
+	return len;
 }
 static DEVICE_ATTR(psr_info, S_IRUGO, decon_show_psr_info, NULL);
 
