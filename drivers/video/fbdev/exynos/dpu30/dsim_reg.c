@@ -16,7 +16,7 @@
 #define DSIM_BTA_TIMEOUT		0xff
 #define DSIM_LP_RX_TIMEOUT		0xffff
 #define DSIM_MULTI_PACKET_CNT		0xffff
-#define DSIM_PLL_STABLE_TIME		0x13880
+#define DSIM_PLL_STABLE_TIME		0x682A
 #define DSIM_FIFOCTRL_THRESHOLD		0x1 /* 1 ~ 32 */
 
 /* If below values depend on panel. These values wil be move to panel file.
