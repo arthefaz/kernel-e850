@@ -59,13 +59,6 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 
 	if (irq_sts_reg & DPU_FRAME_DONE_INT_PEND) {
 		DPU_EVENT_LOG(DPU_EVT_DECON_FRAMEDONE, &decon->sd, ktime_set(0, 0));
-#if defined(CONFIG_EXYNOS_AFBC) && defined(CONFIG_SOC_EXYNOS9810_EVT0)
-		if (dpu_detect_afbc_error()) {
-			dpu_dump_afbc_info();
-			decon_dump(decon);
-			BUG();
-		}
-#endif
 		decon_hiber_trig_reset(decon);
 		if (decon->state == DECON_STATE_TUI)
 			decon_info("%s:%d TUI Frame Done\n", __func__, __LINE__);
