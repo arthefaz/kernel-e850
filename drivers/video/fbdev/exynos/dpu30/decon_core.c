@@ -362,7 +362,8 @@ int decon_tui_protection(bool tui_en)
 		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 
 		decon->state = DECON_STATE_TUI;
-		aclk_khz = clk_get_rate(decon->res.aclk) / 1000U;
+		aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
+				EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
 #if defined(CONFIG_EXYNOS9810_BTS)
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
@@ -375,7 +376,8 @@ int decon_tui_protection(bool tui_en)
 		mutex_unlock(&decon->lock);
 	} else {
 		mutex_lock(&decon->lock);
-		aclk_khz = clk_get_rate(decon->res.aclk) / 1000U;
+		aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
+				EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
 #if defined(CONFIG_EXYNOS9810_BTS)
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
@@ -1289,7 +1291,8 @@ static void decon_set_afbc_recovery_time(struct decon_device *decon)
 	struct v4l2_subdev *sd;
 	struct decon_win *win;
 
-	aclk_khz = clk_get_rate(decon->res.aclk) / 1000U;
+	aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
+			EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 	recovery_num = aclk_khz; /* 1msec */
 
 	for (i = 0; i < decon->dt.max_win; i++) {
