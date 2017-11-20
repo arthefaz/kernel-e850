@@ -903,6 +903,9 @@ static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 		v4l2_set_subdev_hostdata(sd, &dsim->clks.word_clk);
 		break;
 
+	case EXYNOS_DPU_GET_ACLK:
+		return clk_get_rate(dsim->res.aclk);
+
 	default:
 		dsim_err("unsupported ioctl");
 		ret = -EINVAL;

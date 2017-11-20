@@ -2216,6 +2216,9 @@ static long displayport_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *ar
 			displayport_err("failed to configure hdr info\n");
 		break;
 
+	case EXYNOS_DPU_GET_ACLK:
+		return clk_get_rate(displayport->res.aclk);
+
 	default:
 		displayport_err("unsupported ioctl");
 		ret = -EINVAL;

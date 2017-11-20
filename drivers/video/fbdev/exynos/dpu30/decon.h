@@ -1449,4 +1449,7 @@ int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 
 /* cursor async */
 #define DECON_WIN_CURSOR_POS		_IOW('F', 222, struct decon_user_window)
+
+/* DPU aclk */
+#define EXYNOS_DPU_GET_ACLK		_IOR('F', 500, u32)
 #endif /* ___SAMSUNG_DECON_H__ */
