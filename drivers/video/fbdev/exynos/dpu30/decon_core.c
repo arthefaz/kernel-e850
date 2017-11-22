@@ -55,6 +55,13 @@ int decon_systrace_enable;
 struct decon_device *decon_drvdata[MAX_DECON_CNT];
 EXPORT_SYMBOL(decon_drvdata);
 
+#if defined(CONFIG_EXYNOS_ITMON)
+void __iomem *regs_dphy_iso;
+void __iomem *regs_dphy_clk_0;
+void __iomem *regs_dphy_clk_1;
+void __iomem *regs_dphy_clk_2;
+#endif
+
 void tracing_mark_write(struct decon_device *decon, char id, char *str1, int value)
 {
 	char buf[DECON_TRACE_BUF_SIZE] = {0,};
@@ -546,30 +553,35 @@ int cmu_dpu_dump(void)
 	return 0;
 }
 
-static int out_sd_dump(void)
-{
-	void __iomem	*dbg_regs;
-
-	decon_info("\n=== DEBUG register dump : DPHY iso ===\n");
-	dbg_regs = ioremap(0x1406070c, 0x10);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dbg_regs, 0x04, false);
-
-	decon_info("\n=== DEBUG register dump : DPHY clock ===\n");
-	dbg_regs = ioremap(0x16000800, 0x10);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dbg_regs, 0x04, false);
-
-	dbg_regs = ioremap(0x16003030, 0x10);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dbg_regs, 0x04, false);
-
-	dbg_regs = ioremap(0x160060a8, 0x10);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dbg_regs, 0x04, false);
+#if defined(CONFIG_EXYNOS_ITMON)
+static int out_sd_ioremap(void) {
+	regs_dphy_iso = ioremap(0x1406070c, 0x10);
+	regs_dphy_clk_0 = ioremap(0x16000800, 0x10);
+	regs_dphy_clk_1 = ioremap(0x16003030, 0x10);
+	regs_dphy_clk_2 = ioremap(0x160060a8, 0x10);
 
 	return 0;
 }
+
+static int out_sd_dump(void)
+{
+	decon_info("\n=== DEBUG register dump : DPHY iso ===\n");
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs_dphy_iso, 0x04, false);
+
+	decon_info("\n=== DEBUG register dump : DPHY clock ===\n");
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs_dphy_clk_0, 0x04, false);
+
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs_dphy_clk_1, 0x04, false);
+
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs_dphy_clk_2, 0x04, false);
+
+	return 0;
+}
+#endif
 
 static int decon_disable(struct decon_device *decon)
 {
@@ -3274,6 +3286,8 @@ static int decon_probe(struct platform_device *pdev)
 #if defined(CONFIG_EXYNOS_ITMON)
 	decon->itmon_nb.notifier_call = decon_itmon_notifier;
 	itmon_notifier_chain_register(&decon->itmon_nb);
+	/* for DPHY debug */
+	out_sd_ioremap();
 #endif
 
 	ret = decon_initial_display(decon, false);
