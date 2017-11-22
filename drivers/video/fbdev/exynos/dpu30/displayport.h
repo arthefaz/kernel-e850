@@ -530,6 +530,8 @@ struct displayport_device {
 	struct mutex aux_lock;
 	struct mutex training_lock;
 	wait_queue_head_t dp_wait;
+	int audio_state;
+	wait_queue_head_t audio_wait;
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	struct delayed_work notifier_register_work;
 	struct notifier_block dp_typec_nb;
