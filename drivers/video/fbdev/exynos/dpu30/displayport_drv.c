@@ -1668,6 +1668,8 @@ static int displayport_set_hdr_infoframe(struct exynos_hdr_static_info *hdr_info
 
 void displayport_audio_disable(void)
 {
+	struct displayport_device *displayport = get_displayport_drvdata();
+
 	if (displayport_read_mask(SST1_AUDIO_ENABLE, AUDIO_EN) == 1) {
 		displayport_reg_set_audio_fifo_function_enable(0);
 		displayport_reg_set_audio_ch(1);
@@ -1676,6 +1678,8 @@ void displayport_audio_disable(void)
 		displayport_reg_set_dp_audio_enable(0);
 		displayport_reg_set_audio_function_enable(0);
 		displayport_info("audio_disable\n");
+		displayport->audio_state = 0;
+		wake_up_interruptible(&displayport->audio_wait);
 	}
 }
 
@@ -1691,12 +1695,16 @@ static int displayport_set_audio_ch_status(struct displayport_audio_config_data 
 
 int displayport_audio_config(struct displayport_audio_config_data *audio_config_data)
 {
+	struct displayport_device *displayport = get_displayport_drvdata();
 	int ret = 0;
 
 	displayport_info("audio en:%d, ch:%d, fs:%d, bit:%d, packed:%d, word_len:%d\n",
 			audio_config_data->audio_enable, audio_config_data->audio_channel_cnt,
 			audio_config_data->audio_fs, audio_config_data->audio_bit,
 			audio_config_data->audio_packed_mode, audio_config_data->audio_word_length);
+
+	if (audio_config_data->audio_enable == displayport->audio_state)
+		return 0;
 
 	if (audio_config_data->audio_enable == 1) {
 		/* channel mapping: FL, FR, C, SW, RL, RR */
@@ -1715,6 +1723,8 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 		displayport_set_audio_infoframe(audio_config_data);
 		displayport_set_audio_ch_status(audio_config_data);
 		displayport_reg_set_audio_master_mode_enable(audio_config_data->audio_enable);
+
+		displayport->audio_state = 1;
 	} else
 		displayport_audio_disable();
 
@@ -1928,6 +1938,8 @@ static int displayport_enable(struct displayport_device *displayport)
 
 static int displayport_disable(struct displayport_device *displayport)
 {
+	int timeout;
+
 	if (displayport->state != DISPLAYPORT_STATE_ON)
 		return 0;
 
@@ -1936,6 +1948,11 @@ static int displayport_disable(struct displayport_device *displayport)
 	displayport->state = DISPLAYPORT_STATE_OFF;
 	hdcp13_info.auth_state = HDCP13_STATE_NOT_AUTHENTICATED;
 	mutex_unlock(&displayport->cmd_lock);
+
+	timeout = wait_event_interruptible_timeout(displayport->audio_wait,
+		(displayport->audio_state == 0), msecs_to_jiffies(3000));
+	if (!timeout)
+		displayport_info("audio disable timeout\n");
 
 	displayport_audio_disable();
 
@@ -2868,6 +2885,7 @@ static int displayport_probe(struct platform_device *pdev)
 	mutex_init(&displayport->aux_lock);
 	mutex_init(&displayport->training_lock);
 	init_waitqueue_head(&displayport->dp_wait);
+	init_waitqueue_head(&displayport->audio_wait);
 
 	ret = displayport_init_resources(displayport, pdev);
 	if (ret)
