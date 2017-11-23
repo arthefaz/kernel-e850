@@ -944,6 +944,23 @@ HPD_FAIL:
 	return;
 }
 
+void displayport_hpd_unplug(void)
+{
+	int timeout = 0;
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	displayport->hpd_state = HPD_UNPLUG;
+	displayport->hpd_current_state = HPD_UNPLUG;
+	displayport->cur_video = V640X480P60;
+
+	displayport_set_switch_state(displayport, 0);
+	timeout = wait_event_interruptible_timeout(displayport->dp_wait,
+			(displayport->state == DISPLAYPORT_STATE_INIT), msecs_to_jiffies(1000));
+	if (!timeout)
+		displayport_err("disable timeout\n");
+	displayport->hdcp_ver = 0;
+}
+
 void displayport_set_reconnection(void)
 {
 	int ret;
@@ -973,7 +990,7 @@ static void displayport_hpd_plug_work(struct work_struct *work)
 
 static void displayport_hpd_unplug_work(struct work_struct *work)
 {
-	displayport_hpd_changed(0);
+	displayport_hpd_unplug();
 }
 
 static int displayport_check_dpcd_lane_status(u8 lane0_1_status,
@@ -1241,13 +1258,21 @@ static int displayport_hdcp22_irq_handler(void)
 	struct displayport_device *displayport = get_displayport_drvdata();
 	uint8_t rxstatus = 0;
 	int ret = 0;
+	int active;
+
+	active = pm_runtime_active(displayport->dev);
+	if (!active) {
+		displayport_info("displayport power(%d), state(%d)\n",
+				active, displayport->state);
+		spin_unlock(&displayport->slock);
+		return IRQ_HANDLED;
+	}
 
 	hdcp_dplink_get_rxstatus(&rxstatus);
 
 	if (rxstatus & DPCD_HDCP22_RXSTATUS_LINK_INTEGRITY_FAIL) {
 		/* hdcp22 disable while re-authentication */
 		ret = hdcp_dplink_set_integrity_fail();
-		displayport_hdcp22_enable(0);
 
 		if (displayport_reg_get_hdcp22_encryption_enable()) {
 			queue_delayed_work(displayport->dp_wq,
@@ -1263,7 +1288,6 @@ static int displayport_hdcp22_irq_handler(void)
 	} else if (rxstatus & DPCD_HDCP22_RXSTATUS_REAUTH_REQ) {
 		/* hdcp22 disable while re-authentication */
 		ret = hdcp_dplink_set_reauth();
-		displayport_hdcp22_enable(0);
 
 		if (displayport_reg_get_hdcp22_encryption_enable()) {
 			queue_delayed_work(displayport->dp_wq, &displayport->hpd_unplug_work, 0);
