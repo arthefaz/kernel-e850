@@ -466,7 +466,8 @@ void displayport_reg_set_interrupt_mask(enum displayport_interrupt_mask param, u
 		break;
 
 	case AUDIO_FIFO_UNDER_RUN_INT_MASK:
-		displayport_write_mask(SST1_INTERRUPT_STATUS_SET1, val, AFIFO_UNDER);
+		displayport_write_mask(SST1_AUDIO_BUFFER_CONTROL, val, MASTER_AUDIO_BUFFER_EMPTY_INT_EN);
+		displayport_write_mask(SST1_AUDIO_BUFFER_CONTROL, val, MASTER_AUDIO_BUFFER_EMPTY_INT_MASK);
 		break;
 
 	case AUDIO_FIFO_OVER_RUN_INT_MASK:
@@ -499,13 +500,24 @@ void displayport_reg_set_interrupt(u32 en)
 #endif
 	displayport_reg_set_interrupt_mask(VSYNC_DET_INT_MASK, val);
 	displayport_reg_set_interrupt_mask(VIDEO_FIFO_UNDER_FLOW_MASK, val);
+	displayport_reg_set_interrupt_mask(AUDIO_FIFO_UNDER_RUN_INT_MASK, val);
 }
 
 u32 displayport_reg_get_interrupt_and_clear(u32 interrupt_status_register)
 {
-	u32 val = displayport_read(interrupt_status_register);
+	u32 val = 0;
 
-	displayport_write(interrupt_status_register, ~0);
+	if (interrupt_status_register != SST1_AUDIO_BUFFER_CONTROL) {
+		val = displayport_read(interrupt_status_register);
+
+		displayport_write(interrupt_status_register, ~0);
+	} else {
+		val = displayport_read_mask(SST1_AUDIO_BUFFER_CONTROL,
+			MASTER_AUDIO_BUFFER_EMPTY_INT);
+
+		displayport_write_mask(SST1_AUDIO_BUFFER_CONTROL,
+			1, MASTER_AUDIO_BUFFER_EMPTY_INT);
+	}
 
 	return val;
 }
@@ -1594,6 +1606,22 @@ void displayport_reg_set_ch_status_clock_accuracy(enum audio_clock_accuracy cloc
 {
 	displayport_write_mask(SST1_AUDIO_BIST_CHANNEL_STATUS_SET0, clock_accuracy, CLK_ACCUR);
 	displayport_write_mask(SST1_AUDIO_CHANNEL_1_2_STATUS_CTRL_0, clock_accuracy, CLK_ACCUR);
+}
+
+void displayport_reg_wait_buf_full(void)
+{
+	u32 cnt = 1000;
+	u32 state = 0;
+
+	do {
+		state = (displayport_read(SST1_AUDIO_BUFFER_CONTROL) & MASTER_AUDIO_BUFFER_LEVEL)
+			>> MASTER_AUDIO_BUFFER_LEVEL_BIT_POS;
+		cnt--;
+		udelay(1);
+	} while ((state < AUDIO_BUF_FULL_SIZE) && cnt);
+
+	if (!cnt)
+		displayport_err("%s is timeout.\n", __func__);
 }
 
 void displayport_reg_set_hdcp22_system_enable(u32 en)
