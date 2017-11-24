@@ -374,6 +374,11 @@ struct fb_vendor {
 #define SYNC_POSITIVE 0
 #define SYNC_NEGATIVE 1
 
+#define AUDIO_BUF_FULL_SIZE 33
+#define AUDIO_DISABLE 0
+#define AUDIO_ENABLE 1
+#define AUDIO_WAIT_BUF_FULL 2
+
 enum phy_tune_info {
 	PHY_AMP_PARAM = 0,
 	PHY_EMP_PARAM = 1,
@@ -531,6 +536,7 @@ struct displayport_device {
 	struct mutex training_lock;
 	wait_queue_head_t dp_wait;
 	int audio_state;
+	int audio_buf_empty_check;
 	wait_queue_head_t audio_wait;
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	struct delayed_work notifier_register_work;
@@ -977,6 +983,7 @@ void displayport_reg_set_ch_status_ch_cnt(u32 audio_ch_cnt);
 void displayport_reg_set_ch_status_word_length(enum audio_bit_per_channel audio_bit_size);
 void displayport_reg_set_ch_status_sampling_frequency(enum audio_sampling_frequency audio_sampling_freq);
 void displayport_reg_set_ch_status_clock_accuracy(enum audio_clock_accuracy clock_accuracy);
+void displayport_reg_wait_buf_full(void);
 
 void displayport_reg_set_hdcp22_system_enable(u32 en);
 void displayport_reg_set_hdcp22_mode(u32 en);

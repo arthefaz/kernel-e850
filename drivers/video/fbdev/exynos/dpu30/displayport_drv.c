@@ -1499,10 +1499,12 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 		}
 	}
 
-	irq_status_reg = displayport_reg_get_interrupt_and_clear(SST1_INTERRUPT_STATUS_SET1);
+	irq_status_reg = displayport_reg_get_interrupt_and_clear(SST1_AUDIO_BUFFER_CONTROL);
 
-	if (irq_status_reg & AFIFO_UNDER)
+	if (irq_status_reg & MASTER_AUDIO_BUFFER_EMPTY_INT) {
 		displayport_dbg("AFIFO_UNDER detect\n");
+		displayport->audio_buf_empty_check = 1;
+	}
 
 	spin_unlock(&displayport->slock);
 
@@ -1666,17 +1668,39 @@ static int displayport_set_hdr_infoframe(struct exynos_hdr_static_info *hdr_info
 	return 0;
 }
 
+void displayport_audio_wait_buf_full(void)
+{
+	displayport_reg_set_audio_master_mode_enable(0);
+	displayport_reg_wait_buf_full();
+
+	displayport_info("displayport_audio_wait_buf_full\n");
+}
+
+void displayport_wait_audio_buf_empty(struct displayport_device *displayport)
+{
+	u32 cnt = 1000;
+
+	do {
+		cnt--;
+		udelay(1);
+	} while (!displayport->audio_buf_empty_check && cnt);
+
+	if (!cnt)
+		displayport_err("%s is timeout.\n", __func__);
+}
+
 void displayport_audio_disable(void)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
 
 	if (displayport_read_mask(SST1_AUDIO_ENABLE, AUDIO_EN) == 1) {
+		displayport_reg_set_dp_audio_enable(0);
 		displayport_reg_set_audio_fifo_function_enable(0);
 		displayport_reg_set_audio_ch(1);
-		udelay(1000);
+		displayport->audio_buf_empty_check = 0;
+		displayport_reg_set_audio_master_mode_enable(1);
+		displayport_wait_audio_buf_empty(displayport);
 		displayport_reg_set_audio_master_mode_enable(0);
-		displayport_reg_set_dp_audio_enable(0);
-		displayport_reg_set_audio_function_enable(0);
 		displayport_info("audio_disable\n");
 		displayport->audio_state = 0;
 		wake_up_interruptible(&displayport->audio_wait);
@@ -1706,7 +1730,7 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 	if (audio_config_data->audio_enable == displayport->audio_state)
 		return 0;
 
-	if (audio_config_data->audio_enable == 1) {
+	if (audio_config_data->audio_enable == AUDIO_ENABLE) {
 		/* channel mapping: FL, FR, C, SW, RL, RR */
 		displayport_reg_set_audio_ch_mapping(1, 2, 4, 3, 5, 6, 7, 8);
 
@@ -1725,8 +1749,12 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 		displayport_reg_set_audio_master_mode_enable(audio_config_data->audio_enable);
 
 		displayport->audio_state = 1;
-	} else
+	} else if (audio_config_data->audio_enable == AUDIO_DISABLE)
 		displayport_audio_disable();
+	else if (audio_config_data->audio_enable == AUDIO_WAIT_BUF_FULL)
+		displayport_audio_wait_buf_full();
+	else
+		displayport_info("Not support audio_enable = %d\n", audio_config_data->audio_enable);
 
 	return ret;
 }
