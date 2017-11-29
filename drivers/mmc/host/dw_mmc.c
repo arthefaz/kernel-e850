@@ -53,6 +53,8 @@
 #include "dw_mmc-exynos-fmp.h"
 #endif
 
+#include "cqhci.h"
+
 /* Common flag combinations */
 #define DW_MCI_DATA_ERROR_FLAGS	(SDMMC_INT_DRTO | SDMMC_INT_DCRC | \
 				 SDMMC_INT_SBE  | \
