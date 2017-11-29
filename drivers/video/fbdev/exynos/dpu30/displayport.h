@@ -1022,6 +1022,7 @@ extern int hdcp_dplink_set_hprime_available(void);
 extern int hdcp_dplink_set_rp_ready(void);
 extern int hdcp_dplink_set_reauth(void);
 extern int hdcp_dplink_set_integrity_fail(void);
+extern int hdcp_dplink_hpd_changed(void);
 
 #define DISPLAYPORT_IOC_DUMP			_IOW('V', 0, u32)
 #define DISPLAYPORT_IOC_GET_ENUM_DV_TIMINGS	_IOW('V', 1, u8)
