@@ -909,7 +909,7 @@ void displayport_hpd_changed(int state)
 #if defined(CONFIG_EXYNOS_HDCP2)
 		if (displayport->hdcp_ver == HDCP_VERSION_2_2) {
 
-			hdcp_dplink_set_integrity_fail();
+			hdcp_dplink_hpd_changed();
 			displayport_hdcp22_enable(0);
 		}
 #endif
@@ -1289,6 +1289,7 @@ static int displayport_hdcp22_irq_handler(void)
 		/* hdcp22 disable while re-authentication */
 		ret = hdcp_dplink_set_reauth();
 
+		displayport_hdcp22_enable(0);
 		if (displayport_reg_get_hdcp22_encryption_enable()) {
 			queue_delayed_work(displayport->dp_wq, &displayport->hpd_unplug_work, 0);
 
