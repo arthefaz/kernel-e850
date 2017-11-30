@@ -1434,7 +1434,7 @@ void dpp_reg_set_tm_lut(u32 id, struct dpp_params_info *p)
 	u32 *lut_y = NULL;
 
 	if (!exynos_hdr_get_tm_lut_xy(tm_x_tune, tm_y_tune)) {
-		if (p->max_luminance > 1000) {
+		if ((p->max_luminance > 1000) && (p->max_luminance < 10000)) {
 			lut_x = tm_x_axis_gamma_2P2_4000;
 			lut_y = tm_y_axis_gamma_2P2_4000;
 		} else {
