@@ -1,28 +1,13 @@
 /*
+ * Copyright (c) 2017 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
  *
- * Copyright 2017 Samsung Electronics S.LSI Co. LTD
+ * Header file for Exynos HDR metadata
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
- * @file    VendorVideoAPI.h
- * @author  TaeHwan Kim    (t_h_kim@samsung.com)
- *          ByungGwan Kang (bk0917.kang@samsung.com)
- * @version 1.0
- * @history
- *   2017.06.02 : Create
- */
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
 
 #ifndef VENDOR_VIDEO_API_H_
 #define VENDOR_VIDEO_API_H_
