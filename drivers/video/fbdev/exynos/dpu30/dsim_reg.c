@@ -1666,6 +1666,7 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	u32 threshold;
 	u32 num_of_slice;
 	u32 num_of_transfer;
+	int idx;
 
 	/* shadow read disable */
 	dsim_reg_enable_shadow_read(id, 1);
@@ -1682,9 +1683,12 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	dsim_reg_set_lpdr_timeout(id);
 	dsim_reg_set_stop_state_cnt(id);
 
-	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE)
+	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
+		/* DSU_MODE_1 is used in stead of 1 in MCD */
+		idx = lcd_info->mres_mode - 1;
 		dsim_reg_set_cm_underrun_lp_ref(id,
-						lcd_info->cmd_underrun_lp_ref);
+				lcd_info->cmd_underrun_lp_ref[idx]);
+	}
 
 	if (lcd_info->dsc_enabled)
 		threshold = lcd_info->xres / 3;

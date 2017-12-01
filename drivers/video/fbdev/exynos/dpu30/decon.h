@@ -886,6 +886,8 @@ struct decon_debug {
 	struct dentry *debug_cmd;
 #endif
 	struct dentry *debug_recovery_cnt;
+	struct dentry *debug_cmd_lp_ref;
+
 	struct dpu_log event_log[DPU_EVENT_LOG_MAX];
 	atomic_t event_log_idx;
 	dpu_log_level_t event_log_level;
