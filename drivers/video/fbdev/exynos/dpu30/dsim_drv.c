@@ -1129,20 +1129,9 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 
 	dsim->lcd_info.data_lane = dsim->data_lane_cnt;
 
-	if (dsim->lcd_info.mode == DECON_MIPI_COMMAND_MODE) {
-		of_property_read_u32(node, "cmd_underrun_lp_ref",
-			&dsim->lcd_info.cmd_underrun_lp_ref);
-		dsim_info("cmd_underrun_lp_ref(%d)\n", dsim->lcd_info.cmd_underrun_lp_ref);
-	} else {
-		of_property_read_u32(node, "vt_compensation",
-			&dsim->lcd_info.vt_compensation);
-		dsim_info("vt_compensation(%d)\n", dsim->lcd_info.vt_compensation);
-
-	}
-
 	of_property_read_u32(node, "mres_en", &dsim->lcd_info.dt_lcd_mres.mres_en);
 	dsim_info("mres_en(%d)\n", dsim->lcd_info.dt_lcd_mres.mres_en);
-	dsim->lcd_info.mres_mode = 0; /* 0=WQHD, 1=FHD, 2=HD */
+	dsim->lcd_info.mres_mode = 1; /* 1=WQHD, 2=FHD, 3=HD */
 	dsim->lcd_info.dt_lcd_mres.mres_number = mres_num; /* default = 1 */
 
 	if (dsim->lcd_info.dt_lcd_mres.mres_en) {
@@ -1188,6 +1177,15 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 	} else {
 		dsim->lcd_info.dt_lcd_mres.res_info[0].width = dsim->lcd_info.width;
 		dsim->lcd_info.dt_lcd_mres.res_info[0].height = dsim->lcd_info.height;
+	}
+
+	if (dsim->lcd_info.mode == DECON_MIPI_COMMAND_MODE) {
+		of_property_read_u32_array(node, "cmd_underrun_lp_ref",
+				dsim->lcd_info.cmd_underrun_lp_ref,
+				dsim->lcd_info.dt_lcd_mres.mres_number);
+		for (k = 0; k < dsim->lcd_info.dt_lcd_mres.mres_number; k++)
+			dsim_info("mres[%d] cmd_underrun_lp_ref(%d)\n", k,
+					dsim->lcd_info.cmd_underrun_lp_ref[k]);
 	}
 
 	/* HDR info */

@@ -823,6 +823,64 @@ static const struct file_operations decon_cmd_fops = {
 };
 #endif
 
+static int decon_debug_cmd_lp_ref_show(struct seq_file *s, void *unused)
+{
+	struct dsim_device *dsim = get_dsim_drvdata(0);
+	int i;
+
+	/* DSU_MODE_1 is used in stead of 1 in MCD */
+	seq_printf(s, "%u\n", dsim->lcd_info.mres_mode - 1);
+
+	for (i = 0; i < dsim->lcd_info.dt_lcd_mres.mres_number; i++)
+		seq_printf(s, "%u\n", dsim->lcd_info.cmd_underrun_lp_ref[i]);
+
+	return 0;
+}
+
+static int decon_debug_cmd_lp_ref_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, decon_debug_cmd_lp_ref_show, inode->i_private);
+}
+
+static ssize_t decon_debug_cmd_lp_ref_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *f_ops)
+{
+	char *buf_data;
+	int ret;
+	unsigned int cmd_lp_ref;
+	struct dsim_device *dsim;
+	int idx;
+
+	buf_data = kmalloc(count, GFP_KERNEL);
+	if (buf_data == NULL)
+		return count;
+
+	ret = copy_from_user(buf_data, buf, count);
+	if (ret < 0)
+		goto out;
+
+	ret = sscanf(buf_data, "%u", &cmd_lp_ref);
+	if (ret < 0)
+		goto out;
+
+	dsim = get_dsim_drvdata(0);
+
+	idx = dsim->lcd_info.mres_mode - 1;
+	dsim->lcd_info.cmd_underrun_lp_ref[idx] = cmd_lp_ref;
+
+out:
+	kfree(buf_data);
+	return count;
+}
+
+static const struct file_operations decon_cmd_lp_ref_fops = {
+	.open = decon_debug_cmd_lp_ref_open,
+	.write = decon_debug_cmd_lp_ref_write,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+
 static int decon_debug_rec_show(struct seq_file *s, void *unused)
 {
 	seq_printf(s, "VGF0[%u] VGF1[%u]\n",
@@ -921,6 +979,13 @@ int decon_create_debugfs(struct decon_device *decon)
 				0444, decon->d.debug_root, NULL, &decon_rec_fops);
 		if (!decon->d.debug_recovery_cnt) {
 			decon_err("failed to create recovery_cnt file\n");
+			ret = -ENOENT;
+			goto err_debugfs;
+		}
+		decon->d.debug_cmd_lp_ref = debugfs_create_file("cmd_lp_ref",
+				0444, decon->d.debug_root, NULL, &decon_cmd_lp_ref_fops);
+		if (!decon->d.debug_cmd_lp_ref) {
+			decon_err("failed to create cmd_lp_ref file\n");
 			ret = -ENOENT;
 			goto err_debugfs;
 		}

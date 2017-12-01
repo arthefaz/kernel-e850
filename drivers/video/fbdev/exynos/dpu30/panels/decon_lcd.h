@@ -111,7 +111,7 @@ struct decon_lcd {
 	enum mic_ver mic_ver;
 	enum type_of_ddi ddi_type;
 	unsigned int data_lane;
-	unsigned int cmd_underrun_lp_ref;
+	unsigned int cmd_underrun_lp_ref[MAX_RES_NUMBER];
 	unsigned int vt_compensation;
 	unsigned int mres_mode;
 	struct lcd_mres_info dt_lcd_mres;
