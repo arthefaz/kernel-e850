@@ -963,6 +963,7 @@ void displayport_reg_set_bist_video_configuration(videoformat video_format, u8 b
 void displayport_reg_set_bist_video_configuration_for_blue_screen(videoformat video_format);
 void displayport_reg_set_video_bist_mode(u32 en);
 void displayport_reg_set_audio_bist_mode(u32 en);
+void displayport_reg_lh_p_ch_power(u32 en);
 
 void displayport_reg_set_audio_m_n(audio_sync_mode audio_sync_mode,
 		enum audio_sampling_frequency audio_sampling_freq);

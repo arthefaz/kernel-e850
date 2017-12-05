@@ -1132,22 +1132,56 @@ void displayport_reg_set_lane_map_config(void)
 
 void displayport_reg_lh_p_ch_power(u32 en)
 {
-	u32 cnt = 1000;	/* wait 1ms */
+	u32 cnt = 20 * 1000;	/* wait 1ms */
 	u32 state;
 
 	if (en) {
-		displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, 1, SST1_LH_PWR_ON);
-
+		displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, 1,
+				SST1_LH_PWR_ON);
 		do {
-			state = displayport_read_mask(SYSTEM_SST1_FUNCTION_ENABLE, SST1_LH_PWR_ON_STATUS);
+			state = displayport_read_mask(
+					SYSTEM_SST1_FUNCTION_ENABLE,
+					SST1_LH_PWR_ON_STATUS);
 			cnt--;
 			udelay(1);
 		} while (!state && cnt);
 
 		if (!cnt)
-			displayport_err("%s is timeout.\n", __func__);
-	} else
-		displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, 0, SST1_LH_PWR_ON);
+			displayport_err("%s on is timeout[%d].\n", __func__, state);
+	} else {
+		displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, 0,
+				SST1_LH_PWR_ON);
+		do {
+			state = displayport_read_mask(
+					SYSTEM_SST1_FUNCTION_ENABLE,
+					SST1_LH_PWR_ON_STATUS);
+			cnt--;
+			udelay(1);
+		} while (state && cnt);
+
+		if (!cnt) {
+			displayport_err("SYSTEM_CLK_CONTROL[0x%08x]\n",
+				displayport_read(SYSTEM_CLK_CONTROL));
+			displayport_err("SYSTEM_PLL_LOCK_CONTROL[0x%08x]\n",
+				displayport_read(SYSTEM_PLL_LOCK_CONTROL));
+			displayport_err("SYSTEM_DEBUG[0x%08x]\n",
+				displayport_read(SYSTEM_DEBUG));
+			displayport_err("SYSTEM_DEBUG_LH_PCH[0x%08x]\n",
+				displayport_read(SYSTEM_DEBUG_LH_PCH));
+			displayport_err("SST1_VIDEO_CONTROL[0x%08x]\n",
+				displayport_read(SST1_VIDEO_CONTROL));
+			displayport_err("SST1_VIDEO_DEBUG_FSM_STATE[0x%08x]\n",
+				displayport_read(SST1_VIDEO_DEBUG_FSM_STATE));
+			displayport_err("SST1_VIDEO_DEBUG_MAPI[0x%08x]\n",
+				displayport_read(SST1_VIDEO_DEBUG_MAPI));
+			displayport_err("SYSTEM_SW_FUNCTION_ENABLE[0x%08x]\n",
+				displayport_read(SYSTEM_SW_FUNCTION_ENABLE));
+			displayport_err("SYSTEM_COMMON_FUNCTION_ENABLE[0x%08x]\n",
+				displayport_read(SYSTEM_COMMON_FUNCTION_ENABLE));
+			displayport_err("SYSTEM_SST1_FUNCTION_ENABLE[0x%08x]\n",
+				displayport_read(SYSTEM_SST1_FUNCTION_ENABLE));
+		}
+	}
 }
 
 void displayport_reg_sw_function_en(void)

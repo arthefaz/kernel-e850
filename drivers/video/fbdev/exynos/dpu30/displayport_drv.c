@@ -186,6 +186,7 @@ static int displayport_full_link_training(void)
 	int ret = 0;
 	int tps3_supported = 0;
 	struct displayport_device *displayport = get_displayport_drvdata();
+	struct decon_device *decon = get_decon_drvdata(2);
 
 	displayport_reg_dpcd_read_burst(DPCD_ADD_REVISION_NUMBER, DPCD_BUF_SIZE, val);
 	displayport_info("Full Link Training Start + : %02x %02x\n", val[1], val[2]);
@@ -220,23 +221,28 @@ Reduce_Link_Rate_Retry:
 
 	training_retry_no = 0;
 
-	displayport_reg_phy_reset(1);
-	displayport_reg_phy_init_setting();
-	displayport_reg_phy_mode_setting();
+	if (decon->state != DECON_STATE_ON
+		|| displayport_reg_get_link_bw() != link_rate
+		|| displayport_reg_get_lane_count() != lane_cnt) {
+		displayport_reg_phy_reset(1);
+		displayport_reg_phy_init_setting();
+		displayport_reg_phy_mode_setting();
 
-	displayport_reg_set_link_bw(link_rate);
-	displayport_info("link_rate = %x\n", link_rate);
+		displayport_reg_set_link_bw(link_rate);
+		displayport_info("link_rate = %x\n", link_rate);
 
-	displayport_reg_set_lane_count(lane_cnt);
-	displayport_info("lane_cnt = %x\n", lane_cnt);
+		displayport_reg_set_lane_count(lane_cnt);
+		displayport_info("lane_cnt = %x\n", lane_cnt);
 
-	if (enhanced_frame_cap)
-		displayport_write_mask(SST1_MAIN_CONTROL, 1, ENHANCED_MODE);
+		if (enhanced_frame_cap)
+			displayport_write_mask(SST1_MAIN_CONTROL, 1, ENHANCED_MODE);
 
-	/* wait for 60us */
-	udelay(60);
+		/* wait for 60us */
+		udelay(60);
 
-	displayport_reg_phy_reset(0);
+		displayport_reg_phy_reset(0);
+	} else
+		displayport_info("skip phy_reset in link training\n");
 
 	val[0] = link_rate;
 	val[1] = lane_cnt;
