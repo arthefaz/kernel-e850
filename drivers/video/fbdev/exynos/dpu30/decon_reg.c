@@ -1934,6 +1934,9 @@ int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
 
 	decon_reg_update_req_global(id);
 
+	if (psr->out_type == DECON_OUT_DP)
+		displayport_reg_lh_p_ch_power(0);
+
 	/* timeout : 1 / fps + 20% margin */
 	timeout_value = 1000 / decon->lcd_info->fps * 12 / 10 + 5;
 	ret = decon_reg_wait_run_is_off_timeout(id, timeout_value * MSEC);
@@ -1952,14 +1955,20 @@ int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
 {
 	int ret = 0;
 
-	/* call perframe stop */
-	ret = decon_reg_stop_perframe(id, dsi_idx, psr);
-	if (ret < 0) {
-		decon_err("%s, failed to perframe_stop\n", __func__);
-		/* if fails, call decon instant off */
+	if (psr->out_type == DECON_OUT_DP) {
 		ret = decon_reg_stop_inst(id, dsi_idx, psr);
 		if (ret < 0)
-			decon_err("%s, failed to instant_stop\n", __func__);
+			decon_err("%s, failed to DP instant_stop\n", __func__);
+	} else {
+		/* call perframe stop */
+		ret = decon_reg_stop_perframe(id, dsi_idx, psr);
+		if (ret < 0) {
+			decon_err("%s, failed to perframe_stop\n", __func__);
+			/* if fails, call decon instant off */
+			ret = decon_reg_stop_inst(id, dsi_idx, psr);
+			if (ret < 0)
+				decon_err("%s, failed to instant_stop\n", __func__);
+		}
 	}
 
 	if (!ret)

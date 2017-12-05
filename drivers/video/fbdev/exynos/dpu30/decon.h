@@ -82,6 +82,7 @@ extern struct decon_bts_ops decon_bts_control;
 
 #define SHADOW_UPDATE_TIMEOUT	(300 * 1000) /* 300ms */
 #define IDLE_WAIT_TIMEOUT	(50 * 1000) /* 50ms */
+#define RUN_WAIT_TIMEOUT	IDLE_WAIT_TIMEOUT
 #define CEIL(x)			((x-(u32)(x) > 0 ? (u32)(x+1) : (u32)(x)))
 #define DSC_INIT_XMIT_DELAY	0x200
 
