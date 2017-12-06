@@ -352,6 +352,59 @@ void DPU_EVENT_LOG_CURSOR(struct v4l2_subdev *sd, struct decon_reg_data *regs)
 	log->data.reg.win_config[win].state = DECON_WIN_STATE_DISABLED;
 }
 
+void DPU_EVENT_LOG_UPDATE_REGION(struct v4l2_subdev *sd,
+		struct decon_frame *req_region, struct decon_frame *adj_region)
+{
+	struct decon_device *decon = container_of(sd, struct decon_device, sd);
+	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
+	struct dpu_log *log = &decon->d.event_log[idx];
+
+	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event))
+		return;
+
+	log->time = ktime_get();
+	log->type = DPU_EVT_WINUP_UPDATE_REGION;
+
+	memcpy(&log->data.winup.req_region, req_region, sizeof(struct decon_frame));
+	memcpy(&log->data.winup.adj_region, adj_region, sizeof(struct decon_frame));
+}
+
+void DPU_EVENT_LOG_WINUP_FLAGS(struct v4l2_subdev *sd, bool need_update,
+		bool reconfigure)
+{
+	struct decon_device *decon = container_of(sd, struct decon_device, sd);
+	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
+	struct dpu_log *log = &decon->d.event_log[idx];
+
+	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event))
+		return;
+
+	log->time = ktime_get();
+	log->type = DPU_EVT_WINUP_FLAGS;
+
+	log->data.winup.need_update = need_update;
+	log->data.winup.reconfigure = reconfigure;
+}
+
+void DPU_EVENT_LOG_APPLY_REGION(struct v4l2_subdev *sd,
+		struct decon_rect *apl_rect)
+{
+	struct decon_device *decon = container_of(sd, struct decon_device, sd);
+	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
+	struct dpu_log *log = &decon->d.event_log[idx];
+
+	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event))
+		return;
+
+	log->time = ktime_get();
+	log->type = DPU_EVT_WINUP_APPLY_REGION;
+
+	log->data.winup.apl_region.x = apl_rect->left;
+	log->data.winup.apl_region.y = apl_rect->top;
+	log->data.winup.apl_region.w = apl_rect->right - apl_rect->left + 1;
+	log->data.winup.apl_region.h = apl_rect->bottom - apl_rect->top + 1;
+}
+
 /* display logged events related with DECON */
 void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 {

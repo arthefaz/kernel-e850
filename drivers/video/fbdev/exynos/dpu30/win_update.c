@@ -24,6 +24,7 @@ static void win_update_adjust_region(struct decon_device *decon,
 	struct decon_rect r1, r2;
 	struct decon_win_config *update_config = &win_config[DECON_WIN_UPDATE_IDX];
 	struct decon_win_config *config;
+	struct decon_frame adj_region;
 
 	regs->need_update = false;
 	DPU_FULL_RECT(&regs->up_region, decon->lcd_info);
@@ -74,10 +75,16 @@ static void win_update_adjust_region(struct decon_device *decon,
 	r2.right = decon->lcd_info->xres - 1;
 
 	memcpy(&regs->up_region, &r2, sizeof(struct decon_rect));
+
+	memset(&adj_region, 0, sizeof(struct decon_frame));
+	adj_region.x = regs->up_region.left;
+	adj_region.y = regs->up_region.top;
+	adj_region.w = regs->up_region.right - regs->up_region.left + 1;
+	adj_region.h = regs->up_region.bottom - regs->up_region.top + 1;
+	DPU_EVENT_LOG_UPDATE_REGION(&decon->sd, &update_config->dst, &adj_region);
+
 	DPU_DEBUG_WIN("adjusted update region[%d %d %d %d]\n",
-			regs->up_region.left, regs->up_region.top,
-			regs->up_region.right - regs->up_region.left + 1,
-			regs->up_region.bottom - regs->up_region.top + 1);
+			adj_region.x, adj_region.y, adj_region.w, adj_region.h);
 }
 
 static void win_update_check_limitation(struct decon_device *decon,
@@ -256,17 +263,15 @@ void dpu_prepare_win_update_config(struct decon_device *decon,
 	if (is_decon_rect_differ(&regs->up_region, &r))
 		reconfigure = true;
 
-	if (regs->need_update || reconfigure)
+	if (regs->need_update || reconfigure) {
 		DPU_DEBUG_WIN("need_update(%d), reconfigure(%d)\n",
 				regs->need_update, reconfigure);
+		DPU_EVENT_LOG_WINUP_FLAGS(&decon->sd, regs->need_update, reconfigure);
+	}
 
 	/* Reconfigure source and destination coordinates, if needed. */
 	if (reconfigure)
 		win_update_reconfig_coordinates(decon, win_config, regs);
-
-	/* TODO: This will be moved after applied hw configuration. */
-	memcpy(&decon->win_up.prev_up_region, &regs->up_region,
-			sizeof(struct decon_rect));
 }
 
 static int win_update_send_partial_command(struct dsim_device *dsim,
@@ -405,6 +410,7 @@ void dpu_set_win_update_config(struct decon_device *decon,
 		decon_reg_wait_idle_status_timeout(decon->id, IDLE_WAIT_TIMEOUT);
 		win_update_send_partial_command(dsim, &regs->up_region);
 		win_update_set_partial_size(decon, &regs->up_region);
+		DPU_EVENT_LOG_APPLY_REGION(&decon->sd, &regs->up_region);
 	}
 
 	if (full_partial_update)

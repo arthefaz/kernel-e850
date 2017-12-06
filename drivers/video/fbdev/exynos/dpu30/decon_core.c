@@ -2018,6 +2018,14 @@ static int decon_set_win_config(struct decon_device *decon,
 	if (ret)
 		goto err_prepare;
 
+	/*
+	 * If dpu_prepare_win_update_config returns error, prev_up_region is
+	 * updated but that partial size is not applied to HW in previous code.
+	 * So, updating prev_up_region is moved here.
+	 */
+	memcpy(&decon->win_up.prev_up_region, &regs->up_region,
+			sizeof(struct decon_rect));
+
 	if (num_of_window) {
 		fd_install(win_data->retire_fence, sync_file->file);
 #if defined(CONFIG_DPU_2_0_RELEASE_FENCES)
