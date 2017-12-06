@@ -697,6 +697,11 @@ typedef enum dpu_event_type {
 	DPU_EVT_CURSOR_POS,
 	DPU_EVT_CURSOR_UPDATE,
 
+	/* window update */
+	DPU_EVT_WINUP_UPDATE_REGION,
+	DPU_EVT_WINUP_FLAGS,
+	DPU_EVT_WINUP_APPLY_REGION,
+
 	DPU_EVT_MAX, /* End of EVENT */
 } dpu_event_t;
 
@@ -744,6 +749,15 @@ struct disp_log_dpp {
 	struct decon_frame dst;
 };
 
+/* Related with window update information */
+struct disp_log_winup {
+	struct decon_frame req_region;
+	struct decon_frame adj_region;
+	struct decon_frame apl_region;
+	bool need_update;
+	bool reconfigure;
+};
+
 /**
  * struct dpu_log - Display Subsystem Log
  * This struct includes DECON/DSIM/DPP
@@ -758,6 +772,7 @@ struct dpu_log {
 		struct disp_log_pm pm;
 		struct disp_log_fence fence;
 		struct disp_log_cursor cursor;
+		struct disp_log_winup winup;
 	} data;
 };
 
@@ -781,6 +796,12 @@ void DPU_EVENT_LOG(dpu_event_t type, struct v4l2_subdev *sd, ktime_t time);
 void DPU_EVENT_LOG_WINCON(struct v4l2_subdev *sd, struct decon_reg_data *regs);
 void DPU_EVENT_LOG_CMD(struct v4l2_subdev *sd, u32 cmd_id, unsigned long data);
 void DPU_EVENT_LOG_CURSOR(struct v4l2_subdev *sd, struct decon_reg_data *regs); /* cursor async */
+void DPU_EVENT_LOG_UPDATE_REGION(struct v4l2_subdev *sd,
+		struct decon_frame *req_region, struct decon_frame *adj_region);
+void DPU_EVENT_LOG_WINUP_FLAGS(struct v4l2_subdev *sd, bool need_update,
+		bool reconfigure);
+void DPU_EVENT_LOG_APPLY_REGION(struct v4l2_subdev *sd,
+		struct decon_rect *apl_rect);
 void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon);
 int decon_create_debugfs(struct decon_device *decon);
 void decon_destroy_debugfs(struct decon_device *decon);
@@ -790,6 +811,9 @@ void decon_destroy_debugfs(struct decon_device *decon);
 #define DPU_EVENT_LOG_WINCON(...) do { } while(0)
 #define DPU_EVENT_LOG_CMD(...) do { } while(0)
 #define DPU_EVENT_LOG_CURSOR(...) do { } while (0)
+#define DPU_EVENT_LOG_UPDATE_REGION(...) do { } while(0)
+#define DPU_EVENT_LOG_WINUP_FLAGS(...) do { } while(0)
+#define DPU_EVENT_LOG_APPLY_REGION(...) do { } while(0)
 #define DPU_EVENT_SHOW(...) do { } while(0)
 #define decon_create_debugfs(...) do { } while(0)
 #define decon_destroy_debugfs(..) do { } while(0)
