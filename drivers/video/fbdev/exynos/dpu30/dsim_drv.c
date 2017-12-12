@@ -1143,7 +1143,7 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 
 	of_property_read_u32(node, "mres_en", &dsim->lcd_info.dt_lcd_mres.mres_en);
 	dsim_info("mres_en(%d)\n", dsim->lcd_info.dt_lcd_mres.mres_en);
-	dsim->lcd_info.mres_mode = 1; /* 1=WQHD, 2=FHD, 3=HD */
+	dsim->lcd_info.mres_mode = 0; /* 0=WQHD, 1=FHD, 2=HD */
 	dsim->lcd_info.dt_lcd_mres.mres_number = mres_num; /* default = 1 */
 
 	if (dsim->lcd_info.dt_lcd_mres.mres_en) {

@@ -2370,3 +2370,25 @@ void decon_reg_get_clock_ratio(struct decon_clocks *clks,
 		clks->decon[CLK_ID_PCLK],
 		clks->decon[CLK_ID_DPLL]);
 }
+
+void decon_reg_set_mres(u32 id, struct decon_param *p)
+{
+	struct decon_lcd *lcd_info = p->lcd_info;
+	struct decon_mode_info *psr = &p->psr;
+	u32 overlap_w = 0;
+
+	if (lcd_info->mode != DECON_MIPI_COMMAND_MODE) {
+		dsim_info("%s: mode[%d] doesn't support multi resolution\n",
+				__func__, lcd_info->mode);
+		return;
+	}
+
+	decon_reg_set_blender_bg_image_size(id, psr->dsi_mode, lcd_info);
+	decon_reg_set_scaled_image_size(id, psr->dsi_mode, lcd_info);
+
+	if (lcd_info->dsc_enabled)
+		dsc_reg_init(id, p, overlap_w, 0);
+	else
+		decon_reg_config_data_path_size(id, lcd_info->xres,
+				lcd_info->yres, overlap_w, NULL, p);
+}
