@@ -50,6 +50,8 @@ int dpu_bts_log_level = 6;
 module_param(dpu_bts_log_level, int, 0644);
 int win_update_log_level = 6;
 module_param(win_update_log_level, int, 0644);
+int dpu_mres_log_level = 6;
+module_param(dpu_mres_log_level, int, 0644);
 int decon_systrace_enable;
 
 struct decon_device *decon_drvdata[MAX_DECON_CNT];
@@ -1416,6 +1418,9 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 
 	/* TODO: check and wait until the required IDMA is free */
 	decon_reg_chmap_validate(decon, regs);
+
+	/* apply multi-resolution configuration */
+	dpu_set_mres_config(decon, regs);
 
 	/* apply window update configuration to DECON, DSIM and panel */
 	dpu_set_win_update_config(decon, regs);
