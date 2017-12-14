@@ -119,12 +119,6 @@ void decon_displayport_free_irq(struct decon_device *decon)
 
 int decon_displayport_get_clocks(struct decon_device *decon)
 {
-	decon->res.aclk = devm_clk_get(decon->dev, "aclk");
-	if (IS_ERR_OR_NULL(decon->res.aclk)) {
-		decon_err("failed to get aclk\n");
-		return PTR_ERR(decon->res.aclk);
-	}
-
 	return 0;
 }
 
