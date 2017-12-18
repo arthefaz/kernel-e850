@@ -42,7 +42,7 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 	u32 ext_irq = 0;
 
 	spin_lock(&decon->slock);
-	if (decon->state == DECON_STATE_OFF)
+	if (IS_DECON_OFF_STATE(decon))
 		goto irq_end;
 
 	irq_sts_reg = decon_reg_get_interrupt_and_clear(decon->id, &ext_irq);
@@ -316,7 +316,7 @@ static irqreturn_t decon_ext_irq_handler(int irq, void *dev_id)
 	}
 
 #ifdef CONFIG_DECON_HIBER
-	if (decon->state == DECON_STATE_ON && (decon->dt.out_type == DECON_OUT_DSI)) {
+	if (decon->state == DECON_STATE_ON && decon->dt.out_type == DECON_OUT_DSI) {
 		if (decon_min_lock_cond(decon))
 			kthread_queue_work(&decon->hiber.worker, &decon->hiber.work);
 	}
@@ -544,11 +544,8 @@ int decon_set_par(struct fb_info *info)
 	struct decon_window_regs win_regs;
 	int win_no = win->idx;
 
-	decon_info("%s: state %d +\n", __func__, decon->state);
-
-	if ((decon->dt.out_type == DECON_OUT_DSI &&
-			decon->state == DECON_STATE_INIT) ||
-			decon->state == DECON_STATE_OFF)
+	if ((!IS_DECON_HIBER_STATE(decon) && IS_DECON_OFF_STATE(decon)) ||
+			decon->state == DECON_STATE_INIT)
 		return 0;
 
 	memset(&win_regs, 0, sizeof(struct decon_window_regs));
@@ -686,7 +683,7 @@ int decon_setcolreg(unsigned regno,
 	decon_dbg("%s: win %d: %d => rgb=%d/%d/%d\n", __func__, win->idx,
 			regno, red, green, blue);
 
-	if (decon->state == DECON_STATE_OFF)
+	if (IS_DECON_OFF_STATE(decon))
 		return 0;
 
 	switch (info->fix.visual) {
@@ -720,9 +717,14 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	int ret = 0;
 	struct decon_mode_info psr;
 
-	if ((decon->dt.out_type == DECON_OUT_DSI &&
-			decon->state == DECON_STATE_INIT) ||
-			decon->state == DECON_STATE_OFF) {
+	if (decon->dt.out_type != DECON_OUT_DSI) {
+		decon_warn("%s: decon%d unspported on out_type(%d)\n",
+				__func__, decon->id, decon->dt.out_type);
+		return 0;
+	}
+
+	if ((!IS_DECON_HIBER_STATE(decon) && IS_DECON_OFF_STATE(decon)) ||
+			decon->state == DECON_STATE_INIT) {
 		decon_warn("%s: decon%d state(%d), UNBLANK missed\n",
 				__func__, decon->id, decon->state);
 		return 0;
@@ -828,10 +830,9 @@ int decon_exit_hiber(struct decon_device *decon)
 #ifdef CONFIG_DECON_HIBER
 	struct decon_mode_info psr;
 	struct decon_param p;
+	enum decon_state prev_state = decon->state;
 
 	DPU_EVENT_START();
-
-	decon_dbg("enable decon-%d\n", decon->id);
 
 	decon_hiber_block(decon);
 	kthread_flush_worker(&decon->hiber.worker);
@@ -840,21 +841,12 @@ int decon_exit_hiber(struct decon_device *decon)
 	if (decon->state != DECON_STATE_HIBER)
 		goto err;
 
-	ret = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
-			DSIM_IOC_ENTER_ULPS, (unsigned long *)0);
-	if (ret) {
-		decon_warn("starting stream failed for %s\n",
-				decon->out_sd[0]->name);
-	}
+	decon_dbg("enable decon-%d\n", decon->id);
 
-	if (decon->dt.dsi_mode == DSI_MODE_DUAL_DSI) {
-		decon_info("enabled 2nd DSIM and LCD for dual DSI mode\n");
-		ret = v4l2_subdev_call(decon->out_sd[1], core, ioctl,
-				DSIM_IOC_ENTER_ULPS, (unsigned long *)0);
-		if (ret) {
-			decon_warn("starting stream failed for %s\n",
-					decon->out_sd[1]->name);
-		}
+	ret = decon_set_out_sd_state(decon, DECON_STATE_ON);
+	if (ret < 0) {
+		decon_err("%s decon-%d failed to set subdev EXIT_ULPS state\n",
+				__func__, decon->id);
 	}
 
 	decon_to_init_param(decon, &p);
@@ -884,6 +876,8 @@ int decon_exit_hiber(struct decon_device *decon)
 
 	decon_hiber_trig_reset(decon);
 
+	decon_dbg("decon-%d %s - (state:%d -> %d)\n",
+			decon->id, __func__, prev_state, decon->state);
 	decon->hiber.exit_cnt++;
 	DPU_EVENT_LOG(DPU_EVT_EXIT_HIBER, &decon->sd, start);
 
@@ -899,6 +893,7 @@ int decon_enter_hiber(struct decon_device *decon)
 	int ret = 0;
 #ifdef CONFIG_DECON_HIBER
 	struct decon_mode_info psr;
+	enum decon_state prev_state = decon->state;
 
 	DPU_EVENT_START();
 
@@ -914,6 +909,7 @@ int decon_enter_hiber(struct decon_device *decon)
 	if (decon->state != DECON_STATE_ON)
 		goto err;
 
+	decon_dbg("decon-%d %s +\n", decon->id, __func__);
 	decon_hiber_trig_reset(decon);
 
 	kthread_flush_worker(&decon->up.worker);
@@ -942,21 +938,12 @@ int decon_enter_hiber(struct decon_device *decon)
 
 	decon->bts.ops->bts_release_bw(decon);
 
+	ret = decon_set_out_sd_state(decon, DECON_STATE_HIBER);
+	if (ret < 0)
+		decon_err("%s decon-%d failed to set subdev ENTER_ULPS state\n",
+				__func__, decon->id);
+
 	decon->state = DECON_STATE_HIBER;
-
-	ret = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
-			DSIM_IOC_ENTER_ULPS, (unsigned long *)1);
-	if (ret)
-		decon_warn("failed to stop %s\n", decon->out_sd[0]->name);
-
-	if (decon->dt.dsi_mode == DSI_MODE_DUAL_DSI) {
-		ret = v4l2_subdev_call(decon->out_sd[1], core, ioctl,
-				DSIM_IOC_ENTER_ULPS, (unsigned long *)1);
-		if (ret) {
-			decon_warn("stopping stream failed for %s\n",
-					decon->out_sd[1]->name);
-		}
-	}
 
 	decon->hiber.enter_cnt++;
 	DPU_EVENT_LOG(DPU_EVT_ENTER_HIBER, &decon->sd, start);
@@ -967,6 +954,8 @@ err2:
 	mutex_unlock(&decon->hiber.lock);
 #endif
 
+	decon_dbg("decon-%d %s - (state:%d -> %d)\n",
+			decon->id, __func__, prev_state, decon->state);
 	return ret;
 }
 

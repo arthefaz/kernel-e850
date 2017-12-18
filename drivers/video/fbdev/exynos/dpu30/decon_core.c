@@ -57,6 +57,16 @@ int decon_systrace_enable;
 struct decon_device *decon_drvdata[MAX_DECON_CNT];
 EXPORT_SYMBOL(decon_drvdata);
 
+static char *decon_state_names[] = {
+	"INIT",
+	"ON",
+	"DOZE",
+	"HIBER",
+	"DOZE_SUSPEND",
+	"OFF",
+	"TUI",
+};
+
 #if defined(CONFIG_EXYNOS_ITMON)
 void __iomem *regs_dphy_iso;
 void __iomem *regs_dphy_clk_0;
@@ -398,27 +408,91 @@ int decon_tui_protection(bool tui_en)
 	return ret;
 }
 
+int decon_set_out_sd_state(struct decon_device *decon, enum decon_state state)
+{
+	int i, ret = 0;
+	int num_dsi = (decon->dt.dsi_mode == DSI_MODE_DUAL_DSI) ? 2 : 1;
+	enum decon_state prev_state = decon->state;
+
+	for (i = 0; i < num_dsi; i++) {
+		decon_dbg("decon-%d state:%s -> %s, set dsi-%d\n", decon->id,
+				decon_state_names[prev_state],
+				decon_state_names[state], i);
+		if (state == DECON_STATE_OFF) {
+			ret = v4l2_subdev_call(decon->out_sd[i], video, s_stream, 0);
+			if (ret) {
+				decon_err("stopping stream failed for %s\n",
+						decon->out_sd[i]->name);
+				goto err;
+			}
+		} else if (state == DECON_STATE_DOZE) {
+			ret = v4l2_subdev_call(decon->out_sd[i], core, ioctl,
+					DSIM_IOC_DOZE, NULL);
+			if (ret < 0) {
+				decon_err("decon-%d failed to set %s (ret %d)\n",
+						decon->id,
+						decon_state_names[state], ret);
+				goto err;
+			}
+		} else if (state == DECON_STATE_ON) {
+			if (prev_state == DECON_STATE_HIBER) {
+				ret = v4l2_subdev_call(decon->out_sd[i], core, ioctl,
+						DSIM_IOC_ENTER_ULPS, (unsigned long *)0);
+				if (ret) {
+					decon_warn("starting(ulps) stream failed for %s\n",
+							decon->out_sd[i]->name);
+					goto err;
+				}
+			} else {
+				ret = v4l2_subdev_call(decon->out_sd[i], video, s_stream, 1);
+				if (ret) {
+					decon_err("starting stream failed for %s\n",
+							decon->out_sd[i]->name);
+					goto err;
+				}
+			}
+		} else if (state == DECON_STATE_DOZE_SUSPEND) {
+			ret = v4l2_subdev_call(decon->out_sd[i], core, ioctl,
+					DSIM_IOC_DOZE_SUSPEND, NULL);
+			if (ret < 0) {
+				decon_err("decon-%d failed to set %s (ret %d)\n",
+						decon->id,
+						decon_state_names[state], ret);
+				goto err;
+			}
+		} else if (state == DECON_STATE_HIBER) {
+			ret = v4l2_subdev_call(decon->out_sd[i], core, ioctl,
+					DSIM_IOC_ENTER_ULPS, (unsigned long *)1);
+			if (ret) {
+				decon_warn("stopping(ulps) stream failed for %s\n",
+						decon->out_sd[i]->name);
+				goto err;
+			}
+		}
+	}
+
+err:
+	return ret;
+}
+
 /* ---------- FB_BLANK INTERFACE ----------- */
-static int decon_enable(struct decon_device *decon)
+static int _decon_enable(struct decon_device *decon, enum decon_state state)
 {
 	struct decon_mode_info psr;
 	struct decon_param p;
 	int ret = 0;
 
-	decon_dbg("enable decon-%d\n", decon->id);
-
-	mutex_lock(&decon->lock);
-
-	if (!decon->id && (decon->dt.out_type == DECON_OUT_DSI) &&
-				(decon->state == DECON_STATE_INIT)) {
-		decon_info("decon%d init state\n", decon->id);
-		decon->state = DECON_STATE_ON;
-		goto err;
-	}
-
-	if (decon->state == DECON_STATE_ON) {
-		decon_warn("decon%d already enabled\n", decon->id);
-		goto err;
+	if (IS_DECON_ON_STATE(decon)) {
+		decon_warn("%s decon-%d already on(%s) state\n", __func__,
+				decon->id, decon_state_names[decon->state]);
+		ret = decon_set_out_sd_state(decon, state);
+		if (ret < 0) {
+			decon_err("%s decon-%d failed to set subdev %s state\n",
+					__func__, decon->id, decon_state_names[state]);
+			return ret;
+		}
+		decon->state = state;
+		return 0;
 	}
 
 	pm_stay_awake(decon->dev);
@@ -435,19 +509,11 @@ static int decon_enable(struct decon_device *decon)
 		}
 	}
 
-	ret = v4l2_subdev_call(decon->out_sd[0], video, s_stream, 1);
-	if (ret) {
-		decon_err("starting stream failed for %s\n",
-				decon->out_sd[0]->name);
-	}
-
-	if (decon->dt.dsi_mode == DSI_MODE_DUAL_DSI) {
-		decon_info("enabled 2nd DSIM and LCD for dual DSI mode\n");
-		ret = v4l2_subdev_call(decon->out_sd[1], video, s_stream, 1);
-		if (ret) {
-			decon_err("starting stream failed for %s\n",
-					decon->out_sd[1]->name);
-		}
+	ret = decon_set_out_sd_state(decon, state);
+	if (ret < 0) {
+		decon_err("%s decon-%d failed to set subdev %s state\n",
+				__func__, decon->id, decon_state_names[state]);
+		goto err;
 	}
 
 	decon_to_init_param(decon, &p);
@@ -481,10 +547,69 @@ static int decon_enable(struct decon_device *decon)
 		decon->eint_status = 1;
 	}
 
-	decon->state = DECON_STATE_ON;
 	decon_reg_set_int(decon->id, &psr, 1);
+	decon->state = state;
 
 err:
+	return ret;
+}
+
+static int decon_enable(struct decon_device *decon)
+{
+	int ret = 0;
+	enum decon_state prev_state = decon->state;
+	enum decon_state next_state = DECON_STATE_ON;
+
+	mutex_lock(&decon->lock);
+	if (decon->state == next_state) {
+		decon_warn("decon-%d %s already %s state\n", decon->id,
+				__func__, decon_state_names[decon->state]);
+		goto out;
+	}
+
+	DPU_EVENT_LOG(DPU_EVT_UNBLANK, &decon->sd, ktime_set(0, 0));
+	decon_info("decon-%d %s +\n", decon->id, __func__);
+	ret = _decon_enable(decon, next_state);
+	if (ret < 0) {
+		decon_err("decon-%d failed to set %s (ret %d)\n",
+				decon->id, decon_state_names[next_state], ret);
+		goto out;
+	}
+	decon_info("decon-%d %s - (state:%s -> %s)\n", decon->id, __func__,
+			decon_state_names[prev_state],
+			decon_state_names[decon->state]);
+
+out:
+	mutex_unlock(&decon->lock);
+	return ret;
+};
+
+static int decon_doze(struct decon_device *decon)
+{
+	int ret = 0;
+	enum decon_state prev_state = decon->state;
+	enum decon_state next_state = DECON_STATE_DOZE;
+
+	mutex_lock(&decon->lock);
+	if (decon->state == next_state) {
+		decon_warn("decon-%d %s already %s state\n", decon->id,
+				__func__, decon_state_names[decon->state]);
+		goto out;
+	}
+
+	DPU_EVENT_LOG(DPU_EVT_DOZE, &decon->sd, ktime_set(0, 0));
+	decon_info("decon-%d %s +\n", decon->id, __func__);
+	ret = _decon_enable(decon, next_state);
+	if (ret < 0) {
+		decon_err("decon-%d failed to set %s (ret %d)\n",
+				decon->id, decon_state_names[next_state], ret);
+		goto out;
+	}
+	decon_info("decon-%d %s - (state:%s -> %s)\n", decon->id, __func__,
+			decon_state_names[prev_state],
+			decon_state_names[decon->state]);
+
+out:
 	mutex_unlock(&decon->lock);
 	return ret;
 }
@@ -578,20 +703,26 @@ static int out_sd_dump(void)
 }
 #endif
 
-static int decon_disable(struct decon_device *decon)
+static int _decon_disable(struct decon_device *decon, enum decon_state state)
 {
 	struct decon_mode_info psr;
 	int ret = 0;
 
-	if (decon->state == DECON_STATE_TUI) {
+	if (decon->state == DECON_STATE_TUI)
 		decon_tui_protection(false);
-	}
 
-	mutex_lock(&decon->lock);
-
-	if (decon->state == DECON_STATE_OFF) {
-		decon_info("decon%d already disabled\n", decon->id);
-		goto err;
+	if (IS_DECON_OFF_STATE(decon)) {
+		decon_warn("%s decon-%d already off (%s)\n", __func__,
+				decon->id, decon_state_names[decon->state]);
+		ret = decon_set_out_sd_state(decon, state);
+		if (ret < 0) {
+			decon_err("%s decon-%d failed to set subdev %s state\n",
+					__func__, decon->id,
+					decon_state_names[state]);
+			return ret;
+		}
+		decon->state = state;
+		return 0;
 	}
 
 	kthread_flush_worker(&decon->up.worker);
@@ -623,17 +754,11 @@ static int decon_disable(struct decon_device *decon)
 
 	decon->bts.ops->bts_release_bw(decon);
 
-	ret = v4l2_subdev_call(decon->out_sd[0], video, s_stream, 0);
-	if (ret) {
-		decon_err("failed to stop %s\n", decon->out_sd[0]->name);
-	}
-
-	if (decon->dt.dsi_mode == DSI_MODE_DUAL_DSI) {
-		ret = v4l2_subdev_call(decon->out_sd[1], video, s_stream, 0);
-		if (ret) {
-			decon_err("stopping stream failed for %s\n",
-					decon->out_sd[1]->name);
-		}
+	ret = decon_set_out_sd_state(decon, state);
+	if (ret < 0) {
+		decon_err("%s decon-%d failed to set subdev %s state\n",
+				__func__, decon->id, decon_state_names[state]);
+		goto err;
 	}
 
 	pm_relax(decon->dev);
@@ -648,11 +773,131 @@ static int decon_disable(struct decon_device *decon)
 		}
 	}
 
-	decon->state = DECON_STATE_OFF;
-
+	decon->state = state;
 err:
+	return ret;
+}
+
+static int decon_disable(struct decon_device *decon)
+{
+	int ret = 0;
+	enum decon_state prev_state = decon->state;
+	enum decon_state next_state = DECON_STATE_OFF;
+
+	mutex_lock(&decon->lock);
+	if (decon->state == next_state) {
+		decon_warn("decon-%d %s already %s state\n", decon->id,
+				__func__, decon_state_names[decon->state]);
+		goto out;
+	}
+
+	DPU_EVENT_LOG(DPU_EVT_BLANK, &decon->sd, ktime_set(0, 0));
+	decon_info("decon-%d %s +\n", decon->id, __func__);
+	ret = _decon_disable(decon, next_state);
+	if (ret < 0) {
+		decon_err("decon-%d failed to set %s (ret %d)\n",
+				decon->id, decon_state_names[next_state], ret);
+		goto out;
+	}
+	decon_info("decon-%d %s - (state:%s -> %s)\n", decon->id, __func__,
+			decon_state_names[prev_state],
+			decon_state_names[decon->state]);
+
+out:
 	mutex_unlock(&decon->lock);
 	return ret;
+}
+
+static int decon_doze_suspend(struct decon_device *decon)
+{
+	int ret = 0;
+	enum decon_state prev_state = decon->state;
+	enum decon_state next_state = DECON_STATE_DOZE_SUSPEND;
+
+	mutex_lock(&decon->lock);
+	if (decon->state == next_state) {
+		decon_warn("decon-%d %s already %s state\n", decon->id,
+				__func__, decon_state_names[decon->state]);
+		goto out;
+	}
+
+	DPU_EVENT_LOG(DPU_EVT_DOZE_SUSPEND, &decon->sd, ktime_set(0, 0));
+	decon_info("decon-%d %s +\n", decon->id, __func__);
+	ret = _decon_disable(decon, next_state);
+	if (ret < 0) {
+		decon_err("decon-%d failed to set %s (ret %d)\n",
+				decon->id, decon_state_names[next_state], ret);
+		goto out;
+	}
+	decon_info("decon-%d %s - (state:%s -> %s)\n", decon->id, __func__,
+			decon_state_names[prev_state],
+			decon_state_names[decon->state]);
+
+out:
+	mutex_unlock(&decon->lock);
+	return ret;
+}
+
+struct disp_pwr_state decon_pwr_state[] = {
+	[DISP_PWR_OFF] = {
+		.state = DECON_STATE_OFF,
+		.set_pwr_state = (set_pwr_state_t)decon_disable,
+	},
+	[DISP_PWR_DOZE] = {
+		.state = DECON_STATE_DOZE,
+		.set_pwr_state = (set_pwr_state_t)decon_doze,
+	},
+	[DISP_PWR_NORMAL] = {
+		.state = DECON_STATE_ON,
+		.set_pwr_state = (set_pwr_state_t)decon_enable,
+	},
+	[DISP_PWR_DOZE_SUSPEND] = {
+		.state = DECON_STATE_DOZE_SUSPEND,
+		.set_pwr_state = (set_pwr_state_t)decon_doze_suspend,
+	},
+};
+
+int decon_update_pwr_state(struct decon_device *decon, u32 mode)
+{
+	int ret = 0;
+
+	if (mode >= DISP_PWR_MAX) {
+		decon_err("DECON:ERR:%s:invalid mode : %d\n", __func__, mode);
+		return -EINVAL;
+	}
+
+	if (decon_pwr_state[mode].state == decon->state) {
+		decon_warn("decon-%d already %s state\n",
+				decon->id, decon_state_names[decon->state]);
+		return 0;
+	}
+
+	if (IS_DECON_OFF_STATE(decon)) {
+		if (mode == DISP_PWR_OFF) {
+			ret = decon_enable(decon);
+			if (ret < 0) {
+				decon_err("DECON:ERR:%s: failed to set mode(%d)\n",
+						__func__, DISP_PWR_NORMAL);
+				return -EIO;
+			}
+		} else if (mode == DISP_PWR_DOZE_SUSPEND) {
+			ret = decon_doze(decon);
+			if (ret < 0) {
+				decon_err("DECON:ERR:%s: failed to set mode(%d)\n",
+						__func__, DISP_PWR_DOZE);
+				return -EIO;
+			}
+		}
+	}
+
+	ret = decon_pwr_state[mode].set_pwr_state((void *)decon);
+	if (ret < 0) {
+		decon_err("DECON:ERR:%s: failed to set mode(%d)\n",
+				__func__, mode);
+		return ret;
+	}
+
+	return 0;
 }
 
 static int decon_dp_disable(struct decon_device *decon)
@@ -664,7 +909,7 @@ static int decon_dp_disable(struct decon_device *decon)
 
 	mutex_lock(&decon->lock);
 
-	if (decon->state == DECON_STATE_OFF) {
+	if (IS_DECON_OFF_STATE(decon)) {
 		decon_info("decon%d already disabled\n", decon->id);
 		goto err;
 	}
@@ -703,7 +948,7 @@ static int decon_blank(int blank_mode, struct fb_info *info)
 	struct decon_device *decon = win->decon;
 	int ret = 0;
 
-	decon_info("decon-%d %s mode: %dtype (0: DSI, 1: eDP, 2:DP, 3: WB)\n",
+	decon_info("decon-%d %s mode: %d type (0: DSI, 1: eDP, 2:DP, 3: WB)\n",
 			decon->id,
 			blank_mode == FB_BLANK_UNBLANK ? "UNBLANK" : "POWERDOWN",
 			decon->dt.out_type);
@@ -719,7 +964,7 @@ static int decon_blank(int blank_mode, struct fb_info *info)
 	case FB_BLANK_POWERDOWN:
 	case FB_BLANK_NORMAL:
 		DPU_EVENT_LOG(DPU_EVT_BLANK, &decon->sd, ktime_set(0, 0));
-		ret = decon_disable(decon);
+		ret = decon_update_pwr_state(decon, DISP_PWR_OFF);
 		if (ret) {
 			decon_err("failed to disable decon\n");
 			goto blank_exit;
@@ -727,7 +972,7 @@ static int decon_blank(int blank_mode, struct fb_info *info)
 		break;
 	case FB_BLANK_UNBLANK:
 		DPU_EVENT_LOG(DPU_EVT_UNBLANK, &decon->sd, ktime_set(0, 0));
-		ret = decon_enable(decon);
+		ret = decon_update_pwr_state(decon, DISP_PWR_NORMAL);
 		if (ret) {
 			decon_err("failed to enable decon\n");
 			goto blank_exit;
@@ -1985,7 +2230,7 @@ static int decon_set_win_config(struct decon_device *decon,
 
 	mutex_lock(&decon->lock);
 
-	if (decon->state == DECON_STATE_OFF ||
+	if (IS_DECON_OFF_STATE(decon) ||
 		decon->state == DECON_STATE_TUI ||
 		IS_ENABLED(CONFIG_EXYNOS_VIRTUAL_DISPLAY)) {
 		win_data->retire_fence = decon_create_fence(decon, &sync_file);
@@ -2136,6 +2381,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	bool active;
 	u32 crc_bit, crc_start;
 	u32 crc_data[2];
+	u32 pwr;
 
 	decon_hiber_block_exit(decon);
 	switch (cmd) {
@@ -2252,7 +2498,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 		mutex_lock(&decon->lock);
-		if (decon->state != DECON_STATE_ON) {
+		if (!IS_DECON_ON_STATE(decon)) {
 			decon_err("DECON:WRN:%s:decon%d is not active:cmd=%d\n",
 				__func__, decon->id, cmd);
 			ret = -EIO;
@@ -2269,7 +2515,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 		mutex_lock(&decon->lock);
-		if (decon->state != DECON_STATE_ON) {
+		if (!IS_DECON_ON_STATE(decon)) {
 			decon_err("DECON:WRN:%s:decon%d is not active:cmd=%d\n",
 				__func__, decon->id, cmd);
 			ret = -EIO;
@@ -2282,7 +2528,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 
 	case S3CFB_GET_CRC_DATA:
 		mutex_lock(&decon->lock);
-		if (decon->state != DECON_STATE_ON) {
+		if (!IS_DECON_ON_STATE(decon)) {
 			decon_err("DECON:WRN:%s:decon%d is not active:cmd=%d\n",
 				__func__, decon->id, cmd);
 			ret = -EIO;
@@ -2335,7 +2581,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 
 	case EXYNOS_DPU_DUMP:
 		mutex_lock(&decon->lock);
-		if (decon->state != DECON_STATE_ON) {
+		if (!IS_DECON_ON_STATE(decon)) {
 			decon_err("DECON:WRN:%s:decon%d is not active:cmd=%d\n",
 				__func__, decon->id, cmd);
 			ret = -EIO;
@@ -2364,6 +2610,33 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			ret = -EPERM;
 		}
 		break;
+
+	case S3CFB_POWER_MODE:
+		if (!IS_ENABLED(CONFIG_SUPPORT_DOZE)) {
+			decon_info("DOZE mode is disabled\n");
+			break;
+		}
+
+		if (get_user(pwr, (int __user *)arg)) {
+			ret = -EFAULT;
+			break;
+		}
+
+
+		if (pwr != DISP_PWR_DOZE && pwr != DISP_PWR_DOZE_SUSPEND) {
+			decon_err("%s: decon%d invalid pwr_state %d\n",
+					__func__, decon->id, pwr);
+			break;
+		}
+
+		ret = decon_update_pwr_state(decon, pwr);
+		if (ret) {
+			decon_err("%s: decon%d failed to set doze %d, ret %d\n",
+					__func__, decon->id, pwr, ret);
+			break;
+		}
+		break;
+
 	default:
 		ret = -ENOTTY;
 	}
@@ -2400,14 +2673,14 @@ int decon_release(struct fb_info *info, int user)
 	if (decon->dt.out_type == DECON_OUT_DSI) {
 		decon_hiber_block_exit(decon);
 		/* Unused DECON state is DECON_STATE_INIT */
-		if (decon->state == DECON_STATE_ON)
+		if (IS_DECON_ON_STATE(decon))
 			decon_disable(decon);
 		decon_hiber_unblock(decon);
 	}
 
 	if (decon->dt.out_type == DECON_OUT_DP) {
 		/* Unused DECON state is DECON_STATE_INIT */
-		if (decon->state == DECON_STATE_ON)
+		if (IS_DECON_ON_STATE(decon))
 			decon_dp_disable(decon);
 	}
 
@@ -3393,7 +3666,7 @@ static void decon_shutdown(struct platform_device *pdev)
 
 	decon_hiber_block_exit(decon);
 	/* Unused DECON state is DECON_STATE_INIT */
-	if (decon->state == DECON_STATE_ON)
+	if (IS_DECON_ON_STATE(decon))
 		decon_disable(decon);
 
 	unlock_fb_info(fbinfo);

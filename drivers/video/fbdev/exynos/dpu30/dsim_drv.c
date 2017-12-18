@@ -42,6 +42,15 @@ int dsim_log_level = 6;
 struct dsim_device *dsim_drvdata[MAX_DSIM_CNT];
 EXPORT_SYMBOL(dsim_drvdata);
 
+static char *dsim_state_names[] = {
+	"INIT",
+	"ON",
+	"DOZE",
+	"ULPS",
+	"DOZE_SUSPEND",
+	"OFF",
+};
+
 static int dsim_runtime_suspend(struct device *dev);
 static int dsim_runtime_resume(struct device *dev);
 
@@ -166,7 +175,7 @@ static int dsim_wait_for_cmd_fifo_empty(struct dsim_device *dsim, bool must_wait
 		ret = -ETIMEDOUT;
 	}
 
-	if ((dsim->state == DSIM_STATE_ON) && (ret == -ETIMEDOUT)) {
+	if (IS_DSIM_ON_STATE(dsim) && (ret == -ETIMEDOUT)) {
 		dsim_err("%s have timed out\n", __func__);
 		__dsim_dump(dsim);
 	}
@@ -218,7 +227,7 @@ int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1)
 	decon_hiber_block_exit(decon);
 
 	mutex_lock(&dsim->cmd_lock);
-	if (dsim->state != DSIM_STATE_ON) {
+	if (!IS_DSIM_ON_STATE(dsim)) {
 		dsim_err("DSIM is not ready. state(%d)\n", dsim->state);
 		ret = -EINVAL;
 		goto err_exit;
@@ -291,7 +300,7 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 
 	decon_hiber_block_exit(decon);
 
-	if (dsim->state != DSIM_STATE_ON) {
+	if (IS_DSIM_OFF_STATE(dsim)) {
 		dsim_err("DSIM is not ready. state(%d)\n", dsim->state);
 		decon_hiber_unblock(decon);
 		return -EINVAL;
@@ -387,7 +396,7 @@ static void dsim_cmd_fail_detector(unsigned long arg)
 	decon_hiber_block(decon);
 
 	dsim_dbg("%s +\n", __func__);
-	if (dsim->state != DSIM_STATE_ON) {
+	if (IS_DSIM_OFF_STATE(dsim)) {
 		dsim_err("%s: DSIM is not ready. state(%d)\n", __func__,
 				dsim->state);
 		goto exit;
@@ -656,13 +665,18 @@ static int dsim_set_panel_power(struct dsim_device *dsim, bool on)
 	return 0;
 }
 
-static int dsim_enable(struct dsim_device *dsim)
+static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 {
 	int ret = 0;
-	enum dsim_state state = dsim->state;
 
-	if (dsim->state == DSIM_STATE_ON)
+	if (IS_DSIM_ON_STATE(dsim)) {
+		dsim_warn("%s dsim already on(%s)\n",
+				__func__, dsim_state_names[dsim->state]);
+		dsim->state = state;
 		return 0;
+	}
+
+	dsim_dbg("%s %s +\n", __func__, dsim_state_names[dsim->state]);
 
 #if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_get_sync(dsim->dev);
@@ -678,7 +692,8 @@ static int dsim_enable(struct dsim_device *dsim)
 	/* check whether the bootloader init has been done */
 	if (dsim->state == DSIM_STATE_INIT) {
 		if (dsim_reg_is_pll_stable(dsim->id)) {
-			dsim_info("dsim%d PLL is stabled in bootloader, so skip DSIM link/DPHY init.\n", dsim->id);
+			dsim_info("dsim%d PLL is stabled in bootloader", dsim->id);
+			dsim_info(", so skip DSIM link/DPHY init.\n");
 			goto init_end;
 		}
 	}
@@ -718,26 +733,89 @@ static int dsim_enable(struct dsim_device *dsim)
 
 init_end:
 	dsim_reg_start(dsim->id);
-	dsim->state = DSIM_STATE_ON;
-	if (state != DSIM_STATE_INIT)
-		call_panel_ops(dsim, displayon, dsim);
-
+	dsim->state = state;
 	enable_irq(dsim->res.irq);
 
 	return ret;
 }
 
-static int dsim_disable(struct dsim_device *dsim)
+static int dsim_enable(struct dsim_device *dsim)
 {
-	if (dsim->state == DSIM_STATE_OFF)
-		return 0;
+	int ret;
+	enum dsim_state prev_state = dsim->state;
+	enum dsim_state next_state = DSIM_STATE_ON;
 
-	call_panel_ops(dsim, suspend, dsim);
+	if (prev_state == next_state) {
+		dsim_warn("dsim-%d %s already %s state\n", dsim->id,
+				__func__, dsim_state_names[dsim->state]);
+		return 0;
+	}
+
+	dsim_info("dsim-%d %s +\n", dsim->id, __func__);
+	ret = _dsim_enable(dsim, next_state);
+	if (ret < 0) {
+		dsim_err("dsim-%d failed to set %s (ret %d)\n",
+				dsim->id, dsim_state_names[next_state], ret);
+		goto out;
+	}
+
+	if (prev_state != DSIM_STATE_INIT)
+		call_panel_ops(dsim, displayon, dsim);
+
+	dsim_info("dsim-%d %s - (state:%s -> %s)\n", dsim->id, __func__,
+			dsim_state_names[prev_state],
+			dsim_state_names[dsim->state]);
+
+out:
+	return ret;
+}
+
+static int dsim_doze(struct dsim_device *dsim)
+{
+	int ret;
+	enum dsim_state prev_state = dsim->state;
+	enum dsim_state next_state = DSIM_STATE_DOZE;
+
+	if (prev_state == next_state) {
+		dsim_warn("dsim-%d %s already %s state\n", dsim->id,
+				__func__, dsim_state_names[dsim->state]);
+		return 0;
+	}
+
+	dsim_info("dsim-%d %s +\n", dsim->id, __func__);
+	ret = _dsim_enable(dsim, next_state);
+	if (ret < 0) {
+		dsim_err("dsim-%d failed to set %s (ret %d)\n",
+				dsim->id, dsim_state_names[next_state], ret);
+		goto out;
+	}
+	if (prev_state != DSIM_STATE_INIT)
+		call_panel_ops(dsim, doze, dsim);
+	dsim_info("dsim-%d %s - (state:%s -> %s)\n", dsim->id, __func__,
+			dsim_state_names[prev_state],
+			dsim_state_names[dsim->state]);
+
+out:
+	return ret;
+}
+
+static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
+{
+	if (IS_DSIM_OFF_STATE(dsim)) {
+		dsim_warn("%s dsim already off(%s)\n",
+				__func__, dsim_state_names[dsim->state]);
+		if (state == DSIM_STATE_OFF)
+			dsim_set_panel_power(dsim, 0);
+		dsim->state = state;
+		return 0;
+	}
+
+	dsim_dbg("%s %s +\n", __func__, dsim_state_names[dsim->state]);
 
 	/* Wait for current read & write CMDs. */
 	mutex_lock(&dsim->cmd_lock);
 	del_timer(&dsim->cmd_timer);
-	dsim->state = DSIM_STATE_OFF;
+	dsim->state = state;
 	mutex_unlock(&dsim->cmd_lock);
 
 	dsim_reg_stop(dsim->id, dsim->data_lane);
@@ -745,15 +823,73 @@ static int dsim_disable(struct dsim_device *dsim)
 
 	/* HACK */
 	phy_power_off(dsim->phy);
-	dsim_set_panel_power(dsim, 0);
+	if (state == DSIM_STATE_OFF)
+		dsim_set_panel_power(dsim, 0);
 
 #if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_put_sync(dsim->dev);
 #else
 	dsim_runtime_suspend(dsim->dev);
 #endif
+	dsim_dbg("%s %s -\n", __func__, dsim_state_names[dsim->state]);
 
 	return 0;
+}
+
+static int dsim_disable(struct dsim_device *dsim)
+{
+	int ret;
+	enum dsim_state prev_state = dsim->state;
+	enum dsim_state next_state = DSIM_STATE_OFF;
+
+	if (prev_state == next_state) {
+		dsim_warn("dsim-%d %s already %s state\n", dsim->id,
+				__func__, dsim_state_names[dsim->state]);
+		return 0;
+	}
+
+	dsim_info("dsim-%d %s +\n", dsim->id, __func__);
+	call_panel_ops(dsim, suspend, dsim);
+	ret = _dsim_disable(dsim, next_state);
+	if (ret < 0) {
+		dsim_err("dsim-%d failed to set %s (ret %d)\n",
+				dsim->id, dsim_state_names[next_state], ret);
+		goto out;
+	}
+	dsim_info("dsim-%d %s - (state:%s -> %s)\n", dsim->id, __func__,
+			dsim_state_names[prev_state],
+			dsim_state_names[dsim->state]);
+
+out:
+	return ret;
+}
+
+static int dsim_doze_suspend(struct dsim_device *dsim)
+{
+	int ret;
+	enum dsim_state prev_state = dsim->state;
+	enum dsim_state next_state = DSIM_STATE_DOZE_SUSPEND;
+
+	if (prev_state == next_state) {
+		dsim_warn("dsim-%d %s already %s state\n", dsim->id,
+				__func__, dsim_state_names[dsim->state]);
+		return 0;
+	}
+
+	dsim_info("dsim-%d %s +\n", dsim->id, __func__);
+	call_panel_ops(dsim, doze_suspend, dsim);
+	ret = _dsim_disable(dsim, next_state);
+	if (ret < 0) {
+		dsim_err("dsim-%d failed to set %s (ret %d)\n",
+				dsim->id, dsim_state_names[next_state], ret);
+		goto out;
+	}
+	dsim_info("dsim-%d %s - (state:%s -> %s)\n", dsim->id, __func__,
+			dsim_state_names[prev_state],
+			dsim_state_names[dsim->state]);
+
+out:
+	return ret;
 }
 
 static int dsim_enter_ulps(struct dsim_device *dsim)
@@ -765,7 +901,7 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 	exynos_ss_printk("%s:state %d: active %d:+\n", __func__,
 				dsim->state, pm_runtime_active(dsim->dev));
 
-	if (dsim->state != DSIM_STATE_ON) {
+	if (!IS_DSIM_ON_STATE(dsim)) {
 		ret = -EBUSY;
 		goto err;
 	}
@@ -905,6 +1041,14 @@ static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 
 	case EXYNOS_DPU_GET_ACLK:
 		return clk_get_rate(dsim->res.aclk);
+
+	case DSIM_IOC_DOZE:
+		ret = dsim_doze(dsim);
+		break;
+
+	case DSIM_IOC_DOZE_SUSPEND:
+		ret = dsim_doze_suspend(dsim);
+		break;
 
 	default:
 		dsim_err("unsupported ioctl");
