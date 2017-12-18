@@ -148,9 +148,11 @@ enum {
 /* operation state of dsim driver */
 enum dsim_state {
 	DSIM_STATE_INIT,
-	DSIM_STATE_ON,		/* HS clock was enabled. */
-	DSIM_STATE_ULPS,	/* DSIM was entered ULPS state */
-	DSIM_STATE_OFF		/* DSIM is suspend state */
+	DSIM_STATE_ON,			/* HS clock was enabled. */
+	DSIM_STATE_DOZE,		/* HS clock was enabled. */
+	DSIM_STATE_ULPS,		/* DSIM was entered ULPS state */
+	DSIM_STATE_DOZE_SUSPEND,	/* DSIM is suspend state */
+	DSIM_STATE_OFF			/* DSIM is suspend state */
 };
 
 enum dphy_charic_value {
@@ -246,6 +248,8 @@ struct dsim_lcd_driver {
 	int (*resume)(struct dsim_device *dsim);
 	int (*dump)(struct dsim_device *dsim);
 	int (*mres)(struct dsim_device *dsim, int mres_idx);
+	int (*doze)(struct dsim_device *dsim);
+	int (*doze_suspend)(struct dsim_device *dsim);
 };
 
 int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1);
@@ -396,6 +400,25 @@ void dsim_reg_set_video_mode(u32 id, u32 mode);
 void dsim_reg_enable_shadow(u32 id, u32 en);
 #endif
 
+static inline bool IS_DSIM_ON_STATE(struct dsim_device *dsim)
+{
+#ifdef CONFIG_SUPPORT_DOZE
+	return (dsim->state == DSIM_STATE_ON ||
+			dsim->state == DSIM_STATE_DOZE);
+#else
+	return (dsim->state == DSIM_STATE_ON);
+#endif
+}
+
+static inline bool IS_DSIM_OFF_STATE(struct dsim_device *dsim)
+{
+	return (dsim->state == DSIM_STATE_ULPS ||
+#ifdef CONFIG_SUPPORT_DOZE
+			dsim->state == DSIM_STATE_DOZE_SUSPEND ||
+#endif
+			dsim->state == DSIM_STATE_OFF);
+}
+
 #define DSIM_IOC_ENTER_ULPS		_IOW('D', 0, u32)
 #define DSIM_IOC_GET_LCD_INFO		_IOW('D', 5, struct decon_lcd *)
 #define DSIM_IOC_DUMP			_IOW('D', 8, u32)
@@ -404,5 +427,8 @@ void dsim_reg_enable_shadow(u32 id, u32 en);
 #if defined(CONFIG_SOC_EXYNOS9810)
 #define DSIM_IOC_SET_CONFIG		_IOW('D', 10, u32)
 #endif
+
+#define DSIM_IOC_DOZE			_IOW('D', 20, u32)
+#define DSIM_IOC_DOZE_SUSPEND		_IOW('D', 21, u32)
 
 #endif /* __SAMSUNG_DSIM_H__ */

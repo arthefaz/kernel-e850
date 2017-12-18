@@ -57,6 +57,11 @@ config DECON_HIBER
         depends on EXYNOS_DECON_9810
         default n
 
+config SUPPORT_DOZE
+	bool "Support DOZE mode for AOD service"
+        depends on EXYNOS_DECON_9810
+        default n
+
 config EXYNOS_AFBC
 	bool "Display sub-system AFBC stream"
         depends on EXYNOS_DECON_9810

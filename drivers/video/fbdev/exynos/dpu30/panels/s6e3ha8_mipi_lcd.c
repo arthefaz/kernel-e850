@@ -207,6 +207,18 @@ static int s6e3ha8_mres(struct dsim_device *dsim, int mres_idx)
 	return 0;
 }
 
+static int s6e3ha8_doze(struct dsim_device *dsim)
+{
+	pr_info("%s +\n", __func__);
+	return 0;
+}
+
+static int s6e3ha8_doze_suspend(struct dsim_device *dsim)
+{
+	pr_info("%s +\n", __func__);
+	return 0;
+}
+
 struct dsim_lcd_driver s6e3ha8_mipi_lcd_driver = {
 	.probe		= s6e3ha8_probe,
 	.displayon	= s6e3ha8_displayon,
@@ -214,4 +226,6 @@ struct dsim_lcd_driver s6e3ha8_mipi_lcd_driver = {
 	.resume		= s6e3ha8_resume,
 	.dump		= s6e3ha8_dump,
 	.mres		= s6e3ha8_mres,
+	.doze		= s6e3ha8_doze,
+	.doze_suspend	= s6e3ha8_doze_suspend,
 };

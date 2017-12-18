@@ -296,7 +296,9 @@ enum decon_idma_type {
 enum decon_state {
 	DECON_STATE_INIT = 0,
 	DECON_STATE_ON,
+	DECON_STATE_DOZE,
 	DECON_STATE_HIBER,
+	DECON_STATE_DOZE_SUSPEND,
 	DECON_STATE_OFF,
 	DECON_STATE_TUI,
 };
@@ -730,6 +732,9 @@ typedef enum dpu_event_type {
 	DPU_EVT_WINUP_UPDATE_REGION,
 	DPU_EVT_WINUP_FLAGS,
 	DPU_EVT_WINUP_APPLY_REGION,
+
+	DPU_EVT_DOZE,
+	DPU_EVT_DOZE_SUSPEND,
 
 	DPU_EVT_MAX, /* End of EVENT */
 } dpu_event_t;
@@ -1349,6 +1354,41 @@ static inline void decon_enter_shutdown_reset(struct decon_device *decon)
 	atomic_set(&decon->is_shutdown, 0);
 }
 
+enum disp_pwr_mode {
+	DISP_PWR_OFF = 0,
+	DISP_PWR_DOZE,
+	DISP_PWR_NORMAL,
+	DISP_PWR_DOZE_SUSPEND,
+	DISP_PWR_MAX,
+};
+
+typedef int (*set_pwr_state_t)(void *);
+
+struct disp_pwr_state {
+	u32 state;
+	set_pwr_state_t set_pwr_state;
+};
+
+static inline bool IS_DECON_ON_STATE(struct decon_device *decon)
+{
+	return decon->state == DECON_STATE_INIT ||
+		decon->state == DECON_STATE_ON ||
+		decon->state == DECON_STATE_DOZE ||
+		decon->state == DECON_STATE_TUI;
+}
+
+static inline bool IS_DECON_OFF_STATE(struct decon_device *decon)
+{
+	return decon->state == DECON_STATE_HIBER ||
+		decon->state == DECON_STATE_DOZE_SUSPEND ||
+		decon->state == DECON_STATE_OFF;
+}
+
+static inline bool IS_DECON_HIBER_STATE(struct decon_device *decon)
+{
+	return decon->state == DECON_STATE_HIBER;
+}
+
 /* CAL APIs list */
 void dpu_reg_set_qactive_pll(u32 id, u32 en);
 int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p);
@@ -1460,11 +1500,17 @@ void decon_reg_set_te_qactive_pll_mode(u32 id, u32 en);
 int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 	struct device *dev, unsigned long iova, int flags, void *token);
 
+int decon_set_out_sd_state(struct decon_device *decon, enum decon_state state);
+
 /* IOCTL commands */
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, __u32)
 #define S3CFB_DECON_SELF_REFRESH	_IOW('F', 207, __u32)
 #define S3CFB_WIN_CONFIG		_IOW('F', 209, \
 						struct decon_win_config_data)
+
+/* cursor async */
+#define DECON_WIN_CURSOR_POS		_IOW('F', 222, struct decon_user_window)
+#define S3CFB_POWER_MODE		_IOW('F', 223, __u32)
 #define EXYNOS_DISP_INFO		_IOW('F', 260, \
 						struct decon_disp_info)
 
@@ -1483,9 +1529,6 @@ int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 /* HDR support */
 #define S3CFB_GET_HDR_CAPABILITIES _IOW('F', 400, struct decon_hdr_capabilities)
 #define S3CFB_GET_HDR_CAPABILITIES_NUM _IOW('F', 401, struct decon_hdr_capabilities_info)
-
-/* cursor async */
-#define DECON_WIN_CURSOR_POS		_IOW('F', 222, struct decon_user_window)
 
 /* DPU aclk */
 #define EXYNOS_DPU_GET_ACLK		_IOR('F', 500, u32)
