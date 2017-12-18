@@ -945,6 +945,7 @@ struct decon_debug {
 	atomic_t event_log_idx;
 	dpu_log_level_t event_log_level;
 #endif
+	struct dentry *debug_low_persistence;
 	struct dpu_afbc_info prev_afbc_info;
 	struct dpu_afbc_info cur_afbc_info;
 	struct ion_handle *handle[MAX_DECON_WIN][MAX_PLANE_CNT];
@@ -1096,6 +1097,7 @@ struct decon_device {
 	struct decon_systrace_data systrace;
 
 	bool mres_enabled;
+	bool low_persistence;
 };
 
 static inline struct decon_device *get_decon_drvdata(u32 id)
@@ -1233,6 +1235,9 @@ void dpu_set_win_update_config(struct decon_device *decon,
 void dpu_set_win_update_partial_size(struct decon_device *decon,
 		struct decon_rect *up_region);
 
+/* low persistence mode */
+void decon_init_low_persistence_mode(struct decon_device *decon);
+
 /* multi-resolution related function */
 void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs);
 
@@ -1324,6 +1329,7 @@ static inline bool decon_hiber_enter_cond(struct decon_device *decon)
 	return ((atomic_read(&decon->hiber.block_cnt) <= 0)
 		&& is_cam_not_running(decon)
 		&& is_displayport_not_running()
+		&& (!decon->low_persistence)
 		&& (atomic_inc_return(&decon->hiber.trig_cnt) >
 			DECON_ENTER_HIBER_CNT));
 }
