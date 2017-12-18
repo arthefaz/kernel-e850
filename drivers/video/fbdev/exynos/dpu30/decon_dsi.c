@@ -1022,3 +1022,16 @@ int decon_register_hiber_work(struct decon_device *decon)
 
 	return 0;
 }
+
+void decon_init_low_persistence_mode(struct decon_device *decon)
+{
+	decon->low_persistence = false;
+
+	if (!IS_ENABLED(CONFIG_EXYNOS_LOW_PERSISTENCE)) {
+		decon_info("display doesn't support low persistence mode\n");
+		return;
+	}
+
+	decon->low_persistence = true;
+	decon_info("display supports low persistence mode\n");
+}

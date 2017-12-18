@@ -1805,7 +1805,8 @@ static void decon_update_regs(struct decon_device *decon,
 		BUG();
 	}
 
-	decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_DISABLE);
+	if (!decon->low_persistence)
+		decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_DISABLE);
 
 end:
 	DPU_EVENT_LOG(DPU_EVT_TRIG_MASK, &decon->sd, ktime_set(0, 0));
@@ -3303,6 +3304,7 @@ static int decon_probe(struct platform_device *pdev)
 		goto err_win;
 
 	dpu_init_win_update(decon);
+	decon_init_low_persistence_mode(decon);
 
 	decon->bts.ops = &decon_bts_control;
 	decon->bts.ops->bts_init(decon);

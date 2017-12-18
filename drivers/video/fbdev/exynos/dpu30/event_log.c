@@ -961,6 +961,55 @@ static const struct file_operations decon_rec_fops = {
 	.release = seq_release,
 };
 
+static int decon_debug_low_persistence_show(struct seq_file *s, void *unused)
+{
+	struct decon_device *decon = get_decon_drvdata(0);
+	seq_printf(s, "%u\n", decon->low_persistence);
+
+	return 0;
+}
+
+static int decon_debug_low_persistence_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, decon_debug_low_persistence_show, inode->i_private);
+}
+
+static ssize_t decon_debug_low_persistence_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *f_ops)
+{
+	struct decon_device *decon;
+	char *buf_data;
+	int ret;
+	unsigned int low_persistence;
+
+	buf_data = kmalloc(count, GFP_KERNEL);
+	if (buf_data == NULL)
+		return count;
+
+	ret = copy_from_user(buf_data, buf, count);
+	if (ret < 0)
+		goto out;
+
+	ret = sscanf(buf_data, "%u", &low_persistence);
+	if (ret < 0)
+		goto out;
+
+	decon = get_decon_drvdata(0);
+	decon->low_persistence = low_persistence;
+
+out:
+	kfree(buf_data);
+	return count;
+}
+
+static const struct file_operations decon_low_persistence_fops = {
+	.open = decon_debug_low_persistence_open,
+	.write = decon_debug_low_persistence_write,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+
 int decon_create_debugfs(struct decon_device *decon)
 {
 	char name[MAX_NAME_SIZE];
@@ -1039,6 +1088,13 @@ int decon_create_debugfs(struct decon_device *decon)
 				0444, decon->d.debug_root, NULL, &decon_cmd_lp_ref_fops);
 		if (!decon->d.debug_cmd_lp_ref) {
 			decon_err("failed to create cmd_lp_ref file\n");
+			ret = -ENOENT;
+			goto err_debugfs;
+		}
+		decon->d.debug_low_persistence = debugfs_create_file("low_persistence",
+				0444, decon->d.debug_root, NULL, &decon_low_persistence_fops);
+		if (!decon->d.debug_low_persistence) {
+			decon_err("failed to create low persistence file\n");
 			ret = -ENOENT;
 			goto err_debugfs;
 		}
