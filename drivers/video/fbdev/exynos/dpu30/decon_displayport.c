@@ -12,7 +12,9 @@
 #include <linux/clk-provider.h>
 #include <linux/videodev2_exynos_media.h>
 #include <media/v4l2-subdev.h>
+#if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
+#endif
 #include <dt-bindings/clock/exynos9810.h>
 #include "decon.h"
 #include "displayport.h"
@@ -122,7 +124,7 @@ static int decon_displayport_vsync_thread(void *data)
 	while (!kthread_should_stop()) {
 		ktime_t timestamp = decon->vsync.timestamp;
 		int ret = wait_event_interruptible(decon->vsync.wait,
-			!ktime_equal(timestamp, decon->vsync.timestamp) &&
+			(timestamp != decon->vsync.timestamp) &&
 			decon->vsync.active);
 
 		if (!ret)

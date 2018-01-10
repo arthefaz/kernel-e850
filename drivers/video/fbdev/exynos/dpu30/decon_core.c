@@ -26,6 +26,7 @@
 #include <linux/ion.h>
 #include <linux/exynos_iovmm.h>
 #endif
+#include <linux/sched/types.h>
 #include <linux/highmem.h>
 #include <linux/memblock.h>
 #include <linux/bug.h>
@@ -34,7 +35,9 @@
 #include <linux/pinctrl/consumer.h>
 #include <video/mipi_display.h>
 #include <media/v4l2-subdev.h>
+#if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
+#endif
 #include <dt-bindings/clock/exynos9810.h>
 
 #include "decon.h"
@@ -467,7 +470,9 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 	pm_stay_awake(decon->dev);
 	dev_warn(decon->dev, "pm_stay_awake");
 
+#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops->bts_acquire_bw(decon);
+#endif
 
 	if (decon->dt.psr_mode != DECON_VIDEO_MODE) {
 		if (decon->res.pinctrl && decon->res.hw_te_on) {
@@ -697,7 +702,9 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 	decon->cur_using_dpp = 0;
 	decon_dpp_stop(decon, false);
 
+#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops->bts_release_bw(decon);
+#endif
 
 	ret = decon_set_out_sd_state(decon, state);
 	if (ret < 0) {
@@ -875,7 +882,9 @@ static int decon_dp_disable(struct decon_device *decon)
 		decon_dpp_stop(decon, false);
 	}
 
+#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops->bts_release_bw(decon);
+#endif
 
 	decon->state = DECON_STATE_OFF;
 err:
@@ -975,13 +984,11 @@ int decon_wait_for_vsync(struct decon_device *decon, u32 timeout)
 
 	if (timeout) {
 		ret = wait_event_interruptible_timeout(decon->vsync.wait,
-				!ktime_equal(timestamp,
-						decon->vsync.timestamp),
+				timestamp != decon->vsync.timestamp,
 				msecs_to_jiffies(timeout));
 	} else {
 		ret = wait_event_interruptible(decon->vsync.wait,
-				!ktime_equal(timestamp,
-						decon->vsync.timestamp));
+				timestamp != decon->vsync.timestamp);
 	}
 
 	decon_deactivate_vsync(decon);
@@ -1546,6 +1553,7 @@ static void decon_save_vgf_connected_win_id(struct decon_device *decon,
 	}
 }
 
+#if defined(CONFIG_ION_EXYNOS)
 static void decon_dump_afbc_handle(struct decon_device *decon,
 		struct decon_dma_buf_data (*dma_bufs)[MAX_PLANE_CNT])
 {
@@ -1794,9 +1802,11 @@ static int decon_set_hdr_info(struct decon_device *decon,
 		return -EINVAL;
 	}
 
+#if defined(CONFIG_ION_EXYNOS)
 	video_meta = (struct exynos_video_meta *)ion_map_kernel(
 			decon->ion_client,
 			regs->dma_buf_data[win_num][meta_plane].ion_handle);
+#endif
 
 	hdr_cmp = memcmp(&decon->prev_hdr_info,
 			&video_meta->data.dec.shdr_static_info,
@@ -1991,16 +2001,18 @@ static void decon_update_regs(struct decon_device *decon,
 
 	decon_update_hdr_info(decon, regs);
 
+#if defined(CONFIG_EXYNOS9810_BTS)
 	/* add calc and update bw : cur > prev */
 	decon->bts.ops->bts_calc_bw(decon, regs);
 	decon->bts.ops->bts_update_bw(decon, regs, 0);
+#endif
 
 	DPU_EVENT_LOG_WINCON(&decon->sd, regs);
 
 	decon_to_psr_info(decon, &psr);
 	if (regs->num_of_window) {
 		if (__decon_update_regs(decon, regs) < 0) {
-#if defined(CONFIG_EXYNOS_AFBC)
+#if defined(CONFIG_ION_EXYNOS)
 			decon_dump_afbc_handle(decon, old_dma_bufs);
 #endif
 			decon_dump(decon);
@@ -2040,7 +2052,7 @@ static void decon_update_regs(struct decon_device *decon,
 		decon_wait_for_vstatus(decon, 50);
 		if (decon_reg_wait_update_done_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
 			decon_up_list_saved();
-#if defined(CONFIG_EXYNOS_AFBC)
+#if defined(CONFIG_ION_EXYNOS)
 			decon_dump_afbc_handle(decon, old_dma_bufs);
 #endif
 			decon_dump(decon);
@@ -2066,8 +2078,10 @@ end:
 	decon_update_vgf_info(decon, regs, false);
 #endif
 
+#if defined(CONFIG_EXYNOS9810_BTS)
 	/* add update bw : cur < prev */
 	decon->bts.ops->bts_update_bw(decon, regs, 1);
+#endif
 
 	decon_dpp_stop(decon, false);
 }
@@ -2897,9 +2911,11 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 {
 	struct decon_lcd *lcd_info = decon->lcd_info;
 	struct fb_info *fbi = win->fbinfo;
+#if defined(CONFIG_ION_EXYNOS)
 	struct displayport_device *displayport;
 	struct dsim_device *dsim;
 	struct device *dev;
+#endif
 	unsigned int real_size, virt_size, size;
 	dma_addr_t map_dma;
 #if defined(CONFIG_ION_EXYNOS)
@@ -3598,8 +3614,10 @@ static int decon_probe(struct platform_device *pdev)
 	dpu_init_win_update(decon);
 	decon_init_low_persistence_mode(decon);
 
+#if defined(CONFIG_EXYNOS9810_BTS)
 	decon->bts.ops = &decon_bts_control;
 	decon->bts.ops->bts_init(decon);
+#endif
 
 	platform_set_drvdata(pdev, decon);
 	pm_runtime_enable(dev);

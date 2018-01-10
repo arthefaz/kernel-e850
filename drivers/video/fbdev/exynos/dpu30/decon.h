@@ -25,7 +25,9 @@
 #include <linux/platform_device.h>
 #include <media/v4l2-device.h>
 #include <media/videobuf2-core.h>
+#if defined(CONFIG_EXYNOS9810_BTS)
 #include <soc/samsung/bts.h>
+#endif
 #if defined(CONFIG_EXYNOS_ITMON)
 #include <soc/samsung/exynos-itmon.h>
 #endif
@@ -1018,17 +1020,19 @@ struct decon_bts_ops {
 struct decon_bts {
 	bool enabled;
 	u32 resol_clk;
-	u32 bw[BTS_DPP_MAX];
-	/* each decon must know other decon's BW to get overall BW */
-	u32 ch_bw[3][BTS_DPU_MAX];
 	u32 peak;
 	u32 total_bw;
 	u32 prev_total_bw;
 	u32 max_disp_freq;
 	u32 prev_max_disp_freq;
+#if defined(CONFIG_EXYNOS9810_BTS)
+	u32 bw[BTS_DPP_MAX];
+	/* each decon must know other decon's BW to get overall BW */
+	u32 ch_bw[3][BTS_DPU_MAX];
 	enum bts_bw_type type;
-	struct decon_bts_ops *ops;
 	struct bts_decon_info bts_info;
+#endif
+	struct decon_bts_ops *ops;
 	struct pm_qos_request mif_qos;
 	struct pm_qos_request int_qos;
 	struct pm_qos_request disp_qos;
@@ -1505,8 +1509,10 @@ void dpu_cursor_win_update_config(struct decon_device *decon,
 		struct decon_reg_data *regs);
 int decon_set_cursor_win_config(struct decon_device *decon, int x, int y);
 
+#if defined(CONFIG_ION_EXYNOS)
 int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 	struct device *dev, unsigned long iova, int flags, void *token);
+#endif
 
 int decon_set_out_sd_state(struct decon_device *decon, enum decon_state state);
 

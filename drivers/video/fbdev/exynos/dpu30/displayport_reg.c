@@ -10,8 +10,10 @@
 */
 
 #include "displayport.h"
+#if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
 #include "../../../drivers/phy/phy-samsung-usb-cal.h"
 #include "../../../drivers/phy/phy-exynos-usbdp.h"
+#endif
 
 u32 phy_tune_parameters[4][4][3] = {
 	/* Swing Level_0 */ { {4, 0, 0}, {0, 7, 0}, {2,  9, 1}, {0, 13, 1} },
@@ -146,7 +148,9 @@ void displayport_reg_phy_mode_setting(void)
 	case CCIC_NOTIFY_DP_PIN_A:
 	case CCIC_NOTIFY_DP_PIN_C:
 	case CCIC_NOTIFY_DP_PIN_E:
+#if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
 		exynos_usbdrd_inform_dp_use(1, 4);
+#endif
 
 		displayport_phy_write_mask(CMN_REG2C, 1, MAN_USBDP_MODE_EN);
 
@@ -165,7 +169,9 @@ void displayport_reg_phy_mode_setting(void)
 	case CCIC_NOTIFY_DP_PIN_B:
 	case CCIC_NOTIFY_DP_PIN_D:
 	case CCIC_NOTIFY_DP_PIN_F:
+#if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
 		exynos_usbdrd_inform_dp_use(1, 2);
+#endif
 
 		displayport_phy_write_mask(CMN_REG2C, 1, MAN_USBDP_MODE_EN);
 
@@ -1209,8 +1215,10 @@ void displayport_reg_phy_disable(void)
 	displayport_reg_phy_reset(1);
 	displayport_phy_write(DP_REG_0, 0x00);
 
+#if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
 	exynos_usbdrd_inform_dp_use(0, displayport_reg_get_lane_count());
 	exynos_usbdrd_request_phy_isol();
+#endif
 }
 
 void displayport_reg_init(void)

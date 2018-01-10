@@ -28,13 +28,19 @@
 #include <video/mipi_display.h>
 #include <linux/regulator/consumer.h>
 #include <media/v4l2-dv-timings.h>
+#if defined(CONFIG_CPU_IDLE)
 #include <soc/samsung/exynos-powermode.h>
+#endif
+#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
 #include <sound/samsung/dp_ado.h>
+#endif
 #if defined(CONFIG_ION_EXYNOS)
 #include <linux/exynos_iovmm.h>
 #endif
 
+#if defined(CONFIG_PHY_EXYNOS_USBDRD)
 #include "../../../drivers/phy/phy-exynos-usbdrd.h"
+#endif
 #include "displayport.h"
 #include "decon.h"
 
@@ -832,9 +838,13 @@ static void displayport_set_switch_state(struct displayport_device *displayport,
 #if defined(CONFIG_EXTCON)
 	if (state) {
 		extcon_set_state_sync(displayport->extcon_displayport, EXTCON_DISP_DP, 1);
+#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
 		dp_ado_switch_set_state(edid_audio_informs());
+#endif
 	} else {
+#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
 		dp_ado_switch_set_state(-1);
+#endif
 		extcon_set_state_sync(displayport->extcon_displayport, EXTCON_DISP_DP, 0);
 	}
 #else
@@ -1937,8 +1947,10 @@ static int displayport_enable(struct displayport_device *displayport)
 
 	displayport_info("displayport_enable\n");
 
+#if defined(CONFIG_CPU_IDLE)
 	/* block to enter SICD mode */
 	exynos_update_ip_idle_status(displayport->idle_ip_index, 0);
+#endif
 
 #if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_get_sync(displayport->dev);
@@ -2009,8 +2021,10 @@ static int displayport_disable(struct displayport_device *displayport)
 	wake_up_interruptible(&displayport->dp_wait);
 	displayport_info("displayport_disable\n");
 
+#if defined(CONFIG_CPU_IDLE)
 	/* unblock to enter SICD mode */
 	exynos_update_ip_idle_status(displayport->idle_ip_index, 1);
+#endif
 
 	return 0;
 }
@@ -2317,11 +2331,13 @@ static int displayport_init_resources(struct displayport_device *displayport, st
 		return -EINVAL;
 	}
 
+#if defined(CONFIG_PHY_EXYNOS_USBDRD)
 	displayport->res.phy_regs = phy_exynos_usbdp_get_address();
 	if (!displayport->res.phy_regs) {
 		displayport_err("failed to get USBDP combo PHY SFR region\n");
 		return -EINVAL;
 	}
+#endif
 
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!res) {
@@ -3011,11 +3027,13 @@ static int displayport_probe(struct platform_device *pdev)
 	iovmm_set_fault_handler(dev, dpu_sysmmu_fault_handler, NULL);
 #endif
 
+#if defined(CONFIG_CPU_IDLE)
 	displayport->idle_ip_index =
 		exynos_get_idle_ip_index(dev_name(&pdev->dev));
 	if (displayport->idle_ip_index < 0)
 		displayport_warn("idle ip index is not provided for DP\n");
 	exynos_update_ip_idle_status(displayport->idle_ip_index, 1);
+#endif
 
 	phy_init(displayport->phy);
 
