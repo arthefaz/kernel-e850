@@ -28,7 +28,9 @@
 #include <linux/module.h>
 #include <linux/exynos-ss.h>
 #include <video/mipi_display.h>
+#if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
+#endif
 #include <dt-bindings/clock/exynos9810.h>
 #if defined(CONFIG_ION_EXYNOS)
 #include <linux/exynos_iovmm.h>
@@ -416,6 +418,7 @@ exit:
 	return;
 }
 
+#if defined(CONFIG_EXYNOS9810_BTS)
 static void dsim_bts_print_info(struct bts_decon_info *info)
 {
 	int i;
@@ -432,6 +435,7 @@ static void dsim_bts_print_info(struct bts_decon_info *info)
 				info->dpp[i].rotation);
 	}
 }
+#endif
 
 static void dsim_underrun_info(struct dsim_device *dsim)
 {

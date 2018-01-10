@@ -13,12 +13,15 @@
 #include <linux/err.h>
 #include <linux/pm_runtime.h>
 #include <linux/sync_file.h>
+#include <linux/dma-fence.h>
 #include <asm/cacheflush.h>
 #include <asm/page.h>
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 #include <linux/smc.h>
 #endif
+#if defined(CONFIG_ION_EXYNOS)
 #include <linux/exynos_iovmm.h>
+#endif
 
 #include "decon.h"
 #include "dsim.h"
@@ -515,7 +518,7 @@ int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file)
 	}
 
 	*sync_file = sync_file_create(&pt->base);
-	fence_put(&pt->base);
+	dma_fence_put(&pt->base);
 	if (!(*sync_file)) {
 		decon_err("%s: failed to create sync file\n", __func__);
 		goto err;

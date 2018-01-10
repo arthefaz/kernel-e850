@@ -14,7 +14,9 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/ktime.h>
+#if defined(CONFIG_EXYNOS_HDR_TUNABLE_TONEMAPPING)
 #include <video/exynos_hdr_tunables.h>
+#endif
 
 #include "dpp.h"
 #include "dpp_coef.h"
@@ -550,6 +552,7 @@ static void dpp_reg_set_gm_lut(u32 id, struct dpp_params_info *p)
 
 static void dpp_reg_set_tm_lut(u32 id, struct dpp_params_info *p)
 {
+#if defined(CONFIG_EXYNOS_HDR_TUNABLE_TONEMAPPING)
 	u32 i = 0;
 	u32 *lut_x = NULL;
 	u32 *lut_y = NULL;
@@ -577,6 +580,7 @@ static void dpp_reg_set_tm_lut(u32 id, struct dpp_params_info *p)
 			DPP_HDR_TM_Y_AXIS_VAL(i, lut_y[i]),
 			DPP_HDR_TM_MASK(i));
 	}
+#endif
 }
 
 static void dpp_reg_set_hdr_params(u32 id, struct dpp_params_info *p)

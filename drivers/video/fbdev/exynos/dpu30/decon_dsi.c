@@ -16,6 +16,7 @@
 #if defined(CONFIG_ION_EXYNOS)
 #include <linux/exynos_iovmm.h>
 #endif
+#include <linux/sched/types.h>
 #include <linux/of_address.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/irq.h>
@@ -327,7 +328,7 @@ static int decon_vsync_thread(void *data)
 	while (!kthread_should_stop()) {
 		ktime_t timestamp = decon->vsync.timestamp;
 		int ret = wait_event_interruptible(decon->vsync.wait,
-			!ktime_equal(timestamp, decon->vsync.timestamp) &&
+			(timestamp != decon->vsync.timestamp) &&
 			decon->vsync.active);
 
 		if (!ret)
