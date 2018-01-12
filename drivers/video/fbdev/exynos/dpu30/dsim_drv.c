@@ -680,11 +680,7 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 
 	dsim_dbg("%s %s +\n", __func__, dsim_state_names[dsim->state]);
 
-#if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_get_sync(dsim->dev);
-#else
-	dsim_runtime_resume(dsim->dev);
-#endif
 
 	/* Config link to DPHY configuration */
 	dpu_sysreg_set_dphy(dsim, dsim->res.ss_regs);
@@ -827,11 +823,8 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 	if (state == DSIM_STATE_OFF)
 		dsim_set_panel_power(dsim, 0);
 
-#if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_put_sync(dsim->dev);
-#else
-	dsim_runtime_suspend(dsim->dev);
-#endif
+
 	dsim_dbg("%s %s -\n", __func__, dsim_state_names[dsim->state]);
 
 	return 0;
@@ -923,11 +916,7 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 
 	phy_power_off(dsim->phy);
 
-#if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_put_sync(dsim->dev);
-#else
-	dsim_runtime_suspend(dsim->dev);
-#endif
 
 	DPU_EVENT_LOG(DPU_EVT_ENTER_ULPS, &dsim->sd, start);
 err:
@@ -952,11 +941,8 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 		goto err;
 	}
 
-#if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_get_sync(dsim->dev);
-#else
-	dsim_runtime_resume(dsim->dev);
-#endif
+
 	dpu_sysreg_set_dphy(dsim, dsim->res.ss_regs);
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);

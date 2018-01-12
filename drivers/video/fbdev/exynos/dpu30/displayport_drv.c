@@ -1952,11 +1952,8 @@ static int displayport_enable(struct displayport_device *displayport)
 	exynos_update_ip_idle_status(displayport->idle_ip_index, 0);
 #endif
 
-#if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_get_sync(displayport->dev);
-#else
-	displayport_runtime_resume(displayport->dev);
-#endif
+
 	enable_irq(displayport->res.irq);
 
 	displayport_info("cur_video = %s in displayport_enable!!!\n",
@@ -2012,11 +2009,8 @@ static int displayport_disable(struct displayport_device *displayport)
 
 	displayport_reg_phy_disable();
 
-#if defined(CONFIG_EXYNOS_PD)
 	pm_runtime_put_sync(displayport->dev);
-#else
-	displayport_runtime_suspend(displayport->dev);
-#endif
+
 	displayport->state = DISPLAYPORT_STATE_INIT;
 	wake_up_interruptible(&displayport->dp_wait);
 	displayport_info("displayport_disable\n");
