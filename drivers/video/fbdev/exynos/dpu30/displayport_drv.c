@@ -39,7 +39,7 @@
 #endif
 
 #if defined(CONFIG_PHY_EXYNOS_USBDRD)
-#include "../../../drivers/phy/phy-exynos-usbdrd.h"
+#include "../../../drivers/phy/samsung/phy-exynos-usbdrd.h"
 #endif
 #include "displayport.h"
 #include "decon.h"

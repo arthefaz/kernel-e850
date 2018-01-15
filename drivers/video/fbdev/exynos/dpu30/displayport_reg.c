@@ -11,8 +11,8 @@
 
 #include "displayport.h"
 #if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
-#include "../../../drivers/phy/phy-samsung-usb-cal.h"
-#include "../../../drivers/phy/phy-exynos-usbdp.h"
+#include "../../../drivers/phy/samsung/phy-samsung-usb-cal.h"
+#include "../../../drivers/phy/samsung/phy-exynos-usbdp.h"
 #endif
 
 u32 phy_tune_parameters[4][4][3] = {
