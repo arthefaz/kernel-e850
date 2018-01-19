@@ -128,9 +128,8 @@ static void decon_up_list_saved(void)
 		if (decon) {
 			if (!list_empty(&decon->up.list) || !list_empty(&decon->up.saved_list)) {
 				decon->up_list_saved = true;
-				decon_info("\n=== DECON%d TIMELINE %d MAX %d ===\n",
-						decon->id, decon->timeline->value,
-						decon->timeline_max);
+				decon_info("\n=== DECON%d TIMELINE %d ===\n",
+						decon->id, atomic_read(&decon->fence.timeline));
 			} else {
 				decon->up_list_saved = false;
 			}
@@ -301,8 +300,10 @@ static void decon_free_dma_buf(struct decon_device *decon,
 	if (!dma->dma_addr)
 		return;
 
-	if (dma->fence)
-		fput(dma->fence->file);
+	if (dma->fence) {
+		dma_fence_put(dma->fence);
+		dma->fence = NULL;
+	}
 	ion_iovmm_unmap(dma->attachment, dma->dma_addr);
 
 	dma_buf_unmap_attachment(dma->attachment, dma->sg_table,
@@ -1330,7 +1331,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	int ret, i;
 	u32 alpha_length;
 	struct decon_rect r;
-	struct sync_file *fence = NULL;
+	struct dma_fence *fence = NULL;
 	u32 config_size = 0;
 	u32 alloc_size = 0;
 	u32 byte_per_pixel = 4;
@@ -1353,7 +1354,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 
 	if (config->acq_fence >= 0) {
 		/* fence is managed by buffer not plane */
-		fence = sync_file_fdget(config->acq_fence);
+		fence = sync_file_get_fence(config->acq_fence);
 		regs->dma_buf_data[idx][0].fence = fence;
 		if (!fence) {
 			decon_err("failed to import fence fd\n");
@@ -1533,7 +1534,6 @@ static int decon_set_dpp_config(struct decon_device *decon,
 	return err_cnt;
 }
 
-#if defined(CONFIG_EXYNOS_AFBC)
 static void decon_save_vgf_connected_win_id(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
@@ -2034,8 +2034,6 @@ static void decon_update_regs(struct decon_device *decon,
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 		decon_set_protected_content(decon, NULL);
 #endif
-		decon_dbg("write-back timeline:%d, max:%d\n",
-				decon->timeline->value, decon->timeline_max);
 	} else {
 		decon->frame_cnt_target = decon->frame_cnt + 1;
 
@@ -2064,8 +2062,8 @@ end:
 	DPU_EVENT_LOG(DPU_EVT_TRIG_MASK, &decon->sd, ktime_set(0, 0));
 
 	decon_release_old_bufs(decon, regs, old_dma_bufs, old_plane_cnt);
-	/* signal to acquire fence */
-	decon_signal_fence(decon);
+	decon_signal_fence(regs->retire_fence);
+
 	decon_systrace(decon, 'E', "decon_update_regs", 0);
 
 	DPU_EVENT_LOG(DPU_EVT_FENCE_RELEASE, &decon->sd, ktime_set(0, 0));
@@ -2254,7 +2252,7 @@ static int decon_set_win_config(struct decon_device *decon,
 		if (win_data->retire_fence < 0)
 			goto err;
 		fd_install(win_data->retire_fence, sync_file->file);
-		decon_signal_fence(decon);
+		decon_signal_fence(sync_file->fence);
 		goto err;
 	}
 
@@ -2271,7 +2269,6 @@ static int decon_set_win_config(struct decon_device *decon,
 		if (win_data->retire_fence < 0)
 			goto err_prepare;
 	} else {
-		decon->timeline_max++;
 		win_data->retire_fence = -1;
 	}
 
@@ -2294,6 +2291,7 @@ static int decon_set_win_config(struct decon_device *decon,
 #if defined(CONFIG_DPU_2_0_RELEASE_FENCES)
 		decon_create_release_fences(decon, win_data, sync_file);
 #endif
+		regs->retire_fence = sync_file->fence;
 	}
 
 	decon_hiber_block(decon);
@@ -2314,7 +2312,7 @@ err_prepare:
 	if (win_data->retire_fence >= 0) {
 		/* video mode should keep previous buffer object */
 		if (decon->lcd_info->mode == DECON_MIPI_COMMAND_MODE)
-			decon_signal_fence(decon);
+			decon_signal_fence(sync_file->fence);
 		fput(sync_file->file);
 		put_unused_fd(win_data->retire_fence);
 	}
@@ -2493,17 +2491,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 
-		if ((decon->ver == HWC_INIT) ||
-				(decon->ver != disp_info.ver)) {
-			decon->ver = disp_info.ver;
-			if (decon->ver == HWC_2_0) {
-				decon->timeline_max = 0;
-				decon_info("decon is setting by HWC%d.0\n",
-						decon->ver);
-			} else {
-				decon->timeline_max = 1;
-			}
-		}
+		decon_info("HWC version %d.0 is operating\n", disp_info.ver);
 		disp_info.psr_mode = decon->dt.psr_mode;
 		disp_info.chip_ver = CHIP_VER;
 		disp_info.mres_info = *mres_info;

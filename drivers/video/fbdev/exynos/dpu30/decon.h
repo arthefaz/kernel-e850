@@ -36,13 +36,13 @@
 #include <linux/ion.h>
 #include <linux/exynos_iovmm.h>
 #endif
+#include <linux/sync_file.h>
 
 #include "regs-decon.h"
 
 #include "./panels/decon_lcd.h"
 #include "dsim.h"
 #include "displayport.h"
-#include "../../../../dma-buf/sync_debug.h"
 #include "hdr_metadata.h"
 
 #define MAX_DECON_CNT		3
@@ -534,7 +534,7 @@ struct decon_dma_buf_data {
 	struct dma_buf_attachment	*attachment;
 	struct sg_table			*sg_table;
 	dma_addr_t			dma_addr;
-	struct sync_file		*fence;
+	struct dma_fence		*fence;
 };
 
 struct decon_win_rect {
@@ -616,6 +616,7 @@ struct decon_reg_data {
 	struct decon_win_rect block_rect[MAX_DECON_WIN];
 	struct decon_window_regs win_regs[MAX_DECON_WIN];
 	struct decon_dma_buf_data dma_buf_data[MAX_DECON_WIN + 1][MAX_PLANE_CNT];
+	struct dma_fence *retire_fence;
 
 	/*
 	 * If window update size is changed, that size has to be applied to
@@ -1053,6 +1054,13 @@ struct decon_systrace_data {
 	pid_t pid;
 };
 
+struct decon_fence {
+	char name[8];
+	u64 context;
+	atomic_t timeline;
+	spinlock_t lock;
+};
+
 struct decon_device {
 	int id;
 	enum decon_state state;
@@ -1066,9 +1074,6 @@ struct decon_device {
 	spinlock_t slock;
 
 	struct ion_client *ion_client;
-
-	struct sync_timeline *timeline;
-	int timeline_max;
 
 	struct v4l2_subdev *out_sd[MAX_DSIM_CNT];
 	struct v4l2_subdev *dsim_sd[MAX_DSIM_CNT];
@@ -1089,6 +1094,7 @@ struct decon_device {
 	struct decon_hiber hiber;
 	struct decon_bts bts;
 	struct decon_cursor cursor;
+	struct decon_fence fence;
 
 	int frame_cnt;
 	int frame_cnt_target;
@@ -1475,8 +1481,8 @@ void decon_create_release_fences(struct decon_device *decon,
 		struct sync_file *sync_file);
 #endif
 int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file);
-void decon_wait_fence(struct sync_file *fence);
-void decon_signal_fence(struct decon_device *decon);
+void decon_wait_fence(struct dma_fence *fence);
+void decon_signal_fence(struct dma_fence *fence);
 
 bool decon_intersect(struct decon_rect *r1, struct decon_rect *r2);
 int decon_intersection(struct decon_rect *r1,
