@@ -461,7 +461,8 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 	if (IS_ERR_OR_NULL(decon->d.event_log))
 		return;
 
-	dsim = get_dsim_drvdata(decon->id);
+	if (!decon->id)
+		dsim = get_dsim_drvdata(decon->id);
 
 	/* TITLE */
 	seq_printf(s, "-------------------DECON%d EVENT LOGGER ----------------------\n",
@@ -472,7 +473,9 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 			IS_ENABLED(CONFIG_DECON_BLOCKING_MODE) ? "on" : "off");
 	seq_printf(s, "Window_Update(%s)\n",
 			decon->win_up.enabled ? "on" : "off");
-	seq_printf(s, "-- Total underrun count(%d)\n", dsim->total_underrun_cnt);
+	if (!decon->id)
+		seq_printf(s, "-- Total underrun count(%d)\n",
+				dsim->total_underrun_cnt);
 	seq_printf(s, "-- Hibernation enter/exit count(%d %d)\n",
 			decon->hiber.enter_cnt, decon->hiber.exit_cnt);
 	seq_puts(s, "-------------------------------------------------------------\n");
