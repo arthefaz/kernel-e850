@@ -24,7 +24,12 @@ static inline void dpu_event_log_decon
 {
 	struct decon_device *decon = container_of(sd, struct decon_device, sd);
 	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
-	struct dpu_log *log = &decon->d.event_log[idx];
+	struct dpu_log *log;
+
+	if (IS_ERR_OR_NULL(decon->d.event_log))
+		return;
+
+	log = &decon->d.event_log[idx];
 
 	if (time.tv64)
 		log->time = time;
@@ -72,7 +77,12 @@ static inline void dpu_event_log_dsim
 	struct dsim_device *dsim = container_of(sd, struct dsim_device, sd);
 	struct decon_device *decon = get_decon_drvdata(dsim->id);
 	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
-	struct dpu_log *log = &decon->d.event_log[idx];
+	struct dpu_log *log;
+
+	if (IS_ERR_OR_NULL(decon->d.event_log))
+		return;
+
+	log = &decon->d.event_log[idx];
 
 	if (time.tv64)
 		log->time = time;
@@ -119,8 +129,13 @@ static inline void dpu_event_log_dpp
 {
 	struct decon_device *decon = get_decon_drvdata(__get_decon_id_for_dpp(sd));
 	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
-	struct dpu_log *log = &decon->d.event_log[idx];
 	struct dpp_device *dpp = v4l2_get_subdevdata(sd);
+	struct dpu_log *log;
+
+	if (IS_ERR_OR_NULL(decon->d.event_log))
+		return;
+
+	log = &decon->d.event_log[idx];
 
 	if (time.tv64)
 		log->time = time;
@@ -162,6 +177,9 @@ static bool dpu_event_ignore
 	struct dpu_log *log;
 	int idx;
 
+	if (IS_ERR_OR_NULL(decon->d.event_log))
+		return true;
+
 	/* Seek a oldest from current index */
 	idx = (latest + DPU_EVENT_LOG_MAX - DECON_ENTER_HIBER_CNT) % DPU_EVENT_LOG_MAX;
 	do {
@@ -182,7 +200,8 @@ void DPU_EVENT_LOG(dpu_event_t type, struct v4l2_subdev *sd, ktime_t time)
 {
 	struct decon_device *decon = get_decon_drvdata(0);
 
-	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event))
+	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event) ||
+			IS_ERR_OR_NULL(decon->d.event_log))
 		return;
 
 	/* log a eventy softly */
@@ -257,10 +276,15 @@ void DPU_EVENT_LOG(dpu_event_t type, struct v4l2_subdev *sd, ktime_t time)
 void DPU_EVENT_LOG_WINCON(struct v4l2_subdev *sd, struct decon_reg_data *regs)
 {
 	struct decon_device *decon = container_of(sd, struct decon_device, sd);
+	struct dpu_log *log;
 	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
-	struct dpu_log *log = &decon->d.event_log[idx];
 	int win = 0;
 	bool window_updated = false;
+
+	if (IS_ERR_OR_NULL(decon->d.event_log))
+		return;
+
+	log = &decon->d.event_log[idx];
 
 	log->time = ktime_get();
 	log->type = DPU_EVT_UPDATE_HANDLER;
@@ -313,7 +337,8 @@ void DPU_EVENT_LOG_CMD(struct v4l2_subdev *sd, u32 cmd_id, unsigned long data)
 	int idx, i;
 	struct dpu_log *log;
 
-	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event))
+	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event) ||
+			IS_ERR_OR_NULL(decon->d.event_log))
 		return;
 
 	idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
@@ -335,9 +360,14 @@ void DPU_EVENT_LOG_CMD(struct v4l2_subdev *sd, u32 cmd_id, unsigned long data)
 void DPU_EVENT_LOG_CURSOR(struct v4l2_subdev *sd, struct decon_reg_data *regs)
 {
 	struct decon_device *decon = container_of(sd, struct decon_device, sd);
+	struct dpu_log *log;
 	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
-	struct dpu_log *log = &decon->d.event_log[idx];
 	int win = 0;
+
+	if (IS_ERR_OR_NULL(decon->d.event_log))
+		return;
+
+	log = &decon->d.event_log[idx];
 
 	log->time = ktime_get();
 	log->type = DPU_EVT_CURSOR_UPDATE;
@@ -362,11 +392,13 @@ void DPU_EVENT_LOG_UPDATE_REGION(struct v4l2_subdev *sd,
 {
 	struct decon_device *decon = container_of(sd, struct decon_device, sd);
 	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
-	struct dpu_log *log = &decon->d.event_log[idx];
+	struct dpu_log *log;
 
-	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event))
+	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event) ||
+			IS_ERR_OR_NULL(decon->d.event_log))
 		return;
 
+	log = &decon->d.event_log[idx];
 	log->time = ktime_get();
 	log->type = DPU_EVT_WINUP_UPDATE_REGION;
 
@@ -378,11 +410,14 @@ void DPU_EVENT_LOG_WINUP_FLAGS(struct v4l2_subdev *sd, bool need_update,
 		bool reconfigure)
 {
 	struct decon_device *decon = container_of(sd, struct decon_device, sd);
+	struct dpu_log *log;
 	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
-	struct dpu_log *log = &decon->d.event_log[idx];
 
-	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event))
+	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event) ||
+			IS_ERR_OR_NULL(decon->d.event_log))
 		return;
+
+	log = &decon->d.event_log[idx];
 
 	log->time = ktime_get();
 	log->type = DPU_EVT_WINUP_FLAGS;
@@ -396,10 +431,13 @@ void DPU_EVENT_LOG_APPLY_REGION(struct v4l2_subdev *sd,
 {
 	struct decon_device *decon = container_of(sd, struct decon_device, sd);
 	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
-	struct dpu_log *log = &decon->d.event_log[idx];
+	struct dpu_log *log;
 
-	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event))
+	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event) ||
+			IS_ERR_OR_NULL(decon->d.event_log))
 		return;
+
+	log = &decon->d.event_log[idx];
 
 	log->time = ktime_get();
 	log->type = DPU_EVT_WINUP_APPLY_REGION;
@@ -419,6 +457,9 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 	struct timeval tv;
 	ktime_t prev_ktime;
 	struct dsim_device *dsim;
+
+	if (IS_ERR_OR_NULL(decon->d.event_log))
+		return;
 
 	dsim = get_dsim_drvdata(decon->id);
 
@@ -1019,12 +1060,33 @@ int decon_create_debugfs(struct decon_device *decon)
 {
 	char name[MAX_NAME_SIZE];
 	int ret = 0;
+	int i;
+	u32 event_cnt;
+
+	decon->d.event_log = NULL;
+	event_cnt = DPU_EVENT_LOG_MAX;
+
+	for (i = 0; i < DPU_EVENT_LOG_RETRY; ++i) {
+		event_cnt = event_cnt >> i;
+		decon->d.event_log = kzalloc(sizeof(struct dpu_log) * event_cnt,
+				GFP_KERNEL);
+		if (IS_ERR_OR_NULL(decon->d.event_log)) {
+			decon_warn("failed to alloc event log buf[%d]. retry\n",
+					event_cnt);
+			continue;
+		}
+
+		decon_info("#%d event log buffers are allocated\n", event_cnt);
+		break;
+	}
+	decon->d.event_log_cnt = event_cnt;
 
 	if (!decon->id) {
 		decon->d.debug_root = debugfs_create_dir("decon", NULL);
 		if (!decon->d.debug_root) {
 			decon_err("failed to create debugfs root directory.\n");
-			return -ENOENT;
+			ret = -ENOENT;
+			goto err_event_log;
 		}
 	}
 
@@ -1109,6 +1171,9 @@ int decon_create_debugfs(struct decon_device *decon)
 
 err_debugfs:
 	debugfs_remove_recursive(decon->d.debug_root);
+err_event_log:
+	kfree(decon->d.event_log);
+	decon->d.event_log = NULL;
 	return ret;
 }
 
