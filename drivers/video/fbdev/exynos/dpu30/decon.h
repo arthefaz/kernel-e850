@@ -821,9 +821,9 @@ struct dpu_size_err_info {
 };
 
 /* Definitions below are used in the DECON */
-#define	DPU_EVENT_LOG_MAX	SZ_1K
-#define	DPU_EVENT_PRINT_MAX	512
-#define	DPU_EVENT_SIZE_ERR_MAX	16
+#define	DPU_EVENT_LOG_MAX	SZ_512
+#define	DPU_EVENT_PRINT_MAX	(DPU_EVENT_LOG_MAX >> 1)
+#define	DPU_EVENT_LOG_RETRY	3
 typedef enum dpu_event_log_level_type {
 	DPU_EVENT_LEVEL_LOW = 0,
 	DPU_EVENT_LEVEL_HIGH,
@@ -951,7 +951,8 @@ struct decon_debug {
 	struct dentry *debug_recovery_cnt;
 	struct dentry *debug_cmd_lp_ref;
 
-	struct dpu_log event_log[DPU_EVENT_LOG_MAX];
+	struct dpu_log *event_log;
+	u32 event_log_cnt;
 	atomic_t event_log_idx;
 	dpu_log_level_t event_log_level;
 #endif
