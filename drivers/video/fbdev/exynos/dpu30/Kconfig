@@ -7,7 +7,6 @@ if EXYNOS_DECON_9810
 config EXYNOS_DECON_FB
 	bool "Samsung DECON Framebuffer driver"
 	depends on EXYNOS_DECON_9810
-	select MEDIA_EXYNOS
 	default y
 	help
 	  Say Y here if you want support for the DECON in Samsung S5P SoCs.
