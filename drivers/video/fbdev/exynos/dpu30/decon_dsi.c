@@ -13,9 +13,7 @@
 #include <linux/of.h>
 #include <linux/clk-provider.h>
 #include <linux/pm_runtime.h>
-#if defined(CONFIG_ION_EXYNOS)
 #include <linux/exynos_iovmm.h>
-#endif
 #include <linux/sched/types.h>
 #include <linux/of_address.h>
 #include <linux/pinctrl/consumer.h>
@@ -740,7 +738,6 @@ EXPORT_SYMBOL(decon_pan_display);
 
 int decon_mmap(struct fb_info *info, struct vm_area_struct *vma)
 {
-#ifdef CONFIG_ION_EXYNOS
 	int ret;
 	struct decon_win *win = info->par;
 	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
@@ -751,9 +748,6 @@ int decon_mmap(struct fb_info *info, struct vm_area_struct *vma)
 #endif
 
 	return ret;
-#else
-	return 0;
-#endif
 }
 EXPORT_SYMBOL(decon_mmap);
 

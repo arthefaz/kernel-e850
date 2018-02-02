@@ -34,9 +34,7 @@
 #if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
 #include <sound/samsung/dp_ado.h>
 #endif
-#if defined(CONFIG_ION_EXYNOS)
 #include <linux/exynos_iovmm.h>
-#endif
 
 #if defined(CONFIG_PHY_EXYNOS_USBDRD)
 #include "../../../drivers/phy/samsung/phy-exynos-usbdrd.h"
@@ -2930,6 +2928,8 @@ static int displayport_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	dma_set_mask(dev, DMA_BIT_MASK(36));
+
 	ret = displayport_parse_dt(displayport, dev);
 	if (ret)
 		goto err_dt;
@@ -3012,14 +3012,12 @@ static int displayport_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(dev);
 
-#if defined(CONFIG_ION_EXYNOS)
 	ret = iovmm_activate(dev);
 	if (ret) {
 		displayport_err("failed to activate iovmm\n");
 		goto err_dt;
 	}
 	iovmm_set_fault_handler(dev, dpu_sysmmu_fault_handler, NULL);
-#endif
 
 #if defined(CONFIG_CPU_IDLE)
 	displayport->idle_ip_index =

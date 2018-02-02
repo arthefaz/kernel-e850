@@ -32,9 +32,7 @@
 #include <soc/samsung/cal-if.h>
 #endif
 #include <dt-bindings/clock/exynos9810.h>
-#if defined(CONFIG_ION_EXYNOS)
 #include <linux/exynos_iovmm.h>
-#endif
 
 #include "decon.h"
 #include "dsim.h"
@@ -1486,6 +1484,7 @@ static int dsim_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	dma_set_mask(dev, DMA_BIT_MASK(36));
 	ret = dsim_parse_dt(dsim, dev);
 	if (ret)
 		goto err_dt;
@@ -1512,14 +1511,12 @@ static int dsim_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(dev);
 
-#if defined(CONFIG_ION_EXYNOS)
 	ret = iovmm_activate(dev);
 	if (ret) {
 		dsim_err("failed to activate iovmm\n");
 		goto err_dt;
 	}
 	iovmm_set_fault_handler(dev, dpu_sysmmu_fault_handler, NULL);
-#endif
 
 	ret = dsim_get_data_lanes(dsim);
 	if (ret)
