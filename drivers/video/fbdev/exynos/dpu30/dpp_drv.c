@@ -13,9 +13,7 @@
 #include <linux/clk-provider.h>
 #include <linux/clk.h>
 #include <linux/of.h>
-#if defined(CONFIG_ION_EXYNOS)
 #include <linux/exynos_iovmm.h>
-#endif
 #include <linux/videodev2_exynos_media.h>
 #include <linux/console.h>
 

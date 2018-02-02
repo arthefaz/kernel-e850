@@ -31,11 +31,7 @@
 #if defined(CONFIG_EXYNOS_ITMON)
 #include <soc/samsung/exynos-itmon.h>
 #endif
-#if defined(CONFIG_ION_EXYNOS)
-#include <linux/exynos_ion.h>
-#include <linux/ion.h>
 #include <linux/exynos_iovmm.h>
-#endif
 #include <linux/sync_file.h>
 
 #include "regs-decon.h"
@@ -48,7 +44,6 @@
 #define MAX_DECON_CNT		3
 #define SUCCESS_EXYNOS_SMC	0
 
-extern struct ion_device *ion_exynos;
 extern struct decon_device *decon_drvdata[MAX_DECON_CNT];
 extern int decon_log_level;
 extern int dpu_bts_log_level;
@@ -529,7 +524,6 @@ struct decon_window_regs {
 };
 
 struct decon_dma_buf_data {
-	struct ion_handle		*ion_handle;
 	struct dma_buf			*dma_buf;
 	struct dma_buf_attachment	*attachment;
 	struct sg_table			*sg_table;
@@ -962,7 +956,7 @@ struct decon_debug {
 	struct dentry *debug_low_persistence;
 	struct dpu_afbc_info prev_afbc_info;
 	struct dpu_afbc_info cur_afbc_info;
-	struct ion_handle *handle[MAX_DECON_WIN][MAX_PLANE_CNT];
+	struct dma_buf *dmabuf[MAX_DECON_WIN][MAX_PLANE_CNT];
 	int prev_vgf_win_id[2];
 };
 
@@ -1072,8 +1066,6 @@ struct decon_device {
 	struct mutex lock;
 	struct mutex pm_lock;
 	spinlock_t slock;
-
-	struct ion_client *ion_client;
 
 	struct v4l2_subdev *out_sd[MAX_DSIM_CNT];
 	struct v4l2_subdev *dsim_sd[MAX_DSIM_CNT];
@@ -1515,10 +1507,8 @@ void dpu_cursor_win_update_config(struct decon_device *decon,
 		struct decon_reg_data *regs);
 int decon_set_cursor_win_config(struct decon_device *decon, int x, int y);
 
-#if defined(CONFIG_ION_EXYNOS)
 int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 	struct device *dev, unsigned long iova, int flags, void *token);
-#endif
 
 int decon_set_out_sd_state(struct decon_device *decon, enum decon_state state);
 
