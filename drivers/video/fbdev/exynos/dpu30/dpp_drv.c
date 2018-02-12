@@ -908,8 +908,7 @@ static irqreturn_t dma_irq_handler(int irq, void *priv)
 
 		if (irqs & ODMA_STATUS_FRAMEDONE_IRQ) {
 			dpp->d.done_count++;
-			if (dpp->id == ODMA_WB)
-				wake_up_interruptible_all(&dpp->framedone_wq);
+			wake_up_interruptible_all(&dpp->framedone_wq);
 			DPU_EVENT_LOG(DPU_EVT_DPP_FRAMEDONE, &dpp->sd,
 					ktime_set(0, 0));
 			goto irq_end;
@@ -1151,11 +1150,7 @@ static int dpp_runtime_resume(struct device *dev)
 }
 
 static const struct of_device_id dpp_of_match[] = {
-#if defined(CONFIG_SOC_EXYNOS9810)
 	{ .compatible = "samsung,exynos9-dpp" },
-#else
-	{ .compatible = "samsung,exynos8-dpp" },
-#endif
 	{},
 };
 MODULE_DEVICE_TABLE(of, dpp_of_match);

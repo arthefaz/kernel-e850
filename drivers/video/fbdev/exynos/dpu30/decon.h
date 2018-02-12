@@ -1346,7 +1346,9 @@ static inline bool decon_hiber_enter_cond(struct decon_device *decon)
 {
 	return ((atomic_read(&decon->hiber.block_cnt) <= 0)
 		&& is_cam_not_running(decon)
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		&& is_displayport_not_running()
+#endif
 		&& (!decon->low_persistence)
 		&& (atomic_inc_return(&decon->hiber.trig_cnt) >
 			DECON_ENTER_HIBER_CNT));
@@ -1426,15 +1428,10 @@ int decon_reg_wait_for_update_timeout(u32 id, unsigned long timeout);
 int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq);
 void decon_reg_set_blender_bg_image_size(u32 id, enum decon_dsi_mode dsi_mode,
 		struct decon_lcd *lcd_info);
-#if defined(CONFIG_SOC_EYXNOS8895)
-void decon_reg_config_data_path_size(u32 id,
-	u32 width, u32 height, u32 overlap_w);
-#elif defined(CONFIG_SOC_EXYNOS9810)
 void decon_reg_config_data_path_size(u32 id, u32 width, u32 height,
 		u32 overlap_w, struct decon_dsc *p, struct decon_param *param);
 u32 dsc_get_dual_slice_mode(struct decon_lcd *lcd_info);
 u32 dsc_get_slice_mode_change(struct decon_lcd *lcd_info);
-#endif
 void decon_reg_set_dispif_size(u32 id, u32 width, u32 height);
 void decon_reg_get_clock_ratio(struct decon_clocks *clks,
 		struct decon_lcd *lcd_info);
