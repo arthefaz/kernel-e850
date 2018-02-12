@@ -16,4 +16,4 @@ ifeq ($(CONFIG_DEBUG_SNAPSHOT),y)
 obj-$(CONFIG_ARCH_EXYNOS)		+= exynos-helper.o
 obj-$(CONFIG_ARCH_EXYNOS)		+= exynos-handler.o
 endif
-obj-$(CONFIG_EXYNOS_CORESIGHT_ETM)	+= exynos-coresight-etm.o
+obj-$(CONFIG_EXYNOS_ADV_TRACER) 	+= exynos-adv-tracer.o exynos-adv-tracer-ipc.o

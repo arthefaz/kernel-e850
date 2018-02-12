@@ -40,4 +40,9 @@ config EXYNOS_CORESIGHT_MAINTAIN_DBG_REG
           save in /restore from memory. If OS-lock is set, debugging to use
           trace32 is impossible. So OS-lock must clear when core power is up.
           This config must enable only using iTSP program.
+
+config EXYNOS_ADV_TRACER
+        bool "Exynos Advanced Tracer"
+        default n
+        depends on EXYNOS_DEBUG
 endif
