@@ -168,7 +168,7 @@ void decon_dump(struct decon_device *decon)
 {
 	int acquired = console_trylock();
 
-	if (decon->state != DECON_STATE_ON) {
+	if (IS_DECON_OFF_STATE(decon)) {
 		decon_info("%s: DECON%d is disabled, state(%d)\n",
 				__func__, decon->id, decon->state);
 		return;
@@ -517,7 +517,7 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 
 	decon_to_psr_info(decon, &psr);
 
-	if (decon->dt.out_type == DECON_OUT_DSI) {
+	if ((decon->dt.out_type == DECON_OUT_DSI) && (state != DECON_STATE_DOZE)) {
 		if (psr.trig_mode == DECON_HW_TRIG) {
 			decon_set_black_window(decon);
 			/*

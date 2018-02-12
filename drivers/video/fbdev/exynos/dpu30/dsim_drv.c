@@ -711,10 +711,11 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 		dsim_info("dsim_%d already enabled", dsim->id);
 		ret = -EBUSY;
 	} else {
-
-		dsim_info("dsim_%d enabled", dsim->id);
-		/* Panel reset should be set after LP-11 */
-		dsim_reset_panel(dsim);
+		if (state != DSIM_STATE_DOZE) {
+			dsim_info("dsim_%d enabled", dsim->id);
+			/* Panel reset should be set after LP-11 */
+			dsim_reset_panel(dsim);
+		}
 	}
 
 init_end:
