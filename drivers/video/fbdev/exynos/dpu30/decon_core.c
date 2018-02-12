@@ -120,7 +120,7 @@ static void decon_up_list_saved(void)
 	int i;
 	struct decon_device *decon;
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < MAX_DECON_CNT; i++) {
 		decon = get_decon_drvdata(i);
 		if (decon) {
 			if (!list_empty(&decon->up.list) || !list_empty(&decon->up.saved_list)) {
@@ -210,7 +210,7 @@ void decon_dump(struct decon_device *decon)
 }
 
 /* ---------- CHECK FUNCTIONS ----------- */
-static void decon_win_conig_to_regs_param
+static void decon_win_config_to_regs_param
 	(int transp_length, struct decon_win_config *win_config,
 	 struct decon_window_regs *win_regs, enum decon_idma_type idma_type,
 	 int idx)
@@ -362,11 +362,7 @@ int decon_tui_protection(bool tui_en)
 			dpu_set_win_update_config(decon, NULL);
 #endif
 		decon_to_psr_info(decon, &psr);
-#if defined(CONFIG_SOC_EXYNOS9810)
 		decon_reg_stop_tui(decon->id, decon->dt.out_idx[0], &psr);
-#else
-		decon_reg_stop_nreset(decon->id, &psr);
-#endif
 
 		decon->cur_using_dpp = 0;
 		decon_dpp_stop(decon, false);
@@ -1461,7 +1457,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 
 	alpha_length = dpu_get_alpha_len(config->format);
 	regs->protection[idx] = config->protection;
-	decon_win_conig_to_regs_param(alpha_length, config,
+	decon_win_config_to_regs_param(alpha_length, config,
 				&regs->win_regs[idx], config->idma_type, idx);
 
 	return 0;
@@ -1612,7 +1608,6 @@ static void decon_set_afbc_recovery_time(struct decon_device *decon)
 
 	decon->prev_aclk_khz = aclk_khz;
 }
-#endif
 
 static void decon_save_vgf_connected_win_id(struct decon_device *decon,
 		struct decon_reg_data *regs)
@@ -1688,6 +1683,7 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 
 	decon_info("%s -\n", __func__);
 }
+#endif
 
 static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data *regs)
 {
@@ -1994,6 +1990,7 @@ err_hdr:
 	}
 }
 
+#if defined(CONFIG_EXYNOS_AFBC)
 static void decon_update_vgf_info(struct decon_device *decon,
 		struct decon_reg_data *regs, bool cur)
 {
@@ -2050,6 +2047,7 @@ static void decon_update_vgf_info(struct decon_device *decon,
 
 	decon_dbg("%s -\n", __func__);
 }
+#endif
 
 static void decon_update_regs(struct decon_device *decon,
 		struct decon_reg_data *regs)
@@ -2078,7 +2076,9 @@ static void decon_update_regs(struct decon_device *decon,
 
 	decon_check_used_dpp(decon, regs);
 
+#if defined(CONFIG_EXYNOS_AFBC)
 	decon_update_vgf_info(decon, regs, true);
+#endif
 
 	decon_update_hdr_info(decon, regs);
 
@@ -2091,7 +2091,9 @@ static void decon_update_regs(struct decon_device *decon,
 	decon_to_psr_info(decon, &psr);
 	if (regs->num_of_window) {
 		if (__decon_update_regs(decon, regs) < 0) {
+#if defined(CONFIG_EXYNOS_AFBC)
 			decon_dump_afbc_handle(decon, old_dma_bufs);
+#endif
 			decon_dump(decon);
 			BUG();
 		}
@@ -2129,7 +2131,9 @@ static void decon_update_regs(struct decon_device *decon,
 		decon_wait_for_vstatus(decon, 50);
 		if (decon_reg_wait_for_update_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
 			decon_up_list_saved();
+#if defined(CONFIG_EXYNOS_AFBC)
 			decon_dump_afbc_handle(decon, old_dma_bufs);
+#endif
 			decon_dump(decon);
 			BUG();
 		}
@@ -2148,8 +2152,10 @@ end:
 
 	DPU_EVENT_LOG(DPU_EVT_FENCE_RELEASE, &decon->sd, ktime_set(0, 0));
 
+#if defined(CONFIG_EXYNOS_AFBC)
 	decon_save_vgf_connected_win_id(decon, regs);
 	decon_update_vgf_info(decon, regs, false);
+#endif
 
 	/* add update bw : cur < prev */
 	decon->bts.ops->bts_update_bw(decon, regs, 1);
@@ -2260,7 +2266,7 @@ static int decon_prepare_win_config(struct decon_device *decon,
 			win_regs->colormap = config->color;
 
 			/* decon_set_full_size_win(decon, config); */
-			decon_win_conig_to_regs_param(0, config, win_regs,
+			decon_win_config_to_regs_param(0, config, win_regs,
 					config->idma_type, i);
 			ret = 0;
 			break;
@@ -2413,7 +2419,9 @@ static int decon_get_hdr_capa(struct decon_device *decon,
 			hdr_capa->out_types[k] =
 				decon->lcd_info->dt_lcd_hdr.hdr_type[k];
 	} else if (decon->dt.out_type == DECON_OUT_DP) {
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		decon_displayport_get_hdr_capa(decon, hdr_capa);
+#endif
 	} else
 		memset(hdr_capa, 0, sizeof(struct decon_hdr_capabilities));
 
@@ -2441,7 +2449,9 @@ static int decon_get_hdr_capa_info(struct decon_device *decon,
 		hdr_capa_info->min_luminance =
 			decon->lcd_info->dt_lcd_hdr.hdr_min_luma;
 	} else if (decon->dt.out_type == DECON_OUT_DP) {
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		decon_displayport_get_hdr_capa_info(decon, hdr_capa_info);
+#endif
 	} else
 		memset(hdr_capa_info, 0, sizeof(struct decon_hdr_capabilities_info));
 
@@ -2461,7 +2471,9 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	struct lcd_mres_info *mres_info = &lcd_info->dt_lcd_mres;
 	struct decon_win_config_data win_data;
 	struct decon_disp_info disp_info;
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct exynos_displayport_data displayport_data;
+#endif
 	struct decon_hdr_capabilities hdr_capa;
 	struct decon_hdr_capabilities_info hdr_capa_info;
 	struct decon_user_window user_window;	/* cursor async */
@@ -2634,6 +2646,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		}
 		break;
 
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	case EXYNOS_GET_DISPLAYPORT_CONFIG:
 		if (copy_from_user(&displayport_data,
 				   (struct exynos_displayport_data __user *)arg,
@@ -2669,7 +2682,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		decon_info("DISPLAY_IOC_DP_SA_SORTING is called\n");
 		ret = displayport_reg_stand_alone_crc_sorting();
 		break;
-
+#endif
 	case EXYNOS_DPU_DUMP:
 		mutex_lock(&decon->lock);
 		if (!IS_DECON_ON_STATE(decon)) {
@@ -3308,9 +3321,7 @@ static void decon_parse_dt(struct decon_device *decon)
 			decon_info("out1 idx(%d). 0: DSI0 1: DSI1 2: DSI2\n",
 					decon->dt.out_idx[1]);
 		}
-	}
 
-	if ((decon->dt.out_type == DECON_OUT_DSI)) {
 		te_eint = of_get_child_by_name(decon->dev->of_node, "te_eint");
 		if (!te_eint) {
 			decon_info("No DT node for te_eint\n");
@@ -3329,20 +3340,14 @@ static void decon_parse_dt(struct decon_device *decon)
 				decon_info("Failed to get CAM0-STAT Reg\n");
 		}
 	}
-
 }
 
 static int decon_get_disp_ss_addr(struct decon_device *decon)
 {
 	if (of_have_populated_dt()) {
 		struct device_node *nd;
-#if defined(CONFIG_SOC_EXYNOS9810)
 		nd = of_find_compatible_node(NULL, NULL,
 				"samsung,exynos9-disp_ss");
-#else
-		nd = of_find_compatible_node(NULL, NULL,
-				"samsung,exynos8-disp_ss");
-#endif
 		if (!nd) {
 			decon_err("failed find compatible node(sysreg-disp)");
 			return -ENODEV;
@@ -3393,10 +3398,12 @@ static int decon_init_resources(struct decon_device *decon,
 		if (ret)
 			goto err;
 	} else if (decon->dt.out_type == DECON_OUT_DP) {
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		decon_displayport_get_clocks(decon);
 		ret =  decon_displayport_register_irq(decon);
 		if (ret)
 			goto err;
+#endif
 	} else {
 		decon_err("not supported output type(%d)\n", decon->dt.out_type);
 	}
@@ -3781,11 +3788,7 @@ static void decon_shutdown(struct platform_device *pdev)
 }
 
 static const struct of_device_id decon_of_match[] = {
-#if defined(CONFIG_SOC_EXYNOS9810)
 	{ .compatible = "samsung,exynos9-decon" },
-#else
-	{ .compatible = "samsung,exynos8-decon" },
-#endif
 	{},
 };
 MODULE_DEVICE_TABLE(of, decon_of_match);

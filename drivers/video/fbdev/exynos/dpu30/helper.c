@@ -559,13 +559,8 @@ void __iomem *dpu_get_sysreg_addr(void)
 
 	if (of_have_populated_dt()) {
 		struct device_node *nd;
-#if defined(CONFIG_SOC_EXYNOS9810)
 		nd = of_find_compatible_node(NULL, NULL,
 				"samsung,exynos9-disp_ss");
-#else
-		nd = of_find_compatible_node(NULL, NULL,
-				"samsung,exynos8-disp_ss");
-#endif
 		if (!nd) {
 			decon_err("failed find compatible node(sysreg-disp)");
 			return NULL;
@@ -777,7 +772,7 @@ static int dpu_dump_buffer_data(struct dpp_device *dpp)
 
 	if (dpp->state == DPP_STATE_ON) {
 
-		for (i = 0; i < 3; i++) {
+		for (i = 0; i < MAX_DECON_CNT; i++) {
 			decon = get_decon_drvdata(i);
 			if (decon == NULL)
 				continue;
