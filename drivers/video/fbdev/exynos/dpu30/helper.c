@@ -39,8 +39,8 @@ static int __dpu_match_dev(struct device *dev, void *data)
 	if (!strcmp(DPP_MODULE_NAME, dev->driver->name)) {
 		dpp = (struct dpp_device *)dev_get_drvdata(dev);
 		decon->dpp_sd[dpp->id] = &dpp->sd;
-		decon_dbg("dpp%d sd name(%s)\n", dpp->id,
-				decon->dpp_sd[dpp->id]->name);
+		decon_dbg("dpp%d sd name(%s) attr(0x%lx)\n", dpp->id,
+				decon->dpp_sd[dpp->id]->name, dpp->attr);
 	} else if (!strcmp(DSIM_MODULE_NAME, dev->driver->name)) {
 		dsim = (struct dsim_device *)dev_get_drvdata(dev);
 		decon->dsim_sd[dsim->id] = &dsim->sd;
@@ -586,7 +586,7 @@ void __iomem *dpu_get_sysreg_addr(void)
  * DMA_CH1 : G0-VG0
  * DMA_CH2 : G1-VG1
 */
-u32 dpu_dma_type_to_channel(enum decon_idma_type type)
+u32 DPU_DMA2CH(enum decon_idma_type type)
 {
 	u32 ch_id;
 
@@ -615,6 +615,37 @@ u32 dpu_dma_type_to_channel(enum decon_idma_type type)
 	}
 
 	return ch_id;
+}
+
+enum decon_idma_type DPU_CH2DMA(u32 ch)
+{
+	enum decon_idma_type type;
+
+	switch (ch) {
+	case 0:
+		type = IDMA_VG0;
+		break;
+	case 1:
+		type = IDMA_VGF0;
+		break;
+	case 2:
+		type = IDMA_VGF1;
+		break;
+	case 3:
+		type = IDMA_G1;
+		break;
+	case 4:
+		type = IDMA_VG1;
+		break;
+	case 5:
+		type = IDMA_G0;
+		break;
+	default:
+		decon_warn("channal(%d) is invalid\n", ch);
+		return -EINVAL;
+	}
+
+	return type;
 }
 
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
@@ -715,8 +746,7 @@ void decon_set_protected_content(struct decon_device *decon,
 /* id : VGF0=0, VGF1=1 */
 void dpu_dump_data_to_console(void *v_addr, int buf_size, int id)
 {
-	dpp_info("=== (IDMA_VGF%d) Frame Buffer Data(128 Bytes) ===\n",
-		id == IDMA_VGF0 ? 0 : 1);
+	dpp_info("=== (CH#%d) Frame Buffer Data(128 Bytes) ===\n", id);
 
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			v_addr, buf_size, false);
@@ -777,7 +807,7 @@ static int dpu_dump_buffer_data(struct dpp_device *dpp)
 			if (decon == NULL)
 				continue;
 
-			if (dpp->id == IDMA_VGF1)
+			if (DPU_CH2DMA(dpp->id) == IDMA_VGF1)
 				id_idx = 1;
 
 			afbc_info = &decon->d.cur_afbc_info;
