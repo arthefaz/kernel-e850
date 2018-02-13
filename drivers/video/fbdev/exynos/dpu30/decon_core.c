@@ -1497,7 +1497,7 @@ static void decon_check_used_dpp(struct decon_device *decon,
 	for (i = 0; i < decon->dt.max_win; i++) {
 		struct decon_win *win = decon->win[i];
 		if (!regs->win_regs[i].winmap_state)
-			win->dpp_id = regs->dpp_config[i].idma_type;
+			win->dpp_id = DPU_DMA2CH(regs->dpp_config[i].idma_type);
 		else
 			win->dpp_id = 0xF;
 
@@ -1591,7 +1591,8 @@ static void decon_set_afbc_recovery_time(struct decon_device *decon)
 		win = decon->win[i];
 		if (!test_bit(win->dpp_id, &decon->cur_using_dpp))
 			continue;
-		if ((win->dpp_id != IDMA_VGF0) && (win->dpp_id != IDMA_VGF1))
+		if ((DPU_CH2DMA(win->dpp_id) != IDMA_VGF0) &&
+				(DPU_CH2DMA(win->dpp_id) != IDMA_VGF1))
 			continue;
 
 		sd = decon->dpp_sd[win->dpp_id];
@@ -1634,7 +1635,7 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 
 	decon_info("%s +\n", __func__);
 
-	if (test_bit(IDMA_VGF0, &decon->prev_used_dpp)) {
+	if (test_bit(DPU_DMA2CH(IDMA_VGF0), &decon->prev_used_dpp)) {
 		win_id = decon->d.prev_vgf_win_id[0];
 		if (win_id < 0) {
 			decon_err("%s: win_id(%d) is invalid\n", __func__, win_id);
@@ -1657,7 +1658,7 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 				v_addr, size);
 	}
 
-	if (test_bit(IDMA_VGF1, &decon->prev_used_dpp)) {
+	if (test_bit(DPU_DMA2CH(IDMA_VGF1), &decon->prev_used_dpp)) {
 		win_id = decon->d.prev_vgf_win_id[1];
 		if (win_id < 0) {
 			decon_err("%s: win_id(%d) is invalid\n", __func__, win_id);
@@ -2010,7 +2011,7 @@ static void decon_update_vgf_info(struct decon_device *decon,
 		if (!regs->dpp_config[i].compression)
 			continue;
 
-		if (test_bit(IDMA_VGF0, &decon->cur_using_dpp)) {
+		if (test_bit(DPU_DMA2CH(IDMA_VGF0), &decon->cur_using_dpp)) {
 			afbc_info->is_afbc[0] = true;
 			afbc_info->dma_addr[0] =
 				regs->dma_buf_data[i][0].dma_addr;
@@ -2027,7 +2028,7 @@ static void decon_update_vgf_info(struct decon_device *decon,
 #endif
 		}
 
-		if (test_bit(IDMA_VGF1, &decon->cur_using_dpp)) {
+		if (test_bit(DPU_DMA2CH(IDMA_VGF1), &decon->cur_using_dpp)) {
 			afbc_info->is_afbc[1] = true;
 			afbc_info->dma_addr[1] =
 				regs->dma_buf_data[i][0].dma_addr;
@@ -3544,7 +3545,7 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	win_regs.whole_h = fbinfo->var.yres_virtual;
 	win_regs.offset_x = fbinfo->var.xoffset;
 	win_regs.offset_y = fbinfo->var.yoffset;
-	win_regs.type = decon->dt.dft_idma;
+	win_regs.type = DPU_CH2DMA(decon->dt.dft_idma);
 	decon_dbg("pixel_count(%d), whole_w(%d), whole_h(%d), x(%d), y(%d)\n",
 			win_regs.pixel_count, win_regs.whole_w,
 			win_regs.whole_h, win_regs.offset_x,

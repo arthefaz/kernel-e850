@@ -674,7 +674,7 @@ void decon_reg_config_win_channel(u32 id, u32 win_idx,
 	u32 ch_id;
 	u32 val, mask;
 
-	ch_id = dpu_dma_type_to_channel(type);
+	ch_id = DPU_DMA2CH(type);
 
 	val = WIN_CHMAP_F(win_idx, ch_id);
 	mask = WIN_CHMAP_MASK(win_idx);

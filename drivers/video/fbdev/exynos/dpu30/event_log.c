@@ -673,6 +673,7 @@ static int decon_debug_dump_show(struct seq_file *s, void *unused)
 {
 	struct decon_device *decon = s->private;
 
+	BUG();
 	if (!IS_DECON_ON_STATE(decon)) {
 		decon_info("%s: decon is not ON(%d)\n", __func__, decon->state);
 		return 0;
@@ -983,8 +984,8 @@ static const struct file_operations decon_cmd_lp_ref_fops = {
 static int decon_debug_rec_show(struct seq_file *s, void *unused)
 {
 	seq_printf(s, "VGF0[%u] VGF1[%u]\n",
-			get_dpp_drvdata(IDMA_VGF0)->d.recovery_cnt,
-			get_dpp_drvdata(IDMA_VGF1)->d.recovery_cnt);
+			get_dpp_drvdata(DPU_DMA2CH(IDMA_VGF0))->d.recovery_cnt,
+			get_dpp_drvdata(DPU_DMA2CH(IDMA_VGF1))->d.recovery_cnt);
 	return 0;
 }
 

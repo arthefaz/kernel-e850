@@ -1489,8 +1489,9 @@ bool is_scaling(struct decon_win_config *config);
 bool is_full(struct decon_rect *r, struct decon_lcd *lcd);
 bool is_decon_opaque_format(int format);
 void __iomem *dpu_get_sysreg_addr(void);
-u32 dpu_dma_type_to_channel(enum decon_idma_type type);
 void dpu_dump_afbc_info(void);
+u32 DPU_DMA2CH(enum decon_idma_type type);
+enum decon_idma_type DPU_CH2DMA(u32 ch);
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 void decon_set_protected_content(struct decon_device *decon,
 		struct decon_reg_data *regs);
