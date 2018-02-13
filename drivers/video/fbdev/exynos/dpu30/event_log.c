@@ -673,7 +673,6 @@ static int decon_debug_dump_show(struct seq_file *s, void *unused)
 {
 	struct decon_device *decon = s->private;
 
-	BUG();
 	if (!IS_DECON_ON_STATE(decon)) {
 		decon_info("%s: decon is not ON(%d)\n", __func__, decon->state);
 		return 0;
