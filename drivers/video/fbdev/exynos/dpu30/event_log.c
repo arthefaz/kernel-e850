@@ -158,8 +158,8 @@ static inline void dpu_event_log_dpp
 		break;
 	case DPU_EVT_DPP_WINCON:
 		log->data.dpp.id = dpp->id;
-		memcpy(&log->data.dpp.src, &dpp->config->src, sizeof(struct decon_frame));
-		memcpy(&log->data.dpp.dst, &dpp->config->dst, sizeof(struct decon_frame));
+		memcpy(&log->data.dpp.src, &dpp->dpp_config->config.src, sizeof(struct decon_frame));
+		memcpy(&log->data.dpp.dst, &dpp->dpp_config->config.dst, sizeof(struct decon_frame));
 		break;
 	default:
 		log->data.dpp.id = dpp->id;

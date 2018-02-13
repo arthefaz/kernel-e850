@@ -87,9 +87,9 @@ void dpp_op_timer_handler(unsigned long arg)
 
 	dpp_dump(dpp);
 
-	if (dpp->config->compression)
+	if (dpp->dpp_config->config.compression)
 		dpp_info("Compression Source is %s of DPP[%d]\n",
-			dpp->config->dpp_parm.comp_src == DPP_COMP_SRC_G2D ?
+			dpp->dpp_config->config.dpp_parm.comp_src == DPP_COMP_SRC_G2D ?
 			"G2D" : "GPU", dpp->id);
 
 	dpp_info("DPP[%d] irq hasn't been occured", dpp->id);
@@ -125,8 +125,9 @@ static int dpp_wb_wait_for_framedone(struct dpp_device *dpp)
 static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 {
 	u64 src_w, src_h, dst_w, dst_h;
-	struct decon_win_config *config = dpp->config;
+	struct decon_win_config *config = &dpp->dpp_config->config;
 
+	p->rcv_num = dpp->dpp_config->rcv_num;
 	memcpy(&p->src, &config->src, sizeof(struct decon_frame));
 	memcpy(&p->dst, &config->dst, sizeof(struct decon_frame));
 	memcpy(&p->block, &config->block_area, sizeof(struct decon_win_rect));
@@ -192,7 +193,7 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 
 static int dpp_check_size(struct dpp_device *dpp, struct dpp_img_format *vi)
 {
-	struct decon_win_config *config = dpp->config;
+	struct decon_win_config *config = &dpp->dpp_config->config;
 	struct decon_frame *src = &config->src;
 	struct decon_frame *dst = &config->dst;
 	struct dpp_size_constraints vc;
@@ -567,12 +568,11 @@ static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg
 {
 	struct dpp_device *dpp = v4l2_get_subdevdata(sd);
 	bool reset = (bool)arg;
-	unsigned long val;
 	int ret = 0;
 
 	switch (cmd) {
 	case DPP_WIN_CONFIG:
-		dpp->config = (struct decon_win_config *)arg;
+		dpp->dpp_config = (struct dpp_config *)arg;
 		ret = dpp_set_config(dpp);
 		if (ret)
 			dpp_err("failed to configure dpp%d\n", dpp->id);
@@ -590,11 +590,6 @@ static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg
 
 	case DPP_WB_WAIT_FOR_FRAMEDONE:
 		ret = dpp_wb_wait_for_framedone(dpp);
-		break;
-
-	case DPP_SET_RECOVERY_NUM:
-		val = (unsigned long)arg;
-		dma_reg_set_recovery_num(dpp->id, (u32)val);
 		break;
 
 	default:

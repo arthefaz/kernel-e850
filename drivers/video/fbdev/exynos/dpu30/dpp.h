@@ -228,6 +228,11 @@ struct dpp_debug {
 	u32 recovery_cnt;
 };
 
+struct dpp_config {
+	struct decon_win_config config;
+	unsigned long rcv_num;
+};
+
 struct dpp_device {
 	int id;
 	unsigned long attr;
@@ -237,7 +242,7 @@ struct dpp_device {
 	struct dpp_resources res;
 	struct dpp_debug d;
 	wait_queue_head_t framedone_wq;
-	struct decon_win_config *config;
+	struct dpp_config *dpp_config;
 	spinlock_t slock;
 	spinlock_t dma_slock;
 	struct mutex lock;
@@ -264,6 +269,8 @@ struct dpp_params_info {
 	enum dpp_csc_eq eq_mode;
 	int h_ratio;
 	int v_ratio;
+
+	unsigned long rcv_num;
 };
 
 extern struct dpp_device *dpp_drvdata[MAX_DPP_CNT];
@@ -366,7 +373,7 @@ static inline void dma_write_mask(u32 id, u32 reg_id, u32 val, u32 mask)
 static inline void dpp_select_format(struct dpp_device *dpp,
 			struct dpp_img_format *vi, struct dpp_params_info *p)
 {
-	struct decon_win_config *config = dpp->config;
+	struct decon_win_config *config = &dpp->dpp_config->config;
 
 	vi->normal = is_normal(dpp);
 	vi->rot = p->rot;
@@ -381,20 +388,13 @@ static inline void dpp_select_format(struct dpp_device *dpp,
 
 void dpp_dump(struct dpp_device *dpp);
 
-/* DPU DMA low-level APIs exposed to DPP driver */
-u32 dma_reg_get_irq_status(u32 id, unsigned long attr);
-void dma_reg_clear_irq(u32 id, u32 irq, unsigned long attr);
-
 /* DPP low-level APIs exposed to DPP driver */
 void dpp_reg_init(u32 id, unsigned long attr);
 int dpp_reg_deinit(u32 id, bool reset, unsigned long attr);
 void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 		unsigned long attr);
-u32 dpp_reg_get_irq_status(u32 id);
-void dpp_reg_clear_irq(u32 id, u32 irq);
 void dpp_constraints_params(struct dpp_size_constraints *vc,
 					struct dpp_img_format *vi);
-void dma_reg_set_recovery_num(u32 id, u32 rcv_num);
 
 /* DPU DMA DEBUG */
 void dma_reg_dump_com_debug_regs(int id);

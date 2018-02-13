@@ -1530,6 +1530,12 @@ static int decon_set_dpp_config(struct decon_device *decon,
 	int i, ret = 0, err_cnt = 0;
 	struct v4l2_subdev *sd;
 	struct decon_win *win;
+	struct dpp_config dpp_config;
+	unsigned long aclk_khz;
+
+	/* 1 msec */
+	aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
+			EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 
 	for (i = 0; i < decon->dt.max_win; i++) {
 		win = decon->win[i];
@@ -1544,8 +1550,11 @@ static int decon_set_dpp_config(struct decon_device *decon,
 			continue;
 
 		sd = decon->dpp_sd[win->dpp_id];
+		memcpy(&dpp_config.config, &regs->dpp_config[i],
+				sizeof(struct decon_win_config));
+		dpp_config.rcv_num = aclk_khz;
 		ret = v4l2_subdev_call(sd, core, ioctl,
-				DPP_WIN_CONFIG, &regs->dpp_config[i]);
+				DPP_WIN_CONFIG, &dpp_config);
 		if (ret) {
 			decon_err("failed to config (WIN%d : DPP%d)\n",
 					i, win->dpp_id);
@@ -1561,8 +1570,11 @@ static int decon_set_dpp_config(struct decon_device *decon,
 
 	if (decon->dt.out_type == DECON_OUT_WB) {
 		sd = decon->dpp_sd[ODMA_WB];
+		memcpy(&dpp_config.config, &regs->dpp_config[MAX_DECON_WIN],
+				sizeof(struct decon_win_config));
+		dpp_config.rcv_num = aclk_khz;
 		ret = v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG,
-				&regs->dpp_config[MAX_DECON_WIN]);
+				&dpp_config);
 		if (ret) {
 			decon_err("failed to config ODMA_WB\n");
 			clear_bit(ODMA_WB, &decon->cur_using_dpp);
@@ -1571,45 +1583,16 @@ static int decon_set_dpp_config(struct decon_device *decon,
 		}
 	}
 
+	if (decon->prev_aclk_khz != aclk_khz)
+		decon_info("DPU_ACLK(%ld khz), Recovery_num(%ld)\n",
+				aclk_khz, aclk_khz);
+
+	decon->prev_aclk_khz = aclk_khz;
+
 	return err_cnt;
 }
 
 #if defined(CONFIG_EXYNOS_AFBC)
-static void decon_set_afbc_recovery_time(struct decon_device *decon)
-{
-	int i, ret;
-	unsigned long aclk_khz = 630000;
-	unsigned long recovery_num = 630000;
-	struct v4l2_subdev *sd;
-	struct decon_win *win;
-
-	aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
-			EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
-	recovery_num = aclk_khz; /* 1msec */
-
-	for (i = 0; i < decon->dt.max_win; i++) {
-		win = decon->win[i];
-		if (!test_bit(win->dpp_id, &decon->cur_using_dpp))
-			continue;
-		if ((DPU_CH2DMA(win->dpp_id) != IDMA_VGF0) &&
-				(DPU_CH2DMA(win->dpp_id) != IDMA_VGF1))
-			continue;
-
-		sd = decon->dpp_sd[win->dpp_id];
-		ret = v4l2_subdev_call(sd, core, ioctl,
-				DPP_SET_RECOVERY_NUM, (void *)recovery_num);
-		if (ret)
-			decon_err("Failed to RCV_NUM DPP-%d\n", win->dpp_id);
-	}
-
-	if (decon->prev_aclk_khz != aclk_khz) {
-		decon_info("DPU_ACLK(%ld khz), Recovery_num(%ld)\n",
-				aclk_khz, recovery_num);
-	}
-
-	decon->prev_aclk_khz = aclk_khz;
-}
-
 static void decon_save_vgf_connected_win_id(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
@@ -1757,10 +1740,6 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 	decon_set_protected_content(decon, regs);
-#endif
-
-#if defined(CONFIG_EXYNOS_AFBC)
-	decon_set_afbc_recovery_time(decon);
 #endif
 
 	decon_reg_all_win_shadow_update_req(decon->id);
