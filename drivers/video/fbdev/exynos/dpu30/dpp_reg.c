@@ -1840,6 +1840,8 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 	dpp_reg_set_format(id, p, attr);
 	if (test_bit(DPP_ATTR_HDR, &attr))
 		dpp_reg_set_hdr(id, p);
+	if (test_bit(DPP_ATTR_AFBC, &attr))
+		dma_reg_set_recovery_num(id, p->rcv_num);
 
 	/* It's only for DPP BIST mode test */
 #if defined(DMA_BIST)
@@ -2095,7 +2097,7 @@ irqreturn_t dma_irq_handler(int irq, void *priv)
 		if (irqs & IDMA_RECOVERY_START_IRQ) {
 			DPU_EVENT_LOG(DPU_EVT_DMA_RECOVERY, &dpp->sd,
 					ktime_set(0, 0));
-			val = (u32)dpp->config->dpp_parm.comp_src;
+			val = (u32)dpp->dpp_config->config.dpp_parm.comp_src;
 			dpp->d.recovery_cnt++;
 			dpp_info("dma%d recovery start(0x%x).. [src=%s], cnt[%d %d]\n",
 					dpp->id, irqs,
