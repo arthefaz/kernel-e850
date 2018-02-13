@@ -385,11 +385,6 @@ void dpp_dump(struct dpp_device *dpp);
 u32 dma_reg_get_irq_status(u32 id, unsigned long attr);
 void dma_reg_clear_irq(u32 id, u32 irq, unsigned long attr);
 
-/* BIST mode */
-void dma_reg_set_test_pattern(u32 id, u32 pat_id, u32 pat_dat[4]);
-void dma_reg_set_ch_map(u32 id, u32 dpp_id, u32 to_pat);
-void dma_reg_set_test_en(u32 id,u32 en);
-
 /* DPP low-level APIs exposed to DPP driver */
 void dpp_reg_init(u32 id, unsigned long attr);
 int dpp_reg_deinit(u32 id, bool reset, unsigned long attr);
@@ -399,13 +394,16 @@ u32 dpp_reg_get_irq_status(u32 id);
 void dpp_reg_clear_irq(u32 id, u32 irq);
 void dpp_constraints_params(struct dpp_size_constraints *vc,
 					struct dpp_img_format *vi);
-int dpp_reg_wait_idle_status(int id, unsigned long timeout, unsigned long attr);
 void dma_reg_set_recovery_num(u32 id, u32 rcv_num);
 
 /* DPU DMA DEBUG */
-void dma_reg_set_debug(u32 id);
-void dma_reg_set_common_debug(u32 id);
+void dma_reg_dump_com_debug_regs(int id);
+void dma_reg_dump_debug_regs(int id);
+void dpp_reg_dump_debug_regs(int id);
 
+/* DPU_DMA and DPP interrupt handler */
+irqreturn_t dpp_irq_handler(int irq, void *priv);
+irqreturn_t dma_irq_handler(int irq, void *priv);
 
 #define DPP_WIN_CONFIG			_IOW('P', 0, struct decon_win_config)
 #define DPP_STOP			_IOW('P', 1, unsigned long)
