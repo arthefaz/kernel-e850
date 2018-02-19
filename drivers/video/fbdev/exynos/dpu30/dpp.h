@@ -388,11 +388,11 @@ static inline void dpp_select_format(struct dpp_device *dpp,
 
 void dpp_dump(struct dpp_device *dpp);
 
-/* DPP low-level APIs exposed to DPP driver */
-void dpp_reg_init(u32 id, unsigned long attr);
-int dpp_reg_deinit(u32 id, bool reset, unsigned long attr);
+/* DPP CAL APIs exposed to DPP driver */
+void dpp_reg_init(u32 id, const unsigned long attr);
+int dpp_reg_deinit(u32 id, bool reset, const unsigned long attr);
 void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
-		unsigned long attr);
+		const unsigned long attr);
 void dpp_constraints_params(struct dpp_size_constraints *vc,
 					struct dpp_img_format *vi);
 

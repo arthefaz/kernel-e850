@@ -50,7 +50,7 @@
 
 /* _n: [0,7], _v: [0x0, 0xF] */
 #define DPU_DMA_IN_QOS_LUT07_00			0x0070
-#define DPU_DMA_IN_QOS_LUT15_08			0x0078
+#define DPU_DMA_IN_QOS_LUT15_08			0x0074
 #define DPU_DMA_IN_QOS_LUT(_n, _v)		((_v) << (4*(_n)))
 #define DPU_DMA_IN_QOS_LUT_MASK(_n)	(0xF << (4*(_n)))
 
@@ -363,7 +363,7 @@
 #define ODMA_DYNAMIC_GATING_EN		0x0354
 #define ODMA_DG_EN(_n, _v)			((_v) << (_n))
 #define ODMA_DG_EN_MASK(_n)			(1 << (_n))
-#define ODMA_DG_EN_ALL				(0x1F << 0)
+#define ODMA_DG_EN_ALL				(0x7FF << 0) /* 9820 */
 
 #define ODMA_CHAN_CONTROL			0x0360
 #define ODMA_CHAN_DATA				0x0364
@@ -420,7 +420,7 @@
 #define DPU_WB_DYNAMIC_GATING_EN		0x0A54
 #define WB_DG_EN(_n, _v)			((_v) << (_n))
 #define WB_DG_EN_MASK(_n)			(1 << (_n))
-#define WB_DG_EN_ALL				(0x7F << 0)
+#define WB_DG_EN_ALL				(0xF << 0) /* 9820 */
 
 #define DPU_WB_CFG_ERR_STATE			0x0D08
 #define WB_CFG_ERR_GET(_v)			(((_v) >> 0) & 0xF)
@@ -540,6 +540,8 @@
 #define DPP_LINECNT_CON			0x0d00
 #define DPP_LC_CAPTURE(_v)			((_v) << 2)
 #define DPP_LC_CAPTURE_MASK			(1 << 2)
+#define DPP_LC_MODE(_V)				((_V) << 1)
+#define DPP_LC_MODE_MASK			(1 << 1)
 #define DPP_LC_ENABLE(_v)			((_v) << 0)
 #define DPP_LC_ENABLE_MASK			(1 << 0)
 
