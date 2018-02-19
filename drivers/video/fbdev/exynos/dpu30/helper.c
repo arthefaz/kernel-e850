@@ -270,9 +270,16 @@ int dpu_get_plane_cnt(enum decon_pixel_format format, bool is_hdr)
 u32 dpu_get_alpha_len(int format)
 {
 	switch (format) {
+	case DECON_PIXEL_FORMAT_ARGB_8888:
+	case DECON_PIXEL_FORMAT_ABGR_8888:
 	case DECON_PIXEL_FORMAT_RGBA_8888:
 	case DECON_PIXEL_FORMAT_BGRA_8888:
 		return 8;
+
+	case DECON_PIXEL_FORMAT_ABGR_4444:
+	case DECON_PIXEL_FORMAT_RGBA_4444:
+	case DECON_PIXEL_FORMAT_BGRA_4444:
+		return 4;
 
 	case DECON_PIXEL_FORMAT_ARGB_2101010:
 	case DECON_PIXEL_FORMAT_ABGR_2101010:
@@ -281,11 +288,15 @@ u32 dpu_get_alpha_len(int format)
 		return 2;
 
 	case DECON_PIXEL_FORMAT_RGBA_5551:
+	case DECON_PIXEL_FORMAT_BGRA_5551:
 		return 1;
 
+	case DECON_PIXEL_FORMAT_XRGB_8888:
+	case DECON_PIXEL_FORMAT_XBGR_8888:
 	case DECON_PIXEL_FORMAT_RGBX_8888:
-	case DECON_PIXEL_FORMAT_RGB_565:
 	case DECON_PIXEL_FORMAT_BGRX_8888:
+	case DECON_PIXEL_FORMAT_RGB_565:
+	case DECON_PIXEL_FORMAT_BGR_565:
 		return 0;
 
 	default:
