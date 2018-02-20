@@ -357,10 +357,7 @@ int decon_tui_protection(bool tui_en)
 		kthread_flush_worker(&decon->up.worker);
 
 		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
-#ifdef CONFIG_FB_WINDOW_UPDATE
-		if (decon->win_up.enabled)
-			dpu_set_win_update_config(decon, NULL);
-#endif
+		dpu_set_win_update_config(decon, NULL);
 		decon_to_psr_info(decon, &psr);
 		decon_reg_stop_tui(decon->id, decon->dt.out_idx[0], &psr);
 

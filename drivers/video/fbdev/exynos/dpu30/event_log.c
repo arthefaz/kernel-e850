@@ -471,7 +471,7 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 	seq_printf(s, "BlockMode(%s) ",
 			IS_ENABLED(CONFIG_DECON_BLOCKING_MODE) ? "on" : "off");
 	seq_printf(s, "Window_Update(%s)\n",
-			IS_ENABLED(CONFIG_FB_WINDOW_UPDATE) ? "on" : "off");
+			decon->win_up.enabled ? "on" : "off");
 	seq_printf(s, "-- Total underrun count(%d)\n", dsim->total_underrun_cnt);
 	seq_printf(s, "-- Hibernation enter/exit count(%d %d)\n",
 			decon->hiber.enter_cnt, decon->hiber.exit_cnt);
