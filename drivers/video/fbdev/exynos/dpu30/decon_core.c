@@ -546,7 +546,6 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 		decon->eint_status = 1;
 	}
 
-	decon_reg_set_int(decon->id, &psr, 1);
 	decon->state = state;
 
 err:
@@ -727,19 +726,16 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 	kthread_flush_worker(&decon->up.worker);
 
 	decon_to_psr_info(decon, &psr);
-	decon_reg_set_int(decon->id, &psr, 0);
+
+	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true);
+	if (ret < 0)
+		decon_dump(decon);
 
 	if (!decon->id && (decon->vsync.irq_refcount <= 0) &&
 			decon->eint_status) {
 		disable_irq(decon->res.irq);
 		decon->eint_status = 0;
 	}
-
-	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true);
-	if (ret < 0)
-		decon_dump(decon);
-
-	decon_reg_clear_int_all(decon->id);
 
 	/* DMA protection disable must be happen on dpp domain is alive */
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
@@ -916,9 +912,6 @@ static int decon_dp_disable(struct decon_device *decon)
 	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true);
 	if (ret < 0)
 		decon_dump(decon);
-
-	decon_reg_set_int(decon->id, &psr, 0);
-	decon_reg_clear_int_all(decon->id);
 
 	/* DMA protection disable must be happen on dpp domain is alive */
 	if (decon->dt.out_type != DECON_OUT_WB) {
@@ -3546,7 +3539,6 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	decon_reg_update_req_window(decon->id, decon->dt.dft_win);
 
 	decon_to_psr_info(decon, &psr);
-	decon_reg_set_int(decon->id, &psr, 1);
 
 	/* TODO:
 	 * 1. If below code is called after turning on 1st LCD.
