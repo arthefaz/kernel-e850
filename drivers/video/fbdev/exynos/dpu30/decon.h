@@ -1426,8 +1426,6 @@ void decon_reg_config_data_path_size(u32 id, u32 width, u32 height,
 u32 dsc_get_dual_slice_mode(struct decon_lcd *lcd_info);
 u32 dsc_get_slice_mode_change(struct decon_lcd *lcd_info);
 void decon_reg_set_mres(u32 id, struct decon_param *p);
-void decon_reg_all_win_shadow_update_req(u32 id);
-void decon_reg_update_req_window(u32 id, u32 win_idx);
 void decon_reg_update_req_window_mask(u32 id, u32 win_idx);
 void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
 		struct decon_lcd *lcd_info, bool in_slice[],
@@ -1436,7 +1434,7 @@ int decon_reg_wait_idle_status_timeout(u32 id, unsigned long timeout);
 void decon_reg_set_start_crc(u32 id, u32 en);
 void decon_reg_set_select_crc_bits(u32 id, u32 bit_sel);
 void decon_reg_get_crc_data(u32 id, u32 *w0_data, u32 *w1_data);
-void decon_reg_set_win_enable(u32 id, u32 win_idx, u32 en);
+void decon_reg_win_enable_and_update(u32 id, u32 win_idx, u32 en);
 
 /* tui feature support external to security driver(gud) */
 int decon_tui_protection(bool tui_en);

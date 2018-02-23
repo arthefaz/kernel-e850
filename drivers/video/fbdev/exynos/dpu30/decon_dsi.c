@@ -710,20 +710,19 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	 * and new parameters are set to DMA and DPP configuration.
 	 */
 	memcpy(&info->var, var, sizeof(struct fb_var_screeninfo));
-	decon_set_par(info);
 
 	set_bit(decon->dt.dft_idma, &decon->cur_using_dpp);
 	set_bit(decon->dt.dft_idma, &decon->prev_used_dpp);
 	sd = decon->dpp_sd[decon->dt.dft_idma];
 	if (v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG, &config)) {
 		decon_err("%s: Failed to config DPP-%d\n", __func__, win->dpp_id);
-		decon_reg_set_win_enable(decon->id, decon->dt.dft_win, false);
+		decon_reg_win_enable_and_update(decon->id, decon->dt.dft_win, false);
 		clear_bit(decon->dt.dft_idma, &decon->cur_using_dpp);
 		set_bit(decon->dt.dft_idma, &decon->dpp_err_stat);
 		goto err;
 	}
 
-	decon_reg_update_req_window(decon->id, win->idx);
+	decon_set_par(info);
 
 	decon_reg_start(decon->id, &psr);
 err:

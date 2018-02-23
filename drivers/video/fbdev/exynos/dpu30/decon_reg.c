@@ -2040,6 +2040,12 @@ void decon_reg_set_win_enable(u32 id, u32 win_idx, u32 en)
 	decon_dbg("%s: 0x%x\n", __func__, decon_read(id, DATA_PATH_CONTROL_0));
 }
 
+void decon_reg_win_enable_and_update(u32 id, u32 win_idx, u32 en)
+{
+	decon_reg_set_win_enable(id, win_idx, en);
+	decon_reg_update_req_window(id, win_idx);
+}
+
 /*
  * argb_color : 32-bit
  * A[31:24] - R[23:16] - G[15:8] - B[7:0]
@@ -2202,14 +2208,12 @@ void decon_reg_set_window_control(u32 id, int win_idx,
 		decon_write(0, WIN_END_POSITION(win_idx), regs->end_pos);
 		decon_write(0, WIN_START_TIME_CONTROL(win_idx),
 							regs->start_time);
+		decon_reg_set_winmap(id, win_idx, regs->colormap, winmap_en);
 	}
 
-	decon_reg_set_win_enable(id, win_idx, win_en);
-	if (win_en)
-		decon_reg_set_winmap(id, win_idx, regs->colormap, winmap_en);
 	decon_reg_config_win_channel(id, win_idx, regs->type);
+	decon_reg_win_enable_and_update(id, win_idx, win_en);
 
-	/* decon_dbg("%s: regs->type(%d)\n", __func__, regs->type); */
 	decon_dbg("%s: regs->type(%d)\n", __func__, regs->type);
 }
 
