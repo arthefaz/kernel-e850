@@ -515,7 +515,8 @@ void decon_reg_config_data_path_size(u32 id,
 #endif
 	/* 2. OUTFIFO */
 	if (param->lcd_info->dsc_enabled) {
-		ds_en = dsc_get_dual_slice_mode(param->lcd_info);
+		ds_en = (param->lcd_info->dsc_slice_num
+				/ param->lcd_info->dsc_cnt == 2) ? 1 : 0;
 		/* only 8bpp case : check ceil */
 		sw = CEIL(p->slice_width / 6) * 2;
 		width_f = (ds_en) ? sw * 2 : sw;
