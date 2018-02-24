@@ -485,7 +485,7 @@ int decon_set_par(struct fb_info *info)
 
 	decon_hiber_block_exit(decon);
 
-	decon_reg_wait_for_update_timeout(decon->id, SHADOW_UPDATE_TIMEOUT);
+	decon_reg_wait_update_done_timeout(decon->id, SHADOW_UPDATE_TIMEOUT);
 	info->fix.visual = fb_visual(var->bits_per_pixel, 0);
 
 	info->fix.line_length = fb_linelength(var->xres_virtual,

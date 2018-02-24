@@ -1404,32 +1404,48 @@ static inline bool IS_DECON_HIBER_STATE(struct decon_device *decon)
 	return decon->state == DECON_STATE_HIBER;
 }
 
-/* CAL APIs list */
+/*************** DECON CAL APIs exposed to DECON driver ***************/
+/* DECON control */
 int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p);
-//void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p);
 int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr, bool rst);
-void decon_reg_release_resource(u32 id, struct decon_mode_info *psr);
-void decon_reg_config_wb_size(u32 id, struct decon_lcd *lcd_info,
-		struct decon_param *param);
+
+/* DECON window control */
+void decon_reg_win_enable_and_update(u32 id, u32 win_idx, u32 en);
 void decon_reg_set_window_control(u32 id, int win_idx,
 		struct decon_window_regs *regs, u32 winmap_en);
-int decon_reg_update_req_and_unmask(u32 id, struct decon_mode_info *psr);
-int decon_reg_wait_update_done_and_mask(u32 id, struct decon_mode_info *psr,
-		u32 timeout);
+void decon_reg_update_req_window_mask(u32 id, u32 win_idx);
+
+/* DECON shadow update and trigger control */
 void decon_reg_set_trigger(u32 id, struct decon_mode_info *psr,
 		enum decon_set_trig en);
-int decon_reg_wait_for_update_timeout(u32 id, unsigned long timeout);
-int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq);
-void decon_reg_set_mres(u32 id, struct decon_param *p);
-void decon_reg_update_req_window_mask(u32 id, u32 win_idx);
+int decon_reg_update_req_and_unmask(u32 id, struct decon_mode_info *psr);
+int decon_reg_wait_update_done_timeout(u32 id, unsigned long timeout);
+int decon_reg_wait_update_done_and_mask(u32 id,
+		struct decon_mode_info *psr, u32 timeout);
+
+/* For window update and multi resolution feature */
+int decon_reg_wait_idle_status_timeout(u32 id, unsigned long timeout);
 void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
 		struct decon_lcd *lcd_info, bool in_slice[],
 		u32 partial_w, u32 partial_h);
-int decon_reg_wait_idle_status_timeout(u32 id, unsigned long timeout);
+void decon_reg_set_mres(u32 id, struct decon_param *p);
+
+/* For writeback configuration */
+void decon_reg_release_resource(u32 id, struct decon_mode_info *psr);
+void decon_reg_config_wb_size(u32 id, struct decon_lcd *lcd_info,
+		struct decon_param *param);
+
+/* DECON interrupt control */
+int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq);
+
 void decon_reg_set_start_crc(u32 id, u32 en);
 void decon_reg_set_select_crc_bits(u32 id, u32 bit_sel);
 void decon_reg_get_crc_data(u32 id, u32 *w0_data, u32 *w1_data);
-void decon_reg_win_enable_and_update(u32 id, u32 win_idx, u32 en);
+
+/* TODO: this will be removed later */
+void decon_reg_update_req_global(u32 id);
+/*********************************************************************/
+
 
 /* tui feature support external to security driver(gud) */
 int decon_tui_protection(bool tui_en);

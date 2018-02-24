@@ -1620,13 +1620,11 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 	 * If shadow update bit is not cleared, decon initial state or previous
 	 * window configuration has problem.
 	 */
-	if (decon_reg_wait_for_update_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
+	if (decon_reg_wait_update_done_and_mask(decon->id, &psr,
+				SHADOW_UPDATE_TIMEOUT) > 0) {
 		decon_warn("decon SHADOW_UPDATE_TIMEOUT\n");
 		return -ETIMEDOUT;
 	}
-
-	if (psr.trig_mode == DECON_HW_TRIG)
-		decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_DISABLE);
 
 	/* TODO: check and wait until the required IDMA is free */
 	decon_reg_chmap_validate(decon, regs);
@@ -2040,7 +2038,7 @@ static void decon_update_regs(struct decon_device *decon,
 			decon_set_cursor_unmask(decon, false);
 
 		decon_wait_for_vstatus(decon, 50);
-		if (decon_reg_wait_for_update_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
+		if (decon_reg_wait_update_done_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
 			decon_up_list_saved();
 #if defined(CONFIG_EXYNOS_AFBC)
 			decon_dump_afbc_handle(decon, old_dma_bufs);
