@@ -1707,17 +1707,12 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 	}
 
 	if (decon->dt.out_type == DECON_OUT_WB) {
-		if (decon->lcd_info->xres != regs->dpp_config[ODMA_WB].dst.w
-				|| decon->lcd_info->yres != regs->dpp_config[ODMA_WB].dst.h) {
-			decon->lcd_info->xres = regs->dpp_config[ODMA_WB].dst.w;
-			decon->lcd_info->yres = regs->dpp_config[ODMA_WB].dst.h;
-		}
+		/* update resolution info for decon blender size */
+		decon->lcd_info->xres = regs->dpp_config[ODMA_WB].dst.w;
+		decon->lcd_info->yres = regs->dpp_config[ODMA_WB].dst.h;
 
-		decon_reg_set_blender_bg_image_size(decon->id, DSI_MODE_SINGLE,
-				decon->lcd_info);
 		decon_to_init_param(decon, &p);
-		decon_reg_config_data_path_size(decon->id, decon->lcd_info->xres,
-				decon->lcd_info->yres, 0, NULL, &p);
+		decon_reg_config_wb_size(decon->id, decon->lcd_info, &p);
 	}
 
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)

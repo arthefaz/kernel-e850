@@ -1410,6 +1410,8 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p);
 int decon_reg_start(u32 id, struct decon_mode_info *psr);
 int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr, bool rst);
 void decon_reg_release_resource(u32 id, struct decon_mode_info *psr);
+void decon_reg_config_wb_size(u32 id, struct decon_lcd *lcd_info,
+		struct decon_param *param);
 void decon_reg_set_window_control(u32 id, int win_idx,
 		struct decon_window_regs *regs, u32 winmap_en);
 void decon_reg_update_req_and_unmask(u32 id, struct decon_mode_info *psr);
@@ -1419,10 +1421,6 @@ void decon_reg_set_trigger(u32 id, struct decon_mode_info *psr,
 		enum decon_set_trig en);
 int decon_reg_wait_for_update_timeout(u32 id, unsigned long timeout);
 int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq);
-void decon_reg_set_blender_bg_image_size(u32 id, enum decon_dsi_mode dsi_mode,
-		struct decon_lcd *lcd_info);
-void decon_reg_config_data_path_size(u32 id, u32 width, u32 height,
-		u32 overlap_w, struct decon_dsc *p, struct decon_param *param);
 void decon_reg_set_mres(u32 id, struct decon_param *p);
 void decon_reg_update_req_window_mask(u32 id, u32 win_idx);
 void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,

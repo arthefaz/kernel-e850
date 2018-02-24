@@ -2031,6 +2031,15 @@ void decon_reg_release_resource(u32 id, struct decon_mode_info *psr)
 	decon_reg_set_trigger(id, psr, DECON_TRIG_ENABLE);
 }
 
+void decon_reg_config_wb_size(u32 id, struct decon_lcd *lcd_info,
+		struct decon_param *param)
+{
+	decon_reg_set_blender_bg_image_size(id, DSI_MODE_SINGLE,
+			lcd_info);
+	decon_reg_config_data_path_size(id, lcd_info->xres,
+			lcd_info->yres, 0, NULL, param);
+}
+
 void decon_reg_set_win_enable(u32 id, u32 win_idx, u32 en)
 {
 	u32 val, mask;
