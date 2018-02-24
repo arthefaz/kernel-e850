@@ -724,7 +724,7 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 
 	decon_set_par(info);
 
-	decon_reg_start(decon->id, &psr);
+	decon_reg_update_req_and_unmask(decon->id, &psr);
 err:
 	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 

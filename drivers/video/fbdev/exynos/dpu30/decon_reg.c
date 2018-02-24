@@ -1869,25 +1869,6 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	return 0;
 }
 
-int decon_reg_start(u32 id, struct decon_mode_info *psr)
-{
-	int ret = 0;
-
-	decon_reg_direct_on_off(id, 1);
-	decon_reg_update_req_global(id);
-
-	/*
-	 * DECON goes to run-status as soon as
-	 * request shadow update without HW_TE
-	 */
-	ret = decon_reg_wait_run_status_timeout(id, 20 * 1000);
-
-	/* wait until run-status, then trigger */
-	if (psr->psr_mode == DECON_MIPI_COMMAND_MODE)
-		decon_reg_set_trigger(id, psr, DECON_TRIG_ENABLE);
-	return ret;
-}
-
 void decon_reg_set_blender_bg_size(u32 id, enum decon_dsi_mode dsi_mode,
 		u32 bg_w, u32 bg_h)
 {
@@ -2227,15 +2208,25 @@ void decon_reg_set_window_control(u32 id, int win_idx,
 	decon_dbg("%s: regs->type(%d)\n", __func__, regs->type);
 }
 
-
-void decon_reg_update_req_and_unmask(u32 id, struct decon_mode_info *psr)
+int decon_reg_update_req_and_unmask(u32 id, struct decon_mode_info *psr)
 {
+	int ret = 0;
+
+	decon_reg_direct_on_off(id, 1);
 	decon_reg_update_req_global(id);
 
+	/*
+	 * DECON goes to run-status as soon as
+	 * request shadow update without HW_TE
+	 */
+	ret = decon_reg_wait_run_status_timeout(id, 20 * 1000);
+
+	/* wait until run-status, then trigger */
 	if (psr->psr_mode == DECON_MIPI_COMMAND_MODE)
 		decon_reg_set_trigger(id, psr, DECON_TRIG_ENABLE);
-}
 
+	return ret;
+}
 
 int decon_reg_wait_update_done_and_mask(u32 id,
 		struct decon_mode_info *psr, u32 timeout)
