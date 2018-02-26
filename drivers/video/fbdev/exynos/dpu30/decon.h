@@ -1409,6 +1409,7 @@ static inline bool IS_DECON_HIBER_STATE(struct decon_device *decon)
 /*************** DECON CAL APIs exposed to DECON driver ***************/
 /* DECON control */
 int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p);
+int decon_reg_start(u32 id, struct decon_mode_info *psr);
 int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr, bool rst);
 
 /* DECON window control */
@@ -1420,7 +1421,7 @@ void decon_reg_update_req_window_mask(u32 id, u32 win_idx);
 /* DECON shadow update and trigger control */
 void decon_reg_set_trigger(u32 id, struct decon_mode_info *psr,
 		enum decon_set_trig en);
-int decon_reg_update_req_and_unmask(u32 id, struct decon_mode_info *psr);
+void decon_reg_update_req_and_unmask(u32 id, struct decon_mode_info *psr);
 int decon_reg_wait_update_done_timeout(u32 id, unsigned long timeout);
 int decon_reg_wait_update_done_and_mask(u32 id,
 		struct decon_mode_info *psr, u32 timeout);
