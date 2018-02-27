@@ -10,6 +10,7 @@
  */
 
 #include "dsim.h"
+#include "regs-decon.h"
 
 /* These definitions are need to guide from AP team */
 #define DSIM_STOP_STATE_CNT		0xA
@@ -2259,4 +2260,14 @@ void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info)
 		dsim_dbg("dsim%d: number of DSC slice(%d)\n", id, num_of_slice);
 		dsim_reg_print_size_of_slice(id);
 	}
+}
+
+void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 sel)
+{
+	u32 old = readl(sysreg + DISP_DPU_MIPI_PHY_CON);
+	u32 val = sel ? ~0 : 0;
+	u32 mask = SEL_RESET_DPHY_MASK(dsim_id);
+
+	val = (val & mask) | (old & ~mask);
+	writel(val, sysreg + DISP_DPU_MIPI_PHY_CON);
 }
