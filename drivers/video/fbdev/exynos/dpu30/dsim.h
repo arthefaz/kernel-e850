@@ -242,6 +242,9 @@ int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1);
 int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf);
 int dsim_wait_for_cmd_done(struct dsim_device *dsim);
 
+int dsim_reset_panel(struct dsim_device *dsim);
+int dsim_set_panel_power(struct dsim_device *dsim, bool on);
+
 static inline struct dsim_device *get_dsim_drvdata(u32 id)
 {
 	return dsim_drvdata[id];
@@ -343,8 +346,8 @@ static inline void dsim_phy_write_mask(u32 id, u32 reg_id, u32 val, u32 mask)
 }
 
 /* CAL APIs list */
-int dsim_reg_init(u32 id, struct decon_lcd *lcd_info,
-			u32 data_lane_cnt, struct dsim_clks *clks);
+void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
+		bool panel_ctrl);
 int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 			struct stdphy_pms *dphy_pms, u32 en);
 int dsim_reg_set_lanes(u32 id, u32 lanes, u32 en);
