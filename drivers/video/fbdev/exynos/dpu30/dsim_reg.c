@@ -1661,7 +1661,7 @@ static int dsim_reg_get_dphy_timing(u32 hs_clk, u32 esc_clk,
 	return 0;
 }
 
-void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
+void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info,
 		struct dsim_clks *clks)
 {
 	u32 threshold;
@@ -1716,7 +1716,7 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 		dsim_reg_set_num_of_transfer(id, num_of_transfer);
 	}
 
-	dsim_reg_set_num_of_lane(id, (data_lane_cnt-1));
+	dsim_reg_set_num_of_lane(id, lcd_info->data_lane - 1);
 	dsim_reg_enable_eotp(id, 1);
 	dsim_reg_enable_per_frame_read(id, 0);
 	dsim_reg_set_pixel_format(id, DSIM_PIXEL_FORMAT_RGB24);
@@ -1775,38 +1775,6 @@ void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
 	/* dsim_reg_enable_shadow_read(id, 1); */
 	/* dsim_reg_enable_shadow(id, 1); */
 
-}
-
-void dsim_reg_init_probe(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
-		struct dsim_clks *clks)
-{
-}
-
-int dsim_reg_init(u32 id, struct decon_lcd *lcd_info, u32 data_lane_cnt,
-		struct dsim_clks *clks)
-{
-	int ret = 0;
-
-	/*
-	 * DSIM does not need to init, if DSIM is already
-	 * becomes txrequest_hsclk = 1'b1 because of LCD_ON_UBOOT
-	 */
-
-	if (dsim_read_mask(id, DSIM_CLK_CTRL, DSIM_CLK_CTRL_TX_REQUEST_HSCLK)) {
-		dsim_info("dsim%d is probed with LCD ON UBOOT\n", id);
-		dsim_reg_init_probe(id, lcd_info, data_lane_cnt, clks);
-		/*
-		 * If reg_init_probe() sequence is not equal to reg_init()
-		 * then just return.
-		 */
-		ret = -EBUSY;
-		return ret;
-	}
-
-	/*set config*/
-	dsim_reg_set_config(id, lcd_info, data_lane_cnt, clks);
-
-	return ret;
 }
 
 /*
@@ -2270,4 +2238,60 @@ void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 s
 
 	val = (val & mask) | (old & ~mask);
 	writel(val, sysreg + DISP_DPU_MIPI_PHY_CON);
+}
+
+static u32 dsim_reg_translate_lanecnt_to_lanes(int lanecnt)
+{
+	u32 lanes, i;
+
+	lanes = DSIM_LANE_CLOCK;
+	for (i = 1; i <= lanecnt; ++i)
+		lanes |= 1 << i;
+
+	return lanes;
+}
+
+void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
+		bool panel_ctrl)
+{
+	u32 lanes;
+#if !defined(CONFIG_EXYNOS_LCD_ON_UBOOT)
+	struct dsim_device *dsim = get_dsim_drvdata(id);
+#endif
+
+	/* choose OSC_CLK */
+	dsim_reg_set_link_clock(id, 0);
+
+	/* Enable DPHY reset : DPHY reset start */
+	dsim_reg_dphy_resetn(id, 1);
+
+#if defined(CONFIG_EXYNOS_LCD_ON_UBOOT)
+	/* TODO: This code will be implemented as uboot style */
+#else
+	/* Panel power on */
+	if (panel_ctrl)
+		dsim_set_panel_power(dsim, 1);
+#endif
+
+	dsim_reg_sw_reset(id);
+
+	dsim_reg_set_clocks(id, clks, &lcd_info->dphy_pms, 1);
+
+	lanes = dsim_reg_translate_lanecnt_to_lanes(lcd_info->data_lane);
+	dsim_reg_set_lanes(id, lanes, 1);
+	dsim_reg_dphy_resetn(id, 0); /* Release DPHY reset */
+
+	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
+
+	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
+	dsim_reg_enable_word_clock(id, 1);
+
+	dsim_reg_set_config(id, lcd_info, clks);
+
+#if defined(CONFIG_EXYNOS_LCD_ON_UBOOT)
+	/* TODO: This code will be implemented as uboot style */
+#else
+	if (panel_ctrl)
+		dsim_reset_panel(dsim);
+#endif
 }
