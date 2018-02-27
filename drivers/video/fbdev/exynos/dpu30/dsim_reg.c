@@ -2145,6 +2145,10 @@ int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes)
 {
 	int ret = 0;
 
+	dsim_reg_clear_int(id, 0xffffffff);
+	/* disable interrupts */
+	dsim_reg_set_int(id, 0);
+
 	ret = dsim_reg_set_hs_clock(id, 0);
 	if (ret < 0)
 		dsim_err("The CLK lane doesn't be switched to LP mode\n");
