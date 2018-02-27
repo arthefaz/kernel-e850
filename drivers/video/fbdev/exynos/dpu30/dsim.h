@@ -345,49 +345,43 @@ static inline void dsim_phy_write_mask(u32 id, u32 reg_id, u32 val, u32 mask)
 	/* printk("offset : 0x%8x, value : 0x%x\n", reg_id, val); */
 }
 
-/* CAL APIs list */
+/*************** DSIM CAL APIs exposed to DSIM driver ***************/
+/* DPHY system register control */
+void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 sel);
+
+/* DSIM control */
 void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 		bool panel_ctrl);
-int dsim_reg_get_int_and_clear(u32 id);
-
-int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
-			struct stdphy_pms *dphy_pms, u32 en);
-int dsim_reg_set_lanes(u32 id, u32 lanes, u32 en);
-void dsim_reg_set_int(u32 id, u32 en);
-u32 dsim_reg_rx_fifo_is_empty(u32 id);
-u32 dsim_reg_get_rx_fifo(u32 id);
-int dsim_reg_rx_err_handler(u32 id, u32 rx_fifo);
-void dsim_reg_sw_reset(u32 id);
-void dsim_reg_dphy_reset(u32 id);
-void dsim_reg_dphy_resetn(u32 id, u32 en);
-int dsim_reg_exit_ulps_and_start(u32 id, u32 ddi_type, u32 lanes);
-int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes);
 void dsim_reg_start(u32 id);
 void dsim_reg_stop(u32 id, u32 lanes);
-void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info);
+
+/* ULPS control */
+int dsim_reg_exit_ulps_and_start(u32 id, u32 ddi_type, u32 lanes);
+int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes);
+
+/* DSIM interrupt control */
+int dsim_reg_get_int_and_clear(u32 id);
+void dsim_reg_clear_int(u32 id, u32 int_src);
+
+/* DSIM read/write command control */
+void dsim_reg_wr_tx_header(u32 id, u32 d_id, unsigned long d0, u32 d1, u32 bta);
 void dsim_reg_wr_tx_payload(u32 id, u32 payload);
 u32 dsim_reg_header_fifo_is_empty(u32 id);
-void dsim_reg_clear_int(u32 id, u32 int_src);
-void dsim_reg_set_fifo_ctrl(u32 id, u32 cfg);
-void dsim_reg_enable_shadow_read(u32 id, u32 en);
 u32 dsim_reg_is_writable_fifo_state(u32 id);
-void dsim_reg_wr_tx_header(u32 id, u32 data_id, unsigned long data0, u32 data1, u32 bta_type);
-void dsim_set_bist(u32 id, u32 en);
-void dsim_reg_set_partial_update(u32 id, struct decon_lcd *lcd_info);
-void dsim_reg_set_bta_type(u32 id, u32 bta_type);
-void dsim_reg_set_num_of_transfer(u32 id, u32 num_of_transfer);
+u32 dsim_reg_get_rx_fifo(u32 id);
+u32 dsim_reg_rx_fifo_is_empty(u32 id);
+int dsim_reg_rx_err_handler(u32 id, u32 rx_fifo);
 
+/* For reading DSIM shadow SFR */
+void dsim_reg_enable_shadow_read(u32 id, u32 en);
+
+/* For window update and multi resolution feature */
 void dsim_reg_function_reset(u32 id);
-void dsim_reg_set_esc_clk_on_lane(u32 id, u32 en, u32 lane);
-void dsim_reg_enable_word_clock(u32 id, u32 en);
-void dsim_reg_set_esc_clk_prescaler(u32 id, u32 en, u32 p);
-u32 dsim_reg_is_pll_stable(u32 id);
+void dsim_reg_set_partial_update(u32 id, struct decon_lcd *lcd_info);
+void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info);
 
-void dsim_reg_set_link_clock(u32 id, u32 en);
-void dsim_reg_set_video_mode(u32 id, u32 mode);
-void dsim_reg_enable_shadow(u32 id, u32 en);
-
-void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 sel);
+/* DSIM BIST for test */
+void dsim_reg_set_bist(u32 id, u32 en);
 
 static inline bool IS_DSIM_ON_STATE(struct dsim_device *dsim)
 {
