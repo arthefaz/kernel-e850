@@ -842,8 +842,6 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 
 	DPU_EVENT_START();
 	dsim_dbg("%s +\n", __func__);
-	exynos_ss_printk("%s:state %d: active %d:+\n", __func__,
-				dsim->state, pm_runtime_active(dsim->dev));
 
 	if (!IS_DSIM_ON_STATE(dsim)) {
 		ret = -EBUSY;
@@ -854,9 +852,6 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 	mutex_lock(&dsim->cmd_lock);
 	dsim->state = DSIM_STATE_ULPS;
 	mutex_unlock(&dsim->cmd_lock);
-
-	/* disable interrupts */
-	dsim_reg_set_int(dsim->id, 0);
 
 	disable_irq(dsim->res.irq);
 	ret = dsim_reg_stop_and_enter_ulps(dsim->id, dsim->lcd_info.ddi_type,
@@ -871,9 +866,6 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 	DPU_EVENT_LOG(DPU_EVT_ENTER_ULPS, &dsim->sd, start);
 err:
 	dsim_dbg("%s -\n", __func__);
-	exynos_ss_printk("%s:state %d: active %d:-\n", __func__,
-				dsim->state, pm_runtime_active(dsim->dev));
-
 	return ret;
 }
 
