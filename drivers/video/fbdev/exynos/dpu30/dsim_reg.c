@@ -2299,3 +2299,13 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 		dsim_reset_panel(dsim);
 #endif
 }
+
+int dsim_reg_get_int_and_clear(u32 id)
+{
+	u32 val;
+
+	val = dsim_read(id, DSIM_INTSRC);
+	dsim_reg_clear_int(id, val);
+
+	return val;
+}
