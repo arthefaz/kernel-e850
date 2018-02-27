@@ -382,6 +382,8 @@ void dsim_reg_set_link_clock(u32 id, u32 en);
 void dsim_reg_set_video_mode(u32 id, u32 mode);
 void dsim_reg_enable_shadow(u32 id, u32 en);
 
+void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 sel);
+
 static inline bool IS_DSIM_ON_STATE(struct dsim_device *dsim)
 {
 #ifdef CONFIG_SUPPORT_DOZE

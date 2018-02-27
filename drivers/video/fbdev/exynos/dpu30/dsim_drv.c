@@ -518,15 +518,6 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-/* DPHY RESET is controlled by IP */
-void dpu_sysreg_set_dphy(struct dsim_device *dsim, void __iomem *sysreg)
-{
-	u32 val;
-
-	val = SEL_RESET_DPHY_MASK(dsim->id);
-	writel(val, sysreg + DISP_DPU_MIPI_PHY_CON);
-}
-
 static void dsim_clocks_info(struct dsim_device *dsim)
 {
 }
@@ -680,8 +671,8 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 
 	pm_runtime_get_sync(dsim->dev);
 
-	/* Config link to DPHY configuration */
-	dpu_sysreg_set_dphy(dsim, dsim->res.ss_regs);
+	/* DPHY reset control from DSIM */
+	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 1);
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
 
@@ -941,7 +932,8 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 
 	pm_runtime_get_sync(dsim->dev);
 
-	dpu_sysreg_set_dphy(dsim, dsim->res.ss_regs);
+	/* DPHY reset control from DSIM */
+	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 1);
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
 
