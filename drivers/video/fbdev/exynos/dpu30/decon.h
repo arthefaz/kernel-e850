@@ -34,7 +34,8 @@
 #include <linux/exynos_iovmm.h>
 #include <linux/sync_file.h>
 
-#include "regs-decon.h"
+/* TODO: SoC dependency will be removed */
+#include "./cal_9810/regs-decon.h"
 
 #include "./panels/decon_lcd.h"
 #include "dsim.h"
