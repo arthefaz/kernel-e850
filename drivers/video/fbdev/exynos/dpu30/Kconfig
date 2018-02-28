@@ -111,4 +111,4 @@ config EXYNOS_LOW_PERSISTENCE
 
 endif
 
-source "drivers/video/fbdev/exynos/dpu_9810/panels/Kconfig"
+source "drivers/video/fbdev/exynos/dpu20/panels/Kconfig"

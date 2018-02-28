@@ -29,7 +29,7 @@
 #include <linux/ccic/ccic_notifier.h>
 #endif
 
-#include "regs-displayport.h"
+#include "./cal_9810/regs-displayport.h"
 #include "./panels/decon_lcd.h"
 #include "hdr_metadata.h"
 

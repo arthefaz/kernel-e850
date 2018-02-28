@@ -9,7 +9,7 @@
  * published by the Free Software Foundation.
  */
 
-#include "dsim.h"
+#include "../dsim.h"
 #include "regs-decon.h"
 
 /* These definitions are need to guide from AP team */

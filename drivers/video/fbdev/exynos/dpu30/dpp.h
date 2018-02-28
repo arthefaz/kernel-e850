@@ -28,7 +28,8 @@
 #endif
 
 #include "decon.h"
-#include "regs-dpp.h"
+/* TODO: SoC dependency will be removed */
+#include "./cal_9810/regs-dpp.h"
 
 extern int dpp_log_level;
 
