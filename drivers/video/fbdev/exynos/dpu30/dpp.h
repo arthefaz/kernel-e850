@@ -167,14 +167,6 @@ struct dpp_img_format {
 	u32		wb;
 };
 
-enum dpp_cfg_err {
-	DPP_CFG_ERR_SCL_POS		= (1 << 4),
-	DPP_CFG_ERR_SCALE_RATIO	= (1 << 3),
-	DPP_CFG_ERR_ODD_SIZE		= (1 << 2),
-	DPP_CFG_ERR_MAX_SIZE		= (1 << 1),
-	DPP_CFG_ERR_MIN_SIZE		= (1 << 0),
-};
-
 enum dpp_csc_defs {
 	/* csc_type */
 	DPP_CSC_BT_601 = 0,
