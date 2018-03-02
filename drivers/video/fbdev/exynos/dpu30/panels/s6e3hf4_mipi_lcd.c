@@ -196,11 +196,34 @@ static int s6e3hf4_dump(struct dsim_device *dsim)
 	return 0;
 }
 
+static int s6e3hf4_mres(struct dsim_device *dsim, int mres_idx)
+{
+	int dsc_en;
+
+	dsc_en = dsim->lcd_info.dt_lcd_mres.res_info[mres_idx].dsc_en;
+	lcd_mres(dsim->id, mres_idx, dsc_en);
+	return 0;
+}
+
+static int s6e3hf4_doze(struct dsim_device *dsim)
+{
+	pr_info("%s +\n", __func__);
+	return 0;
+}
+
+static int s6e3hf4_doze_suspend(struct dsim_device *dsim)
+{
+	pr_info("%s +\n", __func__);
+	return 0;
+}
+
 struct dsim_lcd_driver s6e3hf4_mipi_lcd_driver = {
 	.probe		= s6e3hf4_probe,
 	.displayon	= s6e3hf4_displayon,
 	.suspend	= s6e3hf4_suspend,
 	.resume		= s6e3hf4_resume,
 	.dump		= s6e3hf4_dump,
+	.mres		= s6e3hf4_mres,
+	.doze		= s6e3hf4_doze,
+	.doze_suspend	= s6e3hf4_doze_suspend,
 };
-
