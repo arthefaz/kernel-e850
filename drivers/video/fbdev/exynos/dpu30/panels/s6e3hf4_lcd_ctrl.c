@@ -220,3 +220,10 @@ int lcd_dump(int id)
 	s6e3hf4_wqhd_dump(id);
 	return 0;
 }
+
+void lcd_mres(int id, int mres_idx, int dsc_en)
+{
+	dsim_info("%s +\n", __func__);
+	dsim_info("S6E3HF4 doesn't support\n");
+	dsim_info("%s -\n", __func__);
+}
