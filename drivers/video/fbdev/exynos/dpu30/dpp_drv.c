@@ -404,6 +404,13 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 	case DECON_PIXEL_FORMAT_NV21M_P010:
 	case DECON_PIXEL_FORMAT_NV12M_S10B:
 	case DECON_PIXEL_FORMAT_NV21M_S10B:
+
+	case DECON_PIXEL_FORMAT_NV16:
+	case DECON_PIXEL_FORMAT_NV61:
+	case DECON_PIXEL_FORMAT_NV16M_P210:
+	case DECON_PIXEL_FORMAT_NV61M_P210:
+	case DECON_PIXEL_FORMAT_NV16M_S10B:
+	case DECON_PIXEL_FORMAT_NV61M_S10B:
 		break;
 	default:
 		dpp_err("Unsupported Format\n");
