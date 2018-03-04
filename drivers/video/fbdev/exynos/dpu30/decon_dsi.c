@@ -877,10 +877,10 @@ err:
 	decon_hiber_unblock(decon);
 err2:
 	mutex_unlock(&decon->hiber.lock);
-#endif
 
 	decon_dbg("decon-%d %s - (state:%d -> %d)\n",
 			decon->id, __func__, prev_state, decon->state);
+#endif
 	return ret;
 }
 
