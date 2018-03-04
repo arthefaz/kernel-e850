@@ -458,73 +458,6 @@ void __iomem *dpu_get_sysreg_addr(void)
 	return regs;
 }
 
-/*
- * DMA_CH0 : VGF0/VGF1
- * DMA_CH1 : G0-VG0
- * DMA_CH2 : G1-VG1
-*/
-u32 DPU_DMA2CH(enum decon_idma_type type)
-{
-	u32 ch_id;
-
-	switch (type) {
-	case IDMA_G0:
-		ch_id = 5;
-		break;
-	case IDMA_G1:
-		ch_id = 3;
-		break;
-	case IDMA_VG0:
-		ch_id = 0;
-		break;
-	case IDMA_VG1:
-		ch_id = 4;
-		break;
-	case IDMA_VGF0:
-		ch_id = 1;
-		break;
-	case IDMA_VGF1:
-		ch_id = 2;
-		break;
-	default:
-		decon_dbg("channel(0x%x) is not valid\n", type);
-		return -EINVAL;
-	}
-
-	return ch_id;
-}
-
-enum decon_idma_type DPU_CH2DMA(u32 ch)
-{
-	enum decon_idma_type type;
-
-	switch (ch) {
-	case 0:
-		type = IDMA_VG0;
-		break;
-	case 1:
-		type = IDMA_VGF0;
-		break;
-	case 2:
-		type = IDMA_VGF1;
-		break;
-	case 3:
-		type = IDMA_G1;
-		break;
-	case 4:
-		type = IDMA_VG1;
-		break;
-	case 5:
-		type = IDMA_G0;
-		break;
-	default:
-		decon_warn("channal(%d) is invalid\n", ch);
-		return -EINVAL;
-	}
-
-	return type;
-}
-
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 static int decon_get_protect_id(int dma_id)
 {
@@ -620,8 +553,9 @@ void decon_set_protected_content(struct decon_device *decon,
 }
 #endif
 
+#if defined(CONFIG_EXYNOS_AFBC)
 /* id : VGF0=0, VGF1=1 */
-void dpu_dump_data_to_console(void *v_addr, int buf_size, int id)
+static void dpu_dump_data_to_console(void *v_addr, int buf_size, int id)
 {
 	dpp_info("=== (CH#%d) Frame Buffer Data(128 Bytes) ===\n", id);
 
@@ -717,6 +651,7 @@ static int dpu_dump_buffer_data(struct dpp_device *dpp)
 
 	return 0;
 }
+#endif
 
 int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 	struct device *dev, unsigned long iova, int flags, void *token)
@@ -738,7 +673,9 @@ int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 	for (i = 0; i < MAX_DPP_SUBDEV; i++) {
 		if (test_bit(i, &decon->prev_used_dpp)) {
 			dpp = get_dpp_drvdata(i);
+#if defined(CONFIG_EXYNOS_AFBC)
 			dpu_dump_buffer_data(dpp);
+#endif
 		}
 	}
 

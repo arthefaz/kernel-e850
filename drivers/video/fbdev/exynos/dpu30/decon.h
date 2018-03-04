@@ -35,7 +35,13 @@
 #include <linux/sync_file.h>
 
 /* TODO: SoC dependency will be removed */
+#if defined(CONFIG_SOC_EXYNOS9810)
 #include "./cal_9810/regs-decon.h"
+#include "./cal_9810/decon_cal.h"
+#elif defined(CONFIG_SOC_EXYNOS9820)
+#include "./cal_9820/regs-decon.h"
+#include "./cal_9820/decon_cal.h"
+#endif
 
 #include "./panels/decon_lcd.h"
 #include "dsim.h"
@@ -46,7 +52,6 @@
 #define SUCCESS_EXYNOS_SMC	0
 
 extern struct decon_device *decon_drvdata[MAX_DECON_CNT];
-extern int decon_log_level;
 extern int dpu_bts_log_level;
 extern int win_update_log_level;
 extern int dpu_mres_log_level;
@@ -95,33 +100,6 @@ extern struct decon_bts_ops decon_bts_control;
 #define MAX_DSC_SLICE_CNT	4
 
 void dpu_debug_printk(const char *function_name, const char *format, ...);
-
-#define decon_err(fmt, ...)							\
-	do {									\
-		if (decon_log_level >= 3) {					\
-			pr_err(pr_fmt(fmt), ##__VA_ARGS__);			\
-		}								\
-	} while (0)
-
-#define decon_warn(fmt, ...)							\
-	do {									\
-		if (decon_log_level >= 4) {					\
-			pr_warn(pr_fmt(fmt), ##__VA_ARGS__);			\
-		}								\
-	} while (0)
-
-#define decon_info(fmt, ...)							\
-	do {									\
-		if (decon_log_level >= 6)					\
-			pr_info(pr_fmt(fmt), ##__VA_ARGS__);			\
-	} while (0)
-
-#define decon_dbg(fmt, ...)							\
-	do {									\
-		if (decon_log_level >= 7)					\
-			pr_info(pr_fmt(fmt), ##__VA_ARGS__);			\
-	} while (0)
-
 #define DPU_DEBUG_WIN(fmt, args...)						\
 	do {									\
 		if (win_update_log_level >= 7)					\
@@ -275,17 +253,6 @@ enum decon_te_src {
 enum decon_set_trig {
 	DECON_TRIG_DISABLE = 0,
 	DECON_TRIG_ENABLE
-};
-
-enum decon_idma_type {
-	IDMA_G0 = 0,
-	IDMA_G1,
-	IDMA_VG0,
-	IDMA_VG1,
-	IDMA_VGF0,
-	IDMA_VGF1, /* VGRF in case of Exynos9810 */
-	ODMA_WB,
-	MAX_DECON_DMA_TYPE,
 };
 
 /*
@@ -1488,7 +1455,6 @@ void decon_signal_fence(struct dma_fence *fence);
 bool decon_intersect(struct decon_rect *r1, struct decon_rect *r2);
 int decon_intersection(struct decon_rect *r1,
 		struct decon_rect *r2, struct decon_rect *r3);
-void dpu_dump_data_to_console(void *v_addr, int buf_size, int id);
 
 bool is_decon_rect_differ(struct decon_rect *r1, struct decon_rect *r2);
 bool is_rgb32(int format);
@@ -1497,8 +1463,6 @@ bool is_full(struct decon_rect *r, struct decon_lcd *lcd);
 bool is_decon_opaque_format(int format);
 void __iomem *dpu_get_sysreg_addr(void);
 void dpu_dump_afbc_info(void);
-u32 DPU_DMA2CH(enum decon_idma_type type);
-enum decon_idma_type DPU_CH2DMA(u32 ch);
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 void decon_set_protected_content(struct decon_device *decon,
 		struct decon_reg_data *regs);

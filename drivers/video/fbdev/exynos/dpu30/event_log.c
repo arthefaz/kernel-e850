@@ -982,9 +982,11 @@ static const struct file_operations decon_cmd_lp_ref_fops = {
 
 static int decon_debug_rec_show(struct seq_file *s, void *unused)
 {
+#if 0 /* TODO: This will be implemented */
 	seq_printf(s, "VGF0[%u] VGF1[%u]\n",
 			get_dpp_drvdata(DPU_DMA2CH(IDMA_VGF0))->d.recovery_cnt,
 			get_dpp_drvdata(DPU_DMA2CH(IDMA_VGF1))->d.recovery_cnt);
+#endif
 	return 0;
 }
 
