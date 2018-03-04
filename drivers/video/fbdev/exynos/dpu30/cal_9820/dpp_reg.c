@@ -1132,6 +1132,7 @@ static bool checked;
 
 void dma_reg_dump_com_debug_regs(int id)
 {
+#if 0 /* TODO: This will be implemented */
 	u32 sel[12] = {0x0000, 0x0100, 0x0200, 0x0204, 0x0205, 0x0300, 0x4000,
 		0x4001, 0x4005, 0x8000, 0x8001, 0x8005};
 
@@ -1143,10 +1144,12 @@ void dma_reg_dump_com_debug_regs(int id)
 	dpp_reg_dump_ch_data(id, REG_AREA_DMA_COM, sel, 12);
 
 	checked = true;
+#endif
 }
 
 void dma_reg_dump_debug_regs(int id)
 {
+#if 0 /* TODO: This will be implemented */
 	u32 sel_g[11] = {
 		0x0000, 0x0001, 0x0002, 0x0004, 0x000A, 0x000B, 0x0400, 0x0401,
 		0x0402, 0x0405, 0x0406
@@ -1201,10 +1204,12 @@ void dma_reg_dump_debug_regs(int id)
 		dpp_err("DPP%d is wrong ID\n", id);
 		return;
 	}
+#endif
 }
 
 void dpp_reg_dump_debug_regs(int id)
 {
+#if 0 /* TODO: This will be implemented */
 	u32 sel_g[3] = {0x0000, 0x0100, 0x0101};
 	u32 sel_vg[19] = {0x0000, 0x0100, 0x0101, 0x0200, 0x0201, 0x0202,
 		0x0203, 0x0204, 0x0205, 0x0206, 0x0207, 0x0208, 0x0300, 0x0301,
@@ -1240,6 +1245,7 @@ void dpp_reg_dump_debug_regs(int id)
 	dpp_write(id, 0x0C00, 0x1);
 	dpp_info("-< DPP%d DEBUG SFR >-\n", id);
 	dpp_reg_dump_ch_data(id, REG_AREA_DPP, sel, cnt);
+#endif
 }
 
 irqreturn_t dpp_irq_handler(int irq, void *priv)
@@ -1336,11 +1342,13 @@ irqreturn_t dma_irq_handler(int irq, void *priv)
 					ktime_set(0, 0));
 			val = (u32)dpp->dpp_config->config.dpp_parm.comp_src;
 			dpp->d.recovery_cnt++;
+#if 0 /* TODO: This will be implemented */
 			dpp_info("dma%d recovery start(0x%x).. [src=%s], cnt[%d %d]\n",
 					dpp->id, irqs,
 					val == DPP_COMP_SRC_G2D ? "G2D" : "GPU",
 					get_dpp_drvdata(DPU_DMA2CH(IDMA_VGF0))->d.recovery_cnt,
 					get_dpp_drvdata(DPU_DMA2CH(IDMA_VGF1))->d.recovery_cnt);
+#endif
 			goto irq_end;
 		}
 

@@ -1335,7 +1335,7 @@ int decon_check_limitation(struct decon_device *decon, int idx,
 		return -EINVAL;
 	}
 
-	if (config->idma_type < IDMA_G0 || config->idma_type > IDMA_VGF1) {
+	if (config->idma_type >= MAX_DECON_DMA_TYPE) {
 		decon_err("idma_type(%d) is wrong\n", config->idma_type);
 		return -EINVAL;
 	}
@@ -1553,6 +1553,7 @@ static int decon_set_dpp_config(struct decon_device *decon,
 	return err_cnt;
 }
 
+#if defined(CONFIG_EXYNOS_AFBC)
 static void decon_save_vgf_connected_win_id(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
@@ -1622,6 +1623,7 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 
 	decon_info("%s -\n", __func__);
 }
+#endif
 
 static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data *regs)
 {
@@ -2012,7 +2014,9 @@ static void decon_update_regs(struct decon_device *decon,
 	decon_to_psr_info(decon, &psr);
 	if (regs->num_of_window) {
 		if (__decon_update_regs(decon, regs) < 0) {
+#if defined(CONFIG_EXYNOS_AFBC)
 			decon_dump_afbc_handle(decon, old_dma_bufs);
+#endif
 			decon_dump(decon);
 			BUG();
 		}
@@ -2048,7 +2052,9 @@ static void decon_update_regs(struct decon_device *decon,
 		decon_wait_for_vstatus(decon, 50);
 		if (decon_reg_wait_update_done_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
 			decon_up_list_saved();
+#if defined(CONFIG_EXYNOS_AFBC)
 			decon_dump_afbc_handle(decon, old_dma_bufs);
+#endif
 			decon_dump(decon);
 			BUG();
 		}
