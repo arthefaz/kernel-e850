@@ -29,7 +29,11 @@
 
 #include "decon.h"
 /* TODO: SoC dependency will be removed */
+#if defined(CONFIG_SOC_EXYNOS9810)
 #include "./cal_9810/regs-dpp.h"
+#else
+#include "./cal_9820/regs-dpp.h"
+#endif
 
 extern int dpp_log_level;
 
