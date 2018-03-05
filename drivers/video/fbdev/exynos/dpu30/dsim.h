@@ -19,7 +19,11 @@
 #include <media/v4l2-subdev.h>
 
 #include "./panels/decon_lcd.h"
+#if defined(CONFIG_SOC_EXYNOS9810)
 #include "./cal_9810/regs-dsim.h"
+#else
+#include "./cal_9820/regs-dsim.h"
+#endif
 
 #if defined(CONFIG_EXYNOS_DECON_LCD_S6E3HA2K)
 #include "./panels/s6e3ha2k_param.h"
