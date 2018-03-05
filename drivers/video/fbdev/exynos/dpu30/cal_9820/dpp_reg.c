@@ -1085,7 +1085,7 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 	idma_reg_set_test_pattern(id, 0, pattern_data);
 #endif
 }
-
+#if 0
 static void dpp_reg_dump_ch_data(int id, enum dpp_reg_area reg_area,
 		u32 sel[], u32 cnt)
 {
@@ -1127,8 +1127,8 @@ static void dpp_reg_dump_ch_data(int id, enum dpp_reg_area reg_area,
 	}
 	dpp_info("%s\n", linebuf);
 }
-
 static bool checked;
+#endif
 
 void dma_reg_dump_com_debug_regs(int id)
 {
