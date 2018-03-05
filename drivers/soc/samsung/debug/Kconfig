@@ -45,4 +45,9 @@ config EXYNOS_ADV_TRACER
         bool "Exynos Advanced Tracer"
         default n
         depends on EXYNOS_DEBUG
+
+config EXYNOS_ADV_TRACER_S2D
+        bool "Exynos Advanced Tracer: Plug-in - S2D"
+	default n
+	depends on EXYNOS_ADV_TRACER
 endif

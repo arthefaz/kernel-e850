@@ -17,3 +17,4 @@ obj-$(CONFIG_ARCH_EXYNOS)		+= exynos-helper.o
 obj-$(CONFIG_ARCH_EXYNOS)		+= exynos-handler.o
 endif
 obj-$(CONFIG_EXYNOS_ADV_TRACER) 	+= exynos-adv-tracer.o exynos-adv-tracer-ipc.o
+obj-$(CONFIG_EXYNOS_ADV_TRACER_S2D)	+= exynos-adv-tracer-s2d.o
