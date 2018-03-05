@@ -28,7 +28,8 @@
 #if defined(CONFIG_EXYNOS9810_BTS)
 #include <soc/samsung/bts.h>
 #endif
-#if defined(CONFIG_EXYNOS_ITMON)
+//#if defined(CONFIG_EXYNOS_ITMON)
+#if 0
 #include <soc/samsung/exynos-itmon.h>
 #endif
 #include <linux/exynos_iovmm.h>
@@ -1074,7 +1075,8 @@ struct decon_device {
 	atomic_t is_shutdown;
 	bool up_list_saved;
 
-#if defined(CONFIG_EXYNOS_ITMON)
+//#if defined(CONFIG_EXYNOS_ITMON)
+#if 0
 	struct notifier_block itmon_nb;
 	bool notified;
 #endif

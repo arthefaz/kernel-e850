@@ -66,7 +66,8 @@ static char *decon_state_names[] = {
 	"TUI",
 };
 
-#if defined(CONFIG_EXYNOS_ITMON)
+//#if defined(CONFIG_EXYNOS_ITMON)
+#if 0
 void __iomem *regs_dphy_iso;
 void __iomem *regs_dphy_clk_0;
 void __iomem *regs_dphy_clk_1;
@@ -667,7 +668,8 @@ int cmu_dpu_dump(void)
 	return 0;
 }
 
-#if defined(CONFIG_EXYNOS_ITMON)
+//#if defined(CONFIG_EXYNOS_ITMON)
+#if 0
 static int out_sd_ioremap(void) {
 	regs_dphy_iso = ioremap(0x1406070c, 0x10);
 	regs_dphy_clk_0 = ioremap(0x16000800, 0x10);
@@ -3316,7 +3318,8 @@ static int decon_create_update_thread(struct decon_device *decon, char *name)
 	return 0;
 }
 
-#if defined(CONFIG_EXYNOS_ITMON)
+//#if defined(CONFIG_EXYNOS_ITMON)
+#if 0
 static int decon_itmon_notifier(struct notifier_block *nb,
 		unsigned long action, void *nb_data)
 {
@@ -3563,7 +3566,8 @@ static int decon_probe(struct platform_device *pdev)
 		goto err_display;
 	}
 
-#if defined(CONFIG_EXYNOS_ITMON)
+//#if defined(CONFIG_EXYNOS_ITMON)
+#if 0
 	decon->itmon_nb.notifier_call = decon_itmon_notifier;
 	itmon_notifier_chain_register(&decon->itmon_nb);
 	/* for DPHY debug */
