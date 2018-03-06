@@ -634,6 +634,98 @@ static void dpp_parse_dt(struct dpp_device *dpp, struct device *dev)
 	dpp->dev = dev;
 }
 
+static irqreturn_t dpp_irq_handler(int irq, void *priv)
+{
+	struct dpp_device *dpp = priv;
+	u32 dpp_irq = 0;
+
+	spin_lock(&dpp->slock);
+	if (dpp->state == DPP_STATE_OFF)
+		goto irq_end;
+
+	dpp_irq = dpp_reg_get_irq_and_clear(dpp->id);
+
+irq_end:
+	del_timer(&dpp->d.op_timer);
+	spin_unlock(&dpp->slock);
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t dma_irq_handler(int irq, void *priv)
+{
+	struct dpp_device *dpp = priv;
+	u32 irqs, val = 0;
+
+	spin_lock(&dpp->dma_slock);
+	if (dpp->state == DPP_STATE_OFF)
+		goto irq_end;
+
+	if (test_bit(DPP_ATTR_ODMA, &dpp->attr)) { /* ODMA case */
+		irqs = odma_reg_get_irq_and_clear(dpp->id);
+
+		if ((irqs & ODMA_WRITE_SLAVE_ERROR) ||
+			       (irqs & ODMA_STATUS_DEADLOCK_IRQ)) {
+			dpp_err("odma%d error irq occur(0x%x)\n", dpp->id, irqs);
+			dpp_dump(dpp);
+			goto irq_end;
+		}
+		if (irqs & ODMA_STATUS_FRAMEDONE_IRQ) {
+			dpp->d.done_count++;
+			wake_up_interruptible_all(&dpp->framedone_wq);
+			DPU_EVENT_LOG(DPU_EVT_DPP_FRAMEDONE, &dpp->sd,
+					ktime_set(0, 0));
+			goto irq_end;
+		}
+	} else { /* IDMA case */
+		irqs = idma_reg_get_irq_and_clear(dpp->id);
+
+		if (irqs & IDMA_RECOVERY_START_IRQ) {
+			DPU_EVENT_LOG(DPU_EVT_DMA_RECOVERY, &dpp->sd,
+					ktime_set(0, 0));
+			val = (u32)dpp->dpp_config->config.dpp_parm.comp_src;
+			dpp->d.recovery_cnt++;
+#if 0 /* TODO: This will be implemented */
+			dpp_info("dma%d recovery start(0x%x).. [src=%s], cnt[%d %d]\n",
+					dpp->id, irqs,
+					val == DPP_COMP_SRC_G2D ? "G2D" : "GPU",
+					get_dpp_drvdata(DPU_DMA2CH(IDMA_VGF0))->d.recovery_cnt,
+					get_dpp_drvdata(DPU_DMA2CH(IDMA_VGF1))->d.recovery_cnt);
+#endif
+			goto irq_end;
+		}
+		if ((irqs & IDMA_AFBC_TIMEOUT_IRQ) ||
+				(irqs & IDMA_READ_SLAVE_ERROR) ||
+				(irqs & IDMA_STATUS_DEADLOCK_IRQ)) {
+			dpp_err("dma%d error irq occur(0x%x)\n", dpp->id, irqs);
+			dpp_dump(dpp);
+			goto irq_end;
+		}
+		/*
+		 * TODO: Normally, DMA framedone occurs before DPP framedone.
+		 * But DMA framedone can occur in case of AFBC crop mode
+		 */
+		if (irqs & IDMA_STATUS_FRAMEDONE_IRQ) {
+			DPU_EVENT_LOG(DPU_EVT_DMA_FRAMEDONE, &dpp->sd,
+					ktime_set(0, 0));
+			goto irq_end;
+		}
+#if defined(CONFIG_SOC_EXYNOS9820)
+		/* TODO: SoC dependency will be removed */
+		if (irqs & IDMA_AFBC_CONFLICT_IRQ) {
+			dpp_err("dma%d AFBC conflict irq occurs\n", dpp->id);
+			goto irq_end;
+		}
+#endif
+	}
+
+irq_end:
+	if (!test_bit(DPP_ATTR_DPP, &dpp->attr))
+		del_timer(&dpp->d.op_timer);
+
+	spin_unlock(&dpp->dma_slock);
+	return IRQ_HANDLED;
+}
+
 static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pdev)
 {
 	struct resource *res;

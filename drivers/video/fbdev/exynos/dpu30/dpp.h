@@ -401,8 +401,9 @@ void dma_reg_dump_debug_regs(int id);
 void dpp_reg_dump_debug_regs(int id);
 
 /* DPU_DMA and DPP interrupt handler */
-irqreturn_t dpp_irq_handler(int irq, void *priv);
-irqreturn_t dma_irq_handler(int irq, void *priv);
+u32 dpp_reg_get_irq_and_clear(u32 id);
+u32 idma_reg_get_irq_and_clear(u32 id);
+u32 odma_reg_get_irq_and_clear(u32 id);
 
 #define DPP_WIN_CONFIG			_IOW('P', 0, struct decon_win_config)
 #define DPP_STOP			_IOW('P', 1, unsigned long)

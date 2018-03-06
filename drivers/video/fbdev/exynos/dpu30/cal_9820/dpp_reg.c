@@ -155,16 +155,6 @@ static void idma_reg_set_test_pattern(u32 id, u32 pat_id, u32 *pat_dat)
 }
 #endif
 
-static u32 idma_reg_get_irqs(u32 id)
-{
-	return dma_read(id, IDMA_IRQ) & IDMA_ALL_IRQ_CLEAR;
-}
-
-static void idma_reg_clear_irqs(u32 id, u32 irqs)
-{
-	dma_write_mask(id, IDMA_IRQ, ~0, irqs);
-}
-
 static void idma_reg_set_afbc(u32 id, u32 en, u32 rcv_num)
 {
 	u32 val = en ? ~0 : 0;
@@ -261,16 +251,6 @@ static void odma_reg_set_format(u32 id, u32 fmt)
 {
 	dma_write_mask(id, ODMA_OUT_CON0, ODMA_IMG_FORMAT(fmt),
 			ODMA_IMG_FORMAT_MASK);
-}
-
-static u32 odma_reg_get_irqs(u32 id)
-{
-	return dma_read(id, ODMA_IRQ) & ODMA_ALL_IRQ_CLEAR;
-}
-
-static void odma_reg_clear_irqs(u32 id, u32 irqs)
-{
-	dma_write_mask(id, ODMA_IRQ, ~0, irqs);
 }
 
 /****************** DPP CAL functions ******************/
@@ -599,11 +579,6 @@ static void dpp_reg_set_hdr_params(u32 id, struct dpp_params_info *p)
 		dpp_reg_set_gm_lut(id, p);
 		dpp_reg_set_tm_lut(id, p);
 	}
-}
-
-static u32 dpp_reg_get_irq_status(u32 id)
-{
-	return dpp_read(id, DPP_IRQ) & DPP_ALL_IRQ_CLEAR;
 }
 
 /****************** WB MUX CAL functions ******************/
@@ -1085,6 +1060,52 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 	idma_reg_set_test_pattern(id, 0, pattern_data);
 #endif
 }
+
+u32 dpp_reg_get_irq_and_clear(u32 id)
+{
+	u32 val, cfg_err;
+
+	val = dpp_read(id, DPP_IRQ);
+	dpp_reg_clear_irq(id, val);
+
+	if (val & DPP_CONFIG_ERROR) {
+		cfg_err = dpp_read(id, DPP_CFG_ERR_STATE);
+		dpp_err("dpp%d config error occur(0x%x)\n", id, cfg_err);
+	}
+
+	return val;
+}
+
+u32 idma_reg_get_irq_and_clear(u32 id)
+{
+	u32 val, cfg_err;
+
+	val = dma_read(id, IDMA_IRQ);
+	idma_reg_clear_irq(id, val);
+
+	if (val & IDMA_CONFIG_ERROR) {
+		cfg_err = dma_read(id, IDMA_CFG_ERR_STATE);
+		dpp_err("dpp%d idma config error occur(0x%x)\n", id, cfg_err);
+	}
+
+	return val;
+}
+
+u32 odma_reg_get_irq_and_clear(u32 id)
+{
+	u32 val, cfg_err;
+
+	val = dma_read(id, ODMA_IRQ);
+	odma_reg_clear_irq(id, val);
+
+	if (val & ODMA_CONFIG_ERROR) {
+		cfg_err = dma_read(id, ODMA_CFG_ERR_STATE);
+		dpp_err("dpp%d odma config error occur(0x%x)\n", id, cfg_err);
+	}
+
+	return val;
+}
+
 #if 0
 static void dpp_reg_dump_ch_data(int id, enum dpp_reg_area reg_area,
 		u32 sel[], u32 cnt)
@@ -1246,160 +1267,4 @@ void dpp_reg_dump_debug_regs(int id)
 	dpp_info("-< DPP%d DEBUG SFR >-\n", id);
 	dpp_reg_dump_ch_data(id, REG_AREA_DPP, sel, cnt);
 #endif
-}
-
-irqreturn_t dpp_irq_handler(int irq, void *priv)
-{
-	struct dpp_device *dpp = priv;
-	u32 dpp_irq = 0;
-	u32 cfg_err = 0;
-
-	spin_lock(&dpp->slock);
-	if (dpp->state == DPP_STATE_OFF)
-		goto irq_end;
-
-	dpp_irq = dpp_reg_get_irq_status(dpp->id);
-	/* CFG_ERR_STATE SFR is cleared when clearing pending bits */
-	if (dpp_irq & DPP_CONFIG_ERROR) {
-		cfg_err = dpp_read(dpp->id, DPP_CFG_ERR_STATE);
-		dpp_reg_clear_irq(dpp->id, dpp_irq);
-
-		dpp_err("dpp%d config error occur(0x%x)\n",
-				dpp->id, dpp_irq);
-		dpp_err("DPP_CFG_ERR_STATE = (0x%x)\n", cfg_err);
-
-		/*
-		 * Disabled because this can cause slow update
-		 * if conditions happen very often
-		 *	dpp_dump(dpp);
-		 */
-		goto irq_end;
-	}
-
-	dpp_reg_clear_irq(dpp->id, dpp_irq);
-
-irq_end:
-	del_timer(&dpp->d.op_timer);
-	spin_unlock(&dpp->slock);
-	return IRQ_HANDLED;
-}
-
-irqreturn_t dma_irq_handler(int irq, void *priv)
-{
-	struct dpp_device *dpp = priv;
-	u32 irqs = 0;
-	u32 reg_id = 0;
-	u32 cfg_err = 0;
-	u32 irq_pend = 0;
-	u32 val = 0;
-
-	spin_lock(&dpp->dma_slock);
-	if (dpp->state == DPP_STATE_OFF)
-		goto irq_end;
-
-	/* CFG_ERR_STATE SFR is cleared when clearing pending bits */
-	if (test_bit(DPP_ATTR_ODMA, &dpp->attr)) {
-		irqs = odma_reg_get_irqs(dpp->id);
-		reg_id = ODMA_CFG_ERR_STATE;
-		irq_pend = ODMA_CONFIG_ERROR;
-		odma_reg_clear_irqs(dpp->id, irqs);
-	} else {
-		irqs = idma_reg_get_irqs(dpp->id);
-		reg_id = IDMA_CFG_ERR_STATE;
-		irq_pend = IDMA_CONFIG_ERROR;
-		idma_reg_clear_irqs(dpp->id, irqs);
-	}
-
-	if (irqs & irq_pend)
-		cfg_err = dma_read(dpp->id, reg_id);
-
-	if (test_bit(DPP_ATTR_ODMA, &dpp->attr)) {
-		if (irqs & ODMA_CONFIG_ERROR) {
-			dpp_err("dma%d config error occur(0x%x)\n", dpp->id, irqs);
-			dpp_err("CFG_ERR_STATE = (0x%x)\n", cfg_err);
-			/* TODO: add to read config error information */
-			dpp_dump(dpp);
-			goto irq_end;
-		}
-
-		if ((irqs & ODMA_WRITE_SLAVE_ERROR) ||
-			       (irqs & ODMA_STATUS_DEADLOCK_IRQ)) {
-			dpp_err("dma%d error irq occur(0x%x)\n", dpp->id, irqs);
-			dpp_dump(dpp);
-			goto irq_end;
-		}
-
-		if (irqs & ODMA_STATUS_FRAMEDONE_IRQ) {
-			dpp->d.done_count++;
-			wake_up_interruptible_all(&dpp->framedone_wq);
-			DPU_EVENT_LOG(DPU_EVT_DPP_FRAMEDONE, &dpp->sd,
-					ktime_set(0, 0));
-			goto irq_end;
-		}
-	} else {
-		if (irqs & IDMA_RECOVERY_START_IRQ) {
-			DPU_EVENT_LOG(DPU_EVT_DMA_RECOVERY, &dpp->sd,
-					ktime_set(0, 0));
-			val = (u32)dpp->dpp_config->config.dpp_parm.comp_src;
-			dpp->d.recovery_cnt++;
-#if 0 /* TODO: This will be implemented */
-			dpp_info("dma%d recovery start(0x%x).. [src=%s], cnt[%d %d]\n",
-					dpp->id, irqs,
-					val == DPP_COMP_SRC_G2D ? "G2D" : "GPU",
-					get_dpp_drvdata(DPU_DMA2CH(IDMA_VGF0))->d.recovery_cnt,
-					get_dpp_drvdata(DPU_DMA2CH(IDMA_VGF1))->d.recovery_cnt);
-#endif
-			goto irq_end;
-		}
-
-		if ((irqs & IDMA_AFBC_TIMEOUT_IRQ) ||
-				(irqs & IDMA_READ_SLAVE_ERROR) ||
-				(irqs & IDMA_STATUS_DEADLOCK_IRQ)) {
-			dpp_err("dma%d error irq occur(0x%x)\n", dpp->id, irqs);
-			dpp_dump(dpp);
-			goto irq_end;
-		}
-
-		if (irqs & IDMA_CONFIG_ERROR) {
-			val = IDMA_CFG_ERR_IMG_HEIGHT
-				| IDMA_CFG_ERR_IMG_HEIGHT_ROTATION;
-			if (cfg_err & val)
-				dpp_err("dma%d config: img_height(0x%x)\n",
-						dpp->id, irqs);
-			else {
-				dpp_err("dma%d config error occur(0x%x)\n",
-						dpp->id, irqs);
-				dpp_err("CFG_ERR_STATE = (0x%x)\n", cfg_err);
-				/* TODO: add to read config error information */
-				/*
-				 * Disabled because this can cause slow update
-				 * if conditions happen very often
-				 *	dpp_dump(dpp);
-				 */
-			}
-			goto irq_end;
-		}
-
-		if (irqs & IDMA_STATUS_FRAMEDONE_IRQ) {
-			/*
-			 * TODO: Normally, DMA framedone occurs before
-			 * DPP framedone. But DMA framedone can occur in case
-			 * of AFBC crop mode
-			 */
-			DPU_EVENT_LOG(DPU_EVT_DMA_FRAMEDONE, &dpp->sd, ktime_set(0, 0));
-			goto irq_end;
-		}
-
-		if (irqs & IDMA_AFBC_CONFLICT_IRQ) {
-			dpp_err("dma%d AFBC conflict irq occurs\n", dpp->id);
-			goto irq_end;
-		}
-	}
-
-irq_end:
-	if (!test_bit(DPP_ATTR_DPP, &dpp->attr))
-		del_timer(&dpp->d.op_timer);
-
-	spin_unlock(&dpp->dma_slock);
-	return IRQ_HANDLED;
 }
