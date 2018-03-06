@@ -1498,11 +1498,11 @@ static void decon_reg_set_blender_bg_size(u32 id, enum decon_dsi_mode dsi_mode,
 	decon_write_mask(id, BLENDER_BG_IMAGE_SIZE_0, val, mask);
 }
 
-static int decon_reg_stop_perframe(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
+static int decon_reg_stop_perframe(u32 id, u32 dsi_idx,
+		struct decon_mode_info *psr, u32 fps)
 {
 	int ret = 0;
 	int timeout_value = 0;
-	struct decon_device *decon = get_decon_drvdata(id);
 
 	decon_dbg("%s +\n", __func__);
 
@@ -1517,18 +1517,18 @@ static int decon_reg_stop_perframe(u32 id, u32 dsi_idx, struct decon_mode_info *
 	decon_reg_update_req_global(id);
 
 	/* timeout : 1 / fps + 20% margin */
-	timeout_value = 1000 / decon->lcd_info->fps * 12 / 10 + 5;
+	timeout_value = 1000 / fps * 12 / 10 + 5;
 	ret = decon_reg_wait_run_is_off_timeout(id, timeout_value * MSEC);
 
 	decon_dbg("%s -\n", __func__);
 	return ret;
 }
 
-static int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
+static int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr,
+		u32 fps)
 {
 	int ret = 0;
 	int timeout_value = 0;
-	struct decon_device *decon = get_decon_drvdata(id);
 
 	decon_dbg("%s +\n", __func__);
 
@@ -1548,7 +1548,7 @@ static int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr)
 #endif
 
 	/* timeout : 1 / fps + 20% margin */
-	timeout_value = 1000 / decon->lcd_info->fps * 12 / 10 + 5;
+	timeout_value = 1000 / fps * 12 / 10 + 5;
 	ret = decon_reg_wait_run_is_off_timeout(id, timeout_value * MSEC);
 
 	decon_dbg("%s -\n", __func__);
@@ -1810,22 +1810,23 @@ int decon_reg_start(u32 id, struct decon_mode_info *psr)
  *	1. perframe off
  *	2. instant off
  */
-int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr, bool rst)
+int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr, bool rst,
+		u32 fps)
 {
 	int ret = 0;
 
 	if (psr->out_type == DECON_OUT_DP) {
-		ret = decon_reg_stop_inst(id, dsi_idx, psr);
+		ret = decon_reg_stop_inst(id, dsi_idx, psr, fps);
 		if (ret < 0)
 			decon_err("%s, failed to DP instant_stop\n", __func__);
 		decon_reg_set_te_qactive_pll_mode(id, 0);
 	} else {
 		/* call perframe stop */
-		ret = decon_reg_stop_perframe(id, dsi_idx, psr);
+		ret = decon_reg_stop_perframe(id, dsi_idx, psr, fps);
 		if (ret < 0) {
 			decon_err("%s, failed to perframe_stop\n", __func__);
 			/* if fails, call decon instant off */
-			ret = decon_reg_stop_inst(id, dsi_idx, psr);
+			ret = decon_reg_stop_inst(id, dsi_idx, psr, fps);
 			if (ret < 0)
 				decon_err("%s, failed to instant_stop\n", __func__);
 		}
