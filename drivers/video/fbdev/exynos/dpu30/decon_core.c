@@ -380,7 +380,8 @@ int decon_tui_protection(bool tui_en)
 		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 		dpu_set_win_update_config(decon, NULL);
 		decon_to_psr_info(decon, &psr);
-		decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, false);
+		decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, false,
+				decon->lcd_info->fps);
 
 		decon->cur_using_dpp = 0;
 		decon_dpp_stop(decon, false);
@@ -757,7 +758,8 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 		decon->eint_status = 0;
 	}
 
-	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true);
+	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true,
+			decon->lcd_info->fps);
 	if (ret < 0)
 		decon_dump(decon);
 
@@ -936,7 +938,8 @@ static int decon_dp_disable(struct decon_device *decon)
 
 	decon_to_psr_info(decon, &psr);
 	decon_reg_set_int(decon->id, &psr, 0);
-	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true);
+	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true,
+			decon->lcd_info->fps);
 	if (ret < 0)
 		decon_dump(decon);
 
