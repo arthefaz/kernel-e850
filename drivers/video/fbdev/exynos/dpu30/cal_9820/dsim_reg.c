@@ -675,11 +675,7 @@ static void dsim_reg_set_pll(u32 id, u32 en)
 static u32 dsim_reg_is_pll_stable(u32 id)
 {
 	u32 val, pll_lock;
-/*
-	val = dsim_read(id, DSIM_LINK_STATUS3);
-	if (val & DSIM_LINK_STATUS3_PLL_STABLE)
-		return 1;
-*/
+
 	val = dsim_phy_read(id, DSIM_PHY_PLL_STAT0);
 	pll_lock = DSIM_PHY_PLL_LOCK_GET(val);
 	if (pll_lock)
@@ -795,6 +791,28 @@ static void dsim_reg_set_sync_inform(u32 id, u32 inform)
 	u32 val = inform ? ~0 : 0;
 
 	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_SYNC_INFORM);
+}
+
+static void dsim_reg_set_pll_clk_gate_enable(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_PLL_CLOCK_GATING);
+}
+
+static void dsim_reg_set_pll_sleep_enable(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_PLL_SLEEP);
+}
+
+/* 0=D-PHY, 1=C-PHY */
+void dsim_reg_set_phy_selection(u32 id, u32 sel)
+{
+	u32 val = sel ? ~0 : 0;
+
+	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_PHY_SELECTION);
 }
 
 static void dsim_reg_set_vfp(u32 id, u32 vfp)
@@ -1887,6 +1905,10 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 	dsim_reg_dphy_resetn(id, 0); /* Release DPHY reset */
 
 	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
+
+	/* disable at EVT0 */
+	dsim_reg_set_pll_clk_gate_enable(id, 0);
+	dsim_reg_set_pll_sleep_enable(id, 0);
 
 	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
 	dsim_reg_enable_word_clock(id, 1);
