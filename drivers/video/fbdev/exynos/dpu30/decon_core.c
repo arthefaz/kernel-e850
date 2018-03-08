@@ -34,7 +34,11 @@
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
+#if defined(CONFIG_SOC_EXYNOS9810)
 #include <dt-bindings/clock/exynos9810.h>
+#elif defined(CONFIG_SOC_EXYNOS9820)
+#include <dt-bindings/clock/exynos9820.h>
+#endif
 
 #include "decon.h"
 #include "dsim.h"
