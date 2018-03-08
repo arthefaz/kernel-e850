@@ -478,15 +478,6 @@ static void dsim_reg_set_dphy_param_dither(u32 id, struct stdphy_pms *dphy_pms)
 }
 #endif
 
-/* BIAS Block Control Register */
-static void dsim_reg_set_bias_con(u32 id, u32 *blk_ctl)
-{
-	u32 i;
-
-	for (i = 0 ; i < 5 ; i++)
-		dsim_phy_write(id, DSIM_PHY_BIAS_CON(i), blk_ctl[i]);
-}
-
 /* PLL Control Register */
 static void dsim_reg_set_pll_con(u32 id, u32 *blk_ctl)
 {
@@ -559,7 +550,7 @@ static void dsim_reg_sw_reset(u32 id)
 
 static void dsim_reg_dphy_resetn(u32 id, u32 en)
 {
-	u32 val = en ? 1 : 0;
+	u32 val = en ? ~0 : 0;
 
 	dsim_write_mask(id, DSIM_SWRST, val, DSIM_DPHY_RST); /* reset high */
 }
@@ -1625,9 +1616,6 @@ static int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		dsim_dbg("escape clock divider is 0x%x\n", esc_div);
 		dsim_dbg("escape clock is %u MHz\n", clks->esc_clk);
 
-		/* set BIAS ctrl : default value */
-		dsim_reg_set_bias_con(id, DSIM_PHY_BIAS_CON_VAL);
-
 		/* set PLL ctrl : default value */
 		dsim_reg_set_pll_con(id, DSIM_PHY_PLL_CON_VAL);
 
@@ -1855,9 +1843,10 @@ static int dsim_reg_set_ulps_by_ddi(u32 id, u32 ddi_type, u32 lanes, u32 en)
 /******************** EXPORTED DSIM CAL APIs ********************/
 void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 sel)
 {
+	u32 phy_num = dsim_id ? 0 : 1;
 	u32 old = readl(sysreg + DISP_DPU_MIPI_PHY_CON);
 	u32 val = sel ? ~0 : 0;
-	u32 mask = SEL_RESET_DPHY_MASK(dsim_id);
+	u32 mask = SEL_RESET_DPHY_MASK(phy_num);
 
 	val = (val & mask) | (old & ~mask);
 	writel(val, sysreg + DISP_DPU_MIPI_PHY_CON);
