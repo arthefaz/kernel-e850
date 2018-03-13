@@ -43,6 +43,9 @@
 #include <linux/exynos_iovmm.h>
 #endif
 
+#include <linux/of_reserved_mem.h>
+#include "../../../../../mm/internal.h"
+
 #include "decon.h"
 #include "dsim.h"
 
@@ -1006,6 +1009,41 @@ static int dsim_set_freq_hop(struct dsim_device *dsim, u32 target_m)
 	return 0;
 }
 
+static int dsim_free_fb_resource(struct dsim_device *dsim)
+{
+	/* unmap */
+	iovmm_unmap_oto(dsim->dev, dsim->phys_addr);
+
+	/* unreserve memory */
+	of_reserved_mem_device_release(dsim->dev);
+
+	/* update state */
+	dsim->fb_reservation = false;
+	dsim->phys_addr = 0xdead;
+
+	return 0;
+}
+
+static int dsim_acquire_fb_resource(struct dsim_device *dsim)
+{
+	int ret = 0;
+
+	ret = of_reserved_mem_device_init_by_idx(dsim->dev, dsim->dev->of_node, 0);
+	if (ret)
+		dsim_err("failed reserved mem device init: %d\n", ret);
+	else
+		dsim->fb_reservation = true;
+
+	ret = iovmm_map_oto(dsim->dev, dsim->phys_addr,
+			dsim->lcd_info.xres * dsim->lcd_info.yres * 4);
+	if (ret) {
+		dsim_err("failed one to one mapping: %d\n", ret);
+		BUG();
+	}
+
+	return ret;
+}
+
 static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	struct dsim_device *dsim = container_of(sd, struct dsim_device, sd);
@@ -1044,6 +1082,10 @@ static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 
 	case DSIM_IOC_SET_FREQ_HOP:
 		ret = dsim_set_freq_hop(dsim, *((u32 *)arg));
+		break;
+
+	case DSIM_IOC_FREE_FB_RES:
+		ret = dsim_free_fb_resource(dsim);
 		break;
 
 	default:
@@ -1639,6 +1681,9 @@ static int dsim_probe(struct platform_device *pdev)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
 #endif
 
+	if (dsim->lcd_info.mode == DECON_VIDEO_MODE)
+		dsim_acquire_fb_resource(dsim);
+
 	pm_runtime_enable(dev);
 
 	ret = iovmm_activate(dev);
@@ -1778,6 +1823,48 @@ static void __exit dsim_exit(void)
 }
 
 module_exit(dsim_exit);
+
+static int rmem_device_init(struct reserved_mem *rmem, struct device *dev)
+{
+	struct dsim_device *dsim = dev_get_drvdata(dev);
+
+	dsim->phys_addr = rmem->base;
+
+	return 0;
+}
+
+/* of_reserved_mem_device_release(dev) when reserved memory is no logner required */
+static void rmem_device_release(struct reserved_mem *rmem, struct device *dev)
+{
+	struct page *first = phys_to_page(PAGE_ALIGN(rmem->base));
+	struct page *last = phys_to_page((rmem->base + rmem->size) & PAGE_MASK);
+	struct page *page;
+
+	pr_info("%s: base=%pa, size=%pa, first=%pa, last=%pa\n",
+			__func__, &rmem->base, &rmem->size, first, last);
+
+	for (page = first; page != last; page++) {
+		__ClearPageReserved(page);
+		set_page_count(page, 1);
+		__free_pages(page, 0);
+		adjust_managed_page_count(page, 1);
+	}
+}
+
+static const struct reserved_mem_ops rmem_ops = {
+	.device_init	= rmem_device_init,
+	.device_release = rmem_device_release,
+};
+
+static int __init fb_handover_setup(struct reserved_mem *rmem)
+{
+	pr_info("%s: base=%pa, size=%pa\n", __func__, &rmem->base, &rmem->size);
+
+	rmem->ops = &rmem_ops;
+	return 0;
+}
+RESERVEDMEM_OF_DECLARE(fb_handover, "exynos,fb_handover", fb_handover_setup);
+
 MODULE_AUTHOR("Yeongran Shin <yr613.shin@samsung.com>");
 MODULE_DESCRIPTION("Samusung EXYNOS DSIM driver");
 MODULE_LICENSE("GPL");
