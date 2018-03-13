@@ -43,7 +43,7 @@
 #include "decon.h"
 #include "dsim.h"
 
-int dsim_log_level = 7;
+int dsim_log_level = 6;
 
 struct dsim_device *dsim_drvdata[MAX_DSIM_CNT];
 EXPORT_SYMBOL(dsim_drvdata);
