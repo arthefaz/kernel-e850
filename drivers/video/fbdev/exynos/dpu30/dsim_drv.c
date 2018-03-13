@@ -36,13 +36,14 @@
 #elif defined(CONFIG_SOC_EXYNOS9820)
 #include <dt-bindings/clock/exynos9820.h>
 #endif
+#include <soc/samsung/exynos-pmu.h>
 
 #include <linux/exynos_iovmm.h>
 
 #include "decon.h"
 #include "dsim.h"
 
-int dsim_log_level = 6;
+int dsim_log_level = 7;
 
 struct dsim_device *dsim_drvdata[MAX_DSIM_CNT];
 EXPORT_SYMBOL(dsim_drvdata);
@@ -1441,6 +1442,10 @@ static int dsim_probe(struct platform_device *pdev)
 
 	/* HACK */
 	phy_init(dsim->phy);
+	/* [9820] HACK:M4S4 power enable for bias control */
+	#define EXYNOS_MIPI_PHY_ISO_BYPASS  (1 << 0)
+	exynos_pmu_update(0x70c, EXYNOS_MIPI_PHY_ISO_BYPASS, EXYNOS_MIPI_PHY_ISO_BYPASS);
+
 	dsim->state = DSIM_STATE_INIT;
 	dsim_enable(dsim);
 
@@ -1459,6 +1464,10 @@ static int dsim_probe(struct platform_device *pdev)
 
 	dsim_clocks_info(dsim);
 	dsim_create_cmd_rw_sysfs(dsim);
+
+#ifdef DPHY_LOOP
+	dsim_reg_set_dphy_loop_back_test(dsim->id);
+#endif
 
 	dsim_info("dsim%d driver(%s mode) has been probed.\n", dsim->id,
 		dsim->lcd_info.mode == DECON_MIPI_COMMAND_MODE ? "cmd" : "video");
