@@ -332,6 +332,14 @@ static inline u32 dsim_phy_read_mask(u32 id, u32 reg_id, u32 mask)
 	val &= (mask);
 	return val;
 }
+static inline void dsim_phy_bias_write(u32 id, u32 reg_id, u32 val)
+{
+	void __iomem *reg;
+
+	reg = ioremap(0x19160000, 0x20);
+	writel(val, reg + reg_id);
+	iounmap(reg);
+}
 static inline void dsim_phy_write(u32 id, u32 reg_id, u32 val)
 {
 	struct dsim_device *dsim = get_dsim_drvdata(id);
@@ -386,6 +394,11 @@ void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info);
 
 /* DSIM BIST for test */
 void dsim_reg_set_bist(u32 id, u32 en);
+
+/* DPHY loop back for test */
+#ifdef DPHY_LOOP
+void dsim_reg_set_dphy_loop_back_test(u32 id);
+#endif
 
 static inline bool IS_DSIM_ON_STATE(struct dsim_device *dsim)
 {

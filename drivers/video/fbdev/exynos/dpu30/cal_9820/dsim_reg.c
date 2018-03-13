@@ -295,6 +295,45 @@ static void dsim_reg_set_dphy_dither_en(u32 id, u32 en)
 }
 #endif
 
+#ifdef DPHY_LOOP
+void dsim_reg_set_dphy_loop_back_test(u32 id)
+{
+	dsim_phy_write_mask(id, 0x0370, 1,(0x3<<0));
+	dsim_phy_write_mask(id, 0x0470, 1,(0x3<<0));
+	dsim_phy_write_mask(id, 0x0570, 1,(0x3<<0));
+	dsim_phy_write_mask(id, 0x0670, 1,(0x3<<0));
+	dsim_phy_write_mask(id, 0x0770, 1,(0x3<<0));
+}
+
+static void dsim_reg_set_dphy_loop_test(u32 id)
+{
+	dsim_phy_write_mask(id, 0x0374, ~0,(1<<3));
+	dsim_phy_write_mask(id, 0x0474, ~0,(1<<3));
+	dsim_phy_write_mask(id, 0x0574, ~0,(1<<3));
+	dsim_phy_write_mask(id, 0x0674, ~0,(1<<3));
+	dsim_phy_write_mask(id, 0x0774, ~0,(1<<3));
+
+	dsim_phy_write_mask(id, 0x0374, 0x6,(0x7<<0));
+	dsim_phy_write_mask(id, 0x0474, 0x6,(0x7<<0));
+	dsim_phy_write_mask(id, 0x0574, 0x6,(0x7<<0));
+	dsim_phy_write_mask(id, 0x0674, 0x6,(0x7<<0));
+	dsim_phy_write_mask(id, 0x0774, 0x6,(0x7<<0));
+
+	dsim_phy_write_mask(id, 0x037c, 0x2,(0xffff<<0));
+	dsim_phy_write_mask(id, 0x047c, 0x2,(0xffff<<0));
+	dsim_phy_write_mask(id, 0x057c, 0x2,(0xffff<<0));
+	dsim_phy_write_mask(id, 0x067c, 0x2,(0xffff<<0));
+	dsim_phy_write_mask(id, 0x077c, 0x2,(0xffff<<0));
+}
+#endif
+
+static void dsim_reg_set_dphy_wclk_buf_sft(u32 id, u32 cnt)
+{
+	u32 val = DSIM_PHY_WCLK_BUF_SFT_CNT(cnt);
+
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON6, val, DSIM_PHY_WCLK_BUF_SFT_CNT_MASK);
+}
+
 /* DPHY setting */
 static void dsim_reg_set_pll_freq(u32 id, u32 p, u32 m, u32 s, u32 k)
 {
@@ -478,6 +517,15 @@ static void dsim_reg_set_dphy_param_dither(u32 id, struct stdphy_pms *dphy_pms)
 }
 #endif
 
+/* BIAS Block Control Register */
+static void dsim_reg_set_bias_con(u32 id, u32 *blk_ctl)
+{
+	u32 i;
+
+	for (i = 0 ; i < 5 ; i++)
+		dsim_phy_bias_write(id, DSIM_PHY_BIAS_CON(i), blk_ctl[i]);
+}
+
 /* PLL Control Register */
 static void dsim_reg_set_pll_con(u32 id, u32 *blk_ctl)
 {
@@ -529,6 +577,32 @@ static void dsim_reg_set_md_ana_con(u32 id, u32 *blk_ctl)
 	}
 }
 
+#ifdef DPDN_INV_SWAP
+void dsim_reg_set_inv_dpdn(u32 id, u32 inv_clk, u32 inv_data[4])
+{
+	u32 i;
+	u32 val, mask;
+
+	val = inv_clk ? (DSIM_PHY_CLK_INV) : 0;
+	mask = DSIM_PHY_CLK_INV;
+	dsim_phy_write_mask(id, DSIM_PHY_MC_DATA_CON0, val, mask);
+
+	for (i = 0; i < MAX_DSIM_DATALANE_CNT; i++) {
+		val = inv_data[i] ? (DSIM_PHY_DATA_INV) : 0;
+		mask = DSIM_PHY_DATA_INV;
+		dsim_phy_write_mask(id,  DSIM_PHY_MD_DATA_CON0(i), val, mask);
+	}
+}
+
+static void dsim_reg_set_dpdn_swap(u32 id, u32 clk_swap)
+{
+	u32 val, mask;
+
+	val = DSIM_PHY_DPDN_SWAP(clk_swap);
+	mask = DSIM_PHY_DPDN_SWAP_MASK;
+	dsim_phy_write_mask(id, DSIM_PHY_MC_ANA_CON1, val, mask);
+}
+#endif
 
 /******************* DSIM CAL functions *************************/
 static void dsim_reg_sw_reset(u32 id)
@@ -720,6 +794,14 @@ static void dsim_reg_set_esc_clk_on_lane(u32 id, u32 en, u32 lane)
 				DSIM_CLK_CTRL_LANE_ESCCLK_EN_MASK);
 }
 
+static void dsim_reg_set_lpdt(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	dsim_write_mask(id, DSIM_ESCMODE, val,
+				DSIM_ESCMODE_CMD_LPDT);
+}
+
 static void dsim_reg_set_stop_state_cnt(u32 id)
 {
 	u32 val = DSIM_ESCMODE_STOP_STATE_CNT(DSIM_STOP_STATE_CNT);
@@ -782,6 +864,12 @@ static void dsim_reg_set_sync_inform(u32 id, u32 inform)
 	u32 val = inform ? ~0 : 0;
 
 	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_SYNC_INFORM);
+}
+
+static void dsim_reg_set_phy_clk_gate(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+	dsim_write_mask(id, 0x200, val, 0x1);
 }
 
 static void dsim_reg_set_pll_clk_gate_enable(u32 id, u32 en)
@@ -1294,6 +1382,14 @@ static void dsim_reg_set_vstatus_int(u32 id, u32 vstatus)
 			DSIM_VIDEO_TIMER_VSTATUS_INTR_SEL_MASK);
 }
 
+static void dsim_reg_set_bist_te_interval(u32 id, u32 interval)
+{
+	u32 val = DSIM_BIST_CTRL0_BIST_TE_INTERVAL(interval);
+
+	dsim_write_mask(id, DSIM_BIST_CTRL0, val,
+			DSIM_BIST_CTRL0_BIST_TE_INTERVAL_MASK);
+}
+
 static void dsim_reg_set_bist_mode(u32 id, u32 bist_mode)
 {
 	u32 val = DSIM_BIST_CTRL0_BIST_PTRN_MODE(bist_mode);
@@ -1448,7 +1544,7 @@ static void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info,
 	if (lcd_info->mode == DECON_VIDEO_MODE)
 		dsim_reg_enable_clocklane(id, 0);
 	else
-		dsim_reg_enable_noncont_clock(id, 1);
+		dsim_reg_enable_noncont_clock(id, 0);
 
 	dsim_set_hw_deskew(id, 0); /* second param is to control enable bit */
 
@@ -1575,6 +1671,9 @@ static int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 	struct dphy_timing_value t;
 	int ret = 0;
 	u32 hsmode = 0;
+#ifdef DPDN_INV_SWAP
+	u32 inv_data[4] = {0, };
+#endif
 
 	if (en) {
 		/*
@@ -1616,6 +1715,9 @@ static int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		dsim_dbg("escape clock divider is 0x%x\n", esc_div);
 		dsim_dbg("escape clock is %u MHz\n", clks->esc_clk);
 
+		/* set BIAS ctrl : default value */
+		dsim_reg_set_bias_con(id, DSIM_PHY_BIAS_CON_VAL);
+
 		/* set PLL ctrl : default value */
 		dsim_reg_set_pll_con(id, DSIM_PHY_PLL_CON_VAL);
 
@@ -1638,8 +1740,20 @@ static int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		/* set clock lane Analog Block Control Register control */
 		dsim_reg_set_mc_ana_con(id, DSIM_PHY_MC_ANA_CON_VAL);
 
+#ifdef DPDN_INV_SWAP
+		dsim_reg_set_dpdn_swap(id, 1);
+#endif
+
 		/* set data lane General Control Register control */
 		dsim_reg_set_md_gnr_con(id, DSIM_PHY_MD_GNR_CON_VAL);
+
+#ifdef DPDN_INV_SWAP
+		inv_data[0] = 0;
+		inv_data[1] = 1;
+		inv_data[2] = 1;
+		inv_data[3] = 0;
+		dsim_reg_set_inv_dpdn(id, 0, inv_data);
+#endif
 
 		/* set data lane Analog Block Control Register control */
 		dsim_reg_set_md_ana_con(id, DSIM_PHY_MD_ANA_CON_VAL);
@@ -1647,10 +1761,16 @@ static int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		/* set PMSK on PHY */
 		dsim_reg_set_pll_freq(id, pll.p, pll.m, pll.s, pll.k);
 
+		/*set wclk buf sft cnt */
+		dsim_reg_set_dphy_wclk_buf_sft(id, 3);
+
 		/* set PLL's lock time (lock_cnt) */
 		/* It depends on project guide */
 		dsim_reg_pll_stable_time(id, 0x1450);
 
+#ifdef DPHY_LOOP
+		dsim_reg_set_dphy_loop_test(id);
+#endif
 		/* enable PLL */
 		ret = dsim_reg_enable_pll(id, 1);
 	} else {
@@ -1673,7 +1793,7 @@ static int dsim_reg_set_lanes(u32 id, u32 lanes, u32 en)
 	dsim_reg_enable_lane(id, lanes, en);
 
 	/* PHY lanes */
-	if (dsim_reg_enable_lane_phy(id, lanes, en))
+	if (dsim_reg_enable_lane_phy(id, (lanes >> 1), en))
 		return -EBUSY;
 
 	return 0;
@@ -1896,11 +2016,13 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
 
 	/* disable at EVT0 */
-	dsim_reg_set_pll_clk_gate_enable(id, 0);
+	dsim_reg_set_phy_clk_gate(id, 0);
+	dsim_reg_set_pll_clk_gate_enable(id, 1);
 	dsim_reg_set_pll_sleep_enable(id, 0);
 
 	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
 	dsim_reg_enable_word_clock(id, 1);
+	dsim_reg_set_lpdt(id, 0);
 
 	dsim_reg_set_config(id, lcd_info, clks);
 
@@ -2161,6 +2283,7 @@ void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info)
 void dsim_reg_set_bist(u32 id, u32 en)
 {
 	if (en) {
+		dsim_reg_set_bist_te_interval(id, 4505);
 		dsim_reg_set_bist_mode(id, DSIM_GRAY_GRADATION);
 		dsim_reg_enable_bist_pattern_move(id, true);
 		dsim_reg_enable_bist(id, en);
