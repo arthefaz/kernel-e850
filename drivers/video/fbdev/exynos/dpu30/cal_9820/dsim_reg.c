@@ -1994,6 +1994,9 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 	/* choose OSC_CLK */
 	dsim_reg_set_link_clock(id, 0);
 
+	/* disable at EVT0 */
+	dsim_reg_set_phy_clk_gate(id, 1);
+
 	/* Enable DPHY reset : DPHY reset start */
 	dsim_reg_dphy_resetn(id, 1);
 
@@ -2015,9 +2018,7 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 
 	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
 
-	/* disable at EVT0 */
-	dsim_reg_set_phy_clk_gate(id, 0);
-	dsim_reg_set_pll_clk_gate_enable(id, 1);
+	dsim_reg_set_pll_clk_gate_enable(id, 0);
 	dsim_reg_set_pll_sleep_enable(id, 0);
 
 	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
