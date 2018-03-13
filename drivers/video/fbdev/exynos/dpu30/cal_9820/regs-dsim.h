@@ -476,7 +476,7 @@
 #define DSIM_PHY_MC_GNR_CON1			(0x0304)
 /* GNR0 */
 #define DSIM_PHY_PHY_READY			(0x1 << 1)
-#define DSIM_PHY_PHY_READY_GET(x)		(((x) >> 0) & 0x1)
+#define DSIM_PHY_PHY_READY_GET(x)		(((x) >> 1) & 0x1)
 #define DSIM_PHY_PHY_ENABLE			(0x1 << 0)
 /* GNR1 */
 #define DSIM_PHY_T_PHY_READY(_x)		(((_x) & 0xffff) << 0)
@@ -493,6 +493,9 @@
 #define DSIM_PHY_RES_UP_MASK			(0xf << 4)
 #define DSIM_PHY_RES_DN(_x)			(((_x) & 0xf) << 0)
 #define DSIM_PHY_RES_DN_MASK			(0xf << 0)
+
+#define DSIM_PHY_DPDN_SWAP(_x)			(((_x) & 0x) << 12)
+#define DSIM_PHY_DPDN_SWAP_MASK			(0x1 << 12)
 
 
 /* master clock lane setting */
@@ -558,8 +561,8 @@
 /* macros for DPHY timing controls */
 /* MC/MD_TIME_CON0 */
 #define DSIM_PHY_HSTX_CLK_SEL			(0x1 << 12)
-#define DSIM_PHY_TLPX(_x)			(((_x) & 0xf) << 4)
-#define DSIM_PHY_TLPX_MASK			(0xf << 4)
+#define DSIM_PHY_TLPX(_x)			(((_x) & 0xff) << 4)
+#define DSIM_PHY_TLPX_MASK			(0xff << 4)
 /* MD only */
 #define DSIM_PHY_TLP_EXIT_SKEW(_x)		(((_x) & 0x3) << 2)
 #define DSIM_PHY_TLP_EXIT_SKEW_MASK		(0x3 << 2)
@@ -601,6 +604,8 @@
 
 /* MC_DATA_CON0 */
 #define DSIM_PHY_CLK_INV			(0x1 << 1)
+/* MC_DATA_CON0 */
+#define DSIM_PHY_DATA_INV			(0x1 << 1)
 
 /* MC_DESKEW_CON0 */
 #define DSIM_PHY_SKEWCAL_RUN_TIME(_x)		(((_x) & 0xf) << 12)
