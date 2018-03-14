@@ -859,7 +859,7 @@ int decon_enter_hiber(struct decon_device *decon)
 		decon_dpp_stop(decon, false);
 	}
 
-#if defined(CONFIG_EXYNOS9810_BTS)
+#if defined(CONFIG_EXYNOS9820_BTS)
 	decon->bts.ops->bts_release_bw(decon);
 #endif
 

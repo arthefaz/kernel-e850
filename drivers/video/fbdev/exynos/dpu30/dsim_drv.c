@@ -422,7 +422,7 @@ exit:
 	return;
 }
 
-#if defined(CONFIG_EXYNOS9810_BTS)
+#if defined(CONFIG_EXYNOS9820_BTS)
 static void dsim_bts_print_info(struct bts_decon_info *info)
 {
 	int i;
@@ -443,7 +443,7 @@ static void dsim_bts_print_info(struct bts_decon_info *info)
 
 static void dsim_underrun_info(struct dsim_device *dsim)
 {
-#if defined(CONFIG_EXYNOS9810_BTS)
+#if defined(CONFIG_EXYNOS9820_BTS)
 	struct decon_device *decon;
 	int i;
 

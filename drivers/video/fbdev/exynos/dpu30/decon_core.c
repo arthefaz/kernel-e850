@@ -376,7 +376,7 @@ int decon_tui_protection(bool tui_en)
 		aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
 				EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
-#if defined(CONFIG_EXYNOS9810_BTS)
+#if defined(CONFIG_EXYNOS9820_BTS)
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
 				cal_dfs_get_rate(ACPM_DVFS_MIF),
 				cal_dfs_get_rate(ACPM_DVFS_INT),
@@ -390,7 +390,7 @@ int decon_tui_protection(bool tui_en)
 		aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
 				EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
-#if defined(CONFIG_EXYNOS9810_BTS)
+#if defined(CONFIG_EXYNOS9820_BTS)
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
 				cal_dfs_get_rate(ACPM_DVFS_MIF),
 				cal_dfs_get_rate(ACPM_DVFS_INT),
@@ -497,7 +497,7 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 	pm_stay_awake(decon->dev);
 	dev_warn(decon->dev, "pm_stay_awake");
 
-#if defined(CONFIG_EXYNOS9810_BTS)
+#if defined(CONFIG_EXYNOS9820_BTS)
 	decon->bts.ops->bts_acquire_bw(decon);
 #endif
 
@@ -746,7 +746,7 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 	decon->cur_using_dpp = 0;
 	decon_dpp_stop(decon, false);
 
-#if defined(CONFIG_EXYNOS9810_BTS)
+#if defined(CONFIG_EXYNOS9820_BTS)
 	decon->bts.ops->bts_release_bw(decon);
 #endif
 
@@ -926,7 +926,7 @@ static int decon_dp_disable(struct decon_device *decon)
 		decon_dpp_stop(decon, false);
 	}
 
-#if defined(CONFIG_EXYNOS9810_BTS)
+#if defined(CONFIG_EXYNOS9820_BTS)
 	decon->bts.ops->bts_release_bw(decon);
 #endif
 
@@ -2009,7 +2009,7 @@ static void decon_update_regs(struct decon_device *decon,
 
 	decon_update_hdr_info(decon, regs);
 
-#if defined(CONFIG_EXYNOS9810_BTS)
+#if defined(CONFIG_EXYNOS9820_BTS)
 	/* add calc and update bw : cur > prev */
 	decon->bts.ops->bts_calc_bw(decon, regs);
 	decon->bts.ops->bts_update_bw(decon, regs, 0);
@@ -2084,7 +2084,7 @@ end:
 	decon_update_vgf_info(decon, regs, false);
 #endif
 
-#if defined(CONFIG_EXYNOS9810_BTS)
+#if defined(CONFIG_EXYNOS9820_BTS)
 	/* add update bw : cur < prev */
 	decon->bts.ops->bts_update_bw(decon, regs, 1);
 #endif
@@ -3555,7 +3555,7 @@ static int decon_probe(struct platform_device *pdev)
 	dpu_init_win_update(decon);
 	decon_init_low_persistence_mode(decon);
 
-#if defined(CONFIG_EXYNOS9810_BTS)
+#if defined(CONFIG_EXYNOS9820_BTS)
 	decon->bts.ops = &decon_bts_control;
 	decon->bts.ops->bts_init(decon);
 #endif
