@@ -647,7 +647,7 @@ static void dsim_reg_enable_lane(u32 id, u32 lane, u32 en)
 /*
  * lane_id : 0 = MC, 1 = MD0, 2 = MD1, 3 = MD2, 4 = MD3
  */
-static int dsim_reg_wait_phy_ready(u32 id, u32 lane_id)
+static int dsim_reg_wait_phy_ready(u32 id, u32 lane_id, u32 en)
 {
 	u32 ready, reg_id, val;
 	u32 cnt = 1000;
@@ -660,10 +660,16 @@ static int dsim_reg_wait_phy_ready(u32 id, u32 lane_id)
 	do {
 		val = dsim_phy_read(id, reg_id);
 		ready = DSIM_PHY_PHY_READY_GET(val);
+		/* enable case */
+		if ((en == 1) && (ready == 1))
+			break;
+		/* disable case */
+		if ((en == 0) && (ready == 0))
+			break;
 
 		cnt--;
 		udelay(10);
-	} while (!ready && cnt);
+	} while (cnt);
 
 	if (!cnt) {
 		dsim_err("PHY lane(%d) is not ready[timeout]\n", lane_id);
@@ -705,12 +711,12 @@ static int dsim_reg_enable_lane_phy(u32 id, u32 lane, u32 en)
 	 */
 
 	/* (2.1) check ready of clock lane */
-	if (dsim_reg_wait_phy_ready(id, 0))
+	if (dsim_reg_wait_phy_ready(id, 0, en))
 		ret++;
 
 	/* (2.2) check ready of data lanes (index : from '1') */
 	for (i = 1; i <= lane_cnt; i++) {
-		if (dsim_reg_wait_phy_ready(id, i))
+		if (dsim_reg_wait_phy_ready(id, i, en))
 			ret++;
 	}
 
@@ -769,9 +775,24 @@ static int dsim_reg_enable_pll(u32 id, u32 en)
 		}
 	} else {
 		dsim_reg_set_pll(id, 0);
+		while (1) {
+			cnt--;
+			if (!dsim_reg_is_pll_stable(id))
+				return 0;
+			if (cnt == 0)
+				return -EBUSY;
+			udelay(10);
+		}
 	}
 
 	return 0;
+}
+
+static void dsim_reg_set_esc_clk_en(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	dsim_write_mask(id, DSIM_CLK_CTRL, val, DSIM_CLK_CTRL_ESCCLK_EN);
 }
 
 static void dsim_reg_set_esc_clk_prescaler(u32 id, u32 en, u32 p)
@@ -1004,6 +1025,43 @@ static void dsim_reg_set_video_mode(u32 id, u32 mode)
 	u32 val = mode ? ~0 : 0;
 
 	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_VIDEO_MODE);
+}
+
+static int dsim_reg_wait_idle_status(u32 id, u32 is_vm)
+{
+	u32 cnt = 1000;
+	u32 reg_id, val, status;
+
+	if (is_vm)
+		reg_id = DSIM_LINK_STATUS0;
+	else
+		reg_id = DSIM_LINK_STATUS1;
+
+	do {
+		val = dsim_read(id, reg_id);
+		status = is_vm ? DSIM_LINK_STATUS0_VIDEO_MODE_STATUS_GET(val) :
+				DSIM_LINK_STATUS1_CMD_MODE_STATUS_GET(val);
+		if (status == DSIM_STATUS_IDLE)
+			break;
+		cnt--;
+		udelay(10);
+	} while (cnt);
+
+	if (!cnt) {
+		dsim_err("dsim%d wait timeout idle status(%u)\n", id, status);
+		return -EBUSY;
+	}
+
+	return 0;
+}
+
+/* 0 = command, 1 = video mode */
+static u32 dsim_reg_get_display_mode(u32 id)
+{
+	u32 val;
+
+	val = dsim_read(id, DSIM_CONFIG);
+	return DSIM_CONFIG_DISPLAY_MODE_GET(val);
 }
 
 static void dsim_reg_enable_dsc(u32 id, u32 en)
@@ -2043,8 +2101,11 @@ void dsim_reg_start(u32 id)
 }
 
 /* Unset clocks and lanes and stop_state */
-void dsim_reg_stop(u32 id, u32 lanes)
+int dsim_reg_stop(u32 id, u32 lanes)
 {
+	int err = 0;
+	u32 is_vm;
+
 	dsim_reg_clear_int(id, 0xffffffff);
 	/* disable interrupts */
 	dsim_reg_set_int(id, 0);
@@ -2052,13 +2113,31 @@ void dsim_reg_stop(u32 id, u32 lanes)
 	/* first disable HS clock */
 	if (dsim_reg_set_hs_clock(id, 0) < 0)
 		dsim_err("The CLK lane doesn't be switched to LP mode\n");
-	/* clock source to OSC */
+
+	/* 0. wait the IDLE status */
+	is_vm = dsim_reg_get_display_mode(id);
+	err = dsim_reg_wait_idle_status(id, is_vm);
+	if (err < 0)
+		dsim_err("DSIM status is not IDLE!\n");
+
+	/* 1. clock selection : OSC */
 	dsim_reg_set_link_clock(id, 0);
+
+	/* 2. master resetn */
+	dsim_reg_dphy_resetn(id, 1);
+	/* 3. disable lane */
 	dsim_reg_set_lanes(id, lanes, 0);
+	/* 4. turn off WORDCLK and ESCCLK */
 	dsim_reg_set_esc_clk_on_lane(id, 0, lanes);
+	dsim_reg_set_esc_clk_en(id, 0);
 	dsim_reg_enable_word_clock(id, 0);
+	/* 5. disable PLL */
 	dsim_reg_set_clocks(id, NULL, NULL, 0);
-	dsim_reg_sw_reset(id);
+
+	if (err == 0)
+		dsim_reg_sw_reset(id);
+
+	return err;
 }
 
 /* Exit ULPS mode and set clocks and lanes */

@@ -25,7 +25,10 @@
 #define DSIM_LINK_STATUS0_VM_LINE_CNT_GET(x)		((x >> 0) & 0x1fff)
 
 #define DSIM_LINK_STATUS1				(0xc)
-#define DSIM_LINK_STATUS1_CMD_MODE_STATUS_GET(x)	(x >> 26 & 0x1)
+#define DSIM_LINK_STATUS1_CMD_MODE_STATUS_GET(x)	((x >> 26) & 0x1)
+
+#define DSIM_STATUS_IDLE				0
+#define DSIM_STATUS_ACTIVE				1
 
 #define DSIM_LINK_STATUS3				(0x14)
 #define DSIM_LINK_STATUS3_PLL_STABLE			(1 << 0)
@@ -149,6 +152,7 @@
 #define DSIM_CONFIG_HSA_DISABLE				(1 << 20)
 #define DSIM_CONFIG_CPRS_EN				(1 << 19)
 #define DSIM_CONFIG_VIDEO_MODE				(1 << 18)
+#define DSIM_CONFIG_DISPLAY_MODE_GET(_v)		(((_v) >> 18) & 0x1)
 #define DSIM_CONFIG_VC_ID(_x)				((_x) << 15)
 #define DSIM_CONFIG_VC_ID_MASK				(0x3 << 15)
 #define DSIM_CONFIG_PIXEL_FORMAT(_x)			((_x) << 9)

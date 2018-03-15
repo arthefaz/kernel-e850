@@ -768,7 +768,8 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 	dsim->state = state;
 	mutex_unlock(&dsim->cmd_lock);
 
-	dsim_reg_stop(dsim->id, dsim->data_lane);
+	if (dsim_reg_stop(dsim->id, dsim->data_lane) < 0)
+		__dsim_dump(dsim);
 	disable_irq(dsim->res.irq);
 
 	/* HACK */

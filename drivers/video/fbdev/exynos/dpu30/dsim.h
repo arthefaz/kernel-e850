@@ -365,7 +365,7 @@ void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 s
 void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 		bool panel_ctrl);
 void dsim_reg_start(u32 id);
-void dsim_reg_stop(u32 id, u32 lanes);
+int dsim_reg_stop(u32 id, u32 lanes);
 
 /* ULPS control */
 int dsim_reg_exit_ulps_and_start(u32 id, u32 ddi_type, u32 lanes);
