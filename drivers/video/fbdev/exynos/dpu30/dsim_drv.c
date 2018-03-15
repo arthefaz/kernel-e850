@@ -26,7 +26,7 @@
 #include <linux/of_gpio.h>
 #include <linux/device.h>
 #include <linux/module.h>
-#include <linux/exynos-ss.h>
+#include <linux/debug-snapshot.h>
 #include <video/mipi_display.h>
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
