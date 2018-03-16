@@ -294,6 +294,26 @@ void decon_dpp_stop(struct decon_device *decon, bool do_reset)
 	}
 }
 
+static void decon_free_unused_buf(struct decon_device *decon,
+		struct decon_reg_data *regs, int win, int plane)
+{
+	struct decon_dma_buf_data *dma = &regs->dma_buf_data[win][plane];
+
+	decon_info("%s, win[%d]plane[%d]\n", __func__, win, plane);
+
+	if (dma->attachment && dma->dma_addr)
+		ion_iovmm_unmap(dma->attachment, dma->dma_addr);
+	if (dma->attachment && dma->sg_table)
+		dma_buf_unmap_attachment(dma->attachment,
+				dma->sg_table, DMA_TO_DEVICE);
+	if (dma->dma_buf && dma->attachment)
+		dma_buf_detach(dma->dma_buf, dma->attachment);
+	if (dma->dma_buf)
+		dma_buf_put(dma->dma_buf);
+
+	memset(dma, 0, sizeof(struct decon_dma_buf_data));
+}
+
 static void decon_free_dma_buf(struct decon_device *decon,
 		struct decon_dma_buf_data *dma)
 {
@@ -1247,12 +1267,12 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 		struct decon_win_config *config,
 		struct decon_reg_data *regs)
 {
-	struct dma_buf *buf;
-	struct decon_dma_buf_data dma_buf_data[MAX_PLANE_CNT];
+	struct dma_buf *buf = NULL;
+	struct decon_dma_buf_data *dma_buf_data = NULL;
 	struct displayport_device *displayport;
 	struct dsim_device *dsim;
 	struct device *dev;
-	int ret = 0, i;
+	int i;
 	size_t buf_size = 0;
 
 	decon_dbg("%s +\n", __func__);
@@ -1262,7 +1282,12 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 	regs->plane_cnt[idx] =
 		dpu_get_plane_cnt(config->format, config->dpp_parm.hdr_std);
 
+	memset(&regs->dma_buf_data[idx], 0,
+			sizeof(struct decon_dma_buf_data) * MAX_PLANE_CNT);
+
 	for (i = 0; i < regs->plane_cnt[idx]; ++i) {
+		dma_buf_data = &regs->dma_buf_data[idx][i];
+
 		buf = dma_buf_get(config->fd_idma[i]);
 		if (IS_ERR_OR_NULL(buf)) {
 			decon_err("failed to get dma_buf:%ld\n", PTR_ERR(buf));
@@ -1275,26 +1300,19 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 			dsim = v4l2_get_subdevdata(decon->out_sd[0]);
 			dev = dsim->dev;
 		}
-		buf_size = decon_map_ion_handle(decon, dev, &dma_buf_data[i],
-				buf, idx);
+		buf_size = decon_map_ion_handle(decon, dev, dma_buf_data, buf, idx);
 		if (!buf_size) {
 			decon_err("failed to map buffer\n");
-			ret = -ENOMEM;
-			goto fail_map;
+			return -ENOMEM;
 		}
 
-		regs->dma_buf_data[idx][i] = dma_buf_data[i];
 		/* DVA is passed to DPP parameters structure */
-		config->dpp_parm.addr[i] = dma_buf_data[i].dma_addr;
+		config->dpp_parm.addr[i] = dma_buf_data->dma_addr;
 	}
 
 	decon_dbg("%s -\n", __func__);
 
-	return ret;
-
-fail_map:
-	dma_buf_put(buf);
-	return ret;
+	return 0;
 }
 
 int decon_check_limitation(struct decon_device *decon, int idx,
@@ -1353,7 +1371,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 		struct decon_win_config *config,
 		struct decon_reg_data *regs, int idx)
 {
-	int ret, i;
+	int ret;
 	u32 alpha_length;
 	struct decon_rect r;
 	struct dma_fence *fence = NULL;
@@ -1384,7 +1402,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 		if (!fence) {
 			decon_err("failed to import fence fd\n");
 			ret = -EINVAL;
-			goto err_fdget;
+			goto err;
 		}
 		decon_dbg("acq_fence(%d), fence(%p)\n", config->acq_fence, fence);
 	}
@@ -1419,7 +1437,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 		decon_err("alloc buf size is less than required size ([w%d] alloc=%x : cfg=%x)\n",
 				idx, alloc_size, config_size);
 		ret = -EINVAL;
-		goto err_fdget;
+		goto err;
 	}
 
 	alpha_length = dpu_get_alpha_len(config->format);
@@ -1429,9 +1447,6 @@ static int decon_set_win_buffer(struct decon_device *decon,
 
 	return 0;
 
-err_fdget:
-	for (i = 0; i < regs->plane_cnt[idx]; ++i)
-		decon_free_dma_buf(decon, &regs->dma_buf_data[idx][i]);
 err:
 	return ret;
 }
@@ -2252,7 +2267,7 @@ static int decon_set_win_config(struct decon_device *decon,
 	int num_of_window = 0;
 	struct decon_reg_data *regs;
 	struct sync_file *sync_file;
-	int ret = 0;
+	int i, j, ret = 0;
 	decon_dbg("%s +\n", __func__);
 
 	mutex_lock(&decon->lock);
@@ -2328,8 +2343,13 @@ err_prepare:
 		fput(sync_file->file);
 		put_unused_fd(win_data->retire_fence);
 	}
-	kfree(regs);
 	win_data->retire_fence = -1;
+
+	for (i = 0; i < decon->dt.max_win; i++)
+		for (j = 0; j < regs->plane_cnt[i]; ++j)
+			decon_free_unused_buf(decon, regs, i, j);
+
+	kfree(regs);
 err:
 	mutex_unlock(&decon->lock);
 	return ret;
