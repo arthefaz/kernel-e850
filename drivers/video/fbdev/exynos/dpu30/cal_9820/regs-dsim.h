@@ -15,6 +15,8 @@
 #ifndef _REGS_DSIM_H
 #define _REGS_DSIM_H
 
+#define DSIM_VERSION					(0x0)
+
 #define DSIM_SWRST					(0x4)
 #define DSIM_DPHY_RST					(1 << 16)
 #define DSIM_SWRST_FUNCRST				(1 << 8)

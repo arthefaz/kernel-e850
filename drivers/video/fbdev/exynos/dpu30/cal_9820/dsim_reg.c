@@ -12,6 +12,10 @@
 #include "../dsim.h"
 #include "regs-decon.h"
 
+/* dsim version */
+#define DSIM_VER_EVT0			0x02020000
+#define DSIM_VER_EVT1			0x02030000
+
 /* These definitions are need to guide from AP team */
 #define DSIM_STOP_STATE_CNT		0xA
 #define DSIM_BTA_TIMEOUT		0xff
@@ -887,17 +891,20 @@ static void dsim_reg_set_sync_inform(u32 id, u32 inform)
 	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_SYNC_INFORM);
 }
 
-static void dsim_reg_set_phy_clk_gate(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-	dsim_write_mask(id, 0x200, val, 0x1);
-}
-
 static void dsim_reg_set_pll_clk_gate_enable(u32 id, u32 en)
 {
+	u32 ver, mask, reg_id;
 	u32 val = en ? ~0 : 0;
 
-	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_PLL_CLOCK_GATING);
+	ver = dsim_read(id, DSIM_VERSION);
+	if (ver == DSIM_VER_EVT0) {
+		reg_id = 0x0200;
+		mask = 0x1;
+	} else {
+		reg_id = DSIM_CONFIG;
+		mask = DSIM_CONFIG_PLL_CLOCK_GATING;
+	}
+	dsim_write_mask(id, reg_id, val, mask);
 }
 
 static void dsim_reg_set_pll_sleep_enable(u32 id, u32 en)
@@ -1608,6 +1615,8 @@ static void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info,
 
 	dsim_reg_set_bta_timeout(id);
 	dsim_reg_set_lpdr_timeout(id);
+
+	dsim_reg_set_lpdt(id, 0);
 	dsim_reg_set_stop_state_cnt(id);
 
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
@@ -2053,7 +2062,8 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 	dsim_reg_set_link_clock(id, 0);
 
 	/* disable at EVT0 */
-	dsim_reg_set_phy_clk_gate(id, 1);
+	dsim_reg_set_pll_clk_gate_enable(id, 1);
+	dsim_reg_set_pll_sleep_enable(id, 0);
 
 	/* Enable DPHY reset : DPHY reset start */
 	dsim_reg_dphy_resetn(id, 1);
@@ -2076,12 +2086,8 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 
 	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
 
-	dsim_reg_set_pll_clk_gate_enable(id, 0);
-	dsim_reg_set_pll_sleep_enable(id, 0);
-
 	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
 	dsim_reg_enable_word_clock(id, 1);
-	dsim_reg_set_lpdt(id, 0);
 
 	dsim_reg_set_config(id, lcd_info, clks);
 
