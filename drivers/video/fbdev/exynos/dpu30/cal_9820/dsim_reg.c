@@ -2169,19 +2169,36 @@ int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes)
 	/* disable interrupts */
 	dsim_reg_set_int(id, 0);
 
+	/* 1. turn off clk lane & wait for stopstate_clk */
 	ret = dsim_reg_set_hs_clock(id, 0);
 	if (ret < 0)
 		dsim_err("The CLK lane doesn't be switched to LP mode\n");
 
+	/* 2. enter to ULPS & wait for ulps state of clk and data */
 	dsim_reg_set_ulps_by_ddi(id, ddi_type, lanes, 1);
-	/* clock source to OSC */
-	dsim_reg_set_link_clock(id, 0);
-	dsim_reg_set_lanes(id, lanes, 0);
+
+	/* 3. turn off WORDCLK and ESCCLK */
+	dsim_reg_set_esc_clk_en(id, 0);
+	dsim_reg_enable_word_clock(id, 0);
 	dsim_reg_set_esc_clk_on_lane(id, 0, lanes);
-	/* 20161201 guide from DIP Team */
-	/* dsim_reg_enable_word_clock(id, 0); */
+
+#if 1
+/* Guide of UM */
+	/* 4. wait until user want to wake DSIM up */
+	udelay(200);
+
+	/* 5. turn on WORDCLK and ESCCLK */
+	dsim_reg_set_esc_clk_en(id, 1);
+	dsim_reg_enable_word_clock(id, 1);
+	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
+#else
+	/* to lower power : BLK_DPU off */
+	dsim_reg_set_link_clock(id, 0);
+	dsim_reg_dphy_resetn(id, 1);
+	dsim_reg_set_lanes(id, lanes, 0);
 	dsim_reg_set_clocks(id, NULL, NULL, 0);
 	dsim_reg_sw_reset(id);
+#endif
 	return ret;
 }
 
