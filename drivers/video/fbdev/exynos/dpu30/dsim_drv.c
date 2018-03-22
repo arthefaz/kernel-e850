@@ -67,31 +67,39 @@ static void __dsim_dump(struct dsim_device *dsim)
 	dsim_reg_enable_shadow_read(dsim->id, 0);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			dsim->res.regs, 0xFC, false);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dsim->res.regs + 0x200, 0x4, false);
 
 	dsim_info("=== DSIM %d DPHY SFR DUMP ===\n", dsim->id);
 	/* DPHY dump */
-	/* PMSK */
+	/* PLL */
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-		dsim->res.phy_regs + 0x0c00, 0x40, false);
-	/* CLOCK lane */
+			dsim->res.phy_regs + 0x0100, 0x24, false);
+	/* MC */
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-		dsim->res.phy_regs + 0x1080, 0x40, false);
-
-	/* Data lane : D0 */
+			dsim->res.phy_regs + 0x0300, 0x48, false);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-		dsim->res.phy_regs + 0x1480, 0x30, false);
-
-	/* Data lane : D1 */
+			dsim->res.phy_regs + 0x03E0, 0x10, false);
+	/* MD0 */
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-		dsim->res.phy_regs + 0x1880, 0x30, false);
-
-	/* Data lane : D2 */
+			dsim->res.phy_regs + 0x0400, 0x48, false);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-		dsim->res.phy_regs + 0x1C80, 0x30, false);
-
-	/* Data lane : D3 */
+			dsim->res.phy_regs + 0x04C0, 0x20, false);
+	/* MD1 */
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-		dsim->res.phy_regs + 0x2080, 0x30, false);
+			dsim->res.phy_regs + 0x0500, 0x48, false);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dsim->res.phy_regs + 0x05C0, 0x20, false);
+	/* MD2 */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dsim->res.phy_regs + 0x0600, 0x48, false);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dsim->res.phy_regs + 0x06C0, 0x20, false);
+	/* MD3 */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dsim->res.phy_regs + 0x0700, 0x48, false);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dsim->res.phy_regs + 0x07C0, 0x20, false);
 
 	/* restore to avoid size mismatch (possible config error at DECON) */
 	dsim_reg_enable_shadow_read(dsim->id, 1);
