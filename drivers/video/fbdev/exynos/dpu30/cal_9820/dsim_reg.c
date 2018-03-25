@@ -302,32 +302,32 @@ static void dsim_reg_set_dphy_dither_en(u32 id, u32 en)
 #ifdef DPHY_LOOP
 void dsim_reg_set_dphy_loop_back_test(u32 id)
 {
-	dsim_phy_write_mask(id, 0x0370, 1,(0x3<<0));
-	dsim_phy_write_mask(id, 0x0470, 1,(0x3<<0));
-	dsim_phy_write_mask(id, 0x0570, 1,(0x3<<0));
-	dsim_phy_write_mask(id, 0x0670, 1,(0x3<<0));
-	dsim_phy_write_mask(id, 0x0770, 1,(0x3<<0));
+	dsim_phy_write_mask(id, 0x0370, 1, (0x3 << 0));
+	dsim_phy_write_mask(id, 0x0470, 1, (0x3 << 0));
+	dsim_phy_write_mask(id, 0x0570, 1, (0x3 << 0));
+	dsim_phy_write_mask(id, 0x0670, 1, (0x3 << 0));
+	dsim_phy_write_mask(id, 0x0770, 1, (0x3 << 0));
 }
 
 static void dsim_reg_set_dphy_loop_test(u32 id)
 {
-	dsim_phy_write_mask(id, 0x0374, ~0,(1<<3));
-	dsim_phy_write_mask(id, 0x0474, ~0,(1<<3));
-	dsim_phy_write_mask(id, 0x0574, ~0,(1<<3));
-	dsim_phy_write_mask(id, 0x0674, ~0,(1<<3));
-	dsim_phy_write_mask(id, 0x0774, ~0,(1<<3));
+	dsim_phy_write_mask(id, 0x0374, ~0, (1 << 3));
+	dsim_phy_write_mask(id, 0x0474, ~0, (1 << 3));
+	dsim_phy_write_mask(id, 0x0574, ~0, (1 << 3));
+	dsim_phy_write_mask(id, 0x0674, ~0, (1 << 3));
+	dsim_phy_write_mask(id, 0x0774, ~0, (1 << 3));
 
-	dsim_phy_write_mask(id, 0x0374, 0x6,(0x7<<0));
-	dsim_phy_write_mask(id, 0x0474, 0x6,(0x7<<0));
-	dsim_phy_write_mask(id, 0x0574, 0x6,(0x7<<0));
-	dsim_phy_write_mask(id, 0x0674, 0x6,(0x7<<0));
-	dsim_phy_write_mask(id, 0x0774, 0x6,(0x7<<0));
+	dsim_phy_write_mask(id, 0x0374, 0x6, (0x7 << 0));
+	dsim_phy_write_mask(id, 0x0474, 0x6, (0x7 << 0));
+	dsim_phy_write_mask(id, 0x0574, 0x6, (0x7 << 0));
+	dsim_phy_write_mask(id, 0x0674, 0x6, (0x7 << 0));
+	dsim_phy_write_mask(id, 0x0774, 0x6, (0x7 << 0));
 
-	dsim_phy_write_mask(id, 0x037c, 0x2,(0xffff<<0));
-	dsim_phy_write_mask(id, 0x047c, 0x2,(0xffff<<0));
-	dsim_phy_write_mask(id, 0x057c, 0x2,(0xffff<<0));
-	dsim_phy_write_mask(id, 0x067c, 0x2,(0xffff<<0));
-	dsim_phy_write_mask(id, 0x077c, 0x2,(0xffff<<0));
+	dsim_phy_write_mask(id, 0x037c, 0x2, (0xffff << 0));
+	dsim_phy_write_mask(id, 0x047c, 0x2, (0xffff << 0));
+	dsim_phy_write_mask(id, 0x057c, 0x2, (0xffff << 0));
+	dsim_phy_write_mask(id, 0x067c, 0x2, (0xffff << 0));
+	dsim_phy_write_mask(id, 0x077c, 0x2, (0xffff << 0));
 }
 #endif
 
@@ -526,7 +526,7 @@ static void dsim_reg_set_bias_con(u32 id, u32 *blk_ctl)
 {
 	u32 i;
 
-	for (i = 0 ; i < 5 ; i++)
+	for (i = 0; i < 5; i++)
 		dsim_phy_bias_write(id, DSIM_PHY_BIAS_CON(i), blk_ctl[i]);
 }
 
@@ -535,7 +535,7 @@ static void dsim_reg_set_pll_con(u32 id, u32 *blk_ctl)
 {
 	u32 i;
 
-	for (i = 0 ; i < 8 ; i++)
+	for (i = 0; i < 8; i++)
 		dsim_phy_write(id, DSIM_PHY_PLL_CON(i), blk_ctl[i]);
 }
 
@@ -544,7 +544,7 @@ static void dsim_reg_set_mc_gnr_con(u32 id, u32 *blk_ctl)
 {
 	u32 i;
 
-	for (i = 0 ; i < 2 ; i++)
+	for (i = 0; i < 2; i++)
 		dsim_phy_write(id, DSIM_PHY_MC_GNR_CON(i), blk_ctl[i]);
 }
 
@@ -553,7 +553,7 @@ static void dsim_reg_set_mc_ana_con(u32 id, u32 *blk_ctl)
 {
 	u32 i;
 
-	for (i = 0 ; i < 2 ; i++)
+	for (i = 0; i < 2; i++)
 		dsim_phy_write(id, DSIM_PHY_MC_ANA_CON(i), blk_ctl[i]);
 }
 

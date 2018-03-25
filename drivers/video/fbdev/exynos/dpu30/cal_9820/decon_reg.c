@@ -1192,23 +1192,20 @@ static u32 dsc_cmp_pps_enc_dec(struct decon_dsc *p_enc, struct decon_dsc *p_dec)
 	if (p_enc->scale_increment_interval !=
 			p_dec->scale_increment_interval) {
 		diff_cnt++;
-		decon_dbg("[dsc_pps] scale_increment_interval\
-						(enc:dec = %d:%d)\n",
+		decon_dbg("[dsc_pps] scale_inc_interval (enc:dec = %d:%d)\n",
 					p_enc->scale_increment_interval,
 					p_dec->scale_increment_interval);
 	}
 	if (p_enc->scale_decrement_interval !=
 			p_dec->scale_decrement_interval) {
 		diff_cnt++;
-		decon_dbg("[dsc_pps] scale_decrement_interval\
-						(enc:dec = %d:%d)\n",
+		decon_dbg("[dsc_pps] scale_dec_interval (enc:dec = %d:%d)\n",
 					p_enc->scale_decrement_interval,
 					p_dec->scale_decrement_interval);
 	}
 	if (p_enc->first_line_bpg_offset != p_dec->first_line_bpg_offset) {
 		diff_cnt++;
-		decon_dbg("[dsc_pps] first_line_bpg_offset\
-						(enc:dec = %d:%d)\n",
+		decon_dbg("[dsc_pps] first_line_bpg_offset (enc:dec = %d:%d)\n",
 					p_enc->first_line_bpg_offset,
 					p_dec->first_line_bpg_offset);
 	}

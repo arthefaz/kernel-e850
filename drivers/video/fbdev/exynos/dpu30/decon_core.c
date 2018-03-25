@@ -2222,9 +2222,8 @@ static int decon_prepare_win_config(struct decon_device *decon,
 
 			regs->num_of_window++;
 			ret = decon_set_win_buffer(decon, config, regs, i);
-			if (!ret) {
+			if (!ret)
 				color_map = false;
-			}
 
 			regs->is_cursor_win[i] = false;
 			if (config->state == DECON_WIN_STATE_CURSOR) {
@@ -2955,7 +2954,7 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 
 	dev_info(decon->dev, "want %u bytes for window[%d]\n", size, win->idx);
 
-	buf= ion_alloc_dmabuf("ion_system_heap", (size_t)size, 0);
+	buf = ion_alloc_dmabuf("ion_system_heap", (size_t)size, 0);
 	if (IS_ERR(buf)) {
 		dev_err(decon->dev, "ion_share_dma_buf() failed\n");
 		goto err_share_dma_buf;

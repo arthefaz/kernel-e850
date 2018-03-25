@@ -144,9 +144,8 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	p->y_2b_strd = 0;
 	p->c_2b_strd = 0;
 
-	if (p->format == DECON_PIXEL_FORMAT_NV12N) {
+	if (p->format == DECON_PIXEL_FORMAT_NV12N)
 		p->addr[1] = NV12N_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
-	}
 
 	if (p->format == DECON_PIXEL_FORMAT_NV12M_S10B || p->format == DECON_PIXEL_FORMAT_NV21M_S10B) {
 		p->addr[2] = p->addr[0] + NV12M_Y_SIZE(p->src.f_w, p->src.f_h);
