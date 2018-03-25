@@ -516,8 +516,7 @@ void dpu_set_win_update_config(struct decon_device *decon,
 	if (regs == NULL) {
 		regs = kzalloc(sizeof(struct decon_reg_data), GFP_KERNEL);
 		if (!regs) {
-			decon_err("%s:set window update config fail\
-					reg_data allocation fail\n", __func__);
+			decon_err("%s: reg_data allocation fail\n", __func__);
 			return;
 		}
 		DPU_FULL_RECT(&regs->up_region, decon->lcd_info);
