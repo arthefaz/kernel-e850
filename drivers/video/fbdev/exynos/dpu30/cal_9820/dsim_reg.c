@@ -1263,6 +1263,15 @@ static void dsim_reg_set_link_clock(u32 id, u32 en)
 	dsim_write_mask(id, DSIM_CLK_CTRL, val, DSIM_CLK_CTRL_CLOCK_SEL);
 }
 
+static int dsim_reg_get_link_clock(u32 id)
+{
+	int val = 0;
+
+	val = dsim_read_mask(id, DSIM_CLK_CTRL, DSIM_CLK_CTRL_CLOCK_SEL);
+
+	return val;
+}
+
 static void dsim_reg_enable_hs_clock(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
@@ -2073,6 +2082,13 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 #if !defined(CONFIG_EXYNOS_LCD_ON_UBOOT)
 	struct dsim_device *dsim = get_dsim_drvdata(id);
 #endif
+	if (dsim->state == DSIM_STATE_INIT) {
+		if (dsim_reg_get_link_clock(dsim->id)) {
+			dsim_info("dsim%d is already enabled in bootloader\n", dsim->id);
+			return;
+		}
+	}
+
 	/* DPHY power on : iso release */
 	dpu_dphy_isolation_control(1);
 
