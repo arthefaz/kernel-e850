@@ -825,12 +825,12 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 		is_yuv = 1;
 		break;
 	case DECON_PIXEL_FORMAT_NV16:
-		fmt = IDMA_IMG_FORMAT_YUV422_2P;
+		fmt = IDMA_IMG_FORMAT_YVU422_2P;
 		fmt_type = DPP_IMG_FORMAT_YUV422_8P;
 		is_yuv = 1;
 		break;
 	case DECON_PIXEL_FORMAT_NV61:
-		fmt = IDMA_IMG_FORMAT_YVU422_2P;
+		fmt = IDMA_IMG_FORMAT_YUV422_2P;
 		fmt_type = DPP_IMG_FORMAT_YUV422_8P;
 		is_yuv = 1;
 		break;
@@ -847,10 +847,12 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 	case DECON_PIXEL_FORMAT_NV16M_S10B:
 		fmt = IDMA_IMG_FORMAT_YUV422_8P2;
 		fmt_type = DPP_IMG_FORMAT_YUV422_8P2;
+		is_yuv = 1;
 		break;
 	case DECON_PIXEL_FORMAT_NV61M_S10B:
 		fmt = IDMA_IMG_FORMAT_YVU422_8P2;
 		fmt_type = DPP_IMG_FORMAT_YUV422_8P2;
+		is_yuv = 1;
 		break;
 	default:
 		dpp_err("Unsupported Format\n");
