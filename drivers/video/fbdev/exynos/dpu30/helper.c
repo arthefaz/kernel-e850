@@ -76,6 +76,7 @@ int dpu_get_sd_by_drvname(struct decon_device *decon, char *drvname)
 u32 dpu_translate_fmt_to_dpp(u32 format)
 {
 	switch (format) {
+	/* YUV420 */
 	case DECON_PIXEL_FORMAT_NV12:
 		return DECON_PIXEL_FORMAT_NV21;
 	case DECON_PIXEL_FORMAT_NV21:
@@ -96,6 +97,12 @@ u32 dpu_translate_fmt_to_dpp(u32 format)
 		return DECON_PIXEL_FORMAT_YVU420M;
 	case DECON_PIXEL_FORMAT_YVU420M:
 		return DECON_PIXEL_FORMAT_YUV420M;
+	/* YUV422 */
+	case DECON_PIXEL_FORMAT_NV16:
+		return DECON_PIXEL_FORMAT_NV61;
+	case DECON_PIXEL_FORMAT_NV61:
+		return DECON_PIXEL_FORMAT_NV16;
+	/* RGB32 */
 	case DECON_PIXEL_FORMAT_ARGB_8888:
 		return DECON_PIXEL_FORMAT_BGRA_8888;
 	case DECON_PIXEL_FORMAT_ABGR_8888:
@@ -136,13 +143,6 @@ u32 dpu_get_bpp(enum decon_pixel_format fmt)
 
 	case DECON_PIXEL_FORMAT_RGBA_5551:
 	case DECON_PIXEL_FORMAT_RGB_565:
-	case DECON_PIXEL_FORMAT_NV16:
-	case DECON_PIXEL_FORMAT_NV61:
-	case DECON_PIXEL_FORMAT_YVU422_3P:
-	case DECON_PIXEL_FORMAT_NV16M_P210:
-	case DECON_PIXEL_FORMAT_NV61M_P210:
-	case DECON_PIXEL_FORMAT_NV16M_S10B:
-	case DECON_PIXEL_FORMAT_NV61M_S10B:
 		return 16;
 
 	case DECON_PIXEL_FORMAT_NV12N_10B:
@@ -150,6 +150,11 @@ u32 dpu_get_bpp(enum decon_pixel_format fmt)
 	case DECON_PIXEL_FORMAT_NV21M_S10B:
 	case DECON_PIXEL_FORMAT_NV12M_P010:
 	case DECON_PIXEL_FORMAT_NV21M_P010:
+	/* YUV422 */
+	case DECON_PIXEL_FORMAT_NV16M_P210:
+	case DECON_PIXEL_FORMAT_NV61M_P210:
+	case DECON_PIXEL_FORMAT_NV16M_S10B:
+	case DECON_PIXEL_FORMAT_NV61M_S10B:
 		return 15;
 
 	case DECON_PIXEL_FORMAT_NV12:
@@ -161,6 +166,10 @@ u32 dpu_get_bpp(enum decon_pixel_format fmt)
 	case DECON_PIXEL_FORMAT_YUV420M:
 	case DECON_PIXEL_FORMAT_YVU420M:
 	case DECON_PIXEL_FORMAT_NV12N:
+	/* YUV422 */
+	case DECON_PIXEL_FORMAT_NV16:
+	case DECON_PIXEL_FORMAT_NV61:
+	case DECON_PIXEL_FORMAT_YVU422_3P:
 		return 12;
 
 	default:
@@ -208,10 +217,15 @@ int dpu_get_meta_plane_cnt(enum decon_pixel_format format)
 	case DECON_PIXEL_FORMAT_NV21M_P010:
 	case DECON_PIXEL_FORMAT_NV12M_S10B:
 	case DECON_PIXEL_FORMAT_NV21M_S10B:
+	/* 9820 */
+	case DECON_PIXEL_FORMAT_NV16M_P210:
+	case DECON_PIXEL_FORMAT_NV61M_P210:
+	case DECON_PIXEL_FORMAT_NV16M_S10B:
+	case DECON_PIXEL_FORMAT_NV61M_S10B:
 		return 2;
 
 	default:
-		decon_err("invalid format(%d)\n", format);
+		decon_err("%s: invalid format(%d)\n", __func__, format);
 		return -1;
 	}
 }
@@ -254,6 +268,11 @@ int dpu_get_plane_cnt(enum decon_pixel_format format, bool is_hdr)
 	case DECON_PIXEL_FORMAT_NV21M_P010:
 	case DECON_PIXEL_FORMAT_NV12M_S10B:
 	case DECON_PIXEL_FORMAT_NV21M_S10B:
+	/* 9820 */
+	case DECON_PIXEL_FORMAT_NV16M_P210:
+	case DECON_PIXEL_FORMAT_NV61M_P210:
+	case DECON_PIXEL_FORMAT_NV16M_S10B:
+	case DECON_PIXEL_FORMAT_NV61M_S10B:
 		if (is_hdr)
 			return 3;
 		else
@@ -267,7 +286,7 @@ int dpu_get_plane_cnt(enum decon_pixel_format format, bool is_hdr)
 		return 3;
 
 	default:
-		decon_err("invalid format(%d)\n", format);
+		decon_err("%s: invalid format(%d)\n", __func__, format);
 		return 1;
 	}
 }
