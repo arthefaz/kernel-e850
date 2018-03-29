@@ -396,7 +396,7 @@ static void dpp_reg_set_csc_params(u32 id, u32 csc_eq)
 {
 	u32 type = (csc_eq >> CSC_STANDARD_SHIFT) & 0x3F;
 	u32 range = (csc_eq >> CSC_RANGE_SHIFT) & 0x7;
-	u32 mode = (csc_eq <= CSC_DCI_P3) ? CSC_COEF_HARDWIRED : CSC_COEF_CUSTOMIZED;
+	u32 mode = (type <= CSC_DCI_P3) ? CSC_COEF_HARDWIRED : CSC_COEF_CUSTOMIZED;
 	u32 val, mask;
 
 	val = (DPP_CSC_TYPE(type) | DPP_CSC_RANGE(range) | DPP_CSC_MODE(mode));
@@ -1062,7 +1062,7 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 	/* configure coordinates and size of IDMA, DPP, ODMA and WB MUX */
 	dma_dpp_reg_set_coordinates(id, p, attr);
 
-	if (test_bit(DPP_ATTR_ROT, &attr))
+	if (test_bit(DPP_ATTR_ROT, &attr) || test_bit(DPP_ATTR_FLIP, &attr))
 		idma_reg_set_rotation(id, p->rot);
 
 	/* configure base address of IDMA and ODMA */
