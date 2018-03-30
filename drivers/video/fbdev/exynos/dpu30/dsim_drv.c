@@ -684,10 +684,9 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 
 	/* DPHY reset control from DSIM */
 	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 1);
-#if 0
+
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
-#endif
 
 	panel_ctrl = (state == DSIM_STATE_ON) ? true : false;
 	dsim_reg_init(dsim->id, &dsim->lcd_info, &dsim->clks, panel_ctrl);
@@ -782,10 +781,9 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 		__dsim_dump(dsim);
 	disable_irq(dsim->res.irq);
 
-#if 0
 	/* HACK */
 	phy_power_off(dsim->phy);
-#endif
+
 	if (state == DSIM_STATE_OFF)
 		dsim_set_panel_power(dsim, 0);
 
@@ -1378,6 +1376,20 @@ static int dsim_init_resources(struct dsim_device *dsim, struct platform_device 
 		return -EINVAL;
 	}
 
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+	if (!res) {
+		dsim_info("no extra dphy resource\n");
+	} else {
+		dsim_info("dphy_extra res: start(0x%x), end(0x%x)\n",
+				(u32)res->start, (u32)res->end);
+
+		dsim->res.phy_regs_ex = devm_ioremap_resource(dsim->dev, res);
+		if (!dsim->res.phy_regs_ex) {
+			dsim_err("failed to remap DSIM DPHY(EXTRA) SFR region\n");
+			return -EINVAL;
+		}
+	}
+
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!res) {
 		dsim_err("failed to get irq resource\n");
@@ -1453,13 +1465,7 @@ static int dsim_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_dt;
 
-#if 0
-	/* HACK */
 	phy_init(dsim->phy);
-	/* [9820] HACK:M4S4 power enable for bias control */
-	#define EXYNOS_MIPI_PHY_ISO_BYPASS  (1 << 0)
-	exynos_pmu_update(0x70c, EXYNOS_MIPI_PHY_ISO_BYPASS, EXYNOS_MIPI_PHY_ISO_BYPASS);
-#endif
 
 	dsim->state = DSIM_STATE_INIT;
 	dsim_enable(dsim);
