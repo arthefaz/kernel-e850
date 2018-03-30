@@ -164,6 +164,7 @@
 #define DSIM_CONFIG_NUM_OF_DATA_LANE(_x)		((_x) << 5)
 #define DSIM_CONFIG_NUM_OF_DATA_LANE_MASK		(0x3 << 5)
 #define DSIM_CONFIG_LANES_EN(_x)			(((_x) & 0x1f) << 0)
+#define DSIM_CONFIG_CLK_LANES_EN			(1 << 0)
 
 /* Interrupt source register */
 #define DSIM_INTSRC					(0x50)

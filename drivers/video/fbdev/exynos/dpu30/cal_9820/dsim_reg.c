@@ -891,6 +891,10 @@ static void dsim_reg_set_sync_inform(u32 id, u32 inform)
 	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_SYNC_INFORM);
 }
 
+#if 0
+/*
+ * Following functions will not be used untile the correct guide is given.
+ */
 static void dsim_reg_set_pll_clk_gate_enable(u32 id, u32 en)
 {
 	u32 ver, mask, reg_id;
@@ -907,12 +911,14 @@ static void dsim_reg_set_pll_clk_gate_enable(u32 id, u32 en)
 	dsim_write_mask(id, reg_id, val, mask);
 }
 
+/* This function is available from EVT1 */
 static void dsim_reg_set_pll_sleep_enable(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
 	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_PLL_SLEEP);
 }
+#endif
 
 /* 0=D-PHY, 1=C-PHY */
 void dsim_reg_set_phy_selection(u32 id, u32 sel)
@@ -1868,6 +1874,11 @@ static int dsim_reg_set_lanes(u32 id, u32 lanes, u32 en)
 	/* LINK lanes */
 	dsim_reg_enable_lane(id, lanes, en);
 
+	return 0;
+}
+
+static int dsim_reg_set_lanes_dphy(u32 id, u32 lanes, u32 en)
+{
 	/* PHY lanes */
 	if (dsim_reg_enable_lane_phy(id, (lanes >> 1), en))
 		return -EBUSY;
@@ -2001,11 +2012,11 @@ static int dsim_reg_set_smddi_ulps(u32 id, u32 en, u32 lanes)
 		/* wait at least 1ms : Twakeup time for MARK1 state */
 		udelay(1000);
 
-		/* Clear ULPS exit request */
-		dsim_reg_exit_ulps(id, 0);
-
 		/* Clear ULPS enter request */
 		dsim_reg_enter_ulps(id, 0);
+
+		/* Clear ULPS exit request */
+		dsim_reg_exit_ulps(id, 0);
 	}
 
 	return ret;
@@ -2077,10 +2088,6 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 	/* choose OSC_CLK */
 	dsim_reg_set_link_clock(id, 0);
 
-	/* disable at EVT0 */
-	dsim_reg_set_pll_clk_gate_enable(id, 1);
-	dsim_reg_set_pll_sleep_enable(id, 0);
-
 	/* Enable DPHY reset : DPHY reset start */
 	dsim_reg_dphy_resetn(id, 1);
 
@@ -2092,13 +2099,14 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 		dsim_set_panel_power(dsim, 1);
 #endif
 
-	dsim_reg_sw_reset(id);
-
 	dsim_reg_set_clocks(id, clks, &lcd_info->dphy_pms, 1);
 
 	lanes = dsim_reg_translate_lanecnt_to_lanes(lcd_info->data_lane);
-	dsim_reg_set_lanes(id, lanes, 1);
+	dsim_reg_set_lanes_dphy(id, lanes, 1);
 	dsim_reg_dphy_resetn(id, 0); /* Release DPHY reset */
+
+	dsim_reg_sw_reset(id);
+	dsim_reg_set_lanes(id, lanes, 1);
 
 	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
 
@@ -2148,7 +2156,7 @@ int dsim_reg_stop(u32 id, u32 lanes)
 	/* 2. master resetn */
 	dsim_reg_dphy_resetn(id, 1);
 	/* 3. disable lane */
-	dsim_reg_set_lanes(id, lanes, 0);
+	dsim_reg_set_lanes_dphy(id, lanes, 0);
 	/* 4. turn off WORDCLK and ESCCLK */
 	dsim_reg_set_esc_clk_on_lane(id, 0, lanes);
 	dsim_reg_set_esc_clk_en(id, 0);
@@ -2186,6 +2194,7 @@ int dsim_reg_exit_ulps_and_start(u32 id, u32 ddi_type, u32 lanes)
 int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes)
 {
 	int ret = 0;
+	u32 is_vm;
 
 	dsim_reg_clear_int(id, 0xffffffff);
 	/* disable interrupts */
@@ -2199,28 +2208,21 @@ int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes)
 	/* 2. enter to ULPS & wait for ulps state of clk and data */
 	dsim_reg_set_ulps_by_ddi(id, ddi_type, lanes, 1);
 
-	/* 3. turn off WORDCLK and ESCCLK */
-	dsim_reg_set_esc_clk_en(id, 0);
-	dsim_reg_enable_word_clock(id, 0);
-	dsim_reg_set_esc_clk_on_lane(id, 0, lanes);
-
-#if 1
-/* Guide of UM */
-	/* 4. wait until user want to wake DSIM up */
-	udelay(200);
-
-	/* 5. turn on WORDCLK and ESCCLK */
-	dsim_reg_set_esc_clk_en(id, 1);
-	dsim_reg_enable_word_clock(id, 1);
-	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
-#else
-	/* to lower power : BLK_DPU off */
+	/* 3. sequence for BLK_DPU off */
+	/* 3.1 wait idle */
+	is_vm = dsim_reg_get_display_mode(id);
+	ret = dsim_reg_wait_idle_status(id, is_vm);
+	if (ret < 0)
+		dsim_err("%s : DSIM_status is not IDLE!\n", __func__);
+	/* 3.2 OSC clock */
 	dsim_reg_set_link_clock(id, 0);
+	/* 3.3 off DPHY */
 	dsim_reg_dphy_resetn(id, 1);
-	dsim_reg_set_lanes(id, lanes, 0);
+	dsim_reg_set_lanes_dphy(id, lanes, 0);
 	dsim_reg_set_clocks(id, NULL, NULL, 0);
+	/* 3.4 sw reset */
 	dsim_reg_sw_reset(id);
-#endif
+
 	return ret;
 }
 
