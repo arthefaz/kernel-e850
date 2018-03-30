@@ -527,7 +527,7 @@ static void dsim_reg_set_bias_con(u32 id, u32 *blk_ctl)
 	u32 i;
 
 	for (i = 0; i < 5; i++)
-		dsim_phy_bias_write(id, DSIM_PHY_BIAS_CON(i), blk_ctl[i]);
+		dsim_phy_extra_write(id, DSIM_PHY_BIAS_CON(i), blk_ctl[i]);
 }
 
 /* PLL Control Register */
@@ -2038,21 +2038,6 @@ static int dsim_reg_set_ulps_by_ddi(u32 id, u32 ddi_type, u32 lanes, u32 en)
 
 /******************** EXPORTED DSIM CAL APIs ********************/
 
-void dpu_dphy_isolation_control(int en)
-{
-	int val;
-	void __iomem *dphy_iso;
-
-	val = (en << 0);
-	dphy_iso = ioremap(0x1586070c, 0x4);
-	writel(val, dphy_iso);
-	iounmap(dphy_iso);
-
-	dphy_iso = ioremap(0x15860710, 0x4);
-	writel(val, dphy_iso);
-	iounmap(dphy_iso);
-}
-
 void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 sel)
 {
 	u32 phy_num = dsim_id ? 0 : 1;
@@ -2088,9 +2073,6 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 			return;
 		}
 	}
-
-	/* DPHY power on : iso release */
-	dpu_dphy_isolation_control(1);
 
 	/* choose OSC_CLK */
 	dsim_reg_set_link_clock(id, 0);
@@ -2176,8 +2158,6 @@ int dsim_reg_stop(u32 id, u32 lanes)
 
 	if (err == 0)
 		dsim_reg_sw_reset(id);
-
-	dpu_dphy_isolation_control(0);
 
 	return err;
 }

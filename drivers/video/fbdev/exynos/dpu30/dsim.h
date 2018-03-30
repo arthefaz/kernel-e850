@@ -203,6 +203,7 @@ struct dsim_resources {
 	void __iomem *regs;
 	void __iomem *ss_regs;
 	void __iomem *phy_regs;
+	void __iomem *phy_regs_ex;
 };
 
 struct dsim_device {
@@ -332,13 +333,11 @@ static inline u32 dsim_phy_read_mask(u32 id, u32 reg_id, u32 mask)
 	val &= (mask);
 	return val;
 }
-static inline void dsim_phy_bias_write(u32 id, u32 reg_id, u32 val)
+static inline void dsim_phy_extra_write(u32 id, u32 reg_id, u32 val)
 {
-	void __iomem *reg;
+	struct dsim_device *dsim = get_dsim_drvdata(id);
 
-	reg = ioremap(0x19160000, 0x20);
-	writel(val, reg + reg_id);
-	iounmap(reg);
+	writel(val, dsim->res.phy_regs_ex + reg_id);
 }
 static inline void dsim_phy_write(u32 id, u32 reg_id, u32 val)
 {
