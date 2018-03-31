@@ -21,8 +21,10 @@
 #include "./panels/decon_lcd.h"
 #if defined(CONFIG_SOC_EXYNOS9810)
 #include "./cal_9810/regs-dsim.h"
+#include "./cal_9810/dsim_cal.h"
 #else
 #include "./cal_9820/regs-dsim.h"
+#include "./cal_9820/dsim_cal.h"
 #endif
 
 #if defined(CONFIG_EXYNOS_DECON_LCD_S6E3HA2K)
@@ -45,7 +47,6 @@ extern int dsim_log_level;
 #define DSIM_PIXEL_FORMAT_RGB18			0x2E
 #define DSIM_PIXEL_FORMAT_RGB30_PACKED		0x0D
 #define DSIM_RX_FIFO_MAX_DEPTH			64
-#define MAX_DSIM_CNT				2
 #define MAX_DSIM_DATALANE_CNT			4
 
 #define MIPI_WR_TIMEOUT				msecs_to_jiffies(50)
@@ -167,13 +168,6 @@ struct dsim_pll_param {
 	u32 s;
 	u32 k;
 	u32 pll_freq; /* in/out parameter: Mhz */
-};
-
-struct dsim_clks {
-	u32 hs_clk;
-	u32 esc_clk;
-	u32 byte_clk;
-	u32 word_clk;
 };
 
 struct dphy_timing_value {
@@ -355,44 +349,6 @@ static inline void dsim_phy_write_mask(u32 id, u32 reg_id, u32 val, u32 mask)
 	writel(val, dsim->res.phy_regs + reg_id);
 	/* printk("offset : 0x%8x, value : 0x%x\n", reg_id, val); */
 }
-
-/*************** DSIM CAL APIs exposed to DSIM driver ***************/
-/* DPHY system register control */
-void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 sel);
-
-/* DSIM control */
-void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
-		bool panel_ctrl);
-void dsim_reg_start(u32 id);
-int dsim_reg_stop(u32 id, u32 lanes);
-
-/* ULPS control */
-int dsim_reg_exit_ulps_and_start(u32 id, u32 ddi_type, u32 lanes);
-int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes);
-
-/* DSIM interrupt control */
-int dsim_reg_get_int_and_clear(u32 id);
-void dsim_reg_clear_int(u32 id, u32 int_src);
-
-/* DSIM read/write command control */
-void dsim_reg_wr_tx_header(u32 id, u32 d_id, unsigned long d0, u32 d1, u32 bta);
-void dsim_reg_wr_tx_payload(u32 id, u32 payload);
-u32 dsim_reg_header_fifo_is_empty(u32 id);
-u32 dsim_reg_is_writable_fifo_state(u32 id);
-u32 dsim_reg_get_rx_fifo(u32 id);
-u32 dsim_reg_rx_fifo_is_empty(u32 id);
-int dsim_reg_rx_err_handler(u32 id, u32 rx_fifo);
-
-/* For reading DSIM shadow SFR */
-void dsim_reg_enable_shadow_read(u32 id, u32 en);
-
-/* For window update and multi resolution feature */
-void dsim_reg_function_reset(u32 id);
-void dsim_reg_set_partial_update(u32 id, struct decon_lcd *lcd_info);
-void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info);
-
-/* DSIM BIST for test */
-void dsim_reg_set_bist(u32 id, u32 en);
 
 /* DPHY loop back for test */
 #ifdef DPHY_LOOP
