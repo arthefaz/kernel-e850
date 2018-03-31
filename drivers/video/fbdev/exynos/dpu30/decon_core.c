@@ -3570,6 +3570,7 @@ static int decon_probe(struct platform_device *pdev)
 
 	dpu_init_win_update(decon);
 	decon_init_low_persistence_mode(decon);
+	dpu_init_cursor_mode(decon);
 
 #if defined(CONFIG_EXYNOS9820_BTS)
 	decon->bts.ops = &decon_bts_control;
