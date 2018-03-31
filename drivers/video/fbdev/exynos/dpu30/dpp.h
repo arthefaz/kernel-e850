@@ -33,54 +33,15 @@
 #include "./cal_9810/regs-dpp.h"
 #else
 #include "./cal_9820/regs-dpp.h"
+#include "./cal_9820/dpp_cal.h"
 #endif
 
 extern int dpp_log_level;
 
 #define DPP_MODULE_NAME		"exynos-dpp"
-#define MAX_DPP_CNT		6
 
 /* about 1msec @ ACLK=630MHz */
 #define INIT_RCV_NUM		630000
-
-#define SRC_SIZE_MULTIPLE	1
-#define SRC_WIDTH_MIN		16
-#define SRC_WIDTH_MAX		65534
-#define SRC_HEIGHT_MIN		16
-#define SRC_HEIGHT_MAX		8190
-#define IMG_SIZE_MULTIPLE	1
-#define IMG_WIDTH_MIN		16
-#define IMG_WIDTH_MAX		4096
-#define IMG_HEIGHT_MIN		16
-#define IMG_HEIGHT_MAX		4096
-#define IMG_ROT_HEIGHT_MAX	2160
-#define SRC_OFFSET_MULTIPLE	1
-
-#define SCALED_WIDTH_MIN	16
-#define SCALED_WIDTH_MAX	4096
-#define SCALED_HEIGHT_MIN	16
-#define SCALED_HEIGHT_MAX	4096
-#define SCALED_SIZE_MULTIPLE	1
-#define SCALED_SIZE_MULTIPLE	1
-
-#define BLK_WIDTH_MIN		4
-#define BLK_WIDTH_MAX		4096
-#define BLK_HEIGHT_MIN		1
-#define BLK_HEIGHT_MAX		4096
-#define BLK_SIZE_MULTIPLE	1
-#define BLK_SIZE_MULTIPLE	1
-
-#define DST_SIZE_MULTIPLE	1
-#define DST_SIZE_WIDTH_MIN	16
-#define DST_SIZE_WIDTH_MAX	8190
-#define DST_SIZE_HEIGHT_MIN	16
-#define DST_SIZE_HEIGHT_MAX	8190
-#define DST_OFFSET_MULTIPLE	1
-#define DST_IMG_MULTIPLE	1
-#define DST_IMG_WIDTH_MIN	16
-#define DST_IMG_WIDTH_MAX	4096
-#define DST_IMG_HEIGHT_MIN	16
-#define DST_IMG_HEIGHT_MAX	4096
 
 #define check_align(width, height, align_w, align_h)\
 	(IS_ALIGNED(width, align_w) && IS_ALIGNED(height, align_h))
@@ -121,55 +82,6 @@ extern int dpp_log_level;
 	} while (0)
 
 /* TODO: This will be removed */
-struct dpp_size_constraints {
-	u32		src_mul_w;
-	u32		src_mul_h;
-	u32		src_w_min;
-	u32		src_w_max;
-	u32		src_h_min;
-	u32		src_h_max;
-	u32		img_mul_w;
-	u32		img_mul_h;
-	u32		img_w_min;
-	u32		img_w_max;
-	u32		img_h_min;
-	u32		img_h_max;
-	u32		blk_w_min;
-	u32		blk_w_max;
-	u32		blk_h_min;
-	u32		blk_h_max;
-	u32		blk_mul_w;
-	u32		blk_mul_h;
-	u32		src_mul_x;
-	u32		src_mul_y;
-	u32		sca_w_min;
-	u32		sca_w_max;
-	u32		sca_h_min;
-	u32		sca_h_max;
-	u32		sca_mul_w;
-	u32		sca_mul_h;
-	u32		dst_mul_w;
-	u32		dst_mul_h;
-	u32		dst_w_min;
-	u32		dst_w_max;
-	u32		dst_h_min;
-	u32		dst_h_max;
-	u32		dst_mul_x;
-	u32		dst_mul_y;
-};
-
-struct dpp_img_format {
-	u32		vgr;
-	u32		normal;
-	u32		rot;
-	u32		scale;
-	u32		format;
-	u32		afbc_en;
-	u32		yuv;
-	u32		yuv422;
-	u32		yuv420;
-	u32		wb;
-};
 
 enum dpp_csc_defs {
 	/* csc_type */
@@ -245,31 +157,6 @@ struct dpp_device {
 	spinlock_t slock;
 	spinlock_t dma_slock;
 	struct mutex lock;
-};
-
-struct dpp_params_info {
-	struct decon_frame src;
-	struct decon_frame dst;
-	struct decon_win_rect block;
-	u32 rot;
-
-	enum dpp_hdr_standard hdr;
-	u32 min_luminance;
-	u32 max_luminance;
-	bool is_4p;
-	u32 y_2b_strd;
-	u32 c_2b_strd;
-
-	bool is_comp;
-	bool is_scale;
-	bool is_block;
-	enum decon_pixel_format format;
-	dma_addr_t addr[MAX_PLANE_ADDR_CNT];
-	enum dpp_csc_eq eq_mode;
-	int h_ratio;
-	int v_ratio;
-
-	unsigned long rcv_num;
 };
 
 extern struct dpp_device *dpp_drvdata[MAX_DPP_CNT];
@@ -386,24 +273,6 @@ static inline void dpp_select_format(struct dpp_device *dpp,
 }
 
 void dpp_dump(struct dpp_device *dpp);
-
-/* DPP CAL APIs exposed to DPP driver */
-void dpp_reg_init(u32 id, const unsigned long attr);
-int dpp_reg_deinit(u32 id, bool reset, const unsigned long attr);
-void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
-		const unsigned long attr);
-void dpp_constraints_params(struct dpp_size_constraints *vc,
-					struct dpp_img_format *vi);
-
-/* DPU DMA DEBUG */
-void dma_reg_dump_com_debug_regs(int id);
-void dma_reg_dump_debug_regs(int id);
-void dpp_reg_dump_debug_regs(int id);
-
-/* DPU_DMA and DPP interrupt handler */
-u32 dpp_reg_get_irq_and_clear(u32 id);
-u32 idma_reg_get_irq_and_clear(u32 id);
-u32 odma_reg_get_irq_and_clear(u32 id);
 
 #define DPP_WIN_CONFIG			_IOW('P', 0, struct decon_win_config)
 #define DPP_STOP			_IOW('P', 1, unsigned long)
