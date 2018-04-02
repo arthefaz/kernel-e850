@@ -756,6 +756,7 @@ int decon_exit_hiber(struct decon_device *decon)
 	int ret = 0;
 #ifdef CONFIG_DECON_HIBER
 	struct decon_param p;
+	struct decon_mode_info psr;
 	enum decon_state prev_state = decon->state;
 
 	DPU_EVENT_START();
@@ -797,6 +798,8 @@ int decon_exit_hiber(struct decon_device *decon)
 	}
 
 	decon->state = DECON_STATE_ON;
+	decon_to_psr_info(decon, &psr);
+	decon_reg_set_int(decon->id, &psr, 1);
 
 	decon_hiber_trig_reset(decon);
 
@@ -839,16 +842,17 @@ int decon_enter_hiber(struct decon_device *decon)
 	kthread_flush_worker(&decon->up.worker);
 
 	decon_to_psr_info(decon, &psr);
-
-	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true);
-	if (ret < 0)
-		decon_dump(decon);
+	decon_reg_set_int(decon->id, &psr, 0);
 
 	if (!decon->id && (decon->vsync.irq_refcount <= 0) &&
 			decon->eint_status) {
 		disable_irq(decon->res.irq);
 		decon->eint_status = 0;
 	}
+
+	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true);
+	if (ret < 0)
+		decon_dump(decon);
 
 	/* DMA protection disable must be happen on dpp domain is alive */
 	if (decon->dt.out_type != DECON_OUT_WB) {
