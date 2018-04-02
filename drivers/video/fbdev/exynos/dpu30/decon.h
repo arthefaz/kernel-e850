@@ -1416,6 +1416,7 @@ void decon_reg_config_wb_size(u32 id, struct decon_lcd *lcd_info,
 		struct decon_param *param);
 
 /* DECON interrupt control */
+void decon_reg_set_int(u32 id, struct decon_mode_info *psr, u32 en);
 int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq);
 
 void decon_reg_set_start_crc(u32 id, u32 en);
