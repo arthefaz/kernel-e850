@@ -460,7 +460,6 @@ struct dpu_size_info {
 	u32 h_out;
 };
 
-#ifdef CONFIG_DECON_EVENT_LOG
 /**
  * Display Subsystem event management status.
  *
@@ -638,19 +637,6 @@ void DPU_EVENT_LOG_APPLY_REGION(struct v4l2_subdev *sd,
 void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon);
 int decon_create_debugfs(struct decon_device *decon);
 void decon_destroy_debugfs(struct decon_device *decon);
-#else /*!*/
-#define DPU_EVENT_START(...) do { } while(0)
-#define DPU_EVENT_LOG(...) do { } while(0)
-#define DPU_EVENT_LOG_WINCON(...) do { } while(0)
-#define DPU_EVENT_LOG_CMD(...) do { } while(0)
-#define DPU_EVENT_LOG_CURSOR(...) do { } while (0)
-#define DPU_EVENT_LOG_UPDATE_REGION(...) do { } while(0)
-#define DPU_EVENT_LOG_WINUP_FLAGS(...) do { } while(0)
-#define DPU_EVENT_LOG_APPLY_REGION(...) do { } while(0)
-#define DPU_EVENT_SHOW(...) do { } while(0)
-#define decon_create_debugfs(...) do { } while(0)
-#define decon_destroy_debugfs(..) do { } while(0)
-#endif
 
 /* HDR information of panel */
 enum decon_hdr_type {
@@ -732,7 +718,6 @@ struct dpu_afbc_info {
 struct decon_debug {
 	void __iomem *eint_pend;
 	struct dentry *debug_root;
-#ifdef CONFIG_DECON_EVENT_LOG
 	struct dentry *debug_event;
 	struct dentry *debug_dump;
 	struct dentry *debug_bts;
@@ -748,7 +733,6 @@ struct decon_debug {
 	u32 event_log_cnt;
 	atomic_t event_log_idx;
 	dpu_log_level_t event_log_level;
-#endif
 	struct dentry *debug_low_persistence;
 	struct dpu_afbc_info prev_afbc_info;
 	struct dpu_afbc_info cur_afbc_info;
@@ -781,10 +765,10 @@ struct decon_hiber {
 	struct kthread_work work;
 	atomic_t trig_cnt;
 	atomic_t block_cnt;
-	bool init_status;
 	void __iomem *cam_status;
 	u32 enter_cnt;
 	u32 exit_cnt;
+	bool enabled;
 };
 
 struct decon_win_update {
@@ -1220,11 +1204,9 @@ void decon_dump(struct decon_device *decon);
 void decon_to_psr_info(struct decon_device *decon, struct decon_mode_info *psr);
 void decon_to_init_param(struct decon_device *decon, struct decon_param *p);
 void decon_create_timeline(struct decon_device *decon, char *name);
-#if defined(CONFIG_DPU_2_0_RELEASE_FENCES)
 void decon_create_release_fences(struct decon_device *decon,
 		struct decon_win_config_data *win_data,
 		struct sync_file *sync_file);
-#endif
 int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file);
 void decon_wait_fence(struct dma_fence *fence);
 void decon_signal_fence(struct dma_fence *fence);

@@ -1159,7 +1159,7 @@ static int decon_set_win_blocking_mode(struct decon_device *decon,
 
 	enabled = false;
 
-	if (!IS_ENABLED(CONFIG_DECON_BLOCKING_MODE))
+	if (!IS_ENABLED(CONFIG_EXYNOS_BLOCK_MODE))
 		return ret;
 
 	if (config->state != DECON_WIN_STATE_BUFFER)
@@ -1580,7 +1580,7 @@ static int decon_set_dpp_config(struct decon_device *decon,
 	return err_cnt;
 }
 
-#if defined(CONFIG_EXYNOS_AFBC)
+#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 static void decon_save_vgf_connected_win_id(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
@@ -1948,7 +1948,7 @@ err_hdr:
 	}
 }
 
-#if defined(CONFIG_EXYNOS_AFBC)
+#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 static void decon_update_vgf_info(struct decon_device *decon,
 		struct decon_reg_data *regs, bool cur)
 {
@@ -2024,7 +2024,7 @@ static void decon_update_regs(struct decon_device *decon,
 
 	decon_check_used_dpp(decon, regs);
 
-#if defined(CONFIG_EXYNOS_AFBC)
+#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 	decon_update_vgf_info(decon, regs, true);
 #endif
 
@@ -2041,7 +2041,7 @@ static void decon_update_regs(struct decon_device *decon,
 	decon_to_psr_info(decon, &psr);
 	if (regs->num_of_window) {
 		if (__decon_update_regs(decon, regs) < 0) {
-#if defined(CONFIG_EXYNOS_AFBC)
+#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 			decon_dump_afbc_handle(decon, old_dma_bufs);
 #endif
 			decon_dump(decon);
@@ -2079,7 +2079,7 @@ static void decon_update_regs(struct decon_device *decon,
 		decon_wait_for_vstatus(decon, 50);
 		if (decon_reg_wait_update_done_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
 			decon_up_list_saved();
-#if defined(CONFIG_EXYNOS_AFBC)
+#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 			decon_dump_afbc_handle(decon, old_dma_bufs);
 #endif
 			decon_dump(decon);
@@ -2101,7 +2101,7 @@ end:
 
 	DPU_EVENT_LOG(DPU_EVT_FENCE_RELEASE, &decon->sd, ktime_set(0, 0));
 
-#if defined(CONFIG_EXYNOS_AFBC)
+#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 	decon_save_vgf_connected_win_id(decon, regs);
 	decon_update_vgf_info(decon, regs, false);
 #endif
@@ -2320,9 +2320,7 @@ static int decon_set_win_config(struct decon_device *decon,
 
 	if (num_of_window) {
 		fd_install(win_data->retire_fence, sync_file->file);
-#if defined(CONFIG_DPU_2_0_RELEASE_FENCES)
 		decon_create_release_fences(decon, win_data, sync_file);
-#endif
 		regs->retire_fence = dma_fence_get(sync_file->fence);
 	}
 
@@ -2480,20 +2478,12 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		if (ret)
 			break;
 
-#if defined(CONFIG_DPU_2_0_RELEASE_FENCES)
 		if (copy_to_user((void __user *)arg, &win_data, _IOC_SIZE(cmd))) {
 			ret = -EFAULT;
 			break;
 		}
 		break;
-#else
-		if (copy_to_user(&((struct decon_win_config_data __user *)arg)->retire_fence,
-				 &win_data.retire_fence, sizeof(int))) {
-			ret = -EFAULT;
-			break;
-		}
-		break;
-#endif
+
 	case S3CFB_GET_HDR_CAPABILITIES:
 		ret = decon_get_hdr_capa(decon, &hdr_capa);
 		if (ret)
@@ -2661,7 +2651,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		break;
 
 	case S3CFB_POWER_MODE:
-		if (!IS_ENABLED(CONFIG_SUPPORT_DOZE)) {
+		if (!IS_ENABLED(CONFIG_EXYNOS_DOZE)) {
 			decon_info("DOZE mode is disabled\n");
 			break;
 		}
@@ -3562,11 +3552,10 @@ static int decon_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_pinctrl;
 
-#ifdef CONFIG_DECON_HIBER
 	ret = decon_register_hiber_work(decon);
 	if (ret)
 		goto err_pinctrl;
-#endif
+
 	ret = decon_register_subdevs(decon);
 	if (ret)
 		goto err_subdev;

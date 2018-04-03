@@ -1,17 +1,9 @@
 config EXYNOS_DPU20
-	bool "Samsung Exynos Display system (DPP, DECON, MIPI, HDMI)"
+	bool "Samsung Exynos Display Sub-system (DPP, DECON, MIPI, DISPLAYPORT)"
 	default n
 	depends on FB
 
 if EXYNOS_DPU20
-config EXYNOS_DECON_FB
-	bool "Samsung DECON Framebuffer driver"
-	depends on EXYNOS_DPU20
-	default y
-	help
-	  Say Y here if you want support for the DECON in Samsung S5P SoCs.
-	  This device produce image data to one of output interfaces.
-
 config EXYNOS_DPP
 	bool "Samsung Exynos Display Post Processor driver"
 	depends on EXYNOS_DPU20
@@ -27,44 +19,56 @@ config EXYNOS_MIPI_DSIM
 config EXYNOS_DISPLAYPORT
 	bool "Samsung Exynos DISPLAYPORT driver"
 	depends on EXYNOS_DPU20
-	default y
+	default n
 	help
 	  Enable DISPLAYPORT driver.
 
-config EXYNOS_ZEBU_EMUL_DISP
-	bool "Zebu Emulator Display driver"
+config EXYNOS_WINDOW_UPDATE
+        bool "Support Window Update Mode"
+        depends on EXYNOS_DPU20
+        default n
+
+config EXYNOS_BLOCK_MODE
+	bool "Support Blocking Mode"
+        depends on EXYNOS_DPU20
+        default y
+
+config EXYNOS_HIBERNATION
+	bool "Support Display Hibernation Mode"
+        depends on EXYNOS_DPU20
+        default n
+
+config EXYNOS_DOZE
+	bool "Support DOZE mode"
+        depends on EXYNOS_DPU20
+        default n
+
+config EXYNOS_AFBC_DEBUG
+	bool "Support AFBC Decoder Debug"
+        depends on EXYNOS_DPU20
+        default n
+
+config EXYNOS_MULTIRESOLUTION
+	bool "Support Multi Resolution LCD"
+	depends on EXYNOS_DPU20 && EXYNOS_WINDOW_UPDATE
+	default y
+
+config EXYNOS_VIRTUAL_DISPLAY
+	bool "Support Virtual Display Mode"
 	depends on EXYNOS_DPU20
 	default n
+	help
+	  If this menu is enabled, you can boot up board without LCD.
 
-config FB_WINDOW_UPDATE
-        bool "DECON window update mode"
+config EXYNOS_LOW_PERSISTENCE
+	bool "Support Low Persistence Mode"
         depends on EXYNOS_DPU20
-        default n
+	default n
 
-config DECON_BLOCKING_MODE
-	bool "DECON blocking mode"
+config EXYNOS_CURSOR
+	bool "Support Cursor Async Mode"
         depends on EXYNOS_DPU20
-        default y
-
-config DECON_EVENT_LOG
-	bool "Display sub-system event logger (DECON/DSIM/DPP)"
-        depends on DEBUG_INFO && EXYNOS_DPU20
-        default y
-
-config DECON_HIBER
-	bool "DECON hiber mode"
-        depends on EXYNOS_DPU20
-        default n
-
-config SUPPORT_DOZE
-	bool "Support DOZE mode for AOD service"
-        depends on EXYNOS_DPU20
-        default n
-
-config EXYNOS_AFBC
-	bool "Display sub-system AFBC stream"
-        depends on EXYNOS_DPU20
-        default n
+	default n
 
 config EXYNOS_DSIM_DITHER
 	bool "DSIM SSCG feature"
@@ -76,13 +80,8 @@ config DECON_BTS_LEGACY
         depends on EXYNOS_DPU20
         default n
 
-config DPU_2_0_FENCE
-	bool "fence is signaled at the beginning of a frame"
-        depends on EXYNOS_DPU20
-        default n
-
 config FB_TEST
-	bool "FB test only"
+	bool "Framebuffer test only"
         depends on EXYNOS_DPU20
         default n
 
@@ -90,24 +89,6 @@ config DSIM_CMD_TEST
 	bool "DSIM command test only"
         depends on EXYNOS_DPU20
         default n
-
-config DPU_2_0_RELEASE_FENCES
-	bool "Release fence FD is created per each enable window"
-        depends on EXYNOS_DPU20
-        default n
-
-config EXYNOS_MULTIRESOLUTION
-	bool "Multi resolution LCD support"
-	depends on EXYNOS_DPU20 && FB_WINDOW_UPDATE
-	default y
-
-config EXYNOS_VIRTUAL_DISPLAY
-	bool "Virtual display mode"
-	depends on EXYNOS_DPU20
-
-config EXYNOS_LOW_PERSISTENCE
-	bool "Support low persistence mode"
-        depends on EXYNOS_DPU20
 
 endif
 

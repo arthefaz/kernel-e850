@@ -553,7 +553,7 @@ void decon_set_protected_content(struct decon_device *decon,
 }
 #endif
 
-#if defined(CONFIG_EXYNOS_AFBC)
+#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 /* id : VGF0=0, VGF1=1 */
 static void dpu_dump_data_to_console(void *v_addr, int buf_size, int id)
 {
@@ -673,7 +673,7 @@ int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 	for (i = 0; i < MAX_DPP_SUBDEV; i++) {
 		if (test_bit(i, &decon->prev_used_dpp)) {
 			dpp = get_dpp_drvdata(i);
-#if defined(CONFIG_EXYNOS_AFBC)
+#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 			dpu_dump_buffer_data(dpp);
 #endif
 		}

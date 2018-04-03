@@ -561,7 +561,7 @@ void dpu_init_win_update(struct decon_device *decon)
 	decon->cursor.xpos = lcd->xres / 2;
 	decon->cursor.ypos = lcd->yres / 2;
 
-	if (!IS_ENABLED(CONFIG_FB_WINDOW_UPDATE)) {
+	if (!IS_ENABLED(CONFIG_EXYNOS_WINDOW_UPDATE)) {
 		decon_info("window update feature is disabled\n");
 		return;
 	}
