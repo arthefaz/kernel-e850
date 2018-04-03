@@ -61,7 +61,6 @@ static int decon_get_valid_fd(void)
 	return fd;
 }
 
-#if defined(CONFIG_DPU_2_0_RELEASE_FENCES)
 void decon_create_release_fences(struct decon_device *decon,
 		struct decon_win_config_data *win_data,
 		struct sync_file *sync_file)
@@ -95,7 +94,6 @@ err:
 	}
 	return;
 }
-#endif
 
 static const char *decon_fence_get_driver_name(struct dma_fence *fence)
 {

@@ -68,7 +68,7 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 
 	if (ext_irq & DPU_TIME_OUT_INT_PEND) {
 		decon_err("%s: DECON%d timeout irq occurs\n", __func__, decon->id);
-#if defined(CONFIG_EXYNOS_AFBC)
+#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 		dpu_dump_afbc_info();
 		BUG();
 #endif
@@ -247,12 +247,12 @@ static irqreturn_t decon_ext_irq_handler(int irq, void *dev_id)
 		decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_ENABLE);
 	}
 
-#ifdef CONFIG_DECON_HIBER
-	if (decon->state == DECON_STATE_ON && decon->dt.out_type == DECON_OUT_DSI) {
+	if (decon->hiber.enabled && decon->state == DECON_STATE_ON &&
+			decon->dt.out_type == DECON_OUT_DSI) {
 		if (decon_min_lock_cond(decon))
 			kthread_queue_work(&decon->hiber.worker, &decon->hiber.work);
 	}
-#endif
+
 	decon_systrace(decon, 'C', "decon_te_signal", 0);
 	decon->vsync.timestamp = timestamp;
 	wake_up_interruptible_all(&decon->vsync.wait);
@@ -754,12 +754,14 @@ EXPORT_SYMBOL(decon_mmap);
 int decon_exit_hiber(struct decon_device *decon)
 {
 	int ret = 0;
-#ifdef CONFIG_DECON_HIBER
 	struct decon_param p;
 	struct decon_mode_info psr;
 	enum decon_state prev_state = decon->state;
 
 	DPU_EVENT_START();
+
+	if (!decon->hiber.enabled)
+		return 0;
 
 	decon_hiber_block(decon);
 	kthread_flush_worker(&decon->hiber.worker);
@@ -811,18 +813,20 @@ int decon_exit_hiber(struct decon_device *decon)
 err:
 	decon_hiber_unblock(decon);
 	mutex_unlock(&decon->hiber.lock);
-#endif
+
 	return ret;
 }
 
 int decon_enter_hiber(struct decon_device *decon)
 {
 	int ret = 0;
-#ifdef CONFIG_DECON_HIBER
 	struct decon_mode_info psr;
 	enum decon_state prev_state = decon->state;
 
 	DPU_EVENT_START();
+
+	if (!decon->hiber.enabled)
+		return 0;
 
 	mutex_lock(&decon->hiber.lock);
 
@@ -885,7 +889,7 @@ err2:
 
 	decon_dbg("decon-%d %s - (state:%d -> %d)\n",
 			decon->id, __func__, prev_state, decon->state);
-#endif
+
 	return ret;
 }
 
@@ -893,7 +897,7 @@ int decon_hiber_block_exit(struct decon_device *decon)
 {
 	int ret = 0;
 
-	if (!decon || !decon->hiber.init_status)
+	if (!decon || !decon->hiber.enabled)
 		return 0;
 
 	decon_hiber_block(decon);
@@ -909,7 +913,7 @@ static void decon_hiber_handler(struct kthread_work *work)
 	struct decon_device *decon =
 		container_of(hiber, struct decon_device, hiber);
 
-	if (!decon || !decon->hiber.init_status)
+	if (!decon || !decon->hiber.enabled)
 		return;
 
 	if (decon_hiber_enter_cond(decon))
@@ -919,6 +923,12 @@ static void decon_hiber_handler(struct kthread_work *work)
 int decon_register_hiber_work(struct decon_device *decon)
 {
 	struct sched_param param;
+
+	decon->hiber.enabled = false;
+	if (!IS_ENABLED(CONFIG_EXYNOS_HIBERNATION)) {
+		decon_info("display doesn't support hibernation mode\n");
+		return 0;
+	}
 
 	mutex_init(&decon->hiber.lock);
 
@@ -937,7 +947,8 @@ int decon_register_hiber_work(struct decon_device *decon)
 	sched_setscheduler_nocheck(decon->hiber.thread, SCHED_FIFO, &param);
 	kthread_init_work(&decon->hiber.work, decon_hiber_handler);
 
-	decon->hiber.init_status = true;
+	decon->hiber.enabled = true;
+	decon_info("display supports hibernation mode\n");
 
 	return 0;
 }

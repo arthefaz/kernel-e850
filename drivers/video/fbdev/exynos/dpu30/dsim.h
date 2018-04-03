@@ -357,7 +357,7 @@ void dsim_reg_set_dphy_loop_back_test(u32 id);
 
 static inline bool IS_DSIM_ON_STATE(struct dsim_device *dsim)
 {
-#ifdef CONFIG_SUPPORT_DOZE
+#ifdef CONFIG_EXYNOS_DOZE
 	return (dsim->state == DSIM_STATE_ON ||
 			dsim->state == DSIM_STATE_DOZE);
 #else
@@ -368,7 +368,7 @@ static inline bool IS_DSIM_ON_STATE(struct dsim_device *dsim)
 static inline bool IS_DSIM_OFF_STATE(struct dsim_device *dsim)
 {
 	return (dsim->state == DSIM_STATE_ULPS ||
-#ifdef CONFIG_SUPPORT_DOZE
+#ifdef CONFIG_EXYNOS_DOZE
 			dsim->state == DSIM_STATE_DOZE_SUSPEND ||
 #endif
 			dsim->state == DSIM_STATE_OFF);

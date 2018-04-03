@@ -468,9 +468,9 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 	seq_printf(s, "-------------------DECON%d EVENT LOGGER ----------------------\n",
 			decon->id);
 	seq_printf(s, "-- STATUS: Hibernation(%s) ",
-			IS_ENABLED(CONFIG_DECON_HIBER) ? "on" : "off");
+			IS_ENABLED(CONFIG_EXYNOS_HIBERNATION) ? "on" : "off");
 	seq_printf(s, "BlockMode(%s) ",
-			IS_ENABLED(CONFIG_DECON_BLOCKING_MODE) ? "on" : "off");
+			IS_ENABLED(CONFIG_EXYNOS_BLOCK_MODE) ? "on" : "off");
 	seq_printf(s, "Window_Update(%s)\n",
 			decon->win_up.enabled ? "on" : "off");
 	if (!decon->id)
