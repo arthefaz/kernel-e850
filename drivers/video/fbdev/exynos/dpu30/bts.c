@@ -13,6 +13,14 @@
 
 #include <soc/samsung/bts.h>
 #include <media/v4l2-subdev.h>
+#if defined(CONFIG_CAL_IF)
+#include <soc/samsung/cal-if.h>
+#endif
+#if defined(CONFIG_SOC_EXYNOS9810)
+#include <dt-bindings/clock/exynos9810.h>
+#elif defined(CONFIG_SOC_EXYNOS9820)
+#include <dt-bindings/clock/exynos9820.h>
+#endif
 
 #define DISP_FACTOR		100UL
 #define PPC			2UL
@@ -135,7 +143,8 @@ static void dpu_bts_find_max_disp_freq(struct decon_device *decon,
 
 	for (i = 0; i < MAX_DECON_WIN; ++i) {
 		idx = config[i].idma_type;
-		if (config[i].state != DECON_WIN_STATE_BUFFER)
+		if ((config[i].state != DECON_WIN_STATE_BUFFER) &&
+				(config[i].state != DECON_WIN_STATE_COLOR))
 			continue;
 
 		freq = dpu_bts_calc_aclk_disp(decon, &config[i], resol_clock);
@@ -350,12 +359,38 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 	struct displayport_device *displayport = get_displayport_drvdata();
 	videoformat cur = displayport->cur_video;
 	__u64 pixelclock = supported_videos[cur].dv_timings.bt.pixelclock;
+#endif
+	struct decon_win_config config;
+	u64 resol_clock;
+	u32 aclk_freq = 0;
 
 	DPU_DEBUG_BTS("%s +\n", __func__);
 
 	if (!decon->bts.enabled)
 		return;
 
+	if (decon->dt.out_type == DECON_OUT_DSI) {
+		memset(&config, 0, sizeof(struct decon_win_config));
+		config.src.w = config.dst.w = decon->lcd_info->xres;
+		config.src.h = config.dst.h = decon->lcd_info->yres;
+		resol_clock = decon->lcd_info->xres * decon->lcd_info->yres *
+			LCD_REFRESH_RATE * 11 / 10 / 1000 + 1;
+		aclk_freq = dpu_bts_calc_aclk_disp(decon, &config, resol_clock);
+		DPU_DEBUG_BTS("Initial calculated disp freq(%lu)\n", aclk_freq);
+		/*
+		 * If current disp freq is higher than calculated freq,
+		 * it must not be set. if not, underrun can occur.
+		 */
+		if (cal_dfs_get_rate(ACPM_DVFS_DISP) < aclk_freq)
+			pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
+
+		DPU_DEBUG_BTS("Get initial disp freq(%lu)\n",
+				cal_dfs_get_rate(ACPM_DVFS_DISP));
+
+		return;
+	}
+
+#if defined(CONFIG_DECON_BTS_LEGACY) && defined(CONFIG_EXYNOS_DISPLAYPORT)
 	if (decon->dt.out_type != DECON_OUT_DP)
 		return;
 
