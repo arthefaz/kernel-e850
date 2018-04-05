@@ -183,6 +183,10 @@ static int s6e3aa2_probe(struct dsim_device *dsim)
 
 static int s6e3aa2_displayon(struct dsim_device *dsim)
 {
+	dsim_reg_set_lpdt(dsim->id, 1);
+	lcd_lane_ctl(dsim->id, 2);
+	dsim_reg_set_lpdt(dsim->id, 0);
+	lcd_init(dsim->id, &dsim->lcd_info);
 	lcd_enable(dsim->id);
 	return 0;
 }
