@@ -32,6 +32,10 @@
 #if 0
 #include <soc/samsung/exynos-itmon.h>
 #endif
+#if defined(CONFIG_SUPPORT_LEGACY_ION)
+#include <linux/exynos_ion.h>
+#include <linux/ion.h>
+#endif
 #include <linux/exynos_iovmm.h>
 #include <linux/sync_file.h>
 
@@ -54,6 +58,9 @@
 
 #define SUCCESS_EXYNOS_SMC	0
 
+#if defined(CONFIG_SUPPORT_LEGACY_ION)
+extern struct ion_device *ion_exynos;
+#endif
 extern struct decon_device *decon_drvdata[MAX_DECON_CNT];
 extern int decon_log_level;
 extern int dpu_bts_log_level;
@@ -306,6 +313,9 @@ struct decon_clocks {
 };
 
 struct decon_dma_buf_data {
+#if defined(CONFIG_SUPPORT_LEGACY_ION)
+	struct ion_handle		*ion_handle;
+#endif
 	struct dma_buf			*dma_buf;
 	struct dma_buf_attachment	*attachment;
 	struct sg_table			*sg_table;
@@ -721,7 +731,11 @@ struct decon_debug {
 	struct dentry *debug_low_persistence;
 	struct dpu_afbc_info prev_afbc_info;
 	struct dpu_afbc_info cur_afbc_info;
+#if defined(CONFIG_SUPPORT_LEGACY_ION)
+	struct ion_handle *handle[MAX_DECON_WIN][MAX_PLANE_CNT];
+#else
 	struct dma_buf *dmabuf[MAX_DECON_WIN][MAX_PLANE_CNT];
+#endif
 	int prev_vgf_win_id[2];
 };
 
@@ -832,6 +846,10 @@ struct decon_device {
 	struct mutex lock;
 	struct mutex pm_lock;
 	spinlock_t slock;
+
+#if defined(CONFIG_SUPPORT_LEGACY_ION)
+	struct ion_client *ion_client;
+#endif
 
 	struct v4l2_subdev *out_sd[MAX_DSIM_CNT];
 	struct v4l2_subdev *dsim_sd[MAX_DSIM_CNT];
