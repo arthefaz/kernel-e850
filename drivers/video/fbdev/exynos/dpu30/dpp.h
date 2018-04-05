@@ -31,9 +31,13 @@
 /* TODO: SoC dependency will be removed */
 #if defined(CONFIG_SOC_EXYNOS9810)
 #include "./cal_9810/regs-dpp.h"
-#else
+#include "./cal_9810/dpp_cal.h"
+#elif defined(CONFIG_SOC_EXYNOS9820)
 #include "./cal_9820/regs-dpp.h"
 #include "./cal_9820/dpp_cal.h"
+#elif defined(CONFIG_SOC_EXYNOS9110)
+#include "./cal_9110/regs-dpp.h"
+#include "./cal_9110/dpp_cal.h"
 #endif
 
 extern int dpp_log_level;
