@@ -21,6 +21,11 @@
 #define MAX_DECON_WIN		3
 #define MAX_DPP_SUBDEV		3
 
+#define DSC0_OFFSET		0x4000
+#define DSC1_OFFSET		0x5000
+#define DPU_RESOURCE_CONFLICT_INT_PEND	0
+#define DPU_RESOURCE_CONFLICT_INT_EN	0
+
 enum decon_idma_type {
 	IDMA_G0 = 0,
 	IDMA_G1,

@@ -43,7 +43,10 @@
 #define BLK_SIZE_MULTIPLE	1
 #define BLK_SIZE_MULTIPLE	1
 
-#define IDMA_AFBC_TIMEOUT_IRQ	0
+#define IDMA_AFBC_TIMEOUT_IRQ		0
+#define ODMA_WRITE_SLAVE_ERROR		0
+#define ODMA_STATUS_DEADLOCK_IRQ	0
+#define ODMA_STATUS_FRAMEDONE_IRQ	0
 
 struct dpp_params_info {
 	struct decon_frame src;
