@@ -21,5 +21,6 @@ int lcd_gamma_ctrl(int id, unsigned int backlightlevel);
 int lcd_gamma_update(int id);
 int lcd_dump(int id);
 void lcd_mres(int id, int mres_idx, int dsc_en);
+void lcd_lane_ctl(int id, unsigned int lane_num);
 
 #endif /* __LCD_CTRL_H__ */
