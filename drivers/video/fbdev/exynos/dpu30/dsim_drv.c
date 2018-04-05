@@ -574,6 +574,38 @@ static int dsim_get_gpios(struct dsim_device *dsim)
 	return 0;
 }
 
+static int dsim_get_regulator(struct dsim_device *dsim)
+{
+	struct device *dev = dsim->dev;
+	struct dsim_resources *res = &dsim->res;
+
+	char *str_regulator_1p8v = NULL;
+	char *str_regulator_3p3v = NULL;
+
+	res->regulator_1p8v = NULL;
+	res->regulator_3p3v = NULL;
+
+	if(!of_property_read_string(dev->of_node, "regulator_1p8v",
+				(const char **)&str_regulator_1p8v)) {
+		res->regulator_1p8v = regulator_get(dev, str_regulator_1p8v);
+		if (IS_ERR(res->regulator_1p8v)) {
+			dsim_err("%s : dsim regulator 1.8V get failed\n", __func__);
+			res->regulator_1p8v = NULL;
+		}
+	}
+
+	if(!of_property_read_string(dev->of_node, "regulator_3p3v",
+				(const char **)&str_regulator_3p3v)) {
+		res->regulator_3p3v = regulator_get(dev, str_regulator_3p3v);
+		if (IS_ERR(res->regulator_3p3v)) {
+			dsim_err("%s : dsim regulator 3.3V get failed\n", __func__);
+			res->regulator_3p3v = NULL;
+		}
+	}
+
+	return 0;
+}
+
 int dsim_reset_panel(struct dsim_device *dsim)
 {
 	struct dsim_resources *res = &dsim->res;
@@ -630,6 +662,22 @@ int dsim_set_panel_power(struct dsim_device *dsim, bool on)
 			gpio_free(res->lcd_power[1]);
 			usleep_range(10000, 11000);
 		}
+		if (res->regulator_1p8v > 0) {
+			ret = regulator_enable(res->regulator_1p8v);
+			if (ret) {
+				dsim_err("%s : dsim regulator 1.8V enable failed\n", __func__);
+				return ret;
+			}
+			usleep_range(5000, 6000);
+		}
+
+		if (res->regulator_3p3v > 0) {
+			ret = regulator_enable(res->regulator_3p3v);
+			if (ret) {
+				dsim_err("%s : dsim regulator 3.3V enable failed\n", __func__);
+				return ret;
+			}
+		}
 	} else {
 		ret = gpio_request_one(res->lcd_reset, GPIOF_OUT_INIT_LOW,
 				"lcd_reset");
@@ -659,6 +707,21 @@ int dsim_set_panel_power(struct dsim_device *dsim, bool on)
 			}
 			gpio_free(res->lcd_power[1]);
 			usleep_range(5000, 6000);
+		}
+		if (res->regulator_1p8v > 0) {
+			ret = regulator_disable(res->regulator_1p8v);
+			if (ret) {
+				dsim_err("%s : dsim regulator 1.8V disable failed\n", __func__);
+				return ret;
+			}
+		}
+
+		if (res->regulator_3p3v > 0) {
+			ret = regulator_disable(res->regulator_3p3v);
+			if (ret) {
+				dsim_err("%s : dsim regulator 3.3V disable failed\n", __func__);
+				return ret;
+			}
 		}
 	}
 
@@ -1317,7 +1380,7 @@ static int dsim_parse_dt(struct dsim_device *dsim, struct device *dev)
 
 	dsim->dev = dev;
 	dsim_get_gpios(dsim);
-
+	dsim_get_regulator(dsim);
 	dsim_parse_lcd_info(dsim);
 
 	return 0;

@@ -14,6 +14,7 @@
 
 #include <linux/device.h>
 #include <linux/kernel.h>
+#include <linux/regulator/consumer.h>
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <media/v4l2-subdev.h>
@@ -201,6 +202,8 @@ struct dsim_resources {
 	void __iomem *ss_regs;
 	void __iomem *phy_regs;
 	void __iomem *phy_regs_ex;
+	struct regulator *regulator_1p8v;
+	struct regulator *regulator_3p3v;
 };
 
 struct dsim_device {
