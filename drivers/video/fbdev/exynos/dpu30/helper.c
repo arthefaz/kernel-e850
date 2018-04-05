@@ -17,6 +17,9 @@
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 #include <linux/smc.h>
 #endif
+#if defined(CONFIG_SUPPORT_LEGACY_ION)
+#include <linux/exynos_iovmm.h>
+#endif
 
 #include "decon.h"
 #include "dsim.h"

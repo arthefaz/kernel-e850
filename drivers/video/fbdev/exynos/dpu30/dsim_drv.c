@@ -26,7 +26,6 @@
 #include <linux/of_gpio.h>
 #include <linux/device.h>
 #include <linux/module.h>
-#include <linux/debug-snapshot.h>
 #include <video/mipi_display.h>
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
@@ -37,8 +36,9 @@
 #include <dt-bindings/clock/exynos9820.h>
 #endif
 #include <soc/samsung/exynos-pmu.h>
-
+#if defined(CONFIG_SUPPORT_LEGACY_ION)
 #include <linux/exynos_iovmm.h>
+#endif
 
 #include "decon.h"
 #include "dsim.h"
@@ -1505,8 +1505,9 @@ static int dsim_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-
+#if !defined(CONFIG_SUPPORT_LEGACY_ION)
 	dma_set_mask(dev, DMA_BIT_MASK(36));
+#endif
 	ret = dsim_parse_dt(dsim, dev);
 	if (ret)
 		goto err_dt;

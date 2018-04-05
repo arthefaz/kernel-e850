@@ -90,6 +90,11 @@ config DSIM_CMD_TEST
         depends on EXYNOS_DPU20
         default n
 
+config SUPPORT_LEGACY_ION
+	bool "Support legacy ION API"
+        depends on EXYNOS_DPU20
+        default n
+
 endif
 
 source "drivers/video/fbdev/exynos/dpu20/panels/Kconfig"
