@@ -199,12 +199,6 @@ static void odma_reg_set_out_frame_alpha(u32 id, u32 alpha)
 	return;
 }
 
-static void odma_reg_clear_irq(u32 id, u32 irq)
-{
-	/* not support */
-	return;
-}
-
 static void odma_reg_set_sw_reset(u32 id)
 {
 	/* not support */
@@ -363,18 +357,6 @@ static void dpp_reg_set_csc_params(u32 id, u32 csc_eq)
 		dpp_reg_set_csc_coef(id, type, range);
 }
 
-static void dpp_reg_set_h_coef(u32 id, u32 h_ratio)
-{
-	/* not support */
-	return;
-}
-
-static void dpp_reg_set_v_coef(u32 id, u32 v_ratio)
-{
-	/* not support */
-	return;
-}
-
 static void dpp_reg_set_scale_ratio(u32 id, struct dpp_params_info *p)
 {
 	/* not support */
@@ -403,24 +385,6 @@ static void dpp_reg_set_format(u32 id, u32 fmt)
 	dpp_write_mask(id, DPP_IN_CON, DPP_IMG_FORMAT(fmt), DPP_IMG_FORMAT_MASK);
 }
 
-static void dpp_reg_set_eotf_lut(u32 id, struct dpp_params_info *p)
-{
-	/* not support */
-	return;
-}
-
-static void dpp_reg_set_gm_lut(u32 id, struct dpp_params_info *p)
-{
-	/* not support */
-	return;
-}
-
-static void dpp_reg_set_tm_lut(u32 id, struct dpp_params_info *p)
-{
-	/* not support */
-	return;
-}
-
 static void dpp_reg_set_hdr_params(u32 id, struct dpp_params_info *p)
 {
 	/* not support */
@@ -430,80 +394,56 @@ static void dpp_reg_set_hdr_params(u32 id, struct dpp_params_info *p)
 /****************** WB MUX CAL functions ******************/
 static void wb_mux_reg_set_clock_gate_en_all(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
-
-	dpp_write_mask(id, DPU_WB_ENABLE, val, WB_ALL_CLOCK_GATE_EN_MASK);
+	/* not support */
+	return;
 }
 
 static void wb_mux_reg_set_dynamic_gating_en_all(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
-
-	dpp_write_mask(id, DPU_WB_DYNAMIC_GATING_EN, val, WB_DG_EN_ALL);
+	/* not support */
+	return;
 }
 
 static void wb_mux_reg_set_out_frame_alpha(u32 id, u32 alpha)
 {
-	dpp_write_mask(id, DPU_WB_OUT_CON1, WB_OUT_FRAME_ALPHA(alpha),
-			WB_OUT_FRAME_ALPHA_MASK);
+	/* not support */
+	return;
 }
 
 static void wb_mux_reg_set_sw_reset(u32 id)
 {
-	dpp_write_mask(id, DPU_WB_ENABLE, ~0, WB_SRSET);
+	/* not support */
+	return;
 }
 
 static int wb_mux_reg_wait_sw_reset_status(u32 id)
 {
-	u32 cfg = 0;
-	unsigned long cnt = 100000;
-
-	do {
-		cfg = dpp_read(id, DPU_WB_ENABLE);
-		if (!(cfg & (WB_SRSET)))
-			return 0;
-		udelay(10);
-	} while (--cnt);
-
-	dpp_err("[wb] timeout sw-reset\n");
-
-	return -1;
+	/* not support */
+	return 0;
 }
 
 static void wb_mux_reg_set_csc_params(u32 id, u32 csc_eq)
 {
-	u32 type = (csc_eq >> CSC_STANDARD_SHIFT) & 0x3F;
-	u32 range = (csc_eq >> CSC_RANGE_SHIFT) & 0x7;
-
-	u32 rgb_type = (type << 1) | (range << 0);
-	/* only support {601, 709, N, W} */
-	if (rgb_type > 3) {
-		dpp_warn("[WB] Unsupported RGB type(%d) !\n", rgb_type);
-		dpp_warn("[WB] -> forcing BT_601_LIMITTED\n");
-		rgb_type = ((CSC_BT_601 << 1) | CSC_RANGE_LIMITED);
-	}
-
-	dpp_write_mask(id, DPU_WB_OUT_CON0, WB_RGB_TYPE(rgb_type),
-			WB_RGB_TYPE_MASK);
+	/* not support */
+	return;
 }
 
 static void wb_mux_reg_set_dst_size(u32 id, u32 w, u32 h)
 {
-	dpp_write(id, DPU_WB_DST_SIZE, WB_DST_HEIGHT(h) | WB_DST_WIDTH(w));
+	/* not support */
+	return;
 }
 
 static void wb_mux_reg_set_csc_r2y(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
-
-	dpp_write_mask(id, DPU_WB_OUT_CON0, val, WB_CSC_R2Y_MASK);
+	/* not support */
+	return;
 }
 
 static void wb_mux_reg_set_uv_offset(u32 id, u32 off_x, u32 off_y)
 {
-	dpp_write_mask(id, DPU_WB_OUT_CON1,
-			WB_UV_OFFSET_Y(off_y) | WB_UV_OFFSET_X(off_x),
-			WB_UV_OFFSET_Y_MASK | WB_UV_OFFSET_X_MASK);
+	/* not support */
+	return;
 }
 
 /********** IDMA and ODMA combination CAL functions **********/
@@ -672,23 +612,6 @@ void dpp_constraints_params(struct dpp_size_constraints *vc,
 	vc->blk_h_max = BLK_HEIGHT_MAX;
 	vc->blk_mul_w = BLK_SIZE_MULTIPLE;
 	vc->blk_mul_h = BLK_SIZE_MULTIPLE;
-
-	if (vi->wb) {
-		vc->src_mul_w = DST_SIZE_MULTIPLE * sz_align;
-		vc->src_mul_h = DST_SIZE_MULTIPLE * sz_align;
-		vc->src_w_min = DST_SIZE_WIDTH_MIN;
-		vc->src_w_max = DST_SIZE_WIDTH_MAX;
-		vc->src_h_min = DST_SIZE_HEIGHT_MIN;
-		vc->src_h_max = DST_SIZE_HEIGHT_MAX;
-		vc->img_mul_w = DST_IMG_MULTIPLE * sz_align;
-		vc->img_mul_h = DST_IMG_MULTIPLE * sz_align;
-		vc->img_w_min = DST_IMG_WIDTH_MIN;
-		vc->img_w_max = DST_IMG_WIDTH_MAX;
-		vc->img_h_min = DST_IMG_HEIGHT_MIN;
-		vc->img_h_max = DST_IMG_HEIGHT_MAX;
-		vc->src_mul_x = DST_OFFSET_MULTIPLE * sz_align;
-		vc->src_mul_y = DST_OFFSET_MULTIPLE * sz_align;
-	}
 }
 
 void dpp_reg_init(u32 id, const unsigned long attr)
@@ -735,11 +658,6 @@ int dpp_reg_deinit(u32 id, bool reset, const unsigned long attr)
 	if (test_bit(DPP_ATTR_DPP, &attr)) {
 		dpp_reg_clear_irq(id, DPP_ALL_IRQ_CLEAR);
 		dpp_reg_set_irq_mask_all(id, 1);
-	}
-
-	if (test_bit(DPP_ATTR_ODMA, &attr)) {
-		odma_reg_clear_irq(id, ODMA_ALL_IRQ_CLEAR);
-		odma_reg_set_irq_mask_all(id, 1);
 	}
 
 	if (reset) {
@@ -853,17 +771,8 @@ u32 idma_reg_get_irq_and_clear(u32 id)
 
 u32 odma_reg_get_irq_and_clear(u32 id)
 {
-	u32 val, cfg_err;
-
-	val = dma_read(id, ODMA_IRQ);
-	odma_reg_clear_irq(id, val);
-
-	if (val & ODMA_CONFIG_ERROR) {
-		cfg_err = dma_read(id, ODMA_CFG_ERR_STATE);
-		dpp_err("dpp%d odma config error occur(0x%x)\n", id, cfg_err);
-	}
-
-	return val;
+	/* not support */
+	return 0;
 }
 
 #if 0
