@@ -14,7 +14,11 @@
 #include <linux/clk-provider.h>
 #include <linux/pm_runtime.h>
 #include <linux/exynos_iovmm.h>
+#if defined(CONFIG_SUPPORT_KERNEL_4_9)
+#include <linux/sched.h>
+#else
 #include <linux/sched/types.h>
+#endif
 #include <linux/of_address.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/irq.h>
@@ -325,10 +329,15 @@ static int decon_vsync_thread(void *data)
 
 	while (!kthread_should_stop()) {
 		ktime_t timestamp = decon->vsync.timestamp;
+#if defined(CONFIG_SUPPORT_KERNEL_4_9)
+		int ret = wait_event_interruptible(decon->vsync.wait,
+			!ktime_equal(timestamp, decon->vsync.timestamp) &&
+			decon->vsync.active);
+#else
 		int ret = wait_event_interruptible(decon->vsync.wait,
 			(timestamp != decon->vsync.timestamp) &&
 			decon->vsync.active);
-
+#endif
 		if (!ret)
 			sysfs_notify(&decon->dev->kobj, NULL, "vsync");
 	}
