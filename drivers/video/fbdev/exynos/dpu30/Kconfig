@@ -95,6 +95,11 @@ config SUPPORT_LEGACY_ION
         depends on EXYNOS_DPU20
         default n
 
+config SUPPORT_LEGACY_FENCE
+	bool "Support legacy fence API"
+        depends on EXYNOS_DPU20
+        default n
+
 endif
 
 source "drivers/video/fbdev/exynos/dpu20/panels/Kconfig"
