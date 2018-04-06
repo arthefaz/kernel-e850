@@ -82,7 +82,7 @@
  *  0x1000  0x2000  0x4000
  */
 #define IDMA_ENABLE				0x0000
-#define IDMA_SRSET				(1 << 24)
+#define IDMA_SRESET				(1 << 24)
 #define IDMA_SFR_CLOCK_GATE_EN	(1 << 10)
 #define IDMA_SRAM_CLOCK_GATE_EN		(1 << 9)
 #define IDMA_ALL_CLOCK_GATE_EN_MASK		(0x3 << 9)
