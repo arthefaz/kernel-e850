@@ -61,5 +61,5 @@ void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info);
 /* DSIM BIST for test */
 void dsim_reg_set_bist(u32 id, u32 en);
 
-void dsim_reg_set_lpdt(u32 id, u32 en);
+void dsim_reg_set_cmd_transfer_mode(u32 id, u32 lp);
 #endif /* __SAMSUNG_DSIM_CAL_H__ */

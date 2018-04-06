@@ -245,6 +245,8 @@ struct dsim_lcd_driver {
 	int (*mres)(struct dsim_device *dsim, int mres_idx);
 	int (*doze)(struct dsim_device *dsim);
 	int (*doze_suspend)(struct dsim_device *dsim);
+	int (*init)(struct dsim_device *dsim);
+	int (*preinit)(struct dsim_device *dsim);
 };
 
 int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1);
