@@ -1350,31 +1350,6 @@ static void decon_reg_clear_int_all(u32 id)
 	decon_write_mask(id, EXTRA_INTERRUPT_PENDING, ~0, mask);
 }
 
-static void decon_reg_set_int(u32 id, struct decon_mode_info *psr, u32 en)
-{
-	u32 val, mask;
-
-	decon_reg_clear_int_all(id);
-
-	if (en) {
-		val = (DPU_FRAME_DONE_INT_EN
-			| DPU_FRAME_START_INT_EN
-			| DPU_EXTRA_INT_EN
-			| DPU_INT_EN);
-
-		decon_write_mask(id, INTERRUPT_ENABLE,
-				val, INTERRUPT_ENABLE_MASK);
-		decon_dbg("decon %d, interrupt val = %x\n", id, val);
-
-		val = (DPU_RESOURCE_CONFLICT_INT_EN
-			| DPU_TIME_OUT_INT_EN);
-		decon_write(id, EXTRA_INTERRUPT_ENABLE, val);
-	} else {
-		mask = (DPU_EXTRA_INT_EN | DPU_INT_EN);
-		decon_write_mask(id, INTERRUPT_ENABLE, 0, mask);
-	}
-}
-
 static void decon_reg_configure_lcd(u32 id, struct decon_param *p)
 {
 	u32 overlap_w = 0;
@@ -1783,11 +1758,11 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	if (p->psr.out_type == DECON_OUT_WB)
 		decon_reg_set_data_path(id, DPATH_WBPRE_ONLY, s_path);
 
+	/* asserted interrupt should be cleared before initializing decon hw */
+	decon_reg_clear_int_all(id);
+
 	/* Configure DECON dsim connection  : 'data_path' setting is required */
 	decon_reg_set_interface(id, psr);
-
-	/* unmask DECON interrupts */
-	decon_reg_set_int(id, psr, 1);
 
 	return 0;
 }
@@ -2029,6 +2004,31 @@ void decon_reg_config_wb_size(u32 id, struct decon_lcd *lcd_info,
 			lcd_info);
 	decon_reg_config_data_path_size(id, lcd_info->xres,
 			lcd_info->yres, 0, NULL, param);
+}
+
+void decon_reg_set_int(u32 id, struct decon_mode_info *psr, u32 en)
+{
+	u32 val, mask;
+
+	decon_reg_clear_int_all(id);
+
+	if (en) {
+		val = (DPU_FRAME_DONE_INT_EN
+			| DPU_FRAME_START_INT_EN
+			| DPU_EXTRA_INT_EN
+			| DPU_INT_EN);
+
+		decon_write_mask(id, INTERRUPT_ENABLE,
+				val, INTERRUPT_ENABLE_MASK);
+		decon_dbg("decon %d, interrupt val = %x\n", id, val);
+
+		val = (DPU_RESOURCE_CONFLICT_INT_EN
+			| DPU_TIME_OUT_INT_EN);
+		decon_write(id, EXTRA_INTERRUPT_ENABLE, val);
+	} else {
+		mask = (DPU_EXTRA_INT_EN | DPU_INT_EN);
+		decon_write_mask(id, INTERRUPT_ENABLE, 0, mask);
+	}
 }
 
 int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq)
