@@ -1365,6 +1365,11 @@ int decon_check_limitation(struct decon_device *decon, int idx,
 		return -EINVAL;
 	}
 
+	if (decon_check_supported_formats(config->format)) {
+		decon_err("not supported pixel format\n");
+		return -EINVAL;
+	}
+
 	if (config->blending >= DECON_BLENDING_MAX) {
 		decon_err("unknown blending %u\n", config->blending);
 		return -EINVAL;

@@ -236,6 +236,7 @@ struct decon_window_regs {
 
 u32 DPU_DMA2CH(u32 dma);
 u32 DPU_CH2DMA(u32 ch);
+int decon_check_supported_formats(enum decon_pixel_format format);
 
 /*************** DECON CAL APIs exposed to DECON driver ***************/
 /* DECON control */

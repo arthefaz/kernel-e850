@@ -198,6 +198,14 @@ enum decon_pixel_format {
 	DECON_PIXEL_FORMAT_NV12M_S10B,
 	DECON_PIXEL_FORMAT_NV21M_S10B,
 
+	/* YUV422 2P */
+	DECON_PIXEL_FORMAT_NV16M_P210,
+	DECON_PIXEL_FORMAT_NV61M_P210,
+
+	/* YUV422(P8+2) 4P */
+	DECON_PIXEL_FORMAT_NV16M_S10B,
+	DECON_PIXEL_FORMAT_NV61M_S10B,
+
 	DECON_PIXEL_FORMAT_MAX,
 };
 
@@ -235,6 +243,7 @@ struct decon_window_regs {
 
 u32 DPU_DMA2CH(u32 dma);
 u32 DPU_CH2DMA(u32 ch);
+int decon_check_supported_formats(enum decon_pixel_format format);
 
 /*************** DECON CAL APIs exposed to DECON driver ***************/
 /* DECON control */
