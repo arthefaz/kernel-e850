@@ -208,24 +208,10 @@ static int s6e3aa2_dump(struct dsim_device *dsim)
 	return 0;
 }
 
-static int s6e3aa2_init(struct dsim_device *dsim)
-{
-	lcd_init(dsim->id, &dsim->lcd_info);
-	return 0;
-}
-
-static int s6e3aa2_preinit(struct dsim_device *dsim)
-{
-	lcd_lane_ctl(dsim->id, 2);
-	return 0;
-}
-
 struct dsim_lcd_driver s6e3aa2_mipi_lcd_driver = {
 	.probe		= s6e3aa2_probe,
 	.displayon	= s6e3aa2_displayon,
 	.suspend	= s6e3aa2_suspend,
 	.resume		= s6e3aa2_resume,
 	.dump		= s6e3aa2_dump,
-	.init		= s6e3aa2_init,
-	.preinit	= s6e3aa2_preinit,
 };
