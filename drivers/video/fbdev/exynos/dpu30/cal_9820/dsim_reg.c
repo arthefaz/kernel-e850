@@ -819,14 +819,6 @@ static void dsim_reg_set_esc_clk_on_lane(u32 id, u32 en, u32 lane)
 				DSIM_CLK_CTRL_LANE_ESCCLK_EN_MASK);
 }
 
-static void dsim_reg_set_lpdt(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	dsim_write_mask(id, DSIM_ESCMODE, val,
-				DSIM_ESCMODE_CMD_LPDT);
-}
-
 static void dsim_reg_set_stop_state_cnt(u32 id)
 {
 	u32 val = DSIM_ESCMODE_STOP_STATE_CNT(DSIM_STOP_STATE_CNT);
@@ -1631,7 +1623,7 @@ static void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info,
 	dsim_reg_set_bta_timeout(id);
 	dsim_reg_set_lpdr_timeout(id);
 
-	dsim_reg_set_lpdt(id, 0);
+	dsim_reg_set_cmd_transfer_mode(id, 0);
 	dsim_reg_set_stop_state_cnt(id);
 
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
@@ -2419,4 +2411,11 @@ void dsim_reg_set_bist(u32 id, u32 en)
 		dsim_reg_enable_bist_pattern_move(id, true);
 		dsim_reg_enable_bist(id, en);
 	}
+}
+
+void dsim_reg_set_cmd_transfer_mode(u32 id, u32 lp)
+{
+	u32 val = lp ? ~0 : 0;
+
+	dsim_write_mask(id, DSIM_ESCMODE, val, DSIM_ESCMODE_CMD_LPDT);
 }
