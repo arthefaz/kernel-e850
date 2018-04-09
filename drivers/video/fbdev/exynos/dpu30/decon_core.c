@@ -1688,6 +1688,18 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 			decon_err("%s: win_id(%d) is invalid\n", __func__, win_id);
 			return;
 		}
+#if defined(CONFIG_SUPPORT_LEGACY_ION)
+		decon->d.handle[win_id][0] = dma_bufs[win_id][0].ion_handle;
+		decon_info("VGF0(WIN%d): handle=0x%p\n",
+				win_id, decon->d.handle[win_id][0]);
+
+		v_addr = ion_map_kernel(decon->ion_client,
+				dma_bufs[win_id][0].ion_handle);
+		if (IS_ERR_OR_NULL(v_addr)) {
+			decon_err("%s: failed to map afbc buffer\n", __func__);
+			return;
+		}
+#else
 		decon->d.dmabuf[win_id][0] = dma_bufs[win_id][0].dma_buf;
 		decon_info("VGF0(WIN%d): dmabuf=0x%p\n",
 				win_id, decon->d.dmabuf[win_id][0]);
@@ -1696,6 +1708,7 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 			decon_err("%s: failed to map afbc buffer\n", __func__);
 			return;
 		}
+#endif
 		size = dma_bufs[win_id][0].dma_buf->size;
 
 		decon_info("DV(0x%p), KV(0x%p), size(%d)\n",
@@ -1709,6 +1722,18 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 			decon_err("%s: win_id(%d) is invalid\n", __func__, win_id);
 			return;
 		}
+#if defined(CONFIG_SUPPORT_LEGACY_ION)
+		decon->d.handle[win_id][0] = dma_bufs[win_id][0].ion_handle;
+		decon_info("VGF1(WIN%d): handle=0x%p\n",
+				win_id, decon->d.handle[win_id][0]);
+
+		v_addr = ion_map_kernel(decon->ion_client,
+				dma_bufs[win_id][0].ion_handle);
+		if (IS_ERR_OR_NULL(v_addr)) {
+			decon_err("%s: failed to map afbc buffer\n", __func__);
+			return;
+		}
+#else
 		decon->d.dmabuf[win_id][0] = dma_bufs[win_id][0].dma_buf;
 		decon_info("VGF1(WIN%d): dmabuf=0x%p\n",
 				win_id, decon->d.dmabuf[win_id][0]);
@@ -1717,6 +1742,7 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 			decon_err("%s: failed to map afbc buffer\n", __func__);
 			return;
 		}
+#endif
 		size = dma_bufs[win_id][0].dma_buf->size;
 
 		decon_info("DV(0x%p), KV(0x%p), size(%d)\n",
