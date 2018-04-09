@@ -1977,7 +1977,7 @@ void dsim_reg_start(u32 id)
 }
 
 /* Unset clocks and lanes and stop_state */
-void dsim_reg_stop(u32 id, u32 lanes)
+int dsim_reg_stop(u32 id, u32 lanes)
 {
 	dsim_reg_clear_int(id, 0xffffffff);
 	/* disable interrupts */
@@ -1993,6 +1993,8 @@ void dsim_reg_stop(u32 id, u32 lanes)
 	dsim_reg_enable_word_clock(id, 0);
 	dsim_reg_set_clocks(id, NULL, NULL, 0);
 	dsim_reg_sw_reset(id);
+
+	return 0;
 }
 
 /* Exit ULPS mode and set clocks and lanes */
