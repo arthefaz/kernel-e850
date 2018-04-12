@@ -891,7 +891,6 @@ static void dsim_reg_set_sync_inform(u32 id, u32 inform)
 	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_SYNC_INFORM);
 }
 
-#if 0
 /*
  * Following functions will not be used untile the correct guide is given.
  */
@@ -911,6 +910,7 @@ static void dsim_reg_set_pll_clk_gate_enable(u32 id, u32 en)
 	dsim_write_mask(id, reg_id, val, mask);
 }
 
+#if 0
 /* This function is available from EVT1 */
 static void dsim_reg_set_pll_sleep_enable(u32 id, u32 en)
 {
@@ -2085,8 +2085,20 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 		}
 	}
 
+	lanes = dsim_reg_translate_lanecnt_to_lanes(lcd_info->data_lane);
+
 	/* choose OSC_CLK */
 	dsim_reg_set_link_clock(id, 0);
+
+	dsim_reg_sw_reset(id);
+
+	dsim_reg_set_lanes(id, lanes, 1);
+
+	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
+
+	dsim_reg_set_pll_clk_gate_enable(id, 1);
+
+	dsim_reg_enable_word_clock(id, 1);
 
 	/* Enable DPHY reset : DPHY reset start */
 	dsim_reg_dphy_resetn(id, 1);
@@ -2101,7 +2113,6 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 
 	dsim_reg_set_clocks(id, clks, &lcd_info->dphy_pms, 1);
 
-	lanes = dsim_reg_translate_lanecnt_to_lanes(lcd_info->data_lane);
 	dsim_reg_set_lanes_dphy(id, lanes, 1);
 	dsim_reg_dphy_resetn(id, 0); /* Release DPHY reset */
 
@@ -2110,10 +2121,10 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 
 	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
 
-	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
-	dsim_reg_enable_word_clock(id, 1);
-
 	dsim_reg_set_config(id, lcd_info, clks);
+
+	dsim_reg_set_pll_clk_gate_enable(id, 0); /* phy clockgate enable */
+	dsim_reg_set_pll_clk_gate_enable(id, 1); /* phy clockgate disable */
 
 #if defined(CONFIG_EXYNOS_LCD_ON_UBOOT)
 	/* TODO: This code will be implemented as uboot style */
@@ -2160,7 +2171,6 @@ int dsim_reg_stop(u32 id, u32 lanes)
 	/* 4. turn off WORDCLK and ESCCLK */
 	dsim_reg_set_esc_clk_on_lane(id, 0, lanes);
 	dsim_reg_set_esc_clk_en(id, 0);
-	dsim_reg_enable_word_clock(id, 0);
 	/* 5. disable PLL */
 	dsim_reg_set_clocks(id, NULL, NULL, 0);
 
