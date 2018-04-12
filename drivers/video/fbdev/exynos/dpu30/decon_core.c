@@ -80,14 +80,6 @@ static char *decon_state_names[] = {
 	"TUI",
 };
 
-//#if defined(CONFIG_EXYNOS_ITMON)
-#if 0
-void __iomem *regs_dphy_iso;
-void __iomem *regs_dphy_clk_0;
-void __iomem *regs_dphy_clk_1;
-void __iomem *regs_dphy_clk_2;
-#endif
-
 void tracing_mark_write(struct decon_device *decon, char id, char *str1, int value)
 {
 	char buf[DECON_TRACE_BUF_SIZE] = {0,};
@@ -716,37 +708,6 @@ int cmu_dpu_dump(void)
 
 	return 0;
 }
-
-//#if defined(CONFIG_EXYNOS_ITMON)
-#if 0
-static int out_sd_ioremap(void) {
-	regs_dphy_iso = ioremap(0x1406070c, 0x10);
-	regs_dphy_clk_0 = ioremap(0x16000800, 0x10);
-	regs_dphy_clk_1 = ioremap(0x16003030, 0x10);
-	regs_dphy_clk_2 = ioremap(0x160060a8, 0x10);
-
-	return 0;
-}
-
-static int out_sd_dump(void)
-{
-	decon_info("\n=== DEBUG register dump : DPHY iso ===\n");
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs_dphy_iso, 0x04, false);
-
-	decon_info("\n=== DEBUG register dump : DPHY clock ===\n");
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs_dphy_clk_0, 0x04, false);
-
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs_dphy_clk_1, 0x04, false);
-
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs_dphy_clk_2, 0x04, false);
-
-	return 0;
-}
-#endif
 
 static int _decon_disable(struct decon_device *decon, enum decon_state state)
 {
@@ -3511,13 +3472,14 @@ static int decon_create_update_thread(struct decon_device *decon, char *name)
 	return 0;
 }
 
-//#if defined(CONFIG_EXYNOS_ITMON)
-#if 0
+#if defined(CONFIG_EXYNOS_ITMON)
 static int decon_itmon_notifier(struct notifier_block *nb,
 		unsigned long action, void *nb_data)
 {
 	struct decon_device *decon;
 	struct itmon_notifier *itmon_data = nb_data;
+	struct dsim_device *dsim = NULL;
+	bool active;
 
 	decon = container_of(nb, struct decon_device, itmon_nb);
 
@@ -3536,7 +3498,14 @@ static int decon_itmon_notifier(struct notifier_block *nb,
 					sizeof("DPU") - 1) == 0))) {
 		decon_info("%s: port: %s, dest: %s, action: %lu\n", __func__,
 				itmon_data->port, itmon_data->dest, action);
-		out_sd_dump();
+		if (decon->dt.out_type == DECON_OUT_DSI) {
+			dsim = v4l2_get_subdevdata(decon->out_sd[0]);
+			if (IS_ERR_OR_NULL(dsim))
+				return NOTIFY_OK;
+			active = pm_runtime_active(dsim->dev);
+			decon_info("DPU power %s state\n", active ? "on" : "off");
+		}
+
 		decon_dump(decon);
 		decon->notified = true;
 		return NOTIFY_OK;
@@ -3762,12 +3731,9 @@ static int decon_probe(struct platform_device *pdev)
 		goto err_display;
 	}
 
-//#if defined(CONFIG_EXYNOS_ITMON)
-#if 0
+#if defined(CONFIG_EXYNOS_ITMON)
 	decon->itmon_nb.notifier_call = decon_itmon_notifier;
 	itmon_notifier_chain_register(&decon->itmon_nb);
-	/* for DPHY debug */
-	out_sd_ioremap();
 #endif
 
 	ret = decon_initial_display(decon, false);
