@@ -209,6 +209,7 @@ struct dsim_device {
 	unsigned int data_lane;
 	u32 data_lane_cnt;
 	struct phy *phy;
+	struct phy *phy_ex;
 	spinlock_t slock;
 
 	struct dsim_lcd_driver *panel_ops;
