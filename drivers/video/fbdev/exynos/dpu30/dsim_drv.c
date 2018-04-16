@@ -687,6 +687,8 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
+	if (dsim->phy_ex)
+		phy_power_on(dsim->phy_ex);
 
 	panel_ctrl = (state == DSIM_STATE_ON) ? true : false;
 	dsim_reg_init(dsim->id, &dsim->lcd_info, &dsim->clks, panel_ctrl);
@@ -783,6 +785,8 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 
 	/* HACK */
 	phy_power_off(dsim->phy);
+	if (dsim->phy_ex)
+		phy_power_off(dsim->phy_ex);
 
 	if (state == DSIM_STATE_OFF)
 		dsim_set_panel_power(dsim, 0);
@@ -874,6 +878,8 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 		dsim_dump(dsim);
 
 	phy_power_off(dsim->phy);
+	if (dsim->phy_ex)
+		phy_power_off(dsim->phy_ex);
 
 	pm_runtime_put_sync(dsim->dev);
 
@@ -901,6 +907,8 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 1);
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
+	if (dsim->phy_ex)
+		phy_power_on(dsim->phy_ex);
 
 	dsim_reg_init(dsim->id, &dsim->lcd_info, &dsim->clks, false);
 	ret = dsim_reg_exit_ulps_and_start(dsim->id, dsim->lcd_info.ddi_type,
@@ -1301,6 +1309,12 @@ static int dsim_parse_dt(struct dsim_device *dsim, struct device *dev)
 		return PTR_ERR(dsim->phy);
 	}
 
+	dsim->phy_ex = devm_phy_get(dev, "dsim_dphy_extra");
+	if (IS_ERR_OR_NULL(dsim->phy_ex)) {
+		dsim_err("failed to get extra phy. It's not mandatary.\n");
+		dsim->phy_ex = NULL;
+	}
+
 	dsim->dev = dev;
 	dsim_get_gpios(dsim);
 
@@ -1466,6 +1480,8 @@ static int dsim_probe(struct platform_device *pdev)
 		goto err_dt;
 
 	phy_init(dsim->phy);
+	if (dsim->phy_ex)
+		phy_init(dsim->phy_ex);
 
 	dsim->state = DSIM_STATE_INIT;
 	dsim_enable(dsim);
