@@ -981,6 +981,7 @@ struct dw_mci_drv_data {
 	int (*prepare_hs400_tuning)(struct dw_mci *host, struct mmc_ios *ios);
 	int (*switch_voltage)(struct mmc_host *mmc, struct mmc_ios *ios);
 	void (*hwacg_control)(struct dw_mci *host, u32 flag);
+	void (*pins_control) (struct dw_mci * host, int config);
 	int (*misc_control)(struct dw_mci *host, enum dw_mci_misc_control control, void *priv);
 	int (*crypto_engine_cfg)(struct dw_mci *host,
 				  void *desc,

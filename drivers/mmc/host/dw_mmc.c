@@ -1996,6 +1996,9 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	case MMC_POWER_ON:
 		if (!(slot->host->quirks & DW_MMC_QUIRK_FIXED_VOLTAGE)) {
 			if (!slot->host->vqmmc_enabled) {
+				if (drv_data && drv_data->pins_control)
+					drv_data->pins_control(host, PINS_FUNC);
+
 				if (!IS_ERR(mmc->supply.vqmmc)) {
 					ret = regulator_enable(mmc->supply.vqmmc);
 					if (ret < 0)
@@ -2025,6 +2028,9 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 			if (!IS_ERR(mmc->supply.vqmmc) && slot->host->vqmmc_enabled)
 				regulator_disable(mmc->supply.vqmmc);
 			slot->host->vqmmc_enabled = false;
+
+			if (drv_data && drv_data->pins_control)
+				drv_data->pins_control(host, PINS_PDN);
 
 			regs = mci_readl(slot->host, PWREN);
 			regs &= ~(1 << slot->id);

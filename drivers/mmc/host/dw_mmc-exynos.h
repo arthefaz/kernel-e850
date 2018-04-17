@@ -74,6 +74,7 @@ struct dw_mci_exynos_priv_data {
 	u32 clk_drive_tuning;
 	struct pinctrl_state *clk_drive_base;
 	struct pinctrl_state *clk_drive_str[6];
+	struct pinctrl_state *pins_config[2];
 	int cd_gpio;
 	u32 caps;
 	u32 ctrl_flag;
@@ -255,6 +256,10 @@ extern void dw_mci_reg_dump(struct dw_mci *host);
 #define MMC_HWACG_CONTROL			BIT(4)
 #define HWACG_Q_ACTIVE_EN			1
 #define HWACG_Q_ACTIVE_DIS			0
+
+/* PINS STATE Control */
+#define PINS_FUNC			1
+#define PINS_PDN			0
 
 /* Phase 7 Mux Control */
 #define sample_path_sel_en(dev, reg) ({\

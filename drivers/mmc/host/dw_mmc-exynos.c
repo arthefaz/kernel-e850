@@ -573,6 +573,14 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 		}
 	}
 
+	priv->pins_config[0] = pinctrl_lookup_state(priv->pinctrl, "pins-as-pdn");
+	priv->pins_config[1] = pinctrl_lookup_state(priv->pinctrl, "pins-as-func");
+
+	for (i = 0; i < 2; i++) {
+		if (IS_ERR(priv->pins_config[i]))
+			priv->pins_config[i] = NULL;
+	}
+
 	of_property_read_u32(np, "samsung,dw-mshc-ciu-div", &div);
 	priv->ciu_div = div;
 
@@ -894,6 +902,14 @@ static void exynos_dwmci_tuning_drv_st(struct dw_mci *host)
 				     priv->clk_drive_str[priv->clk_drive_tuning - 1]);
 }
 
+static void dw_mci_set_pins_state(struct dw_mci *host, int config)
+{
+	struct dw_mci_exynos_priv_data *priv = host->priv;
+
+	if (priv->pinctrl && priv->pins_config[config])
+		pinctrl_select_state(priv->pinctrl, priv->pins_config[config]);
+}
+
 /*
  * Test all 8 possible "Clock in" Sample timings.
  * Create a bitmap of which CLock sample values work and find the "median"
@@ -1212,6 +1228,7 @@ static const struct dw_mci_drv_data exynos_drv_data = {
 	.parse_dt = dw_mci_exynos_parse_dt,
 	.execute_tuning = dw_mci_exynos_execute_tuning,
 	.hwacg_control = dw_mci_card_int_hwacg_ctrl,
+	.pins_control = dw_mci_set_pins_state,
 	.misc_control = dw_mci_exynos_misc_control,
 	.crypto_engine_cfg = exynos_mmc_fmp_cfg,
 	.crypto_engine_clear = exynos_mmc_fmp_clear,
