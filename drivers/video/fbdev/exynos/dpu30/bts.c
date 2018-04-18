@@ -49,6 +49,9 @@ u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 		/ ppc * (MULTI_FACTOR * (u64)dst->w / (u64)decon->lcd_info->xres)
 		/ (MULTI_FACTOR * MULTI_FACTOR * MULTI_FACTOR);
 
+	if (aclk_disp < (resol_clock / ppc))
+		aclk_disp = resol_clock / ppc;
+
 	return aclk_disp;
 }
 
