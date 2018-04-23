@@ -626,12 +626,15 @@ static void dsim_reg_sw_reset(u32 id)
 		dsim_err("%s is timeout.\n", __func__);
 }
 
+#if 0
+/* this function may be used for later use */
 static void dsim_reg_dphy_resetn(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
 	dsim_write_mask(id, DSIM_SWRST, val, DSIM_DPHY_RST); /* reset high */
 }
+#endif
 
 static void dsim_reg_set_num_of_lane(u32 id, u32 lane)
 {
@@ -2052,6 +2055,16 @@ void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 s
 	writel(val, sysreg + DISP_DPU_MIPI_PHY_CON);
 }
 
+void dpu_sysreg_dphy_reset(void __iomem *sysreg, u32 dsim_id, u32 rst)
+{
+	u32 old = readl(sysreg + DISP_DPU_MIPI_PHY_CON);
+	u32 val = rst ? ~0 : 0;
+	u32 mask = dsim_id ? M_RESETN_M4S4_TOP_MASK : M_RESETN_M4S4_MODULE_MASK;
+
+	val = (val & mask) | (old & ~mask);
+	writel(val, sysreg + DISP_DPU_MIPI_PHY_CON);
+}
+
 static u32 dsim_reg_translate_lanecnt_to_lanes(int lanecnt)
 {
 	u32 lanes, i;
@@ -2093,7 +2106,7 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 	dsim_reg_enable_word_clock(id, 1);
 
 	/* Enable DPHY reset : DPHY reset start */
-	dsim_reg_dphy_resetn(id, 1);
+	dpu_sysreg_dphy_reset(dsim->res.ss_regs, id, 0);
 
 #if defined(CONFIG_EXYNOS_LCD_ON_UBOOT)
 	/* TODO: This code will be implemented as uboot style */
@@ -2106,7 +2119,7 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 	dsim_reg_set_clocks(id, clks, &lcd_info->dphy_pms, 1);
 
 	dsim_reg_set_lanes_dphy(id, lanes, 1);
-	dsim_reg_dphy_resetn(id, 0); /* Release DPHY reset */
+	dpu_sysreg_dphy_reset(dsim->res.ss_regs, id, 1); /* Release DPHY reset */
 
 	dsim_reg_sw_reset(id);
 	dsim_reg_set_lanes(id, lanes, 1);
@@ -2139,6 +2152,8 @@ int dsim_reg_stop(u32 id, u32 lanes)
 	int err = 0;
 	u32 is_vm;
 
+	struct dsim_device *dsim = get_dsim_drvdata(id);
+
 	dsim_reg_clear_int(id, 0xffffffff);
 	/* disable interrupts */
 	dsim_reg_set_int(id, 0);
@@ -2157,7 +2172,7 @@ int dsim_reg_stop(u32 id, u32 lanes)
 	dsim_reg_set_link_clock(id, 0);
 
 	/* 2. master resetn */
-	dsim_reg_dphy_resetn(id, 1);
+	dpu_sysreg_dphy_reset(dsim->res.ss_regs, id, 0);
 	/* 3. disable lane */
 	dsim_reg_set_lanes_dphy(id, lanes, 0);
 	/* 4. turn off WORDCLK and ESCCLK */
@@ -2197,6 +2212,7 @@ int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes)
 {
 	int ret = 0;
 	u32 is_vm;
+	struct dsim_device *dsim = get_dsim_drvdata(id);
 
 	dsim_reg_clear_int(id, 0xffffffff);
 	/* disable interrupts */
@@ -2219,7 +2235,7 @@ int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes)
 	/* 3.2 OSC clock */
 	dsim_reg_set_link_clock(id, 0);
 	/* 3.3 off DPHY */
-	dsim_reg_dphy_resetn(id, 1);
+	dpu_sysreg_dphy_reset(dsim->res.ss_regs, id, 0);
 	dsim_reg_set_lanes_dphy(id, lanes, 0);
 	dsim_reg_set_clocks(id, NULL, NULL, 0);
 	/* 3.4 sw reset */
