@@ -1730,6 +1730,10 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 		return 0;
 	}
 
+#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+	decon_set_protected_content(decon, regs);
+#endif
+
 	for (i = 0; i < decon->dt.max_win; i++) {
 		if (regs->is_cursor_win[i]) {
 			dpu_cursor_win_update_config(decon, regs);
@@ -1755,10 +1759,6 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 		decon_to_init_param(decon, &p);
 		decon_reg_config_wb_size(decon->id, decon->lcd_info, &p);
 	}
-
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
-	decon_set_protected_content(decon, regs);
-#endif
 
 	decon_to_psr_info(decon, &psr);
 	if (decon_reg_start(decon->id, &psr) < 0) {
