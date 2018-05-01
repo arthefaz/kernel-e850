@@ -65,6 +65,7 @@ extern int dpp_log_level;
 			&& (config->format <= DECON_PIXEL_FORMAT_YVU422_3P))
 #define is_yuv420(config) ((config->format >= DECON_PIXEL_FORMAT_NV12) \
 			&& (config->format <= DECON_PIXEL_FORMAT_YVU420M))
+#define is_afbc(config) (config->compression)
 
 #define dpp_err(fmt, ...)							\
 	do {									\
