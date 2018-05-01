@@ -27,6 +27,166 @@
 #define LCD_REFRESH_RATE	63UL
 #define MULTI_FACTOR 		(1UL << 10)
 
+#define DPP_SCALE_NONE		0
+#define DPP_SCALE_UP		1
+#define DPP_SCALE_DOWN		2
+
+#define ACLK_100MHZ_PERIOD	10000UL
+#define ACLK_MHZ_INC_STEP	50UL	/* 50Mhz */
+#define FRAME_TIME_NSEC		1000000000UL	/* 1sec */
+#define TOTAL_BUS_LATENCY	3000UL	/* 3us: BUS(1) + PWT(1) + Requst(1) */
+
+
+/* unit : usec x 1000 -> 5592 (5.592us) for WQHD+ case */
+static inline u32 dpu_bts_get_one_line_time(struct decon_lcd *lcd_info)
+{
+	u32 tot_v;
+	int tmp;
+
+	tot_v = lcd_info->yres + lcd_info->vfp + lcd_info->vsa + lcd_info->vbp;
+	tmp = (FRAME_TIME_NSEC + lcd_info->fps - 1) / lcd_info->fps;
+
+	return (tmp / tot_v);
+}
+
+/* lmc : line memory count (usually 4) */
+static inline u32 dpu_bts_afbc_latency(u32 src_w, u32 ppc, u32 lmc)
+{
+	return ((src_w * lmc) / ppc);
+}
+
+/*
+ * line memory max size : 4096
+ * lmc : line memory count (usually 4)
+ */
+static inline u32 dpu_bts_scale_latency(u32 is_s, u32 src_w, u32 dst_w,
+		u32 ppc, u32 lmc)
+{
+	u32 lat_scale = 0;
+	u32 line_w = src_w;
+
+	/*
+	 * line_w : reflecting scale-ratio
+	 * INC for scale-down & DEC for scale-up
+	 */
+	line_w = (src_w * 1000UL) / dst_w;
+	lat_scale = (line_w * lmc) / (ppc * 1000UL);
+
+	return lat_scale;
+}
+
+/*
+ * src_h : height of original input source image
+ * cpl : cycles per line
+ */
+static inline u32 dpu_bts_rotate_latency(u32 src_h, u32 cpl)
+{
+	return (src_h * cpl);
+}
+
+/*
+ * [DSC]
+ * Line memory is necessary like followings.
+ *  1EA : 2-line for 2-slice, 1-line for 1-slice
+ *  2EA : 3.5-line for 4-slice (DSCC 0.5-line + DSC 3-line)
+ *        2.5-line for 2-slice (DSCC 0.5-line + DSC 2-line)
+ *
+ * [DECON] none
+ * When 1H is filled at OUT_FIFO, it immediately transfers to DSIM.
+ */
+static inline u32 dpu_bts_dsc_latency(u32 slice_num, u32 dsc_cnt, u32 dst_w)
+{
+	u32 lat_dsc = dst_w;
+
+	switch (slice_num) {
+	case 1:
+		/* DSC: 1EA */
+		lat_dsc = dst_w * 1;
+		break;
+	case 2:
+		if (dsc_cnt == 1)
+			lat_dsc = dst_w * 2;
+		else
+			lat_dsc = (dst_w * 25) / 10;
+		break;
+	case 4:
+		/* DSC: 2EA */
+		lat_dsc = (dst_w * 35) / 10;
+		break;
+	default:
+		break;
+	}
+
+	return lat_dsc;
+}
+
+/*
+ * unit : cycles
+ * rotate and afbc are incompatible
+ */
+static u32 dpu_bts_get_initial_latency(bool is_r, u32 is_s, bool is_c,
+		struct decon_lcd *lcd_info, u32 src_w, u32 dst_w, u32 ppc,
+		u32 cpl, u32 lmc)
+{
+	u32 lat_cycle = 0;
+
+	if (lcd_info->dsc_enabled)
+		lat_cycle = dpu_bts_dsc_latency(lcd_info->dsc_slice_num,
+				lcd_info->dsc_cnt, dst_w);
+
+	/* src_w : rotation reflected value */
+	if (is_r)
+		lat_cycle += dpu_bts_rotate_latency(src_w, cpl);
+	if (is_s)
+		lat_cycle +=
+			dpu_bts_scale_latency(is_s, src_w, dst_w, ppc, lmc);
+	if (is_c)
+		lat_cycle += dpu_bts_afbc_latency(src_w, ppc, lmc);
+
+	return lat_cycle;
+}
+
+/*
+ * unit : nsec x 1000
+ * reference aclk : 100MHz (-> 10ns x 1000)
+ */
+static inline u32 dpu_bts_get_aclk_period_time(u32 aclk_mhz)
+{
+	return ((ACLK_100MHZ_PERIOD * 100) / aclk_mhz);
+}
+
+/* find min-ACLK to meet latency */
+static u32 dpu_bts_find_latency_meet_aclk(u32 lat_cycle, u32 line_time,
+		u32 vbp, u32 aclk_disp)
+{
+	u32 aclk_mhz = aclk_disp / 1000UL;
+	u32 aclk_period, lat_time;
+	u32 lat_time_max;
+
+	/* lat_time_max: usec x 1000 */
+	lat_time_max = line_time * vbp;
+
+	/* find min-ACLK to able to cover initial latency */
+	while (1) {
+		/* aclk_period: nsec x 1000 */
+		aclk_period = dpu_bts_get_aclk_period_time(aclk_mhz);
+		lat_time = (lat_cycle * aclk_period) / 1000UL;
+		lat_time += TOTAL_BUS_LATENCY;
+
+		DPU_DEBUG_BTS("\tloop: (aclk_period = %d) (lat_time = %d)\n",
+			aclk_period, lat_time);
+		if (lat_time < lat_time_max)
+			break;
+
+		aclk_mhz += ACLK_MHZ_INC_STEP;
+	}
+
+	DPU_DEBUG_BTS("\t(lat_time = %d) (lat_time_max = %d)\n",
+		lat_time, lat_time_max);
+
+	return (aclk_mhz * 1000UL);
+}
+
 u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 		struct decon_win_config *config, u64 resol_clock)
 {
@@ -35,9 +195,23 @@ u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 	u64 ppc;
 	struct decon_frame *src = &config->src;
 	struct decon_frame *dst = &config->dst;
+	u32 src_w, src_h;
+	bool is_rotate = is_rotation(config) ? true : false;
+	bool is_comp = is_afbc(config) ? true : false;
+	u32 is_scale;
+	u32 lat_cycle, line_time;
+	u32 cycle_per_line, line_mem_cnt;
 
-	s_ratio_h = (src->w <= dst->w) ? MULTI_FACTOR : MULTI_FACTOR * (u64)src->w / (u64)dst->w;
-	s_ratio_v = (src->h <= dst->h) ? MULTI_FACTOR : MULTI_FACTOR * (u64)src->h / (u64)dst->h;
+	if (is_rotate) {
+		src_w = src->h;
+		src_h = src->w;
+	} else {
+		src_w = src->w;
+		src_h = src->h;
+	}
+
+	s_ratio_h = (src_w <= dst->w) ? MULTI_FACTOR : MULTI_FACTOR * (u64)src_w / (u64)dst->w;
+	s_ratio_v = (src_h <= dst->h) ? MULTI_FACTOR : MULTI_FACTOR * (u64)src_h / (u64)dst->h;
 
 	/* case for using dsc encoder 1ea at decon0 or decon1 */
 	if ((decon->id != 2) && (decon->lcd_info->dsc_cnt == 1))
@@ -51,6 +225,31 @@ u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 
 	if (aclk_disp < (resol_clock / ppc))
 		aclk_disp = resol_clock / ppc;
+
+	DPU_DEBUG_BTS("BEFORE latency calc: aclk_disp = %d\n", (u32)aclk_disp);
+
+	/* scaling latency: width only */
+	if (src_w < dst->w)
+		is_scale = DPP_SCALE_UP;
+	else if (src_w > dst->w)
+		is_scale = DPP_SCALE_DOWN;
+	else
+		is_scale = DPP_SCALE_NONE;
+
+	/* to check initial latency */
+	cycle_per_line = decon->bts.cycle_per_line;
+	line_mem_cnt = decon->bts.line_mem_cnt;
+	lat_cycle = dpu_bts_get_initial_latency(is_rotate, is_scale, is_comp,
+			decon->lcd_info, src_w, dst->w, (u32)ppc, cycle_per_line,
+			line_mem_cnt);
+	line_time = dpu_bts_get_one_line_time(decon->lcd_info);
+
+	aclk_disp = dpu_bts_find_latency_meet_aclk(lat_cycle, line_time,
+			decon->lcd_info->vbp, aclk_disp);
+
+	DPU_DEBUG_BTS("\t[R:%d C:%d S:%d] (lat_cycle=%d) (line_time=%d)\n",
+		is_rotate, is_comp, is_scale, lat_cycle, line_time);
+	DPU_DEBUG_BTS("AFTER latency calc: aclk_disp = %d\n", (u32)aclk_disp);
 
 	return aclk_disp;
 }
