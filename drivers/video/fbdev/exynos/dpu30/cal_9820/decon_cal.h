@@ -13,6 +13,9 @@
 #define __SAMSUNG_DECON_CAL_H__
 
 #include "../panels/decon_lcd.h"
+#if defined(CONFIG_EXYNOS9820_BTS)
+#include <soc/samsung/bts.h>
+#endif
 
 #define CEIL(x)			((x-(u32)(x) > 0 ? (u32)(x+1) : (u32)(x)))
 
@@ -255,9 +258,17 @@ struct decon_window_regs {
 	enum decon_blending blend;
 };
 
+struct decon_bts_bw {
+	u32 val;
+	u32 ch_num;
+};
+
 u32 DPU_DMA2CH(u32 dma);
 u32 DPU_CH2DMA(u32 ch);
 int decon_check_supported_formats(enum decon_pixel_format format);
+#if defined(CONFIG_EXYNOS9820_BTS)
+void decon_init_bts_info(struct decon_bts_bw bw[BTS_DPP_MAX]);
+#endif
 
 /*************** DECON CAL APIs exposed to DECON driver ***************/
 /* DECON control */
