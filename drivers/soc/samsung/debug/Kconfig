@@ -50,4 +50,9 @@ config EXYNOS_ADV_TRACER_S2D
         bool "Exynos Advanced Tracer: Plug-in - S2D"
 	default n
 	depends on EXYNOS_ADV_TRACER
+
+config EXYNOS_ADV_TRACER_MISC
+	bool "Exynos Advanced Tracer: Plug-in - MISC"
+	default n
+	depends on EXYNOS_ADV_TRACER
 endif
