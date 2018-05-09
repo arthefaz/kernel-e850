@@ -532,11 +532,11 @@ static void dpp_reg_set_gm_lut(u32 id, struct dpp_params_info *p)
 
 static void dpp_reg_set_tm_lut(u32 id, struct dpp_params_info *p)
 {
-#if defined(CONFIG_EXYNOS_HDR_TUNABLE_TONEMAPPING)
 	u32 i = 0;
 	u32 *lut_x = NULL;
 	u32 *lut_y = NULL;
 
+#if defined(CONFIG_EXYNOS_HDR_TUNABLE_TONEMAPPING)
 	if (!exynos_hdr_get_tm_lut_xy(tm_x_tune, tm_y_tune)) {
 		if ((p->max_luminance > 1000) && (p->max_luminance < 10000)) {
 			lut_x = tm_x_axis_gamma_2P2_4000;
@@ -549,6 +549,15 @@ static void dpp_reg_set_tm_lut(u32 id, struct dpp_params_info *p)
 		lut_x = tm_x_tune;
 		lut_y = tm_y_tune;
 	}
+#else
+	if ((p->max_luminance > 1000) && (p->max_luminance < 10000)) {
+		lut_x = tm_x_axis_gamma_2P2_4000;
+		lut_y = tm_y_axis_gamma_2P2_4000;
+	} else {
+		lut_x = tm_x_axis_gamma_2P2_1000;
+		lut_y = tm_y_axis_gamma_2P2_1000;
+	}
+#endif
 
 	for (i = 0; i < MAX_TM; i++) {
 		dpp_write_mask(id,
@@ -560,7 +569,6 @@ static void dpp_reg_set_tm_lut(u32 id, struct dpp_params_info *p)
 			DPP_HDR_TM_Y_AXIS_VAL(i, lut_y[i]),
 			DPP_HDR_TM_MASK(i));
 	}
-#endif
 }
 
 static void dpp_reg_set_hdr_params(u32 id, struct dpp_params_info *p)
