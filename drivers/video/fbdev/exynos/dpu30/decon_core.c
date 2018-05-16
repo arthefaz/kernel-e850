@@ -1877,7 +1877,7 @@ static int decon_set_hdr_info(struct decon_device *decon,
 #endif
 
 	hdr_cmp = memcmp(&decon->prev_hdr_info,
-			&video_meta->data.dec.shdr_static_info,
+			&video_meta->shdr_static_info,
 			sizeof(struct exynos_hdr_static_info));
 
 	/* HDR metadata is same, so skip subdev call.
@@ -1892,12 +1892,12 @@ static int decon_set_hdr_info(struct decon_device *decon,
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	ret = v4l2_subdev_call(decon->displayport_sd, core, ioctl,
 			DISPLAYPORT_IOC_SET_HDR_METADATA,
-			&video_meta->data.dec.shdr_static_info);
+			&video_meta->shdr_static_info);
 	if (ret)
 		goto err_hdr_io;
 #endif
 	memcpy(&decon->prev_hdr_info,
-			&video_meta->data.dec.shdr_static_info,
+			&video_meta->shdr_static_info,
 			sizeof(struct exynos_hdr_static_info));
 #if !defined(CONFIG_SUPPORT_LEGACY_ION)
 	dma_buf_vunmap(regs->dma_buf_data[win_num][meta_plane].dma_buf, video_meta);
