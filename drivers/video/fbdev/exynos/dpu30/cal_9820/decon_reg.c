@@ -2224,14 +2224,3 @@ int decon_check_supported_formats(enum decon_pixel_format format)
 
 	return -EINVAL;
 }
-#if defined(CONFIG_EXYNOS9820_BTS)
-void decon_init_bts_info(struct decon_bts_bw bw[])
-{
-	bw[BTS_DPP0].ch_num = BTS_DPU0;
-	bw[BTS_DPP1].ch_num = BTS_DPU1;
-	bw[BTS_DPP2].ch_num = BTS_DPU2;
-	bw[BTS_DPP3].ch_num = BTS_DPU1;
-	bw[BTS_DPP4].ch_num = BTS_DPU2;
-	bw[BTS_DPP5].ch_num = BTS_DPU0;
-}
-#endif
