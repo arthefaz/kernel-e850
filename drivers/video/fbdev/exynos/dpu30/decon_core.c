@@ -3322,6 +3322,11 @@ static void decon_parse_dt(struct decon_device *decon)
 	decon_info("out type(%d). 0: DSI 1: DISPLAYPORT 2: HDMI 3: WB\n",
 			decon->dt.out_type);
 
+	if (of_property_read_u32(dev->of_node, "ppc", (u32 *)&decon->bts.ppc))
+		decon->bts.ppc = 2UL;
+
+	decon_info("PPC(%d)\n", decon->bts.ppc);
+
 	if (decon->dt.out_type == DECON_OUT_DSI) {
 		ret = of_property_read_u32_index(dev->of_node, "out_idx", 0,
 				&decon->dt.out_idx[0]);

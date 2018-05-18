@@ -585,6 +585,10 @@ static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg
 		ret = dpp_afbc_enabled(dpp, afbc_enabled);
 		break;
 
+	case DPP_GET_PORT_NUM:
+		*(int *)arg = dpp->port;
+		break;
+
 	default:
 		break;
 	}
@@ -617,6 +621,8 @@ static void dpp_parse_dt(struct dpp_device *dpp, struct device *dev)
 	dpp_info("dpp(%d) probe start..\n", dpp->id);
 	of_property_read_u32(dev->of_node, "attr", (u32 *)&dpp->attr);
 	dpp_info("attributes = 0x%lx\n", dpp->attr);
+	of_property_read_u32(dev->of_node, "port", (u32 *)&dpp->port);
+	dpp_info("AXI port = %d\n", dpp->port);
 
 	dpp->dev = dev;
 }
