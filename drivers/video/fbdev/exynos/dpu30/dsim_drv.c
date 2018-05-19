@@ -322,6 +322,7 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 			dsim_dbg("Short Packet was received from LCD module.\n");
 			for (i = 0; i <= cnt; i++)
 				buf[i] = (rx_fifo >> (8 + i * 8)) & 0xff;
+			rx_size = cnt;
 			break;
 		case MIPI_DSI_RX_DCS_LONG_READ_RESPONSE:
 		case MIPI_DSI_RX_GENERIC_LONG_READ_RESPONSE:
