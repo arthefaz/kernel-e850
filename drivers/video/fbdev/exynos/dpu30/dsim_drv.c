@@ -60,55 +60,14 @@ static char *dsim_state_names[] = {
 static int dsim_runtime_suspend(struct device *dev);
 static int dsim_runtime_resume(struct device *dev);
 
-static void __dsim_dump(struct dsim_device *dsim)
-{
-	/* change to updated register read mode (meaning: SHADOW in DECON) */
-	dsim_info("=== DSIM %d LINK SFR DUMP ===\n", dsim->id);
-	dsim_reg_enable_shadow_read(dsim->id, 0);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.regs, 0xFC, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.regs + 0x200, 0x4, false);
-
-	dsim_info("=== DSIM %d DPHY SFR DUMP ===\n", dsim->id);
-	/* DPHY dump */
-	/* PLL */
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.phy_regs + 0x0100, 0x24, false);
-	/* MC */
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.phy_regs + 0x0300, 0x48, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.phy_regs + 0x03E0, 0x10, false);
-	/* MD0 */
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.phy_regs + 0x0400, 0x48, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.phy_regs + 0x04C0, 0x20, false);
-	/* MD1 */
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.phy_regs + 0x0500, 0x48, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.phy_regs + 0x05C0, 0x20, false);
-	/* MD2 */
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.phy_regs + 0x0600, 0x48, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.phy_regs + 0x06C0, 0x20, false);
-	/* MD3 */
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.phy_regs + 0x0700, 0x48, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dsim->res.phy_regs + 0x07C0, 0x20, false);
-
-	/* restore to avoid size mismatch (possible config error at DECON) */
-	dsim_reg_enable_shadow_read(dsim->id, 1);
-}
-
 static void dsim_dump(struct dsim_device *dsim)
 {
+	struct dsim_regs regs;
+
 	dsim_info("=== DSIM SFR DUMP ===\n");
-	__dsim_dump(dsim);
+
+	dsim_to_regs_param(dsim, &regs);
+	__dsim_dump(dsim->id, &regs);
 
 	/* Show panel status */
 	call_panel_ops(dsim, dump, dsim);
@@ -165,6 +124,7 @@ static void dsim_long_data_wr(struct dsim_device *dsim, unsigned long d0, u32 d1
 static int dsim_wait_for_cmd_fifo_empty(struct dsim_device *dsim, bool must_wait)
 {
 	int ret = 0;
+	struct dsim_regs regs;
 
 	if (!must_wait) {
 		/* timer is running, but already command is transferred */
@@ -189,7 +149,8 @@ static int dsim_wait_for_cmd_fifo_empty(struct dsim_device *dsim, bool must_wait
 
 	if (IS_DSIM_ON_STATE(dsim) && (ret == -ETIMEDOUT)) {
 		dsim_err("%s have timed out\n", __func__);
-		__dsim_dump(dsim);
+		dsim_to_regs_param(dsim, &regs);
+		__dsim_dump(dsim->id, &regs);
 	}
 	return ret;
 }
@@ -309,6 +270,7 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 	int i, j, ret = 0;
 	u32 rx_fifo_depth = DSIM_RX_FIFO_MAX_DEPTH;
 	struct decon_device *decon = get_decon_drvdata(0);
+	struct dsim_regs regs;
 
 	decon_hiber_block_exit(decon);
 
@@ -345,7 +307,8 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 		case MIPI_DSI_RX_ACKNOWLEDGE_AND_ERROR_REPORT:
 			ret = dsim_reg_rx_err_handler(dsim->id, rx_fifo);
 			if (ret < 0) {
-				__dsim_dump(dsim);
+				dsim_to_regs_param(dsim, &regs);
+				__dsim_dump(dsim->id, &regs);
 				goto exit;
 			}
 			break;
@@ -381,7 +344,8 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 			break;
 		default:
 			dsim_err("Packet format is invaild.\n");
-			__dsim_dump(dsim);
+			dsim_to_regs_param(dsim, &regs);
+			__dsim_dump(dsim->id, &regs);
 			ret = -EBUSY;
 			goto exit;
 		}
@@ -390,7 +354,8 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 	ret = rx_size;
 	if (!rx_fifo_depth) {
 		dsim_err("Check DPHY values about HS clk.\n");
-		__dsim_dump(dsim);
+		dsim_to_regs_param(dsim, &regs);
+		__dsim_dump(dsim->id, &regs);
 		ret = -EBUSY;
 	}
 exit:
@@ -404,6 +369,7 @@ static void dsim_cmd_fail_detector(unsigned long arg)
 {
 	struct dsim_device *dsim = (struct dsim_device *)arg;
 	struct decon_device *decon = get_decon_drvdata(0);
+	struct dsim_regs regs;
 
 	decon_hiber_block(decon);
 
@@ -422,7 +388,8 @@ static void dsim_cmd_fail_detector(unsigned long arg)
 		goto exit;
 	}
 
-	__dsim_dump(dsim);
+	dsim_to_regs_param(dsim, &regs);
+	__dsim_dump(dsim->id, &regs);
 
 exit:
 	decon_hiber_unblock(decon);
@@ -825,6 +792,8 @@ out:
 
 static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 {
+	struct dsim_regs regs;
+
 	if (IS_DSIM_OFF_STATE(dsim)) {
 		dsim_warn("%s dsim already off(%s)\n",
 				__func__, dsim_state_names[dsim->state]);
@@ -842,8 +811,10 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 	dsim->state = state;
 	mutex_unlock(&dsim->cmd_lock);
 
-	if (dsim_reg_stop(dsim->id, dsim->data_lane) < 0)
-		__dsim_dump(dsim);
+	if (dsim_reg_stop(dsim->id, dsim->data_lane) < 0) {
+		dsim_to_regs_param(dsim, &regs);
+		__dsim_dump(dsim->id, &regs);
+	}
 	disable_irq(dsim->res.irq);
 
 	/* HACK */
@@ -1445,6 +1416,7 @@ static int dsim_init_resources(struct dsim_device *dsim, struct platform_device 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (!res) {
 		dsim_info("no 2nd mem resource\n");
+		dsim->res.phy_regs = NULL;
 	} else {
 		dsim_info("dphy res: start(0x%x), end(0x%x)\n",
 				(u32)res->start, (u32)res->end);
@@ -1459,6 +1431,7 @@ static int dsim_init_resources(struct dsim_device *dsim, struct platform_device 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
 	if (!res) {
 		dsim_info("no extra dphy resource\n");
+		dsim->res.phy_regs_ex = NULL;
 	} else {
 		dsim_info("dphy_extra res: start(0x%x), end(0x%x)\n",
 				(u32)res->start, (u32)res->end);
