@@ -1161,7 +1161,7 @@ static void dpp_reg_dump_ch_data(int id, enum dpp_reg_area reg_area,
 static bool checked;
 #endif
 
-void dma_reg_dump_com_debug_regs(int id)
+static void dma_reg_dump_com_debug_regs(int id)
 {
 #if 0 /* TODO: This will be implemented */
 	u32 sel[12] = {0x0000, 0x0100, 0x0200, 0x0204, 0x0205, 0x0300, 0x4000,
@@ -1178,7 +1178,7 @@ void dma_reg_dump_com_debug_regs(int id)
 #endif
 }
 
-void dma_reg_dump_debug_regs(int id)
+static void dma_reg_dump_debug_regs(int id)
 {
 #if 0 /* TODO: This will be implemented */
 	u32 sel_g[11] = {
@@ -1238,7 +1238,7 @@ void dma_reg_dump_debug_regs(int id)
 #endif
 }
 
-void dpp_reg_dump_debug_regs(int id)
+static void dpp_reg_dump_debug_regs(int id)
 {
 #if 0 /* TODO: This will be implemented */
 	u32 sel_g[3] = {0x0000, 0x0100, 0x0101};
@@ -1277,4 +1277,57 @@ void dpp_reg_dump_debug_regs(int id)
 	dpp_info("-< DPP%d DEBUG SFR >-\n", id);
 	dpp_reg_dump_ch_data(id, REG_AREA_DPP, sel, cnt);
 #endif
+}
+
+static void dma_dump_regs(u32 id, void __iomem *dma_regs)
+{
+	dpp_info("\n=== DPU_DMA%d SFR DUMP ===\n", id);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dma_regs, 0x6C, false);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dma_regs + 0x100, 0x8, false);
+
+	dpp_info("=== DPU_DMA%d SHADOW SFR DUMP ===\n", id);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dma_regs + 0x800, 0x74, false);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			dma_regs + 0x900, 0x8, false);
+}
+
+static void dpp_dump_regs(u32 id, void __iomem *regs, unsigned long attr)
+{
+	dpp_info("=== DPP%d SFR DUMP ===\n", id);
+
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs, 0x4C, false);
+	if (test_bit(DPP_ATTR_AFBC, &attr)) {
+		print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+				regs + 0x5B0, 0x10, false);
+	}
+	if (test_bit(DPP_ATTR_ROT, &attr)) {
+		print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs + 0x600, 0x1E0, false);
+	}
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs + 0xA54, 0x4, false);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs + 0xB00, 0x4C, false);
+	if (test_bit(DPP_ATTR_AFBC, &attr)) {
+		print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+				regs + 0xBB0, 0x10, false);
+	}
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs + 0xD00, 0xC, false);
+}
+
+void __dpp_dump(u32 id, void __iomem *regs, void __iomem *dma_regs,
+		unsigned long attr)
+{
+	dma_reg_dump_com_debug_regs(id);
+
+	dma_dump_regs(id, dma_regs);
+	dma_reg_dump_debug_regs(id);
+
+	dpp_dump_regs(id, regs, attr);
+	dpp_reg_dump_debug_regs(id);
 }
