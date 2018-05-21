@@ -1444,15 +1444,16 @@ static int dsim_init_resources(struct dsim_device *dsim, struct platform_device 
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (!res) {
-		dsim_err("failed to get mem resource\n");
-		return -ENOENT;
-	}
-	dsim_info("dphy res: start(0x%x), end(0x%x)\n", (u32)res->start, (u32)res->end);
+		dsim_info("no 2nd mem resource\n");
+	} else {
+		dsim_info("dphy res: start(0x%x), end(0x%x)\n",
+				(u32)res->start, (u32)res->end);
 
-	dsim->res.phy_regs = devm_ioremap_resource(dsim->dev, res);
-	if (!dsim->res.phy_regs) {
-		dsim_err("failed to remap DSIM DPHY SFR region\n");
-		return -EINVAL;
+		dsim->res.phy_regs = devm_ioremap_resource(dsim->dev, res);
+		if (!dsim->res.phy_regs) {
+			dsim_err("failed to remap DSIM DPHY SFR region\n");
+			return -EINVAL;
+		}
 	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
