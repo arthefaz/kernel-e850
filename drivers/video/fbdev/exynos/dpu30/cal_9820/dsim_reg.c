@@ -2435,3 +2435,48 @@ void dsim_reg_set_cmd_transfer_mode(u32 id, u32 lp)
 
 	dsim_write_mask(id, DSIM_ESCMODE, val, DSIM_ESCMODE_CMD_LPDT);
 }
+
+void __dsim_dump(u32 id, struct dsim_regs *regs)
+{
+	/* change to updated register read mode (meaning: SHADOW in DECON) */
+	dsim_info("=== DSIM %d LINK SFR DUMP ===\n", id);
+	dsim_reg_enable_shadow_read(id, 0);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->regs, 0xFC, false);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->regs + 0x200, 0x4, false);
+
+	dsim_info("=== DSIM %d DPHY SFR DUMP ===\n", id);
+	/* DPHY dump */
+	/* PLL */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x0100, 0x24, false);
+	/* MC */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x0300, 0x48, false);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x03E0, 0x10, false);
+	/* MD0 */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x0400, 0x48, false);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x04C0, 0x20, false);
+	/* MD1 */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x0500, 0x48, false);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x05C0, 0x20, false);
+	/* MD2 */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x0600, 0x48, false);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x06C0, 0x20, false);
+	/* MD3 */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x0700, 0x48, false);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x07C0, 0x20, false);
+
+	/* restore to avoid size mismatch (possible config error at DECON) */
+	dsim_reg_enable_shadow_read(id, 1);
+}
