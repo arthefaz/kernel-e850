@@ -55,7 +55,9 @@
 #include "./panels/lcd_ctrl.h"
 #include "../../../../dma-buf/sync_debug.h"
 #include "dpp.h"
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 #include "displayport.h"
+#endif
 
 int decon_log_level = 6;
 module_param(decon_log_level, int, 0644);
@@ -1250,7 +1252,9 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 #endif
 	struct dma_buf *buf = NULL;
 	struct decon_dma_buf_data *dma_buf_data = NULL;
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct displayport_device *displayport;
+#endif
 	struct dsim_device *dsim;
 	struct device *dev;
 	int i;
@@ -1284,8 +1288,10 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 			return PTR_ERR(buf);
 		}
 		if (decon->dt.out_type == DECON_OUT_DP) {
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 			displayport = v4l2_get_subdevdata(decon->out_sd[0]);
 			dev = displayport->dev;
+#endif
 		} else { /* DSI case */
 			dsim = v4l2_get_subdevdata(decon->out_sd[0]);
 			dev = dsim->dev;
@@ -1830,7 +1836,10 @@ static int decon_set_hdr_info(struct decon_device *decon,
 		struct decon_reg_data *regs, int win_num, bool on)
 {
 	struct exynos_video_meta *video_meta;
-	int ret = 0, hdr_cmp = 0;
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	int ret = 0;
+#endif
+	int hdr_cmp = 0;
 	int meta_plane = 0;
 
 	if (!on) {
@@ -1838,12 +1847,13 @@ static int decon_set_hdr_info(struct decon_device *decon,
 
 		hdr_static_info.mid = -1;
 		decon->prev_hdr_info.mid = -1;
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		ret = v4l2_subdev_call(decon->displayport_sd, core, ioctl,
 				DISPLAYPORT_IOC_SET_HDR_METADATA,
 				&hdr_static_info);
 		if (ret)
 			goto err_hdr_io;
-
+#endif
 		return 0;
 	}
 
@@ -1879,13 +1889,13 @@ static int decon_set_hdr_info(struct decon_device *decon,
 #endif
 		return 0;
 	}
-
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	ret = v4l2_subdev_call(decon->displayport_sd, core, ioctl,
 			DISPLAYPORT_IOC_SET_HDR_METADATA,
 			&video_meta->data.dec.shdr_static_info);
 	if (ret)
 		goto err_hdr_io;
-
+#endif
 	memcpy(&decon->prev_hdr_info,
 			&video_meta->data.dec.shdr_static_info,
 			sizeof(struct exynos_hdr_static_info));
@@ -1894,7 +1904,9 @@ static int decon_set_hdr_info(struct decon_device *decon,
 #endif
 	return 0;
 
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 err_hdr_io:
+#endif
 	/* When the subdev call is failed,
 	 * current hdr_static_info is not copied to prev.
 	 */
@@ -3037,8 +3049,10 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	win->plane_cnt = 1;
 
 	if (decon->dt.out_type == DECON_OUT_DP) {
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		displayport = v4l2_get_subdevdata(decon->out_sd[0]);
 		dev = displayport->dev;
+#endif
 	} else { /* DSI case */
 		dsim = v4l2_get_subdevdata(decon->out_sd[0]);
 		dev = dsim->dev;
