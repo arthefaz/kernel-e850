@@ -55,7 +55,9 @@
 
 #include "./panels/decon_lcd.h"
 #include "dsim.h"
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 #include "displayport.h"
+#endif
 #if defined(CONFIG_SUPPORT_LEGACY_FENCE)
 #include "../../../../dma-buf/sync_debug.h"
 #endif
@@ -1044,6 +1046,7 @@ int decon_wb_get_clocks(struct decon_device *decon);
 void decon_wb_set_clocks(struct decon_device *decon);
 int decon_wb_get_out_sd(struct decon_device *decon);
 
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 /* DECON to DISPLAYPORT interface functions */
 int decon_displayport_register_irq(struct decon_device *decon);
 void decon_displayport_free_irq(struct decon_device *decon);
@@ -1058,6 +1061,7 @@ int decon_displayport_get_config(struct decon_device *dex,
 		struct exynos_displayport_data *displayport_data);
 int decon_displayport_set_config(struct decon_device *dex,
 		struct exynos_displayport_data *displayport_data);
+#endif
 
 /* window update related function */
 #define DPU_FULL_RECT(r, lcd)			\
