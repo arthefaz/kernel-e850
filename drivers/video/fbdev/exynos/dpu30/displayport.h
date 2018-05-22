@@ -29,7 +29,12 @@
 #include <linux/ccic/ccic_notifier.h>
 #endif
 
+#if defined(CONFIG_SOC_EXYNOS9810)
 #include "./cal_9810/regs-displayport.h"
+#elif defined(CONFIG_SOC_EXYNOS9820)
+#include "./cal_9820/regs-displayport.h"
+#endif
+
 #include "./panels/decon_lcd.h"
 #include "hdr_metadata.h"
 
@@ -375,15 +380,17 @@ struct fb_vendor {
 #define SYNC_POSITIVE 0
 #define SYNC_NEGATIVE 1
 
-#define AUDIO_BUF_FULL_SIZE 33
+#define AUDIO_BUF_FULL_SIZE 40
 #define AUDIO_DISABLE 0
 #define AUDIO_ENABLE 1
 #define AUDIO_WAIT_BUF_FULL 2
+#define AUDIO_DMA_REQ_HIGH 3
 
 enum phy_tune_info {
-	PHY_AMP_PARAM = 0,
-	PHY_EMP_PARAM = 1,
-	PHY_IDRV_EN_PARAM = 2,
+	AMP = 0,
+	POST_EMP = 1,
+	PRE_EMP = 2,
+	IDRV = 3,
 };
 
 typedef enum {
@@ -950,8 +957,8 @@ void displayport_reg_phy_disable(void);
 void displayport_reg_phy_init_setting(void);
 void displayport_reg_phy_mode_setting(void);
 void displayport_reg_phy_ssc_enable(u32 en);
-void displayport_reg_set_link_bw(u8 link_rate);
-u32 displayport_reg_get_link_bw(void);
+void displayport_reg_phy_set_link_bw(u8 link_rate);
+u32 displayport_reg_phy_get_link_bw(void);
 void displayport_reg_set_lane_count(u8 lane_cnt);
 u32 displayport_reg_get_lane_count(void);
 void displayport_reg_wait_phy_pll_lock(void);
@@ -969,6 +976,8 @@ void displayport_reg_lh_p_ch_power(u32 en);
 void displayport_reg_set_audio_m_n(audio_sync_mode audio_sync_mode,
 		enum audio_sampling_frequency audio_sampling_freq);
 void displayport_reg_set_audio_function_enable(u32 en);
+void displayport_reg_set_init_dma_config(void);
+void displayport_reg_set_dma_force_req_low(u32 en);
 void displayport_reg_set_dma_burst_size(enum audio_dma_word_length word_length);
 void displayport_reg_set_dma_pack_mode(enum audio_16bit_dma_mode dma_mode);
 void displayport_reg_set_pcm_size(enum audio_bit_per_channel audio_bit_size);

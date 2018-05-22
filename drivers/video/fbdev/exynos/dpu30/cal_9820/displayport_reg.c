@@ -15,11 +15,53 @@
 #include "../../../../drivers/phy/samsung/phy-exynos-usbdp.h"
 #endif
 
-u32 phy_tune_parameters[4][4][3] = {
-	/* Swing Level_0 */ { {4, 0, 0}, {0, 7, 0}, {2,  9, 1}, {0, 13, 1} },
-	/* Swing Level_1 */ { {1, 0, 0}, {2, 6, 1}, {0, 10, 1}, {0, 10, 1} },
-	/* Swing Level_2 */ { {2, 0, 1}, {0, 6, 1}, {0,  6, 1}, {0,  6, 1} },
-	/* Swing Level_3 */ { {0, 0, 1}, {0, 0, 1}, {0,  0, 1}, {0,  0, 1} },
+u32 phy_default_value[DEFAULT_SFR_CNT][2] = {
+	{0x0020, 0x48}, {0x0050, 0x04}, {0x0054, 0x02}, {0x0058, 0x26}, {0x005C, 0x22},
+	{0x0090, 0x60}, {0x0094, 0x60}, {0x00C4, 0x0B}, {0x00E0, 0x38}, {0x012C, 0xF4},
+	{0x0134, 0xF4},	{0x015C, 0x4E}, {0x0174, 0x4E}, {0x018C, 0x41}, {0x01AC, 0x2C},
+	{0x01BC, 0x3F},	{0x01C8, 0x08}, {0x01F0, 0x07}, {0x0208, 0x16}, {0x021C, 0x19},
+	{0x0220, 0x3C},	{0x081C, 0x1F}, {0x0830, 0x07}, {0x085C, 0x80}, {0x08CC, 0x11},
+	{0x0904, 0x71}, {0x0994, 0x3F}, {0x0998, 0x3F},	{0x099C, 0xFF}, {0x09A8, 0x7C},
+	{0x09B8, 0x4E}, {0x09E4, 0x04}, {0x09F8, 0x0C},	{0x09FC, 0x0C}, {0x0A2C, 0x00},
+	{0x0A30, 0x00}, {0x0A34, 0x1E}, {0x0AF4, 0x1B},	{0x0AF8, 0x01}, {0x0AFC, 0x13},
+	{0x0B00, 0x30}, {0x101C, 0x1F}, {0x1030, 0x07}, {0x105C, 0x80}, {0x1078, 0x01},
+	{0x107C, 0x05}, {0x1080, 0x33}, {0x181C, 0x1F}, {0x1830, 0x07}, {0x185C, 0x80},
+	{0x18CC, 0x11}, {0x1904, 0x71},	{0x1994, 0x3F}, {0x1998, 0x3F}, {0x199C, 0xFF},
+	{0x19A8, 0x7C}, {0x19B8, 0x4E},	{0x19E4, 0x04}, {0x19F8, 0x0C}, {0x19FC, 0x0C},
+	{0x1A2C, 0x00}, {0x1A30, 0x00},	{0x1A34, 0x1E}, {0x1AF4, 0x1B}, {0x1AF8, 0x01},
+	{0x1AFC, 0x13}, {0x1B00, 0x30},	{0x201C, 0x1F}, {0x2030, 0x07}, {0x205C, 0x80},
+	{0x2078, 0x01},	{0x207C, 0x05}, {0x2080, 0x33}, {0x0228, 0x38}, {0x0104, 0x44},
+	{0x0248, 0x44}, {0x038C, 0x02}, {0x09D0, 0x60}, {0x19D0, 0x60}, {0x03A8, 0x07},
+	{0x03AC, 0x00}, {0x0C2C, 0x0C}, {0x0C30, 0x0C}, {0x0C44, 0x0C}, {0x0C48, 0x0C},
+	{0x1C2C, 0x0C}, {0x1C30, 0x0C}, {0x1C44, 0x0C}, {0x1C48, 0x0C}, {0x02D0, 0x4B},
+	{0x014C, 0x34},
+};
+
+u32 phy_tune_parameters[4][4][4] = { /* {amp, post, pre, idrv} */
+	{	/* Swing Level_0 */
+		{0x21, 0x10, 0x42, 0x1C}, /* Pre-emphasis Level_0 */
+		{0x25, 0x14, 0x42, 0x1C}, /* Pre-emphasis Level_1 */
+		{0x26, 0x17, 0x43, 0x1C}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x1C, 0x43, 0x1D}, /* Pre-emphasis Level_3 */
+	},
+	{	/* Swing Level_1 */
+		{0x26, 0x10, 0x42, 0x1D}, /* Pre-emphasis Level_0 */
+		{0x2B, 0x15, 0x42, 0x1D}, /* Pre-emphasis Level_1 */
+		{0x2B, 0x18, 0x43, 0x1D}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x18, 0x43, 0x1D}, /* Pre-emphasis Level_3 */
+	},
+	{	/* Swing Level_2 */
+		{0x2A, 0x10, 0x42, 0x1D}, /* Pre-emphasis Level_0 */
+		{0x2B, 0x15, 0x43, 0x1D}, /* Pre-emphasis Level_1 */
+		{0x2B, 0x15, 0x43, 0x1D}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x15, 0x43, 0x1D}, /* Pre-emphasis Level_3 */
+	},
+	{	/* Swing Level_3 */
+		{0x2B, 0x10, 0x43, 0x1D}, /* Pre-emphasis Level_0 */
+		{0x2B, 0x10, 0x43, 0x1D}, /* Pre-emphasis Level_1 */
+		{0x2B, 0x10, 0x43, 0x1D}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x10, 0x43, 0x1D}, /* Pre-emphasis Level_3 */
+	},
 };
 
 /* supported_videos[] is to be arranged in the order of pixel clock */
@@ -107,29 +149,25 @@ void displayport_reg_sw_reset(void)
 void displayport_reg_phy_reset(u32 en)
 {
 	if (en)
-		displayport_phy_write_mask(DP_REG_1, 0, CMN_INIT_RSTN);
-	else
-		displayport_phy_write_mask(DP_REG_1, ~0, CMN_INIT_RSTN);
-}
+		displayport_phy_write_mask(CMN_REG00E3, 0, DP_CMN_RSTN);
+	else {
+		displayport_phy_write(CMN_REG00E3, DP_INIT_RSTN | CDR_WATCHDOG_EN);
 
-void displayport_reg_phy_txclk_source_setting(u8 lane_num)
-{
-	displayport_phy_write_mask(DP_REG_B, lane_num, LN_TXCLK_SOURCE_LANE);
+		udelay(1);
+
+		displayport_phy_write(CMN_REG00E3,
+				DP_INIT_RSTN | DP_CMN_RSTN | CDR_WATCHDOG_EN);
+	}
 }
 
 void displayport_reg_phy_init_setting(void)
 {
-	displayport_phy_write(DP_REG_11, 0x00);
-	displayport_phy_write(DP_REG_31, 0x00);
-	displayport_phy_write(DP_REG_51, 0x00);
-	displayport_phy_write(DP_REG_71, 0x00);
-	displayport_phy_write(DP_REG_C6, 0x20);
-	displayport_phy_write(DP_REG_C9, 0x1E);
-	displayport_phy_write(DP_REG_D9, 0x30);
-	displayport_phy_write(DP_REG_E9, 0x30);
-	displayport_phy_write(DP_REG_CF, 0x0D);
-	displayport_phy_write(DP_REG_DF, 0x08);
-	displayport_phy_write(DP_REG_EF, 0x08);
+	int i;
+
+	for (i = 0; i < DEFAULT_SFR_CNT; i++)
+		displayport_phy_write(phy_default_value[i][0], phy_default_value[i][1]);
+
+	displayport_phy_write_mask(CMN_REG0009, 0xA, ANA_AUX_TX_LVL_CTRL);
 }
 
 void displayport_reg_phy_mode_setting(void)
@@ -137,7 +175,8 @@ void displayport_reg_phy_mode_setting(void)
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	struct displayport_device *displayport = get_displayport_drvdata();
 #endif
-	u32 val = 0;
+	u32 lane_config_val = 0;
+	u32 lane_en_val = 0;
 
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	switch (displayport->ccic_notify_dp_conf) {
@@ -151,19 +190,13 @@ void displayport_reg_phy_mode_setting(void)
 #if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
 		exynos_usbdrd_inform_dp_use(1, 4);
 #endif
+		lane_config_val = LANE_MUX_SEL_DP_LN3 | LANE_MUX_SEL_DP_LN2
+				| LANE_MUX_SEL_DP_LN1 | LANE_MUX_SEL_DP_LN0;
+		lane_en_val = DP_LANE_EN_LN3 | DP_LANE_EN_LN2
+				| DP_LANE_EN_LN1 | DP_LANE_EN_LN0;
 
-		displayport_phy_write_mask(CMN_REG2C, 1, MAN_USBDP_MODE_EN);
-
-		displayport_phy_write_mask(CMN_REG2C, 0x02, MAN_USBDP_MODE);
-
-		displayport_phy_write_mask(CMN_REG2D, 0, USB_TX1_SEL);
-		displayport_phy_write_mask(CMN_REG2D, 0, USB_TX3_SEL);
-
-		displayport_phy_write_mask(DP_REG_B3, 0x02, CMN_DUMMY_CTRL_1_0);
-		displayport_phy_write_mask(DP_REG_B3, 0x00, CMN_DUMMY_CTRL_7_6);
-
-		val = LN0_LANE_EN | LN1_LANE_EN | LN2_LANE_EN | LN3_LANE_EN;
-		displayport_reg_phy_txclk_source_setting(0);
+		displayport_phy_write_mask(TRSV_REG0400, 1, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
+		displayport_phy_write_mask(TRSV_REG0800, 1, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
 		break;
 
 	case CCIC_NOTIFY_DP_PIN_B:
@@ -172,31 +205,18 @@ void displayport_reg_phy_mode_setting(void)
 #if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
 		exynos_usbdrd_inform_dp_use(1, 2);
 #endif
-
-		displayport_phy_write_mask(CMN_REG2C, 1, MAN_USBDP_MODE_EN);
-
 		if (displayport->dp_sw_sel) {
-			displayport_phy_write_mask(CMN_REG2C, 0x03, MAN_USBDP_MODE);
+			lane_config_val = LANE_MUX_SEL_DP_LN3 | LANE_MUX_SEL_DP_LN2;
+			lane_en_val = DP_LANE_EN_LN3 | DP_LANE_EN_LN2;
 
-			displayport_phy_write_mask(CMN_REG2D, 1, USB_TX1_SEL);
-			displayport_phy_write_mask(CMN_REG2D, 0, USB_TX3_SEL);
-
-			displayport_phy_write_mask(DP_REG_B3, 0x03, CMN_DUMMY_CTRL_1_0);
-			displayport_phy_write_mask(DP_REG_B3, 0x01, CMN_DUMMY_CTRL_7_6);
-
-			val = LN2_LANE_EN | LN3_LANE_EN;
-			displayport_reg_phy_txclk_source_setting(3);
+			displayport_phy_write_mask(TRSV_REG0400, 0, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
+			displayport_phy_write_mask(TRSV_REG0800, 1, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
 		} else {
-			displayport_phy_write_mask(CMN_REG2C, 0x00, MAN_USBDP_MODE);
+			lane_config_val = LANE_MUX_SEL_DP_LN1 | LANE_MUX_SEL_DP_LN0;
+			lane_en_val = DP_LANE_EN_LN1 | DP_LANE_EN_LN0;
 
-			displayport_phy_write_mask(CMN_REG2D, 0, USB_TX1_SEL);
-			displayport_phy_write_mask(CMN_REG2D, 1, USB_TX3_SEL);
-
-			displayport_phy_write_mask(DP_REG_B3, 0x00, CMN_DUMMY_CTRL_1_0);
-			displayport_phy_write_mask(DP_REG_B3, 0x02, CMN_DUMMY_CTRL_7_6);
-
-			val = LN0_LANE_EN | LN1_LANE_EN;
-			displayport_reg_phy_txclk_source_setting(0);
+			displayport_phy_write_mask(TRSV_REG0400, 1, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
+			displayport_phy_write_mask(TRSV_REG0800, 0, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
 		}
 		break;
 
@@ -205,14 +225,13 @@ void displayport_reg_phy_mode_setting(void)
 		break;
 	}
 #endif
-
-	val |= 0xF0;
-	displayport_phy_write(DP_REG_0, val);
+	displayport_phy_write_mask(CMN_REG00A3, 1, OVRD_RX_CDR_DATA_MODE_EXIT);
+	displayport_phy_write(CMN_REG00A2, lane_config_val | lane_en_val);
 }
 
 void displayport_reg_phy_ssc_enable(u32 en)
 {
-	displayport_phy_write_mask(DP_REG_97, en, SSC_EN);
+	displayport_phy_write_mask(CMN_REG00B4, en, ROPLL_SSC_EN);
 }
 
 void displayport_reg_wait_phy_pll_lock(void)
@@ -230,14 +249,48 @@ void displayport_reg_wait_phy_pll_lock(void)
 		displayport_err("%s is timeout.\n", __func__);
 }
 
-void displayport_reg_set_link_bw(u8 link_rate)
+void displayport_reg_phy_set_link_bw(u8 link_rate)
 {
-	displayport_write(SYSTEM_MAIN_LINK_BANDWIDTH, link_rate);
+	u32 val = 0;
+
+	switch (link_rate) {
+	case LINK_RATE_5_4Gbps:
+		val = 0x02;
+		break;
+	case LINK_RATE_2_7Gbps:
+		val = 0x01;
+		break;
+	case LINK_RATE_1_62Gbps:
+		val = 0x00;
+		break;
+	default:
+		val = 0x02;
+	}
+
+	displayport_phy_write_mask(CMN_REG00A3, val, DP_TX_LINK_BW);
 }
 
-u32 displayport_reg_get_link_bw(void)
+u32 displayport_reg_phy_get_link_bw(void)
 {
-	return displayport_read(SYSTEM_MAIN_LINK_BANDWIDTH);
+	u32 val = 0;
+
+	val = displayport_phy_read_mask(CMN_REG00A3, DP_TX_LINK_BW) >> 5;
+
+	switch (val) {
+	case 0x02:
+		val = LINK_RATE_5_4Gbps;
+		break;
+	case 0x01:
+		val = LINK_RATE_2_7Gbps;
+		break;
+	case 0x00:
+		val = LINK_RATE_1_62Gbps;
+		break;
+	default:
+		val = LINK_RATE_5_4Gbps;
+	}
+
+	return val;
 }
 
 void displayport_reg_set_lane_count(u8 lane_cnt)
@@ -281,47 +334,34 @@ void displayport_reg_set_pattern_PLTPAT(void)
 	displayport_write(PCS_TEST_PATTERN_SET2, 0x0000F83E);	/* 11111000 00111110 */
 }
 
-void displayport_reg_set_phy_tune(u32 phy_lane_num, u32 amplitude_level, u32 emphasis_level)
+void displayport_reg_set_phy_tune(u32 phy_lane_num, u32 amp_lvl, u32 pre_emp_lvl)
 {
-	u32 amplitude_address = 0;
-	u32 emphasis_address = 0;
+	u32 addr = 0;
 	u32 val = 0;
+	int i;
 
 	switch (phy_lane_num) {
 	case 0:
-		amplitude_address = DP_REG_16;
-		emphasis_address = DP_REG_1A;
+		addr = TRSV_REG0204;
 		break;
-
 	case 1:
-		amplitude_address = DP_REG_36;
-		emphasis_address = DP_REG_3A;
+		addr = TRSV_REG0404;
 		break;
-
 	case 2:
-		amplitude_address = DP_REG_56;
-		emphasis_address = DP_REG_5A;
+		addr = TRSV_REG0604;
 		break;
-
 	case 3:
-		amplitude_address = DP_REG_76;
-		emphasis_address = DP_REG_7A;
+		addr = TRSV_REG0804;
 		break;
-
 	default:
+		addr = TRSV_REG0204;
 		break;
 	}
 
-	amplitude_address += amplitude_level * 4;
-	val = phy_tune_parameters[amplitude_level][emphasis_level][PHY_AMP_PARAM]
-		| (phy_tune_parameters[amplitude_level][emphasis_level][PHY_IDRV_EN_PARAM] << TX_DRV_IDRV_EN_CTRL_BIT_POS);
-	displayport_phy_write(amplitude_address, val);
-	displayport_dbg("DP_REG_%02x = 0x%02x\n", amplitude_address, val);
-
-	emphasis_address += emphasis_level * 4;
-	val = phy_tune_parameters[amplitude_level][emphasis_level][PHY_EMP_PARAM];
-	displayport_phy_write(emphasis_address, val);
-	displayport_dbg("DP_REG_%02x = 0x%02x\n", emphasis_address, val);
+	for (i = AMP; i <= IDRV; i++) {
+		val = phy_tune_parameters[amp_lvl][pre_emp_lvl][i];
+		displayport_phy_write(addr + i * 4, val);
+	}
 }
 
 void displayport_reg_set_phy_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_emphasis)
@@ -350,13 +390,9 @@ void displayport_reg_set_phy_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_empha
 		if (displayport->dp_sw_sel) {
 			displayport_reg_set_phy_tune(2, voltage[0], pre_emphasis[0]);
 			displayport_reg_set_phy_tune(3, voltage[1], pre_emphasis[1]);
-			displayport_phy_write(DP_REG_16, 0x00);
-			displayport_phy_write(DP_REG_1A, 0x00);
 		} else {
 			displayport_reg_set_phy_tune(0, voltage[1], pre_emphasis[1]);
 			displayport_reg_set_phy_tune(1, voltage[0], pre_emphasis[0]);
-			displayport_phy_write(DP_REG_56, 0x00);
-			displayport_phy_write(DP_REG_5A, 0x00);
 		}
 		break;
 
@@ -380,13 +416,9 @@ void displayport_reg_set_phy_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_empha
 		if (displayport->dp_sw_sel) {
 			displayport_reg_set_phy_tune(2, voltage[1], pre_emphasis[1]);
 			displayport_reg_set_phy_tune(3, voltage[0], pre_emphasis[0]);
-			displayport_phy_write(DP_REG_16, 0x00);
-			displayport_phy_write(DP_REG_1A, 0x00);
 		} else {
 			displayport_reg_set_phy_tune(0, voltage[0], pre_emphasis[0]);
 			displayport_reg_set_phy_tune(1, voltage[1], pre_emphasis[1]);
-			displayport_phy_write(DP_REG_56, 0x00);
-			displayport_phy_write(DP_REG_5A, 0x00);
 		}
 		break;
 
@@ -398,17 +430,7 @@ void displayport_reg_set_phy_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_empha
 
 void displayport_reg_set_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_emphasis)
 {
-	u32 val = 0;
-
 	displayport_reg_set_phy_voltage_and_pre_emphasis(voltage, pre_emphasis);
-
-	val = (voltage[0] << LN0_TX_AMP_CTRL_BIT_POS) | (voltage[1] << LN1_TX_AMP_CTRL_BIT_POS)
-		| (voltage[2] << LN2_TX_AMP_CTRL_BIT_POS) | (voltage[3] << LN3_TX_AMP_CTRL_BIT_POS);
-	displayport_phy_write(DP_REG_3, val);
-
-	val = (pre_emphasis[0] << LN0_TX_EMP_CTRL_BIT_POS) | (pre_emphasis[1] << LN1_TX_EMP_CTRL_BIT_POS)
-		| (pre_emphasis[2] << LN2_TX_EMP_CTRL_BIT_POS) | (pre_emphasis[3] << LN3_TX_EMP_CTRL_BIT_POS);
-	displayport_phy_write(DP_REG_4, val);
 }
 
 void displayport_reg_function_enable(void)
@@ -603,7 +625,7 @@ u32 displayport_reg_get_ls_clk(void)
 	u32 val;
 	u32 ls_clk;
 
-	val = displayport_reg_get_link_bw();
+	val = displayport_reg_phy_get_link_bw();
 
 	if (val == LINK_RATE_5_4Gbps)
 		ls_clk = 540000000;
@@ -1195,11 +1217,6 @@ void displayport_reg_sw_function_en(void)
 	displayport_write_mask(SYSTEM_SW_FUNCTION_ENABLE, 1, SW_FUNC_EN);
 }
 
-void displayport_reg_phy_aux_level_setting(void)
-{
-	displayport_phy_write_mask(DP_REG_F, 0x0F, AUX_TX_LVL_CTRL);
-}
-
 void displayport_reg_phy_init(void)
 {
 	displayport_reg_phy_reset(1);
@@ -1207,13 +1224,12 @@ void displayport_reg_phy_init(void)
 	displayport_reg_phy_mode_setting();
 	displayport_reg_phy_reset(0);
 	displayport_reg_wait_phy_pll_lock();
-	displayport_reg_phy_aux_level_setting();
 }
 
 void displayport_reg_phy_disable(void)
 {
 	displayport_reg_phy_reset(1);
-	displayport_phy_write(DP_REG_0, 0x00);
+	displayport_phy_write(CMN_REG00A2, 0x00);
 
 #if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
 	exynos_usbdrd_inform_dp_use(0, displayport_reg_get_lane_count());
@@ -1446,7 +1462,7 @@ void displayport_reg_set_audio_m_n(audio_sync_mode audio_sync_mode,
 	u32 m_value;
 	u32 n_value;
 
-	link_bandwidth_set = displayport_reg_get_link_bw();
+	link_bandwidth_set = displayport_reg_phy_get_link_bw();
 	if (link_bandwidth_set == LINK_RATE_1_62Gbps)
 		array_set = 0;
 	else if (link_bandwidth_set == LINK_RATE_2_7Gbps)
@@ -1471,6 +1487,24 @@ void displayport_reg_set_audio_m_n(audio_sync_mode audio_sync_mode,
 void displayport_reg_set_audio_function_enable(u32 en)
 {
 	displayport_write_mask(SYSTEM_SST1_FUNCTION_ENABLE, en, SST1_AUDIO_FUNC_EN);
+}
+
+void displayport_reg_set_init_dma_config(void)
+{
+	displayport_write_mask(SST1_AUDIO_CONTROL, 1, AUD_DMA_IF_MODE_CONFIG);
+	displayport_write_mask(SST1_AUDIO_CONTROL, 0, AUD_DMA_IF_LTNCY_TRG_MODE);
+}
+
+void displayport_reg_set_dma_force_req_low(u32 en)
+{
+	if (en == 1) {
+		displayport_write_mask(SST1_AUDIO_DMA_REQUEST_LATENCY_CONFIG, 0, AUD_DMA_FORCE_REQ_VAL);
+		displayport_write_mask(SST1_AUDIO_DMA_REQUEST_LATENCY_CONFIG, 1, AUD_DMA_FORCE_REQ_SEL);
+	} else
+		displayport_write_mask(SST1_AUDIO_DMA_REQUEST_LATENCY_CONFIG, 0, AUD_DMA_FORCE_REQ_SEL);
+
+	displayport_info("SST1_AUDIO_DMA_REQUEST_LATENCY_CONFIG = 0x%x\n",
+		displayport_read(SST1_AUDIO_DMA_REQUEST_LATENCY_CONFIG));
 }
 
 void displayport_reg_set_dma_burst_size(enum audio_dma_word_length word_length)
@@ -1528,7 +1562,7 @@ void displayport_reg_set_audio_sampling_frequency(enum audio_sampling_frequency 
 	u32 link_bandwidth_set;
 	u32 n_aud_master_set;
 
-	link_bandwidth_set = displayport_reg_get_link_bw();
+	link_bandwidth_set = displayport_reg_phy_get_link_bw();
 	if (link_bandwidth_set == LINK_RATE_1_62Gbps)
 		n_aud_master_set = 0;
 	else if (link_bandwidth_set == LINK_RATE_2_7Gbps)
@@ -1652,7 +1686,7 @@ void displayport_reg_set_ch_status_clock_accuracy(enum audio_clock_accuracy cloc
 
 void displayport_reg_wait_buf_full(void)
 {
-	u32 cnt = 1000;
+	u32 cnt = 2000;
 	u32 state = 0;
 
 	do {
