@@ -229,13 +229,13 @@ Reduce_Link_Rate_Retry:
 	training_retry_no = 0;
 
 	if (decon->state != DECON_STATE_ON
-		|| displayport_reg_get_link_bw() != link_rate
+		|| displayport_reg_phy_get_link_bw() != link_rate
 		|| displayport_reg_get_lane_count() != lane_cnt) {
 		displayport_reg_phy_reset(1);
 		displayport_reg_phy_init_setting();
 		displayport_reg_phy_mode_setting();
 
-		displayport_reg_set_link_bw(link_rate);
+		displayport_reg_phy_set_link_bw(link_rate);
 		displayport_info("link_rate = %x\n", link_rate);
 
 		displayport_reg_set_lane_count(lane_cnt);
@@ -557,7 +557,7 @@ static int displayport_fast_link_training(void)
 	displayport_reg_phy_init_setting();
 	displayport_reg_phy_mode_setting();
 
-	displayport_reg_set_link_bw(link_rate);
+	displayport_reg_phy_set_link_bw(link_rate);
 	displayport_info("link_rate = %x\n", link_rate);
 
 	displayport_reg_set_lane_count(lane_cnt);
@@ -854,6 +854,7 @@ static void displayport_set_switch_state(struct displayport_device *displayport,
 
 void displayport_audio_init_config(void)
 {
+	displayport_reg_set_dma_force_req_low(1);
 	displayport_reg_set_audio_m_n(ASYNC_MODE, FS_48KHZ);
 	displayport_reg_set_audio_function_enable(1);
 	displayport_reg_set_audio_sampling_frequency(FS_48KHZ);
@@ -1014,7 +1015,7 @@ static int displayport_check_dpcd_lane_status(u8 lane0_1_status,
 		u8 lane2_3_status, u8 lane_align_status)
 {
 	u8 val[2] = {0,};
-	u32 link_rate = displayport_reg_get_link_bw();
+	u32 link_rate = displayport_reg_phy_get_link_bw();
 	u32 lane_cnt = displayport_reg_get_lane_count();
 
 	displayport_reg_dpcd_read(DPCD_ADD_LINK_BW_SET, 2, val);
@@ -1328,6 +1329,7 @@ static int displayport_hdcp22_irq_handler(void)
 		/* todo update stream Management */
 		ret = hdcp_dplink_set_rp_ready();
 		if (auth_done) {
+			auth_done = HDCP_2_2_NOT_AUTH;
 			if (hdcp_dplink_authenticate() != 0) {
 				auth_done = HDCP_2_2_NOT_AUTH;
 				displayport_reg_video_mute(1);
@@ -1712,6 +1714,8 @@ void displayport_audio_disable(void)
 	struct displayport_device *displayport = get_displayport_drvdata();
 
 	if (displayport_read_mask(SST1_AUDIO_ENABLE, AUDIO_EN) == 1) {
+		displayport_reg_set_dma_force_req_low(1);
+		udelay(200);
 		displayport_reg_set_dp_audio_enable(0);
 		displayport_reg_set_audio_fifo_function_enable(0);
 		displayport_reg_set_audio_ch(1);
@@ -1720,9 +1724,16 @@ void displayport_audio_disable(void)
 		displayport_wait_audio_buf_empty(displayport);
 		displayport_reg_set_audio_master_mode_enable(0);
 		displayport_info("audio_disable\n");
-		displayport->audio_state = 0;
-		wake_up_interruptible(&displayport->audio_wait);
-	}
+	} else
+		displayport_info("audio_disable, AUDIO_EN = 0\n");
+
+	displayport->audio_state = 0;
+	wake_up_interruptible(&displayport->audio_wait);
+}
+
+void displayport_audio_dma_force_req_release(void)
+{
+	displayport_reg_set_dma_force_req_low(0);
 }
 
 static int displayport_set_audio_ch_status(struct displayport_audio_config_data *audio_config_data)
@@ -1754,6 +1765,7 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 
 		displayport_reg_set_audio_m_n(ASYNC_MODE, audio_config_data->audio_fs);
 		displayport_reg_set_audio_function_enable(audio_config_data->audio_enable);
+		displayport_reg_set_init_dma_config();
 		displayport_reg_set_dma_burst_size(audio_config_data->audio_word_length);
 		displayport_reg_set_dma_pack_mode(audio_config_data->audio_packed_mode);
 		displayport_reg_set_pcm_size(audio_config_data->audio_bit);
@@ -1771,6 +1783,8 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 		displayport_audio_disable();
 	else if (audio_config_data->audio_enable == AUDIO_WAIT_BUF_FULL)
 		displayport_audio_wait_buf_full();
+	else if (audio_config_data->audio_enable == AUDIO_DMA_REQ_HIGH)
+		displayport_audio_dma_force_req_release();
 	else
 		displayport_info("Not support audio_enable = %d\n", audio_config_data->audio_enable);
 
@@ -1846,6 +1860,7 @@ void displayport_hdcp22_enable(u32 en)
 		displayport_reg_set_hdcp22_system_enable(0);
 		displayport_reg_set_hdcp22_mode(0);
 		displayport_reg_set_hdcp22_encryption_enable(0);
+		auth_done = HDCP_2_2_NOT_AUTH;
 	}
 }
 
@@ -1870,6 +1885,7 @@ static void displayport_hdcp22_run(struct work_struct *work)
 #if defined(CONFIG_EXYNOS_HDCP2)
 	u8 val[2] = {0, };
 
+	auth_done = HDCP_2_2_NOT_AUTH;
 	if (hdcp_dplink_authenticate() != 0) {
 		auth_done = HDCP_2_2_NOT_AUTH;
 		displayport_reg_video_mute(1);
@@ -2267,12 +2283,6 @@ static int displayport_parse_dt(struct displayport_device *displayport, struct d
 	if (IS_ERR_OR_NULL(dev->of_node)) {
 		displayport_err("no device tree information\n");
 		return -EINVAL;
-	}
-
-	displayport->phy = devm_phy_get(dev, "displayport_phy");
-	if (IS_ERR_OR_NULL(displayport->phy)) {
-		displayport_err("failed to get displayport phy\n");
-		return PTR_ERR(displayport->phy);
 	}
 
 	displayport->dev = dev;
@@ -3013,12 +3023,14 @@ static int displayport_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(dev);
 
+#if defined(CONFIG_ION_EXYNOS)
 	ret = iovmm_activate(dev);
 	if (ret) {
 		displayport_err("failed to activate iovmm\n");
 		goto err_dt;
 	}
 	iovmm_set_fault_handler(dev, dpu_sysmmu_fault_handler, NULL);
+#endif
 
 #if defined(CONFIG_CPU_IDLE)
 	displayport->idle_ip_index =
@@ -3027,9 +3039,6 @@ static int displayport_probe(struct platform_device *pdev)
 		displayport_warn("idle ip index is not provided for DP\n");
 	exynos_update_ip_idle_status(displayport->idle_ip_index, 1);
 #endif
-
-	phy_init(displayport->phy);
-
 	displayport->state = DISPLAYPORT_STATE_INIT;
 
 	ret = device_init_wakeup(displayport->dev, true);
