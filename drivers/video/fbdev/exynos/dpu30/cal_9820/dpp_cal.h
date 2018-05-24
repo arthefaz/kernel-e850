@@ -16,52 +16,6 @@
 
 #define MAX_DPP_CNT		6
 
-
-#define SRC_WIDTH_MIN		16
-#define SRC_WIDTH_MAX		65534
-#define SRC_HEIGHT_MIN		16
-#define SRC_HEIGHT_MAX		8190
-
-#if 0
-#define SRC_SIZE_MULTIPLE	1
-#define SRC_WIDTH_MIN		16
-#define SRC_WIDTH_MAX		65534
-#define SRC_HEIGHT_MIN		16
-#define SRC_HEIGHT_MAX		8190
-#define IMG_SIZE_MULTIPLE	1
-#define IMG_WIDTH_MIN		16
-#define IMG_WIDTH_MAX		4096
-#define IMG_HEIGHT_MIN		16
-#define IMG_HEIGHT_MAX		4096
-#define IMG_ROT_HEIGHT_MAX	2160
-#define SRC_OFFSET_MULTIPLE	1
-
-#define SCALED_WIDTH_MIN	16
-#define SCALED_WIDTH_MAX	4096
-#define SCALED_HEIGHT_MIN	16
-#define SCALED_HEIGHT_MAX	4096
-#define SCALED_SIZE_MULTIPLE	1
-#define SCALED_SIZE_MULTIPLE	1
-
-#define BLK_WIDTH_MIN		4
-#define BLK_WIDTH_MAX		4096
-#define BLK_HEIGHT_MIN		1
-#define BLK_HEIGHT_MAX		4096
-#define BLK_SIZE_MULTIPLE	1
-#define BLK_SIZE_MULTIPLE	1
-
-#define DST_SIZE_MULTIPLE	1
-#define DST_SIZE_WIDTH_MIN	16
-#define DST_SIZE_WIDTH_MAX	8190
-#define DST_SIZE_HEIGHT_MIN	16
-#define DST_SIZE_HEIGHT_MAX	8190
-#define DST_OFFSET_MULTIPLE	1
-#define DST_IMG_MULTIPLE	1
-#define DST_IMG_WIDTH_MIN	16
-#define DST_IMG_WIDTH_MAX	4096
-#define DST_IMG_HEIGHT_MIN	16
-#define DST_IMG_HEIGHT_MAX	4096
-#endif
 struct dpp_params_info {
 	struct decon_frame src;
 	struct decon_frame dst;
