@@ -588,7 +588,9 @@ struct disp_log_dpp {
 	u32 id;
 	u32 start_cnt;
 	u32 done_cnt;
-	u32 comp_src;
+	u32 comp;
+	u32 rot;
+	u32 hdr_std;
 	struct decon_frame src;
 	struct decon_frame dst;
 };
