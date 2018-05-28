@@ -111,7 +111,7 @@ static void decon_dump_using_dpp(struct decon_device *decon)
 {
 	int i;
 
-	for (i = 0; i < MAX_DPP_SUBDEV; i++) {
+	for (i = 0; i < decon->dt.dpp_cnt; i++) {
 		if (test_bit(i, &decon->prev_used_dpp)) {
 			struct v4l2_subdev *sd = NULL;
 			sd = decon->dpp_sd[i];
@@ -238,7 +238,7 @@ void decon_dpp_stop(struct decon_device *decon, bool do_reset)
 	bool rst = false;
 	struct v4l2_subdev *sd;
 
-	for (i = 0; i < MAX_DPP_SUBDEV; i++) {
+	for (i = 0; i < decon->dt.dpp_cnt; i++) {
 		if (test_bit(i, &decon->prev_used_dpp) &&
 				!test_bit(i, &decon->cur_using_dpp)) {
 			sd = decon->dpp_sd[i];
@@ -2269,7 +2269,7 @@ static int decon_prepare_win_config(struct decon_device *decon,
 				&win_config[decon->dt.max_win], regs);
 	}
 
-	for (i = 0; i < MAX_DPP_SUBDEV; i++) {
+	for (i = 0; i < decon->dt.dpp_cnt; i++) {
 		memcpy(&regs->dpp_config[i], &win_config[i],
 				sizeof(struct decon_win_config));
 		regs->dpp_config[i].format =
@@ -2849,7 +2849,7 @@ static int decon_register_subdevs(struct decon_device *decon)
 		return ret;
 	}
 
-	for (i = 0;  i < MAX_DPP_SUBDEV; ++i)
+	for (i = 0;  i < MAX_DPP_CNT; ++i)
 		decon->dpp_sd[i] = NULL;
 	ret = dpu_get_sd_by_drvname(decon, DPP_MODULE_NAME);
 	if (ret)
@@ -2867,7 +2867,7 @@ static int decon_register_subdevs(struct decon_device *decon)
 #endif
 
 	if (!decon->id) {
-		for (i = 0; i < MAX_DPP_SUBDEV; i++) {
+		for (i = 0; i < decon->dt.dpp_cnt; i++) {
 			if (IS_ERR_OR_NULL(decon->dpp_sd[i]))
 				continue;
 			ret = v4l2_device_register_subdev(v4l2_dev,
@@ -2923,7 +2923,7 @@ static void decon_unregister_subdevs(struct decon_device *decon)
 	int i;
 
 	if (!decon->id) {
-		for (i = 0; i < MAX_DPP_SUBDEV; i++) {
+		for (i = 0; i < decon->dt.dpp_cnt; i++) {
 			if (decon->dpp_sd[i] == NULL)
 				continue;
 			v4l2_device_unregister_subdev(decon->dpp_sd[i]);
