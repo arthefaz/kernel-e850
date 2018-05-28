@@ -65,6 +65,7 @@
 
 #define MAX_DECON_CNT		3
 #define MAX_DECON_WIN		6
+#define MAX_DPP_SUBDEV		7
 
 #if defined(CONFIG_SUPPORT_LEGACY_ION)
 extern struct ion_device *ion_exynos;
@@ -882,6 +883,7 @@ struct decon_device {
 
 	struct v4l2_subdev *out_sd[MAX_DSIM_CNT];
 	struct v4l2_subdev *dsim_sd[MAX_DSIM_CNT];
+	/* TODO: MAX_DPP_SUBDEV wil be changed to MAX_DPP_CNT */
 	struct v4l2_subdev *dpp_sd[MAX_DPP_SUBDEV];
 	struct v4l2_subdev *displayport_sd;
 	struct v4l2_device v4l2_dev;

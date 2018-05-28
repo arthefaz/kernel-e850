@@ -557,7 +557,11 @@ void decon_set_protected_content(struct decon_device *decon,
 	if (decon->prev_protection_bitmask != cur_protect_bits) {
 
 		/* apply protection configs for each DMA */
-		for (dma_id = 0; dma_id < decon->dt.dpp_cnt; dma_id++) {
+		for (dma_id = 0; dma_id < decon->dt.max_win; dma_id++) {
+			/*
+			 * This loop should use max_win instead of dpp_cnt,
+			 * because dpp_cnt includes writeback case
+			 */
 			en = cur_protect_bits & (1 << dma_id);
 
 			change = (cur_protect_bits & (1 << dma_id)) ^
@@ -688,7 +692,7 @@ int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 		return -EINVAL;
 	}
 
-	for (i = 0; i < MAX_DPP_SUBDEV; i++) {
+	for (i = 0; i < decon->dt.dpp_cnt; i++) {
 		if (test_bit(i, &decon->prev_used_dpp)) {
 			dpp = get_dpp_drvdata(i);
 #if defined(DPU_DUMP_BUFFER_IRQ)

@@ -47,7 +47,7 @@
 extern int dpp_log_level;
 
 #define DPP_MODULE_NAME		"exynos-dpp"
-#define MAX_DPP_CNT		6
+#define MAX_DPP_CNT		7 /* + ODMA case */
 
 /* about 1msec @ ACLK=630MHz */
 #define INIT_RCV_NUM		630000
