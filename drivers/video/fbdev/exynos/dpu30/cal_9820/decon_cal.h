@@ -19,9 +19,6 @@
 
 #define CEIL(x)			((x-(u32)(x) > 0 ? (u32)(x+1) : (u32)(x)))
 
-#define MAX_DECON_WIN		6
-#define MAX_DPP_SUBDEV		7
-
 enum decon_idma_type {
 	IDMA_G0 = 0,
 	IDMA_G1,
