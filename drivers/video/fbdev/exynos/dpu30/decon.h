@@ -63,6 +63,8 @@
 
 #define SUCCESS_EXYNOS_SMC	0
 
+#define MAX_DECON_CNT		3
+
 #if defined(CONFIG_SUPPORT_LEGACY_ION)
 extern struct ion_device *ion_exynos;
 #endif
@@ -695,6 +697,7 @@ struct decon_dt_info {
 	const char *pd_name;
 	int dpp_cnt;
 	int dsim_cnt;
+	int decon_cnt;
 	int chip_ver;
 };
 

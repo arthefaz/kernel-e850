@@ -590,8 +590,11 @@ void dpu_dump_afbc_info(void)
 	struct dpu_afbc_info *afbc_info;
 	void *v_addr[MAX_DECON_WIN];
 	int size[MAX_DECON_WIN];
+	int decon_cnt;
 
-	for (i = 0; i < MAX_DECON_CNT; i++) {
+	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
+
+	for (i = 0; i < decon_cnt; i++) {
 		decon = get_decon_drvdata(i);
 		if (decon == NULL)
 			continue;
@@ -631,12 +634,15 @@ static int dpu_dump_buffer_data(struct dpp_device *dpp)
 	int i;
 	int id_idx = 0;
 	int dump_size = 128;
+	int decon_cnt;
 	struct decon_device *decon;
 	struct dpu_afbc_info *afbc_info;
 
+	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
+
 	if (dpp->state == DPP_STATE_ON) {
 
-		for (i = 0; i < MAX_DECON_CNT; i++) {
+		for (i = 0; i < decon_cnt; i++) {
 			decon = get_decon_drvdata(i);
 			if (decon == NULL)
 				continue;
