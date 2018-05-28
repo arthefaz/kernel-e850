@@ -552,7 +552,7 @@ void decon_set_protected_content(struct decon_device *decon,
 	/* ODMA protection config (WB: writeback) */
 	if (decon->dt.out_type == DECON_OUT_WB)
 		if (regs)
-			cur_protect_bits |= (regs->protection[MAX_DECON_WIN] << ODMA_WB);
+			cur_protect_bits |= (regs->protection[decon->dt.max_win] << ODMA_WB);
 
 	if (decon->prev_protection_bitmask != cur_protect_bits) {
 
@@ -601,7 +601,7 @@ void dpu_dump_afbc_info(void)
 
 		afbc_info = &decon->d.prev_afbc_info;
 		decon_info("%s: previous AFBC channel information\n", __func__);
-		for (j = 0; j < MAX_DECON_WIN; ++j) { /* all the dpp that has afbc */
+		for (j = 0; j < decon->dt.max_win; ++j) { /* all the dpp that has afbc */
 			if (!afbc_info->is_afbc[j])
 				continue;
 
@@ -615,7 +615,7 @@ void dpu_dump_afbc_info(void)
 
 		afbc_info = &decon->d.cur_afbc_info;
 		decon_info("%s: current AFBC channel information\n", __func__);
-		for (j = 0; j < MAX_DECON_WIN; ++j) { /* all the dpp that has afbc */
+		for (j = 0; j < decon->dt.max_win; ++j) { /* all the dpp that has afbc */
 			if (!afbc_info->is_afbc[j])
 				continue;
 

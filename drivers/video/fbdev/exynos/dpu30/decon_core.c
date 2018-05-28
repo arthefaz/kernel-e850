@@ -1056,7 +1056,7 @@ static int decon_find_biggest_block_rect(struct decon_device *decon,
 	r1.bottom = r1.top + config->dst.h - 1;
 
 	/* Find the biggest block region from overlays by the top windows */
-	for (j = win_no + 1; j < MAX_DECON_WIN; j++) {
+	for (j = win_no + 1; j < decon->dt.max_win; j++) {
 		config = &win_config[j];
 		if (config->state != DECON_WIN_STATE_BUFFER)
 			continue;
@@ -1560,7 +1560,7 @@ static int decon_set_dpp_config(struct decon_device *decon,
 
 	if (decon->dt.out_type == DECON_OUT_WB) {
 		sd = decon->dpp_sd[ODMA_WB];
-		memcpy(&dpp_config.config, &regs->dpp_config[MAX_DECON_WIN],
+		memcpy(&dpp_config.config, &regs->dpp_config[decon->dt.max_win],
 				sizeof(struct decon_win_config));
 		dpp_config.rcv_num = aclk_khz;
 		ret = v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG,
@@ -1811,7 +1811,7 @@ static void decon_release_old_bufs(struct decon_device *decon,
 	if (decon->dt.out_type == DECON_OUT_WB) {
 		for (j = 0; j < plane_cnt[0]; ++j)
 			decon_free_dma_buf(decon,
-					&regs->dma_buf_data[MAX_DECON_WIN][j]);
+					&regs->dma_buf_data[decon->dt.max_win][j]);
 	}
 }
 
@@ -2264,9 +2264,9 @@ static int decon_prepare_win_config(struct decon_device *decon,
 	}
 
 	if (decon->dt.out_type == DECON_OUT_WB) {
-		regs->protection[MAX_DECON_WIN] = win_config[MAX_DECON_WIN].protection;
-		ret = decon_import_buffer(decon, MAX_DECON_WIN,
-				&win_config[MAX_DECON_WIN], regs);
+		regs->protection[decon->dt.max_win] = win_config[decon->dt.max_win].protection;
+		ret = decon_import_buffer(decon, decon->dt.max_win,
+				&win_config[decon->dt.max_win], regs);
 	}
 
 	for (i = 0; i < MAX_DPP_SUBDEV; i++) {

@@ -123,7 +123,7 @@ static void dpu_bts_find_max_disp_freq(struct decon_device *decon,
 	DPU_DEBUG_BTS("\tDECON%d : resol clock = %d Khz\n",
 		decon->id, decon->bts.resol_clk);
 
-	for (i = 0; i < MAX_DECON_WIN; ++i) {
+	for (i = 0; i < decon->dt.max_win; ++i) {
 		idx = config[i].idma_type;
 		if ((config[i].state != DECON_WIN_STATE_BUFFER) &&
 				(config[i].state != DECON_WIN_STATE_COLOR))
@@ -180,7 +180,7 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 	DPU_DEBUG_BTS("%s + : DECON%d\n", __func__, decon->id);
 
 	memset(&bts_info, 0, sizeof(struct bts_decon_info));
-	for (i = 0; i < MAX_DECON_WIN; ++i) {
+	for (i = 0; i < decon->dt.max_win; ++i) {
 		if (config[i].state == DECON_WIN_STATE_BUFFER) {
 			idx = config[i].idma_type;
 			bts_info.dpp[idx].used = true;

@@ -309,7 +309,7 @@ void DPU_EVENT_LOG_WINCON(struct v4l2_subdev *sd, struct decon_reg_data *regs)
 	log->time = ktime_get();
 	log->type = DPU_EVT_UPDATE_HANDLER;
 
-	for (win = 0; win < MAX_DECON_WIN; win++) {
+	for (win = 0; win < decon->dt.max_win; win++) {
 		if (regs->win_regs[win].wincon & WIN_EN_F(win)) {
 			memcpy(&log->data.reg.win_regs[win], &regs->win_regs[win],
 				sizeof(struct decon_window_regs));
@@ -392,7 +392,7 @@ void DPU_EVENT_LOG_CURSOR(struct v4l2_subdev *sd, struct decon_reg_data *regs)
 	log->time = ktime_get();
 	log->type = DPU_EVT_CURSOR_UPDATE;
 
-	for (win = 0; win < MAX_DECON_WIN; win++) {
+	for (win = 0; win < decon->dt.max_win; win++) {
 		if (regs->is_cursor_win[win] && regs->win_regs[win].wincon & WIN_EN_F(win)) {
 			memcpy(&log->data.reg.win_regs[win], &regs->win_regs[win],
 				sizeof(struct decon_window_regs));
