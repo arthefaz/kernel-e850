@@ -47,6 +47,7 @@
 extern int dpp_log_level;
 
 #define DPP_MODULE_NAME		"exynos-dpp"
+#define MAX_DPP_CNT		6
 
 /* about 1msec @ ACLK=630MHz */
 #define INIT_RCV_NUM		630000
@@ -219,10 +220,7 @@ extern struct dpp_device *dpp_drvdata[MAX_DPP_CNT];
 
 static inline struct dpp_device *get_dpp_drvdata(u32 id)
 {
-	if (id >= MAX_DPP_CNT)
-		return NULL;
-	else
-		return dpp_drvdata[id];
+	return dpp_drvdata[id];
 }
 
 static inline u32 dpp_read(u32 id, u32 reg_id)

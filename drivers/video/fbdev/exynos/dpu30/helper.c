@@ -557,7 +557,7 @@ void decon_set_protected_content(struct decon_device *decon,
 	if (decon->prev_protection_bitmask != cur_protect_bits) {
 
 		/* apply protection configs for each DMA */
-		for (dma_id = 0; dma_id < MAX_DPP_CNT; dma_id++) {
+		for (dma_id = 0; dma_id < decon->dt.dpp_cnt; dma_id++) {
 			en = cur_protect_bits & (1 << dma_id);
 
 			change = (cur_protect_bits & (1 << dma_id)) ^
