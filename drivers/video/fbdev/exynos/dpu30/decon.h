@@ -693,6 +693,9 @@ struct decon_dt_info {
 	int dft_win;
 	int dft_idma;
 	const char *pd_name;
+	int dpp_cnt;
+	int dsim_cnt;
+	int chip_ver;
 };
 
 struct decon_win {

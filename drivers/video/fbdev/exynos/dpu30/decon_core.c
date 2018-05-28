@@ -2546,7 +2546,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 
 		decon_info("HWC version %d.0 is operating\n", disp_info.ver);
 		disp_info.psr_mode = decon->dt.psr_mode;
-		disp_info.chip_ver = CHIP_VER;
+		disp_info.chip_ver = decon->dt.chip_ver;
 		disp_info.mres_info = *mres_info;
 
 		if (copy_to_user(argp_info,
@@ -2875,7 +2875,7 @@ static int decon_register_subdevs(struct decon_device *decon)
 			}
 		}
 
-		for (i = 0; i < MAX_DSIM_CNT; i++) {
+		for (i = 0; i < decon->dt.dsim_cnt; i++) {
 			if (decon->dsim_sd[i] == NULL || i == 1)
 				continue;
 
@@ -2926,7 +2926,7 @@ static void decon_unregister_subdevs(struct decon_device *decon)
 			v4l2_device_unregister_subdev(decon->dpp_sd[i]);
 		}
 
-		for (i = 0; i < MAX_DSIM_CNT; i++) {
+		for (i = 0; i < decon->dt.dsim_cnt; i++) {
 			if (decon->dsim_sd[i] == NULL || i == 1)
 				continue;
 			v4l2_device_unregister_subdev(decon->dsim_sd[i]);
@@ -3255,11 +3255,9 @@ static void decon_parse_dt(struct decon_device *decon)
 	of_property_read_u32(dev->of_node, "psr_mode",
 			&decon->dt.psr_mode);
 	/* H/W trigger: 0, S/W trigger: 1 */
-	of_property_read_u32(dev->of_node, "trig_mode",
-			&decon->dt.trig_mode);
-	decon_info("decon-%s: max win%d, %s mode, %s trigger\n",
-			(decon->id == 0) ? "f" : ((decon->id == 1) ? "s" : "t"),
-			decon->dt.max_win,
+	of_property_read_u32(dev->of_node, "trig_mode", &decon->dt.trig_mode);
+	decon_info("decon%d: max win%d, %s mode, %s trigger\n",
+			decon->id, decon->dt.max_win,
 			decon->dt.psr_mode ? "command" : "video",
 			decon->dt.trig_mode ? "sw" : "hw");
 
@@ -3275,6 +3273,12 @@ static void decon_parse_dt(struct decon_device *decon)
 		decon->bts.ppc = 2UL;
 
 	decon_info("PPC(%d)\n", decon->bts.ppc);
+
+	of_property_read_u32(dev->of_node, "chip_ver", &decon->dt.chip_ver);
+	of_property_read_u32(dev->of_node, "dpp_cnt", &decon->dt.dpp_cnt);
+	of_property_read_u32(dev->of_node, "dsim_cnt", &decon->dt.dsim_cnt);
+	decon_info("chip_ver %d, dpp cnt %d, dsim cnt %d\n", decon->dt.chip_ver,
+			decon->dt.dpp_cnt, decon->dt.dsim_cnt);
 
 	if (decon->dt.out_type == DECON_OUT_DSI) {
 		ret = of_property_read_u32_index(dev->of_node, "out_idx", 0,
