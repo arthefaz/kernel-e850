@@ -59,7 +59,7 @@ static void dpu_bts_sum_all_decon_bw(struct decon_device *decon, u32 ch_bw[])
 {
 	int i, j;
 
-	if (decon->id < 0 || decon->id >= MAX_DECON_CNT) {
+	if (decon->id < 0 || decon->id >= decon->dt.decon_cnt) {
 		decon_warn("[%s] undefined decon id(%d)!\n", __func__, decon->id);
 		return;
 	}
@@ -67,7 +67,7 @@ static void dpu_bts_sum_all_decon_bw(struct decon_device *decon, u32 ch_bw[])
 	for (i = 0; i < BTS_DPU_MAX; ++i)
 		decon->bts.ch_bw[decon->id][i] = ch_bw[i];
 
-	for (i = 0; i < MAX_DECON_CNT; ++i) {
+	for (i = 0; i < decon->dt.decon_cnt; ++i) {
 		if (decon->id == i)
 			continue;
 
@@ -147,11 +147,17 @@ static void dpu_bts_share_bw_info(int id)
 {
 	int i, j;
 	struct decon_device *decon[3];
+	int decon_cnt;
+
+	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
 
 	for (i = 0; i < MAX_DECON_CNT; i++)
+		decon[i] = NULL;
+
+	for (i = 0; i < decon_cnt; i++)
 		decon[i] = get_decon_drvdata(i);
 
-	for (i = 0; i < MAX_DECON_CNT; ++i) {
+	for (i = 0; i < decon_cnt; ++i) {
 		if (id == i || decon[i] == NULL)
 			continue;
 

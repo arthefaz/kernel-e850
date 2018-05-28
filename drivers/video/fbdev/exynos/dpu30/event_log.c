@@ -124,8 +124,11 @@ static int __get_decon_id_for_dpp(struct v4l2_subdev *sd)
 	struct dpp_device *dpp = v4l2_get_subdevdata(sd);
 	int idx;
 	int ret = 0;
+	int decon_cnt;
 
-	for (idx = 0; idx < MAX_DECON_CNT; idx++) {
+	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
+
+	for (idx = 0; idx < decon_cnt; idx++) {
 		decon = get_decon_drvdata(idx);
 		if (!decon || IS_ERR_OR_NULL(decon->d.debug_event))
 			continue;

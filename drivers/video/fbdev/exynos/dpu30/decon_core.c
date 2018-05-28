@@ -125,8 +125,11 @@ static void decon_up_list_saved(void)
 {
 	int i;
 	struct decon_device *decon;
+	int decon_cnt;
 
-	for (i = 0; i < MAX_DECON_CNT; i++) {
+	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
+
+	for (i = 0; i < decon_cnt; i++) {
 		decon = get_decon_drvdata(i);
 		if (decon) {
 			if (!list_empty(&decon->up.list) || !list_empty(&decon->up.saved_list)) {
@@ -3277,6 +3280,7 @@ static void decon_parse_dt(struct decon_device *decon)
 	of_property_read_u32(dev->of_node, "chip_ver", &decon->dt.chip_ver);
 	of_property_read_u32(dev->of_node, "dpp_cnt", &decon->dt.dpp_cnt);
 	of_property_read_u32(dev->of_node, "dsim_cnt", &decon->dt.dsim_cnt);
+	of_property_read_u32(dev->of_node, "decon_cnt", &decon->dt.decon_cnt);
 	decon_info("chip_ver %d, dpp cnt %d, dsim cnt %d\n", decon->dt.chip_ver,
 			decon->dt.dpp_cnt, decon->dt.dsim_cnt);
 

@@ -420,14 +420,16 @@ static void dsim_underrun_info(struct dsim_device *dsim)
 {
 #if defined(CONFIG_EXYNOS9820_BTS)
 	struct decon_device *decon;
-	int i;
+	int i, decon_cnt;
 
 	dsim_info("\tMIF(%lu), INT(%lu), DISP(%lu)\n",
 			cal_dfs_get_rate(ACPM_DVFS_MIF),
 			cal_dfs_get_rate(ACPM_DVFS_INT),
 			cal_dfs_get_rate(ACPM_DVFS_DISP));
 
-	for (i = 0; i < MAX_DECON_CNT; ++i) {
+	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
+
+	for (i = 0; i < decon_cnt; ++i) {
 		decon = get_decon_drvdata(i);
 
 		if (decon) {
