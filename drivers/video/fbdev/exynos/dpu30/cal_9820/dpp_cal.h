@@ -14,8 +14,6 @@
 
 #include "../decon.h"
 
-#define MAX_DPP_CNT		6
-
 struct dpp_params_info {
 	struct decon_frame src;
 	struct decon_frame dst;

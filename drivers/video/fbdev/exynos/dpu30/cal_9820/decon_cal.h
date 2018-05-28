@@ -19,7 +19,6 @@
 
 #define CEIL(x)			((x-(u32)(x) > 0 ? (u32)(x+1) : (u32)(x)))
 
-#define CHIP_VER		(9820)
 #define MAX_DECON_CNT		3
 #define MAX_DECON_WIN		6
 #define MAX_DPP_SUBDEV		7
