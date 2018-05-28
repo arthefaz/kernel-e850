@@ -13,7 +13,7 @@
 #define __SAMSUNG_DECON_CAL_H__
 
 #include "../panels/decon_lcd.h"
-#if defined(CONFIG_EXYNOS9820_BTS)
+#if defined(CONFIG_EXYNOS_BTS)
 #include <soc/samsung/bts.h>
 #endif
 
