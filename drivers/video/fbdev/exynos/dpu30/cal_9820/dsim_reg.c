@@ -2053,6 +2053,7 @@ void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 s
 
 	val = (val & mask) | (old & ~mask);
 	writel(val, sysreg + DISP_DPU_MIPI_PHY_CON);
+	dsim_dbg("%s: phy_con_sel val=0x%x", __func__, val);
 }
 
 void dpu_sysreg_dphy_reset(void __iomem *sysreg, u32 dsim_id, u32 rst)
@@ -2063,6 +2064,7 @@ void dpu_sysreg_dphy_reset(void __iomem *sysreg, u32 dsim_id, u32 rst)
 
 	val = (val & mask) | (old & ~mask);
 	writel(val, sysreg + DISP_DPU_MIPI_PHY_CON);
+	dsim_dbg("%s: phy_con_rst val=0x%x", __func__, val);
 }
 
 static u32 dsim_reg_translate_lanecnt_to_lanes(int lanecnt)
@@ -2120,9 +2122,6 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 
 	dsim_reg_set_lanes_dphy(id, lanes, 1);
 	dpu_sysreg_dphy_reset(dsim->res.ss_regs, id, 1); /* Release DPHY reset */
-
-	dsim_reg_sw_reset(id);
-	dsim_reg_set_lanes(id, lanes, 1);
 
 	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
 
