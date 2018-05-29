@@ -2262,3 +2262,75 @@ void __decon_dump(u32 id, void __iomem *regs, void __iomem *base_regs, bool dsc_
 				base_regs + SHADOW_OFFSET + 0x5000, 0x80, false);
 	}
 }
+
+/* Makalu (9820) chip dependent HW limitation
+ *	: returns 0 if no error
+ *	: otherwise returns -EPERM for HW-wise not permitted
+ */
+int decon_check_global_limitation(struct decon_device *decon,
+		struct decon_win_config *config)
+{
+	int ret = 0;
+	int i, j;
+	enum decon_idma_type axi_port[MAX_DECON_WIN] = {
+			IDMA_VGRFS, IDMA_VGF, IDMA_VGS,
+			IDMA_GF1, IDMA_VG, IDMA_GF0};
+	/* IDMA_GF0(idx : 0) <-> IDMA_VGRFS (idx : 5)
+	 * IDMA_GF1(idx : 1) <-> IDMA_VGF (idx : 3)
+	 * IDMA_VG (idx : 2) <-> IDMA_VGS (idx : 4)
+	 */
+
+	for (i = 0; i < MAX_DECON_WIN; i++) {
+		if (config[i].state == DECON_WIN_STATE_BUFFER) {
+		/* case 1 : In one axi domain, a channel has
+		 *	compression & src.w over 2048
+		 *	the one on the other should never have compression.
+		 */
+			if (config[i].compression && (config[i].src.w > 2048)) {
+				for (j = 0; j < MAX_DECON_WIN; j++) {
+					if (i == j)
+						continue;
+					if ((config[j].state ==
+						DECON_WIN_STATE_BUFFER) &&
+					(config[j].idma_type ==
+						axi_port[config[i].idma_type])) {
+						if (config[j].compression) {
+							ret = -EPERM;
+							decon_err(
+							"When using both channel\
+							as an AFBC width should\
+							always be set\
+							equal or under 2048\n");
+							goto err;
+						}
+					}
+				}
+		/* case 2 : In an axi domain, a channel has rotation
+		 *	one on the other should never have compression.
+		 */
+			} else if (config[i].dpp_parm.rot > DPP_ROT_180) {
+				for (j = 0; j < MAX_DECON_WIN; j++) {
+					if (i == j)
+						continue;
+					if ((config[j].state ==
+						DECON_WIN_STATE_BUFFER) &&
+					(config[j].idma_type ==
+						axi_port[config[i].idma_type])) {
+						if (config[j].compression) {
+							ret = -EPERM;
+							decon_err(
+							"AFBC & Roation/Flip not\
+							allowed in\
+							the same AXI port\
+							at the same time\n");
+							goto err;
+						}
+					}
+				}
+			}
+		}
+	}
+
+err:
+	return ret;
+}
