@@ -210,10 +210,8 @@ EXPORT_SYMBOL(dbg_snapshot_hook_pmsg);
  */
 
 static struct ramoops_platform_data dss_ramoops_data = {
-	.record_size	= SZ_512K,
-	.console_size	= SZ_512K,
-	.ftrace_size	= SZ_512K,
-	.pmsg_size	= SZ_512K,
+	.record_size	= SZ_4K,
+	.pmsg_size	= SZ_4K,
 	.dump_oops	= 1,
 };
 
@@ -229,6 +227,8 @@ static int __init dss_pstore_init(void)
 	if (dbg_snapshot_get_enable("log_pstore")) {
 		dss_ramoops_data.mem_size = dbg_snapshot_get_item_size("log_pstore");
 		dss_ramoops_data.mem_address = dbg_snapshot_get_item_paddr("log_pstore");
+		dss_ramoops_data.pmsg_size = dss_ramoops_data.mem_size / 2;
+		dss_ramoops_data.record_size = dss_ramoops_data.mem_size / 2;
 	}
 	return platform_device_register(&dss_ramoops);
 }
