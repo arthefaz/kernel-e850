@@ -35,6 +35,9 @@
 #elif defined(CONFIG_SOC_EXYNOS9820)
 #include <dt-bindings/clock/exynos9820.h>
 #endif
+#if defined(CONFIG_CPU_IDLE)
+#include <soc/samsung/exynos-cpupm.h>
+#endif
 #include <soc/samsung/exynos-pmu.h>
 #if defined(CONFIG_SUPPORT_LEGACY_ION)
 #include <linux/exynos_iovmm.h>
@@ -713,6 +716,10 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 
 	dsim_dbg("%s %s +\n", __func__, dsim_state_names[dsim->state]);
 
+#if defined(CONFIG_CPU_IDLE)
+	exynos_update_ip_idle_status(dsim->idle_ip_index, 0);
+#endif
+
 	pm_runtime_get_sync(dsim->dev);
 
 	/* DPHY reset control from SYSREG(0) */
@@ -831,6 +838,9 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 	pm_runtime_put_sync(dsim->dev);
 
 	dsim_dbg("%s %s -\n", __func__, dsim_state_names[dsim->state]);
+#if defined(CONFIG_CPU_IDLE)
+	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
+#endif
 
 	return 0;
 }
@@ -919,6 +929,9 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 		phy_power_off(dsim->phy_ex);
 
 	pm_runtime_put_sync(dsim->dev);
+#if defined(CONFIG_CPU_IDLE)
+	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
+#endif
 
 	DPU_EVENT_LOG(DPU_EVT_ENTER_ULPS, &dsim->sd, start);
 err:
@@ -937,6 +950,9 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 		ret = -EBUSY;
 		goto err;
 	}
+#if defined(CONFIG_CPU_IDLE)
+	exynos_update_ip_idle_status(dsim->idle_ip_index, 0);
+#endif
 
 	pm_runtime_get_sync(dsim->dev);
 
@@ -1508,6 +1524,14 @@ static int dsim_probe(struct platform_device *pdev)
 	dsim_register_panel(dsim);
 	setup_timer(&dsim->cmd_timer, dsim_cmd_fail_detector,
 			(unsigned long)dsim);
+
+#if defined(CONFIG_CPU_IDLE)
+	dsim->idle_ip_index = exynos_get_idle_ip_index(dev_name(&pdev->dev));
+	dsim_info("dsim idle_ip_index[%d]\n", dsim->idle_ip_index);
+	if (dsim->idle_ip_index < 0)
+		dsim_warn("idle ip index is not provided for dsim\n");
+	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
+#endif
 
 	pm_runtime_enable(dev);
 

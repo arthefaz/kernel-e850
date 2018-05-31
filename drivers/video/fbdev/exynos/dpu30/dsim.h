@@ -235,6 +235,7 @@ struct dsim_device {
 	struct completion rd_comp;
 
 	int total_underrun_cnt;
+	int idle_ip_index;
 };
 
 struct dsim_lcd_driver {
