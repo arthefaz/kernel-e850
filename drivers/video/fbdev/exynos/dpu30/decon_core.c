@@ -2982,7 +2982,9 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 {
 	struct decon_lcd *lcd_info = decon->lcd_info;
 	struct fb_info *fbi = win->fbinfo;
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct displayport_device *displayport;
+#endif
 	struct dsim_device *dsim;
 	struct device *dev;
 	unsigned int real_size, virt_size, size;
@@ -3307,7 +3309,7 @@ static void decon_parse_dt(struct decon_device *decon)
 	if (of_property_read_u32(dev->of_node, "ppc", (u32 *)&decon->bts.ppc))
 		decon->bts.ppc = 2UL;
 
-	decon_info("PPC(%d)\n", decon->bts.ppc);
+	decon_info("PPC(%llu)\n", decon->bts.ppc);
 
 	of_property_read_u32(dev->of_node, "chip_ver", &decon->dt.chip_ver);
 	of_property_read_u32(dev->of_node, "dpp_cnt", &decon->dt.dpp_cnt);
