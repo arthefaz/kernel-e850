@@ -99,6 +99,7 @@ extern struct decon_bts_ops decon_bts_control;
 #define DECON_TRACE_BUF_SIZE	40
 
 #define DECON_WIN_UPDATE_IDX	MAX_DECON_WIN
+#define MAX_BUF_MEMMAP		512
 
 #ifndef KHZ
 #define KHZ (1000)
@@ -659,6 +660,8 @@ void DPU_EVENT_LOG_APPLY_REGION(struct v4l2_subdev *sd,
 void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon);
 int decon_create_debugfs(struct decon_device *decon);
 void decon_destroy_debugfs(struct decon_device *decon);
+void dpu_memmap_dec(struct decon_device *decon, dma_addr_t target);
+void dpu_memmap_inc(struct decon_device *decon, dma_addr_t target);
 
 /* HDR information of panel */
 enum decon_hdr_type {
@@ -744,6 +747,12 @@ struct dpu_afbc_info {
 	struct sg_table	*sg_table[MAX_DECON_WIN];
 };
 
+struct dpu_memmap_info {
+	dma_addr_t addr_q;
+	u32 map_cnt;
+	u32 unmap_cnt;
+};
+
 struct decon_debug {
 	void __iomem *eint_pend;
 	struct dentry *debug_root;
@@ -772,6 +781,11 @@ struct decon_debug {
 	struct dma_buf *dmabuf[MAX_DECON_WIN][MAX_PLANE_CNT];
 #endif
 	int prev_afbc_win_id[MAX_DECON_WIN];
+#if defined(CONFIG_EXYNOS_MEMMAP_DEBUG)
+	struct dentry *debug_memmap_ref_cnt;
+	struct dpu_memmap_info mmap_info[MAX_BUF_MEMMAP];
+	int addr_n;
+#endif
 };
 
 struct decon_update_regs {
