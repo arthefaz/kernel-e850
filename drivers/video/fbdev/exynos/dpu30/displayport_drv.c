@@ -49,8 +49,13 @@
 #define HDCP_SUPPORT
 #define HDCP_2_2
 
-#define HDCP_2_2_AUTH_DONE     1
 #define HDCP_2_2_NOT_AUTH      0
+#define HDCP_2_2_AUTH_DONE     1
+
+enum {
+	DRM_OFF = 0x0,
+	DRM_ON  = 0x1,
+};
 
 int displayport_log_level = 6;
 static u8 max_lane_cnt;
@@ -723,9 +728,8 @@ void displayport_hpd_changed(int state)
 	} else {
 #if defined(CONFIG_EXYNOS_HDCP2)
 		if (displayport->hdcp_ver == HDCP_VERSION_2_2) {
-
-			hdcp_dplink_hpd_changed();
-			displayport_hdcp22_enable(0);
+			hdcp_dplink_cancel_auth();
+			hdcp_dplink_dp_link_flag_check(0);
 		}
 #endif
 		cancel_delayed_work_sync(&displayport->hpd_plug_work);
@@ -1102,6 +1106,7 @@ static int displayport_hdcp22_irq_handler(void)
 		}
 	} else if (rxstatus & DPCD_HDCP22_RXSTATUS_REAUTH_REQ) {
 		/* hdcp22 disable while re-authentication */
+		hdcp_dplink_cancel_auth();
 		ret = hdcp_dplink_set_reauth();
 
 		displayport_hdcp22_enable(0);
@@ -1127,14 +1132,10 @@ static int displayport_hdcp22_irq_handler(void)
 		ret = hdcp_dplink_set_rp_ready();
 		if (auth_done) {
 			auth_done = HDCP_2_2_NOT_AUTH;
-			if (hdcp_dplink_authenticate() != 0) {
+			if (hdcp_dplink_authenticate() != 0)
 				auth_done = HDCP_2_2_NOT_AUTH;
-				displayport_reg_video_mute(1);
-			}
-			else {
+			else
 				auth_done = HDCP_2_2_AUTH_DONE;
-				displayport_reg_video_mute(0);
-			}
 		}
 	} else {
 		displayport_info("undefined RxStatus(0x%x). ignore\n", rxstatus);
@@ -1146,6 +1147,50 @@ static int displayport_hdcp22_irq_handler(void)
 	displayport_info("Not compiled EXYNOS_HDCP2 driver\n");
 	return 0;
 #endif
+}
+
+#if defined(CONFIG_DRM_SYSFS)
+static ssize_t secdp_drm_show(struct class *class,
+		struct class_attribute *attr,
+		char *buf)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+	displayport_info("DRM show %d \n", displayport->dp_drm);
+
+	return sprintf(buf, "DRM test show %d\n", displayport->dp_drm);
+}
+
+static ssize_t secdp_drm_store(struct class *dev,
+		struct class_attribute *attr,
+		const char *buf, size_t size)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+	int val[3] = {0, };
+
+	get_options(buf, 2, val);
+
+	displayport->dp_drm = val[1];
+	if (displayport->dp_drm) {
+		displayport_info("drm start!!!\n");
+		hdcp_dplink_drm_flag_check(1);
+	} else if (!displayport->dp_drm) {
+		displayport_info("drm end!!!\n");
+		hdcp_dplink_drm_flag_check(0);
+	}
+
+	return size;
+}
+
+static CLASS_ATTR(dp_drm, 0664, secdp_drm_show, secdp_drm_store);
+#endif
+
+void reset_dp_hdcp_module(void)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	displayport_info("DP Reset to rest HDCP module\n");
+	queue_delayed_work(displayport->dp_wq,
+			&displayport->hpd_unplug_work, 0);
 }
 
 static void displayport_hpd_irq_work(struct work_struct *work)
@@ -1683,14 +1728,11 @@ static void displayport_hdcp22_run(struct work_struct *work)
 	u8 val[2] = {0, };
 
 	auth_done = HDCP_2_2_NOT_AUTH;
-	if (hdcp_dplink_authenticate() != 0) {
+	if (hdcp_dplink_dp_link_flag_check(1) != 0)
 		auth_done = HDCP_2_2_NOT_AUTH;
-		displayport_reg_video_mute(1);
-	}
-	else {
+	else
 		auth_done = HDCP_2_2_AUTH_DONE;
-		displayport_reg_video_mute(0);
-	}
+
 	displayport_dpcd_read_for_hdcp22(DPCD_HDCP22_RX_INFO, 2, val);
 	displayport_info("HDCP2.2 rx_info: 0:0x%X, 8:0x%X\n", val[1], val[0]);
 #else
