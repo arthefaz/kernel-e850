@@ -851,6 +851,14 @@ int decon_update_pwr_state(struct decon_device *decon, u32 mode)
 		return 0;
 	}
 
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	if (mode == DISP_PWR_OFF && decon->dt.out_type == DECON_OUT_DP
+		&& IS_DISPLAYPORT_HPD_PLUG_STATE()) {
+		decon_info("skip decon-%d disable(hpd plug)\n", decon->id);
+		return 0;
+	}
+#endif
+
 	if (IS_DECON_OFF_STATE(decon)) {
 		if (mode == DISP_PWR_OFF) {
 			ret = decon_enable(decon);
