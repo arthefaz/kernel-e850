@@ -939,6 +939,13 @@ static inline void displayport_phy_write_mask(u32 reg_id, u32 val, u32 mask)
 	writel(val, displayport->res.phy_regs + reg_id);
 }
 
+static inline bool IS_DISPLAYPORT_HPD_PLUG_STATE(void)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	return (bool)displayport->hpd_current_state;
+}
+
 void displayport_reg_init(void);
 void displayport_reg_set_interrupt_mask(enum displayport_interrupt_mask param, u8 set);
 u32 displayport_reg_get_interrupt_and_clear(u32 interrupt_status_register);
