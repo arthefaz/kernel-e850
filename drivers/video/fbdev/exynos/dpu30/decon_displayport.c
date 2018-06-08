@@ -236,8 +236,7 @@ int decon_displayport_get_hdr_capa(struct decon_device *decon,
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct displayport_device *displayport = get_displayport_drvdata();
 
-	if (displayport->rx_edid_data.hdr_support)
-		hdr_capa->out_types[0] = HDR_HDR10;
+	hdr_capa->out_types[0] = HDR_HDR10;
 #else
 	decon_info("Not compiled displayport driver\n");
 #endif
@@ -249,19 +248,27 @@ int decon_displayport_get_hdr_capa_info(struct decon_device *decon,
 {
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct displayport_device *displayport = get_displayport_drvdata();
+	struct decon_device *decon0 = get_decon_drvdata(0);
 
-	if (displayport->rx_edid_data.hdr_support)
+	if (displayport->rx_edid_data.hdr_support) {
 		hdr_capa_info->out_num = 1;
-	else
-		hdr_capa_info->out_num = 0;
-
-	/* Need CEA-861.3 EDID value calculation on platform part */
-	hdr_capa_info->max_luminance =
-		displayport->rx_edid_data.max_lumi_data;
-	hdr_capa_info->max_average_luminance =
-		displayport->rx_edid_data.max_average_lumi_data;
-	hdr_capa_info->min_luminance =
-		displayport->rx_edid_data.min_lumi_data;
+		/* Need CEA-861.3 EDID value calculation on platform part */
+		hdr_capa_info->max_luminance =
+			displayport->rx_edid_data.max_lumi_data;
+		hdr_capa_info->max_average_luminance =
+			displayport->rx_edid_data.max_average_lumi_data;
+		hdr_capa_info->min_luminance =
+			displayport->rx_edid_data.min_lumi_data;
+	} else { /* For P version platform */
+		hdr_capa_info->out_num =
+			decon0->lcd_info->dt_lcd_hdr.hdr_num;
+		hdr_capa_info->max_luminance =
+			decon0->lcd_info->dt_lcd_hdr.hdr_max_luma;
+		hdr_capa_info->max_average_luminance =
+			decon0->lcd_info->dt_lcd_hdr.hdr_max_avg_luma;
+		hdr_capa_info->min_luminance =
+			decon0->lcd_info->dt_lcd_hdr.hdr_min_luma;
+	}
 #else
 	decon_info("Not compiled displayport driver\n");
 #endif
@@ -306,6 +313,13 @@ int decon_displayport_get_config(struct decon_device *decon,
 			DISPLAYPORT_IOC_GET_ENUM_DV_TIMINGS, &displayport_data->etimings);
 
 		decon_dbg("EXYNOS_DISPLAYPORT_STATE_ENUM_PRESET\n");
+		break;
+
+	case EXYNOS_DISPLAYPORT_STATE_HDR_INFO:
+		ret = v4l2_subdev_call(displayport_sd, core, ioctl,
+			DISPLAYPORT_IOC_GET_HDR_INFO, &displayport_data->hdr_support);
+
+		decon_dbg("EXYNOS_DISPLAYPORT_STATE_HDR_INFO\n");
 		break;
 
 	default:
