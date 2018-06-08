@@ -69,6 +69,8 @@
 #define MAX_DECON_WIN		6
 #define MAX_DPP_SUBDEV		7
 
+#define DISP_RESTRICTION_VER	20180608
+
 #if defined(CONFIG_SUPPORT_LEGACY_ION)
 extern struct ion_device *ion_exynos;
 #endif
@@ -1305,6 +1307,8 @@ int decon_set_out_sd_state(struct decon_device *decon, enum decon_state state);
 #define S3CFB_POWER_MODE		_IOW('F', 223, __u32)
 #define EXYNOS_DISP_INFO		_IOW('F', 260, \
 						struct decon_disp_info)
+#define EXYNOS_DISP_RESTRICTIONS	_IOW('F', 261, \
+						struct dpp_restrictions_info)
 
 #define S3CFB_START_CRC			_IOW('F', 270, u32)
 #define S3CFB_SEL_CRC_BITS		_IOW('F', 271, u32)

@@ -48,6 +48,8 @@ extern int dpp_log_level;
 
 #define DPP_MODULE_NAME		"exynos-dpp"
 #define MAX_DPP_CNT		7 /* + ODMA case */
+#define MAX_FMT_CNT		64
+#define DEFAULT_FMT_CNT		9
 
 /* about 1msec @ ACLK=630MHz */
 #define INIT_RCV_NUM		630000
@@ -181,7 +183,8 @@ struct dpp_restriction {
 
 	u32 src_h_rot_max; /* limit of source img height in case of rotation */
 
-	u32 *format; /* supported format list for each DPP channel */
+	u32 format[MAX_FMT_CNT]; /* supported format list for each DPP channel */
+	int format_cnt;
 	u32 reserved[8];
 };
 
@@ -196,6 +199,7 @@ struct dpp_ch_restriction {
 struct dpp_restrictions_info {
 	u32 ver; /* version of dpp_restrictions_info structure */
 	struct dpp_ch_restriction dpp_ch[MAX_DPP_CNT];
+	int dpp_cnt;
 	u32 reserved[4];
 };
 
