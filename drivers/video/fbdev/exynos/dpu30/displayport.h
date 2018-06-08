@@ -689,13 +689,13 @@ struct exynos_displayport_data {
 		EXYNOS_DISPLAYPORT_STATE_PRESET = 0,
 		EXYNOS_DISPLAYPORT_STATE_ENUM_PRESET,
 		EXYNOS_DISPLAYPORT_STATE_RECONNECTION,
-		EXYNOS_DISPLAYPORT_STATE_HDCP,
+		EXYNOS_DISPLAYPORT_STATE_HDR_INFO,
 		EXYNOS_DISPLAYPORT_STATE_AUDIO,
 	} state;
 	struct	v4l2_dv_timings timings;
 	struct	v4l2_enum_dv_timings etimings;
 	__u32	audio_info;
-	int	hdcp;
+	int hdr_support;
 };
 
 struct displayport_audio_config_data {
@@ -1047,4 +1047,5 @@ extern int hdcp_dplink_hpd_changed(void);
 #define DISPLAYPORT_IOC_SET_RECONNECTION	_IOW('V', 2, u8)
 #define DISPLAYPORT_IOC_DP_SA_SORTING		_IOW('V', 3, int)
 #define DISPLAYPORT_IOC_SET_HDR_METADATA	_IOW('V', 4, struct exynos_hdr_static_info *)
+#define DISPLAYPORT_IOC_GET_HDR_INFO	_IOW('V', 5, int)
 #endif

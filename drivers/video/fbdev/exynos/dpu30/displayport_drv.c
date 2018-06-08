@@ -2198,6 +2198,13 @@ int displayport_set_hdr_config(struct exynos_hdr_static_info *hdr_info)
 	return ret;
 }
 
+void displayport_get_hdr_support(int *hdr_support)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	*hdr_support = (int)displayport->rx_edid_data.hdr_support;
+}
+
 bool is_displayport_not_running(void)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
@@ -2214,6 +2221,7 @@ static long displayport_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *ar
 	int ret = 0;
 	struct v4l2_enum_dv_timings *enum_timings;
 	struct exynos_hdr_static_info *hdr_info;
+	int *hdr_support;
 
 	switch (cmd) {
 	case DISPLAYPORT_IOC_DUMP:
@@ -2236,6 +2244,12 @@ static long displayport_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *ar
 		ret = displayport_set_hdr_config(hdr_info);
 		if (ret)
 			displayport_err("failed to configure hdr info\n");
+		break;
+
+	case DISPLAYPORT_IOC_GET_HDR_INFO:
+		hdr_support = (int *)arg;
+
+		displayport_get_hdr_support(hdr_support);
 		break;
 
 	case EXYNOS_DPU_GET_ACLK:
