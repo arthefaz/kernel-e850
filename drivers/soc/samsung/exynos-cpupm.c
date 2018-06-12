@@ -515,6 +515,21 @@ static int cpus_busy(int target_residency, const struct cpumask *cpus)
 	return 0;
 }
 
+static int cpus_last_core_detecting(int request_cpu, const struct cpumask *cpus)
+{
+	int cpu;
+
+	for_each_cpu_and(cpu, cpu_online_mask, cpus) {
+		if (cpu == request_cpu)
+			continue;
+
+		if (cal_is_lastcore_detecting(cpu))
+			return -EBUSY;
+	}
+
+	return 0;
+}
+
 static int initcall_done;
 static int system_busy(void)
 {
@@ -548,6 +563,9 @@ static int can_enter_power_mode(int cpu, struct power_mode *mode)
 		return 0;
 
 	if (cpus_busy(mode->target_residency, &mode->siblings))
+		return 0;
+
+	if (cpus_last_core_detecting(cpu, &mode->siblings))
 		return 0;
 
 	if (mode->system_idle && system_busy())
