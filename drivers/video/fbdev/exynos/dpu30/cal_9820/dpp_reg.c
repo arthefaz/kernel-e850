@@ -1116,7 +1116,6 @@ u32 odma_reg_get_irq_and_clear(u32 id)
 	return val;
 }
 
-#if 0
 static void dpp_reg_dump_ch_data(int id, enum dpp_reg_area reg_area,
 		u32 sel[], u32 cnt)
 {
@@ -1159,116 +1158,126 @@ static void dpp_reg_dump_ch_data(int id, enum dpp_reg_area reg_area,
 	dpp_info("%s\n", linebuf);
 }
 static bool checked;
-#endif
 
 static void dma_reg_dump_com_debug_regs(int id)
 {
-#if 0 /* TODO: This will be implemented */
-	u32 sel[12] = {0x0000, 0x0100, 0x0200, 0x0204, 0x0205, 0x0300, 0x4000,
-		0x4001, 0x4005, 0x8000, 0x8001, 0x8005};
+	u32 sel_ch0[30] = {
+		0x0000, 0x0001, 0x0005, 0x0009, 0x000D, 0x000E, 0x0020, 0x0021,
+		0x0025, 0x0029, 0x002D, 0x002E, 0x0100, 0x0101, 0x0105, 0x0109,
+		0x010D, 0x010E, 0x0120, 0x0121, 0x0125, 0x0129, 0x012D, 0x012E,
+		0x0200, 0x0300, 0x0400, 0x0401, 0x0402, 0x0403
+	};
+
+	u32 sel_ch1[29] = {
+		0x4000, 0x4001, 0x4005, 0x4009, 0x400D, 0x400E, 0x4020, 0x4021,
+		0x4025, 0x4029, 0x402D, 0x402E, 0x4100, 0x4101, 0x4105, 0x4109,
+		0x410D, 0x410E, 0x4120, 0x4121, 0x4125, 0x4129, 0x412D, 0x412E,
+		0x4200, 0x4300, 0x4400, 0x4401, 0x4402
+	};
+
+	u32 sel_ch2[5] = {
+		0x8000, 0x8001, 0x8002, 0xC000, 0xC001
+	};
 
 	dpp_info("%s: checked = %d\n", __func__, checked);
 	if (checked)
 		return;
 
-	dpp_info("-< DMA COMMON DEBUG SFR >-\n");
-	dpp_reg_dump_ch_data(id, REG_AREA_DMA_COM, sel, 12);
+	dpp_info("-< DMA COMMON DEBUG SFR(CH0) >-\n");
+	dpp_reg_dump_ch_data(id, REG_AREA_DMA_COM, sel_ch0, 30);
+
+	dpp_info("-< DMA COMMON DEBUG SFR(CH1) >-\n");
+	dpp_reg_dump_ch_data(id, REG_AREA_DMA_COM, sel_ch1, 29);
+
+	dpp_info("-< DMA COMMON DEBUG SFR(CH2) >-\n");
+	dpp_reg_dump_ch_data(id, REG_AREA_DMA_COM, sel_ch2, 5);
 
 	checked = true;
-#endif
 }
 
-static void dma_reg_dump_debug_regs(int id)
+static void dma_reg_dump_debug_regs(int id, unsigned long attr)
 {
-#if 0 /* TODO: This will be implemented */
-	u32 sel_g[11] = {
-		0x0000, 0x0001, 0x0002, 0x0004, 0x000A, 0x000B, 0x0400, 0x0401,
-		0x0402, 0x0405, 0x0406
+	u32 sel_plane0[10] = {
+		0x0000, 0x0001, 0x0002, 0x0003, 0x0007, 0x0008, 0x0400, 0x0401,
+		0x0402, 0x0403
 	};
-	u32 sel_v[39] = {
-		0x1000, 0x1001, 0x1002, 0x1004, 0x100A, 0x100B, 0x1400, 0x1401,
-		0x1402, 0x1405, 0x1406, 0x2000, 0x2001, 0x2002, 0x2004, 0x200A,
-		0x200B, 0x2400, 0x2401, 0x2402, 0x2405, 0x2406, 0x3000, 0x3001,
-		0x3002, 0x3004, 0x300A, 0x300B, 0x3400, 0x3401, 0x3402, 0x3405,
-		0x3406, 0x4002, 0x4003, 0x4004, 0x4005, 0x4006, 0x4007
+
+	u32 sel_plane1[10] = {
+		0x1000, 0x1001, 0x1002, 0x1003, 0x1007, 0x1008, 0x1400, 0x1401,
+		0x1402, 0x1403
 	};
-	u32 sel_f[12] = {
-		0x5100, 0x5101, 0x5104, 0x5105, 0x5200, 0x5202, 0x5204, 0x5205,
-		0x5300, 0x5302, 0x5303, 0x5306
+
+	u32 sel_plane2[10] = {
+		0x2000, 0x2001, 0x2002, 0x2003, 0x2007, 0x2008, 0x2400, 0x2401,
+		0x2402, 0x2403
 	};
-	u32 sel_r[22] = {
-		0x6100, 0x6101, 0x6102, 0x6103, 0x6104, 0x6105, 0x6200, 0x6201,
-		0x6202, 0x6203, 0x6204, 0x6205, 0x6300, 0x6301, 0x6302, 0x6306,
-		0x6307, 0x6400, 0x6401, 0x6402, 0x6406, 0x6407
+
+	u32 sel_plane3[10] = {
+		0x3000, 0x3001, 0x3002, 0x3003, 0x3007, 0x3008, 0x3400, 0x3401,
+		0x3402, 0x3403
 	};
-	u32 sel_com[4] = {
+
+	u32 sel_yuv[6] = {
+		0x4001, 0x4002, 0x4003, 0x4005, 0x4006, 0x4007
+	};
+
+	u32 sel_fbc[15] = {
+		0x5100, 0x5101, 0x5104, 0x5105, 0x5200, 0x5201, 0x5202, 0x5203,
+		0x5204, 0x5300, 0x5301, 0x5302, 0x5303, 0x5304, 0x5305
+	};
+
+	u32 sel_rot[16] = {
+		0x6100, 0x6101, 0x6102, 0x6103, 0x6200, 0x6201, 0x6202, 0x6203,
+		0x6300, 0x6301, 0x6305, 0x6306, 0x6400, 0x6401, 0x6405, 0x6406
+	};
+
+	u32 sel_pix[4] = {
 		0x7000, 0x7001, 0x7002, 0x7003
 	};
 
 	dpp_info("-< DPU_DMA%d DEBUG SFR >-\n", id);
-	switch (DPU_CH2DMA(id)) {
-	case IDMA_G0:
-	case IDMA_G1:
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_g, 11);
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_com, 4);
-		break;
-	case IDMA_VG0:
-	case IDMA_VG1:
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_g, 11);
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_v, 39);
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_com, 4);
-		break;
-	case IDMA_VGF0:
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_g, 11);
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_v, 39);
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_f, 12);
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_com, 4);
-		break;
-	case IDMA_VGF1:
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_g, 11);
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_v, 39);
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_f, 12);
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_r, 22);
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_com, 4);
-		break;
-	default:
-		dpp_err("DPP%d is wrong ID\n", id);
-		return;
+	dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_plane0, 10);
+
+	if (test_bit(DPP_ATTR_CSC, &attr)) {
+		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_plane1, 10);
+		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_plane2, 10);
+		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_plane3, 10);
+		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_yuv, 6);
 	}
-#endif
+
+	if (test_bit(DPP_ATTR_AFBC, &attr))
+		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_fbc, 15);
+
+	if (test_bit(DPP_ATTR_ROT, &attr))
+		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_rot, 16);
+
+	dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_pix, 4);
 }
 
 static void dpp_reg_dump_debug_regs(int id)
 {
-#if 0 /* TODO: This will be implemented */
-	u32 sel_g[3] = {0x0000, 0x0100, 0x0101};
-	u32 sel_vg[19] = {0x0000, 0x0100, 0x0101, 0x0200, 0x0201, 0x0202,
+	u32 sel_gf[3] = {0x0000, 0x0100, 0x0101};
+	u32 sel_vg_vgf[19] = {0x0000, 0x0100, 0x0101, 0x0200, 0x0201, 0x0202,
 		0x0203, 0x0204, 0x0205, 0x0206, 0x0207, 0x0208, 0x0300, 0x0301,
 		0x0302, 0x0303, 0x0304, 0x0400, 0x0401};
-	u32 sel_vgf[37] = {0x0000, 0x0100, 0x0101, 0x0200, 0x0201, 0x0210,
+	u32 sel_vgs_vgrfs[37] = {0x0000, 0x0100, 0x0101, 0x0200, 0x0201, 0x0210,
 		0x0211, 0x0220, 0x0221, 0x0230, 0x0231, 0x0240, 0x0241, 0x0250,
 		0x0251, 0x0300, 0x0301, 0x0302, 0x0303, 0x0304, 0x0305, 0x0306,
 		0x0307, 0x0308, 0x0400, 0x0401, 0x0402, 0x0403, 0x0404, 0x0500,
 		0x0501, 0x0502, 0x0503, 0x0504, 0x0505, 0x0600, 0x0601};
 	u32 cnt;
 	u32 *sel = NULL;
-	switch (DPU_CH2DMA(id)) {
-	case IDMA_G0:
-	case IDMA_G1:
-		sel = sel_g;
+
+	if (id == 0 || id == 2) { /* GF0, GF1 */
+		sel =  sel_gf;
 		cnt = 3;
-		break;
-	case IDMA_VG0:
-	case IDMA_VG1:
-		sel = sel_vg;
+	} else if (id == 3 || id == 4) { /* VGF, VG */
+		sel = sel_vg_vgf;
 		cnt = 19;
-		break;
-	case IDMA_VGF0:
-	case IDMA_VGF1:
-		sel = sel_vgf;
+	} else if (id == 1 || id == 5) { /* VGRFS, VGS */
+		sel = sel_vgs_vgrfs;
 		cnt = 37;
-		break;
-	default:
+	} else {
 		dpp_err("DPP%d is wrong ID\n", id);
 		return;
 	}
@@ -1276,7 +1285,6 @@ static void dpp_reg_dump_debug_regs(int id)
 	dpp_write(id, 0x0C00, 0x1);
 	dpp_info("-< DPP%d DEBUG SFR >-\n", id);
 	dpp_reg_dump_ch_data(id, REG_AREA_DPP, sel, cnt);
-#endif
 }
 
 static void dma_dump_regs(u32 id, void __iomem *dma_regs)
@@ -1326,7 +1334,7 @@ void __dpp_dump(u32 id, void __iomem *regs, void __iomem *dma_regs,
 	dma_reg_dump_com_debug_regs(id);
 
 	dma_dump_regs(id, dma_regs);
-	dma_reg_dump_debug_regs(id);
+	dma_reg_dump_debug_regs(id, attr);
 
 	dpp_dump_regs(id, regs, attr);
 	dpp_reg_dump_debug_regs(id);
