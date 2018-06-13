@@ -3361,6 +3361,20 @@ static void decon_parse_dt(struct decon_device *decon)
 
 	decon_info("PPC(%llu)\n", decon->bts.ppc);
 
+	if (of_property_read_u32(dev->of_node, "line_mem_cnt",
+				(u32 *)&decon->bts.line_mem_cnt)) {
+		decon->bts.line_mem_cnt = 4UL;
+		decon_warn("WARN: line memory cnt is not defined in DT.\n");
+	}
+	decon_info("line memory cnt(%d)\n", decon->bts.line_mem_cnt);
+
+	if (of_property_read_u32(dev->of_node, "cycle_per_line",
+				(u32 *)&decon->bts.cycle_per_line)) {
+		decon->bts.cycle_per_line = 8UL;
+		decon_warn("WARN: cycle per line is not defined in DT.\n");
+	}
+	decon_info("cycle per line(%d)\n", decon->bts.cycle_per_line);
+
 	of_property_read_u32(dev->of_node, "chip_ver", &decon->dt.chip_ver);
 	of_property_read_u32(dev->of_node, "dpp_cnt", &decon->dt.dpp_cnt);
 	of_property_read_u32(dev->of_node, "dsim_cnt", &decon->dt.dsim_cnt);

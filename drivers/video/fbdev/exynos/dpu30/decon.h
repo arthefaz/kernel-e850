@@ -835,6 +835,8 @@ struct decon_bts {
 	u32 max_disp_freq;
 	u32 prev_max_disp_freq;
 	u64 ppc;
+	u32 line_mem_cnt;
+	u32 cycle_per_line;
 #if defined(CONFIG_EXYNOS_BTS)
 	struct decon_bts_bw bw[BTS_DPP_MAX];
 
