@@ -509,15 +509,11 @@ static void decon_reg_set_bpc(u32 id, struct decon_lcd *lcd_info)
 	decon_write_mask(id, GLOBAL_CONTROL, val, mask);
 }
 
-static void decon_reg_config_win_channel(u32 id, u32 win_idx,
-		enum decon_idma_type type)
+static void decon_reg_config_win_channel(u32 id, u32 win_idx, int ch)
 {
-	u32 ch_id;
 	u32 val, mask;
 
-	ch_id = DPU_DMA2CH(type);
-
-	val = WIN_CHMAP_F(win_idx, ch_id);
+	val = WIN_CHMAP_F(win_idx, ch);
 	mask = WIN_CHMAP_MASK(win_idx);
 	decon_write_mask(id, DATA_PATH_CONTROL_1, val, mask);
 }
@@ -1854,10 +1850,10 @@ void decon_reg_set_window_control(u32 id, int win_idx,
 		decon_reg_set_winmap(id, win_idx, regs->colormap, winmap_en);
 	}
 
-	decon_reg_config_win_channel(id, win_idx, regs->type);
+	decon_reg_config_win_channel(id, win_idx, regs->ch);
 	decon_reg_win_enable_and_update(id, win_idx, win_en);
 
-	decon_dbg("%s: regs->type(%d)\n", __func__, regs->type);
+	decon_dbg("%s: regs->ch(%d)\n", __func__, regs->ch);
 }
 
 void decon_reg_update_req_window_mask(u32 id, u32 win_idx)
@@ -2270,6 +2266,10 @@ void __decon_dump(u32 id, void __iomem *regs, void __iomem *base_regs, bool dsc_
 int decon_check_global_limitation(struct decon_device *decon,
 		struct decon_win_config *config)
 {
+#if 1
+	/* TODO: IDMA_XXX will be removed in this function */
+	return 0;
+#else
 	int ret = 0;
 	int i, j;
 	enum decon_idma_type axi_port[MAX_DECON_WIN] = {
@@ -2333,4 +2333,5 @@ int decon_check_global_limitation(struct decon_device *decon,
 
 err:
 	return ret;
+#endif
 }

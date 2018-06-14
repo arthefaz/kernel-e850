@@ -247,7 +247,7 @@ struct decon_window_regs {
 	u32 offset_x;
 	u32 offset_y;
 	u32 winmap_state;
-	enum decon_idma_type type;
+	int ch;
 	int plane_alpha;
 	enum decon_pixel_format format;
 	enum decon_blending blend;
