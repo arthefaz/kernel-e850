@@ -183,8 +183,7 @@ void decon_dump(struct decon_device *decon)
 /* ---------- CHECK FUNCTIONS ----------- */
 static void decon_win_config_to_regs_param
 	(int transp_length, struct decon_win_config *win_config,
-	 struct decon_window_regs *win_regs, enum decon_idma_type idma_type,
-	 int idx)
+	 struct decon_window_regs *win_regs, int ch, int idx)
 {
 	u8 alpha0 = 0, alpha1 = 0;
 
@@ -198,13 +197,13 @@ static void decon_win_config_to_regs_param
 	win_regs->whole_h = win_config->dst.f_h;
 	win_regs->offset_x = win_config->dst.x;
 	win_regs->offset_y = win_config->dst.y;
-	win_regs->type = idma_type;
+	win_regs->ch = ch; /* ch */
 	win_regs->plane_alpha = win_config->plane_alpha;
 	win_regs->format = win_config->format;
 	win_regs->blend = win_config->blending;
 
-	decon_dbg("DMATYPE_%d@ SRC:(%d,%d) %dx%d  DST:(%d,%d) %dx%d\n",
-			idma_type,
+	decon_dbg("CH%d@ SRC:(%d,%d) %dx%d  DST:(%d,%d) %dx%d\n",
+			ch,
 			win_config->src.x, win_config->src.y,
 			win_config->src.f_w, win_config->src.f_h,
 			win_config->dst.x, win_config->dst.y,
@@ -1371,8 +1370,8 @@ int decon_check_limitation(struct decon_device *decon, int idx,
 		return -EINVAL;
 	}
 
-	if (config->idma_type >= MAX_DECON_DMA_TYPE) {
-		decon_err("idma_type(%d) is wrong\n", config->idma_type);
+	if (config->idma_type >= decon->dt.dpp_cnt) { /* ch */
+		decon_err("ch(%d) is wrong\n", config->idma_type);
 		return -EINVAL;
 	}
 
@@ -1463,7 +1462,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	alpha_length = dpu_get_alpha_len(config->format);
 	regs->protection[idx] = config->protection;
 	decon_win_config_to_regs_param(alpha_length, config,
-				&regs->win_regs[idx], config->idma_type, idx);
+				&regs->win_regs[idx], config->idma_type, idx); /* ch */
 
 	return 0;
 
@@ -1481,12 +1480,12 @@ void decon_reg_chmap_validate(struct decon_device *decon,
 				(regs->win_regs[i].winmap_state))
 			continue;
 
-		if (bitmap & (1 << regs->dpp_config[i].idma_type)) {
+		if (bitmap & (1 << regs->dpp_config[i].idma_type)) { /* ch */
 			decon_warn("Channel-%d is mapped to multiple windows\n",
-					regs->dpp_config[i].idma_type);
+					regs->dpp_config[i].idma_type); /* ch */
 			regs->win_regs[i].wincon &= (~WIN_EN_F(i));
 		}
-		bitmap |= 1 << regs->dpp_config[i].idma_type;
+		bitmap |= 1 << regs->dpp_config[i].idma_type; /* ch */
 	}
 }
 
@@ -1499,7 +1498,7 @@ static void decon_check_used_dpp(struct decon_device *decon,
 	for (i = 0; i < decon->dt.max_win; i++) {
 		struct decon_win *win = decon->win[i];
 		if (!regs->win_regs[i].winmap_state)
-			win->dpp_id = DPU_DMA2CH(regs->dpp_config[i].idma_type);
+			win->dpp_id = regs->dpp_config[i].idma_type; /* ch */
 		else
 			win->dpp_id = 0xF;
 
@@ -1607,24 +1606,20 @@ static void decon_save_afbc_enabled_win_id(struct decon_device *decon,
 
 	for (i = 0; i < decon->dt.max_win; ++i) {
 		if (regs->dpp_config[i].state == DECON_WIN_STATE_BUFFER) {
-			sd = decon->dpp_sd[DPU_DMA2CH(
-					regs->dpp_config[i].idma_type)];
+			sd = decon->dpp_sd[regs->dpp_config[i].idma_type]; /* ch */
 			afbc_enabled = 0;
 			v4l2_subdev_call(sd, core, ioctl,
 					DPP_AFBC_ATTR_ENABLED, &afbc_enabled);
 			/* if afbc enabled, DMA2CH <-> win_id mapping */
 			if (regs->dpp_config[i].compression && afbc_enabled)
-				decon->d.prev_afbc_win_id[DPU_DMA2CH(
-					regs->dpp_config[i].idma_type)] = i;
+				decon->d.prev_afbc_win_id[regs->dpp_config[i].idma_type] = i; /* ch */
 			else
-				decon->d.prev_afbc_win_id[DPU_DMA2CH(
-					regs->dpp_config[i].idma_type)] = -1;
+				decon->d.prev_afbc_win_id[regs->dpp_config[i].idma_type] = -1; /* ch */
 
-			decon_dbg("%s:%d win(%d), dma(%d),\
+			decon_dbg("%s:%d win(%d), ch(%d),\
 				afbc(%d), save(%d)\n", __func__, __LINE__,
 				i, regs->dpp_config[i].idma_type, afbc_enabled,
-				decon->d.prev_afbc_win_id[DPU_DMA2CH(
-					regs->dpp_config[i].idma_type)]);
+				decon->d.prev_afbc_win_id[regs->dpp_config[i].idma_type]);
 		}
 	}
 }
@@ -2015,7 +2010,7 @@ static void decon_update_afbc_info(struct decon_device *decon,
 		if (!regs->dpp_config[i].compression)
 			continue;
 
-		ch = DPU_DMA2CH(regs->dpp_config[i].idma_type);
+		ch = regs->dpp_config[i].idma_type; /* ch */
 		if (test_bit(ch, &decon->cur_using_dpp)) {
 			if (regs->dma_buf_data[i][0].dma_buf == NULL)
 				continue;
@@ -2265,7 +2260,7 @@ static int decon_prepare_win_config(struct decon_device *decon,
 
 			/* decon_set_full_size_win(decon, config); */
 			decon_win_config_to_regs_param(0, config, win_regs,
-					config->idma_type, i);
+					config->idma_type, i); /* ch */
 			ret = 0;
 			break;
 		case DECON_WIN_STATE_BUFFER:
@@ -2478,6 +2473,28 @@ static int decon_get_hdr_capa_info(struct decon_device *decon,
 
 }
 
+static void decon_translate_idma2ch(struct decon_device *decon,
+		struct decon_win_config_data *win_data)
+{
+	int i;
+	struct decon_win_config *config;
+	struct decon_win_config *win_config = win_data->config;
+
+	for (i = 0; i < decon->dt.max_win; i++) {
+		config = &win_config[i];
+
+		switch (config->state) {
+		case DECON_WIN_STATE_COLOR:
+		case DECON_WIN_STATE_BUFFER:
+		case DECON_WIN_STATE_CURSOR:
+			config->idma_type = DPU_DMA2CH(config->idma_type);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			unsigned long arg)
 {
@@ -2539,6 +2556,14 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 
+		/*
+		 * idma_type is translated to DPP channel number temporarily.
+		 * In the future, user side will use DPP channel number instead
+		 * of idma_type.
+		 * If use side uses DPP channel number for S3CFB_WIN_CONFIG parameter,
+		 * this function will be removed.
+		 */
+		decon_translate_idma2ch(decon, &win_data);
 		ret = decon_set_win_config(decon, &win_data);
 		if (ret)
 			break;
@@ -3311,8 +3336,8 @@ static void decon_parse_dt(struct decon_device *decon)
 			&decon->dt.max_win);
 	of_property_read_u32(dev->of_node, "default_win",
 			&decon->dt.dft_win);
-	of_property_read_u32(dev->of_node, "default_idma",
-			&decon->dt.dft_idma);
+	of_property_read_u32(dev->of_node, "default_ch",
+			&decon->dt.dft_ch);
 	/* video mode: 0, dp: 1 mipi command mode: 2 */
 	of_property_read_u32(dev->of_node, "psr_mode",
 			&decon->dt.psr_mode);
@@ -3542,7 +3567,7 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	struct decon_mode_info psr;
 	struct dsim_device *dsim;
 	struct dsim_device *dsim1;
-	int dpp_id = DPU_DMA2CH(decon->dt.dft_idma);
+	int dpp_id = decon->dt.dft_ch;
 
 	if (decon->id || (decon->dt.out_type != DECON_OUT_DSI) ||
 			IS_ENABLED(CONFIG_EXYNOS_VIRTUAL_DISPLAY)) {
@@ -3584,7 +3609,7 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	win_regs.whole_h = fbinfo->var.yres_virtual;
 	win_regs.offset_x = fbinfo->var.xoffset;
 	win_regs.offset_y = fbinfo->var.yoffset;
-	win_regs.type = decon->dt.dft_idma;
+	win_regs.ch = dpp_id;
 	decon_dbg("pixel_count(%d), whole_w(%d), whole_h(%d), x(%d), y(%d)\n",
 			win_regs.pixel_count, win_regs.whole_w,
 			win_regs.whole_h, win_regs.offset_x,

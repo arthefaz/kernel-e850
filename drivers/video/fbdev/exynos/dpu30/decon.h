@@ -392,6 +392,12 @@ struct decon_win_config {
 			int				rel_fence;
 			int				plane_alpha;
 			enum decon_blending		blending;
+			/*
+			 * TODO: idma_type will be changed to channel number in the future.
+			 *
+			 * Although the variable name is idma_type, it indicates
+			 * DPP channel number currently.
+			 */
 			enum decon_idma_type		idma_type;
 			enum decon_pixel_format		format;
 			struct dpp_params		dpp_parm;
@@ -701,7 +707,7 @@ struct decon_dt_info {
 	int out_idx[MAX_DSIM_CNT];
 	int max_win;
 	int dft_win;
-	int dft_idma;
+	int dft_ch;
 	const char *pd_name;
 	int dpp_cnt;
 	int dsim_cnt;
