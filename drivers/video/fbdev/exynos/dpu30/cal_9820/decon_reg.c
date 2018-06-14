@@ -2266,65 +2266,57 @@ void __decon_dump(u32 id, void __iomem *regs, void __iomem *base_regs, bool dsc_
 int decon_check_global_limitation(struct decon_device *decon,
 		struct decon_win_config *config)
 {
-#if 1
-	/* TODO: IDMA_XXX will be removed in this function */
-	return 0;
-#else
 	int ret = 0;
 	int i, j;
-	enum decon_idma_type axi_port[MAX_DECON_WIN] = {
-			IDMA_VGRFS, IDMA_VGF, IDMA_VGS,
-			IDMA_GF1, IDMA_VG, IDMA_GF0};
-	/* IDMA_GF0(idx : 0) <-> IDMA_VGRFS (idx : 5)
-	 * IDMA_GF1(idx : 1) <-> IDMA_VGF (idx : 3)
-	 * IDMA_VG (idx : 2) <-> IDMA_VGS (idx : 4)
+	/*
+	 * AXI Port0 : CH0(GF0), CH1(VGRFS)
+	 * AXI Port1 : CH2(GF1), CH3(VGF)
+	 * AXI Port2 : CH4(VG), CH5(VGS)
 	 */
+	int axi_port[MAX_DECON_WIN] = {1, 0, 3, 2, 5, 4};
 
 	for (i = 0; i < MAX_DECON_WIN; i++) {
-		if (config[i].state == DECON_WIN_STATE_BUFFER) {
+		if (config[i].state != DECON_WIN_STATE_BUFFER)
+			continue;
+
 		/* case 1 : In one axi domain, a channel has
 		 *	compression & src.w over 2048
 		 *	the one on the other should never have compression.
 		 */
-			if (config[i].compression && (config[i].src.w > 2048)) {
-				for (j = 0; j < MAX_DECON_WIN; j++) {
-					if (i == j)
-						continue;
-					if ((config[j].state ==
-						DECON_WIN_STATE_BUFFER) &&
-					(config[j].idma_type ==
-						axi_port[config[i].idma_type])) {
-						if (config[j].compression) {
-							ret = -EPERM;
-							decon_err(
-							"When using both channel\
+		if (config[i].compression && (config[i].src.w > 2048)) {
+			for (j = 0; j < MAX_DECON_WIN; j++) {
+				if (i == j)
+					continue;
+				/* idma_type means DPP channel number */
+				if ((config[j].state == DECON_WIN_STATE_BUFFER) &&
+						(config[j].idma_type ==
+						 axi_port[config[i].idma_type])) {
+					if (config[j].compression) {
+						ret = -EPERM;
+						decon_err("When using both channel\
 							as an AFBC width should\
 							always be set\
 							equal or under 2048\n");
-							goto err;
-						}
+						goto err;
 					}
 				}
+			}
 		/* case 2 : In an axi domain, a channel has rotation
 		 *	one on the other should never have compression.
 		 */
-			} else if (config[i].dpp_parm.rot > DPP_ROT_180) {
-				for (j = 0; j < MAX_DECON_WIN; j++) {
-					if (i == j)
-						continue;
-					if ((config[j].state ==
-						DECON_WIN_STATE_BUFFER) &&
-					(config[j].idma_type ==
-						axi_port[config[i].idma_type])) {
-						if (config[j].compression) {
-							ret = -EPERM;
-							decon_err(
-							"AFBC & Roation/Flip not\
-							allowed in\
-							the same AXI port\
+		} else if (config[i].dpp_parm.rot > DPP_ROT_180) {
+			for (j = 0; j < MAX_DECON_WIN; j++) {
+				if (i == j)
+					continue;
+				if ((config[j].state == DECON_WIN_STATE_BUFFER) &&
+						(config[j].idma_type ==
+						 axi_port[config[i].idma_type])) {
+					if (config[j].compression) {
+						ret = -EPERM;
+						decon_err("AFBC & Roation/Flip not\
+							allowed in the same AXI port\
 							at the same time\n");
-							goto err;
-						}
+						goto err;
 					}
 				}
 			}
@@ -2333,5 +2325,4 @@ int decon_check_global_limitation(struct decon_device *decon,
 
 err:
 	return ret;
-#endif
 }
