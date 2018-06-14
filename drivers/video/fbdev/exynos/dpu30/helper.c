@@ -519,21 +519,22 @@ static int decon_get_protect_id(int dma_id)
 	return prot_id;
 }
 
-static int decon_control_protection(int dma_id, bool en)
+static int decon_control_protection(int ch, bool en)
 {
 	int ret = SUCCESS_EXYNOS_SMC;
 	int prot_id;
 
-	prot_id = decon_get_protect_id(dma_id);
+	/* content protection uses dma type */
+	prot_id = decon_get_protect_id(DPU_CH2DMA(ch));
 	ret = exynos_smc(SMC_PROTECTION_SET, 0, prot_id,
 		(en ? SMC_PROTECTION_ENABLE : SMC_PROTECTION_DISABLE));
 
 	if (ret)
-		decon_err("DMA%d (en=%d): exynos_smc call fail (err=%d)\n",
-			dma_id, en, ret);
+		decon_err("DMA CH%d (en=%d): exynos_smc call fail (err=%d)\n",
+			ch, en, ret);
 	else
-		decon_dbg("DMA%d protection %s\n",
-			dma_id, en ? "enabled" : "disabled");
+		decon_dbg("DMA CH%d protection %s\n",
+			ch, en ? "enabled" : "disabled");
 
 	return ret;
 }
@@ -542,17 +543,17 @@ void decon_set_protected_content(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
 	bool en;
-	int dma_id, i, ret = 0;
+	int ch, i, ret = 0;
 	u32 change = 0;
 	u32 cur_protect_bits = 0;
 
-	/* IDMA protection configs (G0,G1,VG0,VG1,VGF0,VGF1) */
+	/* IDMA protection configs */
 	for (i = 0; i < decon->dt.max_win; i++) {
 		if (!regs)
 			break;
 
 		cur_protect_bits |=
-			(regs->protection[i] << regs->dpp_config[i].idma_type);
+			(regs->protection[i] << regs->dpp_config[i].idma_type); /* ch */
 	}
 
 	/* ODMA protection config (WB: writeback) */
@@ -562,19 +563,15 @@ void decon_set_protected_content(struct decon_device *decon,
 
 	if (decon->prev_protection_bitmask != cur_protect_bits) {
 
-		/* apply protection configs for each DMA */
-		for (dma_id = 0; dma_id < decon->dt.max_win; dma_id++) {
-			/*
-			 * This loop should use max_win instead of dpp_cnt,
-			 * because dpp_cnt includes writeback case
-			 */
-			en = cur_protect_bits & (1 << dma_id);
+		/* apply protection configs for each DPP channel */
+		for (ch = 0; ch < decon->dt.dpp_cnt; ch++) {
+			en = cur_protect_bits & (1 << ch);
 
-			change = (cur_protect_bits & (1 << dma_id)) ^
-				(decon->prev_protection_bitmask & (1 << dma_id));
+			change = (cur_protect_bits & (1 << ch)) ^
+				(decon->prev_protection_bitmask & (1 << ch));
 
 			if (change)
-				ret = decon_control_protection(dma_id, en);
+				ret = decon_control_protection(ch, en);
 		}
 	}
 

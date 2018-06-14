@@ -154,7 +154,7 @@ static void win_update_check_limitation(struct decon_device *decon,
 	return;
 
 change_full:
-	DPU_DEBUG_WIN("changed full: win(%d) idma(%d) [%d %d %d %d]\n",
+	DPU_DEBUG_WIN("changed full: win(%d) ch(%d) [%d %d %d %d]\n",
 			i, config->idma_type,
 			config->dst.x, config->dst.y,
 			config->dst.w, config->dst.h);
@@ -220,7 +220,7 @@ static void win_update_reconfig_coordinates(struct decon_device *decon,
 		config->src.w = config->dst.w;
 		config->src.h = config->dst.h;
 
-		DPU_DEBUG_WIN("win(%d), idma(%d)\n", i, config->idma_type);
+		DPU_DEBUG_WIN("win(%d), ch(%d)\n", i, config->idma_type);
 		DPU_DEBUG_WIN("src: origin[%d %d %d %d] -> change[%d %d %d %d]\n",
 				origin_src.x, origin_src.y,
 				origin_src.w, origin_src.h,

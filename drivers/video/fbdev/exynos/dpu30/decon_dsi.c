@@ -510,7 +510,7 @@ int decon_set_par(struct fb_info *info)
 	win_regs.whole_h = var->yoffset + var->yres;
 	win_regs.offset_x = var->xoffset;
 	win_regs.offset_y = var->yoffset;
-	win_regs.type = decon->dt.dft_idma;
+	win_regs.ch = decon->dt.dft_ch;
 	decon_reg_set_window_control(decon->id, win_no, &win_regs, false);
 
 	decon_hiber_unblock(decon);
@@ -657,7 +657,7 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	struct decon_win_config config;
 	int ret = 0;
 	struct decon_mode_info psr;
-	int dpp_id = DPU_DMA2CH(decon->dt.dft_idma);
+	int dpp_id = decon->dt.dft_ch;
 
 	if (decon->dt.out_type != DECON_OUT_DSI) {
 		decon_warn("%s: decon%d unspported on out_type(%d)\n",
