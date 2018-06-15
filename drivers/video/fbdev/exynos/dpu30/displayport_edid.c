@@ -351,6 +351,7 @@ void edid_parse_hdr_metadata(unsigned char *edid_ext_blk,  int block_cnt)
 	displayport->rx_edid_data.max_average_lumi_data = 0;
 	displayport->rx_edid_data.min_lumi_data = 0;
 
+#if 0	/* Mostly USB type C to HDMI dongle can't support HDR 10bit */
 	for (i = 0; i < (block_cnt - 1) * EDID_BLOCK_SIZE; i++) {
 		if ((edid_ext_blk[i] & DATA_BLOCK_TAG_CODE_MASK)
 			== (USE_EXTENDED_TAG_CODE << DATA_BLOCK_TAG_CODE_BIT_POSITION)
@@ -389,6 +390,7 @@ void edid_parse_hdr_metadata(unsigned char *edid_ext_blk,  int block_cnt)
 
 	if (i >= (block_cnt - 1) * EDID_BLOCK_SIZE)
 		displayport_dbg("EDID: can't find HDR Metadata Data Block\n");
+#endif
 }
 
 void edid_find_preset_in_video_data_block(u8 vic)
