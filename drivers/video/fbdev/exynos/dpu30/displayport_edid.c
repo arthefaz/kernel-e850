@@ -342,7 +342,6 @@ void edid_parse_hdmi20_vsdb(unsigned char *edid_ext_blk,
 
 void edid_parse_hdr_metadata(unsigned char *edid_ext_blk,  int block_cnt)
 {
-	int i;
 	struct displayport_device *displayport = get_displayport_drvdata();
 
 	displayport->rx_edid_data.hdr_support = 0;

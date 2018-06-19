@@ -234,8 +234,6 @@ int decon_displayport_get_hdr_capa(struct decon_device *decon,
 		struct decon_hdr_capabilities *hdr_capa)
 {
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	struct displayport_device *displayport = get_displayport_drvdata();
-
 	hdr_capa->out_types[0] = HDR_HDR10;
 #else
 	decon_info("Not compiled displayport driver\n");

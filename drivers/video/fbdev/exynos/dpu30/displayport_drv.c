@@ -612,7 +612,6 @@ static int displayport_link_status_read(void)
 
 static int displayport_link_training(void)
 {
-	u8 val;
 	struct displayport_device *displayport = get_displayport_drvdata();
 	int ret = 0;
 
