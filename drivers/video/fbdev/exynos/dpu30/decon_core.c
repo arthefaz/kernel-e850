@@ -693,7 +693,8 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 		return 0;
 	}
 
-	kthread_flush_worker(&decon->up.worker);
+	if (atomic_read(&decon->up.remaining_frame))
+		kthread_flush_worker(&decon->up.worker);
 
 	decon_to_psr_info(decon, &psr);
 	decon_reg_set_int(decon->id, &psr, 0);
@@ -2193,6 +2194,7 @@ static void decon_update_regs_handler(struct kthread_work *work)
 			decon_systrace(decon, 'C',
 					"update_regs_list", 0);
 			kfree(data);
+			atomic_dec(&decon->up.remaining_frame);
 		}
 	}
 }
@@ -2393,6 +2395,7 @@ static int decon_set_win_config(struct decon_device *decon,
 
 	mutex_lock(&decon->up.lock);
 	list_add_tail(&regs->list, &decon->up.list);
+	atomic_inc(&decon->up.remaining_frame);
 	mutex_unlock(&decon->up.lock);
 	kthread_queue_work(&decon->up.worker, &decon->up.work);
 
@@ -3523,6 +3526,7 @@ static int decon_create_update_thread(struct decon_device *decon, char *name)
 	INIT_LIST_HEAD(&decon->up.list);
 	INIT_LIST_HEAD(&decon->up.saved_list);
 	decon->up_list_saved = false;
+	atomic_set(&decon->up.remaining_frame, 0);
 	kthread_init_worker(&decon->up.worker);
 	decon->up.thread = kthread_run(kthread_worker_fn,
 			&decon->up.worker, name);
