@@ -2253,6 +2253,7 @@ int decon_check_supported_formats(enum decon_pixel_format format)
 	case DECON_PIXEL_FORMAT_NV21M_P010:
 	case DECON_PIXEL_FORMAT_NV12M_S10B:
 	case DECON_PIXEL_FORMAT_NV21M_S10B:
+	case DECON_PIXEL_FORMAT_NV12_P010:
 
 	case DECON_PIXEL_FORMAT_NV16:
 	case DECON_PIXEL_FORMAT_NV61:
