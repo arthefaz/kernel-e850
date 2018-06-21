@@ -54,6 +54,10 @@ extern int dpp_log_level;
 /* about 1msec @ ACLK=630MHz */
 #define INIT_RCV_NUM		630000
 
+#define P010_Y_SIZE(w, h)		((w) * (h) * 2)
+#define P010_CBCR_SIZE(w, h)		((w) * (h))
+#define P010_CBCR_BASE(base, w, h)	((base) + P010_Y_SIZE((w), (h)))
+
 #define check_align(width, height, align_w, align_h)\
 	(IS_ALIGNED(width, align_w) && IS_ALIGNED(height, align_h))
 
