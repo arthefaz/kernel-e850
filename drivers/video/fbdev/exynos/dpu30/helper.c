@@ -156,6 +156,7 @@ u32 dpu_get_bpp(enum decon_pixel_format fmt)
 	case DECON_PIXEL_FORMAT_NV21M_S10B:
 	case DECON_PIXEL_FORMAT_NV12M_P010:
 	case DECON_PIXEL_FORMAT_NV21M_P010:
+	case DECON_PIXEL_FORMAT_NV12_P010:
 	/* YUV422 */
 	case DECON_PIXEL_FORMAT_NV16M_P210:
 	case DECON_PIXEL_FORMAT_NV61M_P210:
@@ -217,6 +218,7 @@ int dpu_get_meta_plane_cnt(enum decon_pixel_format format)
 	case DECON_PIXEL_FORMAT_ABGR_2101010:
 	case DECON_PIXEL_FORMAT_RGBA_1010102:
 	case DECON_PIXEL_FORMAT_BGRA_1010102:
+	case DECON_PIXEL_FORMAT_NV12_P010:
 		return 1;
 
 	case DECON_PIXEL_FORMAT_NV12M_P010:
@@ -257,6 +259,7 @@ int dpu_get_plane_cnt(enum decon_pixel_format format, bool is_hdr)
 	case DECON_PIXEL_FORMAT_ABGR_2101010:
 	case DECON_PIXEL_FORMAT_RGBA_1010102:
 	case DECON_PIXEL_FORMAT_BGRA_1010102:
+	case DECON_PIXEL_FORMAT_NV12_P010:
 		if (is_hdr)
 			return 2;
 		else
