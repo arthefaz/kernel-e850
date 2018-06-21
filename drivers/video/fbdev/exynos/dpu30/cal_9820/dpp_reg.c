@@ -813,6 +813,7 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 		is_yuv = 1;
 		break;
 	case DECON_PIXEL_FORMAT_NV12M_P010:
+	case DECON_PIXEL_FORMAT_NV12_P010:
 		fmt = IDMA_IMG_FORMAT_YUV420_P010;
 		fmt_type = DPP_IMG_FORMAT_YUV420_P010;
 		is_yuv = 1;
