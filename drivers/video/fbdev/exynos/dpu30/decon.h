@@ -819,6 +819,7 @@ struct decon_hiber {
 	u32 enter_cnt;
 	u32 exit_cnt;
 	bool enabled;
+	atomic_t remaining_hiber;
 
 	/* entry time to hibernation */
 	ktime_t hiber_entry_time;
