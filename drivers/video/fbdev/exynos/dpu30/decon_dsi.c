@@ -253,8 +253,10 @@ static irqreturn_t decon_ext_irq_handler(int irq, void *dev_id)
 
 	if (decon->hiber.enabled && decon->state == DECON_STATE_ON &&
 			decon->dt.out_type == DECON_OUT_DSI) {
-		if (decon_min_lock_cond(decon))
+		if (decon_min_lock_cond(decon)) {
+			atomic_inc(&decon->hiber.remaining_hiber);
 			kthread_queue_work(&decon->hiber.worker, &decon->hiber.work);
+		}
 	}
 
 	decon_systrace(decon, 'C', "decon_te_signal", 0);
@@ -776,7 +778,10 @@ int decon_exit_hiber(struct decon_device *decon)
 		return 0;
 
 	decon_hiber_block(decon);
-	kthread_flush_worker(&decon->hiber.worker);
+
+	if (atomic_read(&decon->hiber.remaining_hiber))
+		kthread_flush_worker(&decon->hiber.worker);
+
 	mutex_lock(&decon->hiber.lock);
 
 	if (decon->state != DECON_STATE_HIBER)
@@ -928,11 +933,15 @@ static void decon_hiber_handler(struct kthread_work *work)
 	struct decon_device *decon =
 		container_of(hiber, struct decon_device, hiber);
 
-	if (!decon || !decon->hiber.enabled)
+	if (!decon || !decon->hiber.enabled) {
+		atomic_dec(&decon->hiber.remaining_hiber);
 		return;
+	}
 
 	if (decon_hiber_enter_cond(decon))
 		decon_enter_hiber(decon);
+
+	atomic_dec(&decon->hiber.remaining_hiber);
 }
 
 int decon_register_hiber_work(struct decon_device *decon)
