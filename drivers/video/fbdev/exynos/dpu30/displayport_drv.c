@@ -34,6 +34,7 @@
 #if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
 #include <sound/samsung/dp_ado.h>
 #endif
+#include <linux/smc.h>
 #include <linux/exynos_iovmm.h>
 
 #if defined(CONFIG_PHY_EXYNOS_USBDRD)
@@ -51,11 +52,6 @@
 
 #define HDCP_2_2_NOT_AUTH      0
 #define HDCP_2_2_AUTH_DONE     1
-
-enum {
-	DRM_OFF = 0x0,
-	DRM_ON  = 0x1,
-};
 
 int displayport_log_level = 6;
 static u8 max_lane_cnt;
@@ -95,6 +91,7 @@ static int displayport_remove(struct platform_device *pdev)
 	mutex_destroy(&displayport->hpd_lock);
 	mutex_destroy(&displayport->aux_lock);
 	mutex_destroy(&displayport->training_lock);
+	mutex_destroy(&displayport->hdcp2_lock);
 	destroy_workqueue(displayport->dp_wq);
 	destroy_workqueue(displayport->hdcp2_wq);
 	displayport_info("displayport driver removed\n");
@@ -690,6 +687,7 @@ void displayport_hpd_changed(int state)
 		displayport->dyn_range = VESA_RANGE;
 		displayport->hpd_state = HPD_PLUG;
 		displayport->auto_test_mode = 0;
+
 		/* PHY power on */
 		displayport_reg_init(); /* for AUX ch read/write. */
 		usleep_range(10000, 11000);
@@ -729,7 +727,7 @@ void displayport_hpd_changed(int state)
 #if defined(CONFIG_EXYNOS_HDCP2)
 		if (displayport->hdcp_ver == HDCP_VERSION_2_2) {
 			hdcp_dplink_cancel_auth();
-			hdcp_dplink_dp_link_flag_check(0);
+			displayport_hdcp22_enable(0);
 		}
 #endif
 		cancel_delayed_work_sync(&displayport->hpd_plug_work);
@@ -1133,9 +1131,11 @@ static int displayport_hdcp22_irq_handler(void)
 		if (auth_done) {
 			auth_done = HDCP_2_2_NOT_AUTH;
 			if (hdcp_dplink_authenticate() != 0)
-				auth_done = HDCP_2_2_NOT_AUTH;
-			else
+				displayport_reg_video_mute(1);
+			else {
 				auth_done = HDCP_2_2_AUTH_DONE;
+				displayport_reg_video_mute(0);
+			}
 		}
 	} else {
 		displayport_info("undefined RxStatus(0x%x). ignore\n", rxstatus);
@@ -1150,40 +1150,32 @@ static int displayport_hdcp22_irq_handler(void)
 }
 
 #if defined(CONFIG_DRM_SYSFS)
-static ssize_t secdp_drm_show(struct class *class,
-		struct class_attribute *attr,
-		char *buf)
+static ssize_t secdp_drm_show(struct class *class, struct class_attribute *attr, char *buf)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
-	displayport_info("DRM show %d \n", displayport->dp_drm);
+	displayport_info("DRM state %d\n", displayport->drm_start_state);
 
-	return sprintf(buf, "DRM test show %d\n", displayport->dp_drm);
+	return sprintf(buf, "DRM state %d\n", displayport->drm_start_state);
 }
 
-static ssize_t secdp_drm_store(struct class *dev,
-		struct class_attribute *attr,
-		const char *buf, size_t size)
+static ssize_t secdp_drm_store(struct class *dev, struct class_attribute *attr, const char *buf, size_t size)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
 	int val[3] = {0, };
 
 	get_options(buf, 2, val);
 
-	displayport->dp_drm = val[1];
-	if (displayport->dp_drm) {
-		displayport_info("drm start!!!\n");
-		hdcp_dplink_drm_flag_check(1);
-	} else if (!displayport->dp_drm) {
-		displayport_info("drm end!!!\n");
-		hdcp_dplink_drm_flag_check(0);
-	}
+	displayport->drm_start_state = val[1];
+
+	displayport_err("drm %s!!\n", (displayport->drm_start_state ? "start" : "end"));
+	queue_delayed_work(displayport->hdcp2_wq,
+			&displayport->hdcp22_work, msecs_to_jiffies(0));
 
 	return size;
 }
 
-static CLASS_ATTR(dp_drm, 0664, secdp_drm_show, secdp_drm_store);
+static CLASS_ATTR_RW(secdp_drm);
 #endif
-
 void reset_dp_hdcp_module(void)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
@@ -1722,19 +1714,70 @@ static void displayport_hdcp13_run(struct work_struct *work)
 	}
 }
 
+
 static void displayport_hdcp22_run(struct work_struct *work)
 {
 #if defined(CONFIG_EXYNOS_HDCP2)
+	struct displayport_device *displayport = get_displayport_drvdata();
+#ifndef CONFIG_HDCP2_FUNC_TEST_MODE
+	int i;
+#endif
 	u8 val[2] = {0, };
 
-	auth_done = HDCP_2_2_NOT_AUTH;
-	if (hdcp_dplink_dp_link_flag_check(1) != 0)
-		auth_done = HDCP_2_2_NOT_AUTH;
-	else
-		auth_done = HDCP_2_2_AUTH_DONE;
+	mutex_lock(&displayport->hdcp2_lock);
+	if (displayport_get_hpd_state() == 0) {
+		displayport_info("stop hdcp2 : HPD is low\n");
+		goto exit_hdcp;
+	}
 
+#ifndef CONFIG_HDCP2_FUNC_TEST_MODE
+	if (displayport->drm_start_state == DRM_OFF) {
+		displayport_info("DRM is not started, HDCP wq stop \n");
+		goto exit_hdcp;
+	}
+
+	for (i = 0; i < 1000; i++) {
+		displayport->drm_smc_state = exynos_smc(SMC_CHECK_STREAM_TYPE_ID, 0, 0, 0);
+		if (displayport->drm_smc_state || !(displayport->hpd_current_state)) {
+			displayport_err("drm state %d hpd state %d \n", displayport->drm_smc_state, displayport->hpd_current_state);
+			break;
+		}
+		msleep(200);
+	}
+
+	if (displayport->drm_smc_state == DRM_SAME_STREAM_TYPE && auth_done == HDCP_2_2_AUTH_DONE) {
+		displayport_info("stop drm_smc_state = %d , auth_done %d\n", displayport->drm_smc_state, auth_done);
+		goto exit_hdcp;
+	}
+
+	if (displayport->drm_smc_state == DRM_ON && displayport_reg_get_hdcp22_encryption_enable()) {
+		displayport_info("DRM Stream ID change : DP Reset!!!!\n");
+		queue_delayed_work(displayport->dp_wq, &displayport->hpd_unplug_work, 0);
+		goto exit_hdcp;
+	}
+#endif
+
+	if (displayport_get_hpd_state() == 0) {
+		displayport_info("stop hdcp2 : HPD is low\n");
+		goto exit_hdcp;
+	}
+
+	hdcp_dplink_clear_all();
+	auth_done = HDCP_2_2_NOT_AUTH;
+	if (hdcp_dplink_authenticate() != 0) {
+		displayport_reg_video_mute(1);
+#ifdef CONFIG_SEC_DISPLAYPORT_BIGDATA
+		secdp_bigdata_inc_error_cnt(ERR_HDCP_AUTH);
+#endif
+	} else {
+		auth_done = HDCP_2_2_AUTH_DONE;
+		displayport_reg_video_mute(0);
+	}
 	displayport_dpcd_read_for_hdcp22(DPCD_HDCP22_RX_INFO, 2, val);
 	displayport_info("HDCP2.2 rx_info: 0:0x%X, 8:0x%X\n", val[1], val[0]);
+
+exit_hdcp:
+	mutex_unlock(&displayport->hdcp2_lock);
 #else
 	displayport_info("Not compiled EXYNOS_HDCP2 driver\n");
 #endif
@@ -2805,6 +2848,7 @@ static int displayport_probe(struct platform_device *pdev)
 	mutex_init(&displayport->hpd_lock);
 	mutex_init(&displayport->aux_lock);
 	mutex_init(&displayport->training_lock);
+	mutex_init(&displayport->hdcp2_lock);
 	init_waitqueue_head(&displayport->dp_wait);
 	init_waitqueue_head(&displayport->audio_wait);
 
@@ -2918,6 +2962,11 @@ static int displayport_probe(struct platform_device *pdev)
 		if (ret)
 			displayport_err("failed to create attr_edid\n");
 		ret = class_create_file(dp_class, &class_attr_bist);
+#if defined(CONFIG_EXYNOS_HDCP2)
+		ret = class_create_file(dp_class, &class_attr_dp_drm);
+		if (ret)
+			displayport_err("failed to create attr_dp_drm\n");
+#endif
 		if (ret)
 			displayport_err("failed to create attr_bist\n");
 		ret = class_create_file(dp_class, &class_attr_dp);
@@ -2945,6 +2994,9 @@ static int displayport_probe(struct platform_device *pdev)
 	displayport->bist_used = 0;
 	displayport->bist_type = COLOR_BAR;
 	displayport->dyn_range = CEA_RANGE;
+#if defined(CONFIG_EXYNOS_HDCP2)
+	displayport->drm_start_state = DRM_OFF;
+#endif
 	displayport_info("displayport driver has been probed.\n");
 	return 0;
 
