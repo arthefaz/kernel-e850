@@ -363,6 +363,7 @@ struct fb_vendor {
 #define VERSION (0xFF << 16)
 #define HDCP_CAPABLE (1 << 1)
 
+#define SMC_CHECK_STREAM_TYPE_ID		((unsigned int)0x82004022)
 #define DPCD_HDCP22_RX_INFO 0x69330
 
 #define DPCD_HDCP22_RX_CAPS_LENGTH 3
@@ -376,6 +377,12 @@ struct fb_vendor {
 
 #define HDCP_VERSION_1_3 0x13
 #define HDCP_VERSION_2_2 0x02
+
+enum drm_state {
+       DRM_OFF = 0x0,
+       DRM_ON = 0x1,
+       DRM_SAME_STREAM_TYPE = 0x2      /* If the previous contents and stream_type id are the same flag */
+};
 
 #define SYNC_POSITIVE 0
 #define SYNC_NEGATIVE 1
@@ -542,6 +549,7 @@ struct displayport_device {
 	struct mutex hpd_lock;
 	struct mutex aux_lock;
 	struct mutex training_lock;
+	struct mutex hdcp2_lock;
 	wait_queue_head_t dp_wait;
 	int audio_state;
 	int audio_buf_empty_check;
@@ -569,6 +577,9 @@ struct displayport_device {
 	enum test_pattern bist_type;
 	enum displayport_dynamic_range_type dyn_range;
 	videoformat cur_video;
+
+	enum drm_state drm_start_state;
+	enum drm_state drm_smc_state;
 
 	struct edid_data rx_edid_data;
 
@@ -1041,6 +1052,7 @@ extern int hdcp_dplink_set_rp_ready(void);
 extern int hdcp_dplink_set_reauth(void);
 extern int hdcp_dplink_set_integrity_fail(void);
 extern int hdcp_dplink_cancel_auth(void);
+extern void hdcp_dplink_clear_all(void);
 extern int hdcp_dplink_auth_check(void);
 extern int hdcp_dplink_drm_flag_check(int flag);
 extern int hdcp_dplink_dp_link_flag_check(int flag);
