@@ -1543,8 +1543,7 @@ static int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr,
 	return ret;
 }
 
-
-static void decon_reg_set_win_enable(u32 id, u32 win_idx, u32 en)
+void decon_reg_set_win_enable(u32 id, u32 win_idx, u32 en)
 {
 	u32 val, mask;
 
@@ -1831,6 +1830,15 @@ void decon_reg_win_enable_and_update(u32 id, u32 win_idx, u32 en)
 	decon_reg_update_req_window(id, win_idx);
 }
 
+void decon_reg_all_win_shadow_update_req(u32 id)
+{
+	u32 mask;
+
+	mask = SHADOW_REG_UPDATE_REQ_FOR_DECON;
+
+	decon_write_mask(id, SHADOW_REG_UPDATE_REQ, ~0, mask);
+}
+
 void decon_reg_set_window_control(u32 id, int win_idx,
 		struct decon_window_regs *regs, u32 winmap_en)
 {
@@ -1847,7 +1855,7 @@ void decon_reg_set_window_control(u32 id, int win_idx,
 	}
 
 	decon_reg_config_win_channel(id, win_idx, regs->ch);
-	decon_reg_win_enable_and_update(id, win_idx, win_en);
+	decon_reg_set_win_enable(id, win_idx, win_en);
 
 	decon_dbg("%s: regs->ch(%d)\n", __func__, regs->ch);
 }
