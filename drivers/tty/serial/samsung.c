@@ -91,6 +91,8 @@ static void dbg(const char *fmt, ...)
 #define MAX_BAUD	3000000
 #define MIN_BAUD	0
 
+#define DEFAULT_SOURCE_CLK	200000000
+
 /* macros to change one thing to another */
 
 #define tx_enabled(port) ((port)->unused[0])
@@ -873,10 +875,15 @@ static unsigned int s3c24xx_serial_getclk(struct s3c24xx_uart_port *ourport,
 				dev_err(&ourport->pdev->dev, "UART clk set failed\n");
 
 			rate = clk_get_rate(ourport->clk);
+		} else {
+			ret = clk_set_rate(ourport->clk, ourport->src_clk_rate);
+			if (ret < 0)
+				dev_err(&ourport->pdev->dev, "UART Default clk set failed\n");
+
+			rate = clk_get_rate(ourport->clk);
 		}
 
-		if (ourport->dbg_mode & UART_DBG_MODE)
-			printk(" - Clock rate : %ld\n", rate);
+		dev_info(&ourport->pdev->dev, " Clock rate : %ld\n", rate);
 
 		if (!rate)
 			continue;
@@ -1496,8 +1503,8 @@ static int s3c24xx_serial_init_port(struct s3c24xx_uart_port *ourport,
 		ourport->check_separated_clk = 0;
 
 	if (of_property_read_u32(platdev->dev.of_node, "samsung,source-clock-rate", &ourport->src_clk_rate)){
-		dev_err(&platdev->dev, "Failed to get src-clk_rate\n");
-		ourport->src_clk_rate = 0;
+		dev_err(&platdev->dev, "No explicit src-clk. Use default src-clk\n");
+		ourport->src_clk_rate = DEFAULT_SOURCE_CLK;
 	}
 
 	snprintf(clkname, sizeof(clkname), "ipclk_uart%d", ourport->port.line);
