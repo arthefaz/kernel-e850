@@ -1236,6 +1236,167 @@ static const struct file_operations decon_memmap_ref_cnt_fops = {
 };
 #endif
 
+void decon_hiber_start(struct decon_device *decon)
+{
+	if (!decon->hiber.profile_started)
+		return;
+
+	decon->hiber.hiber_entry_time = ktime_get();
+	decon->hiber.profile_enter_cnt++;
+}
+
+void decon_hiber_finish(struct decon_device *decon)
+{
+	if (!decon->hiber.profile_started)
+		return;
+
+	decon->hiber.hiber_time += ktime_to_us(ktime_sub(ktime_get(),
+				decon->hiber.hiber_entry_time));
+	decon->hiber.profile_exit_cnt++;
+}
+
+static int decon_get_hiber_ratio(struct decon_device *decon)
+{
+	s64 residency = decon->hiber.hiber_time;
+
+	if (!residency)
+		return 0;
+
+	residency *= 100;
+	do_div(residency, decon->hiber.profile_time);
+
+	return residency;
+}
+
+static void _decon_profile_hiber_show(struct decon_device *decon)
+{
+	if (decon->hiber.profile_started) {
+		decon_info("%s: hibernation profiling is ongoing\n", __func__);
+		return;
+	}
+
+	decon_info("#########################################\n");
+	decon_info("Profiling Time: %llu us\n", decon->hiber.profile_time);
+	decon_info("Hibernation Entry Time: %llu us\n", decon->hiber.hiber_time);
+	decon_info("Hibernation Entry Ratio: %d %%\n", decon_get_hiber_ratio(decon));
+	decon_info("Entry count: %d, Exit count: %d\n", decon->hiber.profile_enter_cnt,
+			decon->hiber.profile_exit_cnt);
+	decon_info("#########################################\n");
+}
+
+
+static int decon_profile_hiber_show(struct seq_file *s, void *unused)
+{
+	int ret = 0;
+	struct decon_device *decon = get_decon_drvdata(0);
+	int i;
+
+	if (!decon) {
+		seq_printf(s, "decon0 is not probed yet\n");
+		goto out;
+	}
+
+	_decon_profile_hiber_show(decon);
+
+out:
+	return ret;
+}
+
+static int decon_profile_hiber_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, decon_profile_hiber_show, inode->i_private);
+}
+
+static void decon_profile_hiber_start(struct decon_device *decon)
+{
+	if (decon->hiber.profile_started) {
+		decon_err("%s: hibernation profiling is ongoing\n", __func__);
+		return;
+	}
+
+	/* reset profiling variables */
+	decon->hiber.hiber_entry_time = 0;
+	decon->hiber.hiber_time = 0;
+	decon->hiber.profile_time = 0;
+	decon->hiber.profile_enter_cnt = 0;
+	decon->hiber.profile_exit_cnt = 0;
+
+	/* profiling is just started */
+	decon->hiber.profile_start_time = ktime_get();
+	decon->hiber.profile_started = true;
+
+	/* hibernation status when profiling is started */
+	if (IS_DECON_HIBER_STATE(decon))
+		decon_hiber_start(decon);
+
+	decon_info("display hibernation profiling is started\n");
+}
+
+static void decon_profile_hiber_finish(struct decon_device *decon)
+{
+	if (!decon->hiber.profile_started) {
+		decon_err("%s: hibernation profiling is not started\n", __func__);
+		return;
+	}
+
+	decon->hiber.profile_time = ktime_to_us(ktime_sub(ktime_get(),
+				decon->hiber.profile_start_time));
+
+	/* hibernation status when profiling is finished */
+	if (IS_DECON_HIBER_STATE(decon))
+		decon_hiber_finish(decon);
+
+	decon->hiber.profile_started = false;
+
+	_decon_profile_hiber_show(decon);
+
+	decon_info("display hibernation profiling is finished\n");
+}
+
+static ssize_t decon_profile_hiber_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *f_ops)
+{
+	char *buf_data;
+	int ret;
+	int input;
+	struct decon_device *decon = get_decon_drvdata(0);
+
+	if (!decon) {
+		decon_err("decon0 is not probed yet\n");
+		goto out_cnt;
+	}
+
+	buf_data = kmalloc(count, GFP_KERNEL);
+	if (buf_data == NULL)
+		goto out_cnt;
+
+	ret = copy_from_user(buf_data, buf, count);
+	if (ret < 0)
+		goto out;
+
+	ret = sscanf(buf_data, "%u", &input);
+	if (ret < 0)
+		goto out;
+
+	if (input)
+		decon_profile_hiber_start(decon);
+	else
+		decon_profile_hiber_finish(decon);
+
+out:
+	kfree(buf_data);
+out_cnt:
+	return count;
+}
+
+static const struct file_operations decon_profile_hiber_fops = {
+	.open = decon_profile_hiber_open,
+	.write = decon_profile_hiber_write,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+
 int decon_create_debugfs(struct decon_device *decon)
 {
 	char name[MAX_NAME_SIZE];
@@ -1362,6 +1523,15 @@ int decon_create_debugfs(struct decon_device *decon)
 			goto err_debugfs;
 		}
 #endif
+
+		decon->hiber.profile = debugfs_create_file("profile_hiber",
+				0444, decon->d.debug_root, NULL,
+				&decon_profile_hiber_fops);
+		if (!decon->hiber.profile) {
+			decon_err("failed to create hibernation profiling\n");
+			ret = -ENOENT;
+			goto err_debugfs;
+		}
 	}
 
 	return 0;

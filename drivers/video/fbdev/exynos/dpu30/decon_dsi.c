@@ -821,6 +821,7 @@ int decon_exit_hiber(struct decon_device *decon)
 			decon->id, __func__, prev_state, decon->state);
 	decon->hiber.exit_cnt++;
 	DPU_EVENT_LOG(DPU_EVT_EXIT_HIBER, &decon->sd, start);
+	decon_hiber_finish(decon);
 
 err:
 	decon_hiber_unblock(decon);
@@ -893,6 +894,7 @@ int decon_enter_hiber(struct decon_device *decon)
 
 	decon->hiber.enter_cnt++;
 	DPU_EVENT_LOG(DPU_EVT_ENTER_HIBER, &decon->sd, start);
+	decon_hiber_start(decon);
 
 err:
 	decon_hiber_unblock(decon);

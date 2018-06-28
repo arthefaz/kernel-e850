@@ -811,12 +811,30 @@ struct decon_hiber {
 	struct task_struct *thread;
 	struct kthread_worker worker;
 	struct kthread_work work;
+	struct dentry *profile;
 	atomic_t trig_cnt;
 	atomic_t block_cnt;
 	void __iomem *cam_status;
 	u32 enter_cnt;
 	u32 exit_cnt;
 	bool enabled;
+
+	/* entry time to hibernation */
+	ktime_t hiber_entry_time;
+	/* total time in hibernation */
+	s64 hiber_time;
+
+	/* start time of profiling */
+	ktime_t profile_start_time;
+	/* total profiling time */
+	s64 profile_time;
+	/* hibernation entry count during profiling */
+	u32 profile_enter_cnt;
+	/* hibernation exit count during profiling */
+	u32 profile_exit_cnt;
+
+	/* if true, profiling of hibernation entry ratio will be started */
+	bool profile_started;
 };
 
 struct decon_win_update {
@@ -1317,6 +1335,9 @@ int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 int dpu_pm_domain_check_status(struct exynos_pm_domain *pm_domain);
 #endif
 int decon_set_out_sd_state(struct decon_device *decon, enum decon_state state);
+
+void decon_hiber_start(struct decon_device *decon);
+void decon_hiber_finish(struct decon_device *decon);
 
 /* IOCTL commands */
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, __u32)
