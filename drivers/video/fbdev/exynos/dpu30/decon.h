@@ -86,8 +86,7 @@ extern struct decon_bts_ops decon_bts_control;
 #define MAX_NAME_SIZE		32
 #define MAX_PLANE_CNT		3
 #define MAX_PLANE_ADDR_CNT	4
-#define DECON_ENTER_HIBER_CNT	3
-#define DECON_ENTER_LPD_CNT	3
+#define DECON_ENTER_HIBER_CNT	4
 #define MIN_BLK_MODE_WIDTH	144
 #define MIN_BLK_MODE_HEIGHT	16
 #define VSYNC_TIMEOUT_MSEC	200
@@ -640,6 +639,7 @@ struct dpu_size_err_info {
 #define	DPU_EVENT_LOG_MAX	SZ_512
 #define	DPU_EVENT_PRINT_MAX	(DPU_EVENT_LOG_MAX >> 1)
 #define	DPU_EVENT_LOG_RETRY	3
+#define DPU_EVENT_KEEP_CNT	3
 typedef enum dpu_event_log_level_type {
 	DPU_EVENT_LEVEL_LOW = 0,
 	DPU_EVENT_LEVEL_HIGH,
@@ -837,6 +837,11 @@ struct decon_hiber {
 
 	/* if true, profiling of hibernation entry ratio will be started */
 	bool profile_started;
+
+	int hiber_enter_cnt;
+#if defined(CONFIG_EXYNOS_CHANGE_HIBER_CNT)
+	struct dentry *hiber_cnt;
+#endif
 };
 
 struct decon_win_update {
@@ -1219,8 +1224,8 @@ static inline bool decon_hiber_enter_cond(struct decon_device *decon)
 		&& is_displayport_not_running()
 #endif
 		&& (!decon->low_persistence)
-		&& (atomic_inc_return(&decon->hiber.trig_cnt) >
-			DECON_ENTER_HIBER_CNT));
+		&& (atomic_inc_return(&decon->hiber.trig_cnt) >=
+			decon->hiber.hiber_enter_cnt));
 }
 
 static inline void decon_enter_shutdown(struct decon_device *decon)
