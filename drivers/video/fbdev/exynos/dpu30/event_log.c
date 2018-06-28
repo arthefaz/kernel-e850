@@ -204,7 +204,7 @@ static bool dpu_event_ignore
 		return true;
 
 	/* Seek a oldest from current index */
-	idx = (latest + DPU_EVENT_LOG_MAX - DECON_ENTER_HIBER_CNT) % DPU_EVENT_LOG_MAX;
+	idx = (latest + DPU_EVENT_LOG_MAX - DPU_EVENT_KEEP_CNT) % DPU_EVENT_LOG_MAX;
 	do {
 		if (++idx >= DPU_EVENT_LOG_MAX)
 			idx = 0;
@@ -1397,6 +1397,53 @@ static const struct file_operations decon_profile_hiber_fops = {
 	.release = seq_release,
 };
 
+#if defined(CONFIG_EXYNOS_CHANGE_HIBER_CNT)
+static int decon_hiber_cnt_show(struct seq_file *s, void *unused)
+{
+	struct decon_device *decon = get_decon_drvdata(0);
+	seq_printf(s, "%u\n", decon->hiber.hiber_enter_cnt);
+
+	return 0;
+}
+
+static int decon_hiber_cnt_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, decon_hiber_cnt_show, inode->i_private);
+}
+
+static ssize_t decon_hiber_cnt_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *f_ops)
+{
+	struct decon_device *decon = get_decon_drvdata(0);
+	char *buf_data;
+	int ret;
+
+	buf_data = kmalloc(count, GFP_KERNEL);
+	if (buf_data == NULL)
+		return count;
+
+	ret = copy_from_user(buf_data, buf, count);
+	if (ret < 0)
+		goto out;
+
+	ret = sscanf(buf_data, "%u", &decon->hiber.hiber_enter_cnt);
+	if (ret < 0)
+		goto out;
+
+out:
+	kfree(buf_data);
+	return count;
+}
+
+static const struct file_operations decon_hiber_cnt_fops = {
+	.open = decon_hiber_cnt_open,
+	.write = decon_hiber_cnt_write,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+#endif
+
 int decon_create_debugfs(struct decon_device *decon)
 {
 	char name[MAX_NAME_SIZE];
@@ -1532,6 +1579,17 @@ int decon_create_debugfs(struct decon_device *decon)
 			ret = -ENOENT;
 			goto err_debugfs;
 		}
+
+#if defined(CONFIG_EXYNOS_CHANGE_HIBER_CNT)
+		decon->hiber.hiber_cnt = debugfs_create_file("hiber_enter_cnt",
+				0444, decon->d.debug_root, NULL,
+				&decon_hiber_cnt_fops);
+		if (!decon->hiber.hiber_cnt) {
+			decon_err("failed to create hibernation entry count\n");
+			ret = -ENOENT;
+			goto err_debugfs;
+		}
+#endif
 	}
 
 	return 0;

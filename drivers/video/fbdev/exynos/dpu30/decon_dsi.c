@@ -971,6 +971,7 @@ int decon_register_hiber_work(struct decon_device *decon)
 	sched_setscheduler_nocheck(decon->hiber.thread, SCHED_FIFO, &param);
 	kthread_init_work(&decon->hiber.work, decon_hiber_handler);
 
+	decon->hiber.hiber_enter_cnt = DECON_ENTER_HIBER_CNT;
 	decon->hiber.enabled = true;
 	decon_info("display supports hibernation mode\n");
 

@@ -38,6 +38,11 @@ config EXYNOS_HIBERNATION
         depends on EXYNOS_DPU20
         default n
 
+config EXYNOS_CHANGE_HIBER_CNT
+	bool "Change Hibernation Entry Count at Runtime"
+        depends on EXYNOS_DPU20 && EXYNOS_HIBERNATION
+        default n
+
 config EXYNOS_DOZE
 	bool "Support DOZE mode"
         depends on EXYNOS_DPU20
