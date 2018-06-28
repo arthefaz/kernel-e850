@@ -842,6 +842,9 @@ struct decon_hiber {
 #if defined(CONFIG_EXYNOS_CHANGE_HIBER_CNT)
 	struct dentry *hiber_cnt;
 #endif
+
+	int frame_cnt;
+	int fps;
 };
 
 struct decon_win_update {
