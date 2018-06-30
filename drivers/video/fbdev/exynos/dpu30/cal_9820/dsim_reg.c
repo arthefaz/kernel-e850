@@ -2005,7 +2005,7 @@ static int dsim_reg_set_smddi_ulps(u32 id, u32 en, u32 lanes)
 			return ret;
 
 		/* wait at least 1ms : Twakeup time for MARK1 state */
-		udelay(1000);
+		udelay(100);
 
 		/* Clear ULPS enter request */
 		dsim_reg_enter_ulps(id, 0);
