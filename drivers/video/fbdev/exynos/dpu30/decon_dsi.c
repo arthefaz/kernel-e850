@@ -255,8 +255,10 @@ static irqreturn_t decon_ext_irq_handler(int irq, void *dev_id)
 	if (decon->hiber.enabled && decon->state == DECON_STATE_ON &&
 			decon->dt.out_type == DECON_OUT_DSI) {
 		if (decon_min_lock_cond(decon)) {
-			atomic_inc(&decon->hiber.remaining_hiber);
-			kthread_queue_work(&decon->hiber.worker, &decon->hiber.work);
+			if (list_empty(&decon->hiber.worker.work_list)) {
+				atomic_inc(&decon->hiber.remaining_hiber);
+				kthread_queue_work(&decon->hiber.worker, &decon->hiber.work);
+			}
 		}
 	}
 
