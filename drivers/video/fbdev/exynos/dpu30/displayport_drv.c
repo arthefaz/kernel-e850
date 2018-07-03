@@ -185,6 +185,7 @@ static int displayport_full_link_training(void)
 	u8 pre_emphasis_lane[MAX_LANE_CNT];
 	u8 max_reach_value[MAX_LANE_CNT];
 	int training_retry_no, eq_training_retry_no, i;
+	int total_retry_cnt = 0;
 	u8 val[DPCD_BUF_SIZE] = {0,};
 	u8 eq_val[DPCD_BUF_SIZE] = {0,};
 	u8 lane_cr_done;
@@ -298,16 +299,29 @@ Voltage_Swing_Retry:
 		if (lane_cr_done == 0x0F) {
 			displayport_dbg("lane_cr_done\n");
 			goto EQ_Training_Start;
+		} else if (drive_current[0] == MAX_REACHED_CNT
+			&& drive_current[1] == MAX_REACHED_CNT
+			&& drive_current[2] == MAX_REACHED_CNT
+			&& drive_current[3] == MAX_REACHED_CNT) {
+			displayport_dbg("MAX_REACHED_CNT\n");
+			goto Check_Link_rate;
 		}
 	} else if (lane_cnt == 0x02) {
 		if (lane_cr_done == 0x03) {
 			displayport_dbg("lane_cr_done\n");
 			goto EQ_Training_Start;
+		} else if (drive_current[0] == MAX_REACHED_CNT
+			&& drive_current[1] == MAX_REACHED_CNT) {
+			displayport_dbg("MAX_REACHED_CNT\n");
+			goto Check_Link_rate;
 		}
 	} else if (lane_cnt == 0x01) {
 		if (lane_cr_done == 0x01) {
 			displayport_dbg("lane_cr_done\n");
 			goto EQ_Training_Start;
+		} else if (drive_current[0] == MAX_REACHED_CNT) {
+			displayport_dbg("MAX_REACHED_CNT\n");
+			goto Check_Link_rate;
 		}
 	} else {
 		val[0] = 0x00;	/* SCRAMBLING_ENABLE, NORMAL_DATA */
@@ -317,44 +331,50 @@ Voltage_Swing_Retry:
 		return -EINVAL;
 	}
 
-	if (!(drive_current[0] == 3 && drive_current[1] == 3
-				&& drive_current[2] == 3 && drive_current[3] == 3)) {
-		displayport_reg_dpcd_read_burst(DPCD_ADD_ADJUST_REQUEST_LANE0_1, 2, val);
-		voltage_swing_lane[0] = (val[0] & VOLTAGE_SWING_LANE0);
-		pre_emphasis_lane[0] = (val[0] & PRE_EMPHASIS_LANE0) >> 2;
-		voltage_swing_lane[1] = (val[0] & VOLTAGE_SWING_LANE1) >> 4;
-		pre_emphasis_lane[1] = (val[0] & PRE_EMPHASIS_LANE1) >> 6;
+	displayport_reg_dpcd_read_burst(DPCD_ADD_ADJUST_REQUEST_LANE0_1, 2, val);
+	voltage_swing_lane[0] = (val[0] & VOLTAGE_SWING_LANE0);
+	pre_emphasis_lane[0] = (val[0] & PRE_EMPHASIS_LANE0) >> 2;
+	voltage_swing_lane[1] = (val[0] & VOLTAGE_SWING_LANE1) >> 4;
+	pre_emphasis_lane[1] = (val[0] & PRE_EMPHASIS_LANE1) >> 6;
 
-		voltage_swing_lane[2] = (val[1] & VOLTAGE_SWING_LANE2);
-		pre_emphasis_lane[2] = (val[1] & PRE_EMPHASIS_LANE2) >> 2;
-		voltage_swing_lane[3] = (val[1] & VOLTAGE_SWING_LANE3) >> 4;
-		pre_emphasis_lane[3] = (val[1] & PRE_EMPHASIS_LANE3) >> 6;
+	voltage_swing_lane[2] = (val[1] & VOLTAGE_SWING_LANE2);
+	pre_emphasis_lane[2] = (val[1] & PRE_EMPHASIS_LANE2) >> 2;
+	voltage_swing_lane[3] = (val[1] & VOLTAGE_SWING_LANE3) >> 4;
+	pre_emphasis_lane[3] = (val[1] & PRE_EMPHASIS_LANE3) >> 6;
 
-		if (drive_current[0] == voltage_swing_lane[0] &&
-				drive_current[1] == voltage_swing_lane[1] &&
-				drive_current[2] == voltage_swing_lane[2] &&
-				drive_current[3] == voltage_swing_lane[3]) {
-			if (training_retry_no == 4)
-				goto Check_Link_rate;
-			else
-				training_retry_no++;
-		} else
-			training_retry_no = 1;
+	if (drive_current[0] == voltage_swing_lane[0] &&
+			drive_current[1] == voltage_swing_lane[1] &&
+			drive_current[2] == voltage_swing_lane[2] &&
+			drive_current[3] == voltage_swing_lane[3]) {
+		if (training_retry_no == 4)
+			goto Check_Link_rate;
+		else
+			training_retry_no++;
+	} else
+		training_retry_no = 0;
 
-		for (i = 0; i < 4; i++) {
-			drive_current[i] = voltage_swing_lane[i];
-			pre_emphasis[i] = pre_emphasis_lane[i];
-			displayport_dbg("v drive_current[%d] = %x\n",
-					i, drive_current[i]);
-			displayport_dbg("v pre_emphasis[%d] = %x\n",
-					i, pre_emphasis[i]);
-		}
-
-		goto Voltage_Swing_Retry;
+	for (i = 0; i < 4; i++) {
+		drive_current[i] = voltage_swing_lane[i];
+		pre_emphasis[i] = pre_emphasis_lane[i];
+		displayport_dbg("v drive_current[%d] = %x\n",
+				i, drive_current[i]);
+		displayport_dbg("v pre_emphasis[%d] = %x\n",
+				i, pre_emphasis[i]);
 	}
+
+	total_retry_cnt++;
+
+	if (total_retry_cnt >= MAX_RETRY_CNT) {
+		displayport_err("total_retry_cnt = %d\n", total_retry_cnt);
+		goto Check_Link_rate;
+	}
+
+	goto Voltage_Swing_Retry;
 
 Check_Link_rate:
 	displayport_info("Check_Link_rate\n");
+
+	total_retry_cnt = 0;
 
 	if (link_rate == LINK_RATE_5_4Gbps) {
 		link_rate = LINK_RATE_2_7Gbps;
