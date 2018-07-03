@@ -166,6 +166,7 @@ struct fb_vendor {
 	u8 vic_data[16];
 };
 
+#define MAX_RETRY_CNT 16
 #define MAX_REACHED_CNT 3
 #define MAX_SWING_REACHED_BIT_POS 2
 #define MAX_PRE_EMPHASIS_REACHED_BIT_POS 5
