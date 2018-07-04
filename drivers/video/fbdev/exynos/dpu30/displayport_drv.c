@@ -145,7 +145,8 @@ static int displayport_get_min_link_rate(u8 rx_link_rate, u8 lane_cnt)
 
 	max_pclk = displayport_find_edid_max_pixelclock();
 	for (i = 0; i < 2; i++) {
-		if ((u64)lane_cnt * pc1lane[i] >= max_pclk)
+		/* Add overhead + margin */
+		if ((u64)lane_cnt * pc1lane[i] >= max_pclk * 1.25 + 10000000)
 			break;
 	}
 
