@@ -760,6 +760,8 @@
 #define CHUNK_SIZE_2				(0xFFFF << 0)
 
 #define SST1_VIDEO_BIST_CONTROL			(0x5450)
+#define CTS_BIST_EN				(0x01 << 17)
+#define CTS_BIST_TYPE				(0x03 << 15)
 #define BIST_PRBS7_SEED				(0x7F << 8)
 #define BIST_USER_DATA_EN			(0x01 << 4)
 #define BIST_EN					(0x01 << 3)

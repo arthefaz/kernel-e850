@@ -39,6 +39,7 @@
 #include "hdr_metadata.h"
 
 extern int displayport_log_level;
+extern int forced_resolution;
 
 #define DISPLAYPORT_MODULE_NAME "exynos-displayport"
 
@@ -491,6 +492,10 @@ enum test_pattern{
 	COLOR_BAR = 0,
 	WGB_BAR,
 	MW_BAR,
+	CTS_COLOR_RAMP,
+	CTS_BLACK_WHITE,
+	CTS_COLOR_SQUARE_VESA,
+	CTS_COLOR_SQUARE_CEA,
 };
 
 enum hotplug_state{
@@ -958,6 +963,9 @@ static inline bool IS_DISPLAYPORT_HPD_PLUG_STATE(void)
 
 	return (bool)displayport->hpd_current_state;
 }
+
+int displayport_enable(struct displayport_device *displayport);
+int displayport_disable(struct displayport_device *displayport);
 
 void displayport_reg_init(void);
 void displayport_reg_set_interrupt_mask(enum displayport_interrupt_mask param, u8 set);

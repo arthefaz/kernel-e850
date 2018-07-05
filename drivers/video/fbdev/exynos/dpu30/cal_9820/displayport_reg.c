@@ -1266,8 +1266,21 @@ void displayport_reg_set_video_configuration(videoformat video_format, u8 bpc, u
 
 void displayport_reg_set_bist_video_configuration(videoformat video_format, u8 bpc, u8 type, u8 range)
 {
-	displayport_reg_set_video_configuration(video_format, bpc, range);
-	displayport_write_mask(SST1_VIDEO_BIST_CONTROL, type, BIST_TYPE);	/* Display BIST type */
+	if (type < CTS_COLOR_RAMP) {
+		displayport_reg_set_video_configuration(video_format, bpc, range);
+		displayport_write_mask(SST1_VIDEO_BIST_CONTROL, type, BIST_TYPE);
+		displayport_write_mask(SST1_VIDEO_BIST_CONTROL, 0, CTS_BIST_EN);
+	} else {
+		if (type == CTS_COLOR_SQUARE_CEA)
+			displayport_reg_set_video_configuration(video_format, bpc, CEA_RANGE);
+		else
+			displayport_reg_set_video_configuration(video_format, bpc, VESA_RANGE);
+
+		displayport_write_mask(SST1_VIDEO_BIST_CONTROL,
+				type - CTS_COLOR_RAMP, CTS_BIST_TYPE);
+		displayport_write_mask(SST1_VIDEO_BIST_CONTROL, 1, CTS_BIST_EN);
+	}
+
 	displayport_reg_set_video_bist_mode(1);
 
 	displayport_info("set bist video config format:%d range:%d bpc:%d type:%d\n",
@@ -1281,6 +1294,7 @@ void displayport_reg_set_bist_video_configuration_for_blue_screen(videoformat vi
 	displayport_write(SST1_VIDEO_BIST_USER_DATA_G, 0x00);
 	displayport_write(SST1_VIDEO_BIST_USER_DATA_B, 0xFF);
 	displayport_write_mask(SST1_VIDEO_BIST_CONTROL, 1, BIST_USER_DATA_EN);
+	displayport_write_mask(SST1_VIDEO_BIST_CONTROL, 0, CTS_BIST_EN);
 	displayport_reg_set_video_bist_mode(1);
 
 	displayport_dbg("set bist video config for blue screen\n");
