@@ -703,8 +703,6 @@ void displayport_hpd_changed(int state)
 		pm_stay_awake(displayport->dev);
 
 		displayport->bpc = BPC_8;	/*default setting*/
-		displayport->bist_used = 0;
-		displayport->bist_type = COLOR_BAR;
 		displayport->dyn_range = VESA_RANGE;
 		displayport->hpd_state = HPD_PLUG;
 		displayport->auto_test_mode = 0;
@@ -739,11 +737,15 @@ void displayport_hpd_changed(int state)
 		 *	goto HPD_FAIL;
 		 * }
 		 */
-		displayport_set_switch_state(displayport, 1);
-		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-			(displayport->state == DISPLAYPORT_STATE_ON), msecs_to_jiffies(1000));
-		if (!timeout)
-			displayport_err("enable timeout\n");
+
+		if (displayport->bist_used == 0) {
+			displayport_set_switch_state(displayport, 1);
+			timeout = wait_event_interruptible_timeout(displayport->dp_wait,
+				(displayport->state == DISPLAYPORT_STATE_ON), msecs_to_jiffies(1000));
+			if (!timeout)
+				displayport_err("enable timeout\n");
+		} else
+			displayport_enable(displayport);
 	} else {
 #if defined(CONFIG_EXYNOS_HDCP2)
 		if (displayport->hdcp_ver == HDCP_VERSION_2_2) {
@@ -760,13 +762,17 @@ void displayport_hpd_changed(int state)
 		displayport->hpd_state = HPD_UNPLUG;
 		displayport->cur_video = V640X480P60;
 
+		if (displayport->bist_used == 0) {
+			displayport_set_switch_state(displayport, 0);
+			timeout = wait_event_interruptible_timeout(displayport->dp_wait,
+				(displayport->state == DISPLAYPORT_STATE_INIT), msecs_to_jiffies(1000));
+			if (!timeout)
+				displayport_err("disable timeout\n");
+		} else
+			displayport_disable(displayport);
+
 		pm_relax(displayport->dev);
 
-		displayport_set_switch_state(displayport, 0);
-		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-			(displayport->state == DISPLAYPORT_STATE_INIT), msecs_to_jiffies(1000));
-		if (!timeout)
-			displayport_err("disable timeout\n");
 		displayport->hdcp_ver = 0;
 	}
 	mutex_unlock(&displayport->hpd_lock);
@@ -791,11 +797,15 @@ void displayport_hpd_unplug(void)
 	displayport->hpd_current_state = HPD_UNPLUG;
 	displayport->cur_video = V640X480P60;
 
-	displayport_set_switch_state(displayport, 0);
-	timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-			(displayport->state == DISPLAYPORT_STATE_INIT), msecs_to_jiffies(1000));
-	if (!timeout)
-		displayport_err("disable timeout\n");
+	if (displayport->bist_used == 0) {
+		displayport_set_switch_state(displayport, 0);
+		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
+				(displayport->state == DISPLAYPORT_STATE_INIT), msecs_to_jiffies(1000));
+		if (!timeout)
+			displayport_err("disable timeout\n");
+	} else
+			displayport_disable(displayport);
+
 	displayport->hdcp_ver = 0;
 }
 
@@ -1852,7 +1862,7 @@ static void hdcp_start(struct displayport_device *displayport)
 #endif
 }
 
-static int displayport_enable(struct displayport_device *displayport)
+int displayport_enable(struct displayport_device *displayport)
 {
 	int ret = 0;
 	u8 bpc = (u8)displayport->bpc;
@@ -1876,10 +1886,13 @@ static int displayport_enable(struct displayport_device *displayport)
 	displayport_info("cur_video = %s in displayport_enable!!!\n",
 			supported_videos[displayport->cur_video].name);
 
-	if (displayport->bist_used)
+	if (displayport->bist_used) {
+		if (forced_resolution >= 0)
+			displayport->cur_video = forced_resolution;
+
 		displayport_reg_set_bist_video_configuration(displayport->cur_video,
 				bpc, bist_type, dyn_range);
-	else {
+	} else {
 		if (displayport->bpc == BPC_6 && displayport->dfp_type != DFP_TYPE_DP)
 			bpc = BPC_8;
 
@@ -1900,7 +1913,7 @@ static int displayport_enable(struct displayport_device *displayport)
 	return ret;
 }
 
-static int displayport_disable(struct displayport_device *displayport)
+int displayport_disable(struct displayport_device *displayport)
 {
 	int timeout;
 
@@ -2664,6 +2677,22 @@ static ssize_t displayport_test_bist_store(struct class *dev,
 		displayport->bist_used = 1;
 		displayport->bist_type = MW_BAR;
 		break;
+	case 4:
+		displayport->bist_used = 1;
+		displayport->bist_type = CTS_COLOR_RAMP;
+		break;
+	case 5:
+		displayport->bist_used = 1;
+		displayport->bist_type = CTS_BLACK_WHITE;
+		break;
+	case 6:
+		displayport->bist_used = 1;
+		displayport->bist_type = CTS_COLOR_SQUARE_VESA;
+		break;
+	case 7:
+		displayport->bist_used = 1;
+		displayport->bist_type = CTS_COLOR_SQUARE_CEA;
+		break;
 	case 11:
 	case 12:
 		audio_config_data.audio_enable = 1;
@@ -2706,7 +2735,6 @@ static ssize_t displayport_test_store(struct class *dev,
 
 static CLASS_ATTR(dp, 0664, displayport_test_show, displayport_test_store);
 
-extern int forced_resolution;
 static ssize_t displayport_forced_resolution_show(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
@@ -3015,10 +3043,10 @@ static int displayport_probe(struct platform_device *pdev)
 	displayport->bpc = BPC_8;
 	displayport->bist_used = 0;
 	displayport->bist_type = COLOR_BAR;
-	displayport->dyn_range = CEA_RANGE;
 #if defined(CONFIG_EXYNOS_HDCP2)
 	displayport->drm_start_state = DRM_OFF;
 #endif
+	displayport->dyn_range = VESA_RANGE;
 	displayport_info("displayport driver has been probed.\n");
 	return 0;
 
