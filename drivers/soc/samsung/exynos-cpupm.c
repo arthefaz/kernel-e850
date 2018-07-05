@@ -476,6 +476,9 @@ static int can_enter_power_mode(int cpu, struct power_mode *mode)
 	if (cpus_busy(mode->target_residency, &mode->siblings))
 		return 0;
 
+	if (is_IPI_pending(&mode->siblings))
+		return 0;
+
 	if (mode->system_idle && system_busy())
 		return 0;
 

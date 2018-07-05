@@ -53,4 +53,22 @@ struct idle_ip {
 	unsigned int		count;
 };
 
+#ifdef CONFIG_SMP
+extern DEFINE_PER_CPU(bool, pending_ipi);
+static inline bool is_IPI_pending(const struct cpumask *mask)
+{
+	unsigned int cpu;
+
+	for_each_cpu_and(cpu, cpu_online_mask, mask) {
+		if (per_cpu(pending_ipi, cpu))
+			return true;
+	}
+	return false;
+}
+#else
+static inline bool is_IPI_pending(const struct cpumask *mask)
+{
+	return false;
+}
+#endif
 #endif /* __EXYNOS_CPUPM_H */
