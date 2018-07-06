@@ -14,6 +14,9 @@
 
 #include "../panels/decon_lcd.h"
 
+/* EVT1 feature */
+#define DPHY_PLL_CLK_GATE_EN	0
+
 struct dsim_clks {
 	u32 hs_clk;
 	u32 esc_clk;
