@@ -19,6 +19,9 @@
 
 #define CEIL(x)			((x-(u32)(x) > 0 ? (u32)(x+1) : (u32)(x)))
 
+/* EVT1 feature */
+#define DECON_PLL_SLEEP_EN	1
+
 enum decon_idma_type {
 	IDMA_G0 = 0,
 	IDMA_G1,

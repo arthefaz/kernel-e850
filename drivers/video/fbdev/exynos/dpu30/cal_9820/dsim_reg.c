@@ -32,6 +32,10 @@
 #define TE_PROTECT_ON_TIME		158 /* 15.8ms*/
 #define TE_TIMEOUT_TIME			180 /* 18ms */
 
+#define PLL_LOCK_CNT_MULT		500
+#define PLL_LOCK_CNT_MARGIN_RATIO	10	/* 10% ~ 20% */
+#define PLL_LOCK_CNT_MARGIN	(PLL_LOCK_CNT_MULT * PLL_LOCK_CNT_MARGIN_RATIO / 100)
+
 u32 DSIM_PHY_BIAS_CON_VAL[] = {
 	0x00000010,
 	0x00000110,
@@ -906,7 +910,7 @@ static void dsim_reg_set_pll_clk_gate_enable(u32 id, u32 en)
 	dsim_write_mask(id, reg_id, val, mask);
 }
 
-#if 0
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 /* This function is available from EVT1 */
 static void dsim_reg_set_pll_sleep_enable(u32 id, u32 en)
 {
@@ -1747,6 +1751,7 @@ static int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 	unsigned int esc_div;
 	struct dsim_pll_param pll;
 	struct dphy_timing_value t;
+	u32 pll_lock_cnt;
 	int ret = 0;
 	u32 hsmode = 0;
 #ifdef DPDN_INV_SWAP
@@ -1842,9 +1847,16 @@ static int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		/*set wclk buf sft cnt */
 		dsim_reg_set_dphy_wclk_buf_sft(id, 3);
 
-		/* set PLL's lock time (lock_cnt) */
-		/* It depends on project guide */
-		dsim_reg_pll_stable_time(id, 0x1450);
+		/* set PLL's lock time (lock_cnt)
+		 * PLL lock cnt setting guide
+		 * PLL_LOCK_CNT_MULT = 500
+		 * PLL_LOCK_CNT_MARGIN = 10 (10%)
+		 * PLL lock time = PLL_LOCK_CNT_MULT * Tp
+		 * Tp = 1 / (OSC clk / pll_p)
+		 * PLL lock cnt = PLL lock time * OSC clk
+		 */
+		pll_lock_cnt = (PLL_LOCK_CNT_MULT + PLL_LOCK_CNT_MARGIN) * pll.p;
+		dsim_reg_pll_stable_time(id, pll_lock_cnt);
 
 #ifdef DPHY_LOOP
 		dsim_reg_set_dphy_loop_test(id);
@@ -2135,6 +2147,7 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 	dsim_reg_set_pll_clk_gate_enable(id, 1); /* PHY pll clock gate disable */
 #else
 	dsim_reg_set_pll_clk_gate_enable(id, DPHY_PLL_CLK_GATE_EN); /* PHY pll clock gate disable */
+	dsim_reg_set_pll_sleep_enable(id, DPHY_PLL_SLEEP_EN);	/* PHY pll sleep disable */
 #endif
 
 #if defined(CONFIG_EXYNOS_LCD_ON_UBOOT)

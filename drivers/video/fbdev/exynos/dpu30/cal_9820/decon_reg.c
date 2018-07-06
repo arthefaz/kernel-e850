@@ -1703,6 +1703,35 @@ static void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 				win_idx, af_d, ab_d, af_a, ab_a);
 }
 
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+static void decon_reg_set_pll_sleep(u32 id, u32 en)
+{
+	u32 val, mask;
+
+	if (id >= 2) {
+		decon_info("%s:%d decon(%d) not allowed\n",
+				__func__, __LINE__, id);
+		return;
+	}
+	val = en ? ~0 : 0;
+	mask = (id == 0) ? PLL_SLEEP_EN_OUTIF0_F : PLL_SLEEP_EN_OUTIF1_F;
+	decon_write_mask(id, PLL_SLEEP_CONTROL, val, mask);
+}
+
+static void decon_reg_set_pll_wakeup(u32 id, u32 en)
+{
+	u32 val, mask;
+
+	if (id >= 2) {
+		decon_info("%s:%d decon(%d) not allowed\n",
+				__func__, __LINE__, id);
+		return;
+	}
+	val = en ? ~0 : 0;
+	mask = (id == 0) ? PLL_SLEEP_MASK_OUTIF0 : PLL_SLEEP_MASK_OUTIF1;
+	decon_write_mask(id, PLL_SLEEP_CONTROL, val, mask);
+}
+#endif
 
 /******************** EXPORTED DECON CAL APIs ********************/
 /* TODO: maybe this function will be moved to internal DECON CAL function */
@@ -1769,6 +1798,13 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	/* Configure DECON dsim connection  : 'data_path' setting is required */
 	decon_reg_set_interface(id, psr);
 
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	/* TODO : register for outfifo2 doesn't exist, needs a confirm */
+	if (psr->psr_mode == DECON_MIPI_COMMAND_MODE &&
+			psr->dsi_mode != DSI_MODE_DUAL_DSI)
+		decon_reg_set_pll_sleep(id, DECON_PLL_SLEEP_EN);
+#endif
+
 	return 0;
 }
 
@@ -1801,6 +1837,13 @@ int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr, bool rst,
 		u32 fps)
 {
 	int ret = 0;
+
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	/* when pll is asleep, need to wake it up before stopping */
+	if (psr->psr_mode == DECON_MIPI_COMMAND_MODE &&
+			psr->dsi_mode != DSI_MODE_DUAL_DSI)
+		decon_reg_set_pll_wakeup(id, DECON_PLL_SLEEP_EN);
+#endif
 
 	if (psr->out_type == DECON_OUT_DP)
 		decon_reg_set_te_qactive_pll_mode(id, 0);
