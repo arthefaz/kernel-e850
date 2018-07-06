@@ -887,7 +887,8 @@ static void dsim_reg_set_sync_inform(u32 id, u32 inform)
 }
 
 /*
- * Following functions will not be used untile the correct guide is given.
+ * For EVT0 0 means enable, 1 means disable.
+ * For EVT1 0 means disable, 1 means enable.
  */
 static void dsim_reg_set_pll_clk_gate_enable(u32 id, u32 en)
 {
@@ -2103,7 +2104,9 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 
 	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
 
-	dsim_reg_set_pll_clk_gate_enable(id, 1);
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	dsim_reg_set_pll_clk_gate_enable(id, 1); /* PHY pll clock gate disable */
+#endif
 
 	dsim_reg_enable_word_clock(id, 1);
 
@@ -2127,8 +2130,12 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 
 	dsim_reg_set_config(id, lcd_info, clks);
 
-	dsim_reg_set_pll_clk_gate_enable(id, 0); /* phy clockgate enable */
-	dsim_reg_set_pll_clk_gate_enable(id, 1); /* phy clockgate disable */
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	dsim_reg_set_pll_clk_gate_enable(id, 0); /* PHY pll clock gate enable */
+	dsim_reg_set_pll_clk_gate_enable(id, 1); /* PHY pll clock gate disable */
+#else
+	dsim_reg_set_pll_clk_gate_enable(id, DPHY_PLL_CLK_GATE_EN); /* PHY pll clock gate disable */
+#endif
 
 #if defined(CONFIG_EXYNOS_LCD_ON_UBOOT)
 	/* TODO: This code will be implemented as uboot style */
