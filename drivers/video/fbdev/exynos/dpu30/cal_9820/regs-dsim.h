@@ -399,6 +399,10 @@
 #define	DSIM_SA_CRC_RESULT_LN3_MASK			(0xffff << 0)
 #define DSIM_SA_CRC_RESULT_LN3_GET(x)			(((x) >> 0) & 0xffff)
 
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+#define DSIM_OPTION_SUITE				(0x010C)
+#define	DSIM_OPTION_SUITE_UPDT_EN_MASK			(0x1 << 0)
+#endif
 
 /*
  * DPHY  registers
@@ -422,7 +426,17 @@
 #define DSIM_PHY_PLL_CON5			(0x0114)
 #define DSIM_PHY_PLL_CON6			(0x0118)
 #define DSIM_PHY_PLL_CON7			(0x011C)
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
 #define DSIM_PHY_PLL_STAT0			(0x0120)
+#else
+#define DSIM_PHY_PLL_CON8			(0x0120)
+#define DSIM_PHY_PLL_STAT0			(0x0140)
+
+#define DSIM_PHY_PLL_CON2_USE_SDW_MASK		(0x1 << 15)
+
+#define DSIM_PHY_PLL_CON8_PLL_STB_CNT(x)	((x) << 0)
+#define DSIM_PHY_PLL_CON8_PLL_STB_CNT_MASK	(0xffff << 0)
+#endif
 
 /* PLL_CON0 */
 #define DSIM_PHY_PLL_EN(_x)			(((_x) & 0x1) << 12)
