@@ -116,6 +116,7 @@
 #define DSIM_RESOL_HOZVAL_GET(_v)			(((_v) >> 0) & 0x1fff)
 
 /* Main display Vporch register */
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
 #define DSIM_VPORCH					(0x40)
 #define DSIM_VPORCH_VFP_CMD_ALLOW(_x)			((_x) << 24)
 #define DSIM_VPORCH_VFP_CMD_ALLOW_MASK			(0xff << 24)
@@ -125,6 +126,18 @@
 #define DSIM_VPORCH_VFP_TOTAL_MASK			(0xff << 8)
 #define DSIM_VPORCH_VBP(_x)				((_x) << 0)
 #define DSIM_VPORCH_VBP_MASK				(0xff << 0)
+#else
+#define DSIM_VPORCH					(0x104)
+#define DSIM_VPORCH_VFP_TOTAL(_x)			((_x) << 16)
+#define DSIM_VPORCH_VFP_TOTAL_MASK			(0xffff << 16)
+#define DSIM_VPORCH_VBP(_x)				((_x) << 0)
+#define DSIM_VPORCH_VBP_MASK				(0xffff << 0)
+#define DSIM_VFP_DETAIL					(0x108)
+#define DSIM_VPORCH_VFP_CMD_ALLOW(_x)			((_x) << 16)
+#define DSIM_VPORCH_VFP_CMD_ALLOW_MASK			(0xffff << 16)
+#define DSIM_VPORCH_STABLE_VFP(_x)			((_x) << 0)
+#define DSIM_VPORCH_STABLE_VFP_MASK			(0xffff << 0)
+#endif
 
 /* Main display Hporch register */
 #define DSIM_HPORCH					(0x44)

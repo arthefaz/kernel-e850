@@ -949,14 +949,22 @@ static void dsim_reg_set_cmdallow(u32 id, u32 cmdallow)
 {
 	u32 val = DSIM_VPORCH_VFP_CMD_ALLOW(cmdallow);
 
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
 	dsim_write_mask(id, DSIM_VPORCH, val, DSIM_VPORCH_VFP_CMD_ALLOW_MASK);
+#else
+	dsim_write_mask(id, DSIM_VFP_DETAIL, val, DSIM_VPORCH_VFP_CMD_ALLOW_MASK);
+#endif
 }
 
 static void dsim_reg_set_stable_vfp(u32 id, u32 stablevfp)
 {
 	u32 val = DSIM_VPORCH_STABLE_VFP(stablevfp);
 
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
 	dsim_write_mask(id, DSIM_VPORCH, val, DSIM_VPORCH_STABLE_VFP_MASK);
+#else
+	dsim_write_mask(id, DSIM_VFP_DETAIL, val, DSIM_VPORCH_STABLE_VFP_MASK);
+#endif
 }
 
 static void dsim_reg_set_vbp(u32 id, u32 vbp)
