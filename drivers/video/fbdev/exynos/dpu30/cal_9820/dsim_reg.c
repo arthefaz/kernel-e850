@@ -24,6 +24,12 @@
 #define DSIM_PLL_STABLE_TIME		0x682A
 #define DSIM_FIFOCTRL_THRESHOLD		0x1 /* 1 ~ 32 */
 
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+#define PLL_SLEEP_CNT_MULT		450
+#define PLL_SLEEP_CNT_MARGIN_RATIO	10	/* 10% ~ 20% */
+#define PLL_SLEEP_CNT_MARGIN	(PLL_SLEEP_CNT_MULT * PLL_SLEEP_CNT_MARGIN_RATIO / 100)
+#endif
+
 /* If below values depend on panel. These values wil be move to panel file.
  * And these values are valid in case of video mode only.
  */
@@ -53,6 +59,9 @@ u32 DSIM_PHY_PLL_CON_VAL[] = {
 	0x00000500,
 	0x00000000,
 	0x00001450,
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	0x00000A28,
+#endif
 };
 
 u32 DSIM_PHY_MC_GNR_CON_VAL[] = {
@@ -539,7 +548,8 @@ static void dsim_reg_set_pll_con(u32 id, u32 *blk_ctl)
 {
 	u32 i;
 
-	for (i = 0; i < 8; i++)
+	for (i = 0; i < sizeof(DSIM_PHY_PLL_CON_VAL)/
+			sizeof(*DSIM_PHY_PLL_CON_VAL); i++)
 		dsim_phy_write(id, DSIM_PHY_PLL_CON(i), blk_ctl[i]);
 }
 
@@ -2055,6 +2065,32 @@ static int dsim_reg_set_ulps_by_ddi(u32 id, u32 ddi_type, u32 lanes, u32 en)
 	return ret;
 }
 
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+static void dsim_reg_set_dphy_shadow_update_req(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	dsim_write_mask(id, DSIM_OPTION_SUITE, val,
+			DSIM_OPTION_SUITE_UPDT_EN_MASK);
+}
+
+static void dsim_reg_set_dphy_use_shadow(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON2, val,
+			DSIM_PHY_PLL_CON2_USE_SDW_MASK);
+}
+
+static void dsim_reg_set_dphy_pll_stable_cnt(u32 id, u32 cnt)
+{
+	u32 val = DSIM_PHY_PLL_CON8_PLL_STB_CNT(cnt);
+
+	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON8, val,
+			DSIM_PHY_PLL_CON8_PLL_STB_CNT_MASK);
+}
+#endif
+
 /******************** EXPORTED DSIM CAL APIs ********************/
 
 void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 sel)
@@ -2454,6 +2490,35 @@ void dsim_reg_set_cmd_transfer_mode(u32 id, u32 lp)
 
 	dsim_write_mask(id, DSIM_ESCMODE, val, DSIM_ESCMODE_CMD_LPDT);
 }
+
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+/* Only for command mode */
+void dsim_reg_set_dphy_freq_hopping(u32 id, u32 p, u32 m, u32 k, u32 en)
+{
+	u32 val, mask;
+	u32 pll_stable_cnt = (PLL_SLEEP_CNT_MULT + PLL_SLEEP_CNT_MARGIN) * p;
+
+	if (en) {
+		dsim_reg_set_dphy_use_shadow(id, 1);
+		dsim_reg_set_dphy_pll_stable_cnt(id, pll_stable_cnt);
+
+		/* M value */
+		val = DSIM_PHY_PMS_M(m);
+		mask = DSIM_PHY_PMS_M_MASK;
+		dsim_phy_write_mask(id, DSIM_PHY_PLL_CON2, val, mask);
+
+		/* K value */
+		val = DSIM_PHY_PMS_K(k);
+		mask = DSIM_PHY_PMS_K_MASK;
+		dsim_phy_write_mask(id, DSIM_PHY_PLL_CON1, val, mask);
+
+		dsim_reg_set_dphy_shadow_update_req(id, 1);
+	} else {
+		dsim_reg_set_dphy_use_shadow(id, 0);
+		dsim_reg_set_dphy_shadow_update_req(id, 0);
+	}
+}
+#endif
 
 void __dsim_dump(u32 id, struct dsim_regs *regs)
 {
