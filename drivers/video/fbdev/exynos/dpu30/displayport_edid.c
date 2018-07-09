@@ -468,6 +468,7 @@ int edid_update(struct displayport_device *hdev)
 	int block_cnt = 0;
 	int i;
 	int basic_audio = 0;
+	int modedb_len = 0;
 
 	audio_channels = 0;
 	audio_sample_rates = 0;
@@ -489,6 +490,8 @@ int edid_update(struct displayport_device *hdev)
 		supported_videos[i].edid_support_match = false;
 
 	fb_edid_to_monspecs(edid, &specs);
+
+	modedb_len = specs.modedb_len;
 
 	for (i = 1; i < block_cnt; i++)
 		fb_edid_add_monspecs(edid + i * EDID_BLOCK_SIZE, &specs);
@@ -519,14 +522,6 @@ int edid_update(struct displayport_device *hdev)
 	if (!edid_misc)
 		edid_misc = specs.misc;
 
-	for (i = 0; i < supported_videos_pre_cnt; i++) {
-		displayport_dbg("%s edid_support_match = %d\n",
-				supported_videos[i].name, supported_videos[i].edid_support_match);
-
-		if (supported_videos[i].edid_support_match)
-			first = false;
-	}
-
 	if (edid_misc & FB_MISC_HDMI) {
 		audio_speaker_alloc = sad.speaker;
 		if (sad.channel_count) {
@@ -544,6 +539,14 @@ int edid_update(struct displayport_device *hdev)
 			edid_misc, audio_channels, audio_sample_rates, audio_bit_rates);
 
 out:
+	for (i = 0; i < supported_videos_pre_cnt; i++) {
+		displayport_dbg("%s edid_support_match = %d\n",
+				supported_videos[i].name, supported_videos[i].edid_support_match);
+
+		if (supported_videos[i].edid_support_match)
+			first = false;
+	}
+
 	/* No supported preset found, use default */
 	if (forced_resolution >= 0 || first == true) {
 		displayport_info("edid_use_default_preset\n");
