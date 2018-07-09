@@ -431,6 +431,7 @@ typedef enum {
 	V4096X2160P50,
 	V4096X2160P60,
 	V640X10P60SACRC,
+	VDUMMYTIMING,
 } videoformat;
 
 typedef enum{

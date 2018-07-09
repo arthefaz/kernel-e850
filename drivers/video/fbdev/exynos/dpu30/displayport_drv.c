@@ -2057,6 +2057,12 @@ static int displayport_enum_dv_timings(struct v4l2_subdev *sd,
 		return -E2BIG;
 	}
 
+	if (!supported_videos[timings->index].edid_support_match) {
+		displayport_dbg("not supported video_format : %s\n",
+				supported_videos[timings->index].name);
+		return -EINVAL;
+	}
+
 	/* reduce the timing by lane count and link rate */
 	if (supported_videos[timings->index].dv_timings.bt.pixelclock >
 			displayport_get_max_pixelclock()) {
@@ -2071,13 +2077,8 @@ static int displayport_enum_dv_timings(struct v4l2_subdev *sd,
 		return -E2BIG;
 	}
 
-	if (supported_videos[timings->index].edid_support_match) {
-		displayport_info("matched video_format : %s\n",
-			supported_videos[timings->index].name);
-		timings->timings = supported_videos[timings->index].dv_timings;
-	} else {
-		return -EINVAL;
-	}
+	displayport_info("matched video_format : %s\n", supported_videos[timings->index].name);
+	timings->timings = supported_videos[timings->index].dv_timings;
 
 	return 0;
 }
