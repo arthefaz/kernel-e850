@@ -15,6 +15,7 @@
 #include "../../../../drivers/phy/samsung/phy-exynos-usbdp.h"
 #endif
 
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
 u32 phy_default_value[DEFAULT_SFR_CNT][2] = {
 	{0x0020, 0x48}, {0x0050, 0x04}, {0x0054, 0x02}, {0x0058, 0x26}, {0x005C, 0x22},
 	{0x0090, 0x60}, {0x0094, 0x60}, {0x00C4, 0x0B}, {0x00E0, 0x38}, {0x012C, 0xF4},
@@ -63,6 +64,44 @@ u32 phy_tune_parameters[4][4][4] = { /* {amp, post, pre, idrv} */
 		{0x2B, 0x10, 0x43, 0x1D}, /* Pre-emphasis Level_3 */
 	},
 };
+#else /* EVT1 */
+u32 phy_default_value[DEFAULT_SFR_CNT][2] = {
+	{0x0830, 0x07}, {0x085c, 0x80}, {0x1030, 0x07}, {0x105c, 0x80}, {0x1830, 0x07},
+	{0x185c, 0x80}, {0x2030, 0x07}, {0x205c, 0x80}, {0x0228, 0x38}, {0x0104, 0x44},
+	{0x0248, 0x44}, {0x038C, 0x02}, {0x0878, 0x04}, {0x1878, 0x04}, {0x09A4, 0x07},
+	{0x09A8, 0x22}, {0x19A4, 0x07}, {0x19A8, 0x22}, {0x0994, 0x12}, {0x1994, 0x12},
+	{0x0998, 0x12}, {0x1998, 0x12}, {0x099C, 0x48}, {0x199C, 0x48}, {0x0898, 0x77},
+	{0x1898, 0x77}, {0x0054, 0x01}, {0x00e0, 0x38}, {0x0060, 0x24}, {0x0064, 0x77},
+	{0x0070, 0x76}, {0x0234, 0xE8},
+};
+
+u32 phy_tune_parameters[4][4][4] = { /* {amp, post, pre, idrv} */
+	{	/* Swing Level_0 */
+		{0x21, 0x10, 0x42, 0xE6}, /* Pre-emphasis Level_0 */
+		{0x25, 0x14, 0x42, 0xE6}, /* Pre-emphasis Level_1 */
+		{0x26, 0x17, 0x43, 0xE6}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x1C, 0x43, 0xE7}, /* Pre-emphasis Level_3 */
+	},
+	{	/* Swing Level_1 */
+		{0x26, 0x10, 0x42, 0xE7}, /* Pre-emphasis Level_0 */
+		{0x2B, 0x15, 0x42, 0xE7}, /* Pre-emphasis Level_1 */
+		{0x2B, 0x18, 0x43, 0xE7}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x18, 0x43, 0xE7}, /* Pre-emphasis Level_3 */
+	},
+	{	/* Swing Level_2 */
+		{0x2A, 0x10, 0x42, 0xE7}, /* Pre-emphasis Level_0 */
+		{0x2B, 0x15, 0x43, 0xE7}, /* Pre-emphasis Level_1 */
+		{0x2B, 0x15, 0x43, 0xE7}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x15, 0x43, 0xE7}, /* Pre-emphasis Level_3 */
+	},
+	{	/* Swing Level_3 */
+		{0x2B, 0x10, 0x43, 0xE7}, /* Pre-emphasis Level_0 */
+		{0x2B, 0x10, 0x43, 0xE7}, /* Pre-emphasis Level_1 */
+		{0x2B, 0x10, 0x43, 0xE7}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x10, 0x43, 0xE7}, /* Pre-emphasis Level_3 */
+	},
+};
+#endif
 
 /* supported_videos[] is to be arranged in the order of pixel clock */
 struct displayport_supported_preset supported_videos[] = {
@@ -195,9 +234,10 @@ void displayport_reg_phy_mode_setting(void)
 				| LANE_MUX_SEL_DP_LN1 | LANE_MUX_SEL_DP_LN0;
 		lane_en_val = DP_LANE_EN_LN3 | DP_LANE_EN_LN2
 				| DP_LANE_EN_LN1 | DP_LANE_EN_LN0;
-
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
 		displayport_phy_write_mask(TRSV_REG0400, 1, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
 		displayport_phy_write_mask(TRSV_REG0800, 1, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
+#endif
 		break;
 
 	case CCIC_NOTIFY_DP_PIN_B:
@@ -209,15 +249,17 @@ void displayport_reg_phy_mode_setting(void)
 		if (displayport->dp_sw_sel) {
 			lane_config_val = LANE_MUX_SEL_DP_LN3 | LANE_MUX_SEL_DP_LN2;
 			lane_en_val = DP_LANE_EN_LN3 | DP_LANE_EN_LN2;
-
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
 			displayport_phy_write_mask(TRSV_REG0400, 0, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
 			displayport_phy_write_mask(TRSV_REG0800, 1, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
+#endif
 		} else {
 			lane_config_val = LANE_MUX_SEL_DP_LN1 | LANE_MUX_SEL_DP_LN0;
 			lane_en_val = DP_LANE_EN_LN1 | DP_LANE_EN_LN0;
-
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
 			displayport_phy_write_mask(TRSV_REG0400, 1, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
 			displayport_phy_write_mask(TRSV_REG0800, 0, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
+#endif
 		}
 		break;
 
@@ -226,7 +268,7 @@ void displayport_reg_phy_mode_setting(void)
 		break;
 	}
 #endif
-	displayport_phy_write_mask(CMN_REG00A3, 1, OVRD_RX_CDR_DATA_MODE_EXIT);
+	displayport_phy_write_mask(CMN_REG00A3, 0, OVRD_RX_CDR_DATA_MODE_EXIT);
 	displayport_phy_write(CMN_REG00A2, lane_config_val | lane_en_val);
 }
 
