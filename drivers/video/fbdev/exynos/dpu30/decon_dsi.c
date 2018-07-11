@@ -23,8 +23,8 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/irq.h>
 #include <media/v4l2-subdev.h>
-#if defined(CONFIG_EXYNOS_WD_DVFS)
-#include <linux/exynos-wd.h>
+#if defined(CONFIG_EXYNOS_ALT_DVFS)
+#include <soc/samsung/exynos-alt.h>
 #endif
 
 #include "decon.h"
@@ -33,7 +33,7 @@
 //#include "../../../../soc/samsung/pwrcal/pwrcal.h"
 //#include "../../../../soc/samsung/pwrcal/S5E8890/S5E8890-vclk.h"
 #include "../../../../../kernel/irq/internals.h"
-#ifdef CONFIG_EXYNOS_WD_DVFS
+#ifdef CONFIG_EXYNOS_ALT_DVFS
 struct task_struct *devfreq_change_task;
 #endif
 
@@ -84,7 +84,7 @@ irq_end:
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_EXYNOS_WD_DVFS
+#ifdef CONFIG_EXYNOS_ALT_DVFS
 static int decon_devfreq_change_task(void *data)
 {
 	while (!kthread_should_stop()) {
@@ -94,7 +94,7 @@ static int decon_devfreq_change_task(void *data)
 
 		set_current_state(TASK_RUNNING);
 
-		exynos_wd_call_chain();
+		exynos_alt_call_chain();
 	}
 
 	return 0;
@@ -267,7 +267,7 @@ static irqreturn_t decon_ext_irq_handler(int irq, void *dev_id)
 	wake_up_interruptible_all(&decon->vsync.wait);
 
 	spin_unlock(&decon->slock);
-#ifdef CONFIG_EXYNOS_WD_DVFS
+#ifdef CONFIG_EXYNOS_ALT_DVFS
 	if (devfreq_change_task)
 		wake_up_process(devfreq_change_task);
 #endif
@@ -308,7 +308,7 @@ int decon_register_ext_irq(struct decon_device *decon)
 
 	decon->eint_status = 1;
 
-#ifdef CONFIG_EXYNOS_WD_DVFS
+#ifdef CONFIG_EXYNOS_ALT_DVFS
 	devfreq_change_task =
 		kthread_create(decon_devfreq_change_task, NULL,
 				"devfreq_change");
