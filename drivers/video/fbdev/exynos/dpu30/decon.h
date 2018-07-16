@@ -767,6 +767,7 @@ struct decon_debug {
 	struct dentry *debug_recovery_cnt;
 	struct dentry *debug_cmd_lp_ref;
 	struct dentry *debug_mres;
+	struct dentry *debug_freq_hop;
 
 	struct dpu_log *event_log;
 	u32 event_log_cnt;
@@ -917,6 +918,12 @@ struct decon_fence {
 };
 #endif
 
+struct decon_freq_hop {
+	bool enabled;
+	u32 target_m;	/* will be applied to DPHY */
+	u32 request_m;	/* user requested m value */
+};
+
 struct decon_device {
 	int id;
 	enum decon_state state;
@@ -961,6 +968,7 @@ struct decon_device {
 #if !defined(CONFIG_SUPPORT_LEGACY_FENCE)
 	struct decon_fence fence;
 #endif
+	struct decon_freq_hop freq_hop;
 
 	int frame_cnt;
 	int frame_cnt_target;
@@ -1139,6 +1147,11 @@ void decon_init_low_persistence_mode(struct decon_device *decon);
 
 /* multi-resolution related function */
 void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs);
+
+/* DPHY PLL frequency hopping feature related functions */
+void dpu_init_freq_hop(struct decon_device *decon);
+void dpu_update_freq_hop(struct decon_device *decon);
+void dpu_set_freq_hop(struct decon_device *decon, bool en);
 
 /* internal only function API */
 int decon_check_var(struct fb_var_screeninfo *var, struct fb_info *info);

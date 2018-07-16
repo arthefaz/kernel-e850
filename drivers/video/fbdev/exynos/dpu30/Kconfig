@@ -115,6 +115,11 @@ config SUPPORT_KERNEL_4_9
         depends on EXYNOS_DPU20
         default n
 
+config EXYNOS_FREQ_HOP
+	bool "Support DPHY PLL Frequency Hopping"
+        depends on EXYNOS_DPU20
+        default n
+
 endif
 
 source "drivers/video/fbdev/exynos/dpu20/panels/Kconfig"
