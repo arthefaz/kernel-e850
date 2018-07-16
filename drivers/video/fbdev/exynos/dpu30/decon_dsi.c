@@ -994,3 +994,43 @@ void decon_init_low_persistence_mode(struct decon_device *decon)
 	decon->low_persistence = true;
 	decon_info("display supports low persistence mode\n");
 }
+
+void dpu_init_freq_hop(struct decon_device *decon)
+{
+	if (IS_ENABLED(CONFIG_EXYNOS_FREQ_HOP)) {
+		decon->freq_hop.enabled = true;
+		decon->freq_hop.target_m = decon->lcd_info->dphy_pms.m;
+		decon->freq_hop.request_m = decon->lcd_info->dphy_pms.m;
+	} else {
+		decon->freq_hop.enabled = false;
+	}
+}
+
+void dpu_update_freq_hop(struct decon_device *decon)
+{
+	if (!decon->freq_hop.enabled)
+		return;
+
+	decon->freq_hop.target_m = decon->freq_hop.request_m;
+}
+
+void dpu_set_freq_hop(struct decon_device *decon, bool en)
+{
+	struct stdphy_pms *pms;
+	u32 target_m = decon->freq_hop.target_m;
+
+	if ((decon->dt.out_type != DECON_OUT_DSI) || (!decon->freq_hop.enabled))
+		return;
+
+	pms = &decon->lcd_info->dphy_pms;
+	if (pms->m != target_m) {
+		if (!en) {
+			pms->m = decon->freq_hop.target_m;
+			target_m = 0;
+			decon_info("%s: en(%d), pmsk[%d %d %d %d]\n", __func__,
+					en, pms->p, pms->m, pms->s, pms->k);
+		}
+		v4l2_subdev_call(decon->out_sd[0], core, ioctl,
+				DSIM_IOC_SET_FREQ_HOP, &target_m);
+	}
+}

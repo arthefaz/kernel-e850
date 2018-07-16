@@ -395,5 +395,6 @@ static inline bool IS_DSIM_OFF_STATE(struct dsim_device *dsim)
 #define DSIM_IOC_SET_CONFIG		_IOW('D', 10, u32)
 #define DSIM_IOC_DOZE			_IOW('D', 20, u32)
 #define DSIM_IOC_DOZE_SUSPEND		_IOW('D', 21, u32)
+#define DSIM_IOC_SET_FREQ_HOP		_IOW('D', 30, u32)
 
 #endif /* __SAMSUNG_DSIM_H__ */

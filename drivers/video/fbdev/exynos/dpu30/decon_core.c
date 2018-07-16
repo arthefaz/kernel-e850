@@ -1721,6 +1721,9 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 	/* apply window update configuration to DECON, DSIM and panel */
 	dpu_set_win_update_config(decon, regs);
 
+	/* request to change DPHY PLL frequency */
+	dpu_set_freq_hop(decon, true);
+
 	err_cnt = decon_set_dpp_config(decon, regs);
 	if (!regs->num_of_window) {
 		decon_err("decon%d: num_of_window=0 during dpp_config(err_cnt:%d)\n",
@@ -2164,6 +2167,12 @@ end:
 	decon->bts.ops->bts_update_bw(decon, regs, 1);
 #endif
 
+	/*
+	 * After shadow update, changed PLL is applied and
+	 * target M value is stored
+	 */
+	dpu_set_freq_hop(decon, false);
+
 	decon_dpp_stop(decon, false);
 }
 
@@ -2400,6 +2409,13 @@ static int decon_set_win_config(struct decon_device *decon,
 	list_add_tail(&regs->list, &decon->up.list);
 	atomic_inc(&decon->up.remaining_frame);
 	mutex_unlock(&decon->up.lock);
+
+	/*
+	 * target m value is updated by user requested m value.
+	 * target m value will be applied to DPHY PLL in update handler work
+	 */
+	dpu_update_freq_hop(decon);
+
 	kthread_queue_work(&decon->up.worker, &decon->up.work);
 
 	mutex_unlock(&decon->lock);
@@ -3811,6 +3827,8 @@ static int decon_probe(struct platform_device *pdev)
 	decon->itmon_nb.notifier_call = decon_itmon_notifier;
 	itmon_notifier_chain_register(&decon->itmon_nb);
 #endif
+
+	dpu_init_freq_hop(decon);
 
 	ret = decon_initial_display(decon, false);
 	if (ret)

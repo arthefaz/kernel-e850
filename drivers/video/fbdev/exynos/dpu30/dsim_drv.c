@@ -989,6 +989,23 @@ static int dsim_s_stream(struct v4l2_subdev *sd, int enable)
 		return dsim_disable(dsim);
 }
 
+static int dsim_set_freq_hop(struct dsim_device *dsim, u32 target_m)
+{
+	struct stdphy_pms *pms;
+
+	if (!IS_DSIM_ON_STATE(dsim)) {
+		dsim_err("%s: dsim%d is off state\n", __func__, dsim->id);
+		return -EINVAL;
+	}
+
+	pms = &dsim->lcd_info.dphy_pms;
+	/* If target M value is 0, frequency hopping will be disabled */
+	dsim_reg_set_dphy_freq_hopping(dsim->id, pms->p, target_m, pms->k,
+			(target_m > 0) ? 1 : 0);
+
+	return 0;
+}
+
 static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	struct dsim_device *dsim = container_of(sd, struct dsim_device, sd);
@@ -1023,6 +1040,10 @@ static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 
 	case DSIM_IOC_DOZE_SUSPEND:
 		ret = dsim_doze_suspend(dsim);
+		break;
+
+	case DSIM_IOC_SET_FREQ_HOP:
+		ret = dsim_set_freq_hop(dsim, *((u32 *)arg));
 		break;
 
 	default:

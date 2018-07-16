@@ -1448,6 +1448,62 @@ static const struct file_operations decon_hiber_cnt_fops = {
 };
 #endif
 
+static int decon_debug_freq_hop_show(struct seq_file *s, void *unused)
+{
+	struct decon_device *decon = get_decon_drvdata(0);
+
+	seq_printf(s, "%u\n", decon->freq_hop.request_m);
+
+	return 0;
+}
+
+static int decon_debug_freq_hop_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, decon_debug_freq_hop_show, inode->i_private);
+}
+
+static ssize_t decon_debug_freq_hop_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *f_ops)
+{
+	struct decon_device *decon = get_decon_drvdata(0);
+	char *buf_data;
+	int ret;
+
+	if (!decon->freq_hop.enabled)
+		return 0;
+
+	buf_data = kmalloc(count, GFP_KERNEL);
+	if (buf_data == NULL)
+		return count;
+
+	ret = copy_from_user(buf_data, buf, count);
+	if (ret < 0)
+		goto out;
+
+	/*
+	 * The synchronization is required when request_m value is updated
+	 * between writing sysfs node of "request_m" and calling
+	 * S3CFB_WIN_CONFIG ioctl.
+	 */
+	mutex_lock(&decon->lock);
+	ret = sscanf(buf_data, "%u", &decon->freq_hop.request_m);
+	mutex_unlock(&decon->lock);
+	if (ret < 0)
+		goto out;
+
+out:
+	kfree(buf_data);
+	return count;
+}
+
+static const struct file_operations decon_freq_hop_fops = {
+	.open = decon_debug_freq_hop_open,
+	.write = decon_debug_freq_hop_write,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+
 int decon_create_debugfs(struct decon_device *decon)
 {
 	char name[MAX_NAME_SIZE];
@@ -1594,6 +1650,14 @@ int decon_create_debugfs(struct decon_device *decon)
 			goto err_debugfs;
 		}
 #endif
+		decon->d.debug_freq_hop = debugfs_create_file("request_m",
+				0444, decon->d.debug_root, NULL, &decon_freq_hop_fops);
+		if (!decon->d.debug_freq_hop) {
+			decon_err("failed to create request m value file\n");
+			ret = -ENOENT;
+			goto err_debugfs;
+		}
+
 	}
 
 	return 0;
