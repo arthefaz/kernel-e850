@@ -41,6 +41,8 @@
 #include "./panels/s6e3ha6_param.h"
 #elif defined(CONFIG_EXYNOS_DECON_LCD_S6E3AA2)
 #include "./panels/s6e3aa2_param.h"
+#elif defined(CONFIG_EXYNOS_DECON_LCD_S6E3HA8)
+#include "./panels/s6e3ha8_param.h"
 #endif
 
 extern int dsim_log_level;
