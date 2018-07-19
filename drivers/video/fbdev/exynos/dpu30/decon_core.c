@@ -1444,7 +1444,10 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	/*
 	 * To avoid SysMMU page fault due to small buffer allocation
 	 * bpp = 12 : (NV12, NV21) check LUMA side for simplication
-	 * bpp = 15 : (8+2_10bit)
+	 * bpp = 15 : (8+2_10bit, NV12)
+	 * bpp = 24 : (P010_10bit)
+	 * bpp = 20 : (8+2_10bit, NV16)
+	 * bpp = 32 : (P210_10bit)
 	 * bpp = 16 : (RGB16 formats)
 	 * bpp = 32 : (RGB32 formats)
 	 */
@@ -1452,12 +1455,8 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	 * Also bpp macro is not matched with this. In case of YUV format, each plane's
 	 * bpp is needed.
 	 */
-	if (dpu_get_bpp(config->format) == 12) {
-		byte_per_pixel = 1;
-	} else if (dpu_get_bpp(config->format) == 15) {
-		/* It should be 1.25 byte per pixel of Y plane.
-		 * So 1 byte is used instead of floating point.
-		 */
+	if (is_yuv(config)) {
+		/* this must be corrected & separated for 10-bit YUV cases */
 		byte_per_pixel = 1;
 	} else if (dpu_get_bpp(config->format) == 16) {
 		byte_per_pixel = 2;
