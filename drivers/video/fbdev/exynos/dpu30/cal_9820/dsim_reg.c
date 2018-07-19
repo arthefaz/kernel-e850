@@ -2507,6 +2507,7 @@ void dsim_reg_set_dphy_freq_hopping(u32 id, u32 p, u32 m, u32 k, u32 en)
 	u32 pll_stable_cnt = (PLL_SLEEP_CNT_MULT + PLL_SLEEP_CNT_MARGIN) * p;
 
 	if (en) {
+		dsim_reg_set_pll_sleep_enable(id, false);
 		dsim_reg_set_dphy_use_shadow(id, 1);
 		dsim_reg_set_dphy_pll_stable_cnt(id, pll_stable_cnt);
 
@@ -2524,6 +2525,7 @@ void dsim_reg_set_dphy_freq_hopping(u32 id, u32 p, u32 m, u32 k, u32 en)
 	} else {
 		dsim_reg_set_dphy_use_shadow(id, 0);
 		dsim_reg_set_dphy_shadow_update_req(id, 0);
+		dsim_reg_set_pll_sleep_enable(id, true);
 	}
 }
 #endif

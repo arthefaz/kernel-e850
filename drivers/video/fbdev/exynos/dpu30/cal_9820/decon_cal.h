@@ -320,6 +320,11 @@ int decon_check_global_limitation(struct decon_device *decon,
 
 /* TODO: this will be removed later */
 void decon_reg_update_req_global(u32 id);
+
+/* PLL sleep related functions */
+void decon_reg_set_pll_sleep(u32 id, u32 en);
+void decon_reg_set_pll_wakeup(u32 id, u32 en);
+
 /*********************************************************************/
 
 #endif /* __SAMSUNG_DECON_CAL_H__ */
