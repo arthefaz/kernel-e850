@@ -157,20 +157,29 @@ static inline u32 dpu_bts_get_aclk_period_time(u32 aclk_mhz)
 
 /* find min-ACLK to meet latency */
 static u32 dpu_bts_find_latency_meet_aclk(u32 lat_cycle, u32 line_time,
-		u32 vbp, u32 aclk_disp)
+		u32 criteria_v, u32 aclk_disp,
+		enum decon_pixel_format fmt, bool is_yuv)
 {
 	u32 aclk_mhz = aclk_disp / 1000UL;
 	u32 aclk_period, lat_time;
 	u32 lat_time_max;
+	u32 bpp = 32;
+	u32 lat_inc = 0;
 
 	/* lat_time_max: usec x 1000 */
-	lat_time_max = line_time * vbp;
+	lat_time_max = line_time * criteria_v;
+
+	/* check 10-bit yuv format image */
+	bpp = dpu_get_bpp(fmt);
+	if (is_yuv && ((bpp == 15 || bpp == 24) || (bpp == 20 || bpp == 32)))
+		lat_inc = 1;
 
 	/* find min-ACLK to able to cover initial latency */
 	while (1) {
 		/* aclk_period: nsec x 1000 */
 		aclk_period = dpu_bts_get_aclk_period_time(aclk_mhz);
 		lat_time = (lat_cycle * aclk_period) / 1000UL;
+		lat_time = lat_time << lat_inc;
 		lat_time += TOTAL_BUS_LATENCY;
 
 		DPU_DEBUG_BTS("\tloop: (aclk_period = %d) (lat_time = %d)\n",
@@ -198,9 +207,11 @@ u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 	u32 src_w, src_h;
 	bool is_rotate = is_rotation(config) ? true : false;
 	bool is_comp = is_afbc(config) ? true : false;
+	bool yuv_fmt = is_yuv(config) ? true : false;
 	u32 is_scale;
 	u32 lat_cycle, line_time;
 	u32 cycle_per_line, line_mem_cnt;
+	u32 criteria_v, tot_v;
 
 	if (is_rotate) {
 		src_w = src->h;
@@ -244,8 +255,16 @@ u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 			line_mem_cnt);
 	line_time = dpu_bts_get_one_line_time(decon->lcd_info);
 
+	if (decon->lcd_info->mode == DECON_VIDEO_MODE)
+		criteria_v = decon->lcd_info->vbp;
+	else {
+		/* command mode margin : apply 20% of v-blank time */
+		tot_v = decon->lcd_info->vfp + decon->lcd_info->vsa
+			+ decon->lcd_info->vbp;
+		criteria_v = tot_v - (tot_v * 20 / 100);
+	}
 	aclk_disp = dpu_bts_find_latency_meet_aclk(lat_cycle, line_time,
-			decon->lcd_info->vbp, aclk_disp);
+			criteria_v, aclk_disp, config->format, yuv_fmt);
 
 	DPU_DEBUG_BTS("\t[R:%d C:%d S:%d] (lat_cycle=%d) (line_time=%d)\n",
 		is_rotate, is_comp, is_scale, lat_cycle, line_time);
@@ -369,6 +388,7 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 	struct decon_win_config *config = regs->dpp_config;
 	struct bts_decon_info bts_info;
 	enum dpp_rotate rot;
+	enum decon_pixel_format fmt;
 	int idx, i;
 
 	if (!decon->bts.enabled)
@@ -391,7 +411,8 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 			continue;
 		}
 
-		bts_info.dpp[idx].bpp = dpu_get_bpp(config[i].format);
+		fmt = config[i].format;
+		bts_info.dpp[idx].bpp = dpu_get_bpp(fmt);
 		bts_info.dpp[idx].src_w = config[i].src.w;
 		bts_info.dpp[idx].src_h = config[i].src.h;
 		bts_info.dpp[idx].dst.x1 = config[i].dst.x;
@@ -400,6 +421,16 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 		bts_info.dpp[idx].dst.y2 = config[i].dst.y + config[i].dst.h;
 		rot = config[i].dpp_parm.rot;
 		bts_info.dpp[idx].rotation = (rot > DPP_ROT_180) ? true : false;
+
+		/*
+		 * Need to apply twice instead of x1.25 as many bandwidth
+		 * of 8-bit YUV if it is a 8P2 format rotation.
+		 */
+		if (bts_info.dpp[idx].rotation) {
+			if (fmt == DECON_PIXEL_FORMAT_NV12M_S10B ||
+				fmt == DECON_PIXEL_FORMAT_NV21M_S10B)
+					bts_info.dpp[idx].bpp = 24;
+		}
 
 		DPU_DEBUG_BTS("\tDPP%d : bpp(%d) src w(%d) h(%d) rot(%d)\n",
 				idx, bts_info.dpp[idx].bpp,

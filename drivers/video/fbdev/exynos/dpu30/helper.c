@@ -148,6 +148,10 @@ u32 dpu_get_bpp(enum decon_pixel_format fmt)
 		return 32;
 
 	case DECON_PIXEL_FORMAT_RGBA_5551:
+	case DECON_PIXEL_FORMAT_BGRA_5551:
+	case DECON_PIXEL_FORMAT_ABGR_4444:
+	case DECON_PIXEL_FORMAT_RGBA_4444:
+	case DECON_PIXEL_FORMAT_BGRA_4444:
 	case DECON_PIXEL_FORMAT_RGB_565:
 	case DECON_PIXEL_FORMAT_BGR_565:
 		return 16;
@@ -155,15 +159,19 @@ u32 dpu_get_bpp(enum decon_pixel_format fmt)
 	case DECON_PIXEL_FORMAT_NV12N_10B:
 	case DECON_PIXEL_FORMAT_NV12M_S10B:
 	case DECON_PIXEL_FORMAT_NV21M_S10B:
+		return 15;
 	case DECON_PIXEL_FORMAT_NV12M_P010:
 	case DECON_PIXEL_FORMAT_NV21M_P010:
 	case DECON_PIXEL_FORMAT_NV12_P010:
+		return 24;
+
 	/* YUV422 */
 	case DECON_PIXEL_FORMAT_NV16M_P210:
 	case DECON_PIXEL_FORMAT_NV61M_P210:
+		return 32;
 	case DECON_PIXEL_FORMAT_NV16M_S10B:
 	case DECON_PIXEL_FORMAT_NV61M_S10B:
-		return 15;
+		return 20;
 
 	case DECON_PIXEL_FORMAT_NV12:
 	case DECON_PIXEL_FORMAT_NV21:
@@ -174,13 +182,16 @@ u32 dpu_get_bpp(enum decon_pixel_format fmt)
 	case DECON_PIXEL_FORMAT_YUV420M:
 	case DECON_PIXEL_FORMAT_YVU420M:
 	case DECON_PIXEL_FORMAT_NV12N:
+		return 12;
+
 	/* YUV422 */
 	case DECON_PIXEL_FORMAT_NV16:
 	case DECON_PIXEL_FORMAT_NV61:
 	case DECON_PIXEL_FORMAT_YVU422_3P:
-		return 12;
+		return 16;
 
 	default:
+		decon_err("%s: invalid format(%d)\n", __func__, fmt);
 		break;
 	}
 
