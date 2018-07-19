@@ -1704,7 +1704,7 @@ static void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 }
 
 #if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
-static void decon_reg_set_pll_sleep(u32 id, u32 en)
+void decon_reg_set_pll_sleep(u32 id, u32 en)
 {
 	u32 val, mask;
 
@@ -1718,7 +1718,7 @@ static void decon_reg_set_pll_sleep(u32 id, u32 en)
 	decon_write_mask(id, PLL_SLEEP_CONTROL, val, mask);
 }
 
-static void decon_reg_set_pll_wakeup(u32 id, u32 en)
+void decon_reg_set_pll_wakeup(u32 id, u32 en)
 {
 	u32 val, mask;
 
