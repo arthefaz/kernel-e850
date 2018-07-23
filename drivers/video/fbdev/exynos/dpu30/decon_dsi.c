@@ -997,6 +997,7 @@ void decon_init_low_persistence_mode(struct decon_device *decon)
 
 void dpu_init_freq_hop(struct decon_device *decon)
 {
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 	if (IS_ENABLED(CONFIG_EXYNOS_FREQ_HOP)) {
 		decon->freq_hop.enabled = true;
 		decon->freq_hop.target_m = decon->lcd_info->dphy_pms.m;
@@ -1004,18 +1005,22 @@ void dpu_init_freq_hop(struct decon_device *decon)
 	} else {
 		decon->freq_hop.enabled = false;
 	}
+#endif
 }
 
 void dpu_update_freq_hop(struct decon_device *decon)
 {
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 	if (!decon->freq_hop.enabled)
 		return;
 
 	decon->freq_hop.target_m = decon->freq_hop.request_m;
+#endif
 }
 
 void dpu_set_freq_hop(struct decon_device *decon, bool en)
 {
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 	struct stdphy_pms *pms;
 	u32 target_m = decon->freq_hop.target_m;
 
@@ -1042,4 +1047,5 @@ void dpu_set_freq_hop(struct decon_device *decon, bool en)
 			decon_reg_set_pll_sleep(decon->id, true);
 		}
 	}
+#endif
 }
