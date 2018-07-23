@@ -991,6 +991,7 @@ static int dsim_s_stream(struct v4l2_subdev *sd, int enable)
 
 static int dsim_set_freq_hop(struct dsim_device *dsim, u32 target_m)
 {
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 	struct stdphy_pms *pms;
 
 	if (!IS_DSIM_ON_STATE(dsim)) {
@@ -1002,6 +1003,7 @@ static int dsim_set_freq_hop(struct dsim_device *dsim, u32 target_m)
 	/* If target M value is 0, frequency hopping will be disabled */
 	dsim_reg_set_dphy_freq_hopping(dsim->id, pms->p, target_m, pms->k,
 			(target_m > 0) ? 1 : 0);
+#endif
 
 	return 0;
 }
