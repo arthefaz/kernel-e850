@@ -1349,16 +1349,16 @@ void displayport_reg_set_avi_infoframe(struct infoframe avi_infoframe)
 {
 	u32 avi_infoframe_data = 0;
 
-	avi_infoframe_data = ((u32)avi_infoframe.data[3] << 24) || ((u32)avi_infoframe.data[2] << 16)
-			|| ((u32)avi_infoframe.data[1] << 8) || (u32)avi_infoframe.data[0];
+	avi_infoframe_data = ((u32)avi_infoframe.data[3] << 24) | ((u32)avi_infoframe.data[2] << 16)
+			| ((u32)avi_infoframe.data[1] << 8) | (u32)avi_infoframe.data[0];
 	displayport_write(SST1_INFOFRAME_AVI_PACKET_DATA_SET0, avi_infoframe_data);
 
-	avi_infoframe_data = ((u32)avi_infoframe.data[7] << 24) || ((u32)avi_infoframe.data[6] << 16)
-			|| ((u32)avi_infoframe.data[5] << 8) || (u32)avi_infoframe.data[4];
+	avi_infoframe_data = ((u32)avi_infoframe.data[7] << 24) | ((u32)avi_infoframe.data[6] << 16)
+			| ((u32)avi_infoframe.data[5] << 8) | (u32)avi_infoframe.data[4];
 	displayport_write(SST1_INFOFRAME_AVI_PACKET_DATA_SET1, avi_infoframe_data);
 
-	avi_infoframe_data = ((u32)avi_infoframe.data[11] << 24) || ((u32)avi_infoframe.data[10] << 16)
-			|| ((u32)avi_infoframe.data[9] << 8) || (u32)avi_infoframe.data[8];
+	avi_infoframe_data = ((u32)avi_infoframe.data[11] << 24) | ((u32)avi_infoframe.data[10] << 16)
+			| ((u32)avi_infoframe.data[9] << 8) | (u32)avi_infoframe.data[8];
 	displayport_write(SST1_INFOFRAME_AVI_PACKET_DATA_SET2, avi_infoframe_data);
 
 	avi_infoframe_data = (u32)avi_infoframe.data[12];
@@ -1372,15 +1372,15 @@ void displayport_reg_set_audio_infoframe(struct infoframe audio_infoframe, u32 e
 {
 	u32 audio_infoframe_data = 0;
 
-	audio_infoframe_data = ((u32)audio_infoframe.data[3] << 24) || ((u32)audio_infoframe.data[2] << 16)
-			|| ((u32)audio_infoframe.data[1] << 8) || (u32)audio_infoframe.data[0];
+	audio_infoframe_data = ((u32)audio_infoframe.data[3] << 24) | ((u32)audio_infoframe.data[2] << 16)
+			| ((u32)audio_infoframe.data[1] << 8) | (u32)audio_infoframe.data[0];
 	displayport_write(SST1_INFOFRAME_AUDIO_PACKET_DATA_SET0, audio_infoframe_data);
 
-	audio_infoframe_data = ((u32)audio_infoframe.data[7] << 24) || ((u32)audio_infoframe.data[6] << 16)
-			|| ((u32)audio_infoframe.data[5] << 8) || (u32)audio_infoframe.data[4];
+	audio_infoframe_data = ((u32)audio_infoframe.data[7] << 24) | ((u32)audio_infoframe.data[6] << 16)
+			| ((u32)audio_infoframe.data[5] << 8) | (u32)audio_infoframe.data[4];
 	displayport_write(SST1_INFOFRAME_AUDIO_PACKET_DATA_SET1, audio_infoframe_data);
 
-	audio_infoframe_data = ((u32)audio_infoframe.data[10] << 8) || (u32)audio_infoframe.data[9];
+	audio_infoframe_data = ((u32)audio_infoframe.data[10] << 8) | (u32)audio_infoframe.data[9];
 	displayport_write(SST1_INFOFRAME_AUDIO_PACKET_DATA_SET2, audio_infoframe_data);
 
 	displayport_write_mask(SST1_INFOFRAME_UPDATE_CONTROL, en, AUDIO_INFO_UPDATE);
