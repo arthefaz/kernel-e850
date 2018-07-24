@@ -968,6 +968,8 @@ int displayport_enable(struct displayport_device *displayport);
 int displayport_disable(struct displayport_device *displayport);
 
 void displayport_reg_init(void);
+void displayport_reg_deinit(void);
+void displayport_reg_sw_reset(void);
 void displayport_reg_set_interrupt_mask(enum displayport_interrupt_mask param, u8 set);
 u32 displayport_reg_get_interrupt_and_clear(u32 interrupt_status_register);
 void displayport_reg_start(void);
