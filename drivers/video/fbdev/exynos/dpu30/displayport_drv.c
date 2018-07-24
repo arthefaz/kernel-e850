@@ -695,6 +695,7 @@ void displayport_hpd_changed(int state)
 		displayport->dyn_range = VESA_RANGE;
 		displayport->hpd_state = HPD_PLUG;
 		displayport->auto_test_mode = 0;
+		displayport->state = DISPLAYPORT_STATE_OFF;
 
 		/* PHY power on */
 		displayport_reg_init(); /* for AUX ch read/write. */
