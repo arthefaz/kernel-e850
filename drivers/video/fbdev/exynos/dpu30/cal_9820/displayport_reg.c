@@ -1255,9 +1255,12 @@ void displayport_reg_lh_p_ch_power(u32 en)
 	}
 }
 
-void displayport_reg_sw_function_en(void)
+void displayport_reg_sw_function_en(u32 en)
 {
-	displayport_write_mask(SYSTEM_SW_FUNCTION_ENABLE, 1, SW_FUNC_EN);
+	if (en)
+		displayport_write_mask(SYSTEM_SW_FUNCTION_ENABLE, 1, SW_FUNC_EN);
+	else
+		displayport_write_mask(SYSTEM_SW_FUNCTION_ENABLE, 0, SW_FUNC_EN);
 }
 
 void displayport_reg_phy_init(void)
@@ -1288,7 +1291,7 @@ void displayport_reg_init(void)
 
 	displayport_reg_function_enable();
 	displayport_reg_lh_p_ch_power(1);
-	displayport_reg_sw_function_en();
+	displayport_reg_sw_function_en(1);
 
 	displayport_reg_set_interrupt(1);
 	displayport_reg_set_lane_map_config();
@@ -1437,6 +1440,7 @@ void displayport_reg_video_mute(u32 en)
 void displayport_reg_stop(void)
 {
 	displayport_write_mask(SST1_VIDEO_ENABLE, 0, VIDEO_EN);
+	displayport_reg_sw_function_en(0);
 }
 
 /* Set SA CRC, For Sorting Vector */
