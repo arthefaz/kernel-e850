@@ -592,7 +592,7 @@
 #define ODD_TU_CONTROL				(0x01 << 4)
 
 #define SST1_MAIN_FIFO_CONTROL			(0x5004)
-#define CLEAR_AUDIO_FIFO			(0x03 << 3)
+#define CLEAR_AUDIO_FIFO			(0x01 << 3)
 #define CLEAR_PIXEL_MAPPING_FIFO		(0x01 << 2)
 #define CLEAR_MAPI_FIFO				(0x01 << 1)
 #define CLEAR_GL_DATA_FIFO			(0x01 << 0)
@@ -793,6 +793,7 @@
 #define HOR_BLANK_AUD_BW_ADJ			(0x01 << 0)
 
 #define SST1_AUDIO_CONTROL			(0x5800)
+#define DMA_REQ_GEN_EN				(0x01 << 30)
 #define SW_AUD_CODING_TYPE			(0x07 << 27)
 #define AUD_DMA_IF_LTNCY_TRG_MODE		(0x01 << 26)
 #define AUD_DMA_IF_MODE_CONFIG			(0x01 << 25)

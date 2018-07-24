@@ -1001,28 +1001,13 @@ void displayport_reg_set_video_bist_mode(u32 en);
 void displayport_reg_set_audio_bist_mode(u32 en);
 void displayport_reg_lh_p_ch_power(u32 en);
 
-void displayport_reg_set_audio_m_n(audio_sync_mode audio_sync_mode,
-		enum audio_sampling_frequency audio_sampling_freq);
-void displayport_reg_set_audio_function_enable(u32 en);
-void displayport_reg_set_init_dma_config(void);
-void displayport_reg_set_dma_force_req_low(u32 en);
-void displayport_reg_set_dma_burst_size(enum audio_dma_word_length word_length);
-void displayport_reg_set_dma_pack_mode(enum audio_16bit_dma_mode dma_mode);
-void displayport_reg_set_pcm_size(enum audio_bit_per_channel audio_bit_size);
-void displayport_reg_set_audio_ch_status_same(u32 en);
-void displayport_reg_set_audio_ch(u32 audio_ch_cnt);
-void displayport_reg_set_audio_ch_mapping(u8 pkt_1, u8 pkt_2, u8 pkt_3, u8 pkt_4,
-						u8 pkt_5, u8 pkt_6, u8 pkt_7, u8 pkt_8);
-void displayport_reg_set_audio_fifo_function_enable(u32 en);
-void displayport_reg_set_audio_sampling_frequency
-		(enum audio_sampling_frequency audio_sampling_freq);
-void displayport_reg_set_dp_audio_enable(u32 en);
-void displayport_reg_set_audio_master_mode_enable(u32 en);
-void displayport_reg_set_ch_status_ch_cnt(u32 audio_ch_cnt);
-void displayport_reg_set_ch_status_word_length(enum audio_bit_per_channel audio_bit_size);
-void displayport_reg_set_ch_status_sampling_frequency(enum audio_sampling_frequency audio_sampling_freq);
-void displayport_reg_set_ch_status_clock_accuracy(enum audio_clock_accuracy clock_accuracy);
-void displayport_reg_wait_buf_full(void);
+void displayport_audio_enable(struct displayport_audio_config_data *audio_config_data);
+void displayport_audio_disable(void);
+void displayport_audio_wait_buf_full(void);
+void displayport_audio_dma_force_req_release(void);
+void displayport_audio_bist_enable(struct displayport_audio_config_data audio_config_data);
+void displayport_audio_init_config(void);
+void displayport_audio_bist_config(struct displayport_audio_config_data audio_config_data);
 
 void displayport_reg_set_hdcp22_system_enable(u32 en);
 void displayport_reg_set_hdcp22_mode(u32 en);
@@ -1043,7 +1028,6 @@ int edid_find_resolution(u16 xres, u16 yres, u16 refresh);
 u8 edid_read_checksum(void);
 u32 edid_audio_informs(void);
 
-int displayport_audio_bist_enable(struct displayport_audio_config_data audio_config_data);
 void displayport_reg_set_avi_infoframe(struct infoframe avi_infofrmae);
 void displayport_reg_set_audio_infoframe(struct infoframe audio_infofrmae, u32 en);
 void displayport_reg_set_hdr_infoframe(struct infoframe hdr_infofrmae, u32 en);
