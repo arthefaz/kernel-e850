@@ -154,6 +154,12 @@ enum displayport_interrupt_mask {
 #define FB_AUDIO_20BIT	(1 << 1)
 #define FB_AUDIO_16BIT	(1 << 0)
 
+#define FB_AUDIO_1CH (1)
+#define FB_AUDIO_2CH (1 << 1)
+#define FB_AUDIO_6CH (1 << 5)
+#define FB_AUDIO_8CH (1 << 7)
+#define FB_AUDIO_1N2CH (FB_AUDIO_1CH | FB_AUDIO_2CH)
+
 struct fb_audio {
 	u8 format;
 	u8 channel_count;
@@ -585,12 +591,18 @@ struct displayport_device {
 	enum displayport_dynamic_range_type dyn_range;
 	videoformat cur_video;
 
-	enum drm_state drm_start_state;
-	enum drm_state drm_smc_state;
-
 	struct edid_data rx_edid_data;
 
 	int idle_ip_index;
+	enum drm_state drm_start_state;
+	enum drm_state drm_smc_state;
+
+	u8 edid_manufacturer[4];
+	u32 edid_product;
+	u32 edid_serial;
+	u8 *edid_test_buf;
+
+	videoformat best_video;
 };
 
 struct displayport_debug_param {
@@ -660,6 +672,7 @@ struct displayport_supported_preset {
 	u32 h_sync_pol;
 	u8 vic;
 	char *name;
+	bool pro_audio_support;
 	bool edid_support_match;
 };
 
