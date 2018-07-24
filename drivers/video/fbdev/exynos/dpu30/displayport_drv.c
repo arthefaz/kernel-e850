@@ -699,6 +699,7 @@ void displayport_hpd_changed(int state)
 		displayport->state = DISPLAYPORT_STATE_OFF;
 
 		/* PHY power on */
+		displayport_reg_sw_reset();
 		displayport_reg_init(); /* for AUX ch read/write. */
 		usleep_range(10000, 11000);
 
@@ -770,6 +771,7 @@ void displayport_hpd_changed(int state)
 
 	return;
 HPD_FAIL:
+	displayport_reg_deinit();
 	displayport_reg_phy_disable();
 	pm_relax(displayport->dev);
 	displayport->hpd_current_state = 0;
@@ -1841,7 +1843,7 @@ int displayport_disable(struct displayport_device *displayport)
 	displayport_audio_disable();
 
 	displayport_reg_set_video_bist_mode(0);
-	displayport_reg_stop();
+	displayport_reg_deinit();
 	disable_irq(displayport->res.irq);
 
 	displayport_reg_phy_disable();

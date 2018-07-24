@@ -1508,6 +1508,11 @@ static int decon_reg_stop_perframe(u32 id, u32 dsi_idx,
 	timeout_value = 1000 / fps * 12 / 10 + 5;
 	ret = decon_reg_wait_run_is_off_timeout(id, timeout_value * MSEC);
 
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	if (psr->out_type == DECON_OUT_DP)
+		displayport_reg_lh_p_ch_power(0);
+#endif
+
 	decon_dbg("%s -\n", __func__);
 	return ret;
 }
@@ -1811,6 +1816,9 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 int decon_reg_start(u32 id, struct decon_mode_info *psr)
 {
 	int ret = 0;
+
+	if (psr->out_type == DECON_OUT_DP)
+		displayport_reg_lh_p_ch_power(1);
 
 	decon_reg_direct_on_off(id, 1);
 	decon_reg_update_req_global(id);
