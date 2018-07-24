@@ -672,17 +672,6 @@ static void displayport_set_switch_state(struct displayport_device *displayport,
 	displayport_info("HPD status = %d\n", state);
 }
 
-void displayport_audio_init_config(void)
-{
-	displayport_reg_set_dma_force_req_low(1);
-	displayport_reg_set_audio_m_n(ASYNC_MODE, FS_48KHZ);
-	displayport_reg_set_audio_function_enable(1);
-	displayport_reg_set_audio_sampling_frequency(FS_48KHZ);
-	displayport_reg_set_dp_audio_enable(1);
-	displayport_reg_set_audio_master_mode_enable(1);
-	displayport_info("displayport_audio_init_config\n");
-}
-
 void displayport_hpd_changed(int state)
 {
 	int ret;
@@ -1090,7 +1079,7 @@ static int displayport_Automated_Test_Request(void)
 		audio_config_data.audio_fs =  (val[0] & TEST_AUDIO_SAMPLING_RATE);
 		audio_config_data.audio_channel_cnt = (val[0] & TEST_AUDIO_CHANNEL_COUNT) >> 4;
 		audio_config_data.audio_channel_cnt++;
-		displayport_audio_bist_enable(audio_config_data);
+		displayport_audio_bist_config(audio_config_data);
 
 	} else {
 
@@ -1553,64 +1542,6 @@ static int displayport_set_hdr_infoframe(struct exynos_hdr_static_info *hdr_info
 	return 0;
 }
 
-void displayport_audio_wait_buf_full(void)
-{
-	displayport_reg_set_audio_master_mode_enable(0);
-	displayport_reg_wait_buf_full();
-
-	displayport_info("displayport_audio_wait_buf_full\n");
-}
-
-void displayport_wait_audio_buf_empty(struct displayport_device *displayport)
-{
-	u32 cnt = 1000;
-
-	do {
-		cnt--;
-		udelay(1);
-	} while (!displayport->audio_buf_empty_check && cnt);
-
-	if (!cnt)
-		displayport_err("%s is timeout.\n", __func__);
-}
-
-void displayport_audio_disable(void)
-{
-	struct displayport_device *displayport = get_displayport_drvdata();
-
-	if (displayport_read_mask(SST1_AUDIO_ENABLE, AUDIO_EN) == 1) {
-		displayport_reg_set_dma_force_req_low(1);
-		udelay(200);
-		displayport_reg_set_dp_audio_enable(0);
-		displayport_reg_set_audio_fifo_function_enable(0);
-		displayport_reg_set_audio_ch(1);
-		displayport->audio_buf_empty_check = 0;
-		displayport_reg_set_audio_master_mode_enable(1);
-		displayport_wait_audio_buf_empty(displayport);
-		displayport_reg_set_audio_master_mode_enable(0);
-		displayport_info("audio_disable\n");
-	} else
-		displayport_info("audio_disable, AUDIO_EN = 0\n");
-
-	displayport->audio_state = 0;
-	wake_up_interruptible(&displayport->audio_wait);
-}
-
-void displayport_audio_dma_force_req_release(void)
-{
-	displayport_reg_set_dma_force_req_low(0);
-}
-
-static int displayport_set_audio_ch_status(struct displayport_audio_config_data *audio_config_data)
-{
-	displayport_reg_set_ch_status_ch_cnt(audio_config_data->audio_channel_cnt);
-	displayport_reg_set_ch_status_word_length(audio_config_data->audio_bit);
-	displayport_reg_set_ch_status_sampling_frequency(audio_config_data->audio_fs);
-	displayport_reg_set_ch_status_clock_accuracy(NOT_MATCH);
-
-	return 0;
-}
-
 int displayport_audio_config(struct displayport_audio_config_data *audio_config_data)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
@@ -1625,64 +1556,31 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 		return 0;
 
 	if (audio_config_data->audio_enable == AUDIO_ENABLE) {
-		/* channel mapping: FL, FR, C, SW, RL, RR */
-		displayport_reg_set_audio_ch_mapping(1, 2, 4, 3, 5, 6, 7, 8);
-
-		displayport_reg_set_audio_m_n(ASYNC_MODE, audio_config_data->audio_fs);
-		displayport_reg_set_audio_function_enable(audio_config_data->audio_enable);
-		displayport_reg_set_init_dma_config();
-		displayport_reg_set_dma_burst_size(audio_config_data->audio_word_length);
-		displayport_reg_set_dma_pack_mode(audio_config_data->audio_packed_mode);
-		displayport_reg_set_pcm_size(audio_config_data->audio_bit);
-		displayport_reg_set_audio_ch(audio_config_data->audio_channel_cnt);
-		displayport_reg_set_audio_fifo_function_enable(audio_config_data->audio_enable);
-		displayport_reg_set_audio_ch_status_same(1);
-		displayport_reg_set_audio_sampling_frequency(audio_config_data->audio_fs);
-		displayport_reg_set_dp_audio_enable(audio_config_data->audio_enable);
+		displayport_audio_enable(audio_config_data);
 		displayport_set_audio_infoframe(audio_config_data);
-		displayport_set_audio_ch_status(audio_config_data);
-		displayport_reg_set_audio_master_mode_enable(audio_config_data->audio_enable);
-
-		displayport->audio_state = 1;
-	} else if (audio_config_data->audio_enable == AUDIO_DISABLE)
+		displayport->audio_state = AUDIO_ENABLE;
+	} else if (audio_config_data->audio_enable == AUDIO_DISABLE) {
 		displayport_audio_disable();
-	else if (audio_config_data->audio_enable == AUDIO_WAIT_BUF_FULL)
+		displayport_set_audio_infoframe(audio_config_data);
+		displayport->audio_state = AUDIO_DISABLE;
+		wake_up_interruptible(&displayport->audio_wait);
+	} else if (audio_config_data->audio_enable == AUDIO_WAIT_BUF_FULL) {
 		displayport_audio_wait_buf_full();
-	else if (audio_config_data->audio_enable == AUDIO_DMA_REQ_HIGH)
+		displayport->audio_state = AUDIO_WAIT_BUF_FULL;
+	} else if (audio_config_data->audio_enable == AUDIO_DMA_REQ_HIGH) {
 		displayport_audio_dma_force_req_release();
-	else
+		displayport->audio_state = AUDIO_DMA_REQ_HIGH;
+	} else
 		displayport_info("Not support audio_enable = %d\n", audio_config_data->audio_enable);
 
 	return ret;
 }
 EXPORT_SYMBOL(displayport_audio_config);
 
-int displayport_audio_bist_enable(struct displayport_audio_config_data audio_config_data)
+void displayport_audio_bist_config(struct displayport_audio_config_data audio_config_data)
 {
-	int ret = 0;
-
-	displayport_info("displayport_audio_bist\n");
-	displayport_info("audio_enable = %d\n", audio_config_data.audio_enable);
-	displayport_info("audio_channel_cnt = %d\n", audio_config_data.audio_channel_cnt);
-	displayport_info("audio_fs = %d\n", audio_config_data.audio_fs);
-
-	if (audio_config_data.audio_enable == 1) {
-		displayport_reg_set_audio_m_n(ASYNC_MODE, audio_config_data.audio_fs);
-		displayport_reg_set_audio_function_enable(audio_config_data.audio_enable);
-
-		displayport_reg_set_audio_ch(audio_config_data.audio_channel_cnt);
-		displayport_reg_set_audio_fifo_function_enable(audio_config_data.audio_enable);
-		displayport_reg_set_audio_ch_status_same(1);
-		displayport_reg_set_audio_sampling_frequency(audio_config_data.audio_fs);
-		displayport_reg_set_dp_audio_enable(audio_config_data.audio_enable);
-		displayport_reg_set_audio_bist_mode(1);
-		displayport_set_audio_infoframe(&audio_config_data);
-		displayport_set_audio_ch_status(&audio_config_data);
-		displayport_reg_set_audio_master_mode_enable(audio_config_data.audio_enable);
-	} else
-		displayport_audio_disable();
-
-	return ret;
+	displayport_audio_bist_enable(audio_config_data);
+	displayport_set_audio_infoframe(&audio_config_data);
 }
 
 int displayport_dpcd_read_for_hdcp22(u32 address, u32 length, u8 *data)
@@ -2701,7 +2599,7 @@ static ssize_t displayport_test_bist_store(struct class *dev,
 		audio_config_data.audio_bit = 0;
 		audio_config_data.audio_packed_mode = 0;
 		audio_config_data.audio_word_length = 0;
-		displayport_audio_bist_enable(audio_config_data);
+		displayport_audio_bist_config(audio_config_data);
 		break;
 	default:
 		pr_err("%s: Not support command[%d]\n",

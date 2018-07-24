@@ -1757,6 +1757,160 @@ void displayport_reg_wait_buf_full(void)
 		displayport_err("%s is timeout.\n", __func__);
 }
 
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+void displayport_reg_set_dma_req_gen(u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	displayport_write_mask(SST1_AUDIO_CONTROL, val, DMA_REQ_GEN_EN);
+}
+
+void displayport_reg_set_clear_audio_fifo(void)
+{
+	displayport_write_mask(SST1_MAIN_FIFO_CONTROL, 1, CLEAR_AUDIO_FIFO);
+}
+#endif
+
+void displayport_set_audio_ch_status(struct displayport_audio_config_data *audio_config_data)
+{
+	displayport_reg_set_ch_status_ch_cnt(audio_config_data->audio_channel_cnt);
+	displayport_reg_set_ch_status_word_length(audio_config_data->audio_bit);
+	displayport_reg_set_ch_status_sampling_frequency(audio_config_data->audio_fs);
+	displayport_reg_set_ch_status_clock_accuracy(NOT_MATCH);
+}
+
+void displayport_wait_audio_buf_empty(struct displayport_device *displayport)
+{
+	u32 cnt = 1000;
+
+	do {
+		cnt--;
+		udelay(1);
+	} while (!displayport->audio_buf_empty_check && cnt);
+
+	if (!cnt)
+		displayport_err("%s is timeout.\n", __func__);
+}
+
+void displayport_audio_enable(struct displayport_audio_config_data *audio_config_data)
+{
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	/* channel mapping: FL, FR, C, SW, RL, RR */
+	displayport_reg_set_audio_ch_mapping(1, 2, 4, 3, 5, 6, 7, 8);
+
+	displayport_reg_set_audio_m_n(ASYNC_MODE, audio_config_data->audio_fs);
+	displayport_reg_set_audio_function_enable(audio_config_data->audio_enable);
+	displayport_reg_set_init_dma_config();
+	displayport_reg_set_dma_burst_size(audio_config_data->audio_word_length);
+	displayport_reg_set_dma_pack_mode(audio_config_data->audio_packed_mode);
+	displayport_reg_set_pcm_size(audio_config_data->audio_bit);
+	displayport_reg_set_audio_ch(audio_config_data->audio_channel_cnt);
+	displayport_reg_set_audio_fifo_function_enable(audio_config_data->audio_enable);
+	displayport_reg_set_audio_ch_status_same(1);
+	displayport_reg_set_audio_sampling_frequency(audio_config_data->audio_fs);
+	displayport_reg_set_dp_audio_enable(audio_config_data->audio_enable);
+	displayport_set_audio_ch_status(audio_config_data);
+	displayport_reg_set_audio_master_mode_enable(audio_config_data->audio_enable);
+#else
+	displayport_reg_set_audio_m_n(ASYNC_MODE, audio_config_data->audio_fs);
+	displayport_reg_set_audio_function_enable(audio_config_data->audio_enable);
+	displayport_reg_set_dma_burst_size(audio_config_data->audio_word_length);
+	displayport_reg_set_pcm_size(audio_config_data->audio_bit);
+	displayport_reg_set_dma_pack_mode(audio_config_data->audio_packed_mode);
+	displayport_reg_set_audio_ch(audio_config_data->audio_channel_cnt);
+	displayport_reg_set_audio_fifo_function_enable(audio_config_data->audio_enable);
+	displayport_reg_set_audio_sampling_frequency(audio_config_data->audio_fs);
+	/* channel mapping: FL, FR, C, SW, RL, RR */
+	displayport_reg_set_audio_ch_mapping(1, 2, 4, 3, 5, 6, 7, 8);
+	displayport_reg_set_dp_audio_enable(audio_config_data->audio_enable);
+	displayport_set_audio_ch_status(audio_config_data);
+	displayport_reg_set_audio_ch_status_same(1);
+	displayport_reg_set_dma_req_gen(1);
+	displayport_reg_set_audio_master_mode_enable(audio_config_data->audio_enable);
+#endif
+}
+
+void displayport_audio_disable(void)
+{
+	if (displayport_read_mask(SST1_AUDIO_ENABLE, AUDIO_EN) == 1) {
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
+		displayport_reg_set_dma_force_req_low(1);
+#endif
+		udelay(1000);
+		displayport_reg_set_dp_audio_enable(0);
+		displayport_reg_set_audio_fifo_function_enable(0);
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
+		displayport_reg_set_audio_ch(1);
+		displayport->audio_buf_empty_check = 0;
+		displayport_reg_set_audio_master_mode_enable(1);
+		displayport_wait_audio_buf_empty(displayport);
+		displayport_reg_set_audio_master_mode_enable(0);
+#else
+		displayport_reg_set_clear_audio_fifo();
+#endif
+		displayport_info("audio_disable\n");
+	} else
+		displayport_info("audio_disable, AUDIO_EN = 0\n");
+}
+
+void displayport_audio_wait_buf_full(void)
+{
+	displayport_reg_set_audio_master_mode_enable(0);
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	displayport_reg_set_dma_req_gen(0);
+#else
+	displayport_reg_wait_buf_full();
+#endif
+	displayport_info("displayport_audio_wait_buf_full\n");
+}
+
+void displayport_audio_dma_force_req_release(void)
+{
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	displayport_reg_set_dma_force_req_low(0);
+#else
+	displayport_info("skip displayport_audio_dma_force_req_release(not need)");
+#endif
+}
+
+void displayport_audio_bist_enable(struct displayport_audio_config_data audio_config_data)
+{
+	displayport_info("displayport_audio_bist\n");
+	displayport_info("audio_enable = %d\n", audio_config_data.audio_enable);
+	displayport_info("audio_channel_cnt = %d\n", audio_config_data.audio_channel_cnt);
+	displayport_info("audio_fs = %d\n", audio_config_data.audio_fs);
+
+	if (audio_config_data.audio_enable == 1) {
+		displayport_reg_set_audio_m_n(ASYNC_MODE, audio_config_data.audio_fs);
+		displayport_reg_set_audio_function_enable(audio_config_data.audio_enable);
+
+		displayport_reg_set_audio_ch(audio_config_data.audio_channel_cnt);
+		displayport_reg_set_audio_fifo_function_enable(audio_config_data.audio_enable);
+		displayport_reg_set_audio_ch_status_same(1);
+		displayport_reg_set_audio_sampling_frequency(audio_config_data.audio_fs);
+		displayport_reg_set_dp_audio_enable(audio_config_data.audio_enable);
+		displayport_reg_set_audio_bist_mode(1);
+		displayport_set_audio_ch_status(&audio_config_data);
+		displayport_reg_set_audio_master_mode_enable(audio_config_data.audio_enable);
+	} else {
+		displayport_reg_set_audio_master_mode_enable(0);
+		displayport_audio_disable();
+	}
+}
+
+void displayport_audio_init_config(void)
+{
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	displayport_reg_set_dma_force_req_low(1);
+#endif
+	displayport_reg_set_audio_m_n(ASYNC_MODE, FS_48KHZ);
+	displayport_reg_set_audio_function_enable(1);
+	displayport_reg_set_audio_sampling_frequency(FS_48KHZ);
+	displayport_reg_set_dp_audio_enable(1);
+	displayport_reg_set_audio_master_mode_enable(1);
+	displayport_info("displayport_audio_init_config\n");
+}
+
 void displayport_reg_set_hdcp22_system_enable(u32 en)
 {
 	u32 val = en ? ~0 : 0;
