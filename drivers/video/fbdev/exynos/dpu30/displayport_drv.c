@@ -1245,7 +1245,11 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 
 			if (displayport_check_dpcd_lane_status(val[2], val[3], val[4]) != 0) {
 				displayport_info("link training in HPD IRQ work\n");
-				displayport_link_training();
+				displayport->hpd_current_state = 0;
+				displayport->hpd_state = HPD_UNPLUG;
+				displayport_set_switch_state(displayport, 0);
+				msleep(50);
+				displayport_hpd_changed(1);
 			}
 		}
 		return;
@@ -1282,7 +1286,11 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 
 		if (displayport_check_dpcd_lane_status(val[2], val[3], val[4]) != 0) {
 			displayport_info("link training in HPD IRQ work\n");
-			displayport_link_training();
+			displayport->hpd_current_state = 0;
+			displayport->hpd_state = HPD_UNPLUG;
+			displayport_set_switch_state(displayport, 0);
+			msleep(50);
+			displayport_hpd_changed(1);
 		}
 	} else {
 		displayport_reg_dpcd_read(DPCD_ADD_DEVICE_SERVICE_IRQ_VECTOR, 1, val);
