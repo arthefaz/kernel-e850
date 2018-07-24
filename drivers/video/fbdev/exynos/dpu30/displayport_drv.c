@@ -689,6 +689,7 @@ void displayport_hpd_changed(int state)
 	displayport->hpd_current_state = state;
 
 	if (state) {
+		pm_runtime_get_sync(displayport->dev);
 		pm_stay_awake(displayport->dev);
 
 		displayport->bpc = BPC_8;	/*default setting*/
@@ -773,6 +774,7 @@ HPD_FAIL:
 	pm_relax(displayport->dev);
 	displayport->hpd_current_state = 0;
 	displayport->hpd_state = HPD_UNPLUG;
+	pm_runtime_put_sync(displayport->dev);
 	mutex_unlock(&displayport->hpd_lock);
 
 	return;
@@ -1785,8 +1787,6 @@ int displayport_enable(struct displayport_device *displayport)
 	/* block to enter SICD mode */
 	exynos_update_ip_idle_status(displayport->idle_ip_index, 0);
 #endif
-
-	pm_runtime_get_sync(displayport->dev);
 
 	enable_irq(displayport->res.irq);
 
