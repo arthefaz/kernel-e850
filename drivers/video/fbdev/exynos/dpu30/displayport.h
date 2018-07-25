@@ -391,9 +391,21 @@ struct fb_vendor {
 #define HDCP_VERSION_2_2 0x02
 
 enum drm_state {
-       DRM_OFF = 0x0,
-       DRM_ON = 0x1,
-       DRM_SAME_STREAM_TYPE = 0x2      /* If the previous contents and stream_type id are the same flag */
+	DRM_OFF = 0x0,
+	DRM_ON = 0x1,
+	DRM_SAME_STREAM_TYPE = 0x2      /* If the previous contents and stream_type id are the same flag */
+};
+
+enum auth_state {
+	HDCP_AUTH_PROCESS_IDLE  = 0x1,
+	HDCP_AUTH_PROCESS_STOP  = 0x2,
+	HDCP_AUTH_PROCESS_DONE  = 0x3
+};
+
+enum auth_signal {
+        HDCP_DRM_OFF    = 0x100,
+        HDCP_DRM_ON     = 0x200,
+        HDCP_RP_READY   = 0x300,
 };
 
 #define SYNC_POSITIVE 0
@@ -1096,18 +1108,6 @@ u8 hdcp13_read_bcap(void);
 void hdcp13_link_integrity_check(void);
 
 extern int hdcp_calc_sha1(u8 *digest, const u8 *buf, unsigned int buflen);
-extern int hdcp_dplink_authenticate(void); /* hdcp 2.2 */
-extern int hdcp_dplink_get_rxstatus(uint8_t *status);
-extern int hdcp_dplink_set_paring_available(void);
-extern int hdcp_dplink_set_hprime_available(void);
-extern int hdcp_dplink_set_rp_ready(void);
-extern int hdcp_dplink_set_reauth(void);
-extern int hdcp_dplink_set_integrity_fail(void);
-extern int hdcp_dplink_cancel_auth(void);
-extern void hdcp_dplink_clear_all(void);
-extern int hdcp_dplink_auth_check(void);
-extern int hdcp_dplink_drm_flag_check(int flag);
-extern int hdcp_dplink_dp_link_flag_check(int flag);
 
 #define DISPLAYPORT_IOC_DUMP			_IOW('V', 0, u32)
 #define DISPLAYPORT_IOC_GET_ENUM_DV_TIMINGS	_IOW('V', 1, u8)

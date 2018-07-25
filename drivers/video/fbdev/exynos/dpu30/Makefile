@@ -14,7 +14,7 @@ obj-$(CONFIG_SOC_EXYNOS9820) += ./cal_9820/dsim_reg.o ./cal_9820/dpp_reg.o ./cal
 obj-$(CONFIG_SOC_EXYNOS9110) += ./cal_9110/dsim_reg.o ./cal_9110/dpp_reg.o ./cal_9110/decon_reg.o
 ifdef CONFIG_EXYNOS_DISPLAYPORT
 obj-$(CONFIG_EXYNOS_DISPLAYPORT) += displayport.o
-displayport-y += displayport_drv.o displayport_edid.o displayport_hdcp13.o decon_displayport.o
+displayport-y += displayport_drv.o displayport_edid.o displayport_hdcp13.o decon_displayport.o displayport_hdcp22_if.o
 obj-$(CONFIG_SOC_EXYNOS9810) += ./cal_9810/displayport_reg.o
 obj-$(CONFIG_SOC_EXYNOS9820) += ./cal_9820/displayport_reg.o
 endif
