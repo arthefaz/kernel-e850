@@ -44,6 +44,8 @@
 #include <linux/clk.h>
 #include <linux/suspend.h>
 #include <linux/of.h>
+#include <linux/slab.h>
+#include <linux/sched.h>
 
 #include <asm/irq.h>
 
@@ -531,6 +533,7 @@ s3c24xx_serial_rx_chars(int irq, void *dev_id)
 
 	spin_unlock_irqrestore(&port->lock, flags);
 	tty_flip_buffer_push(&port->state->port);
+	flush_workqueue(system_unbound_wq);
 
  out:
 	return IRQ_HANDLED;
