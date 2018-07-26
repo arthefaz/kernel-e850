@@ -1891,10 +1891,18 @@ int displayport_enable(struct displayport_device *displayport)
 	u8 bist_type = (u8)displayport->bist_type;
 	u8 dyn_range = (u8)displayport->dyn_range;
 
-	if (displayport->state == DISPLAYPORT_STATE_ON)
-		return 0;
+	mutex_lock(&displayport->cmd_lock);
 
-	displayport_info("displayport_enable\n");
+	if (displayport->state == DISPLAYPORT_STATE_ON) {
+		displayport_err("ignore enable, state:%d\n", displayport->state);
+		mutex_unlock(&displayport->cmd_lock);
+		return 0;
+	}
+
+	if (!displayport->hpd_current_state) {
+		displayport_err("%s() hpd is low\n", __func__);
+		return 0;
+	}
 
 #if defined(CONFIG_CPU_IDLE)
 	/* block to enter SICD mode */
@@ -1913,8 +1921,10 @@ int displayport_enable(struct displayport_device *displayport)
 		displayport_reg_set_bist_video_configuration(displayport->cur_video,
 				bpc, bist_type, dyn_range);
 	} else {
-		if (displayport->bpc == BPC_6 && displayport->dfp_type != DFP_TYPE_DP)
+		if (displayport->bpc == BPC_6 && displayport->dfp_type != DFP_TYPE_DP) {
 			bpc = BPC_8;
+			displayport->bpc = BPC_8;
+		}
 
 		displayport_reg_set_video_configuration(displayport->cur_video,
 				bpc, dyn_range);
@@ -1930,29 +1940,22 @@ int displayport_enable(struct displayport_device *displayport)
 	displayport->state = DISPLAYPORT_STATE_ON;
 	wake_up_interruptible(&displayport->dp_wait);
 	hdcp_start(displayport);
+	mutex_unlock(&displayport->cmd_lock);
 
 	return ret;
 }
 
 int displayport_disable(struct displayport_device *displayport)
 {
-	int timeout;
-
-	if (displayport->state != DISPLAYPORT_STATE_ON)
-		return 0;
-
-	/* Wait for current read & write CMDs. */
+	displayport_info("%s +, state: %d\n", __func__, displayport->state);
 	mutex_lock(&displayport->cmd_lock);
-	displayport->state = DISPLAYPORT_STATE_OFF;
+	if (displayport->state != DISPLAYPORT_STATE_ON) {
+		displayport_err("ignore disable, state:%d\n", displayport->state);
+		mutex_unlock(&displayport->cmd_lock);
+		return 0;
+	}
+
 	hdcp13_info.auth_state = HDCP13_STATE_NOT_AUTHENTICATED;
-	mutex_unlock(&displayport->cmd_lock);
-
-	timeout = wait_event_interruptible_timeout(displayport->audio_wait,
-		(displayport->audio_state == 0), msecs_to_jiffies(3000));
-	if (!timeout)
-		displayport_info("audio disable timeout\n");
-
-	displayport_audio_disable();
 
 	displayport_reg_set_video_bist_mode(0);
 	displayport_reg_deinit();
@@ -1962,14 +1965,15 @@ int displayport_disable(struct displayport_device *displayport)
 
 	pm_runtime_put_sync(displayport->dev);
 
-	displayport->state = DISPLAYPORT_STATE_INIT;
+	displayport->state = DISPLAYPORT_STATE_OFF;
 	wake_up_interruptible(&displayport->dp_wait);
-	displayport_info("displayport_disable\n");
+	displayport_info("%s -\n", __func__);
 
 #if defined(CONFIG_CPU_IDLE)
 	/* unblock to enter SICD mode */
 	exynos_update_ip_idle_status(displayport->idle_ip_index, 1);
 #endif
+	mutex_unlock(&displayport->cmd_lock);
 
 	return 0;
 }
