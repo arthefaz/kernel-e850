@@ -913,24 +913,24 @@ static int displayport_check_dpcd_lane_status(u8 lane0_1_status,
 			val[0], (val[1] & MAX_LANE_COUNT));
 
 	if ((link_rate != val[0]) || (lane_cnt != (val[1] & MAX_LANE_COUNT))) {
-		displayport_err("%s(%d)\n", __func__, __LINE__);
+		displayport_err("%s() link rate, lane_cnt error\n", __func__);
 		return -EINVAL;
 	}
 
 	if ((lane_align_status & INTERLANE_ALIGN_DONE) != INTERLANE_ALIGN_DONE) {
-		displayport_err("%s(%d)\n", __func__, __LINE__);
+		displayport_err("%s() interlane align error\n", __func__);
 		return -EINVAL;
 	}
 
 	if ((lane_align_status & LINK_STATUS_UPDATE) == LINK_STATUS_UPDATE) {
-		displayport_err("%s(%d)\n", __func__, __LINE__);
+		displayport_err("%s() link status update req\n", __func__);
 		return -EINVAL;
 	}
 
 	if (lane_cnt >= 1) {
 		if ((lane0_1_status & (LANE0_CR_DONE | LANE0_CHANNEL_EQ_DONE | LANE0_SYMBOL_LOCKED))
 				!= (LANE0_CR_DONE | LANE0_CHANNEL_EQ_DONE | LANE0_SYMBOL_LOCKED)) {
-			displayport_err("%s(%d)\n", __func__, __LINE__);
+			displayport_err("%s() lane0 status error\n", __func__);
 			return -EINVAL;
 		}
 	}
@@ -938,7 +938,7 @@ static int displayport_check_dpcd_lane_status(u8 lane0_1_status,
 	if (lane_cnt >= 2) {
 		if ((lane0_1_status & (LANE1_CR_DONE | LANE1_CHANNEL_EQ_DONE | LANE1_SYMBOL_LOCKED))
 				!= (LANE1_CR_DONE | LANE1_CHANNEL_EQ_DONE | LANE1_SYMBOL_LOCKED)) {
-			displayport_err("%s(%d)\n", __func__, __LINE__);
+			displayport_err("%s() lane1 status error\n", __func__);
 			return -EINVAL;
 		}
 	}
@@ -946,13 +946,13 @@ static int displayport_check_dpcd_lane_status(u8 lane0_1_status,
 	if (lane_cnt == 4) {
 		if ((lane2_3_status & (LANE2_CR_DONE | LANE2_CHANNEL_EQ_DONE | LANE2_SYMBOL_LOCKED))
 				!= (LANE2_CR_DONE | LANE2_CHANNEL_EQ_DONE | LANE2_SYMBOL_LOCKED)) {
-			displayport_err("%s(%d)\n", __func__, __LINE__);
+			displayport_err("%s() lane2 stat error\n", __func__);
 			return -EINVAL;
 		}
 
 		if ((lane2_3_status & (LANE3_CR_DONE | LANE3_CHANNEL_EQ_DONE | LANE3_SYMBOL_LOCKED))
 				!= (LANE3_CR_DONE | LANE3_CHANNEL_EQ_DONE | LANE3_SYMBOL_LOCKED)) {
-			displayport_err("%s(%d)\n", __func__, __LINE__);
+			displayport_err("%s() lane3 status error\n", __func__);
 			return -EINVAL;
 		}
 	}
@@ -1310,7 +1310,7 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 		int ret = displayport_reg_dpcd_read_burst(DPCD_ADD_SINK_COUNT,
 				DPCP_LINK_SINK_STATUS_FIELD_LENGTH, val);
 
-		displayport_info("HPD IRQ work %02x %02x %02x %02x %02x %02x\n",
+		displayport_info("HPD IRQ work2 %02x %02x %02x %02x %02x %02x\n",
 				val[0], val[1], val[2], val[3], val[4], val[5]);
 		if (ret < 0 || (val[0] & val[1] & val[2] & val[3] & val[4] & val[5]) == 0xff) {
 			displayport_info("dpcd_read error in HPD IRQ work\n");
@@ -1331,12 +1331,14 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 			}
 
 			if (displayport_check_dpcd_lane_status(val[2], val[3], val[4]) != 0) {
-				displayport_info("link training in HPD IRQ work\n");
-				displayport->hpd_current_state = 0;
-				displayport->hpd_state = HPD_UNPLUG;
-				displayport_set_switch_state(displayport, 0);
-				msleep(50);
-				displayport_hpd_changed(1);
+				displayport_info("link training in HPD IRQ work2\n");
+
+				hdcp_dplink_set_reauth();
+				displayport_hdcp22_enable(0);
+
+				displayport_link_training();
+				queue_delayed_work(displayport->hdcp2_wq,
+						&displayport->hdcp22_work, msecs_to_jiffies(2000));
 			}
 		}
 		return;
@@ -1346,7 +1348,7 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 		int ret = displayport_reg_dpcd_read_burst(DPCD_ADD_SINK_COUNT,
 				DPCP_LINK_SINK_STATUS_FIELD_LENGTH, val);
 
-		displayport_info("HPD IRQ work %02x %02x %02x %02x %02x %02x\n",
+		displayport_info("HPD IRQ work1 %02x %02x %02x %02x %02x %02x\n",
 				val[0], val[1], val[2], val[3], val[4], val[5]);
 		if (ret < 0 || (val[0] & val[1] & val[2] & val[3] & val[4] & val[5]) == 0xff) {
 			displayport_info("dpcd_read error in HPD IRQ work\n");
@@ -1371,13 +1373,18 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 				return;
 		}
 
+		if (!displayport->hpd_current_state) {
+			displayport_info("HPD IRQ work: hpd is low\n");
+			return;
+		}
+
 		if (displayport_check_dpcd_lane_status(val[2], val[3], val[4]) != 0) {
-			displayport_info("link training in HPD IRQ work\n");
-			displayport->hpd_current_state = 0;
-			displayport->hpd_state = HPD_UNPLUG;
-			displayport_set_switch_state(displayport, 0);
-			msleep(50);
-			displayport_hpd_changed(1);
+			displayport_info("link training in HPD IRQ work1\n");
+			displayport_link_training();
+
+			hdcp13_info.auth_state = HDCP13_STATE_NOT_AUTHENTICATED;
+			queue_delayed_work(displayport->dp_wq,
+					&displayport->hdcp13_work, msecs_to_jiffies(2000));
 		}
 	} else {
 		displayport_reg_dpcd_read(DPCD_ADD_DEVICE_SERVICE_IRQ_VECTOR, 1, val);
@@ -1405,7 +1412,6 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 	struct displayport_device *displayport = dev_data;
 	struct decon_device *decon = get_decon_drvdata(2);
 	int active;
-	ktime_t timestamp = ktime_get();
 	u32 irq_status_reg;
 
 	spin_lock(&displayport->slock);
@@ -1464,7 +1470,7 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 		wake_up_interruptible_all(&decon->wait_vstatus);
 
 		if (decon->dt.psr_mode == DECON_VIDEO_MODE) {
-			decon->vsync.timestamp = timestamp;
+			decon->vsync.timestamp = ktime_get();
 			wake_up_interruptible_all(&decon->vsync.wait);
 		}
 	}
