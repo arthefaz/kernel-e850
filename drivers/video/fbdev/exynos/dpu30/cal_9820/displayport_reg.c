@@ -1845,6 +1845,9 @@ void displayport_audio_enable(struct displayport_audio_config_data *audio_config
 
 void displayport_audio_disable(void)
 {
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	struct displayport_device *displayport = get_displayport_drvdata();
+#endif
 	if (displayport_read_mask(SST1_AUDIO_ENABLE, AUDIO_EN) == 1) {
 #if defined(CONFIG_SOC_EXYNOS9820_EVT0)
 		displayport_reg_set_dma_force_req_low(1);
