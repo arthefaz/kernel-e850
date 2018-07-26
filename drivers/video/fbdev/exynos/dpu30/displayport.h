@@ -1081,6 +1081,7 @@ u8 edid_read_checksum(void);
 u32 edid_audio_informs(void);
 
 void displayport_reg_set_avi_infoframe(struct infoframe avi_infofrmae);
+void displayport_reg_set_spd_infoframe(struct infoframe spd_infofrmae);
 void displayport_reg_set_audio_infoframe(struct infoframe audio_infofrmae, u32 en);
 void displayport_reg_set_hdr_infoframe(struct infoframe hdr_infofrmae, u32 en);
 
