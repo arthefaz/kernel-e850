@@ -1844,6 +1844,19 @@ void displayport_reg_wait_buf_full(void)
 		displayport_err("%s is timeout.\n", __func__);
 }
 
+void displayport_reg_print_audio_state(void)
+{
+	u32 val1, val2, val3, val4, val5;
+
+	val1 = displayport_read(SYSTEM_SST1_FUNCTION_ENABLE);
+	val2 = displayport_read(SST1_AUDIO_ENABLE);
+	val3 = displayport_read(SST1_AUDIO_MASTER_TIMING_GEN);
+	val4 = displayport_read(SST1_AUDIO_DMA_REQUEST_LATENCY_CONFIG);
+	val5 = displayport_read(SST1_AUDIO_CONTROL);
+	displayport_info("audio state: func_en=0x%x, aud_en=0x%x, master_t_gen=0x%x, dma_req=0x%x, aud_con=0x%X\n",
+			val1, val2, val3, val4, val5);
+}
+
 #if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 void displayport_reg_set_dma_req_gen(u32 en)
 {
@@ -1915,6 +1928,7 @@ void displayport_audio_enable(struct displayport_audio_config_data *audio_config
 	displayport_reg_set_dma_req_gen(1);
 	displayport_reg_set_audio_master_mode_enable(audio_config_data->audio_enable);
 #endif
+	displayport_reg_print_audio_state();
 }
 
 void displayport_audio_disable(void)
