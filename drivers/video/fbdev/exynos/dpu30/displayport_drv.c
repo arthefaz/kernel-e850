@@ -944,6 +944,7 @@ static int displayport_Automated_Test_Request(void)
 	u8 data = 0;
 	u8 val[DPCP_LINK_SINK_STATUS_FIELD_LENGTH] = {0, };
 	struct displayport_device *displayport = get_displayport_drvdata();
+	int timeout;
 
 	displayport_reg_dpcd_read(DPCD_TEST_REQUEST, 1, &data);
 	displayport_info("TEST_REQUEST %02x\n", data);
@@ -953,6 +954,20 @@ static int displayport_Automated_Test_Request(void)
 	displayport_reg_dpcd_write(DPCD_TEST_RESPONSE, 1, val);
 
 	if ((data & TEST_LINK_TRAINING) == TEST_LINK_TRAINING) {
+		videoformat cur_video = displayport->cur_video;
+		u8 bpc = (u8)displayport->bpc;
+		u8 bist_type = (u8)displayport->bist_type;
+		u8 dyn_range = (u8)displayport->dyn_range;
+
+		displayport_set_switch_state(displayport, 0);
+		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
+			(displayport->state == DISPLAYPORT_STATE_OFF), msecs_to_jiffies(1000));
+		if (!timeout)
+			displayport_err("disable timeout in %s\n", __func__);
+
+		/* PHY power on */
+		displayport_reg_init();
+
 		displayport_reg_dpcd_read(DPCD_TEST_LINK_RATE, 1, val);
 		displayport_info("TEST_LINK_RATE %02x\n", val[0]);
 		g_displayport_debug_param.link_rate = (val[0]&TEST_LINK_RATE);
@@ -962,18 +977,21 @@ static int displayport_Automated_Test_Request(void)
 		g_displayport_debug_param.lane_cnt = (val[0]&TEST_LANE_COUNT);
 
 		g_displayport_debug_param.param_used = 1;
-
-		displayport_reg_init();
 		displayport_link_training();
-
 		g_displayport_debug_param.param_used = 0;
+
+		displayport->bist_used = 1;
+		displayport_reg_set_bist_video_configuration(cur_video,
+				bpc, bist_type, dyn_range);
 	} else if ((data & TEST_VIDEO_PATTERN) == TEST_VIDEO_PATTERN) {
 		u16 hactive, vactive, fps, vmode;
 		int edid_preset;
 
 		displayport_set_switch_state(displayport, 0);
-
-		msleep(300);
+		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
+			(displayport->state == DISPLAYPORT_STATE_OFF), msecs_to_jiffies(1000));
+		if (!timeout)
+			displayport_err("disable timeout in %s\n", __func__);
 
 		/* PHY power on */
 		displayport_reg_init(); /* for AUX ch read/write. */
@@ -1018,8 +1036,8 @@ static int displayport_Automated_Test_Request(void)
 		edid_preset = edid_find_resolution(hactive, vactive, fps);
 		edid_set_preferred_preset(edid_preset);
 
-		displayport_set_switch_state(displayport, 1);
-
+		displayport_reg_set_bist_video_configuration(displayport->cur_video,
+				displayport->bpc, displayport->bist_type, displayport->dyn_range);
 	} else if ((data & TEST_PHY_TEST_PATTERN) == TEST_PHY_TEST_PATTERN) {
 		displayport_reg_stop();
 		msleep(120);
@@ -2433,7 +2451,10 @@ static ssize_t displayport_link_store(struct class *dev,
 			g_displayport_debug_param.param_used = 0;
 
 			displayport_set_switch_state(displayport, 1);
-			displayport_info("HPD status = %d\n", 1);
+			timeout = wait_event_interruptible_timeout(displayport->dp_wait,
+				(displayport->state == DISPLAYPORT_STATE_ON), msecs_to_jiffies(1000));
+			if (!timeout)
+				displayport_err("enable timeout in %s\n", __func__);
 		} else {
 			pr_err("%s: Not support command[%d]\n",
 					__func__, mode);
