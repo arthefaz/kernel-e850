@@ -2367,9 +2367,9 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 
 	switch (usb_typec_info.id) {
 	case CCIC_NOTIFY_ID_DP_CONNECT:
-		displayport_info("CCIC_NOTIFY_ID_DP_CONNECT, %x\n", usb_typec_info.sub1);
 		switch (usb_typec_info.sub1) {
 		case CCIC_NOTIFY_DETACH:
+			displayport_info("CCIC_NOTIFY_ID_DP_CONNECT, %x\n", usb_typec_info.sub1);
 			displayport->ccic_notify_dp_conf = CCIC_NOTIFY_DP_PIN_UNKNOWN;
 			displayport->ccic_link_conf = false;
 			displayport->ccic_hpd = false;
@@ -2377,6 +2377,7 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 			displayport_aux_onoff(displayport, 0);
 			break;
 		case CCIC_NOTIFY_ATTACH:
+			displayport_info("CCIC_NOTIFY_ID_DP_CONNECT, %x\n", usb_typec_info.sub1);
 			displayport_aux_onoff(displayport, 1);
 			break;
 		default:
@@ -2416,9 +2417,11 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 			displayport->ccic_notify_dp_conf = CCIC_NOTIFY_DP_PIN_UNKNOWN;
 			break;
 		}
-		displayport->ccic_link_conf = true;
-		if (displayport->ccic_hpd) {
-			displayport_hpd_changed(1);
+
+		if (displayport->ccic_notify_dp_conf) {
+			displayport->ccic_link_conf = true;
+			if (displayport->ccic_hpd)
+				displayport_hpd_changed(1);
 		}
 		break;
 
@@ -2463,6 +2466,7 @@ static void displayport_notifier_register_work(struct work_struct *work)
 
 	if (!displayport->notifier_registered) {
 		displayport->notifier_registered = 1;
+		displayport_info("notifier registered\n");
 		manager_notifier_register(&displayport->dp_typec_nb,
 			usb_typec_displayport_notification, MANAGER_NOTIFY_CCIC_DP);
 	}
