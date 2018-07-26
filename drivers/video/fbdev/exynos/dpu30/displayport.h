@@ -1079,6 +1079,7 @@ void edid_set_preferred_preset(int mode);
 int edid_find_resolution(u16 xres, u16 yres, u16 refresh);
 u8 edid_read_checksum(void);
 u32 edid_audio_informs(void);
+bool edid_support_pro_audio(void);
 
 void displayport_reg_set_avi_infoframe(struct infoframe avi_infofrmae);
 void displayport_reg_set_spd_infoframe(struct infoframe spd_infofrmae);

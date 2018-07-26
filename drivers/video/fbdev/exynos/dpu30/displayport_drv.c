@@ -208,7 +208,9 @@ static int displayport_full_link_training(void)
 	tps3_supported = val[2] & TPS3_SUPPORTED;
 	enhanced_frame_cap = val[2] & ENHANCED_FRAME_CAP;
 
-	if (!displayport->auto_test_mode) {
+	if (!displayport->auto_test_mode &&
+			!(supported_videos[displayport->best_video].pro_audio_support &&
+			edid_support_pro_audio())) {
 		link_rate = displayport_get_min_link_rate(link_rate, lane_cnt);
 		displayport->auto_test_mode = 0;
 	}
