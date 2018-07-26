@@ -1605,6 +1605,9 @@ static int displayport_make_hdr_infoframe_data
 			hdr_infoframe->data[i]);
 	}
 
+	print_hex_dump(KERN_INFO, "HDR: ", DUMP_PREFIX_NONE, 32, 1,
+			hdr_infoframe->data, HDR_INFOFRAME_LENGTH, false);
+
 	return 0;
 }
 
@@ -1671,15 +1674,18 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 	struct displayport_device *displayport = get_displayport_drvdata();
 	int ret = 0;
 
-	displayport_info("audio en:%d, ch:%d, fs:%d, bit:%d, packed:%d, word_len:%d\n",
-			audio_config_data->audio_enable, audio_config_data->audio_channel_cnt,
-			audio_config_data->audio_fs, audio_config_data->audio_bit,
-			audio_config_data->audio_packed_mode, audio_config_data->audio_word_length);
+	displayport_info("audio config(%d ==> %d)\n", displayport->audio_state,
+				audio_config_data->audio_enable);
 
 	if (audio_config_data->audio_enable == displayport->audio_state)
 		return 0;
 
 	if (audio_config_data->audio_enable == AUDIO_ENABLE) {
+		displayport_info("audio_enable:%d, ch:%d, fs:%d, bit:%d, packed:%d, word_len:%d\n",
+				audio_config_data->audio_enable, audio_config_data->audio_channel_cnt,
+				audio_config_data->audio_fs, audio_config_data->audio_bit,
+				audio_config_data->audio_packed_mode, audio_config_data->audio_word_length);
+
 		displayport_audio_enable(audio_config_data);
 		displayport_set_audio_infoframe(audio_config_data);
 		displayport->audio_state = AUDIO_ENABLE;
@@ -1687,7 +1693,6 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 		displayport_audio_disable();
 		displayport_set_audio_infoframe(audio_config_data);
 		displayport->audio_state = AUDIO_DISABLE;
-		wake_up_interruptible(&displayport->audio_wait);
 	} else if (audio_config_data->audio_enable == AUDIO_WAIT_BUF_FULL) {
 		displayport_audio_wait_buf_full();
 		displayport->audio_state = AUDIO_WAIT_BUF_FULL;
@@ -1766,7 +1771,6 @@ static void displayport_hdcp13_run(struct work_struct *work)
 				msecs_to_jiffies(2000));
 	}
 }
-
 
 static void displayport_hdcp22_run(struct work_struct *work)
 {
@@ -1878,7 +1882,7 @@ static void hdcp_start(struct displayport_device *displayport)
 				msecs_to_jiffies(2500));
 	else if (displayport->hdcp_ver == HDCP_VERSION_1_3)
 		queue_delayed_work(displayport->dp_wq, &displayport->hdcp13_work,
-						msecs_to_jiffies(4500));
+				msecs_to_jiffies(4500));
 	else
 		displayport_info("HDCP is not supported\n");
 #endif
