@@ -26,6 +26,8 @@
 #define DISP_FACTOR		100UL
 #define LCD_REFRESH_RATE	63UL
 #define MULTI_FACTOR 		(1UL << 10)
+/* bus utilization 75% */
+#define BUS_UTIL		75
 
 #define DPP_SCALE_NONE		0
 #define DPP_SCALE_UP		1
@@ -35,6 +37,12 @@
 #define ACLK_MHZ_INC_STEP	50UL	/* 50Mhz */
 #define FRAME_TIME_NSEC		1000000000UL	/* 1sec */
 #define TOTAL_BUS_LATENCY	3000UL	/* 3us: BUS(1) + PWT(1) + Requst(1) */
+
+/* tuning parameters for rotation */
+#define ROTATION_FACTOR_BPP	32UL
+#define ROTATION_FACTOR_SCUP	1332UL	/* 1.3x */
+#define ROTATION_FACTOR_SCDN	1434UL	/* 1.4x */
+#define RESOL_QHDP_21_TO_9	3440*1440UL	/* for MIF min-lock */
 
 
 /* unit : usec x 1000 -> 5592 (5.592us) for WQHD+ case */
@@ -63,13 +71,16 @@ static inline u32 dpu_bts_scale_latency(u32 is_s, u32 src_w, u32 dst_w,
 		u32 ppc, u32 lmc)
 {
 	u32 lat_scale = 0;
-	u32 line_w = src_w;
+	u32 line_w;
 
 	/*
 	 * line_w : reflecting scale-ratio
 	 * INC for scale-down & DEC for scale-up
 	 */
-	line_w = (src_w * 1000UL) / dst_w;
+	if (is_s == DPP_SCALE_DOWN)
+		line_w = src_w * (src_w * 1000UL) / dst_w;
+	else
+		line_w = src_w * 1000UL;
 	lat_scale = (line_w * lmc) / (ppc * 1000UL);
 
 	return lat_scale;
@@ -81,7 +92,7 @@ static inline u32 dpu_bts_scale_latency(u32 is_s, u32 src_w, u32 dst_w,
  */
 static inline u32 dpu_bts_rotate_latency(u32 src_h, u32 cpl)
 {
-	return (src_h * cpl);
+	return (src_h * cpl * 12 / 10);
 }
 
 /*
@@ -129,19 +140,30 @@ static u32 dpu_bts_get_initial_latency(bool is_r, u32 is_s, bool is_c,
 		u32 cpl, u32 lmc)
 {
 	u32 lat_cycle = 0;
+	u32 tmp;
 
-	if (lcd_info->dsc_enabled)
+	if (lcd_info->dsc_enabled) {
 		lat_cycle = dpu_bts_dsc_latency(lcd_info->dsc_slice_num,
 				lcd_info->dsc_cnt, dst_w);
+		DPU_DEBUG_BTS("\tDSC_lat_cycle(%d)\n", lat_cycle);
+	}
 
 	/* src_w : rotation reflected value */
-	if (is_r)
-		lat_cycle += dpu_bts_rotate_latency(src_w, cpl);
-	if (is_s)
-		lat_cycle +=
-			dpu_bts_scale_latency(is_s, src_w, dst_w, ppc, lmc);
-	if (is_c)
-		lat_cycle += dpu_bts_afbc_latency(src_w, ppc, lmc);
+	if (is_r) {
+		tmp = dpu_bts_rotate_latency(src_w, cpl);
+		DPU_DEBUG_BTS("\tR_lat_cycle(%d)\n", tmp);
+		lat_cycle += tmp;
+	}
+	if (is_s) {
+		tmp = dpu_bts_scale_latency(is_s, src_w, dst_w, ppc, lmc);
+		DPU_DEBUG_BTS("\tS_lat_cycle(%d)\n", tmp);
+		lat_cycle += tmp;
+	}
+	if (is_c) {
+		tmp = dpu_bts_afbc_latency(src_w, ppc, lmc);
+		DPU_DEBUG_BTS("\tC_lat_cycle(%d)\n", tmp);
+		lat_cycle += tmp;
+	}
 
 	return lat_cycle;
 }
@@ -155,32 +177,43 @@ static inline u32 dpu_bts_get_aclk_period_time(u32 aclk_mhz)
 	return ((ACLK_100MHZ_PERIOD * 100) / aclk_mhz);
 }
 
+/* check 10-bit yuv format image */
+static u32 dpu_bts_check_yuv_10bit(enum decon_pixel_format fmt, bool is_yuv)
+{
+	u32 bpp = 32;
+	u32 is_yuv10 = 0;
+
+	bpp = dpu_get_bpp(fmt);
+	if (is_yuv && ((bpp == 15 || bpp == 24) || (bpp == 20 || bpp == 32)))
+		is_yuv10 = 1;
+
+	return is_yuv10;
+}
+
 /* find min-ACLK to meet latency */
 static u32 dpu_bts_find_latency_meet_aclk(u32 lat_cycle, u32 line_time,
 		u32 criteria_v, u32 aclk_disp,
-		enum decon_pixel_format fmt, bool is_yuv)
+		bool is_yuv10, bool is_rotate, u32 rot_factor)
 {
 	u32 aclk_mhz = aclk_disp / 1000UL;
 	u32 aclk_period, lat_time;
 	u32 lat_time_max;
-	u32 bpp = 32;
-	u32 lat_inc = 0;
+
+	DPU_DEBUG_BTS("\t(rot_factor = %d) (is_yuv10 = %d)\n",
+			rot_factor, is_yuv10);
 
 	/* lat_time_max: usec x 1000 */
 	lat_time_max = line_time * criteria_v;
-
-	/* check 10-bit yuv format image */
-	bpp = dpu_get_bpp(fmt);
-	if (is_yuv && ((bpp == 15 || bpp == 24) || (bpp == 20 || bpp == 32)))
-		lat_inc = 1;
 
 	/* find min-ACLK to able to cover initial latency */
 	while (1) {
 		/* aclk_period: nsec x 1000 */
 		aclk_period = dpu_bts_get_aclk_period_time(aclk_mhz);
 		lat_time = (lat_cycle * aclk_period) / 1000UL;
-		lat_time = lat_time << lat_inc;
+		lat_time = lat_time << is_yuv10;
 		lat_time += TOTAL_BUS_LATENCY;
+		if (is_rotate)
+			lat_time = (lat_time * rot_factor) / MULTI_FACTOR;
 
 		DPU_DEBUG_BTS("\tloop: (aclk_period = %d) (lat_time = %d)\n",
 			aclk_period, lat_time);
@@ -208,10 +241,11 @@ u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 	bool is_rotate = is_rotation(config) ? true : false;
 	bool is_comp = is_afbc(config) ? true : false;
 	bool yuv_fmt = is_yuv(config) ? true : false;
-	u32 is_scale;
+	u32 is_scale, is_yuv10;
 	u32 lat_cycle, line_time;
 	u32 cycle_per_line, line_mem_cnt;
 	u32 criteria_v, tot_v;
+	u32 rot_factor = ROTATION_FACTOR_SCUP;
 
 	if (is_rotate) {
 		src_w = src->h;
@@ -242,9 +276,10 @@ u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 	/* scaling latency: width only */
 	if (src_w < dst->w)
 		is_scale = DPP_SCALE_UP;
-	else if (src_w > dst->w)
+	else if (src_w > dst->w) {
 		is_scale = DPP_SCALE_DOWN;
-	else
+		rot_factor = ROTATION_FACTOR_SCDN;
+	} else
 		is_scale = DPP_SCALE_NONE;
 
 	/* to check initial latency */
@@ -263,8 +298,11 @@ u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 			+ decon->lcd_info->vbp;
 		criteria_v = tot_v - (tot_v * 20 / 100);
 	}
+
+	is_yuv10 = dpu_bts_check_yuv_10bit(config->format, yuv_fmt);
+
 	aclk_disp = dpu_bts_find_latency_meet_aclk(lat_cycle, line_time,
-			criteria_v, aclk_disp, config->format, yuv_fmt);
+			criteria_v, aclk_disp, is_yuv10, is_rotate, rot_factor);
 
 	DPU_DEBUG_BTS("\t[R:%d C:%d S:%d] (lat_cycle=%d) (line_time=%d)\n",
 		is_rotate, is_comp, is_scale, lat_cycle, line_time);
@@ -293,9 +331,6 @@ static void dpu_bts_sum_all_decon_bw(struct decon_device *decon, u32 ch_bw[])
 			ch_bw[j] += decon->bts.ch_bw[i][j];
 	}
 }
-
-/* bus utilization 75% */
-#define BUS_UTIL	75
 
 static void dpu_bts_find_max_disp_freq(struct decon_device *decon,
 		struct decon_reg_data *regs)
@@ -423,13 +458,27 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 		bts_info.dpp[idx].rotation = (rot > DPP_ROT_180) ? true : false;
 
 		/*
+		 * [ GUIDE : #if 0 ]
 		 * Need to apply twice instead of x1.25 as many bandwidth
 		 * of 8-bit YUV if it is a 8P2 format rotation.
+		 *
+		 * [ APPLY : #else ]
+		 * In case of rotation, MIF & INT and DISP clock frequencies
+		 * are important factors related to the issue of underrun.
+		 * So, relatively high frequency is required to avoid underrun.
+		 * By using 32 instead of 12/15/24 as bpp(bit-per-pixel) value,
+		 * MIF & INT frequency can be increased because
+		 * those are decided by the bandwidth.
+		 * ROTATION_FACTOR_BPP(= ARGB8888 value) is a tunable value.
 		 */
 		if (bts_info.dpp[idx].rotation) {
+			#if 0
 			if (fmt == DECON_PIXEL_FORMAT_NV12M_S10B ||
 				fmt == DECON_PIXEL_FORMAT_NV21M_S10B)
 					bts_info.dpp[idx].bpp = 24;
+			#else
+			bts_info.dpp[idx].bpp = ROTATION_FACTOR_BPP;
+			#endif
 		}
 
 		DPU_DEBUG_BTS("\tDPP%d : bpp(%d) src w(%d) h(%d) rot(%d)\n",
