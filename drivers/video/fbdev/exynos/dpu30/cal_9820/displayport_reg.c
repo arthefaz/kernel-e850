@@ -769,12 +769,9 @@ void displayport_reg_set_active_symbol(void)
 	else if (integer_fec_on > 5)
 		threshold_fec_on = 9;
 
-	displayport_info("integer_fec_off = %d\n", integer_fec_off);
-	displayport_info("fraction_fec_off = %d\n", fraction_fec_off);
-	displayport_info("threshold_fec_off = %d\n", threshold_fec_off);
-	displayport_info("integer_fec_on = %d\n", integer_fec_on);
-	displayport_info("fraction_fec_on = %d\n", fraction_fec_on);
-	displayport_info("threshold_fec_on = %d\n", threshold_fec_on);
+	displayport_info("fec_off(int: %d, frac: %d, thr: %d), fec_on(int: %d, frac: %d, thr: %d)\n",
+			integer_fec_off, fraction_fec_off, threshold_fec_off,
+			integer_fec_on, fraction_fec_on, threshold_fec_on);
 
 	displayport_write_mask(SST1_ACTIVE_SYMBOL_INTEGER_FEC_OFF, integer_fec_off, ACTIVE_SYMBOL_INTEGER_FEC_OFF);
 	displayport_write_mask(SST1_ACTIVE_SYMBOL_FRACTION_FEC_OFF, fraction_fec_off, ACTIVE_SYMBOL_FRACTION_FEC_OFF);
@@ -1383,6 +1380,7 @@ void displayport_reg_deinit(void)
 
 void displayport_reg_set_video_configuration(videoformat video_format, u8 bpc, u8 range)
 {
+	displayport_info("color range: %d, bpc: %d\n", range, bpc);
 	displayport_reg_set_daynamic_range((range)?CEA_RANGE:VESA_RANGE);
 	displayport_write_mask(SST1_VIDEO_CONTROL, bpc, BPC);	/* 0 : 6bits, 1 : 8bits */
 	displayport_write_mask(SST1_VIDEO_CONTROL, 0, COLOR_FORMAT);	/* RGB */
@@ -1539,7 +1537,7 @@ void displayport_reg_start(void)
 void displayport_reg_video_mute(u32 en)
 {
 /*	displayport_dbg("set mute %d\n", en);
- *	displayport_write_mask(Video_Control_1, en, VIDEO_MUTE);
+ *	displayport_write_mask(SST1_VIDEO_MUTE, en, VIDEO_MUTE);
  */
 }
 
