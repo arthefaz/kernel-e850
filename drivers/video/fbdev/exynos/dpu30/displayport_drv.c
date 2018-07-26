@@ -690,21 +690,13 @@ static int displayport_link_training(void)
 static void displayport_set_switch_state(struct displayport_device *displayport, int state)
 {
 #if defined(CONFIG_EXTCON)
-	if (state) {
+	if (state)
 		extcon_set_state_sync(displayport->extcon_displayport, EXTCON_DISP_DP, 1);
-#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
-		dp_ado_switch_set_state(edid_audio_informs());
-#endif
-	} else {
-#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
-		dp_ado_switch_set_state(-1);
-#endif
+	else
 		extcon_set_state_sync(displayport->extcon_displayport, EXTCON_DISP_DP, 0);
-	}
 #else
 	displayport_info("Not compiled EXTCON driver\n");
 #endif
-
 	displayport_info("HPD status = %d\n", state);
 }
 
@@ -732,11 +724,12 @@ void displayport_hpd_changed(int state)
 		displayport->dyn_range = VESA_RANGE;
 		displayport->hpd_state = HPD_PLUG;
 		displayport->auto_test_mode = 0;
-		displayport->state = DISPLAYPORT_STATE_OFF;
-
+		displayport->best_video = EDID_DEFAULT_TIMINGS_IDX;
+		auth_done = HDCP_2_2_NOT_AUTH;
 		/* PHY power on */
 		displayport_reg_sw_reset();
 		displayport_reg_init(); /* for AUX ch read/write. */
+		displayport->state = DISPLAYPORT_STATE_INIT;
 		usleep_range(10000, 11000);
 
 		/* for Link CTS : (4.2.2.3) EDID Read */
@@ -769,7 +762,10 @@ void displayport_hpd_changed(int state)
 		if (displayport->bist_used == 0) {
 			displayport_set_switch_state(displayport, 1);
 			timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-				(displayport->state == DISPLAYPORT_STATE_ON), msecs_to_jiffies(1000));
+				(displayport->state == DISPLAYPORT_STATE_ON), msecs_to_jiffies(3000));
+#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
+			dp_ado_switch_set_state(edid_audio_informs());
+#endif
 			if (!timeout)
 				displayport_err("enable timeout\n");
 		} else
@@ -792,21 +788,43 @@ void displayport_hpd_changed(int state)
 		displayport->cur_video = V640X480P60;
 
 		if (displayport->bist_used == 0) {
+#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
+			dp_ado_switch_set_state(-1);
+			displayport_info("audio info = -1\n");
+			timeout = wait_event_interruptible_timeout(displayport->audio_wait,
+					(displayport->audio_state == 0), msecs_to_jiffies(5000));
+			if (!timeout)
+				displayport_info("audio disable timeout\n");
+#endif
 			displayport_set_switch_state(displayport, 0);
 			timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-				(displayport->state == DISPLAYPORT_STATE_INIT), msecs_to_jiffies(1000));
-			if (!timeout)
+				(displayport->state == DISPLAYPORT_STATE_OFF), msecs_to_jiffies(7000));
+			if (!timeout) {
+				struct decon_device *decon = get_decon_drvdata(2);
+
 				displayport_err("disable timeout\n");
+				if (displayport->state == DISPLAYPORT_STATE_INIT) {
+					displayport_info("not enabled\n");
+					goto HPD_FAIL;
+				} else if (decon->state == DECON_STATE_OFF &&
+						displayport->state == DISPLAYPORT_STATE_ON) {
+					displayport_err("abnormal state: decon:%d, displayport:%d\n",
+							decon->state, displayport->state);
+					displayport_disable(displayport);
+				}
+			}
 		} else
-			displayport_disable(displayport);
+			displayport_disable(displayport); /* for bist video disable */
 
 		pm_relax(displayport->dev);
 
 		displayport->hdcp_ver = 0;
 	}
+
 	mutex_unlock(&displayport->hpd_lock);
 
 	return;
+
 HPD_FAIL:
 	displayport_reg_deinit();
 	displayport_reg_phy_disable();
@@ -829,13 +847,16 @@ void displayport_hpd_unplug(void)
 	displayport->cur_video = V640X480P60;
 
 	if (displayport->bist_used == 0) {
+#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
+		dp_ado_switch_set_state(-1);
+#endif
 		displayport_set_switch_state(displayport, 0);
 		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-				(displayport->state == DISPLAYPORT_STATE_INIT), msecs_to_jiffies(1000));
+				(displayport->state == DISPLAYPORT_STATE_OFF), msecs_to_jiffies(1000));
 		if (!timeout)
 			displayport_err("disable timeout\n");
 	} else
-			displayport_disable(displayport);
+			displayport_disable(displayport); /* for bist video disable */
 
 	displayport->hdcp_ver = 0;
 }
@@ -869,7 +890,14 @@ static void displayport_hpd_plug_work(struct work_struct *work)
 
 static void displayport_hpd_unplug_work(struct work_struct *work)
 {
-	displayport_hpd_unplug();
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	if (!displayport->hpd_current_state) {
+		displayport_info("%s hpd is low\n", __func__);
+		return;
+	}
+
+	displayport_hpd_changed(0);
 }
 
 static int displayport_check_dpcd_lane_status(u8 lane0_1_status,
