@@ -1059,6 +1059,7 @@ void displayport_audio_dma_force_req_release(void);
 void displayport_audio_bist_enable(struct displayport_audio_config_data audio_config_data);
 void displayport_audio_init_config(void);
 void displayport_audio_bist_config(struct displayport_audio_config_data audio_config_data);
+void displayport_reg_print_audio_state(void);
 
 void displayport_reg_set_hdcp22_system_enable(u32 en);
 void displayport_reg_set_hdcp22_mode(u32 en);

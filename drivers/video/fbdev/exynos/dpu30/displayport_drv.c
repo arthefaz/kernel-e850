@@ -739,6 +739,7 @@ void displayport_hpd_changed(int state)
 		} else
 			displayport_enable(displayport);
 	} else {
+		displayport_reg_print_audio_state();
 #if defined(CONFIG_EXYNOS_HDCP2)
 		if (displayport->hdcp_ver == HDCP_VERSION_2_2) {
 			hdcp_dplink_cancel_auth();
