@@ -1452,6 +1452,28 @@ void displayport_reg_set_avi_infoframe(struct infoframe avi_infoframe)
 	displayport_write_mask(SST1_INFOFRAME_SEND_CONTROL, 1, AVI_INFO_SEND);
 }
 
+void displayport_reg_set_spd_infoframe(struct infoframe spd_infoframe)
+{
+	int i, j;
+	int data_ind = 0;
+	u32 spd_infoframe_data;
+
+	displayport_write(SST1_INFOFRAME_SPD_PACKET_TYPE, spd_infoframe.type_code);
+
+	for (i = 0; i < 24; i += 4) {
+		spd_infoframe_data = 0;
+
+		for (j = 0; j < 32; j += 8)
+			spd_infoframe_data |= spd_infoframe.data[data_ind++] << j;
+
+		displayport_write(SST1_INFOFRAME_SPD_PACKET_DATA_SET0 + i, spd_infoframe_data);
+	}
+	displayport_write(SST1_INFOFRAME_SPD_PACKET_DATA_SET6, spd_infoframe.data[24]);
+
+	displayport_write_mask(SST1_INFOFRAME_UPDATE_CONTROL, 1, SPD_INFO_UPDATE);
+	displayport_write_mask(SST1_INFOFRAME_SEND_CONTROL, 1, SPD_INFO_SEND);
+}
+
 void displayport_reg_set_audio_infoframe(struct infoframe audio_infoframe, u32 en)
 {
 	u32 audio_infoframe_data = 0;

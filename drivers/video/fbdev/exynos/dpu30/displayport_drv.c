@@ -1530,6 +1530,28 @@ static int displayport_set_avi_infoframe(void)
 	return 0;
 }
 
+static int displayport_make_spd_infoframe_data(struct infoframe *spd_infoframe)
+{
+	spd_infoframe->type_code = 0x83;
+	spd_infoframe->version_number = 0x1;
+	spd_infoframe->length = 25;
+
+	strncpy(&spd_infoframe->data[0], "SEC.GED", 8);
+
+	return 0;
+}
+
+static int displayport_set_spd_infoframe(void)
+{
+	struct infoframe spd_infoframe;
+
+	memset(&spd_infoframe, 0, sizeof(spd_infoframe));
+	displayport_make_spd_infoframe_data(&spd_infoframe);
+	displayport_reg_set_spd_infoframe(spd_infoframe);
+
+	return 0;
+}
+
 static int displayport_set_audio_infoframe(struct displayport_audio_config_data *audio_config_data)
 {
 	struct infoframe audio_infoframe;
@@ -1811,6 +1833,7 @@ int displayport_enable(struct displayport_device *displayport)
 	}
 
 	displayport_set_avi_infoframe();
+	displayport_set_spd_infoframe();
 #ifdef HDCP_SUPPORT
 	displayport_reg_video_mute(0);
 #endif
