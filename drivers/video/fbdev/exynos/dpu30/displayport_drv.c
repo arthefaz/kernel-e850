@@ -202,6 +202,11 @@ static int displayport_full_link_training(void)
 	displayport_reg_dpcd_read_burst(DPCD_ADD_REVISION_NUMBER, DPCD_BUF_SIZE, val);
 	displayport_info("Full Link Training Start + : %02x %02x\n", val[1], val[2]);
 
+	if (!displayport->hpd_current_state) {
+		displayport_info("hpd is low in full link training\n");
+		return 0;
+	}
+
 	link_rate = val[1];
 	lane_cnt = val[2] & MAX_LANE_COUNT;
 	max_lane_cnt = lane_cnt;
@@ -224,7 +229,12 @@ static int displayport_full_link_training(void)
 	training_aux_rd_interval = val[0];
 
 Reduce_Link_Rate_Retry:
-	displayport_info("Reduce_Link_Rate_Retry\n");
+	displayport_info("Reduce_Link_Rate_Retry(0x%X)\n", link_rate);
+
+	if (!displayport->hpd_current_state) {
+		displayport_info("hpd is low in link rate retry\n");
+		return 0;
+	}
 
 	for (i = 0; i < 4; i++) {
 		pre_emphasis[i] = 0;
@@ -237,6 +247,12 @@ Reduce_Link_Rate_Retry:
 	if (decon->state != DECON_STATE_ON
 		|| displayport_reg_phy_get_link_bw() != link_rate
 		|| displayport_reg_get_lane_count() != lane_cnt) {
+
+		if (decon->state == DECON_STATE_ON) {
+			displayport_info("phy_reset not permitted on decon on state\n");
+			return -EINVAL;
+		}
+
 		displayport_reg_phy_reset(1);
 		displayport_reg_phy_init_setting();
 		displayport_reg_phy_mode_setting();
@@ -274,6 +290,11 @@ Reduce_Link_Rate_Retry:
 
 Voltage_Swing_Retry:
 	displayport_dbg("Voltage_Swing_Retry\n");
+
+	if (!displayport->hpd_current_state) {
+		displayport_info("hpd is low in swing retry\n");
+		return 0;
+	}
 
 	displayport_reg_set_voltage_and_pre_emphasis((u8 *)drive_current, (u8 *)pre_emphasis);
 	displayport_get_voltage_and_pre_emphasis_max_reach((u8 *)drive_current,
@@ -413,6 +434,11 @@ EQ_Training_Start:
 
 EQ_Training_Retry:
 	displayport_dbg("EQ_Training_Retry\n");
+
+	if (!displayport->hpd_current_state) {
+		displayport_info("hpd is low in eq training retry\n");
+		return 0;
+	}
 
 	displayport_reg_set_voltage_and_pre_emphasis((u8 *)drive_current, (u8 *)pre_emphasis);
 	displayport_get_voltage_and_pre_emphasis_max_reach((u8 *)drive_current,
@@ -559,15 +585,14 @@ static int displayport_check_dfp_type(void)
 
 static void displayport_link_sink_status_read(void)
 {
-	u8 val[DPCP_LINK_SINK_STATUS_FIELD_LENGTH] = {0, };
+	u8 val[DPCD_BUF_SIZE] = {0, };
 
-	displayport_reg_dpcd_read_burst(DPCD_ADD_SINK_COUNT,
-			DPCP_LINK_SINK_STATUS_FIELD_LENGTH, val);
-	displayport_info("Read link status %02x %02x %02x %02x %02x %02x\n",
+	displayport_reg_dpcd_read_burst(DPCD_ADD_REVISION_NUMBER, DPCD_BUF_SIZE, val);
+
+	displayport_info("Read DPCD REV NUM 0_5 %02x %02x %02x %02x %02x %02x\n",
 			val[0], val[1], val[2], val[3], val[4], val[5]);
-
-	displayport_reg_dpcd_read_burst(DPCD_ADD_LINK_BW_SET, 2, val);
-	displayport_info("Read link rate %02x, count %02x\n", val[0], val[1]);
+	displayport_info("Read DPCD REV NUM 6_B %02x %02x %02x %02x %02x %02x\n",
+			val[6], val[7], val[8], val[9], val[10], val[11]);
 }
 
 static int displayport_read_branch_revision(struct displayport_device *displayport)
@@ -637,14 +662,23 @@ static int displayport_link_status_read(void)
 
 static int displayport_link_training(void)
 {
+	u8 val;
 	struct displayport_device *displayport = get_displayport_drvdata();
 	int ret = 0;
+
+	if (!displayport->hpd_current_state) {
+		displayport_info("hpd is low in link training\n");
+		return 0;
+	}
 
 	mutex_lock(&displayport->training_lock);
 
 	ret = edid_update(displayport);
 	if (ret < 0)
 		displayport_err("failed to update edid\n");
+
+	displayport_reg_dpcd_read(DPCD_ADD_MAX_DOWNSPREAD, 1, &val);
+	displayport_dbg("DPCD_ADD_MAX_DOWNSPREAD = %x\n", val);
 
 	ret = displayport_full_link_training();
 
