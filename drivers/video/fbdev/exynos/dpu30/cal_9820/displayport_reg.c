@@ -1464,7 +1464,7 @@ void displayport_reg_set_audio_infoframe(struct infoframe audio_infoframe, u32 e
 			| ((u32)audio_infoframe.data[5] << 8) | (u32)audio_infoframe.data[4];
 	displayport_write(SST1_INFOFRAME_AUDIO_PACKET_DATA_SET1, audio_infoframe_data);
 
-	audio_infoframe_data = ((u32)audio_infoframe.data[10] << 8) | (u32)audio_infoframe.data[9];
+	audio_infoframe_data = ((u32)audio_infoframe.data[9] << 8) | (u32)audio_infoframe.data[8];
 	displayport_write(SST1_INFOFRAME_AUDIO_PACKET_DATA_SET2, audio_infoframe_data);
 
 	displayport_write_mask(SST1_INFOFRAME_UPDATE_CONTROL, en, AUDIO_INFO_UPDATE);
