@@ -1030,6 +1030,80 @@ int displayport_reg_dpcd_read_burst(u32 address, u32 length, u8 *data)
 	return ret;
 }
 
+int displayport_reg_i2c_write(u32 address, u32 length, u8 *data)
+{
+	int ret;
+	struct displayport_device *displayport = get_displayport_drvdata();
+	int retry_cnt = AUX_RETRY_COUNT;
+
+	mutex_lock(&displayport->aux_lock);
+
+	while (retry_cnt > 0) {
+		displayport_reg_set_aux_ch_command(I2C_WRITE);
+		displayport_reg_set_aux_ch_address(address);
+		displayport_reg_set_aux_ch_address_only_command(1);
+		ret = displayport_reg_set_aux_ch_operation_enable();
+		displayport_reg_set_aux_ch_address_only_command(0);
+
+		displayport_reg_aux_ch_buf_clr();
+		displayport_reg_aux_defer_ctrl(1);
+		displayport_reg_set_aux_reply_timeout();
+		displayport_reg_set_aux_ch_address_only_command(0);
+		displayport_reg_set_aux_ch_command(I2C_WRITE);
+		displayport_reg_set_aux_ch_address(address);
+		displayport_reg_set_aux_ch_length(length);
+		displayport_reg_aux_ch_send_buf(data, length);
+		ret = displayport_reg_set_aux_ch_operation_enable();
+
+		if (ret == 0) {
+			displayport_reg_set_aux_ch_command(I2C_WRITE);
+			displayport_reg_set_aux_ch_address(EDID_ADDRESS);
+			displayport_reg_set_aux_ch_address_only_command(1);
+			ret = displayport_reg_set_aux_ch_operation_enable();
+			displayport_reg_set_aux_ch_address_only_command(0);
+			displayport_dbg("address only request in i2c write\n");
+		}
+
+		if (ret == 0)
+			break;
+
+		retry_cnt--;
+	}
+
+	mutex_unlock(&displayport->aux_lock);
+
+	return ret;
+}
+
+int displayport_reg_i2c_read(u32 address, u32 length, u8 *data)
+{
+	int ret;
+	struct displayport_device *displayport = get_displayport_drvdata();
+	int retry_cnt = AUX_RETRY_COUNT;
+
+	mutex_lock(&displayport->aux_lock);
+	while (retry_cnt > 0) {
+		displayport_reg_set_aux_ch_command(I2C_READ);
+		displayport_reg_set_aux_ch_address(address);
+		displayport_reg_set_aux_ch_length(length);
+		displayport_reg_aux_ch_buf_clr();
+		displayport_reg_aux_defer_ctrl(1);
+		displayport_reg_set_aux_reply_timeout();
+		ret = displayport_reg_set_aux_ch_operation_enable();
+
+		if (ret == 0)
+			break;
+		retry_cnt--;
+	}
+
+	if (ret == 0)
+		displayport_reg_aux_ch_received_buf(data, length);
+
+	mutex_unlock(&displayport->aux_lock);
+
+	return ret;
+}
+
 int displayport_reg_edid_write(u8 edid_addr_offset, u32 length, u8 *data)
 {
 	u32 i, buf_length, length_calculation;

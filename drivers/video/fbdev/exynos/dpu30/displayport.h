@@ -1029,6 +1029,8 @@ int displayport_reg_dpcd_write_burst(u32 address, u32 length, u8 *data);
 int displayport_reg_dpcd_read_burst(u32 address, u32 length, u8 *data);
 int displayport_reg_edid_write(u8 edid_addr_offset, u32 length, u8 *data);
 int displayport_reg_edid_read(u8 edid_addr_offset, u32 length, u8 *data);
+int displayport_reg_i2c_read(u32 address, u32 length, u8 *data);
+int displayport_reg_i2c_write(u32 address, u32 length, u8 *data);
 void displayport_reg_phy_reset(u32 en);
 void displayport_reg_phy_disable(void);
 void displayport_reg_phy_init_setting(void);
