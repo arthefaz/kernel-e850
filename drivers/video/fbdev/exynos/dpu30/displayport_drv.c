@@ -54,8 +54,6 @@
 #define HDCP_2_2_AUTH_DONE     1
 
 int displayport_log_level = 6;
-static u8 max_lane_cnt;
-static u8 max_link_rate;
 static u64 reduced_resolution;
 struct displayport_debug_param g_displayport_debug_param;
 int auth_done = HDCP_2_2_NOT_AUTH;
@@ -129,13 +127,42 @@ static int displayport_check_edid_max_clock(struct displayport_device *displaypo
 	return ret_val;
 }
 
+static int displayport_check_link_rate_pixel_clock(u8 link_rate, u8 lane_cnt, u64 pixel_clock)
+{
+	u64 calc_pixel_clock = 0;
+	int ret_val = false;
+
+	switch (link_rate) {
+	case LINK_RATE_1_62Gbps:
+		calc_pixel_clock = RBR_PIXEL_CLOCK_PER_LANE * lane_cnt;
+		break;
+	case LINK_RATE_2_7Gbps:
+		calc_pixel_clock = HBR_PIXEL_CLOCK_PER_LANE * lane_cnt;
+		break;
+	case LINK_RATE_5_4Gbps:
+		calc_pixel_clock = HBR2_PIXEL_CLOCK_PER_LANE * lane_cnt;
+		break;
+	default:
+		calc_pixel_clock = HBR2_PIXEL_CLOCK_PER_LANE * lane_cnt;
+		break;
+	}
+
+	if (calc_pixel_clock >= pixel_clock)
+		ret_val = true;
+
+	if (ret_val == false)
+		displayport_info("link rate: 0x%x, lane cnt: %d, pixel_clock = %llu, calc_pixel_clock = %llu\n",
+			link_rate, lane_cnt, pixel_clock, calc_pixel_clock);
+
+	return ret_val;
+}
+
 static int displayport_get_min_link_rate(u8 rx_link_rate, u8 lane_cnt)
 {
-	int i;
-	u64 pc1lane[] = {54000000, 90000000, 180000000};
-	int link_rate[] = {LINK_RATE_1_62Gbps, LINK_RATE_2_7Gbps, LINK_RATE_5_4Gbps};
-	u64 max_pclk;
-	u8 min_link_rate;
+	int i = 0;
+	int link_rate[MAX_LINK_RATE_NUM] = {LINK_RATE_1_62Gbps, LINK_RATE_2_7Gbps, LINK_RATE_5_4Gbps};
+	u64 max_pclk = 0;
+	u8 min_link_rate = 0;
 
 	if (rx_link_rate == LINK_RATE_1_62Gbps)
 		return rx_link_rate;
@@ -144,13 +171,16 @@ static int displayport_get_min_link_rate(u8 rx_link_rate, u8 lane_cnt)
 		return LINK_RATE_5_4Gbps;
 
 	max_pclk = displayport_find_edid_max_pixelclock();
-	for (i = 0; i < 2; i++) {
-		/* Add overhead + margin */
-		if ((u64)lane_cnt * pc1lane[i] >= max_pclk * 1.25 + 10000000)
+	for (i = 0; i < MAX_LINK_RATE_NUM; i++) {
+		if (displayport_check_link_rate_pixel_clock(link_rate[i], lane_cnt, max_pclk) == true)
 			break;
 	}
 
-	min_link_rate = link_rate[i] > rx_link_rate ? rx_link_rate : link_rate[i];
+	if (i >= MAX_LINK_RATE_NUM)
+		min_link_rate = LINK_RATE_5_4Gbps;
+	else
+		min_link_rate = link_rate[i] > rx_link_rate ? rx_link_rate : link_rate[i];
+
 	displayport_info("set link late: 0x%x, lane cnt:%d\n", min_link_rate, lane_cnt);
 
 	return min_link_rate;
@@ -209,7 +239,6 @@ static int displayport_full_link_training(void)
 
 	link_rate = val[1];
 	lane_cnt = val[2] & MAX_LANE_COUNT;
-	max_lane_cnt = lane_cnt;
 	tps3_supported = val[2] & TPS3_SUPPORTED;
 	enhanced_frame_cap = val[2] & ENHANCED_FRAME_CAP;
 
@@ -493,8 +522,6 @@ EQ_Training_Retry:
 	displayport_info("lane_channel_eq_done = %x\n", lane_channel_eq_done);
 	displayport_info("lane_symbol_locked_done = %x\n", lane_symbol_locked_done);
 	displayport_info("interlane_align_done = %x\n", interlane_align_done);
-
-	max_link_rate = link_rate;
 
 	if (lane_cnt == 0x04) {
 		if ((lane_channel_eq_done == 0x0F) && (lane_symbol_locked_done == 0x0F)
@@ -2073,29 +2100,11 @@ static int displayport_g_dv_timings(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static u64 displayport_get_max_pixelclock(void)
-{
-	u64 pc;
-	u64 pc1lane;
-
-	if (max_link_rate == LINK_RATE_5_4Gbps) {
-		pc1lane = 180000000;
-	} else if (max_link_rate == LINK_RATE_2_7Gbps) {
-		pc1lane = 90000000;
-	} else {/* LINK_RATE_1_62Gbps */
-		pc1lane = 54000000;
-	}
-
-	pc = max_lane_cnt * pc1lane;
-
-	return pc;
-}
-
 static int displayport_enum_dv_timings(struct v4l2_subdev *sd,
 		struct v4l2_enum_dv_timings *timings)
 {
 	if (timings->index >= supported_videos_pre_cnt) {
-		displayport_dbg("displayport_enum_dv_timings -EOVERFLOW\n");
+		displayport_warn("request index %d is too big\n", timings->index);
 		return -E2BIG;
 	}
 
@@ -2106,20 +2115,22 @@ static int displayport_enum_dv_timings(struct v4l2_subdev *sd,
 	}
 
 	/* reduce the timing by lane count and link rate */
-	if (supported_videos[timings->index].dv_timings.bt.pixelclock >
-			displayport_get_max_pixelclock()) {
-		displayport_info("Max pixelclock = %llu, lane:%d, rate:0x%x\n",
-				displayport_get_max_pixelclock(), max_lane_cnt, max_link_rate);
+	if (displayport_check_link_rate_pixel_clock(displayport_reg_phy_get_link_bw(),
+			displayport_reg_get_lane_count(),
+			supported_videos[timings->index].dv_timings.bt.pixelclock)
+			== false) {
+		displayport_info("can't set index %d (over link rate)\n", timings->index);
 		return -E2BIG;
 	}
 
 	if (reduced_resolution && reduced_resolution <
 			supported_videos[timings->index].dv_timings.bt.pixelclock) {
-		displayport_info("reduced_resolution: %llu\n", reduced_resolution);
+		displayport_info("reduced_resolution: %llu, idx: %d\n",
+				reduced_resolution, timings->index);
 		return -E2BIG;
 	}
 
-	displayport_info("matched video_format : %s\n", supported_videos[timings->index].name);
+	displayport_dbg("matched video_format : %s\n", supported_videos[timings->index].name);
 	timings->timings = supported_videos[timings->index].dv_timings;
 
 	return 0;

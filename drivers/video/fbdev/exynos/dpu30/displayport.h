@@ -138,6 +138,10 @@ enum displayport_interrupt_mask {
 };
 
 #define MAX_LANE_CNT 4
+#define MAX_LINK_RATE_NUM 3
+#define RBR_PIXEL_CLOCK_PER_LANE 51300000 /* hz */
+#define HBR_PIXEL_CLOCK_PER_LANE 85500000 /* hz */
+#define HBR2_PIXEL_CLOCK_PER_LANE 171000000 /* hz */
 #define DPCD_BUF_SIZE 12
 
 #define FB_AUDIO_LPCM	1
