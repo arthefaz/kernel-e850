@@ -616,6 +616,7 @@ static irqreturn_t s3c64xx_serial_handle_irq(int irq, void *id)
 	struct s3c24xx_uart_port *ourport = id;
 	struct uart_port *port = &ourport->port;
 	unsigned int pend = rd_regl(port, S3C64XX_UINTP);
+	unsigned int uintm = 0;
 	irqreturn_t ret = IRQ_HANDLED;
 
 #ifdef CONFIG_PM_DEVFREQ
@@ -624,10 +625,15 @@ static irqreturn_t s3c64xx_serial_handle_irq(int irq, void *id)
 		schedule_delayed_work(&ourport->qos_work,
 						msecs_to_jiffies(100));
 #endif
+	uintm = rd_regl(port, S3C64XX_UINTM);
 
 	if (pend & S3C64XX_UINTM_RXD_MSK) {
+		uintm |= S3C64XX_UINTM_RXD_MSK;
+		wr_regl(port, S3C64XX_UINTM, uintm);
 		ret = s3c24xx_serial_rx_chars(irq, id);
 		wr_regl(port, S3C64XX_UINTP, S3C64XX_UINTM_RXD_MSK);
+		uintm &= ~S3C64XX_UINTM_RXD_MSK;
+		wr_regl(port, S3C64XX_UINTM, uintm);
 	}
 	if (pend & S3C64XX_UINTM_TXD_MSK) {
 		ret = s3c24xx_serial_tx_chars(irq, id);
