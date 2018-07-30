@@ -572,9 +572,9 @@ static bool dw_mci_wait_data_busy(struct dw_mci *host, struct mmc_request *mrq)
 	bool ret = false;
 
 	do {
-		if (!readl_poll_timeout_atomic(host->regs + SDMMC_STATUS, status,
-					       !(status & SDMMC_STATUS_BUSY),
-					       10, 100 * USEC_PER_MSEC)) {
+		if (!readl_poll_timeout(host->regs + SDMMC_STATUS, status,
+					!(status & SDMMC_STATUS_BUSY),
+					10, 100 * USEC_PER_MSEC)) {
 			ret = true;
 			goto out;
 		}
