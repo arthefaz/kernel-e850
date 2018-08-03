@@ -2336,6 +2336,14 @@ int decon_check_global_limitation(struct decon_device *decon,
 		if (config[i].state != DECON_WIN_STATE_BUFFER)
 			continue;
 
+		if (config[i].idma_type < 0 ||
+				config[i].idma_type >= decon->dt.dpp_cnt) {
+			ret = -EINVAL;
+			decon_err("invalid dpp channel(%d)\n",
+					config[i].idma_type);
+			goto err;
+		}
+
 		/* case 1 : In one axi domain, a channel has
 		 *	compression & src.w over 2048
 		 *	the one on the other should never have compression.
