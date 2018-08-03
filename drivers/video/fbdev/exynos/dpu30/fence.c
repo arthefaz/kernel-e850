@@ -299,8 +299,6 @@ void decon_wait_fence(struct dma_fence *fence)
 
 void decon_signal_fence(struct dma_fence *fence)
 {
-	if (dma_fence_signal(fence))
-		decon_warn("%s: fence[%p] #%d signal failed\n", __func__,
-				fence, fence->seqno);
+	dma_fence_signal(fence);
 }
 #endif
