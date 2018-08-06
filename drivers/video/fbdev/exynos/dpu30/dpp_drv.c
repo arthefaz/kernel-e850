@@ -541,6 +541,11 @@ static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg
 		break;
 
 	case DPP_AFBC_ATTR_ENABLED:
+		if (!arg) {
+			dpp_err("failed to get afbc enabled info(arg addr : 0x%x)\n", arg);
+			ret = -EINVAL;
+			break;
+		}
 		afbc_enabled = (int *)arg;
 		ret = dpp_afbc_enabled(dpp, afbc_enabled);
 		break;
