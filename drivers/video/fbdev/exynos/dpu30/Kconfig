@@ -120,6 +120,10 @@ config EXYNOS_FREQ_HOP
         depends on EXYNOS_DPU20
         default n
 
+config EXYNOS_PLL_SLEEP
+	bool "Support DPHY PLL Sleep"
+        depends on EXYNOS_DPU20
+        default n
 endif
 
 source "drivers/video/fbdev/exynos/dpu20/panels/Kconfig"
