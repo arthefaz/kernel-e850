@@ -2357,12 +2357,20 @@ static void displayport_aux_sel(struct displayport_device *displayport)
 {
 	if (gpio_is_valid(displayport->gpio_usb_dir) &&
 			gpio_is_valid(displayport->gpio_sw_sel)) {
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
 		displayport->dp_sw_sel = gpio_get_value(displayport->gpio_usb_dir);
+#else
+		displayport->dp_sw_sel = !gpio_get_value(displayport->gpio_usb_dir);
+#endif
 		gpio_direction_output(displayport->gpio_sw_sel, !(displayport->dp_sw_sel));
 		displayport_info("Get direction from ccic %d\n", displayport->dp_sw_sel);
 	} else if (gpio_is_valid(displayport->gpio_usb_dir)) {
 		/* for old H/W - AUX switch is controlled by CCIC */
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
 		displayport->dp_sw_sel = !gpio_get_value(displayport->gpio_usb_dir);
+#else
+		displayport->dp_sw_sel = gpio_get_value(displayport->gpio_usb_dir);
+#endif
 		displayport_info("Get Direction From CCIC %d\n", !displayport->dp_sw_sel);
 	}
 }
