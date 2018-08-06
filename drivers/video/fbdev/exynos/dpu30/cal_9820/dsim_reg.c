@@ -920,8 +920,8 @@ static void dsim_reg_set_pll_clk_gate_enable(u32 id, u32 en)
 	dsim_write_mask(id, reg_id, val, mask);
 }
 
-#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 /* This function is available from EVT1 */
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0) && defined(CONFIG_EXYNOS_PLL_SLEEP)
 static void dsim_reg_set_pll_sleep_enable(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
@@ -2191,7 +2191,9 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 	dsim_reg_set_pll_clk_gate_enable(id, 1); /* PHY pll clock gate disable */
 #else
 	dsim_reg_set_pll_clk_gate_enable(id, DPHY_PLL_CLK_GATE_EN); /* PHY pll clock gate disable */
-	dsim_reg_set_pll_sleep_enable(id, DPHY_PLL_SLEEP_EN);	/* PHY pll sleep disable */
+#if defined(CONFIG_EXYNOS_PLL_SLEEP)
+	dsim_reg_set_pll_sleep_enable(id, true);	/* PHY pll sleep enable */
+#endif
 #endif
 
 #if defined(CONFIG_EXYNOS_LCD_ON_UBOOT)
@@ -2507,7 +2509,9 @@ void dsim_reg_set_dphy_freq_hopping(u32 id, u32 p, u32 m, u32 k, u32 en)
 	u32 pll_stable_cnt = (PLL_SLEEP_CNT_MULT + PLL_SLEEP_CNT_MARGIN) * p;
 
 	if (en) {
+#if defined(CONFIG_EXYNOS_PLL_SLEEP)
 		dsim_reg_set_pll_sleep_enable(id, false);
+#endif
 		dsim_reg_set_dphy_use_shadow(id, 1);
 		dsim_reg_set_dphy_pll_stable_cnt(id, pll_stable_cnt);
 
@@ -2525,7 +2529,9 @@ void dsim_reg_set_dphy_freq_hopping(u32 id, u32 p, u32 m, u32 k, u32 en)
 	} else {
 		dsim_reg_set_dphy_use_shadow(id, 0);
 		dsim_reg_set_dphy_shadow_update_req(id, 0);
+#if defined(CONFIG_EXYNOS_PLL_SLEEP)
 		dsim_reg_set_pll_sleep_enable(id, true);
+#endif
 	}
 }
 #endif

@@ -1030,9 +1030,11 @@ void dpu_set_freq_hop(struct decon_device *decon, bool en)
 	pms = &decon->lcd_info->dphy_pms;
 	if (pms->m != target_m) {
 		if (en) {
+#if defined(CONFIG_EXYNOS_PLL_SLEEP)
 			/* wakeup PLL if sleeping... */
 			decon_reg_set_pll_wakeup(decon->id, true);
 			decon_reg_set_pll_sleep(decon->id, false);
+#endif
 
 			v4l2_subdev_call(decon->out_sd[0], core, ioctl,
 					DSIM_IOC_SET_FREQ_HOP, &target_m);
@@ -1044,7 +1046,9 @@ void dpu_set_freq_hop(struct decon_device *decon, bool en)
 					en, pms->p, pms->m, pms->s, pms->k);
 			v4l2_subdev_call(decon->out_sd[0], core, ioctl,
 					DSIM_IOC_SET_FREQ_HOP, &target_m);
+#if defined(CONFIG_EXYNOS_PLL_SLEEP)
 			decon_reg_set_pll_sleep(decon->id, true);
+#endif
 		}
 	}
 #endif
