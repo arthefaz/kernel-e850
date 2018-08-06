@@ -284,10 +284,11 @@ Reduce_Link_Rate_Retry:
 
 		displayport_reg_phy_reset(1);
 		displayport_reg_phy_init_setting();
-		displayport_reg_phy_mode_setting();
 
 		displayport_reg_phy_set_link_bw(link_rate);
 		displayport_info("link_rate = %x\n", link_rate);
+
+		displayport_reg_phy_mode_setting();
 
 		displayport_reg_set_lane_count(lane_cnt);
 		displayport_info("lane_cnt = %x\n", lane_cnt);
