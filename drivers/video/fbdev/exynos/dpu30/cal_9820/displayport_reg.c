@@ -245,6 +245,17 @@ void displayport_reg_phy_mode_setting(void)
 		displayport_phy_write_mask(TRSV_REG0400, 1, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
 		displayport_phy_write_mask(TRSV_REG0800, 1, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
 #endif
+		if (displayport_reg_phy_get_link_bw() < LINK_RATE_5_4Gbps) {
+			displayport_phy_write_mask(TRSV_REG0215, 1, LN0_ANA_TX_SER_TXCLK_INV);
+			displayport_phy_write_mask(TRSV_REG0415, 1, LN1_ANA_TX_SER_TXCLK_INV);
+			displayport_phy_write_mask(TRSV_REG0615, 1, LN2_ANA_TX_SER_TXCLK_INV);
+			displayport_phy_write_mask(TRSV_REG0815, 1, LN3_ANA_TX_SER_TXCLK_INV);
+		} else {
+			displayport_phy_write_mask(TRSV_REG0215, 0, LN0_ANA_TX_SER_TXCLK_INV);
+			displayport_phy_write_mask(TRSV_REG0415, 0, LN1_ANA_TX_SER_TXCLK_INV);
+			displayport_phy_write_mask(TRSV_REG0615, 0, LN2_ANA_TX_SER_TXCLK_INV);
+			displayport_phy_write_mask(TRSV_REG0815, 0, LN3_ANA_TX_SER_TXCLK_INV);
+		}
 		break;
 
 	case CCIC_NOTIFY_DP_PIN_B:
@@ -260,6 +271,17 @@ void displayport_reg_phy_mode_setting(void)
 			displayport_phy_write_mask(TRSV_REG0400, 0, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
 			displayport_phy_write_mask(TRSV_REG0800, 1, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
 #endif
+			if (displayport_reg_phy_get_link_bw() < LINK_RATE_5_4Gbps) {
+				displayport_phy_write_mask(TRSV_REG0215, 0, LN0_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0415, 0, LN1_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0615, 1, LN2_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0815, 1, LN3_ANA_TX_SER_TXCLK_INV);
+			} else {
+				displayport_phy_write_mask(TRSV_REG0215, 0, LN0_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0415, 0, LN1_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0615, 0, LN2_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0815, 0, LN3_ANA_TX_SER_TXCLK_INV);
+			}
 		} else {
 			lane_config_val = LANE_MUX_SEL_DP_LN1 | LANE_MUX_SEL_DP_LN0;
 			lane_en_val = DP_LANE_EN_LN1 | DP_LANE_EN_LN0;
@@ -267,6 +289,17 @@ void displayport_reg_phy_mode_setting(void)
 			displayport_phy_write_mask(TRSV_REG0400, 1, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
 			displayport_phy_write_mask(TRSV_REG0800, 0, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
 #endif
+			if (displayport_reg_phy_get_link_bw() < LINK_RATE_5_4Gbps) {
+				displayport_phy_write_mask(TRSV_REG0215, 1, LN0_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0415, 1, LN1_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0615, 0, LN2_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0815, 0, LN3_ANA_TX_SER_TXCLK_INV);
+			} else {
+				displayport_phy_write_mask(TRSV_REG0215, 0, LN0_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0415, 0, LN1_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0615, 0, LN2_ANA_TX_SER_TXCLK_INV);
+				displayport_phy_write_mask(TRSV_REG0815, 0, LN3_ANA_TX_SER_TXCLK_INV);
+			}
 		}
 		break;
 

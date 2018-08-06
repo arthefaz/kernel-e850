@@ -1594,18 +1594,30 @@
 #define TRSV_REG0204				(0x0810)
 #define LN0_TX_DRV_LVL_CTRL			(0x1F << 0)
 
+#define TRSV_REG0215				(0x0854)
+#define LN0_ANA_TX_SER_TXCLK_INV	(0x01 << 1)
+
 #define TRSV_REG0400				(0x1000)
 #define OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN	(0x01 << 5)
 
 #define TRSV_REG0404				(0x1010)
 #define LN1_TX_DRV_LVL_CTRL			(0x1F << 0)
 
+#define TRSV_REG0415				(0x1054)
+#define LN1_ANA_TX_SER_TXCLK_INV	(0x01 << 1)
+
 #define TRSV_REG0604				(0x1810)
 #define LN2_TX_DRV_LVL_CTRL			(0x1F << 0)
+
+#define TRSV_REG0615				(0x1854)
+#define LN2_ANA_TX_SER_TXCLK_INV	(0x01 << 1)
 
 #define TRSV_REG0800				(0x2000)
 #define OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN	(0x01 << 5)
 
 #define TRSV_REG0804				(0x2010)
 #define LN3_TX_DRV_LVL_CTRL			(0x1F << 0)
+
+#define TRSV_REG0815				(0x2054)
+#define LN3_ANA_TX_SER_TXCLK_INV	(0x01 << 1)
 #endif
