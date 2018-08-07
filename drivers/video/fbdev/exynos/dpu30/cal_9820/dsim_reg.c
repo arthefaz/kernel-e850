@@ -779,10 +779,9 @@ static u32 dsim_reg_is_pll_stable(u32 id)
 static int dsim_reg_enable_pll(u32 id, u32 en)
 {
 
-	u32 cnt;
+	u32 cnt = 1000;
 
 	if (en) {
-		cnt = 1000;
 		dsim_reg_clear_int(id, DSIM_INTSRC_PLL_STABLE);
 
 		dsim_reg_set_pll(id, 1);
