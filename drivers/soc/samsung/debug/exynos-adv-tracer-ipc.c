@@ -141,7 +141,8 @@ int adv_tracer_ipc_send_data(unsigned int id, struct adv_tracer_ipc_cmd *cmd)
 	return 0;
 }
 
-int adv_tracer_ipc_send_data_polling(unsigned int id, struct adv_tracer_ipc_cmd *cmd)
+int adv_tracer_ipc_send_data_polling_timeout(unsigned int id, struct adv_tracer_ipc_cmd *cmd,
+					unsigned long timeout_ns)
 {
 	struct adv_tracer_ipc_ch *channel = NULL;
 	ktime_t timeout, now;
@@ -161,7 +162,7 @@ int adv_tracer_ipc_send_data_polling(unsigned int id, struct adv_tracer_ipc_cmd 
 	adv_tracer_interrupt_gen(channel->id);
 	spin_unlock(&channel->ch_lock);
 
-	timeout = ktime_add_ns(ktime_get(), EAT_IPC_TIMEOUT);
+	timeout = ktime_add_ns(ktime_get(), timeout_ns);
 	do {
 		now = ktime_get();
 		adv_tracer_ipc_read_buffer(&_cmd.buffer[0], channel->buff_regs, 1);
@@ -173,6 +174,11 @@ int adv_tracer_ipc_send_data_polling(unsigned int id, struct adv_tracer_ipc_cmd 
 	}
 	adv_tracer_ipc_read_buffer(cmd->buffer, channel->buff_regs, channel->len);
 	return 0;
+}
+
+int adv_tracer_ipc_send_data_polling(unsigned int id, struct adv_tracer_ipc_cmd *cmd)
+{
+	return adv_tracer_ipc_send_data_polling_timeout(id, cmd, EAT_IPC_TIMEOUT);
 }
 
 int adv_tracer_ipc_send_data_async(unsigned int id, struct adv_tracer_ipc_cmd *cmd)
