@@ -79,6 +79,7 @@ extern int decon_log_level;
 extern int dpu_bts_log_level;
 extern int win_update_log_level;
 extern int dpu_mres_log_level;
+extern int dpu_fence_log_level;
 extern int decon_systrace_enable;
 extern struct decon_bts_ops decon_bts_control;
 
@@ -186,6 +187,24 @@ void dpu_debug_printk(const char *function_name, const char *format, ...);
 	do {									\
 		if (dpu_mres_log_level >= 3)					\
 			dpu_debug_printk("MRES", fmt, ##args);			\
+	} while (0)
+
+#define DPU_DEBUG_FENCE(fmt, args...)						\
+	do {									\
+		if (dpu_fence_log_level >= 7)					\
+			dpu_debug_printk("FENCE", fmt,  ##args);			\
+	} while (0)
+
+#define DPU_INFO_FENCE(fmt, args...)						\
+	do {									\
+		if (dpu_fence_log_level >= 6)					\
+			dpu_debug_printk("FENCE", fmt,  ##args);			\
+	} while (0)
+
+#define DPU_ERR_FENCE(fmt, args...)						\
+	do {									\
+		if (dpu_fence_log_level >= 3)					\
+			dpu_debug_printk("FENCE", fmt, ##args);			\
 	} while (0)
 
 /* DECON systrace related */
@@ -663,6 +682,44 @@ void decon_destroy_debugfs(struct decon_device *decon);
 void dpu_memmap_dec(struct decon_device *decon, dma_addr_t target);
 void dpu_memmap_inc(struct decon_device *decon, dma_addr_t target);
 
+/* DPU fence event logger */
+typedef enum dpu_f_evt_type {
+	/* create retire fence and fd by driver */
+	DPU_F_EVT_CREATE_RETIRE_FENCE = 0,
+	/* create release fence fds and install fds to retire fence */
+	DPU_F_EVT_CREATE_RELEASE_FENCE_FDS,
+
+	/* wait for acquire fence signal */
+	DPU_F_EVT_WAIT_ACQUIRE_FENCE,
+
+	/* signal retire fence */
+	DPU_F_EVT_SIGNAL_RETIRE_FENCE,
+
+	DPU_F_EVT_MAX,
+} dpu_f_evt_t;
+
+#define DPU_FENCE_EVENT_LOG_MAX		SZ_512
+#define DPU_FENCE_EVENT_LOG_RETRY	2
+#define MAX_DPU_FENCE_NAME		32
+
+struct dpu_fence_info {
+	int fd;
+	char name[MAX_DPU_FENCE_NAME];
+	u64 context;
+	unsigned int seqno;
+	unsigned long flags;
+};
+
+struct dpu_fence_log {
+	ktime_t time;
+	dpu_f_evt_t type;
+
+	struct dpu_fence_info fence_info;
+};
+
+void DPU_F_EVT_LOG(dpu_f_evt_t type, struct v4l2_subdev *sd,
+		struct dpu_fence_info *fence_info);
+
 /* HDR information of panel */
 enum decon_hdr_type {
 	HDR_NONE = 0,
@@ -768,6 +825,7 @@ struct decon_debug {
 	struct dentry *debug_cmd_lp_ref;
 	struct dentry *debug_mres;
 	struct dentry *debug_freq_hop;
+	struct dentry *debug_fence;
 
 	struct dpu_log *event_log;
 	u32 event_log_cnt;
@@ -787,6 +845,10 @@ struct decon_debug {
 	struct dpu_memmap_info mmap_info[MAX_BUF_MEMMAP];
 	int addr_n;
 #endif
+
+	struct dpu_fence_log *f_evt_log;
+	u32 f_evt_log_cnt;
+	atomic_t f_evt_log_idx;
 };
 
 struct decon_update_regs {
@@ -1308,6 +1370,8 @@ int dpu_get_plane_cnt(enum decon_pixel_format format, bool is_hdr);
 u32 dpu_get_alpha_len(int format);
 void dpu_unify_rect(struct decon_rect *r1, struct decon_rect *r2,
 		struct decon_rect *dst);
+void dpu_save_fence_info(int fd, struct dma_fence *fence,
+		struct dpu_fence_info *fence_info);
 
 void decon_dump(struct decon_device *decon);
 void decon_to_psr_info(struct decon_device *decon, struct decon_mode_info *psr);
@@ -1318,11 +1382,11 @@ void decon_create_release_fences(struct decon_device *decon,
 		struct sync_file *sync_file);
 int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file);
 #if defined(CONFIG_SUPPORT_LEGACY_FENCE)
-void decon_wait_fence(struct sync_file *fence);
+void decon_wait_fence(struct decon_device *decon, struct sync_file *fence, int fd);
 void decon_signal_fence(struct decon_device *decon);
 #else
-void decon_wait_fence(struct dma_fence *fence);
-void decon_signal_fence(struct dma_fence *fence);
+void decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd);
+void decon_signal_fence(struct decon_device *decon, struct dma_fence *fence);
 #endif
 
 bool decon_intersect(struct decon_rect *r1, struct decon_rect *r2);

@@ -748,3 +748,14 @@ void dsim_to_regs_param(struct dsim_device *dsim, struct dsim_regs *regs)
 	regs->phy_regs = dsim->res.phy_regs;
 	regs->phy_regs_ex = dsim->res.phy_regs_ex;
 }
+
+void dpu_save_fence_info(int fd, struct dma_fence *fence,
+		struct dpu_fence_info *fence_info)
+{
+	fence_info->fd = fd;
+	fence_info->context = fence->context;
+	fence_info->seqno = fence->seqno;
+	fence_info->flags = fence->flags;
+	strlcpy(fence_info->name, fence->ops->get_driver_name(fence),
+			MAX_DPU_FENCE_NAME);
+}

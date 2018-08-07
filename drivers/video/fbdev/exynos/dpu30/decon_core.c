@@ -67,6 +67,8 @@ int win_update_log_level = 6;
 module_param(win_update_log_level, int, 0644);
 int dpu_mres_log_level = 6;
 module_param(dpu_mres_log_level, int, 0644);
+int dpu_fence_log_level = 6;
+module_param(dpu_fence_log_level, int, 0644);
 int decon_systrace_enable;
 
 struct decon_device *decon_drvdata[MAX_DECON_CNT];
@@ -2069,8 +2071,10 @@ static void decon_update_regs(struct decon_device *decon,
 
 	decon_systrace(decon, 'C', "decon_fence_wait", 1);
 	for (i = 0; i < decon->dt.max_win; i++) {
-		if (regs->dma_buf_data[i][0].fence)
-			decon_wait_fence(regs->dma_buf_data[i][0].fence);
+		if (regs->dma_buf_data[i][0].fence) {
+			decon_wait_fence(decon, regs->dma_buf_data[i][0].fence,
+					regs->dpp_config[i].acq_fence);
+		}
 	}
 
 	decon_systrace(decon, 'C', "decon_fence_wait", 0);
@@ -2150,7 +2154,7 @@ end:
 #if defined(CONFIG_SUPPORT_LEGACY_FENCE)
 	decon_signal_fence(decon);
 #else
-	decon_signal_fence(regs->retire_fence);
+	decon_signal_fence(decon, regs->retire_fence);
 	dma_fence_put(regs->retire_fence);
 #endif
 
@@ -2358,7 +2362,7 @@ static int decon_set_win_config(struct decon_device *decon,
 #if defined(CONFIG_SUPPORT_LEGACY_FENCE)
 		decon_signal_fence(decon);
 #else
-		decon_signal_fence(sync_file->fence);
+		decon_signal_fence(decon, sync_file->fence);
 #endif
 		goto err;
 	}
@@ -2433,7 +2437,7 @@ err_prepare:
 #if defined(CONFIG_SUPPORT_LEGACY_FENCE)
 			decon_signal_fence(decon);
 #else
-			decon_signal_fence(sync_file->fence);
+			decon_signal_fence(decon, sync_file->fence);
 #endif
 		}
 		fput(sync_file->file);

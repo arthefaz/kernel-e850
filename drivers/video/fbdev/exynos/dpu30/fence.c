@@ -133,7 +133,8 @@ err:
 	return fd;
 }
 
-void decon_wait_fence(struct sync_file *sync_file)
+void decon_wait_fence(struct decon_device *decon, struct sync_file *sync_file,
+		int fd)
 {
 	int err = sync_file_wait(sync_file, 900);
 	if (err >= 0)
@@ -148,6 +149,14 @@ void decon_signal_fence(struct decon_device *decon)
 	sync_timeline_signal(decon->timeline, 1);
 }
 #else	/* dma fence in kernel version 4.14 */
+
+static char *fence_evt[] = {
+	"CREATE_RETIRE_FENCE",
+	"CREATE_RELEASE_FENCE_FDS",
+	"WAIT_ACQUIRE_FENCE",
+	"SIGNAL_RETIRE_FENCE",
+};
+
 /* sync fence related functions */
 void decon_create_timeline(struct decon_device *decon, char *name)
 {
@@ -200,6 +209,8 @@ void decon_create_release_fences(struct decon_device *decon,
 		struct sync_file *sync_file)
 {
 	int i = 0;
+	struct dpu_fence_info release;
+	struct dma_fence *fence = sync_file->fence;
 
 	for (i = 0; i < decon->dt.max_win; i++) {
 		int state = win_data->config[i].state;
@@ -213,8 +224,15 @@ void decon_create_release_fences(struct decon_device *decon,
 				goto err;
 			}
 
-			fd_install(rel_fence,
-					get_file(sync_file->file));
+			fd_install(rel_fence, get_file(sync_file->file));
+
+			dpu_save_fence_info(rel_fence, fence, &release);
+			DPU_F_EVT_LOG(DPU_F_EVT_CREATE_RELEASE_FENCE_FDS,
+					&decon->sd, &release);
+			DPU_DEBUG_FENCE("[%s] %s: seqno(%d), fd(%d), flags(0x%x)\n",
+					fence_evt[DPU_F_EVT_CREATE_RELEASE_FENCE_FDS],
+					release.name, release.seqno, release.fd,
+					release.flags);
 		}
 		win_data->config[i].rel_fence = rel_fence;
 	}
@@ -259,6 +277,7 @@ static struct dma_fence_ops decon_fence_ops = {
 int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file)
 {
 	struct dma_fence *fence;
+	struct dpu_fence_info retire;
 	int fd = -EMFILE;
 
 	fence = kzalloc(sizeof(*fence), GFP_KERNEL);
@@ -282,12 +301,20 @@ int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file)
 		fput((*sync_file)->file);
 	}
 
+	dpu_save_fence_info(fd, fence, &retire);
+	DPU_F_EVT_LOG(DPU_F_EVT_CREATE_RETIRE_FENCE, &decon->sd, &retire);
+	DPU_DEBUG_FENCE("[%s] %s: ctx(%ld) seqno(%d), fd(%d), flags(0x%x)\n",
+			fence_evt[DPU_F_EVT_CREATE_RETIRE_FENCE], retire.name,
+			retire.context, retire.seqno, retire.fd, retire.flags);
+
 	return fd;
 }
 
-void decon_wait_fence(struct dma_fence *fence)
+void decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd)
 {
 	int err = 0;
+	struct dpu_fence_info acquire;
+
 
 	snprintf(acq_fence_log, ACQ_FENCE_LEN, "%p:%s",
 			fence, fence->ops->get_driver_name(fence));
@@ -295,10 +322,24 @@ void decon_wait_fence(struct dma_fence *fence)
 	err = dma_fence_wait_timeout(fence, false, 900);
 	if (err < 0)
 		decon_warn("%s: error waiting on acquire fence: %d\n", acq_fence_log, err);
+
+	dpu_save_fence_info(fd, fence, &acquire);
+	DPU_F_EVT_LOG(DPU_F_EVT_WAIT_ACQUIRE_FENCE, &decon->sd, &acquire);
+	DPU_DEBUG_FENCE("[%s] %s: ctx(%ld), seqno(%d), fd(%d), flags(0x%x)\n",
+			fence_evt[DPU_F_EVT_WAIT_ACQUIRE_FENCE], acquire.name,
+			acquire.context, acquire.seqno, acquire.fd, acquire.flags);
 }
 
-void decon_signal_fence(struct dma_fence *fence)
+void decon_signal_fence(struct decon_device *decon, struct dma_fence *fence)
 {
+	struct dpu_fence_info retire;
+
 	dma_fence_signal(fence);
+
+	dpu_save_fence_info(0, fence, &retire);
+	DPU_F_EVT_LOG(DPU_F_EVT_SIGNAL_RETIRE_FENCE, &decon->sd, &retire);
+	DPU_DEBUG_FENCE("[%s] %s: ctx(%ld), seqno(%d), flags(0x%x)\n",
+			fence_evt[DPU_F_EVT_SIGNAL_RETIRE_FENCE], retire.name,
+			retire.context, retire.seqno, retire.flags);
 }
 #endif

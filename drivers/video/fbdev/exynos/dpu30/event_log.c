@@ -18,6 +18,25 @@
 #include "dsim.h"
 #include "dpp.h"
 
+/* DPU fence event logger function */
+void DPU_F_EVT_LOG(dpu_f_evt_t type, struct v4l2_subdev *sd,
+		struct dpu_fence_info *fence_info)
+{
+	struct decon_device *decon = container_of(sd, struct decon_device, sd);
+	struct dpu_fence_log *log;
+	int idx;
+
+	if (!decon || IS_ERR_OR_NULL(decon->d.f_evt_log))
+		return;
+
+	idx = atomic_inc_return(&decon->d.f_evt_log_idx) % DPU_FENCE_EVENT_LOG_MAX;
+	log = &decon->d.f_evt_log[idx];
+
+	log->time = ktime_get();
+	log->type = type;
+	memcpy(&log->fence_info, fence_info, sizeof(struct dpu_fence_info));
+}
+
 /* logging a event related with DECON */
 static inline void dpu_event_log_decon
 	(dpu_event_t type, struct v4l2_subdev *sd, ktime_t time)
@@ -1236,6 +1255,49 @@ static const struct file_operations decon_memmap_ref_cnt_fops = {
 };
 #endif
 
+static int decon_debug_fence_show(struct seq_file *s, void *unused)
+{
+	seq_printf(s, "%u\n", dpu_fence_log_level);
+
+	return 0;
+}
+
+static int decon_debug_fence_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, decon_debug_fence_show, inode->i_private);
+}
+
+static ssize_t decon_debug_fence_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *f_ops)
+{
+	char *buf_data;
+	int ret;
+
+	buf_data = kmalloc(count, GFP_KERNEL);
+	if (buf_data == NULL)
+		return count;
+
+	ret = copy_from_user(buf_data, buf, count);
+	if (ret < 0)
+		goto out;
+
+	ret = sscanf(buf_data, "%u", &dpu_fence_log_level);
+	if (ret < 0)
+		goto out;
+
+out:
+	kfree(buf_data);
+	return count;
+}
+
+static const struct file_operations decon_fence_fops = {
+	.open = decon_debug_fence_open,
+	.write = decon_debug_fence_write,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+
 void decon_hiber_start(struct decon_device *decon)
 {
 	if (!decon->hiber.profile_started)
@@ -1528,6 +1590,24 @@ int decon_create_debugfs(struct decon_device *decon)
 	}
 	decon->d.event_log_cnt = event_cnt;
 
+	decon->d.f_evt_log = NULL;
+	event_cnt = DPU_FENCE_EVENT_LOG_MAX;
+	for (i = 0; i < DPU_FENCE_EVENT_LOG_RETRY; ++i) {
+		event_cnt = event_cnt >> i;
+		decon->d.f_evt_log = kzalloc(sizeof(struct dpu_fence_log) * event_cnt,
+				GFP_KERNEL);
+		if (IS_ERR_OR_NULL(decon->d.f_evt_log)) {
+			decon_warn("failed to alloc fence event log buf[%d]. retry\n",
+					event_cnt);
+			continue;
+		}
+
+		decon_info("#%d fence event log buffers are allocated\n", event_cnt);
+		break;
+	}
+	decon->d.f_evt_log_cnt = event_cnt;
+	atomic_set(&decon->d.f_evt_log_idx, -1);
+
 	if (!decon->id) {
 		decon->d.debug_root = debugfs_create_dir("decon", NULL);
 		if (!decon->d.debug_root) {
@@ -1657,6 +1737,13 @@ int decon_create_debugfs(struct decon_device *decon)
 			goto err_debugfs;
 		}
 
+		decon->d.debug_fence = debugfs_create_file("fence_log", 0444,
+				decon->d.debug_root, NULL, &decon_fence_fops);
+		if (!decon->d.debug_fence) {
+			decon_err("failed to create fence log level file\n");
+			ret = -ENOENT;
+			goto err_debugfs;
+		}
 	}
 
 	return 0;
@@ -1665,7 +1752,9 @@ err_debugfs:
 	debugfs_remove_recursive(decon->d.debug_root);
 err_event_log:
 	kfree(decon->d.event_log);
+	kfree(decon->d.f_evt_log);
 	decon->d.event_log = NULL;
+	decon->d.f_evt_log = NULL;
 	return ret;
 }
 
