@@ -2990,7 +2990,7 @@ static int decon_register_subdevs(struct decon_device *decon)
 		}
 
 		for (i = 0; i < decon->dt.dsim_cnt; i++) {
-			if (decon->dsim_sd[i] == NULL || i == 1)
+			if (decon->dsim_sd[i] == NULL)
 				continue;
 
 			ret = v4l2_device_register_subdev(v4l2_dev,
@@ -3043,7 +3043,7 @@ static void decon_unregister_subdevs(struct decon_device *decon)
 		}
 
 		for (i = 0; i < decon->dt.dsim_cnt; i++) {
-			if (decon->dsim_sd[i] == NULL || i == 1)
+			if (decon->dsim_sd[i] == NULL)
 				continue;
 			v4l2_device_unregister_subdev(decon->dsim_sd[i]);
 		}
