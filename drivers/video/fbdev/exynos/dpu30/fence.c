@@ -16,9 +16,6 @@
 
 #include "decon.h"
 
-#define ACQ_FENCE_LEN 40
-char acq_fence_log[ACQ_FENCE_LEN];
-
 #if defined(CONFIG_SUPPORT_LEGACY_FENCE)
 /* sync fence related functions */
 void decon_create_timeline(struct decon_device *decon, char *name)
@@ -133,15 +130,17 @@ err:
 	return fd;
 }
 
-void decon_wait_fence(struct decon_device *decon, struct sync_file *sync_file,
+int decon_wait_fence(struct decon_device *decon, struct sync_file *sync_file,
 		int fd)
 {
 	int err = sync_file_wait(sync_file, 900);
 	if (err >= 0)
-		return;
+		return 0;
 
-	if (err < 0)
+	if (err < 0) {
 		decon_warn("error waiting on acquire fence: %d\n", err);
+		return err;
+	}
 }
 
 void decon_signal_fence(struct decon_device *decon)
@@ -310,31 +309,53 @@ int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file)
 	return fd;
 }
 
-void decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd)
+int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd)
 {
 	int err = 0;
+	int fence_err = 0;
+	int ret = 0;
 	struct dpu_fence_info acquire;
 
-
-	snprintf(acq_fence_log, ACQ_FENCE_LEN, "%p:%s",
-			fence, fence->ops->get_driver_name(fence));
-
 	err = dma_fence_wait_timeout(fence, false, 900);
-	if (err < 0)
-		decon_warn("%s: error waiting on acquire fence: %d\n", acq_fence_log, err);
+	if (err < 0) {
+		decon_err("%s: waiting on acquire fence timeout\n", __func__);
+		ret = err;
+	}
+
+	fence_err = dma_fence_get_status(fence);
+	if (fence_err < 0) {
+		decon_err("%s: get acquire fence error status\n", __func__);
+		ret = fence_err;
+	}
 
 	dpu_save_fence_info(fd, fence, &acquire);
+	if ((err < 0) || (fence_err < 0)) {
+		decon_err("\t%s: ctx(%ld), seqno(%d), fd(%d), flags(0x%x), err(%d:%d)\n",
+				acquire.name, acquire.context, acquire.seqno,
+				acquire.fd, acquire.flags, err, fence_err);
+	}
+
 	DPU_F_EVT_LOG(DPU_F_EVT_WAIT_ACQUIRE_FENCE, &decon->sd, &acquire);
 	DPU_DEBUG_FENCE("[%s] %s: ctx(%ld), seqno(%d), fd(%d), flags(0x%x)\n",
 			fence_evt[DPU_F_EVT_WAIT_ACQUIRE_FENCE], acquire.name,
 			acquire.context, acquire.seqno, acquire.fd, acquire.flags);
+
+	return ret;
 }
 
 void decon_signal_fence(struct decon_device *decon, struct dma_fence *fence)
 {
 	struct dpu_fence_info retire;
+	int ret = 0;
 
-	dma_fence_signal(fence);
+	ret = dma_fence_signal(fence);
+	if (ret < 0)
+		decon_warn("failed to signal fence. err(%d)\n", ret);
+
+	if (!fence) {
+		decon_err("%s: fence is NULL\n", __func__);
+		return;
+	}
 
 	dpu_save_fence_info(0, fence, &retire);
 	DPU_F_EVT_LOG(DPU_F_EVT_SIGNAL_RETIRE_FENCE, &decon->sd, &retire);

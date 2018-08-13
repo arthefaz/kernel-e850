@@ -1382,10 +1382,10 @@ void decon_create_release_fences(struct decon_device *decon,
 		struct sync_file *sync_file);
 int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file);
 #if defined(CONFIG_SUPPORT_LEGACY_FENCE)
-void decon_wait_fence(struct decon_device *decon, struct sync_file *fence, int fd);
+int decon_wait_fence(struct decon_device *decon, struct sync_file *fence, int fd);
 void decon_signal_fence(struct decon_device *decon);
 #else
-void decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd);
+int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd);
 void decon_signal_fence(struct decon_device *decon, struct dma_fence *fence);
 #endif
 
