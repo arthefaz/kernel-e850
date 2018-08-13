@@ -309,8 +309,11 @@ static int s3c24xx_serial_has_interrupt_mask(struct uart_port *port)
 
 static void s3c24xx_serial_rx_enable(struct uart_port *port)
 {
+	unsigned long flags;
 	unsigned int ucon, ufcon;
 	int count = 10000;
+
+	spin_lock_irqsave(&port->lock, flags);
 
 	while (--count && !s3c24xx_serial_txempty_nofifo(port))
 		udelay(100);
@@ -324,6 +327,7 @@ static void s3c24xx_serial_rx_enable(struct uart_port *port)
 	wr_regl(port, S3C2410_UCON, ucon);
 
 	rx_enabled(port) = 1;
+	spin_unlock_irqrestore(&port->lock, flags);
 }
 
 static void s3c24xx_serial_rx_disable(struct uart_port *port)
@@ -438,8 +442,13 @@ s3c24xx_serial_rx_chars(int irq, void *dev_id)
 	struct s3c24xx_uart_port *ourport = dev_id;
 	struct uart_port *port = &ourport->port;
 	unsigned int ufcon, ch, flag, ufstat, uerstat;
+	unsigned long flags;
 	int fifocnt = 0;
 	int max_count = port->fifosize;
+	unsigned char insert_buf[256] = {0, };
+	unsigned int insert_cnt = 0;
+
+	spin_lock_irqsave(&port->lock, flags);
 
 	while (max_count-- > 0) {
 		/*
@@ -471,6 +480,8 @@ s3c24xx_serial_rx_chars(int irq, void *dev_id)
 					ufcon |= S3C2410_UFCON_RESETRX;
 					wr_regl(port, S3C2410_UFCON, ufcon);
 					rx_enabled(port) = 1;
+					spin_unlock_irqrestore(&port->lock,
+							flags);
 					goto out;
 				}
 				continue;
@@ -496,17 +507,24 @@ s3c24xx_serial_rx_chars(int irq, void *dev_id)
 					goto ignore_char;
 			}
 
-			if (uerstat & S3C2410_UERSTAT_FRAME)
+			if (uerstat & S3C2410_UERSTAT_FRAME) {
+				pr_err("[tty] uerstat & S3C2410_UERSTAT_FRAME!\n");
 				port->icount.frame++;
-			if (uerstat & S3C2410_UERSTAT_OVERRUN)
+			}
+			if (uerstat & S3C2410_UERSTAT_OVERRUN) {
+				pr_err("[tty] uerstat & S3C2410_UERSTAT_OVERRUN!\n");
 				port->icount.overrun++;
-
+			}
 			uerstat &= port->read_status_mask;
 
-			if (uerstat & S3C2410_UERSTAT_BREAK)
+			if (uerstat & S3C2410_UERSTAT_BREAK) {
+				pr_err("[tty] uerstat & S3C2410_UERSTAT_BREAK2!\n");
 				flag = TTY_BREAK;
-			else if (uerstat & S3C2410_UERSTAT_PARITY)
+			}
+			else if (uerstat & S3C2410_UERSTAT_PARITY) {
+				pr_err("[tty] uerstat & S3C2410_UERSTAT_PARITY!\n");
 				flag = TTY_PARITY;
+			}
 			else if (uerstat & (S3C2410_UERSTAT_FRAME |
 					    S3C2410_UERSTAT_OVERRUN))
 				flag = TTY_FRAME;
@@ -515,14 +533,18 @@ s3c24xx_serial_rx_chars(int irq, void *dev_id)
 		if (uart_handle_sysrq_char(port, ch))
 			goto ignore_char;
 
-		uart_insert_char(port, uerstat, S3C2410_UERSTAT_OVERRUN,
-				 ch, flag);
+		insert_buf[insert_cnt++] = ch;
 
  ignore_char:
 		continue;
 	}
 
+	wr_regl(port, S3C64XX_UINTP, S3C64XX_UINTM_RXD_MSK);
+
+	spin_unlock_irqrestore(&port->lock, flags);
+	tty_insert_flip_string(&port->state->port, insert_buf, insert_cnt);
 	tty_flip_buffer_push(&port->state->port);
+	flush_workqueue(system_unbound_wq);
 
  out:
 	return IRQ_HANDLED;
@@ -533,7 +555,10 @@ static irqreturn_t s3c24xx_serial_tx_chars(int irq, void *id)
 	struct s3c24xx_uart_port *ourport = id;
 	struct uart_port *port = &ourport->port;
 	struct circ_buf *xmit = &port->state->xmit;
+	unsigned long flags;
 	int count = port->fifosize;
+
+	spin_lock_irqsave(&port->lock, flags);
 
 	if (port->x_char) {
 		wr_regb(port, S3C2410_UTXH, port->x_char);
@@ -563,13 +588,18 @@ static irqreturn_t s3c24xx_serial_tx_chars(int irq, void *id)
 	}
 
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS) {
+		spin_unlock_irqrestore(&port->lock, flags);
 		uart_write_wakeup(port);
+		spin_lock_irqsave(&port->lock, flags);
 	}
 
 	if (uart_circ_empty(xmit))
 		s3c24xx_serial_stop_tx(port);
 
 out:
+	wr_regl(port, S3C64XX_UINTP, S3C64XX_UINTM_TXD_MSK);
+
+	spin_unlock_irqrestore(&port->lock, flags);
 	return IRQ_HANDLED;
 }
 
@@ -598,8 +628,6 @@ static irqreturn_t s3c64xx_serial_handle_irq(int irq, void *id)
 {
 	struct s3c24xx_uart_port *ourport = id;
 	struct uart_port *port = &ourport->port;
-	unsigned int uintm = 0;
-	unsigned long flags;
 	irqreturn_t ret = IRQ_HANDLED;
 
 #ifdef CONFIG_PM_DEVFREQ
@@ -609,25 +637,12 @@ static irqreturn_t s3c64xx_serial_handle_irq(int irq, void *id)
 						msecs_to_jiffies(100));
 #endif
 
-	spin_lock_irqsave(&port->lock, flags);
-	uintm = rd_regl(port, S3C64XX_UINTM);
-
-	if (rd_regl(port, S3C64XX_UINTP) & S3C64XX_UINTM_RXD_MSK) {
-		uintm |= S3C64XX_UINTM_RXD_MSK;
-		wr_regl(port, S3C64XX_UINTM, uintm);
+	if (rd_regl(port, S3C64XX_UINTP) & S3C64XX_UINTM_RXD_MSK)
 		ret = s3c24xx_serial_rx_chars(irq, id);
-		wr_regl(port, S3C64XX_UINTP, S3C64XX_UINTM_RXD_MSK);
-		uintm &= ~S3C64XX_UINTM_RXD_MSK;
-		wr_regl(port, S3C64XX_UINTM, uintm);
-	}
-	spin_unlock_irqrestore(&port->lock, flags);
-	flush_workqueue(system_unbound_wq);
-	spin_lock_irqsave(&port->lock, flags);
-	if (rd_regl(port, S3C64XX_UINTP) & S3C64XX_UINTM_TXD_MSK) {
+
+	if (rd_regl(port, S3C64XX_UINTP) & S3C64XX_UINTM_TXD_MSK)
 		ret = s3c24xx_serial_tx_chars(irq, id);
-		wr_regl(port, S3C64XX_UINTP, S3C64XX_UINTM_TXD_MSK);
-	}
-	spin_unlock_irqrestore(&port->lock, flags);
+
 	return ret;
 }
 
