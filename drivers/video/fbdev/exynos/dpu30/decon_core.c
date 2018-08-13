@@ -2052,13 +2052,28 @@ static void decon_update_afbc_info(struct decon_device *decon,
 }
 #endif
 
+static void decon_save_cur_buf_info(struct decon_device *decon,
+		struct decon_reg_data *regs)
+{
+	int i, j;
+
+	for (i = 0; i < decon->dt.max_win; i++) {
+		if (decon->dt.out_type != DECON_OUT_WB) {
+			/* backup cur dma_buf_data for freeing next update_handler_regs */
+			for (j = 0; j < regs->plane_cnt[i]; ++j)
+				decon->win[i]->dma_buf_data[j] = regs->dma_buf_data[i][j];
+			decon->win[i]->plane_cnt = regs->plane_cnt[i];
+		}
+	}
+}
+
 static void decon_update_regs(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
 	struct decon_dma_buf_data old_dma_bufs[decon->dt.max_win][MAX_PLANE_CNT];
 	int old_plane_cnt[MAX_DECON_WIN];
 	struct decon_mode_info psr;
-	int i;
+	int i, err;
 
 	if (!decon->systrace.pid)
 		decon->systrace.pid = current->pid;
@@ -2072,18 +2087,22 @@ static void decon_update_regs(struct decon_device *decon,
 	decon_systrace(decon, 'C', "decon_fence_wait", 1);
 	for (i = 0; i < decon->dt.max_win; i++) {
 		if (regs->dma_buf_data[i][0].fence) {
-			decon_wait_fence(decon, regs->dma_buf_data[i][0].fence,
+			err = decon_wait_fence(decon,
+					regs->dma_buf_data[i][0].fence,
 					regs->dpp_config[i].acq_fence);
+			if (err < 0) {
+				decon_save_cur_buf_info(decon, regs);
+				goto fence_err;
+			}
 		}
 	}
-
 	decon_systrace(decon, 'C', "decon_fence_wait", 0);
-
-	decon_check_used_dpp(decon, regs);
 
 #if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 	decon_update_afbc_info(decon, regs, true);
 #endif
+
+	decon_check_used_dpp(decon, regs);
 
 	decon_update_hdr_info(decon, regs);
 
@@ -2143,30 +2162,13 @@ static void decon_update_regs(struct decon_device *decon,
 			BUG();
 		}
 
-		if (!decon->low_persistence)
+		if (!decon->low_persistence) {
 			decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_DISABLE);
+			DPU_EVENT_LOG(DPU_EVT_TRIG_MASK, &decon->sd, ktime_set(0, 0));
+		}
 	}
 
 end:
-	DPU_EVENT_LOG(DPU_EVT_TRIG_MASK, &decon->sd, ktime_set(0, 0));
-
-	decon_release_old_bufs(decon, regs, old_dma_bufs, old_plane_cnt);
-#if defined(CONFIG_SUPPORT_LEGACY_FENCE)
-	decon_signal_fence(decon);
-#else
-	decon_signal_fence(decon, regs->retire_fence);
-	dma_fence_put(regs->retire_fence);
-#endif
-
-	decon_systrace(decon, 'E', "decon_update_regs", 0);
-
-	DPU_EVENT_LOG(DPU_EVT_FENCE_RELEASE, &decon->sd, ktime_set(0, 0));
-
-#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
-	decon_save_afbc_enabled_win_id(decon, regs);
-	decon_update_afbc_info(decon, regs, false);
-#endif
-
 #if defined(CONFIG_EXYNOS_BTS)
 	/* add update bw : cur < prev */
 	decon->bts.ops->bts_update_bw(decon, regs, 1);
@@ -2179,6 +2181,23 @@ end:
 	dpu_set_freq_hop(decon, false);
 
 	decon_dpp_stop(decon, false);
+
+fence_err:
+	decon_release_old_bufs(decon, regs, old_dma_bufs, old_plane_cnt);
+#if defined(CONFIG_SUPPORT_LEGACY_FENCE)
+	decon_signal_fence(decon);
+#else
+	decon_signal_fence(decon, regs->retire_fence);
+	dma_fence_put(regs->retire_fence);
+#endif
+	DPU_EVENT_LOG(DPU_EVT_FENCE_RELEASE, &decon->sd, ktime_set(0, 0));
+
+#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
+	decon_save_afbc_enabled_win_id(decon, regs);
+	decon_update_afbc_info(decon, regs, false);
+#endif
+
+	decon_systrace(decon, 'E', "decon_update_regs", 0);
 }
 
 static void decon_update_regs_handler(struct kthread_work *work)
