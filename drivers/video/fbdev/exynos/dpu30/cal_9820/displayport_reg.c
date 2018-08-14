@@ -77,9 +77,9 @@ u32 phy_default_value[DEFAULT_SFR_CNT][2] = {
 
 u32 phy_tune_parameters[4][4][4] = { /* {amp, post, pre, idrv} */
 	{	/* Swing Level_0 */
-		{0x21, 0x10, 0x42, 0xE6}, /* Pre-emphasis Level_0 */
-		{0x25, 0x14, 0x42, 0xE6}, /* Pre-emphasis Level_1 */
-		{0x26, 0x17, 0x43, 0xE6}, /* Pre-emphasis Level_2 */
+		{0x21, 0x10, 0x42, 0xE5}, /* Pre-emphasis Level_0 */
+		{0x25, 0x14, 0x42, 0xE5}, /* Pre-emphasis Level_1 */
+		{0x26, 0x17, 0x43, 0xE5}, /* Pre-emphasis Level_2 */
 		{0x2B, 0x1C, 0x43, 0xE7}, /* Pre-emphasis Level_3 */
 	},
 	{	/* Swing Level_1 */
