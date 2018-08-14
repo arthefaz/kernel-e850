@@ -2508,6 +2508,8 @@ static int decon_get_hdr_capa_info(struct decon_device *decon,
 
 }
 
+/* Android O version does not support non translation */
+#if !defined(CONFIG_ANDROID_SYSTEM_AS_ROOT)
 static void decon_translate_idma2ch(struct decon_device *decon,
 		struct decon_win_config_data *win_data)
 {
@@ -2529,6 +2531,7 @@ static void decon_translate_idma2ch(struct decon_device *decon,
 		}
 	}
 }
+#endif
 
 static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			unsigned long arg)
@@ -2591,6 +2594,8 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 
+/* Android O version does not support non translation */
+#if !defined(CONFIG_ANDROID_SYSTEM_AS_ROOT)
 		/*
 		 * idma_type is translated to DPP channel number temporarily.
 		 * In the future, user side will use DPP channel number instead
@@ -2599,6 +2604,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		 * this function will be removed.
 		 */
 		decon_translate_idma2ch(decon, &win_data);
+#endif
 		ret = decon_set_win_config(decon, &win_data);
 		if (ret)
 			break;
