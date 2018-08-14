@@ -19,6 +19,9 @@
 
 #define CEIL(x)			((x-(u32)(x) > 0 ? (u32)(x+1) : (u32)(x)))
 
+#define ROT_MAX_W		3040
+#define ROT_MAX_SZ		3040*1440
+
 enum decon_idma_type {
 	IDMA_G0 = 0,
 	IDMA_G1,
