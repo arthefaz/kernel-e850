@@ -277,11 +277,6 @@ Reduce_Link_Rate_Retry:
 		|| displayport_reg_phy_get_link_bw() != link_rate
 		|| displayport_reg_get_lane_count() != lane_cnt) {
 
-		if (decon->state == DECON_STATE_ON) {
-			displayport_info("phy_reset not permitted on decon on state\n");
-			return -EINVAL;
-		}
-
 		displayport_reg_phy_reset(1);
 		displayport_reg_phy_init_setting();
 
