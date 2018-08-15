@@ -57,7 +57,7 @@ u32 DSIM_PHY_PLL_CON_VAL[] = {
 	0x00000000,
 	0x00000000,
 	0x00000500,
-	0x00000000,
+	0x0000008E,
 	0x00001450,
 #if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 	0x00000A28,
@@ -70,8 +70,11 @@ u32 DSIM_PHY_MC_GNR_CON_VAL[] = {
 };
 u32 DSIM_PHY_MC_ANA_CON_VAL[] = {
 	/* EDGE_CON[14:12] DPHY=3'b111, CPHY=3'b001 */
-	0x00007133,
+	0x00007033,
 	0x00000000,
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	0x00000002,
+#endif
 };
 
 /* same value in all master data lane */
@@ -80,7 +83,7 @@ u32 DSIM_PHY_MD_GNR_CON_VAL[] = {
 	0x00001450,
 };
 u32 DSIM_PHY_MD_ANA_CON_VAL[] = {
-	0x00007133,
+	0x00007033,
 	0x00000000,
 	0x00000000,
 	0x00000000,
@@ -566,8 +569,13 @@ static void dsim_reg_set_mc_gnr_con(u32 id, u32 *blk_ctl)
 static void dsim_reg_set_mc_ana_con(u32 id, u32 *blk_ctl)
 {
 	u32 i;
+#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
+	u32 reg_cnt = 2;
+#else
+	u32 reg_cnt = 3;
+#endif
 
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < reg_cnt; i++)
 		dsim_phy_write(id, DSIM_PHY_MC_ANA_CON(i), blk_ctl[i]);
 }
 

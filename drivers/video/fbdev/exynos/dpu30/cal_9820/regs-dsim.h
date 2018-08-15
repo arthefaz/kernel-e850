@@ -521,6 +521,9 @@
 #define DSIM_PHY_MC_ANA_CON(_id)		(0x0308 + (4 * (_id)))
 #define DSIM_PHY_MC_ANA_CON0			(0x0308)
 #define DSIM_PHY_MC_ANA_CON1			(0x030C)
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
+#define DSIM_PHY_MC_ANA_CON2			(0x0310)
+#endif
 
 #define DSIM_PHY_EDGE_CON_EN			(0x1 << 8)
 #define DSIM_PHY_RES_UP(_x)			(((_x) & 0xf) << 4)
