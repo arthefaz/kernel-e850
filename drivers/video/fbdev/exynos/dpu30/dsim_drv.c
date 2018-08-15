@@ -1173,6 +1173,63 @@ int dsim_create_cmd_rw_sysfs(struct dsim_device *dsim)
 	return ret;
 }
 
+static void dsim_calc_slice_width(struct dsim_device *dsim,
+		u32 dsc_cnt, u32 slice_num, u32 xres, int idx)
+{
+	u32 slice_width;
+	u32 width_eff;
+	u32 slice_width_byte_unit, comp_slice_width_byte_unit;
+	u32 comp_slice_width_pixel_unit;
+	u32 compressed_slice_w;
+	u32 i, j;
+
+	if (dsc_cnt == 2)
+		width_eff = xres >> 1;
+	else
+		width_eff = xres;
+
+	if (slice_num / dsc_cnt == 2)
+		slice_width = width_eff >> 1;
+	else
+		slice_width = width_eff;
+
+	/* 3bytes per pixel */
+	slice_width_byte_unit = slice_width * 3;
+	/* integer value, /3 for 1/3 compression */
+	comp_slice_width_byte_unit = slice_width_byte_unit / 3;
+	/* integer value, /3 for pixel unit */
+	comp_slice_width_pixel_unit = comp_slice_width_byte_unit / 3;
+
+	i = comp_slice_width_byte_unit % 3;
+	j = comp_slice_width_pixel_unit % 2;
+
+	if (i == 0 && j == 0) {
+		compressed_slice_w = comp_slice_width_pixel_unit;
+	} else if (i == 0 && j != 0) {
+		compressed_slice_w = comp_slice_width_pixel_unit + 1;
+	} else if (i != 0) {
+		while (1) {
+			comp_slice_width_pixel_unit++;
+			j = comp_slice_width_pixel_unit % 2;
+			if (j == 0)
+				break;
+		}
+		compressed_slice_w = comp_slice_width_pixel_unit;
+	}
+
+	if (idx == -1) {
+		/* for default */
+		dsim->lcd_info.dsc_enc_sw = compressed_slice_w;
+		dsim->lcd_info.dsc_dec_sw = xres / slice_num;
+	} else {
+		/* for mres case */
+		dsim->dsw_info.dsc_enc_sw[idx] = compressed_slice_w;
+		dsim->dsw_info.dsc_dec_sw[idx] = xres / slice_num;
+	}
+	dsim_info("%s: idx(%2d)- enc_sw(%d), dec_sw(%d)\n", __func__,
+			idx, compressed_slice_w, xres / slice_num);
+}
+
 static void dsim_parse_lcd_info(struct dsim_device *dsim)
 {
 	u32 res[14];
@@ -1276,6 +1333,9 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 		of_property_read_u32(node, "dsc_slice_h",
 				&dsim->lcd_info.dsc_slice_h);
 		dsim_info("dsc slice height(%d)\n", dsim->lcd_info.dsc_slice_h);
+
+		dsim_calc_slice_width(dsim, dsim->lcd_info.dsc_cnt,
+			dsim->lcd_info.dsc_slice_num, dsim->lcd_info.xres, -1);
 	}
 
 	of_property_read_u32(node, "data_lane", &dsim->data_lane_cnt);
@@ -1306,18 +1366,24 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 			dsim->lcd_info.dt_lcd_mres.res_info[2].dsc_en = mres_dsc_en[2];
 			dsim->lcd_info.dt_lcd_mres.res_info[2].dsc_width = mres_dsc_w[2];
 			dsim->lcd_info.dt_lcd_mres.res_info[2].dsc_height = mres_dsc_h[2];
+			dsim_calc_slice_width(dsim, dsim->lcd_info.dsc_cnt,
+				dsim->lcd_info.dsc_slice_num, mres_w[2], 2);
 		case 2:
 			dsim->lcd_info.dt_lcd_mres.res_info[1].width = mres_w[1];
 			dsim->lcd_info.dt_lcd_mres.res_info[1].height = mres_h[1];
 			dsim->lcd_info.dt_lcd_mres.res_info[1].dsc_en = mres_dsc_en[1];
 			dsim->lcd_info.dt_lcd_mres.res_info[1].dsc_width = mres_dsc_w[1];
 			dsim->lcd_info.dt_lcd_mres.res_info[1].dsc_height = mres_dsc_h[1];
+			dsim_calc_slice_width(dsim, dsim->lcd_info.dsc_cnt,
+				dsim->lcd_info.dsc_slice_num, mres_w[1], 1);
 		case 1:
 			dsim->lcd_info.dt_lcd_mres.res_info[0].width = mres_w[0];
 			dsim->lcd_info.dt_lcd_mres.res_info[0].height = mres_h[0];
 			dsim->lcd_info.dt_lcd_mres.res_info[0].dsc_en = mres_dsc_en[0];
 			dsim->lcd_info.dt_lcd_mres.res_info[0].dsc_width = mres_dsc_w[0];
 			dsim->lcd_info.dt_lcd_mres.res_info[0].dsc_height = mres_dsc_h[0];
+			dsim_calc_slice_width(dsim, dsim->lcd_info.dsc_cnt,
+				dsim->lcd_info.dsc_slice_num, mres_w[0], 0);
 			break;
 		default:
 			dsim->lcd_info.dt_lcd_mres.res_info[0].width = dsim->lcd_info.width;
