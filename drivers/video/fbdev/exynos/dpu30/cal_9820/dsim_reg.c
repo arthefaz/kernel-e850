@@ -1013,7 +1013,7 @@ static void dsim_reg_set_hresol(u32 id, u32 hresol, struct decon_lcd *lcd)
 	u32 width, val;
 
 	if (lcd->dsc_enabled)
-		width = hresol / 3;
+		width = lcd->dsc_enc_sw * lcd->dsc_slice_num;
 	else
 		width = hresol;
 
@@ -1141,7 +1141,7 @@ static void dsim_reg_set_multi_slice(u32 id, struct decon_lcd *lcd_info)
 
 static void dsim_reg_set_size_of_slice(u32 id, struct decon_lcd *lcd_info)
 {
-	u32 slice_w = lcd_info->xres / lcd_info->dsc_slice_num;
+	u32 slice_w = lcd_info->dsc_dec_sw;
 	u32 val_01 = 0, mask_01 = 0;
 	u32 val_23 = 0, mask_23 = 0;
 
@@ -1659,7 +1659,7 @@ static void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info,
 	}
 
 	if (lcd_info->dsc_enabled)
-		threshold = lcd_info->xres / 3;
+		threshold = lcd_info->dsc_enc_sw * lcd_info->dsc_slice_num;
 	else
 		threshold = lcd_info->xres;
 
@@ -1671,8 +1671,8 @@ static void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info,
 
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
 		if (lcd_info->dsc_enabled)
-			num_of_transfer = lcd_info->xres * lcd_info->yres
-							/ threshold / 3;
+			/* use 1-line transfer only */
+			num_of_transfer = lcd_info->yres;
 		else
 			num_of_transfer = lcd_info->xres * lcd_info->yres
 							/ threshold;
@@ -2457,8 +2457,9 @@ void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info)
 	dsim_reg_set_cm_underrun_lp_ref(id, lcd_info->cmd_underrun_lp_ref[idx]);
 
 	if (lcd_info->dsc_enabled) {
-		threshold = lcd_info->xres / 3;
-		num_of_transfer = lcd_info->xres * lcd_info->yres / threshold / 3;
+		threshold = lcd_info->dsc_enc_sw * lcd_info->dsc_slice_num;
+		/* use 1-line transfer only */
+		num_of_transfer = lcd_info->yres;
 	} else {
 		threshold = lcd_info->xres;
 		num_of_transfer = lcd_info->xres * lcd_info->yres / threshold;
