@@ -238,6 +238,8 @@ struct dsim_device {
 
 	int total_underrun_cnt;
 	int idle_ip_index;
+
+	struct dsc_slice dsw_info;
 };
 
 struct dsim_lcd_driver {

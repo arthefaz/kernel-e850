@@ -106,6 +106,8 @@ struct decon_lcd {
 	unsigned int dsc_cnt;
 	unsigned int dsc_slice_num;
 	unsigned int dsc_slice_h;
+	unsigned int dsc_dec_sw;
+	unsigned int dsc_enc_sw;
 	enum mic_ver mic_ver;
 	enum type_of_ddi ddi_type;
 	unsigned int data_lane;
@@ -142,4 +144,12 @@ struct decon_dsc {
 		unsigned char *dec_pps_t;
 };
 
+/*
+ * dec_sw : slice width in DDI side
+ * enc_sw : slice width in AP(DECON & DSIM) side
+ */
+struct dsc_slice {
+	unsigned int dsc_dec_sw[MAX_RES_NUMBER];
+	unsigned int dsc_enc_sw[MAX_RES_NUMBER];
+};
 #endif
