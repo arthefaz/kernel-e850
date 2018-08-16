@@ -1992,9 +1992,14 @@ void mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	struct mmc_blk_data *md = mq->blkdata;
 	struct mmc_card *card = md->queue.card;
 
-	if (req && !mq->qcnt)
+	if (req && !mq->qcnt) {
 		/* claim host only for the first request */
 		mmc_get_card(card);
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+	       if (mmc_bus_needs_resume(card->host))
+		       mmc_resume_bus(card->host);
+#endif
+	}
 
 	ret = mmc_blk_part_switch(card, md->part_type);
 	if (ret) {
@@ -2540,6 +2545,10 @@ static int mmc_blk_probe(struct mmc_card *card)
 
 	dev_set_drvdata(&card->dev, md);
 
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+       if (card && mmc_card_sd(card))
+	       mmc_set_bus_resume_policy(card->host, 1);
+#endif
 	if (mmc_add_disk(md))
 		goto out;
 
