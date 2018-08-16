@@ -623,7 +623,6 @@ int edid_update(struct displayport_device *hdev)
 	int block_cnt = 0;
 	int i;
 	int basic_audio = 0;
-	int edid_test = 0;
 	int modedb_len = 0;
 
 	audio_channels = 0;
