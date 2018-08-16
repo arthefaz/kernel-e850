@@ -1291,7 +1291,6 @@ static int decon_profile_hiber_show(struct seq_file *s, void *unused)
 {
 	int ret = 0;
 	struct decon_device *decon = get_decon_drvdata(0);
-	int i;
 
 	if (!decon) {
 		seq_printf(s, "decon0 is not probed yet\n");
