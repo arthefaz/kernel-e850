@@ -3114,6 +3114,7 @@ err:
 
 static void displayport_shutdown(struct platform_device *pdev)
 {
+#if 0
 	struct displayport_device *displayport = platform_get_drvdata(pdev);
 
 	/* DPU_EVENT_LOG(DPU_EVT_DP_SHUTDOWN, &displayport->sd, ktime_set(0, 0)); */
@@ -3122,6 +3123,9 @@ static void displayport_shutdown(struct platform_device *pdev)
 	displayport_disable(displayport);
 
 	displayport_info("%s -\n", __func__);
+#else
+	displayport_info("%s +-\n", __func__);
+#endif
 }
 
 static int displayport_runtime_suspend(struct device *dev)
