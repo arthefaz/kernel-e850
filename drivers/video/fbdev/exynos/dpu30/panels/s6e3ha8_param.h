@@ -75,7 +75,15 @@ static const unsigned char SEQ_ERR_FG[] = {
 };
 
 static const unsigned char SEQ_TE_START_SETTING[] = {
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0) && defined(CONFIG_EXYNOS_PLL_SLEEP)
+	/* TE start timing is advanced due to latency for the PLL_SLEEP
+	 *	default value : 2960(active line) + 7(vbp) - 2 = 0xB95
+	 *	modified value : default value - 11(modifying line) = 0xB8A
+	 */
+	0xB9, 0x01, 0xB0, 0x8A, 0x09
+#else
 	0xB9, 0x00, 0xB0, 0x8F, 0x09
+#endif
 };
 
 static const unsigned char SEQ_FFC[] = {
