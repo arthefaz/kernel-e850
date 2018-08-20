@@ -2833,34 +2833,42 @@ static const struct dma_fence_ops vb2_fence_ops = {
 int vb2_setup_out_fence(struct vb2_queue *q, unsigned int index)
 {
 	struct vb2_buffer *vb;
+	int ret = -ENOMEM;
 
 	vb = q->bufs[index];
 
 	vb->out_fence_fd = get_unused_fd_flags(O_CLOEXEC);
+	if (vb->out_fence_fd < 0) {
+		pr_err("%s: failed to get unsued fd (err %d)\n",
+		       __func__, vb->out_fence_fd);
+		ret = vb->out_fence_fd;
+		goto err_fd;
+	}
 
 	if (call_qop(q, is_unordered, q) || !q->queueing_started)
 		q->out_fence_context = dma_fence_context_alloc(1);
 
 	vb->out_fence = kzalloc(sizeof(*vb->out_fence), GFP_KERNEL);
 	if (!vb->out_fence)
-		return -ENOMEM;
+		goto err_fence;
 
 	dma_fence_init(vb->out_fence, &vb2_fence_ops, &q->out_fence_lock,
 		       q->out_fence_context, 1);
-	if (!vb->out_fence) {
-		put_unused_fd(vb->out_fence_fd);
-		return -ENOMEM;
-	}
 
 	vb->sync_file = sync_file_create(vb->out_fence);
-	if (!vb->sync_file) {
-		put_unused_fd(vb->out_fence_fd);
-		dma_fence_put(vb->out_fence);
-		vb->out_fence = NULL;
-		return -ENOMEM;
-	}
+	if (!vb->sync_file)
+		goto err_file;
 
 	return 0;
+err_file:
+	dma_fence_put(vb->out_fence);
+err_fence:
+	put_unused_fd(vb->out_fence_fd);
+err_fd:
+	vb->out_fence_fd = -1;
+	vb->out_fence = NULL;
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(vb2_setup_out_fence);
 
