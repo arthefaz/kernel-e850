@@ -953,9 +953,6 @@ static void vb2_process_buffer_done(struct vb2_buffer *vb, enum vb2_buffer_state
 			if (state == VB2_BUF_STATE_ERROR)
 				dma_fence_set_error(vb->out_fence, -EFAULT);
 			dma_fence_signal(vb->out_fence);
-			dma_fence_put(vb->out_fence);
-			vb->out_fence = NULL;
-			vb->out_fence_fd = -1;
 		}
 
 		/* Inform any processes that may be waiting for buffers */
@@ -1799,6 +1796,12 @@ static void __vb2_dqbuf(struct vb2_buffer *vb)
 	/* nothing to do if the buffer is already dequeued */
 	if (vb->state == VB2_BUF_STATE_DEQUEUED)
 		return;
+
+	if (vb->out_fence) {
+		dma_fence_put(vb->out_fence);
+		vb->out_fence = NULL;
+		vb->out_fence_fd = -1;
+	}
 
 	vb->state = VB2_BUF_STATE_DEQUEUED;
 
