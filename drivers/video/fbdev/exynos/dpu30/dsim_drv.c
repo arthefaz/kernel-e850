@@ -1445,6 +1445,11 @@ static int dsim_parse_dt(struct dsim_device *dsim, struct device *dev)
 	dsim->id = of_alias_get_id(dev->of_node, "dsim");
 	dsim_info("dsim(%d) probe start..\n", dsim->id);
 
+	if(of_property_read_u32(dev->of_node, "board_info",
+			&dsim->board_info))
+		dsim->board_info = 0;
+	dsim_info("board info... (%d)\n", dsim->board_info);
+
 	dsim->phy = devm_phy_get(dev, "dsim_dphy");
 	if (IS_ERR_OR_NULL(dsim->phy)) {
 		dsim_err("failed to get phy\n");
@@ -1475,6 +1480,8 @@ static void dsim_register_panel(struct dsim_device *dsim)
 	dsim->panel_ops = &s6e3ha6_mipi_lcd_driver;
 #elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_S6E3HA8)
 	dsim->panel_ops = &s6e3ha8_mipi_lcd_driver;
+#elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_S6E3HA9)
+	dsim->panel_ops = &s6e3ha9_mipi_lcd_driver;
 #elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_S6E3AA2)
 	dsim->panel_ops = &s6e3aa2_mipi_lcd_driver;
 #elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_EMUL_DISP)
