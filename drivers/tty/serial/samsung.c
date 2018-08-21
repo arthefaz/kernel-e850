@@ -1432,8 +1432,6 @@ static void s3c24xx_serial_resetport(struct uart_port *port,
 	/* To prevent unexpected Interrupt before enabling the channel */
 	wr_regl(port, S3C64XX_UINTM, 0xf);
 
-	/* reset both fifos */
-	wr_regl(port, S3C2410_UFCON, cfg->ufcon | S3C2410_UFCON_RESETBOTH);
 	wr_regl(port, S3C2410_UFCON, cfg->ufcon);
 
 	/* some delay is required after fifo reset */
