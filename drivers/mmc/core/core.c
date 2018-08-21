@@ -668,8 +668,8 @@ EXPORT_SYMBOL(mmc_start_areq);
 void mmc_wait_for_req(struct mmc_host *host, struct mmc_request *mrq)
 {
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-       if (mmc_bus_needs_resume(host))
-	       mmc_resume_bus(host);
+	if (mmc_bus_needs_resume(host))
+		mmc_resume_bus(host);
 #endif
 	__mmc_start_req(host, mrq);
 
@@ -1775,7 +1775,7 @@ int mmc_resume_bus(struct mmc_host *host)
 	if (!mmc_bus_needs_resume(host))
 		return -EINVAL;
 
-	printk("%s: Starting deferred resume\n", mmc_hostname(host));
+	pr_debug("%s: Starting deferred resume\n", mmc_hostname(host));
 	wake_lock(&host->detect_wake_lock);
 	spin_lock_irqsave(&host->lock, flags);
 	host->bus_resume_flags &= ~MMC_BUSRESUME_NEEDS_RESUME;
@@ -1793,10 +1793,9 @@ int mmc_resume_bus(struct mmc_host *host)
 	spin_lock_irqsave(&host->lock, flags);
 	spin_unlock_irqrestore(&host->lock, flags);
 	wake_unlock(&host->detect_wake_lock);
-	printk("%s: Deferred resume completed, err : %d\n", mmc_hostname(host), err);
+	pr_debug("%s: Deferred resume completed, err : %d\n", mmc_hostname(host), err);
 	return 0;
 }
-
 EXPORT_SYMBOL(mmc_resume_bus);
 
 /*

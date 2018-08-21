@@ -1221,16 +1221,16 @@ out:
  */
 static int mmc_sd_resume(struct mmc_host *host)
 {
-        int err = 0;
+	int err = 0;
 
-        if (!(host->caps & MMC_CAP_RUNTIME_RESUME)) {
-                err = _mmc_sd_resume(host);
-                pm_runtime_set_active(&host->card->dev);
-                pm_runtime_mark_last_busy(&host->card->dev);
-        }
+	if (!(host->caps & MMC_CAP_RUNTIME_RESUME)) {
+		err = _mmc_sd_resume(host);
+		pm_runtime_set_active(&host->card->dev);
+		pm_runtime_mark_last_busy(&host->card->dev);
+	}
 
-        pm_runtime_enable(&host->card->dev);
-        return err;
+	pm_runtime_enable(&host->card->dev);
+	return err;
 }
 
 
