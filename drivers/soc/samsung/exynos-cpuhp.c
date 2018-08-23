@@ -418,6 +418,7 @@ static int cpuhp_control(bool enable)
  *
  * #echo mask > /sys/power/cpuhp/set_online_cpu
  */
+#define STR_LEN 6
 #define attr_online_cpu(name)							\
 static ssize_t show_##name##_online_cpu(struct kobject *kobj,			\
 	struct kobj_attribute *attr, char *buf)					\
@@ -431,8 +432,23 @@ static ssize_t store_##name##_online_cpu(struct kobject *kobj,			\
 	struct kobj_attribute *attr, const char *buf,				\
 	size_t count)								\
 {										\
-	cpumask_parse(buf, &cpuhp.sysfs_user.online_cpus);				\
-	cpuhp_do(true);					\
+	char str[STR_LEN];							\
+	int i;									\
+	struct cpumask online_cpus;						\
+	if (!sscanf(buf, "%s", str))						\
+		return -EINVAL;							\
+	if (str[0] == '0' && str[1] == 'x')					\
+		for (i = 0; i+2 < STR_LEN; i++) {				\
+			str[i] = str[i + 2];					\
+			str[i+2] = '\n';					\
+		}								\
+	cpumask_parse(str, &online_cpus);					\
+	if (!cpumask_test_cpu(0, &online_cpus)) {				\
+		pr_warn("wrong format\n");					\
+		return -EINVAL;							\
+	}									\
+	cpumask_copy(&cpuhp.sysfs_user.online_cpus, &online_cpus);		\
+	cpuhp_do(true);								\
 										\
 	return count;								\
 }										\
