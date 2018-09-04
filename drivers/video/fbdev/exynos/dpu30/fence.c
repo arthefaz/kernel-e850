@@ -302,7 +302,7 @@ int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file)
 
 	dpu_save_fence_info(fd, fence, &retire);
 	DPU_F_EVT_LOG(DPU_F_EVT_CREATE_RETIRE_FENCE, &decon->sd, &retire);
-	DPU_DEBUG_FENCE("[%s] %s: ctx(%ld) seqno(%d), fd(%d), flags(0x%x)\n",
+	DPU_DEBUG_FENCE("[%s] %s: ctx(%llu) seqno(%d), fd(%d), flags(0x%lx)\n",
 			fence_evt[DPU_F_EVT_CREATE_RETIRE_FENCE], retire.name,
 			retire.context, retire.seqno, retire.fd, retire.flags);
 
@@ -330,13 +330,13 @@ int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd
 
 	dpu_save_fence_info(fd, fence, &acquire);
 	if ((err < 0) || (fence_err < 0)) {
-		decon_err("\t%s: ctx(%ld), seqno(%d), fd(%d), flags(0x%x), err(%d:%d)\n",
+		decon_err("\t%s: ctx(%llu), seqno(%d), fd(%d), flags(0x%lx), err(%d:%d)\n",
 				acquire.name, acquire.context, acquire.seqno,
 				acquire.fd, acquire.flags, err, fence_err);
 	}
 
 	DPU_F_EVT_LOG(DPU_F_EVT_WAIT_ACQUIRE_FENCE, &decon->sd, &acquire);
-	DPU_DEBUG_FENCE("[%s] %s: ctx(%ld), seqno(%d), fd(%d), flags(0x%x)\n",
+	DPU_DEBUG_FENCE("[%s] %s: ctx(%llu), seqno(%d), fd(%d), flags(0x%lx)\n",
 			fence_evt[DPU_F_EVT_WAIT_ACQUIRE_FENCE], acquire.name,
 			acquire.context, acquire.seqno, acquire.fd, acquire.flags);
 
@@ -359,7 +359,7 @@ void decon_signal_fence(struct decon_device *decon, struct dma_fence *fence)
 
 	dpu_save_fence_info(0, fence, &retire);
 	DPU_F_EVT_LOG(DPU_F_EVT_SIGNAL_RETIRE_FENCE, &decon->sd, &retire);
-	DPU_DEBUG_FENCE("[%s] %s: ctx(%ld), seqno(%d), flags(0x%x)\n",
+	DPU_DEBUG_FENCE("[%s] %s: ctx(%llu), seqno(%d), flags(0x%lx)\n",
 			fence_evt[DPU_F_EVT_SIGNAL_RETIRE_FENCE], retire.name,
 			retire.context, retire.seqno, retire.flags);
 }
