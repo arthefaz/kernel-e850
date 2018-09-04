@@ -351,12 +351,12 @@ static void decon_reg_set_scaled_size(u32 id, u32 scaled_w, u32 scaled_h)
  * is_dsc : 1: DSC is enabled 0: DSC is disabled
  */
 static void decon_reg_set_data_path_size(u32 id, u32 width, u32 height, bool is_dsc,
-		u32 dsc_cnt, u32 slice_w, u32 slice_h)
+		u32 dsc_cnt, u32 slice_w, u32 slice_h, u32 ds_en[2])
 {
 	u32 outfifo_w;
 
 	if (is_dsc)
-		outfifo_w = slice_w;
+		outfifo_w = slice_w << ds_en[0];
 	else
 		outfifo_w = width;
 
@@ -2013,10 +2013,6 @@ void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
 	/* Here, lcd_info contains the size to be updated */
 	decon_reg_set_blender_bg_size(id, dsi_mode, partial_w, partial_h);
 
-	decon_reg_set_data_path_size(id, partial_w, partial_h,
-			lcd_info->dsc_enabled, lcd_info->dsc_cnt,
-			lcd_info->dsc_enc_sw, lcd_info->dsc_slice_h);
-
 	if (lcd_info->dsc_enabled) {
 		/* get correct DSC configuration */
 		dsc_get_partial_update_info(lcd_info->dsc_slice_num,
@@ -2029,6 +2025,11 @@ void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
 			dsc_reg_set_partial_update(1, dual_slice_en[1],
 					slice_mode_ch[1], partial_h);
 	}
+
+	decon_reg_set_data_path_size(id, partial_w, partial_h,
+		lcd_info->dsc_enabled, lcd_info->dsc_cnt,
+		lcd_info->dsc_enc_sw, lcd_info->dsc_slice_h, dual_slice_en);
+
 }
 
 void decon_reg_set_mres(u32 id, struct decon_param *p)
