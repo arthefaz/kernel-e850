@@ -373,9 +373,9 @@ err_domains:
 	return ret;
 }
 
-static u32 exynos_eint_wake_mask = 0xffffffff;
+static u64 exynos_eint_wake_mask = ULLONG_MAX;
 
-u32 exynos_get_eint_wake_mask(void)
+u64 exynos_get_eint_wake_mask(void)
 {
 	return exynos_eint_wake_mask;
 }
