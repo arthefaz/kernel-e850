@@ -803,6 +803,17 @@ static void dw_mci_start_command(struct dw_mci *host, struct mmc_command *cmd, u
 	wmb();			/* drain writebuffer */
 	dw_mci_wait_while_busy(host, cmd_flags);
 
+	/* needed to
+	 * add get node parse_dt for check to enable logging
+	 * if defined(CMD_LOGGING)
+	 * set en_logging to true
+	 * init cmd_log_count
+	 */
+	if (cmd->opcode == MMC_SEND_STATUS)
+		dw_mci_debug_cmd_log(cmd, host, false, DW_MCI_FLAG_SEND_CMD, 0);
+	else
+		dw_mci_debug_cmd_log(cmd, host, true, DW_MCI_FLAG_SEND_CMD, 0);
+
 	mci_writel(host, CMD, cmd_flags | SDMMC_CMD_START);
 
 	/* response expected command only */
