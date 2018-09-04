@@ -1343,7 +1343,7 @@ static void _decon_profile_hiber_show(struct decon_device *decon)
 	decon_info("Hibernation Entry Ratio: %d %%\n", decon_get_hiber_ratio(decon));
 	decon_info("Entry count: %d, Exit count: %d\n", decon->hiber.profile_enter_cnt,
 			decon->hiber.profile_exit_cnt);
-	decon_info("Framedone count: %d, FPS: %d\n", decon->hiber.frame_cnt,
+	decon_info("Framedone count: %d, FPS: %lld\n", decon->hiber.frame_cnt,
 			(decon->hiber.frame_cnt * 1000000) / decon->hiber.profile_time);
 	decon_info("#########################################\n");
 }
