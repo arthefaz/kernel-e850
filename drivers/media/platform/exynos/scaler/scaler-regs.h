@@ -327,10 +327,8 @@ static inline void sc_clear_aux_power_cfg(struct sc_dev *sc)
 			sc->regs + SCALER_CFG);
 }
 
-static inline void sc_hwset_init(struct sc_dev *sc)
+static inline void sc_hwset_bus_idle(struct sc_dev *sc)
 {
-	unsigned long cfg;
-
 	if (sc->version == SCALER_VERSION(5, 0, 1)) {
 		int cnt = 1000;
 
@@ -343,6 +341,13 @@ static inline void sc_hwset_init(struct sc_dev *sc)
 
 		WARN_ON(cnt <= 0);
 	}
+}
+
+static inline void sc_hwset_init(struct sc_dev *sc)
+{
+	unsigned long cfg;
+
+	sc_hwset_bus_idle(sc);
 
 #ifdef SC_NO_SOFTRST
 	cfg = (SCALER_CFG_CSC_Y_OFFSET_SRC | SCALER_CFG_CSC_Y_OFFSET_DST);
@@ -368,6 +373,7 @@ static inline void sc_hwset_init(struct sc_dev *sc)
 
 static inline void sc_hwset_soft_reset(struct sc_dev *sc)
 {
+	sc_hwset_bus_idle(sc);
 	writel(SCALER_CFG_SOFT_RST, sc->regs + SCALER_CFG);
 }
 
