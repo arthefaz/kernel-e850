@@ -322,10 +322,21 @@ int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd
 		ret = err;
 	}
 
-	fence_err = dma_fence_get_status(fence);
-	if (fence_err < 0) {
-		decon_err("%s: get acquire fence error status\n", __func__);
-		ret = fence_err;
+	/*
+	 * If acquire fence has error value, it means image on buffer is corrupted.
+	 * So, if this function returns error value, frame will be dropped and
+	 * previous buffer is released.
+	 *
+	 * However, in case of video mode, if previous buffer is released and current
+	 * buffer is not used, sysmmu fault can occurs
+	 */
+	if (decon->dt.psr_mode == DECON_MIPI_COMMAND_MODE) {
+		fence_err = dma_fence_get_status(fence);
+		if (fence_err < 0) {
+			decon_err("%s: get acquire fence error status\n",
+					__func__);
+			ret = fence_err;
+		}
 	}
 
 	dpu_save_fence_info(fd, fence, &acquire);
