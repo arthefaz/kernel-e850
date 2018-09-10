@@ -3768,6 +3768,8 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	struct decon_mode_info psr;
 	struct dsim_device *dsim;
 	struct dsim_device *dsim1;
+	struct dpp_config dpp_config;
+	unsigned long aclk_khz;
 	int dpp_id = decon->dt.dft_ch;
 
 	if (decon->id || (decon->dt.out_type != DECON_OUT_DSI) ||
@@ -3830,7 +3832,14 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	config.dst.f_w = config.src.f_w;
 	config.dst.f_h = config.src.f_h;
 	sd = decon->dpp_sd[dpp_id];
-	if (v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG, &config)) {
+
+	aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
+			EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
+
+	memcpy(&dpp_config.config, &config, sizeof(struct decon_win_config));
+	dpp_config.rcv_num = aclk_khz;
+
+	if (v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG, &dpp_config)) {
 		decon_err("Failed to config DPP-%d\n", dpp_id);
 		clear_bit(dpp_id, &decon->cur_using_dpp);
 		set_bit(dpp_id, &decon->dpp_err_stat);

@@ -341,7 +341,7 @@ static inline void dpp_select_format(struct dpp_device *dpp,
 
 void dpp_dump(struct dpp_device *dpp);
 
-#define DPP_WIN_CONFIG			_IOW('P', 0, struct decon_win_config)
+#define DPP_WIN_CONFIG			_IOW('P', 0, struct dpp_config)
 #define DPP_STOP			_IOW('P', 1, unsigned long)
 #define DPP_DUMP			_IOW('P', 2, u32)
 #define DPP_WB_WAIT_FOR_FRAMEDONE	_IOR('P', 3, u32)

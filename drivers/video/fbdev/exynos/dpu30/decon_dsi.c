@@ -664,6 +664,8 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	int ret = 0;
 	struct decon_mode_info psr;
 	int dpp_id = decon->dt.dft_ch;
+	struct dpp_config dpp_config;
+	unsigned long aclk_khz;
 
 	if (decon->dt.out_type != DECON_OUT_DSI) {
 		decon_warn("%s: decon%d unspported on out_type(%d)\n",
@@ -729,7 +731,14 @@ int decon_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	set_bit(dpp_id, &decon->cur_using_dpp);
 	set_bit(dpp_id, &decon->prev_used_dpp);
 	sd = decon->dpp_sd[dpp_id];
-	if (v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG, &config)) {
+
+	aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
+			EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
+
+	memcpy(&dpp_config.config, &config, sizeof(struct decon_win_config));
+	dpp_config.rcv_num = aclk_khz;
+
+	if (v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG, &dpp_config)) {
 		decon_err("%s: Failed to config DPP-%d\n", __func__, win->dpp_id);
 		decon_reg_win_enable_and_update(decon->id, decon->dt.dft_win, false);
 		clear_bit(dpp_id, &decon->cur_using_dpp);
