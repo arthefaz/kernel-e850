@@ -54,6 +54,8 @@ static int decon_set_cursor_dpp_config(struct decon_device *decon,
 	int i, ret = 0, err_cnt = 0;
 	struct v4l2_subdev *sd;
 	struct decon_win *win;
+	struct dpp_config dpp_config;
+	unsigned long aclk_khz;
 
 	if (!decon->cursor.enabled)
 		return 0;
@@ -66,9 +68,14 @@ static int decon_set_cursor_dpp_config(struct decon_device *decon,
 	if (!test_bit(win->dpp_id, &decon->cur_using_dpp))
 		return -2;
 
+	aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
+			EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
+
 	sd = decon->dpp_sd[win->dpp_id];
-	ret = v4l2_subdev_call(sd, core, ioctl,
-			DPP_WIN_CONFIG, &regs->dpp_config[i]);
+	memcpy(&dpp_config.config, &regs->dpp_config[i],
+			sizeof(struct decon_win_config));
+	dpp_config.rcv_num = aclk_khz;
+	ret = v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG, &dpp_config);
 	if (ret) {
 		decon_err("failed to config (WIN%d : DPP%d)\n",
 						i, win->dpp_id);
