@@ -921,8 +921,6 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 	disable_irq(dsim->res.irq);
 	ret = dsim_reg_stop_and_enter_ulps(dsim->id, dsim->lcd_info.ddi_type,
 			dsim->data_lane);
-	if (ret < 0)
-		dsim_dump(dsim);
 
 	phy_power_off(dsim->phy);
 	if (dsim->phy_ex)
