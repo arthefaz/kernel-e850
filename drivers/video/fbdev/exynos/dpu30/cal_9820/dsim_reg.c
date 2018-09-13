@@ -2285,6 +2285,7 @@ int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes)
 	int ret = 0;
 	u32 is_vm;
 	struct dsim_device *dsim = get_dsim_drvdata(id);
+	struct dsim_regs regs;
 
 	dsim_reg_clear_int(id, 0xffffffff);
 	/* disable interrupts */
@@ -2307,9 +2308,14 @@ int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes)
 	/* 3.2 OSC clock */
 	dsim_reg_set_link_clock(id, 0);
 	/* 3.3 off DPHY */
-	dpu_sysreg_dphy_reset(dsim->res.ss_regs, id, 0);
 	dsim_reg_set_lanes_dphy(id, lanes, 0);
 	dsim_reg_set_clocks(id, NULL, NULL, 0);
+
+	if (ret < 0) {
+		dsim_to_regs_param(dsim, &regs);
+		__dsim_dump(id, &regs);
+	}
+
 	/* 3.4 sw reset */
 	dsim_reg_sw_reset(id);
 
