@@ -185,6 +185,7 @@ static int devfreq_simple_interactive_register_notifier(struct devfreq *df)
 
 	kthread_bind(data->change_freq_task, BOUND_CPU_NUM);
 
+	wake_up_process(data->change_freq_task);
 	return 0;
 
 err2:
