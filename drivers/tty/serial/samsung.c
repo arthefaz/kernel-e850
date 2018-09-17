@@ -458,8 +458,10 @@ s3c24xx_serial_rx_chars(int irq, void *dev_id)
 		if (fifocnt == 0) {
 			ufstat = rd_regl(port, S3C2410_UFSTAT);
 			fifocnt = s3c24xx_serial_rx_fifocnt(ourport, ufstat);
-			if (fifocnt == 0)
+			if (fifocnt == 0) {
+				wr_regl(port, S3C64XX_UINTP, S3C64XX_UINTM_RXD_MSK);
 				break;
+			}
 		}
 		fifocnt--;
 
@@ -538,8 +540,6 @@ s3c24xx_serial_rx_chars(int irq, void *dev_id)
  ignore_char:
 		continue;
 	}
-
-	wr_regl(port, S3C64XX_UINTP, S3C64XX_UINTM_RXD_MSK);
 
 	spin_unlock_irqrestore(&port->lock, flags);
 	tty_insert_flip_string(&port->state->port, insert_buf, insert_cnt);
