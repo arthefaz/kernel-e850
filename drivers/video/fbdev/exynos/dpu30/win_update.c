@@ -394,8 +394,8 @@ void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs
 	idx = regs->mres_idx;
 	dsim->lcd_info.dsc_enabled = mres_info->res_info[idx].dsc_en;
 	dsim->lcd_info.dsc_slice_h = mres_info->res_info[idx].dsc_height;
-	dsim->lcd_info.dsc_dec_sw = dsim->dsw_info.dsc_dec_sw[idx];
-	dsim->lcd_info.dsc_enc_sw = dsim->dsw_info.dsc_enc_sw[idx];
+	dsim->lcd_info.dsc_enc_sw = dsim->lcd_info.dt_dsc_slice.dsc_enc_sw[idx];
+	dsim->lcd_info.dsc_dec_sw = dsim->lcd_info.dt_dsc_slice.dsc_dec_sw[idx];
 
 	/* transfer LCD resolution change commands to panel */
 	dsim->panel_ops->mres(dsim, regs->mres_idx);
@@ -408,8 +408,9 @@ void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs
 	/* If LCD resolution is changed, initial partial size is also changed */
 	dpu_init_win_update(decon);
 
-	DPU_DEBUG_MRES("changed LCD resolution(%d %d)\n",
-			decon->lcd_info->xres, decon->lcd_info->yres);
+	DPU_DEBUG_MRES("changed LCD resolution(%d %d), dsc enc/dec sw(%d %d)\n",
+			decon->lcd_info->xres, decon->lcd_info->yres,
+			dsim->lcd_info.dsc_enc_sw, dsim->lcd_info.dsc_dec_sw);
 }
 
 static int win_update_send_partial_command(struct dsim_device *dsim,

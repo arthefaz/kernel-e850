@@ -60,6 +60,15 @@ struct lcd_hdr_info {
 	unsigned int hdr_min_luma;
 };
 
+/*
+ * dec_sw : slice width in DDI side
+ * enc_sw : slice width in AP(DECON & DSIM) side
+ */
+struct dsc_slice {
+	unsigned int dsc_dec_sw[MAX_RES_NUMBER];
+	unsigned int dsc_enc_sw[MAX_RES_NUMBER];
+};
+
 struct stdphy_pms {
 	unsigned int p;
 	unsigned int m;
@@ -116,6 +125,7 @@ struct decon_lcd {
 	unsigned int mres_mode;
 	struct lcd_mres_info dt_lcd_mres;
 	struct lcd_hdr_info dt_lcd_hdr;
+	struct dsc_slice dt_dsc_slice;
 	unsigned int bpc;
 };
 
@@ -144,12 +154,4 @@ struct decon_dsc {
 		unsigned char *dec_pps_t;
 };
 
-/*
- * dec_sw : slice width in DDI side
- * enc_sw : slice width in AP(DECON & DSIM) side
- */
-struct dsc_slice {
-	unsigned int dsc_dec_sw[MAX_RES_NUMBER];
-	unsigned int dsc_enc_sw[MAX_RES_NUMBER];
-};
 #endif
