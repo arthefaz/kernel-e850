@@ -1070,8 +1070,6 @@ struct decon_device {
 
 	bool mres_enabled;
 	bool low_persistence;
-
-	struct dsc_slice *dsw_info;
 };
 
 static inline struct decon_device *get_decon_drvdata(u32 id)
