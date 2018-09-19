@@ -1389,7 +1389,11 @@ static void exynos_usi_init(struct uart_port *port)
 	 * Due to this feature, the USI_RESET must be cleared (set as '0')
 	 * before transaction starts.
 	 */
+	wr_regl(port, USI_CON, USI_SET_RESET);
+	udelay(1);
+
 	wr_regl(port, USI_CON, USI_RESET);
+	udelay(1);
 
 	/* set the HWACG option bit in case of UART Rx mode.
 	 * CLKREQ_ON = 1, CLKSTOP_ON = 0 (set USI_OPTION[2:1] = 2'h1)
