@@ -1391,7 +1391,8 @@ int decon_check_limitation(struct decon_device *decon, int idx,
 		return -EINVAL;
 	}
 
-	if (config->idma_type >= decon->dt.dpp_cnt) { /* ch */
+	/* TODO: currently writeback is not supported */
+	if (config->idma_type >= decon->dt.dpp_cnt - 1) { /* ch */
 		decon_err("ch(%d) is wrong\n", config->idma_type);
 		return -EINVAL;
 	}
