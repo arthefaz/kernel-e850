@@ -317,8 +317,8 @@ static int dpp_check_addr(struct dpp_device *dpp, struct dpp_params_info *p)
 static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 {
 	if (!test_bit(DPP_ATTR_ROT, &dpp->attr) && (p->rot > DPP_ROT_180)) {
-		dpp_err("Not support rotation in DPP%d - VGRF only!\n",
-				p->rot);
+		dpp_err("Not support rotation(%d) in DPP%d - VGRF only!\n",
+				p->rot, dpp->id);
 		return -EINVAL;
 	}
 
