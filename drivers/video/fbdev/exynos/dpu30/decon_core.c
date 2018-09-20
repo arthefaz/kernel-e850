@@ -1734,9 +1734,19 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 	if (!regs->num_of_window) {
 		decon_err("decon%d: num_of_window=0 during dpp_config(err_cnt:%d)\n",
 			decon->id, err_cnt);
-		for (i = 0; i < decon->dt.max_win; i++)
-			decon_reg_set_win_enable(decon->id, i, false);
-		decon_reg_all_win_shadow_update_req(decon->id);
+		/*
+		 * The global update is not cleared in command mode because
+		 * trigger is masked. If num_of_window becomes zero, trigger doesn't
+		 * have any chance to change unmask status.
+		 * So, just window is disabled in error case and then next update handler
+		 * will update to shadow register
+		 */
+		if (decon->dt.psr_mode == DECON_VIDEO_MODE) {
+			for (i = 0; i < decon->dt.max_win; i++)
+				decon_reg_set_win_enable(decon->id, i, false);
+			decon_reg_all_win_shadow_update_req(decon->id);
+			decon_reg_update_req_global(decon->id);
+		}
 		return 0;
 	}
 
