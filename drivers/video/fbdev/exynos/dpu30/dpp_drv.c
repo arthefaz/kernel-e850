@@ -267,7 +267,7 @@ static int dpp_check_addr(struct dpp_device *dpp, struct dpp_params_info *p)
 {
 	int cnt = 0;
 
-	cnt = dpu_get_plane_cnt(p->format, false);
+	cnt = dpu_get_plane_cnt(p->format, DPP_HDR_OFF);
 
 	switch (cnt) {
 	case 1:

@@ -251,8 +251,13 @@ int dpu_get_meta_plane_cnt(enum decon_pixel_format format)
 	}
 }
 
-int dpu_get_plane_cnt(enum decon_pixel_format format, bool is_hdr)
+int dpu_get_plane_cnt(enum decon_pixel_format format, enum dpp_hdr_standard std)
 {
+	bool is_hdr = false;
+
+	if (std == DPP_HDR_ST2084 || std == DPP_HDR_HLG)
+		is_hdr = true;
+
 	switch (format) {
 	case DECON_PIXEL_FORMAT_ARGB_8888:
 	case DECON_PIXEL_FORMAT_ABGR_8888:
