@@ -382,6 +382,7 @@ static void dpp_reg_set_csc_params(u32 id, u32 csc_eq)
 	if (type == CSC_STANDARD_UNSPECIFIED) {
 		dpp_dbg("unspecified CSC type! -> BT_601\n");
 		type = CSC_BT_601;
+		mode = CSC_COEF_HARDWIRED;
 	}
 	if (range == CSC_RANGE_UNSPECIFIED) {
 		dpp_dbg("unspecified CSC range! -> LIMIT\n");
