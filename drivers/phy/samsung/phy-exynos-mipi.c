@@ -307,9 +307,12 @@ static int __set_phy_cfg_0502_0000_dphy(void __iomem *regs, int option, u32 *cfg
 	u32 settle_clk_sel = 1;
 	u32 skew_delay_sel = 0;
 	u32 type = cfg[TYPE] & 0xffff;
+	u32 skew_cal_en = 0;
 
-	if (cfg[SPEED] >= PHY_REF_SPEED)
+	if (cfg[SPEED] >= PHY_REF_SPEED) {
 		settle_clk_sel = 0;
+		skew_cal_en = 1;
+	}
 
 	if (cfg[SPEED] >= PHY_REF_SPEED && cfg[SPEED] < 4000) {
 		if (cfg[SPEED] >= 3000)
@@ -342,6 +345,7 @@ static int __set_phy_cfg_0502_0000_dphy(void __iomem *regs, int option, u32 *cfg
 		update_bits(regs + 0x0130 + (i * 0x100), 0, 8, cfg[SETTLE]); /* SD_TIME_CON0 */
 		update_bits(regs + 0x0130 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
 		writel(0x00000003, regs + 0x0134 + (i * 0x100)); /* SD_TIME_CON1 */
+		update_bits(regs + 0x0140 + (i * 0x100), 0, 1, skew_cal_en); /* SD_DESKEW_CON0 */
 		writel(0x0000081a, regs + 0x0150 + (i * 0x100)); /* SD_DESKEW_CON4 */
 	}
 
@@ -354,9 +358,12 @@ static int __set_phy_cfg_0502_0001_dphy(void __iomem *regs, int option, u32 *cfg
 	int i;
 	u32 settle_clk_sel = 1;
 	u32 skew_delay_sel = 0;
+	u32 skew_cal_en = 0;
 
-	if (cfg[SPEED] >= PHY_REF_SPEED)
+	if (cfg[SPEED] >= PHY_REF_SPEED) {
 		settle_clk_sel = 0;
+		skew_cal_en = 1;
+	}
 
 	if (cfg[SPEED] >= PHY_REF_SPEED && cfg[SPEED] < 4000) {
 		if (cfg[SPEED] >= 3000)
@@ -388,6 +395,7 @@ static int __set_phy_cfg_0502_0001_dphy(void __iomem *regs, int option, u32 *cfg
 		update_bits(regs + 0x0030 + (i * 0x100), 0, 8, cfg[SETTLE]); /* SD_TIME_CON0 */
 		update_bits(regs + 0x0030 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
 		writel(0x00000003, regs + 0x0034 + (i * 0x100)); /* SD_TIME_CON1 */
+		update_bits(regs + 0x0040 + (i * 0x100), 0, 1, skew_cal_en); /* SD_DESKEW_CON0 */
 		writel(0x0000081a, regs + 0x0050 + (i * 0x100)); /* SD_DESKEW_CON4 */
 	}
 
@@ -403,9 +411,12 @@ static int __set_phy_cfg_0502_0002_dphy(void __iomem *regs, int option, u32 *cfg
 	u32 t_clk_miss = 3;
 	u32 freq_s_xi_c = 26; /* MHz */
 	u32 clk_div1234_mc;
+	u32 skew_cal_en = 0;
 
-	if (cfg[SPEED] >= PHY_REF_SPEED)
+	if (cfg[SPEED] >= PHY_REF_SPEED) {
 		settle_clk_sel = 0;
+		skew_cal_en = 1;
+	}
 
 	if (cfg[SPEED] >= PHY_REF_SPEED && cfg[SPEED] < 4000) {
 		if (cfg[SPEED] >= 3000)
@@ -454,6 +465,7 @@ static int __set_phy_cfg_0502_0002_dphy(void __iomem *regs, int option, u32 *cfg
 		update_bits(regs + 0x0130 + (i * 0x100), 0, 8, cfg[SETTLE]); /* SD_TIME_CON0 */
 		update_bits(regs + 0x0130 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
 		writel(0x00000003, regs + 0x0134 + (i * 0x100)); /* SD_TIME_CON1 */
+		update_bits(regs + 0x0140 + (i * 0x100), 0, 1, skew_cal_en); /* SD_DESKEW_CON0 */
 		writel(0x0000081a, regs + 0x0150 + (i * 0x100)); /* SD_DESKEW_CON4 */
 	}
 
@@ -468,9 +480,12 @@ static int __set_phy_cfg_0502_0003_dphy(void __iomem *regs, int option, u32 *cfg
 	u32 t_clk_miss = 3;
 	u32 freq_s_xi_c = 26; /* MHz */
 	u32 clk_div1234_mc;
+	u32 skew_cal_en = 0;
 
-	if (cfg[SPEED] >= PHY_REF_SPEED)
+	if (cfg[SPEED] >= PHY_REF_SPEED) {
 		settle_clk_sel = 0;
+		skew_cal_en = 1;
+	}
 
 	if (cfg[SPEED] >= PHY_REF_SPEED && cfg[SPEED] < 4000) {
 		if (cfg[SPEED] >= 3000)
@@ -518,6 +533,7 @@ static int __set_phy_cfg_0502_0003_dphy(void __iomem *regs, int option, u32 *cfg
 		update_bits(regs + 0x0030 + (i * 0x100), 0, 8, cfg[SETTLE]); /* SD_TIME_CON0 */
 		update_bits(regs + 0x0030 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
 		writel(0x00000003, regs + 0x0034 + (i * 0x100)); /* SD_TIME_CON1 */
+		update_bits(regs + 0x0040 + (i * 0x100), 0, 1, skew_cal_en); /* SD_DESKEW_CON0 */
 		writel(0x0000081a, regs + 0x0050 + (i * 0x100)); /* SD_DESKEW_CON4 */
 	}
 
