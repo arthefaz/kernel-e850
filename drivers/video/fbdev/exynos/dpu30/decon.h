@@ -42,15 +42,12 @@
 #include <linux/sync_file.h>
 
 /* TODO: SoC dependency will be removed */
-#if defined(CONFIG_SOC_EXYNOS9810)
-#include "./cal_9810/regs-decon.h"
-#include "./cal_9810/decon_cal.h"
-#elif defined(CONFIG_SOC_EXYNOS9820)
+#if defined(CONFIG_SOC_EXYNOS9820)
 #include "./cal_9820/regs-decon.h"
 #include "./cal_9820/decon_cal.h"
-#elif defined(CONFIG_SOC_EXYNOS9110)
-#include "./cal_9110/regs-decon.h"
-#include "./cal_9110/decon_cal.h"
+#elif defined(CONFIG_SOC_EXYNOS9610)
+#include "./cal_9610/regs-decon.h"
+#include "./cal_9610/decon_cal.h"
 #endif
 
 #include "./panels/decon_lcd.h"
