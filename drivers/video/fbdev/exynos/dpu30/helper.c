@@ -511,6 +511,8 @@ static int decon_get_protect_id(int dma_id)
 {
 	int prot_id = 0;
 
+	/* TODO: This will be change to common code in the future */
+#if defined(CONFIG_SOC_EXYNOS9820)
 	switch (dma_id) {
 	case IDMA_GF0:
 		prot_id = PROT_GF0;
@@ -537,6 +539,25 @@ static int decon_get_protect_id(int dma_id)
 		decon_err("Unknown DMA_ID (%d)\n", dma_id);
 		break;
 	}
+#elif defined(CONFIG_SOC_EXYNOS9610)
+	switch (dma_id) {
+	case IDMA_G0:
+		prot_id = PROT_G0;
+		break;
+	case IDMA_G1:
+		prot_id = PROT_G1;
+		break;
+	case IDMA_GF:
+		prot_id = PROT_GF;
+		break;
+	case IDMA_VG0:
+		prot_id = PROT_VG0;
+		break;
+	default:
+		decon_err("Unknown DMA_ID (%d)\n", dma_id);
+		break;
+	}
+#endif
 
 	return prot_id;
 }
