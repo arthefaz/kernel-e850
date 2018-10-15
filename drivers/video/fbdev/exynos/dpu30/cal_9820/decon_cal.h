@@ -13,9 +13,6 @@
 #define __SAMSUNG_DECON_CAL_H__
 
 #include "../panels/decon_lcd.h"
-#if defined(CONFIG_EXYNOS_BTS)
-#include <soc/samsung/bts.h>
-#endif
 
 #define CEIL(x)			((x-(u32)(x) > 0 ? (u32)(x+1) : (u32)(x)))
 
