@@ -1,5 +1,5 @@
 config EXYNOS_DECON_LCD
-	depends on EXYNOS_DPU20
+	depends on EXYNOS_DPU30
 	bool "Select LCD panel driver"
 
 config EXYNOS_DECON_LCD_S6E3HA2K
