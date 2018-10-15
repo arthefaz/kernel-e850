@@ -1655,7 +1655,7 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 
 	decon_info("%s +\n", __func__);
 
-	for (i = 0; i < (MAX_DPP_SUBDEV - 1); i++) {
+	for (i = 0; i < decon->dt.max_win; i++) {
 		/* check each channel whether they were prev-enabled */
 		if (decon->d.prev_afbc_win_id[i] != -1
 				&& test_bit(i, &decon->prev_used_dpp)) {
