@@ -238,6 +238,7 @@ struct dsim_device {
 	struct completion rd_comp;
 
 	int total_underrun_cnt;
+	struct backlight_device *bd;
 	int idle_ip_index;
 };
 
