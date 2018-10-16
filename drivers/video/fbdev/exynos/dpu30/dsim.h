@@ -42,6 +42,8 @@
 #include "./panels/s6e3ha8_param.h"
 #elif defined(CONFIG_EXYNOS_DECON_LCD_S6E3HA9)
 #include "./panels/s6e3ha9_param.h"
+#elif defined(CONFIG_EXYNOS_DECON_LCD_S6E3FA0)
+#include "./panels/s6e3fa0_param.h"
 #endif
 
 extern int dsim_log_level;
@@ -97,6 +99,7 @@ extern struct dsim_lcd_driver s6e3ha6_mipi_lcd_driver;
 extern struct dsim_lcd_driver s6e3ha8_mipi_lcd_driver;
 extern struct dsim_lcd_driver s6e3ha9_mipi_lcd_driver;
 extern struct dsim_lcd_driver s6e3aa2_mipi_lcd_driver;
+extern struct dsim_lcd_driver s6e3fa0_mipi_lcd_driver;
 
 /* define video timer interrupt */
 enum {
