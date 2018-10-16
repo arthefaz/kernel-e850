@@ -4573,8 +4573,9 @@ int dw_mci_runtime_resume(struct device *dev)
 		   SDMMC_INT_TXDR | SDMMC_INT_RXDR | DW_MCI_ERROR_FLAGS);
 	mci_writel(host, CTRL, SDMMC_CTRL_INT_ENABLE);
 
-	if (host->slot->mmc->pm_flags & MMC_PM_KEEP_POWER
-	    || host->slot->mmc->pm_caps & MMC_PM_SKIP_MMC_RESUME_INIT) {
+	if (host->slot &&
+		((host->slot->mmc->pm_flags & MMC_PM_KEEP_POWER)
+		    || (host->slot->mmc->pm_caps & MMC_PM_SKIP_MMC_RESUME_INIT))) {
 		dw_mci_set_ios(host->slot->mmc, &host->slot->mmc->ios);
 
 		/* Force setup bus to guarantee available clock output */
