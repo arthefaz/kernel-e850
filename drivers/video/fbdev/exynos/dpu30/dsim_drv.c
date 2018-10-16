@@ -1494,6 +1494,8 @@ static void dsim_register_panel(struct dsim_device *dsim)
 	dsim->panel_ops = &s6e3aa2_mipi_lcd_driver;
 #elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_EMUL_DISP)
 	dsim->panel_ops = &emul_disp_mipi_lcd_driver;
+#elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_S6E3FA0)
+	dsim->panel_ops = &s6e3fa0_mipi_lcd_driver;
 #else
 	dsim->panel_ops = &s6e3ha2k_mipi_lcd_driver;
 #endif
