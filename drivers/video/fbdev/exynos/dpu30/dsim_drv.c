@@ -1012,14 +1012,15 @@ static int dsim_set_freq_hop(struct dsim_device *dsim, u32 target_m)
 static int dsim_free_fb_resource(struct dsim_device *dsim)
 {
 	/* unmap */
-	iovmm_unmap_oto(dsim->dev, dsim->phys_addr);
+	iovmm_unmap_oto(dsim->dev, dsim->fb_handover.phys_addr);
 
 	/* unreserve memory */
 	of_reserved_mem_device_release(dsim->dev);
 
 	/* update state */
-	dsim->fb_reservation = false;
-	dsim->phys_addr = 0xdead;
+	dsim->fb_handover.reserved = false;
+	dsim->fb_handover.phys_addr = 0xdead;
+	dsim->fb_handover.phys_size = 0;
 
 	return 0;
 }
@@ -1028,14 +1029,28 @@ static int dsim_acquire_fb_resource(struct dsim_device *dsim)
 {
 	int ret = 0;
 
+	/*
+	 * If of_reserved_mem_device_init_by_idx returns error, it means
+	 * framebuffer handover feature is disabled or reserved memory is
+	 * not defined in DT.
+	 *
+	 * And phys_addr and phys_size is not initialized, becuase
+	 * rmem_device_init callback is not called.
+	 */
 	ret = of_reserved_mem_device_init_by_idx(dsim->dev, dsim->dev->of_node, 0);
-	if (ret)
-		dsim_err("failed reserved mem device init: %d\n", ret);
-	else
-		dsim->fb_reservation = true;
+	if (ret) {
+		dsim_warn("fb handover memory is not reserved(%d)\n", ret);
+		dsim_warn("check whether fb handover memory is not reserved");
+		dsim_warn("or DT definition is missed\n");
+		dsim->fb_handover.reserved = false;
+		return 0;
+	} else {
+		dsim->fb_handover.reserved = true;
+	}
 
-	ret = iovmm_map_oto(dsim->dev, dsim->phys_addr,
-			dsim->lcd_info.xres * dsim->lcd_info.yres * 4);
+	/* phys_addr and phys_size must be aligned to page size */
+	ret = iovmm_map_oto(dsim->dev, dsim->fb_handover.phys_addr,
+			dsim->fb_handover.phys_size);
 	if (ret) {
 		dsim_err("failed one to one mapping: %d\n", ret);
 		BUG();
@@ -1824,16 +1839,26 @@ static void __exit dsim_exit(void)
 
 module_exit(dsim_exit);
 
+/*
+ * rmem_device_init is called in of_reserved_mem_device_init_by_idx function
+ * when reserved memory is required.
+ */
 static int rmem_device_init(struct reserved_mem *rmem, struct device *dev)
 {
 	struct dsim_device *dsim = dev_get_drvdata(dev);
 
-	dsim->phys_addr = rmem->base;
+	dsim_info("%s +\n", __func__);
+	dsim->fb_handover.phys_addr = rmem->base;
+	dsim->fb_handover.phys_size = rmem->size;
+	dsim_info("%s -\n", __func__);
 
 	return 0;
 }
 
-/* of_reserved_mem_device_release(dev) when reserved memory is no logner required */
+/*
+ * rmem_device_release is called in of_reserved_mem_device_release function
+ * when reserved memory is no longer required.
+ */
 static void rmem_device_release(struct reserved_mem *rmem, struct device *dev)
 {
 	struct page *first = phys_to_page(PAGE_ALIGN(rmem->base));
