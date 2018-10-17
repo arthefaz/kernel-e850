@@ -1874,7 +1874,7 @@ static void decon_release_old_bufs(struct decon_device *decon,
 	if (decon->dt.out_type == DECON_OUT_DSI) {
 		if (decon->lcd_info->mode == DECON_VIDEO_MODE) {
 			dsim = v4l2_get_subdevdata(decon->out_sd[0]);
-			if (dsim->fb_reservation) {
+			if (dsim->fb_handover.reserved) {
 				v4l2_subdev_call(decon->out_sd[0], core, ioctl,
 						DSIM_IOC_FREE_FB_RES, NULL);
 			}

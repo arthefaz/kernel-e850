@@ -215,6 +215,14 @@ struct dsim_resources {
 	struct regulator *regulator_3p3v;
 };
 
+struct dsim_fb_handover {
+	/* true  - fb reserved     */
+	/* false - fb not reserved */
+	bool reserved;
+	phys_addr_t phys_addr;
+	size_t phys_size;
+};
+
 struct dsim_device {
 	int id;
 	enum dsim_state state;
@@ -244,10 +252,7 @@ struct dsim_device {
 	struct backlight_device *bd;
 	int idle_ip_index;
 
-	/* true  - fb reserved     */
-	/* false - fb not reserved */
-	bool fb_reservation;
-	phys_addr_t phys_addr;
+	struct dsim_fb_handover fb_handover;
 };
 
 struct dsim_lcd_driver {
