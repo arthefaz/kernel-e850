@@ -725,9 +725,6 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 
 	pm_runtime_get_sync(dsim->dev);
 
-	/* DPHY reset control from SYSREG(0) */
-	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 1);
-
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
 	if (dsim->phy_ex)
@@ -957,8 +954,6 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 
 	pm_runtime_get_sync(dsim->dev);
 
-	/* DPHY reset control from SYSREG(0) */
-	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 1);
 	/* DPHY power on : iso release */
 	phy_power_on(dsim->phy);
 	if (dsim->phy_ex)
