@@ -2156,6 +2156,9 @@ void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 		}
 	}
 
+	/* DPHY reset control from SYSREG(0) */
+	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 0);
+
 	lanes = dsim_reg_translate_lanecnt_to_lanes(lcd_info->data_lane);
 
 	/* choose OSC_CLK */
