@@ -1814,8 +1814,10 @@ int decon_reg_start(u32 id, struct decon_mode_info *psr)
 {
 	int ret = 0;
 
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	if (psr->out_type == DECON_OUT_DP)
 		displayport_reg_lh_p_ch_power(1);
+#endif
 
 	decon_reg_direct_on_off(id, 1);
 	decon_reg_update_req_global(id);
