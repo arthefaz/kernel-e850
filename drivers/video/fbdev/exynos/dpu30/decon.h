@@ -508,6 +508,30 @@ struct dpu_size_info {
 	u32 h_out;
 };
 
+enum dpu_colorspace {
+	DPU_COLORSPACE_RGB,
+	DPU_COLORSPACE_YUV420,
+	DPU_COLORSPACE_YUV422,
+};
+
+#define DPU_UNDEF_BITS_DEPTH		0xabcd
+
+struct dpu_fmt {
+	const char *name;
+	enum decon_pixel_format fmt;	/* user-interfaced color format */
+	u32 dma_fmt;			/* applied color format to DPU_DMA(In) */
+	u32 dpp_fmt;			/* applied color format to DPP(Out) */
+	u8 bpp;				/* bits per pixel */
+	u8 padding;			/* padding bits per pixel */
+	u8 bpc;				/* bits per each color component */
+	u8 num_planes;			/* plane(s) count of color format */
+	u8 num_buffers;			/* number of input buffer(s) */
+	u8 num_addr;			/* number of base address(es) count */
+	u8 num_meta_planes; 		/* number of meta plane(s) */
+	u8 len_alpha;			/* length of alpha bits */
+	enum dpu_colorspace cs;
+};
+
 /**
  * Display Subsystem event management status.
  *
