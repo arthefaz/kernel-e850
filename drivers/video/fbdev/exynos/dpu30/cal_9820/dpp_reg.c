@@ -800,12 +800,12 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 		alpha_type = 1;
 		break;
 	case DECON_PIXEL_FORMAT_RGBA_1010102:
-		fmt = IDMA_IMG_FORMAT_RGBA2101010;
+		fmt = IDMA_IMG_FORMAT_RGBA1010102;
 		fmt_type = DPP_IMG_FORMAT_ARGB8101010;
 		alpha_type = 1;
 		break;
 	case DECON_PIXEL_FORMAT_BGRA_1010102:
-		fmt = IDMA_IMG_FORMAT_BGRA2101010;
+		fmt = IDMA_IMG_FORMAT_BGRA1010102;
 		fmt_type = DPP_IMG_FORMAT_ARGB8101010;
 		alpha_type = 1;
 		break;
