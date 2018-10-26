@@ -571,14 +571,13 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 			if (IS_ERR(priv->clk_drive_str[i]))
 				priv->clk_drive_str[i] = NULL;
 		}
-	}
+		priv->pins_config[0] = pinctrl_lookup_state(priv->pinctrl, "pins-as-pdn");
+		priv->pins_config[1] = pinctrl_lookup_state(priv->pinctrl, "pins-as-func");
 
-	priv->pins_config[0] = pinctrl_lookup_state(priv->pinctrl, "pins-as-pdn");
-	priv->pins_config[1] = pinctrl_lookup_state(priv->pinctrl, "pins-as-func");
-
-	for (i = 0; i < 2; i++) {
-		if (IS_ERR(priv->pins_config[i]))
-			priv->pins_config[i] = NULL;
+		for (i = 0; i < 2; i++) {
+			if (IS_ERR(priv->pins_config[i]))
+				priv->pins_config[i] = NULL;
+		}
 	}
 
 	of_property_read_u32(np, "samsung,dw-mshc-ciu-div", &div);
