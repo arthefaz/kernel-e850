@@ -2323,13 +2323,13 @@ int decon_check_global_limitation(struct decon_device *decon,
 {
 	int ret = 0;
 	int i, j;
-	u32 bpp;
 	/*
 	 * AXI Port0 : CH0(GF0), CH1(VGRFS)
 	 * AXI Port1 : CH2(GF1), CH3(VGF)
 	 * AXI Port2 : CH4(VG), CH5(VGS)
 	 */
 	int axi_port[MAX_DECON_WIN] = {1, 0, 3, 2, 5, 4};
+	const struct dpu_fmt *fmt_info;
 
 	for (i = 0; i < MAX_DECON_WIN; i++) {
 		if (config[i].state != DECON_WIN_STATE_BUFFER)
@@ -2369,14 +2369,14 @@ int decon_check_global_limitation(struct decon_device *decon,
 		 *	one on the other should never have compression.
 		 */
 		} else if (config[i].dpp_parm.rot > DPP_ROT_180) {
-			bpp = dpu_get_bpp(config->format);
-			/* 10-bit YUV */
-			if (bpp == 15 || bpp == 24) {
+			fmt_info = dpu_find_fmt_info(config[i].format);
+			if (IS_YUV10(fmt_info)) {
 				decon_err("Limited 10-bit ROT!\n");
 				ret = -EPERM;
 				goto err;
 			}
 			/* 8-bit YUV */
+			/* TODO: config -> config[i] ? */
 			if ((config->src.w > ROT_MAX_W) &&
 				(config->src.w * config->src.h > ROT_MAX_SZ)) {
 				decon_err("Exceeded supporting ROT size!\n");
