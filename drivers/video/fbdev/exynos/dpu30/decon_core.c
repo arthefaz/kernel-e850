@@ -1407,7 +1407,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 		struct decon_win_config *config,
 		struct decon_reg_data *regs, int idx)
 {
-	int ret;
+	int ret, i;
 	u32 alpha_length;
 	struct decon_rect r;
 #if defined(CONFIG_SUPPORT_LEGACY_FENCE)
@@ -1415,9 +1415,8 @@ static int decon_set_win_buffer(struct decon_device *decon,
 #else
 	struct dma_fence *fence = NULL;
 #endif
-	u32 config_size = 0;
-	u32 alloc_size = 0;
-	u32 byte_per_pixel = 4;
+	u32 cfg_size = 0;
+	u32 buf_size = 0;
 	const struct dpu_fmt *fmt_info;
 
 	ret = decon_check_limitation(decon, idx, config);
@@ -1454,34 +1453,20 @@ static int decon_set_win_buffer(struct decon_device *decon,
 		decon_dbg("acq_fence(%d), fence(%p)\n", config->acq_fence, fence);
 	}
 
-	/*
-	 * To avoid SysMMU page fault due to small buffer allocation
-	 * bpp = 12 : (NV12, NV21) check LUMA side for simplication
-	 * bpp = 15 : (8+2_10bit, NV12)
-	 * bpp = 24 : (P010_10bit)
-	 * bpp = 20 : (8+2_10bit, NV16)
-	 * bpp = 32 : (P210_10bit)
-	 * bpp = 16 : (RGB16 formats)
-	 * bpp = 32 : (RGB32 formats)
-	 */
-	/* TODO : We should check also YUV format, because YUV has more than 2 palnes.
-	 * Also bpp macro is not matched with this. In case of YUV format, each plane's
-	 * bpp is needed.
-	 */
-	if (IS_YUV(fmt_info)) {
-		/* this must be corrected & separated for 10-bit YUV cases */
-		byte_per_pixel = 1;
-	} else if (dpu_get_bpp(config->format) == 16) {
-		byte_per_pixel = 2;
-	} else {
-		byte_per_pixel = 4;
-	}
+	/* To avoid sysmmu page fault due to small buffer allocation */
+	cfg_size = config->src.f_w * config->src.f_h *
+		(fmt_info->bpp + fmt_info->padding);	/* bits */
 
-	config_size = config->src.f_w * config->src.f_h * byte_per_pixel;
-	alloc_size = (u32)(regs->dma_buf_data[idx][0].dma_buf->size);
-	if (config_size > alloc_size) {
-		decon_err("alloc buf size is less than required size ([w%d] alloc=%x : cfg=%x)\n",
-				idx, alloc_size, config_size);
+	for (i = 0; i < fmt_info->num_buffers; ++i)	/* bytes */
+		buf_size += (u32)(regs->dma_buf_data[idx][i].dma_buf->size);
+	buf_size *= 8;	/* bits */
+
+	decon_dbg("%s: cfg size(0x%x bits), buf size(0x%x bits)\n", __func__,
+			cfg_size, buf_size);
+
+	if (cfg_size > buf_size) {
+		decon_err("[w%d] alloc buf size(0x%x) < required size(0x%x)\n",
+				idx, buf_size, cfg_size);
 		ret = -EINVAL;
 		goto err;
 	}
