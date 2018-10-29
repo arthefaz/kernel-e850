@@ -408,8 +408,8 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 {
 	struct decon_win_config *config = regs->dpp_config;
 	struct bts_decon_info bts_info;
+	const struct dpu_fmt *fmt_info;
 	enum dpp_rotate rot;
-	enum decon_pixel_format fmt;
 	int idx, i;
 
 	if (!decon->bts.enabled)
@@ -432,8 +432,8 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 			continue;
 		}
 
-		fmt = config[i].format;
-		bts_info.dpp[idx].bpp = dpu_get_bpp(fmt);
+		fmt_info = dpu_find_fmt_info(config[i].format);
+		bts_info.dpp[idx].bpp = fmt_info->bpp + fmt_info->padding;
 		bts_info.dpp[idx].src_w = config[i].src.w;
 		bts_info.dpp[idx].src_h = config[i].src.h;
 		bts_info.dpp[idx].dst.x1 = config[i].dst.x;

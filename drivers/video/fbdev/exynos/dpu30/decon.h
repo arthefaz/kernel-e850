@@ -1394,7 +1394,6 @@ int decon_tui_protection(bool tui_en);
 
 /* helper functions */
 int dpu_get_sd_by_drvname(struct decon_device *decon, char *drvname);
-u32 dpu_get_bpp(enum decon_pixel_format fmt);
 int dpu_get_meta_plane_cnt(enum decon_pixel_format format);
 int dpu_get_plane_cnt(enum decon_pixel_format format, enum dpp_hdr_standard std);
 u32 dpu_get_alpha_len(int format);
