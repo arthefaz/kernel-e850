@@ -1286,6 +1286,7 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 #endif
 	struct dsim_device *dsim;
 	struct device *dev = NULL;
+	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(config->format);
 	int i;
 	size_t buf_size = 0;
 
@@ -1293,8 +1294,11 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 
 	DPU_EVENT_LOG(DPU_EVT_DECON_SET_BUFFER, &decon->sd, ktime_set(0, 0));
 
-	regs->plane_cnt[idx] =
-		dpu_get_plane_cnt(config->format, config->dpp_parm.hdr_std);
+	regs->plane_cnt[idx] = fmt_info->num_buffers;
+	/* If HDR is requested, meta data is transferred to last plane buffer */
+	if (config->dpp_parm.hdr_std == DPP_HDR_ST2084 ||
+			config->dpp_parm.hdr_std == DPP_HDR_HLG)
+		regs->plane_cnt[idx] += fmt_info->num_meta_planes;
 
 	memset(&regs->dma_buf_data[idx], 0,
 			sizeof(struct decon_dma_buf_data) * MAX_PLANE_CNT);

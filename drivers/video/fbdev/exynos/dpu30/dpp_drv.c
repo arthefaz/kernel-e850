@@ -265,50 +265,15 @@ err:
 
 static int dpp_check_addr(struct dpp_device *dpp, struct dpp_params_info *p)
 {
-	int cnt = 0;
+	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
+	int i;
 
-	cnt = dpu_get_plane_cnt(p->format, DPP_HDR_OFF);
-
-	switch (cnt) {
-	case 1:
-		if (IS_ERR_OR_NULL((void *)p->addr[0])) {
-			dpp_err("Address[0] is 0x0 DPP%d\n", dpp->id);
+	for (i = 0; i < fmt_info->num_addr; ++i) {
+		if (IS_ERR_OR_NULL((void *)p->addr[i])) {
+			dpp_err("DPP%d base address[%d] is NULL\n",
+					dpp->id, i);
 			return -EINVAL;
 		}
-		break;
-	case 2:
-	case 3:
-		if (IS_ERR_OR_NULL((void *)p->addr[0])) {
-			dpp_err("Address[0] is 0x0 DPP%d\n", dpp->id);
-			return -EINVAL;
-		}
-		if (IS_ERR_OR_NULL((void *)p->addr[1])) {
-			dpp_err("Address[1] is 0x0 DPP%d\n", dpp->id);
-			return -EINVAL;
-		}
-		break;
-	case 4:
-		if (IS_ERR_OR_NULL((void *)p->addr[0])) {
-			dpp_err("Address[0] is 0x0 DPP%d\n", dpp->id);
-			return -EINVAL;
-		}
-		if (IS_ERR_OR_NULL((void *)p->addr[1])) {
-			dpp_err("Address[1] is 0x0 DPP%d\n", dpp->id);
-			return -EINVAL;
-		}
-		if (IS_ERR_OR_NULL((void *)p->addr[2])) {
-			dpp_err("Address[2] is 0x0 DPP%d\n", dpp->id);
-			return -EINVAL;
-		}
-		if (IS_ERR_OR_NULL((void *)p->addr[3])) {
-			dpp_err("Address[3] is 0x0 DPP%d\n", dpp->id);
-			return -EINVAL;
-		}
-		break;
-	default:
-		dpp_err("Unsupport plane cnt\n");
-			return -EINVAL;
-		break;
 	}
 
 	return 0;
