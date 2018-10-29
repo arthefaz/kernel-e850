@@ -2363,12 +2363,9 @@ static int decon_prepare_win_config(struct decon_device *decon,
 				&win_config[decon->dt.max_win], regs);
 	}
 
-	for (i = 0; i < decon->dt.dpp_cnt; i++) {
+	for (i = 0; i < decon->dt.dpp_cnt; i++)
 		memcpy(&regs->dpp_config[i], &win_config[i],
 				sizeof(struct decon_win_config));
-		regs->dpp_config[i].format =
-			dpu_translate_fmt_to_dpp(regs->dpp_config[i].format);
-	}
 
 config_err:
 
