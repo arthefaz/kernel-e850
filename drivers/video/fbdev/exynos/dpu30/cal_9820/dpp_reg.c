@@ -732,167 +732,30 @@ static void dma_dpp_reg_set_coordinates(u32 id, struct dpp_params_info *p,
 static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 		const unsigned long attr)
 {
-	u32 fmt;
+	u32 dma_fmt;
 	u32 alpha_type = 0; /* 0: per-frame, 1: per-pixel */
-	u32 fmt_type = 0;
 	u32 is_yuv = 0;
+	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
 
-	switch (p->format) {
-	case DECON_PIXEL_FORMAT_ARGB_8888:
-		fmt = IDMA_IMG_FORMAT_ARGB8888;
-		fmt_type = DPP_IMG_FORMAT_ARGB8888;
-		alpha_type = 1;
-		break;
-	case DECON_PIXEL_FORMAT_ABGR_8888:
-		fmt = IDMA_IMG_FORMAT_ABGR8888;
-		fmt_type = DPP_IMG_FORMAT_ARGB8888;
-		alpha_type = 1;
-		break;
-	case DECON_PIXEL_FORMAT_RGBA_8888:
-		fmt = IDMA_IMG_FORMAT_RGBA8888;
-		fmt_type = DPP_IMG_FORMAT_ARGB8888;
-		alpha_type = 1;
-		break;
-	case DECON_PIXEL_FORMAT_BGRA_8888:
-		fmt = IDMA_IMG_FORMAT_BGRA8888;
-		fmt_type = DPP_IMG_FORMAT_ARGB8888;
-		alpha_type = 1;
-		break;
-	case DECON_PIXEL_FORMAT_XRGB_8888:
-		fmt = IDMA_IMG_FORMAT_XRGB8888;
-		fmt_type = DPP_IMG_FORMAT_ARGB8888;
-		break;
-	case DECON_PIXEL_FORMAT_XBGR_8888:
-		fmt = IDMA_IMG_FORMAT_XBGR8888;
-		fmt_type = DPP_IMG_FORMAT_ARGB8888;
-		break;
-	case DECON_PIXEL_FORMAT_RGBX_8888:
-		fmt = IDMA_IMG_FORMAT_RGBX8888;
-		fmt_type = DPP_IMG_FORMAT_ARGB8888;
-		break;
-	case DECON_PIXEL_FORMAT_BGRX_8888:
-		fmt = IDMA_IMG_FORMAT_BGRX8888;
-		fmt_type = DPP_IMG_FORMAT_ARGB8888;
-		break;
-	case DECON_PIXEL_FORMAT_RGB_565:
-		if (p->is_comp)
-			fmt = IDMA_IMG_FORMAT_BGR565;
-		else
-			fmt = IDMA_IMG_FORMAT_RGB565;
-		fmt_type = DPP_IMG_FORMAT_ARGB8888;
-		break;
-	case DECON_PIXEL_FORMAT_BGR_565:
-		if (p->is_comp)
-			fmt = IDMA_IMG_FORMAT_RGB565;
-		else
-			fmt = IDMA_IMG_FORMAT_BGR565;
-		fmt_type = DPP_IMG_FORMAT_ARGB8888;
-		break;
-	/* TODO: add ARGB1555 & ARGB4444 */
-	case DECON_PIXEL_FORMAT_ARGB_2101010:
-		fmt = IDMA_IMG_FORMAT_ARGB2101010;
-		fmt_type = DPP_IMG_FORMAT_ARGB8101010;
-		alpha_type = 1;
-		break;
-	case DECON_PIXEL_FORMAT_ABGR_2101010:
-		fmt = IDMA_IMG_FORMAT_ABGR2101010;
-		fmt_type = DPP_IMG_FORMAT_ARGB8101010;
-		alpha_type = 1;
-		break;
-	case DECON_PIXEL_FORMAT_RGBA_1010102:
-		fmt = IDMA_IMG_FORMAT_RGBA1010102;
-		fmt_type = DPP_IMG_FORMAT_ARGB8101010;
-		alpha_type = 1;
-		break;
-	case DECON_PIXEL_FORMAT_BGRA_1010102:
-		fmt = IDMA_IMG_FORMAT_BGRA1010102;
-		fmt_type = DPP_IMG_FORMAT_ARGB8101010;
-		alpha_type = 1;
-		break;
+	if (fmt_info->fmt == DECON_PIXEL_FORMAT_RGB_565 && p->is_comp)
+		dma_fmt = IDMA_IMG_FORMAT_BGR565;
+	else if (fmt_info->fmt == DECON_PIXEL_FORMAT_BGR_565 && p->is_comp)
+		dma_fmt = IDMA_IMG_FORMAT_RGB565;
+	else
+		dma_fmt = fmt_info->dma_fmt;
 
-	case DECON_PIXEL_FORMAT_NV12:
-	case DECON_PIXEL_FORMAT_NV12M:
-		fmt = IDMA_IMG_FORMAT_YUV420_2P;
-		fmt_type = DPP_IMG_FORMAT_YUV420_8P;
-		is_yuv = 1;
-		break;
-	case DECON_PIXEL_FORMAT_NV21:
-	case DECON_PIXEL_FORMAT_NV21M:
-	case DECON_PIXEL_FORMAT_NV12N:
-		fmt = IDMA_IMG_FORMAT_YVU420_2P;
-		fmt_type = DPP_IMG_FORMAT_YUV420_8P;
-		is_yuv = 1;
-		break;
-
-	case DECON_PIXEL_FORMAT_NV12N_10B:
-		fmt = IDMA_IMG_FORMAT_YVU420_8P2;
-		fmt_type = DPP_IMG_FORMAT_YUV420_8P2;
-		is_yuv = 1;
-		break;
-	case DECON_PIXEL_FORMAT_NV12M_P010:
-	case DECON_PIXEL_FORMAT_NV12_P010:
-		fmt = IDMA_IMG_FORMAT_YUV420_P010;
-		fmt_type = DPP_IMG_FORMAT_YUV420_P010;
-		is_yuv = 1;
-		break;
-	case DECON_PIXEL_FORMAT_NV21M_P010:
-		fmt = IDMA_IMG_FORMAT_YVU420_P010;
-		fmt_type = DPP_IMG_FORMAT_YUV420_P010;
-		is_yuv = 1;
-		break;
-	case DECON_PIXEL_FORMAT_NV12M_S10B:
-		fmt = IDMA_IMG_FORMAT_YVU420_8P2;
-		fmt_type = DPP_IMG_FORMAT_YUV420_8P2;
-		is_yuv = 1;
-		break;
-	case DECON_PIXEL_FORMAT_NV21M_S10B:
-		fmt = IDMA_IMG_FORMAT_YUV420_8P2;
-		fmt_type = DPP_IMG_FORMAT_YUV420_8P2;
-		is_yuv = 1;
-		break;
-	case DECON_PIXEL_FORMAT_NV16:
-		fmt = IDMA_IMG_FORMAT_YVU422_2P;
-		fmt_type = DPP_IMG_FORMAT_YUV422_8P;
-		is_yuv = 1;
-		break;
-	case DECON_PIXEL_FORMAT_NV61:
-		fmt = IDMA_IMG_FORMAT_YUV422_2P;
-		fmt_type = DPP_IMG_FORMAT_YUV422_8P;
-		is_yuv = 1;
-		break;
-	case DECON_PIXEL_FORMAT_NV16M_P210:
-		fmt = IDMA_IMG_FORMAT_YUV422_P210;
-		fmt_type = DPP_IMG_FORMAT_YUV422_P210;
-		is_yuv = 1;
-		break;
-	case DECON_PIXEL_FORMAT_NV61M_P210:
-		fmt = IDMA_IMG_FORMAT_YVU422_P210;
-		fmt_type = DPP_IMG_FORMAT_YUV422_P210;
-		is_yuv = 1;
-		break;
-	case DECON_PIXEL_FORMAT_NV16M_S10B:
-		fmt = IDMA_IMG_FORMAT_YUV422_8P2;
-		fmt_type = DPP_IMG_FORMAT_YUV422_8P2;
-		is_yuv = 1;
-		break;
-	case DECON_PIXEL_FORMAT_NV61M_S10B:
-		fmt = IDMA_IMG_FORMAT_YVU422_8P2;
-		fmt_type = DPP_IMG_FORMAT_YUV422_8P2;
-		is_yuv = 1;
-		break;
-	default:
-		dpp_err("Unsupported Format\n");
-		return -EINVAL;
-	}
+	alpha_type = (fmt_info->len_alpha > 0) ? 1 : 0;
+	is_yuv = (fmt_info->cs == DPU_COLORSPACE_YUV420 ||
+			fmt_info->cs == DPU_COLORSPACE_YUV422) ? 1 : 0;
 
 	if (test_bit(DPP_ATTR_IDMA, &attr)) {
-		idma_reg_set_format(id, fmt);
+		idma_reg_set_format(id, dma_fmt);
 		if (test_bit(DPP_ATTR_DPP, &attr)) {
 			dpp_reg_set_alpha_type(id, alpha_type);
-			dpp_reg_set_format(id, fmt_type);
+			dpp_reg_set_format(id, fmt_info->dpp_fmt);
 		}
 	} else if (test_bit(DPP_ATTR_ODMA, &attr)) {
-		odma_reg_set_format(id, fmt);
+		odma_reg_set_format(id, dma_fmt);
 		wb_mux_reg_set_csc_r2y(id, is_yuv);
 		wb_mux_reg_set_uv_offset(id, 0, 0);
 	}
