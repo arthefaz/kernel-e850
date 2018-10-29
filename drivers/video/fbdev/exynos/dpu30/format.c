@@ -589,3 +589,16 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.cs = DPU_COLORSPACE_YUV420,
 	},
 };
+
+const struct dpu_fmt *dpu_find_fmt_info(enum decon_pixel_format fmt)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(dpu_formats_list); i++)
+		if (dpu_formats_list[i].fmt == fmt)
+			return &dpu_formats_list[i];
+
+	decon_err("%s: can't find format(%d) in supported format list\n",
+			__func__, fmt);
+	return NULL;
+}

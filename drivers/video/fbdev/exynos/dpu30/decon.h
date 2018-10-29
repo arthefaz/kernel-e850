@@ -1394,7 +1394,6 @@ int decon_tui_protection(bool tui_en);
 
 /* helper functions */
 int dpu_get_sd_by_drvname(struct decon_device *decon, char *drvname);
-u32 dpu_translate_fmt_to_dpp(u32 format);
 u32 dpu_get_bpp(enum decon_pixel_format fmt);
 int dpu_get_meta_plane_cnt(enum decon_pixel_format format);
 int dpu_get_plane_cnt(enum decon_pixel_format format, enum dpp_hdr_standard std);
@@ -1458,6 +1457,9 @@ int decon_set_out_sd_state(struct decon_device *decon, enum decon_state state);
 
 void decon_hiber_start(struct decon_device *decon);
 void decon_hiber_finish(struct decon_device *decon);
+
+/* format */
+const struct dpu_fmt *dpu_find_fmt_info(enum decon_pixel_format fmt);
 
 /* IOCTL commands */
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, __u32)
