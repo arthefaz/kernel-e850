@@ -83,9 +83,6 @@ struct dpp_img_format {
 	u32 scale;
 	u32 format;
 	u32 afbc_en;
-	u32 yuv;
-	u32 yuv422;
-	u32 yuv420;
 	u32 wb;
 };
 

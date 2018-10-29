@@ -765,8 +765,9 @@ void dpp_constraints_params(struct dpp_size_constraints *vc,
 		struct dpp_img_format *vi, struct dpp_restriction *res)
 {
 	u32 sz_align = 1;
+	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(vi->format);
 
-	if (vi->yuv)
+	if (IS_YUV(fmt_info))
 		sz_align = 2;
 
 	vc->src_mul_w = res->src_f_w.align * sz_align;
