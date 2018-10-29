@@ -79,59 +79,6 @@ int dpu_get_sd_by_drvname(struct decon_device *decon, char *drvname)
 	return 0;
 }
 
-int dpu_get_meta_plane_cnt(enum decon_pixel_format format)
-{
-	switch (format) {
-	case DECON_PIXEL_FORMAT_ARGB_8888:
-	case DECON_PIXEL_FORMAT_ABGR_8888:
-	case DECON_PIXEL_FORMAT_RGBA_8888:
-	case DECON_PIXEL_FORMAT_BGRA_8888:
-	case DECON_PIXEL_FORMAT_XRGB_8888:
-	case DECON_PIXEL_FORMAT_XBGR_8888:
-	case DECON_PIXEL_FORMAT_RGBX_8888:
-	case DECON_PIXEL_FORMAT_BGRX_8888:
-	case DECON_PIXEL_FORMAT_RGBA_5551:
-	case DECON_PIXEL_FORMAT_RGB_565:
-	case DECON_PIXEL_FORMAT_BGR_565:
-	case DECON_PIXEL_FORMAT_NV12N:
-	case DECON_PIXEL_FORMAT_NV16:
-	case DECON_PIXEL_FORMAT_NV61:
-	case DECON_PIXEL_FORMAT_NV12:
-	case DECON_PIXEL_FORMAT_NV21:
-	case DECON_PIXEL_FORMAT_NV12M:
-	case DECON_PIXEL_FORMAT_NV21M:
-	case DECON_PIXEL_FORMAT_YVU422_3P:
-	case DECON_PIXEL_FORMAT_YUV420:
-	case DECON_PIXEL_FORMAT_YVU420:
-	case DECON_PIXEL_FORMAT_YUV420M:
-	case DECON_PIXEL_FORMAT_YVU420M:
-		return -1;
-
-	case DECON_PIXEL_FORMAT_NV12N_10B:
-	case DECON_PIXEL_FORMAT_ARGB_2101010:
-	case DECON_PIXEL_FORMAT_ABGR_2101010:
-	case DECON_PIXEL_FORMAT_RGBA_1010102:
-	case DECON_PIXEL_FORMAT_BGRA_1010102:
-	case DECON_PIXEL_FORMAT_NV12_P010:
-		return 1;
-
-	case DECON_PIXEL_FORMAT_NV12M_P010:
-	case DECON_PIXEL_FORMAT_NV21M_P010:
-	case DECON_PIXEL_FORMAT_NV12M_S10B:
-	case DECON_PIXEL_FORMAT_NV21M_S10B:
-	/* 9820 */
-	case DECON_PIXEL_FORMAT_NV16M_P210:
-	case DECON_PIXEL_FORMAT_NV61M_P210:
-	case DECON_PIXEL_FORMAT_NV16M_S10B:
-	case DECON_PIXEL_FORMAT_NV61M_S10B:
-		return 2;
-
-	default:
-		decon_err("%s: invalid format(%d)\n", __func__, format);
-		return -1;
-	}
-}
-
 int dpu_get_plane_cnt(enum decon_pixel_format format, enum dpp_hdr_standard std)
 {
 	bool is_hdr = false;

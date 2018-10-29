@@ -1867,7 +1867,8 @@ static int decon_set_hdr_info(struct decon_device *decon,
 	int ret = 0;
 #endif
 	int hdr_cmp = 0;
-	int meta_plane = 0;
+	int mp_idx = 0;	/* meta plane index */
+	const struct dpu_fmt *fmt_info;
 
 	if (!on) {
 		struct exynos_hdr_static_info hdr_static_info;
@@ -1884,23 +1885,24 @@ static int decon_set_hdr_info(struct decon_device *decon,
 		return 0;
 	}
 
-	meta_plane = dpu_get_meta_plane_cnt(regs->dpp_config[win_num].format);
-	if (meta_plane < 0) {
+	fmt_info = dpu_find_fmt_info(regs->dpp_config[win_num].format);
+	mp_idx = fmt_info->num_buffers + fmt_info->num_meta_planes - 1;
+	if (mp_idx < 0) {
 		decon_err("Unsupported hdr metadata format\n");
 		return -EINVAL;
 	}
 
-	if (!regs->dma_buf_data[win_num][meta_plane].dma_addr) {
+	if (!regs->dma_buf_data[win_num][mp_idx].dma_addr) {
 		decon_err("hdr metadata address is NULL\n");
 		return -EINVAL;
 	}
 #if defined(CONFIG_SUPPORT_LEGACY_ION)
 	video_meta = (struct exynos_video_meta *)ion_map_kernel(
 			decon->ion_client,
-			regs->dma_buf_data[win_num][meta_plane].ion_handle);
+			regs->dma_buf_data[win_num][mp_idx].ion_handle);
 #else
 	video_meta = (struct exynos_video_meta *)dma_buf_vmap(
-			regs->dma_buf_data[win_num][meta_plane].dma_buf);
+			regs->dma_buf_data[win_num][mp_idx].dma_buf);
 #endif
 
 	hdr_cmp = memcmp(&decon->prev_hdr_info,
@@ -1912,7 +1914,7 @@ static int decon_set_hdr_info(struct decon_device *decon,
 	 */
 	if (hdr_cmp == 0) {
 #if !defined(CONFIG_SUPPORT_LEGACY_ION)
-		dma_buf_vunmap(regs->dma_buf_data[win_num][meta_plane].dma_buf, video_meta);
+		dma_buf_vunmap(regs->dma_buf_data[win_num][mp_idx].dma_buf, video_meta);
 #endif
 		return 0;
 	}
@@ -1927,7 +1929,7 @@ static int decon_set_hdr_info(struct decon_device *decon,
 			&video_meta->shdr_static_info,
 			sizeof(struct exynos_hdr_static_info));
 #if !defined(CONFIG_SUPPORT_LEGACY_ION)
-	dma_buf_vunmap(regs->dma_buf_data[win_num][meta_plane].dma_buf, video_meta);
+	dma_buf_vunmap(regs->dma_buf_data[win_num][mp_idx].dma_buf, video_meta);
 #endif
 	return 0;
 
@@ -1940,7 +1942,7 @@ err_hdr_io:
 	decon_err("hdr metadata info subdev call is failed\n");
 
 #if !defined(CONFIG_SUPPORT_LEGACY_ION)
-	dma_buf_vunmap(regs->dma_buf_data[win_num][meta_plane].dma_buf, video_meta);
+	dma_buf_vunmap(regs->dma_buf_data[win_num][mp_idx].dma_buf, video_meta);
 #endif
 	return -EFAULT;
 }
