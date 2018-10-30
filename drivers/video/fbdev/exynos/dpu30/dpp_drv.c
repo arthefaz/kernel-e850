@@ -88,6 +88,7 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	u64 src_w, src_h, dst_w, dst_h;
 	struct decon_win_config *config = &dpp->dpp_config->config;
 	struct dpp_restriction *res = &dpp->restriction;
+	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(config->format);
 
 	p->rcv_num = dpp->dpp_config->rcv_num;
 	memcpy(&p->src, &config->src, sizeof(struct decon_frame));
@@ -158,8 +159,8 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 		p->is_scale = false;
 
 	if ((config->dpp_parm.rot != DPP_ROT_NORMAL) || (p->is_scale) ||
-		(p->format >= DECON_PIXEL_FORMAT_NV16) ||
-		(p->block.w < res->blk_w.min) || (p->block.h < res->blk_h.min))
+			IS_YUV(fmt_info) || (p->block.w < res->blk_w.min) ||
+			(p->block.h < res->blk_h.min))
 		p->is_block = false;
 	else
 		p->is_block = true;
@@ -281,6 +282,8 @@ static int dpp_check_addr(struct dpp_device *dpp, struct dpp_params_info *p)
 
 static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 {
+	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
+
 	if (!test_bit(DPP_ATTR_ROT, &dpp->attr) && (p->rot > DPP_ROT_180)) {
 		dpp_err("Not support rotation(%d) in DPP%d - VGRF only!\n",
 				p->rot, dpp->id);
@@ -299,8 +302,7 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 		return -EINVAL;
 	}
 
-	if (!test_bit(DPP_ATTR_CSC, &dpp->attr) &&
-			(p->format >= DECON_PIXEL_FORMAT_NV16)) {
+	if (!test_bit(DPP_ATTR_CSC, &dpp->attr) && IS_YUV(fmt_info)) {
 		dpp_err("Not support YUV format(%d) in DPP%d - VG & VGF only!\n",
 			p->format, dpp->id);
 		return -EINVAL;
