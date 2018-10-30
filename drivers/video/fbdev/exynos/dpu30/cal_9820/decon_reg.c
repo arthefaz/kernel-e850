@@ -10,6 +10,7 @@
  */
 
 #include "../decon.h"
+#include "../format.h"
 
 /******************* DECON CAL functions *************************/
 static void dpu_reg_set_qactive_pll(u32 id, u32 en)

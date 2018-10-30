@@ -13,6 +13,7 @@
 #define __SAMSUNG_DPP_CAL_H__
 
 #include "../decon.h"
+#include "../format.h"
 
 struct dpp_params_info {
 	struct decon_frame src;
