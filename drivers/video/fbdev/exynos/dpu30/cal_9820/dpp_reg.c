@@ -682,13 +682,16 @@ static void wb_mux_reg_set_uv_offset(u32 id, u32 off_x, u32 off_y)
 static void dma_reg_set_base_addr(u32 id, struct dpp_params_info *p,
 		const unsigned long attr)
 {
+	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
+
 	if (test_bit(DPP_ATTR_IDMA, &attr)) {
 		dma_write(id, IDMA_IN_BASE_ADDR_Y, p->addr[0]);
 		if (p->is_comp)
 			dma_write(id, IDMA_IN_BASE_ADDR_C, p->addr[0]);
 		else
 			dma_write(id, IDMA_IN_BASE_ADDR_C, p->addr[1]);
-		if (p->is_4p) {
+
+		if (fmt_info->num_addr == 4) { /* use 4 base addresses */
 			dma_write(id, IDMA_IN_BASE_ADDR_Y2, p->addr[2]);
 			dma_write(id, IDMA_IN_BASE_ADDR_C2, p->addr[3]);
 			dma_write_mask(id, IDMA_2BIT_STRIDE,
