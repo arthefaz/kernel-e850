@@ -30,6 +30,7 @@
 #include "decon.h"
 #include "dsim.h"
 #include "dpp.h"
+#include "format.h"
 //#include "../../../../soc/samsung/pwrcal/pwrcal.h"
 //#include "../../../../soc/samsung/pwrcal/S5E8890/S5E8890-vclk.h"
 #include "../../../../../kernel/irq/internals.h"

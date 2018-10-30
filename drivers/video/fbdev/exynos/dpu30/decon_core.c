@@ -50,6 +50,7 @@
 #include <dt-bindings/clock/exynos9820.h>
 #endif
 
+#include "format.h"
 #include "decon.h"
 #include "dsim.h"
 #include "./panels/lcd_ctrl.h"

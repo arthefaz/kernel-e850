@@ -11,6 +11,7 @@
 
 #include "decon.h"
 #include "dpp.h"
+#include "format.h"
 
 static const struct dpu_fmt dpu_formats_list[] = {
 	{

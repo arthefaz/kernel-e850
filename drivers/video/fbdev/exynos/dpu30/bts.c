@@ -11,6 +11,7 @@
 
 #include "decon.h"
 #include "dpp.h"
+#include "format.h"
 
 #include <soc/samsung/bts.h>
 #include <media/v4l2-subdev.h>

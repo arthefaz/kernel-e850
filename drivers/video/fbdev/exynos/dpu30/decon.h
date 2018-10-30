@@ -59,6 +59,7 @@
 #include "../../../../dma-buf/sync_debug.h"
 #endif
 #include "hdr_metadata.h"
+#include "format.h"
 
 #define SUCCESS_EXYNOS_SMC	0
 
@@ -506,30 +507,6 @@ struct dpu_size_info {
 	u32 h_in;
 	u32 w_out;
 	u32 h_out;
-};
-
-enum dpu_colorspace {
-	DPU_COLORSPACE_RGB,
-	DPU_COLORSPACE_YUV420,
-	DPU_COLORSPACE_YUV422,
-};
-
-#define DPU_UNDEF_BITS_DEPTH		0xabcd
-
-struct dpu_fmt {
-	const char *name;
-	enum decon_pixel_format fmt;	/* user-interfaced color format */
-	u32 dma_fmt;			/* applied color format to DPU_DMA(In) */
-	u32 dpp_fmt;			/* applied color format to DPP(Out) */
-	u8 bpp;				/* bits per pixel */
-	u8 padding;			/* padding bits per pixel */
-	u8 bpc;				/* bits per each color component */
-	u8 num_planes;			/* plane(s) count of color format */
-	u8 num_buffers;			/* number of input buffer(s) */
-	u8 num_addr;			/* number of base address(es) count */
-	u8 num_meta_planes; 		/* number of meta plane(s) */
-	u8 len_alpha;			/* length of alpha bits */
-	enum dpu_colorspace cs;
 };
 
 /**
@@ -1451,17 +1428,6 @@ int decon_set_out_sd_state(struct decon_device *decon, enum decon_state state);
 
 void decon_hiber_start(struct decon_device *decon);
 void decon_hiber_finish(struct decon_device *decon);
-
-/* format */
-#define IS_YUV420(f)		((f)->cs == DPU_COLORSPACE_YUV420)
-#define IS_YUV422(f)		((f)->cs == DPU_COLORSPACE_YUV422)
-#define IS_YUV(f)	\
-	(((f)->cs == DPU_COLORSPACE_YUV420) || ((f)->cs == DPU_COLORSPACE_YUV422))
-#define IS_YUV10(f)		(IS_YUV(f) && ((f)->bpc == 10))
-#define IS_RGB32(f)	\
-	(((f)->cs == DPU_COLORSPACE_RGB) && (((f)->bpp + (f)->padding) == 32))
-#define IS_OPAQUE(f)		((f)->len_alpha == 0)
-const struct dpu_fmt *dpu_find_fmt_info(enum decon_pixel_format fmt);
 
 /* IOCTL commands */
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, __u32)
