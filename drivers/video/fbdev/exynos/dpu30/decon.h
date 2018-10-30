@@ -1420,10 +1420,8 @@ int decon_intersection(struct decon_rect *r1,
 		struct decon_rect *r2, struct decon_rect *r3);
 
 bool is_decon_rect_differ(struct decon_rect *r1, struct decon_rect *r2);
-bool is_rgb32(int format);
 bool is_scaling(struct decon_win_config *config);
 bool is_full(struct decon_rect *r, struct decon_lcd *lcd);
-bool is_decon_opaque_format(int format);
 void __iomem *dpu_get_sysreg_addr(void);
 void dpu_dump_afbc_info(void);
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
@@ -1460,6 +1458,9 @@ void decon_hiber_finish(struct decon_device *decon);
 #define IS_YUV(f)	\
 	(((f)->cs == DPU_COLORSPACE_YUV420) || ((f)->cs == DPU_COLORSPACE_YUV422))
 #define IS_YUV10(f)		(IS_YUV(f) && ((f)->bpc == 10))
+#define IS_RGB32(f)	\
+	(((f)->cs == DPU_COLORSPACE_RGB) && (((f)->bpp + (f)->padding) == 32))
+#define IS_OPAQUE(f)		((f)->len_alpha == 0)
 const struct dpu_fmt *dpu_find_fmt_info(enum decon_pixel_format fmt);
 
 /* IOCTL commands */
