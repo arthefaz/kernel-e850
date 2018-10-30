@@ -1459,6 +1459,11 @@ void decon_hiber_start(struct decon_device *decon);
 void decon_hiber_finish(struct decon_device *decon);
 
 /* format */
+#define IS_YUV420(f)		((f)->cs == DPU_COLORSPACE_YUV420)
+#define IS_YUV422(f)		((f)->cs == DPU_COLORSPACE_YUV422)
+#define IS_YUV(f)	\
+	(((f)->cs == DPU_COLORSPACE_YUV420) || ((f)->cs == DPU_COLORSPACE_YUV422))
+#define IS_YUV10(f)		(IS_YUV(f) && ((f)->bpc == 10))
 const struct dpu_fmt *dpu_find_fmt_info(enum decon_pixel_format fmt);
 
 /* IOCTL commands */

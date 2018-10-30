@@ -363,6 +363,7 @@ static int dpp_check_limitation(struct dpp_device *dpp, struct dpp_params_info *
 {
 	int ret;
 	struct dpp_img_format vi;
+	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
 
 	ret = dpp_check_scale_ratio(p);
 	if (ret) {
@@ -392,7 +393,7 @@ static int dpp_check_limitation(struct dpp_device *dpp, struct dpp_params_info *
 		return -EINVAL;
 	}
 
-	if (p->is_comp && vi.yuv420) {
+	if (p->is_comp && IS_YUV420(fmt_info)) {
 		dpp_err("Not support AFBC decoding for YUV format in DPP%d\n",
 			dpp->id);
 		return -EINVAL;
@@ -404,7 +405,7 @@ static int dpp_check_limitation(struct dpp_device *dpp, struct dpp_params_info *
 		return -EINVAL;
 	}
 
-	if (p->is_block && vi.yuv420) {
+	if (p->is_block && IS_YUV420(fmt_info)) {
 		dpp_err("Not support BLOCK Mode for YUV format in DPP%d\n",
 			dpp->id);
 		return -EINVAL;

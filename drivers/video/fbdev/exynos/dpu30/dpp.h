@@ -60,12 +60,6 @@ extern int dpp_log_level;
 
 #define is_normal(config) (DPP_ROT_NORMAL)
 #define is_rotation(config) (config->dpp_parm.rot > DPP_ROT_180)
-#define is_yuv(config) ((config->format >= DECON_PIXEL_FORMAT_NV16) \
-			&& (config->format < DECON_PIXEL_FORMAT_MAX))
-#define is_yuv422(config) ((config->format >= DECON_PIXEL_FORMAT_NV16) \
-			&& (config->format <= DECON_PIXEL_FORMAT_YVU422_3P))
-#define is_yuv420(config) ((config->format >= DECON_PIXEL_FORMAT_NV12) \
-			&& (config->format <= DECON_PIXEL_FORMAT_YVU420M))
 #define is_afbc(config) (config->compression)
 
 #define dpp_err(fmt, ...)							\
@@ -324,16 +318,11 @@ static inline void dma_write_mask(u32 id, u32 reg_id, u32 val, u32 mask)
 static inline void dpp_select_format(struct dpp_device *dpp,
 			struct dpp_img_format *vi, struct dpp_params_info *p)
 {
-	struct decon_win_config *config = &dpp->dpp_config->config;
-
 	vi->normal = is_normal(dpp);
 	vi->rot = p->rot;
 	vi->scale = p->is_scale;
 	vi->format = p->format;
 	vi->afbc_en = p->is_comp;
-	vi->yuv = is_yuv(config);
-	vi->yuv422 = is_yuv422(config);
-	vi->yuv420 = is_yuv420(config);
 	vi->wb = test_bit(DPP_ATTR_ODMA, &dpp->attr);
 }
 
