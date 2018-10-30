@@ -79,43 +79,6 @@ int dpu_get_sd_by_drvname(struct decon_device *decon, char *drvname)
 	return 0;
 }
 
-u32 dpu_get_alpha_len(int format)
-{
-	switch (format) {
-	case DECON_PIXEL_FORMAT_ARGB_8888:
-	case DECON_PIXEL_FORMAT_ABGR_8888:
-	case DECON_PIXEL_FORMAT_RGBA_8888:
-	case DECON_PIXEL_FORMAT_BGRA_8888:
-		return 8;
-
-	case DECON_PIXEL_FORMAT_ABGR_4444:
-	case DECON_PIXEL_FORMAT_RGBA_4444:
-	case DECON_PIXEL_FORMAT_BGRA_4444:
-		return 4;
-
-	case DECON_PIXEL_FORMAT_ARGB_2101010:
-	case DECON_PIXEL_FORMAT_ABGR_2101010:
-	case DECON_PIXEL_FORMAT_RGBA_1010102:
-	case DECON_PIXEL_FORMAT_BGRA_1010102:
-		return 2;
-
-	case DECON_PIXEL_FORMAT_RGBA_5551:
-	case DECON_PIXEL_FORMAT_BGRA_5551:
-		return 1;
-
-	case DECON_PIXEL_FORMAT_XRGB_8888:
-	case DECON_PIXEL_FORMAT_XBGR_8888:
-	case DECON_PIXEL_FORMAT_RGBX_8888:
-	case DECON_PIXEL_FORMAT_BGRX_8888:
-	case DECON_PIXEL_FORMAT_RGB_565:
-	case DECON_PIXEL_FORMAT_BGR_565:
-		return 0;
-
-	default:
-		return 0;
-	}
-}
-
 bool decon_intersect(struct decon_rect *r1, struct decon_rect *r2)
 {
 	return !(r1->left > r2->right || r1->right < r2->left ||
