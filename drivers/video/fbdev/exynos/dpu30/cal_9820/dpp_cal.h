@@ -23,7 +23,6 @@ struct dpp_params_info {
 	enum dpp_hdr_standard hdr;
 	u32 min_luminance;
 	u32 max_luminance;
-	bool is_4p;
 	u32 y_2b_strd;
 	u32 c_2b_strd;
 
