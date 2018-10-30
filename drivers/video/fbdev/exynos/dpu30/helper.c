@@ -112,42 +112,6 @@ bool is_full(struct decon_rect *r, struct decon_lcd *lcd)
 		(r->right == lcd->xres - 1) && (r->bottom == lcd->yres - 1);
 }
 
-bool is_rgb32(int format)
-{
-	switch (format) {
-	case DECON_PIXEL_FORMAT_ARGB_8888:
-	case DECON_PIXEL_FORMAT_ABGR_8888:
-	case DECON_PIXEL_FORMAT_RGBA_8888:
-	case DECON_PIXEL_FORMAT_BGRA_8888:
-	case DECON_PIXEL_FORMAT_XRGB_8888:
-	case DECON_PIXEL_FORMAT_XBGR_8888:
-	case DECON_PIXEL_FORMAT_RGBX_8888:
-	case DECON_PIXEL_FORMAT_BGRX_8888:
-		return true;
-	default:
-		return false;
-	}
-}
-
-bool is_decon_opaque_format(int format)
-{
-	switch (format) {
-	case DECON_PIXEL_FORMAT_RGBA_8888:
-	case DECON_PIXEL_FORMAT_BGRA_8888:
-	case DECON_PIXEL_FORMAT_RGBA_5551:
-	case DECON_PIXEL_FORMAT_ARGB_8888:
-	case DECON_PIXEL_FORMAT_ABGR_8888:
-	case DECON_PIXEL_FORMAT_ARGB_2101010:
-	case DECON_PIXEL_FORMAT_ABGR_2101010:
-	case DECON_PIXEL_FORMAT_RGBA_1010102:
-	case DECON_PIXEL_FORMAT_BGRA_1010102:
-		return false;
-
-	default:
-		return true;
-	}
-}
-
 void dpu_unify_rect(struct decon_rect *r1, struct decon_rect *r2,
 		struct decon_rect *dst)
 {

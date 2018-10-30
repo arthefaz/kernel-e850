@@ -1074,6 +1074,7 @@ static int decon_find_biggest_block_rect(struct decon_device *decon,
 	struct decon_rect r1, r2, overlap_rect;
 	unsigned int overlap_size = 0, blocking_size = 0;
 	struct decon_win_config *config;
+	const struct dpu_fmt *fmt_info;
 	int j;
 
 	/* Get the rect in which we try to get the block region */
@@ -1093,7 +1094,8 @@ static int decon_find_biggest_block_rect(struct decon_device *decon,
 		if ((config->plane_alpha < 255) && (config->plane_alpha >= 0))
 			continue;
 
-		if (is_decon_opaque_format(config->format)) {
+		fmt_info = dpu_find_fmt_info(config->format);
+		if (IS_RGB32(fmt_info) && IS_OPAQUE(fmt_info)) {
 			config->opaque_area.x = config->dst.x;
 			config->opaque_area.y = config->dst.y;
 			config->opaque_area.w = config->dst.w;
@@ -1146,6 +1148,7 @@ static int decon_set_win_blocking_mode(struct decon_device *decon,
 	bool enabled;
 	int ret = 0;
 	struct decon_win_config *config = &win_config[win_no];
+	const struct dpu_fmt *fmt_info;
 
 	enabled = false;
 
@@ -1159,7 +1162,8 @@ static int decon_set_win_blocking_mode(struct decon_device *decon,
 		return ret;
 
 	/* Blocking mode is supported only for RGB32 color formats */
-	if (!is_rgb32(config->format))
+	fmt_info = dpu_find_fmt_info(config->format);
+	if (!IS_RGB32(fmt_info))
 		return ret;
 
 	/* Blocking Mode is not supported if there is a rotation */
