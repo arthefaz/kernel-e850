@@ -19,6 +19,7 @@
 
 #include "dpp.h"
 #include "decon.h"
+#include "format.h"
 
 int dpp_log_level = 6;
 
