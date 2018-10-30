@@ -734,7 +734,6 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 {
 	u32 dma_fmt;
 	u32 alpha_type = 0; /* 0: per-frame, 1: per-pixel */
-	u32 is_yuv = 0;
 	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
 
 	if (fmt_info->fmt == DECON_PIXEL_FORMAT_RGB_565 && p->is_comp)
@@ -745,8 +744,6 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 		dma_fmt = fmt_info->dma_fmt;
 
 	alpha_type = (fmt_info->len_alpha > 0) ? 1 : 0;
-	is_yuv = (fmt_info->cs == DPU_COLORSPACE_YUV420 ||
-			fmt_info->cs == DPU_COLORSPACE_YUV422) ? 1 : 0;
 
 	if (test_bit(DPP_ATTR_IDMA, &attr)) {
 		idma_reg_set_format(id, dma_fmt);
@@ -756,7 +753,7 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 		}
 	} else if (test_bit(DPP_ATTR_ODMA, &attr)) {
 		odma_reg_set_format(id, dma_fmt);
-		wb_mux_reg_set_csc_r2y(id, is_yuv);
+		wb_mux_reg_set_csc_r2y(id, IS_YUV(fmt_info));
 		wb_mux_reg_set_uv_offset(id, 0, 0);
 	}
 
