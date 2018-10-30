@@ -1418,10 +1418,13 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	u32 config_size = 0;
 	u32 alloc_size = 0;
 	u32 byte_per_pixel = 4;
+	const struct dpu_fmt *fmt_info;
 
 	ret = decon_check_limitation(decon, idx, config);
 	if (ret)
 		goto err;
+
+	fmt_info = dpu_find_fmt_info(config->format);
 
 	if (decon->dt.out_type == DECON_OUT_WB) {
 		r.left = config->dst.x;
@@ -1465,7 +1468,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	 * Also bpp macro is not matched with this. In case of YUV format, each plane's
 	 * bpp is needed.
 	 */
-	if (is_yuv(config)) {
+	if (IS_YUV(fmt_info)) {
 		/* this must be corrected & separated for 10-bit YUV cases */
 		byte_per_pixel = 1;
 	} else if (dpu_get_bpp(config->format) == 16) {

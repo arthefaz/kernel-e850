@@ -97,6 +97,7 @@ static void win_update_check_limitation(struct decon_device *decon,
 	struct v4l2_subdev *sd;
 	struct dpp_ch_restriction ch_res;
 	struct dpp_restriction *res;
+	const struct dpu_fmt *fmt_info;
 	int i;
 	int sz_align = 1;
 	int adj_src_x = 0, adj_src_y = 0;
@@ -105,7 +106,6 @@ static void win_update_check_limitation(struct decon_device *decon,
 		config = &win_config[i];
 		if (config->state == DECON_WIN_STATE_DISABLED)
 			continue;
-
 
 		r.left = config->dst.x;
 		r.top = config->dst.y;
@@ -120,7 +120,8 @@ static void win_update_check_limitation(struct decon_device *decon,
 		if (!(r.right - r.left) && !(r.bottom - r.top))
 			continue;
 
-		if (is_yuv(config)) {
+		fmt_info = dpu_find_fmt_info(config->format);
+		if (IS_YUV(fmt_info)) {
 			/* check alignment for NV12/NV21 format */
 			update.x = regs->up_region.left;
 			update.y = regs->up_region.top;

@@ -177,19 +177,6 @@ static inline u32 dpu_bts_get_aclk_period_time(u32 aclk_mhz)
 	return ((ACLK_100MHZ_PERIOD * 100) / aclk_mhz);
 }
 
-/* check 10-bit yuv format image */
-static u32 dpu_bts_check_yuv_10bit(enum decon_pixel_format fmt, bool is_yuv)
-{
-	u32 bpp = 32;
-	u32 is_yuv10 = 0;
-
-	bpp = dpu_get_bpp(fmt);
-	if (is_yuv && ((bpp == 15 || bpp == 24) || (bpp == 20 || bpp == 32)))
-		is_yuv10 = 1;
-
-	return is_yuv10;
-}
-
 /* find min-ACLK to meet latency */
 static u32 dpu_bts_find_latency_meet_aclk(u32 lat_cycle, u32 line_time,
 		u32 criteria_v, u32 aclk_disp,
@@ -237,11 +224,11 @@ u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 	u64 ppc;
 	struct decon_frame *src = &config->src;
 	struct decon_frame *dst = &config->dst;
+	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(config->format);
 	u32 src_w, src_h;
 	bool is_rotate = is_rotation(config) ? true : false;
 	bool is_comp = is_afbc(config) ? true : false;
-	bool yuv_fmt = is_yuv(config) ? true : false;
-	u32 is_scale, is_yuv10;
+	u32 is_scale;
 	u32 lat_cycle, line_time;
 	u32 cycle_per_line, line_mem_cnt;
 	u32 criteria_v, tot_v;
@@ -299,10 +286,9 @@ u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 		criteria_v = tot_v - (tot_v * 20 / 100);
 	}
 
-	is_yuv10 = dpu_bts_check_yuv_10bit(config->format, yuv_fmt);
-
 	aclk_disp = dpu_bts_find_latency_meet_aclk(lat_cycle, line_time,
-			criteria_v, aclk_disp, is_yuv10, is_rotate, rot_factor);
+			criteria_v, aclk_disp, IS_YUV10(fmt_info), is_rotate,
+			rot_factor);
 
 	DPU_DEBUG_BTS("\t[R:%d C:%d S:%d] (lat_cycle=%d) (line_time=%d)\n",
 		is_rotate, is_comp, is_scale, lat_cycle, line_time);
