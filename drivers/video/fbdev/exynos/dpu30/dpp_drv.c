@@ -105,7 +105,6 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	p->hdr = config->dpp_parm.hdr_std;
 	p->max_luminance = config->dpp_parm.max_luminance;
 	p->min_luminance = config->dpp_parm.min_luminance;
-	p->is_4p = false;
 	p->y_2b_strd = 0;
 	p->c_2b_strd = 0;
 
@@ -118,7 +117,6 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	if (p->format == DECON_PIXEL_FORMAT_NV12M_S10B || p->format == DECON_PIXEL_FORMAT_NV21M_S10B) {
 		p->addr[2] = p->addr[0] + NV12M_Y_SIZE(p->src.f_w, p->src.f_h);
 		p->addr[3] = p->addr[1] + NV12M_CBCR_SIZE(p->src.f_w, p->src.f_h);
-		p->is_4p = true;
 		p->y_2b_strd = S10B_2B_STRIDE(p->src.f_w);
 		p->c_2b_strd = S10B_2B_STRIDE(p->src.f_w);
 	}
@@ -127,7 +125,6 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 		p->addr[1] = NV12N_10B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
 		p->addr[2] = p->addr[0] + NV12N_10B_Y_8B_SIZE(p->src.f_w, p->src.f_h);
 		p->addr[3] = p->addr[1] + NV12N_10B_CBCR_8B_SIZE(p->src.f_w, p->src.f_h);
-		p->is_4p = true;
 		p->y_2b_strd = S10B_2B_STRIDE(p->src.f_w);
 		p->c_2b_strd = S10B_2B_STRIDE(p->src.f_w);
 	}
@@ -135,7 +132,6 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	if (p->format == DECON_PIXEL_FORMAT_NV16M_S10B || p->format == DECON_PIXEL_FORMAT_NV61M_S10B) {
 		p->addr[2] = p->addr[0] + NV16M_Y_SIZE(p->src.f_w, p->src.f_h);
 		p->addr[3] = p->addr[1] + NV16M_CBCR_SIZE(p->src.f_w, p->src.f_h);
-		p->is_4p = true;
 		p->y_2b_strd = S10B_2B_STRIDE(p->src.f_w);
 		p->c_2b_strd = S10B_2B_STRIDE(p->src.f_w);
 	}
