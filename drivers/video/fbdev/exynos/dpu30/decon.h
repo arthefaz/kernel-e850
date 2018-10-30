@@ -1394,7 +1394,6 @@ int decon_tui_protection(bool tui_en);
 
 /* helper functions */
 int dpu_get_sd_by_drvname(struct decon_device *decon, char *drvname);
-u32 dpu_get_alpha_len(int format);
 void dpu_unify_rect(struct decon_rect *r1, struct decon_rect *r2,
 		struct decon_rect *dst);
 void dpu_save_fence_info(int fd, struct dma_fence *fence,

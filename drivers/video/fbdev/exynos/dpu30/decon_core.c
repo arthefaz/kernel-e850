@@ -1412,7 +1412,6 @@ static int decon_set_win_buffer(struct decon_device *decon,
 		struct decon_reg_data *regs, int idx)
 {
 	int ret, i;
-	u32 alpha_length;
 	struct decon_rect r;
 #if defined(CONFIG_SUPPORT_LEGACY_FENCE)
 	struct sync_file *fence = NULL;
@@ -1475,10 +1474,9 @@ static int decon_set_win_buffer(struct decon_device *decon,
 		goto err;
 	}
 
-	alpha_length = dpu_get_alpha_len(config->format);
 	regs->protection[idx] = config->protection;
-	decon_win_config_to_regs_param(alpha_length, config,
-				&regs->win_regs[idx], config->idma_type, idx); /* ch */
+	decon_win_config_to_regs_param(fmt_info->len_alpha, config,
+			&regs->win_regs[idx], config->idma_type, idx); /* ch */
 
 	return 0;
 
