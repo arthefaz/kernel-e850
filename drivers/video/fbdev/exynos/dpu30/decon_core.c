@@ -2615,7 +2615,8 @@ static int decon_set_color_mode(struct decon_device *decon,
 }
 
 /* Android O version does not support non translation */
-#if !defined(CONFIG_ANDROID_SYSTEM_AS_ROOT)
+#if 0
+//#if !defined(CONFIG_ANDROID_SYSTEM_AS_ROOT)
 static void decon_translate_idma2ch(struct decon_device *decon,
 		struct decon_win_config_data *win_data)
 {
@@ -2703,7 +2704,8 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		}
 
 /* Android O version does not support non translation */
-#if !defined(CONFIG_ANDROID_SYSTEM_AS_ROOT)
+#if 0
+//#if !defined(CONFIG_ANDROID_SYSTEM_AS_ROOT)
 		/*
 		 * idma_type is translated to DPP channel number temporarily.
 		 * In the future, user side will use DPP channel number instead
