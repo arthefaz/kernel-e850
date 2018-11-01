@@ -105,4 +105,6 @@ u32 dpp_reg_get_irq_and_clear(u32 id);
 u32 idma_reg_get_irq_and_clear(u32 id);
 u32 odma_reg_get_irq_and_clear(u32 id);
 
+const struct dpu_fmt *dpu_find_cal_fmt_info(enum decon_pixel_format fmt);
+
 #endif /* __SAMSUNG_DPP_CAL_H__ */
