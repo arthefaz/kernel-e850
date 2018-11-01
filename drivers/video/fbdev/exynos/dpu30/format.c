@@ -281,34 +281,6 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.len_alpha = 2,
 		.cs = DPU_COLORSPACE_RGB,
 	}, {
-		.name = "NV16",
-		.fmt = DECON_PIXEL_FORMAT_NV16,
-		.dma_fmt = IDMA_IMG_FORMAT_YUV422_2P,
-		.dpp_fmt = DPP_IMG_FORMAT_YUV422_8P,
-		.bpp = 16,
-		.padding = 0,
-		.bpc = 8,
-		.num_planes = 2,
-		.num_buffers = 2,
-		.num_addr = 2,
-		.num_meta_planes = 0,
-		.len_alpha = 0,
-		.cs = DPU_COLORSPACE_YUV422,
-	}, {
-		.name = "NV61",
-		.fmt = DECON_PIXEL_FORMAT_NV61,
-		.dma_fmt = IDMA_IMG_FORMAT_YVU422_2P,
-		.dpp_fmt = DPP_IMG_FORMAT_YUV422_8P,
-		.bpp = 16,
-		.padding = 0,
-		.bpc = 8,
-		.num_planes = 2,
-		.num_buffers = 2,
-		.num_addr = 2,
-		.num_meta_planes = 0,
-		.len_alpha = 0,
-		.cs = DPU_COLORSPACE_YUV422,
-	}, {
 		.name = "YVU422_3P",	/* not support */
 		.fmt = DECON_PIXEL_FORMAT_YVU422_3P,
 		.dma_fmt = 0,
@@ -519,62 +491,6 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
 	}, {
-		.name = "NV16M_P210",
-		.fmt = DECON_PIXEL_FORMAT_NV16M_P210,
-		.dma_fmt = IDMA_IMG_FORMAT_YUV422_P210,
-		.dpp_fmt = DPP_IMG_FORMAT_YUV422_P210,
-		.bpp = 20,
-		.padding = 12,
-		.bpc = 10,
-		.num_planes = 2,
-		.num_buffers = 2,
-		.num_addr = 2,
-		.num_meta_planes = 1,
-		.len_alpha = 0,
-		.cs = DPU_COLORSPACE_YUV422,
-	}, {
-		.name = "NV61M_P210",
-		.fmt = DECON_PIXEL_FORMAT_NV61M_P210,
-		.dma_fmt = IDMA_IMG_FORMAT_YVU422_P210,
-		.dpp_fmt = DPP_IMG_FORMAT_YUV422_P210,
-		.bpp = 20,
-		.padding = 12,
-		.bpc = 10,
-		.num_planes = 2,
-		.num_buffers = 2,
-		.num_addr = 2,
-		.num_meta_planes = 1,
-		.len_alpha = 0,
-		.cs = DPU_COLORSPACE_YUV422,
-	}, {
-		.name = "NV16M_S10B",
-		.fmt = DECON_PIXEL_FORMAT_NV16M_S10B,
-		.dma_fmt = IDMA_IMG_FORMAT_YUV422_8P2,
-		.dpp_fmt = DPP_IMG_FORMAT_YUV422_8P2,
-		.bpp = 20,
-		.padding = 0,
-		.bpc = 10,
-		.num_planes = 2,
-		.num_buffers = 2,
-		.num_addr = 4,
-		.num_meta_planes = 1,
-		.len_alpha = 0,
-		.cs = DPU_COLORSPACE_YUV422,
-	}, {
-		.name = "NV61M_S10B",
-		.fmt = DECON_PIXEL_FORMAT_NV61M_S10B,
-		.dma_fmt = IDMA_IMG_FORMAT_YVU422_8P2,
-		.dpp_fmt = DPP_IMG_FORMAT_YUV422_8P2,
-		.bpp = 20,
-		.padding = 0,
-		.bpc = 10,
-		.num_planes = 2,
-		.num_buffers = 2,
-		.num_addr = 4,
-		.num_meta_planes = 1,
-		.len_alpha = 0,
-		.cs = DPU_COLORSPACE_YUV422,
-	}, {
 		.name = "NV12_P010",
 		.fmt = DECON_PIXEL_FORMAT_NV12_P010,
 		.dma_fmt = IDMA_IMG_FORMAT_YUV420_P010,
@@ -594,10 +510,15 @@ static const struct dpu_fmt dpu_formats_list[] = {
 const struct dpu_fmt *dpu_find_fmt_info(enum decon_pixel_format fmt)
 {
 	int i;
+	const struct dpu_fmt *fmt_info;
 
 	for (i = 0; i < ARRAY_SIZE(dpu_formats_list); i++)
 		if (dpu_formats_list[i].fmt == fmt)
 			return &dpu_formats_list[i];
+
+	fmt_info = dpu_find_cal_fmt_info(fmt);
+	if (!IS_ERR_OR_NULL(fmt_info))
+		return fmt_info;
 
 	decon_err("%s: can't find format(%d) in supported format list\n",
 			__func__, fmt);
