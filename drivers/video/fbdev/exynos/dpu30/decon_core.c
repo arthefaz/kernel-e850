@@ -299,14 +299,17 @@ static void decon_free_dma_buf(struct decon_device *decon,
 		dma->fence = NULL;
 #endif
 	}
-	ion_iovmm_unmap(dma->attachment, dma->dma_addr);
-	dpu_memmap_dec(decon, dma->dma_addr);
-
-	dma_buf_unmap_attachment(dma->attachment, dma->sg_table,
-			DMA_TO_DEVICE);
-
-	dma_buf_detach(dma->dma_buf, dma->attachment);
-	dma_buf_put(dma->dma_buf);
+	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_VALUE(dma->dma_addr)) {
+		ion_iovmm_unmap(dma->attachment, dma->dma_addr);
+		dpu_memmap_dec(decon, dma->dma_addr);
+	}
+	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_OR_NULL(dma->sg_table))
+		dma_buf_unmap_attachment(dma->attachment, dma->sg_table,
+				DMA_TO_DEVICE);
+	if (dma->dma_buf && !IS_ERR_OR_NULL(dma->attachment))
+		dma_buf_detach(dma->dma_buf, dma->attachment);
+	if (dma->dma_buf)
+		dma_buf_put(dma->dma_buf);
 #if defined(CONFIG_SUPPORT_LEGACY_ION)
 	ion_free(decon->ion_client, dma->ion_handle);
 #endif
@@ -1812,20 +1815,6 @@ void decon_wait_for_vstatus(struct decon_device *decon, u32 timeout)
 		decon_warn("%s:timeout\n", __func__);
 }
 
-static void __decon_update_clear(struct decon_device *decon, struct decon_reg_data *regs)
-{
-	unsigned short i, j;
-
-	for (i = 0; i < decon->dt.max_win; i++) {
-		for (j = 0; j < regs->plane_cnt[i]; ++j)
-			decon->win[i]->dma_buf_data[j] = regs->dma_buf_data[i][j];
-
-		decon->win[i]->plane_cnt = regs->plane_cnt[i];
-	}
-
-	return;
-}
-
 static void decon_acquire_old_bufs(struct decon_device *decon,
 		struct decon_reg_data *regs,
 		struct decon_dma_buf_data (*dma_bufs)[MAX_PLANE_CNT],
@@ -2119,6 +2108,7 @@ static void decon_update_regs(struct decon_device *decon,
 					regs->dpp_config[i].acq_fence);
 			if (err < 0) {
 				decon_save_cur_buf_info(decon, regs);
+				decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 				goto fence_err;
 			}
 		}
@@ -2151,12 +2141,12 @@ static void decon_update_regs(struct decon_device *decon,
 			BUG();
 		}
 		if (!regs->num_of_window) {
-			__decon_update_clear(decon, regs);
+			decon_save_cur_buf_info(decon, regs);
 			decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 			goto end;
 		}
 	} else {
-		__decon_update_clear(decon, regs);
+		decon_save_cur_buf_info(decon, regs);
 		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 		goto end;
 	}
