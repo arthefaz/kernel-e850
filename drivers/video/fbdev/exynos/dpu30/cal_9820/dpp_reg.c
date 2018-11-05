@@ -692,7 +692,7 @@ static void dma_reg_set_base_addr(u32 id, struct dpp_params_info *p,
 		else
 			dma_write(id, IDMA_IN_BASE_ADDR_C, p->addr[1]);
 
-		if (fmt_info->num_addr == 4) { /* use 4 base addresses */
+		if (fmt_info->num_planes == 4) { /* use 4 base addresses */
 			dma_write(id, IDMA_IN_BASE_ADDR_Y2, p->addr[2]);
 			dma_write(id, IDMA_IN_BASE_ADDR_C2, p->addr[3]);
 			dma_write_mask(id, IDMA_2BIT_STRIDE,
@@ -1234,7 +1234,6 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.bpc = 8,
 		.num_planes = 2,
 		.num_buffers = 2,
-		.num_addr = 2,
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
@@ -1248,7 +1247,6 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.bpc = 8,
 		.num_planes = 2,
 		.num_buffers = 2,
-		.num_addr = 2,
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
@@ -1262,7 +1260,6 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.bpc = 10,
 		.num_planes = 2,
 		.num_buffers = 2,
-		.num_addr = 2,
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
@@ -1276,7 +1273,6 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.bpc = 10,
 		.num_planes = 2,
 		.num_buffers = 2,
-		.num_addr = 2,
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
@@ -1288,9 +1284,8 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.bpp = 20,
 		.padding = 0,
 		.bpc = 10,
-		.num_planes = 2,
+		.num_planes = 4,
 		.num_buffers = 2,
-		.num_addr = 4,
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
@@ -1302,9 +1297,8 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.bpp = 20,
 		.padding = 0,
 		.bpc = 10,
-		.num_planes = 2,
+		.num_planes = 4,
 		.num_buffers = 2,
-		.num_addr = 4,
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
