@@ -266,7 +266,7 @@ static int dpp_check_addr(struct dpp_device *dpp, struct dpp_params_info *p)
 	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
 	int i;
 
-	for (i = 0; i < fmt_info->num_addr; ++i) {
+	for (i = 0; i < fmt_info->num_planes; ++i) {
 		if (IS_ERR_OR_NULL((void *)p->addr[i])) {
 			dpp_err("DPP%d base address[%d] is NULL\n",
 					dpp->id, i);
