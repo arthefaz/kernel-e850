@@ -1462,6 +1462,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	}
 
 	/* To avoid sysmmu page fault due to small buffer allocation */
+	/* TODO: aligned size calculation is needed in case of YUV formats */
 	cfg_size = config->src.f_w * config->src.f_h *
 		(fmt_info->bpp + fmt_info->padding);	/* bits */
 
