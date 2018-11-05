@@ -13,14 +13,32 @@
 #define __EXYNOS_POWERMODE_H __FILE__
 #include <soc/samsung/cal-if.h>
 
+#ifdef CONFIG_EXYNOS_POWERMODE
 extern int exynos_prepare_sys_powerdown(enum sys_powerdown mode);
 extern void exynos_wakeup_sys_powerdown(enum sys_powerdown mode, bool early_wakeup);
+extern int exynos_system_idle_enter(void);
+extern void exynos_system_idle_exit(int cancel);
+#else
+static inline int exynos_prepare_sys_powerdown(enum sys_powerdown mode)
+{
+	return 0;
+}
+static inline void exynos_wakeup_sys_powerdown(enum sys_powerdown mode, bool early_wakeup)
+{
+	return;
+}
+static inline int exynos_system_idle_enter(void)
+{
+	return 0;
+}
+static inline void exynos_system_idle_exit(int cancel)
+{
+	return;
+}
+#endif
 extern void exynos_prepare_cp_call(void);
 extern void exynos_wakeup_cp_call(bool early_wakeup);
 extern int exynos_rtc_wakeup(void);
-
-extern int exynos_system_idle_enter(void);
-extern void exynos_system_idle_exit(int cancel);
 
 /**
  * external driver APIs
