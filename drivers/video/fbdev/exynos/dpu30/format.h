@@ -99,7 +99,6 @@ struct dpu_fmt {
 	u8 bpc;				/* bits per each color component */
 	u8 num_planes;			/* plane(s) count of color format */
 	u8 num_buffers;			/* number of input buffer(s) */
-	u8 num_addr;			/* number of base address(es) count */
 	u8 num_meta_planes; 		/* number of meta plane(s) */
 	u8 len_alpha;			/* length of alpha bits */
 	enum dpu_colorspace cs;
