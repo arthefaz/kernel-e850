@@ -1270,6 +1270,10 @@ static void __enqueue_in_driver(struct vb2_buffer *vb)
 	}
 	spin_unlock_irqrestore(&vb->fence_cb_lock, flags);
 
+	if (vb->state == VB2_BUF_STATE_ACTIVE ||
+			vb->state == VB2_BUF_STATE_ERROR)
+		return;
+
 	vb->state = VB2_BUF_STATE_ACTIVE;
 	atomic_inc(&q->owned_by_drv_count);
 
@@ -1437,7 +1441,7 @@ static void __qbuf_work(struct work_struct *work)
 	vb = container_of(work, struct vb2_buffer, qbuf_work);
 	q = vb->vb2_queue;
 
-	if (q->start_streaming_called)
+	if (q->start_streaming_called && vb->state == VB2_BUF_STATE_QUEUED)
 		__enqueue_in_driver(vb);
 }
 
