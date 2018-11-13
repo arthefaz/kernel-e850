@@ -1769,10 +1769,10 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	if (psr->out_type == DECON_OUT_DP)
 		decon_reg_set_te_qactive_pll_mode(id, 1);
 
-	if (id == 0)
+	if ((id == 0) || (id == 1))
 		decon_reg_set_sram_share(id, DECON_FIFO_04K);
 	else if (id == 2)
-		decon_reg_set_sram_share(id, DECON_FIFO_12K);
+		decon_reg_set_sram_share(id, DECON_FIFO_08K);
 
 	decon_reg_set_operation_mode(id, psr->psr_mode);
 
@@ -1793,7 +1793,7 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 
 	/* FIXME: DECON_T dedicated to PRE_WB */
 	if (p->psr.out_type == DECON_OUT_WB)
-		decon_reg_set_data_path(id, DPATH_WBPRE_ONLY, s_path);
+		decon_reg_set_data_path(id, DPATH_NOCOMP_OUTFIFO0_WB, s_path);
 
 	/* asserted interrupt should be cleared before initializing decon hw */
 	decon_reg_clear_int_all(id);
