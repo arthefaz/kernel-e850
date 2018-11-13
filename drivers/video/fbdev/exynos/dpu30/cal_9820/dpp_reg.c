@@ -179,14 +179,7 @@ static void odma_reg_set_irq_enable(u32 id)
 {
 	dma_write_mask(id, ODMA_IRQ, ~0, ODMA_IRQ_ENABLE);
 }
-#if 0
-static void odma_reg_set_clock_gate_en_all(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
 
-	dma_write_mask(id, ODMA_ENABLE, val, ODMA_ALL_CLOCK_GATE_EN_MASK);
-}
-#endif
 static void odma_reg_set_in_qos_lut(u32 id, u32 lut_id, u32 qos_t)
 {
 	u32 reg_id;
@@ -211,6 +204,7 @@ static void odma_reg_set_out_frame_alpha(u32 id, u32 alpha)
 			ODMA_OUT_FRAME_ALPHA_MASK);
 }
 
+/* TODO: irq mask can be cleared */
 static void odma_reg_clear_irq(u32 id, u32 irq)
 {
 	dma_write_mask(id, ODMA_IRQ, ~0, irq);
@@ -601,29 +595,9 @@ static void dpp_reg_set_hdr_params(u32 id, struct dpp_params_info *p)
 }
 
 /****************** WB MUX CAL functions ******************/
-static void wb_mux_reg_set_clock_gate_en_all(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	dpp_write_mask(id, DPU_WB_ENABLE, val, WB_ALL_CLOCK_GATE_EN_MASK);
-}
-
-static void wb_mux_reg_set_dynamic_gating_en_all(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	dpp_write_mask(id, DPU_WB_DYNAMIC_GATING_EN, val, WB_DG_EN_ALL);
-}
-
-static void wb_mux_reg_set_out_frame_alpha(u32 id, u32 alpha)
-{
-	dpp_write_mask(id, DPU_WB_OUT_CON1, WB_OUT_FRAME_ALPHA(alpha),
-			WB_OUT_FRAME_ALPHA_MASK);
-}
-
 static void wb_mux_reg_set_sw_reset(u32 id)
 {
-	dpp_write_mask(id, DPU_WB_ENABLE, ~0, WB_SRSET);
+	dpp_write_mask(id, DPU_WB_ENABLE, ~0, DPU_WB_SRSET);
 }
 
 static int wb_mux_reg_wait_sw_reset_status(u32 id)
@@ -633,50 +607,79 @@ static int wb_mux_reg_wait_sw_reset_status(u32 id)
 
 	do {
 		cfg = dpp_read(id, DPU_WB_ENABLE);
-		if (!(cfg & (WB_SRSET)))
+		if (!(cfg & (DPU_WB_SRSET)))
 			return 0;
 		udelay(10);
 	} while (--cnt);
 
-	dpp_err("[wb] timeout sw-reset\n");
+	dpp_err("[WBMUX] dpp%d timeout sw-reset\n");
 
 	return -1;
 }
 
-static void wb_mux_reg_set_csc_params(u32 id, u32 csc_eq)
-{
-	u32 type = (csc_eq >> CSC_STANDARD_SHIFT) & 0x3F;
-	u32 range = (csc_eq >> CSC_RANGE_SHIFT) & 0x7;
-
-	u32 rgb_type = (type << 1) | (range << 0);
-	/* only support {601, 709, N, W} */
-	if (rgb_type > 3) {
-		dpp_warn("[WB] Unsupported RGB type(%d) !\n", rgb_type);
-		dpp_warn("[WB] -> forcing BT_601_LIMITTED\n");
-		rgb_type = ((CSC_BT_601 << 1) | CSC_RANGE_LIMITED);
-	}
-
-	dpp_write_mask(id, DPU_WB_OUT_CON0, WB_RGB_TYPE(rgb_type),
-			WB_RGB_TYPE_MASK);
-}
-
-static void wb_mux_reg_set_dst_size(u32 id, u32 w, u32 h)
-{
-	dpp_write(id, DPU_WB_DST_SIZE, WB_DST_HEIGHT(h) | WB_DST_WIDTH(w));
-}
-
-static void wb_mux_reg_set_csc_r2y(u32 id, u32 en)
+static void wb_mux_reg_set_clock_gate_en_all(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	dpp_write_mask(id, DPU_WB_OUT_CON0, val, WB_CSC_R2Y_MASK);
+	dpp_write_mask(id, DPU_WB_ENABLE, val, DPU_WB_ALL_CLOCK_GATE_EN_MASK);
+}
+
+static void wb_mux_reg_set_format(u32 id, const struct dpu_fmt *fmt_info)
+{
+	u32 val = 0, mask;
+
+	mask = DPU_WB_YUV_TYPE | DPU_WB_CSC_R2Y;
+
+	/* RGB888, YUV420 or YUV422 ? */
+	if (IS_YUV(fmt_info)) {
+		val = DPU_WB_CSC_R2Y;
+		if (IS_YUV422(fmt_info))
+			val |= DPU_WB_YUV_TYPE;
+	}
+
+	dpp_write_mask(id, DPU_WB_CSC_CON, val, mask);
 }
 
 static void wb_mux_reg_set_uv_offset(u32 id, u32 off_x, u32 off_y)
 {
-	dpp_write_mask(id, DPU_WB_OUT_CON1,
-			WB_UV_OFFSET_Y(off_y) | WB_UV_OFFSET_X(off_x),
-			WB_UV_OFFSET_Y_MASK | WB_UV_OFFSET_X_MASK);
+	u32 val, mask;
+
+	val = DPU_WB_UV_OFFSET_Y(off_y) | DPU_WB_UV_OFFSET_X(off_x);
+	mask = DPU_WB_UV_OFFSET_Y_MASK | DPU_WB_UV_OFFSET_X_MASK;
+	dpp_write_mask(id, DPU_WB_CSC_CON, val, mask);
+}
+
+static void wb_mux_reg_set_csc_params(u32 id, u32 csc_eq)
+{
+	u32 std = (csc_eq >> CSC_STANDARD_SHIFT) & CSC_STANDARD_MASK;
+	u32 range = (csc_eq >> CSC_RANGE_SHIFT) & CSC_RANGE_MASK;
+	u32 val = 0;
+
+	if ((std == CSC_BT_601) && (range == CSC_RANGE_LIMITED))
+		val = DPU_WB_CSC_TYPE_601_LIMIT;
+	else if ((std == CSC_BT_601) && (range == CSC_RANGE_FULL))
+		val = DPU_WB_CSC_TYPE_601_FULL;
+	else if ((std == CSC_BT_709) && (range == CSC_RANGE_LIMITED))
+		val = DPU_WB_CSC_TYPE_709_LIMIT;
+	else if ((std == CSC_BT_709) && (range == CSC_RANGE_FULL))
+		val = DPU_WB_CSC_TYPE_709_FULL;
+	else
+		dpp_warn("[WBMUX] dpp%d not supported csc eq(0x%x)\n", id, csc_eq);
+
+	dpp_write_mask(id, DPU_WB_CSC_CON, val, DPU_WB_CSC_TYPE_MASK);
+}
+
+static void wb_mux_reg_set_dst_size(u32 id, u32 w, u32 h)
+{
+	dpp_write(id, DPU_WB_IMG_SIZE, DPU_WB_IMG_HEIGHT(h) | DPU_WB_IMG_WIDTH(w));
+}
+
+static void wb_mux_reg_set_dynamic_gating_en_all(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	dpp_write_mask(id, DPU_WB_DYNAMIC_GATING_EN, val,
+			DPU_WB_DYNAMIC_GATING_EN_ALL);
 }
 
 /********** IDMA and ODMA combination CAL functions **********/
@@ -686,11 +689,11 @@ static void dma_reg_set_base_addr(u32 id, struct dpp_params_info *p,
 	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
 
 	if (test_bit(DPP_ATTR_IDMA, &attr)) {
-		dma_write(id, IDMA_IN_BASE_ADDR_Y, p->addr[0]);
+		dma_write(id, IDMA_IN_BASE_ADDR_Y8, p->addr[0]);
 		if (p->is_comp)
-			dma_write(id, IDMA_IN_BASE_ADDR_C, p->addr[0]);
+			dma_write(id, IDMA_IN_BASE_ADDR_C8, p->addr[0]);
 		else
-			dma_write(id, IDMA_IN_BASE_ADDR_C, p->addr[1]);
+			dma_write(id, IDMA_IN_BASE_ADDR_C8, p->addr[1]);
 
 		if (fmt_info->num_planes == 4) { /* use 4 base addresses */
 			dma_write(id, IDMA_IN_BASE_ADDR_Y2, p->addr[2]);
@@ -703,8 +706,19 @@ static void dma_reg_set_base_addr(u32 id, struct dpp_params_info *p,
 					IDMA_CHROMA_2B_STRIDE_MASK);
 		}
 	} else if (test_bit(DPP_ATTR_ODMA, &attr)) {
-		dma_write(id, ODMA_IN_BASE_ADDR_Y, p->addr[0]);
-		dma_write(id, ODMA_IN_BASE_ADDR_C, p->addr[1]);
+		dma_write(id, ODMA_IN_BASE_ADDR_Y8, p->addr[0]);
+		dma_write(id, ODMA_IN_BASE_ADDR_C8, p->addr[1]);
+
+		if (fmt_info->num_planes == 4) {
+			dma_write(id, ODMA_IN_BASE_ADDR_Y2, p->addr[2]);
+			dma_write(id, ODMA_IN_BASE_ADDR_C2, p->addr[3]);
+			dma_write_mask(id, ODMA_2BIT_STRIDE,
+					ODMA_LUMA_2BIT_STRIDE(p->y_2b_strd),
+					ODMA_LUMA_2BIT_STRIDE_MASK);
+			dma_write_mask(id, ODMA_2BIT_STRIDE,
+					ODMA_CHROM_2BIT_STRIDE(p->c_2b_strd),
+					ODMA_CHROM_2BIT_STRIDE_MASK);
+		}
 	}
 	dpp_dbg("dpp%d: base addr 1p(0x%p) 2p(0x%p) 3p(0x%p) 4p(0x%p)\n", id,
 			(void *)p->addr[0], (void *)p->addr[1],
@@ -757,7 +771,7 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 		}
 	} else if (test_bit(DPP_ATTR_ODMA, &attr)) {
 		odma_reg_set_format(id, dma_fmt);
-		wb_mux_reg_set_csc_r2y(id, IS_YUV(fmt_info));
+		wb_mux_reg_set_format(id, fmt_info);
 		wb_mux_reg_set_uv_offset(id, 0, 0);
 	}
 
@@ -845,16 +859,15 @@ void dpp_reg_init(u32 id, const unsigned long attr)
 	}
 
 	if (test_bit(DPP_ATTR_ODMA, &attr)) {
-		odma_reg_set_irq_mask_all(id, 0);
+		odma_reg_set_irq_mask_all(id, 0); /* irq unmask */
 		odma_reg_set_irq_enable(id);
-		//odma_reg_set_clock_gate_en_all(id, 0);
 		odma_reg_set_in_qos_lut(id, 0, 0x44444444);
 		odma_reg_set_in_qos_lut(id, 1, 0x44444444);
 		odma_reg_set_dynamic_gating_en_all(id, 0);
 		odma_reg_set_out_frame_alpha(id, 0xFF);
-		wb_mux_reg_set_clock_gate_en_all(id, 1);
-		wb_mux_reg_set_dynamic_gating_en_all(id, 0); /* TODO: enable or disable ? */
-		wb_mux_reg_set_out_frame_alpha(id, 0xFF);
+		/* TODO: clock gating will be enabled */
+		wb_mux_reg_set_clock_gate_en_all(id, 0);
+		wb_mux_reg_set_dynamic_gating_en_all(id, 0);
 	}
 }
 
@@ -872,7 +885,7 @@ int dpp_reg_deinit(u32 id, bool reset, const unsigned long attr)
 
 	if (test_bit(DPP_ATTR_ODMA, &attr)) {
 		odma_reg_clear_irq(id, ODMA_ALL_IRQ_CLEAR);
-		odma_reg_set_irq_mask_all(id, 1);
+		odma_reg_set_irq_mask_all(id, 1); /* irq mask */
 	}
 
 	if (reset) {

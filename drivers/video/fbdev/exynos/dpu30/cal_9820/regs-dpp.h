@@ -14,6 +14,7 @@
 #define DPP_REGS_H_
 
 /*
+ * DPU WB MUX base address  : 0x19060000
  * DPU_DMA SFR base address : 0x19070000
  * - GLOBAL     : 0x19070000
  * - IDMA GF0   : 0x19071000
@@ -244,8 +245,8 @@
 #define IDMA_LUMA_2B_STRIDE(_v)			((_v) << 0)
 #define IDMA_LUMA_2B_STRIDE_MASK		(0xFFFF << 0)
 
-#define IDMA_IN_BASE_ADDR_Y			0x0040
-#define IDMA_IN_BASE_ADDR_C			0x0044
+#define IDMA_IN_BASE_ADDR_Y8			0x0040
+#define IDMA_IN_BASE_ADDR_C8			0x0044
 #define IDMA_IN_BASE_ADDR_Y2			0x0048
 #define IDMA_IN_BASE_ADDR_C2			0x004C
 
@@ -294,13 +295,9 @@
  */
 #define ODMA_ENABLE				0x0000
 #define ODMA_SRSET				(1 << 24)
-/* [9820] removed ? */
-//#define ODMA_SFR_CLOCK_GATE_EN		(1 << 10)
-//#define ODMA_SRAM_CLOCK_GATE_EN		(1 << 9)
-//#define ODMA_ALL_CLOCK_GATE_EN_MASK		(0x3 << 9)
-//#define ODMA_FRAME_START_FORCE		(1 << 5)
 #define ODMA_SFR_UPDATE_FORCE			(1 << 4)
 #define ODMA_OP_STATUS				(1 << 2)
+#define ODMA_INSTANT_OFF_PENDING		(1 << 1)
 
 #define ODMA_IRQ				0x0004
 #define ODMA_CONFIG_ERROR			(1 << 28)
@@ -322,23 +319,29 @@
 #define ODMA_ALL_IRQ_MASK			(0x1FFB << 1)
 #define ODMA_IRQ_ENABLE				(1 << 0)
 
-#define ODMA_CHROMINANCE_STRIDE		0x0020
-#define ODMA_CHROMA_STRIDE(_v)		((_v) << 0)
-#define ODMA_CHROMA_STRIDE_MASK		(0xFFFF << 0)
+#define ODMA_CHROMINANCE_STRIDE			0x0020
+#define ODMA_CHROMA_STRIDE(_v)			((_v) << 0)
+#define ODMA_CHROMA_STRIDE_MASK			(0xFFFF << 0)
+
+#define ODMA_2BIT_STRIDE			0x0024
+#define ODMA_CHROM_2BIT_STRIDE(_v)		((_v) << 16)
+#define ODMA_CHROM_2BIT_STRIDE_MASK		(0xFFFF << 16)
+#define ODMA_LUMA_2BIT_STRIDE(_v)		((_v) << 0)
+#define ODMA_LUMA_2BIT_STRIDE_MASK		(0xFFFF << 0)
 
 #define ODMA_PERFORMANCE_CON0			0x0030
 #define ODMA_DEGRADATION_TIME(_v)		((_v) << 16)
 #define ODMA_DEGRADATION_TIME_MASK		(0xFFFF << 16)
 #define ODMA_DEGRADATION_EN			(1 << 15)
-#define ODMA_IN_IC_MAX_DEG(_v)		((_v) << 0)
-#define ODMA_IN_IC_MAX_DEG_MASK		(0x7F << 0)
+#define ODMA_IN_IC_MAX_DEG(_v)			((_v) << 0)
+#define ODMA_IN_IC_MAX_DEG_MASK			(0xFF << 0)
 
 #define ODMA_OUT_CON0				0x004C
-#define ODMA_IN_IC_MAX(_v)			((_v) << 19)
-#define ODMA_IN_IC_MAX_MASK			(0x7f << 19)
+#define ODMA_OUT_IC_MAX(_v)			((_v) << 19)
+#define ODMA_OUT_IC_MAX_MASK			(0xFF << 19)
 #define ODMA_IMG_FORMAT(_v)			((_v) << 11)
-#define ODMA_IMG_FORMAT_MASK			(0x1f << 11)
-#define ODMA_IN_CHROMINANCE_STRIDE_SEL	(1 << 4)
+#define ODMA_IMG_FORMAT_MASK			(0x3f << 11)
+#define ODMA_OUT_CHROMINANCE_STRIDE_SEL		(1 << 4)
 
 #define ODMA_OUT_CON1				0x0050
 #define ODMA_OUT_FRAME_ALPHA(_v)		((_v) << 24)
@@ -348,27 +351,29 @@
 #define ODMA_DST_HEIGHT(_v)			((_v) << 16)
 #define ODMA_DST_HEIGHT_MASK			(0x3FFF << 16)
 #define ODMA_DST_WIDTH(_v)			((_v) << 0)
-#define ODMA_DST_WIDTH_MASK			(0x3FFF << 0)
+#define ODMA_DST_WIDTH_MASK			(0xFFFF << 0)
 
-#define ODMA_DST_OFFSET			0x0058
+#define ODMA_DST_OFFSET				0x0058
 #define ODMA_DST_OFFSET_Y(_v)			((_v) << 16)
-#define ODMA_DST_OFFSET_Y_MASK		(0x1FFF << 16)
+#define ODMA_DST_OFFSET_Y_MASK			(0x1FFF << 16)
 #define ODMA_DST_OFFSET_X(_v)			((_v) << 0)
-#define ODMA_DST_OFFSET_X_MASK		(0x1FFF << 0)
+#define ODMA_DST_OFFSET_X_MASK			(0x1FFF << 0)
 
 #define ODMA_OUT_IMG_SIZE			0x005C
-#define ODMA_OUT_IMG_HEIGHT(_v)		((_v) << 16)
+#define ODMA_OUT_IMG_HEIGHT(_v)			((_v) << 16)
 #define ODMA_OUT_IMG_HEIGHT_MASK		(0x1FFF << 16)
-#define ODMA_OUT_IMG_WIDTH(_v)		((_v) << 0)
-#define ODMA_OUT_IMG_WIDTH_MASK		(0x1FFF << 0)
+#define ODMA_OUT_IMG_WIDTH(_v)			((_v) << 0)
+#define ODMA_OUT_IMG_WIDTH_MASK			(0x1FFF << 0)
 
 #define ODMA_OUT_QOS_LUT07_00			0x0060
 #define ODMA_OUT_QOS_LUT15_08			0x0064
 #define ODMA_OUT_QOS_LUT(_n, _v)		((_v) << (4*(_n)))
 #define ODMA_OUT_QOS_LUT_MASK(_n)		(0xF << (4*(_n)))
 
-#define ODMA_IN_BASE_ADDR_Y			0x0074
-#define ODMA_IN_BASE_ADDR_C			0x0094
+#define ODMA_IN_BASE_ADDR_Y8			0x0074
+#define ODMA_IN_BASE_ADDR_Y2			0x0078
+#define ODMA_IN_BASE_ADDR_C8			0x0094
+#define ODMA_IN_BASE_ADDR_C2			0x0098
 
 #define ODMA_SLICE0_BYTE_CNT			0x0100
 #define ODMA_SLICE1_BYTE_CNT			0x0104
@@ -378,90 +383,105 @@
 #define ODMA_SLICE5_BYTE_CNT			0x0114
 #define ODMA_SLICE6_BYTE_CNT			0x0118
 #define ODMA_FRAME_BYTE_CNT			0x011C
-#define ODMA_SLICE_BYTE_CNT(_n)		(0x0100 + ((_n) * 0x4))
+#define ODMA_SLICE_BYTE_CNT(_n)			(0x0100 + ((_n) * 0x4))
 
-#define ODMA_USB_TV_WB_CON			0x0120
-#define ODMA_USB_WB_PATH_SEL			(1 << 3)
-#define USB_WB_PATH_MEM			(0)
-#define USB_WB_PATH_OTF			(1)
-#define ODMA_USB_WB_EN				(1 << 2)
+#define ODMA_NON_IMAGE_CTRL			0x0120
+#define ODMA_WB_PATH_DSC			(1 << 2)
 
 #define ODMA_DEADLOCK_NUM			0x0300
 #define ODMA_DEADLOCK_VAL(_v)			((_v) << 1)
-#define ODMA_DEADLOCK_VAL_MASK		(0x7FFFFFFF << 1)
+#define ODMA_DEADLOCK_VAL_MASK			(0x7FFFFFFF << 1)
 #define ODMA_DEADLOCK_EN			(1 << 0)
 
 #define ODMA_BUS_CON				0x0304
 
 /* _n: [0,4], v: [0,1] */
-#define ODMA_DYNAMIC_GATING_EN		0x0354
+#define ODMA_DYNAMIC_GATING_EN			0x0354
 #define ODMA_DG_EN(_n, _v)			((_v) << (_n))
 #define ODMA_DG_EN_MASK(_n)			(1 << (_n))
-#define ODMA_DG_EN_ALL				(0x7FF << 0) /* 9820 */
+#define ODMA_DG_EN_ALL				(0x7FF << 0)
 
-#define ODMA_CHAN_CONTROL			0x0360
-#define ODMA_CHAN_DATA				0x0364
+#define ODMA_DEBUG_CONTROL			0x0360
+#define ODMA_DEBUG_DATA				0x0364
 
-#define ODMA_CFG_ERR_STATE			0x0C00
-#define ODMA_CFG_ERR_GET(_v)			(((_v) >> 0) & 0x7FF)
+#define ODMA_CFG_ERR_STATE			0x0C08
+#define ODMA_CFG_ERR_GET(_v)			(((_v) >> 0) & 0x1FF)
 // ADD field def
 
 /*
  * 2 - DPU_WB_MUX.base
- *  Non-secure        : 0x1289_0000
+ *  Non-secure        : 0x1906_0000
  */
 #define DPU_WB_ENABLE				0x0000
-#define WB_SRSET				(1 << 24)
-#define WB_SFR_CLOCK_GATE_EN			(1 << 10)
-#define WB_SRAM_CLOCK_GATE_EN			(1 << 9)
-#define WB_INT_CLOCK_GATE_EN			(1 << 8)
-#define WB_ALL_CLOCK_GATE_EN_MASK		(0x7 << 8)
-#define WB_SFR_UPDATE_FORCE			(1 << 4)
-#define WB_QCHANNEL_EN				(1 << 3)
-#define WB_OP_STATUS				(1 << 2)
+#define DPU_WB_SRSET				(1 << 24)
+#define DPU_WB_SFR_CLOCK_GATE_EN		(1 << 10)
+#define DPU_WB_SRAM_CLOCK_GATE_EN		(1 << 9)
+#define DPU_WB_INT_CLOCK_GATE_EN		(1 << 8)
+#define DPU_WB_ALL_CLOCK_GATE_EN_MASK		(0x7 << 8)
+#define DPU_WB_PSLVERR_EN			(1 << 5)
+#define DPU_WB_SFR_UPDATE_FORCE			(1 << 4)
+#define DPU_WB_QCHANNEL_EN			(1 << 3)
+#define DPU_WB_OP_STATUS			(1 << 2)
+#define DPU_WB_TZPC_FLAG			(1 << 0)
 
-#define DPU_WB_OUT_CON0			0x004C
-#define WB_RGB_TYPE_MASK			(0x3 << 17)
-#define WB_RGB_TYPE(_v)			((_v) << 17)
-#define WB_CSC_R2Y_MASK			(0x1 << 0)
-#define WB_CSC_R2Y(_v)				((_v) << 0)
+#define DPU_WB_CSC_CON				0x0008
+#define DPU_WB_YUV_TYPE				(1 << 9)
+#define DPU_WB_UV_OFFSET_Y(_v)			((_v) << 6)
+#define DPU_WB_UV_OFFSET_Y_MASK			(0x7 << 6)
+#define DPU_WB_UV_OFFSET_X(_v)			((_v) << 3)
+#define DPU_WB_UV_OFFSET_X_MASK			(0x7 << 3)
+#define DPU_WB_CSC_TYPE(_v)			((_v) << 1)
+#define DPU_WB_CSC_TYPE_601_LIMIT		(0 << 1)
+#define DPU_WB_CSC_TYPE_601_FULL		(1 << 1)
+#define DPU_WB_CSC_TYPE_709_LIMIT		(2 << 1)
+#define DPU_WB_CSC_TYPE_709_FULL		(3 << 1)
+#define DPU_WB_CSC_TYPE_MASK			(0x3 << 1)
+#define DPU_WB_CSC_R2Y				(1 << 0)
 
-#define DPU_WB_OUT_CON1			0x0050
-#define WB_OUT_FRAME_ALPHA(_v)		((_v) << 24)
-#define WB_OUT_FRAME_ALPHA_MASK		(0xff << 24)
-#define WB_UV_OFFSET_Y(_v)			((_v) << 5)
-#define WB_UV_OFFSET_Y_MASK			(0x7 << 5)
-#define WB_UV_OFFSET_X(_v)			((_v) << 0)
-#define WB_UV_OFFSET_X_MASK			(0x7 << 0)
+#define DPU_WB_NONIMG_CON			0x0010
+#define DPU_WB_DATA_ORDER(_v)			((_v) << 1)
+#define DPU_WB_DATA_ORDER_MASK			(0x3 << 1)
+#define DPU_WB_NONIMG_EN			(1 << 0)
 
-#define DPU_WB_DST_SIZE			0x0054
-#define WB_DST_HEIGHT(_v)			((_v) << 16)
-#define WB_DST_HEIGHT_MASK			(0x1FFF << 16)
-#define WB_DST_WIDTH(_v)			((_v) << 0)
-#define WB_DST_WIDTH_MASK			(0x1FFF << 0)
+#define DPU_WB_IMG_SIZE				0x0014
+#define DPU_WB_IMG_HEIGHT(_v)			((_v) << 16)
+#define DPU_WB_IMG_HEIGHT_MASK			(0x1FFF << 16)
+#define DPU_WB_IMG_WIDTH(_v)			((_v) << 0)
+#define DPU_WB_IMG_WIDTH_MASK			(0x1FFF << 0)
 
-#define DPU_WB_USB_TV_WB_SIZE			0x091C
-#define WB_FRAME_BYTE_CNT(_v)			((_v) << 0)
-#define WB_FRAME_BYTE_CNT_MASK		(0xFFFFFFFF << 0)
+#define DPU_WB_NONIMG_SIZE			0x0018
+#define DPU_WB_FRAME_BYTE_CNT(_v)		((_v) << 0)
+#define DPU_WB_FRAME_BYTE_CNT_MASK		(0xFFFFFFFF << 0)
 
-#define DPU_WB_USB_TV_WB_CON			0x0920
-#define WB_USB_WB_EN(_v)			((_v) << 2)
-#define WB_USB_WB_EN_MASK			(0x1 << 2)
-#define WB_SWAP_OPTION(_v)			((_v) << 0)
-#define WB_SWAP_OPTION_MASK			(0x3 << 0)
-
-/* _n: [0,6], v: [0,1] */
 #define DPU_WB_DYNAMIC_GATING_EN		0x0A54
-#define WB_DG_EN(_n, _v)			((_v) << (_n))
-#define WB_DG_EN_MASK(_n)			(1 << (_n))
-#define WB_DG_EN_ALL				(0xF << 0) /* 9820 */
+#define DPU_WB_DYNAMIC_GATING_EN_ALL		(0xF << 0)
+#define DPU_WB_DYNAMIC_GATING_EN_3		(1 << 3)
+#define DPU_WB_DYNAMIC_GATING_EN_2		(1 << 2)
+#define DPU_WB_DYNAMIC_GATING_EN_1		(1 << 1)
+#define DPU_WB_DYNAMIC_GATING_EN_0		(1 << 0)
+
+#define DPU_WB_ENABLE_SHD			0x0B00
+#define DPU_WB_CSC_CON_SHD			0x0B08
+#define DPU_WB_NONIMG_CON_SHD			0x0B10
+#define DPU_WB_IMG_SIZE_SHD			0x0B14
+#define DPU_WB_NONIMG_SIZE_SHD			0x0B18
+
+#define DPU_WB_LINECNT_CON			0x0D00
+#define DPU_WB_CAPTURE				(1 << 2)
+#define DPU_WB_MODE				(1 << 1)
+#define DPU_WB_LC_ENABLE			(1 << 0)
+
+#define DPU_WB_LINECNT_VAL			0x0D04
+#define DPU_WB_COUNTER_C(_v)			((_v) << 16)
+#define DPU_WB_COUNTER_C_MASK			(0x1FFF << 16)
+#define DPU_WB_COUNTER_Y(_v)			((_v) << 0)
+#define DPU_WB_COUNTER_Y_MASK			(0x1FFF << 0)
 
 #define DPU_WB_CFG_ERR_STATE			0x0D08
-#define WB_CFG_ERR_GET(_v)			(((_v) >> 0) & 0xF)
-#define WB_CFG_ERR_WRONG_PATH			(1 << 3)
-#define WB_CFG_ERR_ODD_SIZE			(1 << 2)
-#define WB_CFG_ERR_MAX_SIZE			(1 << 1)
-#define WB_CFG_ERR_MIN_SIZE			(1 << 0)
+#define DPU_WB_CFG_ERR_WRONG_PATH		(1 << 3)
+#define DPU_WB_CFG_ERR_ODD_SIZE			(1 << 2)
+#define DPU_WB_CFG_ERR_MAX_SIZE			(1 << 1)
+#define DPU_WB_CFG_ERR_MIN_SIZE			(1 << 0)
 
 /*
  * DPP SFR base address : 0x19020000
