@@ -476,6 +476,40 @@ err:
 	return ret;
 }
 
+static int dpp_s_stream(struct v4l2_subdev *sd, int enable)
+{
+	struct dpp_device *dpp = container_of(sd, struct dpp_device, sd);
+
+	dpp_dbg("%s +\n", __func__);
+
+	if (!IS_WB(dpp->attr)) {
+		dpp_err("%s: dpp%d is not support writeback\n", __func__, dpp->id);
+		return -EINVAL;
+	}
+
+	if (enable) {
+		if (dpp->wb_state == WBMUX_STATE_ON) {
+			dpp_warn("dpp%d is already enabled as writeback\n", dpp->id);
+			return 0;
+		}
+
+		pm_runtime_get_sync(dpp->dev);
+		dpp->wb_state = WBMUX_STATE_ON;
+	} else {
+		if (dpp->wb_state == WBMUX_STATE_OFF) {
+			dpp_warn("dpp%d is already disabled as writeback\n", dpp->id);
+			return 0;
+		}
+
+		pm_runtime_put_sync(dpp->dev);
+		dpp->wb_state = WBMUX_STATE_OFF;
+	}
+
+	dpp_dbg("%s -\n", __func__);
+
+	return 0;
+}
+
 static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	struct dpp_device *dpp = v4l2_get_subdevdata(sd);
@@ -543,8 +577,13 @@ static const struct v4l2_subdev_core_ops dpp_subdev_core_ops = {
 	.ioctl = dpp_subdev_ioctl,
 };
 
+static const struct v4l2_subdev_video_ops dpp_subdev_video_ops = {
+	.s_stream = dpp_s_stream,
+};
+
 static struct v4l2_subdev_ops dpp_subdev_ops = {
 	.core = &dpp_subdev_core_ops,
+	.video = &dpp_subdev_video_ops,
 };
 
 static void dpp_init_subdev(struct dpp_device *dpp)
@@ -743,6 +782,7 @@ static irqreturn_t dma_irq_handler(int irq, void *priv)
 			goto irq_end;
 		}
 		if (irqs & ODMA_STATUS_FRAMEDONE_IRQ) {
+			dpp_dbg("dpp%d framedone irq occurs\n", dpp->id);
 			dpp->d.done_count++;
 			wake_up_interruptible_all(&dpp->framedone_wq);
 			DPU_EVENT_LOG(DPU_EVT_DPP_FRAMEDONE, &dpp->sd,
@@ -846,7 +886,8 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 	}
 	disable_irq(dpp->res.dma_irq);
 
-	if (test_bit(DPP_ATTR_DPP, &dpp->attr)) {
+	if (test_bit(DPP_ATTR_DPP, &dpp->attr) ||
+			test_bit(DPP_ATTR_WBMUX, &dpp->attr)) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 		if (!res) {
 			dpp_err("failed to get mem resource\n");
@@ -860,7 +901,9 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 			dpp_err("failed to remap DPP SFR region\n");
 			return -EINVAL;
 		}
+	}
 
+	if (test_bit(DPP_ATTR_DPP, &dpp->attr)) {
 		res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
 		if (!res) {
 			dpp_err("failed to get dpp irq resource\n");
@@ -877,6 +920,39 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 		}
 		disable_irq(dpp->res.irq);
 	}
+
+	return 0;
+}
+
+/*
+ * If dpp becomes output device of DECON, it is responsible for clock, sysmmu
+ * and power domain control like DSIM or DP device.
+ */
+static int dpp_set_output_device(struct dpp_device *dpp)
+{
+	int ret;
+
+	if (!IS_WB(dpp->attr))
+		return 0;
+
+	dpp_dbg("%s +\n", __func__);
+	dma_set_mask(dpp->dev, DMA_BIT_MASK(36));
+
+	dpp->res.aclk = devm_clk_get(dpp->dev, "aclk");
+	if (IS_ERR_OR_NULL(dpp->res.aclk)) {
+		dpp_err("failed to get aclk\n");
+		return PTR_ERR(dpp->res.aclk);
+	}
+
+	pm_runtime_enable(dpp->dev);
+	ret = iovmm_activate(dpp->dev);
+	if (ret) {
+		dpp_err("failed to activate iovmm\n");
+		return ret;
+	}
+
+	dpp->wb_state = WBMUX_STATE_OFF;
+	dpp_dbg("%s -\n", __func__);
 
 	return 0;
 }
@@ -909,6 +985,11 @@ static int dpp_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dpp);
 	timer_setup(&dpp->op_timer, dpp_op_timer_handler, 0);
 
+	/* dpp becomes output device of connected DECON in case of writeback */
+	ret = dpp_set_output_device(dpp);
+	if (ret)
+		goto err_clk;
+
 	dpp->state = DPP_STATE_OFF;
 	dpp_info("dpp%d is probed successfully\n", dpp->id);
 
@@ -926,11 +1007,38 @@ static int dpp_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int dpp_runtime_suspend(struct device *dev)
+{
+	struct dpp_device *dpp = dev_get_drvdata(dev);
+
+	dpp_dbg("%s +\n", __func__);
+	clk_disable_unprepare(dpp->res.aclk);
+	dpp_dbg("%s -\n", __func__);
+
+	return 0;
+}
+
+static int dpp_runtime_resume(struct device *dev)
+{
+	struct dpp_device *dpp = dev_get_drvdata(dev);
+
+	dpp_dbg("%s +\n", __func__);
+	clk_prepare_enable(dpp->res.aclk);
+	dpp_dbg("%s -\n", __func__);
+
+	return 0;
+}
+
 static const struct of_device_id dpp_of_match[] = {
 	{ .compatible = "samsung,exynos9-dpp" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, dpp_of_match);
+
+static const struct dev_pm_ops dpp_pm_ops = {
+	.runtime_suspend	= dpp_runtime_suspend,
+	.runtime_resume		= dpp_runtime_resume,
+};
 
 static struct platform_driver dpp_driver __refdata = {
 	.probe		= dpp_probe,
@@ -938,6 +1046,7 @@ static struct platform_driver dpp_driver __refdata = {
 	.driver = {
 		.name	= DPP_MODULE_NAME,
 		.owner	= THIS_MODULE,
+		.pm	= &dpp_pm_ops,
 		.of_match_table = of_match_ptr(dpp_of_match),
 		.suppress_bind_attrs = true,
 	}

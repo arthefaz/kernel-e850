@@ -313,6 +313,8 @@ enum dpp_rotate {
 	DPP_ROT_270,
 };
 
+#define CSC_STANDARD_MASK	0x3F	/* 6 bits */
+#define CSC_RANGE_MASK		0x7	/* 3 bits */
 enum dpp_csc_eq {
 	/* eq_mode : 6bits [5:0] */
 	CSC_STANDARD_SHIFT = 0,

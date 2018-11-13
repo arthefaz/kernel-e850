@@ -62,6 +62,9 @@ extern int dpp_log_level;
 #define is_rotation(config) (config->dpp_parm.rot > DPP_ROT_180)
 #define is_afbc(config) (config->compression)
 
+#define IS_WB(attr)	(test_bit(DPP_ATTR_WBMUX, &attr) &&		\
+			test_bit(DPP_ATTR_ODMA, &attr))
+
 #define dpp_err(fmt, ...)							\
 	do {									\
 		if (dpp_log_level >= 3) {					\
@@ -110,6 +113,12 @@ enum dpp_state {
 	DPP_STATE_OFF,
 };
 
+/* WB MUX is output device of DECON in case of writeback operation */
+enum wbmux_state {
+	WBMUX_STATE_ON,		/* power on, clock on, sysmmu enable */
+	WBMUX_STATE_OFF,	/* power off, clock off, sysmmu disable */
+};
+
 enum dpp_reg_area {
 	REG_AREA_DPP = 0,
 	REG_AREA_DMA,
@@ -130,10 +139,11 @@ enum dpp_attr {
 	DPP_ATTR_IDMA		= 16,
 	DPP_ATTR_ODMA		= 17,
 	DPP_ATTR_DPP		= 18,
+	DPP_ATTR_WBMUX		= 19,
 };
 
 struct dpp_resources {
-	struct clk *gate;
+	struct clk *aclk;
 	void __iomem *regs;
 	void __iomem *dma_regs;
 	void __iomem *dma_com_regs;
@@ -208,6 +218,7 @@ struct dpp_device {
 	int port;
 	unsigned long attr;
 	enum dpp_state state;
+	enum wbmux_state wb_state;	/* only for writeback */
 	struct device *dev;
 	struct v4l2_subdev sd;
 	struct dpp_resources res;

@@ -24,10 +24,15 @@ static irqreturn_t decon_wb_irq_handler(int irq, void *dev_data)
 
 	irq_sts_reg = decon_reg_get_interrupt_and_clear(decon->id, &ext_irq);
 
-	if (irq_sts_reg & DPU_FRAME_DONE_INT_EN)
+	if (irq_sts_reg & DPU_FRAME_DONE_INT_PEND) {
 		DPU_EVENT_LOG(DPU_EVT_DECON_FRAMEDONE, &decon->sd, ktime_set(0, 0));
+		decon_dbg("%s: decon%d framedone irq\n", __func__, decon->id);
+	}
 
-	if (ext_irq & DPU_RESOURCE_CONFLICT_INT_EN) {
+	if (irq_sts_reg & DPU_FRAME_START_INT_PEND)
+		decon_dbg("%s: decon%d framestart irq\n", __func__, decon->id);
+
+	if (ext_irq & DPU_RESOURCE_CONFLICT_INT_PEND) {
 		DPU_EVENT_LOG(DPU_EVT_RSC_CONFLICT, &decon->sd, ktime_set(0, 0));
 		decon_err("DECON%d Resource Conflict(ext_irq=0x%x, irq_sts=0x%x)\n",
 				decon->id, ext_irq, irq_sts_reg);
@@ -47,7 +52,7 @@ int decon_wb_register_irq(struct decon_device *decon)
 	pdev = container_of(dev, struct platform_device, dev);
 
 	/* Get IRQ resource and register IRQ handler. */
-	/* 0: Under Flow irq */
+	/* 0: FrameStart irq */
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	ret = devm_request_irq(dev, res->start, decon_wb_irq_handler, 0,
 			pdev->name, decon);
@@ -56,7 +61,7 @@ int decon_wb_register_irq(struct decon_device *decon)
 		return ret;
 	}
 
-	/* 1: FrameStart irq */
+	/* 1: FrameDone irq */
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
 	ret = devm_request_irq(dev, res->start, decon_wb_irq_handler, 0,
 			pdev->name, decon);
@@ -65,17 +70,8 @@ int decon_wb_register_irq(struct decon_device *decon)
 		return ret;
 	}
 
-	/* 2: FrameDone irq */
+	/* 2: Extra irq */
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 2);
-	ret = devm_request_irq(dev, res->start, decon_wb_irq_handler, 0,
-			pdev->name, decon);
-	if (ret) {
-		decon_err("failed to install irq\n");
-		return ret;
-	}
-
-	/* 3: Extra irq */
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 3);
 	ret = devm_request_irq(dev, res->start, decon_wb_irq_handler, 0,
 			pdev->name, decon);
 	if (ret) {
@@ -114,22 +110,6 @@ void decon_wb_free_irq(struct decon_device *decon)
 
 int decon_wb_get_clocks(struct decon_device *decon)
 {
-	decon->res.aclk = devm_clk_get(decon->dev, "aclk");
-	if (IS_ERR_OR_NULL(decon->res.aclk)) {
-		decon_err("failed to get aclk\n");
-		return PTR_ERR(decon->res.aclk);
-	}
-	decon->res.busd = devm_clk_get(decon->dev, "busd");
-	if (IS_ERR_OR_NULL(decon->res.busd)) {
-		decon_err("failed to get decon_busd\n");
-		return PTR_ERR(decon->res.busd);
-	}
-	decon->res.busp = devm_clk_get(decon->dev, "busp");
-	if (IS_ERR_OR_NULL(decon->res.busp)) {
-		decon_err("failed to get decon_busp\n");
-		return PTR_ERR(decon->res.busp);
-	}
-
 	return 0;
 }
 
@@ -140,6 +120,7 @@ void decon_wb_set_clocks(struct decon_device *decon)
 static int decon_wb_set_lcd_info(struct decon_device *decon)
 {
 	struct decon_lcd *lcd_info;
+	struct decon_device *decon0 = get_decon_drvdata(0);
 
 	if (decon->lcd_info == NULL) {
 		lcd_info = kzalloc(sizeof(struct decon_lcd), GFP_KERNEL);
@@ -151,10 +132,10 @@ static int decon_wb_set_lcd_info(struct decon_device *decon)
 		decon->lcd_info = lcd_info;
 	}
 
-	decon->lcd_info->width = 1440;
-	decon->lcd_info->height = 2560;
-	decon->lcd_info->xres = 1440;
-	decon->lcd_info->yres = 2560;
+	decon->lcd_info->width = decon0->lcd_info->width;
+	decon->lcd_info->height = decon0->lcd_info->height;
+	decon->lcd_info->xres = decon0->lcd_info->xres;
+	decon->lcd_info->yres = decon0->lcd_info->yres;
 	decon->lcd_info->vfp = 2;
 	decon->lcd_info->vbp = 20;
 	decon->lcd_info->hfp = 20;
