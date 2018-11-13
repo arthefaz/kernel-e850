@@ -716,11 +716,13 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 		decon_dump(decon);
 
 	/* DMA protection disable must be happen on dpp domain is alive */
+	if (decon->dt.out_type != DECON_OUT_WB) {
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
-	decon_set_protected_content(decon, NULL);
+		decon_set_protected_content(decon, NULL);
 #endif
-	decon->cur_using_dpp = 0;
-	decon_dpp_stop(decon, false);
+		decon->cur_using_dpp = 0;
+		decon_dpp_stop(decon, false);
+	}
 
 #if defined(CONFIG_EXYNOS_BTS)
 	decon->bts.ops->bts_release_bw(decon);
@@ -1304,6 +1306,7 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 	struct displayport_device *displayport;
 #endif
 	struct dsim_device *dsim;
+	struct dpp_device *dpp;
 	struct device *dev = NULL;
 	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(config->format);
 	int i;
@@ -1344,9 +1347,12 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 			displayport = v4l2_get_subdevdata(decon->out_sd[0]);
 			dev = displayport->dev;
 #endif
-		} else { /* DSI case */
+		} else if (decon->dt.out_type == DECON_OUT_DSI) {
 			dsim = v4l2_get_subdevdata(decon->out_sd[0]);
 			dev = dsim->dev;
+		} else {	/* writeback case */
+			dpp = v4l2_get_subdevdata(decon->out_sd[0]);
+			dev = dpp->dev;
 		}
 #if defined(CONFIG_SUPPORT_LEGACY_ION)
 		buf_size = decon_map_ion_handle(decon, dev, dma_buf_data,
@@ -3030,7 +3036,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 					DPP_GET_RESTRICTION, &disp_res.dpp_ch[i]);
 
 		disp_res.ver = DISP_RESTRICTION_VER;
-		disp_res.dpp_cnt = decon->dt.max_win;
+		disp_res.dpp_cnt = decon->dt.dpp_cnt;
 
 		if (copy_to_user(argp_res, &disp_res,
 					sizeof(struct dpp_restrictions_info))) {
@@ -3241,6 +3247,11 @@ static int decon_register_subdevs(struct decon_device *decon)
 #endif
 
 	if (!decon->id) {
+		/*
+		 * TODO: Each sd pointer is registered to v4l2_dev
+		 * I'm not sure whether it's necessary or not
+		 * If it's necessary, dpp_cnt has to add ODMA if it's used.
+		 */
 		for (i = 0; i < decon->dt.dpp_cnt; i++) {
 			if (IS_ERR_OR_NULL(decon->dpp_sd[i]))
 				continue;
@@ -3332,6 +3343,7 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	struct displayport_device *displayport;
 #endif
 	struct dsim_device *dsim;
+	struct dpp_device *dpp;
 	struct device *dev = NULL;
 	unsigned int real_size, virt_size, size;
 	dma_addr_t map_dma;
@@ -3403,9 +3415,12 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 		displayport = v4l2_get_subdevdata(decon->out_sd[0]);
 		dev = displayport->dev;
 #endif
-	} else { /* DSI case */
+	} else if (decon->dt.out_type == DECON_OUT_DSI) {
 		dsim = v4l2_get_subdevdata(decon->out_sd[0]);
 		dev = dsim->dev;
+	} else {	/* writeback case */
+		dpp = v4l2_get_subdevdata(decon->out_sd[0]);
+		dev = dpp->dev;
 	}
 #if defined(CONFIG_SUPPORT_LEGACY_ION)
 	ret = decon_map_ion_handle(decon, dev, &win->dma_buf_data[0], handle,
@@ -3443,6 +3458,7 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 	struct fb_info *fbi = decon->win[decon->dt.dft_win]->fbinfo;
 	struct decon_win *win = decon->win[decon->dt.dft_win];
 	struct displayport_device *displayport;
+	struct dpp_device *dpp;
 	struct dsim_device *dsim;
 	struct device *dev = NULL;
 	dma_addr_t map_dma;
@@ -3498,9 +3514,12 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 	if (decon->dt.out_type == DECON_OUT_DP) {
 		displayport = v4l2_get_subdevdata(decon->out_sd[0]);
 		dev = displayport->dev;
-	} else { /* DSI case */
+	} else if (decon->dt.out_type == DECON_OUT_DSI) {
 		dsim = v4l2_get_subdevdata(decon->out_sd[0]);
 		dev = dsim->dev;
+	} else {	/* writeback case */
+		dpp = v4l2_get_subdevdata(decon->out_sd[0]);
+		dev = dpp->dev;
 	}
 #if defined(CONFIG_SUPPORT_LEGACY_ION)
 	ret = decon_map_ion_handle(decon, dev, &win->fb_buf_data, handle,
