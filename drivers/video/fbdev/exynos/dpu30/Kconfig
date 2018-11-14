@@ -53,11 +53,6 @@ config EXYNOS_AFBC_DEBUG
         depends on EXYNOS_DPU30
         default n
 
-config EXYNOS_MEMMAP_DEBUG
-	bool "Support Memory Map Debug"
-        depends on EXYNOS_DPU30
-        default n
-
 config EXYNOS_MULTIRESOLUTION
 	bool "Support Multi Resolution LCD"
 	depends on EXYNOS_DPU30 && EXYNOS_WINDOW_UPDATE
