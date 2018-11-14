@@ -435,6 +435,10 @@ static ssize_t store_##name##_online_cpu(struct kobject *kobj,			\
 	char str[STR_LEN];							\
 	int i;									\
 	struct cpumask online_cpus;						\
+										\
+	if (strlen(buf) >= STR_LEN)						\
+		return -EINVAL;							\
+										\
 	if (!sscanf(buf, "%s", str))						\
 		return -EINVAL;							\
 	if (str[0] == '0' && str[1] == 'x')					\
