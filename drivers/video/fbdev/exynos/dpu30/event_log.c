@@ -1147,114 +1147,6 @@ static const struct file_operations decon_low_persistence_fops = {
 	.release = seq_release,
 };
 
-void dpu_memmap_inc(struct decon_device *decon, dma_addr_t target)
-{
-#if defined(CONFIG_EXYNOS_MEMMAP_DEBUG)
-	int i;
-	if (decon->d.addr_n >= MAX_BUF_MEMMAP) {
-		decon_info("%s:%d not enough room for the memmap\n",
-				__func__, __LINE__);
-		return;
-	}
-	for (i = 0; i < decon->d.addr_n; i++) {
-		if (target == decon->d.mmap_info[i].addr_q) {
-			decon->d.mmap_info[i].map_cnt++;
-			return;
-		}
-	}
-	decon->d.mmap_info[decon->d.addr_n].map_cnt = 1;
-	decon->d.mmap_info[decon->d.addr_n].unmap_cnt = 0;
-	decon->d.mmap_info[decon->d.addr_n].addr_q = target;
-	decon->d.addr_n++;
-#endif
-}
-
-void dpu_memmap_dec(struct decon_device *decon, dma_addr_t target)
-{
-#if defined(CONFIG_EXYNOS_MEMMAP_DEBUG)
-	int i;
-	for (i = 0; i < decon->d.addr_n; i++) {
-		if (target == decon->d.mmap_info[i].addr_q) {
-			decon->d.mmap_info[i].unmap_cnt++;
-			return;
-		}
-	}
-	decon_err("%s:%d address(0x%x) not found in the memmap list\n",
-				__func__, __LINE__, target);
-#endif
-}
-
-#if defined(CONFIG_EXYNOS_MEMMAP_DEBUG)
-static int decon_n;
-static int decon_debug_memmap_ref_cnt_show(struct seq_file *s, void *unused)
-{
-	int ret = 0;
-	struct decon_device *decon;
-	int i;
-
-	decon = get_decon_drvdata(decon_n);
-	if (!decon) {
-		seq_printf(s, "decon%d not probed yet\n", decon_n);
-		goto out;
-	}
-
-	seq_printf(s, "< Memory map count info : decon%d >\n", decon_n);
-	for (i = 0; i < decon->d.addr_n; i++) {
-		seq_printf(s, "0x%x : mapcnt(%u) unmapcnt(%u)\n",
-				decon->d.mmap_info[i].addr_q,
-				decon->d.mmap_info[i].map_cnt,
-				decon->d.mmap_info[i].unmap_cnt);
-	}
-	if (!decon->d.addr_n)
-		seq_printf(s, " - List empty\n");
-	seq_printf(s, "--------------------------------\n");
-out:
-	return ret;
-}
-
-static int decon_debug_memmap_ref_cnt_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, decon_debug_memmap_ref_cnt_show, inode->i_private);
-}
-
-static ssize_t decon_debug_memmap_ref_cnt_write(struct file *file, const char __user *buf,
-		size_t count, loff_t *f_ops)
-{
-	int ret;
-	char *buf_data;
-	unsigned int d_n;
-
-	buf_data = kmalloc(count, GFP_KERNEL);
-	if (buf_data == NULL)
-		goto out_buf;
-
-	ret = copy_from_user(buf_data, buf, count);
-	if (ret < 0)
-		goto out;
-
-	ret = sscanf(buf_data, "%u", &d_n);
-	if (ret < 0)
-		goto out;
-
-	if (d_n > 2)
-		d_n = 0;
-	decon_info("decon%u selected for memmap ref cnt check\n", d_n);
-	decon_n = d_n;
-out:
-	kfree(buf_data);
-out_buf:
-	return count;
-}
-
-static const struct file_operations decon_memmap_ref_cnt_fops = {
-	.open = decon_debug_memmap_ref_cnt_open,
-	.write = decon_debug_memmap_ref_cnt_write,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = seq_release,
-};
-#endif
-
 static int decon_debug_fence_show(struct seq_file *s, void *unused)
 {
 	seq_printf(s, "%u\n", dpu_fence_log_level);
@@ -1699,16 +1591,6 @@ int decon_create_debugfs(struct decon_device *decon)
 			ret = -ENOENT;
 			goto err_debugfs;
 		}
-
-#if defined(CONFIG_EXYNOS_MEMMAP_DEBUG)
-		decon->d.debug_memmap_ref_cnt = debugfs_create_file("memmap_ref_cnt",
-				0444, decon->d.debug_root, NULL, &decon_memmap_ref_cnt_fops);
-		if (!decon->d.debug_memmap_ref_cnt) {
-			decon_err("failed to create memory map ref cnt file\n");
-			ret = -ENOENT;
-			goto err_debugfs;
-		}
-#endif
 
 		decon->hiber.profile = debugfs_create_file("profile_hiber",
 				0444, decon->d.debug_root, NULL,
