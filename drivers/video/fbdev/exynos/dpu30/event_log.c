@@ -490,6 +490,35 @@ void DPU_EVENT_LOG_APPLY_REGION(struct v4l2_subdev *sd,
 	log->data.winup.apl_region.h = apl_rect->bottom - apl_rect->top + 1;
 }
 
+void DPU_EVENT_LOG_MEMMAP(dpu_event_t type, struct v4l2_subdev *sd,
+		dma_addr_t dma_addr, int dpp_ch)
+{
+	struct decon_device *decon = container_of(sd, struct decon_device, sd);
+	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
+	struct dpu_log *log;
+	struct v4l2_subdev *dpp_sd;
+	u32 shd_addr[MAX_PLANE_ADDR_CNT];
+
+	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event) ||
+			IS_ERR_OR_NULL(decon->d.event_log))
+		return;
+
+	log = &decon->d.event_log[idx];
+
+	log->time = ktime_get();
+	log->type = type;
+
+	log->data.memmap.dma_addr = dma_addr;
+	log->data.memmap.dpp_ch = dpp_ch;
+
+	dpp_sd = decon->dpp_sd[dpp_ch];
+	v4l2_subdev_call(dpp_sd, core, ioctl, DPP_GET_SHD_ADDR, &shd_addr);
+
+	decon_dbg("%s:%d, shadow addr: 0x%x, 0x%x, 0x%x, 0x%x\n", __func__, __LINE__,
+			shd_addr[0], shd_addr[1], shd_addr[2], shd_addr[3]);
+	memcpy(log->data.memmap.shd_addr, shd_addr, sizeof(shd_addr));
+}
+
 /* display logged events related with DECON */
 void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 {
