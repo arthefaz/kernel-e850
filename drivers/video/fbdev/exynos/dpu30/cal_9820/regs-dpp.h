@@ -406,6 +406,8 @@
 
 #define ODMA_CFG_ERR_STATE			0x0C08
 #define ODMA_CFG_ERR_GET(_v)			(((_v) >> 0) & 0x1FF)
+
+#define DMA_SHD_OFFSET				0x800
 // ADD field def
 
 /*
