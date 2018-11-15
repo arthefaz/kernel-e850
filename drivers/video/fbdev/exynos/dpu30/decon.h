@@ -677,7 +677,7 @@ struct dpu_size_err_info {
 };
 
 /* Definitions below are used in the DECON */
-#define	DPU_EVENT_LOG_MAX	SZ_512
+#define	DPU_EVENT_LOG_MAX	SZ_1K	/* 1024 */
 #define	DPU_EVENT_PRINT_MAX	(DPU_EVENT_LOG_MAX >> 1)
 #define	DPU_EVENT_LOG_RETRY	3
 #define DPU_EVENT_KEEP_CNT	3
