@@ -1012,6 +1012,23 @@ u32 odma_reg_get_irq_and_clear(u32 id)
 	return val;
 }
 
+void dma_reg_get_shd_addr(u32 id, u32 shd_addr[], const unsigned long attr)
+{
+	if (test_bit(DPP_ATTR_IDMA, &attr)) {
+		shd_addr[0] = dma_read(id, IDMA_IN_BASE_ADDR_Y8 + DMA_SHD_OFFSET);
+		shd_addr[1] = dma_read(id, IDMA_IN_BASE_ADDR_C8 + DMA_SHD_OFFSET);
+		shd_addr[2] = dma_read(id, IDMA_IN_BASE_ADDR_Y2 + DMA_SHD_OFFSET);
+		shd_addr[3] = dma_read(id, IDMA_IN_BASE_ADDR_C2 + DMA_SHD_OFFSET);
+	} else if (test_bit(DPP_ATTR_ODMA, &attr)) {
+		shd_addr[0] = dma_read(id, ODMA_IN_BASE_ADDR_Y8 + DMA_SHD_OFFSET);
+		shd_addr[1] = dma_read(id, ODMA_IN_BASE_ADDR_C8 + DMA_SHD_OFFSET);
+		shd_addr[2] = dma_read(id, ODMA_IN_BASE_ADDR_Y2 + DMA_SHD_OFFSET);
+		shd_addr[3] = dma_read(id, ODMA_IN_BASE_ADDR_C2 + DMA_SHD_OFFSET);
+	}
+	dpp_dbg("dpp%d: shadow addr 1p(0x%p) 2p(0x%p) 3p(0x%p) 4p(0x%p)\n",
+			id, shd_addr[0], shd_addr[1], shd_addr[2], shd_addr[3]);
+}
+
 static void dpp_reg_dump_ch_data(int id, enum dpp_reg_area reg_area,
 		u32 sel[], u32 cnt)
 {
