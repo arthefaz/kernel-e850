@@ -368,6 +368,7 @@ struct decon_dma_buf_data {
 #else
 	struct dma_fence		*fence;
 #endif
+	int				dpp_ch;
 };
 
 struct decon_win_rect {
@@ -584,6 +585,9 @@ typedef enum dpu_event_type {
 	DPU_EVT_DOZE,
 	DPU_EVT_DOZE_SUSPEND,
 
+	DPU_EVT_MEM_MAP,
+	DPU_EVT_MEM_UNMAP,
+
 	DPU_EVT_MAX, /* End of EVENT */
 } dpu_event_t;
 
@@ -642,6 +646,12 @@ struct disp_log_winup {
 	bool reconfigure;
 };
 
+struct disp_log_memmap {
+	dma_addr_t dma_addr;
+	u32 shd_addr[MAX_PLANE_ADDR_CNT];
+	int dpp_ch;
+};
+
 /**
  * struct dpu_log - Display Subsystem Log
  * This struct includes DECON/DSIM/DPP
@@ -657,6 +667,7 @@ struct dpu_log {
 		struct disp_log_fence fence;
 		struct disp_log_cursor cursor;
 		struct disp_log_winup winup;
+		struct disp_log_memmap memmap;
 	} data;
 };
 
@@ -687,6 +698,8 @@ void DPU_EVENT_LOG_WINUP_FLAGS(struct v4l2_subdev *sd, bool need_update,
 		bool reconfigure);
 void DPU_EVENT_LOG_APPLY_REGION(struct v4l2_subdev *sd,
 		struct decon_rect *apl_rect);
+void DPU_EVENT_LOG_MEMMAP(dpu_event_t type, struct v4l2_subdev *sd,
+		dma_addr_t dma_addr, int dpp_ch);
 void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon);
 int decon_create_debugfs(struct decon_device *decon);
 void decon_destroy_debugfs(struct decon_device *decon);

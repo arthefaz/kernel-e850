@@ -348,5 +348,6 @@ void dpp_dump(struct dpp_device *dpp);
 #define DPP_AFBC_ATTR_ENABLED		_IOR('P', 6, unsigned long)
 #define DPP_GET_PORT_NUM		_IOR('P', 7, unsigned long)
 #define DPP_GET_RESTRICTION		_IOR('P', 8, unsigned long)
+#define DPP_GET_SHD_ADDR		_IOR('P', 9, unsigned long)
 
 #endif /* __SAMSUNG_DPP_H__ */

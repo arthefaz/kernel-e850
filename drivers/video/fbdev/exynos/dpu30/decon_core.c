@@ -271,8 +271,11 @@ static void decon_free_unused_buf(struct decon_device *decon,
 
 	decon_info("%s, win[%d]plane[%d]\n", __func__, win, plane);
 
-	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_VALUE(dma->dma_addr))
+	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_VALUE(dma->dma_addr)) {
 		ion_iovmm_unmap(dma->attachment, dma->dma_addr);
+		DPU_EVENT_LOG_MEMMAP(DPU_EVT_MEM_UNMAP, &decon->sd,
+				dma->dma_addr, dma->dpp_ch);
+	}
 	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_OR_NULL(dma->sg_table))
 		dma_buf_unmap_attachment(dma->attachment,
 				dma->sg_table, DMA_TO_DEVICE);
@@ -298,8 +301,11 @@ static void decon_free_dma_buf(struct decon_device *decon,
 		dma->fence = NULL;
 #endif
 	}
-	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_VALUE(dma->dma_addr))
+	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_VALUE(dma->dma_addr)) {
 		ion_iovmm_unmap(dma->attachment, dma->dma_addr);
+		DPU_EVENT_LOG_MEMMAP(DPU_EVT_MEM_UNMAP, &decon->sd, dma->dma_addr,
+				dma->dpp_ch);
+	}
 
 	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_OR_NULL(dma->sg_table))
 		dma_buf_unmap_attachment(dma->attachment, dma->sg_table,
@@ -1277,6 +1283,9 @@ static unsigned int decon_map_ion_handle(struct decon_device *decon,
 		goto err_iovmm_map;
 	}
 
+	DPU_EVENT_LOG_MEMMAP(DPU_EVT_MEM_MAP, &decon->sd, dma->dma_addr,
+			dma->dpp_ch);
+
 #if defined(CONFIG_SUPPORT_LEGACY_ION)
 	dma->ion_handle = ion_handle;
 #endif
@@ -1332,6 +1341,8 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 #endif
 
 		dma_buf_data = &regs->dma_buf_data[idx][i];
+		/* dma_addr in dma_buf_data structure will be used by dpp_ch */
+		dma_buf_data->dpp_ch = config->idma_type;
 
 		buf = dma_buf_get(config->fd_idma[i]);
 		if (IS_ERR_OR_NULL(buf)) {
@@ -2490,6 +2501,7 @@ static int decon_set_win_config(struct decon_device *decon,
 	struct decon_reg_data *regs;
 	struct sync_file *sync_file;
 	int i, j, ret = 0;
+
 	decon_dbg("%s +\n", __func__);
 
 	mutex_lock(&decon->lock);

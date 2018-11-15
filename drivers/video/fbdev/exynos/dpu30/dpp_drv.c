@@ -516,6 +516,7 @@ static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg
 	bool reset = (bool)arg;
 	int ret = 0;
 	int *afbc_enabled;
+	u32 shd_addr[MAX_PLANE_ADDR_CNT];
 
 	switch (cmd) {
 	case DPP_WIN_CONFIG:
@@ -564,6 +565,17 @@ static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg
 				sizeof(struct dpp_restriction));
 		((struct dpp_ch_restriction *)arg)->id = dpp->id;
 		((struct dpp_ch_restriction *)arg)->attr = dpp->attr;
+		break;
+
+	case DPP_GET_SHD_ADDR:
+		if (!arg) {
+			dpp_err("failed to get shadow base address\n");
+			ret = -EINVAL;
+			break;
+		}
+
+		dma_reg_get_shd_addr(dpp->id, shd_addr, dpp->attr);
+		memcpy((u32 *)arg, shd_addr, sizeof(shd_addr));
 		break;
 
 	default:
