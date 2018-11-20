@@ -173,15 +173,43 @@ void lcd_init(int id, struct decon_lcd *lcd)
 					ARRAY_SIZE(SEQ_SET_AREA)) < 0)
 			dsim_err("fail to write SEQ_SET_AREA command.\n");
 
+		if (dsim_wr_data(id, MIPI_DSI_DCS_LONG_WRITE, (unsigned long)GAMCTL1,
+					ARRAY_SIZE(GAMCTL1)) < 0)
+			dsim_err("fail to write GAMCTL1 command.\n");
+
+		if (dsim_wr_data(id, MIPI_DSI_DCS_LONG_WRITE, (unsigned long)GAMCTL2,
+					ARRAY_SIZE(GAMCTL2)) < 0)
+			dsim_err("fail to write GAMCTL2 command.\n");
+
+		if (dsim_wr_data(id, MIPI_DSI_DCS_LONG_WRITE, (unsigned long)GAMCTL3,
+					ARRAY_SIZE(GAMCTL3)) < 0)
+			dsim_err("fail to write GAMCTL3 command.\n");
+
+		if (dsim_wr_data(id, MIPI_DSI_DCS_LONG_WRITE, (unsigned long)BCCTL,
+					ARRAY_SIZE(BCCTL)) < 0)
+			dsim_err("fail to write BCCTL command.\n");
+
+		if (dsim_wr_data(id, MIPI_DSI_DCS_SHORT_WRITE_PARAM,
+					(unsigned long)PANEL_UPDATE[0],
+					(u32)PANEL_UPDATE[1]) < 0)
+			dsim_err("fail to send PANEL_UPDATE command.\n");
+
+		if (dsim_wr_data(id, MIPI_DSI_DCS_SHORT_WRITE_PARAM,
+					(unsigned long)SEQ_B_CTRL_ON[0],
+					(u32)SEQ_B_CTRL_ON[1]) < 0)
+			dsim_err("fail to send B_CTRL_ON command.\n");
+
 		if (dsim_wr_data(id, MIPI_DSI_DCS_SHORT_WRITE,
 					(unsigned long)SEQ_TE_ON[0], 0) < 0)
 			dsim_err("fail to send SEQ_TE_ON command.\n");
 
 		if (dsim_wr_data(id, MIPI_DSI_DCS_SHORT_WRITE_PARAM,
-					(unsigned long)SEQ_ERR_FG[0], (u32)SEQ_ERR_FG[1]) < 0)
+					(unsigned long)SEQ_ERR_FG[0],
+					(u32)SEQ_ERR_FG[1]) < 0)
 			dsim_err("fail to send SEQ_ERR_FG command.\n");
 
-		if (dsim_wr_data(id, MIPI_DSI_DCS_LONG_WRITE, (unsigned long)SEQ_TE_START_SETTING,
+		if (dsim_wr_data(id, MIPI_DSI_DCS_LONG_WRITE,
+					(unsigned long)SEQ_TE_START_SETTING,
 					ARRAY_SIZE(SEQ_TE_START_SETTING)) < 0)
 			dsim_err("fail to write SEQ_TE_START_SETTING command.\n");
 
