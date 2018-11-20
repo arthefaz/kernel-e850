@@ -2067,7 +2067,7 @@ static int sc_vb2_queue_setup(struct vb2_queue *vq,
 	if (ret)
 		return ret;
 
-	return vb2_queue_init(vq);
+	return 0;
 }
 
 static int sc_vb2_buf_prepare(struct vb2_buffer *vb)
