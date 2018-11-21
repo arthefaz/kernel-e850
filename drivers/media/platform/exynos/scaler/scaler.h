@@ -417,6 +417,11 @@ struct sc_qos_table {
 	unsigned int data_size;
 };
 
+struct sc_ppc_table {
+	unsigned int bpp;
+	unsigned int ppc[2];
+};
+
 struct sc_ctx;
 
 /*
@@ -469,7 +474,9 @@ struct sc_dev {
 	bool				pb_disable;
 	u32				cfw;
 	struct sc_qos_table		*qos_table;
+	struct sc_ppc_table		*ppc_table;
 	int qos_table_cnt;
+	int ppc_table_cnt;
 };
 
 enum SC_CONTEXT_TYPE {

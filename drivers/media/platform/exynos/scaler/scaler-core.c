@@ -18,6 +18,7 @@
 #include <linux/interrupt.h>
 #include <linux/clk.h>
 #include <linux/slab.h>
+#include <linux/sort.h>
 #include <linux/pm_runtime.h>
 #include <linux/exynos_iovmm.h>
 #include <linux/smc.h>
@@ -774,17 +775,13 @@ void sc_request_devfreq(struct sc_qos_request *qos_req,
 			PM_QOS_DEVICE_THROUGHPUT, qos_table[lv].freq_int);
 }
 
-static bool sc_get_pm_qos_level(struct sc_ctx *ctx, int framerate)
+static bool sc_get_pm_qos_level_by_data_size(struct sc_ctx *ctx, int framerate)
 {
 	struct sc_dev *sc = ctx->sc_dev;
 	struct sc_frame *frame = &ctx->d_frame;
 	struct sc_qos_table *qos_table = sc->qos_table;
 	unsigned int dst_len = 0;
 	int i;
-
-	/* No need to calculate if no qos_table exists. */
-	if (!qos_table)
-		return false;
 
 	for (i = 0; i < frame->sc_fmt->num_planes; i++)
 		dst_len += frame->bytesused[i];
@@ -812,6 +809,86 @@ static bool sc_get_pm_qos_level(struct sc_ctx *ctx, int framerate)
 	ctx->pm_qos_lv = i;
 
 	return true;
+}
+
+/*
+ * Required Clock (KHz) = (width * height) / (process time(ms) * ppc)
+ */
+static int sc_get_clock_khz(struct sc_ctx *ctx,
+			struct sc_frame *frame, int process_time)
+{
+	struct sc_dev *sc = ctx->sc_dev;
+	struct sc_ppc_table *ppc_table = sc->ppc_table;
+	int ppc_idx = (ctx->flip_rot_cfg & SCALER_ROT_90) ? 1 : 0;
+	int i, bpp = 0, ppc = 0;
+	unsigned long clk;
+
+	for (i = 0; i < frame->sc_fmt->num_planes; i++)
+		bpp += frame->sc_fmt->bitperpixel[i];
+
+	for (i = 0; i < sc->ppc_table_cnt; i++) {
+		if (ppc_table[i].bpp == bpp) {
+			ppc = ppc_table[i].ppc[ppc_idx];
+			break;
+		}
+	}
+
+	if (!ppc || !process_time)
+		return 0;
+
+	/*
+	 * process_time is unit of microseconds,
+	 * and ppc was already multiplied by 100 to eliminate the decimal point.
+	 * So clk should be multiplied by 100000.
+	 */
+	clk = (unsigned long)(frame->crop.width * frame->crop.height) * 100000;
+	clk /= (process_time * ppc);
+
+	if (clk > INT_MAX)
+		clk = INT_MAX;
+
+	return (int)clk;
+}
+
+static bool sc_get_pm_qos_level_by_ppc(struct sc_ctx *ctx, int framerate)
+{
+	struct sc_dev *sc = ctx->sc_dev;
+	struct sc_qos_table *qos_table = sc->qos_table;
+	int time_us = 1000000 / framerate;
+	int src_clk, dst_clk, target_clk;
+	int i;
+
+	src_clk = sc_get_clock_khz(ctx, &ctx->s_frame, time_us);
+	dst_clk = sc_get_clock_khz(ctx, &ctx->d_frame, time_us);
+
+	target_clk = max(src_clk, dst_clk);
+
+	for (i = sc->qos_table_cnt - 1; i >= 0; i--) {
+		if (qos_table[i].freq_int >= target_clk)
+			break;
+	}
+
+	/* No request is required if level is same. */
+	if (ctx->pm_qos_lv == i)
+		return false;
+
+	ctx->pm_qos_lv = i;
+
+	return true;
+}
+
+static bool sc_get_pm_qos_level(struct sc_ctx *ctx, int framerate)
+{
+	struct sc_dev *sc = ctx->sc_dev;
+
+	/* No need to calculate if no qos_table exists. */
+	if (!sc->qos_table)
+		return false;
+
+	if (!sc->ppc_table)
+		return sc_get_pm_qos_level_by_data_size(ctx, framerate);
+
+	return sc_get_pm_qos_level_by_ppc(ctx, framerate);
 }
 
 /* Find the matches format */
@@ -4131,10 +4208,24 @@ static const struct dev_pm_ops sc_pm_ops = {
 	SET_RUNTIME_PM_OPS(NULL, sc_runtime_resume, sc_runtime_suspend)
 };
 
+/* sort qos table in descending order of freq_int */
+static int sc_compare_qos_table_entries(const void *p1, const void *p2)
+{
+	const struct sc_qos_table *t1 = p1, *t2 = p2;
+
+	if (t1->freq_int < t2->freq_int)
+		return 1;
+	else
+		return -1;
+
+	return 0;
+}
+
 static int sc_populate_dt(struct sc_dev *sc)
 {
 	struct device *dev = sc->dev;
 	struct sc_qos_table *qos_table;
+	struct sc_ppc_table *ppc_table;
 	int i, len;
 
 	len = of_property_count_u32_elems(dev->of_node, "mscl_qos_table");
@@ -4152,6 +4243,9 @@ static int sc_populate_dt(struct sc_dev *sc)
 	of_property_read_u32_array(dev->of_node, "mscl_qos_table",
 					(unsigned int *)qos_table, len);
 
+	sort(qos_table, sc->qos_table_cnt, sizeof(*qos_table),
+					sc_compare_qos_table_entries, NULL);
+
 	for (i = 0; i < sc->qos_table_cnt; i++) {
 		dev_info(dev, "MSCL QoS Table[%d] mif : %u int : %u [%u]\n", i,
 			qos_table[i].freq_mif,
@@ -4161,6 +4255,30 @@ static int sc_populate_dt(struct sc_dev *sc)
 
 	sc->qos_table = qos_table;
 
+	len = of_property_count_u32_elems(dev->of_node, "mscl_ppc_table");
+	if (len < 0) {
+		dev_info(dev, "No ppc table for scaler\n");
+		return 0;
+	}
+
+	sc->ppc_table_cnt = len / 3;
+
+	ppc_table = devm_kzalloc(dev,
+			sizeof(*ppc_table) * sc->ppc_table_cnt, GFP_KERNEL);
+	if (!ppc_table)
+		return -ENOMEM;
+
+	of_property_read_u32_array(dev->of_node, "mscl_ppc_table",
+					(unsigned int *)ppc_table, len);
+
+	for (i = 0; i < sc->ppc_table_cnt; i++) {
+		dev_info(dev, "MSCL PPC Table[%d] bpp : %u ppc : %u/%u\n", i,
+			ppc_table[i].bpp,
+			ppc_table[i].ppc[0],
+			ppc_table[i].ppc[1]);
+	}
+
+	sc->ppc_table = ppc_table;
 	return 0;
 }
 
