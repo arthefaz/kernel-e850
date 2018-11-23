@@ -3423,6 +3423,7 @@ static void dw_mci_timeout_timer(unsigned long data)
 {
 	struct dw_mci *host = (struct dw_mci *)data;
 	struct mmc_request *mrq;
+	unsigned int int_mask;
 
 	if (host && host->mrq) {
 		host->sw_timeout_chk = true;
@@ -3467,8 +3468,21 @@ static void dw_mci_timeout_timer(unsigned long data)
 		}
 
 		spin_unlock(&host->lock);
+
 		dw_mci_ciu_reset(host->dev, host);
 		dw_mci_fifo_reset(host->dev, host);
+		int_mask = mci_readl(host, INTMASK);
+		if (~int_mask & (SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER | DW_MCI_ERROR_FLAGS)) {
+			if (host->use_dma)
+				int_mask |= (SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER |
+						DW_MCI_ERROR_FLAGS);
+			else
+				int_mask |= (SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER |
+						SDMMC_INT_TXDR | SDMMC_INT_RXDR |
+						DW_MCI_ERROR_FLAGS);
+			mci_writel(host, INTMASK, int_mask);
+		}
+
 		spin_lock(&host->lock);
 		dw_mci_request_end(host, mrq);
 		host->state = STATE_IDLE;
