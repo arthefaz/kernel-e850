@@ -883,7 +883,6 @@ struct decon_vsync {
 
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 struct decon_esd {
-#define PWR_STATE_RECHECK_TIME	5
 #define ESD_SLEEP_TIME		4
 	struct mutex lock;
 	struct task_struct *thread;
@@ -1019,6 +1018,8 @@ struct decon_device {
 	spinlock_t slock;
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 	struct decon_esd esd;
+	atomic_t bypass;
+	struct decon_reg_data last_regs;
 #endif
 
 #if defined(CONFIG_SUPPORT_LEGACY_ION)
@@ -1081,10 +1082,6 @@ struct decon_device {
 
 	bool mres_enabled;
 	bool low_persistence;
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-	atomic_t bypass;
-	struct decon_reg_data last_regs;
-#endif
 };
 
 static inline struct decon_device *get_decon_drvdata(u32 id)
