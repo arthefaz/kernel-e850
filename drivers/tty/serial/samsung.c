@@ -1130,7 +1130,7 @@ static void s3c24xx_serial_set_termios(struct uart_port *port,
 
 	/* preserve original lcon IR settings */
 	if (!ourport->usi_v2)
-		ulcon |= (cfg->ulcon & S3C2410_LCON_IRM);
+		ulcon |= (unsigned int)(cfg->ulcon & S3C2410_LCON_IRM);
 
 	if (termios->c_cflag & CSTOPB)
 		ulcon |= S3C2410_LCON_STOPB;
