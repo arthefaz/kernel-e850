@@ -1418,7 +1418,8 @@ static int decon_debug_freq_hop_show(struct seq_file *s, void *unused)
 {
 	struct decon_device *decon = get_decon_drvdata(0);
 
-	seq_printf(s, "%u\n", decon->freq_hop.request_m);
+	seq_printf(s, "m(%u) k(%u)\n", decon->freq_hop.request_m,
+			decon->freq_hop.request_k);
 
 	return 0;
 }
@@ -1436,11 +1437,13 @@ static ssize_t decon_debug_freq_hop_write(struct file *file, const char __user *
 	int ret;
 
 	if (!decon->freq_hop.enabled)
-		return 0;
+		return count;
 
 	buf_data = kmalloc(count, GFP_KERNEL);
 	if (buf_data == NULL)
 		return count;
+
+	memset(buf_data, 0, count);
 
 	ret = copy_from_user(buf_data, buf, count);
 	if (ret < 0)
@@ -1452,7 +1455,8 @@ static ssize_t decon_debug_freq_hop_write(struct file *file, const char __user *
 	 * S3CFB_WIN_CONFIG ioctl.
 	 */
 	mutex_lock(&decon->lock);
-	ret = sscanf(buf_data, "%u", &decon->freq_hop.request_m);
+	ret = sscanf(buf_data, "%u %u", &decon->freq_hop.request_m,
+			&decon->freq_hop.request_k);
 	mutex_unlock(&decon->lock);
 	if (ret < 0)
 		goto out;
@@ -1624,7 +1628,7 @@ int decon_create_debugfs(struct decon_device *decon)
 			goto err_debugfs;
 		}
 #endif
-		decon->d.debug_freq_hop = debugfs_create_file("request_m",
+		decon->d.debug_freq_hop = debugfs_create_file("request_mk",
 				0444, decon->d.debug_root, NULL, &decon_freq_hop_fops);
 		if (!decon->d.debug_freq_hop) {
 			decon_err("failed to create request m value file\n");

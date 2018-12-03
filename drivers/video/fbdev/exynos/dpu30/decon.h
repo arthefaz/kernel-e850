@@ -986,7 +986,9 @@ struct decon_fence {
 struct decon_freq_hop {
 	bool enabled;
 	u32 target_m;	/* will be applied to DPHY */
+	u32 target_k;	/* will be applied to DPHY */
 	u32 request_m;	/* user requested m value */
+	u32 request_k;	/* user requested k value */
 };
 
 struct decon_device {
