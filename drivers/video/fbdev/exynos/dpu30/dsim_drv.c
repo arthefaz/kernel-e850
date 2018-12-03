@@ -843,7 +843,7 @@ static int dsim_s_stream(struct v4l2_subdev *sd, int enable)
 		return dsim_disable(dsim);
 }
 
-static int dsim_set_freq_hop(struct dsim_device *dsim, u32 target_m)
+static int dsim_set_freq_hop(struct dsim_device *dsim, struct decon_freq_hop *freq)
 {
 #if !defined(CONFIG_SOC_EXYNOS9820_EVT0) && defined(CONFIG_EXYNOS_FREQ_HOP)
 	struct stdphy_pms *pms;
@@ -855,8 +855,8 @@ static int dsim_set_freq_hop(struct dsim_device *dsim, u32 target_m)
 
 	pms = &dsim->panel->lcd_info.dphy_pms;
 	/* If target M value is 0, frequency hopping will be disabled */
-	dsim_reg_set_dphy_freq_hopping(dsim->id, pms->p, target_m, pms->k,
-			(target_m > 0) ? 1 : 0);
+	dsim_reg_set_dphy_freq_hopping(dsim->id, pms->p, freq->target_m,
+			freq->target_k, (freq->target_m > 0) ? 1 : 0);
 #endif
 
 	return 0;
@@ -949,7 +949,7 @@ static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 		break;
 
 	case DSIM_IOC_SET_FREQ_HOP:
-		ret = dsim_set_freq_hop(dsim, *((u32 *)arg));
+		ret = dsim_set_freq_hop(dsim, (struct decon_freq_hop *)arg);
 		break;
 
 	case DSIM_IOC_FREE_FB_RES:
