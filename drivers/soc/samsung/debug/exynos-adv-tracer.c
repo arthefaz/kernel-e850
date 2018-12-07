@@ -45,7 +45,7 @@ int adv_tracer_arraydump(void)
 	dev_info(exynos_adv_tracer->dev, "Start Arraydump (0x%x)\n", cpu_mask);
 	cmd.cmd_raw.cmd = EAT_IPC_CMD_ARRAYDUMP;
 	cmd.cmd_raw.id = ARR_IPC_CMD_ID_KERNEL_ARRAYDUMP;
-	cmd.buffer[1] = dbg_snapshot_get_item_paddr("log_cachedump");
+	cmd.buffer[1] = dbg_snapshot_get_item_paddr("log_arrdumppanic");
 	cmd.buffer[2] = cpu_mask;
 	ret = adv_tracer_ipc_send_data_polling_timeout(EAT_FRM_CHANNEL, &cmd, EAT_IPC_TIMEOUT * 100);
 	if (ret < 0)
