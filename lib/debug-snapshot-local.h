@@ -62,7 +62,6 @@ struct dbg_snapshot_item {
 	unsigned char *head_ptr;
 	unsigned char *curr_ptr;
 	unsigned long long time;
-	struct vm_struct vm;
 };
 
 struct dbg_snapshot_bl {

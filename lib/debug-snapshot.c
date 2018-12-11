@@ -80,9 +80,6 @@ struct dbg_snapshot_base ess_base;
 struct dbg_snapshot_log *dss_log = NULL;
 struct dbg_snapshot_desc dss_desc;
 
-/* Variable for assigning virtual address base */
-static size_t g_dbg_snapshot_vaddr_base = DSS_FIXED_VIRT_BASE;
-
 int dbg_snapshot_add_bl_item_info(const char *name, unsigned int paddr, unsigned int size)
 {
 	if (dss_bl->item_count >= SZ_16)
@@ -398,11 +395,13 @@ static int dbg_snapshot_sfr_dump_init(struct device_node *np)
 static int __init dbg_snapshot_remap(void)
 {
 	unsigned long i, j;
+	unsigned long flags = VM_NO_GUARD | VM_MAP;
 	unsigned int enabled_count = 0;
 	pgprot_t prot = __pgprot(PROT_NORMAL_NC);
-	int page_size, ret;
+	int page_size;
 	struct page *page;
 	struct page **pages;
+	void *vaddr;
 
 	for (i = 0; i < ARRAY_SIZE(dss_items); i++) {
 		if (dss_items[i].entry.enabled) {
@@ -414,16 +413,19 @@ static int __init dbg_snapshot_remap(void)
 			for (j = 0; j < page_size; j++)
 				pages[j] = page++;
 
-			ret = map_vm_area(&dss_items[i].vm, prot, pages);
+			vaddr = vmap(pages, page_size, flags, prot);
 			kfree(pages);
-			if (ret) {
-				dev_err(dss_desc.dev, "debug-snapshot: failed to mapping between virt and phys");
+			if (!vaddr) {
+				pr_err("debug-snapshot: failed to mapping between virt and phys");
 				return -ENOMEM;
 			}
 
-			dss_items[i].entry.vaddr = (size_t)dss_items[i].vm.addr;
+			dss_items[i].entry.vaddr = (size_t)vaddr;
 			dss_items[i].head_ptr = (unsigned char *)dss_items[i].entry.vaddr;
 			dss_items[i].curr_ptr = (unsigned char *)dss_items[i].entry.vaddr;
+
+			if (strnstr(dss_items[i].name, "header", strlen("header")))
+				dss_base.vaddr = dss_items[i].entry.vaddr;
 		}
 	}
 	dss_desc.log_cnt = ARRAY_SIZE(dss_items);
@@ -489,17 +491,8 @@ static int __init dbg_snapshot_item_reserved_mem_setup(struct reserved_mem *reme
 	dss_items[i].entry.size = remem->size;
 	dss_items[i].entry.enabled = true;
 
-	dss_items[i].vm.phys_addr = remem->base;
-	dss_items[i].vm.addr = (void *)g_dbg_snapshot_vaddr_base;
-	dss_items[i].vm.size = remem->size;
-	dss_items[i].vm.flags = VM_NO_GUARD;
-	g_dbg_snapshot_vaddr_base += remem->size;
-
-	vm_area_add_early(&dss_items[i].vm);
-
 	if (strnstr(remem->name, "header", strlen(remem->name))) {
 		dss_base.paddr = remem->base;
-		dss_base.vaddr = (size_t)dss_items[i].vm.addr;
 		ess_base = dss_base;
 		dss_base.enabled = false;
 	}
