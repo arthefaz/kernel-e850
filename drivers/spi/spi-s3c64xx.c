@@ -837,6 +837,9 @@ static void s3c64xx_spi_config(struct s3c64xx_spi_driver_data *sdd)
 		ret = clk_set_rate(sdd->src_clk, sdd->cur_speed * 4);
 		if (ret < 0)
 			dev_err(&sdd->pdev->dev, "SPI clk set failed\n");
+		else
+			dev_err(&sdd->pdev->dev, "Set SPI clock rate: %u(%lu)\n",
+					sdd->cur_speed, clk_get_rate(sdd->src_clk));
 
 	} else {
 		/* Configure Clock */
