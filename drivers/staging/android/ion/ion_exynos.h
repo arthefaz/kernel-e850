@@ -134,7 +134,10 @@ static inline void *ion_buffer_protect_multi(unsigned int protection_id,
 {
 	return NULL;
 }
-#define ion_buffer_unprotect(priv) do { } while (0)
+static inline int ion_buffer_unprotect(void *priv)
+{
+	return 0;
+}
 #define exynos_ion_fixup(idev) do { } while (0)
 static inline int exynos_ion_alloc_fixup(struct ion_device *idev,
 					 struct ion_buffer *buffer)

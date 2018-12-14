@@ -21,7 +21,7 @@
 void ion_contig_heap_show_buffers(struct seq_file *s, struct ion_heap *heap,
 				  phys_addr_t base, size_t pool_size);
 #else
-#define ion_contig_heap_show_buffers do { } while (0)
+#define ion_contig_heap_show_buffers(s, heap, base, size)  do { } while (0)
 #endif
 
 enum ion_event_type {
