@@ -49,6 +49,7 @@ bool ion_hwrender_dmabuf(struct dma_buf *dmabuf)
 	return !!(buffer->flags & ION_FLAG_MAY_HWRENDER);
 }
 
+#if defined(CONFIG_EXYNOS_IOVMM)
 static struct ion_iovm_map *ion_buffer_iova_create(struct ion_buffer *buffer,
 						   struct device *dev,
 						   enum dma_data_direction dir,
@@ -234,7 +235,7 @@ void ion_iovmm_unmap_attr(struct dma_buf_attachment *attachment,
 		__ion_iovmm_unmap(attachment, iova);
 	}
 }
-
+#endif
 #define MAX_BUFFER_IDS 2048
 static DEFINE_IDA(ion_buffer_ida);
 static int last_buffer_id;
