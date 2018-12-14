@@ -41,6 +41,7 @@
 #include <linux/serial_core.h>
 #include <linux/serial.h>
 #include <linux/serial_s3c.h>
+#include <linux/notifier.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/suspend.h>
@@ -117,6 +118,43 @@ EXPORT_SYMBOL_GPL(s3c2410_serial_wake_peer);
 
 /* Allocate 800KB of buffer for UART logging */
 #define LOG_BUFFER_SIZE		(0xC8000)
+struct s3c24xx_uart_port *panic_port;
+
+static int exynos_s3c24xx_panic_handler(struct notifier_block *nb,
+								unsigned long l, void *p)
+{
+
+	struct uart_port *port = &panic_port->port;
+
+	dev_err(panic_port->port.dev, " Register dump\n"
+		"ULCON	0x%08x	"
+		"UCON	0x%08x	"
+		"UFCON	0x%08x\n"
+		"UMCON	0x%08x	"
+		"UTRSTAT	0x%08x	"
+		"UERSTAT	0x%08x	"
+		"UMSTAT	0x%08x\n"
+		"UBRDIV	0x%08x	"
+		"UINTP	0x%08x	"
+		"UINTM	0x%08x\n"
+		, readl(port->membase + S3C2410_ULCON)
+		, readl(port->membase + S3C2410_UCON)
+		, readl(port->membase + S3C2410_UFCON)
+		, readl(port->membase + S3C2410_UMCON)
+		, readl(port->membase + S3C2410_UTRSTAT)
+		, readl(port->membase + S3C2410_UERSTAT)
+		, readl(port->membase + S3C2410_UMSTAT)
+		, readl(port->membase + S3C2410_UBRDIV)
+		, readl(port->membase + S3C64XX_UINTP)
+		, readl(port->membase + S3C64XX_UINTM)
+	);
+
+	return 0;
+}
+
+static struct notifier_block exynos_s3c24xx_panic_block = {
+	.notifier_call = exynos_s3c24xx_panic_handler,
+};
 
 static void uart_sfr_dump(struct s3c24xx_uart_port *ourport)
 {
@@ -1810,6 +1848,16 @@ static int s3c24xx_serial_probe(struct platform_device *pdev)
 	ourport->port.fifosize = (ourport->info->fifosize) ?
 		ourport->info->fifosize :
 		ourport->drv_data->fifosize[port_index];
+
+	if (of_get_property(pdev->dev.of_node, "samsung,uart-panic-log", NULL))
+		ourport->uart_panic_log = 1;
+	else
+		ourport->uart_panic_log = 0;
+
+	if (ourport->uart_panic_log) {
+		atomic_notifier_chain_register(&panic_notifier_list, &exynos_s3c24xx_panic_block);
+		panic_port = ourport;
+	}
 
 	if (of_get_property(pdev->dev.of_node, "samsung,usi-serial-v2", NULL))
 		ourport->usi_v2 = 1;
