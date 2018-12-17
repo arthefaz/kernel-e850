@@ -20,6 +20,9 @@
 #define ROT_MAX_W		3040
 #define ROT_MAX_SZ		3040*1440
 
+#define BTS_DPU_MAX		3 /* DPU0 ~ 2 */
+#define BTS_DPP_MAX		6 /* DPP0 ~ 5 */
+
 enum decon_idma_type {
 	IDMA_G0 = 0,
 	IDMA_G1,
@@ -159,6 +162,15 @@ enum decon_blending {
 enum decon_set_trig {
 	DECON_TRIG_DISABLE = 0,
 	DECON_TRIG_ENABLE
+};
+
+enum dpu_bts_scen {
+	DPU_BS_DEFAULT		= 0,
+	DPU_BS_UHD,		/* for UHD 8-bit rotation case */
+	DPU_BS_UHD_10B,		/* for UHD 10-bit rotation case */
+	DPU_BS_DP_DEFAULT,
+	/* add scenario index if necessary */
+	DPU_BS_MAX
 };
 
 struct decon_mode_info {
