@@ -89,6 +89,7 @@ struct stdphy_pms {
 };
 
 struct decon_lcd {
+	unsigned int id; /* panel id. It is used for finding connected panel */
 	enum decon_psr_mode mode;
 	unsigned int vfp;
 	unsigned int vbp;
