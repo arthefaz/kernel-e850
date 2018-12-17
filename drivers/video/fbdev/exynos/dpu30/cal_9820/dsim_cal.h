@@ -36,6 +36,7 @@ struct dsim_regs {
 void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 sel);
 
 /* DSIM control */
+void dsim_reg_preinit(u32 id);
 void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 		bool panel_ctrl);
 void dsim_reg_start(u32 id);
