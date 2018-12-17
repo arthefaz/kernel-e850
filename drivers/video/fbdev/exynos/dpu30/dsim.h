@@ -88,9 +88,6 @@ extern int dsim_log_level;
 			pr_info(pr_fmt(fmt), ##__VA_ARGS__);			\
 	} while (0)
 
-#define call_panel_ops(q, op, args...)				\
-	(((q)->panel_ops->op) ? ((q)->panel_ops->op(args)) : 0)
-
 extern struct dsim_device *dsim_drvdata[MAX_DSIM_CNT];
 extern struct dsim_lcd_driver s6e3ha2k_mipi_lcd_driver;
 extern struct dsim_lcd_driver emul_disp_mipi_lcd_driver;
@@ -235,9 +232,8 @@ struct dsim_device {
 	struct phy *phy_ex;
 	spinlock_t slock;
 
-	struct dsim_lcd_driver *panel_ops;
-	struct decon_lcd lcd_info;
-	u32 board_info;
+	struct exynos_panel_device *panel;
+	struct decon_lcd *lcd_info;
 
 	struct v4l2_subdev sd;
 	struct dsim_clks clks;
@@ -273,6 +269,7 @@ struct dsim_lcd_driver {
 #endif
 };
 
+int dsim_call_panel_ops(struct dsim_device *dsim, u32 cmd, void *arg);
 int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1);
 int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf);
 int dsim_wait_for_cmd_done(struct dsim_device *dsim);

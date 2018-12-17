@@ -11,6 +11,7 @@
 
 #include <video/mipi_display.h>
 
+#include "./panels/exynos_panel_drv.h"
 #include "decon.h"
 #include "dpp.h"
 #include "dsim.h"
@@ -355,7 +356,7 @@ void dpu_prepare_win_update_config(struct decon_device *decon,
 void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs)
 {
 	struct dsim_device *dsim = get_dsim_drvdata(0);
-	struct lcd_mres_info *mres_info = &dsim->lcd_info.dt_lcd_mres;
+	struct lcd_mres_info *mres_info = &dsim->lcd_info->dt_lcd_mres;
 	struct decon_param p;
 	int idx;
 
@@ -389,20 +390,20 @@ void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs
 	decon_reg_wait_idle_status_timeout(decon->id, IDLE_WAIT_TIMEOUT);
 
 	/* backup current LCD resolution information to previous one */
-	dsim->lcd_info.xres = regs->lcd_width;
-	dsim->lcd_info.yres = regs->lcd_height;
-	dsim->lcd_info.mres_mode = regs->mres_idx;
+	dsim->lcd_info->xres = regs->lcd_width;
+	dsim->lcd_info->yres = regs->lcd_height;
+	dsim->lcd_info->mres_mode = regs->mres_idx;
 	idx = regs->mres_idx;
-	dsim->lcd_info.dsc_enabled = mres_info->res_info[idx].dsc_en;
-	dsim->lcd_info.dsc_slice_h = mres_info->res_info[idx].dsc_height;
-	dsim->lcd_info.dsc_enc_sw = dsim->lcd_info.dt_dsc_slice.dsc_enc_sw[idx];
-	dsim->lcd_info.dsc_dec_sw = dsim->lcd_info.dt_dsc_slice.dsc_dec_sw[idx];
+	dsim->lcd_info->dsc_enabled = mres_info->res_info[idx].dsc_en;
+	dsim->lcd_info->dsc_slice_h = mres_info->res_info[idx].dsc_height;
+	dsim->lcd_info->dsc_enc_sw = dsim->lcd_info->dt_dsc_slice.dsc_enc_sw[idx];
+	dsim->lcd_info->dsc_dec_sw = dsim->lcd_info->dt_dsc_slice.dsc_dec_sw[idx];
 
 	/* transfer LCD resolution change commands to panel */
-	dsim->panel_ops->mres(dsim, regs->mres_idx);
+	dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_MRES, &regs->mres_idx);
 
 	/* DECON and DSIM are reconfigured by changed LCD resolution */
-	dsim_reg_set_mres(dsim->id, &dsim->lcd_info);
+	dsim_reg_set_mres(dsim->id, dsim->lcd_info);
 	decon_to_init_param(decon, &p);
 	decon_reg_set_mres(decon->id, &p);
 
@@ -411,7 +412,7 @@ void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs
 
 	DPU_DEBUG_MRES("changed LCD resolution(%d %d), dsc enc/dec sw(%d %d)\n",
 			decon->lcd_info->xres, decon->lcd_info->yres,
-			dsim->lcd_info.dsc_enc_sw, dsim->lcd_info.dsc_dec_sw);
+			dsim->lcd_info->dsc_enc_sw, dsim->lcd_info->dsc_dec_sw);
 }
 
 static int win_update_send_partial_command(struct dsim_device *dsim,

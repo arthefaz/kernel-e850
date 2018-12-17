@@ -54,6 +54,7 @@
 #include "decon.h"
 #include "dsim.h"
 #include "./panels/lcd_ctrl.h"
+#include "./panels/exynos_panel_drv.h"
 #include "../../../../dma-buf/sync_debug.h"
 #include "dpp.h"
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
@@ -4021,13 +4022,14 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 		decon_info("2nd LCD is on\n");
 		msleep(1);
 		dsim1 = container_of(decon->out_sd[1], struct dsim_device, sd);
-		call_panel_ops(dsim1, displayon, dsim1);
+		dsim_call_panel_ops(dsim1, EXYNOS_PANEL_IOC_DISPLAYON, NULL);
+
 	}
 
 	dsim = container_of(decon->out_sd[0], struct dsim_device, sd);
 	decon_reg_start(decon->id, &psr);
 	decon_reg_set_int(decon->id, &psr, 1);
-	call_panel_ops(dsim, displayon, dsim);
+	dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DISPLAYON, NULL);
 	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 	if (decon_reg_wait_update_done_and_mask(decon->id, &psr,
 				SHADOW_UPDATE_TIMEOUT) < 0)
