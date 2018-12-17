@@ -48,6 +48,7 @@
 
 #include "decon.h"
 #include "dsim.h"
+#include "./panels/exynos_panel_drv.h"
 
 int dsim_log_level = 6;
 
@@ -66,6 +67,19 @@ static char *dsim_state_names[] = {
 static int dsim_runtime_suspend(struct device *dev);
 static int dsim_runtime_resume(struct device *dev);
 
+int dsim_call_panel_ops(struct dsim_device *dsim, u32 cmd, void *arg)
+{
+	struct v4l2_subdev *sd;
+
+	if (IS_ERR_OR_NULL(dsim->panel)) {
+		dsim_err("%s: panel ptr is NULL\n", __func__);
+		return -ENOMEM;
+	}
+
+	sd = &dsim->panel->sd;
+	return v4l2_subdev_call(sd, core, ioctl, cmd, arg);
+}
+
 static void dsim_dump(struct dsim_device *dsim)
 {
 	struct dsim_regs regs;
@@ -76,7 +90,7 @@ static void dsim_dump(struct dsim_device *dsim)
 	__dsim_dump(dsim->id, &regs);
 
 	/* Show panel status */
-	call_panel_ops(dsim, dump, dsim);
+	dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DUMP, NULL);
 }
 
 static void dsim_long_data_wr(struct dsim_device *dsim, unsigned long d0, u32 d1)
@@ -505,10 +519,6 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void dsim_clocks_info(struct dsim_device *dsim)
-{
-}
-
 static int dsim_get_clocks(struct dsim_device *dsim)
 {
 	dsim->res.aclk = devm_clk_get(dsim->dev, "aclk");
@@ -520,190 +530,36 @@ static int dsim_get_clocks(struct dsim_device *dsim)
 	return 0;
 }
 
-static int dsim_get_gpios(struct dsim_device *dsim)
-{
-	struct device *dev = dsim->dev;
-	struct dsim_resources *res = &dsim->res;
-
-	dsim_info("%s +\n", __func__);
-
-	if (of_get_property(dev->of_node, "gpios", NULL) != NULL)  {
-		/* panel reset */
-		res->lcd_reset = of_get_gpio(dev->of_node, 0);
-		if (res->lcd_reset < 0) {
-			dsim_err("failed to get lcd reset GPIO");
-			return -ENODEV;
-		}
-		res->lcd_power[0] = of_get_gpio(dev->of_node, 1);
-		if (res->lcd_power[0] < 0) {
-			res->lcd_power[0] = -1;
-			dsim_info("This board doesn't support LCD power GPIO");
-		}
-		res->lcd_power[1] = of_get_gpio(dev->of_node, 2);
-		if (res->lcd_power[1] < 0) {
-			res->lcd_power[1] = -1;
-			dsim_info("This board doesn't support 2nd LCD power GPIO");
-		}
-	}
-
-	dsim_info("%s -\n", __func__);
-	return 0;
-}
-
-static int dsim_get_regulator(struct dsim_device *dsim)
-{
-	struct device *dev = dsim->dev;
-	struct dsim_resources *res = &dsim->res;
-
-	char *str_regulator_1p8v = NULL;
-	char *str_regulator_3p3v = NULL;
-
-	res->regulator_1p8v = NULL;
-	res->regulator_3p3v = NULL;
-
-	if(!of_property_read_string(dev->of_node, "regulator_1p8v",
-				(const char **)&str_regulator_1p8v)) {
-		res->regulator_1p8v = regulator_get(dev, str_regulator_1p8v);
-		if (IS_ERR(res->regulator_1p8v)) {
-			dsim_err("%s : dsim regulator 1.8V get failed\n", __func__);
-			res->regulator_1p8v = NULL;
-		}
-	}
-
-	if(!of_property_read_string(dev->of_node, "regulator_3p3v",
-				(const char **)&str_regulator_3p3v)) {
-		res->regulator_3p3v = regulator_get(dev, str_regulator_3p3v);
-		if (IS_ERR(res->regulator_3p3v)) {
-			dsim_err("%s : dsim regulator 3.3V get failed\n", __func__);
-			res->regulator_3p3v = NULL;
-		}
-	}
-
-	return 0;
-}
-
 int dsim_reset_panel(struct dsim_device *dsim)
 {
-	struct dsim_resources *res = &dsim->res;
-	int ret;
+	struct v4l2_subdev *sd;
 
-	dsim_dbg("%s +\n", __func__);
-
-	ret = gpio_request_one(res->lcd_reset, GPIOF_OUT_INIT_HIGH, "lcd_reset");
-	if (ret < 0) {
-		dsim_err("failed to get LCD reset GPIO\n");
-		return -EINVAL;
+	if (IS_ERR_OR_NULL(dsim->panel)) {
+		dsim_err("%s: panel ptr is NULL\n", __func__);
+		return -ENOMEM;
 	}
 
-	usleep_range(5000, 6000);
-	gpio_set_value(res->lcd_reset, 0);
-	usleep_range(5000, 6000);
-	gpio_set_value(res->lcd_reset, 1);
-
-	gpio_free(res->lcd_reset);
-
-	usleep_range(10000, 11000);
-
-	dsim_dbg("%s -\n", __func__);
-	return 0;
+	sd = &dsim->panel->sd;
+	return v4l2_subdev_call(sd, core, ioctl, EXYNOS_PANEL_IOC_RESET, NULL);
 }
 
 int dsim_set_panel_power(struct dsim_device *dsim, bool on)
 {
-	struct dsim_resources *res = &dsim->res;
-	int ret;
+	struct v4l2_subdev *sd;
+	int ret = 0;
 
-	dsim_dbg("%s(%d) +\n", __func__, on);
-
-
-	if (on) {
-		if (res->lcd_power[0] > 0) {
-			ret = gpio_request_one(res->lcd_power[0],
-					GPIOF_OUT_INIT_HIGH, "lcd_power0");
-			if (ret < 0) {
-				dsim_err("failed LCD power on\n");
-				return -EINVAL;
-			}
-			gpio_free(res->lcd_power[0]);
-			usleep_range(10000, 11000);
-		}
-
-		if (res->lcd_power[1] > 0) {
-			ret = gpio_request_one(res->lcd_power[1],
-					GPIOF_OUT_INIT_HIGH, "lcd_power1");
-			if (ret < 0) {
-				dsim_err("failed 2nd LCD power on\n");
-				return -EINVAL;
-			}
-			gpio_free(res->lcd_power[1]);
-			usleep_range(10000, 11000);
-		}
-		if (res->regulator_1p8v > 0) {
-			ret = regulator_enable(res->regulator_1p8v);
-			if (ret) {
-				dsim_err("%s : dsim regulator 1.8V enable failed\n", __func__);
-				return ret;
-			}
-			usleep_range(5000, 6000);
-		}
-
-		if (res->regulator_3p3v > 0) {
-			ret = regulator_enable(res->regulator_3p3v);
-			if (ret) {
-				dsim_err("%s : dsim regulator 3.3V enable failed\n", __func__);
-				return ret;
-			}
-		}
-	} else {
-		ret = gpio_request_one(res->lcd_reset, GPIOF_OUT_INIT_LOW,
-				"lcd_reset");
-		if (ret < 0) {
-			dsim_err("failed LCD reset off\n");
-			return -EINVAL;
-		}
-		gpio_free(res->lcd_reset);
-
-		if (res->lcd_power[0] > 0) {
-			ret = gpio_request_one(res->lcd_power[0],
-					GPIOF_OUT_INIT_LOW, "lcd_power0");
-			if (ret < 0) {
-				dsim_err("failed LCD power off\n");
-				return -EINVAL;
-			}
-			gpio_free(res->lcd_power[0]);
-			usleep_range(5000, 6000);
-		}
-
-		if (res->lcd_power[1] > 0) {
-			ret = gpio_request_one(res->lcd_power[1],
-					GPIOF_OUT_INIT_LOW, "lcd_power1");
-			if (ret < 0) {
-				dsim_err("failed 2nd LCD power off\n");
-				return -EINVAL;
-			}
-			gpio_free(res->lcd_power[1]);
-			usleep_range(5000, 6000);
-		}
-		if (res->regulator_1p8v > 0) {
-			ret = regulator_disable(res->regulator_1p8v);
-			if (ret) {
-				dsim_err("%s : dsim regulator 1.8V disable failed\n", __func__);
-				return ret;
-			}
-		}
-
-		if (res->regulator_3p3v > 0) {
-			ret = regulator_disable(res->regulator_3p3v);
-			if (ret) {
-				dsim_err("%s : dsim regulator 3.3V disable failed\n", __func__);
-				return ret;
-			}
-		}
+	if (IS_ERR_OR_NULL(dsim->panel)) {
+		dsim_err("%s: panel ptr is NULL\n", __func__);
+		return -ENOMEM;
 	}
 
-	dsim_dbg("%s(%d) -\n", __func__, on);
+	sd = &dsim->panel->sd;
+	if (on)
+		ret = v4l2_subdev_call(sd, core, ioctl, EXYNOS_PANEL_IOC_POWERON, NULL);
+	else
+		ret = v4l2_subdev_call(sd, core, ioctl, EXYNOS_PANEL_IOC_POWEROFF, NULL);
 
-	return 0;
+	return ret;
 }
 
 static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
@@ -731,7 +587,7 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 		phy_power_on(dsim->phy_ex);
 
 	panel_ctrl = (state == DSIM_STATE_ON) ? true : false;
-	dsim_reg_init(dsim->id, &dsim->lcd_info, &dsim->clks, panel_ctrl);
+	dsim_reg_init(dsim->id, dsim->lcd_info, &dsim->clks, panel_ctrl);
 	dsim_reg_start(dsim->id);
 
 	dsim->state = state;
@@ -761,7 +617,7 @@ static int dsim_enable(struct dsim_device *dsim)
 	}
 
 	if (prev_state != DSIM_STATE_INIT)
-		call_panel_ops(dsim, displayon, dsim);
+		dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DISPLAYON, NULL);
 
 	dsim_info("dsim-%d %s - (state:%s -> %s)\n", dsim->id, __func__,
 			dsim_state_names[prev_state],
@@ -791,7 +647,8 @@ static int dsim_doze(struct dsim_device *dsim)
 		goto out;
 	}
 	if (prev_state != DSIM_STATE_INIT)
-		call_panel_ops(dsim, doze, dsim);
+		dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DOZE, NULL);
+
 	dsim_info("dsim-%d %s - (state:%s -> %s)\n", dsim->id, __func__,
 			dsim_state_names[prev_state],
 			dsim_state_names[dsim->state]);
@@ -858,7 +715,7 @@ static int dsim_disable(struct dsim_device *dsim)
 	}
 
 	dsim_info("dsim-%d %s +\n", dsim->id, __func__);
-	call_panel_ops(dsim, suspend, dsim);
+	dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_SUSPEND, NULL);
 	ret = _dsim_disable(dsim, next_state);
 	if (ret < 0) {
 		dsim_err("dsim-%d failed to set %s (ret %d)\n",
@@ -886,7 +743,7 @@ static int dsim_doze_suspend(struct dsim_device *dsim)
 	}
 
 	dsim_info("dsim-%d %s +\n", dsim->id, __func__);
-	call_panel_ops(dsim, doze_suspend, dsim);
+	dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DOZE_SUSPEND, NULL);
 	ret = _dsim_disable(dsim, next_state);
 	if (ret < 0) {
 		dsim_err("dsim-%d failed to set %s (ret %d)\n",
@@ -919,7 +776,7 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 	mutex_unlock(&dsim->cmd_lock);
 
 	disable_irq(dsim->res.irq);
-	ret = dsim_reg_stop_and_enter_ulps(dsim->id, dsim->lcd_info.ddi_type,
+	ret = dsim_reg_stop_and_enter_ulps(dsim->id, dsim->lcd_info->ddi_type,
 			dsim->data_lane);
 
 	phy_power_off(dsim->phy);
@@ -959,8 +816,8 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 	if (dsim->phy_ex)
 		phy_power_on(dsim->phy_ex);
 
-	dsim_reg_init(dsim->id, &dsim->lcd_info, &dsim->clks, false);
-	ret = dsim_reg_exit_ulps_and_start(dsim->id, dsim->lcd_info.ddi_type,
+	dsim_reg_init(dsim->id, dsim->lcd_info, &dsim->clks, false);
+	ret = dsim_reg_exit_ulps_and_start(dsim->id, dsim->lcd_info->ddi_type,
 			dsim->data_lane);
 	if (ret < 0)
 		dsim_dump(dsim);
@@ -995,7 +852,7 @@ static int dsim_set_freq_hop(struct dsim_device *dsim, u32 target_m)
 		return -EINVAL;
 	}
 
-	pms = &dsim->lcd_info.dphy_pms;
+	pms = &dsim->lcd_info->dphy_pms;
 	/* If target M value is 0, frequency hopping will be disabled */
 	dsim_reg_set_dphy_freq_hopping(dsim->id, pms->p, target_m, pms->k,
 			(target_m > 0) ? 1 : 0);
@@ -1061,7 +918,7 @@ static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 
 	switch (cmd) {
 	case DSIM_IOC_GET_LCD_INFO:
-		v4l2_set_subdev_hostdata(sd, &dsim->lcd_info);
+		v4l2_set_subdev_hostdata(sd, dsim->lcd_info);
 		break;
 
 	case DSIM_IOC_ENTER_ULPS:
@@ -1179,22 +1036,32 @@ static int dsim_cmd_sysfs_write(struct dsim_device *dsim, bool on)
 	return ret;
 }
 
-static int dsim_cmd_sysfs_read(struct dsim_device *dsim)
+static int dsim_read_panel_id(struct dsim_device *dsim, u32 *id)
 {
 	int ret = 0;
-	unsigned int id;
 	u8 buf[4];
+
+	memset(buf, 0, sizeof(buf));
 
 	/* dsim sends the request for the lcd id and gets it buffer */
 	ret = dsim_read_data(dsim, MIPI_DSI_DCS_READ,
-		MIPI_DCS_GET_DISPLAY_ID, DSIM_DDI_ID_LEN, buf);
-	id = *(unsigned int *)buf;
-	if (ret < 0)
-		dsim_err("Failed to read panel id!\n");
-	else
-		dsim_info("Suceeded to read panel id : 0x%08x\n", id);
+			MIPI_DCS_GET_DISPLAY_ID, DSIM_DDI_ID_LEN, buf);
+	if (ret < 0) {
+		dsim_err("failed to read panel id(%d)\n", ret);
+		return ret;
+	}
+
+	memcpy(id, (unsigned int *)buf, sizeof(u32));
+	dsim_info("suceeded to read panel id : 0x%08x\n", *id);
 
 	return ret;
+}
+
+static int dsim_cmd_sysfs_read(struct dsim_device *dsim)
+{
+	u32 panel_id;
+
+	return dsim_read_panel_id(dsim, &panel_id);
 }
 
 static ssize_t dsim_cmd_sysfs_show(struct device *dev,
@@ -1217,7 +1084,7 @@ static ssize_t dsim_cmd_sysfs_store(struct device *dev,
 	switch (cmd) {
 	case 1:
 		ret = dsim_cmd_sysfs_read(dsim);
-		call_panel_ops(dsim, dump, dsim);
+		dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DUMP, NULL);
 		if (ret)
 			return ret;
 		break;
@@ -1253,278 +1120,6 @@ int dsim_create_cmd_rw_sysfs(struct dsim_device *dsim)
 	return ret;
 }
 
-static int dsim_calc_slice_width(u32 dsc_cnt, u32 slice_num, u32 xres)
-{
-	u32 slice_width;
-	u32 width_eff;
-	u32 slice_width_byte_unit, comp_slice_width_byte_unit;
-	u32 comp_slice_width_pixel_unit;
-	u32 compressed_slice_w = 0;
-	u32 i, j;
-
-	if (dsc_cnt == 2)
-		width_eff = xres >> 1;
-	else
-		width_eff = xres;
-
-	if (slice_num / dsc_cnt == 2)
-		slice_width = width_eff >> 1;
-	else
-		slice_width = width_eff;
-
-	/* 3bytes per pixel */
-	slice_width_byte_unit = slice_width * 3;
-	/* integer value, /3 for 1/3 compression */
-	comp_slice_width_byte_unit = slice_width_byte_unit / 3;
-	/* integer value, /3 for pixel unit */
-	comp_slice_width_pixel_unit = comp_slice_width_byte_unit / 3;
-
-	i = comp_slice_width_byte_unit % 3;
-	j = comp_slice_width_pixel_unit % 2;
-
-	if (i == 0 && j == 0) {
-		compressed_slice_w = comp_slice_width_pixel_unit;
-	} else if (i == 0 && j != 0) {
-		compressed_slice_w = comp_slice_width_pixel_unit + 1;
-	} else if (i != 0) {
-		while (1) {
-			comp_slice_width_pixel_unit++;
-			j = comp_slice_width_pixel_unit % 2;
-			if (j == 0)
-				break;
-		}
-		compressed_slice_w = comp_slice_width_pixel_unit;
-	}
-
-	return compressed_slice_w;
-}
-
-static void dsim_parse_lcd_info(struct dsim_device *dsim)
-{
-	u32 res[14];
-	struct device_node *node;
-	unsigned int mres_num = 1;
-	u32 mres_w[3] = {0, };
-	u32 mres_h[3] = {0, };
-	u32 mres_dsc_w[3] = {0, };
-	u32 mres_dsc_h[3] = {0, };
-	u32 mres_dsc_en[3] = {0, };
-	u32 hdr_num = 0;
-	u32 hdr_type[HDR_CAPA_NUM] = {0, };
-	u32 hdr_mxl = 0;
-	u32 hdr_mal = 0;
-	u32 hdr_mnl = 0;
-	int k;
-
-	node = of_parse_phandle(dsim->dev->of_node, "lcd_info", 0);
-
-	of_property_read_u32(node, "mode", &dsim->lcd_info.mode);
-	dsim_info("%s mode\n", dsim->lcd_info.mode ? "command" : "video");
-
-	of_property_read_u32_array(node, "resolution", res, 2);
-	dsim->lcd_info.xres = res[0];
-	dsim->lcd_info.yres = res[1];
-	dsim_info("LCD(%s) resolution: xres(%d), yres(%d)\n",
-			of_node_full_name(node), res[0], res[1]);
-
-	of_property_read_u32_array(node, "size", res, 2);
-	dsim->lcd_info.width = res[0];
-	dsim->lcd_info.height = res[1];
-	dsim_dbg("LCD size: width(%d), height(%d)\n", res[0], res[1]);
-
-	of_property_read_u32(node, "timing,refresh", &dsim->lcd_info.fps);
-	dsim_dbg("LCD refresh rate(%d)\n", dsim->lcd_info.fps);
-
-	of_property_read_u32_array(node, "timing,h-porch", res, 3);
-	dsim->lcd_info.hbp = res[0];
-	dsim->lcd_info.hfp = res[1];
-	dsim->lcd_info.hsa = res[2];
-	dsim_dbg("hbp(%d), hfp(%d), hsa(%d)\n", res[0], res[1], res[2]);
-
-	of_property_read_u32_array(node, "timing,v-porch", res, 3);
-	dsim->lcd_info.vbp = res[0];
-	dsim->lcd_info.vfp = res[1];
-	dsim->lcd_info.vsa = res[2];
-	dsim_dbg("vbp(%d), vfp(%d), vsa(%d)\n", res[0], res[1], res[2]);
-
-	of_property_read_u32(node, "timing,dsi-hs-clk", &dsim->lcd_info.hs_clk);
-	dsim->clks.hs_clk = dsim->lcd_info.hs_clk;
-	dsim_dbg("requested hs clock(%d)\n", dsim->lcd_info.hs_clk);
-
-#if defined(CONFIG_EXYNOS_DSIM_DITHER)
-	of_property_read_u32_array(node, "timing,pmsk", res, 14);
-#else
-	of_property_read_u32_array(node, "timing,pmsk", res, 4);
-#endif
-	dsim->lcd_info.dphy_pms.p = res[0];
-	dsim->lcd_info.dphy_pms.m = res[1];
-	dsim->lcd_info.dphy_pms.s = res[2];
-	dsim->lcd_info.dphy_pms.k = res[3];
-	dsim_dbg("p(%d), m(%d), s(%d), k(%d)\n", res[0], res[1], res[2], res[3]);
-#if defined(CONFIG_EXYNOS_DSIM_DITHER)
-	dsim->lcd_info.dphy_pms.mfr = res[4];
-	dsim->lcd_info.dphy_pms.mrr = res[5];
-	dsim->lcd_info.dphy_pms.sel_pf = res[6];
-	dsim->lcd_info.dphy_pms.icp = res[7];
-	dsim->lcd_info.dphy_pms.afc_enb = res[8];
-	dsim->lcd_info.dphy_pms.extafc = res[9];
-	dsim->lcd_info.dphy_pms.feed_en = res[10];
-	dsim->lcd_info.dphy_pms.fsel = res[11];
-	dsim->lcd_info.dphy_pms.fout_mask = res[12];
-	dsim->lcd_info.dphy_pms.rsel = res[13];
-	dsim_dbg(" mfr(%d), mrr(0x%x), sel_pf(%d), icp(%d)\n",
-				res[4], res[5], res[6], res[7]);
-	dsim_dbg(" afc_enb(%d), extafc(%d), feed_en(%d), fsel(%d)\n",
-				res[8], res[9], res[10], res[11]);
-	dsim_dbg(" fout_mask(%d), rsel(%d)\n", res[12], res[13]);
-#endif
-
-	of_property_read_u32(node, "timing,dsi-escape-clk",
-			&dsim->lcd_info.esc_clk);
-	dsim->clks.esc_clk = dsim->lcd_info.esc_clk;
-	dsim_dbg("requested escape clock(%d)\n", dsim->lcd_info.esc_clk);
-
-	of_property_read_u32(node, "mic_en", &dsim->lcd_info.mic_enabled);
-	dsim_info("mic enabled (%d)\n", dsim->lcd_info.mic_enabled);
-
-	of_property_read_u32(node, "type_of_ddi", &dsim->lcd_info.ddi_type);
-	dsim_dbg("ddi type(%d)\n", dsim->lcd_info.ddi_type);
-
-	of_property_read_u32(node, "dsc_en", &dsim->lcd_info.dsc_enabled);
-	dsim_info("dsc is %s\n", dsim->lcd_info.dsc_enabled ? "enabled" : "disabled");
-
-	if (dsim->lcd_info.dsc_enabled) {
-		of_property_read_u32(node, "dsc_cnt", &dsim->lcd_info.dsc_cnt);
-		dsim_info("dsc count(%d)\n", dsim->lcd_info.dsc_cnt);
-		of_property_read_u32(node, "dsc_slice_num",
-				&dsim->lcd_info.dsc_slice_num);
-		dsim_info("dsc slice count(%d)\n", dsim->lcd_info.dsc_slice_num);
-		of_property_read_u32(node, "dsc_slice_h",
-				&dsim->lcd_info.dsc_slice_h);
-		dsim_info("dsc slice height(%d)\n", dsim->lcd_info.dsc_slice_h);
-
-		dsim->lcd_info.dsc_enc_sw = dsim_calc_slice_width(dsim->lcd_info.dsc_cnt,
-					dsim->lcd_info.dsc_slice_num, dsim->lcd_info.xres);
-		dsim->lcd_info.dsc_dec_sw = dsim->lcd_info.xres / dsim->lcd_info.dsc_slice_num;
-		dsim_info("dsc enc_sw(%d), dec_sw(%d)\n",
-				dsim->lcd_info.dsc_enc_sw, dsim->lcd_info.dsc_dec_sw);
-	}
-
-	of_property_read_u32(node, "data_lane", &dsim->data_lane_cnt);
-	dsim_info("using data lane count(%d)\n", dsim->data_lane_cnt);
-
-	dsim->lcd_info.data_lane = dsim->data_lane_cnt;
-
-	of_property_read_u32(node, "mres_en", &dsim->lcd_info.dt_lcd_mres.mres_en);
-	dsim_info("mres_en(%d)\n", dsim->lcd_info.dt_lcd_mres.mres_en);
-	dsim->lcd_info.mres_mode = 0; /* 0=WQHD, 1=FHD, 2=HD */
-	dsim->lcd_info.dt_lcd_mres.mres_number = mres_num; /* default = 1 */
-
-	if (dsim->lcd_info.dt_lcd_mres.mres_en) {
-		of_property_read_u32(node, "mres_number", &mres_num);
-		dsim->lcd_info.dt_lcd_mres.mres_number = mres_num;
-		dsim_info("mres_number(%d)\n", mres_num);
-
-		of_property_read_u32_array(node, "mres_width", mres_w, mres_num);
-		of_property_read_u32_array(node, "mres_height", mres_h, mres_num);
-		of_property_read_u32_array(node, "mres_dsc_width", mres_dsc_w, mres_num);
-		of_property_read_u32_array(node, "mres_dsc_height", mres_dsc_h, mres_num);
-		of_property_read_u32_array(node, "mres_dsc_en", mres_dsc_en, mres_num);
-
-		switch (mres_num) {
-		case 3:
-			dsim->lcd_info.dt_lcd_mres.res_info[2].width = mres_w[2];
-			dsim->lcd_info.dt_lcd_mres.res_info[2].height = mres_h[2];
-			dsim->lcd_info.dt_lcd_mres.res_info[2].dsc_en = mres_dsc_en[2];
-			dsim->lcd_info.dt_lcd_mres.res_info[2].dsc_width = mres_dsc_w[2];
-			dsim->lcd_info.dt_lcd_mres.res_info[2].dsc_height = mres_dsc_h[2];
-			dsim->lcd_info.dt_dsc_slice.dsc_enc_sw[2] =
-				dsim_calc_slice_width(dsim->lcd_info.dsc_cnt,
-						dsim->lcd_info.dsc_slice_num, mres_w[2]);
-			dsim->lcd_info.dt_dsc_slice.dsc_dec_sw[2] =
-				 mres_w[2] / dsim->lcd_info.dsc_slice_num;
-			dsim_info("mres[2]: dsc enc_sw(%d), dec_sw(%d)\n",
-					dsim->lcd_info.dt_dsc_slice.dsc_enc_sw[2],
-					dsim->lcd_info.dt_dsc_slice.dsc_dec_sw[2]);
-		case 2:
-			dsim->lcd_info.dt_lcd_mres.res_info[1].width = mres_w[1];
-			dsim->lcd_info.dt_lcd_mres.res_info[1].height = mres_h[1];
-			dsim->lcd_info.dt_lcd_mres.res_info[1].dsc_en = mres_dsc_en[1];
-			dsim->lcd_info.dt_lcd_mres.res_info[1].dsc_width = mres_dsc_w[1];
-			dsim->lcd_info.dt_lcd_mres.res_info[1].dsc_height = mres_dsc_h[1];
-			dsim->lcd_info.dt_dsc_slice.dsc_enc_sw[1] =
-				dsim_calc_slice_width(dsim->lcd_info.dsc_cnt,
-						dsim->lcd_info.dsc_slice_num, mres_w[1]);
-			dsim->lcd_info.dt_dsc_slice.dsc_dec_sw[1] =
-				 mres_w[1] / dsim->lcd_info.dsc_slice_num;
-			dsim_info("mres[1]: dsc enc_sw(%d), dec_sw(%d)\n",
-					dsim->lcd_info.dt_dsc_slice.dsc_enc_sw[1],
-					dsim->lcd_info.dt_dsc_slice.dsc_dec_sw[1]);
-		case 1:
-			dsim->lcd_info.dt_lcd_mres.res_info[0].width = mres_w[0];
-			dsim->lcd_info.dt_lcd_mres.res_info[0].height = mres_h[0];
-			dsim->lcd_info.dt_lcd_mres.res_info[0].dsc_en = mres_dsc_en[0];
-			dsim->lcd_info.dt_lcd_mres.res_info[0].dsc_width = mres_dsc_w[0];
-			dsim->lcd_info.dt_lcd_mres.res_info[0].dsc_height = mres_dsc_h[0];
-			dsim->lcd_info.dt_dsc_slice.dsc_enc_sw[0] =
-				dsim_calc_slice_width(dsim->lcd_info.dsc_cnt,
-						dsim->lcd_info.dsc_slice_num, mres_w[0]);
-			dsim->lcd_info.dt_dsc_slice.dsc_dec_sw[0] =
-				 mres_w[0] / dsim->lcd_info.dsc_slice_num;
-			dsim_info("mres[0]: dsc enc_sw(%d), dec_sw(%d)\n",
-					dsim->lcd_info.dt_dsc_slice.dsc_enc_sw[0],
-					dsim->lcd_info.dt_dsc_slice.dsc_dec_sw[0]);
-			break;
-		default:
-			dsim->lcd_info.dt_lcd_mres.res_info[0].width = dsim->lcd_info.width;
-			dsim->lcd_info.dt_lcd_mres.res_info[0].height = dsim->lcd_info.height;
-			dsim_warn("check multi-resolution configurations at DT\n");
-			break;
-		}
-		dsim_info("[LCD multi(%d)-resolution info] 1st(%dx%d), 2nd(%dx%d), 3rd(%dx%d)\n",
-				mres_num, mres_w[0], mres_h[0],
-				mres_w[1], mres_h[1], mres_w[2], mres_h[2]);
-	} else {
-		dsim->lcd_info.dt_lcd_mres.res_info[0].width = dsim->lcd_info.width;
-		dsim->lcd_info.dt_lcd_mres.res_info[0].height = dsim->lcd_info.height;
-	}
-
-	if (dsim->lcd_info.mode == DECON_MIPI_COMMAND_MODE) {
-		of_property_read_u32_array(node, "cmd_underrun_lp_ref",
-				dsim->lcd_info.cmd_underrun_lp_ref,
-				dsim->lcd_info.dt_lcd_mres.mres_number);
-		for (k = 0; k < dsim->lcd_info.dt_lcd_mres.mres_number; k++)
-			dsim_info("mres[%d] cmd_underrun_lp_ref(%d)\n", k,
-					dsim->lcd_info.cmd_underrun_lp_ref[k]);
-	} else {
-		of_property_read_u32(node, "vt_compensation",
-				&dsim->lcd_info.vt_compensation);
-		dsim_info("vt_compensation(%d)\n", dsim->lcd_info.vt_compensation);
-	}
-
-	/* HDR info */
-	of_property_read_u32(node, "hdr_num", &hdr_num);
-	dsim->lcd_info.dt_lcd_hdr.hdr_num = hdr_num;
-	dsim_info("hdr_num(%d)\n", hdr_num);
-
-	if (hdr_num != 0) {
-		of_property_read_u32_array(node, "hdr_type", hdr_type, hdr_num);
-		for (k = 0; k < hdr_num; k++) {
-			dsim->lcd_info.dt_lcd_hdr.hdr_type[k] = hdr_type[k];
-			dsim_info("hdr_type[%d] = %d\n", k, hdr_type[k]);
-		}
-
-		of_property_read_u32(node, "hdr_max_luma", &hdr_mxl);
-		of_property_read_u32(node, "hdr_max_avg_luma", &hdr_mal);
-		of_property_read_u32(node, "hdr_min_luma", &hdr_mnl);
-		dsim->lcd_info.dt_lcd_hdr.hdr_max_luma = hdr_mxl;
-		dsim->lcd_info.dt_lcd_hdr.hdr_max_avg_luma = hdr_mal;
-		dsim->lcd_info.dt_lcd_hdr.hdr_min_luma = hdr_mnl;
-		dsim_info("hdr_max_luma(%d), hdr_max_avg_luma(%d), hdr_min_luma(%d)\n",
-				hdr_mxl, hdr_mal, hdr_mnl);
-	}
-}
-
 static int dsim_parse_dt(struct dsim_device *dsim, struct device *dev)
 {
 	if (IS_ERR_OR_NULL(dev->of_node)) {
@@ -1534,11 +1129,6 @@ static int dsim_parse_dt(struct dsim_device *dsim, struct device *dev)
 
 	dsim->id = of_alias_get_id(dev->of_node, "dsim");
 	dsim_info("dsim(%d) probe start..\n", dsim->id);
-
-	if(of_property_read_u32(dev->of_node, "board_info",
-			&dsim->board_info))
-		dsim->board_info = 0;
-	dsim_info("board info... (%d)\n", dsim->board_info);
 
 	dsim->phy = devm_phy_get(dev, "dsim_dphy");
 	if (IS_ERR_OR_NULL(dsim->phy)) {
@@ -1553,34 +1143,8 @@ static int dsim_parse_dt(struct dsim_device *dsim, struct device *dev)
 	}
 
 	dsim->dev = dev;
-	dsim_get_gpios(dsim);
-	dsim_get_regulator(dsim);
-	dsim_parse_lcd_info(dsim);
 
 	return 0;
-}
-
-static void dsim_register_panel(struct dsim_device *dsim)
-{
-#if IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_S6E3HA2K)
-	dsim->panel_ops = &s6e3ha2k_mipi_lcd_driver;
-#elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_S6E3HF4)
-	dsim->panel_ops = &s6e3hf4_mipi_lcd_driver;
-#elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_S6E3HA6)
-	dsim->panel_ops = &s6e3ha6_mipi_lcd_driver;
-#elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_S6E3HA8)
-	dsim->panel_ops = &s6e3ha8_mipi_lcd_driver;
-#elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_S6E3HA9)
-	dsim->panel_ops = &s6e3ha9_mipi_lcd_driver;
-#elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_S6E3AA2)
-	dsim->panel_ops = &s6e3aa2_mipi_lcd_driver;
-#elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_EMUL_DISP)
-	dsim->panel_ops = &emul_disp_mipi_lcd_driver;
-#elif IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_S6E3FA0)
-	dsim->panel_ops = &s6e3fa0_mipi_lcd_driver;
-#else
-	dsim->panel_ops = &s6e3ha2k_mipi_lcd_driver;
-#endif
 }
 
 static int dsim_get_data_lanes(struct dsim_device *dsim)
@@ -1674,6 +1238,72 @@ static int dsim_init_resources(struct dsim_device *dsim, struct platform_device 
 	return 0;
 }
 
+static int dsim_register_panel(struct dsim_device *dsim)
+{
+	struct dsim_regs regs;
+	u32 panel_id;
+	int ret;
+
+	dsim_info("%s +\n", __func__);
+
+	dsim->panel = get_panel_drvdata();
+	if (dsim->panel->found == true) {
+		/* clock and data lane count are stored for DSIM init */
+		dsim->clks.hs_clk = dsim->panel->lcd_info.hs_clk;
+		dsim->clks.esc_clk = dsim->panel->lcd_info.esc_clk;
+		dsim->data_lane_cnt = dsim->panel->lcd_info.data_lane;
+		dsim_info("panel is already found in panel driver\n");
+		return 0;
+	}
+
+	pm_runtime_get_sync(dsim->dev);
+
+	/* DPHY power on : iso release */
+	phy_power_on(dsim->phy);
+	if (dsim->phy_ex)
+		phy_power_on(dsim->phy_ex);
+
+	dsim_reg_preinit(dsim->id);
+	dsim_reg_start(dsim->id);
+
+	dsim->state = DSIM_STATE_ON;
+	enable_irq(dsim->res.irq);
+
+	dsim_read_panel_id(dsim, &panel_id);
+	dsim_info("panel_id = 0x%x\n", panel_id);
+
+	ret = dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_REGISTER, &panel_id);
+	if (ret) {
+		dsim_err("%s: cannot find proper panel\n", __func__);
+		BUG();
+	}
+
+	dsim->lcd_info = &dsim->panel->lcd_info;
+	dsim->clks.hs_clk = dsim->panel->lcd_info.hs_clk;
+	dsim->clks.esc_clk = dsim->panel->lcd_info.esc_clk;
+	dsim->data_lane_cnt = dsim->panel->lcd_info.data_lane;
+	dsim->data_lane = 0x1F; /* 4 data lane + 1 clock lane */
+
+	dsim->state = DSIM_STATE_OFF;
+
+	if (dsim_reg_stop(dsim->id, dsim->data_lane) < 0) {
+		dsim_to_regs_param(dsim, &regs);
+		__dsim_dump(dsim->id, &regs);
+		return -EBUSY;
+	}
+	disable_irq(dsim->res.irq);
+
+	phy_power_off(dsim->phy);
+	if (dsim->phy_ex)
+		phy_power_off(dsim->phy_ex);
+
+	pm_runtime_put_sync(dsim->dev);
+
+	dsim_info("%s -\n", __func__);
+
+	return 0;
+}
+
 static int dsim_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -1709,7 +1339,6 @@ static int dsim_probe(struct platform_device *pdev)
 
 	dsim_init_subdev(dsim);
 	platform_set_drvdata(pdev, dsim);
-	dsim_register_panel(dsim);
 	timer_setup(&dsim->cmd_timer, dsim_cmd_fail_detector, 0);
 
 #if defined(CONFIG_CPU_IDLE)
@@ -1720,9 +1349,6 @@ static int dsim_probe(struct platform_device *pdev)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
 #endif
 
-	if (dsim->lcd_info.mode == DECON_VIDEO_MODE)
-		dsim_acquire_fb_resource(dsim);
-
 	pm_runtime_enable(dev);
 
 	ret = iovmm_activate(dev);
@@ -1732,31 +1358,31 @@ static int dsim_probe(struct platform_device *pdev)
 	}
 	iovmm_set_fault_handler(dev, dpu_sysmmu_fault_handler, NULL);
 
-	ret = dsim_get_data_lanes(dsim);
-	if (ret)
-		goto err_dt;
-
 	phy_init(dsim->phy);
 	if (dsim->phy_ex)
 		phy_init(dsim->phy_ex);
 
+	dsim_register_panel(dsim);
+
+	ret = dsim_get_data_lanes(dsim);
+	if (ret)
+		goto err_dt;
+
+	if (dsim->lcd_info->mode == DECON_VIDEO_MODE)
+		dsim_acquire_fb_resource(dsim);
+
 	dsim->state = DSIM_STATE_INIT;
 	dsim_enable(dsim);
 
-	/* TODO: If you want to enable DSIM BIST mode. you must turn on LCD here */
-
-#if !defined(BRINGUP_DSIM_BIST)
-	call_panel_ops(dsim, probe, dsim);
-#else
+#if defined(BRINGUP_DSIM_BIST)
 	/* TODO: This is for dsim BIST mode in zebu emulator. only for test*/
-	call_panel_ops(dsim, displayon, dsim);
+	dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DISPLAYON, NULL);
 	dsim_reg_set_bist(dsim->id, true);
 #endif
 
 	/* for debug */
 	/* dsim_dump(dsim); */
 
-	dsim_clocks_info(dsim);
 	dsim_create_cmd_rw_sysfs(dsim);
 
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
@@ -1771,7 +1397,7 @@ static int dsim_probe(struct platform_device *pdev)
 #endif
 
 	dsim_info("dsim%d driver(%s mode) has been probed.\n", dsim->id,
-		dsim->lcd_info.mode == DECON_MIPI_COMMAND_MODE ? "cmd" : "video");
+		dsim->lcd_info->mode == DECON_MIPI_COMMAND_MODE ? "cmd" : "video");
 	return 0;
 
 err_dt:

@@ -431,7 +431,7 @@ static int decon_handle_esd(struct decon_device *decon)
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION_TEST)
 		status = DSIM_ESD_OK;
 #else
-		status = call_panel_ops(dsim, read_state, dsim);
+		status = dsim_call_panel_ops(dsim, EXYNOS_PANEL_READ_STATE, NULL);
 #endif
 		if (status != DSIM_ESD_OK) {
 			decon_err("%s failed to recover subdev(status %d)\n",
@@ -519,7 +519,7 @@ static int decon_esd_thread(void *data)
 
 			decon_info("%s, Try to check ESD\n", __func__);
 
-			esd = call_panel_ops(dsim, read_state, dsim);
+			esd = dsim_call_panel_ops(dsim, EXYNOS_PANEL_READ_STATE, NULL);
 			decon_esd_process(esd, decon);
 
 			mutex_unlock(&decon->esd.lock);
