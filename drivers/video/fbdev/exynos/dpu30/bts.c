@@ -213,6 +213,20 @@ static u32 dpu_bts_find_latency_meet_aclk(u32 lat_cycle, u32 line_time,
 	return (aclk_mhz * 1000UL);
 }
 
+/* return : kHz value based on 1-pixel processing pipe-line */
+u32 dpu_bts_get_aclk(u32 xres, u32 yres, u32 fps)
+{
+	u32 aclk;
+	u64 tmp;
+
+	/* aclk = vclk_1pix * ( 1.1 + (48+20)/WIDTH ) : x1000 */
+	tmp = 1100 + (48000 + 20000) / xres;
+	aclk = xres * yres * fps * tmp / 1000;
+
+	/* convert to kHz unit */
+	return (aclk / 1000);
+}
+
 u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 		struct decon_win_config *config, u64 resol_clock)
 {
@@ -351,10 +365,8 @@ static void dpu_bts_find_max_disp_freq(struct decon_device *decon,
 	if (decon->dt.out_type == DECON_OUT_DP)
 		op_fps = decon->lcd_info->fps;
 
-	/* 1.1: 10% margin, 1000: for KHZ, 1: for raising to a unit */
-	resol_clock = decon->lcd_info->xres * decon->lcd_info->yres *
-		op_fps * 11 / 10 / 1000 + 1;
-	decon->bts.resol_clk = resol_clock;
+	resol_clock = dpu_bts_get_aclk(decon->lcd_info->xres,
+			decon->lcd_info->yres, op_fps);
 
 	DPU_DEBUG_BTS("\tDECON%d : resol clock = %d Khz\n",
 		decon->id, decon->bts.resol_clk);
@@ -401,6 +413,20 @@ static void dpu_bts_share_bw_info(int id)
 	}
 }
 
+static void dpu_bts_calc_dpp_bw(struct bts_decon_info *bts_info, int idx)
+{
+	struct bts_dpp_info *dpp = &bts_info->dpp[idx];
+	unsigned int dst_w, dst_h;
+
+	dst_w = dpp->dst.x2 - dpp->dst.x1;
+	dst_h = dpp->dst.y2 - dpp->dst.y1;
+
+	dpp->bw = ((u64)dpp->src_h * dpp->src_w * dpp->bpp * bts_info->vclk) /
+		(8 * dst_h * bts_info->lcd_w);
+
+	DPU_DEBUG_BTS("\tDPP%d bandwidth = %d\n", idx, dpp->bw);
+}
+
 void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 {
 	struct decon_win_config *config = regs->dpp_config;
@@ -408,6 +434,7 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 	const struct dpu_fmt *fmt_info;
 	enum dpp_rotate rot;
 	int idx, i;
+	u32 total_bw = 0;
 
 	if (!decon->bts.enabled)
 		return;
@@ -416,9 +443,14 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 	DPU_DEBUG_BTS("%s + : DECON%d\n", __func__, decon->id);
 
 	memset(&bts_info, 0, sizeof(struct bts_decon_info));
+
+	bts_info.vclk = decon->bts.resol_clk;
+	bts_info.lcd_w = decon->lcd_info->xres;
+	bts_info.lcd_h = decon->lcd_info->yres;
+
 	for (i = 0; i < decon->dt.max_win; ++i) {
 		if (config[i].state == DECON_WIN_STATE_BUFFER) {
-			idx = DPU_CH2DMA(config[i].idma_type); /* ch */
+			idx = DPU_CH2DMA(config[i].channel); /* ch */
 			/*
 			 * TODO: Array index of bts_info structure uses dma type.
 			 * This array index will be changed to DPP channel number
@@ -473,20 +505,16 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 				bts_info.dpp[idx].dst.x2,
 				bts_info.dpp[idx].dst.y1,
 				bts_info.dpp[idx].dst.y2);
+
+		dpu_bts_calc_dpp_bw(&bts_info, idx);
+		total_bw += bts_info.dpp[idx].bw;
 	}
 
-	bts_info.vclk = decon->bts.resol_clk;
-	bts_info.lcd_w = decon->lcd_info->xres;
-	bts_info.lcd_h = decon->lcd_info->yres;
-	decon->bts.total_bw = bts_calc_bw(decon->bts.type, &bts_info);
+	decon->bts.total_bw = total_bw;
 	memcpy(&decon->bts.bts_info, &bts_info, sizeof(struct bts_decon_info));
 
-	for (i = 0; i < BTS_DPP_MAX; ++i) {
+	for (i = 0; i < BTS_DPP_MAX; ++i)
 		decon->bts.bw[i].val = bts_info.dpp[i].bw;
-		if (decon->bts.bw[i].val)
-			DPU_DEBUG_BTS("\tDPP%d bandwidth = %d\n",
-					i, decon->bts.bw[i].val);
-	}
 
 	DPU_DEBUG_BTS("\tDECON%d total bandwidth = %d\n", decon->id,
 			decon->bts.total_bw);
@@ -524,7 +552,7 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 
 	if (is_after) { /* after DECON h/w configuration */
 		if (decon->bts.total_bw <= decon->bts.prev_total_bw)
-			bts_update_bw(decon->bts.type, bw);
+			bts_update_bw(decon->bts.bw_idx, bw);
 
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		if ((displayport->state == DISPLAYPORT_STATE_ON)
@@ -540,7 +568,7 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 		decon->bts.prev_max_disp_freq = decon->bts.max_disp_freq;
 	} else {
 		if (decon->bts.total_bw > decon->bts.prev_total_bw)
-			bts_update_bw(decon->bts.type, bw);
+			bts_update_bw(decon->bts.bw_idx, bw);
 
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		if ((displayport->state == DISPLAYPORT_STATE_ON)
@@ -613,10 +641,7 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 		else
 			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
-		if (!decon->bts.scen_updated) {
-			decon->bts.scen_updated = 1;
-			bts_update_scen(BS_DP_DEFAULT, 1);
-		}
+		bts_add_scenario(decon->bts.scen_idx[DPU_BS_DP_DEFAULT]);
 	} else if (pixelclock > 148500000) { /* pixelclock < 533000000 ? */
 		if (pm_qos_request_active(&decon->bts.mif_qos))
 			pm_qos_update_request(&decon->bts.mif_qos, 1352 * 1000);
@@ -638,7 +663,7 @@ void dpu_bts_release_bw(struct decon_device *decon)
 		return;
 
 	if (decon->dt.out_type == DECON_OUT_DSI) {
-		bts_update_bw(decon->bts.type, bw);
+		bts_update_bw(decon->bts.bw_idx, bw);
 		decon->bts.prev_total_bw = 0;
 		pm_qos_update_request(&decon->bts.disp_qos, 0);
 		decon->bts.prev_max_disp_freq = 0;
@@ -659,10 +684,7 @@ void dpu_bts_release_bw(struct decon_device *decon)
 		else
 			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
-		if (decon->bts.scen_updated) {
-			decon->bts.scen_updated = 0;
-			bts_update_scen(BS_DP_DEFAULT, 0);
-		}
+		bts_del_scenario(decon->bts.scen_idx[DPU_BS_DP_DEFAULT]);
 #endif
 	}
 
@@ -674,6 +696,14 @@ void dpu_bts_init(struct decon_device *decon)
 	int comp_ratio;
 	int i;
 	struct v4l2_subdev *sd = NULL;
+	const char *scen_name[DPU_BS_MAX] = {
+		"default",
+		"mfc_uhd",
+		"mfc_uhd_10bit",
+		"dp_default",
+		/* add scenario & update index of [decon_cal.h] */
+	};
+
 
 	DPU_DEBUG_BTS("%s +\n", __func__);
 
@@ -685,16 +715,26 @@ void dpu_bts_init(struct decon_device *decon)
 	}
 
 	if (decon->id == 1)
-		decon->bts.type = BTS_BW_DECON1;
+		decon->bts.bw_idx = bts_get_bwindex("DECON1");
 	else if (decon->id == 2)
-		decon->bts.type = BTS_BW_DECON2;
+		decon->bts.bw_idx = bts_get_bwindex("DECON2");
 	else
-		decon->bts.type = BTS_BW_DECON0;
+		decon->bts.bw_idx = bts_get_bwindex("DECON0");
+
+	/*
+	 * Get scenario index from BTS driver
+	 * Don't try to get index value of "default" scenario
+	 */
+	for (i = 1; i < DPU_BS_MAX; i++) {
+		if (scen_name[i] != NULL)
+			decon->bts.scen_idx[i] =
+				bts_get_scenindex(scen_name[i]);
+	}
 
 	for (i = 0; i < BTS_DPU_MAX; i++)
 		decon->bts.ch_bw[decon->id][i] = 0;
 
-	DPU_DEBUG_BTS("BTS_BW_TYPE(%d) -\n", decon->bts.type);
+	DPU_DEBUG_BTS("BTS_BW_TYPE(%d) -\n", decon->bts.bw_idx);
 
 	if (decon->lcd_info->dsc.en)
 		comp_ratio = 3;
