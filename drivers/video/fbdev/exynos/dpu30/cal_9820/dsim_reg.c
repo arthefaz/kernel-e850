@@ -2142,6 +2142,60 @@ static u32 dsim_reg_translate_lanecnt_to_lanes(int lanecnt)
 	return lanes;
 }
 
+/* This function is just for dsim basic initialization for reading panel id */
+void dsim_reg_preinit(u32 id)
+{
+	u32 lanes;
+	struct dsim_device *dsim = get_dsim_drvdata(id);
+	struct dsim_clks clks;
+	struct decon_lcd lcd_info;
+
+	/* default configuration just for reading panel id */
+	memset(&clks, 0, sizeof(struct dsim_clks));
+	clks.hs_clk = 1100;
+	clks.esc_clk = 20;
+	memset(&lcd_info, 0, sizeof(struct decon_lcd));
+	lcd_info.mode = DECON_MIPI_COMMAND_MODE;
+	lcd_info.xres = 1080;
+	lcd_info.yres = 1920;
+	lcd_info.dphy_pms.p = 3;
+	lcd_info.dphy_pms.m = 127;
+	lcd_info.dphy_pms.s = 0;
+	lcd_info.data_lane = 4;
+	lcd_info.cmd_underrun_lp_ref[0] = 3022;
+
+	/* DPHY reset control from SYSREG(0) */
+	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 0);
+
+	lanes = dsim_reg_translate_lanecnt_to_lanes(lcd_info.data_lane);
+
+	/* choose OSC_CLK */
+	dsim_reg_set_link_clock(id, 0);
+
+	dsim_reg_sw_reset(id);
+	dsim_reg_set_lanes(id, lanes, 1);
+	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
+	dsim_reg_enable_word_clock(id, 1);
+
+	/* Enable DPHY reset : DPHY reset start */
+	dpu_sysreg_dphy_reset(dsim->res.ss_regs, id, 0);
+
+	/* panel power on and reset are mandatory for reading panel id */
+	dsim_set_panel_power(dsim, 1);
+
+	dsim_reg_set_clocks(id, &clks, &lcd_info.dphy_pms, 1);
+	dsim_reg_set_lanes_dphy(id, lanes, 1);
+	dpu_sysreg_dphy_reset(dsim->res.ss_regs, id, 1); /* Release DPHY reset */
+
+	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
+
+	dsim_reg_set_config(id, &lcd_info, &clks);
+
+	/* PHY pll clock gate disable */
+	dsim_reg_set_pll_clk_gate_enable(id, DPHY_PLL_CLK_GATE_EN);
+	dsim_reset_panel(dsim);
+}
+
 void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
 		bool panel_ctrl)
 {
