@@ -35,6 +35,19 @@ struct ion_reserved_mem_struct {
 	bool		untouchable;
 } ion_reserved_mem[ION_NUM_HEAP_IDS - 1] __initdata;
 
+#if defined(CONFIG_CMA)
+#define exynos_cma_init_reserved_mem(base, size, bit, name, cma) \
+	cma_init_reserved_mem(base, size, bit, name, cma)
+#else
+static inline int exynos_cma_init_reserved_mem(phys_addr_t base, phys_addr_t size,
+					       unsigned int order_per_bit,
+					       const char *name,
+					       struct cma **res_cma)
+{
+	return -ENODEV;
+}
+#endif
+
 static int __init exynos_ion_reserved_mem_setup(struct reserved_mem *rmem)
 {
 	bool untch, reusable, secure;
@@ -83,8 +96,8 @@ static int __init exynos_ion_reserved_mem_setup(struct reserved_mem *rmem)
 		struct cma *cma;
 		int ret;
 
-		ret = cma_init_reserved_mem(rmem->base, rmem->size, 0,
-					    heapname, &cma);
+		ret = exynos_cma_init_reserved_mem(rmem->base, rmem->size, 0,
+						   heapname, &cma);
 		if (ret < 0) {
 			perrfn("failed to init cma for '%s'", heapname);
 			return ret;
