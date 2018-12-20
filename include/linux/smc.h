@@ -102,6 +102,10 @@
 /* For connectivity I/F */
 #define SMC_CMD_CONN_IF			(0x82000710)
 
+/* For PPMPU fail information */
+#define SMC_CMD_GET_PPMPU_FAIL_INFO	(0x8200211A)
+#define SMC_CMD_CHECK_PPMPU_CH_NUM	(0x8200211B)
+
 /* For MMCache flush */
 #define SMC_CMD_MM_CACHE_OPERATION	(0x82000720)
 
