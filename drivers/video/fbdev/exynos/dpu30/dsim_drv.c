@@ -372,9 +372,9 @@ exit:
 	return ret;
 }
 
-static void dsim_cmd_fail_detector(unsigned long arg)
+static void dsim_cmd_fail_detector(struct timer_list *arg)
 {
-	struct dsim_device *dsim = (struct dsim_device *)arg;
+	struct dsim_device *dsim = from_timer(dsim, arg, cmd_timer);
 	struct decon_device *decon = get_decon_drvdata(0);
 	struct dsim_regs regs;
 
@@ -1680,8 +1680,7 @@ static int dsim_probe(struct platform_device *pdev)
 	dsim_init_subdev(dsim);
 	platform_set_drvdata(pdev, dsim);
 	dsim_register_panel(dsim);
-	setup_timer(&dsim->cmd_timer, dsim_cmd_fail_detector,
-			(unsigned long)dsim);
+	timer_setup(&dsim->cmd_timer, dsim_cmd_fail_detector, 0);
 
 #if defined(CONFIG_CPU_IDLE)
 	dsim->idle_ip_index = exynos_get_idle_ip_index(dev_name(&pdev->dev));
