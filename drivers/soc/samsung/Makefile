@@ -73,3 +73,6 @@ obj-$(CONFIG_EXYNOS_HIU)	+= exynos-hiu.o
 # HAFM & HAFM-TB
 obj-$(CONFIG_EXYNOS_PSTATE_HAFM)	+= exynos-hafm.o
 obj-$(CONFIG_EXYNOS_PSTATE_HAFM_TB)	+= exynos-hafm-tb.o
+
+# Exynos PPMPU fail detector
+obj-$(CONFIG_EXYNOS_PPMPU_FAIL_DETECTOR)	+= exynos-ppmpu.o
