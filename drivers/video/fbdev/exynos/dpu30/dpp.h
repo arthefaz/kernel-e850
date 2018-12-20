@@ -148,7 +148,6 @@ struct dpp_resources {
 };
 
 struct dpp_debug {
-	struct timer_list op_timer;
 	u32 done_count;
 	u32 recovery_cnt;
 };
@@ -219,6 +218,7 @@ struct dpp_device {
 	struct v4l2_subdev sd;
 	struct dpp_resources res;
 	struct dpp_debug d;
+	struct timer_list op_timer;
 	wait_queue_head_t framedone_wq;
 	struct dpp_config *dpp_config;
 	spinlock_t slock;
