@@ -36,6 +36,7 @@
 #include <linux/mfd/syscon.h>
 #include <linux/regmap.h>
 #include <linux/delay.h>
+#include <linux/rtc.h>
 #include <linux/syscore_ops.h>
 #include <linux/soc/samsung/exynos-soc.h>
 #include <soc/samsung/exynos-pmu.h>
@@ -122,6 +123,11 @@ struct s3c2410_wdt {
 	unsigned int disable_reg_val;
 	unsigned int mask_reset_reg_val;
 	unsigned int noncpu_int_reg_val;
+
+	struct task_struct	*tsk;
+	struct thread_info	*thr;
+	struct rtc_time		tm;
+	int last_ping_cpu;
 };
 
 /**
@@ -417,12 +423,30 @@ static int s3c2410wdt_automatic_disable_wdt(struct s3c2410_wdt *wdt, bool mask)
 	return ret;
 }
 
+static void s3c2410wdt_print_rtc(int index)
+{
+	struct s3c2410_wdt *wdt = s3c_wdt[index];
+	time64_t sec;
+
+	wdt->tsk = current;
+	wdt->thr = current_thread_info();
+	wdt->last_ping_cpu = raw_smp_processor_id();
+	sec = ktime_get_real_seconds();
+	rtc_time_to_tm(sec, &wdt->tm);
+
+	dev_info(wdt->dev, "RTC %d-%02d-%02d %02d:%02d:%02d UTC, last_ping_cpu: %d\n",
+		wdt->tm.tm_year + 1900, wdt->tm.tm_mon + 1,
+		wdt->tm.tm_mday, wdt->tm.tm_hour,
+		wdt->tm.tm_min, wdt->tm.tm_sec, wdt->last_ping_cpu);
+}
+
 static int s3c2410wdt_keepalive(struct watchdog_device *wdd)
 {
 	struct s3c2410_wdt *wdt = watchdog_get_drvdata(wdd);
 	unsigned long flags, wtcnt = 0;
 
-	s3c2410wdt_multistage_wdt_keepalive();
+	if (wdt->cluster == LITTLE_CLUSTER)
+		s3c2410wdt_multistage_wdt_keepalive();
 
 	spin_lock_irqsave(&wdt->lock, flags);
 	writel(wdt->count, wdt->reg_base + S3C2410_WTCNT);
@@ -430,6 +454,7 @@ static int s3c2410wdt_keepalive(struct watchdog_device *wdd)
 
 	wtcnt = readl(wdt->reg_base + S3C2410_WTCNT);
 	dev_info(wdt->dev, "Watchdog cluster %u keepalive!, wtcnt = %lx\n", wdt->cluster, wtcnt);
+	s3c2410wdt_print_rtc(wdt->cluster);
 
 	return 0;
 }
@@ -505,6 +530,7 @@ static int s3c2410wdt_start(struct watchdog_device *wdd)
 
 	wtcon = readl(wdt->reg_base + S3C2410_WTCON);
 	dev_info(wdt->dev, "Watchdog cluster %u start, WTCON = %lx\n", wdt->cluster, wtcon);
+
 	return 0;
 }
 
@@ -854,7 +880,7 @@ static int s3c2410wdt_multistage_set_heartbeat(struct s3c2410_wdt *wdt, int rati
 static void s3c2410wdt_multistage_wdt_keepalive(void)
 {
 	int index;
-	unsigned long flags;
+	unsigned long flags, wtcnt = 0;
 
 	index = s3c2410wdt_get_multistage_index();
 
@@ -864,6 +890,12 @@ static void s3c2410wdt_multistage_wdt_keepalive(void)
 	spin_lock_irqsave(&s3c_wdt[index]->lock, flags);
 	writel(s3c_wdt[index]->count, s3c_wdt[index]->reg_base + S3C2410_WTCNT);
 	spin_unlock_irqrestore(&s3c_wdt[index]->lock, flags);
+
+	wtcnt = readl(s3c_wdt[index]->reg_base + S3C2410_WTCNT);
+	dev_info(s3c_wdt[index]->dev, "Watchdog cluster %u keepalive!, wtcnt = %lx\n",
+		s3c_wdt[index]->cluster, wtcnt);
+	s3c2410wdt_print_rtc(index);
+
 }
 
 static int s3c2410wdt_multistage_wdt_stop(void)
