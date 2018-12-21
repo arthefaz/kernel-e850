@@ -24,22 +24,22 @@
 
 extern int dpu_panel_log_level;
 
-#define DPU_DEBUG_PANEL(fmt, args...)						\
-	do {									\
-		if (dpu_panel_log_level >= 7)					\
-			dpu_debug_printk("PANEL", fmt,  ##args);			\
+#define DPU_DEBUG_PANEL(fmt, args...)					\
+	do {								\
+		if (dpu_panel_log_level >= 7)				\
+			dpu_debug_printk("PANEL", fmt,  ##args);	\
 	} while (0)
 
-#define DPU_INFO_PANEL(fmt, args...)						\
-	do {									\
-		if (dpu_panel_log_level >= 6)					\
-			dpu_debug_printk("PANEL", fmt,  ##args);			\
+#define DPU_INFO_PANEL(fmt, args...)					\
+	do {								\
+		if (dpu_panel_log_level >= 6)				\
+			dpu_debug_printk("PANEL", fmt,  ##args);	\
 	} while (0)
 
-#define DPU_ERR_PANEL(fmt, args...)						\
-	do {									\
-		if (dpu_panel_log_level >= 3)					\
-			dpu_debug_printk("PANEL", fmt, ##args);			\
+#define DPU_ERR_PANEL(fmt, args...)					\
+	do {								\
+		if (dpu_panel_log_level >= 3)				\
+			dpu_debug_printk("PANEL", fmt, ##args);		\
 	} while (0)
 
 #define MAX_REGULATORS		3
