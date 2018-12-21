@@ -12,7 +12,7 @@
 #ifndef __SAMSUNG_DECON_CAL_H__
 #define __SAMSUNG_DECON_CAL_H__
 
-#include "../panels/decon_lcd.h"
+#include "../panels/exynos_panel.h"
 #include "../format.h"
 
 #define CEIL(x)			((x-(u32)(x) > 0 ? (u32)(x+1) : (u32)(x)))
@@ -170,7 +170,7 @@ struct decon_mode_info {
 
 struct decon_param {
 	struct decon_mode_info psr;
-	struct decon_lcd *lcd_info;
+	struct exynos_panel_info *lcd_info;
 	u32 nr_windows;
 	void __iomem *disp_ss_regs; /* TODO: remove ? */
 };
@@ -196,6 +196,30 @@ struct decon_window_regs {
 struct decon_bts_bw {
 	u32 val;
 	u32 ch_num;
+};
+
+struct decon_dsc {
+	unsigned int comp_cfg;
+	unsigned int bit_per_pixel;
+	unsigned int pic_height;
+	unsigned int pic_width;
+	unsigned int slice_height;
+	unsigned int slice_width;
+	unsigned int chunk_size;
+	unsigned int initial_xmit_delay;
+	unsigned int initial_dec_delay;
+	unsigned int initial_scale_value;
+	unsigned int scale_increment_interval;
+	unsigned int scale_decrement_interval;
+	unsigned int first_line_bpg_offset;
+	unsigned int nfl_bpg_offset;
+	unsigned int slice_bpg_offset;
+	unsigned int initial_offset;
+	unsigned int final_offset;
+	unsigned int rc_range_parameters;
+	unsigned int overlap_w;
+	unsigned int width_per_enc;
+	unsigned char *dec_pps_t;
 };
 
 u32 DPU_DMA2CH(u32 dma);
@@ -229,13 +253,13 @@ int decon_reg_wait_update_done_and_mask(u32 id,
 /* For window update and multi resolution feature */
 int decon_reg_wait_idle_status_timeout(u32 id, unsigned long timeout);
 void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
-		struct decon_lcd *lcd_info, bool in_slice[],
+		struct exynos_panel_info *lcd_info, bool in_slice[],
 		u32 partial_w, u32 partial_h);
 void decon_reg_set_mres(u32 id, struct decon_param *p);
 
 /* For writeback configuration */
 void decon_reg_release_resource(u32 id, struct decon_mode_info *psr);
-void decon_reg_config_wb_size(u32 id, struct decon_lcd *lcd_info,
+void decon_reg_config_wb_size(u32 id, struct exynos_panel_info *lcd_info,
 		struct decon_param *param);
 
 /* DECON interrupt control */

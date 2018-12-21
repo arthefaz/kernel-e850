@@ -1016,12 +1016,12 @@ static void dsim_reg_set_vresol(u32 id, u32 vresol)
 	dsim_write_mask(id, DSIM_RESOL, val, DSIM_RESOL_VRESOL_MASK);
 }
 
-static void dsim_reg_set_hresol(u32 id, u32 hresol, struct decon_lcd *lcd)
+static void dsim_reg_set_hresol(u32 id, u32 hresol, struct exynos_panel_info *lcd)
 {
 	u32 width, val;
 
-	if (lcd->dsc_enabled)
-		width = lcd->dsc_enc_sw * lcd->dsc_slice_num;
+	if (lcd->dsc.en)
+		width = lcd->dsc.enc_sw * lcd->dsc.slice_num;
 	else
 		width = hresol;
 
@@ -1030,7 +1030,7 @@ static void dsim_reg_set_hresol(u32 id, u32 hresol, struct decon_lcd *lcd)
 	dsim_write_mask(id, DSIM_RESOL, val, DSIM_RESOL_HRESOL_MASK);
 }
 
-static void dsim_reg_set_porch(u32 id, struct decon_lcd *lcd)
+static void dsim_reg_set_porch(u32 id, struct exynos_panel_info *lcd)
 {
 	if (lcd->mode == DECON_VIDEO_MODE) {
 		dsim_reg_set_vbp(id, lcd->vbp);
@@ -1124,7 +1124,7 @@ static void dsim_reg_get_num_of_slice(u32 id, u32 *num_of_slice)
 	*num_of_slice = DSIM_CPRS_CTRL_NUM_OF_SLICE_GET(val);
 }
 
-static void dsim_reg_set_multi_slice(u32 id, struct decon_lcd *lcd_info)
+static void dsim_reg_set_multi_slice(u32 id, struct exynos_panel_info *lcd_info)
 {
 	u32 multi_slice = 1;
 	u32 val;
@@ -1136,7 +1136,7 @@ static void dsim_reg_set_multi_slice(u32 id, struct decon_lcd *lcd_info)
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE)
 		multi_slice = 1;
 	else if (lcd_info->mode == DECON_VIDEO_MODE)
-		multi_slice = lcd_info->dsc_slice_num > 1 ? 1 : 0;
+		multi_slice = lcd_info->dsc.slice_num > 1 ? 1 : 0;
 
 	/* if MULTI_SLICE_PACKET is enabled,
 	 * only one packet header is transferred
@@ -1147,13 +1147,13 @@ static void dsim_reg_set_multi_slice(u32 id, struct decon_lcd *lcd_info)
 				DSIM_CPRS_CTRL_MULI_SLICE_PACKET);
 }
 
-static void dsim_reg_set_size_of_slice(u32 id, struct decon_lcd *lcd_info)
+static void dsim_reg_set_size_of_slice(u32 id, struct exynos_panel_info *lcd_info)
 {
-	u32 slice_w = lcd_info->dsc_dec_sw;
+	u32 slice_w = lcd_info->dsc.dec_sw;
 	u32 val_01 = 0, mask_01 = 0;
 	u32 val_23 = 0, mask_23 = 0;
 
-	if (lcd_info->dsc_slice_num == 4) {
+	if (lcd_info->dsc.slice_num == 4) {
 		val_01 = DSIM_SLICE01_SIZE_OF_SLICE1(slice_w) |
 			DSIM_SLICE01_SIZE_OF_SLICE0(slice_w);
 		mask_01 = DSIM_SLICE01_SIZE_OF_SLICE1_MASK |
@@ -1165,21 +1165,21 @@ static void dsim_reg_set_size_of_slice(u32 id, struct decon_lcd *lcd_info)
 
 		dsim_write_mask(id, DSIM_SLICE01, val_01, mask_01);
 		dsim_write_mask(id, DSIM_SLICE23, val_23, mask_23);
-	} else if (lcd_info->dsc_slice_num == 2) {
+	} else if (lcd_info->dsc.slice_num == 2) {
 		val_01 = DSIM_SLICE01_SIZE_OF_SLICE1(slice_w) |
 			DSIM_SLICE01_SIZE_OF_SLICE0(slice_w);
 		mask_01 = DSIM_SLICE01_SIZE_OF_SLICE1_MASK |
 			DSIM_SLICE01_SIZE_OF_SLICE0_MASK;
 
 		dsim_write_mask(id, DSIM_SLICE01, val_01, mask_01);
-	} else if (lcd_info->dsc_slice_num == 1) {
+	} else if (lcd_info->dsc.slice_num == 1) {
 		val_01 = DSIM_SLICE01_SIZE_OF_SLICE0(slice_w);
 		mask_01 = DSIM_SLICE01_SIZE_OF_SLICE0_MASK;
 
 		dsim_write_mask(id, DSIM_SLICE01, val_01, mask_01);
 	} else {
 		dsim_err("not supported slice mode. dsc(%d), slice(%d)\n",
-				lcd_info->dsc_cnt, lcd_info->dsc_slice_num);
+				lcd_info->dsc.cnt, lcd_info->dsc.slice_num);
 	}
 }
 
@@ -1232,7 +1232,7 @@ static void dsim_reg_set_time_te_timeout(u32 id, u32 tetout)
 				DSIM_CMD_TE_CTRL1_TIME_TE_TOUT_MASK);
 }
 
-static void dsim_reg_set_cmd_ctrl(u32 id, struct decon_lcd *lcd_info,
+static void dsim_reg_set_cmd_ctrl(u32 id, struct exynos_panel_info *lcd_info,
 						struct dsim_clks *clks)
 {
 	unsigned int time_stable_vfp;
@@ -1634,7 +1634,7 @@ static int dsim_reg_get_dphy_timing(u32 hs_clk, u32 esc_clk,
 	return 0;
 }
 
-static void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info,
+static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 		struct dsim_clks *clks)
 {
 	u32 threshold;
@@ -1662,12 +1662,11 @@ static void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info,
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
 		/* DSU_MODE_1 is used in stead of 1 in MCD */
 		idx = lcd_info->mres_mode;
-		dsim_reg_set_cm_underrun_lp_ref(id,
-				lcd_info->cmd_underrun_lp_ref[idx]);
+		dsim_reg_set_cm_underrun_lp_ref(id, lcd_info->cmd_underrun_cnt[idx]);
 	}
 
-	if (lcd_info->dsc_enabled)
-		threshold = lcd_info->dsc_enc_sw * lcd_info->dsc_slice_num;
+	if (lcd_info->dsc.en)
+		threshold = lcd_info->dsc.enc_sw * lcd_info->dsc.slice_num;
 	else
 		threshold = lcd_info->xres;
 
@@ -1678,7 +1677,7 @@ static void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info,
 	dsim_reg_set_porch(id, lcd_info);
 
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
-		if (lcd_info->dsc_enabled)
+		if (lcd_info->dsc.en)
 			/* use 1-line transfer only */
 			num_of_transfer = lcd_info->yres;
 		else
@@ -1708,7 +1707,7 @@ static void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info,
 		dsim_dbg("%s: command mode set\n", __func__);
 	}
 
-	dsim_reg_enable_dsc(id, lcd_info->dsc_enabled);
+	dsim_reg_enable_dsc(id, lcd_info->dsc.en);
 
 	/* shadow disable */
 	dsim_reg_enable_shadow(id, 0);
@@ -1723,9 +1722,9 @@ static void dsim_reg_set_config(u32 id, struct decon_lcd *lcd_info,
 		dsim_reg_enable_clocklane(id, 0);
 	}
 
-	if (lcd_info->dsc_enabled) {
+	if (lcd_info->dsc.en) {
 		dsim_dbg("%s: dsc configuration is set\n", __func__);
-		dsim_reg_set_num_of_slice(id, lcd_info->dsc_slice_num);
+		dsim_reg_set_num_of_slice(id, lcd_info->dsc.slice_num);
 		dsim_reg_set_multi_slice(id, lcd_info); /* multi slice */
 		dsim_reg_set_size_of_slice(id, lcd_info);
 
@@ -2148,13 +2147,13 @@ void dsim_reg_preinit(u32 id)
 	u32 lanes;
 	struct dsim_device *dsim = get_dsim_drvdata(id);
 	struct dsim_clks clks;
-	struct decon_lcd lcd_info;
+	struct exynos_panel_info lcd_info;
 
 	/* default configuration just for reading panel id */
 	memset(&clks, 0, sizeof(struct dsim_clks));
 	clks.hs_clk = 1100;
 	clks.esc_clk = 20;
-	memset(&lcd_info, 0, sizeof(struct decon_lcd));
+	memset(&lcd_info, 0, sizeof(struct exynos_panel_info));
 	lcd_info.mode = DECON_MIPI_COMMAND_MODE;
 	lcd_info.xres = 1080;
 	lcd_info.yres = 1920;
@@ -2162,7 +2161,7 @@ void dsim_reg_preinit(u32 id)
 	lcd_info.dphy_pms.m = 127;
 	lcd_info.dphy_pms.s = 0;
 	lcd_info.data_lane = 4;
-	lcd_info.cmd_underrun_lp_ref[0] = 3022;
+	lcd_info.cmd_underrun_cnt[0] = 3022;
 
 	/* DPHY reset control from SYSREG(0) */
 	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 0);
@@ -2196,7 +2195,7 @@ void dsim_reg_preinit(u32 id)
 	dsim_reset_panel(dsim);
 }
 
-void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
+void dsim_reg_init(u32 id, struct exynos_panel_info *lcd_info, struct dsim_clks *clks,
 		bool panel_ctrl)
 {
 	u32 lanes;
@@ -2503,7 +2502,7 @@ void dsim_reg_function_reset(u32 id)
 }
 
 /* Set porch and resolution to support Partial update */
-void dsim_reg_set_partial_update(u32 id, struct decon_lcd *lcd_info)
+void dsim_reg_set_partial_update(u32 id, struct exynos_panel_info *lcd_info)
 {
 	dsim_reg_set_vresol(id, lcd_info->yres);
 	dsim_reg_set_hresol(id, lcd_info->xres, lcd_info);
@@ -2511,7 +2510,7 @@ void dsim_reg_set_partial_update(u32 id, struct decon_lcd *lcd_info)
 	dsim_reg_set_num_of_transfer(id, lcd_info->yres);
 }
 
-void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info)
+void dsim_reg_set_mres(u32 id, struct exynos_panel_info *lcd_info)
 {
 	u32 threshold;
 	u32 num_of_slice;
@@ -2525,10 +2524,10 @@ void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info)
 	}
 
 	idx = lcd_info->mres_mode;
-	dsim_reg_set_cm_underrun_lp_ref(id, lcd_info->cmd_underrun_lp_ref[idx]);
+	dsim_reg_set_cm_underrun_lp_ref(id, lcd_info->cmd_underrun_cnt[idx]);
 
-	if (lcd_info->dsc_enabled) {
-		threshold = lcd_info->dsc_enc_sw * lcd_info->dsc_slice_num;
+	if (lcd_info->dsc.en) {
+		threshold = lcd_info->dsc.enc_sw * lcd_info->dsc.slice_num;
 		/* use 1-line transfer only */
 		num_of_transfer = lcd_info->yres;
 	} else {
@@ -2542,10 +2541,10 @@ void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info)
 	dsim_reg_set_porch(id, lcd_info);
 	dsim_reg_set_num_of_transfer(id, num_of_transfer);
 
-	dsim_reg_enable_dsc(id, lcd_info->dsc_enabled);
-	if (lcd_info->dsc_enabled) {
+	dsim_reg_enable_dsc(id, lcd_info->dsc.en);
+	if (lcd_info->dsc.en) {
 		dsim_dbg("%s: dsc configuration is set\n", __func__);
-		dsim_reg_set_num_of_slice(id, lcd_info->dsc_slice_num);
+		dsim_reg_set_num_of_slice(id, lcd_info->dsc.slice_num);
 		dsim_reg_set_multi_slice(id, lcd_info); /* multi slice */
 		dsim_reg_set_size_of_slice(id, lcd_info);
 
