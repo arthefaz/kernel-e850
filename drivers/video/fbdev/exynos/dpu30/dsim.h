@@ -18,6 +18,7 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <media/v4l2-subdev.h>
+#include <video/mipi_display.h>
 
 #include "./panels/decon_lcd.h"
 #if defined(CONFIG_SOC_EXYNOS9820)
@@ -26,24 +27,6 @@
 #elif defined(CONFIG_SOC_EXYNOS9610)
 #include "./cal_9610/regs-dsim.h"
 #include "./cal_9610/dsim_cal.h"
-#endif
-
-#if defined(CONFIG_EXYNOS_DECON_LCD_S6E3HA2K)
-#include "./panels/s6e3ha2k_param.h"
-#elif defined(CONFIG_EXYNOS_DECON_LCD_S6E3HF4)
-#include "./panels/s6e3hf4_param.h"
-#elif defined(CONFIG_EXYNOS_DECON_LCD_EMUL_DISP)
-#include "./panels/emul_disp_param.h"
-#elif defined(CONFIG_EXYNOS_DECON_LCD_S6E3HA6)
-#include "./panels/s6e3ha6_param.h"
-#elif defined(CONFIG_EXYNOS_DECON_LCD_S6E3AA2)
-#include "./panels/s6e3aa2_param.h"
-#elif defined(CONFIG_EXYNOS_DECON_LCD_S6E3HA8)
-#include "./panels/s6e3ha8_param.h"
-#elif defined(CONFIG_EXYNOS_DECON_LCD_S6E3HA9)
-#include "./panels/s6e3ha9_param.h"
-#elif defined(CONFIG_EXYNOS_DECON_LCD_S6E3FA0)
-#include "./panels/s6e3fa0_param.h"
 #endif
 
 extern int dsim_log_level;
@@ -89,14 +72,6 @@ extern int dsim_log_level;
 	} while (0)
 
 extern struct dsim_device *dsim_drvdata[MAX_DSIM_CNT];
-extern struct dsim_lcd_driver s6e3ha2k_mipi_lcd_driver;
-extern struct dsim_lcd_driver emul_disp_mipi_lcd_driver;
-extern struct dsim_lcd_driver s6e3hf4_mipi_lcd_driver;
-extern struct dsim_lcd_driver s6e3ha6_mipi_lcd_driver;
-extern struct dsim_lcd_driver s6e3ha8_mipi_lcd_driver;
-extern struct dsim_lcd_driver s6e3ha9_mipi_lcd_driver;
-extern struct dsim_lcd_driver s6e3aa2_mipi_lcd_driver;
-extern struct dsim_lcd_driver s6e3fa0_mipi_lcd_driver;
 
 /* define video timer interrupt */
 enum {
@@ -245,27 +220,12 @@ struct dsim_device {
 	struct completion rd_comp;
 
 	int total_underrun_cnt;
-	struct backlight_device *bd;
 	int idle_ip_index;
 
 	struct dsim_fb_handover fb_handover;
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 	int esd_test;
 	bool esd_recovering;
-#endif
-};
-
-struct dsim_lcd_driver {
-	int (*probe)(struct dsim_device *dsim);
-	int (*suspend)(struct dsim_device *dsim);
-	int (*displayon)(struct dsim_device *dsim);
-	int (*resume)(struct dsim_device *dsim);
-	int (*dump)(struct dsim_device *dsim);
-	int (*mres)(struct dsim_device *dsim, int mres_idx);
-	int (*doze)(struct dsim_device *dsim);
-	int (*doze_suspend)(struct dsim_device *dsim);
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-	int (*read_state)(struct dsim_device *dsim);
 #endif
 };
 
@@ -296,17 +256,66 @@ static inline int dsim_rd_data(u32 id, u32 cmd_id, u32 addr, u32 size, u8 *buf)
 	return 0;
 }
 
-static inline int dsim_wr_data(u32 id, u32 cmd_id, unsigned long d0, u32 d1)
+static inline int dsim_wr_data(struct dsim_device *dsim, u32 type, u8 data[],
+		u32 len)
 {
-	int ret;
-	struct dsim_device *dsim = get_dsim_drvdata(id);
+	u32 t;
+	int ret = 0;
 
-	ret = dsim_write_data(dsim, cmd_id, d0, d1);
-	if (ret)
-		return ret;
+	switch (len) {
+	case 0:
+		return -EINVAL;
+	case 1:
+		t = type ? type : MIPI_DSI_DCS_SHORT_WRITE;
+		ret = dsim_write_data(dsim, t, (unsigned long)data[0], 0);
+		break;
+	case 2:
+		t = type ? type : MIPI_DSI_DCS_SHORT_WRITE_PARAM;
+		ret = dsim_write_data(dsim, t, (unsigned long)data[0], (u32)data[1]);
+		break;
+	default:
+		t = type ? type : MIPI_DSI_DCS_LONG_WRITE;
+		ret = dsim_write_data(dsim, t, (unsigned long)data, len);
+		break;
+	}
 
-	return 0;
+	return ret;
 }
+
+#define dsim_write_data_seq(dsim, seq...) do {			\
+	u8 d[] = { seq };					\
+	int ret;						\
+	ret = dsim_wr_data(dsim, 0, d, ARRAY_SIZE(d));		\
+	if (ret < 0)						\
+		dsim_err("failed to write cmd(%d)\n", ret);	\
+} while (0)
+
+#define dsim_write_data_seq_delay(dsim, delay, seq...) do {	\
+	dsim_write_data_seq(dsim, seq);				\
+	msleep(delay);						\
+} while (0)
+
+#define dsim_write_data_table(dsim, table) do {			\
+	int ret;						\
+	ret = dsim_wr_data(dsim, 0, table, ARRAY_SIZE(table));	\
+	if (ret < 0)						\
+		dsim_err("failed to write cmd(%d)\n", ret);	\
+} while (0)
+
+#define dsim_write_data_type_seq(dsim, type, seq...) do {	\
+	u8 d[] = { seq };					\
+	int ret;						\
+	ret = dsim_wr_data(dsim, type, d, ARRAY_SIZE(d));	\
+	if (ret < 0)						\
+		dsim_err("failed to write cmd(%d)\n", ret);	\
+} while (0)
+
+#define dsim_write_data_type_table(dsim, type, table) do {		\
+	int ret;							\
+	ret = dsim_wr_data(dsim, type, table, ARRAY_SIZE(table));	\
+	if (ret < 0)							\
+		dsim_err("failed to write cmd(%d)\n", ret);		\
+} while (0)
 
 static inline int dsim_wait_for_cmd_completion(u32 id)
 {
