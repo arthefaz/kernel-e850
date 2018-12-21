@@ -12,7 +12,7 @@
 #ifndef __SAMSUNG_DSIM_CAL_H__
 #define __SAMSUNG_DSIM_CAL_H__
 
-#include "../panels/decon_lcd.h"
+#include "../panels/exynos_panel.h"
 
 /* EVT1 feature */
 #define DPHY_PLL_CLK_GATE_EN	0
@@ -37,7 +37,7 @@ void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 s
 
 /* DSIM control */
 void dsim_reg_preinit(u32 id);
-void dsim_reg_init(u32 id, struct decon_lcd *lcd_info, struct dsim_clks *clks,
+void dsim_reg_init(u32 id, struct exynos_panel_info *lcd_info, struct dsim_clks *clks,
 		bool panel_ctrl);
 void dsim_reg_start(u32 id);
 int dsim_reg_stop(u32 id, u32 lanes);
@@ -64,8 +64,8 @@ void dsim_reg_enable_shadow_read(u32 id, u32 en);
 
 /* For window update and multi resolution feature */
 void dsim_reg_function_reset(u32 id);
-void dsim_reg_set_partial_update(u32 id, struct decon_lcd *lcd_info);
-void dsim_reg_set_mres(u32 id, struct decon_lcd *lcd_info);
+void dsim_reg_set_partial_update(u32 id, struct exynos_panel_info *lcd_info);
+void dsim_reg_set_mres(u32 id, struct exynos_panel_info *lcd_info);
 
 /* DSIM BIST for test */
 void dsim_reg_set_bist(u32 id, u32 en);
