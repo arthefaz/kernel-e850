@@ -175,13 +175,13 @@ err:
 static int decon_displayport_set_lcd_info(struct decon_device *decon)
 {
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	struct decon_lcd *lcd_info;
+	struct exynos_panel_info *lcd_info;
 	struct displayport_device *displayport = get_displayport_drvdata();
 
 	if (decon->lcd_info == NULL) {
-		lcd_info = kzalloc(sizeof(struct decon_lcd), GFP_KERNEL);
+		lcd_info = kzalloc(sizeof(struct exynos_panel_info), GFP_KERNEL);
 		if (!lcd_info) {
-			decon_err("could not allocate decon_lcd for displayport\n");
+			decon_err("could not allocate exynos_panel_info for dp\n");
 			return -ENOMEM;
 		}
 
@@ -259,13 +259,13 @@ int decon_displayport_get_hdr_capa_info(struct decon_device *decon,
 			displayport->rx_edid_data.min_lumi_data;
 	} else { /* For P version platform */
 		hdr_capa_info->out_num =
-			decon0->lcd_info->dt_lcd_hdr.hdr_num;
+			decon0->lcd_info->hdr.num;
 		hdr_capa_info->max_luminance =
-			decon0->lcd_info->dt_lcd_hdr.hdr_max_luma;
+			decon0->lcd_info->hdr.max_luma;
 		hdr_capa_info->max_average_luminance =
-			decon0->lcd_info->dt_lcd_hdr.hdr_max_avg_luma;
+			decon0->lcd_info->hdr.max_avg_luma;
 		hdr_capa_info->min_luminance =
-			decon0->lcd_info->dt_lcd_hdr.hdr_min_luma;
+			decon0->lcd_info->hdr.min_luma;
 	}
 #else
 	decon_info("Not compiled displayport driver\n");

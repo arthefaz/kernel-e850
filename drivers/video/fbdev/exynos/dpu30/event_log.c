@@ -17,6 +17,7 @@
 #include "decon.h"
 #include "dsim.h"
 #include "dpp.h"
+#include "./panels/exynos_panel_drv.h"
 
 /* DPU fence event logger function */
 void DPU_F_EVT_LOG(dpu_f_evt_t type, struct v4l2_subdev *sd,
@@ -1046,10 +1047,10 @@ static int decon_debug_cmd_lp_ref_show(struct seq_file *s, void *unused)
 	int i;
 
 	/* DSU_MODE_1 is used in stead of 1 in MCD */
-	seq_printf(s, "%u\n", dsim->lcd_info->mres_mode);
+	seq_printf(s, "%u\n", dsim->panel->lcd_info.mres_mode);
 
-	for (i = 0; i < dsim->lcd_info->dt_lcd_mres.mres_number; i++)
-		seq_printf(s, "%u\n", dsim->lcd_info->cmd_underrun_lp_ref[i]);
+	for (i = 0; i < dsim->panel->lcd_info.mres.number; i++)
+		seq_printf(s, "%u\n", dsim->panel->lcd_info.cmd_underrun_cnt[i]);
 
 	return 0;
 }
@@ -1082,8 +1083,8 @@ static ssize_t decon_debug_cmd_lp_ref_write(struct file *file, const char __user
 
 	dsim = get_dsim_drvdata(0);
 
-	idx = dsim->lcd_info->mres_mode;
-	dsim->lcd_info->cmd_underrun_lp_ref[idx] = cmd_lp_ref;
+	idx = dsim->panel->lcd_info.mres_mode;
+	dsim->panel->lcd_info.cmd_underrun_cnt[idx] = cmd_lp_ref;
 
 out:
 	kfree(buf_data);

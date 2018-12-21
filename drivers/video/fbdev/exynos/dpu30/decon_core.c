@@ -53,7 +53,6 @@
 #include "format.h"
 #include "decon.h"
 #include "dsim.h"
-#include "./panels/lcd_ctrl.h"
 #include "./panels/exynos_panel_drv.h"
 #include "../../../../dma-buf/sync_debug.h"
 #include "dpp.h"
@@ -173,7 +172,7 @@ void decon_dump(struct decon_device *decon)
 	}
 
 	__decon_dump(decon->id, decon->res.regs, base_regs,
-			decon->lcd_info->dsc_enabled);
+			decon->lcd_info->dsc.en);
 
 	if (decon->dt.out_type == DECON_OUT_DSI)
 		v4l2_subdev_call(decon->out_sd[0], core, ioctl,
@@ -324,7 +323,7 @@ static void decon_free_dma_buf(struct decon_device *decon,
 static void decon_set_black_window(struct decon_device *decon)
 {
 	struct decon_window_regs win_regs;
-	struct decon_lcd *lcd = decon->lcd_info;
+	struct exynos_panel_info *lcd = decon->lcd_info;
 
 	memset(&win_regs, 0, sizeof(struct decon_window_regs));
 	win_regs.wincon = wincon(0x8, 0xFF, 0xFF, 0xFF, DECON_BLENDING_NONE,
@@ -2631,9 +2630,8 @@ static int decon_get_hdr_capa(struct decon_device *decon,
 	mutex_lock(&decon->lock);
 
 	if (decon->dt.out_type == DECON_OUT_DSI) {
-		for (k = 0; k < decon->lcd_info->dt_lcd_hdr.hdr_num; k++)
-			hdr_capa->out_types[k] =
-				decon->lcd_info->dt_lcd_hdr.hdr_type[k];
+		for (k = 0; k < decon->lcd_info->hdr.num; k++)
+			hdr_capa->out_types[k] = decon->lcd_info->hdr.type[k];
 	} else if (decon->dt.out_type == DECON_OUT_DP) {
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		decon_displayport_get_hdr_capa(decon, hdr_capa);
@@ -2656,14 +2654,11 @@ static int decon_get_hdr_capa_info(struct decon_device *decon,
 	mutex_lock(&decon->lock);
 
 	if (decon->dt.out_type == DECON_OUT_DSI) {
-		hdr_capa_info->out_num =
-			decon->lcd_info->dt_lcd_hdr.hdr_num;
-		hdr_capa_info->max_luminance =
-			decon->lcd_info->dt_lcd_hdr.hdr_max_luma;
+		hdr_capa_info->out_num = decon->lcd_info->hdr.num;
+		hdr_capa_info->max_luminance = decon->lcd_info->hdr.max_luma;
 		hdr_capa_info->max_average_luminance =
-			decon->lcd_info->dt_lcd_hdr.hdr_max_avg_luma;
-		hdr_capa_info->min_luminance =
-			decon->lcd_info->dt_lcd_hdr.hdr_min_luma;
+			decon->lcd_info->hdr.max_avg_luma;
+		hdr_capa_info->min_luminance = decon->lcd_info->hdr.min_luma;
 	} else if (decon->dt.out_type == DECON_OUT_DP) {
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		decon_displayport_get_hdr_capa_info(decon, hdr_capa_info);
@@ -2765,8 +2760,8 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 {
 	struct decon_win *win = info->par;
 	struct decon_device *decon = win->decon;
-	struct decon_lcd *lcd_info = decon->lcd_info;
-	struct lcd_mres_info *mres_info = &lcd_info->dt_lcd_mres;
+	struct exynos_panel_info *lcd_info = decon->lcd_info;
+	struct lcd_mres_info *mres_info = &lcd_info->mres;
 	struct decon_win_config_data win_data;
 	struct decon_disp_info disp_info;
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
@@ -3346,7 +3341,7 @@ static void decon_release_windows(struct decon_win *win)
 
 static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *win)
 {
-	struct decon_lcd *lcd_info = decon->lcd_info;
+	struct exynos_panel_info *lcd_info = decon->lcd_info;
 	struct fb_info *fbi = win->fbinfo;
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct displayport_device *displayport;
@@ -3565,7 +3560,7 @@ static int decon_acquire_window(struct decon_device *decon, int idx)
 	struct decon_win *win;
 	struct fb_info *fbinfo;
 	struct fb_var_screeninfo *var;
-	struct decon_lcd *lcd_info = decon->lcd_info;
+	struct exynos_panel_info *lcd_info = decon->lcd_info;
 	int ret, i;
 
 	decon_dbg("acquire DECON window%d\n", idx);

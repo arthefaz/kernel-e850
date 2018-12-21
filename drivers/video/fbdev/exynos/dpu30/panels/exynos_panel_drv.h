@@ -18,7 +18,7 @@
 #include <linux/regulator/consumer.h>
 #include <video/mipi_display.h>
 #include <media/v4l2-subdev.h>
-#include "decon_lcd.h"
+#include "exynos_panel.h"
 #include "../dsim.h"
 #include "../decon.h"
 
@@ -68,15 +68,13 @@ struct exynos_panel_ops {
 
 struct exynos_panel_device {
 	u32 id;		/* panel device id */
-	int num_lcd_info;
 	bool found;	/* found connected panel or not */
 	struct device *dev;
 	struct v4l2_subdev sd;
 	struct mutex ops_lock;
 	struct exynos_panel_resources res;
 	struct backlight_device *bl;
-	struct decon_lcd lcd_info;
-	//struct dsim_lcd_driver *ops;
+	struct exynos_panel_info lcd_info;
 	struct exynos_panel_ops *ops;
 };
 

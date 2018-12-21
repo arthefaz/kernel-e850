@@ -326,7 +326,7 @@ static int exynos_panel_calc_slice_width(u32 dsc_cnt, u32 slice_num, u32 xres)
 	return compressed_slice_w;
 }
 
-static void exynos_panel_get_timing_info(struct decon_lcd *info,
+static void exynos_panel_get_timing_info(struct exynos_panel_info *info,
 		struct device_node *np)
 {
 	u32 res[14];
@@ -385,30 +385,30 @@ static void exynos_panel_get_timing_info(struct decon_lcd *info,
 	}
 }
 
-static void exynos_panel_get_dsc_info(struct decon_lcd *info,
+static void exynos_panel_get_dsc_info(struct exynos_panel_info *info,
 		struct device_node *np)
 {
-	of_property_read_u32(np, "dsc_en", &info->dsc_enabled);
-	DPU_INFO_PANEL("DSC %s\n", info->dsc_enabled ? "enabled" : "disabled");
+	of_property_read_u32(np, "dsc_en", &info->dsc.en);
+	DPU_INFO_PANEL("DSC %s\n", info->dsc.en ? "enabled" : "disabled");
 
-	if (info->dsc_enabled) {
-		of_property_read_u32(np, "dsc_cnt", &info->dsc_cnt);
-		of_property_read_u32(np, "dsc_slice_num", &info->dsc_slice_num);
-		of_property_read_u32(np, "dsc_slice_h", &info->dsc_slice_h);
+	if (info->dsc.en) {
+		of_property_read_u32(np, "dsc_cnt", &info->dsc.cnt);
+		of_property_read_u32(np, "dsc_slice_num", &info->dsc.slice_num);
+		of_property_read_u32(np, "dsc_slice_h", &info->dsc.slice_h);
 
-		info->dsc_enc_sw = exynos_panel_calc_slice_width(info->dsc_cnt,
-					info->dsc_slice_num, info->xres);
-		info->dsc_dec_sw = info->xres / info->dsc_slice_num;
+		info->dsc.enc_sw = exynos_panel_calc_slice_width(info->dsc.cnt,
+					info->dsc.slice_num, info->xres);
+		info->dsc.dec_sw = info->xres / info->dsc.slice_num;
 
 		DPU_INFO_PANEL(" DSC cnt(%d), slice cnt(%d), slice height(%d)\n",
-				info->dsc_cnt, info->dsc_slice_num,
-				info->dsc_slice_h);
+				info->dsc.cnt, info->dsc.slice_num,
+				info->dsc.slice_h);
 		DPU_INFO_PANEL(" DSC enc_sw(%d), dec_sw(%d)\n",
-				info->dsc_enc_sw, info->dsc_dec_sw);
+				info->dsc.enc_sw, info->dsc.dec_sw);
 	}
 }
 
-static void exynos_panel_get_mres_info(struct decon_lcd *info,
+static void exynos_panel_get_mres_info(struct exynos_panel_info *info,
 		struct device_node *np)
 {
 	u32 num;
@@ -419,15 +419,15 @@ static void exynos_panel_get_mres_info(struct decon_lcd *info,
 	u32 dsc_en[3] = {0, };
 	int i;
 
-	of_property_read_u32(np, "mres_en", &info->dt_lcd_mres.mres_en);
+	of_property_read_u32(np, "mres_en", &info->mres.en);
 	DPU_INFO_PANEL("Multi Resolution LCD %s\n",
-			info->dt_lcd_mres.mres_en ? "enabled" : "disabled");
+			info->mres.en ? "enabled" : "disabled");
 
-	if (info->dt_lcd_mres.mres_en) {
+	if (info->mres.en) {
 		info->mres_mode = 0; /* 0=WQHD, 1=FHD, 2=HD */
-		info->dt_lcd_mres.mres_number = 1; /* default = 1 */
+		info->mres.number = 1; /* default = 1 */
 		of_property_read_u32(np, "mres_number", &num);
-		info->dt_lcd_mres.mres_number = num;
+		info->mres.number = num;
 
 		of_property_read_u32_array(np, "mres_width", w, num);
 		of_property_read_u32_array(np, "mres_height", h, num);
@@ -436,39 +436,39 @@ static void exynos_panel_get_mres_info(struct decon_lcd *info,
 		of_property_read_u32_array(np, "mres_dsc_en", dsc_en, num);
 
 		for (i = 0; i < num; ++i) {
-			info->dt_lcd_mres.res_info[i].width = w[i];
-			info->dt_lcd_mres.res_info[i].height = h[i];
-			info->dt_lcd_mres.res_info[i].dsc_en = dsc_en[i];
-			info->dt_lcd_mres.res_info[i].dsc_width = dsc_w[i];
-			info->dt_lcd_mres.res_info[i].dsc_height = dsc_h[i];
-			info->dt_dsc_slice.dsc_enc_sw[i] =
-				exynos_panel_calc_slice_width(info->dsc_cnt,
-						info->dsc_slice_num, w[i]);
-			info->dt_dsc_slice.dsc_dec_sw[i] = w[i] / info->dsc_slice_num;
+			info->mres.res_info[i].width = w[i];
+			info->mres.res_info[i].height = h[i];
+			info->mres.res_info[i].dsc_en = dsc_en[i];
+			info->mres.res_info[i].dsc_width = dsc_w[i];
+			info->mres.res_info[i].dsc_height = dsc_h[i];
+			info->dsc_slice.dsc_enc_sw[i] =
+				exynos_panel_calc_slice_width(info->dsc.cnt,
+						info->dsc.slice_num, w[i]);
+			info->dsc_slice.dsc_dec_sw[i] = w[i] / info->dsc.slice_num;
 
 			if (info->mode == DECON_MIPI_COMMAND_MODE)
-				of_property_read_u32_array(np, "cmd_underrun_lp_ref",
-						info->cmd_underrun_lp_ref,
-						info->dt_lcd_mres.mres_number);
+				of_property_read_u32_array(np, "cmd_underrun_cnt",
+						info->cmd_underrun_cnt,
+						info->mres.number);
 
 			DPU_INFO_PANEL(" [%dx%d]: DSC(%d) enc/dec sw(%d %d) lp(%d)\n",
-					info->dt_lcd_mres.res_info[i].width,
-					info->dt_lcd_mres.res_info[i].height,
-					info->dt_lcd_mres.res_info[i].dsc_en,
-					info->dt_dsc_slice.dsc_enc_sw[i],
-					info->dt_dsc_slice.dsc_dec_sw[i],
-					info->cmd_underrun_lp_ref[i]);
+					info->mres.res_info[i].width,
+					info->mres.res_info[i].height,
+					info->mres.res_info[i].dsc_en,
+					info->dsc_slice.dsc_enc_sw[i],
+					info->dsc_slice.dsc_dec_sw[i],
+					info->cmd_underrun_cnt[i]);
 		}
 	} else {
 		if (info->mode == DECON_MIPI_COMMAND_MODE) {
-			of_property_read_u32(np, "cmd_underrun_lp_ref",
-					&info->cmd_underrun_lp_ref[0]);
-			DPU_INFO_PANEL("lp(%d)\n", &info->cmd_underrun_lp_ref[0]);
+			of_property_read_u32(np, "cmd_underrun_cnt",
+					&info->cmd_underrun_cnt[0]);
+			DPU_INFO_PANEL("lp(%d)\n", &info->cmd_underrun_cnt[0]);
 		}
 	}
 }
 
-static void exynos_panel_get_hdr_info(struct decon_lcd *info,
+static void exynos_panel_get_hdr_info(struct exynos_panel_info *info,
 		struct device_node *np)
 {
 	u32 hdr_num = 0;
@@ -478,22 +478,22 @@ static void exynos_panel_get_hdr_info(struct decon_lcd *info,
 
 	/* HDR info */
 	of_property_read_u32(np, "hdr_num", &hdr_num);
-	info->dt_lcd_hdr.hdr_num = hdr_num;
+	info->hdr.num = hdr_num;
 	DPU_INFO_PANEL("hdr_num(%d)\n", hdr_num);
 
 	if (hdr_num != 0) {
 		of_property_read_u32_array(np, "hdr_type", hdr_type, hdr_num);
 		for (i = 0; i < hdr_num; i++) {
-			info->dt_lcd_hdr.hdr_type[i] = hdr_type[i];
+			info->hdr.type[i] = hdr_type[i];
 			DPU_INFO_PANEL(" hdr_type[%d] = %d\n", i, hdr_type[i]);
 		}
 
 		of_property_read_u32(np, "hdr_max_luma", &max);
 		of_property_read_u32(np, "hdr_max_avg_luma", &avg);
 		of_property_read_u32(np, "hdr_min_luma", &min);
-		info->dt_lcd_hdr.hdr_max_luma = max;
-		info->dt_lcd_hdr.hdr_max_avg_luma = avg;
-		info->dt_lcd_hdr.hdr_min_luma = min;
+		info->hdr.max_luma = max;
+		info->hdr.max_avg_luma = avg;
+		info->hdr.min_luma = min;
 		DPU_INFO_PANEL(" luma max/avg/min(%d %d %d)\n", max, avg, min);
 	}
 }
@@ -502,7 +502,7 @@ static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 		struct device_node *np)
 {
 	u32 res[2];
-	struct decon_lcd *lcd_info = &panel->lcd_info;
+	struct exynos_panel_info *lcd_info = &panel->lcd_info;
 
 	of_property_read_u32(np, "mode", &lcd_info->mode);
 	of_property_read_u32_array(np, "resolution", res, 2);
