@@ -41,9 +41,8 @@ static int exynos_backlight_get_brightness(struct backlight_device *bl)
 static int exynos_backlight_update_status(struct backlight_device *bl)
 {
 	int brightness = bl->props.brightness;
-	unsigned char set_brightness[2] = {
-		0x51, 0xFF,
-	};
+	struct exynos_panel_device *panel = dev_get_drvdata(&bl->dev);
+	struct dsim_device *dsim = get_dsim_drvdata(0);
 
 	DPU_INFO_PANEL("%s: brightness = %d\n", __func__, brightness);
 #if 0
@@ -52,16 +51,11 @@ static int exynos_backlight_update_status(struct backlight_device *bl)
 			bl->props.state & BL_CORE_FBBLANK)
 		brightness = 0;
 #endif
-	set_brightness[1] = brightness;
 
 	if (brightness >= 0) {
-		DPU_INFO_PANEL("%s: [0x%x 0x%x]\n", __func__,
-				set_brightness[0], set_brightness[1]);
-		/* DO update brightness using dsim_wr_data */
-		if (dsim_wr_data(0, MIPI_DSI_DCS_SHORT_WRITE_PARAM,
-					(unsigned long)set_brightness[0],
-					(u32)set_brightness[1]) < 0)
-			DPU_ERR_PANEL("fail to send WRDISBV command.\n");
+		mutex_lock(&panel->ops_lock);
+		dsim_write_data_seq(dsim, 0x51, brightness);
+		mutex_unlock(&panel->ops_lock);
 	} else {
 		/* DO update brightness using dsim_wr_data */
 		/* backlight_off ??? */
@@ -534,8 +528,8 @@ static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 
 static void exynos_panel_list_up(void)
 {
-	panel_list[0] = &panel_s6e3ha9_ops;
-	panel_list[1] = &panel_s6e3ha8_ops;
+	panel_list[0] = &panel_s6e3ha8_ops;
+	panel_list[1] = &panel_s6e3ha9_ops;
 }
 
 static int exynos_panel_register_ops(struct exynos_panel_device *panel)
