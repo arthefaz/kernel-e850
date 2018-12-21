@@ -27,7 +27,6 @@
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 #include "displayport.h"
 #endif
-#include "./panels/lcd_ctrl.h"
 #include <video/mipi_display.h>
 
 static int __dpu_match_dev(struct device *dev, void *data)
@@ -106,7 +105,7 @@ bool is_scaling(struct decon_win_config *config)
 	return (config->dst.w != config->src.w) || (config->dst.h != config->src.h);
 }
 
-bool is_full(struct decon_rect *r, struct decon_lcd *lcd)
+bool is_full(struct decon_rect *r, struct exynos_panel_info *lcd)
 {
 	return (r->left == 0) && (r->top == 0) &&
 		(r->right == lcd->xres - 1) && (r->bottom == lcd->yres - 1);
@@ -131,7 +130,7 @@ void decon_to_psr_info(struct decon_device *decon, struct decon_mode_info *psr)
 
 void decon_to_init_param(struct decon_device *decon, struct decon_param *p)
 {
-	struct decon_lcd *lcd_info = decon->lcd_info;
+	struct exynos_panel_info *lcd_info = decon->lcd_info;
 	struct v4l2_mbus_framefmt mbus_fmt;
 
 	mbus_fmt.width = 0;

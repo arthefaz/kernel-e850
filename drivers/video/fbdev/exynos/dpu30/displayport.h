@@ -35,7 +35,7 @@
 #include "./cal_9820/regs-displayport.h"
 #endif
 
-#include "./panels/decon_lcd.h"
+#include "./panels/exynos_panel.h"
 #include "hdr_metadata.h"
 
 extern int displayport_log_level;
@@ -560,7 +560,7 @@ struct displayport_device {
 	spinlock_t slock;
 
 	struct dsim_lcd_driver *panel_ops;
-	struct decon_lcd lcd_info;
+	struct exynos_panel_info lcd_info;
 
 	struct v4l2_subdev sd;
 	struct v4l2_dv_timings cur_timings;

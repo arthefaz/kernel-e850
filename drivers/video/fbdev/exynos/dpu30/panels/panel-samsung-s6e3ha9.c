@@ -42,7 +42,7 @@ static int s6e3ha9_suspend(struct exynos_panel_device *panel)
 
 static int s6e3ha9_displayon(struct exynos_panel_device *panel)
 {
-	struct decon_lcd *lcd = &panel->lcd_info;
+	struct exynos_panel_info *lcd = &panel->lcd_info;
 	struct dsim_device *dsim = get_dsim_drvdata(0);
 
 	DPU_INFO_PANEL("%s +\n", __func__);
@@ -54,7 +54,7 @@ static int s6e3ha9_displayon(struct exynos_panel_device *panel)
 
 	/* DSC related configuration */
 	dsim_write_data_type_seq(dsim, MIPI_DSI_DSC_PRA, 0x1);
-	if (lcd->dsc_slice_num == 2)
+	if (lcd->dsc.slice_num == 2)
 		dsim_write_data_type_table(dsim, MIPI_DSI_DSC_PPS, SEQ_PPS_SLICE2);
 	else
 		DPU_ERR_PANEL("fail to set MIPI_DSI_DSC_PPS command\n");

@@ -154,5 +154,4 @@ struct decon_dsc {
 		unsigned int width_per_enc;
 		unsigned char *dec_pps_t;
 };
-
 #endif

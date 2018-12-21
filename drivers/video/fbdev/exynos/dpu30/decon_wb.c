@@ -119,13 +119,13 @@ void decon_wb_set_clocks(struct decon_device *decon)
 
 static int decon_wb_set_lcd_info(struct decon_device *decon)
 {
-	struct decon_lcd *lcd_info;
+	struct exynos_panel_info *lcd_info;
 	struct decon_device *decon0 = get_decon_drvdata(0);
 
 	if (decon->lcd_info == NULL) {
-		lcd_info = kzalloc(sizeof(struct decon_lcd), GFP_KERNEL);
+		lcd_info = kzalloc(sizeof(struct exynos_panel_info), GFP_KERNEL);
 		if (!lcd_info) {
-			decon_err("could not allocate decon_lcd for wb\n");
+			decon_err("could not allocate exynos_panel_info for wb\n");
 			return -ENOMEM;
 		}
 

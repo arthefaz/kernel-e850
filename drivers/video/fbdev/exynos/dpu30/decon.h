@@ -50,7 +50,7 @@
 #include "./cal_9610/decon_cal.h"
 #endif
 
-#include "./panels/decon_lcd.h"
+#include "./panels/exynos_panel.h"
 #include "dsim.h"
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 #include "displayport.h"
@@ -1046,7 +1046,7 @@ struct decon_device {
 	struct decon_debug d;
 	struct decon_update_regs up;
 	struct decon_vsync vsync;
-	struct decon_lcd *lcd_info;
+	struct exynos_panel_info *lcd_info;
 	struct decon_win_update win_up;
 	struct decon_hiber hiber;
 	struct decon_bts bts;
@@ -1438,7 +1438,7 @@ int decon_intersection(struct decon_rect *r1,
 
 bool is_decon_rect_differ(struct decon_rect *r1, struct decon_rect *r2);
 bool is_scaling(struct decon_win_config *config);
-bool is_full(struct decon_rect *r, struct decon_lcd *lcd);
+bool is_full(struct decon_rect *r, struct exynos_panel_info *lcd);
 void __iomem *dpu_get_sysreg_addr(void);
 void dpu_dump_afbc_info(void);
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)

@@ -183,7 +183,7 @@ int decon_get_out_sd(struct decon_device *decon)
 
 	v4l2_subdev_call(decon->out_sd[0], core, ioctl, DSIM_IOC_GET_LCD_INFO, NULL);
 	decon->lcd_info =
-		(struct decon_lcd *)v4l2_get_subdev_hostdata(decon->out_sd[0]);
+		(struct exynos_panel_info *)v4l2_get_subdev_hostdata(decon->out_sd[0]);
 	if (IS_ERR_OR_NULL(decon->lcd_info)) {
 		decon_err("failed to get lcd information\n");
 		return -EINVAL;
@@ -574,15 +574,15 @@ static ssize_t decon_show_psr_info(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct decon_device *decon = dev_get_drvdata(dev);
-	struct decon_lcd *lcd_info = decon->lcd_info;
+	struct exynos_panel_info *lcd_info = decon->lcd_info;
 	int i;
 	char *p = buf;
-	struct lcd_mres_info *mres_info = &lcd_info->dt_lcd_mres;
+	struct lcd_mres_info *mres_info = &lcd_info->mres;
 	int len;
 
 	len = sprintf(p, "%d\n", decon->dt.psr_mode);
-	len += sprintf(p + len, "%d\n", mres_info->mres_number);
-	for (i = 0; i < mres_info->mres_number; i++) {
+	len += sprintf(p + len, "%d\n", mres_info->number);
+	for (i = 0; i < mres_info->number; i++) {
 		if (mres_info->res_info[i].dsc_en)
 			len += sprintf(p + len, "%d\n%d\n%d\n%d\n%d\n",
 				mres_info->res_info[i].width,

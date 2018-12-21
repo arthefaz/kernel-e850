@@ -47,7 +47,7 @@
 
 
 /* unit : usec x 1000 -> 5592 (5.592us) for WQHD+ case */
-static inline u32 dpu_bts_get_one_line_time(struct decon_lcd *lcd_info)
+static inline u32 dpu_bts_get_one_line_time(struct exynos_panel_info *lcd_info)
 {
 	u32 tot_v;
 	int tmp;
@@ -137,15 +137,15 @@ static inline u32 dpu_bts_dsc_latency(u32 slice_num, u32 dsc_cnt, u32 dst_w)
  * rotate and afbc are incompatible
  */
 static u32 dpu_bts_get_initial_latency(bool is_r, u32 is_s, bool is_c,
-		struct decon_lcd *lcd_info, u32 src_w, u32 dst_w, u32 ppc,
-		u32 cpl, u32 lmc)
+		struct exynos_panel_info *lcd_info, u32 src_w, u32 dst_w,
+		u32 ppc, u32 cpl, u32 lmc)
 {
 	u32 lat_cycle = 0;
 	u32 tmp;
 
-	if (lcd_info->dsc_enabled) {
-		lat_cycle = dpu_bts_dsc_latency(lcd_info->dsc_slice_num,
-				lcd_info->dsc_cnt, dst_w);
+	if (lcd_info->dsc.en) {
+		lat_cycle = dpu_bts_dsc_latency(lcd_info->dsc.slice_num,
+				lcd_info->dsc.cnt, dst_w);
 		DPU_DEBUG_BTS("\tDSC_lat_cycle(%d)\n", lat_cycle);
 	}
 
@@ -247,7 +247,7 @@ u64 dpu_bts_calc_aclk_disp(struct decon_device *decon,
 	s_ratio_v = (src_h <= dst->h) ? MULTI_FACTOR : MULTI_FACTOR * (u64)src_h / (u64)dst->h;
 
 	/* case for using dsc encoder 1ea at decon0 or decon1 */
-	if ((decon->id != 2) && (decon->lcd_info->dsc_cnt == 1))
+	if ((decon->id != 2) && (decon->lcd_info->dsc.cnt == 1))
 		ppc = ((decon->bts.ppc / 2UL) >= 1UL) ? (decon->bts.ppc / 2UL) : 1UL;
 	else
 		ppc = decon->bts.ppc;
@@ -700,7 +700,7 @@ void dpu_bts_init(struct decon_device *decon)
 
 	DPU_DEBUG_BTS("BTS_BW_TYPE(%d) -\n", decon->bts.type);
 
-	if (decon->lcd_info->dsc_enabled)
+	if (decon->lcd_info->dsc.en)
 		comp_ratio = 3;
 	else
 		comp_ratio = 1;

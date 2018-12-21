@@ -587,7 +587,7 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 		phy_power_on(dsim->phy_ex);
 
 	panel_ctrl = (state == DSIM_STATE_ON) ? true : false;
-	dsim_reg_init(dsim->id, dsim->lcd_info, &dsim->clks, panel_ctrl);
+	dsim_reg_init(dsim->id, &dsim->panel->lcd_info, &dsim->clks, panel_ctrl);
 	dsim_reg_start(dsim->id);
 
 	dsim->state = state;
@@ -776,7 +776,7 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 	mutex_unlock(&dsim->cmd_lock);
 
 	disable_irq(dsim->res.irq);
-	ret = dsim_reg_stop_and_enter_ulps(dsim->id, dsim->lcd_info->ddi_type,
+	ret = dsim_reg_stop_and_enter_ulps(dsim->id, dsim->panel->lcd_info.ddi_type,
 			dsim->data_lane);
 
 	phy_power_off(dsim->phy);
@@ -816,8 +816,8 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 	if (dsim->phy_ex)
 		phy_power_on(dsim->phy_ex);
 
-	dsim_reg_init(dsim->id, dsim->lcd_info, &dsim->clks, false);
-	ret = dsim_reg_exit_ulps_and_start(dsim->id, dsim->lcd_info->ddi_type,
+	dsim_reg_init(dsim->id, &dsim->panel->lcd_info, &dsim->clks, false);
+	ret = dsim_reg_exit_ulps_and_start(dsim->id, dsim->panel->lcd_info.ddi_type,
 			dsim->data_lane);
 	if (ret < 0)
 		dsim_dump(dsim);
@@ -852,7 +852,7 @@ static int dsim_set_freq_hop(struct dsim_device *dsim, u32 target_m)
 		return -EINVAL;
 	}
 
-	pms = &dsim->lcd_info->dphy_pms;
+	pms = &dsim->panel->lcd_info.dphy_pms;
 	/* If target M value is 0, frequency hopping will be disabled */
 	dsim_reg_set_dphy_freq_hopping(dsim->id, pms->p, target_m, pms->k,
 			(target_m > 0) ? 1 : 0);
@@ -918,7 +918,7 @@ static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 
 	switch (cmd) {
 	case DSIM_IOC_GET_LCD_INFO:
-		v4l2_set_subdev_hostdata(sd, dsim->lcd_info);
+		v4l2_set_subdev_hostdata(sd, &dsim->panel->lcd_info);
 		break;
 
 	case DSIM_IOC_ENTER_ULPS:
@@ -1278,7 +1278,6 @@ static int dsim_register_panel(struct dsim_device *dsim)
 		BUG();
 	}
 
-	dsim->lcd_info = &dsim->panel->lcd_info;
 	dsim->clks.hs_clk = dsim->panel->lcd_info.hs_clk;
 	dsim->clks.esc_clk = dsim->panel->lcd_info.esc_clk;
 	dsim->data_lane_cnt = dsim->panel->lcd_info.data_lane;
@@ -1368,7 +1367,7 @@ static int dsim_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_dt;
 
-	if (dsim->lcd_info->mode == DECON_VIDEO_MODE)
+	if (dsim->panel->lcd_info.mode == DECON_VIDEO_MODE)
 		dsim_acquire_fb_resource(dsim);
 
 	dsim->state = DSIM_STATE_INIT;
@@ -1397,7 +1396,7 @@ static int dsim_probe(struct platform_device *pdev)
 #endif
 
 	dsim_info("dsim%d driver(%s mode) has been probed.\n", dsim->id,
-		dsim->lcd_info->mode == DECON_MIPI_COMMAND_MODE ? "cmd" : "video");
+		dsim->panel->lcd_info.mode == DECON_MIPI_COMMAND_MODE ? "cmd" : "video");
 	return 0;
 
 err_dt:

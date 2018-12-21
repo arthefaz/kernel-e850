@@ -256,7 +256,7 @@ static bool dpu_need_mres_config(struct decon_device *decon,
 		goto end;
 	}
 
-	if (!decon->lcd_info->dt_lcd_mres.mres_en) {
+	if (!decon->lcd_info->mres.en) {
 		DPU_DEBUG_MRES("panel doesn't support multi-resolution\n");
 		goto end;
 	}
@@ -277,8 +277,8 @@ static bool dpu_need_mres_config(struct decon_device *decon,
 	}
 
 	/* match supported and requested LCD resolution */
-	for (i = 0; i < decon->lcd_info->dt_lcd_mres.mres_number; i++) {
-		supported_res = &decon->lcd_info->dt_lcd_mres.res_info[i];
+	for (i = 0; i < decon->lcd_info->mres.number; i++) {
+		supported_res = &decon->lcd_info->mres.res_info[i];
 		if ((supported_res->width == regs->lcd_width) &&
 			(supported_res->height == regs->lcd_height)) {
 			regs->mres_update = true;
@@ -356,7 +356,7 @@ void dpu_prepare_win_update_config(struct decon_device *decon,
 void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs)
 {
 	struct dsim_device *dsim = get_dsim_drvdata(0);
-	struct lcd_mres_info *mres_info = &dsim->lcd_info->dt_lcd_mres;
+	struct lcd_mres_info *mres_info = &dsim->panel->lcd_info.mres;
 	struct decon_param p;
 	int idx;
 
@@ -370,7 +370,7 @@ void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs
 		return;
 	}
 
-	if (!decon->lcd_info->dt_lcd_mres.mres_en) {
+	if (!decon->lcd_info->mres.en) {
 		DPU_DEBUG_MRES("panel doesn't support multi-resolution\n");
 		return;
 	}
@@ -390,20 +390,22 @@ void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs
 	decon_reg_wait_idle_status_timeout(decon->id, IDLE_WAIT_TIMEOUT);
 
 	/* backup current LCD resolution information to previous one */
-	dsim->lcd_info->xres = regs->lcd_width;
-	dsim->lcd_info->yres = regs->lcd_height;
-	dsim->lcd_info->mres_mode = regs->mres_idx;
+	dsim->panel->lcd_info.xres = regs->lcd_width;
+	dsim->panel->lcd_info.yres = regs->lcd_height;
+	dsim->panel->lcd_info.mres_mode = regs->mres_idx;
 	idx = regs->mres_idx;
-	dsim->lcd_info->dsc_enabled = mres_info->res_info[idx].dsc_en;
-	dsim->lcd_info->dsc_slice_h = mres_info->res_info[idx].dsc_height;
-	dsim->lcd_info->dsc_enc_sw = dsim->lcd_info->dt_dsc_slice.dsc_enc_sw[idx];
-	dsim->lcd_info->dsc_dec_sw = dsim->lcd_info->dt_dsc_slice.dsc_dec_sw[idx];
+	dsim->panel->lcd_info.dsc.en = mres_info->res_info[idx].dsc_en;
+	dsim->panel->lcd_info.dsc.slice_h = mres_info->res_info[idx].dsc_height;
+	dsim->panel->lcd_info.dsc.enc_sw =
+		dsim->panel->lcd_info.dsc_slice.dsc_enc_sw[idx];
+	dsim->panel->lcd_info.dsc.dec_sw =
+		dsim->panel->lcd_info.dsc_slice.dsc_dec_sw[idx];
 
 	/* transfer LCD resolution change commands to panel */
 	dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_MRES, &regs->mres_idx);
 
 	/* DECON and DSIM are reconfigured by changed LCD resolution */
-	dsim_reg_set_mres(dsim->id, dsim->lcd_info);
+	dsim_reg_set_mres(dsim->id, &dsim->panel->lcd_info);
 	decon_to_init_param(decon, &p);
 	decon_reg_set_mres(decon->id, &p);
 
@@ -412,7 +414,8 @@ void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs
 
 	DPU_DEBUG_MRES("changed LCD resolution(%d %d), dsc enc/dec sw(%d %d)\n",
 			decon->lcd_info->xres, decon->lcd_info->yres,
-			dsim->lcd_info->dsc_enc_sw, dsim->lcd_info->dsc_dec_sw);
+			dsim->panel->lcd_info.dsc.enc_sw,
+			dsim->panel->lcd_info.dsc.dec_sw);
 }
 
 static int win_update_send_partial_command(struct dsim_device *dsim,
@@ -462,7 +465,7 @@ static int win_update_send_partial_command(struct dsim_device *dsim,
 	return 0;
 }
 
-static void win_update_find_included_slice(struct decon_lcd *lcd,
+static void win_update_find_included_slice(struct exynos_panel_info *lcd,
 		struct decon_rect *rect, bool in_slice[])
 {
 	int slice_left, slice_right, slice_width;
@@ -470,9 +473,9 @@ static void win_update_find_included_slice(struct decon_lcd *lcd,
 
 	slice_left = 0;
 	slice_right = 0;
-	slice_width = lcd->dsc_dec_sw;
+	slice_width = lcd->dsc.dec_sw;
 
-	for (i = 0; i < lcd->dsc_slice_num; ++i) {
+	for (i = 0; i < lcd->dsc.slice_num; ++i) {
 		slice_left = slice_width * i;
 		slice_right = slice_left + slice_width - 1;
 		in_slice[i] = false;
@@ -489,11 +492,11 @@ static void win_update_find_included_slice(struct decon_lcd *lcd,
 static void win_update_set_partial_size(struct decon_device *decon,
 		struct decon_rect *rect)
 {
-	struct decon_lcd lcd_info;
+	struct exynos_panel_info lcd_info;
 	struct dsim_device *dsim = get_dsim_drvdata(0);
 	bool in_slice[MAX_DSC_SLICE_CNT];
 
-	memcpy(&lcd_info, decon->lcd_info, sizeof(struct decon_lcd));
+	memcpy(&lcd_info, decon->lcd_info, sizeof(struct exynos_panel_info));
 	lcd_info.xres = rect->right - rect->left + 1;
 	lcd_info.yres = rect->bottom - rect->top + 1;
 
@@ -568,7 +571,7 @@ void dpu_set_win_update_partial_size(struct decon_device *decon,
 
 void dpu_init_win_update(struct decon_device *decon)
 {
-	struct decon_lcd *lcd = decon->lcd_info;
+	struct exynos_panel_info *lcd = decon->lcd_info;
 
 	decon->win_up.enabled = false;
 	decon->cursor.xpos = lcd->xres / 2;
@@ -585,9 +588,9 @@ void dpu_init_win_update(struct decon_device *decon)
 		return;
 	}
 
-	if (lcd->dsc_enabled) {
-		decon->win_up.rect_w = lcd->xres / lcd->dsc_slice_num;
-		decon->win_up.rect_h = lcd->dsc_slice_h;
+	if (lcd->dsc.en) {
+		decon->win_up.rect_w = lcd->xres / lcd->dsc.slice_num;
+		decon->win_up.rect_h = lcd->dsc.slice_h;
 	} else {
 		decon->win_up.rect_w = MIN_WIN_BLOCK_WIDTH;
 		decon->win_up.rect_h = MIN_WIN_BLOCK_HEIGHT;

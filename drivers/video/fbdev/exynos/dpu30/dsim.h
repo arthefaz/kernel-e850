@@ -20,7 +20,7 @@
 #include <media/v4l2-subdev.h>
 #include <video/mipi_display.h>
 
-#include "./panels/decon_lcd.h"
+#include "./panels/exynos_panel.h"
 #if defined(CONFIG_SOC_EXYNOS9820)
 #include "./cal_9820/regs-dsim.h"
 #include "./cal_9820/dsim_cal.h"
@@ -208,7 +208,6 @@ struct dsim_device {
 	spinlock_t slock;
 
 	struct exynos_panel_device *panel;
-	struct decon_lcd *lcd_info;
 
 	struct v4l2_subdev sd;
 	struct dsim_clks clks;
@@ -419,7 +418,7 @@ static inline bool IS_DSIM_OFF_STATE(struct dsim_device *dsim)
 }
 
 #define DSIM_IOC_ENTER_ULPS		_IOW('D', 0, u32)
-#define DSIM_IOC_GET_LCD_INFO		_IOW('D', 5, struct decon_lcd *)
+#define DSIM_IOC_GET_LCD_INFO		_IOW('D', 5, struct exynos_panel_info *)
 #define DSIM_IOC_DUMP			_IOW('D', 8, u32)
 #define DSIM_IOC_GET_WCLK		_IOW('D', 9, u32)
 #define DSIM_IOC_SET_CONFIG		_IOW('D', 10, u32)
