@@ -176,8 +176,6 @@ static unsigned char PASET_TABLE[][5] = {
 
 static int s6e3ha8_suspend(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
 
@@ -271,29 +269,21 @@ static int s6e3ha8_mres(struct exynos_panel_device *panel, int mres_idx)
 
 static int s6e3ha8_doze(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
 
 static int s6e3ha8_doze_suspend(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
 
 static int s6e3ha8_dump(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
 
 static int s6e3ha8_read_state(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
 

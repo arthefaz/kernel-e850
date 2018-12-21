@@ -35,8 +35,6 @@ static unsigned char SEQ_PPS_SLICE2[] = {
 
 static int s6e3ha9_suspend(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
 
@@ -58,20 +56,6 @@ static int s6e3ha9_displayon(struct exynos_panel_device *panel)
 		dsim_write_data_type_table(dsim, MIPI_DSI_DSC_PPS, SEQ_PPS_SLICE2);
 	else
 		DPU_ERR_PANEL("fail to set MIPI_DSI_DSC_PPS command\n");
-
-#if 0
-	dsim_write_data(dsim, MIPI_DSI_DSC_PRA, (unsigned long)0x1, 0);
-	switch (lcd->dsc_slice_num) {
-	case 2:
-		dsim_write_data(dsim, MIPI_DSI_DSC_PPS,
-				(unsigned long)SEQ_PPS_SLICE2_S6E3HA9,
-				ARRAY_SIZE(SEQ_PPS_SLICE2_S6E3HA9));
-		break;
-	default:
-		DPU_ERR_PANEL("fail to set MIPI_DSI_DSC_PPS command\n");
-		break;
-	}
-#endif
 
 	dsim_write_data_seq_delay(dsim, 120, 0x11); /* sleep out: 120ms delay */
 	dsim_write_data_seq(dsim, 0xB9, 0x00, 0xB0, 0xE5, 0x09, 0x00, 0x00,
@@ -95,36 +79,26 @@ static int s6e3ha9_displayon(struct exynos_panel_device *panel)
 
 static int s6e3ha9_mres(struct exynos_panel_device *panel, int mres_idx)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
 
 static int s6e3ha9_doze(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
 
 static int s6e3ha9_doze_suspend(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
 
 static int s6e3ha9_dump(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
 
 static int s6e3ha9_read_state(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
 

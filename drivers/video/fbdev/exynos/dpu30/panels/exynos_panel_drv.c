@@ -111,12 +111,12 @@ static int exynos_panel_parse_gpios(struct exynos_panel_device *panel)
 		res->lcd_power[0] = of_get_gpio(n, 1);
 		if (res->lcd_power[0] < 0) {
 			res->lcd_power[0] = -1;
-			DPU_INFO_PANEL("This board doesn't support LCD power GPIO");
+			DPU_INFO_PANEL("not support LCD power GPIO");
 		}
 		res->lcd_power[1] = of_get_gpio(n, 2);
 		if (res->lcd_power[1] < 0) {
 			res->lcd_power[1] = -1;
-			DPU_INFO_PANEL("This board doesn't support 2nd LCD power GPIO");
+			DPU_INFO_PANEL("not support 2nd LCD power GPIO");
 		}
 	}
 
