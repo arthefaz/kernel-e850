@@ -395,6 +395,9 @@ static int exynos5_i2c_set_timing(struct exynos5_i2c *i2c, int mode)
 	if (mode == HSI2C_STAND_SPD) {
 		op_clk = i2c->stand_clock;
 
+		if (!op_clk)
+			op_clk = HSI2C_STAND_TX_CLOCK;
+
 		fs_div = ipclk / (op_clk * 16);
 		fs_div &= 0xFF;
 		utemp = readl(i2c->regs + HSI2C_TIMING_FS3) & ~0x00FF0000;
@@ -416,6 +419,9 @@ static int exynos5_i2c_set_timing(struct exynos5_i2c *i2c, int mode)
 				readl(i2c->regs + HSI2C_TIMING_FS3));
 	} else if (mode == HSI2C_FAST_PLUS_SPD) {
 		op_clk = i2c->fs_plus_clock;
+
+		if (!op_clk)
+			op_clk = HSI2C_FAST_PLUS_TX_CLOCK;
 
 		//fs_div = ipclk / (op_clk * 15);
 		//from the spec, fs and hs div calculation formula: Fscl = ipc/((CLK_DIV_FS+1)*16).
@@ -442,6 +448,10 @@ static int exynos5_i2c_set_timing(struct exynos5_i2c *i2c, int mode)
 	} else if (mode == HSI2C_HIGH_SPD) {
 		/* ipclk's unit is Hz, op_clk's unit is Hz */
 		op_clk = i2c->hs_clock;
+
+		if (!op_clk)
+			op_clk = HSI2C_HS_TX_CLOCK;
+
 		hs_div = ipclk / (op_clk * 15);
 		hs_div &= 0xFF;
 		utemp = readl(i2c->regs + HSI2C_TIMING_HS3) & ~0x00FF0000;
@@ -470,6 +480,10 @@ static int exynos5_i2c_set_timing(struct exynos5_i2c *i2c, int mode)
 		/* Fast speed mode */
 		/* ipclk's unit is Hz, op_clk's unit is Hz */
 		op_clk = i2c->fs_clock;
+
+		if (!op_clk)
+			op_clk = HSI2C_FS_TX_CLOCK;
+
 		fs_div = ipclk / (op_clk * 15);
 		fs_div &= 0xFF;
 		utemp = readl(i2c->regs + HSI2C_TIMING_FS3) & ~0x00FF0000;
