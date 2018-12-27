@@ -109,11 +109,6 @@ config DSIM_CMD_TEST
         depends on EXYNOS_DPU30
         default n
 
-config SUPPORT_LEGACY_FENCE
-	bool "Support legacy fence API"
-        depends on EXYNOS_DPU30
-        default n
-
 config SUPPORT_KERNEL_4_9
 	bool "Support kernel version 4.9"
         depends on EXYNOS_DPU30
