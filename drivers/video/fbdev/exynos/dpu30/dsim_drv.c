@@ -39,9 +39,6 @@
 #include <soc/samsung/exynos-cpupm.h>
 #endif
 #include <soc/samsung/exynos-pmu.h>
-#if defined(CONFIG_SUPPORT_LEGACY_ION)
-#include <linux/exynos_iovmm.h>
-#endif
 
 #include <linux/of_reserved_mem.h>
 #include "../../../../../mm/internal.h"
@@ -1315,9 +1312,9 @@ static int dsim_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-#if !defined(CONFIG_SUPPORT_LEGACY_ION)
+
 	dma_set_mask(dev, DMA_BIT_MASK(36));
-#endif
+
 	ret = dsim_parse_dt(dsim, dev);
 	if (ret)
 		goto err_dt;

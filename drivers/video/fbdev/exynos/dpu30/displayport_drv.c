@@ -2783,9 +2783,8 @@ static int displayport_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-#if !defined(CONFIG_SUPPORT_LEGACY_ION)
 	dma_set_mask(dev, DMA_BIT_MASK(36));
-#endif
+
 	ret = displayport_parse_dt(displayport, dev);
 	if (ret)
 		goto err_dt;
