@@ -48,6 +48,7 @@ extern int dpu_panel_log_level;
 extern struct exynos_panel_device *panel_drvdata;
 extern struct exynos_panel_ops panel_s6e3ha9_ops;
 extern struct exynos_panel_ops panel_s6e3ha8_ops;
+extern struct exynos_panel_ops panel_s6e3fa0_ops;
 
 struct exynos_panel_resources {
 	int lcd_reset;
