@@ -22,11 +22,7 @@
 #include <linux/pm_qos.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
-#if defined(CONFIG_SUPPORT_LEGACY_ION)
-#include <linux/exynos_iovmm.h>
-#else
 #include <linux/ion_exynos.h>
-#endif
 #if defined(CONFIG_EXYNOS_BTS)
 #include <soc/samsung/bts.h>
 #endif

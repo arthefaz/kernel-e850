@@ -109,11 +109,6 @@ config DSIM_CMD_TEST
         depends on EXYNOS_DPU30
         default n
 
-config SUPPORT_LEGACY_ION
-	bool "Support legacy ION API"
-        depends on EXYNOS_DPU30
-        default n
-
 config SUPPORT_LEGACY_FENCE
 	bool "Support legacy fence API"
         depends on EXYNOS_DPU30
