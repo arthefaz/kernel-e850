@@ -1350,6 +1350,8 @@ static int dsim_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(dev);
 
+	dsim_acquire_fb_resource(dsim);
+
 	ret = iovmm_activate(dev);
 	if (ret) {
 		dsim_err("failed to activate iovmm\n");
@@ -1366,9 +1368,6 @@ static int dsim_probe(struct platform_device *pdev)
 	ret = dsim_get_data_lanes(dsim);
 	if (ret)
 		goto err_dt;
-
-	if (dsim->panel->lcd_info.mode == DECON_VIDEO_MODE)
-		dsim_acquire_fb_resource(dsim);
 
 	dsim->state = DSIM_STATE_INIT;
 	dsim_enable(dsim);
