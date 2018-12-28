@@ -317,15 +317,13 @@ static void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 {
 #if defined(SUPPORT_USER_COEF)
 	u32 val, mask;
-	u32 csc_id = DPP_CSC_ID_BT_2020 + CSC_RANGE_LIMITED;
+	u32 csc_id = CSC_CUSTOMIZED_START; /* CSC_BT601/625/525 */
 	u32 c00, c01, c02;
 	u32 c10, c11, c12;
 	u32 c20, c21, c22;
 
-	if (csc_std == CSC_BT_2020)
-		csc_id = DPP_CSC_ID_BT_2020 + csc_rng;
-	else if (csc_std == CSC_DCI_P3)
-		csc_id = DPP_CSC_ID_DCI_P3 + csc_rng;
+	if ((csc_std > CSC_DCI_P3) && (csc_std <= CSC_ADOBE_RGB))
+		csc_id = (csc_std - CSC_CUSTOMIZED_START) * 2 + csc_rng;
 	else
 		dpp_err("Undefined CSC Type!!!\n");
 
