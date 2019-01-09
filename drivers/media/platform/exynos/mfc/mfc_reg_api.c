@@ -507,12 +507,31 @@ void mfc_set_pixel_format(struct mfc_ctx *ctx, unsigned int format)
 		ctx->mem_type_10bit = 1;
 		pix_val = 1;
 		break;
+	case V4L2_PIX_FMT_ARGB32:
+		pix_val = 8;
+		break;
+	case V4L2_PIX_FMT_RGB24:
+		pix_val = 9;
+		break;
+	case V4L2_PIX_FMT_RGB565:
+		pix_val = 10;
+		break;
+	case V4L2_PIX_FMT_RGB32X:
+		pix_val = 12;
+		break;
+	case V4L2_PIX_FMT_BGR32:
+		pix_val = 13;
+		break;
 	default:
 		pix_val = 0;
 		break;
 	}
 	reg |= pix_val;
-	reg |= (ctx->mem_type_10bit << 4);
+
+	/* for YUV format */
+	if (pix_val < 4)
+		reg |= (ctx->mem_type_10bit << 4);
+
 	MFC_WRITEL(reg, MFC_REG_PIXEL_FORMAT);
 	mfc_debug(2, "[FRAME] pixel format: %d, mem_type_10bit for 10bit: %d (reg: %#x)\n",
 			pix_val, ctx->mem_type_10bit, reg);

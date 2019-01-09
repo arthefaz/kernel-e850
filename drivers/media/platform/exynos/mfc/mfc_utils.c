@@ -161,22 +161,21 @@ static void __mfc_set_linear_stride_size(struct mfc_ctx *ctx,
 		raw->stride_2bits[2] = 0;
 		break;
 	case V4L2_PIX_FMT_RGB24:
-		ctx->raw_buf.stride[0] = ctx->img_width * 3;
-		ctx->raw_buf.stride[1] = 0;
-		ctx->raw_buf.stride[2] = 0;
+		raw->stride[0] = ALIGN((ctx->img_width * 3), 16);
+		raw->stride[1] = 0;
+		raw->stride[2] = 0;
 		break;
 	case V4L2_PIX_FMT_RGB565:
-		ctx->raw_buf.stride[0] = ctx->img_width * 2;
-		ctx->raw_buf.stride[1] = 0;
-		ctx->raw_buf.stride[2] = 0;
+		raw->stride[0] = ALIGN((ctx->img_width * 2), 16);
+		raw->stride[1] = 0;
+		raw->stride[2] = 0;
 		break;
 	case V4L2_PIX_FMT_RGB32X:
 	case V4L2_PIX_FMT_BGR32:
 	case V4L2_PIX_FMT_ARGB32:
-		ctx->raw_buf.stride[0] = (ctx->buf_stride > ctx->img_width) ?
-			(ALIGN(ctx->img_width, 16) * 4) : (ctx->img_width * 4);
-		ctx->raw_buf.stride[1] = 0;
-		ctx->raw_buf.stride[2] = 0;
+		raw->stride[0] = ALIGN((ctx->img_width * 4), 16);
+		raw->stride[1] = 0;
+		raw->stride[2] = 0;
 		break;
 	default:
 		break;
@@ -363,6 +362,17 @@ void mfc_enc_calc_src_size(struct mfc_ctx *ctx)
 	case V4L2_PIX_FMT_NV61M_P210:
 		raw->plane_size[0] = ALIGN(default_size, 256) * 2 + extra;
 		raw->plane_size[1] = ALIGN(default_size, 256) * 2 + extra;
+		break;
+	case V4L2_PIX_FMT_RGB24:
+		raw->plane_size[0] = ALIGN((default_size * 3), 256) + extra;
+		break;
+	case V4L2_PIX_FMT_RGB565:
+		raw->plane_size[0] = ALIGN((default_size * 2), 256) + extra;
+		break;
+	case V4L2_PIX_FMT_RGB32X:
+	case V4L2_PIX_FMT_BGR32:
+	case V4L2_PIX_FMT_ARGB32:
+		raw->plane_size[0] = ALIGN((default_size * 4), 256) + extra;
 		break;
 	default:
 		mfc_err_ctx("Invalid pixel format(%d)\n", ctx->src_fmt->fourcc);

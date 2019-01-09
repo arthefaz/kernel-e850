@@ -199,6 +199,16 @@ static void __mfc_set_enc_params(struct mfc_ctx *ctx)
 
 	mfc_set_pixel_format(ctx, ctx->src_fmt->fourcc);
 
+	if (ctx->src_fmt->type & MFC_FMT_RGB) {
+		reg = MFC_RAW_READL(MFC_REG_PIXEL_FORMAT);
+		mfc_clear_set_bits(reg, 0x1, 8, p->color_range);
+		if (p->transfer_characteristics)
+			mfc_clear_set_bits(reg, 0x3, 6, p->transfer_characteristics);
+		mfc_debug(2, "[RGB] enc color_range %d, transfer %d\n",
+				p->color_range, p->transfer_characteristics);
+		MFC_RAW_WRITEL(reg, MFC_REG_PIXEL_FORMAT);
+	}
+
 	/* padding control & value */
 	MFC_RAW_WRITEL(0x0, MFC_REG_E_PADDING_CTRL);
 	if (p->pad) {
