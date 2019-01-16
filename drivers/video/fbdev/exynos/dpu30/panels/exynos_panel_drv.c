@@ -571,6 +571,10 @@ static int exynos_panel_register(struct exynos_panel_device *panel, u32 id)
 		of_property_read_u32(np, "id", &panel_id);
 		DPU_INFO_PANEL("finding... %s(0x%x)\n", np->name, panel_id);
 
+		/*
+		 * TODO: The mode(video or command) should be compared
+		 * for distinguishing panel DT information which has same DDI ID
+		 */
 		if (id == panel_id) {
 			panel->found = true;
 			DPU_INFO_PANEL("matched panel is found(%s:0x%x)\n",
