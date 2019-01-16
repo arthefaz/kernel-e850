@@ -576,15 +576,7 @@ err:
 #define CFG_DESCTYPE_3 0x3
 int exynos_fmp_sec_config(int id)
 {
-	int ret;
-
-	if (id) {
-		pr_err("%s: fails to set set config for %d. only host0\n",
-			__func__, id);
-		return 0;
-	}
-
-	ret = exynos_smc(SMC_CMD_FMP_SECURITY, 0, id, CFG_DESCTYPE_3);
+	int ret = exynos_smc(SMC_CMD_FMP_SECURITY, 0, id, CFG_DESCTYPE_3);
 	if (ret)
 		pr_err("%s: Fail smc call for FMP_SECURITY. ret(%d)\n",
 				__func__, ret);

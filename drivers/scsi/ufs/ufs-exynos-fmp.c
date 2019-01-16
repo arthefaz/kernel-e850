@@ -72,11 +72,6 @@ int exynos_ufs_fmp_sec_cfg(struct exynos_ufs *ufs)
 	if (!ufs || (ufs->fmp == SMU_ID_MAX))
 		return 0;
 
-	if (ufs->fmp != SMU_EMBEDDED)
-		dev_err(ufs->dev, "%s is fails id:%d\n",
-				__func__, ufs->fmp);
-
-
 	dev_info(ufs->dev, "%s with id:%d\n", __func__, ufs->fmp);
 	return exynos_fmp_sec_config(ufs->fmp);
 }
