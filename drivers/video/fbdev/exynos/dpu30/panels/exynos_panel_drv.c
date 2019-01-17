@@ -463,7 +463,7 @@ static void exynos_panel_get_mres_info(struct exynos_panel_info *info,
 		if (info->mode == DECON_MIPI_COMMAND_MODE) {
 			of_property_read_u32(np, "cmd_underrun_cnt",
 					&info->cmd_underrun_cnt[0]);
-			DPU_INFO_PANEL("lp(%d)\n", &info->cmd_underrun_cnt[0]);
+			DPU_INFO_PANEL("lp(%d)\n", info->cmd_underrun_cnt[0]);
 		}
 	}
 }
