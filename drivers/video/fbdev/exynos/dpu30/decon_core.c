@@ -2166,10 +2166,6 @@ int decon_update_last_regs(struct decon_device *decon,
 
 	decon_check_used_dpp(decon, regs);
 
-#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
-	decon_update_vgf_info(decon, regs, true);
-#endif
-
 	decon_update_hdr_info(decon, regs);
 
 #if defined(CONFIG_EXYNOS_BTS)
@@ -2183,19 +2179,16 @@ int decon_update_last_regs(struct decon_device *decon,
 	decon_to_psr_info(decon, &psr);
 	if (regs->num_of_window) {
 		if (__decon_update_regs(decon, regs) < 0) {
-#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
-			decon_dump_afbc_handle(decon, old_dma_bufs);
-#endif
 			decon_dump(decon);
 			BUG();
 		}
 		if (!regs->num_of_window) {
-			__decon_update_clear(decon, regs);
+			decon_save_cur_buf_info(decon, regs);
 			decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 			goto end;
 		}
 	} else {
-		__decon_update_clear(decon, regs);
+		decon_save_cur_buf_info(decon, regs);
 		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 		goto end;
 	}
@@ -2219,11 +2212,6 @@ int decon_update_last_regs(struct decon_device *decon,
 
 end:
 	DPU_EVENT_LOG(DPU_EVT_FENCE_RELEASE, &decon->sd, ktime_set(0, 0));
-
-#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
-	decon_save_vgf_connected_win_id(decon, regs);
-	decon_update_vgf_info(decon, regs, false);
-#endif
 
 #if defined(CONFIG_EXYNOS_BTS)
 	/* add update bw : cur < prev */
