@@ -238,24 +238,34 @@ static int ion_handle_test_phys(struct ion_test_data *test_data,
 
 		break;
 	}
-	case PHYS_IS_ALIGNED:
+	case PHYS_IS_PHYSICALLY_CONTIGUOUS:
 	{
 		if (sgt->orig_nents != 1) {
 			perrfn("buffer should be physically contiguous");
 			ret = -EINVAL;
-			break;
 		}
-
+		break;
+	}
+	case PHYS_IS_ALIGNED:
+	{
 		if ((arg & ~arg) != 0) {
 			perrfn("arg %u of PHYS_IS_ALIGNED is not power of 2", arg);
 			ret = -EINVAL;
 			break;
 		}
 
-		if (!IS_ALIGNED(sg_phys(sgt->sgl), arg)) {
-			perrfn("buffer is not aligned by %u", arg);
-			ret = -EINVAL;
-			break;
+		for_each_sg(sgt->sgl, sg, sgt->orig_nents, i) {
+			if (!IS_ALIGNED(sg_phys(sg), arg)) {
+				perrfn("address is not aligned by %u", arg);
+				ret = -EINVAL;
+				break;
+			}
+
+			if (!IS_ALIGNED(sg->length, arg)) {
+				perrfn("length is not aligned by %u", arg);
+				ret = -EINVAL;
+				break;
+			}
 		}
 		break;
 	}

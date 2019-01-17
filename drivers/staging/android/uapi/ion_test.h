@@ -50,6 +50,8 @@ struct ion_test_rw_data {
  *		  migratetype is MIGRATE_CMA
  *		- PHYS_IS_ALIGNED: check if the address of the first physical
  *		  memory chunk is aligned by @arg.
+ *              - PHYS_IS_PHYSICALLY_CONTIGUOUS: check if the buffer is
+ *                physically contiguous.
  * @arg:	an argument to @cmd. the meaning of @arg varies according to
  *		@cmd.
  * @result:	result of @cmd is stored if required.
@@ -60,6 +62,7 @@ enum {
 	PHYS_IS_RESERVED = 2,
 	PHYS_IS_CMA = 3,
 	PHYS_IS_ALIGNED = 4,
+	PHYS_IS_PHYSICALLY_CONTIGUOUS = 5,
 };
 
 struct ion_test_phys_data {
