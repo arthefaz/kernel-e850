@@ -1482,13 +1482,17 @@ static struct s3c24xx_uart_port *exynos_serial_default_port(int port_index)
 
 static void exynos_usi_init(struct uart_port *port)
 {
+	struct s3c24xx_uart_port *ourport = to_ourport(port);
+
 	/* USI_RESET is active High signal.
 	 * Reset value of USI_RESET is 'h1 to drive stable value to PAD.
 	 * Due to this feature, the USI_RESET must be cleared (set as '0')
 	 * before transaction starts.
 	 */
-	wr_regl(port, USI_CON, USI_SET_RESET);
-	udelay(1);
+	if (!ourport->console_dbg) {
+		wr_regl(port, USI_CON, USI_SET_RESET);
+		udelay(1);
+	}
 
 	wr_regl(port, USI_CON, USI_RESET);
 	udelay(1);
@@ -1996,6 +2000,11 @@ static int s3c24xx_serial_probe(struct platform_device *pdev)
 		ourport->use_default_irq =1;
 	else
 		ourport->use_default_irq =0;
+
+	if (of_find_property(pdev->dev.of_node, "samsung,console-dbg", NULL))
+		ourport->console_dbg = 1;
+	else
+		ourport->console_dbg = 0;
 
 	ret = s3c24xx_serial_init_port(ourport, pdev);
 	if (ret < 0)
