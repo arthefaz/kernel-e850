@@ -293,53 +293,6 @@ static void cluster_disable(unsigned int cluster_id)
 	cal_cluster_disable(cluster_id);
 }
 
-/******************************************************************************
- *                               CPU HOTPLUG                                  *
- ******************************************************************************/
-/* cpumask for indecating last cpu of a cluster */
-struct cpumask cpuhp_last_mask;
-
-bool exynos_cpuhp_last_cpu(unsigned int cpu)
-{
-	return cpumask_test_cpu(cpu, &cpuhp_last_mask);
-}
-
-static int cpuhp_cpupm_online(unsigned int cpu)
-{
-	struct cpumask mask;
-
-	cpumask_and(&mask, cpu_cluster_mask(cpu), cpu_online_mask);
-	if (cpumask_weight(&mask) == 0) {
-		cluster_enable(cpu_topology[cpu].cluster_id);
-		/* clear cpus of this cluster from cpuhp_last_mask */
-		cpumask_andnot(&cpuhp_last_mask,
-			&cpuhp_last_mask, cpu_cluster_mask(cpu));
-	}
-
-	cpu_enable(cpu);
-
-	return 0;
-}
-
-static int cpuhp_cpupm_offline(unsigned int cpu)
-{
-	struct cpumask online_mask, last_mask;
-
-	cpu_disable(cpu);
-
-	spin_lock(&cpupm_lock);
-	cpumask_and(&online_mask, cpu_cluster_mask(cpu), cpu_online_mask);
-	cpumask_and(&last_mask, cpu_cluster_mask(cpu), &cpuhp_last_mask);
-	if ((cpumask_weight(&online_mask) == 0) && cpumask_empty(&last_mask)) {
-		/* set cpu cpuhp_last_mask */
-		cpumask_set_cpu(cpu, &cpuhp_last_mask);
-		cluster_disable(cpu_topology[cpu].cluster_id);
-	}
-	spin_unlock(&cpupm_lock);
-
-	return 0;
-}
-
 #ifdef CONFIG_CPU_IDLE
 
 /******************************************************************************
@@ -373,6 +326,8 @@ enum {
 
 /* Length of power mode name */
 #define NAME_LEN	32
+
+static int cpupm_initialized;
 
 /*
  * Power modes
@@ -430,6 +385,12 @@ struct power_mode {
 
 /* Maximum number of power modes manageable per cpu */
 #define MAX_MODE	5
+
+/* Iterator for power mode */
+#define for_each_mode(mode, array, pos)			\
+	for ((pos) = 0, (mode) = (array)[0];		\
+		(mode) = (array)[(pos)],		\
+		(pos) < MAX_MODE; (pos)++)
 
 /*
  * Main struct of CPUPM
@@ -900,6 +861,8 @@ static int __init exynos_cpupm_init(void)
 
 	idle_ip_init();
 
+	cpupm_initialized = 1;
+
 	return 0;
 }
 arch_initcall(exynos_cpupm_init);
@@ -912,6 +875,57 @@ static int __init exynos_cpupm_late_init(void)
 }
 late_initcall(exynos_cpupm_late_init);
 #endif
+
+/******************************************************************************
+ *                               CPU HOTPLUG                                  *
+ ******************************************************************************/
+static int cluster_sibling_weight(unsigned int cpu)
+{
+	struct exynos_cpupm *pm = &per_cpu(cpupm, cpu);
+	struct power_mode *mode;
+	struct cpumask mask;
+	int pos;
+
+	cpumask_clear(&mask);
+	for_each_mode(mode, pm->modes, pos) {
+		if (mode->type == POWERMODE_TYPE_CLUSTER) {
+			cpumask_and(&mask, &mode->siblings, cpu_online_mask);
+			break;
+		}
+	}
+
+	return cpumask_weight(&mask);
+}
+
+bool exynos_cpuhp_last_cpu(unsigned int cpu)
+{
+	return cluster_sibling_weight(cpu) == 0;
+}
+
+static int cpuhp_cpupm_online(unsigned int cpu)
+{
+	/*
+	 * When CPU become online at very early booting time,
+	 * CPUPM is not initiailized yet. Only in this case,
+	 * allow duplicate calls to cluster_enable().
+	 */
+	if (!cpupm_initialized || cluster_sibling_weight(cpu) == 0)
+		cluster_enable(cpu);
+
+	cpu_enable(cpu);
+
+	return 0;
+}
+
+static int cpuhp_cpupm_offline(unsigned int cpu)
+{
+	cpu_disable(cpu);
+
+	if (cluster_sibling_weight(cpu) == 0)
+		cluster_disable(cpu);
+
+	return 0;
+}
 
 static int cpuhp_cpupm_enable_idle(unsigned int cpu)
 {
