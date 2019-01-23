@@ -20,15 +20,6 @@
 #include <soc/samsung/cal-if.h>
 #include <soc/samsung/exynos-pmu.h>
 
-#ifdef CONFIG_CPU_IDLE
-/*
- * State of each cpu is managed by a structure declared by percpu, so there
- * is no need for protection for synchronization. However, when entering
- * the power mode, it is necessary to set the critical section to check the
- * state of cpus in the power domain, cpupm_lock is used for it.
- */
-static spinlock_t cpupm_lock;
-
 /******************************************************************************
  *                                  IDLE_IP                                   *
  ******************************************************************************/
@@ -185,7 +176,6 @@ static void __init fix_idle_ip_init(void)
 		fix_idle_ip_arr[i].reg_index = i;
 	}
 }
-#endif
 
 /******************************************************************************
  *                                CAL interfaces                              *
@@ -210,8 +200,6 @@ static void cluster_disable(unsigned int cluster_id)
 {
 	cal_cluster_disable(cluster_id);
 }
-
-#ifdef CONFIG_CPU_IDLE
 
 /******************************************************************************
  *                            CPU idle management                             *
@@ -318,6 +306,14 @@ struct exynos_cpupm {
 };
 
 static DEFINE_PER_CPU(struct exynos_cpupm, cpupm);
+
+/*
+ * State of each cpu is managed by a structure declared by percpu, so there
+ * is no need for protection for synchronization. However, when entering
+ * the power mode, it is necessary to set the critical section to check the
+ * state of cpus in the power domain, cpupm_lock is used for it.
+ */
+static spinlock_t cpupm_lock;
 
 /* Nop function to awake cpus */
 static void do_nothing(void *unused)
@@ -824,7 +820,6 @@ static int __init exynos_cpupm_late_init(void)
 	return 0;
 }
 late_initcall(exynos_cpupm_late_init);
-#endif
 
 /******************************************************************************
  *                               CPU HOTPLUG                                  *
