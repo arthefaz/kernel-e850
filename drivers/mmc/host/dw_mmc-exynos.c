@@ -133,7 +133,8 @@ void dw_mci_reg_dump(struct dw_mci *host)
 	dev_err(host->dev, ": FORCE_CLK_STOP: 0x%08x\n",
 		host->sfr_dump->force_clk_stop = mci_readl(host, FORCE_CLK_STOP));
 	dev_err(host->dev, ": CDTHRCTL: 0x%08x\n", mci_readl(host, CDTHRCTL));
-	dw_mci_exynos_register_dump(host);
+	if (host->ch_id == 0)
+		dw_mci_exynos_register_dump(host);
 	dev_err(host->dev, ": ============== STATUS DUMP ================\n");
 	dev_err(host->dev, ": cmd_status:      0x%08x\n",
 		host->sfr_dump->cmd_status = host->cmd_status);

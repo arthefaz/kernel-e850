@@ -3379,6 +3379,7 @@ static int dw_mci_init_slot_caps(struct dw_mci_slot *slot)
 	} else {
 		ctrl_id = to_platform_device(host->dev)->id;
 	}
+	host->ch_id = ctrl_id;
 
 	if (drv_data && drv_data->caps) {
 		if (ctrl_id >= drv_data->num_caps) {
