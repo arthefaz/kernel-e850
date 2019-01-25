@@ -216,31 +216,41 @@ static int dw_mci_exynos_priv_init(struct dw_mci *host)
 	return 0;
 }
 
-static void dw_mci_ssclk_control(struct dw_mci *host, int enable)
+static void dw_mci_exynos_ssclk_control(struct dw_mci *host, int enable)
 {
 #if 0
-	if (host->pdata->quirks & DW_MCI_QUIRK_USE_SSC) {
-		u32 err;
+	u32 err;
 
-		if (enable && cal_pll_mmc_check() == false) {
-			if (host->pdata->ssc_rate > 8) {
-				dev_info(host->dev, "unvalid SSC rate value.\n");
-			} else {
-				err = cal_pll_mmc_set_ssc(12, host->pdata->ssc_rate, 1);
-				if (err)
-					dev_info(host->dev, "SSC set fail.\n");
-				else
-					dev_info(host->dev, "SSC set enable.\n");
-			}
-		} else if (!enable && cal_pll_mmc_check() == true) {
-			err = cal_pll_mmc_set_ssc(0, 0, 0);
-			if (err)
-				dev_info(host->dev, "SSC set fail.\n");
-			else
-				dev_info(host->dev, "SSC set disable.\n");
+	if (!(host->pdata->quirks & DW_MCI_QUIRK_USE_SSC))
+		return;
+
+	if (enable) {
+		if (cal_pll_mmc_check() == true)
+			goto out;
+
+		if (host->pdata->ssc_rate > 8) {
+			dev_info(host->dev, "unvalid SSC rate value\n");
+			goto out;
 		}
+
+		err = cal_pll_mmc_set_ssc(12, host->pdata->ssc_rate, 1);
+		if (err)
+			dev_info(host->dev, "SSC set fail.\n");
+		else
+			dev_info(host->dev, "SSC set enable.\n");
+	} else {
+		if (cal_pll_mmc_check() == false)
+			goto out;
+
+		err = cal_pll_mmc_set_ssc(0, 0, 0);
+		if (err)
+			dev_info(host->dev, "SSC set fail.\n");
+		else
+			dev_info(host->dev, "SSC set disable.\n");
 	}
+out:
 #endif
+	return;
 }
 
 static void dw_mci_exynos_set_clksel_timing(struct dw_mci *host, u32 timing)
@@ -430,7 +440,7 @@ static void dw_mci_exynos_set_ios(struct dw_mci *host, struct mmc_ios *ios)
 			dev_info(host->dev, "Setting of SDR104 timing in not been!!\n");
 			clksel = SDMMC_CLKSEL_UP_SAMPLE(priv->sdr_timing, priv->tuned_sample);
 		}
-		dw_mci_ssclk_control(host, 1);
+		dw_mci_exynos_ssclk_control(host, 1);
 		break;
 	case MMC_TIMING_UHS_SDR50:
 		if (priv->sdr50_timing)
@@ -439,7 +449,7 @@ static void dw_mci_exynos_set_ios(struct dw_mci *host, struct mmc_ios *ios)
 			dev_info(host->dev, "Setting of SDR50 timing is not been!!\n");
 			clksel = SDMMC_CLKSEL_UP_SAMPLE(priv->sdr_timing, priv->tuned_sample);
 		}
-		dw_mci_ssclk_control(host, 1);
+		dw_mci_exynos_ssclk_control(host, 1);
 		break;
 	default:
 		clksel = priv->sdr_timing;
@@ -1176,6 +1186,7 @@ static const struct dw_mci_drv_data exynos_drv_data = {
 	.access_control_init = exynos_mmc_smu_init,
 	.access_control_abort = exynos_mmc_smu_abort,
 	.access_control_resume = exynos_mmc_smu_resume,
+	.ssclk_control = dw_mci_exynos_ssclk_control,
 };
 
 static const struct of_device_id dw_mci_exynos_match[] = {

@@ -2337,6 +2337,16 @@ static bool dw_mci_reset(struct dw_mci *host)
 	return ret;
 }
 
+static void dw_mci_ssclk_control(struct mmc_host *mmc, int enable)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	const struct dw_mci_drv_data *drv_data = host->drv_data;
+
+	if (drv_data && drv_data->ssclk_control)
+		drv_data->ssclk_control(host, enable);
+}
+
 static const struct mmc_host_ops dw_mci_ops = {
 	.request = dw_mci_request,
 	.pre_req = dw_mci_pre_req,
@@ -2352,6 +2362,7 @@ static const struct mmc_host_ops dw_mci_ops = {
 	.start_signal_voltage_switch = dw_mci_switch_voltage,
 	.init_card = dw_mci_init_card,
 	.prepare_hs400_tuning = dw_mci_prepare_hs400_tuning,
+	.ssclk_control = dw_mci_ssclk_control,
 };
 
 static void dw_mci_request_end(struct dw_mci *host, struct mmc_request *mrq)
@@ -3845,7 +3856,6 @@ static void dw_mci_dto_timer(unsigned long arg)
 static void dw_mci_work_routine_card(struct work_struct *work)
 {
 	struct dw_mci *host = container_of(work, struct dw_mci, card_work);
-	const struct dw_mci_drv_data *drv_data = host->drv_data;
 	struct dw_mci_slot *slot = host->slot;
 	struct mmc_host *mmc = slot->mmc;
 	struct mmc_request *mrq;
@@ -3908,22 +3918,16 @@ static void dw_mci_work_routine_card(struct work_struct *work)
 		}
 
 		/* Power down slot */
-		if (present == 0)
+		if (present == 0) {
 			dw_mci_reset(host);
+
+			if (host->pdata->only_once_tune)
+				host->pdata->tuned = false;
+		}
 		spin_unlock_bh(&host->lock);
 	}
 
 	mmc_detect_change(slot->mmc, msecs_to_jiffies(host->pdata->detect_delay_ms));
-
-	if (!present) {
-		if (host->pdata->only_once_tune)
-			host->pdata->tuned = false;
-
-		if (host->pdata->quirks & DW_MCI_QUIRK_USE_SSC) {
-			if (drv_data && drv_data->ssclk_control)
-				drv_data->ssclk_control(host, 0);
-		}
-	}
 }
 
 #ifdef CONFIG_OF

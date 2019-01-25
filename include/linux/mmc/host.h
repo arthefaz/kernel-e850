@@ -168,6 +168,7 @@ struct mmc_host_ops {
 	 */
 	int	(*multi_io_quirk)(struct mmc_card *card,
 				  unsigned int direction, int blk_size);
+	void	(*ssclk_control)(struct mmc_host *host, int enable);
 };
 
 struct mmc_cqe_ops {

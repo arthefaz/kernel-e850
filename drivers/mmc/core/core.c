@@ -2600,6 +2600,9 @@ void mmc_rescan(struct work_struct *work)
 		return;
 	host->rescan_entered = 1;
 
+	/* spread spectrum clk disable */
+	host->ops->ssclk_control(host, 0);
+
 	if (host->trigger_card_event && host->ops->card_event) {
 		mmc_claim_host(host);
 		host->ops->card_event(host);
