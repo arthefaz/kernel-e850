@@ -203,7 +203,7 @@ static void decon_reg_set_sram_share(u32 id, enum decon_fifo_mode fifo_mode)
 		break;
 	}
 
-	decon_write(id, SRAM_SHARE_ENABLE, val);
+	decon_write(id, SRAM_SHARE_ENABLE_MAIN, val);
 }
 
 static void decon_reg_set_scaled_image_size(u32 id,
