@@ -525,6 +525,29 @@ static void decon_reg_configure_trigger(u32 id, enum decon_trig_mode mode)
 	decon_write_mask(id, HW_SW_TRIG_CONTROL, val, mask);
 }
 
+static void decon_reg_set_ewr_enable(u32 id, u32 en)
+{
+	u32 val, mask;
+
+	mask = EWR_EN_F;
+	val = en ? ~0 : 0;
+	decon_write_mask(id, EWR_CONTROL, val, mask);
+}
+
+static void decon_reg_set_ewr_timer(u32 id, u32 cnt)
+{
+	u32 val;
+
+	val = TIMER_VALUE(cnt);
+	decon_write_mask(id, EWR_TIMER, val, TIMER_VALUE_MASK);
+}
+
+static void decon_reg_set_ewr_control(u32 id, u32 cnt, u32 en)
+{
+	decon_reg_set_ewr_timer(id, cnt);
+	decon_reg_set_ewr_enable(id, en);
+}
+
 static void dsc_reg_swreset(u32 dsc_id)
 {
 	dsc_write_mask(dsc_id, DSC_CONTROL0, 1, DSC_SW_RESET);
@@ -1787,8 +1810,10 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 		decon_reg_configure_lcd(id, p);
 	} else {
 		decon_reg_configure_lcd(id, p);
-		if (psr->psr_mode == DECON_MIPI_COMMAND_MODE)
+		if (psr->psr_mode == DECON_MIPI_COMMAND_MODE) {
+			decon_reg_set_ewr_control(id, 430733, 0);
 			decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
+		}
 	}
 
 	/* FIXME: DECON_T dedicated to PRE_WB */
