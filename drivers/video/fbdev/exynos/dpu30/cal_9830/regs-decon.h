@@ -197,7 +197,7 @@
 
 #define EWR_TIMER				0x0084
 #define TIMER_VALUE(_v)				((_v) << 0)
-#define TIMER_VALUE_MASK			(((_v) >> 0) & 0xffffffff)
+#define TIMER_VALUE_MASK			(0xffffffff << 0)
 
 #define PLL_SLEEP_CONTROL			0x0090
 #define PLL_SLEEP_MASK_OUTIF1			(1 << 5)
