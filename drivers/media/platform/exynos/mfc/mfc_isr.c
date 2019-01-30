@@ -1119,6 +1119,12 @@ static int __mfc_handle_seq_dec(struct mfc_ctx *ctx)
 		if (is_interlace || is_mbaff)
 			dec->is_interlaced = 1;
 		mfc_debug(2, "[INTERLACE] interlace: %d, mbaff: %d\n", is_interlace, is_mbaff);
+
+		if (dev->pdata->support_sbwc) {
+			ctx->is_sbwc = mfc_is_sbwc_avail();
+			MFC_TRACE_CTX("*** is_sbwc %d\n", ctx->is_sbwc);
+			mfc_debug(2, "[SBWC] is_sbwc %d\n", ctx->is_sbwc);
+		}
 	}
 
 	if (IS_H264_DEC(ctx) || IS_H264_MVC_DEC(ctx) || IS_HEVC_DEC(ctx)) {

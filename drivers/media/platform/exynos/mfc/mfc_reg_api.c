@@ -108,10 +108,12 @@ int mfc_set_dec_codec_buffers(struct mfc_ctx *ctx)
 		MFC_WRITEL(raw->plane_size[i], MFC_REG_D_FIRST_PLANE_DPB_SIZE + (i * 4));
 		MFC_WRITEL(ctx->raw_buf.stride[i],
 				MFC_REG_D_FIRST_PLANE_DPB_STRIDE_SIZE + (i * 4));
-		if (ctx->is_10bit) {
+		if (ctx->is_10bit || ctx->is_sbwc) {
 			MFC_WRITEL(raw->stride_2bits[i], MFC_REG_D_FIRST_PLANE_2BIT_DPB_STRIDE_SIZE + (i * 4));
 			MFC_WRITEL(raw->plane_size_2bits[i], MFC_REG_D_FIRST_PLANE_2BIT_DPB_SIZE + (i * 4));
-			mfc_debug(2, "[FRAME][10BIT] 2bits buf[%d] size: %d, stride: %d\n",
+			mfc_debug(2, "[FRAME]%s%s 2bits buf[%d] size: %d, stride: %d\n",
+					(ctx->is_10bit ? "[10BIT]" : ""),
+					(ctx->is_sbwc ? "[SBWC]" : ""),
 					i, raw->plane_size_2bits[i], raw->stride_2bits[i]);
 		}
 	}
@@ -154,7 +156,7 @@ int mfc_set_dec_codec_buffers(struct mfc_ctx *ctx)
 		mfc_debug(2, "Notcoded frame copy mode start\n");
 	}
 	/* Enable 10bit Dithering when only 8+2 10bit format */
-	if (ctx->is_10bit && !ctx->mem_type_10bit) {
+	if (ctx->is_10bit && !ctx->mem_type_10bit && !ctx->is_sbwc) {
 		reg |= (0x1 << MFC_REG_D_INIT_BUF_OPT_DITHERING_EN_SHIFT);
 		/* 64byte align, It is vaid only for VP9 */
 		reg |= (0x1 << MFC_REG_D_INIT_BUF_OPT_STRIDE_SIZE_ALIGN);
@@ -444,7 +446,7 @@ int mfc_set_dynamic_dpb(struct mfc_ctx *ctx, struct mfc_buf *dst_mb)
 		MFC_WRITEL(dst_mb->addr[0][i],
 				MFC_REG_D_FIRST_PLANE_DPB0 + (i * 0x100 + dst_index * 4));
 		ctx->last_dst_addr[i] = dst_mb->addr[0][i];
-		if (ctx->is_10bit)
+		if (ctx->is_10bit || ctx->is_sbwc)
 			MFC_WRITEL(raw->plane_size_2bits[i],
 					MFC_REG_D_FIRST_PLANE_2BIT_DPB_SIZE + (i * 4));
 		mfc_debug(2, "[BUFINFO][DPB] ctx[%d] set dst index: %d, addr[%d]: 0x%08llx\n",
@@ -463,6 +465,7 @@ void mfc_set_pixel_format(struct mfc_ctx *ctx, unsigned int format)
 	struct mfc_dev *dev = ctx->dev;
 	unsigned int reg = 0;
 	unsigned int pix_val;
+	unsigned int sbwc = 0;
 
 	if (dev->pdata->P010_decoding && !ctx->is_drm)
 		ctx->mem_type_10bit = 1;
@@ -522,19 +525,30 @@ void mfc_set_pixel_format(struct mfc_ctx *ctx, unsigned int format)
 	case V4L2_PIX_FMT_BGR32:
 		pix_val = 13;
 		break;
+	/* for compress format (SBWC) */
+	case V4L2_PIX_FMT_NV12M_SBWC_8B:
+	case V4L2_PIX_FMT_NV12M_SBWC_10B:
+	case V4L2_PIX_FMT_NV12N_SBWC_8B:
+	case V4L2_PIX_FMT_NV12N_SBWC_10B:
+		pix_val = 0;
+		sbwc = 1;
+		break;
 	default:
 		pix_val = 0;
 		break;
 	}
-	reg |= pix_val;
+	mfc_set_bits(reg, 0xf, 0, pix_val);
 
 	/* for YUV format */
 	if (pix_val < 4)
-		reg |= (ctx->mem_type_10bit << 4);
+		mfc_set_bits(reg, 0x3, 4, ctx->mem_type_10bit);
+
+	if (dev->pdata->support_sbwc)
+		mfc_set_bits(reg, 0x1, 9, sbwc);
 
 	MFC_WRITEL(reg, MFC_REG_PIXEL_FORMAT);
-	mfc_debug(2, "[FRAME] pixel format: %d, mem_type_10bit for 10bit: %d (reg: %#x)\n",
-			pix_val, ctx->mem_type_10bit, reg);
+	mfc_debug(2, "[FRAME] pix format: %d, mem_type_10bit for 10bit: %d, sbwc: %d (reg: %#x)\n",
+			pix_val, ctx->mem_type_10bit, sbwc, reg);
 }
 
 void mfc_print_hdr_plus_info(struct mfc_ctx *ctx, struct hdr10_plus_meta *sei_meta)

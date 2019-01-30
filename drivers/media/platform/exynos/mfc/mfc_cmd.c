@@ -248,6 +248,9 @@ void mfc_cmd_dec_seq_header(struct mfc_ctx *ctx)
 	if (sfr_dump & MFC_DUMP_DEC_SEQ_START)
 		call_dop(dev, dump_regs, dev);
 
+	if (dev->pdata->support_sbwc && IS_SBWC_FMT(ctx->dst_fmt))
+		MFC_WRITEL(0x2, MFC_REG_DBG_INFO_ENABLE);
+
 	mfc_cmd_host2risc(dev, MFC_REG_H2R_CMD_SEQ_HEADER);
 
 	mfc_debug_leave();
