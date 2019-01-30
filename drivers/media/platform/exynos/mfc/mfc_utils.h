@@ -141,6 +141,7 @@ void mfc_stream_unprotect(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf,
 
 void mfc_dec_calc_dpb_size(struct mfc_ctx *ctx);
 void mfc_enc_calc_src_size(struct mfc_ctx *ctx);
+void mfc_calc_base_addr(struct mfc_ctx *ctx, struct vb2_buffer *vb, struct mfc_fmt *fmt);
 
 static inline void mfc_cleanup_assigned_fd(struct mfc_ctx *ctx)
 {

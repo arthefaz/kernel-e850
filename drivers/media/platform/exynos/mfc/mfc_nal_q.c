@@ -958,7 +958,7 @@ static int __mfc_nal_q_run_in_buf_dec(struct mfc_ctx *ctx, DecoderInputStr *pInS
 		pInStr->FrameSize[i] = raw->plane_size[i];
 		pInStr->FrameAddr[i] = dst_mb->addr[0][i];
 		ctx->last_dst_addr[i] = dst_mb->addr[0][i];
-		if (ctx->is_10bit)
+		if (ctx->is_10bit || ctx->is_sbwc)
 			pInStr->Frame2BitSize[i] = raw->plane_size_2bits[i];
 		mfc_debug(2, "[NALQ][BUFINFO][DPB] ctx[%d] set dst index: %d, addr[%d]: 0x%08llx\n",
 				ctx->num, dst_index, i, dst_mb->addr[0][i]);
@@ -1669,6 +1669,13 @@ void __mfc_nal_q_handle_frame(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 		mfc_err_ctx("[NALQ][DRC] Interframe resolution change is not supported\n");
 		dev->nal_q_handle->nal_q_exception = 1;
 		mfc_info_ctx("[NALQ][DRC] nal_q_exception is set (interframe res change)\n");
+		mfc_change_state(ctx, MFCINST_ERROR);
+		goto leave_handle_frame;
+	}
+	if (is_interlaced) {
+		mfc_err_ctx("[NALQ][SBWC] interlace during decoding is not supported\n");
+		dev->nal_q_handle->nal_q_exception = 1;
+		mfc_info_ctx("[NALQ][SBWC] nal_q_exception is set (interlaced)\n");
 		mfc_change_state(ctx, MFCINST_ERROR);
 		goto leave_handle_frame;
 	}

@@ -13,6 +13,7 @@
 #include <linux/smc.h>
 
 #include "mfc_utils.h"
+#include "mfc_mem.h"
 
 int mfc_check_vb_with_fmt(struct mfc_fmt *fmt, struct vb2_buffer *vb)
 {
@@ -177,6 +178,29 @@ static void __mfc_set_linear_stride_size(struct mfc_ctx *ctx,
 		raw->stride[1] = 0;
 		raw->stride[2] = 0;
 		break;
+	/* for compress format (SBWC) */
+	case V4L2_PIX_FMT_NV12M_SBWC_8B:
+	case V4L2_PIX_FMT_NV12N_SBWC_8B:
+		raw->stride[0] = SBWC_8B_STRIDE(ctx->img_width);
+		raw->stride[1] = SBWC_8B_STRIDE(ctx->img_width);
+		raw->stride[2] = 0;
+		raw->stride_2bits[0] = SBWC_HEADER_STRIDE(ctx->img_width);
+		raw->stride_2bits[1] = SBWC_HEADER_STRIDE(ctx->img_width);
+		raw->stride_2bits[2] = 0;
+		mfc_debug(2, "[SBWC] 8B stride [0] %d [1] %d header [0] %d [1] %d\n",
+				raw->stride[0], raw->stride[1], raw->stride_2bits[0], raw->stride_2bits[1]);
+		break;
+	case V4L2_PIX_FMT_NV12M_SBWC_10B:
+	case V4L2_PIX_FMT_NV12N_SBWC_10B:
+		raw->stride[0] = SBWC_10B_STRIDE(ctx->img_width);
+		raw->stride[1] = SBWC_10B_STRIDE(ctx->img_width);
+		raw->stride[2] = 0;
+		raw->stride_2bits[0] = SBWC_HEADER_STRIDE(ctx->img_width);
+		raw->stride_2bits[1] = SBWC_HEADER_STRIDE(ctx->img_width);
+		raw->stride_2bits[2] = 0;
+		mfc_debug(2, "[SBWC] 10B stride [0] %d [1] %d header [0] %d [1] %d\n",
+				raw->stride[0], raw->stride[1], raw->stride_2bits[0], raw->stride_2bits[1]);
+		break;
 	default:
 		break;
 	}
@@ -184,8 +208,8 @@ static void __mfc_set_linear_stride_size(struct mfc_ctx *ctx,
 	/* Decoder needs multiple of 16 alignment for stride */
 	if (ctx->type == MFCINST_DECODER) {
 		for (i = 0; i < 3; i++)
-			ctx->raw_buf.stride[i] =
-				ALIGN(ctx->raw_buf.stride[i], 16);
+			raw->stride[i] =
+				ALIGN(raw->stride[i], 16);
 	}
 }
 
@@ -260,6 +284,21 @@ void mfc_dec_calc_dpb_size(struct mfc_ctx *ctx)
 		raw->plane_size[1] = YUV420N_CB_SIZE(ctx->img_width, ctx->img_height);
 		raw->plane_size[2] = YUV420N_CR_SIZE(ctx->img_width, ctx->img_height);
 		break;
+	/* for compress format (SBWC) */
+	case V4L2_PIX_FMT_NV12M_SBWC_8B:
+	case V4L2_PIX_FMT_NV12N_SBWC_8B:
+		raw->plane_size[0] = SBWC_8B_Y_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size[1] = SBWC_8B_CBCR_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size_2bits[0] = SBWC_8B_Y_HEADER_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size_2bits[1] = SBWC_8B_CBCR_HEADER_SIZE(ctx->img_width, ctx->img_height);
+		break;
+	case V4L2_PIX_FMT_NV12M_SBWC_10B:
+	case V4L2_PIX_FMT_NV12N_SBWC_10B:
+		raw->plane_size[0] = SBWC_10B_Y_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size[1] = SBWC_10B_CBCR_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size_2bits[0] = SBWC_10B_Y_HEADER_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size_2bits[1] = SBWC_10B_CBCR_HEADER_SIZE(ctx->img_width, ctx->img_height);
+		break;
 	default:
 		mfc_err_ctx("Invalid pixelformat : %s\n", ctx->dst_fmt->name);
 		break;
@@ -280,10 +319,12 @@ void mfc_dec_calc_dpb_size(struct mfc_ctx *ctx)
 		mfc_debug(2, "[FRAME] Plane[%d] size = %d, stride = %d\n",
 			i, raw->plane_size[i], raw->stride[i]);
 	}
-	if (ctx->is_10bit) {
+	if (ctx->is_10bit || ctx->is_sbwc) {
 		for (i = 0; i < raw->num_planes; i++) {
 			raw->total_plane_size += raw->plane_size_2bits[i];
-			mfc_debug(2, "[FRAME][10BIT] Plane[%d] 2bit size = %d, stride = %d\n",
+			mfc_debug(2, "[FRAME]%s%s Plane[%d] 2bit size = %d, stride = %d\n",
+					(ctx->is_10bit ? "[10BIT]" : ""),
+					(ctx->is_sbwc ? "[SBWC]" : ""),
 					i, raw->plane_size_2bits[i],
 					raw->stride_2bits[i]);
 		}
@@ -396,6 +437,44 @@ void mfc_enc_calc_src_size(struct mfc_ctx *ctx)
 	}
 
 	mfc_debug(2, "[FRAME] total plane size: %d\n", raw->total_plane_size);
+}
+
+void mfc_calc_base_addr(struct mfc_ctx *ctx, struct vb2_buffer *vb,
+				struct mfc_fmt *fmt)
+{
+	struct mfc_buf *buf = vb_to_mfc_buf(vb);
+	dma_addr_t start_raw;
+	int i;
+
+	start_raw = mfc_mem_get_daddr_vb(vb, 0);
+
+	switch (fmt->fourcc) {
+	case V4L2_PIX_FMT_NV12N:
+		buf->addr[0][0] = start_raw;
+		buf->addr[0][1] = NV12N_CBCR_BASE(start_raw, ctx->img_width, ctx->img_height);
+		break;
+	case V4L2_PIX_FMT_NV12N_10B:
+		buf->addr[0][0] = start_raw;
+		buf->addr[0][1] = NV12N_10B_CBCR_BASE(start_raw, ctx->img_width, ctx->img_height);
+		break;
+	case V4L2_PIX_FMT_YUV420N:
+		buf->addr[0][0] = start_raw;
+		buf->addr[0][1] = YUV420N_CB_BASE(start_raw, ctx->img_width, ctx->img_height);
+		buf->addr[0][2] = YUV420N_CR_BASE(start_raw, ctx->img_width, ctx->img_height);
+		break;
+	case V4L2_PIX_FMT_NV12N_SBWC_8B:
+		buf->addr[0][0] = start_raw;
+		buf->addr[0][1] = SBWC_8B_CBCR_BASE(start_raw, ctx->img_width, ctx->img_height);
+		break;
+	case V4L2_PIX_FMT_NV12N_SBWC_10B:
+		buf->addr[0][0] = start_raw;
+		buf->addr[0][1] = SBWC_10B_CBCR_BASE(start_raw, ctx->img_width, ctx->img_height);
+		break;
+	default:
+		for (i = 0; i < fmt->mem_planes; i++)
+			buf->addr[0][i] = mfc_mem_get_daddr_vb(vb, i);
+		break;
+	}
 }
 
 void mfc_cleanup_assigned_dpb(struct mfc_ctx *ctx)

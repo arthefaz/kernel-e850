@@ -49,6 +49,10 @@ static struct mfc_fmt *__mfc_dec_find_format(struct mfc_ctx *ctx,
 		mfc_err_ctx("[FRAME] 422 is not supported\n");
 		fmt = NULL;
 	}
+	if (fmt && !dev->pdata->support_sbwc && (fmt->type & MFC_FMT_SBWC)) {
+		mfc_err_ctx("[FRAME] SBWC is not supported\n");
+		fmt = NULL;
+	}
 
 	return fmt;
 }
@@ -117,6 +121,8 @@ static int __mfc_dec_enum_fmt(struct mfc_dev *dev, struct v4l2_fmtdesc *f,
 			continue;
 		if (!dev->pdata->support_422 && (dec_formats[i].type & MFC_FMT_422))
 			continue;
+		if (!dev->pdata->support_sbwc && (dec_formats[i].type & MFC_FMT_SBWC))
+			continue;
 
 		if (j == f->index) {
 			fmt = &dec_formats[i];
@@ -166,6 +172,8 @@ static void __mfc_dec_change_format(struct mfc_ctx *ctx)
 		case V4L2_PIX_FMT_NV16M:
 		case V4L2_PIX_FMT_NV12M_S10B:
 		case V4L2_PIX_FMT_NV12M_P010:
+		case V4L2_PIX_FMT_NV12M_SBWC_8B:
+		case V4L2_PIX_FMT_NV12M_SBWC_10B:
 			ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV16M_S10B);
 			break;
 		case V4L2_PIX_FMT_NV21M:
@@ -182,7 +190,10 @@ static void __mfc_dec_change_format(struct mfc_ctx *ctx)
 	} else if (ctx->is_10bit && !ctx->is_422) {
 		if (ctx->dst_fmt->mem_planes == 1) {
 			/* YUV420 only supports the single plane */
-			ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV12N_10B);
+			if (ctx->is_sbwc)
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV12N_SBWC_10B);
+			else
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV12N_10B);
 		} else {
 			switch (org_fmt) {
 			case V4L2_PIX_FMT_NV12M_S10B:
@@ -206,6 +217,17 @@ static void __mfc_dec_change_format(struct mfc_ctx *ctx)
 			case V4L2_PIX_FMT_NV61M_P210:
 				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV21M_S10B);
 				break;
+			case V4L2_PIX_FMT_NV12M_SBWC_8B:
+			case V4L2_PIX_FMT_NV12M_SBWC_10B:
+				if (ctx->is_sbwc) {
+					ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV12M_SBWC_10B);
+				} else {
+					if (dev->pdata->P010_decoding)
+						ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV12M_P010);
+					else
+						ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV12M_S10B);
+				}
+				break;
 			default:
 				if (dev->pdata->P010_decoding)
 					ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV12M_P010);
@@ -226,6 +248,8 @@ static void __mfc_dec_change_format(struct mfc_ctx *ctx)
 		case V4L2_PIX_FMT_NV16M_S10B:
 		case V4L2_PIX_FMT_NV12M_P010:
 		case V4L2_PIX_FMT_NV16M_P210:
+		case V4L2_PIX_FMT_NV12M_SBWC_8B:
+		case V4L2_PIX_FMT_NV12M_SBWC_10B:
 			ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV16M);
 			break;
 		case V4L2_PIX_FMT_NV21M:
@@ -256,6 +280,20 @@ static void __mfc_dec_change_format(struct mfc_ctx *ctx)
 		case V4L2_PIX_FMT_NV21M_P010:
 		case V4L2_PIX_FMT_NV61M_P210:
 			ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV21M);
+			break;
+		case V4L2_PIX_FMT_NV12M_SBWC_8B:
+		case V4L2_PIX_FMT_NV12M_SBWC_10B:
+			if (ctx->is_sbwc)
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV12M_SBWC_8B);
+			else
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV12M);
+			break;
+		case V4L2_PIX_FMT_NV12N_SBWC_8B:
+		case V4L2_PIX_FMT_NV12N_SBWC_10B:
+			if (ctx->is_sbwc)
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV12N_SBWC_8B);
+			else
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV12N);
 			break;
 		default:
 			/* It is right format */
@@ -303,7 +341,7 @@ static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 
 	if (ctx->state >= MFCINST_HEAD_PARSED &&
 	    ctx->state < MFCINST_ABORT) {
-		/* This is run on CAPTURE (deocde output) */
+		/* This is run on CAPTURE (decode output) */
 
 		/* only NV16(61) format is supported for 422 format */
 		/* only 2 plane is supported for 10bit */
@@ -352,7 +390,7 @@ static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 			if (ctx->dst_fmt->mem_planes == 1) {
 				pix_fmt_mp->plane_fmt[i].sizeimage = raw->total_plane_size;
 			} else {
-				if (ctx->is_10bit)
+				if (ctx->is_10bit || ctx->is_sbwc)
 					pix_fmt_mp->plane_fmt[i].sizeimage = raw->plane_size[i]
 						+ raw->plane_size_2bits[i];
 				else
