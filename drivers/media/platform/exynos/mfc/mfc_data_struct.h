@@ -477,6 +477,8 @@ struct mfc_platdata {
 	unsigned int support_10bit;
 	unsigned int support_422;
 	unsigned int support_rgb;
+	/* SBWC */
+	unsigned int support_sbwc;
 	/* HDR10+ */
 	unsigned int max_hdr_win;
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
@@ -1557,6 +1559,9 @@ struct mfc_ctx {
 	/* Profile infomation */
 	int is_10bit;
 	int is_422;
+
+	/* SBWC */
+	int is_sbwc;
 
 	/* for DRM */
 	int is_drm;

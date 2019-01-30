@@ -82,6 +82,10 @@
 #define mfc_is_mbaff_picture()	((MFC_READL(MFC_REG_D_H264_INFO)		\
 						>> MFC_REG_D_H264_INFO_MBAFF_FRAME_FLAG_SHIFT)\
 						& MFC_REG_D_H264_INFO_MBAFF_FRAME_FLAG_MASK)
+#define mfc_is_sbwc_avail()		((MFC_READL(MFC_REG_D_DISPLAY_STATUS)		\
+						>> MFC_REG_DISP_STATUS_COMP_SHIFT)\
+						& MFC_REG_DISP_STATUS_COMP_MASK)
+
 #define mfc_get_img_width()		MFC_READL(MFC_REG_D_DISPLAY_FRAME_WIDTH)
 #define mfc_get_img_height()	MFC_READL(MFC_REG_D_DISPLAY_FRAME_HEIGHT)
 #define mfc_get_disp_y_addr()	MFC_READL(MFC_REG_D_DISPLAY_LUMA_ADDR)

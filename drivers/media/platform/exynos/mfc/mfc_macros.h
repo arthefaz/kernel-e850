@@ -55,6 +55,25 @@
 #define ENC_CHROMA_DPB_SIZE(x, y)					\
 	((x + 63) / 64) * 64 * ((((y + 31) / 32 ) * 32) / 2) + 64
 
+#define ENC_SBWC_LUMA_8B_SIZE(x, y)					\
+	((128 * ((x + 31) / 32) * ((__ALIGN_UP(y, 32) + 3) / 4)) + 64)
+#define ENC_SBWC_LUMA_10B_SIZE(x, y)					\
+	((160 * ((x + 31) / 32) * ((__ALIGN_UP(y, 32) + 3) / 4)) + 64)
+#define ENC_SBWC_LUMA_HEADER_SIZE(x, y)					\
+	((((((x + 63) / 64) + 15) / 16) * 16) * ((__ALIGN_UP(y, 32) + 3) / 4) + 256)
+
+#define ENC_SBWC_CHROMA_8B_SIZE(x, y)					\
+	((128 * ((x + 31) / 32) * (((__ALIGN_UP(y, 32) / 2) + 3) / 4)) + 64)
+#define ENC_SBWC_CHROMA_10B_SIZE(x, y)					\
+	((160 * ((x + 31) / 32) * (((__ALIGN_UP(y, 32) / 2) + 3) / 4)) + 64)
+#define ENC_SBWC_CHROMA_HEADER_SIZE(x, y)					\
+	((((((x + 63) / 64) + 15) / 16) * 16) * (((__ALIGN_UP(y, 32) / 2) + 3) / 4) + 128)
+
+#define ENC_SBWC_LUMA_8B_DPB_SIZE(x, y) (ENC_SBWC_LUMA_8B_SIZE(x, y) + ENC_SBWC_LUMA_HEADER_SIZE(x, y))
+#define ENC_SBWC_LUMA_10B_DPB_SIZE(x, y) (ENC_SBWC_LUMA_10B_SIZE(x, y) + ENC_SBWC_LUMA_HEADER_SIZE(x, y))
+#define ENC_SBWC_CHROMA_8B_DPB_SIZE(x, y) (ENC_SBWC_CHROMA_8B_SIZE(x, y) + ENC_SBWC_CHROMA_HEADER_SIZE(x, y))
+#define ENC_SBWC_CHROMA_10B_DPB_SIZE(x, y) (ENC_SBWC_CHROMA_10B_SIZE(x, y) + ENC_SBWC_CHROMA_HEADER_SIZE(x, y))
+
 #define ENC_V100_H264_ME_SIZE(x, y)				\
 	(((x + 3) * (y + 3) * 8) + ((((x * y) + 63) / 64) * 32) + (((y * 64) + 2304) * (x + 7) / 8))
 #define ENC_V100_MPEG4_ME_SIZE(x, y)				\
