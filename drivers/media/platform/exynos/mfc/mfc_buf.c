@@ -253,11 +253,19 @@ static void __mfc_enc_calc_codec_buffer_size(struct mfc_ctx *ctx)
 	lcu_width = ENC_LCU_WIDTH(ctx->crop_width);
 	lcu_height = ENC_LCU_HEIGHT(ctx->crop_height);
 
-	/* default recon buffer size, it can be changed in case of 422, 10bit */
-	enc->luma_dpb_size =
-		ALIGN(ENC_LUMA_DPB_SIZE(ctx->crop_width, ctx->crop_height), 64);
-	enc->chroma_dpb_size =
-		ALIGN(ENC_CHROMA_DPB_SIZE(ctx->crop_width, ctx->crop_height), 64);
+	if (ctx->is_sbwc && ctx->is_10bit) {
+		enc->luma_dpb_size = ENC_SBWC_LUMA_10B_DPB_SIZE(ctx->crop_width, ctx->crop_height);
+		enc->chroma_dpb_size = ENC_SBWC_CHROMA_10B_DPB_SIZE(ctx->crop_width, ctx->crop_height);
+	} else if (ctx->is_sbwc && !ctx->is_10bit) {
+		enc->luma_dpb_size = ENC_SBWC_LUMA_8B_DPB_SIZE(ctx->crop_width, ctx->crop_height);
+		enc->chroma_dpb_size = ENC_SBWC_CHROMA_8B_DPB_SIZE(ctx->crop_width, ctx->crop_height);
+	} else {
+		/* default recon buffer size, it can be changed in case of 422, 10bit */
+		enc->luma_dpb_size =
+			ALIGN(ENC_LUMA_DPB_SIZE(ctx->crop_width, ctx->crop_height), 64);
+		enc->chroma_dpb_size =
+			ALIGN(ENC_CHROMA_DPB_SIZE(ctx->crop_width, ctx->crop_height), 64);
+	}
 
 	/* Codecs have different memory requirements */
 	switch (ctx->codec_mode) {
@@ -293,7 +301,7 @@ static void __mfc_enc_calc_codec_buffer_size(struct mfc_ctx *ctx)
 			enc->chroma_dpb_size + enc->me_buffer_size));
 		break;
 	case MFC_REG_CODEC_VP9_ENC:
-		if (ctx->is_10bit || ctx->is_422) {
+		if (!ctx->is_sbwc && (ctx->is_10bit || ctx->is_422)) {
 			enc->luma_dpb_size =
 				ALIGN(ENC_VP9_LUMA_DPB_10B_SIZE(ctx->crop_width, ctx->crop_height), 64);
 			enc->chroma_dpb_size =
@@ -312,7 +320,7 @@ static void __mfc_enc_calc_codec_buffer_size(struct mfc_ctx *ctx)
 		break;
 	case MFC_REG_CODEC_HEVC_ENC:
 	case MFC_REG_CODEC_BPG_ENC:
-		if (ctx->is_10bit || ctx->is_422) {
+		if (!ctx->is_sbwc && (ctx->is_10bit || ctx->is_422)) {
 			enc->luma_dpb_size =
 				ALIGN(ENC_HEVC_LUMA_DPB_10B_SIZE(ctx->crop_width, ctx->crop_height), 64);
 			enc->chroma_dpb_size =

@@ -825,6 +825,24 @@ static int __mfc_nal_q_run_in_buf_enc(struct mfc_ctx *ctx, EncoderInputStr *pInS
 			mfc_debug(2, "[NALQ][BUFINFO] ctx[%d] set src index:%d, 2bit addr[%d]: 0x%08llx\n",
 					ctx->num, index, i, addr_2bit[i]);
 		}
+	} else if (IS_SBWC_8B(ctx->src_fmt)) {
+		addr_2bit[0] = src_addr[0] + SBWC_8B_Y_SIZE(ctx->img_width, ctx->img_height);
+		addr_2bit[1] = src_addr[1] + SBWC_8B_CBCR_SIZE(ctx->img_width, ctx->img_height);
+
+		for (i = 0; i < raw->num_planes; i++) {
+			pInStr->Frame2bitAddr[i] = addr_2bit[i];
+			mfc_debug(2, "[NALQ][BUFINFO][SBWC] ctx[%d] set src index:%d, 2bit addr[%d]: 0x%08llx\n",
+					ctx->num, index, i, addr_2bit[i]);
+		}
+	} else if (IS_SBWC_10B(ctx->src_fmt)) {
+		addr_2bit[0] = src_addr[0] + SBWC_10B_Y_SIZE(ctx->img_width, ctx->img_height);
+		addr_2bit[1] = src_addr[1] + SBWC_10B_CBCR_SIZE(ctx->img_width, ctx->img_height);
+
+		for (i = 0; i < raw->num_planes; i++) {
+			pInStr->Frame2bitAddr[i] = addr_2bit[i];
+			mfc_debug(2, "[NALQ][BUFINFO][SBWC] ctx[%d] set src index:%d, 2bit addr[%d]: 0x%08llx\n",
+					ctx->num, index, i, addr_2bit[i]);
+		}
 	}
 
 	/* HDR10+ sei meta */

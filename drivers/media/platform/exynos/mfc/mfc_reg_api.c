@@ -350,6 +350,24 @@ buffer_set:
 			mfc_debug(2, "[BUFINFO][10BIT] ctx[%d] set src 2bit addr[%d]: 0x%08llx\n",
 					ctx->num, i, addr_2bit[i]);
 		}
+	} else if (IS_SBWC_8B(ctx->src_fmt)) {
+		addr_2bit[0] = addr[0] + SBWC_8B_Y_SIZE(ctx->img_width, ctx->img_height);
+		addr_2bit[1] = addr[1] + SBWC_8B_CBCR_SIZE(ctx->img_width, ctx->img_height);
+
+		for (i = 0; i < num_planes; i++) {
+			MFC_WRITEL(addr_2bit[i], MFC_REG_E_SOURCE_FIRST_2BIT_ADDR + (i * 4));
+			mfc_debug(2, "[BUFINFO][SBWC] ctx[%d] set src header addr[%d]: 0x%08llx\n",
+				ctx->num, i, addr_2bit[i]);
+		}
+	} else if (IS_SBWC_10B(ctx->src_fmt)) {
+		addr_2bit[0] = addr[0] + SBWC_10B_Y_SIZE(ctx->img_width, ctx->img_height);
+		addr_2bit[1] = addr[1] + SBWC_10B_CBCR_SIZE(ctx->img_width, ctx->img_height);
+
+		for (i = 0; i < num_planes; i++) {
+			MFC_WRITEL(addr_2bit[i], MFC_REG_E_SOURCE_FIRST_2BIT_ADDR + (i * 4));
+			mfc_debug(2, "[BUFINFO][10BIT][SBWC] ctx[%d] set src header addr[%d]: 0x%08llx\n",
+				ctx->num, i, addr_2bit[i]);
+		}
 	}
 }
 

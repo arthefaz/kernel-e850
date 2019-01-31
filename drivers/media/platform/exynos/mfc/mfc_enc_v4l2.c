@@ -50,6 +50,10 @@ static struct mfc_fmt *__mfc_enc_find_format(struct mfc_ctx *ctx,
 		mfc_err_ctx("[FRAME] RGB is not supported\n");
 		fmt = NULL;
 	}
+	if (fmt && !dev->pdata->support_sbwc && (fmt->type & MFC_FMT_SBWC)) {
+		mfc_err_ctx("[FRAME] SBWC is not supported\n");
+		fmt = NULL;
+	}
 
 	return fmt;
 }
@@ -164,6 +168,8 @@ static int __mfc_enc_enum_fmt(struct mfc_dev *dev, struct v4l2_fmtdesc *f,
 			continue;
 		if (!dev->pdata->support_rgb && (enc_formats[i].type & MFC_FMT_RGB))
 			continue;
+		if (!dev->pdata->support_sbwc && (enc_formats[i].type & MFC_FMT_SBWC))
+			continue;
 
 		if (j == f->index) {
 			fmt = &enc_formats[i];
@@ -259,6 +265,10 @@ static int mfc_enc_try_fmt(struct file *file, void *priv, struct v4l2_format *f)
 
 static void __mfc_enc_check_format(struct mfc_ctx *ctx)
 {
+	ctx->is_422 = 0;
+	ctx->is_10bit = 0;
+	ctx->is_sbwc = 0;
+
 	switch (ctx->src_fmt->fourcc) {
 	case V4L2_PIX_FMT_NV16M_S10B:
 	case V4L2_PIX_FMT_NV61M_S10B:
@@ -271,7 +281,6 @@ static void __mfc_enc_check_format(struct mfc_ctx *ctx)
 	case V4L2_PIX_FMT_NV16M:
 	case V4L2_PIX_FMT_NV61M:
 		mfc_debug(2, "[FRAME] is 422 format\n");
-		ctx->is_10bit = 0;
 		ctx->is_422 = 1;
 		break;
 	case V4L2_PIX_FMT_NV12M_S10B:
@@ -280,14 +289,25 @@ static void __mfc_enc_check_format(struct mfc_ctx *ctx)
 	case V4L2_PIX_FMT_NV21M_P010:
 		mfc_debug(2, "[FRAME][10BIT] is 10bit format\n");
 		ctx->is_10bit = 1;
-		ctx->is_422 = 0;
+		break;
+	case V4L2_PIX_FMT_NV12M_SBWC_8B:
+	case V4L2_PIX_FMT_NV21M_SBWC_8B:
+	case V4L2_PIX_FMT_NV12N_SBWC_8B:
+		mfc_debug(2, "[FRAME][SBWC] is SBWC 8bit format\n");
+		ctx->is_sbwc = 1;
+		break;
+	case V4L2_PIX_FMT_NV12M_SBWC_10B:
+	case V4L2_PIX_FMT_NV21M_SBWC_10B:
+	case V4L2_PIX_FMT_NV12N_SBWC_10B:
+		mfc_debug(2, "[FRAME][SBWC] is SBWC 10bit format\n");
+		ctx->is_10bit = 1;
+		ctx->is_sbwc = 1;
 		break;
 	default:
-		ctx->is_10bit = 0;
-		ctx->is_422 = 0;
 		break;
 	}
-	mfc_debug(2, "[FRAME] 10bit: %d, 422: %d\n", ctx->is_10bit, ctx->is_422);
+	mfc_debug(2, "[FRAME] 10bit: %d, 422: %d, sbwc: %d\n",
+			ctx->is_10bit, ctx->is_422, ctx->is_sbwc);
 }
 
 static int __mfc_enc_check_resolution(struct mfc_ctx *ctx)

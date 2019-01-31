@@ -233,30 +233,8 @@ static int mfc_enc_buf_prepare(struct vb2_buffer *vb)
 
 				dma_buf_put(bufcon_dmabuf[i]);
 			} else {
-				dma_addr_t start_raw;
-
 				dma_buf_put(bufcon_dmabuf[i]);
-				start_raw = mfc_mem_get_daddr_vb(vb, 0);
-				if (start_raw == 0) {
-					mfc_err_ctx("Plane mem not allocated\n");
-					return -ENOMEM;
-				}
-				if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12N) {
-					buf->addr[0][0] = start_raw;
-					buf->addr[0][1] = NV12N_CBCR_BASE(start_raw,
-							ctx->img_width,
-							ctx->img_height);
-				} else if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_YUV420N) {
-					buf->addr[0][0] = start_raw;
-					buf->addr[0][1] = YUV420N_CB_BASE(start_raw,
-							ctx->img_width,
-							ctx->img_height);
-					buf->addr[0][2] = YUV420N_CR_BASE(start_raw,
-							ctx->img_width,
-							ctx->img_height);
-				} else {
-					buf->addr[0][i] = mfc_mem_get_daddr_vb(vb, i);
-				}
+				mfc_calc_base_addr(ctx, vb, ctx->src_fmt);
 			}
 		}
 

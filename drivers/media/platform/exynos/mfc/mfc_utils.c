@@ -415,6 +415,23 @@ void mfc_enc_calc_src_size(struct mfc_ctx *ctx)
 	case V4L2_PIX_FMT_ARGB32:
 		raw->plane_size[0] = ALIGN((default_size * 4), 256) + extra;
 		break;
+	/* for compress format (SBWC) */
+	case V4L2_PIX_FMT_NV12M_SBWC_8B:
+	case V4L2_PIX_FMT_NV21M_SBWC_8B:
+	case V4L2_PIX_FMT_NV12N_SBWC_8B:
+		raw->plane_size[0] = SBWC_8B_Y_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size[1] = SBWC_8B_CBCR_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size_2bits[0] = SBWC_8B_Y_HEADER_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size_2bits[1] = SBWC_8B_CBCR_HEADER_SIZE(ctx->img_width, ctx->img_height);
+		break;
+	case V4L2_PIX_FMT_NV12M_SBWC_10B:
+	case V4L2_PIX_FMT_NV21M_SBWC_10B:
+	case V4L2_PIX_FMT_NV12N_SBWC_10B:
+		raw->plane_size[0] = SBWC_10B_Y_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size[1] = SBWC_10B_CBCR_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size_2bits[0] = SBWC_10B_Y_HEADER_SIZE(ctx->img_width, ctx->img_height);
+		raw->plane_size_2bits[1] = SBWC_10B_CBCR_HEADER_SIZE(ctx->img_width, ctx->img_height);
+		break;
 	default:
 		mfc_err_ctx("Invalid pixel format(%d)\n", ctx->src_fmt->fourcc);
 		break;
@@ -427,10 +444,12 @@ void mfc_enc_calc_src_size(struct mfc_ctx *ctx)
 		mfc_debug(2, "[FRAME] Plane[%d] size = %d, stride = %d\n",
 			i, raw->plane_size[i], raw->stride[i]);
 	}
-	if (ctx->is_10bit) {
+	if (ctx->is_10bit || ctx->is_sbwc) {
 		for (i = 0; i < raw->num_planes; i++) {
 			raw->total_plane_size += raw->plane_size_2bits[i];
-			mfc_debug(2, "[FRAME][10BIT] Plane[%d] 2bit size = %d, stride = %d\n",
+			mfc_debug(2, "[FRAME]%s%s Plane[%d] 2bit size = %d, stride = %d\n",
+					(ctx->is_10bit ? "[10BIT]" : ""),
+					(ctx->is_sbwc ? "[SBWC]" : ""),
 					i, raw->plane_size_2bits[i],
 					raw->stride_2bits[i]);
 		}
