@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2019 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
  * Header file for Samsung EXYNOS SoC MIPI-DSI Master driver.
@@ -21,13 +21,8 @@
 #include <video/mipi_display.h>
 
 #include "./panels/exynos_panel.h"
-#if defined(CONFIG_SOC_EXYNOS9820)
-#include "./cal_9820/regs-dsim.h"
-#include "./cal_9820/dsim_cal.h"
-#elif defined(CONFIG_SOC_EXYNOS9610)
-#include "./cal_9610/regs-dsim.h"
-#include "./cal_9610/dsim_cal.h"
-#endif
+#include "./cal_9830/regs-dsim.h"
+#include "./cal_9830/dsim_cal.h"
 
 extern int dsim_log_level;
 

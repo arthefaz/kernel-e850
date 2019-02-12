@@ -215,7 +215,7 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 	dsim_write_data_seq(dsim, 0x35); /* TE on */
 	dsim_write_data_seq(dsim, 0xED, 0x44);
 
-#if !defined(CONFIG_SOC_EXYNOS9820_EVT0) && defined(CONFIG_EXYNOS_PLL_SLEEP)
+#if defined(CONFIG_EXYNOS_PLL_SLEEP)
 	dsim_write_data_seq(dsim, 0xB9, 0x01, 0xB0, 0x91, 0x09);
 #else
 	dsim_write_data_seq(dsim, 0xB9, 0x00, 0xB0, 0x9C, 0x09);
