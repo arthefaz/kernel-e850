@@ -2,7 +2,7 @@
  * Copyright (c) 2018 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
- * Header file for Exynos9820 DECON CAL
+ * Header file for Exynos9830 DECON CAL
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -282,11 +282,9 @@ int decon_check_global_limitation(struct decon_device *decon,
 /* TODO: this will be removed later */
 void decon_reg_update_req_global(u32 id);
 
-#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 /* PLL sleep related functions */
 void decon_reg_set_pll_sleep(u32 id, u32 en);
 void decon_reg_set_pll_wakeup(u32 id, u32 en);
-#endif
 
 /*********************************************************************/
 

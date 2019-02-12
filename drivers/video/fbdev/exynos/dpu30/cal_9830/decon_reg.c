@@ -1729,7 +1729,7 @@ static void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 				win_idx, af_d, ab_d, af_a, ab_a);
 }
 
-#if !defined(CONFIG_SOC_EXYNOS9820_EVT0) && defined(CONFIG_EXYNOS_PLL_SLEEP)
+#if defined(CONFIG_EXYNOS_PLL_SLEEP)
 void decon_reg_set_pll_sleep(u32 id, u32 en)
 {
 	u32 val, mask;
@@ -1826,7 +1826,7 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	/* Configure DECON dsim connection  : 'data_path' setting is required */
 	decon_reg_set_interface(id, psr);
 
-#if !defined(CONFIG_SOC_EXYNOS9820_EVT0) && defined(CONFIG_EXYNOS_PLL_SLEEP)
+#if defined(CONFIG_EXYNOS_PLL_SLEEP)
 	/* TODO : register for outfifo2 doesn't exist, needs a confirm */
 	if (psr->psr_mode == DECON_MIPI_COMMAND_MODE &&
 			psr->dsi_mode != DSI_MODE_DUAL_DSI)
@@ -1871,7 +1871,7 @@ int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr, bool rst,
 {
 	int ret = 0;
 
-#if !defined(CONFIG_SOC_EXYNOS9820_EVT0) && defined(CONFIG_EXYNOS_PLL_SLEEP)
+#if defined(CONFIG_EXYNOS_PLL_SLEEP)
 	/* when pll is asleep, need to wake it up before stopping */
 	if (psr->psr_mode == DECON_MIPI_COMMAND_MODE &&
 			psr->dsi_mode != DSI_MODE_DUAL_DSI)
@@ -2340,7 +2340,7 @@ void __decon_dump(u32 id, void __iomem *regs, void __iomem *base_regs, bool dsc_
 	}
 }
 
-/* Makalu (9820) chip dependent HW limitation
+/* 9830 chip dependent HW limitation
  *	: returns 0 if no error
  *	: otherwise returns -EPERM for HW-wise not permitted
  */
