@@ -58,4 +58,7 @@ void mfc_mem_ion_free(struct mfc_dev *dev,
 void mfc_bufcon_put_daddr(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf, int plane);
 int mfc_bufcon_get_daddr(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf,
 					struct dma_buf *bufcon_dmabuf, int plane);
+void mfc_put_iovmm(struct mfc_ctx *ctx, int num_planes, int index);
+void mfc_get_iovmm(struct mfc_ctx *ctx, struct vb2_buffer *vb);
+void mfc_cleanup_assigned_iovmm(struct mfc_ctx *ctx);
 #endif /* __MFC_MEM_H */

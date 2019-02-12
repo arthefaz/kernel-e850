@@ -1420,6 +1420,11 @@ struct mfc_dec {
 
 	struct dec_dpb_ref_info *ref_info;
 	int assigned_fd[MFC_MAX_DPBS];
+	dma_addr_t assigned_addr[MFC_MAX_DPBS][MFC_MAX_PLANES];
+	struct dma_buf *assigned_dmabufs[MFC_MAX_DPBS][MFC_MAX_PLANES];
+	struct dma_buf_attachment *assigned_attach[MFC_MAX_DPBS][MFC_MAX_PLANES];
+	int assigned_refcnt[MFC_MAX_DPBS];
+	struct mutex dpb_mutex;
 	struct mfc_user_shared_handle sh_handle_dpb;
 	struct mfc_user_shared_handle sh_handle_hdr;
 	struct hdr10_plus_meta *hdr10_plus_info;
