@@ -4352,6 +4352,7 @@ static inline void ufshcd_hba_stop(struct ufs_hba *hba, bool can_sleep)
 static int __ufshcd_hba_enable(struct ufs_hba *hba)
 {
 	int retry;
+	int ret = 0;
 
 	/*
 	 * msleep of 1 and 5 used in this function might result in msleep(20),
@@ -4399,9 +4400,9 @@ static int __ufshcd_hba_enable(struct ufs_hba *hba)
 	/* enable UIC related interrupts */
 	ufshcd_enable_intr(hba, UFSHCD_UIC_MASK);
 
-	ufshcd_vops_hce_enable_notify(hba, POST_CHANGE);
+	ret = ufshcd_vops_hce_enable_notify(hba, POST_CHANGE);
 
-	return 0;
+	return ret;
 }
 
 static int ufshcd_disable_tx_lcc(struct ufs_hba *hba, bool peer)
@@ -6807,14 +6808,24 @@ retry:
 			"%s: Failed getting max supported power mode\n",
 			__func__);
 	} else {
-		if ((pwr_info->lane_rx != pwr_info->peer_available_lane_rx)
-			|| (pwr_info->lane_tx != pwr_info->peer_available_lane_tx)) {
-			dev_info(hba->dev,
-				"%s: availabele lanes, Host:Device Lane tx %d%d rx %d:%d\n",
-				__func__,
-				pwr_info->lane_tx, pwr_info->peer_available_lane_tx,
-				pwr_info->lane_rx, pwr_info->peer_available_lane_rx);
+		if (pwr_info->lane_rx != min(pwr_info->peer_available_lane_rx,
+					pwr_info->available_lane_rx)) {
+			dev_err(hba->dev,
+				"%s: connected lane rx= %d, peer_available lane rx= %d\n",
+				__func__, pwr_info->lane_rx,
+				pwr_info->peer_available_lane_rx);
+			goto out;
 		}
+
+		if (pwr_info->lane_tx != min(pwr_info->peer_available_lane_tx,
+					pwr_info->available_lane_tx)) {
+			dev_err(hba->dev,
+				"%s: connected lane tx= %d, peer_available lane tx= %d\n",
+				__func__, pwr_info->lane_tx,
+				pwr_info->peer_available_lane_tx);
+			goto out;
+		}
+
 		ret = ufshcd_config_pwr_mode(hba, &hba->max_pwr_info.info);
 		if (ret) {
 			dev_err(hba->dev, "%s: Failed setting power mode, err = %d\n",

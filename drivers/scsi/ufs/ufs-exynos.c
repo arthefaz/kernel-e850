@@ -783,6 +783,61 @@ static int exynos_ufs_setup_clocks(struct ufs_hba *hba, bool on)
 	return ret;
 }
 
+static int exynos_ufs_get_available_lane(struct ufs_hba *hba)
+{
+	struct ufs_pa_layer_attr *pwr_info = &hba->max_pwr_info.info;
+	struct exynos_ufs *ufs = to_exynos_ufs(hba);
+
+	/* Get the available lane count */
+	ufshcd_dme_get(hba, UIC_ARG_MIB(PA_AVAILRXDATALANES),
+			&pwr_info->available_lane_rx);
+	ufshcd_dme_get(hba, UIC_ARG_MIB(PA_AVAILTXDATALANES),
+			&pwr_info->available_lane_tx);
+
+	if (!pwr_info->available_lane_rx || !pwr_info->available_lane_tx) {
+		dev_err(hba->dev, "%s: invalid host available lanes value. rx=%d, tx=%d\n",
+				__func__,
+				pwr_info->available_lane_rx,
+				pwr_info->available_lane_tx);
+		return -EINVAL;
+	}
+
+	if (ufs->num_rx_lanes == 0 || ufs->num_tx_lanes == 0) {
+		ufs->num_rx_lanes = pwr_info->available_lane_rx;
+		ufs->num_tx_lanes = pwr_info->available_lane_tx;
+		WARN(ufs->num_rx_lanes != ufs->num_tx_lanes,
+				"available data lane is not equal(rx:%d, tx:%d)\n",
+				ufs->num_rx_lanes, ufs->num_tx_lanes);
+	}
+
+	return 0;
+
+}
+
+static int exynos_ufs_hce_enable_notify(struct ufs_hba *hba,
+					enum ufs_notify_change_status status)
+{
+	struct exynos_ufs *ufs = to_exynos_ufs(hba);
+	int ret = 0;
+
+	switch (status) {
+	case PRE_CHANGE:
+		break;
+	case POST_CHANGE:
+		exynos_ufs_ctrl_clk(ufs, true);
+		exynos_ufs_select_refclk(ufs, true);
+		exynos_ufs_gate_clk(ufs, false);
+		exynos_ufs_set_hwacg_control(ufs, false);
+
+		ret = exynos_ufs_get_available_lane(hba);
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
 static int exynos_ufs_link_startup_notify(struct ufs_hba *hba,
 					enum ufs_notify_change_status status)
 {
@@ -798,21 +853,6 @@ static int exynos_ufs_link_startup_notify(struct ufs_hba *hba,
 		exynos_ufs_config_intr(ufs, DFES_DEF_DL_ERRS, UNIP_DL_LYR);
 		exynos_ufs_config_intr(ufs, DFES_DEF_N_ERRS, UNIP_N_LYR);
 		exynos_ufs_config_intr(ufs, DFES_DEF_T_ERRS, UNIP_T_LYR);
-
-		exynos_ufs_ctrl_clk(ufs, true);
-		exynos_ufs_select_refclk(ufs, true);
-		exynos_ufs_gate_clk(ufs, false);
-		exynos_ufs_set_hwacg_control(ufs, false);
-
-		if (ufs->num_rx_lanes == 0 || ufs->num_tx_lanes == 0) {
-			ufshcd_dme_get(hba, UIC_ARG_MIB(PA_AVAILRXDATALANES),
-					&ufs->num_rx_lanes);
-			ufshcd_dme_get(hba, UIC_ARG_MIB(PA_AVAILTXDATALANES),
-					&ufs->num_tx_lanes);
-			WARN(ufs->num_rx_lanes != ufs->num_tx_lanes,
-					"available data lane is not equal(rx:%d, tx:%d)\n",
-					ufs->num_rx_lanes, ufs->num_tx_lanes);
-		}
 
 		ufs->mclk_rate = clk_get_rate(ufs->clk_unipro);
 
@@ -1007,6 +1047,7 @@ static struct ufs_hba_variant_ops exynos_ufs_ops = {
 	.host_reset = exynos_ufs_host_reset,
 	.pre_setup_clocks = exynos_ufs_pre_setup_clocks,
 	.setup_clocks = exynos_ufs_setup_clocks,
+	.hce_enable_notify = exynos_ufs_hce_enable_notify,
 	.link_startup_notify = exynos_ufs_link_startup_notify,
 	.pwr_change_notify = exynos_ufs_pwr_change_notify,
 	.set_nexus_t_xfer_req = exynos_ufs_set_nexus_t_xfer_req,

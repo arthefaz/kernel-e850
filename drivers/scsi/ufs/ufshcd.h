@@ -280,6 +280,8 @@ struct ufs_pa_layer_attr {
 	u32 hs_rate;
 	u32 peer_available_lane_rx;
 	u32 peer_available_lane_tx;
+	u32 available_lane_rx;
+	u32 available_lane_tx;
 };
 
 struct ufs_pwr_mode_info {
