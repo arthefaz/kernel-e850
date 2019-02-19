@@ -713,6 +713,46 @@ static void exynos_panel_init_subdev(struct exynos_panel_device *panel)
 	DPU_INFO_PANEL("%s: panel sd name(%s)\n", __func__, sd->name);
 }
 
+static ssize_t panel_cabc_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	ssize_t count = 0;
+	int ret = 0;
+	struct exynos_panel_device *panel = dev_get_drvdata(dev);
+
+	ret = call_panel_ops(panel, set_cabc_mode,
+				panel, POWER_MODE_READ);
+
+	count = snprintf(buf, PAGE_SIZE, "power_mode = %d, ret = %d\n",
+			panel->power_mode, ret);
+
+	return count;
+}
+
+static ssize_t panel_cabc_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int ret;
+	unsigned int value = 0;
+	struct exynos_panel_device *panel = dev_get_drvdata(dev);
+
+	ret = kstrtouint(buf, 0, &value);
+	if (ret < 0)
+		return ret;
+
+	panel->power_mode = value;
+
+	DPU_INFO_PANEL("%s: %d\n", __func__, value);
+
+	call_panel_ops(panel, set_cabc_mode,
+			panel, panel->power_mode);
+
+	return count;
+}
+
+static DEVICE_ATTR(cabc_mode, 0660, panel_cabc_mode_show,
+			panel_cabc_mode_store);
+
 static int exynos_panel_probe(struct platform_device *pdev)
 {
 	struct exynos_panel_device *panel;
@@ -731,24 +771,46 @@ static int exynos_panel_probe(struct platform_device *pdev)
 	panel->dev = &pdev->dev;
 	panel_drvdata = panel;
 
+	if (IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_CABC))
+		panel->cabc_enabled = true;
+	else
+		panel->cabc_enabled = false;
+
+	if (panel->cabc_enabled) {
+		ret = device_create_file(panel->dev, &dev_attr_cabc_mode);
+		if (ret) {
+			DPU_ERR_PANEL("failed to create cabc sysfs\n");
+			goto err;
+		}
+
+		panel->power_mode = POWER_SAVE_OFF;
+	}
+
 	panel->bl = devm_backlight_device_register(panel->dev,
 			dev_name(panel->dev), NULL, panel,
 			&exynos_backlight_ops, NULL);
 	if (IS_ERR(panel->bl)) {
 		DPU_ERR_PANEL("failed to register backlight device\n");
 		ret = PTR_ERR(panel->bl);
-		goto err;
+		goto err_dev_file;
 	}
 
 	ret = exynos_panel_parse_dt(panel);
-	if (ret)
-		goto err;
+	if (ret) {
+		goto err_dev_file;
+	}
 
 	exynos_panel_list_up();
 	exynos_panel_find_id(panel);
 
 	exynos_panel_init_subdev(panel);
 	platform_set_drvdata(pdev, panel);
+
+	DPU_DEBUG_PANEL("%s -\n", __func__);
+	return ret;
+
+err_dev_file:
+	device_remove_file(panel->dev, &dev_attr_cabc_mode);
 
 err:
 	DPU_DEBUG_PANEL("%s -\n", __func__);

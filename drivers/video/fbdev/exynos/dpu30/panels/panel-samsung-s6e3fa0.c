@@ -17,9 +17,75 @@ int s6e3fa0_suspend(struct exynos_panel_device *panel)
 {
 	struct dsim_device *dsim = get_dsim_drvdata(0);
 
+	mutex_lock(&panel->ops_lock);
 	dsim_write_data_seq_delay(dsim, 20, 0x28, 0x00, 0x00);
+	mutex_unlock(&panel->ops_lock);
 
 	return 0;
+}
+
+static int s6e3fa0_cabc_mode_unlocked(int mode)
+{
+	int ret = 0;
+	int count;
+	unsigned char buf[] = {0x0, 0x0};
+	unsigned char SEQ_CABC_CMD[] = {0x55, 0x00, 0x00};
+	unsigned char cmd = MIPI_DCS_WRITE_POWER_SAVE; /* 0x55 */
+	struct dsim_device *dsim = get_dsim_drvdata(0);
+
+	DPU_DEBUG_PANEL("%s: CABC mode[%d] write/read\n", __func__, mode);
+
+	switch (mode) {
+	/* read */
+	case POWER_MODE_READ:
+		cmd = MIPI_DCS_GET_POWER_SAVE; /* 0x56 */
+		ret = dsim_read_data(dsim, MIPI_DSI_DCS_READ, cmd, 0x1, buf);
+		if (ret < 0) {
+			DPU_ERR_PANEL("CABC REG(0x%02X) read failure!\n", cmd);
+			count = 0;
+		} else {
+			DPU_INFO_PANEL("CABC REG(0x%02X) read success: 0x%02x\n",
+				cmd, *(unsigned int *)buf & 0xFF);
+			count = 1;
+		}
+		return count;
+
+	/* write */
+	case POWER_SAVE_OFF:
+		SEQ_CABC_CMD[1] = CABC_OFF;
+		break;
+	case POWER_SAVE_LOW:
+		SEQ_CABC_CMD[1] = CABC_USER_IMAGE;
+		break;
+	case POWER_SAVE_MEDIUM:
+		SEQ_CABC_CMD[1] = CABC_STILL_PICTURE;
+		break;
+	case POWER_SAVE_HIGH:
+		SEQ_CABC_CMD[1] = CABC_MOVING_IMAGE;
+		break;
+	default:
+		DPU_ERR_PANEL("Unavailable CABC mode(%d)!\n", mode);
+		return -EINVAL;
+	}
+
+	dsim_write_data_table(dsim, SEQ_CABC_CMD);
+
+	return ret;
+}
+
+static int s6e3fa0_cabc_mode(struct exynos_panel_device *panel, int mode)
+{
+	int ret = 0;
+
+	if (!panel->cabc_enabled) {
+		ret = -EPERM;
+		return ret;
+	}
+
+	mutex_lock(&panel->ops_lock);
+	s6e3fa0_cabc_mode_unlocked(mode);
+	mutex_unlock(&panel->ops_lock);
+	return ret;
 }
 
 int s6e3fa0_displayon(struct exynos_panel_device *panel)
@@ -27,6 +93,7 @@ int s6e3fa0_displayon(struct exynos_panel_device *panel)
 	struct exynos_panel_info *lcd = &panel->lcd_info;
 	struct dsim_device *dsim = get_dsim_drvdata(0);
 
+	mutex_lock(&panel->ops_lock);
 	dsim_write_data_seq_delay(dsim, 12, 0xF0, 0x5A, 0x5A);
 	dsim_write_data_seq_delay(dsim, 12, 0xF1, 0x5A, 0x5A);
 	dsim_write_data_seq_delay(dsim, 12, 0xFC, 0x5A, 0x5A);
@@ -49,6 +116,9 @@ int s6e3fa0_displayon(struct exynos_panel_device *panel)
 	dsim_write_data_seq_delay(dsim, 12, 0xC0, 0x63, 0x02, 0x03, 0x32, 0xFF,
 			0x44, 0x44, 0xC0, 0x00, 0x40);
 
+	if (panel->cabc_enabled)
+		s6e3fa0_cabc_mode_unlocked(panel->power_mode);
+
 	/* enable brightness control */
 	dsim_write_data_seq_delay(dsim, 12, 0x53, 0x20, 0x00);
 
@@ -59,6 +129,7 @@ int s6e3fa0_displayon(struct exynos_panel_device *panel)
 		mdelay(120);
 
 	dsim_write_data_seq(dsim, 0x29); /* display on */
+	mutex_unlock(&panel->ops_lock);
 
 	return 0;
 }
@@ -97,4 +168,5 @@ struct exynos_panel_ops panel_s6e3fa0_ops = {
 	.doze_suspend	= s6e3fa0_doze_suspend,
 	.dump		= s6e3fa0_dump,
 	.read_state	= s6e3fa0_read_state,
+	.set_cabc_mode	= s6e3fa0_cabc_mode,
 };

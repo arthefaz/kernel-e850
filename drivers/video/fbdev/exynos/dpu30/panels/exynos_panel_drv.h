@@ -65,6 +65,32 @@ struct exynos_panel_ops {
 	int (*doze_suspend)(struct exynos_panel_device *panel);
 	int (*dump)(struct exynos_panel_device *panel);
 	int (*read_state)(struct exynos_panel_device *panel);
+	int (*set_cabc_mode)(struct exynos_panel_device *panel, int mode);
+};
+
+/*
+ * cabc_mode[1:0] must be re-mapped according to DDI command
+ * 3FA0 is OLED, so CABC command is not supported.
+ * Following values represent for ACL2 control of 3FA0.
+ * - [2'b00] ACL off
+ * - [2'b01] ACL low
+ * - [2'b10] ACL mid
+ * - [2'b11] ACL high
+ */
+enum cabc_mode {
+	CABC_OFF = 0,
+	CABC_USER_IMAGE,
+	CABC_STILL_PICTURE,
+	CABC_MOVING_IMAGE,
+};
+
+enum power_mode {
+	POWER_SAVE_OFF = 0,
+	POWER_SAVE_LOW = 1,
+	POWER_SAVE_MEDIUM = 2,
+	POWER_SAVE_HIGH = 3,
+	POWER_SAVE_MAX = 4,
+	POWER_MODE_READ = 0x80,
 };
 
 struct exynos_panel_device {
@@ -77,6 +103,8 @@ struct exynos_panel_device {
 	struct backlight_device *bl;
 	struct exynos_panel_info lcd_info;
 	struct exynos_panel_ops *ops;
+	bool cabc_enabled;
+	enum power_mode power_mode;
 };
 
 static inline struct exynos_panel_device *get_panel_drvdata(void)
