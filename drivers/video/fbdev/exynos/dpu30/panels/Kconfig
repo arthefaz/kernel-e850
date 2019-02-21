@@ -1,5 +1,6 @@
 config EXYNOS_COMMON_PANEL
 	depends on EXYNOS_DPU30
+	select BACKLIGHT_CLASS_DEVICE
 	default n
 	bool "Support Exynos Common Panel Driver"
 
