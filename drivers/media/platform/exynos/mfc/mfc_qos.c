@@ -413,11 +413,12 @@ static inline unsigned long __mfc_qos_get_mb_per_second(struct mfc_ctx *ctx)
 static void __mfc_qos_get_bw_per_second(struct mfc_ctx *ctx, struct bts_bw *curr_mfc_bw_ctx)
 {
 	struct mfc_bw_data bw_data;
-	struct mfc_bw_info *bw_info = &ctx->dev->pdata->mfc_bw_info;
+	struct mfc_bw_info *bw_info = NULL;
 	unsigned long mb_width, mb_height, fps, mb;
 	unsigned long peak_bw_per_sec;
 	unsigned long read_bw_per_sec;
 	unsigned long write_bw_per_sec;
+	unsigned long add_bw_per_sec = 0;
 	unsigned long mb_count_per_uhd_frame = MB_COUNT_PER_UHD_FRAME;
 	unsigned long max_fps_per_uhd_frame = MAX_FPS_PER_UHD_FRAME;
 
@@ -426,6 +427,11 @@ static void __mfc_qos_get_bw_per_second(struct mfc_ctx *ctx, struct bts_bw *curr
 	fps = ctx->framerate / 1000;
 
 	mb = mb_width * mb_height * fps;
+
+	if (ctx->is_sbwc)
+		bw_info = &ctx->dev->pdata->mfc_bw_info_sbwc;
+	else
+		bw_info = &ctx->dev->pdata->mfc_bw_info;
 
 	switch (ctx->codec_mode) {
 	case MFC_REG_CODEC_H264_DEC:
@@ -495,9 +501,14 @@ static void __mfc_qos_get_bw_per_second(struct mfc_ctx *ctx, struct bts_bw *curr
 		mb = mb_count_per_uhd_frame * max_fps_per_uhd_frame;
 	}
 
-	peak_bw_per_sec = (bw_data.peak * mb) / mb_count_per_uhd_frame;
-	read_bw_per_sec = (bw_data.read * mb) / mb_count_per_uhd_frame;
-	write_bw_per_sec = (bw_data.write * mb) / mb_count_per_uhd_frame;
+	if (ctx->rgb_bpp > 12) {
+		add_bw_per_sec = (((ctx->rgb_bpp - 12) / 8) * (ctx->crop_width * ctx->crop_height) * fps) / 1024;
+		mfc_debug(4, "[QoS] additional BW %ldKB for RGB format\n", add_bw_per_sec);
+	}
+
+	peak_bw_per_sec = ((bw_data.peak * mb) / mb_count_per_uhd_frame) + add_bw_per_sec;
+	read_bw_per_sec = ((bw_data.read * mb) / mb_count_per_uhd_frame) + add_bw_per_sec;
+	write_bw_per_sec = ((bw_data.write * mb) / mb_count_per_uhd_frame) + add_bw_per_sec;
 
 	if (peak_bw_per_sec == 0) {
 		mfc_debug(4, "[QoS] fix lower peak bound (mb: %ld, fps: %ld)\n", mb, fps);

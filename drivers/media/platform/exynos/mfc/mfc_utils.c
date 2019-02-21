@@ -162,19 +162,11 @@ static void __mfc_set_linear_stride_size(struct mfc_ctx *ctx,
 		raw->stride_2bits[2] = 0;
 		break;
 	case V4L2_PIX_FMT_RGB24:
-		raw->stride[0] = ALIGN((ctx->img_width * 3), 16);
-		raw->stride[1] = 0;
-		raw->stride[2] = 0;
-		break;
 	case V4L2_PIX_FMT_RGB565:
-		raw->stride[0] = ALIGN((ctx->img_width * 2), 16);
-		raw->stride[1] = 0;
-		raw->stride[2] = 0;
-		break;
 	case V4L2_PIX_FMT_RGB32X:
 	case V4L2_PIX_FMT_BGR32:
 	case V4L2_PIX_FMT_ARGB32:
-		raw->stride[0] = ALIGN((ctx->img_width * 4), 16);
+		raw->stride[0] = ALIGN((ctx->img_width * (ctx->rgb_bpp / 8)), 16);
 		raw->stride[1] = 0;
 		raw->stride[2] = 0;
 		break;
@@ -405,15 +397,18 @@ void mfc_enc_calc_src_size(struct mfc_ctx *ctx)
 		raw->plane_size[1] = ALIGN(default_size, 256) * 2 + extra;
 		break;
 	case V4L2_PIX_FMT_RGB24:
-		raw->plane_size[0] = ALIGN((default_size * 3), 256) + extra;
+		ctx->rgb_bpp = 24;
+		raw->plane_size[0] = ALIGN((default_size * (ctx->rgb_bpp / 8)), 256) + extra;
 		break;
 	case V4L2_PIX_FMT_RGB565:
-		raw->plane_size[0] = ALIGN((default_size * 2), 256) + extra;
+		ctx->rgb_bpp = 16;
+		raw->plane_size[0] = ALIGN((default_size * (ctx->rgb_bpp / 8)), 256) + extra;
 		break;
 	case V4L2_PIX_FMT_RGB32X:
 	case V4L2_PIX_FMT_BGR32:
 	case V4L2_PIX_FMT_ARGB32:
-		raw->plane_size[0] = ALIGN((default_size * 4), 256) + extra;
+		ctx->rgb_bpp = 32;
+		raw->plane_size[0] = ALIGN((default_size * (ctx->rgb_bpp / 8)), 256) + extra;
 		break;
 	/* for compress format (SBWC) */
 	case V4L2_PIX_FMT_NV12M_SBWC_8B:

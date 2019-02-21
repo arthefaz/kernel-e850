@@ -521,6 +521,7 @@ struct mfc_platdata {
 
 #ifdef CONFIG_EXYNOS_BTS
 	struct mfc_bw_info mfc_bw_info;
+	struct mfc_bw_info mfc_bw_info_sbwc;
 #endif
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	struct mfc_qos_weight qos_weight;
@@ -1529,6 +1530,7 @@ struct mfc_ctx {
 	int crop_top;
 	int dpb_count;
 	int buf_stride;
+	int rgb_bpp;
 
 	int min_dpb_size[3];
 
