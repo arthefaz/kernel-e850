@@ -9,6 +9,7 @@ obj-$(CONFIG_EXYNOS_DPP) += dpp.o
 dpp-y := dpp_drv.o
 obj-$(CONFIG_EXYNOS_MIPI_DSIM) += dsim.o
 dsim-y += dsim_drv.o
+obj-$(CONFIG_SOC_EXYNOS9830) += ./cal_9830/dsim_reg.o ./cal_9830/dpp_reg.o ./cal_9830/decon_reg.o
 obj-$(CONFIG_SOC_EXYNOS9820) += ./cal_9820/dsim_reg.o ./cal_9820/dpp_reg.o ./cal_9820/decon_reg.o
 obj-$(CONFIG_SOC_EXYNOS9610) += ./cal_9610/dsim_reg.o ./cal_9610/dpp_reg.o ./cal_9610/decon_reg.o
 ifdef CONFIG_EXYNOS_DISPLAYPORT
