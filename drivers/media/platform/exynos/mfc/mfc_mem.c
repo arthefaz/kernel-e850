@@ -279,35 +279,34 @@ err_get_daddr:
 	return -1;
 }
 
-void mfc_put_iovmm(struct mfc_ctx *ctx, int num_planes, int index)
+void mfc_put_iovmm(struct mfc_ctx *ctx, struct dpb_table *dpb, int num_planes, int index)
 {
-	struct mfc_dec *dec = ctx->dec_priv;
 	int i;
 
 	for (i = 0; i < num_planes; i++) {
-		if (dec->assigned_addr[index][i]) {
-			mfc_debug(2, "[IOVMM] index %d buf[%d] addr: %#llx\n",
-					index, i, dec->assigned_addr[index][i]);
-			ion_iovmm_unmap(dec->assigned_attach[index][i], dec->assigned_addr[index][i]);
+		if (dpb[index].addr[i]) {
+			mfc_debug(2, "[IOVMM] index %d buf[%d] fd: %d addr: %#llx\n",
+					index, i, dpb[index].fd[i], dpb[index].addr[i]);
+			ion_iovmm_unmap(dpb[index].attach[i], dpb[index].addr[i]);
 		}
-		if (dec->assigned_attach[index][i])
-			dma_buf_detach(dec->assigned_dmabufs[index][i], dec->assigned_attach[index][i]);
-		if (dec->assigned_dmabufs[index][i])
-			dma_buf_put(dec->assigned_dmabufs[index][i]);
+		if (dpb[index].attach[i])
+			dma_buf_detach(dpb[index].dmabufs[i], dpb[index].attach[i]);
+		if (dpb[index].dmabufs[i])
+			dma_buf_put(dpb[index].dmabufs[i]);
 
-		dec->assigned_addr[index][i] = 0;
-		dec->assigned_attach[index][i] = NULL;
-		dec->assigned_dmabufs[index][i] = NULL;
+		dpb[index].fd[i] = -1;
+		dpb[index].addr[i] = 0;
+		dpb[index].attach[i] = NULL;
+		dpb[index].dmabufs[i] = NULL;
 	}
 
-	dec->assigned_refcnt[index]--;
-	mfc_debug(2, "[IOVMM] index %d ref %d\n", index, dec->assigned_refcnt[index]);
+	dpb[index].mapcnt--;
+	mfc_debug(2, "[IOVMM] index %d mapcnt %d\n", index, dpb[index].mapcnt);
 }
 
-void mfc_get_iovmm(struct mfc_ctx *ctx, struct vb2_buffer *vb)
+void mfc_get_iovmm(struct mfc_ctx *ctx, struct vb2_buffer *vb, struct dpb_table *dpb)
 {
 	struct mfc_dev *dev = ctx->dev;
-	struct mfc_dec *dec = ctx->dec_priv;
 	struct vb2_queue *vq = vb->vb2_queue;
 	int i, mem_get_count = 0;
 	int index = vb->index;
@@ -316,48 +315,50 @@ void mfc_get_iovmm(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 	for (i = 0; i < ctx->dst_fmt->mem_planes; i++) {
 		mem_get_count++;
 
-		dec->assigned_dmabufs[index][i] = dma_buf_get(vb->planes[i].m.fd);
-		if (IS_ERR(dec->assigned_dmabufs[index][i])) {
+		dpb[index].fd[i] = vb->planes[i].m.fd;
+
+		dpb[index].dmabufs[i] = dma_buf_get(vb->planes[i].m.fd);
+		if (IS_ERR(dpb[index].dmabufs[i])) {
 			mfc_err_ctx("[IOVMM] Failed to dma_buf_get (err %ld)\n",
-					PTR_ERR(dec->assigned_dmabufs[index][i]));
-			dec->assigned_dmabufs[index][i] = NULL;
+					PTR_ERR(dpb[index].dmabufs[i]));
+			dpb[index].dmabufs[i] = NULL;
 			goto err_iovmm;
 		}
 
-		dec->assigned_attach[index][i] = dma_buf_attach(dec->assigned_dmabufs[index][i], dev->device);
-		if (IS_ERR(dec->assigned_attach[index][i])) {
+		dpb[index].attach[i] = dma_buf_attach(dpb[index].dmabufs[i], dev->device);
+		if (IS_ERR(dpb[index].attach[i])) {
 			mfc_err_ctx("[IOVMM] Failed to get dma_buf_attach (err %ld)\n",
-					PTR_ERR(dec->assigned_attach[index][i]));
-			dec->assigned_attach[index][i] = NULL;
+					PTR_ERR(dpb[index].attach[i]));
+			dpb[index].attach[i] = NULL;
 			goto err_iovmm;
 		}
 
 		if (device_get_dma_attr(dev->device) == DEV_DMA_COHERENT)
 			ioprot |= IOMMU_CACHE;
 
-		dec->assigned_addr[index][i] = ion_iovmm_map(dec->assigned_attach[index][i],
+		dpb[index].addr[i] = ion_iovmm_map(dpb[index].attach[i],
 				0, ctx->raw_buf.plane_size[i], vq->dma_dir, ioprot);
-		if (IS_ERR_VALUE(dec->assigned_addr[index][i])) {
+		if (IS_ERR_VALUE(dpb[index].addr[i])) {
 			mfc_err_ctx("[IOVMM] Failed to allocate iova (err 0x%p)\n",
-					&dec->assigned_addr[index][i]);
-			dec->assigned_addr[index][i] = 0;
+					&dpb[index].addr[i]);
+			dpb[index].addr[i] = 0;
 			goto err_iovmm;
 		}
-		mfc_debug(2, "[IOVMM] index %d buf[%d] addr: %#llx\n",
-				index, i, dec->assigned_addr[index][i]);
+		mfc_debug(2, "[IOVMM] index %d buf[%d] fd: %d addr: %#llx\n",
+				index, i, dpb[index].fd[i], dpb[index].addr[i]);
 	}
 
-	dec->assigned_refcnt[index]++;
-	mfc_debug(2, "[IOVMM] index %d ref %d\n", index, dec->assigned_refcnt[index]);
+	dpb[index].mapcnt++;
+	mfc_debug(2, "[IOVMM] index %d mapcnt %d\n", index, dpb[index].mapcnt);
 
 	return;
 
 err_iovmm:
-	dec->assigned_refcnt[index]++;
-	mfc_put_iovmm(ctx, mem_get_count, index);
+	dpb[index].mapcnt++;
+	mfc_put_iovmm(ctx, dpb, mem_get_count, index);
 }
 
-void mfc_cleanup_assigned_iovmm(struct mfc_ctx *ctx)
+void mfc_cleanup_iovmm(struct mfc_ctx *ctx)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
 	int i;
@@ -365,15 +366,14 @@ void mfc_cleanup_assigned_iovmm(struct mfc_ctx *ctx)
 	mutex_lock(&dec->dpb_mutex);
 
 	for (i = 0; i < MFC_MAX_DPBS; i++) {
-		if (dec->assigned_refcnt[i] == 0) {
+		if (dec->dpb[i].mapcnt == 0) {
 			continue;
-		} else if (dec->assigned_refcnt[i] == 1) {
-			mfc_put_iovmm(ctx, ctx->dst_fmt->mem_planes, i);
+		} else if (dec->dpb[i].mapcnt == 1) {
+			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 		} else {
-			mfc_err_ctx("[IOVMM] index %d invalid refcnt %d\n", i, dec->assigned_refcnt[i]);
-			MFC_TRACE_CTX("DPB[%d] %#llx invalid refcnt %d\n",
-					i, dec->assigned_addr[i][0],
-					dec->assigned_refcnt[i]);
+			mfc_err_ctx("[IOVMM] index %d invalid mapcnt %d\n", i, dec->dpb[i].mapcnt);
+			MFC_TRACE_CTX("DPB[%d] %#llx invalid mapcnt %d\n",
+					i, dec->dpb[i].addr[0], dec->dpb[i].mapcnt);
 		}
 	}
 

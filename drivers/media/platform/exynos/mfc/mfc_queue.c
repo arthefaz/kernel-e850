@@ -880,26 +880,26 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 
 	mutex_lock(&dec->dpb_mutex);
-	if (!dec->assigned_refcnt[index]) {
-		mfc_get_iovmm(ctx, vb);
+	if (!dec->dpb[index].mapcnt) {
+		mfc_get_iovmm(ctx, vb, dec->dpb);
 	} else {
-		if (dec->assigned_addr[index][0] != mfc_buf->addr[0][0]) {
+		if (dec->dpb[index].addr[0] != mfc_buf->addr[0][0]) {
 			if (dec->dynamic_used & (1 << index)) {
 				mfc_err_ctx("[IOVMM] ref DPB[%d] was changed %#llx->%#llx (used: %#x)\n",
-						index, dec->assigned_addr[index][0],
+						index, dec->dpb[index].addr[0],
 						mfc_buf->addr[0][0], dec->dynamic_used);
 				MFC_TRACE_CTX("ref DPB[%d] %#llx->%#llx (%#x)\n",
-						index, dec->assigned_addr[index][0],
+						index, dec->dpb[index].addr[0],
 						mfc_buf->addr[0][0], dec->dynamic_used);
 			} else {
 				mfc_debug(2, "[IOVMM] DPB[%d] was changed %#llx->%#llx (used: %#x)\n",
-						index, dec->assigned_addr[index][0],
+						index, dec->dpb[index].addr[0],
 						mfc_buf->addr[0][0], dec->dynamic_used);
 				MFC_TRACE_CTX("DPB[%d] %#llx->%#llx (%#x)\n",
-						index, dec->assigned_addr[index][0],
+						index, dec->dpb[index].addr[0],
 						mfc_buf->addr[0][0], dec->dynamic_used);
-				mfc_put_iovmm(ctx, ctx->dst_fmt->mem_planes, index);
-				mfc_get_iovmm(ctx, vb);
+				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, index);
+				mfc_get_iovmm(ctx, vb, dec->dpb);
 			}
 		}
 	}

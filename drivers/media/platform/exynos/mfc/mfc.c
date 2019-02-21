@@ -95,7 +95,7 @@ static void __mfc_deinit_dec_ctx(struct mfc_ctx *ctx)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
 
-	mfc_cleanup_assigned_iovmm(ctx);
+	mfc_cleanup_iovmm(ctx);
 
 	mfc_delete_queue(&ctx->src_buf_queue);
 	mfc_delete_queue(&ctx->dst_buf_queue);
