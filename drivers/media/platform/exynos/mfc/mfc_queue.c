@@ -891,6 +891,7 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 				MFC_TRACE_CTX("ref DPB[%d] %#llx->%#llx (%#x)\n",
 						index, dec->dpb[index].addr[0],
 						mfc_buf->addr[0][0], dec->dynamic_used);
+				mfc_get_iovmm(ctx, vb, dec->spare_dpb);
 			} else {
 				mfc_debug(2, "[IOVMM] DPB[%d] was changed %#llx->%#llx (used: %#x)\n",
 						index, dec->dpb[index].addr[0],
@@ -901,6 +902,7 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, index);
 				mfc_get_iovmm(ctx, vb, dec->dpb);
 			}
+			mfc_print_iovmm(ctx);
 		}
 	}
 	mutex_unlock(&dec->dpb_mutex);

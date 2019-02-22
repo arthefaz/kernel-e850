@@ -1429,6 +1429,7 @@ struct mfc_dec {
 	struct dec_dpb_ref_info *ref_info;
 	int assigned_fd[MFC_MAX_DPBS];
 	struct dpb_table dpb[MFC_MAX_DPBS];
+	struct dpb_table spare_dpb[MFC_MAX_DPBS];
 	struct mutex dpb_mutex;
 	struct mfc_user_shared_handle sh_handle_dpb;
 	struct mfc_user_shared_handle sh_handle_hdr;

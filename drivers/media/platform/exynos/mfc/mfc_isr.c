@@ -598,6 +598,36 @@ static void __mfc_handle_frame_input(struct mfc_ctx *ctx, unsigned int err)
 	vb2_buffer_done(&src_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
 }
 
+static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
+{
+	struct mfc_dev *dev = ctx->dev;
+	struct mfc_dec *dec = ctx->dec_priv;
+	unsigned int prev_flag, used_flag, released_flag = 0;
+	int i, reassigned = 0;
+
+	prev_flag = dec->dynamic_used;
+	used_flag = mfc_get_dec_used_flag();
+	released_flag = prev_flag & (~used_flag);
+
+	mutex_lock(&dec->dpb_mutex);
+
+	for (i = 0; i < MFC_MAX_DPBS; i++) {
+		if ((released_flag & (1 << i)) && dec->spare_dpb[i].mapcnt) {
+			mfc_debug(2, "[IOVMM] released buf %d re-assigned\n", i);
+			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
+			dec->dpb[i] = dec->spare_dpb[i];
+			mfc_clear_iovmm(ctx, dec->spare_dpb, ctx->dst_fmt->mem_planes, i);
+			reassigned = 1;
+		}
+	}
+
+	/* It is only for debugging */
+	if (reassigned)
+		mfc_print_iovmm(ctx);
+
+	mutex_unlock(&dec->dpb_mutex);
+}
+
 /* Handle frame decoding interrupt */
 static void __mfc_handle_frame(struct mfc_ctx *ctx,
 			unsigned int reason, unsigned int err)
@@ -721,6 +751,9 @@ static void __mfc_handle_frame(struct mfc_ctx *ctx,
 		dec->super64_bframe = 1;
 		mfc_qos_on(ctx);
 	}
+
+	/* arrangement of assigned dpb table */
+	__mfc_handle_released_buf(ctx);
 
 	switch (dst_frame_status) {
 	case MFC_REG_DEC_STATUS_DECODING_DISPLAY:

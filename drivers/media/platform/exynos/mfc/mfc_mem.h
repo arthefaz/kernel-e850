@@ -35,6 +35,18 @@ static inline int mfc_bufcon_get_buf_count(struct dma_buf *dmabuf)
 	return dmabuf_container_get_count(dmabuf);
 }
 
+static inline void mfc_print_iovmm(struct mfc_ctx *ctx)
+{
+	struct mfc_dec *dec = ctx->dec_priv;
+	int i;
+
+	for (i = 0; i < MFC_MAX_DPBS; i++)
+		mfc_debug(3, "[IOVMM][%d] dpb %#llx %#llx (%d), spare %#llx %#llx (%d)\n",
+				i, dec->dpb[i].addr[0], dec->dpb[i].addr[1],
+				dec->dpb[i].mapcnt, dec->spare_dpb[i].addr[0],
+				dec->spare_dpb[i].addr[1], dec->spare_dpb[i].mapcnt);
+}
+
 struct vb2_mem_ops *mfc_mem_ops(void);
 
 void mfc_mem_set_cacheable(bool cacheable);
@@ -60,5 +72,6 @@ int mfc_bufcon_get_daddr(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf,
 					struct dma_buf *bufcon_dmabuf, int plane);
 void mfc_put_iovmm(struct mfc_ctx *ctx, struct dpb_table *dpb, int num_planes, int index);
 void mfc_get_iovmm(struct mfc_ctx *ctx, struct vb2_buffer *vb, struct dpb_table *dpb);
+void mfc_clear_iovmm(struct mfc_ctx *ctx, struct dpb_table *dpb, int num_planes, int index);
 void mfc_cleanup_iovmm(struct mfc_ctx *ctx);
 #endif /* __MFC_MEM_H */
