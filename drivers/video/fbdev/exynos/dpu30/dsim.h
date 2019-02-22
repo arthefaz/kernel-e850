@@ -39,6 +39,7 @@ extern int dsim_log_level;
 
 #define MIPI_WR_TIMEOUT				msecs_to_jiffies(50)
 #define MIPI_RD_TIMEOUT				msecs_to_jiffies(100)
+#define DSIM_PL_FIFO_THRESHOLD			2048	/*this value depends on H/W */
 
 #define dsim_err(fmt, ...)							\
 	do {									\
@@ -215,6 +216,9 @@ struct dsim_device {
 
 	int total_underrun_cnt;
 	int idle_ip_index;
+
+	int pl_cnt;
+	int line_cnt;
 
 	struct dsim_fb_handover fb_handover;
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)

@@ -54,10 +54,14 @@ void dsim_reg_clear_int(u32 id, u32 int_src);
 void dsim_reg_wr_tx_header(u32 id, u32 d_id, unsigned long d0, u32 d1, u32 bta);
 void dsim_reg_wr_tx_payload(u32 id, u32 payload);
 u32 dsim_reg_header_fifo_is_empty(u32 id);
-u32 dsim_reg_is_writable_fifo_state(u32 id);
+u32 dsim_reg_payload_fifo_is_empty(u32 id);
+bool dsim_reg_is_writable_ph_fifo_state(u32 id);
 u32 dsim_reg_get_rx_fifo(u32 id);
 u32 dsim_reg_rx_fifo_is_empty(u32 id);
 int dsim_reg_rx_err_handler(u32 id, u32 rx_fifo);
+void dsim_reg_enable_packetgo(u32 id, u32 en);
+
+int dsim_reg_get_linecount(u32 id, u32 mode);
 
 /* For reading DSIM shadow SFR */
 void dsim_reg_enable_shadow_read(u32 id, u32 en);

@@ -22,7 +22,7 @@
 #define DSIM_LP_RX_TIMEOUT		0xffff
 #define DSIM_MULTI_PACKET_CNT		0xffff
 #define DSIM_PLL_STABLE_TIME		0x682A
-#define DSIM_FIFOCTRL_THRESHOLD		0x1 /* 1 ~ 32 */
+#define DSIM_PH_FIFOCTRL_THRESHOLD	32 /* 1 ~ 32 */
 
 #define PLL_SLEEP_CNT_MULT		450
 #define PLL_SLEEP_CNT_MARGIN_RATIO	0	/* 10% ~ 20% */
@@ -1231,7 +1231,7 @@ static void dsim_reg_enable_clocklane(u32 id, u32 en)
 				DSIM_CLK_CTRL_CLKLANE_ONOFF);
 }
 
-static void dsim_reg_enable_packetgo(u32 id, u32 en)
+void dsim_reg_enable_packetgo(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
@@ -1702,7 +1702,7 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	}
 
 	if (lcd_info->mode == DECON_VIDEO_MODE) {
-		dsim_reg_set_multi_packet_count(id, 0xff);
+		dsim_reg_set_multi_packet_count(id, DSIM_PH_FIFOCTRL_THRESHOLD);
 		dsim_reg_enable_multi_cmd_packet(id, 0);
 	}
 	dsim_reg_enable_packetgo(id, 0);
@@ -2369,14 +2369,21 @@ u32 dsim_reg_header_fifo_is_empty(u32 id)
 	return dsim_read_mask(id, DSIM_FIFOCTRL, DSIM_FIFOCTRL_EMPTY_PH_SFR);
 }
 
-u32 dsim_reg_is_writable_fifo_state(u32 id)
+u32 dsim_reg_payload_fifo_is_empty(u32 id)
+{
+
+	return dsim_read_mask(id, DSIM_FIFOCTRL, DSIM_FIFOCTRL_EMPTY_PL_SFR);
+}
+
+bool dsim_reg_is_writable_ph_fifo_state(u32 id)
 {
 	u32 val = dsim_read(id, DSIM_FIFOCTRL);
 
-	if (DSIM_FIFOCTRL_NUMBER_OF_PH_SFR_GET(val) < DSIM_FIFOCTRL_THRESHOLD)
-		return 1;
+	val = DSIM_FIFOCTRL_NUMBER_OF_PH_SFR_GET(val);
+	if (val < DSIM_PH_FIFOCTRL_THRESHOLD)
+		return true;
 	else
-		return 0;
+		return false;
 }
 
 u32 dsim_reg_get_rx_fifo(u32 id)
@@ -2387,6 +2394,21 @@ u32 dsim_reg_get_rx_fifo(u32 id)
 u32 dsim_reg_rx_fifo_is_empty(u32 id)
 {
 	return dsim_read_mask(id, DSIM_FIFOCTRL, DSIM_FIFOCTRL_EMPTY_RX);
+}
+
+int dsim_reg_get_linecount(u32 id, u32 mode)
+{
+	u32 val = 0;
+
+	if (mode == DECON_VIDEO_MODE) {
+		val = dsim_read(id, DSIM_LINK_STATUS0);
+		return DSIM_LINK_STATUS0_VM_LINE_CNT_GET(val);
+	} else if (mode == DECON_MIPI_COMMAND_MODE) {
+		val = dsim_read(id, DSIM_LINK_STATUS1);
+		return DSIM_LINK_STATUS1_CMD_TRANSF_CNT_GET(val);
+	}
+
+	return -EINVAL;
 }
 
 int dsim_reg_rx_err_handler(u32 id, u32 rx_fifo)
