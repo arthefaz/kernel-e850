@@ -524,6 +524,135 @@ static int __set_phy_cfg_0502_0003_dphy(void __iomem *regs, int option, u32 *cfg
 	return 0;
 }
 
+static int __set_phy_cfg_0503_0000_dcphy(void __iomem *regs, int option, u32 *cfg)
+{
+	int i;
+	u32 type = cfg[TYPE] & 0xffff;
+	u32 mode = cfg[TYPE] >> 16;
+	u32 settle_clk_sel = 1;
+	u32 skew_delay_sel = 0;
+	u32 skew_cal_en = 0;
+
+	if (cfg[SPEED] >= PHY_REF_SPEED) {
+		settle_clk_sel = 0;
+		skew_cal_en = 1;
+
+		if (cfg[SPEED] >= 4000 && cfg[SPEED] <= 6500)
+			skew_delay_sel = 0;
+		else if (cfg[SPEED] >= 3000 && cfg[SPEED] < 4000)
+			skew_delay_sel = 1;
+		else if (cfg[SPEED] >= 2000 && cfg[SPEED] < 3000)
+			skew_delay_sel = 2;
+		else if (cfg[SPEED] >= 1500 && cfg[SPEED] < 2000)
+			skew_delay_sel = 3;
+		else
+			skew_delay_sel = 0;
+	}
+
+	/* BIAS_SET */
+	writel(0x00000010, regs + 0x0000); /* M_BIAS_CON0 */
+	writel(0x00000110, regs + 0x0004); /* M_BIAS_CON1 */
+	writel(0x00003223, regs + 0x0008); /* M_BIAS_CON2 */
+	if (mode == 0x000C)
+		writel(0x00000040, regs + 0x0010); /* M1_BIAS_CON4 */
+
+	/* Dphy */
+	if (mode == 0x000D) {
+		/* clock */
+		writel(0x00001450, regs + 0x0004); /* SC_GNR_CON1 */
+		writel(0x00000002, regs + 0x0010); /* SC_ANA_CON2 */
+		writel(0x00000600, regs + 0x0014); /* SC_ANA_CON3 */
+		writel(0x00000000, regs + 0x0030); /* SC_TIME_CON0 */
+
+		for (i = 0; i <= cfg[LANES]; i++) {
+			writel(0x00001450, regs + 0x0004 + (i * 0x100)); /* SD_GNR_CON1 */
+			writel(0x00000002, regs + 0x0010 + (i * 0x100)); /* SD_ANA_CON2 */
+			update_bits(regs + 0x0010 + (i * 0x100), 8, 2, skew_delay_sel); /* SD_ANA_CON2 */
+			writel(0x00000600, regs + 0x0014 + (i * 0x100)); /* SD_ANA_CON3 */
+
+			if ((type == 0xDC) && (i < 3))
+				writel(0x00000040, regs + 0x0024 + (i * 0x100)); /* SD_ANA_CON7 */
+
+			update_bits(regs + 0x0030 + (i * 0x100), 0, 8, cfg[SETTLE]);    /* SD_TIME_CON0 */
+			update_bits(regs + 0x0030 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
+			writel(0x00000003, regs + 0x0134 + (i * 0x100)); /* SD_TIME_CON1 */
+			update_bits(regs + 0x0040 + (i * 0x100), 0, 1, skew_cal_en); /* SD_DESKEW_CON0 */
+			writel(0x0000081A, regs + 0x0050 + (i * 0x100)); /* SD_DESKEW_CON4 */
+		}
+	} else { /* Cphy */
+		for (i = 0; i <= cfg[LANES]; i++) {
+			writel(0x00001450, regs + 0x0004 + (i * 0x100)); /* SD_GNR_CON1 */
+			writel(0x00008000, regs + 0x000C + (i * 0x100)); /* SD_ANA_CON1 */
+			writel(0x00000005, regs + 0x0010 + (i * 0x100)); /* SD_ANA_CON2 */
+			writel(0x00000600, regs + 0x0014 + (i * 0x100)); /* SD_ANA_CON3 */
+			writel(0x00000200, regs + 0x001c + (i * 0x100)); /* SD_ANA_CON5 */
+			writel(0x00000608, regs + 0x0020 + (i * 0x100)); /* SD_ANA_CON6 */
+			writel(0x00000040, regs + 0x0024 + (i * 0x100)); /* SD_ANA_CON7 */
+			update_bits(regs + 0x0030 + (i * 0x100), 0, 8, cfg[SETTLE]);    /* SD_TIME_CON0 */
+			update_bits(regs + 0x0030 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
+			writel(0x00000003, regs + 0x0134 + (i * 0x100)); /* SD_TIME_CON1 */
+			writel(0x00001500, regs + 0x0064 + (i * 0x100)); /* SD_CRC_CON1 */
+			writel(0x00000030, regs + 0x0068 + (i * 0x100)); /* SD_CRC_CON2 */
+		}
+	}
+	return 0;
+}
+
+static int __set_phy_cfg_0503_0001_dphy(void __iomem *regs, int option, u32 *cfg)
+{
+	int i;
+	u32 type = cfg[TYPE] & 0xffff;
+	u32 mode = cfg[TYPE] >> 16;
+	u32 settle_clk_sel = 1;
+	u32 skew_delay_sel = 0;
+	u32 skew_cal_en = 0;
+
+	if (cfg[SPEED] >= PHY_REF_SPEED) {
+		settle_clk_sel = 0;
+		skew_cal_en = 1;
+
+		if (cfg[SPEED] >= 4000 && cfg[SPEED] <= 6500)
+			skew_delay_sel = 0;
+		else if (cfg[SPEED] >= 3000 && cfg[SPEED] < 4000)
+			skew_delay_sel = 1;
+		else if (cfg[SPEED] >= 2000 && cfg[SPEED] < 3000)
+			skew_delay_sel = 2;
+		else if (cfg[SPEED] >= 1500 && cfg[SPEED] < 2000)
+			skew_delay_sel = 3;
+		else
+			skew_delay_sel = 0;
+	}
+
+	/* BIAS_SET */
+	writel(0x00000010, regs + 0x0000); /* M_BIAS_CON0 */
+	writel(0x00000110, regs + 0x0004); /* M_BIAS_CON1 */
+	writel(0x00003223, regs + 0x0008); /* M_BIAS_CON2 */
+	if (mode == 0x000C)
+		writel(0x00000040, regs + 0x0010); /* M1_BIAS_CON4 */
+
+	/* clock */
+	writel(0x00001450, regs + 0x0004); /* SC_GNR_CON1 */
+	writel(0x00000002, regs + 0x0010); /* SC_ANA_CON2 */
+	writel(0x00000600, regs + 0x0014); /* SC_ANA_CON3 */
+	writel(0x00000000, regs + 0x0030); /* SC_TIME_CON0 */
+
+	for (i = 0; i <= cfg[LANES]; i++) {
+		writel(0x00001450, regs + 0x0004 + (i * 0x100)); /* SD_GNR_CON1 */
+		writel(0x00000002, regs + 0x0010 + (i * 0x100)); /* SD_ANA_CON2 */
+		update_bits(regs + 0x0010 + (i * 0x100), 8, 2, skew_delay_sel); /* SD_ANA_CON2 */
+		writel(0x00000600, regs + 0x0014 + (i * 0x100)); /* SD_ANA_CON3 */
+
+		if ((type == 0xDC) && (i < 3))
+			writel(0x00000040, regs + 0x0024 + (i * 0x100)); /* SD_ANA_CON7 */
+
+		update_bits(regs + 0x0030 + (i * 0x100), 0, 8, cfg[SETTLE]);    /* SD_TIME_CON0 */
+		update_bits(regs + 0x0030 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
+		writel(0x00000003, regs + 0x0134 + (i * 0x100)); /* SD_TIME_CON1 */
+		update_bits(regs + 0x0040 + (i * 0x100), 0, 1, skew_cal_en); /* SD_DESKEW_CON0 */
+		writel(0x0000081A, regs + 0x0050 + (i * 0x100)); /* SD_DESKEW_CON4 */
+	}
+	return 0;
+}
 
 static const struct exynos_mipi_phy_cfg phy_cfg_table[] = {
 	{
@@ -555,6 +684,26 @@ static const struct exynos_mipi_phy_cfg phy_cfg_table[] = {
 		.minor = 0x0003,
 		.mode = 0xD,
 		.set = __set_phy_cfg_0502_0003_dphy,
+	},
+	{
+		/* type : Combo(DCphy), mode : Dphy */
+		.major = 0x0503,
+		.minor = 0x0000,
+		.mode = 0xD,
+		.set = __set_phy_cfg_0503_0000_dcphy,
+	},
+	{
+		/* type : Combo(DCphy), mode : Cphy */
+		.major = 0x0503,
+		.minor = 0x0000,
+		.mode = 0xC,
+		.set = __set_phy_cfg_0503_0000_dcphy,
+	},
+	{	/* Dphy, 2 lane */
+		.major = 0x0503,
+		.minor = 0x0001,
+		.mode = 0xD,
+		.set = __set_phy_cfg_0503_0001_dphy,
 	},
 	{ },
 };
