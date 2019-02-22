@@ -328,6 +328,13 @@ enum dpp_comp_src {
 	DPP_COMP_SRC_GPU
 };
 
+enum dpp_comp_type {
+	COMP_TYPE_NONE = 0,
+	COMP_TYPE_AFBC,
+	COMP_TYPE_SBWC,
+	COMP_TYPE_CSET,
+};
+
 enum dpp_hdr_standard {
 	DPP_HDR_OFF = 0,
 	DPP_HDR_ST2084,
@@ -430,7 +437,7 @@ struct decon_win_config {
 	/* destination OSD coordinates */
 	struct decon_frame dst;
 	bool protection;
-	bool compression;
+	enum dpp_comp_type compression;
 };
 
 struct decon_reg_data {
@@ -471,7 +478,7 @@ struct decon_reg_data {
 struct decon_win_config_data {
 	int	retire_fence;
 	int	fd_odma;
-	struct decon_win_config config[MAX_DECON_WIN + 1];
+	struct decon_win_config config[MAX_DECON_WIN + 2];
 };
 
 enum hwc_ver {
