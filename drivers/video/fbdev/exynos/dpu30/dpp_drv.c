@@ -106,8 +106,10 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	p->hdr = config->dpp_parm.hdr_std;
 	p->max_luminance = config->dpp_parm.max_luminance;
 	p->min_luminance = config->dpp_parm.min_luminance;
-	p->y_2b_strd = 0;
-	p->c_2b_strd = 0;
+	p->yhd_y2_strd = 0;
+	p->ypl_c2_strd = 0;
+	p->chd_strd = 0;
+	p->cpl_strd = 0;
 
 	if (p->format == DECON_PIXEL_FORMAT_NV12N)
 		p->addr[1] = NV12N_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
@@ -118,23 +120,52 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	if (p->format == DECON_PIXEL_FORMAT_NV12M_S10B || p->format == DECON_PIXEL_FORMAT_NV21M_S10B) {
 		p->addr[2] = p->addr[0] + NV12M_Y_SIZE(p->src.f_w, p->src.f_h);
 		p->addr[3] = p->addr[1] + NV12M_CBCR_SIZE(p->src.f_w, p->src.f_h);
-		p->y_2b_strd = S10B_2B_STRIDE(p->src.f_w);
-		p->c_2b_strd = S10B_2B_STRIDE(p->src.f_w);
+		p->yhd_y2_strd = S10B_2B_STRIDE(p->src.f_w);
+		p->ypl_c2_strd = S10B_2B_STRIDE(p->src.f_w);
 	}
 
 	if (p->format == DECON_PIXEL_FORMAT_NV12N_10B) {
 		p->addr[1] = NV12N_10B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
 		p->addr[2] = p->addr[0] + NV12N_10B_Y_8B_SIZE(p->src.f_w, p->src.f_h);
 		p->addr[3] = p->addr[1] + NV12N_10B_CBCR_8B_SIZE(p->src.f_w, p->src.f_h);
-		p->y_2b_strd = S10B_2B_STRIDE(p->src.f_w);
-		p->c_2b_strd = S10B_2B_STRIDE(p->src.f_w);
+		p->yhd_y2_strd = S10B_2B_STRIDE(p->src.f_w);
+		p->ypl_c2_strd = S10B_2B_STRIDE(p->src.f_w);
 	}
 
 	if (p->format == DECON_PIXEL_FORMAT_NV16M_S10B || p->format == DECON_PIXEL_FORMAT_NV61M_S10B) {
 		p->addr[2] = p->addr[0] + NV16M_Y_SIZE(p->src.f_w, p->src.f_h);
 		p->addr[3] = p->addr[1] + NV16M_CBCR_SIZE(p->src.f_w, p->src.f_h);
-		p->y_2b_strd = S10B_2B_STRIDE(p->src.f_w);
-		p->c_2b_strd = S10B_2B_STRIDE(p->src.f_w);
+		p->yhd_y2_strd = S10B_2B_STRIDE(p->src.f_w);
+		p->ypl_c2_strd = S10B_2B_STRIDE(p->src.f_w);
+	}
+
+	/*
+        * buffer and base_addr relationship in SBWC (cf. 8+2)
+        * <buffer fd> fd[0]: Y-payload / fd[1]: C-payload
+        * <base addr> [0]-Y8:Y_HD / [1]-C8:Y_PL / [2]-Y2:C_HD / [3]-C2:C_PL
+        *  [1] -> [3] C-payload
+        *  [0] -> [1] Y-payload
+        *         [0] Y-header : [1] + Y_PL_SIZE
+        *         [2] C-header : [3] + C_PL_SIZE
+        *
+        * TODO :
+        * replace PL/HD SIZE & STRIDE macro of videodev2_exynos_media.h
+        */
+	if (p->is_comp == COMP_TYPE_SBWC) {
+		p->addr[3] = p->addr[1];
+		p->addr[1] = p->addr[0];
+		p->ypl_c2_strd = SBWC_PL_STRIDE(p->src.w, SBWC_BLK_SIZE_32,
+				SBWC_BLK_SIZE_4, fmt_info->bpc);
+		p->cpl_strd = p->ypl_c2_strd;
+		
+		p->addr[0] = p->addr[1] +
+				SBWC_Y_PL_SIZE(p->ypl_c2_strd, p->src.h);
+		p->addr[2] = p->addr[3] +
+				SBWC_C_PL_SIZE(p->cpl_strd, p->src.h);
+		
+		p->yhd_y2_strd = SBWC_HD_STRIDE(p->src.w, SBWC_BLK_SIZE_32);
+		p->chd_strd = SBWC_HD_STRIDE(p->src.w, SBWC_BLK_SIZE_32);
+
 	}
 
 	if (is_rotation(config)) {
@@ -802,7 +833,7 @@ static irqreturn_t dma_irq_handler(int irq, void *priv)
 	} else { /* IDMA case */
 		irqs = idma_reg_get_irq_and_clear(dpp->id);
 
-		if (irqs & IDMA_RECOVERY_START_IRQ) {
+		if (irqs & IDMA_RECOVERY_TRG_IRQ) {
 			DPU_EVENT_LOG(DPU_EVT_DMA_RECOVERY, &dpp->sd,
 					ktime_set(0, 0));
 			val = (u32)dpp->dpp_config->config.dpp_parm.comp_src;
@@ -811,8 +842,7 @@ static irqreturn_t dma_irq_handler(int irq, void *priv)
 					dpp->id, irqs, dpp->d.recovery_cnt);
 			goto irq_end;
 		}
-		if ((irqs & IDMA_AFBC_TIMEOUT_IRQ) ||
-				(irqs & IDMA_READ_SLAVE_ERROR) ||
+		if ((irqs & IDMA_READ_SLAVE_ERROR) ||
 				(irqs & IDMA_STATUS_DEADLOCK_IRQ)) {
 			dpp_err("dma%d error irq occur(0x%x)\n", dpp->id, irqs);
 			dpp_dump(dpp);
@@ -827,13 +857,18 @@ static irqreturn_t dma_irq_handler(int irq, void *priv)
 					ktime_set(0, 0));
 			goto irq_end;
 		}
-#if defined(CONFIG_SOC_EXYNOS9820)
-		/* TODO: SoC dependency will be removed */
 		if (irqs & IDMA_AFBC_CONFLICT_IRQ) {
 			dpp_err("dma%d AFBC conflict irq occurs\n", dpp->id);
 			goto irq_end;
 		}
-#endif
+		if (irqs & IDMA_AXI_ADDR_ERR_IRQ) {
+			dpp_err("dma%d AXI addr err irq occurs\n", dpp->id);
+			goto irq_end;
+		}
+		if (irqs & IDMA_SBWC_ERR_IRQ) {
+			dpp_err("dma%d SBWC err irq occurs\n", dpp->id);
+			goto irq_end;
+		}
 	}
 
 irq_end:
