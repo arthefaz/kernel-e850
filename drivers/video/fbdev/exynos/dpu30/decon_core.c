@@ -1291,7 +1291,7 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 	for (i = 0; i < regs->plane_cnt[idx]; ++i) {
 		dma_buf_data = &regs->dma_buf_data[idx][i];
 		/* dma_addr in dma_buf_data structure will be used by dpp_ch */
-		dma_buf_data->dpp_ch = config->idma_type;
+		dma_buf_data->dpp_ch = config->channel;
 
 		buf = dma_buf_get(config->fd_idma[i]);
 		if (IS_ERR_OR_NULL(buf)) {
@@ -1376,8 +1376,8 @@ int decon_check_limitation(struct decon_device *decon, int idx,
 	}
 
 	/* TODO: currently writeback is not supported */
-	if (config->idma_type >= decon->dt.dpp_cnt) { /* ch */
-		decon_err("ch(%d) is wrong\n", config->idma_type);
+	if (config->channel >= decon->dt.dpp_cnt) { /* ch */
+		decon_err("ch(%d) is wrong\n", config->channel);
 		return -EINVAL;
 	}
 
@@ -1446,7 +1446,7 @@ static int decon_set_win_buffer(struct decon_device *decon,
 
 	regs->protection[idx] = config->protection;
 	decon_win_config_to_regs_param(fmt_info->len_alpha, config,
-			&regs->win_regs[idx], config->idma_type, idx); /* ch */
+			&regs->win_regs[idx], config->channel, idx); /* ch */
 
 	return 0;
 
@@ -1464,12 +1464,12 @@ void decon_reg_chmap_validate(struct decon_device *decon,
 				(regs->win_regs[i].winmap_state))
 			continue;
 
-		if (bitmap & (1 << regs->dpp_config[i].idma_type)) { /* ch */
+		if (bitmap & (1 << regs->dpp_config[i].channel)) { /* ch */
 			decon_warn("Channel-%d is mapped to multiple windows\n",
-					regs->dpp_config[i].idma_type); /* ch */
+					regs->dpp_config[i].channel); /* ch */
 			regs->win_regs[i].wincon &= (~WIN_EN_F(i));
 		}
-		bitmap |= 1 << regs->dpp_config[i].idma_type; /* ch */
+		bitmap |= 1 << regs->dpp_config[i].channel; /* ch */
 	}
 }
 
@@ -1482,7 +1482,7 @@ static void decon_check_used_dpp(struct decon_device *decon,
 	for (i = 0; i < decon->dt.max_win; i++) {
 		struct decon_win *win = decon->win[i];
 		if (!regs->win_regs[i].winmap_state)
-			win->dpp_id = regs->dpp_config[i].idma_type; /* ch */
+			win->dpp_id = regs->dpp_config[i].channel; /* ch */
 		else
 			win->dpp_id = 0xF;
 
@@ -1590,20 +1590,20 @@ static void decon_save_afbc_enabled_win_id(struct decon_device *decon,
 
 	for (i = 0; i < decon->dt.max_win; ++i) {
 		if (regs->dpp_config[i].state == DECON_WIN_STATE_BUFFER) {
-			sd = decon->dpp_sd[regs->dpp_config[i].idma_type]; /* ch */
+			sd = decon->dpp_sd[regs->dpp_config[i].channel]; /* ch */
 			afbc_enabled = 0;
 			v4l2_subdev_call(sd, core, ioctl,
 					DPP_AFBC_ATTR_ENABLED, &afbc_enabled);
 			/* if afbc enabled, DMA2CH <-> win_id mapping */
 			if (regs->dpp_config[i].compression && afbc_enabled)
-				decon->d.prev_afbc_win_id[regs->dpp_config[i].idma_type] = i; /* ch */
+				decon->d.prev_afbc_win_id[regs->dpp_config[i].channel] = i; /* ch */
 			else
-				decon->d.prev_afbc_win_id[regs->dpp_config[i].idma_type] = -1; /* ch */
+				decon->d.prev_afbc_win_id[regs->dpp_config[i].channel] = -1; /* ch */
 
 			decon_dbg("%s:%d win(%d), ch(%d),\
 				afbc(%d), save(%d)\n", __func__, __LINE__,
-				i, regs->dpp_config[i].idma_type, afbc_enabled,
-				decon->d.prev_afbc_win_id[regs->dpp_config[i].idma_type]);
+				i, regs->dpp_config[i].channel, afbc_enabled,
+				decon->d.prev_afbc_win_id[regs->dpp_config[i].channel]);
 		}
 	}
 }
@@ -1985,7 +1985,7 @@ static void decon_update_afbc_info(struct decon_device *decon,
 		if (!regs->dpp_config[i].compression)
 			continue;
 
-		ch = regs->dpp_config[i].idma_type; /* ch */
+		ch = regs->dpp_config[i].channel; /* ch */
 		if (test_bit(ch, &decon->cur_using_dpp)) {
 			if (regs->dma_buf_data[i][0].dma_buf == NULL)
 				continue;
@@ -2343,7 +2343,7 @@ static int decon_prepare_win_config(struct decon_device *decon,
 
 			/* decon_set_full_size_win(decon, config); */
 			decon_win_config_to_regs_param(0, config, win_regs,
-					config->idma_type, i); /* ch */
+					config->channel, i); /* ch */
 			ret = 0;
 			break;
 		case DECON_WIN_STATE_BUFFER:
@@ -2628,7 +2628,7 @@ static void decon_translate_idma2ch(struct decon_device *decon,
 		case DECON_WIN_STATE_COLOR:
 		case DECON_WIN_STATE_BUFFER:
 		case DECON_WIN_STATE_CURSOR:
-			config->idma_type = DPU_DMA2CH(config->idma_type);
+			config->channel = DPU_DMA2CH(config->channel);
 			break;
 		default:
 			break;
@@ -2704,9 +2704,9 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 #if 0
 //#if !defined(CONFIG_ANDROID_SYSTEM_AS_ROOT)
 		/*
-		 * idma_type is translated to DPP channel number temporarily.
+		 * channel is translated to DPP channel number temporarily.
 		 * In the future, user side will use DPP channel number instead
-		 * of idma_type.
+		 * of channel.
 		 * If use side uses DPP channel number for S3CFB_WIN_CONFIG parameter,
 		 * this function will be removed.
 		 */

@@ -2361,11 +2361,11 @@ int decon_check_global_limitation(struct decon_device *decon,
 		if (config[i].state != DECON_WIN_STATE_BUFFER)
 			continue;
 
-		if (config[i].idma_type < 0 ||
-				config[i].idma_type >= decon->dt.dpp_cnt) {
+		if (config[i].channel < 0 ||
+				config[i].channel >= decon->dt.dpp_cnt) {
 			ret = -EINVAL;
 			decon_err("invalid dpp channel(%d)\n",
-					config[i].idma_type);
+					config[i].channel);
 			goto err;
 		}
 
@@ -2377,10 +2377,10 @@ int decon_check_global_limitation(struct decon_device *decon,
 			for (j = 0; j < MAX_DECON_WIN; j++) {
 				if (i == j)
 					continue;
-				/* idma_type means DPP channel number */
+				/* channel means DPP channel number */
 				if ((config[j].state == DECON_WIN_STATE_BUFFER) &&
-						(config[j].idma_type ==
-						 axi_port[config[i].idma_type])) {
+						(config[j].channel ==
+						 axi_port[config[i].channel])) {
 					if (config[j].compression) {
 						ret = -EPERM;
 						decon_err("When using both channel\
@@ -2414,8 +2414,8 @@ int decon_check_global_limitation(struct decon_device *decon,
 				if (i == j)
 					continue;
 				if ((config[j].state == DECON_WIN_STATE_BUFFER) &&
-						(config[j].idma_type ==
-						 axi_port[config[i].idma_type])) {
+						(config[j].channel ==
+						 axi_port[config[i].channel])) {
 					if (config[j].compression) {
 						ret = -EPERM;
 						decon_err("AFBC & Roation/Flip not\
