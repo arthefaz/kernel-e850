@@ -613,6 +613,9 @@ struct decon_update_reg_data {
 struct dsim_log_cmd_buf {
 	u32 id;
 	u8 buf;
+	u32 size;
+	u32 pl_cnt;
+	u32 line_cnt;
 	void *caller[DPU_CALLSTACK_MAX];
 };
 
@@ -681,7 +684,7 @@ typedef enum dpu_event_log_level_type {
 #define DPU_EVENT_START() ktime_t start = ktime_get()
 void DPU_EVENT_LOG(dpu_event_t type, struct v4l2_subdev *sd, ktime_t time);
 void DPU_EVENT_LOG_WINCON(struct v4l2_subdev *sd, struct decon_reg_data *regs);
-void DPU_EVENT_LOG_CMD(struct v4l2_subdev *sd, u32 cmd_id, unsigned long data);
+void DPU_EVENT_LOG_CMD(struct v4l2_subdev *sd, u32 cmd_id, unsigned long data, u32 size);
 void DPU_EVENT_LOG_CURSOR(struct v4l2_subdev *sd, struct decon_reg_data *regs); /* cursor async */
 void DPU_EVENT_LOG_UPDATE_REGION(struct v4l2_subdev *sd,
 		struct decon_frame *req_region, struct decon_frame *adj_region);
