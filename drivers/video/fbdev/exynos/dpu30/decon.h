@@ -417,12 +417,12 @@ struct decon_win_config {
 			int				plane_alpha;
 			enum decon_blending		blending;
 			/*
-			 * TODO: idma_type will be changed to channel number in the future.
+			 * TODO: channel will be changed to channel number in the future.
 			 *
-			 * Although the variable name is idma_type, it indicates
+			 * Although the variable name is channel, it indicates
 			 * DPP channel number currently.
 			 */
-			enum decon_idma_type		idma_type;
+			u32				channel;
 			enum decon_pixel_format		format;
 			struct dpp_params		dpp_parm;
 			/* no read area of IDMA */
