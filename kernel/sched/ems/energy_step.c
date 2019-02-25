@@ -719,6 +719,26 @@ unsigned long cpufreq_governor_get_util(unsigned int cpu)
 	return esg_cpu->util;
 }
 
+unsigned int cpufreq_governor_get_freq(int cpu)
+{
+	struct esgov_policy *esg_policy;
+	unsigned int freq;
+	unsigned long flags;
+
+	if (cpu < 0)
+		return 0;
+
+	esg_policy = per_cpu(esgov_policy, cpu);
+	if (!esg_policy)
+		return 0;
+
+	raw_spin_lock_irqsave(&esg_policy->update_lock, flags);
+	freq = esg_policy->target_freq;
+	raw_spin_unlock_irqrestore(&esg_policy->update_lock, flags);
+
+	return freq;
+}
+
 struct cpufreq_governor *cpufreq_default_governor(void)
 {
 	return &energy_step_gov;

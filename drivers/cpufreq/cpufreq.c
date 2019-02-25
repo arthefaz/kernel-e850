@@ -1021,6 +1021,11 @@ __weak struct cpufreq_governor *cpufreq_default_governor(void)
 	return NULL;
 }
 
+__weak unsigned int cpufreq_governor_get_freq(int cpu)
+{
+	return 0;
+}
+
 static int cpufreq_init_policy(struct cpufreq_policy *policy)
 {
 	struct cpufreq_governor *gov = NULL;

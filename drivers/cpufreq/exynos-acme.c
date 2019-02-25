@@ -684,13 +684,8 @@ static int need_update_freq(struct exynos_cpufreq_domain *domain,
 	if (cur == freq)
 		return 0;
 
-	if (pm_qos_class == domain->pm_qos_min_class) {
-		if (cur > freq)
-			return 0;
-	} else if (domain->pm_qos_max_class == pm_qos_class) {
-		if (cur < freq)
-			return 0;
-	} else {
+	if ((pm_qos_class != domain->pm_qos_min_class) &&
+			(pm_qos_class != domain->pm_qos_max_class)) {
 		/* invalid PM QoS class */
 		return -EINVAL;
 	}
@@ -706,6 +701,7 @@ static int exynos_cpufreq_pm_qos_callback(struct notifier_block *nb,
 	struct cpufreq_policy *policy;
 	struct cpumask mask;
 	int ret;
+	unsigned int next_freq;
 
 	pr_debug("update PM QoS class %d to %ld kHz\n", pm_qos_class, val);
 
@@ -730,6 +726,22 @@ static int exynos_cpufreq_pm_qos_callback(struct notifier_block *nb,
 		return NOTIFY_BAD;
 	if (!ret)
 		return NOTIFY_OK;
+
+	/*
+	 * In 'need_update_freq()', pm qos class is checked whether min or max.
+	 * When pm qos lock is released, we update the frequency with next freq.
+	 * In normal case, lock is set with pm qos value or governor value.
+	 * The reason is to apply the next freq immediately for fast reactivity.
+	 */
+	next_freq = cpufreq_governor_get_freq(policy->cpu);
+
+	/* If 'sugov_get_freq()' fail, we just update frequency with pm qos val */
+	if (next_freq) {
+		if (pm_qos_class == domain->pm_qos_min_class)
+			val = max_t(unsigned int, val, next_freq);
+		else
+			val = min_t(unsigned int, val, next_freq);
+	}
 
 	if (update_freq(domain, val))
 		return NOTIFY_BAD;

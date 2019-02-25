@@ -731,6 +731,27 @@ unsigned long cpufreq_governor_get_util(unsigned int cpu)
 	return util;
 }
 
+/* This function is for getting the calculated next freq. */
+unsigned int cpufreq_governor_get_freq(int cpu)
+{
+	struct sugov_policy *sg_policy;
+	unsigned int freq;
+	unsigned long flags;
+
+	if (cpu < 0)
+		return 0;
+
+	sg_policy = per_cpu(sugov_policy, cpu);
+	if (!sg_policy)
+		return 0;
+
+	raw_spin_lock_irqsave(&sg_policy->update_lock, flags);
+	freq = sg_policy->next_freq;
+	raw_spin_unlock_irqrestore(&sg_policy->update_lock, flags);
+
+	return freq;
+}
+
 struct cpufreq_governor *cpufreq_default_governor(void)
 {
 	return &schedutil_gov;
