@@ -22,7 +22,7 @@
 #define DSIM_LP_RX_TIMEOUT		0xffff
 #define DSIM_MULTI_PACKET_CNT		0xffff
 #define DSIM_PLL_STABLE_TIME		0x682A
-#define DSIM_PH_FIFOCTRL_THRESHOLD	32 /* 1 ~ 32 */
+#define DSIM_PH_FIFOCTRL_THRESHOLD	1 /* 1 ~ 32 */
 
 #define PLL_SLEEP_CNT_MULT		450
 #define PLL_SLEEP_CNT_MARGIN_RATIO	0	/* 10% ~ 20% */
@@ -2075,7 +2075,7 @@ static void dsim_reg_set_dphy_pll_stable_cnt(u32 id, u32 cnt)
 
 void dpu_sysreg_select_dphy_rst_control(void __iomem *sysreg, u32 dsim_id, u32 sel)
 {
-	u32 phy_num = dsim_id ? 0 : 1;
+	u32 phy_num = dsim_id;
 	u32 old = readl(sysreg + DISP_DPU_MIPI_PHY_CON);
 	u32 val = sel ? ~0 : 0;
 	u32 mask = SEL_RESET_DPHY_MASK(phy_num);
@@ -2089,7 +2089,7 @@ void dpu_sysreg_dphy_reset(void __iomem *sysreg, u32 dsim_id, u32 rst)
 {
 	u32 old = readl(sysreg + DISP_DPU_MIPI_PHY_CON);
 	u32 val = rst ? ~0 : 0;
-	u32 mask = dsim_id ? M_RESETN_M4S4_TOP_MASK : M_RESETN_M4S4_MODULE_MASK;
+	u32 mask = dsim_id ? M_RESETN_M4S4_MODULE_MASK : M_RESETN_M4S4_TOP_MASK;
 
 	val = (val & mask) | (old & ~mask);
 	writel(val, sysreg + DISP_DPU_MIPI_PHY_CON);
@@ -2168,6 +2168,7 @@ void dsim_reg_init(u32 id, struct exynos_panel_info *lcd_info, struct dsim_clks 
 #if !defined(CONFIG_EXYNOS_LCD_ON_UBOOT)
 	struct dsim_device *dsim = get_dsim_drvdata(id);
 #endif
+
 	if (dsim->state == DSIM_STATE_INIT) {
 		if (dsim_reg_get_link_clock(dsim->id)) {
 			dsim_info("dsim%d is already enabled in bootloader\n", dsim->id);
@@ -2188,7 +2189,6 @@ void dsim_reg_init(u32 id, struct exynos_panel_info *lcd_info, struct dsim_clks 
 	dsim_reg_set_lanes(id, lanes, 1);
 
 	dsim_reg_set_esc_clk_on_lane(id, 1, lanes);
-
 
 	dsim_reg_enable_word_clock(id, 1);
 
@@ -2598,32 +2598,32 @@ void __dsim_dump(u32 id, struct dsim_regs *regs)
 	/* DPHY dump */
 	/* PLL */
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0100, 0x24, false);
+			regs->phy_regs + 0x0000, 0x24, false);
 	/* MC */
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x0200, 0x48, false);
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x02E0, 0x10, false);
+	/* MD0 */
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			regs->phy_regs + 0x0300, 0x48, false);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x03E0, 0x10, false);
-	/* MD0 */
+			regs->phy_regs + 0x03C0, 0x20, false);
+	/* MD1 */
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			regs->phy_regs + 0x0400, 0x48, false);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			regs->phy_regs + 0x04C0, 0x20, false);
-	/* MD1 */
+	/* MD2 */
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			regs->phy_regs + 0x0500, 0x48, false);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			regs->phy_regs + 0x05C0, 0x20, false);
-	/* MD2 */
+	/* MD3 */
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			regs->phy_regs + 0x0600, 0x48, false);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			regs->phy_regs + 0x06C0, 0x20, false);
-	/* MD3 */
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0700, 0x48, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x07C0, 0x20, false);
 
 	/* restore to avoid size mismatch (possible config error at DECON) */
 	dsim_reg_enable_shadow_read(id, 1);
