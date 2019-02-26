@@ -14,6 +14,8 @@ fw-external-y := $(subst $(quote),,$(CONFIG_EXTRA_FIRMWARE))
 
 fw-external-$(CONFIG_EXYNOS9610_ACPM) += exynos9610_acpm_fvp.fw
 fw-external-$(CONFIG_EXYNOS9610_ACPM) += exynos9610_acpm_tmu.fw
+fw-shipped-$(CONFIG_TOUCHSCREEN_SEC_TS_A552) += tsp_sec/hero2la.bin
+fw-shipped-$(CONFIG_TOUCHSCREEN_SEC_TS) += tsp_sec/y761_dream1.fw
 
 quiet_cmd_ihex  = IHEX    $@
       cmd_ihex  = $(OBJCOPY) -Iihex -Obinary $< $@
