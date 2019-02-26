@@ -1426,12 +1426,9 @@ struct mfc_dec {
 	unsigned int dynamic_set;
 	unsigned int dynamic_used;
 
-	struct dec_dpb_ref_info *ref_info;
-	int assigned_fd[MFC_MAX_DPBS];
 	struct dpb_table dpb[MFC_MAX_DPBS];
 	struct dpb_table spare_dpb[MFC_MAX_DPBS];
 	struct mutex dpb_mutex;
-	struct mfc_user_shared_handle sh_handle_dpb;
 	struct mfc_user_shared_handle sh_handle_hdr;
 	struct hdr10_plus_meta *hdr10_plus_info;
 

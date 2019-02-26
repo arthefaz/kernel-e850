@@ -143,17 +143,6 @@ void mfc_dec_calc_dpb_size(struct mfc_ctx *ctx);
 void mfc_enc_calc_src_size(struct mfc_ctx *ctx);
 void mfc_calc_base_addr(struct mfc_ctx *ctx, struct vb2_buffer *vb, struct mfc_fmt *fmt);
 
-static inline void mfc_cleanup_assigned_fd(struct mfc_ctx *ctx)
-{
-	struct mfc_dec *dec;
-	int i;
-
-	dec = ctx->dec_priv;
-
-	for (i = 0; i < MFC_MAX_DPBS; i++)
-		dec->assigned_fd[i] = MFC_INFO_INIT_FD;
-}
-
 static inline void mfc_clear_assigned_dpb(struct mfc_ctx *ctx)
 {
 	struct mfc_dec *dec;

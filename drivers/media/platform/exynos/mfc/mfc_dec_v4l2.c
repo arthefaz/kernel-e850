@@ -787,10 +787,8 @@ static int mfc_dec_dqbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 {
 	struct mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	struct mfc_dec *dec = ctx->dec_priv;
-	struct dec_dpb_ref_info *dstBuf, *srcBuf;
 	struct hdr10_plus_meta *dst_sei_meta, *src_sei_meta;
 	int ret;
-	int ncount = 0;
 
 	mfc_debug_enter();
 
@@ -808,22 +806,6 @@ static int mfc_dec_dqbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 		if (buf->index >= MFC_MAX_DPBS) {
 			mfc_err_ctx("buffer index[%d] range over\n", buf->index);
 			return -EINVAL;
-		}
-
-		/* Memcpy from dec->ref_info to shared memory */
-		srcBuf = &dec->ref_info[buf->index];
-		for (ncount = 0; ncount < MFC_MAX_DPBS; ncount++) {
-			if (srcBuf->dpb[ncount].fd[0] == MFC_INFO_INIT_FD)
-				break;
-			mfc_debug(2, "[DPB] DQ index[%d] Released FD = %d\n",
-					buf->index, srcBuf->dpb[ncount].fd[0]);
-		}
-
-		if (dec->sh_handle_dpb.vaddr != NULL) {
-			dstBuf = (struct dec_dpb_ref_info *)
-					dec->sh_handle_dpb.vaddr + buf->index;
-			memcpy(dstBuf, srcBuf, sizeof(struct dec_dpb_ref_info));
-			dstBuf->index = buf->index;
 		}
 
 		/* Memcpy from dec->hdr10_plus_info to shared memory */
@@ -1135,13 +1117,7 @@ static int mfc_dec_s_ctrl(struct file *file, void *priv,
 			mfc_err_ctx("[DPB] is_dynamic_dpb is 0. it has to be enabled\n");
 		break;
 	case V4L2_CID_MPEG_MFC_SET_USER_SHARED_HANDLE:
-		if (dec->sh_handle_dpb.fd == -1) {
-			dec->sh_handle_dpb.fd = ctrl->value;
-			if (mfc_mem_get_user_shared_handle(ctx, &dec->sh_handle_dpb))
-				return -EINVAL;
-			mfc_debug(2, "[MEMINFO][DPB] shared handle fd: %d, vaddr: 0x%p\n",
-					dec->sh_handle_dpb.fd, dec->sh_handle_dpb.vaddr);
-		}
+		mfc_info_ctx("[DPB] dynamic dpb info is handled in only driver\n");
 		break;
 	case V4L2_CID_MPEG_MFC_SET_BUF_PROCESS_TYPE:
 		ctx->buf_process_type = ctrl->value;

@@ -103,10 +103,8 @@ static void __mfc_deinit_dec_ctx(struct mfc_ctx *ctx)
 	mfc_delete_queue(&ctx->dst_buf_nal_queue);
 	mfc_delete_queue(&ctx->ref_buf_queue);
 
-	mfc_mem_cleanup_user_shared_handle(ctx, &dec->sh_handle_dpb);
 	mfc_mem_cleanup_user_shared_handle(ctx, &dec->sh_handle_hdr);
 	kfree(dec->hdr10_plus_info);
-	kfree(dec->ref_info);
 	kfree(dec);
 }
 
@@ -165,21 +163,8 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	dec->is_dynamic_dpb = 1;
 	dec->dynamic_used = 0;
 	dec->is_dpb_full = 0;
-	mfc_cleanup_assigned_fd(ctx);
 	mfc_clear_assigned_dpb(ctx);
 	mutex_init(&dec->dpb_mutex);
-
-	/* sh_handle: released dpb info */
-	dec->sh_handle_dpb.fd = -1;
-	dec->ref_info = kzalloc(
-		(sizeof(struct dec_dpb_ref_info) * MFC_MAX_DPBS), GFP_KERNEL);
-	if (!dec->ref_info) {
-		mfc_err_ctx("failed to allocate decoder information data\n");
-		ret = -ENOMEM;
-		goto fail_dec_init;
-	}
-	for (i = 0; i < MFC_MAX_BUFFERS; i++)
-		dec->ref_info[i].dpb[0].fd[0] = MFC_INFO_INIT_FD;
 
 	/* sh_handle: HDR10+ HEVC SEI meta */
 	dec->sh_handle_hdr.fd = -1;

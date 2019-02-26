@@ -523,11 +523,8 @@ static void __mfc_check_ref_frame(struct mfc_ctx *ctx, struct mfc_buf_queue *dst
 			list_add_tail(&ref_mb->list, &dst_queue->head);
 			dst_queue->count++;
 
-			dec->assigned_fd[index] =
-					ref_mb->vb.vb2_buf.planes[0].m.fd;
 			clear_bit(index, &dec->available_dpb);
-			mfc_debug(2, "[DPB] Move buffer[%d], fd[%d] to dst queue\n",
-					index, dec->assigned_fd[index]);
+			mfc_debug(2, "[DPB] Move buffer[%d] to dst queue\n", index);
 			found = 1;
 			break;
 		}
@@ -538,11 +535,8 @@ static void __mfc_check_ref_frame(struct mfc_ctx *ctx, struct mfc_buf_queue *dst
 		list_for_each_entry_safe(ref_mb, tmp_mb, &dst_queue->head, list) {
 			index = ref_mb->vb.vb2_buf.index;
 			if (index == ref_index) {
-				dec->assigned_fd[index] =
-					ref_mb->vb.vb2_buf.planes[0].m.fd;
 				clear_bit(index, &dec->available_dpb);
-				mfc_debug(2, "[DPB] re-assigned buffer[%d], fd[%d]\n",
-						index, dec->assigned_fd[index]);
+				mfc_debug(2, "[DPB] re-assigned buffer[%d]\n", index);
 				break;
 			}
 		}
@@ -555,23 +549,18 @@ static void __mfc_check_ref_frame(struct mfc_ctx *ctx, struct mfc_buf_queue *dst
 void mfc_handle_released_info(struct mfc_ctx *ctx, unsigned int released_flag, int index)
 {
 	struct mfc_dec *dec;
-	struct dec_dpb_ref_info *refBuf;
-	int t, ncount = 0;
+	int t;
 
 	dec = ctx->dec_priv;
 	if (!dec) {
 		mfc_err_ctx("[DPB] no decoder context to run\n");
 		return;
 	}
-	refBuf = &dec->ref_info[index];
 
 	if (dec->dec_only_release_flag) {
 		for (t = 0; t < MFC_MAX_DPBS; t++) {
 			if (dec->dec_only_release_flag & (1 << t)) {
-				mfc_debug(2, "[DPB] Release FD[%d] = %03d (already released in dec only)\n",
-						t, dec->assigned_fd[t]);
-				refBuf->dpb[ncount].fd[0] = dec->assigned_fd[t];
-				ncount++;
+				mfc_debug(2, "[DPB] buf[%d] already released in dec only\n", t);
 				dec->dec_only_release_flag &= ~(1 << t);
 			}
 		}
@@ -582,29 +571,14 @@ void mfc_handle_released_info(struct mfc_ctx *ctx, unsigned int released_flag, i
 			if (released_flag & (1 << t)) {
 				if (dec->err_reuse_flag & (1 << t)) {
 					/* reuse buffer with error : do not update released info */
-					mfc_debug(2, "[DPB] Released, but reuse(error frame). FD[%d] = %03d\n",
-							t, dec->assigned_fd[t]);
+					mfc_debug(2, "[DPB] Released, but[%d] reuse(error frame)\n", t);
 					dec->err_reuse_flag &= ~(1 << t);
-				} else if ((t != index) &&
-						__mfc_find_buf_index(ctx, &ctx->ref_buf_queue, t)) {
-					/* decoding only frame: do not update released info */
-					mfc_debug(2, "[DPB] Released, but reuse(decoding only). FD[%d] = %03d\n",
-							t, dec->assigned_fd[t]);
-				} else {
-					/* displayed and released frame */
-					mfc_debug(2, "[DPB] Release FD[%d] = %03d\n",
-							t, dec->assigned_fd[t]);
-					refBuf->dpb[ncount].fd[0] = dec->assigned_fd[t];
-					ncount++;
 				}
-				dec->assigned_fd[t] = MFC_INFO_INIT_FD;
-				__mfc_check_ref_frame(ctx, &ctx->dst_buf_queue, &ctx->ref_buf_queue, t);
+				__mfc_check_ref_frame(ctx, &ctx->dst_buf_queue,
+						&ctx->ref_buf_queue, t);
 			}
 		}
 	}
-
-	if (ncount != MFC_MAX_DPBS)
-		refBuf->dpb[ncount].fd[0] = MFC_INFO_INIT_FD;
 }
 
 struct mfc_buf *mfc_move_reuse_buffer(struct mfc_ctx *ctx, int release_index)
@@ -869,10 +843,6 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 	mfc_buf = vb_to_mfc_buf(vb);
 	mfc_buf->used = 0;
 	index = vb->index;
-
-	dec->assigned_fd[index] = vb->planes[0].m.fd;
-	mfc_debug(2, "[DPB] Assigned FD[%d] = %d (%s)\n", index, dec->assigned_fd[index],
-			(dec->dynamic_used & (1 << index) ? "used" : "non-used"));
 
 	list_add_tail(&mfc_buf->list, &ctx->dst_buf_queue.head);
 	ctx->dst_buf_queue.count++;
