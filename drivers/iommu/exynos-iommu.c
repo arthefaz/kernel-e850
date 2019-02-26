@@ -553,18 +553,6 @@ static int __init exynos_sysmmu_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	data->clk = devm_clk_get(dev, "aclk");
-	if (IS_ERR(data->clk)) {
-		dev_err(dev, "Failed to get clock!\n");
-		return PTR_ERR(data->clk);
-	} else  {
-		ret = clk_prepare(data->clk);
-		if (ret) {
-			dev_err(dev, "Failed to prepare clk\n");
-			return ret;
-		}
-	}
-
 	data->sysmmu = dev;
 	spin_lock_init(&data->lock);
 	ATOMIC_INIT_NOTIFIER_HEAD(&data->fault_notifiers);

@@ -470,8 +470,6 @@ static inline void __sysmmu_disable_nocount(struct sysmmu_drvdata *drvdata)
 				drvdata->sfrbase + REG_MMU_CTRL_VM) != value);
 	}
 
-	clk_disable(drvdata->clk);
-
 	SYSMMU_EVENT_LOG_DISABLE(SYSMMU_DRVDATA_TO_LOG(drvdata));
 }
 
@@ -642,8 +640,6 @@ static inline void __sysmmu_init_config(struct sysmmu_drvdata *drvdata)
 
 static inline void __sysmmu_enable_nocount(struct sysmmu_drvdata *drvdata)
 {
-	clk_enable(drvdata->clk);
-
 	__sysmmu_init_config(drvdata);
 
 	__sysmmu_set_ptbase(drvdata, drvdata->pgtable / PAGE_SIZE);
