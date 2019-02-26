@@ -7272,6 +7272,7 @@ static int ufshcd_config_vreg_load(struct device *dev, struct ufs_vreg *vreg,
 {
 	int ret;
 
+	return 0;
 	if (!vreg)
 		return 0;
 
@@ -7287,6 +7288,7 @@ static int ufshcd_config_vreg_load(struct device *dev, struct ufs_vreg *vreg,
 static inline int ufshcd_config_vreg_lpm(struct ufs_hba *hba,
 					 struct ufs_vreg *vreg)
 {
+	return 0;
 	if (!vreg)
 		return 0;
 	else if (vreg->unused)
@@ -7299,6 +7301,8 @@ static inline int ufshcd_config_vreg_lpm(struct ufs_hba *hba,
 static inline int ufshcd_config_vreg_hpm(struct ufs_hba *hba,
 					 struct ufs_vreg *vreg)
 {
+	return 0;
+
 	if (!vreg)
 		return 0;
 	else if (vreg->unused)
@@ -7314,6 +7318,8 @@ static int ufshcd_config_vreg(struct device *dev,
 	struct regulator *reg;
 	const char *name;
 	int min_uV, uA_load;
+
+	return 0;
 
 	BUG_ON(!vreg);
 
@@ -7342,6 +7348,8 @@ static int ufshcd_enable_vreg(struct device *dev, struct ufs_vreg *vreg)
 {
 	int ret = 0;
 
+	return 0;
+
 	if (!vreg)
 		goto out;
 	else if (vreg->enabled || vreg->unused)
@@ -7363,6 +7371,8 @@ out:
 static int ufshcd_disable_vreg(struct device *dev, struct ufs_vreg *vreg)
 {
 	int ret = 0;
+
+	return 0;
 
 	if (!vreg)
 		goto out;
@@ -7388,6 +7398,8 @@ static int ufshcd_setup_vreg(struct ufs_hba *hba, bool on)
 	int ret = 0;
 	struct device *dev = hba->dev;
 	struct ufs_vreg_info *info = &hba->vreg_info;
+
+	return 0;
 
 	if (!info)
 		goto out;
@@ -7427,6 +7439,8 @@ static int ufshcd_get_vreg(struct device *dev, struct ufs_vreg *vreg)
 {
 	int ret = 0;
 
+	return 0;
+
 	if (!vreg)
 		goto out;
 
@@ -7445,6 +7459,8 @@ static int ufshcd_init_vreg(struct ufs_hba *hba)
 	int ret = 0;
 	struct device *dev = hba->dev;
 	struct ufs_vreg_info *info = &hba->vreg_info;
+
+	return 0;
 
 	if (!info)
 		goto out;
