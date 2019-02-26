@@ -6814,7 +6814,9 @@ retry:
 				"%s: connected lane rx= %d, peer_available lane rx= %d\n",
 				__func__, pwr_info->lane_rx,
 				pwr_info->peer_available_lane_rx);
+#if 0
 			goto out;
+#endif
 		}
 
 		if (pwr_info->lane_tx != min(pwr_info->peer_available_lane_tx,
@@ -6823,7 +6825,9 @@ retry:
 				"%s: connected lane tx= %d, peer_available lane tx= %d\n",
 				__func__, pwr_info->lane_tx,
 				pwr_info->peer_available_lane_tx);
+#if 0
 			goto out;
+#endif
 		}
 
 		ret = ufshcd_config_pwr_mode(hba, &hba->max_pwr_info.info);
