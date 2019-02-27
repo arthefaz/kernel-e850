@@ -22,7 +22,7 @@
 #define DSIM_LP_RX_TIMEOUT		0xffff
 #define DSIM_MULTI_PACKET_CNT		0xffff
 #define DSIM_PLL_STABLE_TIME		0x682A
-#define DSIM_PH_FIFOCTRL_THRESHOLD	1 /* 1 ~ 32 */
+#define DSIM_PH_FIFOCTRL_THRESHOLD	32 /* 1 ~ 32 */
 
 #define PLL_SLEEP_CNT_MULT		450
 #define PLL_SLEEP_CNT_MARGIN_RATIO	0	/* 10% ~ 20% */
@@ -2212,7 +2212,7 @@ void dsim_reg_init(u32 id, struct exynos_panel_info *lcd_info, struct dsim_clks 
 
 	dsim_reg_set_config(id, lcd_info, clks);
 
-	dsim_reg_set_pll_clk_gate_enable(id, DPHY_PLL_CLK_GATE_EN); /* PHY pll clock gate disable */
+//	dsim_reg_set_pll_clk_gate_enable(id, DPHY_PLL_CLK_GATE_EN); /* PHY pll clock gate disable */
 #if defined(CONFIG_EXYNOS_PLL_SLEEP)
 	dsim_reg_set_pll_sleep_enable(id, true);	/* PHY pll sleep enable */
 #endif
