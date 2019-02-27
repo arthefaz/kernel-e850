@@ -370,12 +370,12 @@ int decon_tui_protection(bool tui_en)
 				EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
 #if defined(CONFIG_EXYNOS_BTS)
-		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
-				cal_dfs_get_rate(ACPM_DVFS_MIF),
-				cal_dfs_get_rate(ACPM_DVFS_INT),
-				cal_dfs_get_rate(ACPM_DVFS_DISP),
-				decon->bts.prev_total_bw,
-				decon->bts.total_bw);
+//		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
+//				cal_dfs_get_rate(ACPM_DVFS_MIF),
+//				cal_dfs_get_rate(ACPM_DVFS_INT),
+//				cal_dfs_get_rate(ACPM_DVFS_DISP),
+//				decon->bts.prev_total_bw,
+//				decon->bts.total_bw);
 #endif
 		mutex_unlock(&decon->lock);
 	} else {
@@ -384,12 +384,12 @@ int decon_tui_protection(bool tui_en)
 				EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
 #if defined(CONFIG_EXYNOS_BTS)
-		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
-				cal_dfs_get_rate(ACPM_DVFS_MIF),
-				cal_dfs_get_rate(ACPM_DVFS_INT),
-				cal_dfs_get_rate(ACPM_DVFS_DISP),
-				decon->bts.prev_total_bw,
-				decon->bts.total_bw);
+//		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
+//				cal_dfs_get_rate(ACPM_DVFS_MIF),
+//				cal_dfs_get_rate(ACPM_DVFS_INT),
+//				cal_dfs_get_rate(ACPM_DVFS_DISP),
+//				decon->bts.prev_total_bw,
+//				decon->bts.total_bw);
 #endif
 		decon->state = DECON_STATE_ON;
 		decon_hiber_unblock(decon);
@@ -491,7 +491,7 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 	dev_warn(decon->dev, "pm_stay_awake");
 
 #if defined(CONFIG_EXYNOS_BTS)
-	decon->bts.ops->bts_acquire_bw(decon);
+//	decon->bts.ops->bts_acquire_bw(decon);
 #endif
 
 	if (decon->dt.psr_mode != DECON_VIDEO_MODE) {
@@ -712,7 +712,7 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 	}
 
 #if defined(CONFIG_EXYNOS_BTS)
-	decon->bts.ops->bts_release_bw(decon);
+//	decon->bts.ops->bts_release_bw(decon);
 #endif
 
 	ret = decon_set_out_sd_state(decon, state);
@@ -920,7 +920,7 @@ static int decon_dp_disable(struct decon_device *decon)
 	}
 
 #if defined(CONFIG_EXYNOS_BTS)
-	decon->bts.ops->bts_release_bw(decon);
+//	decon->bts.ops->bts_release_bw(decon);
 #endif
 
 	decon->state = DECON_STATE_OFF;
@@ -2061,9 +2061,9 @@ static void decon_update_regs(struct decon_device *decon,
 	decon_update_hdr_info(decon, regs);
 
 #if defined(CONFIG_EXYNOS_BTS)
-	/* add calc and update bw : cur > prev */
-	decon->bts.ops->bts_calc_bw(decon, regs);
-	decon->bts.ops->bts_update_bw(decon, regs, 0);
+//	/* add calc and update bw : cur > prev */
+//	decon->bts.ops->bts_calc_bw(decon, regs);
+//	decon->bts.ops->bts_update_bw(decon, regs, 0);
 #endif
 
 	DPU_EVENT_LOG_WINCON(&decon->sd, regs);
@@ -2129,7 +2129,7 @@ static void decon_update_regs(struct decon_device *decon,
 end:
 #if defined(CONFIG_EXYNOS_BTS)
 	/* add update bw : cur < prev */
-	decon->bts.ops->bts_update_bw(decon, regs, 1);
+//	decon->bts.ops->bts_update_bw(decon, regs, 1);
 #endif
 
 	/*
@@ -2175,8 +2175,8 @@ int decon_update_last_regs(struct decon_device *decon,
 
 #if defined(CONFIG_EXYNOS_BTS)
 	/* add calc and update bw : cur > prev */
-	decon->bts.ops->bts_calc_bw(decon, regs);
-	decon->bts.ops->bts_update_bw(decon, regs, 0);
+//	decon->bts.ops->bts_calc_bw(decon, regs);
+//	decon->bts.ops->bts_update_bw(decon, regs, 0);
 #endif
 
 	DPU_EVENT_LOG_WINCON(&decon->sd, regs);
@@ -2220,7 +2220,7 @@ end:
 
 #if defined(CONFIG_EXYNOS_BTS)
 	/* add update bw : cur < prev */
-	decon->bts.ops->bts_update_bw(decon, regs, 1);
+//	decon->bts.ops->bts_update_bw(decon, regs, 1);
 #endif
 
 	decon_dpp_stop(decon, false);
@@ -3684,6 +3684,7 @@ static int decon_create_update_thread(struct decon_device *decon, char *name)
 }
 
 #if defined(CONFIG_EXYNOS_ITMON)
+#if 0
 static int decon_itmon_notifier(struct notifier_block *nb,
 		unsigned long action, void *nb_data)
 {
@@ -3726,6 +3727,7 @@ static int decon_itmon_notifier(struct notifier_block *nb,
 
 	return NOTIFY_DONE;
 }
+#endif
 #endif
 
 static int decon_initial_display(struct decon_device *decon, bool is_colormap)
@@ -3942,8 +3944,8 @@ static int decon_probe(struct platform_device *pdev)
 	dpu_init_cursor_mode(decon);
 
 #if defined(CONFIG_EXYNOS_BTS)
-	decon->bts.ops = &decon_bts_control;
-	decon->bts.ops->bts_init(decon);
+//	decon->bts.ops = &decon_bts_control;
+//	decon->bts.ops->bts_init(decon);
 #endif
 
 	platform_set_drvdata(pdev, decon);
@@ -3957,8 +3959,8 @@ static int decon_probe(struct platform_device *pdev)
 	}
 
 #if defined(CONFIG_EXYNOS_ITMON)
-	decon->itmon_nb.notifier_call = decon_itmon_notifier;
-	itmon_notifier_chain_register(&decon->itmon_nb);
+//	decon->itmon_nb.notifier_call = decon_itmon_notifier;
+//	itmon_notifier_chain_register(&decon->itmon_nb);
 #endif
 
 	dpu_init_freq_hop(decon);
