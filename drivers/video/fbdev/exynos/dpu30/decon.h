@@ -952,12 +952,12 @@ struct decon_bts {
 	u32 line_mem_cnt;
 	u32 cycle_per_line;
 #if defined(CONFIG_EXYNOS_BTS)
-	struct decon_bts_bw bw[BTS_DPP_MAX];
-
-	/* each decon must know other decon's BW to get overall BW */
-	u32 ch_bw[3][BTS_DPU_MAX];
-	enum bts_bw_type type;
-	struct bts_decon_info bts_info;
+//	struct decon_bts_bw bw[BTS_DPP_MAX];
+//	
+//	/* each decon must know other decon's BW to get overall BW */
+//	u32 ch_bw[3][BTS_DPU_MAX];
+//	enum bts_bw_type type;
+//	struct bts_decon_info bts_info;
 #endif
 	struct decon_bts_ops *ops;
 	struct pm_qos_request mif_qos;
@@ -1048,8 +1048,8 @@ struct decon_device {
 	bool up_list_saved;
 
 #if defined(CONFIG_EXYNOS_ITMON)
-	struct notifier_block itmon_nb;
-	bool notified;
+//	struct notifier_block itmon_nb;
+//	bool notified;
 #endif
 #if defined(CONFIG_EXYNOS_PD)
 	struct exynos_pm_domain *pm_domain;
