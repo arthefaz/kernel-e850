@@ -3323,7 +3323,7 @@ pl330_probe(struct amba_device *adev, const struct amba_id *id)
 	pl330->lpa_nb.next = NULL;
 	pl330->lpa_nb.priority = 0;
 
-#ifdef CONFIG_EXYNOS_PD
+#if defined(CONFIG_EXYNOS_PD) && defined(CONFIG_EXYNOS_PM)
 	ret = exynos_pm_register_notifier(&pl330->lpa_nb);
 	if (ret) {
 		dev_err(&adev->dev, "failed to register pm notifier\n");
