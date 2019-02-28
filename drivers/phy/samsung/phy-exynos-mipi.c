@@ -786,6 +786,12 @@ static struct exynos_mipi_phy_data mipi_phy_m0s4s4s4_mod = {
 	.slock = __SPIN_LOCK_UNLOCKED(mipi_phy_m0s4s4s4.slock),
 };
 
+static struct exynos_mipi_phy_data mipi_phy_m0s4s4s4s4s4s2 = {
+	.flags = MIPI_PHY_MxSx_SHARED,
+	.active_count = 0,
+	.slock = __SPIN_LOCK_UNLOCKED(mipi_phy_m0s4s4s4s4s4s2.slock),
+};
+
 static const struct of_device_id exynos_mipi_phy_of_table[] = {
 	{
 		.compatible = "samsung,mipi-phy-m4s4-top",
@@ -814,6 +820,10 @@ static const struct of_device_id exynos_mipi_phy_of_table[] = {
 	{
 		.compatible = "samsung,mipi-phy-m0s4s4s4-mod",
 		.data = &mipi_phy_m0s4s4s4_mod,
+	},
+	{
+		.compatible = "samsung,mipi-phy-m0s4s4s4s4s4s2",
+		.data = &mipi_phy_m0s4s4s4s4s4s2,
 	},
 	{ },
 };
