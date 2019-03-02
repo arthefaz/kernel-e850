@@ -771,6 +771,8 @@ static int exynos_panel_probe(struct platform_device *pdev)
 	panel->dev = &pdev->dev;
 	panel_drvdata = panel;
 
+	mutex_init(&panel->ops_lock);
+
 	if (IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_CABC))
 		panel->cabc_enabled = true;
 	else
