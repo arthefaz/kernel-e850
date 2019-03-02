@@ -186,7 +186,7 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 
 	DPU_INFO_PANEL("%s +\n", __func__);
 
-//	mutex_lock(&panel->ops_lock);
+	mutex_lock(&panel->ops_lock);
 
 	dsim_write_data_seq(dsim, 0xf0, 0x5a, 0x5a);
 	dsim_write_data_seq(dsim, 0xfc, 0x5a, 0x5a);
@@ -213,7 +213,7 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 
 	dsim_write_data_seq(dsim, 0x29); /* display on */
 
-//	mutex_unlock(&panel->ops_lock);
+	mutex_unlock(&panel->ops_lock);
 
 	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
