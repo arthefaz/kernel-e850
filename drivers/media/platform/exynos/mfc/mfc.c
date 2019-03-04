@@ -1359,7 +1359,7 @@ static int __mfc_itmon_notifier(struct notifier_block *nb, unsigned long action,
 		pr_err("mfc_itmon_notifier: %s -\n", is_mfc_itmon ? "MFC" : "MMCACHE");
 		dev->itmon_notified = 1;
 	}
-	return NOTIFY_DONE;
+	return NOTIFY_BAD;
 }
 #endif
 
