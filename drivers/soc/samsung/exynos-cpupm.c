@@ -873,6 +873,11 @@ static int cluster_sibling_weight(unsigned int cpu)
 	struct cpumask mask;
 	int pos;
 
+	if (IS_NULL(pm->modes[0])) {
+		pr_debug("ERROR: cpupm's node must be declared.\n");
+		BUG_ON(1);
+	}
+
 	cpumask_clear(&mask);
 
 	for (pos = 0; pos < MAX_MODE; pos++) {
