@@ -884,6 +884,9 @@ static int cluster_sibling_weight(unsigned int cpu)
 		mode = pm->modes[pos];
 
 		if (mode->type == POWERMODE_TYPE_CLUSTER) {
+			if (cpumask_empty(&mode->entry_allowed))
+				return -1;
+
 			cpumask_and(&mask, &mode->siblings, cpu_online_mask);
 			break;
 		}
