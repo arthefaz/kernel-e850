@@ -991,7 +991,7 @@ static int exynos_mipi_phy_probe(struct platform_device *pdev)
 static struct platform_driver exynos_mipi_phy_driver = {
 	.probe	= exynos_mipi_phy_probe,
 	.driver = {
-		.name  = "exynos-mipi-phy",
+		.name  = "exynos-mipi-phy-csi",
 		.of_match_table = of_match_ptr(exynos_mipi_phy_of_table),
 		.suppress_bind_attrs = true,
 	}
