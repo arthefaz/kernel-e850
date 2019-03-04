@@ -92,6 +92,7 @@ extern unsigned int reg_test;
 #define MFC_TRACE_LOG_STR_LEN		25
 #define MFC_TRACE_LOG_COUNT_MAX		256
 #define MFC_TRACE_LOG_COUNT_PRINT	20
+#define MFC_TRACE_NAL_QUEUE_PRINT	25
 
 
 struct _mfc_trace {

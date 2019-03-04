@@ -1426,12 +1426,6 @@ struct mfc_dec {
 	unsigned int dynamic_set;
 	unsigned int dynamic_used;
 
-	struct dpb_table dpb[MFC_MAX_DPBS];
-	struct dpb_table spare_dpb[MFC_MAX_DPBS];
-	struct mutex dpb_mutex;
-	struct mfc_user_shared_handle sh_handle_hdr;
-	struct hdr10_plus_meta *hdr10_plus_info;
-
 	int has_multiframe;
 
 	unsigned int err_reuse_flag;
@@ -1449,9 +1443,17 @@ struct mfc_dec {
 	 * ============ boundary line ============
 	 * The following variables are excluded from the MFC log dumps
 	 */
-
 	/* for DRM ASP */
 	struct mfc_buf *assigned_dpb[MFC_MAX_DPBS];
+
+	/* for Dynamic DPB */
+	struct dpb_table dpb[MFC_MAX_DPBS];
+	struct dpb_table spare_dpb[MFC_MAX_DPBS];
+	struct mutex dpb_mutex;
+
+	/* for HDR10+ */
+	struct mfc_user_shared_handle sh_handle_hdr;
+	struct hdr10_plus_meta *hdr10_plus_info;
 
 	/* for debugging about black bar detection */
 	void *frame_vaddr[3][30];
@@ -1481,9 +1483,6 @@ struct mfc_enc {
 	unsigned int buf_full;
 
 	int stored_tag;
-	struct mfc_user_shared_handle sh_handle_svc;
-	struct mfc_user_shared_handle sh_handle_roi;
-	struct mfc_user_shared_handle sh_handle_hdr;
 	int roi_index;
 	struct mfc_special_buf roi_buf[MFC_MAX_EXTRA_BUF];
 	struct mfc_enc_roi_info roi_info[MFC_MAX_EXTRA_BUF];
@@ -1494,6 +1493,10 @@ struct mfc_enc {
 	 * The following variables are excluded from the MFC log dumps
 	 */
 	struct mfc_enc_params params;
+
+	struct mfc_user_shared_handle sh_handle_svc;
+	struct mfc_user_shared_handle sh_handle_roi;
+	struct mfc_user_shared_handle sh_handle_hdr;
 };
 
 struct mfc_fmt {
@@ -1619,9 +1622,6 @@ struct mfc_ctx {
 	bool check_dump;
 	bool mem_type_10bit;
 
-	struct vb2_queue vq_src;
-	struct vb2_queue vq_dst;
-
 	/*
 	 * new variables should be added above
 	 * ============ boundary line ============
@@ -1630,6 +1630,8 @@ struct mfc_ctx {
 
 	/* external structure */
 	struct v4l2_fh fh;
+	struct vb2_queue vq_src;
+	struct vb2_queue vq_dst;
 
 	/* per buffer controls */
 	struct mfc_ctrls_ops *c_ops;

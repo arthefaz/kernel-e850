@@ -55,8 +55,7 @@ static void __mfc_dump_regs(struct mfc_dev *dev)
 		{ 0xC000, 0x84 },
 	};
 
-	dev_err(dev->device, "-----------dumping MFC registers (SFR base = 0x%pK, dev = 0x%pK)\n",
-				dev->regs_base, dev);
+	dev_err(dev->device, "-----------dumping MFC registers\n");
 
 	if (!mfc_pm_get_pwr_ref_cnt(dev) || !mfc_pm_get_clk_ref_cnt(dev)) {
 		dev_err(dev->device, "Power(%d) or clock(%d) is not enabled\n",
@@ -291,26 +290,45 @@ static void __mfc_save_logging_sfr(struct mfc_dev *dev)
 
 static int __mfc_get_curr_ctx(struct mfc_dev *dev)
 {
+	struct mfc_ctx *ctx = NULL;
 	nal_queue_handle *nal_q_handle = dev->nal_q_handle;
 	unsigned int index, offset;
 	DecoderInputStr *pStr;
+	int i;
+	int curr_ctx = dev->curr_ctx;
 
 	if (nal_q_handle) {
 		if (nal_q_handle->nal_q_state == NAL_Q_STATE_STARTED) {
 			index = nal_q_handle->nal_q_in_handle->in_exe_count % NAL_Q_QUEUE_SIZE;
 			offset = dev->pdata->nal_q_entry_size * index;
 			pStr = (DecoderInputStr *)(nal_q_handle->nal_q_in_handle->nal_q_in_addr + offset);
-			return pStr->InstanceId;
+			curr_ctx = pStr->InstanceId;
 		}
 	}
 
-	return dev->curr_ctx;
+	ctx = dev->ctx[curr_ctx];
+	if (!ctx) {
+		for (i = 0; i < MFC_NUM_CONTEXTS; i++) {
+			if (dev->ctx[i]) {
+				ctx = dev->ctx[i];
+				break;
+			}
+		}
+
+		if (!ctx) {
+			dev_err(dev->device, "there is no ctx structure for dumpping\n");
+			return -EINVAL;
+		}
+		dev_err(dev->device, "curr ctx is changed %d -> %d\n", dev->curr_ctx, ctx->num);
+	}
+
+	return ctx->num;
 }
 
-static void __mfc_dump_state(struct mfc_dev *dev)
+static void __mfc_dump_state(struct mfc_dev *dev, int curr_ctx)
 {
 	nal_queue_handle *nal_q_handle = dev->nal_q_handle;
-	int i, curr_ctx;
+	int i;
 
 	dev_err(dev->device, "-----------dumping MFC device info-----------\n");
 	dev_err(dev->device, "power:%d, clock:%d, continue_clock_on:%d, num_inst:%d, num_drm_inst:%d, fw_status:%d\n",
@@ -319,7 +337,7 @@ static void __mfc_dump_state(struct mfc_dev *dev)
 	dev_err(dev->device, "hwlock bits:%#lx / dev:%#lx, curr_ctx:%d (is_drm:%d),"
 			" preempt_ctx:%d, work_bits:%#lx\n",
 			dev->hwlock.bits, dev->hwlock.dev,
-			dev->curr_ctx, dev->curr_ctx_is_drm,
+			curr_ctx, dev->curr_ctx_is_drm,
 			dev->preempt_ctx, mfc_get_bits(&dev->work_bits));
 	dev_err(dev->device, "has 2sysmmu:%d, has hwfc:%d, has mmcache:%d, shutdown:%d, sleep:%d, itmon_notified:%d\n",
 			dev->has_2sysmmu, dev->has_hwfc, dev->has_mmcache,
@@ -332,7 +350,6 @@ static void __mfc_dump_state(struct mfc_dev *dev)
 				nal_q_handle->nal_q_in_handle->in_exe_count,
 				nal_q_handle->nal_q_out_handle->out_exe_count);
 
-	curr_ctx = __mfc_get_curr_ctx(dev);
 	for (i = 0; i < MFC_NUM_CONTEXTS; i++)
 		if (dev->ctx[i])
 			dev_err(dev->device, "MFC ctx[%d] %s(%scodec_type:%d) state:%d, queue_cnt(src:%d, dst:%d, ref:%d, qsrc:%d, qdst:%d), interrupt(cond:%d, type:%d, err:%d)\n",
@@ -377,114 +394,175 @@ static void __mfc_dump_trace_longterm(struct mfc_dev *dev)
 	}
 }
 
-void __mfc_dump_buffer_info(struct mfc_dev *dev)
+void __mfc_dump_nal_q_buffer_info(struct mfc_dev *dev, int curr_ctx)
 {
-	struct mfc_ctx *ctx;
+	struct mfc_ctx *ctx = dev->ctx[curr_ctx];
+	nal_queue_in_handle *nal_q_in_handle = dev->nal_q_handle->nal_q_in_handle;
+	nal_queue_out_handle *nal_q_out_handle = dev->nal_q_handle->nal_q_out_handle;
+	EncoderInputStr *pEncIn = NULL;
+	EncoderOutputStr *pEncOut = NULL;
+	DecoderInputStr *pDecIn = NULL;
+	DecoderOutputStr *pDecOut = NULL;
+	int i, offset, index, cnt;
 
-	ctx = dev->ctx[__mfc_get_curr_ctx(dev)];
-	if (ctx) {
-		dev_err(dev->device, "-----------dumping MFC buffer info (fault at: %#x)\n",
-				dev->logging_data->fault_addr);
-		dev_err(dev->device, "Normal FW:%llx~%#llx (common ctx buf:%#llx~%#llx)\n",
-				dev->fw_buf.daddr, dev->fw_buf.daddr + dev->fw_buf.size,
-				dev->common_ctx_buf.daddr,
-				dev->common_ctx_buf.daddr + PAGE_ALIGN(0x7800));
-#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
-		dev_err(dev->device, "Secure FW:%llx~%#llx (common ctx buf:%#llx~%#llx)\n",
-				dev->drm_fw_buf.daddr, dev->drm_fw_buf.daddr + dev->drm_fw_buf.size,
-				dev->drm_common_ctx_buf.daddr,
-				dev->drm_common_ctx_buf.daddr + PAGE_ALIGN(0x7800));
-#endif
-		dev_err(dev->device, "instance buf:%#llx~%#llx, codec buf:%#llx~%#llx\n",
-				ctx->instance_ctx_buf.daddr,
-				ctx->instance_ctx_buf.daddr + ctx->instance_ctx_buf.size,
-				ctx->codec_buf.daddr,
-				ctx->codec_buf.daddr + ctx->codec_buf.size);
-		if (ctx->type == MFCINST_DECODER) {
-			dev_err(dev->device, "Decoder CPB:%#x++%#x, scratch:%#x++%#x, static(vp9):%#x++%#x\n",
-					MFC_READL(MFC_REG_D_CPB_BUFFER_ADDR),
-					MFC_READL(MFC_REG_D_CPB_BUFFER_SIZE),
-					MFC_READL(MFC_REG_D_SCRATCH_BUFFER_ADDR),
-					MFC_READL(MFC_REG_D_SCRATCH_BUFFER_SIZE),
-					MFC_READL(MFC_REG_D_STATIC_BUFFER_ADDR),
-					MFC_READL(MFC_REG_D_STATIC_BUFFER_SIZE));
-			dev_err(dev->device, "DPB [0]plane:++%#x, [1]plane:++%#x, [2]plane:++%#x, MV buffer:++%#lx\n",
-					ctx->raw_buf.plane_size[0],
-					ctx->raw_buf.plane_size[1],
-					ctx->raw_buf.plane_size[2],
-					ctx->mv_size);
-			print_hex_dump(KERN_ERR, "[0] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
-					dev->regs_base + MFC_REG_D_FIRST_PLANE_DPB0,
-					0x100, false);
-			print_hex_dump(KERN_ERR, "[1] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
-					dev->regs_base + MFC_REG_D_SECOND_PLANE_DPB0,
-					0x100, false);
-			if (ctx->dst_fmt->num_planes == 3)
-				print_hex_dump(KERN_ERR, "[2] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
-						dev->regs_base + MFC_REG_D_THIRD_PLANE_DPB0,
-						0x100, false);
+	/* Skip NAL_Q dump when multi instance */
+	if (dev->num_inst != 1)
+		return;
+
+	index = nal_q_in_handle->in_exe_count % NAL_Q_QUEUE_SIZE;
+
+	if (ctx->type == MFCINST_DECODER) {
+		dev_err(dev->device, "Decoder scratch:%#x++%#x, static(vp9):%#x++%#x, MV:++%#lx\n",
+				MFC_READL(MFC_REG_D_SCRATCH_BUFFER_ADDR),
+				MFC_READL(MFC_REG_D_SCRATCH_BUFFER_SIZE),
+				MFC_READL(MFC_REG_D_STATIC_BUFFER_ADDR),
+				MFC_READL(MFC_REG_D_STATIC_BUFFER_SIZE), ctx->mv_size);
+		dev_err(dev->device, "CPB:++%#x, DPB[0]:++%#x, [1]:++%#x, [2]plane:++%#x\n",
+				MFC_READL(MFC_REG_D_CPB_BUFFER_SIZE),
+				ctx->raw_buf.plane_size[0], ctx->raw_buf.plane_size[1],
+				ctx->raw_buf.plane_size[2]);
+		if (ctx->mv_size)
 			print_hex_dump(KERN_ERR, "MV buffer ", DUMP_PREFIX_ADDRESS, 32, 4,
-					dev->regs_base + MFC_REG_D_MV_BUFFER0,
-					0x100, false);
-		} else if (ctx->type == MFCINST_ENCODER) {
-			dev_err(dev->device, "Encoder SRC %dplane, [0]:%#x++%#x, [1]:%#x++%#x, [2]:%#x++%#x\n",
-					ctx->src_fmt->num_planes,
-					MFC_READL(MFC_REG_E_SOURCE_FIRST_ADDR),
-					ctx->raw_buf.plane_size[0],
-					MFC_READL(MFC_REG_E_SOURCE_SECOND_ADDR),
-					ctx->raw_buf.plane_size[1],
-					MFC_READL(MFC_REG_E_SOURCE_THIRD_ADDR),
-					ctx->raw_buf.plane_size[2]);
-			dev_err(dev->device, "DST:%#x++%#x, scratch:%#x++%#x\n",
-					MFC_READL(MFC_REG_E_STREAM_BUFFER_ADDR),
-					MFC_READL(MFC_REG_E_STREAM_BUFFER_SIZE),
-					MFC_READL(MFC_REG_E_SCRATCH_BUFFER_ADDR),
-					MFC_READL(MFC_REG_E_SCRATCH_BUFFER_SIZE));
-			dev_err(dev->device, "DPB [0] plane:++%#lx, [1] plane:++%#lx, ME buffer:++%#lx\n",
-					ctx->enc_priv->luma_dpb_size,
-					ctx->enc_priv->chroma_dpb_size,
-					ctx->enc_priv->me_buffer_size);
-			print_hex_dump(KERN_ERR, "[0] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
-					dev->regs_base + MFC_REG_E_LUMA_DPB,
-					0x44, false);
-			print_hex_dump(KERN_ERR, "[1] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
-					dev->regs_base + MFC_REG_E_CHROMA_DPB,
-					0x44, false);
-			print_hex_dump(KERN_ERR, "ME buffer ", DUMP_PREFIX_ADDRESS, 32, 4,
-					dev->regs_base + MFC_REG_E_ME_BUFFER,
-					0x44, false);
-		} else {
-			dev_err(dev->device, "invalid MFC instnace type(%d)\n", ctx->type);
+					dev->regs_base + MFC_REG_D_MV_BUFFER0, 0x100, false);
+		dev_err(dev->device, "NALQ In: ID CPB DPBFlag DPB0 DPB1\
+			/ Out: ID dispstat diap0 disp1 used decstat dec0 dec1 type\n");
+		for (i = MFC_TRACE_NAL_QUEUE_PRINT - 1; i >= 0; i--) {
+			cnt = ((index + NAL_Q_QUEUE_SIZE) - i) % NAL_Q_QUEUE_SIZE;
+			offset = dev->pdata->nal_q_entry_size * cnt;
+			pDecIn = (DecoderInputStr *)(nal_q_in_handle->nal_q_in_addr + offset);
+			pDecOut = (DecoderOutputStr *)(nal_q_out_handle->nal_q_out_addr + offset);
+			dev_err(dev->device, "[%d] In: %d %#x %x %x %x / Out: %d %d %x %x %x %d %x %x %d\n",
+					cnt, pDecIn->CommandId, pDecIn->CpbBufferAddr,
+					pDecIn->DynamicDpbFlagLower,
+					pDecIn->FrameAddr[0], pDecIn->FrameAddr[1],
+					pDecOut->CommandId, pDecOut->DisplayStatus,
+					pDecOut->DisplayAddr[0], pDecOut->DisplayAddr[1],
+					pDecOut->UsedDpbFlagLower, pDecOut->DecodedStatus,
+					pDecOut->DecodedAddr[0], pDecOut->DecodedAddr[1],
+					pDecOut->DecodedFrameType);
 		}
+	} else if (ctx->type == MFCINST_ENCODER) {
+		dev_err(dev->device, "Encoder scratch:%#x++%#x, recon[0]:++%#lx, [1]:++%#lx, ME:++%#lx\n",
+				MFC_READL(MFC_REG_E_SCRATCH_BUFFER_ADDR),
+				MFC_READL(MFC_REG_E_SCRATCH_BUFFER_SIZE),
+				ctx->enc_priv->luma_dpb_size,
+				ctx->enc_priv->chroma_dpb_size,
+				ctx->enc_priv->me_buffer_size);
+		dev_err(dev->device, "SRC[0]:++%#x, [1]:++%#x, [2]:++%#x, DST:++%#x\n",
+				MFC_READL(MFC_REG_E_STREAM_BUFFER_SIZE),
+				ctx->raw_buf.plane_size[0], ctx->raw_buf.plane_size[1],
+				ctx->raw_buf.plane_size[2]);
+		print_hex_dump(KERN_ERR, "ME buffer ", DUMP_PREFIX_ADDRESS, 32, 4,
+				dev->regs_base + MFC_REG_E_ME_BUFFER, 0x44, false);
+		dev_err(dev->device, "NALQ In: ID src0 src1 dst\
+			/ Out: ID enc0 enc1 strm recon0 recon1 type\n");
+		for (i = MFC_TRACE_NAL_QUEUE_PRINT - 1; i >= 0; i--) {
+			cnt = ((index + NAL_Q_QUEUE_SIZE) - i) % NAL_Q_QUEUE_SIZE;
+			offset = dev->pdata->nal_q_entry_size * cnt;
+			pEncIn = (EncoderInputStr *)(nal_q_in_handle->nal_q_in_addr + offset);
+			pEncOut = (EncoderOutputStr *)(nal_q_out_handle->nal_q_out_addr + offset);
+			dev_err(dev->device, "[%d] In: %d %#x %#x %#x / Out: %d %#x %#x %#x %d %#x %#x\n",
+					cnt, pEncIn->CommandId, pEncIn->FrameAddr[0],
+					pEncIn->FrameAddr[1], pEncIn->StreamBufferAddr,
+					pEncOut->CommandId, pEncOut->EncodedFrameAddr[0],
+					pEncOut->EncodedFrameAddr[1], pEncOut->StreamBufferAddr,
+					pEncOut->SliceType, pEncOut->ReconLumaDpbAddr,
+					pEncOut->ReconChromaDpbAddr);
+		}
+	} else {
+		dev_err(dev->device, "invalid MFC instnace type(%d)\n", ctx->type);
 	}
 }
 
-static void __mfc_dump_struct(struct mfc_dev *dev)
+void __mfc_dump_buffer_info(struct mfc_dev *dev)
 {
-	struct mfc_ctx *ctx = NULL;
-	int i, size = 0;
+	int curr_ctx = __mfc_get_curr_ctx(dev);
+	struct mfc_ctx *ctx = dev->ctx[curr_ctx];
 
-	dev_err(dev->device, "-----------dumping MFC struct info-----------\n");
-	ctx = dev->ctx[__mfc_get_curr_ctx(dev)];
-	if (!ctx) {
-		for (i = 0; i < MFC_NUM_CONTEXTS; i++) {
-			if (dev->ctx[i]) {
-				ctx = dev->ctx[i];
-				break;
-			}
-		}
+	dev_err(dev->device, "-----------dumping MFC buffer info (fault at: %#x)\n",
+			dev->logging_data->fault_addr);
+	dev_err(dev->device, "Normal FW:%llx~%#llx (common ctx buf:%#llx~%#llx)\n",
+			dev->fw_buf.daddr, dev->fw_buf.daddr + dev->fw_buf.size,
+			dev->common_ctx_buf.daddr,
+			dev->common_ctx_buf.daddr + PAGE_ALIGN(0x7800));
+#ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
+	dev_err(dev->device, "Secure FW:%llx~%#llx (common ctx buf:%#llx~%#llx)\n",
+			dev->drm_fw_buf.daddr, dev->drm_fw_buf.daddr + dev->drm_fw_buf.size,
+			dev->drm_common_ctx_buf.daddr,
+			dev->drm_common_ctx_buf.daddr + PAGE_ALIGN(0x7800));
+#endif
 
-		if (!ctx) {
-			dev_err(dev->device, "there is no ctx structure for dumpping\n");
-			return;
-		}
-		dev_err(dev->device, "curr ctx is changed %d -> %d\n", dev->curr_ctx, ctx->num);
+	if (curr_ctx < 0)
+		return;
+
+	dev_err(dev->device, "instance buf:%#llx~%#llx, codec buf:%#llx~%#llx\n",
+			ctx->instance_ctx_buf.daddr,
+			ctx->instance_ctx_buf.daddr + ctx->instance_ctx_buf.size,
+			ctx->codec_buf.daddr,
+			ctx->codec_buf.daddr + ctx->codec_buf.size);
+
+	if (dev->nal_q_handle && (dev->nal_q_handle->nal_q_state == NAL_Q_STATE_STARTED)) {
+		__mfc_dump_nal_q_buffer_info(dev, curr_ctx);
+		return;
 	}
 
-	/* mfc_platdata */
-	size = (unsigned long)&dev->pdata->enc_param_num - (unsigned long)dev->pdata;
-	print_hex_dump(KERN_ERR, "dump mfc_pdata: ", DUMP_PREFIX_ADDRESS,
-			32, 4, dev->pdata, size, false);
+	if (ctx->type == MFCINST_DECODER) {
+		dev_err(dev->device, "Decoder CPB:%#x++%#x, scratch:%#x++%#x, static(vp9):%#x++%#x\n",
+				MFC_READL(MFC_REG_D_CPB_BUFFER_ADDR),
+				MFC_READL(MFC_REG_D_CPB_BUFFER_SIZE),
+				MFC_READL(MFC_REG_D_SCRATCH_BUFFER_ADDR),
+				MFC_READL(MFC_REG_D_SCRATCH_BUFFER_SIZE),
+				MFC_READL(MFC_REG_D_STATIC_BUFFER_ADDR),
+				MFC_READL(MFC_REG_D_STATIC_BUFFER_SIZE));
+		dev_err(dev->device, "DPB [0]plane:++%#x, [1]plane:++%#x, [2]plane:++%#x, MV buffer:++%#lx\n",
+				ctx->raw_buf.plane_size[0], ctx->raw_buf.plane_size[1],
+				ctx->raw_buf.plane_size[2], ctx->mv_size);
+		print_hex_dump(KERN_ERR, "[0] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
+				dev->regs_base + MFC_REG_D_FIRST_PLANE_DPB0, 0x100, false);
+		print_hex_dump(KERN_ERR, "[1] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
+				dev->regs_base + MFC_REG_D_SECOND_PLANE_DPB0, 0x100, false);
+		if (ctx->dst_fmt->num_planes == 3)
+			print_hex_dump(KERN_ERR, "[2] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
+					dev->regs_base + MFC_REG_D_THIRD_PLANE_DPB0,
+					0x100, false);
+		if (ctx->mv_size)
+			print_hex_dump(KERN_ERR, "MV buffer ", DUMP_PREFIX_ADDRESS, 32, 4,
+					dev->regs_base + MFC_REG_D_MV_BUFFER0, 0x100, false);
+	} else if (ctx->type == MFCINST_ENCODER) {
+		dev_err(dev->device, "Encoder SRC %dplane, [0]:%#x++%#x, [1]:%#x++%#x, [2]:%#x++%#x\n",
+				ctx->src_fmt->num_planes,
+				MFC_READL(MFC_REG_E_SOURCE_FIRST_ADDR),
+				ctx->raw_buf.plane_size[0],
+				MFC_READL(MFC_REG_E_SOURCE_SECOND_ADDR),
+				ctx->raw_buf.plane_size[1],
+				MFC_READL(MFC_REG_E_SOURCE_THIRD_ADDR),
+				ctx->raw_buf.plane_size[2]);
+		dev_err(dev->device, "DST:%#x++%#x, scratch:%#x++%#x\n",
+				MFC_READL(MFC_REG_E_STREAM_BUFFER_ADDR),
+				MFC_READL(MFC_REG_E_STREAM_BUFFER_SIZE),
+				MFC_READL(MFC_REG_E_SCRATCH_BUFFER_ADDR),
+				MFC_READL(MFC_REG_E_SCRATCH_BUFFER_SIZE));
+		dev_err(dev->device, "recon [0] plane:++%#lx, [1] plane:++%#lx, ME buffer:++%#lx\n",
+				ctx->enc_priv->luma_dpb_size,
+				ctx->enc_priv->chroma_dpb_size,
+				ctx->enc_priv->me_buffer_size);
+		print_hex_dump(KERN_ERR, "[0] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
+				dev->regs_base + MFC_REG_E_LUMA_DPB, 0x44, false);
+		print_hex_dump(KERN_ERR, "[1] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
+				dev->regs_base + MFC_REG_E_CHROMA_DPB, 0x44, false);
+		print_hex_dump(KERN_ERR, "ME buffer ", DUMP_PREFIX_ADDRESS, 32, 4,
+				dev->regs_base + MFC_REG_E_ME_BUFFER, 0x44, false);
+	} else {
+		dev_err(dev->device, "invalid MFC instnace type(%d)\n", ctx->type);
+	}
+}
+
+static void __mfc_dump_struct(struct mfc_dev *dev, int curr_ctx)
+{
+	struct mfc_ctx *ctx = dev->ctx[curr_ctx];
+	int size = 0;
+
+	dev_err(dev->device, "-----------dumping MFC struct info-----------\n");
 
 	/* mfc_ctx */
 	size = (unsigned long)&ctx->fh - (unsigned long)ctx;
@@ -506,17 +584,60 @@ static void __mfc_dump_struct(struct mfc_dev *dev)
 	}
 }
 
+static void __mfc_dump_dpb_table(struct mfc_dev *dev, int curr_ctx)
+{
+	struct mfc_ctx *ctx = dev->ctx[curr_ctx];
+	struct mfc_dec *dec = ctx->dec_priv;
+	int i, j, k, l;
+
+	if (ctx->type != MFCINST_DECODER || ctx->dec_priv == NULL)
+		return;
+
+	dev_err(dev->device, "-----------dumping MFC DPB table-----------\n");
+
+	for (i = 0; i < MFC_MAX_DPBS; i+=4) {
+		j = i + 1;
+		k = i + 2;
+		l = i + 3;
+		dev_err(dev->device, "dpb [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d)\n",
+				i, dec->dpb[i].addr[0], dec->dpb[i].addr[1], dec->dpb[i].mapcnt,
+				j, dec->dpb[j].addr[0], dec->dpb[j].addr[1], dec->dpb[j].mapcnt,
+				k, dec->dpb[k].addr[0], dec->dpb[k].addr[1], dec->dpb[k].mapcnt,
+				l, dec->dpb[l].addr[0], dec->dpb[l].addr[1], dec->dpb[l].mapcnt);
+	}
+	for (i = 0; i < MFC_MAX_DPBS; i+=4) {
+		j = i + 1;
+		k = i + 2;
+		l = i + 3;
+		dev_err(dev->device, "spare dpb [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d)\n",
+				i, dec->spare_dpb[i].addr[0], dec->spare_dpb[i].addr[1], dec->spare_dpb[i].mapcnt,
+				j, dec->spare_dpb[j].addr[0], dec->spare_dpb[j].addr[1], dec->spare_dpb[j].mapcnt,
+				k, dec->spare_dpb[k].addr[0], dec->spare_dpb[k].addr[1], dec->spare_dpb[k].mapcnt,
+				l, dec->spare_dpb[l].addr[0], dec->spare_dpb[l].addr[1], dec->spare_dpb[l].mapcnt);
+	}
+}
+
 static void __mfc_dump_info_context(struct mfc_dev *dev)
 {
-	__mfc_dump_state(dev);
+	int curr_ctx = __mfc_get_curr_ctx(dev);
+
+	__mfc_dump_state(dev, curr_ctx);
 	__mfc_dump_trace_longterm(dev);
 }
 
 static void __mfc_dump_info_without_regs(struct mfc_dev *dev)
 {
-	__mfc_dump_state(dev);
+	int curr_ctx = __mfc_get_curr_ctx(dev);
+
+	__mfc_dump_state(dev, curr_ctx);
 	__mfc_dump_trace(dev);
-	__mfc_dump_struct(dev);
+
+	/* If there was no struct mfc_ctx, skip access the *ctx */
+	if (curr_ctx < 0)
+		return;
+
+	__mfc_dump_dpb_table(dev, curr_ctx);
+	__mfc_dump_struct(dev, curr_ctx);
 }
 
 static void __mfc_dump_info(struct mfc_dev *dev)

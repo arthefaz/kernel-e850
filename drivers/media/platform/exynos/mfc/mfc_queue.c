@@ -709,6 +709,28 @@ void mfc_cleanup_enc_dst_queue(struct mfc_ctx *ctx)
 	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 }
 
+void __mfc_debug_dpb_list(struct mfc_ctx *ctx, struct mfc_dec *dec)
+{
+	struct mfc_buf *mfc_buf = NULL;
+
+	mfc_info_ctx("[DPB] src %d, dst %d, ref %d, src_nal %d, dst_nal %d, used %#x\n",
+			ctx->src_buf_queue.count, ctx->dst_buf_queue.count,
+			ctx->ref_buf_queue.count, ctx->src_buf_nal_queue.count,
+			ctx->dst_buf_nal_queue.count, dec->dynamic_used);
+
+	if (!list_empty(&ctx->dst_buf_queue.head))
+		list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list)
+			mfc_info_ctx("[DPB] dst[%d] %#llx used: %d\n",
+					mfc_buf->vb.vb2_buf.index,
+					mfc_buf->addr[0][0], mfc_buf->used);
+
+	if (!list_empty(&ctx->ref_buf_queue.head))
+		list_for_each_entry(mfc_buf, &ctx->ref_buf_queue.head, list)
+			mfc_info_ctx("[DPB] ref[%d] %#llx used: %d\n",
+					mfc_buf->vb.vb2_buf.index,
+					mfc_buf->addr[0][0], mfc_buf->used);
+}
+
 /* Check all buffers are referenced or not */
 struct mfc_buf *__mfc_check_full_refered_dpb(struct mfc_ctx *ctx)
 {
@@ -747,8 +769,10 @@ struct mfc_buf *__mfc_check_full_refered_dpb(struct mfc_ctx *ctx)
 		ctx->clear_work_bit = 1;
 	}
 
-	if (mfc_buf)
+	if (mfc_buf) {
+		__mfc_debug_dpb_list(ctx, dec);
 		mfc_buf->used = 1;
+	}
 
 	return mfc_buf;
 }
