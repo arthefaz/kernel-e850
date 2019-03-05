@@ -398,8 +398,8 @@ static int init_mmc_srpmb(struct platform_device *pdev, struct _mmc_rpmb_ctx *ct
 		goto alloc_wsm_fail;
 	}
 
-	dev_info(dev, "srpmb dma addr: virt(%llx), phy(%llx)\n",
-			(uint64_t)ctx->wsm_virtaddr, (uint64_t)ctx->wsm_phyaddr);
+	dev_info(dev, "srpmb dma addr: virt_pK(%pK), phy(%llx)\n",
+			ctx->wsm_virtaddr, (uint64_t)ctx->wsm_phyaddr);
 
 	/* get mmc srpmb irq number */
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
