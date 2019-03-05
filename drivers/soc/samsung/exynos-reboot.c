@@ -71,133 +71,6 @@ int soc_has_big(void)
 #define PS_HOLD_CONTROL			(0x330C)
 #define EXYNOS_PMU_SYSIP_DAT0			(0x0810)
 
-/* defines for BIG reset */
-#define PEND_BIG				(1 << 0)
-#define PEND_LITTLE				(1 << 1)
-#define DEFAULT_VAL_CPU_RESET_DISABLE		(0xFFFFFFFC)
-#define RESET_DISABLE_GPR_CPUPORESET		(1 << 15)
-#define RESET_DISABLE_WDT_CPUPORESET		(1 << 12)
-#define RESET_DISABLE_CORERESET			(1 << 9)
-#define RESET_DISABLE_CPUPORESET		(1 << 8)
-
-#define RESET_DISABLE_WDT_L2RESET		(1 << 31)
-#define RESET_DISABLE_WDT_PRESET_DBG		(1 << 25)
-#define RESET_DISABLE_PRESET_DBG		(1 << 18)
-#define RESET_DISABLE_L2RESET			(1 << 16)
-
-#define DFD_EDPCSR_DUMP_EN			(1 << 0)
-
-#define DFD_L2RSTDISABLE_BIG_EN			(1 << 11)
-#define DFD_DBGL1RSTDISABLE_BIG_EN		(1 << 10)
-#define DFD_L2RSTDISABLE_LITTLE_EN		(1 << 9)
-#define DFD_DBGL1RSTDISABLE_LITTLE_EN		(1 << 8)
-
-#define DFD_CLEAR_L2RSTDISABLE_BIG		(1 << 7)
-#define DFD_CLEAR_DBGL1RSTDISABLE_BIG		(1 << 6)
-#define DFD_CLEAR_L2RSTDISABLE_LITTLE		(1 << 5)
-#define DFD_CLEAR_DBGL1RSTDISABLE_LITTLE	(1 << 4)
-
-#define DFD_L2RSTDISABLE		(DFD_L2RSTDISABLE_BIG_EN	\
-					| DFD_DBGL1RSTDISABLE_BIG_EN	\
-					| DFD_L2RSTDISABLE_LITTLE_EN	\
-					| DFD_DBGL1RSTDISABLE_LITTLE_EN)
-
-#define DFD_CLEAR_L2RSTDISABLE		(DFD_CLEAR_L2RSTDISABLE_BIG 	\
-					| DFD_CLEAR_DBGL1RSTDISABLE_BIG	\
-					| DFD_CLEAR_L2RSTDISABLE_LITTLE	\
-					| DFD_CLEAR_DBGL1RSTDISABLE_LITTLE)
-
-#define DFD_RESET_PEND			(PEND_BIG | PEND_LITTLE)
-
-#define DFD_DISABLE_RESET		(RESET_DISABLE_WDT_CPUPORESET	\
-					| RESET_DISABLE_CORERESET	\
-					| RESET_DISABLE_CPUPORESET)
-
-#define	DFD_BIG_NONCPU_ETC_RESET	(RESET_DISABLE_WDT_L2RESET	\
-					| RESET_DISABLE_WDT_PRESET_DBG	\
-					| RESET_DISABLE_PRESET_DBG	\
-					| RESET_DISABLE_L2RESET)
-
-static void dfd_set_dump_gpr(int en)
-{
-	u32 reg_val;
-
-	if (en) {
-		reg_val = DFD_EDPCSR_DUMP_EN | DFD_L2RSTDISABLE;
-		exynos_pmu_write(RESET_SEQUENCER_CONFIGURATION, reg_val);
-	} else {
-		exynos_pmu_read(RESET_SEQUENCER_CONFIGURATION, &reg_val);
-		if (reg_val) {
-			reg_val = DFD_EDPCSR_DUMP_EN | DFD_CLEAR_L2RSTDISABLE;
-			exynos_pmu_write(RESET_SEQUENCER_CONFIGURATION, reg_val);
-		}
-	}
-#ifdef REBOOT_DEBUG
-	exynos_pmu_read(RESET_SEQUENCER_CONFIGURATION, &reg_val);
-	pr_info("RESET_SEQUENCER_CONFIGURATION :%x\n", reg_val);
-#endif
-}
-
-void big_reset_control(int en)
-{
-	u32 reg_val, val;
-	u32 big_cpu_cnt = soc_has_big();
-	u32 check_dumpGPR;
-
-	if (big_cpu_cnt == 0 || !exynos_pmu_base)
-		return;
-
-	exynos_pmu_read(RESET_SEQUENCER_CONFIGURATION, &check_dumpGPR);
-	if (!(check_dumpGPR & DFD_EDPCSR_DUMP_EN))
-		return;
-
-	if (en) {
-		/* reset disable for BIG */
-		exynos_pmu_read(CPU_RESET_DISABLE_FROM_SOFTRESET, &reg_val);
-		if (reg_val != DEFAULT_VAL_CPU_RESET_DISABLE)
-			exynos_pmu_update(CPU_RESET_DISABLE_FROM_SOFTRESET,
-					DFD_RESET_PEND, 0);
-
-		exynos_pmu_read(CPU_RESET_DISABLE_FROM_WDTRESET, &reg_val);
-		if (reg_val != DEFAULT_VAL_CPU_RESET_DISABLE)
-			exynos_pmu_update(CPU_RESET_DISABLE_FROM_WDTRESET,
-					DFD_RESET_PEND, 0);
-
-		/* The reset disable of BIG core and BIG cluster in Exynos9610(Artemis)
-		 * should be skipped because of cache flush in dump gpr situation
-		 */
-		/*
-		for (val = 0; val < big_cpu_cnt; val++)
-			exynos_pmu_update(BIG_CPU0_RESET + (val * PMU_CPU_OFFSET),
-					DFD_DISABLE_RESET, DFD_DISABLE_RESET);
-
-		exynos_pmu_update(BIG_NONCPU_ETC_RESET, DFD_BIG_NONCPU_ETC_RESET,
-					DFD_BIG_NONCPU_ETC_RESET);
-		*/
-	} else {
-		/* reset enable for BIG */
-		for (val = 0; val < big_cpu_cnt; val++)
-			exynos_pmu_update(BIG_CPU0_RESET + (val * PMU_CPU_OFFSET),
-					DFD_DISABLE_RESET, 0);
-
-		exynos_pmu_update(BIG_NONCPU_ETC_RESET, DFD_BIG_NONCPU_ETC_RESET, 0);
-	}
-
-#ifdef REBOOT_DEBUG
-	exynos_pmu_read(CPU_RESET_DISABLE_FROM_SOFTRESET, &reg_val);
-	pr_info("CPU_RESET_DISABLE_FROM_SOFTRESET :%x\n", reg_val);
-	exynos_pmu_read(CPU_RESET_DISABLE_FROM_WDTRESET, &reg_val);
-	pr_info("CPU_RESET_DISABLE_FROM_WDTRESET :%x\n", reg_val);
-	exynos_pmu_read(BIG_NONCPU_ETC_RESET, &reg_val);
-	pr_info("BIG_NONCPU_ETC_RESET :%x\n", reg_val);
-
-	for (val = 0; val < big_cpu_cnt; val++) {
-		exynos_pmu_read(BIG_CPU0_RESET + (val * PMU_CPU_OFFSET), &reg_val);
-		pr_info("BIG_CPU%d_RESET :%x\n", val, reg_val);
-	}
-#endif
-}
-
 #define INFORM_NONE		0x0
 #define INFORM_RAMDUMP		0xd
 #define INFORM_RECOVERY		0xf
@@ -303,24 +176,15 @@ static void exynos_reboot(enum reboot_mode mode, const char *cmd)
 	pr_info("SOC ID %X. Revision: %x\n", soc_id, revision);
 	switch(soc_id) {
 	case EXYNOS9810_SOC_ID:
-		/* Check reset_sequencer_configuration register */
-		if (readl(exynos_pmu_base + RESET_SEQUENCER_CONFIGURATION) & DFD_EDPCSR_DUMP_EN) {
-			big_reset_control(0);
-			dfd_set_dump_gpr(0);
-		}
 		if (revision < EXYNOS_MAIN_REV_1) {
 			pr_emerg("%s: Exynos SoC reset right now with fake watchdog\n", __func__);
 			s3c2410wdt_set_emergency_reset(1000, 1);
+
 			while (1)
 				wfi();
 		}
 		break;
 	case EXYNOS9610_SOC_ID:
-		/* Check reset_sequencer_configuration register */
-		if (readl(exynos_pmu_base + RESET_SEQUENCER_CONFIGURATION) & DFD_EDPCSR_DUMP_EN) {
-			big_reset_control(0);
-			dfd_set_dump_gpr(0);
-		}
 		break;
 	default:
 		break;
@@ -353,7 +217,6 @@ static int __init exynos_reboot_setup(struct device_node *np)
 	/* If Debug-Snapshot is disabed, This code prevents entering fastboot */
 	writel(0, exynos_pmu_base + RESET_SEQUENCER_CONFIGURATION);
 #endif
-	big_reset_control(1);
 	return err;
 }
 
