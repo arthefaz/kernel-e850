@@ -437,7 +437,7 @@ struct decon_win_config {
 	/* destination OSD coordinates */
 	struct decon_frame dst;
 	bool protection;
-	enum dpp_comp_type compression;
+	bool compression;
 };
 
 struct decon_reg_data {
