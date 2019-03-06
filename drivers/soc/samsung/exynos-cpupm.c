@@ -14,6 +14,7 @@
 #include <linux/psci.h>
 #include <linux/cpuhotplug.h>
 #include <linux/cpuidle_profiler.h>
+#include <linux/cpuidle-moce.h>
 
 #include <soc/samsung/exynos-cpupm.h>
 #include <soc/samsung/exynos-powermode.h>
@@ -402,7 +403,7 @@ static s64 get_sleep_length(int cpu)
 
 static int cpus_busy(int target_residency, const struct cpumask *cpus)
 {
-	int cpu;
+	int cpu, cal_tr;
 
 	/*
 	 * If there is even one cpu which is not in POWERDOWN state or has
@@ -415,7 +416,12 @@ static int cpus_busy(int target_residency, const struct cpumask *cpus)
 		if (check_state_run(pm))
 			return -EBUSY;
 
-		if (get_sleep_length(cpu) < target_residency)
+		/*
+		 * target residency for system-wide c-state (CPD/SICD) is
+		 * re-evaluated in accordance with moce factor
+		 */
+		cal_tr = exynos_moce_calculate_target_res(target_residency, cpu);
+		if (get_sleep_length(cpu) < cal_tr)
 			return -EBUSY;
 	}
 

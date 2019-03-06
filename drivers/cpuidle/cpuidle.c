@@ -55,17 +55,43 @@ unsigned int cpuidle_get_target_residency(int cpu, int state)
 {
 	struct cpuidle_device *dev = per_cpu(cpuidle_devices, cpu);
 	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
-	struct cpuidle_state *s;
-	unsigned int target_residency = INT_MAX;
 
 	if (!drv)
-		goto exit_func;
+		return INT_MAX;
 
-	s = &drv->states[state];
-	target_residency = s->target_residency;
+	return drv->states[state].target_residency;
+}
 
-exit_func:
-	return target_residency;
+int cpuidle_get_state_size(void)
+{
+	struct cpuidle_device *dev = per_cpu(cpuidle_devices, 0);
+	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
+
+	if (!drv)
+		return INT_MAX;
+
+	return drv->state_count;
+}
+
+unsigned int cpuidle_get_exit_latency(int cpu, int state)
+{
+	struct cpuidle_device *dev = per_cpu(cpuidle_devices, cpu);
+	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
+
+	if (!drv)
+		return INT_MAX;
+
+	return drv->states[state].exit_latency;
+}
+
+bool cpuidle_check_state_enable(unsigned int cpu, int state)
+{
+	struct cpuidle_device *dev = per_cpu(cpuidle_devices, cpu);
+	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
+	struct cpuidle_state *s = &drv->states[state];
+	struct cpuidle_state_usage *su = &dev->states_usage[state];
+
+	return s->disabled || su->disable;
 }
 
 /**

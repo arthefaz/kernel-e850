@@ -12,9 +12,10 @@
 #include <linux/kobject.h>
 #include <linux/cpuidle.h>
 #include <linux/slab.h>
-#include <soc/samsung/exynos_perf_cpuidle.h>
+#include <linux/kdev_t.h>
 
 #include <soc/samsung/exynos-cpupm.h>
+#include <soc/samsung/exynos_perf_cpuidle.h>
 
 /* whether profiling has started */
 static bool profile_started;
@@ -667,14 +668,14 @@ cpuidle_profile_group_idle_register(int id, const char *name)
 	group_idle_state_count++;
 }
 
+extern struct class *idle_class;
+
 static int __init cpuidle_profile_init(void)
 {
-	struct class *class;
 	struct device *dev;
 	int ret = 0;
 
-	class = class_create(THIS_MODULE, "cpuidle");
-	dev = device_create(class, NULL, 0, NULL, "cpuidle_profiler");
+	dev = device_create(idle_class, NULL, MKDEV(0, 0), NULL, "cpuidle_profiler");
 
 	ret = sysfs_create_group(&dev->kobj, &cpuidle_profile_group);
 	if (ret)
