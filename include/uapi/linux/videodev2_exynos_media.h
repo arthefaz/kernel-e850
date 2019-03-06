@@ -57,6 +57,11 @@
 
 #define V4L2_PIX_FMT_NV12_P010		v4l2_fourcc('P', 'N', '1', '2')
 
+#define V4L2_PIX_FMT_ARGB2101010	v4l2_fourcc('A', 'B', '1', '0')
+#define V4L2_PIX_FMT_ABGR2101010	v4l2_fourcc('A', 'R', '1', '0')
+#define V4L2_PIX_FMT_RGBA1010102	v4l2_fourcc('R', 'A', '1', '0')
+#define V4L2_PIX_FMT_BGRA1010102	v4l2_fourcc('B', 'A', '1', '0')
+
 /* 12 Y/CbCr 4:2:0 SBWC */
 #define V4L2_PIX_FMT_NV12M_SBWC_8B	v4l2_fourcc('M', '1', 'S', '8')
 #define V4L2_PIX_FMT_NV12M_SBWC_10B	v4l2_fourcc('M', '1', 'S', '1')
