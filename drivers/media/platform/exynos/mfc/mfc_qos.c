@@ -53,8 +53,9 @@ void mfc_perf_boost_enable(struct mfc_dev *dev)
 #ifdef CONFIG_EXYNOS_BTS
 	if (perf_boost_mode & MFC_PERF_BOOST_MO) {
 		if (pdata->mo_control) {
-			bts_update_scen(BS_MFC_UHD_10BIT, 1);
-			mfc_debug(3, "[QoS][BOOST] BTS(MO): UHD_10BIT\n");
+			bts_add_scenario(qos_boost_table->bts_scen_idx);
+			mfc_debug(3, "[QoS][BOOST] BTS(MO) add idx %d (%s)\n",
+					qos_boost_table->bts_scen_idx, qos_boost_table->name);
 		}
 	}
 #endif
@@ -85,8 +86,10 @@ void mfc_perf_boost_disable(struct mfc_dev *dev)
 #ifdef CONFIG_EXYNOS_BTS
 	if (perf_boost_mode & MFC_PERF_BOOST_MO) {
 		if (pdata->mo_control) {
-			bts_update_scen(BS_MFC_UHD_10BIT, 0);
-			mfc_debug(3, "[QoS][BOOST] BTS(MO) off\n");
+			bts_del_scenario(pdata->qos_boost_table->bts_scen_idx);
+			mfc_debug(3, "[QoS][BOOST] BTS(MO) del idx %d (%s)\n",
+					pdata->qos_boost_table->bts_scen_idx,
+					pdata->qos_boost_table->name);
 		}
 	}
 #endif
@@ -127,15 +130,12 @@ static void __mfc_qos_operate(struct mfc_ctx *ctx, int opr_type, int idx)
 
 #ifdef CONFIG_EXYNOS_BTS
 		if (pdata->mo_control) {
-			bts_update_scen(BS_MFC_UHD_ENC60, qos_table[idx].mo_uhd_enc60_value);
-			bts_update_scen(BS_MFC_UHD_10BIT, qos_table[idx].mo_10bit_value);
-			bts_update_scen(BS_MFC_UHD, qos_table[idx].mo_value);
-			MFC_TRACE_CTX("BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
-					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
-					qos_table[idx].mo_uhd_enc60_value);
-			mfc_debug(2, "[QoS] BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
-					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
-					qos_table[idx].mo_uhd_enc60_value);
+			bts_add_scenario(qos_table[idx].bts_scen_idx);
+			dev->prev_bts_scen_idx = qos_table[idx].bts_scen_idx;
+			MFC_TRACE_CTX("BTS(MO) add idx %d (%s)\n",
+					qos_table[idx].bts_scen_idx, qos_table[idx].name);
+			mfc_debug(2, "[QoS] BTS(MO) add idx %d (%s)\n",
+					qos_table[idx].bts_scen_idx, qos_table[idx].name);
 		}
 #endif
 
@@ -161,15 +161,13 @@ static void __mfc_qos_operate(struct mfc_ctx *ctx, int opr_type, int idx)
 
 #ifdef CONFIG_EXYNOS_BTS
 		if (pdata->mo_control) {
-			bts_update_scen(BS_MFC_UHD_ENC60, qos_table[idx].mo_uhd_enc60_value);
-			bts_update_scen(BS_MFC_UHD_10BIT, qos_table[idx].mo_10bit_value);
-			bts_update_scen(BS_MFC_UHD, qos_table[idx].mo_value);
-			MFC_TRACE_CTX("BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
-					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
-					qos_table[idx].mo_uhd_enc60_value);
-			mfc_debug(2, "[QoS] BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
-					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
-					qos_table[idx].mo_uhd_enc60_value);
+			bts_add_scenario(qos_table[idx].bts_scen_idx);
+			bts_del_scenario(dev->prev_bts_scen_idx);
+			dev->prev_bts_scen_idx = qos_table[idx].bts_scen_idx;
+			MFC_TRACE_CTX("BTS(MO) update idx %d (%s)\n",
+					qos_table[idx].bts_scen_idx, qos_table[idx].name);
+			mfc_debug(2, "[QoS] BTS(MO) update idx %d (%s)\n",
+					qos_table[idx].bts_scen_idx, qos_table[idx].name);
 		}
 #endif
 
@@ -189,16 +187,16 @@ static void __mfc_qos_operate(struct mfc_ctx *ctx, int opr_type, int idx)
 
 #ifdef CONFIG_EXYNOS_BTS
 		if (pdata->mo_control) {
-			bts_update_scen(BS_MFC_UHD_ENC60, 0);
-			bts_update_scen(BS_MFC_UHD_10BIT, 0);
-			bts_update_scen(BS_MFC_UHD, 0);
+			bts_del_scenario(dev->prev_bts_scen_idx);
+			MFC_TRACE_CTX("BTS(MO) del idx %d\n", dev->prev_bts_scen_idx);
+			mfc_debug(2, "[QoS] BTS(MO) del idx %d\n", dev->prev_bts_scen_idx);
 		}
 
 		if (pdata->bw_control) {
 			dev->mfc_bw.peak = 0;
 			dev->mfc_bw.read = 0;
 			dev->mfc_bw.write = 0;
-			bts_update_bw(BTS_BW_MFC, dev->mfc_bw);
+			bts_update_bw(dev->pdata->mfc_bw_index, dev->mfc_bw);
 		}
 #endif
 
@@ -209,7 +207,7 @@ static void __mfc_qos_operate(struct mfc_ctx *ctx, int opr_type, int idx)
 	case MFC_QOS_BW:
 #ifdef CONFIG_EXYNOS_BTS
 		if (pdata->bw_control) {
-			bts_update_bw(BTS_BW_MFC, dev->mfc_bw);
+			bts_update_bw(dev->pdata->mfc_bw_index, dev->mfc_bw);
 			MFC_TRACE_CTX("BTS(BW) update (peak: %d, read: %d, write: %d)\n",
 					dev->mfc_bw.peak, dev->mfc_bw.read, dev->mfc_bw.write);
 			mfc_debug(2, "[QoS] BTS(BW) update (peak: %d, read: %d, write: %d)\n",

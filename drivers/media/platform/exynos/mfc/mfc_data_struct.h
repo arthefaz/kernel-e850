@@ -428,10 +428,9 @@ struct mfc_qos {
 	unsigned int freq_mfc;
 	unsigned int freq_int;
 	unsigned int freq_mif;
-	unsigned int mo_value;
-	unsigned int mo_10bit_value;
-	unsigned int mo_uhd_enc60_value;
 	unsigned int time_fw;
+	unsigned int bts_scen_idx;
+	const char *name;
 };
 
 struct mfc_qos_boost {
@@ -440,6 +439,8 @@ struct mfc_qos_boost {
 	unsigned int freq_int;
 	unsigned int freq_mif;
 	unsigned int freq_cluster[MAX_NUM_CLUSTER];
+	unsigned int bts_scen_idx;
+	const char *name;
 };
 
 struct mfc_qos_weight {
@@ -522,6 +523,7 @@ struct mfc_platdata {
 #ifdef CONFIG_EXYNOS_BTS
 	struct mfc_bw_info mfc_bw_info;
 	struct mfc_bw_info mfc_bw_info_sbwc;
+	unsigned int mfc_bw_index;
 #endif
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	struct mfc_qos_weight qos_weight;
@@ -894,6 +896,7 @@ struct mfc_dev {
 
 #ifdef CONFIG_EXYNOS_BTS
 	struct bts_bw mfc_bw;
+	unsigned int prev_bts_scen_idx;
 #endif
 
 	struct mfc_debugfs debugfs;

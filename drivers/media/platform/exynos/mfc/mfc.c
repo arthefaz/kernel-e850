@@ -882,13 +882,11 @@ static const struct v4l2_file_operations mfc_fops = {
 static int __mfc_parse_mfc_qos_platdata(struct device_node *np, char *node_name,
 	struct mfc_qos *qosdata)
 {
-	int ret = 0;
 	struct device_node *np_qos;
 
 	np_qos = of_find_node_by_name(np, node_name);
 	if (!np_qos) {
-		pr_err("%s: could not find mfc_qos_platdata node\n",
-			node_name);
+		pr_err("%s: could not find mfc_qos_platdata node\n", node_name);
 		return -EINVAL;
 	}
 
@@ -896,12 +894,17 @@ static int __mfc_parse_mfc_qos_platdata(struct device_node *np, char *node_name,
 	of_property_read_u32(np_qos, "freq_mfc", &qosdata->freq_mfc);
 	of_property_read_u32(np_qos, "freq_int", &qosdata->freq_int);
 	of_property_read_u32(np_qos, "freq_mif", &qosdata->freq_mif);
-	of_property_read_u32(np_qos, "mo_value", &qosdata->mo_value);
-	of_property_read_u32(np_qos, "mo_10bit_value", &qosdata->mo_10bit_value);
-	of_property_read_u32(np_qos, "mo_uhd_enc60_value", &qosdata->mo_uhd_enc60_value);
 	of_property_read_u32(np_qos, "time_fw", &qosdata->time_fw);
 
-	return ret;
+	of_property_read_string(np_qos, "bts_scen", &qosdata->name);
+	if (!qosdata->name) {
+		pr_err("[QoS] bts_scen is missing in '%s' node", node_name);
+		return -EINVAL;
+	}
+
+	qosdata->bts_scen_idx = bts_get_scenindex(qosdata->name);
+
+	return 0;
 }
 #endif
 
@@ -973,7 +976,7 @@ static void __mfc_create_bitrate_table(struct mfc_dev *dev)
 	}
 }
 
-static void __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
+static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 {
 	struct mfc_platdata	*pdata = mfc->pdata;
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
@@ -982,8 +985,10 @@ static void __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 	int i;
 #endif
 
-	if (!np)
-		return;
+	if (!np) {
+		pr_err("there is no device node\n");
+		return -EINVAL;
+	}
 
 	/* MFC version */
 	of_property_read_u32(np, "ip_ver", &pdata->ip_ver);
@@ -1065,6 +1070,8 @@ static void __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 		of_property_read_u32_array(np, "sbwc_bw_dec_vp9_10bit", &pdata->mfc_bw_info_sbwc.bw_dec_vp9_10bit.peak, 3);
 		of_property_read_u32_array(np, "sbwc_bw_dec_mpeg4", &pdata->mfc_bw_info_sbwc.bw_dec_mpeg4.peak, 3);
 	}
+
+	pdata->mfc_bw_index = bts_get_bwindex("mfc");
 #endif
 
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
@@ -1089,8 +1096,8 @@ static void __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 			sizeof(struct mfc_qos_boost), GFP_KERNEL);
 	np_qos = of_find_node_by_name(np, "mfc_perf_boost_table");
 	if (!np_qos) {
-		pr_err("%s:[QoS][BOOST] could not find mfc_perf_boost_table node\n", node_name);
-		return;
+		pr_err("[QoS][BOOST] could not find mfc_perf_boost_table node\n");
+		return -EINVAL;
 	}
 	of_property_read_u32(np_qos, "num_cluster", &pdata->qos_boost_table->num_cluster);
 	of_property_read_u32(np_qos, "freq_mfc", &pdata->qos_boost_table->freq_mfc);
@@ -1098,6 +1105,14 @@ static void __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 	of_property_read_u32(np_qos, "freq_mif", &pdata->qos_boost_table->freq_mif);
 	of_property_read_u32_array(np_qos, "freq_cluster", &pdata->qos_boost_table->freq_cluster[0],
 			pdata->qos_boost_table->num_cluster);
+
+	of_property_read_string(np_qos, "bts_scen", &pdata->qos_boost_table->name);
+	if (!pdata->qos_boost_table->name) {
+		pr_err("[QoS][BOOST] bts_scen is missing in qos_boost node");
+		return -EINVAL;
+	}
+
+	pdata->qos_boost_table->bts_scen_idx = bts_get_scenindex(pdata->qos_boost_table->name);
 
 	/* QoS weight */
 	of_property_read_u32(np, "qos_weight_h264_hevc", &pdata->qos_weight.weight_h264_hevc);
@@ -1118,6 +1133,8 @@ static void __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 		of_property_read_u32_array(np, "mfc_freqs", pdata->mfc_freqs, pdata->num_mfc_freq);
 	of_property_read_u32_array(np, "max_Kbps", pdata->max_Kbps, MAX_NUM_MFC_BPS);
 	__mfc_create_bitrate_table(mfc);
+
+	return 0;
 }
 
 static void *__mfc_get_drv_data(struct platform_device *pdev);
@@ -1402,7 +1419,9 @@ static int mfc_probe(struct platform_device *pdev)
 		goto err_pm;
 	}
 
-	__mfc_parse_dt(dev->device->of_node, dev);
+	ret = __mfc_parse_dt(dev->device->of_node, dev);
+	if (ret)
+		goto err_pm;
 
 	atomic_set(&dev->trace_ref, 0);
 	atomic_set(&dev->trace_ref_longterm, 0);
@@ -1518,11 +1537,13 @@ static int mfc_probe(struct platform_device *pdev)
 	mfc_info_dev("[QoS] control: mfc_freq(%d), mo(%d), bw(%d)\n",
 			dev->pdata->mfc_freq_control, dev->pdata->mo_control, dev->pdata->bw_control);
 	for (i = 0; i < dev->pdata->num_qos_steps; i++) {
-		mfc_info_dev("[QoS] table[%d] mfc: %d, int : %d, mif : %d\n",
+		mfc_info_dev("[QoS] table[%d] mfc: %d, int: %d, mif: %d, bts_scen: %s(%d)\n",
 				i,
 				dev->pdata->qos_table[i].freq_mfc,
 				dev->pdata->qos_table[i].freq_int,
-				dev->pdata->qos_table[i].freq_mif);
+				dev->pdata->qos_table[i].freq_mif,
+				dev->pdata->qos_table[i].name,
+				dev->pdata->qos_table[i].bts_scen_idx);
 	}
 #endif
 
