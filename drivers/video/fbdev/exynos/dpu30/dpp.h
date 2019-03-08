@@ -140,6 +140,7 @@ enum dpp_reg_area {
 	REG_AREA_DPP = 0,
 	REG_AREA_DMA,
 	REG_AREA_DMA_COM,
+	REG_AREA_ODMA,
 };
 
 enum dpp_attr {
