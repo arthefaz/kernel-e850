@@ -3487,7 +3487,6 @@ static int decon_acquire_windows(struct decon_device *decon)
 static void decon_parse_dt(struct decon_device *decon)
 {
 	struct device_node *te_eint;
-	struct device_node *cam_stat;
 	struct device *dev = decon->dev;
 	int ret;
 
@@ -3577,14 +3576,6 @@ static void decon_parse_dt(struct decon_device *decon)
 				decon_info("Failed to get te eint pend\n");
 		}
 
-		cam_stat = of_get_child_by_name(decon->dev->of_node, "cam-stat");
-		if (!cam_stat) {
-			decon_info("No DT node for cam_stat\n");
-		} else {
-			decon->hiber.cam_status = of_iomap(cam_stat, 0);
-			if (!decon->hiber.cam_status)
-				decon_info("Failed to get CAM0-STAT Reg\n");
-		}
 	}
 #if defined(CONFIG_EXYNOS_PD)
 	if (of_property_read_string(dev->of_node, "pd_name", &decon->dt.pd_name)) {
