@@ -484,6 +484,8 @@
 #define ODMA_DG_EN_ALL				(0xFFFFFFFF)
 
 #define ODMA_DEBUG_CONTROL			0x0360
+#define ODMA_DEBUG_CONTROL_SEL(_v)		((_v) << 16)
+#define ODMA_DEBUG_CONTROL_EN			(0x1 << 0)
 #define ODMA_DEBUG_DATA				0x0364
 
 #define ODMA_PSLV_ERR_CTRL			0x0370
