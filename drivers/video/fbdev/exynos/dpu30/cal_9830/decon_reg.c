@@ -2154,14 +2154,6 @@ int decon_reg_get_interrupt_and_clear(u32 id, u32 *ext_irq)
 	return val;
 }
 
-u32 decon_reg_get_cam_status(void __iomem *cam_status)
-{
-	if (cam_status)
-		return readl(cam_status);
-	else
-		return 0xF;
-}
-
 void decon_reg_set_start_crc(u32 id, u32 en)
 {
 	decon_write_mask(id, CRC_CONTROL, en ? ~0 : 0, CRC_START);

@@ -887,7 +887,6 @@ struct decon_hiber {
 	struct dentry *profile;
 	atomic_t trig_cnt;
 	atomic_t block_cnt;
-	void __iomem *cam_status;
 	u32 enter_cnt;
 	u32 exit_cnt;
 	bool enabled;
@@ -1275,7 +1274,6 @@ int decon_enter_hiber(struct decon_device *decon);
 int decon_lcd_off(struct decon_device *decon);
 int decon_register_hiber_work(struct decon_device *decon);
 int decon_hiber_block_exit(struct decon_device *decon);
-u32 decon_reg_get_cam_status(void __iomem *cam_status);
 
 static inline void decon_hiber_block(struct decon_device *decon)
 {
@@ -1318,17 +1316,9 @@ static inline bool decon_min_lock_cond(struct decon_device *decon)
 	return (atomic_read(&decon->hiber.block_cnt) <= 0);
 }
 
-static inline bool is_cam_not_running(struct decon_device *decon)
-{
-	if (!decon->id)
-		return (!(decon_reg_get_cam_status(decon->hiber.cam_status) & 0xF));
-	else
-		return true;
-}
 static inline bool decon_hiber_enter_cond(struct decon_device *decon)
 {
 	return ((atomic_read(&decon->hiber.block_cnt) <= 0)
-		&& is_cam_not_running(decon)
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 		&& is_displayport_not_running()
 #endif
