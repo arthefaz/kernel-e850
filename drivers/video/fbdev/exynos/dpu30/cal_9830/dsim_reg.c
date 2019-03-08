@@ -2590,36 +2590,44 @@ void __dsim_dump(u32 id, struct dsim_regs *regs)
 	dsim_info("=== DSIM %d LINK SFR DUMP ===\n", id);
 	dsim_reg_enable_shadow_read(id, 0);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->regs, 0xFC, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->regs + 0x200, 0x4, false);
+			regs->regs, 0x124, false);
 
 	dsim_info("=== DSIM %d DPHY SFR DUMP ===\n", id);
 	/* DPHY dump */
-	/* PLL */
+	/* BIAS */
+	dsim_info("-[BIAS]-\n");
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0000, 0x24, false);
+			regs->phy_regs_ex + 0x0000, 0x14, false);
+	/* PLL */
+	dsim_info("-[PLL]-\n");
+	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			regs->phy_regs + 0x0000, 0x44, false);
 	/* MC */
+	dsim_info("-[MC]-\n");
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			regs->phy_regs + 0x0200, 0x48, false);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			regs->phy_regs + 0x02E0, 0x10, false);
 	/* MD0 */
+	dsim_info("-[CMD 0]-\n");
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0300, 0x48, false);
+			regs->phy_regs + 0x0300, 0x70, false);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x03C0, 0x20, false);
+			regs->phy_regs + 0x03C0, 0x40, false);
 	/* MD1 */
+	dsim_info("-[CMD 1]-\n");
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0400, 0x48, false);
+			regs->phy_regs + 0x0400, 0x70, false);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x04C0, 0x20, false);
+			regs->phy_regs + 0x04C0, 0x40, false);
 	/* MD2 */
+	dsim_info("-[CMD 2]-\n");
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0500, 0x48, false);
+			regs->phy_regs + 0x0500, 0x70, false);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x05C0, 0x20, false);
+			regs->phy_regs + 0x05C0, 0x40, false);
 	/* MD3 */
+	dsim_info("-[MD 3]-\n");
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			regs->phy_regs + 0x0600, 0x48, false);
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
