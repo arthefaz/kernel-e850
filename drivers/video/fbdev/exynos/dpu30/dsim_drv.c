@@ -30,7 +30,7 @@
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
-//#include <dt-bindings/clock/exynos9830.h>
+#include <dt-bindings/clock/exynos9830.h>
 #if defined(CONFIG_CPU_IDLE)
 #include <soc/samsung/exynos-cpupm.h>
 #endif
