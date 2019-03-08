@@ -502,7 +502,6 @@ exit:
 }
 
 #if defined(CONFIG_EXYNOS_BTS)
-#if 0
 static void dsim_bts_print_info(struct bts_decon_info *info)
 {
 	int i;
@@ -520,35 +519,34 @@ static void dsim_bts_print_info(struct bts_decon_info *info)
 	}
 }
 #endif
-#endif
 
 static void dsim_underrun_info(struct dsim_device *dsim)
 {
 #if defined(CONFIG_EXYNOS_BTS)
-//	struct decon_device *decon;
-//	int i, decon_cnt;
-//	
-//	dsim_info("\tMIF(%lu), INT(%lu), DISP(%lu)\n",
-//			cal_dfs_get_rate(ACPM_DVFS_MIF),
-//			cal_dfs_get_rate(ACPM_DVFS_INT),
-//			cal_dfs_get_rate(ACPM_DVFS_DISP));
-//	
-//	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
-//	
-//	for (i = 0; i < decon_cnt; ++i) {
-//		decon = get_decon_drvdata(i);
-//	
-//		if (decon) {
-//			dsim_info("\tDECON%d: bw(%u %u), disp(%u %u), p(%u)\n",
-//					decon->id,
-//					decon->bts.prev_total_bw,
-//					decon->bts.total_bw,
-//					decon->bts.prev_max_disp_freq,
-//					decon->bts.max_disp_freq,
-//					decon->bts.peak);
-//			dsim_bts_print_info(&decon->bts.bts_info);
-//		}
-//	}
+	struct decon_device *decon;
+	int i, decon_cnt;
+
+	dsim_info("\tMIF(%lu), INT(%lu), DISP(%lu)\n",
+			cal_dfs_get_rate(ACPM_DVFS_MIF),
+			cal_dfs_get_rate(ACPM_DVFS_INT),
+			cal_dfs_get_rate(ACPM_DVFS_DISP));
+
+	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
+
+	for (i = 0; i < decon_cnt; ++i) {
+		decon = get_decon_drvdata(i);
+
+		if (decon) {
+			dsim_info("\tDECON%d: bw(%u %u), disp(%u %u), p(%u)\n",
+					decon->id,
+					decon->bts.prev_total_bw,
+					decon->bts.total_bw,
+					decon->bts.prev_max_disp_freq,
+					decon->bts.max_disp_freq,
+					decon->bts.peak);
+			dsim_bts_print_info(&decon->bts.bts_info);
+		}
+	}
 #endif
 }
 
