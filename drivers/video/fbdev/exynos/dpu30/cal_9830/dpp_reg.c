@@ -1112,27 +1112,29 @@ u32 dpp_reg_get_irq_and_clear(u32 id)
 	u32 val, cfg_err;
 
 	val = dpp_read(id, DPP_IRQ);
-	dpp_reg_clear_irq(id, val);
-
 	if (val & DPP_CONFIG_ERROR) {
 		cfg_err = dpp_read(id, DPP_CFG_ERR_STATE);
 		dpp_err("dpp%d config error occur(0x%x)\n", id, cfg_err);
 	}
+	dpp_reg_clear_irq(id, val);
 
 	return val;
 }
 
+/*
+ * CFG_ERR is cleared when clearing pending bits
+ * So, get cfg_err first, then clear pending bits
+ */
 u32 idma_reg_get_irq_and_clear(u32 id)
 {
 	u32 val, cfg_err;
 
 	val = dma_read(id, IDMA_IRQ);
-	idma_reg_clear_irq(id, val);
-
 	if (val & IDMA_CONFIG_ERROR) {
 		cfg_err = dma_read(id, IDMA_CFG_ERR_STATE);
 		dpp_err("dpp%d idma config error occur(0x%x)\n", id, cfg_err);
 	}
+	idma_reg_clear_irq(id, val);
 
 	return val;
 }
@@ -1142,12 +1144,12 @@ u32 odma_reg_get_irq_and_clear(u32 id)
 	u32 val, cfg_err;
 
 	val = dma_read(id, ODMA_IRQ);
-	odma_reg_clear_irq(id, val);
 
 	if (val & ODMA_CONFIG_ERROR) {
 		cfg_err = dma_read(id, ODMA_CFG_ERR_STATE);
 		dpp_err("dpp%d odma config error occur(0x%x)\n", id, cfg_err);
 	}
+	odma_reg_clear_irq(id, val);
 
 	return val;
 }
