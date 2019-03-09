@@ -3186,6 +3186,10 @@ static irqreturn_t sc_irq_handler(int irq, void *priv)
 
 			dst_vb->vb2_buf.timestamp =
 				(__u32)ktime_us_delta(ktime_get(), svb->ktime);
+
+			if (sc_show_stat & 0x4)
+				dev_info(sc->dev, "H/W time : %ld us\n",
+				(unsigned long)dst_vb->vb2_buf.timestamp);
 		}
 
 		v4l2_m2m_buf_done(src_vb,
@@ -3205,10 +3209,14 @@ static irqreturn_t sc_irq_handler(int irq, void *priv)
 
 		BUG_ON(ctx->context_type != SC_CTX_M2M1SHOT_TYPE);
 
-		if (__measure_hw_latency)
+		if (__measure_hw_latency) {
 			task->task.reserved[1] =
 				(unsigned long)ktime_us_delta(
 					ktime_get(), ctx->ktime_m2m1shot);
+			if (sc_show_stat & 0x4)
+				dev_info(sc->dev, "H/W time : %ld us\n",
+				(unsigned long)task->task.reserved[1]);
+		}
 
 		m2m1shot_task_finish(sc->m21dev, task,
 					SCALER_INT_OK(irq_status));
