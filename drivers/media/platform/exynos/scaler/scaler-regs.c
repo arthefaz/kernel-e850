@@ -991,84 +991,85 @@ void sc_hwset_dst_addr(struct sc_dev *sc, struct sc_frame *frame)
 		sc_hwset_dst_2bit_addr(sc, frame);
 }
 
+#define PREFIX_LEN	40
+#define ROW_LEN		16
+void sc_print_hex_dump(struct sc_dev *sc, const void *buf, size_t len)
+{
+	char prefix_buf[PREFIX_LEN];
+	unsigned long p;
+	int i, row;
+
+	for (i = 0; i < len; i += ROW_LEN) {
+		p = buf - sc->regs + i;
+
+		if (len - i < ROW_LEN)
+			row = len - i;
+		else
+			row = ROW_LEN;
+
+		snprintf(prefix_buf, sizeof(prefix_buf), "[%08lX] ", p);
+		print_hex_dump(KERN_NOTICE, prefix_buf, DUMP_PREFIX_NONE,
+				16, 4, buf + i, row, false);
+	}
+}
+
 void sc_hwregs_dump(struct sc_dev *sc)
 {
 	dev_notice(sc->dev, "Dumping control registers...\n");
 	pr_notice("------------------------------------------------\n");
 
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x000, 0x044 - 0x000 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x050, 0x058 - 0x050 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x060, 0x134 - 0x060 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x140, 0x214 - 0x140 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x220, 0x240 - 0x220 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x250, 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x260, 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x278, 4, false);
+	sc_print_hex_dump(sc, sc->regs + 0x000, 0x044 - 0x000 + 4);
+	sc_print_hex_dump(sc, sc->regs + 0x050, 0x058 - 0x050 + 4);
+	sc_print_hex_dump(sc, sc->regs + 0x060, 0x134 - 0x060 + 4);
+	sc_print_hex_dump(sc, sc->regs + 0x140, 0x214 - 0x140 + 4);
+	sc_print_hex_dump(sc, sc->regs + 0x220, 0x240 - 0x220 + 4);
+	sc_print_hex_dump(sc, sc->regs + 0x250, 4);
+	sc_print_hex_dump(sc, sc->regs + 0x260, 4);
+	sc_print_hex_dump(sc, sc->regs + 0x278, 4);
+
 	if (sc->version <= SCALER_VERSION(2, 1, 1))
-		print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x280, 0x28C - 0x280 + 4, false);
+		sc_print_hex_dump(sc, sc->regs + 0x280, 0x28C - 0x280 + 4);
 	if (sc->version >= SCALER_VERSION(5, 0, 0))
-		print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x280, 0x288 - 0x280 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x290, 0x298 - 0x290 + 4, false);
+		sc_print_hex_dump(sc, sc->regs + 0x280, 0x288 - 0x280 + 4);
+
+	sc_print_hex_dump(sc, sc->regs + 0x290, 0x298 - 0x290 + 4);
+
 	if (sc->version <= SCALER_VERSION(2, 1, 1))
-		print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x2A8, 0x2A8 - 0x2A0 + 4, false);
+		sc_print_hex_dump(sc, sc->regs + 0x2A8, 0x2A8 - 0x2A0 + 4);
 	if (sc->version >= SCALER_VERSION(5, 0, 0))
-		print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x2A0, 0x2A8 - 0x2A0 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x2B0, 0x2C4 - 0x2B0 + 4, false);
+		sc_print_hex_dump(sc, sc->regs + 0x2A0, 0x2A8 - 0x2A0 + 4);
+
+	sc_print_hex_dump(sc, sc->regs + 0x2B0, 0x2CC - 0x2B0 + 4);
+
 	if (sc->version >= SCALER_VERSION(3, 0, 0))
-		print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x2D0, 0x2DC - 0x2D0 + 4, false);
+		sc_print_hex_dump(sc, sc->regs + 0x2D0, 0x2DC - 0x2D0 + 4);
 	if (sc->version >= SCALER_VERSION(5, 0, 0))
-		print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x2E0, 0x2E8 - 0x2E0 + 4, false);
+		sc_print_hex_dump(sc, sc->regs + 0x2E0, 0x2E8 - 0x2E0 + 4);
 
 	if (sc->version >= SCALER_VERSION(5, 0, 0))
 		goto end;
 
 
 	/* shadow registers */
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x1004, 0x1004 - 0x1004 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x1010, 0x1044 - 0x1010 + 4, false);
+	sc_print_hex_dump(sc, sc->regs + 0x1004, 0x1004 - 0x1004 + 4);
+	sc_print_hex_dump(sc, sc->regs + 0x1010, 0x1044 - 0x1010 + 4);
+	sc_print_hex_dump(sc, sc->regs + 0x1050, 0x1058 - 0x1050 + 4);
+	sc_print_hex_dump(sc, sc->regs + 0x1060, 0x1134 - 0x1060 + 4);
+	sc_print_hex_dump(sc, sc->regs + 0x1140, 0x1214 - 0x1140 + 4);
+	sc_print_hex_dump(sc, sc->regs + 0x1220, 0x1240 - 0x1220 + 4);
+	sc_print_hex_dump(sc, sc->regs + 0x1250, 4);
 
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x1050, 0x1058 - 0x1050 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x1060, 0x1134 - 0x1060 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x1140, 0x1214 - 0x1140 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x1220, 0x1240 - 0x1220 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x1250, 4, false);
 	if (sc->version <= SCALER_VERSION(2, 1, 1) ||
 			sc->version <= SCALER_VERSION(4, 2, 0))
-		print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x1280, 0x128C - 0x1280 + 4, false);
-	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x1290, 0x1298 - 0x1290 + 4, false);
+		sc_print_hex_dump(sc, sc->regs + 0x1280, 0x128C - 0x1280 + 4);
+
+	sc_print_hex_dump(sc, sc->regs + 0x1290, 0x1298 - 0x1290 + 4);
+
 	if (sc->version >= SCALER_VERSION(3, 0, 0))
-		print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x12D0, 0x12DC - 0x12D0 + 4, false);
+		sc_print_hex_dump(sc, sc->regs + 0x12D0, 0x12DC - 0x12D0 + 4);
 	if (sc->version >= SCALER_VERSION(4, 2, 0)) {
-		print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x1300, 0x1304 - 0x1300 + 4, false);
-		print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,
-			sc->regs + 0x1310, 0x1318 - 0x1310 + 4, false);
+		sc_print_hex_dump(sc, sc->regs + 0x1300, 0x1304 - 0x1300 + 4);
+		sc_print_hex_dump(sc, sc->regs + 0x1310, 0x1318 - 0x1310 + 4);
 	}
 
 end:
