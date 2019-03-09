@@ -347,6 +347,7 @@ static inline void sc_hwset_init(struct sc_dev *sc)
 {
 	unsigned long cfg;
 
+	sc_hwset_clk_request(sc, true);
 	sc_hwset_bus_idle(sc);
 
 #ifdef SC_NO_SOFTRST
