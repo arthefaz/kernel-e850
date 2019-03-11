@@ -2186,19 +2186,19 @@ u32 DPU_DMA2CH(u32 dma)
 		ch_id = 0;
 		break;
 	case IDMA_GF1:
-		ch_id = 2;
+		ch_id = 1;
 		break;
 	case IDMA_VG:
-		ch_id = 4;
+		ch_id = 2;
 		break;
 	case IDMA_VGF:
-		ch_id = 3;
+		ch_id = 4;
 		break;
 	case IDMA_VGS:
-		ch_id = 5;
+		ch_id = 3;
 		break;
 	case IDMA_VGRFS:
-		ch_id = 1;
+		ch_id = 5;
 		break;
 	default:
 		decon_dbg("channel(0x%x) is not valid\n", dma);
@@ -2216,19 +2216,19 @@ u32 DPU_CH2DMA(u32 ch)
 	case 0:
 		dma = IDMA_GF0;
 		break;
-	case 1:
+	case 5:
 		dma = IDMA_VGRFS;
 		break;
-	case 2:
+	case 1:
 		dma = IDMA_GF1;
 		break;
-	case 3:
+	case 4:
 		dma = IDMA_VGF;
 		break;
-	case 4:
+	case 2:
 		dma = IDMA_VG;
 		break;
-	case 5:
+	case 3:
 		dma = IDMA_VGS;
 		break;
 	default:
