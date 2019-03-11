@@ -450,7 +450,7 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 
 	for (i = 0; i < decon->dt.max_win; ++i) {
 		if (config[i].state == DECON_WIN_STATE_BUFFER) {
-			idx = DPU_CH2DMA(config[i].channel); /* ch */
+			idx = config[i].channel; /* ch */
 			/*
 			 * TODO: Array index of bts_info structure uses dma type.
 			 * This array index will be changed to DPP channel number
@@ -767,11 +767,11 @@ void dpu_bts_init(struct decon_device *decon)
 	decon->bts.scen_updated = 0;
 
 	for (i = 0; i < BTS_DPP_MAX; ++i) {
-		sd = decon->dpp_sd[DPU_DMA2CH(i)];
+		sd = decon->dpp_sd[i];
 		v4l2_subdev_call(sd, core, ioctl, DPP_GET_PORT_NUM,
 				&decon->bts.bw[i].ch_num);
-		DPU_INFO_BTS("IDMA_TYPE(%d) CH(%d) Port(%d)\n", i,
-				DPU_DMA2CH(i), decon->bts.bw[i].ch_num);
+		DPU_INFO_BTS(" CH(%d) Port(%d)\n", i,
+				decon->bts.bw[i].ch_num);
 	}
 
 	decon->bts.enabled = true;
