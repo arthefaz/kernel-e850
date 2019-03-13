@@ -26,6 +26,9 @@
 
 #define MFC_DRV_TIME			500
 
+#define MFC_QOS_TABLE_TYPE_DEFAULT	0
+#define MFC_QOS_TABLE_TYPE_ENCODER	1
+
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 void mfc_perf_boost_enable(struct mfc_dev *dev);
 void mfc_perf_boost_disable(struct mfc_dev *dev);

@@ -484,13 +484,14 @@ struct mfc_platdata {
 	unsigned int max_hdr_win;
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	/* QoS */
-	unsigned int num_qos_steps;
-	unsigned int max_qos_steps;
+	unsigned int num_default_qos_steps;
+	unsigned int num_encoder_qos_steps;
 	unsigned int max_mb;
 	unsigned int mfc_freq_control;
 	unsigned int mo_control;
 	unsigned int bw_control;
-	struct mfc_qos *qos_table;
+	struct mfc_qos *default_qos_table;
+	struct mfc_qos *encoder_qos_table;
 	struct mfc_qos_boost *qos_boost_table;
 #endif
 	int num_mfc_freq;
@@ -868,7 +869,6 @@ struct mfc_dev {
 	struct pm_qos_request qos_req_int;
 	struct pm_qos_request qos_req_mif;
 	struct pm_qos_request qos_req_cluster[MAX_NUM_CLUSTER];
-	int qos_has_enc_ctx;
 	struct mutex qos_mutex;
 	int mfc_freq_by_bps;
 #endif

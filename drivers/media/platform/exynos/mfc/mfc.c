@@ -1076,19 +1076,25 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	/* QoS */
-	of_property_read_u32(np, "num_qos_steps", &pdata->num_qos_steps);
-	of_property_read_u32(np, "max_qos_steps", &pdata->max_qos_steps);
+	of_property_read_u32(np, "num_default_qos_steps", &pdata->num_default_qos_steps);
+	of_property_read_u32(np, "num_encoder_qos_steps", &pdata->num_encoder_qos_steps);
 	of_property_read_u32(np, "max_mb", &pdata->max_mb);
 	of_property_read_u32(np, "mfc_freq_control", &pdata->mfc_freq_control);
 	of_property_read_u32(np, "mo_control", &pdata->mo_control);
 	of_property_read_u32(np, "bw_control", &pdata->bw_control);
 
-	pdata->qos_table = devm_kzalloc(mfc->device,
-			sizeof(struct mfc_qos) * pdata->max_qos_steps, GFP_KERNEL);
+	pdata->default_qos_table = devm_kzalloc(mfc->device,
+			sizeof(struct mfc_qos) * pdata->num_default_qos_steps, GFP_KERNEL);
+	for (i = 0; i < pdata->num_default_qos_steps; i++) {
+		snprintf(node_name, sizeof(node_name), "mfc_d_qos_variant_%d", i);
+		__mfc_parse_mfc_qos_platdata(np, node_name, &pdata->default_qos_table[i]);
+	}
 
-	for (i = 0; i < pdata->max_qos_steps; i++) {
-		snprintf(node_name, sizeof(node_name), "mfc_qos_variant_%d", i);
-		__mfc_parse_mfc_qos_platdata(np, node_name, &pdata->qos_table[i]);
+	pdata->encoder_qos_table = devm_kzalloc(mfc->device,
+			sizeof(struct mfc_qos) * pdata->num_encoder_qos_steps, GFP_KERNEL);
+	for (i = 0; i < pdata->num_encoder_qos_steps; i++) {
+		snprintf(node_name, sizeof(node_name), "mfc_e_qos_variant_%d", i);
+		__mfc_parse_mfc_qos_platdata(np, node_name, &pdata->encoder_qos_table[i]);
 	}
 
 	/* performance boost mode */
@@ -1536,15 +1542,24 @@ static int mfc_probe(struct platform_device *pdev)
 
 	mfc_info_dev("[QoS] control: mfc_freq(%d), mo(%d), bw(%d)\n",
 			dev->pdata->mfc_freq_control, dev->pdata->mo_control, dev->pdata->bw_control);
-	for (i = 0; i < dev->pdata->num_qos_steps; i++) {
+	mfc_info_dev("[QoS]-------------------Default table\n");
+	for (i = 0; i < dev->pdata->num_default_qos_steps; i++)
 		mfc_info_dev("[QoS] table[%d] mfc: %d, int: %d, mif: %d, bts_scen: %s(%d)\n",
 				i,
-				dev->pdata->qos_table[i].freq_mfc,
-				dev->pdata->qos_table[i].freq_int,
-				dev->pdata->qos_table[i].freq_mif,
-				dev->pdata->qos_table[i].name,
-				dev->pdata->qos_table[i].bts_scen_idx);
-	}
+				dev->pdata->default_qos_table[i].freq_mfc,
+				dev->pdata->default_qos_table[i].freq_int,
+				dev->pdata->default_qos_table[i].freq_mif,
+				dev->pdata->default_qos_table[i].name,
+				dev->pdata->default_qos_table[i].bts_scen_idx);
+	mfc_info_dev("[QoS]-------------------Encoder only table\n");
+	for (i = 0; i < dev->pdata->num_encoder_qos_steps; i++)
+		mfc_info_dev("[QoS] table[%d] mfc: %d, int: %d, mif: %d, bts_scen: %s(%d)\n",
+				i,
+				dev->pdata->encoder_qos_table[i].freq_mfc,
+				dev->pdata->encoder_qos_table[i].freq_int,
+				dev->pdata->encoder_qos_table[i].freq_mif,
+				dev->pdata->encoder_qos_table[i].name,
+				dev->pdata->encoder_qos_table[i].bts_scen_idx);
 #endif
 
 	iovmm_set_fault_handler(dev->device,

@@ -102,12 +102,18 @@ void mfc_perf_boost_disable(struct mfc_dev *dev)
 	}
 }
 
-static void __mfc_qos_operate(struct mfc_ctx *ctx, int opr_type, int idx)
+static void __mfc_qos_operate(struct mfc_ctx *ctx, int opr_type, int table_type, int idx)
 {
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_platdata *pdata = dev->pdata;
-	struct mfc_qos *qos_table = pdata->qos_table;
-	int freq_mfc = pdata->qos_table[idx].freq_mfc;
+	struct mfc_qos *qos_table;
+	int freq_mfc;
+
+	if (table_type == MFC_QOS_TABLE_TYPE_ENCODER)
+		qos_table = pdata->encoder_qos_table;
+	else
+		qos_table = pdata->default_qos_table;
+	freq_mfc = qos_table[idx].freq_mfc;
 
 	switch (opr_type) {
 	case MFC_QOS_ADD:
@@ -222,19 +228,27 @@ static void __mfc_qos_operate(struct mfc_ctx *ctx, int opr_type, int idx)
 }
 
 #ifdef CONFIG_EXYNOS_BTS
-static void __mfc_qos_set(struct mfc_ctx *ctx, struct bts_bw *curr_mfc_bw, int i)
+static void __mfc_qos_set(struct mfc_ctx *ctx, struct bts_bw *curr_mfc_bw, int table_type, int i)
 #else
-static void __mfc_qos_set(struct mfc_ctx *ctx, int i)
+static void __mfc_qos_set(struct mfc_ctx *ctx, int table_type, int i)
 #endif
 {
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_platdata *pdata = dev->pdata;
-	struct mfc_qos *qos_table = pdata->qos_table;
+	struct mfc_qos *qos_table;
+	int num_qos_steps;
 
-	mfc_debug(2, "[QoS] table[%d] covered mb %d ~ %d (mfc: %d, int:%d, mif:%d)\n",
-			i, qos_table[i].threshold_mb,
-			i == pdata->num_qos_steps - 1 ?
-			pdata->max_mb : qos_table[i + 1].threshold_mb,
+	if (table_type == MFC_QOS_TABLE_TYPE_ENCODER) {
+		num_qos_steps = pdata->num_encoder_qos_steps;
+		qos_table = pdata->encoder_qos_table;
+	} else {
+		num_qos_steps = pdata->num_default_qos_steps;
+		qos_table = pdata->default_qos_table;
+	}
+
+	mfc_debug(2, "[QoS] %s table[%d] covered mb %d ~ %d (mfc: %d, int:%d, mif:%d)\n",
+			table_type ? "enc" : "default", i, qos_table[i].threshold_mb,
+			i == num_qos_steps - 1 ? pdata->max_mb : qos_table[i + 1].threshold_mb,
 			qos_table[i].freq_mfc, qos_table[i].freq_int,
 			qos_table[i].freq_mif);
 
@@ -243,21 +257,21 @@ static void __mfc_qos_set(struct mfc_ctx *ctx, int i)
 		dev->mfc_bw.peak = curr_mfc_bw->peak;
 		dev->mfc_bw.read = curr_mfc_bw->read;
 		dev->mfc_bw.write = curr_mfc_bw->write;
-		__mfc_qos_operate(ctx, MFC_QOS_BW, i);
+		__mfc_qos_operate(ctx, MFC_QOS_BW, table_type, i);
 	}
 #endif
 
 	mutex_lock(&dev->qos_mutex);
 	if (atomic_read(&dev->qos_req_cur) == 0) {
-		__mfc_qos_operate(ctx, MFC_QOS_ADD, i);
+		__mfc_qos_operate(ctx, MFC_QOS_ADD, table_type, i);
 	} else {
 		/*
 		 * 1) QoS level is changed
 		 * 2) MFC freq should be high regardless of QoS level
 		 */
 		if ((atomic_read(&dev->qos_req_cur) != (i + 1)) ||
-				(dev->mfc_freq_by_bps > pdata->qos_table[i].freq_mfc))
-			__mfc_qos_operate(ctx, MFC_QOS_UPDATE, i);
+				(dev->mfc_freq_by_bps > qos_table[i].freq_mfc))
+			__mfc_qos_operate(ctx, MFC_QOS_UPDATE, table_type, i);
 	}
 	mutex_unlock(&dev->qos_mutex);
 }
@@ -550,12 +564,12 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 {
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_platdata *pdata = dev->pdata;
-	struct mfc_qos *qos_table = pdata->qos_table;
+	struct mfc_qos *qos_table;
 	struct mfc_ctx *qos_ctx;
 	unsigned long hw_mb = 0, total_mb = 0, total_fps = 0, total_bps = 0;
 	unsigned int fw_time, sw_time;
-	int i, found = 0, enc_found = 0;
-	int start_qos_step;
+	int i, found = 0, dec_found = 0, num_qos_steps;
+	int table_type = MFC_QOS_TABLE_TYPE_DEFAULT;
 #ifdef CONFIG_EXYNOS_BTS
 	struct bts_bw curr_mfc_bw, curr_mfc_bw_ctx;
 #endif
@@ -579,8 +593,8 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 #endif
 	/* get the hw macroblock */
 	list_for_each_entry(qos_ctx, &dev->qos_queue, qos_list) {
-		if (OVER_UHD_ENC60(qos_ctx))
-			enc_found = 1;
+		if (qos_ctx->type == MFCINST_DECODER)
+			dec_found += 1;
 		hw_mb += __mfc_qos_get_mb_per_second(qos_ctx);
 		total_fps += (qos_ctx->framerate / 1000);
 		total_bps += qos_ctx->Kbps;
@@ -592,12 +606,20 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 #endif
 	}
 
-	start_qos_step = pdata->num_qos_steps;
-	if (enc_found)
-		start_qos_step = pdata->max_qos_steps;
+	if (dec_found) {
+		/* default table */
+		num_qos_steps = pdata->num_default_qos_steps;
+		qos_table = pdata->default_qos_table;
+		table_type = MFC_QOS_TABLE_TYPE_DEFAULT;
+	} else {
+		/* encoder only table */
+		num_qos_steps = pdata->num_encoder_qos_steps;
+		qos_table = pdata->encoder_qos_table;
+		table_type = MFC_QOS_TABLE_TYPE_ENCODER;
+	}
 
 	/* search the suitable qos table */
-	for (i = start_qos_step - 1; i >= 0; i--) {
+	for (i = num_qos_steps - 1; i >= 0; i--) {
 		fw_time = qos_table[i].time_fw;
 		sw_time = (MFC_DRV_TIME + fw_time);
 
@@ -606,8 +628,9 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 		else
 			total_mb = ((1000000 * hw_mb) / (1000000 - (total_fps * sw_time)));
 
-		mfc_debug(4, "[QoS] table[%d] fw_time: %dus, hw_mb: %ld, "
+		mfc_debug(4, "[QoS] %s table[%d] fw_time: %dus, hw_mb: %ld, "
 				"sw_time: %d, total_fps: %ld, total_mb: %ld\n",
+				table_type ? "enc" : "default",
 				i, fw_time, hw_mb, sw_time, total_fps, total_mb);
 
 		if ((total_mb > qos_table[i].threshold_mb) || (i == 0))
@@ -621,9 +644,9 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 	dev->mfc_freq_by_bps = __mfc_qos_get_freq_by_bps(dev, total_bps);
 
 #ifdef CONFIG_EXYNOS_BTS
-	__mfc_qos_set(ctx, &curr_mfc_bw, i);
+	__mfc_qos_set(ctx, &curr_mfc_bw, table_type, i);
 #else
-	__mfc_qos_set(ctx, i);
+	__mfc_qos_set(ctx, table_type, i);
 #endif
 }
 
@@ -631,12 +654,12 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 {
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_platdata *pdata = dev->pdata;
-	struct mfc_qos *qos_table = pdata->qos_table;
+	struct mfc_qos *qos_table;
 	struct mfc_ctx *qos_ctx;
 	unsigned long hw_mb = 0, total_mb = 0, total_fps = 0, total_bps = 0;
 	unsigned int fw_time, sw_time;
-	int i, found = 0, enc_found = 0;
-	int start_qos_step;
+	int i, found = 0, dec_found = 0, num_qos_steps;
+	int table_type = MFC_QOS_TABLE_TYPE_DEFAULT;
 #ifdef CONFIG_EXYNOS_BTS
 	struct bts_bw mfc_bw, mfc_bw_ctx;
 #endif
@@ -650,7 +673,7 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 		mutex_lock(&dev->qos_mutex);
 		if (atomic_read(&dev->qos_req_cur) != 0) {
 			mfc_err_ctx("[QoS] MFC request count is wrong!\n");
-			__mfc_qos_operate(ctx, MFC_QOS_REMOVE, 0);
+			__mfc_qos_operate(ctx, MFC_QOS_REMOVE, table_type, 0);
 		}
 		mutex_unlock(&dev->qos_mutex);
 		return;
@@ -668,8 +691,8 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 			continue;
 		}
 
-		if (OVER_UHD_ENC60(qos_ctx))
-			enc_found = 1;
+		if (qos_ctx->type == MFCINST_DECODER)
+			dec_found += 1;
 		hw_mb += __mfc_qos_get_mb_per_second(qos_ctx);
 		total_fps += (qos_ctx->framerate / 1000);
 		total_bps += qos_ctx->Kbps;
@@ -681,12 +704,20 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 #endif
 	}
 
-	start_qos_step = pdata->num_qos_steps;
-	if (enc_found)
-		start_qos_step = pdata->max_qos_steps;
+	if (dec_found) {
+		/* default table */
+		num_qos_steps = pdata->num_default_qos_steps;
+		qos_table = pdata->default_qos_table;
+		table_type = MFC_QOS_TABLE_TYPE_DEFAULT;
+	} else {
+		/* encoder only table */
+		num_qos_steps = pdata->num_encoder_qos_steps;
+		qos_table = pdata->encoder_qos_table;
+		table_type = MFC_QOS_TABLE_TYPE_ENCODER;
+	}
 
 	/* search the suitable qos table */
-	for (i = start_qos_step - 1; i >= 0; i--) {
+	for (i = num_qos_steps - 1; i >= 0; i--) {
 		fw_time = qos_table[i].time_fw;
 		sw_time = (MFC_DRV_TIME + fw_time);
 
@@ -695,8 +726,9 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 		else
 			total_mb = ((1000000 * hw_mb) / (1000000 - (total_fps * sw_time)));
 
-		mfc_debug(4, "[QoS] table[%d] fw_time: %dus, hw_mb: %ld, "
+		mfc_debug(4, "[QoS] %s table[%d] fw_time: %dus, hw_mb: %ld, "
 				"sw_time: %d, total_fps: %ld, total_mb: %ld\n",
+				table_type ? "enc" : "default",
 				i, fw_time, hw_mb, sw_time, total_fps, total_mb);
 
 		if ((total_mb > qos_table[i].threshold_mb) || (total_mb == 0) || (i == 0))
@@ -714,13 +746,13 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 
 	if (list_empty(&dev->qos_queue) || total_mb == 0) {
 		mutex_lock(&dev->qos_mutex);
-		__mfc_qos_operate(ctx, MFC_QOS_REMOVE, 0);
+		__mfc_qos_operate(ctx, MFC_QOS_REMOVE, table_type, 0);
 		mutex_unlock(&dev->qos_mutex);
 	} else {
 #ifdef CONFIG_EXYNOS_BTS
-		__mfc_qos_set(ctx, &mfc_bw, i);
+		__mfc_qos_set(ctx, &mfc_bw, table_type, i);
 #else
-		__mfc_qos_set(ctx, i);
+		__mfc_qos_set(ctx, table_type, i);
 #endif
 	}
 }
