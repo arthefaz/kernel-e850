@@ -908,6 +908,7 @@ static void dsim_reg_set_sync_inform(u32 id, u32 inform)
 	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_SYNC_INFORM);
 }
 
+#if 0
 static void dsim_reg_set_pll_clk_gate_enable(u32 id, u32 en)
 {
 	u32 mask, reg_id;
@@ -917,7 +918,7 @@ static void dsim_reg_set_pll_clk_gate_enable(u32 id, u32 en)
 	mask = DSIM_CONFIG_PLL_CLOCK_GATING;
 	dsim_write_mask(id, reg_id, val, mask);
 }
-
+#endif
 /* This function is available from EVT1 */
 #if defined(CONFIG_EXYNOS_PLL_SLEEP)
 static void dsim_reg_set_pll_sleep_enable(u32 id, u32 en)
@@ -2157,7 +2158,7 @@ void dsim_reg_preinit(u32 id)
 	dsim_reg_set_config(id, &lcd_info, &clks);
 
 	/* PHY pll clock gate disable */
-	dsim_reg_set_pll_clk_gate_enable(id, DPHY_PLL_CLK_GATE_EN);
+//	dsim_reg_set_pll_clk_gate_enable(id, DPHY_PLL_CLK_GATE_EN);
 	dsim_reset_panel(dsim);
 }
 
