@@ -19,7 +19,6 @@
 #include <linux/of.h>
 #include <linux/psci.h>
 #include <linux/cpuidle_profiler.h>
-#include <linux/cpuidle-moce.h>
 
 #include <asm/tlbflush.h>
 #include <asm/cpuidle.h>
@@ -42,8 +41,6 @@
 static unsigned int prepare_idle(unsigned int cpu, int index)
 {
 	unsigned int entry_state = 0;
-
-	index = exynos_moce_select(cpu, index);
 
 	if (index > 0) {
 		cpu_pm_enter();

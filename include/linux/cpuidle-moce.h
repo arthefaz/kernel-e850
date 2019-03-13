@@ -9,77 +9,51 @@
  * MOCE can vary the target residency and exit latency in accordance with the frequency
  */
 
+/*
+ * Information about each factor that affects idle state entry,
+ * initialized through the device tree.
+ */
+struct factor {
+	/* list of factor */
+	struct list_head	list;
 
-/* Communicated info. from MENU in CPUIdle */
-struct cpuidle_info {
-	unsigned int    predicted_us;
-	unsigned int    latency_req;
-	int             first_idx;
+	/* lock */
+	spinlock_t		lock;
 
-	/* don't re-evaluate idle state using MOCE */
-	bool            bias_forbid;
+	/* factor type */
+	int			type;
+
+	/* factor domain */
+	int			domain;
+
+	/* weight of factor per c-state */
+	unsigned int		*weight;
+
+	/* ratio table of factor */
+	unsigned int		size;
+	unsigned int		ratio;
+	unsigned int		*ratio_table;
 };
 
 /*
- * Save the calculated ratio through the factor and the biased value by the ratio
- * to re-evaluate the idle state entry.
- *
- * it is dependent on the information of the cpuidle driver during initialization.
+ * Information that is directly required to bias the entry conditions of the idle state,
+ * and is managed by the per-cpu variable.
  */
-struct bias_cpuidle_info {
-	bool            init;
-	spinlock_t      lock;
+struct bias_cpuidle {
+	/* check biased */
+	bool			biased;
 
-	unsigned int	*orig_target_res;	/* same with cpuidle_state(C2) struct */
-	unsigned int	*orig_exit_lat;		/* same with cpuidle_state(C2) struct */
+	/*total ratio of factors per c-state */
+	unsigned int		*total_ratio;
 
-	unsigned int    *bias_target_res;
-	unsigned int    *bias_exit_lat;
-
-	unsigned int    bias_state;
-
-	unsigned int	cur_ratio;		/* integration of following ratios */
-	unsigned int	*ratios;		/* ratio per factor */
-	unsigned int	*weights;		/* weights of the ratios */
-};
-
-/*
- * Save information on factors affecting idle state entry.
- * Use to calculate the required ratio when calculating the deflection value.
- *
- * initialize with exynos-moce part in device tree.
- */
-struct factor_info {
-	spinlock_t      lock;
-
-	/* frequency */
-	int		domain_id;
-	unsigned int	nfreq_factor;
-	unsigned int	*freq_factor;
-
-	/*
-	 * Add knob that affects idle state entry
-	 */
+	/* head of factor list */
+	struct list_head	factor_list;
 };
 
 #ifdef CONFIG_ARM64_EXYNOS_MOCE
-/* Menu Gov. MOCE APIs */
-extern bool exynos_moce_skip(unsigned int cpu);
-extern void exynos_moce_allow(void);
-extern void exynos_moce_forbid(void);
-extern void exynos_moce_cpuidle_info_update(unsigned int pre_us, int lat, int idx);
-
 /* CPUIdle MOCE APIs */
-extern int exynos_moce_select(unsigned int cpu, int index);
-extern unsigned int exynos_moce_calculate_target_res(int target_residency, unsigned int cpu);
+extern unsigned int exynos_moce_get_ratio(int state, unsigned int cpu);
 #else
-static inline bool exynos_moce_skip(unsigned int cpu) {return false; }
-static inline void exynos_moce_allow(void) { }
-static inline void exynos_moce_forbid(void) { }
-static inline void exynos_moce_cpuidle_info_update(unsigned int pre_us, int lat, int idx)
-{ }
-
-static inline int exynos_moce_select(unsigned int cpu, int index) {return index; }
-static inline unsigned int exynos_moce_calculate_target_res(int target_residency, unsigned int cpu)
-{return target_residency; }
+static inline unsigned int exynos_moce_get_ratio(int state, unsigned int cpu)
+{return 1; }
 #endif

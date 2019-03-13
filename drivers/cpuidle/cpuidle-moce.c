@@ -11,13 +11,10 @@
  */
 
 #include <linux/init.h>
-#include <linux/of.h>
 #include <linux/slab.h>
-#include <linux/cpumask.h>
 #include <linux/cpuidle.h>
 #include <linux/cpufreq.h>
 #include <linux/of_device.h>
-#include <linux/platform_device.h>
 #include <linux/cpuidle-moce.h>
 #include <linux/kdev_t.h>
 
@@ -27,12 +24,15 @@
  * Define the considered element as a number.
  * Used to read the ratios and weights variables.
  */
-#define DEFAULT_RATIO		100
+#define DEFAULT_RATIO		1
 #define FACTOR_NUM		1
 
-enum _factor {
+typedef enum _factor_type {
 	FREQ_FACTOR = 0,
-} factor;
+	/* Add enum value for new-factor */
+} FACTOR_TYPE;
+
+DEFINE_PER_CPU(struct bias_cpuidle, bias_cpuidle);
 
 static int size_state;
 #define for_each_state(state)					\
@@ -40,197 +40,81 @@ static int size_state;
 #define for_each_state_from_start_and(state, start, mask)	\
 	for ((state) = (start); (state) < size_state; (state)++, (void)mask)
 
-/* per-cpu varriables */
-DEFINE_PER_CPU(struct cpuidle_info, idle_info);
-DEFINE_PER_CPU(struct bias_cpuidle_info, bias_idle_info);
-DEFINE_PER_CPU(struct factor_info, factor_info);
-
 /*****************************************************************************
  *                               HELPER FUNCTION                             *
  *****************************************************************************/
 
-static unsigned int find_ratio(unsigned int *factor_table,
-		unsigned int table_size, unsigned int value)
+static struct factor *find_factor(struct bias_cpuidle *bias_idle, FACTOR_TYPE type)
+{
+	struct factor *pos;
+
+	list_for_each_entry(pos, &bias_idle->factor_list, list)
+		if (pos->type == type)
+			return pos;
+
+	return NULL;
+}
+
+static unsigned int find_ratio(unsigned int *table, unsigned int size, unsigned int value)
 {
 	int i;
 
 	/* Searching correct value according to state of factor */
-	for (i = 0 ; i < table_size - 1 &&
-			value >= factor_table[i+1]; i += 2)
+	for (i = 0 ; i < size - 1 && value >= table[i+1]; i += 2)
 		;
 
-	return factor_table[i];
+	return table[i];
 }
 
-static void calculate_cur_ratio(struct bias_cpuidle_info *bias_info)
+static void update_total_ratio(struct bias_cpuidle *bias_idle)
 {
-	int i;
-	unsigned int total_ratio = 0;
-
-	for (i = 0; i < FACTOR_NUM; i++)
-		total_ratio += (bias_info->ratios[i] * bias_info->weights[i]) / 100;
-
-	/* if there are more factors later, add ratio. */
-	bias_info->cur_ratio =  total_ratio;
-}
-
-static unsigned int __exynos_moce_calculate_target_res(int target_residency, unsigned int ratio)
-{
-	return (target_residency * ratio) / 100;
-}
-
-static void update_bias_idle_info(unsigned int cpu)
-{
-	struct bias_cpuidle_info *bias_info;
+	struct factor *pos;
 	int state;
-	unsigned int b_target_res, b_exit_lat;
-	unsigned long flags;
-
-	bias_info = &per_cpu(bias_idle_info, cpu);
-
-	spin_lock_irqsave(&bias_info->lock, flags);
-	calculate_cur_ratio(bias_info);
+	unsigned int total_ratio;
 
 	for_each_state(state) {
+		total_ratio = 0;
+
+		list_for_each_entry(pos, &bias_idle->factor_list, list) {
+			total_ratio += (pos->ratio / 100) * (pos->weight[state] / 100);
+		}
+
 		/*
-		 * MOCE supported C2 state or deeper
-		 * states[0] == C1
+		 * The total_ratio is '0' in c1(state == 0),
+		 * also prevent problems caused by excessive bias.
 		 */
-		if (state == 0)
-			continue;
-
-		b_target_res = __exynos_moce_calculate_target_res(
-				bias_info->orig_target_res[state],
-				bias_info->cur_ratio);
-		b_exit_lat = (bias_info->orig_exit_lat[state] * bias_info->cur_ratio) / 100;
-
-		bias_info->bias_target_res[state] = b_target_res;
-		bias_info->bias_exit_lat[state] = b_exit_lat;
+		if (total_ratio < 10)
+			bias_idle->total_ratio[state] = DEFAULT_RATIO;
+		else
+			bias_idle->total_ratio[state] = total_ratio;
 	}
-
-	spin_unlock_irqrestore(&bias_info->lock, flags);
 }
 
 /*****************************************************************************
  *                           EXTERNAL REFERENCE APIs                         *
  *****************************************************************************/
 
-/* Check MOCE domain init && gov.'s opinion about biasing */
-bool exynos_moce_skip(unsigned int cpu)
-{
-	struct cpuidle_info *info = this_cpu_ptr(&idle_info);
-	struct bias_cpuidle_info *bias_info = &per_cpu(bias_idle_info, cpu);
-
-	return !bias_info->init || info->bias_forbid;
-}
-EXPORT_SYMBOL(exynos_moce_skip);
-
-/* Enable MOCE per cpu */
-void exynos_moce_allow(void)
-{
-	struct cpuidle_info *info = this_cpu_ptr(&idle_info);
-
-	info->bias_forbid = false;
-}
-EXPORT_SYMBOL(exynos_moce_allow);
-
-/* Disable MOCE per cpu */
-void exynos_moce_forbid(void)
-{
-	struct cpuidle_info *info = this_cpu_ptr(&idle_info);
-
-	info->bias_forbid = true;
-}
-EXPORT_SYMBOL(exynos_moce_forbid);
-
 /*
- * For system-wide C state, calculate target residency with ratio per cpu.
+ * This function is called to bias target_residency and exit_latency values,
+ * when deciding next_state in cpupm and ilde governors.
+ *
+ * When called for the state of a cpu-group other than the c-state,
+ * (state == -1) is taken as an argument.
  */
-unsigned int exynos_moce_calculate_target_res(int target_residency, unsigned int cpu)
+unsigned int exynos_moce_get_ratio(int state, unsigned int cpu)
 {
-	struct bias_cpuidle_info *bias_info = &per_cpu(bias_idle_info, cpu);
-	unsigned int ratio;
-	unsigned long flags;
+	struct bias_cpuidle *bias_idle = &per_cpu(bias_cpuidle, cpu);
 
-	if (!exynos_moce_skip(cpu))
-		return target_residency;
+	/* check have factor for the cpu */
+	if (!bias_idle->biased)
+		return DEFAULT_RATIO;
 
-	spin_lock_irqsave(&bias_info->lock, flags);
-	ratio = bias_info->cur_ratio;
-	spin_unlock_irqrestore(&bias_info->lock, flags);
+	if (state < 0)
+		state = size_state - 1;
 
-	return __exynos_moce_calculate_target_res(target_residency, ratio);
+	return bias_idle->total_ratio[state];
 }
-EXPORT_SYMBOL(exynos_moce_calculate_target_res);
-
-/*****************************************************************************
- *                           CPUIdle REFERENCE APIs                          *
- *****************************************************************************/
-
-#define check_state_bias_enable(i, mask) ((mask) & (0x1 << (i)))
-
-/*
- * Re-evaluate idle state entry
- */
-int exynos_moce_select(unsigned int cpu, int index)
-{
-	struct cpuidle_info *info = this_cpu_ptr(&idle_info);
-	struct bias_cpuidle_info *bias_info;
-	unsigned int bias_target_residency;
-	unsigned int bias_exit_latency;
-	int state, next_state;
-
-	if (exynos_moce_skip(cpu))
-		return index;
-
-	bias_info = &per_cpu(bias_idle_info, cpu);
-
-	/* Re-evaluate the depth of idle in accordance with the variation */
-	next_state = -1;
-	for_each_state_from_start_and(state, info->first_idx, bias_info->bias_state) {
-		/* s->disabled || su->disable */
-		if (cpuidle_check_state_enable(cpu, state))
-			continue;
-
-		/*
-		 * If the different biasing timing is applied onto plural idle states,
-		 * bias_info also must have the different biased value for each idle state.
-		 * But now the ratio of frequency factor per idle state is the same,
-		 * and only the orig value is different.
-		 *
-		 * [For lowering the idle transition cost]
-		 * Fetch the criteria for idle state without spinlock
-		 * with the way of Read-Copy-No update
-		 */
-		spin_lock(&bias_info->lock);
-		bias_target_residency = bias_info->bias_target_res[state];
-		bias_exit_latency = bias_info->bias_exit_lat[state];
-		spin_unlock(&bias_info->lock);
-
-		if (bias_target_residency > info->predicted_us)
-			break;
-		if (bias_exit_latency > info->latency_req)
-			break;
-
-		next_state = state;
-	}
-
-	if(next_state < 0)
-		return index;
-
-	return next_state;
-}
-EXPORT_SYMBOL(exynos_moce_select);
-
-void exynos_moce_cpuidle_info_update(unsigned int pre_us, int lat, int idx)
-{
-	struct cpuidle_info *info = this_cpu_ptr(&idle_info);
-
-	info->predicted_us = pre_us;
-	info->latency_req = lat;
-	info->first_idx = idx;
-}
-EXPORT_SYMBOL(exynos_moce_cpuidle_info_update);
+EXPORT_SYMBOL(exynos_moce_get_ratio);
 
 /*****************************************************************************
  *                            DEFINE NOTIFIER CALL                           *
@@ -245,9 +129,10 @@ static int exynos_moce_cpufreq_trans_notifier(struct notifier_block *nb,
 		unsigned long val, void *data)
 {
 	struct cpufreq_freqs *freq = data;
-	struct bias_cpuidle_info *bias_info;
-	struct factor_info *factor;
+	struct bias_cpuidle *bias_idle;
+	struct factor *factor;
 	int cpu, target_domain;
+	unsigned int cur_ratio;
 	unsigned long flags;
 
 	if (freq->flags & CPUFREQ_CONST_LOOPS)
@@ -256,23 +141,35 @@ static int exynos_moce_cpufreq_trans_notifier(struct notifier_block *nb,
 	if (val != CPUFREQ_POSTCHANGE)
 		return NOTIFY_OK;
 
-	factor = &per_cpu(factor_info, freq->cpu);
-	target_domain = factor->domain_id;
+	bias_idle = &per_cpu(bias_cpuidle, freq->cpu);
+
+	/* check have factor for the cpu */
+	if (!bias_idle->biased)
+		return NOTIFY_OK;
+
+	factor = find_factor(bias_idle, FREQ_FACTOR);
+
+	target_domain = factor->domain;
+
+	spin_lock_irqsave(&factor->lock, flags);
+	cur_ratio = find_ratio(factor->ratio_table, factor->size, freq->new);
+	spin_unlock_irqrestore(&factor->lock, flags);
 
 	for_each_possible_cpu(cpu) {
-		factor = &per_cpu(factor_info, cpu);
-		bias_info = &per_cpu(bias_idle_info, cpu);
+		bias_idle = &per_cpu(bias_cpuidle, cpu);
+		factor = find_factor(bias_idle, FREQ_FACTOR);
 
-		if (factor->domain_id != target_domain)
+		if (factor->domain < target_domain)
 			continue;
+		else if (factor->domain > target_domain)
+			break;
 
 		spin_lock_irqsave(&factor->lock, flags);
-		bias_info->ratios[FREQ_FACTOR] = find_ratio(factor->freq_factor,
-				factor->nfreq_factor, freq->new);
+		factor->ratio = cur_ratio;
+		update_total_ratio(bias_idle);
 		spin_unlock_irqrestore(&factor->lock, flags);
-
-		update_bias_idle_info(cpu);
 	}
+
 	return NOTIFY_OK;
 }
 
@@ -330,7 +227,7 @@ static unsigned int *get_tokenized_data(const char *buf, int *num_tokens, unsign
 			goto err_kfree;
 
 		/* Any percentage value except */
-		if ((index & 0x1) == 1 && tokenized_data[index-1] < 0)
+		if ((index & 0x1) == 1 && tokenized_data[index-1] < 10)
 			goto err_kfree;
 		bbuf = strpbrk(bbuf, " :");
 		if (!bbuf)
@@ -350,79 +247,99 @@ err:
 	return ERR_PTR(err);
 }
 
-static ssize_t show_freq_factor(struct kobject *kobj,
+static FACTOR_TYPE get_factor_type(const char *name)
+{
+	FACTOR_TYPE type;
+
+	if (!strcmp(name, "freq-factor"))
+		type = FREQ_FACTOR;
+	/* Add sysfs node for the new factor  */
+
+	return type;
+}
+
+static ssize_t show_factor(struct kobject *kobj,
 				struct attribute *attr, char *buf)
 {
-	struct factor_info *factor;
+	struct bias_cpuidle *bias_idle;
+	struct factor *factor;
 	int i, cpu, index = -1;
 	ssize_t size = 0;
 	unsigned long flags;
+	FACTOR_TYPE type = get_factor_type(attr->name);
 
 	for_each_possible_cpu(cpu) {
-		factor = &per_cpu(factor_info, cpu);
+		bias_idle = &per_cpu(bias_cpuidle, cpu);
 
-		if (factor->domain_id <= index)
+		factor = find_factor(bias_idle, type);
+
+		if (factor->domain <= index)
 			continue;
-		index = factor->domain_id;
+		index = factor->domain;
 
 		spin_lock_irqsave(&factor->lock, flags);
 		size += sprintf(buf + size, "%u ", index);
-		for (i = 0; i < factor->nfreq_factor; i++) {
-			size += sprintf(buf + size, "%u%s", factor->freq_factor[i],
+		for (i = 0; i < factor->size; i++) {
+			size += sprintf(buf + size, "%u%s", factor->ratio_table[i],
 					i & 0x1 ? ":" : " ");
-			pr_info("%u ", factor->freq_factor[i]);
+			pr_info("%u ", factor->ratio_table[i]);
 		}
 		spin_unlock_irqrestore(&factor->lock, flags);
 		size += sprintf(buf + size, "\n");
+
 	}
 
 	return size;
 }
 
-static ssize_t store_freq_factor(struct kobject *kobj, struct attribute *attr,
+static ssize_t store_factor(struct kobject *kobj, struct attribute *attr,
 					const char *buf, size_t size)
 {
-	struct factor_info *factor;
+	struct bias_cpuidle *bias_idle;
+	struct factor *factor;
 	int ntokens, cpu;
 	unsigned int target_domain = NR_CPUS;
-	unsigned int *new_freq_factor = NULL;
-	unsigned int *old_freq_factor = NULL;
+	unsigned int *new_ratio_table = NULL;
+	unsigned int *old_ratio_table = NULL;
 	unsigned long flags;
+	FACTOR_TYPE type = get_factor_type(attr->name);
 
-	new_freq_factor = get_tokenized_data(buf, &ntokens, &target_domain);
+	new_ratio_table = get_tokenized_data(buf, &ntokens, &target_domain);
 
-	if (IS_ERR(new_freq_factor))
-		return PTR_RET(new_freq_factor);
+	if (IS_ERR(new_ratio_table))
+		return PTR_RET(new_ratio_table);
 
 	if (target_domain >= NR_CPUS) {
-		pr_info("Wrong format: domain_id ratio freq:ratio freq:ratio ...\n");
+		pr_info("Wrong format: domain ratio freq:ratio freq:ratio ...\n");
 		return 0;
 	}
 
 	for_each_possible_cpu(cpu) {
-		factor = &per_cpu(factor_info, cpu);
+		bias_idle = &per_cpu(bias_cpuidle, cpu);
 
-		if (factor->domain_id < target_domain)
+		factor = find_factor(bias_idle, type);
+
+		if (factor->domain < target_domain)
 			continue;
-		else if (factor->domain_id > target_domain)
+		else if (factor->domain > target_domain)
 			break;
 
 		spin_lock_irqsave(&factor->lock, flags);
-		if (!old_freq_factor) {
-			old_freq_factor = factor->freq_factor;
-		}
-		factor->freq_factor = new_freq_factor;
-		factor->nfreq_factor = ntokens;
+		if (!old_ratio_table)
+			old_ratio_table = factor->ratio_table;
+		factor->ratio_table = new_ratio_table;
+		factor->size = ntokens;
 		spin_unlock_irqrestore(&factor->lock, flags);
 	}
-	kfree(old_freq_factor);
+	kfree(old_ratio_table);
 
 	return size;
 }
 
 static struct global_attr freq_factor =
 __ATTR(freq_factor, S_IRUGO | S_IWUSR,
-		show_freq_factor, store_freq_factor);
+		show_factor, store_factor);
+/* Add sysfs node for the new factor  */
 
 static struct attribute *cpuidle_moce_attrs[] = {
 	&freq_factor.attr,
@@ -449,195 +366,228 @@ static __init void init_sysfs(void)
 		pr_err("%s: failed to create sysfs group", __func__);
 }
 
-static int __init init_ratios(void)
+static int __init init_ratio_table(struct factor *factor,
+					struct device_node *factor_node)
 {
-	struct bias_cpuidle_info *bias_info;
-	int i, cpu;
+	factor->size = of_property_count_u32_elems(factor_node, "ratio-table");
 
-	for_each_possible_cpu(cpu) {
-		bias_info = &per_cpu(bias_idle_info, cpu);
+	factor->ratio_table = kzalloc(sizeof(unsigned int) * factor->size, GFP_KERNEL);
+	if (!factor->ratio_table)
+		return -1;
 
-		bias_info->ratios = kzalloc(sizeof(unsigned int) * FACTOR_NUM, GFP_KERNEL);
-		bias_info->weights = kzalloc(sizeof(unsigned int) * FACTOR_NUM, GFP_KERNEL);
-		if (!bias_info->ratios || !bias_info->weights)
-			return -1;
-
-		for (i = 0; i < FACTOR_NUM; i++) {
-			bias_info->ratios[i] = 100;
-			bias_info->weights[i] = 100 / FACTOR_NUM;
-		}
-		calculate_cur_ratio(bias_info);
-	}
+	of_property_read_u32_array(factor_node, "ratio-table",
+					factor->ratio_table, factor->size);
 
 	return 0;
 }
 
-static void delete_ratios(void)
+static int __init add_factor_data(struct list_head *factor_list,
+					struct device_node *factor_node,
+					struct factor *sub_table,
+					int weight)
 {
-	struct bias_cpuidle_info *bias_info;
-	int cpu;
+	struct factor *factor;
+	struct factor *sub_factor;
 
-	for_each_possible_cpu(cpu) {
-		bias_info = &per_cpu(bias_idle_info, cpu);
-		kfree(bias_info->ratios);
-		kfree(bias_info->weights);
-	}
-}
+	/* factor list init */
+	INIT_LIST_HEAD(factor_list);
 
-/*
- * init bias_cpuidle_info structure
- * according cpudile state info. (target_residency, exit_latency)
- */
-static int __init init_idle_state_info(void)
-{
-	struct bias_cpuidle_info *bias_info;
-	int cpu;
-	unsigned int i;
-
-	size_state = cpuidle_get_state_size();
-
-	for_each_possible_cpu(cpu) {
-		bias_info = &per_cpu(bias_idle_info, cpu);
-		bias_info->orig_target_res = kzalloc(sizeof(unsigned int) * size_state, GFP_KERNEL);
-		bias_info->orig_exit_lat = kzalloc(sizeof(unsigned int) * size_state, GFP_KERNEL);
-		bias_info->bias_target_res = kzalloc(sizeof(unsigned int) * size_state, GFP_KERNEL);
-		bias_info->bias_exit_lat = kzalloc(sizeof(unsigned int) * size_state, GFP_KERNEL);
-		if (!bias_info->orig_target_res || !bias_info->orig_exit_lat
-				|| !bias_info->bias_target_res || !bias_info->bias_exit_lat) {
-			pr_info("failed to allocate idle info table\n");
-			return -1;
-		}
-
-		for (i = 0; i < size_state; i++) {
-		/*
-		 * MOCE supported C2 state or deeper
-		 * states[0] == C1
-		 */
-			if (i == 0)
-				continue;
-			bias_info->bias_state |= (1 << i);
-			bias_info->orig_target_res[i] = cpuidle_get_target_residency(cpu, i);
-			bias_info->orig_exit_lat[i] = cpuidle_get_exit_latency(cpu, i);
-			bias_info->bias_target_res[i] = bias_info->orig_target_res[i];
-			bias_info->bias_exit_lat[i] = bias_info->orig_exit_lat[i];
-		}
-		spin_lock_init(&bias_info->lock);
-		bias_info->init = true;
-	}
-
-	pr_info("Updated Exynos MOCE driver : to %d c-state\n", size_state - 1);
-	return 0;
-}
-
-static const struct of_device_id of_exynos_moce_match[] = {
-	{ .compatible = "samsung,exynos-moce", },
-	{ },
-};
-
-static void delete_factor(void)
-{
-	struct factor_info *factor;
-	int cpu;
-
-	for_each_possible_cpu(cpu) {
-		factor = &per_cpu(factor_info, cpu);
-		kfree(factor->freq_factor);
-	}
-}
-
-static int __init init_freq_data(struct factor_info *factor, struct device_node *dn)
-{
-	int size;
-	const struct of_device_id *match_id;
-
-	match_id = of_match_node(of_exynos_moce_match, dn);
-	if (!match_id)
-		return -ENODEV;
-
-	of_property_read_u32(dn, "domain-id", &factor->domain_id);
-
-	size = of_property_count_u32_elems(dn, "factors");
-	if (size < 0) {
-		pr_info("table size is '0' of frequency factor\n");
+	/* alloc factor */
+	factor = kzalloc(sizeof(struct factor), GFP_KERNEL);
+	if (!factor)
 		return -1;
-	}
-	factor->nfreq_factor = size;
 
-	factor->freq_factor = kzalloc(sizeof(unsigned int)
-			* (factor->nfreq_factor), GFP_KERNEL);
-	if (!factor->freq_factor) {
-		delete_factor();
+	/* factor domain */
+	if (of_property_read_u32(factor_node, "domain", &factor->domain))
 		return -1;
+
+	/* factor id */
+	if (of_property_read_u32(factor_node, "type", &factor->type))
+		return -1;
+
+	/*
+	 * ratio table of factor:
+	 * If there is a ratio table of the same domain previously created, points to it.
+	 */
+	sub_factor = &sub_table[factor->type];
+
+	if (factor->domain == sub_factor->domain) {
+		factor->size = sub_factor->size;
+		factor->ratio_table = sub_factor->ratio_table;
+	} else {
+		init_ratio_table(factor, factor_node);
+		sub_factor->domain = factor->domain;
+		sub_factor->size = factor->size;
+		sub_factor->ratio_table = factor->ratio_table;
 	}
 
-	/* init frequency factor table */
-	of_property_read_u32_array(dn, "factors", factor->freq_factor, size);
+	if (!factor->ratio_table)
+		return -1;
+
+	/* factor weight */
+	factor->weight = kzalloc(sizeof(unsigned int) * size_state, GFP_KERNEL);
+	if (!factor->weight)
+		return -1;
+
+	factor->weight[0] = 0;
+	factor->weight[1] = weight;
+
+	factor->ratio = DEFAULT_RATIO;
 
 	spin_lock_init(&factor->lock);
 
+	list_add_tail(&factor->list, factor_list);
+
+	of_node_put(factor_node);
+
 	return 0;
 }
 
-static int __init dt_init_freq_factor(void)
+static void delete_all(void)
 {
-	struct device_node *cpu_node;
-	struct device_node *freq_node;
-	struct factor_info *factor;
-	int cpu, ret = 0;
+	struct bias_cpuidle *bias_idle;
+	struct factor *pos;
+	struct factor *tmp;
+	int cpu;
 
 	for_each_possible_cpu(cpu) {
-		cpu_node = of_cpu_device_node_get(cpu);
+		bias_idle = &per_cpu(bias_cpuidle, cpu);
+		kfree(bias_idle->total_ratio);
 
-		freq_node = of_parse_phandle(cpu_node, "moce-freq", 0);
-		if (!freq_node)
+		list_for_each_entry_safe(pos, tmp, &bias_idle->factor_list, list) {
+			kfree(pos->weight);
+			kfree(pos->ratio_table);
+			list_del(&pos->list);
+			kfree(pos);
+		}
+	}
+}
+
+static int __init init_factor_list(struct bias_cpuidle *bias_idle,
+					struct device_node *state_node,
+					struct factor *sub_table,
+					int state)
+{
+	struct device_node *factor_node;
+	struct factor *factor = list_first_entry(&bias_idle->factor_list,
+							struct factor, list);
+	int i, ret = 0;
+	unsigned int weight;
+
+	for (i = 0; ; i++) {
+		if (of_property_read_u32_index(state_node, "moce-weights", i, &weight))
 			break;
 
-		if (!of_device_is_available(freq_node)) {
-			of_node_put(freq_node);
+		if (state > 1) {
+			factor = container_of(factor->list.next, struct factor, list);
+			factor->weight[state] = weight;
 			continue;
 		}
 
-		factor = &per_cpu(factor_info, cpu);
-		ret = init_freq_data(factor, freq_node);
-		if (ret) {
-			pr_err("failed to parsing freq factor for MOCE");
-			break;
+		/* init factor list only in first loop */
+		factor_node = of_parse_phandle(state_node, "moce-factors", i);
+		if (!factor_node) {
+			pr_err("the number of factors for the state%d is too small", state);
+			return -1;
 		}
 
-		of_node_put(freq_node);
+		ret = add_factor_data(&bias_idle->factor_list, factor_node,
+							sub_table, weight);
+		if (ret < 0) {
+			of_node_put(factor_node);
+			delete_all();
+			return -1;
+		}
+	}
+	of_node_put(state_node);
+
+	return i;
+}
+
+static int __init dt_init_bias_idle(int cpu, struct factor *sub_table)
+{
+	struct device_node *cpu_node;
+	struct device_node *state_node;
+	struct bias_cpuidle *bias_idle;
+	int i, size;
+
+	cpu_node = of_cpu_device_node_get(cpu);
+	bias_idle = &per_cpu(bias_cpuidle, cpu);
+
+	bias_idle->total_ratio = kzalloc(sizeof(unsigned int) * size_state, GFP_KERNEL);
+	if (!bias_idle->total_ratio) {
+		of_node_put(cpu_node);
+		return -1;
 	}
 
-	of_node_put(freq_node);
+	/*
+	 * the c1 state is not specified in the device tree,
+	 * so set it separately.
+	 */
+	bias_idle->total_ratio[0] = 0;
+
+	for (i = 0; ; i++) {
+		state_node = of_parse_phandle(cpu_node, "cpu-idle-states", i);
+		if (!state_node)
+			break;
+
+		size = init_factor_list(bias_idle, state_node, sub_table, i + 1);
+		if (size < 0) {
+			of_node_put(state_node);
+			of_node_put(cpu_node);
+			return size;
+		}
+
+		bias_idle->total_ratio[i + 1] = DEFAULT_RATIO;
+	}
+
+	/* if (size == 0), the cpu does not have a factor */
+	if (size)
+		bias_idle->biased = true;
+
 	of_node_put(cpu_node);
+
+	return 0;
+}
+
+static int __init init_bias_idle(void)
+{
+	struct factor sub_table[FACTOR_NUM];
+	int cpu, i, ret = 0;
+
+	/* init sub_table */
+	for (i = 0; i < FACTOR_NUM; i++)
+		sub_table[i].domain = -1;
+
+	for_each_possible_cpu(cpu) {
+		ret = dt_init_bias_idle(cpu, sub_table);
+		if (ret < 0) {
+			pr_err("failed to initialize moce factors for cpu%d", cpu);
+			break;
+		}
+	}
 
 	return ret;
 }
 
 static int __init exynos_moce_init(void)
 {
-	int ret;
+	int ret = 0;
 
-	ret = init_ratios();
+	size_state = cpuidle_get_state_size();
+
+	ret = init_bias_idle();
 	if (ret < 0) {
-		pr_info("failed to allocate and initialize value for ratios\n");
-		delete_ratios();
-		return -1;
+		pr_err("failed to initialize moce driver\n");
+		return ret;
 	}
-
-	ret = dt_init_freq_factor();
-	if (ret < 0) {
-		pr_err("failed to initialize factor with device tree\n");
-		return -1;
-	}
-
-	init_idle_state_info();
 
 	init_sysfs();
 
 	cpufreq_register_notifier(&exynos_cpufreq_trans_nb,
 			CPUFREQ_TRANSITION_NOTIFIER);
 
-	pr_info("Initialized Exynos MOCE driver\n");
+	pr_info("initialized exynos moce driver\n");
 
 	return ret;
 }
