@@ -22,7 +22,7 @@
 #define RESULT_READ_REQ				0x0005
 #define RPMB_END_ADDRESS			0x4000
 
-#define RPMB_PACKET_SIZE 			512
+#define RPMB_PACKET_SIZE			512
 #define RPMB_REQRES				510
 #define RPMB_RESULT				508
 

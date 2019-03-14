@@ -151,7 +151,8 @@ static int srpmb_ioctl_secu_prot_command(struct scsi_device *sdev, char *cmd,
 	unsigned int bufflen;
 	int prot_in_out = req->cmd;
 
-	SCSI_LOG_IOCTL(1, printk("Trying ioctl with scsi command %d\n", *cmd));
+	SCSI_LOG_IOCTL(1, sdev_printk(KERN_INFO, sdev,
+				      "Trying ioctl with scsi command %d\n", *cmd));
 	if (prot_in_out == SCSI_IOCTL_SECURITY_PROTOCOL_IN) {
 		dma_direction = DMA_FROM_DEVICE;
 		bufflen = req->inlen;
@@ -191,10 +192,11 @@ static int srpmb_ioctl_secu_prot_command(struct scsi_device *sdev, char *cmd,
 	result = scsi_execute_req(sdev, cmd, dma_direction, buf, bufflen,
 				  &sshdr, timeout, retries, NULL);
 
-	if (prot_in_out == SCSI_IOCTL_SECURITY_PROTOCOL_IN) {
+	if (prot_in_out == SCSI_IOCTL_SECURITY_PROTOCOL_IN)
 		memcpy(req->rpmb_data, buf, bufflen);
-	}
-	SCSI_LOG_IOCTL(2, printk("Ioctl returned  0x%x\n", result));
+
+	SCSI_LOG_IOCTL(2, sdev_printk(KERN_INFO, sdev,
+				      "Ioctl returned  0x%x\n", result));
 
 	if ((driver_byte(result) & DRIVER_SENSE) &&
 	    (scsi_sense_valid(&sshdr))) {
@@ -206,11 +208,11 @@ static int srpmb_ioctl_secu_prot_command(struct scsi_device *sdev, char *cmd,
 
 	kfree(buf);
 err_pre_buf_alloc:
-	SCSI_LOG_IOCTL(2, printk("IOCTL Releasing command\n"));
+	SCSI_LOG_IOCTL(2, sdev_printk(KERN_INFO, sdev,
+				      "IOCTL Releasing command\n"));
 	return result;
 err_kzalloc:
-	if (buf)
-		kfree(buf);
+	kfree(buf);
 	printk(KERN_INFO "%s kzalloc faild\n", __func__);
 	return result;
 }
@@ -226,7 +228,8 @@ static int ioctl_secu_prot_command(struct scsi_device *sdev, char *cmd,
 	unsigned int bufflen;
 	Scsi_Ioctl_Command __user *s_ioc_arg;
 
-	SCSI_LOG_IOCTL(1, printk("Trying ioctl with scsi command %d\n", *cmd));
+	SCSI_LOG_IOCTL(1, sdev_printk(KERN_INFO, sdev,
+				      "Trying ioctl with scsi command %d\n", *cmd));
 
 	s_ioc_arg = (Scsi_Ioctl_Command *)kmalloc(sizeof(*s_ioc_arg), GFP_KERNEL);
 	if (!s_ioc_arg) {
@@ -243,23 +246,27 @@ static int ioctl_secu_prot_command(struct scsi_device *sdev, char *cmd,
 	if (prot_in_out == SCSI_IOCTL_SECURITY_PROTOCOL_IN) {
 		dma_direction = DMA_FROM_DEVICE;
 		bufflen = s_ioc_arg->inlen;
-		if (bufflen <= 0 || bufflen > MAX_BUFFLEN) {
+		if (bufflen == 0 || bufflen > MAX_BUFFLEN) {
 			sdev_printk(KERN_INFO, sdev,
 					"Invalid bufflen : %x\n", bufflen);
 			result = -EFAULT;
 			goto err_pre_buf_alloc;
 		}
 		buf = kzalloc(bufflen, GFP_KERNEL);
+		if (!buf)
+			return -EFAULT;
 	} else if (prot_in_out == SCSI_IOCTL_SECURITY_PROTOCOL_OUT) {
 		dma_direction = DMA_TO_DEVICE;
 		bufflen = s_ioc_arg->outlen;
-		if (bufflen <= 0 || bufflen > MAX_BUFFLEN) {
+		if (bufflen == 0 || bufflen > MAX_BUFFLEN) {
 			sdev_printk(KERN_INFO, sdev,
 					"Invalid bufflen : %x\n", bufflen);
 			result = -EFAULT;
 			goto err_pre_buf_alloc;
 		}
 		buf = kzalloc(bufflen, GFP_KERNEL);
+		if (!buf)
+			return -EFAULT;
 		if (copy_from_user(buf, arg + sizeof(*s_ioc_arg), s_ioc_arg->outlen)) {
 			printk(KERN_INFO "copy_from_user failed\n");
 			result = -EFAULT;
@@ -282,7 +289,8 @@ static int ioctl_secu_prot_command(struct scsi_device *sdev, char *cmd,
 			goto err_post_buf_alloc;
 		}
 	}
-	SCSI_LOG_IOCTL(2, printk("Ioctl returned  0x%x\n", result));
+	SCSI_LOG_IOCTL(2, sdev_printk(KERN_INFO, sdev,
+				      "Ioctl returned  0x%x\n", result));
 
 	if ((driver_byte(result) & DRIVER_SENSE) &&
 	    (scsi_sense_valid(&sshdr))) {
@@ -296,7 +304,8 @@ err_post_buf_alloc:
 	kfree(buf);
 err_pre_buf_alloc:
 	kfree(s_ioc_arg);
-	SCSI_LOG_IOCTL(2, printk("IOCTL Releasing command\n"));
+	SCSI_LOG_IOCTL(2, sdev_printk(KERN_INFO, sdev,
+				      "IOCTL Releasing command\n"));
 	return result;
 }
 

@@ -49,6 +49,7 @@ static void dump_packet(u8 *data, int len)
 static void swap_packet(u8 *p, u8 *d)
 {
 	int i;
+
 	for (i = 0; i < RPMB_PACKET_SIZE; i++)
 		d[i] = p[RPMB_PACKET_SIZE - 1 - i];
 }
@@ -73,18 +74,18 @@ static void srpmb_worker(struct work_struct *data)
 
 	if (!data) {
 		dev_err(&sr_pdev->dev, "rpmb work_struct data invalid\n");
-		return ;
+		return;
 	}
 	rpmb_ctx = container_of(data, struct rpmb_irq_ctx, work);
 	if (!rpmb_ctx->dev) {
 		dev_err(&sr_pdev->dev, "rpmb_ctx->dev invalid\n");
-		return ;
+		return;
 	}
 	sdp = to_scsi_device(rpmb_ctx->dev);
 
 	if (!rpmb_ctx->vir_addr) {
 		dev_err(&sr_pdev->dev, "rpmb_ctx->vir_addr invalid\n");
-		return ;
+		return;
 	}
 	req = (Rpmb_Req *)rpmb_ctx->vir_addr;
 
@@ -379,7 +380,7 @@ out_srpmb_init_fail:
 	if (rpmb_ctx->srpmb_queue)
 		destroy_workqueue(rpmb_ctx->srpmb_queue);
 
-	dma_free_coherent(&sr_pdev->dev, RPMB_BUF_MAX_SIZE,
+	dma_free_coherent(&sr_pdev->dev, sizeof(Rpmb_Req) + RPMB_BUF_MAX_SIZE,
 			rpmb_ctx->vir_addr, rpmb_ctx->phy_addr);
 
 out_srpmb_dma_alloc_fail:
