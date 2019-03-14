@@ -18,7 +18,8 @@
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
-#include <dt-bindings/clock/exynos9830.h>
+#include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
+#include <soc/samsung/exynos-devfreq.h>
 
 #define DISP_FACTOR		100UL
 #define LCD_REFRESH_RATE	63UL
@@ -612,11 +613,11 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 		 * If current disp freq is higher than calculated freq,
 		 * it must not be set. if not, underrun can occur.
 		 */
-		if (cal_dfs_get_rate(ACPM_DVFS_DISP) < aclk_freq)
+		if (exynos_devfreq_get_domain_freq(DEVFREQ_DISP) < aclk_freq)
 			pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
 
 		DPU_DEBUG_BTS("Get initial disp freq(%lu)\n",
-				cal_dfs_get_rate(ACPM_DVFS_DISP));
+				exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
 
 		return;
 	}
