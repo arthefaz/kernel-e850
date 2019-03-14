@@ -30,7 +30,9 @@
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
-#include <dt-bindings/clock/exynos9830.h>
+#include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
+#include <soc/samsung/exynos-devfreq.h>
+
 #if defined(CONFIG_CPU_IDLE)
 #include <soc/samsung/exynos-cpupm.h>
 #endif
@@ -387,9 +389,9 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 
 	/* Read request */
 	dsim_write_data(dsim, id, addr, 0);
-	
+
 	dsim_wait_for_cmd_done(dsim);
-	
+
 	if (!wait_for_completion_timeout(&dsim->rd_comp, MIPI_RD_TIMEOUT)) {
 		dsim_err("MIPI DSIM read Timeout!\n");
 		return -ETIMEDOUT;
@@ -529,9 +531,9 @@ static void dsim_underrun_info(struct dsim_device *dsim)
 //	int i, decon_cnt;
 
 	dsim_info("\tMIF(%lu), INT(%lu), DISP(%lu)\n",
-			cal_dfs_get_rate(ACPM_DVFS_MIF),
-			cal_dfs_get_rate(ACPM_DVFS_INT),
-			cal_dfs_get_rate(ACPM_DVFS_DISP));
+			exynos_devfreq_get_domain_freq(DEVFREQ_MIF),
+			exynos_devfreq_get_domain_freq(DEVFREQ_INT),
+			exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
 
 #if 0
 	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
