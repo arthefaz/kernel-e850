@@ -121,6 +121,11 @@ config EXYNOS_PLL_SLEEP
 	bool "Support DPHY PLL Sleep"
         depends on EXYNOS_DPU30
         default n
+
+config EXYNOS_EWR
+	bool "Support early wake up"
+        depends on EXYNOS_DPU30
+        default n
 endif
 
 source "drivers/video/fbdev/exynos/dpu30/panels/Kconfig"
