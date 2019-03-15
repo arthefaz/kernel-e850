@@ -519,6 +519,7 @@ static void decon_reg_configure_trigger(u32 id, enum decon_trig_mode mode)
 	decon_write_mask(id, HW_SW_TRIG_CONTROL, val, mask);
 }
 
+#if defined(CONFIG_EXYNOS_EWR)
 static void decon_reg_set_ewr_enable(u32 id, u32 en)
 {
 	u32 val, mask;
@@ -541,6 +542,7 @@ static void decon_reg_set_ewr_control(u32 id, u32 cnt, u32 en)
 	decon_reg_set_ewr_timer(id, cnt);
 	decon_reg_set_ewr_enable(id, en);
 }
+#endif
 
 static void dsc_reg_swreset(u32 dsc_id)
 {
@@ -1801,7 +1803,10 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	} else {
 		decon_reg_configure_lcd(id, p);
 		if (psr->psr_mode == DECON_MIPI_COMMAND_MODE) {
-			decon_reg_set_ewr_control(id, 430733, 0);
+#if defined(CONFIG_EXYNOS_EWR)
+			/* Request wake up befor 100us of TE */
+			decon_reg_set_ewr_control(id, 430733, 1);
+#endif
 			decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
 		}
 	}

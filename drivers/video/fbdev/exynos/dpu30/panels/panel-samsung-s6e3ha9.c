@@ -63,10 +63,17 @@ static int s6e3ha9_displayon(struct exynos_panel_device *panel)
 	dsim_write_data_seq(dsim, 0x35); /* TE on */
 	dsim_write_data_seq(dsim, 0xED, 0x04, 0x44);
 
+#if !defined(CONFIG_EXYNOS_EWR)
 #if defined(CONFIG_EXYNOS_PLL_SLEEP)
+	/* TE start timing is advanced due to latency for the PLL_SLEEP
+	 *      default value : 3040(active line) + 7(vbp) - 2 = 0xBE5
+	 *      modified value : default value - 11(modifying line) = 0xBDA
+	 */
+
 	dsim_write_data_seq(dsim, 0xB9, 0x01, 0xB0, 0xE1, 0x09);
 #else
 	dsim_write_data_seq(dsim, 0xB9, 0x00, 0xB0, 0xEC, 0x09);
+#endif
 #endif
 	dsim_write_data_seq(dsim, 0xC5, 0x0D, 0x10, 0xB4, 0x3E, 0x01);
 	dsim_write_data_seq(dsim, 0x29); /* display on */
