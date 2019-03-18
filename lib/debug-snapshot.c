@@ -34,7 +34,7 @@
 #include <soc/samsung/cal-if.h>
 #endif
 
-extern void register_hook_logbuf(void (*)(const char *, size_t));
+extern void register_hook_logbuf(void (*)(const char *, size_t, int fatal));
 extern void register_hook_logger(void (*)(const char *, const char *, size_t));
 
 struct dbg_snapshot_interface {
@@ -207,24 +207,30 @@ static inline void dbg_snapshot_hook_logger(const char *name,
 	}
 }
 
-static inline void dbg_snapshot_hook_logbuf(const char *buf, size_t size)
+static inline void dbg_snapshot_hook_logbuf(const char *buf, size_t size, int fatal)
 {
 	struct dbg_snapshot_item *item = &dss_items[dss_desc.log_kernel_num];
 
-	if (likely(dss_base.enabled && item->entry.enabled)) {
-		size_t last_buf;
+	do {
+		if (likely(dss_base.enabled && item->entry.enabled)) {
+			size_t last_buf;
 
-		if (dbg_snapshot_check_eob(item, size))
-			item->curr_ptr = item->head_ptr;
+			if (dbg_snapshot_check_eob(item, size))
+				item->curr_ptr = item->head_ptr;
 
-		memcpy(item->curr_ptr, buf, size);
-		item->curr_ptr += size;
-		/*  save the address of last_buf to physical address */
-		last_buf = (size_t)item->curr_ptr;
+			memcpy(item->curr_ptr, buf, size);
+			item->curr_ptr += size;
+			/*  save the address of last_buf to physical address */
+			last_buf = (size_t)item->curr_ptr;
 
-		__raw_writel(item->entry.paddr + (last_buf - item->entry.vaddr),
-				dbg_snapshot_get_base_vaddr() + DSS_OFFSET_LAST_LOGBUF);
-	}
+			if (item == (struct dbg_snapshot_item *)&dss_items[dss_desc.log_kernel_num])
+				__raw_writel(item->entry.paddr + (last_buf - item->entry.vaddr),
+					dbg_snapshot_get_base_vaddr() + DSS_OFFSET_LAST_LOGBUF);
+
+			if (fatal == 1)
+				item = &dss_items[dss_desc.log_fatal_num];
+		}
+	} while(fatal-- > 0);
 }
 
 #ifdef CONFIG_DEBUG_SNAPSHOT_PMU
@@ -440,6 +446,8 @@ static int __init dbg_snapshot_init_desc(void)
 			dss_desc.header_num = i;
 		else if (!strncmp(dss_items[i].name, "log_kevents", len))
 			dss_desc.kevents_num = i;
+		else if (!strncmp(dss_items[i].name, "log_fatal", len))
+			dss_desc.log_fatal_num = i;
 		else if (!strncmp(dss_items[i].name, "log_kernel", len))
 			dss_desc.log_kernel_num = i;
 		else if (!strncmp(dss_items[i].name, "log_platform", len))

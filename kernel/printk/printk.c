@@ -589,10 +589,10 @@ module_param_named(process, printk_process, bool, S_IRUGO | S_IWUSR);
 #ifdef CONFIG_DEBUG_SNAPSHOT
 static size_t hook_size;
 static char hook_text[LOG_LINE_MAX + PREFIX_MAX];
-static void (*func_hook_logbuf)(const char *buf, size_t size);
+static void (*func_hook_logbuf)(const char *buf, size_t size, int fatal);
 static size_t msg_print_text(const struct printk_log *msg,
 			     bool syslog, char *buf, size_t size);
-void register_hook_logbuf(void (*func)(const char *buf, size_t size))
+void register_hook_logbuf(void (*func)(const char *buf, size_t size, int fatal))
 {
 	unsigned long flags;
 
@@ -612,7 +612,7 @@ void register_hook_logbuf(void (*func)(const char *buf, size_t size))
 			msg = (struct printk_log *)(log_buf + step_idx);
 			hook_size = msg_print_text(msg,
 					true, hook_text, LOG_LINE_MAX + PREFIX_MAX);
-			func(hook_text, hook_size);
+			func(hook_text, hook_size, msg->level <= LOGLEVEL_ERR ? 1 : 0);
 			step_idx = log_next(step_idx);
 		}
 	}
@@ -621,7 +621,6 @@ void register_hook_logbuf(void (*func)(const char *buf, size_t size))
 }
 EXPORT_SYMBOL(register_hook_logbuf);
 #endif
-
 
 /*
  * Define how much of the log buffer we could take at maximum. The value
@@ -714,7 +713,8 @@ static int log_store(int facility, int level,
 	if (func_hook_logbuf) {
 		hook_size = msg_print_text(msg,
 				true, hook_text, LOG_LINE_MAX + PREFIX_MAX);
-		func_hook_logbuf(hook_text, hook_size);
+		func_hook_logbuf(hook_text, hook_size,
+				msg->level <= LOGLEVEL_ERR ? 1 : 0);
 	}
 #endif
 	/* insert message */

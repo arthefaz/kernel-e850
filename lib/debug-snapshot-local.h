@@ -95,6 +95,7 @@ struct dbg_snapshot_desc {
 	unsigned int kevents_num;
 	unsigned int log_kernel_num;
 	unsigned int log_platform_num;
+	unsigned int log_fatal_num;
 	unsigned int log_sfr_num;
 	unsigned int log_pstore_num;
 	unsigned int log_etm_num;
