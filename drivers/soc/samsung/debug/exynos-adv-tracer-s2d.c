@@ -154,8 +154,7 @@ static int adv_tracer_s2d_probe(struct platform_device *pdev)
 	struct adv_tracer_plugin *s2d = NULL;
 	int ret;
 
-	dev_info(&pdev->dev, "[EAT+] %s\n", __func__);
-
+	dev_set_socdata(&pdev->dev, "Exynos", "EAT_S2D");
 	s2d = devm_kzalloc(&pdev->dev, sizeof(struct adv_tracer_plugin), GFP_KERNEL);
 	if (!s2d) {
 		dev_err(&pdev->dev, "can not allocate mem for s2d\n");
@@ -186,7 +185,7 @@ static int adv_tracer_s2d_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	dev_info(&pdev->dev, "[EAT-] %s\n", __func__);
+	dev_info(&pdev->dev, "%s successful.\n", __func__);
 	return 0;
 
 err_sysfs_probe:

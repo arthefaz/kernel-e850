@@ -17,6 +17,7 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/debug-snapshot.h>
+#include <linux/device.h>
 
 #ifdef CONFIG_EXYNOS_CPUIDLE
 #include <soc/samsung/exynos-cpupm.h>
@@ -64,8 +65,7 @@ static int adv_tracer_probe(struct platform_device *pdev)
 	struct adv_tracer_info *adv_tracer;
 	int ret = 0;
 
-	dev_info(&pdev->dev, "[EAT+] %s\n", __func__);
-
+	dev_set_socdata(&pdev->dev, "Exynos", "EAT");
 	adv_tracer = devm_kzalloc(&pdev->dev,
 				sizeof(struct adv_tracer_info), GFP_KERNEL);
 
@@ -79,7 +79,7 @@ static int adv_tracer_probe(struct platform_device *pdev)
 
 	exynos_adv_tracer = adv_tracer;
 
-	dev_info(&pdev->dev, "[EAT-] %s\n", __func__);
+	dev_info(&pdev->dev, "%s successful.\n", __func__);
 out:
 	return ret;
 }
