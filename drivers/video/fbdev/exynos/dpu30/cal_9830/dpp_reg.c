@@ -182,12 +182,14 @@ static void idma_reg_set_afbc(u32 id, u32 en, u32 rcv_num)
 
 static void idma_reg_set_sbwc(u32 id, u32 en, u32 rcv_num)
 {
+#if 0
 	u32 val = en ? ~0 : 0;
 
 	dma_write_mask(id, IDMA_IN_CON, val, IDMA_SBWC_EN);
 	dma_write_mask(id, IDMA_RECOVERY_CTRL, val, IDMA_RECOVERY_EN);
 	dma_write_mask(id, IDMA_RECOVERY_CTRL, IDMA_RECOVERY_NUM(rcv_num),
 				IDMA_RECOVERY_NUM_MASK);
+#endif
 }
 
 static void idma_reg_set_deadlock(u32 id, u32 en, u32 dl_num)
