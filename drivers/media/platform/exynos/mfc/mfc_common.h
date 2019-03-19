@@ -28,7 +28,7 @@
 #include "exynos_mfc_media.h"
 #include "mfc_data_struct.h"
 
-#define MFC_DRIVER_INFO		180315
+#define MFC_DRIVER_INFO		190319
 
 #define MFC_MAX_REF_BUFS	2
 #define MFC_FRAME_PLANES	2
@@ -173,6 +173,7 @@
 #define	DEC_SET_LAST_FRAME_INFO		(1 << 2)
 #define	DEC_SET_SKYPE_FLAG		(1 << 3)
 #define	DEC_SET_HDR10_PLUS		(1 << 4)
+#define	DEC_SET_DRV_DPB_MANAGER		(1 << 5)
 
 /* Extra information for Encoder */
 #define	ENC_SET_RGB_INPUT		(1 << 0)
