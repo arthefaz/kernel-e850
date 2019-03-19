@@ -962,7 +962,7 @@ int s3c2410wdt_set_emergency_stop(int index)
 		return -ENODEV;
 
 	/* stop watchdog */
-	pr_emerg("%s: watchdog is stopped\n", __func__);
+	dev_emerg(wdt->dev, "%s: watchdog is stopped\n", __func__);
 	s3c2410wdt_stop(&wdt->wdt_device);
 	return 0;
 }
@@ -975,7 +975,7 @@ int s3c2410wdt_keepalive_emergency(bool reset, int index)
 		return -ENODEV;
 
 	if (reset) {
-		pr_emerg("watchdog reset is started to 30secs\n");
+		dev_emerg(wdt->dev, "watchdog reset is started to 30secs\n");
 		s3c2410wdt_set_heartbeat(&wdt->wdt_device, 30);
 		s3c2410wdt_start(&wdt->wdt_device);
 		s3c2410wdt_multistage_wdt_stop();
@@ -1128,7 +1128,7 @@ static int s3c2410wdt_panic_handler(struct notifier_block *nb,
 	/* We assumed that num_online_cpus() > 1 status is abnormal */
 	if (dbg_snapshot_get_hardlockup() || num_online_cpus() > 1) {
 
-		pr_emerg("%s: watchdog reset is started on panic after 5secs\n", __func__);
+		dev_emerg(wdt->dev, "%s: watchdog reset is started on panic after 5secs\n", __func__);
 
 		/* set watchdog timer is started and  set by 5 seconds*/
 		s3c2410wdt_set_heartbeat(&wdt->wdt_device, 5);
@@ -1423,6 +1423,8 @@ static int s3c2410wdt_probe(struct platform_device *pdev)
 	int started = 0;
 	int ret, cluster_index;
 
+	dev_set_socdata(dev, "Exynos", "WDT");
+
 	wdt = devm_kzalloc(dev, sizeof(*wdt), GFP_KERNEL);
 	if (!wdt)
 		return -ENOMEM;
@@ -1695,12 +1697,12 @@ static int s3c2410wdt_remove(struct platform_device *dev)
 
 static void s3c2410wdt_shutdown(struct platform_device *dev)
 {
-#ifdef CONFIG_S3C2410_SHUTDOWN_REBOOT
-	pr_emerg("%s: watchdog is still alive\n", __func__);
-	s3c2410wdt_keepalive_emergency(true, 0);
-#else
 	struct s3c2410_wdt *wdt = platform_get_drvdata(dev);
 
+#ifdef CONFIG_S3C2410_SHUTDOWN_REBOOT
+	dev_emerg(wdt->dev, "%s: watchdog is still alive\n", __func__);
+	s3c2410wdt_keepalive_emergency(true, 0);
+#else
 	/* Only little cluster watchdog excute mask function */
 	if ((wdt->cluster == LITTLE_CLUSTER) && (wdt->drv_data->pmu_reset_func))
 		wdt->drv_data->pmu_reset_func(wdt, true);
