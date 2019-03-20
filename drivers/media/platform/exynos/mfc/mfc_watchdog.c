@@ -68,7 +68,7 @@ static void __mfc_dump_regs(struct mfc_dev *dev)
 
 	for (i = 0; i < MFC_SFR_AREA_COUNT; i++) {
 		printk("[%04X .. %04X]\n", addr[i][0], addr[i][0] + addr[i][1]);
-		print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4, dev->regs_base + addr[i][0],
+		print_hex_dump(KERN_ERR, "", DUMP_PREFIX_OFFSET, 32, 4, dev->regs_base + addr[i][0],
 				addr[i][1], false);
 		printk("...\n");
 	}
@@ -76,7 +76,7 @@ static void __mfc_dump_regs(struct mfc_dev *dev)
 	if (dbg_enable) {
 		buf_size = dev->variant->buf_size->ctx_buf;
 		printk("[DBG INFO dump]\n");
-		print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4, dev->dbg_info_buf.vaddr,
+		print_hex_dump(KERN_ERR, "", DUMP_PREFIX_OFFSET, 32, 4, dev->dbg_info_buf.vaddr,
 			buf_size->dbg_info_buf, false);
 		printk("...\n");
 	}
@@ -422,7 +422,7 @@ void __mfc_dump_nal_q_buffer_info(struct mfc_dev *dev, int curr_ctx)
 				ctx->raw_buf.plane_size[0], ctx->raw_buf.plane_size[1],
 				ctx->raw_buf.plane_size[2]);
 		if (ctx->mv_size)
-			print_hex_dump(KERN_ERR, "MV buffer ", DUMP_PREFIX_ADDRESS, 32, 4,
+			print_hex_dump(KERN_ERR, "MV buffer ", DUMP_PREFIX_OFFSET, 32, 4,
 					dev->regs_base + MFC_REG_D_MV_BUFFER0, 0x100, false);
 		dev_err(dev->device, "NALQ In: ID CPB DPBFlag DPB0 DPB1\
 			/ Out: ID dispstat diap0 disp1 used decstat dec0 dec1 type\n");
@@ -452,7 +452,7 @@ void __mfc_dump_nal_q_buffer_info(struct mfc_dev *dev, int curr_ctx)
 				MFC_READL(MFC_REG_E_STREAM_BUFFER_SIZE),
 				ctx->raw_buf.plane_size[0], ctx->raw_buf.plane_size[1],
 				ctx->raw_buf.plane_size[2]);
-		print_hex_dump(KERN_ERR, "ME buffer ", DUMP_PREFIX_ADDRESS, 32, 4,
+		print_hex_dump(KERN_ERR, "ME buffer ", DUMP_PREFIX_OFFSET, 32, 4,
 				dev->regs_base + MFC_REG_E_ME_BUFFER, 0x44, false);
 		dev_err(dev->device, "NALQ In: ID src0 src1 dst\
 			/ Out: ID enc0 enc1 strm recon0 recon1 type\n");
@@ -517,16 +517,16 @@ void __mfc_dump_buffer_info(struct mfc_dev *dev)
 		dev_err(dev->device, "DPB [0]plane:++%#x, [1]plane:++%#x, [2]plane:++%#x, MV buffer:++%#lx\n",
 				ctx->raw_buf.plane_size[0], ctx->raw_buf.plane_size[1],
 				ctx->raw_buf.plane_size[2], ctx->mv_size);
-		print_hex_dump(KERN_ERR, "[0] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
+		print_hex_dump(KERN_ERR, "[0] plane ", DUMP_PREFIX_OFFSET, 32, 4,
 				dev->regs_base + MFC_REG_D_FIRST_PLANE_DPB0, 0x100, false);
-		print_hex_dump(KERN_ERR, "[1] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
+		print_hex_dump(KERN_ERR, "[1] plane ", DUMP_PREFIX_OFFSET, 32, 4,
 				dev->regs_base + MFC_REG_D_SECOND_PLANE_DPB0, 0x100, false);
 		if (ctx->dst_fmt->num_planes == 3)
-			print_hex_dump(KERN_ERR, "[2] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
+			print_hex_dump(KERN_ERR, "[2] plane ", DUMP_PREFIX_OFFSET, 32, 4,
 					dev->regs_base + MFC_REG_D_THIRD_PLANE_DPB0,
 					0x100, false);
 		if (ctx->mv_size)
-			print_hex_dump(KERN_ERR, "MV buffer ", DUMP_PREFIX_ADDRESS, 32, 4,
+			print_hex_dump(KERN_ERR, "MV buffer ", DUMP_PREFIX_OFFSET, 32, 4,
 					dev->regs_base + MFC_REG_D_MV_BUFFER0, 0x100, false);
 	} else if (ctx->type == MFCINST_ENCODER) {
 		dev_err(dev->device, "Encoder SRC %dplane, [0]:%#x++%#x, [1]:%#x++%#x, [2]:%#x++%#x\n",
@@ -546,11 +546,11 @@ void __mfc_dump_buffer_info(struct mfc_dev *dev)
 				ctx->enc_priv->luma_dpb_size,
 				ctx->enc_priv->chroma_dpb_size,
 				ctx->enc_priv->me_buffer_size);
-		print_hex_dump(KERN_ERR, "[0] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
+		print_hex_dump(KERN_ERR, "[0] plane ", DUMP_PREFIX_OFFSET, 32, 4,
 				dev->regs_base + MFC_REG_E_LUMA_DPB, 0x44, false);
-		print_hex_dump(KERN_ERR, "[1] plane ", DUMP_PREFIX_ADDRESS, 32, 4,
+		print_hex_dump(KERN_ERR, "[1] plane ", DUMP_PREFIX_OFFSET, 32, 4,
 				dev->regs_base + MFC_REG_E_CHROMA_DPB, 0x44, false);
-		print_hex_dump(KERN_ERR, "ME buffer ", DUMP_PREFIX_ADDRESS, 32, 4,
+		print_hex_dump(KERN_ERR, "ME buffer ", DUMP_PREFIX_OFFSET, 32, 4,
 				dev->regs_base + MFC_REG_E_ME_BUFFER, 0x44, false);
 	} else {
 		dev_err(dev->device, "invalid MFC instnace type(%d)\n", ctx->type);
@@ -566,20 +566,20 @@ static void __mfc_dump_struct(struct mfc_dev *dev, int curr_ctx)
 
 	/* mfc_ctx */
 	size = (unsigned long)&ctx->fh - (unsigned long)ctx;
-	print_hex_dump(KERN_ERR, "dump mfc_ctx: ", DUMP_PREFIX_ADDRESS,
+	print_hex_dump(KERN_ERR, "dump mfc_ctx: ", DUMP_PREFIX_OFFSET,
 			32, 4, ctx, size, false);
 
 	if (ctx->type == MFCINST_DECODER && ctx->dec_priv != NULL) {
 		/* mfc_dec */
 		size = (unsigned long)&ctx->dec_priv->assigned_dpb[0] - (unsigned long)ctx->dec_priv;
-		print_hex_dump(KERN_ERR, "dump mfc_dec: ", DUMP_PREFIX_ADDRESS,
+		print_hex_dump(KERN_ERR, "dump mfc_dec: ", DUMP_PREFIX_OFFSET,
 				32, 4, ctx->dec_priv, size, false);
 	} else if (ctx->type == MFCINST_ENCODER && ctx->enc_priv != NULL) {
 		/* mfc_enc */
 		size = (unsigned long)&ctx->enc_priv->params - (unsigned long)ctx->enc_priv;
-		print_hex_dump(KERN_ERR, "dump mfc_enc: ", DUMP_PREFIX_ADDRESS,
+		print_hex_dump(KERN_ERR, "dump mfc_enc: ", DUMP_PREFIX_OFFSET,
 				32, 4, ctx->enc_priv, size, false);
-		print_hex_dump(KERN_ERR, "dump mfc_enc_param: ", DUMP_PREFIX_ADDRESS,
+		print_hex_dump(KERN_ERR, "dump mfc_enc_param: ", DUMP_PREFIX_OFFSET,
 				32, 1, &ctx->enc_priv->params, sizeof(struct mfc_enc_params), false);
 	}
 }
