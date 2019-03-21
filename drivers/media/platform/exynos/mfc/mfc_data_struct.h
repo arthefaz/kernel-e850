@@ -472,6 +472,7 @@ struct mfc_platdata {
 	unsigned int share_sysmmu;
 	unsigned int axid_mask;
 	unsigned int mfc_fault_num;
+	unsigned int trans_info_offset;
 	/* Default 10bit format for decoding */
 	unsigned int P010_decoding;
 	/* Formats */
