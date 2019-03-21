@@ -87,6 +87,10 @@ struct ion_buffer {
 	void *vaddr;
 	struct sg_table *sg_table;
 	struct list_head iovas;
+	char task_comm[TASK_COMM_LEN];
+	char thread_comm[TASK_COMM_LEN];
+	pid_t pid;
+	pid_t tid;
 };
 void ion_buffer_destroy(struct ion_buffer *buffer);
 

@@ -288,8 +288,9 @@ static void ion_debug_buffer_for_heap(struct seq_file *s,
 	struct ion_buffer *buffer;
 	size_t total = 0;
 
-	ion_debug_print(s, "[  id] %15s %8s %5s %8s\n",
-			"heap", "heaptype", "flags", "size(kb)");
+	ion_debug_print(s, "[  id] %15s %8s %5s %8s %16s(%5s) %16s(%5s)\n",
+			"heap", "heaptype", "flags", "size(kb)",
+			"task_comm", "pid", "thread_comm", "tid");
 
 	mutex_lock(&dev->buffer_lock);
 	for (n = rb_first(&dev->buffers); n; n = rb_next(n)) {
@@ -300,10 +301,12 @@ static void ion_debug_buffer_for_heap(struct seq_file *s,
 				ARRAY_SIZE(heap_type_name)) ?
 				buffer->heap->type : 0;
 
-			ion_debug_print(s, "[%4d] %15s %8s %#5lx %8zu\n",
+			ion_debug_print(s, "[%4d] %15s %8s %#5lx %8zu %16s(%5u) %16s(%5u)\n",
 					buffer->id, buffer->heap->name,
 					heap_type_name[heaptype], buffer->flags,
-					buffer->size / SZ_1K);
+					buffer->size / SZ_1K,
+					buffer->task_comm, buffer->pid,
+					buffer->thread_comm, buffer->tid);
 
 			total += buffer->size;
 		}
