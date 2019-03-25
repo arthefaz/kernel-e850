@@ -879,7 +879,7 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 	} else {
 		if (dec->dpb[index].addr[0] != mfc_buf->addr[0][0]) {
 			if (dec->dynamic_used & (1 << index)) {
-				mfc_err_ctx("[IOVMM] ref DPB[%d] was changed %#llx->%#llx (used: %#x)\n",
+				mfc_debug(2, "[IOVMM] ref DPB[%d] was changed %#llx->%#llx (used: %#x)\n",
 						index, dec->dpb[index].addr[0],
 						mfc_buf->addr[0][0], dec->dynamic_used);
 				MFC_TRACE_CTX("ref DPB[%d] %#llx->%#llx (%#x)\n",

@@ -281,6 +281,7 @@ err_get_daddr:
 
 void mfc_put_iovmm(struct mfc_ctx *ctx, struct dpb_table *dpb, int num_planes, int index)
 {
+	struct mfc_dev *dev = ctx->dev;
 	int i;
 
 	for (i = 0; i < num_planes; i++) {
@@ -302,6 +303,12 @@ void mfc_put_iovmm(struct mfc_ctx *ctx, struct dpb_table *dpb, int num_planes, i
 
 	dpb[index].mapcnt--;
 	mfc_debug(2, "[IOVMM] index %d mapcnt %d\n", index, dpb[index].mapcnt);
+
+	if (dpb[index].mapcnt != 0) {
+		mfc_err_ctx("[IOVMM] DPB[%d] %#llx invalid mapcnt %d\n",
+				index, dpb[index].addr[0], dpb[index].mapcnt);
+		call_dop(dev, dump_and_stop_debug_mode, dev);
+	}
 }
 
 void mfc_get_iovmm(struct mfc_ctx *ctx, struct vb2_buffer *vb, struct dpb_table *dpb)
@@ -311,6 +318,12 @@ void mfc_get_iovmm(struct mfc_ctx *ctx, struct vb2_buffer *vb, struct dpb_table 
 	int i, mem_get_count = 0;
 	int index = vb->index;
 	int ioprot = IOMMU_READ	| IOMMU_WRITE;
+
+	if (dpb[index].mapcnt != 0) {
+		mfc_err_ctx("[IOVMM] DPB[%d] %#llx invalid mapcnt %d\n",
+				index, dpb[index].addr[0], dpb[index].mapcnt);
+		call_dop(dev, dump_and_stop_debug_mode, dev);
+	}
 
 	for (i = 0; i < ctx->dst_fmt->mem_planes; i++) {
 		mem_get_count++;

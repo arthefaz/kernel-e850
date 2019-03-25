@@ -1488,6 +1488,33 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 	}
 }
 
+static void __mfc_nal_q_handle_released_buf(struct mfc_ctx *ctx, unsigned int released_flag)
+{
+	struct mfc_dec *dec = ctx->dec_priv;
+	int i, reassigned = 0;
+
+	mutex_lock(&dec->dpb_mutex);
+
+	for (i = 0; i < MFC_MAX_DPBS; i++) {
+		if ((released_flag & (1 << i)) && dec->spare_dpb[i].mapcnt) {
+			mfc_debug(2, "[NALQ][IOVMM] dpb[%d] %#llx -> %llx reassigned from spare\n",
+					i, dec->dpb[i].addr[0], dec->spare_dpb[i].addr[0]);
+			MFC_TRACE_CTX("dpb[%d] %#llx -> %llx reassigned\n",
+					i, dec->dpb[i].addr[0], dec->spare_dpb[i].addr[0]);
+			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
+			dec->dpb[i] = dec->spare_dpb[i];
+			mfc_clear_iovmm(ctx, dec->spare_dpb, ctx->dst_fmt->mem_planes, i);
+			reassigned = 1;
+		}
+	}
+
+	/* It is only for debugging */
+	if (reassigned)
+		mfc_print_iovmm(ctx);
+
+	mutex_unlock(&dec->dpb_mutex);
+}
+
 static void __mfc_nal_q_handle_frame_new(struct mfc_ctx *ctx, unsigned int err,
 					DecoderOutputStr *pOutStr)
 {
@@ -1525,6 +1552,9 @@ static void __mfc_nal_q_handle_frame_new(struct mfc_ctx *ctx, unsigned int err,
 
 	mfc_debug(2, "[NALQ][DPB] Used flag: old = %08x, new = %08x, Released buffer = %08x\n",
 			prev_flag, dec->dynamic_used, released_flag);
+
+	/* arrangement of assigned dpb during ISR handling*/
+	__mfc_nal_q_handle_released_buf(ctx, released_flag);
 
 	if ((IS_VC1_RCV_DEC(ctx) &&
 			(disp_err == MFC_REG_ERR_SYNC_POINT_NOT_RECEIVED)) ||
@@ -1598,35 +1628,6 @@ static void __mfc_nal_q_handle_frame_input(struct mfc_ctx *ctx, unsigned int err
 	vb2_buffer_done(&src_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
 }
 
-static void __mfc_nal_q_handle_released_buf(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
-{
-	struct mfc_dec *dec = ctx->dec_priv;
-	unsigned int prev_flag, used_flag, released_flag = 0;
-	int i, reassigned = 0;
-
-	prev_flag = dec->dynamic_used;
-	used_flag = pOutStr->UsedDpbFlagLower;
-	released_flag = prev_flag & (~used_flag);
-
-	mutex_lock(&dec->dpb_mutex);
-
-	for (i = 0; i < MFC_MAX_DPBS; i++) {
-		if ((released_flag & (1 << i)) && dec->spare_dpb[i].mapcnt) {
-			mfc_debug(2, "[NALQ][IOVMM] released buf %d re-assigned\n", i);
-			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
-			dec->dpb[i] = dec->spare_dpb[i];
-			mfc_clear_iovmm(ctx, dec->spare_dpb, ctx->dst_fmt->mem_planes, i);
-			reassigned = 1;
-		}
-	}
-
-	/* It is only for debugging */
-	if (reassigned)
-		mfc_print_iovmm(ctx);
-
-	mutex_unlock(&dec->dpb_mutex);
-}
-
 void __mfc_nal_q_handle_frame(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 {
 	struct mfc_dev *dev = ctx->dev;
@@ -1634,6 +1635,7 @@ void __mfc_nal_q_handle_frame(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 	unsigned int dst_frame_status, sei_avail_status, need_empty_dpb;
 	unsigned int res_change, need_dpb_change, need_scratch_change;
 	unsigned int is_interlaced, err;
+	unsigned int prev_flag, used_flag, released_flag = 0;
 
 	mfc_debug_enter();
 
@@ -1740,7 +1742,11 @@ void __mfc_nal_q_handle_frame(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 		mfc_qos_on(ctx);
 	}
 
-	__mfc_nal_q_handle_released_buf(ctx, pOutStr);
+	/* arrangement of assigned dpb table */
+	prev_flag = dec->dynamic_used;
+	used_flag = pOutStr->UsedDpbFlagLower;
+	released_flag = prev_flag & (~used_flag);
+	__mfc_nal_q_handle_released_buf(ctx, released_flag);
 
 	switch (dst_frame_status) {
 	case MFC_REG_DEC_STATUS_DECODING_DISPLAY:
