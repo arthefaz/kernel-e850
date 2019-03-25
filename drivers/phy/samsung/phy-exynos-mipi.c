@@ -623,11 +623,11 @@ static int __set_phy_cfg_0503_0000_dcphy(void __iomem *regs, int option, u32 *cf
 static int __set_phy_cfg_0503_0001_dphy(void __iomem *regs, int option, u32 *cfg)
 {
 	int i;
-	u32 type = cfg[TYPE] & 0xffff;
-	u32 mode = cfg[TYPE] >> 16;
 	u32 settle_clk_sel = 1;
 	u32 skew_delay_sel = 0;
 	u32 skew_cal_en = 0;
+
+	void __iomem *bias;
 
 	if (cfg[SPEED] >= PHY_REF_SPEED) {
 		settle_clk_sel = 0;
@@ -645,28 +645,28 @@ static int __set_phy_cfg_0503_0001_dphy(void __iomem *regs, int option, u32 *cfg
 			skew_delay_sel = 0;
 	}
 
+	bias = ioremap(0x170D1000, 0x1000);
+
 	/* BIAS_SET */
-	writel(0x00000010, regs + 0x0000); /* M_BIAS_CON0 */
-	writel(0x00000110, regs + 0x0004); /* M_BIAS_CON1 */
-	writel(0x00003223, regs + 0x0008); /* M_BIAS_CON2 */
-	if (mode == 0x000C)
-		writel(0x00000040, regs + 0x0010); /* M1_BIAS_CON4 */
+	writel(0x00000010, bias + 0x0000); /* M_BIAS_CON0 */
+	writel(0x00000110, bias + 0x0004); /* M_BIAS_CON1 */
+	writel(0x00003223, bias + 0x0008); /* M_BIAS_CON2 */
+
+	iounmap(bias);
 
 	/* clock */
+	writel(0x00000001, regs + 0x0000); /* SC_GNR_CON0, Phy clock enable */
 	writel(0x00001450, regs + 0x0004); /* SC_GNR_CON1 */
 	writel(0x00000002, regs + 0x0010); /* SC_ANA_CON2 */
 	writel(0x00000600, regs + 0x0014); /* SC_ANA_CON3 */
-	writel(0x00000000, regs + 0x0030); /* SC_TIME_CON0 */
+	writel(0x00000301, regs + 0x0030); /* SC_TIME_CON0 */
 
 	for (i = 0; i <= cfg[LANES]; i++) {
+		writel(0x00000001, regs + 0x0100 + (i * 0x100)); /* SD_GNR_CON0 , Phy data enable */
 		writel(0x00001450, regs + 0x0104 + (i * 0x100)); /* SD_GNR_CON1 */
 		writel(0x00000002, regs + 0x0110 + (i * 0x100)); /* SD_ANA_CON2 */
 		update_bits(regs + 0x0110 + (i * 0x100), 8, 2, skew_delay_sel); /* SD_ANA_CON2 */
 		writel(0x00000600, regs + 0x0114 + (i * 0x100)); /* SD_ANA_CON3 */
-
-		if ((type == 0xDC) && (i < 3))
-			writel(0x00000040, regs + 0x0124 + (i * 0x100)); /* SD_ANA_CON7 */
-
 		update_bits(regs + 0x0130 + (i * 0x100), 0, 8, cfg[SETTLE]);    /* SD_TIME_CON0 */
 		update_bits(regs + 0x0130 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
 		writel(0x00000003, regs + 0x0134 + (i * 0x100)); /* SD_TIME_CON1 */
@@ -707,7 +707,7 @@ static const struct exynos_mipi_phy_cfg phy_cfg_table[] = {
 		.set = __set_phy_cfg_0502_0003_dphy,
 	},
 	{
-		/* type : Combo(DCphy), mode : Dphy */
+		/* type : Combo(DCphy) or Dphy, mode : Dphy */
 		.major = 0x0503,
 		.minor = 0x0000,
 		.mode = 0xD,
