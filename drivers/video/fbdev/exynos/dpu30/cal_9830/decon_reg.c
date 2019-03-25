@@ -2337,11 +2337,11 @@ int decon_check_global_limitation(struct decon_device *decon,
 	int ret = 0;
 	int i, j;
 	/*
-	 * AXI Port0 : CH0(GF0), CH1(VGRFS)
-	 * AXI Port1 : CH2(GF1), CH3(VGF)
-	 * AXI Port2 : CH4(VG), CH5(VGS)
+	 * AXI Port0 : CH0(GF0), CH5(VGRFS)
+	 * AXI Port1 : CH1(GF1), CH4(VGF)
+	 * AXI Port2 : CH2(VG), CH3(VGS)
 	 */
-	int axi_port[MAX_DECON_WIN] = {1, 0, 3, 2, 5, 4};
+	int axi_port[MAX_DECON_WIN] = {5, 4, 3, 2, 1, 0};
 	const struct dpu_fmt *fmt_info;
 
 	for (i = 0; i < MAX_DECON_WIN; i++) {
