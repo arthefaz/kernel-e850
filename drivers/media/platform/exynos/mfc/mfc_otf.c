@@ -222,15 +222,13 @@ static void __mfc_otf_deinit_hwfc_buf(struct mfc_ctx *ctx)
 static int __mfc_otf_create_handle(struct mfc_ctx *ctx)
 {
 	struct _otf_handle *otf_handle;
-	struct mfc_dev *dev;
-
-	mfc_debug_enter();
 
 	if (!ctx) {
 		mfc_err("[OTF] no mfc context to run\n");
 		return -EINVAL;
 	}
-	dev = ctx->dev;
+
+	mfc_debug_enter();
 
 	ctx->otf_handle = kzalloc(sizeof(*otf_handle), GFP_KERNEL);
 	if (!ctx->otf_handle) {
@@ -246,15 +244,12 @@ static int __mfc_otf_create_handle(struct mfc_ctx *ctx)
 
 static void __mfc_otf_destroy_handle(struct mfc_ctx *ctx)
 {
-	struct mfc_dev *dev;
-
-	mfc_debug_enter();
-
 	if (!ctx) {
 		mfc_err("[OTF] no mfc context to run\n");
 		return;
 	}
-	dev = ctx->dev;
+
+	mfc_debug_enter();
 
 	kfree(ctx->otf_handle);
 	ctx->otf_handle = NULL;
@@ -302,12 +297,13 @@ void mfc_otf_destroy(struct mfc_ctx *ctx)
 {
 	struct mfc_dev *dev;
 
-	mfc_debug_enter();
-
 	if (!ctx) {
 		mfc_err("[OTF] no mfc context to run\n");
 		return;
 	}
+
+	mfc_debug_enter();
+
 	dev = ctx->dev;
 
 	mfc_otf_release_stream_buf(ctx);
@@ -321,15 +317,14 @@ void mfc_otf_destroy(struct mfc_ctx *ctx)
 
 int mfc_otf_init(struct mfc_ctx *ctx)
 {
-	struct mfc_dev *dev = ctx->dev;
 	int ret;
-
-	mfc_debug_dev_enter();
 
 	if (!ctx) {
 		mfc_err("[OTF] no mfc context to run\n");
 		return -EINVAL;
 	}
+
+	mfc_debug_enter();
 
 	if (!ctx->otf_handle) {
 		mfc_err_ctx("[OTF] otf_handle was not created\n");
@@ -344,21 +339,19 @@ int mfc_otf_init(struct mfc_ctx *ctx)
 
 	mfc_debug(2, "[OTF] otf_init is completed\n");
 
-	mfc_debug_dev_leave();
+	mfc_debug_leave();
 
 	return 0;
 }
 
 void mfc_otf_deinit(struct mfc_ctx *ctx)
 {
-	struct mfc_dev *dev;
-	mfc_debug_enter();
-
 	if (!ctx) {
 		mfc_err("[OTF] no mfc context to run\n");
 		return;
 	}
-	dev = ctx->dev;
+
+	mfc_debug_enter();
 
 	__mfc_otf_deinit_hwfc_buf(ctx);
 	mfc_debug(2, "[OTF] deinit_otf is completed\n");

@@ -489,7 +489,7 @@ static int mfc_open(struct file *file)
 		vdev = dev->vfd_enc_otf_drm;
 		break;
 	default:
-		mfc_err_ctx("Invalid node(%d)\n", node);
+		mfc_err_dev("Invalid node(%d)\n", node);
 		break;
 	}
 
