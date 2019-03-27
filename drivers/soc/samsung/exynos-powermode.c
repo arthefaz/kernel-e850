@@ -44,8 +44,10 @@ int exynos_system_idle_enter(void)
 	int ret;
 
 	ret = exynos_prepare_sys_powerdown(SYS_SICD);
-	if (ret)
+	if (ret) {
+		pr_info("failed exynos prepare sys powerdown\n");
 		return ret;
+	}
 
 	exynos_pm_notify(SICD_ENTER);
 

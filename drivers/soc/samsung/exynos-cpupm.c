@@ -32,240 +32,142 @@ static spinlock_t cpupm_lock;
 /******************************************************************************
  *                                  IDLE_IP                                   *
  ******************************************************************************/
-#define PMU_IDLE_IP_BASE		0x03E0
-#define PMU_IDLE_IP_MASK_BASE		0x03F0
-#define PMU_IDLE_IP(x)			(PMU_IDLE_IP_BASE + (x * 0x4))
-#define PMU_IDLE_IP_MASK(x)		(PMU_IDLE_IP_MASK_BASE + (x * 0x4))
+#define PMU_IDLE_IP			0x03E0
 
-#define IDLE_IP_REG_SIZE		32
-#define NUM_IDLE_IP_REG			4
+#define IDLE_IP_MAX			64
+#define FIX_IDLE_IP_MAX			32
 
-static int idle_ip_mask[NUM_IDLE_IP_REG];
+static DEFINE_SPINLOCK(idle_ip_list_lock);
+static DEFINE_SPINLOCK(idle_ip_bit_field_lock);
+static unsigned long long idle_ip_bit_field;
 
-#define IDLE_IP_MAX_INDEX		127
-static int idle_ip_max_index = IDLE_IP_MAX_INDEX;
-
-char *idle_ip_names[NUM_IDLE_IP_REG][IDLE_IP_REG_SIZE];
-
-static int check_idle_ip(int reg_index)
-{
-	unsigned int val, mask;
-	int ret;
-
-	exynos_pmu_read(PMU_IDLE_IP(reg_index), &val);
-	mask = idle_ip_mask[reg_index];
-
-	ret = (val & ~mask) == ~mask ? 0 : -EBUSY;
-	if (ret) {
-		/*
-		 * Profile non-idle IP using idle_ip.
-		 * A bit of idle-ip equals 0, it means non-idle. But then, if
-		 * same bit of idle-ip-mask is 1, PMU does not see this bit.
-		 * To know what IP blocks to enter system power mode, suppose
-		 * below example: (express only 8 bits)
-		 *
-		 * idle-ip  : 1 0 1 1 0 0 1 0
-		 * mask     : 1 1 0 0 1 0 0 1
-		 *
-		 * First, clear masked idle-ip bit.
-		 *
-		 * idle-ip  : 1 0 1 1 0 0 1 0
-		 * ~mask    : 0 0 1 1 0 1 1 0
-		 * -------------------------- (AND)
-		 * idle-ip' : 0 0 1 1 0 0 1 0
-		 *
-		 * In upper case, only idle-ip[2] is not in idle. Calculates
-		 * as follows, then we can get the non-idle IP easily.
-		 *
-		 * idle-ip' : 0 0 1 1 0 0 1 0
-		 * ~mask    : 0 0 1 1 0 1 1 0
-		 *--------------------------- (XOR)
-		 *            0 0 0 0 0 1 0 0
-		 */
-#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
-		cpuidle_profile_idle_ip(reg_index, ((val & ~mask) ^ ~mask));
-#endif
-	}
-
-	return ret;
-}
-
-static void set_idle_ip_mask(void)
-{
-	int i;
-
-	for (i = 0; i < NUM_IDLE_IP_REG; i++)
-		exynos_pmu_write(PMU_IDLE_IP_MASK(i), idle_ip_mask[i]);
-}
-
-static void clear_idle_ip_mask(void)
-{
-	int i;
-
-	for (i = 0; i < NUM_IDLE_IP_REG; i++)
-		exynos_pmu_write(PMU_IDLE_IP_MASK(i), 0);
-}
-
-/**
- * There are 4 IDLE_IP registers in PMU, IDLE_IP therefore supports 128 index,
- * 0 from 127. To access the IDLE_IP register, convert_idle_ip_index() converts
- * idle_ip index to register index and bit in regster. For example, idle_ip index
- * 33 converts to IDLE_IP1[1]. convert_idle_ip_index() returns register index
- * and ships bit in register to *ip_index.
+/*
+ * list head of idle-ip
  */
-static int convert_idle_ip_index(int *ip_index)
+LIST_HEAD(idle_ip_list);
+
+static int fix_idle_ip_max;
+
+/*
+ * array of fix-idle-ip
+ */
+struct fix_idle_ip fix_idle_ip_arr[FIX_IDLE_IP_MAX];
+
+static int get_index_last_entry(struct list_head *head)
 {
-	int reg_index;
+	struct idle_ip *ip;
 
-	reg_index = *ip_index / IDLE_IP_REG_SIZE;
-	*ip_index = *ip_index % IDLE_IP_REG_SIZE;
+	if (list_empty(head))
+		return -1;
 
-	return reg_index;
+	ip = list_last_entry(head, struct idle_ip, list);
+
+	return ip->index;
 }
 
-static int idle_ip_index_available(int ip_index)
+static bool check_idle_ip(void)
 {
-	struct device_node *dn = of_find_node_by_path("/cpupm/idle-ip");
-	int proplen;
-	int ref_idle_ip[IDLE_IP_MAX_INDEX];
-	int i;
+	unsigned long flags;
 
-	proplen = of_property_count_u32_elems(dn, "idle-ip-mask");
+	spin_lock_irqsave(&idle_ip_bit_field_lock, flags);
 
-	if (proplen <= 0)
-		return false;
+	if (idle_ip_bit_field) {
+#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
+		cpuidle_profile_idle_ip(idle_ip_bit_field);
+#endif
+		spin_unlock_irqrestore(&idle_ip_bit_field_lock, flags);
 
-	if (!of_property_read_u32_array(dn, "idle-ip-mask",
-					ref_idle_ip, proplen)) {
-		for (i = 0; i < proplen; i++)
-			if (ip_index == ref_idle_ip[i])
-				return true;
+		return true;
+	}
+	spin_unlock_irqrestore(&idle_ip_bit_field_lock, flags);
+
+	return false;
+}
+
+static bool check_fix_idle_ip(void)
+{
+	unsigned int val;
+
+	exynos_pmu_read(PMU_IDLE_IP, &val);
+	/*
+	 * Up to 32 fix-idle-ip are supported.
+	 * HW register value is
+	 * 			== 0, it means non-idle.
+	 * 			== 1, it means idle.
+	 */
+	val = ~val << (32 - fix_idle_ip_max);
+	if (val) {
+#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
+		cpuidle_profile_fix_idle_ip(val, fix_idle_ip_max);
+#endif
+
+		return true;
 	}
 
 	return false;
 }
 
-static DEFINE_SPINLOCK(idle_ip_mask_lock);
-static void unmask_idle_ip(int ip_index)
+/*
+ * @ip_index: index of idle-ip
+ * @idle: idle status, (idle == 0)non-idle or (idle == 1)idle
+ */
+void exynos_update_ip_idle_status(int ip_index, int idle)
 {
-	int reg_index;
 	unsigned long flags;
+	unsigned long long val = 1;
 
-	if (!idle_ip_index_available(ip_index))
+	if (ip_index < 0 || ip_index > get_index_last_entry(&idle_ip_list))
 		return;
 
-	reg_index = convert_idle_ip_index(&ip_index);
+	spin_lock_irqsave(&idle_ip_bit_field_lock, flags);
 
-	spin_lock_irqsave(&idle_ip_mask_lock, flags);
-	idle_ip_mask[reg_index] &= ~(0x1 << ip_index);
-	spin_unlock_irqrestore(&idle_ip_mask_lock, flags);
+	if (idle)
+		idle_ip_bit_field &= ~(val << ip_index);
+	else
+		idle_ip_bit_field |= (val << ip_index);
+
+	spin_unlock_irqrestore(&idle_ip_bit_field_lock, flags);
 }
 
 int exynos_get_idle_ip_index(const char *ip_name)
 {
-	struct device_node *dn = of_find_node_by_path("/cpupm/idle-ip");
-	int ip_index;
-
-	ip_index = of_property_match_string(dn, "idle-ip-list", ip_name);
-	if (ip_index < 0) {
-		pr_err("%s: Fail to find %s in idle-ip list with err %d\n",
-					__func__, ip_name, ip_index);
-		return ip_index;
-	}
-
-	if (ip_index > idle_ip_max_index) {
-		pr_err("%s: %s index %d is out of range\n",
-					__func__, ip_name, ip_index);
-		return -EINVAL;
-	}
-
-	/**
-	 * If it successes to find IP in idle_ip list, we set
-	 * corresponding bit in idle_ip mask.
-	 */
-	unmask_idle_ip(ip_index);
-
-	return ip_index;
-}
-
-static DEFINE_SPINLOCK(ip_idle_lock);
-void exynos_update_ip_idle_status(int ip_index, int idle)
-{
+	struct idle_ip *ip;
+	int ip_index = get_index_last_entry(&idle_ip_list) + 1;
 	unsigned long flags;
-	int reg_index;
 
-	if (ip_index < 0 || ip_index > idle_ip_max_index)
-		return;
-
-	reg_index = convert_idle_ip_index(&ip_index);
-
-	spin_lock_irqsave(&ip_idle_lock, flags);
-	exynos_pmu_update(PMU_IDLE_IP(reg_index),
-				1 << ip_index, idle << ip_index);
-	spin_unlock_irqrestore(&ip_idle_lock, flags);
-
-	return;
-}
-
-static void __init init_idle_ip_names(struct device_node *dn)
-{
-	int size;
-	const char *list[IDLE_IP_MAX_INDEX];
-	int i, bit, reg_index;
-
-	size = of_property_count_strings(dn, "idle-ip-list");
-	if (size < 0)
-		return;
-
-	of_property_read_string_array(dn, "idle-ip-list", list, size);
-	for (i = 0, bit = 0; i < size; i++, bit = i) {
-		reg_index = convert_idle_ip_index(&bit);
-		idle_ip_names[reg_index][bit] = (char *)list[i];
+	if (ip_index >= IDLE_IP_MAX) {
+		pr_err("Up to 64 idle-ip can be supported[failed %s].", ip_name);
+		return -1;
 	}
 
-	size = of_property_count_strings(dn, "fix-idle-ip");
-	if (size < 0)
-		return;
+	ip = kzalloc(sizeof(struct idle_ip), GFP_KERNEL);
+	ip->name = ip_name;
+	ip->index = ip_index;
 
-	of_property_read_string_array(dn, "fix-idle-ip", list, size);
-	for (i = 0; i < size; i++) {
-		if (!of_property_read_u32_index(dn, "fix-idle-ip-index", i, &bit)) {
-			reg_index = convert_idle_ip_index(&bit);
-			idle_ip_names[reg_index][bit] = (char *)list[i];
-		}
-	}
+	spin_lock_irqsave(&idle_ip_list_lock, flags);
+	list_add_tail(&ip->list, &idle_ip_list);
+	spin_unlock_irqrestore(&idle_ip_list_lock, flags);
+
+	exynos_update_ip_idle_status(ip->index, 0);
+
+	return ip->index;
 }
 
-static void __init idle_ip_init(void)
+static void __init fix_idle_ip_init(void)
 {
 	struct device_node *dn = of_find_node_by_path("/cpupm/idle-ip");
-	int index, count, i;
+	int i;
+	const char *ip_name;
 
-	for (i = 0; i < NUM_IDLE_IP_REG; i++)
-		idle_ip_mask[i] = 0xFFFFFFFF;
-
-	init_idle_ip_names(dn);
-
-	/*
-	 * To unmask fixed idle-ip, fix-idle-ip and fix-idle-ip-index,
-	 * both properties must be existed and size must be same.
-	 */
-	if (!of_find_property(dn, "fix-idle-ip", NULL)
-			|| !of_find_property(dn, "fix-idle-ip-index", NULL))
+	fix_idle_ip_max = of_property_count_strings(dn, "fix-idle-ip");
+	if (fix_idle_ip_max < 0 || fix_idle_ip_max > FIX_IDLE_IP_MAX)
 		return;
 
-	count = of_property_count_strings(dn, "fix-idle-ip");
-	if (count != of_property_count_u32_elems(dn, "fix-idle-ip-index")) {
-		pr_err("Mismatch between fih-idle-ip and fix-idle-ip-index\n");
-		return;
+	for (i = 0; i < fix_idle_ip_max; i++) {
+		of_property_read_string_index(dn, "fix-idle-ip", i, &ip_name);
+		fix_idle_ip_arr[i].name = ip_name;
+		fix_idle_ip_arr[i].reg_index = i;
 	}
-
-	for (i = 0; i < count; i++) {
-		of_property_read_u32_index(dn, "fix-idle-ip-index", i, &index);
-		unmask_idle_ip(index);
-	}
-
-	idle_ip_max_index -= count;
 }
 #endif
 
@@ -533,15 +435,15 @@ static int cpus_last_core_detecting(int request_cpu, const struct cpumask *cpus)
 static int initcall_done;
 static int system_busy(void)
 {
-	int i;
-
 	/* do not allow system idle util initialization time */
 	if (!initcall_done)
 		return 1;
 
-	for (i = 0; i < NUM_IDLE_IP_REG; i++)
-		if (check_idle_ip(i))
-			return 1;
+	if (check_idle_ip())
+		return 1;
+
+	if (check_fix_idle_ip())
+		return 1;
 
 	return 0;
 }
@@ -596,8 +498,6 @@ static int try_to_enter_power_mode(int cpu, struct power_mode *mode)
 	case POWERMODE_TYPE_SYSTEM:
 		if (unlikely(exynos_system_idle_enter()))
 			return 0;
-
-		set_idle_ip_mask();
 		break;
 	}
 
@@ -630,7 +530,6 @@ static void exit_mode(int cpu, struct power_mode *mode, int cancel)
 		break;
 	case POWERMODE_TYPE_SYSTEM:
 		exynos_system_idle_exit(cancel);
-		clear_idle_ip_mask();
 		break;
 	}
 }
@@ -877,7 +776,7 @@ static int __init exynos_cpupm_init(void)
 
 	spin_lock_init(&cpupm_lock);
 
-	idle_ip_init();
+	fix_idle_ip_init();
 
 	cpupm_initialized = 1;
 

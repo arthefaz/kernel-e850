@@ -14,6 +14,8 @@
 #include <linux/slab.h>
 #include <soc/samsung/exynos_perf_cpuidle.h>
 
+#include <soc/samsung/exynos-cpupm.h>
+
 /* whether profiling has started */
 static bool profile_started;
 
@@ -178,9 +180,10 @@ static s64 profile_time;
 /* start time of profile */
 static ktime_t profile_start_time;
 
-/* idle ip */
-static int idle_ip_stats[4][32];
-extern char *idle_ip_names[4][32];
+/* idle-ip */
+#define FIX_IDLE_IP_MAX			32
+extern struct list_head idle_ip_list;
+extern struct fix_idle_ip fix_idle_ip_arr[];
 
 static void clear_stats(struct cpuidle_stats *stats)
 {
@@ -196,6 +199,7 @@ static void clear_stats(struct cpuidle_stats *stats)
 
 static void reset_profile(void)
 {
+	struct idle_ip *ip;
 	int cpu, i;
 
 	profile_start_time = 0;
@@ -207,7 +211,12 @@ static void reset_profile(void)
 	for (i = 0; i < group_idle_state_count; i++)
 		clear_stats(&group_idle_state[i]->stats);
 
-	memset(idle_ip_stats, 0, sizeof(idle_ip_stats));
+	/* Initialize idle-ip count */
+	for (i = 0; i < FIX_IDLE_IP_MAX; i++)
+		fix_idle_ip_arr[i].count = 0;
+
+	list_for_each_entry(ip, &idle_ip_list, list)
+		ip->count = 0;
 }
 
 static void do_nothing(void *unused)
@@ -260,9 +269,10 @@ static void cpuidle_profile_stop(void)
 /************************************************************************
  *                               IDLE IP                                *
  ************************************************************************/
-void cpuidle_profile_idle_ip(int index, unsigned int idle_ip)
+void cpuidle_profile_idle_ip(unsigned long long val)
 {
-	int i;
+	struct idle_ip *ip;
+	int i = 0;
 
 	/*
 	 * Return if profile is not started
@@ -270,14 +280,34 @@ void cpuidle_profile_idle_ip(int index, unsigned int idle_ip)
 	if (!profile_started)
 		return;
 
-	for (i = 0; i < 32; i++) {
+	list_for_each_entry(ip, &idle_ip_list, list) {
 		/*
-		 * If bit of idle_ip has 1, IP corresponding to its bit
-		 * is not idle.
+		 * Profile non-idle IP using @val
+		 *
+		 * A bit of val is
+		 *                      == 0, it means idle.
+		 *                      == 1, it means non-idle.
+		 * So, profiler only count IP with a bit value of 1.
 		 */
-		if (idle_ip & (1 << i))
-			idle_ip_stats[index][i]++;
+		if (val & (0x1 << i++))
+			ip->count++;
 	}
+}
+
+void cpuidle_profile_fix_idle_ip(unsigned int fix_idle_ip, int max_index)
+{
+	int i;
+	unsigned int val = 1;
+
+	/*
+	 * Return if profile is not started
+	 */
+	if (!profile_started)
+		return;
+
+	for (i = 0; i < max_index; i++)
+		if (fix_idle_ip & val << i)
+			fix_idle_ip_arr[i].count++;
 }
 
 /************************************************************************
@@ -314,8 +344,9 @@ static ssize_t show_result(struct device *kobj,
 				     struct device_attribute *attr,
 				     char *buf)
 {
+	struct idle_ip *ip;
 	int ret = 0;
-	int cpu, i, bit;
+	int cpu, i;
 
 	if (profile_started) {
 		ret += snprintf(buf + ret, PAGE_SIZE - ret,
@@ -407,16 +438,19 @@ static ssize_t show_result(struct device *kobj,
 	}
 
 	ret += snprintf(buf + ret, PAGE_SIZE - ret, "[IDLE-IP statistics]\n");
-	for (i = 0; i < 4; i++) {
-		for (bit = 0; bit < 32; bit++) {
-			if (!idle_ip_stats[i][bit])
-				continue;
 
+	/* fix-idle-ip */
+	for (i = 0; i < FIX_IDLE_IP_MAX; i++)
+		if (fix_idle_ip_arr[i].count)
 			ret += snprintf(buf + ret, PAGE_SIZE - ret,
-				"busy IP : %s(count = %d)\n",
-				idle_ip_names[i][bit], idle_ip_stats[i][bit]);
-		}
-	}
+					"busy IP : %s(count = %d)\n",
+					fix_idle_ip_arr[i].name, fix_idle_ip_arr[i].count);
+	/* idle-ip */
+	list_for_each_entry(ip, &idle_ip_list, list)
+		if (ip->count)
+			ret += snprintf(buf + ret, PAGE_SIZE - ret,
+					"busy IP : %s(count = %d)\n",
+					ip->name, ip->count);
 
 	ret += snprintf(buf + ret, PAGE_SIZE - ret,
 		"#############################################################\n");

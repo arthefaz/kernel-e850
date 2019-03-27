@@ -20,6 +20,7 @@ extern void cpuidle_profile_cpu_idle_register(struct cpuidle_driver *drv);
 extern void cpuidle_profile_group_idle_enter(int id);
 extern void cpuidle_profile_group_idle_exit(int id, int cancel);
 extern void cpuidle_profile_group_idle_register(int id, const char *name);
-extern void cpuidle_profile_idle_ip(int index, unsigned int idle_ip);
+extern void cpuidle_profile_idle_ip(unsigned long long val);
+extern void cpuidle_profile_fix_idle_ip(unsigned int fix_idle_ip, int max_index);
 
 #endif /* CPUIDLE_PROFILE_H */

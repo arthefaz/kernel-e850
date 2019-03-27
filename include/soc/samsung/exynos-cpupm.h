@@ -17,8 +17,6 @@ enum {
 	POWERMODE_TYPE_SYSTEM,
 };
 
-//extern void disable_power_mode(int cpu, int type);
-//extern void enable_power_mode(int cpu, int type);
 extern bool exynos_cpuhp_last_cpu(unsigned int cpu);
 
 #ifdef CONFIG_CPU_IDLE
@@ -26,6 +24,26 @@ void exynos_update_ip_idle_status(int index, int idle);
 int exynos_get_idle_ip_index(const char *name);
 extern void disable_power_mode(int cpu, int type);
 extern void enable_power_mode(int cpu, int type);
+
+struct fix_idle_ip {
+	/* name of fix-idle-ip */
+	const char		*name;
+	/* register index of fix-idle-ip */
+	unsigned int		reg_index;
+	/* non-idle count for cpuidle-profiler */
+	unsigned int		count;
+};
+
+struct idle_ip {
+	/* list of idle-ip */
+	struct list_head	list;
+	/* name of idle-ip */
+	const char		*name;
+	/* identity of idle-ip */
+	unsigned int		index;
+	/* non-idle count for cpuidle-profiler */
+	unsigned int		count;
+};
 #else
 static inline void exynos_update_ip_idle_status(int index, int idle)
 {
