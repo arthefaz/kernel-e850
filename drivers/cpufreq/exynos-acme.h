@@ -10,6 +10,17 @@
 
 #include <linux/pm_qos.h>
 #include <soc/samsung/exynos-dm.h>
+#include <linux/timer.h>
+
+#define DEFAULT_EXPIRED_TIME 70
+
+struct exynos_slack_timer {
+	/* for slack timer */
+	unsigned long min;
+	int enabled;
+	int expired_time;
+	struct timer_list timer;
+};
 
 struct exynos_cpufreq_dm {
 	struct list_head		list;

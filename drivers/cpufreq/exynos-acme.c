@@ -16,12 +16,16 @@
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
 #include <linux/cpufreq.h>
+#include <linux/cpu_pm.h>
+#include <linux/tick.h>
 #include <linux/debug-snapshot.h>
 #include <linux/pm_opp.h>
 #include <linux/cpu_cooling.h>
 #include <linux/suspend.h>
 #include <linux/ems.h>
 #include <linux/ems_service.h>
+
+#include <trace/events/power.h>
 
 #include <soc/samsung/cal-if.h>
 #include <soc/samsung/ect_parser.h>
@@ -41,9 +45,66 @@ LIST_HEAD(domains);
  */
 LIST_HEAD(ready_list);
 
+/* slack timer per cpu */
+static DEFINE_PER_CPU(struct exynos_slack_timer, exynos_slack_timer);
+
 /*********************************************************************
  *                          HELPER FUNCTION                          *
  *********************************************************************/
+
+static void slack_update_min(struct cpufreq_policy *policy)
+{
+	unsigned int cpu;
+	unsigned long max_cap, min_cap;
+	struct exynos_slack_timer *slack_timer;
+
+	max_cap = arch_scale_cpu_capacity(NULL, policy->cpu);
+
+	/* min_cap is minimum value making higher frequency than policy->min */
+	min_cap = (max_cap * policy->min) / policy->max;
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL
+	min_cap = (min_cap * 4 / 5) + 1;
+#endif
+	for_each_cpu(cpu, policy->cpus) {
+		slack_timer = &per_cpu(exynos_slack_timer, cpu);
+		slack_timer->min = min_cap;
+	}
+}
+
+static s64 get_next_event_time_ms(unsigned int cpu)
+{
+	return ktime_to_us(ktime_sub(*(get_next_event_cpu(cpu)), ktime_get()));
+}
+
+static int need_slack_timer(unsigned int cpu)
+{
+	struct exynos_slack_timer *slack_timer = &per_cpu(exynos_slack_timer, cpu);
+	unsigned long util = cpufreq_governor_get_util(cpu);
+
+	if ((util > slack_timer->min) &&
+		(get_next_event_time_ms(cpu) > slack_timer->expired_time))
+		return 1;
+
+	return 0;
+}
+
+static void slack_nop_timer(struct timer_list *timer)
+{
+	/*
+	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
+	 * to decrease its frequency if it is not set to minimum already.
+	 *
+	 * This is important for platforms where CPU with higher frequencies
+	 * consume higher power even at IDLE.
+	 */
+	trace_exynos_slack_func(smp_processor_id());
+}
+
+struct list_head *get_domain_list(void)
+{
+	return &domains;
+}
+
 static struct exynos_cpufreq_domain *find_domain(unsigned int cpu)
 {
 	struct exynos_cpufreq_domain *domain;
@@ -677,6 +738,55 @@ static int exynos_cpufreq_pm_qos_callback(struct notifier_block *nb,
 /*********************************************************************
  *                       EXTERNAL EVENT HANDLER                      *
  *********************************************************************/
+
+static int exynos_cpufreq_cpu_pm_callback(struct notifier_block *nb,
+						unsigned long event, void *v)
+{
+	unsigned int cpu = raw_smp_processor_id();
+	unsigned long util = cpufreq_governor_get_util(cpu);
+	struct exynos_slack_timer *slack_timer = &per_cpu(exynos_slack_timer, cpu);
+	struct timer_list *timer = &slack_timer->timer;
+
+	if (!slack_timer->enabled)
+		return NOTIFY_OK;
+
+	switch (event) {
+	case CPU_PM_ENTER_PREPARE:
+		if (timer_pending(timer))
+			del_timer_sync(timer);
+
+		if (need_slack_timer(cpu)) {
+			timer->expires = jiffies + msecs_to_jiffies(slack_timer->expired_time);
+			add_timer_on(timer, cpu);
+
+			trace_exynos_slack(cpu, util, slack_timer->min, event, 1);
+		}
+		break;
+
+	case CPU_PM_ENTER:
+		if (timer_pending(timer) && !need_slack_timer(cpu)) {
+			del_timer_sync(timer);
+
+			trace_exynos_slack(cpu, util, slack_timer->min, event, -1);
+		}
+		break;
+
+	case CPU_PM_EXIT_POST:
+		if (timer_pending(timer)) {
+			del_timer_sync(timer);
+
+			trace_exynos_slack(cpu, util, slack_timer->min, event, -1);
+		}
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block exynos_cpufreq_cpu_pm_notifier = {
+	.notifier_call = exynos_cpufreq_cpu_pm_callback,
+};
+
 static int exynos_cpufreq_policy_callback(struct notifier_block *nb,
 				unsigned long event, void *data)
 {
@@ -689,6 +799,9 @@ static int exynos_cpufreq_policy_callback(struct notifier_block *nb,
 	switch (event) {
 	case CPUFREQ_NOTIFY:
 		arch_set_freq_scale(&domain->cpus, domain->old, policy->max);
+
+		/* update min capacity for slack timer */
+		slack_update_min(policy);
 		break;
 	}
 
@@ -1452,6 +1565,38 @@ static int init_dm(struct exynos_cpufreq_domain *domain,
 	return register_exynos_dm_freq_scaler(domain->dm_type, dm_scaler);
 }
 
+static __init int init_slack_timer(struct exynos_cpufreq_domain *domain,
+		struct device_node *dn)
+{
+	int cpu;
+	struct device_node *timer_node = NULL;
+
+	timer_node = of_find_node_by_type(dn, "slack-timer-domain");
+	if (!timer_node)
+		return -EINVAL;
+
+	for_each_cpu(cpu, &domain->cpus) {
+		struct exynos_slack_timer *slack_timer =
+			&per_cpu(exynos_slack_timer, cpu);
+
+		/* parsing slack info */
+		if (of_property_read_u32(timer_node, "enabled", &slack_timer->enabled))
+			return -EINVAL;
+
+		if (slack_timer->enabled) {
+			if (of_property_read_u32(timer_node, "expired_time", &slack_timer->expired_time))
+				slack_timer->expired_time = DEFAULT_EXPIRED_TIME;
+
+			slack_timer->min = ULONG_MAX;
+
+			/* Initialize slack-timer */
+			timer_setup(&slack_timer->timer, slack_nop_timer, TIMER_PINNED);
+		}
+	}
+	pr_info("Success: Initialize Slack Timer");
+	return 0;
+}
+
 static __init int init_domain(struct exynos_cpufreq_domain *domain,
 					struct device_node *dn)
 {
@@ -1492,6 +1637,11 @@ static __init int init_domain(struct exynos_cpufreq_domain *domain,
 
 	domain->boot_freq = cal_dfs_get_boot_freq(domain->cal_id);
 	domain->resume_freq = cal_dfs_get_resume_freq(domain->cal_id);
+
+	/* Initialize slack timer */
+	ret = init_slack_timer(domain, dn);
+	if (ret)
+		return ret;
 
 	ret = init_table(domain);
 	if (ret)
@@ -1674,6 +1824,8 @@ static int __init exynos_cpufreq_init(void)
 
 	cpufreq_register_notifier(&exynos_cpufreq_policy_notifier,
 					CPUFREQ_POLICY_NOTIFIER);
+
+	cpu_pm_register_notifier(&exynos_cpufreq_cpu_pm_notifier);
 
 	cpuhp_setup_state_nocalls(CPUHP_AP_EXYNOS_ACME,
 					"exynos:acme",

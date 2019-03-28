@@ -719,6 +719,18 @@ static struct cpufreq_governor schedutil_gov = {
 };
 
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL
+unsigned long cpufreq_governor_get_util(unsigned int cpu)
+{
+	struct sugov_cpu *sg_cpu = &per_cpu(sugov_cpu, cpu);
+	unsigned long util, max;
+	if (!sg_cpu)
+		return 0;
+
+	sugov_get_util(&util, &max, sg_cpu->cpu);
+
+	return util;
+}
+
 struct cpufreq_governor *cpufreq_default_governor(void)
 {
 	return &schedutil_gov;

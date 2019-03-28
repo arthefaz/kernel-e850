@@ -1011,6 +1011,10 @@ static int cpufreq_add_dev_interface(struct cpufreq_policy *policy)
 
 	return 0;
 }
+__weak unsigned long cpufreq_governor_get_util(unsigned int cpu)
+{
+	return 0;
+}
 
 __weak struct cpufreq_governor *cpufreq_default_governor(void)
 {
