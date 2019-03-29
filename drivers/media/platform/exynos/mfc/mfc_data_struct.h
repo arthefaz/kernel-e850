@@ -1374,6 +1374,8 @@ struct dpb_table {
 	dma_addr_t addr[MFC_MAX_PLANES];
 	int fd[MFC_MAX_PLANES];
 	int mapcnt;
+	int ref;
+	int queued;
 	struct dma_buf *dmabufs[MFC_MAX_PLANES];
 	struct dma_buf_attachment *attach[MFC_MAX_PLANES];
 };
@@ -1415,6 +1417,7 @@ struct mfc_dec {
 	int is_dynamic_dpb;
 	int is_dpb_full;
 	unsigned long available_dpb;
+	unsigned long queued_dpb;
 	unsigned int dynamic_set;
 	unsigned int dynamic_used;
 

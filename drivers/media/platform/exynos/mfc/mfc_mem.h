@@ -40,11 +40,17 @@ static inline void mfc_print_dpb_table(struct mfc_ctx *ctx)
 	struct mfc_dec *dec = ctx->dec_priv;
 	int i;
 
+	mfc_debug(2, "[DPB] dynamic_used = %#x, queued = %#lx\n", dec->dynamic_used, dec->queued_dpb);
 	for (i = 0; i < MFC_MAX_DPBS; i++)
-		mfc_debug(3, "[IOVMM][%d] dpb %#llx %#llx (%d), spare %#llx %#llx (%d)\n",
+		mfc_debug(2, "[DPB][%d] org %#llx %#llx (%s, %s, %s) / spare %#llx %#llx (%s, %s, %s)\n",
 				i, dec->dpb[i].addr[0], dec->dpb[i].addr[1],
-				dec->dpb[i].mapcnt, dec->spare_dpb[i].addr[0],
-				dec->spare_dpb[i].addr[1], dec->spare_dpb[i].mapcnt);
+				dec->dpb[i].mapcnt ? "map" : "unmap",
+				dec->dpb[i].ref ? "ref" : "free",
+				dec->dpb[i].queued ? "Q" : "DQ",
+				dec->spare_dpb[i].addr[0], dec->spare_dpb[i].addr[1],
+				dec->spare_dpb[i].mapcnt ? "map" : "unmap",
+				dec->spare_dpb[i].ref ? "ref" : "free",
+				dec->spare_dpb[i].queued ? "Q" : "DQ");
 }
 
 struct vb2_mem_ops *mfc_mem_ops(void);

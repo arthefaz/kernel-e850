@@ -310,9 +310,10 @@ static void __mfc_dec_dst_stop_streaming(struct mfc_ctx *ctx)
 	struct mfc_dec *dec = ctx->dec_priv;
 	int index = 0;
 
-	mfc_cleanup_iovmm(ctx);
 	mfc_cleanup_queue(&ctx->buf_queue_lock, &ctx->dst_buf_queue);
+	mfc_cleanup_iovmm(ctx);
 
+	dec->queued_dpb = 0;
 	dec->dynamic_used = 0;
 	ctx->is_dpb_realloc = 0;
 	dec->available_dpb = 0;

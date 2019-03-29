@@ -159,6 +159,7 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	dec->is_dynamic_dpb = 1;
 	dec->dynamic_used = 0;
 	dec->is_dpb_full = 0;
+	dec->queued_dpb = 0;
 	mutex_init(&dec->dpb_mutex);
 
 	/* sh_handle: HDR10+ HEVC SEI meta */

@@ -378,8 +378,8 @@ void mfc_cmd_dec_one_frame(struct mfc_ctx *ctx, int last_frame)
 	struct mfc_dec *dec = ctx->dec_priv;
 	u32 reg = 0;
 
-	mfc_debug(2, "[DPB] Dynamic:0x%08x, Available:0x%lx\n",
-			dec->dynamic_set, dec->available_dpb);
+	mfc_debug(2, "[DPB] set dpb: %#x, used: %#x, available: %#lx\n",
+			dec->dynamic_set, dec->dynamic_used, dec->available_dpb);
 
 	reg = MFC_READL(MFC_REG_D_NAL_START_OPTIONS);
 	reg &= ~(0x1 << MFC_REG_D_NAL_START_OPT_BLACK_BAR_SHIFT);

@@ -23,6 +23,7 @@
 #include "mfc_reg_api.h"
 #include "mfc_hw_reg_api.h"
 
+#include "mfc_mem.h"
 #include "mfc_queue.h"
 #include "mfc_utils.h"
 
@@ -584,38 +585,28 @@ static void __mfc_dump_struct(struct mfc_dev *dev, int curr_ctx)
 	}
 }
 
-static void __mfc_dump_dpb_table(struct mfc_dev *dev, int curr_ctx)
+static void __mfc_dump_dpb(struct mfc_dev *dev, int curr_ctx)
 {
 	struct mfc_ctx *ctx = dev->ctx[curr_ctx];
 	struct mfc_dec *dec = ctx->dec_priv;
 	struct mfc_buf *mfc_buf = NULL;
-	int i, j, k, l;
+	int i;
 
-	if (ctx->type != MFCINST_DECODER || ctx->dec_priv == NULL)
+	if (ctx->type != MFCINST_DECODER || dec == NULL)
 		return;
 
 	dev_err(dev->device, "-----------dumping MFC DPB table-----------\n");
-
-	for (i = 0; i < MFC_MAX_DPBS; i+=4) {
-		j = i + 1;
-		k = i + 2;
-		l = i + 3;
-		dev_err(dev->device, "dpb [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d)\n",
-				i, dec->dpb[i].addr[0], dec->dpb[i].addr[1], dec->dpb[i].mapcnt,
-				j, dec->dpb[j].addr[0], dec->dpb[j].addr[1], dec->dpb[j].mapcnt,
-				k, dec->dpb[k].addr[0], dec->dpb[k].addr[1], dec->dpb[k].mapcnt,
-				l, dec->dpb[l].addr[0], dec->dpb[l].addr[1], dec->dpb[l].mapcnt);
-	}
-	for (i = 0; i < MFC_MAX_DPBS; i+=4) {
-		j = i + 1;
-		k = i + 2;
-		l = i + 3;
-		dev_err(dev->device, "spare dpb [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d), [%d]%#llx-%#llx(%d)\n",
-				i, dec->spare_dpb[i].addr[0], dec->spare_dpb[i].addr[1], dec->spare_dpb[i].mapcnt,
-				j, dec->spare_dpb[j].addr[0], dec->spare_dpb[j].addr[1], dec->spare_dpb[j].mapcnt,
-				k, dec->spare_dpb[k].addr[0], dec->spare_dpb[k].addr[1], dec->spare_dpb[k].mapcnt,
-				l, dec->spare_dpb[l].addr[0], dec->spare_dpb[l].addr[1], dec->spare_dpb[l].mapcnt);
-	}
+	dev_err(dev->device, "used: %#x, queued = %#lx\n", dec->dynamic_used, dec->queued_dpb);
+	for (i = 0; i < MFC_MAX_DPBS; i++)
+		dev_err(dev->device, "[%d] dpb %#llx %#llx (%s, %s, %s) / spare %#llx %#llx (%s, %s, %s)\n",
+				i, dec->dpb[i].addr[0], dec->dpb[i].addr[1],
+				dec->dpb[i].mapcnt ? "map" : "unmap",
+				dec->dpb[i].ref ? "ref" : "free",
+				dec->dpb[i].queued ? "Q" : "DQ",
+				dec->spare_dpb[i].addr[0], dec->spare_dpb[i].addr[1],
+				dec->spare_dpb[i].mapcnt ? "map" : "unmap",
+				dec->spare_dpb[i].ref ? "ref" : "free",
+				dec->spare_dpb[i].queued ? "Q" : "DQ");
 
 	if (!list_empty(&ctx->dst_buf_queue.head))
 		list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list)
@@ -650,7 +641,7 @@ static void __mfc_dump_info_without_regs(struct mfc_dev *dev)
 	if (curr_ctx < 0)
 		return;
 
-	__mfc_dump_dpb_table(dev, curr_ctx);
+	__mfc_dump_dpb(dev, curr_ctx);
 	__mfc_dump_struct(dev, curr_ctx);
 }
 

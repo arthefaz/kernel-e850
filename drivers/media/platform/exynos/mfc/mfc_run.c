@@ -374,7 +374,7 @@ int mfc_run_dec_frame(struct mfc_ctx *ctx)
 		mfc_set_dec_stream_buffer(ctx, src_mb, 0, src_mb->vb.vb2_buf.planes[0].bytesused);
 
 	/* Try to use the non-referenced DPB on dst-queue */
-	dst_mb = mfc_search_for_dpb(ctx, dec->dynamic_used);
+	dst_mb = mfc_search_for_dpb(ctx);
 	if (!dst_mb) {
 		mfc_debug(2, "[DPB] couldn't find dst buffers\n");
 		return -EAGAIN;
@@ -419,7 +419,7 @@ int mfc_run_dec_last_frames(struct mfc_ctx *ctx)
 	}
 
 	/* Try to use the non-referenced DPB on dst-queue */
-	dst_mb = mfc_search_for_dpb(ctx, dec->dynamic_used);
+	dst_mb = mfc_search_for_dpb(ctx);
 	if (!dst_mb) {
 		mfc_debug(2, "[DPB] couldn't find dst buffers\n");
 		return -EAGAIN;

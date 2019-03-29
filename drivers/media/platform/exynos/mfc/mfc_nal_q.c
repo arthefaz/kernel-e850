@@ -918,7 +918,7 @@ static int __mfc_nal_q_run_in_buf_dec(struct mfc_ctx *ctx, DecoderInputStr *pInS
 	pInStr->NalStartOptions = 0;
 
 	/* Try to use the non-referenced DPB on dst-queue */
-	dst_mb = mfc_search_move_dpb_nal_q(ctx, dec->dynamic_used);
+	dst_mb = mfc_search_move_dpb_nal_q(ctx);
 	if (!dst_mb) {
 		mfc_debug(2, "[NALQ][DPB] couldn't find dst buffers\n");
 		return -EAGAIN;
@@ -1405,6 +1405,10 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 		mfc_qos_update_last_framerate(ctx, dst_mb->vb.vb2_buf.timestamp);
 		vb2_buffer_done(&dst_mb->vb.vb2_buf, disp_err ?
 				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
+		mutex_lock(&dec->dpb_mutex);
+		dec->dpb[index].queued = 0;
+		clear_bit(index, &dec->queued_dpb);
+		mutex_unlock(&dec->dpb_mutex);
 	}
 }
 
@@ -1419,19 +1423,24 @@ static void __mfc_nal_q_handle_released_buf(struct mfc_ctx *ctx, DecoderOutputSt
 	prev_flag = dec->dynamic_used;
 	dec->dynamic_used = pOutStr->UsedDpbFlagLower;
 	released_flag = prev_flag & (~dec->dynamic_used);
-	mfc_debug(2, "[NALQ][DPB] Used flag: old = %08x, new = %08x, Released buffer = %08x\n",
-			prev_flag, dec->dynamic_used, released_flag);
+	mfc_debug(2, "[NALQ][DPB] Used flag: old = %08x, new = %08x, released = %08x, queued = %#lx\n",
+			prev_flag, dec->dynamic_used, released_flag, dec->queued_dpb);
 
 	for (i = 0; i < MFC_MAX_DPBS; i++) {
-		if ((released_flag & (1 << i)) && dec->spare_dpb[i].mapcnt) {
-			mfc_debug(2, "[NALQ][IOVMM] DPB[%d] %#llx -> %#llx reassigned from spare\n",
-					i, dec->dpb[i].addr[0], dec->spare_dpb[i].addr[0]);
-			MFC_TRACE_CTX("DPB[%d] %#llx -> %#llx reassigned\n",
-					i, dec->dpb[i].addr[0], dec->spare_dpb[i].addr[0]);
-			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
-			dec->dpb[i] = dec->spare_dpb[i];
-			mfc_clear_iovmm(ctx, dec->spare_dpb, ctx->dst_fmt->mem_planes, i);
-			reassigned = 1;
+		if (dec->dynamic_used & (1 << i))
+			dec->dpb[i].ref = 1;
+		if (released_flag & (1 << i)) {
+			dec->dpb[i].ref = 0;
+			if (dec->spare_dpb[i].mapcnt) {
+				mfc_debug(2, "[NALQ][IOVMM] DPB[%d] %#llx->%#llx reassigned from spare\n",
+						i, dec->dpb[i].addr[0], dec->spare_dpb[i].addr[0]);
+				MFC_TRACE_CTX("DPB[%d] %#llx->%#llx reassigned\n",
+						i, dec->dpb[i].addr[0], dec->spare_dpb[i].addr[0]);
+				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
+				dec->dpb[i] = dec->spare_dpb[i];
+				mfc_clear_iovmm(ctx, dec->spare_dpb, ctx->dst_fmt->mem_planes, i);
+				reassigned = 1;
+			}
 		}
 	}
 
