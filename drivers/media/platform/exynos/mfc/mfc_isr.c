@@ -377,8 +377,14 @@ static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
 			prev_flag, dec->dynamic_used, released_flag, dec->queued_dpb);
 
 	for (i = 0; i < MFC_MAX_DPBS; i++) {
-		if (dec->dynamic_used & (1 << i))
+		if (dec->dynamic_used & (1 << i)) {
 			dec->dpb[i].ref = 1;
+			if (dec->dpb[i].mapcnt == 0) {
+				mfc_err_ctx("[DPB] %d index is no dpb table\n", i);
+				mfc_print_dpb_table(ctx);
+				call_dop(dev, dump_and_stop_debug_mode, dev);
+			}
+		}
 		if (released_flag & (1 << i)) {
 			dec->dpb[i].ref = 0;
 			if (dec->spare_dpb[i].mapcnt) {
@@ -390,6 +396,9 @@ static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
 				dec->dpb[i] = dec->spare_dpb[i];
 				mfc_clear_iovmm(ctx, dec->spare_dpb, ctx->dst_fmt->mem_planes, i);
 				reassigned = 1;
+			} else if (!dec->dpb[i].queued) {
+				/* Except queued buffer, the released DPB is deleted from dpb_table */
+				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 			}
 		}
 	}
