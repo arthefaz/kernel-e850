@@ -328,13 +328,6 @@ enum dpp_comp_src {
 	DPP_COMP_SRC_GPU
 };
 
-enum dpp_comp_type {
-	COMP_TYPE_NONE = 0,
-	COMP_TYPE_AFBC,
-	COMP_TYPE_SBWC,
-	COMP_TYPE_CSET,
-};
-
 enum dpp_hdr_standard {
 	DPP_HDR_OFF = 0,
 	DPP_HDR_ST2084,

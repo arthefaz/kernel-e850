@@ -80,6 +80,14 @@ enum decon_pixel_format {
 
 	DECON_PIXEL_FORMAT_NV12_P010,
 
+	/* formats for lossless SBWC case */
+	DECON_PIXEL_FORMAT_NV12M_SBWC_8B,
+	DECON_PIXEL_FORMAT_NV12M_SBWC_10B,
+	DECON_PIXEL_FORMAT_NV21M_SBWC_8B,
+	DECON_PIXEL_FORMAT_NV21M_SBWC_10B,
+	DECON_PIXEL_FORMAT_NV12N_SBWC_8B,
+	DECON_PIXEL_FORMAT_NV12N_SBWC_10B,
+
 	DECON_PIXEL_FORMAT_MAX,
 };
 
@@ -87,6 +95,13 @@ enum dpu_colorspace {
 	DPU_COLORSPACE_RGB,
 	DPU_COLORSPACE_YUV420,
 	DPU_COLORSPACE_YUV422,
+};
+
+enum dpp_comp_type {
+	COMP_TYPE_NONE = 0,
+	COMP_TYPE_AFBC,
+	COMP_TYPE_SBWC,
+	COMP_TYPE_CSET,
 };
 
 struct dpu_fmt {
@@ -102,6 +117,7 @@ struct dpu_fmt {
 	u8 num_meta_planes; 		/* number of meta plane(s) */
 	u8 len_alpha;			/* length of alpha bits */
 	enum dpu_colorspace cs;
+	enum dpp_comp_type ct;
 };
 
 /* format */

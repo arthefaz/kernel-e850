@@ -47,29 +47,6 @@ extern int dpp_log_level;
 #define P010_CBCR_BASE(base, w, h)	((base) + P010_Y_SIZE((w), (h)))
 /* ceil function for positive value */
 #define p_ceil(n, d)	((n)/(d) + ((n)%(d) != 0))
-	
-/*
- * stride of payload buffer(byte) >=
- *     (image width/block width) x ((bit-depth x block width x block height)/8)
- * stride of header buffer(byte, 64byte align) =
- *     ceil(((image width/block width) x 0.5byte) / 64bytes) x 64bytes
- * Y PL size = Y_STRIDE_SIZE * ((ALIGN(frame_height, 8) + 3) / 4) + 64
- * Y HD size = Y_HD_STRIDE_SIZE * ((ALIGN(frame_height, 8) + 3) / 4) + 256
- * C PL size = C_STRIDE_SIZE * ((ALIGN(frame_height, 8) / 2 + 3) / 4) + 64
- * C HD size = C_HD_STRIDE_SIZE * ((ALIGN(frame_height, 8) + 3) / 4) + 256
- * default block size : 32x4
- */
-#define SBWC_BLK_SIZE_4			4
-#define SBWC_BLK_SIZE_8			8
-#define SBWC_BLK_SIZE_16		16
-#define SBWC_BLK_SIZE_32		32
-#define SBWC_BLK_SIZE_64		64
-#define SBWC_PL_STRIDE(w, bw, bh, bd)	(((w)/(bw)) * ((bd)*(bw)*(bh) / 8))
-#define SBWC_Y_PL_SIZE(s_sz, h)		(((s_sz) * (ALIGN(h, 8) + 3) / 4) + 64)
-#define SBWC_C_PL_SIZE(s_sz, h)		(((s_sz) * (ALIGN(h, 8)/2 + 3) / 4) + 64)
-#define SBWC_HD_STRIDE(w, bw)		(p_ceil((w) / (bw) / 2, 64) * 64)
-#define SBWC_HD_SIZE(s_sz, h)		(((s_sz) * (ALIGN(h, 8) + 3) / 4) + 256)
-
 
 #define check_align(width, height, align_w, align_h)\
 	(IS_ALIGNED(width, align_w) && IS_ALIGNED(height, align_h))
