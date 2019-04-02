@@ -2585,54 +2585,64 @@ void dsim_reg_set_dphy_freq_hopping(u32 id, u32 p, u32 m, u32 k, u32 en)
 	}
 }
 
+#define PREFIX_LEN	40
+#define ROW_LEN		32
+static void dsim_print_hex_dump(void __iomem *regs, const void *buf, size_t len)
+{
+	char prefix_buf[PREFIX_LEN];
+	unsigned long p;
+	int i, row;
+
+	for (i = 0; i < len; i += ROW_LEN) {
+		p = buf - regs + i;
+
+		if (len - i < ROW_LEN)
+			row = len - i;
+		else
+			row = ROW_LEN;
+
+		snprintf(prefix_buf, sizeof(prefix_buf), "[%08lX] ", p);
+		print_hex_dump(KERN_NOTICE, prefix_buf, DUMP_PREFIX_NONE,
+				32, 4, buf + i, row, false);
+	}
+}
+
 void __dsim_dump(u32 id, struct dsim_regs *regs)
 {
 	/* change to updated register read mode (meaning: SHADOW in DECON) */
 	dsim_info("=== DSIM %d LINK SFR DUMP ===\n", id);
 	dsim_reg_enable_shadow_read(id, 0);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->regs, 0x124, false);
+	dsim_print_hex_dump(regs->regs, regs->regs + 0x0000, 0x124);
 
 	dsim_info("=== DSIM %d DPHY SFR DUMP ===\n", id);
 	/* DPHY dump */
 	/* BIAS */
 	dsim_info("-[BIAS]-\n");
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs_ex + 0x0000, 0x14, false);
+	dsim_print_hex_dump(regs->phy_regs_ex,
+	regs->phy_regs_ex + 0x0000, 0x14);
 	/* PLL */
-	dsim_info("-[PLL]-\n");
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0000, 0x44, false);
+	dsim_info("-[PLL : offset + 0x100]-\n");
+	dsim_print_hex_dump(regs->phy_regs, regs->phy_regs + 0x0000, 0x44);
 	/* MC */
-	dsim_info("-[MC]-\n");
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0200, 0x48, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x02E0, 0x10, false);
+	dsim_info("-[MC : offset + 0x100]-\n");
+	dsim_print_hex_dump(regs->phy_regs, regs->phy_regs + 0x0200, 0x48);
+	dsim_print_hex_dump(regs->phy_regs, regs->phy_regs + 0x02E0, 0x10);
 	/* MD0 */
-	dsim_info("-[CMD 0]-\n");
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0300, 0x70, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x03C0, 0x40, false);
+	dsim_info("-[CMD 0 : offset + 0x100]-\n");
+	dsim_print_hex_dump(regs->phy_regs, regs->phy_regs + 0x0300, 0x70);
+	dsim_print_hex_dump(regs->phy_regs, regs->phy_regs + 0x03E0, 0x40);
 	/* MD1 */
-	dsim_info("-[CMD 1]-\n");
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0400, 0x70, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x04C0, 0x40, false);
+	dsim_info("-[CMD 1 : offset + 0x100]-\n");
+	dsim_print_hex_dump(regs->phy_regs, regs->phy_regs + 0x0400, 0x70);
+	dsim_print_hex_dump(regs->phy_regs, regs->phy_regs + 0x04C0, 0x40);
 	/* MD2 */
-	dsim_info("-[CMD 2]-\n");
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0500, 0x70, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x05C0, 0x40, false);
+	dsim_info("-[CMD 2 : offset + 0x100]-\n");
+	dsim_print_hex_dump(regs->phy_regs, regs->phy_regs + 0x0500, 0x70);
+	dsim_print_hex_dump(regs->phy_regs, regs->phy_regs + 0x05C0, 0x40);
 	/* MD3 */
-	dsim_info("-[MD 3]-\n");
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x0600, 0x48, false);
-	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs->phy_regs + 0x06C0, 0x20, false);
+	dsim_info("-[MD 3 : offset + 0x100]-\n");
+	dsim_print_hex_dump(regs->phy_regs, regs->phy_regs + 0x0600, 0x48);
+	dsim_print_hex_dump(regs->phy_regs, regs->phy_regs + 0x06C0, 0x20);
 
 	/* restore to avoid size mismatch (possible config error at DECON) */
 	dsim_reg_enable_shadow_read(id, 1);

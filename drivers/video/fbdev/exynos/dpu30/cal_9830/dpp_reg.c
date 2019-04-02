@@ -1334,45 +1334,54 @@ static void dpp_reg_dump_debug_regs(int id)
 	dpp_reg_dump_ch_data(id, REG_AREA_DPP, sel, cnt);
 }
 
+#define PREFIX_LEN	40
+#define ROW_LEN		32
+static void dpp_print_hex_dump(void __iomem *regs, const void *buf, size_t len)
+{
+	char prefix_buf[PREFIX_LEN];
+	unsigned long p;
+	int i, row;
+
+	for (i = 0; i < len; i += ROW_LEN) {
+		p = buf - regs + i;
+
+		if (len - i < ROW_LEN)
+			row = len - i;
+		else
+			row = ROW_LEN;
+
+		snprintf(prefix_buf, sizeof(prefix_buf), "[%08lX] ", p);
+		print_hex_dump(KERN_NOTICE, prefix_buf, DUMP_PREFIX_NONE,
+				32, 4, buf + i, row, false);
+	}
+}
+
 static void dma_dump_regs(u32 id, void __iomem *dma_regs)
 {
 	dpp_info("\n=== DPU_DMA%d SFR DUMP ===\n", id);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dma_regs, 0x74, false);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dma_regs + 0x100, 0x44, false);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dma_regs + 0x200, 0x8, false);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dma_regs + 0x300, 0x24, false);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0000, 0x74);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0100, 0x44);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0200, 0x8);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0300, 0x24);
 
 	dpp_info("=== DPU_DMA%d SHADOW SFR DUMP ===\n", id);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dma_regs + 0x800, 0x74, false);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dma_regs + 0x900, 0x44, false);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dma_regs + 0xA00, 0x8, false);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dma_regs + 0xB00, 0x24, false);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0800, 0x74);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0900, 0x44);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0A00, 0x8);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0B00, 0x24);
 	/* config_err_status */
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dma_regs + 0xB30, 0x4, false);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0B30, 0x4);
 }
 
 static void dpp_dump_regs(u32 id, void __iomem *regs, unsigned long attr)
 {
 	dpp_info("=== DPP%d SFR DUMP ===\n", id);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs, 0x4C, false);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs + 0xA54, 0x4, false);
+	dpp_print_hex_dump(regs, regs + 0x0000, 0x4C);
+	dpp_print_hex_dump(regs, regs + 0x0A54, 0x4);
 	/* shadow */
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs + 0xB00, 0x4C, false);
+	dpp_print_hex_dump(regs, regs + 0x0B00, 0x4C);
 	/* debug */
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			regs + 0xD00, 0xC, false);
+	dpp_print_hex_dump(regs, regs + 0x0D00, 0xC);
 }
 
 void __dpp_dump(u32 id, void __iomem *regs, void __iomem *dma_regs,
