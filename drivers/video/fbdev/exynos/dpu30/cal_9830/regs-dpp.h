@@ -209,6 +209,8 @@
 #define IDMA_PLANE_2_STRIDE_SEL			(1 << 22)
 #define IDMA_PLANE_1_STRIDE_SEL			(1 << 21)
 #define IDMA_PLANE_0_STRIDE_SEL			(1 << 20)
+#define IDMA_PLANE_STRIDE_SEL(_v)		((_v) << 20)
+#define IDMA_PLANE_STRIDE_SEL_MASK		(0xF << 20)
 #define IDMA_CHROM_STRIDE_SEL			(1 << 16)
 #define IDMA_CHROM_STRIDE(_v)			((_v) << 0)
 #define IDMA_CHROM_STRIDE_MASK			(0xFFFF << 0)
