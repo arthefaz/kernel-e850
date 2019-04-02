@@ -170,9 +170,12 @@ static void idma_reg_set_test_pattern(u32 id, u32 pat_id, u32 *pat_dat)
 }
 #endif
 
-static void idma_reg_set_afbc(u32 id, u32 en, u32 rcv_num)
+static void idma_reg_set_afbc(u32 id, enum dpp_comp_type ct, u32 rcv_num)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	if (ct == COMP_TYPE_AFBC)
+		val = ~0;
 
 	dma_write_mask(id, IDMA_IN_CON, val, IDMA_AFBC_EN);
 	dma_write_mask(id, IDMA_RECOVERY_CTRL, val, IDMA_RECOVERY_EN);
@@ -180,9 +183,12 @@ static void idma_reg_set_afbc(u32 id, u32 en, u32 rcv_num)
 				IDMA_RECOVERY_NUM_MASK);
 }
 
-static void idma_reg_set_sbwc(u32 id, u32 en, u32 rcv_num)
+static void idma_reg_set_sbwc(u32 id, enum dpp_comp_type ct, u32 rcv_num)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = 0;
+
+	if (ct == COMP_TYPE_SBWC)
+		val = ~0;
 
 	dma_write_mask(id, IDMA_IN_CON, val, IDMA_SBWC_EN);
 	dma_write_mask(id, IDMA_RECOVERY_CTRL, val, IDMA_RECOVERY_EN);
@@ -800,7 +806,7 @@ static void dma_reg_set_base_addr(u32 id, struct dpp_params_info *p,
 
 	if (test_bit(DPP_ATTR_IDMA, &attr)) {
 		dma_write(id, IDMA_IN_BASE_ADDR_Y8, p->addr[0]);
-		if (p->is_comp)
+		if (p->comp_type == COMP_TYPE_AFBC)
 			dma_write(id, IDMA_IN_BASE_ADDR_C8, p->addr[0]);
 		else
 			dma_write(id, IDMA_IN_BASE_ADDR_C8, p->addr[1]);
@@ -1090,10 +1096,10 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 		dpp_reg_set_hdr_params(id, p);
 
 	if (test_bit(DPP_ATTR_AFBC, &attr))
-		idma_reg_set_afbc(id, p->is_comp, p->rcv_num);
+		idma_reg_set_afbc(id, p->comp_type, p->rcv_num);
 
 	if (test_bit(DPP_ATTR_SBWC, &attr))
-		idma_reg_set_sbwc(id, p->is_comp, p->rcv_num);
+		idma_reg_set_sbwc(id, p->comp_type, p->rcv_num);
 
 	/*
 	 * To check HW stuck
