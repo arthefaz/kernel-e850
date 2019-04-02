@@ -39,6 +39,7 @@ struct dpp_params_info {
 	int v_ratio;
 
 	unsigned long rcv_num;
+	enum dpp_comp_type comp_type;
 };
 
 struct dpp_size_constraints {
