@@ -27,6 +27,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 8,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "ABGR8888",
 		.fmt = DECON_PIXEL_FORMAT_ABGR_8888,
@@ -40,6 +41,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 8,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "RGBA8888",
 		.fmt = DECON_PIXEL_FORMAT_RGBA_8888,
@@ -53,6 +55,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 8,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "BGRA8888",
 		.fmt = DECON_PIXEL_FORMAT_BGRA_8888,
@@ -66,6 +69,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 8,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "XRGB8888",
 		.fmt = DECON_PIXEL_FORMAT_XRGB_8888,
@@ -79,6 +83,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "XBGR8888",
 		.fmt = DECON_PIXEL_FORMAT_XBGR_8888,
@@ -92,6 +97,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "RGBX8888",
 		.fmt = DECON_PIXEL_FORMAT_RGBX_8888,
@@ -105,6 +111,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "BGRX8888",
 		.fmt = DECON_PIXEL_FORMAT_BGRX_8888,
@@ -118,6 +125,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "RGBA5551",
 		.fmt = DECON_PIXEL_FORMAT_RGBA_5551,
@@ -131,6 +139,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 1,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "BGRA5551",
 		.fmt = DECON_PIXEL_FORMAT_BGRA_5551,
@@ -144,6 +153,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 1,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "ABGR4444",
 		.fmt = DECON_PIXEL_FORMAT_ABGR_4444,
@@ -157,6 +167,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 4,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "RGBA4444",
 		.fmt = DECON_PIXEL_FORMAT_RGBA_4444,
@@ -170,6 +181,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 4,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "BGRA4444",
 		.fmt = DECON_PIXEL_FORMAT_BGRA_4444,
@@ -183,6 +195,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 4,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "RGB565",
 		.fmt = DECON_PIXEL_FORMAT_RGB_565,
@@ -196,6 +209,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "BGR565",
 		.fmt = DECON_PIXEL_FORMAT_BGR_565,
@@ -209,6 +223,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "ARGB2101010",
 		.fmt = DECON_PIXEL_FORMAT_ARGB_2101010,
@@ -222,6 +237,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 2,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "ABGR2101010",
 		.fmt = DECON_PIXEL_FORMAT_ABGR_2101010,
@@ -235,6 +251,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 2,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "RGBA1010102",
 		.fmt = DECON_PIXEL_FORMAT_RGBA_1010102,
@@ -248,6 +265,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 2,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "BGRA1010102",
 		.fmt = DECON_PIXEL_FORMAT_BGRA_1010102,
@@ -261,6 +279,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 2,
 		.cs = DPU_COLORSPACE_RGB,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "YVU422_3P",	/* not support */
 		.fmt = DECON_PIXEL_FORMAT_YVU422_3P,
@@ -274,6 +293,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV12",
 		.fmt = DECON_PIXEL_FORMAT_NV12,
@@ -287,6 +307,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV21",
 		.fmt = DECON_PIXEL_FORMAT_NV21,
@@ -300,6 +321,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV12M",
 		.fmt = DECON_PIXEL_FORMAT_NV12M,
@@ -313,6 +335,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV21M",
 		.fmt = DECON_PIXEL_FORMAT_NV21M,
@@ -326,6 +349,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "YUV420",	/* not support */
 		.fmt = DECON_PIXEL_FORMAT_YUV420,
@@ -339,6 +363,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "YVU420",	/* not support */
 		.fmt = DECON_PIXEL_FORMAT_YVU420,
@@ -352,6 +377,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "YUV420M",	/* not support */
 		.fmt = DECON_PIXEL_FORMAT_YUV420M,
@@ -365,6 +391,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "YVU420M",	/* not support */
 		.fmt = DECON_PIXEL_FORMAT_YVU420M,
@@ -378,6 +405,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV12N",
 		.fmt = DECON_PIXEL_FORMAT_NV12N,
@@ -391,6 +419,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV12N_10B",
 		.fmt = DECON_PIXEL_FORMAT_NV12N_10B,
@@ -404,6 +433,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV12M_P010",
 		.fmt = DECON_PIXEL_FORMAT_NV12M_P010,
@@ -417,6 +447,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV21M_P010",
 		.fmt = DECON_PIXEL_FORMAT_NV21M_P010,
@@ -430,6 +461,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV12M_S10B",
 		.fmt = DECON_PIXEL_FORMAT_NV12M_S10B,
@@ -443,6 +475,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV21M_S10B",
 		.fmt = DECON_PIXEL_FORMAT_NV21M_S10B,
@@ -456,6 +489,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV12_P010",
 		.fmt = DECON_PIXEL_FORMAT_NV12_P010,
@@ -469,6 +503,91 @@ static const struct dpu_fmt dpu_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_NONE,
+	}, { /* format for lossless SBWC case */
+		.name = "NV12M_SBWC_8B",
+		.fmt = DECON_PIXEL_FORMAT_NV12M_SBWC_8B,
+		.dma_fmt = IDMA_IMG_FORMAT_YVU420_2P,
+		.dpp_fmt = DPP_IMG_FORMAT_YUV420_8P,
+		.bpp = 12,
+		.padding = 0,
+		.bpc = 8,
+		.num_planes = 4,
+		.num_buffers = 2,
+		.num_meta_planes = 0,
+		.len_alpha = 0,
+		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_SBWC,
+	}, {
+		.name = "NV12M_SBWC_10B",
+		.fmt = DECON_PIXEL_FORMAT_NV12M_SBWC_10B,
+		.dma_fmt = IDMA_IMG_FORMAT_YVU420_P010,
+		.dpp_fmt = DPP_IMG_FORMAT_YUV420_P010,
+		.bpp = 15,
+		.padding = 9,
+		.bpc = 10,
+		.num_planes = 4,
+		.num_buffers = 2,
+		.num_meta_planes = 0,
+		.len_alpha = 0,
+		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_SBWC,
+	}, {
+		.name = "NV21M_SBWC_8B",
+		.fmt = DECON_PIXEL_FORMAT_NV21M_SBWC_8B,
+		.dma_fmt = IDMA_IMG_FORMAT_YUV420_2P,
+		.dpp_fmt = DPP_IMG_FORMAT_YUV420_8P,
+		.bpp = 12,
+		.padding = 0,
+		.bpc = 8,
+		.num_planes = 4,
+		.num_buffers = 2,
+		.num_meta_planes = 0,
+		.len_alpha = 0,
+		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_SBWC,
+	}, {
+		.name = "NV21M_SBWC_10B",
+		.fmt = DECON_PIXEL_FORMAT_NV21M_SBWC_10B,
+		.dma_fmt = IDMA_IMG_FORMAT_YUV420_P010,
+		.dpp_fmt = DPP_IMG_FORMAT_YUV420_P010,
+		.bpp = 15,
+		.padding = 9,
+		.bpc = 10,
+		.num_planes = 4,
+		.num_buffers = 2,
+		.num_meta_planes = 0,
+		.len_alpha = 0,
+		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_SBWC,
+	}, {
+		.name = "NV12N_SBWC_8B",
+		.fmt = DECON_PIXEL_FORMAT_NV12N_SBWC_8B,
+		.dma_fmt = IDMA_IMG_FORMAT_YVU420_2P,
+		.dpp_fmt = DPP_IMG_FORMAT_YUV420_8P,
+		.bpp = 12,
+		.padding = 0,
+		.bpc = 8,
+		.num_planes = 4,
+		.num_buffers = 1,
+		.num_meta_planes = 0,
+		.len_alpha = 0,
+		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_SBWC,
+	}, {
+		.name = "NV12N_SBWC_10B",
+		.fmt = DECON_PIXEL_FORMAT_NV12N_SBWC_10B,
+		.dma_fmt = IDMA_IMG_FORMAT_YVU420_P010,
+		.dpp_fmt = DPP_IMG_FORMAT_YUV420_P010,
+		.bpp = 15,
+		.padding = 9,
+		.bpc = 10,
+		.num_planes = 4,
+		.num_buffers = 1,
+		.num_meta_planes = 0,
+		.len_alpha = 0,
+		.cs = DPU_COLORSPACE_YUV420,
+		.ct = COMP_TYPE_SBWC,
 	},
 };
 

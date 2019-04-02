@@ -84,7 +84,99 @@ static int dpp_wb_wait_for_framedone(struct dpp_device *dpp)
 	return 0;
 }
 
-static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
+/*
+ * [ SBWC info ]
+ * buffer and base_addr relationship in SBWC (cf. 8+2)
+ * <buffer fd> fd[0]: Y-payload / fd[1]: C-payload
+ * <DPU base addr> [0]-Y8:Y_HD / [1]-C8:Y_PL / [2]-Y2:C_HD / [3]-C2:C_PL
+ *
+ * re-arrange & calculate base addr
+ *  fd[1] -> addr[3] C-payload
+ *  fd[0] -> addr[1] Y-payload
+ *           addr[0] Y-header : [1] + Y_PL_SIZE
+ *           addr[2] C-header : [3] + C_PL_SIZE
+ */
+static void dpp_get_base_addr_params(struct dpp_params_info *p)
+{
+	switch (p->format) {
+
+	case DECON_PIXEL_FORMAT_NV12N:
+		p->addr[1] = NV12N_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
+		break;
+
+	case DECON_PIXEL_FORMAT_NV12_P010:
+		p->addr[1] = P010_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
+		break;
+
+	case DECON_PIXEL_FORMAT_NV12M_S10B:
+	case DECON_PIXEL_FORMAT_NV21M_S10B:
+		p->addr[2] = p->addr[0] + NV12M_Y_SIZE(p->src.f_w, p->src.f_h);
+		p->addr[3] = p->addr[1] + NV12M_CBCR_SIZE(p->src.f_w, p->src.f_h);
+		p->yhd_y2_strd = S10B_2B_STRIDE(p->src.f_w);
+		p->ypl_c2_strd = S10B_2B_STRIDE(p->src.f_w);
+		break;
+
+	case DECON_PIXEL_FORMAT_NV12N_10B:
+		p->addr[1] = NV12N_10B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
+		p->addr[2] = p->addr[0] + NV12N_10B_Y_8B_SIZE(p->src.f_w, p->src.f_h);
+		p->addr[3] = p->addr[1] + NV12N_10B_CBCR_8B_SIZE(p->src.f_w, p->src.f_h);
+		p->yhd_y2_strd = S10B_2B_STRIDE(p->src.f_w);
+		p->ypl_c2_strd = S10B_2B_STRIDE(p->src.f_w);
+		break;
+
+	case DECON_PIXEL_FORMAT_NV16M_S10B:
+	case DECON_PIXEL_FORMAT_NV61M_S10B:
+		p->addr[2] = p->addr[0] + NV16M_Y_SIZE(p->src.f_w, p->src.f_h);
+		p->addr[3] = p->addr[1] + NV16M_CBCR_SIZE(p->src.f_w, p->src.f_h);
+		p->yhd_y2_strd = S10B_2B_STRIDE(p->src.f_w);
+		p->ypl_c2_strd = S10B_2B_STRIDE(p->src.f_w);
+		break;
+
+	/* for lossless SBWC */
+	case DECON_PIXEL_FORMAT_NV12N_SBWC_8B: /* single fd : [0]-Y_PL */
+		/* calc CbCr Payload base */
+		p->addr[1] = SBWC_8B_CBCR_BASE(p->addr[0], p->src.w, p->src.h);
+	case DECON_PIXEL_FORMAT_NV12M_SBWC_8B:
+	case DECON_PIXEL_FORMAT_NV21M_SBWC_8B:
+		/* payload */
+		p->addr[3] = p->addr[1];
+		p->addr[1] = p->addr[0];
+		p->ypl_c2_strd = SBWC_8B_STRIDE(p->src.w);
+		p->cpl_strd = p->ypl_c2_strd;
+		/* header */
+		p->addr[0] = p->addr[1] + SBWC_8B_Y_SIZE(p->src.w, p->src.h);
+		p->addr[2] = p->addr[3] + SBWC_8B_CBCR_SIZE(p->src.w, p->src.h);
+		p->yhd_y2_strd = SBWC_HEADER_STRIDE(p->src.w);
+		p->chd_strd = SBWC_HEADER_STRIDE(p->src.w);
+		break;
+
+	case DECON_PIXEL_FORMAT_NV12N_SBWC_10B: /* single fd : [0]-Y_PL */
+		/* calc CbCr Payload base */
+		p->addr[1] = SBWC_10B_CBCR_BASE(p->addr[0], p->src.w, p->src.h);
+	case DECON_PIXEL_FORMAT_NV12M_SBWC_10B:
+	case DECON_PIXEL_FORMAT_NV21M_SBWC_10B:
+		/* payload */
+		p->addr[3] = p->addr[1];
+		p->addr[1] = p->addr[0];
+		p->ypl_c2_strd = SBWC_10B_STRIDE(p->src.w);
+		p->cpl_strd = p->ypl_c2_strd;
+		/* header */
+		p->addr[0] = p->addr[1] + SBWC_10B_Y_SIZE(p->src.w, p->src.h);
+		p->addr[2] = p->addr[3] + SBWC_10B_CBCR_SIZE(p->src.w, p->src.h);
+		p->yhd_y2_strd = SBWC_HEADER_STRIDE(p->src.w);
+		p->chd_strd = SBWC_HEADER_STRIDE(p->src.w);
+		break;
+
+	/* for lossy SBWC */
+
+	default:
+		dpp_info("%s: Unspeicified YUV formats!!(%d)\n",
+			__func__, p->format);
+		break;
+	}
+}
+
+static int dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 {
 	u64 src_w, src_h, dst_w, dst_h;
 	struct decon_win_config *config = &dpp->dpp_config->config;
@@ -111,62 +203,20 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	p->chd_strd = 0;
 	p->cpl_strd = 0;
 
-	if (p->format == DECON_PIXEL_FORMAT_NV12N)
-		p->addr[1] = NV12N_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
-
-	if (p->format == DECON_PIXEL_FORMAT_NV12_P010)
-		p->addr[1] = P010_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
-
-	if (p->format == DECON_PIXEL_FORMAT_NV12M_S10B || p->format == DECON_PIXEL_FORMAT_NV21M_S10B) {
-		p->addr[2] = p->addr[0] + NV12M_Y_SIZE(p->src.f_w, p->src.f_h);
-		p->addr[3] = p->addr[1] + NV12M_CBCR_SIZE(p->src.f_w, p->src.f_h);
-		p->yhd_y2_strd = S10B_2B_STRIDE(p->src.f_w);
-		p->ypl_c2_strd = S10B_2B_STRIDE(p->src.f_w);
+	p->comp_type = fmt_info->ct;
+	if (p->is_comp) {
+		if (fmt_info->cs == DPU_COLORSPACE_RGB)
+			p->comp_type = COMP_TYPE_AFBC;
+		else {
+			p->comp_type = COMP_TYPE_NONE;
+			dpp_err("%s: Unknown compression type!!\n", __func__);
+			return -EINVAL;
+		}
 	}
 
-	if (p->format == DECON_PIXEL_FORMAT_NV12N_10B) {
-		p->addr[1] = NV12N_10B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
-		p->addr[2] = p->addr[0] + NV12N_10B_Y_8B_SIZE(p->src.f_w, p->src.f_h);
-		p->addr[3] = p->addr[1] + NV12N_10B_CBCR_8B_SIZE(p->src.f_w, p->src.f_h);
-		p->yhd_y2_strd = S10B_2B_STRIDE(p->src.f_w);
-		p->ypl_c2_strd = S10B_2B_STRIDE(p->src.f_w);
-	}
-
-	if (p->format == DECON_PIXEL_FORMAT_NV16M_S10B || p->format == DECON_PIXEL_FORMAT_NV61M_S10B) {
-		p->addr[2] = p->addr[0] + NV16M_Y_SIZE(p->src.f_w, p->src.f_h);
-		p->addr[3] = p->addr[1] + NV16M_CBCR_SIZE(p->src.f_w, p->src.f_h);
-		p->yhd_y2_strd = S10B_2B_STRIDE(p->src.f_w);
-		p->ypl_c2_strd = S10B_2B_STRIDE(p->src.f_w);
-	}
-
-	/*
-        * buffer and base_addr relationship in SBWC (cf. 8+2)
-        * <buffer fd> fd[0]: Y-payload / fd[1]: C-payload
-        * <base addr> [0]-Y8:Y_HD / [1]-C8:Y_PL / [2]-Y2:C_HD / [3]-C2:C_PL
-        *  [1] -> [3] C-payload
-        *  [0] -> [1] Y-payload
-        *         [0] Y-header : [1] + Y_PL_SIZE
-        *         [2] C-header : [3] + C_PL_SIZE
-        *
-        * TODO :
-        * replace PL/HD SIZE & STRIDE macro of videodev2_exynos_media.h
-        */
-	if (p->is_comp == COMP_TYPE_SBWC) {
-		p->addr[3] = p->addr[1];
-		p->addr[1] = p->addr[0];
-		p->ypl_c2_strd = SBWC_PL_STRIDE(p->src.w, SBWC_BLK_SIZE_32,
-				SBWC_BLK_SIZE_4, fmt_info->bpc);
-		p->cpl_strd = p->ypl_c2_strd;
-		
-		p->addr[0] = p->addr[1] +
-				SBWC_Y_PL_SIZE(p->ypl_c2_strd, p->src.h);
-		p->addr[2] = p->addr[3] +
-				SBWC_C_PL_SIZE(p->cpl_strd, p->src.h);
-		
-		p->yhd_y2_strd = SBWC_HD_STRIDE(p->src.w, SBWC_BLK_SIZE_32);
-		p->chd_strd = SBWC_HD_STRIDE(p->src.w, SBWC_BLK_SIZE_32);
-
-	}
+	/* YUV formats need base address calcuation */
+	if (fmt_info->cs != DPU_COLORSPACE_RGB)
+		dpp_get_base_addr_params(p);
 
 	if (is_rotation(config)) {
 		src_w = p->src.h;
@@ -192,6 +242,8 @@ static void dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 		p->is_block = false;
 	else
 		p->is_block = true;
+
+	return 0;
 }
 
 static int dpp_check_size(struct dpp_device *dpp, struct dpp_img_format *vi)
@@ -313,13 +365,13 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
 
 	if (!test_bit(DPP_ATTR_ROT, &dpp->attr) && (p->rot > DPP_ROT_180)) {
-		dpp_err("Not support rotation(%d) in DPP%d - VGRF only!\n",
+		dpp_err("Not support rotation(%d) in DPP%d - L5 only!\n",
 				p->rot, dpp->id);
 		return -EINVAL;
 	}
 
 	if (!test_bit(DPP_ATTR_HDR, &dpp->attr) && (p->hdr > DPP_HDR_OFF)) {
-		dpp_err("Not support hdr in DPP%d - VGRF only!\n",
+		dpp_err("Not support HDR in DPP%d - No H/W!\n",
 				dpp->id);
 		return -EINVAL;
 	}
@@ -331,19 +383,19 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 	}
 
 	if (!test_bit(DPP_ATTR_CSC, &dpp->attr) && IS_YUV(fmt_info)) {
-		dpp_err("Not support YUV format(%d) in DPP%d - VG & VGF only!\n",
+		dpp_err("Not support YUV format(%d) in DPP%d - L2/3/4/5 only!\n",
 			p->format, dpp->id);
 		return -EINVAL;
 	}
 
 	if (!test_bit(DPP_ATTR_AFBC, &dpp->attr) && p->is_comp) {
-		dpp_err("Not support AFBC decoding in DPP%d - VGF only!\n",
+		dpp_err("Not support AFBC decoding in DPP%d - L0/1/4/5 only!\n",
 				dpp->id);
 		return -EINVAL;
 	}
 
 	if (!test_bit(DPP_ATTR_SCALE, &dpp->attr) && p->is_scale) {
-		dpp_err("Not support SCALING in DPP%d - VGF only!\n", dpp->id);
+		dpp_err("Not support SCALING in DPP%d - L3/L5 only!\n", dpp->id);
 		return -EINVAL;
 	}
 
@@ -440,7 +492,9 @@ static int dpp_set_config(struct dpp_device *dpp)
 	mutex_lock(&dpp->lock);
 
 	/* parameters from decon driver are translated for dpp driver */
-	dpp_get_params(dpp, &params);
+	ret = dpp_get_params(dpp, &params);
+	if (ret)
+		goto err;
 
 	/* all parameters must be passed dpp hw limitation */
 	ret = dpp_check_limitation(dpp, &params);
