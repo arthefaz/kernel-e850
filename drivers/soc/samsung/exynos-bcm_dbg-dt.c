@@ -165,6 +165,12 @@ static int exynos_bcm_init_run_ip_parse_dt(struct device_node *np,
 		return ret;
 	}
 
+	ret = of_property_read_u32(np, "bcm_ip_print_nr", &data->bcm_ip_print_nr);
+	if (ret) {
+		BCM_ERR("%s: Failed get bcm_ip_print_nr\n", __func__);
+		return ret;
+	}
+
 	data->initial_run_ip =
 		kzalloc(sizeof(unsigned int) * data->bcm_ip_nr, GFP_KERNEL);
 	if (data->initial_run_ip == NULL) {

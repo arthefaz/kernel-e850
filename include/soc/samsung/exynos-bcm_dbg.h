@@ -195,6 +195,7 @@ struct exynos_bcm_dbg_data {
 	struct exynos_bcm_sample_id	define_sample_id[PRE_DEFINE_EVT_MAX];
 
 	unsigned int			bcm_ip_nr;
+	unsigned int			bcm_ip_print_nr;
 	unsigned int			initial_bcm_run;
 	unsigned int			initial_period;
 	unsigned int			initial_bcm_mode;
