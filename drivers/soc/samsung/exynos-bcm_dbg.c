@@ -1597,9 +1597,10 @@ static ssize_t show_get_event(struct file *fp, struct kobject *kobj,
 		ret = exynos_bcm_dbg_event_ctrl(&ipc_base_info, &bcm_event,
 						ip_cnt, data);
 		if (ret) {
-			count += snprintf(buf + count, PAGE_SIZE,
-					"failed get event(ip:%d)\n", ip_cnt);
-			return count;
+			BCM_ERR("%s: failed get event(ip:%d)\n",
+					__func__, ip_cnt);
+			ip_cnt = 0;
+			return ret;
 		}
 
 		count += snprintf(buf + count, PAGE_SIZE,
@@ -1774,9 +1775,10 @@ static ssize_t show_get_filter_id(struct file *fp, struct kobject *kobj,
 		ret = exynos_bcm_dbg_filter_id_ctrl(&ipc_base_info,
 						&filter_id, ip_cnt, data);
 		if (ret) {
-			count += snprintf(buf + count, PAGE_SIZE,
-					"failed get filter id(ip:%d)\n", ip_cnt);
-			return count;
+			BCM_ERR("%s: failed get filter id(ip:%d)\n",
+					__func__, ip_cnt);
+			ip_cnt = 0;
+			return ret;
 		}
 
 		count += snprintf(buf + count, PAGE_SIZE,
@@ -1813,9 +1815,10 @@ static ssize_t show_get_filter_id_active(struct file *fp, struct kobject *kobj,
 		ret = exynos_bcm_dbg_filter_id_ctrl(&ipc_base_info,
 						&filter_id, ip_cnt, data);
 		if (ret) {
-			count += snprintf(buf + count, PAGE_SIZE,
-					"failed get filter id(ip:%d)\n", ip_cnt);
-			return count;
+			BCM_ERR("%s: failed get filter id(ip:%d)\n",
+					__func__, ip_cnt);
+			ip_cnt = 0;
+			return ret;
 		}
 
 		count += snprintf(buf + count, PAGE_SIZE, "bcm[%2d]:", ip_cnt);
@@ -1998,9 +2001,10 @@ static ssize_t show_get_filter_others(struct file *fp, struct kobject *kobj,
 		ret = exynos_bcm_dbg_filter_others_ctrl(&ipc_base_info,
 					&filter_others, ip_cnt, data);
 		if (ret) {
-			count += snprintf(buf + count, PAGE_SIZE,
-					"failed get filter others(ip:%d)\n", ip_cnt);
-			return count;
+			BCM_ERR("%s: failed get filter others(ip:%d)\n",
+					__func__, ip_cnt);
+			ip_cnt = 0;
+			return ret;
 		}
 
 		count += snprintf(buf + count, PAGE_SIZE, "bcm[%2d]:", ip_cnt);
@@ -2042,9 +2046,10 @@ static ssize_t show_get_filter_others_active(struct file *fp, struct kobject *ko
 		ret = exynos_bcm_dbg_filter_others_ctrl(&ipc_base_info,
 					&filter_others, ip_cnt, data);
 		if (ret) {
-			count += snprintf(buf + count, PAGE_SIZE,
-					"failed get filter others(ip:%d)\n", ip_cnt);
-			return count;
+			BCM_ERR("%s: failed get filter others(ip:%d)\n",
+					__func__, ip_cnt);
+			ip_cnt = 0;
+			return ret;
 		}
 
 		count += snprintf(buf + count, PAGE_SIZE, "bcm[%2d]:", ip_cnt);
@@ -2257,9 +2262,10 @@ static ssize_t show_get_sample_id(struct file *fp, struct kobject *kobj,
 		ret = exynos_bcm_dbg_sample_id_ctrl(&ipc_base_info,
 						&sample_id, ip_cnt, data);
 		if (ret) {
-			count += snprintf(buf + count, PAGE_SIZE,
-					"failed get sample id(ip:%d)\n", ip_cnt);
-			return count;
+			BCM_ERR("%s: failed get sample id(ip:%d)\n",
+					__func__, ip_cnt);
+			ip_cnt = 0;
+			return ret;
 		}
 
 		count += snprintf(buf + count, PAGE_SIZE,
@@ -2296,9 +2302,10 @@ static ssize_t show_get_sample_id_active(struct file *fp, struct kobject *kobj,
 		ret = exynos_bcm_dbg_sample_id_ctrl(&ipc_base_info,
 						&sample_id, ip_cnt, data);
 		if (ret) {
-			count += snprintf(buf + count, PAGE_SIZE,
-					"failed get sample id(ip:%d)\n", ip_cnt);
-			return count;
+			BCM_ERR("%s: failed get sample id(ip:%d)\n",
+					__func__, ip_cnt);
+			ip_cnt = 0;
+			return ret;
 		}
 
 		count += snprintf(buf + count, PAGE_SIZE, "bcm[%2d]:", ip_cnt);
@@ -2810,9 +2817,10 @@ static ssize_t show_get_ip(struct file *fp, struct kobject *kobj,
 		ret = exynos_bcm_dbg_ip_ctrl(&ipc_base_info,
 						&ip_enable, ip_cnt, data);
 		if (ret) {
-			count += snprintf(buf + count, PAGE_SIZE,
-					"failed get ip_enable state(ip:%d)\n", ip_cnt);
-			return count;
+			BCM_ERR("%s: failed get ip_enable state(ip:%d)\n",
+					__func__, ip_cnt);
+			ip_cnt = 0;
+			return ret;
 		}
 
 		count += snprintf(buf + count, PAGE_SIZE, "bcm[%2d]: enabled (%s)\n",
