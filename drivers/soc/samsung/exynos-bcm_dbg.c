@@ -1542,26 +1542,32 @@ static ssize_t show_bcm_dbg_data_df_attr(struct file *fp, struct kobject *kobj,
 	struct platform_device *pdev = container_of(dev,
 					struct platform_device, dev);
 	struct exynos_bcm_dbg_data *data = platform_get_drvdata(pdev);
-	int i;
 	ssize_t count = 0;
+	static int ip_cnt = 0;
 
-	if (off > 0)
+	if (ip_cnt >= data->bcm_ip_nr) {
+		ip_cnt = 0;
 		return 0;
+	}
 
-	count += snprintf(buf + count, PAGE_SIZE, "\n=== Ctrl Attr info ===\n");
-	count += snprintf(buf + count, PAGE_SIZE, "Initial BCM run: %s\n",
+	if (off == 0) {
+		count += snprintf(buf + count, PAGE_SIZE, "\n=== Ctrl Attr info ===\n");
+		count += snprintf(buf + count, PAGE_SIZE, "Initial BCM run: %s\n",
 				data->initial_bcm_run ? "true" : "false");
-	count += snprintf(buf + count, PAGE_SIZE,
+		count += snprintf(buf + count, PAGE_SIZE,
 				"Initial monitor period: %u msec\n",
 				data->initial_period);
-	count += snprintf(buf + count, PAGE_SIZE, "Initial BCM mode: %u\n",
+		count += snprintf(buf + count, PAGE_SIZE, "Initial BCM mode: %u\n",
 				data->initial_bcm_mode);
-	count += snprintf(buf + count, PAGE_SIZE, "Initial Run IPs\n");
+		count += snprintf(buf + count, PAGE_SIZE, "Initial Run IPs\n");
+	}
 
-	for (i = 0; i < data->bcm_ip_nr; i++)
+	do {
 		count += snprintf(buf + count, PAGE_SIZE,
-				" BCM IP[%d]: %s\n", i,
-				data->initial_run_ip[i] ? "true" : "false");
+				" BCM IP[%d]: %s\n", ip_cnt,
+				data->initial_run_ip[ip_cnt] ? "true" : "false");
+		ip_cnt++;
+	} while ((ip_cnt < data->bcm_ip_nr) && (ip_cnt % data->bcm_ip_print_nr));
 
 	return count;
 }
