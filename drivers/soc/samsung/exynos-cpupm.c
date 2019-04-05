@@ -756,6 +756,7 @@ static void __init virtual_cluster_init(void)
 			snprintf(name, sizeof(name), "vcluster%d_sibling", i);
 			if (!of_property_read_string(dn, name, &buf)) {
 				cpulist_parse(buf, &sibling);
+				cpumask_and(&sibling, &sibling, cpu_possible_mask);
 
 				if (cpumask_empty(&sibling))
 					continue;
