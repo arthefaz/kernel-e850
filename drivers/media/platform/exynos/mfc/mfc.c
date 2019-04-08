@@ -40,6 +40,7 @@
 #include "mfc_reg_api.h"
 #include "mfc_hw_reg_api.h"
 #include "mfc_mmcache.h"
+#include "mfc_llc.h"
 
 #include "mfc_qos.h"
 #include "mfc_queue.h"
@@ -390,6 +391,8 @@ static int __mfc_init_instance(struct mfc_dev *dev, struct mfc_ctx *ctx)
 	if (dev->has_mmcache && (dev->mmcache.is_on_status == 0))
 		mfc_mmcache_enable(dev);
 
+	if (dev->has_llc && (dev->llc_on_status == 0))
+		mfc_llc_enable(dev);
 
 	mfc_release_hwlock_dev(dev);
 
@@ -758,6 +761,13 @@ static int mfc_release(struct file *file)
 			mfc_mmcache_disable(dev);
 	}
 
+	if (dev->has_llc && dev->llc_on_status) {
+		mfc_llc_flush(dev);
+
+		if (dev->num_inst == 0)
+			mfc_llc_disable(dev);
+	}
+
 	mfc_release_codec_buffers(ctx);
 	mfc_release_instance_context(ctx);
 
@@ -986,6 +996,9 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 	of_property_read_u32(np, "axid_mask", &pdata->axid_mask);
 	of_property_read_u32(np, "mfc_fault_num", &pdata->mfc_fault_num);
 	of_property_read_u32(np, "trans_info_offset", &pdata->trans_info_offset);
+
+	/* LLC(Last Level Cache) */
+	of_property_read_u32(np, "llc", &mfc->has_llc);
 
 	/* NAL-Q size */
 	of_property_read_u32(np, "nal_q_entry_size", &pdata->nal_q_entry_size);
@@ -1715,6 +1728,11 @@ static int mfc_suspend(struct device *device)
 		mfc_mmcache_disable(dev);
 	}
 
+	if (dev->has_llc && dev->llc_on_status) {
+		mfc_llc_flush(dev);
+		mfc_llc_disable(dev);
+	}
+
 	mfc_release_hwlock_dev(dev);
 
 	return ret;
@@ -1744,6 +1762,9 @@ static int mfc_resume(struct device *device)
 
 	if (dev->has_mmcache && (dev->mmcache.is_on_status == 0))
 		mfc_mmcache_enable(dev);
+
+	if (dev->has_llc && (dev->llc_on_status == 0))
+		mfc_llc_enable(dev);
 
 	ret = mfc_run_wakeup(dev);
 	mfc_release_hwlock_dev(dev);

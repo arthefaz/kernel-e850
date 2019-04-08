@@ -6,3 +6,4 @@ exynos_mfc-y += mfc_dec_ctrl.o mfc_enc_ctrl.o mfc_enc_param.o
 exynos_mfc-y += mfc_queue.o mfc_buf.o mfc_utils.o mfc_qos.o mfc_mem.o
 exynos_mfc-y += mfc_debugfs.o mfc_otf.o
 exynos_mfc-y += mfc_mmcache.o
+exynos_mfc-y += mfc_llc.o

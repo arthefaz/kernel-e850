@@ -31,6 +31,7 @@ unsigned int perf_measure_option;
 unsigned int sfr_dump;
 unsigned int mmcache_dump;
 unsigned int mmcache_disable;
+unsigned int llc_disable;
 unsigned int perf_boost_mode;
 unsigned int reg_test;
 
@@ -277,6 +278,8 @@ void mfc_init_debugfs(struct mfc_dev *dev)
 			0644, debugfs->root, &mmcache_dump);
 	debugfs->mmcache_disable = debugfs_create_u32("mmcache_disable",
 			0644, debugfs->root, &mmcache_disable);
+	debugfs->llc_disable = debugfs_create_u32("llc_disable",
+			0644, debugfs->root, &llc_disable);
 	debugfs->perf_boost_mode = debugfs_create_u32("perf_boost_mode",
 			0644, debugfs->root, &perf_boost_mode);
 }

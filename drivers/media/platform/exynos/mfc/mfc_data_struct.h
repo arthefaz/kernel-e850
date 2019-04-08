@@ -374,6 +374,7 @@ struct mfc_debugfs {
 	struct dentry *sfr_dump;
 	struct dentry *mmcache_dump;
 	struct dentry *mmcache_disable;
+	struct dentry *llc_disable;
 	struct dentry *perf_boost_mode;
 };
 
@@ -835,6 +836,9 @@ struct mfc_dev {
 	bool has_hwfc;
 	bool has_mmcache;
 	bool has_cmu;
+
+	int has_llc;
+	int llc_on_status;
 
 	struct mfc_special_buf common_ctx_buf;
 	struct mfc_special_buf drm_common_ctx_buf;

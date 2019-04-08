@@ -27,6 +27,7 @@ extern unsigned int otf_dump;
 extern unsigned int sfr_dump;
 extern unsigned int mmcache_dump;
 extern unsigned int mmcache_disable;
+extern unsigned int llc_disable;
 extern unsigned int perf_boost_mode;
 extern unsigned int reg_test;
 
