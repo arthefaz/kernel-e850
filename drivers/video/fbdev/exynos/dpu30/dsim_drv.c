@@ -321,7 +321,7 @@ int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1)
 	case MIPI_DSI_DCS_READ:
 		/* Enable packet go for blocking command transfer */
 		dsim_reg_enable_packetgo(dsim->id, true);
-		dsim_reg_wr_tx_header(dsim->id, id, d0, d1, false);
+		dsim_reg_wr_tx_header(dsim->id, id, d0, d1, true);
 		break;
 
 	/* long packet types of packet types for command. */
