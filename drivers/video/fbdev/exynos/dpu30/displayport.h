@@ -33,6 +33,8 @@
 #include "./cal_9810/regs-displayport.h"
 #elif defined(CONFIG_SOC_EXYNOS9820)
 #include "./cal_9820/regs-displayport.h"
+#elif defined(CONFIG_SOC_EXYNOS9830)
+#include "./cal_9830/regs-displayport.h"
 #endif
 
 #include "./panels/exynos_panel.h"

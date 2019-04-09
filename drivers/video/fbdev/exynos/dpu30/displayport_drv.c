@@ -328,7 +328,10 @@ Voltage_Swing_Retry:
 	displayport_info("Voltage_Swing_Retry %02x %02x %02x %02x\n", val[0], val[1], val[2], val[3]);
 	displayport_reg_dpcd_write_burst(DPCD_ADD_TRANING_LANE0_SET, 4, val);
 
-	udelay((training_aux_rd_interval*4000)+400);
+	if (training_aux_rd_interval != 0)
+		mdelay(training_aux_rd_interval * 4);
+	else
+		udelay(100);
 
 	lane_cr_done = 0;
 
@@ -1234,7 +1237,9 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 			if (displayport_check_dpcd_lane_status(val[2], val[3], val[4]) != 0) {
 				displayport_info("link training in HPD IRQ work2\n");
 
+#if defined(CONFIG_EXYNOS_HDCP2)
 				hdcp_dplink_set_reauth();
+#endif
 				displayport_hdcp22_enable(0);
 
 				displayport_link_training();
