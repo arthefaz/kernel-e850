@@ -15,7 +15,6 @@
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
-#include <dt-bindings/clock/exynos9810.h>
 #include "decon.h"
 #include "displayport.h"
 
