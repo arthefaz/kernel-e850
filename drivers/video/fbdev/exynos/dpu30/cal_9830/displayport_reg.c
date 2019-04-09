@@ -308,7 +308,6 @@ void displayport_reg_phy_mode_setting(void)
 		break;
 	}
 #endif
-	displayport_phy_write_mask(CMN_REG00A3, 0, OVRD_RX_CDR_DATA_MODE_EXIT);
 	displayport_phy_write(CMN_REG00A2, lane_config_val | lane_en_val);
 }
 
