@@ -1385,7 +1385,6 @@ void displayport_reg_phy_init(void)
 void displayport_reg_phy_disable(void)
 {
 	displayport_reg_phy_reset(1);
-	displayport_phy_write(CMN_REG00A2, 0x00);
 
 #if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
 	exynos_usbdrd_inform_dp_use(0, displayport_reg_get_lane_count());
