@@ -694,6 +694,12 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 		decon->eint_status = 0;
 	}
 
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	/* for remove under flow interrupt log when decon disable */
+	if (decon->dt.out_type == DECON_OUT_DP)
+		decon_displayport_under_flow_int_mask();
+#endif
+
 	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true,
 			decon->lcd_info->fps);
 	if (ret < 0)
