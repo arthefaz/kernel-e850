@@ -109,23 +109,40 @@ static u64 displayport_find_edid_max_pixelclock(void)
 }
 
 static int displayport_check_edid_max_clock(struct displayport_device *displayport,
-				videoformat video_format)
+		videoformat video_format, enum bit_depth bpc)
 {
-	int ret_val = 0;
+	int ret_val = true;
+	u64 calc_pixel_clock = 0;
 
-	if (supported_videos[video_format].dv_timings.bt.pixelclock * 12 / 10 <
-		displayport->rx_edid_data.max_support_clk * 5 * MHZ) {
-		displayport_info("RX support Max TMDS Clock = %d Mhz\n",
-			displayport->rx_edid_data.max_support_clk * 5);
-		ret_val = -EINVAL;
+	switch (bpc) {
+	case BPC_8:
+		calc_pixel_clock = supported_videos[video_format].dv_timings.bt.pixelclock;
+		break;
+	case BPC_10:
+		calc_pixel_clock = supported_videos[video_format].dv_timings.bt.pixelclock * 125 / 100;
+		break;
+	default:
+		calc_pixel_clock = supported_videos[video_format].dv_timings.bt.pixelclock;
+		break;
 	}
+
+	if (displayport->rx_edid_data.max_support_clk != 0) {
+		if (calc_pixel_clock > displayport->rx_edid_data.max_support_clk * MHZ) {
+			displayport_info("RX support Max TMDS Clock = %llu, but pixel clock = %llu\n",
+					displayport->rx_edid_data.max_support_clk * MHZ, calc_pixel_clock);
+			ret_val = false;
+		}
+	} else
+		displayport_info("Can't check RX support Max TMDS Clock\n");
 
 	return ret_val;
 }
 
-static int displayport_check_link_rate_pixel_clock(u8 link_rate, u8 lane_cnt, u64 pixel_clock)
+static int displayport_check_link_rate_pixel_clock(u8 link_rate,
+		u8 lane_cnt, u64 pixel_clock, enum bit_depth bpc)
 {
 	u64 calc_pixel_clock = 0;
+	u64 pixel_clock_with_bpc = 0;
 	int ret_val = false;
 
 	switch (link_rate) {
@@ -143,17 +160,48 @@ static int displayport_check_link_rate_pixel_clock(u8 link_rate, u8 lane_cnt, u6
 		break;
 	}
 
-	if (calc_pixel_clock >= pixel_clock)
+	switch (bpc) {
+	case BPC_8:
+		pixel_clock_with_bpc = pixel_clock;
+		break;
+	case BPC_10:
+		pixel_clock_with_bpc = pixel_clock * 125 / 100;
+		break;
+	default:
+		pixel_clock_with_bpc = pixel_clock;
+		break;
+	}
+
+	if (calc_pixel_clock >= pixel_clock_with_bpc)
 		ret_val = true;
 
 	if (ret_val == false)
-		displayport_info("link rate: 0x%x, lane cnt: %d, pixel_clock = %llu, calc_pixel_clock = %llu\n",
-			link_rate, lane_cnt, pixel_clock, calc_pixel_clock);
+		displayport_info("link rate: 0x%x, lane cnt: %d, pixel_clock_with_bpc = %llu, calc_pixel_clock = %llu\n",
+				link_rate, lane_cnt, pixel_clock_with_bpc, calc_pixel_clock);
 
 	return ret_val;
 }
 
-static int displayport_get_min_link_rate(u8 rx_link_rate, u8 lane_cnt)
+static int displayport_check_pixel_clock_for_hdr(struct displayport_device *displayport,
+		videoformat video_format)
+{
+	int ret_val = false;
+
+	if (displayport->rx_edid_data.hdr_support) {
+		ret_val = displayport_check_edid_max_clock(displayport, video_format, BPC_10);
+
+		if (ret_val == true)
+			ret_val = displayport_check_link_rate_pixel_clock(displayport_reg_phy_get_link_bw(),
+							displayport_reg_get_lane_count(),
+							supported_videos[video_format].dv_timings.bt.pixelclock,
+							BPC_10);
+	}
+
+	return ret_val;
+}
+
+static int displayport_get_min_link_rate(u8 rx_link_rate,
+		u8 lane_cnt, enum bit_depth bpc)
 {
 	int i = 0;
 	int link_rate[MAX_LINK_RATE_NUM] = {LINK_RATE_1_62Gbps, LINK_RATE_2_7Gbps, LINK_RATE_5_4Gbps};
@@ -168,7 +216,8 @@ static int displayport_get_min_link_rate(u8 rx_link_rate, u8 lane_cnt)
 
 	max_pclk = displayport_find_edid_max_pixelclock();
 	for (i = 0; i < MAX_LINK_RATE_NUM; i++) {
-		if (displayport_check_link_rate_pixel_clock(link_rate[i], lane_cnt, max_pclk) == true)
+		if (displayport_check_link_rate_pixel_clock(link_rate[i],
+				lane_cnt, max_pclk, bpc) == true)
 			break;
 	}
 
@@ -222,6 +271,7 @@ static int displayport_full_link_training(void)
 	u8 enhanced_frame_cap;
 	int ret = 0;
 	int tps3_supported = 0;
+	enum bit_depth bpc = BPC_8;
 	struct displayport_device *displayport = get_displayport_drvdata();
 	struct decon_device *decon = get_decon_drvdata(2);
 
@@ -241,7 +291,10 @@ static int displayport_full_link_training(void)
 	if (!displayport->auto_test_mode &&
 			!(supported_videos[displayport->best_video].pro_audio_support &&
 			edid_support_pro_audio())) {
-		link_rate = displayport_get_min_link_rate(link_rate, lane_cnt);
+		if (displayport->rx_edid_data.hdr_support)
+			bpc = BPC_10;
+
+		link_rate = displayport_get_min_link_rate(link_rate, lane_cnt, bpc);
 		displayport->auto_test_mode = 0;
 	}
 
@@ -1914,12 +1967,15 @@ static int displayport_s_dv_timings(struct v4l2_subdev *sd,
 	displayport_setting_videoformat = ret;
 
 	if (displayport->bist_used == 0) {
-		if (displayport->rx_edid_data.hdr_support &&
-			!(displayport_check_edid_max_clock(displayport,
-			displayport_setting_videoformat) < 0))
+		if (displayport_check_pixel_clock_for_hdr(displayport,
+				displayport_setting_videoformat) == true) {
+			displayport_info("sink support HDR\n");
+			/* BPC_10 should be enabled when support HDR */
 			displayport->bpc = BPC_10;
-		else
+		} else {
+			displayport->rx_edid_data.hdr_support = 0;
 			displayport->bpc = BPC_8;
+		}
 
 		/*fail safe mode (640x480) with 6 bpc*/
 		if (displayport_setting_videoformat == V640X480P60)
@@ -1966,8 +2022,8 @@ static int displayport_enum_dv_timings(struct v4l2_subdev *sd,
 	/* reduce the timing by lane count and link rate */
 	if (displayport_check_link_rate_pixel_clock(displayport_reg_phy_get_link_bw(),
 			displayport_reg_get_lane_count(),
-			supported_videos[timings->index].dv_timings.bt.pixelclock)
-			== false) {
+			supported_videos[timings->index].dv_timings.bt.pixelclock,
+			BPC_8) == false) {
 		displayport_info("can't set index %d (over link rate)\n", timings->index);
 		return -E2BIG;
 	}
