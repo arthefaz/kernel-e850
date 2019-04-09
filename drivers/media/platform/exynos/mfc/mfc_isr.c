@@ -417,6 +417,7 @@ static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
 				reassigned = 1;
 			} else if (!dec->dpb[i].queued) {
 				/* Except queued buffer, the released DPB is deleted from dpb_table */
+				dec->dpb_table_used &= ~(1 << i);
 				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 			}
 		}
@@ -426,6 +427,7 @@ static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
 	if (dec->display_index >= 0) {
 		i = dec->display_index;
 		if (!(dec->dynamic_used & (1 << i)) && dec->dpb[i].mapcnt) {
+			dec->dpb_table_used &= ~(1 << i);
 			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 		}
 		dec->display_index = -1;

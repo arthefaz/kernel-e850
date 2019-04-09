@@ -313,6 +313,7 @@ static void __mfc_dec_dst_stop_streaming(struct mfc_ctx *ctx)
 	mfc_cleanup_queue(&ctx->buf_queue_lock, &ctx->dst_buf_queue);
 	mfc_cleanup_iovmm(ctx);
 
+	dec->dpb_table_used = 0;
 	dec->queued_dpb = 0;
 	dec->dynamic_used = 0;
 	ctx->is_dpb_realloc = 0;

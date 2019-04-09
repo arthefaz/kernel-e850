@@ -587,33 +587,48 @@ int __mfc_assign_dpb_index(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
 	struct mfc_dev *dev = ctx->dev;
+	unsigned int used;
 	int index = -1;
-	int dpb_index = -1;
 	int i;
 
-	/* [TODO] should be optimized */
 	mutex_lock(&dec->dpb_mutex);
-	for (i = 0; i < MFC_MAX_DPBS; i++) {
-		if (!dec->dpb[i].mapcnt && index == -1) {
-			index = i;
-		}
-		if (mfc_buf->addr[0][0] == dec->dpb[i].addr[0]) {
-			mfc_debug(2, "[DPB] index [%d] [%d] %#llx is referenced\n",
-					mfc_buf->vb.vb2_buf.index, i, mfc_buf->addr[0][0]);
-			dpb_index = i;
-			break;
+
+	/* case 1: dpb has same address with vb index */
+	if (mfc_buf->addr[0][0] == dec->dpb[mfc_buf->vb.vb2_buf.index].addr[0]) {
+		mfc_debug(2, "[DPB] vb index [%d] %#llx has same address\n",
+				mfc_buf->vb.vb2_buf.index, mfc_buf->addr[0][0]);
+		index = mfc_buf->vb.vb2_buf.index;
+		goto out;
+	}
+
+	/* case 2: dpb has same address with referenced buffer */
+	used = dec->dynamic_used;
+	if (used) {
+		for (i = (ffs(used) - 1); i < MFC_MAX_DPBS;) {
+			if (mfc_buf->addr[0][0] == dec->dpb[i].addr[0]) {
+				mfc_debug(2, "[DPB] index [%d][%d] %#llx is referenced\n",
+						mfc_buf->vb.vb2_buf.index, i, mfc_buf->addr[0][0]);
+				index = i;
+				goto out;
+			}
+			used &= ~(1 << i);
+			if (used == 0)
+				break;
+			i = ffs(used) - 1;
 		}
 	}
-	mutex_unlock(&dec->dpb_mutex);
 
-	/* [TODO] handle index full error case */
-	if (index < 0 && dpb_index < 0) {
+	/* case 3: allocate new dpb index */
+	if (dec->dpb_table_used == ~0UL) {
 		mfc_err_ctx("[DPB] index is full\n");
 		mfc_print_dpb_table(ctx);
 		call_dop(dev, dump_and_stop_debug_mode, dev);
 	}
+	index = ffz(dec->dpb_table_used);
+out:
+	mutex_unlock(&dec->dpb_mutex);
 
-	return (dpb_index >= 0 ? dpb_index : index);
+	return index;
 }
 
 /* Add dst buffer in dst_buf_queue */
@@ -688,6 +703,8 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 					index, dec->dpb[index].addr[0], dec->dynamic_used);
 		}
 	}
+	if (dec->dpb[index].queued)
+		dec->dpb_table_used |= (1 << index);
 	mutex_unlock(&dec->dpb_mutex);
 }
 

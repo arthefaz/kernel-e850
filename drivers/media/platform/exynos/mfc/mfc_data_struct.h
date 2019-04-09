@@ -1441,6 +1441,7 @@ struct mfc_dec {
 	struct dpb_table dpb[MFC_MAX_DPBS];
 	struct dpb_table spare_dpb[MFC_MAX_DPBS];
 	struct mutex dpb_mutex;
+	unsigned int dpb_table_used;
 
 	/* for HDR10+ */
 	struct mfc_user_shared_handle sh_handle_hdr;

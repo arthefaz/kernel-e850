@@ -95,6 +95,7 @@ static void __mfc_deinit_dec_ctx(struct mfc_ctx *ctx)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
 
+	dec->dpb_table_used = 0;
 	mfc_cleanup_iovmm(ctx);
 
 	mfc_delete_queue(&ctx->src_buf_queue);
@@ -161,6 +162,7 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	dec->is_dpb_full = 0;
 	dec->queued_dpb = 0;
 	dec->display_index = -1;
+	dec->dpb_table_used = 0;
 	mutex_init(&dec->dpb_mutex);
 
 	/* sh_handle: HDR10+ HEVC SEI meta */
