@@ -371,3 +371,8 @@ int decon_displayport_set_config(struct decon_device *decon,
 	mutex_unlock(&decon->lock);
 	return ret;
 }
+
+void decon_displayport_under_flow_int_mask(void)
+{
+	displayport_reg_set_interrupt_mask(VIDEO_FIFO_UNDER_FLOW_MASK, 0);
+}

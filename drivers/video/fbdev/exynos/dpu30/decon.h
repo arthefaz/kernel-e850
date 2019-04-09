@@ -1208,6 +1208,7 @@ int decon_displayport_get_config(struct decon_device *dex,
 		struct exynos_displayport_data *displayport_data);
 int decon_displayport_set_config(struct decon_device *dex,
 		struct exynos_displayport_data *displayport_data);
+void decon_displayport_under_flow_int_mask(void);
 #endif
 
 /* window update related function */
