@@ -17,56 +17,6 @@
 #include "../../../drivers/usb/dwc3/dwc3-exynos.h"
 #endif
 
-#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
-u32 phy_default_value[DEFAULT_SFR_CNT][2] = {
-	{0x0020, 0x48}, {0x0050, 0x04}, {0x0054, 0x02}, {0x0058, 0x26}, {0x005C, 0x22},
-	{0x0090, 0x60}, {0x0094, 0x60}, {0x00C4, 0x0B}, {0x00E0, 0x38}, {0x012C, 0xF4},
-	{0x0134, 0xF4},	{0x015C, 0x4E}, {0x0174, 0x4E}, {0x018C, 0x41}, {0x01AC, 0x2C},
-	{0x01BC, 0x3F},	{0x01C8, 0x08}, {0x01F0, 0x07}, {0x0208, 0x16}, {0x021C, 0x19},
-	{0x0220, 0x3C},	{0x081C, 0x1F}, {0x0830, 0x07}, {0x085C, 0x80}, {0x08CC, 0x11},
-	{0x0904, 0x71}, {0x0994, 0x3F}, {0x0998, 0x3F},	{0x099C, 0xFF}, {0x09A8, 0x7C},
-	{0x09B8, 0x4E}, {0x09E4, 0x04}, {0x09F8, 0x0C},	{0x09FC, 0x0C}, {0x0A2C, 0x00},
-	{0x0A30, 0x00}, {0x0A34, 0x1E}, {0x0AF4, 0x1B},	{0x0AF8, 0x01}, {0x0AFC, 0x13},
-	{0x0B00, 0x30}, {0x101C, 0x1F}, {0x1030, 0x07}, {0x105C, 0x80}, {0x1078, 0x01},
-	{0x107C, 0x05}, {0x1080, 0x33}, {0x181C, 0x1F}, {0x1830, 0x07}, {0x185C, 0x80},
-	{0x18CC, 0x11}, {0x1904, 0x71},	{0x1994, 0x3F}, {0x1998, 0x3F}, {0x199C, 0xFF},
-	{0x19A8, 0x7C}, {0x19B8, 0x4E},	{0x19E4, 0x04}, {0x19F8, 0x0C}, {0x19FC, 0x0C},
-	{0x1A2C, 0x00}, {0x1A30, 0x00},	{0x1A34, 0x1E}, {0x1AF4, 0x1B}, {0x1AF8, 0x01},
-	{0x1AFC, 0x13}, {0x1B00, 0x30},	{0x201C, 0x1F}, {0x2030, 0x07}, {0x205C, 0x80},
-	{0x2078, 0x01},	{0x207C, 0x05}, {0x2080, 0x33}, {0x0228, 0x38}, {0x0104, 0x44},
-	{0x0248, 0x44}, {0x038C, 0x02}, {0x09D0, 0x60}, {0x19D0, 0x60}, {0x03A8, 0x07},
-	{0x03AC, 0x00}, {0x0C2C, 0x0C}, {0x0C30, 0x0C}, {0x0C44, 0x0C}, {0x0C48, 0x0C},
-	{0x1C2C, 0x0C}, {0x1C30, 0x0C}, {0x1C44, 0x0C}, {0x1C48, 0x0C}, {0x02D0, 0x4B},
-	{0x014C, 0x34},
-};
-
-u32 phy_tune_parameters[4][4][4] = { /* {amp, post, pre, idrv} */
-	{	/* Swing Level_0 */
-		{0x21, 0x10, 0x42, 0x1C}, /* Pre-emphasis Level_0 */
-		{0x25, 0x14, 0x42, 0x1C}, /* Pre-emphasis Level_1 */
-		{0x26, 0x17, 0x43, 0x1C}, /* Pre-emphasis Level_2 */
-		{0x2B, 0x1C, 0x43, 0x1D}, /* Pre-emphasis Level_3 */
-	},
-	{	/* Swing Level_1 */
-		{0x26, 0x10, 0x42, 0x1D}, /* Pre-emphasis Level_0 */
-		{0x2B, 0x15, 0x42, 0x1D}, /* Pre-emphasis Level_1 */
-		{0x2B, 0x18, 0x43, 0x1D}, /* Pre-emphasis Level_2 */
-		{0x2B, 0x18, 0x43, 0x1D}, /* Pre-emphasis Level_3 */
-	},
-	{	/* Swing Level_2 */
-		{0x2A, 0x10, 0x42, 0x1D}, /* Pre-emphasis Level_0 */
-		{0x2B, 0x15, 0x43, 0x1D}, /* Pre-emphasis Level_1 */
-		{0x2B, 0x15, 0x43, 0x1D}, /* Pre-emphasis Level_2 */
-		{0x2B, 0x15, 0x43, 0x1D}, /* Pre-emphasis Level_3 */
-	},
-	{	/* Swing Level_3 */
-		{0x2B, 0x10, 0x43, 0x1D}, /* Pre-emphasis Level_0 */
-		{0x2B, 0x10, 0x43, 0x1D}, /* Pre-emphasis Level_1 */
-		{0x2B, 0x10, 0x43, 0x1D}, /* Pre-emphasis Level_2 */
-		{0x2B, 0x10, 0x43, 0x1D}, /* Pre-emphasis Level_3 */
-	},
-};
-#else /* EVT1 */
 u32 phy_default_value[DEFAULT_SFR_CNT][2] = {
 	{0x0830, 0x07}, {0x085c, 0x80}, {0x1030, 0x07}, {0x105c, 0x80}, {0x1830, 0x07},
 	{0x185c, 0x80}, {0x2030, 0x07}, {0x205c, 0x80}, {0x0228, 0x38}, {0x0104, 0x44},
@@ -103,7 +53,6 @@ u32 phy_tune_parameters[4][4][4] = { /* {amp, post, pre, idrv} */
 		{0x2B, 0x10, 0x43, 0xE7}, /* Pre-emphasis Level_3 */
 	},
 };
-#endif
 
 /* supported_videos[] is to be arranged in the order of pixel clock */
 struct displayport_supported_preset supported_videos[] = {
@@ -246,10 +195,7 @@ void displayport_reg_phy_mode_setting(void)
 				| LANE_MUX_SEL_DP_LN1 | LANE_MUX_SEL_DP_LN0;
 		lane_en_val = DP_LANE_EN_LN3 | DP_LANE_EN_LN2
 				| DP_LANE_EN_LN1 | DP_LANE_EN_LN0;
-#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
-		displayport_phy_write_mask(TRSV_REG0400, 1, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
-		displayport_phy_write_mask(TRSV_REG0800, 1, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
-#endif
+
 		if (displayport_reg_phy_get_link_bw() < LINK_RATE_5_4Gbps) {
 			displayport_phy_write_mask(TRSV_REG0215, 1, LN0_ANA_TX_SER_TXCLK_INV);
 			displayport_phy_write_mask(TRSV_REG0415, 1, LN1_ANA_TX_SER_TXCLK_INV);
@@ -272,10 +218,7 @@ void displayport_reg_phy_mode_setting(void)
 		if (displayport->dp_sw_sel) {
 			lane_config_val = LANE_MUX_SEL_DP_LN3 | LANE_MUX_SEL_DP_LN2;
 			lane_en_val = DP_LANE_EN_LN3 | DP_LANE_EN_LN2;
-#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
-			displayport_phy_write_mask(TRSV_REG0400, 0, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
-			displayport_phy_write_mask(TRSV_REG0800, 1, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
-#endif
+
 			if (displayport_reg_phy_get_link_bw() < LINK_RATE_5_4Gbps) {
 				displayport_phy_write_mask(TRSV_REG0215, 0, LN0_ANA_TX_SER_TXCLK_INV);
 				displayport_phy_write_mask(TRSV_REG0415, 0, LN1_ANA_TX_SER_TXCLK_INV);
@@ -290,10 +233,7 @@ void displayport_reg_phy_mode_setting(void)
 		} else {
 			lane_config_val = LANE_MUX_SEL_DP_LN1 | LANE_MUX_SEL_DP_LN0;
 			lane_en_val = DP_LANE_EN_LN1 | DP_LANE_EN_LN0;
-#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
-			displayport_phy_write_mask(TRSV_REG0400, 1, OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN);
-			displayport_phy_write_mask(TRSV_REG0800, 0, OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN);
-#endif
+
 			if (displayport_reg_phy_get_link_bw() < LINK_RATE_5_4Gbps) {
 				displayport_phy_write_mask(TRSV_REG0215, 1, LN0_ANA_TX_SER_TXCLK_INV);
 				displayport_phy_write_mask(TRSV_REG0415, 1, LN1_ANA_TX_SER_TXCLK_INV);
@@ -1913,7 +1853,6 @@ void displayport_reg_print_audio_state(void)
 			val1, val2, val3, val4, val5);
 }
 
-#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 void displayport_reg_set_dma_req_gen(u32 en)
 {
 	u32 val = en ? ~0 : 0;
@@ -1925,7 +1864,6 @@ void displayport_reg_set_clear_audio_fifo(void)
 {
 	displayport_write_mask(SST1_MAIN_FIFO_CONTROL, 1, CLEAR_AUDIO_FIFO);
 }
-#endif
 
 void displayport_set_audio_ch_status(struct displayport_audio_config_data *audio_config_data)
 {
@@ -1950,24 +1888,6 @@ void displayport_wait_audio_buf_empty(struct displayport_device *displayport)
 
 void displayport_audio_enable(struct displayport_audio_config_data *audio_config_data)
 {
-#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
-	/* channel mapping: FL, FR, C, SW, RL, RR */
-	displayport_reg_set_audio_ch_mapping(1, 2, 4, 3, 5, 6, 7, 8);
-
-	displayport_reg_set_audio_m_n(ASYNC_MODE, audio_config_data->audio_fs);
-	displayport_reg_set_audio_function_enable(audio_config_data->audio_enable);
-	displayport_reg_set_init_dma_config();
-	displayport_reg_set_dma_burst_size(audio_config_data->audio_word_length);
-	displayport_reg_set_dma_pack_mode(audio_config_data->audio_packed_mode);
-	displayport_reg_set_pcm_size(audio_config_data->audio_bit);
-	displayport_reg_set_audio_ch(audio_config_data->audio_channel_cnt);
-	displayport_reg_set_audio_fifo_function_enable(audio_config_data->audio_enable);
-	displayport_reg_set_audio_ch_status_same(1);
-	displayport_reg_set_audio_sampling_frequency(audio_config_data->audio_fs);
-	displayport_reg_set_dp_audio_enable(audio_config_data->audio_enable);
-	displayport_set_audio_ch_status(audio_config_data);
-	displayport_reg_set_audio_master_mode_enable(audio_config_data->audio_enable);
-#else
 	displayport_reg_set_audio_m_n(ASYNC_MODE, audio_config_data->audio_fs);
 	displayport_reg_set_audio_function_enable(audio_config_data->audio_enable);
 	displayport_reg_set_dma_burst_size(audio_config_data->audio_word_length);
@@ -1983,31 +1903,16 @@ void displayport_audio_enable(struct displayport_audio_config_data *audio_config
 	displayport_reg_set_audio_ch_status_same(1);
 	displayport_reg_set_dma_req_gen(1);
 	displayport_reg_set_audio_master_mode_enable(audio_config_data->audio_enable);
-#endif
 	displayport_reg_print_audio_state();
 }
 
 void displayport_audio_disable(void)
 {
-#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
-	struct displayport_device *displayport = get_displayport_drvdata();
-#endif
 	if (displayport_read_mask(SST1_AUDIO_ENABLE, AUDIO_EN) == 1) {
-#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
-		displayport_reg_set_dma_force_req_low(1);
-#endif
 		udelay(1000);
 		displayport_reg_set_dp_audio_enable(0);
 		displayport_reg_set_audio_fifo_function_enable(0);
-#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
-		displayport_reg_set_audio_ch(1);
-		displayport->audio_buf_empty_check = 0;
-		displayport_reg_set_audio_master_mode_enable(1);
-		displayport_wait_audio_buf_empty(displayport);
-		displayport_reg_set_audio_master_mode_enable(0);
-#else
 		displayport_reg_set_clear_audio_fifo();
-#endif
 		displayport_info("audio_disable\n");
 	} else
 		displayport_info("audio_disable, AUDIO_EN = 0\n");
@@ -2016,21 +1921,13 @@ void displayport_audio_disable(void)
 void displayport_audio_wait_buf_full(void)
 {
 	displayport_reg_set_audio_master_mode_enable(0);
-#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 	displayport_reg_set_dma_req_gen(0);
-#else
-	displayport_reg_wait_buf_full();
-#endif
 	displayport_info("displayport_audio_wait_buf_full\n");
 }
 
 void displayport_audio_dma_force_req_release(void)
 {
-#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
-	displayport_reg_set_dma_force_req_low(0);
-#else
 	displayport_info("skip displayport_audio_dma_force_req_release(not need)");
-#endif
 }
 
 void displayport_audio_bist_enable(struct displayport_audio_config_data audio_config_data)
@@ -2043,7 +1940,6 @@ void displayport_audio_bist_enable(struct displayport_audio_config_data audio_co
 	if (audio_config_data.audio_enable == 1) {
 		displayport_reg_set_audio_m_n(ASYNC_MODE, audio_config_data.audio_fs);
 		displayport_reg_set_audio_function_enable(audio_config_data.audio_enable);
-
 		displayport_reg_set_audio_ch(audio_config_data.audio_channel_cnt);
 		displayport_reg_set_audio_fifo_function_enable(audio_config_data.audio_enable);
 		displayport_reg_set_audio_ch_status_same(1);
@@ -2060,9 +1956,6 @@ void displayport_audio_bist_enable(struct displayport_audio_config_data audio_co
 
 void displayport_audio_init_config(void)
 {
-#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
-	displayport_reg_set_dma_force_req_low(1);
-#endif
 	displayport_reg_set_audio_m_n(ASYNC_MODE, FS_48KHZ);
 	displayport_reg_set_audio_function_enable(1);
 	displayport_reg_set_audio_sampling_frequency(FS_48KHZ);
