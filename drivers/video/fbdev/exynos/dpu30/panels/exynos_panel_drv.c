@@ -535,16 +535,22 @@ static void exynos_panel_list_up(void)
 
 static int exynos_panel_register_ops(struct exynos_panel_device *panel)
 {
-	int i;
+	int i, j;
 	bool found = false;
 
 	for (i = 0; i < MAX_PANEL_SUPPORT; ++i) {
-		if (panel_list[i]->id == panel->lcd_info.id) {
-			panel->ops = panel_list[i];
-			found = true;
-			DPU_INFO_PANEL("panel ops is found in panel list\n");
-			break;
+		for (j = 0; j < MAX_PANEL_ID_NUM; j++) {
+			if (panel_list[i]->id[j] == panel->lcd_info.id) {
+				panel->ops = panel_list[i];
+				panel->id_index = j;
+				found = true;
+				DPU_INFO_PANEL("panel ops is found in panel list\n");
+				break;
+			}
+
 		}
+		if (found == true)
+			break;
 	}
 
 	if (!found) {
@@ -559,7 +565,9 @@ static int exynos_panel_register(struct exynos_panel_device *panel, u32 id)
 {
 	struct device_node *n = panel->dev->of_node;
 	struct device_node *np;
+	struct property *prop;
 	int panel_id, i;
+	const __be32 *cur;
 
 	for (i = 0; i < MAX_PANEL_SUPPORT; ++i) {
 		np = of_parse_phandle(n, "lcd_info", i);
@@ -568,26 +576,30 @@ static int exynos_panel_register(struct exynos_panel_device *panel, u32 id)
 			return -EINVAL;
 		}
 
-		of_property_read_u32(np, "id", &panel_id);
-		DPU_INFO_PANEL("finding... %s(0x%x)\n", np->name, panel_id);
+		of_property_for_each_u32(np, "id", prop, cur, panel_id) {
+			DPU_INFO_PANEL("finding... %s(0x%x)\n", np->name, panel_id);
 
-		/*
-		 * TODO: The mode(video or command) should be compared
-		 * for distinguishing panel DT information which has same DDI ID
-		 */
-		if (id == panel_id) {
-			panel->found = true;
-			DPU_INFO_PANEL("matched panel is found(%s:0x%x)\n",
-					np->name, id);
+			/*
+			 * TODO: The mode(video or command) should be compared
+			 * for distinguishing panel DT information which has same DDI ID
+			 */
+			if (id == panel_id) {
+				panel->found = true;
+				DPU_INFO_PANEL("matched panel is found(%s:0x%x)\n",
+						np->name, id);
 
-			/* parsing lcd info */
-			panel->lcd_info.id = id;
-			exynos_panel_parse_lcd_info(panel, np);
-			if (exynos_panel_register_ops(panel))
-				BUG();
+				/* parsing lcd info */
+				panel->lcd_info.id = id;
+				exynos_panel_parse_lcd_info(panel, np);
+				if (exynos_panel_register_ops(panel))
+					BUG();
 
-			break;
+				break;
+			}
 		}
+
+		if(panel->found == true)
+			break;
 	}
 
 	return 0;
