@@ -13,6 +13,8 @@
 #if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
 #include "../../../../drivers/phy/samsung/phy-samsung-usb-cal.h"
 #include "../../../../drivers/phy/samsung/phy-exynos-usbdp.h"
+#include <linux/usb/otg-fsm.h>
+#include "../../../drivers/usb/dwc3/dwc3-exynos.h"
 #endif
 
 #if defined(CONFIG_SOC_EXYNOS9820_EVT0)
@@ -226,6 +228,9 @@ void displayport_reg_phy_mode_setting(void)
 	u32 lane_en_val = 0;
 
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
+#if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
+	dwc3_exynos_phy_enable(1, 1);
+#endif
 	switch (displayport->ccic_notify_dp_conf) {
 	case CCIC_NOTIFY_DP_PIN_UNKNOWN:
 		displayport_dbg("CCIC_NOTIFY_DP_PIN_UNKNOWN\n");
@@ -1388,7 +1393,7 @@ void displayport_reg_phy_disable(void)
 
 #if defined(CONFIG_PHY_SAMSUNG_USB_CAL)
 	exynos_usbdrd_inform_dp_use(0, displayport_reg_get_lane_count());
-	exynos_usbdrd_request_phy_isol();
+	dwc3_exynos_phy_enable(1, 0);
 #endif
 }
 
