@@ -648,7 +648,12 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 			pm_qos_update_request(&decon->bts.mif_qos, 1352 * 1000);
 		else
 			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
-	} /* pixelclock <= 148500000 ? */
+	} else { /* pixelclock <= 148500000 ? */
+		if (pm_qos_request_active(&decon->bts.mif_qos))
+			pm_qos_update_request(&decon->bts.mif_qos, 845 * 1000);
+		else
+			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
+	}
 
 	DPU_DEBUG_BTS("%s: decon%d, pixelclock(%u)\n", __func__, decon->id,
 			pixelclock);
