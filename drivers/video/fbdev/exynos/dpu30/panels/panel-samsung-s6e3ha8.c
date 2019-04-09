@@ -288,7 +288,7 @@ static int s6e3ha8_read_state(struct exynos_panel_device *panel)
 }
 
 struct exynos_panel_ops panel_s6e3ha8_ops = {
-	.id		= 0x460091,
+	.id		= {0x460091, 0x430491},
 	.suspend	= s6e3ha8_suspend,
 	.displayon	= s6e3ha8_displayon,
 	.mres		= s6e3ha8_mres,
