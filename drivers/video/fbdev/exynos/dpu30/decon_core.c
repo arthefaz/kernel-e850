@@ -1677,6 +1677,13 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 		return -ETIMEDOUT;
 	}
 
+	for (i = 0; i < decon->dt.max_win; i++) {
+		if (regs->is_cursor_win[i]) {
+			has_cursor_win = true;
+			break;
+		}
+	}
+
 	/* TODO: check and wait until the required IDMA is free */
 	decon_reg_chmap_validate(decon, regs);
 
@@ -1723,10 +1730,6 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 #endif
 
 	for (i = 0; i < decon->dt.max_win; i++) {
-		if (regs->is_cursor_win[i]) {
-			dpu_cursor_win_update_config(decon, regs);
-			has_cursor_win = true;
-		}
 		/* set decon registers for each window */
 		decon_reg_set_window_control(decon->id, i, &regs->win_regs[i],
 						regs->win_regs[i].winmap_state);
@@ -2208,9 +2211,6 @@ static void decon_update_regs(struct decon_device *decon,
 		decon_systrace(decon, 'C', "decon_wait_vsync", 1);
 		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 		decon_systrace(decon, 'C', "decon_wait_vsync", 0);
-
-		if (decon->cursor.unmask)
-			decon_set_cursor_unmask(decon, false);
 
 		decon_wait_for_vstatus(decon, 50);
 		if (decon_reg_wait_update_done_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
@@ -3077,17 +3077,10 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			ret = -EFAULT;
 			break;
 		}
-		if ((decon->id == 2) &&
-				(decon->lcd_info->mode == DECON_VIDEO_MODE)) {
 			decon_dbg("cursor pos : x:%d, y:%d\n",
 					user_window.x, user_window.y);
 			ret = decon_set_cursor_win_config(decon, user_window.x,
 					user_window.y);
-		} else {
-			decon_err("decon[%d] is not support CURSOR ioctl\n",
-					decon->id);
-			ret = -EPERM;
-		}
 		break;
 
 	case S3CFB_POWER_MODE:
@@ -3870,6 +3863,12 @@ static void decon_parse_dt(struct decon_device *decon)
 	decon_info("chip_ver %d, dpp cnt %d, dsim cnt %d\n", decon->dt.chip_ver,
 			decon->dt.dpp_cnt, decon->dt.dsim_cnt);
 
+	if (of_property_read_u32(dev->of_node, "cursor_margin",
+					&decon->cursor.regset_margin)) {
+		decon_info("cursor margin not declared\n");
+		decon->cursor.regset_margin = 40;
+	}
+
 	if (decon->dt.out_type == DECON_OUT_DSI) {
 		ret = of_property_read_u32_index(dev->of_node, "out_idx", 0,
 				&decon->dt.out_idx[0]);
@@ -4210,7 +4209,9 @@ static int decon_probe(struct platform_device *pdev)
 	mutex_init(&decon->lock);
 	mutex_init(&decon->pm_lock);
 	mutex_init(&decon->up.lock);
-	mutex_init(&decon->cursor.lock);
+	/* cursor async */
+	mutex_init(&decon->cursor.unmask_lock);
+	spin_lock_init(&decon->cursor.pos_lock);
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 	mutex_init(&decon->esd.lock);
 #endif

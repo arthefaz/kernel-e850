@@ -108,6 +108,9 @@ static void win_update_check_limitation(struct decon_device *decon,
 		if (config->state == DECON_WIN_STATE_DISABLED)
 			continue;
 
+		if (config->state == DECON_WIN_STATE_CURSOR)
+			goto change_full;
+
 		r.left = config->dst.x;
 		r.top = config->dst.y;
 		r.right = config->dst.w + config->dst.x - 1;
@@ -161,6 +164,7 @@ change_full:
 			config->dst.x, config->dst.y,
 			config->dst.w, config->dst.h);
 	DPU_FULL_RECT(&regs->up_region, decon->lcd_info);
+	return;
 }
 
 static void win_update_reconfig_coordinates(struct decon_device *decon,

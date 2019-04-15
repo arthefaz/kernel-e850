@@ -384,37 +384,6 @@ void DPU_EVENT_LOG_CMD(struct v4l2_subdev *sd, u32 cmd_id, unsigned long data, u
 		log->data.cmd_buf.caller[i] = (void *)((size_t)return_address(i + 1));
 }
 
-/* cursor async */
-void DPU_EVENT_LOG_CURSOR(struct v4l2_subdev *sd, struct decon_reg_data *regs)
-{
-	struct decon_device *decon = container_of(sd, struct decon_device, sd);
-	struct dpu_log *log;
-	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
-	int win = 0;
-
-	if (IS_ERR_OR_NULL(decon->d.event_log))
-		return;
-
-	log = &decon->d.event_log[idx];
-
-	log->time = ktime_get();
-	log->type = DPU_EVT_CURSOR_UPDATE;
-
-	for (win = 0; win < decon->dt.max_win; win++) {
-		if (regs->is_cursor_win[win] && regs->win_regs[win].wincon & WIN_EN_F(win)) {
-			memcpy(&log->data.reg.win_regs[win], &regs->win_regs[win],
-				sizeof(struct decon_window_regs));
-			memcpy(&log->data.reg.win_config[win], &regs->dpp_config[win],
-				sizeof(struct decon_win_config));
-		} else {
-			log->data.reg.win_config[win].state =
-						DECON_WIN_STATE_DISABLED;
-		}
-	}
-	win  = DECON_WIN_UPDATE_IDX;
-	log->data.reg.win_config[win].state = DECON_WIN_STATE_DISABLED;
-}
-
 void DPU_EVENT_LOG_UPDATE_REGION(struct v4l2_subdev *sd,
 		struct decon_frame *req_region, struct decon_frame *adj_region)
 {
@@ -718,6 +687,13 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 			break;
 		case DPU_EVT_DMA_RECOVERY:
 			seq_printf(s, "%20s  %20s", "DMA_FRAMEDONE", "-\n");
+			break;
+		case DPU_EVT_CURSOR_POS:
+			tv = ktime_to_timeval(log->data.cursor.elapsed);
+			seq_printf(s, "%20s  x=%6d y=%6d elapsed=[%ld.%03lds]\n",
+					"CURSOR_POS",
+					log->data.cursor.xpos, log->data.cursor.ypos,
+					tv.tv_sec, tv.tv_usec/1000);
 			break;
 		default:
 			seq_printf(s, "%20s  (%2d)\n", "NO_DEFINED", log->type);

@@ -494,6 +494,28 @@ static int dpp_afbc_enabled(struct dpp_device *dpp, int *afbc_enabled)
 	return ret;
 }
 
+static int dpp_set_cursor_config(struct dpp_device *dpp)
+{
+	struct dpp_params_info params;
+	int ret = 0;
+
+	/* parameters from decon driver are translated for dpp driver */
+	dpp_get_params(dpp, &params);
+
+	/* all parameters must be passed dpp hw limitation */
+	ret = dpp_check_limitation(dpp, &params);
+	if (ret)
+		goto err;
+
+	/* set all parameters to dpp hw */
+	dpp_reg_configure_params(dpp->id, &params, dpp->attr);
+
+	dpp_dbg("dpp%d cursor configuration\n", dpp->id);
+
+err:
+	return ret;
+}
+
 static int dpp_set_config(struct dpp_device *dpp)
 {
 	struct dpp_params_info params;
@@ -610,6 +632,13 @@ static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg
 	case DPP_WIN_CONFIG:
 		dpp->dpp_config = (struct dpp_config *)arg;
 		ret = dpp_set_config(dpp);
+		if (ret)
+			dpp_err("failed to configure dpp%d\n", dpp->id);
+		break;
+
+	case DPP_CURSOR_WIN_CONFIG:
+		dpp->dpp_config = (struct dpp_config *)arg;
+		ret = dpp_set_cursor_config(dpp);
 		if (ret)
 			dpp_err("failed to configure dpp%d\n", dpp->id);
 		break;

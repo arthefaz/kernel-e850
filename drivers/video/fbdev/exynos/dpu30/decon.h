@@ -590,7 +590,6 @@ typedef enum dpu_event_type {
 	DPU_EVT_DECON_SET_BUFFER,
 	/* cursor async */
 	DPU_EVT_CURSOR_POS,
-	DPU_EVT_CURSOR_UPDATE,
 
 	/* window update */
 	DPU_EVT_WINUP_UPDATE_REGION,
@@ -1026,11 +1025,13 @@ struct decon_bts {
 /* cursor async */
 struct decon_cursor {
 	struct decon_reg_data regs;
-	struct mutex lock;
+	struct mutex unmask_lock;
+	spinlock_t pos_lock;
 	u32 xpos;
 	u32 ypos;
 	bool unmask;	/* if true, cursor unmask period */
 	bool enabled;
+	u32 regset_margin;
 };
 
 /* systrace */
@@ -1504,6 +1505,8 @@ int decon_update_last_regs(struct decon_device *decon,
 
 void decon_hiber_start(struct decon_device *decon);
 void decon_hiber_finish(struct decon_device *decon);
+
+u32 decon_processed_linecnt(struct decon_device *decon);
 
 /* IOCTL commands */
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, __u32)
