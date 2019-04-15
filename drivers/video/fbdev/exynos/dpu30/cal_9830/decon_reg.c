@@ -2253,6 +2253,7 @@ int decon_check_global_limitation(struct decon_device *decon,
 	 * AXI Port2 : CH2(VG), CH3(VGS)
 	 */
 	int axi_port[MAX_DECON_WIN] = {5, 4, 3, 2, 1, 0};
+	int cursor_cnt = 0;
 #if defined(CONFIG_EXYNOS_LIMIT_ROTATION)
 	const struct dpu_fmt *fmt_info;
 #endif
@@ -2260,6 +2261,9 @@ int decon_check_global_limitation(struct decon_device *decon,
 	for (i = 0; i < MAX_DECON_WIN; i++) {
 		if (config[i].state != DECON_WIN_STATE_BUFFER)
 			continue;
+
+		if (config[i].state == DECON_WIN_STATE_CURSOR)
+			cursor_cnt++;
 
 		if (config[i].channel < 0 ||
 				config[i].channel >= decon->dt.dpp_cnt) {
@@ -2330,6 +2334,23 @@ int decon_check_global_limitation(struct decon_device *decon,
 		}
 	}
 
+	if (cursor_cnt >= 2)
+		ret = -EPERM;
+
+
 err:
 	return ret;
+}
+
+static u32 decon_reg_outfifo_y_couter(u32 id)
+{
+	u32 val;
+
+	val = decon_read(id, OUTFIFO_COUNTER0);
+	return OUTFIFO_Y_CNT_GET(val);
+}
+
+u32 decon_processed_linecnt(struct decon_device *decon)
+{
+	return decon_reg_outfifo_y_couter(decon->id);
 }

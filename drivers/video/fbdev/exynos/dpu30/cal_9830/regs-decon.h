@@ -400,6 +400,9 @@
 
 #define FRAME_COUNT				0x02A0
 
+#define OUTFIFO_COUNTER0			0x0474
+#define OUTFIFO_Y_CNT_GET(_v)			(((_v) >> 16) & 0x3fff)
+
 /* BLENDER */
 #define WIN_CONTROL_0(_win)			(0x1000 + ((_win) * 0x30))
 #define WIN_ALPHA1_F(_v)			(((_v) & 0xFF) << 24)
