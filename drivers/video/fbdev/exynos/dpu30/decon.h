@@ -63,6 +63,7 @@ extern int dpu_bts_log_level;
 extern int win_update_log_level;
 extern int dpu_mres_log_level;
 extern int dpu_fence_log_level;
+extern int dpu_dma_buf_log_level;
 extern int decon_systrace_enable;
 extern struct decon_bts_ops decon_bts_control;
 
@@ -187,6 +188,12 @@ void dpu_debug_printk(const char *function_name, const char *format, ...);
 	do {									\
 		if (dpu_fence_log_level >= 3)					\
 			dpu_debug_printk("FENCE", fmt, ##args);			\
+	} while (0)
+
+#define DPU_DEBUG_DMA_BUF(fmt, args...)						\
+	do {									\
+		if (dpu_dma_buf_log_level >= 7)					\
+			dpu_debug_printk("DMA_BUF", fmt,  ##args);			\
 	} while (0)
 
 /* DECON systrace related */
@@ -829,6 +836,7 @@ struct decon_debug {
 	struct dentry *debug_mres;
 	struct dentry *debug_freq_hop;
 	struct dentry *debug_fence;
+	struct dentry *debug_dma_buf;
 
 	struct dpu_log *event_log;
 	u32 event_log_cnt;
