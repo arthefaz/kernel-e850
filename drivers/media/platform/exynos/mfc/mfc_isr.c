@@ -281,6 +281,14 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx, unsigned int err)
 			mfc_debug(2, "[HDR] color range parsed\n");
 		}
 
+		if (IS_VP9_DEC(ctx) && mfc_get_disp_res_change()) {
+			mfc_info_ctx("[FRAME] display resolution changed\n");
+			ctx->wait_state = WAIT_G_FMT;
+			mfc_get_img_size(ctx, MFC_GET_RESOL_SIZE);
+			dec->disp_res_change = 1;
+			mfc_set_vb_flag(dst_mb, MFC_FLAG_DISP_RES_CHANGE);
+		}
+
 		if (dec->black_bar_updated) {
 			mfc_set_vb_flag(dst_mb, MFC_FLAG_BLACKBAR_DETECT);
 			mfc_debug(3, "[BLACKBAR] black bar detected\n");
@@ -630,8 +638,11 @@ static void __mfc_handle_frame(struct mfc_ctx *ctx,
 	}
 
 	if (need_dpb_change || need_scratch_change) {
-		mfc_err_ctx("[DRC] Interframe resolution change is not supported\n");
-		mfc_change_state(ctx, MFCINST_ERROR);
+		mfc_info_ctx("[DRC] Interframe resolution changed\n");
+		ctx->wait_state = WAIT_G_FMT | WAIT_STOP;
+		mfc_get_img_size(ctx, MFC_GET_RESOL_DPB_SIZE);
+		dec->inter_res_change = 1;
+		__mfc_handle_frame_all_extracted(ctx);
 		return;
 	}
 

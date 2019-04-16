@@ -52,8 +52,8 @@ static int mfc_dec_queue_setup(struct vb2_queue *vq,
 		alloc_devs[0] = dev->device;
 	/* Video capture for decoding (destination)
 	 * this can be set after the header was parsed */
-	} else if (ctx->state == MFCINST_HEAD_PARSED &&
-		   vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+	} else if (ctx->state >= MFCINST_HEAD_PARSED &&
+		vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		mfc_debug(4, "dec dst\n");
 		/* Output plane count is different by the pixel format */
 		*plane_count = ctx->dst_fmt->mem_planes;
@@ -311,15 +311,20 @@ static void __mfc_dec_dst_stop_streaming(struct mfc_ctx *ctx)
 	int index = 0;
 
 	mfc_cleanup_queue(&ctx->buf_queue_lock, &ctx->dst_buf_queue);
-	mfc_cleanup_iovmm(ctx);
-
-	dec->dpb_table_used = 0;
 	dec->queued_dpb = 0;
-	dec->dynamic_used = 0;
 	ctx->is_dpb_realloc = 0;
-	dec->available_dpb = 0;
-
 	dec->y_addr_for_pb = 0;
+
+	if (!dec->inter_res_change) {
+		mfc_cleanup_iovmm(ctx);
+
+		dec->dpb_table_used = 0;
+		dec->dynamic_used = 0;
+		dec->available_dpb = 0;
+	} else {
+		mfc_cleanup_iovmm_except_used(ctx);
+		mfc_print_dpb_table(ctx);
+	}
 
 	while (index < MFC_MAX_BUFFERS) {
 		index = find_next_bit(&ctx->dst_ctrls_avail,
@@ -362,7 +367,8 @@ static void mfc_dec_stop_streaming(struct vb2_queue *q)
 	if (ctx->state == MFCINST_FINISHING)
 		mfc_change_state(ctx, MFCINST_RUNNING);
 
-	if (q->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE && need_to_dpb_flush(ctx)) {
+	if (q->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE && need_to_dpb_flush(ctx)
+			&& !ctx->dec_priv->inter_res_change) {
 		prev_state = ctx->state;
 		mfc_change_state(ctx, MFCINST_DPB_FLUSHING);
 		mfc_set_bit(ctx->num, &dev->work_bits);

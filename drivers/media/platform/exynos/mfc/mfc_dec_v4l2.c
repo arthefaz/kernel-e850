@@ -318,7 +318,8 @@ static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 
 	mfc_debug_enter();
 
-	mfc_debug(2, "dec dst g_fmt, state: %d\n", ctx->state);
+	mfc_debug(2, "dec dst g_fmt, state: %d wait_state: %d\n",
+			ctx->state, ctx->wait_state);
 	MFC_TRACE_CTX("** DEC g_fmt(state:%d wait_state:%d)\n",
 			ctx->state, ctx->wait_state);
 
@@ -352,7 +353,9 @@ static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 		   of the movie, the buffer is bigger and
 		   further processing stages should crop to this
 		   rectangle. */
-		mfc_dec_calc_dpb_size(ctx);
+		if (!dec->disp_res_change)
+			mfc_dec_calc_dpb_size(ctx);
+		dec->disp_res_change = 0;
 
 		if (IS_LOW_MEM) {
 			unsigned int dpb_size;
@@ -653,13 +656,14 @@ static int mfc_dec_reqbufs(struct file *file, void *priv,
 		if (reqbufs->count == 0) {
 			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
 
-			if (dev->has_mmcache && dev->mmcache.is_on_status)
-				mfc_invalidate_mmcache(dev);
+			if (!dec->inter_res_change) {
+				if (dev->has_mmcache && dev->mmcache.is_on_status)
+					mfc_invalidate_mmcache(dev);
+				if (dev->has_llc && dev->llc_on_status)
+					mfc_llc_flush(dev);
 
-			if (dev->has_llc && dev->llc_on_status)
-				mfc_llc_flush(dev);
-
-			mfc_release_codec_buffers(ctx);
+				mfc_release_codec_buffers(ctx);
+			}
 			ctx->capture_state = QUEUE_FREE;
 			return ret;
 		}
@@ -684,12 +688,14 @@ static int mfc_dec_reqbufs(struct file *file, void *priv,
 
 		dec->total_dpb_count = reqbufs->count;
 
-		ret = mfc_alloc_codec_buffers(ctx);
-		if (ret) {
-			mfc_err_ctx("Failed to allocate decoding buffers\n");
-			reqbufs->count = 0;
-			vb2_reqbufs(&ctx->vq_dst, reqbufs);
-			return -ENOMEM;
+		if (!dec->inter_res_change) {
+			ret = mfc_alloc_codec_buffers(ctx);
+			if (ret) {
+				mfc_err_ctx("Failed to allocate decoding buffers\n");
+				reqbufs->count = 0;
+				vb2_reqbufs(&ctx->vq_dst, reqbufs);
+				return -ENOMEM;
+			}
 		}
 
 		ctx->capture_state = QUEUE_BUFS_REQUESTED;
@@ -974,7 +980,8 @@ static int __mfc_dec_get_ctrl_val(struct mfc_ctx *ctx, struct v4l2_control *ctrl
 			ctrl->value = MFCSTATE_DEC_S3D_REALLOC;
 		else if (ctx->state == MFCINST_RES_CHANGE_FLUSH
 				|| ctx->state == MFCINST_RES_CHANGE_END
-				|| ctx->state == MFCINST_HEAD_PARSED)
+				|| ctx->state == MFCINST_HEAD_PARSED
+				|| dec->inter_res_change)
 			ctrl->value = MFCSTATE_DEC_RES_DETECT;
 		else if (ctx->state == MFCINST_FINISHING)
 			ctrl->value = MFCSTATE_DEC_TERMINATING;

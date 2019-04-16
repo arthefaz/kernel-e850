@@ -530,7 +530,18 @@ static int __mfc_nal_q_just_run(struct mfc_ctx *ctx, int need_cache_flush)
 				dev->logging_data->cause |= (1 << MFC_CAUSE_FAIL_STOP_NAL_Q);
 				call_dop(dev, dump_and_stop_always, dev);
 	                }
-			ret = 1;
+			/* nal_q_exception 2 means stop NALQ and do not handle NAL_START command */
+			if (nal_q_handle->nal_q_exception == 2) {
+				mfc_debug(2, "[NALQ] stopped, handle new work\n");
+				mfc_clear_bit(ctx->num, &dev->work_bits);
+				mfc_release_hwlock_ctx(ctx);
+
+				if (mfc_is_work_to_do(dev))
+					queue_work(dev->butler_wq, &dev->butler_work);
+				ret = 0;
+			} else {
+				ret = 1;
+			}
 			break;
 		} else {
 			/* NAL QUEUE */

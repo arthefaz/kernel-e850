@@ -164,6 +164,10 @@ int mfc_set_dec_codec_buffers(struct mfc_ctx *ctx)
 		reg &= ~(0x1 << MFC_REG_D_INIT_BUF_OPT_STRIDE_SIZE_ALIGN);
 	}
 
+	if (IS_VP9_DEC(ctx) && MFC_FEATURE_SUPPORT(dev, dev->pdata->vp9_stride_align)) {
+		reg &= ~(0x3 << MFC_REG_D_INIT_BUF_OPT_STRIDE_SIZE_ALIGN);
+		reg |= (0x2 << MFC_REG_D_INIT_BUF_OPT_STRIDE_SIZE_ALIGN);
+	}
 	MFC_WRITEL(reg, MFC_REG_D_INIT_BUFFER_OPTIONS);
 
 	frame_size_mv = ctx->mv_size;
@@ -474,6 +478,43 @@ int mfc_set_dynamic_dpb(struct mfc_ctx *ctx, struct mfc_buf *dst_mb)
 			dec->available_dpb, dec->dynamic_used);
 
 	return 0;
+}
+
+void mfc_get_img_size(struct mfc_ctx *ctx, enum mfc_get_img_size img_size)
+{
+	struct mfc_dev *dev = ctx->dev;
+	unsigned int w, h;
+	int i;
+
+	w = ctx->img_width;
+	h = ctx->img_height;
+
+	ctx->img_width = mfc_get_img_width();
+	ctx->img_height = mfc_get_img_height();
+	ctx->crop_width = ctx->img_width;
+	ctx->crop_height = ctx->img_height;
+
+	for (i = 0; i < ctx->dst_fmt->num_planes; i++) {
+		ctx->raw_buf.stride[i] = mfc_get_stride_size(i);
+		if (ctx->is_10bit || ctx->is_sbwc)
+			ctx->raw_buf.stride_2bits[i] = mfc_get_stride_size_2bit(i);
+	}
+	mfc_debug(2, "[FRAME] resolution changed, %dx%d => %dx%d (stride: %d)\n", w, h,
+			ctx->img_width, ctx->img_height, ctx->raw_buf.stride[0]);
+
+	if (img_size == MFC_GET_RESOL_DPB_SIZE) {
+		ctx->dpb_count = mfc_get_dpb_count();
+		ctx->scratch_buf_size = mfc_get_scratch_size();
+		for (i = 0; i < ctx->dst_fmt->num_planes; i++) {
+			ctx->min_dpb_size[i] = mfc_get_min_dpb_size(i);
+			if (ctx->is_10bit || ctx->is_sbwc)
+				ctx->raw_buf.plane_size_2bits[i] = mfc_get_min_dpb_size_2bit(i);
+		}
+
+		mfc_debug(2, "[FRAME] DPB count %d, min_dpb_size %zu(%#x) scratch %zu(%#x)\n",
+			ctx->dpb_count, ctx->min_dpb_size[0], ctx->min_dpb_size[0],
+			ctx->scratch_buf_size, ctx->scratch_buf_size);
+	}
 }
 
 void mfc_set_pixel_format(struct mfc_ctx *ctx, unsigned int format)

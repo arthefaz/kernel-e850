@@ -191,6 +191,7 @@ enum mfc_vb_flag {
 	MFC_FLAG_HDR_VIDEO_SIGNAL_TYPE	= 4,
 	MFC_FLAG_BLACKBAR_DETECT	= 5,
 	MFC_FLAG_HDR_PLUS		= 6,
+	MFC_FLAG_DISP_RES_CHANGE	= 7,
 	MFC_FLAG_CSD			= 29,
 	MFC_FLAG_EMPTY_DATA		= 30,
 	MFC_FLAG_LAST_FRAME		= 31,
@@ -355,6 +356,11 @@ enum mfc_sfr_dump_type {
 	MFC_DUMP_WARN_INT		= (1 << 7),
 };
 
+enum mfc_get_img_size {
+	MFC_GET_RESOL_SIZE		= 0,
+	MFC_GET_RESOL_DPB_SIZE		= 1,
+};
+
 struct mfc_debugfs {
 	struct dentry *root;
 	struct dentry *mfc_info;
@@ -512,6 +518,7 @@ struct mfc_platdata {
 	struct mfc_feature color_aspect_enc;
 	struct mfc_feature static_info_enc;
 	struct mfc_feature hdr10_plus;
+	struct mfc_feature vp9_stride_align;
 
 	/*
 	 * new variables should be added above
@@ -671,7 +678,12 @@ typedef struct __DecoderOutputStr {
 	int FirstPlaneDpbSize;
 	int SecondPlaneDpbSize;
 	int St2094_40sei[30];
-} DecoderOutputStr; /* 94*4 =  376 bytes */
+	int Vp9Info;
+	unsigned int MfcHwCycle;
+	unsigned int MfcProcessingCycle;
+	unsigned int DpbStrideSize[3];
+	unsigned int Dpb2bitStrideSize[2];
+} DecoderOutputStr; /* 102*4 = 408 bytes */
 
 typedef struct __EncoderOutputStr {
 	int StartCode; /* 0xBBBBBBBB; Encoder output structure marker */
@@ -1399,6 +1411,8 @@ struct mfc_dec {
 	int is_interlaced;
 	int is_dts_mode;
 	int stored_tag;
+	int inter_res_change;
+	int disp_res_change;
 
 	int crc_enable;
 	int crc_luma0;
@@ -1560,8 +1574,10 @@ struct mfc_ctx {
 
 	/* Extra Buffers */
 	int codec_buffer_allocated;
+	int scratch_buffer_allocated;
 	struct mfc_special_buf codec_buf;
 	struct mfc_special_buf instance_ctx_buf;
+	struct mfc_special_buf scratch_buf;
 
 	size_t mv_size;
 	size_t scratch_buf_size;

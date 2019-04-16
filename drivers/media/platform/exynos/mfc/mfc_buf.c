@@ -393,7 +393,54 @@ void mfc_release_codec_buffers(struct mfc_ctx *ctx)
 
 	mfc_mem_ion_free(dev, &ctx->codec_buf);
 	ctx->codec_buffer_allocated = 0;
+	mfc_release_scratch_buffer(ctx);
 	mfc_debug(2, "[MEMINFO] Release the codec buffer ctx[%d]\n", ctx->num);
+}
+
+int mfc_alloc_scratch_buffer(struct mfc_ctx *ctx)
+{
+	struct mfc_dev *dev = ctx->dev;
+
+	mfc_debug_enter();
+
+	if (ctx->scratch_buffer_allocated) {
+		mfc_mem_ion_free(dev, &ctx->scratch_buf);
+		ctx->scratch_buffer_allocated = 0;
+		mfc_debug(2, "[MEMINFO] Release the scratch buffer ctx[%d]\n", ctx->num);
+	}
+
+	if (ctx->is_drm)
+		ctx->scratch_buf.buftype = MFCBUF_DRM;
+	else
+		ctx->scratch_buf.buftype = MFCBUF_NORMAL;
+
+	ctx->scratch_buf.size =  ALIGN(ctx->scratch_buf_size, 256);
+	if (ctx->scratch_buf.size > 0) {
+		if (mfc_mem_ion_alloc(dev, &ctx->scratch_buf)) {
+			mfc_err_ctx("Allocating scratch_buf buffer failed\n");
+			return -ENOMEM;
+		}
+		ctx->scratch_buffer_allocated = 1;
+	}
+
+	mfc_debug(2, "[MEMINFO] scratch buf ctx[%d] size: %ld, addr: 0x%08llx\n",
+			ctx->num, ctx->scratch_buf_size, ctx->scratch_buf.daddr);
+
+	mfc_debug_leave();
+	return 0;
+}
+
+void mfc_release_scratch_buffer(struct mfc_ctx *ctx)
+{
+	struct mfc_dev *dev = ctx->dev;
+
+	mfc_debug_enter();
+	if (ctx->scratch_buffer_allocated) {
+		mfc_mem_ion_free(dev, &ctx->scratch_buf);
+		ctx->scratch_buffer_allocated = 0;
+		mfc_debug(2, "[MEMINFO] Release the scratch buffer ctx[%d]\n", ctx->num);
+	}
+	mfc_debug_leave();
 }
 
 /* Allocation buffer of debug infor memory for FW debugging */

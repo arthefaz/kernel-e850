@@ -110,4 +110,5 @@ void mfc_put_iovmm(struct mfc_ctx *ctx, struct dpb_table *dpb, int num_planes, i
 void mfc_get_iovmm(struct mfc_ctx *ctx, struct vb2_buffer *vb, struct dpb_table *dpb);
 void mfc_clear_iovmm(struct mfc_ctx *ctx, struct dpb_table *dpb, int num_planes, int index);
 void mfc_cleanup_iovmm(struct mfc_ctx *ctx);
+void mfc_cleanup_iovmm_except_used(struct mfc_ctx *ctx);
 #endif /* __MFC_MEM_H */

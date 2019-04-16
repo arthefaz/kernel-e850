@@ -24,6 +24,8 @@ void mfc_release_instance_context(struct mfc_ctx *ctx);
 
 int mfc_alloc_codec_buffers(struct mfc_ctx *ctx);
 void mfc_release_codec_buffers(struct mfc_ctx *ctx);
+int mfc_alloc_scratch_buffer(struct mfc_ctx *ctx);
+void mfc_release_scratch_buffer(struct mfc_ctx *ctx);
 
 int mfc_alloc_enc_roi_buffer(struct mfc_ctx *ctx);
 void mfc_release_enc_roi_buffer(struct mfc_ctx *ctx);

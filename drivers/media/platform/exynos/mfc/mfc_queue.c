@@ -532,7 +532,7 @@ struct mfc_buf *mfc_search_for_dpb(struct mfc_ctx *ctx)
 	if (hweight32(dec->dynamic_used) == ctx->dpb_count + 5) {
 		mfc_buf = list_entry(ctx->dst_buf_queue.head.next, struct mfc_buf, list);
 		mfc_buf->used = 1;
-		mfc_debug(2, "[DPB] All queued buf refernecing. select buf[%d][%d]\n",
+		mfc_debug(2, "[DPB] All queued buf referencing. select buf[%d][%d]\n",
 				mfc_buf->vb.vb2_buf.index, mfc_buf->dpb_index);
 		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return mfc_buf;

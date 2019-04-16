@@ -33,7 +33,7 @@ int mfc_cmd_enc_seq_header(struct mfc_ctx *ctx);
 int mfc_cmd_dec_init_buffers(struct mfc_ctx *ctx);
 int mfc_cmd_enc_init_buffers(struct mfc_ctx *ctx);
 
-void mfc_cmd_dec_one_frame(struct mfc_ctx *ctx, int last_frame);
+int mfc_cmd_dec_one_frame(struct mfc_ctx *ctx, int last_frame);
 void mfc_cmd_enc_one_frame(struct mfc_ctx *ctx, int last_frame);
 
 #endif /* __MFC_CMD_H */

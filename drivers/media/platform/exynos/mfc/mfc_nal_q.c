@@ -90,6 +90,10 @@ int mfc_nal_q_check_enable(struct mfc_dev *dev)
 					mfc_debug(2, "[BLACKBAR] black bar detection is enabled\n");
 					return 0;
 				}
+				if (dec->inter_res_change) {
+					mfc_debug(2, "[DRC] interframe resolution is changed\n");
+					return 0;
+				}
 			/* NAL-Q doesn't support fixed byte(slice mode), CBR_VT(rc mode) */
 			} else if (ctx->type == MFCINST_ENCODER) {
 				enc = ctx->enc_priv;
@@ -1242,6 +1246,80 @@ static void __mfc_nal_q_handle_reuse_buffer(struct mfc_ctx *ctx, DecoderOutputSt
 	}
 }
 
+static void __mfc_nal_q_handle_frame_all_extracted(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
+{
+	struct mfc_dec *dec = ctx->dec_priv;
+	struct mfc_buf *dst_mb;
+	int index, i, is_first = 1;
+
+	mfc_debug(2, "[NALQ] Decided to finish\n");
+	ctx->sequence++;
+
+	while (1) {
+		dst_mb = mfc_get_del_buf(ctx, &ctx->dst_buf_nal_queue, MFC_BUF_NO_TOUCH_USED);
+		if (!dst_mb)
+			break;
+
+		mfc_debug(2, "[NALQ] Cleaning up buffer: [%d][%d]\n",
+					  dst_mb->vb.vb2_buf.index, dst_mb->dpb_index);
+
+		index = dst_mb->vb.vb2_buf.index;
+
+		for (i = 0; i < ctx->dst_fmt->mem_planes; i++)
+			vb2_set_plane_payload(&dst_mb->vb.vb2_buf, i, 0);
+
+		dst_mb->vb.sequence = (ctx->sequence++);
+		mfc_clear_vb_flag(dst_mb);
+
+#ifdef USE_DPB_INDEX
+		clear_bit(dst_mb->dpb_index, &dec->available_dpb);
+#else
+		clear_bit(dst_mb->vb.vb2_buf.index, &dec->available_dpb);
+#endif
+
+		if (call_cop(ctx, get_buf_ctrls_val_nal_q_dec, ctx,
+					&ctx->dst_ctrls[index], pOutStr) < 0)
+			mfc_err_ctx("[NALQ] failed in get_buf_ctrls_val\n");
+
+		if (is_first) {
+			call_cop(ctx, get_buf_update_val, ctx,
+				&ctx->dst_ctrls[index],
+				V4L2_CID_MPEG_MFC51_VIDEO_FRAME_TAG,
+				dec->stored_tag);
+			is_first = 0;
+		} else {
+			call_cop(ctx, get_buf_update_val, ctx,
+				&ctx->dst_ctrls[index],
+				V4L2_CID_MPEG_MFC51_VIDEO_FRAME_TAG,
+				DEFAULT_TAG);
+			call_cop(ctx, get_buf_update_val, ctx,
+				&ctx->dst_ctrls[index],
+				V4L2_CID_MPEG_VIDEO_H264_SEI_FP_AVAIL,
+				0);
+		}
+
+		mutex_lock(&dec->dpb_mutex);
+#ifdef USE_DPB_INDEX
+		index = dst_mb->dpb_index;
+#else
+		index = dst_mb->vb.vb2_buf.index;
+#endif
+		if (dec->spare_dpb[index].mapcnt) {
+			dec->spare_dpb[index].queued = 0;
+			mfc_put_iovmm(ctx, dec->spare_dpb, ctx->dst_fmt->mem_planes, index);
+		} else {
+			dec->dpb[index].queued = 0;
+		}
+		clear_bit(index, &dec->queued_dpb);
+		mutex_unlock(&dec->dpb_mutex);
+		vb2_buffer_done(&dst_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
+		mfc_debug(2, "[NALQ][DPB] Cleand up index = %d, used_flag = %08x, queued = %#lx\n",
+				index, dec->dynamic_used, dec->queued_dpb);
+	}
+
+	mfc_debug(2, "[NALQ] After cleanup\n");
+}
+
 static void __mfc_nal_q_handle_frame_copy_timestamp(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 {
 	struct mfc_buf *dst_mb, *src_mb;
@@ -1265,6 +1343,43 @@ static void __mfc_nal_q_handle_frame_copy_timestamp(struct mfc_ctx *ctx, Decoder
 	mfc_debug_leave();
 }
 
+static void __mfc_nal_q_get_img_size(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr,
+					enum mfc_get_img_size img_size)
+{
+	struct mfc_dev *dev = ctx->dev;
+	unsigned int w, h;
+	int i;
+
+	w = ctx->img_width;
+	h = ctx->img_height;
+
+	ctx->img_width = pOutStr->DisplayFrameWidth;
+	ctx->img_height = pOutStr->DisplayFrameHeight;
+	ctx->crop_width = ctx->img_width;
+	ctx->crop_height = ctx->img_height;
+
+	for (i = 0; i < ctx->dst_fmt->num_planes; i++) {
+		ctx->raw_buf.stride[i] = pOutStr->DpbStrideSize[i];
+		if (ctx->is_10bit || ctx->is_sbwc)
+			ctx->raw_buf.stride_2bits[i] = pOutStr->Dpb2bitStrideSize[i];
+	}
+
+	mfc_debug(2, "[NALQ][FRAME] resolution changed, %dx%d => %dx%d (stride: %d)\n", w, h,
+			ctx->img_width, ctx->img_height, ctx->raw_buf.stride[0]);
+
+	if (img_size == MFC_GET_RESOL_DPB_SIZE) {
+		ctx->scratch_buf_size = mfc_get_scratch_size();
+		for (i = 0; i < ctx->dst_fmt->num_planes; i++) {
+			ctx->min_dpb_size[i] = mfc_get_min_dpb_size(i);
+			if (ctx->is_10bit || ctx->is_sbwc)
+				ctx->raw_buf.plane_size_2bits[i] = mfc_get_min_dpb_size_2bit(i);
+		}
+		mfc_debug(2, "[NALQ][FRAME] DPB count %d, min_dpb_size %zu(%#x) scratch %zu(%#x)\n",
+			ctx->dpb_count, ctx->min_dpb_size[0], ctx->min_dpb_size[0],
+			ctx->scratch_buf_size, ctx->scratch_buf_size);
+	}
+}
+
 static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 		DecoderOutputStr *pOutStr, unsigned int err)
 {
@@ -1278,6 +1393,7 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 	unsigned int is_video_signal_type = 0, is_colour_description = 0;
 	unsigned int is_content_light = 0, is_display_colour = 0;
 	unsigned int is_hdr10_plus_sei = 0;
+	unsigned int is_disp_res_change = 0;
 	unsigned int disp_err;
 	int i, index;
 
@@ -1347,6 +1463,19 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 			}
 			mfc_set_vb_flag(dst_mb, MFC_FLAG_HDR_VIDEO_SIGNAL_TYPE);
 			mfc_debug(2, "[NALQ][HDR] color range parsed\n");
+		}
+
+		if (IS_VP9_DEC(ctx)) {
+			is_disp_res_change = ((pOutStr->Vp9Info
+						>> MFC_REG_D_VP9_INFO_DISP_RES_SHIFT)
+						& MFC_REG_D_VP9_INFO_DISP_RES_MASK);
+			if (is_disp_res_change) {
+				mfc_info_ctx("[NALQ][FRAME] display resolution changed\n");
+				ctx->wait_state = WAIT_G_FMT;
+				__mfc_nal_q_get_img_size(ctx, pOutStr, MFC_GET_RESOL_SIZE);
+				dec->disp_res_change = 1;
+				mfc_set_vb_flag(dst_mb, MFC_FLAG_DISP_RES_CHANGE);
+			}
 		}
 
 		if (is_hdr10_plus_sei) {
@@ -1651,10 +1780,12 @@ void __mfc_nal_q_handle_frame(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 		goto leave_handle_frame;
 	}
 	if (need_dpb_change || need_scratch_change) {
-		mfc_err_ctx("[NALQ][DRC] Interframe resolution change is not supported\n");
-		dev->nal_q_handle->nal_q_exception = 1;
+		mfc_info_ctx("[NALQ][DRC] Interframe resolution changed\n");
+		ctx->wait_state = WAIT_G_FMT | WAIT_STOP;
+		__mfc_nal_q_get_img_size(ctx, pOutStr, MFC_GET_RESOL_DPB_SIZE);
+		dec->inter_res_change = 1;
 		mfc_info_ctx("[NALQ][DRC] nal_q_exception is set (interframe res change)\n");
-		mfc_change_state(ctx, MFCINST_ERROR);
+		dev->nal_q_handle->nal_q_exception = 2;
 		goto leave_handle_frame;
 	}
 	if (is_interlaced) {
@@ -1725,6 +1856,9 @@ void __mfc_nal_q_handle_frame(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 				dec->is_dpb_full);
 
 leave_handle_frame:
+	if (dev->nal_q_handle->nal_q_exception == 2)
+		__mfc_nal_q_handle_frame_all_extracted(ctx, pOutStr);
+
 	mfc_debug_leave();
 }
 

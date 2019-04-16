@@ -156,6 +156,8 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	dec->is_interlaced = 0;
 	dec->immediate_display = 0;
 	dec->is_dts_mode = 0;
+	dec->inter_res_change = 0;
+	dec->disp_res_change = 0;
 
 	dec->is_dynamic_dpb = 1;
 	dec->dynamic_used = 0;
@@ -1012,6 +1014,7 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 	of_property_read_u32_array(np, "color_aspect_enc", &pdata->color_aspect_enc.support, 2);
 	of_property_read_u32_array(np, "static_info_enc", &pdata->static_info_enc.support, 2);
 	of_property_read_u32_array(np, "hdr10_plus", &pdata->hdr10_plus.support, 2);
+	of_property_read_u32_array(np, "vp9_stride_align", &pdata->vp9_stride_align.support, 2);
 
 	/* Default 10bit format for decoding */
 	of_property_read_u32(np, "P010_decoding", &pdata->P010_decoding);

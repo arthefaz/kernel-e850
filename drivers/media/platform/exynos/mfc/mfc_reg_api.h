@@ -104,7 +104,10 @@
 #define mfc_get_consumed_stream()		MFC_READL(MFC_REG_D_DECODED_NAL_SIZE)
 #define mfc_get_dpb_count()			MFC_READL(MFC_REG_D_MIN_NUM_DPB)
 #define mfc_get_min_dpb_size(x)		MFC_READL(MFC_REG_D_MIN_FIRST_PLANE_DPB_SIZE + (x * 4))
+#define mfc_get_min_dpb_size_2bit(x)		MFC_READL(MFC_REG_D_FIRST_PLANE_2BIT_DPB_SIZE + (x * 4))
 #define mfc_get_scratch_size()		MFC_READL(MFC_REG_D_MIN_SCRATCH_BUFFER_SIZE)
+#define mfc_get_stride_size(x)		MFC_READL(MFC_REG_D_FIRST_PLANE_DPB_STRIDE_SIZE + (x * 4))
+#define mfc_get_stride_size_2bit(x)		MFC_READL(MFC_REG_D_FIRST_PLANE_2BIT_DPB_STRIDE_SIZE + (x * 4))
 #define mfc_get_mv_count()			MFC_READL(MFC_REG_D_MIN_NUM_MV)
 #define mfc_get_inst_no()			MFC_READL(MFC_REG_RET_INSTANCE_ID)
 #define mfc_get_enc_dpb_count()		MFC_READL(MFC_REG_E_NUM_DPB)
@@ -174,7 +177,9 @@
 						& MFC_REG_DEC_STATUS_NUM_OF_TILE_MASK)
 #define mfc_get_lcu_size()			(MFC_READL(MFC_REG_D_HEVC_INFO)		\
 						& MFC_REG_D_HEVC_INFO_LCU_SIZE_MASK)
-
+#define mfc_get_disp_res_change()		((MFC_READL(MFC_REG_D_VP9_INFO)	\
+						>> MFC_REG_D_VP9_INFO_DISP_RES_SHIFT)	\
+						& MFC_REG_D_VP9_INFO_DISP_RES_MASK)
 
 /* nal queue information */
 #define mfc_get_nal_q_input_count()		MFC_READL(MFC_REG_NAL_QUEUE_INPUT_COUNT)
@@ -278,6 +283,7 @@ void mfc_set_enc_stride(struct mfc_ctx *ctx);
 
 int mfc_set_dynamic_dpb(struct mfc_ctx *ctx, struct mfc_buf *dst_vb);
 
+void mfc_get_img_size(struct mfc_ctx *ctx, enum mfc_get_img_size img_size);
 void mfc_set_pixel_format(struct mfc_ctx *ctx, unsigned int format);
 
 void mfc_print_hdr_plus_info(struct mfc_ctx *ctx, struct hdr10_plus_meta *sei_meta);

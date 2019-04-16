@@ -357,6 +357,7 @@ int mfc_run_dec_frame(struct mfc_ctx *ctx)
 	struct mfc_buf *src_mb, *dst_mb;
 	int last_frame = 0;
 	unsigned int index;
+	int ret;
 
 	/* Get the next source buffer */
 	src_mb = mfc_get_buf(ctx, &ctx->src_buf_queue, MFC_BUF_SET_USED);
@@ -389,9 +390,9 @@ int mfc_run_dec_frame(struct mfc_ctx *ctx)
 	mfc_clean_ctx_int_flags(ctx);
 
 	last_frame = __mfc_check_last_frame(ctx, src_mb);
-	mfc_cmd_dec_one_frame(ctx, last_frame);
+	ret = mfc_cmd_dec_one_frame(ctx, last_frame);
 
-	return 0;
+	return ret;
 }
 
 int mfc_run_dec_last_frames(struct mfc_ctx *ctx)

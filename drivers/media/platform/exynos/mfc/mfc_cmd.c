@@ -378,12 +378,60 @@ int mfc_cmd_enc_init_buffers(struct mfc_ctx *ctx)
 	return ret;
 }
 
+int __mfc_set_scratch_dpb_buffer(struct mfc_ctx *ctx)
+{
+	struct mfc_dev *dev = ctx->dev;
+	struct mfc_dec *dec = ctx->dec_priv;
+	struct mfc_raw_info *raw;
+	int i, ret;
+
+	if (dev->has_mmcache && dev->mmcache.is_on_status)
+		mfc_invalidate_mmcache(dev);
+
+	if (dev->has_llc && dev->llc_on_status)
+		mfc_llc_flush(dev);
+
+	ret = mfc_alloc_scratch_buffer(ctx);
+	if (ret) {
+		mfc_err_ctx("Failed to allocate scratch buffers\n");
+		return ret;
+	}
+
+	raw = &ctx->raw_buf;
+	/* set decoder DPB size, stride */
+	MFC_WRITEL(dec->total_dpb_count, MFC_REG_D_NUM_DPB);
+	for (i = 0; i < raw->num_planes; i++) {
+		mfc_debug(2, "[FRAME] buf[%d] size: %d, stride: %d\n",
+				i, raw->plane_size[i], raw->stride[i]);
+		MFC_WRITEL(raw->plane_size[i], MFC_REG_D_FIRST_PLANE_DPB_SIZE + (i * 4));
+		MFC_WRITEL(ctx->raw_buf.stride[i],
+				MFC_REG_D_FIRST_PLANE_DPB_STRIDE_SIZE + (i * 4));
+		if (ctx->is_10bit || ctx->is_sbwc) {
+			MFC_WRITEL(raw->stride_2bits[i], MFC_REG_D_FIRST_PLANE_2BIT_DPB_STRIDE_SIZE + (i * 4));
+			MFC_WRITEL(raw->plane_size_2bits[i], MFC_REG_D_FIRST_PLANE_2BIT_DPB_SIZE + (i * 4));
+			mfc_debug(2, "[FRAME]%s%s 2bits buf[%d] size: %d, stride: %d\n",
+					(ctx->is_10bit ? "[10BIT]" : ""),
+					(ctx->is_sbwc ? "[SBWC]" : ""),
+					i, raw->plane_size_2bits[i], raw->stride_2bits[i]);
+		}
+	}
+
+	/* set scratch buffers */
+	MFC_WRITEL(ctx->scratch_buf.daddr, MFC_REG_D_SCRATCH_BUFFER_ADDR);
+	MFC_WRITEL(ctx->scratch_buf_size, MFC_REG_D_SCRATCH_BUFFER_SIZE);
+	mfc_debug(2, "[FRAME] scratch buf addr: 0x%#llx size %ld\n",
+			ctx->scratch_buf.daddr, ctx->scratch_buf_size);
+
+	return 0;
+}
+
 /* Decode a single frame */
-void mfc_cmd_dec_one_frame(struct mfc_ctx *ctx, int last_frame)
+int mfc_cmd_dec_one_frame(struct mfc_ctx *ctx, int last_frame)
 {
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_dec *dec = ctx->dec_priv;
 	u32 reg = 0;
+	int ret = 0;
 
 	mfc_debug(2, "[DPB] set dpb: %#x, used: %#x, available: %#lx\n",
 			dec->dynamic_set, dec->dynamic_used, dec->available_dpb);
@@ -391,6 +439,17 @@ void mfc_cmd_dec_one_frame(struct mfc_ctx *ctx, int last_frame)
 	reg = MFC_READL(MFC_REG_D_NAL_START_OPTIONS);
 	reg &= ~(0x1 << MFC_REG_D_NAL_START_OPT_BLACK_BAR_SHIFT);
 	reg |= ((dec->detect_black_bar & 0x1) << MFC_REG_D_NAL_START_OPT_BLACK_BAR_SHIFT);
+	if (dec->inter_res_change) {
+		ret = __mfc_set_scratch_dpb_buffer(ctx);
+		if (ret)
+			return ret;
+		reg |= (0x1 << MFC_REG_D_NAL_START_OPT_NEW_SCRATCH_SHIFT);
+		reg |= (0x1 << MFC_REG_D_NAL_START_OPT_NEW_DPB_SHIFT);
+		dec->inter_res_change = 0;
+	} else {
+		reg &= ~(0x1 << MFC_REG_D_NAL_START_OPT_NEW_SCRATCH_SHIFT);
+		reg &= ~(0x1 << MFC_REG_D_NAL_START_OPT_NEW_DPB_SHIFT);
+	}
 	MFC_WRITEL(reg, MFC_REG_D_NAL_START_OPTIONS);
 	mfc_debug(3, "[BLACKBAR] black bar detect set: %#x\n", reg);
 
@@ -424,6 +483,7 @@ void mfc_cmd_dec_one_frame(struct mfc_ctx *ctx, int last_frame)
 	}
 
 	mfc_debug(2, "Decoding a usual frame\n");
+	return 0;
 }
 
 /* Encode a single frame */
