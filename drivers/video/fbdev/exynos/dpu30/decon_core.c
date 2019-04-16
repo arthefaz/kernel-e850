@@ -57,6 +57,8 @@ int dpu_mres_log_level = 6;
 module_param(dpu_mres_log_level, int, 0644);
 int dpu_fence_log_level = 6;
 module_param(dpu_fence_log_level, int, 0644);
+int dpu_dma_buf_log_level = 6;
+module_param(dpu_dma_buf_log_level, int, 0644);
 int decon_systrace_enable;
 
 struct decon_device *decon_drvdata[MAX_DECON_CNT];
@@ -2028,7 +2030,7 @@ static void decon_update_regs(struct decon_device *decon,
 	struct decon_dma_buf_data old_dma_bufs[decon->dt.max_win][MAX_PLANE_CNT];
 	int old_plane_cnt[MAX_DECON_WIN];
 	struct decon_mode_info psr;
-	int i, err;
+	int i, j, err;
 
 	if (!decon->systrace.pid)
 		decon->systrace.pid = current->pid;
@@ -2121,6 +2123,17 @@ static void decon_update_regs(struct decon_device *decon,
 			decon_dump(decon);
 			BUG();
 		}
+		DPU_DEBUG_DMA_BUF("frame_start\n");
+		for (i = 0; i < decon->dt.max_win; i++) {
+			if (regs->win_regs[i].wincon & WIN_EN_F(i)) {
+				for (j = 0; j < MAX_PLANE_CNT; j++) {
+					if (regs->dma_buf_data[i][j].dma_buf)
+						DPU_DEBUG_DMA_BUF("dma_buf_%d[%p]\n",
+								i, regs->dma_buf_data[i][j].dma_buf);
+				}
+			}
+		}
+
 
 		if (!decon->low_persistence) {
 			decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_DISABLE);
