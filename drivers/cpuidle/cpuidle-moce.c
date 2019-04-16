@@ -24,7 +24,8 @@
  * Define the considered element as a number.
  * Used to read the ratios and weights variables.
  */
-#define DEFAULT_RATIO		1
+#define DEFAULT_RATIO		100
+#define MIN_RATIO		10
 #define FACTOR_NUM		1
 
 typedef enum _factor_type {
@@ -73,18 +74,23 @@ static void update_total_ratio(struct bias_cpuidle *bias_idle)
 	unsigned int total_ratio;
 
 	for_each_state(state) {
+		/*
+		 * The total_ratio is '0' in c1(state == 0),
+		 */
+		if (!state)
+			continue;
+
 		total_ratio = 0;
 
 		list_for_each_entry(pos, &bias_idle->factor_list, list) {
-			total_ratio += (pos->ratio / 100) * (pos->weight[state] / 100);
+			total_ratio += (pos->ratio * pos->weight[state]) / 100;
 		}
 
 		/*
-		 * The total_ratio is '0' in c1(state == 0),
-		 * also prevent problems caused by excessive bias.
+		 * limit the minimum ratio to prevent problems caused by excessive bias.
 		 */
 		if (total_ratio < 10)
-			bias_idle->total_ratio[state] = DEFAULT_RATIO;
+			bias_idle->total_ratio[state] = MIN_RATIO;
 		else
 			bias_idle->total_ratio[state] = total_ratio;
 	}

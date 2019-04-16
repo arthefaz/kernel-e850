@@ -422,7 +422,7 @@ static int cpus_busy(int target_residency, const struct cpumask *cpus)
 		 */
 		moce_ratio = exynos_moce_get_ratio(-1, cpu);
 
-		if (get_sleep_length(cpu) < target_residency * moce_ratio)
+		if (get_sleep_length(cpu) < (target_residency * moce_ratio) / 100)
 			return -EBUSY;
 	}
 
