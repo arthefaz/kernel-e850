@@ -134,10 +134,13 @@ void exynos_update_ip_idle_status(int ip_index, int idle)
 int exynos_get_idle_ip_index(const char *ip_name)
 {
 	struct idle_ip *ip;
-	int ip_index = get_index_last_entry(&idle_ip_list) + 1;
+	int ip_index;
 	unsigned long flags;
 
+	spin_lock_irqsave(&idle_ip_list_lock, flags);
+	ip_index = get_index_last_entry(&idle_ip_list) + 1;
 	if (ip_index >= IDLE_IP_MAX) {
+		spin_unlock_irqrestore(&idle_ip_list_lock, flags);
 		pr_err("Up to 64 idle-ip can be supported[failed %s].", ip_name);
 		goto free;
 	}
@@ -146,7 +149,6 @@ int exynos_get_idle_ip_index(const char *ip_name)
 	ip->name = ip_name;
 	ip->index = ip_index;
 
-	spin_lock_irqsave(&idle_ip_list_lock, flags);
 	list_add_tail(&ip->list, &idle_ip_list);
 	spin_unlock_irqrestore(&idle_ip_list_lock, flags);
 
