@@ -7,7 +7,7 @@ config COMMON_CLK_SAMSUNG
 
 config COMPOSITE_CLK_SAMSUNG
 	bool
-	default y
+	default n
 	depends on ARCH_EXYNOS9 || ARCH_EXYNOS8 || ARCH_EXYNOS7
 
 config EXYNOS_ARM64_COMMON_CLK
