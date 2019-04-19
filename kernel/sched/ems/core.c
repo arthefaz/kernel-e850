@@ -13,6 +13,69 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/ems.h>
 
+static void select_fit_cpus(struct enrg_env *env)
+{
+	struct cpumask *fit_cpus = &env->fit_cpus;
+	struct task_struct *p = env->p;
+	struct cpumask overutil_cpus;
+	int cpu;
+
+	/*
+	 * Get fit cpus from ontime migration.
+	 * The fit cpus is determined by the size of task runnable.
+	 *
+	 * fit_cpus = fit_cpus from ontime
+	 */
+	ontime_select_fit_cpus(p, fit_cpus);
+
+	/*
+	 * Exclude overutilized cpu from fit cpus.
+	 * If assigning a task to a cpu and the cpu becomes overutilized, then
+	 * the cpu may not be able to process the task properly, and
+	 * performance may drop. Therefore, overutil cpu is excluded.
+	 *
+	 * fit_cpus = fit_cpus & ~(overutilized cpus)
+	 */
+	cpumask_clear(&overutil_cpus);
+	for_each_cpu(cpu, cpu_active_mask) {
+		unsigned long capacity = capacity_cpu(cpu, p->sse);
+		unsigned long new_util = _ml_cpu_util(cpu, p->sse);
+
+		if (task_cpu(p) != cpu)
+			new_util += ml_task_util(p);
+
+		if (cpu_overutilized(capacity, new_util))
+			cpumask_set_cpu(cpu, &overutil_cpus);
+	}
+
+	cpumask_andnot(fit_cpus, fit_cpus, &overutil_cpus);
+
+	/*
+	 * If all fit cpus are overutilized, fit cpus become empty.
+	 * But in task migration sequence, it does not need to consider whether
+	 * fit cpus is empty or not because the cpu is already busy, there is no
+	 * performance gain even if migrating tasks to faster cpu.
+	 */
+	if (!env->wake)
+		goto skip;
+
+	/*
+	 * If fit cpus are empty, ignore fit cpus found in the previous step
+	 * and all non-overutilized cpus become fit cpus.
+	 *
+	 * fit_cpus = all cpus & ~(overutilized cpus)
+	 */
+	if (cpumask_empty(fit_cpus))
+		cpumask_andnot(fit_cpus, cpu_active_mask, &overutil_cpus);
+
+skip:
+	cpumask_and(fit_cpus, fit_cpus, &env->p->cpus_allowed);
+
+	trace_ems_select_fit_cpus(env->p, env->wake,
+		*(unsigned int *)cpumask_bits(fit_cpus),
+		*(unsigned int *)cpumask_bits(&overutil_cpus));
+}
+
 extern void sync_entity_load_avg(struct sched_entity *se);
 
 int exynos_select_task_rq(struct task_struct *p, int prev_cpu,
@@ -23,6 +86,7 @@ int exynos_select_task_rq(struct task_struct *p, int prev_cpu,
 		.p = p,
 		.prefer_perf = global_boost() || schedtune_prefer_perf(p),
 		.prefer_idle = schedtune_prefer_idle(p),
+		.wake = wake,
 	};
 
 	/*
@@ -40,8 +104,7 @@ int exynos_select_task_rq(struct task_struct *p, int prev_cpu,
 		}
 	}
 
-	cpumask_and(&env.fit_cpus, &p->cpus_allowed, cpu_active_mask);
-	ontime_select_fit_cpus(p, &env.fit_cpus);
+	select_fit_cpus(&env);
 
 	/* There is no fit cpus */
 	if (cpumask_empty(&env.fit_cpus)) {

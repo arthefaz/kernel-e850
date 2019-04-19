@@ -25,6 +25,8 @@ struct enrg_env {
 
 	unsigned long c_weight[NR_CPUS];	/* capacity weight */
 	unsigned long e_weight[NR_CPUS];	/* energy weight */
+
+	int wake;
 };
 
 

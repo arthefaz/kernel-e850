@@ -46,6 +46,62 @@ TRACE_EVENT(ems_select_task_rq,
 );
 
 /*
+ * Tracepoint for fit cpu selection
+ */
+TRACE_EVENT(ems_select_fit_cpus,
+
+	TP_PROTO(struct task_struct *p, int wake, unsigned int fit_cpus, unsigned int overutil_cpus),
+
+	TP_ARGS(p, wake, fit_cpus, overutil_cpus),
+
+	TP_STRUCT__entry(
+		__array(	char,		comm,	TASK_COMM_LEN	)
+		__field(	pid_t,		pid			)
+		__field(	int,		wake			)
+		__field(	unsigned int,	fit_cpus		)
+		__field(	unsigned int,	overutil_cpus		)
+	),
+
+	TP_fast_assign(
+		memcpy(__entry->comm, p->comm, TASK_COMM_LEN);
+		__entry->pid			= p->pid;
+		__entry->wake			= wake;
+		__entry->fit_cpus		= fit_cpus;
+		__entry->overutil_cpus		= overutil_cpus;
+	),
+
+	TP_printk("comm=%s pid=%d wake=%d fit_cpus=%#x overutil_cpus=%#x",
+		  __entry->comm, __entry->pid, __entry->wake, __entry->fit_cpus, __entry->overutil_cpus)
+);
+
+/*
+ * Tracepoint for candidate cpu
+ */
+TRACE_EVENT(ems_candidates,
+
+	TP_PROTO(struct task_struct *p, unsigned int candidates, unsigned int idle_candidates),
+
+	TP_ARGS(p, candidates, idle_candidates),
+
+	TP_STRUCT__entry(
+		__array(	char,		comm,	TASK_COMM_LEN	)
+		__field(	pid_t,		pid			)
+		__field(	unsigned int,	candidates		)
+		__field(	unsigned int,	idle_candidates		)
+	),
+
+	TP_fast_assign(
+		memcpy(__entry->comm, p->comm, TASK_COMM_LEN);
+		__entry->pid			= p->pid;
+		__entry->candidates		= candidates;
+		__entry->idle_candidates	= idle_candidates;
+	),
+
+	TP_printk("comm=%s pid=%d candidates=%#x idle_candidates=%#x",
+		  __entry->comm, __entry->pid, __entry->candidates, __entry->idle_candidates)
+);
+
+/*
  * Tracepoint for computing energy/capacity efficiency
  */
 TRACE_EVENT(ems_compute_eff,

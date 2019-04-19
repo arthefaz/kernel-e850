@@ -187,9 +187,10 @@ static void get_ready_env(struct enrg_env *env)
 {
 	int cpu;
 
+	cpumask_copy(&env->candidates, &env->fit_cpus);
 	cpumask_clear(&env->idle_candidates);
 
-	for_each_cpu_and(cpu, &env->fit_cpus, cpu_active_mask) {
+	for_each_cpu(cpu, &env->fit_cpus) {
 		/*
 		 * The weight is separated into the value for normal mode and
 		 * the value for performance mode.
@@ -203,19 +204,20 @@ static void get_ready_env(struct enrg_env *env)
 		}
 
 		/*
-		 * In principle, the active cpu of fit_cpus becomes a candidate. If
-		 * env->prefer_idle is set to '1', the idle cpu of the candidate is
-		 * included in env->idle_candidates and the running cpu of the
-		 * candidate is included in the env->candidate. Otherwise,
-		 * env->prefer_idle is set to '0', all candidates are included in
-		 * env->candidates.
+		 * Basically, all active cpus are candidates. But if
+		 * env->prefer_idle is set to '1', the idle cpus are included in
+		 * env->idle_candidates and * the running cpus are included in
+		 * the env->candidate. Both candidates are exclusive.
 		 */
-		if (env->prefer_idle && idle_cpu(cpu))
+		if (env->prefer_idle && idle_cpu(cpu)) {
 			cpumask_set_cpu(cpu, &env->idle_candidates);
+			cpumask_clear_cpu(cpu, &env->candidates);
+		}
 	}
 
-	cpumask_and(&env->candidates, &env->fit_cpus, cpu_active_mask);
-	cpumask_andnot(&env->candidates, &env->candidates, &env->idle_candidates);
+	trace_ems_candidates(env->p,
+		*(unsigned int *)cpumask_bits(&env->candidates),
+		*(unsigned int *)cpumask_bits(&env->idle_candidates));
 }
 
 int find_best_cpu(struct enrg_env *env)
