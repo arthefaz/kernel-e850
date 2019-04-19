@@ -414,14 +414,8 @@ struct decon_win_config {
 			int				fd_idma[3];
 			int				acq_fence;
 			int				rel_fence;
-			int				plane_alpha;
 			enum decon_blending		blending;
-			/*
-			 * TODO: channel will be changed to channel number in the future.
-			 *
-			 * Although the variable name is channel, it indicates
-			 * DPP channel number currently.
-			 */
+			/* channel id of DECON CHMAP */
 			u32				channel;
 			enum decon_pixel_format		format;
 			struct dpp_params		dpp_parm;
@@ -438,6 +432,7 @@ struct decon_win_config {
 	struct decon_frame dst;
 	bool protection;
 	bool compression;
+	int plane_alpha;
 };
 
 struct decon_reg_data {
