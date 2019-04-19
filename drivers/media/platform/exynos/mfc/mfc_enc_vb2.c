@@ -346,7 +346,7 @@ static void mfc_enc_stop_streaming(struct vb2_queue *q)
 			mfc_change_state(ctx, MFCINST_FINISHING);
 			mfc_set_bit(ctx->num, &dev->work_bits);
 
-			while (mfc_get_buf(ctx, &ctx->dst_buf_queue, MFC_BUF_NO_TOUCH_USED)) {
+			while (ctx->state != MFCINST_FINISHED) {
 				ret = mfc_just_run(dev, ctx->num);
 				if (ret) {
 					mfc_err_ctx("Failed to run MFC\n");
@@ -354,10 +354,6 @@ static void mfc_enc_stop_streaming(struct vb2_queue *q)
 				}
 				if (mfc_wait_for_done_ctx(ctx, MFC_REG_R2H_CMD_FRAME_DONE_RET)) {
 					mfc_err_ctx("Waiting for LAST_SEQ timed out\n");
-					break;
-				}
-				if (ctx->state == MFCINST_FINISHED) {
-					mfc_debug(2, "all encoded buffers out\n");
 					break;
 				}
 			}
