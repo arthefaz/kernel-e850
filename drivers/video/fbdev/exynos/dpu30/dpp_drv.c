@@ -170,7 +170,7 @@ static void dpp_get_base_addr_params(struct dpp_params_info *p)
 	/* for lossy SBWC */
 
 	default:
-		dpp_info("%s: Unspeicified YUV formats!!(%d)\n",
+		dpp_dbg("%s: YUV format(%d) doesn't require BASE ADDR Calc.\n",
 			__func__, p->format);
 		break;
 	}
