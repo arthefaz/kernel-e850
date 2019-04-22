@@ -59,7 +59,7 @@ unsigned long ml_task_util(struct task_struct *p)
 }
 
 /*
- * _ml_task_util_est/ml_task_util_est - task util with util-est
+ * ml_task_util_est - task util with util-est
  *
  * Task utilization with util-est, The calculation is the same as
  * task_util_est of cfs.
@@ -68,13 +68,12 @@ static unsigned long _ml_task_util_est(struct task_struct *p)
 {
 	struct util_est ue = READ_ONCE(p->se.avg.ml.util_est);
 
-	return schedtune_util_est(p) ? max(ue.ewma, ue.enqueued)
-					: ml_task_util(p);
+	return max(ue.ewma, ue.enqueued);
 }
 
 unsigned long ml_task_util_est(struct task_struct *p)
 {
-	return schedtune_util_est(p) ? max(READ_ONCE(p->se.avg.ml.util_avg), _ml_task_util_est(p))
+	return schedtune_util_est(p) ? max(ml_task_util(p), _ml_task_util_est(p))
 					: ml_task_util(p);
 }
 
@@ -227,7 +226,8 @@ unsigned long ml_cpu_util_without(int cpu, struct task_struct *p)
 		 * properly fix the execl regression and it helps in further
 		 * reducing the chances for the above race.
 		 */
-		if (unlikely(task_on_rq_queued(p) || current == p)) {
+		if (schedtune_util_est(p) &&
+		    unlikely(task_on_rq_queued(p) || current == p)) {
 			if (p->sse) {
 				sse_util_est -= min_t(unsigned int, sse_util_est,
 					   (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED));
@@ -268,7 +268,7 @@ unsigned long __ml_cpu_util_with(int cpu, struct task_struct *p, int sse)
 	if (sched_feat(UTIL_EST)) {
 		unsigned long util_est = __ml_cpu_util_est(cpu, sse);
 
-		if (p->sse == sse)
+		if (schedtune_util_est(p) && p->sse == sse)
 			util_est += min_t(unsigned int, util_est,
 				   (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED));
 
@@ -679,8 +679,6 @@ update_tg_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se,
  * We map this information into the LSB bit of the utilization saved at
  * dequeue time (i.e. util_est.dequeued).
  */
-#define UTIL_AVG_UNCHANGED 0x1
-
 static inline void util_change(struct multi_load *ml)
 {
 	unsigned int enqueued;
@@ -708,17 +706,19 @@ void util_est_enqueue_multi_load(struct cfs_rq *cfs_rq, struct task_struct *p)
 	unsigned int enqueued;
 	struct util_est *cfs_rq_ue = cfs_rq_util_est(cfs_rq, p->sse);
 
-	if (!schedtune_util_est(p))
+	if (!sched_feat(UTIL_EST))
 		return;
 
-	/* Update root cfs_rq's estimated utilization */
-	enqueued  = cfs_rq_ue->enqueued;
-	enqueued += (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED);
-	WRITE_ONCE(cfs_rq_ue->enqueued, enqueued);
+	if (schedtune_util_est(p)) {
+		/* Update root cfs_rq's estimated utilization */
+		enqueued  = cfs_rq_ue->enqueued;
+		enqueued += (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED);
+		WRITE_ONCE(cfs_rq_ue->enqueued, enqueued);
 
-	/* Update plots for Task and CPU estimated utilization */
-	trace_ems_util_est_task(p, &p->se.avg.ml);
-	trace_ems_util_est_cpu(cpu_of(cfs_rq->rq), cfs_rq);
+		/* Update plots for Task and CPU estimated utilization */
+		trace_ems_util_est_task(p, &p->se.avg.ml);
+		trace_ems_util_est_cpu(cpu_of(cfs_rq->rq), cfs_rq);
+	}
 }
 
 /*
@@ -739,19 +739,21 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 	long last_ewma_diff;
 	struct util_est ue, *cfs_rq_ue;
 
-	if (!schedtune_util_est(p))
+	if (!sched_feat(UTIL_EST))
 		return;
 
-	cfs_rq_ue = cfs_rq_util_est(cfs_rq, p->sse);
+	if (schedtune_util_est(p)) {
+		cfs_rq_ue = cfs_rq_util_est(cfs_rq, p->sse);
 
-	/* Update root cfs_rq's estimated utilization */
-	ue.enqueued  = cfs_rq_ue->enqueued;
-	ue.enqueued -= min_t(unsigned int, ue.enqueued,
-			     (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED));
-	WRITE_ONCE(cfs_rq_ue->enqueued, ue.enqueued);
+		/* Update root cfs_rq's estimated utilization */
+		ue.enqueued  = cfs_rq_ue->enqueued;
+		ue.enqueued -= min_t(unsigned int, ue.enqueued,
+				(_ml_task_util_est(p) | UTIL_AVG_UNCHANGED));
+		WRITE_ONCE(cfs_rq_ue->enqueued, ue.enqueued);
 
-	/* Update plots for CPU's estimated utilization */
-	trace_ems_util_est_cpu(cpu_of(cfs_rq->rq), cfs_rq);
+		/* Update plots for CPU's estimated utilization */
+		trace_ems_util_est_cpu(cpu_of(cfs_rq->rq), cfs_rq);
+	}
 
 	/*
 	 * Skip update of task's estimated utilization when the task has not
@@ -801,6 +803,45 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 
 	/* Update plots for Task's estimated utilization */
 	trace_ems_util_est_task(p, &p->se.avg.ml);
+}
+
+void util_est_update(struct task_struct *p,
+			int prev_util_est, int next_util_est)
+{
+	struct rq_flags rq_flags;
+	struct rq *rq;
+	struct util_est ue, *cfs_rq_ue;
+	unsigned int enqueued = 0;
+
+	/*
+	 * If both prev and next util-est are off or on, enqueued of cfs_rq
+	 * does not change.
+	 */
+	if (prev_util_est == next_util_est)
+		return;
+
+	rq = task_rq_lock(p, &rq_flags);
+	if (!p->on_rq) {
+		task_rq_unlock(rq, p, &rq_flags);
+		return;
+	}
+
+	ue = p->se.avg.ml.util_est;
+	cfs_rq_ue = cfs_rq_util_est(&rq->cfs, p->sse);
+
+	enqueued = cfs_rq_ue->enqueued;
+	if (prev_util_est)
+		enqueued -= min_t(unsigned int, enqueued,
+				(_ml_task_util_est(p) | UTIL_AVG_UNCHANGED));
+	if (next_util_est)
+		enqueued += (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED);
+
+	WRITE_ONCE(cfs_rq_ue->enqueued, enqueued);
+
+	/* Update plots for CPU's estimated utilization */
+	trace_ems_util_est_cpu(cpu_of(rq), &rq->cfs);
+
+	task_rq_unlock(rq, p, &rq_flags);
 }
 
 /****************************************************************/

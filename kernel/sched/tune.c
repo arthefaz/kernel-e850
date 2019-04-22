@@ -295,6 +295,18 @@ void schedtune_enqueue_task(struct task_struct *p, int cpu)
 	raw_spin_unlock_irqrestore(&bg->lock, irq_flags);
 }
 
+static void
+schedtune_util_est_update(struct cgroup_subsys_state *css, int util_est)
+{
+	struct css_task_iter it;
+	struct task_struct *p;
+
+	css_task_iter_start(css, 0, &it);
+	while ((p = css_task_iter_next(&it)))
+		util_est_update(p, css_st(css)->util_est, util_est);
+	css_task_iter_end(&it);
+}
+
 int schedtune_can_attach(struct cgroup_taskset *tset)
 {
 	struct task_struct *task;
@@ -313,6 +325,8 @@ int schedtune_can_attach(struct cgroup_taskset *tset)
 
 
 	cgroup_taskset_for_each(task, css, tset) {
+		util_est_update(task, task_schedtune(task)->util_est,
+						css_st(css)->util_est);
 
 		/*
 		 * Lock the CPU's RQ the task is enqueued to avoid race
@@ -527,7 +541,9 @@ util_est_write(struct cgroup_subsys_state *css, struct cftype *cft,
 	    u64 util_est)
 {
 	struct schedtune *st = css_st(css);
-	st->util_est = util_est;
+
+	schedtune_util_est_update(css, !!util_est);
+	st->util_est = !!util_est;
 
 	return 0;
 }
