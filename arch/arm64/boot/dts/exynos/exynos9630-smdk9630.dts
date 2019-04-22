@@ -1,0 +1,65 @@
+/*
+ * SAMSUNG EXYNOS9630 board device tree source
+ *
+ * Copyright (c) 2019 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "samsung,exynos9630", "samsung,SMDK9630";
+	board_id = <0x0>;
+	board_rev = <0x0>;
+
+	fragment@model {
+		target-path = "/";
+		__overlay__ {
+			#address-cells = <2>;
+			#size-cells = <1>;
+
+			model = "Samsung SMDK9630 board based on EXYNOS9630";
+
+			fixed-rate-clocks {
+				oscclk {
+					compatible = "samsung,emulator-oscclk";
+					clock-frequency = <26000000>;
+				};
+			};
+
+			firmware {
+				android {
+					compatible = "android,firmware";
+					vbmeta {
+						compatible = "android,vbmeta";
+						parts = "vbmeta,boot,system,vendor,dtbo";
+					};
+					fstab {
+						compatible = "android,fstab";
+						vendor {
+							compatible = "android,vendor";
+							dev = "/dev/block/platform/13520000.ufs/by-name/vendor";
+							type = "ext4";
+							mnt_flags = "ro";
+							fsmgr_flags = "wait,avb,slotselect";
+						};
+					};
+				};
+			};
+
+		}; /* end of __overlay__ */
+	}; /* end of fragment */
+}; /* end of root */
+
+&chosen {
+	bootargs_ext = "";
+};
+
+&serial_0 {
+	status = "okay";
+};
