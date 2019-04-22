@@ -137,6 +137,9 @@ static inline void update_tg_multi_load(struct cfs_rq *cfs_rq, struct sched_enti
 				struct cfs_rq *gcfs_rq) { }
 static inline void util_est_enqueue_multi_load(struct cfs_rq *cfs_rq, struct task_struct *p) { }
 static inline void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq, struct task_struct *p, bool task_sleep) { }
+static inline void set_part_period_start(struct rq *rq) { }
+static inline void update_cpu_active_ratio(struct rq *rq, struct task_struct *p, int type) { }
+static inline void part_cpu_active_ratio(unsigned long *util, unsigned long *max, int cpu) { }
 
 
 /*
