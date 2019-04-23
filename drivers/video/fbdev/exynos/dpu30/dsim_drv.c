@@ -263,10 +263,11 @@ int dsim_check_pl_threshold(struct dsim_device *dsim, u32 d1)
 	return cnt;
 }
 
-int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1)
+int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1, bool wait_empty)
 {
 	int ret = 0;
 	struct decon_device *decon = get_decon_drvdata(0);
+	int cnt = 5000; /* for wating empty status during 50ms */
 
 	decon_hiber_block_exit(decon);
 
@@ -354,6 +355,19 @@ int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1)
 
 	dsim_reg_enable_packetgo(dsim->id, false);
 
+	if (wait_empty) {
+		do {
+			if (dsim_is_fifo_empty_status(dsim))
+				break;
+			udelay(10);
+		} while (cnt--);
+
+		if (!cnt) {
+			dsim_err("ID(%d): DSIM command(%lx) fail\n", id, d0);
+			ret = -EINVAL;
+		}
+	}
+
 err_exit:
 	DPU_EVENT_LOG_CMD(&dsim->sd, id, d0, d1);
 	mutex_unlock(&dsim->cmd_lock);
@@ -385,10 +399,10 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 
 	/* Set the maximum packet size returned */
 	dsim_write_data(dsim,
-		MIPI_DSI_SET_MAXIMUM_RETURN_PACKET_SIZE, cnt, 0);
+		MIPI_DSI_SET_MAXIMUM_RETURN_PACKET_SIZE, cnt, 0, false);
 
 	/* Read request */
-	dsim_write_data(dsim, id, addr, 0);
+	dsim_write_data(dsim, id, addr, 0, true);
 
 	dsim_wait_for_cmd_done(dsim);
 
@@ -1112,10 +1126,10 @@ static int dsim_cmd_sysfs_write(struct dsim_device *dsim, bool on)
 
 	if (on)
 		ret = dsim_write_data(dsim, MIPI_DSI_DCS_SHORT_WRITE,
-			MIPI_DCS_SET_DISPLAY_ON, 0);
+			MIPI_DCS_SET_DISPLAY_ON, 0, false);
 	else
 		ret = dsim_write_data(dsim, MIPI_DSI_DCS_SHORT_WRITE,
-			MIPI_DCS_SET_DISPLAY_OFF, 0);
+			MIPI_DCS_SET_DISPLAY_OFF, 0, false);
 	if (ret < 0)
 		dsim_err("Failed to write test data!\n");
 	else
