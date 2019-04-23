@@ -44,7 +44,7 @@ extern int dpu_panel_log_level;
 
 #define MAX_REGULATORS		3
 #define MAX_PANEL_SUPPORT	10
-#define MAX_PANEL_ID_NUM	2
+#define MAX_PANEL_ID_NUM	3
 
 extern struct exynos_panel_device *panel_drvdata;
 extern struct exynos_panel_ops panel_s6e3ha9_ops;
@@ -58,7 +58,7 @@ struct exynos_panel_resources {
 };
 
 struct exynos_panel_ops {
-	u32 id[2];
+	u32 id[MAX_PANEL_ID_NUM];
 	int (*suspend)(struct exynos_panel_device *panel);
 	int (*displayon)(struct exynos_panel_device *panel);
 	int (*mres)(struct exynos_panel_device *panel, int mres_idx);
