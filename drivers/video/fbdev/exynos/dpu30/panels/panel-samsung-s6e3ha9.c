@@ -110,7 +110,7 @@ static int s6e3ha9_read_state(struct exynos_panel_device *panel)
 }
 
 struct exynos_panel_ops panel_s6e3ha9_ops = {
-	.id		= {0x001090, 0x1310a1},
+	.id		= {0x001090, 0x1310a1, 0x1333a1},
 	.suspend	= s6e3ha9_suspend,
 	.displayon	= s6e3ha9_displayon,
 	.mres		= s6e3ha9_mres,

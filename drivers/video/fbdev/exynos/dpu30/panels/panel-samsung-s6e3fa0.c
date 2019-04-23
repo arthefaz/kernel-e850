@@ -160,7 +160,7 @@ int s6e3fa0_read_state(struct exynos_panel_device *panel)
 }
 
 struct exynos_panel_ops panel_s6e3fa0_ops = {
-	.id		= {0x244040, 0},
+	.id		= {0x244040, 0xffffff, 0xffffff},
 	.suspend	= s6e3fa0_suspend,
 	.displayon	= s6e3fa0_displayon,
 	.mres		= s6e3fa0_mres,
