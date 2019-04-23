@@ -442,7 +442,7 @@ static int win_update_send_partial_command(struct dsim_device *dsim,
 
 	retry = 2;
 	while (dsim_write_data(dsim, MIPI_DSI_DCS_LONG_WRITE,
-				(unsigned long)column, ARRAY_SIZE(column)) != 0) {
+				(unsigned long)column, ARRAY_SIZE(column), true) != 0) {
 		dsim_err("failed to write COLUMN_ADDRESS\n");
 		dsim_reg_function_reset(dsim->id);
 		if (--retry <= 0) {
@@ -453,7 +453,7 @@ static int win_update_send_partial_command(struct dsim_device *dsim,
 
 	retry = 2;
 	while (dsim_write_data(dsim, MIPI_DSI_DCS_LONG_WRITE,
-				(unsigned long)page, ARRAY_SIZE(page)) != 0) {
+				(unsigned long)page, ARRAY_SIZE(page), true) != 0) {
 		dsim_err("failed to write PAGE_ADDRESS\n");
 		dsim_reg_function_reset(dsim->id);
 		if (--retry <= 0) {

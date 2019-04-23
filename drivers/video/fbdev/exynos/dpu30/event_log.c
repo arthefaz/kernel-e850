@@ -1003,7 +1003,7 @@ static ssize_t decon_debug_cmd_write(struct file *file, const char __user *buf,
 		goto out;
 	}
 
-	ret = dsim_write_data(dsim, id, d0, d1);
+	ret = dsim_write_data(dsim, id, d0, d1, true);
 	if (ret < 0) {
 		decon_err("failed to write DSIM command(0x%lx)\n",
 				(id == MIPI_DSI_DCS_LONG_WRITE) ?

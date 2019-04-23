@@ -228,7 +228,7 @@ struct dsim_device {
 };
 
 int dsim_call_panel_ops(struct dsim_device *dsim, u32 cmd, void *arg);
-int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1);
+int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1, bool wait_empty);
 int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf);
 int dsim_wait_for_cmd_done(struct dsim_device *dsim);
 
@@ -255,7 +255,7 @@ static inline int dsim_rd_data(u32 id, u32 cmd_id, u32 addr, u32 size, u8 *buf)
 }
 
 static inline int dsim_wr_data(struct dsim_device *dsim, u32 type, u8 data[],
-		u32 len)
+		u32 len, bool wait_empty)
 {
 	u32 t;
 	int ret = 0;
@@ -265,52 +265,52 @@ static inline int dsim_wr_data(struct dsim_device *dsim, u32 type, u8 data[],
 		return -EINVAL;
 	case 1:
 		t = type ? type : MIPI_DSI_DCS_SHORT_WRITE;
-		ret = dsim_write_data(dsim, t, (unsigned long)data[0], 0);
+		ret = dsim_write_data(dsim, t, (unsigned long)data[0], 0, wait_empty);
 		break;
 	case 2:
 		t = type ? type : MIPI_DSI_DCS_SHORT_WRITE_PARAM;
-		ret = dsim_write_data(dsim, t, (unsigned long)data[0], (u32)data[1]);
+		ret = dsim_write_data(dsim, t, (unsigned long)data[0], (u32)data[1], wait_empty);
 		break;
 	default:
 		t = type ? type : MIPI_DSI_DCS_LONG_WRITE;
-		ret = dsim_write_data(dsim, t, (unsigned long)data, len);
+		ret = dsim_write_data(dsim, t, (unsigned long)data, len, wait_empty);
 		break;
 	}
 
 	return ret;
 }
 
-#define dsim_write_data_seq(dsim, seq...) do {			\
-	u8 d[] = { seq };					\
-	int ret;						\
-	ret = dsim_wr_data(dsim, 0, d, ARRAY_SIZE(d));		\
-	if (ret < 0)						\
-		dsim_err("failed to write cmd(%d)\n", ret);	\
+#define dsim_write_data_seq(dsim, wait_empty, seq...) do {		\
+	u8 d[] = { seq };						\
+	int ret;							\
+	ret = dsim_wr_data(dsim, 0, d, ARRAY_SIZE(d), wait_empty);	\
+	if (ret < 0)							\
+		dsim_err("failed to write cmd(%d)\n", ret);		\
 } while (0)
 
 #define dsim_write_data_seq_delay(dsim, delay, seq...) do {	\
-	dsim_write_data_seq(dsim, seq);				\
+	dsim_write_data_seq(dsim, true, seq);			\
 	msleep(delay);						\
 } while (0)
 
-#define dsim_write_data_table(dsim, table) do {			\
-	int ret;						\
-	ret = dsim_wr_data(dsim, 0, table, ARRAY_SIZE(table));	\
-	if (ret < 0)						\
-		dsim_err("failed to write cmd(%d)\n", ret);	\
+#define dsim_write_data_table(dsim, table) do {				\
+	int ret;							\
+	ret = dsim_wr_data(dsim, 0, table, ARRAY_SIZE(table), false);	\
+	if (ret < 0)							\
+		dsim_err("failed to write cmd(%d)\n", ret);		\
 } while (0)
 
 #define dsim_write_data_type_seq(dsim, type, seq...) do {	\
 	u8 d[] = { seq };					\
 	int ret;						\
-	ret = dsim_wr_data(dsim, type, d, ARRAY_SIZE(d));	\
+	ret = dsim_wr_data(dsim, type, d, ARRAY_SIZE(d), false);\
 	if (ret < 0)						\
 		dsim_err("failed to write cmd(%d)\n", ret);	\
 } while (0)
 
 #define dsim_write_data_type_table(dsim, type, table) do {		\
 	int ret;							\
-	ret = dsim_wr_data(dsim, type, table, ARRAY_SIZE(table));	\
+	ret = dsim_wr_data(dsim, type, table, ARRAY_SIZE(table), false);\
 	if (ret < 0)							\
 		dsim_err("failed to write cmd(%d)\n", ret);		\
 } while (0)

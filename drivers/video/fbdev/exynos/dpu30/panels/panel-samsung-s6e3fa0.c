@@ -128,7 +128,7 @@ int s6e3fa0_displayon(struct exynos_panel_device *panel)
 	if (lcd->mode == DECON_VIDEO_MODE)
 		mdelay(120);
 
-	dsim_write_data_seq(dsim, 0x29); /* display on */
+	dsim_write_data_seq(dsim, false, 0x29); /* display on */
 	mutex_unlock(&panel->ops_lock);
 
 	return 0;

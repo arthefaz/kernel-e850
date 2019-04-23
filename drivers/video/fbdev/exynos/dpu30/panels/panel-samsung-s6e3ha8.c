@@ -188,8 +188,8 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 
 	mutex_lock(&panel->ops_lock);
 
-	dsim_write_data_seq(dsim, 0xf0, 0x5a, 0x5a);
-	dsim_write_data_seq(dsim, 0xfc, 0x5a, 0x5a);
+	dsim_write_data_seq(dsim, false, 0xf0, 0x5a, 0x5a);
+	dsim_write_data_seq(dsim, false, 0xfc, 0x5a, 0x5a);
 
 	/* DSC related configuration */
 	dsim_write_data_type_seq(dsim, MIPI_DSI_DSC_PRA, 0x1);
@@ -199,21 +199,21 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 		DPU_ERR_PANEL("fail to set MIPI_DSI_DSC_PPS command\n");
 
 	dsim_write_data_seq_delay(dsim, 120, 0x11); /* sleep out: 120ms delay */
-	dsim_write_data_seq(dsim, 0xB9, 0x00, 0xB0, 0x8F, 0x09, 0x00, 0x00,
+	dsim_write_data_seq(dsim, false, 0xB9, 0x00, 0xB0, 0x8F, 0x09, 0x00, 0x00,
 			0x00, 0x11, 0x01);
-	dsim_write_data_seq(dsim, 0x1A, 0x1F, 0x00, 0x00, 0x00, 0x00);
+	dsim_write_data_seq(dsim, false, 0x1A, 0x1F, 0x00, 0x00, 0x00, 0x00);
 	if (panel->id_index == 0) {
-		dsim_write_data_seq(dsim, 0xC7, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+		dsim_write_data_seq(dsim, false, 0xC7, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00);
 		dsim_write_data_table(dsim, GAMCTL1);
 		dsim_write_data_table(dsim, GAMCTL2);
 		dsim_write_data_table(dsim, GAMCTL3);
 		dsim_write_data_table(dsim, BCCTL);
-		dsim_write_data_seq(dsim, 0xF7, 0x03);
-		dsim_write_data_seq(dsim, 0x53, 0x20);
+		dsim_write_data_seq(dsim, false, 0xF7, 0x03);
+		dsim_write_data_seq(dsim, false, 0x53, 0x20);
 	}
-	dsim_write_data_seq(dsim, 0x35); /* TE on */
-	dsim_write_data_seq(dsim, 0xED, 0x44);
+	dsim_write_data_seq(dsim, false, 0x35); /* TE on */
+	dsim_write_data_seq(dsim, false, 0xED, 0x44);
 
 #if !defined(CONFIG_EXYNOS_EWR)
 #if defined(CONFIG_EXYNOS_PLL_SLEEP)
@@ -222,18 +222,18 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 	 *      modified value : default value - 11(modifying line) = 0xB91
 	 */
 
-	dsim_write_data_seq(dsim, 0xB9, 0x01, 0xB0, 0x91, 0x09);
+	dsim_write_data_seq(dsim, false, 0xB9, 0x01, 0xB0, 0x91, 0x09);
 #else
-	dsim_write_data_seq(dsim, 0xB9, 0x00, 0xB0, 0x9C, 0x09);
+	dsim_write_data_seq(dsim, false, 0xB9, 0x00, 0xB0, 0x9C, 0x09);
 #endif
 #endif
 	dsim_write_data_table(dsim, SEQ_FFC);
 
 	if (panel->id_index == 1) {
-		dsim_write_data_seq(dsim, 0x53, 0x20);
-		dsim_write_data_seq(dsim, 0x51, 0x01, 0xff);
+		dsim_write_data_seq(dsim, false, 0x53, 0x20);
+		dsim_write_data_seq(dsim, false, 0x51, 0x01, 0xff);
 	}
-	dsim_write_data_seq(dsim, 0x29); /* display on */
+	dsim_write_data_seq(dsim, false, 0x29); /* display on */
 
 	mutex_unlock(&panel->ops_lock);
 
@@ -252,7 +252,7 @@ static int s6e3ha8_mres(struct exynos_panel_device *panel, int mres_idx)
 
 	mutex_lock(&panel->ops_lock);
 
-	dsim_write_data_seq(dsim, 0x9F, 0xA5, 0xA5);
+	dsim_write_data_seq(dsim, false,  0x9F, 0xA5, 0xA5);
 	/* DSC related configuration */
 	if (dsc_en) {
 		dsim_write_data_type_seq(dsim, MIPI_DSI_DSC_PRA, 0x1);
@@ -261,16 +261,16 @@ static int s6e3ha8_mres(struct exynos_panel_device *panel, int mres_idx)
 	} else {
 		dsim_write_data_type_seq(dsim, MIPI_DSI_DSC_PRA, 0x0);
 	}
-	dsim_write_data_seq(dsim, 0x9F, 0x5A, 0x5A);
+	dsim_write_data_seq(dsim, false,  0x9F, 0x5A, 0x5A);
 
 	/* partial update configuration */
 	dsim_write_data_table(dsim, CASET_TABLE[mres_idx]);
 	dsim_write_data_table(dsim, PASET_TABLE[mres_idx]);
 
-	dsim_write_data_seq(dsim, 0xF0, 0x5A, 0x5A);
+	dsim_write_data_seq(dsim, false,  0xF0, 0x5A, 0x5A);
 	/* DDI scaling configuration */
 	dsim_write_data_table(dsim, SCALER_TABLE[mres_idx]);
-	dsim_write_data_seq(dsim, 0xF0, 0xA5, 0xA5);
+	dsim_write_data_seq(dsim, false,  0xF0, 0xA5, 0xA5);
 
 	mutex_unlock(&panel->ops_lock);
 	DPU_INFO_PANEL("%s -\n", __func__);
