@@ -1495,12 +1495,10 @@ static void __mfc_nal_q_handle_frame_output(struct mfc_ctx *ctx, unsigned int er
 	struct mfc_dec *dec = ctx->dec_priv;
 	dma_addr_t dspl_y_addr;
 	unsigned int frame_type;
-	unsigned int disp_err;
 
 	mfc_debug_enter();
 
 	frame_type = pOutStr->DisplayFrameType & MFC_REG_DISPLAY_FRAME_MASK;
-	disp_err = mfc_get_warn(pOutStr->ErrorCode);
 
 	ctx->sequence++;
 
@@ -1520,7 +1518,7 @@ static void __mfc_nal_q_handle_frame_output(struct mfc_ctx *ctx, unsigned int er
 	}
 
 	/* Dequeued display buffer for user */
-	if (!IS_NO_DISPLAY(ctx, disp_err))
+	if (!IS_NO_DISPLAY(ctx, err))
 		__mfc_nal_q_handle_frame_output_del(ctx, pOutStr, err);
 
 	mfc_debug_leave();
