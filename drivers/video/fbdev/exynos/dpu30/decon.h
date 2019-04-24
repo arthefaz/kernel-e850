@@ -1564,6 +1564,7 @@ int decon_update_last_regs(struct decon_device *decon,
 
 void decon_hiber_start(struct decon_device *decon);
 void decon_hiber_finish(struct decon_device *decon);
+int dpu_hw_recovery_process(struct decon_device *decon);
 
 u32 decon_processed_linecnt(struct decon_device *decon);
 
