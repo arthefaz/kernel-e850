@@ -41,6 +41,7 @@
 #define VC_TIMER_TH_RESET	0x0
 #define CUTOFF_CONT_RESET	0x0
 #define BRB_CUTOFF_CONFIG_RESET	0x0
+#define WDBUF_CUTOFF_CONFIG_RESET	0x0
 
 #define RREQ_THRT_CON_RESET	0x8000
 #define RREQ_THRT_MO_P2_RESET	0x0
@@ -204,6 +205,7 @@ struct bts_stat {
 	unsigned int		vc_timer_th[VC_TIMER_TH_NR];
 	unsigned int		cutoff_con;
 	unsigned int		brb_cutoff_con;
+	unsigned int		wdbuf_cutoff_con;
 	bool			drex_pf_on;
 	unsigned int		pf_rreq_thrt_con;
 	unsigned int		allow_mo_for_region;
