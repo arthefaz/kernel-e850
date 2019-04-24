@@ -152,6 +152,16 @@ enum dphy_charic_value {
 	M_DPHY_CTRL4
 };
 
+enum dsim_datalane_status {
+	DSIM_DATALANE_STATUS_STOPDATA,
+	DSIM_DATALANE_STATUS_HSDT,
+	DSIM_DATALANE_STATUS_LPDT,
+	DSIM_DATALANE_STATUS_TRIGGER,
+	DSIM_DATALANE_STATUS_ULPSDATA,
+	DSIM_DATALANE_STATUS_SEWCALDATA,
+	DSIM_DATALANE_STATUS_BTA
+};
+
 struct dsim_pll_param {
 	u32 p;
 	u32 m;
@@ -247,6 +257,8 @@ int dsim_reset_panel(struct dsim_device *dsim);
 int dsim_set_panel_power(struct dsim_device *dsim, bool on);
 
 void dsim_to_regs_param(struct dsim_device *dsim, struct dsim_regs *regs);
+
+void dsim_reg_recovery_process(struct dsim_device *dsim);
 
 static inline struct dsim_device *get_dsim_drvdata(u32 id)
 {
@@ -436,6 +448,7 @@ static inline bool IS_DSIM_OFF_STATE(struct dsim_device *dsim)
 #define DSIM_IOC_DOZE			_IOW('D', 20, u32)
 #define DSIM_IOC_DOZE_SUSPEND		_IOW('D', 21, u32)
 #define DSIM_IOC_SET_FREQ_HOP		_IOW('D', 30, u32)
+#define DSIM_IOC_RECOVERY_PROC		_IOW('D', 40, u32)
 
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 #define DSIM_ESD_OK			0

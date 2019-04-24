@@ -79,6 +79,8 @@ void dsim_reg_set_cmd_transfer_mode(u32 id, u32 lp);
 /* Frequency Hopping feature for EVT1 */
 void dsim_reg_set_dphy_freq_hopping(u32 id, u32 p, u32 m, u32 k, u32 en);
 
+enum dsim_datalane_status dsim_reg_get_datalane_status(u32 id);
+
 /* DSIM SFR dump */
 void __dsim_dump(u32 id, struct dsim_regs *regs);
 

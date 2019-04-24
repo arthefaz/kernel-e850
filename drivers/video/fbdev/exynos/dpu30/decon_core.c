@@ -1798,8 +1798,6 @@ void decon_wait_for_vstatus(struct decon_device *decon, u32 timeout)
 			msecs_to_jiffies(timeout));
 	decon_systrace(decon, 'C', "decon_frame_start", 0);
 	DPU_EVENT_LOG(DPU_EVT_DECON_FRAMESTART, &decon->sd, ktime_set(0, 0));
-	if (!ret)
-		decon_warn("%s:timeout\n", __func__);
 }
 
 static void decon_acquire_old_bufs(struct decon_device *decon,

@@ -70,7 +70,7 @@ static u32 decon_reg_get_idle_status(u32 id)
 	return 0;
 }
 
-static u32 decon_reg_get_run_status(u32 id)
+u32 decon_reg_get_run_status(u32 id)
 {
 	u32 val;
 
@@ -1539,7 +1539,7 @@ static int decon_reg_stop_perframe(u32 id, u32 dsi_idx,
 	return ret;
 }
 
-static int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr,
+int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr,
 		u32 fps)
 {
 	int ret = 0;

@@ -419,6 +419,17 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 
 	if (!wait_for_completion_timeout(&dsim->rd_comp, MIPI_RD_TIMEOUT)) {
 		dsim_err("MIPI DSIM read Timeout!\n");
+		if (dsim_reg_get_datalane_status(id) == DSIM_DATALANE_STATUS_BTA) {
+			if (decon_reg_get_run_status(id)) {
+				dsim_reset_panel(dsim);
+				dpu_hw_recovery_process(decon);
+			} else {
+				dsim_reset_panel(dsim);
+				dsim_reg_recovery_process(dsim);
+			}
+		} else
+			dsim_err("datalane status is %d\n", dsim_reg_get_datalane_status(id));
+
 		return -ETIMEDOUT;
 	}
 
@@ -1131,6 +1142,10 @@ static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 
 	case DSIM_IOC_FREE_FB_RES:
 		ret = dsim_free_fb_resource(dsim);
+		break;
+
+	case DSIM_IOC_RECOVERY_PROC:
+		dsim_reg_recovery_process(dsim);
 		break;
 
 	default:

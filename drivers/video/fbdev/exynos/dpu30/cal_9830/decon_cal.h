@@ -249,6 +249,8 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p);
 int decon_reg_start(u32 id, struct decon_mode_info *psr);
 int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr, bool rst,
 		u32 fps);
+int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info * psr,
+		u32 fps);
 
 /* DECON window control */
 void decon_reg_set_win_enable(u32 id, u32 win_idx, u32 en);
@@ -302,6 +304,8 @@ void decon_reg_update_req_global(u32 id);
 /* PLL sleep related functions */
 void decon_reg_set_pll_sleep(u32 id, u32 en);
 void decon_reg_set_pll_wakeup(u32 id, u32 en);
+u32 decon_reg_get_run_status(u32 id);
+
 
 /*********************************************************************/
 

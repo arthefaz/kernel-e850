@@ -1071,6 +1071,14 @@ static u32 dsim_reg_get_display_mode(u32 id)
 	return DSIM_CONFIG_DISPLAY_MODE_GET(val);
 }
 
+enum dsim_datalane_status dsim_reg_get_datalane_status(u32 id)
+{
+	u32 val;
+
+	val = dsim_read(id, DSIM_LINK_STATUS2);
+	return DSIM_LINK_STATUS2_DATALANE_STATUS_GET(val);
+}
+
 static void dsim_reg_enable_dsc(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
@@ -2272,6 +2280,33 @@ int dsim_reg_stop(u32 id, u32 lanes)
 		dsim_reg_sw_reset(id);
 
 	return err;
+}
+
+void dsim_reg_recovery_process(struct dsim_device *dsim)
+{
+	dsim_info("%s +\n", __func__);
+
+	dsim_reg_clear_int(dsim->id, 0xffffffff);
+
+	/* 0. disable HS clock */
+	if (dsim_reg_set_hs_clock(dsim->id, 0) < 0)
+		dsim_err("The CLK lane doesn't be switched to LP mode\n");
+
+	/* 1. clock selection : OSC */
+	dsim_reg_set_link_clock(dsim->id, 0);
+
+	/* 2. reset & release */
+	dpu_sysreg_dphy_reset(dsim->res.ss_regs, dsim->id, 0);
+	dsim_reg_function_reset(dsim->id);
+	dpu_sysreg_dphy_reset(dsim->res.ss_regs, dsim->id, 1);
+
+	/* 3. clock selection : PLL */
+	dsim_reg_set_link_clock(dsim->id, 1);
+
+	/* 4. enable HS clock */
+	dsim_reg_set_hs_clock(dsim->id, 1);
+
+	dsim_info("%s -\n", __func__);
 }
 
 /* Exit ULPS mode and set clocks and lanes */
