@@ -523,6 +523,22 @@ struct mfc_buf *mfc_search_for_dpb(struct mfc_ctx *ctx)
 	}
 
 	/*
+	 * In case of H.264/HEVC codec,
+	 * all of the queued buffers can be referenced by F/W.
+	 * At that time, we should set the any DPB to F/W,
+	 * F/W will returns display only buffer whether if reference or not.
+	 * In this way the reference can be released by circulating.
+	 */
+	if (hweight32(dec->dynamic_used) == ctx->dpb_count + 5) {
+		mfc_buf = list_entry(ctx->dst_buf_queue.head.next, struct mfc_buf, list);
+		mfc_buf->used = 1;
+		mfc_debug(2, "[DPB] All queued buf refernecing. select buf[%d][%d]\n",
+				mfc_buf->vb.vb2_buf.index, mfc_buf->dpb_index);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
+		return mfc_buf;
+	}
+
+	/*
 	 * 1) ctx->dst_buf_queue.count >= (ctx->dpb_count + 5): All DPBs queued in DRV
 	 * 2) ctx->dst_buf_queue.count == 0: All DPBs dequeued to user
 	 * we will wait
@@ -567,17 +583,28 @@ struct mfc_buf *mfc_search_move_dpb_nal_q(struct mfc_ctx *ctx)
 	}
 
 	/*
+	 * In case of H.264/HEVC codec,
+	 * all of the queued buffers can be referenced by F/W.
+	 * In NAL_Q mode, F/W couldn't know when the buffer
+	 * that returned to the display index was displayed.
+	 * Therefore, NAL_Q mode can't be continued.
+	 */
+	if (hweight32(dec->dynamic_used) == ctx->dpb_count + 5) {
+		dec->is_dpb_full = 1;
+		mfc_debug(2, "[NALQ][DPB] full reference\n");
+	}
+
+	/*
 	 * 1) ctx->dst_buf_queue.count >= (ctx->dpb_count + 5): All DPBs queued in DRV
 	 * 2) ctx->dst_buf_queue.count == 0: All DPBs dequeued to user
 	 * we will wait
 	 */
-	mfc_debug(2, "[DPB] All enqueued DPBs are referencing or there's no DPB in DRV (in %d/total %d)\n",
-			ctx->dst_buf_queue.count, ctx->dpb_count + 5);
+	mfc_debug(2, "[NALQ][DPB] All enqueued DPBs are referencing or there's no DPB in DRV (in %d/total %d)\n",
+			ctx->dst_buf_queue.count + ctx->dst_buf_nal_queue.count, ctx->dpb_count + 5);
 	ctx->clear_work_bit = 1;
 	__mfc_print_dpb_queue(ctx, dec);
 	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 
-	/*TODO: need to lock, and when we should set the "is_dpb_full"? */
 	mfc_print_dpb_table(ctx);
 
 	return NULL;
