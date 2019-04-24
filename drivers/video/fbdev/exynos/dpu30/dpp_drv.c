@@ -135,36 +135,36 @@ static void dpp_get_base_addr_params(struct dpp_params_info *p)
 	/* for lossless SBWC */
 	case DECON_PIXEL_FORMAT_NV12N_SBWC_8B: /* single fd : [0]-Y_PL */
 		/* calc CbCr Payload base */
-		p->addr[1] = SBWC_8B_CBCR_BASE(p->addr[0], p->src.w, p->src.h);
+		p->addr[1] = SBWC_8B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
 	case DECON_PIXEL_FORMAT_NV12M_SBWC_8B:
 	case DECON_PIXEL_FORMAT_NV21M_SBWC_8B:
 		/* payload */
 		p->addr[3] = p->addr[1];
 		p->addr[1] = p->addr[0];
-		p->ypl_c2_strd = SBWC_8B_STRIDE(p->src.w);
+		p->ypl_c2_strd = SBWC_8B_STRIDE(p->src.f_w);
 		p->cpl_strd = p->ypl_c2_strd;
 		/* header */
-		p->addr[0] = p->addr[1] + SBWC_8B_Y_SIZE(p->src.w, p->src.h);
-		p->addr[2] = p->addr[3] + SBWC_8B_CBCR_SIZE(p->src.w, p->src.h);
-		p->yhd_y2_strd = SBWC_HEADER_STRIDE(p->src.w);
-		p->chd_strd = SBWC_HEADER_STRIDE(p->src.w);
+		p->addr[0] = p->addr[1] + SBWC_8B_Y_SIZE(p->src.f_w, p->src.f_h);
+		p->addr[2] = p->addr[3] + SBWC_8B_CBCR_SIZE(p->src.f_w, p->src.f_h);
+		p->yhd_y2_strd = SBWC_HEADER_STRIDE(p->src.f_w);
+		p->chd_strd = SBWC_HEADER_STRIDE(p->src.f_w);
 		break;
 
 	case DECON_PIXEL_FORMAT_NV12N_SBWC_10B: /* single fd : [0]-Y_PL */
 		/* calc CbCr Payload base */
-		p->addr[1] = SBWC_10B_CBCR_BASE(p->addr[0], p->src.w, p->src.h);
+		p->addr[1] = SBWC_10B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h);
 	case DECON_PIXEL_FORMAT_NV12M_SBWC_10B:
 	case DECON_PIXEL_FORMAT_NV21M_SBWC_10B:
 		/* payload */
 		p->addr[3] = p->addr[1];
 		p->addr[1] = p->addr[0];
-		p->ypl_c2_strd = SBWC_10B_STRIDE(p->src.w);
+		p->ypl_c2_strd = SBWC_10B_STRIDE(p->src.f_w);
 		p->cpl_strd = p->ypl_c2_strd;
 		/* header */
-		p->addr[0] = p->addr[1] + SBWC_10B_Y_SIZE(p->src.w, p->src.h);
-		p->addr[2] = p->addr[3] + SBWC_10B_CBCR_SIZE(p->src.w, p->src.h);
-		p->yhd_y2_strd = SBWC_HEADER_STRIDE(p->src.w);
-		p->chd_strd = SBWC_HEADER_STRIDE(p->src.w);
+		p->addr[0] = p->addr[1] + SBWC_10B_Y_SIZE(p->src.f_w, p->src.f_h);
+		p->addr[2] = p->addr[3] + SBWC_10B_CBCR_SIZE(p->src.f_w, p->src.f_h);
+		p->yhd_y2_strd = SBWC_HEADER_STRIDE(p->src.f_w);
+		p->chd_strd = SBWC_HEADER_STRIDE(p->src.f_w);
 		break;
 
 	/* for lossy SBWC */
