@@ -1302,3 +1302,34 @@ void dpu_set_freq_hop(struct decon_device *decon, bool en)
 	}
 #endif
 }
+
+int dpu_hw_recovery_process(struct decon_device *decon)
+{
+	int err = 0;
+	u32 dsi_idx = decon->dt.out_idx[0];
+	u32 fps = decon->lcd_info->fps;
+	struct decon_mode_info psr;
+
+	decon_info("decon%d %s +\n", decon->id, __func__);
+
+	if (decon->dt.out_type != DECON_OUT_DSI) {
+		decon_info("decon%d is not DSI path..exit\n", decon->id);
+		err = -EINVAL;
+		goto out;
+	}
+
+	/* dsim & dphy reset and recover */
+	v4l2_subdev_call(decon->out_sd[0], core, ioctl,
+				DSIM_IOC_RECOVERY_PROC, NULL);
+
+	/* decon instant off */
+	decon_to_psr_info(decon, &psr);
+	err = decon_reg_stop_inst(decon->id, dsi_idx, &psr, fps);
+	if (err < 0)
+		decon_err("%s, failed to instant_stop\n", __func__);
+
+out:
+	decon_info("decon%d %s -\n", decon->id, __func__);
+
+	return err;
+}

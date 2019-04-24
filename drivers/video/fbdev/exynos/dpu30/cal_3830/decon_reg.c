@@ -1,5 +1,5 @@
 /*
- * linux/drivers/video/fbdev/exynos/dpu_9810/decon_reg.c
+ * linux/drivers/video/fbdev/exynos/dpu_3830/decon_reg.c
  *
  * Copyright 2013-2017 Samsung Electronics
  *	  SeungBeom Park <sb1.park@samsung.com>
@@ -70,7 +70,7 @@ static u32 decon_reg_get_idle_status(u32 id)
 	return 0;
 }
 
-static u32 decon_reg_get_run_status(u32 id)
+u32 decon_reg_get_run_status(u32 id)
 {
 	u32 val;
 
@@ -294,7 +294,7 @@ static int decon_reg_stop_perframe(u32 id, struct decon_mode_info *psr, u32 fps)
 	return ret;
 }
 
-static int decon_reg_stop_inst(u32 id, struct decon_mode_info *psr,
+int decon_reg_stop_inst(u32 id, struct decon_mode_info *psr,
 		u32 fps)
 {
 	int ret = 0;

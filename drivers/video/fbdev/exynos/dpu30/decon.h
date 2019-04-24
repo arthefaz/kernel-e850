@@ -1496,6 +1496,7 @@ int decon_update_last_regs(struct decon_device *decon,
 
 void decon_hiber_start(struct decon_device *decon);
 void decon_hiber_finish(struct decon_device *decon);
+int dpu_hw_recovery_process(struct decon_device *decon);
 
 /* IOCTL commands */
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, __u32)

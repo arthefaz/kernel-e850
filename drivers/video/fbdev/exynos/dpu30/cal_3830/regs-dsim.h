@@ -33,6 +33,9 @@
 #define DSIM_STATUS_IDLE				0
 #define DSIM_STATUS_ACTIVE				1
 
+#define DSIM_LINK_STATUS2				(0x10)
+#define DSIM_LINK_STATUS2_DATALANE_STATUS_GET(x)	((x >> 0) & 0x7)
+
 #define DSIM_LINK_STATUS3				(0x14)
 #define DSIM_LINK_STATUS3_PLL_STABLE			(1 << 0)
 
