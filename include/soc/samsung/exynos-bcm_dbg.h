@@ -56,7 +56,7 @@
 #define BCM_EVT_PRE_DEFINE_MASK			(0x7)
 #define BCM_EVT_PRE_DEFINE_SHIFT		(6)
 #define BCM_IP_RANGE_SHIFT			(9)
-#define BCM_IP_MASK				(0x3F)
+#define BCM_IP_MASK				(0x7F)
 #define BCM_IP_SHIFT				(10)
 #define BCM_EVT_EVENT_MASK			(0xFF)
 #define BCM_EVT_EVENT_SHIFT(x)			(((x) >= 4) ? (((x) * 8) - 32) : ((x) * 8))
