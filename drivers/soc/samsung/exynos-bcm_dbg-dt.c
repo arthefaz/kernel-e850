@@ -281,7 +281,7 @@ static int exynos_bcm_define_event_parse_dt(struct device_node *np,
 					&data->default_define_event);
 	if (ret) {
 		BCM_ERR("%s: Failed get default define event\n", __func__);
-		data->default_define_event = PEAK_LATENCY_FMT_EVT;
+		data->default_define_event = LATENCY_FMT_EVT;
 		BCM_INFO("%s: replaced default define event: %u\n",
 				__func__, data->default_define_event);
 	} else {
@@ -289,7 +289,7 @@ static int exynos_bcm_define_event_parse_dt(struct device_node *np,
 			BCM_ERR("%s: Invalid default define event(%u), max(%u)\n",
 					__func__, data->default_define_event,
 					data->define_event_max);
-			data->default_define_event = PEAK_LATENCY_FMT_EVT;
+			data->default_define_event = LATENCY_FMT_EVT;
 			BCM_INFO("%s: replaced default define event: %u\n",
 					__func__, data->default_define_event);
 		}
