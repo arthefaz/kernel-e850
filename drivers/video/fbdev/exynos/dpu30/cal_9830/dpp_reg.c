@@ -852,9 +852,14 @@ static void dma_reg_set_base_addr(u32 id, struct dpp_params_info *p,
 					ODMA_STRIDE_3_MASK);
 		}
 	}
-	dpp_dbg("dpp%d: base addr 1p(0x%p) 2p(0x%p) 3p(0x%p) 4p(0x%p)\n", id,
-			(void *)p->addr[0], (void *)p->addr[1],
-			(void *)p->addr[2], (void *)p->addr[3]);
+
+	dpp_dbg("dpp%d: base addr 1p(0x%lx) 2p(0x%lx) 3p(0x%lx) 4p(0x%lx)\n", id,
+			(unsigned long)p->addr[0], (unsigned long)p->addr[1],
+			(unsigned long)p->addr[2], (unsigned long)p->addr[3]);
+	if (p->comp_type == COMP_TYPE_SBWC)
+		dpp_dbg("dpp%d: [stride] yh(0x%lx) yp(0x%lx) ch(0x%lx) cp(0x%lx)\n", id,
+			(unsigned long)p->yhd_y2_strd, (unsigned long)p->ypl_c2_strd,
+			(unsigned long)p->chd_strd, (unsigned long)p->cpl_strd);
 }
 
 /********** IDMA, ODMA, DPP and WB MUX combination CAL functions **********/
