@@ -435,8 +435,8 @@ static void mfc_dec_buf_queue(struct vb2_buffer *vb)
 					&ctx->dst_buf_queue, dec->total_dpb_count))
 			ctx->capture_state = QUEUE_BUFS_MMAPED;
 
-		MFC_TRACE_CTX("Q dst[%d] fd: %d, %#llx / avail %#lx used %#x\n",
-				vb->index, vb->planes[0].m.fd, buf->addr[0][0],
+		MFC_TRACE_CTX("Q dst[%d][%d] fd: %d, %#llx / avail %#lx used %#x\n",
+				vb->index, buf->dpb_index, vb->planes[0].m.fd, buf->addr[0][0],
 				dec->available_dpb, dec->dynamic_used);
 	} else {
 		mfc_err_ctx("Unsupported buffer type (%d)\n", vq->type);

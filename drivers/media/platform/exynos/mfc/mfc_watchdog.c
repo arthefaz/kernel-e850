@@ -404,13 +404,13 @@ void __mfc_dump_nal_q_buffer_info(struct mfc_dev *dev, int curr_ctx)
 	EncoderOutputStr *pEncOut = NULL;
 	DecoderInputStr *pDecIn = NULL;
 	DecoderOutputStr *pDecOut = NULL;
-	int i, offset, index, cnt;
+	int i, offset, Inindex, cnt;
 
 	/* Skip NAL_Q dump when multi instance */
 	if (dev->num_inst != 1)
 		return;
 
-	index = nal_q_in_handle->in_exe_count % NAL_Q_QUEUE_SIZE;
+	Inindex = mfc_get_nal_q_input_count() % NAL_Q_QUEUE_SIZE;
 
 	if (ctx->type == MFCINST_DECODER) {
 		dev_err(dev->device, "Decoder scratch:%#x++%#x, static(vp9):%#x++%#x, MV:++%#lx\n",
@@ -425,16 +425,18 @@ void __mfc_dump_nal_q_buffer_info(struct mfc_dev *dev, int curr_ctx)
 		if (ctx->mv_size)
 			print_hex_dump(KERN_ERR, "MV buffer ", DUMP_PREFIX_OFFSET, 32, 4,
 					dev->regs_base + MFC_REG_D_MV_BUFFER0, 0x100, false);
-		dev_err(dev->device, "NALQ In: ID CPB DPBFlag DPB0 DPB1\
-			/ Out: ID dispstat diap0 disp1 used decstat dec0 dec1 type\n");
+		dev_err(dev->device, "NALQ In(in%d-exe%d): ID CPB DPBFlag DPB0 DPB1\
+		/ Out(%d): ID dispstat diap0 disp1 used decstat dec0 dec1 type\n",
+				mfc_get_nal_q_input_count(), nal_q_in_handle->in_exe_count,
+				mfc_get_nal_q_output_count());
 		for (i = MFC_TRACE_NAL_QUEUE_PRINT - 1; i >= 0; i--) {
-			cnt = ((index + NAL_Q_QUEUE_SIZE) - i) % NAL_Q_QUEUE_SIZE;
+			cnt = ((Inindex + NAL_Q_QUEUE_SIZE) - i) % NAL_Q_QUEUE_SIZE;
 			offset = dev->pdata->nal_q_entry_size * cnt;
 			pDecIn = (DecoderInputStr *)(nal_q_in_handle->nal_q_in_addr + offset);
 			pDecOut = (DecoderOutputStr *)(nal_q_out_handle->nal_q_out_addr + offset);
-			dev_err(dev->device, "[%d] In: %d %#x %x %x %x / Out: %d %d %x %x %x %d %x %x %d\n",
+			dev_err(dev->device, "[%d] In: %d %#x %x[%d] %x %x / Out: %d %d %x %x %x %d %x %x %d\n",
 					cnt, pDecIn->CommandId, pDecIn->CpbBufferAddr,
-					pDecIn->DynamicDpbFlagLower,
+					pDecIn->DynamicDpbFlagLower, ffs(pDecIn->DynamicDpbFlagLower) - 1,
 					pDecIn->FrameAddr[0], pDecIn->FrameAddr[1],
 					pDecOut->CommandId, pDecOut->DisplayStatus,
 					pDecOut->DisplayAddr[0], pDecOut->DisplayAddr[1],
@@ -458,7 +460,7 @@ void __mfc_dump_nal_q_buffer_info(struct mfc_dev *dev, int curr_ctx)
 		dev_err(dev->device, "NALQ In: ID src0 src1 dst\
 			/ Out: ID enc0 enc1 strm recon0 recon1 type\n");
 		for (i = MFC_TRACE_NAL_QUEUE_PRINT - 1; i >= 0; i--) {
-			cnt = ((index + NAL_Q_QUEUE_SIZE) - i) % NAL_Q_QUEUE_SIZE;
+			cnt = ((Inindex + NAL_Q_QUEUE_SIZE) - i) % NAL_Q_QUEUE_SIZE;
 			offset = dev->pdata->nal_q_entry_size * cnt;
 			pEncIn = (EncoderInputStr *)(nal_q_in_handle->nal_q_in_addr + offset);
 			pEncOut = (EncoderOutputStr *)(nal_q_out_handle->nal_q_out_addr + offset);
@@ -595,8 +597,21 @@ static void __mfc_dump_dpb(struct mfc_dev *dev, int curr_ctx)
 	if (ctx->type != MFCINST_DECODER || dec == NULL)
 		return;
 
+	dev_err(dev->device, "-----------dumping MFC DPB queue-----------\n");
+	if (!list_empty(&ctx->dst_buf_queue.head))
+		list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list)
+			dev_err(dev->device, "dst[%d][%d] %#llx used: %d\n",
+					mfc_buf->vb.vb2_buf.index, mfc_buf->dpb_index,
+					mfc_buf->addr[0][0], mfc_buf->used);
+	if (!list_empty(&ctx->dst_buf_nal_queue.head))
+		list_for_each_entry(mfc_buf, &ctx->dst_buf_nal_queue.head, list)
+			dev_err(dev->device, "dst_nal[%d][%d] %#llx used: %d\n",
+					mfc_buf->vb.vb2_buf.index, mfc_buf->dpb_index,
+					mfc_buf->addr[0][0], mfc_buf->used);
+
 	dev_err(dev->device, "-----------dumping MFC DPB table-----------\n");
-	dev_err(dev->device, "used: %#x, queued = %#lx\n", dec->dynamic_used, dec->queued_dpb);
+	dev_err(dev->device, "dynnamic_used: %#x, queued: %#lx, table_used: %#x\n",
+			dec->dynamic_used, dec->queued_dpb, dec->dpb_table_used);
 	for (i = 0; i < MFC_MAX_DPBS; i++)
 		dev_err(dev->device, "[%d] dpb %#llx %#llx (%s, %s, %s) / spare %#llx %#llx (%s, %s, %s)\n",
 				i, dec->dpb[i].addr[0], dec->dpb[i].addr[1],
@@ -607,19 +622,6 @@ static void __mfc_dump_dpb(struct mfc_dev *dev, int curr_ctx)
 				dec->spare_dpb[i].mapcnt ? "map" : "unmap",
 				dec->spare_dpb[i].ref ? "ref" : "free",
 				dec->spare_dpb[i].queued ? "Q" : "DQ");
-
-	if (!list_empty(&ctx->dst_buf_queue.head))
-		list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list)
-			dev_err(dev->device, "dst[%d][%d] %#llx used: %d\n",
-					mfc_buf->vb.vb2_buf.index, mfc_buf->dpb_index,
-					mfc_buf->addr[0][0], mfc_buf->used);
-	else if (!list_empty(&ctx->dst_buf_nal_queue.head))
-		list_for_each_entry(mfc_buf, &ctx->dst_buf_nal_queue.head, list)
-			dev_err(dev->device, "dst_nal[%d][%d] %#llx used: %d\n",
-					mfc_buf->vb.vb2_buf.index, mfc_buf->dpb_index,
-					mfc_buf->addr[0][0], mfc_buf->used);
-	else
-		dev_err(dev->device, "dst queue is empty\n");
 }
 
 static void __mfc_dump_info_context(struct mfc_dev *dev)

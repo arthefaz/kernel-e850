@@ -303,6 +303,8 @@ void mfc_put_iovmm(struct mfc_ctx *ctx, struct dpb_table *dpb, int num_planes, i
 
 	dpb[index].mapcnt--;
 	mfc_debug(2, "[IOVMM] index %d mapcnt %d\n", index, dpb[index].mapcnt);
+	MFC_TRACE_CTX("DPB[%d] fd: %d addr: %#llx put(%d)\n",
+			index, dpb[index].fd[0], dpb[index].addr[0], dpb[index].mapcnt);
 
 	if (dpb[index].mapcnt != 0) {
 		mfc_err_ctx("[IOVMM] DPB[%d] %#llx invalid mapcnt %d\n",
@@ -368,6 +370,8 @@ void mfc_get_iovmm(struct mfc_ctx *ctx, struct vb2_buffer *vb, struct dpb_table 
 
 	dpb[index].mapcnt++;
 	mfc_debug(2, "[IOVMM] index %d mapcnt %d\n", index, dpb[index].mapcnt);
+	MFC_TRACE_CTX("DPB[%d] fd: %d addr: %#llx get(%d)\n",
+			index, dpb[index].fd[0], dpb[index].addr[0], dpb[index].mapcnt);
 
 	return;
 

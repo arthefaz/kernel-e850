@@ -42,7 +42,8 @@ static inline void mfc_print_dpb_table(struct mfc_ctx *ctx)
 	unsigned long flags;
 	int i, found = 0;
 
-	mfc_debug(2, "[DPB] dynamic_used = %#x, queued = %#lx\n", dec->dynamic_used, dec->queued_dpb);
+	mfc_debug(2, "[DPB] dynamic_used: %#x, queued: %#lx, table_used: %#x\n",
+			dec->dynamic_used, dec->queued_dpb, dec->dpb_table_used);
 	for (i = 0; i < MFC_MAX_DPBS; i++) {
 		found = 0;
 		spin_lock_irqsave(&ctx->buf_queue_lock, flags);
