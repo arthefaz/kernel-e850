@@ -1572,8 +1572,7 @@ static int decon_set_dpp_config(struct decon_device *decon,
 	}
 
 	if (decon->prev_aclk_khz != aclk_khz)
-		decon_info("DPU_ACLK(%ld khz), Recovery_num(%ld)\n",
-				aclk_khz, aclk_khz);
+		decon_info("DPU_ACLK(%ld khz)\n", aclk_khz);
 
 	decon->prev_aclk_khz = aclk_khz;
 
