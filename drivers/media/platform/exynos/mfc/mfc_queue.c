@@ -618,14 +618,12 @@ int __mfc_assign_dpb_index(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf)
 	int index = -1;
 	int i;
 
-	mutex_lock(&dec->dpb_mutex);
-
 	/* case 1: dpb has same address with vb index */
 	if (mfc_buf->addr[0][0] == dec->dpb[mfc_buf->vb.vb2_buf.index].addr[0]) {
 		mfc_debug(2, "[DPB] vb index [%d] %#llx has same address\n",
 				mfc_buf->vb.vb2_buf.index, mfc_buf->addr[0][0]);
 		index = mfc_buf->vb.vb2_buf.index;
-		goto out;
+		return index;
 	}
 
 	/* case 2: dpb has same address with referenced buffer */
@@ -636,7 +634,7 @@ int __mfc_assign_dpb_index(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf)
 				mfc_debug(2, "[DPB] index [%d][%d] %#llx is referenced\n",
 						mfc_buf->vb.vb2_buf.index, i, mfc_buf->addr[0][0]);
 				index = i;
-				goto out;
+				return index;
 			}
 			used &= ~(1 << i);
 			if (used == 0)
@@ -652,8 +650,6 @@ int __mfc_assign_dpb_index(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf)
 		call_dop(dev, dump_and_stop_debug_mode, dev);
 	}
 	index = ffz(dec->dpb_table_used);
-out:
-	mutex_unlock(&dec->dpb_mutex);
 
 	return index;
 }
@@ -679,9 +675,11 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 
 	mfc_buf = vb_to_mfc_buf(vb);
 	mfc_buf->used = 0;
+
+	mutex_lock(&dec->dpb_mutex);
 	mfc_buf->dpb_index = __mfc_assign_dpb_index(ctx, mfc_buf);
-	mfc_debug(2, "[DPB] DPB vb_index %d -> dpb_index %d (used: %#x)\n",
-			vb->index, mfc_buf->dpb_index, dec->dynamic_used);
+	mfc_debug(2, "[DPB] DPB vb_index %d -> dpb_index %d addr %#llx (used: %#x)\n",
+			vb->index, mfc_buf->dpb_index, mfc_buf->addr[0][0], dec->dynamic_used);
 
 #ifdef USE_DPB_INDEX
 	index = mfc_buf->dpb_index;
@@ -689,15 +687,6 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 	index = vb->index;
 #endif
 
-	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
-
-	list_add_tail(&mfc_buf->list, &ctx->dst_buf_queue.head);
-	ctx->dst_buf_queue.count++;
-	set_bit(index, &dec->queued_dpb);
-
-	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
-
-	mutex_lock(&dec->dpb_mutex);
 	if (!dec->dpb[index].mapcnt) {
 		mfc_get_iovmm(ctx, vb, dec->dpb);
 		dec->dpb[index].queued = 1;
@@ -733,6 +722,14 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 	if (dec->dpb[index].queued)
 		dec->dpb_table_used |= (1 << index);
 	mutex_unlock(&dec->dpb_mutex);
+
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
+
+	list_add_tail(&mfc_buf->list, &ctx->dst_buf_queue.head);
+	ctx->dst_buf_queue.count++;
+	set_bit(index, &dec->queued_dpb);
+
+	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 }
 
 void mfc_cleanup_nal_queue(struct mfc_ctx *ctx)
