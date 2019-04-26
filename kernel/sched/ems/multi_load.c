@@ -776,7 +776,7 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 	 */
 	ue.enqueued = (ml_task_util(p) | UTIL_AVG_UNCHANGED);
 	last_ewma_diff = ue.enqueued - ue.ewma;
-	if (within_margin(last_ewma_diff, capacity_cpu_orig(task_cpu(p), USS) / 100))
+	if (within_margin(last_ewma_diff, SCHED_CAPACITY_SCALE / 100))
 		return;
 
 	/*
