@@ -487,28 +487,24 @@ TRACE_EVENT(ems_lbt_overutilized,
  */
 TRACE_EVENT(ems_lb_sibling_overutilized,
 
-	TP_PROTO(int dst_cpu, int cpu, int level, unsigned long util, unsigned long capacity),
+	TP_PROTO(int dst_cpu, int level, unsigned long ou),
 
-	TP_ARGS(dst_cpu, cpu, level, util, capacity),
+	TP_ARGS(dst_cpu, level, ou),
 
 	TP_STRUCT__entry(
 		__field( int,		dst_cpu			)
-		__field( int,		cpu			)
 		__field( int,		level			)
-		__field( unsigned long,	util			)
-		__field( unsigned long,	capacity		)
+		__field( unsigned long,	ou			)
 	),
 
 	TP_fast_assign(
 		__entry->dst_cpu		= dst_cpu;
-		__entry->cpu			= cpu;
 		__entry->level			= level;
-		__entry->util			= util;
-		__entry->capacity		= capacity;
+		__entry->ou			= ou;
 	),
 
-	TP_printk("dst_cpu=%d cpu=%d level=%d util=%lu capacity=%lu", __entry->dst_cpu,
-			__entry->cpu, __entry->level, __entry->util, __entry->capacity)
+	TP_printk("dst_cpu=%d level=%d ou=%lu",
+				__entry->dst_cpu, __entry->level, __entry->ou)
 );
 
 /*

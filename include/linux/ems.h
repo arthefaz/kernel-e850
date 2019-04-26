@@ -94,6 +94,7 @@ extern bool lb_sibling_overutilized(int dst_cpu, struct sched_domain *sd,
 					struct cpumask *lb_cpus);
 extern bool lbt_overutilized(int cpu, int level);
 extern void update_lbt_overutil(int cpu, unsigned long capacity);
+extern void lb_update_misfit_status(struct task_struct *p, struct rq *rq, unsigned long task_h_load);
 
 #else /* CONFIG_SCHED_EMS */
 
@@ -184,6 +185,7 @@ static inline bool lbt_overutilized(int cpu, int level)
 	return false;
 }
 static inline void update_lbt_overutil(int cpu, unsigned long capacity) { }
+static inline void lb_update_misfit_status(struct task_struct *p, struct rq *rq, unsigned long task_h_load) { }
 
 #endif /* CONFIG_SCHED_EMS */
 

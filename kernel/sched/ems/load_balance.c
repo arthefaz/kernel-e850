@@ -93,6 +93,7 @@ int lb_need_active_balance(enum cpu_idle_type idle, struct sched_domain *sd,
 
 struct lbt_overutil {
 	bool			top;
+	bool			misfit_task;
 	struct cpumask		cpus;
 	unsigned long		capacity;
 	int			ratio;
@@ -180,7 +181,7 @@ void update_lbt_overutil(int cpu, unsigned long capacity)
 
 bool lb_sibling_overutilized(int dst_cpu, struct sched_domain *sd, struct cpumask *lb_cpus)
 {
-	int cpu;
+	bool overutilized;
 	struct sched_group *sg = sd->groups;
 
 	/* No need to check overutil status for bottom-level sched domain */
@@ -188,6 +189,7 @@ bool lb_sibling_overutilized(int dst_cpu, struct sched_domain *sd, struct cpumas
 		return true;
 
 	do {
+		int cpu;
 		struct lbt_overutil *ou;
 
 		/* we don't need to check overutil status for sched group of dst_cpu */
@@ -200,19 +202,50 @@ bool lb_sibling_overutilized(int dst_cpu, struct sched_domain *sd, struct cpumas
 			if (!ou)
 				return true;
 
-			/* It means that the sibling needs to be *balanced* */
-			if (ml_cpu_util(cpu) <= ou[sd->level - 1].capacity) {
-				trace_ems_lb_sibling_overutilized(dst_cpu, cpu, sd->level,
-						ml_cpu_util(cpu), ou[sd->level - 1].capacity);
-
-				return false;
+			if (ou->misfit_task) {
+				overutilized = true;
+				goto done;
 			}
+
+			/* It means that the sibling needs to be *balanced* */
+			if (ml_cpu_util(cpu) <= ou[sd->level - 1].capacity)
+				overutilized = false;
 		}
 next_group:
 		sg = sg->next;
 	} while (sg != sd->groups);
+done:
+	trace_ems_lb_sibling_overutilized(dst_cpu, sd->level, overutilized);
 
-	return true;
+	return overutilized;
+}
+
+static bool lb_task_fits_capacity(struct task_struct *p, unsigned long capacity)
+{
+	return capacity * 1024 > ml_boosted_task_util(p) * 1280;
+}
+
+void lb_update_misfit_status(struct task_struct *p, struct rq *rq,
+						unsigned long task_h_load)
+{
+	if (!p) {
+		per_cpu(lbt_overutil, cpu)->misfit_task = false;
+		rq->misfit_task_load = 0;
+		return;
+	}
+
+	/*
+	 * Criteria for determining misfit task
+	 *  boosted task util >= 80% of cpu capacity
+	 */
+	if (lb_task_fits_capacity(p, capacity_cpu(cpu, USS))) {
+		per_cpu(lbt_overutil, cpu)->misfit_task = false;
+		rq->misfit_task_load = 0;
+		return;
+	}
+
+	per_cpu(lbt_overutil, cpu)->misfit_task = true;
+	rq->misfit_task_load = task_h_load;
 }
 
 /****************************************************************/

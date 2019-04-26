@@ -3681,6 +3681,11 @@ static inline void update_misfit_status(struct task_struct *p, struct rq *rq)
 	if (!static_branch_unlikely(&sched_asym_cpucapacity))
 		return;
 
+	if (sched_feat(EXYNOS_MS)) {
+		lb_update_misfit_status(p, rq, p ? task_h_load(p) : 0);
+		return;
+	}
+
 	if (!p) {
 		rq->misfit_task_load = 0;
 		return;
