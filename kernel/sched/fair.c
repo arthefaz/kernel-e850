@@ -3080,32 +3080,6 @@ ___update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 	return 1;
 }
 
-/*
- * When a task is dequeued, its estimated utilization should not be update if
- * its util_avg has not been updated at least once.
- * This flag is used to synchronize util_avg updates with util_est updates.
- * We map this information into the LSB bit of the utilization saved at
- * dequeue time (i.e. util_est.dequeued).
- */
-#define UTIL_AVG_UNCHANGED 0x1
-
-static inline void cfs_se_util_change(struct sched_avg *avg)
-{
-	unsigned int enqueued;
-
-	if (!sched_feat(UTIL_EST))
-		return;
-
-	/* Avoid store if the flag has been already set */
-	enqueued = avg->util_est.enqueued;
-	if (!(enqueued & UTIL_AVG_UNCHANGED))
-		return;
-
-	/* Reset flag to report util_avg has been updated */
-	enqueued &= ~UTIL_AVG_UNCHANGED;
-	WRITE_ONCE(avg->util_est.enqueued, enqueued);
-}
-
 static int
 __update_load_avg_blocked_se(u64 now, int cpu, struct sched_entity *se)
 {
@@ -3485,8 +3459,6 @@ int update_rt_rq_load_avg(u64 now, int cpu, struct rt_rq *rt_rq, int running)
 {
 	int decayed, removed_util = 0;
 	struct sched_avg *sa = &rt_rq->avg;
-
-	ret = ___update_load_avg(now, cpu, &rt_rq->avg, running, running, NULL, rt_rq);
 
 	if (atomic_long_read(&rt_rq->removed_util_avg)) {
 		long r = atomic_long_xchg(&rt_rq->removed_util_avg, 0);
@@ -5867,7 +5839,7 @@ static unsigned long __cpu_norm_util(unsigned long util, unsigned long capacity)
  *
  * Return: the (estimated) utilization for the specified CPU
  */
-static inline unsigned long cpu_util(int cpu)
+unsigned long cpu_util(int cpu)
 {
 	struct cfs_rq *cfs_rq;
 	unsigned int util;
@@ -7267,7 +7239,7 @@ static int select_idle_sibling(struct task_struct *p, int prev, int target)
  * cpu_util_wake: Compute cpu utilization with any contributions from
  * the waking task p removed.
  */
-static int cpu_util_wake(int cpu, struct task_struct *p)
+int cpu_util_wake(int cpu, struct task_struct *p)
 {
 	struct cfs_rq *cfs_rq;
 	unsigned int util;
@@ -9606,14 +9578,14 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 			if (lbt_overutilized(i, env->sd->level)) {
 				*overutilized = true;
 
-				if (rq_has_misfit(rq))
+				if (rq->misfit_task_load)
 					*misfit_task = true;
 			}
 		} else {
 			if (cpu_overutilized(i)) {
 				*overutilized = true;
 
-				if (rq_has_misfit(rq))
+				if (rq->misfit_task_load)
 					*misfit_task = true;
 			}
 		}
