@@ -17,6 +17,7 @@
 #include "mfc_run.h"
 #include "mfc_sync.h"
 #include "mfc_mmcache.h"
+#include "mfc_llc.h"
 
 #include "mfc_qos.h"
 #include "mfc_queue.h"
@@ -654,6 +655,9 @@ static int mfc_dec_reqbufs(struct file *file, void *priv,
 
 			if (dev->has_mmcache && dev->mmcache.is_on_status)
 				mfc_invalidate_mmcache(dev);
+
+			if (dev->has_llc && dev->llc_on_status)
+				mfc_llc_flush(dev);
 
 			mfc_release_codec_buffers(ctx);
 			ctx->capture_state = QUEUE_FREE;

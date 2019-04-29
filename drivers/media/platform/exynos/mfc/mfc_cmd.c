@@ -19,6 +19,7 @@
 #include "mfc_hw_reg_api.h"
 #include "mfc_enc_param.h"
 #include "mfc_mmcache.h"
+#include "mfc_llc.h"
 
 #include "mfc_utils.h"
 #include "mfc_buf.h"
@@ -299,6 +300,9 @@ int mfc_cmd_dec_init_buffers(struct mfc_ctx *ctx)
 		if (dev->has_mmcache && dev->mmcache.is_on_status)
 			mfc_invalidate_mmcache(dev);
 
+		if (dev->has_llc && dev->llc_on_status)
+			mfc_llc_flush(dev);
+
 		mfc_release_codec_buffers(ctx);
 		ret = mfc_alloc_codec_buffers(ctx);
 		if (ret) {
@@ -347,6 +351,9 @@ int mfc_cmd_enc_init_buffers(struct mfc_ctx *ctx)
 
 		if (dev->has_mmcache && dev->mmcache.is_on_status)
 			mfc_invalidate_mmcache(dev);
+
+		if (dev->has_llc && dev->llc_on_status)
+			mfc_llc_flush(dev);
 
 		mfc_release_codec_buffers(ctx);
 		ret = mfc_alloc_codec_buffers(ctx);
