@@ -28,8 +28,8 @@
 #define entity_is_cfs_rq(se)	(se->my_q)
 #define entity_is_task(se)	(!se->my_q)
 
-/* Structure of ontime migration condition */
-struct ontime_cond {
+/* Structure of ontime migration domain */
+struct ontime_dom {
 	bool			enabled;
 
 	unsigned long		upper_boundary;
@@ -45,7 +45,8 @@ struct ontime_cond {
 	/* kobject for sysfs group */
 	struct kobject		kobj;
 };
-LIST_HEAD(cond_list);
+
+LIST_HEAD(dom_list);
 
 /* Structure of ontime migration environment */
 struct ontime_env {
@@ -63,11 +64,11 @@ static inline struct sched_entity *se_of(struct sched_avg *sa)
 	return container_of(sa, struct sched_entity, avg);
 }
 
-struct ontime_cond *get_current_cond(int cpu)
+struct ontime_dom *get_current_dom(int cpu)
 {
-	struct ontime_cond *curr;
+	struct ontime_dom *curr;
 
-	list_for_each_entry(curr, &cond_list, list) {
+	list_for_each_entry(curr, &dom_list, list) {
 		if (cpumask_test_cpu(cpu, &curr->cpus))
 			return curr;
 	}
@@ -75,12 +76,12 @@ struct ontime_cond *get_current_cond(int cpu)
 	return NULL;
 }
 
-#define u_boundary(cond, p)	(p->sse ? cond->upper_boundary_s : cond->upper_boundary)
-#define l_boundary(cond, p)	(p->sse ? cond->lower_boundary_s : cond->lower_boundary)
+#define u_boundary(dom, p)	(p->sse ? dom->upper_boundary_s : dom->upper_boundary)
+#define l_boundary(dom, p)	(p->sse ? dom->lower_boundary_s : dom->lower_boundary)
 
 unsigned long get_upper_boundary(int cpu, struct task_struct *p)
 {
-	struct ontime_cond *curr = get_current_cond(cpu);
+	struct ontime_dom *curr = get_current_dom(cpu);
 
 	if (curr)
 		return u_boundary(curr, p);
@@ -90,7 +91,7 @@ unsigned long get_upper_boundary(int cpu, struct task_struct *p)
 
 static inline unsigned long get_lower_boundary(int cpu, struct task_struct *p)
 {
-	struct ontime_cond *curr = get_current_cond(cpu);
+	struct ontime_dom *curr = get_current_dom(cpu);
 
 	if (curr)
 		return l_boundary(curr, p);
@@ -116,12 +117,12 @@ static inline int check_migrate_slower(int src, int dst, int sse)
 
 void ontime_select_fit_cpus(struct task_struct *p, struct cpumask *fit_cpus)
 {
-	struct ontime_cond *curr;
+	struct ontime_dom *curr;
 	int src_cpu = task_cpu(p);
 	u32 runnable = ml_task_runnable(p);
 	struct cpumask mask;
 
-	curr = get_current_cond(src_cpu);
+	curr = get_current_dom(src_cpu);
 	if (!curr)
 		return;
 
@@ -151,7 +152,7 @@ void ontime_select_fit_cpus(struct task_struct *p, struct cpumask *fit_cpus)
 	 */
 	if (runnable < u_boundary(curr, p)) {
 		cpumask_or(&mask, &mask, &curr->cpus);
-		list_for_each_entry_continue(curr, &cond_list, list)
+		list_for_each_entry_continue(curr, &dom_list, list)
 			cpumask_or(&mask, &mask, &curr->cpus);
 
 		goto done;
@@ -165,7 +166,7 @@ void ontime_select_fit_cpus(struct task_struct *p, struct cpumask *fit_cpus)
 	 *
 	 * fit_cpus = faster cpus
 	 */
-	list_for_each_entry_continue(curr, &cond_list, list)
+	list_for_each_entry_continue(curr, &dom_list, list)
 		cpumask_or(&mask, &mask, &curr->cpus);
 
 done:
@@ -486,21 +487,21 @@ struct ontime_attr {
 #define show_store_attr(_name, _type, _max)					\
 static ssize_t show_##_name(struct kobject *k, char *buf)			\
 {										\
-	struct ontime_cond *cond = container_of(k, struct ontime_cond, kobj);	\
+	struct ontime_dom *dom = container_of(k, struct ontime_dom, kobj);	\
 										\
-	return sprintf(buf, "%u\n", (unsigned int)cond->_name);			\
+	return sprintf(buf, "%u\n", (unsigned int)dom->_name);			\
 }										\
 										\
 static ssize_t store_##_name(struct kobject *k, const char *buf, size_t count)	\
 {										\
 	unsigned int val;							\
-	struct ontime_cond *cond = container_of(k, struct ontime_cond, kobj);	\
+	struct ontime_dom *dom = container_of(k, struct ontime_dom, kobj);	\
 										\
 	if (!sscanf(buf, "%u", &val))						\
 		return -EINVAL;							\
 										\
 	val = val > _max ? _max : val;						\
-	cond->_name = (_type)val;						\
+	dom->_name = (_type)val;						\
 										\
 	return count;								\
 }										\
@@ -548,9 +549,9 @@ static struct kobj_type ktype_ontime = {
 
 static int __init ontime_sysfs_init(void)
 {
-	struct ontime_cond *curr;
+	struct ontime_dom *curr;
 
-	if (list_empty(&cond_list))
+	if (list_empty(&dom_list))
 		return 0;
 
 	ontime_kobj = kobject_create_and_add("ontime", ems_kobj);
@@ -558,7 +559,7 @@ static int __init ontime_sysfs_init(void)
 		goto out;
 
 	/* Add ontime sysfs node for each coregroup */
-	list_for_each_entry(curr, &cond_list, list) {
+	list_for_each_entry(curr, &dom_list, list) {
 		int ret;
 
 		/* If ontime is disabled in this coregroup, do not create sysfs node */
@@ -582,7 +583,7 @@ out:
 /*			initialization				*/
 /****************************************************************/
 static void __init
-parse_ontime(struct device_node *dn, struct ontime_cond *cond, int cnt)
+parse_ontime(struct device_node *dn, struct ontime_dom *dom, int cnt)
 {
 	struct device_node *ontime, *coregroup;
 	char name[15];
@@ -598,10 +599,10 @@ parse_ontime(struct device_node *dn, struct ontime_cond *cond, int cnt)
 	coregroup = of_get_child_by_name(ontime, name);
 	if (!coregroup)
 		goto disable;
-	cond->coregroup = cnt;
+	dom->coregroup = cnt;
 
-	capacity = capacity_cpu_orig(cpumask_first(&cond->cpus), 0);
-	capacity_s = capacity_cpu_orig(cpumask_first(&cond->cpus), 1);
+	capacity = capacity_cpu_orig(cpumask_first(&dom->cpus), 0);
+	capacity_s = capacity_cpu_orig(cpumask_first(&dom->cpus), 1);
 
 	/* If capacity of this coregroup is 0, disable ontime of this coregroup */
 	if (capacity == 0)
@@ -609,39 +610,39 @@ parse_ontime(struct device_node *dn, struct ontime_cond *cond, int cnt)
 
 	/* If any of ontime parameter isn't, disable ontime of this coregroup */
 	res |= of_property_read_s32(coregroup, "upper-boundary", &prop);
-	cond->upper_boundary = prop;
+	dom->upper_boundary = prop;
 
 	res |= of_property_read_s32(coregroup, "lower-boundary", &prop);
-	cond->lower_boundary = prop;
+	dom->lower_boundary = prop;
 
 	res |= of_property_read_s32(coregroup, "upper-boundary-s", &prop);
-	cond->upper_boundary_s = prop;
+	dom->upper_boundary_s = prop;
 
 	res |= of_property_read_s32(coregroup, "lower-boundary-s", &prop);
-	cond->lower_boundary_s = prop;
+	dom->lower_boundary_s = prop;
 
 	if (res)
 		goto disable;
 
-	cond->enabled = true;
+	dom->enabled = true;
 	return;
 
 disable:
 	pr_err("ONTIME(%s): failed to parse ontime node\n", __func__);
-	cond->enabled = false;
-	cond->upper_boundary = ULONG_MAX;
-	cond->lower_boundary = 0;
-	cond->upper_boundary_s = ULONG_MAX;
-	cond->lower_boundary_s = 0;
+	dom->enabled = false;
+	dom->upper_boundary = ULONG_MAX;
+	dom->lower_boundary = 0;
+	dom->upper_boundary_s = ULONG_MAX;
+	dom->lower_boundary_s = 0;
 }
 
 static int __init init_ontime(void)
 {
-	struct ontime_cond *cond;
+	struct ontime_dom *dom;
 	struct device_node *dn;
 	int cpu, cnt = 0;
 
-	INIT_LIST_HEAD(&cond_list);
+	INIT_LIST_HEAD(&dom_list);
 
 	dn = of_find_node_by_path("/cpus/ems");
 	if (!dn)
@@ -654,13 +655,13 @@ static int __init init_ontime(void)
 		if (cpu != cpumask_first(cpu_coregroup_mask(cpu)))
 			continue;
 
-		cond = kzalloc(sizeof(struct ontime_cond), GFP_KERNEL);
+		dom = kzalloc(sizeof(struct ontime_dom), GFP_KERNEL);
 
-		cpumask_copy(&cond->cpus, cpu_coregroup_mask(cpu));
+		cpumask_copy(&dom->cpus, cpu_coregroup_mask(cpu));
 
-		parse_ontime(dn, cond, cnt++);
+		parse_ontime(dn, dom, cnt++);
 
-		list_add_tail(&cond->list, &cond_list);
+		list_add_tail(&dom->list, &dom_list);
 	}
 
 	ontime_sysfs_init();
