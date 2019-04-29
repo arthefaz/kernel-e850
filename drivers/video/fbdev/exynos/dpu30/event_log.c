@@ -514,6 +514,9 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 	struct timeval tv;
 	ktime_t prev_ktime;
 	struct dsim_device *dsim;
+	struct decon_win_config *config;
+	char *str_state[3] = {"DISABLED", "COLOR", "BUFFER"};
+	int i;
 
 	if (IS_ERR_OR_NULL(decon->d.event_log))
 		return;
@@ -597,8 +600,21 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 			seq_printf(s, "%20s  %20s", "RSC_CONFLICT", "-\n");
 			break;
 		case DPU_EVT_UPDATE_HANDLER:
-			seq_printf(s, "%20s  ", "UPDATE_HANDLER");
-			seq_printf(s, "Partial Size (%d,%d,%d,%d)\n",
+			seq_printf(s, "%20s  ", "UPDATE_HANDLER", "-\n");
+
+			for (i = 0; i < MAX_DECON_WIN; i++) {
+				config = &log->data.reg.win_config[i];
+
+				if (config->state == DECON_WIN_STATE_DISABLED)
+					continue;
+
+				seq_printf(s, "\t\t\tWIN%d: %s[0x%lx] SRC[%d %d %d %d]\n",
+						i, str_state[config->state],
+						(config->state == DECON_WIN_STATE_BUFFER) ?
+						(unsigned long)config->dpp_parm.addr[0] : 0,
+						config->src.x, config->src.y, config->src.w, config->src.h);
+			}
+			seq_printf(s, "\t\t\tPartial Size (%d,%d,%d,%d)\n",
 					log->data.reg.win.x,
 					log->data.reg.win.y,
 					log->data.reg.win.w,
