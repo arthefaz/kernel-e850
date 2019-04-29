@@ -158,14 +158,15 @@ TRACE_EVENT(ems_best_cpu,
  */
 TRACE_EVENT(ems_ontime_fit_cpus,
 
-	TP_PROTO(struct task_struct *p, unsigned int fit_cpus),
+	TP_PROTO(struct task_struct *p, int src_cpu, unsigned int fit_cpus),
 
-	TP_ARGS(p, fit_cpus),
+	TP_ARGS(p, src_cpu, fit_cpus),
 
 	TP_STRUCT__entry(
 		__array(	char,		comm,	TASK_COMM_LEN	)
 		__field(	pid_t,		pid			)
 		__field(	int,		sse			)
+		__field(	int,		src_cpu			)
 		__field(	unsigned long,	task_runnable		)
 		__field(	unsigned int,	fit_cpus		)
 	),
@@ -174,12 +175,13 @@ TRACE_EVENT(ems_ontime_fit_cpus,
 		memcpy(__entry->comm, p->comm, TASK_COMM_LEN);
 		__entry->pid		= p->pid;
 		__entry->sse		= p->sse;
+		__entry->src_cpu	= src_cpu;
 		__entry->task_runnable	= p->se.avg.ml.runnable_avg;
 		__entry->fit_cpus	= fit_cpus;
 	),
 
-	TP_printk("comm=%s pid=%d sse=%d task_runnable=%lu fit_cpus=%#x",
-		__entry->comm, __entry->pid, __entry->sse,
+	TP_printk("comm=%s pid=%d sse=%d src_cpu=%d task_runnable=%lu fit_cpus=%#x",
+		__entry->comm, __entry->pid, __entry->sse, __entry->src_cpu,
 		__entry->task_runnable, __entry->fit_cpus)
 );
 

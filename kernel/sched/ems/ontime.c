@@ -125,36 +125,53 @@ void ontime_select_fit_cpus(struct task_struct *p, struct cpumask *fit_cpus)
 	if (!curr)
 		return;
 
-	cpumask_clear(&mask);
-
-	if (runnable >= u_boundary(curr, p)) {
-		/*
-		 * Runnable of the task is bigger than upper boundary of
-		 * current, faster cpus are marked on the mask.
-		 */
-		list_for_each_entry_continue(curr, &cond_list, list) {
-			int dst_cpu = cpumask_any(&curr->cpus);
-
-			if (check_migrate_faster(src_cpu, dst_cpu, p->sse))
-				cpumask_or(&mask, &mask, &curr->cpus);
-		}
-	} else if (runnable >= l_boundary(curr, p)) {
-		/*
-		 * Runnable of the task is in the current boundary,
-		 * current coregroup are marked on the mask.
-		 */
-		cpumask_copy(&mask, &curr->cpus);
-	} else {
-		/*
-		 * Runnable of the task is smaller than lower boundary of
-		 * current, give up cpu selection.
-		 */
-		return;
+	/*
+	 * case 1) task runnable < lower boundary
+	 *
+	 * If task 'runnable' is smaller than lower boundary of current domain,
+	 * do not target specific cpu because ontime migration is not involved
+	 * in down migration. All active cpus are fit.
+	 *
+	 * fit_cpus = cpu_active_mask
+	 */
+	if (runnable < l_boundary(curr, p)) {
+		cpumask_copy(&mask, cpu_active_mask);
+		goto done;
 	}
 
-	cpumask_and(fit_cpus, fit_cpus, &mask);
+	cpumask_clear(&mask);
 
-	trace_ems_ontime_fit_cpus(p, *(unsigned int *)cpumask_bits(fit_cpus));
+	/*
+	 * case 2) lower boundary <= task ruuanble < upper boundary
+	 *
+	 * If task 'runnable' is between lower boundary and upper boundary of
+	 * current domain, both current and faster domain are fit.
+	 *
+	 * fit_cpus = current cpus & faster cpus
+	 */
+	if (runnable < u_boundary(curr, p)) {
+		cpumask_or(&mask, &mask, &curr->cpus);
+		list_for_each_entry_continue(curr, &cond_list, list)
+			cpumask_or(&mask, &mask, &curr->cpus);
+
+		goto done;
+	}
+
+	/*
+	 * case 3) task ruuanble >= upper boundary
+	 *
+	 * If task 'runnable' is greater than boundary of current domain, only
+	 * faster domain is fit to gurantee cpu performance.
+	 *
+	 * fit_cpus = faster cpus
+	 */
+	list_for_each_entry_continue(curr, &cond_list, list)
+		cpumask_or(&mask, &mask, &curr->cpus);
+
+done:
+	cpumask_copy(fit_cpus, &mask);
+
+	trace_ems_ontime_fit_cpus(p, src_cpu, *(unsigned int *)cpumask_bits(fit_cpus));
 }
 
 extern struct sched_entity *__pick_next_entity(struct sched_entity *se);
