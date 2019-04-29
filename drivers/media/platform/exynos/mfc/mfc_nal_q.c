@@ -1418,11 +1418,12 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 #ifdef USE_DPB_INDEX
 		dec->dpb[dst_mb->dpb_index].queued = 0;
 		clear_bit(dst_mb->dpb_index, &dec->queued_dpb);
+		dec->display_index = dst_mb->dpb_index;
 #else
 		dec->dpb[index].queued = 0;
 		clear_bit(index, &dec->queued_dpb);
+		dec->display_index = index;
 #endif
-		dec->display_index = dst_mb->dpb_index;
 		mutex_unlock(&dec->dpb_mutex);
 		vb2_buffer_done(&dst_mb->vb.vb2_buf, disp_err ?
 				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
@@ -1449,7 +1450,6 @@ static void __mfc_nal_q_handle_released_buf(struct mfc_ctx *ctx, DecoderOutputSt
 			dec->dpb[i].ref = 1;
 			if (dec->dpb[i].mapcnt == 0) {
 				mfc_err_ctx("[DPB] %d index is no dpb table\n", i);
-				mfc_print_dpb_table(ctx);
 				call_dop(dev, dump_and_stop_debug_mode, dev);
 			}
 		}

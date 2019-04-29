@@ -96,7 +96,6 @@ static void __mfc_deinit_dec_ctx(struct mfc_ctx *ctx)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
 
-	dec->dpb_table_used = 0;
 	mfc_cleanup_iovmm(ctx);
 
 	mfc_delete_queue(&ctx->src_buf_queue);

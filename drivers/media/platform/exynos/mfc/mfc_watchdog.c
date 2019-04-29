@@ -434,7 +434,7 @@ void __mfc_dump_nal_q_buffer_info(struct mfc_dev *dev, int curr_ctx)
 			offset = dev->pdata->nal_q_entry_size * cnt;
 			pDecIn = (DecoderInputStr *)(nal_q_in_handle->nal_q_in_addr + offset);
 			pDecOut = (DecoderOutputStr *)(nal_q_out_handle->nal_q_out_addr + offset);
-			dev_err(dev->device, "[%d] In: %d %#x %x[%d] %x %x / Out: %d %d %x %x %x %d %x %x %d\n",
+			dev_err(dev->device, "[%d] In: %d %x %x[%d] %x %x / Out: %d %d %x %x %x %d %x %x %d\n",
 					cnt, pDecIn->CommandId, pDecIn->CpbBufferAddr,
 					pDecIn->DynamicDpbFlagLower, ffs(pDecIn->DynamicDpbFlagLower) - 1,
 					pDecIn->FrameAddr[0], pDecIn->FrameAddr[1],

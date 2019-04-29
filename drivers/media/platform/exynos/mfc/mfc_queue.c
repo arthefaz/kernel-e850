@@ -646,7 +646,6 @@ int __mfc_assign_dpb_index(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf)
 	/* case 3: allocate new dpb index */
 	if (dec->dpb_table_used == ~0UL) {
 		mfc_err_ctx("[DPB] index is full\n");
-		mfc_print_dpb_table(ctx);
 		call_dop(dev, dump_and_stop_debug_mode, dev);
 	}
 	index = ffz(dec->dpb_table_used);
