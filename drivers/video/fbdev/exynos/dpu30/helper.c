@@ -194,53 +194,32 @@ static int decon_get_protect_id(int dma_id)
 {
 	int prot_id = 0;
 
-	/* TODO: This will be change to common code in the future */
-#if defined(CONFIG_SOC_EXYNOS9820)
 	switch (dma_id) {
-	case IDMA_GF0:
-		prot_id = PROT_GF0;
+	case 0: /* GF0 */
+		prot_id = PROT_L0;
 		break;
-	case IDMA_GF1:
-		prot_id = PROT_GF1;
+	case 1: /* GF1 */
+		prot_id = PROT_L1;
 		break;
-	case IDMA_VG:
-		prot_id = PROT_VG;
+	case 2: /* VG */
+		prot_id = PROT_L2;
 		break;
-	case IDMA_VGF:
-		prot_id = PROT_VGF;
+	case 3: /* VGS */
+		prot_id = PROT_L3;
 		break;
-	case IDMA_VGS:
-		prot_id = PROT_VGS;
+	case 4: /* VGF */
+		prot_id = PROT_L4;
 		break;
-	case IDMA_VGRFS:
-		prot_id = PROT_VGRFS;
+	case 5: /* VGRFS */
+		prot_id = PROT_L5;
 		break;
-	case ODMA_WB:
+	case 6: /* WB */
 		prot_id = PROT_WB1;
 		break;
 	default:
 		decon_err("Unknown DMA_ID (%d)\n", dma_id);
 		break;
 	}
-#elif defined(CONFIG_SOC_EXYNOS9610)
-	switch (dma_id) {
-	case IDMA_G0:
-		prot_id = PROT_G0;
-		break;
-	case IDMA_G1:
-		prot_id = PROT_G1;
-		break;
-	case IDMA_GF:
-		prot_id = PROT_GF;
-		break;
-	case IDMA_VG0:
-		prot_id = PROT_VG0;
-		break;
-	default:
-		decon_err("Unknown DMA_ID (%d)\n", dma_id);
-		break;
-	}
-#endif
 
 	return prot_id;
 }
@@ -251,7 +230,7 @@ static int decon_control_protection(int ch, bool en)
 	int prot_id;
 
 	/* content protection uses dma type */
-	prot_id = decon_get_protect_id(DPU_CH2DMA(ch));
+	prot_id = decon_get_protect_id(ch);
 	ret = exynos_smc(SMC_PROTECTION_SET, 0, prot_id,
 		(en ? SMC_PROTECTION_ENABLE : SMC_PROTECTION_DISABLE));
 
@@ -279,7 +258,7 @@ void decon_set_protected_content(struct decon_device *decon,
 			break;
 
 		cur_protect_bits |=
-			(regs->protection[i] << regs->dpp_config[i].idma_type); /* ch */
+			(regs->protection[i] << regs->dpp_config[i].channel);
 	}
 
 	/* ODMA protection config (WB: writeback) */
