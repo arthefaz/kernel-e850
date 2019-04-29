@@ -263,14 +263,13 @@ unsigned long __ml_cpu_util_with(int cpu, struct task_struct *p, int sse)
 	}
 
 	if (p->sse == sse)
-		util += min_t(unsigned long, util, ml_task_util(p));
+		util += ml_task_util(p);
 
 	if (sched_feat(UTIL_EST)) {
 		unsigned long util_est = __ml_cpu_util_est(cpu, sse);
 
 		if (schedtune_util_est(p) && p->sse == sse)
-			util_est += min_t(unsigned int, util_est,
-				   (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED));
+			util_est += (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED);
 
 		util = max_t(unsigned long, util, util_est);
 	}
@@ -385,7 +384,7 @@ __update_cpu_util(struct multi_load *ml, u64 periods, u32 contrib,
 	if (periods) {
 		ml->util_sum_s = decay_load((u64)(ml->util_sum_s), periods);
 		ml->util_sum = decay_load((u64)(ml->util_sum), periods);
-		ml->runnable_sum_s = decay_load((u64)(ml->runnable_sum), periods);
+		ml->runnable_sum_s = decay_load((u64)(ml->runnable_sum_s), periods);
 		ml->runnable_sum = decay_load((u64)(ml->runnable_sum), periods);
 	}
 
