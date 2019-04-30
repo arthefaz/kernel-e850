@@ -1557,6 +1557,7 @@ struct mfc_ctx {
 	int rgb_bpp;
 
 	int min_dpb_size[3];
+	int min_dpb_size_2bits[3];
 
 	struct mfc_raw_info raw_buf;
 

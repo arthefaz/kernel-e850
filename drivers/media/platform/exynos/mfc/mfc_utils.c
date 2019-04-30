@@ -238,6 +238,12 @@ void mfc_dec_calc_dpb_size(struct mfc_ctx *ctx)
 					i, raw->plane_size[i], ctx->min_dpb_size[i]);
 			raw->plane_size[i] = ctx->min_dpb_size[i];
 		}
+		if ((ctx->is_10bit || ctx->is_sbwc) &&
+				(raw->plane_size_2bits[i] < ctx->min_dpb_size_2bits[i])) {
+			mfc_info_ctx("[FRAME] 2bit plane[%d] size is changed %d -> %d\n",
+					i, raw->plane_size_2bits[i], ctx->min_dpb_size_2bits[i]);
+			raw->plane_size_2bits[i] = ctx->min_dpb_size_2bits[i];
+		}
 	}
 
 	for (i = 0; i < raw->num_planes; i++) {

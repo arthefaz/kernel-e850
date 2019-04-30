@@ -1372,10 +1372,10 @@ static void __mfc_nal_q_get_img_size(struct mfc_ctx *ctx, DecoderOutputStr *pOut
 		for (i = 0; i < ctx->dst_fmt->num_planes; i++) {
 			ctx->min_dpb_size[i] = mfc_get_min_dpb_size(i);
 			if (ctx->is_10bit || ctx->is_sbwc)
-				ctx->raw_buf.plane_size_2bits[i] = mfc_get_min_dpb_size_2bit(i);
+				ctx->min_dpb_size_2bits[i] = mfc_get_min_dpb_size_2bit(i);
 		}
-		mfc_debug(2, "[NALQ][FRAME] DPB count %d, min_dpb_size %zu(%#x) scratch %zu(%#x)\n",
-			ctx->dpb_count, ctx->min_dpb_size[0], ctx->min_dpb_size[0],
+		mfc_debug(2, "[NALQ][FRAME] DPB count %d, min_dpb_size %zu(%#x) min_dpb_size_2bits %zu scratch %zu(%#x)\n",
+			ctx->dpb_count, ctx->min_dpb_size[0], ctx->min_dpb_size[0], ctx->min_dpb_size_2bits[0],
 			ctx->scratch_buf_size, ctx->scratch_buf_size);
 	}
 }

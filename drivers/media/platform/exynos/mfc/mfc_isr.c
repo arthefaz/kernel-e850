@@ -1028,8 +1028,11 @@ static int __mfc_handle_seq_dec(struct mfc_ctx *ctx)
 
 	ctx->dpb_count = mfc_get_dpb_count();
 	ctx->scratch_buf_size = mfc_get_scratch_size();
-	for (i = 0; i < ctx->dst_fmt->num_planes; i++)
+	for (i = 0; i < ctx->dst_fmt->num_planes; i++) {
 		ctx->min_dpb_size[i] = mfc_get_min_dpb_size(i);
+		if ((ctx->is_10bit || ctx->is_sbwc))
+			ctx->min_dpb_size_2bits[i] = mfc_get_min_dpb_size_2bit(i);
+	}
 
 	mfc_dec_get_crop_info(ctx);
 	dec->mv_count = mfc_get_mv_count();
