@@ -664,6 +664,72 @@ int dsim_set_panel_power(struct dsim_device *dsim, bool on)
 	return ret;
 }
 
+static char *rpm_status_name[] = {
+	"RPM_ACTIVE",
+	"RPM_RESUMING",
+	"RPM_SUSPENDED",
+	"RPM_SUSPENDING",
+};
+
+static void dsim_print_phy_info(struct dsim_device *dsim)
+{
+	dsim_info("[PHY] power_count(%d), disable_depth(%d), runtime_status(%s)\n",
+			dsim->phy->power_count, dsim->phy->dev.power.disable_depth,
+			rpm_status_name[dsim->phy->dev.power.runtime_status]);
+
+	dsim_info("[PHY_EX] power_count(%d), disable_depth(%d), runtime_status(%s)\n",
+			dsim->phy_ex->power_count, dsim->phy_ex->dev.power.disable_depth,
+			rpm_status_name[dsim->phy_ex->dev.power.runtime_status]);
+}
+
+static int dsim_phy_power_on(struct dsim_device *dsim)
+{
+	int ret = 0;
+
+	ret = phy_power_on(dsim->phy);
+	if (ret < 0) {
+		dsim_err("failed to enable phy(%d)\n", ret);
+		goto err;
+	}
+	if (dsim->phy_ex) {
+		ret = phy_power_on(dsim->phy_ex);
+		if (ret < 0) {
+			dsim_err("failed to enable extra phy(%d)\n", ret);
+			goto err;
+		}
+	}
+
+	return 0;
+
+err:
+	dsim_print_phy_info(dsim);
+	return ret;
+}
+
+static int dsim_phy_power_off(struct dsim_device *dsim)
+{
+	int ret = 0;
+
+	ret = phy_power_off(dsim->phy);
+	if (ret < 0) {
+		dsim_err("failed to enable phy(%d)\n", ret);
+		goto err;
+	}
+	if (dsim->phy_ex) {
+		ret = phy_power_off(dsim->phy_ex);
+		if (ret < 0) {
+			dsim_err("failed to enable extra phy(%d)\n", ret);
+			goto err;
+		}
+	}
+
+	return 0;
+
+err:
+	dsim_print_phy_info(dsim);
+	return ret;
+}
+
 static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 {
 	bool panel_ctrl;
@@ -684,9 +750,7 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 	pm_runtime_get_sync(dsim->dev);
 
 	/* DPHY power on : iso release */
-	phy_power_on(dsim->phy);
-	if (dsim->phy_ex)
-		phy_power_on(dsim->phy_ex);
+	dsim_phy_power_on(dsim);
 
 	panel_ctrl = (state == DSIM_STATE_ON) ? true : false;
 	dsim_reg_init(dsim->id, &dsim->panel->lcd_info, &dsim->clks, panel_ctrl);
@@ -787,9 +851,7 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 	disable_irq(dsim->res.irq);
 
 	/* HACK */
-	phy_power_off(dsim->phy);
-	if (dsim->phy_ex)
-		phy_power_off(dsim->phy_ex);
+	dsim_phy_power_off(dsim);
 
 	if (state == DSIM_STATE_OFF)
 		dsim_set_panel_power(dsim, 0);
@@ -881,9 +943,7 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 	ret = dsim_reg_stop_and_enter_ulps(dsim->id, dsim->panel->lcd_info.ddi_type,
 			dsim->data_lane);
 
-	phy_power_off(dsim->phy);
-	if (dsim->phy_ex)
-		phy_power_off(dsim->phy_ex);
+	dsim_phy_power_off(dsim);
 
 	pm_runtime_put_sync(dsim->dev);
 #if defined(CONFIG_CPU_IDLE)
@@ -914,9 +974,7 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 	pm_runtime_get_sync(dsim->dev);
 
 	/* DPHY power on : iso release */
-	phy_power_on(dsim->phy);
-	if (dsim->phy_ex)
-		phy_power_on(dsim->phy_ex);
+	dsim_phy_power_on(dsim);
 
 	dsim_reg_init(dsim->id, &dsim->panel->lcd_info, &dsim->clks, false);
 	ret = dsim_reg_exit_ulps_and_start(dsim->id, dsim->panel->lcd_info.ddi_type,
