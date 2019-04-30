@@ -126,6 +126,11 @@ config EXYNOS_EWR
 	bool "Support early wake up"
         depends on EXYNOS_DPU30
         default n
+
+config EXYNOS_LIMIT_ROTATION
+	bool "Limit Rotation based on Size and Bit-depth"
+        depends on EXYNOS_DPU30
+        default n
 endif
 
 source "drivers/video/fbdev/exynos/dpu30/panels/Kconfig"
