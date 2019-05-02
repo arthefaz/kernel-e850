@@ -834,12 +834,19 @@ void arch_irq_work_raise(void)
 #endif
 
 static DEFINE_RAW_SPINLOCK(stop_lock);
+static cpumask_t cpu_stop_mask;
 
 /*
  * ipi_cpu_stop - handle IPI from smp_send_stop()
  */
 static void ipi_cpu_stop(unsigned int cpu, struct pt_regs *regs)
 {
+	unsigned long timeout;
+
+	timeout = USEC_PER_SEC * 5;
+	while (cpumask_test_cpu(cpu, &cpu_stop_mask) && timeout--)
+		udelay(1);
+
 	pr_crit("CPU%u: stopping\n", cpu);
 
 	if (system_state == SYSTEM_BOOTING ||
@@ -992,12 +999,13 @@ static const char *system_state_show[SYSTEM_END] = {
 void smp_send_stop(void)
 {
 	unsigned long timeout;
+	cpumask_t mask;
+	int cpu;
 
 	if (num_online_cpus() > 1) {
-		cpumask_t mask;
-
 		cpumask_copy(&mask, cpu_online_mask);
 		cpumask_clear_cpu(smp_processor_id(), &mask);
+		cpumask_copy(&cpu_stop_mask, &mask);
 
 		pr_crit("SMP: stopping secondary CPUs : %s\n",
 				system_state_show[system_state]);
@@ -1005,9 +1013,16 @@ void smp_send_stop(void)
 	}
 
 	/* Wait up to one second for other CPUs to stop */
-	timeout = USEC_PER_SEC;
-	while (num_online_cpus() > 1 && timeout--)
-		udelay(1);
+	for_each_cpu(cpu, &mask) {
+		cpumask_clear_cpu(cpu, &cpu_stop_mask);
+
+		timeout = USEC_PER_MSEC * 500;
+		while (cpu_online(cpu) && timeout--)
+			udelay(1);
+
+		if (cpu_online(cpu))
+			pr_warning("SMP: failed to stop CPU%d\n", cpu);
+	}
 
 	if (num_online_cpus() > 1)
 		pr_warning("SMP: failed to stop secondary CPUs %*pbl\n",
