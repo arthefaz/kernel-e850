@@ -16,7 +16,7 @@
 extern void sync_entity_load_avg(struct sched_entity *se);
 
 int exynos_select_task_rq(struct task_struct *p, int prev_cpu,
-				int sd_flag, int sync, int wakeup)
+				int sd_flag, int sync, int wake)
 {
 	int target_cpu = -1;
 	struct enrg_env env = {
@@ -26,7 +26,7 @@ int exynos_select_task_rq(struct task_struct *p, int prev_cpu,
 	};
 
 	/*
-	 * Update utilization of wakeup task to apply "sleep" period
+	 * Update utilization of waking task to apply "sleep" period
 	 * before selecting cpu.
 	 */
 	if (!(sd_flag & SD_BALANCE_FORK))
@@ -35,7 +35,7 @@ int exynos_select_task_rq(struct task_struct *p, int prev_cpu,
 	if (sysctl_sched_sync_hint_enable && sync) {
 		target_cpu = smp_processor_id();
 		if (cpumask_test_cpu(target_cpu, &p->cpus_allowed)) {
-			trace_ems_select_task_rq(p, target_cpu, wakeup, "sync");
+			trace_ems_select_task_rq(p, target_cpu, wake, "sync");
 			return target_cpu;
 		}
 	}
@@ -45,33 +45,33 @@ int exynos_select_task_rq(struct task_struct *p, int prev_cpu,
 
 	/* There is no fit cpus */
 	if (cpumask_empty(&env.fit_cpus)) {
-		trace_ems_select_task_rq(p, prev_cpu, wakeup, "no fit cpu");
+		trace_ems_select_task_rq(p, prev_cpu, wake, "no fit cpu");
 		return prev_cpu;
 	}
 
-	if (!wakeup) {
+	if (!wake) {
 		struct cpumask mask;
 
 		/*
-		 * 'wakeup = 0' means that running task is migrated to faster
+		 * 'wake = 0' means that running task is migrated to faster
 		 * cpu by ontime migration. If there are fit faster cpus,
 		 * current coregroup and env.fit_cpus are exclusive.
 		 */
 		cpumask_and(&mask, cpu_coregroup_mask(prev_cpu), &env.fit_cpus);
 		if (cpumask_weight(&mask)) {
-			trace_ems_select_task_rq(p, -1, wakeup, "no fit faster cpu");
+			trace_ems_select_task_rq(p, -1, wake, "no fit faster cpu");
 			return -1;
 		}
 	}
 
 	target_cpu = find_best_cpu(&env);
 	if (target_cpu >= 0) {
-		trace_ems_select_task_rq(p, target_cpu, wakeup, "best_cpu");
+		trace_ems_select_task_rq(p, target_cpu, wake, "best_cpu");
 		return target_cpu;
 	}
 
 	target_cpu = prev_cpu;
-	trace_ems_select_task_rq(p, target_cpu, wakeup, "no benefit");
+	trace_ems_select_task_rq(p, target_cpu, wake, "no benefit");
 
 	return target_cpu;
 }
