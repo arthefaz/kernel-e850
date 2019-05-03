@@ -10268,8 +10268,9 @@ static struct rq *find_busiest_queue(struct lb_env *env,
 		 * which is not scaled with the cpu capacity.
 		 */
 
-		if (rq->nr_running == 1 && wl > env->imbalance &&
-		    !check_cpu_capacity(rq, env->sd))
+		if (rq->nr_running == 1 && wl > env->imbalance
+			&& !rq->misfit_task_load
+			&& !check_cpu_capacity(rq, env->sd))
 			continue;
 
 		/*
