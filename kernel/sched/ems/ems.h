@@ -60,3 +60,9 @@ extern unsigned long get_upper_boundary(int cpu, struct task_struct *p);
 
 /* global boost */
 extern int global_boost(void);
+
+
+static inline cpu_overutilized(unsigned long capacity, unsigned long util)
+{
+	return (capacity * 1024) < (util * 1280);
+}
