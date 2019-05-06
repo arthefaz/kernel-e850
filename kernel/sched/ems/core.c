@@ -56,8 +56,22 @@ static void select_fit_cpus(struct enrg_env *env)
 	 * fit cpus is empty or not because the cpu is already busy, there is no
 	 * performance gain even if migrating tasks to faster cpu.
 	 */
-	if (!env->wake)
+	if (!env->wake) {
+		/*
+		 * Do not migrate tasks to cpu that is used more than 12.5%.
+		 * (12.5% : this percentage is heuristically obtained)
+		 *
+		 * fit_cpus = fit_cpus with util < 12.5%
+		 */
+		for_each_cpu(cpu, cpu_active_mask) {
+			int threshold = capacity_cpu(cpu, p->sse) >> 3;
+
+			if (_ml_cpu_util(cpu, p->sse) >= threshold)
+				cpumask_clear_cpu(cpu, fit_cpus);
+		}
+
 		goto skip;
+	}
 
 	/*
 	 * Unfortunately, if all of the cpus are overutilized, significantly
