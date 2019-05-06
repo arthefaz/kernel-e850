@@ -60,6 +60,24 @@ static void select_fit_cpus(struct enrg_env *env)
 		goto skip;
 
 	/*
+	 * Unfortunately, if all of the cpus are overutilized, significantly
+	 * low-utilized cpus(< ~1.56%) become inevitably candidates.
+	 *
+	 * fit_cpus = cpus with util < 1.56%
+	 */
+	if (unlikely(cpumask_equal(cpu_active_mask, &overutil_cpus))) {
+		cpumask_clear(fit_cpus);
+		for_each_cpu(cpu, cpu_active_mask) {
+			int threshold = capacity_cpu(cpu, p->sse) >> 6;
+
+			if (_ml_cpu_util(cpu, p->sse) < threshold)
+				cpumask_set_cpu(cpu, fit_cpus);
+		}
+
+		goto skip;
+	}
+
+	/*
 	 * If fit cpus are empty, ignore fit cpus found in the previous step
 	 * and all non-overutilized cpus become fit cpus.
 	 *
