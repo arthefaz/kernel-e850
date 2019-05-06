@@ -447,6 +447,17 @@ int ontime_can_migrate_task(struct task_struct *p, int dst_cpu)
 	}
 
 	/*
+	 * Migration is not allowed if the destination cpu is overutilized.
+	 * However, the following cases are exceptions.
+	 *  1. If there is no running task on the destination cpu
+	 *  2. If the source cpu is not overutilized
+	 */
+	if (cpu_overutilized(capacity_cpu(src_cpu, USS), ml_cpu_util(src_cpu)) &&
+	    cpu_overutilized(capacity_cpu(dst_cpu, USS), ml_cpu_util_with(dst_cpu, p)))
+		if (cpu_rq(dst_cpu)->nr_running)
+			return false;
+
+	/*
 	 * Task is heavy enough but load balancer tries to migrate the task to
 	 * slower cpu, it does not allow migration.
 	 */
