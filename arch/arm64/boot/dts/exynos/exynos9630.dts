@@ -19,6 +19,7 @@
 #include "exynos9630-pinctrl.dtsi"
 #include "exynos9630-rmem.dtsi"
 #include <dt-bindings/clock/exynos9630.h>
+#include "exynos9630-dpu.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos9630";
