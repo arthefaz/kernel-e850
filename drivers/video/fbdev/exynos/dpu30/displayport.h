@@ -21,7 +21,7 @@
 #include <uapi/linux/v4l2-dv-timings.h>
 #include <linux/phy/phy.h>
 #if defined(CONFIG_EXTCON)
-#include <linux/extcon.h>
+#include <linux/extcon-provider.h>
 #endif
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 #include <linux/usb/manager/usb_typec_manager_notifier.h>
@@ -140,10 +140,11 @@ enum displayport_interrupt_mask {
 };
 
 #define MAX_LANE_CNT 4
-#define MAX_LINK_RATE_NUM 3
+#define MAX_LINK_RATE_NUM 4
 #define RBR_PIXEL_CLOCK_PER_LANE 48600000 /* hz */
 #define HBR_PIXEL_CLOCK_PER_LANE 85500000 /* hz */
 #define HBR2_PIXEL_CLOCK_PER_LANE 171000000 /* hz */
+#define HBR3_PIXEL_CLOCK_PER_LANE 256500000 /* hz */
 #define DPCD_BUF_SIZE 12
 
 #define FB_AUDIO_LPCM	1
@@ -190,6 +191,7 @@ struct fb_vendor {
 #define LINK_RATE_1_62Gbps 0x06
 #define LINK_RATE_2_7Gbps 0x0A
 #define LINK_RATE_5_4Gbps 0x14
+#define LINK_RATE_8_1Gbps 0x1E
 
 #define DPCD_ADD_MAX_LANE_COUNT 0x00002
 #define MAX_LANE_COUNT (0x1F << 0)
@@ -424,6 +426,7 @@ enum phy_tune_info {
 	POST_EMP = 1,
 	PRE_EMP = 2,
 	IDRV = 3,
+	ACCDRV = 4,
 };
 
 typedef enum {
