@@ -276,9 +276,15 @@ struct fsxattr {
 #define FS_ENCRYPTION_MODE_AES_256_CTS		4
 #define FS_ENCRYPTION_MODE_AES_128_CBC		5
 #define FS_ENCRYPTION_MODE_AES_128_CTS		6
+<<<<<<< HEAD
 #define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7 /* Removed, do not use. */
 #define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8 /* Removed, do not use. */
 #define FS_ENCRYPTION_MODE_ADIANTUM		9
+=======
+#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7
+#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8
+#define FS_ENCRYPTION_MODE_PRIVATE              127
+>>>>>>> 85d8d338758a... [RAMEN9610-14970] fs: support FS_ENCRYPTION_MODE_PRIVATE for fmp
 
 struct fscrypt_policy {
 	__u8 version;
