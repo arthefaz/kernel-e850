@@ -155,6 +155,9 @@ static int displayport_check_link_rate_pixel_clock(u8 link_rate,
 	case LINK_RATE_5_4Gbps:
 		calc_pixel_clock = HBR2_PIXEL_CLOCK_PER_LANE * lane_cnt;
 		break;
+	case LINK_RATE_8_1Gbps:
+		calc_pixel_clock = HBR3_PIXEL_CLOCK_PER_LANE * lane_cnt;
+		break;
 	default:
 		calc_pixel_clock = HBR2_PIXEL_CLOCK_PER_LANE * lane_cnt;
 		break;
@@ -204,7 +207,8 @@ static int displayport_get_min_link_rate(u8 rx_link_rate,
 		u8 lane_cnt, enum bit_depth bpc)
 {
 	int i = 0;
-	int link_rate[MAX_LINK_RATE_NUM] = {LINK_RATE_1_62Gbps, LINK_RATE_2_7Gbps, LINK_RATE_5_4Gbps};
+	int link_rate[MAX_LINK_RATE_NUM] = {LINK_RATE_1_62Gbps,
+			LINK_RATE_2_7Gbps, LINK_RATE_5_4Gbps , LINK_RATE_8_1Gbps};
 	u64 max_pclk = 0;
 	u8 min_link_rate = 0;
 
@@ -221,7 +225,7 @@ static int displayport_get_min_link_rate(u8 rx_link_rate,
 			break;
 	}
 
-	if (i >= MAX_LINK_RATE_NUM)
+	if (i > MAX_LINK_RATE_NUM)
 		min_link_rate = LINK_RATE_5_4Gbps;
 	else
 		min_link_rate = link_rate[i] > rx_link_rate ? rx_link_rate : link_rate[i];
@@ -477,7 +481,10 @@ Check_Link_rate:
 
 	total_retry_cnt = 0;
 
-	if (link_rate == LINK_RATE_5_4Gbps) {
+	if (link_rate == LINK_RATE_8_1Gbps) {
+		link_rate = LINK_RATE_5_4Gbps;
+		goto Reduce_Link_Rate_Retry;
+	} else if (link_rate == LINK_RATE_5_4Gbps) {
 		link_rate = LINK_RATE_2_7Gbps;
 		goto Reduce_Link_Rate_Retry;
 	} else if (link_rate == LINK_RATE_2_7Gbps) {
@@ -2426,7 +2433,9 @@ static ssize_t displayport_link_store(struct class *dev,
 
 		if ((link_rate >= 1 && link_rate <= 3) &&
 				(lane_cnt == 1 || lane_cnt == 2 || lane_cnt == 4)) {
-			if (link_rate == 3)
+			if (link_rate == 4)
+				link_rate = LINK_RATE_8_1Gbps;
+			else if (link_rate == 3)
 				link_rate = LINK_RATE_5_4Gbps;
 			else if (link_rate == 2)
 				link_rate = LINK_RATE_2_7Gbps;
