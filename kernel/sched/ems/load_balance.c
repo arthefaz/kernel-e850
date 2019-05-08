@@ -228,17 +228,26 @@ static bool lb_task_fits_capacity(struct task_struct *p, unsigned long capacity)
 void lb_update_misfit_status(struct task_struct *p, struct rq *rq,
 						unsigned long task_h_load)
 {
+	int cpu = cpu_of(rq);
+	unsigned long capacity;
+	int overutilized;
+
 	if (!p) {
 		per_cpu(lbt_overutil, cpu)->misfit_task = false;
 		rq->misfit_task_load = 0;
 		return;
 	}
 
+	capacity = capacity_cpu(cpu, USS);
+	overutilized = cpu_overutilized(capacity, ml_cpu_util(cpu));
+
 	/*
-	 * Criteria for determining misfit task
-	 *  boosted task util >= 80% of cpu capacity
+	 * Criteria for determining fit task:
+	 *  1) boosted task util < 80% of cpu capacity
+	 *  2) nr_running > 1 or cpu is not overutilized
 	 */
-	if (lb_task_fits_capacity(p, capacity_cpu(cpu, USS))) {
+	if (lb_task_fits_capacity(p, capacity) &&
+	    !(rq->cfs.nr_running == 1 && overutilized)) {
 		per_cpu(lbt_overutil, cpu)->misfit_task = false;
 		rq->misfit_task_load = 0;
 		return;
