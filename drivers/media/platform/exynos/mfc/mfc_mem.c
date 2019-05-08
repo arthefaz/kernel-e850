@@ -316,7 +316,12 @@ void mfc_get_iovmm(struct mfc_ctx *ctx, struct vb2_buffer *vb, struct dpb_table 
 	struct mfc_dev *dev = ctx->dev;
 	struct vb2_queue *vq = vb->vb2_queue;
 	int i, mem_get_count = 0;
+#ifdef USE_DPB_INDEX
+	struct mfc_buf *mfc_buf = vb_to_mfc_buf(vb);
+	int index = mfc_buf->dpb_index;
+#else
 	int index = vb->index;
+#endif
 	int ioprot = IOMMU_READ	| IOMMU_WRITE;
 
 	if (dpb[index].mapcnt != 0) {

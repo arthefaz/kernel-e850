@@ -115,8 +115,8 @@ static void __mfc_handle_frame_all_extracted(struct mfc_ctx *ctx)
 		if (!dst_mb)
 			break;
 
-		mfc_debug(2, "Cleaning up buffer: %d\n",
-					  dst_mb->vb.vb2_buf.index);
+		mfc_debug(2, "Cleaning up buffer: [%d][%d]\n",
+					  dst_mb->vb.vb2_buf.index, dst_mb->dpb_index);
 
 		index = dst_mb->vb.vb2_buf.index;
 
@@ -127,7 +127,11 @@ static void __mfc_handle_frame_all_extracted(struct mfc_ctx *ctx)
 		dst_mb->vb.field = __mfc_handle_frame_field(ctx);
 		mfc_clear_vb_flag(dst_mb);
 
+#ifdef USE_DPB_INDEX
+		clear_bit(dst_mb->dpb_index, &dec->available_dpb);
+#else
 		clear_bit(dst_mb->vb.vb2_buf.index, &dec->available_dpb);
+#endif
 
 		if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->dst_ctrls[index]) < 0)
 			mfc_err_ctx("failed in get_buf_ctrls_val\n");
@@ -149,9 +153,12 @@ static void __mfc_handle_frame_all_extracted(struct mfc_ctx *ctx)
 				0);
 		}
 
-		vb2_buffer_done(&dst_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
 		mutex_lock(&dec->dpb_mutex);
-		clear_bit(index, &dec->queued_dpb);
+#ifdef USE_DPB_INDEX
+		index = dst_mb->dpb_index;
+#else
+		index = dst_mb->vb.vb2_buf.index;
+#endif
 		/* TODO: is there another way? */
 		if (dec->spare_dpb[index].mapcnt) {
 			dec->spare_dpb[index].queued = 0;
@@ -159,9 +166,11 @@ static void __mfc_handle_frame_all_extracted(struct mfc_ctx *ctx)
 		} else {
 			dec->dpb[index].queued = 0;
 		}
+		clear_bit(index, &dec->queued_dpb);
+		mutex_unlock(&dec->dpb_mutex);
+		vb2_buffer_done(&dst_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
 		mfc_debug(2, "[DPB] Cleand up index = %d, used_flag = %08x, queued = %#lx\n",
 				index, dec->dynamic_used, dec->queued_dpb);
-		mutex_unlock(&dec->dpb_mutex);
 	}
 
 	mfc_handle_force_change_status(ctx);
@@ -232,8 +241,8 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx, unsigned int err)
 	if (dst_mb) {
 		index = dst_mb->vb.vb2_buf.index;
 		/* Check if this is the buffer we're looking for */
-		mfc_debug(2, "[BUFINFO][DPB] ctx[%d] get dst index: %d, addr[0]: 0x%08llx\n",
-				ctx->num, index, dst_mb->addr[0][0]);
+		mfc_debug(2, "[BUFINFO][DPB] ctx[%d] get dst index: [%d][%d], addr[0]: 0x%08llx\n",
+				ctx->num, index, dst_mb->dpb_index, dst_mb->addr[0][0]);
 
 		dst_mb->vb.sequence = ctx->sequence;
 		dst_mb->vb.field = __mfc_handle_frame_field(ctx);
@@ -295,9 +304,11 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx, unsigned int err)
 						raw->plane_size[i]);
 			}
 		}
-
+#ifdef USE_DPB_INDEX
+		clear_bit(dst_mb->dpb_index, &dec->available_dpb);
+#else
 		clear_bit(index, &dec->available_dpb);
-
+#endif
 		dst_mb->vb.flags &= ~(V4L2_BUF_FLAG_KEYFRAME |
 					V4L2_BUF_FLAG_PFRAME |
 					V4L2_BUF_FLAG_BFRAME |
@@ -352,12 +363,20 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx, unsigned int err)
 		}
 
 		mfc_qos_update_last_framerate(ctx, dst_mb->vb.vb2_buf.timestamp);
-		vb2_buffer_done(&dst_mb->vb.vb2_buf, mfc_get_warn(err) ?
-				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
+		mfc_debug(2, "[DPB] dst index [%d][%d] is buffer done\n",
+				dst_mb->vb.vb2_buf.index, dst_mb->dpb_index);
 		mutex_lock(&dec->dpb_mutex);
+#ifdef USE_DPB_INDEX
+		dec->dpb[dst_mb->dpb_index].queued = 0;
+		clear_bit(dst_mb->dpb_index, &dec->queued_dpb);
+#else
 		dec->dpb[index].queued = 0;
 		clear_bit(index, &dec->queued_dpb);
+#endif
+		dec->display_index = dst_mb->dpb_index;
 		mutex_unlock(&dec->dpb_mutex);
+		vb2_buffer_done(&dst_mb->vb.vb2_buf, mfc_get_warn(err) ?
+				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 	}
 }
 
@@ -401,6 +420,15 @@ static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
 				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 			}
 		}
+	}
+
+	/* The displayed and not referenced buffer must be freed from dpb_table */
+	if (dec->display_index >= 0) {
+		i = dec->display_index;
+		if (!(dec->dynamic_used & (1 << i)) && dec->dpb[i].mapcnt) {
+			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
+		}
+		dec->display_index = -1;
 	}
 
 	/* It is only for debugging */

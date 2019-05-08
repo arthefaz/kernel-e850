@@ -431,7 +431,12 @@ int mfc_set_dynamic_dpb(struct mfc_ctx *ctx, struct mfc_buf *dst_mb)
 	int dst_index;
 	int i;
 
+#ifdef USE_DPB_INDEX
+	dst_index = dst_mb->dpb_index;
+#else
 	dst_index = dst_mb->vb.vb2_buf.index;
+#endif
+
 	set_bit(dst_index, &dec->available_dpb);
 	dec->dynamic_set = 1 << dst_index;
 	mfc_debug(2, "[DPB] ADDING Flag after: 0x%lx\n", dec->available_dpb);
@@ -459,8 +464,9 @@ int mfc_set_dynamic_dpb(struct mfc_ctx *ctx, struct mfc_buf *dst_mb)
 		if (ctx->is_10bit || ctx->is_sbwc)
 			MFC_WRITEL(raw->plane_size_2bits[i],
 					MFC_REG_D_FIRST_PLANE_2BIT_DPB_SIZE + (i * 4));
-		mfc_debug(2, "[BUFINFO][DPB] ctx[%d] set dst index: %d, addr[%d]: 0x%08llx\n",
-				ctx->num, dst_index, i, dst_mb->addr[0][i]);
+		mfc_debug(2, "[BUFINFO][DPB] ctx[%d] set dst index: [%d][%d], addr[%d]: 0x%08llx\n",
+				ctx->num, dst_mb->vb.vb2_buf.index, dst_mb->dpb_index,
+				i, dst_mb->addr[0][i]);
 	}
 
 	MFC_TRACE_CTX("Set dst[%d] fd: %d, %#llx / avail %#lx used %#x\n",

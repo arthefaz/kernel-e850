@@ -610,13 +610,13 @@ static void __mfc_dump_dpb(struct mfc_dev *dev, int curr_ctx)
 
 	if (!list_empty(&ctx->dst_buf_queue.head))
 		list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list)
-			dev_err(dev->device, "dst[%d] %#llx used: %d\n",
-					mfc_buf->vb.vb2_buf.index,
+			dev_err(dev->device, "dst[%d][%d] %#llx used: %d\n",
+					mfc_buf->vb.vb2_buf.index, mfc_buf->dpb_index,
 					mfc_buf->addr[0][0], mfc_buf->used);
 	else if (!list_empty(&ctx->dst_buf_nal_queue.head))
 		list_for_each_entry(mfc_buf, &ctx->dst_buf_nal_queue.head, list)
-			dev_err(dev->device, "dst_nal[%d] %#llx used: %d\n",
-					mfc_buf->vb.vb2_buf.index,
+			dev_err(dev->device, "dst_nal[%d][%d] %#llx used: %d\n",
+					mfc_buf->vb.vb2_buf.index, mfc_buf->dpb_index,
 					mfc_buf->addr[0][0], mfc_buf->used);
 	else
 		dev_err(dev->device, "dst queue is empty\n");

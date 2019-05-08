@@ -490,13 +490,15 @@ void __mfc_print_dpb_queue(struct mfc_ctx *ctx, struct mfc_dec *dec)
 
 	if (!list_empty(&ctx->dst_buf_queue.head))
 		list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list)
-			mfc_debug(2, "[DPB] dst[%d] %#llx used: %d\n",
+			mfc_debug(2, "[DPB] dst[%d][%d] %#llx used: %d\n",
 					mfc_buf->vb.vb2_buf.index,
+					mfc_buf->dpb_index,
 					mfc_buf->addr[0][0], mfc_buf->used);
 	if (!list_empty(&ctx->dst_buf_nal_queue.head))
 		list_for_each_entry(mfc_buf, &ctx->dst_buf_nal_queue.head, list)
-			mfc_debug(2, "[DPB] dst_nal[%d] %#llx used: %d\n",
+			mfc_debug(2, "[DPB] dst_nal[%d][%d] %#llx used: %d\n",
 					mfc_buf->vb.vb2_buf.index,
+					mfc_buf->dpb_index,
 					mfc_buf->addr[0][0], mfc_buf->used);
 }
 
@@ -509,7 +511,11 @@ struct mfc_buf *mfc_search_for_dpb(struct mfc_ctx *ctx)
 
 	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 	list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list) {
+#ifdef USE_DPB_INDEX
+		if ((dec->dynamic_used & (1 << mfc_buf->dpb_index)) == 0) {
+#else
 		if ((dec->dynamic_used & (1 << mfc_buf->vb.vb2_buf.index)) == 0) {
+#endif
 			mfc_buf->used = 1;
 			spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 			return mfc_buf;
@@ -542,7 +548,11 @@ struct mfc_buf *mfc_search_move_dpb_nal_q(struct mfc_ctx *ctx)
 
 	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 	list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list) {
+#ifdef USE_DPB_INDEX
+		if ((dec->dynamic_used & (1 << mfc_buf->dpb_index)) == 0) {
+#else
 		if ((dec->dynamic_used & (1 << mfc_buf->vb.vb2_buf.index)) == 0) {
+#endif
 			mfc_buf->used = 1;
 
 			list_del(&mfc_buf->list);
@@ -573,6 +583,39 @@ struct mfc_buf *mfc_search_move_dpb_nal_q(struct mfc_ctx *ctx)
 	return NULL;
 }
 
+int __mfc_assign_dpb_index(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf)
+{
+	struct mfc_dec *dec = ctx->dec_priv;
+	struct mfc_dev *dev = ctx->dev;
+	int index = -1;
+	int dpb_index = -1;
+	int i;
+
+	/* [TODO] should be optimized */
+	mutex_lock(&dec->dpb_mutex);
+	for (i = 0; i < MFC_MAX_DPBS; i++) {
+		if (!dec->dpb[i].mapcnt && index == -1) {
+			index = i;
+		}
+		if (mfc_buf->addr[0][0] == dec->dpb[i].addr[0]) {
+			mfc_debug(2, "[DPB] index [%d] [%d] %#llx is referenced\n",
+					mfc_buf->vb.vb2_buf.index, i, mfc_buf->addr[0][0]);
+			dpb_index = i;
+			break;
+		}
+	}
+	mutex_unlock(&dec->dpb_mutex);
+
+	/* [TODO] handle index full error case */
+	if (index < 0 && dpb_index < 0) {
+		mfc_err_ctx("[DPB] index is full\n");
+		mfc_print_dpb_table(ctx);
+		call_dop(dev, dump_and_stop_debug_mode, dev);
+	}
+
+	return (dpb_index >= 0 ? dpb_index : index);
+}
+
 /* Add dst buffer in dst_buf_queue */
 void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 {
@@ -592,11 +635,19 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 		return;
 	}
 
-	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
-
 	mfc_buf = vb_to_mfc_buf(vb);
 	mfc_buf->used = 0;
+	mfc_buf->dpb_index = __mfc_assign_dpb_index(ctx, mfc_buf);
+	mfc_debug(2, "[DPB] DPB vb_index %d -> dpb_index %d (used: %#x)\n",
+			vb->index, mfc_buf->dpb_index, dec->dynamic_used);
+
+#ifdef USE_DPB_INDEX
+	index = mfc_buf->dpb_index;
+#else
 	index = vb->index;
+#endif
+
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	list_add_tail(&mfc_buf->list, &ctx->dst_buf_queue.head);
 	ctx->dst_buf_queue.count++;
@@ -617,8 +668,8 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 				MFC_TRACE_CTX("ref DPB[%d] %#llx->%#llx (%#x)\n",
 						index, dec->dpb[index].addr[0],
 						mfc_buf->addr[0][0], dec->dynamic_used);
-				mfc_get_iovmm(ctx, vb, dec->spare_dpb);
 				dec->spare_dpb[index].queued = 1;
+				mfc_get_iovmm(ctx, vb, dec->spare_dpb);
 			} else {
 				mfc_debug(2, "[IOVMM] DPB[%d] was changed %#llx->%#llx (used: %#x)\n",
 						index, dec->dpb[index].addr[0],
@@ -626,13 +677,15 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 				MFC_TRACE_CTX("DPB[%d] %#llx->%#llx (%#x)\n",
 						index, dec->dpb[index].addr[0],
 						mfc_buf->addr[0][0], dec->dynamic_used);
+				dec->dpb[index].queued = 1;
 				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, index);
 				mfc_get_iovmm(ctx, vb, dec->dpb);
-				dec->dpb[index].queued = 1;
 			}
 			mfc_print_dpb_table(ctx);
 		} else {
 			dec->dpb[index].queued = 1;
+			mfc_debug(2, "[IOVMM] DPB[%d] is same %#llx(used: %#x)\n",
+					index, dec->dpb[index].addr[0], dec->dynamic_used);
 		}
 	}
 	mutex_unlock(&dec->dpb_mutex);
@@ -677,15 +730,19 @@ void mfc_cleanup_nal_queue(struct mfc_ctx *ctx)
 
 		dst_mb->used = 0;
 		if (ctx->type == MFCINST_DECODER)
+#ifdef USE_DPB_INDEX
+			clear_bit(dst_mb->dpb_index, &dec->available_dpb);
+#else
 			clear_bit(dst_mb->vb.vb2_buf.index, &dec->available_dpb);
+#endif
 		list_del(&dst_mb->list);
 		ctx->dst_buf_nal_queue.count--;
 
 		list_add(&dst_mb->list, &ctx->dst_buf_queue.head);
 		ctx->dst_buf_queue.count++;
 
-		mfc_debug(2, "[NALQ] cleanup, dst_buf_nal_queue -> dst_buf_queue, index:%d\n",
-				dst_mb->vb.vb2_buf.index);
+		mfc_debug(2, "[NALQ] cleanup, dst_buf_nal_queue -> dst_buf_queue, index:[%d][%d]\n",
+				dst_mb->vb.vb2_buf.index, dst_mb->dpb_index);
 	}
 
 	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);

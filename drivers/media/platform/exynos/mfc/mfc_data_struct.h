@@ -265,6 +265,7 @@ struct mfc_buf {
 	dma_addr_t addr[MAX_NUM_IMAGES_IN_VB][MFC_MAX_PLANES];
 	struct dma_buf *dmabufs[MAX_NUM_IMAGES_IN_VB][MFC_MAX_PLANES];
 	struct dma_buf_attachment *attachments[MAX_NUM_IMAGES_IN_VB][MFC_MAX_PLANES];
+	int dpb_index;
 	int next_index;
 	int done_index;
 	int used;
@@ -1416,6 +1417,7 @@ struct mfc_dec {
 	/* For dynamic DPB */
 	int is_dynamic_dpb;
 	int is_dpb_full;
+	int display_index;
 	unsigned long available_dpb;
 	unsigned long queued_dpb;
 	unsigned int dynamic_set;

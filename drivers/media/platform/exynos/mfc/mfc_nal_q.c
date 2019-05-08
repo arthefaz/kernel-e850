@@ -960,7 +960,11 @@ static int __mfc_nal_q_run_in_buf_dec(struct mfc_ctx *ctx, DecoderInputStr *pInS
 	ctx->last_src_addr = buf_addr;
 
 	/* dst buffer setting */
+#ifdef USE_DPB_INDEX
+	dst_index = dst_mb->dpb_index;
+#else
 	dst_index = dst_mb->vb.vb2_buf.index;
+#endif
 	set_bit(dst_index, &dec->available_dpb);
 	dec->dynamic_set = 1 << dst_index;
 
@@ -970,8 +974,8 @@ static int __mfc_nal_q_run_in_buf_dec(struct mfc_ctx *ctx, DecoderInputStr *pInS
 		ctx->last_dst_addr[i] = dst_mb->addr[0][i];
 		if (ctx->is_10bit || ctx->is_sbwc)
 			pInStr->Frame2BitSize[i] = raw->plane_size_2bits[i];
-		mfc_debug(2, "[NALQ][BUFINFO][DPB] ctx[%d] set dst index: %d, addr[%d]: 0x%08llx\n",
-				ctx->num, dst_index, i, dst_mb->addr[0][i]);
+		mfc_debug(2, "[NALQ][BUFINFO][DPB] ctx[%d] set dst index: [%d][%d], addr[%d]: 0x%08llx\n",
+				ctx->num, dst_mb->vb.vb2_buf.index, dst_mb->dpb_index, i, dst_mb->addr[0][i]);
 	}
 
 	pInStr->ScratchBufAddr = ctx->codec_buf.daddr;
@@ -1132,10 +1136,10 @@ static void __mfc_nal_q_handle_stream_output(struct mfc_ctx *ctx, int slice_type
 			return;
 		}
 
-		mfc_debug(2, "[NALQ] no output, dst_buf_nal_queue(%d) -> dst_buf_queue(%d) index:%d\n",
+		mfc_debug(2, "[NALQ] no output, dst_buf_nal_queue(%d) -> dst_buf_queue(%d) index:[%d][%d]\n",
 				mfc_get_queue_count(&ctx->buf_queue_lock, &ctx->dst_buf_nal_queue),
 				mfc_get_queue_count(&ctx->buf_queue_lock, &ctx->dst_buf_queue),
-				dst_mb->vb.vb2_buf.index);
+				dst_mb->vb.vb2_buf.index, dst_mb->dpb_index);
 		return;
 	}
 
@@ -1226,10 +1230,14 @@ static void __mfc_nal_q_handle_reuse_buffer(struct mfc_ctx *ctx, DecoderOutputSt
 		mfc_debug(2, "[NALQ][DPB] decoding only but there is disp addr: 0x%llx\n", disp_addr);
 		dst_mb = mfc_get_move_buf_addr(ctx, &ctx->dst_buf_queue, &ctx->dst_buf_nal_queue, disp_addr);
 		if (dst_mb) {
-			mfc_debug(2, "[NALQ][DPB] buf[%d] will reused. addr: 0x%08llx\n",
-					dst_mb->vb.vb2_buf.index, disp_addr);
+			mfc_debug(2, "[NALQ][DPB] buf[%d][%d] will reused. addr: 0x%08llx\n",
+					dst_mb->vb.vb2_buf.index, dst_mb->dpb_index, disp_addr);
 			dst_mb->used = 0;
+#ifdef USE_DPB_INDEX
+			clear_bit(dst_mb->dpb_index, &dec->available_dpb);
+#else
 			clear_bit(dst_mb->vb.vb2_buf.index, &dec->available_dpb);
+#endif
 		}
 	}
 }
@@ -1305,8 +1313,8 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 		index = dst_mb->vb.vb2_buf.index;
 
 		/* Check if this is the buffer we're looking for */
-		mfc_debug(2, "[NALQ][BUFINFO][DPB] ctx[%d] get dst index: %d, addr[0]: 0x%08llx\n",
-				ctx->num, index, dst_mb->addr[0][0]);
+		mfc_debug(2, "[NALQ][BUFINFO][DPB] ctx[%d] get dst index: [%d][%d], addr[0]: 0x%08llx\n",
+				ctx->num, index, dst_mb->dpb_index, dst_mb->addr[0][0]);
 
 		dst_mb->vb.sequence = ctx->sequence;
 
@@ -1353,8 +1361,11 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 			vb2_set_plane_payload(&dst_mb->vb.vb2_buf, i,
 					raw->plane_size[i]);
 
+#ifdef USE_DPB_INDEX
+		clear_bit(dst_mb->dpb_index, &dec->available_dpb);
+#else
 		clear_bit(index, &dec->available_dpb);
-
+#endif
 		dst_mb->vb.flags &= ~(V4L2_BUF_FLAG_KEYFRAME |
 					V4L2_BUF_FLAG_PFRAME |
 					V4L2_BUF_FLAG_BFRAME |
@@ -1403,18 +1414,25 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 		}
 
 		mfc_qos_update_last_framerate(ctx, dst_mb->vb.vb2_buf.timestamp);
-		vb2_buffer_done(&dst_mb->vb.vb2_buf, disp_err ?
-				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 		mutex_lock(&dec->dpb_mutex);
+#ifdef USE_DPB_INDEX
+		dec->dpb[dst_mb->dpb_index].queued = 0;
+		clear_bit(dst_mb->dpb_index, &dec->queued_dpb);
+#else
 		dec->dpb[index].queued = 0;
 		clear_bit(index, &dec->queued_dpb);
+#endif
+		dec->display_index = dst_mb->dpb_index;
 		mutex_unlock(&dec->dpb_mutex);
+		vb2_buffer_done(&dst_mb->vb.vb2_buf, disp_err ?
+				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 	}
 }
 
 static void __mfc_nal_q_handle_released_buf(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
+	struct mfc_dev *dev = ctx->dev;
 	unsigned int prev_flag, released_flag = 0;
 	int i, reassigned = 0;
 
@@ -1427,8 +1445,14 @@ static void __mfc_nal_q_handle_released_buf(struct mfc_ctx *ctx, DecoderOutputSt
 			prev_flag, dec->dynamic_used, released_flag, dec->queued_dpb);
 
 	for (i = 0; i < MFC_MAX_DPBS; i++) {
-		if (dec->dynamic_used & (1 << i))
+		if (dec->dynamic_used & (1 << i)) {
 			dec->dpb[i].ref = 1;
+			if (dec->dpb[i].mapcnt == 0) {
+				mfc_err_ctx("[DPB] %d index is no dpb table\n", i);
+				mfc_print_dpb_table(ctx);
+				call_dop(dev, dump_and_stop_debug_mode, dev);
+			}
+		}
 		if (released_flag & (1 << i)) {
 			dec->dpb[i].ref = 0;
 			if (dec->spare_dpb[i].mapcnt) {
@@ -1440,8 +1464,20 @@ static void __mfc_nal_q_handle_released_buf(struct mfc_ctx *ctx, DecoderOutputSt
 				dec->dpb[i] = dec->spare_dpb[i];
 				mfc_clear_iovmm(ctx, dec->spare_dpb, ctx->dst_fmt->mem_planes, i);
 				reassigned = 1;
+			} else if (!dec->dpb[i].queued) {
+				/* Except queued buffer, the released DPB is deleted from dpb_table */
+				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 			}
 		}
+	}
+
+	/* The displayed and not referenced buffer must be freed from dpb_table */
+	if (dec->display_index >= 0) {
+		i = dec->display_index;
+		if (!(dec->dynamic_used & (1 << i)) && dec->dpb[i].mapcnt) {
+			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
+		}
+		dec->display_index = -1;
 	}
 
 	/* It is only for debugging */

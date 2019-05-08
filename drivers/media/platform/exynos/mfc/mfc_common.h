@@ -28,6 +28,8 @@
 #include "exynos_mfc_media.h"
 #include "mfc_data_struct.h"
 
+#define USE_DPB_INDEX
+
 #define MFC_DRIVER_INFO		190319
 
 #define MFC_MAX_REF_BUFS	2
