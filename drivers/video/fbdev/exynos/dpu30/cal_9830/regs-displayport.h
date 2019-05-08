@@ -1,9 +1,9 @@
 /* linux/drivers/video/fbdev/exynos/dpu/regs-displayport.h
  *
- * Copyright (c) 2016 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2019 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
- * Register definition file for Samsung vpp driver
+ * Register definition file for Samsung DisplayPort driver
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1560,64 +1560,39 @@
 #define SST2_VSC_SDP_DATA_PAYLOAD_FIFO		(0x6D80)
 
 /* PHY register */
-#if defined(CONFIG_SOC_EXYNOS9820_EVT0)
-#define DEFAULT_SFR_CNT				91
-#else /* EVT1 */
-#define DEFAULT_SFR_CNT				32
-#endif
+#define DEFAULT_SFR_CNT			44 /* COMMON + DP settings */
 
-#define CMN_REG0009				(0x0024)
-#define ANA_AUX_TX_LVL_CTRL			(0x0F << 3)
+#define CMN_REG0008				(0x0020)
+#define OVRD_AUX_EN					(0x01 << 3)
+#define AUX_EN						(0x01 << 2)
 
-#define CMN_REG00A2				(0x0288)
-#define LANE_MUX_SEL_DP_LN3			(0x01 << 7)
-#define LANE_MUX_SEL_DP_LN2			(0x01 << 6)
-#define LANE_MUX_SEL_DP_LN1			(0x01 << 5)
-#define LANE_MUX_SEL_DP_LN0			(0x01 << 4)
+#define CMN_REG00B8				(0x02E0)
+#define SSC_EN						(0x03 << 4)
+#define LANE_MUX_SEL_DP_LN3			(0x01 << 3)
+#define LANE_MUX_SEL_DP_LN2			(0x01 << 2)
+#define LANE_MUX_SEL_DP_LN1			(0x01 << 1)
+#define LANE_MUX_SEL_DP_LN0			(0x01 << 0)
+
+#define CMN_REG00B9				(0x02E4)
+#define DP_TX_LINK_BW				(0x03 << 4)
 #define DP_LANE_EN_LN3				(0x01 << 3)
 #define DP_LANE_EN_LN2				(0x01 << 2)
 #define DP_LANE_EN_LN1				(0x01 << 1)
 #define DP_LANE_EN_LN0				(0x01 << 0)
 
-#define CMN_REG00A3				(0x028C)
-#define DP_TX_LINK_BW				(0x03 << 5)
-#define OVRD_RX_CDR_DATA_MODE_EXIT		(0x01 << 4)
-
-#define CMN_REG00B4				(0x02D0)
-#define ROPLL_SSC_EN				(0x01 << 1)
-
-#define CMN_REG00E3				(0x038C)
-#define DP_INIT_RSTN				(0x01 << 3)
-#define DP_CMN_RSTN				(0x01 << 2)
-#define CDR_WATCHDOG_EN				(0x01 << 1)
+#define CMN_REG00BD				(0x02F4)
+#define DP_INIT_RSTN			(0x01 << 1)
+#define DP_CMN_RSTN				(0x01 << 0)
 
 #define TRSV_REG0204				(0x0810)
 #define LN0_TX_DRV_LVL_CTRL			(0x1F << 0)
 
-#define TRSV_REG0215				(0x0854)
-#define LN0_ANA_TX_SER_TXCLK_INV	(0x01 << 1)
-
-#define TRSV_REG0400				(0x1000)
-#define OVRD_LN1_TX_DRV_BECON_LFPS_OUT_EN	(0x01 << 5)
-
 #define TRSV_REG0404				(0x1010)
 #define LN1_TX_DRV_LVL_CTRL			(0x1F << 0)
-
-#define TRSV_REG0415				(0x1054)
-#define LN1_ANA_TX_SER_TXCLK_INV	(0x01 << 1)
 
 #define TRSV_REG0604				(0x1810)
 #define LN2_TX_DRV_LVL_CTRL			(0x1F << 0)
 
-#define TRSV_REG0615				(0x1854)
-#define LN2_ANA_TX_SER_TXCLK_INV	(0x01 << 1)
-
-#define TRSV_REG0800				(0x2000)
-#define OVRD_LN3_TX_DRV_BECON_LFPS_OUT_EN	(0x01 << 5)
-
 #define TRSV_REG0804				(0x2010)
 #define LN3_TX_DRV_LVL_CTRL			(0x1F << 0)
-
-#define TRSV_REG0815				(0x2054)
-#define LN3_ANA_TX_SER_TXCLK_INV	(0x01 << 1)
 #endif

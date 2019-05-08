@@ -18,39 +18,44 @@
 #endif
 
 u32 phy_default_value[DEFAULT_SFR_CNT][2] = {
-	{0x0830, 0x07}, {0x085c, 0x80}, {0x1030, 0x07}, {0x105c, 0x80}, {0x1830, 0x07},
-	{0x185c, 0x80}, {0x2030, 0x07}, {0x205c, 0x80}, {0x0228, 0x38}, {0x0104, 0x44},
-	{0x0248, 0x44}, {0x038C, 0x02}, {0x0878, 0x04}, {0x1878, 0x04}, {0x09A4, 0x07},
-	{0x09A8, 0x22}, {0x19A4, 0x07}, {0x19A8, 0x22}, {0x0994, 0x12}, {0x1994, 0x12},
-	{0x0998, 0x12}, {0x1998, 0x12}, {0x099C, 0x48}, {0x199C, 0x48}, {0x0898, 0x77},
-	{0x1898, 0x77}, {0x0054, 0x01}, {0x00e0, 0x38}, {0x0060, 0x24}, {0x0064, 0x77},
-	{0x0070, 0x76}, {0x0234, 0xE8},
+	/* COMMON */
+	{0x0320, 0x07}, {0x0324, 0x27},	{0x0830, 0x07}, {0x1030, 0x07}, {0x1830, 0x07},
+	{0x2030, 0x07}, {0x0858, 0x63},	{0x1058, 0x63}, {0x1858, 0x63}, {0x2058, 0x63},
+	{0x0820, 0x38}, {0x1020, 0x38},	{0x1820, 0x38},	{0x2020, 0x38}, {0x0BB8, 0x05},
+	{0x10B0, 0x05}, {0x1BB8, 0x05},	{0x20B0, 0x05},	{0x0BBC, 0x77}, {0x10B4, 0x77},
+	{0x1BBC, 0x77}, {0x20B4, 0x77}, {0x0388, 0xF0}, {0x0894, 0x00}, {0x0A1C, 0x00},
+	{0x1094, 0x00}, {0x1894, 0x00}, {0x1A1C, 0x00}, {0x2094, 0x00}, {0x0594, 0x08},
+	{0x0420, 0x77},
+	/* DP */
+	{0x027C, 0x0F}, {0x0168, 0x77}, {0x016C, 0x77}, {0x0170, 0x66},	{0x0028, 0x3D},
+	{0x0550, 0xF0}, {0x0558, 0xF0}, {0x0E08, 0x7C}, {0x09E8, 0x3F}, {0x09EC, 0xFF},
+	{0x1E08, 0x7C},	{0x19E8, 0x3F}, {0x19EC, 0xFF},
 };
 
-u32 phy_tune_parameters[4][4][4] = { /* {amp, post, pre, idrv} */
+u32 phy_tune_parameters[4][4][5] = { /* {amp, post, pre, idrv, accdrv} */
 	{	/* Swing Level_0 */
-		{0x21, 0x10, 0x42, 0xE5}, /* Pre-emphasis Level_0 */
-		{0x25, 0x14, 0x42, 0xE5}, /* Pre-emphasis Level_1 */
-		{0x26, 0x17, 0x43, 0xE5}, /* Pre-emphasis Level_2 */
-		{0x2B, 0x1C, 0x43, 0xE7}, /* Pre-emphasis Level_3 */
+		{0x22, 0x10, 0x42, 0x82, 0x00}, /* Pre-emphasis Level_0 */
+		{0x26, 0x15, 0x42, 0x82, 0x00}, /* Pre-emphasis Level_1 */
+		{0x26, 0x17, 0x43, 0x82, 0x00}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x1C, 0x43, 0x83, 0x30}, /* Pre-emphasis Level_3 */
 	},
 	{	/* Swing Level_1 */
-		{0x26, 0x10, 0x42, 0xE7}, /* Pre-emphasis Level_0 */
-		{0x2B, 0x15, 0x42, 0xE7}, /* Pre-emphasis Level_1 */
-		{0x2B, 0x18, 0x43, 0xE7}, /* Pre-emphasis Level_2 */
-		{0x2B, 0x18, 0x43, 0xE7}, /* Pre-emphasis Level_3 */
+		{0x26, 0x10, 0x42, 0x82, 0x00}, /* Pre-emphasis Level_0 */
+		{0x2B, 0x14, 0x42, 0x83, 0x30}, /* Pre-emphasis Level_1 */
+		{0x2B, 0x18, 0x43, 0x83, 0x30}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x18, 0x43, 0x83, 0x30}, /* Pre-emphasis Level_3 */
 	},
 	{	/* Swing Level_2 */
-		{0x2A, 0x10, 0x42, 0xE7}, /* Pre-emphasis Level_0 */
-		{0x2B, 0x15, 0x43, 0xE7}, /* Pre-emphasis Level_1 */
-		{0x2B, 0x15, 0x43, 0xE7}, /* Pre-emphasis Level_2 */
-		{0x2B, 0x15, 0x43, 0xE7}, /* Pre-emphasis Level_3 */
+		{0x2A, 0x10, 0x42, 0x83, 0x30}, /* Pre-emphasis Level_0 */
+		{0x2B, 0x17, 0x43, 0x83, 0x38}, /* Pre-emphasis Level_1 */
+		{0x2B, 0x17, 0x43, 0x83, 0x38}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x17, 0x43, 0x83, 0x38}, /* Pre-emphasis Level_3 */
 	},
 	{	/* Swing Level_3 */
-		{0x2B, 0x10, 0x43, 0xE7}, /* Pre-emphasis Level_0 */
-		{0x2B, 0x10, 0x43, 0xE7}, /* Pre-emphasis Level_1 */
-		{0x2B, 0x10, 0x43, 0xE7}, /* Pre-emphasis Level_2 */
-		{0x2B, 0x10, 0x43, 0xE7}, /* Pre-emphasis Level_3 */
+		{0x2B, 0x10, 0x43, 0x83, 0x30}, /* Pre-emphasis Level_0 */
+		{0x2B, 0x10, 0x43, 0x83, 0x30}, /* Pre-emphasis Level_1 */
+		{0x2B, 0x10, 0x43, 0x83, 0x30}, /* Pre-emphasis Level_2 */
+		{0x2B, 0x10, 0x43, 0x83, 0x30}, /* Pre-emphasis Level_3 */
 	},
 };
 
@@ -95,35 +100,39 @@ struct displayport_supported_preset supported_videos[] = {
 
 const int supported_videos_pre_cnt = ARRAY_SIZE(supported_videos);
 
-u32 audio_async_m_n[2][3][7] = {
+u32 audio_async_m_n[2][4][7] = {
 	{	/* M value set */
 		{3314, 4567, 4971, 9134, 9942, 18269, 19884},
 		{1988, 2740, 2983, 5481, 5695, 10961, 11930},
 		{ 994, 1370, 1491, 2740, 2983,  5481,  5965},
+		{ 663,  913,  994, 1827, 1988,  3654,  3977},
 	},
 	{	/* N value set */
+		{32768, 32768, 32768, 32768, 32768, 32768, 32768},
 		{32768, 32768, 32768, 32768, 32768, 32768, 32768},
 		{32768, 32768, 32768, 32768, 32768, 32768, 32768},
 		{32768, 32768, 32768, 32768, 32768, 32768, 32768},
 	}
 };
 
-u32 audio_sync_m_n[2][3][7] = {
+u32 audio_sync_m_n[2][4][7] = {
 	{	/* M value set */
 		{1024, 784, 512, 1568, 1024, 3136, 2048},
 		{1024, 784, 512, 1568, 1024, 3136, 2048},
 		{1024, 784, 512,  784,  512, 1568, 1024},
+		{1024, 784, 512, 1568, 1024, 3136, 2048},
 	},
 	{	/* N value set */
-		{10125,  5625,  3375, 5625, 3375, 5625, 3375},
-		{16875,  9375,  5625, 9375, 5625, 9375, 5625},
-		{33750, 18750, 11250, 9375, 5625, 9375, 5625},
+		{10125,  5625,  3375,  5625,  3375,  5625,  3375},
+		{16875,  9375,  5625,  9375,  5625,  9375,  5625},
+		{33750, 18750, 11250,  9375,  5625,  9375,  5625},
+		{50625, 28125, 16875, 28125, 16875, 28125, 16875},
 	}
 };
 
 u32 m_aud_master[7] = {32000, 44100, 48000, 88200, 96000, 176000, 192000};
 
-u32 n_aud_master[3] = {81000000, 135000000, 270000000};
+u32 n_aud_master[4] = {81000000, 135000000, 270000000, 405000000};
 
 void displayport_reg_sw_reset(void)
 {
@@ -147,15 +156,9 @@ void displayport_reg_sw_reset(void)
 void displayport_reg_phy_reset(u32 en)
 {
 	if (en)
-		displayport_phy_write_mask(CMN_REG00E3, 0, DP_CMN_RSTN);
-	else {
-		displayport_phy_write(CMN_REG00E3, DP_INIT_RSTN | CDR_WATCHDOG_EN);
-
-		udelay(1);
-
-		displayport_phy_write(CMN_REG00E3,
-				DP_INIT_RSTN | DP_CMN_RSTN | CDR_WATCHDOG_EN);
-	}
+		displayport_phy_write_mask(CMN_REG00BD, 0, DP_INIT_RSTN | DP_CMN_RSTN);
+	else
+		displayport_phy_write_mask(CMN_REG00BD, ~0, DP_INIT_RSTN | DP_CMN_RSTN);
 }
 
 void displayport_reg_phy_init_setting(void)
@@ -165,7 +168,7 @@ void displayport_reg_phy_init_setting(void)
 	for (i = 0; i < DEFAULT_SFR_CNT; i++)
 		displayport_phy_write(phy_default_value[i][0], phy_default_value[i][1]);
 
-	displayport_phy_write_mask(CMN_REG0009, 0xA, ANA_AUX_TX_LVL_CTRL);
+	displayport_phy_write_mask(CMN_REG0008, 0, OVRD_AUX_EN);
 }
 
 void displayport_reg_phy_mode_setting(void)
@@ -195,18 +198,6 @@ void displayport_reg_phy_mode_setting(void)
 				| LANE_MUX_SEL_DP_LN1 | LANE_MUX_SEL_DP_LN0;
 		lane_en_val = DP_LANE_EN_LN3 | DP_LANE_EN_LN2
 				| DP_LANE_EN_LN1 | DP_LANE_EN_LN0;
-
-		if (displayport_reg_phy_get_link_bw() < LINK_RATE_5_4Gbps) {
-			displayport_phy_write_mask(TRSV_REG0215, 1, LN0_ANA_TX_SER_TXCLK_INV);
-			displayport_phy_write_mask(TRSV_REG0415, 1, LN1_ANA_TX_SER_TXCLK_INV);
-			displayport_phy_write_mask(TRSV_REG0615, 1, LN2_ANA_TX_SER_TXCLK_INV);
-			displayport_phy_write_mask(TRSV_REG0815, 1, LN3_ANA_TX_SER_TXCLK_INV);
-		} else {
-			displayport_phy_write_mask(TRSV_REG0215, 0, LN0_ANA_TX_SER_TXCLK_INV);
-			displayport_phy_write_mask(TRSV_REG0415, 0, LN1_ANA_TX_SER_TXCLK_INV);
-			displayport_phy_write_mask(TRSV_REG0615, 0, LN2_ANA_TX_SER_TXCLK_INV);
-			displayport_phy_write_mask(TRSV_REG0815, 0, LN3_ANA_TX_SER_TXCLK_INV);
-		}
 		break;
 
 	case CCIC_NOTIFY_DP_PIN_B:
@@ -218,33 +209,9 @@ void displayport_reg_phy_mode_setting(void)
 		if (displayport->dp_sw_sel) {
 			lane_config_val = LANE_MUX_SEL_DP_LN3 | LANE_MUX_SEL_DP_LN2;
 			lane_en_val = DP_LANE_EN_LN3 | DP_LANE_EN_LN2;
-
-			if (displayport_reg_phy_get_link_bw() < LINK_RATE_5_4Gbps) {
-				displayport_phy_write_mask(TRSV_REG0215, 0, LN0_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0415, 0, LN1_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0615, 1, LN2_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0815, 1, LN3_ANA_TX_SER_TXCLK_INV);
-			} else {
-				displayport_phy_write_mask(TRSV_REG0215, 0, LN0_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0415, 0, LN1_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0615, 0, LN2_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0815, 0, LN3_ANA_TX_SER_TXCLK_INV);
-			}
 		} else {
 			lane_config_val = LANE_MUX_SEL_DP_LN1 | LANE_MUX_SEL_DP_LN0;
 			lane_en_val = DP_LANE_EN_LN1 | DP_LANE_EN_LN0;
-
-			if (displayport_reg_phy_get_link_bw() < LINK_RATE_5_4Gbps) {
-				displayport_phy_write_mask(TRSV_REG0215, 1, LN0_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0415, 1, LN1_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0615, 0, LN2_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0815, 0, LN3_ANA_TX_SER_TXCLK_INV);
-			} else {
-				displayport_phy_write_mask(TRSV_REG0215, 0, LN0_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0415, 0, LN1_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0615, 0, LN2_ANA_TX_SER_TXCLK_INV);
-				displayport_phy_write_mask(TRSV_REG0815, 0, LN3_ANA_TX_SER_TXCLK_INV);
-			}
 		}
 		break;
 
@@ -253,12 +220,19 @@ void displayport_reg_phy_mode_setting(void)
 		break;
 	}
 #endif
-	displayport_phy_write(CMN_REG00A2, lane_config_val | lane_en_val);
+
+	displayport_phy_write_mask(CMN_REG00B8, lane_config_val,
+			LANE_MUX_SEL_DP_LN3 | LANE_MUX_SEL_DP_LN2
+			| LANE_MUX_SEL_DP_LN1 | LANE_MUX_SEL_DP_LN0);
+
+	displayport_phy_write_mask(CMN_REG00B9, lane_en_val,
+			DP_LANE_EN_LN3 | DP_LANE_EN_LN2
+			| DP_LANE_EN_LN1 | DP_LANE_EN_LN0);
 }
 
 void displayport_reg_phy_ssc_enable(u32 en)
 {
-	displayport_phy_write_mask(CMN_REG00B4, en, ROPLL_SSC_EN);
+	displayport_phy_write_mask(CMN_REG00B8, en, SSC_EN);
 }
 
 void displayport_reg_wait_phy_pll_lock(void)
@@ -281,6 +255,9 @@ void displayport_reg_phy_set_link_bw(u8 link_rate)
 	u32 val = 0;
 
 	switch (link_rate) {
+	case LINK_RATE_8_1Gbps:
+		val = 0x03;
+		break;
 	case LINK_RATE_5_4Gbps:
 		val = 0x02;
 		break;
@@ -294,16 +271,19 @@ void displayport_reg_phy_set_link_bw(u8 link_rate)
 		val = 0x02;
 	}
 
-	displayport_phy_write_mask(CMN_REG00A3, val, DP_TX_LINK_BW);
+	displayport_phy_write_mask(CMN_REG00B9, val, DP_TX_LINK_BW);
 }
 
 u32 displayport_reg_phy_get_link_bw(void)
 {
 	u32 val = 0;
 
-	val = displayport_phy_read_mask(CMN_REG00A3, DP_TX_LINK_BW) >> 5;
+	val = displayport_phy_read_mask(CMN_REG00B9, DP_TX_LINK_BW) >> 4;
 
 	switch (val) {
+	case 0x03:
+		val = LINK_RATE_8_1Gbps;
+		break;
 	case 0x02:
 		val = LINK_RATE_5_4Gbps;
 		break;
@@ -385,7 +365,7 @@ void displayport_reg_set_phy_tune(u32 phy_lane_num, u32 amp_lvl, u32 pre_emp_lvl
 		break;
 	}
 
-	for (i = AMP; i <= IDRV; i++) {
+	for (i = AMP; i <= ACCDRV; i++) {
 		val = phy_tune_parameters[amp_lvl][pre_emp_lvl][i];
 		displayport_phy_write(addr + i * 4, val);
 	}
@@ -654,7 +634,9 @@ u32 displayport_reg_get_ls_clk(void)
 
 	val = displayport_reg_phy_get_link_bw();
 
-	if (val == LINK_RATE_5_4Gbps)
+	if (val == LINK_RATE_8_1Gbps)
+		ls_clk = 810000000;
+	else if (val == LINK_RATE_5_4Gbps)
 		ls_clk = 540000000;
 	else if (val == LINK_RATE_2_7Gbps)
 		ls_clk = 270000000;
@@ -1607,8 +1589,10 @@ void displayport_reg_set_audio_m_n(audio_sync_mode audio_sync_mode,
 		array_set = 0;
 	else if (link_bandwidth_set == LINK_RATE_2_7Gbps)
 		array_set = 1;
-	else/* if (link_bandwidth_set == LINK_RATE_5_4Gbps)*/
+	else if (link_bandwidth_set == LINK_RATE_5_4Gbps)
 		array_set = 2;
+	else/* if (link_bandwidth_set == LINK_RATE_8_1Gbps)*/
+		array_set = 3;
 
 	if (audio_sync_mode == ASYNC_MODE) {
 		m_value = audio_async_m_n[0][array_set][audio_sampling_freq];
@@ -1707,8 +1691,10 @@ void displayport_reg_set_audio_sampling_frequency(enum audio_sampling_frequency 
 		n_aud_master_set = 0;
 	else if (link_bandwidth_set == LINK_RATE_2_7Gbps)
 		n_aud_master_set = 1;
-	else/* if (link_bandwidth_set == LINK_RATE_5_4Gbps)*/
+	else if (link_bandwidth_set == LINK_RATE_5_4Gbps)
 		n_aud_master_set = 2;
+	else/* if (link_bandwidth_set == LINK_RATE_8_1Gbps)*/
+		n_aud_master_set = 3;
 
 	displayport_write(SST1_MAUD_MASTER_MODE, m_aud_master[audio_sampling_freq]);
 	displayport_write(SST1_NAUD_MASTER_MODE, n_aud_master[n_aud_master_set]);
