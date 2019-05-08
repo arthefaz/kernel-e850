@@ -11,7 +11,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/of_address.h>
 #include <linux/proc_fs.h>
@@ -1394,8 +1393,6 @@ static int mfc_probe(struct platform_device *pdev)
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	int i;
 #endif
-
-	dev_set_socdata(&pdev->dev, "Exynos", "MFC");
 
 	dev_dbg(&pdev->dev, "%s()\n", __func__);
 	dev = devm_kzalloc(&pdev->dev, sizeof(struct mfc_dev), GFP_KERNEL);
