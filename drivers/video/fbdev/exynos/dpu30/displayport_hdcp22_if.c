@@ -112,6 +112,7 @@ void reset_dp_hdcp_module(void)
 
 int displayport_hdcp22_authenticate()
 {
+#if defined(CONFIG_EXYNOS_HDCP2)
 #ifdef CONFIG_HDCP2_FUNC_TEST_MODE
 	displayport_info("HDCP22 DRM Always On.\n");
 	return hdcp_dplink_auth_check(HDCP_DRM_ON);
@@ -123,6 +124,10 @@ int displayport_hdcp22_authenticate()
 		hdcp_dplink_auth_check(HDCP_DRM_ON);
 
 	reauth_trigger = 0;
+	return 0;
+#endif
+#else
+	displayport_info("Not compiled EXYNOS_HDCP2 driver\n");
 	return 0;
 #endif
 }
