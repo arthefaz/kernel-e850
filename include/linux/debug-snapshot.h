@@ -225,6 +225,7 @@ extern void dbg_snapshot_binder(struct trace_binder_transaction_base *base,
 #define dbg_snapshot_hook_hardlockup_entry(a) do { } while(0)
 #define dbg_snapshot_hook_hardlockup_exit() do { } while(0)
 #define dbg_snapshot_binder(a,b,c)	do { } while(0)
+#define dbg_snapshot_save_log(a, b)	do { } while(0)
 
 static inline unsigned int dbg_snapshot_get_item_size(char *name)
 {
