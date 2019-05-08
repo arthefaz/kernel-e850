@@ -160,7 +160,7 @@ static void __mfc_handle_frame_all_extracted(struct mfc_ctx *ctx)
 static void __mfc_handle_frame_copy_timestamp(struct mfc_ctx *ctx)
 {
 	struct mfc_dev *dev = ctx->dev;
-	struct mfc_buf *ref_mb, *src_mb;
+	struct mfc_buf *dst_mb, *src_mb;
 	dma_addr_t dec_y_addr;
 
 	dec_y_addr = (dma_addr_t)mfc_get_dec_y_addr();
@@ -172,49 +172,17 @@ static void __mfc_handle_frame_copy_timestamp(struct mfc_ctx *ctx)
 		return;
 	}
 
-	ref_mb = mfc_find_buf(ctx, &ctx->ref_buf_queue, dec_y_addr);
-	if (ref_mb)
-		ref_mb->vb.vb2_buf.timestamp = src_mb->vb.vb2_buf.timestamp;
+	dst_mb = mfc_find_buf(ctx, &ctx->dst_buf_queue, dec_y_addr);
+	if (dst_mb)
+		dst_mb->vb.vb2_buf.timestamp = src_mb->vb.vb2_buf.timestamp;
 }
 
-static void __mfc_handle_frame_output_move(struct mfc_ctx *ctx,
-		dma_addr_t dspl_y_addr, unsigned int released_flag)
-{
-	struct mfc_dev *dev = ctx->dev;
-	struct mfc_dec *dec = ctx->dec_priv;
-	struct mfc_buf *ref_mb;
-	int index;
-
-	ref_mb = mfc_find_move_buf(ctx, &ctx->dst_buf_queue, &ctx->ref_buf_queue,
-			dspl_y_addr, released_flag);
-	if (ref_mb) {
-		index = ref_mb->vb.vb2_buf.index;
-
-		/* Check if this is the buffer we're looking for */
-		mfc_debug(2, "[DPB] Found buf[%d] 0x%08llx, looking for disp addr 0x%08llx\n",
-				index, ref_mb->addr[0][0], dspl_y_addr);
-
-		if (released_flag & (1 << index)) {
-			dec->available_dpb &= ~(1 << index);
-			released_flag &= ~(1 << index);
-			mfc_debug(2, "[DPB] Corrupted frame(%d), it will be re-used(release)\n",
-					mfc_get_warn(mfc_get_int_err()));
-		} else {
-			dec->err_reuse_flag |= 1 << index;
-			mfc_debug(2, "[DPB] Corrupted frame(%d), it will be re-used(not released)\n",
-					mfc_get_warn(mfc_get_int_err()));
-		}
-		dec->dynamic_used |= released_flag;
-	}
-}
-
-static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx,
-		unsigned int err, unsigned int released_flag)
+static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx, unsigned int err)
 {
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_dec *dec = ctx->dec_priv;
 	struct mfc_raw_info *raw = &ctx->raw_buf;
-	struct mfc_buf *ref_mb;
+	struct mfc_buf *dst_mb;
 	dma_addr_t dspl_y_addr;
 	unsigned int frame_type;
 	unsigned int dst_frame_status;
@@ -249,90 +217,90 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx,
 		frame_type = mfc_get_disp_frame_type();
 	}
 
-	ref_mb = mfc_find_del_buf(ctx, &ctx->ref_buf_queue, dspl_y_addr);
-	if (ref_mb) {
-		index = ref_mb->vb.vb2_buf.index;
+	dst_mb = mfc_find_del_buf(ctx, &ctx->dst_buf_queue, dspl_y_addr);
+	if (dst_mb) {
+		index = dst_mb->vb.vb2_buf.index;
 		/* Check if this is the buffer we're looking for */
 		mfc_debug(2, "[BUFINFO][DPB] ctx[%d] get dst index: %d, addr[0]: 0x%08llx\n",
-				ctx->num, index, ref_mb->addr[0][0]);
+				ctx->num, index, dst_mb->addr[0][0]);
 
-		ref_mb->vb.sequence = ctx->sequence;
-		ref_mb->vb.field = __mfc_handle_frame_field(ctx);
+		dst_mb->vb.sequence = ctx->sequence;
+		dst_mb->vb.field = __mfc_handle_frame_field(ctx);
 
 		/* Set reserved2 bits in order to inform SEI information */
-		mfc_clear_vb_flag(ref_mb);
+		mfc_clear_vb_flag(dst_mb);
 
 		if (is_content_light) {
-			mfc_set_vb_flag(ref_mb, MFC_FLAG_HDR_CONTENT_LIGHT);
+			mfc_set_vb_flag(dst_mb, MFC_FLAG_HDR_CONTENT_LIGHT);
 			mfc_debug(2, "[HDR] content light level parsed\n");
 		}
 
 		if (is_display_colour) {
-			mfc_set_vb_flag(ref_mb, MFC_FLAG_HDR_DISPLAY_COLOUR);
+			mfc_set_vb_flag(dst_mb, MFC_FLAG_HDR_DISPLAY_COLOUR);
 			mfc_debug(2, "[HDR] mastering display colour parsed\n");
 		}
 
 		if (is_video_signal_type) {
-			mfc_set_vb_flag(ref_mb, MFC_FLAG_HDR_VIDEO_SIGNAL_TYPE);
+			mfc_set_vb_flag(dst_mb, MFC_FLAG_HDR_VIDEO_SIGNAL_TYPE);
 			mfc_debug(2, "[HDR] video signal type parsed\n");
 			if (is_colour_description) {
-				mfc_set_vb_flag(ref_mb, MFC_FLAG_HDR_MAXTIX_COEFF);
+				mfc_set_vb_flag(dst_mb, MFC_FLAG_HDR_MAXTIX_COEFF);
 				mfc_debug(2, "[HDR] matrix coefficients parsed\n");
-				mfc_set_vb_flag(ref_mb, MFC_FLAG_HDR_COLOUR_DESC);
+				mfc_set_vb_flag(dst_mb, MFC_FLAG_HDR_COLOUR_DESC);
 				mfc_debug(2, "[HDR] colour description parsed\n");
 			}
 		}
 
 		if (IS_VP9_DEC(ctx) && MFC_FEATURE_SUPPORT(dev, dev->pdata->color_aspect_dec)) {
 			if (dec->color_space != MFC_REG_D_COLOR_UNKNOWN) {
-				mfc_set_vb_flag(ref_mb, MFC_FLAG_HDR_COLOUR_DESC);
+				mfc_set_vb_flag(dst_mb, MFC_FLAG_HDR_COLOUR_DESC);
 				mfc_debug(2, "[HDR] color space parsed\n");
 			}
-			mfc_set_vb_flag(ref_mb, MFC_FLAG_HDR_VIDEO_SIGNAL_TYPE);
+			mfc_set_vb_flag(dst_mb, MFC_FLAG_HDR_VIDEO_SIGNAL_TYPE);
 			mfc_debug(2, "[HDR] color range parsed\n");
 		}
 
 		if (dec->black_bar_updated) {
-			mfc_set_vb_flag(ref_mb, MFC_FLAG_BLACKBAR_DETECT);
+			mfc_set_vb_flag(dst_mb, MFC_FLAG_BLACKBAR_DETECT);
 			mfc_debug(3, "[BLACKBAR] black bar detected\n");
 		}
 
 		if (is_hdr10_plus_sei) {
 			mfc_get_hdr_plus_info(ctx, &dec->hdr10_plus_info[index]);
-			mfc_set_vb_flag(ref_mb, MFC_FLAG_HDR_PLUS);
+			mfc_set_vb_flag(dst_mb, MFC_FLAG_HDR_PLUS);
 			mfc_debug(2, "[HDR+] HDR10 plus dyanmic SEI metadata parsed\n");
 		} else {
 			dec->hdr10_plus_info[index].valid = 0;
 		}
 
 		if (ctx->src_fmt->mem_planes == 1) {
-			vb2_set_plane_payload(&ref_mb->vb.vb2_buf, 0,
+			vb2_set_plane_payload(&dst_mb->vb.vb2_buf, 0,
 					raw->total_plane_size);
 			mfc_debug(5, "single plane payload: %d\n",
 					raw->total_plane_size);
 		} else {
 			for (i = 0; i < ctx->src_fmt->mem_planes; i++) {
-				vb2_set_plane_payload(&ref_mb->vb.vb2_buf, i,
+				vb2_set_plane_payload(&dst_mb->vb.vb2_buf, i,
 						raw->plane_size[i]);
 			}
 		}
 
 		clear_bit(index, &dec->available_dpb);
 
-		ref_mb->vb.flags &= ~(V4L2_BUF_FLAG_KEYFRAME |
+		dst_mb->vb.flags &= ~(V4L2_BUF_FLAG_KEYFRAME |
 					V4L2_BUF_FLAG_PFRAME |
 					V4L2_BUF_FLAG_BFRAME |
 					V4L2_BUF_FLAG_ERROR);
 
 		switch (frame_type) {
 			case MFC_REG_DISPLAY_FRAME_I:
-				ref_mb->vb.flags |= V4L2_BUF_FLAG_KEYFRAME;
+				dst_mb->vb.flags |= V4L2_BUF_FLAG_KEYFRAME;
 				break;
 			case MFC_REG_DISPLAY_FRAME_P:
-				ref_mb->vb.flags |= V4L2_BUF_FLAG_PFRAME;
+				dst_mb->vb.flags |= V4L2_BUF_FLAG_PFRAME;
 				break;
 			case MFC_REG_DISPLAY_FRAME_B:
-				ref_mb->vb.flags |= V4L2_BUF_FLAG_BFRAME;
+				dst_mb->vb.flags |= V4L2_BUF_FLAG_BFRAME;
 				break;
 			default:
 				break;
@@ -341,13 +309,11 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx,
 		if (mfc_get_warn(err)) {
 			mfc_err_ctx("Warning for displayed frame: %d\n",
 					mfc_get_warn(err));
-			ref_mb->vb.flags |= V4L2_BUF_FLAG_ERROR;
+			dst_mb->vb.flags |= V4L2_BUF_FLAG_ERROR;
 		}
 
 		if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->dst_ctrls[index]) < 0)
 			mfc_err_ctx("failed in get_buf_ctrls_val\n");
-
-		mfc_handle_released_info(ctx, released_flag, index);
 
 		if (dec->immediate_display == 1) {
 			dst_frame_status = mfc_get_dec_status();
@@ -374,24 +340,32 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx,
 			dec->y_addr_for_pb = 0;
 		}
 
-		mfc_qos_update_last_framerate(ctx, ref_mb->vb.vb2_buf.timestamp);
-		vb2_buffer_done(&ref_mb->vb.vb2_buf, mfc_get_warn(err) ?
+		mfc_qos_update_last_framerate(ctx, dst_mb->vb.vb2_buf.timestamp);
+		vb2_buffer_done(&dst_mb->vb.vb2_buf, mfc_get_warn(err) ?
 				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 	}
 }
 
-static void __mfc_handle_released_buf(struct mfc_ctx *ctx, unsigned int released_flag)
+static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
 {
+	struct mfc_dev *dev = ctx->dev;
 	struct mfc_dec *dec = ctx->dec_priv;
+	unsigned int prev_flag, released_flag = 0;
 	int i, reassigned = 0;
 
 	mutex_lock(&dec->dpb_mutex);
 
+	prev_flag = dec->dynamic_used;
+	dec->dynamic_used = mfc_get_dec_used_flag();
+	released_flag = prev_flag & (~dec->dynamic_used);
+	mfc_debug(2, "[DPB] Used flag: old = %08x, new = %08x, Released buffer = %08x\n",
+			prev_flag, dec->dynamic_used, released_flag);
+
 	for (i = 0; i < MFC_MAX_DPBS; i++) {
 		if ((released_flag & (1 << i)) && dec->spare_dpb[i].mapcnt) {
-			mfc_debug(2, "[IOVMM] dpb[%d] %#llx -> %llx reassigned from spare\n",
+			mfc_debug(2, "[IOVMM] DPB[%d] %#llx -> %#llx reassigned from spare\n",
 					i, dec->dpb[i].addr[0], dec->spare_dpb[i].addr[0]);
-			MFC_TRACE_CTX("dpb[%d] %#llx -> %llx reassigned\n",
+			MFC_TRACE_CTX("DPB[%d] %#llx -> %#llx reassigned\n",
 					i, dec->dpb[i].addr[0], dec->spare_dpb[i].addr[0]);
 			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 			dec->dpb[i] = dec->spare_dpb[i];
@@ -402,19 +376,18 @@ static void __mfc_handle_released_buf(struct mfc_ctx *ctx, unsigned int released
 
 	/* It is only for debugging */
 	if (reassigned)
-		mfc_print_iovmm(ctx);
+		mfc_print_dpb_table(ctx);
 
 	mutex_unlock(&dec->dpb_mutex);
 }
 
-static void __mfc_handle_frame_new(struct mfc_ctx *ctx, unsigned int err)
+static void __mfc_handle_frame_output(struct mfc_ctx *ctx, unsigned int err)
 {
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_dec *dec = ctx->dec_priv;
 	dma_addr_t dspl_y_addr;
 	unsigned int frame_type;
 	int mvc_view_id;
-	unsigned int prev_flag, released_flag = 0;
 
 	frame_type = mfc_get_disp_frame_type();
 	mvc_view_id = mfc_get_mvc_disp_view_id();
@@ -440,22 +413,9 @@ static void __mfc_handle_frame_new(struct mfc_ctx *ctx, unsigned int err)
 		if (!CODEC_NOT_CODED(ctx))
 			return;
 
-	prev_flag = dec->dynamic_used;
-	dec->dynamic_used = mfc_get_dec_used_flag();
-	released_flag = prev_flag & (~dec->dynamic_used);
-
-	mfc_debug(2, "[DPB] Used flag: old = %08x, new = %08x, Released buffer = %08x\n",
-			prev_flag, dec->dynamic_used, released_flag);
-
-	/* arrangement of assigned dpb during ISR handling*/
-	__mfc_handle_released_buf(ctx, released_flag);
-
-	if ((IS_VC1_RCV_DEC(ctx) &&
-		mfc_get_warn(err) == MFC_REG_ERR_SYNC_POINT_NOT_RECEIVED) ||
-		(mfc_get_warn(err) == MFC_REG_ERR_BROKEN_LINK))
-		__mfc_handle_frame_output_move(ctx, dspl_y_addr, released_flag);
-	else
-		__mfc_handle_frame_output_del(ctx, err, released_flag);
+	/* Dequeued display buffer for user */
+	if (!IS_NO_DISPLAY(ctx, err))
+		__mfc_handle_frame_output_del(ctx, err);
 }
 
 static void __mfc_handle_frame_error(struct mfc_ctx *ctx,
@@ -499,55 +459,6 @@ static void __mfc_handle_frame_error(struct mfc_ctx *ctx,
 	}
 
 	mfc_debug(2, "Assesing whether this context should be run again\n");
-}
-
-static void __mfc_handle_ref_frame(struct mfc_ctx *ctx)
-{
-	struct mfc_dev *dev = ctx->dev;
-	struct mfc_dec *dec = ctx->dec_priv;
-	struct mfc_buf *dst_mb;
-	dma_addr_t dec_addr;
-
-	dec_addr = (dma_addr_t)mfc_get_dec_y_addr();
-
-	/* Try to search decoded address in whole dst queue */
-	dst_mb = mfc_find_move_buf_used(ctx, &ctx->ref_buf_queue, &ctx->dst_buf_queue, dec_addr);
-	if (dst_mb) {
-		mfc_debug(2, "[DPB] Found in dst queue = 0x%08llx, buf = 0x%08llx\n",
-				dec_addr, dst_mb->addr[0][0]);
-
-		if (!(dec->dynamic_set & mfc_get_dec_used_flag()))
-			dec->dynamic_used |= dec->dynamic_set;
-	} else {
-		mfc_debug(2, "[DPB] Can't find buffer for addr = 0x%08llx\n", dec_addr);
-	}
-}
-
-static void __mfc_handle_reuse_buffer(struct mfc_ctx *ctx)
-{
-	struct mfc_dev *dev = ctx->dev;
-	struct mfc_dec *dec = ctx->dec_priv;
-	unsigned int prev_flag, released_flag = 0;
-	int i;
-
-	prev_flag = dec->dynamic_used;
-	dec->dynamic_used = mfc_get_dec_used_flag();
-	released_flag = prev_flag & (~dec->dynamic_used);
-
-	if (!released_flag)
-		return;
-
-	/* Reuse not referenced buf anymore */
-	for (i = 0; i < MFC_MAX_DPBS; i++)
-		if (released_flag & (1 << i))
-			if (mfc_move_reuse_buffer(ctx, i))
-				released_flag &= ~(1 << i);
-
-	/* Not reused buffer should be released when there is a display frame */
-	dec->dec_only_release_flag |= released_flag;
-	for (i = 0; i < MFC_MAX_DPBS; i++)
-		if (released_flag & (1 << i))
-			clear_bit(i, &dec->available_dpb);
 }
 
 static void __mfc_handle_frame_input(struct mfc_ctx *ctx, unsigned int err)
@@ -620,7 +531,6 @@ static void __mfc_handle_frame(struct mfc_ctx *ctx,
 	struct mfc_dec *dec = ctx->dec_priv;
 	unsigned int dst_frame_status, sei_avail_frame_pack;
 	unsigned int res_change, need_dpb_change, need_scratch_change;
-	unsigned int prev_flag, used_flag, released_flag = 0;
 
 	dst_frame_status = mfc_get_disp_status();
 	res_change = mfc_get_res_change();
@@ -647,8 +557,6 @@ static void __mfc_handle_frame(struct mfc_ctx *ctx,
 	mfc_debug(4, "[HDR] SEI display primaries: 0x%08x, 0x%08x, 0x%08x\n",
 			mfc_get_sei_mastering3(), mfc_get_sei_mastering4(),
 			mfc_get_sei_mastering5());
-	mfc_debug(2, "[DPB] Used flag: old = %08x, new = %08x\n",
-				dec->dynamic_used, mfc_get_dec_used_flag());
 
 	if (ctx->state == MFCINST_RES_CHANGE_INIT)
 		mfc_change_state(ctx, MFCINST_RES_CHANGE_FLUSH);
@@ -732,37 +640,16 @@ static void __mfc_handle_frame(struct mfc_ctx *ctx,
 		mfc_qos_on(ctx);
 	}
 
-	/* arrangement of assigned dpb table */
-	prev_flag = dec->dynamic_used;
-	used_flag = mfc_get_dec_used_flag();
-	released_flag = prev_flag & (~used_flag);
-	__mfc_handle_released_buf(ctx, released_flag);
-
-	switch (dst_frame_status) {
-	case MFC_REG_DEC_STATUS_DECODING_DISPLAY:
-		__mfc_handle_ref_frame(ctx);
-		break;
-	case MFC_REG_DEC_STATUS_DECODING_ONLY:
-		__mfc_handle_ref_frame(ctx);
-		/*
-		 * Some cases can have many decoding only frames like VP9
-		 * alt-ref frame. So need handling release buffer
-		 * because of DPB full.
-		 */
-		__mfc_handle_reuse_buffer(ctx);
-		break;
-	default:
-		break;
-	}
-
+	/* copy decoded timestamp */
 	if (mfc_dec_status_decoding(dst_frame_status))
 		__mfc_handle_frame_copy_timestamp(ctx);
 
 	/* A frame has been decoded and is in the buffer  */
 	if (mfc_dec_status_display(dst_frame_status))
-		__mfc_handle_frame_new(ctx, err);
-	else
-		mfc_debug(2, "No frame decode\n");
+		__mfc_handle_frame_output(ctx, err);
+
+	/* arrangement of assigned dpb table */
+	__mfc_handle_released_buf(ctx);
 
 	/* Mark source buffer as complete */
 	if (dst_frame_status != MFC_REG_DEC_STATUS_DISPLAY_ONLY)

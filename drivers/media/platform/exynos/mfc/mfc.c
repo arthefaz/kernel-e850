@@ -101,7 +101,6 @@ static void __mfc_deinit_dec_ctx(struct mfc_ctx *ctx)
 	mfc_delete_queue(&ctx->dst_buf_queue);
 	mfc_delete_queue(&ctx->src_buf_nal_queue);
 	mfc_delete_queue(&ctx->dst_buf_nal_queue);
-	mfc_delete_queue(&ctx->ref_buf_queue);
 
 	mfc_mem_cleanup_user_shared_handle(ctx, &dec->sh_handle_hdr);
 	kfree(dec->hdr10_plus_info);
@@ -127,7 +126,6 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	mfc_create_queue(&ctx->dst_buf_queue);
 	mfc_create_queue(&ctx->src_buf_nal_queue);
 	mfc_create_queue(&ctx->dst_buf_nal_queue);
-	mfc_create_queue(&ctx->ref_buf_queue);
 
 	for (i = 0; i < MFC_MAX_BUFFERS; i++) {
 		INIT_LIST_HEAD(&ctx->src_ctrls[i]);
@@ -157,8 +155,6 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	dec->is_interlaced = 0;
 	dec->immediate_display = 0;
 	dec->is_dts_mode = 0;
-	dec->err_reuse_flag = 0;
-	dec->dec_only_release_flag = 0;
 
 	dec->is_dynamic_dpb = 1;
 	dec->dynamic_used = 0;

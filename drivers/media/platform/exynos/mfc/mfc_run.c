@@ -358,12 +358,6 @@ int mfc_run_dec_frame(struct mfc_ctx *ctx)
 	int last_frame = 0;
 	unsigned int index;
 
-	if (mfc_is_queue_count_same(&ctx->buf_queue_lock, &ctx->dst_buf_queue, 0) &&
-			mfc_is_queue_count_smaller(&ctx->buf_queue_lock,
-				&ctx->ref_buf_queue, (ctx->dpb_count + 5))) {
-		return -EAGAIN;
-	}
-
 	/* Get the next source buffer */
 	src_mb = mfc_get_buf(ctx, &ctx->src_buf_queue, MFC_BUF_SET_USED);
 	if (!src_mb) {

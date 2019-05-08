@@ -1420,9 +1420,6 @@ struct mfc_dec {
 
 	int has_multiframe;
 
-	unsigned int err_reuse_flag;
-	unsigned int dec_only_release_flag;
-
 	unsigned int num_of_tile_over_4;
 	unsigned int super64_bframe;
 

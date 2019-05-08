@@ -194,25 +194,20 @@ int __mfc_dec_ctx_ready_set_bit(struct mfc_ctx *ctx, struct mfc_bits *data, bool
 	struct mfc_dev *dev = ctx->dev;
 	int src_buf_queue_greater_than_0 = 0;
 	int dst_buf_queue_greater_than_0 = 0;
-	int ref_buf_queue_same_dpb_count_plus_5 = 0;
 	unsigned long flags;
 	int is_ready = 0;
 
-	mfc_debug(1, "[c:%d] src = %d, dst = %d, src_nal = %d, dst_nal = %d, ref = %d, state = %d, capstat = %d\n",
+	mfc_debug(1, "[c:%d] src = %d, dst = %d, src_nal = %d, dst_nal = %d, state = %d, capstat = %d, waitstat = %d\n",
 		  ctx->num, mfc_get_queue_count(&ctx->buf_queue_lock, &ctx->src_buf_queue),
 		  mfc_get_queue_count(&ctx->buf_queue_lock, &ctx->dst_buf_queue),
 		  mfc_get_queue_count(&ctx->buf_queue_lock, &ctx->src_buf_nal_queue),
 		  mfc_get_queue_count(&ctx->buf_queue_lock, &ctx->dst_buf_nal_queue),
-		  mfc_get_queue_count(&ctx->buf_queue_lock, &ctx->ref_buf_queue),
-		  ctx->state, ctx->capture_state);
-	mfc_debug(2, "wait_state = %d\n", ctx->wait_state);
+		  ctx->state, ctx->capture_state, ctx->wait_state);
 
 	src_buf_queue_greater_than_0
 		= mfc_is_queue_count_greater(&ctx->buf_queue_lock, &ctx->src_buf_queue, 0);
 	dst_buf_queue_greater_than_0
 		= mfc_is_queue_count_greater(&ctx->buf_queue_lock, &ctx->dst_buf_queue, 0);
-	ref_buf_queue_same_dpb_count_plus_5
-		= mfc_is_queue_count_same(&ctx->buf_queue_lock, &ctx->ref_buf_queue, (ctx->dpb_count + 5));
 
 	/* If shutdown is called, do not try any cmd */
 	if (dev->shutdown)
@@ -229,12 +224,11 @@ int __mfc_dec_ctx_ready_set_bit(struct mfc_ctx *ctx, struct mfc_bits *data, bool
 	/* Context is to decode a frame */
 	else if (ctx->state == MFCINST_RUNNING &&
 		ctx->wait_state == WAIT_NONE && src_buf_queue_greater_than_0 &&
-		(dst_buf_queue_greater_than_0 || ref_buf_queue_same_dpb_count_plus_5))
+		dst_buf_queue_greater_than_0)
 		is_ready = 1;
 
 	/* Context is to return last frame */
-	else if (ctx->state == MFCINST_FINISHING &&
-		(dst_buf_queue_greater_than_0 || ref_buf_queue_same_dpb_count_plus_5))
+	else if (ctx->state == MFCINST_FINISHING && dst_buf_queue_greater_than_0)
 		is_ready = 1;
 
 	/* Context is to set buffers */

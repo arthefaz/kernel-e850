@@ -126,21 +126,11 @@ struct mfc_buf *mfc_find_buf(struct mfc_ctx *ctx, struct mfc_buf_queue *queue,
 		dma_addr_t addr);
 struct mfc_buf *mfc_find_del_buf(struct mfc_ctx *ctx, struct mfc_buf_queue *queue,
 		dma_addr_t addr);
-struct mfc_buf *mfc_find_move_buf(struct mfc_ctx *ctx,
-		struct mfc_buf_queue *to_queue, struct mfc_buf_queue *from_queue,
-		dma_addr_t addr, unsigned int released_flag);
-struct mfc_buf *mfc_find_move_buf_used(struct mfc_ctx *ctx,
-		struct mfc_buf_queue *to_queue, struct mfc_buf_queue *from_queue,
-		dma_addr_t addr);
 
 void mfc_move_all_bufs(struct mfc_ctx *ctx, struct mfc_buf_queue *to_queue,
 		struct mfc_buf_queue *from_queue, enum mfc_queue_top_type top);
 
 void mfc_cleanup_queue(spinlock_t *plock, struct mfc_buf_queue *queue);
-
-void mfc_handle_released_info(struct mfc_ctx *ctx, unsigned int released_flag, int index);
-
-struct mfc_buf *mfc_move_reuse_buffer(struct mfc_ctx *ctx, int release_index);
 
 void mfc_cleanup_enc_src_queue(struct mfc_ctx *ctx);
 void mfc_cleanup_enc_dst_queue(struct mfc_ctx *ctx);

@@ -588,6 +588,7 @@ static void __mfc_dump_dpb_table(struct mfc_dev *dev, int curr_ctx)
 {
 	struct mfc_ctx *ctx = dev->ctx[curr_ctx];
 	struct mfc_dec *dec = ctx->dec_priv;
+	struct mfc_buf *mfc_buf = NULL;
 	int i, j, k, l;
 
 	if (ctx->type != MFCINST_DECODER || ctx->dec_priv == NULL)
@@ -615,6 +616,19 @@ static void __mfc_dump_dpb_table(struct mfc_dev *dev, int curr_ctx)
 				k, dec->spare_dpb[k].addr[0], dec->spare_dpb[k].addr[1], dec->spare_dpb[k].mapcnt,
 				l, dec->spare_dpb[l].addr[0], dec->spare_dpb[l].addr[1], dec->spare_dpb[l].mapcnt);
 	}
+
+	if (!list_empty(&ctx->dst_buf_queue.head))
+		list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list)
+			dev_err(dev->device, "dst[%d] %#llx used: %d\n",
+					mfc_buf->vb.vb2_buf.index,
+					mfc_buf->addr[0][0], mfc_buf->used);
+	else if (!list_empty(&ctx->dst_buf_nal_queue.head))
+		list_for_each_entry(mfc_buf, &ctx->dst_buf_nal_queue.head, list)
+			dev_err(dev->device, "dst_nal[%d] %#llx used: %d\n",
+					mfc_buf->vb.vb2_buf.index,
+					mfc_buf->addr[0][0], mfc_buf->used);
+	else
+		dev_err(dev->device, "dst queue is empty\n");
 }
 
 static void __mfc_dump_info_context(struct mfc_dev *dev)

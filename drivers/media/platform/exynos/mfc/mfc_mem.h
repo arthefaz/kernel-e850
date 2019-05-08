@@ -35,7 +35,7 @@ static inline int mfc_bufcon_get_buf_count(struct dma_buf *dmabuf)
 	return dmabuf_container_get_count(dmabuf);
 }
 
-static inline void mfc_print_iovmm(struct mfc_ctx *ctx)
+static inline void mfc_print_dpb_table(struct mfc_ctx *ctx)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
 	int i;

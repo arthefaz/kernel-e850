@@ -457,5 +457,5 @@ void mfc_cleanup_iovmm(struct mfc_ctx *ctx)
 
 	mutex_unlock(&dec->dpb_mutex);
 
-	mfc_print_iovmm(ctx);
+	mfc_print_dpb_table(ctx);
 }
