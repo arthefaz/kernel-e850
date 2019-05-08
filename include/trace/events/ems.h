@@ -46,6 +46,43 @@ TRACE_EVENT(ems_select_task_rq,
 );
 
 /*
+ * Tracepoint for serching fit cpu
+ */
+TRACE_EVENT(ems_search_fit_cpus,
+
+	TP_PROTO(struct task_struct *p, int cpu, int nr_running, unsigned long capacity,
+			unsigned long cpu_util, unsigned long task_util),
+
+	TP_ARGS(p, cpu, nr_running, capacity, cpu_util, task_util),
+
+	TP_STRUCT__entry(
+		__array(	char,		comm,	TASK_COMM_LEN	)
+		__field(	pid_t,		pid			)
+		__field(	int,		task_cpu		)
+		__field(	int,		cpu			)
+		__field(	int,		nr_running		)
+		__field(	unsigned long,	capacity		)
+		__field(	unsigned long,	cpu_util		)
+		__field(	unsigned long,	task_util		)
+	),
+
+	TP_fast_assign(
+		memcpy(__entry->comm, p->comm, TASK_COMM_LEN);
+		__entry->pid			= p->pid;
+		__entry->task_cpu		= task_cpu(p);
+		__entry->cpu			= cpu;
+		__entry->nr_running		= nr_running;
+		__entry->capacity		= capacity;
+		__entry->cpu_util		= cpu_util;
+		__entry->task_util		= task_util;
+	),
+
+	TP_printk("comm=%s pid=%d task_cpu=%d cpu=%d nr_running=%d capacity=%lu cpu_util=%lu task_util=%lu",
+		  __entry->comm, __entry->pid, __entry->task_cpu, __entry->cpu, __entry->nr_running,
+		  __entry->capacity, __entry->cpu_util, __entry->task_util)
+);
+
+/*
  * Tracepoint for fit cpu selection
  */
 TRACE_EVENT(ems_select_fit_cpus,

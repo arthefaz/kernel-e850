@@ -34,7 +34,11 @@ static void select_fit_cpus(struct enrg_env *env)
 	 * the cpu may not be able to process the task properly, and
 	 * performance may drop. Therefore, overutil cpu is excluded.
 	 *
-	 * fit_cpus = fit_cpus & ~(overutilized cpus)
+	 * However, if cpu is overutilized but there is no running task on the
+	 * cpu, this cpu is also a candidate because the cpu is likely to become
+	 * idle.
+	 *
+	 * fit_cpus = fit_cpus & ~(running overutilized cpus)
 	 */
 	cpumask_clear(&overutil_cpus);
 	for_each_cpu(cpu, cpu_active_mask) {
@@ -44,7 +48,7 @@ static void select_fit_cpus(struct enrg_env *env)
 		if (task_cpu(p) != cpu)
 			new_util += ml_task_util(p);
 
-		if (cpu_overutilized(capacity, new_util))
+		if (cpu_overutilized(capacity, new_util) && cpu_rq(cpu)->nr_running)
 			cpumask_set_cpu(cpu, &overutil_cpus);
 	}
 
