@@ -1415,6 +1415,7 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV61",
 		.fmt = DECON_PIXEL_FORMAT_NV61,
@@ -1428,6 +1429,7 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.num_meta_planes = 0,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV16M_P210",
 		.fmt = DECON_PIXEL_FORMAT_NV16M_P210,
@@ -1441,6 +1443,7 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV61M_P210",
 		.fmt = DECON_PIXEL_FORMAT_NV61M_P210,
@@ -1454,6 +1457,7 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV16M_S10B",
 		.fmt = DECON_PIXEL_FORMAT_NV16M_S10B,
@@ -1467,6 +1471,7 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
+		.ct = COMP_TYPE_NONE,
 	}, {
 		.name = "NV61M_S10B",
 		.fmt = DECON_PIXEL_FORMAT_NV61M_S10B,
@@ -1480,6 +1485,7 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {
 		.num_meta_planes = 1,
 		.len_alpha = 0,
 		.cs = DPU_COLORSPACE_YUV422,
+		.ct = COMP_TYPE_NONE,
 	},
 };
 
