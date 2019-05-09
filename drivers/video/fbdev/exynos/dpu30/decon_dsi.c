@@ -672,8 +672,7 @@ int decon_set_par(struct fb_info *info)
 	info->fix.xpanstep = fb_panstep(var->xres, var->xres_virtual);
 	info->fix.ypanstep = fb_panstep(var->yres, var->yres_virtual);
 
-	win_regs.wincon |= wincon(var->transp.length, 0, 0xFF,
-				0xFF, DECON_BLENDING_NONE, win_no);
+	win_regs.wincon |= wincon(win_no);
 	win_regs.start_pos = win_start_pos(0, 0);
 	win_regs.end_pos = win_end_pos(0, 0, var->xres, var->yres);
 	win_regs.pixel_count = (var->xres * var->yres);
