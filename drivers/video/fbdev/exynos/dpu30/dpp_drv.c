@@ -398,6 +398,11 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 		return -EINVAL;
 	}
 
+	if (!test_bit(DPP_ATTR_SBWC, &dpp->attr) && (p->comp_type == COMP_TYPE_SBWC)) {
+		dpp_err("Not support SBWC in DPP%d - L3/L5 only!\n", dpp->id);
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
