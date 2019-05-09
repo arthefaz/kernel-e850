@@ -10,6 +10,8 @@
  * (at your option) any later version.
  */
 
+#ifdef MFC_USED_LLC
+
 #include <linux/module.h>
 #include <soc/samsung/exynos-sci.h>
 
@@ -55,3 +57,4 @@ void mfc_llc_flush(struct mfc_dev *dev)
 
 	mfc_debug_dev_leave();
 }
+#endif

@@ -15,8 +15,20 @@
 
 #include "mfc_common.h"
 
+/*
+ * If SoC supports the LLC for MFC,
+ * we should add definition the MFC_USED_LLC such as below.
+ * #define MFC_USED_LLC
+ */
+
+#ifdef MFC_USED_LLC
 void mfc_llc_enable(struct mfc_dev *dev);
 void mfc_llc_disable(struct mfc_dev *dev);
 void mfc_llc_flush(struct mfc_dev *dev);
+#else
+#define mfc_llc_enable(dev)	do {} while (0)
+#define mfc_llc_disable(dev)	do {} while (0)
+#define mfc_llc_flush(dev)	do {} while (0)
+#endif
 
 #endif /* __MFC_LLC_H */
