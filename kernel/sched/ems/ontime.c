@@ -452,14 +452,14 @@ int ontime_can_migrate_task(struct task_struct *p, int dst_cpu)
 	 */
 	runnable = ml_task_runnable(p);
 	if (runnable >= get_lower_boundary(src_cpu, p) &&
-	    check_migrate_slower(src_cpu, dst_cpu, p->sse) > 0) {
+	    check_migrate_slower(src_cpu, dst_cpu, p->sse)) {
 		/*
 		 * However, only if the source cpu is overutilized, it allows
 		 * migration if the task is not very heavy.
-		 * (criteria : task util is under 50% of cpu util)
+		 * (criteria : task util is under 75% of cpu util)
 		 */
 		if ((capacity_cpu(src_cpu, 0) * 1024) < (ml_cpu_util(src_cpu) * 1280) &&
-		    ml_task_util(p) < (_ml_cpu_util(src_cpu, p->sse) >> 1)) {
+		    ml_task_util(p) * 100 < (_ml_cpu_util(src_cpu, p->sse) * 75)) {
 			trace_ems_ontime_can_migrate(p, src_cpu, dst_cpu, true, "overutil");
 			return true;
 		}
