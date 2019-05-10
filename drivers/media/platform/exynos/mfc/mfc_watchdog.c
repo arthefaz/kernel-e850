@@ -613,15 +613,11 @@ static void __mfc_dump_dpb(struct mfc_dev *dev, int curr_ctx)
 	dev_err(dev->device, "dynnamic_used: %#x, queued: %#lx, table_used: %#x\n",
 			dec->dynamic_used, dec->queued_dpb, dec->dpb_table_used);
 	for (i = 0; i < MFC_MAX_DPBS; i++)
-		dev_err(dev->device, "[%d] dpb %#llx %#llx (%s, %s, %s) / spare %#llx %#llx (%s, %s, %s)\n",
+		dev_err(dev->device, "[%d] dpb %#llx %#llx (%s, %s, %s)\n",
 				i, dec->dpb[i].addr[0], dec->dpb[i].addr[1],
 				dec->dpb[i].mapcnt ? "map" : "unmap",
 				dec->dpb[i].ref ? "ref" : "free",
-				dec->dpb[i].queued ? "Q" : "DQ",
-				dec->spare_dpb[i].addr[0], dec->spare_dpb[i].addr[1],
-				dec->spare_dpb[i].mapcnt ? "map" : "unmap",
-				dec->spare_dpb[i].ref ? "ref" : "free",
-				dec->spare_dpb[i].queued ? "Q" : "DQ");
+				dec->dpb[i].queued ? "Q" : "DQ");
 }
 
 static void __mfc_dump_info_context(struct mfc_dev *dev)

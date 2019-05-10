@@ -656,9 +656,10 @@ int __mfc_assign_dpb_index(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf)
 /* Add dst buffer in dst_buf_queue */
 void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 {
-	unsigned long flags;
+	struct mfc_dev *dev = ctx->dev;
 	struct mfc_dec *dec;
 	struct mfc_buf *mfc_buf;
+	unsigned long flags;
 	int index;
 
 	if (!ctx) {
@@ -688,38 +689,17 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 
 	if (!dec->dpb[index].mapcnt) {
 		mfc_get_iovmm(ctx, vb, dec->dpb);
-		dec->dpb[index].queued = 1;
 	} else {
-		if (dec->dpb[index].addr[0] != mfc_buf->addr[0][0]) {
-			if (dec->dynamic_used & (1 << index)) {
-				mfc_debug(2, "[IOVMM] ref DPB[%d] was changed %#llx->%#llx (used: %#x)\n",
-						index, dec->dpb[index].addr[0],
-						mfc_buf->addr[0][0], dec->dynamic_used);
-				MFC_TRACE_CTX("ref DPB[%d] %#llx->%#llx (%#x)\n",
-						index, dec->dpb[index].addr[0],
-						mfc_buf->addr[0][0], dec->dynamic_used);
-				dec->spare_dpb[index].queued = 1;
-				mfc_get_iovmm(ctx, vb, dec->spare_dpb);
-			} else {
-				mfc_debug(2, "[IOVMM] DPB[%d] was changed %#llx->%#llx (used: %#x)\n",
-						index, dec->dpb[index].addr[0],
-						mfc_buf->addr[0][0], dec->dynamic_used);
-				MFC_TRACE_CTX("DPB[%d] %#llx->%#llx (%#x)\n",
-						index, dec->dpb[index].addr[0],
-						mfc_buf->addr[0][0], dec->dynamic_used);
-				dec->dpb[index].queued = 1;
-				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, index);
-				mfc_get_iovmm(ctx, vb, dec->dpb);
-			}
-			mfc_print_dpb_table(ctx);
-		} else {
-			dec->dpb[index].queued = 1;
-			mfc_debug(2, "[IOVMM] DPB[%d] is same %#llx(used: %#x)\n",
+		if (dec->dpb[index].addr[0] == mfc_buf->addr[0][0]) {
+			mfc_debug(2, "[DPB] DPB[%d] is same %#llx(used: %#x)\n",
 					index, dec->dpb[index].addr[0], dec->dynamic_used);
+		} else {
+			mfc_err_ctx("[DPB] wrong assign dpb index\n");
+			call_dop(dev, dump_and_stop_debug_mode, dev);
 		}
 	}
-	if (dec->dpb[index].queued)
-		dec->dpb_table_used |= (1 << index);
+	dec->dpb[index].queued = 1;
+	dec->dpb_table_used |= (1 << index);
 	mutex_unlock(&dec->dpb_mutex);
 
 	spin_lock_irqsave(&ctx->buf_queue_lock, flags);

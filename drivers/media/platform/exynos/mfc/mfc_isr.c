@@ -160,13 +160,7 @@ static void __mfc_handle_frame_all_extracted(struct mfc_ctx *ctx)
 #else
 		index = dst_mb->vb.vb2_buf.index;
 #endif
-		/* TODO: is there another way? */
-		if (dec->spare_dpb[index].mapcnt) {
-			dec->spare_dpb[index].queued = 0;
-			mfc_put_iovmm(ctx, dec->spare_dpb, ctx->dst_fmt->mem_planes, index);
-		} else {
-			dec->dpb[index].queued = 0;
-		}
+		dec->dpb[index].queued = 0;
 		clear_bit(index, &dec->queued_dpb);
 		mutex_unlock(&dec->dpb_mutex);
 		vb2_buffer_done(&dst_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
@@ -395,7 +389,7 @@ static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_dec *dec = ctx->dec_priv;
 	unsigned int prev_flag, released_flag = 0;
-	int i, reassigned = 0;
+	int i;
 
 	mutex_lock(&dec->dpb_mutex);
 
@@ -415,16 +409,7 @@ static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
 		}
 		if (released_flag & (1 << i)) {
 			dec->dpb[i].ref = 0;
-			if (dec->spare_dpb[i].mapcnt) {
-				mfc_debug(2, "[IOVMM] DPB[%d] %#llx->%#llx reassigned from spare\n",
-						i, dec->dpb[i].addr[0], dec->spare_dpb[i].addr[0]);
-				MFC_TRACE_CTX("DPB[%d] %#llx->%#llx reassigned\n",
-						i, dec->dpb[i].addr[0], dec->spare_dpb[i].addr[0]);
-				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
-				dec->dpb[i] = dec->spare_dpb[i];
-				mfc_clear_iovmm(ctx, dec->spare_dpb, ctx->dst_fmt->mem_planes, i);
-				reassigned = 1;
-			} else if (!dec->dpb[i].queued) {
+			if (!dec->dpb[i].queued) {
 				/* Except queued buffer, the released DPB is deleted from dpb_table */
 				dec->dpb_table_used &= ~(1 << i);
 				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
@@ -441,10 +426,7 @@ static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
 		}
 		dec->display_index = -1;
 	}
-
-	/* It is only for debugging */
-	if (reassigned)
-		mfc_print_dpb_table(ctx);
+	mfc_print_dpb_table(ctx);
 
 	mutex_unlock(&dec->dpb_mutex);
 }

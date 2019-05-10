@@ -70,16 +70,12 @@ static inline void mfc_print_dpb_table(struct mfc_ctx *ctx)
 			}
 		}
 		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
-		mfc_debug(2, "[%d] dpb [%d] %#010llx %#010llx (%s, %s, %s) / spare %#010llx %#010llx (%s, %s, %s)\n",
+		mfc_debug(2, "[%d] dpb [%d] %#010llx %#010llx (%s, %s, %s)\n",
 				i, found ? mfc_buf->vb.vb2_buf.index : -1,
 				dec->dpb[i].addr[0], dec->dpb[i].addr[1],
 				dec->dpb[i].mapcnt ? "map" : "unmap",
 				dec->dpb[i].ref ? "ref" : "free",
-				dec->dpb[i].queued ? "Q" : "DQ",
-				dec->spare_dpb[i].addr[0], dec->spare_dpb[i].addr[1],
-				dec->spare_dpb[i].mapcnt ? "map" : "unmap",
-				dec->spare_dpb[i].ref ? "ref" : "free",
-				dec->spare_dpb[i].queued ? "Q" : "DQ");
+				dec->dpb[i].queued ? "Q" : "DQ");
 	}
 }
 

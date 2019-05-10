@@ -1457,7 +1457,6 @@ struct mfc_dec {
 	 */
 	/* for Dynamic DPB */
 	struct dpb_table dpb[MFC_MAX_DPBS];
-	struct dpb_table spare_dpb[MFC_MAX_DPBS];
 	struct mutex dpb_mutex;
 	unsigned int dpb_table_used;
 
