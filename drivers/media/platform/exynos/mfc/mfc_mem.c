@@ -409,7 +409,6 @@ void mfc_cleanup_iovmm(struct mfc_ctx *ctx)
 			continue;
 		} else if (dec->dpb[i].mapcnt == 1) {
 			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
-			dec->dpb[i].queued = 0;
 		} else {
 			mfc_err_ctx("[IOVMM] DPB[%d] %#llx invalid mapcnt %d\n",
 					i, dec->dpb[i].addr[0], dec->dpb[i].mapcnt);

@@ -308,9 +308,11 @@ static void __mfc_dec_src_stop_streaming(struct mfc_ctx *ctx)
 static void __mfc_dec_dst_stop_streaming(struct mfc_ctx *ctx)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
-	int index = 0;
+	int index = 0, i;
 
 	mfc_cleanup_queue(&ctx->buf_queue_lock, &ctx->dst_buf_queue);
+	for (i = 0; i < MFC_MAX_DPBS; i++)
+		dec->dpb[i].queued = 0;
 	dec->queued_dpb = 0;
 	ctx->is_dpb_realloc = 0;
 	dec->y_addr_for_pb = 0;
