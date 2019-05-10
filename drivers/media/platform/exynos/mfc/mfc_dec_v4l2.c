@@ -306,6 +306,65 @@ static void __mfc_dec_change_format(struct mfc_ctx *ctx)
 		mfc_info_ctx("[FRAME] format is changed to %s\n", ctx->dst_fmt->name);
 }
 
+static int __mfc_dec_update_disp_res(struct mfc_ctx *ctx, struct v4l2_format *f)
+{
+	struct v4l2_pix_format_mplane *pix_fmt_mp = &f->fmt.pix_mp;
+	struct mfc_dec *dec = ctx->dec_priv;
+	struct mfc_raw_info *raw;
+	int i;
+
+	dec->disp_res_change = 0;
+
+	if (ctx->state >= MFCINST_RUNNING) {
+		mfc_debug(2, "dec update disp_res, state: %d\n", ctx->state);
+		MFC_TRACE_CTX("** DEC update disp_res, state: %d\n", ctx->state);
+		raw = &ctx->raw_buf;
+
+		pix_fmt_mp->width = ctx->img_width;
+		pix_fmt_mp->height = ctx->img_height;
+		pix_fmt_mp->num_planes = ctx->dst_fmt->mem_planes;
+
+		if (dec->is_interlaced)
+			pix_fmt_mp->field = V4L2_FIELD_INTERLACED;
+		else
+			pix_fmt_mp->field = V4L2_FIELD_NONE;
+
+		pix_fmt_mp->pixelformat = ctx->dst_fmt->fourcc;
+		for (i = 0; i < ctx->dst_fmt->mem_planes; i++) {
+			pix_fmt_mp->plane_fmt[i].bytesperline = raw->stride[i];
+			if (ctx->dst_fmt->mem_planes == 1) {
+				pix_fmt_mp->plane_fmt[i].sizeimage = raw->total_plane_size;
+			} else {
+				if (ctx->is_10bit || ctx->is_sbwc)
+					pix_fmt_mp->plane_fmt[i].sizeimage = raw->plane_size[i]
+						+ raw->plane_size_2bits[i];
+				else
+					pix_fmt_mp->plane_fmt[i].sizeimage = raw->plane_size[i];
+			}
+		}
+
+		/*
+		 * Do not clear WAIT_G_FMT except RUNNING state
+		 * because the resolution change (DRC) case uses WAIT_G_FMT
+		 */
+		if (ctx->state == MFCINST_RUNNING && (ctx->wait_state & WAIT_G_FMT) != 0) {
+			ctx->wait_state &= ~(WAIT_G_FMT);
+			mfc_debug(2, "clear WAIT_G_FMT %d\n", ctx->wait_state);
+			MFC_TRACE_CTX("** DEC clear WAIT_G_FMT(wait_state %d)\n", ctx->wait_state);
+		}
+	} else {
+		/*
+		 * In case of HEAD_PARSED state,
+		 * the resolution would be changed and it is not display resolution
+		 * so cannot update display resolution
+		 */
+		mfc_err_ctx("dec update disp_res, wrong state: %d\n", ctx->state);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 /* Get format */
 static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 						struct v4l2_format *f)
@@ -322,6 +381,11 @@ static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 			ctx->state, ctx->wait_state);
 	MFC_TRACE_CTX("** DEC g_fmt(state:%d wait_state:%d)\n",
 			ctx->state, ctx->wait_state);
+
+	if (dec && dec->disp_res_change) {
+		if (__mfc_dec_update_disp_res(ctx, f) == 0)
+			return 0;
+	}
 
 	if (ctx->state == MFCINST_GOT_INST ||
 	    ctx->state == MFCINST_RES_CHANGE_INIT ||
@@ -353,9 +417,7 @@ static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 		   of the movie, the buffer is bigger and
 		   further processing stages should crop to this
 		   rectangle. */
-		if (!dec->disp_res_change)
-			mfc_dec_calc_dpb_size(ctx);
-		dec->disp_res_change = 0;
+		mfc_dec_calc_dpb_size(ctx);
 
 		if (IS_LOW_MEM) {
 			unsigned int dpb_size;
