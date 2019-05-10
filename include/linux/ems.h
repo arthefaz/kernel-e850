@@ -160,30 +160,30 @@ static inline void gb_qos_update_request(struct gb_qos_request *req, u32 new_val
 /*
  * load balance
  */
-extern void lb_add_cfs_task(struct rq *rq, struct sched_entity *se) { }
-extern int lb_check_priority(int src_cpu, int dst_cpu)
+static inline void lb_add_cfs_task(struct rq *rq, struct sched_entity *se) { }
+static inline int lb_check_priority(int src_cpu, int dst_cpu)
 {
 	return 0;
 }
-extern struct list_head *lb_prefer_cfs_tasks(int src_cpu, int dst_cpu)
+static inline struct list_head *lb_prefer_cfs_tasks(int src_cpu, int dst_cpu)
 {
 	return NULL;
 }
-extern int lb_need_active_balance(enum cpu_idle_type idle,
+static inline int lb_need_active_balance(enum cpu_idle_type idle,
 				struct sched_domain *sd, int src_cpu, int dst_cpu)
 {
 	return 0;
 }
-extern bool lb_sibling_overutilized(int dst_cpu, struct sched_domain *sd,
+static inline bool lb_sibling_overutilized(int dst_cpu, struct sched_domain *sd,
 					struct cpumask *lb_cpus)
 {
 	return true;
 }
-extern bool lbt_overutilized(int cpu, int level)
+static inline bool lbt_overutilized(int cpu, int level)
 {
 	return false;
 }
-extern void update_lbt_overutil(int cpu, unsigned long capacity) { }
+static inline void update_lbt_overutil(int cpu, unsigned long capacity) { }
 
 #endif /* CONFIG_SCHED_EMS */
 
