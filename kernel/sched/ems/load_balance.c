@@ -181,7 +181,7 @@ void update_lbt_overutil(int cpu, unsigned long capacity)
 
 bool lb_sibling_overutilized(int dst_cpu, struct sched_domain *sd, struct cpumask *lb_cpus)
 {
-	bool overutilized;
+	bool overutilized = true;
 	struct sched_group *sg = sd->groups;
 
 	/* No need to check overutil status for bottom-level sched domain */
