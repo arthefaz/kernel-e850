@@ -308,6 +308,7 @@
 #define	DSIM_CMD_STATUS_ABNORMAL_CAUSE_ST_GET(x)	(((x) >> 0) & 0xff)
 
 #define DSIM_VIDEO_TIMER				(0x90)
+/* khs : DSIM_VIDEO_TIMER_COMPENSATE field should be removed at Neus */
 #define DSIM_VIDEO_TIMER_COMPENSATE(_x)			((_x) << 8)
 #define DSIM_VIDEO_TIMER_COMPENSATE_MASK		(0xffffff << 8)
 #define DSIM_VIDEO_TIMER_VSTATUS_INTR_SEL(_x)		((_x) << 1)
@@ -404,13 +405,25 @@
 #define DSIM_OPTION_SUITE				(0x010C)
 #define	DSIM_OPTION_SUITE_UPDT_EN_MASK			(0x1 << 0)
 
+#define DSIM_VT_HTIMING0				(0x0110)
+#define DSIM_VT_HTIMING0_HSA_PERIOD(_x)			((_x) << 16)
+#define DSIM_VT_HTIMING0_HSA_PERIOD_MASK		(0xffff << 16)
+#define DSIM_VT_HTIMING0_HACT_PERIOD(_x)		((_x) << 0)
+#define DSIM_VT_HTIMING0_HACT_PERIOD_MASK		(0X1fff << 0)
+
+#define DSIM_VT_HTIMING1				(0X0114)
+#define DSIM_VT_HTIMING1_HFP_PERIOD(_x)			((_x) << 16)
+#define DSIM_VT_HTIMING1_HFP_PERIOD_MASK		(0xffff << 16)
+#define DSIM_VT_HTIMING1_HBP_PERIOD(_x)			((_x) << 0)
+#define DSIM_VT_HTIMING1_HBP_PERIOD_MASK		(0xffff << 0)
+
 /*
  * DPHY  registers
  */
 
-/* 2020 */
-#define DCPHY_TOP_M4S0				0x0100
-#define DCPHY_MOD_M4S0				0x0900
+/* Neus */
+#define DCPHY_TOP_M4M4				0x0100
+#define DCPHY_MOD_M4M4				0x0900
 
 
 /* DPHY BIAS setting */
@@ -427,6 +440,7 @@
 #define DSIM_PHY_PLL_CON6			(0x0018)
 #define DSIM_PHY_PLL_CON7			(0x001C)
 #define DSIM_PHY_PLL_CON8			(0x0020)
+#define DSIM_PHY_PLL_STAT0			(0x0040)
 
 /* PLL_CON0 */
 #define DSIM_PHY_PLL_EN(_x)			(((_x) & 0x1) << 12)
@@ -484,7 +498,6 @@
 #define DSIM_PHY_PLL_STB_CNT_MASK		(0xffff << 0)
 
 /* PLL_STAT0 */
-#define DSIM_PHY_PLL_STAT0			(0x0040)
 #define DSIM_PHY_PLL_LOCK_GET(x)		(((x) >> 0) & 0x1)
 
 /* master clock lane General Control Register : GNR */
@@ -504,6 +517,7 @@
 #define DSIM_PHY_MC_ANA_CON(_id)		(0x0208 + (4 * (_id)))
 #define DSIM_PHY_MC_ANA_CON0			(0x0208)
 #define DSIM_PHY_MC_ANA_CON1			(0x020C)
+#define DSIM_PHY_MC_ANA_CON2			(0x0210)
 /* ANA_CON0 */
 #define DSIM_PHY_EDGE_CON_EN			(0x1 << 8)
 #define DSIM_PHY_RES_UP(_x)			(((_x) & 0xf) << 4)
