@@ -34,6 +34,10 @@ struct enrg_env {
 #define USS	0
 #define SSE	1
 
+
+/* EMS service */
+extern int select_service_cpu(struct task_struct *p);
+
 /* energy model */
 extern unsigned long capacity_cpu_orig(int cpu, int sse);
 extern unsigned long capacity_cpu(int cpu, int sse);
@@ -42,6 +46,7 @@ extern unsigned long capacity_ratio(int cpu, int sse);
 /* multi load */
 extern unsigned long ml_task_util(struct task_struct *p);
 extern unsigned long ml_task_runnable(struct task_struct *p);
+extern unsigned long ml_task_util_est(struct task_struct *p);
 extern unsigned long ml_boosted_task_util(struct task_struct *p);
 extern unsigned long ml_cpu_util(int cpu);
 extern unsigned long _ml_cpu_util(int cpu, int sse);

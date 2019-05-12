@@ -132,6 +132,14 @@ int exynos_select_task_rq(struct task_struct *p, int prev_cpu,
 	if (!(sd_flag & SD_BALANCE_FORK))
 		sync_entity_load_avg(&p->se);
 
+	if (wake) {
+		target_cpu = select_service_cpu(p);
+		if (target_cpu >= 0) {
+			trace_ems_select_task_rq(p, target_cpu, wake, "service");
+			return target_cpu;
+		}
+	}
+
 	if (sysctl_sched_sync_hint_enable && sync) {
 		target_cpu = smp_processor_id();
 		if (cpumask_test_cpu(target_cpu, &p->cpus_allowed)) {
