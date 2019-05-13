@@ -438,6 +438,9 @@ static void decon_reg_set_interface(u32 id, struct decon_mode_info *psr)
 	u32 dsim_if0 = 1;
 	u32 dsim_if1 = 0;
 	u32 dual_dsi = 0;
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	u32 dp_con_bits = 0;
+#endif
 
 	if (psr->out_type == DECON_OUT_DSI) {
 		dsim_if0 = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DSIM_IF0);
@@ -473,19 +476,17 @@ static void decon_reg_set_interface(u32 id, struct decon_mode_info *psr)
 		}
 
 		decon_write_mask(0, DSIM_CONNECTION_CONTROL, val, mask);
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	} else if (psr->out_type == DECON_OUT_DP) {
 		/* for MST support */
-		if (id == 2) {
-			/* decon2 - DP0 : default for single DP */
-			val = DP_CONNECTION_SEL_DP0(2);
-			mask =  DP_CONNECTION_SEL_DP0_MASK;
-		} else if (id == 1) {
-			/* decon1 - DP1 */
-			val = DP_CONNECTION_SEL_DP1(1);
-			mask =  DP_CONNECTION_SEL_DP0_MASK;
-		}
+		dp_con_bits = 4 * displayport_get_sst_id_with_decon_id(id);
+		val = id << dp_con_bits;
+		mask =  0x7 << dp_con_bits;
 
 		decon_write_mask(0, DP_CONNECTION_CONTROL, val, mask);
+
+		decon_dbg("DP_CONNECTION_CONTROL = 0x%x\n", decon_read(0, DP_CONNECTION_CONTROL));
+#endif
 	}
 }
 
@@ -1506,6 +1507,9 @@ static int decon_reg_stop_perframe(u32 id, u32 dsi_idx,
 {
 	int ret = 0;
 	int timeout_value = 0;
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	u32 sst_id = SST1;
+#endif
 
 	decon_dbg("%s +\n", __func__);
 
@@ -1524,8 +1528,11 @@ static int decon_reg_stop_perframe(u32 id, u32 dsi_idx,
 	ret = decon_reg_wait_run_is_off_timeout(id, timeout_value * MSEC);
 
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	if (psr->out_type == DECON_OUT_DP)
-		displayport_reg_lh_p_ch_power(0);
+	if (psr->out_type == DECON_OUT_DP) {
+		sst_id = displayport_get_sst_id_with_decon_id(id);
+
+		displayport_reg_lh_p_ch_power(sst_id, 0);
+	}
 #endif
 
 	decon_dbg("%s -\n", __func__);
@@ -1537,6 +1544,9 @@ static int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr,
 {
 	int ret = 0;
 	int timeout_value = 0;
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	u32 sst_id = SST1;
+#endif
 
 	decon_dbg("%s +\n", __func__);
 
@@ -1551,8 +1561,11 @@ static int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr,
 	decon_reg_update_req_global(id);
 
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	if (psr->out_type == DECON_OUT_DP)
-		displayport_reg_lh_p_ch_power(0);
+	if (psr->out_type == DECON_OUT_DP) {
+		sst_id = displayport_get_sst_id_with_decon_id(id);
+
+		displayport_reg_lh_p_ch_power(sst_id, 0);
+	}
 #endif
 
 	/* timeout : 1 / fps + 20% margin */
@@ -1784,10 +1797,12 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	if (psr->out_type == DECON_OUT_DP)
 		decon_reg_set_te_qactive_pll_mode(id, 1);
 
-	if ((id == 0) || (id == 1))
+	if (id == 0)
 		decon_reg_set_sram_share(id, DECON_FIFO_04K);
+	else if (id == 1)
+		decon_reg_set_sram_share(id, DECON_FIFO_08K); /* DP default decon */
 	else if (id == 2)
-		decon_reg_set_sram_share(id, DECON_FIFO_08K);
+		decon_reg_set_sram_share(id, DECON_FIFO_04K);
 
 	decon_reg_set_operation_mode(id, psr->psr_mode);
 
@@ -1834,10 +1849,14 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 int decon_reg_start(u32 id, struct decon_mode_info *psr)
 {
 	int ret = 0;
-
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	if (psr->out_type == DECON_OUT_DP)
-		displayport_reg_lh_p_ch_power(1);
+	u32 sst_id = SST1;
+
+	if (psr->out_type == DECON_OUT_DP) {
+		sst_id = displayport_get_sst_id_with_decon_id(id);
+
+		displayport_reg_lh_p_ch_power(sst_id, 1);
+	}
 #endif
 
 	decon_reg_direct_on_off(id, 1);
