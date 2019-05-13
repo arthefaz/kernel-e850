@@ -88,16 +88,89 @@
 					core0 {
 						cpu = <&cpu0>;
 					};
+					core1 {
+						cpu = <&cpu1>;
+					};
+					core2 {
+						cpu = <&cpu2>;
+					};
+					core3 {
+						cpu = <&cpu3>;
+					};
+					core4 {
+						cpu = <&cpu4>;
+					};
+					core5 {
+						cpu = <&cpu5>;
+					};
+				};
+				coregroup1 {
+					core0 {
+						cpu = <&cpu6>;
+					};
+					core1 {
+						cpu = <&cpu7>;
+					};
 				};
 			};
 		};
 
-		cpu0: cpu@000 {
+		cpu0: cpu@0000 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
 		};
+		cpu1: cpu@0001 {
+			device_type = "cpu";
+			compatible = "arm,ananke", "arm,armv8";
+			reg = <0x0 0x0001>;
+			enable-method = "psci";
+		};
+		cpu2: cpu@0002 {
+			device_type = "cpu";
+			compatible = "arm,ananke", "arm,armv8";
+			reg = <0x0 0x0002>;
+			enable-method = "psci";
+		};
+		cpu3: cpu@0003 {
+			device_type = "cpu";
+			compatible = "arm,ananke", "arm,armv8";
+			reg = <0x0 0x0003>;
+			enable-method = "psci";
+		};
+		cpu4: cpu@0004 {
+			device_type = "cpu";
+			compatible = "arm,ananke", "arm,armv8";
+			reg = <0x0 0x0004>;
+			enable-method = "psci";
+		};
+		cpu5: cpu@0005 {
+			device_type = "cpu";
+			compatible = "arm,ananke", "arm,armv8";
+			reg = <0x0 0x0005>;
+			enable-method = "psci";
+		};
+		cpu6: cpu@0006 {
+			device_type = "cpu";
+			compatible = "arm,deimos", "arm,armv8";
+			reg = <0x0 0x0006>;
+			enable-method = "psci";
+		};
+		cpu7: cpu@0007 {
+			device_type = "cpu";
+			compatible = "arm,deimos", "arm,armv8";
+			reg = <0x0 0x0007>;
+			enable-method = "psci";
+		};
+	};
+
+	psci {
+		compatible = "arm,psci";
+		method = "smc";
+		cpu_suspend = <0xC4000001>;
+		cpu_off = <0x84000002>;
+		cpu_on = <0xC4000003>;
 	};
 
 	gic:interrupt-controller@11F00000 {
