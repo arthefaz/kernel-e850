@@ -13,6 +13,8 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
 
 /* USI v2 mode */
 #define I2C_SW_CONF		(1<<2)
@@ -28,6 +30,8 @@ struct usi_v2_data {
 	void __iomem	*base;
 	int 		mode;
 	int		ch_id;
+	struct regmap	*sysreg;
+	unsigned int	sys_ps_cfg;
 };
 
 static const struct usi_v2_mode usi_v2_modes[] = {
@@ -54,6 +58,7 @@ static int usi_v2_probe(struct platform_device *pdev)
 	struct resource *res;
 	const char* mode_name;
 	struct usi_v2_data *data;
+	int ret;
 
 	data = devm_kzalloc(&pdev->dev, sizeof(struct usi_v2_data), GFP_KERNEL);
 	if (!data) {
@@ -78,6 +83,17 @@ static int usi_v2_probe(struct platform_device *pdev)
 	if (data->mode < 0) {
 		dev_err(&pdev->dev, "wrong usi_v2 mode: %s\n", mode_name);
 		return -EINVAL;
+	}
+
+	ret = of_property_read_u32(node, "samsung,weak-pull-up-mask", &data->sys_ps_cfg);
+	if (ret == 0) {
+		dev_info(&pdev->dev, "weak-pull-up-mask was set\n");
+		data->sysreg = syscon_regmap_lookup_by_phandle(node, "samsung,sysreg-phandle");
+		if (IS_ERR(data->sysreg))
+			dev_err(&pdev->dev, "failed to get sysreg phandle\n");
+
+		regmap_update_bits(data->sysreg, 0x0, 0x3 << data->sys_ps_cfg,
+			0x3 << data->sys_ps_cfg);
 	}
 
 	platform_set_drvdata(pdev, data);
