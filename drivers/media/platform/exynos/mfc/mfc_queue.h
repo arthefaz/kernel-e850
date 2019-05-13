@@ -119,6 +119,9 @@ struct mfc_buf *mfc_get_move_buf_used(struct mfc_ctx *ctx,
 struct mfc_buf *mfc_get_move_buf_addr(struct mfc_ctx *ctx,
 		struct mfc_buf_queue *to_queue, struct mfc_buf_queue *from_queue,
 		dma_addr_t addr);
+struct mfc_buf *mfc_get_move_buf_index(struct mfc_ctx *ctx,
+		struct mfc_buf_queue *to_queue, struct mfc_buf_queue *from_queue,
+		int index);
 
 struct mfc_buf *mfc_find_first_buf(struct mfc_ctx *ctx, struct mfc_buf_queue *queue,
 		dma_addr_t addr);

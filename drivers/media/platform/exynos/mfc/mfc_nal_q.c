@@ -1554,20 +1554,49 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 	}
 }
 
+static void __mfc_nal_q_move_released_buf(struct mfc_ctx *ctx, int released_flag)
+{
+	struct mfc_dec *dec = ctx->dec_priv;
+	struct mfc_buf *dst_mb;
+	int i;
+
+	if (!released_flag)
+		return;
+
+	for (i = 0; i < MFC_MAX_DPBS; i++) {
+		if (released_flag & (1 << i) && dec->dpb[i].queued) {
+			dst_mb = mfc_get_move_buf_index(ctx, &ctx->dst_buf_queue, &ctx->dst_buf_nal_queue, i);
+			if (dst_mb) {
+				mfc_debug(2, "[NALQ][DPB] buf[%d][%d] released will be reused. addr: 0x%08llx\n",
+						dst_mb->vb.vb2_buf.index, dst_mb->dpb_index, dst_mb->addr[0][0]);
+				dst_mb->used = 0;
+#ifdef USE_DPB_INDEX
+				clear_bit(dst_mb->dpb_index, &dec->available_dpb);
+#else
+				clear_bit(dst_mb->vb.vb2_buf.index, &dec->available_dpb);
+#endif
+			}
+		}
+	}
+}
+
 static void __mfc_nal_q_handle_released_buf(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
 	struct mfc_dev *dev = ctx->dev;
-	unsigned int prev_flag, released_flag = 0;
+	unsigned int prev_flag, cur_flag, released_flag = 0;
 	int i;
 
 	mutex_lock(&dec->dpb_mutex);
 
 	prev_flag = dec->dynamic_used;
-	dec->dynamic_used = pOutStr->UsedDpbFlagLower;
-	released_flag = prev_flag & (~dec->dynamic_used);
+	cur_flag = pOutStr->UsedDpbFlagLower;
+	released_flag = prev_flag & (~cur_flag);
 	mfc_debug(2, "[NALQ][DPB] Used flag: old = %08x, new = %08x, released = %08x, queued = %#lx\n",
-			prev_flag, dec->dynamic_used, released_flag, dec->queued_dpb);
+			prev_flag, cur_flag, released_flag, dec->queued_dpb);
+
+	__mfc_nal_q_move_released_buf(ctx, released_flag);
+	dec->dynamic_used = cur_flag;
 
 	for (i = 0; i < MFC_MAX_DPBS; i++) {
 		if (dec->dynamic_used & (1 << i)) {
