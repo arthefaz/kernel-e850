@@ -534,8 +534,15 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 	struct bts_bw bw = { 0, };
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct displayport_device *displayport = get_displayport_drvdata();
-	videoformat cur = displayport->cur_video;
-	__u64 pixelclock = supported_videos[cur].dv_timings.bt.pixelclock;
+	videoformat cur = V640X480P60;
+	__u64 pixelclock = 0;
+	u32 sst_id = SST1;
+
+	if (decon->dt.out_type == DECON_OUT_DP) {
+		sst_id = displayport_get_sst_id_with_decon_id(decon->id);
+		cur = displayport->sst[sst_id]->cur_video;
+		pixelclock = supported_videos[cur].dv_timings.bt.pixelclock;
+	}
 #endif
 
 	DPU_DEBUG_BTS("%s +\n", __func__);
@@ -556,7 +563,7 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 			bts_update_bw(decon->bts.bw_idx, bw);
 
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
-		if ((displayport->state == DISPLAYPORT_STATE_ON)
+		if ((displayport->sst[sst_id]->state == DISPLAYPORT_STATE_ON)
 			&& (pixelclock >= 533000000)) /* 4K DP case */
 			return;
 #endif
@@ -572,7 +579,7 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 			bts_update_bw(decon->bts.bw_idx, bw);
 
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
-		if ((displayport->state == DISPLAYPORT_STATE_ON)
+		if ((displayport->sst[sst_id]->state == DISPLAYPORT_STATE_ON)
 			&& (pixelclock >= 533000000)) /* 4K DP case */
 			return;
 #endif
@@ -589,12 +596,21 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 {
 #if defined(CONFIG_DECON_BTS_LEGACY) && defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct displayport_device *displayport = get_displayport_drvdata();
-	videoformat cur = displayport->cur_video;
-	__u64 pixelclock = supported_videos[cur].dv_timings.bt.pixelclock;
+	videoformat cur = V640X480P60;
+	__u64 pixelclock = 0;
+	u32 sst_id = SST1;
 #endif
 	struct decon_win_config config;
 	u64 resol_clock;
 	u32 aclk_freq = 0;
+
+#if defined(CONFIG_DECON_BTS_LEGACY) && defined(CONFIG_EXYNOS_DISPLAYPORT)
+	if (decon->dt.out_type == DECON_OUT_DP) {
+		sst_id = displayport_get_sst_id_with_decon_id(decon->id);
+		cur = displayport->sst[sst_id]->cur_video;
+		pixelclock = supported_videos[cur].dv_timings.bt.pixelclock;
+	}
+#endif
 
 	DPU_DEBUG_BTS("%s +\n", __func__);
 
@@ -655,8 +671,8 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
 	}
 
-	DPU_DEBUG_BTS("%s: decon%d, pixelclock(%u)\n", __func__, decon->id,
-			pixelclock);
+	DPU_DEBUG_BTS("%s: decon%d, pixelclock(%u)\n",
+			__func__, decon->id, pixelclock);
 #endif
 }
 
