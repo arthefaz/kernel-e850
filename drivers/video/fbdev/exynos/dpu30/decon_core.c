@@ -400,6 +400,11 @@ int decon_set_out_sd_state(struct decon_device *decon, enum decon_state state)
 	int num_dsi = (decon->dt.dsi_mode == DSI_MODE_DUAL_DSI) ? 2 : 1;
 	enum decon_state prev_state = decon->state;
 
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	if (decon->dt.out_type == DECON_OUT_DP)
+		decon_displayport_set_cur_sst_id(decon->id);
+#endif
+
 	for (i = 0; i < num_dsi; i++) {
 		decon_dbg("decon-%d state:%s -> %s, set dsi-%d\n", decon->id,
 				decon_state_names[prev_state],
@@ -694,7 +699,7 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	/* for remove under flow interrupt log when decon disable */
 	if (decon->dt.out_type == DECON_OUT_DP)
-		decon_displayport_under_flow_int_mask();
+		decon_displayport_under_flow_int_mask(decon->id);
 #endif
 
 	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true,
@@ -853,9 +858,11 @@ int decon_update_pwr_state(struct decon_device *decon, u32 mode)
 
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	if (mode == DISP_PWR_OFF && decon->dt.out_type == DECON_OUT_DP
-		&& IS_DISPLAYPORT_HPD_PLUG_STATE()) {
-		decon_info("skip decon-%d disable(hpd plug)\n", decon->id);
-		return 0;
+			&& IS_DISPLAYPORT_HPD_PLUG_STATE()) {
+		if (IS_DISPLAYPORT_SST_HPD_PLUG_STATE(displayport_get_sst_id_with_decon_id(decon->id))) {
+			decon_info("skip decon-%d disable(hpd plug)\n", decon->id);
+			return 0;
+		}
 	}
 #endif
 
