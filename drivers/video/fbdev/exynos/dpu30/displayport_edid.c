@@ -87,18 +87,66 @@ static int edid_checksum(u8 *data, int block)
 	return 0;
 }
 
-static int edid_read_block(struct displayport_device *hdev, int block, u8 *buf, size_t len)
+static int edid_read_block(u32 sst_id, struct displayport_device *displayport,
+		int block, u8 *buf, size_t len)
 {
-	int ret;
+	int ret = 0;
 	u8 offset = EDID_OFFSET(block);
 
 	if (len < EDID_BLOCK_SIZE)
 		return -EINVAL;
 
 	edid_check_set_i2c_capabilities();
-	ret = displayport_reg_edid_read(offset, EDID_BLOCK_SIZE, buf);
-	if (ret)
-		return ret;
+
+	if (displayport->mst_cap == 0) {
+		ret = displayport_reg_edid_read(offset, EDID_BLOCK_SIZE, buf);
+		if (ret)
+			return ret;
+	} else {
+#if 0
+		msg_aux_tx.req_id = REMOTE_DPCD_WRITE;
+		msg_aux_tx.port_num = displayport->sst[sst_id]->vc_config->port_num;
+		msg_aux_tx.dpcd_address = 0x00109;
+		msg_aux_tx.num_write_bytes = 1;
+		msg_aux_tx.write_data = 0x08;
+
+		sb_msg_header.link_cnt_total = 1;
+		sb_msg_header.link_cnt_remain = 0;
+		sb_msg_header.broadcast_msg = 0x0;
+		sb_msg_header.path_msg = 0x0;
+		sb_msg_header.sb_msg_body_length = 7;
+		sb_msg_header.start_of_msg_transcation = 1;
+		sb_msg_header.end_of_msg_transcation = 1;
+		sb_msg_header.msg_seq_no = 0;
+
+		displayport_info("msg_aux_tx.port_num = %d\n", msg_aux_tx.port_num);
+
+		displayport_msg_tx(DOWN_REQ);
+		displayport_msg_rx(DOWN_REP);
+#endif
+		msg_aux_tx.req_id = REMOTE_I2C_READ;
+		msg_aux_tx.num_i2c_tx = 1;
+		msg_aux_tx.port_num = displayport->sst[sst_id]->vc_config->port_num;
+		msg_aux_tx.write_i2c_dev_id = 0x50;
+		msg_aux_tx.num_write_bytes = 1;
+		msg_aux_tx.write_data = offset;
+		msg_aux_tx.no_stop_bit = 0;
+		msg_aux_tx.i2c_tx_delay = 0;
+		msg_aux_tx.read_i2c_dev_id = 0x50;
+		msg_aux_tx.num_read_bytes = EDID_BLOCK_SIZE;
+
+		sb_msg_header.link_cnt_total = 1;
+		sb_msg_header.link_cnt_remain = 0;
+		sb_msg_header.broadcast_msg = 0;
+		sb_msg_header.path_msg = 0;
+		sb_msg_header.sb_msg_body_length = 9;
+		sb_msg_header.start_of_msg_transcation = 1;
+		sb_msg_header.end_of_msg_transcation = 1;
+		sb_msg_header.msg_seq_no = 0;
+
+		displayport_msg_tx(DOWN_REQ);
+		displayport_msg_aux_remote_i2c_read(buf);
+	}
 
 	print_hex_dump(KERN_INFO, "EDID: ", DUMP_PREFIX_OFFSET, 16, 1,
 					buf, 128, false);
@@ -106,20 +154,34 @@ static int edid_read_block(struct displayport_device *hdev, int block, u8 *buf, 
 	return 0;
 }
 
-int edid_read(struct displayport_device *hdev, u8 **data)
+int edid_read(u32 sst_id, struct displayport_device *displayport, u8 **data)
 {
 	u8 block0[EDID_BLOCK_SIZE];
 	u8 *edid;
 	int block = 0;
-	int block_cnt, ret;
+	int block_cnt = 0;
+	int ret = 0;
+	int retry_num = 5;
 
-	ret = edid_read_block(hdev, 0, block0, sizeof(block0));
+EDID_READ_RETRY:
+	block = 0;
+	block_cnt = 0;
+
+	ret = edid_read_block(sst_id, displayport, 0, block0, sizeof(block0));
 	if (ret)
 		return ret;
 
 	ret = edid_checksum(block0, block);
-	if (ret)
-		return ret;
+	if (ret) {
+		if (retry_num <= 0) {
+			displayport_err("edid read error\n");
+			return ret;
+		} else {
+			msleep(100);
+			retry_num--;
+			goto EDID_READ_RETRY;
+		}
+	}
 
 	block_cnt = block0[EDID_EXTENSION_FLAG] + 1;
 	displayport_info("block_cnt = %d\n", block_cnt);
@@ -131,9 +193,8 @@ int edid_read(struct displayport_device *hdev, u8 **data)
 	memcpy(edid, block0, sizeof(block0));
 
 	while (++block < block_cnt) {
-		ret = edid_read_block(hdev, block,
-			edid + (block * EDID_BLOCK_SIZE),
-			EDID_BLOCK_SIZE);
+		ret = edid_read_block(sst_id, displayport, block,
+					edid + (block * EDID_BLOCK_SIZE), EDID_BLOCK_SIZE);
 
 		/* check error, extension tag and checksum */
 		if (ret || *(edid + (block * EDID_BLOCK_SIZE)) != 0x02 ||
@@ -184,10 +245,10 @@ bool edid_find_max_resolution(const struct v4l2_dv_timings *t1,
 	return false;
 }
 
-static void edid_find_preset(const struct fb_videomode *mode)
+static void edid_find_preset(u32 sst_id,
+		struct displayport_device *displayport, const struct fb_videomode *mode)
 {
 	int i;
-	struct displayport_device *displayport = get_displayport_drvdata();
 
 	displayport_dbg("EDID: %ux%u@%u - %u(ps?), lm:%u, rm:%u, um:%u, lm:%u",
 		mode->xres, mode->yres, mode->refresh, mode->pixclock,
@@ -203,11 +264,15 @@ static void edid_find_preset(const struct fb_videomode *mode)
 			mode->upper_margin == supported_videos[i].dv_timings.bt.vbackporch &&
 			mode->lower_margin == supported_videos[i].dv_timings.bt.vfrontporch) {
 			if (supported_videos[i].edid_support_match == false) {
-				displayport_info("EDID: found: %s\n", supported_videos[i].name);
-				supported_videos[i].edid_support_match = true;
-				preferred_preset = supported_videos[i].dv_timings;
-				if (displayport->best_video < i)
-					displayport->best_video = i;
+				if (displayport->mst_cap == 0 || i <= MAX_MST_TIMINGS_ID) {
+					displayport_info("EDID: found: %s\n", supported_videos[i].name);
+
+					supported_videos[i].edid_support_match = true;
+					preferred_preset = supported_videos[i].dv_timings;
+
+					if (displayport->sst[sst_id]->best_video < i)
+						displayport->sst[sst_id]->best_video = i;
+				}
 			}
 		}
 	}
@@ -334,7 +399,8 @@ int static dv_timing_to_fb_video(videoformat video, struct fb_videomode *fb)
 	return 0;
 }
 
-void edid_find_hdmi14_vsdb_update(struct fb_vendor *vsdb)
+void edid_find_hdmi14_vsdb_update(u32 sst_id,
+		struct displayport_device *displayport, struct fb_vendor *vsdb)
 {
 	int udmode_idx, vic_idx;
 
@@ -352,42 +418,41 @@ void edid_find_hdmi14_vsdb_update(struct fb_vendor *vsdb)
 				struct fb_videomode fb;
 
 				dv_timing_to_fb_video(ud_mode_h14b_vsdb[udmode_idx], &fb);
-				edid_find_preset(&fb);
+				edid_find_preset(sst_id, displayport, &fb);
 			}
 		}
 	}
 }
 
-void edid_parse_hdmi20_vsdb(unsigned char *edid_ext_blk,
-	struct fb_vendor *vsdb, int block_cnt)
+void edid_parse_hdmi20_vsdb(u32 sst_id, struct displayport_device *displayport,
+		unsigned char *edid_ext_blk, struct fb_vendor *vsdb, int block_cnt)
 {
 	int i;
-	struct displayport_device *displayport = get_displayport_drvdata();
 
-	displayport->rx_edid_data.max_support_clk = 0;
-	displayport->rx_edid_data.support_10bpc = 0;
+	displayport->sst[sst_id]->rx_edid_data.max_support_clk = 0;
+	displayport->sst[sst_id]->rx_edid_data.support_10bpc = 0;
 
 	for (i = 0; i < (block_cnt - 1) * EDID_BLOCK_SIZE; i++) {
 		if ((edid_ext_blk[i] & DATA_BLOCK_TAG_CODE_MASK)
-			== (VSDB_TAG_CODE << DATA_BLOCK_TAG_CODE_BIT_POSITION)
+				== (VSDB_TAG_CODE << DATA_BLOCK_TAG_CODE_BIT_POSITION)
 				&& edid_ext_blk[i + IEEE_OUI_0_BYTE_NUM] == HDMI20_IEEE_OUI_0
 				&& edid_ext_blk[i + IEEE_OUI_1_BYTE_NUM] == HDMI20_IEEE_OUI_1
 				&& edid_ext_blk[i + IEEE_OUI_2_BYTE_NUM] == HDMI20_IEEE_OUI_2) {
 			displayport_dbg("EDID: find VSDB for HDMI 2.0\n");
 
 			/* Max_TMDS_Character_Rate * 5Mhz */
-			displayport->rx_edid_data.max_support_clk =
-				edid_ext_blk[i + MAX_TMDS_RATE_BYTE_NUM] * 5;
+			displayport->sst[sst_id]->rx_edid_data.max_support_clk =
+					edid_ext_blk[i + MAX_TMDS_RATE_BYTE_NUM] * 5;
 			displayport_info("EDID: Max_TMDS_Character_Rate = %d Mhz\n",
-				displayport->rx_edid_data.max_support_clk);
+					displayport->sst[sst_id]->rx_edid_data.max_support_clk);
 
 			if (edid_ext_blk[i + DC_SUPPORT_BYTE_NUM] & DC_30BIT)
-				displayport->rx_edid_data.support_10bpc = 1;
+				displayport->sst[sst_id]->rx_edid_data.support_10bpc = 1;
 			else
-				displayport->rx_edid_data.support_10bpc = 0;
+				displayport->sst[sst_id]->rx_edid_data.support_10bpc = 0;
 
 			displayport_info("EDID: 10 bpc support = %d\n",
-				displayport->rx_edid_data.support_10bpc);
+				displayport->sst[sst_id]->rx_edid_data.support_10bpc);
 
 			break;
 		}
@@ -399,57 +464,57 @@ void edid_parse_hdmi20_vsdb(unsigned char *edid_ext_blk,
 	}
 }
 
-void edid_parse_hdr_metadata(unsigned char *edid_ext_blk,  int block_cnt)
+void edid_parse_hdr_metadata(u32 sst_id, struct displayport_device *displayport,
+		unsigned char *edid_ext_blk,  int block_cnt)
 {
 	int i;
-	struct displayport_device *displayport = get_displayport_drvdata();
 
-	displayport->rx_edid_data.hdr_support = 0;
-	displayport->rx_edid_data.eotf = 0;
-	displayport->rx_edid_data.max_lumi_data = 0;
-	displayport->rx_edid_data.max_average_lumi_data = 0;
-	displayport->rx_edid_data.min_lumi_data = 0;
+	displayport->sst[sst_id]->rx_edid_data.hdr_support = 0;
+	displayport->sst[sst_id]->rx_edid_data.eotf = 0;
+	displayport->sst[sst_id]->rx_edid_data.max_lumi_data = 0;
+	displayport->sst[sst_id]->rx_edid_data.max_average_lumi_data = 0;
+	displayport->sst[sst_id]->rx_edid_data.min_lumi_data = 0;
 
 	for (i = 0; i < (block_cnt - 1) * EDID_BLOCK_SIZE; i++) {
 		if ((edid_ext_blk[i] & DATA_BLOCK_TAG_CODE_MASK)
-			== (USE_EXTENDED_TAG_CODE << DATA_BLOCK_TAG_CODE_BIT_POSITION)
+				== (USE_EXTENDED_TAG_CODE << DATA_BLOCK_TAG_CODE_BIT_POSITION)
 				&& edid_ext_blk[i + EXTENDED_TAG_CODE_BYTE_NUM]
 				== EXTENDED_HDR_TAG_CODE) {
 			displayport_dbg("EDID: find HDR Metadata Data Block\n");
 
-			displayport->rx_edid_data.eotf =
+			displayport->sst[sst_id]->rx_edid_data.eotf =
 				edid_ext_blk[i + SUPPORTED_EOTF_BYTE_NUM];
 			displayport_dbg("EDID: SUPPORTED_EOTF = 0x%x\n",
-				displayport->rx_edid_data.eotf);
+				displayport->sst[sst_id]->rx_edid_data.eotf);
 
-			if (displayport->rx_edid_data.eotf & SMPTE_ST_2084) {
-				/*displayport->rx_edid_data.hdr_support = 1;*/
+			if (displayport->sst[sst_id]->rx_edid_data.eotf & SMPTE_ST_2084) {
+				displayport->sst[sst_id]->rx_edid_data.hdr_support = 1;
 				displayport_info("EDID: SMPTE_ST_2084 support, but not now\n");
 			}
 
-			displayport->rx_edid_data.max_lumi_data =
-				edid_ext_blk[i + MAX_LUMI_BYTE_NUM];
+			displayport->sst[sst_id]->rx_edid_data.max_lumi_data =
+					edid_ext_blk[i + MAX_LUMI_BYTE_NUM];
 			displayport_dbg("EDID: MAX_LUMI = 0x%x\n",
-				displayport->rx_edid_data.max_lumi_data);
+					displayport->sst[sst_id]->rx_edid_data.max_lumi_data);
 
-			displayport->rx_edid_data.max_average_lumi_data =
-				edid_ext_blk[i + MAX_AVERAGE_LUMI_BYTE_NUM];
+			displayport->sst[sst_id]->rx_edid_data.max_average_lumi_data =
+					edid_ext_blk[i + MAX_AVERAGE_LUMI_BYTE_NUM];
 			displayport_dbg("EDID: MAX_AVERAGE_LUMI = 0x%x\n",
-				displayport->rx_edid_data.max_average_lumi_data);
+					displayport->sst[sst_id]->rx_edid_data.max_average_lumi_data);
 
-			displayport->rx_edid_data.min_lumi_data =
-				edid_ext_blk[i + MIN_LUMI_BYTE_NUM];
+			displayport->sst[sst_id]->rx_edid_data.min_lumi_data =
+					edid_ext_blk[i + MIN_LUMI_BYTE_NUM];
 			displayport_dbg("EDID: MIN_LUMI = 0x%x\n",
-				displayport->rx_edid_data.min_lumi_data);
+					displayport->sst[sst_id]->rx_edid_data.min_lumi_data);
 
 			displayport_info("HDR: EOTF(0x%X) ST2084(%u) GAMMA(%s|%s) LUMI(max:%u,avg:%u,min:%u)\n",
-					displayport->rx_edid_data.eotf,
-					displayport->rx_edid_data.hdr_support,
-					displayport->rx_edid_data.eotf & 0x1 ? "SDR" : "",
-					displayport->rx_edid_data.eotf & 0x2 ? "HDR" : "",
-					displayport->rx_edid_data.max_lumi_data,
-					displayport->rx_edid_data.max_average_lumi_data,
-					displayport->rx_edid_data.min_lumi_data);
+					displayport->sst[sst_id]->rx_edid_data.eotf,
+					displayport->sst[sst_id]->rx_edid_data.hdr_support,
+					displayport->sst[sst_id]->rx_edid_data.eotf & 0x1 ? "SDR" : "",
+					displayport->sst[sst_id]->rx_edid_data.eotf & 0x2 ? "HDR" : "",
+					displayport->sst[sst_id]->rx_edid_data.max_lumi_data,
+					displayport->sst[sst_id]->rx_edid_data.max_average_lumi_data,
+					displayport->sst[sst_id]->rx_edid_data.min_lumi_data);
 			break;
 		}
 	}
@@ -458,24 +523,29 @@ void edid_parse_hdr_metadata(unsigned char *edid_ext_blk,  int block_cnt)
 		displayport_dbg("EDID: can't find HDR Metadata Data Block\n");
 }
 
-void edid_find_preset_in_video_data_block(u8 vic)
+void edid_find_preset_in_video_data_block(u32 sst_id,
+		struct displayport_device *displayport, u8 vic)
 {
 	int i;
-	struct displayport_device *displayport = get_displayport_drvdata();
 
 	for (i = 0; i < supported_videos_pre_cnt; i++) {
 		if ((vic != 0) && (supported_videos[i].vic == vic) &&
 				(supported_videos[i].edid_support_match == false)) {
-			supported_videos[i].edid_support_match = true;
-			if (displayport->best_video < i)
-					displayport->best_video = i;
-			displayport_info("EDID: found(VDB): %s\n", supported_videos[i].name);
+			if (displayport->mst_cap == 0 || i <= MAX_MST_TIMINGS_ID) {
+				supported_videos[i].edid_support_match = true;
+
+				if (displayport->sst[sst_id]->best_video < i)
+					displayport->sst[sst_id]->best_video = i;
+
+				displayport_info("EDID: found(VDB): %s\n", supported_videos[i].name);
+			}
 		}
 
 	}
 }
 
-static int edid_parse_audio_video_db(unsigned char *edid, struct fb_audio *sad)
+static int edid_parse_audio_video_db(u32 sst_id, struct displayport_device *displayport,
+		unsigned char *edid, struct fb_audio *sad)
 {
 	int i;
 	u8 pos = 4;
@@ -516,7 +586,7 @@ static int edid_parse_audio_video_db(unsigned char *edid, struct fb_audio *sad)
 		} else if (type == VIDEO_DATA_BLOCK) {
 			for (i = pos; i < pos + len; i++) {
 				u8 vic = edid[i] & SVD_VIC_MASK;
-				edid_find_preset_in_video_data_block(vic);
+				edid_find_preset_in_video_data_block(sst_id, displayport, vic);
 				displayport_dbg("EDID: Video data block vic:%d %s\n",
 					vic, supported_videos[i].name);
 			}
@@ -531,12 +601,12 @@ static int edid_parse_audio_video_db(unsigned char *edid, struct fb_audio *sad)
 	return 0;
 }
 
-void edid_check_detail_timing_desc1(struct fb_monspecs *specs, int modedb_len, u8 *edid)
+void edid_check_detail_timing_desc1(u32 sst_id, struct displayport_device *displayport,
+		struct fb_monspecs *specs, int modedb_len, u8 *edid)
 {
 	int i;
 	struct fb_videomode *mode = NULL;
 	u64 pixelclock = 0;
-	struct displayport_device *displayport = get_displayport_drvdata();
 	u8 *block = edid + DETAILED_TIMING_DESCRIPTIONS_START;
 
 	for (i = 0; i < modedb_len; i++) {
@@ -570,8 +640,9 @@ void edid_check_detail_timing_desc1(struct fb_monspecs *specs, int modedb_len, u
 	}
 
 	/* check if index is valid and index is bigger than best video */
-	if (i >= supported_videos_pre_cnt || i <= displayport->best_video) {
-		displayport_info("invalid timing i:%d, best:%d\n", i, displayport->best_video);
+	if (i >= supported_videos_pre_cnt || i <= displayport->sst[sst_id]->best_video) {
+		displayport_info("invalid timing i:%d, best:%d\n",
+				i, displayport->sst[sst_id]->best_video);
 		return;
 	}
 
@@ -587,7 +658,7 @@ void edid_check_detail_timing_desc1(struct fb_monspecs *specs, int modedb_len, u
 		return;
 	}
 
-	displayport->best_video = VDUMMYTIMING;
+	displayport->sst[sst_id]->best_video = VDUMMYTIMING;
 	supported_videos[VDUMMYTIMING].dv_timings.bt.width = mode->xres;
 	supported_videos[VDUMMYTIMING].dv_timings.bt.height = mode->yres;
 	supported_videos[VDUMMYTIMING].dv_timings.bt.interlaced = false;
@@ -614,7 +685,7 @@ void edid_check_detail_timing_desc1(struct fb_monspecs *specs, int modedb_len, u
 			supported_videos[VDUMMYTIMING].edid_support_match);
 }
 
-int edid_update(struct displayport_device *hdev)
+int edid_update(u32 sst_id, struct displayport_device *displayport)
 {
 	struct fb_monspecs specs;
 	struct fb_vendor vsdb;
@@ -635,9 +706,10 @@ int edid_update(struct displayport_device *hdev)
 	memset(&specs, 0, sizeof(specs));
 	memset(&sad, 0, sizeof(sad));
 
-	memset(hdev->edid_manufacturer, 0, sizeof(specs.manufacturer));
-	hdev->edid_product = 0;
-	hdev->edid_serial = 0;
+	memset(displayport->sst[sst_id]->rx_edid_data.edid_manufacturer,
+			0, sizeof(specs.manufacturer));
+	displayport->sst[sst_id]->rx_edid_data.edid_product = 0;
+	displayport->sst[sst_id]->rx_edid_data.edid_serial = 0;
 
 	preferred_preset = supported_videos[EDID_DEFAULT_TIMINGS_IDX].dv_timings;
 	supported_videos[0].edid_support_match = true; /*default support VGA*/
@@ -645,7 +717,7 @@ int edid_update(struct displayport_device *hdev)
 	supported_videos[VDUMMYTIMING].dv_timings.bt.height = 0;
 	for (i = 1; i < supported_videos_pre_cnt; i++)
 		supported_videos[i].edid_support_match = false;
-	block_cnt = edid_read(hdev, &edid);
+	block_cnt = edid_read(sst_id, displayport, &edid);
 	if (block_cnt < 0)
 		goto out;
 
@@ -659,18 +731,19 @@ int edid_update(struct displayport_device *hdev)
 
 	/* find 2D preset */
 	for (i = 0; i < specs.modedb_len; i++)
-		edid_find_preset(&specs.modedb[i]);
+		edid_find_preset(sst_id, displayport, &specs.modedb[i]);
 
 	/* color depth */
 	if (edid[EDID_COLOR_DEPTH] & 0x80) {
 		if (((edid[EDID_COLOR_DEPTH] & 0x70) >> 4) == 1)
-			hdev->bpc = BPC_6;
+			displayport->sst[sst_id]->bpc = BPC_6;
 	}
 
 	/* vendro block */
-	memcpy(hdev->edid_manufacturer, specs.manufacturer, sizeof(specs.manufacturer));
-	hdev->edid_product = specs.model;
-	hdev->edid_serial = specs.serial;
+	memcpy(displayport->sst[sst_id]->rx_edid_data.edid_manufacturer,
+			specs.manufacturer, sizeof(specs.manufacturer));
+	displayport->sst[sst_id]->rx_edid_data.edid_product = specs.model;
+	displayport->sst[sst_id]->rx_edid_data.edid_serial = specs.serial;
 
 	/* number of 128bytes blocks to follow */
 	if (block_cnt <= 1)
@@ -682,14 +755,17 @@ int edid_update(struct displayport_device *hdev)
 	}
 
 	edid_parse_hdmi14_vsdb(edid + EDID_BLOCK_SIZE, &vsdb, block_cnt);
-	edid_find_hdmi14_vsdb_update(&vsdb);
+	edid_find_hdmi14_vsdb_update(sst_id, displayport, &vsdb);
 
-	edid_parse_hdmi20_vsdb(edid + EDID_BLOCK_SIZE, &vsdb, block_cnt);
+	edid_parse_hdmi20_vsdb(sst_id, displayport,
+			edid + EDID_BLOCK_SIZE, &vsdb, block_cnt);
 
-	edid_parse_hdr_metadata(edid + EDID_BLOCK_SIZE, block_cnt);
+	edid_parse_hdr_metadata(sst_id, displayport,
+			edid + EDID_BLOCK_SIZE, block_cnt);
 
 	for (i = 1; i < block_cnt; i++)
-		edid_parse_audio_video_db(edid + (EDID_BLOCK_SIZE * i), &sad);
+		edid_parse_audio_video_db(sst_id, displayport,
+				edid + (EDID_BLOCK_SIZE * i), &sad);
 
 	if (!edid_misc)
 		edid_misc = specs.misc;
@@ -719,7 +795,8 @@ int edid_update(struct displayport_device *hdev)
 			edid_misc, audio_channels, audio_sample_rates, audio_bit_rates);
 
 out:
-	edid_check_detail_timing_desc1(&specs, modedb_len, edid);
+	edid_check_detail_timing_desc1(sst_id, displayport,
+			&specs, modedb_len, edid);
 
 	/* No supported preset found, use default */
 	if (forced_resolution >= 0) {
@@ -730,7 +807,9 @@ out:
 	if (block_cnt == -EPROTO)
 		edid_misc = FB_MISC_HDMI;
 
-	kfree(edid);
+	if (block_cnt >= 2)
+		kfree(edid);
+
 	return block_cnt;
 }
 
@@ -739,7 +818,7 @@ struct v4l2_dv_timings edid_preferred_preset(void)
 	return preferred_preset;
 }
 
-bool edid_supports_hdmi(struct displayport_device *hdev)
+bool edid_supports_hdmi(struct displayport_device *displayport)
 {
 	return edid_misc & FB_MISC_HDMI;
 }
@@ -768,12 +847,12 @@ u32 edid_audio_informs(void)
 	 * 4. channel is over 2 and under 8.
 	 * 5. channel is 8. And smaple freq is under 192KHz
 	 */
-	if ((!supported_videos[displayport->cur_video].pro_audio_support ||
+	if ((!supported_videos[displayport->sst[SST1]->cur_video].pro_audio_support ||
 				link_rate < LINK_RATE_5_4Gbps)) {
 		if ((ch_info > FB_AUDIO_1N2CH && ch_info < FB_AUDIO_8CH) ||
 				(ch_info >= FB_AUDIO_8CH && audio_sample_rates < FB_AUDIO_192KHZ)) {
 			displayport_info("reduce SF(pro_aud:%d, link_rate:0x%X, ch:0x%X, sf:0x%X)\n",
-					supported_videos[displayport->cur_video].pro_audio_support, link_rate,
+					supported_videos[displayport->sst[SST1]->cur_video].pro_audio_support, link_rate,
 					ch_info, audio_sample_rates);
 			audio_sample_rates &= 0x7; /* reduce to under 48KHz */
 		}

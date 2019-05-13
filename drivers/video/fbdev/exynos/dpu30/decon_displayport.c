@@ -18,6 +18,13 @@
 #include "decon.h"
 #include "displayport.h"
 
+void decon_displayport_set_cur_sst_id(u32 decon_id)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	displayport->cur_sst_id = displayport_get_sst_id_with_decon_id(decon_id);
+}
+
 static irqreturn_t decon_displayport_irq_handler(int irq, void *dev_data)
 {
 	struct decon_device *decon = dev_data;
@@ -137,8 +144,8 @@ int decon_displayport_create_vsync_thread(struct decon_device *decon)
 	int ret = 0;
 	char name[16];
 
-	if (decon->id != 2) {
-		decon_info("decon_displayport_create_vsync_thread is needed for displayport path\n");
+	if (decon->dt.out_type != DECON_OUT_DP) {
+		decon_info("vsync thread for DP is only needed for DP path\n");
 		return 0;
 	}
 
@@ -170,6 +177,7 @@ static int decon_displayport_set_lcd_info(struct decon_device *decon)
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct exynos_panel_info *lcd_info;
 	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = SST1;
 
 	if (decon->lcd_info == NULL) {
 		lcd_info = kzalloc(sizeof(struct exynos_panel_info), GFP_KERNEL);
@@ -181,22 +189,24 @@ static int decon_displayport_set_lcd_info(struct decon_device *decon)
 		decon->lcd_info = lcd_info;
 	}
 
-	decon->lcd_info->width = supported_videos[displayport->cur_video].dv_timings.bt.width;
-	decon->lcd_info->height = supported_videos[displayport->cur_video].dv_timings.bt.height;
-	decon->lcd_info->xres = supported_videos[displayport->cur_video].dv_timings.bt.width;
-	decon->lcd_info->yres = supported_videos[displayport->cur_video].dv_timings.bt.height;
-	decon->lcd_info->vfp = supported_videos[displayport->cur_video].dv_timings.bt.vfrontporch;
-	decon->lcd_info->vbp = supported_videos[displayport->cur_video].dv_timings.bt.vbackporch;
-	decon->lcd_info->hfp = supported_videos[displayport->cur_video].dv_timings.bt.hfrontporch;
-	decon->lcd_info->hbp = supported_videos[displayport->cur_video].dv_timings.bt.hbackporch;
-	decon->lcd_info->vsa = supported_videos[displayport->cur_video].dv_timings.bt.vsync;
-	decon->lcd_info->hsa = supported_videos[displayport->cur_video].dv_timings.bt.hsync;
-	decon->lcd_info->fps = supported_videos[displayport->cur_video].fps;
+	sst_id = displayport_get_sst_id_with_decon_id(decon->id);
+
+	decon->lcd_info->width = supported_videos[displayport->sst[sst_id]->cur_video].dv_timings.bt.width;
+	decon->lcd_info->height = supported_videos[displayport->sst[sst_id]->cur_video].dv_timings.bt.height;
+	decon->lcd_info->xres = supported_videos[displayport->sst[sst_id]->cur_video].dv_timings.bt.width;
+	decon->lcd_info->yres = supported_videos[displayport->sst[sst_id]->cur_video].dv_timings.bt.height;
+	decon->lcd_info->vfp = supported_videos[displayport->sst[sst_id]->cur_video].dv_timings.bt.vfrontporch;
+	decon->lcd_info->vbp = supported_videos[displayport->sst[sst_id]->cur_video].dv_timings.bt.vbackporch;
+	decon->lcd_info->hfp = supported_videos[displayport->sst[sst_id]->cur_video].dv_timings.bt.hfrontporch;
+	decon->lcd_info->hbp = supported_videos[displayport->sst[sst_id]->cur_video].dv_timings.bt.hbackporch;
+	decon->lcd_info->vsa = supported_videos[displayport->sst[sst_id]->cur_video].dv_timings.bt.vsync;
+	decon->lcd_info->hsa = supported_videos[displayport->sst[sst_id]->cur_video].dv_timings.bt.hsync;
+	decon->lcd_info->fps = supported_videos[displayport->sst[sst_id]->cur_video].fps;
 	decon->dt.psr_mode = DECON_VIDEO_MODE;
 	decon->dt.trig_mode = DECON_HW_TRIG;
 	decon->dt.out_type = DECON_OUT_DP;
 
-	if (displayport->bpc == BPC_10)
+	if (displayport->sst[sst_id]->bpc == BPC_10)
 		decon->lcd_info->bpc = 10; /* 10pbc */
 	else
 		decon->lcd_info->bpc = 8; /* 8pbc */
@@ -240,16 +250,17 @@ int decon_displayport_get_hdr_capa_info(struct decon_device *decon,
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 	struct displayport_device *displayport = get_displayport_drvdata();
 	struct decon_device *decon0 = get_decon_drvdata(0);
+	u32 sst_id = displayport_get_sst_id_with_decon_id(decon->id);
 
-	if (displayport->rx_edid_data.hdr_support) {
+	if (displayport->sst[sst_id]->rx_edid_data.hdr_support) {
 		hdr_capa_info->out_num = 1;
 		/* Need CEA-861.3 EDID value calculation on platform part */
 		hdr_capa_info->max_luminance =
-			displayport->rx_edid_data.max_lumi_data;
+			displayport->sst[sst_id]->rx_edid_data.max_lumi_data;
 		hdr_capa_info->max_average_luminance =
-			displayport->rx_edid_data.max_average_lumi_data;
+			displayport->sst[sst_id]->rx_edid_data.max_average_lumi_data;
 		hdr_capa_info->min_luminance =
-			displayport->rx_edid_data.min_lumi_data;
+			displayport->sst[sst_id]->rx_edid_data.min_lumi_data;
 	} else { /* For P version platform */
 		hdr_capa_info->out_num =
 			decon0->lcd_info->hdr.num;
@@ -283,6 +294,8 @@ int decon_displayport_get_config(struct decon_device *decon,
 		return -EINVAL;
 
 	mutex_lock(&decon->lock);
+
+	decon_displayport_set_cur_sst_id(decon->id);
 
 	switch (displayport_data->state) {
 	case EXYNOS_DISPLAYPORT_STATE_PRESET:
@@ -337,6 +350,8 @@ int decon_displayport_set_config(struct decon_device *decon,
 
 	mutex_lock(&decon->lock);
 
+	decon_displayport_set_cur_sst_id(decon->id);
+
 	switch (displayport_data->state) {
 	case EXYNOS_DISPLAYPORT_STATE_PRESET:
 		ret = v4l2_subdev_call(displayport_sd, video, s_dv_timings, &displayport_data->timings);
@@ -372,7 +387,8 @@ int decon_displayport_set_config(struct decon_device *decon,
 	return ret;
 }
 
-void decon_displayport_under_flow_int_mask(void)
+void decon_displayport_under_flow_int_mask(u32 decon_id)
 {
-	displayport_reg_set_interrupt_mask(VIDEO_FIFO_UNDER_FLOW_MASK, 0);
+	displayport_reg_set_sst_interrupt_mask(displayport_get_sst_id_with_decon_id(decon_id),
+			VIDEO_FIFO_UNDER_FLOW_MASK, 0);
 }
