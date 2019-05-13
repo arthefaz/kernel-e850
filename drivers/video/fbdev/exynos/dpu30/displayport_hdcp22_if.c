@@ -53,11 +53,12 @@ int displayport_hdcp22_irq_handler(void)
 	uint8_t rxstatus = 0;
 	int ret = 0;
 	int active;
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	active = pm_runtime_active(displayport->dev);
 	if (!active) {
 		displayport_info("displayport power(%d), state(%d)\n",
-				active, displayport->state);
+				active, displayport->sst[sst_id]->state);
 		spin_unlock(&displayport->slock);
 		return IRQ_HANDLED;
 	}

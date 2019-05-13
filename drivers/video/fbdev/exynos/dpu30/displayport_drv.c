@@ -62,12 +62,26 @@ static int displayport_runtime_resume(struct device *dev);
 
 void displayport_hdcp22_enable(u32 en);
 
-static void displayport_dump_registers(struct displayport_device *displayport)
+void displayport_dump_registers(struct displayport_device *displayport)
 {
 	displayport_info("=== DisplayPort SFR DUMP ===\n");
 
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			displayport->res.link_regs, 0xC0, false);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			displayport->res.link_regs + 0x100, 0x0C, false);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			displayport->res.link_regs + 0x200, 0x08, false);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			displayport->res.link_regs + 0x2000, 0x64, false);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			displayport->res.link_regs + 0x5000, 0x104, false);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			displayport->res.link_regs + 0x5400, 0x46C, false);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			displayport->res.link_regs + 0x6000, 0x104, false);
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
+			displayport->res.link_regs + 0x6400, 0x46C, false);
 }
 
 static int displayport_remove(struct platform_device *pdev)
@@ -77,7 +91,6 @@ static int displayport_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 #if defined(CONFIG_EXTCON)
 	devm_extcon_dev_unregister(displayport->dev, displayport->extcon_displayport);
-	//devm_extcon_dev_unregister(displayport->dev, displayport->audio_switch);
 #else
 	displayport_info("Not compiled EXTCON driver\n");
 #endif
@@ -91,6 +104,128 @@ static int displayport_remove(struct platform_device *pdev)
 	displayport_info("displayport driver removed\n");
 
 	return 0;
+}
+
+u32 displayport_get_decon_id(u32 sst_id)
+{
+	u32 decon_id = SST1_DECON_ID;
+
+	switch (sst_id) {
+	case SST1:
+		decon_id = SST1_DECON_ID;
+		break;
+	case SST2:
+		decon_id = SST2_DECON_ID;
+		break;
+	default:
+		decon_id = SST1_DECON_ID;
+	}
+
+	return decon_id;
+}
+
+u32 displayport_get_sst_id_with_decon_id(u32 decon_id)
+{
+	u32 i = 0;
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	for (i = SST1; i < MAX_SST_CNT; i++) {
+		if (decon_id == displayport->sst[i]->decon_id) {
+			displayport_dbg("SST%d connect DECON%d\n", i + 1, decon_id);
+			break;
+		}
+	}
+
+	return displayport->sst[i]->id;
+}
+
+int displayport_get_sst_id_with_port_number(u8 port_number, u8 get_sst_id_type)
+{
+	int i = 0;
+	int ret_val = 0;
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	if (get_sst_id_type == FIND_SST_ID) {
+		for (i = SST1; i < MAX_SST_CNT; i++) {
+			if (port_number == displayport->sst[i]->vc_config->port_num) {
+				displayport_dbg("SST%d's port number = %d\n", i + 1,
+						displayport->sst[i]->vc_config->port_num);
+				break;
+			}
+		}
+	} else if (get_sst_id_type == ALLOC_SST_ID) {
+		for (i = SST1; i < MAX_SST_CNT; i++) {
+			if (displayport->sst[i]->hpd_state == HPD_UNPLUG) {
+				displayport_dbg("SST%d's port number = %d\n", i + 1, port_number);
+				displayport->sst[i]->vc_config->port_num = port_number;
+				break;
+			}
+		}
+	}
+
+	if (i >= MAX_SST_CNT) {
+		displayport_dbg("Can't get SST ID with port number\n");
+		ret_val = -EINVAL;
+	} else
+		ret_val = displayport->sst[i]->id;
+
+	return ret_val;
+}
+
+void displayport_clr_vc_config(u32 ch,
+		struct displayport_device *displayport)
+{
+	displayport->sst[ch]->vc_config->port_num = 0;
+	displayport->sst[ch]->vc_config->timeslot = 0;
+	displayport->sst[ch]->vc_config->timeslot_start_no = 0;
+	displayport->sst[ch]->vc_config->pbn = 0;
+	displayport->sst[ch]->vc_config->xvalue = 0;
+	displayport->sst[ch]->vc_config->yvalue = 0;
+	displayport->sst[ch]->vc_config->mode_enable = 0;
+}
+
+int displayport_calc_vc_config(u32 ch,
+		struct displayport_device *displayport)
+{
+	int ret = 0;
+	u64 pixelbandwidth = 0;
+	u32 bitsperpixel = 24;
+	u64 linkbandwidth = 0;
+	u64 calc_temp = 0;
+	u32 lane_cnt = displayport_reg_get_lane_count();
+
+	displayport->sst[ch]->vc_config->mode_enable = DPTX_MST_FEC_DSC_DISABLE;
+
+	switch (displayport->sst[ch]->bpc) {
+	case BPC_8:
+		bitsperpixel = 24;
+		break;
+	case BPC_10:
+		bitsperpixel = 30;
+		break;
+	default:
+		bitsperpixel = 18;
+		break;
+	}
+
+	pixelbandwidth = (displayport_reg_get_video_clk(ch) / 1000) * (bitsperpixel / 8);
+	displayport->sst[ch]->vc_config->pbn =
+			(((pixelbandwidth * (64000 / 54)) / 1000) * 1006 / 1000) / 1000 + 1;
+	displayport_info("CH%d PBN = %d", ch + 1, displayport->sst[ch]->vc_config->pbn);
+
+	linkbandwidth = displayport_reg_get_ls_clk() * lane_cnt;
+	displayport->sst[ch]->vc_config->timeslot =
+			(pixelbandwidth / (linkbandwidth / 1000000)) * 64 / 1000 + 1;
+	displayport_info("CH%d TimeSlot = %d", ch + 1, displayport->sst[ch]->vc_config->timeslot);
+
+	calc_temp = ((displayport->sst[ch]->vc_config->pbn * 54 * 1000)
+					/ (linkbandwidth / 1000000)) * lane_cnt;
+	displayport->sst[ch]->vc_config->xvalue = calc_temp / 1000;
+	displayport->sst[ch]->vc_config->yvalue = calc_temp - (displayport->sst[ch]->vc_config->xvalue * 1000);
+	displayport_info("CH%d StreamSymbolTimeSlotsPerMTP = %d.%d", ch + 1,
+			displayport->sst[ch]->vc_config->xvalue, displayport->sst[ch]->vc_config->yvalue);
+
+	return ret;
 }
 
 static u64 displayport_find_edid_max_pixelclock(void)
@@ -108,8 +243,8 @@ static u64 displayport_find_edid_max_pixelclock(void)
 	return supported_videos[i].dv_timings.bt.pixelclock;
 }
 
-static int displayport_check_edid_max_clock(struct displayport_device *displayport,
-		videoformat video_format, enum bit_depth bpc)
+static int displayport_check_edid_max_clock(u32 sst_id,
+		struct displayport_device *displayport, videoformat video_format, enum bit_depth bpc)
 {
 	int ret_val = true;
 	u64 calc_pixel_clock = 0;
@@ -126,10 +261,10 @@ static int displayport_check_edid_max_clock(struct displayport_device *displaypo
 		break;
 	}
 
-	if (displayport->rx_edid_data.max_support_clk != 0) {
-		if (calc_pixel_clock > displayport->rx_edid_data.max_support_clk * MHZ) {
+	if (displayport->sst[sst_id]->rx_edid_data.max_support_clk != 0) {
+		if (calc_pixel_clock > displayport->sst[sst_id]->rx_edid_data.max_support_clk * MHZ) {
 			displayport_info("RX support Max TMDS Clock = %llu, but pixel clock = %llu\n",
-					displayport->rx_edid_data.max_support_clk * MHZ, calc_pixel_clock);
+					displayport->sst[sst_id]->rx_edid_data.max_support_clk * MHZ, calc_pixel_clock);
 			ret_val = false;
 		}
 	} else
@@ -185,13 +320,13 @@ static int displayport_check_link_rate_pixel_clock(u8 link_rate,
 	return ret_val;
 }
 
-static int displayport_check_pixel_clock_for_hdr(struct displayport_device *displayport,
-		videoformat video_format)
+static int displayport_check_pixel_clock_for_hdr(u32 sst_id,
+		struct displayport_device *displayport,	videoformat video_format)
 {
 	int ret_val = false;
 
-	if (displayport->rx_edid_data.hdr_support) {
-		ret_val = displayport_check_edid_max_clock(displayport, video_format, BPC_10);
+	if (displayport->sst[sst_id]->rx_edid_data.hdr_support) {
+		ret_val = displayport_check_edid_max_clock(sst_id, displayport, video_format, BPC_10);
 
 		if (ret_val == true)
 			ret_val = displayport_check_link_rate_pixel_clock(displayport_reg_phy_get_link_bw(),
@@ -254,7 +389,7 @@ void displayport_get_voltage_and_pre_emphasis_max_reach(u8 *drive_current, u8 *p
 	}
 }
 
-static int displayport_full_link_training(void)
+static int displayport_full_link_training(u32 sst_id)
 {
 	u8 link_rate;
 	u8 lane_cnt;
@@ -277,7 +412,7 @@ static int displayport_full_link_training(void)
 	int tps3_supported = 0;
 	enum bit_depth bpc = BPC_8;
 	struct displayport_device *displayport = get_displayport_drvdata();
-	struct decon_device *decon = get_decon_drvdata(2);
+	struct decon_device *decon = get_decon_drvdata(DEFAULT_DECON_ID);
 
 	displayport_reg_dpcd_read_burst(DPCD_ADD_REVISION_NUMBER, DPCD_BUF_SIZE, val);
 	displayport_info("Full Link Training Start + : %02x %02x\n", val[1], val[2]);
@@ -293,13 +428,18 @@ static int displayport_full_link_training(void)
 	enhanced_frame_cap = val[2] & ENHANCED_FRAME_CAP;
 
 	if (!displayport->auto_test_mode &&
-			!(supported_videos[displayport->best_video].pro_audio_support &&
+			!(supported_videos[displayport->sst[sst_id]->best_video].pro_audio_support &&
 			edid_support_pro_audio())) {
-		if (displayport->rx_edid_data.hdr_support)
+		if (displayport->sst[sst_id]->rx_edid_data.hdr_support)
 			bpc = BPC_10;
 
-		link_rate = displayport_get_min_link_rate(link_rate, lane_cnt, bpc);
-		displayport->auto_test_mode = 0;
+		if (displayport->mst_cap == 1) {
+			enhanced_frame_cap = 0;
+			displayport_info("enhanced_frame_cap disable for MST mode\n");
+		} else {
+			link_rate = displayport_get_min_link_rate(link_rate, lane_cnt, bpc);
+			displayport->auto_test_mode = 0;
+		}
 	}
 
 	if (g_displayport_debug_param.param_used) {
@@ -342,7 +482,8 @@ Reduce_Link_Rate_Retry:
 		displayport_info("lane_cnt = %x\n", lane_cnt);
 
 		if (enhanced_frame_cap)
-			displayport_write_mask(SST1_MAIN_CONTROL, 1, ENHANCED_MODE);
+			displayport_write_mask(SST1_MAIN_CONTROL + 0x1000 * sst_id,
+					1, ENHANCED_MODE);
 
 		/* wait for 60us */
 		udelay(60);
@@ -543,7 +684,10 @@ EQ_Training_Retry:
 	lane_symbol_locked_done = 0;
 	interlane_align_done = 0;
 
-	udelay((training_aux_rd_interval*4000)+400);
+	if (training_aux_rd_interval != 0)
+		mdelay(training_aux_rd_interval * 4);
+	else
+		udelay(100);
 
 	displayport_reg_dpcd_read_burst(DPCD_ADD_LANE0_1_STATUS, 3, val);
 	lane_cr_done |= ((val[0] & LANE0_CR_DONE) >> 0);
@@ -691,7 +835,7 @@ static int displayport_read_branch_revision(struct displayport_device *displaypo
 	return ret;
 }
 
-static int displayport_link_status_read(void)
+static int displayport_link_status_read(u32 sst_id)
 {
 	u8 val[DPCP_LINK_SINK_STATUS_FIELD_LENGTH] = {0, };
 	int count = 200;
@@ -735,14 +879,14 @@ static int displayport_link_status_read(void)
 			val[0] = 0x04; /*TEST_EDID_CHECKSUM_WRITE*/
 			displayport_reg_dpcd_write(DPCD_TEST_RESPONSE, 1, val);
 
-			displayport->bist_used = 0;
+			displayport->sst[sst_id]->bist_used = 0;
 		}
 	}
 
 	return 0;
 }
 
-static int displayport_link_training(void)
+static int displayport_link_training(u32 sst_id)
 {
 	u8 val;
 	struct displayport_device *displayport = get_displayport_drvdata();
@@ -755,38 +899,237 @@ static int displayport_link_training(void)
 
 	mutex_lock(&displayport->training_lock);
 
-	ret = edid_update(displayport);
-	if (ret < 0)
-		displayport_err("failed to update edid\n");
+	if (displayport->mst_cap == 0) {
+		ret = edid_update(sst_id, displayport);
+		if (ret < 0)
+			displayport_err("failed to update edid\n");
+	}
 
 	displayport_reg_dpcd_read(DPCD_ADD_MAX_DOWNSPREAD, 1, &val);
 	displayport_dbg("DPCD_ADD_MAX_DOWNSPREAD = %x\n", val);
 
-	ret = displayport_full_link_training();
+	ret = displayport_full_link_training(sst_id);
 
 	mutex_unlock(&displayport->training_lock);
 
 	return ret;
 }
 
-static void displayport_set_switch_state(struct displayport_device *displayport, int state)
+static void displayport_set_extcon_state(u32 sst_id,
+		struct displayport_device *displayport, int state)
 {
 #if defined(CONFIG_EXTCON)
+	u32 extcon_dp_id = EXTCON_DISP_DP;
+
+	switch (sst_id) {
+	case SST1:
+		extcon_dp_id = EXTCON_DISP_DP;
+		break;
+	case SST2:
+		extcon_dp_id = EXTCON_DISP_DP2;
+		break;
+	default:
+		extcon_dp_id = EXTCON_DISP_DP;
+	}
+
 	if (state)
-		extcon_set_state_sync(displayport->extcon_displayport, EXTCON_DISP_DP, 1);
+		extcon_set_state_sync(displayport->extcon_displayport, extcon_dp_id, 1);
 	else
-		extcon_set_state_sync(displayport->extcon_displayport, EXTCON_DISP_DP, 0);
+		extcon_set_state_sync(displayport->extcon_displayport, extcon_dp_id, 0);
 #else
 	displayport_info("Not compiled EXTCON driver\n");
 #endif
-	displayport_info("HPD status = %d\n", state);
+	displayport_info("SST%d HPD status = %d\n", sst_id + 1, state);
+}
+
+static int displayport_get_extcon_state(u32 sst_id,
+		struct displayport_device *displayport)
+{
+#if defined(CONFIG_EXTCON)
+	u32 extcon_dp_id = EXTCON_DISP_DP;
+
+	switch (sst_id) {
+	case SST1:
+		extcon_dp_id = EXTCON_DISP_DP;
+		break;
+	case SST2:
+		extcon_dp_id = EXTCON_DISP_DP2;
+		break;
+	default:
+		extcon_dp_id = EXTCON_DISP_DP;
+	}
+
+	return extcon_get_state(displayport->extcon_displayport, extcon_dp_id);
+#else
+	displayport_info("Not compiled EXTCON driver\n");
+#endif
+}
+
+int displayport_check_mst(void)
+{
+	u8 val = 0;
+	int mst_cap = 0;
+
+	displayport_reg_dpcd_read(DPCD_ADD_REVISION_NUMBER, 1, &val);
+	displayport_dbg("DPCD_ADD_REVISION_NUMBER = %x\n", val);
+
+	if (val >= DPCD_VER_1_2) {
+		displayport_reg_dpcd_read(DPCD_ADD_MSTM_CAP, 1, &val);
+		displayport_dbg("DPCD_ADD_MSTM_CAP = %x\n", val);
+
+		if (val & MST_CAP)
+			mst_cap = 1;
+	}
+
+	return mst_cap;
+}
+
+void displayport_mst_enable(void)
+{
+	u8 val = 0;
+
+	val = DPCD_MST_EN | UP_REQ_EN | UPSTREAM_IS_SRC;
+	displayport_reg_dpcd_write(DPCD_ADD_MSTM_CTRL, 1, &val);
+
+	displayport_reg_set_mst_en(1);
+}
+
+int displayport_wait_state_change(u32 sst_id,
+		struct displayport_device *displayport,	int max_wait_time,
+		enum displayport_state state)
+{
+	int ret = 0;
+	int wait_cnt = max_wait_time;
+
+	displayport_info("SST%d wait_state_change start\n", sst_id + 1);
+	displayport_info("max_wait_time = %dms, state = %d\n", max_wait_time, state);
+
+	do {
+		wait_cnt--;
+		usleep_range(1000, 1030);
+	} while ((state != displayport->sst[sst_id]->state) && (wait_cnt > 0));
+
+	displayport_info("wait_state_change time = %dms, state = %d\n",
+			max_wait_time - wait_cnt, state);
+
+	if (wait_cnt <= 0)
+		displayport_err("SST%d wait state timeout\n", sst_id + 1);
+
+	ret = wait_cnt;
+
+	displayport_info("SST%d wait_state_change end\n", sst_id + 1);
+
+	return ret;
+}
+
+int displayport_wait_audio_off_change(u32 sst_id,
+		struct displayport_device *displayport,	int max_wait_time)
+{
+	int ret = 0;
+	int wait_cnt = max_wait_time;
+
+	displayport_info("SST%d wait_audio_off_change start\n", sst_id + 1);
+	displayport_info("max_wait_time = %dms\n", max_wait_time);
+
+	do {
+		wait_cnt--;
+		usleep_range(1000, 1030);
+	} while ((displayport->sst[sst_id]->audio_state != 0) && (wait_cnt > 0));
+
+	displayport_info("wait_audio_off time = %dms\n", max_wait_time - wait_cnt);
+
+	if (wait_cnt <= 0)
+		displayport_err("SST%d wait audio off timeout\n", sst_id + 1);
+
+	ret = wait_cnt;
+
+	displayport_info("SST%d wait_audio_off_change end\n", sst_id + 1);
+
+	return ret;
+}
+
+void displayport_on_by_hpd_high(u32 sst_id, struct displayport_device *displayport)
+{
+	int timeout = 0;
+
+	if (displayport->sst[sst_id]->hpd_state) {
+		displayport->sst[sst_id]->bpc = BPC_8;	/* default setting */
+		displayport->sst[sst_id]->dyn_range = VESA_RANGE;
+		displayport->sst[sst_id]->state = DISPLAYPORT_STATE_INIT;
+
+		displayport_audio_init_config(sst_id);
+
+		if (displayport->sst[sst_id]->bist_used) {
+			displayport->cur_sst_id = sst_id;
+			displayport_enable(displayport); /* for bist video enable */
+		} else {
+			if (displayport_get_extcon_state(sst_id, displayport) == 0) {
+				if (displayport->sst[sst_id]->bist_used == 0) {
+					displayport_set_extcon_state(sst_id, displayport, 1);
+
+					timeout = displayport_wait_state_change(sst_id,
+									displayport, 3000, DISPLAYPORT_STATE_ON);
+				}
+			}
+		}
+	}
+
+#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
+	dp_ado_switch_set_state(edid_audio_informs());
+#endif
+}
+
+void displayport_off_by_hpd_low(u32 sst_id, struct displayport_device *displayport)
+{
+	int timeout = 0;
+	struct decon_device *decon;
+
+#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
+	dp_ado_switch_set_state(-1);
+	displayport_info("audio info = -1\n");
+	displayport_wait_audio_off_change(sst_id, displayport, 5000);
+#endif
+
+	if (displayport->sst[sst_id]->state == DISPLAYPORT_STATE_ON) {
+		displayport->sst[sst_id]->hpd_state = HPD_UNPLUG;
+		displayport->sst[sst_id]->cur_video = V640X480P60;
+		displayport->sst[sst_id]->bpc = BPC_8;
+		displayport->sst[sst_id]->dyn_range = VESA_RANGE;
+
+		if (displayport->sst[sst_id]->bist_used == 0) {
+			displayport_set_extcon_state(sst_id, displayport, 0);
+
+			timeout = displayport_wait_state_change(sst_id,
+							displayport, 7000, DISPLAYPORT_STATE_OFF);
+
+			if (timeout <= 0) {
+				displayport_err("disable timeout\n");
+
+				decon = get_decon_drvdata(displayport_get_decon_id(sst_id));
+
+				if (displayport->sst[sst_id]->state == DISPLAYPORT_STATE_INIT) {
+					displayport_info("SST%d not enabled\n", sst_id + 1);
+				} else if (decon->state == DECON_STATE_OFF &&
+						displayport->sst[sst_id]->state == DISPLAYPORT_STATE_ON) {
+					displayport_err("abnormal state: decon%d:%d, displayport SST%d:%d\n",
+							decon->id, decon->state, sst_id + 1,
+							displayport->sst[sst_id]->state);
+					displayport_disable(displayport);
+				}
+			}
+		} else {
+			displayport->cur_sst_id = sst_id;
+			displayport_disable(displayport); /* for bist video disable */
+		}
+	}
 }
 
 void displayport_hpd_changed(int state)
 {
-	int ret;
-	int timeout = 0;
+	int ret = 0;
 	struct displayport_device *displayport = get_displayport_drvdata();
+	int i = 0;
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	mutex_lock(&displayport->hpd_lock);
 	if (displayport->hpd_current_state == state) {
@@ -802,19 +1145,25 @@ void displayport_hpd_changed(int state)
 		pm_runtime_get_sync(displayport->dev);
 		pm_stay_awake(displayport->dev);
 
-		displayport->bpc = BPC_8;	/*default setting*/
-		displayport->dyn_range = VESA_RANGE;
-		displayport->hpd_state = HPD_PLUG;
-		displayport->auto_test_mode = 0;
-		displayport->best_video = EDID_DEFAULT_TIMINGS_IDX;
 		/* PHY power on */
 		displayport_reg_sw_reset();
 		displayport_reg_init(); /* for AUX ch read/write. */
-		displayport->state = DISPLAYPORT_STATE_INIT;
+
+		displayport->auto_test_mode = 0;
+		displayport->sst[sst_id]->best_video = EDID_DEFAULT_TIMINGS_IDX;
+
 		usleep_range(10000, 11000);
 
+		displayport->mst_cap = displayport_check_mst();
+
+		if (displayport->mst_cap) {
+			displayport_mst_enable();
+			displayport_topology_clr_vc();
+		} else
+			displayport->sst[sst_id]->hpd_state = HPD_PLUG; /* default */
+
 		/* for Link CTS : (4.2.2.3) EDID Read */
-		if (displayport_link_status_read()) {
+		if (displayport_link_status_read(sst_id)) {
 			displayport_err("link_status_read fail\n");
 			goto HPD_FAIL;
 		}
@@ -823,13 +1172,11 @@ void displayport_hpd_changed(int state)
 			displayport_err("branch_revision_read fail\n");
 
 		displayport_info("link training in hpd_changed\n");
-		ret = displayport_link_training();
+		ret = displayport_link_training(sst_id);
 		if (ret < 0) {
 			displayport_dbg("link training fail\n");
 			goto HPD_FAIL;
 		}
-
-		displayport_audio_init_config();
 
 		displayport->dfp_type = displayport_check_dfp_type();
 		/* Enable it! if you want to prevent output according to type
@@ -840,19 +1187,12 @@ void displayport_hpd_changed(int state)
 		 * }
 		 */
 
-		if (displayport->bist_used == 0) {
-			displayport_set_switch_state(displayport, 1);
-			timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-				(displayport->state == DISPLAYPORT_STATE_ON), msecs_to_jiffies(3000));
-#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
-			dp_ado_switch_set_state(edid_audio_informs());
-#endif
-			if (!timeout)
-				displayport_err("enable timeout\n");
-		} else
-			displayport_enable(displayport);
+		if (displayport->mst_cap == 0) {
+			displayport_info("displayport_on_by_hpd_high in hpd changed\n");
+			displayport_on_by_hpd_high(sst_id, displayport);
+		}
 	} else {
-		displayport_reg_print_audio_state();
+		displayport_reg_print_audio_state(sst_id);
 #if defined(CONFIG_EXYNOS_HDCP2)
 		if (displayport->hdcp_ver == HDCP_VERSION_2_2) {
 			hdcp_dplink_cancel_auth();
@@ -864,38 +1204,17 @@ void displayport_hpd_changed(int state)
 		cancel_delayed_work_sync(&displayport->hdcp13_work);
 		cancel_delayed_work_sync(&displayport->hdcp22_work);
 		cancel_delayed_work_sync(&displayport->hdcp13_integrity_check_work);
-		displayport->hpd_state = HPD_UNPLUG;
-		displayport->cur_video = V640X480P60;
 
-		if (displayport->bist_used == 0) {
-#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
-			dp_ado_switch_set_state(-1);
-			displayport_info("audio info = -1\n");
-			timeout = wait_event_interruptible_timeout(displayport->audio_wait,
-					(displayport->audio_state == 0), msecs_to_jiffies(5000));
-			if (!timeout)
-				displayport_info("audio disable timeout\n");
+		for (i = SST1; i < MAX_SST_CNT; i++)
+			displayport_off_by_hpd_low(i, displayport);
+
+		displayport_reg_deinit();
+		displayport_reg_phy_disable();
+		pm_runtime_put_sync(displayport->dev);
+#if defined(CONFIG_CPU_IDLE)
+		/* unblock to enter SICD mode */
+		exynos_update_ip_idle_status(displayport->idle_ip_index, 1);
 #endif
-			displayport_set_switch_state(displayport, 0);
-			timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-				(displayport->state == DISPLAYPORT_STATE_OFF), msecs_to_jiffies(7000));
-			if (!timeout) {
-				struct decon_device *decon = get_decon_drvdata(2);
-
-				displayport_err("disable timeout\n");
-				if (displayport->state == DISPLAYPORT_STATE_INIT) {
-					displayport_info("not enabled\n");
-					goto HPD_FAIL;
-				} else if (decon->state == DECON_STATE_OFF &&
-						displayport->state == DISPLAYPORT_STATE_ON) {
-					displayport_err("abnormal state: decon:%d, displayport:%d\n",
-							decon->state, displayport->state);
-					displayport_disable(displayport);
-				}
-			}
-		} else
-			displayport_disable(displayport); /* for bist video disable */
-
 		pm_relax(displayport->dev);
 
 		displayport->hdcp_ver = 0;
@@ -909,75 +1228,68 @@ HPD_FAIL:
 	displayport_reg_deinit();
 	displayport_reg_phy_disable();
 	pm_relax(displayport->dev);
-	displayport->hpd_current_state = 0;
-	displayport->hpd_state = HPD_UNPLUG;
+	displayport->hpd_current_state = HPD_UNPLUG;
+
+	for (i = SST1; i < MAX_SST_CNT; i++) {
+		displayport->sst[i]->state = DISPLAYPORT_STATE_INIT;
+		displayport->sst[i]->hpd_state = HPD_UNPLUG;
+		displayport->sst[i]->cur_video = V640X480P60;
+		displayport->sst[i]->bpc = BPC_8;
+		displayport->sst[i]->dyn_range = VESA_RANGE;
+	}
+
 	pm_runtime_put_sync(displayport->dev);
 	mutex_unlock(&displayport->hpd_lock);
 
 	return;
 }
 
-void displayport_hpd_unplug(void)
-{
-	int timeout = 0;
-	struct displayport_device *displayport = get_displayport_drvdata();
-
-	displayport->hpd_state = HPD_UNPLUG;
-	displayport->hpd_current_state = HPD_UNPLUG;
-	displayport->cur_video = V640X480P60;
-
-	if (displayport->bist_used == 0) {
-#if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
-		dp_ado_switch_set_state(-1);
-#endif
-		displayport_set_switch_state(displayport, 0);
-		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-				(displayport->state == DISPLAYPORT_STATE_OFF), msecs_to_jiffies(1000));
-		if (!timeout)
-			displayport_err("disable timeout\n");
-	} else
-			displayport_disable(displayport); /* for bist video disable */
-
-	displayport->hdcp_ver = 0;
-}
-
 void displayport_set_reconnection(void)
 {
 	int ret;
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	/* PHY power on */
 	displayport_reg_init(); /* for AUX ch read/write. */
 
 	displayport_info("link training in reconnection\n");
-	ret = displayport_link_training();
+	ret = displayport_link_training(sst_id);
 	if (ret < 0) {
 		displayport_dbg("link training fail\n");
 		return;
 	}
 }
 
-int displayport_get_hpd_state(void)
-{
-	struct displayport_device *displayport = get_displayport_drvdata();
-
-	return displayport->hpd_current_state;
-}
-
 static void displayport_hpd_plug_work(struct work_struct *work)
 {
-	displayport_hpd_changed(1);
+	int i = 0;
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	for (i = SST1; i < MAX_SST_CNT; i++) {
+		if (displayport->sst[i]->hpd_state == HPD_PLUG_WORK) {
+			displayport_info("hpd_plug_work\n");
+			displayport->sst[i]->hpd_state = HPD_PLUG;
+			edid_update(i, displayport);
+			displayport_topology_make();
+			displayport_on_by_hpd_high(i, displayport);
+		}
+	}
 }
 
 static void displayport_hpd_unplug_work(struct work_struct *work)
 {
+	int i = 0;
 	struct displayport_device *displayport = get_displayport_drvdata();
 
-	if (!displayport->hpd_current_state) {
-		displayport_info("%s hpd is low\n", __func__);
-		return;
+	for (i = SST1; i < MAX_SST_CNT; i++) {
+		if (displayport->sst[i]->hpd_state == HPD_UNPLUG_WORK) {
+			displayport_info("hpd_unplug_work\n");
+			displayport_reg_set_sst_interrupt_mask(i, VIDEO_FIFO_UNDER_FLOW_MASK, 0);
+			displayport_topology_delete_vc(i);
+			displayport->sst[i]->hpd_state = HPD_UNPLUG;
+			displayport_off_by_hpd_low(i, displayport);
+		}
 	}
-
-	displayport_hpd_changed(0);
 }
 
 static int displayport_check_dpcd_lane_status(u8 lane0_1_status,
@@ -999,11 +1311,6 @@ static int displayport_check_dpcd_lane_status(u8 lane0_1_status,
 
 	if ((lane_align_status & INTERLANE_ALIGN_DONE) != INTERLANE_ALIGN_DONE) {
 		displayport_err("%s() interlane align error\n", __func__);
-		return -EINVAL;
-	}
-
-	if ((lane_align_status & LINK_STATUS_UPDATE) == LINK_STATUS_UPDATE) {
-		displayport_err("%s() link status update req\n", __func__);
 		return -EINVAL;
 	}
 
@@ -1086,7 +1393,7 @@ static int displayport_Automated_Test_Request(void)
 	u8 data = 0;
 	u8 val[DPCP_LINK_SINK_STATUS_FIELD_LENGTH] = {0, };
 	struct displayport_device *displayport = get_displayport_drvdata();
-	int timeout;
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	displayport_reg_dpcd_read(DPCD_TEST_REQUEST, 1, &data);
 	displayport_info("TEST_REQUEST %02x\n", data);
@@ -1096,16 +1403,14 @@ static int displayport_Automated_Test_Request(void)
 	displayport_reg_dpcd_write(DPCD_TEST_RESPONSE, 1, val);
 
 	if ((data & TEST_LINK_TRAINING) == TEST_LINK_TRAINING) {
-		videoformat cur_video = displayport->cur_video;
-		u8 bpc = (u8)displayport->bpc;
-		u8 bist_type = (u8)displayport->bist_type;
-		u8 dyn_range = (u8)displayport->dyn_range;
+		videoformat cur_video = displayport->sst[sst_id]->cur_video;
+		u8 bpc = (u8)displayport->sst[sst_id]->bpc;
+		u8 bist_type = (u8)displayport->sst[sst_id]->bist_type;
+		u8 dyn_range = (u8)displayport->sst[sst_id]->dyn_range;
 
-		displayport_set_switch_state(displayport, 0);
-		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-			(displayport->state == DISPLAYPORT_STATE_OFF), msecs_to_jiffies(1000));
-		if (!timeout)
-			displayport_err("disable timeout in %s\n", __func__);
+		displayport_set_extcon_state(sst_id, displayport, 0);
+		displayport_wait_state_change(sst_id, displayport,
+				1000, DISPLAYPORT_STATE_OFF);
 
 		/* PHY power on */
 		displayport_reg_init();
@@ -1119,28 +1424,26 @@ static int displayport_Automated_Test_Request(void)
 		g_displayport_debug_param.lane_cnt = (val[0]&TEST_LANE_COUNT);
 
 		g_displayport_debug_param.param_used = 1;
-		displayport_link_training();
+		displayport_link_training(sst_id);
 		g_displayport_debug_param.param_used = 0;
 
-		displayport->bist_used = 1;
-		displayport_reg_set_bist_video_configuration(cur_video,
-				bpc, bist_type, dyn_range);
+		displayport->sst[sst_id]->bist_used = 1;
+		displayport_reg_set_bist_video_configuration(sst_id,
+				cur_video, bpc, bist_type, dyn_range);
 	} else if ((data & TEST_VIDEO_PATTERN) == TEST_VIDEO_PATTERN) {
 		u16 hactive, vactive, fps, vmode;
 		int edid_preset;
 
-		displayport_set_switch_state(displayport, 0);
-		timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-			(displayport->state == DISPLAYPORT_STATE_OFF), msecs_to_jiffies(1000));
-		if (!timeout)
-			displayport_err("disable timeout in %s\n", __func__);
+		displayport_set_extcon_state(sst_id, displayport, 0);
+		displayport_wait_state_change(sst_id, displayport,
+				1000, DISPLAYPORT_STATE_OFF);
 
 		/* PHY power on */
 		displayport_reg_init(); /* for AUX ch read/write. */
 
 		g_displayport_debug_param.param_used = 1;
 
-		displayport_link_training();
+		displayport_link_training(sst_id);
 
 		g_displayport_debug_param.param_used = 0;
 
@@ -1159,8 +1462,8 @@ static int displayport_Automated_Test_Request(void)
 
 		displayport_reg_dpcd_read(DPCD_TEST_MISC_1, 1, val);
 		displayport_info("TEST_MISC_1 %02x", val[0]);
-		displayport->dyn_range = (val[0] & TEST_DYNAMIC_RANGE)?CEA_RANGE:VESA_RANGE;
-		displayport->bpc = (val[0] & TEST_BIT_DEPTH)?BPC_8:BPC_6;
+		displayport->sst[sst_id]->dyn_range = (val[0] & TEST_DYNAMIC_RANGE)?CEA_RANGE:VESA_RANGE;
+		displayport->sst[sst_id]->bpc = (val[0] & TEST_BIT_DEPTH)?BPC_8:BPC_6;
 
 		displayport_reg_dpcd_read(DPCD_TEST_MISC_2, 1, val);
 		displayport_info("TEST_MISC_2 %02x\n", val[0]);
@@ -1170,18 +1473,19 @@ static int displayport_Automated_Test_Request(void)
 		fps = val[0];
 		displayport_info("TEST_REFRESH_RATE_NUMERATOR %02x", fps);
 		displayport_info("%d %d %d %d dyn:%d %dbpc\n", hactive, vactive, fps, vmode,
-				displayport->dyn_range, (displayport->bpc == BPC_6)?6:8);
+				displayport->sst[sst_id]->dyn_range, (displayport->sst[sst_id]->bpc == BPC_6)?6:8);
 
-		displayport->bist_used = 1;
-		displayport->bist_type = COLOR_BAR;
+		displayport->sst[sst_id]->bist_used = 1;
+		displayport->sst[sst_id]->bist_type = COLOR_BAR;
 
 		edid_preset = edid_find_resolution(hactive, vactive, fps);
 		edid_set_preferred_preset(edid_preset);
 
-		displayport_reg_set_bist_video_configuration(displayport->cur_video,
-				displayport->bpc, displayport->bist_type, displayport->dyn_range);
+		displayport_reg_set_bist_video_configuration(sst_id,
+				displayport->sst[sst_id]->cur_video, displayport->sst[sst_id]->bpc,
+				displayport->sst[sst_id]->bist_type, displayport->sst[sst_id]->dyn_range);
 	} else if ((data & TEST_PHY_TEST_PATTERN) == TEST_PHY_TEST_PATTERN) {
-		displayport_reg_stop();
+		displayport_reg_stop(sst_id);
 		msleep(120);
 		displayport_reg_dpcd_read(DPCD_ADD_ADJUST_REQUEST_LANE0_1, 2, val);
 		displayport_info("ADJUST_REQUEST_LANE0_1 %02x %02x\n", val[0], val[1]);
@@ -1247,10 +1551,8 @@ static int displayport_Automated_Test_Request(void)
 		audio_config_data.audio_fs =  (val[0] & TEST_AUDIO_SAMPLING_RATE);
 		audio_config_data.audio_channel_cnt = (val[0] & TEST_AUDIO_CHANNEL_COUNT) >> 4;
 		audio_config_data.audio_channel_cnt++;
-		displayport_audio_bist_config(audio_config_data);
-
+		displayport_audio_bist_config(sst_id, audio_config_data);
 	} else {
-
 		displayport_err("Not Supported AUTOMATED_TEST_REQUEST\n");
 		return -EINVAL;
 	}
@@ -1261,13 +1563,13 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 {
 	u8 val[DPCP_LINK_SINK_STATUS_FIELD_LENGTH] = {0, };
 	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	if (!displayport->hpd_current_state) {
 		displayport_info("HPD IRQ work: hpd is low\n");
 		return;
 	}
 
-	displayport->hpd_state = HPD_IRQ;
 	displayport_dbg("detect HPD_IRQ\n");
 
 	if (displayport->hdcp_ver == HDCP_VERSION_2_2) {
@@ -1302,9 +1604,14 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 #endif
 				displayport_hdcp22_enable(0);
 
-				displayport_link_training();
+				displayport_link_training(sst_id);
 				queue_delayed_work(displayport->hdcp2_wq,
 						&displayport->hdcp22_work, msecs_to_jiffies(2000));
+			}
+
+			if ((val[1] & UP_REQ_MSG_RDY) == UP_REQ_MSG_RDY) {
+				displayport_info("Detect UP_REQ_MSG_RDY IRQ\n");
+				displayport_msg_rx(UP_REQ);
 			}
 		}
 		return;
@@ -1327,11 +1634,9 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 			hdcp13_info.link_check = LINK_CHECK_NEED;
 			hdcp13_link_integrity_check();
 
-			if (hdcp13_info.auth_state == HDCP13_STATE_FAIL) {
+			if (hdcp13_info.auth_state == HDCP13_STATE_FAIL)
 				queue_delayed_work(displayport->dp_wq,
-					&displayport->hdcp13_work, msecs_to_jiffies(2000));
-			} else
-				return;
+						&displayport->hdcp13_work, msecs_to_jiffies(2000));
 		}
 
 		if ((val[1] & AUTOMATED_TEST_REQUEST) == AUTOMATED_TEST_REQUEST) {
@@ -1346,11 +1651,16 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 
 		if (displayport_check_dpcd_lane_status(val[2], val[3], val[4]) != 0) {
 			displayport_info("link training in HPD IRQ work1\n");
-			displayport_link_training();
+			displayport_link_training(sst_id);
 
 			hdcp13_info.auth_state = HDCP13_STATE_NOT_AUTHENTICATED;
 			queue_delayed_work(displayport->dp_wq,
 					&displayport->hdcp13_work, msecs_to_jiffies(2000));
+		}
+
+		if ((val[1] & UP_REQ_MSG_RDY) == UP_REQ_MSG_RDY) {
+			displayport_info("Detect UP_REQ_MSG_RDY IRQ\n");
+			displayport_msg_rx(UP_REQ);
 		}
 	} else {
 		displayport_reg_dpcd_read(DPCD_ADD_DEVICE_SERVICE_IRQ_VECTOR, 1, val);
@@ -1359,6 +1669,11 @@ static void displayport_hpd_irq_work(struct work_struct *work)
 			displayport_info("detect CP_IRQ\n");
 			hdcp13_info.cp_irq_flag = 1;
 			displayport_reg_dpcd_read(ADDR_HDCP13_BSTATUS, 1, HDCP13_DPCD.HDCP13_BSTATUS);
+		}
+
+		if ((val[1] & UP_REQ_MSG_RDY) == UP_REQ_MSG_RDY) {
+			displayport_info("Detect UP_REQ_MSG_RDY IRQ\n");
+			displayport_msg_rx(UP_REQ);
 		}
 	}
 }
@@ -1376,40 +1691,36 @@ static void displayport_hdcp13_integrity_check_work(struct work_struct *work)
 static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 {
 	struct displayport_device *displayport = dev_data;
-	struct decon_device *decon = get_decon_drvdata(2);
+	struct decon_device *decon = NULL;
 	int active;
 	u32 irq_status_reg;
+	int i = 0;
 
 	spin_lock(&displayport->slock);
 
 	active = pm_runtime_active(displayport->dev);
 	if (!active) {
-		displayport_info("displayport power(%d), state(%d)\n",
-			active, displayport->state);
+		displayport_info("displayport power(%d)\n", active);
 		spin_unlock(&displayport->slock);
 		return IRQ_HANDLED;
 	}
 
 	/* Common interrupt */
-	irq_status_reg = displayport_reg_get_interrupt_and_clear(SYSTEM_IRQ_COMMON_STATUS);
+	irq_status_reg = displayport_reg_get_common_interrupt_and_clear();
 
 #if !defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	if (irq_status_reg & HPD_CHG)
 		displayport_info("HPD_CHG detect\n");
 
 	if (irq_status_reg & HPD_LOST) {
-		/*queue_delayed_work(displayport->dp_wq, &displayport->hpd_unplug_work, 0);*/
 		displayport_info("HPD_LOST detect\n");
 	}
 
 	if (irq_status_reg & HPD_PLUG_INT) {
-		/*queue_delayed_work(displayport->dp_wq, &displayport->hpd_plug_work, 0);*/
 		displayport_info("HPD_PLUG detect\n");
 	}
 
 	if (irq_status_reg & HPD_IRQ_FLAG) {
-		displayport->hpd_state = HPD_IRQ;
-		/*queue_delayed_work(displayport->dp_wq, &displayport->hpd_irq_work, 0);*/
 		displayport_info("HPD IRQ detect\n");
 	}
 #endif
@@ -1424,28 +1735,33 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 		displayport_info("R0_CHECK_FLAG detect\n");
 	}
 
-	/* SST1 interrupt */
-	irq_status_reg = displayport_reg_get_interrupt_and_clear(SST1_INTERRUPT_STATUS_SET0);
+	for (i = SST1; i < MAX_SST_CNT; i++) {
+		irq_status_reg = displayport_reg_get_sst_video_interrupt_and_clear(i);
 
-	if (irq_status_reg & MAPI_FIFO_UNDER_FLOW)
-		displayport_info("VIDEO FIFO_UNDER_FLOW detect\n");
+		if (irq_status_reg & MAPI_FIFO_UNDER_FLOW)
+			displayport_info("SST%d VIDEO FIFO_UNDER_FLOW detect\n", i + 1);
 
-	if (irq_status_reg & VSYNC_DET) {
-		/* VSYNC interrupt, accept it */
-		decon->frame_cnt++;
-		wake_up_interruptible_all(&decon->wait_vstatus);
+		if (displayport->sst[i]->bist_used == 0) {
+			decon = get_decon_drvdata(displayport_get_decon_id(i));
 
-		if (decon->dt.psr_mode == DECON_VIDEO_MODE) {
-			decon->vsync.timestamp = ktime_get();
-			wake_up_interruptible_all(&decon->vsync.wait);
+			if (irq_status_reg & VSYNC_DET) {
+				/* VSYNC interrupt, accept it */
+				decon->frame_cnt++;
+				wake_up_interruptible_all(&decon->wait_vstatus);
+
+				if (decon->dt.psr_mode == DECON_VIDEO_MODE) {
+					decon->vsync.timestamp = ktime_get();
+					wake_up_interruptible_all(&decon->vsync.wait);
+				}
+			}
 		}
-	}
 
-	irq_status_reg = displayport_reg_get_interrupt_and_clear(SST1_AUDIO_BUFFER_CONTROL);
+		irq_status_reg = displayport_reg_get_sst_audio_interrupt_and_clear(i);
 
-	if (irq_status_reg & MASTER_AUDIO_BUFFER_EMPTY_INT) {
-		displayport_dbg("AFIFO_UNDER detect\n");
-		displayport->audio_buf_empty_check = 1;
+		if (irq_status_reg & MASTER_AUDIO_BUFFER_EMPTY_INT) {
+			displayport_dbg("SST%d AFIFO_UNDER detect\n", i + 1);
+			displayport->sst[i]->audio_buf_empty_check = 1;
+		}
 	}
 
 	spin_unlock(&displayport->slock);
@@ -1453,14 +1769,15 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 	return IRQ_HANDLED;
 }
 
-static u8 displayport_get_vic(void)
+static u8 displayport_get_vic(u32 sst_id)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
 
-	return supported_videos[displayport->cur_video].vic;
+	return supported_videos[displayport->sst[sst_id]->cur_video].vic;
 }
 
-static int displayport_make_avi_infoframe_data(struct infoframe *avi_infoframe)
+static int displayport_make_avi_infoframe_data(u32 sst_id,
+		struct infoframe *avi_infoframe)
 {
 	int i;
 
@@ -1473,7 +1790,7 @@ static int displayport_make_avi_infoframe_data(struct infoframe *avi_infoframe)
 
 	avi_infoframe->data[0] |= ACTIVE_FORMAT_INFOMATION_PRESENT;
 	avi_infoframe->data[1] |= ACITVE_PORTION_ASPECT_RATIO;
-	avi_infoframe->data[3] = displayport_get_vic();
+	avi_infoframe->data[3] = displayport_get_vic(sst_id);
 
 	return 0;
 }
@@ -1577,12 +1894,12 @@ static int displayport_make_hdr_infoframe_data
 	return 0;
 }
 
-static int displayport_set_avi_infoframe(void)
+static int displayport_set_avi_infoframe(u32 sst_id)
 {
 	struct infoframe avi_infoframe;
 
-	displayport_make_avi_infoframe_data(&avi_infoframe);
-	displayport_reg_set_avi_infoframe(avi_infoframe);
+	displayport_make_avi_infoframe_data(sst_id, &avi_infoframe);
+	displayport_reg_set_avi_infoframe(sst_id, avi_infoframe);
 
 	return 0;
 }
@@ -1598,52 +1915,54 @@ static int displayport_make_spd_infoframe_data(struct infoframe *spd_infoframe)
 	return 0;
 }
 
-static int displayport_set_spd_infoframe(void)
+static int displayport_set_spd_infoframe(u32 sst_id)
 {
 	struct infoframe spd_infoframe;
 
 	memset(&spd_infoframe, 0, sizeof(spd_infoframe));
 	displayport_make_spd_infoframe_data(&spd_infoframe);
-	displayport_reg_set_spd_infoframe(spd_infoframe);
+	displayport_reg_set_spd_infoframe(sst_id, spd_infoframe);
 
 	return 0;
 }
 
-static int displayport_set_audio_infoframe(struct displayport_audio_config_data *audio_config_data)
+static int displayport_set_audio_infoframe(u32 sst_id,
+		struct displayport_audio_config_data *audio_config_data)
 {
 	struct infoframe audio_infoframe;
 
 	displayport_make_audio_infoframe_data(&audio_infoframe, audio_config_data);
-	displayport_reg_set_audio_infoframe(audio_infoframe, audio_config_data->audio_enable);
+	displayport_reg_set_audio_infoframe(sst_id, audio_infoframe, audio_config_data->audio_enable);
 
 	return 0;
 }
 
-static int displayport_set_hdr_infoframe(struct exynos_hdr_static_info *hdr_info)
+static int displayport_set_hdr_infoframe(u32 sst_id,
+		struct exynos_hdr_static_info *hdr_info)
 {
 	struct infoframe hdr_infoframe;
 
 	if (hdr_info->mid >= 0) {
-		displayport_dbg("displayport_set_hdr_infoframe 1\n");
+		displayport_dbg("SST%d displayport_set_hdr_infoframe 1\n", sst_id + 1);
 		displayport_make_hdr_infoframe_data(&hdr_infoframe, hdr_info);
-		displayport_reg_set_hdr_infoframe(hdr_infoframe, 1);
+		displayport_reg_set_hdr_infoframe(sst_id, hdr_infoframe, 1);
 	} else {
-		displayport_dbg("displayport_set_hdr_infoframe 0\n");
-		displayport_reg_set_hdr_infoframe(hdr_infoframe, 0);
+		displayport_dbg("SST%d displayport_set_hdr_infoframe 0\n", sst_id + 1);
+		displayport_reg_set_hdr_infoframe(sst_id, hdr_infoframe, 0);
 	}
 
 	return 0;
 }
 
-int displayport_audio_config(struct displayport_audio_config_data *audio_config_data)
+int displayport_audio_config(u32 sst_id, struct displayport_audio_config_data *audio_config_data)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
 	int ret = 0;
 
-	displayport_info("audio config(%d ==> %d)\n", displayport->audio_state,
-				audio_config_data->audio_enable);
+	displayport_info("SST%d audio config(%d ==> %d)\n",
+			sst_id + 1, displayport->sst[sst_id]->audio_state, audio_config_data->audio_enable);
 
-	if (audio_config_data->audio_enable == displayport->audio_state)
+	if (audio_config_data->audio_enable == displayport->sst[sst_id]->audio_state)
 		return 0;
 
 	if (audio_config_data->audio_enable == AUDIO_ENABLE) {
@@ -1652,19 +1971,19 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 				audio_config_data->audio_fs, audio_config_data->audio_bit,
 				audio_config_data->audio_packed_mode, audio_config_data->audio_word_length);
 
-		displayport_audio_enable(audio_config_data);
-		displayport_set_audio_infoframe(audio_config_data);
-		displayport->audio_state = AUDIO_ENABLE;
+		displayport_audio_enable(sst_id, audio_config_data);
+		displayport_set_audio_infoframe(sst_id, audio_config_data);
+		displayport->sst[sst_id]->audio_state = AUDIO_ENABLE;
 	} else if (audio_config_data->audio_enable == AUDIO_DISABLE) {
-		displayport_audio_disable();
-		displayport_set_audio_infoframe(audio_config_data);
-		displayport->audio_state = AUDIO_DISABLE;
+		displayport_audio_disable(sst_id);
+		displayport_set_audio_infoframe(sst_id, audio_config_data);
+		displayport->sst[sst_id]->audio_state = AUDIO_DISABLE;
 	} else if (audio_config_data->audio_enable == AUDIO_WAIT_BUF_FULL) {
-		displayport_audio_wait_buf_full();
-		displayport->audio_state = AUDIO_WAIT_BUF_FULL;
+		displayport_audio_wait_buf_full(sst_id);
+		displayport->sst[sst_id]->audio_state = AUDIO_WAIT_BUF_FULL;
 	} else if (audio_config_data->audio_enable == AUDIO_DMA_REQ_HIGH) {
-		displayport_audio_dma_force_req_release();
-		displayport->audio_state = AUDIO_DMA_REQ_HIGH;
+		displayport_audio_dma_force_req_release(sst_id);
+		displayport->sst[sst_id]->audio_state = AUDIO_DMA_REQ_HIGH;
 	} else
 		displayport_info("Not support audio_enable = %d\n", audio_config_data->audio_enable);
 
@@ -1672,10 +1991,11 @@ int displayport_audio_config(struct displayport_audio_config_data *audio_config_
 }
 EXPORT_SYMBOL(displayport_audio_config);
 
-void displayport_audio_bist_config(struct displayport_audio_config_data audio_config_data)
+void displayport_audio_bist_config(u32 sst_id,
+		struct displayport_audio_config_data audio_config_data)
 {
-	displayport_audio_bist_enable(audio_config_data);
-	displayport_set_audio_infoframe(&audio_config_data);
+	displayport_audio_bist_enable(sst_id, audio_config_data);
+	displayport_set_audio_infoframe(sst_id, &audio_config_data);
 }
 
 int displayport_dpcd_read_for_hdcp22(u32 address, u32 length, u8 *data)
@@ -1704,7 +2024,7 @@ int displayport_dpcd_write_for_hdcp22(u32 address, u32 length, u8 *data)
 
 void displayport_hdcp22_enable(u32 en)
 {
-	struct decon_device *decon = get_decon_drvdata(2);
+	struct decon_device *decon = get_decon_drvdata(DEFAULT_DECON_ID);
 
 	/* wait 2 frames for hdcp encryption enable/disable */
 	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
@@ -1742,13 +2062,10 @@ static void displayport_hdcp22_run(struct work_struct *work)
 #if defined(CONFIG_EXYNOS_HDCP2)
 	struct displayport_device *displayport = get_displayport_drvdata();
 	u32 ret;
-#ifndef CONFIG_HDCP2_FUNC_TEST_MODE
-	int i;
-#endif
 	u8 val[2] = {0, };
 
 	mutex_lock(&displayport->hdcp2_lock);
-	if (displayport_get_hpd_state() == 0) {
+	if (IS_DISPLAYPORT_HPD_PLUG_STATE() == 0) {
 		displayport_info("stop hdcp2 : HPD is low\n");
 		goto exit_hdcp;
 	}
@@ -1761,7 +2078,7 @@ static void displayport_hdcp22_run(struct work_struct *work)
 		goto exit_hdcp;
 	}
 
-	if (displayport_get_hpd_state() == 0) {
+	if (IS_DISPLAYPORT_HPD_PLUG_STATE() == 0) {
 		displayport_info("stop hdcp2 : HPD is low\n");
 		goto exit_hdcp;
 	}
@@ -1824,62 +2141,91 @@ static void hdcp_start(struct displayport_device *displayport)
 #endif
 }
 
+static enum displayport_state displayport_check_sst_on(struct displayport_device *displayport)
+{
+	int ret = DISPLAYPORT_STATE_OFF;
+	int i = 0;
+
+	for (i = SST1; i < MAX_SST_CNT; i++) {
+		if (displayport->sst[i]->state == DISPLAYPORT_STATE_ON) {
+			ret = DISPLAYPORT_STATE_ON;
+			break;
+		}
+	}
+
+	return ret;
+}
+
 int displayport_enable(struct displayport_device *displayport)
 {
 	int ret = 0;
-	u8 bpc = (u8)displayport->bpc;
-	u8 bist_type = (u8)displayport->bist_type;
-	u8 dyn_range = (u8)displayport->dyn_range;
+	u32 sst_id = displayport->cur_sst_id;
+	u8 bpc = (u8)displayport->sst[sst_id]->bpc;
+	u8 bist_type = (u8)displayport->sst[sst_id]->bist_type;
+	u8 dyn_range = (u8)displayport->sst[sst_id]->dyn_range;
 
 	mutex_lock(&displayport->cmd_lock);
 
-	if (displayport->state == DISPLAYPORT_STATE_ON) {
-		displayport_err("ignore enable, state:%d\n", displayport->state);
+	if (!displayport->hpd_current_state) {
+		displayport_err("%s() hpd is low\n", __func__);
 		mutex_unlock(&displayport->cmd_lock);
 		return 0;
 	}
 
-	if (!displayport->hpd_current_state) {
-		displayport_err("%s() hpd is low\n", __func__);
+	if (displayport->sst[sst_id]->state == DISPLAYPORT_STATE_ON) {
+		displayport_err("SST%d ignore enable, state:%d\n", sst_id + 1,
+				displayport->sst[sst_id]->state);
+		mutex_unlock(&displayport->cmd_lock);
 		return 0;
 	}
 
-#if defined(CONFIG_CPU_IDLE)
-	/* block to enter SICD mode */
-	exynos_update_ip_idle_status(displayport->idle_ip_index, 0);
-#endif
+	if (forced_resolution >= 0)
+		displayport->sst[sst_id]->cur_video = forced_resolution;
+	else if (displayport->sst[sst_id]->bist_used)
+		displayport->sst[sst_id]->cur_video = displayport->sst[sst_id]->best_video;
 
-	enable_irq(displayport->res.irq);
-
-	displayport_info("cur_video = %s in displayport_enable!!!\n",
-			supported_videos[displayport->cur_video].name);
-
-	if (displayport->bist_used) {
-		if (forced_resolution >= 0)
-			displayport->cur_video = forced_resolution;
-
-		displayport_reg_set_bist_video_configuration(displayport->cur_video,
-				bpc, bist_type, dyn_range);
-	} else {
-		if (displayport->bpc == BPC_6 && displayport->dfp_type != DFP_TYPE_DP) {
-			bpc = BPC_8;
-			displayport->bpc = BPC_8;
-		}
-
-		displayport_reg_set_video_configuration(displayport->cur_video,
-				bpc, dyn_range);
+	if (displayport->mst_cap) {
+		displayport_topology_set_vc(sst_id);
+		usleep_range(25, 30);
 	}
 
-	displayport_set_avi_infoframe();
-	displayport_set_spd_infoframe();
+	if (displayport_check_sst_on(displayport) != DISPLAYPORT_STATE_ON) {
+		displayport_info("first sst on");
+#if defined(CONFIG_CPU_IDLE)
+		/* block to enter SICD mode */
+		exynos_update_ip_idle_status(displayport->idle_ip_index, 0);
+#endif
+		enable_irq(displayport->res.irq);
+	}
+
+	if (displayport->sst[sst_id]->bist_used) {
+		displayport_reg_set_bist_video_configuration(sst_id,
+				displayport->sst[sst_id]->cur_video, bpc, bist_type, dyn_range);
+	} else {
+		if (displayport->sst[sst_id]->bpc == BPC_6 && displayport->dfp_type != DFP_TYPE_DP) {
+			bpc = BPC_8;
+			displayport->sst[sst_id]->bpc = BPC_8;
+		}
+
+		displayport_reg_set_video_configuration(sst_id,
+				displayport->sst[sst_id]->cur_video, bpc, dyn_range);
+	}
+
+	displayport_info("SST%d cur_video = %s in displayport_enable!!!\n", sst_id + 1,
+			supported_videos[displayport->sst[sst_id]->cur_video].name);
+
+	displayport_set_avi_infoframe(sst_id);
+	displayport_set_spd_infoframe(sst_id);
 #ifdef HDCP_SUPPORT
 	displayport_reg_video_mute(0);
 #endif
-	displayport_reg_start();
+	displayport_reg_start(sst_id);
 
-	displayport->state = DISPLAYPORT_STATE_ON;
-	wake_up_interruptible(&displayport->dp_wait);
-	hdcp_start(displayport);
+	if (displayport_check_sst_on(displayport) != DISPLAYPORT_STATE_ON)
+		hdcp_start(displayport);
+
+	displayport->sst[sst_id]->state = DISPLAYPORT_STATE_ON;
+
 	mutex_unlock(&displayport->cmd_lock);
 
 	return ret;
@@ -1887,32 +2233,41 @@ int displayport_enable(struct displayport_device *displayport)
 
 int displayport_disable(struct displayport_device *displayport)
 {
-	displayport_info("%s +, state: %d\n", __func__, displayport->state);
+	u32 sst_id = displayport->cur_sst_id;
+
+	displayport_info("SST%d %s +, state: %d\n", sst_id + 1,
+			__func__, displayport->sst[sst_id]->state);
+
 	mutex_lock(&displayport->cmd_lock);
-	if (displayport->state != DISPLAYPORT_STATE_ON) {
-		displayport_err("ignore disable, state:%d\n", displayport->state);
+
+	if (displayport->sst[sst_id]->state != DISPLAYPORT_STATE_ON) {
+		displayport_err("ignore disable, state:%d\n", displayport->sst[sst_id]->state);
 		mutex_unlock(&displayport->cmd_lock);
 		return 0;
 	}
 
-	hdcp13_info.auth_state = HDCP13_STATE_NOT_AUTHENTICATED;
+	displayport_reg_stop(sst_id);
+	displayport_reg_set_video_bist_mode(sst_id, 0);
 
-	displayport_reg_set_video_bist_mode(0);
-	displayport_reg_deinit();
-	disable_irq(displayport->res.irq);
+	if (displayport->mst_cap && displayport->hpd_current_state == HPD_PLUG) {
+		displayport_mst_payload_table_delete(sst_id);
+		displayport_clr_vc_config(sst_id, displayport);
+		displayport_info("SST%d displayport_mst_payload_table_delete\n", sst_id + 1);
+	}
 
-	displayport_reg_phy_disable();
+	displayport->sst[sst_id]->state = DISPLAYPORT_STATE_OFF_CHECK;
 
-	pm_runtime_put_sync(displayport->dev);
+	if (displayport_check_sst_on(displayport) == DISPLAYPORT_STATE_OFF) {
+		disable_irq(displayport->res.irq);
 
-	displayport->state = DISPLAYPORT_STATE_OFF;
-	wake_up_interruptible(&displayport->dp_wait);
+		hdcp13_info.auth_state = HDCP13_STATE_NOT_AUTHENTICATED;
+		displayport_info("all sst off");
+	}
+
+	displayport->sst[sst_id]->state = DISPLAYPORT_STATE_OFF;
+
 	displayport_info("%s -\n", __func__);
 
-#if defined(CONFIG_CPU_IDLE)
-	/* unblock to enter SICD mode */
-	exynos_update_ip_idle_status(displayport->idle_ip_index, 1);
-#endif
 	mutex_unlock(&displayport->cmd_lock);
 
 	return 0;
@@ -1961,11 +2316,12 @@ static int displayport_s_dv_timings(struct v4l2_subdev *sd,
 		struct v4l2_dv_timings *timings)
 {
 	struct displayport_device *displayport = container_of(sd, struct displayport_device, sd);
-	struct decon_device *decon = get_decon_drvdata(2);
-	videoformat displayport_setting_videoformat;
+	u32 sst_id = displayport->cur_sst_id;
+	struct decon_device *decon = get_decon_drvdata(displayport_get_decon_id(sst_id));
+	videoformat displayport_setting_videoformat = V640X480P60;
 	int ret = 0;
 
-	v4l2_print_dv_timings("Displayport:", " set ", timings, false);
+	v4l2_print_dv_timings("Displayport", "set", timings, false);
 	ret = displayport_timing2conf(timings);
 	if (ret < 0) {
 		displayport_err("displayport timings not supported\n");
@@ -1973,29 +2329,29 @@ static int displayport_s_dv_timings(struct v4l2_subdev *sd,
 	}
 	displayport_setting_videoformat = ret;
 
-	if (displayport->bist_used == 0) {
-		if (displayport_check_pixel_clock_for_hdr(displayport,
+	if (displayport->sst[sst_id]->bist_used == 0) {
+		if (displayport_check_pixel_clock_for_hdr(sst_id, displayport,
 				displayport_setting_videoformat) == true) {
 			displayport_info("sink support HDR\n");
 			/* BPC_10 should be enabled when support HDR */
-			displayport->bpc = BPC_10;
+			displayport->sst[sst_id]->bpc = BPC_10;
 		} else {
-			displayport->rx_edid_data.hdr_support = 0;
-			displayport->bpc = BPC_8;
+			displayport->sst[sst_id]->rx_edid_data.hdr_support = 0;
+			displayport->sst[sst_id]->bpc = BPC_8;
 		}
 
 		/*fail safe mode (640x480) with 6 bpc*/
 		if (displayport_setting_videoformat == V640X480P60)
-			displayport->bpc = BPC_6;
+			displayport->sst[sst_id]->bpc = BPC_6;
 	}
 
-	displayport->cur_video = displayport_setting_videoformat;
-	displayport->cur_timings = *timings;
+	displayport->sst[sst_id]->cur_video = displayport_setting_videoformat;
+	displayport->sst[sst_id]->cur_timings = *timings;
 
 	decon_displayport_get_out_sd(decon);
 
-	displayport_dbg("New cur_video = %s\n",
-		supported_videos[displayport->cur_video].name);
+	displayport_dbg("SST%d New cur_video = %s\n", sst_id + 1,
+			supported_videos[displayport->sst[sst_id]->cur_video].name);
 
 	return 0;
 }
@@ -2005,7 +2361,7 @@ static int displayport_g_dv_timings(struct v4l2_subdev *sd,
 {
 	struct displayport_device *displayport = container_of(sd, struct displayport_device, sd);
 
-	*timings = displayport->cur_timings;
+	*timings = displayport->sst[displayport->cur_sst_id]->cur_timings;
 
 	displayport_dbg("displayport_g_dv_timings\n");
 
@@ -2058,30 +2414,33 @@ static int displayport_s_stream(struct v4l2_subdev *sd, int enable)
 		return displayport_disable(displayport);
 }
 
-int displayport_set_hdr_config(struct exynos_hdr_static_info *hdr_info)
+int displayport_set_hdr_config(u32 sst_id, struct exynos_hdr_static_info *hdr_info)
 {
 	int ret = 0;
 
-	displayport_set_hdr_infoframe(hdr_info);
+	displayport_set_hdr_infoframe(sst_id, hdr_info);
 
 	return ret;
 }
 
-void displayport_get_hdr_support(int *hdr_support)
+void displayport_get_hdr_support(u32 sst_id,
+		struct displayport_device *displayport, int *hdr_support)
 {
-	struct displayport_device *displayport = get_displayport_drvdata();
-
-	*hdr_support = (int)displayport->rx_edid_data.hdr_support;
+	*hdr_support = (int)displayport->sst[sst_id]->rx_edid_data.hdr_support;
 }
 
 bool is_displayport_not_running(void)
 {
+	int i = 0;
+
 	struct displayport_device *displayport = get_displayport_drvdata();
 
-	if (displayport->state == DISPLAYPORT_STATE_ON)
-		return false;
-	else
-		return true;
+	for (i = SST1; i < MAX_SST_CNT; i++) {
+		if (displayport->sst[i]->state == DISPLAYPORT_STATE_ON)
+			return false;
+	}
+
+	return true;
 }
 
 static long displayport_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
@@ -2110,7 +2469,7 @@ static long displayport_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *ar
 	case DISPLAYPORT_IOC_SET_HDR_METADATA:
 		hdr_info = (struct exynos_hdr_static_info *)arg;
 		/* set info frame for hdr contents */
-		ret = displayport_set_hdr_config(hdr_info);
+		ret = displayport_set_hdr_config(displayport->cur_sst_id, hdr_info);
 		if (ret)
 			displayport_err("failed to configure hdr info\n");
 		break;
@@ -2118,7 +2477,8 @@ static long displayport_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *ar
 	case DISPLAYPORT_IOC_GET_HDR_INFO:
 		hdr_support = (int *)arg;
 
-		displayport_get_hdr_support(hdr_support);
+		displayport_get_hdr_support(displayport->cur_sst_id,
+				displayport, hdr_support);
 		break;
 
 	case EXYNOS_DPU_GET_ACLK:
@@ -2415,6 +2775,7 @@ static ssize_t displayport_link_store(struct class *dev,
 {
 	int mode = 0;
 	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	if (kstrtoint(buf, 10, &mode))
 		return size;
@@ -2445,21 +2806,19 @@ static ssize_t displayport_link_store(struct class *dev,
 			pr_info("%s: %02x %02x\n", __func__, link_rate, lane_cnt);
 			displayport_reg_init(); /* for AUX ch read/write. */
 
-			displayport_link_status_read();
+			displayport_link_status_read(sst_id);
 
 			g_displayport_debug_param.param_used = 1;
 			g_displayport_debug_param.link_rate = link_rate;
 			g_displayport_debug_param.lane_cnt = lane_cnt;
 
-			displayport_full_link_training();
+			displayport_full_link_training(sst_id);
 
 			g_displayport_debug_param.param_used = 0;
 
-			displayport_set_switch_state(displayport, 1);
-			timeout = wait_event_interruptible_timeout(displayport->dp_wait,
-				(displayport->state == DISPLAYPORT_STATE_ON), msecs_to_jiffies(1000));
-			if (!timeout)
-				displayport_err("enable timeout in %s\n", __func__);
+			displayport_set_extcon_state(sst_id, displayport, 1);
+			displayport_wait_state_change(sst_id, displayport,
+					1000, DISPLAYPORT_STATE_ON);
 		} else {
 			pr_err("%s: Not support command[%d]\n",
 					__func__, mode);
@@ -2476,8 +2835,10 @@ static ssize_t displayport_test_bpc_show(struct class *class,
 		char *buf)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
-	return snprintf(buf, PAGE_SIZE, "displayport bpc %d\n", (displayport->bpc == BPC_6)?6:8);
+	return snprintf(buf, PAGE_SIZE, "displayport bpc %d\n",
+			(displayport->sst[sst_id]->bpc == BPC_6)?6:8);
 }
 static ssize_t displayport_test_bpc_store(struct class *dev,
 		struct class_attribute *attr,
@@ -2485,6 +2846,7 @@ static ssize_t displayport_test_bpc_store(struct class *dev,
 {
 	int mode = 0;
 	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	if (kstrtoint(buf, 10, &mode))
 		return size;
@@ -2492,10 +2854,10 @@ static ssize_t displayport_test_bpc_store(struct class *dev,
 
 	switch (mode) {
 	case 6:
-		displayport->bpc = BPC_6;
+		displayport->sst[sst_id]->bpc = BPC_6;
 		break;
 	case 8:
-		displayport->bpc = BPC_8;
+		displayport->sst[sst_id]->bpc = BPC_8;
 		break;
 	default:
 		pr_err("%s: Not support command[%d]\n",
@@ -2513,9 +2875,10 @@ static ssize_t displayport_test_range_show(struct class *class,
 		char *buf)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	return sprintf(buf, "displayport range %s\n",
-		(displayport->dyn_range == VESA_RANGE)?"VESA_RANGE":"CEA_RANGE");
+		(displayport->sst[sst_id]->dyn_range == VESA_RANGE)?"VESA_RANGE":"CEA_RANGE");
 }
 static ssize_t displayport_test_range_store(struct class *dev,
 		struct class_attribute *attr,
@@ -2523,6 +2886,7 @@ static ssize_t displayport_test_range_store(struct class *dev,
 {
 	int mode = 0;
 	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	if (kstrtoint(buf, 10, &mode))
 		return size;
@@ -2530,10 +2894,10 @@ static ssize_t displayport_test_range_store(struct class *dev,
 
 	switch (mode) {
 	case 0:
-		displayport->dyn_range = VESA_RANGE;
+		displayport->sst[sst_id]->dyn_range = VESA_RANGE;
 		break;
 	case 1:
-		displayport->dyn_range = CEA_RANGE;
+		displayport->sst[sst_id]->dyn_range = CEA_RANGE;
 		break;
 	default:
 		pr_err("%s: Not support command[%d]\n",
@@ -2553,12 +2917,13 @@ static ssize_t displayport_test_edid_show(struct class *class,
 	struct v4l2_dv_timings edid_preset;
 	int i;
 	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	edid_preset = edid_preferred_preset();
 
 	i = displayport_timing2conf(&edid_preset);
 	if (i < 0) {
-		i = displayport->cur_video;
+		i = displayport->sst[sst_id]->cur_video;
 		pr_err("displayport timings not supported\n");
 	}
 
@@ -2576,6 +2941,7 @@ static ssize_t displayport_test_edid_store(struct class *dev,
 	int i;
 	int mode = 0;
 	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	if (kstrtoint(buf, 10, &mode))
 		return size;
@@ -2585,7 +2951,7 @@ static ssize_t displayport_test_edid_store(struct class *dev,
 	edid_preset = edid_preferred_preset();
 	i = displayport_timing2conf(&edid_preset);
 	if (i < 0) {
-		i = displayport->cur_video;
+		i = displayport->sst[sst_id]->cur_video;
 		pr_err("displayport timings not supported\n");
 	}
 
@@ -2603,10 +2969,11 @@ static ssize_t displayport_test_bist_show(struct class *class,
 		char *buf)
 {
 	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	return snprintf(buf, PAGE_SIZE, "displayport bist used %d type %d\n",
-			displayport->bist_used,
-			displayport->bist_type);
+			displayport->sst[sst_id]->bist_used,
+			displayport->sst[sst_id]->bist_type);
 }
 
 static ssize_t displayport_test_bist_store(struct class *dev,
@@ -2616,6 +2983,7 @@ static ssize_t displayport_test_bist_store(struct class *dev,
 	int mode = 0;
 	struct displayport_audio_config_data audio_config_data;
 	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
 
 	if (kstrtoint(buf, 10, &mode))
 		return size;
@@ -2623,36 +2991,36 @@ static ssize_t displayport_test_bist_store(struct class *dev,
 
 	switch (mode) {
 	case 0:
-		displayport->bist_used = 0;
-		displayport->bist_type = COLOR_BAR;
+		displayport->sst[sst_id]->bist_used = 0;
+		displayport->sst[sst_id]->bist_type = COLOR_BAR;
 		break;
 	case 1:
-		displayport->bist_used = 1;
-		displayport->bist_type = COLOR_BAR;
+		displayport->sst[sst_id]->bist_used = 1;
+		displayport->sst[sst_id]->bist_type = COLOR_BAR;
 		break;
 	case 2:
-		displayport->bist_used = 1;
-		displayport->bist_type = WGB_BAR;
+		displayport->sst[sst_id]->bist_used = 1;
+		displayport->sst[sst_id]->bist_type = WGB_BAR;
 		break;
 	case 3:
-		displayport->bist_used = 1;
-		displayport->bist_type = MW_BAR;
+		displayport->sst[sst_id]->bist_used = 1;
+		displayport->sst[sst_id]->bist_type = MW_BAR;
 		break;
 	case 4:
-		displayport->bist_used = 1;
-		displayport->bist_type = CTS_COLOR_RAMP;
+		displayport->sst[sst_id]->bist_used = 1;
+		displayport->sst[sst_id]->bist_type = CTS_COLOR_RAMP;
 		break;
 	case 5:
-		displayport->bist_used = 1;
-		displayport->bist_type = CTS_BLACK_WHITE;
+		displayport->sst[sst_id]->bist_used = 1;
+		displayport->sst[sst_id]->bist_type = CTS_BLACK_WHITE;
 		break;
 	case 6:
-		displayport->bist_used = 1;
-		displayport->bist_type = CTS_COLOR_SQUARE_VESA;
+		displayport->sst[sst_id]->bist_used = 1;
+		displayport->sst[sst_id]->bist_type = CTS_COLOR_SQUARE_VESA;
 		break;
 	case 7:
-		displayport->bist_used = 1;
-		displayport->bist_type = CTS_COLOR_SQUARE_CEA;
+		displayport->sst[sst_id]->bist_used = 1;
+		displayport->sst[sst_id]->bist_type = CTS_COLOR_SQUARE_CEA;
 		break;
 	case 11:
 	case 12:
@@ -2662,7 +3030,7 @@ static ssize_t displayport_test_bist_store(struct class *dev,
 		audio_config_data.audio_bit = 0;
 		audio_config_data.audio_packed_mode = 0;
 		audio_config_data.audio_word_length = 0;
-		displayport_audio_bist_config(audio_config_data);
+		displayport_audio_bist_config(SST1, audio_config_data);
 		break;
 	default:
 		pr_err("%s: Not support command[%d]\n",
@@ -2828,6 +3196,49 @@ static ssize_t displayport_log_level_store(struct class *dev,
 static CLASS_ATTR(log_level, 0664, displayport_log_level_show, displayport_log_level_store);
 #endif
 
+static int displayport_init_sst_info(struct displayport_device *displayport)
+{
+	int ret = 0;
+	int i = 0;
+	struct displayport_sst *sst = NULL;
+	struct displayport_vc_config *vc_config = NULL;
+
+	for (i = SST1; i < MAX_SST_CNT; i++) {
+		if (displayport->sst[i] == NULL) {
+			sst = kzalloc(sizeof(struct displayport_sst), GFP_KERNEL);
+			if (!sst) {
+				displayport_err("could not allocate sst[%d]\n", i);
+				ret = -ENOMEM;
+				goto err_sst_info;
+			}
+
+			displayport->sst[i] = sst;
+			displayport->sst[i]->id = i;
+			displayport->sst[i]->decon_id = displayport_get_decon_id(i);
+			displayport->sst[i]->state = DISPLAYPORT_STATE_INIT;
+			displayport->sst[i]->cur_video = V640X480P60;
+			displayport->sst[i]->bpc = BPC_8;
+			displayport->sst[i]->dyn_range = VESA_RANGE;
+			displayport->sst[i]->bist_used = 0;
+			displayport->sst[i]->bist_type = COLOR_BAR;
+			displayport->sst[i]->audio_state = AUDIO_DISABLE;
+			displayport->sst[i]->audio_buf_empty_check = 0;
+
+			vc_config = kzalloc(sizeof(struct displayport_vc_config), GFP_KERNEL);
+			if (!vc_config) {
+				displayport_err("could not allocate sst[%d] vc_config\n", i);
+				ret = -ENOMEM;
+				goto err_sst_info;
+			}
+
+			displayport->sst[i]->vc_config = vc_config;
+		}
+	}
+
+err_sst_info:
+	return ret;
+}
+
 static int displayport_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -2845,6 +3256,10 @@ static int displayport_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	ret = displayport_init_sst_info(displayport);
+	if (ret)
+		goto err_dt;
+
 	dma_set_mask(dev, DMA_BIT_MASK(36));
 
 	ret = displayport_parse_dt(displayport, dev);
@@ -2859,8 +3274,6 @@ static int displayport_probe(struct platform_device *pdev)
 	mutex_init(&displayport->aux_lock);
 	mutex_init(&displayport->training_lock);
 	mutex_init(&displayport->hdcp2_lock);
-	init_waitqueue_head(&displayport->dp_wait);
-	init_waitqueue_head(&displayport->audio_wait);
 
 	ret = displayport_init_resources(displayport, pdev);
 	if (ret)
@@ -2908,25 +3321,9 @@ static int displayport_probe(struct platform_device *pdev)
 		displayport_err("hdmi extcon register failed.\n");
 		goto err_dt;
 	}
-#if 0
-	displayport->audio_switch.name = "ch_hdmi_audio";
-
-	ret = devm_extcon_dev_allocate(displayport->dev, 2);
-	if (ret) {
-		displayport_err("audio extcon dev_allocate failed.\n");
-		goto err_dt;
-	}
-
-	ret = devm_extcon_dev_register(displayport->dev, extcon_id);
-	if (ret) {
-		displayport_err("audio extcon register failed.\n");
-		goto err_dt;
-	}
-#endif
 #else
 	displayport_info("Not compiled EXTCON driver\n");
 #endif
-	displayport->hpd_state = HPD_UNPLUG;
 
 	pm_runtime_enable(dev);
 
@@ -2946,7 +3343,6 @@ static int displayport_probe(struct platform_device *pdev)
 		displayport_warn("idle ip index is not provided for DP\n");
 	exynos_update_ip_idle_status(displayport->idle_ip_index, 1);
 #endif
-	displayport->state = DISPLAYPORT_STATE_INIT;
 
 	ret = device_init_wakeup(displayport->dev, true);
 	if (ret) {
@@ -3000,13 +3396,10 @@ static int displayport_probe(struct platform_device *pdev)
 	g_displayport_debug_param.link_rate = LINK_RATE_2_7Gbps;
 	g_displayport_debug_param.lane_cnt = 0x04;
 
-	displayport->bpc = BPC_8;
-	displayport->bist_used = 0;
-	displayport->bist_type = COLOR_BAR;
 #if defined(CONFIG_EXYNOS_HDCP2)
 	displayport->drm_start_state = DRM_OFF;
 #endif
-	displayport->dyn_range = VESA_RANGE;
+
 	displayport_info("displayport driver has been probed.\n");
 	return 0;
 
@@ -3020,11 +3413,13 @@ static void displayport_shutdown(struct platform_device *pdev)
 {
 #if 0
 	struct displayport_device *displayport = platform_get_drvdata(pdev);
+	int i = 0;
 
 	/* DPU_EVENT_LOG(DPU_EVT_DP_SHUTDOWN, &displayport->sd, ktime_set(0, 0)); */
-	displayport_info("%s + state:%d\n", __func__, displayport->state);
-
-	displayport_disable(displayport);
+	for (i = SST1; i < MAX_SST_CNT; i++) {
+		displayport_info("SST%d %s + state:%d\n", i + 1, __func__, displayport->sst[i]->state);
+		displayport_disable(displayport);
+	}
 
 	displayport_info("%s -\n", __func__);
 #else

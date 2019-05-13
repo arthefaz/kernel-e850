@@ -259,7 +259,8 @@ u8 hdcp13_cmp_ri(void)
 
 void hdcp13_encryption_con(u8 enable)
 {
-	struct decon_device *decon = get_decon_drvdata(2);
+	u32 sst_id = displayport_get_sst_id_with_decon_id(DEFAULT_DECON_ID);
+	struct decon_device *decon = get_decon_drvdata(displayport_get_decon_id(sst_id));
 
 	/* wait 2 frames for hdcp encryption enable/disable */
 	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
@@ -312,8 +313,8 @@ void hdcp13_link_integrity_check(void)
 
 void hdcp13_irq_mask(void)
 {
-	displayport_reg_set_interrupt_mask(HDCP_LINK_CHECK_INT_MASK, 1);
-	displayport_reg_set_interrupt_mask(HDCP_LINK_FAIL_INT_MASK, 1);
+	displayport_reg_set_common_interrupt_mask(HDCP_LINK_CHECK_INT_MASK, 1);
+	displayport_reg_set_common_interrupt_mask(HDCP_LINK_FAIL_INT_MASK, 1);
 }
 
 void hdcp13_make_sha1_input_buf(u8 *sha1_input_buf, u8 *binfo, u8 device_cnt)
@@ -407,7 +408,7 @@ static int hdcp13_proceed_repeater(void)
 		mdelay(RI_AVAILABLE_WAITING);
 		cnt++;
 
-		if (cnt > REPEATER_READY_WAIT_COUNT || !displayport_get_hpd_state()) {
+		if (cnt > REPEATER_READY_WAIT_COUNT || !IS_DISPLAYPORT_HPD_PLUG_STATE()) {
 			displayport_info("[HDCP 1.3] Not repeater ready in RX part\n");
 			hdcp13_info.auth_state = HDCP13_STATE_FAIL;
 			goto repeater_err;

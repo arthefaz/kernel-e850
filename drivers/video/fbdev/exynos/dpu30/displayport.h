@@ -39,6 +39,8 @@
 
 #include "./panels/exynos_panel.h"
 #include "hdr_metadata.h"
+#include "displayport_aux_client.h"
+#include "displayport_topology.h"
 
 extern int displayport_log_level;
 extern int forced_resolution;
@@ -76,7 +78,8 @@ extern struct displayport_device *displayport_drvdata;
 enum displayport_state {
 	DISPLAYPORT_STATE_INIT,
 	DISPLAYPORT_STATE_ON,
-	DISPLAYPORT_STATE_OFF
+	DISPLAYPORT_STATE_OFF,
+	DISPLAYPORT_STATE_OFF_CHECK
 };
 
 enum displayport_dynamic_range_type {
@@ -118,7 +121,7 @@ typedef enum {
 typedef enum {
 	ENABLE_SCRAM = 0,
 	DISABLE_SCRAM = 1,
-}displayport_scrambling;
+} displayport_scrambling;
 
 enum displayport_interrupt_mask {
 	PLL_LOCK_CHG_INT_MASK,
@@ -138,6 +141,19 @@ enum displayport_interrupt_mask {
 
 	ALL_INT_MASK
 };
+
+enum displayport_get_sst_id_type {
+	FIND_SST_ID,
+	ALLOC_SST_ID,
+};
+
+#define MAX_SST_CNT MAX_VC_CNT
+#define SST1 0
+#define SST2 1
+#define DEFAULT_DECON_ID 1
+#define SST1_DECON_ID DEFAULT_DECON_ID
+#define SST2_DECON_ID 2
+#define MAX_VC_PAYLOAD_TIMESLOT 63
 
 #define MAX_LANE_CNT 4
 #define MAX_LINK_RATE_NUM 4
@@ -187,6 +203,12 @@ struct fb_vendor {
 #define DPCP_LINK_SINK_STATUS_FIELD_LENGTH 8
 
 #define DPCD_ADD_REVISION_NUMBER 0x00000
+#define DPCD_VER_1_0 0x10
+#define DPCD_VER_1_1 0x11
+#define DPCD_VER_1_2 0x12
+#define DPCD_VER_1_3 0x13
+#define DPCD_VER_1_4 0x14
+
 #define DPCD_ADD_MAX_LINK_RATE 0x00001
 #define LINK_RATE_1_62Gbps 0x06
 #define LINK_RATE_2_7Gbps 0x0A
@@ -223,6 +245,9 @@ struct fb_vendor {
 #define TRANING_AUX_RD_INTERVAL_12ms 0x03
 #define TRANING_AUX_RD_INTERVAL_16ms 0x04
 
+#define DPCD_ADD_MSTM_CAP 0x00021
+#define MST_CAP (1 << 0)
+
 #define DPCD_ADD_LINK_BW_SET 0x00100
 
 #define DPCD_ADD_LANE_COUNT_SET 0x00101
@@ -250,12 +275,22 @@ struct fb_vendor {
 #define DPCD_ADD_LINK_QUAL_LANE3_SET 0x0010E
 #define DPCD_LINK_QUAL_PATTERN_SET (7 << 0)
 
+#define DPCD_ADD_MSTM_CTRL 0x00111
+#define DPCD_MST_EN (1 << 0)
+#define UP_REQ_EN (1 << 1)
+#define UPSTREAM_IS_SRC (1 << 2)
+
+#define DPCD_ADD_PAYLOAD_ALLOCATE_SET 0x001C0
+#define DPCD_ADD_PAYLOAD_ALLOCATE_START_TIME_SLOT 0x001C1
+#define DPCD_ADD_PAYLOAD_ALLOCATE_TIME_SLOT_COUNT 0x001C2
+
 #define DPCD_ADD_SINK_COUNT 0x00200
 #define SINK_COUNT2 (1 << 7)
 #define CP_READY (1 << 6)
 #define SINK_COUNT1 (0x3F << 0)
 
 #define DPCD_ADD_DEVICE_SERVICE_IRQ_VECTOR 0x00201
+#define DPCD_ADD_DEVICE_SERVICE_IRQ_VECTOR_ESI0 0x02003
 #define AUTOMATED_TEST_REQUEST (1 << 1)
 #define CP_IRQ (1 << 2)
 #define MCCS_IRQ (1 << 3)
@@ -366,6 +401,9 @@ struct fb_vendor {
 
 #define DPCD_TEST_AUDIO_PATTERN_TYPE 0x00272
 
+#define DPCD_ADD_PAYLOAD_TABLE_UPDATE_STATUS 0x002C0
+#define VC_PAYLOAD_ID_TABLE_UPDATE (1 << 0)
+
 #define DPCD_BRANCH_HW_REVISION	0x509
 #define DPCD_BRANCH_SW_REVISION_MAJOR	0x50A
 #define DPCD_BRANCH_SW_REVISION_MINOR	0x50B
@@ -467,7 +505,7 @@ typedef enum {
 	VDUMMYTIMING,
 } videoformat;
 
-typedef enum{
+typedef enum {
 	ASYNC_MODE = 0,
 	SYNC_MODE,
 } audio_sync_mode;
@@ -512,7 +550,7 @@ enum audio_clock_accuracy {
 	NOT_MATCH = 3,
 };
 
-enum bit_depth{
+enum bit_depth {
 	BPC_6 = 0,
 	BPC_8,
 	BPC_10,
@@ -520,7 +558,7 @@ enum bit_depth{
 	BPC_16,
 };
 
-enum test_pattern{
+enum test_pattern {
 	COLOR_BAR = 0,
 	WGB_BAR,
 	MW_BAR,
@@ -530,15 +568,20 @@ enum test_pattern{
 	CTS_COLOR_SQUARE_CEA,
 };
 
-enum hotplug_state{
+enum hotplug_state {
 	HPD_UNPLUG = 0,
 	HPD_PLUG,
 	HPD_IRQ,
+	HPD_UNPLUG_WORK,
+	HPD_PLUG_WORK,
 };
 
 #if defined(CONFIG_EXTCON)
+#define EXTCON_DISP_DP2 49 /* for MST */
+
 static const unsigned int extcon_id[] = {
 	EXTCON_DISP_DP,
+	EXTCON_DISP_DP2,
 
 	EXTCON_NONE,
 };
@@ -552,23 +595,46 @@ struct edid_data {
 	u8 max_lumi_data;
 	u8 max_average_lumi_data;
 	u8 min_lumi_data;
+
+	u8 edid_manufacturer[4];
+	u32 edid_product;
+	u32 edid_serial;
+	u8 *edid_buf;
+};
+
+struct displayport_sst {
+	u32 id;
+	u32 decon_id; /* connected decon id */
+	enum displayport_state state;
+	enum hotplug_state hpd_state; /* each SST RX port status */
+
+	struct edid_data rx_edid_data;
+	videoformat best_video;
+
+	struct v4l2_dv_timings cur_timings;
+	videoformat cur_video;
+	enum bit_depth bpc;
+	enum displayport_dynamic_range_type dyn_range;
+
+	u8 bist_used;
+	enum test_pattern bist_type;
+
+	int audio_state;
+	int audio_buf_empty_check;
+
+	struct displayport_vc_config *vc_config;
 };
 
 struct displayport_device {
-	enum displayport_state state;
 	struct device *dev;
 	struct displayport_resources res;
 
-	unsigned int data_lane;
-	u32 data_lane_cnt;
 	struct phy *phy;
 	spinlock_t slock;
 
-	struct dsim_lcd_driver *panel_ops;
 	struct exynos_panel_info lcd_info;
 
 	struct v4l2_subdev sd;
-	struct v4l2_dv_timings cur_timings;
 
 	struct workqueue_struct *dp_wq;
 	struct workqueue_struct *hdcp2_wq;
@@ -577,7 +643,6 @@ struct displayport_device {
 	struct delayed_work hpd_irq_work;
 #if defined(CONFIG_EXTCON)
 	struct extcon_dev *extcon_displayport;
-	//struct extcon_dev audio_switch;
 #endif
 	struct delayed_work hdcp13_work;
 	struct delayed_work hdcp22_work;
@@ -589,10 +654,7 @@ struct displayport_device {
 	struct mutex aux_lock;
 	struct mutex training_lock;
 	struct mutex hdcp2_lock;
-	wait_queue_head_t dp_wait;
-	int audio_state;
-	int audio_buf_empty_check;
-	wait_queue_head_t audio_wait;
+
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	struct delayed_work notifier_register_work;
 	struct notifier_block dp_typec_nb;
@@ -602,7 +664,6 @@ struct displayport_device {
 	bool ccic_hpd;
 #endif
 	int hpd_current_state;
-	enum hotplug_state hpd_state;
 	int dp_sw_sel;
 	int gpio_sw_oe;
 	int gpio_sw_sel;
@@ -611,24 +672,15 @@ struct displayport_device {
 	const char *aux_vdd;
 
 	int auto_test_mode;
-	enum bit_depth bpc;
-	u8 bist_used;
-	enum test_pattern bist_type;
-	enum displayport_dynamic_range_type dyn_range;
-	videoformat cur_video;
-
-	struct edid_data rx_edid_data;
 
 	int idle_ip_index;
 	enum drm_state drm_start_state;
 	enum drm_state drm_smc_state;
 
-	u8 edid_manufacturer[4];
-	u32 edid_product;
-	u32 edid_serial;
-	u8 *edid_test_buf;
+	u32 cur_sst_id;
+	struct displayport_sst *sst[MAX_SST_CNT];
 
-	videoformat best_video;
+	int mst_cap;
 };
 
 struct displayport_debug_param {
@@ -640,6 +692,7 @@ struct displayport_debug_param {
 /* EDID functions */
 /* default preset configured on probe */
 #define EDID_DEFAULT_TIMINGS_IDX (0) /* 640x480@60Hz */
+#define MAX_MST_TIMINGS_ID V4096X2160P30
 
 #define EDID_ADDRESS 0x50
 #define AUX_DATA_BUF_COUNT 16
@@ -1032,18 +1085,38 @@ static inline bool IS_DISPLAYPORT_HPD_PLUG_STATE(void)
 	return (bool)displayport->hpd_current_state;
 }
 
+static inline bool IS_DISPLAYPORT_SST_HPD_PLUG_STATE(u32 sst_id)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+
+	return (bool)displayport->sst[sst_id]->hpd_state;
+}
+
+void displayport_dump_registers(struct displayport_device *displayport);
+u32 displayport_get_decon_id(u32 sst_id);
+u32 displayport_get_sst_id_with_decon_id(u32 decon_id);
+int displayport_get_sst_id_with_port_number(u8 port_number, u8 get_sst_id_type);
+void displayport_clr_vc_config(u32 ch,
+		struct displayport_device *displayport);
+int displayport_calc_vc_config(u32 ch,
+		struct displayport_device *displayport);
 int displayport_enable(struct displayport_device *displayport);
 int displayport_disable(struct displayport_device *displayport);
 
 void displayport_reg_init(void);
 void displayport_reg_deinit(void);
 void displayport_reg_sw_reset(void);
-void displayport_reg_set_interrupt_mask(enum displayport_interrupt_mask param, u8 set);
-u32 displayport_reg_get_interrupt_and_clear(u32 interrupt_status_register);
-void displayport_reg_start(void);
+void displayport_reg_set_common_interrupt_mask(enum displayport_interrupt_mask param, u8 set);
+void displayport_reg_set_sst_interrupt_mask(u32 sst_id,
+		enum displayport_interrupt_mask param, u8 set);
+u32 displayport_reg_get_common_interrupt_and_clear(void);
+u32 displayport_reg_get_sst_video_interrupt_and_clear(u32 sst_id);
+u32 displayport_reg_get_sst_audio_interrupt_and_clear(u32 sst_id);
+void displayport_reg_start(u32 sst_id);
 void displayport_reg_video_mute(u32 en);
-void displayport_reg_stop(void);
-void displayport_reg_set_video_configuration(videoformat video_format, u8 bpc, u8 range);
+void displayport_reg_stop(u32 sst_id);
+void displayport_reg_set_video_configuration(u32 sst_id,
+		videoformat video_format, u8 bpc, u8 range);
 int displayport_reg_dpcd_write(u32 address, u32 length, u8 *data);
 int displayport_reg_dpcd_read(u32 address, u32 length, u8 *data);
 int displayport_reg_dpcd_write_burst(u32 address, u32 length, u8 *data);
@@ -1067,34 +1140,48 @@ void displayport_reg_set_qual_pattern(displayport_qual_pattern pattern, displayp
 void displayport_reg_set_hbr2_scrambler_reset(u32 uResetCount);
 void displayport_reg_set_pattern_PLTPAT(void);
 void displayport_reg_set_voltage_and_pre_emphasis(u8 *voltage, u8 *pre_emphasis);
-void displayport_reg_set_bist_video_configuration(videoformat video_format, u8 bpc, u8 type, u8 range);
-void displayport_reg_set_bist_video_configuration_for_blue_screen(videoformat video_format);
-void displayport_reg_set_video_bist_mode(u32 en);
-void displayport_reg_set_audio_bist_mode(u32 en);
-void displayport_reg_lh_p_ch_power(u32 en);
+void displayport_reg_set_bist_video_configuration(u32 sst_id,
+		videoformat video_format, u8 bpc, u8 type, u8 range);
+void displayport_reg_set_bist_video_configuration_for_blue_screen(u32 sst_id,
+		videoformat video_format);
+void displayport_reg_set_video_bist_mode(u32 sst_id, u32 en);
+void displayport_reg_set_audio_bist_mode(u32 sst_id, u32 en);
+u32 displayport_reg_get_video_clk(u32 sst_id);
+u32 displayport_reg_get_ls_clk(void);
+void displayport_reg_lh_p_ch_power(u32 sst_id, u32 en);
 
-void displayport_audio_enable(struct displayport_audio_config_data *audio_config_data);
-void displayport_audio_disable(void);
-void displayport_audio_wait_buf_full(void);
-void displayport_audio_dma_force_req_release(void);
-void displayport_audio_bist_enable(struct displayport_audio_config_data audio_config_data);
-void displayport_audio_init_config(void);
-void displayport_audio_bist_config(struct displayport_audio_config_data audio_config_data);
-void displayport_reg_print_audio_state(void);
+void displayport_audio_enable(u32 sst_id,
+		struct displayport_audio_config_data *audio_config_data);
+void displayport_audio_disable(u32 sst_id);
+void displayport_audio_wait_buf_full(u32 sst_id);
+void displayport_audio_dma_force_req_release(u32 sst_id);
+void displayport_audio_bist_enable(u32 sst_id,
+		struct displayport_audio_config_data audio_config_data);
+void displayport_audio_init_config(u32 sst_id);
+void displayport_audio_bist_config(u32 sst_id,
+		struct displayport_audio_config_data audio_config_data);
+void displayport_reg_print_audio_state(u32 sst_id);
 
 void displayport_reg_set_hdcp22_system_enable(u32 en);
 void displayport_reg_set_hdcp22_mode(u32 en);
 void displayport_reg_set_hdcp22_encryption_enable(u32 en);
 u32 displayport_reg_get_hdcp22_encryption_enable(void);
 void displayport_reg_set_aux_pn_inv(u32 val);
+void displayport_on_by_hpd_high(u32 sst_id, struct displayport_device *displayport);
+void displayport_off_by_hpd_low(u32 sst_id, struct displayport_device *displayport);
 void displayport_hpd_changed(int state);
-int displayport_get_hpd_state(void);
 bool is_displayport_not_running(void);
+void displayport_reg_set_mst_en(u32 en);
+void displayport_reg_set_vc_payload_update_flag(void);
+void displayport_reg_set_strm_x_y(u32 sst_id, u32 x_val, u32 y_val);
+void displyaport_reg_set_vc_payload_id_timeslot(u32 ch, u32 start, u32 size);
+void displyaport_reg_set_vc_payload_id_timeslot_delete(u32 ch,
+		struct displayport_device *displayport);
 
 int displayport_reg_stand_alone_crc_sorting(void);
 
-int edid_read(struct displayport_device *hdev, u8 **data);
-int edid_update(struct displayport_device *hdev);
+int edid_read(u32 sst_id, struct displayport_device *displayport, u8 **data);
+int edid_update(u32 sst_id, struct displayport_device *displayport);
 struct v4l2_dv_timings edid_preferred_preset(void);
 void edid_set_preferred_preset(int mode);
 int edid_find_resolution(u16 xres, u16 yres, u16 refresh);
@@ -1102,10 +1189,10 @@ u8 edid_read_checksum(void);
 u32 edid_audio_informs(void);
 bool edid_support_pro_audio(void);
 
-void displayport_reg_set_avi_infoframe(struct infoframe avi_infofrmae);
-void displayport_reg_set_spd_infoframe(struct infoframe spd_infofrmae);
-void displayport_reg_set_audio_infoframe(struct infoframe audio_infofrmae, u32 en);
-void displayport_reg_set_hdr_infoframe(struct infoframe hdr_infofrmae, u32 en);
+void displayport_reg_set_avi_infoframe(u32 sst_id, struct infoframe avi_infofrmae);
+void displayport_reg_set_spd_infoframe(u32 sst_id, struct infoframe spd_infofrmae);
+void displayport_reg_set_audio_infoframe(u32 sst_id, struct infoframe audio_infofrmae, u32 en);
+void displayport_reg_set_hdr_infoframe(u32 sst_id, struct infoframe hdr_infofrmae, u32 en);
 
 void hdcp13_run(void);
 void hdcp13_dpcd_buffer(void);
