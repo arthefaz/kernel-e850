@@ -1203,6 +1203,7 @@ int decon_wb_get_out_sd(struct decon_device *decon);
 
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 /* DECON to DISPLAYPORT interface functions */
+void decon_displayport_set_cur_sst_id(u32 decon_id);
 int decon_displayport_register_irq(struct decon_device *decon);
 void decon_displayport_free_irq(struct decon_device *decon);
 int decon_displayport_create_vsync_thread(struct decon_device *decon);
@@ -1216,7 +1217,7 @@ int decon_displayport_get_config(struct decon_device *dex,
 		struct exynos_displayport_data *displayport_data);
 int decon_displayport_set_config(struct decon_device *dex,
 		struct exynos_displayport_data *displayport_data);
-void decon_displayport_under_flow_int_mask(void);
+void decon_displayport_under_flow_int_mask(u32 decon_id);
 #endif
 
 /* window update related function */
