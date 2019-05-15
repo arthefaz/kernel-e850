@@ -55,7 +55,7 @@
 #define MAX_DECON_WIN		6
 #define MAX_DPP_SUBDEV		7
 
-#define DISP_RESTRICTION_VER	20180608
+#define DISP_RESTRICTION_VER	20190612
 
 extern struct decon_device *decon_drvdata[MAX_DECON_CNT];
 extern int decon_log_level;
@@ -437,13 +437,13 @@ struct decon_win_config {
 
 struct decon_reg_data {
 	u32 num_of_window;
-	int plane_cnt[MAX_DECON_WIN + 1];
+	int plane_cnt[MAX_DECON_WIN + 2];
 	struct list_head list;
 	struct decon_rect blender_bg;
-	struct decon_win_config dpp_config[MAX_DECON_WIN + 1];
+	struct decon_win_config dpp_config[MAX_DECON_WIN + 2];
 	struct decon_win_rect block_rect[MAX_DECON_WIN];
-	struct decon_window_regs win_regs[MAX_DECON_WIN];
-	struct decon_dma_buf_data dma_buf_data[MAX_DECON_WIN + 1][MAX_PLANE_CNT];
+	struct decon_window_regs win_regs[MAX_DECON_WIN + 2];
+	struct decon_dma_buf_data dma_buf_data[MAX_DECON_WIN + 2][MAX_PLANE_CNT];
 	struct dma_fence *retire_fence;
 
 	/*
@@ -459,7 +459,7 @@ struct decon_reg_data {
 	/* current update region */
 	struct decon_rect up_region;
 	/* protected contents playback */
-	bool protection[MAX_DECON_WIN + 1];
+	bool protection[MAX_DECON_WIN + 2];
 	/* cursor async */
 	bool is_cursor_win[MAX_DECON_WIN];
 	int cursor_win;
@@ -599,7 +599,7 @@ struct disp_log_pm {
 /* Related with S3CFB_WIN_CONFIG */
 struct decon_update_reg_data {
 	struct decon_window_regs 	win_regs[MAX_DECON_WIN];
-	struct decon_win_config 	win_config[MAX_DECON_WIN + 1];
+	struct decon_win_config 	win_config[MAX_DECON_WIN + 2];
 	struct decon_win_rect 		win;
 };
 
