@@ -1193,6 +1193,7 @@ bool decon_validate_x_alignment(struct decon_device *decon, int x, u32 w,
 int decon_wait_for_vsync(struct decon_device *decon, u32 timeout);
 int decon_check_limitation(struct decon_device *decon, int idx,
 		struct decon_win_config *config);
+void decon_readback_wq(struct work_struct *work);
 
 /* DECON to DSI interface functions */
 int decon_register_irq(struct decon_device *decon);

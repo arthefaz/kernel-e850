@@ -1452,6 +1452,8 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	}
 
 	regs->protection[idx] = config->protection;
+	if (config->protection)
+		regs->readback.drm = true;
 	decon_win_config_to_regs_param(fmt_info->len_alpha, config,
 			&regs->win_regs[idx], config->channel, idx); /* ch */
 
@@ -1500,7 +1502,7 @@ static void decon_check_used_dpp(struct decon_device *decon,
 		}
 	}
 
-	if (decon->dt.out_type == DECON_OUT_WB) {
+	if (decon->dt.out_type == DECON_OUT_WB || regs->readback.request) {
 		set_bit(ODMA_WB, &decon->cur_using_dpp);
 		set_bit(ODMA_WB, &decon->prev_used_dpp);
 	}
@@ -1560,7 +1562,7 @@ static int decon_set_dpp_config(struct decon_device *decon,
 		}
 	}
 
-	if (decon->dt.out_type == DECON_OUT_WB) {
+	if (decon->dt.out_type == DECON_OUT_WB || regs->readback.request) {
 		sd = decon->dpp_sd[ODMA_WB];
 		memcpy(&dpp_config.config, &regs->dpp_config[decon->dt.wb_win],
 				sizeof(struct decon_win_config));
@@ -1706,6 +1708,15 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 
 #if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 	decon_set_protected_content(decon, regs);
+#endif
+
+#if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
+	/* buffer should be filled with black data if drm contents */
+	if (regs->readback.request && !regs->readback.drm) {
+		decon_dbg("%s: CWB path enable!\n", __func__);
+		decon_reg_set_cwb_enable(decon->id, true);
+	} else
+		decon_reg_set_cwb_enable(decon->id, false);
 #endif
 
 	for (i = 0; i < decon->dt.max_win; i++) {
@@ -2026,6 +2037,63 @@ static void decon_save_cur_buf_info(struct decon_device *decon,
 	}
 }
 
+void decon_readback_wq(struct work_struct *work)
+{
+	struct decon_device *decon = get_decon_drvdata(0);
+	int i;
+
+	if (!decon->readback.enabled) {
+		decon_info("%s: readback feature is disabled\n", __func__);
+		return;
+	}
+
+	decon_dbg("%s +\n", __func__);
+
+	for (i = 0; i < decon->readback.num_buffers; ++i)
+		decon_free_dma_buf(decon, &decon->readback.dma_buf_data[i]);
+	decon_signal_fence(decon, decon->readback.fence);
+	dma_fence_put(decon->readback.fence);
+
+	decon_dbg("%s -\n", __func__);
+}
+
+#if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
+static void decon_handle_readback_buffer(struct decon_device *decon,
+		struct decon_reg_data *regs)
+{
+	int i;
+	void *buf_addr;
+	size_t buf_size;
+	const struct dpu_fmt *fmt_info;
+
+	decon_dbg("%s +\n", __func__);
+
+	fmt_info = dpu_find_fmt_info(regs->dpp_config[decon->dt.wb_win].format);
+
+	decon->readback.request = true;
+	decon->readback.num_buffers = fmt_info->num_buffers;
+	for (i = 0; i < fmt_info->num_buffers; ++i)
+		decon->readback.dma_buf_data[i] = regs->dma_buf_data[decon->dt.wb_win][i];
+	decon->readback.fence = regs->readback.fence;
+
+	if (regs->readback.drm) {
+		for (i = 0; i < fmt_info->num_buffers; ++i) {
+			/* kernel virtual */
+			buf_addr = dma_buf_vmap(decon->readback.dma_buf_data[i].dma_buf);
+			if (IS_ERR_OR_NULL(buf_addr)) {
+				decon_err("%s: failed to map readback buffer\n",
+						__func__);
+				return;
+			}
+			buf_size = regs->dma_buf_data[decon->dt.wb_win][i].dma_buf->size;
+			memset(buf_addr, 0x00, buf_size);
+		}
+	}
+
+	decon_dbg("%s -\n", __func__);
+}
+#endif
+
 static void decon_update_regs(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
@@ -2056,6 +2124,19 @@ static void decon_update_regs(struct decon_device *decon,
 			}
 		}
 	}
+#if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
+	if (regs->readback.request) {
+		/* wait release fence to write data */
+		if (regs->dma_buf_data[decon->dt.wb_win][0].fence) {
+			err = decon_wait_fence(decon,
+					regs->dma_buf_data[decon->dt.wb_win][0].fence,
+					regs->dpp_config[decon->dt.wb_win].rel_fence);
+			if (err < 0) {
+				goto fence_err;
+			}
+		}
+	}
+#endif
 	decon_systrace(decon, 'C', "decon_fence_wait", 0);
 
 #if defined(CONFIG_EXYNOS_AFBC_DEBUG)
@@ -2166,6 +2247,13 @@ fence_err:
 #if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 	decon_save_afbc_enabled_win_id(decon, regs);
 	decon_update_afbc_info(decon, regs, false);
+#endif
+
+#if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
+	if (regs->readback.request)
+		decon_handle_readback_buffer(decon, regs);
+	else
+		decon->readback.request = false;
 #endif
 
 	decon_systrace(decon, 'E', "decon_update_regs", 0);
@@ -2286,7 +2374,7 @@ static void decon_update_regs_handler(struct kthread_work *work)
 }
 
 static int decon_get_active_win_count(struct decon_device *decon,
-		struct decon_win_config_data *win_data)
+		struct decon_win_config_data *win_data, bool *readback_req)
 {
 	int i;
 	int win_cnt = 0;
@@ -2313,6 +2401,16 @@ static int decon_get_active_win_count(struct decon_device *decon,
 		}
 	}
 
+	*readback_req = false;
+#if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
+	if (win_config[decon->dt.wb_win].state == DECON_WIN_STATE_BUFFER) {
+		if (decon->dt.out_type != DECON_OUT_WB) {
+			decon_dbg("Readback Buffer Frame!\n");
+			*readback_req = true;
+		}
+	}
+#endif
+
 	return win_cnt;
 }
 
@@ -2337,6 +2435,8 @@ static int decon_prepare_win_config(struct decon_device *decon,
 	struct decon_win_config *win_config = win_data->config;
 	struct decon_win_config *config;
 	struct decon_window_regs *win_regs;
+	int cfg_cnt;
+	struct dma_fence *fence = NULL;
 
 	decon_dbg("%s +\n", __func__);
 
@@ -2390,13 +2490,33 @@ static int decon_prepare_win_config(struct decon_device *decon,
 		win_regs->winmap_state = color_map;
 	}
 
-	if (decon->dt.out_type == DECON_OUT_WB) {
-		regs->protection[decon->dt.wb_win] = win_config[decon->dt.wb_win].protection;
+	/* handle standalone-WB/concurrent-WB case */
+	cfg_cnt = decon->dt.dpp_cnt;
+	if (decon->dt.out_type == DECON_OUT_WB || regs->readback.request) {
+		cfg_cnt = decon->dt.dpp_cnt + 1;
+		config = &win_config[decon->dt.wb_win];
+		regs->protection[decon->dt.wb_win] = config->protection;
 		ret = decon_import_buffer(decon, decon->dt.wb_win,
-				&win_config[decon->dt.wb_win], regs);
+				config, regs);
+
+		if (regs->readback.request && (config->rel_fence >= 0)) {
+			/* fence is managed by buffer not plane */
+			fence = sync_file_get_fence(config->rel_fence);
+			regs->dma_buf_data[decon->dt.wb_win][0].fence = fence;
+			if (!fence) {
+				decon_err("failed to import fence fd\n");
+				ret = -EINVAL;
+				goto config_err;
+			}
+			decon_dbg("rel_fence(%d), fence(%p)\n",
+				config->rel_fence, fence);
+		}
+
+		decon_win_config_to_regs_param(0, config,
+				&regs->win_regs[decon->dt.wb_win], ODMA_WB, 0);
 	}
 
-	for (i = 0; i < decon->dt.dpp_cnt; i++)
+	for (i = 0; i < cfg_cnt; i++)
 		memcpy(&regs->dpp_config[i], &win_config[i],
 				sizeof(struct decon_win_config));
 
@@ -2412,8 +2532,13 @@ static int decon_set_win_config(struct decon_device *decon,
 {
 	int num_of_window = 0;
 	struct decon_reg_data *regs;
-	struct sync_file *sync_file;
+	struct sync_file *sync_ifile;
 	int i, j, ret = 0;
+	bool readback_req = false;
+#if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
+	struct sync_file *sync_ofile;
+	int readback_fence;
+#endif
 
 	decon_dbg("%s +\n", __func__);
 
@@ -2433,11 +2558,19 @@ static int decon_set_win_config(struct decon_device *decon,
 		decon_warn("decon-%d skip win_config(state:%s)\n",
 				decon->id, decon_state_names[decon->state]);
 #endif
-		win_data->retire_fence = decon_create_fence(decon, &sync_file);
+		win_data->retire_fence = decon_create_fence(decon, &sync_ifile);
 		if (win_data->retire_fence < 0)
 			goto err;
-		fd_install(win_data->retire_fence, sync_file->file);
-		decon_signal_fence(decon, sync_file->fence);
+		fd_install(win_data->retire_fence, sync_ifile->file);
+		decon_signal_fence(decon, sync_ifile->fence);
+
+#if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
+		readback_fence = decon_create_fence(decon, &sync_ofile);
+		if (readback_fence < 0)
+			goto err;
+		fd_install(readback_fence, sync_ofile->file);
+		decon_signal_fence(decon, sync_ofile->fence);
+#endif
 		goto err;
 	}
 
@@ -2448,11 +2581,28 @@ static int decon_set_win_config(struct decon_device *decon,
 		goto err;
 	}
 
-	num_of_window = decon_get_active_win_count(decon, win_data);
+	num_of_window = decon_get_active_win_count(decon, win_data, &readback_req);
+
 	if (num_of_window) {
-		win_data->retire_fence = decon_create_fence(decon, &sync_file);
+		win_data->retire_fence = decon_create_fence(decon, &sync_ifile);
 		if (win_data->retire_fence < 0)
 			goto err_prepare;
+#if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
+		if (readback_req) {
+			regs->readback.request = readback_req;
+			readback_fence = decon_create_fence(decon, &sync_ofile);
+			win_data->config[decon->dt.wb_win].acq_fence = readback_fence;
+			if (readback_fence < 0)
+				goto err_prepare;
+			fd_install(readback_fence, sync_ofile->file);
+			regs->readback.fence = dma_fence_get(sync_ofile->fence);
+		}
+#else
+		if (!decon->readback.enabled && readback_req) {
+			regs->readback.request = false;
+			decon_warn("Not support readback(CWB)!!\n");
+		}
+#endif
 	} else {
 		win_data->retire_fence = -1;
 	}
@@ -2472,9 +2622,9 @@ static int decon_set_win_config(struct decon_device *decon,
 			sizeof(struct decon_rect));
 
 	if (num_of_window) {
-		fd_install(win_data->retire_fence, sync_file->file);
-		decon_create_release_fences(decon, win_data, sync_file);
-		regs->retire_fence = dma_fence_get(sync_file->fence);
+		fd_install(win_data->retire_fence, sync_ifile->file);
+		decon_create_release_fences(decon, win_data, sync_ifile);
+		regs->retire_fence = dma_fence_get(sync_ifile->fence);
 	}
 
 	decon_hiber_block(decon);
@@ -2503,8 +2653,8 @@ err_prepare:
 	if (win_data->retire_fence >= 0) {
 		/* video mode should keep previous buffer object */
 		if (decon->lcd_info->mode == DECON_MIPI_COMMAND_MODE)
-			decon_signal_fence(decon, sync_file->fence);
-		fput(sync_file->file);
+			decon_signal_fence(decon, sync_ifile->fence);
+		fput(sync_ifile->file);
 		put_unused_fd(win_data->retire_fence);
 	}
 	win_data->retire_fence = -1;
@@ -2512,6 +2662,18 @@ err_prepare:
 	for (i = 0; i < decon->dt.max_win; i++)
 		for (j = 0; j < regs->plane_cnt[i]; ++j)
 			decon_free_unused_buf(decon, regs, i, j);
+
+#if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
+	if (readback_req) {
+		if (readback_fence >= 0) {
+			if (decon->lcd_info->mode == DECON_MIPI_COMMAND_MODE)
+				decon_signal_fence(decon, sync_ofile->fence);
+			fput(sync_ofile->file);
+			put_unused_fd(readback_fence);
+		}
+		decon_free_unused_buf(decon, regs, decon->dt.wb_win, 0);
+	}
+#endif
 
 	kfree(regs);
 err:
@@ -3874,6 +4036,25 @@ decon_init_done:
 	return 0;
 }
 
+void decon_init_readback(struct decon_device *decon)
+{
+	decon->readback.enabled = false;
+
+	if (!IS_ENABLED(CONFIG_EXYNOS_SUPPORT_READBACK)) {
+		decon_info("display doesn't support readback(CWB)\n");
+		return;
+	}
+
+	decon->readback.enabled = true;
+	decon_info("display supports readback(CWB)\n");
+
+	if (decon->id != 2) {
+		/* concurrent writeback can't be enabled in decon2 */
+		decon->readback.wq = create_workqueue("decon_readback");
+		INIT_WORK(&decon->readback.work, decon_readback_wq);
+	}
+}
+
 /* --------- DRIVER INITIALIZATION ---------- */
 static int decon_probe(struct platform_device *pdev)
 {
@@ -3964,6 +4145,7 @@ static int decon_probe(struct platform_device *pdev)
 	dpu_init_win_update(decon);
 	decon_init_low_persistence_mode(decon);
 	dpu_init_cursor_mode(decon);
+	decon_init_readback(decon);
 
 #if defined(CONFIG_EXYNOS_BTS)
 	decon->bts.ops = &decon_bts_control;

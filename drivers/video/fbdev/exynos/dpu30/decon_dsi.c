@@ -52,6 +52,7 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 	if (irq_sts_reg & DPU_FRAME_START_INT_PEND) {
 		/* VSYNC interrupt, accept it */
 		decon->frame_cnt++;
+		decon_dbg("Decon FrameStart(%d)\n", decon->frame_cnt);
 		wake_up_interruptible_all(&decon->wait_vstatus);
 		if (decon->state == DECON_STATE_TUI)
 			decon_info("%s:%d TUI Frame Start\n", __func__, __LINE__);
@@ -65,6 +66,13 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 		decon_hiber_trig_reset(decon);
 		if (decon->state == DECON_STATE_TUI)
 			decon_info("%s:%d TUI Frame Done\n", __func__, __LINE__);
+
+#if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
+		if (decon->readback.request) {
+			decon_dbg("[CWB] Decon FrameDone!(%d)\n", decon->frame_cnt);
+			queue_work(decon->readback.wq, &decon->readback.work);
+		}
+#endif
 	}
 
 	if (ext_irq & DPU_RESOURCE_CONFLICT_INT_PEND)
