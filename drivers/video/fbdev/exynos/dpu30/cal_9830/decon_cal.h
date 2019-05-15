@@ -114,8 +114,11 @@ enum decon_scaler_path {
 enum decon_path_cfg {
 	PATH_CON_ID_DSIM_IF0 = 0,
 	PATH_CON_ID_DSIM_IF1 = 1,
+	PATH_CON_ID_WB = 2,
 	PATH_CON_ID_DP = 3,
 	PATH_CON_ID_DUAL_DSC = 4,
+	PATH_CON_ID_DSC0 = 4,
+	PATH_CON_ID_DSC1 = 5,
 	PATH_CON_ID_DSCC_EN = 7,
 };
 
@@ -278,6 +281,7 @@ void decon_reg_set_mres(u32 id, struct decon_param *p);
 void decon_reg_release_resource(u32 id, struct decon_mode_info *psr);
 void decon_reg_config_wb_size(u32 id, struct exynos_panel_info *lcd_info,
 		struct decon_param *param);
+void decon_reg_set_cwb_enable(u32 id, u32 en);
 
 /* DECON interrupt control */
 void decon_reg_set_int(u32 id, struct decon_mode_info *psr, u32 en);

@@ -109,15 +109,6 @@
 #define RESOURCE_OCCUPANCY_INFO_2		0x0018
 
 #define SRAM_SHARE_ENABLE_MAIN			0x0030
-#define SRAM0_SHARE_ENABLE_F			(1 << 0)
-#define SRAM1_SHARE_ENABLE_F			(1 << 4)
-#define SRAM2_SHARE_ENABLE_F			(1 << 8)
-#define SRAM3_SHARE_ENABLE_F			(1 << 12)
-#define SRAM4_SHARE_ENABLE_F			(1 << 16)
-#define SRAM5_SHARE_ENABLE_F			(1 << 20)
-#define ALL_SRAM_SHARE_ENABLE			(0x11111 << 0)
-#define ALL_SRAM_SHARE_DISABLE			(0x0)
-
 #define SRAM_SHARE_ENABLE_SUB			0x0034
 #define SRAM0_SHARE_ENABLE_F			(1 << 0)
 #define SRAM1_SHARE_ENABLE_F			(1 << 4)
@@ -347,6 +338,7 @@
 #define COMP_OUTIF_PATH_F(_v)			((_v) << 0)
 #define COMP_OUTIF_PATH_MASK			(0xff << 0)
 #define COMP_OUTIF_PATH_GET(_v)			(((_v) >> 0) & 0xff)
+#define CWB_PATH_EN				(1 << 2)
 
 #define DSIM_CONNECTION_CONTROL			0x0250
 #define DSIM_CONNECTION_DSIM1_F(_v)		((_v) << 4)

@@ -195,6 +195,10 @@ static void decon_reg_set_sram_share(u32 id, enum decon_fifo_mode fifo_mode)
 	}
 
 	decon_write(id, SRAM_SHARE_ENABLE_MAIN, val);
+
+	/* for CWB */
+	val = SRAM5_SHARE_ENABLE_F;
+	decon_write(id, SRAM_SHARE_ENABLE_SUB, val);
 }
 
 static void decon_reg_set_scaled_image_size(u32 id,
@@ -283,11 +287,28 @@ static void decon_reg_set_data_path(u32 id, enum decon_data_path d_path,
 	decon_write_mask(id, DATA_PATH_CONTROL_2, val, mask);
 }
 
+void decon_reg_set_cwb_enable(u32 id, u32 en)
+{
+	u32 val, mask, d_path;
+
+	val = decon_read(id, DATA_PATH_CONTROL_2);
+	d_path = COMP_OUTIF_PATH_GET(val);
+
+	if (en)
+		d_path |= CWB_PATH_EN;
+	else
+		d_path &= ~CWB_PATH_EN;
+
+	mask = COMP_OUTIF_PATH_MASK;
+	decon_write_mask(id, DATA_PATH_CONTROL_2, d_path, mask);
+}
+
 /*
  * Check major configuration of data_path_control
  *    DSCC[7]
  *    DSC_ENC1[5] DSC_ENC0[4]
  *    DP_IF[3]
+ *    WB[2]
  *    DSIM_IF1[1] DSIM_IF0[0]
  */
 static u32 decon_reg_get_data_path_cfg(u32 id, enum decon_path_cfg con_id)
@@ -309,7 +330,11 @@ static u32 decon_reg_get_data_path_cfg(u32 id, enum decon_path_cfg con_id)
 			bRet = 1;
 		break;
 	case PATH_CON_ID_DP:
-		if (d_path & (0x3 << PATH_CON_ID_DP))
+		if (d_path & (0x1 << PATH_CON_ID_DP))
+			bRet = 1;
+		break;
+	case PATH_CON_ID_WB:
+		if (d_path & (0x1 << PATH_CON_ID_WB))
 			bRet = 1;
 		break;
 	case PATH_CON_ID_DSIM_IF0:
