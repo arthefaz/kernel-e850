@@ -197,9 +197,6 @@
 #define	ENC_SET_VP9_PROFILE_LEVEL	(1 << 13)
 #define	ENC_SET_DROP_CONTROL		(1 << 14)
 
-#define MFC_VER_MAJOR(dev)	((dev->pdata->ip_ver >> 8) & 0xFF)
-#define MFC_VER_MINOR(dev)	(dev->pdata->ip_ver & 0xFF)
-
 #define MFC_FEATURE_SUPPORT(dev, f)	((f).support && ((dev)->fw.date >= (f).version))
 
 /* Low memory check */

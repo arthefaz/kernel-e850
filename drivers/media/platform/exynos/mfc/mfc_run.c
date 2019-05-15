@@ -97,13 +97,12 @@ static int __mfc_init_hw(struct mfc_dev *dev, enum mfc_buf_usage_type buf_type)
 	if (dev->fw.fimv_info != 'D' && dev->fw.fimv_info != 'E')
 		dev->fw.fimv_info = 'N';
 
-	mfc_info_dev("[F/W] MFC v%x.%x, %02xyy %02xmm %02xdd (%c)\n",
-		 MFC_VER_MAJOR(dev),
-		 MFC_VER_MINOR(dev),
-		 mfc_get_fw_ver_year(),
-		 mfc_get_fw_ver_month(),
-		 mfc_get_fw_ver_date(),
-		 dev->fw.fimv_info);
+	mfc_info_dev("[F/W] MFC v%x, %02xyy %02xmm %02xdd (%c)\n",
+			dev->pdata->ip_ver,
+			mfc_get_fw_ver_year(),
+			mfc_get_fw_ver_month(),
+			mfc_get_fw_ver_date(),
+			dev->fw.fimv_info);
 
 	dev->fw.date = mfc_get_fw_ver_all();
 	/* Check MFC version and F/W version */

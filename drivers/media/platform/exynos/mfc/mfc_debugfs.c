@@ -43,8 +43,8 @@ static int __mfc_info_show(struct seq_file *s, void *unused)
 	char *codec_name = NULL;
 
 	seq_puts(s, ">> MFC device information(common)\n");
-	seq_printf(s, "[VERSION] H/W: v%x.%x, F/W: %06x(%c), DRV: %d\n",
-		 MFC_VER_MAJOR(dev), MFC_VER_MINOR(dev), dev->fw.date,
+	seq_printf(s, "[VERSION] H/W: v%x, F/W: %06x(%c), DRV: %d\n",
+		 dev->pdata->ip_ver, dev->fw.date,
 		 dev->fw.fimv_info, MFC_DRIVER_INFO);
 	seq_printf(s, "[PM] power: %d, clock: %d\n",
 			mfc_pm_get_pwr_ref_cnt(dev), mfc_pm_get_clk_ref_cnt(dev));
