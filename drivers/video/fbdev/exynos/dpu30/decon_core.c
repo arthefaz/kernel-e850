@@ -1562,7 +1562,7 @@ static int decon_set_dpp_config(struct decon_device *decon,
 
 	if (decon->dt.out_type == DECON_OUT_WB) {
 		sd = decon->dpp_sd[ODMA_WB];
-		memcpy(&dpp_config.config, &regs->dpp_config[decon->dt.max_win],
+		memcpy(&dpp_config.config, &regs->dpp_config[decon->dt.wb_win],
 				sizeof(struct decon_win_config));
 		dpp_config.rcv_num = aclk_khz;
 		ret = v4l2_subdev_call(sd, core, ioctl, DPP_WIN_CONFIG,
@@ -1727,8 +1727,8 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 
 	if (decon->dt.out_type == DECON_OUT_WB) {
 		/* update resolution info for decon blender size */
-		decon->lcd_info->xres = regs->dpp_config[ODMA_WB].dst.w;
-		decon->lcd_info->yres = regs->dpp_config[ODMA_WB].dst.h;
+		decon->lcd_info->xres = regs->dpp_config[decon->dt.wb_win].dst.w;
+		decon->lcd_info->yres = regs->dpp_config[decon->dt.wb_win].dst.h;
 
 		decon_to_init_param(decon, &p);
 		decon_reg_config_wb_size(decon->id, decon->lcd_info, &p);
@@ -1808,7 +1808,7 @@ static void decon_release_old_bufs(struct decon_device *decon,
 	if (decon->dt.out_type == DECON_OUT_WB) {
 		for (j = 0; j < plane_cnt[0]; ++j)
 			decon_free_dma_buf(decon,
-					&regs->dma_buf_data[decon->dt.max_win][j]);
+					&regs->dma_buf_data[decon->dt.wb_win][j]);
 	}
 
 	if (decon->dt.out_type == DECON_OUT_DSI) {
@@ -2391,9 +2391,9 @@ static int decon_prepare_win_config(struct decon_device *decon,
 	}
 
 	if (decon->dt.out_type == DECON_OUT_WB) {
-		regs->protection[decon->dt.max_win] = win_config[decon->dt.max_win].protection;
-		ret = decon_import_buffer(decon, decon->dt.max_win,
-				&win_config[decon->dt.max_win], regs);
+		regs->protection[decon->dt.wb_win] = win_config[decon->dt.wb_win].protection;
+		ret = decon_import_buffer(decon, decon->dt.wb_win,
+				&win_config[decon->dt.wb_win], regs);
 	}
 
 	for (i = 0; i < decon->dt.dpp_cnt; i++)
@@ -3534,6 +3534,8 @@ static void decon_parse_dt(struct decon_device *decon)
 	decon->id = of_alias_get_id(dev->of_node, "decon");
 	of_property_read_u32(dev->of_node, "max_win",
 			&decon->dt.max_win);
+	/* used for win_config[wb_win] in case of supporting WB */
+	decon->dt.wb_win = decon->dt.max_win + 1;
 	of_property_read_u32(dev->of_node, "default_win",
 			&decon->dt.dft_win);
 	of_property_read_u32(dev->of_node, "default_ch",

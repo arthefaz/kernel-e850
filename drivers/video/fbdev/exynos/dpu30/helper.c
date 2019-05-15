@@ -264,7 +264,7 @@ void decon_set_protected_content(struct decon_device *decon,
 	/* ODMA protection config (WB: writeback) */
 	if (decon->dt.out_type == DECON_OUT_WB)
 		if (regs)
-			cur_protect_bits |= (regs->protection[decon->dt.max_win] << ODMA_WB);
+			cur_protect_bits |= (regs->protection[decon->dt.wb_win] << ODMA_WB);
 
 	if (decon->prev_protection_bitmask != cur_protect_bits) {
 
