@@ -397,6 +397,17 @@ struct decon_frame {
 	u32 f_h;
 };
 
+struct decon_readback {
+	bool enabled;
+	bool request;
+	bool drm;
+	u8 num_buffers;
+	struct decon_dma_buf_data dma_buf_data[MAX_PLANE_CNT];
+	struct dma_fence *fence;
+	struct work_struct work;
+	struct workqueue_struct *wq;
+};
+
 struct decon_win_config {
 	enum {
 		DECON_WIN_STATE_DISABLED = 0,
@@ -445,6 +456,7 @@ struct decon_reg_data {
 	struct decon_window_regs win_regs[MAX_DECON_WIN + 2];
 	struct decon_dma_buf_data dma_buf_data[MAX_DECON_WIN + 2][MAX_PLANE_CNT];
 	struct dma_fence *retire_fence;
+	struct decon_readback readback;
 
 	/*
 	 * If window update size is changed, that size has to be applied to
@@ -779,6 +791,7 @@ struct decon_dt_info {
 	int max_win;
 	int dft_win;
 	int dft_ch;
+	int wb_win;
 	const char *pd_name;
 	int dpp_cnt;
 	int dsim_cnt;
@@ -1060,6 +1073,7 @@ struct decon_device {
 	struct decon_cursor cursor;
 	struct decon_fence fence;
 	struct decon_freq_hop freq_hop;
+	struct decon_readback readback;
 
 	int frame_cnt;
 	int frame_cnt_target;
