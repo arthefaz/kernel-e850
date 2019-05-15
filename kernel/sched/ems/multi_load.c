@@ -256,14 +256,14 @@ unsigned long __ml_cpu_util_with(int cpu, struct task_struct *p, int sse)
 {
 	unsigned long util = __ml_cpu_util(cpu, sse);
 
-	if (cpu == task_cpu(p) || !READ_ONCE(p->se.avg.last_update_time)) {
-		if (sched_feat(UTIL_EST))
-			util = max_t(unsigned long, util, __ml_cpu_util_est(cpu, sse));
-		return util;
-	}
-
-	if (p->sse == sse)
-		util += ml_task_util(p);
+	/*
+	 * If 1) prev cpu of the waking task is different with cpu of which
+	 * we want to calculate utilization and 2) the waking task is not newbie,
+	 * consider the task's utilization for 'util' which we are calculating.
+	 */
+	if (cpu != task_cpu(p) && READ_ONCE(p->se.avg.last_update_time))
+		if (p->sse == sse)
+			util += ml_task_util(p);
 
 	if (sched_feat(UTIL_EST)) {
 		unsigned long util_est = __ml_cpu_util_est(cpu, sse);
