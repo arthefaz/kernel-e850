@@ -179,16 +179,16 @@ int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd
 	int err = 0;
 	int fence_err = 0;
 	int ret = 0;
-	struct dpu_fence_info acquire;
+	struct dpu_fence_info in_fence;
 
 	err = dma_fence_wait_timeout(fence, false, 900);
 	if (err < 0) {
-		decon_err("%s: waiting on acquire fence timeout\n", __func__);
+		decon_err("%s: waiting on in-fence timeout\n", __func__);
 		ret = err;
 	}
 
 	/*
-	 * If acquire fence has error value, it means image on buffer is corrupted.
+	 * If in-fence has error value, it means image on buffer is corrupted.
 	 * So, if this function returns error value, frame will be dropped and
 	 * previous buffer is released.
 	 *
@@ -198,23 +198,23 @@ int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd
 	if (decon->dt.psr_mode == DECON_MIPI_COMMAND_MODE) {
 		fence_err = dma_fence_get_status(fence);
 		if (fence_err < 0) {
-			decon_err("%s: get acquire fence error status\n",
+			decon_err("%s: get in-fence error status\n",
 					__func__);
 			ret = fence_err;
 		}
 	}
 
-	dpu_save_fence_info(fd, fence, &acquire);
+	dpu_save_fence_info(fd, fence, &in_fence);
 	if ((err < 0) || (fence_err < 0)) {
 		decon_err("\t%s: ctx(%llu), seqno(%d), fd(%d), flags(0x%lx), err(%d:%d)\n",
-				acquire.name, acquire.context, acquire.seqno,
-				acquire.fd, acquire.flags, err, fence_err);
+				in_fence.name, in_fence.context, in_fence.seqno,
+				in_fence.fd, in_fence.flags, err, fence_err);
 	}
 
-	DPU_F_EVT_LOG(DPU_F_EVT_WAIT_ACQUIRE_FENCE, &decon->sd, &acquire);
+	DPU_F_EVT_LOG(DPU_F_EVT_WAIT_ACQUIRE_FENCE, &decon->sd, &in_fence);
 	DPU_DEBUG_FENCE("[%s] %s: ctx(%llu), seqno(%d), fd(%d), flags(0x%lx)\n",
-			fence_evt[DPU_F_EVT_WAIT_ACQUIRE_FENCE], acquire.name,
-			acquire.context, acquire.seqno, acquire.fd, acquire.flags);
+			fence_evt[DPU_F_EVT_WAIT_ACQUIRE_FENCE], in_fence.name,
+			in_fence.context, in_fence.seqno, in_fence.fd, in_fence.flags);
 
 	return ret;
 }
