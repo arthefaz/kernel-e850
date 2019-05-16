@@ -40,8 +40,7 @@ static int exynos_backlight_get_brightness(struct backlight_device *bl)
 
 static int exynos_backlight_update_status(struct backlight_device *bl)
 {
-	int brightness = bl->props.brightness;
-	struct exynos_panel_device *panel = dev_get_drvdata(&bl->dev);
+	u32 brightness = bl->props.brightness;
 	struct dsim_device *dsim = get_dsim_drvdata(0);
 
 	DPU_INFO_PANEL("%s: brightness = %d\n", __func__, brightness);
@@ -53,10 +52,8 @@ static int exynos_backlight_update_status(struct backlight_device *bl)
 #endif
 
 	if (brightness >= 0) {
-		mutex_lock(&panel->ops_lock);
-		if (bl->props.fb_blank != FB_BLANK_POWERDOWN)
-			dsim_write_data_seq(dsim, false, 0x51, brightness);
-		mutex_unlock(&panel->ops_lock);
+		/* brightness bit-depth and para order can be different */
+		dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_SET_LIGHT, &brightness);
 	} else {
 		/* DO update brightness using dsim_wr_data */
 		/* backlight_off ??? */
@@ -679,6 +676,9 @@ static long exynos_panel_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *a
 		break;
 	case EXYNOS_PANEL_IOC_READ_STATE:
 		ret = call_panel_ops(panel, read_state, panel);
+		break;
+	case EXYNOS_PANEL_IOC_SET_LIGHT:
+		call_panel_ops(panel, set_light, panel, *(int *)arg);
 		break;
 	default:
 		DPU_ERR_PANEL("not supported ioctl by panel driver\n");
