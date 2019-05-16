@@ -202,17 +202,18 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 	dsim_write_data_seq(dsim, false, 0xB9, 0x00, 0xB0, 0x8F, 0x09, 0x00, 0x00,
 			0x00, 0x11, 0x01);
 	dsim_write_data_seq(dsim, false, 0x1A, 0x1F, 0x00, 0x00, 0x00, 0x00);
-	if (panel->id_index == 0) {
-		dsim_write_data_seq(dsim, false, 0xC7, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00);
-		dsim_write_data_table(dsim, GAMCTL1);
-		dsim_write_data_table(dsim, GAMCTL2);
-		dsim_write_data_table(dsim, GAMCTL3);
-		dsim_write_data_table(dsim, BCCTL);
-		dsim_write_data_seq(dsim, false, 0xF7, 0x03);
-		dsim_write_data_seq(dsim, false, 0x53, 0x20);
-	}
+
+	/* brightness */
+	dsim_write_data_table(dsim, GAMCTL1);
+	dsim_write_data_table(dsim, GAMCTL2);
+	dsim_write_data_table(dsim, GAMCTL3);
+	dsim_write_data_table(dsim, BCCTL);
+	dsim_write_data_seq(dsim, false, 0xF7, 0x03);
+	dsim_write_data_seq(dsim, false, 0x53, 0x20);
+
 	dsim_write_data_seq(dsim, false, 0x35); /* TE on */
+
+	/* ESD flag: [2]=VLIN3, [6]=VLIN1 error check*/
 	dsim_write_data_seq(dsim, false, 0xED, 0x44);
 
 #if !defined(CONFIG_EXYNOS_EWR)
@@ -229,10 +230,6 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 #endif
 	dsim_write_data_table(dsim, SEQ_FFC);
 
-	if (panel->id_index == 1) {
-		dsim_write_data_seq(dsim, false, 0x53, 0x20);
-		dsim_write_data_seq(dsim, false, 0x51, 0x01, 0xff);
-	}
 	dsim_write_data_seq(dsim, false, 0x29); /* display on */
 
 	mutex_unlock(&panel->ops_lock);
@@ -298,6 +295,37 @@ static int s6e3ha8_read_state(struct exynos_panel_device *panel)
 	return 0;
 }
 
+static int s6e3ha8_set_light(struct exynos_panel_device *panel, u32 br_val)
+{
+	u8 data[2] = {0, };
+	struct dsim_device *dsim = get_dsim_drvdata(0);
+
+	DPU_DEBUG_PANEL("%s +\n", __func__);
+
+	mutex_lock(&panel->ops_lock);
+
+#if 1
+	/* 8-bit : BCCTL(B1h) 46th - D4(BIT_EXT_SEL) = 1 {[7:0]<<2 | [7:6]} */
+	data[0] = br_val;
+	dsim_write_data_seq(dsim, false, 0x51, data[0]);
+#else
+	/* 10-bit : BCCTL(B1h) 46th - D4(BIT_EXT_SEL) = 0 */
+	DPU_DEBUG_PANEL("(I: 8bit) br_val = %d\n", br_val);
+	br_val = (br_val << 2) | ((br_val >> 6) & 0x03);
+	DPU_DEBUG_PANEL("(O: 10bit) br_val = %d\n", br_val);
+
+	/* WRDISBV: 1st DBV[7:0], 2nd DBV[9:8] */
+	data[0] = (br_val >> 0) & 0xFF;
+	data[1] = (br_val >> 8) & 0x03;
+	dsim_write_data_seq(dsim, false, 0x51, data[0], data[1]);
+#endif
+
+	mutex_unlock(&panel->ops_lock);
+
+	DPU_DEBUG_PANEL("%s -\n", __func__);
+	return 0;
+}
+
 struct exynos_panel_ops panel_s6e3ha8_ops = {
 	.id		= {0x460091, 0x430491, 0xffffff},
 	.suspend	= s6e3ha8_suspend,
@@ -307,4 +335,5 @@ struct exynos_panel_ops panel_s6e3ha8_ops = {
 	.doze_suspend	= s6e3ha8_doze_suspend,
 	.dump		= s6e3ha8_dump,
 	.read_state	= s6e3ha8_read_state,
+	.set_light	= s6e3ha8_set_light,
 };
