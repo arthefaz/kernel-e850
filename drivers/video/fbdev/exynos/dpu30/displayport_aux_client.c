@@ -563,7 +563,7 @@ MSG_RX_READ_RETRY:
 			retry_cnt--;
 			goto MSG_RX_READ_RETRY;
 		} else if (retry_cnt <= 0) {
-			msg_aux_rx.req_id == 0xFF;
+			msg_aux_rx.req_id = 0xFF;
 			displayport_err("DOWN_REP ID fail after retry read\n");
 		}
 	}
@@ -789,7 +789,7 @@ REMOTE_I2C_READ_RETRY:
 		retry_cnt--;
 		goto REMOTE_I2C_READ_RETRY;
 	} else if (retry_cnt <= 0) {
-		msg_aux_rx.req_id == 0xFF;
+		msg_aux_rx.req_id = 0xFF;
 		displayport_err("REMOTE_I2C_READ ID fail after retry read\n");
 	}
 
