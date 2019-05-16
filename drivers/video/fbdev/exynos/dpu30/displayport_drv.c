@@ -263,7 +263,7 @@ static int displayport_check_edid_max_clock(u32 sst_id,
 
 	if (displayport->sst[sst_id]->rx_edid_data.max_support_clk != 0) {
 		if (calc_pixel_clock > displayport->sst[sst_id]->rx_edid_data.max_support_clk * MHZ) {
-			displayport_info("RX support Max TMDS Clock = %llu, but pixel clock = %llu\n",
+			displayport_info("RX support Max TMDS Clock = %d, but pixel clock = %llu\n",
 					displayport->sst[sst_id]->rx_edid_data.max_support_clk * MHZ, calc_pixel_clock);
 			ret_val = false;
 		}
