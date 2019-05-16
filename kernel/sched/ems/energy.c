@@ -266,6 +266,45 @@ out:
 	return best_cpu;
 }
 
+/*
+ * returns allowed capacity base on the allowed power
+ * freq: base frequency to find base_power
+ * power: allowed_power = base_power + power
+ */
+int find_allowed_capacity(int cpu, unsigned int freq, int power)
+{
+	struct energy_table *table = &per_cpu(energy_table, cpu);
+	unsigned long new_power = 0;
+	int i;
+
+	/* find power budget for new frequency */
+	for (i = 0; i < table->nr_states; i++)
+		if (table->states[i].frequency == freq)
+			break;
+
+	/* calaculate new power budget */
+	new_power = table->states[i].power + power;
+
+	/* find minimum freq over the new power budget */
+	for (i = 0; i < table->nr_states; i++)
+		if (table->states[i].power >= new_power)
+			return table->states[i].cap;
+
+	/* returne the max capaity */
+	return table->states[table->nr_states - 1].cap;
+}
+
+int find_step_power(int cpu, int step)
+{
+	struct energy_table *table = &per_cpu(energy_table, cpu);
+	int max_idx = table->nr_states - 1;
+
+	if (!step)
+		return 0;
+
+	return (table->states[max_idx].power - table->states[0].power) / step;
+}
+
 static ssize_t show_ce_weight(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {

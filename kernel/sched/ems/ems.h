@@ -73,3 +73,7 @@ static inline cpu_overutilized(unsigned long capacity, unsigned long util)
 {
 	return (capacity * 1024) < (util * 1280);
 }
+
+/* energy_step_wise_governor */
+extern int find_allowed_capacity(int cpu, unsigned int new, int power);
+extern int find_step_power(int cpu, int step);
