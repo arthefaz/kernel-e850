@@ -143,13 +143,6 @@ static bool static_governor(struct cpufreq_policy *policy)
 	return false;
 }
 
-static unsigned int index_to_freq(struct cpufreq_frequency_table *table,
-					unsigned int index)
-{
-	return table[index].frequency;
-}
-
-
 /*********************************************************************
  *                         FREQUENCY SCALING                         *
  *********************************************************************/
@@ -343,6 +336,20 @@ static int exynos_cpufreq_driver_init(struct cpufreq_policy *policy)
 	return 0;
 }
 
+static unsigned int exynos_cpufreq_resolve(struct cpufreq_policy *policy,
+						unsigned int target_freq)
+{
+	unsigned int index;
+
+	index = cpufreq_frequency_table_target(policy, target_freq, CPUFREQ_RELATION_L);
+	if (index < 0) {
+		pr_err("target frequency(%d) out of range\n", target_freq);
+		return 0;
+	}
+
+	return policy->freq_table[index].frequency;
+}
+
 static int exynos_cpufreq_verify(struct cpufreq_policy *policy)
 {
 	struct exynos_cpufreq_domain *domain = find_domain(policy->cpu);
@@ -358,7 +365,6 @@ static int __exynos_cpufreq_target(struct cpufreq_policy *policy,
 				  unsigned int relation)
 {
 	struct exynos_cpufreq_domain *domain = find_domain(policy->cpu);
-	unsigned int index;
 	int ret = 0;
 
 	if (!domain)
@@ -380,13 +386,9 @@ static int __exynos_cpufreq_target(struct cpufreq_policy *policy,
 	 * Updated target_freq is in between minimum and maximum PM QoS/policy,
 	 * priority of policy is higher.
 	 */
-	index = cpufreq_frequency_table_target(policy, target_freq, relation);
-	if (index < 0) {
-		pr_err("target frequency(%d) out of range\n", target_freq);
+	target_freq = exynos_cpufreq_resolve(policy, target_freq);
+	if (!target_freq)
 		goto out;
-	}
-
-	target_freq = index_to_freq(domain->freq_table, index);
 
 	/* Target is same as current, skip scaling */
 	if (domain->old == target_freq)
@@ -424,7 +426,6 @@ static int exynos_cpufreq_target(struct cpufreq_policy *policy,
 {
 	struct exynos_cpufreq_domain *domain = find_domain(policy->cpu);
 	unsigned long freq;
-	unsigned int index;
 	unsigned int policy_min, policy_max;
 	unsigned int pm_qos_min, pm_qos_max;
 
@@ -436,15 +437,10 @@ static int exynos_cpufreq_target(struct cpufreq_policy *policy,
 	if (list_empty(&domain->dm_list))
 		return __exynos_cpufreq_target(policy, target_freq, relation);
 
-	index = cpufreq_frequency_table_target(policy, target_freq, relation);
-	if (index < 0) {
-		pr_err("target frequency(%d) out of range\n", target_freq);
-	}
-
 	mutex_lock(&domain->lock);
 
-	freq = (unsigned long)index_to_freq(domain->freq_table, index);
-	if (domain->old == freq) {
+	freq = exynos_cpufreq_resolve(policy, target_freq);
+	if (!freq || domain->old == freq) {
 		mutex_unlock(&domain->lock);
 		return 0;
 	}
@@ -572,6 +568,7 @@ static struct cpufreq_driver exynos_driver = {
 	.verify		= exynos_cpufreq_verify,
 	.target		= exynos_cpufreq_target,
 	.get		= exynos_cpufreq_get,
+	.resolve_freq	= exynos_cpufreq_resolve,
 	.suspend	= exynos_cpufreq_suspend,
 	.resume		= exynos_cpufreq_resume,
 	.ready		= exynos_cpufreq_ready,
