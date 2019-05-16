@@ -137,6 +137,12 @@ int exynos_get_idle_ip_index(const char *ip_name)
 	int ip_index;
 	unsigned long flags;
 
+	ip = kzalloc(sizeof(struct idle_ip), GFP_KERNEL);
+	if (!ip) {
+		pr_err("Faile to allocate idle_ip [failed %s].", ip_name);
+		return -1;
+	}
+
 	spin_lock_irqsave(&idle_ip_list_lock, flags);
 	ip_index = get_index_last_entry(&idle_ip_list) + 1;
 	if (ip_index >= IDLE_IP_MAX) {
@@ -145,7 +151,6 @@ int exynos_get_idle_ip_index(const char *ip_name)
 		goto free;
 	}
 
-	ip = kzalloc(sizeof(struct idle_ip), GFP_KERNEL);
 	ip->name = ip_name;
 	ip->index = ip_index;
 
