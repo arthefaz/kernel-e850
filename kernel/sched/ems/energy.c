@@ -58,7 +58,7 @@ static inline unsigned int
 __compute_energy(unsigned long util, unsigned long cap,
 				unsigned long dp, unsigned long sp)
 {
-	return (dp * ((util << SCHED_CAPACITY_SHIFT) / cap))
+	return 1 + (dp * ((util << SCHED_CAPACITY_SHIFT) / cap))
 				+ (sp << SCHED_CAPACITY_SHIFT);
 }
 
