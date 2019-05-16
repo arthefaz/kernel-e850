@@ -121,7 +121,8 @@ int s6e3fa0_displayon(struct exynos_panel_device *panel)
 		s6e3fa0_cabc_mode_unlocked(panel->power_mode);
 
 	/* enable brightness control */
-	dsim_write_data_seq_delay(dsim, 12, 0x53, 0x20, 0x00);
+	dsim_write_data_seq_delay(dsim, 12, 0x53, 0x20);
+	dsim_write_data_seq_delay(dsim, 12, 0x51, 0x7f);
 
 #ifdef CONFIG_SOC_EXYNOS3830
 	/* parameter index jump */
@@ -170,6 +171,25 @@ int s6e3fa0_read_state(struct exynos_panel_device *panel)
 	return 0;
 }
 
+static int s6e3fa0_set_light(struct exynos_panel_device *panel, u32 br_val)
+{
+	u8 data = 0;
+	struct dsim_device *dsim = get_dsim_drvdata(0);
+
+	DPU_DEBUG_PANEL("%s +\n", __func__);
+
+	mutex_lock(&panel->ops_lock);
+
+	/* WRDISBV(8bit): 1st DBV[7:0] */
+	data = br_val & 0xFF;
+	dsim_write_data_seq(dsim, 12, 0x51, data);
+
+	mutex_unlock(&panel->ops_lock);
+
+	DPU_DEBUG_PANEL("%s -\n", __func__);
+	return 0;
+}
+
 struct exynos_panel_ops panel_s6e3fa0_ops = {
 	.id		= {0x244040, 0xffffff, 0xffffff},
 	.suspend	= s6e3fa0_suspend,
@@ -180,4 +200,5 @@ struct exynos_panel_ops panel_s6e3fa0_ops = {
 	.dump		= s6e3fa0_dump,
 	.read_state	= s6e3fa0_read_state,
 	.set_cabc_mode	= s6e3fa0_cabc_mode,
+	.set_light	= s6e3fa0_set_light,
 };
