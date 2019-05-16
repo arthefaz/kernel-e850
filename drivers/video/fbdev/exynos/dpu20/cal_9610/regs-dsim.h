@@ -350,6 +350,30 @@
 #define DSIM_PLL_CTRL2					(0xa8)
 #define DSIM_PLL_CTRL2_M_PLL_CTRL2			(0xffffffff << 0)
 
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+/* M_PLL_CTR1 */
+#define DSIM_PHY_DITHER_SEL_PF(_x)	(((_x) & 0x3) << 30)
+#define DSIM_PHY_DITHER_SEL_PF_MASK	(0x3 << 30)
+#define DSIM_PHY_DITHER_MRR(_x)		(((_x) & 0x3f) << 24)
+#define DSIM_PHY_DITHER_MRR_MASK	(0x3f << 24)
+#define DSIM_PHY_DITHER_MFR(_x)		(((_x) & 0xff) << 16)
+#define DSIM_PHY_DITHER_MFR_MASK	(0xff << 16)
+#define DSIM_PHY_DITHER_EN			(0x1 << 15)
+#define DSIM_PHY_DITHER_FEED_EN		(0x1 << 14)
+#define DSIM_PHY_DITHER_FSEL		(0x1 << 11)
+#define DSIM_PHY_DITHER_ICP(_x)		(((_x) & 0x3) << 8)
+#define DSIM_PHY_DITHER_ICP_MASK	(0x3 << 8)
+#define DSIM_PHY_DITHER_EXTAFC(_x)	(((_x) & 0x1f) << 1)
+#define DSIM_PHY_DITHER_EXTAFC_MASK	(0x1f << 1)
+#define DSIM_PHY_DITHER_AFC_ENB		(0x1 << 0)
+/* M_PLL_CTR2 */
+#define DSIM_PHY_DITHER_RSEL(_x)	(((_x) & 0xf) << 26)
+#define DSIM_PHY_DITHER_RSEL_MASK	(0xf << 26)
+#define DSIM_PHY_DITHER_FOUT_MASK	(0x1 << 17)
+#define DSIM_PHY_PMS_K(_x)			(((_x) & 0xffff) << 0)
+#define DSIM_PHY_PMS_K_MASK			(0xffff << 0)
+#endif
+
 /* PLL timer register */
 #define DSIM_PLLTMR					(0xac)
 

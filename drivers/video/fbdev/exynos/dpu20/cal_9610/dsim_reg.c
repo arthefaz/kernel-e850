@@ -349,7 +349,7 @@ static void dsim_reg_set_dphy_dither_en(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON4, val, DSIM_PHY_DITHER_EN);
+	dsim_write_mask(id, DSIM_PLL_CTRL1, val, DSIM_PHY_DITHER_EN);
 }
 #endif
 
@@ -385,11 +385,16 @@ static void dsim_reg_set_dphy_loop_test(u32 id)
 }
 #endif
 
-void dsim_reg_set_pll_freq(u32 id, u32 p, u32 m, u32 s)
+void dsim_reg_set_pll_freq(u32 id, u32 p, u32 m, u32 s, u32 k)
 {
 	u32 val = (p & 0x3f) << 13 | (m & 0x3ff) << 3 | (s & 0x7) << 0;
 
 	dsim_write_mask(id, DSIM_PLLCTRL, val, DSIM_PLLCTRL_PMS_MASK);
+
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+	val = DSIM_PHY_PMS_K(k);
+	dsim_write_mask(id, DSIM_PLL_CTRL2, val, DSIM_PHY_PMS_K_MASK);
+#endif
 }
 
 void dsim_reg_set_dphy_timing_values(u32 id, struct dphy_timing_value *t)
@@ -423,52 +428,52 @@ static void dsim_reg_set_dphy_param_dither(u32 id, struct stdphy_pms *dphy_pms)
 	/* MFR */
 	val = DSIM_PHY_DITHER_MFR(dphy_pms->mfr);
 	mask = DSIM_PHY_DITHER_MFR_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON3, val, mask);
+	dsim_write_mask(id, DSIM_PLL_CTRL1, val, mask);
 
 	/* MRR */
 	val = DSIM_PHY_DITHER_MRR(dphy_pms->mrr);
 	mask = DSIM_PHY_DITHER_MRR_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON3, val, mask);
+	dsim_write_mask(id, DSIM_PLL_CTRL1, val, mask);
 
 	/* SEL_PF */
 	val = DSIM_PHY_DITHER_SEL_PF(dphy_pms->sel_pf);
 	mask = DSIM_PHY_DITHER_SEL_PF_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON5, val, mask);
+	dsim_write_mask(id, DSIM_PLL_CTRL1, val, mask);
 
 	/* ICP */
 	val = DSIM_PHY_DITHER_ICP(dphy_pms->icp);
 	mask = DSIM_PHY_DITHER_ICP_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON5, val, mask);
+	dsim_write_mask(id, DSIM_PLL_CTRL1, val, mask);
 
 	/* AFC_ENB */
 	val = (dphy_pms->afc_enb) ? ~0 : 0;
 	mask = DSIM_PHY_DITHER_AFC_ENB;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON4, val, mask);
+	dsim_write_mask(id, DSIM_PLL_CTRL1, val, mask);
 
 	/* EXTAFC */
 	val = DSIM_PHY_DITHER_EXTAFC(dphy_pms->extafc);
 	mask = DSIM_PHY_DITHER_EXTAFC_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON4, val, mask);
+	dsim_write_mask(id, DSIM_PLL_CTRL1, val, mask);
 
 	/* FEED_EN */
 	val = (dphy_pms->feed_en) ? ~0 : 0;
 	mask = DSIM_PHY_DITHER_FEED_EN;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON2, val, mask);
+	dsim_write_mask(id, DSIM_PLL_CTRL1, val, mask);
 
 	/* FSEL */
 	val = (dphy_pms->fsel) ? ~0 : 0;
 	mask = DSIM_PHY_DITHER_FSEL;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON4, val, mask);
+	dsim_write_mask(id, DSIM_PLL_CTRL1, val, mask);
 
 	/* FOUT_MASK */
 	val = (dphy_pms->fout_mask) ? ~0 : 0;
 	mask = DSIM_PHY_DITHER_FOUT_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON2, val, mask);
+	dsim_write_mask(id, DSIM_PLL_CTRL2, val, mask);
 
 	/* RSEL */
 	val = DSIM_PHY_DITHER_RSEL(dphy_pms->rsel);
 	mask = DSIM_PHY_DITHER_RSEL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CON4, val, mask);
+	dsim_write_mask(id, DSIM_PLL_CTRL2, val, mask);
 }
 #endif
 #ifdef DPDN_INV_SWAP
@@ -1477,6 +1482,7 @@ static int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		pll.p = dphy_pms->p;
 		pll.m = dphy_pms->m;
 		pll.s = dphy_pms->s;
+		pll.k = dphy_pms->k;
 
 		/* get word clock */
 		dsim_dbg("hs clock is %u MHz\n", clks->hs_clk);
@@ -1518,7 +1524,13 @@ static int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		dsim_reg_set_m_dphy_ctrl3(id, DSIM_PHY_CHARIC_VAL[id][M_DPHY_CTRL3]);
 		dsim_reg_set_m_dphy_ctrl4(id, DSIM_PHY_CHARIC_VAL[id][M_DPHY_CTRL4]);
 
-		dsim_reg_set_pll_freq(id, pll.p, pll.m, pll.s);
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+		/* check dither sequence */
+		dsim_reg_set_dphy_param_dither(id, dphy_pms);
+		dsim_reg_set_dphy_dither_en(id, 1);
+#endif
+
+		dsim_reg_set_pll_freq(id, pll.p, pll.m, pll.s, pll.k);
 		/* set PLL's lock time */
 		dsim_reg_pll_stable_time(id);
 
@@ -1528,6 +1540,10 @@ static int dsim_reg_set_clocks(u32 id, struct dsim_clks *clks,
 		dsim_reg_set_m_pll_ctrl1(id, 0x0);
 		dsim_reg_set_m_pll_ctrl2(id, 0x0);
 		dsim_reg_set_esc_clk_prescaler(id, 0, 0xff);
+#if defined(CONFIG_EXYNOS_DSIM_DITHER)
+		/* check dither sequence */
+		dsim_reg_set_dphy_dither_en(id, 0);
+#endif
 		dsim_reg_enable_pll(id, 0);
 	}
 
