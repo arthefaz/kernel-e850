@@ -11,6 +11,7 @@
  */
 
 #include <linux/cpu.h>
+#include <linux/cpumask.h>
 #include <linux/fb.h>
 #include <linux/kthread.h>
 #include <linux/pm_qos.h>
@@ -621,9 +622,61 @@ static void __init cpuhp_dt_init(void)
 }
 
 /**********************************************************************************/
+/*                            CPUFREQ PM QOS HANDLER                              */
+/**********************************************************************************/
+static int exynos_cpuhp_pm_qos_callback(struct notifier_block *nb,
+						unsigned long val, void *v)
+{
+	int pm_qos_class = *((int *)v);
+	struct cpumask mask;
+	int i = 0, max;
+
+	if (val < 0)
+		return NOTIFY_BAD;
+
+	cpumask_clear(&mask);
+
+	switch (pm_qos_class) {
+	case PM_QOS_CPU_ONLINE_MIN:
+		max = val;
+		break;
+	case PM_QOS_CPU_ONLINE_MAX:
+		max = nr_cpu_ids - val;
+		break;
+	default:
+		return NOTIFY_BAD;
+	}
+
+	do {
+		cpumask_set_cpu(i, &mask);
+	} while(++i < max && i < nr_cpu_ids);
+
+	exynos_cpuhp_request("HP_QOS", mask, 0);
+
+	return NOTIFY_OK;
+}
+
+/**********************************************************************************/
 /*				        INIT					  */
 /**********************************************************************************/
+struct notifier_block	hp_qos_min_notifier;
+struct notifier_block	hp_qos_max_notifier;
+
+static void __init cpuhp_pm_qos_init(void)
+{
+	exynos_cpuhp_register("HP_QOS", *cpu_online_mask, 0);
+
+	hp_qos_min_notifier.notifier_call = exynos_cpuhp_pm_qos_callback;
+	hp_qos_min_notifier.priority = INT_MAX;
+	hp_qos_max_notifier.notifier_call = exynos_cpuhp_pm_qos_callback;
+	hp_qos_max_notifier.priority = INT_MAX;
+
+	pm_qos_add_notifier(PM_QOS_CPU_ONLINE_MIN, &hp_qos_min_notifier);
+	pm_qos_add_notifier(PM_QOS_CPU_ONLINE_MAX, &hp_qos_max_notifier);
+}
+
 extern struct cpumask early_cpu_mask;
+
 static void __init cpuhp_user_init(void)
 {
 	struct cpumask mask;
@@ -647,6 +700,9 @@ static void __init cpuhp_user_init(void)
 	list_add(&cpuhp.sysfs_user.list, &cpuhp.users);
 
 	cpumask_copy(&cpuhp.online_cpus, cpu_online_mask);
+
+	/* init pm_qos request and handler */
+	cpuhp_pm_qos_init();
 }
 
 static void __init cpuhp_sysfs_init(void)
