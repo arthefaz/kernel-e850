@@ -688,6 +688,131 @@ TRACE_EVENT(ems_cpu_active_ratio_util_stat,
 			__entry->cpu, __entry->part_util, __entry->pelt_util)
 );
 
+/* Energy Step Wise Governor */
+TRACE_EVENT(esg_update_capacity,
+
+	TP_PROTO(int cpu, unsigned long new_freq, unsigned long old_freq, int capacity),
+
+	TP_ARGS(cpu, new_freq, old_freq, capacity),
+
+	TP_STRUCT__entry(
+		__field( int,			cpu			)
+		__field( unsigned long,		new_freq		)
+		__field( unsigned long,		old_freq		)
+		__field( int,			capacity		)
+	),
+
+	TP_fast_assign(
+		__entry->cpu			= cpu;
+		__entry->new_freq		= new_freq;
+		__entry->old_freq		= old_freq;
+		__entry->capacity		= capacity;
+	),
+
+	TP_printk("cpu=%d new_freq=%lu old_freq=%lu, capacity=%d",
+			__entry->cpu, __entry->new_freq,
+			__entry->old_freq, __entry->capacity)
+);
+
+TRACE_EVENT(esg_cpu_eutil,
+
+	TP_PROTO(int cpu, int allowed_cap, int active_ratio, int max, int util),
+
+	TP_ARGS(cpu, allowed_cap, active_ratio, max, util),
+
+	TP_STRUCT__entry(
+		__field( int,		cpu				)
+		__field( int,		allowed_cap			)
+		__field( int,		active_ratio			)
+		__field( int,		max				)
+		__field( int,		util				)
+	),
+
+	TP_fast_assign(
+		__entry->cpu			= cpu;
+		__entry->allowed_cap		= allowed_cap;
+		__entry->active_ratio		= active_ratio;
+		__entry->max			= max;
+		__entry->util			= util;
+	),
+
+	TP_printk("cpu=%d allowed_cap=%d active_ratio=%d, max=%d, util=%d",
+			__entry->cpu, __entry->allowed_cap, __entry->active_ratio,
+			__entry->max, __entry->util)
+);
+
+TRACE_EVENT(esg_cpu_util,
+
+	TP_PROTO(int cpu, int eutil, int putil, int max, int util),
+
+	TP_ARGS(cpu, eutil, putil, max, util),
+
+	TP_STRUCT__entry(
+		__field( int,		cpu				)
+		__field( int,		eutil				)
+		__field( int,		putil				)
+		__field( int,		max				)
+		__field( int,		util				)
+	),
+
+	TP_fast_assign(
+		__entry->cpu			= cpu;
+		__entry->eutil			= eutil;
+		__entry->putil			= putil;
+		__entry->max			= max;
+		__entry->util			= util;
+	),
+
+	TP_printk("cpu=%d eutil=%d putil=%d, max=%d, util=%d",
+			__entry->cpu, __entry->eutil, __entry->putil,
+			__entry->max, __entry->util)
+);
+
+TRACE_EVENT(esg_req_freq,
+
+	TP_PROTO(int cpu, int util, int freq),
+
+	TP_ARGS(cpu, util, freq),
+
+	TP_STRUCT__entry(
+		__field( int,		cpu				)
+		__field( int,		util				)
+		__field( int,		freq				)
+	),
+
+	TP_fast_assign(
+		__entry->cpu			= cpu;
+		__entry->util			= util;
+		__entry->freq			= freq;
+	),
+
+	TP_printk("cpu=%d util=%d, freq=%d",
+		__entry->cpu, __entry->util, __entry->freq)
+);
+
+TRACE_EVENT(esg_update_limit,
+
+	TP_PROTO(int cpu, int min, int max),
+
+	TP_ARGS(cpu, min, max),
+
+	TP_STRUCT__entry(
+		__field( int,		cpu				)
+		__field( int,		min				)
+		__field( int,		max				)
+	),
+
+	TP_fast_assign(
+		__entry->cpu			= cpu;
+		__entry->min			= min;
+		__entry->max			= max;
+	),
+
+	TP_printk("cpu=%d min_cap=%d, max_cap=%d",
+		__entry->cpu, __entry->min, __entry->max)
+);
+
+
 /*
  * Tracepoint for EMS service
  */
