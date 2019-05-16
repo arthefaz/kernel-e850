@@ -132,7 +132,7 @@
 	vender {
 		rear_sensor_id = <47>; /* 46: RPB, 20: 2P8, 47: 2P7SQ */
 		front_sensor_id = <7>; /* 6B2 */
-		rear_second_sensor_id = <48>; /* 48: 2T7SX  */
+		rear2_sensor_id = <48>; /* 48: 2T7SX  */
 		secure_sensor_id = <22>; /* 5E2 */
 	};
 
