@@ -12,8 +12,6 @@
 #include <linux/of.h>
 #include <linux/slab.h>
 
-#include <asm/smp_plat.h>
-
 #include <soc/samsung/exynos-pm.h>
 #include <soc/samsung/exynos-pmu.h>
 #include <soc/samsung/exynos-powermode.h>
@@ -25,6 +23,7 @@ struct exynos_powermode_info {
 	 */
 	unsigned int	num_wakeup_mask;
 	unsigned int	*wakeup_mask_offset;
+	unsigned int	*wakeup_stat_offset;
 	unsigned int	*wakeup_mask[NUM_SYS_POWERDOWN];
 };
 
@@ -53,7 +52,7 @@ void exynos_system_idle_exit(int cancel)
 	exynos_wakeup_sys_powerdown(SYS_SICD, cancel);
 }
 
-#define PMU_EINT_WAKEUP_MASK	0x650
+#define PMU_EINT_WAKEUP_MASK	0x60C
 static void exynos_set_wakeupmask(enum sys_powerdown mode)
 {
 	int i;
@@ -62,9 +61,11 @@ static void exynos_set_wakeupmask(enum sys_powerdown mode)
 	/* Set external interrupt mask */
 	exynos_pmu_write(PMU_EINT_WAKEUP_MASK, (u32)eintmask);
 
-	for (i = 0; i < pm_info->num_wakeup_mask; i++)
+	for (i = 0; i < pm_info->num_wakeup_mask; i++) {
+		exynos_pmu_write(pm_info->wakeup_stat_offset[i], 0);
 		exynos_pmu_write(pm_info->wakeup_mask_offset[i],
 				pm_info->wakeup_mask[mode][i]);
+	}
 }
 
 int exynos_prepare_sys_powerdown(enum sys_powerdown mode)
@@ -104,6 +105,11 @@ static int alloc_wakeup_mask(int num_wakeup_mask)
 	if (!pm_info->wakeup_mask_offset)
 		return -ENOMEM;
 
+	pm_info->wakeup_stat_offset = kzalloc(sizeof(unsigned int)
+				* num_wakeup_mask, GFP_KERNEL);
+	if (!pm_info->wakeup_stat_offset)
+		return -ENOMEM;
+
 	for_each_syspwr_mode(mode) {
 		pm_info->wakeup_mask[mode] = kzalloc(sizeof(unsigned int)
 				* num_wakeup_mask, GFP_KERNEL);
@@ -120,6 +126,7 @@ free_reg_offset:
 			kfree(pm_info->wakeup_mask[mode]);
 
 	kfree(pm_info->wakeup_mask_offset);
+	kfree(pm_info->wakeup_stat_offset);
 
 	return -ENOMEM;
 }
@@ -147,6 +154,11 @@ static int parsing_dt_wakeup_mask(struct device_node *np)
 
 		ret = of_property_read_u32(child, "mask-offset",
 				&pm_info->wakeup_mask_offset[mask_index]);
+		if (ret)
+			return ret;
+
+		ret = of_property_read_u32(child, "stat-offset",
+				&pm_info->wakeup_stat_offset[mask_index]);
 		if (ret)
 			return ret;
 
