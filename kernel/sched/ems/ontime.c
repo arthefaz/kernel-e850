@@ -127,6 +127,16 @@ void ontime_select_fit_cpus(struct task_struct *p, struct cpumask *fit_cpus)
 		return;
 
 	/*
+	 * If the task belongs to a group that does not support ontime
+	 * migration or task is currently migrating, it can be assigned to all
+	 * active cpus without specifying fit cpus.
+	 */
+	if (!schedtune_ontime(p) || ontime_of(p)->migrating) {
+		cpumask_copy(&mask, cpu_active_mask);
+		goto done;
+	}
+
+	/*
 	 * case 1) task runnable < lower boundary
 	 *
 	 * If task 'runnable' is smaller than lower boundary of current domain,
