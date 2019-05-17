@@ -600,7 +600,7 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 			seq_printf(s, "%20s  %20s", "RSC_CONFLICT", "-\n");
 			break;
 		case DPU_EVT_UPDATE_HANDLER:
-			seq_printf(s, "%20s  ", "UPDATE_HANDLER", "-\n");
+			seq_printf(s, "%20s  ", "UPDATE_HANDLER\n");
 
 			for (i = 0; i < MAX_DECON_WIN; i++) {
 				config = &log->data.reg.win_config[i];
