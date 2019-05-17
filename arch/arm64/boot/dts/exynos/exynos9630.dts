@@ -635,6 +635,34 @@
 		};
 	};
 
+	exynos-powermode {
+		wakeup-masks {
+			/*
+			 * wakeup_mask configuration
+			 *	        SICD		SICD_CPD	AFTR		STOP
+			 *              LPD		LPA		ALPA		DSTOP
+			 *              SLEEP		SLEEP_VTS_ON	SLEEP_AUD_ON	FAPO
+			 *		USB_L2		HSI2ON
+			 */
+			wakeup-mask {
+				mask = <0xffffffff>,	<0x0>,		<0x0>,		<0x0>,
+				       <0x0>,		<0x0>,		<0x0>,		<0x0>,
+				       <0x8007ff6f>,	<0x8007ff6f>,	<0x8007ff6f>,	<0x0>,
+				       <0x8007ff6f>,	<0x8007ff6f>;
+				mask-offset = <0x3944>;
+				stat-offset = <0x3950>;
+			};
+			wakeup-mask2 {
+				mask = <0x3e1e>,	<0x0>,		<0x0>,		<0x0>,
+				       <0x0>,		<0x0>,		<0x0>,		<0x0>,
+				       <0x3e1e>,	<0x3e1e>,	<0x3e1e>,	<0x0>,
+				       <0x3e1e>,	<0x3e1e>;
+				mask-offset = <0x3964>;
+				stat-offset = <0x3954>;
+			};
+		};
+	};
+
 	iommu-domain_dpu {
 		compatible = "samsung,exynos-iommu-bus";
 		#dma-address-cells = <2>;
