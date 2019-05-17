@@ -127,6 +127,10 @@ static int usi_v2_resume_noirq(struct device *dev)
 		ret = -EINVAL;
 	}
 
+	if (data->sys_ps_cfg)
+		regmap_update_bits(data->sysreg, 0x0, 0x3 << data->sys_ps_cfg,
+			0x3 << data->sys_ps_cfg);
+
 	return ret;
 }
 
