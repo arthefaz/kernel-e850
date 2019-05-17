@@ -335,6 +335,10 @@ static int cpuhp_do(int fast_hp)
 	struct cpumask online_cpus, enable_cpus, disable_cpus;
 
 	mutex_lock(&cpuhp.lock);
+
+	/* synchronize with cpu_online_mask */
+	cpumask_copy(&cpuhp.online_cpus, cpu_online_mask);
+
 	/*
 	 * If cpu hotplug is disabled or suspended,
 	 * cpuhp_do() do nothing.
