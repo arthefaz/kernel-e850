@@ -26,6 +26,7 @@
 #include "exynos9630-mali.dtsi"
 #include <dt-bindings/soc/samsung/exynos9630-dm.h>
 #include <dt-bindings/soc/samsung/exynos9630-devfreq.h>
+#include "exynos9630-pm-domains.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos9630";
