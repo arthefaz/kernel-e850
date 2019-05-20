@@ -175,20 +175,17 @@ static void decon_reg_set_sram_share(u32 id, enum decon_fifo_mode fifo_mode)
 		if (id == 0)
 			val = SRAM0_SHARE_ENABLE_F | SRAM1_SHARE_ENABLE_F;
 		else if (id == 1)
-			val = 0;
-		else if (id == 2)
 			val = SRAM2_SHARE_ENABLE_F | SRAM3_SHARE_ENABLE_F;
+		else if (id == 2)
+			val = 0;
 		break;
 	case DECON_FIFO_12K:
-			if (id == 2) {
-				val = SRAM1_SHARE_ENABLE_F | SRAM2_SHARE_ENABLE_F
+		if (id == 1)
+			val = SRAM1_SHARE_ENABLE_F | SRAM2_SHARE_ENABLE_F
 					| SRAM3_SHARE_ENABLE_F;
-			} else {
-				decon_err("decon%d can't support SRAM 12KB\n",
-										id);
-			}
-			break;
-
+		else
+			decon_err("decon%d can't support SRAM 12KB\n", id);
+		break;
 	case DECON_FIFO_16K:
 		val = ALL_SRAM_SHARE_ENABLE;
 		break;
