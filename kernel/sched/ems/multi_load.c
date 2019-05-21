@@ -122,8 +122,8 @@ static unsigned long __ml_cpu_util_est(int cpu, int sse)
 
 static unsigned long ml_cpu_util_est(int cpu)
 {
-	return __normalize_util(cpu, __ml_cpu_util_est(cpu, USS),
-				__ml_cpu_util_est(cpu, SSE), USS);
+	return __normalize_util(cpu, __ml_cpu_util_est(cpu, SSE),
+				__ml_cpu_util_est(cpu, USS), USS);
 }
 
 /*
