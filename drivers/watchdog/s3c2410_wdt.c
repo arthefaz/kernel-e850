@@ -132,6 +132,7 @@ struct s3c2410_wdt {
 	unsigned int disable_reg_val;
 	unsigned int mask_reset_reg_val;
 	unsigned int noncpu_int_reg_val;
+	int skip_gettime;
 
 	struct task_struct	*tsk;
 	struct thread_info	*thr;
@@ -482,21 +483,22 @@ static int s3c2410wdt_automatic_disable_wdt(struct s3c2410_wdt *wdt, bool mask)
 	return ret;
 }
 
-static void s3c2410wdt_print_rtc(int index)
+static void s3c2410wdt_gettime(int index)
 {
 	struct s3c2410_wdt *wdt = s3c_wdt[index];
-	time64_t sec;
+	struct rtc_device *rtc;
 
 	wdt->tsk = current;
 	wdt->thr = current_thread_info();
 	wdt->last_ping_cpu = raw_smp_processor_id();
-	sec = ktime_get_real_seconds();
-	rtc_time_to_tm(sec, &wdt->tm);
 
-	dev_info(wdt->dev, "RTC %d-%02d-%02d %02d:%02d:%02d UTC, last_ping_cpu: %d\n",
-		wdt->tm.tm_year + 1900, wdt->tm.tm_mon + 1,
-		wdt->tm.tm_mday, wdt->tm.tm_hour,
-		wdt->tm.tm_min, wdt->tm.tm_sec, wdt->last_ping_cpu);
+	rtc = rtc_class_open(CONFIG_RTC_HCTOSYS_DEVICE);
+	if (!rtc) {
+		dev_info(wdt->dev, "Unable to open rtc device\n");
+	} else {
+		rtc_read_time(rtc, &wdt->tm);
+		rtc_class_close(rtc);
+	}
 }
 
 static int s3c2410wdt_keepalive(struct watchdog_device *wdd)
@@ -513,7 +515,8 @@ static int s3c2410wdt_keepalive(struct watchdog_device *wdd)
 
 	wtcnt = readl(wdt->reg_base + S3C2410_WTCNT);
 	dev_info(wdt->dev, "Watchdog cluster %u keepalive!, wtcnt = %lx\n", wdt->cluster, wtcnt);
-	s3c2410wdt_print_rtc(wdt->cluster);
+	if (!wdt->skip_gettime)
+		s3c2410wdt_gettime(wdt->cluster);
 
 	return 0;
 }
@@ -987,7 +990,8 @@ static void s3c2410wdt_multistage_wdt_keepalive(void)
 	wtcnt = readl(s3c_wdt[index]->reg_base + S3C2410_WTCNT);
 	dev_info(s3c_wdt[index]->dev, "Watchdog cluster %u keepalive!, wtcnt = %lx\n",
 		s3c_wdt[index]->cluster, wtcnt);
-	s3c2410wdt_print_rtc(index);
+	if (!s3c_wdt[index]->skip_gettime)
+		s3c2410wdt_gettime(index);
 
 }
 
@@ -1195,6 +1199,7 @@ static int s3c2410wdt_dev_suspend(struct device *dev)
 	if (wdt->cluster == LITTLE_CLUSTER)
 		return 0;
 
+	wdt->skip_gettime = 1;
 	s3c2410wdt_keepalive(&wdt->wdt_device);
 	/* Save watchdog state, and turn it off. */
 	wdt->wtcon_save = readl(wdt->reg_base + S3C2410_WTCON);
@@ -1216,6 +1221,7 @@ static int s3c2410wdt_dev_resume(struct device *dev)
 	if (wdt->cluster == LITTLE_CLUSTER)
 		return ret;
 
+	wdt->skip_gettime = 0;
 	if (wdt->drv_data->auto_disable_func) {
 		ret = wdt->drv_data->auto_disable_func(wdt, false);
 		if (ret < 0) {
@@ -1269,6 +1275,7 @@ static int s3c2410wdt_syscore_suspend(void)
 	if (!wdt)
 		return 0;
 
+	wdt->skip_gettime = 1;
 	s3c2410wdt_keepalive(&wdt->wdt_device);
 	/* Save watchdog state, and turn it off. */
 	wdt->wtcon_save = readl(wdt->reg_base + S3C2410_WTCON);
@@ -1286,6 +1293,7 @@ static void s3c2410wdt_syscore_resume(void)
 	if (!wdt)
 		return;
 
+	wdt->skip_gettime = 0;
 	if (wdt->drv_data->auto_disable_func) {
 		ret = wdt->drv_data->auto_disable_func(wdt, false);
 		if (ret < 0) {
