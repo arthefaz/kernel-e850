@@ -105,6 +105,7 @@ static void select_fit_cpus(struct enrg_env *env)
 		cpumask_andnot(fit_cpus, cpu_active_mask, &overutil_cpus);
 
 skip:
+	cpumask_and(fit_cpus, fit_cpus, cpu_active_mask);
 	cpumask_and(fit_cpus, fit_cpus, &env->p->cpus_allowed);
 
 	trace_ems_select_fit_cpus(env->p, env->wake,
