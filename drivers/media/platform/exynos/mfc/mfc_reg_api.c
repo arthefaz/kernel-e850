@@ -513,7 +513,7 @@ void mfc_get_img_size(struct mfc_ctx *ctx, enum mfc_get_img_size img_size)
 				ctx->min_dpb_size_2bits[i] = mfc_get_min_dpb_size_2bit(i);
 		}
 
-		mfc_debug(2, "[FRAME] DPB count %d, min_dpb_size %zu(%#x) min_dpb_size_2bits %zu scratch %zu(%#x)\n",
+		mfc_debug(2, "[FRAME] DPB count %d, min_dpb_size %d(%#x) min_dpb_size_2bits %d scratch %zu(%#zx)\n",
 			ctx->dpb_count, ctx->min_dpb_size[0], ctx->min_dpb_size[0], ctx->min_dpb_size_2bits[0],
 			ctx->scratch_buf_size, ctx->scratch_buf_size);
 	}
