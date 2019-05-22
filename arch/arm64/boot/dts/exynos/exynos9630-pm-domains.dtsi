@@ -141,6 +141,7 @@
 		cal_id = <0xB138000E>;
 		need_smc = <0x13010204>;
 		status = "disabled";// "okay";
+		power-down-ok = <PD_OK_USB>;
 	};
 
 	pd_tnr: pd-tnr@10e62200 {
