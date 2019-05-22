@@ -15,5 +15,6 @@
 
 #define PD_OK_AUD		0x1
 #define PD_OK_VTS		0x2
+#define PD_OK_USB		0x3
 
 #endif

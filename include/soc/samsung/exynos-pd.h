@@ -102,5 +102,13 @@ extern bool vts_is_on(void);
 #ifdef CONFIG_SND_SOC_SAMSUNG_ABOX
 extern bool abox_is_on(void);
 #endif
+#ifdef CONFIG_USB_DWC3_EXYNOS
+extern u32 otg_is_connect(void);
+#else
+static inline u32 otg_is_connect(void)
+{
+	return 0;
+}
+#endif
 
 #endif /* __EXYNOS_PD_H */

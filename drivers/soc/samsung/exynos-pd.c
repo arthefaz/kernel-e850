@@ -226,6 +226,15 @@ static bool exynos_pd_power_down_ok_vts(void)
 #endif
 }
 
+static bool exynos_pd_power_down_ok_usb(void)
+{
+#ifdef CONFIG_USB_DWC3_EXYNOS
+	return !otg_is_connect();
+#else
+	return true;
+#endif
+}
+
 static void of_get_power_down_ok(struct exynos_pm_domain *pd)
 {
 	int ret;
@@ -242,6 +251,9 @@ static void of_get_power_down_ok(struct exynos_pm_domain *pd)
 			break;
 		case PD_OK_VTS:
 			pd->power_down_ok = exynos_pd_power_down_ok_vts;
+			break;
+		case PD_OK_USB:
+			pd->power_down_ok = exynos_pd_power_down_ok_usb;
 			break;
 		default:
 			break;
