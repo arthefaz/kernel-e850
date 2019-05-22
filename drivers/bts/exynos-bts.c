@@ -791,6 +791,7 @@ static int exynos_bts_drex_open_show(struct seq_file *buf, void *d)
 					seq_printf(buf, "0x%.8X ", stat.vc_timer_th[idx]);
 				seq_printf(buf, "\n cutoff_con\t0x%.8X\n", stat.cutoff_con);
 				seq_printf(buf, " brb_cutoff_con\t0x%.8X\n", stat.brb_cutoff_con);
+				seq_printf(buf, " wdbuf_cutoff_con\t0x%.8X\n", stat.wdbuf_cutoff_con);
 			}
 
 			if (info[i].stat->drex_pf_on) {
@@ -1131,9 +1132,10 @@ static int exynos_bts_cutoff_open_show(struct seq_file *buf, void *d)
 				pr_err("%s: failed get cutoff\n", __func__);
 				goto err_get_cutoff;
 			}
-			seq_printf(buf, "[%d] %s:   \tcutoff_control 0x%.8X, brb_cutoff_config 0x%.8X\n",
-				i, info[i].name,
-				stat.cutoff_con, stat.brb_cutoff_con);
+			seq_printf(buf, "[%d] %s:   \tcutoff_control 0x%.8X, brb_cutoff_config 0x%.8X"\
+					" wdbuf_cutoff_config 0x%.8X\n",
+					i, info[i].name,
+					stat.cutoff_con, stat.brb_cutoff_con, stat.wdbuf_cutoff_con);
 		} else {
 			seq_printf(buf, "[%d] %s:   \tLocal power off!\n",
 					i, info[i].name);
@@ -1158,7 +1160,7 @@ static ssize_t exynos_bts_cutoff_write(struct file *file, const char __user *use
 
 	struct bts_info *info = btsdev->bts_list;
 	struct bts_stat stat;
-	int ret, index, cutoff_con, brb_cutoff_con;
+	int ret, index, cutoff_con, brb_cutoff_con, wdbuf_cutoff_con;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
 	if (buf_size < 0)
@@ -1166,13 +1168,13 @@ static ssize_t exynos_bts_cutoff_write(struct file *file, const char __user *use
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %x %x\n",
-			&index, &cutoff_con, &brb_cutoff_con);
+	ret = sscanf(buf, "%d %x %x %x\n",
+			&index, &cutoff_con, &brb_cutoff_con, &wdbuf_cutoff_con);
 
-	if (ret != 3) {
-		pr_err("%s: sscanf failed. We need 3 inputs."\
-				"<IP CUTOFF_CONTROL BRB_CUTOFF_CONFIG> count=(%d)\n",
-				__func__, ret);
+	if (ret != 4) {
+		pr_err("%s: sscanf failed. We need 4 inputs."\
+			"<IP CUTOFF_CONTROL BRB_CUTOFF_CONFIG WDBUG_CUTOFF_CONFIG> count=(%d)\n",
+			__func__, ret);
 		return -EINVAL;
 	}
 
@@ -1184,6 +1186,7 @@ static ssize_t exynos_bts_cutoff_write(struct file *file, const char __user *use
 
 	stat.cutoff_con = cutoff_con;
 	stat.brb_cutoff_con = brb_cutoff_con;
+	stat.wdbuf_cutoff_con = wdbuf_cutoff_con;
 
 	spin_lock(&btsdev->lock);
 
@@ -1858,6 +1861,9 @@ static void bts_parse_setting(struct device_node *np, struct bts_stat *stat)
 		if (of_property_read_u32(np, "brb_cutoff_con",
 					&(stat->brb_cutoff_con)))
 			stat->brb_cutoff_con = BRB_CUTOFF_CONFIG_RESET;
+		if (of_property_read_u32(np, "wdbuf_cutoff_con",
+					&(stat->wdbuf_cutoff_con)))
+			stat->wdbuf_cutoff_con = WDBUF_CUTOFF_CONFIG_RESET;
 
 		of_property_read_u32(np, "drex_pf_on", &tmp);
 		stat->drex_pf_on = tmp ? true : false;
