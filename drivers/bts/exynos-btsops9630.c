@@ -607,6 +607,7 @@ static int set_drexbts_cutoff(void __iomem *base, struct bts_stat *stat)
 
 	__raw_writel(stat->cutoff_con, base + CUTOFF_CON);
 	__raw_writel(stat->brb_cutoff_con, base + BRB_CUTOFF_CON);
+	__raw_writel(stat->wdbuf_cutoff_con, base + WDBUF_CUTOFF_CON);
 
 	return 0;
 }
@@ -618,6 +619,7 @@ static int get_drexbts_cutoff(void __iomem *base, struct bts_stat *stat)
 
 	stat->cutoff_con = __raw_readl(base + CUTOFF_CON);
 	stat->brb_cutoff_con = __raw_readl(base + BRB_CUTOFF_CON);
+	stat->wdbuf_cutoff_con = __raw_readl(base + WDBUF_CUTOFF_CON);
 
 	return 0;
 }
