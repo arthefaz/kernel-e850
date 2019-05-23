@@ -15,6 +15,23 @@
 #include "../decon.h"
 #include "../format.h"
 
+struct dpp_hdr_params {
+	unsigned int oetf_x[33];
+	unsigned int oetf_y[33];
+	unsigned int eotf_x[129];
+	unsigned int eotf_y[129];
+	unsigned int gm_coef[9];
+	unsigned int tm_ctrl[2];
+	unsigned int tm_coef[3];
+	unsigned int tm_rngx[2];
+	unsigned int tm_rngy[2];
+	unsigned int tm_maxi[1];
+	unsigned int tm_maxp[1];
+	unsigned int tm_maxo[1];
+	unsigned int tm_x[33];
+	unsigned int tm_y[33];
+};
+
 struct dpp_params_info {
 	struct decon_frame src;
 	struct decon_frame dst;
@@ -28,6 +45,7 @@ struct dpp_params_info {
 	u32 ypl_c2_strd;
 	u32 chd_strd;
 	u32 cpl_strd;
+	enum decon_blending blend;
 
 	bool is_comp;
 	bool is_scale;
@@ -40,6 +58,7 @@ struct dpp_params_info {
 
 	unsigned long rcv_num;
 	enum dpp_comp_type comp_type;
+	struct dpp_hdr_params hdr_params;
 };
 
 struct dpp_size_constraints {
