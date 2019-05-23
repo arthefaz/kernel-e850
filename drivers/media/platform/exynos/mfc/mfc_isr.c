@@ -128,11 +128,7 @@ static void __mfc_handle_frame_all_extracted(struct mfc_ctx *ctx)
 		dst_mb->vb.field = __mfc_handle_frame_field(ctx);
 		mfc_clear_vb_flag(dst_mb);
 
-#ifdef USE_DPB_INDEX
 		clear_bit(dst_mb->dpb_index, &dec->available_dpb);
-#else
-		clear_bit(dst_mb->vb.vb2_buf.index, &dec->available_dpb);
-#endif
 
 		if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->dst_ctrls[index]) < 0)
 			mfc_err_ctx("failed in get_buf_ctrls_val\n");
@@ -155,14 +151,13 @@ static void __mfc_handle_frame_all_extracted(struct mfc_ctx *ctx)
 		}
 
 		mutex_lock(&dec->dpb_mutex);
-#ifdef USE_DPB_INDEX
+
 		index = dst_mb->dpb_index;
-#else
-		index = dst_mb->vb.vb2_buf.index;
-#endif
 		dec->dpb[index].queued = 0;
 		clear_bit(index, &dec->queued_dpb);
+
 		mutex_unlock(&dec->dpb_mutex);
+
 		vb2_buffer_done(&dst_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
 		mfc_debug(2, "[DPB] Cleand up index = %d, used_flag = %08x, queued = %#lx\n",
 				index, dec->dynamic_used, dec->queued_dpb);
@@ -307,11 +302,7 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx, unsigned int err)
 						raw->plane_size[i]);
 			}
 		}
-#ifdef USE_DPB_INDEX
 		clear_bit(dst_mb->dpb_index, &dec->available_dpb);
-#else
-		clear_bit(index, &dec->available_dpb);
-#endif
 		dst_mb->vb.flags &= ~(V4L2_BUF_FLAG_KEYFRAME |
 					V4L2_BUF_FLAG_PFRAME |
 					V4L2_BUF_FLAG_BFRAME |
@@ -368,17 +359,15 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx, unsigned int err)
 		mfc_qos_update_last_framerate(ctx, dst_mb->vb.vb2_buf.timestamp);
 		mfc_debug(2, "[DPB] dst index [%d][%d] is buffer done\n",
 				dst_mb->vb.vb2_buf.index, dst_mb->dpb_index);
+
 		mutex_lock(&dec->dpb_mutex);
-#ifdef USE_DPB_INDEX
+
 		dec->dpb[dst_mb->dpb_index].queued = 0;
 		clear_bit(dst_mb->dpb_index, &dec->queued_dpb);
 		dec->display_index = dst_mb->dpb_index;
-#else
-		dec->dpb[index].queued = 0;
-		clear_bit(index, &dec->queued_dpb);
-		dec->display_index = index;
-#endif
+
 		mutex_unlock(&dec->dpb_mutex);
+
 		vb2_buffer_done(&dst_mb->vb.vb2_buf, mfc_get_warn(err) ?
 				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 	}

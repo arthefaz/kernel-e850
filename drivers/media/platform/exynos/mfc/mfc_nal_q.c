@@ -964,11 +964,7 @@ static int __mfc_nal_q_run_in_buf_dec(struct mfc_ctx *ctx, DecoderInputStr *pInS
 	ctx->last_src_addr = buf_addr;
 
 	/* dst buffer setting */
-#ifdef USE_DPB_INDEX
 	dst_index = dst_mb->dpb_index;
-#else
-	dst_index = dst_mb->vb.vb2_buf.index;
-#endif
 	set_bit(dst_index, &dec->available_dpb);
 	dec->dynamic_set = 1 << dst_index;
 
@@ -1237,11 +1233,7 @@ static void __mfc_nal_q_handle_reuse_buffer(struct mfc_ctx *ctx, DecoderOutputSt
 			mfc_debug(2, "[NALQ][DPB] buf[%d][%d] will reused. addr: 0x%08llx\n",
 					dst_mb->vb.vb2_buf.index, dst_mb->dpb_index, disp_addr);
 			dst_mb->used = 0;
-#ifdef USE_DPB_INDEX
 			clear_bit(dst_mb->dpb_index, &dec->available_dpb);
-#else
-			clear_bit(dst_mb->vb.vb2_buf.index, &dec->available_dpb);
-#endif
 		}
 	}
 }
@@ -1271,11 +1263,7 @@ static void __mfc_nal_q_handle_frame_all_extracted(struct mfc_ctx *ctx, DecoderO
 		dst_mb->vb.sequence = (ctx->sequence++);
 		mfc_clear_vb_flag(dst_mb);
 
-#ifdef USE_DPB_INDEX
 		clear_bit(dst_mb->dpb_index, &dec->available_dpb);
-#else
-		clear_bit(dst_mb->vb.vb2_buf.index, &dec->available_dpb);
-#endif
 
 		if (call_cop(ctx, get_buf_ctrls_val_nal_q_dec, ctx,
 					&ctx->dst_ctrls[index], pOutStr) < 0)
@@ -1299,14 +1287,13 @@ static void __mfc_nal_q_handle_frame_all_extracted(struct mfc_ctx *ctx, DecoderO
 		}
 
 		mutex_lock(&dec->dpb_mutex);
-#ifdef USE_DPB_INDEX
+
 		index = dst_mb->dpb_index;
-#else
-		index = dst_mb->vb.vb2_buf.index;
-#endif
 		dec->dpb[index].queued = 0;
 		clear_bit(index, &dec->queued_dpb);
+
 		mutex_unlock(&dec->dpb_mutex);
+
 		vb2_buffer_done(&dst_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
 		mfc_debug(2, "[NALQ][DPB] Cleand up index = %d, used_flag = %08x, queued = %#lx\n",
 				index, dec->dynamic_used, dec->queued_dpb);
@@ -1496,11 +1483,7 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 			vb2_set_plane_payload(&dst_mb->vb.vb2_buf, i,
 					raw->plane_size[i]);
 
-#ifdef USE_DPB_INDEX
 		clear_bit(dst_mb->dpb_index, &dec->available_dpb);
-#else
-		clear_bit(index, &dec->available_dpb);
-#endif
 		dst_mb->vb.flags &= ~(V4L2_BUF_FLAG_KEYFRAME |
 					V4L2_BUF_FLAG_PFRAME |
 					V4L2_BUF_FLAG_BFRAME |
@@ -1549,17 +1532,15 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 		}
 
 		mfc_qos_update_last_framerate(ctx, dst_mb->vb.vb2_buf.timestamp);
+
 		mutex_lock(&dec->dpb_mutex);
-#ifdef USE_DPB_INDEX
+
 		dec->dpb[dst_mb->dpb_index].queued = 0;
 		clear_bit(dst_mb->dpb_index, &dec->queued_dpb);
 		dec->display_index = dst_mb->dpb_index;
-#else
-		dec->dpb[index].queued = 0;
-		clear_bit(index, &dec->queued_dpb);
-		dec->display_index = index;
-#endif
+
 		mutex_unlock(&dec->dpb_mutex);
+
 		vb2_buffer_done(&dst_mb->vb.vb2_buf, disp_err ?
 				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 	}
@@ -1581,11 +1562,7 @@ static void __mfc_nal_q_move_released_buf(struct mfc_ctx *ctx, int released_flag
 				mfc_debug(2, "[NALQ][DPB] buf[%d][%d] released will be reused. addr: 0x%08llx\n",
 						dst_mb->vb.vb2_buf.index, dst_mb->dpb_index, dst_mb->addr[0][0]);
 				dst_mb->used = 0;
-#ifdef USE_DPB_INDEX
 				clear_bit(dst_mb->dpb_index, &dec->available_dpb);
-#else
-				clear_bit(dst_mb->vb.vb2_buf.index, &dec->available_dpb);
-#endif
 			}
 		}
 	}

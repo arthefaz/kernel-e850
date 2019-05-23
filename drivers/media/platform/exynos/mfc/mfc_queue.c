@@ -252,11 +252,7 @@ struct mfc_buf *mfc_get_move_buf_index(struct mfc_ctx *ctx,
 	mfc_debug(4, "Looking for this index: %d\n", index);
 	list_for_each_entry(mfc_buf, &from_queue->head, list) {
 
-#ifdef USE_DPB_INDEX
 		if (mfc_buf->dpb_index == index) {
-#else
-		if (mfc_buf->vb.vb2_buf.index == index) {
-#endif
 			mfc_debug(2, "[DPB] buf[%d][%d] addr[0]: 0x%08llx\n",
 					mfc_buf->vb.vb2_buf.index, mfc_buf->dpb_index, mfc_buf->addr[0][0]);
 
@@ -546,11 +542,7 @@ struct mfc_buf *mfc_search_for_dpb(struct mfc_ctx *ctx)
 
 	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 	list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list) {
-#ifdef USE_DPB_INDEX
 		if ((dec->dynamic_used & (1 << mfc_buf->dpb_index)) == 0) {
-#else
-		if ((dec->dynamic_used & (1 << mfc_buf->vb.vb2_buf.index)) == 0) {
-#endif
 			mfc_buf->used = 1;
 			spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 			return mfc_buf;
@@ -599,11 +591,7 @@ struct mfc_buf *mfc_search_move_dpb_nal_q(struct mfc_ctx *ctx)
 
 	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 	list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list) {
-#ifdef USE_DPB_INDEX
 		if ((dec->dynamic_used & (1 << mfc_buf->dpb_index)) == 0) {
-#else
-		if ((dec->dynamic_used & (1 << mfc_buf->vb.vb2_buf.index)) == 0) {
-#endif
 			mfc_buf->used = 1;
 
 			list_del(&mfc_buf->list);
@@ -716,11 +704,7 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 	mfc_debug(2, "[DPB] DPB vb_index %d -> dpb_index %d addr %#llx (used: %#x)\n",
 			vb->index, mfc_buf->dpb_index, mfc_buf->addr[0][0], dec->dynamic_used);
 
-#ifdef USE_DPB_INDEX
 	index = mfc_buf->dpb_index;
-#else
-	index = vb->index;
-#endif
 
 	if (!dec->dpb[index].mapcnt) {
 		mfc_get_iovmm(ctx, vb, dec->dpb);
@@ -785,11 +769,7 @@ void mfc_cleanup_nal_queue(struct mfc_ctx *ctx)
 
 		dst_mb->used = 0;
 		if (ctx->type == MFCINST_DECODER)
-#ifdef USE_DPB_INDEX
 			clear_bit(dst_mb->dpb_index, &dec->available_dpb);
-#else
-			clear_bit(dst_mb->vb.vb2_buf.index, &dec->available_dpb);
-#endif
 		list_del(&dst_mb->list);
 		ctx->dst_buf_nal_queue.count--;
 

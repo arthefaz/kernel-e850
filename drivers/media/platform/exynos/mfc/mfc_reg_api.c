@@ -444,11 +444,7 @@ int mfc_set_dynamic_dpb(struct mfc_ctx *ctx, struct mfc_buf *dst_mb)
 	int dst_index;
 	int i;
 
-#ifdef USE_DPB_INDEX
 	dst_index = dst_mb->dpb_index;
-#else
-	dst_index = dst_mb->vb.vb2_buf.index;
-#endif
 
 	set_bit(dst_index, &dec->available_dpb);
 	dec->dynamic_set = 1 << dst_index;

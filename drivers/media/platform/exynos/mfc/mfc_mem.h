@@ -48,22 +48,14 @@ static inline void mfc_print_dpb_table(struct mfc_ctx *ctx)
 		found = 0;
 		spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 		list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list) {
-#ifdef USE_DPB_INDEX
 			if (i == mfc_buf->dpb_index) {
-#else
-			if (i == mfc_buf->vb.vb2_buf.index) {
-#endif
 				found = 1;
 				break;
 			}
 		}
 		if (!found) {
 			list_for_each_entry(mfc_buf, &ctx->dst_buf_nal_queue.head, list) {
-#ifdef USE_DPB_INDEX
 				if (i == mfc_buf->dpb_index) {
-#else
-				if (i == mfc_buf->vb.vb2_buf.index) {
-#endif
 					found = 1;
 					break;
 				}
