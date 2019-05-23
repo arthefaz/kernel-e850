@@ -1489,7 +1489,7 @@ static void exynos_usi_init(struct uart_port *port)
 	 * Due to this feature, the USI_RESET must be cleared (set as '0')
 	 * before transaction starts.
 	 */
-	if (!ourport->console_dbg) {
+	if (!ourport->dbg_uart_ch) {
 		wr_regl(port, USI_CON, USI_SET_RESET);
 		udelay(1);
 	}
@@ -2001,10 +2001,6 @@ static int s3c24xx_serial_probe(struct platform_device *pdev)
 	else
 		ourport->use_default_irq =0;
 
-	if (of_find_property(pdev->dev.of_node, "samsung,console-dbg", NULL))
-		ourport->console_dbg = 1;
-	else
-		ourport->console_dbg = 0;
 
 	ret = s3c24xx_serial_init_port(ourport, pdev);
 	if (ret < 0)

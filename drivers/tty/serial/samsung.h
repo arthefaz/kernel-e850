@@ -103,7 +103,6 @@ struct s3c24xx_uart_port {
 	unsigned int dbg_word_len;
 	unsigned int			uart_logging;
 	struct uart_local_buf		uart_local_buf;
-	unsigned int		console_dbg;
 };
 
 /* conversion functions */
