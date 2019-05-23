@@ -34,7 +34,12 @@
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
+
+#if defined(CONFIG_SOC_EXYNOS9830)
 #include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
+#elif defined(CONFIG_SOC_EXYNOS9630)
+#include <dt-bindings/soc/samsung/exynos9630-devfreq.h>
+#endif
 #include <soc/samsung/exynos-devfreq.h>
 
 #include "format.h"

@@ -1,4 +1,4 @@
-/* drivers/video/fbdev/exynos/dpu30/cal_9830/regs-dpp.h
+/* drivers/video/fbdev/exynos/dpu30/cal_9630/regs-dpp.h
  *
  * Copyright (c) 2019 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
@@ -86,7 +86,7 @@
 #define INSTANT_OFF_NOT_PENDING			(0)
 
 #define IDMA_IRQ				0x0004
-/* [9830] AXI_ADDR_ERR_IRQ is added */
+/* [9630] AXI_ADDR_ERR_IRQ is added */
 #define IDMA_AXI_ADDR_ERR_IRQ			(1 << 26)
 #define IDMA_AFBC_CONFLICT_IRQ			(1 << 25)
 #define IDMA_VR_CONFLICT_IRQ			(1 << 24)
@@ -98,7 +98,7 @@
 #define IDMA_STATUS_DEADLOCK_IRQ		(1 << 17)
 #define IDMA_STATUS_FRAMEDONE_IRQ		(1 << 16)
 #define IDMA_ALL_IRQ_CLEAR			(0x7FB << 16)
-/* [9830] AXI_ADDR_ERR_IRQ_MASK is added */
+/* [9630] AXI_ADDR_ERR_IRQ_MASK is added */
 #define IDMA_AXI_ADDR_ERR_IRQ_MASK		(1 << 11)
 #define IDMA_AFBC_CONFLICT_MASK			(1 << 10)
 #define IDMA_VR_CONFLICT_MASK			(1 << 9)
@@ -228,7 +228,7 @@
 #define IDMA_PLANE_2_STRIDE_MASK		(0xffff << 0)
 
 /*
-// Not support in 9830
+// Not support in 9630
 #define IDMA_AFBC_PARAM				0x0060
 #define IDMA_AFBC_BLOCK_SIZE(_v)		((_v) << 0)
 #define IDMA_AFBC_BLOCK_SIZE_MASK		(0x3 << 0)
@@ -237,7 +237,7 @@
 #define IDMA_AFBC_BLOCK_SIZE_64_4		(2)
 */
 
-/* [9830] SWBC_PARAM is added */
+/* [9630] SWBC_PARAM is added */
 #define IDMA_SBWC_PARAM				0x0064
 #define IDMA_CHM_BLK_SIZE(_v)			((_v) << 2)
 #define IDMA_CHM_BLK_SIZE_MASK			(0x3 << 2)
@@ -251,7 +251,7 @@
 #define IDMA_LUM_BLK_SIZE_64_4			(2)
 
 /*
-// Not support in 9830
+// Not support in 9630
 #define IDMA_CSET_PARAM				0x0068
 #define IDMA_GB_BASE(_v)			((_v) << 0)
 #define IDMA_GB_BASE_MASK			(0x1f << 0)
@@ -262,7 +262,7 @@
 #define IDMA_RECOVERY_NUM_MASK			(0x7fffffff << 1)
 #define IDMA_RECOVERY_EN			(1 << 0)
 
-/* [9830] IDMA_DEADLOCK_NUM -> IDMA_DEADLOCK_EN */
+/* [9630] IDMA_DEADLOCK_NUM -> IDMA_DEADLOCK_EN */
 #define IDMA_DEADLOCK_EN			0x0100
 #define IDMA_DEADLOCK_TIMER(_v)			((_v) << 1)
 #define IDMA_DEADLOCK_TIMER_MASK		(0x7fffffff << 1)
@@ -270,7 +270,7 @@
 
 #define IDMA_BUS_CON				0x0110
 
-/* [9830] IDMA_CACHE_CON is added */
+/* [9630] IDMA_CACHE_CON is added */
 #define IDMA_CACHE_CON				0x0114
 #define IDMA_DATA_SAHRE_TYPE_P3(_v)		((_v) << 28)
 #define IDMA_DATA_SAHRE_TYPE_P3_MASK		(0x3 << 28)
@@ -289,7 +289,7 @@
 #define IDMA_LLC_HINT_P0(_v)			((_v) << 0)
 #define IDMA_LLC_HINT_P0_MASK			(0x7 << 0)
 
-/* [9830] IDMA_PERFORMANCE_CON is added at each layer */
+/* [9630] IDMA_PERFORMANCE_CON is added at each layer */
 #define IDMA_PERFORMANCE_CON			0x0120
 #define IDMA_DEGRADATION_TIME(_v)		((_v) << 16)
 #define IDMA_DEGRADATION_TIME_MASK		(0xFFFF << 16)
@@ -297,7 +297,7 @@
 #define IDMA_IN_IC_MAX_DEG_MASK			(0xFF << 4)
 #define IDMA_DEGRADATION_EN			(1 << 0)
 
-/* [9830] IDMA_QOS_LUT is added at each layer */
+/* [9630] IDMA_QOS_LUT is added at each layer */
 /* _n: [0,7], _v: [0x0, 0xF] */
 #define IDMA_QOS_LUT07_00			0x0130
 #define IDMA_QOS_LUT15_08			0x0134
@@ -321,17 +321,17 @@
 #define IDMA_IN_REG_DEST_SEL(_v)		((_v) << 0)
 #define IDMA_IN_REG_DEST_SEL_MASK		(0x3 << 0)
 
-/* [9830] IDMA_PSLV_ERR_CTRL is added */
+/* [9630] IDMA_PSLV_ERR_CTRL is added */
 #define IDMA_PSLV_ERR_CTRL			0x030c
 #define IDMA_PSLVERR_CTRL			(1 << 0)
 
-/* [9830] IDMA_DEBUG_ADDR_Y/C is added */
+/* [9630] IDMA_DEBUG_ADDR_Y/C is added */
 #define IDMA_DEBUG_ADDR_Y8			0x0310
 #define IDMA_DEBUG_ADDR_C8			0x0314
 #define IDMA_DEBUG_ADDR_Y2			0x0318
 #define IDMA_DEBUG_ADDR_C2			0x031C
 
-/* [9830] IDMA_DEBUG_ADDR_CTRL is added */
+/* [9630] IDMA_DEBUG_ADDR_CTRL is added */
 #define IDMA_DEBUG_ADDR_CTRL			0x0320
 #define IDMA_DBG_EN_ADDR_C2			(1 << 3)
 #define IDMA_DBG_EN_ADDR_Y2			(1 << 2)
@@ -746,8 +746,8 @@
 #define DPP_CFG_ERR_GET(_v)			(((_v) >> 0) & 0x1F)
 
 /*
- * 9830 : no HDR Layer
- * E9830 doesn't support HDR, but we've left it because of the compilation.
+ * 9630 : no HDR Layer
+ * E9630 doesn't support HDR, but we've left it because of the compilation.
  */
 #if 1
 /* HDR section */
