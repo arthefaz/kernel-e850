@@ -1,4 +1,4 @@
-/* drivers/video/fbdev/exynos/dpu30/cal_9830/dpp_regs.c
+/* drivers/video/fbdev/exynos/dpu30/cal_9630/dpp_regs.c
  *
  * Copyright (c) 2019 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
