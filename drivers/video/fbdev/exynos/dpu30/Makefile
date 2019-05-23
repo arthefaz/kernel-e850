@@ -11,12 +11,14 @@ obj-$(CONFIG_EXYNOS_MIPI_DSIM) += dsim.o
 dsim-y += dsim_drv.o
 obj-$(CONFIG_SOC_EXYNOS9830) += ./cal_9830/dsim_reg.o ./cal_9830/dpp_reg.o ./cal_9830/decon_reg.o
 obj-$(CONFIG_SOC_EXYNOS9820) += ./cal_9820/dsim_reg.o ./cal_9820/dpp_reg.o ./cal_9820/decon_reg.o
+obj-$(CONFIG_SOC_EXYNOS9630) += ./cal_9630/dsim_reg.o ./cal_9630/dpp_reg.o ./cal_9630/decon_reg.o
 obj-$(CONFIG_SOC_EXYNOS9610) += ./cal_9610/dsim_reg.o ./cal_9610/dpp_reg.o ./cal_9610/decon_reg.o
 ifdef CONFIG_EXYNOS_DISPLAYPORT
 obj-$(CONFIG_EXYNOS_DISPLAYPORT) += displayport.o
 displayport-y += displayport_drv.o displayport_edid.o displayport_hdcp13.o decon_displayport.o displayport_hdcp22_if.o displayport_aux_client.o displayport_topology.o
 obj-$(CONFIG_SOC_EXYNOS9830) += ./cal_9830/displayport_reg.o
 obj-$(CONFIG_SOC_EXYNOS9820) += ./cal_9820/displayport_reg.o
+obj-$(CONFIG_SOC_EXYNOS9630) += ./cal_9630/displayport_reg.o
 obj-$(CONFIG_SOC_EXYNOS9610) += ./cal_9610/displayport_reg.o
 endif
 obj-$(CONFIG_EXYNOS_DPU30) += decon.o
