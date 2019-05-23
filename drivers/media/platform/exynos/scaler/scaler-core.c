@@ -1170,6 +1170,18 @@ static int sc_v4l2_s_fmt_mplane(struct file *file, void *fh,
 	frame->crop.width = pixm->width;
 	frame->crop.height = pixm->height;
 
+	if (V4L2_TYPE_IS_OUTPUT(f->type) && ctx->sc_dev->variant->blending &&
+			frame->sc_fmt->is_alphablend_fmt) {
+		if (pixm->pixelformat == V4L2_PIX_FMT_NV12M_RGB32 ||
+				pixm->pixelformat == V4L2_PIX_FMT_NV12N_RGB32 ||
+				pixm->pixelformat == V4L2_PIX_FMT_NV12_RGB32) {
+			ctx->src_blend_cfg.blend_src_color_byte_swap =
+				(SCALER_CFG_BYTE_HWORD_SWAP >> 5);
+			ctx->src_blend_cfg.blend_src_color_format =
+				SCALER_CFG_FMT_RGBA8888;
+		}
+	}
+
 	return 0;
 }
 
@@ -2247,6 +2259,34 @@ static int sc_s_ctrl(struct v4l2_ctrl *ctrl)
 		}
 		ctx->bl_op = ctrl->val;
 		break;
+	case V4L2_CID_2D_SRC_BLEND_SET_H_POS:
+		if (!ctx->sc_dev->variant->blending)
+			return -EINVAL;
+		ctx->src_blend_cfg.blend_src_h_pos = ctrl->val;
+		break;
+
+	case V4L2_CID_2D_SRC_BLEND_SET_V_POS:
+		if (!ctx->sc_dev->variant->blending)
+			return -EINVAL;
+		ctx->src_blend_cfg.blend_src_v_pos = ctrl->val;
+		break;
+	case V4L2_CID_2D_SRC_BLEND_FMT_PREMULTI:
+		if (!ctx->sc_dev->variant->blending)
+			return -EINVAL;
+		ctx->src_blend_cfg.pre_multi = ctrl->val;
+		break;
+	case V4L2_CID_2D_SRC_BLEND_SET_HEIGHT:
+		if (!ctx->sc_dev->variant->blending)
+			return -EINVAL;
+		ctx->src_blend_cfg.blend_src_height = ctrl->val;
+		ctx->src_blend_frame.height = ctrl->val;
+		break;
+	case V4L2_CID_2D_SRC_BLEND_SET_WIDTH:
+		if (!ctx->sc_dev->variant->blending)
+			return -EINVAL;
+		ctx->src_blend_cfg.blend_src_width = ctrl->val;
+		ctx->src_blend_frame.width = ctrl->val;
+		break;
 	case V4L2_CID_2D_FMT_PREMULTI:
 		ctx->pre_multi = ctrl->val;
 		break;
@@ -2357,6 +2397,56 @@ static const struct v4l2_ctrl_config sc_custom_ctrl[] = {
 		.min = 0,
 		.max = SC_FT_MAX,
 		.def = 0,
+	}, {
+		.ops = &sc_ctrl_ops,
+		.id = V4L2_CID_2D_SRC_BLEND_SET_H_POS,
+		.name = "set src blend H position",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.step = 1,
+		.min = 0,
+		.max = 8192,
+		.def = 0,
+	}, {
+		.ops = &sc_ctrl_ops,
+		.id = V4L2_CID_2D_SRC_BLEND_SET_V_POS,
+		.name = "set src blend V position",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.step = 1,
+		.min = 0,
+		.max = 8192,
+		.def = 0,
+	}, {
+		.ops = &sc_ctrl_ops,
+		.id = V4L2_CID_2D_SRC_BLEND_FMT_PREMULTI,
+		.name = "set src blend premultiplied alpha",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.step = 1,
+		.min = 0,
+		.max = 1,
+		.def = 0,
+	}, {
+		.ops = &sc_ctrl_ops,
+		.id = V4L2_CID_2D_SRC_BLEND_SET_WIDTH,
+		.name = "set src blend full width",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.step = 1,
+		.min = 16,
+		.max = 8192,
+		.def = 16,
+	}, {
+		.ops = &sc_ctrl_ops,
+		.id = V4L2_CID_2D_SRC_BLEND_SET_HEIGHT,
+		.name = "set src blend full height",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.step = 1,
+		.min = 16,
+		.max = 8192,
+		.def = 16,
 	}, {
 		.ops = &sc_ctrl_ops,
 		.id = SC_CID_FRAMERATE,
@@ -3295,12 +3385,6 @@ static void sc_m2m_device_run(void *priv)
 		BUG_ON(!s_frame->sc_fmt->is_alphablend_fmt);
 		BUG_ON(!ctx->src_blend_cfg.blend_src_width);
 		BUG_ON(!ctx->src_blend_cfg.blend_src_height);
-		BUG_ON(!ctx->src_blend_cfg.blend_src_stride);
-
-		/* update the src_blend_frame parameters */
-		// TODO : move to s_ctrl
-		src_blend_frame->width = ctx->src_blend_cfg.blend_src_width;
-		src_blend_frame->height = ctx->src_blend_cfg.blend_src_height;
 	} else
 		src_blend_frame = NULL;
 

@@ -38,7 +38,7 @@ extern int sc_log_level;
 #define SC_MAX_DEVS		1
 #define SC_TIMEOUT		(2 * HZ)	/* 2 seconds */
 #define SC_WDT_CNT		3
-#define SC_MAX_CTRL_NUM		11
+#define SC_MAX_CTRL_NUM		20
 
 #define SC_MAX_PLANES		3
 /* Address index */
@@ -111,6 +111,12 @@ extern int sc_log_level;
 #define V4L2_CID_2D_DITH		(V4L2_CID_EXYNOS_BASE + 105)
 #define V4L2_CID_2D_FMT_PREMULTI	(V4L2_CID_EXYNOS_BASE + 106)
 
+/* for scaler blend set format */
+#define V4L2_CID_2D_SRC_BLEND_SET_H_POS         (V4L2_CID_EXYNOS_BASE + 116)
+#define V4L2_CID_2D_SRC_BLEND_SET_V_POS         (V4L2_CID_EXYNOS_BASE + 117)
+#define V4L2_CID_2D_SRC_BLEND_FMT_PREMULTI      (V4L2_CID_EXYNOS_BASE + 118)
+#define V4L2_CID_2D_SRC_BLEND_SET_WIDTH         (V4L2_CID_EXYNOS_BASE + 119)
+#define V4L2_CID_2D_SRC_BLEND_SET_HEIGHT        (V4L2_CID_EXYNOS_BASE + 120)
 /* for scaler : blending operation */
 /* 12  Y/CbCr 4:2:0 RGBA  */
 #define V4L2_PIX_FMT_NV12M_RGB32    v4l2_fourcc('N', 'V', 'R', 'G')
