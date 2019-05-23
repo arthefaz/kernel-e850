@@ -201,6 +201,7 @@ static int dpp_get_params(struct dpp_device *dpp, struct dpp_params_info *p)
 	p->ypl_c2_strd = 0;
 	p->chd_strd = 0;
 	p->cpl_strd = 0;
+	p->blend = config->blending;
 
 	p->comp_type = fmt_info->ct;
 	if (p->is_comp) {
@@ -872,8 +873,8 @@ static irqreturn_t dma_irq_handler(int irq, void *priv)
 		goto irq_end;
 
 	if (test_bit(DPP_ATTR_ODMA, &dpp->attr)) { /* ODMA case */
+#if defined(CONFIG_SOC_EXYNOS9830)
 		irqs = odma_reg_get_irq_and_clear(dpp->id);
-
 		if ((irqs & ODMA_WRITE_SLAVE_ERROR) ||
 			       (irqs & ODMA_STATUS_DEADLOCK_IRQ)) {
 			dpp_err("odma%d error irq occur(0x%x)\n", dpp->id, irqs);
@@ -888,6 +889,7 @@ static irqreturn_t dma_irq_handler(int irq, void *priv)
 					ktime_set(0, 0));
 			goto irq_end;
 		}
+#endif
 	} else { /* IDMA case */
 		irqs = idma_reg_get_irq_and_clear(dpp->id);
 
@@ -971,6 +973,39 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 			dpp_err("failed to remap DPU_DMA COMMON SFR region\n");
 			return -EINVAL;
 		}
+
+		if (test_bit(DPP_ATTR_WCG, &dpp->attr)) {
+			res = platform_get_resource(pdev, IORESOURCE_MEM, 3);
+			if (!res) {
+				dpp_err("failed to get mem resource\n");
+				return -ENOENT;
+			}
+			dpp_info("WCG res: start(0x%x), end(0x%x)\n",
+					(u32)res->start, (u32)res->end);
+
+			dpp->res.hdr_regs = devm_ioremap_resource(dpp->dev, res);
+			if (!dpp->res.hdr_regs) {
+				dpp_err("failed to remap WCG/HDR SFR region\n");
+				return -EINVAL;
+			}
+		}
+	} else {
+		if (test_bit(DPP_ATTR_WCG, &dpp->attr) ||
+				test_bit(DPP_ATTR_HDR10P, &dpp->attr)) {
+			res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+			if (!res) {
+				dpp_err("failed to get mem resource\n");
+				return -ENOENT;
+			}
+			dpp_info("WCG/HDR10P res: start(0x%x), end(0x%x)\n",
+					(u32)res->start, (u32)res->end);
+
+			dpp->res.hdr_regs = devm_ioremap_resource(dpp->dev, res);
+			if (!dpp->res.hdr_regs) {
+				dpp_err("failed to remap WCG/HDR SFR region\n");
+				return -EINVAL;
+			}
+		}
 	}
 
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
@@ -996,7 +1031,7 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 			dpp_err("failed to get mem resource\n");
 			return -ENOENT;
 		}
-		dpp_info("res: start(0x%x), end(0x%x)\n",
+		dpp_info("dpp res: start(0x%x), end(0x%x)\n",
 				(u32)res->start, (u32)res->end);
 
 		dpp->res.regs = devm_ioremap_resource(dpp->dev, res);
@@ -1005,6 +1040,7 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 			return -EINVAL;
 		}
 	}
+
 
 	if (test_bit(DPP_ATTR_DPP, &dpp->attr)) {
 		res = platform_get_resource(pdev, IORESOURCE_IRQ, 1);
