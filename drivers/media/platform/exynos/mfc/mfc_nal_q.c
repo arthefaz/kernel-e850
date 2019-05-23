@@ -1420,6 +1420,17 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 	}
 
 	dst_mb = mfc_find_del_buf(ctx, &ctx->dst_buf_nal_queue, dspl_y_addr);
+	if (!dst_mb) {
+		/*
+		 * A buffer that was not displayed during NAL_START mode
+		 * can be displayed after changing to NAL_QUEUE mode
+		 * and it exists in dst_buf_queue.
+		 * So, here tries to find the buffer also in dst_buf_queue.
+		 */
+		dst_mb = mfc_find_del_buf(ctx, &ctx->dst_buf_queue, dspl_y_addr);
+		mfc_debug(2, "[NALQ][BUFINFO] disp buffer %ssearch in dst_q also\n",
+				dst_mb? "" : "couldn't ");
+	}
 	if (dst_mb) {
 		index = dst_mb->vb.vb2_buf.index;
 
