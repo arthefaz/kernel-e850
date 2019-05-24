@@ -543,8 +543,56 @@ void get_blend_value(unsigned int *cfg, u32 val, bool pre_multi)
 		*cfg |= (1 << SCALER_OP_SEL_INV_SHIFT);
 }
 
+void sc_hwset_blend_src_addr(struct sc_dev *sc, struct sc_frame *frame)
+{
+	writel(frame->addr.ioaddr[SC_PLANE_Y],
+			sc->regs + SCALER_BLEND_SRC_BASE_REG);
+}
+
+void sc_set_blendsrc_cfg(struct sc_dev *sc, bool pre_multi,
+				struct sc_src_blend_cfg *src_blend_cfg)
+{
+	u32 val = 0;
+
+	if (!pre_multi && src_blend_cfg->pre_multi)
+		val |= (1 << SCALER_SRC_ALPHA_MUL_EN_SHIFT);
+	else if (pre_multi && !src_blend_cfg->pre_multi)
+		val |= (1 << SCALER_SRC_ALPHA_DIV_EN_SHIFT);
+
+	val |= (src_blend_cfg->blend_src_color_byte_swap
+				<< SCALER_BLEND_SRC_COLOR_BYTE_SWAP_SHIFT);
+	val |= (src_blend_cfg->blend_src_color_format
+				<< SCALER_BLEND_SRC_COLOR_FORMAT_SHIFT);
+
+	/* setting it to 2, as suggested by AP team engineer
+	 * JINWOOK LEE <jdmcjini.lee@samsung.com>
+	 */
+	val |= (2 << SCALER_BLEND_DST_CSC_HOFFSET_SHIFT);
+	val |= (2 << SCALER_BLEND_DST_CSC_VOFFSET_SHIFT);
+	writel(val, sc->regs + SCALER_BLEND_CFG_REG);
+}
+
+void sc_set_blend_src_span(struct sc_dev *sc, u32 val)
+{
+	writel(val, sc->regs + SCALER_BLEND_SRC_SPAN_REG);
+}
+
+void sc_blend_src_pos(struct sc_dev *sc, u32 hpos, u32 vpos)
+{
+	writel((hpos << SCALER_BLEND_SRC_H_POS_SHIFT) |
+				(vpos << SCALER_BLEND_SRC_V_POS_SHIFT),
+				sc->regs + SCALER_BLEND_SRC_POS_REG);
+}
+
+void sc_blend_src_wh(struct sc_dev *sc, u32 width, u32 height)
+{
+	writel((width << SCALER_BLEND_SRC_WH_WIDTH_SHIFT) |
+				(height << SCALER_BLEND_SRC_WH_HEIGHT_SHIFT),
+				sc->regs + SCALER_BLEND_SRC_WH_REG);
+}
+
 void sc_hwset_blend(struct sc_dev *sc, enum sc_blend_op bl_op, bool pre_multi,
-		unsigned char g_alpha)
+		unsigned char g_alpha, struct sc_src_blend_cfg *src_blend_cfg)
 {
 	unsigned int cfg = readl(sc->regs + SCALER_CFG);
 	int idx = bl_op - 1;
@@ -590,6 +638,21 @@ void sc_hwset_blend(struct sc_dev *sc, enum sc_blend_op bl_op, bool pre_multi,
 		cfg = readl(sc->regs + SCALER_CFG);
 		cfg |= SCALER_CFG_BL_DIV_ALPHA_EN;
 		writel(cfg, sc->regs + SCALER_CFG);
+	}
+
+	/* Set source blending configuration */
+	if (sc->variant->blending) {
+		sc_set_blendsrc_cfg(sc, pre_multi, src_blend_cfg);
+
+		/* span in the units of pixels */
+		sc_set_blend_src_span(sc, src_blend_cfg->blend_src_width);
+
+		sc_blend_src_pos(sc,
+				src_blend_cfg->blend_src_h_pos,
+				src_blend_cfg->blend_src_v_pos);
+		sc_blend_src_wh(sc,
+				src_blend_cfg->blend_src_crop_width,
+				src_blend_cfg->blend_src_crop_height);
 	}
 }
 
@@ -793,13 +856,17 @@ void sc_hwset_src_imgsize(struct sc_dev *sc, struct sc_frame *frame)
 	 */
 	if (frame->sc_fmt->num_comp == 2)
 		cfg |= (frame->width << frame->sc_fmt->cspan) << 16;
-	if (frame->sc_fmt->num_comp == 3) {
-		if (sc_fmt_is_ayv12(frame->sc_fmt->pixelformat))
-			cfg |= ALIGN(frame->width >> 1, 16) << 16;
-		else if (frame->sc_fmt->cspan) /* YUV444 */
-			cfg |= frame->width << 16;
-		else
-			cfg |= (frame->width >> 1) << 16;
+	else if (frame->sc_fmt->num_comp == 3) {
+		if (frame->sc_fmt->is_alphablend_fmt)
+			cfg |= (frame->width << frame->sc_fmt->cspan) << 16;
+		else {
+			if (sc_fmt_is_ayv12(frame->sc_fmt->pixelformat))
+				cfg |= ALIGN(frame->width >> 1, 16) << 16;
+			else if (frame->sc_fmt->cspan) /* YUV444 */
+				cfg |= frame->width << 16;
+			else
+				cfg |= (frame->width >> 1) << 16;
+		}
 	}
 
 	writel(cfg, sc->regs + SCALER_SRC_SPAN);
@@ -1031,6 +1098,7 @@ const static char *sc_irq_err_status[] = {
 	[20] = "illigal dst width",
 	[21] = "illigal dst height",
 	[23] = "illigal scaling ratio",
+	[24] = "illegal format/width/height of blending source",
 	[25] = "illigal pre-scaler width/height",
 	[28] = "AXI Write Error Response",
 	[29] = "AXI Read Error Response",

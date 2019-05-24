@@ -562,7 +562,7 @@ int sc_hwset_src_image_format(struct sc_dev *sc, const struct sc_fmt *);
 int sc_hwset_dst_image_format(struct sc_dev *sc, const struct sc_fmt *);
 void sc_hwset_pre_multi_format(struct sc_dev *sc, bool src, bool dst);
 void sc_hwset_blend(struct sc_dev *sc, enum sc_blend_op bl_op, bool pre_multi,
-		unsigned char g_alpha);
+		unsigned char g_alpha, struct sc_src_blend_cfg *src_blend_cfg);
 void sc_hwset_color_fill(struct sc_dev *sc, unsigned int val);
 void sc_hwset_dith(struct sc_dev *sc, unsigned int val);
 void sc_hwset_csc_coef(struct sc_dev *sc, enum sc_csc_idx idx,
@@ -574,6 +574,7 @@ void sc_hwset_src_crop(struct sc_dev *sc, struct v4l2_rect *rect,
 		       unsigned int pre_h_ratio, unsigned int pre_v_ratio);
 void sc_hwset_dst_crop(struct sc_dev *sc, struct v4l2_rect *rect);
 void sc_hwset_src_addr(struct sc_dev *sc, struct sc_frame *frame);
+void sc_hwset_blend_src_addr(struct sc_dev *sc, struct sc_frame *frame);
 void sc_hwset_dst_addr(struct sc_dev *sc, struct sc_frame *frame);
 void sc_hwset_hcoef(struct sc_dev *sc, unsigned int coef);
 void sc_hwset_vcoef(struct sc_dev *sc, unsigned int coef);
