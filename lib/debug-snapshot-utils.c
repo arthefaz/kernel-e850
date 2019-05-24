@@ -91,10 +91,11 @@ void dbg_snapshot_hook_hardlockup_entry(void *v_regs)
 		regs->pc = last_pc;
 
 		/* Then, we expect bug() function works well */
-		pr_emerg("\n--------------------------------------------------------------------------\n"
-			"      Debugging Information for Hardlockup core - CPU(%d), Mask:(0x%x)"
-			"\n--------------------------------------------------------------------------\n\n",
-			cpu, dss_desc.hardlockup_core_mask);
+		pr_emerg("\n------------------------------------------------------------------------------\n"
+				"%s - Debugging Information for Hardlockup core(%d) - locked CPUs %*pbl"
+				"\n------------------------------------------------------------------------------\n\n",
+				(dss_desc.allcorelockup_detected) ? "All Core" : "Core", cpu,
+				cpumask_pr_args((cpumask_t *)&dss_desc.hardlockup_core_mask));
 	}
 }
 
