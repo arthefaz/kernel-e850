@@ -449,17 +449,19 @@ static void decon_reg_set_interface(u32 id, struct decon_mode_info *psr)
 			dual_dsi = 1;
 
 		if (dual_dsi) {
-			/* decon0 - (dsim_if0-dsim0) - (dsim_if1-dsim1) */
-			val = DSIM_CONNECTION_DSIM0_F(0)
-				| DSIM_CONNECTION_DSIM1_F(1);
+			/* for NEUS PCB artwork, DSIM1 & DSIM4LB is used as 1st LCD connection */
+			/* decon0 - (dsim_if0-dsim1) - (dsim_if1-dsim0) */
+			val = DSIM_CONNECTION_DSIM0_F(1)
+				| DSIM_CONNECTION_DSIM1_F(0);
 			mask =  DSIM_CONNECTION_DSIM0_MASK
 				| DSIM_CONNECTION_DSIM1_MASK;
 		} else { /* single dsi : DSIM0 only */
 			if (dsim_if0) {
 				if (id == 0) {
-					/* DECON0 - DSIMIF0 - DSIM0 */
-					val = DSIM_CONNECTION_DSIM0_F(0);
-					mask =  DSIM_CONNECTION_DSIM0_MASK;
+					/* for NEUS PCB artwork, DSIM1 & DSIM4LB is used as 1st LCD connection */
+					/* DECON0 - DSIMIF0 - DSIM1 */
+					val = DSIM_CONNECTION_DSIM1_F(0);
+					mask =  DSIM_CONNECTION_DSIM1_MASK;
 				} else if (id == 1) {
 					/* DECON1 - DSIMIF0 - DSIM0 */
 					val = DSIM_CONNECTION_DSIM0_F(2);
