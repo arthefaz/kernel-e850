@@ -426,6 +426,13 @@ void mfc_set_enc_stride(struct mfc_ctx *ctx)
 				MFC_REG_E_SOURCE_FIRST_STRIDE + (i * 4));
 		mfc_debug(2, "[FRAME] enc src plane[%d] stride: %d\n",
 				i, ctx->raw_buf.stride[i]);
+		if (ctx->is_10bit || ctx->is_sbwc) {
+			MFC_WRITEL(ctx->raw_buf.stride_2bits[0],
+					MFC_REG_E_SOURCE_FIRST_2BIT_STRIDE + (i * 4));
+
+			mfc_debug(2, "[FRAME] enc src plane[%d] 2bit stride: %d\n",
+					i, ctx->raw_buf.stride_2bits[i]);
+		}
 	}
 }
 
