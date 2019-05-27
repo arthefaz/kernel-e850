@@ -1630,7 +1630,7 @@ static void __mfc_nal_q_handle_released_buf(struct mfc_ctx *ctx, DecoderOutputSt
 	/* The displayed and not referenced buffer must be freed from dpb_table */
 	if (dec->display_index >= 0) {
 		i = dec->display_index;
-		if (!(dec->dynamic_used & (1 << i)) && dec->dpb[i].mapcnt) {
+		if (!(dec->dynamic_used & (1 << i)) && !dec->dpb[i].queued && dec->dpb[i].mapcnt) {
 			dec->dpb_table_used &= ~(1 << i);
 			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 		}
