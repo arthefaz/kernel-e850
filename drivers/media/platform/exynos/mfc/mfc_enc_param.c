@@ -1323,6 +1323,10 @@ void mfc_set_test_params(struct mfc_dev *dev)
 				((base_addr + (i * 4)) != MFC_REG_E_SOURCE_FIRST_STRIDE) &&
 				((base_addr + (i * 4)) != MFC_REG_E_SOURCE_SECOND_STRIDE) &&
 				((base_addr + (i * 4)) != MFC_REG_E_SOURCE_THIRD_STRIDE) &&
+				((base_addr + (i * 4)) != MFC_REG_E_SOURCE_FIRST_2BIT_ADDR) &&
+				((base_addr + (i * 4)) != MFC_REG_E_SOURCE_SECOND_2BIT_ADDR) &&
+				((base_addr + (i * 4)) != MFC_REG_E_SOURCE_FIRST_2BIT_STRIDE) &&
+				((base_addr + (i * 4)) != MFC_REG_E_SOURCE_SECOND_2BIT_STRIDE) &&
 				((base_addr + (i * 4)) != MFC_REG_PIXEL_FORMAT))
 			MFC_RAW_WRITEL(dev->reg_val[i], base_addr + (i * 4));
 
