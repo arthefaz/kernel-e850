@@ -211,6 +211,12 @@ int dbg_snapshot_set_hardlockup(int val)
 }
 EXPORT_SYMBOL(dbg_snapshot_set_hardlockup);
 
+int dbg_snapshot_is_hardlockup(void)
+{
+	return !!dss_desc.hardlockup_core_mask;
+}
+EXPORT_SYMBOL(dbg_snapshot_is_hardlockup);
+
 int dbg_snapshot_early_panic(void)
 {
 	dss_soc_ops->soc_early_panic(NULL);

@@ -304,7 +304,7 @@ void __show_regs(struct pt_regs *regs)
 
 		pr_cont("\n");
 	}
-	if (!user_mode(regs))
+	if (!user_mode(regs) && !dbg_snapshot_is_hardlockup())
 		show_extra_register_data(regs, 128);
 	printk("\n");
 }
