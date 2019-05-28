@@ -615,7 +615,8 @@ void sc_hwset_blend(struct sc_dev *sc, enum sc_blend_op bl_op, bool pre_multi,
 	sc_dbg("src_blend_alpha is 0x%x\n", cfg);
 
 	cfg = readl(sc->regs + SCALER_DST_BLEND_COLOR);
-	get_blend_value(&cfg, sc_bl_op_tbl[idx].dst_color, pre_multi);
+	get_blend_value(&cfg, sc_bl_op_tbl[idx].dst_color,
+			src_blend_cfg->pre_multi);
 	if (g_alpha < 0xff)
 		cfg |= ((INV_SAGA & 0xf) << SCALER_OP_SEL_SHIFT);
 	writel(cfg, sc->regs + SCALER_DST_BLEND_COLOR);
@@ -1036,6 +1037,7 @@ void sc_hwregs_dump(struct sc_dev *sc)
 
 	if (sc->version >= SCALER_VERSION(5, 0, 0))
 		goto end;
+
 
 	/* shadow registers */
 	print_hex_dump(KERN_NOTICE, "", DUMP_PREFIX_ADDRESS, 16, 4,

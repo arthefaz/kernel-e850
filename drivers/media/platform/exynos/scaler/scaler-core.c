@@ -2782,7 +2782,9 @@ static void sc_set_csc_coef(struct sc_ctx *ctx)
 	s_frame = &ctx->s_frame;
 	d_frame = &ctx->d_frame;
 
-	if (s_frame->sc_fmt->is_rgb == d_frame->sc_fmt->is_rgb)
+	if (s_frame->sc_fmt->is_alphablend_fmt)
+		idx = CSC_Y2R;
+	else if (s_frame->sc_fmt->is_rgb == d_frame->sc_fmt->is_rgb)
 		idx = NO_CSC;
 	else if (s_frame->sc_fmt->is_rgb)
 		idx = CSC_R2Y;
