@@ -584,6 +584,7 @@ static int __set_phy_cfg_0503_0000_dcphy(void __iomem *regs, int option, u32 *cf
 		/* clock */
 		writel(0x00000001, regs + 0x0000); /* SC_GNR_CON0, Phy clock enable */
 		writel(0x00001450, regs + 0x0004); /* SC_GNR_CON1 */
+		writel(0x00000008, regs + 0x0008); /* SC_ANA_CON0 */
 		writel(0x00000002, regs + 0x0010); /* SC_ANA_CON2 */
 		writel(0x00000600, regs + 0x0014); /* SC_ANA_CON3 */
 		writel(0x00000301, regs + 0x0030); /* SC_TIME_CON0 */
@@ -591,6 +592,8 @@ static int __set_phy_cfg_0503_0000_dcphy(void __iomem *regs, int option, u32 *cf
 		for (i = 0; i <= cfg[LANES]; i++) {
 			writel(0x00000001, regs + 0x0100 + (i * 0x100)); /* SD_GNR_CON0 , Phy data enable */
 			writel(0x00001450, regs + 0x0104 + (i * 0x100)); /* SD_GNR_CON1 */
+			if ((type == 0xDC) && (i < 3))
+				writel(0x00000008, regs + 0x0108 + (i * 0x100)); /* SD_ANA_CON0 */
 			writel(0x00000002, regs + 0x0110 + (i * 0x100)); /* SD_ANA_CON2 */
 			update_bits(regs + 0x0010 + (i * 0x100), 8, 2, skew_delay_sel); /* SD_ANA_CON2 */
 			writel(0x00000600, regs + 0x0114 + (i * 0x100)); /* SD_ANA_CON3 */
@@ -609,18 +612,19 @@ static int __set_phy_cfg_0503_0000_dcphy(void __iomem *regs, int option, u32 *cf
 		for (i = 0; i <= cfg[LANES]; i++) {
 			writel(0x00000001, regs + 0x0100 + (i * 0x100)); /* SD_GNR_CON0 , Phy data enable */
 			writel(0x00001450, regs + 0x0104 + (i * 0x100)); /* SD_GNR_CON1 */
-			writel(0x00008000, regs + 0x010C + (i * 0x100)); /* SD_ANA_CON1 */
-			writel(0x00000005, regs + 0x0110 + (i * 0x100)); /* SD_ANA_CON2 */
+			writel(0x00000009, regs + 0x0108 + (i * 0x100)); /* SD_ANA_CON0 */
+			writel(0x000082B8, regs + 0x010C + (i * 0x100)); /* SD_ANA_CON1 */
+			writel(0x00000001, regs + 0x0110 + (i * 0x100)); /* SD_ANA_CON2 */
 			writel(0x00000600, regs + 0x0114 + (i * 0x100)); /* SD_ANA_CON3 */
 			writel(0x00000200, regs + 0x011c + (i * 0x100)); /* SD_ANA_CON5 */
-			writel(0x00000608, regs + 0x0120 + (i * 0x100)); /* SD_ANA_CON6 */
+			writel(0x00000638, regs + 0x0120 + (i * 0x100)); /* SD_ANA_CON6 */
 			writel(0x00000040, regs + 0x0124 + (i * 0x100)); /* SD_ANA_CON7 */
 			update_bits(regs + 0x0130 + (i * 0x100), 0, 8, cfg[SETTLE]);    /* SD_TIME_CON0 */
 			update_bits(regs + 0x0130 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
-			writel(0x00000003, regs + 0x0134 + (i * 0x100)); /* SD_TIME_CON1 */
+			writel(0x00000032, regs + 0x0134 + (i * 0x100)); /* SD_TIME_CON1 */
 			update_bits(regs + 0x0140 + (i * 0x100), 0, 1, skew_cal_en); /* SD_DESKEW_CON0 */
-			writel(0x00001500, regs + 0x0164 + (i * 0x100)); /* SD_CRC_CON1 */
-			writel(0x00000030, regs + 0x0168 + (i * 0x100)); /* SD_CRC_CON2 */
+			writel(0x00001503, regs + 0x0164 + (i * 0x100)); /* SD_CRC_CON1 */
+			writel(0x00000031, regs + 0x0168 + (i * 0x100)); /* SD_CRC_CON2 */
 		}
 	}
 	return 0;
