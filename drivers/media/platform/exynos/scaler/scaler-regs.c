@@ -1077,7 +1077,8 @@ void sc_hwregs_dump(struct sc_dev *sc)
 	sc_print_hex_dump(sc, sc->regs + 0x278, 4);
 
 	/* src SBWC HEADER registers */
-	if (sc->version >= SCALER_VERSION(5, 0, 0))
+	if (sc->version >= SCALER_VERSION(5, 0, 0) ||
+			sc->version == SCALER_VERSION(4, 2, 0))
 		sc_print_hex_dump(sc, sc->regs + 0x280, 0x28C - 0x280 + 4);
 
 	/* color-fill, cr-plane base registers */
@@ -1103,6 +1104,10 @@ void sc_hwregs_dump(struct sc_dev *sc)
 	if (sc->version >= SCALER_VERSION(5, 0, 0))
 		goto end;
 
+	if (sc->version == SCALER_VERSION(4, 2, 0)) {
+		sc_print_hex_dump(sc, sc->regs + 0x300, 0x304 - 0x300 + 4);
+		sc_print_hex_dump(sc, sc->regs + 0x310, 0x318 - 0x310 + 4);
+	}
 
 	/* shadow registers */
 	sc_print_hex_dump(sc, sc->regs + 0x1004, 0x1004 - 0x1004 + 4);
