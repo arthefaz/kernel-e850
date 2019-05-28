@@ -267,6 +267,7 @@ static void update_bits(void __iomem *addr, unsigned int start,
 }
 
 #define PHY_REF_SPEED	(1500)
+#define CPHY_REF_SPEED	(500)
 static int __set_phy_cfg_0501_0000_dphy(void __iomem *regs, int option, u32 *cfg)
 {
 
@@ -551,22 +552,6 @@ static int __set_phy_cfg_0503_0000_dcphy(void __iomem *regs, int option, u32 *cf
 
 	void __iomem *bias;
 
-	if (cfg[SPEED] >= PHY_REF_SPEED) {
-		settle_clk_sel = 0;
-		skew_cal_en = 1;
-
-		if (cfg[SPEED] >= 4000 && cfg[SPEED] <= 6500)
-			skew_delay_sel = 0;
-		else if (cfg[SPEED] >= 3000 && cfg[SPEED] < 4000)
-			skew_delay_sel = 1;
-		else if (cfg[SPEED] >= 2000 && cfg[SPEED] < 3000)
-			skew_delay_sel = 2;
-		else if (cfg[SPEED] >= 1500 && cfg[SPEED] < 2000)
-			skew_delay_sel = 3;
-		else
-			skew_delay_sel = 0;
-	}
-
 	bias = ioremap(0x170D1000, 0x1000);
 
 	/* BIAS_SET */
@@ -580,6 +565,22 @@ static int __set_phy_cfg_0503_0000_dcphy(void __iomem *regs, int option, u32 *cf
 
 	/* Dphy */
 	if (mode == 0x000D) {
+		if (cfg[SPEED] >= PHY_REF_SPEED) {
+			settle_clk_sel = 0;
+			skew_cal_en = 1;
+
+			if (cfg[SPEED] >= 4000 && cfg[SPEED] <= 6500)
+				skew_delay_sel = 0;
+			else if (cfg[SPEED] >= 3000 && cfg[SPEED] < 4000)
+				skew_delay_sel = 1;
+			else if (cfg[SPEED] >= 2000 && cfg[SPEED] < 3000)
+				skew_delay_sel = 2;
+			else if (cfg[SPEED] >= 1500 && cfg[SPEED] < 2000)
+				skew_delay_sel = 3;
+			else
+				skew_delay_sel = 0;
+		}
+
 		/* clock */
 		writel(0x00000001, regs + 0x0000); /* SC_GNR_CON0, Phy clock enable */
 		writel(0x00001450, regs + 0x0004); /* SC_GNR_CON1 */
@@ -602,6 +603,9 @@ static int __set_phy_cfg_0503_0000_dcphy(void __iomem *regs, int option, u32 *cf
 			writel(0x0000081A, regs + 0x0150 + (i * 0x100)); /* SD_DESKEW_CON4 */
 		}
 	} else { /* Cphy */
+		if (cfg[SPEED] >= CPHY_REF_SPEED)
+			settle_clk_sel = 0;
+
 		for (i = 0; i <= cfg[LANES]; i++) {
 			writel(0x00000001, regs + 0x0100 + (i * 0x100)); /* SD_GNR_CON0 , Phy data enable */
 			writel(0x00001450, regs + 0x0104 + (i * 0x100)); /* SD_GNR_CON1 */
@@ -618,62 +622,6 @@ static int __set_phy_cfg_0503_0000_dcphy(void __iomem *regs, int option, u32 *cf
 			writel(0x00001500, regs + 0x0164 + (i * 0x100)); /* SD_CRC_CON1 */
 			writel(0x00000030, regs + 0x0168 + (i * 0x100)); /* SD_CRC_CON2 */
 		}
-	}
-	return 0;
-}
-
-static int __set_phy_cfg_0503_0001_dphy(void __iomem *regs, int option, u32 *cfg)
-{
-	int i;
-	u32 settle_clk_sel = 1;
-	u32 skew_delay_sel = 0;
-	u32 skew_cal_en = 0;
-
-	void __iomem *bias;
-
-	if (cfg[SPEED] >= PHY_REF_SPEED) {
-		settle_clk_sel = 0;
-		skew_cal_en = 1;
-
-		if (cfg[SPEED] >= 4000 && cfg[SPEED] <= 6500)
-			skew_delay_sel = 0;
-		else if (cfg[SPEED] >= 3000 && cfg[SPEED] < 4000)
-			skew_delay_sel = 1;
-		else if (cfg[SPEED] >= 2000 && cfg[SPEED] < 3000)
-			skew_delay_sel = 2;
-		else if (cfg[SPEED] >= 1500 && cfg[SPEED] < 2000)
-			skew_delay_sel = 3;
-		else
-			skew_delay_sel = 0;
-	}
-
-	bias = ioremap(0x170D1000, 0x1000);
-
-	/* BIAS_SET */
-	writel(0x00000010, bias + 0x0000); /* M_BIAS_CON0 */
-	writel(0x00000110, bias + 0x0004); /* M_BIAS_CON1 */
-	writel(0x00003223, bias + 0x0008); /* M_BIAS_CON2 */
-
-	iounmap(bias);
-
-	/* clock */
-	writel(0x00000001, regs + 0x0000); /* SC_GNR_CON0, Phy clock enable */
-	writel(0x00001450, regs + 0x0004); /* SC_GNR_CON1 */
-	writel(0x00000002, regs + 0x0010); /* SC_ANA_CON2 */
-	writel(0x00000600, regs + 0x0014); /* SC_ANA_CON3 */
-	writel(0x00000301, regs + 0x0030); /* SC_TIME_CON0 */
-
-	for (i = 0; i <= cfg[LANES]; i++) {
-		writel(0x00000001, regs + 0x0100 + (i * 0x100)); /* SD_GNR_CON0 , Phy data enable */
-		writel(0x00001450, regs + 0x0104 + (i * 0x100)); /* SD_GNR_CON1 */
-		writel(0x00000002, regs + 0x0110 + (i * 0x100)); /* SD_ANA_CON2 */
-		update_bits(regs + 0x0110 + (i * 0x100), 8, 2, skew_delay_sel); /* SD_ANA_CON2 */
-		writel(0x00000600, regs + 0x0114 + (i * 0x100)); /* SD_ANA_CON3 */
-		update_bits(regs + 0x0130 + (i * 0x100), 0, 8, cfg[SETTLE]);    /* SD_TIME_CON0 */
-		update_bits(regs + 0x0130 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
-		writel(0x00000003, regs + 0x0134 + (i * 0x100)); /* SD_TIME_CON1 */
-		update_bits(regs + 0x0140 + (i * 0x100), 0, 1, skew_cal_en); /* SD_DESKEW_CON0 */
-		writel(0x0000081A, regs + 0x0150 + (i * 0x100)); /* SD_DESKEW_CON4 */
 	}
 	return 0;
 }
@@ -722,12 +670,6 @@ static const struct exynos_mipi_phy_cfg phy_cfg_table[] = {
 		.minor = 0x0000,
 		.mode = 0xC,
 		.set = __set_phy_cfg_0503_0000_dcphy,
-	},
-	{	/* Dphy, 2 lane */
-		.major = 0x0503,
-		.minor = 0x0001,
-		.mode = 0xD,
-		.set = __set_phy_cfg_0503_0001_dphy,
 	},
 	{ },
 };
