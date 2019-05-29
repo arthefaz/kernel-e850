@@ -514,7 +514,7 @@ void __mfc_print_dpb_queue(struct mfc_ctx *ctx, struct mfc_dec *dec)
 {
 	struct mfc_buf *mfc_buf = NULL;
 
-	mfc_debug(2, "[DPB] src %d, dst %d, src_nal %d, dst_nal %d, used %#x, queued %#lx, set %#x, avail %#lx\n",
+	mfc_debug(2, "[DPB] src %d, dst %d, src_nal %d, dst_nal %d, used %#lx, queued %#lx, set %#lx, avail %#lx\n",
 			ctx->src_buf_queue.count, ctx->dst_buf_queue.count,
 			ctx->src_buf_nal_queue.count, ctx->dst_buf_nal_queue.count,
 			dec->dynamic_used, dec->queued_dpb, dec->dynamic_set, dec->available_dpb);
@@ -542,7 +542,7 @@ struct mfc_buf *mfc_search_for_dpb(struct mfc_ctx *ctx)
 
 	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 	list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list) {
-		if ((dec->dynamic_used & (1 << mfc_buf->dpb_index)) == 0) {
+		if ((dec->dynamic_used & (1UL << mfc_buf->dpb_index)) == 0) {
 			mfc_buf->used = 1;
 			spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 			return mfc_buf;
@@ -556,7 +556,7 @@ struct mfc_buf *mfc_search_for_dpb(struct mfc_ctx *ctx)
 	 * F/W will returns display only buffer whether if reference or not.
 	 * In this way the reference can be released by circulating.
 	 */
-	if (hweight32(dec->dynamic_used) == ctx->dpb_count + 5) {
+	if (hweight64(dec->dynamic_used) == ctx->dpb_count + 5) {
 		mfc_buf = list_entry(ctx->dst_buf_queue.head.next, struct mfc_buf, list);
 		mfc_buf->used = 1;
 		mfc_debug(2, "[DPB] All queued buf referencing. select buf[%d][%d]\n",
@@ -591,7 +591,7 @@ struct mfc_buf *mfc_search_move_dpb_nal_q(struct mfc_ctx *ctx)
 
 	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 	list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list) {
-		if ((dec->dynamic_used & (1 << mfc_buf->dpb_index)) == 0) {
+		if ((dec->dynamic_used & (1UL << mfc_buf->dpb_index)) == 0) {
 			mfc_buf->used = 1;
 
 			list_del(&mfc_buf->list);
@@ -612,7 +612,7 @@ struct mfc_buf *mfc_search_move_dpb_nal_q(struct mfc_ctx *ctx)
 	 * that returned to the display index was displayed.
 	 * Therefore, NAL_Q mode can't be continued.
 	 */
-	if (hweight32(dec->dynamic_used) == ctx->dpb_count + 5) {
+	if (hweight64(dec->dynamic_used) == ctx->dpb_count + 5) {
 		dec->is_dpb_full = 1;
 		mfc_debug(2, "[NALQ][DPB] full reference\n");
 	}
@@ -637,7 +637,7 @@ int __mfc_assign_dpb_index(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
 	struct mfc_dev *dev = ctx->dev;
-	unsigned int used;
+	unsigned long used;
 	int index = -1;
 	int i;
 
@@ -652,17 +652,17 @@ int __mfc_assign_dpb_index(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf)
 	/* case 2: dpb has same address with referenced buffer */
 	used = dec->dynamic_used;
 	if (used) {
-		for (i = (ffs(used) - 1); i < MFC_MAX_DPBS;) {
+		for (i = __ffs(used); i < MFC_MAX_DPBS;) {
 			if (mfc_buf->addr[0][0] == dec->dpb[i].addr[0]) {
 				mfc_debug(2, "[DPB] index [%d][%d] %#llx is referenced\n",
 						mfc_buf->vb.vb2_buf.index, i, mfc_buf->addr[0][0]);
 				index = i;
 				return index;
 			}
-			used &= ~(1 << i);
+			used &= ~(1UL << i);
 			if (used == 0)
 				break;
-			i = ffs(used) - 1;
+			i = __ffs(used);
 		}
 	}
 
@@ -671,7 +671,7 @@ int __mfc_assign_dpb_index(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf)
 		mfc_err_ctx("[DPB] index is full\n");
 		call_dop(dev, dump_and_stop_debug_mode, dev);
 	}
-	index = ffz(dec->dpb_table_used);
+	index = __ffs(~dec->dpb_table_used);
 
 	return index;
 }
@@ -701,7 +701,7 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 
 	mutex_lock(&dec->dpb_mutex);
 	mfc_buf->dpb_index = __mfc_assign_dpb_index(ctx, mfc_buf);
-	mfc_debug(2, "[DPB] DPB vb_index %d -> dpb_index %d addr %#llx (used: %#x)\n",
+	mfc_debug(2, "[DPB] DPB vb_index %d -> dpb_index %d addr %#llx (used: %#lx)\n",
 			vb->index, mfc_buf->dpb_index, mfc_buf->addr[0][0], dec->dynamic_used);
 
 	index = mfc_buf->dpb_index;
@@ -710,7 +710,7 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 		mfc_get_iovmm(ctx, vb, dec->dpb);
 	} else {
 		if (dec->dpb[index].addr[0] == mfc_buf->addr[0][0]) {
-			mfc_debug(2, "[DPB] DPB[%d] is same %#llx(used: %#x)\n",
+			mfc_debug(2, "[DPB] DPB[%d] is same %#llx(used: %#lx)\n",
 					index, dec->dpb[index].addr[0], dec->dynamic_used);
 		} else {
 			mfc_err_ctx("[DPB] wrong assign dpb index\n");
@@ -718,7 +718,7 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 		}
 	}
 	dec->dpb[index].queued = 1;
-	dec->dpb_table_used |= (1 << index);
+	dec->dpb_table_used |= (1UL << index);
 	mutex_unlock(&dec->dpb_mutex);
 
 	spin_lock_irqsave(&ctx->buf_queue_lock, flags);

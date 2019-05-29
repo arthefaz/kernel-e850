@@ -425,10 +425,10 @@ void mfc_cleanup_iovmm_except_used(struct mfc_ctx *ctx)
 	mutex_lock(&dec->dpb_mutex);
 
 	for (i = 0; i < MFC_MAX_DPBS; i++) {
-		if (dec->dpb[i].mapcnt == 0 || dec->dynamic_used & (1 << i)) {
+		if (dec->dpb[i].mapcnt == 0 || dec->dynamic_used & (1UL << i)) {
 			continue;
 		} else if (dec->dpb[i].mapcnt == 1) {
-			dec->dpb_table_used &= ~(1 << i);
+			dec->dpb_table_used &= ~(1UL << i);
 			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 		} else {
 			mfc_err_ctx("[IOVMM] DPB[%d] %#llx invalid mapcnt %d\n",

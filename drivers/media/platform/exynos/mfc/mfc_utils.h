@@ -24,6 +24,9 @@
 		reg |= (value & mask) << shift;		\
 	} while (0)
 
+#define mfc_get_upper(x)	(((unsigned long)(x) >> 32) & 0xffffffff)
+#define mfc_get_lower(x)	((x) & 0xffffffff)
+
 static inline void mfc_clean_dev_int_flags(struct mfc_dev *dev)
 {
 	dev->int_condition = 0;

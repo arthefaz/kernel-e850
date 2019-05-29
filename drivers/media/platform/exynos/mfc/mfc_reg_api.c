@@ -447,7 +447,7 @@ int mfc_set_dynamic_dpb(struct mfc_ctx *ctx, struct mfc_buf *dst_mb)
 	dst_index = dst_mb->dpb_index;
 
 	set_bit(dst_index, &dec->available_dpb);
-	dec->dynamic_set = 1 << dst_index;
+	dec->dynamic_set = 1UL << dst_index;
 	mfc_debug(2, "[DPB] ADDING Flag after: 0x%lx\n", dec->available_dpb);
 
 	/* for debugging about black bar detection */
@@ -478,7 +478,7 @@ int mfc_set_dynamic_dpb(struct mfc_ctx *ctx, struct mfc_buf *dst_mb)
 				i, dst_mb->addr[0][i]);
 	}
 
-	MFC_TRACE_CTX("Set dst[%d] fd: %d, %#llx / avail %#lx used %#x\n",
+	MFC_TRACE_CTX("Set dst[%d] fd: %d, %#llx / avail %#lx used %#lx\n",
 			dst_index, dst_mb->vb.vb2_buf.planes[0].m.fd, dst_mb->addr[0][0],
 			dec->available_dpb, dec->dynamic_used);
 

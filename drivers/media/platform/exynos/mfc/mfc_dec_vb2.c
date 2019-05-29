@@ -443,7 +443,7 @@ static void mfc_dec_buf_queue(struct vb2_buffer *vb)
 					&ctx->dst_buf_queue, dec->total_dpb_count))
 			ctx->capture_state = QUEUE_BUFS_MMAPED;
 
-		MFC_TRACE_CTX("Q dst[%d][%d] fd: %d, %#llx / avail %#lx used %#x\n",
+		MFC_TRACE_CTX("Q dst[%d][%d] fd: %d, %#llx / avail %#lx used %#lx\n",
 				vb->index, buf->dpb_index, vb->planes[0].m.fd, buf->addr[0][0],
 				dec->available_dpb, dec->dynamic_used);
 	} else {

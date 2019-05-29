@@ -162,7 +162,8 @@
 #define mfc_get_chroma_bit_depth_minus8()	((MFC_READL(MFC_REG_D_DECODED_PICTURE_PROFILE)	\
 						>> MFC_REG_D_BIT_DEPTH_CHROMA_MINUS8_SHIFT)	\
 						& MFC_REG_D_BIT_DEPTH_CHROMA_MINUS8_MASK)
-#define mfc_get_dec_used_flag()		MFC_READL(MFC_REG_D_USED_DPB_FLAG_LOWER)
+#define mfc_get_dec_used_flag()		(((unsigned long)(MFC_READL(MFC_REG_D_USED_DPB_FLAG_UPPER)) << 32) |	\
+						MFC_READL(MFC_REG_D_USED_DPB_FLAG_LOWER))
 #define mfc_get_enc_nal_done_info()		((MFC_READL(MFC_REG_E_NAL_DONE_INFO) & (0x3 << 4)) >> 4)
 #define mfc_get_chroma_format()		(MFC_READL(MFC_REG_D_CHROMA_FORMAT)		\
 						& MFC_REG_D_CHROMA_FORMAT_MASK)

@@ -36,7 +36,7 @@
 
 #define MFC_NUM_CONTEXTS		32
 #define MFC_MAX_PLANES			3
-#define MFC_MAX_DPBS			32
+#define MFC_MAX_DPBS			64
 #define MFC_MAX_BUFFERS			32
 #define MFC_MAX_EXTRA_BUF		10
 #define MFC_SFR_LOGGING_COUNT_SET0	10
@@ -249,7 +249,7 @@ struct mfc_debug {
 	u8	power_cnt;
 	u8	clock_cnt;
 	/* for decoder only */
-	u32	dynamic_used;
+	u64	dynamic_used;
 	u32	last_src_addr;
 	u32	last_dst_addr[MFC_MAX_PLANES];
 	/* total logging data */
@@ -1439,8 +1439,8 @@ struct mfc_dec {
 	int display_index;
 	unsigned long available_dpb;
 	unsigned long queued_dpb;
-	unsigned int dynamic_set;
-	unsigned int dynamic_used;
+	unsigned long dynamic_set;
+	unsigned long dynamic_used;
 
 	int has_multiframe;
 
@@ -1459,7 +1459,7 @@ struct mfc_dec {
 	/* for Dynamic DPB */
 	struct dpb_table dpb[MFC_MAX_DPBS];
 	struct mutex dpb_mutex;
-	unsigned int dpb_table_used;
+	unsigned long dpb_table_used;
 
 	/* for HDR10+ */
 	struct mfc_user_shared_handle sh_handle_hdr;

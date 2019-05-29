@@ -159,7 +159,7 @@ static void __mfc_handle_frame_all_extracted(struct mfc_ctx *ctx)
 		mutex_unlock(&dec->dpb_mutex);
 
 		vb2_buffer_done(&dst_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
-		mfc_debug(2, "[DPB] Cleand up index = %d, used_flag = %08x, queued = %#lx\n",
+		mfc_debug(2, "[DPB] Cleand up index = %d, used_flag = %#lx, queued = %#lx\n",
 				index, dec->dynamic_used, dec->queued_dpb);
 	}
 
@@ -380,7 +380,8 @@ static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
 {
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_dec *dec = ctx->dec_priv;
-	unsigned int prev_flag, released_flag = 0;
+	unsigned long prev_flag, released_flag = 0;
+	unsigned long flag;
 	int i;
 
 	mutex_lock(&dec->dpb_mutex);
@@ -388,32 +389,37 @@ static void __mfc_handle_released_buf(struct mfc_ctx *ctx)
 	prev_flag = dec->dynamic_used;
 	dec->dynamic_used = mfc_get_dec_used_flag();
 	released_flag = prev_flag & (~dec->dynamic_used);
-	mfc_debug(2, "[DPB] Used flag: old = %08x, new = %08x, released = %08x, queued = %#lx\n",
+	mfc_debug(2, "[DPB] Used flag: old = %#lx, new = %#lx, released = %#lx, queued = %#lx\n",
 			prev_flag, dec->dynamic_used, released_flag, dec->queued_dpb);
 
-	for (i = 0; i < MFC_MAX_DPBS; i++) {
-		if (dec->dynamic_used & (1 << i)) {
+	flag = dec->dynamic_used | released_flag;
+	for (i = __ffs(flag); i < MFC_MAX_DPBS;) {
+		if (dec->dynamic_used & (1UL << i)) {
 			dec->dpb[i].ref = 1;
 			if (dec->dpb[i].mapcnt == 0) {
 				mfc_err_ctx("[DPB] %d index is no dpb table\n", i);
 				call_dop(dev, dump_and_stop_debug_mode, dev);
 			}
 		}
-		if (released_flag & (1 << i)) {
+		if (released_flag & (1UL << i)) {
 			dec->dpb[i].ref = 0;
 			if (!dec->dpb[i].queued) {
 				/* Except queued buffer, the released DPB is deleted from dpb_table */
-				dec->dpb_table_used &= ~(1 << i);
+				dec->dpb_table_used &= ~(1UL << i);
 				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 			}
 		}
+		flag &= ~(1UL << i);
+		if (flag == 0)
+			break;
+		i = __ffs(flag);
 	}
 
 	/* The displayed and not referenced buffer must be freed from dpb_table */
 	if (dec->display_index >= 0) {
 		i = dec->display_index;
-		if (!(dec->dynamic_used & (1 << i)) && !dec->dpb[i].queued && dec->dpb[i].mapcnt) {
-			dec->dpb_table_used &= ~(1 << i);
+		if (!(dec->dynamic_used & (1UL << i)) && !dec->dpb[i].queued && dec->dpb[i].mapcnt) {
+			dec->dpb_table_used &= ~(1UL << i);
 			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 		}
 		dec->display_index = -1;

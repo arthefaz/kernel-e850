@@ -433,7 +433,7 @@ int mfc_cmd_dec_one_frame(struct mfc_ctx *ctx, int last_frame)
 	u32 reg = 0;
 	int ret = 0;
 
-	mfc_debug(2, "[DPB] set dpb: %#x, used: %#x, available: %#lx\n",
+	mfc_debug(2, "[DPB] set dpb: %#lx, used: %#lx, available: %#lx\n",
 			dec->dynamic_set, dec->dynamic_used, dec->available_dpb);
 
 	reg = MFC_READL(MFC_REG_D_NAL_START_OPTIONS);
@@ -453,10 +453,11 @@ int mfc_cmd_dec_one_frame(struct mfc_ctx *ctx, int last_frame)
 	MFC_WRITEL(reg, MFC_REG_D_NAL_START_OPTIONS);
 	mfc_debug(3, "[BLACKBAR] black bar detect set: %#x\n", reg);
 
-	MFC_WRITEL(dec->dynamic_set, MFC_REG_D_DYNAMIC_DPB_FLAG_LOWER);
-	MFC_WRITEL(0x0, MFC_REG_D_DYNAMIC_DPB_FLAG_UPPER);
-	MFC_WRITEL(dec->available_dpb, MFC_REG_D_AVAILABLE_DPB_FLAG_LOWER);
-	MFC_WRITEL(0x0, MFC_REG_D_AVAILABLE_DPB_FLAG_UPPER);
+	MFC_WRITEL(mfc_get_lower(dec->dynamic_set), MFC_REG_D_DYNAMIC_DPB_FLAG_LOWER);
+	MFC_WRITEL(mfc_get_upper(dec->dynamic_set), MFC_REG_D_DYNAMIC_DPB_FLAG_UPPER);
+	MFC_WRITEL(mfc_get_lower(dec->available_dpb), MFC_REG_D_AVAILABLE_DPB_FLAG_LOWER);
+	MFC_WRITEL(mfc_get_upper(dec->available_dpb), MFC_REG_D_AVAILABLE_DPB_FLAG_UPPER);
+
 	MFC_WRITEL(dec->slice_enable, MFC_REG_D_SLICE_IF_ENABLE);
 	MFC_WRITEL(MFC_TIMEOUT_VALUE, MFC_REG_DEC_TIMEOUT_VALUE);
 

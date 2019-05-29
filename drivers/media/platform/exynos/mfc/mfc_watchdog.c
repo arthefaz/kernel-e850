@@ -610,7 +610,7 @@ static void __mfc_dump_dpb(struct mfc_dev *dev, int curr_ctx)
 					mfc_buf->addr[0][0], mfc_buf->used);
 
 	dev_err(dev->device, "-----------dumping MFC DPB table-----------\n");
-	dev_err(dev->device, "dynnamic_used: %#x, queued: %#lx, table_used: %#x\n",
+	dev_err(dev->device, "dynnamic_used: %#lx, queued: %#lx, table_used: %#lx\n",
 			dec->dynamic_used, dec->queued_dpb, dec->dpb_table_used);
 	for (i = 0; i < MFC_MAX_DPBS; i++)
 		dev_err(dev->device, "[%d] dpb %#llx %#llx (%s, %s, %s)\n",

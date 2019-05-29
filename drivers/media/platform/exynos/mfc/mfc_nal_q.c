@@ -966,7 +966,7 @@ static int __mfc_nal_q_run_in_buf_dec(struct mfc_ctx *ctx, DecoderInputStr *pInS
 	/* dst buffer setting */
 	dst_index = dst_mb->dpb_index;
 	set_bit(dst_index, &dec->available_dpb);
-	dec->dynamic_set = 1 << dst_index;
+	dec->dynamic_set = 1UL << dst_index;
 
 	for (i = 0; i < raw->num_planes; i++) {
 		pInStr->FrameSize[i] = raw->plane_size[i];
@@ -985,13 +985,15 @@ static int __mfc_nal_q_run_in_buf_dec(struct mfc_ctx *ctx, DecoderInputStr *pInS
 				&ctx->src_ctrls[src_index], pInStr) < 0)
 		mfc_err_ctx("[NALQ] failed in set_buf_ctrls_val\n");
 
-	pInStr->DynamicDpbFlagLower = dec->dynamic_set;
+	pInStr->DynamicDpbFlagUpper = mfc_get_upper(dec->dynamic_set);
+	pInStr->DynamicDpbFlagLower = mfc_get_lower(dec->dynamic_set);
 
 	/* use dynamic_set value to available dpb in NAL Q */
 	// pInStr->AvailableDpbFlagLower = dec->available_dpb;
-	pInStr->AvailableDpbFlagLower = dec->dynamic_set;
+	pInStr->AvailableDpbFlagLower = mfc_get_lower(dec->dynamic_set);
+	pInStr->AvailableDpbFlagUpper = mfc_get_upper(dec->dynamic_set);
 
-	MFC_TRACE_CTX("Set dst[%d] fd: %d, %#llx / avail %#lx used %#x\n",
+	MFC_TRACE_CTX("Set dst[%d] fd: %d, %#llx / avail %#lx used %#lx\n",
 			dst_index, dst_mb->vb.vb2_buf.planes[0].m.fd, dst_mb->addr[0][0],
 			dec->available_dpb, dec->dynamic_used);
 
@@ -1295,7 +1297,7 @@ static void __mfc_nal_q_handle_frame_all_extracted(struct mfc_ctx *ctx, DecoderO
 		mutex_unlock(&dec->dpb_mutex);
 
 		vb2_buffer_done(&dst_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
-		mfc_debug(2, "[NALQ][DPB] Cleand up index = %d, used_flag = %08x, queued = %#lx\n",
+		mfc_debug(2, "[NALQ][DPB] Cleand up index = %d, used_flag = %#lx, queued = %#lx\n",
 				index, dec->dynamic_used, dec->queued_dpb);
 	}
 
@@ -1546,7 +1548,7 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 	}
 }
 
-static void __mfc_nal_q_move_released_buf(struct mfc_ctx *ctx, int released_flag)
+static void __mfc_nal_q_move_released_buf(struct mfc_ctx *ctx, unsigned long released_flag)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
 	struct mfc_buf *dst_mb;
@@ -1556,7 +1558,7 @@ static void __mfc_nal_q_move_released_buf(struct mfc_ctx *ctx, int released_flag
 		return;
 
 	for (i = 0; i < MFC_MAX_DPBS; i++) {
-		if (released_flag & (1 << i) && dec->dpb[i].queued) {
+		if (released_flag & (1UL << i) && dec->dpb[i].queued) {
 			dst_mb = mfc_get_move_buf_index(ctx, &ctx->dst_buf_queue, &ctx->dst_buf_nal_queue, i);
 			if (dst_mb) {
 				mfc_debug(2, "[NALQ][DPB] buf[%d][%d] released will be reused. addr: 0x%08llx\n",
@@ -1572,43 +1574,50 @@ static void __mfc_nal_q_handle_released_buf(struct mfc_ctx *ctx, DecoderOutputSt
 {
 	struct mfc_dec *dec = ctx->dec_priv;
 	struct mfc_dev *dev = ctx->dev;
-	unsigned int prev_flag, cur_flag, released_flag = 0;
+	unsigned long prev_flag, cur_flag, released_flag = 0;
+	unsigned long flag;
 	int i;
 
 	mutex_lock(&dec->dpb_mutex);
 
 	prev_flag = dec->dynamic_used;
-	cur_flag = pOutStr->UsedDpbFlagLower;
+	cur_flag = ((unsigned long)(pOutStr->UsedDpbFlagUpper) << 32) | (pOutStr->UsedDpbFlagLower & 0xffffffff);
 	released_flag = prev_flag & (~cur_flag);
-	mfc_debug(2, "[NALQ][DPB] Used flag: old = %08x, new = %08x, released = %08x, queued = %#lx\n",
+
+	mfc_debug(2, "[NALQ][DPB] Used flag: old = %#lx, new = %#lx, released = %#lx, queued = %#lx\n",
 			prev_flag, cur_flag, released_flag, dec->queued_dpb);
 
 	__mfc_nal_q_move_released_buf(ctx, released_flag);
 	dec->dynamic_used = cur_flag;
 
-	for (i = 0; i < MFC_MAX_DPBS; i++) {
-		if (dec->dynamic_used & (1 << i)) {
+	flag = dec->dynamic_used | released_flag;
+	for (i = __ffs(flag); i < MFC_MAX_DPBS;) {
+		if (dec->dynamic_used & (1UL << i)) {
 			dec->dpb[i].ref = 1;
 			if (dec->dpb[i].mapcnt == 0) {
 				mfc_err_ctx("[DPB] %d index is no dpb table\n", i);
 				call_dop(dev, dump_and_stop_debug_mode, dev);
 			}
 		}
-		if (released_flag & (1 << i)) {
+		if (released_flag & (1UL << i)) {
 			dec->dpb[i].ref = 0;
 			if (!dec->dpb[i].queued) {
 				/* Except queued buffer, the released DPB is deleted from dpb_table */
-				dec->dpb_table_used &= ~(1 << i);
+				dec->dpb_table_used &= ~(1UL << i);
 				mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 			}
 		}
+		flag &= ~(1UL << i);
+		if (flag == 0)
+			break;
+		i = __ffs(flag);
 	}
 
 	/* The displayed and not referenced buffer must be freed from dpb_table */
 	if (dec->display_index >= 0) {
 		i = dec->display_index;
-		if (!(dec->dynamic_used & (1 << i)) && !dec->dpb[i].queued && dec->dpb[i].mapcnt) {
-			dec->dpb_table_used &= ~(1 << i);
+		if (!(dec->dynamic_used & (1UL << i)) && !dec->dpb[i].queued && dec->dpb[i].mapcnt) {
+			dec->dpb_table_used &= ~(1UL << i);
 			mfc_put_iovmm(ctx, dec->dpb, ctx->dst_fmt->mem_planes, i);
 		}
 		dec->display_index = -1;
