@@ -165,6 +165,9 @@ static void __mfc_handle_frame_all_extracted(struct mfc_ctx *ctx)
 
 	mfc_handle_force_change_status(ctx);
 	mfc_debug(2, "After cleanup\n");
+
+	mfc_cleanup_iovmm_except_used(ctx);
+	mfc_print_dpb_table(ctx);
 }
 
 static void __mfc_handle_frame_copy_timestamp(struct mfc_ctx *ctx)
