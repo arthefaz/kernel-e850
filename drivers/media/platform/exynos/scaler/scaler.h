@@ -88,7 +88,11 @@ extern int sc_log_level;
 		(x == V4L2_PIX_FMT_YVU420) || (x == V4L2_PIX_FMT_NV12) || \
 		(x == V4L2_PIX_FMT_NV21) || (x == V4L2_PIX_FMT_NV12M) || \
 		(x == V4L2_PIX_FMT_NV21M) || (x == V4L2_PIX_FMT_YUV420M) || \
-		(x == V4L2_PIX_FMT_YVU420M) || (x == V4L2_PIX_FMT_NV12MT_16X16))
+		(x == V4L2_PIX_FMT_YVU420M) || \
+		(x == V4L2_PIX_FMT_NV12MT_16X16) || \
+		(x == V4L2_PIX_FMT_NV12N) || \
+		(x == V4L2_PIX_FMT_NV12N_RGB32) || \
+		(x == V4L2_PIX_FMT_NV12M_RGB32))
 #define sc_fmt_is_ayv12(x)	((x) == V4L2_PIX_FMT_YVU420)
 #define sc_fmt_is_s10bit_yuv(x)	((x == V4L2_PIX_FMT_NV12M_S10B) || \
 		(x == V4L2_PIX_FMT_NV12N_10B) || (x == V4L2_PIX_FMT_NV16M_S10B) || \
@@ -106,6 +110,30 @@ extern int sc_log_level;
 #define V4L2_CID_2D_COLOR_FILL		(V4L2_CID_EXYNOS_BASE + 104)
 #define V4L2_CID_2D_DITH		(V4L2_CID_EXYNOS_BASE + 105)
 #define V4L2_CID_2D_FMT_PREMULTI	(V4L2_CID_EXYNOS_BASE + 106)
+
+/* for scaler : blending operation */
+/* 12  Y/CbCr 4:2:0 RGBA  */
+#define V4L2_PIX_FMT_NV12M_RGB32    v4l2_fourcc('N', 'V', 'R', 'G')
+/* 12  Y/CbCr 4:2:0 ARGB  */
+#define V4L2_PIX_FMT_NV12M_BGR32    v4l2_fourcc('N', 'V', 'B', 'G')
+/* 12  Y/CbCr 4:2:0 RGB565  */
+#define V4L2_PIX_FMT_NV12M_RGB565   v4l2_fourcc('N', 'V', 'R', '6')
+/* 12  Y/CbCr 4:2:0 RGB444  */
+#define V4L2_PIX_FMT_NV12M_RGB444   v4l2_fourcc('N', 'V', 'R', '4')
+/* 12  Y/CbCr 4:2:0 RGB555X  */
+#define V4L2_PIX_FMT_NV12M_RGB555X   v4l2_fourcc('N', 'V', 'R', '5')
+/* 12  Y/CbCr 4:2:0 16x16 macroblocks */
+#define V4L2_PIX_FMT_NV12MT_16X16_RGB32 v4l2_fourcc('V', 'M', 'R', 'G')
+/* 12  Y/CbCr 4:2:0 RGBA */
+#define V4L2_PIX_FMT_NV12_RGB32 v4l2_fourcc('N', 'V', '1', 'R')
+/* 12  Y/CbCr 4:2:0 RGBA */
+#define V4L2_PIX_FMT_NV12N_RGB32   v4l2_fourcc('N', 'N', '1', 'R')
+/* 21  Y/CbCr 4:2:0 RGBA  */
+#define V4L2_PIX_FMT_NV21M_RGB32   v4l2_fourcc('V', 'N', 'R', 'G')
+/* 21  Y/CbCr 4:2:0 ARGB  */
+#define V4L2_PIX_FMT_NV21M_BGR32   v4l2_fourcc('V', 'N', 'B', 'G')
+/* 21  Y/CbCr 4:2:0 RGBA */
+#define V4L2_PIX_FMT_NV21_RGB32    v4l2_fourcc('V', 'N', '1', 'R')
 
 /* for performance */
 #define SC_CID_FRAMERATE		(V4L2_CID_EXYNOS_BASE + 110)
@@ -270,6 +298,8 @@ struct sc_fmt {
 	u8	v_shift:1;
 	u8	is_rgb:1;
 	u8	cspan:1;
+	u8	is_alphablend_fmt:1;
+	u8	alphablend_plane_num:2;
 };
 
 enum {
