@@ -391,6 +391,19 @@ struct sc_dnoise_filter {
 	u32			h;
 };
 
+struct sc_src_blend_cfg {
+	bool pre_multi;
+	u8 blend_src_color_byte_swap;
+	u8 blend_src_color_format;
+	u32 blend_src_stride;
+	u32 blend_src_h_pos;
+	u32 blend_src_v_pos;
+	u32 blend_src_width;
+	u32 blend_src_height;
+	u32 blend_src_crop_width;
+	u32 blend_src_crop_height;
+};
+
 struct sc_qos_table {
 	unsigned int freq_mif;
 	unsigned int freq_int;
@@ -491,6 +504,7 @@ struct sc_ctx {
 		struct m2m1shot_context	*m21_ctx;
 	};
 	struct sc_frame			s_frame;
+	struct sc_frame			src_blend_frame;
 	struct sc_int_frame		*i_frame;
 	struct sc_frame			d_frame;
 	struct v4l2_ctrl_handler	ctrl_handler;
@@ -513,6 +527,7 @@ struct sc_ctx {
 	struct sc_csc			csc;
 	struct sc_init_phase		init_phase;
 	struct sc_dnoise_filter		dnoise_ft;
+	struct sc_src_blend_cfg		src_blend_cfg;
 	struct sc_qos_request		pm_qos;
 	int				pm_qos_lv;
 	int				framerate;
