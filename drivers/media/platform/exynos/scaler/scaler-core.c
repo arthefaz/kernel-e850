@@ -363,106 +363,138 @@ static const struct sc_fmt sc_formats[] = {
 		.num_comp	= 2,
 		.h_shift	= 1,
 	}, {
-		.name		= "YUV 4:2:0 contiguous 2-planar, Y/CbCr SBWC 8 bit",
-		.pixelformat	= V4L2_PIX_FMT_NV12M_SBWC_8B,
+		/* Src Blending : NV12M + RGB32 */
+		.name		= "NV12M-RGB32",
+		.pixelformat	= V4L2_PIX_FMT_NV12M_RGB32,
+		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P,
+		.bitperpixel	= { 8, 4, 32 },
+		.num_planes	= 3,
+		.num_comp	= 3,
+		.h_shift	= 1,
+		.v_shift	= 1,
+		.is_alphablend_fmt = 1,
+		.alphablend_plane_num = 2,
+	}, {
+		/* Src Blending : NV12M + BGR32 */
+		.name		= "NV12M-BGR32",
+		.pixelformat	= V4L2_PIX_FMT_NV12M_BGR32,
+		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P,
+		.bitperpixel	= { 8, 4, 32 },
+		.num_planes	= 3,
+		.num_comp	= 3,
+		.h_shift	= 1,
+		.v_shift	= 1,
+		.is_alphablend_fmt = 1,
+		.alphablend_plane_num = 2,
+	}, {
+		/* Src Blending : NV12M + RGB565 */
+		.name		= "NV12M-RGB565",
+		.pixelformat	= V4L2_PIX_FMT_NV12M_RGB565,
+		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P,
+		.bitperpixel	= { 8, 4, 16 },
+		.num_planes	= 3,
+		.num_comp	= 3,
+		.h_shift	= 1,
+		.v_shift	= 1,
+		.is_alphablend_fmt = 1,
+		.alphablend_plane_num = 2,
+	}, {
+		/* Src Blending : NV12M + RGB444 */
+		.name		= "NV12M-RGB444",
+		.pixelformat	= V4L2_PIX_FMT_NV12M_RGB444,
+		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P,
+		.bitperpixel	= { 8, 4, 16 },
+		.num_planes	= 3,
+		.num_comp	= 3,
+		.h_shift	= 1,
+		.v_shift	= 1,
+		.is_alphablend_fmt = 1,
+		.alphablend_plane_num = 2,
+	}, {
+		/* Src Blending : NV12M + RGB555 */
+		.name		= "NV12M-RGB555X",
+		.pixelformat	= V4L2_PIX_FMT_NV12M_RGB555X,
+		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P,
+		.bitperpixel	= { 8, 4, 16 },
+		.num_planes	= 3,
+		.num_comp	= 3,
+		.h_shift	= 1,
+		.v_shift	= 1,
+		.is_alphablend_fmt = 1,
+		.alphablend_plane_num = 2,
+	}, {
+		/* Src Blending : NV12MT + RGB32 */
+		.name		= "NV12MT-RGB32",
+		.pixelformat	= V4L2_PIX_FMT_NV12MT_16X16_RGB32,
 		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P |
-					SCALER_CFG_SBWC_FORMAT,
-		.bitperpixel	= { 8, 4 },
+					SCALER_CFG_TILE_EN,
+		.bitperpixel	= { 8, 4, 32 },
+		.num_planes	= 3,
+		.num_comp	= 3,
+		.h_shift	= 1,
+		.v_shift	= 1,
+		.is_alphablend_fmt = 1,
+		.alphablend_plane_num = 2,
+	}, {
+		/* Src Blending : NV12 + RGB32 */
+		.name		= "NV12-RGB32",
+		.pixelformat	= V4L2_PIX_FMT_NV12_RGB32,
+		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P,
+		.bitperpixel	= { 12, 32 },
 		.num_planes	= 2,
-		.num_comp	= 2,
+		.num_comp	= 3,
 		.h_shift	= 1,
 		.v_shift	= 1,
+		.is_alphablend_fmt = 1,
+		.alphablend_plane_num = 1,
 	}, {
-		.name		= "YUV 4:2:0 contiguous 2-planar, Y/CbCr SBWC 10 bit",
-		.pixelformat	= V4L2_PIX_FMT_NV12M_SBWC_10B,
-		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P	|
-					SCALER_CFG_SBWC_FORMAT	|
-					SCALER_CFG_10BIT_SBWC,
-		.bitperpixel	= { 10, 5 },
+		/* Src Blending : NV12N + RGB32 */
+		.name		= "NV12N-RGB32",
+		.pixelformat	= V4L2_PIX_FMT_NV12N_RGB32,
+		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P,
+		.bitperpixel	= { 12, 32 },
 		.num_planes	= 2,
-		.num_comp	= 2,
+		.num_comp	= 3,
 		.h_shift	= 1,
 		.v_shift	= 1,
+		.is_alphablend_fmt = 1,
+		.alphablend_plane_num = 1,
 	}, {
-		.name		= "YUV 4:2:0 contiguous 2-planar, Y/CrCb SBWC 8 bit",
-		.pixelformat	= V4L2_PIX_FMT_NV21M_SBWC_8B,
-		.cfg_val	= SCALER_CFG_FMT_YCRCB420_2P |
-					SCALER_CFG_SBWC_FORMAT,
-		.bitperpixel	= { 8, 4 },
+		/* Src Blending : NV21M + RGB32 */
+		.name		= "NV21M-RGB32",
+		.pixelformat	= V4L2_PIX_FMT_NV21M_RGB32,
+		.cfg_val	= SCALER_CFG_FMT_YCRCB420_2P,
+		.bitperpixel	= { 8, 4, 32 },
+		.num_planes	= 3,
+		.num_comp	= 3,
+		.h_shift	= 1,
+		.v_shift	= 1,
+		.is_alphablend_fmt = 1,
+		.alphablend_plane_num = 2,
+	}, {
+		/* Src Blending : NV21M + BGR32 */
+		.name		= "NV21M-BGR32",
+		.pixelformat	= V4L2_PIX_FMT_NV21M_BGR32,
+		.cfg_val	= SCALER_CFG_FMT_YCRCB420_2P,
+		.bitperpixel	= { 8, 4, 32 },
+		.num_planes	= 3,
+		.num_comp	= 3,
+		.h_shift	= 1,
+		.v_shift	= 1,
+		.is_alphablend_fmt = 1,
+		.alphablend_plane_num = 2,
+	}, {
+		/* Src Blending : NV21 + RGB32 */
+		.name		= "NV21-RGB32",
+		.pixelformat	= V4L2_PIX_FMT_NV21_RGB32,
+		.cfg_val	= SCALER_CFG_FMT_YCRCB420_2P,
+		.bitperpixel	= { 12, 32 },
 		.num_planes	= 2,
-		.num_comp	= 2,
+		.num_comp	= 3,
 		.h_shift	= 1,
 		.v_shift	= 1,
-	}, {
-		.name		= "YUV 4:2:0 contiguous 2-planar, Y/CrCb SBWC 10 bit",
-		.pixelformat	= V4L2_PIX_FMT_NV21M_SBWC_10B,
-		.cfg_val	= SCALER_CFG_FMT_YCRCB420_2P	|
-					SCALER_CFG_SBWC_FORMAT	|
-					SCALER_CFG_10BIT_SBWC,
-		.bitperpixel	= { 10, 5 },
-		.num_planes	= 2,
-		.num_comp	= 2,
-		.h_shift	= 1,
-		.v_shift	= 1,
-	}, {
-		.name		= "YUV 4:2:0 contiguous, Y/CbCr SBWC 8 bit",
-		.pixelformat	= V4L2_PIX_FMT_NV12N_SBWC_8B,
-		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P |
-					SCALER_CFG_SBWC_FORMAT,
-		.bitperpixel	= { 8, 4 },
-		.num_planes	= 1,
-		.num_comp	= 2,
-		.h_shift	= 1,
-		.v_shift	= 1,
-	}, {
-		.name		= "YUV 4:2:0 contiguous, Y/CbCr SBWC 10 bit",
-		.pixelformat	= V4L2_PIX_FMT_NV12N_SBWC_10B,
-		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P	|
-					SCALER_CFG_SBWC_FORMAT	|
-					SCALER_CFG_10BIT_SBWC,
-		.bitperpixel	= { 10, 5 },
-		.num_planes	= 1,
-		.num_comp	= 2,
-		.h_shift	= 1,
-		.v_shift	= 1,
-	}, {
-		.name		= "YUV 4:2:0 contiguous 2-planar, Y/CbCr SBWC lossy 8 bit",
-		.pixelformat	= V4L2_PIX_FMT_NV12M_SBWCL_8B,
-		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P	|
-					SCALER_CFG_SBWC_LOSSY	|
-					SCALER_CFG_SBWC_FORMAT,
-		.bitperpixel	= { 6, 3 },
-		.num_planes	= 2,
-		.num_comp	= 2,
-		.h_shift	= 1,
-		.v_shift	= 1,
-	}, {
-		.name		= "YUV 4:2:0 contiguous 2-planar, Y/CbCr SBWC lossy 10 bit",
-		.pixelformat	= V4L2_PIX_FMT_NV12M_SBWCL_10B,
-		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P	|
-					SCALER_CFG_SBWC_LOSSY	|
-					SCALER_CFG_SBWC_FORMAT	|
-					SCALER_CFG_10BIT_SBWC,
-		.bitperpixel	= { 8, 4 },
-		.num_planes	= 2,
-		.num_comp	= 2,
-		.h_shift	= 1,
-		.v_shift	= 1,
-	}, {
-		.name		= "Y mono",
-		.pixelformat	= V4L2_PIX_FMT_GREY,
-		.cfg_val	= SCALER_CFG_FMT_Y_MONO,
-		.bitperpixel	= { 8 },
-		.num_planes	= 1,
-		.num_comp	= 1,
-	}, {
-		.name		= "Y mono 10 bit",
-		.pixelformat	= V4L2_PIX_FMT_Y10,
-		.cfg_val	= SCALER_CFG_FMT_Y_MONO |
-				  SCALER_CFG_10BIT_P010,
-		.bitperpixel	= { 16 },
-		.num_planes	= 1,
-		.num_comp	= 1,
+		.is_alphablend_fmt = 1,
+		.alphablend_plane_num = 1,
 	},
 };
 
