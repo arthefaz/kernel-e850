@@ -294,13 +294,13 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx, unsigned int err)
 			dec->hdr10_plus_info[index].valid = 0;
 		}
 
-		if (ctx->src_fmt->mem_planes == 1) {
+		if (ctx->dst_fmt->mem_planes == 1) {
 			vb2_set_plane_payload(&dst_mb->vb.vb2_buf, 0,
 					raw->total_plane_size);
 			mfc_debug(5, "single plane payload: %d\n",
 					raw->total_plane_size);
 		} else {
-			for (i = 0; i < ctx->src_fmt->mem_planes; i++) {
+			for (i = 0; i < ctx->dst_fmt->mem_planes; i++) {
 				vb2_set_plane_payload(&dst_mb->vb.vb2_buf, i,
 						raw->plane_size[i]);
 			}
@@ -1000,7 +1000,7 @@ static int __mfc_handle_seq_dec(struct mfc_ctx *ctx)
 	ctx->scratch_buf_size = mfc_get_scratch_size();
 	for (i = 0; i < ctx->dst_fmt->num_planes; i++) {
 		ctx->min_dpb_size[i] = mfc_get_min_dpb_size(i);
-		if ((ctx->is_10bit || ctx->is_sbwc))
+		if ((ctx->is_10bit && !ctx->mem_type_10bit) || ctx->is_sbwc)
 			ctx->min_dpb_size_2bits[i] = mfc_get_min_dpb_size_2bit(i);
 	}
 

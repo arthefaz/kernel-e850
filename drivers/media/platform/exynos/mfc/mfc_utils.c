@@ -238,7 +238,7 @@ void mfc_dec_calc_dpb_size(struct mfc_ctx *ctx)
 					i, raw->plane_size[i], ctx->min_dpb_size[i]);
 			raw->plane_size[i] = ctx->min_dpb_size[i];
 		}
-		if ((ctx->is_10bit || ctx->is_sbwc) &&
+		if (((ctx->is_10bit && !ctx->mem_type_10bit) || ctx->is_sbwc) &&
 				(raw->plane_size_2bits[i] < ctx->min_dpb_size_2bits[i])) {
 			mfc_info_ctx("[FRAME] 2bit plane[%d] size is changed %d -> %d\n",
 					i, raw->plane_size_2bits[i], ctx->min_dpb_size_2bits[i]);
@@ -251,7 +251,7 @@ void mfc_dec_calc_dpb_size(struct mfc_ctx *ctx)
 		mfc_debug(2, "[FRAME] Plane[%d] size = %d, stride = %d\n",
 			i, raw->plane_size[i], raw->stride[i]);
 	}
-	if (ctx->is_10bit || ctx->is_sbwc) {
+	if ((ctx->is_10bit && !ctx->mem_type_10bit) || ctx->is_sbwc) {
 		for (i = 0; i < raw->num_planes; i++) {
 			raw->total_plane_size += raw->plane_size_2bits[i];
 			mfc_debug(2, "[FRAME]%s%s Plane[%d] 2bit size = %d, stride = %d\n",
@@ -379,7 +379,7 @@ void mfc_enc_calc_src_size(struct mfc_ctx *ctx)
 		mfc_debug(2, "[FRAME] Plane[%d] size = %d, stride = %d\n",
 			i, raw->plane_size[i], raw->stride[i]);
 	}
-	if (ctx->is_10bit || ctx->is_sbwc) {
+	if ((ctx->is_10bit && !ctx->mem_type_10bit) || ctx->is_sbwc) {
 		for (i = 0; i < raw->num_planes; i++) {
 			raw->total_plane_size += raw->plane_size_2bits[i];
 			mfc_debug(2, "[FRAME]%s%s Plane[%d] 2bit size = %d, stride = %d\n",
