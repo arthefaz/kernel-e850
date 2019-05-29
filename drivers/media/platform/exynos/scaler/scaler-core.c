@@ -1465,17 +1465,37 @@ static int sc_v4l2_try_fmt_mplane(struct file *file, void *fh,
 					    &pixm->plane_fmt[2].sizeimage);
 	else {
 		for (i = 0; i < pixm->num_planes; ++i) {
-			pixm->plane_fmt[i].bytesperline =
-				(pixm->width * sc_fmt->bitperpixel[i]) >> 3;
-
-			pixm->plane_fmt[i].sizeimage =
-				pixm->plane_fmt[i].bytesperline * pixm->height;
-
-			v4l2_dbg(1, sc_log_level, &ctx->sc_dev->m2m.v4l2_dev,
-				 "[%d] plane: bytesperline %d, sizeimage %d\n",
-				 i, pixm->plane_fmt[i].bytesperline,
-				 pixm->plane_fmt[i].sizeimage);
+			/* The pixm->plane_fmt[i].sizeimage for the plane which
+			 * contains the src blend data has to be calculated as per the
+			 * size of the actual width and actual height of the src blend
+			 * buffer
+			 */
+			BUG_ON(!sc_fmt->alphablend_plane_num &&
+			       sc_fmt->is_alphablend_fmt);
+			if ((i == sc_fmt->alphablend_plane_num) &&
+			    sc_fmt->is_alphablend_fmt) {
+				if ((ctx->src_blend_cfg.blend_src_height == 0) ||
+				    (ctx->src_blend_cfg.blend_src_width == 0))
+					return -EINVAL;
+				pixm->plane_fmt[i].bytesperline =
+					(ctx->src_blend_cfg.blend_src_width *
+					 sc_fmt->bitperpixel[i]) >> 3;
+				pixm->plane_fmt[i].sizeimage =
+					pixm->plane_fmt[i].bytesperline *
+					ctx->src_blend_cfg.blend_src_height;
+			} else {
+				pixm->plane_fmt[i].bytesperline = (pixm->width *
+					sc_fmt->bitperpixel[i]) >> 3;
+				pixm->plane_fmt[i].sizeimage =
+					pixm->plane_fmt[i].bytesperline *
+					pixm->height;
+			}
 		}
+
+		v4l2_dbg(1, sc_log_level, &ctx->sc_dev->m2m.v4l2_dev,
+			 "[%d] plane: bytesperline %d, sizeimage %d\n",
+			 i, pixm->plane_fmt[i].bytesperline,
+			 pixm->plane_fmt[i].sizeimage);
 	}
 
 	for (i = 0; ext_size && i < pixm->num_planes; i++)
@@ -2015,6 +2035,39 @@ static int sc_v4l2_s_selection(struct file *file, void *fh,
 		return -EINVAL;
 	}
 
+	if (!V4L2_TYPE_IS_OUTPUT(s->type) && ctx->bl_op &&
+		ctx->sc_dev->variant->blending) {
+		struct sc_frame *src_blend_frame = &ctx->src_blend_frame;
+		struct sc_src_blend_cfg *cfg = &ctx->src_blend_cfg;
+
+		if (cfg->blend_src_h_pos + rect.width > cfg->blend_src_width) {
+			v4l2_err(&ctx->sc_dev->m2m.v4l2_dev,
+				"Invalid range(x) of blending image: %d\n",
+				cfg->blend_src_width);
+			v4l2_err(&ctx->sc_dev->m2m.v4l2_dev,
+				"which is smaller than X-pos(%d) + width(%d)\n",
+				cfg->blend_src_h_pos, rect.width);
+			return -EINVAL;
+		}
+		if (cfg->blend_src_v_pos + rect.height >
+						cfg->blend_src_height) {
+			v4l2_err(&ctx->sc_dev->m2m.v4l2_dev,
+				"Invalid range(y) of blending image: %d\n",
+				cfg->blend_src_height);
+			v4l2_err(&ctx->sc_dev->m2m.v4l2_dev,
+				"which is smaller than Y-pos(%d) + height(%d)\n",
+				cfg->blend_src_v_pos, rect.height);
+			return -EINVAL;
+		}
+
+		src_blend_frame->crop.top = ctx->src_blend_cfg.blend_src_v_pos;
+		src_blend_frame->crop.left = ctx->src_blend_cfg.blend_src_h_pos;
+		src_blend_frame->crop.width = rect.width;
+		src_blend_frame->crop.height = rect.height;
+		/* src blend crop width and crop height HAS TO BE same as dst */
+		cfg->blend_src_crop_width = rect.width;
+		cfg->blend_src_crop_height = rect.height;
+	}
 	frame->crop.top = rect.top;
 	frame->crop.left = rect.left;
 	frame->crop.height = rect.height;
@@ -3324,6 +3377,7 @@ static int sc_open(struct file *file)
 	/* Default color format */
 	ctx->s_frame.sc_fmt = &sc_formats[0];
 	ctx->d_frame.sc_fmt = &sc_formats[0];
+	ctx->src_blend_frame.sc_fmt = &sc_formats[0];
 
 	if (!IS_ERR(sc->pclk)) {
 		ret = clk_prepare(sc->pclk);
@@ -4080,9 +4134,9 @@ static dma_addr_t sc_get_vb2_dma_addr(struct vb2_buffer *vb2buf, int plane_no)
 }
 
 static int sc_get_bufaddr(struct sc_dev *sc, struct vb2_buffer *vb2buf,
-		struct sc_frame *frame)
+		struct sc_frame *frame, struct sc_frame *src_blend_frame)
 {
-	unsigned int pixsize, bytesize;
+	unsigned int pixsize, bytesize, src_blend_pixsize;
 
 	pixsize = frame->width * frame->height;
 	bytesize = (pixsize * frame->sc_fmt->bitperpixel[0]) >> 3;
@@ -4171,7 +4225,25 @@ static int sc_get_bufaddr(struct sc_dev *sc, struct vb2_buffer *vb2buf,
 			}
 		} else if (frame->sc_fmt->num_planes == 3) {
 			frame->addr.ioaddr[SC_PLANE_CB] = sc_get_vb2_dma_addr(vb2buf, 1);
-			frame->addr.ioaddr[SC_PLANE_CR] = sc_get_vb2_dma_addr(vb2buf, 2);
+
+			if (frame->sc_fmt->is_alphablend_fmt) {
+				BUG_ON(!sc->variant->blending);
+				BUG_ON(src_blend_frame == NULL);
+
+				src_blend_frame->addr.ioaddr[SC_PLANE_Y] =
+					sc_get_vb2_dma_addr(vb2buf, 2);
+
+				src_blend_pixsize =
+					src_blend_frame->width *
+						src_blend_frame->height;
+
+				src_blend_frame->addr.size[SC_PLANE_Y] =
+					src_blend_pixsize *
+						frame->sc_fmt->bitperpixel[1] >> 3;
+			} else {
+				frame->addr.ioaddr[SC_PLANE_CR] =
+					sc_get_vb2_dma_addr(vb2buf, 2);
+			}
 
 			if (sc_fmt_is_ayv12(frame->sc_fmt->pixelformat)) {
 				sc_calc_ayv12_planesize(frame->width,
@@ -4183,7 +4255,36 @@ static int sc_get_bufaddr(struct sc_dev *sc, struct vb2_buffer *vb2buf,
 				sc_calc_planesize(frame, pixsize);
 			}
 		} else {
-			dev_err(sc->dev, "Please check the num of comp\n");
+			if (frame->sc_fmt->is_alphablend_fmt) {
+				BUG_ON(!sc->variant->blending);
+				BUG_ON(src_blend_frame == NULL);
+
+				src_blend_frame->addr.ioaddr[SC_PLANE_Y] =
+					sc_get_vb2_dma_addr(vb2buf, 1);
+				src_blend_pixsize =
+					src_blend_frame->width *
+						src_blend_frame->height;
+
+				if (frame->sc_fmt->pixelformat ==
+						V4L2_PIX_FMT_NV12N_RGB32) {
+					unsigned int w = frame->width;
+					unsigned int h = frame->height;
+
+					frame->addr.ioaddr[SC_PLANE_CB] =
+						NV12N_CBCR_BASE(frame->addr.ioaddr[SC_PLANE_Y], w, h);
+					frame->addr.size[SC_PLANE_Y] = NV12N_Y_SIZE(w, h);
+					frame->addr.size[SC_PLANE_CB] = NV12N_CBCR_SIZE(w, h);
+				} else {
+					frame->addr.ioaddr[SC_PLANE_CB] = frame->addr.ioaddr[SC_PLANE_Y] + pixsize;
+					frame->addr.size[SC_PLANE_Y] = pixsize;
+					frame->addr.size[SC_PLANE_CB] = bytesize - pixsize;
+				}
+
+				src_blend_frame->addr.size[SC_PLANE_Y] =
+					src_blend_pixsize *
+						frame->sc_fmt->bitperpixel[1] >> 3;
+			} else
+				dev_err(sc->dev, "Please check the num of comp\n");
 		}
 		break;
 	default:
@@ -4197,10 +4298,16 @@ static int sc_get_bufaddr(struct sc_dev *sc, struct vb2_buffer *vb2buf,
 		frame->addr.ioaddr[SC_PLANE_CR] = t_cb;
 	}
 
-	sc_dbg("y addr %pa y size %#x\n", &frame->addr.ioaddr[SC_PLANE_Y], frame->addr.size[SC_PLANE_Y]);
-	sc_dbg("cb addr %pa cb size %#x\n", &frame->addr.ioaddr[SC_PLANE_CB], frame->addr.size[SC_PLANE_CB]);
-	sc_dbg("cr addr %pa cr size %#x\n", &frame->addr.ioaddr[SC_PLANE_CR], frame->addr.size[SC_PLANE_CR]);
-
+	sc_dbg("y addr %pa y size %#x\n", &frame->addr.ioaddr[SC_PLANE_Y],
+			frame->addr.size[SC_PLANE_Y]);
+	sc_dbg("cb addr %pa cb size %#x\n", &frame->addr.ioaddr[SC_PLANE_CB],
+			frame->addr.size[SC_PLANE_CB]);
+	sc_dbg("cr addr %pa cr size %#x\n", &frame->addr.ioaddr[SC_PLANE_CR],
+			frame->addr.size[SC_PLANE_CR]);
+	if (frame->sc_fmt->is_alphablend_fmt == 1)
+		sc_dbg("src blend addr %pa src blend sz %#x\n",
+				&src_blend_frame->addr.ioaddr[SC_PLANE_Y],
+				src_blend_frame->addr.size[SC_PLANE_Y]);
 	return 0;
 }
 
@@ -4208,7 +4315,7 @@ static void sc_m2m_device_run(void *priv)
 {
 	struct sc_ctx *ctx = priv;
 	struct sc_dev *sc = ctx->sc_dev;
-	struct sc_frame *s_frame, *d_frame;
+	struct sc_frame *s_frame, *d_frame, *src_blend_frame;
 	struct vb2_buffer *src_vb, *dst_vb;
 	struct vb2_v4l2_buffer *src_vb_v4l2, *dst_vb_v4l2;
 	struct vb2_sc_buffer *src_sc_buf, *dst_sc_buf;
@@ -4248,8 +4355,23 @@ static void sc_m2m_device_run(void *priv)
 	if (dst_sc_buf->tws)
 		ctx->tws = dst_sc_buf->tws;
 
-	sc_get_bufaddr(sc, src_vb, s_frame);
-	sc_get_bufaddr(sc, dst_vb, d_frame);
+	if (sc->variant->blending && ctx->bl_op) {
+		src_blend_frame = &ctx->src_blend_frame;
+
+		BUG_ON(!s_frame->sc_fmt->is_alphablend_fmt);
+		BUG_ON(!ctx->src_blend_cfg.blend_src_width);
+		BUG_ON(!ctx->src_blend_cfg.blend_src_height);
+		BUG_ON(!ctx->src_blend_cfg.blend_src_stride);
+
+		/* update the src_blend_frame parameters */
+		// TODO : move to s_ctrl
+		src_blend_frame->width = ctx->src_blend_cfg.blend_src_width;
+		src_blend_frame->height = ctx->src_blend_cfg.blend_src_height;
+	} else
+		src_blend_frame = NULL;
+
+	sc_get_bufaddr(sc, src_vb, s_frame, src_blend_frame);
+	sc_get_bufaddr(sc, dst_vb, d_frame, NULL);
 
 	sc_add_context_and_run(sc, ctx);
 }
