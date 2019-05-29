@@ -16,6 +16,7 @@
 //#include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/exynos9630.h>
 #include <dt-bindings/display/exynos-display.h>
+#include <dt-bindings/display/exynos-display-9630.h>
 #include <dt-bindings/clock/exynos9630.h>
 #include "exynos9630-pinctrl.dtsi"
 #include "exynos9630-display-lcd.dtsi"
@@ -31,7 +32,7 @@
 		decon0 = &decon_f;
 	};
 
-	dpp_0: dpp@0x14841000 {	/* L0 */
+	dpp_0: dpp@0x14841000 {	/* GW_L0 */
 		compatible = "samsung,exynos9-dpp";
 		#pb-id-cells = <3>;
 		/* DPU_DMA, DPP, DPU_DMA_COMMON, WCG/HDR */
@@ -79,7 +80,7 @@
 			DECON_PIXEL_FORMAT_RGBA_1010102 DECON_PIXEL_FORMAT_BGRA_1010102>;
 	};
 
-	dpp_1: dpp@0x14842000 {	/* L1 */
+	dpp_1: dpp@0x14842000 {	/* GW_L1 */
 		compatible = "samsung,exynos9-dpp";
 		#pb-id-cells = <3>;
 		reg = <0x0 0x14892000 0x1000>, <0x0 0x14842000 0x1000>, <0x0 0x1484D000 0x3C0>;
@@ -96,7 +97,7 @@
 			DECON_PIXEL_FORMAT_RGBA_1010102 DECON_PIXEL_FORMAT_BGRA_1010102>;
 	};
 
-	dpp_2: dpp@0x14843000 {	/* L2 */
+	dpp_2: dpp@0x14843000 {	/* GFW_L2 */
 		compatible = "samsung,exynos9-dpp";
 		#pb-id-cells = <3>;
 		reg = <0x0 0x14893000 0x1000>, <0x0 0x14843000 0x1000>, <0x0 0x1484E000 0x3C0>;
@@ -113,7 +114,7 @@
 			DECON_PIXEL_FORMAT_RGBA_1010102 DECON_PIXEL_FORMAT_BGRA_1010102>;
 	};
 
-	dpp_3: dpp@0x14844000 {	/* L3 */
+	dpp_3: dpp@0x14844000 {	/* VGBSH_L3 */
 		compatible = "samsung,exynos9-dpp";
 		#pb-id-cells = <3>;
 		reg = <0x0 0x14894000 0x1000>, <0x0 0x14844000 0x1000>, <0x0 0x1484F000 0x510>;

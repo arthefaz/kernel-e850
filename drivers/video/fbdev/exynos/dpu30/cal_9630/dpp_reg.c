@@ -1143,6 +1143,8 @@ void __dpp_dump(u32 id, void __iomem *regs, void __iomem *dma_regs,
 
 	dpp_dump_regs(id, regs, attr);
 	dpp_reg_dump_debug_regs(id);
+
+	/* TODO: dump for hdr -> dpp_dump_hdr_regs(id, regs, attr); */
 }
 
 static const struct dpu_fmt dpu_cal_formats_list[] = {
