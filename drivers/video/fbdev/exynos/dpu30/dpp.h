@@ -40,24 +40,35 @@
 extern int dpp_log_level;
 
 #define DPP_MODULE_NAME		"exynos-dpp"
+
+#if defined(CONFIG_SOC_EXYNOS9830)
 #define MAX_DPP_CNT		7 /* + ODMA case */
+#elif defined(CONFIG_SOC_EXYNOS9630)
+#define MAX_DPP_CNT		4 /* + ODMA case */
+#endif
+
 #define MAX_FMT_CNT		64
 #define DEFAULT_FMT_CNT		8
 
+/* TODO: remove */
+#ifndef REMOVED
 /* about 1msec @ ACLK=630MHz */
 #define INIT_RCV_NUM		630000
 
+/* TODO: Make sure dpp use define of videodev2_exynos_media.h instead of below */
 #define P010_Y_SIZE(w, h)		((w) * (h) * 2)
 #define P010_CBCR_SIZE(w, h)		((w) * (h))
 #define P010_CBCR_BASE(base, w, h)	((base) + P010_Y_SIZE((w), (h)))
 /* ceil function for positive value */
 #define p_ceil(n, d)	((n)/(d) + ((n)%(d) != 0))
+#endif
 
 #define check_align(width, height, align_w, align_h)\
 	(IS_ALIGNED(width, align_w) && IS_ALIGNED(height, align_h))
 
 #define is_normal(config) (DPP_ROT_NORMAL)
 #define is_rotation(config) (config->dpp_parm.rot > DPP_ROT_180)
+/* TODO: Is is_sbwc necessary also? or is_afbc may be changed to is_comp */
 #define is_afbc(config) (config->compression)
 
 #define IS_WB(attr)	(test_bit(DPP_ATTR_WBMUX, &attr) &&		\
@@ -89,8 +100,8 @@ extern int dpp_log_level;
 			pr_info(pr_fmt(fmt), ##__VA_ARGS__);			\
 	} while (0)
 
+#ifndef REMOVED
 /* TODO: This will be removed */
-
 enum dpp_csc_defs {
 	/* csc_type */
 	DPP_CSC_BT_601 = 0,
@@ -106,6 +117,7 @@ enum dpp_csc_defs {
 	DPP_CSC_ID_DCI_P3 = 2,
 	CSC_CUSTOMIZED_START = 4,
 };
+#endif
 
 enum dpp_state {
 	DPP_STATE_ON,
