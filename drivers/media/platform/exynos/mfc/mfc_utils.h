@@ -40,8 +40,6 @@ static inline void mfc_clean_ctx_int_flags(struct mfc_ctx *ctx)
 
 static inline void mfc_change_state(struct mfc_ctx *ctx, enum mfc_inst_state state)
 {
-	struct mfc_dev *dev = ctx->dev;
-
 	MFC_TRACE_CTX("** state : %d\n", state);
 	ctx->state = state;
 }
@@ -49,14 +47,16 @@ static inline void mfc_change_state(struct mfc_ctx *ctx, enum mfc_inst_state sta
 static inline enum mfc_node_type mfc_get_node_type(struct file *file)
 {
 	struct video_device *vdev = video_devdata(file);
+	struct mfc_dev *dev;
 	enum mfc_node_type node_type;
 
 	if (!vdev) {
-		mfc_err_dev("failed to get video_device\n");
+		mfc_err("failed to get video_device\n");
 		return MFCNODE_INVALID;
 	}
+	dev = video_drvdata(file);
 
-	mfc_debug(2, "video_device index: %d\n", vdev->index);
+	mfc_debug_dev(2, "video_device index: %d\n", vdev->index);
 
 	switch (vdev->index) {
 	case 0:
@@ -160,13 +160,13 @@ static inline void mfc_clear_assigned_dpb(struct mfc_ctx *ctx)
 	int i;
 
 	if (!ctx) {
-		mfc_err_dev("no mfc context to run\n");
+		mfc_err("no mfc context to run\n");
 		return;
 	}
 
 	dec = ctx->dec_priv;
 	if (!dec) {
-		mfc_err_dev("no mfc decoder to run\n");
+		mfc_err_ctx("no mfc decoder to run\n");
 		return;
 	}
 

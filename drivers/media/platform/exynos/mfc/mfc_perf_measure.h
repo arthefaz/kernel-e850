@@ -90,7 +90,7 @@ static inline void mfc_perf_measure_off(struct mfc_dev *dev)
 
 		__mfc_measure_store(dev, diff);
 
-		mfc_debug(3, "uDECtype :%d, uENCtype :%d, codectype :%d\n",
+		mfc_debug_dev(3, "uDECtype :%d, uENCtype :%d, codectype :%d\n",
 			mfc_get_dec_frame_type(), mfc_get_enc_slice_type(), MFC_READL(MFC_REG_CODEC_TYPE));
 
 		dev->perf.drv_margin = 1;

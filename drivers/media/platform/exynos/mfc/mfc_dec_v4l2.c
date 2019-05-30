@@ -311,7 +311,6 @@ static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 {
 	struct mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	struct mfc_dec *dec = ctx->dec_priv;
-	struct mfc_dev *dev = ctx->dev;
 	struct v4l2_pix_format_mplane *pix_fmt_mp = &f->fmt.pix_mp;
 	struct mfc_raw_info *raw;
 	int i;
@@ -329,12 +328,12 @@ static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 		/* If there is no source buffer to parsing, we can't SEQ_START */
 		if (((ctx->wait_state & WAIT_G_FMT) != 0) &&
 			mfc_is_queue_count_same(&ctx->buf_queue_lock, &ctx->src_buf_queue, 0)) {
-			mfc_err_dev("There is no source buffer to parsing, keep previous resolution\n");
+			mfc_err_ctx("There is no source buffer to parsing, keep previous resolution\n");
 			return -EAGAIN;
 		}
 		/* If the MFC is parsing the header, so wait until it is finished */
 		if (mfc_wait_for_done_ctx(ctx, MFC_REG_R2H_CMD_SEQ_DONE_RET)) {
-			mfc_err_dev("header parsing failed\n");
+			mfc_err_ctx("header parsing failed\n");
 			return -EAGAIN;
 		}
 	}
@@ -446,7 +445,7 @@ static int mfc_dec_try_fmt(struct file *file, void *priv, struct v4l2_format *f)
 
 	fmt = __mfc_dec_find_format(ctx, pix_fmt_mp->pixelformat);
 	if (!fmt) {
-		mfc_err_dev("Unsupported format for %s\n",
+		mfc_err_ctx("Unsupported format for %s\n",
 				V4L2_TYPE_IS_OUTPUT(f->type) ? "source" : "destination");
 		return -EINVAL;
 	}
@@ -716,18 +715,18 @@ static int mfc_dec_querybuf(struct file *file, void *priv,
 		mfc_debug(4, "dec dst querybuf, state: %d\n", ctx->state);
 		ret = vb2_querybuf(&ctx->vq_dst, buf);
 		if (ret != 0) {
-			mfc_err_dev("dec dst: error in vb2_querybuf()\n");
+			mfc_err_ctx("dec dst: error in vb2_querybuf()\n");
 			return ret;
 		}
 	} else if (buf->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		mfc_debug(4, "dec src querybuf, state: %d\n", ctx->state);
 		ret = vb2_querybuf(&ctx->vq_src, buf);
 		if (ret != 0) {
-			mfc_err_dev("dec src: error in vb2_querybuf()\n");
+			mfc_err_ctx("dec src: error in vb2_querybuf()\n");
 			return ret;
 		}
 	} else {
-		mfc_err_dev("invalid buf type (%d)\n", buf->type);
+		mfc_err_ctx("invalid buf type (%d)\n", buf->type);
 		return -EINVAL;
 	}
 
@@ -903,11 +902,12 @@ static int mfc_dec_streamoff(struct file *file, void *priv,
 static int mfc_dec_queryctrl(struct file *file, void *priv,
 			    struct v4l2_queryctrl *qc)
 {
+	struct mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	struct v4l2_queryctrl *c;
 
 	c = __mfc_dec_get_ctrl(qc->id);
 	if (!c) {
-		mfc_err_dev("[CTRLS] not supported control id (%#x)\n", qc->id);
+		mfc_err_ctx("[CTRLS] not supported control id (%#x)\n", qc->id);
 		return -EINVAL;
 	}
 
@@ -1123,7 +1123,7 @@ static int mfc_dec_s_ctrl(struct file *file, void *priv,
 		ctx->wait_state = ctrl->value;
 		break;
 	case V4L2_CID_MPEG_MFC_SET_DUAL_DPB_MODE:
-		mfc_err_dev("[DPB] not supported CID: 0x%x\n", ctrl->id);
+		mfc_err_ctx("[DPB] not supported CID: 0x%x\n", ctrl->id);
 		break;
 	case V4L2_CID_MPEG_VIDEO_QOS_RATIO:
 		ctx->qos_ratio = ctrl->value;
@@ -1132,7 +1132,7 @@ static int mfc_dec_s_ctrl(struct file *file, void *priv,
 	case V4L2_CID_MPEG_MFC_SET_DYNAMIC_DPB_MODE:
 		dec->is_dynamic_dpb = ctrl->value;
 		if (dec->is_dynamic_dpb == 0)
-			mfc_err_dev("[DPB] is_dynamic_dpb is 0. it has to be enabled\n");
+			mfc_err_ctx("[DPB] is_dynamic_dpb is 0. it has to be enabled\n");
 		break;
 	case V4L2_CID_MPEG_MFC_SET_USER_SHARED_HANDLE:
 		if (dec->sh_handle_dpb.fd == -1) {

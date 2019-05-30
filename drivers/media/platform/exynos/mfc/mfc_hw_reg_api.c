@@ -20,7 +20,7 @@ void mfc_reset_mfc(struct mfc_dev *dev)
 {
 	int i;
 
-	mfc_debug_enter();
+	mfc_debug_dev_enter();
 
 	/* Zero Initialization of MFC registers */
 	MFC_WRITEL(0, MFC_REG_RISC2HOST_CMD);
@@ -33,7 +33,7 @@ void mfc_reset_mfc(struct mfc_dev *dev)
 	MFC_WRITEL(0x1FFF, MFC_REG_MFC_RESET);
 	MFC_WRITEL(0, MFC_REG_MFC_RESET);
 
-	mfc_debug_leave();
+	mfc_debug_dev_leave();
 }
 
 void mfc_set_risc_base_addr(struct mfc_dev *dev,
@@ -47,7 +47,7 @@ void mfc_set_risc_base_addr(struct mfc_dev *dev,
 		fw_buf = &dev->drm_fw_buf;
 
 	MFC_WRITEL(fw_buf->daddr, MFC_REG_RISC_BASE_ADDRESS);
-	mfc_debug(2, "[MEMINFO][F/W] %s Base Address : %#x\n",
+	mfc_debug_dev(2, "[MEMINFO][F/W] %s Base Address : %#x\n",
 			buf_type == MFCBUF_DRM ? "DRM" : "NORMAL", (u32)fw_buf->daddr);
 	MFC_TRACE_DEV("%s F/W Base Address : %#x\n",
 			buf_type == MFCBUF_DRM ? "DRM" : "NORMAL", (u32)fw_buf->daddr);
@@ -55,7 +55,7 @@ void mfc_set_risc_base_addr(struct mfc_dev *dev,
 
 void mfc_cmd_host2risc(struct mfc_dev *dev, int cmd)
 {
-	mfc_debug(1, "Issue the command: %d\n", cmd);
+	mfc_debug_dev(1, "Issue the command: %d\n", cmd);
 	MFC_TRACE_DEV(">> CMD : %d, (dev:0x%lx, bits:%lx, owned:%d, wl:%d, trans:%d)\n",
 			cmd, dev->hwlock.dev, dev->hwlock.bits, dev->hwlock.owned_by_irq,
 			dev->hwlock.wl_count, dev->hwlock.transfer_owner);

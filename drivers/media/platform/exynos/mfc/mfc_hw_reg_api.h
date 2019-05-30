@@ -96,7 +96,7 @@ static inline void mfc_risc_on(struct mfc_dev *dev)
 
 	MFC_WRITEL(0x1, MFC_REG_RISC_ON);
 	MFC_WRITEL(0x0, MFC_REG_MFC_OFF);
-	mfc_debug(1, "RISC_ON\n");
+	mfc_debug_dev(1, "RISC_ON\n");
 	MFC_TRACE_DEV(">> RISC ON\n");
 }
 

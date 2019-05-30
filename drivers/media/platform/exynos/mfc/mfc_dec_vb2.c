@@ -284,7 +284,7 @@ static void __mfc_dec_src_stop_streaming(struct mfc_ctx *ctx)
 			}
 		}
 
-		src_mb = mfc_get_del_buf(&ctx->buf_queue_lock, &ctx->src_buf_queue, MFC_BUF_NO_TOUCH_USED);
+		src_mb = mfc_get_del_buf(ctx, &ctx->src_buf_queue, MFC_BUF_NO_TOUCH_USED);
 		if (!src_mb)
 			break;
 
@@ -315,7 +315,6 @@ static void __mfc_dec_src_stop_streaming(struct mfc_ctx *ctx)
 static void __mfc_dec_dst_stop_streaming(struct mfc_ctx *ctx)
 {
 	struct mfc_dec *dec = ctx->dec_priv;
-	struct mfc_dev *dev = ctx->dev;
 	int index = 0;
 
 	mfc_cleanup_assigned_fd(ctx);
@@ -430,7 +429,7 @@ static void mfc_dec_buf_queue(struct vb2_buffer *vb)
 
 		buf->vir_addr = stream_vir;
 
-		mfc_add_tail_buf(&ctx->buf_queue_lock, &ctx->src_buf_queue, buf);
+		mfc_add_tail_buf(ctx, &ctx->src_buf_queue, buf);
 
 		if (debug_ts == 1)
 			mfc_info_ctx("[TS] framerate: %ld, timestamp: %lld\n",

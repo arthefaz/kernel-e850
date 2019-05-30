@@ -107,7 +107,7 @@ static void __mfc_set_default_params(struct mfc_ctx *ctx)
 	mfc_debug(2, "Set default param -  enc_param_num: %d\n", dev->pdata->enc_param_num);
 	for (i = 0; i < dev->pdata->enc_param_num; i++) {
 		if (i >= MFC_MAX_DEFAULT_PARAM) {
-			mfc_err_dev("enc_param_num(%d) is over max number(%d)\n",
+			mfc_err_ctx("enc_param_num(%d) is over max number(%d)\n",
 					dev->pdata->enc_param_num, MFC_MAX_DEFAULT_PARAM);
 			break;
 		}
@@ -1262,7 +1262,6 @@ int mfc_set_enc_params(struct mfc_ctx *ctx)
 
 void mfc_set_test_params(struct mfc_dev *dev)
 {
-
 	unsigned int base_addr = 0xF000;
 	unsigned int i;
 

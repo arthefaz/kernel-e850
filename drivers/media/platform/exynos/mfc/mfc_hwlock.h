@@ -18,7 +18,7 @@
 static inline void mfc_init_listable_wq_dev(struct mfc_dev *dev)
 {
 	if (!dev) {
-		mfc_err_dev("no mfc device to run\n");
+		mfc_err("no mfc device to run\n");
 		return;
 	}
 
@@ -29,47 +29,47 @@ static inline void mfc_init_listable_wq_dev(struct mfc_dev *dev)
 	dev->hwlock_wq.dev = dev;
 }
 
-static inline void mfc_init_listable_wq_ctx(struct mfc_ctx *curr_ctx)
+static inline void mfc_init_listable_wq_ctx(struct mfc_ctx *ctx)
 {
-	if (!curr_ctx) {
-		mfc_err_dev("no mfc context to run\n");
+	if (!ctx) {
+		mfc_err("no mfc context to run\n");
 		return;
 	}
 
-	INIT_LIST_HEAD(&curr_ctx->hwlock_wq.list);
-	init_waitqueue_head(&curr_ctx->hwlock_wq.wait_queue);
-	mutex_init(&curr_ctx->hwlock_wq.wait_mutex);
-	curr_ctx->hwlock_wq.ctx = curr_ctx;
-	curr_ctx->hwlock_wq.dev = NULL;
+	INIT_LIST_HEAD(&ctx->hwlock_wq.list);
+	init_waitqueue_head(&ctx->hwlock_wq.wait_queue);
+	mutex_init(&ctx->hwlock_wq.wait_mutex);
+	ctx->hwlock_wq.ctx = ctx;
+	ctx->hwlock_wq.dev = NULL;
 }
 
 static inline void mfc_destroy_listable_wq_dev(struct mfc_dev *dev)
 {
 	if (!dev) {
-		mfc_err_dev("no mfc device to run\n");
+		mfc_err("no mfc device to run\n");
 		return;
 	}
 
 	mutex_destroy(&dev->hwlock_wq.wait_mutex);
 }
 
-static inline void mfc_destroy_listable_wq_ctx(struct mfc_ctx *curr_ctx)
+static inline void mfc_destroy_listable_wq_ctx(struct mfc_ctx *ctx)
 {
-	if (!curr_ctx) {
-		mfc_err_dev("no mfc context to run\n");
+	if (!ctx) {
+		mfc_err("no mfc context to run\n");
 		return;
 	}
 
-	mutex_destroy(&curr_ctx->hwlock_wq.wait_mutex);
+	mutex_destroy(&ctx->hwlock_wq.wait_mutex);
 }
 
 void mfc_init_hwlock(struct mfc_dev *dev);
 
 int mfc_get_hwlock_dev(struct mfc_dev *dev);
-int mfc_get_hwlock_ctx(struct mfc_ctx *curr_ctx);
+int mfc_get_hwlock_ctx(struct mfc_ctx *ctx);
 
 void mfc_release_hwlock_dev(struct mfc_dev *dev);
-void mfc_release_hwlock_ctx(struct mfc_ctx *curr_ctx);
+void mfc_release_hwlock_ctx(struct mfc_ctx *ctx);
 
 void mfc_cache_flush(struct mfc_dev *dev, int is_drm);
 

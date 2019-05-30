@@ -17,11 +17,13 @@
 
 int mfc_check_vb_with_fmt(struct mfc_fmt *fmt, struct vb2_buffer *vb)
 {
+	struct mfc_ctx *ctx = vb->vb2_queue->drv_priv;
+
 	if (!fmt)
 		return -EINVAL;
 
 	if (fmt->mem_planes != vb->num_planes) {
-		mfc_err_dev("plane number is different (%d != %d)\n",
+		mfc_err_ctx("plane number is different (%d != %d)\n",
 				fmt->mem_planes, vb->num_planes);
 		return -EINVAL;
 	}
@@ -300,7 +302,7 @@ void mfc_dec_calc_dpb_size(struct mfc_ctx *ctx)
 
 	for (i = 0; i < raw->num_planes; i++) {
 		if (raw->plane_size[i] < ctx->min_dpb_size[i]) {
-			mfc_info_dev("[FRAME] plane[%d] size is changed %d -> %d\n",
+			mfc_info_ctx("[FRAME] plane[%d] size is changed %d -> %d\n",
 					i, raw->plane_size[i], ctx->min_dpb_size[i]);
 			raw->plane_size[i] = ctx->min_dpb_size[i];
 		}
@@ -498,13 +500,13 @@ void mfc_cleanup_assigned_dpb(struct mfc_ctx *ctx)
 	int i;
 
 	if (!ctx) {
-		mfc_err_dev("no mfc context to run\n");
+		mfc_err("no mfc context to run\n");
 		return;
 	}
 
 	dec = ctx->dec_priv;
 	if (!dec) {
-		mfc_err_dev("no mfc decoder to run\n");
+		mfc_err_ctx("no mfc decoder to run\n");
 		return;
 	}
 
@@ -527,13 +529,13 @@ void mfc_unprotect_released_dpb(struct mfc_ctx *ctx, unsigned int released_flag)
 	int i;
 
 	if (!ctx) {
-		mfc_err_dev("no mfc context to run\n");
+		mfc_err("no mfc context to run\n");
 		return;
 	}
 
 	dec = ctx->dec_priv;
 	if (!dec) {
-		mfc_err_dev("no mfc decoder to run\n");
+		mfc_err_ctx("no mfc decoder to run\n");
 		return;
 	}
 
@@ -554,13 +556,13 @@ void mfc_protect_dpb(struct mfc_ctx *ctx, struct mfc_buf *dst_mb)
 	int dst_index;
 
 	if (!ctx) {
-		mfc_err_dev("no mfc context to run\n");
+		mfc_err("no mfc context to run\n");
 		return;
 	}
 
 	dec = ctx->dec_priv;
 	if (!dec) {
-		mfc_err_dev("no mfc decoder to run\n");
+		mfc_err_ctx("no mfc decoder to run\n");
 		return;
 	}
 
@@ -576,7 +578,7 @@ void mfc_watchdog_tick(unsigned long arg)
 {
 	struct mfc_dev *dev = (struct mfc_dev *)arg;
 
-	mfc_debug(5, "watchdog is ticking!\n");
+	mfc_debug_dev(5, "watchdog is ticking!\n");
 
 	if (atomic_read(&dev->watchdog_tick_running))
 		atomic_inc(&dev->watchdog_tick_cnt);
@@ -602,9 +604,9 @@ void mfc_watchdog_tick(unsigned long arg)
 void mfc_watchdog_start_tick(struct mfc_dev *dev)
 {
 	if (atomic_read(&dev->watchdog_tick_running)) {
-		mfc_debug(2, "watchdog timer was already started!\n");
+		mfc_debug_dev(2, "watchdog timer was already started!\n");
 	} else {
-		mfc_debug(2, "watchdog timer is now started!\n");
+		mfc_debug_dev(2, "watchdog timer is now started!\n");
 		atomic_set(&dev->watchdog_tick_running, 1);
 	}
 
@@ -615,10 +617,10 @@ void mfc_watchdog_start_tick(struct mfc_dev *dev)
 void mfc_watchdog_stop_tick(struct mfc_dev *dev)
 {
 	if (atomic_read(&dev->watchdog_tick_running)) {
-		mfc_debug(2, "watchdog timer is now stopped!\n");
+		mfc_debug_dev(2, "watchdog timer is now stopped!\n");
 		atomic_set(&dev->watchdog_tick_running, 0);
 	} else {
-		mfc_debug(2, "watchdog timer was already stopped!\n");
+		mfc_debug_dev(2, "watchdog timer was already stopped!\n");
 	}
 
 	/* Reset the timeout watchdog */
@@ -627,7 +629,7 @@ void mfc_watchdog_stop_tick(struct mfc_dev *dev)
 
 void mfc_watchdog_reset_tick(struct mfc_dev *dev)
 {
-	mfc_debug(2, "watchdog timer reset!\n");
+	mfc_debug_dev(2, "watchdog timer reset!\n");
 
 	/* Reset the timeout watchdog */
 	atomic_set(&dev->watchdog_tick_cnt, 0);

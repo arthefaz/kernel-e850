@@ -348,7 +348,7 @@ static void mfc_enc_stop_streaming(struct vb2_queue *q)
 			mfc_change_state(ctx, MFCINST_FINISHING);
 			mfc_set_bit(ctx->num, &dev->work_bits);
 
-			while (mfc_get_buf(&ctx->buf_queue_lock, &ctx->dst_buf_queue, MFC_BUF_NO_TOUCH_USED)) {
+			while (mfc_get_buf(ctx, &ctx->dst_buf_queue, MFC_BUF_NO_TOUCH_USED)) {
 				ret = mfc_just_run(dev, ctx->num);
 				if (ret) {
 					mfc_err_ctx("Failed to run MFC\n");
@@ -365,8 +365,7 @@ static void mfc_enc_stop_streaming(struct vb2_queue *q)
 			}
 		}
 
-		mfc_move_all_bufs(&ctx->buf_queue_lock, &ctx->src_buf_queue,
-				&ctx->ref_buf_queue, MFC_QUEUE_ADD_BOTTOM);
+		mfc_move_all_bufs(ctx, &ctx->src_buf_queue, &ctx->ref_buf_queue, MFC_QUEUE_ADD_BOTTOM);
 		mfc_cleanup_enc_src_queue(ctx);
 
 		while (index < MFC_MAX_BUFFERS) {
@@ -408,12 +407,12 @@ static void mfc_enc_buf_queue(struct vb2_buffer *vb)
 				ctx->num, vb->index, buf->addr[0][0]);
 
 		/* Mark destination as available for use by MFC */
-		mfc_add_tail_buf(&ctx->buf_queue_lock, &ctx->dst_buf_queue, buf);
+		mfc_add_tail_buf(ctx, &ctx->dst_buf_queue, buf);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		for (i = 0; i < ctx->src_fmt->mem_planes; i++)
 			mfc_debug(2, "[BUFINFO] ctx[%d] add src index: %d, addr[%d]: 0x%08llx\n",
 					ctx->num, vb->index, i, buf->addr[0][i]);
-		mfc_add_tail_buf(&ctx->buf_queue_lock, &ctx->src_buf_queue, buf);
+		mfc_add_tail_buf(ctx, &ctx->src_buf_queue, buf);
 
 		if (debug_ts == 1)
 			mfc_info_ctx("[TS] framerate: %ld, timestamp: %lld\n",

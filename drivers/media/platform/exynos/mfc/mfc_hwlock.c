@@ -27,7 +27,7 @@
 
 static inline void __mfc_print_hwlock(struct mfc_dev *dev)
 {
-	mfc_debug(2, "dev.hwlock.dev = 0x%lx, bits = 0x%lx, owned_by_irq = %d, wl_count = %d, transfer_owner = %d\n",
+	mfc_debug_dev(2, "dev.hwlock.dev = 0x%lx, bits = 0x%lx, owned_by_irq = %d, wl_count = %d, transfer_owner = %d\n",
 		dev->hwlock.dev, dev->hwlock.bits, dev->hwlock.owned_by_irq,
 		dev->hwlock.wl_count, dev->hwlock.transfer_owner);
 }
@@ -61,7 +61,7 @@ static void __mfc_remove_listable_wq_dev(struct mfc_dev *dev)
 		if (!listable_wq->dev)
 			continue;
 
-		mfc_debug(2, "Found dev and will delete it!\n");
+		mfc_debug_dev(2, "Found dev and will delete it!\n");
 
 		list_del(&listable_wq->list);
 		dev->hwlock.wl_count--;
@@ -73,9 +73,9 @@ static void __mfc_remove_listable_wq_dev(struct mfc_dev *dev)
 	spin_unlock_irqrestore(&dev->hwlock.lock, flags);
 }
 
-static void __mfc_remove_listable_wq_ctx(struct mfc_ctx *curr_ctx)
+static void __mfc_remove_listable_wq_ctx(struct mfc_ctx *ctx)
 {
-	struct mfc_dev *dev = curr_ctx->dev;
+	struct mfc_dev *dev = ctx->dev;
 	struct mfc_listable_wq *listable_wq;
 	unsigned long flags;
 
@@ -86,8 +86,8 @@ static void __mfc_remove_listable_wq_ctx(struct mfc_ctx *curr_ctx)
 		if (!listable_wq->ctx)
 			continue;
 
-		if (listable_wq->ctx->num == curr_ctx->num) {
-			mfc_debug(2, "Found ctx and will delete it (%d)!\n", curr_ctx->num);
+		if (listable_wq->ctx->num == ctx->num) {
+			mfc_debug(2, "Found ctx and will delete it (%d)!\n", ctx->num);
 
 			list_del(&listable_wq->list);
 			dev->hwlock.wl_count--;
@@ -127,7 +127,7 @@ int mfc_get_hwlock_dev(struct mfc_dev *dev)
 
 		spin_unlock_irqrestore(&dev->hwlock.lock, flags);
 
-		mfc_debug(2, "Waiting for hwlock to be released\n");
+		mfc_debug_dev(2, "Waiting for hwlock to be released\n");
 
 		ret = wait_event_timeout(dev->hwlock_wq.wait_queue,
 			((dev->hwlock.transfer_owner == 1) && (dev->hwlock.dev == 1)),
@@ -141,7 +141,7 @@ int mfc_get_hwlock_dev(struct mfc_dev *dev)
 			mutex_unlock(&dev->hwlock_wq.wait_mutex);
 			return -EIO;
 		} else {
-			mfc_debug(2, "Woken up and got hwlock\n");
+			mfc_debug_dev(2, "Woken up and got hwlock\n");
 			__mfc_print_hwlock(dev);
 			mutex_unlock(&dev->hwlock_wq.wait_mutex);
 		}
@@ -167,57 +167,57 @@ int mfc_get_hwlock_dev(struct mfc_dev *dev)
  *    0: succeeded to get hwlock
  * -EIO: failed to get hwlock (time out)
  */
-int mfc_get_hwlock_ctx(struct mfc_ctx *curr_ctx)
+int mfc_get_hwlock_ctx(struct mfc_ctx *ctx)
 {
-	struct mfc_dev *dev = curr_ctx->dev;
+	struct mfc_dev *dev = ctx->dev;
 	int ret = 0;
 	unsigned long flags;
 
-	mutex_lock(&curr_ctx->hwlock_wq.wait_mutex);
+	mutex_lock(&ctx->hwlock_wq.wait_mutex);
 
 	spin_lock_irqsave(&dev->hwlock.lock, flags);
 	__mfc_print_hwlock(dev);
 
 	if (dev->shutdown) {
-		mfc_info_dev("Couldn't lock HW. Shutdown was called\n");
+		mfc_info_ctx("Couldn't lock HW. Shutdown was called\n");
 		spin_unlock_irqrestore(&dev->hwlock.lock, flags);
-		mutex_unlock(&curr_ctx->hwlock_wq.wait_mutex);
+		mutex_unlock(&ctx->hwlock_wq.wait_mutex);
 		return -EINVAL;
 	}
 
 	if ((dev->hwlock.bits != 0) || (dev->hwlock.dev != 0)) {
-		list_add_tail(&curr_ctx->hwlock_wq.list, &dev->hwlock.waiting_list);
+		list_add_tail(&ctx->hwlock_wq.list, &dev->hwlock.waiting_list);
 		dev->hwlock.wl_count++;
 
 		spin_unlock_irqrestore(&dev->hwlock.lock, flags);
 
 		mfc_debug(2, "Waiting for hwlock to be released\n");
 
-		ret = wait_event_timeout(curr_ctx->hwlock_wq.wait_queue,
-			((dev->hwlock.transfer_owner == 1) && (test_bit(curr_ctx->num, &dev->hwlock.bits))),
+		ret = wait_event_timeout(ctx->hwlock_wq.wait_queue,
+			((dev->hwlock.transfer_owner == 1) && (test_bit(ctx->num, &dev->hwlock.bits))),
 			msecs_to_jiffies(MFC_HWLOCK_TIMEOUT));
 
 		dev->hwlock.transfer_owner = 0;
-		__mfc_remove_listable_wq_ctx(curr_ctx);
+		__mfc_remove_listable_wq_ctx(ctx);
 		if (ret == 0) {
-			mfc_err_dev("Woken up but timed out\n");
+			mfc_err_ctx("Woken up but timed out\n");
 			__mfc_print_hwlock(dev);
-			mutex_unlock(&curr_ctx->hwlock_wq.wait_mutex);
+			mutex_unlock(&ctx->hwlock_wq.wait_mutex);
 			return -EIO;
 		} else {
 			mfc_debug(2, "Woken up and got hwlock\n");
 			__mfc_print_hwlock(dev);
-			mutex_unlock(&curr_ctx->hwlock_wq.wait_mutex);
+			mutex_unlock(&ctx->hwlock_wq.wait_mutex);
 		}
 	} else {
 		dev->hwlock.bits = 0;
 		dev->hwlock.dev = 0;
-		set_bit(curr_ctx->num, &dev->hwlock.bits);
+		set_bit(ctx->num, &dev->hwlock.bits);
 		dev->hwlock.owned_by_irq = 0;
 
 		__mfc_print_hwlock(dev);
 		spin_unlock_irqrestore(&dev->hwlock.lock, flags);
-		mutex_unlock(&curr_ctx->hwlock_wq.wait_mutex);
+		mutex_unlock(&ctx->hwlock_wq.wait_mutex);
 	}
 
 	/* Stop NAL-Q after getting hwlock */
@@ -245,20 +245,20 @@ void mfc_release_hwlock_dev(struct mfc_dev *dev)
 	dev->hwlock.owned_by_irq = 0;
 
 	if (dev->shutdown) {
-		mfc_debug(2, "Couldn't wakeup module. Shutdown was called\n");
+		mfc_debug_dev(2, "Couldn't wakeup module. Shutdown was called\n");
 	} else if (list_empty(&dev->hwlock.waiting_list)) {
-		mfc_debug(2, "No waiting module\n");
+		mfc_debug_dev(2, "No waiting module\n");
 	} else {
-		mfc_debug(2, "There is a waiting module\n");
+		mfc_debug_dev(2, "There is a waiting module\n");
 		listable_wq = list_entry(dev->hwlock.waiting_list.next, struct mfc_listable_wq, list);
 		list_del(&listable_wq->list);
 		dev->hwlock.wl_count--;
 
 		if (listable_wq->dev) {
-			mfc_debug(2, "Waking up dev\n");
+			mfc_debug_dev(2, "Waking up dev\n");
 			dev->hwlock.dev = 1;
 		} else {
-			mfc_debug(2, "Waking up another ctx\n");
+			mfc_debug_dev(2, "Waking up another ctx\n");
 			set_bit(listable_wq->ctx->num, &dev->hwlock.bits);
 		}
 
@@ -278,13 +278,13 @@ void mfc_release_hwlock_dev(struct mfc_dev *dev)
  * 0: succeeded to release hwlock
  * 1: succeeded to release hwlock, hwlock is captured by another module
  */
-static void __mfc_release_hwlock_ctx_protected(struct mfc_ctx *curr_ctx)
+static void __mfc_release_hwlock_ctx_protected(struct mfc_ctx *ctx)
 {
-	struct mfc_dev *dev = curr_ctx->dev;
+	struct mfc_dev *dev = ctx->dev;
 	struct mfc_listable_wq *listable_wq;
 
 	__mfc_print_hwlock(dev);
-	clear_bit(curr_ctx->num, &dev->hwlock.bits);
+	clear_bit(ctx->num, &dev->hwlock.bits);
 	dev->hwlock.owned_by_irq = 0;
 
 	if (dev->shutdown) {
@@ -318,23 +318,23 @@ static void __mfc_release_hwlock_ctx_protected(struct mfc_ctx *curr_ctx)
  * 0: succeeded to release hwlock
  * 1: succeeded to release hwlock, hwlock is captured by another module
  */
-void mfc_release_hwlock_ctx(struct mfc_ctx *curr_ctx)
+void mfc_release_hwlock_ctx(struct mfc_ctx *ctx)
 {
-	struct mfc_dev *dev = curr_ctx->dev;
+	struct mfc_dev *dev = ctx->dev;
 	unsigned long flags;
 
 	spin_lock_irqsave(&dev->hwlock.lock, flags);
-	__mfc_release_hwlock_ctx_protected(curr_ctx);
+	__mfc_release_hwlock_ctx_protected(ctx);
 	spin_unlock_irqrestore(&dev->hwlock.lock, flags);
 }
 
-static inline void __mfc_yield_hwlock(struct mfc_dev *dev, struct mfc_ctx *curr_ctx)
+static inline void __mfc_yield_hwlock(struct mfc_dev *dev, struct mfc_ctx *ctx)
 {
 	unsigned long flags;
 
 	spin_lock_irqsave(&dev->hwlock.lock, flags);
 
-	__mfc_release_hwlock_ctx_protected(curr_ctx);
+	__mfc_release_hwlock_ctx_protected(ctx);
 
 	spin_unlock_irqrestore(&dev->hwlock.lock, flags);
 
@@ -346,11 +346,11 @@ static inline void __mfc_yield_hwlock(struct mfc_dev *dev, struct mfc_ctx *curr_
 /*
  * Should be called with hwlock.lock
  */
-static inline void __mfc_transfer_hwlock_ctx_protected(struct mfc_dev *dev, int curr_ctx_index)
+static inline void __mfc_transfer_hwlock_ctx_protected(struct mfc_dev *dev, int ctx_index)
 {
 	dev->hwlock.dev = 0;
 	dev->hwlock.bits = 0;
-	set_bit(curr_ctx_index, &dev->hwlock.bits);
+	set_bit(ctx_index, &dev->hwlock.bits);
 }
 
 /*
@@ -379,7 +379,7 @@ static int __mfc_try_to_get_new_ctx_protected(struct mfc_dev *dev)
 	/* Check whether hardware is not running */
 	if ((dev->hwlock.bits != 0) || (dev->hwlock.dev != 0)) {
 		/* This is perfectly ok, the scheduled ctx should wait */
-		mfc_debug(2, "Couldn't lock HW\n");
+		mfc_debug_dev(2, "Couldn't lock HW\n");
 		return -1;
 	}
 
@@ -389,7 +389,7 @@ static int __mfc_try_to_get_new_ctx_protected(struct mfc_dev *dev)
 		/* This is perfectly ok, the scheduled ctx should wait
 		 * No contexts to run
 		 */
-		mfc_debug(2, "No ctx is scheduled to be run\n");
+		mfc_debug_dev(2, "No ctx is scheduled to be run\n");
 		ret = -1;
 		return ret;
 	}
@@ -423,7 +423,7 @@ void mfc_try_run(struct mfc_dev *dev)
 
 	new_ctx_index = __mfc_try_to_get_new_ctx_protected(dev);
 	if (new_ctx_index < 0) {
-		mfc_debug(2, "Failed to get new context to run\n");
+		mfc_debug_dev(2, "Failed to get new context to run\n");
 		__mfc_print_hwlock(dev);
 		spin_unlock_irqrestore(&dev->hwlock.lock, flags);
 		return;
@@ -443,11 +443,11 @@ void mfc_try_run(struct mfc_dev *dev)
  * Should be called without hwlock holding
  *
  */
-void mfc_cleanup_work_bit_and_try_run(struct mfc_ctx *curr_ctx)
+void mfc_cleanup_work_bit_and_try_run(struct mfc_ctx *ctx)
 {
-	struct mfc_dev *dev = curr_ctx->dev;
+	struct mfc_dev *dev = ctx->dev;
 
-	mfc_clear_bit(curr_ctx->num, &dev->work_bits);
+	mfc_clear_bit(ctx->num, &dev->work_bits);
 
 	mfc_try_run(dev);
 }
@@ -524,7 +524,7 @@ static int __mfc_nal_q_just_run(struct mfc_ctx *ctx, int need_cache_flush)
 			mfc_info_ctx("[NALQ] stop NAL QUEUE\n");
 			if (mfc_wait_for_done_dev(dev,
 					MFC_REG_R2H_CMD_COMPLETE_QUEUE_RET)) {
-				mfc_err_dev("[NALQ] Failed to stop queue\n");
+				mfc_err_ctx("[NALQ] Failed to stop queue\n");
 				dev->logging_data->cause |= (1 << MFC_CAUSE_FAIL_STOP_NAL_Q);
 				call_dop(dev, dump_and_stop_always, dev);
 	                }
@@ -738,7 +738,7 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 	return ret;
 }
 
-void mfc_hwlock_handler_irq(struct mfc_dev *dev, struct mfc_ctx *curr_ctx,
+void mfc_hwlock_handler_irq(struct mfc_dev *dev, struct mfc_ctx *ctx,
 		unsigned int reason, unsigned int err)
 {
 	int new_ctx_index;
@@ -752,7 +752,7 @@ void mfc_hwlock_handler_irq(struct mfc_dev *dev, struct mfc_ctx *curr_ctx,
 		if (dev->preempt_ctx > MFC_NO_INSTANCE_SET) {
 			mfc_debug(2, "There is a preempt_ctx\n");
 			dev->continue_clock_on = true;
-			mfc_wake_up_ctx(curr_ctx, reason, err);
+			mfc_wake_up_ctx(ctx, reason, err);
 			new_ctx_index = dev->preempt_ctx;
 			mfc_debug(2, "preempt_ctx is : %d\n", new_ctx_index);
 
@@ -770,8 +770,8 @@ void mfc_hwlock_handler_irq(struct mfc_dev *dev, struct mfc_ctx *curr_ctx,
 
 			spin_unlock_irqrestore(&dev->hwlock.lock, flags);
 
-			mfc_release_hwlock_ctx(curr_ctx);
-			mfc_wake_up_ctx(curr_ctx, reason, err);
+			mfc_release_hwlock_ctx(ctx);
+			mfc_wake_up_ctx(ctx, reason, err);
 			queue_work(dev->butler_wq, &dev->butler_work);
 		} else {
 			mfc_debug(2, "No preempt_ctx and no waiting module\n");
@@ -784,13 +784,13 @@ void mfc_hwlock_handler_irq(struct mfc_dev *dev, struct mfc_ctx *curr_ctx,
 
 				spin_unlock_irqrestore(&dev->hwlock.lock, flags);
 
-				mfc_release_hwlock_ctx(curr_ctx);
-				mfc_wake_up_ctx(curr_ctx, reason, err);
+				mfc_release_hwlock_ctx(ctx);
+				mfc_wake_up_ctx(ctx, reason, err);
 				queue_work(dev->butler_wq, &dev->butler_work);
 			} else {
 				mfc_debug(2, "There is a ctx to run\n");
 				dev->continue_clock_on = true;
-				mfc_wake_up_ctx(curr_ctx, reason, err);
+				mfc_wake_up_ctx(ctx, reason, err);
 
 				/* If cache flush command is needed or there is OTF handle, handler should stop */
 				if ((dev->curr_ctx_is_drm != dev->ctx[new_ctx_index]->is_drm) ||
@@ -801,7 +801,7 @@ void mfc_hwlock_handler_irq(struct mfc_dev *dev, struct mfc_ctx *curr_ctx,
 
 					spin_unlock_irqrestore(&dev->hwlock.lock, flags);
 
-					mfc_release_hwlock_ctx(curr_ctx);
+					mfc_release_hwlock_ctx(ctx);
 					queue_work(dev->butler_wq, &dev->butler_work);
 				} else {
 					mfc_debug(2, "Work to do successively (next ctx: %d)\n", new_ctx_index);
@@ -821,7 +821,7 @@ void mfc_hwlock_handler_irq(struct mfc_dev *dev, struct mfc_ctx *curr_ctx,
 		mfc_debug(2, "hwlock is NOT owned by irq\n");
 		dev->continue_clock_on = false;
 		mfc_pm_clock_off(dev);
-		mfc_wake_up_ctx(curr_ctx, reason, err);
+		mfc_wake_up_ctx(ctx, reason, err);
 		queue_work(dev->butler_wq, &dev->butler_work);
 
 		spin_unlock_irqrestore(&dev->hwlock.lock, flags);

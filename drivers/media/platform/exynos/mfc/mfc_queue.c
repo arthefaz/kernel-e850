@@ -15,36 +15,36 @@
 #include "mfc_utils.h"
 #include "mfc_mem.h"
 
-void mfc_add_tail_buf(spinlock_t *plock, struct mfc_buf_queue *queue,
+void mfc_add_tail_buf(struct mfc_ctx *ctx, struct mfc_buf_queue *queue,
 		struct mfc_buf *mfc_buf)
 {
 	unsigned long flags;
 
 	if (!mfc_buf) {
-		mfc_err_dev("mfc_buf is NULL!\n");
+		mfc_err_ctx("mfc_buf is NULL!\n");
 		return;
 	}
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	mfc_buf->used = 0;
 	list_add_tail(&mfc_buf->list, &queue->head);
 	queue->count++;
 
-	spin_unlock_irqrestore(plock, flags);
+	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 }
 
-struct mfc_buf *mfc_get_buf(spinlock_t *plock, struct mfc_buf_queue *queue,
+struct mfc_buf *mfc_get_buf(struct mfc_ctx *ctx, struct mfc_buf_queue *queue,
 		enum mfc_queue_used_type used)
 {
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	if (list_empty(&queue->head)) {
 		mfc_debug(2, "queue is empty\n");
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return NULL;
 	}
 
@@ -55,21 +55,21 @@ struct mfc_buf *mfc_get_buf(spinlock_t *plock, struct mfc_buf_queue *queue,
 
 	mfc_debug(2, "addr[0]: 0x%08llx\n", mfc_buf->addr[0][0]);
 
-	spin_unlock_irqrestore(plock, flags);
+	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 	return mfc_buf;
 }
 
-struct mfc_buf *mfc_get_del_buf(spinlock_t *plock, struct mfc_buf_queue *queue,
+struct mfc_buf *mfc_get_del_buf(struct mfc_ctx *ctx, struct mfc_buf_queue *queue,
 		enum mfc_queue_used_type used)
 {
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	if (list_empty(&queue->head)) {
 		mfc_debug(2, "queue is empty\n");
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return NULL;
 	}
 
@@ -83,7 +83,7 @@ struct mfc_buf *mfc_get_del_buf(spinlock_t *plock, struct mfc_buf_queue *queue,
 	list_del(&mfc_buf->list);
 	queue->count--;
 
-	spin_unlock_irqrestore(plock, flags);
+	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 	return mfc_buf;
 }
 
@@ -137,18 +137,18 @@ struct mfc_buf *mfc_get_del_if_consumed(struct mfc_ctx *ctx, struct mfc_buf_queu
 	return mfc_buf;
 }
 
-struct mfc_buf *mfc_get_move_buf(spinlock_t *plock,
-		struct mfc_buf_queue *to_queue, struct mfc_buf_queue *from_queue,
-		enum mfc_queue_used_type used, enum mfc_queue_top_type top)
+struct mfc_buf *mfc_get_move_buf(struct mfc_ctx *ctx, struct mfc_buf_queue *to_queue,
+		struct mfc_buf_queue *from_queue, enum mfc_queue_used_type used,
+		enum mfc_queue_top_type top)
 {
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	if (list_empty(&from_queue->head)) {
 		mfc_debug(2, "from_queue is empty\n");
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return NULL;
 	}
 
@@ -169,21 +169,21 @@ struct mfc_buf *mfc_get_move_buf(spinlock_t *plock,
 
 	to_queue->count++;
 
-	spin_unlock_irqrestore(plock, flags);
+	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 	return mfc_buf;
 }
 
-struct mfc_buf *mfc_get_move_buf_used(spinlock_t *plock,
+struct mfc_buf *mfc_get_move_buf_used(struct mfc_ctx *ctx,
 		struct mfc_buf_queue *to_queue, struct mfc_buf_queue *from_queue)
 {
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	if (list_empty(&from_queue->head)) {
 		mfc_debug(2, "from_queue is empty\n");
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return NULL;
 	}
 
@@ -198,26 +198,26 @@ struct mfc_buf *mfc_get_move_buf_used(spinlock_t *plock,
 		list_add_tail(&mfc_buf->list, &to_queue->head);
 		to_queue->count++;
 
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return mfc_buf;
 	} else {
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return NULL;
 	}
 }
 
-struct mfc_buf *mfc_get_move_buf_addr(spinlock_t *plock,
+struct mfc_buf *mfc_get_move_buf_addr(struct mfc_ctx *ctx,
 		struct mfc_buf_queue *to_queue, struct mfc_buf_queue *from_queue,
 		dma_addr_t addr)
 {
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	if (list_empty(&from_queue->head)) {
 		mfc_debug(2, "[DPB] from_queue is empty\n");
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return NULL;
 	}
 
@@ -232,27 +232,26 @@ struct mfc_buf *mfc_get_move_buf_addr(spinlock_t *plock,
 		list_add_tail(&mfc_buf->list, &to_queue->head);
 		to_queue->count++;
 
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return mfc_buf;
 	} else {
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return NULL;
 	}
 }
 
-struct mfc_buf *mfc_find_first_buf(spinlock_t *plock, struct mfc_buf_queue *queue,
-		dma_addr_t addr)
+struct mfc_buf *mfc_find_first_buf(struct mfc_ctx *ctx, struct mfc_buf_queue *queue, dma_addr_t addr)
 {
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 	dma_addr_t mb_addr;
 	int i;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	if (list_empty(&queue->head)) {
 		mfc_debug(2, "queue is empty\n");
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return mfc_buf;
 	}
 
@@ -263,7 +262,7 @@ struct mfc_buf *mfc_find_first_buf(spinlock_t *plock, struct mfc_buf_queue *queu
 			mb_addr = mfc_buf->addr[i][0];
 			mfc_debug(4, "[BUFCON] batch[%d] addr[0]: 0x%08llx\n", i, mb_addr);
 			if (addr == mb_addr) {
-				spin_unlock_irqrestore(plock, flags);
+				spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 				return mfc_buf;
 			}
 		}
@@ -272,24 +271,23 @@ struct mfc_buf *mfc_find_first_buf(spinlock_t *plock, struct mfc_buf_queue *queu
 		mfc_debug(4, "addr[0]: 0x%08llx\n", mb_addr);
 
 		if (addr == mb_addr) {
-			spin_unlock_irqrestore(plock, flags);
+			spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 			return mfc_buf;
 		}
 	}
 
-	spin_unlock_irqrestore(plock, flags);
+	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 	return NULL;
 }
 
-struct mfc_buf *mfc_find_buf(spinlock_t *plock, struct mfc_buf_queue *queue,
-		dma_addr_t addr)
+struct mfc_buf *mfc_find_buf(struct mfc_ctx *ctx, struct mfc_buf_queue *queue, dma_addr_t addr)
 {
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 	dma_addr_t mb_addr;
 	int i;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	mfc_debug(4, "Looking for this address: 0x%08llx\n", addr);
 	list_for_each_entry(mfc_buf, &queue->head, list) {
@@ -298,7 +296,7 @@ struct mfc_buf *mfc_find_buf(spinlock_t *plock, struct mfc_buf_queue *queue,
 				mb_addr = mfc_buf->addr[i][0];
 				mfc_debug(4, "[BUFCON] batch[%d] addr[0]: 0x%08llx\n", i, mb_addr);
 				if (addr == mb_addr) {
-					spin_unlock_irqrestore(plock, flags);
+					spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 					return mfc_buf;
 				}
 			}
@@ -307,25 +305,24 @@ struct mfc_buf *mfc_find_buf(spinlock_t *plock, struct mfc_buf_queue *queue,
 			mfc_debug(4, "addr[0]: 0x%08llx\n", mb_addr);
 
 			if (addr == mb_addr) {
-				spin_unlock_irqrestore(plock, flags);
+				spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 				return mfc_buf;
 			}
 		}
 	}
 
-	spin_unlock_irqrestore(plock, flags);
+	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 	return NULL;
 }
 
-struct mfc_buf *mfc_find_del_buf(spinlock_t *plock, struct mfc_buf_queue *queue,
-		dma_addr_t addr)
+struct mfc_buf *mfc_find_del_buf(struct mfc_ctx *ctx, struct mfc_buf_queue *queue, dma_addr_t addr)
 {
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 	dma_addr_t mb_addr;
 	int found = 0, i;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	mfc_debug(4, "Looking for this address: 0x%08llx\n", addr);
 	list_for_each_entry(mfc_buf, &queue->head, list) {
@@ -357,15 +354,15 @@ struct mfc_buf *mfc_find_del_buf(spinlock_t *plock, struct mfc_buf_queue *queue,
 		list_del(&mfc_buf->list);
 		queue->count--;
 
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return mfc_buf;
 	} else {
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return NULL;
 	}
 }
 
-struct mfc_buf *mfc_find_move_buf(spinlock_t *plock,
+struct mfc_buf *mfc_find_move_buf(struct mfc_ctx *ctx,
 		struct mfc_buf_queue *to_queue, struct mfc_buf_queue *from_queue,
 		dma_addr_t addr, unsigned int released_flag)
 {
@@ -374,7 +371,7 @@ struct mfc_buf *mfc_find_move_buf(spinlock_t *plock,
 	dma_addr_t mb_addr;
 	int found = 0;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	mfc_debug(4, "[DPB] Looking for this address: 0x%08llx\n", addr);
 	list_for_each_entry(mfc_buf, &from_queue->head, list) {
@@ -396,15 +393,15 @@ struct mfc_buf *mfc_find_move_buf(spinlock_t *plock,
 			to_queue->count++;
 		}
 
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return mfc_buf;
 	} else {
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return NULL;
 	}
 }
 
-struct mfc_buf *mfc_find_move_buf_used(spinlock_t *plock,
+struct mfc_buf *mfc_find_move_buf_used(struct mfc_ctx *ctx,
 		struct mfc_buf_queue *to_queue, struct mfc_buf_queue *from_queue,
 		dma_addr_t addr)
 {
@@ -413,7 +410,7 @@ struct mfc_buf *mfc_find_move_buf_used(spinlock_t *plock,
 	dma_addr_t mb_addr;
 	int found = 0;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	mfc_debug(4, "[DPB] Looking for this address: 0x%08llx\n", addr);
 	list_for_each_entry(mfc_buf, &from_queue->head, list) {
@@ -434,21 +431,21 @@ struct mfc_buf *mfc_find_move_buf_used(spinlock_t *plock,
 		list_add_tail(&mfc_buf->list, &to_queue->head);
 		to_queue->count++;
 
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return mfc_buf;
 	} else {
-		spin_unlock_irqrestore(plock, flags);
+		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 		return NULL;
 	}
 }
 
-void mfc_move_all_bufs(spinlock_t *plock, struct mfc_buf_queue *to_queue,
+void mfc_move_all_bufs(struct mfc_ctx *ctx, struct mfc_buf_queue *to_queue,
 		struct mfc_buf_queue *from_queue, enum mfc_queue_top_type top)
 {
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	if (top == MFC_QUEUE_ADD_TOP) {
 		while (!list_empty(&from_queue->head)) {
@@ -475,17 +472,16 @@ void mfc_move_all_bufs(spinlock_t *plock, struct mfc_buf_queue *to_queue,
 	INIT_LIST_HEAD(&from_queue->head);
 	from_queue->count = 0;
 
-	spin_unlock_irqrestore(plock, flags);
+	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 }
 
-struct mfc_buf *__mfc_find_buf_index(spinlock_t *plock, struct mfc_buf_queue *queue,
-		int index)
+struct mfc_buf *__mfc_find_buf_index(struct mfc_ctx *ctx, struct mfc_buf_queue *queue, int index)
 {
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 	int buf_index;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	mfc_debug(4, "[DPB] Looking for index: %d\n", index);
 	list_for_each_entry(mfc_buf, &queue->head, list) {
@@ -493,12 +489,12 @@ struct mfc_buf *__mfc_find_buf_index(spinlock_t *plock, struct mfc_buf_queue *qu
 
 		if (index == buf_index) {
 			mfc_debug(2, "[DPB] Found index: %d\n", buf_index);
-			spin_unlock_irqrestore(plock, flags);
+			spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 			return mfc_buf;
 		}
 	}
 
-	spin_unlock_irqrestore(plock, flags);
+	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 	return NULL;
 }
 
@@ -506,9 +502,8 @@ struct mfc_buf *__mfc_find_buf_index(spinlock_t *plock, struct mfc_buf_queue *qu
  * Check released and enqueued buffers. (dst queue)
  * Check and move reuse buffers. (ref -> dst queue)
  */
-static void __mfc_check_ref_frame(spinlock_t *plock, struct mfc_buf_queue *dst_queue,
-		struct mfc_buf_queue *ref_queue,
-		struct mfc_ctx *ctx, int ref_index)
+static void __mfc_check_ref_frame(struct mfc_ctx *ctx, struct mfc_buf_queue *dst_queue,
+		struct mfc_buf_queue *ref_queue, int ref_index)
 {
 	unsigned long flags;
 	struct mfc_dec *dec = ctx->dec_priv;
@@ -516,7 +511,7 @@ static void __mfc_check_ref_frame(spinlock_t *plock, struct mfc_buf_queue *dst_q
 	int index;
 	int found = 0;
 
-	spin_lock_irqsave(plock, flags);
+	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	/* reuse buffers : error frame, decoding only frame (ref -> dst queue) */
 	list_for_each_entry_safe(ref_mb, tmp_mb, &ref_queue->head, list) {
@@ -553,12 +548,11 @@ static void __mfc_check_ref_frame(spinlock_t *plock, struct mfc_buf_queue *dst_q
 		}
 	}
 
-	spin_unlock_irqrestore(plock, flags);
+	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 }
 
 /* Process the released reference information */
-void mfc_handle_released_info(struct mfc_ctx *ctx,
-		unsigned int released_flag, int index)
+void mfc_handle_released_info(struct mfc_ctx *ctx, unsigned int released_flag, int index)
 {
 	struct mfc_dec *dec;
 	struct dec_dpb_ref_info *refBuf;
@@ -566,7 +560,7 @@ void mfc_handle_released_info(struct mfc_ctx *ctx,
 
 	dec = ctx->dec_priv;
 	if (!dec) {
-		mfc_err_dev("[DPB] no decoder context to run\n");
+		mfc_err_ctx("[DPB] no decoder context to run\n");
 		return;
 	}
 	refBuf = &dec->ref_info[index];
@@ -592,7 +586,7 @@ void mfc_handle_released_info(struct mfc_ctx *ctx,
 							t, dec->assigned_fd[t]);
 					dec->err_reuse_flag &= ~(1 << t);
 				} else if ((t != index) &&
-						__mfc_find_buf_index(&ctx->buf_queue_lock, &ctx->ref_buf_queue, t)) {
+						__mfc_find_buf_index(ctx, &ctx->ref_buf_queue, t)) {
 					/* decoding only frame: do not update released info */
 					mfc_debug(2, "[DPB] Released, but reuse(decoding only). FD[%d] = %03d\n",
 							t, dec->assigned_fd[t]);
@@ -604,8 +598,7 @@ void mfc_handle_released_info(struct mfc_ctx *ctx,
 					ncount++;
 				}
 				dec->assigned_fd[t] = MFC_INFO_INIT_FD;
-				__mfc_check_ref_frame(&ctx->buf_queue_lock, &ctx->dst_buf_queue,
-						&ctx->ref_buf_queue, ctx, t);
+				__mfc_check_ref_frame(ctx, &ctx->dst_buf_queue, &ctx->ref_buf_queue, t);
 			}
 		}
 	}
@@ -751,7 +744,7 @@ struct mfc_buf *__mfc_check_full_refered_dpb(struct mfc_ctx *ctx)
 
 	dec = ctx->dec_priv;
 	if (!dec) {
-		mfc_err_dev("[DPB] no decoder context to run\n");
+		mfc_err_ctx("[DPB] no decoder context to run\n");
 		return NULL;
 	}
 
@@ -818,7 +811,7 @@ struct mfc_buf *mfc_search_move_dpb_nal_q(struct mfc_ctx *ctx, unsigned int dyna
 
 	dec = ctx->dec_priv;
 	if (!dec) {
-		mfc_err_dev("no mfc decoder to run\n");
+		mfc_err_ctx("no mfc decoder to run\n");
 		return mfc_buf;
 	}
 
@@ -861,13 +854,13 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 	int index;
 
 	if (!ctx) {
-		mfc_err_dev("[DPB] no mfc context to run\n");
+		mfc_err("[DPB] no mfc context to run\n");
 		return;
 	}
 
 	dec = ctx->dec_priv;
 	if (!dec) {
-		mfc_err_dev("[DPB] no mfc decoder to run\n");
+		mfc_err_ctx("[DPB] no mfc decoder to run\n");
 		return;
 	}
 

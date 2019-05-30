@@ -11,6 +11,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/of_address.h>
 #include <linux/proc_fs.h>
@@ -116,7 +117,7 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 
 	dec = kzalloc(sizeof(struct mfc_dec), GFP_KERNEL);
 	if (!dec) {
-		mfc_err_dev("failed to allocate decoder private data\n");
+		mfc_err_ctx("failed to allocate decoder private data\n");
 		return -ENOMEM;
 	}
 	ctx->dec_priv = dec;
@@ -171,7 +172,7 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	dec->ref_info = kzalloc(
 		(sizeof(struct dec_dpb_ref_info) * MFC_MAX_DPBS), GFP_KERNEL);
 	if (!dec->ref_info) {
-		mfc_err_dev("failed to allocate decoder information data\n");
+		mfc_err_ctx("failed to allocate decoder information data\n");
 		ret = -ENOMEM;
 		goto fail_dec_init;
 	}
@@ -183,7 +184,7 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	dec->hdr10_plus_info = kzalloc(
 			(sizeof(struct hdr10_plus_meta) * MFC_MAX_DPBS), GFP_KERNEL);
 	if (!dec->hdr10_plus_info) {
-		mfc_err_dev("[HDR+] failed to allocate HDR10+ information data\n");
+		mfc_err_ctx("[HDR+] failed to allocate HDR10+ information data\n");
 		ret = -ENOMEM;
 		goto fail_dec_init;
 	}
@@ -198,7 +199,7 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	ctx->vq_src.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	ret = vb2_queue_init(&ctx->vq_src);
 	if (ret) {
-		mfc_err_dev("Failed to initialize videobuf2 queue(output)\n");
+		mfc_err_ctx("Failed to initialize videobuf2 queue(output)\n");
 		goto fail_dec_init;
 	}
 	/* Init videobuf2 queue for CAPTURE */
@@ -211,7 +212,7 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	ctx->vq_dst.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	ret = vb2_queue_init(&ctx->vq_dst);
 	if (ret) {
-		mfc_err_dev("Failed to initialize videobuf2 queue(capture)\n");
+		mfc_err_ctx("Failed to initialize videobuf2 queue(capture)\n");
 		goto fail_dec_init;
 	}
 
@@ -252,7 +253,7 @@ static int __mfc_init_enc_ctx(struct mfc_ctx *ctx)
 
 	enc = kzalloc(sizeof(struct mfc_enc), GFP_KERNEL);
 	if (!enc) {
-		mfc_err_dev("failed to allocate encoder private data\n");
+		mfc_err_ctx("failed to allocate encoder private data\n");
 		return -ENOMEM;
 	}
 	ctx->enc_priv = enc;
@@ -304,7 +305,7 @@ static int __mfc_init_enc_ctx(struct mfc_ctx *ctx)
 	ctx->vq_src.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	ret = vb2_queue_init(&ctx->vq_src);
 	if (ret) {
-		mfc_err_dev("Failed to initialize videobuf2 queue(output)\n");
+		mfc_err_ctx("Failed to initialize videobuf2 queue(output)\n");
 		goto fail_enc_init;
 	}
 
@@ -318,7 +319,7 @@ static int __mfc_init_enc_ctx(struct mfc_ctx *ctx)
 	ctx->vq_dst.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	ret = vb2_queue_init(&ctx->vq_dst);
 	if (ret) {
-		mfc_err_dev("Failed to initialize videobuf2 queue(capture)\n");
+		mfc_err_ctx("Failed to initialize videobuf2 queue(capture)\n");
 		goto fail_enc_init;
 	}
 
@@ -376,8 +377,8 @@ static int __mfc_init_instance(struct mfc_dev *dev, struct mfc_ctx *ctx)
 
 	ret = mfc_get_hwlock_dev(dev);
 	if (ret < 0) {
-		mfc_err_dev("Failed to get hwlock\n");
-		mfc_err_dev("dev.hwlock.dev = 0x%lx, bits = 0x%lx, owned_by_irq = %d, wl_count = %d, transfer_owner = %d\n",
+		mfc_err_ctx("Failed to get hwlock\n");
+		mfc_err_ctx("dev.hwlock.dev = 0x%lx, bits = 0x%lx, owned_by_irq = %d, wl_count = %d, transfer_owner = %d\n",
 				dev->hwlock.dev, dev->hwlock.bits, dev->hwlock.owned_by_irq,
 				dev->hwlock.wl_count, dev->hwlock.transfer_owner);
 		goto err_hw_lock;
@@ -409,7 +410,7 @@ static int __mfc_init_instance(struct mfc_dev *dev, struct mfc_ctx *ctx)
 	if (MFC_FEATURE_SUPPORT(dev, dev->pdata->nal_q)) {
 		dev->nal_q_handle = mfc_nal_q_create(dev);
 		if (dev->nal_q_handle == NULL)
-			mfc_err_dev("[NALQ] Can't create nal q\n");
+			mfc_err_ctx("[NALQ] Can't create nal q\n");
 	}
 
 	return ret;
@@ -441,7 +442,7 @@ err_fw_load:
 err_fw_alloc:
 	del_timer_sync(&dev->watchdog_timer);
 
-	mfc_err_dev("failed to init first instance\n");
+	mfc_err_ctx("failed to init first instance\n");
 	return ret;
 }
 
@@ -454,12 +455,12 @@ static int mfc_open(struct file *file)
 	enum mfc_node_type node;
 	struct video_device *vdev = NULL;
 
-	mfc_debug(2, "mfc driver open called\n");
-
 	if (!dev) {
-		mfc_err_dev("no mfc device to run\n");
+		mfc_err("no mfc device to run\n");
 		goto err_no_device;
 	}
+
+	mfc_debug_dev(2, "mfc driver open called\n");
 
 	if (mutex_lock_interruptible(&dev->mfc_mutex))
 		return -ERESTARTSYS;
@@ -501,7 +502,7 @@ static int mfc_open(struct file *file)
 		vdev = dev->vfd_enc_otf_drm;
 		break;
 	default:
-		mfc_err_dev("Invalid node(%d)\n", node);
+		mfc_err_ctx("Invalid node(%d)\n", node);
 		break;
 	}
 
@@ -519,8 +520,8 @@ static int mfc_open(struct file *file)
 	while (dev->ctx[ctx->num]) {
 		ctx->num++;
 		if (ctx->num >= MFC_NUM_CONTEXTS) {
-			mfc_err_dev("Too many open contexts\n");
-			mfc_err_dev("Print information to check if there was an error or not\n");
+			mfc_err_ctx("Too many open contexts\n");
+			mfc_err_ctx("Print information to check if there was an error or not\n");
 			call_dop(dev, dump_info_context, dev);
 			ret = -EBUSY;
 			goto err_ctx_num;
@@ -561,7 +562,7 @@ static int mfc_open(struct file *file)
 					dev->num_drm_inst, dev->num_inst);
 		} else {
 			mfc_err_ctx("Too many instance are opened for DRM\n");
-			mfc_err_dev("Print information to check if there was an error or not\n");
+			mfc_err_ctx("Print information to check if there was an error or not\n");
 			call_dop(dev, dump_info_context, dev);
 			ret = -EINVAL;
 			goto err_drm_start;
@@ -709,7 +710,7 @@ static int mfc_release(struct file *file)
 
 	ret = mfc_get_hwlock_ctx(ctx);
 	if (ret < 0) {
-		mfc_err_dev("Failed to get hwlock\n");
+		mfc_err_ctx("Failed to get hwlock\n");
 		MFC_TRACE_CTX_LT("[ERR][Release] failed to get hwlock (shutdown: %d)\n", dev->shutdown);
 		mutex_unlock(&dev->mfc_mutex);
 		return -EBUSY;
@@ -880,13 +881,14 @@ static const struct v4l2_file_operations mfc_fops = {
 
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 static int __mfc_parse_mfc_qos_platdata(struct device_node *np, char *node_name,
-	struct mfc_qos *qosdata)
+	struct mfc_qos *qosdata, struct mfc_dev *dev)
 {
 	struct device_node *np_qos;
 
 	np_qos = of_find_node_by_name(np, node_name);
 	if (!np_qos) {
-		pr_err("%s: could not find mfc_qos_platdata node\n", node_name);
+		dev_err(dev->device, "%s: could not find mfc_qos_platdata node\n",
+			node_name);
 		return -EINVAL;
 	}
 
@@ -911,9 +913,7 @@ static int __mfc_parse_mfc_qos_platdata(struct device_node *np, char *node_name,
 int mfc_sysmmu_fault_handler(struct iommu_domain *iodmn, struct device *device,
 		unsigned long addr, int id, void *param)
 {
-	struct mfc_dev *dev;
-
-	dev = (struct mfc_dev *)param;
+	struct mfc_dev *dev = (struct mfc_dev *)param;
 
 	/* [OTF] If AxID is 1 in SYSMMU1 fault info, it is TS-MUX fault */
 	if (dev->has_hwfc && dev->has_2sysmmu) {
@@ -1087,14 +1087,14 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 			sizeof(struct mfc_qos) * pdata->num_default_qos_steps, GFP_KERNEL);
 	for (i = 0; i < pdata->num_default_qos_steps; i++) {
 		snprintf(node_name, sizeof(node_name), "mfc_d_qos_variant_%d", i);
-		__mfc_parse_mfc_qos_platdata(np, node_name, &pdata->default_qos_table[i]);
+		__mfc_parse_mfc_qos_platdata(np, node_name, &pdata->default_qos_table[i], mfc);
 	}
 
 	pdata->encoder_qos_table = devm_kzalloc(mfc->device,
 			sizeof(struct mfc_qos) * pdata->num_encoder_qos_steps, GFP_KERNEL);
 	for (i = 0; i < pdata->num_encoder_qos_steps; i++) {
 		snprintf(node_name, sizeof(node_name), "mfc_e_qos_variant_%d", i);
-		__mfc_parse_mfc_qos_platdata(np, node_name, &pdata->encoder_qos_table[i]);
+		__mfc_parse_mfc_qos_platdata(np, node_name, &pdata->encoder_qos_table[i], mfc);
 	}
 
 	/* performance boost mode */
@@ -1102,7 +1102,7 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 			sizeof(struct mfc_qos_boost), GFP_KERNEL);
 	np_qos = of_find_node_by_name(np, "mfc_perf_boost_table");
 	if (!np_qos) {
-		pr_err("[QoS][BOOST] could not find mfc_perf_boost_table node\n");
+		dev_err(mfc->device, "[QoS][BOOST] could not find mfc_perf_boost_table node\n");
 		return -EINVAL;
 	}
 	of_property_read_u32(np_qos, "num_cluster", &pdata->qos_boost_table->num_cluster);
@@ -1227,7 +1227,7 @@ static int __mfc_register_resource(struct platform_device *pdev, struct mfc_dev 
 
 	dev->sysmmu1_base = of_iomap(iommu, 1);
 	if (dev->sysmmu1_base == NULL) {
-		pr_debug("there is only one MFC sysmmu\n");
+		dev_dbg(&pdev->dev, "there is only one MFC sysmmu\n");
 	} else {
 		dev->has_2sysmmu = 1;
 	}
@@ -1365,11 +1365,11 @@ static int __mfc_itmon_notifier(struct notifier_block *nb, unsigned long action,
 	}
 
 	if (is_mfc_itmon || is_mmcache_itmon) {
-		pr_err("mfc_itmon_notifier: %s +\n", is_mfc_itmon ? "MFC" : "MMCACHE");
-		pr_err("%s is %s\n", is_mfc_itmon ? "MFC" : "MMCACHE",
+		dev_err(dev->device, "mfc_itmon_notifier: %s +\n", is_mfc_itmon ? "MFC" : "MMCACHE");
+		dev_err(dev->device, "%s is %s\n", is_mfc_itmon ? "MFC" : "MMCACHE",
 				is_master ? "master" : "dest");
 		if (!dev->itmon_notified) {
-			pr_err("dump MFC %s information\n", is_mmcache_itmon ? "MMCACHE" : "");
+			dev_err(dev->device, "dump MFC %s information\n", is_mmcache_itmon ? "MMCACHE" : "");
 			if (is_mmcache_itmon)
 				mfc_mmcache_dump_info(dev);
 			if (is_master || (!is_master && itmon_info->onoff))
@@ -1377,9 +1377,9 @@ static int __mfc_itmon_notifier(struct notifier_block *nb, unsigned long action,
 			else
 				call_dop(dev, dump_info_without_regs, dev);
 		} else {
-			pr_err("MFC notifier has already been called. skip MFC information\n");
+			dev_err(dev->device, "MFC notifier has already been called. skip MFC information\n");
 		}
-		pr_err("mfc_itmon_notifier: %s -\n", is_mfc_itmon ? "MFC" : "MMCACHE");
+		dev_err(dev->device, "mfc_itmon_notifier: %s -\n", is_mfc_itmon ? "MFC" : "MMCACHE");
 		dev->itmon_notified = 1;
 	}
 	return NOTIFY_BAD;
@@ -1394,6 +1394,8 @@ static int mfc_probe(struct platform_device *pdev)
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	int i;
 #endif
+
+	dev_set_socdata(&pdev->dev, "Exynos", "MFC");
 
 	dev_dbg(&pdev->dev, "%s()\n", __func__);
 	dev = devm_kzalloc(&pdev->dev, sizeof(struct mfc_dev), GFP_KERNEL);
@@ -1587,7 +1589,7 @@ static int mfc_probe(struct platform_device *pdev)
 
 	mfc_init_debugfs(dev);
 
-	pr_debug("%s--\n", __func__);
+	dev_dbg(&pdev->dev, "%s--\n", __func__);
 	return 0;
 
 /* Deinit MFC if probe had failed */
@@ -1654,7 +1656,7 @@ static int mfc_remove(struct platform_device *pdev)
 #endif
 	mfc_destroy_listable_wq_dev(dev);
 	iovmm_deactivate(&pdev->dev);
-	mfc_debug(2, "Will now deinit HW\n");
+	mfc_debug_dev(2, "Will now deinit HW\n");
 	mfc_run_deinit_hw(dev);
 	free_irq(dev->irq, dev);
 	if (dev->has_mmcache)
@@ -1706,7 +1708,7 @@ static int mfc_suspend(struct device *device)
 	int ret;
 
 	if (!dev) {
-		mfc_err_dev("no mfc device to run\n");
+		mfc_err("no mfc device to run\n");
 		return -EINVAL;
 	}
 
@@ -1740,7 +1742,7 @@ static int mfc_resume(struct device *device)
 	int ret;
 
 	if (!dev) {
-		mfc_err_dev("no mfc device to run\n");
+		mfc_err("no mfc device to run\n");
 		return -EINVAL;
 	}
 
@@ -1767,9 +1769,11 @@ static int mfc_resume(struct device *device)
 #endif
 
 #ifdef CONFIG_PM
-static int mfc_runtime_suspend(struct device *dev)
+static int mfc_runtime_suspend(struct device *device)
 {
-	mfc_debug(3, "mfc runtime suspend\n");
+	struct mfc_dev *dev = platform_get_drvdata(to_platform_device(device));
+
+	mfc_debug_dev(3, "mfc runtime suspend\n");
 
 	return 0;
 }
@@ -1779,9 +1783,11 @@ static int mfc_runtime_idle(struct device *dev)
 	return 0;
 }
 
-static int mfc_runtime_resume(struct device *dev)
+static int mfc_runtime_resume(struct device *device)
 {
-	mfc_debug(3, "mfc runtime resume\n");
+	struct mfc_dev *dev = platform_get_drvdata(to_platform_device(device));
+
+	mfc_debug_dev(3, "mfc runtime resume\n");
 
 	return 0;
 }

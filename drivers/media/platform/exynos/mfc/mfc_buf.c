@@ -25,7 +25,7 @@ static void __mfc_alloc_common_context(struct mfc_dev *dev,
 	int firmware_size;
 	unsigned long fw_daddr;
 
-	mfc_debug_enter();
+	mfc_debug_dev_enter();
 
 	ctx_buf = &dev->common_ctx_buf;
 	fw_daddr = dev->fw_buf.daddr;
@@ -43,7 +43,7 @@ static void __mfc_alloc_common_context(struct mfc_dev *dev,
 	ctx_buf->vaddr = NULL;
 	ctx_buf->daddr = fw_daddr + firmware_size;
 
-	mfc_debug_leave();
+	mfc_debug_dev_leave();
 }
 
 /* Wrapper : allocate context buffers for SYS_INIT */
@@ -145,6 +145,7 @@ int mfc_alloc_instance_context(struct mfc_ctx *ctx)
 
 	mfc_debug(2, "[MEMINFO] Instance buf ctx[%d] size: %ld, daddr: 0x%08llx\n",
 			ctx->num, ctx->instance_ctx_buf.size, ctx->instance_ctx_buf.daddr);
+	mfc_debug_leave();
 
 	return 0;
 }
@@ -164,9 +165,7 @@ void mfc_release_instance_context(struct mfc_ctx *ctx)
 
 static void __mfc_dec_calc_codec_buffer_size(struct mfc_ctx *ctx)
 {
-	struct mfc_dec *dec;
-
-	dec = ctx->dec_priv;
+	struct mfc_dec *dec = ctx->dec_priv;
 
 	/* Codecs have different memory requirements */
 	switch (ctx->codec_mode) {
@@ -382,6 +381,7 @@ int mfc_alloc_codec_buffers(struct mfc_ctx *ctx)
 
 	mfc_debug(2, "[MEMINFO] Codec buf ctx[%d] size: %ld, addr: 0x%08llx\n",
 			ctx->num, ctx->codec_buf.size, ctx->codec_buf.daddr);
+	mfc_debug_leave();
 
 	return 0;
 }
@@ -401,7 +401,7 @@ int mfc_alloc_dbg_info_buffer(struct mfc_dev *dev)
 {
 	struct mfc_ctx_buf_size *buf_size = dev->variant->buf_size->ctx_buf;
 
-	mfc_debug(2, "Allocate a debug-info buffer\n");
+	mfc_debug_dev(2, "Allocate a debug-info buffer\n");
 
 	dev->dbg_info_buf.buftype = MFCBUF_NORMAL;
 	dev->dbg_info_buf.size = buf_size->dbg_info_buf;
@@ -409,7 +409,7 @@ int mfc_alloc_dbg_info_buffer(struct mfc_dev *dev)
 		mfc_err_dev("Allocating debug info buffer failed\n");
 		return -ENOMEM;
 	}
-	mfc_debug(2, "[MEMINFO] debug info buf size: %ld, daddr: 0x%08llx, vaddr: 0x%p\n",
+	mfc_debug_dev(2, "[MEMINFO] debug info buf size: %ld, daddr: 0x%08llx, vaddr: 0x%p\n",
 			dev->dbg_info_buf.size, dev->dbg_info_buf.daddr, dev->dbg_info_buf.vaddr);
 
 	return 0;
@@ -419,10 +419,10 @@ int mfc_alloc_dbg_info_buffer(struct mfc_dev *dev)
 void mfc_release_dbg_info_buffer(struct mfc_dev *dev)
 {
 	if (!dev->dbg_info_buf.dma_buf)
-		mfc_debug(2, "debug info buffer is already freed\n");
+		mfc_debug_dev(2, "debug info buffer is already freed\n");
 
 	mfc_mem_ion_free(dev, &dev->dbg_info_buf);
-	mfc_debug(2, "[MEMINFO] Release the debug info buffer\n");
+	mfc_debug_dev(2, "[MEMINFO] Release the debug info buffer\n");
 }
 
 /* Allocation buffer of ROI macroblock information */
@@ -455,7 +455,7 @@ int mfc_alloc_enc_roi_buffer(struct mfc_ctx *ctx)
 
 	for (i = 0; i < MFC_MAX_EXTRA_BUF; i++) {
 		if (__mfc_alloc_enc_roi_buffer(ctx, &enc->roi_buf[i]) < 0) {
-			mfc_err_dev("[ROI] Allocating remapping buffer[%d] failed\n", i);
+			mfc_err_ctx("[ROI] Allocating remapping buffer[%d] failed\n", i);
 			return -ENOMEM;
 		}
 	}
@@ -531,7 +531,7 @@ int mfc_alloc_firmware(struct mfc_dev *dev)
 	size_t firmware_size;
 	struct mfc_ctx_buf_size *buf_size;
 
-	mfc_debug_enter();
+	mfc_debug_dev_enter();
 
 	buf_size = dev->variant->buf_size->ctx_buf;
 	firmware_size = dev->variant->buf_size->firmware_code;
@@ -540,7 +540,7 @@ int mfc_alloc_firmware(struct mfc_dev *dev)
 	if (dev->fw_buf.dma_buf)
 		return 0;
 
-	mfc_debug(4, "[F/W] Allocating memory for firmware\n");
+	mfc_debug_dev(4, "[F/W] Allocating memory for firmware\n");
 	trace_mfc_loadfw_start(dev->fw.size, firmware_size);
 
 	dev->fw_buf.buftype = MFCBUF_NORMAL;
@@ -550,7 +550,7 @@ int mfc_alloc_firmware(struct mfc_dev *dev)
 		return -ENOMEM;
 	}
 
-	mfc_debug(2, "[MEMINFO][F/W] FW normal: 0x%08llx (vaddr: 0x%p), size: %08zu\n",
+	mfc_debug_dev(2, "[MEMINFO][F/W] FW normal: 0x%08llx (vaddr: 0x%p), size: %08zu\n",
 			dev->fw_buf.daddr, dev->fw_buf.vaddr,
 			dev->fw_buf.size);
 
@@ -562,12 +562,12 @@ int mfc_alloc_firmware(struct mfc_dev *dev)
 		return -ENOMEM;
 	}
 
-	mfc_debug(2, "[MEMINFO][F/W] FW DRM: 0x%08llx (vaddr: 0x%p), size: %08zu\n",
+	mfc_debug_dev(2, "[MEMINFO][F/W] FW DRM: 0x%08llx (vaddr: 0x%p), size: %08zu\n",
 			dev->drm_fw_buf.daddr, dev->drm_fw_buf.vaddr,
 			dev->drm_fw_buf.size);
 #endif
 
-	mfc_debug_leave();
+	mfc_debug_dev_leave();
 
 	return 0;
 }
@@ -583,8 +583,8 @@ int mfc_load_firmware(struct mfc_dev *dev)
 
 	/* Firmare has to be present as a separate file or compiled
 	 * into kernel. */
-	mfc_debug_enter();
-	mfc_debug(4, "[F/W] Requesting F/W\n");
+	mfc_debug_dev_enter();
+	mfc_debug_dev(4, "[F/W] Requesting F/W\n");
 	err = request_firmware((const struct firmware **)&fw_blob,
 					MFC_FW_NAME, dev->v4l2_dev.dev);
 
@@ -594,7 +594,7 @@ int mfc_load_firmware(struct mfc_dev *dev)
 		return -EINVAL;
 	}
 
-	mfc_debug(2, "[MEMINFO][F/W] loaded F/W Size: %zu\n", fw_blob->size);
+	mfc_debug_dev(2, "[MEMINFO][F/W] loaded F/W Size: %zu\n", fw_blob->size);
 
 	if (fw_blob->size > firmware_size) {
 		mfc_err_dev("[MEMINFO][F/W] MFC firmware(%zu) is too big to be loaded in memory(%zu)\n",
@@ -610,18 +610,18 @@ int mfc_load_firmware(struct mfc_dev *dev)
 	}
 
 	/*  This adds to clear with '0' for firmware memory except code region. */
-	mfc_debug(4, "[F/W] memset before memcpy for normal fw\n");
+	mfc_debug_dev(4, "[F/W] memset before memcpy for normal fw\n");
 	memset((dev->fw_buf.vaddr + fw_blob->size), 0, (firmware_size - fw_blob->size));
 	memcpy(dev->fw_buf.vaddr, fw_blob->data, fw_blob->size);
 	if (dev->drm_fw_buf.vaddr) {
-		mfc_debug(4, "[F/W] memset before memcpy for secure fw\n");
+		mfc_debug_dev(4, "[F/W] memset before memcpy for secure fw\n");
 		memset((dev->drm_fw_buf.vaddr + fw_blob->size), 0, (firmware_size - fw_blob->size));
 		memcpy(dev->drm_fw_buf.vaddr, fw_blob->data, fw_blob->size);
-		mfc_debug(4, "[F/W] copy firmware to secure region\n");
+		mfc_debug_dev(4, "[F/W] copy firmware to secure region\n");
 	}
 	release_firmware(fw_blob);
 	trace_mfc_loadfw_end(dev->fw.size, firmware_size);
-	mfc_debug_leave();
+	mfc_debug_dev_leave();
 	return 0;
 }
 

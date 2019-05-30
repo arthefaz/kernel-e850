@@ -16,13 +16,13 @@
 
 void mfc_dbg_enable(struct mfc_dev *dev)
 {
-	mfc_debug(2, "MFC debug info enable\n");
+	mfc_debug_dev(2, "MFC debug info enable\n");
 	MFC_WRITEL(0x1, MFC_REG_DBG_INFO_ENABLE);
 }
 
 void mfc_dbg_disable(struct mfc_dev *dev)
 {
-	mfc_debug(2, "MFC debug info disable\n");
+	mfc_debug_dev(2, "MFC debug info disable\n");
 	MFC_WRITEL(0x0, MFC_REG_DBG_INFO_ENABLE);
 }
 
@@ -74,7 +74,6 @@ void mfc_otf_set_stream_size(struct mfc_ctx *ctx, unsigned int size)
 void mfc_otf_set_hwfc_index(struct mfc_ctx *ctx, int job_id)
 {
 	struct mfc_dev *dev = ctx->dev;
-
 	mfc_debug(2, "[OTF] set hwfc index, %d\n", job_id);
 	HWFC_WRITEL(job_id, HWFC_ENCODING_IDX);
 }

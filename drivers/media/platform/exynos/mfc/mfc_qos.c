@@ -45,7 +45,7 @@ void mfc_perf_boost_enable(struct mfc_dev *dev)
 				qos_boost_table->freq_int);
 		pm_qos_add_request(&dev->qos_req_mif, PM_QOS_BUS_THROUGHPUT,
 				qos_boost_table->freq_mif);
-		mfc_debug(3, "[QoS][BOOST] DVFS mfc: %d, int:%d, mif:%d\n",
+		mfc_debug_dev(3, "[QoS][BOOST] DVFS mfc: %d, int:%d, mif:%d\n",
 				qos_boost_table->freq_mfc, qos_boost_table->freq_int,
 				qos_boost_table->freq_mif);
 	}
@@ -54,7 +54,7 @@ void mfc_perf_boost_enable(struct mfc_dev *dev)
 	if (perf_boost_mode & MFC_PERF_BOOST_MO) {
 		if (pdata->mo_control) {
 			bts_add_scenario(qos_boost_table->bts_scen_idx);
-			mfc_debug(3, "[QoS][BOOST] BTS(MO) add idx %d (%s)\n",
+			mfc_debug_dev(3, "[QoS][BOOST] BTS(MO) add idx %d (%s)\n",
 					qos_boost_table->bts_scen_idx, qos_boost_table->name);
 		}
 	}
@@ -64,7 +64,7 @@ void mfc_perf_boost_enable(struct mfc_dev *dev)
 		for (i = 0; i < qos_boost_table->num_cluster; i++) {
 			pm_qos_add_request(&dev->qos_req_cluster[i], PM_QOS_CLUSTER0_FREQ_MIN + (i * 2),
 					qos_boost_table->freq_cluster[i]);
-			mfc_debug(3, "[QoS][BOOST] CPU cluster[%d]: %d\n",
+			mfc_debug_dev(3, "[QoS][BOOST] CPU cluster[%d]: %d\n",
 					i, qos_boost_table->freq_cluster[i]);
 		}
 	}
@@ -80,14 +80,14 @@ void mfc_perf_boost_disable(struct mfc_dev *dev)
 			pm_qos_remove_request(&dev->qos_req_mfc);
 		pm_qos_remove_request(&dev->qos_req_int);
 		pm_qos_remove_request(&dev->qos_req_mif);
-		mfc_debug(3, "[QoS][BOOST] DVFS off\n");
+		mfc_debug_dev(3, "[QoS][BOOST] DVFS off\n");
 	}
 
 #ifdef CONFIG_EXYNOS_BTS
 	if (perf_boost_mode & MFC_PERF_BOOST_MO) {
 		if (pdata->mo_control) {
 			bts_del_scenario(pdata->qos_boost_table->bts_scen_idx);
-			mfc_debug(3, "[QoS][BOOST] BTS(MO) del idx %d (%s)\n",
+			mfc_debug_dev(3, "[QoS][BOOST] BTS(MO) del idx %d (%s)\n",
 					pdata->qos_boost_table->bts_scen_idx,
 					pdata->qos_boost_table->name);
 		}
@@ -97,7 +97,7 @@ void mfc_perf_boost_disable(struct mfc_dev *dev)
 	if (perf_boost_mode & MFC_PERF_BOOST_CPU) {
 		for (i = 0; i < pdata->qos_boost_table->num_cluster; i++) {
 			pm_qos_remove_request(&dev->qos_req_cluster[i]);
-			mfc_debug(3, "[QoS][BOOST] CPU cluster[%d] off\n", i);
+			mfc_debug_dev(3, "[QoS][BOOST] CPU cluster[%d] off\n", i);
 		}
 	}
 }
@@ -546,7 +546,7 @@ static int __mfc_qos_get_freq_by_bps(struct mfc_dev *dev, unsigned long total_bp
 	int i;
 
 	if (total_bps > dev->pdata->max_Kbps[0]) {
-		mfc_debug(4, "[QoS] overspec bps %d > %d\n",
+		mfc_debug_dev(4, "[QoS] overspec bps %d > %d\n",
 				total_bps, dev->pdata->max_Kbps[0]);
 		return dev->bitrate_table[dev->pdata->num_mfc_freq - 1].mfc_freq;
 	}
@@ -810,14 +810,14 @@ static int __mfc_qos_get_bps_section_by_bps(struct mfc_dev *dev, int Kbps)
 	int i;
 
 	if (Kbps > dev->pdata->max_Kbps[0]) {
-		mfc_debug(4, "[QoS] overspec bps %d > %d\n",
+		mfc_debug_dev(4, "[QoS] overspec bps %d > %d\n",
 				Kbps, dev->pdata->max_Kbps[0]);
 		return dev->pdata->num_mfc_freq - 1;
 	}
 
 	for (i = 0; i < dev->pdata->num_mfc_freq; i++) {
 		if (Kbps <= dev->bitrate_table[i].bps_interval) {
-			mfc_debug(3, "[QoS] MFC freq lv%d, %dKHz is needed\n",
+			mfc_debug_dev(3, "[QoS] MFC freq lv%d, %dKHz is needed\n",
 					i, dev->bitrate_table[i].mfc_freq);
 			return i;
 		}

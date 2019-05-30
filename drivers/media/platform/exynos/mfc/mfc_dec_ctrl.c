@@ -370,7 +370,7 @@ static int mfc_dec_init_ctx_ctrls(struct mfc_ctx *ctx)
 	for (i = 0; i < NUM_CTRL_CFGS; i++) {
 		ctx_ctrl = kzalloc(sizeof(struct mfc_ctx_ctrl), GFP_KERNEL);
 		if (ctx_ctrl == NULL) {
-			mfc_err_dev("Failed to allocate context control "
+			mfc_err_ctx("Failed to allocate context control "
 					"id: 0x%08x, type: %d\n",
 					mfc_ctrl_list[i].id,
 					mfc_ctrl_list[i].type);
@@ -427,7 +427,7 @@ static int mfc_dec_init_buf_ctrls(struct mfc_ctx *ctx,
 	struct list_head *head;
 
 	if (index >= MFC_MAX_BUFFERS) {
-		mfc_err_dev("Per-buffer control index is out of range\n");
+		mfc_err_ctx("Per-buffer control index is out of range\n");
 		return -EINVAL;
 	}
 
@@ -448,7 +448,7 @@ static int mfc_dec_init_buf_ctrls(struct mfc_ctx *ctx,
 
 		head = &ctx->dst_ctrls[index];
 	} else {
-		mfc_err_dev("Control type mismatch. type : %d\n", type);
+		mfc_err_ctx("Control type mismatch. type : %d\n", type);
 		return -EINVAL;
 	}
 
@@ -465,7 +465,7 @@ static int mfc_dec_init_buf_ctrls(struct mfc_ctx *ctx,
 		}
 
 		if (i == NUM_CTRL_CFGS) {
-			mfc_err_dev("Failed to find buffer control "
+			mfc_err_ctx("Failed to find buffer control "
 					"id: 0x%08x, type: %d\n",
 					ctx_ctrl->id, ctx_ctrl->type);
 			continue;
@@ -473,7 +473,7 @@ static int mfc_dec_init_buf_ctrls(struct mfc_ctx *ctx,
 
 		buf_ctrl = kzalloc(sizeof(struct mfc_buf_ctrl), GFP_KERNEL);
 		if (buf_ctrl == NULL) {
-			mfc_err_dev("Failed to allocate buffer control "
+			mfc_err_ctx("Failed to allocate buffer control "
 					"id: 0x%08x, type: %d\n",
 					mfc_ctrl_list[i].id,
 					mfc_ctrl_list[i].type);
@@ -514,7 +514,7 @@ static int mfc_dec_cleanup_buf_ctrls(struct mfc_ctx *ctx,
 	struct list_head *head;
 
 	if (index >= MFC_MAX_BUFFERS) {
-		mfc_err_dev("Per-buffer control index is out of range\n");
+		mfc_err_ctx("Per-buffer control index is out of range\n");
 		return -EINVAL;
 	}
 
@@ -531,7 +531,7 @@ static int mfc_dec_cleanup_buf_ctrls(struct mfc_ctx *ctx,
 
 		head = &ctx->dst_ctrls[index];
 	} else {
-		mfc_err_dev("Control type mismatch. type : %d\n", type);
+		mfc_err_ctx("Control type mismatch. type : %d\n", type);
 		return -EINVAL;
 	}
 
@@ -595,9 +595,9 @@ static int mfc_dec_to_ctx_ctrls(struct mfc_ctx *ctx, struct list_head *head)
 
 static int mfc_dec_set_buf_ctrls_val(struct mfc_ctx *ctx, struct list_head *head)
 {
+	struct mfc_dev *dev = ctx->dev;
 	struct mfc_buf_ctrl *buf_ctrl;
 	struct mfc_dec *dec = ctx->dec_priv;
-	struct mfc_dev *dev = ctx->dev;
 	unsigned int value = 0;
 
 	list_for_each_entry(buf_ctrl, head, list) {

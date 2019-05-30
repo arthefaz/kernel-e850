@@ -238,7 +238,7 @@ static int mfc_enc_g_fmt(struct file *file, void *priv, struct v4l2_format *f)
 			pix_fmt_mp->plane_fmt[i].sizeimage = raw->plane_size[i];
 		}
 	} else {
-		mfc_err_dev("invalid buf type (%d)\n", f->type);
+		mfc_err_ctx("invalid buf type (%d)\n", f->type);
 		return -EINVAL;
 	}
 
@@ -255,7 +255,7 @@ static int mfc_enc_try_fmt(struct file *file, void *priv, struct v4l2_format *f)
 
 	fmt = __mfc_enc_find_format(ctx, pix_fmt_mp->pixelformat);
 	if (!fmt) {
-		mfc_err_dev("Unsupported format for %s\n",
+		mfc_err_ctx("Unsupported format for %s\n",
 				V4L2_TYPE_IS_OUTPUT(f->type) ? "source" : "destination");
 		return -EINVAL;
 	}
@@ -467,7 +467,7 @@ static int mfc_enc_s_fmt_vid_cap_mplane(struct file *file, void *priv,
 
 	ret = mfc_get_hwlock_ctx(ctx);
 	if (ret < 0) {
-		mfc_err_dev("Failed to get hwlock\n");
+		mfc_err_ctx("Failed to get hwlock\n");
 		mfc_release_instance_context(ctx);
 		mfc_release_enc_roi_buffer(ctx);
 		return -EBUSY;
@@ -712,18 +712,18 @@ static int mfc_enc_querybuf(struct file *file, void *priv,
 		mfc_debug(4, "enc dst querybuf, state: %d\n", ctx->state);
 		ret = vb2_querybuf(&ctx->vq_dst, buf);
 		if (ret != 0) {
-			mfc_err_dev("enc dst: error in vb2_querybuf()\n");
+			mfc_err_ctx("enc dst: error in vb2_querybuf()\n");
 			return ret;
 		}
 	} else if (buf->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		mfc_debug(4, "enc src querybuf, state: %d\n", ctx->state);
 		ret = vb2_querybuf(&ctx->vq_src, buf);
 		if (ret != 0) {
-			mfc_err_dev("enc src: error in vb2_querybuf()\n");
+			mfc_err_ctx("enc src: error in vb2_querybuf()\n");
 			return ret;
 		}
 	} else {
-		mfc_err_dev("invalid buf type (%d)\n", buf->type);
+		mfc_err_ctx("invalid buf type (%d)\n", buf->type);
 		return -EINVAL;
 	}
 
@@ -876,6 +876,7 @@ static int mfc_enc_streamoff(struct file *file, void *priv,
 static int mfc_enc_queryctrl(struct file *file, void *priv,
 			    struct v4l2_queryctrl *qc)
 {
+	struct mfc_dev *dev = video_drvdata(file);
 	struct v4l2_queryctrl *c;
 
 	c = __mfc_enc_get_ctrl(qc->id);

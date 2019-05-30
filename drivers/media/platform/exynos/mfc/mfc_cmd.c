@@ -29,7 +29,7 @@ void mfc_cmd_sys_init(struct mfc_dev *dev,
 	struct mfc_ctx_buf_size *buf_size;
 	struct mfc_special_buf *ctx_buf;
 
-	mfc_debug_enter();
+	mfc_debug_dev_enter();
 
 	mfc_clean_dev_int_flags(dev);
 
@@ -44,27 +44,27 @@ void mfc_cmd_sys_init(struct mfc_dev *dev,
 
 	mfc_cmd_host2risc(dev, MFC_REG_H2R_CMD_SYS_INIT);
 
-	mfc_debug_leave();
+	mfc_debug_dev_leave();
 }
 
 void mfc_cmd_sleep(struct mfc_dev *dev)
 {
-	mfc_debug_enter();
+	mfc_debug_dev_enter();
 
 	mfc_clean_dev_int_flags(dev);
 	mfc_cmd_host2risc(dev, MFC_REG_H2R_CMD_SLEEP);
 
-	mfc_debug_leave();
+	mfc_debug_dev_leave();
 }
 
 void mfc_cmd_wakeup(struct mfc_dev *dev)
 {
-	mfc_debug_enter();
+	mfc_debug_dev_enter();
 
 	mfc_clean_dev_int_flags(dev);
 	mfc_cmd_host2risc(dev, MFC_REG_H2R_CMD_WAKEUP);
 
-	mfc_debug_leave();
+	mfc_debug_dev_leave();
 }
 
 /* Open a new instance and get its number */
