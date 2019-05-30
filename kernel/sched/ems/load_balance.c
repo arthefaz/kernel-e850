@@ -178,7 +178,7 @@ void update_lbt_overutil(int cpu, unsigned long capacity)
 }
 
 #define SD_BOTTOM_LEVEL (0)
-
+static struct cpumask pre_overutilized_cpus;
 bool lb_sibling_overutilized(int dst_cpu, struct sched_domain *sd, struct cpumask *lb_cpus)
 {
 	bool overutilized = true;
@@ -209,6 +209,14 @@ bool lb_sibling_overutilized(int dst_cpu, struct sched_domain *sd, struct cpumas
 
 			/* It means that the sibling needs to be *balanced* */
 			if (ml_cpu_util(cpu) <= ou[sd->level - 1].capacity)
+				overutilized = false;
+
+			/*
+			 * In TOP level,
+			 * let's check whether pre_overutilized_cpus are all overutilized.
+			 */
+			if (!cpumask_test_cpu(dst_cpu, &pre_overutilized_cpus)
+				&& ml_cpu_util(cpu) <= ou[sd->level].capacity)
 				overutilized = false;
 		}
 next_group:
@@ -495,6 +503,7 @@ static void parse_lbt_overutil(struct device_node *dn)
 {
 	struct device_node *lbt, *ou;
 	int level, depth = get_topology_depth();
+	const char *pou_cpus;
 
 	/* If lbt node isn't, set by default value (80%) */
 	lbt = of_get_child_by_name(dn, "lbt");
@@ -509,6 +518,18 @@ static void parse_lbt_overutil(struct device_node *dn)
 			default_lbt_overutil(level);
 		return;
 	}
+
+	/*
+	 * In TOP level load balancing, pre_overutilized_cpus MUST be overutilized
+	 * before non-pre_overutilized_cpus pull task(s) from them.
+	 *
+	 * NOTE : "pre_overutilized_cpus \/ non-pre_overutilized_cpus"
+	 *         equals to "cpu_possible_mask".
+	 */
+	if (!of_property_read_string(lbt, "pre-overutilized-cpus", &pou_cpus))
+		cpulist_parse(pou_cpus, &pre_overutilized_cpus);
+	else
+		cpumask_copy(&pre_overutilized_cpus, cpu_possible_mask);
 
 	for (level = 0; level <= depth; level++) {
 		char name[20];
