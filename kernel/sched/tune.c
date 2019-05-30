@@ -144,6 +144,21 @@ schedtune_boost_group_active(int idx, struct boost_groups* bg, u64 now)
 	return !schedtune_boost_timeout(now, bg->group[idx].ts);
 }
 
+bool schedtune_cpu_boost_group_active(int idx, int cpu, u64 now)
+{
+	struct boost_groups *bg = &per_cpu(cpu_boost_groups, cpu);
+
+	/*
+	 * A boost group affects a CPU only if it has
+	 * RUNNABLE tasks on that CPU or it has hold
+	 * in effect from a previous task.
+	 */
+	if (bg->group[idx].tasks)
+		return true;
+
+	return !schedtune_boost_timeout(now, bg->group[idx].ts);
+}
+
 static void
 schedtune_cpu_update(int cpu, u64 now)
 {
@@ -217,6 +232,7 @@ schedtune_boostgroup_update(int idx, int boost)
 		/* Check if this update has decreased current max */
 		if (cur_boost_max == old_boost && old_boost > boost) {
 			schedtune_cpu_update(cpu, now);
+			emst_cpu_update(cpu, now);
 			trace_sched_tune_boostgroup_update(cpu, -1, bg->boost_max);
 			continue;
 		}
@@ -256,8 +272,10 @@ schedtune_tasks_update(struct task_struct *p, int cpu, int idx, int task_count)
 			bg->group[idx].ts = now;
 
 		/* Boost group activation or deactivation on that RQ */
-		if (bg->group[idx].tasks == 1)
+		if (bg->group[idx].tasks == 1) {
 			schedtune_cpu_update(cpu, now);
+			emst_cpu_update(cpu, now);
+		}
 	}
 
 	trace_sched_tune_tasks_update(p, cpu, tasks, idx,
@@ -436,8 +454,10 @@ int schedtune_cpu_boost(int cpu)
 	now = sched_clock_cpu(cpu);
 
 	/* Check to see if we have a hold in effect */
-	if (schedtune_boost_timeout(now, bg->boost_ts))
+	if (schedtune_boost_timeout(now, bg->boost_ts)) {
 		schedtune_cpu_update(cpu, now);
+		emst_cpu_update(cpu, now);
+	}
 
 	return bg->boost_max;
 }
