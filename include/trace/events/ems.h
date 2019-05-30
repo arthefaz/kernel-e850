@@ -167,7 +167,7 @@ TRACE_EVENT(ems_compute_eff,
 		__entry->pid		= p->pid;
 		__entry->sse		= p->sse;
 		__entry->cpu		= cpu;
-		__entry->task_util	= p->se.avg.ml.util_avg;
+		__entry->task_util	= p->se.ml.util_avg;
 		__entry->cpu_util_with	= cpu_util_with;
 		__entry->eff_weight	= eff_weight;
 		__entry->capacity	= capacity;
@@ -267,7 +267,7 @@ TRACE_EVENT(ems_ontime_fit_cpus,
 		__entry->pid		= p->pid;
 		__entry->sse		= p->sse;
 		__entry->src_cpu	= src_cpu;
-		__entry->task_runnable	= p->se.avg.ml.runnable_avg;
+		__entry->task_runnable	= p->se.ml.runnable_avg;
 		__entry->fit_cpus	= fit_cpus;
 	),
 
@@ -384,8 +384,7 @@ DECLARE_EVENT_CLASS(multi_load_task,
 	),
 
 	TP_fast_assign(
-		struct sched_avg *sa = container_of(ml, struct sched_avg, ml);
-		struct sched_entity *se = container_of(sa, struct sched_entity, avg);
+		struct sched_entity *se = container_of(ml, struct sched_entity, ml);
 		struct task_struct *tsk = se->my_q ? NULL
 					: container_of(se, struct task_struct, se);
 
@@ -433,8 +432,7 @@ TRACE_EVENT(ems_multi_load_cpu,
 	),
 
 	TP_fast_assign(
-		struct sched_avg *sa = container_of(ml, struct sched_avg, ml);
-		struct cfs_rq *cfs_rq = container_of(sa, struct cfs_rq, avg);
+		struct cfs_rq *cfs_rq = container_of(ml, struct cfs_rq, ml);
 
 		__entry->cpu			= cpu_of(cfs_rq->rq);
 		__entry->runnable		= ml->runnable_avg;
@@ -504,9 +502,9 @@ TRACE_EVENT(ems_util_est_cpu,
 
 	TP_fast_assign(
 		__entry->cpu			= cpu;
-		__entry->util_avg		= cfs_rq->avg.ml.util_avg;
-		__entry->util_est_enqueued	= cfs_rq->avg.ml.util_est.enqueued;
-		__entry->util_est_enqueued_s	= cfs_rq->avg.ml.util_est_s.enqueued;
+		__entry->util_avg		= cfs_rq->ml.util_avg;
+		__entry->util_est_enqueued	= cfs_rq->ml.util_est.enqueued;
+		__entry->util_est_enqueued_s	= cfs_rq->ml.util_est_s.enqueued;
 	),
 
 	TP_printk("cpu=%d util_avg=%u util_est_enqueued=%u util_est_enqueued_s=%u",

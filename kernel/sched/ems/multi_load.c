@@ -24,7 +24,7 @@
  */
 unsigned long ml_task_runnable(struct task_struct *p)
 {
-	return READ_ONCE(p->se.avg.ml.runnable_avg);
+	return READ_ONCE(p->se.ml.runnable_avg);
 }
 
 extern long schedtune_margin(unsigned long capacity, unsigned long signal, long boost);
@@ -55,7 +55,7 @@ unsigned long ml_boosted_task_runnable(struct task_struct *p)
  */
 unsigned long ml_task_util(struct task_struct *p)
 {
-	return READ_ONCE(p->se.avg.ml.util_avg);
+	return READ_ONCE(p->se.ml.util_avg);
 }
 
 /*
@@ -66,7 +66,7 @@ unsigned long ml_task_util(struct task_struct *p)
  */
 static unsigned long _ml_task_util_est(struct task_struct *p)
 {
-	struct util_est ue = READ_ONCE(p->se.avg.ml.util_est);
+	struct util_est ue = READ_ONCE(p->se.ml.util_est);
 
 	return max(ue.ewma, ue.enqueued);
 }
@@ -116,8 +116,8 @@ static unsigned long __ml_cpu_util_est(int cpu, int sse)
 {
 	struct cfs_rq *cfs_rq = &cpu_rq(cpu)->cfs;
 
-	return sse ? READ_ONCE(cfs_rq->avg.ml.util_est_s.enqueued) :
-		READ_ONCE(cfs_rq->avg.ml.util_est.enqueued);
+	return sse ? READ_ONCE(cfs_rq->ml.util_est_s.enqueued) :
+		READ_ONCE(cfs_rq->ml.util_est.enqueued);
 }
 
 static unsigned long ml_cpu_util_est(int cpu)
@@ -136,8 +136,8 @@ unsigned long __ml_cpu_util(int cpu, int sse)
 {
 	struct cfs_rq *cfs_rq = &cpu_rq(cpu)->cfs;
 
-	return sse ? READ_ONCE(cfs_rq->avg.ml.util_avg_s) :
-				READ_ONCE(cfs_rq->avg.ml.util_avg);
+	return sse ? READ_ONCE(cfs_rq->ml.util_avg_s) :
+				READ_ONCE(cfs_rq->ml.util_avg);
 }
 
 /*
@@ -306,8 +306,7 @@ static inline struct task_struct *task_of(struct sched_entity *se)
 
 static void update_next_balance(struct multi_load *ml)
 {
-	struct sched_avg *sa = container_of(ml, struct sched_avg, ml);
-	struct sched_entity *se = container_of(sa, struct sched_entity, avg);
+	struct sched_entity *se = container_of(ml, struct sched_entity, ml);
 	struct task_struct *p;
 
 	if (se->my_q)
@@ -451,7 +450,13 @@ __update_multi_load(u64 delta, int cpu, struct cfs_rq *cfs_rq,
 void update_multi_load(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_entity *se,
 				struct sched_avg *sa, unsigned long load, int running)
 {
+	struct multi_load *ml;
 	u64 delta;
+
+	if (cfs_rq)
+		ml = &cfs_rq->ml;
+	else
+		ml = &se->ml;
 
 	delta = now - sa->last_update_time;
 	if (delta < 0)
@@ -464,32 +469,32 @@ void update_multi_load(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_ent
 	if (!load)
 		running = 0;
 
-	__update_multi_load(delta, cpu, cfs_rq, &sa->ml, load, running, get_sse(se));
+	__update_multi_load(delta, cpu, cfs_rq, ml, load, running, get_sse(se));
 }
 
 void init_multi_load(struct sched_entity *se)
 {
-	struct multi_load *ml = &se->avg.ml;
+	struct multi_load *ml = &se->ml;
 
 	memset(ml, 0, sizeof(*ml));
 
-	ml->runnable_sum = current->se.avg.ml.runnable_sum >> 1;
-	ml->runnable_avg = current->se.avg.ml.runnable_avg >> 1;
+	ml->runnable_sum = current->se.ml.runnable_sum >> 1;
+	ml->runnable_avg = current->se.ml.runnable_avg >> 1;
 }
 
 void post_init_multi_load_cfs_rq(struct sched_entity *se, u32 inherit_ratio)
 {
 	int sse = get_sse(se);
 	struct cfs_rq *cfs_rq = se->cfs_rq;
-	struct multi_load *ml = &se->avg.ml;
+	struct multi_load *ml = &se->ml;
 	unsigned long cpu_scale = capacity_cpu(cpu_of(cfs_rq->rq), sse);
 	long cap = (long)(cpu_scale - _ml_cpu_util(cpu_of(cfs_rq->rq), sse));
 
 	if (cap <= 0)
 		return;
 
-	if (cfs_rq->avg.ml.util_avg != 0) {
-		ml->util_avg  = cfs_rq->avg.ml.util_avg * se->load.weight;
+	if (cfs_rq->ml.util_avg != 0) {
+		ml->util_avg  = cfs_rq->ml.util_avg * se->load.weight;
 		ml->util_avg /= (cfs_rq->avg.load_avg + 1);
 		ml->util_avg = ml->util_avg << 1;
 
@@ -504,11 +509,11 @@ void post_init_multi_load_cfs_rq(struct sched_entity *se, u32 inherit_ratio)
 
 void post_init_multi_load_parent(struct sched_entity *se, u32 inherit_ratio)
 {
-	struct multi_load *ml = &se->avg.ml;
+	struct multi_load *ml = &se->ml;
 
 	/* initialize util */
-	ml->util_sum = current->se.avg.ml.util_sum;
-	ml->util_avg = current->se.avg.ml.util_avg;
+	ml->util_sum = current->se.ml.util_sum;
+	ml->util_avg = current->se.ml.util_avg;
 
 	trace_ems_multi_load_new_task(ml);
 }
@@ -558,14 +563,14 @@ void post_init_multi_load_parent(struct sched_entity *se, u32 inherit_ratio)
 void detach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
 	if (get_sse(se)) {
-		sub_positive(&cfs_rq->avg.ml.util_avg_s, se->avg.ml.util_avg);
-		sub_positive(&cfs_rq->avg.ml.util_sum_s, se->avg.ml.util_sum);
+		sub_positive(&cfs_rq->ml.util_avg_s, se->ml.util_avg);
+		sub_positive(&cfs_rq->ml.util_sum_s, se->ml.util_sum);
 	} else {
-		sub_positive(&cfs_rq->avg.ml.util_avg, se->avg.ml.util_avg);
-		sub_positive(&cfs_rq->avg.ml.util_sum, se->avg.ml.util_sum);
+		sub_positive(&cfs_rq->ml.util_avg, se->ml.util_avg);
+		sub_positive(&cfs_rq->ml.util_sum, se->ml.util_sum);
 	}
 
-	trace_ems_multi_load_cpu(&cfs_rq->avg.ml);
+	trace_ems_multi_load_cpu(&cfs_rq->ml);
 }
 
 /**
@@ -575,21 +580,21 @@ void detach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
  */
 void attach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
-	struct multi_load *ml = &se->avg.ml;
-	u32 divider = LOAD_AVG_MAX - 1024 + cfs_rq->avg.ml.period_contrib;
+	struct multi_load *ml = &se->ml;
+	u32 divider = LOAD_AVG_MAX - 1024 + cfs_rq->ml.period_contrib;
 
-	ml->period_contrib = cfs_rq->avg.ml.period_contrib;
+	ml->period_contrib = cfs_rq->ml.period_contrib;
 	ml->util_sum = ml->util_avg * divider;
 
 	if (get_sse(se)) {
-		cfs_rq->avg.ml.util_avg_s += se->avg.ml.util_avg;
-		cfs_rq->avg.ml.util_sum_s += se->avg.ml.util_sum;
+		cfs_rq->ml.util_avg_s += se->ml.util_avg;
+		cfs_rq->ml.util_sum_s += se->ml.util_sum;
 	} else {
-		cfs_rq->avg.ml.util_avg += se->avg.ml.util_avg;
-		cfs_rq->avg.ml.util_sum += se->avg.ml.util_sum;
+		cfs_rq->ml.util_avg += se->ml.util_avg;
+		cfs_rq->ml.util_sum += se->ml.util_sum;
 	}
 
-	trace_ems_multi_load_cpu(&cfs_rq->avg.ml);
+	trace_ems_multi_load_cpu(&cfs_rq->ml);
 }
 
 /**
@@ -603,9 +608,9 @@ void remove_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
 
 	raw_spin_lock_irqsave(&cfs_rq->ml_removed.lock, flags);
 	if (get_sse(se))
-		cfs_rq->ml_removed.util_avg_s += se->avg.ml.util_avg;
+		cfs_rq->ml_removed.util_avg_s += se->ml.util_avg;
 	else
-		cfs_rq->ml_removed.util_avg += se->avg.ml.util_avg;
+		cfs_rq->ml_removed.util_avg += se->ml.util_avg;
 	raw_spin_unlock_irqrestore(&cfs_rq->ml_removed.lock, flags);
 }
 
@@ -616,7 +621,7 @@ void remove_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
 void apply_removed_multi_load(struct cfs_rq *cfs_rq)
 {
 	unsigned long removed_util_s = 0, removed_util = 0, r;
-	struct multi_load *ml = &cfs_rq->avg.ml;
+	struct multi_load *ml = &cfs_rq->ml;
 	u32 divider = LOAD_AVG_MAX - 1024 + ml->period_contrib;
 
 	raw_spin_lock(&cfs_rq->ml_removed.lock);
@@ -638,34 +643,34 @@ void
 update_tg_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se,
 						struct cfs_rq *gcfs_rq)
 {
-	struct multi_load *ml = &se->avg.ml;
+	struct multi_load *ml = &se->ml;
 	long delta, delta_s;
 
-	delta_s = gcfs_rq->avg.ml.util_avg_s - ml->util_avg_s;
-	delta = gcfs_rq->avg.ml.util_avg - ml->util_avg;
+	delta_s = gcfs_rq->ml.util_avg_s - ml->util_avg_s;
+	delta = gcfs_rq->ml.util_avg - ml->util_avg;
 
 	if (delta_s) {
 		/* Set new sched_entity's utilization */
-		ml->util_avg_s = gcfs_rq->avg.ml.util_avg_s;
+		ml->util_avg_s = gcfs_rq->ml.util_avg_s;
 		ml->util_sum_s = ml->util_avg_s * LOAD_AVG_MAX;
 
 		/* Update parent cfs_rq utilization */
-		add_positive(&cfs_rq->avg.ml.util_avg_s, delta_s);
-		cfs_rq->avg.ml.util_sum_s = cfs_rq->avg.ml.util_avg_s * LOAD_AVG_MAX;
+		add_positive(&cfs_rq->ml.util_avg_s, delta_s);
+		cfs_rq->ml.util_sum_s = cfs_rq->ml.util_avg_s * LOAD_AVG_MAX;
 	}
 
 	if (delta) {
 		/* Set new sched_entity's utilization */
-		ml->util_avg = gcfs_rq->avg.ml.util_avg;
+		ml->util_avg = gcfs_rq->ml.util_avg;
 		ml->util_sum = ml->util_avg * LOAD_AVG_MAX;
 
 		/* Update parent cfs_rq utilization */
-		add_positive(&cfs_rq->avg.ml.util_avg, delta);
-		cfs_rq->avg.ml.util_sum = cfs_rq->avg.ml.util_avg * LOAD_AVG_MAX;
+		add_positive(&cfs_rq->ml.util_avg, delta);
+		cfs_rq->ml.util_sum = cfs_rq->ml.util_avg * LOAD_AVG_MAX;
 	}
 
 	trace_ems_multi_load_task(ml);
-	trace_ems_multi_load_cpu(&cfs_rq->avg.ml);
+	trace_ems_multi_load_cpu(&cfs_rq->ml);
 }
 
 /******************************************************************************
@@ -697,7 +702,7 @@ static inline void util_change(struct multi_load *ml)
 
 static inline struct util_est* cfs_rq_util_est(struct cfs_rq *cfs_rq, int sse)
 {
-	return sse ? &cfs_rq->avg.ml.util_est_s : &cfs_rq->avg.ml.util_est;
+	return sse ? &cfs_rq->ml.util_est_s : &cfs_rq->ml.util_est;
 }
 
 void util_est_enqueue_multi_load(struct cfs_rq *cfs_rq, struct task_struct *p)
@@ -713,7 +718,7 @@ void util_est_enqueue_multi_load(struct cfs_rq *cfs_rq, struct task_struct *p)
 		 * Skip applying estimated utilization of task to cfs_rq if it
 		 * is already applied.
 		 */
-		if (p->se.avg.ml.util_est_applied)
+		if (p->se.ml.util_est_applied)
 			return;
 
 		cfs_rq_ue = cfs_rq_util_est(cfs_rq, p->sse);
@@ -722,10 +727,10 @@ void util_est_enqueue_multi_load(struct cfs_rq *cfs_rq, struct task_struct *p)
 		enqueued  = cfs_rq_ue->enqueued;
 		enqueued += (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED);
 		WRITE_ONCE(cfs_rq_ue->enqueued, enqueued);
-		p->se.avg.ml.util_est_applied = 1;
+		p->se.ml.util_est_applied = 1;
 
 		/* Update plots for Task and CPU estimated utilization */
-		trace_ems_util_est_task(p, &p->se.avg.ml);
+		trace_ems_util_est_task(p, &p->se.ml);
 		trace_ems_util_est_cpu(cpu_of(cfs_rq->rq), cfs_rq);
 	}
 }
@@ -756,7 +761,7 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 	 * Only the task to which utilization estimation is applied to cfs_rq
 	 * is updated
 	 */
-	if (p->se.avg.ml.util_est_applied) {
+	if (p->se.ml.util_est_applied) {
 		cfs_rq_ue = cfs_rq_util_est(cfs_rq, p->sse);
 
 		/* Update root cfs_rq's estimated utilization */
@@ -764,7 +769,7 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 		ue.enqueued -= min_t(unsigned int, ue.enqueued,
 				(_ml_task_util_est(p) | UTIL_AVG_UNCHANGED));
 		WRITE_ONCE(cfs_rq_ue->enqueued, ue.enqueued);
-		p->se.avg.ml.util_est_applied = 0;
+		p->se.ml.util_est_applied = 0;
 
 		updated = true;
 	}
@@ -802,7 +807,7 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 	 * If the PELT values haven't changed since enqueue time,
 	 * skip the util_est update.
 	 */
-	ue = p->se.avg.ml.util_est;
+	ue = p->se.ml.util_est;
 	if (ue.enqueued & UTIL_AVG_UNCHANGED)
 		return;
 
@@ -835,10 +840,10 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 	ue.ewma <<= UTIL_EST_WEIGHT_SHIFT;
 	ue.ewma  += last_ewma_diff;
 	ue.ewma >>= UTIL_EST_WEIGHT_SHIFT;
-	WRITE_ONCE(p->se.avg.ml.util_est, ue);
+	WRITE_ONCE(p->se.ml.util_est, ue);
 
 	/* Update plots for Task's estimated utilization */
-	trace_ems_util_est_task(p, &p->se.avg.ml);
+	trace_ems_util_est_task(p, &p->se.ml);
 }
 
 void util_est_update(struct task_struct *p,
@@ -862,19 +867,19 @@ void util_est_update(struct task_struct *p,
 		return;
 	}
 
-	ue = p->se.avg.ml.util_est;
+	ue = p->se.ml.util_est;
 	cfs_rq_ue = cfs_rq_util_est(&rq->cfs, p->sse);
 
 	enqueued = cfs_rq_ue->enqueued;
-	if (prev_util_est && p->se.avg.ml.util_est_applied) {
+	if (prev_util_est && p->se.ml.util_est_applied) {
 		enqueued -= min_t(unsigned int, enqueued,
 				(_ml_task_util_est(p) | UTIL_AVG_UNCHANGED));
-		p->se.avg.ml.util_est_applied = 0;
+		p->se.ml.util_est_applied = 0;
 	}
 
-	if (next_util_est && likely(!p->se.avg.ml.util_est_applied)) {
+	if (next_util_est && likely(!p->se.ml.util_est_applied)) {
 		enqueued += (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED);
-		p->se.avg.ml.util_est_applied = 1;
+		p->se.ml.util_est_applied = 1;
 	}
 
 	WRITE_ONCE(cfs_rq_ue->enqueued, enqueued);

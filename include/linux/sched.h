@@ -457,8 +457,6 @@ struct sched_avg {
 	unsigned long			load_avg;
 	unsigned long			util_avg;
 	struct util_est			util_est;
-
-	struct multi_load		ml;
 };
 
 struct ontime_entity {
@@ -535,6 +533,7 @@ struct sched_entity {
 	 * collide with read-mostly values above.
 	 */
 	struct sched_avg		avg ____cacheline_aligned_in_smp;
+	struct multi_load		ml ____cacheline_aligned_in_smp;
 #endif
 	struct ontime_entity		ontime;
 };
