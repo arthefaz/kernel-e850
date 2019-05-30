@@ -293,7 +293,7 @@ int gpu_dvfs_decide_next_freq(struct kbase_device *kbdev, int utilization)
 	spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
 
 #ifdef CONFIG_MALI_SEC_CL_BOOST
-	if (kbdev->pm.backend.metrics.is_full_compute_util)
+	if (kbdev->pm.backend.metrics.is_full_compute_util && platform->cl_boost_disable == false)
 		platform->step = gpu_dvfs_get_level(platform->gpu_max_clock);
 #endif
 

@@ -36,9 +36,46 @@
 #include <linux/exynos-busmon.h>
 #endif
 
+#ifdef CONFIG_MALI_PM_QOS
+#include <linux/pm_qos.h>
+#endif
+
 #include <linux/oom.h>
 
 extern struct kbase_device *pkbdev;
+
+#ifdef CONFIG_MALI_PM_QOS
+static int gpu_pm_qos_notifier(struct notifier_block *nb,
+		unsigned long val, void *v)
+{
+	int pm_qos_class = *((int *)v);
+
+	GPU_LOG(DVFS_ERROR, DUMMY, 0u, 0u, "%s: update GPU PM Qos class %d to %ld kHz\n", __func__, pm_qos_class, val);
+
+	if (pm_qos_class == PM_QOS_GPU_THROUGHPUT_MAX) {
+		/* TO DO FOR MAX LOCK */
+		gpu_dvfs_clock_lock(GPU_DVFS_MAX_LOCK, PMQOS_LOCK, val);
+	} else if (pm_qos_class == PM_QOS_GPU_THROUGHPUT_MIN) {
+		/* TO DO FOR MIN LOCK */
+		gpu_dvfs_clock_lock(GPU_DVFS_MIN_LOCK, PMQOS_LOCK, val);
+	} else {
+		/* invalid PM QoS class */
+		return -EINVAL;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block gpu_min_qos_notifier = {
+	.notifier_call = gpu_pm_qos_notifier,
+	.priority = INT_MAX,
+};
+
+static struct notifier_block gpu_max_qos_notifier = {
+	.notifier_call = gpu_pm_qos_notifier,
+	.priority = INT_MAX,
+};
+#endif
 
 #if defined (CONFIG_EXYNOS_THERMAL) && defined(CONFIG_GPU_THERMAL)
 static void gpu_tmu_normal_work(struct kbase_device *kbdev)
@@ -100,7 +137,7 @@ static struct notifier_block gpu_tmu_nb = {
 
 static int gpu_power_on(struct kbase_device *kbdev)
 {
-	int ret;
+	int ret = 0;
 	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
 	if (!platform)
 		return -ENODEV;
@@ -119,6 +156,9 @@ static int gpu_power_on(struct kbase_device *kbdev)
 	ret = 0;
 #endif
 
+
+	GPU_LOG(DVFS_INFO, LSI_GPU_RPM_RESUME_API, ret, 0u, "power on\n");
+
 	if (ret > 0) {
 #ifdef CONFIG_MALI_DVFS
 		if (platform->early_clk_gating_status) {
@@ -126,10 +166,13 @@ static int gpu_power_on(struct kbase_device *kbdev)
 			gpu_control_enable_clock(kbdev);
 		}
 #endif
+		platform->power_runtime_resume_ret = ret;
 		return 0;
 	} else if (ret == 0) {
+		platform->power_runtime_resume_ret = ret;
 		return 1;
 	} else {
+		platform->power_runtime_resume_ret = ret;
 		GPU_LOG(DVFS_ERROR, DUMMY, 0u, 0u, "runtime pm returned %d\n", ret);
 		return 0;
 	}
@@ -137,6 +180,7 @@ static int gpu_power_on(struct kbase_device *kbdev)
 
 static void gpu_power_off(struct kbase_device *kbdev)
 {
+	int ret = 0;
 	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
 	if (!platform)
 		return;
@@ -146,13 +190,15 @@ static void gpu_power_off(struct kbase_device *kbdev)
 	gpu_control_enable_customization(kbdev);
 
 	pm_runtime_mark_last_busy(kbdev->dev);
-	pm_runtime_put_autosuspend(kbdev->dev);
+	ret = pm_runtime_put_autosuspend(kbdev->dev);
 
 #ifdef CONFIG_MALI_DVFS
 	if (platform->early_clk_gating_status)
 		gpu_control_disable_clock(kbdev);
 #endif
 #endif
+	platform->power_runtime_suspend_ret = ret;
+	GPU_LOG(DVFS_INFO, LSI_GPU_RPM_SUSPEND_API, ret, 0u, "power off\n");
 }
 
 static void gpu_power_suspend(struct kbase_device *kbdev)
@@ -164,6 +210,7 @@ static void gpu_power_suspend(struct kbase_device *kbdev)
 		return;
 
 	GPU_LOG(DVFS_INFO, DUMMY, 0u, 0u, "power suspend\n");
+#ifdef CONFIG_MALI_RT_PM
 	if (platform->dvs_status)
 		gpu_control_enable_customization(kbdev);
 
@@ -173,20 +220,44 @@ static void gpu_power_suspend(struct kbase_device *kbdev)
 	if (platform->early_clk_gating_status)
 		gpu_control_disable_clock(kbdev);
 #endif
+#endif
+
+	platform->power_runtime_suspend_ret = ret;
+	GPU_LOG(DVFS_INFO, LSI_SUSPEND_CALLBACK, ret, 0u, "power suspend\n");
 }
 
 #ifdef CONFIG_MALI_RT_PM
-
 static int gpu_pm_notifier(struct notifier_block *nb, unsigned long event, void *cmd)
 {
 	int err = NOTIFY_OK;
+	struct kbase_device *kbdev = pkbdev;
+	struct kbasep_js_device_data *js_devdata = NULL;
+	struct exynos_context *platform = NULL;
+
+	if (kbdev) {
+		js_devdata = &kbdev->js_data;
+		platform = (struct exynos_context *)kbdev->platform_context;
+	}
+
+	if (!kbdev || !js_devdata || !platform) {
+		GPU_LOG(DVFS_ERROR, DUMMY, event, 0u, "[G3D] error control of variable : event[%lu]\n", event);
+		GPU_LOG(DVFS_ERROR, DUMMY, event, 0u, "    kbdev      [%p]\n", kbdev);
+		GPU_LOG(DVFS_ERROR, DUMMY, event, 0u, "    js_devdata [%p]\n", js_devdata);
+		GPU_LOG(DVFS_ERROR, DUMMY, event, 0u, "    platform   [%p]\n", platform);
+	}
 
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
-		GPU_LOG(DVFS_DEBUG, LSI_SUSPEND, 0u, 0u, "%s: suspend prepare event\n", __func__);
+		if (platform) {
+			GPU_LOG(DVFS_DEBUG, LSI_SUSPEND, platform->power_runtime_suspend_ret, platform->power_runtime_resume_ret, \
+					"%s: suspend event\n", __func__);
+		}
 		break;
 	case PM_POST_SUSPEND:
-		GPU_LOG(DVFS_DEBUG, LSI_RESUME, 0u, 0u, "%s: resume event\n", __func__);
+		if (platform) {
+			GPU_LOG(DVFS_DEBUG, LSI_RESUME, platform->power_runtime_suspend_ret, platform->power_runtime_resume_ret, \
+					"%s: resume event\n", __func__);
+		}
 		break;
 	default:
 		break;
@@ -208,6 +279,9 @@ static int gpu_device_runtime_init(struct kbase_device *kbdev)
 		ret = -ENOSYS;
 		return ret;
 	}
+
+	platform->power_runtime_resume_ret = 0;
+	platform->power_runtime_suspend_ret = 0;
 
 	dev_dbg(kbdev->dev, "kbase_device_runtime_init\n");
 
@@ -259,6 +333,7 @@ static int pm_callback_runtime_on(struct kbase_device *kbdev)
 #endif
 	gpu_dvfs_start_env_data_gathering(kbdev);
 	platform->power_status = true;
+#if 0
 #ifdef CONFIG_MALI_DVFS
 #ifdef CONFIG_MALI_SEC_CL_BOOST
 	if (platform->dvfs_status && platform->wakeup_lock && !kbdev->pm.backend.metrics.is_full_compute_util)
@@ -269,7 +344,7 @@ static int pm_callback_runtime_on(struct kbase_device *kbdev)
 	else
 		gpu_set_target_clk_vol(platform->cur_clock, false);
 #endif /* CONFIG_MALI_DVFS */
-
+#endif
 	return 0;
 }
 extern void preload_balance_setup(struct kbase_device *kbdev);
@@ -395,6 +470,11 @@ int gpu_notifier_init(struct kbase_device *kbdev)
 		return -1;
 #endif /* CONFIG_MALI_RT_PM */
 
+#ifdef CONFIG_MALI_PM_QOS
+	pm_qos_add_notifier(PM_QOS_GPU_THROUGHPUT_MAX, &gpu_max_qos_notifier);
+	pm_qos_add_notifier(PM_QOS_GPU_THROUGHPUT_MIN, &gpu_min_qos_notifier);
+#endif
+
 #ifdef CONFIG_EXYNOS_BUSMONITOR
 	busmon_notifier_chain_register(&gpu_noc_nb);
 #endif
@@ -416,5 +496,9 @@ void gpu_notifier_term(void)
 #ifdef CONFIG_MALI_RT_PM
 	unregister_pm_notifier(&gpu_pm_nb);
 #endif /* CONFIG_MALI_RT_PM */
+#ifdef CONFIG_MALI_PM_QOS
+	pm_qos_remove_notifier(PM_QOS_GPU_THROUGHPUT_MAX, &gpu_max_qos_notifier);
+	pm_qos_remove_notifier(PM_QOS_GPU_THROUGHPUT_MIN, &gpu_min_qos_notifier);
+#endif
 	return;
 }
