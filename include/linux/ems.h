@@ -200,4 +200,8 @@ enum stune_group {
 	STUNE_RT,
 	STUNE_GROUP_COUNT,
 };
+void emst_cpu_update(int cpu, u64 now);
+unsigned long emst_boost(int cpu, unsigned long util);
+#else
+static inline unsigned long emst_boost(int cpu, unsigned long util) { return util; };
 #endif

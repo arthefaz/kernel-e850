@@ -521,7 +521,7 @@ TRACE_EVENT(ems_util_est_cpu,
 /*
  * Tracepoint for frequency variant boost
  */
-TRACE_EVENT(ems_freqvar_boost,
+TRACE_EVENT(emst_boost,
 
 	TP_PROTO(int cpu, int ratio, unsigned long util, unsigned long boosted_util),
 
