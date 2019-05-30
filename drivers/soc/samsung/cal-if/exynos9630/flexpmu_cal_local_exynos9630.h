@@ -7,14 +7,10 @@ struct pmucal_seq aud_on[] = {
 
 struct pmucal_seq aud_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_LOCKTIME_PLL_AUD", 0x14e00000, 0x0000, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON1_PLL_AUD0", 0x14E00000, 0x0124, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON2_PLL_AUD0", 0x14E00000, 0x0128, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON3_PLL_AUD0", 0x14E00000, 0x012c, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON4_PLL_AUD0", 0x14E00000, 0x0130, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON1_PLL_AUD1", 0x14E00000, 0x0144, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON2_PLL_AUD1", 0x14E00000, 0x0148, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON3_PLL_AUD1", 0x14E00000, 0x014c, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON4_PLL_AUD1", 0x14E00000, 0x0150, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON1_PLL_AUD", 0x14e00000, 0x0104, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON2_PLL_AUD", 0x14e00000, 0x0108, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON3_PLL_AUD", 0x14e00000, 0x010c, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON4_PLL_AUD", 0x14e00000, 0x0110, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CLK_CON_DIV_DIV_CLK_AUD_UAIF6", 0x14E00000, 0x1848, 0xffffffff, 0, 0x10e60000, 0x1984, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CLK_CON_DIV_DIV_CLK_AUD_UAIF5", 0x14E00000, 0x1844, 0xffffffff, 0, 0x10e60000, 0x1984, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CLK_CON_DIV_DIV_CLK_AUD_UAIF4", 0x14E00000, 0x1840, 0xffffffff, 0, 0x10e60000, 0x1984, (0x1 << 0), (0x1 << 0)),
@@ -46,12 +42,9 @@ struct pmucal_seq aud_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CLK_CON_MUX_MUX_CLK_AUD_DSIF", 0x14E00000, 0x1004, 0xffffffff, 0, 0x10e60000, 0x1984, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CLK_CON_MUX_MUX_CLK_AUD_CPU", 0x14E00000, 0x1000, 0xffffffff, 0, 0x10e60000, 0x1984, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON0_MUX_CLKCMU_AUD_CPU_USER", 0x14e00000, 0x0600, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON0_PLL_AUD0", 0x14E00000, 0x0120, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_CHECK_SKIP, "PLL_CON0_PLL_AUD0", 0x14E00000, 0x0120, (0x1 << 31), (0x0 << 31), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WAIT, "PLL_CON0_PLL_AUD0", 0x14E00000, 0x0120, (0x1 << 29), (0x1 << 29), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON0_PLL_AUD1", 0x14E00000, 0x0140, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_CHECK_SKIP, "PLL_CON0_PLL_AUD1", 0x14E00000, 0x0140, (0x1 << 31), (0x0 << 31), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WAIT, "PLL_CON0_PLL_AUD1", 0x14E00000, 0x0140, (0x1 << 29), (0x1 << 29), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON0_PLL_AUD", 0x14e00000, 0x0100, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CHECK_SKIP, "PLL_CON0_PLL_AUD", 0x14e00000, 0x0100, (0x1 << 31), (0x0 << 31), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WAIT, "PLL_CON0_PLL_AUD", 0x14e00000, 0x0100, (0x1 << 29), (0x1 << 29), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "AUD_HCHGEN_CLKMUX", 0x14e00000, 0x0850, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_READ, "DBG_NFO_QCH_CON_WDT_AUD_QCH", 0x14E00000, 0x707c, 0xffffffff, 0, 0x10e60000, 0x1984, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_READ, "DBG_NFO_QCH_CON_VGEN_LITE_AUD_QCH", 0x14E00000, 0x7078, 0xffffffff, 0, 0x10e60000, 0x1984, (0x1 << 0), (0x1 << 0)),
@@ -114,8 +107,8 @@ struct pmucal_seq aud_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DMYQCH_CON_ABOX_QCH_FM", 0x14E00000, 0x3004, 0xffffffff, 0, 0x10e60000, 0x1984, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DMYQCH_CON_ABOX_QCH_CPU", 0x14E00000, 0x3000, 0xffffffff, 0, 0x10e60000, 0x1984, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "AUD_CMU_AUD_CONTROLLER_OPTION", 0x14e00000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_AUD_BUS_COMPONENT_DRCG_EN", 0x18C10000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SNPS_EMA", 0x18C10000, 0x0300, (0xffffffff << 0), 0, 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_AUD_BUS_COMPONENT_DRCG_EN", 0x14e10000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_AUD_LPP_MCS", 0x14e10000, 0x0300, (0xffffffff << 0), 0, 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq aud_off[] = {
@@ -227,8 +220,8 @@ struct pmucal_seq npu0_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DMYQCH_CON_NPUD_UNIT1_QCH", 0x10A00000, 0x3004, 0xffffffff, 0, 0x10e60000, 0x2484, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DMYQCH_CON_NPUD_UNIT0_QCH", 0x10A00000, 0x3000, 0xffffffff, 0, 0x10e60000, 0x2484, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "NPU0_CMU_NPU0_CONTROLLER_OPTION", 0x10a00000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_NPU0_BUS_COMPONENT_DRCG_EN", 0x17910000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_NPU0_NPUC_DRCG_EN", 0x17910000, 0x0404, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_NPU0_BUS_COMPONENT_DRCG_EN", 0x10a20000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_NPU0_BUS_COMPONENT_DRCG_EN_2", 0x10a20000, 0x0400, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq npu0_off[] = {
@@ -340,7 +333,8 @@ struct pmucal_seq npu1_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DMYQCH_CON_NPUD_UNIT1_QCH", 0x10B00000, 0x3004, 0xffffffff, 0, 0x10e60000, 0x2504, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DMYQCH_CON_NPUD_UNIT0_QCH", 0x10B00000, 0x3000, 0xffffffff, 0, 0x10e60000, 0x2504, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "NPU1_CMU_NPU1_CONTROLLER_OPTION", 0x10b00000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_NPU1_BUS_COMPONENT_DRCG_EN", 0x17A10000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_NPU1_BUS_COMPONENT_DRCG_EN", 0x10b20000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_NPU1_BUS_COMPONENT_DRCG_EN_2", 0x10b20000, 0x0400, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq npu1_off[] = {
@@ -383,21 +377,7 @@ struct pmucal_seq dpu_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_DPU_QCH_DPU", 0x14800000, 0x3014, 0xffffffff, 0, 0x10e60000, 0x1a04, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_DPU_CMU_DPU_QCH", 0x14800000, 0x3010, 0xffffffff, 0, 0x10e60000, 0x1a04, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_CMU_DPU_CONTROLLER_OPTION", 0x14800000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_DPU_BUS_COMPONENT_DRCG_EN", 0x19010000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPP_DPP_GF0_DYNAMIC_GATING_EN", 0x19020000, 0x1A54, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPP_DPP_GF1_DYNAMIC_GATING_EN", 0x19020000, 0x2A54, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPP_DPP_VG_DYNAMIC_GATING_EN", 0x19020000, 0x3A54, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPP_DPP_VGF_DYNAMIC_GATING_EN", 0x19020000, 0x4A54, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPP_DPP_VGS_DYNAMIC_GATING_EN", 0x19020000, 0x5A54, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPP_DPP_VGRFS_DYNAMIC_GATING_EN", 0x19020000, 0x6A54, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPU_DMA_IDMA_GF0_DYNAMIC_GATING_EN", 0x19070000, 0x1058, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPU_DMA_IDMA_GF1_DYNAMIC_GATING_EN", 0x19070000, 0x2058, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPU_DMA_IDMA_VG_DYNAMIC_GATING_EN", 0x19070000, 0x3058, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPU_DMA_IDMA_VGS_DYNAMIC_GATING_EN", 0x19070000, 0x4058, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPU_DMA_IDMA_VGF_DYNAMIC_GATING_EN", 0x19070000, 0x5058, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPU_DMA_IDMA_VGRFS_DYNAMIC_GATING_EN", 0x19070000, 0x6058, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPU_DMA_ODMA_WB_DYNAMIC_GATING_EN", 0x19070000, 0x7354, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPU_WB_MUX_DPU_WB_DYNAMIC_GATING_EN", 0x19060000, 0x0A54, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_DPU_BUS_COMPONENT_DRCG_EN", 0x14820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq dpu_off[] = {
@@ -437,7 +417,7 @@ struct pmucal_seq dsp0_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_D_TZPC_DSP_QCH", 0x12A00000, 0x3028, 0xffffffff, 0, 0x10e60000, 0x2684, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_DSP_CMU_DSP_QCH", 0x12A00000, 0x3024, 0xffffffff, 0, 0x10e60000, 0x2684, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DSP0_CMU_DSP0_CONTROLLER_OPTION", 0x12a00000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_DSP0_BUS_COMPONENT_DRCG_EN", 0x17C10000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_DSP0_BUS_COMPONENT_DRCG_EN", 0x12a20000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SCOREAP3_TS_II_IP_DSP0_MCGEN", 0x17D00000, 0x0004, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
@@ -478,7 +458,7 @@ struct pmucal_seq dsp1_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_D_TZPC_DSP_QCH", 0x12B00000, 0x3028, 0xffffffff, 0, 0x10e60000, 0x2704, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_DSP_CMU_DSP_QCH", 0x12B00000, 0x3024, 0xffffffff, 0, 0x10e60000, 0x2704, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DSP1_CMU_DSP1_CONTROLLER_OPTION", 0x12b00000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_DSP1_BUS_COMPONENT_DRCG_EN", 0x17F10000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_DSP1_BUS_COMPONENT_DRCG_EN", 0x12b20000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq dsp1_off[] = {
@@ -532,8 +512,7 @@ struct pmucal_seq g2d_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_G2D_CMU_G2D_QCH", 0x12C00000, 0x3010, 0xffffffff, 0, 0x10e60000, 0x1e84, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_D_TZPC_G2D_QCH", 0x12C00000, 0x300c, 0xffffffff, 0, 0x10e60000, 0x1e84, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "G2D_CMU_G2D_CONTROLLER_OPTION", 0x12c00000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_G2D_BUS_COMPONENT_DRCG_EN", 0x18AE0000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "M2M_SCALER_V4_00_SCALER_CFG_DRCG_ENABLE", 0x18B10000, 0x0004, (0x1 << 31), (0x1 << 31), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_G2D_BUS_COMPONENT_DRCG_EN", 0x12c20000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq g2d_off[] = {
@@ -548,7 +527,7 @@ struct pmucal_seq g2d_status[] = {
 struct pmucal_seq g3d_on[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON2_PLL_G3D", 0x11d00000, 0x0108, (0xffffffff << 0), (0x30000003 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON0_PLL_G3D", 0x11d00000, 0x0100, (0x1 << 4), (0x1 << 4), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON0_MUX_CLKCMU_G3D_USER", 0x18400000, 0x0100, (0x1 << 4), (0x1 << 4), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON0_MUX_CLKCMU_G3D_BUS_USER", 0x10c00000, 0x0610, (0x1 << 4), (0x1 << 4), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "G3D_OUT", 0x10e60000, 0x1f20, (0xffffffff << 0), (0x2 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_DELAY, "delay", 0, 0, 0, 0x118, 0, 0, 0, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "G3D_CONFIGURATION", 0x10e60000, 0x1f00, (0x1 << 0), (0x1 << 0), 0, 0, 0xffffffff, 0),
@@ -561,7 +540,7 @@ struct pmucal_seq g3d_save[] = {
 struct pmucal_seq g3d_off[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "G3D_CONFIGURATION", 0x10e60000, 0x1f00, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WAIT, "G3D_STATUS", 0x10e60000, 0x1f04, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON0_MUX_CLKCMU_G3D_USER", 0x18400000, 0x0100, (0x1 << 4), (0x0 << 4), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON0_MUX_CLKCMU_G3D_BUS_USER", 0x10c00000, 0x0610, (0x1 << 4), (0x0 << 4), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON0_PLL_G3D", 0x11d00000, 0x0100, (0x1 << 4), (0x0 << 4), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON2_PLL_G3D", 0x11d00000, 0x0108, (0xffffffff << 0), (0x10000001 << 0), 0, 0, 0xffffffff, 0),
 };
@@ -656,7 +635,7 @@ struct pmucal_seq csis_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_CSIS_PDP_QCH_C2_CSIS", 0x15000000, 0x3040, 0xffffffff, 0, 0x10e60000, 0x1d84, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_CSIS_CMU_CSIS_QCH", 0x15000000, 0x303c, 0xffffffff, 0, 0x10e60000, 0x1d84, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CSIS_CMU_CSIS_CONTROLLER_OPTION", 0x15000000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_CSIS_BUS_COMPONENT_DRCG_EN", 0x17020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_CSIS_BUS_COMPONENT_DRCG_EN", 0x15020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq csis_off[] = {
@@ -725,7 +704,7 @@ struct pmucal_seq ipp_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_IPP_CMU_IPP_QCH", 0x15200000, 0x303c, 0xffffffff, 0, 0x10e60000, 0x2084, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_D_TZPC_IPP_QCH", 0x15200000, 0x3038, 0xffffffff, 0, 0x10e60000, 0x2084, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "IPP_CMU_IPP_CONTROLLER_OPTION", 0x15200000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_IPP_BUS_COMPONENT_DRCG_EN", 0x17720000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_IPP_BUS_COMPONENT_DRCG_EN", 0x15220000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq ipp_off[] = {
@@ -776,7 +755,7 @@ struct pmucal_seq itp_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_ITP_CMU_ITP_QCH", 0x15400000, 0x3040, 0xffffffff, 0, 0x10e60000, 0x2104, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_D_TZPC_ITP_QCH", 0x15400000, 0x303c, 0xffffffff, 0, 0x10e60000, 0x2104, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "ITP_CMU_ITP_CONTROLLER_OPTION", 0x15400000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_ITP_BUS_COMPONENT_DRCG_EN", 0x17420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_ITP_BUS_COMPONENT_DRCG_EN", 0x15420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq itp_off[] = {
@@ -847,7 +826,7 @@ struct pmucal_seq mcsc_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_C2AGENT_D1_MCSC_QCH", 0x15600000, 0x3024, 0xffffffff, 0, 0x10e60000, 0x2184, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_C2AGENT_D0_MCSC_QCH", 0x15600000, 0x3020, 0xffffffff, 0, 0x10e60000, 0x2184, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "MCSC_CMU_CONTROLLER_OPTION", 0x15600000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_MCSC_BUS_COMPONENT_DRCG_EN", 0x18010000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_MCSC_BUS_COMPONENT_DRCG_EN", 0x15620000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq mcsc_off[] = {
@@ -913,7 +892,7 @@ struct pmucal_seq mfc_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_LHM_AXI_P_MFC_QCH", 0x12E00000, 0x3010, 0xffffffff, 0, 0x10e60000, 0x2284, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_D_TZPC_MFC_QCH", 0x12E00000, 0x300c, 0xffffffff, 0, 0x10e60000, 0x2284, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "MFC_CMU_MFC_CONTROLLER_OPTION", 0x12e00000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_MFC_BUS_COMPONENT_DRCG_EN", 0x18810000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_MFC_BUS_COMPONENT_DRCG_EN", 0x12e20000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq mfc_off[] = {
@@ -1003,7 +982,7 @@ struct pmucal_seq vts_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DMYQCH_CON_DMIC_IF_QCH_DMIC", 0x11700000, 0x3004, 0xffffffff, 0, 0x10e60000, 0x2884, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DMYQCH_CON_DMIC_IF_3RD_QCH_DMIC", 0x11700000, 0x3000, 0xffffffff, 0, 0x10e60000, 0x2884, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "VTS_CMU_VTS_CONTROLLER_OPTION", 0x11700000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_VTS_BUS_COMPONENT_DRCG_EN", 0x15510000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_VTS_BUS_COMPONENT_DRCG_EN", 0x11710000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq vts_off[] = {
@@ -1057,7 +1036,7 @@ struct pmucal_seq usb_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_DP_LINK_QCH_GTC_CLK", 0x13000000, 0x300c, 0xffffffff, 0, 0x10e60000, 0x2004, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DMYQCH_CON_USB31DRD_QCH_REF", 0x13000000, 0x3000, 0xffffffff, 0, 0x10e60000, 0x2004, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "USB_CMU_USB_CONTROLLER_OPTION", 0x13000000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_FSYS0_BUS_COMPONENT_DRCG_EN", 0x13020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_USB_BUS_COMPONENT_DRCG_EN", 0x13020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq usb_off[] = {
@@ -1118,7 +1097,7 @@ struct pmucal_seq tnr_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_LHM_AST_VO_DNSTNR_QCH", 0x15800000, 0x3020, 0xffffffff, 0, 0x10e60000, 0x2204, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_D_TZPC_TNR_QCH", 0x15800000, 0x301c, 0xffffffff, 0, 0x10e60000, 0x2204, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "TNR_CMU_CONTROLLER_OPTION", 0x15800000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_TNR_BUS_COMPONENT_DRCG_EN", 0x17620000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_TNR_BUS_COMPONENT_DRCG_EN", 0x15820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq tnr_off[] = {
@@ -1233,7 +1212,7 @@ struct pmucal_seq dnc_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_BUSIF_HPMDNC_QCH", 0x16200000, 0x3074, 0xffffffff, 0, 0x10e60000, 0x2584, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DMYQCH_CON_ADM_DAP_DNC_QCH", 0x16200000, 0x3000, 0xffffffff, 0, 0x10e60000, 0x2584, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DNC_CMU_CONTROLLER_OPTION", 0x16200000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_DNC_BUS_COMPONENT_DRCG_EN", 0x17620000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_DNC_BUS_COMPONENT_DRCG_EN", 0x16220000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq dnc_off[] = {
@@ -1298,7 +1277,7 @@ struct pmucal_seq dns_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_DNS_QCH", 0x15500000, 0x3048, 0xffffffff, 0, 0x10e60000, 0x2604, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_DNS_CMU_DNS_QCH", 0x15500000, 0x3044, 0xffffffff, 0, 0x10e60000, 0x2604, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DNS_CMU_CONTROLLER_OPTION", 0x15500000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_DNS_BUS_COMPONENT_DRCG_EN", 0x17620000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_DNS_BUS_COMPONENT_DRCG_EN", 0x15520000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq dns_off[] = {
@@ -1329,7 +1308,7 @@ struct pmucal_seq ssp_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_D_TZPC_SSP_QCH", 0x13C00000, 0x3008, 0xffffffff, 0, 0x10e60000, 0x2984, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DMYQCH_CON_USS_SSPCORE_QCH", 0x13C00000, 0x3000, 0xffffffff, 0, 0x10e60000, 0x2984, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SSP_CMU_SSP_CONTROLLER_OPTION", 0x13c00000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_SSP_BUS_COMPONENT_DRCG_EN", 0x17A10000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_SSPCTRL_BUS_COMPONENT_DRCG_EN", 0x13c20000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq ssp_off[] = {
@@ -1377,7 +1356,7 @@ struct pmucal_seq vra_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_D_TZPC_VRA_QCH", 0x15300000, 0x3020, 0xffffffff, 0, 0x10e60000, 0x2404, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_CLAHE_QCH", 0x15300000, 0x301c, 0xffffffff, 0, 0x10e60000, 0x2404, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "VRA_CMU_CONTROLLER_OPTION", 0x15300000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_VRA_BUS_COMPONENT_DRCG_EN", 0x17620000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_VRA_BUS_COMPONENT_DRCG_EN", 0x15320000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq vra_off[] = {
@@ -1513,7 +1492,7 @@ struct pmucal_seq chub_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_APBIF_GPIO_CHUB_QCH", 0x11800000, 0x3028, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_APBIF_CHUB_COMBINE_WAKEUP_SRC_QCH", 0x11800000, 0x3024, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CHUB_CMU_CHUB_CONTROLLER_OPTION", 0x11800000, 0x0800, (0x3 << 28), (0x3 << 28), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "BUS_COMPONENT_DRCG_EN", 0x13A10000, 0x0104, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_CHUB_BUS_COMPONENT_DRCG_EN", 0x11820000, 0x0104, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq chub_off[] = {
