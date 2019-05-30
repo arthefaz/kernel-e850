@@ -275,4 +275,16 @@
 		compatible = "samsung,exynos9630-pinctrl";
 		reg = <0x0 0x11780000 0x1000>;
 	};
+
+	exynos-pmu {
+		compatible = "samsung,exynos-pmu";
+		samsung,syscon-phandle = <&pmu_system_controller>;
+		reg = <0x0 0x10E60000 0x10000>;
+		reg-names = "pmu_alive";
+	};
+
+	pmu_system_controller: system-controller@10E60000 {
+		compatible = "samsung,exynos9630-pmu", "syscon";
+		reg = <0x0 0x10E60000 0x10000>;
+	};
 };
