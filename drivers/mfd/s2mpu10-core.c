@@ -1,6 +1,6 @@
 
 /*
- * s2mpu09-core.c - mfd core driver for the s2mpu09
+ * s2mpu10-core.c - mfd core driver for the s2mpu10
  *
  * Copyright (C) 2016 Samsung Electronics
  *
@@ -20,6 +20,8 @@
  *
  */
 
+/* s2mpu10 uses i3c but still applies i2c functions and structures */
+
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
@@ -27,8 +29,8 @@
 #include <linux/interrupt.h>
 #include <linux/mutex.h>
 #include <linux/mfd/core.h>
-#include <linux/mfd/samsung/s2mpu09.h>
-#include <linux/mfd/samsung/s2mpu09-regulator.h>
+#include <linux/mfd/samsung/s2mpu10.h>
+#include <linux/mfd/samsung/s2mpu10-regulator.h>
 #include <linux/regulator/machine.h>
 #include <linux/rtc.h>
 #include <soc/samsung/acpm_mfd.h>
@@ -42,87 +44,92 @@
 #define I2C_ADDR_PMIC	0x01
 #define I2C_ADDR_RTC	0x02
 
-//struct device_node *acpm_mfd_node;
+#define S2MPU10_CHANNEL	(0)
 
-static struct mfd_cell s2mpu09_devs[] = {
-	{ .name = "s2mpu09-regulator", },
-	{ .name = "s2mpu09-rtc", },
+extern struct device_node *acpm_mfd_node;
+
+static struct mfd_cell s2mpu10_devs[] = {
+	{ .name = "s2mpu10-regulator", },
+	{ .name = "s2mpu10-rtc", },
+#ifdef	CONFIG_KEYBOARD_S2MPU10
+	{ .name = "s2mpu10-power-keys", },
+#endif
 };
 
 #if defined(CONFIG_EXYNOS_ACPM)
-int s2mpu09_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest)
+int s2mpu10_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest)
 {
 	int ret;
 
-	ret = exynos_acpm_read_reg(i2c->addr, reg, dest);
+	ret = exynos_acpm_read_reg(S2MPU10_CHANNEL, i2c->addr, reg, dest);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;
 	}
 	return 0;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_read_reg);
+EXPORT_SYMBOL_GPL(s2mpu10_read_reg);
 
-int s2mpu09_bulk_read(struct i2c_client *i2c, u8 reg, int count, u8 *buf)
+int s2mpu10_bulk_read(struct i2c_client *i2c, u8 reg, int count, u8 *buf)
 {
 	int ret;
 
-	ret = exynos_acpm_bulk_read(i2c->addr, reg, count, buf);
+	ret = exynos_acpm_bulk_read(S2MPU10_CHANNEL, i2c->addr, reg, count, buf);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;
 	}
 	return 0;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_bulk_read);
+EXPORT_SYMBOL_GPL(s2mpu10_bulk_read);
 
-int s2mpu09_write_reg(struct i2c_client *i2c, u8 reg, u8 value)
+int s2mpu10_write_reg(struct i2c_client *i2c, u8 reg, u8 value)
 {
 	int ret;
 
-	ret = exynos_acpm_write_reg(i2c->addr, reg, value);
+	ret = exynos_acpm_write_reg(S2MPU10_CHANNEL, i2c->addr, reg, value);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;
 	}
 	return ret;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_write_reg);
+EXPORT_SYMBOL_GPL(s2mpu10_write_reg);
 
-int s2mpu09_bulk_write(struct i2c_client *i2c, u8 reg, int count, u8 *buf)
+int s2mpu10_bulk_write(struct i2c_client *i2c, u8 reg, int count, u8 *buf)
 {
 	int ret;
 
-	ret = exynos_acpm_bulk_write(i2c->addr, reg, count, buf);
+	ret = exynos_acpm_bulk_write(S2MPU10_CHANNEL, i2c->addr, reg, count, buf);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;
 	}
 	return ret;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_bulk_write);
+EXPORT_SYMBOL_GPL(s2mpu10_bulk_write);
 
-int s2mpu09_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask)
+int s2mpu10_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask)
 {
 	int ret;
 
-	ret = exynos_acpm_update_reg(i2c->addr, reg, val, mask);
+	ret = exynos_acpm_update_reg(S2MPU10_CHANNEL, i2c->addr, reg, val, mask);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;
 	}
 	return ret;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_update_reg);
+EXPORT_SYMBOL_GPL(s2mpu10_update_reg);
 #else
-int s2mpu09_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest)
+int s2mpu10_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest)
 {
-	struct s2mpu09_dev *s2mpu09 = i2c_get_clientdata(i2c);
+	struct s2mpu10_dev *s2mpu10 = i2c_get_clientdata(i2c);
 	int ret;
 
-	mutex_lock(&s2mpu09->i2c_lock);
+	mutex_lock(&s2mpu10->i2c_lock);
 	ret = i2c_smbus_read_byte_data(i2c, reg);
-	mutex_unlock(&s2mpu09->i2c_lock);
+	mutex_unlock(&s2mpu10->i2c_lock);
 	if (ret < 0) {
 		pr_info("%s:%s reg(0x%x), ret(%d)\n",
 			 MFD_DEV_NAME, __func__, reg, ret);
@@ -133,107 +140,107 @@ int s2mpu09_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest)
 	*dest = ret;
 	return 0;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_read_reg);
+EXPORT_SYMBOL_GPL(s2mpu10_read_reg);
 
-int s2mpu09_bulk_read(struct i2c_client *i2c, u8 reg, int count, u8 *buf)
+int s2mpu10_bulk_read(struct i2c_client *i2c, u8 reg, int count, u8 *buf)
 {
-	struct s2mpu09_dev *s2mpu09 = i2c_get_clientdata(i2c);
+	struct s2mpu10_dev *s2mpu10 = i2c_get_clientdata(i2c);
 	int ret;
 
-	mutex_lock(&s2mpu09->i2c_lock);
+	mutex_lock(&s2mpu10->i2c_lock);
 	ret = i2c_smbus_read_i2c_block_data(i2c, reg, count, buf);
-	mutex_unlock(&s2mpu09->i2c_lock);
+	mutex_unlock(&s2mpu10->i2c_lock);
 	if (ret < 0)
 		return ret;
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_bulk_read);
+EXPORT_SYMBOL_GPL(s2mpu10_bulk_read);
 
-int s2mpu09_read_word(struct i2c_client *i2c, u8 reg)
+int s2mpu10_read_word(struct i2c_client *i2c, u8 reg)
 {
-	struct s2mpu09_dev *s2mpu09 = i2c_get_clientdata(i2c);
+	struct s2mpu10_dev *s2mpu10 = i2c_get_clientdata(i2c);
 	int ret;
 
-	mutex_lock(&s2mpu09->i2c_lock);
+	mutex_lock(&s2mpu10->i2c_lock);
 	ret = i2c_smbus_read_word_data(i2c, reg);
-	mutex_unlock(&s2mpu09->i2c_lock);
+	mutex_unlock(&s2mpu10->i2c_lock);
 	if (ret < 0)
 		return ret;
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_read_word);
+EXPORT_SYMBOL_GPL(s2mpu10_read_word);
 
-int s2mpu09_write_reg(struct i2c_client *i2c, u8 reg, u8 value)
+int s2mpu10_write_reg(struct i2c_client *i2c, u8 reg, u8 value)
 {
-	struct s2mpu09_dev *s2mpu09 = i2c_get_clientdata(i2c);
+	struct s2mpu10_dev *s2mpu10 = i2c_get_clientdata(i2c);
 	int ret;
 
-	mutex_lock(&s2mpu09->i2c_lock);
+	mutex_lock(&s2mpu10->i2c_lock);
 	ret = i2c_smbus_write_byte_data(i2c, reg, value);
-	mutex_unlock(&s2mpu09->i2c_lock);
+	mutex_unlock(&s2mpu10->i2c_lock);
 	if (ret < 0)
 		pr_info("%s:%s reg(0x%x), ret(%d)\n",
 				MFD_DEV_NAME, __func__, reg, ret);
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_write_reg);
+EXPORT_SYMBOL_GPL(s2mpu10_write_reg);
 
-int s2mpu09_bulk_write(struct i2c_client *i2c, u8 reg, int count, u8 *buf)
+int s2mpu10_bulk_write(struct i2c_client *i2c, u8 reg, int count, u8 *buf)
 {
-	struct s2mpu09_dev *s2mpu09 = i2c_get_clientdata(i2c);
+	struct s2mpu10_dev *s2mpu10 = i2c_get_clientdata(i2c);
 	int ret;
 
-	mutex_lock(&s2mpu09->i2c_lock);
+	mutex_lock(&s2mpu10->i2c_lock);
 	ret = i2c_smbus_write_i2c_block_data(i2c, reg, count, buf);
-	mutex_unlock(&s2mpu09->i2c_lock);
+	mutex_unlock(&s2mpu10->i2c_lock);
 	if (ret < 0)
 		return ret;
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_bulk_write);
+EXPORT_SYMBOL_GPL(s2mpu10_bulk_write);
 
-int s2mpu09_write_word(struct i2c_client *i2c, u8 reg, u16 value)
+int s2mpu10_write_word(struct i2c_client *i2c, u8 reg, u16 value)
 {
-	struct s2mpu09_dev *s2mpu09 = i2c_get_clientdata(i2c);
+	struct s2mpu10_dev *s2mpu10 = i2c_get_clientdata(i2c);
 	int ret;
 
-	mutex_lock(&s2mpu09->i2c_lock);
+	mutex_lock(&s2mpu10->i2c_lock);
 	ret = i2c_smbus_write_word_data(i2c, reg, value);
-	mutex_unlock(&s2mpu09->i2c_lock);
+	mutex_unlock(&s2mpu10->i2c_lock);
 	if (ret < 0)
 		return ret;
 	return 0;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_write_word);
+EXPORT_SYMBOL_GPL(s2mpu10_write_word);
 
-int s2mpu09_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask)
+int s2mpu10_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask)
 {
-	struct s2mpu09_dev *s2mpu09 = i2c_get_clientdata(i2c);
+	struct s2mpu10_dev *s2mpu10 = i2c_get_clientdata(i2c);
 	int ret;
 	u8 old_val, new_val;
 
-	mutex_lock(&s2mpu09->i2c_lock);
+	mutex_lock(&s2mpu10->i2c_lock);
 	ret = i2c_smbus_read_byte_data(i2c, reg);
 	if (ret >= 0) {
 		old_val = ret & 0xff;
 		new_val = (val & mask) | (old_val & (~mask));
 		ret = i2c_smbus_write_byte_data(i2c, reg, new_val);
 	}
-	mutex_unlock(&s2mpu09->i2c_lock);
+	mutex_unlock(&s2mpu10->i2c_lock);
 	return ret;
 }
-EXPORT_SYMBOL_GPL(s2mpu09_update_reg);
+EXPORT_SYMBOL_GPL(s2mpu10_update_reg);
 
 #endif
 
 #if defined(CONFIG_OF)
-static int of_s2mpu09_dt(struct device *dev,
-			 struct s2mpu09_platform_data *pdata,
-			 struct s2mpu09_dev *s2mpu09)
+static int of_s2mpu10_dt(struct device *dev,
+			 struct s2mpu10_platform_data *pdata,
+			 struct s2mpu10_dev *s2mpu10)
 {
 	struct device_node *np = dev->of_node;
 	int ret, strlen;
@@ -245,9 +252,7 @@ static int of_s2mpu09_dt(struct device *dev,
 
 	acpm_mfd_node = np;
 
-	pdata->irq_gpio = of_get_named_gpio(np, "s2mpu09,irq-gpio", 0);
-
-	status = of_get_property(np, "s2mpu09,wakeup", &strlen);
+	status = of_get_property(np, "s2mpu10,wakeup", &strlen);
 	if (status == NULL)
 		return -EINVAL;
 	if (strlen > 0) {
@@ -256,11 +261,6 @@ static int of_s2mpu09_dt(struct device *dev,
 		else
 			pdata->wakeup = false;
 	}
-
-	if (of_get_property(np, "i2c-speedy-address", NULL))
-		pdata->use_i2c_speedy = true;
-
-	pr_info("%s: irq-gpio: %u \n", __func__, pdata->irq_gpio);
 
 	/* WTSR, SMPL */
 	pdata->wtsr_smpl = devm_kzalloc(dev, sizeof(*pdata->wtsr_smpl),
@@ -372,41 +372,41 @@ static int of_s2mpu09_dt(struct device *dev,
 	return 0;
 }
 #else
-static int of_s2mpu09_dt(struct device *dev,
-			 struct s2mpu09_platform_data *pdata)
+static int of_s2mpu10_dt(struct device *dev,
+			 struct s2mpu10_platform_data *pdata)
 {
 	return 0;
 }
 #endif /* CONFIG_OF */
 
-static int s2mpu09_i2c_probe(struct i2c_client *i2c,
+static int s2mpu10_i2c_probe(struct i2c_client *i2c,
 				const struct i2c_device_id *dev_id)
 {
-	struct s2mpu09_dev *s2mpu09;
-	struct s2mpu09_platform_data *pdata = i2c->dev.platform_data;
+	struct s2mpu10_dev *s2mpu10;
+	struct s2mpu10_platform_data *pdata = i2c->dev.platform_data;
 
 	u8 reg_data;
 	int ret = 0;
 
 	pr_info("%s:%s\n", MFD_DEV_NAME, __func__);
 
-	s2mpu09 = kzalloc(sizeof(struct s2mpu09_dev), GFP_KERNEL);
-	if (!s2mpu09) {
-		dev_err(&i2c->dev, "%s: Failed to alloc mem for s2mpu09\n",
+	s2mpu10 = kzalloc(sizeof(struct s2mpu10_dev), GFP_KERNEL);
+	if (!s2mpu10) {
+		dev_err(&i2c->dev, "%s: Failed to alloc mem for s2mpu10\n",
 								 __func__);
 		return -ENOMEM;
 	}
 
 	if (i2c->dev.of_node) {
 		pdata = devm_kzalloc(&i2c->dev,
-			 sizeof(struct s2mpu09_platform_data), GFP_KERNEL);
+			 sizeof(struct s2mpu10_platform_data), GFP_KERNEL);
 		if (!pdata) {
 			dev_err(&i2c->dev, "Failed to allocate memory\n");
 			ret = -ENOMEM;
 			goto err;
 		}
 
-		ret = of_s2mpu09_dt(&i2c->dev, pdata, s2mpu09);
+		ret = of_s2mpu10_dt(&i2c->dev, pdata, s2mpu10);
 		if (ret < 0) {
 			dev_err(&i2c->dev, "Failed to get device of_node\n");
 			goto err;
@@ -417,176 +417,174 @@ static int s2mpu09_i2c_probe(struct i2c_client *i2c,
 		pdata = i2c->dev.platform_data;
 
 
-	s2mpu09->dev = &i2c->dev;
-	s2mpu09->i2c = i2c;
-	s2mpu09->irq = i2c->irq;
-	s2mpu09->device_type = S2MPU09X;
+	s2mpu10->dev = &i2c->dev;
+	s2mpu10->i2c = i2c;
+	s2mpu10->irq = i2c->irq;
+	s2mpu10->device_type = S2MPU10X;
 
 	if (pdata) {
-		s2mpu09->pdata = pdata;
+		s2mpu10->pdata = pdata;
 
-		pdata->irq_base = irq_alloc_descs(-1, 0, S2MPU09_IRQ_NR, -1);
+		pdata->irq_base = irq_alloc_descs(-1, 0, S2MPU10_IRQ_NR, -1);
 		if (pdata->irq_base < 0) {
 			pr_err("%s:%s irq_alloc_descs Fail! ret(%d)\n",
 				MFD_DEV_NAME, __func__, pdata->irq_base);
 			ret = -EINVAL;
 			goto err;
 		} else
-			s2mpu09->irq_base = pdata->irq_base;
+			s2mpu10->irq_base = pdata->irq_base;
 
-		s2mpu09->irq_gpio = pdata->irq_gpio;
-		s2mpu09->wakeup = pdata->wakeup;
+		s2mpu10->wakeup = pdata->wakeup;
 	} else {
 		ret = -EINVAL;
 		goto err;
 	}
-	mutex_init(&s2mpu09->i2c_lock);
+	mutex_init(&s2mpu10->i2c_lock);
 
-	i2c_set_clientdata(i2c, s2mpu09);
+	i2c_set_clientdata(i2c, s2mpu10);
 
-	/* TODO */
-	if (s2mpu09_read_reg(i2c, S2MPU09_PMIC_REG_PMICID, &reg_data) < 0) {
-		dev_err(s2mpu09->dev,
+	if (s2mpu10_read_reg(i2c, S2MPU10_PMIC_REG_CHIPID, &reg_data) < 0) {
+		dev_err(s2mpu10->dev,
 			"device not found on this channel (this is not an error)\n");
 		ret = -ENODEV;
 		goto err_w_lock;
 	} else {
 		/* print rev */
-		s2mpu09->pmic_rev = reg_data;
+		s2mpu10->pmic_rev = reg_data;
 	}
 
-	s2mpu09->pmic = i2c_new_dummy(i2c->adapter, I2C_ADDR_PMIC);
-	s2mpu09->rtc = i2c_new_dummy(i2c->adapter, I2C_ADDR_RTC);
+	s2mpu10->pmic = i2c_new_dummy(i2c->adapter, I2C_ADDR_PMIC);
+	s2mpu10->rtc = i2c_new_dummy(i2c->adapter, I2C_ADDR_RTC);
 
 	if (pdata->use_i2c_speedy) {
-		dev_err(s2mpu09->dev, "use_i2c_speedy was true\n");
-		s2mpu09->pmic->flags |= I2C_CLIENT_SPEEDY;
-		s2mpu09->rtc->flags |= I2C_CLIENT_SPEEDY;
+		dev_err(s2mpu10->dev, "use_i2c_speedy was true\n");
+		s2mpu10->pmic->flags |= I2C_CLIENT_SPEEDY;
+		s2mpu10->rtc->flags |= I2C_CLIENT_SPEEDY;
 	}
 
-	i2c_set_clientdata(s2mpu09->pmic, s2mpu09);
-	i2c_set_clientdata(s2mpu09->rtc, s2mpu09);
+	i2c_set_clientdata(s2mpu10->pmic, s2mpu10);
+	i2c_set_clientdata(s2mpu10->rtc, s2mpu10);
 
-	pr_info("%s device found: rev.0x%2x\n", __func__, s2mpu09->pmic_rev);
+	pr_info("%s device found: rev.0x%2x\n", __func__, s2mpu10->pmic_rev);
 
-	ret = s2mpu09_irq_init(s2mpu09);
+	ret = s2mpu10_irq_init(s2mpu10);
 	if (ret < 0)
 		goto err_irq_init;
 
-	ret = mfd_add_devices(s2mpu09->dev, -1, s2mpu09_devs,
-			ARRAY_SIZE(s2mpu09_devs), NULL, 0, NULL);
+	ret = mfd_add_devices(s2mpu10->dev, -1, s2mpu10_devs,
+			ARRAY_SIZE(s2mpu10_devs), NULL, 0, NULL);
 	if (ret < 0)
 		goto err_mfd;
 
-	device_init_wakeup(s2mpu09->dev, pdata->wakeup);
+	device_init_wakeup(s2mpu10->dev, pdata->wakeup);
 
 	return ret;
 
 err_mfd:
-	mfd_remove_devices(s2mpu09->dev);
+	mfd_remove_devices(s2mpu10->dev);
 err_irq_init:
-	i2c_unregister_device(s2mpu09->i2c);
+	i2c_unregister_device(s2mpu10->i2c);
 err_w_lock:
-	mutex_destroy(&s2mpu09->i2c_lock);
+	mutex_destroy(&s2mpu10->i2c_lock);
 err:
-	kfree(s2mpu09);
+	kfree(s2mpu10);
 	return ret;
 }
 
-static int s2mpu09_i2c_remove(struct i2c_client *i2c)
+static int s2mpu10_i2c_remove(struct i2c_client *i2c)
 {
-	struct s2mpu09_dev *s2mpu09 = i2c_get_clientdata(i2c);
+	struct s2mpu10_dev *s2mpu10 = i2c_get_clientdata(i2c);
 
-	mfd_remove_devices(s2mpu09->dev);
-	i2c_unregister_device(s2mpu09->i2c);
-	kfree(s2mpu09);
+	mfd_remove_devices(s2mpu10->dev);
+	i2c_unregister_device(s2mpu10->i2c);
+	kfree(s2mpu10);
 
 	return 0;
 }
 
-static const struct i2c_device_id s2mpu09_i2c_id[] = {
-	{ MFD_DEV_NAME, TYPE_S2MPU09 },
+static const struct i2c_device_id s2mpu10_i2c_id[] = {
+	{ MFD_DEV_NAME, TYPE_S2MPU10 },
 	{ }
 };
-MODULE_DEVICE_TABLE(i2c, s2mpu09_i2c_id);
+MODULE_DEVICE_TABLE(i2c, s2mpu10_i2c_id);
 
 #if defined(CONFIG_OF)
-static struct of_device_id s2mpu09_i2c_dt_ids[] = {
-	{ .compatible = "samsung,s2mpu09mfd" },
+static struct of_device_id s2mpu10_i2c_dt_ids[] = {
+	{ .compatible = "samsung,s2mpu10mfd" },
 	{ },
 };
 #endif /* CONFIG_OF */
 
 #if defined(CONFIG_PM)
-static int s2mpu09_suspend(struct device *dev)
+static int s2mpu10_suspend(struct device *dev)
 {
 	struct i2c_client *i2c = container_of(dev, struct i2c_client, dev);
-	struct s2mpu09_dev *s2mpu09 = i2c_get_clientdata(i2c);
+	struct s2mpu10_dev *s2mpu10 = i2c_get_clientdata(i2c);
 
 	if (device_may_wakeup(dev))
-		enable_irq_wake(s2mpu09->irq);
+		enable_irq_wake(s2mpu10->irq);
 
-	disable_irq(s2mpu09->irq);
+	disable_irq(s2mpu10->irq);
 
 	return 0;
 }
 
-static int s2mpu09_resume(struct device *dev)
+static int s2mpu10_resume(struct device *dev)
 {
 	struct i2c_client *i2c = container_of(dev, struct i2c_client, dev);
-	struct s2mpu09_dev *s2mpu09 = i2c_get_clientdata(i2c);
+	struct s2mpu10_dev *s2mpu10 = i2c_get_clientdata(i2c);
 
 #if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
 	pr_info("%s:%s\n", MFD_DEV_NAME, __func__);
 #endif /* CONFIG_SAMSUNG_PRODUCT_SHIP */
 
 	if (device_may_wakeup(dev))
-		disable_irq_wake(s2mpu09->irq);
+		disable_irq_wake(s2mpu10->irq);
 
-	enable_irq(s2mpu09->irq);
+	enable_irq(s2mpu10->irq);
 
 	return 0;
 }
 #else
-#define s2mpu09_suspend	NULL
-#define s2mpu09_resume NULL
+#define s2mpu10_suspend	NULL
+#define s2mpu10_resume NULL
 #endif /* CONFIG_PM */
 
-const struct dev_pm_ops s2mpu09_pm = {
-	.suspend_late = s2mpu09_suspend,
-	.resume_early = s2mpu09_resume,
+const struct dev_pm_ops s2mpu10_pm = {
+	.suspend_late = s2mpu10_suspend,
+	.resume_early = s2mpu10_resume,
 };
 
-static struct i2c_driver s2mpu09_i2c_driver = {
+static struct i2c_driver s2mpu10_i2c_driver = {
 	.driver		= {
 		.name	= MFD_DEV_NAME,
 		.owner	= THIS_MODULE,
 #if defined(CONFIG_PM)
-		.pm	= &s2mpu09_pm,
+		.pm	= &s2mpu10_pm,
 #endif /* CONFIG_PM */
 #if defined(CONFIG_OF)
-		.of_match_table	= s2mpu09_i2c_dt_ids,
+		.of_match_table	= s2mpu10_i2c_dt_ids,
 #endif /* CONFIG_OF */
 	},
-	.probe		= s2mpu09_i2c_probe,
-	.remove		= s2mpu09_i2c_remove,
-	.id_table	= s2mpu09_i2c_id,
+	.probe		= s2mpu10_i2c_probe,
+	.remove		= s2mpu10_i2c_remove,
+	.id_table	= s2mpu10_i2c_id,
 };
 
-static int __init s2mpu09_i2c_init(void)
+static int __init s2mpu10_i2c_init(void)
 {
 	pr_info("%s:%s\n", MFD_DEV_NAME, __func__);
-	return i2c_add_driver(&s2mpu09_i2c_driver);
+	return i2c_add_driver(&s2mpu10_i2c_driver);
 }
 /* init early so consumer devices can complete system boot */
-subsys_initcall(s2mpu09_i2c_init);
+subsys_initcall(s2mpu10_i2c_init);
 
-static void __exit s2mpu09_i2c_exit(void)
+static void __exit s2mpu10_i2c_exit(void)
 {
-	i2c_del_driver(&s2mpu09_i2c_driver);
+	i2c_del_driver(&s2mpu10_i2c_driver);
 }
-module_exit(s2mpu09_i2c_exit);
+module_exit(s2mpu10_i2c_exit);
 
-MODULE_DESCRIPTION("s2mpu09 multi-function core driver");
+MODULE_DESCRIPTION("s2mpu10 multi-function core driver");
 MODULE_AUTHOR("Samsung Electronics");
 MODULE_LICENSE("GPL");

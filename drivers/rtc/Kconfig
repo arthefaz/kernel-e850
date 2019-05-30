@@ -640,14 +640,23 @@ config RTC_DRV_S2MPU09
 	  This driver can also be built as a module. If so, the module
 	  will be called rtc-s2mpu09.
 
+config RTC_DRV_S2MPU10
+	tristate "Samsung PMIC series RTC"
+	depends on MFD_S2MPU10
+	help
+	  If you say yes here you will get support for the
+	  RTC of Samsung PMIC series.
+	  This driver can also be built as a module. If so, the module
+	  will be called rtc-s2mpu10.
+
 config RTC_BOOT_ALARM
 	tristate "Samsung PMIC series RTC"
-	depends on RTC_DRV_S2MPU09
+	depends on RTC_DRV_S2MPU10
 	help
 	  If you say yes here you will get support for the function which
 	  allows the device to be turned on by RTC alarm.
 	  This driver can also be built as a module. If so, the module
-	  will be called rtc-s2mpu09.
+	  will be called rtc-s2mpu10.
 
 endif # I2C
 
