@@ -190,3 +190,14 @@ static inline void lb_update_misfit_status(struct task_struct *p, struct rq *rq,
 #endif /* CONFIG_SCHED_EMS */
 
 extern unsigned int frt_disable_cpufreq;
+
+#ifdef CONFIG_SCHED_TUNE
+enum stune_group {
+	STUNE_ROOT,
+	STUNE_FOREGROUND,
+	STUNE_BACKGROUND,
+	STUNE_TOPAPP,
+	STUNE_RT,
+	STUNE_GROUP_COUNT,
+};
+#endif
