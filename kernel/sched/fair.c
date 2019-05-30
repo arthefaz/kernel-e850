@@ -790,7 +790,7 @@ void post_init_entity_util_avg(struct sched_entity *se)
 	long cpu_scale = arch_scale_cpu_capacity(NULL, cpu_of(rq_of(cfs_rq)));
 	long cap = (long)(cpu_scale - cfs_rq->avg.util_avg) / 2;
 
-	post_init_entity_multi_load(se);
+	post_init_entity_multi_load(se, cfs_rq_clock_task(cfs_rq));
 
 	if (cap > 0) {
 		if (cfs_rq->avg.util_avg != 0) {
@@ -825,8 +825,6 @@ void post_init_entity_util_avg(struct sched_entity *se)
 
 		sa->util_est.ewma = 0;
 		sa->util_est.enqueued = 0;
-		sa->ml.util_est.ewma = 0;
-		sa->ml.util_est.enqueued = 0;
 	}
 
 	attach_entity_cfs_rq(se);
@@ -3066,8 +3064,6 @@ ___update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 static int
 __update_load_avg_blocked_se(u64 now, int cpu, struct sched_entity *se)
 {
-	update_multi_load(now, cpu, NULL, se, &se->avg, 0, 0);
-
 	return ___update_load_avg(now, cpu, &se->avg, 0, 0, NULL, NULL);
 }
 
@@ -3100,9 +3096,6 @@ static inline void cfs_se_util_change(struct sched_avg *avg)
 static int
 __update_load_avg_se(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
-	update_multi_load(now, cpu, NULL, se, &se->avg,
-		se->on_rq * scale_load_down(se->load.weight), cfs_rq->curr == se);
-
 	if (___update_load_avg(now, cpu, &se->avg,
 				  se->on_rq * scale_load_down(se->load.weight),
 				  cfs_rq->curr == se, NULL, NULL)) {
@@ -3138,9 +3131,6 @@ __update_load_avg_se(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_entit
 static int
 __update_load_avg_cfs_rq(u64 now, int cpu, struct cfs_rq *cfs_rq)
 {
-	update_multi_load(now, cpu, cfs_rq, cfs_rq->curr, &cfs_rq->avg,
-			scale_load_down(cfs_rq->load.weight), cfs_rq->curr != NULL);
-
 	return ___update_load_avg(now, cpu, &cfs_rq->avg,
 			scale_load_down(cfs_rq->load.weight),
 			cfs_rq->curr != NULL, cfs_rq, NULL);
@@ -3194,6 +3184,8 @@ void set_task_rq_fair(struct sched_entity *se,
 	if (!sched_feat(ATTACH_AGE_LOAD))
 		return;
 
+	set_task_rq_multi_load(se, prev, next);
+
 	/*
 	 * We are supposed to update the task to "current" time, then its up to
 	 * date and ready to go to new CPU/cfs_rq. But we have difficulty in
@@ -3235,6 +3227,8 @@ update_tg_cfs_util(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
 	struct cfs_rq *gcfs_rq = group_cfs_rq(se);
 	long delta = gcfs_rq->avg.util_avg - se->avg.util_avg;
+
+	update_tg_cfs_multi_load(cfs_rq, se, gcfs_rq);
 
 	/* Nothing to update */
 	if (!delta)
@@ -3345,7 +3339,6 @@ static inline int propagate_entity_load_avg(struct sched_entity *se)
 
 	update_tg_cfs_util(cfs_rq, se);
 	update_tg_cfs_load(cfs_rq, se);
-	update_tg_multi_load(cfs_rq, se, group_cfs_rq(se));
 
 	trace_sched_load_cfs_rq(cfs_rq);
 	trace_sched_load_se(se);
@@ -3418,6 +3411,8 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq)
 	struct sched_avg *sa = &cfs_rq->avg;
 	int decayed, removed_load = 0, removed_util = 0;
 
+	decayed = update_cfs_rq_multi_load(cfs_rq_clock_task(cfs_rq), cfs_rq);
+
 	if (atomic_long_read(&cfs_rq->removed_load_avg)) {
 		s64 r = atomic_long_xchg(&cfs_rq->removed_load_avg, 0);
 		sub_positive(&sa->load_avg, r);
@@ -3432,8 +3427,6 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq)
 		sub_positive(&sa->util_sum, r * LOAD_AVG_MAX);
 		removed_util = 1;
 		set_tg_cfs_propagate(cfs_rq);
-
-		apply_removed_multi_load(cfs_rq);
 	}
 
 	decayed = __update_load_avg_cfs_rq(now, cpu_of(rq_of(cfs_rq)), cfs_rq);
@@ -3516,8 +3509,10 @@ static inline void update_load_avg(struct sched_entity *se, int flags)
 	 * Track task load average for carrying it to new CPU after migrated, and
 	 * track group sched_entity load average for task_h_load calc in migration
 	 */
-	if (se->avg.last_update_time && !(flags & SKIP_AGE_LOAD))
+	if (se->avg.last_update_time && !(flags & SKIP_AGE_LOAD)) {
 		__update_load_avg_se(now, cpu, cfs_rq, se);
+		update_multi_load_se(cfs_rq_clock_task(cfs_rq), cfs_rq, se);
+	}
 
 	decayed  = update_cfs_rq_load_avg(now, cfs_rq);
 	decayed |= propagate_entity_load_avg(se);
@@ -3536,14 +3531,14 @@ static inline void update_load_avg(struct sched_entity *se, int flags)
  */
 static void attach_entity_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
+	attach_entity_multi_load(cfs_rq, se);
+
 	se->avg.last_update_time = cfs_rq->avg.last_update_time;
 	cfs_rq->avg.load_avg += se->avg.load_avg;
 	cfs_rq->avg.load_sum += se->avg.load_sum;
 	cfs_rq->avg.util_avg += se->avg.util_avg;
 	cfs_rq->avg.util_sum += se->avg.util_sum;
 	set_tg_cfs_propagate(cfs_rq);
-
-	attach_entity_multi_load(cfs_rq, se);
 
 	cfs_rq_util_change(cfs_rq);
 
@@ -3560,14 +3555,13 @@ static void attach_entity_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *s
  */
 static void detach_entity_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
+	detach_entity_multi_load(cfs_rq, se);
 
 	sub_positive(&cfs_rq->avg.load_avg, se->avg.load_avg);
 	sub_positive(&cfs_rq->avg.load_sum, se->avg.load_sum);
 	sub_positive(&cfs_rq->avg.util_avg, se->avg.util_avg);
 	sub_positive(&cfs_rq->avg.util_sum, se->avg.util_sum);
 	set_tg_cfs_propagate(cfs_rq);
-
-	detach_entity_multi_load(cfs_rq, se);
 
 	cfs_rq_util_change(cfs_rq);
 
@@ -3628,6 +3622,8 @@ void sync_entity_load_avg(struct sched_entity *se)
 {
 	struct cfs_rq *cfs_rq = cfs_rq_of(se);
 	u64 last_update_time;
+
+	sync_entity_multi_load(cfs_rq, se);
 
 	last_update_time = cfs_rq_last_update_time(cfs_rq);
 	__update_load_avg_blocked_se(last_update_time, cpu_of(rq_of(cfs_rq)), se);
@@ -8011,6 +8007,7 @@ static void migrate_task_rq_fair(struct task_struct *p)
 
 	/* Tell new CPU we are migrated */
 	p->se.avg.last_update_time = 0;
+	migrate_entity_multi_load(&p->se);
 
 	/* We have migrated, no longer consider this task hot */
 	p->se.exec_start = 0;
@@ -11700,7 +11697,7 @@ void init_cfs_rq(struct cfs_rq *cfs_rq)
 #endif
 	atomic_long_set(&cfs_rq->removed_load_avg, 0);
 	atomic_long_set(&cfs_rq->removed_util_avg, 0);
-	raw_spin_lock_init(&cfs_rq->ml_removed.lock);
+	init_cfs_rq_multi_load(cfs_rq);
 #endif
 }
 
@@ -11721,6 +11718,7 @@ static void task_move_group_fair(struct task_struct *p)
 #ifdef CONFIG_SMP
 	/* Tell se's cfs_rq has been changed -- migrated */
 	p->se.avg.last_update_time = 0;
+	migrate_entity_multi_load(&p->se);
 #endif
 	attach_task_cfs_rq(p);
 }

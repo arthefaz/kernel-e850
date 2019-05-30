@@ -510,6 +510,7 @@ struct cfs_rq {
 
 	struct {
 		raw_spinlock_t	lock ____cacheline_aligned;
+		int		nr;
 		unsigned long	util_avg;
 		unsigned long	util_avg_s;
 	} ml_removed;

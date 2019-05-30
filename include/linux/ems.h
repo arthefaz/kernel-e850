@@ -35,7 +35,7 @@ extern void init_ems(void);
 /*
  * init util
  */
-extern void post_init_entity_multi_load(struct sched_entity *se);
+extern void post_init_entity_multi_load(struct sched_entity *se, u64 now);
 
 
 /*
@@ -58,14 +58,18 @@ extern void rebuild_sched_energy_table(struct cpumask *cpus, int clipped_freq,
  */
 extern unsigned long ml_boosted_cpu_util(int cpu);
 extern void init_multi_load(struct sched_entity *se);
-extern void update_multi_load(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_entity *se,
-				struct sched_avg *sa, unsigned long load, int running);
+
+extern void set_task_rq_multi_load(struct sched_entity *se, struct cfs_rq *prev, struct cfs_rq *next);
+extern void update_tg_cfs_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se, struct cfs_rq *gcfs_rq);
+extern int update_cfs_rq_multi_load(u64 now, struct cfs_rq *cfs_rq);
 extern void attach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se);
 extern void detach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se);
+extern int update_multi_load_se(u64 now, struct cfs_rq *cfs_rq, struct sched_entity *se);
+extern void sync_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se);
 extern void remove_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se);
-extern void apply_removed_multi_load(struct cfs_rq *cfs_rq);
-extern void update_tg_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se,
-				struct cfs_rq *gcfs_rq);
+extern void init_cfs_rq_multi_load(struct cfs_rq *cfs_rq);
+extern void migrate_entity_multi_load(struct sched_entity *se);
+
 extern void util_est_enqueue_multi_load(struct cfs_rq *cfs_rq, struct task_struct *p);
 extern void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq, struct task_struct *p, bool task_sleep);
 extern void util_est_update(struct task_struct *p, int prev_util_est, int next_util_est);
@@ -118,7 +122,7 @@ static inline void init_ems(void) { }
 /*
  * init util
  */
-static inline void post_init_entity_multi_load(struct sched_entity *se) { }
+static inline void post_init_entity_multi_load(struct sched_entity *se, u64 now) { }
 
 
 /*
@@ -135,14 +139,18 @@ static inline void reconstruct_sched_energy_table_qos(struct cpumask *cpus,
  */
 static inline unsigned long ml_boosted_cpu_util(int cpu) { return 0; }
 static inline void init_multi_load(struct sched_entity *se) { }
-static inline void update_multi_load(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_entity *se,
-				struct sched_avg *sa, unsigned long load, int running) { }
+
+static inline void set_task_rq_multi_load(struct sched_entity *se, struct cfs_rq *prev, struct cfs_rq *next);
+static inline void update_tg_cfs_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se, struct cfs_rq *gcfs_rq) { }
+static inline int update_cfs_rq_multi_load(u64 now, struct cfs_rq *cfs_rq) { return 0; }
 static inline void attach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se) { }
 static inline void detach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se) { }
+static inline int update_multi_load_se(u64 now, struct cfs_rq *cfs_rq, struct sched_entity *se) { return 0; }
+static inline void sync_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se) { }
 static inline void remove_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se) { }
-static inline void apply_removed_multi_load(struct cfs_rq *cfs_rq) { }
-static inline void update_tg_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se,
-				struct cfs_rq *gcfs_rq) { }
+static inline void init_cfs_rq_multi_load(struct cfs_rq *cfs_rq) { }
+static inline void migrate_entity_multi_load(struct sched_entity *se) { }
+
 static inline void util_est_enqueue_multi_load(struct cfs_rq *cfs_rq, struct task_struct *p) { }
 static inline void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq, struct task_struct *p, bool task_sleep) { }
 static inline void util_est_update(struct task_struct *p, int prev_util_est, int next_util_est) { }

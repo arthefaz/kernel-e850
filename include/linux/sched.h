@@ -355,6 +355,7 @@ struct util_est {
 };
 
 struct multi_load {
+	u64				last_update_time;
 	u32				period_contrib;
 	u64				runnable_sum;
 	u64				runnable_sum_s;

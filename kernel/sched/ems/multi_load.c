@@ -194,7 +194,7 @@ unsigned long ml_cpu_util_without(int cpu, struct task_struct *p)
 	unsigned long sse_util, uss_util;
 
 	/* Task has no contribution or is new */
-	if (cpu != task_cpu(p) || !READ_ONCE(p->se.avg.last_update_time))
+	if (cpu != task_cpu(p) || !READ_ONCE(p->se.ml.last_update_time))
 		return ml_cpu_util(cpu);
 
 	sse_util = __ml_cpu_util(cpu, SSE);
@@ -261,7 +261,7 @@ unsigned long __ml_cpu_util_with(int cpu, struct task_struct *p, int sse)
 	 * we want to calculate utilization and 2) the waking task is not newbie,
 	 * consider the task's utilization for 'util' which we are calculating.
 	 */
-	if (cpu != task_cpu(p) && READ_ONCE(p->se.avg.last_update_time))
+	if (cpu != task_cpu(p) && READ_ONCE(p->se.ml.last_update_time))
 		if (p->sse == sse)
 			util += ml_task_util(p);
 
@@ -357,7 +357,7 @@ static void post_init_inherit_parent(struct sched_entity *se, u32 inherit_ratio)
 	trace_ems_multi_load_new_task(ml);
 }
 
-void post_init_entity_multi_load(struct sched_entity *se)
+void post_init_entity_multi_load(struct sched_entity *se, u64 now)
 {
 	switch(inherit_type) {
 	case INHERIT_CFS_RQ:
@@ -369,6 +369,12 @@ void post_init_entity_multi_load(struct sched_entity *se)
 	default:
 		pr_info("%s: Not support initial util type %d\n",
 				__func__, inherit_type);
+	}
+
+	if (entity_is_task(se)) {
+		struct task_struct *p = task_of(se);
+		if (p->sched_class != &fair_sched_class)
+			se->ml.last_update_time = now;
 	}
 }
 
@@ -446,6 +452,9 @@ static int __init init_initial_util(void)
 }
 late_initcall(init_initial_util);
 
+/******************************************************************************
+ *                           utilization tracking                             *
+ ******************************************************************************/
 static void update_next_balance(struct multi_load *ml)
 {
 	struct sched_entity *se = container_of(ml, struct sched_entity, ml);
@@ -581,7 +590,7 @@ __update_multi_load(u64 delta, int cpu, struct cfs_rq *cfs_rq,
 	return periods;
 }
 
-void update_multi_load(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_entity *se,
+static void update_multi_load(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_entity *se,
 				struct sched_avg *sa, unsigned long load, int running)
 {
 	struct multi_load *ml;
@@ -592,7 +601,7 @@ void update_multi_load(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_ent
 	else
 		ml = &se->ml;
 
-	delta = now - sa->last_update_time;
+	delta = now - ml->last_update_time;
 	if (delta < 0)
 		return;
 
@@ -600,10 +609,35 @@ void update_multi_load(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_ent
 	if (!delta)
 		return;
 
+	ml->last_update_time += delta << 10;
+
 	if (!load)
 		running = 0;
 
 	__update_multi_load(delta, cpu, cfs_rq, ml, load, running, get_sse(se));
+}
+
+static int __update_multi_load_blocked_se(u64 now, struct sched_entity *se)
+{
+	update_multi_load(now, rq_of(se->cfs_rq)->cpu, NULL, se, &se->avg, 0, 0);
+
+	return 0;
+}
+
+static int __update_multi_load_se(u64 now, struct cfs_rq *cfs_rq, struct sched_entity *se)
+{
+	update_multi_load(now, rq_of(se->cfs_rq)->cpu, NULL, se, &se->avg,
+				se_weight(se) * se->on_rq, cfs_rq->curr == se);
+
+	return 0;
+}
+
+static int __update_multi_load_cfs_rq(u64 now, struct cfs_rq *cfs_rq)
+{
+	update_multi_load(now, rq_of(cfs_rq)->cpu, cfs_rq, cfs_rq->curr, &cfs_rq->avg,
+			scale_load_down(cfs_rq->load.weight), cfs_rq->curr != NULL);
+
+	return 0;
 }
 
 /*
@@ -643,92 +677,39 @@ void update_multi_load(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_ent
 	WRITE_ONCE(*ptr, res);					\
 } while (0)
 
-/**
- * detach_entity_multi_load - detach this entity from its cfs_rq load avg
- * @cfs_rq: cfs_rq to detach from
- * @se: sched_entity to detach
+/*
+ * set_task_rq_multi_load() is called from
+ *   set_task_rq_fair() in fair.c
  */
-void detach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
+void set_task_rq_multi_load(struct sched_entity *se,
+				struct cfs_rq *prev, struct cfs_rq *next)
 {
-	if (get_sse(se)) {
-		sub_positive(&cfs_rq->ml.util_avg_s, se->ml.util_avg);
-		sub_positive(&cfs_rq->ml.util_sum_s, se->ml.util_sum);
-	} else {
-		sub_positive(&cfs_rq->ml.util_avg, se->ml.util_avg);
-		sub_positive(&cfs_rq->ml.util_sum, se->ml.util_sum);
-	}
+	u64 p_last_update_time;
+	u64 n_last_update_time;
 
-	trace_ems_multi_load_cpu(&cfs_rq->ml);
+	/*
+	 * We are supposed to update the task to "current" time, then its up to
+	 * date and ready to go to new CPU/cfs_rq. But we have difficulty in
+	 * getting what current time is, so simply throw away the out-of-date
+	 * time. This will result in the wakee task is less decayed, but giving
+	 * the wakee more load sounds not bad.
+	 */
+	if (!(se->ml.last_update_time && prev))
+		return;
+
+	p_last_update_time = prev->ml.last_update_time;
+	n_last_update_time = next->ml.last_update_time;
+
+	__update_multi_load_blocked_se(p_last_update_time, se);
+	se->ml.last_update_time = n_last_update_time;
 }
 
-/**
- * attach_entity_multi_load - attach this entity to its cfs_rq load avg
- * @cfs_rq: cfs_rq to attach to
- * @se: sched_entity to attach
+/*
+ * update_tg_cfs_multi_load() is called from
+ *   update_tg_cfs_util() in fair.c
  */
-void attach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
-{
-	struct multi_load *ml = &se->ml;
-	u32 divider = LOAD_AVG_MAX - 1024 + cfs_rq->ml.period_contrib;
-
-	ml->period_contrib = cfs_rq->ml.period_contrib;
-	ml->util_sum = ml->util_avg * divider;
-
-	if (get_sse(se)) {
-		cfs_rq->ml.util_avg_s += se->ml.util_avg;
-		cfs_rq->ml.util_sum_s += se->ml.util_sum;
-	} else {
-		cfs_rq->ml.util_avg += se->ml.util_avg;
-		cfs_rq->ml.util_sum += se->ml.util_sum;
-	}
-
-	trace_ems_multi_load_cpu(&cfs_rq->ml);
-}
-
-/**
- * remove_entity_multi_load - apply removed entity's util average to cfs_rq
- * @cfs_rq : cfs_rq to remove from
- * @se : sched_entity to remove
- */
-void remove_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
-{
-	unsigned long flags;
-
-	raw_spin_lock_irqsave(&cfs_rq->ml_removed.lock, flags);
-	if (get_sse(se))
-		cfs_rq->ml_removed.util_avg_s += se->ml.util_avg;
-	else
-		cfs_rq->ml_removed.util_avg += se->ml.util_avg;
-	raw_spin_unlock_irqrestore(&cfs_rq->ml_removed.lock, flags);
-}
-
-/**
- * apply_removed_multi_load - apply removed entity's util average to cfs_rq
- * @cfs_rq : cfs_rq to update
- */
-void apply_removed_multi_load(struct cfs_rq *cfs_rq)
-{
-	unsigned long removed_util_s = 0, removed_util = 0, r;
-	struct multi_load *ml = &cfs_rq->ml;
-	u32 divider = LOAD_AVG_MAX - 1024 + ml->period_contrib;
-
-	raw_spin_lock(&cfs_rq->ml_removed.lock);
-	swap(cfs_rq->ml_removed.util_avg_s, removed_util_s);
-	swap(cfs_rq->ml_removed.util_avg, removed_util);
-	raw_spin_unlock(&cfs_rq->ml_removed.lock);
-
-	r = removed_util_s;
-	sub_positive(&ml->util_avg_s, r);
-	sub_positive(&ml->util_sum_s, r * divider);
-
-	r = removed_util;
-	sub_positive(&ml->util_avg, r);
-	sub_positive(&ml->util_sum, r * divider);
-}
-
-/* Take into account change of utilization of a child task group */
 void
-update_tg_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se,
+update_tg_cfs_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se,
 						struct cfs_rq *gcfs_rq)
 {
 	struct multi_load *ml = &se->ml;
@@ -759,6 +740,141 @@ update_tg_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se,
 
 	trace_ems_multi_load_task(ml);
 	trace_ems_multi_load_cpu(&cfs_rq->ml);
+}
+
+/*
+ * update_cfs_rq_multi_load() is called from
+ *   update_cfs_rq_load_avg() in fair.c
+ */
+int update_cfs_rq_multi_load(u64 now, struct cfs_rq *cfs_rq)
+{
+	unsigned long removed_util_s = 0, removed_util = 0;
+	struct multi_load *ml = &cfs_rq->ml;
+	int decayed = 0;
+
+	if (cfs_rq->ml_removed.nr) {
+		unsigned long r;
+		u32 divider = LOAD_AVG_MAX - 1024 + ml->period_contrib;
+
+		raw_spin_lock(&cfs_rq->ml_removed.lock);
+		swap(cfs_rq->ml_removed.util_avg_s, removed_util_s);
+		swap(cfs_rq->ml_removed.util_avg, removed_util);
+		cfs_rq->ml_removed.nr = 0;
+		raw_spin_unlock(&cfs_rq->ml_removed.lock);
+
+		r = removed_util_s;
+		sub_positive(&ml->util_avg_s, r);
+		sub_positive(&ml->util_sum_s, r * divider);
+
+		r = removed_util;
+		sub_positive(&ml->util_avg, r);
+		sub_positive(&ml->util_sum, r * divider);
+
+		cfs_rq->propagate = 1;
+
+		decayed = 1;
+	}
+
+	decayed |= __update_multi_load_cfs_rq(now, cfs_rq);
+
+	return decayed;
+}
+
+/*
+ * attach_entity_multi_load() is called from
+ *   attach_entity_load_avg() in fair.c
+ */
+void attach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
+{
+	u32 divider = LOAD_AVG_MAX - 1024 + cfs_rq->ml.period_contrib;
+
+	se->ml.last_update_time = cfs_rq->ml.last_update_time;
+	se->ml.period_contrib = cfs_rq->ml.period_contrib;
+	se->ml.util_sum = se->ml.util_avg * divider;
+
+	if (get_sse(se)) {
+		cfs_rq->ml.util_avg_s += se->ml.util_avg;
+		cfs_rq->ml.util_sum_s += se->ml.util_sum;
+	} else {
+		cfs_rq->ml.util_avg += se->ml.util_avg;
+		cfs_rq->ml.util_sum += se->ml.util_sum;
+	}
+
+	trace_ems_multi_load_cpu(&cfs_rq->ml);
+}
+
+/*
+ * detach_entity_multi_load() is called from
+ *   detach_entity_load_avg() in fair.c
+ */
+void detach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
+{
+	if (get_sse(se)) {
+		sub_positive(&cfs_rq->ml.util_avg_s, se->ml.util_avg);
+		sub_positive(&cfs_rq->ml.util_sum_s, se->ml.util_sum);
+	} else {
+		sub_positive(&cfs_rq->ml.util_avg, se->ml.util_avg);
+		sub_positive(&cfs_rq->ml.util_sum, se->ml.util_sum);
+	}
+
+	trace_ems_multi_load_cpu(&cfs_rq->ml);
+}
+
+/*
+ * update_multi_load_se() is called from
+ *   update_load_avg() in fair.c
+ */
+int update_multi_load_se(u64 now, struct cfs_rq *cfs_rq, struct sched_entity *se)
+{
+	__update_multi_load_se(now, cfs_rq, se);
+
+	return 0;
+}
+
+/*
+ * sync_entity_multi_load() is called from
+ *   sync_entity_load_avg() in fair.c
+ */
+void sync_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
+{
+	__update_multi_load_blocked_se(cfs_rq->ml.last_update_time, se);
+}
+
+/*
+ * remove_entity_multi_load() is called from
+ *   remove_entity_load_avg() in fair.c
+ */
+void remove_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se)
+{
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&cfs_rq->ml_removed.lock, flags);
+	++cfs_rq->ml_removed.nr;
+	if (get_sse(se))
+		cfs_rq->ml_removed.util_avg_s += se->ml.util_avg;
+	else
+		cfs_rq->ml_removed.util_avg += se->ml.util_avg;
+	raw_spin_unlock_irqrestore(&cfs_rq->ml_removed.lock, flags);
+}
+
+/*
+ * init_cfs_rq_multi_load() is called from
+ *   init_cfs_rq() in fair.c
+ */
+void init_cfs_rq_multi_load(struct cfs_rq *cfs_rq)
+{
+	raw_spin_lock_init(&cfs_rq->ml_removed.lock);
+}
+
+/*
+ * migrate_entity_multi_load() is called from
+ *   migrate_task_rq_fair() in fair.c
+ *   task_move_group_fair() in fair.c
+ */
+void migrate_entity_multi_load(struct sched_entity *se)
+{
+	/* Tell new CPU we are migrated */
+	se->ml.last_update_time = 0;
 }
 
 /******************************************************************************
