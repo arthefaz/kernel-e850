@@ -183,6 +183,7 @@ struct dw_mci {
 	unsigned int		prev_blksz;
 	unsigned char		timing;
 	struct workqueue_struct *card_workqueue;
+	struct workqueue_struct *sd_card_det_workqueue;
 
 	/* DMA interface members*/
 	int			use_dma;
@@ -210,8 +211,8 @@ struct dw_mci {
 	u32			dir_status;
 	struct tasklet_struct	tasklet;
 	u32 tasklet_state;
-	struct tasklet_struct pw_tasklet;
 	struct work_struct card_work;
+	struct work_struct card_det_work;
 	unsigned long		pending_events;
 	unsigned long		completed_events;
 	enum dw_mci_state	state;
