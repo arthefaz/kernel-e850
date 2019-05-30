@@ -216,15 +216,6 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 	}
 }
 
-#ifdef CONFIG_SCHED_EMS
-unsigned long freqvar_boost_vector(int cpu, unsigned long util);
-#else
-static inline unsigned long freqvar_boost_vector(int cpu, unsigned long util)
-{
-	return util;
-}
-#endif
-
 /**
  * get_next_freq - Compute a new frequency for a given cpufreq policy.
  * @sg_policy: schedutil policy object to compute the new frequency for.
@@ -278,7 +269,7 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, int cpu)
 #else
  	*util = boosted_cpu_util(cpu, rt);
 #endif
-	*util = freqvar_boost_vector(cpu, *util);
+	*util = emst_boost(cpu, *util);
 	*util = min(*util, max_cap);
 	*max = max_cap;
 
@@ -434,56 +425,7 @@ static void sugov_irq_work(struct irq_work *irq_work)
 	schedule_work_on(smp_processor_id(), &sg_policy->work);
 }
 
-/************************ Governor externals ***********************/
-static void update_min_rate_limit_ns(struct sugov_policy *sg_policy);
-void sugov_update_rate_limit_us(struct cpufreq_policy *policy,
-			int up_rate_limit_ms, int down_rate_limit_ms)
-{
-	struct sugov_policy *sg_policy;
-	struct sugov_tunables *tunables;
-
-	sg_policy = policy->governor_data;
-	if (!sg_policy)
-		return;
-
-	tunables = sg_policy->tunables;
-	if (!tunables)
-		return;
-
-	tunables->up_rate_limit_us = (unsigned int)(up_rate_limit_ms * USEC_PER_MSEC);
-	tunables->down_rate_limit_us = (unsigned int)(down_rate_limit_ms * USEC_PER_MSEC);
-
-	sg_policy->up_rate_delay_ns = up_rate_limit_ms * NSEC_PER_MSEC;
-	sg_policy->down_rate_delay_ns = down_rate_limit_ms * NSEC_PER_MSEC;
-
-	update_min_rate_limit_ns(sg_policy);
-}
-
-int sugov_sysfs_add_attr(struct cpufreq_policy *policy, const struct attribute *attr)
-{
-	struct sugov_policy *sg_policy;
-	struct sugov_tunables *tunables;
-
-	sg_policy = policy->governor_data;
-	if (!sg_policy)
-		return -ENODEV;
-
-	tunables = sg_policy->tunables;
-	if (!tunables)
-		return -ENODEV;
-
-	return sysfs_create_file(&tunables->attr_set.kobj, attr);
-}
-
-struct cpufreq_policy *sugov_get_attr_policy(struct gov_attr_set *attr_set)
-{
-	struct sugov_policy *sg_policy = list_first_entry(&attr_set->policy_list,
-						typeof(*sg_policy), tunables_hook);
-	return sg_policy->policy;
-}
-
 /************************** sysfs interface ************************/
-
 static struct sugov_tunables *global_tunables;
 static DEFINE_MUTEX(global_tunables_lock);
 
