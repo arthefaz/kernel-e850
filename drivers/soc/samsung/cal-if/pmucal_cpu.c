@@ -1,13 +1,9 @@
 #include "pmucal_cpu.h"
-#ifdef CONFIG_FLEXPMU
 #include "pmucal_powermode.h"
-#endif
 #include "pmucal_rae.h"
 
-#ifdef CONFIG_FLEXPMU
 unsigned int cpu_inform_c2;
 unsigned int cpu_inform_cpd;
-#endif
 
 /**
  *  pmucal_cpu_enable - enables a core.
@@ -32,9 +28,8 @@ int pmucal_cpu_enable(unsigned int cpu)
 				PMUCAL_PREFIX, cpu);
 		return -ENOENT;
 	}
-#ifdef CONFIG_FLEXPMU
+
 	pmucal_powermode_hint_clear();
-#endif
 	ret = pmucal_rae_handle_seq(pmucal_cpu_list[cpu].on,
 				pmucal_cpu_list[cpu].num_on);
 	if (ret) {
@@ -42,6 +37,8 @@ int pmucal_cpu_enable(unsigned int cpu)
 				PMUCAL_PREFIX, __func__, cpu);
 		return ret;
 	}
+
+	pmucal_dbg_do_profile(pmucal_cpu_list[cpu].dbg, true);
 
 	return 0;
 }
@@ -69,9 +66,10 @@ int pmucal_cpu_disable(unsigned int cpu)
 				PMUCAL_PREFIX, cpu);
 		return -ENOENT;
 	}
-#ifdef CONFIG_FLEXPMU
+
 	pmucal_powermode_hint(cpu_inform_c2);
-#endif
+
+	pmucal_dbg_set_emulation(pmucal_cpu_list[cpu].dbg);
 
 	ret = pmucal_rae_handle_seq(pmucal_cpu_list[cpu].off,
 				pmucal_cpu_list[cpu].num_off);
@@ -80,6 +78,8 @@ int pmucal_cpu_disable(unsigned int cpu)
 				PMUCAL_PREFIX, __func__, cpu);
 		return ret;
 	}
+
+	pmucal_dbg_do_profile(pmucal_cpu_list[cpu].dbg, false);
 
 	return 0;
 }
@@ -141,9 +141,8 @@ int pmucal_cpu_cluster_enable(unsigned int cluster)
 				PMUCAL_PREFIX, cluster, pmucal_cluster_list_size);
 		return -EINVAL;
 	}
-#ifdef CONFIG_FLEXPMU
+
 	pmucal_powermode_hint_clear();
-#endif
 
 	if (pmucal_cluster_list[cluster].num_on) {
 		ret = pmucal_rae_handle_seq(pmucal_cluster_list[cluster].on,
@@ -154,6 +153,8 @@ int pmucal_cpu_cluster_enable(unsigned int cluster)
 			return ret;
 		}
 	}
+
+	pmucal_dbg_do_profile(pmucal_cluster_list[cluster].dbg, true);
 
 	return 0;
 }
@@ -175,9 +176,10 @@ int pmucal_cpu_cluster_disable(unsigned int cluster)
 				PMUCAL_PREFIX, cluster, pmucal_cluster_list_size);
 		return -EINVAL;
 	}
-#ifdef CONFIG_FLEXPMU
+
 	pmucal_powermode_hint(cpu_inform_cpd);
-#endif
+
+	pmucal_dbg_set_emulation(pmucal_cluster_list[cluster].dbg);
 
 	if (pmucal_cluster_list[cluster].num_off) {
 		ret = pmucal_rae_handle_seq(pmucal_cluster_list[cluster].off,
@@ -188,6 +190,8 @@ int pmucal_cpu_cluster_disable(unsigned int cluster)
 			return ret;
 		}
 	}
+
+	pmucal_dbg_do_profile(pmucal_cluster_list[cluster].dbg, false);
 
 	return 0;
 }
@@ -230,6 +234,29 @@ int pmucal_cpu_cluster_is_enabled(unsigned int cluster)
 		return 1;
 	else
 		return 0;
+}
+
+/**
+ *  pmucal_cpu_cluster_req_emulation - requests en/disabling of emulation at next CPD enter.
+ *		                exposed to CAL interface.
+ *
+ *  @cluster: cpu cluster index.
+ *  @en	    : en/disable emulation.
+ *
+ *  Returns 0 if it succeeds.
+ *  Otherwise, negative error code.
+ */
+int pmucal_cpu_cluster_req_emulation(unsigned int cluster, bool en)
+{
+	if (cluster >= pmucal_cluster_list_size) {
+		pr_err("%s cluster index(%d) is out of supported range (0~%d).\n",
+				PMUCAL_PREFIX, cluster, pmucal_cluster_list_size);
+		return -EINVAL;
+	}
+
+	pmucal_dbg_req_emulation(pmucal_cluster_list[cluster].dbg, en);
+
+	return 0;
 }
 
 /**

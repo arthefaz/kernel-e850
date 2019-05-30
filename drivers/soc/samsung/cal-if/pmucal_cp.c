@@ -39,6 +39,7 @@ int pmucal_cp_init(void)
  */
 int pmucal_cp_status(void)
 {
+	int ret;
 	pr_info("%s%s()\n", PMUCAL_PREFIX, __func__);
 
 	if (!pmucal_cp_list.status) {
@@ -47,10 +48,16 @@ int pmucal_cp_status(void)
 		return -ENOENT;
 	}
 
-	pmucal_rae_handle_cp_seq(pmucal_cp_list.status,
+	ret = pmucal_rae_handle_cp_seq(pmucal_cp_list.status,
 				pmucal_cp_list.num_status);
 
-	if (pmucal_cp_list.status->value == 0x5)
+	if (ret < 0) {
+		pr_err("%s %s: error on handling cp-status sequence.\n",
+				PMUCAL_PREFIX, __func__);
+		return ret;
+	}
+
+	if (pmucal_cp_list.status->value == PMU_CP_STATUS_BIT)
 		return 1;
 	else
 		return 0;
@@ -195,16 +202,6 @@ int pmucal_cp_disable_dump_pc_no_pg(void)
 
 	return 0;
 }
-#define PMU_CP_CTRL_NS_OFFSET	0x30
-#define PMU_CP_CTRL_S_OFFSET	0x34
-#define SMC_ID		0x82000700
-#define READ_CTRL	0x3
-#define WRITE_CTRL	0x4
-
-enum cp_control {
-	CP_CTRL_S,
-	CP_CTRL_NS,
-};
 
 int pmucal_is_cp_smc_regs(struct pmucal_seq *seq) {
 	int use_smc = 0;
@@ -225,7 +222,7 @@ void pmucal_smc_read(struct pmucal_seq *seq, int update)
 	} else if (seq->offset == PMU_CP_CTRL_NS_OFFSET) {
 		reg = CP_CTRL_NS;
 	} else {
-		pr_err("%s%s: ERR! it is not CP_CTRL_S, CP_CTRL_NS: 0x%08x\n", PMUCAL_PREFIX, __func__, seq->offset);
+		pr_err("%s%s: ERR! it is not CP_CTRL_S, CP_CTRL_NS\n", PMUCAL_PREFIX, __func__);
 		return;
 	}
 
@@ -267,7 +264,7 @@ void pmucal_smc_write(struct pmucal_seq *seq)
 	} else if (seq->offset == PMU_CP_CTRL_NS_OFFSET) {
 		reg = CP_CTRL_NS;
 	} else {
-		pr_err("%s%s: ERR! it is not CP_CTRL_S, CP_CTRL_NS: 0x%08x\n", PMUCAL_PREFIX, __func__, seq->offset);
+		pr_err("%s%s: ERR! it is not CP_CTRL_S, CP_CTRL_NS\n", PMUCAL_PREFIX, __func__);
 		return;
 	}
 
@@ -343,6 +340,20 @@ int pmucal_is_cp_regs(int reg) {
 
 	for (i = 0; i < pmucal_cp_list.num_cp_reset_req_clear; i++) {
 		if (reg == pmucal_cp_list.cp_reset_req_clear[i].base_pa + pmucal_cp_list.cp_reset_req_clear[i].offset) {
+			is_cp_regs = 1;
+			goto out;
+		}
+	}
+
+	for (i = 0; i < pmucal_cp_list.num_cp_enable_dump_pc_no_pg; i++) {
+		if (reg == pmucal_cp_list.cp_enable_dump_pc_no_pg[i].base_pa + pmucal_cp_list.cp_enable_dump_pc_no_pg[i].offset) {
+			is_cp_regs = 1;
+			goto out;
+		}
+	}
+
+	for (i = 0; i < pmucal_cp_list.num_cp_disable_dump_pc_no_pg; i++) {
+		if (reg == pmucal_cp_list.cp_disable_dump_pc_no_pg[i].base_pa + pmucal_cp_list.cp_disable_dump_pc_no_pg[i].offset) {
 			is_cp_regs = 1;
 			goto out;
 		}
@@ -441,6 +452,22 @@ int __init pmucal_cp_initialize(void)
 				pmucal_cp_list.num_cp_reset_req_clear);
 	if (ret) {
 		pr_err("%s %s: error on PA2VA conversion. aborting cp_reset_req_clear...\n",
+				PMUCAL_PREFIX, __func__);
+		goto out;
+	}
+
+	ret = pmucal_rae_phy2virt(pmucal_cp_list.cp_enable_dump_pc_no_pg,
+				pmucal_cp_list.num_cp_enable_dump_pc_no_pg);
+	if (ret) {
+		pr_err("%s %s: error on PA2VA conversion. aborting cp_enable_dump_pc_no_pg...\n",
+				PMUCAL_PREFIX, __func__);
+		goto out;
+	}
+
+	ret = pmucal_rae_phy2virt(pmucal_cp_list.cp_disable_dump_pc_no_pg,
+				pmucal_cp_list.num_cp_disable_dump_pc_no_pg);
+	if (ret) {
+		pr_err("%s %s: error on PA2VA conversion. aborting cp_disable_dump_pc_no_pg...\n",
 				PMUCAL_PREFIX, __func__);
 		goto out;
 	}

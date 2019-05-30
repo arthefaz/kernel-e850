@@ -9,7 +9,7 @@
 extern void pmucal_powermode_hint(unsigned int mode);
 extern void pmucal_powermode_hint_clear(void);
 extern int pmucal_cpuinform_init(void);
-
+extern u32 pmucal_is_lastcore_detecting(unsigned int cpu);
 #else
 
 #define pmucal_powermode_hint(a) do {} while (0)

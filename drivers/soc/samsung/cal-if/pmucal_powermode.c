@@ -1,39 +1,48 @@
+#include <soc/samsung/cal-if.h>
 #include "pwrcal-env.h"
 #include "pmucal_system.h"
 #include "pmucal_powermode.h"
 #include "pmucal_rae.h"
-
-#define read_mpidr() ({							\
-	u64 __val;							\
-	asm("mrs	%0, mpidr_el1" : "=r" (__val));			\
-	__val;								\
-})
-
-static inline unsigned int linear_phycpu(unsigned int mpidr)
-{
-	unsigned int lvl = 0;
-
-	lvl = (mpidr & MPIDR_MT_BITMASK) ? 1 : 0;
-	return ((MPIDR_AFFINITY_LEVEL(mpidr, (1 + lvl)) << 2)
-			| MPIDR_AFFINITY_LEVEL(mpidr, lvl));
-}
+#include "pmucal_cpu.h"
 
 void pmucal_powermode_hint(unsigned int mode)
 {
-	unsigned int mpidr = read_mpidr();
-	unsigned int phycpu = linear_phycpu(mpidr);
+	unsigned int cpu = smp_processor_id();
 
-	__raw_writel(mode, pmucal_cpuinform_list[phycpu].base_va
-			+ pmucal_cpuinform_list[phycpu].offset);
+	__raw_writel(mode, pmucal_cpuinform_list[cpu].base_va
+			+ pmucal_cpuinform_list[cpu].offset);
+}
+
+u32 pmucal_get_powermode_hint(unsigned int cpu)
+{
+	return __raw_readl(pmucal_cpuinform_list[cpu].base_va
+			+ pmucal_cpuinform_list[cpu].offset);
+}
+
+u32 pmucal_is_lastcore_detecting(unsigned int cpu)
+{
+	u32 power_mode;
+
+	if (cpu >= cpu_inform_list_size)
+		return 0;
+
+	power_mode = pmucal_get_powermode_hint(cpu);
+
+	if (!cal_cpu_status(cpu))
+		return 0;
+
+	if (power_mode == cpu_inform_cpd || power_mode == pmucal_sys_powermode[SYS_SICD])
+		return 1;
+
+	return 0;
 }
 
 void pmucal_powermode_hint_clear(void)
 {
-	unsigned int mpidr = read_mpidr();
-	unsigned int phycpu = linear_phycpu(mpidr);
+	unsigned int cpu = smp_processor_id();
 
-	__raw_writel(0, pmucal_cpuinform_list[phycpu].base_va
-			+ pmucal_cpuinform_list[phycpu].offset);
+	__raw_writel(0, pmucal_cpuinform_list[cpu].base_va
+			+ pmucal_cpuinform_list[cpu].offset);
 }
 
 int __init pmucal_cpuinform_init(void)

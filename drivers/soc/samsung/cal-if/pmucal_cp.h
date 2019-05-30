@@ -2,6 +2,25 @@
 #define __PMUCAL_CP_H__
 #include "pmucal_common.h"
 
+#if defined(CONFIG_SOC_EXYNOS9820)
+#define PMU_CP_CTRL_NS_OFFSET	0x3010
+#define PMU_CP_CTRL_S_OFFSET	0x3014
+#define PMU_CP_STATUS_BIT	0x1
+#else
+#define PMU_CP_CTRL_NS_OFFSET	0x30
+#define PMU_CP_CTRL_S_OFFSET	0x34
+#define PMU_CP_STATUS_BIT	0x5
+#endif
+
+#define SMC_ID		0x82000700
+#define READ_CTRL	0x3
+#define WRITE_CTRL	0x4
+
+enum cp_control {
+	CP_CTRL_S,
+	CP_CTRL_NS,
+};
+
 struct pmucal_cp {
 	struct pmucal_seq *init;
 	struct pmucal_seq *status;

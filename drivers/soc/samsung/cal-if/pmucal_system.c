@@ -1,10 +1,8 @@
 #include "pmucal_system.h"
 #include "pmucal_rae.h"
-#ifdef CONFIG_FLEXPMU
 #include "pmucal_powermode.h"
 
 unsigned int pmucal_sys_powermode[NUM_SYS_POWERDOWN] = {0xffffffff, };
-#endif
 
 /**
  *  pmucal_system_enter - prepares to enter a system power mode.
@@ -32,9 +30,8 @@ int pmucal_system_enter(int mode)
 				PMUCAL_PREFIX, __func__, mode);
 		return -ENOENT;
 	}
-#ifdef CONFIG_FLEXPMU
+
 	pmucal_powermode_hint(pmucal_sys_powermode[mode]);
-#endif
 
 	pmucal_rae_save_seq(pmucal_lpm_list[mode].save, pmucal_lpm_list[mode].num_save);
 
@@ -48,6 +45,9 @@ int pmucal_system_enter(int mode)
 
 	if (mode != SYS_SICD)
 		dbg_snapshot_pmu(mode, __func__, DSS_FLAG_OUT);
+
+	pmucal_dbg_set_emulation(pmucal_lpm_list[mode].dbg);
+	pmucal_dbg_do_profile(pmucal_lpm_list[mode].dbg, false);
 
 	return 0;
 }
@@ -98,6 +98,8 @@ int pmucal_system_exit(int mode)
 	if (mode != SYS_SICD)
 		dbg_snapshot_pmu(mode, __func__, DSS_FLAG_OUT);
 
+	pmucal_dbg_do_profile(pmucal_lpm_list[mode].dbg, true);
+
 	return 0;
 }
 
@@ -143,9 +145,7 @@ int pmucal_system_earlywakeup(int mode)
 				PMUCAL_PREFIX, __func__, mode);
 		return ret;
 	}
-#ifdef CONFIG_FLEXPMU
 	pmucal_powermode_hint_clear();
-#endif
 
 	if (mode != SYS_SICD)
 		dbg_snapshot_pmu(mode, __func__, DSS_FLAG_OUT);
