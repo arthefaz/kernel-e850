@@ -31,6 +31,7 @@
  * @total_size:		Size of the framework and all plugins attached.
  * @fw_size:		Size of the ACPM framework.
  * @intr_to_skip:	Disabled interrupts.
+ * @preemption_irq:	preemptive interrupts.
  * @intr_flag_offset:	Field offset for Mailbox interrupt pending register.
  */
 struct acpm_framework {
@@ -51,7 +52,6 @@ struct acpm_framework {
 	u32 ipc_ap_max;
 	u32 ipc_cp_max;
 	u32 ipc_gnss_max;
-	u32 ipc_shub_max;
 	u32 ipc_wlbt_max;
 	u32 ipc_max;
 	u32 irq_max;
@@ -68,13 +68,17 @@ struct acpm_framework {
 	u32 intr_to_skip;
 	u32 intr_flag_offset;
 	struct build_info info;
-	u32 regulator_id;
-	u32 mifdn_count;
-	u32 inform_head;
-	u32 inform0[6];
-	u32 inform1[6];
-	u32 inform2[6];
-	u32 inform3[6];
+	u32 preempt_irq_max;
+	u32 nvic_max;
+	u32 intr_stat;
+	u32 intr_stat1;
+	u32 preemption_irq;
+	u32 preempt_plugin;
+	u32 preempt_log_buf_rear;
+	u32 preempt_log_buf_front;
+	u32 preempt_log_data;
+	u32 preempt_log_entry_len;
+	unsigned long long timestamps[32];
 };
 
 /**
@@ -140,6 +144,8 @@ struct acpm_interrupt {
 	s32 owner;
 	bool is_disabled;
 	bool log_skip;
+	bool idle_ip_skip;
+	bool is_preemption;
 };
 
 /**
@@ -183,6 +189,7 @@ struct apm_peri {
 	void (*disable_intr) (u32 idx, u32 intr);
 	u32 (*get_enabled_intr) (u32 idx);
 	void (*clr_pend_intr) (u32 idx, u32 intr);
+	u32 (*get_active_intr) (u32 idx);
 	u32 (*get_pend_intr) (u32 idx);
 	u32 (*get_mbox_pend_intr) (u32 mbox_addr);
 	void (*clr_mbox_pend_intr) (u32 mbox_addr, u32 intr);
@@ -190,7 +197,6 @@ struct apm_peri {
 	u32 (*set_idle_ip) (u32 is_idle, u32 intr_filed);
 	s32 (*udelay_systick) (u32 udelay_us);
 	void (*set_wdtrst_req) (void);
-	u32 (*get_mif_up_req) (void);
 };
 extern struct apm_peri apm_peri;
 
@@ -212,6 +218,11 @@ struct plat_ops {
 	u32 (*filter_queue_int_status) (u32 intr, u32 int_status);
 	void (*wait_for_intr) (void);
 	u32 (*system_reset) (void);
+	void (*preemption_enable) (void);
+	void (*preemption_disable) (void);
+	void (*restore_intr) (void);
+	void (*preemption_disable_irq_save)(u32 *flag);
+	void (*preemption_enable_irq_restore)(u32 *flag);
 };
 extern struct plat_ops plat_ops;
 
@@ -222,6 +233,9 @@ void acpm_insert_dbg_log(u32 plugin_id, struct dbg_log_info *log);
 char *acpm_strcpy(char *dest, const char *src);
 extern void acpm_print(u32 id, const char *s, u32 int_data, u32 level);
 extern void *get_intr_vector(u32 *irq_max);
+extern void *get_preempt_intr_vector(u32 *irq_max);
+extern u32 get_nvic_max(void);
+extern struct acpm_framework acpm;
 
 enum shard_buffer_type {
 	TYPE_QUEUE = 1,
@@ -229,8 +243,8 @@ enum shard_buffer_type {
 };
 
 #define LOG_ID_SHIFT			(28)
-#define LOG_LEVEL			(27)
-#define LOG_TIME_INDEX			(22)
+#define LOG_TIME_INDEX			(20)
+#define LOG_LEVEL			(19)
 #define AVAILABLE_TIME			(26000)
 
 #define ACPM_DEBUG_PRINT
@@ -265,15 +279,25 @@ enum shard_buffer_type {
 /* speedy definition */
 struct speedyops {
 	int (*init)(void);
+#ifdef CONFIG_MULTI_PMIC
+	int (*tx)(u8 channel, unsigned int reg, unsigned int val);
+	int (*rx)(u8 channel, unsigned int reg);
+#else
 	int (*tx)(unsigned int reg, unsigned int val);
 	int (*rx)(unsigned int reg);
+#endif
 };
 
 extern struct speedyops speedyops;
 
 #define speedy_init()	        	speedyops.init()
+#ifdef CONFIG_MULTI_PMIC
+#define speedy_tx(channel, reg, val)		speedyops.tx(channel, reg, val)
+#define speedy_rx(channel, reg)		        speedyops.rx(channel, reg)
+#else
 #define speedy_tx(reg, val)		speedyops.tx(reg, val)
 #define speedy_rx(reg)		        speedyops.rx(reg)
+#endif
 
 #define MAGIC				0x0BAD0BAD
 

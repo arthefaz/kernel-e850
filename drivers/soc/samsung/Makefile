@@ -23,6 +23,7 @@ obj-$(CONFIG_EXYNOS_CHIPID)	+= exynos-chipid.o
 obj-$(CONFIG_EXYNOS_ACPM)       += acpm/
 
 obj-$(CONFIG_EXYNOS_RGT)        += exynos-rgt.o
+obj-$(CONFIG_EXYNOS_FLEXPMU_DBG)        += exynos-flexpmu-dbg.o
 
 obj-$(CONFIG_EXYNOS_REBOOT)     += exynos-reboot.o
 
