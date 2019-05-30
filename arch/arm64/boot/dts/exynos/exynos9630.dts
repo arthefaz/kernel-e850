@@ -16,9 +16,10 @@
 /dts-v1/;
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/exynos9630.h>
-#include "exynos9630-pinctrl.dtsi"
-#include "exynos9630-rmem.dtsi"
 #include <dt-bindings/clock/exynos9630.h>
+#include "exynos9630-pinctrl.dtsi"
+#include "exynos9630-usi.dtsi"
+#include "exynos9630-rmem.dtsi"
 #include "exynos9630-dpu.dtsi"
 #include "exynos9630-sysmmu.dtsi"
 #include <dt-bindings/ufs/ufs.h>
@@ -201,23 +202,6 @@
 					<10 &gic 0 INTREQ__MCT_L6 IRQ_TYPE_LEVEL_HIGH>,
 					<11 &gic 0 INTREQ__MCT_L7 IRQ_TYPE_LEVEL_HIGH>;
 		};
-	};
-
-	serial_0: uart@13800000 {
-		compatible = "samsung,exynos-uart";
-		samsung,separate-uart-clk;
-		reg = <0x0 0x13800000 0x100>;
-		samsung,fifo-size = <256>;
-		interrupts = <GIC_SPI INTREQ__UART_DBG IRQ_TYPE_LEVEL_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&uart0_bus>;
-		samsung,usi-serial-v2;
-		samsung,dbg-uart-ch;
-		samsung,dbg-uart-baud = <115200>;
-		samsung,dbg-word-len = <8>;
-		clocks = <&clock GATE_UART_DBG_QCH>, <&clock UART_DBG>;
-		clock-names = "gate_uart_clk0", "ipclk_uart0";
-		status = "disabled";
 	};
 
 	/* ALIVE */
