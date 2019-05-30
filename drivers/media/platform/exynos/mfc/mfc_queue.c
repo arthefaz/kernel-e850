@@ -596,8 +596,6 @@ struct mfc_buf *mfc_move_reuse_buffer(struct mfc_ctx *ctx, int release_index)
 	list_for_each_entry_safe(ref_mb, tmp_mb, &ref_queue->head, list) {
 		index = ref_mb->vb.vb2_buf.index;
 		if (index == release_index) {
-			mfc_raw_unprotect(ctx, ref_mb, index);
-
 			ref_mb->used = 0;
 
 			list_del(&ref_mb->list);
@@ -648,17 +646,12 @@ void mfc_cleanup_enc_src_queue(struct mfc_ctx *ctx)
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 	struct mfc_buf_queue *queue = &ctx->src_buf_queue;
-	int i, index;
+	int i;
 
 	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	while (!list_empty(&queue->head)) {
 		mfc_buf = list_entry(queue->head.next, struct mfc_buf, list);
-
-		if (ctx->is_drm && ctx->raw_protect_flag) {
-			index = mfc_buf->vb.vb2_buf.index;
-			mfc_raw_unprotect(ctx, mfc_buf, index);
-		}
 
 		for (i = 0; i < mfc_buf->vb.vb2_buf.num_planes; i++) {
 			if (IS_BUFFER_BATCH_MODE(ctx))
@@ -683,17 +676,12 @@ void mfc_cleanup_enc_dst_queue(struct mfc_ctx *ctx)
 	unsigned long flags;
 	struct mfc_buf *mfc_buf = NULL;
 	struct mfc_buf_queue *queue = &ctx->dst_buf_queue;
-	int i, index;
+	int i;
 
 	spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 
 	while (!list_empty(&queue->head)) {
 		mfc_buf = list_entry(queue->head.next, struct mfc_buf, list);
-
-		if (ctx->is_drm && ctx->stream_protect_flag) {
-			index = mfc_buf->vb.vb2_buf.index;
-			mfc_stream_unprotect(ctx, mfc_buf, index);
-		}
 
 		for (i = 0; i < mfc_buf->vb.vb2_buf.num_planes; i++)
 			vb2_set_plane_payload(&mfc_buf->vb.vb2_buf, i, 0);

@@ -571,7 +571,7 @@ static void __mfc_dump_struct(struct mfc_dev *dev, int curr_ctx)
 
 	if (ctx->type == MFCINST_DECODER && ctx->dec_priv != NULL) {
 		/* mfc_dec */
-		size = (unsigned long)&ctx->dec_priv->assigned_dpb[0] - (unsigned long)ctx->dec_priv;
+		size = (unsigned long)&ctx->dec_priv->dpb[0] - (unsigned long)ctx->dec_priv;
 		print_hex_dump(KERN_ERR, "dump mfc_dec: ", DUMP_PREFIX_OFFSET,
 				32, 4, ctx->dec_priv, size, false);
 	} else if (ctx->type == MFCINST_ENCODER && ctx->enc_priv != NULL) {

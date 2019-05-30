@@ -163,7 +163,6 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	dec->is_dynamic_dpb = 1;
 	dec->dynamic_used = 0;
 	dec->is_dpb_full = 0;
-	mfc_clear_assigned_dpb(ctx);
 	mutex_init(&dec->dpb_mutex);
 
 	/* sh_handle: HDR10+ HEVC SEI meta */
@@ -535,13 +534,6 @@ static int mfc_open(struct file *file)
 #ifdef CONFIG_EXYNOS_CONTENT_PATH_PROTECTION
 	if (mfc_is_drm_node(node)) {
 		if (dev->num_drm_inst < MFC_MAX_DRM_CTX) {
-			if (ctx->raw_protect_flag || ctx->stream_protect_flag) {
-				mfc_err_ctx("protect_flag(%#lx/%#lx) remained\n",
-						ctx->raw_protect_flag,
-						ctx->stream_protect_flag);
-				ret = -EINVAL;
-				goto err_drm_start;
-			}
 			dev->num_drm_inst++;
 			ctx->is_drm = 1;
 

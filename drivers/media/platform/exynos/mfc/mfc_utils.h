@@ -129,39 +129,9 @@ static inline int mfc_check_vb_flag(struct mfc_buf *mfc_buf, enum mfc_vb_flag f)
 }
 
 int mfc_check_vb_with_fmt(struct mfc_fmt *fmt, struct vb2_buffer *vb);
-
-void mfc_raw_protect(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf,
-					int index);
-void mfc_raw_unprotect(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf,
-					int index);
-void mfc_stream_protect(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf,
-					int index);
-void mfc_stream_unprotect(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf,
-					int index);
-
 void mfc_dec_calc_dpb_size(struct mfc_ctx *ctx);
 void mfc_enc_calc_src_size(struct mfc_ctx *ctx);
 void mfc_calc_base_addr(struct mfc_ctx *ctx, struct vb2_buffer *vb, struct mfc_fmt *fmt);
-
-static inline void mfc_clear_assigned_dpb(struct mfc_ctx *ctx)
-{
-	struct mfc_dec *dec;
-	int i;
-
-	if (!ctx) {
-		mfc_err("no mfc context to run\n");
-		return;
-	}
-
-	dec = ctx->dec_priv;
-	if (!dec) {
-		mfc_err_ctx("no mfc decoder to run\n");
-		return;
-	}
-
-	for (i = 0; i < MFC_MAX_DPBS; i++)
-		dec->assigned_dpb[i] = NULL;
-}
 
 static inline int mfc_dec_status_decoding(unsigned int dst_frame_status)
 {
@@ -179,10 +149,6 @@ static inline int mfc_dec_status_display(unsigned int dst_frame_status)
 
 	return 0;
 }
-
-void mfc_cleanup_assigned_dpb(struct mfc_ctx *ctx);
-void mfc_unprotect_released_dpb(struct mfc_ctx *ctx, unsigned int released_flag);
-void mfc_protect_dpb(struct mfc_ctx *ctx, struct mfc_buf *dst_mb);
 
 /* Watchdog interval */
 #define WATCHDOG_TICK_INTERVAL   1000

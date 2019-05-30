@@ -328,19 +328,10 @@ int mfc_run_dec_init(struct mfc_ctx *ctx)
 	mfc_debug(2, "[STREAM] Header size: %d, (offset: %lu)\n",
 		src_mb->vb.vb2_buf.planes[0].bytesused, dec->consumed);
 
-	if (dec->consumed) {
+	if (dec->consumed)
 		mfc_set_dec_stream_buffer(ctx, src_mb, dec->consumed, dec->remained_size);
-	} else {
-		/* decoder src buffer CFW PROT */
-		if (ctx->is_drm) {
-			int index = src_mb->vb.vb2_buf.index;
-
-			mfc_stream_protect(ctx, src_mb, index);
-		}
-
-		mfc_set_dec_stream_buffer(ctx, src_mb,
-			0, src_mb->vb.vb2_buf.planes[0].bytesused);
-	}
+	else
+		mfc_set_dec_stream_buffer(ctx, src_mb, 0, src_mb->vb.vb2_buf.planes[0].bytesused);
 
 	mfc_debug(2, "[BUFINFO] Header addr: 0x%08llx\n", src_mb->addr[0][0]);
 	mfc_clean_ctx_int_flags(ctx);
@@ -378,14 +369,6 @@ int mfc_run_dec_frame(struct mfc_ctx *ctx)
 	if (!src_mb) {
 		mfc_debug(2, "no src buffers\n");
 		return -EAGAIN;
-	}
-
-	/* decoder src buffer CFW PROT */
-	if (ctx->is_drm) {
-		if (!dec->consumed) {
-			index = src_mb->vb.vb2_buf.index;
-			mfc_stream_protect(ctx, src_mb, index);
-		}
 	}
 
 	if (mfc_check_vb_flag(src_mb, MFC_FLAG_EMPTY_DATA))
@@ -435,18 +418,10 @@ int mfc_run_dec_last_frames(struct mfc_ctx *ctx)
 		mfc_debug(2, "no src buffers\n");
 		mfc_set_dec_stream_buffer(ctx, 0, 0, 0);
 	} else {
-		if (dec->consumed) {
+		if (dec->consumed)
 			mfc_set_dec_stream_buffer(ctx, src_mb, dec->consumed, dec->remained_size);
-		} else {
-			/* decoder src buffer CFW PROT */
-			if (ctx->is_drm) {
-				int index = src_mb->vb.vb2_buf.index;
-
-				mfc_stream_protect(ctx, src_mb, index);
-			}
-
+		else
 			mfc_set_dec_stream_buffer(ctx, src_mb, 0, 0);
-		}
 	}
 
 	/* Try to use the non-referenced DPB on dst-queue */
@@ -475,12 +450,6 @@ int mfc_run_enc_init(struct mfc_ctx *ctx)
 		return -EAGAIN;
 	}
 
-	/* encoder dst buffer CFW PROT */
-	if (ctx->is_drm) {
-		int index = dst_mb->vb.vb2_buf.index;
-
-		mfc_stream_protect(ctx, dst_mb, index);
-	}
 	mfc_set_enc_stream_buffer(ctx, dst_mb);
 
 	mfc_set_enc_stride(ctx);
@@ -500,7 +469,7 @@ int mfc_run_enc_frame(struct mfc_ctx *ctx)
 	struct mfc_buf *src_mb;
 	struct mfc_raw_info *raw;
 	struct hdr10_plus_meta dst_sei_meta, *src_sei_meta;
-	unsigned int index, i;
+	unsigned int index;
 	int last_frame = 0;
 
 	raw = &ctx->raw_buf;
@@ -523,11 +492,6 @@ int mfc_run_enc_frame(struct mfc_ctx *ctx)
 	}
 
 	index = src_mb->vb.vb2_buf.index;
-
-	/* encoder src buffer CFW PROT */
-	if (ctx->is_drm)
-		mfc_raw_protect(ctx, src_mb, index);
-
 	mfc_set_enc_frame_buffer(ctx, src_mb, raw->num_planes);
 
 	/* HDR10+ sei meta */
@@ -551,11 +515,6 @@ int mfc_run_enc_frame(struct mfc_ctx *ctx)
 		return -EAGAIN;
 	}
 
-	/* encoder dst buffer CFW PROT */
-	if (ctx->is_drm) {
-		i = dst_mb->vb.vb2_buf.index;
-		mfc_stream_protect(ctx, dst_mb, i);
-	}
 	mfc_debug(2, "nal start : src index from src_buf_queue:%d\n",
 		src_mb->vb.vb2_buf.index);
 	mfc_debug(2, "nal start : dst index from dst_buf_queue:%d\n",
@@ -594,14 +553,6 @@ int mfc_run_enc_last_frames(struct mfc_ctx *ctx)
 
 	mfc_debug(2, "Set address zero for all planes\n");
 	mfc_set_enc_frame_buffer(ctx, 0, raw->num_planes);
-
-	/* encoder dst buffer CFW PROT */
-	if (ctx->is_drm) {
-		int index = dst_mb->vb.vb2_buf.index;
-
-		mfc_stream_protect(ctx, dst_mb, index);
-	}
-
 	mfc_set_enc_stream_buffer(ctx, dst_mb);
 
 	mfc_clean_ctx_int_flags(ctx);

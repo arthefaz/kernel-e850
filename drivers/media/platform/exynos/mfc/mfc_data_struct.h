@@ -1266,15 +1266,6 @@ struct mfc_ctrls_ops {
 			struct list_head *head);
 };
 
-struct stored_dpb_info {
-	int fd[MFC_MAX_PLANES];
-};
-
-struct dec_dpb_ref_info {
-	int index;
-	struct stored_dpb_info dpb[MFC_MAX_DPBS];
-};
-
 struct temporal_layer_info {
 	unsigned int temporal_layer_count;
 	unsigned int temporal_layer_bitrate[VIDEO_MAX_TEMPORAL_LAYERS];
@@ -1444,9 +1435,6 @@ struct mfc_dec {
 	 * ============ boundary line ============
 	 * The following variables are excluded from the MFC log dumps
 	 */
-	/* for DRM ASP */
-	struct mfc_buf *assigned_dpb[MFC_MAX_DPBS];
-
 	/* for Dynamic DPB */
 	struct dpb_table dpb[MFC_MAX_DPBS];
 	struct dpb_table spare_dpb[MFC_MAX_DPBS];
@@ -1611,9 +1599,6 @@ struct mfc_ctx {
 	int last_bps_section;
 
 	int buf_process_type;
-
-	unsigned long raw_protect_flag;
-	unsigned long stream_protect_flag;
 
 	int frame_cnt;
 	u32 last_src_addr;

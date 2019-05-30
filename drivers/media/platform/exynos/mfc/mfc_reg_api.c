@@ -450,9 +450,6 @@ int mfc_set_dynamic_dpb(struct mfc_ctx *ctx, struct mfc_buf *dst_mb)
 			dec->frame_cnt = 0;
 	}
 
-	/* decoder dst buffer CFW PROT */
-	mfc_protect_dpb(ctx, dst_mb);
-
 	for (i = 0; i < raw->num_planes; i++) {
 		MFC_WRITEL(raw->plane_size[i],
 				MFC_REG_D_FIRST_PLANE_DPB_SIZE + i * 4);

@@ -150,11 +150,6 @@ static void __mfc_handle_frame_all_extracted(struct mfc_ctx *ctx)
 		}
 
 		vb2_buffer_done(&dst_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
-
-		/* decoder dst buffer CFW UNPROT */
-		if (ctx->is_drm)
-			mfc_raw_unprotect(ctx, dst_mb, index);
-
 		mfc_debug(2, "Cleaned up buffer: %d\n", index);
 	}
 
@@ -455,9 +450,6 @@ static void __mfc_handle_frame_new(struct mfc_ctx *ctx, unsigned int err)
 	/* arrangement of assigned dpb during ISR handling*/
 	__mfc_handle_released_buf(ctx, released_flag);
 
-	/* decoder dst buffer CFW UNPROT */
-	mfc_unprotect_released_dpb(ctx, released_flag);
-
 	if ((IS_VC1_RCV_DEC(ctx) &&
 		mfc_get_warn(err) == MFC_REG_ERR_SYNC_POINT_NOT_RECEIVED) ||
 		(mfc_get_warn(err) == MFC_REG_ERR_BROKEN_LINK))
@@ -502,10 +494,6 @@ static void __mfc_handle_frame_error(struct mfc_ctx *ctx,
 
 		if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err_ctx("failed in get_buf_ctrls_val\n");
-
-		/* decoder src buffer CFW UNPROT */
-		if (ctx->is_drm)
-			mfc_stream_unprotect(ctx, src_mb, index);
 
 		vb2_buffer_done(&src_mb->vb.vb2_buf, VB2_BUF_STATE_ERROR);
 	}
@@ -621,10 +609,6 @@ static void __mfc_handle_frame_input(struct mfc_ctx *ctx, unsigned int err)
 	if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
 		mfc_err_ctx("failed in get_buf_ctrls_val\n");
 
-	/* decoder src buffer CFW UNPROT */
-	if (ctx->is_drm)
-		mfc_stream_unprotect(ctx, src_mb, index);
-
 	vb2_buffer_done(&src_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
 }
 
@@ -710,11 +694,6 @@ static void __mfc_handle_frame(struct mfc_ctx *ctx,
 			mfc_debug(2, "[DRC] Last frame received after resolution change\n");
 			__mfc_handle_frame_all_extracted(ctx);
 			mfc_change_state(ctx, MFCINST_RES_CHANGE_END);
-			/* If there is no display frame after resolution change,
-			 * Some released frames can't be unprotected.
-			 * So, check and request unprotection in the end of DRC.
-			 */
-			mfc_cleanup_assigned_dpb(ctx);
 
 			/* empty the timestamp queue */
 			while (!list_empty(&ctx->ts_list)) {
@@ -860,10 +839,6 @@ static void __mfc_handle_stream_input(struct mfc_ctx *ctx)
 					for (i = 0; i < raw->num_planes; i++)
 						mfc_bufcon_put_daddr(ctx, src_mb, i);
 					vb2_buffer_done(&src_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
-
-					/* encoder src buffer CFW UNPROT */
-					if (ctx->is_drm)
-						mfc_raw_unprotect(ctx, src_mb, index);
 				}
 			}
 		}
@@ -879,22 +854,12 @@ static void __mfc_handle_stream_input(struct mfc_ctx *ctx)
 
 			mfc_debug(3, "find src buf in src_queue\n");
 			vb2_buffer_done(&src_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
-
-			/* encoder src buffer CFW UNPROT */
-			if (ctx->is_drm)
-				mfc_raw_unprotect(ctx, src_mb, index);
 		} else {
 			mfc_debug(3, "no src buf in src_queue\n");
 			ref_mb = mfc_find_del_buf(ctx, &ctx->ref_buf_queue, enc_addr[0]);
 			if (ref_mb) {
 				mfc_debug(3, "find src buf in ref_queue\n");
 				vb2_buffer_done(&ref_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
-
-				/* encoder src buffer CFW UNPROT */
-				if (ctx->is_drm) {
-					index = ref_mb->vb.vb2_buf.index;
-					mfc_raw_unprotect(ctx, ref_mb, index);
-				}
 			} else {
 				mfc_err_ctx("couldn't find src buffer\n");
 			}
@@ -964,10 +929,6 @@ static void __mfc_handle_stream_output(struct mfc_ctx *ctx, int slice_type,
 		mfc_err_ctx("failed in get_buf_ctrls_val\n");
 
 	vb2_buffer_done(&dst_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
-
-	/* encoder dst buffer CFW UNPROT */
-	if (ctx->is_drm)
-		mfc_stream_unprotect(ctx, dst_mb, index);
 }
 
 /* Handle frame encoding interrupt */
@@ -1020,7 +981,6 @@ static inline void __mfc_handle_error(struct mfc_ctx *ctx,
 {
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_buf *src_mb;
-	int index;
 
 	mfc_err_ctx("Interrupt Error: display: %d, decoded: %d\n",
 			mfc_get_warn(err), mfc_get_err(err));
@@ -1051,12 +1011,8 @@ static inline void __mfc_handle_error(struct mfc_ctx *ctx,
 			}
 		} else {
 			src_mb = mfc_get_del_buf(ctx, &ctx->src_buf_queue, MFC_BUF_NO_TOUCH_USED);
-			if (src_mb) {
-				index = src_mb->vb.vb2_buf.index;
-				/* decoder src buffer CFW UNPROT */
-				mfc_stream_unprotect(ctx, src_mb, index);
+			if (src_mb)
 				vb2_buffer_done(&src_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
-			}
 		}
 		break;
 	case MFCINST_INIT:
@@ -1224,13 +1180,6 @@ static int __mfc_handle_seq_enc(struct mfc_ctx *ctx)
 
 			vb2_set_plane_payload(&dst_mb->vb.vb2_buf, 0, mfc_get_enc_strm_size());
 			vb2_buffer_done(&dst_mb->vb.vb2_buf, VB2_BUF_STATE_DONE);
-
-			/* encoder dst buffer CFW UNPROT */
-			if (ctx->is_drm) {
-				int index = dst_mb->vb.vb2_buf.index;
-
-				mfc_stream_unprotect(ctx, dst_mb, index);
-			}
 		}
 	}
 

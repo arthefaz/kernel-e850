@@ -249,7 +249,7 @@ static void __mfc_dec_src_stop_streaming(struct mfc_ctx *ctx)
 	struct mfc_dev *dev = ctx->dev;
 	struct mfc_dec *dec = ctx->dec_priv;
 	struct mfc_buf *src_mb;
-	int index, csd, condition = 0;
+	int index = 0, csd, condition = 0;
 	int ret = 0;
 
 	while (1) {
@@ -286,10 +286,6 @@ static void __mfc_dec_src_stop_streaming(struct mfc_ctx *ctx)
 		if (!src_mb)
 			break;
 
-		index = src_mb->vb.vb2_buf.index;
-
-		if (ctx->is_drm)
-			mfc_stream_unprotect(ctx, src_mb, index);
 		vb2_set_plane_payload(&src_mb->vb.vb2_buf, 0, 0);
 		vb2_buffer_done(&src_mb->vb.vb2_buf, VB2_BUF_STATE_ERROR);
 	}
@@ -300,7 +296,6 @@ static void __mfc_dec_src_stop_streaming(struct mfc_ctx *ctx)
 
 	mfc_init_queue(&ctx->src_buf_queue);
 
-	index = 0;
 	while (index < MFC_MAX_BUFFERS) {
 		index = find_next_bit(&ctx->src_ctrls_avail,
 				MFC_MAX_BUFFERS, index);
@@ -328,8 +323,6 @@ static void __mfc_dec_dst_stop_streaming(struct mfc_ctx *ctx)
 	dec->available_dpb = 0;
 
 	dec->y_addr_for_pb = 0;
-
-	mfc_cleanup_assigned_dpb(ctx);
 
 	while (index < MFC_MAX_BUFFERS) {
 		index = find_next_bit(&ctx->dst_ctrls_avail,
