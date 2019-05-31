@@ -63,3 +63,8 @@
 &serial_0 {
 	status = "okay";
 };
+
+&panel_0 {
+	/* reset, power */
+	gpios = <&gpq0 2 0x1>, <&gpp3 2 0x1>;
+};
