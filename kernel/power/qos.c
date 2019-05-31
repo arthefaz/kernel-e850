@@ -462,6 +462,136 @@ static struct pm_qos_object mfc_throughput_max_pm_qos = {
 	.name = "mfc_throughput_max",
 };
 
+#ifdef CONFIG_SOC_EXYNOS9630
+/*
+ * Define npu_tput_constraints pm_qos_constraints
+ */
+static BLOCKING_NOTIFIER_HEAD(npu_throughput_notifier);
+static struct pm_qos_constraints npu_tput_constraints = {
+	.list = PLIST_HEAD_INIT(npu_tput_constraints.list),
+	.target_value = PM_QOS_NPU_THROUGHPUT_DEFAULT_VALUE,
+	.default_value = PM_QOS_NPU_THROUGHPUT_DEFAULT_VALUE,
+	.type = PM_QOS_MAX,
+	.notifiers = &npu_throughput_notifier,
+};
+static struct pm_qos_object npu_throughput_pm_qos = {
+	.constraints = &npu_tput_constraints,
+	.name = "npu_throughput",
+};
+
+/*
+ * Define npu_tput_max_constraints pm_qos_constraints
+ */
+static BLOCKING_NOTIFIER_HEAD(npu_throughput_max_notifier);
+static struct pm_qos_constraints npu_tput_max_constraints = {
+	.list = PLIST_HEAD_INIT(npu_tput_max_constraints.list),
+	.target_value = PM_QOS_NPU_THROUGHPUT_MAX_DEFAULT_VALUE,
+	.default_value = PM_QOS_NPU_THROUGHPUT_MAX_DEFAULT_VALUE,
+	.type = PM_QOS_MIN,
+	.notifiers = &npu_throughput_max_notifier,
+};
+static struct pm_qos_object npu_throughput_max_pm_qos = {
+	.constraints = &npu_tput_max_constraints,
+	.name = "npu_throughput_max",
+};
+
+/*
+ * Define dsp_tput_constraints pm_qos_constraints
+ */
+static BLOCKING_NOTIFIER_HEAD(dsp_throughput_notifier);
+static struct pm_qos_constraints dsp_tput_constraints = {
+	.list = PLIST_HEAD_INIT(dsp_tput_constraints.list),
+	.target_value = PM_QOS_DSP_THROUGHPUT_DEFAULT_VALUE,
+	.default_value = PM_QOS_DSP_THROUGHPUT_DEFAULT_VALUE,
+	.type = PM_QOS_MAX,
+	.notifiers = &dsp_throughput_notifier,
+};
+static struct pm_qos_object dsp_throughput_pm_qos = {
+	.constraints = &dsp_tput_constraints,
+	.name = "dsp_throughput",
+};
+
+/*
+ * Define dsp_tput_max_constraints pm_qos_constraints
+ */
+static BLOCKING_NOTIFIER_HEAD(dsp_throughput_max_notifier);
+static struct pm_qos_constraints dsp_tput_max_constraints = {
+	.list = PLIST_HEAD_INIT(dsp_tput_max_constraints.list),
+	.target_value = PM_QOS_DSP_THROUGHPUT_MAX_DEFAULT_VALUE,
+	.default_value = PM_QOS_DSP_THROUGHPUT_MAX_DEFAULT_VALUE,
+	.type = PM_QOS_MIN,
+	.notifiers = &dsp_throughput_max_notifier,
+};
+static struct pm_qos_object dsp_throughput_max_pm_qos = {
+	.constraints = &dsp_tput_max_constraints,
+	.name = "dsp_throughput_max",
+};
+
+/*
+ * Define tnr_tput_constraints pm_qos_constraints
+ */
+static BLOCKING_NOTIFIER_HEAD(tnr_throughput_notifier);
+static struct pm_qos_constraints tnr_tput_constraints = {
+	.list = PLIST_HEAD_INIT(tnr_tput_constraints.list),
+	.target_value = PM_QOS_TNR_THROUGHPUT_DEFAULT_VALUE,
+	.default_value = PM_QOS_TNR_THROUGHPUT_DEFAULT_VALUE,
+	.type = PM_QOS_MAX,
+	.notifiers = &tnr_throughput_notifier,
+};
+static struct pm_qos_object tnr_throughput_pm_qos = {
+	.constraints = &tnr_tput_constraints,
+	.name = "tnr_throughput",
+};
+
+/*
+ * Define tnr_tput_max_constraints pm_qos_constraints
+ */
+static BLOCKING_NOTIFIER_HEAD(tnr_throughput_max_notifier);
+static struct pm_qos_constraints tnr_tput_max_constraints = {
+	.list = PLIST_HEAD_INIT(tnr_tput_max_constraints.list),
+	.target_value = PM_QOS_TNR_THROUGHPUT_MAX_DEFAULT_VALUE,
+	.default_value = PM_QOS_TNR_THROUGHPUT_MAX_DEFAULT_VALUE,
+	.type = PM_QOS_MIN,
+	.notifiers = &tnr_throughput_max_notifier,
+};
+static struct pm_qos_object tnr_throughput_max_pm_qos = {
+	.constraints = &tnr_tput_max_constraints,
+	.name = "tnr_throughput_max",
+};
+
+/*
+ * Define dnc_tput_constraints pm_qos_constraints
+ */
+static BLOCKING_NOTIFIER_HEAD(dnc_throughput_notifier);
+static struct pm_qos_constraints dnc_tput_constraints = {
+	.list = PLIST_HEAD_INIT(dnc_tput_constraints.list),
+	.target_value = PM_QOS_DNC_THROUGHPUT_DEFAULT_VALUE,
+	.default_value = PM_QOS_DNC_THROUGHPUT_DEFAULT_VALUE,
+	.type = PM_QOS_MAX,
+	.notifiers = &dnc_throughput_notifier,
+};
+static struct pm_qos_object dnc_throughput_pm_qos = {
+	.constraints = &dnc_tput_constraints,
+	.name = "dnc_throughput",
+};
+
+/*
+ * Define dnc_tput_max_constraints pm_qos_constraints
+ */
+static BLOCKING_NOTIFIER_HEAD(dnc_throughput_max_notifier);
+static struct pm_qos_constraints dnc_tput_max_constraints = {
+	.list = PLIST_HEAD_INIT(dnc_tput_max_constraints.list),
+	.target_value = PM_QOS_DNC_THROUGHPUT_MAX_DEFAULT_VALUE,
+	.default_value = PM_QOS_DNC_THROUGHPUT_MAX_DEFAULT_VALUE,
+	.type = PM_QOS_MIN,
+	.notifiers = &dnc_throughput_max_notifier,
+};
+static struct pm_qos_object dnc_throughput_max_pm_qos = {
+	.constraints = &dnc_tput_max_constraints,
+	.name = "dnc_throughput_max",
+};
+#endif
+
 static struct pm_qos_object *pm_qos_array[] = {
 	&null_pm_qos,
 	&cpu_dma_pm_qos,
@@ -498,6 +628,16 @@ static struct pm_qos_object *pm_qos_array[] = {
 #endif
 	&mfc_throughput_pm_qos,
 	&mfc_throughput_max_pm_qos,
+#ifdef CONFIG_SOC_EXYNOS9630
+	&npu_throughput_pm_qos,
+	&npu_throughput_max_pm_qos,
+	&dsp_throughput_pm_qos,
+	&dsp_throughput_max_pm_qos,
+	&tnr_throughput_pm_qos,
+	&tnr_throughput_max_pm_qos,
+	&dnc_throughput_pm_qos,
+	&dnc_throughput_max_pm_qos,
+#endif
 };
 
 static ssize_t pm_qos_power_write(struct file *filp, const char __user *buf,
