@@ -128,7 +128,7 @@
 /* Bit definitions for ADC_V3 */
 #define ADC_V3_DAT_FLAG		(1u << 31)
 
-#define MAX_ADC_V3_CHANNELS		12
+#define MAX_ADC_V3_CHANNELS		9
 #define MAX_ADC_V2_CHANNELS		10
 #define MAX_ADC_V1_CHANNELS		8
 #define MAX_EXYNOS3250_ADC_CHANNELS	2
@@ -866,9 +866,6 @@ static const struct iio_chan_spec exynos_adc_iio_channels[] = {
 	ADC_CHANNEL(6, "adc6"),
 	ADC_CHANNEL(7, "adc7"),
 	ADC_CHANNEL(8, "adc8"),
-	ADC_CHANNEL(9, "adc9"),
-	ADC_CHANNEL(10, "adc10"),
-	ADC_CHANNEL(11, "adc11"),
 };
 
 static int exynos_adc_remove_devices(struct device *dev, void *c)
