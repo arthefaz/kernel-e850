@@ -20,6 +20,7 @@
 #include "exynos9630-rmem.dtsi"
 #include <dt-bindings/clock/exynos9630.h>
 #include "exynos9630-dpu.dtsi"
+#include "exynos9630-sysmmu.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos9630";
@@ -331,5 +332,14 @@
 	pmu_system_controller: system-controller@10E60000 {
 		compatible = "samsung,exynos9630-pmu", "syscon";
 		reg = <0x0 0x10E60000 0x10000>;
+	};
+
+	iommu-domain_dpu {
+		compatible = "samsung,exynos-iommu-bus";
+		#dma-address-cells = <2>;
+		#dma-size-cells = <1>;
+		ranges;
+
+                domain-clients = <>;
 	};
 };
