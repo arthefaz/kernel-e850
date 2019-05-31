@@ -25,15 +25,15 @@
 			    "mfc_uhd",
 			    "g3d_performance",
 			    "camera_default",
-			    "fhd_480_encoding",
+			    "camera_performance",
 			    "camera_thermal";
 
-		bts_busc_s1 {
+		bts_busc_s0 {
 			reg = <0x0 0x146D2000 0x100>;
 			status = "okay";
 			bts-type = <BUSC_BTS>;
 		};
-		bts_busc_s2 {
+		bts_busc_s1 {
 			reg = <0x0 0x146E2000 0x100>;
 			status = "okay";
 			bts-type = <BUSC_BTS>;
@@ -68,16 +68,6 @@
 			status = "okay";
 			bts-type = <BUSC_BTS>;
 		};
-		bts_s_cci0 {
-			reg = <0x0 0x121E2000 0x100>;
-			status = "okay";
-			bts-type = <BUSC_BTS>;
-		};
-		bts_s_cci1 {
-			reg = <0x0 0x121F2000 0x100>;
-			status = "okay";
-			bts-type = <BUSC_BTS>;
-		};
 
 		bts_tnr0 {
 			reg = <0x0 0x14600000 0x100>;
@@ -88,12 +78,72 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
-				qmax0_limit_r = <0x1>;
-				qmax0_limit_w = <0x1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
 			};
 		};
 		bts_tnr1 {
@@ -105,12 +155,72 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
-				qmax0_limit_r = <0x1>;
-				qmax0_limit_w = <0x1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
 			};
 		};
 		bts_mfc0 {
@@ -122,12 +232,72 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
-				qmax0_limit_r = <0x1>;
-				qmax0_limit_w = <0x1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x10>;
+				wmo = <0x10>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
 			};
 		};
 		bts_mfc1 {
@@ -139,12 +309,72 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
-				qmax0_limit_r = <0x1>;
-				qmax0_limit_w = <0x1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x10>;
+				wmo = <0x10>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x3>;
+				qmax0_limit_w = <0x3>;
 			};
 		};
 		bts_g2d0 {
@@ -156,8 +386,68 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				rmo = <0x10>;
+				wmo = <0x10>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x10>;
+				wmo = <0x10>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x10>;
+				wmo = <0x10>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
 				qmax0_limit_r = <0x1>;
@@ -173,8 +463,68 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x6>;
+				wmo = <0x6>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x6>;
+				wmo = <0x6>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x6>;
+				wmo = <0x6>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
 				qmax0_limit_r = <0x1>;
@@ -190,14 +540,72 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
-				rmo = <0x4>;
-				wmo = <0x4>;
-				qurgent_on = <1>;
-				qurgent_th_r = <0xC>;
-				qurgent_th_w = <0xC>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
 				blocking_on = <1>;
-				qmax0_limit_r = <0x1>;
-				qmax0_limit_w = <0x1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x5>;
+				wmo = <0x5>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
 			};
 		};
 		bts_dnc1 {
@@ -209,14 +617,72 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
-				rmo = <0x4>;
-				wmo = <0x4>;
-				qurgent_on = <1>;
-				qurgent_th_r = <0xC>;
-				qurgent_th_w = <0xC>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
 				blocking_on = <1>;
-				qmax0_limit_r = <0x1>;
-				qmax0_limit_w = <0x1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x5>;
+				wmo = <0x5>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
 			};
 		};
 		bts_dnc2 {
@@ -228,14 +694,72 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
-				rmo = <0x4>;
-				wmo = <0x4>;
-				qurgent_on = <1>;
-				qurgent_th_r = <0xC>;
-				qurgent_th_w = <0xC>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
 				blocking_on = <1>;
-				qmax0_limit_r = <0x1>;
-				qmax0_limit_w = <0x1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x5>;
+				wmo = <0x5>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
 			};
 		};
 		bts_ssp {
@@ -301,9 +825,7 @@
 				rmo = <0x4>;
 				wmo = <0x4>;
 				qurgent_on = <0>;
-				blocking_on = <1>;
-				qmax0_limit_r = <0x1>;
-				qmax0_limit_w = <0x1>;
+				blocking_on = <0>;
 			};
 		};
 		bts_g3d0 {
@@ -317,6 +839,62 @@
 				awqos = <0x4>;
 				rmo = <0x4>;
 				wmo = <0x4>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x4>;
+				wmo = <0x4>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				qurgent_on = <0>;
+				blocking_on = <0>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x2>;
+				wmo = <0x2>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x2>;
+				wmo = <0x2>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x2>;
+				wmo = <0x2>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
 				qmax0_limit_r = <0x1>;
@@ -339,6 +917,62 @@
 				qmax0_limit_r = <0x1>;
 				qmax0_limit_w = <0x1>;
 			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x4>;
+				wmo = <0x4>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				qurgent_on = <0>;
+				blocking_on = <0>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x2>;
+				wmo = <0x2>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x2>;
+				wmo = <0x2>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x2>;
+				wmo = <0x2>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
 		};
 		bts_csis0 {
 			reg = <0x0 0x12050000 0x100>;
@@ -349,10 +983,71 @@
 				bypass = <0>;
 				arqos = <0xC>;
 				awqos = <0xC>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				rmo = <0xA>;
+				wmo = <0xA>;
 				qurgent_on = <1>;
-				qurgent_th_w = <0xC>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
 				blocking_on = <0>;
 			};
 		};
@@ -365,10 +1060,71 @@
 				bypass = <0>;
 				arqos = <0xC>;
 				awqos = <0xC>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				rmo = <0xA>;
+				wmo = <0xA>;
 				qurgent_on = <1>;
-				qurgent_th_w = <0xC>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
 				blocking_on = <0>;
 			};
 		};
@@ -381,10 +1137,71 @@
 				bypass = <0>;
 				arqos = <0xC>;
 				awqos = <0xC>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x8>;
 				qurgent_on = <1>;
-				qurgent_th_w = <0xC>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0x8>;
+				wmo = <0x8>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
 				blocking_on = <0>;
 			};
 		};
@@ -404,6 +1221,66 @@
 				qmax0_limit_r = <0x1>;
 				qmax0_limit_w = <0x1>;
 			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x4>;
+				wmo = <0x4>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x4>;
+				wmo = <0x4>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x4>;
+				wmo = <0x4>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x4>;
+				wmo = <0x4>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x3>;
+				wmo = <0x3>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
 		};
 		bts_dns {
 			reg = <0x0 0x12090000 0x100>;
@@ -414,11 +1291,71 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x1>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
-				qmax0_limit_r = <0x1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x1>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x1>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x1>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x1>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x1>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x1>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x8>;
+				wmo = <0x1>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
 				qmax0_limit_w = <0x1>;
 			};
 		};
@@ -431,12 +1368,72 @@
 				bypass = <0>;
 				arqos = <0x4>;
 				awqos = <0x4>;
+				rmo = <0xA>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0xA>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0xA>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0xA>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0xA>;
+				wmo = <0x8>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
 				rmo = <0x4>;
 				wmo = <0x4>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
-				qmax0_limit_r = <0x1>;
-				qmax0_limit_w = <0x1>;
+				qmax0_limit_r = <0x4>;
+				qmax0_limit_w = <0x4>;
 			};
 		};
 		bts_mcsc1 {
@@ -448,9 +1445,71 @@
 				bypass = <0>;
 				arqos = <0xC>;
 				awqos = <0xC>;
-				rmo = <0x4>;
-				wmo = <0x4>;
-				qurgent_on = <0>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
+				blocking_on = <0>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xC>;
+				awqos = <0xC>;
+				rmo = <0xA>;
+				wmo = <0xA>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xF>;
+				qurgent_th_w = <0xF>;
 				blocking_on = <0>;
 			};
 		};
@@ -461,10 +1520,65 @@
 			default {
 				stat_on = <1>;
 				bypass = <0>;
-				arqos = <0xC>;
-				awqos = <0xC>;
-				rmo = <0x4>;
-				wmo = <0x4>;
+				arqos = <0xA>;
+				awqos = <0xA>;
+				rmo = <0x20>;
+				wmo = <0x20>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0x20>;
+				blocking_on = <0>;
+			};
+			mfc_uhd {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xA>;
+				awqos = <0xA>;
+				rmo = <0x20>;
+				wmo = <0x20>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0x20>;
+				blocking_on = <0>;
+			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xA>;
+				awqos = <0xA>;
+				rmo = <0x20>;
+				wmo = <0x20>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0x20>;
+				blocking_on = <0>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xA>;
+				awqos = <0xA>;
+				rmo = <0x20>;
+				wmo = <0x20>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0x20>;
+				blocking_on = <0>;
+			};
+			camera_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xA>;
+				awqos = <0xA>;
+				rmo = <0x20>;
+				wmo = <0x20>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0x20>;
+				blocking_on = <0>;
+			};
+			camera_thermal {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0xA>;
+				awqos = <0xA>;
+				rmo = <0x20>;
+				wmo = <0x20>;
 				qurgent_on = <1>;
 				qurgent_th_r = <0x20>;
 				blocking_on = <0>;
@@ -490,9 +1604,11 @@
 			default {
 				stat_on = <1>;
 				bypass = <0>;
-				arqos = <0xC>;
-				awqos = <0xC>;
-				qurgent_on = <0>;
+				arqos = <0xD>;
+				awqos = <0xD>;
+				qurgent_on = <1>;
+				qurgent_th_r = <0xC>;
+				qurgent_th_w = <0xA>;
 				blocking_on = <0>;
 			};
 		};
@@ -503,8 +1619,8 @@
 			default {
 				stat_on = <1>;
 				bypass = <0>;
-				arqos = <0xC>;
-				awqos = <0xC>;
+				arqos = <0x4>;
+				awqos = <0x4>;
 				qurgent_on = <0>;
 				blocking_on = <0>;
 			};
@@ -516,8 +1632,8 @@
 			default {
 				stat_on = <1>;
 				bypass = <0>;
-				arqos = <0xC>;
-				awqos = <0xC>;
+				arqos = <0x4>;
+				awqos = <0x4>;
 				qurgent_on = <0>;
 				blocking_on = <0>;
 			};
@@ -529,12 +1645,14 @@
 			default {
 				stat_on = <1>;
 				bypass = <0>;
-				arqos = <0xC>;
-				awqos = <0xC>;
+				arqos = <0x4>;
+				awqos = <0x4>;
 				rmo = <0x4>;
 				wmo = <0x4>;
 				qurgent_on = <0>;
-				blocking_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
 			};
 		};
 		bts_gnss {
@@ -584,8 +1702,8 @@
 				wmo = <0x4>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
-				qmax0_limit_r = <0x1>;
-				qmax0_limit_w = <0x1>;
+				qmax0_limit_r = <0x2>;
+				qmax0_limit_w = <0x2>;
 			};
 		};
 		bts_dit {
@@ -660,7 +1778,7 @@
 				blocking_on = <0>;
 				drex_on = <1>;
 				drex_pf_on = <0>;
-				write_flush_config_0 = <0xC0401808>;
+				write_flush_config_0 = <0xB4301606>;
 				write_flush_config_1 = <0x1810100A>;
 				drex_timeout = <0x000A0180>,
 						<0x000A0100>,
@@ -686,9 +1804,9 @@
 						<0x000D001A>,
 						<0x00030007>,
 						<0x00010001>;
-				cutoff_con = <0x00050005>;
+				cutoff_con = <0x00000505>;
 				brb_cutoff_con = <0x00020002>;
-				wdbuf_cutoff_con = <0x00020002>;
+				wdbuf_cutoff_con = <0x00100010>;
 			};
 		};
 		bts_drex1 {
@@ -702,7 +1820,7 @@
 				blocking_on = <0>;
 				drex_on = <1>;
 				drex_pf_on = <0>;
-				write_flush_config_0 = <0xC0401808>;
+				write_flush_config_0 = <0xB4301606>;
 				write_flush_config_1 = <0x1810100A>;
 				drex_timeout = <0x000A0180>,
 						<0x000A0100>,
@@ -728,9 +1846,9 @@
 						<0x000D001A>,
 						<0x00030007>,
 						<0x00010001>;
-				cutoff_con = <0x00050005>;
+				cutoff_con = <0x00000505>;
 				brb_cutoff_con = <0x00020002>;
-				wdbuf_cutoff_con = <0x00020002>;
+				wdbuf_cutoff_con = <0x00100010>;
 			};
 		};
 
