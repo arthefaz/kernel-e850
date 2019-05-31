@@ -184,4 +184,57 @@
 		samsung,pin-pud = <0>;
 		samsung,pin-drv = <0>;
 	};
+
+	attn_irq: attn-irq {
+		samsung,pins = "gpa0-3";
+		samsung,pin-function = <0xf>;
+		samsung,pin-pud = <3>;
+		samsung,pin-drv = <3>;
+	};
+
+	attn_input: attn-input {
+		samsung,pins = "gpa0-3";
+		samsung,pin-function = <0>;
+		samsung,pin-pud = <1>;
+	};
+};
+
+&pinctrl_5 {
+	vdd_on: vdd-on {
+		samsung,pins = "gpp3-3";
+		samsung,pin-function = <2>;
+		samsung,pin-val = <1>;
+		samsung,pin-pud = <3>;
+	};
+
+	vdd_off: vdd-off {
+		samsung,pins = "gpp3-3";
+		samsung,pin-functon = <2>;
+		samsung,pin-val = <0>;
+		samsung,pin-pud = <1>;
+	};
+};
+
+&hsi2c_6 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	samsung,reset-before-trans;
+	touchscreen@48 {
+		compatible = "sec,sec_ts";
+		reg = <0x48>;
+		pinctrl-names = "on_state", "off_state";
+		pinctrl-0 = <&attn_irq &vdd_on>;
+		pinctrl-1 = <&attn_input &vdd_off>;
+		pressure-sensor = "Y";
+		sec,irq_gpio = <&gpa0 3 0>;
+		sec,irq_type = <8200>;
+		sec,max_coords = <4095 4095>;
+		sec,mis_cal_check = <1>;
+//		sec,regulator_avdd = "";
+//		sec,regulator_boot_on;
+//		sec,always_lpmode = <1>;
+		sec,project_name = "neus";
+		sec,firmware_name = "tsp_sec/y761_dream1.fw", "tsp_sec/y761_dream1.fw";
+	};
 };
