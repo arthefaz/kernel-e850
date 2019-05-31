@@ -28,7 +28,7 @@
 		dpp1 = &dpp_1;
 		dpp2 = &dpp_2;
 		dpp3 = &dpp_3;
-		dsim0 = &dsim_0;
+		dsim0 = &dsim_1;
 		decon0 = &decon_f;
 	};
 
@@ -143,31 +143,31 @@
 			DECON_PIXEL_FORMAT_NV12N_SBWC_10B>;
 	};
 
-	disp_ss: disp_ss@0x16010000 {
+	disp_ss: disp_ss@0x14820000 {
 		compatible = "samsung,exynos9-disp_ss";
-		reg = <0x0 0x19021000 0x10>;
+		reg = <0x0 0x14821000 0x10>;
 	};
 
-	mipi_phy_dsim0_m4m4: dphy_m4s4_dsim0@0x19160000 {
+	mipi_phy_dsim_m4m4: dphy_m4s4_dsim@0x10E60000 { /* MIPI_PHY_CONTROL @PMU_Alive */
 		compatible = "samsung,mipi-phy-m4m4";
-		isolation = <0x0710>;
+		isolation = <0x070C>;
 		owner = <0>; /* 0: DSI_0 1: DSI_1 */
 		#phy-cells = <1>;
 	};
 
-	dsim_0: dsim@0x190C0000 {
+	dsim_1: dsim@0x148D0000 { /* DSIM1 & DCPHY_M4M4_MOD */
 		compatible = "samsung,exynos9-dsim";
-		/* DSIM0, DCPHY_M4M4_TOP, DCPHY_M4M4_COMMON */
-		reg = <0x0 0x190C0000 0x300>, <0x0 0x190E0100 0x700>, <0x0 0x190E0000 0x100>;
-		interrupts = <GIC_SPI INTREQ__DPU_DSIM0 IRQ_TYPE_LEVEL_HIGH>;
-		iommus = <&sysmmu_dpu0>, <&sysmmu_dpu1>, <&sysmmu_dpu2>;
+		/* DSIM1, DCPHY_M4M4_MOD, DCPHY_M4M4_COMMON */
+		reg = <0x0 0x148D0000 0x300>, <0x0 0x148E0900 0x700>, <0x0 0x148E0000 0x100>;
+		interrupts = <GIC_SPI INTREQ__DPU_DSIM1 IRQ_TYPE_LEVEL_HIGH>;
+		iommus = <&sysmmu_dpu>;
 
 		/* clock */
 		clock-names = "aclk";
-		clocks = <&clock GATE_DPU_DPU>;
+		clocks = <&clock GATE_DPU_QCH_DPU>;
 
-		 phys = <&mipi_phy_dsim0_m4m4 0>;
-		 phy-names = "dsim_dphy";
+		phys = <&mipi_phy_dsim_m4m4 0>;
+		phy-names = "dsim_dphy";
 	};
 
 	panel_0: panel_0 {
@@ -178,16 +178,16 @@
 		lcd_info = <&s6e3ha8>, <&s6e3ha9>;
 	};
 
-	decon_f: decon_f@0x19050000 {
+	decon_f: decon_f@0x14850000 {
 		compatible = "samsung,exynos9-decon";
 		#pb-id-cells = <4>;
-		reg = <0x0 0x19050000 0x10000>;
+		reg = <0x0 0x14850000 0x10000>;
 
-		/* interrupt num : FRAME_START, FRMAE_DONE, EXTRA, GPIO_PERIC1(EXT_INT_TE: GPD0[0]) */
+		/* interrupt num : FRAME_START, FRMAE_DONE, EXTRA, GPIO_PERI(EXT_INT_TE: GPD0[0]) */
 		interrupts = <GIC_SPI INTREQ__DPU_DECON0_FRAME_START IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI INTREQ__DPU_DECON0_FRAME_DONE IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI INTREQ__DPU_DECON0_EXTRA IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI INTREQ__GPIO_PERIC1 IRQ_TYPE_LEVEL_HIGH>;
+			     <GIC_SPI INTREQ__GPIO_PERI IRQ_TYPE_LEVEL_HIGH>;
 
 		/* pinctrl */
 
@@ -195,8 +195,8 @@
 		pinctrl-0 = <&decon_f_te_on>;
 		pinctrl-1 = <&decon_f_te_off>;
 
-		max_win = <6>;
-		default_win = <5>;
+		max_win = <4>;
+		default_win = <3>;
 		default_ch = <0>;
 		psr_mode = <2>;         /* 0: video mode, 1: DP command mode, 2: MIPI command mode */
 		trig_mode = <0>;        /* 0: hw trigger, 1: sw trigger */
@@ -212,9 +212,9 @@
 		line_mem_cnt = <4>;
 		cycle_per_line = <8>;   /* 4ppc */
 
-		chip_ver = <9830>;
+		chip_ver = <9630>;
 
-		dpp_cnt = <6>;
+		dpp_cnt = <4>;
 		dsim_cnt = <2>;
 		decon_cnt = <3>;
 
@@ -223,11 +223,11 @@
 		ranges;
 
 		/* EINT for TE */
-		 gpios = <&gpb1 4 0xf>;
+		 gpios = <&gpg0 1 0xf>;
 		/* sw te pending register */
 		te_eint {
-			/* NWEINT_GPC0_PEND */
-			reg = <0x0 0x10730a14 0x4>;
+			/* NWEINT_GPG0_PEND */
+			reg = <0x0 0x10040a10 0x4>;
 		};
 	};
 };
