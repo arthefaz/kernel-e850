@@ -1026,6 +1026,7 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 
 	/* SBWC */
 	of_property_read_u32(np, "support_sbwc", &pdata->support_sbwc);
+	of_property_read_u32(np, "support_sbwcl", &pdata->support_sbwcl);
 
 	/* HDR10+ num max window */
 	of_property_read_u32(np, "max_hdr_win", &pdata->max_hdr_win);

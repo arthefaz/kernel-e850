@@ -335,7 +335,7 @@ static int __mfc_dec_update_disp_res(struct mfc_ctx *ctx, struct v4l2_format *f)
 			if (ctx->dst_fmt->mem_planes == 1) {
 				pix_fmt_mp->plane_fmt[i].sizeimage = raw->total_plane_size;
 			} else {
-				if ((ctx->is_10bit && !ctx->mem_type_10bit) || ctx->is_sbwc)
+				if (IS_2BIT_NEED(ctx))
 					pix_fmt_mp->plane_fmt[i].sizeimage = raw->plane_size[i]
 						+ raw->plane_size_2bits[i];
 				else
@@ -455,7 +455,7 @@ static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 			if (ctx->dst_fmt->mem_planes == 1) {
 				pix_fmt_mp->plane_fmt[i].sizeimage = raw->total_plane_size;
 			} else {
-				if ((ctx->is_10bit && !ctx->mem_type_10bit) || ctx->is_sbwc)
+				if (IS_2BIT_NEED(ctx))
 					pix_fmt_mp->plane_fmt[i].sizeimage = raw->plane_size[i]
 						+ raw->plane_size_2bits[i];
 				else

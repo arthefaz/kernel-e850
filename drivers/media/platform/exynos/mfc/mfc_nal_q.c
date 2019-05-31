@@ -825,7 +825,7 @@ static int __mfc_nal_q_run_in_buf_enc(struct mfc_ctx *ctx, EncoderInputStr *pInS
 			mfc_debug(2, "[NALQ][BUFINFO] ctx[%d] set src index:%d, 2bit addr[%d]: 0x%08llx\n",
 					ctx->num, index, i, addr_2bit[i]);
 		}
-	} else if (IS_SBWC_8B(ctx->src_fmt)) {
+	} else if (ctx->is_sbwc && !ctx->is_10bit) {
 		addr_2bit[0] = src_addr[0] + SBWC_8B_Y_SIZE(ctx->img_width, ctx->img_height);
 		addr_2bit[1] = src_addr[1] + SBWC_8B_CBCR_SIZE(ctx->img_width, ctx->img_height);
 
@@ -834,7 +834,7 @@ static int __mfc_nal_q_run_in_buf_enc(struct mfc_ctx *ctx, EncoderInputStr *pInS
 			mfc_debug(2, "[NALQ][BUFINFO][SBWC] ctx[%d] set src index:%d, 2bit addr[%d]: 0x%08llx\n",
 					ctx->num, index, i, addr_2bit[i]);
 		}
-	} else if (IS_SBWC_10B(ctx->src_fmt)) {
+	} else if (ctx->is_sbwc && ctx->is_10bit) {
 		addr_2bit[0] = src_addr[0] + SBWC_10B_Y_SIZE(ctx->img_width, ctx->img_height);
 		addr_2bit[1] = src_addr[1] + SBWC_10B_CBCR_SIZE(ctx->img_width, ctx->img_height);
 
@@ -972,7 +972,7 @@ static int __mfc_nal_q_run_in_buf_dec(struct mfc_ctx *ctx, DecoderInputStr *pInS
 		pInStr->FrameSize[i] = raw->plane_size[i];
 		pInStr->FrameAddr[i] = dst_mb->addr[0][i];
 		ctx->last_dst_addr[i] = dst_mb->addr[0][i];
-		if ((ctx->is_10bit && !ctx->mem_type_10bit) || ctx->is_sbwc)
+		if (IS_2BIT_NEED(ctx))
 			pInStr->Frame2BitSize[i] = raw->plane_size_2bits[i];
 		mfc_debug(2, "[NALQ][BUFINFO][DPB] ctx[%d] set dst index: [%d][%d], addr[%d]: 0x%08llx\n",
 				ctx->num, dst_mb->vb.vb2_buf.index, dst_mb->dpb_index, i, dst_mb->addr[0][i]);
@@ -1348,7 +1348,7 @@ static void __mfc_nal_q_get_img_size(struct mfc_ctx *ctx, DecoderOutputStr *pOut
 
 	for (i = 0; i < ctx->dst_fmt->num_planes; i++) {
 		ctx->raw_buf.stride[i] = pOutStr->DpbStrideSize[i];
-		if ((ctx->is_10bit && !ctx->mem_type_10bit) || ctx->is_sbwc)
+		if (IS_2BIT_NEED(ctx))
 			ctx->raw_buf.stride_2bits[i] = pOutStr->Dpb2bitStrideSize[i];
 	}
 
@@ -1359,7 +1359,7 @@ static void __mfc_nal_q_get_img_size(struct mfc_ctx *ctx, DecoderOutputStr *pOut
 		ctx->scratch_buf_size = mfc_get_scratch_size();
 		for (i = 0; i < ctx->dst_fmt->num_planes; i++) {
 			ctx->min_dpb_size[i] = mfc_get_min_dpb_size(i);
-			if ((ctx->is_10bit && !ctx->mem_type_10bit) || ctx->is_sbwc)
+			if (IS_2BIT_NEED(ctx))
 				ctx->min_dpb_size_2bits[i] = mfc_get_min_dpb_size_2bit(i);
 		}
 		mfc_debug(2, "[NALQ][FRAME] DPB count %d, min_dpb_size %d(%#x) min_dpb_size_2bits %d scratch %zu(%#zx)\n",

@@ -1000,7 +1000,7 @@ static int __mfc_handle_seq_dec(struct mfc_ctx *ctx)
 	ctx->scratch_buf_size = mfc_get_scratch_size();
 	for (i = 0; i < ctx->dst_fmt->num_planes; i++) {
 		ctx->min_dpb_size[i] = mfc_get_min_dpb_size(i);
-		if ((ctx->is_10bit && !ctx->mem_type_10bit) || ctx->is_sbwc)
+		if (IS_2BIT_NEED(ctx))
 			ctx->min_dpb_size_2bits[i] = mfc_get_min_dpb_size_2bit(i);
 	}
 
@@ -1123,6 +1123,8 @@ static int __mfc_handle_seq_enc(struct mfc_ctx *ctx)
 
 	ctx->dpb_count = mfc_get_enc_dpb_count();
 	ctx->scratch_buf_size = mfc_get_enc_scratch_size();
+	ctx->min_dpb_size[0] = mfc_get_enc_luma_size();
+	ctx->min_dpb_size[1] = mfc_get_enc_chroma_size();
 
 	/* If the ROI is enabled at SEQ_START, clear ROI_ENABLE bit */
 	mfc_clear_roi_enable(dev);

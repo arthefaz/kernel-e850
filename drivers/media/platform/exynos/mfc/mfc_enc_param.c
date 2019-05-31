@@ -195,6 +195,13 @@ static void __mfc_set_enc_params(struct mfc_ctx *ctx)
 	mfc_clear_bits(reg, 0x1, 18);
 	if (nal_q_parallel_disable)
 		mfc_set_bits(reg, 0x1, 18, 0x1);
+	/* compressor ratio of input source */
+	if (dev->pdata->support_sbwcl && ctx->is_sbwc_lossy) {
+		if (ctx->sbwcl_ratio == 50 || ctx->sbwcl_ratio == 60)
+			mfc_clear_set_bits(reg, 0x3, 24, 1);
+		else if (ctx->sbwcl_ratio == 75 || ctx->sbwcl_ratio == 80)
+			mfc_clear_set_bits(reg, 0x3, 24, 2);
+	}
 	MFC_RAW_WRITEL(reg, MFC_REG_E_ENC_OPTIONS);
 
 	mfc_set_pixel_format(ctx, ctx->src_fmt->fourcc);

@@ -68,6 +68,12 @@
 #define MAX_NUM_MFC_BPS			2
 #define MAX_NUM_MFC_FREQ		10
 
+/* MFC FMT FLAG */
+#define MFC_FMT_FLAG_SBWCL_50		0x0001
+#define MFC_FMT_FLAG_SBWCL_60		0x0002
+#define MFC_FMT_FLAG_SBWCL_75		0x0004
+#define MFC_FMT_FLAG_SBWCL_80		0x0008
+
 /*
  *  MFC region id for smc
  */
@@ -500,6 +506,7 @@ struct mfc_platdata {
 	unsigned int support_rgb;
 	/* SBWC */
 	unsigned int support_sbwc;
+	unsigned int support_sbwcl;
 	/* HDR10+ */
 	unsigned int max_hdr_win;
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
@@ -1604,6 +1611,8 @@ struct mfc_ctx {
 
 	/* SBWC */
 	int is_sbwc;
+	int is_sbwc_lossy;
+	int sbwcl_ratio;
 
 	/* for DRM */
 	int is_drm;

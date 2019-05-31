@@ -54,6 +54,10 @@ static struct mfc_fmt *__mfc_enc_find_format(struct mfc_ctx *ctx,
 		mfc_err_ctx("[FRAME] SBWC is not supported\n");
 		fmt = NULL;
 	}
+	if (fmt && !dev->pdata->support_sbwcl && (fmt->type & MFC_FMT_SBWCL)) {
+		mfc_err_ctx("[FRAME] SBWC lossy is not supported\n");
+		fmt = NULL;
+	}
 
 	return fmt;
 }
@@ -303,11 +307,22 @@ static void __mfc_enc_check_format(struct mfc_ctx *ctx)
 		ctx->is_10bit = 1;
 		ctx->is_sbwc = 1;
 		break;
+	case V4L2_PIX_FMT_NV12M_SBWCL_8B:
+	case V4L2_PIX_FMT_NV12N_SBWCL_8B:
+		mfc_debug(2, "[FRAME][SBWC] is SBWC Lossy 8bit format\n");
+		ctx->is_sbwc_lossy = 1;
+		break;
+	case V4L2_PIX_FMT_NV12M_SBWCL_10B:
+	case V4L2_PIX_FMT_NV12N_SBWCL_10B:
+		mfc_debug(2, "[FRAME][SBWC] is SBWC Lossy 10bit format\n");
+		ctx->is_10bit = 1;
+		ctx->is_sbwc_lossy = 1;
+		break;
 	default:
 		break;
 	}
-	mfc_debug(2, "[FRAME] 10bit: %d, 422: %d, sbwc: %d\n",
-			ctx->is_10bit, ctx->is_422, ctx->is_sbwc);
+	mfc_debug(2, "[FRAME] 10bit: %d, 422: %d, sbwc: %d lossy: %d\n",
+			ctx->is_10bit, ctx->is_422, ctx->is_sbwc, ctx->is_sbwc_lossy);
 }
 
 static int __mfc_enc_check_resolution(struct mfc_ctx *ctx)
@@ -508,6 +523,37 @@ static int mfc_enc_s_fmt_vid_cap_mplane(struct file *file, void *priv,
 	return 0;
 }
 
+static int __mfc_enc_check_sbwcl(struct mfc_ctx *ctx, u8 pix_flag)
+{
+	int ret = 0;
+
+	ctx->sbwcl_ratio = 0;
+	if (ctx->is_sbwc_lossy && !ctx->is_10bit) {
+		if (pix_flag == MFC_FMT_FLAG_SBWCL_50) {
+			ctx->sbwcl_ratio = 50;
+		} else if (pix_flag == MFC_FMT_FLAG_SBWCL_75) {
+			ctx->sbwcl_ratio = 75;
+		} else {
+			ret = -EINVAL;
+			mfc_err_ctx("sbwc ratio is wrong %#x\n", pix_flag);
+		}
+	} else if (ctx->is_sbwc_lossy && ctx->is_10bit) {
+		if (pix_flag == MFC_FMT_FLAG_SBWCL_60) {
+			ctx->sbwcl_ratio = 60;
+		} else if (pix_flag == MFC_FMT_FLAG_SBWCL_80) {
+			ctx->sbwcl_ratio = 80;
+		} else {
+			ret = -EINVAL;
+			mfc_err_ctx("sbwc ratio is wrong %#x\n", pix_flag);
+		}
+	} else {
+		ret = -EINVAL;
+		mfc_err_ctx("This is not SBWC lossy format %s\n", ctx->src_fmt->name);
+	}
+	mfc_debug(2, "SBWC Lossy ratio is %d\n", ctx->sbwcl_ratio);
+	return ret;
+}
+
 static int mfc_enc_s_fmt_vid_out_mplane(struct file *file, void *priv,
 							struct v4l2_format *f)
 {
@@ -544,6 +590,9 @@ static int mfc_enc_s_fmt_vid_out_mplane(struct file *file, void *priv,
 	ctx->buf_stride = pix_fmt_mp->plane_fmt[0].bytesperline;
 
 	__mfc_enc_check_format(ctx);
+
+	if (ctx->is_sbwc_lossy && __mfc_enc_check_sbwcl(ctx, pix_fmt_mp->flags))
+		return -EINVAL;
 
 	if (ctx->state == MFCINST_FINISHED) {
 		mfc_change_state(ctx, MFCINST_GOT_INST);

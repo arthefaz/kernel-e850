@@ -103,6 +103,7 @@
 #define MFC_FMT_422		(1 << 3)
 #define MFC_FMT_RGB		(1 << 4)
 #define MFC_FMT_SBWC		(1 << 5)
+#define MFC_FMT_SBWCL		(1 << 6)
 
 /* node check */
 #define IS_DEC_NODE(n)		((n == EXYNOS_VIDEONODE_MFC_DEC) ||	\
@@ -171,6 +172,9 @@
 				(((fmt)->fourcc) == V4L2_PIX_FMT_NV21M_SBWC_10B) || \
 				(((fmt)->fourcc) == V4L2_PIX_FMT_NV12N_SBWC_10B))
 #define IS_SBWC_FMT(fmt)	(IS_SBWC_8B(fmt) || IS_SBWC_10B(fmt))
+
+#define IS_2BIT_NEED(ctx)	((ctx->is_10bit && !ctx->mem_type_10bit &&	\
+				!ctx->is_sbwc_lossy) || ctx->is_sbwc)
 
 /* Extra information for Decoder */
 #define	DEC_SET_DUAL_DPB		(1 << 0)

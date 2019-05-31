@@ -112,6 +112,8 @@
 #define mfc_get_inst_no()			MFC_READL(MFC_REG_RET_INSTANCE_ID)
 #define mfc_get_enc_dpb_count()		MFC_READL(MFC_REG_E_NUM_DPB)
 #define mfc_get_enc_scratch_size()		MFC_READL(MFC_REG_E_MIN_SCRATCH_BUFFER_SIZE)
+#define mfc_get_enc_luma_size()		MFC_READL(MFC_REG_E_MIN_LUMA_DPB_SIZE)
+#define mfc_get_enc_chroma_size()		MFC_READL(MFC_REG_E_MIN_CHROMA_DPB_SIZE)
 #define mfc_get_enc_strm_size()		MFC_READL(MFC_REG_E_STREAM_SIZE)
 #define mfc_get_enc_slice_type()		MFC_READL(MFC_REG_E_SLICE_TYPE)
 #define mfc_get_enc_pic_count()		MFC_READL(MFC_REG_E_PICTURE_COUNT)

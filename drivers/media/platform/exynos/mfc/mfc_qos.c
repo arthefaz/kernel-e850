@@ -440,7 +440,7 @@ static void __mfc_qos_get_bw_per_second(struct mfc_ctx *ctx, struct bts_bw *curr
 
 	mb = mb_width * mb_height * fps;
 
-	if (ctx->is_sbwc)
+	if (ctx->is_sbwc || ctx->is_sbwc_lossy)
 		bw_info = &ctx->dev->pdata->mfc_bw_info_sbwc;
 	else
 		bw_info = &ctx->dev->pdata->mfc_bw_info;
