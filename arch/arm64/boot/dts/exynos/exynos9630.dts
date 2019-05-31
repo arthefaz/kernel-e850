@@ -37,6 +37,11 @@
 		uart0 = &serial_0;
 	};
 
+	ect {
+		parameter_address = <0x90000000>;
+		parameter_size = <0x4B000>;
+	};
+
 	memory@80000000 {
 		device_type = "memory";
 		reg = <0x0 0x80000000 0x3A000000>;
