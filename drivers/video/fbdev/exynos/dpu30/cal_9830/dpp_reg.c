@@ -1364,18 +1364,33 @@ static void dpp_print_hex_dump(void __iomem *regs, const void *buf, size_t len)
 static void dma_dump_regs(u32 id, void __iomem *dma_regs)
 {
 	dpp_info("\n=== DPU_DMA%d SFR DUMP ===\n", id);
-	dpp_print_hex_dump(dma_regs, dma_regs + 0x0000, 0x74);
-	dpp_print_hex_dump(dma_regs, dma_regs + 0x0100, 0x44);
-	dpp_print_hex_dump(dma_regs, dma_regs + 0x0200, 0x8);
-	dpp_print_hex_dump(dma_regs, dma_regs + 0x0300, 0x24);
+	if (id == ODMA_WB) {
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0000, 0x68);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0074, 0x8);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0094, 0x8);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0300, 0xC);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0354, 0x20);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0400, 0x8);
+	} else {
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0000, 0x74);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0100, 0x44);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0200, 0x8);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0300, 0x24);
+	}
 
 	dpp_info("=== DPU_DMA%d SHADOW SFR DUMP ===\n", id);
-	dpp_print_hex_dump(dma_regs, dma_regs + 0x0800, 0x74);
-	dpp_print_hex_dump(dma_regs, dma_regs + 0x0900, 0x44);
-	dpp_print_hex_dump(dma_regs, dma_regs + 0x0A00, 0x8);
-	dpp_print_hex_dump(dma_regs, dma_regs + 0x0B00, 0x24);
-	/* config_err_status */
-	dpp_print_hex_dump(dma_regs, dma_regs + 0x0B30, 0x4);
+	if (id == ODMA_WB) {
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0820, 0x7C);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0B00, 0xC);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0C00, 0xC);
+	} else {
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0800, 0x74);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0900, 0x44);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0A00, 0x8);
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0B00, 0x24);
+		/* config_err_status */
+		dpp_print_hex_dump(dma_regs, dma_regs + 0x0B30, 0x4);
+	}
 }
 
 static void dpp_dump_regs(u32 id, void __iomem *regs, unsigned long attr)
