@@ -11,10 +11,10 @@ obj-$(CONFIG_SOC_EXYNOS5410)	+= clk-exynos5410.o
 obj-$(CONFIG_SOC_EXYNOS5420)	+= clk-exynos5420.o
 obj-$(CONFIG_SOC_EXYNOS5440)	+= clk-exynos5440.o
 obj-$(CONFIG_EXYNOS_AUDSS_CLK_CON) += clk-exynos-audss.o
-obj-$(CONFIG_SOC_EXYNOS9630)   += clk-emulator.o
 ifeq ($(CONFIG_COMPOSITE_CLK_SAMSUNG), y)
 	obj-y				+= composite.o
 	obj-$(CONFIG_SOC_EXYNOS9610)	+= clk-exynos9610.o
+	obj-$(CONFIG_SOC_EXYNOS9630)	+= clk-exynos9630.o
 else
 	obj-$(CONFIG_COMMON_CLK)	+= clk.o clk-pll.o clk-cpu.o
 	obj-$(CONFIG_EXYNOS_ARM64_COMMON_CLK)	+= clk-exynos5433.o
