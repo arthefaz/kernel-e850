@@ -27,14 +27,14 @@
  */
 /* fixed rate clocks generated outside the soc */
 struct samsung_fixed_rate_clock emulator_fixed_rate_ext_clks[] __initdata = {
-	FRATE(CLK_FIN_PLL, "fin_pll", NULL, 0, 1000000),
+	FRATE(CLK_FIN_PLL, "fin_pll", NULL, 0, 26000000),
 };
 
 /* After complete to prepare clock tree, these will be removed. */
 struct samsung_fixed_rate_clock emulator_fixed_rate_clks[] __initdata = {
-	FRATE(CLK_GATE_UART0, "gate_uart_clk0", NULL, 0, 1000000),
-	FRATE(CLK_UART0, "ipclk_uart0", NULL, 0, 6451200),
-	FRATE(CLK_MCT, "mct", NULL, 0, 1000000),
+	FRATE(CLK_GATE_UART0, "gate_uart_clk0", NULL, 0, 26000000),
+	FRATE(CLK_UART0, "ipclk_uart0", NULL, 0, 133000000),
+	FRATE(CLK_MCT, "mct", NULL, 0, 26000000),
 };
 
 static __initdata struct of_device_id ext_clk_match[] = {
