@@ -342,4 +342,58 @@
 
                 domain-clients = <>;
 	};
+
+	iommu-domain_isp {
+		compatible = "samsung,exynos-iommu-bus";
+		#dma-address-cells = <2>;
+		#dma-size-cells = <1>;
+		ranges;
+
+                domain-clients = <>;
+	};
+
+	iommu-domain_g2dmscljpeg {
+		compatible = "samsung,exynos-iommu-bus";
+		#dma-address-cells = <2>;
+		#dma-size-cells = <1>;
+		ranges;
+
+                domain-clients = <>;
+	};
+
+	iommu-domain_aud {
+		compatible = "samsung,exynos-iommu-bus";
+		#dma-address-cells = <2>;
+		#dma-size-cells = <1>;
+		ranges;
+
+                domain-clients = <>;
+	};
+
+	iommu-domain_dnc {
+		compatible = "samsung,exynos-iommu-bus";
+		#dma-address-cells = <2>;
+		#dma-size-cells = <1>;
+		ranges;
+
+                domain-clients = <>;
+	};
+
+	iommu-domain_vra {
+		compatible = "samsung,exynos-iommu-bus";
+		#dma-address-cells = <2>;
+		#dma-size-cells = <1>;
+		ranges;
+
+                domain-clients = <>;
+	};
+
+	iommu-domain_mfc {
+		compatible = "samsung,exynos-iommu-bus";
+		#dma-address-cells = <2>;
+		#dma-size-cells = <1>;
+		ranges;
+
+                domain-clients = <>;
+	};
 };
