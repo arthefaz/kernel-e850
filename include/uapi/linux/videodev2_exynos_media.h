@@ -134,4 +134,16 @@
 #define SBWC_8B_CBCR_BASE(base, w, h)	((base) + SBWC_8B_Y_SIZE(w, h) + SBWC_8B_Y_HEADER_SIZE(w, h))
 #define SBWC_10B_CBCR_BASE(base, w, h)	((base) + SBWC_10B_Y_SIZE(w, h) + SBWC_10B_Y_HEADER_SIZE(w, h))
 
+/* SBWC Lossy */
+#define SBWCL_8B_STRIDE(w, r)		(((128 * (r)) / 100) * (((w) + 31) / 32))
+#define SBWCL_10B_STRIDE(w, r)		(((160 * (r)) / 100) * (((w) + 31) / 32))
+
+#define SBWCL_8B_Y_SIZE(w, h, r)	((SBWCL_8B_STRIDE(w, r) * ((__ALIGN_UP((h), 8) + 3) / 4)) + 64)
+#define SBWCL_8B_CBCR_SIZE(w, h, r)	((SBWCL_8B_STRIDE(w, r) * (((__ALIGN_UP((h), 8) / 2) + 3) / 4)) + 64)
+
+#define SBWCL_10B_Y_SIZE(w, h, r)	((SBWCL_10B_STRIDE(w, r) * ((__ALIGN_UP((h), 8) + 3) / 4)) + 64)
+#define SBWCL_10B_CBCR_SIZE(w, h, r)	((SBWCL_10B_STRIDE(w, r) * (((__ALIGN_UP((h), 8) / 2) + 3) / 4)) + 64)
+
+#define SBWCL_8B_CBCR_BASE(base, w, h, r)	((base) + SBWCL_8B_Y_SIZE(w, h, r))
+#define SBWCL_10B_CBCR_BASE(base, w, h, r)	((base) + SBWCL_10B_Y_SIZE(w, h, r))
 #endif /* __LINUX_VIDEODEV2_EXYNOS_MEDIA_H */
