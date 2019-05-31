@@ -2387,9 +2387,6 @@ int decon_check_global_limitation(struct decon_device *decon,
 	 * AXI Port2 : CH2(VG), CH3(VGS)
 	 */
 	int axi_port[MAX_DECON_WIN] = {5, 4, 3, 2, 1, 0};
-#if defined(CONFIG_EXYNOS_LIMIT_ROTATION)
-	const struct dpu_fmt *fmt_info;
-#endif
 
 	for (i = 0; i < MAX_DECON_WIN; i++) {
 		if (config[i].state != DECON_WIN_STATE_BUFFER)
@@ -2428,39 +2425,6 @@ int decon_check_global_limitation(struct decon_device *decon,
 		/* case 2 : In an axi domain, a channel has rotation
 		 *	one on the other should never have compression.
 		 */
-		} else if (config[i].dpp_parm.rot > DPP_ROT_180) {
-#if defined(CONFIG_EXYNOS_LIMIT_ROTATION)
-			fmt_info = dpu_find_fmt_info(config[i].format);
-			if (IS_YUV10(fmt_info)) {
-				decon_err("Limited 10-bit ROT!\n");
-				ret = -EPERM;
-				goto err;
-			}
-			/* 8-bit YUV */
-			/* TODO: config -> config[i] ? */
-			if ((config->src.w > ROT_MAX_W) &&
-				(config->src.w * config->src.h > ROT_MAX_SZ)) {
-				decon_err("Exceeded supporting ROT size!\n");
-				ret = -EPERM;
-				goto err;
-			}
-#endif
-
-			for (j = 0; j < MAX_DECON_WIN; j++) {
-				if (i == j)
-					continue;
-				if ((config[j].state == DECON_WIN_STATE_BUFFER) &&
-						(config[j].channel ==
-						 axi_port[config[i].channel])) {
-					if (config[j].compression) {
-						ret = -EPERM;
-						decon_err("AFBC & Roation/Flip not\
-							allowed in the same AXI port\
-							at the same time\n");
-						goto err;
-					}
-				}
-			}
 		}
 	}
 

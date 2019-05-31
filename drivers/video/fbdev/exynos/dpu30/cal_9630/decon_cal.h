@@ -17,16 +17,8 @@
 
 #define CEIL(x)			((x-(u32)(x) > 0 ? (u32)(x+1) : (u32)(x)))
 
-#if defined(CONFIG_EXYNOS_LIMIT_ROTATION)
-#define ROT_MAX_W		3040
-#define ROT_MAX_SZ		3040*1440
-#else
-#define ROT_MAX_W		4096
-#define ROT_MAX_SZ		4096*2160
-#endif
-
 #define BTS_DPU_MAX		3 /* DPU0 ~ 2 */
-#define BTS_DPP_MAX		6 /* DPP0 ~ 5 */
+#define BTS_DPP_MAX		4 /* DPP0 ~ 5 */
 
 enum decon_idma_type {
 	IDMA_G0 = 0,

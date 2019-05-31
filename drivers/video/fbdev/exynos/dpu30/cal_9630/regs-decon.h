@@ -34,9 +34,9 @@
  * - CMU_DPU			0x1900_0000
  * - SYSREG_DPU			0x1902_0000
  * - DPP			0x1904_0000
- * - DECON0			0x1905_0000
- * - DECON1			0x1906_0000
- * - DECON2			0x1907_0000
+ * - DECON0			0x1485_0000
+ * - DECON1			0x1486_0000
+ * - DECON2			0x1487_0000
  * - DPU_WB_MUX			0x1908_0000
  * - DPU_DMA			0x1909_0000
  * - MIPI_DSIM0			0x190C_0000
@@ -113,19 +113,7 @@
 #define SRAM1_SHARE_ENABLE_F			(1 << 4)
 #define SRAM2_SHARE_ENABLE_F			(1 << 8)
 #define SRAM3_SHARE_ENABLE_F			(1 << 12)
-#define SRAM4_SHARE_ENABLE_F			(1 << 16)
-#define SRAM5_SHARE_ENABLE_F			(1 << 20)
-#define ALL_SRAM_SHARE_ENABLE			(0x11111 << 0)
-#define ALL_SRAM_SHARE_DISABLE			(0x0)
-
-#define SRAM_SHARE_ENABLE_SUB			0x0034
-#define SRAM0_SHARE_ENABLE_F			(1 << 0)
-#define SRAM1_SHARE_ENABLE_F			(1 << 4)
-#define SRAM2_SHARE_ENABLE_F			(1 << 8)
-#define SRAM3_SHARE_ENABLE_F			(1 << 12)
-#define SRAM4_SHARE_ENABLE_F			(1 << 16)
-#define SRAM5_SHARE_ENABLE_F			(1 << 20)
-#define ALL_SRAM_SHARE_ENABLE			(0x11111 << 0)
+#define ALL_SRAM_SHARE_ENABLE			(0x1111 << 0)
 #define ALL_SRAM_SHARE_DISABLE			(0x0)
 
 #define INTERRUPT_ENABLE			0x0040
@@ -138,6 +126,7 @@
 #define INTERRUPT_ENABLE_MASK			0x3011
 
 #define EXTRA_INTERRUPT_ENABLE			0x0044
+#define DSIM_LATE_START_ALARM_INT_EN		(1 << 16)
 #define DPU_RESOURCE_CONFLICT_INT_EN		(1 << 8)
 #define DPU_TIME_OUT_INT_EN			(1 << 4)
 
@@ -151,6 +140,7 @@
 #define DPU_EXTRA_INT_PEND			(1 << 4)
 
 #define EXTRA_INTERRUPT_PENDING			0x0050
+#define DSIM_LATE_START_ALARM_INT_PEND		(1 << 16)
 #define DPU_RESOURCE_CONFLICT_INT_PEND		(1 << 8)
 #define DPU_TIME_OUT_INT_PEND			(1 << 4)
 
@@ -158,7 +148,7 @@
 #define SHADOW_REG_UPDATE_REQ_GLOBAL		(1 << 31)
 #define SHADOW_REG_UPDATE_REQ_DQE		(1 << 28)
 #define SHADOW_REG_UPDATE_REQ_WIN(_win)		(1 << (_win))
-#define SHADOW_REG_UPDATE_REQ_FOR_DECON		(0x3f)
+#define SHADOW_REG_UPDATE_REQ_FOR_DECON		(0xf)
 
 #define SECURE_CONTROL				0x0064
 #define TZPC_FLAG_WIN(_win)			(1 << (_win))
@@ -273,6 +263,8 @@
 #define OUTFIFO_PIXEL_ORDER_SWAP_MASK		(0x7 << 4)
 #define OUTFIFO_PIXEL_ORDER_SWAP_GET(_v)	(((_v) >> 4) & 0x7)
 
+#define OUTFIFO_LEVEL				0x0134
+
 #define READ_URGENT_CONTROL_0			0x0140
 #define READ_URGETN_GENERATION_EN_F		(0x1 << 0)
 
@@ -372,6 +364,10 @@
 #define DSIM1_START_TIME_CONTROL		0x0264
 #define DSIM1_START_TIME(_v)			((_v) << 0)
 
+#define DSIM0_LATE_START_ALARM_TH		0x0268
+
+#define DSIM1_LATE_START_ALARM_TH		0x026c
+
 #define DP_CONNECTION_CONTROL			0x0270
 #define DP_CONNECTION_SEL_DP1(_v)		((_v) << 4)
 #define DP_CONNECTION_SEL_DP1_MASK		(0x7 << 4)
@@ -395,6 +391,79 @@
 #define CRC_START				(1 << 0)
 
 #define FRAME_COUNT				0x02A0
+
+#define DECON_10BIT_BLEND_DITHER_EN		0x0300
+#define DECON_10BIT_BLEND_DITHER_EN_F		(1 << 0)
+
+#define DECON_DITHER_CONTROL			0x0304
+#define	DECON_DITHER_SFR_MASK_SEL_F		(1 << 1)
+#define	DECON_DITHER_SFR_MASK_SPIN_F		(1 << 0)
+
+#define DECON_DITHER_LINECNT_EN			0x0308
+#define DECON_DITHER_LINECNT_ENABLE		(1 << 0)
+
+#define DECON_DITHER_LINECNT			0x030c
+
+#define DECON_DITHER_DBG_EN			0x0310
+#define DECON_DITHER_DBG_ENABLE			(1 << 0)
+
+#define DECON_DITHER_DBG_CONTROL		0x0314
+
+#define DECON_DITHER_DBG_DATA			0x0318
+
+#define DEBUG_CONTROL				0x0400
+#define	DEBUG_CONTROL_DEBUG_EN			(1 << 31)
+
+#define DEBUG_DATA				0x0404
+
+#define DEBUG_INFO_QCH				0x0410
+
+#define DEBUG_INFO_DSIMIF_0			0x0414
+#define DEBUG_INFO_DSIMIF_1			0x0418
+
+#define	DEBUG_INFO_SCALER_PATH_0		0x041c
+#define	DEBUG_INFO_SCALER_PATH_1		0x0420
+
+#define SYNCMGR_STATE				0x0468
+
+#define OUTFIFO_COUNTER0			0x0474
+#define OUTFIFO_COUNTER1			0x0478
+#define OUTFIFO_COUNTER2			0x047c
+
+#define OUTFIFO_INFO_0				0x0480
+#define OUTFIFO_INFO_1				0x0484
+
+#define DSIM0_OUT_PIXEL_COUNT			0x0488
+#define DSIM0_OUT_TH_START_COUNT		0x048c
+#define DSIM1_OUT_PIXEL_COUNT			0x0490
+#define DSIM1_OUT_TH_START_COUNT		0x0494
+#define DSIM_TE_FRM_PROTOCOL_STATUS		0x0498
+
+#define DP0_STATE				0x04a0
+#define DP0_OUT_PIXEL_COUNT			0x04a4
+
+#define DP1_STATE				0x04a8
+#define DP1_OUT_PIXEL_COUNT			0x04ac
+
+#define MAIN_CTRL_SIGNAL_0			0x04c0
+#define MAIN_CTRL_SIGNAL_1			0x04c4
+#define MAIN_CTRL_SIGNAL_2			0x04c8
+#define MAIN_CTRL_SIGNAL_3			0x04cc
+#define MAIN_CTRL_SIGNAL_4			0x04d0
+#define MAIN_CTRL_SIGNAL_5			0x04d4
+#define MAIN_CTRL_SIGNAL_6			0x04d8
+#define MAIN_CTRL_SIGNAL_7			0x04dc
+#define MAIN_CTRL_SIGNAL_8			0x04e0
+
+#define INTERNAL_DATA_FLOW_0			0x0500
+#define INTERNAL_DATA_FLOW_1			0x0504
+#define INTERNAL_DATA_FLOW_2			0x0508
+#define INTERNAL_DATA_FLOW_3			0x050c
+#define INTERNAL_DATA_FLOW_4			0x0510
+#define INTERNAL_DATA_FLOW_5			0x0514
+#define INTERNAL_DATA_FLOW_6			0x0518
+
+#define DECON_VERSION				0x0ffc
 
 /* BLENDER */
 #define WIN_CONTROL_0(_win)			(0x1000 + ((_win) * 0x30))
@@ -443,6 +512,11 @@
 #define WIN_START_TIME_CONTROL(_win)		(0x1018 + ((_win) * 0x30))
 #define WIN_START_TIME_CONTROL_F(_v)		((_v) << 0)
 #define WIN_START_TIME_CONTROL_MASK		(0x3fff << 0)
+
+#define BLENDER_CTRL_STATE_0			0x1180
+#define BLENDER_CTRL_STATE_1			0x1184
+#define BLENDER_CTRL_STATE_2			0x1188
+
 
 /*
  * DSC registers
@@ -637,7 +711,6 @@
 #define PPS58_59_RC_RANGE_PARAM_MASK		(0xFFFF << 0)
 #define PPS58_59_RC_RANGE_PARAM(_v)		(_v << 0)
 
-
 #define DSC_DEBUG_EN				0x0078
 #define DSC_DBG_EN_MASK				(1 << 31)
 #define DSC_DBG_EN(_v)				((_v) << 31)
@@ -653,8 +726,6 @@
 #define DSCC_DBG_SEL(_v)			((_v) << 0)
 
 #define DSCC_DEBUG_DATA				0x0084
-
-
 
 #define SHADOW_OFFSET				0x7000
 
