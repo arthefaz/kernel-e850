@@ -17,6 +17,7 @@ static struct vclk *dvfs_domain;
 static unsigned int margin;
 
 extern unsigned int dbg_offset;
+static unsigned int cmu_top_base = 0x0;
 
 void print_clk_on_blk(void)
 {
@@ -24,14 +25,19 @@ void print_clk_on_blk(void)
 	int size, reg;
 	int i;
 
+	if (cmu_top_base == 0x0) {
+		pr_info("cmu_top_base is NULL\n");
+		return ;
+	}
+
 	size = cmucal_get_list_size(PLL_TYPE);
 	for (i = 0; i < size ; i++) {
 		clk = cmucal_get_node(i | PLL_TYPE);
-		if (!clk || (clk->paddr & 0xFFFF0000) != 0x12100000)
+		if (!clk || (clk->paddr & 0xFFFF0000) != cmu_top_base)
 			continue;
 
-		reg = readl((clk->pll_con0) + dbg_offset);
-		if (((reg >> 4) & 0x7) != 0x3)
+		reg = readl(clk->pll_con0);
+		if ((reg >> 29) & 0x1)
 			printk("name %s : [0x%x] active\n", clk->name, reg);
 		else
 			printk("name %s : [0x%x] idle\n", clk->name, reg);
@@ -42,7 +48,7 @@ void print_clk_on_blk(void)
 
 	for (i = 0; i < size ; i++) {
 		clk = cmucal_get_node(i | GATE_TYPE);
-		if (!clk || (clk->paddr & 0xFFFF0000) != 0x12100000)
+		if (!clk || (clk->paddr & 0xFFFF0000) != cmu_top_base)
 			continue;
 
 		reg = readl(clk->offset + dbg_offset);
@@ -361,6 +367,12 @@ int vclk_debug_clk_set_value(unsigned int id, unsigned int params)
 }
 EXPORT_SYMBOL_GPL(vclk_debug_clk_set_value);
 
+void cmucal_dbg_set_cmu_top_base(u32 base_addr)
+{
+	cmu_top_base = base_addr;
+	pr_info("cmu_top_base : 0x%x\n", base_addr);
+}
+EXPORT_SYMBOL_GPL(cmucal_dbg_set_cmu_top_base);
 /**
  * vclk_debug_init - lazily create the debugfs clk tree visualization
  */

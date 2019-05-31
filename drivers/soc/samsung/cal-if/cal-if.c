@@ -460,6 +460,7 @@ void cal_gnss_active_clear(void)
 int __init cal_if_init(void *dev)
 {
 	static int cal_initialized;
+	struct resource res;
 	int ret;
 
 	if (cal_initialized == 1)
@@ -513,6 +514,9 @@ int __init cal_if_init(void *dev)
 
 #endif
 	exynos_acpm_set_device(dev);
+
+	if (of_address_to_resource(dev, 0, &res) == 0)
+		cmucal_dbg_set_cmu_top_base(res.start);
 
 	cal_initialized = 1;
 
