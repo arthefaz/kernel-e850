@@ -1743,7 +1743,7 @@ static int sec_ts_parse_dt(struct i2c_client *client)
 		pdata->panel_revision = 0;
 	else
 		pdata->panel_revision = ((lcdtype >> 8) & 0xFF) >> 4;
-
+#if 0
 	if (of_property_read_string(np, "sec,regulator_dvdd", &pdata->regulator_dvdd)) {
 		input_err(true, dev, "%s: Failed to get regulator_dvdd name property\n", __func__);
 		return -EINVAL;
@@ -1753,6 +1753,7 @@ static int sec_ts_parse_dt(struct i2c_client *client)
 		input_err(true, dev, "%s: Failed to get regulator_avdd name property\n", __func__);
 		return -EINVAL;
 	}
+#endif
 
 	pdata->power = sec_ts_power;
 
@@ -2097,7 +2098,7 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	sec_ts_pinctrl_configure(ts, true);
 
 	/* power enable */
-	sec_ts_power(ts, true);
+//	sec_ts_power(ts, true);
 	if (!pdata->regulator_boot_on)
 		sec_ts_delay(70);
 	ts->power_status = SEC_TS_STATE_POWER_ON;
@@ -2292,7 +2293,7 @@ err_input_register_device:
 err_allocate_frame:
 err_init:
 	wake_lock_destroy(&ts->wakelock);
-	sec_ts_power(ts, false);
+//	sec_ts_power(ts, false);
 	if (ts->plat_data->support_dex) {
 		if (ts->input_dev_pad)
 			input_free_device(ts->input_dev_pad);
@@ -2744,7 +2745,7 @@ static int sec_ts_remove(struct i2c_client *client)
 	ts->input_dev = NULL;
 	ts->input_dev_touch = NULL;
 	ts_dup = NULL;
-	ts->plat_data->power(ts, false);
+//	ts->plat_data->power(ts, false);
 
 #ifdef CONFIG_TRUSTONIC_TRUSTED_UI
 	tsp_info = NULL;
@@ -2779,7 +2780,7 @@ int sec_ts_stop_device(struct sec_ts_data *ts)
 	disable_irq(ts->client->irq);
 	sec_ts_locked_release_all_finger(ts);
 
-	ts->plat_data->power(ts, false);
+//	ts->plat_data->power(ts, false);
 
 	if (ts->plat_data->enable_sync)
 		ts->plat_data->enable_sync(false);
@@ -2808,7 +2809,7 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 
 	sec_ts_locked_release_all_finger(ts);
 
-	ts->plat_data->power(ts, true);
+//	ts->plat_data->power(ts, true);
 	sec_ts_delay(70);
 	ts->power_status = SEC_TS_STATE_POWER_ON;
 	sec_ts_wait_for_ready(ts, SEC_TS_ACK_BOOT_COMPLETE);
