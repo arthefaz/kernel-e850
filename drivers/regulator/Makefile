@@ -96,6 +96,7 @@ obj-$(CONFIG_REGULATOR_S2MPA01) += s2mpa01.o
 obj-$(CONFIG_REGULATOR_S2MPS11) += s2mps11.o
 obj-$(CONFIG_REGULATOR_S2MPU09) += s2mpu09-regulator.o
 obj-$(CONFIG_REGULATOR_S2MPU10) += s2mpu10-regulator.o
+obj-$(CONFIG_REGULATOR_S2MPU11) += s2mpu11-regulator.o
 obj-$(CONFIG_REGULATOR_S2MPB02) += s2mpb02-regulator.o
 obj-$(CONFIG_REGULATOR_S5M8767) += s5m8767.o
 obj-$(CONFIG_REGULATOR_SKY81452) += sky81452-regulator.o
