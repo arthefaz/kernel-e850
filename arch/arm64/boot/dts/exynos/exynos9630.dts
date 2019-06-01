@@ -525,4 +525,14 @@
 		clocks = <&clock GATE_ADC_CMGP_QCH_S0>;
 		clock-names = "gate_adcif";
 	};
+
+	sec_pwm: pwm@10090000 {
+		compatible = "samsung,s3c6400-pwm";
+		reg = <0x0 0x10090000 0x1000>;
+		samsung,pwm-outputs = <0>, <1>, <2>, <3>, <4>;
+		#pwm-cells = <3>;
+		clocks = <&clock GATE_PWM_QCH>, <&clock OSCCLK>;
+		clock-names = "pwm_pclk", "pwm_sclk";
+		status = "ok";
+	};
 };
