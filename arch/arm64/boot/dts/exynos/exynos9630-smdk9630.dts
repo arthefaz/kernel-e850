@@ -27,7 +27,7 @@
 
 			fixed-rate-clocks {
 				oscclk {
-					compatible = "samsung,emulator-oscclk";
+					compatible = "samsung,exynos9630-oscclk";
 					clock-frequency = <26000000>;
 				};
 			};
