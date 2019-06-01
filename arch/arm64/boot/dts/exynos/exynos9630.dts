@@ -57,7 +57,7 @@
 	};
 
 	chosen: chosen {
-		bootargs = "earlycon=exynos4210,0x13800000 console=ttySAC0,115200n8 root=/dev/ram0 rw ramdisk=8192 initrd=0x84000000,8M init=/linuxrc mem=512M clk_ignore_unused";
+		bootargs = "earlycon=exynos4210,0x13800000 console=ttySAC0,115200n8 root=/dev/ram0 rw ramdisk=8192 initrd=0x84000000,8M init=/linuxrc clk_ignore_unused";
 		linux,initrd-start = <0x84000000>;
 		linux,initrd-end = <0x841FFFFF>;
 	};
