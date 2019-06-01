@@ -535,4 +535,12 @@
 		clock-names = "pwm_pclk", "pwm_sclk";
 		status = "ok";
 	};
+
+	rtc@11030000 {
+		compatible = "samsung,exynos8-rtc";
+		reg = <0x0 0x11030000 0x100>;
+		interrupts = <GIC_SPI INTREQ__RTC_ALARM_INT IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__RTC_TIC_INT_0 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
 };
