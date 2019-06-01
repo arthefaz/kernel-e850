@@ -177,7 +177,7 @@
 		interrupts =	<0>, <1>, <2>, <3>,
 				<4>, <5>, <6>, <7>,
 				<8>, <9>, <10>, <11>;
-		clocks = <&clock 1>, <&clock 21>;
+		clocks = <&clock OSCCLK>, <&clock GATE_MCT_QCH>;
 		clock-names = "fin_pll", "mct";
 		use-clockevent-only;
 
@@ -212,7 +212,7 @@
 		samsung,dbg-uart-ch;
 		samsung,dbg-uart-baud = <115200>;
 		samsung,dbg-word-len = <8>;
-		clocks = <&clock 9>, <&clock 15>;
+		clocks = <&clock GATE_UART_DBG_QCH>, <&clock UART_DBG>;
 		clock-names = "gate_uart_clk0", "ipclk_uart0";
 		status = "disabled";
 	};
