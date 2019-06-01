@@ -515,4 +515,14 @@
 		index = <1>; /* if little cluster then index is 0*/
 		use_multistage_wdt; /* Use FIQ debug watchdog */
 	};
+
+	exynos_adc: adc@11440000 {
+		compatible = "samsung,exynos-adc-v3";
+		reg = <0x0 0x11440000 0x100>;
+		interrupts = <GIC_SPI INTREQ__ADC_CMGP2AP IRQ_TYPE_LEVEL_HIGH>;
+		#io-channel-cells = <1>;
+		io-channel-ranges;
+		clocks = <&clock GATE_ADC_CMGP_QCH_S0>;
+		clock-names = "gate_adcif";
+	};
 };
