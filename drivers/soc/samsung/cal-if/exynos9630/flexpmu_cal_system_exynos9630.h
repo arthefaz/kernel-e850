@@ -43,7 +43,7 @@ struct pmucal_seq pmucal_lpm_init[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_DSP1_BUS_COMPONENT_DRCG_EN", 0x12b20000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_G2D_BUS_COMPONENT_DRCG_EN", 0x12c20000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_G3D_BUS_COMPONENT_DRCG_EN", 0x10c20000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_GNSS_BUS_COMPONENT_DRCG_EN", 0x13f90000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+//	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_GNSS_BUS_COMPONENT_DRCG_EN", 0x13f90000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_HSI_BUS_COMPONENT_DRCG_EN", 0x13420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_IPP_BUS_COMPONENT_DRCG_EN", 0x15220000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_ITP_BUS_COMPONENT_DRCG_EN", 0x15420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
