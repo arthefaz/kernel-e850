@@ -103,13 +103,28 @@ static inline int ufs_init_cal(struct exynos_ufs *ufs, int idx,
 	return 0;
 }
 
+static void exynos_ufs_update_active_lanes(struct ufs_hba *hba)
+{
+       struct exynos_ufs *ufs = to_exynos_ufs(hba);
+       struct ufs_cal_param *p = ufs->cal_param;
+       u32 active_tx_lane = 0;
+       u32 active_rx_lane = 0;
+
+       ufshcd_dme_get(hba, UIC_ARG_MIB(PA_ACTIVETXDATALANES), &(active_tx_lane));
+       ufshcd_dme_get(hba, UIC_ARG_MIB(PA_ACTIVERXDATALANES), &(active_rx_lane));
+
+       p->active_tx_lane = (u8) active_tx_lane;
+       p->active_rx_lane = (u8) active_rx_lane;
+
+       dev_info(ufs->dev, "active_tx_lane(%d), active_rx_lane(%d)\n", p->active_tx_lane, p->active_rx_lane);
+}
+
 static inline int ufs_pre_link(struct exynos_ufs *ufs)
 {
 	int ret = 0;
 	struct ufs_cal_param *p = ufs->cal_param;
 
 	p->mclk_rate = ufs->mclk_rate;
-	p->target_lane = ufs->num_rx_lanes;
 	p->available_lane = ufs->num_rx_lanes;
 
 	if ((ret = ufs_cal_pre_link(p)) != UFS_CAL_NO_ERROR) {
@@ -123,6 +138,9 @@ static inline int ufs_pre_link(struct exynos_ufs *ufs)
 static inline int ufs_post_link(struct exynos_ufs *ufs)
 {
 	int ret = 0;
+
+	/* update active lanes after link*/
+	exynos_ufs_update_active_lanes(ufs->hba);
 
 	if ((ret = ufs_cal_post_link(ufs->cal_param)) != UFS_CAL_NO_ERROR) {
 		dev_err(ufs->dev, "ufs_post_link = %d!!!\n", ret);
@@ -139,7 +157,6 @@ static inline int ufs_pre_gear_change(struct exynos_ufs *ufs,
 	int ret = 0;
 
 	p->pmd = pmd;
-	p->target_lane = pmd->lane;
 	if ((ret = ufs_cal_pre_pmc(p)) != UFS_CAL_NO_ERROR) {
 		dev_err(ufs->dev, "ufs_pre_gear_change = %d!!!\n", ret);
 		return -EPERM;
@@ -379,10 +396,14 @@ static void exynos_ufs_init_pmc_req(struct ufs_hba *hba,
 	struct exynos_ufs *ufs = to_exynos_ufs(hba);
 	struct uic_pwr_mode *req_pmd = &ufs->req_pmd_parm;
 	struct uic_pwr_mode *act_pmd = &ufs->act_pmd_parm;
+	struct ufs_cal_param *p = ufs->cal_param;
 
 	/* update lane variable after link */
 	ufs->num_rx_lanes = pwr_max->lane_rx;
 	ufs->num_tx_lanes = pwr_max->lane_tx;
+
+	p->connected_rx_lane = pwr_max->lane_rx;
+	p->connected_tx_lane = pwr_max->lane_tx;
 
 	pwr_req->gear_rx
 		= act_pmd->gear= min_t(u8, pwr_max->gear_rx, req_pmd->gear);
@@ -867,6 +888,9 @@ static int exynos_ufs_link_startup_notify(struct ufs_hba *hba,
 		ret = ufs_pre_link(ufs);
 		break;
 	case POST_CHANGE:
+		/* update active lanes after pmc */
+		exynos_ufs_update_active_lanes(hba);
+
 		/* UIC configuration table after link startup */
 		ret = ufs_post_link(ufs);
 		break;
