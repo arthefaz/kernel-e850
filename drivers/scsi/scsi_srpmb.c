@@ -373,8 +373,10 @@ int init_wsm(struct device *dev)
 
 	return 0;
 
+#ifdef CONFIG_EXYNOS_SMC_LOGGING
 out_srpmb_unregister_pm:
 	unregister_pm_notifier(&rpmb_ctx->pm_notifier);
+#endif
 out_srpmb_init_fail:
 	if (rpmb_ctx->srpmb_queue)
 		destroy_workqueue(rpmb_ctx->srpmb_queue);

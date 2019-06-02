@@ -47,6 +47,8 @@
 #define BIT_9		(1U << 9)
 #define BIT_16		(1U << 16)
 #define BIT_17		(1U << 17)
+#define BIT_22		(1U << 22)
+#define BIT_23		(1U << 23)
 
 #define PMD_PWM_G1_L1	(1U << 0)
 #define PMD_PWM_G1_L2	(1U << 1)

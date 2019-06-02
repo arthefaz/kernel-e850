@@ -21,7 +21,7 @@
 #include "ufs-exynos.h"
 #include "ufs-exynos-fmp.h"
 #include <soc/samsung/exynos-fsys0-tcxo.h>
-#include <soc/samsung/exynos-cpupm.h>
+//#include <soc/samsung/exynos-cpupm.h>
 #include <linux/mfd/syscon.h>
 #include <linux/regmap.h>
 #include <linux/soc/samsung/exynos-soc.h>
@@ -1178,7 +1178,7 @@ static int exynos_ufs_populate_dt_system(struct device *dev, struct exynos_ufs *
 		dev_err(dev, "pmu regmap lookup failed.\n");
 		return PTR_ERR(ufs->pmureg);
 	}
-
+#if 0
 	/* Set access context for phy isolation bypass */
 	ret = exynos_ufs_set_context_for_access(dev, "ufs-phy-iso",
 							&ufs->cxt_iso);
@@ -1189,7 +1189,7 @@ static int exynos_ufs_populate_dt_system(struct device *dev, struct exynos_ufs *
 		ufs->cxt_iso.val = 0x1;
 		ret = 0;
 	}
-
+#endif
 	/* regmap sysreg */
 	ufs->sysreg = syscon_regmap_lookup_by_phandle(dev->of_node,
 					 "samsung,sysreg-fsys-phandle");
