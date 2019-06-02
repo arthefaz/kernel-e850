@@ -99,17 +99,26 @@ static int get_drexbts(void __iomem *base, struct bts_stat *stat)
 	return 0;
 }
 
-static int set_buscbts_qmax_limit(void __iomem *base, struct bts_stat *stat)
+static int set_buscbts_qmax_threshold(void __iomem *base, unsigned int r_thd, unsigned int w_thd)
 {
 	unsigned int tmp_reg_r = 0, tmp_reg_w = 0;
 
 	if (!base || !stat)
 		return -ENODATA;
 
-	tmp_reg_r = stat->qmax0_limit_r & 0xFFFF;
-	tmp_reg_w = stat->qmax0_limit_w & 0xFFFF;
-	tmp_reg_r |= (stat->qmax1_limit_r & 0xFFFF) << 16;
-	tmp_reg_w |= (stat->qmax1_limit_w & 0xFFFF) << 16;
+	if (r_thd > 0xFFFF)
+		r_thd = 0xFFFF;
+
+	tmp_reg_r = __raw_readl(base + QMAX_THRESHOLD_R);
+	tmp_reg_r &= ~(0xFFFF << 0);
+	tmp_reg_r |= (r_rhd << 0);
+
+	if (w_thd > 0xFFFF)
+		w_thd = 0xFFFF;
+
+	tmp_reg_w = __raw_readl(base + QMAX_THRESHOLD_W);
+	tmp_reg_w &= ~(0xFFFF << 0);
+	tmp_reg_w |= (w_rhd << 0);
 
 	__raw_writel(tmp_reg_r, base + QMAX_THRESHOLD_R);
 	__raw_writel(tmp_reg_w, base + QMAX_THRESHOLD_W);
@@ -117,7 +126,7 @@ static int set_buscbts_qmax_limit(void __iomem *base, struct bts_stat *stat)
 	return 0;
 }
 
-static int get_buscbts_qmax_limit(void __iomem *base, struct bts_stat *stat)
+static int get_buscbts_qmax_threshold(void __iomem *base, unsigned int *r_thd, unsigned int *w_thd)
 {
 	unsigned int tmp_reg_r, tmp_reg_w;
 
@@ -127,10 +136,8 @@ static int get_buscbts_qmax_limit(void __iomem *base, struct bts_stat *stat)
 	tmp_reg_r = __raw_readl(base + QMAX_THRESHOLD_R);
 	tmp_reg_w = __raw_readl(base + QMAX_THRESHOLD_W);
 
-	stat->qmax0_limit_r = tmp_reg_r & 0xFFFF;
-	stat->qmax0_limit_w = tmp_reg_w & 0xFFFF;
-	stat->qmax1_limit_r = (tmp_reg_r >> 16) & 0xFFFF;
-	stat->qmax1_limit_w = (tmp_reg_w >> 16) & 0xFFFF;
+	*r_thd = tmp_reg_r & 0xFFFF;
+	*w_thd = tmp_reg_w & 0xFFFF;
 
 	return 0;
 }
