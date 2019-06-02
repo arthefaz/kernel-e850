@@ -38,7 +38,8 @@
 #if defined(CONFIG_SOC_EXYNOS9830)
 #include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
 #elif defined(CONFIG_SOC_EXYNOS9630)
-#include <dt-bindings/soc/samsung/exynos9630-devfreq.h>
+/* TODO : DEVFREQ */
+//#include <dt-bindings/soc/samsung/exynos9630-devfreq.h>
 #endif
 #include <soc/samsung/exynos-devfreq.h>
 
