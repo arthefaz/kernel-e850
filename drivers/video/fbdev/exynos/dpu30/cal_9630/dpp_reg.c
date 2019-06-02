@@ -850,6 +850,8 @@ u32 pattern_data[] = {
 void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 		const unsigned long attr)
 {
+	int deadlock_cnt = 0;
+
 	if (test_bit(DPP_ATTR_CSC, &attr) && test_bit(DPP_ATTR_DPP, &attr))
 		dpp_reg_set_csc_params(id, p->eq_mode);
 
@@ -889,7 +891,12 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 	 * dead_lock min: 17ms (17ms: 1-frame time, rcv_time: 1ms)
 	 * but, considered DVFS 3x level switch (ex: 200 <-> 600 Mhz)
 	 */
-	idma_reg_set_deadlock(id, 1, p->rcv_num * 51);
+
+	deadlock_cnt = p->rcv_num * 51;
+	deadlock_cnt = 0x7fffffff;
+	dpp_info("idma deadlock_cnt(%d)\n", deadlock_cnt);
+	/* TODO : deadlock is not set for bring up */
+	idma_reg_set_deadlock(id, 1, deadlock_cnt);
 
 #if defined(DMA_BIST)
 	idma_reg_set_test_pattern(id, 0, pattern_data);
