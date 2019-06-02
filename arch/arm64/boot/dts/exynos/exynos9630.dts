@@ -592,6 +592,46 @@
 		reg = <0x0 0x10E60000 0x10000>;
 	};
 
+	/* DMA */
+	amba {
+		#address-cells = <2>;
+		#size-cells = <1>;
+		compatible = "arm,amba-bus";
+		interrupt-parent = <&gic>;
+		ranges;
+
+		pdma0: pdma0@14550000 {
+			compatible = "arm,pl330", "arm,primecell";
+			reg = <0x0 0x14550000 0x1000>;
+			interrupts = <0 37 0>;
+			clocks = <&clock GATE_PDMA_BUSC_QCH>;
+			clock-names = "apb_pclk";
+			#dma-cells = <1>;
+			#dma-channels = <8>;
+			#dma-requests = <32>;
+			#dma-multi-irq = <1>;
+			dma-arwrapper = <0x14554400>,
+					<0x14554420>,
+					<0x14554440>,
+					<0x14554460>,
+					<0x14554480>,
+					<0x145544A0>,
+					<0x145544C0>,
+					<0x145544E0>;
+			dma-awwrapper = <0x14554404>,
+					<0x14554424>,
+					<0x14554444>,
+					<0x14554464>,
+					<0x14554484>,
+					<0x145544A4>,
+					<0x145544C4>,
+					<0x145544E4>;
+			dma-instwrapper = <0x14554500>;
+			dma-mask-bit = <36>;
+			coherent-mask-bit = <36>;
+		};
+	};
+
 	iommu-domain_dpu {
 		compatible = "samsung,exynos-iommu-bus";
 		#dma-address-cells = <2>;
