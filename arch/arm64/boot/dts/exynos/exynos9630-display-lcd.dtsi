@@ -62,8 +62,8 @@
 				mic_ver = <2>;			/* 0: mic v1.1, 1: v1.2, 2: v2.0 */
 				type_of_ddi = <0>;		/* 0: Samsung Mobile, 1: MAGNA, 2: Normal(Etc) */
 				dsc_en = <1>;			/* 0: Disable, 1: Enable */
-				dsc_cnt = <2>;			/* used DSC count */
-				dsc_slice_num = <4>;		/* count of dsc slice */
+				dsc_cnt = <1>;			/* used DSC count */
+				dsc_slice_num = <2>;		/* count of dsc slice */
 				dsc_slice_h = <64>;		/* height of dsc slice */
 				data_lane = <4>;		/* number of using data lane */
 				cmd_underrun_lp_ref = <5629>;	/* for underrun detect (max : 65535) */
@@ -169,7 +169,7 @@
 				mic_ver = <2>;			/* 0: mic v1.1, 1: v1.2, 2: v2.0 */
 				type_of_ddi = <0>;		/* 0: Samsung Mobile, 1: MAGNA, 2: Normal(Etc) */
 				dsc_en = <1>;			/* 0: Disable, 1: Enable */
-				dsc_cnt = <2>;			/* used DSC count */
+				dsc_cnt = <1>;			/* used DSC count */
 				dsc_slice_num = <2>;		/* count of dsc slice */
 				dsc_slice_h = <40>;		/* height of dsc slice */
 				data_lane = <4>;		/* number of using data lane */
@@ -210,7 +210,7 @@
 				mic_ver = <2>;			/* 0: mic v1.1, 1: v1.2, 2: v2.0 */
 				type_of_ddi = <0>;		/* 0: Samsung Mobile, 1: MAGNA, 2: Normal(Etc) */
 				dsc_en = <1>;			/* 0: Disable, 1: Enable */
-				dsc_cnt = <2>;			/* used DSC count */
+				dsc_cnt = <1>;			/* used DSC count */
 				dsc_slice_num = <2>;		/* count of dsc slice */
 				dsc_slice_h = <40>;		/* height of dsc slice */
 				data_lane = <4>;		/* number of using data lane */
@@ -249,7 +249,7 @@
 				mic_ver = <2>;			/* 0: mic v1.1, 1: v1.2, 2: v2.0 */
 				type_of_ddi = <0>;		/* 0: Samsung Mobile, 1: MAGNA, 2: Normal(Etc) */
 				dsc_en = <1>;			/* 0: Disable, 1: Enable */
-				dsc_cnt = <2>;			/* used DSC count */
+				dsc_cnt = <1>;			/* used DSC count */
 				dsc_slice_num = <2>;		/* count of dsc slice */
 				dsc_slice_h = <40>;		/* height of dsc slice */
 				data_lane = <4>;		/* number of using data lane */
