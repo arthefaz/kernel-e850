@@ -150,6 +150,7 @@
 
 	mipi_phy_dsim_m4m4: dphy_m4s4_dsim@0x10E60000 { /* MIPI_PHY_CONTROL @PMU_Alive */
 		compatible = "samsung,mipi-phy-m4m4";
+		samsung,pmu-syscon = <&pmu_system_controller>;
 		isolation = <0x070C>;
 		owner = <0>; /* 0: DSI_0 1: DSI_1 */
 		#phy-cells = <1>;
