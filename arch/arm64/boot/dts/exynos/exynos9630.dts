@@ -21,6 +21,7 @@
 #include <dt-bindings/clock/exynos9630.h>
 #include "exynos9630-dpu.dtsi"
 #include "exynos9630-sysmmu.dtsi"
+#include <dt-bindings/ufs/ufs.h>
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos9630";
@@ -396,4 +397,116 @@
 
                 domain-clients = <>;
 	};
+
+	exynos-sysreg-hsi {
+		compatible = "samsung,exynos-sysreg-hsi";
+		samsung,syscon-phandle = <&sysreg_fsys_system_controller>;
+	};
+
+	sysreg_fsys_system_controller: system-controller@13420000 {
+		compatible = "samsung,exynos9610-sysreg-fsys", "syscon";
+		reg = <0x0 0x13420000 0x1020>;
+	};
+
+	ufs: ufs@0x13600000 {
+	     /* ----------------------- */
+	     /* 1. SYSTEM CONFIGURATION */
+	     /* ----------------------- */
+	     compatible ="samsung,exynos-ufs";
+	     #address-cells = <2>;
+	     #size-cells = <1>;
+	     ranges;
+	     reg =
+		     <0x0 0x13600000 0x200>,	/* 0: HCI standard */
+		     <0x0 0x13601100 0x220>,	/* 1: Vendor specificed */
+		     <0x0 0x13680000 0x8000>,	/* 2: UNIPRO */
+		     <0x0 0x13500000 0x2100>;	/* 3: UFS protector */
+	     interrupts = <GIC_SPI INTREQ__UFS_EMBD IRQ_TYPE_LEVEL_HIGH>;
+	     pinctrl-names = "default";
+	     pinctrl-0 = <&ufs_rst_n &ufs_refclk_out>;
+	     clocks =
+		     /* aclk clock */
+		     <&clock GATE_UFS_EMBD_QCH>,
+		     /* unipro clocks */
+		     <&clock UFS_EMBD>;
+
+	     clock-names =
+		     /* aclk clocks */
+		     "GATE_UFS_EMBD_QCH_UFS",
+		     /* unipro clocks */
+		     "UFS_EMBD";
+
+	     /* PM QoS for INT power domain */
+//	     ufs-pm-qos-int = <533000>;
+
+	     /* DMA coherent callback, should be coupled with 'ufs-sys' */
+	     dma-coherent;
+
+	     /* UFS PHY isolation and TCXO control */
+	     samsung,pmu-phandle = <&pmu_system_controller>;
+
+	     /* TCXO exclusive control  */
+	     tcxo-ex-ctrl = <0>;
+
+	     /* UFS IO coherency  */
+	     samsung,sysreg-fsys-phandle = <&sysreg_fsys_system_controller>;
+
+	     /* ----------------------- */
+	     /* 2. UFS COMMON           */
+	     /* ----------------------- */
+	     freq-table-hz = <0 0>, <0 0>;
+
+//	     vcc-supply = <&ufs_fixed_vcc>;
+//	     vcc-fixed-regulator;
+//	     ufs-power-gpio = <&gpa0 0 0>; not used xbootldo
+	     ufs-reset-n-gpio = <&gpf0 1 0>;
+
+	     /* ----------------------- */
+	     /* 3. UFS EXYNOS           */
+	     /* ----------------------- */
+	     hw-rev = <UFS_VER_0005>;
+
+	     /* power mode change */
+	     ufs,pmd-attr-lane = /bits/ 8 <1>;
+	     ufs,pmd-attr-gear = /bits/ 8 <3>;
+
+	     /* hiberantion */
+	     ufs-rx-min-activate-time-cap = <3>;
+	     ufs-rx-hibern8-time-cap = <2>;
+	     ufs-tx-hibern8-time-cap = <2>;
+
+	     /* board type for UFS CAL */
+	     brd-for-cal = <0>;
+
+	     fmp-id = <0>;
+	     smu-id = <0>;
+
+	     /* ----------------------- */
+	     /* 4. ADDITIONAL NODES     */
+	     /* ----------------------- */
+	     ufs-phy {
+		     #address-cells = <2>;
+		     #size-cells = <1>;
+		     ranges;
+		     reg = <0x0 0x13604000 0x800>;
+	     };
+
+	     /* SYSREG */
+	     ufs-dma-coherency {
+		     #address-cells = <2>;
+		     #size-cells = <1>;
+
+		     offset = <0x400>;
+		     mask = <(BIT_22 | BIT_23)>;
+		     val = <(BIT_22 | BIT_23)>;
+	     };
+	     /*
+	      * not confirm this address and can't find cport address
+	      ufs-cport {
+	      reg =
+	      <0x0 0x13108000 0x804>;
+	      };
+	      */
+     };
+
 };

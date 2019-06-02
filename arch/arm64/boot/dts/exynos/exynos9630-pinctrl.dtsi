@@ -289,6 +289,20 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 		};
+
+		ufs_rst_n: ufs-rst-n {
+			samsung,pins = "gpf0-1";
+			samsung,pin-function = <3>;
+			samsung,pin-pud = <0>;
+			samsung,pin-con-pdn = <3>;
+		};
+
+		ufs_refclk_out: ufs-refclk-out {
+			samsung,pins = "gpf0-0";
+			samsung,pin-function = <3>;
+			samsung,pin-pud = <0>;
+			samsung,pin-con-pdn = <3>;
+		};
 		gpf1: gpf1 {
 			gpio-controller;
 			#gpio-cells = <2>;
