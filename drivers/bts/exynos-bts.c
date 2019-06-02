@@ -1623,7 +1623,6 @@ out:
 static int exynos_bts_qmax_thrd_open_show(struct seq_file *buf, void *d)
 {
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
 	int ret, i = 0;
 	unsigned int r_thd, w_thd;
 
@@ -1666,7 +1665,6 @@ static ssize_t exynos_bts_qmax_thrd_write(struct file *file, const char __user *
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
 	int ret, i = 0, r_thd, w_thd;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
@@ -1689,7 +1687,7 @@ static ssize_t exynos_bts_qmax_thrd_write(struct file *file, const char __user *
 	for (i = 0; i < btsdev->num_bts; i++) {
 		if (info[i].ops->set_qmax_threshold != NULL) {
 			if (info[i].pd_on) {
-				if (info[i].ops->set_qmax_threshold(info[i].va_base, &r_thd, &w_thd))
+				if (info[i].ops->set_qmax_threshold(info[i].va_base, r_thd, w_thd))
 					pr_warn("%s: set_qmax_limit failed. input=(%d) err=(%d)\n",
 							__func__, i, ret);
 			}
@@ -1866,7 +1864,7 @@ int exynos_bts_debugfs_init(void)
 	debugfs_create_file("pf_qos_timer", 0440, den, NULL,
 				&debug_bts_pf_qos_timer_fops);
 	debugfs_create_file("qmax_thrd", 0440, den, NULL,
-				&debug_bts_qmax_limit_fops);
+				&debug_bts_qmax_thrd_fops);
 
 	return 0;
 }
