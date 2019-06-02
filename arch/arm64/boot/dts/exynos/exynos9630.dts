@@ -340,7 +340,7 @@
 		#dma-size-cells = <1>;
 		ranges;
 
-                domain-clients = <>;
+                domain-clients = <&dsim_1>;
 	};
 
 	iommu-domain_isp {
