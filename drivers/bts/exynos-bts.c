@@ -417,8 +417,8 @@ static ssize_t exynos_bts_qos_write(struct file *file, const char __user *user_b
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
-	int ret, index, bypass, ar, aw;
+	struct bts_stat *stat;
+	int ret, scen, index, bypass, ar, aw;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
 	if (buf_size < 0)
@@ -426,9 +426,9 @@ static ssize_t exynos_bts_qos_write(struct file *file, const char __user *user_b
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %d %x %x\n", &index, &bypass, &ar, &aw);
-	if (ret != 4) {
-		pr_err("%s: sscanf failed. We need 4 inputs. <IP BYPASS(0/1) ARQOS AWQOS> count=(%d)\n",
+	ret = sscanf(buf, "%d %d %d %x %x\n", &scen, &index, &bypass, &ar, &aw);
+	if (ret != 5) {
+		pr_err("%s: sscanf failed. We need 5 inputs. <SCEN IP BYPASS(0/1) ARQOS AWQOS> count=(%d)\n",
 			__func__, ret);
 		return -EINVAL;
 	}
@@ -439,24 +439,38 @@ static ssize_t exynos_bts_qos_write(struct file *file, const char __user *user_b
 		return -EINVAL;
 	}
 
-	if (bypass == 0)
-		stat.bypass = false;
-	else if (bypass == 1)
-		stat.bypass = true;
+	if (scen >= btsdev->num_scen) {
+		pr_err("%s: SCEN index should be in range of (0 ~ %d). input=(%d)\n",
+			__func__, btsdev->num_scen - 1, scen);
+		return -EINVAL;
+	}
 
-	stat.arqos = ar;
-	stat.awqos = aw;
+	stat = info[index].stat;
 
 	spin_lock(&btsdev->lock);
 
+	stat[scen].stat_on = true;
+
+	if (bypass == 0)
+		stat[scen].bypass = false;
+	else if (bypass == 1)
+		stat[scen].bypass = true;
+
+	stat[scen].arqos = ar;
+	stat[scen].awqos = aw;
+
+	if (scen != btsdev->top_scen)
+		goto out;
+
 	if (info[index].ops->set_qos != NULL) {
 		if (info[index].pd_on) {
-			if (info[index].ops->set_qos(info[index].va_base, &stat))
+			if (info[index].ops->set_qos(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_qos failed. input=(%d) err=(%d)\n",
 						__func__, index, ret);
 		}
 	}
 
+out:
 	spin_unlock(&btsdev->lock);
 
 	return buf_size;
@@ -501,8 +515,8 @@ static ssize_t exynos_bts_mo_write(struct file *file, const char __user *user_bu
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
-	int ret, index, rmo, wmo;
+	struct bts_stat *stat;
+	int ret, scen, index, rmo, wmo;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
 	if (buf_size < 0)
@@ -510,9 +524,9 @@ static ssize_t exynos_bts_mo_write(struct file *file, const char __user *user_bu
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %x %x\n", &index, &rmo, &wmo);
-	if (ret != 3) {
-		pr_err("%s: sscanf failed. We need 3 inputs. <IP RMO WMO> count=(%d)\n",
+	ret = sscanf(buf, "%d %d %x %x\n", &scen, &index, &rmo, &wmo);
+	if (ret != 4) {
+		pr_err("%s: sscanf failed. We need 4 inputs. <SCEN IP RMO WMO> count=(%d)\n",
 			__func__, ret);
 		return -EINVAL;
 	}
@@ -523,19 +537,32 @@ static ssize_t exynos_bts_mo_write(struct file *file, const char __user *user_bu
 		return -EINVAL;
 	}
 
-	stat.rmo = rmo;
-	stat.wmo = wmo;
+	if (scen >= btsdev->num_scen) {
+		pr_err("%s: SCEN index should be in range of (0 ~ %d). input=(%d)\n",
+			__func__, btsdev->num_scen - 1, scen);
+		return -EINVAL;
+	}
+
+	stat = info[index].stat;
 
 	spin_lock(&btsdev->lock);
 
+	stat[scen].stat_on = true;
+	stat[scen].rmo = rmo;
+	stat[scen].wmo = wmo;
+
+	if (scen != btsdev->top_scen)
+		goto out;
+
 	if (info[index].ops->set_mo != NULL) {
 		if (info[index].pd_on) {
-			if (info[index].ops->set_mo(info[index].va_base, &stat))
+			if (info[index].ops->set_mo(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_mo failed. input=(%d) err=(%d)\n",
 						__func__, index, ret);
 		}
 	}
 
+out:
 	spin_unlock(&btsdev->lock);
 
 	return buf_size;
@@ -580,8 +607,8 @@ static ssize_t exynos_bts_urgent_write(struct file *file, const char __user *use
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
-	int ret, index, on, th_r, th_w;
+	struct bts_stat *stat;
+	int ret, scen, index, on, th_r, th_w;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
 	if (buf_size < 0)
@@ -589,9 +616,9 @@ static ssize_t exynos_bts_urgent_write(struct file *file, const char __user *use
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %d %x %x\n", &index, &on, &th_r, &th_w);
-	if (ret != 4) {
-		pr_err("%s: sscanf failed. We need 4 inputs. <IP ON/OFF TH_R TH_W> count=(%d)\n",
+	ret = sscanf(buf, "%d %d %d %x %x\n", &scen, &index, &on, &th_r, &th_w);
+	if (ret != 5) {
+		pr_err("%s: sscanf failed. We need 5 inputs. <SCEN IP ON/OFF TH_R TH_W> count=(%d)\n",
 			__func__, ret);
 		return -EINVAL;
 	}
@@ -602,20 +629,33 @@ static ssize_t exynos_bts_urgent_write(struct file *file, const char __user *use
 		return -EINVAL;
 	}
 
-	stat.qurgent_on = on;
-	stat.qurgent_th_r = th_r;
-	stat.qurgent_th_w = th_w;
+	if (scen >= btsdev->num_scen) {
+		pr_err("%s: SCEN index should be in range of (0 ~ %d). input=(%d)\n",
+			__func__, btsdev->num_scen - 1, scen);
+		return -EINVAL;
+	}
+
+	stat = info[index].stat;
 
 	spin_lock(&btsdev->lock);
 
+	stat[scen].stat_on = true;
+	stat[scen].qurgent_on = on;
+	stat[scen].qurgent_th_r = th_r;
+	stat[scen].qurgent_th_w = th_w;
+
+	if (scen != btsdev->top_scen)
+		goto out;
+
 	if (info[index].ops->set_urgent != NULL) {
 		if (info[index].pd_on) {
-			if (info[index].ops->set_urgent(info[index].va_base, &stat))
+			if (info[index].ops->set_urgent(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_urgent failed. input=(%d) err=(%d)\n",
 						__func__, index, ret);
 		}
 	}
 
+out:
 	spin_unlock(&btsdev->lock);
 
 	return buf_size;
@@ -667,8 +707,9 @@ static ssize_t exynos_bts_blocking_write(struct file *file, const char __user *u
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
-	int ret, index, on, full_r, full_w, busy_r, busy_w, max0_r, max0_w, max1_r, max1_w;
+	struct bts_stat *stat;
+	int ret;
+	int scen, index, on, full_r, full_w, busy_r, busy_w, max0_r, max0_w, max1_r, max1_w;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
 	if (buf_size < 0)
@@ -676,12 +717,12 @@ static ssize_t exynos_bts_blocking_write(struct file *file, const char __user *u
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %d %x %x %x %x %x %x %x %x\n",
-			&index, &on, &full_r, &full_w, &busy_r, &busy_w,
+	ret = sscanf(buf, "%d %d %d %x %x %x %x %x %x %x %x\n",
+			&scen, &index, &on, &full_r, &full_w, &busy_r, &busy_w,
 			&max0_r, &max0_w, &max1_r, &max1_w);
 
-	if (ret != 10) {
-		pr_err("%s: sscanf failed. We need 10 inputs. <IP ON/OFF FULL_R, FULL_W, BUSY_R, BUSY_W, "\
+	if (ret != 11) {
+		pr_err("%s: sscanf failed. We need 11 inputs. <SCEN IP ON/OFF FULL_R, FULL_W, BUSY_R, BUSY_W, "\
 				"MAX0_R, MAX0_W, MAX1_R, MAX1_W count=(%d)\n", __func__, ret);
 		return -EINVAL;
 	}
@@ -692,26 +733,39 @@ static ssize_t exynos_bts_blocking_write(struct file *file, const char __user *u
 		return -EINVAL;
 	}
 
-	stat.blocking_on = on;
-	stat.qfull_limit_r = full_r;
-	stat.qfull_limit_w = full_w;
-	stat.qbusy_limit_r = busy_r;
-	stat.qbusy_limit_w = busy_w;
-	stat.qmax0_limit_r = max0_r;
-	stat.qmax0_limit_w = max0_w;
-	stat.qmax1_limit_r = max1_r;
-	stat.qmax1_limit_w = max1_w;
+	if (scen >= btsdev->num_scen) {
+		pr_err("%s: SCEN index should be in range of (0 ~ %d). input=(%d)\n",
+			__func__, btsdev->num_scen - 1, scen);
+		return -EINVAL;
+	}
+
+	stat = info[index].stat;
 
 	spin_lock(&btsdev->lock);
 
+	stat[scen].stat_on = true;
+	stat[scen].blocking_on = on;
+	stat[scen].qfull_limit_r = full_r;
+	stat[scen].qfull_limit_w = full_w;
+	stat[scen].qbusy_limit_r = busy_r;
+	stat[scen].qbusy_limit_w = busy_w;
+	stat[scen].qmax0_limit_r = max0_r;
+	stat[scen].qmax0_limit_w = max0_w;
+	stat[scen].qmax1_limit_r = max1_r;
+	stat[scen].qmax1_limit_w = max1_w;
+
+	if (scen != btsdev->top_scen)
+		goto out;
+
 	if (info[index].ops->set_blocking != NULL) {
 		if (info[index].pd_on) {
-			if (info[index].ops->set_blocking(info[index].va_base, &stat))
+			if (info[index].ops->set_blocking(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_blocking failed. input=(%d) err=(%d)\n",
 						__func__, index, ret);
 		}
 	}
 
+out:
 	spin_unlock(&btsdev->lock);
 
 	return buf_size;
@@ -835,7 +889,7 @@ static int exynos_bts_write_config_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_write_config == NULL || !info[i].stat->drex_on)
+		if (info[i].ops->get_write_config == NULL)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -872,8 +926,8 @@ static ssize_t exynos_bts_write_config_write(struct file *file, const char __use
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
-	int ret, index, write_flush_config_0, write_flush_config_1;
+	struct bts_stat *stat;
+	int ret, scen, index, write_flush_config_0, write_flush_config_1;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
 	if (buf_size < 0)
@@ -881,12 +935,12 @@ static ssize_t exynos_bts_write_config_write(struct file *file, const char __use
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %x %x\n",
-			&index, &write_flush_config_0, &write_flush_config_1);
+	ret = sscanf(buf, "%d %d %x %x\n",
+			&scen, &index, &write_flush_config_0, &write_flush_config_1);
 
-	if (ret != 3) {
-		pr_err("%s: sscanf failed. We need 3 inputs."\
-				"<IP WRITE_FLUSH_CONFIG_0, WRITE_FLUSH_CONFIG_1> count=(%d)\n",
+	if (ret != 4) {
+		pr_err("%s: sscanf failed. We need 4 inputs."\
+				"<SCEN IP WRITE_FLUSH_CONFIG_0, WRITE_FLUSH_CONFIG_1> count=(%d)\n",
 				__func__, ret);
 		return -EINVAL;
 	}
@@ -897,22 +951,34 @@ static ssize_t exynos_bts_write_config_write(struct file *file, const char __use
 		return -EINVAL;
 	}
 
-	stat.write_flush_config_0 = write_flush_config_0;
-	stat.write_flush_config_1 = write_flush_config_1;
+	if (scen >= btsdev->num_scen) {
+		pr_err("%s: SCEN index should be in range of (0 ~ %d). input=(%d)\n",
+			__func__, btsdev->num_scen - 1, scen);
+		return -EINVAL;
+	}
+
+	stat = info[index].stat;
 
 	spin_lock(&btsdev->lock);
 
-	if (info[index].ops->set_write_config != NULL && info[index].stat->drex_on) {
+	stat[scen].drex_on = true;
+	stat[scen].write_flush_config_0 = write_flush_config_0;
+	stat[scen].write_flush_config_1 = write_flush_config_1;
+
+	if (scen != btsdev->top_scen)
+		goto out;
+
+	if (info[index].ops->set_write_config != NULL) {
 		if (info[index].pd_on) {
-			if (info[index].ops->set_write_config(info[index].va_base, &stat))
+			if (info[index].ops->set_write_config(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_write_config failed. input=(%d) err=(%d)\n",
 						__func__, index, ret);
 		}
-	}
-	else {
+	} else {
 		pr_err("%s: Invalid index. [%d] is %s\n", __func__, index, info[index].name);
 	}
 
+out:
 	spin_unlock(&btsdev->lock);
 
 	return buf_size;
@@ -925,7 +991,7 @@ static int exynos_bts_drex_timeout_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0, idx;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_drex_timeout == NULL || !info[i].stat->drex_on)
+		if (info[i].ops->get_drex_timeout == NULL)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -964,8 +1030,8 @@ static ssize_t exynos_bts_drex_timeout_write(struct file *file, const char __use
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
-	int ret, index, drex_timeout;
+	struct bts_stat *stat;
+	int ret, scen, index, drex_timeout;
 	unsigned int target;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
@@ -974,12 +1040,12 @@ static ssize_t exynos_bts_drex_timeout_write(struct file *file, const char __use
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %d %x\n",
-			&index, &target, &drex_timeout);
+	ret = sscanf(buf, "%d %d %d %x\n",
+			&scen, &index, &target, &drex_timeout);
 
-	if (ret != 3) {
-		pr_err("%s: sscanf failed. We need 3 inputs."\
-				"<IP DREX_TIMEOUT_INDEX(0~15) DREX_TIMEOUT> count=(%d)\n",
+	if (ret != 4) {
+		pr_err("%s: sscanf failed. We need 4 inputs."\
+				"<SCEN IP DREX_TIMEOUT_INDEX(0~15) DREX_TIMEOUT> count=(%d)\n",
 				__func__, ret);
 		return -EINVAL;
 	}
@@ -995,22 +1061,34 @@ static ssize_t exynos_bts_drex_timeout_write(struct file *file, const char __use
 		return -EINVAL;
 	}
 
-	stat.drex_timeout[target] = drex_timeout;
+	if (scen >= btsdev->num_scen) {
+		pr_err("%s: SCEN index should be in range of (0 ~ %d). input=(%d)\n",
+				__func__, btsdev->num_scen - 1, scen);
+		return -EINVAL;
+	}
+
+	stat = info[index].stat;
 
 	spin_lock(&btsdev->lock);
 
-	if (info[index].ops->set_drex_timeout != NULL && info[index].stat->drex_on) {
+	stat[scen].drex_on = true;
+	stat[scen].drex_timeout[target] = drex_timeout;
+
+	if (scen != btsdev->top_scen)
+		goto out;
+
+	if (info[index].ops->set_drex_timeout != NULL) {
 		if (info[index].pd_on) {
 			if (info[index].ops->set_drex_timeout(info[index].va_base,
-						&stat, target))
+						&stat[scen], target))
 				pr_warn("%s: set_drex_timeout failed. input=(%d) err=(%d)\n",
 						__func__, index, ret);
 		}
-	}
-	else {
+	} else {
 		pr_err("%s: Invalid index. [%d] is %s\n", __func__, index, info[index].name);
 	}
 
+out:
 	spin_unlock(&btsdev->lock);
 
 	return buf_size;
@@ -1023,7 +1101,7 @@ static int exynos_bts_vc_timer_th_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0, idx;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_vc_timer_th == NULL || !info[i].stat->drex_on)
+		if (info[i].ops->get_vc_timer_th == NULL)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -1062,8 +1140,8 @@ static ssize_t exynos_bts_vc_timer_th_write(struct file *file, const char __user
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
-	int ret, index, vc_timer_th;
+	struct bts_stat *stat;
+	int ret, scen, index, vc_timer_th;
 	unsigned int target;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
@@ -1072,12 +1150,12 @@ static ssize_t exynos_bts_vc_timer_th_write(struct file *file, const char __user
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %d %x\n",
-			&index, &target, &vc_timer_th);
+	ret = sscanf(buf, "%d %d %d %x\n",
+			&scen, &index, &target, &vc_timer_th);
 
-	if (ret != 3) {
-		pr_err("%s: sscanf failed. We need 3 inputs."\
-				"<IP VC_TIMER_TH_INDEX VC_TIMER_TH> count=(%d)\n",
+	if (ret != 4) {
+		pr_err("%s: sscanf failed. We need 4 inputs."\
+				"<SCEN IP VC_TIMER_TH_INDEX VC_TIMER_TH> count=(%d)\n",
 				__func__, ret);
 		return -EINVAL;
 	}
@@ -1093,22 +1171,34 @@ static ssize_t exynos_bts_vc_timer_th_write(struct file *file, const char __user
 		return -EINVAL;
 	}
 
-	stat.vc_timer_th[target] = vc_timer_th;
+	if (scen >= btsdev->num_scen) {
+		pr_err("%s: SCEN index should be in range of (0 ~ %d). input=(%d)\n",
+			__func__, btsdev->num_scen - 1, scen);
+		return -EINVAL;
+	}
+
+	stat = info[index].stat;
 
 	spin_lock(&btsdev->lock);
 
-	if (info[index].ops->set_vc_timer_th != NULL && info[index].stat->drex_on) {
+	stat[scen].drex_on = true;
+	stat[scen].vc_timer_th[target] = vc_timer_th;
+
+	if (scen != btsdev->top_scen)
+		goto out;
+
+	if (info[index].ops->set_vc_timer_th != NULL) {
 		if (info[index].pd_on) {
 			if (info[index].ops->set_vc_timer_th(info[index].va_base,
-								  &stat, target))
+								  &stat[scen], target))
 				pr_warn("%s: set_vc_timer_th failed. input=(%d) err=(%d)\n",
 						__func__, index, ret);
 		}
-	}
-	else {
+	} else {
 		pr_err("%s: Invalid index. [%d] is %s\n", __func__, index, info[index].name);
 	}
 
+out:
 	spin_unlock(&btsdev->lock);
 
 	return buf_size;
@@ -1121,7 +1211,7 @@ static int exynos_bts_cutoff_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_cutoff == NULL || !info[i].stat->drex_on)
+		if (info[i].ops->get_cutoff == NULL)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -1159,8 +1249,8 @@ static ssize_t exynos_bts_cutoff_write(struct file *file, const char __user *use
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
-	int ret, index, cutoff_con, brb_cutoff_con, wdbuf_cutoff_con;
+	struct bts_stat *stat;
+	int ret, scen, index, cutoff_con, brb_cutoff_con, wdbuf_cutoff_con;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
 	if (buf_size < 0)
@@ -1168,12 +1258,12 @@ static ssize_t exynos_bts_cutoff_write(struct file *file, const char __user *use
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %x %x %x\n",
-			&index, &cutoff_con, &brb_cutoff_con, &wdbuf_cutoff_con);
+	ret = sscanf(buf, "%d %d %x %x %x\n",
+			&scen, &index, &cutoff_con, &brb_cutoff_con, &wdbuf_cutoff_con);
 
-	if (ret != 4) {
-		pr_err("%s: sscanf failed. We need 4 inputs."\
-			"<IP CUTOFF_CONTROL BRB_CUTOFF_CONFIG WDBUG_CUTOFF_CONFIG> count=(%d)\n",
+	if (ret != 5) {
+		pr_err("%s: sscanf failed. We need 5 inputs."\
+			"<SCEN IP CUTOFF_CONTROL BRB_CUTOFF_CONFIG WDBUG_CUTOFF_CONFIG> count=(%d)\n",
 			__func__, ret);
 		return -EINVAL;
 	}
@@ -1184,23 +1274,35 @@ static ssize_t exynos_bts_cutoff_write(struct file *file, const char __user *use
 		return -EINVAL;
 	}
 
-	stat.cutoff_con = cutoff_con;
-	stat.brb_cutoff_con = brb_cutoff_con;
-	stat.wdbuf_cutoff_con = wdbuf_cutoff_con;
+	if (scen >= btsdev->num_scen) {
+		pr_err("%s: SCEN index should be in range of (0 ~ %d). input=(%d)\n",
+			__func__, btsdev->num_scen - 1, scen);
+		return -EINVAL;
+	}
+
+	stat = info[index].stat;
 
 	spin_lock(&btsdev->lock);
 
-	if (info[index].ops->set_cutoff != NULL && info[index].stat->drex_on) {
+	stat[scen].drex_on = true;
+	stat[scen].cutoff_con = cutoff_con;
+	stat[scen].brb_cutoff_con = brb_cutoff_con;
+	stat[scen].wdbuf_cutoff_con = wdbuf_cutoff_con;
+
+	if (scen != btsdev->top_scen)
+		goto out;
+
+	if (info[index].ops->set_cutoff != NULL) {
 		if (info[index].pd_on) {
-			if (info[index].ops->set_cutoff(info[index].va_base, &stat))
+			if (info[index].ops->set_cutoff(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_cutoff failed. input=(%d) err=(%d)\n",
 						__func__, index, ret);
 		}
-	}
-	else {
+	} else {
 		pr_err("%s: Invalid index. [%d] is %s\n", __func__, index, info[index].name);
 	}
 
+out:
 	spin_unlock(&btsdev->lock);
 
 	return buf_size;
@@ -1213,7 +1315,7 @@ static int exynos_bts_pf_rreq_thrt_con_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_pf_rreq_thrt_con == NULL || !info[i].stat->drex_pf_on)
+		if (info[i].ops->get_pf_rreq_thrt_con == NULL)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -1250,8 +1352,8 @@ static ssize_t exynos_bts_pf_rreq_thrt_con_write(struct file *file, const char _
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
-	int ret, index, pf_rreq_thrt_con;
+	struct bts_stat *stat;
+	int ret, scen, index, pf_rreq_thrt_con;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
 	if (buf_size < 0)
@@ -1259,11 +1361,11 @@ static ssize_t exynos_bts_pf_rreq_thrt_con_write(struct file *file, const char _
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %x\n",
-			&index, &pf_rreq_thrt_con);
+	ret = sscanf(buf, "%d %d %x\n",
+			&scen, &index, &pf_rreq_thrt_con);
 
-	if (ret != 2) {
-		pr_err("%s: sscanf failed. We need 2 inputs."\
+	if (ret != 3) {
+		pr_err("%s: sscanf failed. We need 3 inputs."\
 				"<IP PF_RREQ_THRT_CON> count=(%d)\n",
 				__func__, ret);
 		return -EINVAL;
@@ -1275,21 +1377,33 @@ static ssize_t exynos_bts_pf_rreq_thrt_con_write(struct file *file, const char _
 		return -EINVAL;
 	}
 
-	stat.pf_rreq_thrt_con = pf_rreq_thrt_con;
+	if (scen >= btsdev->num_scen) {
+		pr_err("%s: SCEN index should be in range of (0 ~ %d). input=(%d)\n",
+			__func__, btsdev->num_scen - 1, scen);
+		return -EINVAL;
+	}
+
+	stat = info[index].stat;
 
 	spin_lock(&btsdev->lock);
 
-	if (info[index].ops->set_pf_rreq_thrt_con != NULL && info[index].stat->drex_pf_on) {
+	stat[scen].drex_pf_on = true;
+	stat[scen].pf_rreq_thrt_con = pf_rreq_thrt_con;
+
+	if (scen != btsdev->top_scen)
+		goto out;
+
+	if (info[index].ops->set_pf_rreq_thrt_con != NULL) {
 		if (info[index].pd_on) {
-			if (info[index].ops->set_pf_rreq_thrt_con(info[index].va_base, &stat))
+			if (info[index].ops->set_pf_rreq_thrt_con(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_pf_rreq_thrt_con failed. input=(%d) err=(%d)\n",
 						__func__, index, ret);
 		}
-	}
-	else {
+	} else {
 		pr_err("%s: Invalid index. [%d] is %s\n", __func__, index, info[index].name);
 	}
 
+out:
 	spin_unlock(&btsdev->lock);
 
 	return buf_size;
@@ -1302,7 +1416,7 @@ static int exynos_bts_allow_mo_for_region_open_show(struct seq_file *buf, void *
 	int ret, i = 0;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_allow_mo_for_region == NULL || !info[i].stat->drex_pf_on)
+		if (info[i].ops->get_allow_mo_for_region == NULL)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -1339,8 +1453,8 @@ static ssize_t exynos_bts_allow_mo_for_region_write(struct file *file, const cha
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
-	int ret, index, allow_mo_for_region;
+	struct bts_stat *stat;
+	int ret, scen, index, allow_mo_for_region;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
 	if (buf_size < 0)
@@ -1348,11 +1462,11 @@ static ssize_t exynos_bts_allow_mo_for_region_write(struct file *file, const cha
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %x\n",
-			&index, &allow_mo_for_region);
+	ret = sscanf(buf, "%d %d %x\n",
+			&scen, &index, &allow_mo_for_region);
 
-	if (ret != 2) {
-		pr_err("%s: sscanf failed. We need 2 inputs."\
+	if (ret != 3) {
+		pr_err("%s: sscanf failed. We need 3 inputs."\
 				"<IP ALLOW_MO_FOR_REGION> count=(%d)\n",
 				__func__, ret);
 		return -EINVAL;
@@ -1364,21 +1478,33 @@ static ssize_t exynos_bts_allow_mo_for_region_write(struct file *file, const cha
 		return -EINVAL;
 	}
 
-	stat.allow_mo_for_region = allow_mo_for_region;
+	if (scen >= btsdev->num_scen) {
+		pr_err("%s: SCEN index should be in range of (0 ~ %d). input=(%d)\n",
+				__func__, btsdev->num_scen - 1, scen);
+		return -EINVAL;
+	}
+
+	stat = info[index].stat;
 
 	spin_lock(&btsdev->lock);
 
-	if (info[index].ops->set_allow_mo_for_region != NULL && info[index].stat->drex_pf_on) {
+	stat[scen].drex_pf_on = true;
+	stat[scen].allow_mo_for_region = allow_mo_for_region;
+
+	if (scen != btsdev->top_scen)
+		goto out;
+
+	if (info[index].ops->set_allow_mo_for_region != NULL) {
 		if (info[index].pd_on) {
-			if (info[index].ops->set_allow_mo_for_region(info[index].va_base, &stat))
+			if (info[index].ops->set_allow_mo_for_region(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_allow_mo_for_region failed. input=(%d) err=(%d)\n",
 						__func__, index, ret);
 		}
-	}
-	else {
+	} else {
 		pr_err("%s: Invalid index. [%d] is %s\n", __func__, index, info[index].name);
 	}
 
+out:
 	spin_unlock(&btsdev->lock);
 
 	return buf_size;
@@ -1391,7 +1517,7 @@ static int exynos_bts_pf_qos_timer_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0, idx;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_pf_qos_timer == NULL || !info[i].stat->drex_pf_on)
+		if (info[i].ops->get_pf_qos_timer == NULL)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -1430,8 +1556,8 @@ static ssize_t exynos_bts_pf_qos_timer_write(struct file *file, const char __use
 	ssize_t buf_size;
 
 	struct bts_info *info = btsdev->bts_list;
-	struct bts_stat stat;
-	int ret, index, pf_qos_timer;
+	struct bts_stat *stat;
+	int ret, scen, index, pf_qos_timer;
 	unsigned int target;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
@@ -1440,11 +1566,11 @@ static ssize_t exynos_bts_pf_qos_timer_write(struct file *file, const char __use
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %d %x\n",
-			&index, &target, &pf_qos_timer);
+	ret = sscanf(buf, "%d %d %d %x\n",
+			&scen, &index, &target, &pf_qos_timer);
 
-	if (ret != 3) {
-		pr_err("%s: sscanf failed. We need 3 inputs."\
+	if (ret != 4) {
+		pr_err("%s: sscanf failed. We need 4 inputs."\
 				"<IP PF_QOS_TIMER_INDEX PF_QOS_TIMER> count=(%d)\n",
 				__func__, ret);
 		return -EINVAL;
@@ -1461,22 +1587,34 @@ static ssize_t exynos_bts_pf_qos_timer_write(struct file *file, const char __use
 		return -EINVAL;
 	}
 
-	stat.pf_qos_timer[target] = pf_qos_timer;
+	if (scen >= btsdev->num_scen) {
+		pr_err("%s: SCEN index should be in range of (0 ~ %d). input=(%d)\n",
+			__func__, btsdev->num_scen - 1, scen);
+		return -EINVAL;
+	}
+
+	stat = info[index].stat;
 
 	spin_lock(&btsdev->lock);
 
-	if (info[index].ops->set_pf_qos_timer != NULL && info[index].stat->drex_pf_on) {
+	stat[scen].drex_pf_on = true;
+	stat[scen].pf_qos_timer[target] = pf_qos_timer;
+
+	if (scen != btsdev->top_scen)
+		goto out;
+
+	if (info[index].ops->set_pf_qos_timer != NULL) {
 		if (info[index].pd_on) {
 			if (info[index].ops->set_pf_qos_timer(info[index].va_base,
-								   &stat, target))
+								   &stat[scen], target))
 				pr_warn("%s: set_pf_qos_timer failed. input=(%d) err=(%d)\n",
 						__func__, index, ret);
 		}
-	}
-	else {
+	} else {
 		pr_err("%s: Invalid index. [%d] is %s\n", __func__, index, info[index].name);
 	}
 
+out:
 	spin_unlock(&btsdev->lock);
 
 	return buf_size;
