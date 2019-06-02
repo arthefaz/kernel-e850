@@ -11,6 +11,8 @@
  */
 
 #include <linux/io.h>
+#include <linux/slab.h>
+#include <linux/device.h>
 #include <dt-bindings/soc/samsung/exynos-bts.h>
 
 #include "regs-bts9630.h"
@@ -103,7 +105,7 @@ static int set_buscbts_qmax_threshold(void __iomem *base, unsigned int r_thd, un
 {
 	unsigned int tmp_reg_r = 0, tmp_reg_w = 0;
 
-	if (!base || !stat)
+	if (!base)
 		return -ENODATA;
 
 	if (r_thd > 0xFFFF)
@@ -111,14 +113,14 @@ static int set_buscbts_qmax_threshold(void __iomem *base, unsigned int r_thd, un
 
 	tmp_reg_r = __raw_readl(base + QMAX_THRESHOLD_R);
 	tmp_reg_r &= ~(0xFFFF << 0);
-	tmp_reg_r |= (r_rhd << 0);
+	tmp_reg_r |= (r_thd << 0);
 
 	if (w_thd > 0xFFFF)
 		w_thd = 0xFFFF;
 
 	tmp_reg_w = __raw_readl(base + QMAX_THRESHOLD_W);
 	tmp_reg_w &= ~(0xFFFF << 0);
-	tmp_reg_w |= (w_rhd << 0);
+	tmp_reg_w |= (w_thd << 0);
 
 	__raw_writel(tmp_reg_r, base + QMAX_THRESHOLD_R);
 	__raw_writel(tmp_reg_w, base + QMAX_THRESHOLD_W);
@@ -130,7 +132,7 @@ static int get_buscbts_qmax_threshold(void __iomem *base, unsigned int *r_thd, u
 {
 	unsigned int tmp_reg_r, tmp_reg_w;
 
-	if (!base || !stat)
+	if (!base)
 		return -ENODATA;
 
 	tmp_reg_r = __raw_readl(base + QMAX_THRESHOLD_R);
@@ -733,8 +735,8 @@ int register_btsops(struct bts_info *info)
 		info->ops->set_allow_mo_for_region = NULL;
 		info->ops->get_pf_qos_timer = NULL;
 		info->ops->set_pf_qos_timer = NULL;
-		info->ops->get_qmax_limit = NULL;
-		info->ops->set_qmax_limit = NULL;
+		info->ops->get_qmax_threshold = NULL;
+		info->ops->set_qmax_threshold = NULL;
 		break;
 	case TREX_BTS:
 		info->ops->init_bts = init_trexbts;
@@ -762,8 +764,8 @@ int register_btsops(struct bts_info *info)
 		info->ops->set_allow_mo_for_region = NULL;
 		info->ops->get_pf_qos_timer = NULL;
 		info->ops->set_pf_qos_timer = NULL;
-		info->ops->get_qmax_limit = NULL;
-		info->ops->set_qmax_limit = NULL;
+		info->ops->get_qmax_threshold = NULL;
+		info->ops->set_qmax_threshold = NULL;
 		break;
 	case SCI_BTS:
 		info->ops->init_bts = init_sciqfull;
@@ -791,8 +793,8 @@ int register_btsops(struct bts_info *info)
 		info->ops->set_allow_mo_for_region = NULL;
 		info->ops->get_pf_qos_timer = NULL;
 		info->ops->set_pf_qos_timer = NULL;
-		info->ops->get_qmax_limit = NULL;
-		info->ops->set_qmax_limit = NULL;
+		info->ops->get_qmax_threshold = NULL;
+		info->ops->set_qmax_threshold = NULL;
 		break;
 	case SMC_BTS:
 		info->ops->init_bts = init_smcqbusy;
@@ -820,8 +822,8 @@ int register_btsops(struct bts_info *info)
 		info->ops->set_allow_mo_for_region = NULL;
 		info->ops->get_pf_qos_timer = NULL;
 		info->ops->set_pf_qos_timer = NULL;
-		info->ops->get_qmax_limit = NULL;
-		info->ops->set_qmax_limit = NULL;
+		info->ops->get_qmax_threshold = NULL;
+		info->ops->set_qmax_threshold = NULL;
 		break;
 	case BUSC_BTS:
 		info->ops->init_bts = init_qmax;
@@ -849,8 +851,8 @@ int register_btsops(struct bts_info *info)
 		info->ops->set_allow_mo_for_region = NULL;
 		info->ops->get_pf_qos_timer = NULL;
 		info->ops->set_pf_qos_timer = NULL;
-		info->ops->get_qmax_limit = get_buscbts_qmax_limit;
-		info->ops->set_qmax_limit = set_buscbts_qmax_limit;
+		info->ops->get_qmax_threshold = get_buscbts_qmax_threshold;
+		info->ops->set_qmax_threshold = set_buscbts_qmax_threshold;
 		break;
 	case DREX_BTS:
 		info->ops->init_bts = NULL;
@@ -878,8 +880,8 @@ int register_btsops(struct bts_info *info)
 		info->ops->set_allow_mo_for_region = set_drexbts_allow_mo_for_region;
 		info->ops->get_pf_qos_timer = get_drexbts_pf_qos_timer;
 		info->ops->set_pf_qos_timer = set_drexbts_pf_qos_timer;
-		info->ops->get_qmax_limit = NULL;
-		info->ops->set_qmax_limit = NULL;
+		info->ops->get_qmax_threshold = NULL;
+		info->ops->set_qmax_threshold = NULL;
 		break;
 	case INTERNAL_BTS:
 		info->ops->init_bts = NULL;
@@ -907,8 +909,8 @@ int register_btsops(struct bts_info *info)
 		info->ops->set_allow_mo_for_region = NULL;
 		info->ops->get_pf_qos_timer = NULL;
 		info->ops->set_pf_qos_timer = NULL;
-		info->ops->get_qmax_limit = NULL;
-		info->ops->set_qmax_limit = NULL;
+		info->ops->get_qmax_threshold = NULL;
+		info->ops->set_qmax_threshold = NULL;
 		break;
 	default:
 		break;
