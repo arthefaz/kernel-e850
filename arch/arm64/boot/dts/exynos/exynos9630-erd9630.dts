@@ -855,6 +855,13 @@
 		samsung,pin-function = <0>;
 		samsung,pin-pud = <1>;
 	};
+
+	if_pmic_irq: if-pmic-irq {
+		samsung,pins = "gpa0-4";
+		samsung,pin-function = <0>;
+		samsung,pin-pud = <0>;
+		samsung,pin-drv = <0>;
+	};
 };
 
 &pinctrl_5 {
@@ -989,6 +996,22 @@
 				regulator-max-microvolt = <2800000>;
 			};
 		};
+	};
+};
+
+&hsi2c_5 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	samsung,i2c-max-bus-freq = <400000>;
+	s2mu107@3A {
+		status = "okay";
+		compatible = "samsung,s2mu107mfd";
+		reg = <0x3A>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&if_pmic_irq>;
+		s2mu107,irq-gpio = <&gpa0 4 1>;
+		s2mu107,wakeup;
 	};
 };
 

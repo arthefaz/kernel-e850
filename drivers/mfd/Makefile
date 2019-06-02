@@ -221,6 +221,7 @@ obj-$(CONFIG_MFD_RN5T618)	+= rn5t618.o
 obj-$(CONFIG_MFD_SEC_CORE)	+= sec-core.o sec-irq.o
 obj-$(CONFIG_MFD_S2MU004)	+= s2mu004_core.o s2mu004_irq.o
 obj-$(CONFIG_MFD_S2MU106)	+= s2mu106_core.o s2mu106_irq.o
+obj-$(CONFIG_MFD_S2MU107)	+= s2mu107_core.o s2mu107_irq.o
 obj-$(CONFIG_MFD_S2MPU09)	+= s2mpu09-core.o s2mpu09-irq.o
 obj-$(CONFIG_MFD_S2MPU10)	+= s2mpu10-core.o s2mpu10-irq.o
 obj-$(CONFIG_MFD_S2MPU11)	+= s2mpu11-core.o s2mpu11-notifier.o
