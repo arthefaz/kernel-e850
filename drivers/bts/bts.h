@@ -137,8 +137,8 @@ struct bts_ops {
 	int		(*set_pf_qos_timer)(void __iomem *va, struct bts_stat *stat,
 			unsigned int index);
 	int		(*get_pf_qos_timer)(void __iomem *va, struct bts_stat *stat);
-	int		(*set_qmax_limit)(void __iomem *va, struct bts_stat *stat);
-	int		(*get_qmax_limit)(void __iomem *va, struct bts_stat *stat);
+	int		(*set_qmax_threshold)(void __iomem *va, unsigned int r_thd, unsigned int w_thd);
+	int		(*get_qmax_threshold)(void __iomem *va, unsigned int *r_thd, unsigned int *w_thd);
 };
 
 /**

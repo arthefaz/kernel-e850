@@ -1620,46 +1620,46 @@ out:
 	return buf_size;
 }
 
-static int exynos_bts_qmax_limit_open_show(struct seq_file *buf, void *d)
+static int exynos_bts_qmax_thrd_open_show(struct seq_file *buf, void *d)
 {
 	struct bts_info *info = btsdev->bts_list;
 	struct bts_stat stat;
 	int ret, i = 0;
+	unsigned int r_thd, w_thd;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_qmax_limit == NULL)
+		if (info[i].ops->get_qmax_threshold == NULL)
 			continue;
 
 		spin_lock(&btsdev->lock);
 
 		if (info[i].pd_on) {
-			ret = info[i].ops->get_qmax_limit(info[i].va_base, &stat);
+			ret = info[i].ops->get_qmax_threshold(info[i].va_base,
+								&r_thd, &w_thd);
 			if (ret) {
-				pr_err("%s: failed get qmax_limit\n", __func__);
-				goto err_get_qmax_limit;
+				pr_err("%s: failed get qmax_threshold\n", __func__);
+				goto err_get_qmax_threshold;
 			}
-			seq_printf(buf, "[%d] %s:   \tqmax_limit_r (0x%.4X, 0x%.4X), "\
-				"qmax_limit_w (0x%.4X, 0x%.4X)\n",
-				i, info[i].name,
-				stat.qmax0_limit_r, stat.qmax1_limit_r,
-				stat.qmax0_limit_w, stat.qmax1_limit_w);
+			seq_printf(buf, "[%d] %s:   \tqmax_threshold_r (0x%.4X), "\
+				"qmax_threshold_w (0x%.4X)\n",
+				i, info[i].name, r_thd, w_thd);
 		} else {
 			seq_printf(buf, "[%d] %s:   \tLocal power off!\n",
 					i, info[i].name);
 		}
-err_get_qmax_limit:
+err_get_qmax_threshold:
 		spin_unlock(&btsdev->lock);
 	}
 
 	return 0;
 }
 
-static int exynos_bts_qmax_limit_open(struct inode *inode, struct file *file)
+static int exynos_bts_qmax_thrd_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, exynos_bts_qmax_limit_open_show, inode->i_private);
+	return single_open(file, exynos_bts_qmax_thrd_open_show, inode->i_private);
 }
 
-static ssize_t exynos_bts_qmax_limit_write(struct file *file, const char __user *user_buf,
+static ssize_t exynos_bts_qmax_thrd_write(struct file *file, const char __user *user_buf,
 					size_t count, loff_t *ppos)
 {
 	char buf[64];
@@ -1667,7 +1667,7 @@ static ssize_t exynos_bts_qmax_limit_write(struct file *file, const char __user 
 
 	struct bts_info *info = btsdev->bts_list;
 	struct bts_stat stat;
-	int ret, i = 0, qmax0_limit_r, qmax1_limit_r, qmax0_limit_w, qmax1_limit_w;
+	int ret, i = 0, r_thd, w_thd;
 
 	buf_size = simple_write_to_buffer(buf, sizeof(buf) - 1, ppos, user_buf, count);
 	if (buf_size < 0)
@@ -1675,27 +1675,21 @@ static ssize_t exynos_bts_qmax_limit_write(struct file *file, const char __user 
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%x %x %x %x\n",
-			&qmax0_limit_r, &qmax1_limit_r, &qmax0_limit_w, &qmax1_limit_w);
+	ret = sscanf(buf, "%x %x\n", &r_thd, &w_thd);
 
-	if (ret != 4) {
-		pr_err("%s: sscanf failed. We need 4 inputs."\
-				"<QMAX0_LIMIT_R QMAX1_LIMIT_R QMAX0_LIMIT_W QMAX1_LIMIT_W> count=(%d)\n",
+	if (ret != 2) {
+		pr_err("%s: sscanf failed. We need 2 inputs."\
+				"<QMAX_THRESHOLD_R QMAX_THRESHOLD_W> count=(%d)\n",
 				__func__, ret);
 		return -EINVAL;
 	}
 
-	stat.qmax0_limit_r = qmax0_limit_r;
-	stat.qmax1_limit_r = qmax1_limit_r;
-	stat.qmax0_limit_w = qmax0_limit_w;
-	stat.qmax1_limit_w = qmax1_limit_w;
-
 	spin_lock(&btsdev->lock);
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->set_qmax_limit != NULL) {
+		if (info[i].ops->set_qmax_threshold != NULL) {
 			if (info[i].pd_on) {
-				if (info[i].ops->set_qmax_limit(info[i].va_base, &stat))
+				if (info[i].ops->set_qmax_threshold(info[i].va_base, &r_thd, &w_thd))
 					pr_warn("%s: set_qmax_limit failed. input=(%d) err=(%d)\n",
 							__func__, i, ret);
 			}
@@ -1825,10 +1819,10 @@ static const struct file_operations debug_bts_pf_qos_timer_fops = {
 	.release	= single_release,
 };
 
-static const struct file_operations debug_bts_qmax_limit_fops = {
-	.open		= exynos_bts_qmax_limit_open,
+static const struct file_operations debug_bts_qmax_thrd_fops = {
+	.open		= exynos_bts_qmax_thrd_open,
 	.read		= seq_read,
-	.write		= exynos_bts_qmax_limit_write,
+	.write		= exynos_bts_qmax_thrd_write,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -1871,7 +1865,7 @@ int exynos_bts_debugfs_init(void)
 				&debug_bts_allow_mo_for_region_fops);
 	debugfs_create_file("pf_qos_timer", 0440, den, NULL,
 				&debug_bts_pf_qos_timer_fops);
-	debugfs_create_file("qmax_limit", 0440, den, NULL,
+	debugfs_create_file("qmax_thrd", 0440, den, NULL,
 				&debug_bts_qmax_limit_fops);
 
 	return 0;
