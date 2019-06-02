@@ -819,7 +819,7 @@ int register_btsops(struct bts_info *info)
 	case BUSC_BTS:
 		info->ops->init_bts = init_qmax;
 		info->ops->set_bts = NULL;
-		info->ops->get_bts = get_buscbts;
+		info->ops->get_bts = NULL;
 		info->ops->set_qos = NULL;
 		info->ops->get_qos = NULL;
 		info->ops->set_mo = NULL;
