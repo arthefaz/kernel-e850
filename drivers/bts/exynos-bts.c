@@ -961,15 +961,16 @@ static ssize_t exynos_bts_write_config_write(struct file *file, const char __use
 
 	spin_lock(&btsdev->lock);
 
-	stat[scen].stat_on = true;
-	stat[scen].drex_on = true;
-	stat[scen].write_flush_config_0 = write_flush_config_0;
-	stat[scen].write_flush_config_1 = write_flush_config_1;
+	if (info[index].ops->set_write_config != NULL &&
+			info[index].stat[ID_DEFAULT].drex_on) {
+		stat[scen].stat_on = true;
+		stat[scen].drex_on = true;
+		stat[scen].write_flush_config_0 = write_flush_config_0;
+		stat[scen].write_flush_config_1 = write_flush_config_1;
 
-	if (scen != btsdev->top_scen)
-		goto out;
+		if (scen != btsdev->top_scen)
+			goto out;
 
-	if (info[index].ops->set_write_config != NULL) {
 		if (info[index].pd_on) {
 			if (info[index].ops->set_write_config(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_write_config failed. input=(%d) err=(%d)\n",
@@ -1072,14 +1073,15 @@ static ssize_t exynos_bts_drex_timeout_write(struct file *file, const char __use
 
 	spin_lock(&btsdev->lock);
 
-	stat[scen].stat_on = true;
-	stat[scen].drex_on = true;
-	stat[scen].drex_timeout[target] = drex_timeout;
+	if (info[index].ops->set_drex_timeout != NULL &&
+			info[index].stat[ID_DEFAULT].drex_on) {
+		stat[scen].stat_on = true;
+		stat[scen].drex_on = true;
+		stat[scen].drex_timeout[target] = drex_timeout;
 
-	if (scen != btsdev->top_scen)
-		goto out;
+		if (scen != btsdev->top_scen)
+			goto out;
 
-	if (info[index].ops->set_drex_timeout != NULL) {
 		if (info[index].pd_on) {
 			if (info[index].ops->set_drex_timeout(info[index].va_base,
 						&stat[scen], target))
@@ -1183,14 +1185,15 @@ static ssize_t exynos_bts_vc_timer_th_write(struct file *file, const char __user
 
 	spin_lock(&btsdev->lock);
 
-	stat[scen].stat_on = true;
-	stat[scen].drex_on = true;
-	stat[scen].vc_timer_th[target] = vc_timer_th;
+	if (info[index].ops->set_vc_timer_th != NULL &&
+			info[index].stat[ID_DEFAULT].drex_on) {
+		stat[scen].stat_on = true;
+		stat[scen].drex_on = true;
+		stat[scen].vc_timer_th[target] = vc_timer_th;
 
-	if (scen != btsdev->top_scen)
-		goto out;
+		if (scen != btsdev->top_scen)
+			goto out;
 
-	if (info[index].ops->set_vc_timer_th != NULL) {
 		if (info[index].pd_on) {
 			if (info[index].ops->set_vc_timer_th(info[index].va_base,
 								  &stat[scen], target))
@@ -1287,16 +1290,17 @@ static ssize_t exynos_bts_cutoff_write(struct file *file, const char __user *use
 
 	spin_lock(&btsdev->lock);
 
-	stat[scen].stat_on = true;
-	stat[scen].drex_on = true;
-	stat[scen].cutoff_con = cutoff_con;
-	stat[scen].brb_cutoff_con = brb_cutoff_con;
-	stat[scen].wdbuf_cutoff_con = wdbuf_cutoff_con;
+	if (info[index].ops->set_cutoff != NULL &&
+			info[index].stat[ID_DEFAULT].drex_on) {
+		stat[scen].stat_on = true;
+		stat[scen].drex_on = true;
+		stat[scen].cutoff_con = cutoff_con;
+		stat[scen].brb_cutoff_con = brb_cutoff_con;
+		stat[scen].wdbuf_cutoff_con = wdbuf_cutoff_con;
 
-	if (scen != btsdev->top_scen)
-		goto out;
+		if (scen != btsdev->top_scen)
+			goto out;
 
-	if (info[index].ops->set_cutoff != NULL) {
 		if (info[index].pd_on) {
 			if (info[index].ops->set_cutoff(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_cutoff failed. input=(%d) err=(%d)\n",
@@ -1392,14 +1396,15 @@ static ssize_t exynos_bts_pf_rreq_thrt_con_write(struct file *file, const char _
 
 	spin_lock(&btsdev->lock);
 
-	stat[scen].stat_on = true;
-	stat[scen].drex_pf_on = true;
-	stat[scen].pf_rreq_thrt_con = pf_rreq_thrt_con;
+	if (info[index].ops->set_pf_rreq_thrt_con != NULL &&
+			info[index].stat[ID_DEFAULT].drex_pf_on) {
+		stat[scen].stat_on = true;
+		stat[scen].drex_pf_on = true;
+		stat[scen].pf_rreq_thrt_con = pf_rreq_thrt_con;
 
-	if (scen != btsdev->top_scen)
-		goto out;
+		if (scen != btsdev->top_scen)
+			goto out;
 
-	if (info[index].ops->set_pf_rreq_thrt_con != NULL) {
 		if (info[index].pd_on) {
 			if (info[index].ops->set_pf_rreq_thrt_con(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_pf_rreq_thrt_con failed. input=(%d) err=(%d)\n",
@@ -1495,14 +1500,15 @@ static ssize_t exynos_bts_allow_mo_for_region_write(struct file *file, const cha
 
 	spin_lock(&btsdev->lock);
 
-	stat[scen].stat_on = true;
-	stat[scen].drex_pf_on = true;
-	stat[scen].allow_mo_for_region = allow_mo_for_region;
+	if (info[index].ops->set_allow_mo_for_region != NULL &&
+			info[index].stat[ID_DEFAULT].drex_pf_on) {
+		stat[scen].stat_on = true;
+		stat[scen].drex_pf_on = true;
+		stat[scen].allow_mo_for_region = allow_mo_for_region;
 
-	if (scen != btsdev->top_scen)
-		goto out;
+		if (scen != btsdev->top_scen)
+			goto out;
 
-	if (info[index].ops->set_allow_mo_for_region != NULL) {
 		if (info[index].pd_on) {
 			if (info[index].ops->set_allow_mo_for_region(info[index].va_base, &stat[scen]))
 				pr_warn("%s: set_allow_mo_for_region failed. input=(%d) err=(%d)\n",
@@ -1606,14 +1612,15 @@ static ssize_t exynos_bts_pf_qos_timer_write(struct file *file, const char __use
 
 	spin_lock(&btsdev->lock);
 
-	stat[scen].stat_on = true;
-	stat[scen].drex_pf_on = true;
-	stat[scen].pf_qos_timer[target] = pf_qos_timer;
+	if (info[index].ops->set_pf_qos_timer != NULL &&
+			info[index].stat[ID_DEFAULT].drex_pf_on) {
+		stat[scen].stat_on = true;
+		stat[scen].drex_pf_on = true;
+		stat[scen].pf_qos_timer[target] = pf_qos_timer;
 
-	if (scen != btsdev->top_scen)
-		goto out;
+		if (scen != btsdev->top_scen)
+			goto out;
 
-	if (info[index].ops->set_pf_qos_timer != NULL) {
 		if (info[index].pd_on) {
 			if (info[index].ops->set_pf_qos_timer(info[index].va_base,
 								   &stat[scen], target))
