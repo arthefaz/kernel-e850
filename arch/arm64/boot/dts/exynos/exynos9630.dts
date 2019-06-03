@@ -1139,4 +1139,10 @@
 			dfs_id = <ACPM_DVFS_TNR>;
 		};
 	};
+
+	/* tbase */
+        tee {
+	        compatible = "samsung,exynos-tee";
+		interrupts = <GIC_SPI INTREQ__TBASE IRQ_TYPE_LEVEL_HIGH>;
+	};
 };

@@ -237,12 +237,9 @@
 #define INTREQ__SMMU_DPU_S1_S		219
 #define INTREQ__SMMU_DPU_S2		220
 #define INTREQ__G2D		221
-/*
-#define -		222
-#define -		223
-#define -		224
-#define -		225
-*/
+
+#define INTREQ__TBASE	223
+
 #define INTREQ__JPEG		226
 #define INTREQ__M2M		227
 #define INTREQ__PPMU_D0_G2D_interrupt_upper_or_normal		228
