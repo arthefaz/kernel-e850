@@ -364,3 +364,29 @@ unsigned int blk_tnr_ud_lut_params[] = {
 unsigned int blk_vra_ud_lut_params[] = {
 	1,
 };
+
+/* parent clock source: 400Mhz */
+unsigned int div_clk_200_lut_params[] = {
+	1, 1,
+};
+unsigned int div_clk_100_lut_params[] = {
+	3, 1,
+};
+unsigned int div_clk_50_lut_params[] = {
+	7, 1,
+};
+unsigned int div_clk_25_lut_params[] = {
+	15, 1,
+};
+unsigned int div_clk_26_lut_params[] = {
+	0, 0,
+};
+unsigned int div_clk_13_lut_params[] = {
+	1, 0,
+};
+unsigned int div_clk_8_lut_params[] = {
+	2, 0,
+};
+unsigned int div_clk_6_lut_params[] = {
+	3, 0,
+};
