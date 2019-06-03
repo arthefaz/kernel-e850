@@ -202,16 +202,18 @@
 &pinctrl_5 {
 	vdd_on: vdd-on {
 		samsung,pins = "gpp3-3";
-		samsung,pin-function = <2>;
+		samsung,pin-function = <1>;
 		samsung,pin-val = <1>;
 		samsung,pin-pud = <3>;
+		samsung,pin-drv = <3>;
 	};
 
 	vdd_off: vdd-off {
 		samsung,pins = "gpp3-3";
-		samsung,pin-functon = <2>;
+		samsung,pin-functon = <1>;
 		samsung,pin-val = <0>;
 		samsung,pin-pud = <1>;
+		samsung,pin-drv = <3>;
 	};
 };
 
