@@ -716,20 +716,25 @@ inline void s3c2410wdt_sysfs_reset_confirm(struct watchdog_device *wdd)
 	dev_info(wdt->dev, "Current Little_cluster watchdog %sable, wtcon = %x\n",
 			(wtcon & S3C2410_WTCON_ENABLE) ? "en" : "dis", wtcon);
 
-	ret = regmap_read(wdt->pmureg, wdt->drv_data->mask_reset_reg, &mask_reset_reg);
-	if (ret) {
-		dev_err(wdt->dev, "Couldn't get MASK_WDT_RESET register\n");
-		return;
+	if (wdt->drv_data->mask_reset_reg) {
+		ret = regmap_read(wdt->pmureg, wdt->drv_data->mask_reset_reg, &mask_reset_reg);
+		if (ret) {
+			dev_err(wdt->dev, "Couldn't get MASK_WDT_RESET register\n");
+			return;
+		}
 	}
 
-	ret = regmap_read(wdt->pmureg, wdt->drv_data->disable_reg, &disable_reg);
-	if (ret) {
-		dev_err(wdt->dev, "Couldn't get DISABLE_WDT register\n");
-		return;
+	if (wdt->drv_data->disable_reg) {
+		ret = regmap_read(wdt->pmureg, wdt->drv_data->disable_reg, &disable_reg);
+		if (ret) {
+			dev_err(wdt->dev, "Couldn't get DISABLE_WDT register\n");
+			return;
+		}
 	}
 
 	/*  Fake watchdog bits in both registers must be cleared. */
-	dev_info(wdt->dev, "DISABLE_WDT reg:  %x, MASK_WDT_RESET reg: %x\n", disable_reg, mask_reset_reg);
+	if (wdt->drv_data->mask_reset_reg && wdt->drv_data->disable_reg)
+		dev_info(wdt->dev, "DISABLE_WDT reg:  %x, MASK_WDT_RESET reg: %x\n", disable_reg, mask_reset_reg);
 
 	/* If watchdog is disabled, do not print wtcnt value. */
 	if (!(wtcon & S3C2410_WTCON_ENABLE))
