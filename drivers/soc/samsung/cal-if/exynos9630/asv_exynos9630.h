@@ -92,27 +92,27 @@ int asv_get_grp(unsigned int id)
 		return grp;
 
 	switch (id) {
-	case dvfs_mif:
+	case MIF:
 		grp = asv_tbl->mif_asv_group + asv_tbl->mif_modify_group;
 		break;
-	case dvfs_int:
-	case dvfs_intcam:
+	case INT:
+	case INTCAM:
 		grp = asv_tbl->int_asv_group + asv_tbl->int_modify_group;
 		break;
-	case dvfs_cpucl0:
+	case CPUCL0:
 		grp = asv_tbl->bigcpu_asv_group + asv_tbl->bigcpu_modify_group;
 		break;
-	case dvfs_cpucl1:
+	case CPUCL1:
 		grp = asv_tbl->littlecpu_asv_group + asv_tbl->littlecpu_modify_group;
 		break;
-	case dvfs_g3d:
+	case G3D:
 		grp = asv_tbl->g3d_asv_group + asv_tbl->g3d_modify_group;
 		break;
-	case dvfs_cam:
-	case dvfs_disp:
+	case CAM:
+	case DISP:
 		grp = asv_tbl->cam_disp_asv_group + asv_tbl->cam_disp_modify_group;
 		break;
-	case dvs_cp:
+	case CP:
 		grp = asv_tbl->cp_asv_group + asv_tbl->cp_modify_group;
 		break;
 	default:
@@ -130,19 +130,19 @@ int asv_get_ids_info(unsigned int id)
 		return ids;
 
 	switch (id) {
-	case dvfs_cpucl1:
+	case CPUCL1:
 		ids = id_tbl->ids_big;
 		break;
-	case dvfs_g3d:
+	case G3D:
 		ids = id_tbl->ids_g3d;
 		break;
-	case dvfs_cpucl0:
-	case dvfs_int:
-	case dvfs_intcam:
-	case dvfs_mif:
-	case dvfs_disp:
-	case dvs_cp:
-	case dvfs_cam:
+	case CPUCL0:
+	case INT:
+	case INTCAM:
+	case MIF:
+	case DISP:
+	case CP:
+	case CAM:
 		ids = id_tbl->ids_others;
 		break;
 	default:
