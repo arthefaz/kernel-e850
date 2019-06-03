@@ -862,7 +862,7 @@ static int exynos_bts_drex_open_show(struct seq_file *buf, void *d)
 						stat.allow_mo_for_region);
 				seq_printf(buf, " pf_qos_timer 0~7\t");
 				for (idx = 0; idx < PF_TIMER_NR; idx++)
-					seq_printf(buf, "0x%.8X ", stat.vc_timer_th[idx]);
+					seq_printf(buf, "0x%.8X ", stat.pf_qos_timer[idx]);
 				seq_printf(buf, "\n");
 			}
 		} else {
