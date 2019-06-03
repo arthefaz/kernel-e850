@@ -23,6 +23,7 @@
 #include "exynos9630-dpu.dtsi"
 #include "exynos9630-sysmmu.dtsi"
 #include <dt-bindings/ufs/ufs.h>
+#include "exynos9630-mali.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos9630";
