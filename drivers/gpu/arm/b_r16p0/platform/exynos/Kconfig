@@ -39,7 +39,7 @@ config MALI_SYSTRACE_SUPPORT
 config MALI_DVFS
     bool "Enable EXYNOS DVFS"
     depends on MALI_MIDGARD
-    default y
+    default n
     help
       Choose this option to enable DVFS in the Mali Midgard DDK.
 
@@ -48,7 +48,7 @@ config MALI_RT_PM
     depends on MALI_MIDGARD
     depends on PM
     depends on EXYNOS_PD
-    default y
+    default n
     help
       Choose this option to enable runtime power management in the Mali Midgard DDK.
 
@@ -70,7 +70,7 @@ config MALI_DEBUG_SYS
 config MALI_SEC_CL_BOOST
     bool "Enable EXYNOS cl booster"
     depends on MALI_MIDGARD
-    default y
+    default n
     help
       Enables open cl dvfs booster.
 

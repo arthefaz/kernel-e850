@@ -18,7 +18,7 @@
 #ifndef _GPU_PLATFORM_H_
 #define _GPU_PLATFORM_H_
 
-#include <soc/samsung/exynos-pd.h>
+//#include <soc/samsung/exynos-pd.h>
 
 #ifdef CONFIG_MALI_EXYNOS_TRACE
 #define GPU_LOG(level, code, gpu_addr, info_val, msg, args...) \
