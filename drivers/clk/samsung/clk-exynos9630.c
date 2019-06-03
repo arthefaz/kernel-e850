@@ -415,6 +415,22 @@ struct init_vclk exynos9630_top_vclks[] __initdata = {
 	VCLK(CIS_CLK4, CLKCMU_CIS_CLK4, "CIS_CLK4", 0, 0, NULL),
 };
 
+struct init_vclk exynos9630_cmgp_vclks[] __initdata = {
+	VCLK(DOUT_CLK_USI_CMGP0, VCLK_DIV_CLK_USI_CMGP0, "DOUT_CLK_USI_CMGP0", 0, 0, NULL),
+	VCLK(DOUT_CLK_USI_CMGP1, VCLK_DIV_CLK_USI_CMGP1, "DOUT_CLK_USI_CMGP1", 0, 0, NULL),
+	VCLK(DOUT_CLK_USI_CMGP2, VCLK_DIV_CLK_USI_CMGP2, "DOUT_CLK_USI_CMGP2", 0, 0, NULL),
+	VCLK(DOUT_CLK_USI_CMGP3, VCLK_DIV_CLK_USI_CMGP3, "DOUT_CLK_USI_CMGP3", 0, 0, NULL),
+	VCLK(DOUT_CLK_I2C_CMGP, VCLK_DIV_CLK_I2C_CMGP, "DOUT_CLK_I2C_CMGP", 0, 0, NULL),
+	VCLK(DOUT_CLK_I3C_CMGP, VCLK_DIV_CLK_I3C_CMGP, "DOUT_CLK_I3C_CMGP", 0, 0, NULL),
+};
+
+struct init_vclk exynos9630_chub_vclks[] __initdata = {
+	VCLK(DOUT_CLK_CHUB_USI0, VCLK_DIV_CLK_CHUB_USI0, "DOUT_CLK_CHUB_USI0", 0, 0, NULL),
+	VCLK(DOUT_CLK_CHUB_USI1, VCLK_DIV_CLK_CHUB_USI1, "DOUT_CLK_CHUB_USI1", 0, 0, NULL),
+	VCLK(DOUT_CLK_CHUB_USI2, VCLK_DIV_CLK_CHUB_USI2, "DOUT_CLK_CHUB_USI2", 0, 0, NULL),
+	VCLK(DOUT_CLK_CHUB_I2C, VCLK_DIV_CLK_CHUB_I2C, "DOUT_CLK_CHUB_I2C", 0, 0, NULL),
+};
+
 static struct init_vclk exynos9630_clkout_vclks[] __initdata = {
 	VCLK(OSC_NFC, VCLK_CLKOUT1, "OSC_NFC", 0, 0, NULL),
 	VCLK(OSC_AUD, VCLK_CLKOUT0, "OSC_AUD", 0, 0, NULL),
@@ -490,6 +506,8 @@ void __init exynos9630_clk_init(struct device_node *np)
 	samsung_register_vclk(exynos9630_clk_provider, exynos9630_hsi_vclks, ARRAY_SIZE(exynos9630_hsi_vclks));
 	samsung_register_vclk(exynos9630_clk_provider, exynos9630_vra_vclks, ARRAY_SIZE(exynos9630_vra_vclks));
 	samsung_register_vclk(exynos9630_clk_provider, exynos9630_top_vclks, ARRAY_SIZE(exynos9630_top_vclks));
+	samsung_register_vclk(exynos9630_clk_provider, exynos9630_cmgp_vclks, ARRAY_SIZE(exynos9630_cmgp_vclks));
+	samsung_register_vclk(exynos9630_clk_provider, exynos9630_chub_vclks, ARRAY_SIZE(exynos9630_chub_vclks));
 	samsung_register_vclk(exynos9630_clk_provider, exynos9630_clkout_vclks, ARRAY_SIZE(exynos9630_clkout_vclks));
 
 	clk_register_fixed_factor(NULL, "pwm-clock", "fin_pll", CLK_SET_RATE_PARENT, 1, 1);

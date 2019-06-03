@@ -179,6 +179,10 @@ enum clk_id cmucal_vclk_div_clk_chub_usi2[] = {
 	DIV_CLK_CHUB_USI2,
 	MUX_CLK_CHUB_USI2,
 };
+enum clk_id cmucal_vclk_div_clk_chub_i2c[] = {
+	DIV_CLK_CHUB_I2C,
+	MUX_CLK_CHUB_I2C,
+};
 enum clk_id cmucal_vclk_div_clk_usi_cmgp1[] = {
 	DIV_CLK_USI_CMGP1,
 	MUX_CLK_USI_CMGP1,
@@ -194,6 +198,10 @@ enum clk_id cmucal_vclk_div_clk_usi_cmgp2[] = {
 enum clk_id cmucal_vclk_div_clk_usi_cmgp3[] = {
 	DIV_CLK_USI_CMGP3,
 	MUX_CLK_USI_CMGP3,
+};
+enum clk_id cmucal_vclk_div_clk_i2c_cmgp[] = {
+	DIV_CLK_I2C_CMGP,
+	MUX_CLK_I2C_CMGP,
 };
 enum clk_id cmucal_vclk_div_clk_i3c_cmgp[] = {
 	DIV_CLK_I3C_CMGP,
@@ -319,12 +327,8 @@ enum clk_id cmucal_vclk_blk_apm[] = {
 enum clk_id cmucal_vclk_blk_chub[] = {
 	DIV_CLK_CHUB_BUS,
 	MUX_CLK_CHUB_BUS,
-	DIV_CLK_CHUB_I2C,
-	MUX_CLK_CHUB_I2C,
 };
 enum clk_id cmucal_vclk_blk_cmgp[] = {
-	DIV_CLK_I2C_CMGP,
-	MUX_CLK_I2C_CMGP,
 	DIV_CLK_CMGP_BUS,
 	MUX_CLK_CMGP_BUS,
 };
@@ -3026,7 +3030,7 @@ struct vclk_switch switch_vdd_cam[] = {
 };
 
 /*================================ VCLK List =================================*/
-unsigned int cmucal_vclk_size = 786;
+unsigned int cmucal_vclk_size = 788;
 struct vclk cmucal_vclk_list[] = {
 
 /* DVFS VCLK*/
@@ -3058,10 +3062,12 @@ struct vclk cmucal_vclk_list[] = {
 	CMUCAL_VCLK(VCLK_CLKCMU_CHUB_BUS, cmucal_vclk_clkcmu_chub_bus_lut, cmucal_vclk_clkcmu_chub_bus, NULL, NULL),
 	CMUCAL_VCLK(VCLK_DIV_CLK_CHUB_USI1, cmucal_vclk_div_clk_usixx_lut, cmucal_vclk_div_clk_chub_usi1, NULL, NULL),
 	CMUCAL_VCLK(VCLK_DIV_CLK_CHUB_USI2, cmucal_vclk_div_clk_usixx_lut, cmucal_vclk_div_clk_chub_usi2, NULL, NULL),
+	CMUCAL_VCLK(VCLK_DIV_CLK_CHUB_I2C, cmucal_vclk_div_clk_usixx_lut, cmucal_vclk_div_clk_chub_i2c, NULL, NULL),
 	CMUCAL_VCLK(VCLK_DIV_CLK_USI_CMGP1, cmucal_vclk_div_clk_usixx_lut, cmucal_vclk_div_clk_usi_cmgp1, NULL, NULL),
 	CMUCAL_VCLK(VCLK_DIV_CLK_USI_CMGP0, cmucal_vclk_div_clk_usixx_lut, cmucal_vclk_div_clk_usi_cmgp0, NULL, NULL),
 	CMUCAL_VCLK(VCLK_DIV_CLK_USI_CMGP2, cmucal_vclk_div_clk_usixx_lut, cmucal_vclk_div_clk_usi_cmgp2, NULL, NULL),
 	CMUCAL_VCLK(VCLK_DIV_CLK_USI_CMGP3, cmucal_vclk_div_clk_usixx_lut, cmucal_vclk_div_clk_usi_cmgp3, NULL, NULL),
+	CMUCAL_VCLK(VCLK_DIV_CLK_I2C_CMGP, cmucal_vclk_div_clk_usixx_lut, cmucal_vclk_div_clk_i2c_cmgp, NULL, NULL),
 	CMUCAL_VCLK(VCLK_DIV_CLK_I3C_CMGP, cmucal_vclk_div_clk_usixx_lut, cmucal_vclk_div_clk_i3c_cmgp, NULL, NULL),
 	CMUCAL_VCLK(VCLK_CLKCMU_HPM, cmucal_vclk_clkcmu_hpm_lut, cmucal_vclk_clkcmu_hpm, NULL, NULL),
 	CMUCAL_VCLK(VCLK_CLKCMU_CIS_CLK0, cmucal_vclk_clkcmu_cis_clk0_lut, cmucal_vclk_clkcmu_cis_clk0, NULL, NULL),

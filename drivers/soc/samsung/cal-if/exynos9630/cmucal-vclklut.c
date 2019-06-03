@@ -284,10 +284,10 @@ unsigned int blk_apm_nm_lut_params[] = {
 	1, 1, 0, 0,
 };
 unsigned int blk_chub_nm_lut_params[] = {
-	1, 1, 0, 1,
+	1, 1,
 };
 unsigned int blk_cmgp_nm_lut_params[] = {
-	1, 1, 1, 0,
+	1, 0,
 };
 unsigned int blk_core_ud_lut_params[] = {
 	0, 1,
