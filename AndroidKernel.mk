@@ -22,11 +22,7 @@ else
 KERNEL_ARCH := $(TARGET_KERNEL_ARCH)
 endif
 
-ifeq ($(CROSS_COMPILE),)
-KERNEL_CROSS_COMPILE := aarch64-linux-android-
-else
-KERNEL_CROSS_COMPILE := $(CROSS_COMPILE)
-endif
+KERNEL_CROSS_COMPILE := $(PWD)/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-
 
 SOONG_GLOBAL_CONFIG := build/soong/cc/config/global.go
 CLANG_VERSION := $(shell  grep "ClangDefaultVersion" $(SOONG_GLOBAL_CONFIG) | grep -o "clang-[0-9][0-9]*")
