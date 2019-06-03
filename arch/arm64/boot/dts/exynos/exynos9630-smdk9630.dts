@@ -73,3 +73,81 @@
 	/* reset, power */
 	gpios = <&gpq0 2 0x1>, <&gpp3 2 0x1>;
 };
+
+/* USI_00 */
+&usi_0 {
+	usi_v2_mode = "spi";
+	status = "okay";
+};
+
+/* USI_01 */
+&usi_1 {
+	usi_v2_mode = "spi";
+	status = "okay";
+};
+
+/* USI_02 */
+&usi_2 {
+	usi_v2_mode = "i2c";
+	status = "okay";
+};
+
+/* USI_03 */
+&usi_3 {
+	usi_v2_mode = "i2c";
+	status = "okay";
+};
+
+/* USI_04 */
+&usi_4 {
+	usi_v2_mode = "i2c";
+	status = "okay";
+};
+
+/* USI_05 */
+&usi_5 {
+	/*	usi_v2_mode = "i2c" or "spi" or "uart"	*/
+	status = "disabled";
+};
+
+/* USI_00_CMGP */
+&usi_00_cmgp {
+	usi_v2_mode = "i2c";
+	status = "okay";
+};
+
+/* USI_01_CMGP */
+&usi_01_cmgp {
+	usi_v2_mode = "i2c";
+	status = "okay";
+};
+
+/* USI_02_CMGP */
+&usi_02_cmgp {
+	/*	usi_v2_mode = "i2c" or "spi" or "uart"	*/
+	status = "disabled";
+};
+
+/* USI_03_CMGP */
+&usi_03_cmgp {
+	/*	usi_v2_mode = "i2c" or "spi" or "uart"	*/
+	status = "disabled";
+};
+
+/* USI_00_CHUB */
+&usi_00_chub {
+	/*	usi_v2_mode = "i2c" or "spi" or "uart"	*/
+	status = "disabled";
+};
+
+/* USI_01_CHUB */
+&usi_01_chub {
+	/*	usi_v2_mode = "i2c" or "spi" or "uart"	*/
+	status = "disabled";
+};
+
+/* USI_02_CHUB */
+&usi_02_chub {
+	/*	usi_v2_mode = "i2c" or "spi" or "uart"	*/
+	status = "disabled";
+};
