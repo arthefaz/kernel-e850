@@ -45,7 +45,7 @@
 						compatible = "android,fstab";
 						vendor {
 							compatible = "android,vendor";
-							dev = "/dev/block/platform/13520000.ufs/by-name/vendor";
+							dev = "/dev/block/platform/13600000.ufs/by-name/vendor";
 							type = "ext4";
 							mnt_flags = "ro";
 							fsmgr_flags = "wait";
