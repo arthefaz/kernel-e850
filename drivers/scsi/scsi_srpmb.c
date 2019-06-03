@@ -393,6 +393,7 @@ out_srpmb_ctx_alloc_fail:
 static int srpmb_probe(struct platform_device *pdev)
 {
 	sr_pdev = pdev;
+	dma_set_mask(&pdev->dev, DMA_BIT_MASK(36));
 
 	return 0;
 }
