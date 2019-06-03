@@ -825,7 +825,7 @@ static int exynos_bts_drex_open_show(struct seq_file *buf, void *d)
 		spin_lock(&btsdev->lock);
 
 		if (info[i].pd_on) {
-			if (info[i].stat->drex_on) {
+			if (info[i].stat[ID_DEFAULT].drex_on) {
 				stat.drex_on = 1;
 				stat.drex_pf_on = 0;
 				ret = info[i].ops->get_bts(info[i].va_base, &stat);
@@ -848,7 +848,7 @@ static int exynos_bts_drex_open_show(struct seq_file *buf, void *d)
 				seq_printf(buf, " wdbuf_cutoff_con\t0x%.8X\n", stat.wdbuf_cutoff_con);
 			}
 
-			if (info[i].stat->drex_pf_on) {
+			if (info[i].stat[ID_DEFAULT].drex_pf_on) {
 				stat.drex_on = 0;
 				stat.drex_pf_on = 1;
 				ret = info[i].ops->get_bts(info[i].va_base, &stat);
@@ -889,7 +889,7 @@ static int exynos_bts_write_config_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_write_config == NULL)
+		if (info[i].ops->get_write_config == NULL || !info[i].stat[ID_DEFAULT].drex_on)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -961,6 +961,7 @@ static ssize_t exynos_bts_write_config_write(struct file *file, const char __use
 
 	spin_lock(&btsdev->lock);
 
+	stat[scen].stat_on = true;
 	stat[scen].drex_on = true;
 	stat[scen].write_flush_config_0 = write_flush_config_0;
 	stat[scen].write_flush_config_1 = write_flush_config_1;
@@ -991,7 +992,7 @@ static int exynos_bts_drex_timeout_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0, idx;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_drex_timeout == NULL)
+		if (info[i].ops->get_drex_timeout == NULL || !info[i].stat[ID_DEFAULT].drex_on)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -1071,6 +1072,7 @@ static ssize_t exynos_bts_drex_timeout_write(struct file *file, const char __use
 
 	spin_lock(&btsdev->lock);
 
+	stat[scen].stat_on = true;
 	stat[scen].drex_on = true;
 	stat[scen].drex_timeout[target] = drex_timeout;
 
@@ -1101,7 +1103,7 @@ static int exynos_bts_vc_timer_th_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0, idx;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_vc_timer_th == NULL)
+		if (info[i].ops->get_vc_timer_th == NULL || !info[i].stat[ID_DEFAULT].drex_on)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -1181,6 +1183,7 @@ static ssize_t exynos_bts_vc_timer_th_write(struct file *file, const char __user
 
 	spin_lock(&btsdev->lock);
 
+	stat[scen].stat_on = true;
 	stat[scen].drex_on = true;
 	stat[scen].vc_timer_th[target] = vc_timer_th;
 
@@ -1211,7 +1214,7 @@ static int exynos_bts_cutoff_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_cutoff == NULL)
+		if (info[i].ops->get_cutoff == NULL || !info[i].stat[ID_DEFAULT].drex_on)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -1284,6 +1287,7 @@ static ssize_t exynos_bts_cutoff_write(struct file *file, const char __user *use
 
 	spin_lock(&btsdev->lock);
 
+	stat[scen].stat_on = true;
 	stat[scen].drex_on = true;
 	stat[scen].cutoff_con = cutoff_con;
 	stat[scen].brb_cutoff_con = brb_cutoff_con;
@@ -1315,7 +1319,8 @@ static int exynos_bts_pf_rreq_thrt_con_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_pf_rreq_thrt_con == NULL)
+		if (info[i].ops->get_pf_rreq_thrt_con == NULL ||
+			!info[i].stat[ID_DEFAULT].drex_pf_on)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -1387,6 +1392,7 @@ static ssize_t exynos_bts_pf_rreq_thrt_con_write(struct file *file, const char _
 
 	spin_lock(&btsdev->lock);
 
+	stat[scen].stat_on = true;
 	stat[scen].drex_pf_on = true;
 	stat[scen].pf_rreq_thrt_con = pf_rreq_thrt_con;
 
@@ -1416,7 +1422,8 @@ static int exynos_bts_allow_mo_for_region_open_show(struct seq_file *buf, void *
 	int ret, i = 0;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_allow_mo_for_region == NULL)
+		if (info[i].ops->get_allow_mo_for_region == NULL ||
+			!info[i].stat[ID_DEFAULT].drex_pf_on)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -1488,6 +1495,7 @@ static ssize_t exynos_bts_allow_mo_for_region_write(struct file *file, const cha
 
 	spin_lock(&btsdev->lock);
 
+	stat[scen].stat_on = true;
 	stat[scen].drex_pf_on = true;
 	stat[scen].allow_mo_for_region = allow_mo_for_region;
 
@@ -1517,7 +1525,8 @@ static int exynos_bts_pf_qos_timer_open_show(struct seq_file *buf, void *d)
 	int ret, i = 0, idx;
 
 	for (i = 0; i < btsdev->num_bts; i++) {
-		if (info[i].ops->get_pf_qos_timer == NULL)
+		if (info[i].ops->get_pf_qos_timer == NULL ||
+			!info[i].stat[ID_DEFAULT].drex_pf_on)
 			continue;
 
 		spin_lock(&btsdev->lock);
@@ -1597,6 +1606,7 @@ static ssize_t exynos_bts_pf_qos_timer_write(struct file *file, const char __use
 
 	spin_lock(&btsdev->lock);
 
+	stat[scen].stat_on = true;
 	stat[scen].drex_pf_on = true;
 	stat[scen].pf_qos_timer[target] = pf_qos_timer;
 
