@@ -28,9 +28,10 @@
 #include <soc/samsung/cal-if.h>
 #include <soc/samsung/bts.h>
 #include <linux/of_platform.h>
-#include <dt-bindings/soc/samsung/exynos9610-devfreq.h>
 #include "../../soc/samsung/cal-if/acpm_dvfs.h"
+#ifdef CONFIG_EXYNOS_PD
 #include <soc/samsung/exynos-pd.h>
+#endif
 
 #include <soc/samsung/exynos-devfreq.h>
 #include <soc/samsung/ect_parser.h>
@@ -248,13 +249,14 @@ static int exynos_devfreq_get_freq(struct device *dev, u32 *cur_freq,
 		struct clk *clk, struct exynos_devfreq_data *data)
 {
 	if (data->pm_domain) {
+#ifdef CONFIG_EXYNOS_PD
 		if (!exynos_pd_status(data->pm_domain)) {
 			dev_err(dev, "power domain %s is offed\n", data->pm_domain->name);
 			*cur_freq = 0;
 			return -EINVAL;
 		}
+#endif
 	}
-
 	*cur_freq = (u32)cal_dfs_get_rate(data->dfs_id);
 	if (*cur_freq == 0) {
 		dev_err(dev, "failed get frequency from CAL\n");
@@ -274,10 +276,12 @@ static int exynos_devfreq_set_freq(struct device *dev, u32 new_freq,
 	}
 #endif
 	if (data->pm_domain) {
+#ifdef CONFIG_EXYNOS_PD
 		if (!exynos_pd_status(data->pm_domain)) {
 			dev_err(dev, "power domain %s is offed\n", data->pm_domain->name);
 			return -EINVAL;
 		}
+#endif
 	}
 
 	if (cal_dfs_set_rate(data->dfs_id, (unsigned long)new_freq)) {
@@ -889,7 +893,12 @@ static int exynos_devfreq_parse_dt(struct device_node *np, struct exynos_devfreq
 		data->pm_domain = NULL;
 	} else {
 		dev_info(data->dev, "power domain: %s\n", pd_name);
+#ifdef CONFIG_EXYNOS_PD
 		data->pm_domain = exynos_pd_lookup_name(pd_name);
+#else
+		dev_info(data->dev, "pd_name is existed, but runtimePM feature disable\n");
+		data->pm_domain = NULL;
+#endif
 	}
 
 
@@ -1432,10 +1441,12 @@ static int exynos_devfreq_probe(struct platform_device *pdev)
 		pm_qos_update_request_timeout(&data->boot_pm_qos, data->boot_freq,
 					data->boot_qos_timeout * USEC_PER_SEC);
 	} else {
+#ifdef CONFIG_EXYNOS_PD
 		pm_runtime_enable(&pdev->dev);
 		pm_runtime_get_sync(&pdev->dev);
 		pm_qos_update_request(&data->boot_pm_qos, data->default_qos);
 		pm_runtime_put_sync(&pdev->dev);
+#endif
 	}
 
 	dev_info(data->dev, "devfreq is initialized!!\n");
