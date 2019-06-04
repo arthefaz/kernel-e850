@@ -32,41 +32,65 @@
 			reg = <0x0 0x146D2000 0x100>;
 			status = "okay";
 			bts-type = <BUSC_BTS>;
+			default {
+				stat_on = <0>;
+			};
 		};
 		bts_busc_s1 {
 			reg = <0x0 0x146E2000 0x100>;
 			status = "okay";
 			bts-type = <BUSC_BTS>;
+			default {
+				stat_on = <0>;
+			};
 		};
 		bts_s_nrt0 {
 			reg = <0x0 0x12172000 0x100>;
 			status = "okay";
 			bts-type = <BUSC_BTS>;
+			default {
+				stat_on = <0>;
+			};
 		};
 		bts_s_nrt1 {
 			reg = <0x0 0x12182000 0x100>;
 			status = "okay";
 			bts-type = <BUSC_BTS>;
+			default {
+				stat_on = <0>;
+			};
 		};
 		bts_rt_mem0 {
 			reg = <0x0 0x12192000 0x100>;
 			status = "okay";
 			bts-type = <BUSC_BTS>;
+			default {
+				stat_on = <0>;
+			};
 		};
 		bts_rt_mem1 {
 			reg = <0x0 0x121A2000 0x100>;
 			status = "okay";
 			bts-type = <BUSC_BTS>;
+			default {
+				stat_on = <0>;
+			};
 		};
 		bts_cp_mem0 {
 			reg = <0x0 0x121B2000 0x100>;
 			status = "okay";
 			bts-type = <BUSC_BTS>;
+			default {
+				stat_on = <0>;
+			};
 		};
 		bts_cp_mem1 {
 			reg = <0x0 0x121C2000 0x100>;
 			status = "okay";
 			bts-type = <BUSC_BTS>;
+			default {
+				stat_on = <0>;
+			};
 		};
 
 		bts_tnr0 {
