@@ -894,7 +894,7 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 
 	deadlock_cnt = p->rcv_num * 51;
 	deadlock_cnt = 0x7fffffff;
-	dpp_info("idma deadlock_cnt(%d)\n", deadlock_cnt);
+	dpp_dbg("idma deadlock_cnt(%d)\n", deadlock_cnt);
 	/* TODO : deadlock is not set for bring up */
 	idma_reg_set_deadlock(id, 1, deadlock_cnt);
 
