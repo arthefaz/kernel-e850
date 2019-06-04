@@ -18,7 +18,11 @@
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
+#if defined(CONFIG_SOC_EXYNOS9830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
 #include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
+#elif defined(CONFIG_SOC_EXYNOS9630) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
+#include <dt-bindings/soc/samsung/exynos9630-devfreq.h>
+#endif
 #include <soc/samsung/exynos-devfreq.h>
 
 #define DISP_FACTOR		100UL
@@ -629,12 +633,20 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 		 * If current disp freq is higher than calculated freq,
 		 * it must not be set. if not, underrun can occur.
 		 */
+#if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
+		if (cal_dfs_get_rate(ACPM_DVFS_DISP) < aclk_freq)
+#elif defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
 		if (exynos_devfreq_get_domain_freq(DEVFREQ_DISP) < aclk_freq)
+#endif
 			pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
 
+#if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
+		DPU_DEBUG_BTS("Get initial disp freq(%lu)\n",
+				cal_dfs_get_rate(ACPM_DVFS_DISP));
+#elif defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
 		DPU_DEBUG_BTS("Get initial disp freq(%lu)\n",
 				exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
-
+#endif
 		return;
 	}
 

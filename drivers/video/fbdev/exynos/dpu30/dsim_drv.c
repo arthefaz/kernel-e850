@@ -551,10 +551,17 @@ static void dsim_underrun_info(struct dsim_device *dsim)
 //	struct decon_device *decon;
 //	int i, decon_cnt;
 
+#if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
+	dsim_info("\tMIF(%lu), INT(%lu), DISP(%lu)\n",
+				cal_dfs_get_rate(ACPM_DVFS_MIF),
+				cal_dfs_get_rate(ACPM_DVFS_INT),
+				cal_dfs_get_rate(ACPM_DVFS_DISP));
+#elif defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
 	dsim_info("\tMIF(%lu), INT(%lu), DISP(%lu)\n",
 			exynos_devfreq_get_domain_freq(DEVFREQ_MIF),
 			exynos_devfreq_get_domain_freq(DEVFREQ_INT),
 			exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
+#endif
 
 #if 0
 	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
