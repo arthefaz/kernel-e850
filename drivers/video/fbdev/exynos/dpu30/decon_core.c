@@ -370,12 +370,21 @@ int decon_tui_protection(bool tui_en)
 				EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
 #if defined(CONFIG_EXYNOS_BTS)
+#if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
+		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
+				cal_dfs_get_rate(ACPM_DVFS_MIF),
+				cal_dfs_get_rate(ACPM_DVFS_INT),
+				cal_dfs_get_rate(ACPM_DVFS_DISP),
+				decon->bts.prev_total_bw,
+				decon->bts.total_bw);
+#elif defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
 				exynos_devfreq_get_domain_freq(DEVFREQ_MIF),
 				exynos_devfreq_get_domain_freq(DEVFREQ_INT),
 				exynos_devfreq_get_domain_freq(DEVFREQ_DISP),
 				decon->bts.prev_total_bw,
 				decon->bts.total_bw);
+#endif
 #endif
 		mutex_unlock(&decon->lock);
 	} else {
@@ -384,12 +393,21 @@ int decon_tui_protection(bool tui_en)
 				EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
 #if defined(CONFIG_EXYNOS_BTS)
+#if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
+		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
+				cal_dfs_get_rate(ACPM_DVFS_MIF),
+				cal_dfs_get_rate(ACPM_DVFS_INT),
+				cal_dfs_get_rate(ACPM_DVFS_DISP),
+				decon->bts.prev_total_bw,
+				decon->bts.total_bw);
+#elif defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
 				exynos_devfreq_get_domain_freq(DEVFREQ_MIF),
 				exynos_devfreq_get_domain_freq(DEVFREQ_INT),
 				exynos_devfreq_get_domain_freq(DEVFREQ_DISP),
 				decon->bts.prev_total_bw,
 				decon->bts.total_bw);
+#endif
 #endif
 		decon->state = DECON_STATE_ON;
 		decon_hiber_unblock(decon);
