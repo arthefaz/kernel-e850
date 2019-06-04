@@ -2205,64 +2205,12 @@ void decon_reg_get_crc_data(u32 id, u32 *w0_data, u32 *w1_data)
 
 u32 DPU_DMA2CH(u32 dma)
 {
-	u32 ch_id;
-
-	switch (dma) {
-	case IDMA_GF0:
-		ch_id = 0;
-		break;
-	case IDMA_GF1:
-		ch_id = 1;
-		break;
-	case IDMA_VG:
-		ch_id = 2;
-		break;
-	case IDMA_VGF:
-		ch_id = 4;
-		break;
-	case IDMA_VGS:
-		ch_id = 3;
-		break;
-	case IDMA_VGRFS:
-		ch_id = 5;
-		break;
-	default:
-		decon_dbg("channel(0x%x) is not valid\n", dma);
-		return -1;
-	}
-
-	return ch_id;
+	return 0;
 }
 
 u32 DPU_CH2DMA(u32 ch)
 {
-	u32 dma;
-
-	switch (ch) {
-	case 0:
-		dma = IDMA_GF0;
-		break;
-	case 5:
-		dma = IDMA_VGRFS;
-		break;
-	case 1:
-		dma = IDMA_GF1;
-		break;
-	case 4:
-		dma = IDMA_VGF;
-		break;
-	case 2:
-		dma = IDMA_VG;
-		break;
-	case 3:
-		dma = IDMA_VGS;
-		break;
-	default:
-		decon_warn("channal(%d) is invalid\n", ch);
-		return -1;
-	}
-
-	return dma;
+	return 0;
 }
 
 int decon_check_supported_formats(enum decon_pixel_format format)
@@ -2386,7 +2334,7 @@ int decon_check_global_limitation(struct decon_device *decon,
 	 * AXI Port1 : CH1(GF1), CH4(VGF)
 	 * AXI Port2 : CH2(VG), CH3(VGS)
 	 */
-	int axi_port[MAX_DECON_WIN] = {5, 4, 3, 2, 1, 0};
+	int axi_port[MAX_DECON_WIN] = {3, 2, 1, 0};
 
 	for (i = 0; i < MAX_DECON_WIN; i++) {
 		if (config[i].state != DECON_WIN_STATE_BUFFER)

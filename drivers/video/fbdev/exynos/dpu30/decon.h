@@ -56,9 +56,16 @@
 
 #define SUCCESS_EXYNOS_SMC	0
 
+
 #define MAX_DECON_CNT		3
+
+#if defined(CONFIG_SOC_EXYNOS9830)
+#define MAX_DECON_WIN		6
+#define MAX_DPP_SUBDEV		7
+#elif defined(CONFIG_SOC_EXYNOS9630)
 #define MAX_DECON_WIN		4
-#define MAX_DPP_SUBDEV		4
+#define MAX_DPP_SUBDEV		5
+#endif
 
 #define DISP_RESTRICTION_VER	20180608
 
