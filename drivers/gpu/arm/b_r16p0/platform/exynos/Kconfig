@@ -31,7 +31,7 @@ config EXYNOS_SOC_NAME
 config MALI_SYSTRACE_SUPPORT
     bool "Enable Exynos systrace Debug support"
     depends on MALI_MIDGARD
-    default y
+    default n
     help
       Enable systrace marker in kernel
 # SRUK-MALI_SYSTRACE_SUPPORT }
@@ -77,7 +77,7 @@ config MALI_SEC_CL_BOOST
 config MALI_PM_QOS
     bool "Enable DVFS with QoS"
     depends on MALI_MIDGARD && MALI_DVFS && PM_DEVFREQ && CPU_FREQ
-    default y
+    default n
     help
       Choose this option to enable PM_QOS in the Mali tNOx DDK.
 
@@ -112,7 +112,7 @@ config MALI_ASV_CALIBRATION_SUPPORT
 config MALI_VK_BOOST
 	bool "Enable GPU VK JOB PMQOS BOOST"
 	depends on MALI_MIDGARD && MALI_RT_PM && MALI_DVFS
-	default y
+	default n
 	help
 	  Choose this option to enable VK JOB PMQOS BOOST in the Mali tNOx DDK.
 
