@@ -46,7 +46,6 @@ static inline void exynos_usbdrd_debugfs_exit(struct exynos_usbdrd_phy *)
 	.bitoffset = bit,		\
 	.mask = false,			\
 }
-
 #define dump_register_dp(rnm)		\
 {					\
 	.name = __stringify(rnm),	\
@@ -58,6 +57,15 @@ static inline void exynos_usbdrd_debugfs_exit(struct exynos_usbdrd_phy *)
 	.offset = EXYNOS_USBDP_COM_##rnm,		\
 	.bitname = #bit_nm,			\
 	.bitmask = bit_rnm##_##bit_nm##_MASK,	\
+	.bitoffset = bit,			\
+	.mask = true,				\
+}
+#define dump_regmap_gen2_mask(rnm, bit_rnm, bit_nm, bit)	\
+{						\
+	.name = __stringify(rnm),		\
+	.offset = EXYNOS_USBDP_COM_##rnm,		\
+	.bitname = #bit_nm,			\
+	.bitmask = bit_rnm##_##bit_nm##_MSK,	\
 	.bitoffset = bit,			\
 	.mask = true,				\
 }
