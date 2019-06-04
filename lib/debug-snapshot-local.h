@@ -23,8 +23,6 @@
 #include <linux/clk-provider.h>
 #endif
 
-extern void (*arm_pm_restart)(char str, const char *cmd);
-
 extern void dbg_snapshot_log_idx_init(void);
 extern void dbg_snapshot_utils_init(void);
 extern void dbg_snapshot_helper_init(void);

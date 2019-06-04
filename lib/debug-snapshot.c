@@ -59,12 +59,16 @@ struct dbg_snapshot_item dss_items[] = {
 	{"log_kernel",		{0, 0, 0, false, false}, NULL ,NULL, 0, },
 	{"log_platform",	{0, 0, 0, false, false}, NULL ,NULL, 0, },
 	{"log_sfr",		{0, 0, 0, false, false}, NULL ,NULL, 0, },
-	{"log_s2d",		{0, 0, 0, true, false}, NULL, NULL, 0, },
-	{"log_cachedump",	{0, 0, 0, true, false}, NULL, NULL, 0, },
+	{"log_s2d",		{0, 0, 0, false, false}, NULL, NULL, 0, },
+	{"log_arrdumpreset",	{0, 0, 0, false, false}, NULL, NULL, 0, },
+	{"log_arrdumppanic",	{0, 0, 0, false, false}, NULL, NULL, 0, },
 	{"log_etm",		{0, 0, 0, true, false}, NULL ,NULL, 0, },
 	{"log_bcm",		{0, 0, 0, false, false}, NULL ,NULL, 0, },
+	{"log_llc",		{0, 0, 0, false, false}, NULL ,NULL, 0, },
+	{"log_dbgc",		{0, 0, 0, false, false}, NULL ,NULL, 0, },
 	{"log_pstore",		{0, 0, 0, true, false}, NULL ,NULL, 0, },
 	{"log_kevents",		{0, 0, 0, false, false}, NULL ,NULL, 0, },
+	{"log_fatal",		{0, 0, 0, false, false}, NULL ,NULL, 0, },
 };
 
 /*  External interface variable for trace debugging */
@@ -459,6 +463,7 @@ static int __init dbg_snapshot_item_reserved_mem_setup(struct reserved_mem *reme
 {
 	unsigned int i;
 
+
 	for (i = 0; i < (unsigned int)ARRAY_SIZE(dss_items); i++) {
 		if (strnstr(remem->name, dss_items[i].name, strlen(remem->name)))
 			break;
@@ -497,11 +502,15 @@ DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_kernel);
 DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_platform);
 DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_sfr);
 DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_s2d);
-DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_cachedump);
+DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_arrdumpreset);
+DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_arrdumppanic);
 DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_etm);
 DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_bcm);
+DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_llc);
+DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_dbgc);
 DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_pstore);
 DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_kevents);
+DECLARE_DBG_SNAPSHOT_RESERVED_REGION("debug-snapshot,", log_fatal);
 #endif
 
 /*
