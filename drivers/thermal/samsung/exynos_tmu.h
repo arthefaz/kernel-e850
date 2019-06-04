@@ -35,7 +35,8 @@ enum soc_type {
 	SOC_ARCH_EXYNOS8895 = 2,
 	SOC_ARCH_EXYNOS7872,
 	SOC_ARCH_EXYNOS9810,
-	SOC_ARCH_EXYNOS9610,
+	SOC_ARCH_EXYNOS9820,
+	SOC_ARCH_EXYNOS9630,
 };
 
 /**
@@ -122,8 +123,6 @@ struct exynos_tmu_data {
 	int hotplug_in_threshold;
 	int hotplug_out_threshold;
 	int limited_frequency;
-	int limited_threshold;
-	int limited_threshold_release;
 	struct exynos_tmu_platform_data *pdata;
 	void __iomem *base;
 	int irq;
