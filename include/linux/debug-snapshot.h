@@ -39,8 +39,6 @@ extern int dbg_snapshot_post_panic(void);
 extern int dbg_snapshot_post_reboot(char *cmd);
 extern int dbg_snapshot_set_hardlockup(int);
 extern int dbg_snapshot_get_hardlockup(void);
-extern int dbg_snapshot_set_debug_level(const char *);
-extern int dbg_snapshot_get_debug_level(void);
 extern unsigned int dbg_snapshot_get_item_size(char *);
 extern unsigned int dbg_snapshot_get_item_paddr(char *);
 extern unsigned long dbg_snapshot_get_item_vaddr(char *);
@@ -204,8 +202,6 @@ extern void dbg_snapshot_binder(struct trace_binder_transaction_base *base,
 #define dbg_snapshot_post_panic()		do { } while(0)
 #define dbg_snapshot_post_reboot(a)	do { } while(0)
 #define dbg_snapshot_set_hardlockup(a)	do { } while(0)
-#define dbg_snapshot_get_debug_level()	do { } while(0)
-#define dbg_snapshot_get_debug_level_reg()     do { } while (0)
 #define dbg_snapshot_check_crash_key(a,b)	do { } while(0)
 #define dbg_snapshot_dm(a,b,c,d,e)		do { } while(0)
 #define dbg_snapshot_panic_handler_safe()	do { } while(0)
@@ -216,6 +212,7 @@ extern void dbg_snapshot_binder(struct trace_binder_transaction_base *base,
 #define dbg_snapshot_binder(a,b,c)	do { } while(0)
 #define dbg_snapshot_print_notifier_call(a,b,c) do { } while(0)
 #define dbg_snapshot_save_log(a,b)	do { } while(0)
+
 
 static inline unsigned int dbg_snapshot_get_item_size(char *name)
 {
