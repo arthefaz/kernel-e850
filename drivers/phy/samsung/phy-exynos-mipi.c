@@ -25,7 +25,7 @@
 /* the maximum number of PHY for each module */
 #define EXYNOS_MIPI_PHYS_NUM	4
 
-#define EXYNOS_MIPI_PHY_ISO_BYPASS  (1 << 0)
+#define EXYNOS_MIPI_PHY_ISO_BYPASS  BIT(0)
 
 #define MIPI_PHY_MxSx_UNIQUE	(0 << 1)
 #define MIPI_PHY_MxSx_SHARED	(1 << 1)
@@ -394,137 +394,6 @@ static int __set_phy_cfg_0502_0001_dphy(void __iomem *regs, int option, u32 *cfg
 	return 0;
 }
 
-static int __set_phy_cfg_0502_0002_dphy(void __iomem *regs, int option, u32 *cfg)
-{
-	int i;
-	u32 settle_clk_sel = 1;
-	u32 skew_delay_sel = 0;
-	u32 type = cfg[TYPE] & 0xffff;
-	u32 t_clk_miss = 3;
-	u32 freq_s_xi_c = 26; /* MHz */
-	u32 clk_div1234_mc;
-
-	if (cfg[SPEED] >= PHY_REF_SPEED)
-		settle_clk_sel = 0;
-
-	if (cfg[SPEED] >= PHY_REF_SPEED && cfg[SPEED] < 4000) {
-		if (cfg[SPEED] >= 3000)
-			skew_delay_sel = 1;
-		else if (cfg[SPEED] >= 2000)
-			skew_delay_sel = 2;
-		else
-			skew_delay_sel = 3;
-	}
-
-	writel(0x00000001, regs + 0x0000); /* SC_GNR_CON0 */
-	writel(0x00001450, regs + 0x0004); /* SC_GNR_CON1 */
-	if (cfg[SPEED] > 4500)
-		writel(0x00000000, regs + 0x0008); /* SC_ANA_CON0 */
-	else
-		writel(0x00000004, regs + 0x0008); /* SC_ANA_CON0 */
-	if (cfg[SPEED] > 4500)
-		writel(0x00008000, regs + 0x000c); /* SC_ANA_CON1 */
-	else
-		writel(0x00009000, regs + 0x000c); /* SC_ANA_CON1 */
-	writel(0x00000005, regs + 0x0010); /* SC_ANA_CON2 */
-	clk_div1234_mc = max(0, (int)(5 - DIV_ROUND_UP(((t_clk_miss - 1) * cfg[SPEED]) >> 2, freq_s_xi_c)));
-	update_bits(regs + 0x0010, 8, 2, clk_div1234_mc); /* SC_ANA_CON2 */
-	writel(0x00000600, regs + 0x0014); /* SC_ANA_CON3 */
-	writel(0x00000301, regs + 0x0030); /* SC_TIME_CON0 */
-
-	for (i = 0; i <= cfg[LANES]; i++) {
-		writel(0x00000001, regs + 0x0100 + (i * 0x100)); /* SD_GNR_CON0 */
-		writel(0x00001450, regs + 0x0104 + (i * 0x100)); /* SD_GNR_CON1 */
-		if (cfg[SPEED] > 4500)
-			writel(0x00000000, regs + 0x0108 + (i * 0x100)); /* SD_ANA_CON0 */
-		else
-			writel(0x00000004, regs + 0x0108 + (i * 0x100)); /* SD_ANA_CON0 */
-		if (cfg[SPEED] > 4500)
-			writel(0x00008260, regs + 0x010c + (i * 0x100)); /* SD_ANA_CON1 */
-		else if (cfg[SPEED] == 4500)
-			writel(0x00009260, regs + 0x010c + (i * 0x100)); /* SD_ANA_CON1 */
-		else
-			writel(0x00009000, regs + 0x010c + (i * 0x100)); /* SD_ANA_CON1 */
-		writel(0x00000005, regs + 0x0110 + (i * 0x100)); /* SD_ANA_CON2 */
-		update_bits(regs + 0x0110 + (i * 0x100), 8, 2, skew_delay_sel); /* SD_ANA_CON2 */
-		writel(0x00000600, regs + 0x0114 + (i * 0x100)); /* SD_ANA_CON3 */
-		/* DC Combo lane has below SFR (0/1/2) */
-		if ((type == 0xDC) && (i < 3))
-			writel(0x00000040, regs + 0x0124 + (i * 0x100)); /* SD_ANA_CON7 */
-		update_bits(regs + 0x0130 + (i * 0x100), 0, 8, cfg[SETTLE]); /* SD_TIME_CON0 */
-		update_bits(regs + 0x0130 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
-		writel(0x00000003, regs + 0x0134 + (i * 0x100)); /* SD_TIME_CON1 */
-		writel(0x0000081a, regs + 0x0150 + (i * 0x100)); /* SD_DESKEW_CON4 */
-	}
-
-	return 0;
-}
-
-static int __set_phy_cfg_0502_0003_dphy(void __iomem *regs, int option, u32 *cfg)
-{
-	int i;
-	u32 settle_clk_sel = 1;
-	u32 skew_delay_sel = 0;
-	u32 t_clk_miss = 3;
-	u32 freq_s_xi_c = 26; /* MHz */
-	u32 clk_div1234_mc;
-
-	if (cfg[SPEED] >= PHY_REF_SPEED)
-		settle_clk_sel = 0;
-
-	if (cfg[SPEED] >= PHY_REF_SPEED && cfg[SPEED] < 4000) {
-		if (cfg[SPEED] >= 3000)
-			skew_delay_sel = 1;
-		else if (cfg[SPEED] >= 2000)
-			skew_delay_sel = 2;
-		else
-			skew_delay_sel = 3;
-	}
-
-	writel(0x00000001, regs + 0x0500); /* SC_GNR_CON0 */
-	writel(0x00001450, regs + 0x0504); /* SC_GNR_CON1 */
-	if (cfg[SPEED] > 4500)
-		writel(0x00000000, regs + 0x0508); /* SC_ANA_CON0 */
-	else
-		writel(0x00000004, regs + 0x0508); /* SC_ANA_CON0 */
-	if (cfg[SPEED] > 4500)
-		writel(0x00008000, regs + 0x050c); /* SC_ANA_CON1 */
-	else
-		writel(0x00009000, regs + 0x050c); /* SC_ANA_CON1 */
-	writel(0x00000005, regs + 0x0510); /* SC_ANA_CON2 */
-	clk_div1234_mc = max(0, (int)(5 - DIV_ROUND_UP(((t_clk_miss - 1) * cfg[SPEED]) >> 2, freq_s_xi_c)));
-	update_bits(regs + 0x0510, 8, 2, clk_div1234_mc); /* SC_ANA_CON2 */
-	writel(0x00000600, regs + 0x0514); /* SC_ANA_CON3 */
-	writel(0x00000301, regs + 0x0530); /* SC_TIME_CON0 */
-
-	for (i = 0; i <= cfg[LANES]; i++) {
-		writel(0x00000001, regs + 0x0000 + (i * 0x100)); /* SD_GNR_CON0 */
-		writel(0x00001450, regs + 0x0004 + (i * 0x100)); /* SD_GNR_CON1 */
-		if (cfg[SPEED] > 4500)
-			writel(0x00000000, regs + 0x0008 + (i * 0x100)); /* SD_ANA_CON0 */
-		else
-			writel(0x00000004, regs + 0x0008 + (i * 0x100)); /* SD_ANA_CON0 */
-		if (cfg[SPEED] > 4500)
-			writel(0x00008260, regs + 0x000c + (i * 0x100)); /* SD_ANA_CON1 */
-		else if (cfg[SPEED] == 4500)
-			writel(0x00009260, regs + 0x000c + (i * 0x100)); /* SD_ANA_CON1 */
-		else
-			writel(0x00009000, regs + 0x000c + (i * 0x100)); /* SD_ANA_CON1 */
-		writel(0x00000005, regs + 0x0010 + (i * 0x100)); /* SD_ANA_CON2 */
-		update_bits(regs + 0x0010 + (i * 0x100), 8, 2, skew_delay_sel); /* SD_ANA_CON2 */
-		update_bits(regs + 0x0010 + (i * 0x100), 15, 1, 1); /* RESETN_CFG_SEL */
-		update_bits(regs + 0x0010 + (i * 0x100), 7, 1, 1); /* RXDDRCLKHS_SEL */
-		writel(0x00000600, regs + 0x0014 + (i * 0x100)); /* SD_ANA_CON3 */
-		update_bits(regs + 0x0030 + (i * 0x100), 0, 8, cfg[SETTLE]); /* SD_TIME_CON0 */
-		update_bits(regs + 0x0030 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
-		writel(0x00000003, regs + 0x0034 + (i * 0x100)); /* SD_TIME_CON1 */
-		writel(0x0000081a, regs + 0x0050 + (i * 0x100)); /* SD_DESKEW_CON4 */
-	}
-
-	return 0;
-}
-
-
 static const struct exynos_mipi_phy_cfg phy_cfg_table[] = {
 	{
 		.major = 0x0501,
@@ -544,18 +413,6 @@ static const struct exynos_mipi_phy_cfg phy_cfg_table[] = {
 		.mode = 0xD,
 		.set = __set_phy_cfg_0502_0001_dphy,
 	},
-	{
-		.major = 0x0502,
-		.minor = 0x0002,
-		.mode = 0xD,
-		.set = __set_phy_cfg_0502_0002_dphy,
-	},
-	{
-		.major = 0x0502,
-		.minor = 0x0003,
-		.mode = 0xD,
-		.set = __set_phy_cfg_0502_0003_dphy,
-	},
 	{ },
 };
 
@@ -563,7 +420,7 @@ static int __set_phy_cfg(struct exynos_mipi_phy *state,
 		struct mipi_phy_desc *phy_desc, int option, void *info)
 {
 	u32 *cfg = (u32 *)info;
-	unsigned long i;
+	int i;
 	int ret = -EINVAL;
 
 	for (i = 0; i < ARRAY_SIZE(phy_cfg_table); i++) {

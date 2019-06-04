@@ -31,7 +31,7 @@
 #define EXYNOS_USBCON_VER_02_1_2	0x0212  /* Katmai EVT0 */
 #define EXYNOS_USBCON_VER_02_MAX	0x02FF
 
-#define EXYNOS_USBCON_VER_03_0_0	0x0300	/* Lhotse, Lassen HS */
+#define EXYNOS_USBCON_VER_03_0_0	0x0300	/* Lhotse, Lassen HS, Ramen HS */
 #define EXYNOS_USBCON_VER_03_0_1	0x0301	/* MK */
 #define EXYNOS_USBCON_VER_03_MAX	0x03FF
 
@@ -217,6 +217,9 @@ struct exynos_usbphy_info {
 
 	/* SS PHY tune parameter */
 	struct exynos_usbphy_ss_tune *ss_tune;
+
+	/* Tune Parma list - Synopsys USB3 PHY */
+	struct exynos_usb_tune_param *ss_tune_param;
 
 	/* Tune Parma list */
 	struct exynos_usb_tune_param *tune_param;

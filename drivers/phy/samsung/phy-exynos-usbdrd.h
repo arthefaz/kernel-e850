@@ -11,7 +11,7 @@
 
 #include "phy-samsung-usb-cal.h"
 #include "phy-exynos-usb3p1.h"
-#include "phy-exynos-usbdp-gen2.h"
+#include "phy-exynos-usbdp.h"
 
 #define EXYNOS_USBPHY_VER_02_0_0	0x0200	/* Lhotse - USBDP Combo PHY */
 
@@ -22,6 +22,8 @@
 #define EXYNOS_USBDEV_PHY_CONTROL	(0x704)
 #define EXYNOS_USBDRD_ENABLE		BIT(0)
 #define EXYNOS_USBHOST_ENABLE		BIT(1)
+/* enables TCXO_USB. 1:enable TCXO */
+#define ENABLE_TCXO_BUF_MASK		(0x10000)
 
 /* Exynos USB PHY registers */
 #define EXYNOS_FSEL_9MHZ6		0x0
@@ -158,17 +160,12 @@ struct exynos_usbdrd_phy {
 		u32 pmu_offset;
 		u32 pmu_offset_dp;
 		u32 pmu_mask;
-		u32 pmu_offset_tcxobuf;
-		u32 pmu_mask_tcxobuf;
 		const struct exynos_usbdrd_phy_config *phy_cfg;
 	} phys[EXYNOS_DRDPHYS_NUM];
 	u32 extrefclk;
 	bool use_phy_umux;
 	struct clk *ref_clk;
 	struct regulator *vbus;
-	struct regulator	*ldo10;
-	struct regulator	*ldo11;
-	struct regulator	*ldo12;
 	struct exynos_usbphy_info usbphy_info;
 	struct exynos_usbphy_info usbphy_sub_info;
 	struct exynos_usbphy_ss_tune ss_value[2];
@@ -189,11 +186,11 @@ struct exynos_usbdrd_phy {
 	int irq_conn;
 	int is_conn;
 	int is_irq_enabled;
+	int usb3phy_isolation;
 	u32 phy_port;
-	u32 reverse_phy_port;
-	spinlock_t lock;
 };
 
 void __iomem *phy_exynos_usbdp_get_address(void);
+extern int xhci_portsc_set(int on);
 
 #endif	/* __PHY_EXYNOS_USBDRD_H__ */
