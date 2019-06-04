@@ -57,8 +57,8 @@
 #define SUCCESS_EXYNOS_SMC	0
 
 #define MAX_DECON_CNT		3
-#define MAX_DECON_WIN		6
-#define MAX_DPP_SUBDEV		7
+#define MAX_DECON_WIN		4
+#define MAX_DPP_SUBDEV		4
 
 #define DISP_RESTRICTION_VER	20180608
 
