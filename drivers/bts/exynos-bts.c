@@ -426,7 +426,7 @@ static ssize_t exynos_bts_qos_write(struct file *file, const char __user *user_b
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %d %d %x %x\n", &scen, &index, &bypass, &ar, &aw);
+	ret = sscanf(buf, "%d %d %d %d %d\n", &scen, &index, &bypass, &ar, &aw);
 	if (ret != 5) {
 		pr_err("%s: sscanf failed. We need 5 inputs. <SCEN IP BYPASS(0/1) ARQOS AWQOS> count=(%d)\n",
 			__func__, ret);
@@ -524,7 +524,7 @@ static ssize_t exynos_bts_mo_write(struct file *file, const char __user *user_bu
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %d %x %x\n", &scen, &index, &rmo, &wmo);
+	ret = sscanf(buf, "%d %d %d %d\n", &scen, &index, &rmo, &wmo);
 	if (ret != 4) {
 		pr_err("%s: sscanf failed. We need 4 inputs. <SCEN IP RMO WMO> count=(%d)\n",
 			__func__, ret);
@@ -616,7 +616,7 @@ static ssize_t exynos_bts_urgent_write(struct file *file, const char __user *use
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %d %d %x %x\n", &scen, &index, &on, &th_r, &th_w);
+	ret = sscanf(buf, "%d %d %d %d %d\n", &scen, &index, &on, &th_r, &th_w);
 	if (ret != 5) {
 		pr_err("%s: sscanf failed. We need 5 inputs. <SCEN IP ON/OFF TH_R TH_W> count=(%d)\n",
 			__func__, ret);
@@ -717,7 +717,7 @@ static ssize_t exynos_bts_blocking_write(struct file *file, const char __user *u
 
 	buf[buf_size] = '\0';
 
-	ret = sscanf(buf, "%d %d %d %x %x %x %x %x %x %x %x\n",
+	ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d\n",
 			&scen, &index, &on, &full_r, &full_w, &busy_r, &busy_w,
 			&max0_r, &max0_w, &max1_r, &max1_w);
 
