@@ -31,6 +31,7 @@
 #include "exynos9630-pm-domains.dtsi"
 #include "exynos9630-debug.dtsi"
 #include <dt-bindings/thermal/thermal.h>
+#include "exynos9630-mfc.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos9630";
@@ -48,6 +49,7 @@
 		pinctrl6 = &pinctrl_6;
 		uart0 = &serial_0;
 		fmp0 = &fmp_0;
+		mfc0 = &mfc_0;
 	};
 
 	ect {
