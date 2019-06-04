@@ -23,20 +23,11 @@
 enum decon_idma_type {
 	IDMA_G0 = 0,
 	IDMA_G1,
+	IDMA_GF, /* GF in case of Exynos9630 */
 	IDMA_VG0,
-	IDMA_VG1,
-	IDMA_VGF0,
-	IDMA_VGF1, /* VGRF in case of Exynos9810 */
 	ODMA_WB,
 	MAX_DECON_DMA_TYPE,
 };
-
-#define IDMA_GF0	IDMA_G0
-#define IDMA_GF1	IDMA_G1
-#define IDMA_VG		IDMA_VG0
-#define IDMA_VGF	IDMA_VG1
-#define IDMA_VGS	IDMA_VGF0
-#define IDMA_VGRFS	IDMA_VGF1
 
 enum decon_fifo_mode {
 	DECON_FIFO_00K = 0,
