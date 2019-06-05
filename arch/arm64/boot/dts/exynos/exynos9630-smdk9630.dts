@@ -13,6 +13,8 @@
 /plugin/;
 #include <dt-bindings/interrupt-controller/exynos9630.h>
 
+#include "exynos9630_smdk9630_battery_data.dtsi"
+
 / {
 	compatible = "samsung,exynos9630", "samsung,SMDK9630";
 	board_id = <0x1>;
@@ -862,6 +864,13 @@
 		samsung,pin-pud = <0>;
 		samsung,pin-drv = <0>;
 	};
+
+	fuel_irq: fuel-irq {
+		samsung,pins = "gpa0-6";
+		samsung,pin-function = <0>;
+		samsung,pin-pud = <2>;
+		samsung,pin-drv = <0>;
+	};
 };
 
 &pinctrl_5 {
@@ -1012,6 +1021,19 @@
 		pinctrl-0 = <&if_pmic_irq>;
 		s2mu107,irq-gpio = <&gpa0 4 1>;
 		s2mu107,wakeup;
+	};
+
+	s2mu107-fuelgauge@3B {
+		compatible = "samsung,s2mu107-fuelgauge";
+		reg = <0x3B>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fuel_irq>;
+		fuelgauge,charger_name = "s2mu107-switching-charger";
+		fuelgauge,fuel_int = <&gpa0 6 0>;
+		fuelgauge,fuel_alert_soc = <1>;
+		fuelgauge,fuel_alert_vol = <3300>;
+		fuelgauge,low_temp_limit = <100>;
+		fuelgauge,low_vbat_threshold = <3400>;
 	};
 };
 
