@@ -8,7 +8,8 @@ dtb-$(CONFIG_SOC_EXYNOS9610) += exynos9610.dtb
 dtb-$(CONFIG_SOC_EXYNOS9610) += \
 	exynos9610-erd9610.dtbo
 dtb-$(CONFIG_SOC_EXYNOS9630) += exynos9630.dtb \
-				exynos9630-smdk9630.dtbo
+				exynos9630-smdk9630.dtbo \
+				exynos9630-erd9630.dtbo \
 
 always		:= $(dtb-y) $(dtbo-y)
 subdir-y	:= $(dts-dirs)
