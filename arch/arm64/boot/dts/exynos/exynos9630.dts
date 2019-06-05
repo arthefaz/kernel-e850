@@ -817,7 +817,7 @@
 		#dma-size-cells = <1>;
 		ranges;
 
-                domain-clients = <>;
+                domain-clients = <&mfc_0>;
 	};
 
 	exynos-sysreg-hsi {
