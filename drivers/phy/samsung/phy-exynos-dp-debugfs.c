@@ -27,10 +27,75 @@
 #include <linux/usb/ch9.h>
 #include "phy-exynos-usbdrd.h"
 #include "phy-exynos-usbdp-reg.h"
+#include "phy-exynos-usbdp-gen2-reg.h"
 #include "phy-exynos-debug.h"
 
 static struct exynos_debugfs_prvdata *prvdata_dp;
 
+/* Makalu */
+#if defined(CONFIG_PHY_SAMSUNG_USB_GEN2)
+/* PHY Combo DP register set */
+static const struct debugfs_reg32 exynos_usb3drd_dp_regs[] = {
+	dump_register_dp(TRSV_0241), /* ssrx_mf_eq_en */
+	dump_register_dp(TRSV_0641), /* ssrx_mf_eq_en */
+	dump_register_dp(TRSV_0311), /* ssrx_mf_eq_ctrl_ss */
+	dump_register_dp(TRSV_0711), /* ssrx_mf_eq_ctrl_ss */
+	dump_register_dp(TRSV_030B), /* ssrx_hf_eq_ctrl_ss */
+	dump_register_dp(TRSV_070B), /* ssrx_hf_eq_ctrl_ss */
+	dump_register_dp(TRSV_0279), /* ssrx_dfe1_tap_ctrl */
+	dump_register_dp(TRSV_0679), /* ssrx_dfe1_tap_ctrl */
+	dump_register_dp(TRSV_02BD), /* ssrx_term_cal */
+	dump_register_dp(TRSV_06BD), /* ssrx_term_cal */
+};
+
+/* PHY Combo DP register set */
+static const struct debugfs_regmap32 exynos_usb3drd_dp_regmap[] = {
+	dump_regmap_gen2_mask(TRSV_0241, USBDP_TRSV_0241,
+		LN0_RX_CTLE_RL_HF_HBR3, 5),
+	dump_regmap_dp(TRSV_0241, USBDP_TRSV_0241,
+		LN0_RX_CTLE_MF_BWD_EN, 4),
+	dump_regmap_dp(TRSV_0241, USBDP_TRSV_0241,
+		LN0_RX_CTLE_OC_DAC_PU, 3),
+	dump_regmap_gen2_mask(TRSV_0241, USBDP_TRSV_0241,
+		LN0_RX_CTLE_I_MF_FWD_CTRL, 0),
+	dump_regmap_gen2_mask(TRSV_0641, USBDP_TRSV_0641,
+		LN2_RX_CTLE_RL_HF_HBR3, 5),
+	dump_regmap_dp(TRSV_0641, USBDP_TRSV_0641,
+		LN2_RX_CTLE_MF_BWD_EN, 4),
+	dump_regmap_dp(TRSV_0641, USBDP_TRSV_0641,
+		LN2_RX_CTLE_OC_DAC_PU, 3),
+	dump_regmap_gen2_mask(TRSV_0641, USBDP_TRSV_0641,
+		LN2_RX_CTLE_I_MF_FWD_CTRL, 0),
+	dump_regmap_gen2_mask(TRSV_0311, USBDP_TRSV_0311,
+		LN0_RX_SSLMS_MF_INIT_RATE_SP, 0),
+	dump_regmap_gen2_mask(TRSV_0711, USBDP_TRSV_0711,
+		LN2_RX_SSLMS_MF_INIT_RATE_SP, 0),
+	dump_regmap_gen2_mask(TRSV_030B, USBDP_TRSV_030B,
+		LN0_RX_SSLMS_HF_INIT_RATE_SP, 0),
+	dump_regmap_gen2_mask(TRSV_070B, USBDP_TRSV_070B,
+		LN2_RX_SSLMS_HF_INIT_RATE_SP, 0),
+	dump_regmap_gen2_mask(TRSV_0279, USBDP_TRSV_0279,
+		LN0_RX_SSLMS_C1_INIT, 0),
+	dump_regmap_gen2_mask(TRSV_0679, USBDP_TRSV_0679,
+		LN2_RX_SSLMS_C1_INIT, 0),
+	dump_regmap_dp(TRSV_02BD, USBDP_TRSV_02BD,
+		LN0_RX_OVRD_CAL_RSTN, 7),
+	dump_regmap_dp(TRSV_02BD, USBDP_TRSV_02BD,
+		LN0_RX_RCAL_RSTN, 6),
+	dump_regmap_gen2_mask(TRSV_02BD, USBDP_TRSV_02BD,
+		LN0_RX_RCAL_OPT_CODE, 4),
+	dump_regmap_gen2_mask(TRSV_02BD, USBDP_TRSV_02BD,
+		LN0_RX_RTERM_CTRL, 0),
+	dump_regmap_dp(TRSV_06BD, USBDP_TRSV_06BD,
+		LN2_RX_OVRD_CAL_RSTN, 7),
+	dump_regmap_dp(TRSV_06BD, USBDP_TRSV_06BD,
+		LN2_RX_RCAL_RSTN, 6),
+	dump_regmap_gen2_mask(TRSV_06BD, USBDP_TRSV_06BD,
+		LN2_RX_RCAL_OPT_CODE, 4),
+	dump_regmap_gen2_mask(TRSV_06BD, USBDP_TRSV_06BD,
+		LN2_RX_RTERM_CTRL, 0),
+};
+#else /* SOCs without Gen2 - Lhotse */
 /* PHY Combo DP register set */
 static const struct debugfs_reg32 exynos_usb3drd_dp_regs[] = {
 	dump_register_dp(TRSV_R01),
@@ -54,6 +119,7 @@ static const struct debugfs_regmap32 exynos_usb3drd_dp_regmap[] = {
 	dump_regmap_dp_mask(TRSV_R0C, USBDP_TRSV0C, MAN_TX_DE_EMP_LVL, 4),
 	dump_regmap_dp_mask(TRSV_R0C, USBDP_TRSV0C, MAN_TX_DRVR_LVL, 0),
 };
+#endif
 
 static int debugfs_phy_power_state(struct exynos_usbdrd_phy *phy_drd, int phy_index)
 {
@@ -425,7 +491,14 @@ int exynos_usbdrd_dp_debugfs_init(struct exynos_usbdrd_phy *phy_drd)
 	u32 version = phy_drd->usbphy_sub_info.version;
 	int		ret;
 
+#if defined(CONFIG_PHY_SAMSUNG_USB_GEN2)
+	/* Makalu */
+	root = debugfs_create_dir("10ae0000.usbdp", NULL);
+#else
+	/* Lhotse */
 	root = debugfs_create_dir("110a0000.usbdp", NULL);
+#endif
+
 	if (!root) {
 		dev_err(dev, "failed to create root directory for USBPHY debugfs");
 		ret = -ENOMEM;

@@ -92,23 +92,10 @@ config PHY_EXYNOS_USBDRD
 	  This driver provides PHY interface for USB 3.0 DRD controller
 	  present on Exynos SoC series.
 
-config PHY_EXYNOS_USBDRD3
-	tristate "Exynos SoC series USB DRD PHY3 & PHY2 driver"
-	depends on ARCH_EXYNOS && OF
-	depends on HAS_IOMEM
-	depends on USB_DWC3_EXYNOS
-	select GENERIC_PHY
-	select MFD_SYSCON
-	default y
-	help
-	  Enable USB DRD PHY support for Exynos SoC series.
-	  This driver provides PHY interface for USB 3.0 DRD controller
-	  present on Exynos SoC series.
-
 config PHY_EXYNOS_DEBUGFS
 	tristate "Exynos SoC series USB DRD PHY DebugFS"
 	depends on DEBUG_FS
-	depends on PHY_EXYNOS_USBDRD || PHY_EXYNOS_USBDRD3
+	depends on PHY_EXYNOS_USBDRD
 	select GENERIC_PHY
 	default y
 	help
@@ -129,11 +116,19 @@ config PHY_EXYNOS_DP_DEBUGFS
 
 config PHY_SAMSUNG_USB_CAL
 	bool "Samsung USB PHY CAL"
-	depends on PHY_EXYNOS_USBDRD || PHY_EXYNOS_USBDRD3
+	depends on PHY_EXYNOS_USBDRD
 	default y
 	help
 	  Enable this to support CAL (Chip Abstraction Layer)
 	  for Samsung USB PHY controller.
+
+config PHY_SAMSUNG_USB_GEN2
+	tristate "Exynos SoC series USB DRD PHY DebugFS"
+	depends on PHY_SAMSUNG_USB_CAL
+	depends on PHY_EXYNOS_USBDRD
+	default y
+	help
+	  Support SAMSUNG USB3.1 GEN2 PHY.
 
 config PHY_EXYNOS5250_SATA
 	tristate "Exynos5250 Sata SerDes/PHY driver"
@@ -150,7 +145,7 @@ config PHY_EXYNOS5250_SATA
 	  SATA 3.0 Gb/s, SATA 6.0 Gb/s speeds. It supports one SATA host
 	  port to accept one SATA device.
 
-config PHY_EXYNOS8895_MIPI
+config PHY_EXYNOS_MIPI
 	tristate "Samsung EXYNOS SoC MIPI CSI/DSI D/C-PHY driver"
 	depends on HAS_IOMEM
 	depends on ARCH_EXYNOS && OF || COMPILE_TEST
