@@ -18,6 +18,27 @@
 		#size-cells = <1>;
 		ranges;
 
+		ion_video_stream {
+			compatible = "exynos9820-ion";
+			size = <0x4800000>;
+			alloc-ranges = <0x0 0x40000000 0xB0000000>;
+			alignment = <0x0 0x00400000>;
+			ion,heapname = "vstream_heap";
+			ion,secure;
+			ion,reusable;
+			ion,protection_id = <3>;
+			ion,alignment = <0x10000>;
+		};
+
+		ion_crypto{
+			compatible = "exynos9820-ion";
+			size = <0x1800000>;
+			alignment = <0x0 0x00400000>;
+			ion,heapname = "crypto_heap";
+			ion,reusable;
+			ion,alignment = <0x10000>;
+		};
+
 		debug_snapshot {
 			#address-cells = <2>;
 			#size-cells = <1>;
@@ -85,6 +106,51 @@
 			compatible = "exynos,modem_if";
 			reg = <0x0 0xD0000000 0x14000000>;
 			rmem_index = <0>;
+		};
+	};
+
+	ion-hpa-heap {
+		#address-cells = <2>;
+		#size-cells = <1>;
+		ranges;
+		ion,hpa_limit = <0x9 0x00000000>;
+		ion_video_fw {
+			compatible = "exynos9820-ion";
+			ion,heapname = "vfw_heap";
+			ion,secure;
+			ion,protection_id = <2>;
+			ion,alignment = <0x10000>;
+		};
+
+		ion_video_nfw {
+			compatible = "exynos9820-ion";
+			ion,heapname = "vnfw_heap";
+			ion,protection_id = <7>;
+			ion,alignment = <0x10000>;
+		};
+
+		ion_video_frame {
+			compatible = "exynos9820-ion";
+			ion,heapname = "vframe_heap";
+			ion,secure;
+			ion,protection_id = <5>;
+			ion,alignment = <0x10000>;
+		};
+
+		ion_video_scaler {
+			compatible = "exynos9820-ion";
+			ion,heapname = "vscaler_heap";
+			ion,secure;
+			ion,protection_id = <6>;
+			ion,alignment = <0x10000>;
+		};
+
+		ion_gpu_buffer {
+			compatible = "exynos9820-ion";
+			ion,heapname = "gpu_buffer";
+			ion,secure;
+			ion,protection_id = <9>;
+			ion,alignment = <0x10000>;
 		};
 	};
 };
