@@ -38,7 +38,7 @@ static void g2d_pm_qos_remove_devfreq(struct pm_qos_request *req)
 		pm_qos_remove_request(req);
 }
 #else
-#define g2d_pm_qos_update_devfreq(req, freq) do { } while (0)
+#define g2d_pm_qos_update_devfreq(req, freq, class) do { } while (0)
 #define g2d_pm_qos_remove_devfreq(req) do { } while (0)
 #endif
 
