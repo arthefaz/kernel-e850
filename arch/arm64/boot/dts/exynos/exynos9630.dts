@@ -1157,4 +1157,12 @@
 		compatible = "samsung,exynos-seclog";
 		interrupts = <GIC_SPI INTREQ__SECURE_LOG IRQ_TYPE_LEVEL_HIGH>;
 	};
+
+	ppmpu {
+		compatible = "samsung,exynos-ppmpu";
+		channel = <2>;
+		irqcnt = <2>;
+		interrupts = <GIC_SPI INTREQ__DMC_INTR_MIF0 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__DMC_INTR_MIF1 IRQ_TYPE_LEVEL_HIGH>;
+	};
 };
