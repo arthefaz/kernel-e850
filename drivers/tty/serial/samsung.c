@@ -2741,9 +2741,9 @@ static int s3c24xx_serial_remove(struct platform_device *dev)
 {
 	struct uart_port *port = s3c24xx_dev_to_port(&dev->dev);
 
-#ifdef CONFIG_PM_DEVFREQ
 	struct s3c24xx_uart_port *ourport = to_ourport(port);
 
+#ifdef CONFIG_PM_DEVFREQ
 	if (ourport->mif_qos_val && ourport->qos_timeout)
 		pm_qos_remove_request(&ourport->s3c24xx_uart_mif_qos);
 
