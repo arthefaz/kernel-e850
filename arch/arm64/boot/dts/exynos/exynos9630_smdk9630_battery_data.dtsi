@@ -15,12 +15,11 @@
 		__overlay__ {
 			battery {
 				status = "okay";
+				compatible = "samsung,s2m-battery";
 
 				pinctrl-names = "default";
 
-				battery,vendor = "SDI SDI";
-				battery,charger_name = "s2mu106-charger";
-				battery,smallcharger_name = "s2mcs02-charger";
+				battery,charger_name = "s2mu107-switching-charger";
 				battery,fuelgauge_name = "s2mu107-fuelgauge";
 				battery,technology = <2>; /* POWER_SUPPLY_TECHNOLOGY_LION */
 
@@ -44,10 +43,12 @@
 
 				battery,max_input_current = <3000>;
 				battery,max_charging_current = <3000>;
+				battery,default_limit_current = <1500>;
 
 				battery,pdo_max_input_vol = <5000>; /* mV */
 				battery,pdo_max_chg_power = <15000>; /* mW */
 
+				battery,small_limit_current = <2000>;
 				battery,small_input_current = <1000>;
 				battery,small_charging_current = <1000>;
 
