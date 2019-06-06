@@ -45,8 +45,8 @@ int pmucal_local_enable(unsigned int pd_id)
 	if (pmucal_pd_list[pd_id].need_smc) {
 		ret = exynos_pd_tz_restore(pmucal_pd_list[pd_id].need_smc);
 		if (ret) {
-			pr_err("%s %s: DTZPC restore smc error. (pd_id : %d)\n",
-					PMUCAL_PREFIX, __func__, pd_id);
+			pr_err("%s %s: DTZPC restore smc error. (pd_id : %d) returned: %d\n",
+					PMUCAL_PREFIX, __func__, pd_id, ret);
 			goto err_out;
 		}
 	}
@@ -107,8 +107,8 @@ int pmucal_local_disable(unsigned int pd_id)
 	if (pmucal_pd_list[pd_id].need_smc) {
 		ret = exynos_pd_tz_save(pmucal_pd_list[pd_id].need_smc);
 		if (ret) {
-			pr_err("%s %s: DTZPC save smc error. (pd_id : %d)\n",
-					PMUCAL_PREFIX, __func__, pd_id);
+			pr_err("%s %s: DTZPC save smc error. (pd_id : %d) returned: %d\n",
+					PMUCAL_PREFIX, __func__, pd_id, ret);
 			goto err_out;
 		}
 	}
