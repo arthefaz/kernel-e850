@@ -411,6 +411,7 @@ void exynos_dump_common_cpu_reg(void)
 
 static void exynos_dump_info(void *val)
 {
+#if 0
 	/*
 	 *  Output CPU Memory Error syndrome Register
 	 *  CPUMERRSR, L2MERRSR
@@ -499,6 +500,7 @@ static void exynos_dump_info(void *val)
 		pr_emerg("CPUMERRSR: %08lx_%08lx, L2MERRSR: %08lx_%08lx\n",
 				reg1, reg0, reg3, reg2);
 	}
+#endif
 #endif
 }
 
