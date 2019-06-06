@@ -684,6 +684,12 @@ config CHARGER_S2MCS02
 	help
 	  Say Y here to enable support for the S2MCS02 charger.
 
+config MANAGER_S2M_CHARGER
+	tristate "S2M_CHG_MANAGER battery driver"
+	help
+	  Say Y here to enable support for S2MXXXX charging manager driver.
+	  This charging manager driver supports only the basic functions.
+
 config FUELGAUGE_S2MU107
 	tristate "S2MU107 fuel gauge driver"
 	default n

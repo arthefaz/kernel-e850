@@ -91,4 +91,5 @@ obj-$(CONFIG_BATTERY_S2MU00X)   += s2mu00x_battery.o
 obj-$(CONFIG_BATTERY_S2MU00X_ERD)   += s2mu00x_erd_battery.o
 obj-$(CONFIG_CHARGER_S2MCS02)   += s2mcs02_charger.o
 obj-$(CONFIG_PM_S2MU106)  		+= s2mu106_pmeter.o
+obj-$(CONFIG_MANAGER_S2M_CHARGER)   += s2m_chg_manager.o
 obj-$(CONFIG_FUELGAUGE_S2MU107)		+= s2mu107_fuelgauge.o
