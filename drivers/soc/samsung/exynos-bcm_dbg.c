@@ -3379,6 +3379,11 @@ static int exynos_bcm_dbg_dump_config(struct exynos_bcm_dbg_data *data)
 	data->dump_addr.v_addr =
 		(void __iomem *)dbg_snapshot_get_item_vaddr(BCM_DSS_NAME);
 
+	if (!data->dump_addr.p_addr) {
+		BCM_ERR("%s: failed get dump address\n", __func__);
+		return -ENOMEM;
+	}
+
 	ret = exynos_bcm_dbg_set_dump_info(data);
 	if (ret) {
 		BCM_ERR("%s: failed set dump info\n", __func__);
@@ -3426,6 +3431,15 @@ static int exynos_bcm_dbg_init(struct exynos_bcm_dbg_data *data)
 		goto err_ipc_channel;
 	}
 
+#ifdef CONFIG_DEBUG_SNAPSHOT
+	ret = exynos_bcm_dbg_dump_config(data);
+	if (ret) {
+		BCM_ERR("%s: failed to dump config\n", __func__);
+		goto err_dump_config;
+	}
+#endif
+	data->dump_klog = false;
+
 	/* Initalize BCM Plugin */
 	ret = exynos_bcm_dbg_early_init(data);
 	if (ret) {
@@ -3441,15 +3455,6 @@ static int exynos_bcm_dbg_init(struct exynos_bcm_dbg_data *data)
 		goto err_pd_sync_init;
 	}
 
-#ifdef CONFIG_DEBUG_SNAPSHOT
-	ret = exynos_bcm_dbg_dump_config(data);
-	if (ret) {
-		BCM_ERR("%s: failed to dump config\n", __func__);
-		goto err_dump_config;
-	}
-#endif
-	data->dump_klog = false;
-
 	/* BCM plugin run */
 	if (data->initial_bcm_run) {
 		ret = exynos_bcm_dbg_run(data->initial_bcm_run, data);
@@ -3462,11 +3467,11 @@ static int exynos_bcm_dbg_init(struct exynos_bcm_dbg_data *data)
 	return 0;
 
 err_initial_run:
+err_pd_sync_init:
+err_early_init:
 #ifdef CONFIG_DEBUG_SNAPSHOT
 err_dump_config:
 #endif
-err_pd_sync_init:
-err_early_init:
 	exynos_bcm_dbg_ipc_channel_release(data);
 err_ipc_channel:
 err_parse_dt:
