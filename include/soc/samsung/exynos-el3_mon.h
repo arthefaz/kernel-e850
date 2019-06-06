@@ -23,7 +23,7 @@
 #define EXYNOS_GET_IN_PD_DOWN			(0)
 #define EXYNOS_WAKEUP_PD_DOWN			(1)
 
-#define EXYNOS_PD_RUNTIME_PM			(0)
+#define EXYNOS_PD_RUNTIME_PM			(2)
 #define EXYNOS_PD_CONNECTIVITY			(1)
 
 /* Connectivity sub system */
