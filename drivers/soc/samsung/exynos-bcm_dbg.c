@@ -1148,6 +1148,58 @@ out:
 }
 #endif
 
+static int exynos_bcm_dbg_glb_auto_ctrl(struct exynos_bcm_ipc_base_info *ipc_base_info,
+					unsigned int *glb_auto_en,
+					struct exynos_bcm_dbg_data *data)
+{
+	unsigned int cmd[4] = {0, 0, 0, 0};
+	unsigned int glb_en;
+	int ret = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&data->lock, flags);
+
+	if (!ipc_base_info) {
+		BCM_ERR("%s: pointer is NULL\n", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	exynos_bcm_dbg_set_base_cmd(cmd, ipc_base_info);
+
+	if (ipc_base_info->event_id != BCM_EVT_GLBAUTO_CONT) {
+		BCM_ERR("%s: Invalid Event ID(%d)\n", __func__,
+					ipc_base_info->event_id);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	glb_en = *glb_auto_en;
+	if (ipc_base_info->direction == BCM_EVT_SET) {
+		cmd[0] |= BCM_CMD_SET(glb_en, BCM_ONE_BIT_MASK,
+					BCM_EVT_GLBAUTO_SHIFT);
+
+	}
+
+	/* send command for BCM glb en */
+	ret = __exynos_bcm_dbg_ipc_send_data(IPC_BCM_DBG_EVENT, data, cmd);
+	if (ret) {
+		BCM_ERR("%s: Failed send data\n", __func__);
+		goto out;
+	}
+
+	if (ipc_base_info->direction == BCM_EVT_GET) {
+		glb_en = BCM_CMD_GET(cmd[0], BCM_ONE_BIT_MASK,
+					BCM_EVT_GLBAUTO_SHIFT);
+		*glb_auto_en = glb_en;
+	}
+
+out:
+	spin_unlock_irqrestore(&data->lock, flags);
+
+	return ret;
+}
+
 static int exynos_bcm_dbg_early_init(struct exynos_bcm_dbg_data *data)
 {
 	struct exynos_bcm_ipc_base_info ipc_base_info;
@@ -1266,6 +1318,17 @@ static int exynos_bcm_dbg_early_init(struct exynos_bcm_dbg_data *data)
 			BCM_ERR("%s: failed set IP control\n", __func__);
 			return ret;
 		}
+	}
+
+	/* glb_auto mode set */
+	exynos_bcm_dbg_set_base_info(&ipc_base_info, BCM_EVT_GLBAUTO_CONT,
+					BCM_EVT_SET, 0);
+
+	ret = exynos_bcm_dbg_glb_auto_ctrl(&ipc_base_info,
+					&data->glb_auto_en, data);
+	if (ret) {
+		BCM_ERR("%s: failed set mode\n", __func__);
+		return ret;
 	}
 
 	return 0;
@@ -2714,6 +2777,82 @@ static ssize_t store_mode_ctrl(struct file *fp, struct kobject *kobj,
 	return size;
 }
 
+static ssize_t show_get_glbauto(struct file *fp, struct kobject *kobj,
+		struct bin_attribute *battr, char *buf, loff_t off, size_t size)
+{
+	struct device *dev = container_of(kobj, struct device, kobj);
+	struct platform_device *pdev = container_of(dev,
+					struct platform_device, dev);
+	struct exynos_bcm_dbg_data *data = platform_get_drvdata(pdev);
+	struct exynos_bcm_ipc_base_info ipc_base_info;
+	unsigned int glb_en;
+	ssize_t count = 0;
+	int ret;
+
+	if (off > 0)
+		return 0;
+
+	exynos_bcm_dbg_set_base_info(&ipc_base_info, BCM_EVT_GLBAUTO_CONT,
+					BCM_EVT_GET, 0);
+
+	ret = exynos_bcm_dbg_glb_auto_ctrl(&ipc_base_info, &glb_en, data);
+	if (ret) {
+		count += snprintf(buf + count, PAGE_SIZE,
+					"failed get glb_en\n");
+		return count;
+	}
+
+	count += snprintf(buf + count, PAGE_SIZE, ": %d\n", glb_en);
+
+	return count;
+}
+
+static ssize_t show_glbauto_ctrl_help(struct file *fp, struct kobject *kobj,
+		struct bin_attribute *battr, char *buf, loff_t off, size_t size)
+{
+	ssize_t count = 0;
+
+	if (off > 0)
+		return 0;
+
+	/* help store_glbauto_ctrl */
+	count += snprintf(buf + count, PAGE_SIZE, "\n= glbauto_ctrl set help =\n");
+	count += snprintf(buf + count, PAGE_SIZE, "Usage:\n");
+	count += snprintf(buf + count, PAGE_SIZE, "echo [en] > glbauto_ctrl\n");
+
+	return count;
+}
+
+static ssize_t store_glbauto_ctrl(struct file *fp, struct kobject *kobj,
+		struct bin_attribute *battr, char *buf, loff_t off, size_t size)
+{
+	struct device *dev = container_of(kobj, struct device, kobj);
+	struct platform_device *pdev = container_of(dev,
+					struct platform_device, dev);
+	struct exynos_bcm_dbg_data *data = platform_get_drvdata(pdev);
+	struct exynos_bcm_ipc_base_info ipc_base_info;
+	unsigned int glb_en;
+	int ret;
+
+	if (off != 0)
+		return size;
+
+	ret = kstrtouint(buf, 0, &glb_en);
+	if (ret)
+		return ret;
+
+	exynos_bcm_dbg_set_base_info(&ipc_base_info, BCM_EVT_GLBAUTO_CONT,
+					BCM_EVT_SET, 0);
+
+	ret = exynos_bcm_dbg_glb_auto_ctrl(&ipc_base_info, &glb_en, data);
+	if (ret) {
+		BCM_ERR("%s:failed set glb_en\n", __func__);
+		return ret;
+	}
+
+	return size;
+}
+
 static ssize_t show_get_str(struct file *fp, struct kobject *kobj,
 		struct bin_attribute *battr, char *buf, loff_t off, size_t size)
 {
@@ -3157,6 +3296,9 @@ static BIN_ATTR(period_ctrl, 0640, NULL, store_period_ctrl, 0);
 static BIN_ATTR(get_mode, 0440, show_get_mode, NULL, 0);
 static BIN_ATTR(mode_ctrl_help, 0440, show_mode_ctrl_help, NULL, 0);
 static BIN_ATTR(mode_ctrl, 0640, NULL, store_mode_ctrl, 0);
+static BIN_ATTR(get_glbauto, 0440, show_get_glbauto, NULL, 0);
+static BIN_ATTR(glbauto_ctrl_help, 0440, show_glbauto_ctrl_help, NULL, 0);
+static BIN_ATTR(glbauto_ctrl, 0640, NULL, store_glbauto_ctrl, 0);
 static BIN_ATTR(get_str, 0440, show_get_str, NULL, 0);
 static BIN_ATTR(str_ctrl_help, 0440, show_str_ctrl_help, NULL, 0);
 static BIN_ATTR(str_ctrl, 0640, NULL, store_str_ctrl, 0);
@@ -3202,6 +3344,9 @@ static struct bin_attribute *exynos_bcm_dbg_sysfs_entries[] = {
 	&bin_attr_get_mode,
 	&bin_attr_mode_ctrl_help,
 	&bin_attr_mode_ctrl,
+	&bin_attr_get_glbauto,
+	&bin_attr_glbauto_ctrl_help,
+	&bin_attr_glbauto_ctrl,
 	&bin_attr_get_str,
 	&bin_attr_str_ctrl_help,
 	&bin_attr_str_ctrl,

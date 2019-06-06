@@ -75,6 +75,7 @@
 #define BCM_EVT_MODE_CONT_SHIFT			(7)
 #define BCM_EVT_STR_STATE_SHIFT			BCM_EVT_RUN_CONT_SHIFT
 #define BCM_EVT_IP_CONT_SHIFT			BCM_EVT_RUN_CONT_SHIFT
+#define BCM_EVT_GLBAUTO_SHIFT			BCM_EVT_RUN_CONT_SHIFT
 
 #define BCM_CMD_GET(cmd_data, mask, shift)	((cmd_data & (mask << shift)) >> shift)
 #define BCM_CMD_CLEAR(mask, shift)		(~(mask << shift))
@@ -114,6 +115,7 @@ enum exynos_bcm_event_id {
 	BCM_EVT_IP_CONT,
 	BCM_EVT_PERIOD_CONT,
 	BCM_EVT_MODE_CONT,
+	BCM_EVT_GLBAUTO_CONT,
 	BCM_EVT_EVENT_FLT_ID,
 	BCM_EVT_EVENT_FLT_OTHERS,
 	BCM_EVT_EVENT_SAMPLE_ID,
@@ -200,6 +202,7 @@ struct exynos_bcm_dbg_data {
 	unsigned int			initial_period;
 	unsigned int			initial_bcm_mode;
 	unsigned int			*initial_run_ip;
+	unsigned int			glb_auto_en;
 
 	unsigned int			bcm_run_state;
 	bool				available_stop_owner[STOP_OWNER_MAX];

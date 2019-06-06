@@ -627,6 +627,12 @@ static int exynos_bcm_init_control_parse_dt(struct device_node *np,
 		data->available_stop_owner[owner_index] = true;
 	}
 
+	ret = of_property_read_u32(np, "glb_auto_en", &data->glb_auto_en);
+	if (ret) {
+		BCM_ERR("%s: Failed get glb_auto_en \n", __func__);
+		return ret;
+	}
+
 	return 0;
 }
 
