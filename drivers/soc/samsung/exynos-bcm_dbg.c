@@ -30,7 +30,9 @@
 #include <soc/samsung/exynos-bcm_dbg.h>
 #include <soc/samsung/exynos-bcm_dbg-dt.h>
 #include <soc/samsung/exynos-bcm_dbg-dump.h>
+#ifdef CONFIG_EXYNOS_PD
 #include <soc/samsung/exynos-pd.h>
+#endif
 #include <soc/samsung/cal-if.h>
 #ifdef	CONFIG_EXYNOS_ITMON
 #include <soc/samsung/exynos-itmon.h>
@@ -91,10 +93,12 @@ static int __nocfi __exynos_bcm_dbg_ipc_send_data(enum exynos_bcm_dbg_ipc_type i
 				struct exynos_bcm_dbg_data *data,
 				unsigned int *cmd)
 {
-	int i, ret = 0;
+	int ret = 0;
 #if defined(CONFIG_EXYNOS_ADV_TRACER)
+	int i = 0;
 	struct adv_tracer_ipc_cmd config;
 #elif defined(CONFIG_EXYNOS_BCM_DBG_GNR)
+	int i = 0;
 	struct cmd_data config;
 #endif
 	enum exynos_bcm_err_code ipc_err;
@@ -210,6 +214,7 @@ void exynos_bcm_dbg_ipc_channel_release(struct exynos_bcm_dbg_data *data)
 }
 #endif
 
+#ifdef CONFIG_EXYNOS_PD
 static int exynos_bcm_dbg_early_pd_sync(unsigned int cal_pdid, bool on)
 {
 	unsigned int cmd[4] = {0, };
@@ -256,6 +261,8 @@ out:
 
 	return ret;
 }
+#endif
+
 int exynos_bcm_dbg_pd_sync(unsigned int cal_pdid, bool on)
 {
 	unsigned int cmd[4] = {0, };
@@ -312,9 +319,10 @@ EXPORT_SYMBOL(exynos_bcm_dbg_pd_sync);
 
 static int exynos_bcm_dbg_pd_sync_init(struct exynos_bcm_dbg_data *data)
 {
+	int ret = 0;
+#ifdef CONFIG_EXYNOS_PD
 	struct exynos_pm_domain *exynos_pd;
 	unsigned int pd_index, pd_size;
-	int ret = 0;
 
 	if (data->pd_sync_init) {
 		BCM_ERR("%s: already pd_sync_init(%s)\n",
@@ -347,15 +355,17 @@ static int exynos_bcm_dbg_pd_sync_init(struct exynos_bcm_dbg_data *data)
 	}
 
 	data->pd_sync_init = true;
+#endif
 
 	return ret;
 }
 
 static int exynos_bcm_dbg_pd_sync_exit(struct exynos_bcm_dbg_data *data)
 {
+	int ret = 0;
+#ifdef CONFIG_EXYNOS_PD
 	struct exynos_pm_domain *exynos_pd;
 	unsigned int pd_index, pd_size;
-	int ret = 0;
 
 	if (!data->pd_sync_init) {
 		BCM_ERR("%s: already pd_sync_exit(%s)\n",
@@ -383,6 +393,7 @@ static int exynos_bcm_dbg_pd_sync_exit(struct exynos_bcm_dbg_data *data)
 	}
 
 	data->pd_sync_init = false;
+#endif
 
 	return ret;
 }
@@ -3762,6 +3773,7 @@ static int exynos_bcm_dbg_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_EXYNOS_BCM_DBG_GNR
 static int __init bcm_setup(char *str)
 {
 	if (kstrtoul(str, 0, (unsigned long *)&bcm_addr))
@@ -3772,7 +3784,7 @@ out:
 	return -EINVAL;
 }
 __setup("reserve-fimc=", bcm_setup);
-
+#endif
 
 static struct platform_device_id exynos_bcm_dbg_driver_ids[] = {
 	{ .name = EXYNOS_BCM_DBG_MODULE_NAME, },
