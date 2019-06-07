@@ -1302,8 +1302,8 @@
 			bts_update = "false";
 			dfs_id = <ACPM_DVFS_AUD>;
 
-//			samsung,power-domain = <&pd_aud>;
-//			pd_name = "pd-aud";
+			samsung,power-domain = <&pd_aud>;
+			pd_name = "pd-aud";
 		};
 
 		devfreq_6: devfreq_dsp@17000070 {
