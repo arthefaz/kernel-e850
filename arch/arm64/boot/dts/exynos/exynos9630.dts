@@ -1145,4 +1145,10 @@
 	        compatible = "samsung,exynos-tee";
 		interrupts = <GIC_SPI INTREQ__TBASE IRQ_TYPE_LEVEL_HIGH>;
 	};
+
+	/* Secure RPMB */
+	ufs-srpmb {
+		compatible = "samsung,ufs-srpmb";
+		interrupts = <GIC_SPI INTREQ__RPMB IRQ_TYPE_LEVEL_HIGH>;
+	};
 };
