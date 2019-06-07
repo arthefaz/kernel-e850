@@ -45,6 +45,9 @@
 
 #include "../governor.h"
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/exynos_devfreq.h>
+
 static struct exynos_devfreq_data **devfreq_data;
 
 static u32 freq_array[6];
@@ -1147,6 +1150,8 @@ static int exynos_devfreq_target(struct device *dev, unsigned long *target_freq,
 #ifdef CONFIG_DEBUG_SNAPSHOT_FREQ
 	dbg_snapshot_freq(data->ess_flag, data->old_freq, data->new_freq, DSS_FLAG_OUT);
 #endif
+
+	trace_exynos_devfreq(data->old_freq, data->new_freq, dev_name(data->dev));
 
 	data->old_freq = data->new_freq;
 	data->old_idx = data->new_idx;
