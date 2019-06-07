@@ -86,6 +86,7 @@ obj-$(CONFIG_FUELGAUGE_S2MU004) += s2mu004_fuelgauge.o
 obj-$(CONFIG_CHARGER_S2MU004)   += s2mu004_charger.o
 obj-$(CONFIG_FUELGAUGE_S2MU106) += s2mu106_fuelgauge.o
 obj-$(CONFIG_CHARGER_S2MU106)   += s2mu106_charger.o
+obj-$(CONFIG_CHARGER_S2MU107)   += s2mu107_switching_charger.o
 obj-$(CONFIG_BATTERY_S2MU00X)   += s2mu00x_battery.o
 obj-$(CONFIG_BATTERY_S2MU00X_ERD)   += s2mu00x_erd_battery.o
 obj-$(CONFIG_CHARGER_S2MCS02)   += s2mcs02_charger.o
