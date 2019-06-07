@@ -379,9 +379,9 @@ int cal_asv_get_tablever(void)
 }
 
 #ifdef CONFIG_CP_PMUCAL
-void cal_cp_init(void)
+int cal_cp_init(void)
 {
-	pmucal_cp_init();
+	return pmucal_cp_init();
 }
 
 int cal_cp_status(void)
@@ -389,14 +389,14 @@ int cal_cp_status(void)
 	return pmucal_cp_status();
 }
 
-void cal_cp_reset_assert(void)
+int cal_cp_reset_assert(void)
 {
-	pmucal_cp_reset_assert();
+	return pmucal_cp_reset_assert();
 }
 
-void cal_cp_reset_release(void)
+int cal_cp_reset_release(void)
 {
-	pmucal_cp_reset_release();
+	return pmucal_cp_reset_release();
 }
 
 void cal_cp_active_clear(void)

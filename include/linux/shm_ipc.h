@@ -1,99 +1,68 @@
 /*
- * Copyright (C) 2014 Samsung Electronics Co.Ltd
- * http://www.samsung.com
+ * Copyright (C) 2014-2019, Samsung Electronics.
  *
- * Shared Memory driver
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
  *
- * This program is free software; you can redistribute  it and/or modify it
- * under  the terms of  the GNU General  Public License as published by the
- * Free Software Foundation;  either version 2 of the  License, or (at your
- * option) any later version.
-*/
-#ifndef SHMEM_IPC_H
-#define SHMEM_IPC_H
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
-struct shdmem_info {
-	unsigned int base;
-	unsigned int size;
-};
+#ifndef __SHMEM_IPC_H__
+#define __SHMEM_IPC_H__
 
-#if IS_ENABLED(CONFIG_SHM_IPC)
-unsigned long shm_get_phys_base(void);
-unsigned shm_get_phys_size(void);
-unsigned shm_get_boot_size(void);
-unsigned shm_get_ipc_rgn_offset(void);
-unsigned shm_get_ipc_rgn_size(void);
-unsigned shm_get_zmb_size(void);
-unsigned shm_get_vss_base(void);
-unsigned shm_get_vss_size(void);
-unsigned shm_get_vparam_base(void);
-unsigned shm_get_vparam_size(void);
-unsigned shm_get_acpm_size(void);
-unsigned shm_get_cp_size(void);
-unsigned long shm_get_security_param2(unsigned long mode, u32 bl_size);
-unsigned long shm_get_security_param3(unsigned long mode, u32 main_size);
+#define SHMEM_CP		0
+#define SHMEM_VSS		1
+#define SHMEM_L2B		2
+#define SHMEM_IPC		3
+#define SHMEM_VPA		4
+#define SHMEM_BTL		5
+#define SHMEM_PKTPROC		6
+#define SHMEM_ZMC		7
+#define SHMEM_C2C		8
+#define SHMEM_MSI		9
 
-void __iomem *shm_request_region(unsigned long sh_addr, unsigned size);
-void __iomem *shm_get_boot_region(void);
-void __iomem *shm_get_ipc_region(void);
-void __iomem *shm_get_zmb_region(void);
-void __iomem *shm_get_vss_region(void);
-void __iomem *shm_get_acpm_region(void);
+#if defined(CONFIG_SHM_IPC)
+extern int cp_shmem_get_mem_map_on_cp_flag(u32 cp_num);
+extern void __iomem *cp_shmem_get_region(u32 cp, u32 idx);
+extern void __iomem *cp_shmem_get_nc_region(unsigned long base, u32 size);
+extern void cp_shmem_release_region(u32 cp, u32 idx);
+extern void cp_shmem_release_rmem(u32 cp, u32 idx);
+extern unsigned long cp_shmem_get_base(u32 cp, u32 idx);
+extern u32 cp_shmem_get_size(u32 cp, u32 idx);
 
-void shm_release_region(void *v_addr);
-void shm_release_regions(void);
-void clean_vss_magic_code(void);
-int shm_get_use_cp_memory_map_flag(void);
+/* Legacy functions */
+extern unsigned long shm_get_msi_base(void);
+extern void __iomem *shm_get_vss_region(void);
+extern unsigned long shm_get_vss_base(void);
+extern u32 shm_get_vss_size(void);
+extern void __iomem *shm_get_vparam_region(void);
+extern unsigned long shm_get_vparam_base(void);
+extern u32 shm_get_vparam_size(void);
 
-#ifdef CONFIG_CP_RAM_LOGGING
-unsigned long shm_get_cplog_base(void);
-unsigned shm_get_cplog_size(void);
-int shm_get_cplog_flag(void);
-void __iomem *shm_get_cplog_region(void);
-#endif
-#else
-static inline unsigned long shm_get_phys_base(void) { return 0; }
-static inline unsigned shm_get_phys_size(void) { return 0; }
-static inline unsigned shm_get_boot_size(void) { return 0; }
-static inline unsigned shm_get_ipc_rgn_offset(void) { return 0; }
-static inline unsigned shm_get_ipc_rgn_size(void) { return 0; }
-static inline unsigned shm_get_zmb_size(void) { return 0; }
-static inline unsigned shm_get_vss_base(void) { return 0; }
-static inline unsigned shm_get_vss_size(void) { return 0; }
-static inline unsigned shm_get_vparam_base(void) { return 0; }
-static inline unsigned shm_get_vparam_size(void) { return 0; }
-static inline unsigned shm_get_acpm_size(void) { return 0; }
-static inline unsigned shm_get_cp_size(void) { return 0; }
-static inline unsigned long shm_get_security_param2(unsigned long mode, u32 bl_size)
-{
-	 return 0;
-}
-static inline unsigned long shm_get_security_param3(unsigned long mode, u32 main_size)
-{
-	 return 0;
-}
+#else /* CONFIG_SHM_IPC */
 
-static inline void __iomem *shm_request_region(unsigned long sh_addr, unsigned size)
-{
-	return 0;
-}
-static inline void __iomem *shm_get_boot_region(void) { return NULL; }
-static inline void __iomem *shm_get_ipc_region(void) { return NULL; }
-static inline void __iomem *shm_get_zmb_region(void) { return NULL; }
-static inline void __iomem *shm_get_vss_region(void) { return NULL; }
-static inline void __iomem *shm_get_acpm_region(void) { return NULL; }
+static inline int cp_shmem_get_mem_map_on_cp_flag(u32 cp_num) { return 0; }
+static inline void __iomem *cp_shmem_get_region(u32 cp, u32 idx) { return NULL; }
+static inline void __iomem *cp_shmem_get_nc_region(unsigned long base, u32 size) { return NULL; }
+static inline void cp_shmem_release_region(u32 cp, u32 idx) { return; }
+static inline void cp_shmem_release_rmem(u32 cp, u32 idx) { return; }
+static inline unsigned long cp_shmem_get_base(u32 cp, u32 idx) { return 0; }
+static inline u32 cp_shmem_get_size(u32 cp, u32 idx) { return 0; }
 
-static inline void shm_release_region(void *v_addr) {}
-static inline void shm_release_regions(void) {}
-static inline void clean_vss_magic_code(void) {}
-static inline int shm_get_use_cp_memory_map_flag(void) { return 0; }
+/* Legacy functions */
+static inline unsigned long shm_get_msi_base(void) { return 0; }
+static inline void __iomem *shm_get_vss_region(void) { return NULL;}
+static inline unsigned long shm_get_vss_base(void) { return 0; }
+static inline u32 shm_get_vss_size(void) { return 0; }
+static inline void __iomem *shm_get_vparam_region(void) { return NULL; }
+static inline unsigned long shm_get_vparam_base(void) { return 0; }
+static inline u32 shm_get_vparam_size(void) { return 0; }
 
-#ifdef CONFIG_CP_RAM_LOGGING
-static inline unsigned long shm_get_cplog_base(void) { return 0; }
-static inline unsigned shm_get_cplog_size(void) { return 0; }
-static inline int shm_get_cplog_flag(void) { return 0; }
-static inline void __iomem *shm_get_cplog_region(void) { return NULL; }
-#endif
-#endif
+#endif /* CONFIG_SHM_IPC */
 
-#endif
+#endif /* __SHMEM_IPC_H__ */

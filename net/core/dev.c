@@ -5635,6 +5635,20 @@ out_unlock:
 	return work;
 }
 
+#if defined(CONFIG_EXYNOS_MODEM_IF)
+struct napi_struct *napi_get_current(void)
+{
+#ifdef CONFIG_MODEM_IF_NET_GRO
+        struct softnet_data *sd = this_cpu_ptr(&softnet_data);
+
+        return sd->current_napi;
+#else
+        return NULL;
+#endif
+}
+EXPORT_SYMBOL(napi_get_current);
+#endif
+
 static __latent_entropy void net_rx_action(struct softirq_action *h)
 {
 	struct softnet_data *sd = this_cpu_ptr(&softnet_data);

@@ -32,7 +32,7 @@
 
 #include <soc/samsung/exynos-bcm_dbg.h>
 
-#if defined(CONFIG_SEC_MODEM_IF)
+#if defined(CONFIG_EXYNOS_MODEM_IF)
 #include <soc/samsung/exynos-modem-ctrl.h>
 #endif
 
@@ -243,7 +243,7 @@ static void exynos_prepare_panic_entry(void *val)
 
 static void exynos_prepare_panic_exit(void *val)
 {
-#if defined(CONFIG_SEC_MODEM_IF)
+#if defined(CONFIG_EXYNOS_MODEM_IF)
 	modem_send_panic_noti_ext();
 #endif
 #if defined(CONFIG_ACPM_DVFS)

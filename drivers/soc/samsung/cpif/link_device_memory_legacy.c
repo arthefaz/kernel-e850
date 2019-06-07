@@ -1,0 +1,309 @@
+#include "include/legacy.h"
+#include "modem_utils.h"
+#include "link_device.h"
+
+int create_legacy_link_device(struct mem_link_device *mld)
+{
+	struct legacy_map *map;
+	struct legacy_ipc_device *dev;
+	struct legacy_link_device *bl = &mld->legacy_link_dev;
+
+	bl->ld = &mld->link_dev;
+	map = (struct legacy_map *)mld->base;
+
+	/* magic code and access enable fields */
+	bl->magic = (u32 __iomem *)&map->magic;
+	bl->mem_access = (u32 __iomem *)&map->mem_access;
+
+	/* IPC_MAP_FMT */
+	bl->dev[IPC_MAP_FMT] = kzalloc(sizeof(struct legacy_ipc_device), GFP_KERNEL);
+	dev = bl->dev[IPC_MAP_FMT];
+
+	dev->id = IPC_MAP_FMT;
+	strcpy(dev->name, "FMT");
+
+	spin_lock_init(&dev->txq.lock);
+	atomic_set(&dev->txq.busy, 0);
+	dev->txq.head = &map->fmt_tx_head;
+	dev->txq.tail = &map->fmt_tx_tail;
+	dev->txq.buff = &map->fmt_tx_buff[0];
+	dev->txq.size = BOOT_FMT_TX_BUFF_SZ;
+
+	spin_lock_init(&dev->rxq.lock);
+	atomic_set(&dev->rxq.busy, 0);
+	dev->rxq.head = &map->fmt_rx_head;
+	dev->rxq.tail = &map->fmt_rx_tail;
+	dev->rxq.buff = &map->fmt_rx_buff[0];
+	dev->rxq.size = BOOT_FMT_RX_BUFF_SZ;
+
+	dev->msg_mask = MASK_SEND_FMT;
+	dev->req_ack_mask = MASK_REQ_ACK_FMT;
+	dev->res_ack_mask = MASK_RES_ACK_FMT;
+
+	dev->skb_txq = kzalloc(sizeof(struct sk_buff_head), GFP_KERNEL);
+	dev->skb_rxq = kzalloc(sizeof(struct sk_buff_head), GFP_KERNEL);
+	skb_queue_head_init(dev->skb_txq);
+	skb_queue_head_init(dev->skb_rxq);
+
+	dev->req_ack_cnt[TX] = 0;
+	dev->req_ack_cnt[RX] = 0;
+
+	spin_lock_init(&dev->tx_lock);
+
+#ifdef CONFIG_MODEM_IF_LEGACY_QOS
+	/* IPC_MAP_HPRIO_RAW */
+	bl->dev[IPC_MAP_HPRIO_RAW] = kzalloc(sizeof(struct legacy_ipc_device), GFP_KERNEL);
+	dev = bl->dev[IPC_MAP_HPRIO_RAW];
+
+	dev->id = IPC_MAP_HPRIO_RAW;
+	strcpy(dev->name, "HPRIO_RAW");
+
+	spin_lock_init(&dev->txq.lock);
+	atomic_set(&dev->txq.busy, 0);
+	dev->txq.head = &map->raw_hprio_tx_head;
+	dev->txq.tail = &map->raw_hprio_tx_tail;
+	dev->txq.buff = &map->raw_hprio_tx_buff[0];
+	dev->txq.size = BOOT_RAW_HPRIO_TX_BUFF_SZ;
+
+	spin_lock_init(&dev->rxq.lock);
+	atomic_set(&dev->rxq.busy, 0);
+	dev->rxq.head = &map->raw_hprio_rx_head;
+	dev->rxq.tail = &map->raw_hprio_rx_tail;
+	dev->rxq.buff = &map->raw_hprio_rx_buff[0];
+	dev->rxq.size = BOOT_RAW_HPRIO_RX_BUFF_SZ;
+
+	dev->msg_mask = MASK_SEND_RAW;
+	dev->req_ack_mask = MASK_REQ_ACK_RAW;
+	dev->res_ack_mask = MASK_RES_ACK_RAW;
+
+	dev->skb_txq = kzalloc(sizeof(struct sk_buff_head), GFP_KERNEL);
+	dev->skb_rxq = kzalloc(sizeof(struct sk_buff_head), GFP_KERNEL);
+	skb_queue_head_init(dev->skb_txq);
+	skb_queue_head_init(dev->skb_rxq);
+
+	dev->req_ack_cnt[TX] = 0;
+	dev->req_ack_cnt[RX] = 0;
+
+	spin_lock_init(&dev->tx_lock);
+#endif
+
+	/* IPC_MAP_NORM_RAW */
+	bl->dev[IPC_MAP_NORM_RAW] = kzalloc(sizeof(struct legacy_ipc_device), GFP_KERNEL);
+	dev = bl->dev[IPC_MAP_NORM_RAW];
+
+	dev->id = IPC_MAP_NORM_RAW;
+	strcpy(dev->name, "NORM_RAW");
+
+	spin_lock_init(&dev->txq.lock);
+	atomic_set(&dev->txq.busy, 0);
+	dev->txq.head = &map->raw_tx_head;
+	dev->txq.tail = &map->raw_tx_tail;
+	dev->txq.buff = &map->raw_tx_buff[0];
+	dev->txq.size = BOOT_RAW_TX_BUFF_SZ;
+
+	spin_lock_init(&dev->rxq.lock);
+	atomic_set(&dev->rxq.busy, 0);
+	dev->rxq.head = &map->raw_rx_head;
+	dev->rxq.tail = &map->raw_rx_tail;
+	dev->rxq.buff = &map->raw_rx_buff[0];
+	dev->rxq.size = BOOT_RAW_RX_BUFF_SZ;
+
+	dev->msg_mask = MASK_SEND_RAW;
+	dev->req_ack_mask = MASK_REQ_ACK_RAW;
+	dev->res_ack_mask = MASK_RES_ACK_RAW;
+
+	dev->skb_txq = kzalloc(sizeof(struct sk_buff_head), GFP_KERNEL);
+	dev->skb_rxq = kzalloc(sizeof(struct sk_buff_head), GFP_KERNEL);
+	skb_queue_head_init(dev->skb_txq);
+	skb_queue_head_init(dev->skb_rxq);
+
+	dev->req_ack_cnt[TX] = 0;
+	dev->req_ack_cnt[RX] = 0;
+
+	spin_lock_init(&dev->tx_lock);
+
+	return 0;
+}
+
+int init_legacy_link(struct legacy_link_device *bl)
+{
+	unsigned int magic;
+	unsigned int mem_access;
+	int i = 0;
+
+	iowrite32(0, bl->magic);
+	iowrite32(0, bl->mem_access);
+
+	for (i = 0; i < MAX_SIPC_MAP; i++) {
+		struct legacy_ipc_device *dev = bl->dev[i];
+		/* initialize circ_queues */
+		iowrite32(0, dev->txq.head);
+		iowrite32(0, dev->txq.tail);
+		iowrite32(0, dev->rxq.head);
+		iowrite32(0, dev->rxq.tail);
+
+		/* initialize skb queues */
+		skb_queue_purge(dev->skb_txq);
+		atomic_set(&dev->txq.busy, 0);
+		dev->req_ack_cnt[TX] = 0;
+		skb_queue_purge(dev->skb_rxq);
+		atomic_set(&dev->rxq.busy, 0);
+		dev->req_ack_cnt[RX] = 0;
+	}
+
+	iowrite32(bl->ld->magic_ipc, bl->magic);
+	iowrite32(1, bl->mem_access);
+
+	magic = ioread32(bl->magic);
+	mem_access = ioread32(bl->mem_access);
+	if (magic != bl->ld->magic_ipc || mem_access != 1)
+		return -EACCES;
+
+	return 0;
+}
+
+int xmit_to_legacy_link(struct mem_link_device *mld, enum sipc_ch_id ch,
+			struct sk_buff *skb, enum legacy_ipc_map legacy_buffer_index)
+{
+	struct legacy_ipc_device *dev = mld->legacy_link_dev.dev[legacy_buffer_index];
+	struct link_device *ld = &mld->link_dev;
+	char *src = skb->data;
+	char *dst = get_txq_buff(dev);
+	unsigned int qsize = 0;
+	unsigned int in = 0;
+	unsigned int out = 0;
+	unsigned int count = skb->len;
+	int space = 0;
+	int tried = 0;
+
+	while (1) {
+		qsize = get_txq_buff_size(dev);
+		in = get_txq_head(dev);
+		out = get_txq_tail(dev);
+
+		/* is queue valid? */
+		if (!circ_valid(qsize, in, out)) {
+			mif_err("%s: ERR! Invalid %s_TXQ{qsize:%d in:%d out:%d}\n",
+					ld->name, dev->name, qsize, in, out);
+			return -EIO;
+		}
+		/* space available? */
+		space = circ_get_space(qsize, in, out);
+		if (unlikely(space < count)) {
+			mif_err("%s: tried %d NOSPC %s_TX{qsize:%d in:%d out:%d free:%d len:%d}\n",
+					ld->name, tried, dev->name, qsize, in, out, space, count);
+			tried++;
+			if (tried >= 20)
+				return -ENOSPC;
+			if (in_interrupt())
+				mdelay(50);
+			else
+				msleep(50);
+			continue;
+		}
+
+		barrier();
+
+		circ_write(dst, src, qsize, in, count);
+
+		barrier();
+
+		set_txq_head(dev, circ_new_ptr(qsize, in, count));
+
+		/* Commit the item before incrementing the head */
+		smp_mb();
+
+		break;
+
+	}
+
+#ifdef DEBUG_MODEM_IF_LINK_TX
+	mif_pkt(ch, "LNK-TX", skb);
+#endif
+
+	dev_kfree_skb_any(skb);
+
+	return count;
+}
+
+
+struct sk_buff *recv_from_legacy_link(struct mem_link_device *mld,
+		struct legacy_ipc_device *dev, unsigned int in, int *ret)
+{
+	struct link_device *ld = &mld->link_dev;
+	struct sk_buff *skb;
+	char *src = get_rxq_buff(dev);
+	unsigned int qsize = get_rxq_buff_size(dev);
+	unsigned int out = get_rxq_tail(dev);
+	unsigned int rest = circ_get_usage(qsize, in, out);
+	unsigned int len;
+	char hdr[EXYNOS_HEADER_SIZE];
+
+	/* Copy the header in a frame to the header buffer */
+	switch (ld->protocol) {
+	case PROTOCOL_SIPC:
+		circ_read(hdr, src, qsize, out, SIPC5_MIN_HEADER_SIZE);
+		break;
+	case PROTOCOL_SIT:
+		circ_read(hdr, src, qsize, out, EXYNOS_HEADER_SIZE);
+		break;
+	default:
+		mif_err("procotol error %d\n", ld->protocol);
+		break;
+	}
+
+	/* Check the config field in the header */
+	if (unlikely(!ld->is_start_valid(hdr))) {
+		mif_err("%s: ERR! %s BAD CFG 0x%02X (in:%d out:%d rest:%d)\n",
+			ld->name, dev->name, hdr[SIPC5_CONFIG_OFFSET],
+			in, out, rest);
+		goto bad_msg;
+	}
+
+	/* Verify the length of the frame (data + padding) */
+	len = ld->get_total_len(hdr);
+	if (unlikely(len > rest)) {
+		mif_err("%s: ERR! %s BAD LEN %d > rest %d\n",
+			ld->name, dev->name, len, rest);
+		goto bad_msg;
+	}
+
+	/* Allocate an skb */
+	skb = mem_alloc_skb(len);
+	if (!skb) {
+		mif_err("%s: ERR! %s mem_alloc_skb(%d) fail\n",
+			ld->name, dev->name, len);
+		*ret = -ENOMEM;
+		goto no_mem;
+	}
+
+	/* Read the frame from the RXQ */
+	circ_read(skb_put(skb, len), src, qsize, out, len);
+
+	/* Update tail (out) pointer to the frame to be read in the future */
+	set_rxq_tail(dev, circ_new_ptr(qsize, out, len));
+
+	/* Finish reading data before incrementing tail */
+	smp_mb();
+
+#ifdef DEBUG_MODEM_IF
+	/* Record the time-stamp */
+	getnstimeofday(&skbpriv(skb)->ts);
+#endif
+
+	return skb;
+
+bad_msg:
+	mif_err("%s%s%s: ERR! BAD MSG: %02x %02x %02x %02x\n",
+		ld->name, arrow(RX), ld->mc->name,
+		hdr[0], hdr[1], hdr[2], hdr[3]);
+	set_rxq_tail(dev, in);	/* Reset tail (out) pointer */
+	if (ld->link_trigger_cp_crash) {
+		ld->link_trigger_cp_crash(mld, CRASH_REASON_MIF_RX_BAD_DATA,
+					"ERR! BAD MSG from CP");
+	}
+	*ret = -EINVAL;
+
+no_mem:
+	return NULL;
+}

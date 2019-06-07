@@ -8,7 +8,7 @@
  * under  the terms of  the GNU General  Public License as published by the
  * Free Software Foundation;  either version 2 of the  License, or (at your
  * option) any later version.
- */
+*/
 #ifndef MCU_IPC_H
 #define MCU_IPC_H
 
@@ -40,7 +40,7 @@ enum mcu_ipc_region {
 };
 
 int mbox_request_irq(enum mcu_ipc_region id, u32 int_num,
-		void (*handler)(void *), void *data);
+		irq_handler_t handler, void *data);
 int mbox_enable_irq(enum mcu_ipc_region id, u32 int_num);
 int mbox_check_irq(enum mcu_ipc_region id, u32 int_num);
 int mbox_disable_irq(enum mcu_ipc_region id, u32 int_num);
@@ -54,7 +54,6 @@ void mbox_update_value(enum mcu_ipc_region id, u32 mbx_num,
 					u32 msg, u32 mask, u32 pos);
 u32 mbox_extract_value(enum mcu_ipc_region id, u32 mbx_num, u32 mask, u32 pos);
 void mbox_sw_reset(enum mcu_ipc_region id);
-void mcu_ipc_clear_all_interrupt(enum mcu_ipc_region id);
-int mcu_ipc_set_affinity(enum mcu_ipc_region id, int affinity);
+void mcu_ipc_reg_dump(enum mcu_ipc_region id);
 
 #endif

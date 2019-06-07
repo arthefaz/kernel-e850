@@ -45,6 +45,11 @@ obj-$(CONFIG_ARCH_EXYNOS)	+= exynos-topology.o
 # OCP
 obj-$(CONFIG_EXYNOS_OCP)	+= exynos-ocp.o
 
+# CP
+ifneq ($(CONFIG_CP_PMUCAL), y)
+obj-$(CONFIG_EXYNOS_MODEM_IF) += pmu-cp.o
+endif
+
 #CPU Power Management
 obj-$(CONFIG_ARCH_EXYNOS)      += exynos-cpupm.o
 
@@ -73,6 +78,8 @@ obj-$(CONFIG_EXYNOS_HIU)	+= exynos-hiu.o
 # HAFM & HAFM-TB
 obj-$(CONFIG_EXYNOS_PSTATE_HAFM)	+= exynos-hafm.o
 obj-$(CONFIG_EXYNOS_PSTATE_HAFM_TB)	+= exynos-hafm-tb.o
+
+obj-$(CONFIG_EXYNOS_MODEM_IF) += cpif/
 
 # Exynos PPMPU fail detector
 obj-$(CONFIG_EXYNOS_PPMPU_FAIL_DETECTOR)	+= exynos-ppmpu.o
