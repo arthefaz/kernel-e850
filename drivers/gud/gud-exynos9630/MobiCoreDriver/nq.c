@@ -100,9 +100,6 @@ static struct {
 	unsigned long		default_affinity_mask;
 	atomic_t		tee_affinity;
 
-	/* TEE time */
-	struct timer_list	tee_timer_list;
-
 	/* TEE workers */
 	atomic_t		workers_started;
 	atomic_t		workers_run;
@@ -716,24 +713,6 @@ static int nq_boot_tee(void)
 	return ret;
 }
 
-static void tee_timer_rearm(void)
-{
-	/* Trigger again around 1 millisecond in the future */
-	mod_timer(&l_ctx.tee_timer_list, jiffies + msecs_to_jiffies(1));
-}
-
-#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
-static void tee_timer_handler(struct timer_list *t)
-#else
-static void tee_timer_handler(unsigned long cookie)
-#endif
-{
-	if (l_ctx.tee_scheduler_run) {
-		nq_update_time();
-		tee_timer_rearm();
-	}
-}
-
 static int tee_worker_wait(void)
 {
 	int ret, workers;
@@ -808,6 +787,9 @@ static int tee_schedule(uintptr_t arg)
 			tee_set_affinity();
 			local_aff = tee_aff;
 		}
+
+		/* Refresh MCI time */
+		nq_update_time();
 
 		/* Relinquish current CPU to TEE */
 		ret = fc_yield(0, 0, &resp);
@@ -966,9 +948,6 @@ static int tee_worker(void *arg)
 		else
 			mc_dev_err(ret, "failed to unregister log buffer");
 
-		/* Stop TEE timer */
-		del_timer(&l_ctx.tee_timer_list);
-
 		/* Disable TEE clock */
 		mc_clock_disable();
 	}
@@ -1072,16 +1051,6 @@ int nq_start(void)
 	/* Create worker debugfs entry */
 	debugfs_create_file("workers_counters", 0600, g_ctx.debug_dir, NULL,
 			    &mc_debug_tee_worker_ops);
-
-	/* Setup TEE timer */
-#if KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE
-	timer_setup(&l_ctx.tee_timer_list, tee_timer_handler, 0);
-#else
-	setup_timer(&l_ctx.tee_timer_list, tee_timer_handler, 0);
-#endif
-
-	/* Start TEE timer, this will regularly update the REE time from now */
-	tee_timer_rearm();
 
 	return 0;
 }
