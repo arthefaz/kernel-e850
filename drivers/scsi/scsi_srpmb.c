@@ -355,13 +355,13 @@ int init_wsm(struct device *dev)
 			dev_err(&sr_pdev->dev, "Failed to setup pm notifier\n");
 			goto out_srpmb_init_fail;
 		}
-#ifdef CONFIG_EXYNOS_SMC_LOGGING
+
 		ret = exynos_smc(SMC_SRPMB_WSM, rpmb_ctx->phy_addr, hwirq, 0);
 		if (ret) {
 			dev_err(&sr_pdev->dev, "wsm smc init failed: %x\n", ret);
 			goto out_srpmb_unregister_pm;
 		}
-#endif
+
 		wakeup_source_init(&rpmb_ctx->wakesrc, "srpmb");
 		spin_lock_init(&rpmb_ctx->lock);
 		INIT_WORK(&rpmb_ctx->work, srpmb_worker);
@@ -373,10 +373,8 @@ int init_wsm(struct device *dev)
 
 	return 0;
 
-#ifdef CONFIG_EXYNOS_SMC_LOGGING
 out_srpmb_unregister_pm:
 	unregister_pm_notifier(&rpmb_ctx->pm_notifier);
-#endif
 out_srpmb_init_fail:
 	if (rpmb_ctx->srpmb_queue)
 		destroy_workqueue(rpmb_ctx->srpmb_queue);
