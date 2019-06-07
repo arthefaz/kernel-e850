@@ -986,3 +986,10 @@
 		};
 	};
 };
+
+&ufs {
+	vcc-supply = <&l18_reg>;
+	vccq2-supply = <&l17_reg>;
+	vcc-max-microamp = <3375000>;
+	vccq2-max-microamp = <2275000>;
+};
