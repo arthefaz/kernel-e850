@@ -740,6 +740,11 @@
 	status = "okay";
 };
 
+&fmp_0 {
+	exynos,block-type = "sda";
+	exynos,fips-block_offset = <5>;
+};
+
 &panel_0 {
 	/* reset, power */
 	gpios = <&gpq0 2 0x1>, <&gpp3 2 0x1>;

@@ -42,6 +42,7 @@
 		pinctrl5 = &pinctrl_5;
 		pinctrl6 = &pinctrl_6;
 		uart0 = &serial_0;
+		fmp0 = &fmp_0;
 	};
 
 	ect {
@@ -485,6 +486,10 @@
 	sysreg_fsys_system_controller: system-controller@13420000 {
 		compatible = "samsung,exynos9610-sysreg-fsys", "syscon";
 		reg = <0x0 0x13420000 0x1020>;
+	};
+
+	fmp_0: fmp {
+		compatible = "samsung,exynos-fmp";
 	};
 
 	ufs: ufs@0x13600000 {
