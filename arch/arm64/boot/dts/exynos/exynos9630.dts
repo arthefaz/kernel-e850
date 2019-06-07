@@ -652,7 +652,7 @@
 		#address-cells = <2>;
 		#size-cells = <1>;
 		ranges;
-		//samsung,power-domain = <&pd_fsys0a>;
+		samsung,power-domain = <&pd_usb>;
 		status = "disabled";
 
 		usbdrd_dwc3: dwc3 {

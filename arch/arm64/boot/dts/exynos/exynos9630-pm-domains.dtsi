@@ -140,7 +140,7 @@
 		reg = <0x0 0x10e62000 0x20>;
 		cal_id = <0xB138000E>;
 		need_smc = <0x13010204>;
-		status = "disabled";// "okay";
+		status = "okay";
 		power-down-ok = <PD_OK_USB>;
 	};
 
