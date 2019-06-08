@@ -70,7 +70,7 @@
 	};
 
 	chosen: chosen {
-		bootargs = "earlycon=exynos4210,0x13800000 console=ttySAC0,115200n8 skip_initramfs rootwait ro init=/init root=/dev/sda1 clk_ignore_unused androidboot.hardware=exynos9630 androidboot.selinux=permissive androidboot.debug_level=0x4948 firmware_class.path=/vendor/firmware";
+		bootargs = "earlycon=exynos4210,0x13800000 console=ttySAC0,115200n8 skip_initramfs rootwait ro init=/init root=/dev/sda9 clk_ignore_unused androidboot.hardware=exynos9630 androidboot.selinux=permissive androidboot.debug_level=0x4948 firmware_class.path=/vendor/firmware";
 		linux,initrd-start = <0x84000000>;
 		linux,initrd-end = <0x841FFFFF>;
 	};
