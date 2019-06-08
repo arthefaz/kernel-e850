@@ -27,6 +27,8 @@
 
 #define BITLEN_LDFW_ERROR			(4)
 #define MASK_LDFW_ERROR				(0xF)
+#define LOG_PRINT_BUFFER_SIZE			(120)
+#define MAX_LOG_COUNT				(510)
 
 #define SHIFT_LDFW_MAGIC			(28)
 #define MASK_LDFW_MAGIC				(0xF << SHIFT_LDFW_MAGIC)
@@ -73,9 +75,9 @@ struct seclog_ctx {
 
 /* Log header information */
 struct log_header_info {
-	unsigned int log_len;
 	unsigned int tv_sec;
 	unsigned int tv_usec;
+	char buf[LOG_PRINT_BUFFER_SIZE];
 };
 
 /* Secure log information shared with EL3 Monitor and LDFWs */
@@ -84,15 +86,12 @@ struct sec_log_info {
 	unsigned int log_write_cnt;
 	/* The count to read log */
 	unsigned int log_read_cnt;
-	/*
-	 * The log count when log_buf
-	 * returns to initial_log_buf
-	 */
-	unsigned int log_return_cnt;
-	/* Start log buffer address */
-	unsigned long start_log_addr;
 	/* Initial log buffer address */
 	unsigned long initial_log_addr;
+	/* Log buffer flag  */
+	unsigned int log_buffer_full_flag;
+	/* Blocked log count */
+	unsigned int blocked_log_cnt;
 };
 #endif	/* __ASSEMBLY__ */
 

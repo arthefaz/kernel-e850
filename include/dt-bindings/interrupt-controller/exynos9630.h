@@ -239,6 +239,7 @@
 #define INTREQ__G2D		221
 
 #define INTREQ__TBASE	223
+#define INTREQ__SECURE_LOG      224
 #define INTREQ__RPMB	225
 
 #define INTREQ__JPEG		226
