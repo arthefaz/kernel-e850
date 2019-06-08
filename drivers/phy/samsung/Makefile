@@ -2,6 +2,7 @@
 obj-$(CONFIG_PHY_EXYNOS_DP_VIDEO)	+= phy-exynos-dp-video.o
 obj-$(CONFIG_PHY_EXYNOS_MIPI_VIDEO)	+= phy-exynos-mipi-video.o
 obj-$(CONFIG_PHY_EXYNOS_MIPI_DSIM)	+= phy-exynos-mipi-dsim.o
+obj-$(CONFIG_PHY_EXYNOS_MIPI)		+= phy-exynos-mipi.o
 obj-$(CONFIG_PHY_EXYNOS8895_MIPI)		+= phy-exynos8895-mipi.o
 obj-$(CONFIG_PHY_EXYNOS_DISPLAYPORT)	+= phy-exynos-displayport.o
 obj-$(CONFIG_PHY_EXYNOS_PCIE)		+= phy-exynos-pcie.o
