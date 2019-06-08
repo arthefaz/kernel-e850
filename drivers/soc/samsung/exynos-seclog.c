@@ -41,16 +41,6 @@ static struct seclog_data ldata;
 static struct seclog_ctx slog_ctx;
 static struct sec_log_info *sec_log[NR_CPUS];
 
-static inline uint32_t exynos_seclog_check_va_validation(uint64_t ptr)
-{
-	uint64_t base = (uint64_t)ldata.virt_addr;
-	uint64_t end = base + ldata.size;
-
-	if (base <= ptr && end > ptr)
-		return 0;
-
-	return -1;
-}
 
 static void exynos_ldfw_error(struct platform_device *pdev,
 				int error)
@@ -116,58 +106,27 @@ static void *exynos_seclog_request_region(unsigned long addr,
 
 static void exynos_seclog_worker(struct work_struct *work)
 {
-	struct log_header_info *v_log_h = NULL;
-	char *v_log = NULL;
+	struct log_header_info *v_log_arr = 0;
 	unsigned long v_log_addr = 0;
 	unsigned int cpu = 0;
-
+	unsigned int tmp_read_cnt = 0;
+	unsigned int tmp_write_cnt = 0;
 	pr_debug("%s: Start seclog_worker\n", __func__);
 
 	/* Print log message in a message buffer */
 	for (cpu = 0; cpu < NR_CPUS; cpu++) {
-		v_log_addr = SECLOG_PHYS_TO_VIRT(sec_log[cpu]->start_log_addr);
+		v_log_addr = SECLOG_PHYS_TO_VIRT(sec_log[cpu]->initial_log_addr);
+		v_log_arr = (struct log_header_info *)v_log_addr;
+		tmp_read_cnt = sec_log[cpu]->log_read_cnt;
+		tmp_write_cnt = sec_log[cpu]->log_write_cnt;
 
-		while (sec_log[cpu]->log_read_cnt != sec_log[cpu]->log_write_cnt) {
-			/* Check the log message is reached the end of log buffer */
-			if (sec_log[cpu]->log_return_cnt) {
-				if (sec_log[cpu]->log_read_cnt
-					== sec_log[cpu]->log_return_cnt) {
-					sec_log[cpu]->log_return_cnt = 0;
-					v_log_addr = SECLOG_PHYS_TO_VIRT(sec_log[cpu]->initial_log_addr);
-				}
-			}
-
-			if (exynos_seclog_check_va_validation((uint64_t)v_log_addr)) {
-				/* v_log_addr is not valid. print debugging info  */
-				pr_err("[SECLOG_ERR C%d] read_cnt[%d]\n",
-						cpu, sec_log[cpu]->log_read_cnt);
-				pr_err("[SECLOG_ERR C%d] write_cnt[%d]\n",
-						cpu, sec_log[cpu]->log_write_cnt);
-				pr_err("[SECLOG_ERR C%d] return_cnt[%d]\n",
-						cpu, sec_log[cpu]->log_return_cnt);
-				pr_err("[SECLOG_ERR C%d] v_log_addr[%#lx]\n",
-						cpu, v_log_addr);
-				pr_err("[SECLOG_ERR C%d] start_log_addr[%#lx]\n",
-						cpu, sec_log[cpu]->start_log_addr);
-				pr_err("[SECLOG_ERR C%d] initial_log_addr[%#lx]\n",
-						cpu, sec_log[cpu]->initial_log_addr);
-				pr_err("[SECLOG_ERR C%d] p_log_addr[%#lx]\n",
-						cpu,
-						v_log_addr
-						- (unsigned long)ldata.virt_addr
-						+ ldata.phys_addr);
-
-				/* make panic for debugging */
-				BUG();
-			}
+		while (tmp_read_cnt != tmp_write_cnt) {
 
 			/* For debug */
 			pr_debug("[SECLOG_DEBUG C%d] read_cnt[%d]\n",
 					cpu, sec_log[cpu]->log_read_cnt);
 			pr_debug("[SECLOG_DEBUG C%d] write_cnt[%d]\n",
 					cpu, sec_log[cpu]->log_write_cnt);
-			pr_debug("[SECLOG_DEBUG C%d] return_cnt[%d]\n",
-					cpu, sec_log[cpu]->log_return_cnt);
 			pr_debug("[SECLOG_DEBUG C%d] v_log_addr[%#lx]\n",
 					cpu, v_log_addr);
 			pr_debug("[SECLOG_DEBUG C%d] p_log_addr[%#lx]\n",
@@ -177,30 +136,28 @@ static void exynos_seclog_worker(struct work_struct *work)
 					+ ldata.phys_addr);
 
 			/* Set log address and log's header address */
-			v_log_h = (struct log_header_info *)v_log_addr;
-			v_log = (char *)v_log_addr + sizeof(struct log_header_info);
-
 			/* For debug */
-			pr_debug("[SECLOG_DEBUG C%d] v_log_h[%#lx]\n",
-					cpu, (unsigned long)v_log_h);
-			pr_debug("[SECLOG_DEBUG C%d] v_log[%#lx]\n",
-					cpu, (unsigned long)v_log);
-			pr_debug("[SECLOG_DEBUG C%d] log_len = %d\n",
-					cpu, v_log_h->log_len);
-
+			pr_debug("[SECLOG_DEBUG C%d] v_log_addr[%#lx]\n",
+					cpu, (unsigned long)v_log_addr);
+			pr_debug("[SECLOG_DEBUG C%d] v_log_arr[%#lx]\n",
+					cpu, (unsigned long)v_log_arr);
 			/* Print logs from SWd */
-			pr_info("[SECLOG C%d] [%06d.%06d] %s",
+			pr_info("[SECLOG C%d] [%06d.%06d] %s\n",
 				cpu,
-				v_log_h->tv_sec,
-				v_log_h->tv_usec,
-				v_log);
-
-			/* v_log_addr is moved to next log */
-			v_log_addr += (sizeof(struct log_header_info) + v_log_h->log_len);
-			CHECK_AND_ALIGN_4BYTES(v_log_addr);
+				v_log_arr[tmp_read_cnt].tv_sec,
+				v_log_arr[tmp_read_cnt].tv_usec,
+				v_log_arr[tmp_read_cnt].buf);
 
 			/* Increase read count */
-			(sec_log[cpu]->log_read_cnt)++;
+			tmp_read_cnt = (tmp_read_cnt + 1) % MAX_LOG_COUNT;
+		}
+		sec_log[cpu]->log_read_cnt = tmp_read_cnt;
+		if(sec_log[cpu]->log_buffer_full_flag) {
+			pr_info("[SECLOG Error C%d] Sec_log is full!! %d\n", cpu, sec_log[cpu]->log_read_cnt);
+			pr_info("[SECLOG Error C%d] %d Messages blocked...\n",
+					cpu, sec_log[cpu]->blocked_log_cnt);
+			sec_log[cpu]->blocked_log_cnt = 0;
+			sec_log[cpu]->log_buffer_full_flag = 0;
 		}
 	}
 }
@@ -215,7 +172,6 @@ static irqreturn_t exynos_seclog_irq_handler(int irq, void *dev_id)
 		/* Skip all log messages */
 		for (cpu = 0; cpu < NR_CPUS; cpu++) {
 			sec_log[cpu]->log_read_cnt = sec_log[cpu]->log_write_cnt;
-			sec_log[cpu]->log_return_cnt = 0;
 		}
 	}
 
@@ -354,8 +310,8 @@ detect_ldfw_err:
 	}
 
 	dev_info(&pdev->dev,
-		"Message buffer address[PA : %#lx, VA : %#lx], Message buffer size[%#lx]\n",
-		ldata.phys_addr, ldata.virt_addr, ldata.size);
+		"Message buffer address[%#lx], Message buffer size[%#lx]\n",
+		ldata.phys_addr, ldata.size);
 	dev_info(&pdev->dev, "Exynos Secure Log driver probe done!\n");
 
 	return 0;
