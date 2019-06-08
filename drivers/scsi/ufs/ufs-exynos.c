@@ -731,7 +731,7 @@ static int exynos_ufs_pre_setup_clocks(struct ufs_hba *hba, bool on)
 	unsigned long flags;
 
 	if (on) {
-#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
+#if defined(CONFIG_ARM64_EXYNOS_CPUIDLE) && defined(CONFIG_EXYNOS_PM)
 		exynos_update_ip_idle_status(ufs->idle_ip_index, 0);
 #endif
 
@@ -796,7 +796,7 @@ static int exynos_ufs_setup_clocks(struct ufs_hba *hba, bool on)
 		}
 
 
-#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
+#if defined(CONFIG_ARM64_EXYNOS_CPUIDLE) && defined(CONFIG_EXYNOS_PM)
 		exynos_update_ip_idle_status(ufs->idle_ip_index, 1);
 #endif
 	}
@@ -1357,7 +1357,7 @@ static int exynos_ufs_probe(struct platform_device *pdev)
 			return ret;
 		}
 	}
-#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
+#if defined(CONFIG_ARM64_EXYNOS_CPUIDLE) && defined(CONFIG_EXYNOS_PM)
 	ufs->idle_ip_index = exynos_get_idle_ip_index(dev_name(&pdev->dev));
 	exynos_update_ip_idle_status(ufs->idle_ip_index, 0);
 #endif
