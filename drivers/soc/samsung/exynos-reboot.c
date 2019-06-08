@@ -66,8 +66,9 @@ int soc_has_big(void)
 #define BIG_CPU0_RESET			(0x220C)
 #define BIG_NONCPU_ETC_RESET		(0x242C)
 #define	PMU_CPU_OFFSET			(0x80)
-#define SWRESET				(0x0400)
-#define RESET_SEQUENCER_CONFIGURATION	(0x3A00)
+#define SWRESET				(0x2)
+#define SYSTEM_CONFIGURATION		(0x3a00)
+#define RESET_SEQUENCER_CONFIGURATION	(0x0500)
 #define PS_HOLD_CONTROL			(0x330C)
 #define EXYNOS_PMU_SYSIP_DAT0			(0x0810)
 
@@ -148,12 +149,11 @@ static void exynos_reboot(enum reboot_mode mode, const char *cmd)
 {
 	u32 soc_id, revision;
 	void __iomem *addr;
-	u32 reg;
 
 	if (!exynos_pmu_base)
 		return;
 #ifdef CONFIG_EXYNOS_ACPM
-//	exynos_acpm_reboot();
+	exynos_acpm_reboot();
 #endif
 	printk("[%s] reboot cmd: %s\n", __func__, cmd);
 
@@ -178,8 +178,7 @@ static void exynos_reboot(enum reboot_mode mode, const char *cmd)
 
 	/* Do S/W Reset */
 	pr_emerg("%s: Exynos SoC reset right now\n", __func__);
-	reg = __raw_readl(exynos_pmu_base + RESET_SEQUENCER_CONFIGURATION);
-	__raw_writel(reg | 0x2, exynos_pmu_base + RESET_SEQUENCER_CONFIGURATION);
+	__raw_writel(SWRESET, exynos_pmu_base + SYSTEM_CONFIGURATION);
 }
 
 static int __init exynos_reboot_setup(struct device_node *np)
