@@ -47,7 +47,7 @@
 #define DSS_CALLSTACK_MAX_NUM		4
 #define DSS_ITERATION			5
 #define DSS_NR_CPUS			NR_CPUS
-#define DSS_ITEM_MAX_NUM		10
+#define DSS_ITEM_MAX_NUM		16
 
 /* Sign domain */
 #define DSS_SIGN_RESET			0x0
