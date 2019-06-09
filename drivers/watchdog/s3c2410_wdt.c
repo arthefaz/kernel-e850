@@ -1060,9 +1060,13 @@ static int s3c2410wdt_panic_handler(struct notifier_block *nb,
 	struct wdt_panic_block *wdt_panic =
 		(struct wdt_panic_block *)nb;
 	struct s3c2410_wdt *wdt = wdt_panic->wdt;
+	int i;
 
 	if (!wdt)
 		return -ENODEV;
+
+	for (i = 0; i < ARRAY_SIZE(s3c_wdt); i++)
+		s3c_wdt[i]->skip_gettime = 1;
 
 	/* We assumed that num_online_cpus() > 1 status is abnormal */
 	if (dbg_snapshot_get_hardlockup() || num_online_cpus() > 1) {
