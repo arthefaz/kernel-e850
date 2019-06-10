@@ -35,11 +35,11 @@ static void *dma_pre_alloc_coherent(struct xhci_hcd *xhci, size_t size,
 			 dma_addr_t *dma_handle, gfp_t gfp)
 {
 	struct usb_xhci_pre_alloc *xhci_alloc = xhci->xhci_alloc;
-	u64 align = size % PAGE_SIZE;
-	u64 b_offset = xhci_alloc->offset;
+	u32 align = PAGE_SIZE - (size % PAGE_SIZE);
+	u32 b_offset = xhci_alloc->offset;
 
 	if (align)
-		xhci_alloc->offset = xhci_alloc->offset + size + (PAGE_SIZE - align);
+		xhci_alloc->offset = xhci_alloc->offset + size + align;
 	else
 		xhci_alloc->offset = xhci_alloc->offset + size;
 
@@ -940,8 +940,6 @@ void xhci_free_virt_device(struct xhci_hcd *xhci, int slot_id)
 	if (dev->out_ctx)
 		xhci_free_container_ctx(xhci, dev->out_ctx);
 
-	if (dev->udev && dev->udev->slot_id)
-		dev->udev->slot_id = 0;
 	kfree(xhci->devs[slot_id]);
 	xhci->devs[slot_id] = NULL;
 }

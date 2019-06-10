@@ -7,12 +7,15 @@
  * (at your option) any later version.
  */
 
-  /* usb notify layer v3.2 */
+  /* usb_power_notify.h */
 
-#ifndef __LINUX_DOCK_NOTIFY_H__
-#define __LINUX_DOCK_NOTIFY_H__
+#ifndef __LINUX_USB_POWER_NOTIFY_H__
+#define __LINUX_USB_POWER_NOTIFY_H__
 
-extern void register_usbdev_notify(void);
-extern void unregister_usbdev_notify(void);
+#define HUB_MAX_DEPTH	7
+
+extern void register_usb_power_notify(void);
+extern void unregister_usb_power_notify(void);
+extern int xhci_port_power_set(u32 on, u32 prt);
 #endif
 

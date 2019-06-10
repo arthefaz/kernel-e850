@@ -24,6 +24,7 @@
 
 #ifdef CONFIG_SND_EXYNOS_USB_AUDIO
 struct host_data xhci_data;
+struct exynos_usb_audio *usb_audio;
 #endif
 
 struct usb_xhci_pre_alloc {
@@ -159,12 +160,27 @@ int dwc3_host_init(struct dwc3 *dwc)
 	phy_create_lookup(dwc->usb3_generic_phy, "usb3-phy",
 			  dev_name(dwc->dev));
 
+	phycon_base_addr = ioremap(0x131f0000, SZ_1K);
+
 #ifdef CONFIG_SND_EXYNOS_USB_AUDIO
+	usb_audio = kmalloc(sizeof(struct exynos_usb_audio), GFP_KERNEL);
+	dev_info(dwc->dev, "%s : usb_audio alloc done\n", __func__);
+
+	/* In data buf alloc */
 	xhci_data.in_data_addr = dma_alloc_coherent(dwc->dev, (PAGE_SIZE * 256), &dma,
 			GFP_KERNEL);
 	xhci_data.in_data_dma = dma;
-	dev_info(dwc->dev, "// Data address = 0x%llx (DMA), %p (virt)",
+	dev_info(dwc->dev, "// IN Data address = 0x%llx (DMA), %p (virt)",
 		(unsigned long long)xhci_data.in_data_dma, xhci_data.in_data_addr);
+
+	/* Out data buf alloc */
+	xhci_data.out_data_addr = dma_alloc_coherent(dwc->dev, (PAGE_SIZE * 256), &dma,
+			GFP_KERNEL);
+	xhci_data.out_data_dma = dma;
+	dev_info(dwc->dev, "// OUT Data address = 0x%llx (DMA), %p (virt)",
+		(unsigned long long)xhci_data.out_data_dma, xhci_data.out_data_addr);
+
+	INIT_WORK(&usb_audio->usb_work, exynos_usb_audio_work);
 #endif
 	if (!dwc->dotg) {
 		ret = platform_device_add(xhci);

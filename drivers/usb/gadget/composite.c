@@ -2256,7 +2256,7 @@ fail:
 
 /*-------------------------------------------------------------------------*/
 
-void __nocfi composite_suspend(struct usb_gadget *gadget)
+void composite_suspend(struct usb_gadget *gadget)
 {
 	struct usb_composite_dev	*cdev = get_gadget_data(gadget);
 	struct usb_function		*f;

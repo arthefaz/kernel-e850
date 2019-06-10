@@ -7,7 +7,7 @@
  * (at your option) any later version.
  */
 
- /* usb notify layer v3.1 */
+ /* usb notify layer v3.2 */
 
 #define pr_fmt(fmt) "usb_notify: " fmt
 
@@ -683,7 +683,8 @@ static void otg_notify_state(struct otg_notify *n,
 				usleep_range(n->pre_peri_delay_us * 1000,
 					n->pre_peri_delay_us * 1000);
 #if defined(CONFIG_IFCONN_NOTIFIER)
-			pr_info("Charger status in usb detect = %d\n", n->charger_detect);
+			pr_info("Charger status in usb detect = %d\n",
+				n->charger_detect);
 			if (n->set_peripheral && n->charger_detect == 0) {
 				n->set_peripheral(true);
 				n->usb_noti_done = 1;
@@ -808,9 +809,6 @@ static void otg_notify_state(struct otg_notify *n,
 		if (enable) {
 			n->charger_detect = 1;
 			if (n->usb_noti_done) {
-				if (n->is_wakelock)
-					wake_unlock(&u_notify->wlock);
-
 				n->set_charger(enable);
 				n->usb_noti_done = 0;
 			}

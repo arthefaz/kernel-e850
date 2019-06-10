@@ -516,14 +516,6 @@ struct usb_composite_dev {
 	/* public: */
 	unsigned int			setup_pending:1;
 	unsigned int			os_desc_pending:1;
-
-#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
-	/* used by enable_store function of android.c
-	 * to avoid signalling switch changes
-	 */
-	bool				mute_switch;
-	bool				force_disconnect;
-#endif
 };
 
 extern int usb_string_id(struct usb_composite_dev *c);
@@ -537,7 +529,7 @@ extern int usb_string_ids_n(struct usb_composite_dev *c, unsigned n);
 extern void composite_disconnect(struct usb_gadget *gadget);
 extern int composite_setup(struct usb_gadget *gadget,
 		const struct usb_ctrlrequest *ctrl);
-extern void __nocfi composite_suspend(struct usb_gadget *gadget);
+extern void composite_suspend(struct usb_gadget *gadget);
 extern void composite_resume(struct usb_gadget *gadget);
 
 /*

@@ -6,7 +6,7 @@
  *
 */
 
- /* usb notify layer v3.1 */
+ /* usb notify layer v3.2 */
 
 #define pr_fmt(fmt) "usb_notify: " fmt
 
@@ -45,6 +45,9 @@ usb_hw_param_print[USB_CCIC_HW_PARAM_MAX][MAX_HWPARAM_STRING] = {
 	{"H_IMAGE"},
 	{"H_PRINTER"},
 	{"H_STORAGE"},
+	{"H_STO_S"},
+	{"H_STO_H"},
+	{"H_STO_F"},
 	{"H_HUB"},
 	{"H_CDC"},
 	{"H_CSCID"},
@@ -58,10 +61,16 @@ usb_hw_param_print[USB_CCIC_HW_PARAM_MAX][MAX_HWPARAM_STRING] = {
 	{"CC_WTIME"},
 	{"CC_WVBUS"},
 	{"CC_WVTIME"},
+	{"CC_WLVBS"},
+	{"CC_WLVTM"},
 	{"CC_CSHORT"},
+	{"CC_SVSHT"},
+	{"CC_SGSHT"},
 	{"M_AFCNAK"},
 	{"M_AFCERR"},
 	{"M_DCDTMO"},
+	{"CC_KILLER"},
+	{"CC_FWERR"},
 	{"CC_VER"},
 };
 #endif
@@ -297,25 +306,31 @@ static ssize_t usb_hw_param_show(struct device *dev,
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	p_param = get_hw_param(n, USB_CCIC_WATER_INT_COUNT);
 	if (p_param)
-		*p_param += get_ccic_water_count();
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_INT_COUNT);
 	p_param = get_hw_param(n, USB_CCIC_DRY_INT_COUNT);
 	if (p_param)
-		*p_param += get_ccic_dry_count();
+		*p_param += manager_hw_param_update(USB_CCIC_DRY_INT_COUNT);
 	p_param = get_hw_param(n, USB_CLIENT_SUPER_SPEED_COUNT);
 	if (p_param)
-		*p_param += get_usb310_count();
+		*p_param += manager_hw_param_update(USB_CLIENT_SUPER_SPEED_COUNT);
 	p_param = get_hw_param(n, USB_CLIENT_HIGH_SPEED_COUNT);
 	if (p_param)
-		*p_param += get_usb210_count();
+		*p_param += manager_hw_param_update(USB_CLIENT_HIGH_SPEED_COUNT);
 	p_param = get_hw_param(n, USB_CCIC_WATER_TIME_DURATION);
 	if (p_param)
-		*p_param += get_waterDet_duration();
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_TIME_DURATION);
 	p_param = get_hw_param(n, USB_CCIC_WATER_VBUS_COUNT);
 	if (p_param)
-		*p_param += get_waterChg_count();
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_VBUS_COUNT);
+	p_param = get_hw_param(n, USB_CCIC_WATER_LPM_VBUS_COUNT);
+	if (p_param)
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_LPM_VBUS_COUNT);
 	p_param = get_hw_param(n, USB_CCIC_WATER_VBUS_TIME_DURATION);
 	if (p_param)
-		*p_param += get_wVbus_duration();
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_VBUS_TIME_DURATION);
+	p_param = get_hw_param(n, USB_CCIC_WATER_LPM_VBUS_TIME_DURATION);
+	if (p_param)
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_LPM_VBUS_TIME_DURATION);
 	p_param = get_hw_param(n, USB_CCIC_VERSION);
 #if defined(CONFIG_USB_NOTIFY_PROC_LOG)
 	if (p_param)
@@ -347,7 +362,7 @@ static ssize_t usb_hw_param_store(
 		dev_get_drvdata(dev);
 	struct otg_notify *n = udev->o_notify;
 	unsigned long long prev_hw_param[USB_CCIC_HW_PARAM_MAX] = {0, };
-
+	unsigned long long *p_param = NULL;
 	int index = 0;
 	size_t ret = -ENOMEM;
 	char *token, *str = (char *)buf;
@@ -371,8 +386,11 @@ static ssize_t usb_hw_param_store(
 			goto error;
 	}
 
-	for (index = 0; index < (USB_CCIC_HW_PARAM_MAX - 1); index++)
-		*(get_hw_param(n, index)) += prev_hw_param[index];
+	for (index = 0; index < (USB_CCIC_HW_PARAM_MAX - 1); index++) {
+		p_param = get_hw_param(n, index);
+		if (p_param)
+			*p_param += prev_hw_param[index];
+	}
 	pr_info("%s - ret : %zu\n", __func__, ret);
 error:
 	return ret;
@@ -389,25 +407,31 @@ static ssize_t hw_param_show(struct device *dev,
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	p_param = get_hw_param(n, USB_CCIC_WATER_INT_COUNT);
 	if (p_param)
-		*p_param += get_ccic_water_count();
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_INT_COUNT);
 	p_param = get_hw_param(n, USB_CCIC_DRY_INT_COUNT);
 	if (p_param)
-		*p_param += get_ccic_dry_count();
+		*p_param += manager_hw_param_update(USB_CCIC_DRY_INT_COUNT);
 	p_param = get_hw_param(n, USB_CLIENT_SUPER_SPEED_COUNT);
 	if (p_param)
-		*p_param += get_usb310_count();
+		*p_param += manager_hw_param_update(USB_CLIENT_SUPER_SPEED_COUNT);
 	p_param = get_hw_param(n, USB_CLIENT_HIGH_SPEED_COUNT);
 	if (p_param)
-		*p_param += get_usb210_count();
+		*p_param += manager_hw_param_update(USB_CLIENT_HIGH_SPEED_COUNT);
 	p_param = get_hw_param(n, USB_CCIC_WATER_TIME_DURATION);
 	if (p_param)
-		*p_param += get_waterDet_duration();
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_TIME_DURATION);
 	p_param = get_hw_param(n, USB_CCIC_WATER_VBUS_COUNT);
 	if (p_param)
-		*p_param += get_waterChg_count();
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_VBUS_COUNT);
+	p_param = get_hw_param(n, USB_CCIC_WATER_LPM_VBUS_COUNT);
+	if (p_param)
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_LPM_VBUS_COUNT);
 	p_param = get_hw_param(n, USB_CCIC_WATER_VBUS_TIME_DURATION);
 	if (p_param)
-		*p_param += get_wVbus_duration();
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_VBUS_TIME_DURATION);
+	p_param = get_hw_param(n, USB_CCIC_WATER_LPM_VBUS_TIME_DURATION);
+	if (p_param)
+		*p_param += manager_hw_param_update(USB_CCIC_WATER_LPM_VBUS_TIME_DURATION);
 	p_param = get_hw_param(n, USB_CCIC_VERSION);
 #if defined(CONFIG_USB_NOTIFY_PROC_LOG)
 	if (p_param)
@@ -460,6 +484,7 @@ static ssize_t hw_param_store(
 	int index = 0;
 	size_t ret = -ENOMEM;
 	char *str = (char *)buf;
+	unsigned long long *p_param = NULL;
 
 	if (size > 2) {
 		pr_err("%s size(%zu) is too long.\n", __func__, size);
@@ -468,8 +493,11 @@ static ssize_t hw_param_store(
 	ret = size;
 	pr_info("%s : %s\n", __func__, str);
 	if (!strncmp(str, "c", 1))
-		for (index = 0; index < USB_CCIC_HW_PARAM_MAX; index++)
-			*(get_hw_param(n, index)) = 0;
+		for (index = 0; index < USB_CCIC_HW_PARAM_MAX; index++) {
+			p_param = get_hw_param(n, index);
+			if (p_param)
+				*p_param = 0;
+		}
 error:
 	return ret;
 }

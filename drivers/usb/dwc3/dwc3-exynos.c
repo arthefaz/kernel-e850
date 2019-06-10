@@ -31,20 +31,20 @@
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 
+
 #include <linux/io.h>
 #include <linux/usb/otg-fsm.h>
 
-#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
-#include <soc/samsung/exynos-cpupm.h>
-#endif
+//#include <soc/samsung/exynos-cpupm.h>
 
 /* -------------------------------------------------------------------------- */
 
 struct dwc3_exynos_rsw {
 	struct otg_fsm		*fsm;
 	struct work_struct	work;
-	struct workqueue_struct *rsw_wq;
 };
+
+
 
 struct dwc3_exynos {
 	struct platform_device	*usb2_phy;
@@ -52,16 +52,15 @@ struct dwc3_exynos {
 	struct device		*dev;
 
 	struct clk		**clocks;
-
 	struct regulator	*vdd33;
 	struct regulator	*vdd10;
-
 	int			idle_ip_index;
 
 	struct dwc3_exynos_rsw	rsw;
 };
 
 void dwc3_otg_run_sm(struct otg_fsm *fsm);
+int dwc3_otg_phy_enable(struct otg_fsm *fsm, int owner, bool on);
 
 static const struct of_device_id exynos_dwc3_match[] = {
 	{
@@ -258,11 +257,6 @@ int dwc3_exynos_rsw_setup(struct device *dev, struct otg_fsm *fsm)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-	rsw->rsw_wq
-		= create_singlethread_workqueue("usb_rsw_wq");
-	 if (!rsw->rsw_wq)
-		pr_err("%s failed to create rsw work queue\n", __func__);
-
 	INIT_WORK(&rsw->work, dwc3_exynos_rsw_work);
 
 	rsw->fsm = fsm;
@@ -278,7 +272,6 @@ void dwc3_exynos_rsw_exit(struct device *dev)
 	dev_dbg(dev, "%s\n", __func__);
 
 	cancel_work_sync(&rsw->work);
-	destroy_workqueue(rsw->rsw_wq);
 
 	rsw->fsm = NULL;
 }
@@ -307,8 +300,7 @@ int dwc3_exynos_id_event(struct device *dev, int state)
 
 	if (fsm->id != state) {
 		fsm->id = state;
-		/* schedule_work(&rsw->work); */
-		queue_work(rsw->rsw_wq, &rsw->work);
+		schedule_work(&rsw->work);
 	}
 
 	return 0;
@@ -339,13 +331,64 @@ int dwc3_exynos_vbus_event(struct device *dev, bool vbus_active)
 
 	if (fsm->b_sess_vld != vbus_active) {
 		fsm->b_sess_vld = vbus_active;
-		/* schedule_work(&rsw->work); */
-		queue_work(rsw->rsw_wq, &rsw->work);
+		schedule_work(&rsw->work);
 	}
 
 	return 0;
 }
 EXPORT_SYMBOL_GPL(dwc3_exynos_vbus_event);
+
+/**
+ * dwc3_exynos_phy_enable - received combo phy control.
+ */
+int dwc3_exynos_phy_enable(int owner, bool on)
+{
+	struct dwc3_exynos	*exynos;
+	struct dwc3_exynos_rsw	*rsw;
+	struct otg_fsm		*fsm;
+	struct device_node *np = NULL;
+	struct platform_device *pdev = NULL;
+	int ret = 0;
+
+	pr_info("%s owner=%d (usb:0 dp:1) on=%d +\n", __func__, owner, on);
+
+	np = of_find_compatible_node(NULL, NULL, "samsung,exynos-dwusb");
+	if (np) {
+		pdev = of_find_device_by_node(np);
+		if (!pdev) {
+			pr_err("%s we can't get platform device\n", __func__);
+			ret = -ENODEV;
+			goto err;
+		}
+		of_node_put(np);
+	} else {
+		pr_err("%s we can't get np\n", __func__);
+		ret = -ENODEV;
+		goto err;
+	}
+
+	exynos = platform_get_drvdata(pdev);
+	if (!exynos) {
+		pr_err("%s we can't get drvdata\n", __func__);
+		ret = -ENOENT;
+		goto err;
+	}
+
+	rsw = &exynos->rsw;
+
+	fsm = rsw->fsm;
+	if (!fsm) {
+		pr_err("%s we can't get fsm\n", __func__);
+		ret = -ENOENT;
+		goto err;
+	}
+
+	dwc3_otg_phy_enable(fsm, owner, on);
+err:
+	pr_info("%s -\n", __func__);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(dwc3_exynos_phy_enable);
 
 static int dwc3_exynos_register_phys(struct dwc3_exynos *exynos)
 {
@@ -433,10 +476,8 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 
 	exynos->dev = dev;
 
-#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
-	exynos->idle_ip_index = exynos_get_idle_ip_index(dev_name(dev));
-	exynos_update_ip_idle_status(exynos->idle_ip_index, 0);
-#endif
+	//exynos->idle_ip_index = exynos_get_idle_ip_index(dev_name(dev));
+	//exynos_update_ip_idle_status(exynos->idle_ip_index, 0);
 
 	ret = dwc3_exynos_clk_get(exynos);
 	if (ret)
@@ -454,14 +495,13 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
-
 	exynos->vdd33 = devm_regulator_get(dev, "vdd33");
 	if (IS_ERR(exynos->vdd33)) {
 	        dev_dbg(dev, "couldn't get regulator vdd33\n");
 		exynos->vdd33 = NULL;
 	}
 	if (exynos->vdd33) {
-		ret = regulator_enable(exynos->vdd33);
+	//	ret = regulator_enable(exynos->vdd33);
 		if (ret) {
 			dev_err(dev, "Failed to enable VDD33 supply\n");
 			goto vdd33_err;
@@ -474,13 +514,12 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 		exynos->vdd10 = NULL;
 	}
 	if (exynos->vdd10) {
-		ret = regulator_enable(exynos->vdd10);
+	//	ret = regulator_enable(exynos->vdd10);
 		if (ret) {
 			dev_err(dev, "Failed to enable VDD10 supply\n");
 			goto vdd10_err;
 		}
         }
-
 	ret = dwc3_exynos_register_phys(exynos);
 	if (ret) {
 		dev_err(dev, "couldn't register PHYs\n");
@@ -506,11 +545,11 @@ populate_err:
 	platform_device_unregister(exynos->usb2_phy);
 	platform_device_unregister(exynos->usb3_phy);
 phys_err:
-	if (exynos->vdd10)
-		regulator_disable(exynos->vdd10);
+//	if (exynos->vdd10)
+//		regulator_disable(exynos->vdd10);
 vdd10_err:
-	if (exynos->vdd33)
-		regulator_disable(exynos->vdd33);
+//	if (exynos->vdd33)
+//		regulator_disable(exynos->vdd33);
 vdd33_err:
 	pm_runtime_disable(&pdev->dev);
 	dwc3_exynos_clk_disable(exynos);
@@ -540,7 +579,6 @@ static int dwc3_exynos_remove(struct platform_device *pdev)
 	if (exynos->vdd10)
 		regulator_disable(exynos->vdd10);
 
-
 	return 0;
 }
 
@@ -553,10 +591,8 @@ static int dwc3_exynos_runtime_suspend(struct device *dev)
 
 	dwc3_exynos_clk_disable(exynos);
 
-#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
 	/* inform what USB state is idle to IDLE_IP */
-	exynos_update_ip_idle_status(exynos->idle_ip_index, 1);
-#endif
+	//exynos_update_ip_idle_status(exynos->idle_ip_index, 1);
 
 	return 0;
 }
@@ -568,10 +604,8 @@ static int dwc3_exynos_runtime_resume(struct device *dev)
 
 	dev_info(dev, "%s\n", __func__);
 
-#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
 	/* inform what USB state is not idle to IDLE_IP */
-	exynos_update_ip_idle_status(exynos->idle_ip_index, 0);
-#endif
+	//exynos_update_ip_idle_status(exynos->idle_ip_index, 0);
 
 	ret = dwc3_exynos_clk_enable(exynos);
 	if (ret) {
@@ -611,7 +645,7 @@ static int dwc3_exynos_resume(struct device *dev)
 	struct dwc3_exynos *exynos = dev_get_drvdata(dev);
 	int ret;
 
-	dev_dbg(dev, "%s\n", __func__);
+	dev_info(dev, "%s\n", __func__);
 
 	/* inform what USB state is not idle to IDLE_IP */
 	//exynos_update_ip_idle_status(exynos->idle_ip_index, 0);

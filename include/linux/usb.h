@@ -553,12 +553,21 @@ struct hcd_hw_info {
 	dma_addr_t out_ctx;
 	dma_addr_t save_dma;
 	u64 cmd_ring;
+	/* Data Stream EP */
 	u64 old_out_deq;
 	u64 old_in_deq;
 	u64 out_deq;
 	u64 in_deq;
 	int in_ep;
 	int out_ep;
+	/* feedback ep */
+	int fb_in_ep;
+	int fb_out_ep;
+	u64 fb_old_out_deq;
+	u64 fb_old_in_deq;
+	u64 fb_out_deq;
+	u64 fb_in_deq;
+	/* Device Common Information */
 	int speed;
 	void *out_buf;
 	u64 out_dma;
@@ -1979,6 +1988,8 @@ static inline int usb_translate_errors(int error_code)
 	}
 }
 
+int usb_parse_configuration(struct usb_device *dev, int cfgidx,
+		struct usb_host_config *config, unsigned char *buffer, int size);
 /* Events from the usb core */
 #define USB_DEVICE_ADD		0x0001
 #define USB_DEVICE_REMOVE	0x0002

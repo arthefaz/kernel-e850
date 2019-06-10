@@ -1445,6 +1445,7 @@ void exynos_usbdrd_ldo_control(struct exynos_usbdrd_phy *phy_drd, int on)
 {
 	int ret1, ret2, ret3;
 
+	return;
 	dev_info(phy_drd->dev, "Turn %s LDO\n", on ? "on" : "off");
 
 	if (on) {

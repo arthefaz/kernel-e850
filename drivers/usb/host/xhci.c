@@ -29,9 +29,7 @@
 #include <linux/dmi.h>
 #include <linux/dma-mapping.h>
 
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO
 #include <linux/usb/exynos_usb_audio.h>
-#endif
 
 #include "xhci.h"
 #include "xhci-trace.h"
@@ -3673,9 +3671,6 @@ static void xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	 */
 
 out:
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO
-	exynos_usb_audio_conn(0);
-#endif
 	return;
 }
 
@@ -3747,9 +3742,11 @@ int xhci_store_hw_info(struct usb_hcd *hcd, struct usb_device *udev)
 	hwinfo->dcbaa_dma = xhci->dcbaa->dma;
 	hwinfo->save_dma = xhci->save_dma;
 	hwinfo->cmd_ring = xhci->op_regs->cmd_ring;
-	hwinfo->slot_id = xhci->slot_id;
+	hwinfo->slot_id = udev->slot_id;
 	hwinfo->in_dma = xhci->in_dma;
 	hwinfo->in_buf = xhci->in_addr;
+	hwinfo->out_dma = xhci->out_dma;
+	hwinfo->out_buf = xhci->out_addr;
 	hwinfo->in_ctx = virt_dev->in_ctx->dma;
 	hwinfo->out_ctx = virt_dev->out_ctx->dma;
 	hwinfo->erst_addr = entry->seg_addr;
@@ -3770,16 +3767,35 @@ int xhci_set_deq(struct xhci_hcd *xhci, struct xhci_container_ctx *ctx,
 	for (i = 0; i < last_ep_ctx; ++i) {
 		unsigned int epaddr = xhci_get_endpoint_address(i);
 		struct xhci_ep_ctx *ep_ctx = xhci_get_ep_ctx(xhci, ctx, i);
+
 		if (epaddr == udev->hwinfo.in_ep ) {
-			pr_debug("[%s] set in deq : %#08llx \n",__func__, ep_ctx->deq);
+			pr_info("[%s] set in deq : %#08llx \n",
+					__func__, ep_ctx->deq);
 			if (udev->hwinfo.in_deq)
-				udev->hwinfo.old_in_deq = udev->hwinfo.in_deq;
+				udev->hwinfo.old_in_deq =
+						udev->hwinfo.in_deq;
 			udev->hwinfo.in_deq = ep_ctx->deq;
 		} else if (epaddr == udev->hwinfo.out_ep) {
-			pr_debug("[%s] set out deq : %#08llx \n",__func__, ep_ctx->deq);
+			pr_info("[%s] set out deq : %#08llx \n",
+					__func__, ep_ctx->deq);
 			if (udev->hwinfo.out_deq)
-				udev->hwinfo.old_out_deq = udev->hwinfo.out_deq;
+				udev->hwinfo.old_out_deq =
+						udev->hwinfo.out_deq;
 			udev->hwinfo.out_deq = ep_ctx->deq;
+		} else if (epaddr == udev->hwinfo.fb_out_ep) {
+			pr_info("[%s] set fb out deq : %#08llx \n",
+					__func__, ep_ctx->deq);
+			if (udev->hwinfo.fb_out_deq)
+				udev->hwinfo.fb_old_out_deq =
+						udev->hwinfo.fb_out_deq;
+			udev->hwinfo.fb_out_deq = ep_ctx->deq;
+		} else if (epaddr == udev->hwinfo.fb_in_ep) {
+			pr_info("[%s] set fb in deq : %#08llx \n",
+					__func__, ep_ctx->deq);
+			if (udev->hwinfo.fb_in_deq)
+				udev->hwinfo.fb_old_in_deq =
+						udev->hwinfo.fb_in_deq;
+			udev->hwinfo.fb_in_deq = ep_ctx->deq;
 		}
 	}
 
@@ -3799,9 +3815,6 @@ int xhci_alloc_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	int ret, slot_id;
 	struct xhci_command *command;
 
-#ifdef CONFIG_SND_EXYNOS_USB_AUDIO
-	exynos_usb_audio_conn(1);
-#endif
 	command = xhci_alloc_command(xhci, false, true, GFP_KERNEL);
 	if (!command)
 		return 0;
@@ -5090,14 +5103,19 @@ EXPORT_SYMBOL_GPL(xhci_gen_setup);
 int xhci_wake_lock(struct usb_hcd *hcd, int is_lock) {
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
 
-	xhci_info(xhci, "%s: WAKE %s\n", __func__, is_lock ? "LOCK" : "UNLOCK");
-	if (is_lock) {
-		xhci->l2_state = 0;
-		wake_lock(xhci->wakelock);
-	} else {
-		xhci->l2_state = 1;
-		wake_unlock(xhci->wakelock);
-	}
+	if (hcd == xhci->main_hcd) {
+		if (is_lock) {
+			xhci_info(xhci, "%s: WAKE LOCK\n", __func__);
+			xhci->l2_state = 0;
+			wake_lock(xhci->wakelock);
+		} else if (!hcd->driver->hub_check_speed(hcd->shared_hcd)) {
+			xhci_info(xhci, "%s: WAKE UNLOCK\n", __func__);
+			xhci->l2_state = 1;
+			wake_unlock(xhci->wakelock);
+		} else
+			xhci_info(xhci, "%s: wake unlock ignored due to USB3\n", __func__);
+	} else
+		xhci_info(xhci, "%s: %d - no main hcd\n", __func__, is_lock);
 
 	return 0;
 }

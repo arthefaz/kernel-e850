@@ -78,11 +78,10 @@ config USB_HOST_SAMSUNG_FEATURE
 config USB_HW_PARAM
     boolean "USB H/W Parameter"
     depends on USB_NOTIFY_LAYER
-    depends on USB_HOST_NOTIFY
     help
       Added USB H/W Parameter for DQA Agent.
       You need more works for USB PDIC driver.
 
-config USB_OTG_SW_SWITCH
-	boolean "USB Host S/W Switch"
-	depends on USB
+config USB_PORT_POWER_OPTIMIZATION
+	default n
+	bool "USB3.0 Link port power optimization"

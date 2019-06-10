@@ -134,13 +134,6 @@ config U_SERIAL_CONSOLE
 	help
 	   It supports the serial gadget can be used as a console.
 
-config USB_ANDROID_SAMSUNG_COMPOSITE
-	bool "Samsung Composite function"
-	help
-	  Provides SAMSUNG composite driver.
-	  Multi Configuration.
-	  If you enable this option, android composite will be changed.
-
 source "drivers/usb/gadget/udc/Kconfig"
 
 #
@@ -232,9 +225,6 @@ config USB_F_AUDIO_SRC
 	tristate
 
 config USB_F_ACC
-	tristate
-
-config USB_F_SIMMIAN
 	tristate
 
 # this first set of drivers all depend on bulk-capable hardware.
@@ -404,13 +394,6 @@ config USB_CONFIGFS_F_ADB
 	help
 	  USB gadget ADB support
 
-config USB_CONFIGFS_F_SIMMIAN
-       bool "Android gadget SIMMIAN function"
-       depends on USB_CONFIGFS
-       select USB_F_SIMMIAN
-       help
-         Provides SIMMIAN function for android gadget driver.
-
 config USB_CONFIGFS_F_MTP
 	boolean "MTP gadget"
 	depends on USB_CONFIGFS
@@ -448,6 +431,12 @@ config USB_CONFIGFS_UEVENT
 	  Enable uevent notifications to userspace when the gadget
 	  state changes. The gadget can be in any of the following
 	  three states: "CONNECTED/DISCONNECTED/CONFIGURED"
+
+config USB_RNDIS_MULTIPACKET
+	boolean "Samsung Rndis Multi Packet support"
+	depends on USB_CONFIGFS_UEVENT
+	help
+	Rndis Multipacket Support.
 
 config USB_CONFIGFS_F_UAC1
 	bool "Audio Class 1.0"

@@ -2,6 +2,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/device.h>
+#include <linux/delay.h>
 #include <linux/nls.h>
 #include <linux/usb/composite.h>
 #include <linux/usb/gadget_configfs.h>
@@ -171,6 +172,8 @@ static int set_alt_serialnumber(struct gadget_strings *gs)
 	char *str;
 	int ret = -ENOMEM;
 
+	pr_info("%s\n", __func__);
+
 	str = kmalloc(CHIPID_SIZE + 1, GFP_KERNEL);
 	if (!str) {
 		pr_err("%s: failed to alloc for string\n", __func__);
@@ -320,16 +323,11 @@ static ssize_t gadget_dev_desc_UDC_store(struct config_item *item,
 	int ret;
 
 	pr_info("%s: +++\n", __func__);
+	mdelay(50);
 
 	name = kstrdup(page, GFP_KERNEL);
 	if (!name)
 		return -ENOMEM;
-
-	if(!len || (strlen(name) != len)) {
-		kfree(name);
-		return -EINVAL;
-	}
-
 	if (name[len - 1] == '\n')
 		name[len - 1] = '\0';
 
@@ -1356,9 +1354,12 @@ static int configfs_composite_bind(struct usb_gadget *gadget,
 			gs->strings[USB_GADGET_MANUFACTURER_IDX].s =
 				gs->manufacturer;
 			gs->strings[USB_GADGET_PRODUCT_IDX].s = gs->product;
-			if (gs->serialnumber && !set_alt_serialnumber(gs))
-				pr_info("usb: serial number: %s\n",
-						gs->serialnumber);
+
+			if (!gs->serialnumber)
+				set_alt_serialnumber(gs);
+
+			pr_info("usb: serial number: %s\n", gs->serialnumber);
+
 			gs->strings[USB_GADGET_SERIAL_IDX].s = gs->serialnumber;
 			i++;
 		}
@@ -1460,11 +1461,6 @@ static void android_work(struct work_struct *data)
 	bool status[3] = { false, false, false };
 	unsigned long flags;
 	bool uevent_sent = false;
-
-	if (!android_device && IS_ERR(android_device)) {
-		pr_info("usb: cannot send uevent because android_device not available \n");
-		return;
-	}
 
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (cdev->config)
@@ -1734,7 +1730,6 @@ functions_store(struct device *pdev, struct device_attribute *attr,
 	strlcpy(buf, buff, sizeof(buf));
 	b = strim(buf);
 
-	printk("Function stored : %s\n", b);
 	while (b) {
 		name = strsep(&b, ",");
 		if (!name)
