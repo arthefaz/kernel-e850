@@ -431,6 +431,28 @@ struct init_vclk exynos9630_chub_vclks[] __initdata = {
 	VCLK(DOUT_CLK_CHUB_I2C, VCLK_DIV_CLK_CHUB_I2C, "DOUT_CLK_CHUB_I2C", 0, 0, NULL),
 };
 
+struct init_vclk exynos9630_aud_vclks[] __initdata = {
+	VCLK(DOUT_CLK_AUD_AUDIF, DIV_CLK_AUD_AUDIF, "DOUT_CLK_AUD_AUDIF", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_CPU_PCLKDBG, DIV_CLK_AUD_CPU_PCLKDBG, "DOUT_CLK_AUD_CPU_PCLKDBG", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_FM_SPDY, DIV_CLK_AUD_FM_SPDY, "DOUT_CLK_AUD_FM_SPDY", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_UAIF0, DIV_CLK_AUD_UAIF0, "DOUT_CLK_AUD_UAIF0", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_UAIF1, DIV_CLK_AUD_UAIF1, "DOUT_CLK_AUD_UAIF1", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_UAIF2, DIV_CLK_AUD_UAIF2, "DOUT_CLK_AUD_UAIF2", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_UAIF3, DIV_CLK_AUD_UAIF3, "DOUT_CLK_AUD_UAIF3", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_CPU_ACLK, DIV_CLK_AUD_CPU_ACLK, "DOUT_CLK_AUD_CPU_ACLK", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_BUS, DIV_CLK_AUD_BUS, "DOUT_CLK_AUD_BUS", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_BUSP, DIV_CLK_AUD_BUSP, "DOUT_CLK_AUD_BUSP", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_CNT, DIV_CLK_AUD_CNT, "DOUT_CLK_AUD_CNT", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_UAIF4, DIV_CLK_AUD_UAIF4, "DOUT_CLK_AUD_UAIF4", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_DSIF, DIV_CLK_AUD_DSIF, "DOUT_CLK_AUD_DSIF", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_FM, DIV_CLK_AUD_FM, "DOUT_CLK_AUD_FM", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_UAIF5, DIV_CLK_AUD_UAIF5, "DOUT_CLK_AUD_UAIF5", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_UAIF6, DIV_CLK_AUD_UAIF6, "DOUT_CLK_AUD_UAIF6", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_SCLK, DIV_CLK_AUD_SCLK, "DOUT_CLK_AUD_SCLK", 0, 0, NULL),
+	VCLK(DOUT_CLK_AUD_MCLK, DIV_CLK_AUD_MCLK, "DOUT_CLK_AUD_MCLK", 0, 0, NULL),
+	VCLK(PLL_OUT_AUD, PLL_AUD, "PLL_AUD", 0, 0, NULL),
+};
+
 static struct init_vclk exynos9630_clkout_vclks[] __initdata = {
 	VCLK(OSC_NFC, VCLK_CLKOUT1, "OSC_NFC", 0, 0, NULL),
 	VCLK(OSC_AUD, VCLK_CLKOUT0, "OSC_AUD", 0, 0, NULL),
@@ -508,6 +530,7 @@ void __init exynos9630_clk_init(struct device_node *np)
 	samsung_register_vclk(exynos9630_clk_provider, exynos9630_top_vclks, ARRAY_SIZE(exynos9630_top_vclks));
 	samsung_register_vclk(exynos9630_clk_provider, exynos9630_cmgp_vclks, ARRAY_SIZE(exynos9630_cmgp_vclks));
 	samsung_register_vclk(exynos9630_clk_provider, exynos9630_chub_vclks, ARRAY_SIZE(exynos9630_chub_vclks));
+	samsung_register_vclk(exynos9630_clk_provider, exynos9630_aud_vclks, ARRAY_SIZE(exynos9630_aud_vclks));
 	samsung_register_vclk(exynos9630_clk_provider, exynos9630_clkout_vclks, ARRAY_SIZE(exynos9630_clkout_vclks));
 
 	clk_register_fixed_factor(NULL, "pwm-clock", "fin_pll", CLK_SET_RATE_PARENT, 1, 1);
