@@ -212,6 +212,13 @@
 				udc = <&udc>;
 			};
 
+			ifconn {
+				status = "okay";
+				compatible = "samsung,ifconn";
+				ifconn,usbpd = "s2mu107";
+				ifconn,muic = "s2mu107-muic";
+			};
+
 			acpm_mfd_bus@11060000 {
 				status = "okay";
 				#address-cells = <1>;

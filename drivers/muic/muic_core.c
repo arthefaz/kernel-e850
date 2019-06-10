@@ -915,9 +915,8 @@ bool muic_core_get_ccic_cable_state(struct muic_platform_data *muic_pdata)
 	default:
 		break;
 	}
-
-		return false;
-	}
+	return false;
+}
 
 int muic_core_handle_attach(struct muic_platform_data *muic_pdata,
 			muic_attached_dev_t new_dev, int adc, u8 vbvolt)

@@ -405,7 +405,7 @@ static int muic_manager_handle_ccic_attach(struct muic_interface_t *muic_if, voi
 	struct ccic_desc_t *ccic = muic_if->ccic;
 #ifdef CONFIG_IFCONN_NOTIFIER
 	struct ifconn_notifier_template *pnoti =
-	    (struct ifconn_notifier_template *)data;
+		(struct ifconn_notifier_template *)data;
 #else
 	CC_NOTI_ATTACH_TYPEDEF *pnoti = (CC_NOTI_ATTACH_TYPEDEF *) data;
 #endif
@@ -413,8 +413,8 @@ static int muic_manager_handle_ccic_attach(struct muic_interface_t *muic_if, voi
 	struct muic_platform_data *pdata = muic_if->pdata;
 
 	pr_info("%s: src:%d dest:%d id:%d attach:%d cable_type:%d rprd:%d\n",
-		__func__, pnoti->src, pnoti->dest, pnoti->id, pnoti->attach,
-		pnoti->cable_type, pnoti->rprd);
+			__func__, pnoti->src, pnoti->dest, pnoti->id, pnoti->attach,
+			pnoti->cable_type, pnoti->rprd);
 
 #ifdef CONFIG_IFCONN_NOTIFIER
 	if (pnoti->event == IFCONN_NOTIFY_EVENT_ATTACH) {
@@ -426,7 +426,7 @@ static int muic_manager_handle_ccic_attach(struct muic_interface_t *muic_if, voi
 	}
 #else
 	ccic->ccic_evt_attached = pnoti->attach ?
-	    MUIC_CCIC_NOTI_ATTACH : MUIC_CCIC_NOTI_DETACH;
+		MUIC_CCIC_NOTI_ATTACH : MUIC_CCIC_NOTI_DETACH;
 #endif
 
 	/* Attached */
