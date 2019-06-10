@@ -96,34 +96,13 @@ static int edid_read_block(u32 sst_id, struct displayport_device *displayport,
 	if (len < EDID_BLOCK_SIZE)
 		return -EINVAL;
 
-	edid_check_set_i2c_capabilities();
-
 	if (displayport->mst_cap == 0) {
+		edid_check_set_i2c_capabilities();
+
 		ret = displayport_reg_edid_read(offset, EDID_BLOCK_SIZE, buf);
 		if (ret)
 			return ret;
 	} else {
-#if 0
-		msg_aux_tx.req_id = REMOTE_DPCD_WRITE;
-		msg_aux_tx.port_num = displayport->sst[sst_id]->vc_config->port_num;
-		msg_aux_tx.dpcd_address = 0x00109;
-		msg_aux_tx.num_write_bytes = 1;
-		msg_aux_tx.write_data = 0x08;
-
-		sb_msg_header.link_cnt_total = 1;
-		sb_msg_header.link_cnt_remain = 0;
-		sb_msg_header.broadcast_msg = 0x0;
-		sb_msg_header.path_msg = 0x0;
-		sb_msg_header.sb_msg_body_length = 7;
-		sb_msg_header.start_of_msg_transcation = 1;
-		sb_msg_header.end_of_msg_transcation = 1;
-		sb_msg_header.msg_seq_no = 0;
-
-		displayport_info("msg_aux_tx.port_num = %d\n", msg_aux_tx.port_num);
-
-		displayport_msg_tx(DOWN_REQ);
-		displayport_msg_rx(DOWN_REP);
-#endif
 		msg_aux_tx.req_id = REMOTE_I2C_READ;
 		msg_aux_tx.num_i2c_tx = 1;
 		msg_aux_tx.port_num = displayport->sst[sst_id]->vc_config->port_num;

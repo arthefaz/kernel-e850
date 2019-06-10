@@ -1093,6 +1093,7 @@ void displayport_off_by_hpd_low(u32 sst_id, struct displayport_device *displaypo
 	if (displayport->sst[sst_id]->state == DISPLAYPORT_STATE_ON) {
 		displayport->sst[sst_id]->hpd_state = HPD_UNPLUG;
 		displayport->sst[sst_id]->cur_video = V640X480P60;
+		displayport->sst[sst_id]->best_video = V640X480P60;
 		displayport->sst[sst_id]->bpc = BPC_8;
 		displayport->sst[sst_id]->dyn_range = VESA_RANGE;
 
@@ -1190,7 +1191,8 @@ void displayport_hpd_changed(int state)
 		if (displayport->mst_cap == 0) {
 			displayport_info("displayport_on_by_hpd_high in hpd changed\n");
 			displayport_on_by_hpd_high(sst_id, displayport);
-		}
+		} else
+			displayport_topology_make();
 	} else {
 		displayport_reg_print_audio_state(sst_id);
 #if defined(CONFIG_EXYNOS_HDCP2)

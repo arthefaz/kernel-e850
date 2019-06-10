@@ -271,10 +271,6 @@ void displayport_msg_tx(u32 msg_type)
 	case REMOTE_DPCD_WRITE:
 		msg_tx_buf[msg_tx_buf_size++] =
 				(msg_aux_tx.port_num << 4) | (msg_aux_tx.dpcd_address >> 16);
-
-		displayport_info("msg_aux_tx.port_num2 = %d\n", msg_aux_tx.port_num);
-		displayport_info("msg_tx_buf[msg_tx_buf_size] = %d\n", msg_tx_buf[msg_tx_buf_size - 1]);
-
 		msg_tx_buf[msg_tx_buf_size++] =
 				(msg_aux_tx.dpcd_address >> 8) & 0x000000FF;
 		msg_tx_buf[msg_tx_buf_size++] =
@@ -284,7 +280,7 @@ void displayport_msg_tx(u32 msg_type)
 		break;
 	case REMOTE_I2C_READ:
 		msg_tx_buf[msg_tx_buf_size++] =
-				(msg_aux_tx.num_i2c_tx << 4) | msg_aux_tx.port_num;
+				(msg_aux_tx.port_num << 4) | msg_aux_tx.num_i2c_tx;
 		msg_tx_buf[msg_tx_buf_size++] =	msg_aux_tx.write_i2c_dev_id;
 		msg_tx_buf[msg_tx_buf_size++] =	msg_aux_tx.num_write_bytes;
 		msg_tx_buf[msg_tx_buf_size++] = msg_aux_tx.write_data;
