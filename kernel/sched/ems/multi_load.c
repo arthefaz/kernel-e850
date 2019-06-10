@@ -747,6 +747,7 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 {
 	long last_ewma_diff;
 	struct util_est ue, *cfs_rq_ue;
+	bool updated = false;
 
 	if (!sched_feat(UTIL_EST))
 		return;
@@ -765,6 +766,27 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 		WRITE_ONCE(cfs_rq_ue->enqueued, ue.enqueued);
 		p->se.avg.ml.util_est_applied = 0;
 
+		updated = true;
+	}
+
+	/*
+	 * There are some cases that dequeued tasks's util is not subtracted
+	 * from cpu util_est enqueued; it causes cpu util_est to be misleading.
+	 *
+	 * Clear cpu util_est enqueued when cfs_rq->nr_running is 0. It helps
+	 * cpu util_est to be in the right state.
+	 */
+	if (cfs_rq->nr_running == 0) {
+		cfs_rq_ue = cfs_rq_util_est(cfs_rq, SSE);
+		WRITE_ONCE(cfs_rq_ue->enqueued, 0);
+
+		cfs_rq_ue = cfs_rq_util_est(cfs_rq, USS);
+		WRITE_ONCE(cfs_rq_ue->enqueued, 0);
+
+		updated = true;
+	}
+
+	if (updated) {
 		/* Update plots for CPU's estimated utilization */
 		trace_ems_util_est_cpu(cpu_of(cfs_rq->rq), cfs_rq);
 	}
