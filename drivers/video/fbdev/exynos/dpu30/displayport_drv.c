@@ -2134,10 +2134,10 @@ static void hdcp_start(struct displayport_device *displayport)
 #if defined(HDCP_SUPPORT)
 	if (displayport->hdcp_ver == HDCP_VERSION_2_2)
 		queue_delayed_work(displayport->hdcp2_wq, &displayport->hdcp22_work,
-				msecs_to_jiffies(2500));
+				msecs_to_jiffies(3500));
 	else if (displayport->hdcp_ver == HDCP_VERSION_1_3)
 		queue_delayed_work(displayport->dp_wq, &displayport->hdcp13_work,
-				msecs_to_jiffies(4500));
+				msecs_to_jiffies(5500));
 	else
 		displayport_info("HDCP is not supported\n");
 #endif
