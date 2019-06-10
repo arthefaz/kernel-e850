@@ -703,16 +703,26 @@ static inline struct util_est* cfs_rq_util_est(struct cfs_rq *cfs_rq, int sse)
 void util_est_enqueue_multi_load(struct cfs_rq *cfs_rq, struct task_struct *p)
 {
 	unsigned int enqueued;
-	struct util_est *cfs_rq_ue = cfs_rq_util_est(cfs_rq, p->sse);
+	struct util_est *cfs_rq_ue;
 
 	if (!sched_feat(UTIL_EST))
 		return;
 
 	if (schedtune_util_est(p)) {
+		/*
+		 * Skip applying estimated utilization of task to cfs_rq if it
+		 * is already applied.
+		 */
+		if (p->se.avg.ml.util_est_applied)
+			return;
+
+		cfs_rq_ue = cfs_rq_util_est(cfs_rq, p->sse);
+
 		/* Update root cfs_rq's estimated utilization */
 		enqueued  = cfs_rq_ue->enqueued;
 		enqueued += (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED);
 		WRITE_ONCE(cfs_rq_ue->enqueued, enqueued);
+		p->se.avg.ml.util_est_applied = 1;
 
 		/* Update plots for Task and CPU estimated utilization */
 		trace_ems_util_est_task(p, &p->se.avg.ml);
@@ -741,7 +751,11 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 	if (!sched_feat(UTIL_EST))
 		return;
 
-	if (schedtune_util_est(p)) {
+	/*
+	 * Only the task to which utilization estimation is applied to cfs_rq
+	 * is updated
+	 */
+	if (p->se.avg.ml.util_est_applied) {
 		cfs_rq_ue = cfs_rq_util_est(cfs_rq, p->sse);
 
 		/* Update root cfs_rq's estimated utilization */
@@ -749,6 +763,7 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 		ue.enqueued -= min_t(unsigned int, ue.enqueued,
 				(_ml_task_util_est(p) | UTIL_AVG_UNCHANGED));
 		WRITE_ONCE(cfs_rq_ue->enqueued, ue.enqueued);
+		p->se.avg.ml.util_est_applied = 0;
 
 		/* Update plots for CPU's estimated utilization */
 		trace_ems_util_est_cpu(cpu_of(cfs_rq->rq), cfs_rq);
@@ -829,11 +844,16 @@ void util_est_update(struct task_struct *p,
 	cfs_rq_ue = cfs_rq_util_est(&rq->cfs, p->sse);
 
 	enqueued = cfs_rq_ue->enqueued;
-	if (prev_util_est)
+	if (prev_util_est && p->se.avg.ml.util_est_applied) {
 		enqueued -= min_t(unsigned int, enqueued,
 				(_ml_task_util_est(p) | UTIL_AVG_UNCHANGED));
-	if (next_util_est)
+		p->se.avg.ml.util_est_applied = 0;
+	}
+
+	if (next_util_est && likely(!p->se.avg.ml.util_est_applied)) {
 		enqueued += (_ml_task_util_est(p) | UTIL_AVG_UNCHANGED);
+		p->se.avg.ml.util_est_applied = 1;
+	}
 
 	WRITE_ONCE(cfs_rq_ue->enqueued, enqueued);
 
