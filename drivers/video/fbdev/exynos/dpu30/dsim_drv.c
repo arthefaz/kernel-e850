@@ -278,7 +278,7 @@ int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1, 
 
 	mutex_lock(&dsim->cmd_lock);
 	if (!IS_DSIM_ON_STATE(dsim)) {
-		dsim_err("DSIM is not ready. state(%d)\n", dsim->state);
+		dsim_warn("DSIM is not ready. state(%d)\n", dsim->state);
 		ret = -EINVAL;
 		goto err_exit;
 	}

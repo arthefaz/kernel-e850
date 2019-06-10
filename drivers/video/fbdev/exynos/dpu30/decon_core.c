@@ -3077,7 +3077,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 
 
 		if (pwr != DISP_PWR_DOZE && pwr != DISP_PWR_DOZE_SUSPEND) {
-			decon_err("%s: decon%d invalid pwr_state %d\n",
+			decon_warn("%s: decon%d invalid pwr_state %d\n",
 					__func__, decon->id, pwr);
 			break;
 		}
