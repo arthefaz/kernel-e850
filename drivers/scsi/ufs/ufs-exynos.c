@@ -601,9 +601,6 @@ static int exynos_ufs_init(struct ufs_hba *hba)
 	struct exynos_ufs *ufs = to_exynos_ufs(hba);
 	int ret;
 	int id;
-	void __iomem *fmp_test;
-
-	fmp_test =  ioremap(0x13500000, 0x3000);
 
 	/* set features, such as caps or quirks */
 	exynos_ufs_set_features(hba, ufs->hw_rev);
@@ -630,15 +627,10 @@ static int exynos_ufs_init(struct ufs_hba *hba)
 		ufs->smu = SMU_ID_MAX;
 	else
 		ufs->smu = id;
-#if 0
+
 	/* FMPSECURITY & SMU */
 	exynos_ufs_fmp_sec_cfg(ufs);
 	exynos_ufs_smu_init(ufs);
-#endif
-	writel(0x0, fmp_test + 0x2000);
-	writel(0xffffffff, fmp_test + 0x2004);
-	writel(0xff, fmp_test + 0x2008);
-	writel(0xf1, fmp_test + 0x200c);
 
 	/* Enable log */
 	ret =  exynos_ufs_init_dbg(hba);
