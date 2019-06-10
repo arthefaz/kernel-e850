@@ -670,8 +670,8 @@ const struct samsung_pin_ctrl exynos9630_pin_ctrl[] = {
 		.pin_banks	= exynos9630_pin_banks6,
 		.nr_banks	= ARRAY_SIZE(exynos9630_pin_banks6),
 		//.eint_gpio_init = exynos_eint_gpio_init,
-		.suspend	= exynos_pinctrl_suspend,
-		.resume		= exynos_pinctrl_resume,
+		//.suspend	= exynos_pinctrl_suspend,
+		//.resume	= exynos_pinctrl_resume,
 	},
 };
 
