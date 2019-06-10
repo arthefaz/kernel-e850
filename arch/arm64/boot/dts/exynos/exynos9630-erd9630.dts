@@ -800,8 +800,8 @@
 
 /* USI_02_CMGP */
 &usi_02_cmgp {
-	/*	usi_v2_mode = "i2c" or "spi" or "uart"	*/
-	status = "disabled";
+	usi_v2_mode = "i2c";
+	status = "okay";
 };
 
 /* USI_03_CMGP */
