@@ -5,17 +5,10 @@
  * Lakkyung Jung <lakkyung.jung@samsung.com>
  */
 
-#include <linux/sched.h>
-#include <linux/cpuidle.h>
-#include <linux/pm_qos.h>
-#include <linux/sched/energy.h>
-#include <linux/ems.h>
-
 #include <trace/events/ems.h>
 
 #include "ems.h"
 #include "../sched.h"
-#include "../tune.h"
 
 struct list_head *lb_cfs_tasks(struct rq *rq, int sse)
 {
@@ -24,16 +17,18 @@ struct list_head *lb_cfs_tasks(struct rq *rq, int sse)
 
 void lb_add_cfs_task(struct rq *rq, struct sched_entity *se)
 {
-	struct list_head *tasks = lb_cfs_tasks(rq, task_of(se)->sse);
+	struct list_head *tasks;
+
+	tasks = lb_cfs_tasks(rq, container_of(se, struct task_struct, se)->sse);
 
 	list_add(&se->group_node, tasks);
 }
 
 int lb_check_priority(int src_cpu, int dst_cpu)
 {
-	if (capacity_orig_of_sse(dst_cpu, 0) > capacity_orig_of_sse(src_cpu, 0))
+	if (capacity_cpu_orig(dst_cpu, 0) > capacity_cpu_orig(src_cpu, 0))
 		return 0;
-	else if (capacity_orig_of_sse(dst_cpu, 1) > capacity_orig_of_sse(src_cpu, 1))
+	else if (capacity_cpu_orig(dst_cpu, 1) > capacity_cpu_orig(src_cpu, 1))
 		return 1;
 	else
 		return 0;
@@ -62,39 +57,32 @@ check_cpu_capacity(struct rq *rq, struct sched_domain *sd)
 #define lb_sd_parent(sd) \
 	(sd->parent && sd->parent->groups != sd->parent->groups->next)
 
+bool lbt_overutilized(int cpu, int level);
 int lb_need_active_balance(enum cpu_idle_type idle, struct sched_domain *sd,
 					int src_cpu, int dst_cpu)
 {
 	struct task_struct *p = cpu_rq(src_cpu)->curr;
-	unsigned int src_imb_pct = lb_sd_parent(sd) ? sd->imbalance_pct : 1;
-	unsigned int dst_imb_pct = lb_sd_parent(sd) ? 100 : 1;
-	unsigned long src_cap = capacity_orig_of_sse(src_cpu, p->sse);
-	unsigned long dst_cap = capacity_orig_of_sse(dst_cpu, p->sse);
-
+	unsigned long src_cap = capacity_cpu_orig(src_cpu, p->sse);
+	unsigned long dst_cap = capacity_cpu_orig(dst_cpu, p->sse);
 	int level = sd->level;
 
 	/* dst_cpu is idle */
 	if ((idle != CPU_NOT_IDLE) &&
 	    (cpu_rq(src_cpu)->cfs.h_nr_running == 1)) {
-		if ((check_cpu_capacity(cpu_rq(src_cpu), sd)) &&
-		    (src_cap * sd->imbalance_pct < dst_cap * 100)) {
-			return 1;
-		}
-
 		/* This domain is top and dst_cpu is bigger than src_cpu*/
 		if (!lb_sd_parent(sd) && src_cap < dst_cap)
-			if (lbt_overutilized(src_cpu, level) || global_boosted())
+			if (lbt_overutilized(src_cpu, level))
 				return 1;
 	}
 
-	if ((src_cap * src_imb_pct < dst_cap * dst_imb_pct) &&
-			cpu_rq(src_cpu)->cfs.h_nr_running == 1 &&
-			lbt_overutilized(src_cpu, level) &&
-			!lbt_overutilized(dst_cpu, level)) {
+	if ((src_cap < dst_cap) &&
+		cpu_rq(src_cpu)->cfs.h_nr_running == 1 &&
+		lbt_overutilized(src_cpu, level) &&
+		!lbt_overutilized(dst_cpu, level)) {
 		return 1;
 	}
 
-	return unlikely(sd->nr_balance_failed > sd->cache_nice_tries + 2);
+	return 0;
 }
 
 /****************************************************************/
@@ -173,7 +161,12 @@ bool lbt_overutilized(int cpu, int level)
 void update_lbt_overutil(int cpu, unsigned long capacity)
 {
 	struct lbt_overutil *ou = per_cpu(lbt_overutil, cpu);
-	int level, last = get_last_level(ou);
+	int level, last;
+
+	if (!ou)
+		return;
+
+	last = get_last_level(ou);
 
 	for (level = 0; level <= last; level++) {
 		if (ou[level].ratio == DISABLE_OU)
@@ -181,6 +174,45 @@ void update_lbt_overutil(int cpu, unsigned long capacity)
 
 		ou[level].capacity = (capacity * ou[level].ratio) / 100;
 	}
+}
+
+#define SD_BOTTOM_LEVEL (0)
+
+bool lb_sibling_overutilized(int dst_cpu, struct sched_domain *sd, struct cpumask *lb_cpus)
+{
+	int cpu;
+	struct sched_group *sg = sd->groups;
+
+	/* No need to check overutil status for bottom-level sched domain */
+	if (sd->level == SD_BOTTOM_LEVEL)
+		return true;
+
+	do {
+		struct lbt_overutil *ou;
+
+		/* we don't need to check overutil status for sched group of dst_cpu */
+		if (cpumask_test_cpu(dst_cpu, sched_group_span(sg)))
+			goto next_group;
+
+		for_each_cpu_and(cpu, lb_cpus, sched_group_span(sg)) {
+			ou = per_cpu(lbt_overutil, cpu);
+
+			if (!ou)
+				return true;
+
+			/* It means that the sibling needs to be *balanced* */
+			if (ml_cpu_util(cpu) <= ou[sd->level - 1].capacity) {
+				trace_ems_lb_sibling_overutilized(dst_cpu, cpu, sd->level,
+						ml_cpu_util(cpu), ou[sd->level - 1].capacity);
+
+				return false;
+			}
+		}
+next_group:
+		sg = sg->next;
+	} while (sg != sd->groups);
+
+	return true;
 }
 
 /****************************************************************/
@@ -245,7 +277,7 @@ static ssize_t store_overutil_ratio(struct kobject *kobj,
 			continue;
 
 		ou[level].ratio = ratio;
-		capacity = capacity_orig_of(cpu);
+		capacity = capacity_cpu_orig(cpu, 0);
 		update_lbt_overutil(cpu, capacity);
 	}
 

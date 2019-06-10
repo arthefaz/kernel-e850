@@ -32,6 +32,8 @@
 #include <linux/irq_work.h>
 #include <linux/tick.h>
 #include <linux/slab.h>
+#include <linux/cpufreq.h>
+#include <linux/ems.h>
 
 #ifdef CONFIG_PARAVIRT
 #include <asm/paravirt.h>
@@ -504,6 +506,13 @@ struct cfs_rq {
 	unsigned long propagate_avg;
 #endif
 	atomic_long_t removed_load_avg, removed_util_avg;
+
+	struct {
+		raw_spinlock_t	lock ____cacheline_aligned;
+		unsigned long	util_avg;
+		unsigned long	util_avg_s;
+	} ml_removed;
+
 #ifndef CONFIG_64BIT
 	u64 load_last_update_time_copy;
 #endif
@@ -699,6 +708,9 @@ struct root_domain {
 	 */
 	int overload;
 
+	/* For backporting from 4.19 */
+	int overutilized;
+
 	/*
 	 * The bit corresponding to a CPU gets set here if such CPU has more
 	 * than one runnable -deadline task (as it is below for RT tasks).
@@ -860,6 +872,8 @@ struct rq {
 	u64 cum_window_demand;
 #endif /* CONFIG_SCHED_WALT */
 
+	struct part pa;
+
 #ifdef CONFIG_SCHED_EMS
 	bool ontime_migrating;
 #endif
@@ -913,6 +927,9 @@ struct rq {
 	struct cpuidle_state *idle_state;
 	int idle_state_idx;
 #endif
+
+	struct list_head uss_cfs_tasks;
+	struct list_head sse_cfs_tasks;
 };
 
 static inline int cpu_of(struct rq *rq)

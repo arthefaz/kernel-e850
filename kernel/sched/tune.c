@@ -5,7 +5,6 @@
 #include <linux/printk.h>
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
-#include <linux/ems.h>
 #include <linux/ems_service.h>
 
 #include <trace/events/sched.h>
@@ -43,13 +42,13 @@ struct schedtune {
 	int prefer_perf;
 
 	/* SchedTune util-est */
-	int util_est_en;
+	int util_est;
 
 	/* Hint to group tasks by process */
 	int band;
 
 	/* SchedTune ontime migration */
-	int ontime_en;
+	int ontime;
 };
 
 static inline struct schedtune *css_st(struct cgroup_subsys_state *css)
@@ -383,11 +382,6 @@ void schedtune_cancel_attach(struct cgroup_taskset *tset)
 
 static void schedtune_attach(struct cgroup_taskset *tset)
 {
-	struct task_struct *task;
-	struct cgroup_subsys_state *css;
-
-	cgroup_taskset_for_each(task, css, tset)
-		sync_band(task, css_st(css)->band);
 }
 
 /*
@@ -451,10 +445,10 @@ int schedtune_task_boost(struct task_struct *p)
 	return task_boost;
 }
 
-int schedtune_util_est_en(struct task_struct *p)
+int schedtune_util_est(struct task_struct *p)
 {
 	struct schedtune *st;
-	int util_est_en;
+	int util_est;
 
 	if (unlikely(!schedtune_initialized))
 		return 0;
@@ -462,16 +456,16 @@ int schedtune_util_est_en(struct task_struct *p)
 	/* Get util_est value */
 	rcu_read_lock();
 	st = task_schedtune(p);
-	util_est_en = st->util_est_en;
+	util_est = st->util_est;
 	rcu_read_unlock();
 
-	return util_est_en;
+	return util_est;
 }
 
-int schedtune_ontime_en(struct task_struct *p)
+int schedtune_ontime(struct task_struct *p)
 {
 	struct schedtune *st;
-	int ontime_en;
+	int ontime;
 
 	if (unlikely(!schedtune_initialized))
 		return 0;
@@ -479,10 +473,10 @@ int schedtune_ontime_en(struct task_struct *p)
 	/* Get ontime value */
 	rcu_read_lock();
 	st = task_schedtune(p);
-	ontime_en = st->ontime_en;
+	ontime = st->ontime;
 	rcu_read_unlock();
 
-	return ontime_en;
+	return ontime;
 
 }
 
@@ -514,44 +508,44 @@ int schedtune_prefer_perf(struct task_struct *p)
 	/* Get prefer_perf value */
 	rcu_read_lock();
 	st = task_schedtune(p);
-	prefer_perf = max(st->prefer_perf, kernel_prefer_perf(st->idx));
+	prefer_perf = max(st->prefer_perf, kpp_status(st->idx));
 	rcu_read_unlock();
 
 	return prefer_perf;
 }
 
 static u64
-util_est_en_read(struct cgroup_subsys_state *css, struct cftype *cft)
+util_est_read(struct cgroup_subsys_state *css, struct cftype *cft)
 {
 	struct schedtune *st = css_st(css);
 
-	return st->util_est_en;
+	return st->util_est;
 }
 
 static int
-util_est_en_write(struct cgroup_subsys_state *css, struct cftype *cft,
-	    u64 util_est_en)
+util_est_write(struct cgroup_subsys_state *css, struct cftype *cft,
+	    u64 util_est)
 {
 	struct schedtune *st = css_st(css);
-	st->util_est_en = util_est_en;
+	st->util_est = util_est;
 
 	return 0;
 }
 
 static u64
-ontime_en_read(struct cgroup_subsys_state *css, struct cftype *cft)
+ontime_read(struct cgroup_subsys_state *css, struct cftype *cft)
 {
 	struct schedtune *st = css_st(css);
 
-	return st->ontime_en;
+	return st->ontime;
 }
 
 static int
-ontime_en_write(struct cgroup_subsys_state *css, struct cftype *cft,
-		u64 ontime_en)
+ontime_write(struct cgroup_subsys_state *css, struct cftype *cft,
+		u64 ontime)
 {
 	struct schedtune *st = css_st(css);
-	st->ontime_en = ontime_en;
+	st->ontime = ontime;
 
 	return 0;
 }
@@ -658,13 +652,13 @@ static struct cftype files[] = {
 	},
 	{
 		.name = "util_est_en",
-		.read_u64 = util_est_en_read,
-		.write_u64 = util_est_en_write,
+		.read_u64 = util_est_read,
+		.write_u64 = util_est_write,
 	},
 	{
 		.name = "ontime_en",
-		.read_u64 = ontime_en_read,
-		.write_u64 = ontime_en_write,
+		.read_u64 = ontime_read,
+		.write_u64 = ontime_write,
 	},
 	{ }	/* terminate */
 };

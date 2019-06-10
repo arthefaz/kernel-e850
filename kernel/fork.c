@@ -1260,6 +1260,8 @@ static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
 good_mm:
 	tsk->mm = mm;
 	tsk->active_mm = mm;
+	if (tsk->mm->mmap_base && !(tsk->mm->mmap_base >> 32))
+		tsk->sse = 1;
 	return 0;
 
 fail_nomem:

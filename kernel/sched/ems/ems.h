@@ -11,40 +11,52 @@
  * GNU General Public License for more details.
  */
 
-#include "../sched-pelt.h"
-
-#define cpu_selected(cpu)	(cpu >= 0)
-#define tsk_cpus_allowed(tsk)	(&(tsk)->cpus_allowed)
-
 extern struct kobject *ems_kobj;
 
-extern int select_service_cpu(struct task_struct *p);
-extern int ontime_task_wakeup(struct task_struct *p, int sync);
-extern int select_perf_cpu(struct task_struct *p);
-extern int global_boosting(struct task_struct *p);
-extern int global_boosted(void);
-extern int select_energy_cpu(struct task_struct *p, int prev_cpu, int sd_flag, int sync);
-extern unsigned int calculate_energy(struct task_struct *p, int target_cpu);
-extern int band_play_cpu(struct task_struct *p);
+struct enrg_env {
+	struct task_struct *p;
 
-#ifdef CONFIG_SCHED_TUNE
-extern int prefer_perf_cpu(struct task_struct *p);
-extern int prefer_idle_cpu(struct task_struct *p);
-extern int group_balancing(struct task_struct *p);
-#else
-static inline int prefer_perf_cpu(struct task_struct *p) { return -1; }
-static inline int prefer_idle_cpu(struct task_struct *p) { return -1; }
-#endif
+	int prefer_perf;
+	int prefer_idle;
 
-extern unsigned long task_util(struct task_struct *p);
-extern int cpu_util_wake(int cpu, struct task_struct *p);
-extern unsigned long task_util_est(struct task_struct *p);
-extern unsigned int get_cpu_mips(unsigned int cpu);
-extern unsigned int get_cpu_max_capacity(unsigned int cpu);
+	struct cpumask fit_cpus;
+	struct cpumask candidates;
+	struct cpumask idle_candidates;
 
-extern unsigned long boosted_task_util(struct task_struct *p);
+	unsigned long c_weight[NR_CPUS];	/* capacity weight */
+	unsigned long e_weight[NR_CPUS];	/* energy weight */
+};
 
-static inline struct task_struct *task_of(struct sched_entity *se)
-{
-	return container_of(se, struct task_struct, se);
-}
+
+/* ISA flags */
+#define USS	0
+#define SSE	1
+
+/* energy model */
+extern unsigned long capacity_cpu_orig(int cpu, int sse);
+extern unsigned long capacity_cpu(int cpu, int sse);
+extern unsigned long capacity_ratio(int cpu, int sse);
+
+/* multi load */
+extern unsigned long ml_task_util(struct task_struct *p);
+extern unsigned long ml_task_runnable(struct task_struct *p);
+extern unsigned long ml_boosted_task_util(struct task_struct *p);
+extern unsigned long ml_cpu_util(int cpu);
+extern unsigned long _ml_cpu_util(int cpu, int sse);
+extern unsigned long ml_cpu_util_ratio(int cpu, int sse);
+extern unsigned long __ml_cpu_util_with(int cpu, struct task_struct *p, int sse);
+extern unsigned long ml_cpu_util_with(int cpu, struct task_struct *p);
+extern unsigned long ml_cpu_util_without(int cpu, struct task_struct *p);
+extern void post_init_multi_load_cfs_rq(struct sched_entity *se, u32 inherit_ratio);
+extern void post_init_multi_load_parent(struct sched_entity *se, u32 inherit_ratio);
+extern void init_part(void);
+
+/* efficiency cpu selection */
+extern int find_best_cpu(struct enrg_env *env);
+
+/* ontime migration */
+extern void ontime_select_fit_cpus(struct task_struct *p, struct cpumask *fit_cpus);
+extern unsigned long get_upper_boundary(int cpu, struct task_struct *p);
+
+/* global boost */
+extern int global_boost(void);

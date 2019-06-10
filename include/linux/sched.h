@@ -354,6 +354,48 @@ struct util_est {
 #define UTIL_EST_WEIGHT_SHIFT		2
 };
 
+struct multi_load {
+	u32				period_contrib;
+	u64				runnable_sum;
+	u64				runnable_sum_s;
+	unsigned long			runnable_avg;
+	unsigned long			runnable_avg_s;
+	u32				util_sum;
+	unsigned long			util_avg;
+	u32				util_sum_s;
+	unsigned long			util_avg_s;
+
+	/* for util_est */
+	struct util_est			util_est;
+	struct util_est			util_est_s;
+};
+
+#define EMS_PART_ENQUEUE	0x1
+#define EMS_PART_DEQUEUE	0x2
+#define EMS_PART_UPDATE		0x4
+#define EMS_PART_WAKEUP_NEW	0x8
+
+struct part {
+	bool	running;
+
+	u64	period_start;
+	u64	last_updated;
+	u64	active_sum;
+
+#define PART_HIST_SIZE_MAX	20
+	int	hist_idx;
+	int	hist[PART_HIST_SIZE_MAX];
+	int	active_ratio_recent;
+	int	active_ratio_avg;
+	int	active_ratio_max;
+	int	active_ratio_est;
+	int	active_ratio_stdev;
+	int	active_ratio_limit;
+
+	u64	last_boost_time;
+	int	active_ratio_boost;
+};
+
 /*
  * The load_avg/util_avg accumulates an infinite geometric series
  * (see __update_load_avg() in kernel/sched/fair.c).
@@ -414,17 +456,11 @@ struct sched_avg {
 	unsigned long			load_avg;
 	unsigned long			util_avg;
 	struct util_est			util_est;
-};
 
-struct ontime_avg {
-	u64 ontime_migration_time;
-	u64 load_sum;
-	u32 period_contrib;
-	unsigned long load_avg;
+	struct multi_load		ml;
 };
 
 struct ontime_entity {
-	struct ontime_avg avg;
 	int migrating;
 	int cpu;
 };
@@ -760,6 +796,8 @@ struct task_struct {
 	struct plist_node		pushable_tasks;
 	struct rb_node			pushable_dl_tasks;
 #endif
+
+	unsigned int			sse;
 
 	struct mm_struct		*mm;
 	struct mm_struct		*active_mm;

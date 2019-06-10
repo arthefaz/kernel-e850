@@ -5,12 +5,9 @@
  * Park Bumgyu <bumgyu.park@samsung.com>
  */
 
-#include <linux/sched.h>
-#include <linux/kobject.h>
-#include <linux/ems.h>
-
 #include <trace/events/ems.h>
 
+#include "../sched.h"
 #include "ems.h"
 
 /*
@@ -63,6 +60,27 @@ static struct gb_qos_request gb_req_user =
 	.name = "gb_req_user",
 };
 
+/* booting boost duration = system booting + 40s */
+static int booting_boost_duration = 40 * USEC_PER_SEC;
+static int booting_boost = 1;
+
+/*
+ * Returns the biggest value in the global boost list. In the current policy,
+ * a value greater than 0 is unconditionally boosting. The size of the value
+ * is meaningless.
+ */
+int global_boost(void)
+{
+	if (booting_boost) {
+		if (ktime_to_us(ktime_get()) < booting_boost_duration)
+			return 1;
+		else
+			booting_boost = 0;
+	}
+
+	return gb_qos_value() > 0;
+}
+
 static ssize_t show_global_boost(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -105,27 +123,3 @@ static int __init init_gb_sysfs(void)
 	return 0;
 }
 late_initcall(init_gb_sysfs);
-
-/*
- * Returns the biggest value in the global boost list. In the current policy,
- * a value greater than 0 is unconditionally boosting. The size of the value
- * is meaningless.
- */
-int global_boosted(void)
-{
-	u64 now = ktime_to_us(ktime_get());
-
-	/* booting boost duration = 40s */
-	if (now < 40 * USEC_PER_SEC)
-		return 1;
-
-	return gb_qos_value() > 0;
-}
-
-int global_boosting(struct task_struct *p)
-{
-	if (!global_boosted())
-		return -1;
-
-	return select_perf_cpu(p);
-}

@@ -6,123 +6,121 @@
  */
 
 #include <linux/sched.h>
+#include <trace/events/ems.h>
 
-#include "ems.h"
 #include "../sched.h"
+<<<<<<< HEAD
+=======
+#include "../sched-pelt.h"
+#include "ems.h"
+>>>>>>> 78ae72181ddd... sched: support EMSv2.0
 
 enum {
-	TYPE_BASE_CFS_RQ_UTIL = 0,
-	TYPE_BASE_INHERIT_PARENT_UTIL,
-	TYPE_MAX_NUM,
+	INHERIT_CFS_RQ = 0,
+	INHERIT_PARENT,
+	INHERIT_MAX_NUM,
 };
 
-static unsigned long init_util_type = TYPE_BASE_CFS_RQ_UTIL;
-static unsigned long init_util_ratio = 25;			/* 25% */
+static u32 inherit_type = INHERIT_CFS_RQ;
+static u32 inherit_ratio = 25;	/* EMS default : 25% (fair : 50%) */
 
-static void base_cfs_rq_util(struct sched_entity *se)
+static void inherit_cfs_rq_util(struct sched_entity *se)
 {
 	struct cfs_rq *cfs_rq = se->cfs_rq;
 	struct sched_avg *sa = &se->avg;
-	int cpu = cpu_of(cfs_rq->rq);
-	unsigned long cap_org = capacity_orig_of(cpu);
-	long cap = (long)(cap_org - cfs_rq->avg.util_avg) / 2;
+	unsigned long cpu_scale = arch_scale_cpu_capacity(NULL, cpu_of(cfs_rq->rq));
+	long cap = (long)(cpu_scale - cfs_rq->avg.util_avg);
 
 	if (cap > 0) {
 		if (cfs_rq->avg.util_avg != 0) {
 			sa->util_avg  = cfs_rq->avg.util_avg * se->load.weight;
 			sa->util_avg /= (cfs_rq->avg.load_avg + 1);
+			sa->util_avg = sa->util_avg << 1;
 
 			if (sa->util_avg > cap)
 				sa->util_avg = cap;
 		} else {
-			sa->util_avg = cap_org * init_util_ratio / 100;
+			sa->util_avg = cap * inherit_ratio / 100;
 		}
-		/*
-		 * If we wish to restore tuning via setting initial util,
-		 * this is where we should do it.
-		 */
 		sa->util_sum = sa->util_avg * LOAD_AVG_MAX;
 	}
 }
 
-static void base_inherit_parent_util(struct sched_entity *se)
+static void inherit_parent_util(struct sched_entity *se)
 {
-	struct sched_avg *sa = &se->avg;
-	struct task_struct *p = current;
-
-	sa->util_avg = p->se.avg.util_avg;
-	sa->util_sum = p->se.avg.util_sum;
+	se->avg.util_avg = current->se.avg.util_avg * inherit_ratio / 100;
+	se->avg.util_sum = current->se.avg.util_sum * inherit_ratio / 100;
 }
 
-void exynos_init_entity_util_avg(struct sched_entity *se)
+void exynos_post_init_entity_util_avg(struct sched_entity *se)
 {
-	int type = init_util_type;
-
-	switch(type) {
-	case TYPE_BASE_CFS_RQ_UTIL:
-		base_cfs_rq_util(se);
+	switch(inherit_type) {
+	case INHERIT_CFS_RQ:
+		inherit_cfs_rq_util(se);
+		post_init_multi_load_cfs_rq(se, inherit_ratio);
 		break;
-	case TYPE_BASE_INHERIT_PARENT_UTIL:
-		base_inherit_parent_util(se);
+	case INHERIT_PARENT:
+		inherit_parent_util(se);
+		post_init_multi_load_parent(se, inherit_ratio);
 		break;
 	default:
-		pr_info("%s: Not support initial util type %ld\n",
-				__func__, init_util_type);
+		pr_info("%s: Not support initial util type %d\n",
+				__func__, inherit_type);
 	}
 }
 
-static ssize_t show_initial_util_type(struct kobject *kobj,
+static ssize_t show_inherit_type(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return snprintf(buf, 10, "%ld\n", init_util_type);
+        return snprintf(buf, 10, "%d\n", inherit_type);
 }
 
-static ssize_t store_initial_util_type(struct kobject *kobj,
+static ssize_t store_inherit_type(struct kobject *kobj,
                 struct kobj_attribute *attr, const char *buf,
                 size_t count)
 {
-        long input;
+        int input;
 
-        if (!sscanf(buf, "%ld", &input))
+        if (!sscanf(buf, "%d", &input))
                 return -EINVAL;
 
-        input = input < 0 ? 0 : input;
-        input = input >= TYPE_MAX_NUM ? TYPE_MAX_NUM - 1 : input;
+        input = min_t(u32, input, INHERIT_CFS_RQ);
+	input = max_t(u32, input, INHERIT_MAX_NUM - 1);
 
-        init_util_type = input;
+        inherit_type = input;
 
         return count;
 }
 
-static ssize_t show_initial_util_ratio(struct kobject *kobj,
+static ssize_t show_inherit_ratio(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-        return snprintf(buf, 10, "%ld\n", init_util_ratio);
+        return snprintf(buf, 10, "%d\n", inherit_ratio);
 }
 
-static ssize_t store_initial_util_ratio(struct kobject *kobj,
+static ssize_t store_inherit_ratio(struct kobject *kobj,
                 struct kobj_attribute *attr, const char *buf,
                 size_t count)
 {
-        long input;
+        int input;
 
-        if (!sscanf(buf, "%ld", &input))
+        if (!sscanf(buf, "%d", &input))
                 return -EINVAL;
 
-        init_util_ratio = !!input;
+        inherit_ratio = !!input;
 
         return count;
 }
 
-static struct kobj_attribute initial_util_type =
-__ATTR(initial_util_type, 0644, show_initial_util_type, store_initial_util_type);
+static struct kobj_attribute inherit_type_attr =
+__ATTR(inherit_type, 0644, show_inherit_type, store_inherit_type);
 
-static struct kobj_attribute initial_util_ratio =
-__ATTR(initial_util_ratio, 0644, show_initial_util_ratio, store_initial_util_ratio);
+static struct kobj_attribute inherit_ratio_attr =
+__ATTR(inherit_ratio, 0644, show_inherit_ratio, store_inherit_ratio);
 
 static struct attribute *attrs[] = {
-	&initial_util_type.attr,
-	&initial_util_ratio.attr,
+	&inherit_type_attr.attr,
+	&inherit_ratio_attr.attr,
 	NULL,
 };
 
