@@ -1286,7 +1286,6 @@ static void displayport_hpd_unplug_work(struct work_struct *work)
 	for (i = SST1; i < MAX_SST_CNT; i++) {
 		if (displayport->sst[i]->hpd_state == HPD_UNPLUG_WORK) {
 			displayport_info("hpd_unplug_work\n");
-			displayport_reg_set_sst_interrupt_mask(i, VIDEO_FIFO_UNDER_FLOW_MASK, 0);
 			displayport_topology_delete_vc(i);
 			displayport->sst[i]->hpd_state = HPD_UNPLUG;
 			displayport_off_by_hpd_low(i, displayport);
@@ -1740,7 +1739,8 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 	for (i = SST1; i < MAX_SST_CNT; i++) {
 		irq_status_reg = displayport_reg_get_sst_video_interrupt_and_clear(i);
 
-		if (irq_status_reg & MAPI_FIFO_UNDER_FLOW)
+		if ((irq_status_reg & MAPI_FIFO_UNDER_FLOW)
+				&& displayport->sst[i]->decon_run == 1)
 			displayport_info("SST%d VIDEO FIFO_UNDER_FLOW detect\n", i + 1);
 
 		if (displayport->sst[i]->bist_used == 0) {

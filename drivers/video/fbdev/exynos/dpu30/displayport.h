@@ -604,7 +604,10 @@ struct edid_data {
 
 struct displayport_sst {
 	u32 id;
+
 	u32 decon_id; /* connected decon id */
+	bool decon_run;
+
 	enum displayport_state state;
 	enum hotplug_state hpd_state; /* each SST RX port status */
 

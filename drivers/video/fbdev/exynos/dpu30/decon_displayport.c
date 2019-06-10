@@ -30,6 +30,8 @@ static irqreturn_t decon_displayport_irq_handler(int irq, void *dev_data)
 	struct decon_device *decon = dev_data;
 	u32 irq_sts_reg;
 	u32 ext_irq = 0;
+	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(decon->id);
 
 	spin_lock(&decon->slock);
 	if (decon->state == DECON_STATE_OFF)
@@ -37,8 +39,10 @@ static irqreturn_t decon_displayport_irq_handler(int irq, void *dev_data)
 
 	irq_sts_reg = decon_reg_get_interrupt_and_clear(decon->id, &ext_irq);
 
-	if (irq_sts_reg & DPU_FRAME_DONE_INT_PEND)
+	if (irq_sts_reg & DPU_FRAME_DONE_INT_PEND) {
 		DPU_EVENT_LOG(DPU_EVT_DECON_FRAMEDONE, &decon->sd, ktime_set(0, 0));
+		displayport->sst[sst_id]->decon_run = 1;
+	}
 
 	if (ext_irq & DPU_TIME_OUT_INT_PEND)
 		decon_err("%s: DECON%d timeout irq occurs\n", __func__, decon->id);
@@ -389,6 +393,9 @@ int decon_displayport_set_config(struct decon_device *decon,
 
 void decon_displayport_under_flow_int_mask(u32 decon_id)
 {
-	displayport_reg_set_sst_interrupt_mask(displayport_get_sst_id_with_decon_id(decon_id),
-			VIDEO_FIFO_UNDER_FLOW_MASK, 0);
+	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(decon_id);
+
+	displayport->sst[sst_id]->decon_run = 0;
+	displayport_reg_set_sst_interrupt_mask(sst_id, VIDEO_FIFO_UNDER_FLOW_MASK, 0);
 }
