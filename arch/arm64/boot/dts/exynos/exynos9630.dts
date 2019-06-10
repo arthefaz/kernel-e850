@@ -635,6 +635,86 @@
 		};
 	};
 
+	psci {
+		compatible = "arm,psci-1.0";
+		method = "smc";
+	};
+
+	exynos-pm {
+		compatible = "samsung,exynos-pm";
+		reg = <0x0 0x10E50000 0x1000>,
+		    <0x0 0x11F01200 0x100>;
+		reg-names = "gpio_alive_base",
+			"gicd_ispendrn_base";
+		num-eint = <12>;
+		num-gic = <16>;
+		suspend_mode_idx = <8>;         /* SYS_SLEEP */
+		suspend_psci_idx = <1024>;      /* PSCI_SYSTEM_SLEEP */
+
+		usbl2_suspend_available = <0>;  /* SYS_SLEEP_USBL2 */
+		usbl2_suspend_mode_idx = <12>;  /* PSCI_SYSTEM_SLEEP */
+
+		/* WAKEUP_STAT,      WAKEUP2_STAT*/
+		wakeup_stat = <0x3950>,         <0x3954>;
+
+		wake_lock = <0>;		/* 1: held wake_lock */
+
+		wakeup_stats {
+			wakeup_stat {
+				ws-name =
+					"RTC_ALARM",		/* [ 0] */
+					"RTC_TICK",		/* [ 1] */
+					"TRTC_ALARM",		/* [ 2] */
+					"TRTC_TICK",		/* [ 3] */
+					"SPARE",		/* [ 4] */
+					"CMGP2PMU_AP_EINT0",	/* [ 5] */
+					"CMGP2PMU_AP_EINT1",	/* [ 6] */
+					"MAILBOX_APM2AP",	/* [ 7] */
+					"MAILBOX_CP2AP",	/* [ 8] */
+					"MAILBOX_VTS2AP",	/* [ 9] */
+					"S_MAILBOX_CP2AP",	/* [10] */
+					"VTS_WDT",		/* [11] */
+					"EINT",			/* [12] */
+					"MAILBOX_GNSS2AP",	/* [13] */
+					"MAILBOX_WLBT2AP",	/* [14] */
+					"MAILBOX_CHUB2AP",	/* [15] */
+					"RESETREQ_CP",		/* [16] */
+					"RESETREQ_GNSS",	/* [17] */
+					"RESETREQ_WLBT",	/* [18] */
+					"USB_REWA",		/* [19] */
+					"USBDP",		/* [20] */
+					"MMC_CARD",		/* [21] */
+					"TIMER",		/* [22] */
+					"CLUSTER0_CPU0_nIRQ",	/* [23] */
+					"CLUSTER0_CPU1_nIRQ",	/* [24] */
+					"CLUSTER0_CPU2_nIRQ",	/* [25] */
+					"CLUSTER0_CPU3_nIRQ",	/* [26] */
+					"CLUSTER0_CPU4_nIRQ",	/* [27] */
+					"CLUSTER0_CPU5_nIRQ",	/* [28] */
+					"CLUSTER1_CPU0_nIRQ",	/* [29] */
+					"CLUSTER1_CPU1_nIRQ",	/* [30] */
+					"CHUB_WDT";		/* [31] */
+			};
+			wakeup_stat2 {
+				ws-name =
+					"CP_ACTIVE",		/* [ 0] */
+					"GNSS_ACTIVE",		/* [ 1] */
+					"WLBT_ACTIVE",		/* [ 2] */
+					"USB20_VMINUS",		/* [ 3] */
+					"USB20_VPLUS",		/* [ 4] */
+					"RESERVED",		/* [ 5] */
+					"RESERVED",		/* [ 6] */
+					"RESERVED",		/* [ 7] */
+					"MMC_EMBD",		/* [ 8] */
+					"GNSS2AP_WAKUP_INT_REQ",/* [ 9] */
+					"CHUB2PMU_AP_EINT0",	/* [10] */
+					"CHUB2PMU_AP_EINT1",	/* [11] */
+					"VGPIO2PMU_EINT0",	/* [12] */
+					"VGPIO2PMU_EINT1";	/* [13] */
+			};
+		};
+	};
+
 	exynos-powermode {
 		wakeup-masks {
 			/*
