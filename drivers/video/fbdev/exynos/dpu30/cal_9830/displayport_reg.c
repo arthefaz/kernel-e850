@@ -169,6 +169,7 @@ void displayport_reg_phy_init_setting(void)
 		displayport_phy_write(phy_default_value[i][0], phy_default_value[i][1]);
 
 	displayport_phy_write_mask(CMN_REG0008, 0, OVRD_AUX_EN);
+	displayport_phy_write_mask(CMN_REG000A, 0xA, ANA_AUX_TX_LVL_CTRL);
 }
 
 void displayport_reg_phy_mode_setting(void)
