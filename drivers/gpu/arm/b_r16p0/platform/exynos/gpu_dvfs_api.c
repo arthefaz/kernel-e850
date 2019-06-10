@@ -27,10 +27,6 @@
 #include "gpu_dvfs_handler.h"
 #include "gpu_dvfs_governor.h"
 
-#ifdef CONFIG_EXYNOS_PD
-#include <soc/samsung/exynos-pd.h>
-#endif
-
 extern struct kbase_device *pkbdev;
 
 static int gpu_check_target_clock(struct exynos_context *platform, int clock)
