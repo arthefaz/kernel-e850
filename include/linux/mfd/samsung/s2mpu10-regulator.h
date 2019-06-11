@@ -260,6 +260,7 @@ enum s2mpu10_irq_source {
 };
 
 #define S2MPU10_NUM_IRQ_PMIC_REGS	6
+#define S2MPU10_NUM_SC_LDO_IRQ		4
 
 enum s2mpu10_irq {
 	/* PMIC */
