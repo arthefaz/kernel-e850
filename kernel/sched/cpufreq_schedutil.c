@@ -51,6 +51,8 @@ struct sugov_policy {
 	bool need_freq_update;
 };
 
+static DEFINE_PER_CPU(struct sugov_policy *, sugov_policy);
+
 struct sugov_cpu {
 	struct update_util_data update_util;
 	struct sugov_policy *sg_policy;
@@ -611,6 +613,11 @@ static int sugov_init(struct cpufreq_policy *policy)
 	struct sugov_policy *sg_policy;
 	struct sugov_tunables *tunables;
 	int ret = 0;
+	int cpu;
+
+	sg_policy = per_cpu(sugov_policy, policy->cpu);
+	if (sg_policy)
+		return 0;
 
 	/* State should be equivalent to EXIT */
 	if (policy->governor_data)
@@ -650,6 +657,9 @@ static int sugov_init(struct cpufreq_policy *policy)
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;
 
+	for_each_cpu(cpu, policy->related_cpus)
+		per_cpu(sugov_policy, cpu) = sg_policy;
+
 	ret = kobject_init_and_add(&tunables->attr_set.kobj, &sugov_tunables_ktype,
 				   get_governor_parent_kobj(policy), "%s",
 				   schedutil_gov.name);
@@ -680,6 +690,9 @@ static void sugov_exit(struct cpufreq_policy *policy)
 	struct sugov_policy *sg_policy = policy->governor_data;
 	struct sugov_tunables *tunables = sg_policy->tunables;
 	unsigned int count;
+
+	if (per_cpu(sugov_policy, policy->cpu))
+		return;
 
 	mutex_lock(&global_tunables_lock);
 
