@@ -1004,6 +1004,30 @@
 		};
 	};
 
+	cpufreq-ufc {
+		/* Ctrl Type */
+		#define PM_QOS_MIN_LIMIT		0
+		#define PM_QOS_MIN_WO_BOOST_LIMIT	1
+		#define PM_QOS_MAX_LIMIT		2
+		/* Execution Mode */
+		#define	AARCH64_MODE			0
+		#define AARCH32_MODE			1
+
+		domain@0 {
+			device_type = "cpufreq-userctrl";
+			shared-cpus = "0-5";
+			user-default-qos = <806000>;
+			user-boost = <0>;
+		};
+
+		domain@1 {
+			device_type = "cpufreq-userctrl";
+			shared-cpus = "6-7";
+			user-default-qos = <845000>;
+			user-boost = <1>;
+		};
+	};
+
 	cpufreq {
 		cpufreq_domain0: domain@0 {
 			device_type = "cpufreq-domain";
