@@ -1043,6 +1043,12 @@
 						>;
 				};
 			};
+
+			slack_timer {
+				device_type = "slack-timer-domain";
+
+				enabled = <0>;          /* Disabled */
+			};
 		};
 
 		cpufreq_domain1: domain@1 {
@@ -1082,6 +1088,13 @@
 						650000       0
 						>;
 				};
+			};
+
+			slack_timer {
+				device_type = "slack-timer-domain";
+
+				enabled = <1>;          /* Enabled */
+				expired_time = <80>;    /* 80ms */
 			};
 		};
 
