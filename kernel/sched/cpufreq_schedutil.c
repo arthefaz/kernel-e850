@@ -624,15 +624,15 @@ static int sugov_init(struct cpufreq_policy *policy)
 	int ret = 0;
 	int cpu;
 
-	sg_policy = per_cpu(sugov_policy, policy->cpu);
-	if (sg_policy)
-		return 0;
-
 	/* State should be equivalent to EXIT */
 	if (policy->governor_data)
 		return -EBUSY;
 
-	cpufreq_enable_fast_switch(policy);
+	sg_policy = per_cpu(sugov_policy, policy->cpu);
+	if (sg_policy) {
+		policy->governor_data = sg_policy;
+		return 0;
+	}
 
 	sg_policy = sugov_policy_alloc(policy);
 	if (!sg_policy) {
@@ -700,8 +700,10 @@ static void sugov_exit(struct cpufreq_policy *policy)
 	struct sugov_tunables *tunables = sg_policy->tunables;
 	unsigned int count;
 
-	if (per_cpu(sugov_policy, policy->cpu))
+	if (per_cpu(sugov_policy, policy->cpu)) {
+		policy->governor_data = NULL;
 		return;
+	}
 
 	mutex_lock(&global_tunables_lock);
 
