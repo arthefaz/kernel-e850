@@ -90,10 +90,21 @@ struct exynos_cpufreq_domain {
 	/* list head of DVFS Manager constraints */
 	struct list_head		dm_list;
 
+	/* list head of User cpuFreq Ctrl (UFC) */
+	struct list_head		ufc_list;
+
 	bool				need_awake;
 
 	struct thermal_cooling_device *cdev;
 };
+
+/*
+ * list head of cpufreq domain
+ */
+
+extern struct exynos_cpufreq_domain
+		*find_domain_cpumask(const struct cpumask *mask);
+extern struct list_head *get_domain_list(void);
 
 /*
  * the time it takes on this CPU to switch between
