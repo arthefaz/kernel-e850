@@ -444,7 +444,7 @@
 		compatible = "samsung,exynos-flexpmu-dbg";
 		#address-cells = <2>;
 		#size-cells = <1>;
-		data-base = <0x204bc00>;
+		data-base = <0x204f800>;
 		data-size = <0x400>;
 	};
 
