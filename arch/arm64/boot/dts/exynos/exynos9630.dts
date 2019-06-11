@@ -29,6 +29,7 @@
 #include <dt-bindings/soc/samsung/exynos9630-dm.h>
 #include <dt-bindings/soc/samsung/exynos9630-devfreq.h>
 #include "exynos9630-pm-domains.dtsi"
+#include "exynos9630-debug.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos9630";
