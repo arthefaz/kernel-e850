@@ -116,6 +116,22 @@ bool dbg_snapshot_is_scratch(void)
 			DSS_OFFSET_SCRATCH) == DSS_SIGN_SCRATCH;
 }
 
+void dbg_snapshot_set_debug_test_buffer_addr(u64 paddr, unsigned int cpu)
+{
+	if (!dbg_snapshot_get_enable("header"))
+		return;
+
+	__raw_writeq(paddr, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_BUFFER(cpu));
+}
+
+unsigned int dbg_snapshot_get_debug_test_buffer_addr(unsigned int cpu)
+{
+	if (!dbg_snapshot_get_enable("header"))
+		return 0;
+
+	return __raw_readq(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_BUFFER(cpu));
+}
+
 unsigned long dbg_snapshot_get_last_pc_paddr(void)
 {
 	/*

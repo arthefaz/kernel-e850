@@ -49,6 +49,10 @@ struct dbg_snapshot_helper_ops {
 extern void dbg_snapshot_register_soc_ops(struct dbg_snapshot_helper_ops *ops);
 extern void dbg_snapshot_scratch_reg(unsigned int val);
 extern bool dbg_snapshot_is_scratch(void);
+
+extern void dbg_snapshot_set_debug_test_buffer_addr(u64 paddr, unsigned int cpu);
+extern unsigned int dbg_snapshot_get_debug_test_buffer_addr(unsigned int cpu);
+
 #else
 #define dbg_snapshot_register_soc_ops(a)	do { } while(0)
 #define dbg_snapshot_scratch_reg(a)		do { } while(0)
