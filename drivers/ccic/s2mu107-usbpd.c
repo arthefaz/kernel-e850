@@ -1322,6 +1322,16 @@ static int s2mu107_vbus_on_check(void *_data)
 #endif
 }
 
+#if defined(CONFIG_TYPEC)
+static void s2mu107_set_pwr_opmode(void *_data, int mode)
+{
+	struct usbpd_data *data = (struct usbpd_data *) _data;
+	struct s2mu107_usbpd_data *pdic_data = data->phy_driver_data;
+
+	typec_set_pwr_opmode(pdic_data->port, mode);
+}
+#endif
+
 #if defined(CONFIG_CHECK_CTYPE_SIDE) || defined(CONFIG_CCIC_SYSFS)
 static int s2mu107_get_side_check(void *_data)
 {
@@ -2459,7 +2469,7 @@ done:
 	mutex_unlock(&pdic_data->water_mutex);
 }
 
-#if defined(CONFIG_MUIC_NOTIFIER)
+#if (defined(CONFIG_MUIC_NOTIFIER) || defined(CONFIG_IFCONN_NOTIFIER))
 static void s2mu107_usbpd_otg_attach(struct s2mu107_usbpd_data *pdic_data)
 {
 #if 0
@@ -2467,9 +2477,10 @@ static void s2mu107_usbpd_otg_attach(struct s2mu107_usbpd_data *pdic_data)
 	 struct otg_notify *o_notify = get_otg_notify();
 #endif
 #endif
-
 	struct i2c_client *i2c = pdic_data->i2c;
 	struct device *dev = &i2c->dev;
+
+	pr_info("%s, enter\n", __func__);
 
 	/* otg */
 	pdic_data->is_host = HOST_ON;
@@ -2497,6 +2508,7 @@ static void s2mu107_usbpd_otg_attach(struct s2mu107_usbpd_data *pdic_data)
 #ifdef CONFIG_PM_S2MU107
 	s2mu107_usbpd_check_vbus(pdic_data, 80, VBUS_OFF);
 #endif
+	pr_info("%s, before vbus_turn_on_ctrl\n", __func__);
 	vbus_turn_on_ctrl(pdic_data, VBUS_ON);
 	usbpd_manager_acc_handler_cancel(dev);
 
@@ -2866,7 +2878,52 @@ static void s2mu107_usbpd_detach_init(struct s2mu107_usbpd_data *pdic_data)
 static void s2mu107_usbpd_notify_detach(struct s2mu107_usbpd_data *pdic_data)
 {
 	struct device *dev = pdic_data->dev;
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_IFCONN_NOTIFIER)
+	/* MUIC */
+	ifconn_event_work(pdic_data, IFCONN_NOTIFY_MUIC, IFCONN_NOTIFY_ID_ATTACH,
+								IFCONN_NOTIFY_EVENT_DETACH, NULL);
+
+	ifconn_event_work(pdic_data, IFCONN_NOTIFY_MUIC, IFCONN_NOTIFY_ID_RID,
+								IFCONN_NOTIFY_EVENT_DETACH, NULL);
+
+	if (pdic_data->is_host > HOST_OFF || pdic_data->is_client > CLIENT_OFF) {
+#if defined(CONFIG_DUAL_ROLE_USB_INTF)
+		if (pdic_data->is_host > HOST_OFF ||
+			pdic_data->power_role_dual == DUAL_ROLE_PROP_PR_SRC) {
+#else
+		if (pdic_data->is_host > HOST_OFF) {
+#endif
+			vbus_turn_on_ctrl(pdic_data, VBUS_OFF);
+		}
+		usbpd_manager_acc_detach(dev);
+		/* usb or otg */
+		dev_info(dev, "%s %d: is_host = %d, is_client = %d\n", __func__,
+				__LINE__, pdic_data->is_host, pdic_data->is_client);
+		pdic_data->is_host = HOST_OFF;
+		pdic_data->is_client = CLIENT_OFF;
+#if defined(CONFIG_DUAL_ROLE_USB_INTF)
+		pdic_data->power_role_dual = DUAL_ROLE_PROP_PR_NONE;
+#elif defined(CONFIG_TYPEC)
+		if (pdic_data->partner) {
+			pr_info("%s, %d\n", __func__, __LINE__);
+			if (!IS_ERR(pdic_data->partner)) {
+				typec_unregister_partner(pdic_data->partner);
+				pdic_data->partner = NULL;
+			}
+		}
+		pdic_data->typec_power_role = TYPEC_SINK;
+		pdic_data->typec_data_role = TYPEC_DEVICE;
+#endif
+		/* USB */
+		ifconn_event_work(pdic_data, IFCONN_NOTIFY_USB, IFCONN_NOTIFY_ID_USB,
+										IFCONN_NOTIFY_EVENT_DETACH, NULL);
+	}
+#else
+	usbpd_manager_plug_detach(dev, 1);
+#endif
+#if 0
+	struct device *dev = pdic_data->dev;
+#if defined(CONFIG_IFCONN_NOTIFIER)
 #if defined(CONFIG_USB_HOST_NOTIFY)
 	struct otg_notify *o_notify = get_otg_notify();
 #endif
@@ -2913,6 +2970,7 @@ static void s2mu107_usbpd_notify_detach(struct s2mu107_usbpd_data *pdic_data)
 	}
 #else
 	usbpd_manager_plug_detach(dev, 1);
+#endif
 #endif
 }
 
@@ -2961,6 +3019,7 @@ static void s2mu107_usbpd_check_host(struct s2mu107_usbpd_data *pdic_data,
 		pr_info("%s, send OTG notify to MUIC\n", __func__);
 		ifconn_event_work(pdic_data, IFCONN_NOTIFY_MUIC,
 				IFCONN_NOTIFY_ID_OTG, IFCONN_NOTIFY_EVENT_ATTACH, NULL);
+		s2mu107_usbpd_otg_attach(pdic_data);
 #endif
 	}
 }
@@ -3864,6 +3923,9 @@ static usbpd_phy_ops_type s2mu107_ops = {
 #endif
 	.pr_swap			= s2mu107_pr_swap,
 	.vbus_on_check		= s2mu107_vbus_on_check,
+#if defined(CONFIG_TYPEC)
+	.set_pwr_opmode		= s2mu107_set_pwr_opmode,
+#endif
 	.set_rp_control		= s2mu107_set_rp_control,
 	.cc_instead_of_vbus = s2mu107_cc_instead_of_vbus,
 	.op_mode_clear		= s2mu107_op_mode_clear,

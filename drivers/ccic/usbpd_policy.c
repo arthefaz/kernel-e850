@@ -334,11 +334,12 @@ policy_state usbpd_policy_src_ready(struct policy_data *policy)
 
 	/* 1) PD State Inform for AP */
 	dev_info(pd_data->dev, "%s\n", __func__);
-
+#if defined(CONFIG_TYPEC)
 	if (pd_data->pd_support == 0) {
 		pd_data->pd_support = 1;
 		pd_data->phy_ops.set_pwr_opmode(pd_data, TYPEC_PWR_MODE_PD);
 	}
+#endif
 
 	/* 2) Wait Message or State */
 	CHECK_MSG(pd_data, MSG_GET_SRC_CAP, PE_SRC_Give_Source_Cap);
@@ -1145,10 +1146,12 @@ policy_state usbpd_policy_snk_ready(struct policy_data *policy)
 	/* 1) PD State Inform to AP */
 	dev_info(pd_data->dev, "%s\n", __func__);
 
+#if defined(CONFIG_TYPEC)
 	if (pd_data->pd_support == 0) {
 		pd_data->pd_support = 1;
 		pd_data->phy_ops.set_pwr_opmode(pd_data, TYPEC_PWR_MODE_PD);
 	}
+#endif
 
 	/* 3) Message Check */
 	CHECK_MSG(pd_data, MSG_GET_SNK_CAP, PE_SNK_Give_Sink_Cap);

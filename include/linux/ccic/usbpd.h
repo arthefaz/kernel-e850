@@ -416,7 +416,7 @@ typedef struct usbpd_phy_ops {
 	int    (*set_vconn_source)(void *, int);
 	int    (*get_vconn_source)(void *, int *);
 	int    (*set_check_msg_pass)(void *, int);
-	unsigned   (*get_status)(void *, u64);
+	unsigned int	(*get_status)(void *, u64);
 	bool   (*poll_status)(void *);
 	void   (*driver_reset)(void *);
 	int    (*set_otg_control)(void *, int);
@@ -424,7 +424,7 @@ typedef struct usbpd_phy_ops {
 	int    (*set_cc_control)(void *, int);
 	int		(*get_side_check)(void *_data);
 	void    (*pr_swap)(void *, int);
-	void	(*set_pwr_opmode)(void *_data, int mode);
+	void	(*set_pwr_opmode)(void *, int);
 	int		(*vbus_on_check)(void *);
 	int		(*set_rp_control)(void *, int);
 	int		(*cc_instead_of_vbus)(void *);
