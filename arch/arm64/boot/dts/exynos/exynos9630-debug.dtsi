@@ -44,4 +44,15 @@
 		plugin-name = "S2D";
 		status = "ok";
 	};
+
+	exynos-debug-test {
+		compatible = "samsung,exynos-debug-test";
+		enabled = "dbg_test";
+		ps_hold_control_offset = <0x030C>;
+		nr_cpu = <0x8>;
+		nr_little_cpu = <0x6>;
+		nr_big_cpu = <0x2>;
+		little_cpu_start = <0x0>;
+		big_cpu_start = <0x6>;
+	};
 };
