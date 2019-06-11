@@ -28,5 +28,12 @@
                 reg-names = "mailbox";
                 interrupts = <0 INTREQ__MAILBOX_DBGCORE2AP 0>;
                 status = "ok";
-        };
+	};
+
+	s2d: exynos_adv_tracer_s2d {
+		compatible = "samsung,exynos-adv-tracer-s2d";
+		plugin-len = <3>;
+		plugin-name = "S2D";
+		status = "ok";
+	};
 };
