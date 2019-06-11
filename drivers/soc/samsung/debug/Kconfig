@@ -55,4 +55,10 @@ config EXYNOS_ADV_TRACER_MISC
 	bool "Exynos Advanced Tracer: Plug-in - MISC"
 	default n
 	depends on EXYNOS_ADV_TRACER
+
+config EXYNOS_DEBUG_TEST
+	bool "Exynos debug feature test"
+	default y
+	depends on ARCH_EXYNOS && EXYNOS_DEBUG && DEBUG_SNAPSHOT
+
 endif
