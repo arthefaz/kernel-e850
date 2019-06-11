@@ -1612,7 +1612,7 @@
 		initial_bcm_mode = <BCM_MODE_INTERVAL>;
 		available_stop_owner = <PANIC_HANDLE CAMERA_DRIVER MODEM_IF ITMON_HANDLE>;
 		buff_size = <0x200000>;
-		glb_auto_en = <0>;
+		glb_auto_en = <1>;
 
 		ipc_bcm_event {
 			plugin-len = <5>;
