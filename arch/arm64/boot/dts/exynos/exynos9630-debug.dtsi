@@ -21,4 +21,12 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 	};
+
+        exynos-adv_tracer {
+                compatible = "samsung,exynos-adv-tracer";
+                reg = <0x0 0x10EC0000 0x1000>;
+                reg-names = "mailbox";
+                interrupts = <0 INTREQ__MAILBOX_DBGCORE2AP 0>;
+                status = "ok";
+        };
 };
