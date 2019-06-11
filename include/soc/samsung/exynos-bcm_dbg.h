@@ -186,7 +186,6 @@ struct exynos_bcm_dbg_data {
 	unsigned int			ipc_size;
 	struct exynos_bcm_pd_info	*pd_info[BCM_PD_INFO_MAX];
 	unsigned int			pd_size;
-	bool				pd_sync_init;
 
 	struct exynos_bcm_event		define_event[PRE_DEFINE_EVT_MAX];
 	unsigned int			default_define_event;

@@ -39,6 +39,7 @@
 #endif
 
 static struct exynos_bcm_dbg_data *bcm_dbg_data;
+static bool pd_sync_init = false;
 #ifdef CONFIG_EXYNOS_BCM_DBG_GNR
 static void *bcm_addr;
 static struct bin_system_func *bin_func;
@@ -270,9 +271,9 @@ int exynos_bcm_dbg_pd_sync(unsigned int cal_pdid, bool on)
 	struct exynos_bcm_pd_info *bcm_pd_info = NULL;
 	int i, ret = 0;
 
-	if (!bcm_dbg_data || !bcm_dbg_data->pd_sync_init) {
+	if (!bcm_dbg_data || !pd_sync_init) {
 		BCM_DBG("%s: do not pd_sync_init(%s)\n", __func__,
-				bcm_dbg_data->pd_sync_init ? "true" : "false");
+				pd_sync_init ? "true" : "false");
 		return 0;
 	}
 
@@ -324,9 +325,9 @@ static int exynos_bcm_dbg_pd_sync_init(struct exynos_bcm_dbg_data *data)
 	struct exynos_pm_domain *exynos_pd;
 	unsigned int pd_index, pd_size;
 
-	if (data->pd_sync_init) {
+	if (pd_sync_init) {
 		BCM_ERR("%s: already pd_sync_init(%s)\n",
-			__func__, data->pd_sync_init ? "true" : "false");
+			__func__, pd_sync_init ? "true" : "false");
 		return -EINVAL;
 	}
 
@@ -354,7 +355,7 @@ static int exynos_bcm_dbg_pd_sync_init(struct exynos_bcm_dbg_data *data)
 		}
 	}
 
-	data->pd_sync_init = true;
+	pd_sync_init = true;
 #endif
 
 	return ret;
@@ -367,9 +368,9 @@ static int exynos_bcm_dbg_pd_sync_exit(struct exynos_bcm_dbg_data *data)
 	struct exynos_pm_domain *exynos_pd;
 	unsigned int pd_index, pd_size;
 
-	if (!data->pd_sync_init) {
+	if (!pd_sync_init) {
 		BCM_ERR("%s: already pd_sync_exit(%s)\n",
-			__func__, data->pd_sync_init ? "true" : "false");
+			__func__, pd_sync_init ? "true" : "false");
 		return -EINVAL;
 	}
 
@@ -392,7 +393,7 @@ static int exynos_bcm_dbg_pd_sync_exit(struct exynos_bcm_dbg_data *data)
 		}
 	}
 
-	data->pd_sync_init = false;
+	pd_sync_init = false;
 #endif
 
 	return ret;
@@ -1470,7 +1471,7 @@ static ssize_t show_bcm_dbg_data_pd(struct file *fp, struct kobject *kobj,
 	count += snprintf(buf + count, PAGE_SIZE,
 				"pd_size: %u, pd_sync_init: %s\n",
 				data->pd_size,
-				data->pd_sync_init ? "true" : "false");
+				pd_sync_init ? "true" : "false");
 
 	for (i = 0; i < data->pd_size; i++)
 		count += snprintf(buf + count, PAGE_SIZE,
@@ -3459,7 +3460,6 @@ static int exynos_bcm_dbg_init(struct exynos_bcm_dbg_data *data)
 	}
 
 	/* initial Local Power Domain sync-up */
-	data->pd_sync_init = false;
 	ret = exynos_bcm_dbg_pd_sync_init(data);
 	if (ret) {
 		BCM_ERR("%s: failed to pd_sync_init\n", __func__);
@@ -3746,6 +3746,7 @@ err_init:
 #endif
 	kfree(data);
 	data = NULL;
+	bcm_dbg_data = NULL;
 err_data:
 	return ret;
 }
