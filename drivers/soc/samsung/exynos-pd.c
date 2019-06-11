@@ -82,8 +82,6 @@ static void exynos_pd_power_off_pre(struct exynos_pm_domain *pd)
 		exynos_g3d_power_down_noti_apm();
 	}
 #endif /* CONFIG_EXYNOS_CL_DVFS_G3D */
-	if (!strcmp(pd->name, "pd-dispaud"))
-		abox_poweroff();
 }
 
 static void exynos_pd_power_off_post(struct exynos_pm_domain *pd)
