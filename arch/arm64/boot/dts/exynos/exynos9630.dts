@@ -129,49 +129,158 @@
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
+			sched-energy-data = <&ANANKE_ENERGY>;
 		};
 		cpu1: cpu@0001 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0001>;
 			enable-method = "psci";
+			sched-energy-data = <&ANANKE_ENERGY>;
 		};
 		cpu2: cpu@0002 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0002>;
 			enable-method = "psci";
+			sched-energy-data = <&ANANKE_ENERGY>;
 		};
 		cpu3: cpu@0003 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0003>;
 			enable-method = "psci";
+			sched-energy-data = <&ANANKE_ENERGY>;
 		};
 		cpu4: cpu@0004 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0004>;
 			enable-method = "psci";
+			sched-energy-data = <&ANANKE_ENERGY>;
 		};
 		cpu5: cpu@0005 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0005>;
 			enable-method = "psci";
+			sched-energy-data = <&ANANKE_ENERGY>;
 		};
 		cpu6: cpu@0006 {
 			device_type = "cpu";
 			compatible = "arm,deimos", "arm,armv8";
 			reg = <0x0 0x0006>;
 			enable-method = "psci";
+			sched-energy-data = <&DEIMOS_ENERGY>;
 		};
 		cpu7: cpu@0007 {
 			device_type = "cpu";
 			compatible = "arm,deimos", "arm,armv8";
 			reg = <0x0 0x0007>;
 			enable-method = "psci";
+			sched-energy-data = <&DEIMOS_ENERGY>;
 		};
+
+		energy-data {
+			ANANKE_ENERGY: ananke-energy {
+				capacity-mips = <272>;
+				power-coefficient = <160>;
+				capacity-mips-s = <215>;
+				power-coefficient-s = <130>;
+				static-power-coefficient = <45>;
+
+				capacity-weight = <1>;
+				energy-weight = <1>;
+				capacity-weight-perf = <2>;
+				energy-weight-perf = <1>;
+			};
+			DEIMOS_ENERGY: deimos-energy {
+				capacity-mips = <785>;
+				power-coefficient = <760>;
+				capacity-mips-s = <365>;
+				power-coefficient-s = <506>;
+				static-power-coefficient = <289>;
+
+				capacity-weight = <1>;
+				energy-weight = <3>;
+				capacity-weight-perf = <3>;
+				energy-weight-perf = <1>;
+			};
+		};
+
+		ems {
+			/* Ontime Migration */
+			ontime {
+				/* little cores */
+				coregroup0 {
+					lower-boundary = <0>;
+					upper-boundary = <106>;
+					lower-boundary-s = <0>;
+					upper-boundary-s = <60>;
+				};
+				/* big cores */
+				coregroup1 {
+					lower-boundary = <204>;
+					upper-boundary = <0xffffffff>;
+					lower-boundary-s = <309>;
+					upper-boundary-s = <0xffffffff>;
+				};
+			};
+
+			/* Load Balance Trigger */
+			#define DEFAULT_RATIO	80
+			lbt {
+				overutil-level0 {
+					cpus =	"0-5",
+						"6-7";
+					ratio =	<25>,
+						<30>;
+				};
+				overutil-level1 {
+					cpus = "0-7";
+					ratio = <DEFAULT_RATIO>;
+				};
+			};
+
+			/* FRT Migration */
+			frt {
+				/* little cores */
+				coregroup0 {
+					coverage-ratio = <30>;
+					active-ratio = <25>;
+				};
+				/* big cores */
+				coregroup1 {
+					coverage-ratio = <30>;
+					active-ratio = <5>;
+				};
+			};
+
+			part {
+				/* little cores */
+				coregroup0 {
+					active-ratio-limit = <43>;
+					active-ratio-boost = <42>;
+				};
+				/* big cores */
+				coregroup1 {
+					active-ratio-limit = <30>;
+					active-ratio-boost = <0>;
+				};
+			};
+
+			service {
+				prefer-perf0 {
+					boost = <1>;
+					prefer-cpus =	"6-7",
+						"0-5";
+					light-task-threshold = <10>;
+					light-task-threshold-s = <6>;
+					light-prefer-cpus = "0-5";
+				};
+			};
+		};
+
 	};
 
 	cpuhp {
