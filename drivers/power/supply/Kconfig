@@ -672,6 +672,14 @@ config PM_S2MU106
 	 S2MU106 power meter is dependent on MFD_S2MU106
 	 so it needs to be defined.
 
+config PM_S2MU107
+	tristate "S2MU107 power meter support"
+	depends on (MFD_S2MU107) && I2C
+	help
+	 Say Y here to enable support for the S2MU107 power meter.
+	 S2MU107 power meter is dependent on MFD_S2MU107
+	 so it needs to be defined.
+
 config SMALL_CHARGER
 	tristate "Small charger support"
 	depends on I2C

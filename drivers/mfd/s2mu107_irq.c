@@ -34,7 +34,7 @@
 #include <linux/muic/s2mu107-muic.h>
 #endif
 #if defined(CONFIG_PM_S2MU107)
-#include "../battery_v2/include/s2mu107_pmeter.h"
+#include <linux/power/s2mu107_pmeter.h>
 #endif
 #if defined(CONFIG_LEDS_S2MU107_FLASH)
 #include <linux/leds-s2mu107.h>
