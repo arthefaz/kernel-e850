@@ -36,6 +36,7 @@
 #if defined(CONFIG_MUIC_NOTIFIER)
 #include <linux/muic/muic_notifier.h>
 #endif /* CONFIG_MUIC_NOTIFIER */
+
 #ifdef CONFIG_BATTERY_SAMSUNG
 #include <linux/sec_batt.h>
 #include <linux/battery/sec_charging_common.h>
@@ -758,16 +759,23 @@ static void s2mu106_assert_rp(void *_data)
 	s2mu106_usbpd_write_reg(i2c, S2MU106_REG_PLUG_CTRL_RpRd, val);
 }
 
-static unsigned s2mu106_get_status(void *_data, unsigned flag)
+static unsigned s2mu106_get_status(void *_data, u64 flag)
 {
+#if 0
 	unsigned ret;
+#endif
 	struct usbpd_data *data = (struct usbpd_data *) _data;
 	struct s2mu106_usbpd_data *pdic_data = data->phy_driver_data;
-
+#if 0
 	if (pdic_data->status_reg & flag) {
 		ret = pdic_data->status_reg & flag;
 		pdic_data->status_reg &= ~flag; /* clear the flag */
 		return ret;
+#elif
+	if (pdic_data->status_reg & (one << flag)) {
+		pdic_data->status_reg &= ~(one << flag); /* clear the flag */
+		return 1;
+#endif
 	} else {
 		return 0;
 	}

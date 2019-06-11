@@ -158,8 +158,8 @@ static struct usbpd_init_data *usbpd_get_init_data(const char *name)
  * Returns a valid pointer to struct usbpd_dev on success
  * or an ERR_PTR() on error.
  */
-struct usbpd_dev *
-usbpd_register(struct device *dev, struct usbpd_desc *usbpd_desc, void *_data)
+struct usbpd_dev
+*usbpd_register(struct device *dev, struct usbpd_desc *usbpd_desc, void *_data)
 {
 	struct usbpd_init_data *init_data;
 	struct usbpd_dev *udev;

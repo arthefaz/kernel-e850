@@ -32,6 +32,9 @@
 #ifdef CONFIG_CCIC_S2MU106
 #include <linux/ccic/usbpd.h>
 #endif
+#ifdef CONFIG_CCIC_S2MU107
+#include <linux/ccic/usbpd.h>
+#endif
 
 #ifdef CONFIG_CCIC_S2MM005
 static ssize_t s2mm005_cur_ver_show(struct device *dev,
@@ -229,6 +232,26 @@ static ssize_t ccic_connector_side_show(struct device *dev,
 }
 static DEVICE_ATTR(usb_direction, 0444, ccic_connector_side_show, NULL);
 #endif
+
+#ifdef CONFIG_CCIC_S2MU107
+static ssize_t ccic_connector_side_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct usbpd_data *pd_data = dev_get_drvdata(dev);
+	int ret = 0;
+	if (!pd_data) {
+		pr_err("%s pd_data is null!!\n", __func__);
+		return -ENODEV;
+	}
+
+	ret = pd_data->phy_ops.get_side_check(pd_data);
+	pr_info("%s usbpd side check: %d\n", __func__, ret);
+
+	return sprintf(buf, "%d\n", ret);
+}
+static DEVICE_ATTR(usb_direction, 0444, ccic_connector_side_show, NULL);
+#endif
+
 static struct attribute *ccic_attributes[] = {
 #ifdef CONFIG_CCIC_S2MM005
 	&dev_attr_cur_version.attr,
@@ -236,6 +259,9 @@ static struct attribute *ccic_attributes[] = {
 	&dev_attr_fw_update_status.attr,
 #endif
 #ifdef CONFIG_CCIC_S2MU106
+	&dev_attr_usb_direction.attr,
+#endif
+#ifdef CONFIG_CCIC_S2MU107
 	&dev_attr_usb_direction.attr,
 #endif
 	NULL

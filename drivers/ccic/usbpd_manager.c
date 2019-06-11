@@ -1,13 +1,17 @@
 /*
-*	USB PD Driver - Device Policy Manager
-*/
+ *	USB PD Driver - Device Policy Manager
+ */
 
 #include <linux/device.h>
 #include <linux/workqueue.h>
 #include <linux/slab.h>
 #include <linux/sched.h>
 #include <linux/ccic/usbpd.h>
+#if defined(CONFIG_CCIC_S2MU106)
 #include <linux/ccic/usbpd-s2mu106.h>
+#elif defined(CONFIG_CCIC_S2MU107)
+#include <linux/ccic/usbpd-s2mu107.h>
+#endif
 #include <linux/of_gpio.h>
 
 #include <linux/muic/muic.h>
@@ -51,11 +55,20 @@ static char DP_Pin_Assignment_Print[7][40] = {
 
 };
 
+
+#if defined(CONFIG_PDIC_PD30)
+int (*fp_sec_pd_select_pps)(int num, int ppsVol, int ppsCur);
+int (*fp_sec_pd_get_apdo_max_power)(unsigned int *pdo_pos, unsigned int *taMaxVol,
+		unsigned int *taMaxCur, unsigned int *taMaxPwr);
+int (*fp_pps_enable)(int num, int ppsVol, int ppsCur, int enable);
+int (*fp_get_pps_voltage)(void);
+#endif
+
 #ifdef CONFIG_IFCONN_NOTIFIER
 void select_pdo(int num);
-void s2mu106_select_pdo(int num);
 void (*fp_select_pdo)(int num);
-
+#if defined(CONFIG_CCIC_S2MU106)
+//void s2mu106_select_pdo(int num);
 void s2mu106_select_pdo(int num)
 {
 	struct usbpd_data *pd_data = pd_noti.pd_data;
@@ -73,6 +86,26 @@ void s2mu106_select_pdo(int num)
 
 	schedule_delayed_work(&manager->select_pdo_handler, msecs_to_jiffies(50));
 }
+#elif defined(CONFIG_CCIC_S2MU107)
+//void s2mu107_select_pdo(int num);
+void s2mu107_select_pdo(int num)
+{
+	struct usbpd_data *pd_data = pd_noti.pd_data;
+	struct usbpd_manager_data *manager = &pd_data->manager;
+
+	if (pd_noti.sink_status.selected_pdo_num == num)
+		return;
+	else if (num > pd_noti.sink_status.available_pdo_num)
+		pd_noti.sink_status.selected_pdo_num = pd_noti.sink_status.available_pdo_num;
+	else if (num < 1)
+		pd_noti.sink_status.selected_pdo_num = 1;
+	else
+		pd_noti.sink_status.selected_pdo_num = num;
+	pr_info(" %s : PDO(%d) is selected to change\n", __func__, pd_noti.sink_status.selected_pdo_num);
+
+	schedule_delayed_work(&manager->select_pdo_handler, msecs_to_jiffies(50));
+}
+#endif
 
 void select_pdo(int num)
 {
@@ -209,7 +242,11 @@ void usbpd_manager_plug_attach(struct device *dev)
 {
 #if defined(CONFIG_IFCONN_NOTIFIER)
 	struct usbpd_data *pd_data = dev_get_drvdata(dev);
+#if defined(CONFIG_CCIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#elif defined(CONFIG_CCIC_S2MU107)
+	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#endif
 	struct policy_data *policy = &pd_data->policy;
 	struct usbpd_manager_data *manager = &pd_data->manager;
 
@@ -230,7 +267,11 @@ void usbpd_manager_plug_detach(struct device *dev, bool notify)
 {
 #if defined(CONFIG_IFCONN_NOTIFIER)
 	struct usbpd_data *pd_data = dev_get_drvdata(dev);
+#if defined(CONFIG_CCIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#elif defined(CONFIG_CCIC_S2MU107)
+	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#endif
 	struct usbpd_manager_data *manager = &pd_data->manager;
 
 	if (manager->pd_attached && pdic_data->power_role == PDIC_SINK) {
@@ -403,7 +444,11 @@ void usbpd_manager_turn_off_power_supply(struct usbpd_data *pd_data)
 
 void usbpd_manager_turn_off_power_sink(struct usbpd_data *pd_data)
 {
+#if defined(CONFIG_CCIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#elif defined(CONFIG_CCIC_S2MU107)
+	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#endif
 
 	pr_info("%s: usbpd sink turn off\n", __func__);
 
@@ -585,7 +630,11 @@ int usbpd_manager_get_svids(struct usbpd_data *pd_data)
 {
 	struct policy_data *policy = &pd_data->policy;
 	struct usbpd_manager_data *manager = &pd_data->manager;
+#if defined(CONFIG_CCIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#elif defined(CONFIG_CCIC_S2MU107)
+	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#endif
 
 	manager->SVID_0 = policy->rx_data_obj[1].vdm_svid.svid_0;
 	manager->SVID_1 = policy->rx_data_obj[1].vdm_svid.svid_1;
@@ -708,7 +757,11 @@ int usbpd_manager_exit_mode(struct usbpd_data *pd_data, unsigned mode)
 int usbpd_manager_get_status(struct usbpd_data *pd_data)
 {
 	struct policy_data *policy = &pd_data->policy;
+#if defined(CONFIG_CCIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#elif defined(CONFIG_CCIC_S2MU107)
+	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#endif
 	struct usbpd_manager_data *manager = &pd_data->manager;
 	bool multi_func_preference = 0;
 	int pin_assignment = 0;
@@ -781,7 +834,11 @@ int usbpd_manager_get_status(struct usbpd_data *pd_data)
 int usbpd_manager_get_configure(struct usbpd_data *pd_data)
 {
 	struct usbpd_manager_data *manager = &pd_data->manager;
+#if defined(CONFIG_CCIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#elif defined(CONFIG_CCIC_S2MU107)
+	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#endif
 
 	if (manager->SVID_0 == TypeC_DP_SUPPORT)
 		ifconn_event_work(pdic_data, IFCONN_NOTIFY_MANAGER,
@@ -794,7 +851,11 @@ int usbpd_manager_get_configure(struct usbpd_data *pd_data)
 int usbpd_manager_get_attention(struct usbpd_data *pd_data)
 {
 	struct policy_data *policy = &pd_data->policy;
+#if defined(CONFIG_CCIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#elif defined(CONFIG_CCIC_S2MU107)
+	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#endif
 	struct usbpd_manager_data *manager = &pd_data->manager;
 	bool multi_func_preference = 0;
 	int pin_assignment = 0;
@@ -866,7 +927,11 @@ int usbpd_manager_get_attention(struct usbpd_data *pd_data)
 
 void usbpd_dp_detach(struct usbpd_data *pd_data)
 {
+#if defined(CONFIG_CCIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#elif defined(CONFIG_CCIC_S2MU107)
+	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
+#endif
 	struct usbpd_manager_data *manager = &pd_data->manager;
 
 	dev_info(pd_data->dev, "%s: dp_is_connect %d\n", __func__, manager->dp_is_connect);
@@ -1114,7 +1179,11 @@ int usbpd_init_manager(struct usbpd_data *pd_data)
 		ret = of_usbpd_manager_dt(manager);
 #ifdef CONFIG_BATTERY_SAMSUNG
 #ifdef CONFIG_USB_TYPEC_MANAGER_NOTIFIER
+#if defined(CONFIG_CCIC_S2MU106)
 	fp_select_pdo = s2mu106_select_pdo;
+#elif defined(CONFIG_CCIC_S2MU107)
+	fp_select_pdo = s2mu107_select_pdo;
+#endif
 #endif
 #endif
 	mutex_init(&manager->vdm_mutex);

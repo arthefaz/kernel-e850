@@ -194,7 +194,7 @@ obj-$(CONFIG_EXYNOS_BTS)	+= bts/
 
 obj-$(CONFIG_TRUSTONIC_TEE)     += gud/
 
-obj-$(CONFIG_USBPD_CORE)		+= ccic/
+obj-$(CONFIG_USE_CCIC)			+= ccic/
 
 obj-$(CONFIG_VISION_SUPPORT)    += vision/
 

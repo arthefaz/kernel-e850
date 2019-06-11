@@ -39,6 +39,8 @@
 #include <linux/ccic/usbpd-s2mu106.h>
 #elif defined CONFIG_CCIC_S2MU205
 #include <linux/ccic/usbpd-s2mu205.h>
+#elif defined CONFIG_CCIC_S2MU107
+#include <linux/ccic/usbpd-s2mu107.h>
 #endif
 
 #include <linux/usb_notify.h>
@@ -93,6 +95,8 @@ extern void ccic_event_work(void *data, int dest, int id, int attach, int event)
 	struct s2mu106_usbpd_data *usbpd_data = data;
 #elif defined CONFIG_CCIC_S2MU205
 	struct s2mu205_usbpd_data *usbpd_data = data;
+#elif defined CONFIG_CCIC_S2MU107
+	struct s2mu107_usbpd_data *usbpd_data = data;
 #endif
 	struct ccic_state_work *event_work;
 #if defined(CONFIG_TYPEC)
@@ -195,7 +199,11 @@ static void ifconn_event_notifier(struct work_struct *data)
 
 extern void ifconn_event_work(void *pd_data, int dest, int id, int event, void *data)
 {
+#if defined(CONFIG_CCIC_S2MU106)
 	struct s2mu106_usbpd_data *usbpd_data = pd_data;
+#elif defined(CONFIG_CCIC_S2MU107)
+	struct s2mu107_usbpd_data *usbpd_data = pd_data;
+#endif
 	struct ifconn_state_work *event_work;
 #if defined(CONFIG_TYPEC)
 	struct typec_partner_desc desc;
@@ -302,6 +310,9 @@ void role_swap_check(struct work_struct *wk)
 #elif defined CONFIG_CCIC_S2MU205
 	struct s2mu205_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mu205_usbpd_data, role_swap_work);
+#elif defined CONFIG_CCIC_S2MU107
+	struct s2mu107_usbpd_data *usbpd_data =
+		container_of(delay_work, struct s2mu107_usbpd_data, role_swap_work);
 #endif
 	int mode = 0;
 
@@ -319,6 +330,8 @@ void role_swap_check(struct work_struct *wk)
 		s2mu106_rprd_mode_change(usbpd_data, mode);
 #elif defined CONFIG_CCIC_S2MU205
 		s2mu205_rprd_mode_change(usbpd_data, mode);
+#elif defined CONFIG_CCIC_S2MU107
+		s2mu107_rprd_mode_change(usbpd_data, mode);
 #endif
 		enable_irq(usbpd_data->irq);
 	}
@@ -334,6 +347,8 @@ static int ccic_set_dual_role(struct dual_role_phy_instance *dual_role,
 	struct s2mu106_usbpd_data *usbpd_data = dual_role_get_drvdata(dual_role);
 #elif defined CONFIG_CCIC_S2MU205
 	struct s2mu205_usbpd_data *usbpd_data = dual_role_get_drvdata(dual_role);
+#elif defined CONFIG_CCIC_S2MU107
+	struct s2mu107_usbpd_data *usbpd_data = dual_role_get_drvdata(dual_role);
 #endif
 	struct i2c_client *i2c;
 
@@ -395,6 +410,8 @@ static int ccic_set_dual_role(struct dual_role_phy_instance *dual_role,
 		s2mu106_rprd_mode_change(usbpd_data, mode);
 #elif defined CONFIG_CCIC_S2MU205
 		s2mu205_rprd_mode_change(usbpd_data, mode);
+#elif defined CONFIG_CCIC_S2MU107
+		s2mu107_rprd_mode_change(usbpd_data, mode);
 #endif
 	} else {
 		/* Current mode UFP and Sink  */
@@ -408,6 +425,8 @@ static int ccic_set_dual_role(struct dual_role_phy_instance *dual_role,
 		s2mu106_rprd_mode_change(usbpd_data, mode);
 #elif defined CONFIG_CCIC_S2MU205
 		s2mu205_rprd_mode_change(usbpd_data, mode);
+#elif defined CONFIG_CCIC_S2MU107
+		s2mu107_rprd_mode_change(usbpd_data, mode);
 #endif
 	}
 
@@ -429,6 +448,8 @@ static int ccic_set_dual_role(struct dual_role_phy_instance *dual_role,
 		s2mu106_rprd_mode_change(usbpd_data, mode);
 #elif defined CONFIG_CCIC_S2MU205
 		s2mu205_rprd_mode_change(usbpd_data, mode);
+#elif defined CONFIG_CCIC_S2MU107
+		s2mu107_rprd_mode_change(usbpd_data, mode);
 #endif
 		enable_irq(usbpd_data->irq);
 		ret = -EIO;
@@ -462,6 +483,8 @@ int dual_role_get_local_prop(struct dual_role_phy_instance *dual_role,
 	struct s2mu106_usbpd_data *usbpd_data = dual_role_get_drvdata(dual_role);
 #elif defined CONFIG_CCIC_S2MU205
 	struct s2mu205_usbpd_data *usbpd_data = dual_role_get_drvdata(dual_role);
+#elif defined CONFIG_CCIC_S2MU107
+	struct s2mu107_usbpd_data *usbpd_data = dual_role_get_drvdata(dual_role);
 #endif
 
 	USB_STATUS attached_state;
@@ -545,6 +568,8 @@ int dual_role_init(void *_data)
 	struct s2mu106_usbpd_data *pdic_data = _data;
 #elif defined CONFIG_CCIC_S2MU205
 	struct s2mu205_usbpd_data *pdic_data = _data;
+#elif defined CONFIG_CCIC_S2MU107
+	struct s2mu107_usbpd_data *pdic_data = _data;
 #endif
 	struct dual_role_phy_desc *desc;
 	struct dual_role_phy_instance *dual_role;
@@ -587,6 +612,9 @@ void typec_role_swap_check(struct work_struct *wk)
 #elif defined CONFIG_CCIC_S2MU205
 	struct s2mu205_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mu205_usbpd_data, typec_role_swap_work);
+#elif defined CONFIG_CCIC_S2MU107
+	struct s2mu107_usbpd_data *usbpd_data =
+		container_of(delay_work, struct s2mu107_usbpd_data, typec_role_swap_work);
 #endif
 
 	pr_info("%s: ccic_set_dual_role check again.\n", __func__);
@@ -602,6 +630,8 @@ void typec_role_swap_check(struct work_struct *wk)
 		s2mu106_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
 #elif defined CONFIG_CCIC_S2MU205
 		s2mu205_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
+#elif defined CONFIG_CCIC_S2MU107
+		s2mu107_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
 #endif
 		enable_irq(usbpd_data->irq);
 	}
@@ -615,6 +645,8 @@ int typec_port_type_set(const struct typec_capability *cap, enum typec_port_type
 	struct s2mu106_usbpd_data *usbpd_data = container_of(cap, struct s2mu106_usbpd_data, typec_cap);
 #elif defined CONFIG_CCIC_S2MU205
 	struct s2mu205_usbpd_data *usbpd_data = container_of(cap, struct s2mu205_usbpd_data, typec_cap);
+#elif defined CONFIG_CCIC_S2MU107
+	struct s2mu107_usbpd_data *usbpd_data = container_of(cap, struct s2mu107_usbpd_data, typec_cap);
 #endif
 
 	int timeout = 0;
@@ -637,6 +669,8 @@ int typec_port_type_set(const struct typec_capability *cap, enum typec_port_type
 		s2mu106_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DFP);
 #elif defined CONFIG_CCIC_S2MU205
 		s2mu205_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DFP);
+#elif defined CONFIG_CCIC_S2MU107
+		s2mu107_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DFP);
 #endif
 
 		break;
@@ -656,6 +690,8 @@ int typec_port_type_set(const struct typec_capability *cap, enum typec_port_type
 		s2mu106_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_UFP);
 #elif defined CONFIG_CCIC_S2MU205
 		s2mu205_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_UFP);
+#elif defined CONFIG_CCIC_S2MU107
+		s2mu107_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_UFP);
 #endif
 
 		break;
@@ -685,6 +721,8 @@ int typec_port_type_set(const struct typec_capability *cap, enum typec_port_type
 			s2mu106_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
 #elif defined CONFIG_CCIC_S2MU205
 			s2mu205_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
+#elif defined CONFIG_CCIC_S2MU107
+			s2mu107_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
 #endif
 
 			enable_irq(usbpd_data->irq);
@@ -703,7 +741,9 @@ static int typec_pr_set(const struct typec_capability *cap, enum typec_role role
 #elif defined CONFIG_CCIC_S2MU106
 	struct s2mu106_usbpd_data *usbpd_data = container_of(cap, struct s2mu106_usbpd_data, typec_cap);
 #elif defined CONFIG_CCIC_S2MU205
-	struct s2mu205_usbpd_data *usbpd_data = container_of(cap, struct s2mu205_usbpd_data, typec_cap);
+	struct s2mu205_usbpd_data *usbpd_data = container_of(cap, struct s2mu205_usbpd_data, typec_cap)
+#elif defined CONFIG_CCIC_S2MU107
+	struct s2mu107_usbpd_data *usbpd_data = container_of(cap, struct s2mu107_usbpd_data, typec_cap);
 #endif
 
 	int timeout = 0;
@@ -756,7 +796,9 @@ static int typec_dr_set(const struct typec_capability *cap, enum typec_data_role
 #elif defined CONFIG_CCIC_S2MU106
 	struct s2mu106_usbpd_data *usbpd_data = container_of(cap, struct s2mu106_usbpd_data, typec_cap);
 #elif defined CONFIG_CCIC_S2MU205
-	struct s2mu205_usbpd_data *usbpd_data = container_of(cap, struct s2mu205_usbpd_data, typec_cap);
+	struct s2mu205_usbpd_data *usbpd_data = container_of(cap, struct s2mu205_usbpd_data, typec_cap)
+#elif defined CONFIG_CCIC_S2MU107
+	struct s2mu107_usbpd_data *usbpd_data = container_of(cap, struct s2mu107_usbpd_data, typec_cap);
 #endif
 
 	int timeout = 0;
@@ -804,7 +846,11 @@ static int typec_dr_set(const struct typec_capability *cap, enum typec_data_role
 
 int typec_get_pd_support(void *_data)
 {
+#if defined CONFIG_CCIC_S2MU106
 	struct s2mu106_usbpd_data *pdic_data = _data;
+#elif defined CONFIG_CCIC_S2MU107
+	struct s2mu107_usbpd_data *pdic_data = _data;
+#endif
 	struct usbpd_data *pd_data = dev_get_drvdata(pdic_data->dev);
 
 	if (pd_data->pd_support)
@@ -821,6 +867,8 @@ int typec_init(void *_data)
 	struct s2mu106_usbpd_data *pdic_data = _data;
 #elif defined CONFIG_CCIC_S2MU205
 	struct s2mu205_usbpd_data *pdic_data = _data;
+#elif defined CONFIG_CCIC_S2MU107
+	struct s2mu107_usbpd_data *pdic_data = _data;
 #endif
 
 	pdic_data->typec_cap.revision = USB_TYPEC_REV_1_2;

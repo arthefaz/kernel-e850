@@ -328,11 +328,18 @@ void usbpd_set_ops(struct device *dev, usbpd_phy_ops_type *ops)
 	pd_data->phy_ops.poll_status = ops->poll_status;
 	pd_data->phy_ops.driver_reset = ops->driver_reset;
 	pd_data->phy_ops.set_otg_control = ops->set_otg_control;
+	pd_data->phy_ops.get_vbus_short_check = ops->get_vbus_short_check;
 	pd_data->phy_ops.set_cc_control = ops->set_cc_control;
 	pd_data->phy_ops.get_side_check = ops->get_side_check;
 	pd_data->phy_ops.pr_swap = ops->pr_swap;
-	pd_data->phy_ops.vbus_on_check = ops->vbus_on_check;
 	pd_data->phy_ops.set_pwr_opmode = ops->set_pwr_opmode;
+	pd_data->phy_ops.vbus_on_check = ops->vbus_on_check;
+	pd_data->phy_ops.set_rp_control = ops->set_rp_control;
+	pd_data->phy_ops.cc_instead_of_vbus = ops->cc_instead_of_vbus;
+	pd_data->phy_ops.op_mode_clear = ops->op_mode_clear;
+	pd_data->phy_ops.pps_enable = ops->pps_enable;
+	pd_data->phy_ops.send_psrdy = ops->send_psrdy;
+	pd_data->phy_ops.get_pps_voltage = ops->get_pps_voltage;
 }
 
 protocol_state usbpd_protocol_rx_layer_reset_for_receive(struct protocol_data *rx)

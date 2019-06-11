@@ -38,7 +38,7 @@ typedef union {
 		unsigned port_power_role:1;
 		unsigned msg_id:3;
 		unsigned num_data_objs:3;
-		unsigned:1;
+		unsigned extended:1;
 	};
 } msg_header_type;
 
@@ -46,6 +46,15 @@ typedef union {
 	u32 object;
 	u16 word[2];
 	u8  byte[4];
+
+	struct {
+		unsigned data_size:9;
+		unsigned reserved:1;
+		unsigned request_chunk:1;
+		unsigned chunk_number:4;
+		unsigned chunked:1;
+		unsigned data : 16;
+	} extended_msg_header_type;
 
 	struct {
 		unsigned:30;
@@ -268,6 +277,7 @@ typedef enum {
 } sop_type;
 
 enum usbpd_control_msg_type {
+#if 0
 	USBPD_GoodCRC        = 0x1,
 	USBPD_GotoMin        = 0x2,
 	USBPD_Accept         = 0x3,
@@ -282,6 +292,28 @@ enum usbpd_control_msg_type {
 	USBPD_Wait           = 0xC,
 	USBPD_Soft_Reset     = 0xD,
 	USBPD_UVDM_MSG       = 0xE
+#endif
+	USBPD_GoodCRC        = 1,
+	USBPD_GotoMin        = 2,
+	USBPD_Accept         = 3,
+	USBPD_Reject         = 4,
+	USBPD_Ping           = 5,
+	USBPD_PS_RDY         = 6,
+	USBPD_Get_Source_Cap = 7,
+	USBPD_Get_Sink_Cap   = 8,
+	USBPD_DR_Swap        = 9,
+	USBPD_PR_Swap        = 10,
+	USBPD_VCONN_Swap     = 11,
+	USBPD_Wait           = 12,
+	USBPD_Soft_Reset     = 13,
+	USBPD_Not_Supported  = 16,
+	USBPD_Get_Source_Cap_Extended  = 17,
+	USBPD_Get_Status	 = 18,
+	USBPD_FR_Swap		 = 19,
+	USBPD_Get_PPS_Status = 20,
+	USBPD_Get_Country_Codes		   = 21,
+	USBPD_Get_Sink_Cap_Extended	   = 22,
+	USBPD_UVDM_MSG       = 23,
 };
 
 enum usbpd_check_msg_pass {
@@ -388,16 +420,45 @@ enum usbpd_connect_type {
 
 
 enum usbpd_data_msg_type {
+#if 0
 	USBPD_Source_Capabilities	= 0x1,
 	USBPD_Request		        = 0x2,
 	USBPD_BIST			= 0x3,
 	USBPD_Sink_Capabilities		= 0x4,
 	USBPD_Vendor_Defined		= 0xF,
+#endif
+	USBPD_Source_Capabilities	= 0x1,
+	USBPD_Request		        = 0x2,
+	USBPD_BIST					= 0x3,
+	USBPD_Sink_Capabilities		= 0x4,
+	USBPD_Battery_Status		= 0x5,
+	USBPD_Alert					= 0x6,
+	USBPD_Get_Country_Info		= 0x7,
+	USBPD_Vendor_Defined		= 0xF,
+};
+
+enum usbpd_extended_msg_type {
+	USBPD_Source_Capabilities_Extended	= 1,
+	USBPD_Status						= 2,
+	USBPD_Get_Battery_Cap				= 3,
+	USBPD_Get_Battery_Status			= 4,
+	USBPD_Battery_Capabilities			= 5,
+	USBPD_Get_Manufacturer_Info			= 6,
+	USBPD_Manufacturer_Info				= 7,
+	USBPD_Security_Request				= 8,
+	USBPD_Security_Response				= 9,
+	USBPD_Firmware_Update_Request		= 10,
+	USBPD_Firmware_Update_Response		= 11,
+	USBPD_PPS_Status					= 12,
+	USBPD_Country_Info					= 13,
+	USBPD_Country_Codes					= 14,
+	USBPD_Sink_Capabilities_Extended	= 15
 };
 
 enum usbpd_msg_type {
 	USBPD_CTRL_MSG		= 0,
 	USBPD_DATA_MSG		= 1,
+	USBPD_EXTENDED_MSG		= 2,
 };
 
 #endif

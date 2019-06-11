@@ -257,6 +257,7 @@ typedef enum usbpd_manager_event {
 	MANAGER_SEND_DR_SWAP	= 20,
 } usbpd_manager_event_type;
 
+#if 0
 enum usbpd_msg_status {
 	MSG_GOODCRC	= 1<<0,
 	MSG_ACCEPT	= 1<<1,
@@ -290,6 +291,77 @@ enum usbpd_msg_status {
 	MSG_PASS		= 1<<29,
 	MSG_RID			= 1<<30,
 	MSG_BIST		= 1<<31,
+};
+#endif
+
+enum usbpd_msg_status {
+	MSG_GOODCRC	= 0,
+	MSG_ACCEPT	= 1,
+	MSG_PSRDY	= 2,
+	MSG_REQUEST	= 3,
+	MSG_REJECT	= 4,
+	MSG_WAIT	= 5,
+	MSG_ERROR	= 6,
+	MSG_PING	= 7,
+	MSG_GET_SNK_CAP = 8,
+	MSG_GET_SRC_CAP = 9,
+	MSG_SNK_CAP     = 10,
+	MSG_SRC_CAP     = 11,
+	MSG_PR_SWAP	= 12,
+	MSG_DR_SWAP	= 13,
+	MSG_VCONN_SWAP	= 14,
+	VDM_DISCOVER_IDENTITY	= 15,
+	VDM_DISCOVER_SVID	= 16,
+	VDM_DISCOVER_MODE	= 17,
+	VDM_ENTER_MODE		= 18,
+	VDM_EXIT_MODE		= 19,
+	VDM_ATTENTION		= 20,
+	VDM_DP_STATUS_UPDATE	= 21,
+	VDM_DP_CONFIGURE	= 22,
+	MSG_SOFTRESET		= 23,
+	PLUG_DETACH		= 24,
+	PLUG_ATTACH		= 25,
+	MSG_HARDRESET		= 26,
+	CC_DETECT		= 27,
+	UVDM_MSG		= 28,
+	MSG_PASS		= 29,
+	MSG_RID			= 30,
+	MSG_BIST		= 31,
+
+	/* PD 3.0 : Control Message */
+	MSG_NOT_SUPPORTED = 32,
+	MSG_GET_SOURCE_CAP_EXTENDED = 33,
+	MSG_GET_STATUS = 34,
+	MSG_FR_SWAP = 35,
+	MSG_GET_PPS_STATUS = 36,
+	MSG_GET_COUNTRY_CODES = 37,
+	MSG_GET_SINK_CAP_EXTENDED = 38,
+
+	/* PD 3.0 : Data Message */
+	MSG_BATTERY_STATUS = 39,
+	MSG_ALERT = 40,
+	MSG_GET_COUNTRY_INFO = 41,
+
+	/* PD 3.0 : Extended Message */
+	MSG_SOURCE_CAPABILITIES_EXTENDED = 42,
+	MSG_STATUS = 43,
+	MSG_GET_BATTERY_CAP = 44,
+	MSG_GET_BATTERY_STATUS = 45,
+	MSG_BATTERY_CAPABILITIES = 46,
+	MSG_GET_MANUFACTURER_INFO = 47,
+	MSG_MANUFACTURER_INFO = 48,
+	MSG_SECURITY_REQUEST = 49,
+	MSG_SECURITY_RESPONSE = 50,
+	MSG_FIRMWARE_UPDATE_REQUEST = 51,
+	MSG_FIRMWARE_UPDATE_RESPONSE = 52,
+	MSG_PPS_STATUS = 53,
+	MSG_COUNTRY_INFO = 54,
+	MSG_COUNTRY_CODES = 55,
+	MSG_SINK_CAPABILITIES_EXTENDED = 56,
+
+	MSG_NONE = 61,
+	/* Reserved */
+	MSG_RESERVED = 62,
 };
 
 /* Timer */
@@ -344,15 +416,22 @@ typedef struct usbpd_phy_ops {
 	int    (*set_vconn_source)(void *, int);
 	int    (*get_vconn_source)(void *, int *);
 	int    (*set_check_msg_pass)(void *, int);
-	unsigned   (*get_status)(void *, unsigned);
+	unsigned   (*get_status)(void *, u64);
 	bool   (*poll_status)(void *);
 	void   (*driver_reset)(void *);
 	int    (*set_otg_control)(void *, int);
+	void	(*get_vbus_short_check)(void *, bool *);
 	int    (*set_cc_control)(void *, int);
-	void    (*pr_swap)(void *, int);
-	int    (*vbus_on_check)(void *);
 	int		(*get_side_check)(void *_data);
+	void    (*pr_swap)(void *, int);
 	void	(*set_pwr_opmode)(void *_data, int mode);
+	int		(*vbus_on_check)(void *);
+	int		(*set_rp_control)(void *, int);
+	int		(*cc_instead_of_vbus)(void *);
+	int		(*op_mode_clear)(void *);
+	int		(*pps_enable)(void *, int);
+	int		(*send_psrdy)(void *);
+	int		(*get_pps_voltage)(void *);
 } usbpd_phy_ops_type;
 
 struct policy_data {
