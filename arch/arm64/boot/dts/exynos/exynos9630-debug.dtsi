@@ -22,6 +22,14 @@
 		#size-cells = <1>;
 	};
 
+	ITMON@0 {
+		compatible = "samsung,exynos-itmon";
+		interrupts = <0 INTREQ__TREX_D_CORE_DEBUG_INT 0>,
+			     <0 INTREQ__TREX_D_BUSC_debugInterrupt 0>,
+			     <0 INTREQ__TREX_D_NRT_DEBUG_INT 0>,
+			     <0 INTREQ__TREX_P_CORE_DEBUG_INT 0>;
+	};
+
         exynos-adv_tracer {
                 compatible = "samsung,exynos-adv-tracer";
                 reg = <0x0 0x10EC0000 0x1000>;
