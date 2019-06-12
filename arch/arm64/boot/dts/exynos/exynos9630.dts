@@ -130,6 +130,7 @@
 			reg = <0x0 0x0>;
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu1: cpu@0001 {
 			device_type = "cpu";
@@ -137,6 +138,7 @@
 			reg = <0x0 0x0001>;
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu2: cpu@0002 {
 			device_type = "cpu";
@@ -144,6 +146,7 @@
 			reg = <0x0 0x0002>;
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu3: cpu@0003 {
 			device_type = "cpu";
@@ -151,6 +154,7 @@
 			reg = <0x0 0x0003>;
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu4: cpu@0004 {
 			device_type = "cpu";
@@ -158,6 +162,7 @@
 			reg = <0x0 0x0004>;
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu5: cpu@0005 {
 			device_type = "cpu";
@@ -165,6 +170,7 @@
 			reg = <0x0 0x0005>;
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu6: cpu@0006 {
 			device_type = "cpu";
@@ -172,6 +178,7 @@
 			reg = <0x0 0x0006>;
 			enable-method = "psci";
 			sched-energy-data = <&DEIMOS_ENERGY>;
+			cpu-idle-states = <&DEIMOS_CPU_SLEEP>;
 		};
 		cpu7: cpu@0007 {
 			device_type = "cpu";
@@ -179,6 +186,31 @@
 			reg = <0x0 0x0007>;
 			enable-method = "psci";
 			sched-energy-data = <&DEIMOS_ENERGY>;
+			cpu-idle-states = <&DEIMOS_CPU_SLEEP>;
+		};
+		
+		idle-states {
+			entry-method = "arm,psci";
+
+			ANANKE_CPU_SLEEP: ananke-cpu-sleep {
+				idle-state-name = "c2";
+				compatible = "exynos,idle-state";
+				arm,psci-suspend-param = <0x0010000>;
+				entry-latency-us = <70>;
+				exit-latency-us = <160>;
+				min-residency-us = <2000>;
+				status = "okay";
+			};
+
+			DEIMOS_CPU_SLEEP: deimos-cpu-sleep {
+				idle-state-name = "c2";
+				compatible = "exynos,idle-state";
+				arm,psci-suspend-param = <0x0010000>;
+				entry-latency-us = <150>;
+				exit-latency-us = <190>;
+				min-residency-us = <2500>;
+				status = "okay";
+			};
 		};
 
 		energy-data {
