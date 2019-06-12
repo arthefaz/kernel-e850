@@ -639,6 +639,33 @@ static inline enum dev_format dev_id(enum sipc_ch_id ch)
 
 #endif
 
+static inline u32 get_ctrl_msg(u32 __iomem *addr)
+{
+	return ioread32(addr);
+}
+
+static inline void set_ctrl_msg(u32 __iomem *addr, u32 msg)
+{
+	iowrite32(msg, addr);
+}
+
+/* get a part of 4 byte length msg */
+static inline u32 extract_ctrl_msg(u32 __iomem *addr, u32 mask, u32 pos)
+{
+	return (ioread32(addr) >> pos) & mask;
+}
+
+/* set a part of 4 byte length msg */
+static inline void update_ctrl_msg(u32 __iomem *addr, u32 msg, u32 mask, u32 pos)
+{
+	u32 val;
+
+	val = ioread32(addr);
+	val &= ~(mask << pos);
+	val |= (msg & mask) << pos;
+	iowrite32(val, addr);
+}
+
 #ifdef GROUP_MEM_LINK_DEVICE
 
 void shmem_unlock_mif_freq(struct mem_link_device *mld);

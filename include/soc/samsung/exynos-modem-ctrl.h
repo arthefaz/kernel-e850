@@ -13,12 +13,12 @@
 #ifndef __EXYNOS_MODEM_CTRL_H
 #define __EXYNOS_MODEM_CTRL_H
 
-#if defined(CONFIG_SEC_MODEM_IF)
+#if defined(CONFIG_EXYNOS_MODEM_IF)
 extern int modem_force_crash_exit_ext(void);
 extern int modem_send_panic_noti_ext(void);
-#else /* CONFIG_SEC_MODEM_IF */
+#else /* CONFIG_EXYNOS_MODEM_IF */
 static inline int modem_force_crash_exit_ext(void) { return 0; }
 static inline int modem_send_panic_noti_ext(void) { return 0; }
-#endif /* CONFIG_SEC_MODEM_IF */
+#endif /* CONFIG_EXYNOS_MODEM_IF */
 
 #endif

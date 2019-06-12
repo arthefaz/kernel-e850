@@ -80,11 +80,8 @@ static irqreturn_t cp_active_handler(int irq, void *arg)
 	enum modem_state old_state = mc->phone_state;
 	enum modem_state new_state = mc->phone_state;
 
-	if (modem->cmsg_type == MAILBOX_SR)
-		cp_active = mbox_extract_value(MCU_CP, mc->mbx_cp_status,
-			mc->sbi_lte_active_mask, mc->sbi_lte_active_pos);
-	else
-		cp_active = (ioread32(mld->cp2ap_united_status) >> mc->sbi_lte_active_pos) & mc->sbi_lte_active_mask;
+	cp_active = extract_ctrl_msg(mld->cp2ap_united_status, mc->sbi_lte_active_mask,
+			mc->sbi_lte_active_pos);
 
 	mif_info("old_state:%s cp_on:%d cp_active:%d\n",
 		cp_state_str(old_state), cp_on, cp_active);
@@ -132,7 +129,7 @@ static int get_system_rev(struct device_node *np)
 	gpio_cnt = of_gpio_count(np);
 	if (gpio_cnt < 0) {
 		mif_err("failed to get gpio_count from DT(%d)\n", gpio_cnt);
-		return gpio_cnt;
+		return 0;
 	}
 
 	for (cnt = 0; cnt < gpio_cnt; cnt++) {
@@ -217,25 +214,15 @@ static int init_control_messages(struct modem_ctl *mc)
 	struct device_node *np = pdev->dev.of_node;
 	struct modem_data *modem = mc->mdm_data;
 	struct mem_link_device *mld = modem->mld;
-	unsigned int ap_status;
 	unsigned int sbi_ds_det_mask, sbi_ds_det_pos;
 	unsigned int sbi_sys_rev_mask, sbi_sys_rev_pos;
-	int ds_det, i;
+	int ds_det;
 #ifdef CONFIG_CP_BTL
 	unsigned int sbi_ext_backtrace_mask, sbi_ext_backtrace_pos;
 #endif
 
-	if (modem->cmsg_type == MAILBOX_SR) {
-		for (i = 0; i < MAX_MBOX_NUM; i++)
-			mbox_set_value(MCU_CP, i, 0);
-		mif_dt_read_u32(np, "reg_ap2cp_united_status", ap_status);
-	} else if (modem->cmsg_type == DRAM_HYBRID) {
-		/* TODO */
-		mif_dt_read_u32(np, "reg_ap2cp_united_status", ap_status);
-	} else { /* DRAM */
-		iowrite32(0, mld->ap2cp_united_status);
-		iowrite32(0, mld->cp2ap_united_status);
-	}
+	set_ctrl_msg(mld->ap2cp_united_status, 0);
+	set_ctrl_msg(mld->cp2ap_united_status, 0);
 
 	if (!np) {
 		mif_err("non-DT project, can't set mailbox regs\n");
@@ -246,16 +233,8 @@ static int init_control_messages(struct modem_ctl *mc)
 	mif_info("btl enable:%d\n", mc->mdm_data->btl.enabled);
 	mif_dt_read_u32(np, "sbi_ext_backtrace_mask", sbi_ext_backtrace_mask);
 	mif_dt_read_u32(np, "sbi_ext_backtrace_pos", sbi_ext_backtrace_pos);
-	if (modem->cmsg_type == MAILBOX_SR) {
-		mbox_update_value(MCU_CP, ap_status, mc->mdm_data->btl.enabled,
+	update_ctrl_msg(mld->ap2cp_united_status, mc->mdm_data->btl.enabled,
 				sbi_ext_backtrace_mask, sbi_ext_backtrace_pos);
-	} else {
-		u32 val;
-		val = ioread32(mld->ap2cp_united_status);
-		val &= ~(sbi_ext_backtrace_mask << sbi_ext_backtrace_pos);
-		val |= (mc->mdm_data->btl.enabled & sbi_ext_backtrace_mask) << sbi_ext_backtrace_pos;
-		iowrite32(val, mld->ap2cp_united_status);
-	}
 #endif
 
 	mif_dt_read_u32(np, "sbi_sys_rev_mask", sbi_sys_rev_mask);
@@ -268,16 +247,9 @@ static int init_control_messages(struct modem_ctl *mc)
 		mif_err("ds_det error:%d\n", ds_det);
 		return -EINVAL;
 	}
-	if (modem->cmsg_type == MAILBOX_SR) {
-		mbox_update_value(MCU_CP, ap_status, ds_det,
-				sbi_ds_det_mask, sbi_ds_det_pos);
-	} else {
-		u32 val;
-		val = ioread32(mld->ap2cp_united_status);
-		val &= ~(sbi_ds_det_mask << sbi_ds_det_pos);
-		val |= (ds_det & sbi_ds_det_mask) << sbi_ds_det_pos;
-		iowrite32(val, mld->ap2cp_united_status);
-	}
+
+	update_ctrl_msg(mld->ap2cp_united_status, ds_det, sbi_ds_det_mask,
+			sbi_ds_det_pos);
 	mif_info("ds_det:%d\n", ds_det);
 
 #ifndef CONFIG_HW_REV_DETECT
@@ -287,22 +259,15 @@ static int init_control_messages(struct modem_ctl *mc)
 		mif_err("hw_rev error:%d\n", hw_rev);
 		return -EINVAL;
 	}
-	if (modem->cmsg_type == MAILBOX_SR) {
-		mbox_update_value(MCU_CP, ap_status, hw_rev,
-				sbi_sys_rev_mask, sbi_sys_rev_pos);
-	mif_info("hw_rev:0x%x\n", hw_rev);
-	} else {
-		u32 val;
-		val = ioread32(mld->ap2cp_united_status);
-		val &= ~(sbi_sys_rev_mask << sbi_sys_rev_pos);
-		val |= (hw_rev & sbi_sys_rev_mask) << sbi_sys_rev_pos;
-		iowrite32(val, mld->ap2cp_united_status);
-	}
+
+	update_ctrl_msg(mld->ap2cp_united_status, hw_rev, sbi_sys_rev_mask,
+			sbi_sys_rev_pos);
 	mif_info("hw_rev:0x%x\n", hw_rev);
 
 	return 0;
 }
 
+static int _is_first_boot;
 static int power_on_cp(struct modem_ctl *mc)
 {
 	int cp_active = 0;
@@ -310,18 +275,7 @@ static int power_on_cp(struct modem_ctl *mc)
 	struct modem_data *modem = mc->mdm_data;
 	struct mem_link_device *mld = modem->mld;
 
-	if (modem->cmsg_type == MAILBOX_SR) {
-		cp_active = mbox_extract_value(MCU_CP, mc->mbx_cp_status,
-			mc->sbi_lte_active_mask, mc->sbi_lte_active_pos);
-		cp_status = mbox_extract_value(MCU_CP, mc->mbx_cp_status,
-			mc->sbi_cp_status_mask, mc->sbi_cp_status_pos);
-	} else {
-		cp_active = (ioread32(mld->cp2ap_united_status) >> mc->sbi_lte_active_pos) & mc->sbi_lte_active_mask;
-		cp_status = (ioread32(mld->cp2ap_united_status) >> mc->sbi_cp_status_pos) & mc->sbi_cp_status_mask;
-	}
-
 	mif_info("+++\n");
-	mif_info("cp_active:%d cp_status:%d\n", cp_active, cp_status);
 
 #ifndef CONFIG_CP_SECURE_BOOT
 	exynos_cp_init();
@@ -335,25 +289,20 @@ static int power_on_cp(struct modem_ctl *mc)
 	if (init_control_messages(mc))
 		mif_err("Failed to initialize mbox regs\n");
 
-	if (modem->cmsg_type == MAILBOX_SR) {
-		mbox_update_value(MCU_CP,mc->mbx_ap_status, 1, mc->sbi_pda_active_mask, mc->sbi_pda_active_pos);
-		mif_info("ap_status:0x%08x\n", mbox_get_value(MCU_CP, mc->mbx_ap_status));
-	} else {
-		u32 val;
-		val = ioread32(mld->ap2cp_united_status);
-		val &= ~(mc->sbi_pda_active_mask << mc->sbi_pda_active_pos);
-		val |= (1 & mc->sbi_pda_active_mask) << mc->sbi_pda_active_pos;
-		iowrite32(val, mld->ap2cp_united_status);
-		mif_info("ap_status:0x%08x\n", ioread32(mld->ap2cp_united_status));
-	}
+	cp_active = extract_ctrl_msg(mld->cp2ap_united_status,
+			mc->sbi_lte_active_mask, mc->sbi_lte_active_pos);
+	cp_status = extract_ctrl_msg(mld->cp2ap_united_status,
+			mc->sbi_cp_status_mask, mc->sbi_cp_status_pos);
+	mif_info("cp_active:0x%x cp_status:0x%x\n", cp_active, cp_status);
 
-
-	if (cal_cp_status()) {
-		mif_info("CP aleady Init, Just reset release!\n");
-		cal_cp_reset_release();
-	} else {
-		mif_info("CP first Init!\n");
-		cal_cp_init();
+	if (cal_cp_status() == 0) {
+		if (!_is_first_boot) {
+			mif_info("First init\n");
+			cal_cp_init();
+			_is_first_boot = 1;
+		} else {
+			mif_err("Not first time, but power is down\n");
+		}
 	}
 
 	mif_info("---\n");
@@ -388,7 +337,6 @@ static int power_shutdown_cp(struct modem_ctl *mc)
 	reinit_completion(&mc->off_cmpl);
 	remain = wait_for_completion_timeout(&mc->off_cmpl, timeout);
 	if (remain == 0) {
-		mif_err("T-I-M-E-O-U-T\n");
 		mc->phone_state = STATE_OFFLINE;
 		list_for_each_entry(iod, &mc->modem_state_notify_list, list) {
 			if (iod && atomic_read(&iod->opened) > 0)
@@ -459,7 +407,7 @@ static int start_normal_boot(struct modem_ctl *mc)
 	struct io_device *iod;
 	struct modem_data *modem = mc->mdm_data;
 	struct mem_link_device *mld = modem->mld;
-	int cnt = 100;
+	int cnt = 200;
 	int ret = 0;
 	int cp_status = 0;
 
@@ -478,17 +426,6 @@ static int start_normal_boot(struct modem_ctl *mc)
 		ld->link_start_normal_boot(ld, mc->iod);
 	}
 
-	if (modem->cmsg_type == MAILBOX_SR) {
-		mbox_update_value(MCU_CP ,mc->mbx_ap_status, 1, mc->sbi_ap_status_mask, mc->sbi_ap_status_pos);
-		mif_info("ap_status=%u\n", mbox_extract_value(MCU_CP, mc->mbx_ap_status, mc->sbi_ap_status_mask, mc->sbi_ap_status_pos));
-	} else {
-		u32 val;
-		val = ioread32(mld->ap2cp_united_status);
-		val &= ~(mc->sbi_ap_status_mask << mc->sbi_ap_status_pos);
-		val |= (1 & mc->sbi_ap_status_mask) << mc->sbi_ap_status_pos;
-		iowrite32(val, mld->ap2cp_united_status);
-		mif_info("ap_status=%u\n", (ioread32(mld->ap2cp_united_status) >> mc->sbi_ap_status_pos) & mc->sbi_cp_status_mask);
-	}
 	if (mc->ap2cp_cfg_ioaddr) {
 		mif_info("Before setting AP2CP_CFG:0x%08x\n",
 					__raw_readl(mc->ap2cp_cfg_ioaddr));
@@ -501,35 +438,31 @@ static int start_normal_boot(struct modem_ctl *mc)
 		mif_info("AP2CP_CFG is ok:0x%08x\n", ret);
 	}
 
-
-
-	if (modem->cmsg_type == MAILBOX_SR) {
-		while (mbox_extract_value(MCU_CP, mc->mbx_cp_status,
-				mc->sbi_cp_status_mask, mc->sbi_cp_status_pos) == 0) {
-			if (--cnt > 0)
-				usleep_range(10000, 20000);
-			else
-				return -EACCES;
-		}
-
-	} else {
-		while (((ioread32(mld->cp2ap_united_status) >> mld->sbi_cp_status_pos) & mld->sbi_cp_status_mask) == 0) {
-			if (--cnt > 0)
-				usleep_range(10000, 20000);
-			else
-				return -EACCES;
+	while (extract_ctrl_msg(mld->cp2ap_united_status, mld->sbi_cp_status_mask,
+				mld->sbi_cp_status_pos) == 0) {
+		if (--cnt > 0) {
+			usleep_range(10000, 20000);
+		} else {
+			mif_err("cp_status error:%d\n", extract_ctrl_msg(mld->cp2ap_united_status,
+						mld->sbi_cp_status_mask, mld->sbi_cp_status_pos));
+			return -EACCES;
 		}
 	}
 
 	mif_disable_irq(&mc->irq_cp_wdt);
 
-	if (modem->cmsg_type == MAILBOX_SR) {
-		cp_status = mbox_extract_value(MCU_CP, mc->mbx_cp_status,
-			mc->sbi_cp_status_mask, mc->sbi_cp_status_pos);
-	} else {
-		cp_status = (ioread32(mld->cp2ap_united_status) >> mld->sbi_cp_status_pos) & mld->sbi_cp_status_mask;
-	}
+	cp_status = extract_ctrl_msg(mld->cp2ap_united_status,
+				mld->sbi_cp_status_mask, mld->sbi_cp_status_pos);
 	mif_info("cp_status=%u\n", cp_status);
+
+	update_ctrl_msg(mld->ap2cp_united_status, 1, mc->sbi_ap_status_mask,
+			mc->sbi_ap_status_pos);
+	mif_info("ap_status=%u\n", extract_ctrl_msg(mld->ap2cp_united_status,
+				mc->sbi_ap_status_mask, mc->sbi_cp_status_pos));
+
+	update_ctrl_msg(mld->ap2cp_united_status, 1, mc->sbi_pda_active_mask,
+			mc->sbi_pda_active_pos);
+	mif_info("ap_status:0x%08x\n", get_ctrl_msg(mld->ap2cp_united_status));
 
 	mif_info("---\n");
 	return 0;
@@ -659,16 +592,8 @@ static int start_dump_boot(struct modem_ctl *mc)
 		cal_cp_reset_release();
 	}
 
-	if (modem->cmsg_type == MAILBOX_SR) {
-		mbox_update_value(MCU_CP, mc->mbx_ap_status, 1,
-				mc->sbi_ap_status_mask, mc->sbi_ap_status_pos);
-	} else {
-		u32 val;
-		val = ioread32(mld->ap2cp_united_status);
-		val &= ~(mc->sbi_ap_status_mask << mc->sbi_ap_status_pos);
-		val |= (1 & mc->sbi_ap_status_mask) << mc->sbi_ap_status_pos;
-		iowrite32(val, mld->ap2cp_united_status);
-	}
+	update_ctrl_msg(mld->ap2cp_united_status, 1, mc->sbi_ap_status_mask,
+			mc->sbi_ap_status_pos);
 
 	mif_info("---\n");
 	return err;
@@ -677,54 +602,20 @@ static int start_dump_boot(struct modem_ctl *mc)
 static int suspend_cp(struct modem_ctl *mc)
 {
 	struct modem_data *modem = mc->mdm_data;
-	struct modem_mbox *mbox = mc->mdm_data->mbx;
 	struct mem_link_device *mld = modem->mld;
 	struct utc_time t;
 
 	get_utc_time(&t);
 	mif_err("time = %d.%d\n", t.sec + (t.min * 60), t.us);
 
-	if (modem->cmsg_type == MAILBOX_SR) {
-		mbox_update_value(MCU_CP, mbox->mbx_ap2cp_kerneltime,
-				t.sec + (t.min * 60),
-				modem->sbi_ap2cp_kerneltime_sec_mask,
-				modem->sbi_ap2cp_kerneltime_sec_pos);
-		mbox_update_value(MCU_CP, mbox->mbx_ap2cp_kerneltime, t.us,
-				modem->sbi_ap2cp_kerneltime_usec_mask,
-				modem->sbi_ap2cp_kerneltime_usec_pos);
-		mif_err("%s: pda_active:0\n", mc->name);
-		mbox_update_value(MCU_CP, mc->mbx_ap_status, 0,
-				mc->sbi_pda_active_mask, mc->sbi_pda_active_pos);
-	} else if (modem->cmsg_type == DRAM_HYBRID) {
-		u32 val;
-		val = ioread32(mld->ap2cp_kerneltime);
-		val &= ~(modem->sbi_ap2cp_kerneltime_sec_mask << modem->sbi_ap2cp_kerneltime_sec_pos);
-		val |= ((t.sec + (t.min * 60)) & modem->sbi_ap2cp_kerneltime_sec_mask) << modem->sbi_ap2cp_kerneltime_sec_pos;
-		iowrite32(val, mld->ap2cp_kerneltime);
+	set_ctrl_msg(mld->ap2cp_kerneltime_sec, t.sec + (t.min * 60));
+	set_ctrl_msg(mld->ap2cp_kerneltime_usec, t.us);
 
-		val = ioread32(mld->ap2cp_kerneltime);
-		val &= ~(modem->sbi_ap2cp_kerneltime_usec_mask << modem->sbi_ap2cp_kerneltime_usec_pos);
-		val |= (t.us & modem->sbi_ap2cp_kerneltime_usec_mask) << modem->sbi_ap2cp_kerneltime_usec_pos;
-		iowrite32(val, mld->ap2cp_kerneltime);
+	mif_err("%s: pda_active:0\n", mc->name);
 
-		mif_err("%s: pda_active:0\n", mc->name);
+	update_ctrl_msg(mld->ap2cp_united_status, 0, mc->sbi_pda_active_mask,
+			mc->sbi_pda_active_pos);
 
-		val = ioread32(mld->ap2cp_united_status);
-		val &= ~(mc->sbi_pda_active_mask << mc->sbi_pda_active_pos);
-		val |= (0 & mc->sbi_pda_active_mask) << mc->sbi_pda_active_pos;
-		iowrite32(val, mld->ap2cp_united_status);
-	} else {
-		u32 val;
-		iowrite32(t.sec + (t.min * 60), mld->ap2cp_kerneltime_sec);
-		iowrite32(t.us, mld->ap2cp_kerneltime_usec);
-
-		mif_err("%s: pda_active:0\n", mc->name);
-
-		val = ioread32(mld->ap2cp_united_status);
-		val &= ~(mc->sbi_pda_active_mask << mc->sbi_pda_active_pos);
-		val |= (0 & mc->sbi_pda_active_mask) << mc->sbi_pda_active_pos;
-		iowrite32(val, mld->ap2cp_united_status);
-	}
 	mbox_set_interrupt(MCU_CP, mc->int_pda_active);
 
 	return 0;
@@ -733,54 +624,20 @@ static int suspend_cp(struct modem_ctl *mc)
 static int resume_cp(struct modem_ctl *mc)
 {
 	struct modem_data *modem = mc->mdm_data;
-	struct modem_mbox *mbox = mc->mdm_data->mbx;
 	struct mem_link_device *mld = modem->mld;
 	struct utc_time t;
 
 	get_utc_time(&t);
 	mif_err("time = %d.%d\n", t.sec + (t.min * 60), t.us);
 
-	if (modem->cmsg_type == MAILBOX_SR) {
-		mbox_update_value(MCU_CP, mbox->mbx_ap2cp_kerneltime,
-				t.sec + (t.min * 60),
-				modem->sbi_ap2cp_kerneltime_sec_mask,
-				modem->sbi_ap2cp_kerneltime_sec_pos);
-		mbox_update_value(MCU_CP, mbox->mbx_ap2cp_kerneltime, t.us,
-				modem->sbi_ap2cp_kerneltime_usec_mask,
-				modem->sbi_ap2cp_kerneltime_usec_pos);
-		mif_err("%s: pda_active:1\n", mc->name);
-		mbox_update_value(MCU_CP, mc->mbx_ap_status, 1,
-				mc->sbi_pda_active_mask, mc->sbi_pda_active_pos);
-	} else if (modem->cmsg_type == DRAM_HYBRID) {
-		u32 val;
-		val = ioread32(mld->ap2cp_kerneltime);
-		val &= ~(modem->sbi_ap2cp_kerneltime_sec_mask << modem->sbi_ap2cp_kerneltime_sec_pos);
-		val |= ((t.sec + (t.min * 60)) & modem->sbi_ap2cp_kerneltime_sec_mask) << modem->sbi_ap2cp_kerneltime_sec_pos;
-		iowrite32(val, mld->ap2cp_kerneltime);
+	set_ctrl_msg(mld->ap2cp_kerneltime_sec, t.sec + (t.min * 60));
+	set_ctrl_msg(mld->ap2cp_kerneltime_usec, t.us);
 
-		val = ioread32(mld->ap2cp_kerneltime);
-		val &= ~(modem->sbi_ap2cp_kerneltime_usec_mask << modem->sbi_ap2cp_kerneltime_usec_pos);
-		val |= (t.us & modem->sbi_ap2cp_kerneltime_usec_mask) << modem->sbi_ap2cp_kerneltime_usec_pos;
-		iowrite32(val, mld->ap2cp_kerneltime);
+	mif_err("%s: pda_active:1\n", mc->name);
 
-		mif_err("%s: pda_active:1\n", mc->name);
+	update_ctrl_msg(mld->ap2cp_united_status, 1, mc->sbi_pda_active_mask,
+			mc->sbi_pda_active_pos);
 
-		val = ioread32(mld->ap2cp_united_status);
-		val &= ~(mc->sbi_pda_active_mask << mc->sbi_pda_active_pos);
-		val |= (1 & mc->sbi_pda_active_mask) << mc->sbi_pda_active_pos;
-		iowrite32(val, mld->ap2cp_united_status);
-	} else {
-		u32 val;
-		iowrite32(t.sec + (t.min * 60), mld->ap2cp_kerneltime_sec);
-		iowrite32(t.us, mld->ap2cp_kerneltime_usec);
-
-		mif_err("%s: pda_active:1\n", mc->name);
-
-		val = ioread32(mld->ap2cp_united_status);
-		val &= ~(mc->sbi_pda_active_mask << mc->sbi_pda_active_pos);
-		val |= (1 & mc->sbi_pda_active_mask) << mc->sbi_pda_active_pos;
-		iowrite32(val, mld->ap2cp_united_status);
-	}
 	mbox_set_interrupt(MCU_CP, mc->int_pda_active);
 
 	return 0;

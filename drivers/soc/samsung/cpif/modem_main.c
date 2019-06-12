@@ -310,10 +310,10 @@ static int parse_dt_common_pdata(struct device_node *np,
 		mif_dt_read_u32(np, "ulpath_offset", pdata->ulpath_offset);
 #endif
 	/* srinfo settings */
-	mif_dt_read_u32(np, "srinfo_offset", pdata->srinfo_offset);
-	mif_dt_read_u32(np, "srinfo_size", pdata->srinfo_size);
+	mif_dt_read_u32_noerr(np, "srinfo_offset", pdata->srinfo_offset);
+	mif_dt_read_u32_noerr(np, "srinfo_size", pdata->srinfo_size);
 	/* clk_table offset */
-	mif_dt_read_u32(np, "clk_table_offset", pdata->clk_table_offset);
+	mif_dt_read_u32_noerr(np, "clk_table_offset", pdata->clk_table_offset);
 
 	return 0;
 }
@@ -509,17 +509,6 @@ static int parse_dt_mbox_pdata(struct device *dev, struct device_node *np,
 			mbox->irq_cp2ap_change_ul_path);
 #endif
 
-	if (pdata->cmsg_type == MAILBOX_SR) {
-		mif_dt_read_u32(np, "reg_ap2cp_msg", mbox->mbx_ap2cp_msg);
-		mif_dt_read_u32(np, "reg_cp2ap_msg", mbox->mbx_cp2ap_msg);
-		mif_dt_read_u32(np, "reg_cp2ap_united_status", mbox->mbx_cp2ap_status);
-		mif_dt_read_u32(np, "reg_ap2cp_united_status", mbox->mbx_ap2cp_status);
-		mif_dt_read_u32(np, "reg_cp2ap_dvfsreq_cpu", mbox->mbx_cp2ap_perf_req_cpu);
-		mif_dt_read_u32(np, "reg_cp2ap_dvfsreq_mif", mbox->mbx_cp2ap_perf_req_mif);
-		mif_dt_read_u32(np, "reg_cp2ap_dvfsreq_int", mbox->mbx_cp2ap_perf_req_int);
-		mif_dt_read_u32(np, "reg_ap2cp_kerneltime", mbox->mbx_ap2cp_kerneltime);
-	}
-
 	return ret;
 }
 
@@ -562,13 +551,13 @@ static int parse_dt_ipc_region_pdata(struct device *dev, struct device_node *np,
 	mif_dt_read_u32(np, "sbi_crash_type_mask", pdata->sbi_crash_type_mask);
 	mif_dt_read_u32(np, "sbi_crash_type_pos", pdata->sbi_crash_type_pos);
 
-	mif_dt_read_u32(np, "sbi_ap2cp_kerneltime_sec_mask",
+	mif_dt_read_u32_noerr(np, "sbi_ap2cp_kerneltime_sec_mask",
 			pdata->sbi_ap2cp_kerneltime_sec_mask);
-	mif_dt_read_u32(np, "sbi_ap2cp_kerneltime_sec_pos",
+	mif_dt_read_u32_noerr(np, "sbi_ap2cp_kerneltime_sec_pos",
 			pdata->sbi_ap2cp_kerneltime_sec_pos);
-	mif_dt_read_u32(np, "sbi_ap2cp_kerneltime_usec_mask",
+	mif_dt_read_u32_noerr(np, "sbi_ap2cp_kerneltime_usec_mask",
 			pdata->sbi_ap2cp_kerneltime_usec_mask);
-	mif_dt_read_u32(np, "sbi_ap2cp_kerneltime_usec_pos",
+	mif_dt_read_u32_noerr(np, "sbi_ap2cp_kerneltime_usec_pos",
 			pdata->sbi_ap2cp_kerneltime_usec_pos);
 
 	return ret;
