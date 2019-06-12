@@ -191,7 +191,7 @@ static inline void lb_update_misfit_status(struct task_struct *p, struct rq *rq,
 
 extern unsigned int frt_disable_cpufreq;
 
-#ifdef CONFIG_SCHED_TUNE
+#if defined(CONFIG_SCHED_EMS) && defined (CONFIG_SCHED_TUNE)
 enum stune_group {
 	STUNE_ROOT,
 	STUNE_FOREGROUND,
@@ -203,5 +203,6 @@ enum stune_group {
 void emst_cpu_update(int cpu, u64 now);
 unsigned long emst_boost(int cpu, unsigned long util);
 #else
+static inline void emst_cpu_update(int cpu, u64 now) { };
 static inline unsigned long emst_boost(int cpu, unsigned long util) { return util; };
 #endif

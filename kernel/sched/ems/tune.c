@@ -188,7 +188,7 @@ static struct kobj_type ktype_fb = {
  **********************************************************************/
 static int __init emst_init(void)
 {
-	struct device_node *root, *dn;
+	struct device_node *ems_dn, *emst_dn, *dn;
 	struct emst_dom *cur;
 	int idx;
 	char name[15];
@@ -198,8 +198,12 @@ static int __init emst_init(void)
 	if (!emst_kobj)
 		return -EINVAL;
 
-	root = of_find_node_by_name(NULL, "ems-tune");
-	if (!root)
+	ems_dn = of_find_node_by_path("/cpus/ems");
+	if (!ems_dn)
+		return -EINVAL;
+
+	emst_dn = of_find_node_by_name(ems_dn, "ems-tune");
+	if (!emst_dn)
 		return -EINVAL;
 
 	for (idx = 0; idx < STUNE_GROUP_COUNT; ++idx) {
@@ -209,7 +213,7 @@ static int __init emst_init(void)
 		snprintf(name, sizeof(name), "%s", stune_group_name[idx]);
 
 		/* find node for this group */
-		dn = of_find_node_by_name(root, name);
+		dn = of_find_node_by_name(emst_dn, name);
 		if (!dn) {
 			pr_warn("%s: %s is not registered on the DT\n", __func__, name);
 			continue;
