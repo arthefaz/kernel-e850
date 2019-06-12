@@ -22,6 +22,7 @@
 #include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
 #elif defined(CONFIG_SOC_EXYNOS9630) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
 #include <dt-bindings/soc/samsung/exynos9630-devfreq.h>
+#include <dt-bindings/clock/exynos9630.h>
 #endif
 #include <soc/samsung/exynos-devfreq.h>
 
