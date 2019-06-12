@@ -61,7 +61,9 @@ static void slack_update_min(struct cpufreq_policy *policy)
 
 	/* min_cap is minimum value making higher frequency than policy->min */
 	min_cap = (max_cap * policy->min) / policy->max;
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ENERGYSTEP
+	min_cap -= 1;
+#else
 	min_cap = (min_cap * 4 / 5) + 1;
 #endif
 	for_each_cpu(cpu, policy->cpus) {

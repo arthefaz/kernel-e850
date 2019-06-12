@@ -709,6 +709,16 @@ struct cpufreq_governor energy_step_gov = {
 };
 
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ENERGYSTEP
+unsigned long cpufreq_governor_get_util(unsigned int cpu)
+{
+	struct esgov_cpu *esg_cpu = &per_cpu(esgov_cpu, cpu);
+
+	if (!esg_cpu)
+		return 0;
+
+	return esg_cpu->util;
+}
+
 struct cpufreq_governor *cpufreq_default_governor(void)
 {
 	return &energy_step_gov;
