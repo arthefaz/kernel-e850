@@ -301,6 +301,23 @@
 
 	};
 
+	esg {
+		domain@0 {
+			device_type = "esgov-pol0";
+			shared-cpus = "0-5";
+			pm_qos-min-class = <3>;
+			pm_qos-max-class = <4>;
+			step = <4>;
+		};
+		domain@1 {
+			device_type = "esgov-pol6";
+			shared-cpus = "6-7";
+			pm_qos-min-class = <5>;
+			pm_qos-max-class = <6>;
+			step = <8>;
+		};
+	};
+
 	cpuhp {
 		compatible = "exynos, cpuhp";
 	};
