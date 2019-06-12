@@ -5308,8 +5308,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		walt_inc_cumulative_runnable_avg(rq, p);
 	}
 
-
-	util_est_enqueue(&rq->cfs, p);
 	hrtick_update(rq);
 }
 
