@@ -11707,6 +11707,7 @@ void init_cfs_rq(struct cfs_rq *cfs_rq)
 #endif
 	atomic_long_set(&cfs_rq->removed_load_avg, 0);
 	atomic_long_set(&cfs_rq->removed_util_avg, 0);
+	raw_spin_lock_init(&cfs_rq->ml_removed.lock);
 #endif
 }
 
