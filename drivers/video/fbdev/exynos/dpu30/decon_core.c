@@ -2790,31 +2790,36 @@ static int decon_set_color_mode(struct decon_device *decon,
 	return ret;
 }
 
-/* Android O version does not support non translation */
-#if 0
-//#if !defined(CONFIG_ANDROID_SYSTEM_AS_ROOT)
-static void decon_translate_idma2ch(struct decon_device *decon,
-		struct decon_win_config_data *win_data)
+static int decon_get_readback_attribute(struct decon_device *decon,
+		struct decon_readback_attribute *readback_attr)
 {
-	int i;
-	struct decon_win_config *config;
-	struct decon_win_config *win_config = win_data->config;
+	int ret = 0;
 
-	for (i = 0; i < decon->dt.max_win; i++) {
-		config = &win_config[i];
+	decon_dbg("%s +\n", __func__);
+	mutex_lock(&decon->lock);
 
-		switch (config->state) {
-		case DECON_WIN_STATE_COLOR:
-		case DECON_WIN_STATE_BUFFER:
-		case DECON_WIN_STATE_CURSOR:
-			config->channel = DPU_DMA2CH(config->channel);
-			break;
-		default:
-			break;
-		}
+	if (!decon->readback.enabled) {
+		decon_info("Not support readback!\n");
+		/* EPERM(1) : Operation not permitted */
+		ret = -EPERM;
+		goto end;
 	}
+
+	readback_attr->format = DECON_PIXEL_FORMAT_ARGB_8888;
+	/* transfer[13:9] | range[8:6] | standard[5:0] */
+	readback_attr->dataspace = (DPP_TRANSFER_SRGB << CSC_TRANSFER_SHIFT) |
+				(CSC_RANGE_FULL << CSC_RANGE_SHIFT) |
+				(CSC_DCI_P3 << CSC_STANDARD_SHIFT);
+
+	decon_info("%s: readback_attribute - format(%d) dataspace(0x%x)\n",
+		__func__, readback_attr->format, readback_attr->dataspace);
+
+end:
+	mutex_unlock(&decon->lock);
+	decon_dbg("%s -\n", __func__);
+
+	return ret;
 }
-#endif
 
 static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			unsigned long arg)
@@ -2835,7 +2840,9 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	struct decon_disp_info __user *argp_info;
 	struct dpp_restrictions_info __user *argp_res;
 	struct decon_color_mode_info cm_info;
+	struct decon_readback_attribute readback_attr;
 	struct decon_edid_data edid_data;
+
 	int ret = 0;
 	u32 crtc;
 	bool active;
@@ -2880,18 +2887,6 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 
-/* Android O version does not support non translation */
-#if 0
-//#if !defined(CONFIG_ANDROID_SYSTEM_AS_ROOT)
-		/*
-		 * channel is translated to DPP channel number temporarily.
-		 * In the future, user side will use DPP channel number instead
-		 * of channel.
-		 * If use side uses DPP channel number for S3CFB_WIN_CONFIG parameter,
-		 * this function will be removed.
-		 */
-		decon_translate_idma2ch(decon, &win_data);
-#endif
 		ret = decon_set_win_config(decon, &win_data);
 		if (ret)
 			break;
@@ -3148,6 +3143,27 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 
 		/* ADD additional action if necessary */
+
+		break;
+
+	case EXYNOS_GET_READBACK_ATTRIBUTE:
+		if (copy_from_user(&readback_attr,
+				   (struct decon_readback_attribute __user *)arg,
+				   sizeof(struct decon_readback_attribute))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		ret = decon_get_readback_attribute(decon, &readback_attr);
+		if (ret)
+			break;
+
+		if (copy_to_user((struct decon_readback_attribute __user *)arg,
+				&readback_attr,
+				sizeof(struct decon_readback_attribute))) {
+			ret = -EFAULT;
+			break;
+		}
 
 		break;
 

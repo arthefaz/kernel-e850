@@ -306,6 +306,7 @@ enum dpp_rotate {
 
 #define CSC_STANDARD_MASK	0x3F	/* 6 bits */
 #define CSC_RANGE_MASK		0x7	/* 3 bits */
+#define CSC_TRANSFER_MASK	0x1F	/* 5 bits */
 enum dpp_csc_eq {
 	/* eq_mode : 6bits [5:0] */
 	CSC_STANDARD_SHIFT = 0,
@@ -326,7 +327,10 @@ enum dpp_csc_eq {
 	CSC_RANGE_SHIFT = 6,
 	CSC_RANGE_LIMITED = 0x0,
 	CSC_RANGE_FULL = 0x1,
+	CSC_RANGE_EXTENDED = 0x2,
 	CSC_RANGE_UNSPECIFIED = 7,
+	/* transfer : 5bits [13:9] */
+	CSC_TRANSFER_SHIFT = 9,
 };
 
 enum dpp_comp_src {
@@ -337,8 +341,14 @@ enum dpp_comp_src {
 
 enum dpp_hdr_standard {
 	DPP_HDR_OFF = 0,
-	DPP_HDR_ST2084,
-	DPP_HDR_HLG,
+	DPP_HDR_ST2084 = 1,
+	DPP_HDR_HLG = 2,
+	DPP_TRANSFER_LINEAR = 3,
+	DPP_TRANSFER_SRGB = 4,
+	DPP_TRANSFER_SMPTE_170M = 5,
+	DPP_TRANSFER_GAMMA2_2 = 6,
+	DPP_TRANSFER_GAMMA2_6 = 7,
+	DPP_TRANSFER_GAMMA2_8 = 8,
 };
 
 enum decon_color_mode {
@@ -492,6 +502,7 @@ enum hwc_ver {
 	HWC_INIT = 0,
 	HWC_1_0 = 1,
 	HWC_2_0 = 2,
+	HWC_2_3 = 3,
 };
 
 struct decon_disp_info {
@@ -507,6 +518,11 @@ struct dpu_size_info {
 	u32 h_in;
 	u32 w_out;
 	u32 h_out;
+};
+
+struct decon_readback_attribute {
+	u32 format;
+	u32 dataspace;
 };
 
 /**
@@ -1517,6 +1533,9 @@ void decon_hiber_finish(struct decon_device *decon);
 #define EXYNOS_GET_COLOR_MODE_NUM	_IOW('F', 600, __u32)
 #define EXYNOS_GET_COLOR_MODE		_IOW('F', 601, struct decon_color_mode_info)
 #define EXYNOS_SET_COLOR_MODE		_IOW('F', 602, __u32)
+
+/* Readback */
+#define EXYNOS_GET_READBACK_ATTRIBUTE	_IOW('F', 614, struct decon_readback_attribute)
 
 /* EDID data */
 #define EXYNOS_GET_EDID		_IOW('F', 800, struct decon_edid_data)
