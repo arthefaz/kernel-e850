@@ -684,10 +684,10 @@ static void dbg_snapshot_print_calltrace(void)
 {
 	int i;
 
-	pr_info("\n<Call trace>\n");
+	dev_info(dss_desc.dev, "\n<Call trace>\n");
 	for (i = 0; i < DSS_NR_CPUS; i++) {
-		pr_info("CPU ID: %d -----------------------------------------------\n", i);
-		pr_info("%s", dss_lastinfo.log[i]);
+		dev_info(dss_desc.dev, "CPU ID: %d -----------------------------------------------\n", i);
+		dev_info(dss_desc.dev, "%s", dss_lastinfo.log[i]);
 	}
 }
 
@@ -719,7 +719,7 @@ static void dbg_snapshot_print_last_irq(int cpu)
 	dbg_snapshot_get_sec(dss_log->irq[cpu][idx].time, &sec, &msec);
 	lookup_symbol_name((unsigned long)dss_log->irq[cpu][idx].fn, fn_name);
 
-	pr_info("%-16s: [%4lu] %10lu.%06lu sec, %10s: %24s, %8s: %8d, %10s: %2d, %s\n",
+	dev_info(dss_desc.dev, "%-16s: [%4lu] %10lu.%06lu sec, %10s: %24s, %8s: %8d, %10s: %2d, %s\n",
 			">>> last irq", idx, sec, msec,
 			"handler", fn_name,
 			"irq", dss_log->irq[cpu][idx].irq,
@@ -736,7 +736,7 @@ static void dbg_snapshot_print_last_task(int cpu)
 	dbg_snapshot_get_sec(dss_log->task[cpu][idx].time, &sec, &msec);
 	task = dss_log->task[cpu][idx].task;
 
-	pr_info("%-16s: [%4lu] %10lu.%06lu sec, %10s: %24s, %8s: 0x%-16p, %10s: %16llu\n",
+	dev_info(dss_desc.dev, "%-16s: [%4lu] %10lu.%06lu sec, %10s: %24s, %8s: 0x%-16p, %10s: %16llu\n",
 			">>> last task", idx, sec, msec,
 			"task_comm", (task) ? task->comm : "NULL",
 			"task", task,
@@ -752,7 +752,7 @@ static void dbg_snapshot_print_last_work(int cpu)
 	dbg_snapshot_get_sec(dss_log->work[cpu][idx].time, &sec, &msec);
 	lookup_symbol_name((unsigned long)dss_log->work[cpu][idx].fn, fn_name);
 
-	pr_info("%-16s: [%4lu] %10lu.%06lu sec, %10s: %24s, %8s: %20s, %3s: %3d %s\n",
+	dev_info(dss_desc.dev, "%-16s: [%4lu] %10lu.%06lu sec, %10s: %24s, %8s: %20s, %3s: %3d %s\n",
 			">>> last work", idx, sec, msec,
 			"task_name", dss_log->work[cpu][idx].task_comm,
 			"work_fn", fn_name,
@@ -767,7 +767,7 @@ static void dbg_snapshot_print_last_cpuidle(int cpu)
 	idx = atomic_read(&dss_idx.cpuidle_log_idx[cpu]) & (ARRAY_SIZE(dss_log->cpuidle[0]) - 1);
 	dbg_snapshot_get_sec(dss_log->cpuidle[cpu][idx].time, &sec, &msec);
 
-	pr_info("%-16s: [%4lu] %10lu.%06lu sec, %10s: %24d, %8s: %4s, %6s: %3d, %12s: %2d, %3s: %3d %s\n",
+	dev_info(dss_desc.dev, "%-16s: [%4lu] %10lu.%06lu sec, %10s: %24d, %8s: %4s, %6s: %3d, %12s: %2d, %3s: %3d %s\n",
 			">>> last cpuidle", idx, sec, msec,
 			"stay time", dss_log->cpuidle[cpu][idx].delta,
 			"modes", dss_log->cpuidle[cpu][idx].modes,
@@ -781,9 +781,9 @@ static void dbg_snapshot_print_lastinfo(void)
 {
 	int cpu;
 
-	pr_info("<last info>\n");
+	dev_info(dss_desc.dev, "<last info>\n");
 	for (cpu = 0; cpu < DSS_NR_CPUS; cpu++) {
-		pr_info("CPU ID: %d -----------------------------------------------\n", cpu);
+		dev_info(dss_desc.dev, "CPU ID: %d -----------------------------------------------\n", cpu);
 		dbg_snapshot_print_last_task(cpu);
 		dbg_snapshot_print_last_work(cpu);
 		dbg_snapshot_print_last_irq(cpu);
@@ -1013,7 +1013,7 @@ void dbg_snapshot_print_notifier_call(void **nl, unsigned long func, int en)
 			lookup_symbol_name((unsigned long)nl_org, notifier_name);
 			lookup_symbol_name((unsigned long)func, notifier_func_name);
 
-			pr_info("debug-snapshot: %s -> %s call %s\n",
+			dev_info(dss_desc.dev, "debug-snapshot: %s -> %s call %s\n",
 				notifier_name,
 				notifier_func_name,
 				en == DSS_FLAG_IN ? "+" : "-");
@@ -1030,20 +1030,20 @@ static void dbg_snapshot_print_freqinfo(void)
 	unsigned int i;
 	unsigned long old_freq, target_freq;
 
-	pr_info("\n<freq info>\n");
+	dev_info(dss_desc.dev, "\n<freq info>\n");
 
 	for (i = 0; i < DSS_FLAG_END; i++) {
 		idx = atomic_read(&dss_lastinfo.freq_last_idx[i]) & (ARRAY_SIZE(dss_log->freq) - 1);
 		freq_name = dss_log->freq[idx].freq_name;
 		if ((!freq_name) || strncmp(freq_name, dss_freq_name[i], strlen(dss_freq_name[i]))) {
-			pr_info("%10s: no infomation\n", dss_freq_name[i]);
+			dev_info(dss_desc.dev, "%10s: no infomation\n", dss_freq_name[i]);
 			continue;
 		}
 
 		dbg_snapshot_get_sec(dss_log->freq[idx].time, &sec, &msec);
 		old_freq = dss_log->freq[idx].old_freq;
 		target_freq = dss_log->freq[idx].target_freq;
-		pr_info("%10s: [%4lu] %10lu.%06lu sec, %12s: %6luMhz, %12s: %6luMhz, %3s: %3d %s\n",
+		dev_info(dss_desc.dev, "%10s: [%4lu] %10lu.%06lu sec, %12s: %6luMhz, %12s: %6luMhz, %3s: %3d %s\n",
 					freq_name, idx, sec, msec,
 					"old_freq", old_freq/1000,
 					"target_freq", target_freq/1000,
@@ -1092,11 +1092,11 @@ static void dbg_snapshot_print_irq(void)
 	}
 	sum += arch_irq_stat();
 
-	pr_info("\n<irq info>\n");
-	pr_info("------------------------------------------------------------------\n");
-	pr_info("\n");
-	pr_info("sum irq : %llu", (unsigned long long)sum);
-	pr_info("------------------------------------------------------------------\n");
+	dev_info(dss_desc.dev, "\n<irq info>\n");
+	dev_info(dss_desc.dev, "------------------------------------------------------------------\n");
+	dev_info(dss_desc.dev, "\n");
+	dev_info(dss_desc.dev, "sum irq : %llu", (unsigned long long)sum);
+	dev_info(dss_desc.dev, "------------------------------------------------------------------\n");
 
 	for_each_irq_nr(j) {
 		unsigned int irq_stat = kstat_irqs(j);
@@ -1106,23 +1106,23 @@ static void dbg_snapshot_print_irq(void)
 			const char *name;
 
 			name = desc->action ? (desc->action->name ? desc->action->name : "???") : "???";
-			pr_info("irq-%-4d : %8u %s\n", j, irq_stat, name);
+			dev_info(dss_desc.dev, "irq-%-4d : %8u %s\n", j, irq_stat, name);
 		}
 	}
 }
 
 void dbg_snapshot_print_panic_report(void)
 {
-	pr_info("============================================================\n");
-	pr_info("Panic Report\n");
-	pr_info("============================================================\n");
+	dev_info(dss_desc.dev, "============================================================\n");
+	dev_info(dss_desc.dev, "Panic Report\n");
+	dev_info(dss_desc.dev, "============================================================\n");
 	dbg_snapshot_print_lastinfo();
 #ifdef CONFIG_DEBUG_SNAPSHOT_FREQ
 	dbg_snapshot_print_freqinfo();
 #endif
 	dbg_snapshot_print_calltrace();
 	dbg_snapshot_print_irq();
-	pr_info("============================================================\n");
+	dev_info(dss_desc.dev, "============================================================\n");
 }
 
 #ifdef CONFIG_DEBUG_SNAPSHOT_DM

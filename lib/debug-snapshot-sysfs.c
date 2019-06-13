@@ -84,7 +84,7 @@ static ssize_t dss_enable_store(struct device *dev,
 	en = dbg_snapshot_get_enable(name);
 
 	if (en == -1)
-		pr_info("echo name > enabled\n");
+		dev_info(dss_desc.dev, "echo name > enabled\n");
 	else {
 		if (en)
 			dbg_snapshot_set_enable(name, false);
@@ -112,11 +112,11 @@ static ssize_t dss_callstack_store(struct device *dev, struct device_attribute *
 	unsigned long callstack;
 
 	callstack = simple_strtoul(buf, NULL, 0);
-	pr_info("callstack depth(min 1, max 4) : %lu\n", callstack);
+	dev_info(dss_desc.dev, "callstack depth(min 1, max 4) : %lu\n", callstack);
 
 	if (callstack < 5 && callstack > 0) {
 		dss_desc.callstack = (unsigned int)callstack;
-		pr_info("success inserting %lu to callstack value\n", callstack);
+		dev_info(dss_desc.dev, "success inserting %lu to callstack value\n", callstack);
 	}
 	return count;
 }
@@ -145,7 +145,7 @@ static ssize_t dss_irqlog_exlist_store(struct device *dev,
 	unsigned long irq;
 
 	irq = simple_strtoul(buf, NULL, 0);
-	pr_info("irq number : %lu\n", irq);
+	dev_info(dss_desc.dev, "irq number : %lu\n", irq);
 
 	for (i = 0; i < ARRAY_SIZE(dss_irqlog_exlist); i++) {
 		if (dss_irqlog_exlist[i] == 0)
@@ -153,13 +153,13 @@ static ssize_t dss_irqlog_exlist_store(struct device *dev,
 	}
 
 	if (i == ARRAY_SIZE(dss_irqlog_exlist)) {
-		pr_err("list is full\n");
+		dev_err(dss_desc.dev, "list is full\n");
 		return count;
 	}
 
 	if (irq != 0) {
 		dss_irqlog_exlist[i] = irq;
-		pr_info("success inserting %lu to list\n", irq);
+		dev_info(dss_desc.dev, "success inserting %lu to list\n", irq);
 	}
 	return count;
 }
@@ -188,7 +188,7 @@ static ssize_t dss_irqexit_exlist_store(struct device *dev,
 	unsigned long irq;
 
 	irq = simple_strtoul(buf, NULL, 0);
-	pr_info("irq number : %lu\n", irq);
+	dev_info(dss_desc.dev, "irq number : %lu\n", irq);
 
 	for (i = 0; i < ARRAY_SIZE(dss_irqexit_exlist); i++) {
 		if (dss_irqexit_exlist[i] == 0)
@@ -196,13 +196,13 @@ static ssize_t dss_irqexit_exlist_store(struct device *dev,
 	}
 
 	if (i == ARRAY_SIZE(dss_irqexit_exlist)) {
-		pr_err("list is full\n");
+		dev_err(dss_desc.dev, "list is full\n");
 		return count;
 	}
 
 	if (irq != 0) {
 		dss_irqexit_exlist[i] = irq;
-		pr_info("success inserting %lu to list\n", irq);
+		dev_info(dss_desc.dev, "success inserting %lu to list\n", irq);
 	}
 	return count;
 }
@@ -223,11 +223,11 @@ static ssize_t dss_irqexit_threshold_store(struct device *dev,
 	unsigned long val;
 
 	val = simple_strtoul(buf, NULL, 0);
-	pr_info("threshold value : %lu\n", val);
+	dev_info(dss_desc.dev, "threshold value : %lu\n", val);
 
 	if (val != 0) {
 		dss_irqexit_threshold = (unsigned int)val;
-		pr_info("success %lu to threshold\n", val);
+		dev_info(dss_desc.dev, "success %lu to threshold\n", val);
 	}
 	return count;
 }
@@ -258,7 +258,7 @@ static ssize_t dss_reg_exlist_store(struct device *dev,
 	size_t addr;
 
 	addr = simple_strtoul(buf, NULL, 0);
-	pr_info("register addr: %zx\n", addr);
+	dev_info(dss_desc.dev, "register addr: %zx\n", addr);
 
 	for (i = 0; i < ARRAY_SIZE(dss_reg_exlist); i++) {
 		if (dss_reg_exlist[i].addr == 0)
@@ -267,7 +267,7 @@ static ssize_t dss_reg_exlist_store(struct device *dev,
 	if (addr != 0) {
 		dss_reg_exlist[i].size = SZ_4K;
 		dss_reg_exlist[i].addr = addr;
-		pr_info("success %zx to threshold\n", (addr));
+		dev_info(dss_desc.dev, "success %zx to threshold\n", (addr));
 	}
 	return count;
 }
@@ -327,7 +327,7 @@ static int __init dbg_snapshot_sysfs_init(void)
 
 	ret = subsys_system_register(&dss_subsys, dss_sysfs_groups);
 	if (ret)
-		pr_err("fail to register debug-snapshop subsys\n");
+		dev_err(dss_desc.dev, "fail to register debug-snapshop subsys\n");
 
 	return ret;
 }

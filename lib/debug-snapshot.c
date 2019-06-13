@@ -104,14 +104,14 @@ int dbg_snapshot_set_enable(const char *name, int en)
 
 	if (!strncmp(name, "base", strlen(name))) {
 		dss_base.enabled = en;
-		pr_info("debug-snapshot: %sabled\n", en ? "en" : "dis");
+		dev_info(dss_desc.dev, "debug-snapshot: %sabled\n", en ? "en" : "dis");
 	} else {
 		for (i = 0; i < ARRAY_SIZE(dss_items); i++) {
 			if (!strncmp(dss_items[i].name, name, strlen(name))) {
 				item = &dss_items[i];
 				item->entry.enabled = en;
 				item->time = local_clock();
-				pr_info("debug-snapshot: item - %s is %sabled\n",
+				dev_info(dss_desc.dev, "debug-snapshot: item - %s is %sabled\n",
 						name, en ? "en" : "dis");
 				break;
 			}
@@ -247,12 +247,12 @@ static bool dbg_snapshot_check_pmu(struct dbg_snapshot_sfrdump *sfrdump,
 	for (i = 0; i < count; i++) {
 		ret = of_property_read_u32_index(np, "cal-pd-id", i, &val);
 		if (ret < 0) {
-			pr_err("failed to get pd-id - %s\n", sfrdump->name);
+			dev_err(dss_desc.dev, "failed to get pd-id - %s\n", sfrdump->name);
 			return false;
 		}
 		ret = dss_ops.pd_status(val);
 		if (ret < 0) {
-			pr_err("not powered - %s (pd-id: %d)\n", sfrdump->name, i);
+			dev_err(dss_desc.dev, "not powered - %s (pd-id: %d)\n", sfrdump->name, i);
 			return false;
 		}
 	}
@@ -273,7 +273,7 @@ void dbg_snapshot_dump_sfr(void)
 		return;
 
 	if (list_empty(&dss_desc.sfrdump_list)) {
-		pr_emerg("debug-snapshot: %s: No information\n", __func__);
+		dev_emerg(dss_desc.dev, "debug-snapshot: %s: No information\n", __func__);
 		return;
 	}
 
@@ -288,7 +288,7 @@ void dbg_snapshot_dump_sfr(void)
 		for (i = 0; i < sfrdump->num; i++) {
 			ret = of_property_read_u32_index(np, "addr", i, &reg);
 			if (ret < 0) {
-				pr_err("debug-snapshot: failed to get address information - %s\n",
+				dev_err(dss_desc.dev, "debug-snapshot: failed to get address information - %s\n",
 					sfrdump->name);
 				break;
 			}
@@ -296,7 +296,7 @@ void dbg_snapshot_dump_sfr(void)
 				break;
 			offset = reg - sfrdump->phy_reg;
 			if (reg < offset) {
-				pr_err("debug-snapshot: invalid address information - %s: 0x%08x\n",
+				dev_err(dss_desc.dev, "debug-snapshot: invalid address information - %s: 0x%08x\n",
 				sfrdump->name, reg);
 				break;
 			}
@@ -309,7 +309,7 @@ void dbg_snapshot_dump_sfr(void)
 			item->curr_ptr += strlen(buf);
 		}
 		of_node_put(np);
-		pr_info("debug-snapshot: complete to dump %s\n", sfrdump->name);
+		dev_info(dss_desc.dev, "debug-snapshot: complete to dump %s\n", sfrdump->name);
 	}
 
 }
@@ -324,7 +324,7 @@ static int dbg_snapshot_sfr_dump_init(struct device_node *np)
 
 	ret = of_property_count_strings(np, "sfr-dump-list");
 	if (ret < 0) {
-		pr_err("failed to get sfr-dump-list\n");
+		dev_err(dss_desc.dev, "failed to get sfr-dump-list\n");
 		return ret;
 	}
 	count = ret;
@@ -334,26 +334,26 @@ static int dbg_snapshot_sfr_dump_init(struct device_node *np)
 		ret = of_property_read_string_index(np, "sfr-dump-list", i,
 						(const char **)&dump_str);
 		if (ret < 0) {
-			pr_err("failed to get sfr-dump-list\n");
+			dev_err(dss_desc.dev, "failed to get sfr-dump-list\n");
 			continue;
 		}
 
 		dump_np = of_get_child_by_name(np, dump_str);
 		if (!dump_np) {
-			pr_err("failed to get %s node, count:%d\n", dump_str, count);
+			dev_err(dss_desc.dev, "failed to get %s node, count:%d\n", dump_str, count);
 			continue;
 		}
 
 		sfrdump = kzalloc(sizeof(struct dbg_snapshot_sfrdump), GFP_KERNEL);
 		if (!sfrdump) {
-			pr_err("failed to get memory region of dbg_snapshot_sfrdump\n");
+			dev_err(dss_desc.dev, "failed to get memory region of dbg_snapshot_sfrdump\n");
 			of_node_put(dump_np);
 			continue;
 		}
 
 		ret = of_property_read_u32_array(dump_np, "reg", phy_regs, 2);
 		if (ret < 0) {
-			pr_err("failed to get register information\n");
+			dev_err(dss_desc.dev, "failed to get register information\n");
 			of_node_put(dump_np);
 			kfree(sfrdump);
 			continue;
@@ -361,7 +361,7 @@ static int dbg_snapshot_sfr_dump_init(struct device_node *np)
 
 		sfrdump->reg = ioremap(phy_regs[0], phy_regs[1]);
 		if (!sfrdump->reg) {
-			pr_err("failed to get i/o address %s node\n", dump_str);
+			dev_err(dss_desc.dev, "failed to get i/o address %s node\n", dump_str);
 			of_node_put(dump_np);
 			kfree(sfrdump);
 			continue;
@@ -370,7 +370,7 @@ static int dbg_snapshot_sfr_dump_init(struct device_node *np)
 
 		ret = of_property_count_u32_elems(dump_np, "addr");
 		if (ret < 0) {
-			pr_err("failed to get addr count\n");
+			dev_err(dss_desc.dev, "failed to get addr count\n");
 			of_node_put(dump_np);
 			kfree(sfrdump);
 			continue;
@@ -387,7 +387,7 @@ static int dbg_snapshot_sfr_dump_init(struct device_node *np)
 		sfrdump->node = dump_np;
 		list_add(&sfrdump->list, &dss_desc.sfrdump_list);
 
-		pr_info("success to regsiter %s\n", sfrdump->name);
+		dev_info(dss_desc.dev, "success to regsiter %s\n", sfrdump->name);
 		of_node_put(dump_np);
 		ret = 0;
 	}
@@ -417,7 +417,7 @@ static int __init dbg_snapshot_remap(void)
 			ret = map_vm_area(&dss_items[i].vm, prot, pages);
 			kfree(pages);
 			if (ret) {
-				pr_err("debug-snapshot: failed to mapping between virt and phys");
+				dev_err(dss_desc.dev, "debug-snapshot: failed to mapping between virt and phys");
 				return -ENOMEM;
 			}
 
@@ -439,6 +439,11 @@ static int __init dbg_snapshot_init_desc(void)
 	dss_desc.callstack = CONFIG_DEBUG_SNAPSHOT_CALLSTACK;
 	raw_spin_lock_init(&dss_desc.ctrl_lock);
 	raw_spin_lock_init(&dss_desc.nmi_lock);
+	dss_desc.dev = create_empty_device();
+
+	if (!dss_desc.dev)
+		panic("Exynos: create empty device fail");
+	dev_set_socdata(dss_desc.dev, "Exynos", "DSS");
 
 	for (i = 0; i < (unsigned int)ARRAY_SIZE(dss_items); i++) {
 		len = strlen(dss_items[i].name);
@@ -534,18 +539,18 @@ static int __init dbg_snapshot_output(void)
 {
 	unsigned long i, size = 0;
 
-	pr_info("debug-snapshot physical / virtual memory layout:\n");
+	dev_info(dss_desc.dev, "debug-snapshot physical / virtual memory layout:\n");
 	for (i = 0; i < ARRAY_SIZE(dss_items); i++) {
 		if (dss_items[i].entry.enabled)
-			pr_info("%-12s: phys:0x%zx / virt:0x%zx / size:0x%zx\n",
-				dss_items[i].name,
-				dss_items[i].entry.paddr,
-				dss_items[i].entry.vaddr,
-				dss_items[i].entry.size);
+			dev_info(dss_desc.dev, "%-12s: phys:0x%zx / virt:0x%zx / size:0x%zx\n",
+						dss_items[i].name,
+						dss_items[i].entry.paddr,
+						dss_items[i].entry.vaddr,
+						dss_items[i].entry.size);
 		size += dss_items[i].entry.size;
 	}
 
-	pr_info("total_item_size: %ldKB, dbg_snapshot_log struct size: %dKB\n",
+	dev_info(dss_desc.dev, "total_item_size: %ldKB, dbg_snapshot_log struct size: %dKB\n",
 			size / SZ_1K, dbg_snapshot_log_size / SZ_1K);
 
 	return 0;
@@ -676,13 +681,13 @@ static int dbg_snapshot_init_dt_parse(struct device_node *np)
 	struct device_node *sfr_dump_np = of_get_child_by_name(np, "dump-info");
 
 	if (!sfr_dump_np) {
-		pr_err("debug-snapshot: failed to get dump-info node\n");
+		dev_err(dss_desc.dev, "debug-snapshot: failed to get dump-info node\n");
 		ret = -ENODEV;
 	} else {
 #ifdef CONFIG_DEBUG_SNAPSHOT_PMU
 		ret = dbg_snapshot_sfr_dump_init(sfr_dump_np);
 		if (ret < 0) {
-			pr_err("debug-snapshot: failed to register sfr dump node\n");
+			dev_err(dss_desc.dev, "debug-snapshot: failed to register sfr dump node\n");
 			ret = -ENODEV;
 			of_node_put(sfr_dump_np);
 		}
@@ -694,7 +699,7 @@ static int dbg_snapshot_init_dt_parse(struct device_node *np)
 	if (of_property_read_u32(np, "use_multistage_wdt_irq",
 				&dss_desc.multistage_wdt_irq)) {
 		dss_desc.multistage_wdt_irq = 0;
-		pr_err("debug-snapshot: no support multistage_wdt\n");
+		dev_err(dss_desc.dev, "debug-snapshot: no support multistage_wdt\n");
 		ret = -EINVAL;
 	}
 
@@ -717,7 +722,7 @@ static int __init dbg_snapshot_init_dt(void)
 	np = of_find_matching_node_and_match(NULL, dss_of_match, &matched_np);
 
 	if (!np) {
-		pr_info("debug-snapshot: couldn't find device tree file of debug-snapshot\n");
+		dev_info(dss_desc.dev, "debug-snapshot: couldn't find device tree file of debug-snapshot\n");
 		dbg_snapshot_set_enable("log_sfr", false);
 		return -ENODEV;
 	}
@@ -749,7 +754,7 @@ static int __init dbg_snapshot_init(void)
 		register_hook_logbuf(dbg_snapshot_hook_logbuf);
 		register_hook_logger(dbg_snapshot_hook_logger);
 	} else
-		pr_err("debug-snapshot: %s failed\n", __func__);
+		dev_err(dss_desc.dev, "debug-snapshot: %s failed\n", __func__);
 
 	return 0;
 }

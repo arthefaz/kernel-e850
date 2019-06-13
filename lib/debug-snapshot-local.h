@@ -15,6 +15,7 @@
 
 #ifndef DEBUG_SNAPSHOT_LOCAL_H
 #define DEBUG_SNAPSHOT_LOCAL_H
+#include <linux/device.h>
 #include <linux/debug-snapshot.h>
 #include <linux/debug-snapshot-helper.h>
 #include "debug-snapshot-log.h"
@@ -88,6 +89,7 @@ struct dbg_snapshot_sfrdump {
 };
 
 struct dbg_snapshot_desc {
+	struct device *dev;
 	struct list_head sfrdump_list;
 	raw_spinlock_t ctrl_lock;
 	raw_spinlock_t nmi_lock;

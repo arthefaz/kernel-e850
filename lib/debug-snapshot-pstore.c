@@ -85,7 +85,7 @@ void register_hook_logger(void (*func)(const char *name, const char *buf, size_t
 	logger.buffer = vmalloc(PAGE_SIZE * 3);
 
 	if (logger.buffer)
-		pr_info("debug-snapshot: logger buffer alloc address: 0x%p\n", logger.buffer);
+		dev_info(dss_desc.dev, "debug-snapshot: logger buffer alloc success\n");
 }
 EXPORT_SYMBOL(register_hook_logger);
 

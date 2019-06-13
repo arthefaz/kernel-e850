@@ -298,7 +298,7 @@ int dbg_snapshot_post_panic(void)
 	dbg_snapshot_spin_func();
 
 	/* Never run this function */
-	pr_emerg("debug-snapshot: %s DO NOT RUN this function (CPU:%d)\n",
+	dev_emerg(dss_desc.dev, "debug-snapshot: %s DO NOT RUN this function (CPU:%d)\n",
 					__func__, raw_smp_processor_id());
 	return 0;
 }
@@ -334,7 +334,7 @@ int dbg_snapshot_post_reboot(char *cmd)
 	else if (strcmp((char *)cmd, "bootloader") && strcmp((char *)cmd, "ramdump"))
 		dbg_snapshot_scratch_reg(DSS_SIGN_RESET);
 
-	pr_emerg("debug-snapshot: normal reboot done\n");
+	dev_emerg(dss_desc.dev, "debug-snapshot: normal reboot done\n");
 
 	dbg_snapshot_save_context(NULL);
 
@@ -355,7 +355,7 @@ static int dbg_snapshot_reboot_handler(struct notifier_block *nb,
 	if (unlikely(!dss_base.enabled))
 		return 0;
 
-	pr_emerg("debug-snapshot: normal reboot starting\n");
+	dev_emerg(dss_desc.dev, "debug-snapshot: normal reboot starting\n");
 
 	return 0;
 }
@@ -369,12 +369,12 @@ static int dbg_snapshot_panic_handler(struct notifier_block *nb,
 
 #ifdef CONFIG_DEBUG_SNAPSHOT_PANIC_REBOOT
 	local_irq_disable();
-	pr_emerg("debug-snapshot: panic - reboot[%s]\n", __func__);
+	dev_emerg(dss_desc.dev, "debug-snapshot: panic - reboot[%s]\n", __func__);
 #else
-	pr_emerg("debug-snapshot: panic - normal[%s]\n", __func__);
+	dev_emerg(dss_desc.dev, "debug-snapshot: panic - normal[%s]\n", __func__);
 #endif
 	dbg_snapshot_dump_task_info();
-	pr_emerg("linux_banner: %s\n", linux_banner);
+	dev_emerg(dss_desc.dev, "linux_banner: %s\n", linux_banner);
 
 	return 0;
 }
