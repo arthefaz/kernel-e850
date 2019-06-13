@@ -221,6 +221,7 @@
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x12E80000>;
 		#iommu-cells = <0>;
+		samsung,power-domain = <&pd_mfc>;
 	};
 
 	sysmmu_mfc1: sysmmu@12EA0000 {
@@ -233,5 +234,6 @@
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x12EB0000>;
 		#iommu-cells = <0>;
+		samsung,power-domain = <&pd_mfc>;
 	};
 };
