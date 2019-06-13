@@ -74,7 +74,7 @@ struct pmucal_seq core04_status[] = {
 struct pmucal_seq core05_on[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x10e70000, 0x0200, (0x1 << 5), (0x0 << 5), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x10e70000, 0x020c, (0x1 << 5), (0x1 << 5), 0x10e70000, 0x0208, (0x1 << 5), 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU3_INT_EN", 0x10e60000, 0x12c4, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU5_INT_EN", 0x10e60000, 0x12c4, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core05_off[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x10e70000, 0x0200, (0x1 << 5), (0x1 << 5), 0, 0, 0xffffffff, 0),
@@ -115,6 +115,9 @@ struct pmucal_seq core11_status[] = {
 };
 struct pmucal_seq cluster0_status[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_READ, "CLUSTER0_NONCPU_STATUS", 0x10e60000, 0x1304, (0x1 << 0), 0, 0, 0, 0xffffffff, 0),
+};
+struct pmucal_seq cluster1_status[] = {
+	PMUCAL_SEQ_DESC(PMUCAL_READ, "CLUSTER1_NONCPU_STATUS", 0x10e60000, 0x1504, (0x1 << 0), 0, 0, 0, 0xffffffff, 0),
 };
 enum pmucal_cpu_corenum {
 	CPU_CORE00,
@@ -222,6 +225,7 @@ unsigned int pmucal_cpu_list_size = ARRAY_SIZE(pmucal_cpu_list);
 
 enum pmucal_cpu_clusternum {
 	CPU_CLUSTER0,
+	CPU_CLUSTER1,
 	PMUCAL_NUM_CLUSTERS,
 };
 
@@ -234,6 +238,15 @@ struct pmucal_cpu pmucal_cluster_list[PMUCAL_NUM_CLUSTERS] = {
 		.num_on = 0,
 		.num_off = 0,
 		.num_status = ARRAY_SIZE(cluster0_status),
+	},
+	[CPU_CLUSTER1] = {
+		.id = CPU_CLUSTER1,
+		.on = 0,
+		.off = 0,
+		.status = cluster1_status,
+		.num_on = 0,
+		.num_off = 0,
+		.num_status = ARRAY_SIZE(cluster1_status),
 	},
 };
 unsigned int pmucal_cluster_list_size = ARRAY_SIZE(pmucal_cluster_list);
@@ -392,12 +405,12 @@ struct pmucal_seq cluster0_status[] = {
 };
 struct pmucal_seq cluster1_on[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CPUCL1_HCHGEN_CLKMUX_CPU", 0x10830000, 0x0844, (0x1 << 4), (0x1 << 4), 0, 0, 0, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_EXT_FUNC, "cluster1_noncpu_up", 0, 0, 0x38, 0x0, 0, 0, 0, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_EXT_FUNC, "cluster1_noncpu_up", 0, 0, 0x28, 0x0, 0, 0, 0, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CPUCL1_HCHGEN_CLKMUX_CPU", 0x10830000, 0x0844, (0x1 << 4), (0x0 << 4), 0, 0, 0, 0),
 };
 struct pmucal_seq cluster1_off[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CPUCL1_HCHGEN_CLKMUX_CPU", 0x10830000, 0x0844, (0x1 << 4), (0x1 << 4), 0, 0, 0, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_EXT_FUNC, "cluster1_noncpu_down", 0, 0, 0x39, 0x0, 0, 0, 0, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_EXT_FUNC, "cluster1_noncpu_down", 0, 0, 0x29, 0x0, 0, 0, 0, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CPUCL1_HCHGEN_CLKMUX_CPU", 0x10830000, 0x0844, (0x1 << 4), (0x0 << 4), 0, 0, 0, 0),
 };
 struct pmucal_seq cluster1_status[] = {
@@ -556,3 +569,4 @@ struct cpu_info cpuinfo[] = {
 	},
 };
 #endif
+
