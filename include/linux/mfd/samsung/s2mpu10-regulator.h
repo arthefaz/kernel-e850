@@ -242,6 +242,9 @@ enum S2MPU10_regulators {
 #define S2MPU10_REGULATOR_MAX (S2MPU10_REG_MAX)
 #define SEC_PMIC_REV(iodev)    (iodev)->pmic_rev
 
+#define S2MPU10_OCP_WARN_EN		7
+#define S2MPU10_OCP_WARN_CNT		6
+#define S2MPU10_OCP_WARN_DVS_MASK	5
 /*
  * sec_opmode_data - regulator operation mode data
  * @id: regulator id
@@ -261,6 +264,9 @@ enum s2mpu10_irq_source {
 
 #define S2MPU10_NUM_IRQ_PMIC_REGS	6
 #define S2MPU10_NUM_SC_LDO_IRQ		4
+#define S2MPU10_BUCK_MAX		9
+#define S2MPU10_TEMP_MAX		2
+#define S2MPU10_OCP_WARN_MASK		0xE0
 
 enum s2mpu10_irq {
 	/* PMIC */

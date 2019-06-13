@@ -148,6 +148,11 @@
 #define S2MPU11_WTSREN_MASK			0x04
 #define S2MPU11_PM_IRQM_MASK			0x01
 
+#define S2MPU11_OCP_WARN_MASK			0xE0
+#define S2MPU11_OCP_WARN_EN			7
+#define S2MPU11_OCP_WARN_CNT			6
+#define S2MPU11_OCP_WARN_DVS_MASK		5
+
 /* S2MPU11 regulator ids */
 enum S2MPU11_regulators {
 	/* 15 LDOs */
@@ -287,6 +292,6 @@ extern int s2mpu11_read_word(struct i2c_client *i2c, u8 reg);
 
 extern int s2mpu11_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask);
 /* notifier */
-extern void s2mps11_call_notifier(u8 irq1, u8 irq2, u8 irq3);
+extern void s2mpu11_call_notifier(void);
 extern int s2mpu11_notifier_init(struct s2mpu11_dev *s2mpu11);
 #endif /* __LINUX_MFD_S2MPU11_PRIV_H */

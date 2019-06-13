@@ -25,6 +25,7 @@
 #include <linux/gpio.h>
 #include <linux/mfd/samsung/s2mpu10.h>
 #include <linux/mfd/samsung/s2mpu10-regulator.h>
+#include <linux/mfd/samsung/s2mpu11-regulator.h>
 #include <linux/of_irq.h>
 
 #define S2MPU10_IBI_CNT			2
@@ -214,7 +215,7 @@ static irqreturn_t s2mpu10_irq_thread(int irq, void *data)
 
 	if (ibi_src[0] & S2MPU10_IBI0_PMIC_S) {
 		pr_info("%s: IBI from slave pmic\n", __func__);
-		/* TODO : IRQ from s2mpu11 PMIC */
+		s2mpu11_call_notifier();
 	}
 
 	if (ibi_src[0] & S2MPU10_IBI0_CODEC) {

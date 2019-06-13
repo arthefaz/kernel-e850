@@ -35,6 +35,9 @@ static struct s2mpu10_info *static_info;
 static struct regulator_desc regulators[S2MPU10_REGULATOR_MAX];
 static char sc_ldo_irq_name [S2MPU10_NUM_SC_LDO_IRQ][20] =
 		{"SC_LDO1_IRQ", "SC_LDO2_IRQ", "SC_LDO7_IRQ", "SC_LDO19_IRQ"};
+int s2mpu10_buck_ocp_cnt[S2MPU10_BUCK_MAX]; /* BUCK 1~9 OCP count */
+int s2mpu10_bb_ocp_cnt; /* BUCK-BOOST OCP count */
+int s2mpu10_temp_cnt[S2MPU10_TEMP_MAX]; /* 0 : 120 degree , 1 : 140 degree */
 
 #ifdef CONFIG_DEBUG_FS
 static u8 i2caddr = 0;
@@ -53,6 +56,9 @@ struct s2mpu10_info {
 	struct mutex lock;
 	struct i2c_client *i2c;
 	int sc_ldo_irq[S2MPU10_NUM_SC_LDO_IRQ];
+	int buck_ocp_irq[S2MPU10_BUCK_MAX]; /* BUCK OCP IRQ */
+	int bb_ocp_irq; /* BUCK-BOOST OCP IRQ */
+	int temp_irq[2]; /* 0 : 120 degree, 1 : 140 degree */
 };
 
 static unsigned int s2mpu10_of_map_mode(unsigned int val) {
@@ -446,12 +452,71 @@ static int s2mpu10_pmic_dt_parse_pdata(struct s2mpu10_dev *iodev,
 	struct device_node *pmic_np, *regulators_np, *reg_np;
 	struct s2mpu10_regulator_data *rdata;
 	unsigned int i;
+	int ret;
+	u32 val;
+	pdata->smpl_warn_vth = 0;
+	pdata->smpl_warn_hys = 0;
 
 	pmic_np = iodev->dev->of_node;
 	if (!pmic_np) {
 		dev_err(iodev->dev, "could not find pmic sub-node\n");
 		return -ENODEV;
 	}
+
+	/* get 1 gpio values */
+	if (of_gpio_count(pmic_np) < 1) {
+		dev_err(iodev->dev, "could not find pmic gpios\n");
+		return -EINVAL;
+	}
+
+	/* SMPL_WARN */
+	pdata->smpl_warn = of_get_gpio(pmic_np, 0);
+
+	ret = of_property_read_u32(pmic_np, "smpl_warn_en", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->smpl_warn_en = val;
+
+	ret = of_property_read_u32(pmic_np, "smpl_warn_vth", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->smpl_warn_vth = val;
+
+	ret = of_property_read_u32(pmic_np, "smpl_warn_hys", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->smpl_warn_hys = val;
+
+	/* OCP_WARN */
+	ret = of_property_read_u32(pmic_np, "ocp_warn_b2_en", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->ocp_warn_b2_en = val;
+
+	ret = of_property_read_u32(pmic_np, "ocp_warn_b3_en", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->ocp_warn_b3_en = val;
+
+	ret = of_property_read_u32(pmic_np, "ocp_warn_b2_cnt", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->ocp_warn_b2_cnt = val;
+
+	ret = of_property_read_u32(pmic_np, "ocp_warn_b3_cnt", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->ocp_warn_b3_cnt = val;
+
+	ret = of_property_read_u32(pmic_np, "ocp_warn_b2_dvs_mask", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->ocp_warn_b2_dvs_mask = val;
+
+	ret = of_property_read_u32(pmic_np, "ocp_warn_b3_dvs_mask", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->ocp_warn_b3_dvs_mask = val;
 
 	regulators_np = of_find_node_by_name(pmic_np, "regulators");
 	if (!regulators_np) {
@@ -591,12 +656,98 @@ static const struct file_operations s2mpu10_i2cdata_fops = {
 };
 #endif
 
+static irqreturn_t s2mpu10_buck_ocp_irq(int irq, void *dev_id)
+{
+	struct s2mpu10_info *s2mpu10 = dev_id;
+	int i;
+
+	mutex_lock(&s2mpu10->lock);
+
+	for (i = 0; i < S2MPU10_BUCK_MAX; i++) {
+		if (s2mpu10->buck_ocp_irq[i] == irq) {
+			s2mpu10_buck_ocp_cnt[i]++;
+			pr_info("%s: BUCK[%d] OCP IRQ: %d, %d\n",
+				__func__, i + 1, s2mpu10_buck_ocp_cnt[i], irq);
+			break;
+		}
+	}
+
+	mutex_unlock(&s2mpu10->lock);
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t s2mpu10_bb_ocp_irq(int irq, void *dev_id)
+{
+	struct s2mpu10_info *s2mpu10 = dev_id;
+
+	mutex_lock(&s2mpu10->lock);
+
+	s2mpu10_bb_ocp_cnt++;
+	pr_info("%s: BUCKBOOST OCP IRQ: %d, %d\n",
+		__func__, s2mpu10_bb_ocp_cnt, irq);
+
+	mutex_unlock(&s2mpu10->lock);
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t s2mpu10_temp_irq(int irq, void *dev_id)
+{
+	struct s2mpu10_info *s2mpu10 = dev_id;
+
+	mutex_lock(&s2mpu10->lock);
+
+	if (s2mpu10->temp_irq[0] == irq) {
+		s2mpu10_temp_cnt[0]++;
+		pr_info("%s: PMIC thermal 120C IRQ : %d, %d\n",
+			__func__, s2mpu10_temp_cnt[0], irq);
+	} else if (s2mpu10->temp_irq[1] == irq) {
+		s2mpu10_temp_cnt[1]++;
+		pr_info("%s: PMIC thermal 140C IRQ : %d, %d\n",
+			__func__, s2mpu10_temp_cnt[1], irq);
+	}
+
+	mutex_unlock(&s2mpu10->lock);
+
+	return IRQ_HANDLED;
+}
+
+void s2mpu10_oi_function(struct s2mpu10_info *s2mpu10)
+{
+	struct i2c_client *i2c = s2mpu10->i2c;
+	int i;
+	u8 val;
+
+	/* BUCK1~9 & BUCK-BOOST OI function enable */
+	s2mpu10_write_reg(i2c, S2MPU10_PMIC_BUCK_OI_EN1, 0xFF);
+	s2mpu10_update_reg(i2c, S2MPU10_PMIC_BUCK_OI_EN2, 0x03, 0x03);
+
+	/* BUCK1~9 & BUCK-BOOST OI power down disable */
+	s2mpu10_write_reg(i2c, S2MPU10_PMIC_BUCK_OI_PD_EN1, 0x00);
+	s2mpu10_update_reg(i2c, S2MPU10_PMIC_BUCK_OI_PD_EN2, 0x00, 0x03);
+
+	/* OI detection time window : 300us, OI comp. output count : 50 times */
+	s2mpu10_write_reg(i2c, S2MPU10_BUCK_OI_CTRL1, 0xCC);
+	s2mpu10_write_reg(i2c, S2MPU10_BUCK_OI_CTRL2, 0xCC);
+	s2mpu10_write_reg(i2c, S2MPU10_BUCK_OI_CTRL3, 0xCC);
+	s2mpu10_write_reg(i2c, S2MPU10_BUCK_OI_CTRL4, 0xCC);
+	s2mpu10_write_reg(i2c, S2MPU10_BUCK_OI_CTRL5, 0xCC);
+
+	pr_info("%s\n", __func__);
+	for (i = S2MPU10_PMIC_BUCK_OI_EN1; i <= S2MPU10_BUCK_OI_CTRL5; i++) {
+		s2mpu10_read_reg(i2c, i, &val);
+		pr_info("0x%x[0x%x], ", i, val);
+	}
+	pr_info("\n");
+}
+
 static void s2mpu10_set_interrupt(struct platform_device *pdev,
 				  struct s2mpu10_info *s2mpu10, int irq_base)
 {
 	int i, ret;
 
-	/* SC card LDO OCP interrupt */
+	/* SD card LDO OCP interrupt */
 	for (i = 0; i < S2MPU10_NUM_SC_LDO_IRQ; i++) {
 		s2mpu10->sc_ldo_irq[i] = irq_base +
 					 S2MPU10_PMIC_IRQ_SC_LDO1_INT4 + i;
@@ -606,11 +757,129 @@ static void s2mpu10_set_interrupt(struct platform_device *pdev,
 						s2mpu10_sc_ldo_irq, 0,
 						sc_ldo_irq_name[i], s2mpu10);
 		if (ret < 0) {
-			dev_err(&pdev->dev, "Failed to request SC LDO IRQ: %d: %d\n",
+			dev_err(&pdev->dev,
+				"Failed to request SC LDO IRQ: %d: %d\n",
 				s2mpu10->sc_ldo_irq[i], ret);
 		}
 	}
+
+	/* BUCK1~9 OCP interrupt */
+	for (i = 0; i < S2MPU10_BUCK_MAX; i++) {
+		s2mpu10->buck_ocp_irq[i] = irq_base +
+					   S2MPU10_PMIC_IRQ_OCPB1_INT3 + i;
+
+		ret = devm_request_threaded_irq(&pdev->dev,
+						s2mpu10->buck_ocp_irq[i], NULL,
+						s2mpu10_buck_ocp_irq, 0,
+						"BUCK_OCP_IRQ", s2mpu10);
+		if (ret < 0) {
+			dev_err(&pdev->dev,
+				"Failed to request BUCK[%d] OCP IRQ: %d: %d\n",
+				i + 1, s2mpu10->buck_ocp_irq[i], ret);
+		}
+	}
+
+	/* BUCK-BOOST OCP interrupt */
+	s2mpu10->bb_ocp_irq = irq_base + S2MPU10_PMIC_IRQ_OCPB10_INT4;
+	ret = devm_request_threaded_irq(&pdev->dev,
+					s2mpu10->bb_ocp_irq, NULL,
+					s2mpu10_bb_ocp_irq, 0,
+					"BB_OCP_IRQ", s2mpu10);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"Failed to request BUCKBOOST OCP IRQ: %d: %d\n",
+			s2mpu10->bb_ocp_irq, ret);
+	}
+
+	/* Thermal interrupt */
+	for (i = 0; i < S2MPU10_TEMP_MAX; i++) {
+		s2mpu10->temp_irq[i] = irq_base +
+				       S2MPU10_PMIC_IRQ_INT120C_INT6 + i;
+
+		ret = devm_request_threaded_irq(&pdev->dev,
+						s2mpu10->temp_irq[i], NULL,
+						s2mpu10_temp_irq, 0,
+						"TEMP_IRQ", s2mpu10);
+		if (ret < 0) {
+			dev_err(&pdev->dev,
+				"Failed to request over temperature[%d] IRQ: %d: %d\n",
+				i, s2mpu10->temp_irq[i], ret);
+		}
+	}
+
 	pr_info("%s: Done\n", __func__);
+}
+
+static int s2mpu10_set_warn(struct platform_device *pdev,
+			    struct s2mpu10_platform_data *pdata,
+			    struct s2mpu10_info *s2mpu10)
+{
+	u8 val;
+	int ret;
+
+	/* SMPL_WARN */
+	if (pdata->smpl_warn_en) {
+		ret = s2mpu10_update_reg(s2mpu10->i2c, S2MPU10_PMIC_REG_CTRL2,
+					 pdata->smpl_warn_vth, 0xE0);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Failed to update smpl_warn configuration\n");
+			goto err;
+		}
+		pr_info("%s: smpl_warn vth is 0x%x\n",
+			__func__, pdata->smpl_warn_vth);
+
+		ret = s2mpu10_update_reg(s2mpu10->i2c, S2MPU10_PMIC_REG_CTRL2,
+					 pdata->smpl_warn_hys, 0x18);
+		if (ret) {
+			dev_err(&pdev->dev, "set smpl_warn configuration i2c write error\n");
+			goto err;
+		}
+		pr_info("%s: smpl_warn hysteresis is 0x%x\n",
+			__func__, pdata->smpl_warn_hys);
+	}
+
+	/* OCP_WARN */
+	if (pdata->ocp_warn_b2_en) {
+		val = (pdata->ocp_warn_b2_en << S2MPU10_OCP_WARN_EN) |
+		      (pdata->ocp_warn_b2_cnt << S2MPU10_OCP_WARN_CNT) |
+		      (pdata->ocp_warn_b2_dvs_mask << S2MPU10_OCP_WARN_DVS_MASK);
+
+		ret = s2mpu10_update_reg(s2mpu10->i2c, S2MPU10_PMIC_OCP_WARN_B2,
+					 val, S2MPU10_OCP_WARN_MASK);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"%s: failed to write OCP_WARN_B2 configuration\n",
+				__func__);
+			goto err;
+		}
+
+		pr_info("%s: OCP_WARN_B2[0x%x]\n", __func__, val);
+	}
+
+	if (pdata->ocp_warn_b3_en) {
+		val = (pdata->ocp_warn_b3_en << S2MPU10_OCP_WARN_EN) |
+		      (pdata->ocp_warn_b3_cnt << S2MPU10_OCP_WARN_CNT) |
+		      (pdata->ocp_warn_b3_dvs_mask << S2MPU10_OCP_WARN_DVS_MASK);
+
+		ret = s2mpu10_update_reg(s2mpu10->i2c, S2MPU10_PMIC_OCP_WARN_B3,
+					 val, S2MPU10_OCP_WARN_MASK);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"%s: failed to write OCP_WARN_B3 configuration\n",
+				__func__);
+			goto err;
+		}
+
+		pr_info("%s: OCP_WARN_B3[0x%x]\n", __func__, val);
+	}
+
+	pr_info("%s: Done\n", __func__);
+	return 0;
+
+err:
+	pr_info("%s: Fail\n", __func__);
+	return -1;
 }
 
 static int s2mpu10_pmic_probe(struct platform_device *pdev)
@@ -684,6 +953,14 @@ static int s2mpu10_pmic_probe(struct platform_device *pdev)
 #endif
 	/* Interrupt setting */
 	s2mpu10_set_interrupt(pdev, s2mpu10, irq_base);
+
+	/* Warning setting */
+	ret = s2mpu10_set_warn(pdev, pdata, s2mpu10);
+	if (ret < 0)
+		goto err;
+
+	/* OI setting */
+	s2mpu10_oi_function(s2mpu10);
 
 	pr_info("%s s2mpu10 pmic driver Loading end\n", __func__);
 

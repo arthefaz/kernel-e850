@@ -106,6 +106,21 @@ struct s2mpu10_platform_data {
 	int	osc_xout;
 
 	bool	use_i2c_speedy;
+
+	/* SMPL */
+	int smpl_warn;
+	bool smpl_warn_en;
+	unsigned int smpl_warn_vth;
+	unsigned int smpl_warn_hys;
+
+	/* OCP_WARN */
+	int ocp_warn_b2_en;
+	int ocp_warn_b3_en;
+	int ocp_warn_b2_cnt;
+	int ocp_warn_b3_cnt;
+	int ocp_warn_b2_dvs_mask;
+	int ocp_warn_b3_dvs_mask;
+
 };
 
 struct s2mpu10 {

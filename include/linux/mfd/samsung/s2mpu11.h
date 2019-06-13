@@ -82,6 +82,12 @@ struct s2mpu11_platform_data {
 	/* IRQ */
 	bool use_i2c_speedy;
 	bool wakeup;
+
+	/* OCP_WARN */
+	int ocp_warn_b2_en;
+	int ocp_warn_b2_cnt;
+	int ocp_warn_b2_dvs_mask;
+
 };
 
 struct s2mpu11 {

@@ -28,37 +28,52 @@
 struct notifier_block slave_pmic_notifier;
 static struct s2mpu11_dev *s2mpu11_global;
 
-static int s2mps11_notifier_handler(struct notifier_block *nb,
+static int s2mpu11_notifier_handler(struct notifier_block *nb,
 				    unsigned long action,
 				    void *data)
 {
-	pr_info("%s: check handler\n", __func__);
+	u8 irq_reg[S2MPU11_IRQ_GROUP_NR] = {0, };
+	int ret;
+	struct s2mpu11_dev *s2mpu11 = data;
+	if (!s2mpu11) {
+		pr_err("%s: fail to load dev.\n", __func__);
+		return IRQ_HANDLED;
+	}
+
+	/* Read interrupt */
+	ret = s2mpu11_bulk_read(s2mpu11->pmic, S2MPU11_PMIC_REG_INT1,
+				S2MPU11_NUM_IRQ_PMIC_REGS,
+				&irq_reg[S2MPU11_PMIC_INT1]);
+	if (ret) {
+		pr_err("%s: fail to read INT sources\n", __func__);
+		return IRQ_HANDLED;
+	}
+
+	pr_info("%s: slave pmic interrupt(0x%02x, 0x%02x, 0x%02x)\n",
+		__func__, irq_reg[S2MPU11_PMIC_INT1],
+		irq_reg[S2MPU11_PMIC_INT2], irq_reg[S2MPU11_PMIC_INT3]);
 
 	return IRQ_HANDLED;
 }
 
-static BLOCKING_NOTIFIER_HEAD(s2mps11_notifier);
+static BLOCKING_NOTIFIER_HEAD(s2mpu11_notifier);
 
-int s2mps11_register_notifier(struct notifier_block *nb,
+int s2mpu11_register_notifier(struct notifier_block *nb,
 			      struct s2mpu11_dev *s2mpu11)
 {
 	int ret;
 
-	ret = blocking_notifier_chain_register(&s2mps11_notifier, nb);
+	ret = blocking_notifier_chain_register(&s2mpu11_notifier, nb);
 	if (ret < 0)
 		pr_err("%s: fail to register notifier\n", __func__);
 	return ret;
 }
 
-void s2mps11_call_notifier(u8 irq1, u8 irq2, u8 irq3)
+void s2mpu11_call_notifier(void)
 {
-	pr_info("%s: INT1 = 0x%02x\n", __func__, irq1);
-	pr_info("%s: INT2 = 0x%02x\n", __func__, irq2);
-	pr_info("%s: INT3 = 0x%02x\n", __func__, irq3);
-
-	blocking_notifier_call_chain(&s2mps11_notifier, 0, s2mpu11_global);
+	blocking_notifier_call_chain(&s2mpu11_notifier, 0, s2mpu11_global);
 }
-EXPORT_SYMBOL(s2mps11_call_notifier);
+EXPORT_SYMBOL(s2mpu11_call_notifier);
 
 static const u8 s2mpu11_mask_reg[] = {
 	[S2MPU11_PMIC_INT1] = S2MPU11_PMIC_REG_INT1M,
@@ -77,18 +92,20 @@ static void s2mpu11_set_interrupt(struct s2mpu11_dev *s2mpu11)
 	s2mpu11_update_reg(s2mpu11->i2c, S2MPU11_PMIC_REG_IRQM,
 			   S2MPU11_PM_IRQM_MASK, S2MPU11_PM_IRQM_MASK);
 
+	/* unmask OCP interrupt */
+	s2mpu11_update_reg(s2mpu11->pmic, S2MPU11_PMIC_REG_INT2M, 0x00, 0x1F);
+
 	/* Check unmask interrupt register */
 	for (i = 0; i < S2MPU11_IRQ_GROUP_NR; i++) {
 		s2mpu11_read_reg(s2mpu11->pmic, s2mpu11_mask_reg[i], &val);
-		pr_info("%s: INT%dM = 0x%02x\n", __func__,
-			s2mpu11_mask_reg[i] + 1, val);
+		pr_info("%s: INT%dM = 0x%02x\n", __func__, i + 1, val);
 	}
 }
 
 static void s2mpu11_set_notifier(struct s2mpu11_dev *s2mpu11)
 {
-	slave_pmic_notifier.notifier_call = s2mps11_notifier_handler;
-	s2mps11_register_notifier(&slave_pmic_notifier, s2mpu11);
+	slave_pmic_notifier.notifier_call = s2mpu11_notifier_handler;
+	s2mpu11_register_notifier(&slave_pmic_notifier, s2mpu11);
 }
 
 int s2mpu11_notifier_init(struct s2mpu11_dev *s2mpu11)

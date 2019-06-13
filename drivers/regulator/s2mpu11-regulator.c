@@ -399,7 +399,7 @@ static int s2mpu11_pmic_dt_parse_pdata(struct s2mpu11_dev *iodev,
 	struct s2mpu11_regulator_data *rdata;
 	unsigned int i;
 	int ret;
-	u8 val;
+	u32 val;
 
 	pmic_np = iodev->dev->of_node;
 	if (!pmic_np) {
@@ -409,11 +409,28 @@ static int s2mpu11_pmic_dt_parse_pdata(struct s2mpu11_dev *iodev,
 
 	/* wtsr_en */
 	pdata->wtsr_en = 0;
-	ret = of_property_read_u8(pmic_np, "wtsr_en", &val);
+	ret = of_property_read_u32(pmic_np, "wtsr_en", &val);
 	if (ret < 0)
 		pr_info("%s: fail to read wtsr_en\n", __func__);
 	else
 		pdata->wtsr_en = val;
+
+	/* OCP_WARN */
+	ret = of_property_read_u32(pmic_np, "ocp_warn_b2_en", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->ocp_warn_b2_en = val;
+
+	ret = of_property_read_u32(pmic_np, "ocp_warn_b2_cnt", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->ocp_warn_b2_cnt = val;
+
+	ret = of_property_read_u32(pmic_np, "ocp_warn_b2_dvs_mask", &val);
+	if (ret)
+		return -EINVAL;
+	pdata->ocp_warn_b2_dvs_mask = val;
+
 
 	regulators_np = of_find_node_by_name(pmic_np, "regulators");
 	if (!regulators_np) {
@@ -580,6 +597,63 @@ static void s2mpu11_wtsr_disable(struct s2mpu11_info *s2mpu11)
 		pr_info("%s: fail to update WTSR reg(%d)\n", __func__, ret);
 }
 
+void s2mpu11_oi_function(struct s2mpu11_info *s2mpu11)
+{
+	struct i2c_client *i2c = s2mpu11->i2c;
+	int i;
+	u8 val;
+
+	/* BUCK1~5 OI function enable & power down disable */
+	s2mpu11_update_reg(i2c, S2MPU11_PMIC_REG_BUCK_OI_EN, 0x1F, 0x1F);
+	s2mpu11_update_reg(i2c, S2MPU11_PMIC_REG_BUCK_OI_PD_EN, 0x1F, 0x1F);
+
+	/* OI detection time window : 300us, OI comp. output count : 50 times */
+	s2mpu11_write_reg(i2c, S2MPU11_PMIC_REG_BUCK_OI_CTRL1, 0xCC);
+	s2mpu11_write_reg(i2c, S2MPU11_PMIC_REG_BUCK_OI_CTRL2, 0xCC);
+	s2mpu11_update_reg(i2c, S2MPU11_PMIC_REG_BUCK_OI_CTRL3, 0x0C, 0x0C);
+
+	pr_info("%s\n", __func__);
+	for (i = S2MPU11_PMIC_REG_BUCK_OI_EN; i <= S2MPU11_PMIC_REG_BUCK_OI_CTRL3; i++) {
+		s2mpu11_read_reg(i2c, i, &val);
+		pr_info("0x%x[0x%x], ", i, val);
+	}
+	pr_info("\n");
+}
+
+static int s2mpu11_set_warn(struct platform_device *pdev,
+			    struct s2mpu11_platform_data *pdata,
+			    struct s2mpu11_info *s2mpu11)
+{
+	u8 val;
+	int ret;
+
+	/* OCP_WARN */
+	if (pdata->ocp_warn_b2_en) {
+		val = (pdata->ocp_warn_b2_en << S2MPU11_OCP_WARN_EN) |
+		      (pdata->ocp_warn_b2_cnt << S2MPU11_OCP_WARN_CNT) |
+		      (pdata->ocp_warn_b2_dvs_mask << S2MPU11_OCP_WARN_DVS_MASK);
+
+		ret = s2mpu11_update_reg(s2mpu11->i2c,
+					 S2MPU11_PMIC_REG_OCP_WARN_BUCK2,
+					 val, S2MPU11_OCP_WARN_MASK);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"%s: failed to write OCP_WARN_B2 configuration\n",
+				__func__);
+			goto err;
+		}
+
+		pr_info("%s: OCP_WARN_B2[0x%x]\n", __func__, val);
+	}
+
+	pr_info("%s: Done\n", __func__);
+	return 0;
+
+err:
+	pr_info("%s: Fail\n", __func__);
+	return -1;
+}
+
 static int s2mpu11_pmic_probe(struct platform_device *pdev)
 {
 	struct s2mpu11_dev *iodev = dev_get_drvdata(pdev->dev.parent);
@@ -647,6 +721,14 @@ static int s2mpu11_pmic_probe(struct platform_device *pdev)
 #endif
 	s2mpu11_read_reg(s2mpu11->i2c, S2MPU11_PMIC_REG_OFFSRC, &val);
 	pr_info("OFFSRC 0x%x\n", __func__, val);
+
+	/* Warning setting */
+	ret = s2mpu11_set_warn(pdev, pdata, s2mpu11);
+	if (ret < 0)
+		goto err;
+
+	/* OI setting */
+	s2mpu11_oi_function(s2mpu11);
 
 	pr_info("%s: s2mpu11 pmic driver Loading end\n", __func__);
 
