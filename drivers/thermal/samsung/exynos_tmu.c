@@ -1548,7 +1548,8 @@ static int exynos_tmu_probe(struct platform_device *pdev)
 	}
 
 #if defined(CONFIG_ECT)
-	exynos_tmu_parse_ect(data);
+	if (!of_property_read_bool(pdev->dev.of_node, "ect_nouse"))
+		exynos_tmu_parse_ect(data);
 #endif
 
 	data->num_probe = (readl(data->base + EXYNOS_TMU_REG_CONTROL1) >> EXYNOS_TMU_NUM_PROBE_SHIFT)
