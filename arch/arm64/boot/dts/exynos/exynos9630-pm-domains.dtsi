@@ -83,7 +83,7 @@
 		reg = <0x0 0x10e61f00 0x20>;
 		cal_id = <0xB1380007>;
 		need_smc = <0x10C10204>;
-		status = "disabled"; //"okay";
+		status = "okay";
 	};
 
 	pd_csis: pd-csis@10e61d80 {
