@@ -262,6 +262,17 @@ static int s2m_set_voltage_time_sel(struct regulator_dev *rdev,
 	return 0;
 }
 
+int s2mpu10_read_pwron_status(void)
+{
+	u8 val;
+	struct s2mpu10_info *s2mpu10 = static_info;
+
+	s2mpu10_read_reg(s2mpu10->i2c, S2MPU10_PMIC_REG_STATUS1, &val);
+	pr_info("%s : 0x%x\n", __func__, val);
+
+	return (val & 0x1);
+}
+
 static struct regulator_ops s2mpu10_ldo_ops = {
 	.list_voltage		= regulator_list_voltage_linear,
 	.map_voltage		= regulator_map_voltage_linear,

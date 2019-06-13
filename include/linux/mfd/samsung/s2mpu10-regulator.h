@@ -366,4 +366,6 @@ extern int s2mpu10_read_word(struct i2c_client *i2c, u8 reg);
 
 extern int s2mpu10_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask);
 
+extern int s2mpu10_read_pwron_status(void);
+
 #endif /* __LINUX_MFD_S2MPU10_PRIV_H */
