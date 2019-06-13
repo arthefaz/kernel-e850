@@ -12,7 +12,6 @@
 
 #include <linux/io.h>
 #include <linux/of.h>
-#include <linux/of_gpio.h>
 #include <linux/input.h>
 #include <linux/delay.h>
 #include <linux/of_address.h>
@@ -28,6 +27,7 @@
 #include <soc/samsung/acpm_ipc_ctrl.h>
 #endif
 #include <soc/samsung/exynos-pmu.h>
+#include <linux/mfd/samsung/s2mpu10-regulator.h>
 
 extern void (*arm_pm_restart)(enum reboot_mode reboot_mode, const char *cmd);
 static void __iomem *exynos_pmu_base = NULL;
@@ -90,35 +90,12 @@ int soc_has_big(void)
 static void exynos_power_off(void)
 {
 	int poweroff_try = 0;
-	int power_gpio = -1;
-	unsigned int keycode = 0;
-	struct device_node *np, *pp;
 
-	np = of_find_node_by_path("/gpio_keys");
-	if (!np)
-		return;
-
-	for_each_child_of_node(np, pp) {
-		if (!of_find_property(pp, "gpios", NULL))
-			continue;
-		of_property_read_u32(pp, "linux,code", &keycode);
-		if (keycode == KEY_POWER) {
-			pr_info("%s: <%u>\n", __func__,  keycode);
-			power_gpio = of_get_gpio(pp, 0);
-			break;
-		}
-	}
-
-	of_node_put(np);
-
-	if (!gpio_is_valid(power_gpio)) {
-		pr_err("Couldn't find power key node\n");
-		return;
-	}
+	pr_info("%s: Power off %d \n", __func__, s2mpu10_read_pwron_status());
 
 	while (1) {
 		/* wait for power button release */
-		if (gpio_get_value(power_gpio)) {
+		if (!s2mpu10_read_pwron_status()) {
 #ifdef CONFIG_EXYNOS_ACPM
 			exynos_acpm_reboot();
 #endif
