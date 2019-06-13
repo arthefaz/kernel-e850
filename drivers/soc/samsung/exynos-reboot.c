@@ -69,7 +69,7 @@ int soc_has_big(void)
 #define SWRESET				(0x2)
 #define SYSTEM_CONFIGURATION		(0x3a00)
 #define RESET_SEQUENCER_CONFIGURATION	(0x0500)
-#define PS_HOLD_CONTROL			(0x330C)
+#define PS_HOLD_CONTROL			(0x030C)
 #define EXYNOS_PMU_SYSIP_DAT0			(0x0810)
 
 #define INFORM_NONE		0x0
