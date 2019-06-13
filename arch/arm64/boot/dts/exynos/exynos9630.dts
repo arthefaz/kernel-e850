@@ -716,6 +716,9 @@
 	};
 
 	exynos-powermode {
+		reg = <0x0 0x11090000 0x1000>;
+		reg-names = "sysreg_vgpio2pmu";
+
 		wakeup-masks {
 			/*
 			 * wakeup_mask configuration
@@ -740,6 +743,14 @@
 				mask-offset = <0x3964>;
 				stat-offset = <0x3954>;
 			};
+		};
+
+		vgpio-wakeup-inten {
+			mask = <0x0>,		<0x0>,		<0x0>,		<0x0>,
+			       <0x0>,		<0x0>,		<0x0>,		<0x0>,
+			       <0x19>,		<0x19>,		<0x19>,		<0x0>,
+			       <0x19>,		<0x19>;
+			inten-offset = <0x0288>;
 		};
 	};
 
