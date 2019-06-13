@@ -48,7 +48,7 @@ config MALI_RT_PM
     depends on MALI_MIDGARD
     depends on PM
     depends on EXYNOS_PD
-    default n
+    default y
     help
       Choose this option to enable runtime power management in the Mali Midgard DDK.
 

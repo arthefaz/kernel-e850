@@ -73,7 +73,7 @@ int kbase_pm_policy_init(struct kbase_device *kbdev)
 	if (enabled_policy_count == 0)
 		return -EINVAL;
 
-	kbdev->pm.backend.pm_current_policy = enabled_policy_list[1];
+	kbdev->pm.backend.pm_current_policy = enabled_policy_list[0];
 	kbdev->pm.backend.pm_current_policy->init(kbdev);
 
 	return 0;
