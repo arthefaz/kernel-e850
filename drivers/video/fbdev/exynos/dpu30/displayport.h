@@ -599,6 +599,8 @@ struct edid_data {
 	u8 edid_manufacturer[4];
 	u32 edid_product;
 	u32 edid_serial;
+
+	int edid_data_size;
 	u8 *edid_buf;
 };
 

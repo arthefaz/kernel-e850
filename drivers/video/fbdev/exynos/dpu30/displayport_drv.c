@@ -2266,6 +2266,9 @@ int displayport_disable(struct displayport_device *displayport)
 		displayport_info("all sst off");
 	}
 
+	if (displayport->sst[sst_id]->rx_edid_data.edid_buf != NULL)
+		kfree(displayport->sst[sst_id]->rx_edid_data.edid_buf);
+
 	displayport->sst[sst_id]->state = DISPLAYPORT_STATE_OFF;
 
 	displayport_info("%s -\n", __func__);

@@ -689,6 +689,8 @@ int edid_update(u32 sst_id, struct displayport_device *displayport)
 			0, sizeof(specs.manufacturer));
 	displayport->sst[sst_id]->rx_edid_data.edid_product = 0;
 	displayport->sst[sst_id]->rx_edid_data.edid_serial = 0;
+	displayport->sst[sst_id]->rx_edid_data.edid_data_size = 0;
+	displayport->sst[sst_id]->rx_edid_data.edid_buf = NULL;
 
 	preferred_preset = supported_videos[EDID_DEFAULT_TIMINGS_IDX].dv_timings;
 	supported_videos[0].edid_support_match = true; /*default support VGA*/
@@ -699,6 +701,10 @@ int edid_update(u32 sst_id, struct displayport_device *displayport)
 	block_cnt = edid_read(sst_id, displayport, &edid);
 	if (block_cnt < 0)
 		goto out;
+
+	displayport->sst[sst_id]->rx_edid_data.edid_data_size =
+			EDID_BLOCK_SIZE * block_cnt;
+	displayport->sst[sst_id]->rx_edid_data.edid_buf = edid;
 
 	fb_edid_to_monspecs(edid, &specs);
 	modedb_len = specs.modedb_len;
@@ -785,9 +791,6 @@ out:
 
 	if (block_cnt == -EPROTO)
 		edid_misc = FB_MISC_HDMI;
-
-	if (block_cnt >= 2)
-		kfree(edid);
 
 	return block_cnt;
 }
