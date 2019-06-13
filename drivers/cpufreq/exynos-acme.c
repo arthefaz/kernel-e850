@@ -89,7 +89,7 @@ static int need_slack_timer(unsigned int cpu)
 	return 0;
 }
 
-static void slack_nop_timer(struct timer_list *timer)
+static void slack_nop_timer(unsigned long data)
 {
 	/*
 	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
@@ -1251,7 +1251,7 @@ static __init int init_slack_timer(struct exynos_cpufreq_domain *domain,
 			slack_timer->min = ULONG_MAX;
 
 			/* Initialize slack-timer */
-			timer_setup(&slack_timer->timer, slack_nop_timer, TIMER_PINNED);
+			setup_timer(&slack_timer->timer, slack_nop_timer, TIMER_PINNED);
 		}
 	}
 	pr_info("Success: Initialize Slack Timer");
