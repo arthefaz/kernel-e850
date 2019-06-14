@@ -299,10 +299,152 @@ unsigned long ml_boosted_cpu_util(int cpu)
 	return util + schedtune_margin(capacity_cpu(cpu, USS), util, boost);
 }
 
-static inline struct task_struct *task_of(struct sched_entity *se)
+/******************************************************************************
+ *                       initial utilization of task                          *
+ ******************************************************************************/
+enum {
+	INHERIT_CFS_RQ = 0,
+	INHERIT_PARENT,
+	INHERIT_MAX_NUM,
+};
+
+static u32 inherit_type = INHERIT_CFS_RQ;
+static u32 inherit_ratio = 25;	/* EMS default : 25% (fair : 50%) */
+
+void init_multi_load(struct sched_entity *se)
 {
-	return container_of(se, struct task_struct, se);
+	struct multi_load *ml = &se->ml;
+
+	memset(ml, 0, sizeof(*ml));
+
+	ml->runnable_sum = current->se.ml.runnable_sum >> 1;
+	ml->runnable_avg = current->se.ml.runnable_avg >> 1;
 }
+
+static void post_init_inherit_cfs_rq(struct sched_entity *se, u32 inherit_ratio)
+{
+	int sse = get_sse(se);
+	struct cfs_rq *cfs_rq = se->cfs_rq;
+	struct multi_load *ml = &se->ml;
+	unsigned long cpu_scale = capacity_cpu(cpu_of(cfs_rq->rq), sse);
+	long cap = (long)(cpu_scale - _ml_cpu_util(cpu_of(cfs_rq->rq), sse));
+
+	if (cap <= 0)
+		return;
+
+	if (cfs_rq->ml.util_avg != 0) {
+		ml->util_avg  = cfs_rq->ml.util_avg * se->load.weight;
+		ml->util_avg /= (cfs_rq->avg.load_avg + 1);
+		ml->util_avg = ml->util_avg << 1;
+
+		if (ml->util_avg > cap)
+			ml->util_avg = cap;
+	} else {
+		ml->util_avg = cap * inherit_ratio / 100;
+	}
+
+	trace_ems_multi_load_new_task(ml);
+}
+
+static void post_init_inherit_parent(struct sched_entity *se, u32 inherit_ratio)
+{
+	struct multi_load *ml = &se->ml;
+
+	/* initialize util */
+	ml->util_sum = current->se.ml.util_sum;
+	ml->util_avg = current->se.ml.util_avg;
+
+	trace_ems_multi_load_new_task(ml);
+}
+
+void post_init_entity_multi_load(struct sched_entity *se)
+{
+	switch(inherit_type) {
+	case INHERIT_CFS_RQ:
+		post_init_inherit_cfs_rq(se, inherit_ratio);
+		break;
+	case INHERIT_PARENT:
+		post_init_inherit_parent(se, inherit_ratio);
+		break;
+	default:
+		pr_info("%s: Not support initial util type %d\n",
+				__func__, inherit_type);
+	}
+}
+
+static ssize_t show_inherit_type(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return snprintf(buf, 10, "%d\n", inherit_type);
+}
+
+static ssize_t store_inherit_type(struct kobject *kobj,
+                struct kobj_attribute *attr, const char *buf,
+                size_t count)
+{
+        int input;
+
+        if (!sscanf(buf, "%d", &input))
+                return -EINVAL;
+
+        input = min_t(u32, input, INHERIT_CFS_RQ);
+	input = max_t(u32, input, INHERIT_MAX_NUM - 1);
+
+        inherit_type = input;
+
+        return count;
+}
+
+static ssize_t show_inherit_ratio(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+        return snprintf(buf, 10, "%d\n", inherit_ratio);
+}
+
+static ssize_t store_inherit_ratio(struct kobject *kobj,
+                struct kobj_attribute *attr, const char *buf,
+                size_t count)
+{
+        int input;
+
+        if (!sscanf(buf, "%d", &input))
+                return -EINVAL;
+
+        inherit_ratio = !!input;
+
+        return count;
+}
+
+static struct kobj_attribute inherit_type_attr =
+__ATTR(inherit_type, 0644, show_inherit_type, store_inherit_type);
+
+static struct kobj_attribute inherit_ratio_attr =
+__ATTR(inherit_ratio, 0644, show_inherit_ratio, store_inherit_ratio);
+
+static struct attribute *initial_util_attrs[] = {
+	&inherit_type_attr.attr,
+	&inherit_ratio_attr.attr,
+	NULL,
+};
+
+static const struct attribute_group initial_util_attr_group = {
+	.attrs = initial_util_attrs,
+};
+
+static int __init init_initial_util(void)
+{
+	struct kobject *kobj;
+
+	kobj = kobject_create_and_add("init_util", ems_kobj);
+	if (!kobj)
+		return -EINVAL;
+
+	if (sysfs_create_group(kobj, &initial_util_attr_group))
+		return -EINVAL;
+
+	return 0;
+}
+late_initcall(init_initial_util);
 
 static void update_next_balance(struct multi_load *ml)
 {
@@ -326,14 +468,6 @@ static void update_next_balance(struct multi_load *ml)
 /* declare extern function from cfs */
 extern u64 decay_load(u64 val, u64 n);
 extern u32 __accumulate_pelt_segments(u64 periods, u32 d1, u32 d3);
-
-static inline int get_sse(struct sched_entity *se)
-{
-	if (!se || se->my_q)
-		return 0;
-
-	return task_of(se)->sse;
-}
 
 static inline void util_change(struct multi_load *ml);
 
@@ -470,52 +604,6 @@ void update_multi_load(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_ent
 		running = 0;
 
 	__update_multi_load(delta, cpu, cfs_rq, ml, load, running, get_sse(se));
-}
-
-void init_multi_load(struct sched_entity *se)
-{
-	struct multi_load *ml = &se->ml;
-
-	memset(ml, 0, sizeof(*ml));
-
-	ml->runnable_sum = current->se.ml.runnable_sum >> 1;
-	ml->runnable_avg = current->se.ml.runnable_avg >> 1;
-}
-
-void post_init_multi_load_cfs_rq(struct sched_entity *se, u32 inherit_ratio)
-{
-	int sse = get_sse(se);
-	struct cfs_rq *cfs_rq = se->cfs_rq;
-	struct multi_load *ml = &se->ml;
-	unsigned long cpu_scale = capacity_cpu(cpu_of(cfs_rq->rq), sse);
-	long cap = (long)(cpu_scale - _ml_cpu_util(cpu_of(cfs_rq->rq), sse));
-
-	if (cap <= 0)
-		return;
-
-	if (cfs_rq->ml.util_avg != 0) {
-		ml->util_avg  = cfs_rq->ml.util_avg * se->load.weight;
-		ml->util_avg /= (cfs_rq->avg.load_avg + 1);
-		ml->util_avg = ml->util_avg << 1;
-
-		if (ml->util_avg > cap)
-			ml->util_avg = cap;
-	} else {
-		ml->util_avg = cap * inherit_ratio / 100;
-	}
-
-	trace_ems_multi_load_new_task(ml);
-}
-
-void post_init_multi_load_parent(struct sched_entity *se, u32 inherit_ratio)
-{
-	struct multi_load *ml = &se->ml;
-
-	/* initialize util */
-	ml->util_sum = current->se.ml.util_sum;
-	ml->util_avg = current->se.ml.util_avg;
-
-	trace_ems_multi_load_new_task(ml);
 }
 
 /*

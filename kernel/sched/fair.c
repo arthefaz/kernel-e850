@@ -790,10 +790,7 @@ void post_init_entity_util_avg(struct sched_entity *se)
 	long cpu_scale = arch_scale_cpu_capacity(NULL, cpu_of(rq_of(cfs_rq)));
 	long cap = (long)(cpu_scale - cfs_rq->avg.util_avg) / 2;
 
-	if (sched_feat(EXYNOS_MS)) {
-		exynos_post_init_entity_util_avg(se);
-		goto util_init_done;
-	}
+	post_init_entity_multi_load(se);
 
 	if (cap > 0) {
 		if (cfs_rq->avg.util_avg != 0) {
@@ -808,7 +805,6 @@ void post_init_entity_util_avg(struct sched_entity *se)
 		sa->util_sum = sa->util_avg * LOAD_AVG_MAX;
 	}
 
-util_init_done:
 	if (entity_is_task(se)) {
 		struct task_struct *p = task_of(se);
 		struct sched_avg *sa = &se->avg;

@@ -53,8 +53,6 @@ extern unsigned long ml_cpu_util_ratio(int cpu, int sse);
 extern unsigned long __ml_cpu_util_with(int cpu, struct task_struct *p, int sse);
 extern unsigned long ml_cpu_util_with(int cpu, struct task_struct *p);
 extern unsigned long ml_cpu_util_without(int cpu, struct task_struct *p);
-extern void post_init_multi_load_cfs_rq(struct sched_entity *se, u32 inherit_ratio);
-extern void post_init_multi_load_parent(struct sched_entity *se, u32 inherit_ratio);
 extern void init_part(void);
 
 /* efficiency cpu selection */
@@ -67,12 +65,24 @@ extern unsigned long get_upper_boundary(int cpu, struct task_struct *p);
 /* global boost */
 extern int global_boost(void);
 
+/* energy_step_wise_governor */
+extern int find_allowed_capacity(int cpu, unsigned int new, int power);
+extern int find_step_power(int cpu, int step);
 
 static inline cpu_overutilized(unsigned long capacity, unsigned long util)
 {
 	return (capacity * 1024) < (util * 1280);
 }
 
-/* energy_step_wise_governor */
-extern int find_allowed_capacity(int cpu, unsigned int new, int power);
-extern int find_step_power(int cpu, int step);
+static inline struct task_struct *task_of(struct sched_entity *se)
+{
+	return container_of(se, struct task_struct, se);
+}
+
+static inline int get_sse(struct sched_entity *se)
+{
+	if (!se || se->my_q)
+		return 0;
+
+	return task_of(se)->sse;
+}

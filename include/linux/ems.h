@@ -35,7 +35,7 @@ extern void init_ems(void);
 /*
  * init util
  */
-extern void exynos_post_init_entity_util_avg(struct sched_entity *se);
+extern void post_init_entity_multi_load(struct sched_entity *se);
 
 
 /*
@@ -118,7 +118,7 @@ static inline void init_ems(void) { }
 /*
  * init util
  */
-static inline void exynos_post_init_entity_util_avg(struct sched_entity *se) { }
+static inline void post_init_entity_multi_load(struct sched_entity *se) { }
 
 
 /*
