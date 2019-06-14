@@ -73,47 +73,47 @@ struct id_tbl_info {
 	unsigned reserved_4:16;
 	unsigned char ids_big:8;
 	unsigned char ids_g3d:8;
-	unsigned char ids_others:8; /* little, int, mif, disp, cp */
+	unsigned char ids_others:8; /* int, cam, idsp, intcam, mfc, aud */
 	unsigned reserved_5:8;
-	unsigned reserved_6;
+	unsigned reserved_6:32;
 	unsigned short sub_rev:4;
 	unsigned short main_rev:4;
-	unsigned reserved_7;
+	unsigned reserved_7:32;
 };
 
-static volatile struct asv_tbl_info *asv_tbl;
-static volatile struct id_tbl_info *id_tbl;
+#define ASV_INFO_ADDR_CNT	(sizeof(struct asv_tbl_info) / 4)
+#define ID_INFO_ADDR_CNT	(sizeof(struct id_tbl_info) / 4)
+
+static struct asv_tbl_info asv_tbl;
+static struct id_tbl_info id_tbl;
 
 int asv_get_grp(unsigned int id)
 {
 	int grp = -1;
 
-	if (!asv_tbl)
-		return grp;
-
 	switch (id) {
 	case MIF:
-		grp = asv_tbl->mif_asv_group + asv_tbl->mif_modify_group;
+		grp = asv_tbl.mif_asv_group + asv_tbl.mif_modify_group;
 		break;
 	case INT:
 	case INTCAM:
-		grp = asv_tbl->int_asv_group + asv_tbl->int_modify_group;
+		grp = asv_tbl.int_asv_group + asv_tbl.int_modify_group;
 		break;
 	case CPUCL0:
-		grp = asv_tbl->bigcpu_asv_group + asv_tbl->bigcpu_modify_group;
+		grp = asv_tbl.bigcpu_asv_group + asv_tbl.bigcpu_modify_group;
 		break;
 	case CPUCL1:
-		grp = asv_tbl->littlecpu_asv_group + asv_tbl->littlecpu_modify_group;
+		grp = asv_tbl.littlecpu_asv_group + asv_tbl.littlecpu_modify_group;
 		break;
 	case G3D:
-		grp = asv_tbl->g3d_asv_group + asv_tbl->g3d_modify_group;
+		grp = asv_tbl.g3d_asv_group + asv_tbl.g3d_modify_group;
 		break;
 	case CAM:
 	case DISP:
-		grp = asv_tbl->cam_disp_asv_group + asv_tbl->cam_disp_modify_group;
+		grp = asv_tbl.cam_disp_asv_group + asv_tbl.cam_disp_modify_group;
 		break;
 	case CP:
-		grp = asv_tbl->cp_asv_group + asv_tbl->cp_modify_group;
+		grp = asv_tbl.cp_asv_group + asv_tbl.cp_modify_group;
 		break;
 	default:
 		pr_info("Un-support asv grp %d\n", id);
@@ -126,15 +126,12 @@ int asv_get_ids_info(unsigned int id)
 {
 	int ids = 0;
 
-	if (!id_tbl)
-		return ids;
-
 	switch (id) {
 	case CPUCL1:
-		ids = id_tbl->ids_big;
+		ids = id_tbl.ids_big;
 		break;
 	case G3D:
-		ids = id_tbl->ids_g3d;
+		ids = id_tbl.ids_g3d;
 		break;
 	case CPUCL0:
 	case INT:
@@ -143,7 +140,7 @@ int asv_get_ids_info(unsigned int id)
 	case DISP:
 	case CP:
 	case CAM:
-		ids = id_tbl->ids_others;
+		ids = id_tbl.ids_others;
 		break;
 	default:
 		pr_info("Un-support ids info %d\n", id);
@@ -154,38 +151,45 @@ int asv_get_ids_info(unsigned int id)
 
 int asv_get_table_ver(void)
 {
-	int ver = 0;
-
-	if (asv_tbl)
-		ver = asv_tbl->asv_table_version;
-
-	return ver;
+	return asv_tbl.asv_table_version;
 }
 
 void id_get_rev(unsigned int *main_rev, unsigned int *sub_rev)
 {
-	*main_rev = id_tbl->main_rev;
-	*sub_rev =  id_tbl->sub_rev;
+	*main_rev = id_tbl.main_rev;
+	*sub_rev =  id_tbl.sub_rev;
 }
 
 int asv_table_init(void)
 {
-	asv_tbl = ioremap(ASV_TABLE_BASE, SZ_4K);
-	if (!asv_tbl)
-		return 0;
+	int i;
+	unsigned int *p_table;
+	unsigned int *regs;
+	unsigned long tmp;
 
-	pr_info("asv_table_version : %d\n", asv_tbl->asv_table_version);
-	pr_info("  bigcpu grp : %d\n", asv_tbl->bigcpu_asv_group);
-	pr_info("  littlecpu grp : %d\n", asv_tbl->littlecpu_asv_group);
-	pr_info("  g3d grp : %d\n", asv_tbl->g3d_asv_group);
-	pr_info("  mif grp : %d\n", asv_tbl->mif_asv_group);
-	pr_info("  int grp : %d\n", asv_tbl->int_asv_group);
-	pr_info("  cam_disp grp : %d\n", asv_tbl->cam_disp_asv_group);
-	pr_info("  cp grp : %d\n", asv_tbl->cp_asv_group);
-	pr_info("  fsys grp : %d\n", asv_tbl->fsys_asv_group);
+	p_table = (unsigned int *)&asv_tbl;
 
-	id_tbl = ioremap(ID_TABLE_BASE, SZ_4K);
+	for (i = 0; i < ASV_INFO_ADDR_CNT; i++) {
+		exynos_smc_readsfr((unsigned long)(ASV_TABLE_BASE + 0x4 * i), &tmp);
+		*(p_table + i) = (unsigned int)tmp;
+	}
 
-	return asv_tbl->asv_table_version;
+	p_table = (unsigned int *)&id_tbl;
+
+	regs = (unsigned int *)ioremap(ID_TABLE_BASE, ID_INFO_ADDR_CNT * sizeof(int));
+	for(i = 0; i < ID_INFO_ADDR_CNT; i++)
+		*(p_table + i) = (unsigned int)regs[i];
+
+	pr_info("asv_table_version : %d\n", asv_tbl.asv_table_version);
+	pr_info("  bigcpu grp : %d\n", asv_tbl.bigcpu_asv_group);
+	pr_info("  littlecpu grp : %d\n", asv_tbl.littlecpu_asv_group);
+	pr_info("  g3d grp : %d\n", asv_tbl.g3d_asv_group);
+	pr_info("  mif grp : %d\n", asv_tbl.mif_asv_group);
+	pr_info("  int grp : %d\n", asv_tbl.int_asv_group);
+	pr_info("  cam_disp grp : %d\n", asv_tbl.cam_disp_asv_group);
+	pr_info("  cp grp : %d\n", asv_tbl.cp_asv_group);
+	pr_info("  fsys grp : %d\n", asv_tbl.fsys_asv_group);
+
+	return asv_tbl.asv_table_version;
 }
 #endif
