@@ -80,5 +80,11 @@
 			compatible = "exynos,seclog";
 			reg = <0 SECLOG_LOG_BUF_BASE SECLOG_LOG_BUF_TOTAL_SIZE>;
 		};
+
+		cp_rmem {
+			compatible = "exynos,modem_if";
+			reg = <0x0 0xD0000000 0x14000000>;
+			rmem_index = <0>;
+		};
 	};
 };

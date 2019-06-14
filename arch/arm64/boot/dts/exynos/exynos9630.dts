@@ -76,7 +76,7 @@
 	};
 
 	chosen: chosen {
-		bootargs = "console=ram skip_initramfs rootwait ro init=/init root=/dev/sda12 clk_ignore_unused androidboot.hardware=exynos9630 androidboot.selinux=enforce androidboot.debug_level=0x4948 firmware_class.path=/vendor/firmware";
+		bootargs = "console=ram skip_initramfs rootwait ro init=/init root=/dev/sda12 clk_ignore_unused androidboot.hardware=exynos9630 androidboot.selinux=enforce androidboot.debug_level=0x4948 firmware_class.path=/vendor/firmware sec_debug.cp=0";
 		linux,initrd-start = <0x84000000>;
 		linux,initrd-end = <0x841FFFFF>;
 	};

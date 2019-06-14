@@ -12,6 +12,7 @@
 /dts-v1/;
 /plugin/;
 #include "exynos9630-board_common.dtsi"
+#include "exynos9630-erd9630-cp-s5188ap-sit.dtsi"
 #include "exynos9630_erd9630_battery_data.dtsi"
 
 / {
