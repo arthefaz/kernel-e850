@@ -787,8 +787,8 @@ void dpp_reg_init(u32 id, const unsigned long attr)
 		idma_reg_set_sram_clk_gate_en(id, 0);
 		idma_reg_set_dynamic_gating_en_all(id, 0);
 		idma_reg_set_pixel_alpha(id, 0xFF);
-		idma_reg_set_in_ic_max(id, 0x40);
-		idma_reg_set_assigned_mo(id, 0x40);
+		idma_reg_set_in_ic_max(id, 0x20);
+		idma_reg_set_assigned_mo(id, 0x20);
 	}
 
 	if (test_bit(DPP_ATTR_DPP, &attr)) {
@@ -893,7 +893,6 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 	 */
 
 	deadlock_cnt = p->rcv_num * 51;
-	deadlock_cnt = 0x7fffffff;
 	dpp_dbg("idma deadlock_cnt(%d)\n", deadlock_cnt);
 	/* TODO : deadlock is not set for bring up */
 	idma_reg_set_deadlock(id, 1, deadlock_cnt);
@@ -1020,12 +1019,12 @@ static void dma_reg_dump_com_debug_regs(int id)
 
 static void dma_reg_dump_debug_regs(int id)
 {
-	u32 sel_layer_01[14] = {
+	u32 sel_layer_012[14] = {
 		0x0000, 0x0001, 0x0002, 0x0003, 0x0007, 0x0008, 0x0100, 0x0101,
 		0x0102, 0x0103, 0x7000, 0x7001, 0x7002, 0x7003
 	};
 
-	u32 sel_layer_234[52] = {
+	u32 sel_layer_3[52] = {
 		0x0000, 0x0001, 0x0002, 0x0003, 0x0007, 0x0008, 0x0100, 0x0101,
 		0x0102, 0x0103, 0x1000, 0x1001, 0x1002, 0x1003, 0x1007, 0x1008,
 		0x1100, 0x1101, 0x1102, 0x1103, 0x2000, 0x2001, 0x2002, 0x2003,
@@ -1035,34 +1034,16 @@ static void dma_reg_dump_debug_regs(int id)
 		0x7000, 0x7001, 0x7002, 0x7003
 	};
 
-	u32 sel_layer_5[78] = {
-		0x0000, 0x0001, 0x0002, 0x0003, 0x0007, 0x0008, 0x0100, 0x0101,
-		0x0102, 0x0103, 0x1000, 0x1001, 0x1002, 0x1003, 0x1007, 0x1008,
-		0x1100, 0x1101, 0x1102, 0x1103, 0x2000, 0x2001, 0x2002, 0x2003,
-		0x2007, 0x2008, 0x2100, 0x2101, 0x2102, 0x2103, 0x3000, 0x3001,
-		0x3002, 0x3003, 0x3007, 0x3008, 0x3100, 0x3101, 0x3102, 0x3103,
-		0x4000, 0x4001, 0x4002, 0x4003, 0x4004, 0x4005, 0x4006, 0x4007,
-		0x6000, 0x6001, 0x6100, 0x6101, 0x6102, 0x6103, 0x6104, 0x6105,
-		0x6200, 0x6201, 0x6202, 0x6203, 0x6204, 0x6205, 0x6300, 0x6301,
-		0x6302, 0x6303, 0x6305, 0x6306, 0x6400, 0x6401, 0x6402, 0x6403,
-		0x6405, 0x6406, 0x7000, 0x7001, 0x7002, 0x7003
-	};
-
 	dpp_info("-< DPU_DMA%d DEBUG SFR >-\n", id);
-	if (id == 0 || id == 1)
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_layer_01, 14);
-	else if (id == 2 || id == 3 || id == 4)
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_layer_234, 52);
-	else /* (id == 5) */
-		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_layer_5, 78);
+	if (id == 0 || id == 1 || id == 2)
+		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_layer_012, 14);
+	else /* (id == 3) */
+		dpp_reg_dump_ch_data(id, REG_AREA_DMA, sel_layer_3, 52);
 }
 
 static void dpp_reg_dump_debug_regs(int id)
 {
 	u32 sel_gf[3] = {0x0000, 0x0100, 0x0101};
-	u32 sel_vg_vgf[19] = {0x0000, 0x0100, 0x0101, 0x0200, 0x0201, 0x0202,
-		0x0203, 0x0204, 0x0205, 0x0206, 0x0207, 0x0208, 0x0300, 0x0301,
-		0x0302, 0x0303, 0x0304, 0x0400, 0x0401};
 	u32 sel_vgs_vgrfs[37] = {0x0000, 0x0100, 0x0101, 0x0200, 0x0201, 0x0210,
 		0x0211, 0x0220, 0x0221, 0x0230, 0x0231, 0x0240, 0x0241, 0x0250,
 		0x0251, 0x0300, 0x0301, 0x0302, 0x0303, 0x0304, 0x0305, 0x0306,
@@ -1071,13 +1052,10 @@ static void dpp_reg_dump_debug_regs(int id)
 	u32 cnt;
 	u32 *sel = NULL;
 
-	if (id == 0 || id == 1) { /* GF0, GF1 */
+	if (id == 0 || id == 1 || id == 2) { /* GF0, GF1 */
 		sel =  sel_gf;
 		cnt = 3;
-	} else if (id == 2 || id == 4) { /* VG, VGF */
-		sel = sel_vg_vgf;
-		cnt = 19;
-	} else if (id == 3 || id == 5) { /* VGS, VGRFS */
+	} else if (id == 3) { /* VGS, VGRFS */
 		sel = sel_vgs_vgrfs;
 		cnt = 37;
 	} else {
