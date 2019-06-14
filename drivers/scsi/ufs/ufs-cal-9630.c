@@ -93,7 +93,7 @@ enum {
 	PHY_PMA_TRSV_SQ,
 	COMMON_WAIT,
 
-	/* Since exynos7920. UFS v3.0*/
+	/* Since exynos9630. UFS v3.0*/
 	PHY_PCS_RX_LR_PRD,
 	PHY_PCS_TX_LR_PRD,
 	PHY_PCS_RX_PRD_ROUND_OFF,
@@ -209,7 +209,7 @@ static const struct ufs_cal_phy_cfg init_cfg[] = {
 	{0x1B0, 0x18, PMD_ALL, PHY_PMA_TRSV, BRD_ALL},
 	{0xE0, 0x12, PMD_ALL, PHY_PMA_TRSV, BRD_ALL},
 	{0x164, 0x58, PMD_ALL, PHY_PMA_TRSV, BRD_ALL},
-//	{0x120, 0xC0, PMD_ALL, PHY_PMA_TRSV, BRD_ALL},	//PWM amplitude override
+	{0x120, 0xC0, PMD_ALL, PHY_PMA_TRSV, BRD_ALL},	//PWM amplitude override
 
 	{0x8C, 0xC0, PMD_ALL, PHY_PMA_COMN, BRD_ALL},
 	{0x8C, 0x00, PMD_ALL, PHY_PMA_COMN, BRD_ALL},
