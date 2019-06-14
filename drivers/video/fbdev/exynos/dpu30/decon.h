@@ -1055,6 +1055,11 @@ struct decon_freq_hop {
 	u32 request_k;	/* user requested k value */
 };
 
+struct decon_edid_data {
+	int size;
+	u8 edid_data[EDID_BLOCK_SIZE * MAX_EDID_BLOCK];
+};
+
 struct decon_device {
 	int id;
 	enum decon_state state;
@@ -1251,6 +1256,8 @@ int decon_displayport_get_config(struct decon_device *dex,
 		struct exynos_displayport_data *displayport_data);
 int decon_displayport_set_config(struct decon_device *dex,
 		struct exynos_displayport_data *displayport_data);
+int decon_displayport_get_edid(struct decon_device *decon,
+		struct decon_edid_data *edid);
 void decon_displayport_under_flow_int_mask(u32 decon_id);
 #endif
 
@@ -1539,4 +1546,6 @@ int dpu_hw_recovery_process(struct decon_device *decon);
 #define EXYNOS_GET_COLOR_MODE		_IOW('F', 601, struct decon_color_mode_info)
 #define EXYNOS_SET_COLOR_MODE		_IOW('F', 602, __u32)
 
+/* EDID data */
+#define EXYNOS_GET_EDID		_IOW('F', 800, struct decon_edid_data)
 #endif /* ___SAMSUNG_DECON_H__ */

@@ -706,6 +706,7 @@ struct displayport_debug_param {
 #define AUX_RETRY_COUNT 3
 #define AUX_TIMEOUT_1800us 0x03
 
+#define MAX_EDID_BLOCK 4
 #define EDID_BLOCK_SIZE 128
 #define DATA_BLOCK_TAG_CODE_MASK 0xE0
 #define DATA_BLOCK_LENGTH_MASK 0x1F

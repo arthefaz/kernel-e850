@@ -387,6 +387,27 @@ int decon_displayport_set_config(struct decon_device *decon,
 	return ret;
 }
 
+int decon_displayport_get_edid(struct decon_device *decon,
+		struct decon_edid_data *edid)
+{
+	struct displayport_device *displayport = get_displayport_drvdata();
+	u32 sst_id = displayport_get_sst_id_with_decon_id(decon->id);
+	int i = 0;
+	int ret = 0;
+
+	mutex_lock(&decon->lock);
+
+	edid->size = displayport->sst[sst_id]->rx_edid_data.edid_data_size;
+	if (edid->size <= 0)
+		ret = -EINVAL;
+
+	for (i = 0; i < edid->size; i++)
+		edid->edid_data[i] = displayport->sst[sst_id]->rx_edid_data.edid_buf[i];
+
+	mutex_unlock(&decon->lock);
+	return ret;
+}
+
 void decon_displayport_under_flow_int_mask(u32 decon_id)
 {
 	displayport_reg_set_sst_interrupt_mask(displayport_get_sst_id_with_decon_id(decon_id),

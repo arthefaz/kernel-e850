@@ -2710,6 +2710,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	struct dpp_restrictions_info __user *argp_res;
 	struct decon_color_mode_info cm_info;
 	struct dpp_ch_restriction dpp_ch_restriction;
+	struct decon_edid_data edid_data;
 	int ret = 0;
 	u32 crtc;
 	bool active;
@@ -3054,6 +3055,20 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 
 		/* ADD additional action if necessary */
+
+		break;
+
+	case EXYNOS_GET_EDID:
+		if (decon->dt.out_type == DECON_OUT_DP) {
+			ret = decon_displayport_get_edid(decon, &edid_data);
+
+			if (copy_to_user((struct decon_edid_data __user *)arg,
+					&edid_data, sizeof(edid_data))) {
+				ret = -EFAULT;
+				break;
+			}
+		} else
+			ret = -EFAULT;
 
 		break;
 
