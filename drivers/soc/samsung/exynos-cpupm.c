@@ -53,6 +53,8 @@ static int fix_idle_ip_max;
  */
 struct fix_idle_ip fix_idle_ip_arr[FIX_IDLE_IP_MAX];
 
+struct kobj_attribute idle_ip_attr;
+
 static int get_index_last_entry(struct list_head *head)
 {
 	struct idle_ip *ip;
@@ -632,6 +634,28 @@ static ssize_t store_power_mode(struct kobject *kobj,
 	return count;
 }
 
+static ssize_t show_idle_ip_list(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	struct idle_ip *ip;
+	unsigned long flags;
+	int i, ret = 0;
+
+	for (i = 0; i < fix_idle_ip_max; i++)
+		ret += sprintf(buf + ret, "[fix:%d] %s\n",
+				fix_idle_ip_arr[i].reg_index,
+				fix_idle_ip_arr[i].name);
+
+	spin_lock_irqsave(&idle_ip_list_lock, flags);
+
+	list_for_each_entry(ip, &idle_ip_list, list)
+		ret += sprintf(buf + ret, "[%d] %s\n", ip->index, ip->name);
+
+	spin_unlock_irqrestore(&idle_ip_list_lock, flags);
+
+	return ret;
+}
+
 /*
  * attr_pool is used to create sysfs node at initialization time. Saving the
  * initiailized attr to attr_pool, and it creates nodes of each attr at the
@@ -666,13 +690,12 @@ out:
 	kfree(attr_group.attrs);
 }
 
-#define cpupm_attr_init(_attr, _name, _index)				\
+#define cpupm_attr_init(_attr, _name, _mode, _show, _store)	\
 	sysfs_attr_init(&_attr.attr);				\
 	_attr.attr.name	= _name;				\
-	_attr.attr.mode	= VERIFY_OCTAL_PERMISSIONS(0644);	\
-	_attr.show	= show_power_mode;			\
-	_attr.store	= store_power_mode;			\
-	attr_pool[_index] = &_attr.attr;
+	_attr.attr.mode	= VERIFY_OCTAL_PERMISSIONS(_mode);	\
+	_attr.show	= _show;				\
+	_attr.store	= _store;
 
 /******************************************************************************
  *                                Initialization                              *
@@ -748,8 +771,9 @@ static int __init cpu_power_mode_init(void)
 		 * mode being disabled. In this case, no attribute is created.
 		 */
 		if (!cpumask_empty(&mode->entry_allowed)) {
-			cpupm_attr_init(mode->attr, mode->name, attr_count);
-			attr_count++;
+			cpupm_attr_init(mode->attr, mode->name, 0644,
+					show_power_mode, store_power_mode);
+			attr_pool[attr_count++] = &mode->attr.attr;
 		}
 
 		/* Connect power mode to the cpus in the power domain */
@@ -760,6 +784,10 @@ static int __init cpu_power_mode_init(void)
 		cpuidle_profile_group_idle_register(mode->id, mode->name);
 #endif
 	}
+
+	cpupm_attr_init(idle_ip_attr, "idle_ip_list", 0444,
+			show_idle_ip_list, NULL);
+	attr_pool[attr_count++] = &idle_ip_attr.attr;
 
 	if (attr_count)
 		cpupm_sysfs_node_init(attr_count);
