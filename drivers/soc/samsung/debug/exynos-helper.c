@@ -41,6 +41,7 @@
 #endif
 
 extern void (*arm_pm_restart)(enum reboot_mode str, const char *cmd);
+static struct device *exynos_helper_dev;
 
 static struct err_variant arm64_err_type_1[] = {
 	ERR_VAR("AV", 31, 31),
@@ -197,7 +198,7 @@ void exynos_err_parse(u32 reg_idx, u64 reg, struct err_variant_data *exynos_cpu_
 
 	valid = reg & BIT(exynos_cpu_err->valid_bit);
 	if (!valid) {
-		pr_emerg("%s valid_bit(%d) is NOT set (0x%lx)\n",
+		dev_emerg(exynos_helper_dev, "%s valid_bit(%d) is NOT set (0x%lx)\n",
 				exynos_cpu_err->reg_name, exynos_cpu_err->valid_bit, valid);
 		return;
 	}
@@ -213,7 +214,7 @@ run_valid:
 
 		field = (reg & GENMASK_ULL(fld_end, fld_offset)) >> fld_offset;
 		if (field != 0)
-			pr_emerg("%s (%d:%d) %s 0x%lx\n",
+			dev_emerg(exynos_helper_dev, "%s (%d:%d) %s 0x%lx\n",
 				exynos_cpu_err->reg_name,
 				fld_end, fld_offset,
 				variant[i].fld_name, field);
@@ -224,7 +225,7 @@ run_valid:
 static void exynos_cpu_err_parse(u32 reg_idx, u64 reg)
 {
 	if (reg_idx >= ARRAY_SIZE(exynos_cpu_err_table)) {
-		pr_err("%s: there is no parse data\n", __func__);
+		dev_err(exynos_helper_dev, "%s: there is no parse data\n", __func__);
 		return;
 	}
 
@@ -433,13 +434,13 @@ static void exynos_dump_info(void *val)
 		case ARM_CPU_PART_CORTEX_A53:
 			asm volatile ("mrs %0, S3_1_c11_c0_3\n\t"
 					: "=r" (reg1));
-			pr_emerg("L2ECTLR_EL1: %016lx", reg1);
+			dev_emerg("exynos_helper_dev, L2ECTLR_EL1: %016lx", reg1);
 			exynos_cpu_err_parse(L2ECTLR_EL1, reg1);
 
 			asm volatile ("mrs %0, S3_1_c15_c2_2\n\t"
 					"mrs %1, S3_1_c15_c2_3\n"
 					: "=r" (reg1), "=r" (reg2));
-			pr_emerg("CPUMERRSR: %016lx, L2MERRSR: %016lx\n", reg1, reg2);
+			dev_emerg(exynos_helper_dev, "CPUMERRSR: %016lx, L2MERRSR: %016lx\n", reg1, reg2);
 			exynos_cpu_err_parse(CPUMERRSR, reg1);
 			exynos_cpu_err_parse(L2MERRSR, reg2);
 			break;
@@ -448,14 +449,14 @@ static void exynos_dump_info(void *val)
 			asm volatile ("mrs %0, S3_1_c11_c0_3\n\t"
 					"mrs %1, S3_1_c15_c2_3\n"
 					: "=r" (reg1), "=r" (reg2));
-			pr_emerg("L2ECTLR_EL1: %016lx, L2MERRSR: %016lx\n", reg1, reg2);
+			dev_emerg(exynos_helper_dev, "L2ECTLR_EL1: %016lx, L2MERRSR: %016lx\n", reg1, reg2);
 			exynos_cpu_err_parse(L2ECTLR_EL1, reg1);
 			exynos_cpu_err_parse(L2MERRSR, reg2);
 			break;
 		case ARM_CPU_PART_CORTEX_A75:
 			asm volatile ("HINT #16");
 			asm volatile ("mrs %0, S3_0_c12_c1_1\n" : "=r" (reg1)); /* read DISR_EL1 */
-			pr_emerg("DISR_EL1: %016lx\n", reg1);
+			dev_emerg(exynos_helper_dev, "DISR_EL1: %016lx\n", reg1);
 			exynos_cpu_err_parse(DISR_EL1, reg1);
 
 			asm volatile ("msr S3_0_c5_c3_1, %0\n"
@@ -466,7 +467,7 @@ static void exynos_dump_info(void *val)
 					"mrs %1, S3_0_c5_c4_3\n"
 					"mrs %2, S3_0_c5_c5_0\n"
 					: "=r" (reg1), "=r" (reg2), "=r" (reg3));
-			pr_emerg("CPU : ERXSTATUS_EL1: %016lx, ERXADDR_EL1: %016lx, "
+			dev_emerg(exynos_helper_dev, "CPU : ERXSTATUS_EL1: %016lx, ERXADDR_EL1: %016lx, "
 					"ERXMISC0_EL1: %016lx\n", reg1, reg2, reg3);
 			exynos_cpu_err_parse(ERXSTATUS_EL1, reg1);
 
@@ -478,7 +479,7 @@ static void exynos_dump_info(void *val)
 					"mrs %1, S3_0_c5_c4_3\n"
 					"mrs %2, S3_0_c5_c5_0\n"
 					: "=r" (reg1), "=r" (reg2), "=r" (reg3));
-			pr_emerg("DSU : ERXSTATUS_EL1: %016lx, ERXADDR_EL1: %016lx, "
+			dev_emerg(exynos_helper_dev, "DSU : ERXSTATUS_EL1: %016lx, ERXADDR_EL1: %016lx, "
 					"ERXMISC0_EL1: %016lx\n", reg1, reg2, reg3);
 			exynos_cpu_err_parse(ERXSTATUS_EL1, reg1);
 
@@ -497,7 +498,7 @@ static void exynos_dump_info(void *val)
 			"mrrc p15, 1, %2, %3, c15\n"
 			: "=r" (reg0), "=r" (reg1),
 			"=r" (reg2), "=r" (reg3));
-		pr_emerg("CPUMERRSR: %08lx_%08lx, L2MERRSR: %08lx_%08lx\n",
+		dev_emerg(exynos_helper_dev, "CPUMERRSR: %08lx_%08lx, L2MERRSR: %08lx_%08lx\n",
 				reg1, reg0, reg3, reg2);
 	}
 #endif
@@ -574,5 +575,10 @@ struct dbg_snapshot_helper_ops exynos_debug_ops = {
 
 void __init dbg_snapshot_soc_helper_init(void)
 {
+	exynos_helper_dev = create_empty_device();
+	if (!exynos_helper_dev)
+		panic("Exynos: create empty device fail\n");
+	dev_set_socdata(exynos_helper_dev, "Exynos", "Helper");
+
 	dbg_snapshot_register_soc_ops(&exynos_debug_ops);
 }
