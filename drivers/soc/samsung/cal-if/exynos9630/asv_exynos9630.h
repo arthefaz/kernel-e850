@@ -89,37 +89,38 @@ static struct id_tbl_info id_tbl;
 
 int asv_get_grp(unsigned int id)
 {
-	int grp = -1;
+//	int grp = -1;
 
-	switch (id) {
-	case MIF:
-		grp = asv_tbl.mif_asv_group + asv_tbl.mif_modify_group;
-		break;
-	case INT:
-	case INTCAM:
-		grp = asv_tbl.int_asv_group + asv_tbl.int_modify_group;
-		break;
-	case CPUCL0:
-		grp = asv_tbl.bigcpu_asv_group + asv_tbl.bigcpu_modify_group;
-		break;
-	case CPUCL1:
-		grp = asv_tbl.littlecpu_asv_group + asv_tbl.littlecpu_modify_group;
-		break;
-	case G3D:
-		grp = asv_tbl.g3d_asv_group + asv_tbl.g3d_modify_group;
-		break;
-	case CAM:
-	case DISP:
-		grp = asv_tbl.cam_disp_asv_group + asv_tbl.cam_disp_modify_group;
-		break;
-	case CP:
-		grp = asv_tbl.cp_asv_group + asv_tbl.cp_modify_group;
-		break;
-	default:
-		pr_info("Un-support asv grp %d\n", id);
-	}
+//	switch (id) {
+//	case MIF:
+//		grp = asv_tbl.mif_asv_group + asv_tbl.mif_modify_group;
+//		break;
+//	case INT:
+//	case INTCAM:
+//		grp = asv_tbl.int_asv_group + asv_tbl.int_modify_group;
+//		break;
+//	case CPUCL0:
+//		grp = asv_tbl.bigcpu_asv_group + asv_tbl.bigcpu_modify_group;
+//		break;
+//	case CPUCL1:
+//		grp = asv_tbl.littlecpu_asv_group + asv_tbl.littlecpu_modify_group;
+//		break;
+//	case G3D:
+//		grp = asv_tbl.g3d_asv_group + asv_tbl.g3d_modify_group;
+//		break;
+//	case CAM:
+//	case DISP:
+//		grp = asv_tbl.cam_disp_asv_group + asv_tbl.cam_disp_modify_group;
+//		break;
+//	case CP:
+//		grp = asv_tbl.cp_asv_group + asv_tbl.cp_modify_group;
+//		break;
+//	default:
+//		pr_info("Un-support asv grp %d\n", id);
+//	}
 
-	return grp;
+//	return grp;
+	return 0;
 }
 
 int asv_get_ids_info(unsigned int id)
@@ -151,7 +152,8 @@ int asv_get_ids_info(unsigned int id)
 
 int asv_get_table_ver(void)
 {
-	return asv_tbl.asv_table_version;
+//	return asv_tbl.asv_table_version;
+	return 0;
 }
 
 void id_get_rev(unsigned int *main_rev, unsigned int *sub_rev)
@@ -165,14 +167,14 @@ int asv_table_init(void)
 	int i;
 	unsigned int *p_table;
 	unsigned int *regs;
-	unsigned long tmp;
+//	unsigned long tmp;
 
-	p_table = (unsigned int *)&asv_tbl;
-
-	for (i = 0; i < ASV_INFO_ADDR_CNT; i++) {
-		exynos_smc_readsfr((unsigned long)(ASV_TABLE_BASE + 0x4 * i), &tmp);
-		*(p_table + i) = (unsigned int)tmp;
-	}
+//	p_table = (unsigned int *)&asv_tbl;
+//
+//	for (i = 0; i < ASV_INFO_ADDR_CNT; i++) {
+//		exynos_smc_readsfr((unsigned long)(ASV_TABLE_BASE + 0x4 * i), &tmp);
+//		*(p_table + i) = (unsigned int)tmp;
+//	}
 
 	p_table = (unsigned int *)&id_tbl;
 
