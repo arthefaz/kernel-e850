@@ -106,7 +106,7 @@ static struct esgov_policy * esg_find_esg_pol_qos_class(int class)
 unsigned int get_gov_target_util(int src, int dst, struct task_struct *p)
 {
 	struct esgov_policy *esg_policy = per_cpu(esgov_policy, dst);
-	int cpu, task_util = p->se.avg.ml.util_avg;
+	int cpu, task_util = ml_task_util(p);
 	int target_util = 0;
 
 	if (unlikely(!esg_policy || !esg_policy->enabled)) {
