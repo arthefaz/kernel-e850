@@ -71,7 +71,6 @@ static int s6e3ha9_displayon(struct exynos_panel_device *panel)
 	/* ESD flag: [2]=VLIN3, [6]=VLIN1 error check*/
 	dsim_write_data_seq(dsim, false, 0xED, 0x04, 0x44);
 
-#if !defined(CONFIG_EXYNOS_EWR)
 #if defined(CONFIG_EXYNOS_PLL_SLEEP)
 	/* TE start timing is advanced due to latency for the PLL_SLEEP
 	 *      default value : 3040(active line) + 7(vbp) - 2 = 0xBE5
@@ -81,7 +80,6 @@ static int s6e3ha9_displayon(struct exynos_panel_device *panel)
 	dsim_write_data_seq(dsim, false, 0xB9, 0x01, 0xB0, 0xE1, 0x09);
 #else
 	dsim_write_data_seq(dsim, false, 0xB9, 0x00, 0xB0, 0xEC, 0x09);
-#endif
 #endif
 	dsim_write_data_seq(dsim, false, 0xC5, 0x0D, 0x10, 0xB4, 0x3E, 0x01);
 
