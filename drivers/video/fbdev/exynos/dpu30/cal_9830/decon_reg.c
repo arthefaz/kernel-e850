@@ -518,6 +518,24 @@ static void decon_reg_configure_trigger(u32 id, enum decon_trig_mode mode)
 }
 
 #if defined(CONFIG_EXYNOS_EWR)
+/*
+ * wakeup_us : usec unit
+ * cnt : TE rising ~ expire
+ * (example)
+ *    if 60fps, TE period = 16666us(=1/fps) & wakeup_us = 100
+ *    cnt = (16666 - 100) time = 16566us
+ *    <meaning> wakeup at 16.566ms after TE rising
+ */
+static u32 decon_get_ewr_cycle(int fps, int wakeup_us)
+{
+	u32 cnt;
+
+	cnt = ((1000000 / fps) - wakeup_us) * 26;
+	decon_dbg("%s: ewr_cnt = %d @ %dfps\n", __func__, cnt, fps);
+
+	return cnt;
+}
+
 static void decon_reg_set_ewr_enable(u32 id, u32 en)
 {
 	u32 val, mask;
@@ -1816,8 +1834,9 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 		decon_reg_configure_lcd(id, p);
 		if (psr->psr_mode == DECON_MIPI_COMMAND_MODE) {
 #if defined(CONFIG_EXYNOS_EWR)
-			/* Request wake up befor 100us of TE */
-			decon_reg_set_ewr_control(id, 430733, 1);
+			/* 60fps: request wakeup at 16.566ms after TE rising */
+			decon_reg_set_ewr_control(id,
+				decon_get_ewr_cycle(lcd_info->fps, 100), 1);
 #endif
 			decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
 		}
