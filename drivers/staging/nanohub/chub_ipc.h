@@ -67,7 +67,11 @@
 
 /* contexthub bootargs */
 #define BL_OFFSET		(0x0)
+#if defined(CONFIG_SOC_EXYNOS9630)
+#define MAP_INFO_OFFSET (0x200)
+#elif defined(CONFIG_SOC_EXYNOS9610)
 #define MAP_INFO_OFFSET (256)
+#endif
 #define MAP_INFO_MAX_SIZE (128)
 #define CHUB_PERSISTBUF_SIZE (96)
 
@@ -398,8 +402,13 @@ enum vendor_sensor_list_id {
 	sensor_list_bmi160_accel_ucal,
 	sensor_list_bmi160_gyro,
 	sensor_list_bmi160_gyro_ucal,
+#if defined(CONFIG_SOC_EXYNOS9610)
 	sensor_list_stlis3mdl_mag,
 	sensor_list_stlis3mdl_mag_ucal,
+#elif defined(CONFIG_SOC_EXYNOS9630)
+	sensor_list_akmak09918_mag,
+	sensor_list_akmak09918_mag_ucal,
+#endif
 	sensor_list_bmp280_press,
 	sensor_list_max,
 };
@@ -488,7 +497,7 @@ struct ipc_map_area {
 #if defined(AP_IPC)
 #if defined(CONFIG_SOC_EXYNOS9810)
 #define REG_MAILBOX_VERSION (0x050)
-#elif defined(CONFIG_SOC_EXYNOS9610)
+#elif defined(CONFIG_SOC_EXYNOS9610) || defined(CONFIG_SOC_EXYNOS9630)
 #define REG_MAILBOX_VERSION (0x070)
 #else
 //

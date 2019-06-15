@@ -172,6 +172,7 @@ struct contexthub_ipc_info {
 	void __iomem *mailbox;
 	void __iomem *chub_dumpgpr;
 	void __iomem *chub_baaw;
+	void __iomem *vdd_sensor_en;
 	void __iomem *pmu_chub_reset;
 	void __iomem *pmu_chub_cpu;
 	void __iomem *cmu_chub_qch;
@@ -209,39 +210,36 @@ struct contexthub_ipc_info {
 
 /*	PMU CHUB_CPU registers */
 #if defined(CONFIG_SOC_EXYNOS9810)
-#define REG_CHUB_CPU_STATUS (0x0)
-#elif defined(CONFIG_SOC_EXYNOS9610)
-#define REG_CHUB_CPU_STATUS (0x4)
-#else
-/* TODO: Need to check */
-#define REG_CHUB_CPU_STATUS (0x0)
-#endif
-#define REG_CHUB_CPU_STATUS_BIT_STANDBYWFI (28)
-#if defined(CONFIG_SOC_EXYNOS9810)
-#define REG_CHUB_CPU_OPTION (0x4)
-#define ENABLE_SYSRESETREQ BIT(4)
-#elif defined(CONFIG_SOC_EXYNOS9610)
-#define REG_CHUB_CPU_OPTION (0x8)
-#define ENABLE_SYSRESETREQ BIT(9)
-#else
-/* TODO: Need to check */
-#define REG_CHUB_CPU_OPTION (0x0)
-#define ENABLE_SYSRESETREQ BIT(0)
-#endif
-#define REG_CHUB_CPU_DURATION (0x8)
+#define REG_CHUB_RESET_CHUB_CONFIGURATION	(0x0)
+#define REG_CHUB_CPU_STATUS			(0x0)
+#define REG_CHUB_CPU_OPTION			(0x4)
+#define ENABLE_SYSRESETREQ			BIT(4)
+#define CHUB_RESET_RELEASE_VALUE		(0x10000000)
 
-/*	PMU CHUB_RESET registers */
-#define REG_CHUB_RESET_CHUB_CONFIGURATION (0x0)
-#define REG_CHUB_RESET_CHUB_STATUS (0x4)
-#define REG_CHUB_RESET_CHUB_OPTION (0x8)
-#if defined(CONFIG_SOC_EXYNOS9810)
-#define CHUB_RESET_RELEASE_VALUE (0x10000000)
 #elif defined(CONFIG_SOC_EXYNOS9610)
-#define CHUB_RESET_RELEASE_VALUE (0x8000)
+#define REG_CHUB_CPU_CONFIGURATION		(0x0)
+#define REG_CHUB_CPU_STATUS			(0x4)
+#define REG_CHUB_CPU_OPTION			(0x8)
+#define ENABLE_SYSRESETREQ			BIT(9)
+#define CHUB_RESET_RELEASE_VALUE		(0x8000)
+#define REG_CHUB_CPU_STATUS_BIT_STANDBYWFI	(28)
+
+#elif defined(CONFIG_SOC_EXYNOS9630)
+#define REG_CHUB_CPU_CONFIGURATION		(0x0)
+#define REG_CHUB_CPU_STATUS			(0x4)
+#define REG_CHUB_CPU_OPTION			(0xc)
+#define ENABLE_SYSRESETREQ			BIT(9)
+#define CHUB_RESET_RELEASE_VALUE 		(0x1)
 #else
-/* TODO: Need to check */
-#define CHUB_RESET_RELEASE_VALUE (0x0)
+#define REG_CHUB_CPU_STATUS			(0x0)
+#define REG_CHUB_CPU_OPTION			(0x0)
+#define ENABLE_SYSRESETREQ			BIT(0)
+#define CHUB_RESET_RELEASE_VALUE		(0x0)
 #endif
+
+#define REG_CHUB_CPU_DURATION			(0x8)
+#define REG_CHUB_RESET_CHUB_OPTION		(0x4)
+#define REG_CHUB_CPU_STATUS_BIT_STANDBYWFI	(28)
 
 /*	CMU CHUB_QCH registers	*/
 #if defined(CONFIG_SOC_EXYNOS9610)
@@ -249,9 +247,12 @@ struct contexthub_ipc_info {
 #define IGNORE_FORCE_PM_EN BIT(2)
 #define CLOCK_REQ BIT(1)
 #define ENABLE BIT(0)
+#elif defined(CONFIG_SOC_EXYNOS9630)
+#define REG_GPH2_CON				(0x0)
+#define REG_GPH2_DAT				(0x4)
 #endif
 
-/*	CHUB dump gpr Registers : CHUB BASE + 0x1f000000 */
+/*	CHUB dump gpr Registers */
 #define REG_CHUB_DUMPGPR_CTRL (0x0)
 #define REG_CHUB_DUMPGPR_PCR  (0x4)
 #define REG_CHUB_DUMPGPR_GP0R (0x10)

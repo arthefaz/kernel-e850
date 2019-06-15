@@ -250,7 +250,7 @@ static int contexthub_ipc_drv_init(struct contexthub_ipc_info *chub)
 #endif
 	ret = chub_dbg_init(chub, chub->chub_rt_log.buffer, chub->chub_rt_log.buffer_size);
 	if (ret)
-		dev_err(chub_dev, "%s: fails. ret:%d\n", __func__, ret);
+		dev_err(chub_dev, "%s: fails in chub_dbg_init. ret:%d\n", __func__, ret);
 
 	return ret;
 }
@@ -417,7 +417,7 @@ static void contexthub_select_os(struct contexthub_ipc_info *ipc)
 	log_flush_all();
 	contexthub_download_image(ipc, IPC_REG_OS);
 	ipc_hw_write_shared_reg(AP, ipc->os_load, SR_BOOT_MODE);
-	ipc_write_val(AP, 99);
+	ipc_write_val(AP, READY_TO_GO);
 	do {
 		msleep(WAIT_CHUB_MS);
 		contexthub_ipc_write_event(ipc, MAILBOX_EVT_CHUB_ALIVE);
@@ -601,7 +601,9 @@ static void check_rtc_time(void)
 static int contexthub_hw_reset(struct contexthub_ipc_info *ipc,
 				 enum mailbox_event event)
 {
+#if defined(CONFIG_SOC_EXYNOS9610)
 	u32 val;
+#endif
 	int trycnt = 0;
 	int ret = 0;
 	int i;
@@ -648,25 +650,9 @@ static int contexthub_hw_reset(struct contexthub_ipc_info *ipc,
 				     REG_QCH_CON_CM4_SHUB_QCH);
 #endif
 			/* pmu reset-release on CHUB */
-			val = __raw_readl(ipc->pmu_chub_reset +
-					REG_CHUB_RESET_CHUB_OPTION);
-			__raw_writel((val | CHUB_RESET_RELEASE_VALUE),
-				     ipc->pmu_chub_reset +
-				     REG_CHUB_RESET_CHUB_OPTION);
+			ret = pmucal_shub_reset_release();
 
 #if defined(CONFIG_SOC_EXYNOS9610)
-			/* check chub cpu status */
-			do {
-				val = __raw_readl(ipc->pmu_chub_reset +
-						REG_CHUB_RESET_CHUB_CONFIGURATION);
-				msleep(WAIT_TIMEOUT_MS);
-				if (++trycnt > WAIT_TRY_CNT) {
-					dev_warn(ipc->dev,
-						"chub cpu status is not set correctly\n");
-					break;
-				}
-			} while ((val & 0x1) == 0x0);
-
 			/* cmu cm4 clock - release */
 			val = __raw_readl(ipc->cmu_chub_qch +
 					REG_QCH_CON_CM4_SHUB_QCH);
@@ -690,7 +676,9 @@ static int contexthub_hw_reset(struct contexthub_ipc_info *ipc,
 		}
 		break;
 	case MAILBOX_EVT_RESET:
+		#if defined(CHUB_RESET_ENABLE)
 		ret = pmucal_shub_reset_release();
+		#endif
 		break;
 	default:
 		break;
@@ -839,7 +827,9 @@ int contexthub_ipc_write_event(struct contexthub_ipc_info *ipc,
 		}
 		break;
 	case MAILBOX_EVT_SHUTDOWN:
+#if defined(CHUB_RESET_ENABLE)
 		/* assert */
+		atomic_set(&ipc->chub_status, CHUB_ST_SHUTDOWN);
 		if (ipc->block_reset) {
 			/* pmu call assert */
 			ret = pmucal_shub_reset_assert();
@@ -847,43 +837,28 @@ int contexthub_ipc_write_event(struct contexthub_ipc_info *ipc,
 				pr_err("%s: reset assert fail\n", __func__);
 				return ret;
 			}
-
-			/* pmu call reset-release_config */
-			ret = pmucal_shub_reset_release_config();
-			if (ret) {
-				pr_err("%s: reset release cfg fail\n", __func__);
-				return ret;
-			}
-
-			/* tzpc setting */
-			ret = exynos_smc(SMC_CMD_CONN_IF,
-				(EXYNOS_SHUB << 32) |
-				EXYNOS_SET_CONN_TZPC, 0, 0);
-			if (ret) {
-				pr_err("%s: TZPC setting fail\n",
-					__func__);
-				return -EINVAL;
-			}
-			dev_info(ipc->dev, "%s: tzpc setted\n", __func__);
-				/* baaw config */
-			contexthub_config_init(ipc);
 		} else {
+#if defined(CONFIG_SOC_EXYNOS9610)
 			val = __raw_readl(ipc->pmu_chub_reset +
 					  REG_CHUB_CPU_STATUS);
 			if (val & (1 << REG_CHUB_CPU_STATUS_BIT_STANDBYWFI)) {
 				val = __raw_readl(ipc->pmu_chub_reset +
-						  REG_CHUB_RESET_CHUB_CONFIGURATION);
+						  REG_CHUB_CPU_CONFIGURATION);
 				__raw_writel(val & ~(1 << 0),
 						 ipc->pmu_chub_reset +
-						 REG_CHUB_RESET_CHUB_CONFIGURATION);
+						 REG_CHUB_CPU_CONFIGURATION);
 			} else {
 				dev_err(ipc->dev,
 					"fails to shutdown contexthub. cpu_status: 0x%x\n",
 					val);
 				return -EINVAL;
 			}
+#else
+			pr_err("%s: core reset is not implemented yet except exynos9610\n", __func__);
+			return -EINVAL;
+#endif
 		}
-		atomic_set(&ipc->chub_status, CHUB_ST_SHUTDOWN);
+#endif
 		break;
 	case MAILBOX_EVT_CHUB_ALIVE:
 		ipc_hw_write_shared_reg(AP, AP_WAKE, SR_3);
@@ -893,7 +868,7 @@ int contexthub_ipc_write_event(struct contexthub_ipc_info *ipc,
 			dev_info(ipc->dev, "%s : chub is alive", __func__);
 		} else if (ipc->sel_os == true) {
 			dev_err(ipc->dev,
-				"%s : chub isn't alive, should be reset. status:%d, inreset:%d\n",
+				"%s : chub isn't alive, status:%d, inreset:%d\n",
 				__func__, atomic_read(&ipc->chub_status), atomic_read(&ipc->in_reset));
 			if (!atomic_read(&ipc->in_reset)) {
 #ifdef USE_NO_PANIC_ON_POWERON
@@ -1084,6 +1059,29 @@ out:
 	return ret;
 }
 
+int contexthub_reset_prepare(struct contexthub_ipc_info *ipc) {
+	int ret;
+	/* pmu call reset-release_config */
+	ret = pmucal_shub_reset_release_config();
+	if (ret) {
+		pr_err("%s: reset release cfg fail\n", __func__);
+		return ret;
+	}
+	/* tzpc setting */
+	ret = exynos_smc(SMC_CMD_CONN_IF,
+		(EXYNOS_SHUB << 32) |
+		EXYNOS_SET_CONN_TZPC, 0, 0);
+	if (ret) {
+		pr_err("%s: TZPC setting fail\n",
+			__func__);
+		return -EINVAL;
+	}
+	dev_info(ipc->dev, "%s: tzpc set\n", __func__);
+	/* baaw config */
+	contexthub_config_init(ipc);
+	return ret;
+}
+
 int contexthub_reset(struct contexthub_ipc_info *ipc, bool force_load, enum chub_err_type err)
 {
 	int ret;
@@ -1126,14 +1124,21 @@ int contexthub_reset(struct contexthub_ipc_info *ipc, bool force_load, enum chub
 
 	/* shutdown */
 	mutex_lock(&pmu_shutdown_mutex);
-	dev_info(ipc->dev, "%s: enter shutdown\n", __func__);
+	dev_info(ipc->dev, "%s: shutdown\n", __func__);
 	ret = contexthub_ipc_write_event(ipc, MAILBOX_EVT_SHUTDOWN);
 	if (ret) {
 		dev_err(ipc->dev, "%s: shutdown fails, ret:%d\n", __func__, ret);
 		mutex_unlock(&pmu_shutdown_mutex);
 		goto out;
 	}
-	dev_info(ipc->dev, "%s: out shutdown\n", __func__);
+	/* deassert and config */
+	dev_info(ipc->dev, "%s: prepare\n", __func__);
+	ret = contexthub_reset_prepare(ipc);
+	if (ret) {
+		dev_err(ipc->dev, "%s: prepare fails, ret:%d\n", __func__, ret);
+		mutex_unlock(&pmu_shutdown_mutex);
+		goto out;
+	}
 	mutex_unlock(&pmu_shutdown_mutex);
 
 	/* image download */
@@ -1162,15 +1167,15 @@ int contexthub_reset(struct contexthub_ipc_info *ipc, bool force_load, enum chub
 				goto out;
 		}
 	}
-	/* reset */
+	/* reset release */
 	ret = contexthub_ipc_write_event(ipc, MAILBOX_EVT_RESET);
 	if (ret) {
-		dev_err(ipc->dev, "%s: reset fails, ret:%d\n", __func__, ret);
+	        dev_err(ipc->dev, "%s: chub reset fail! (ret:%d)\n", __func__, ret);
 	} else {
-		dev_info(ipc->dev, "%s: chub reseted! (cnt:%d)\n",
-			__func__, ipc->err_cnt[CHUB_ERR_RESET_CNT]);
-		ipc->err_cnt[CHUB_ERR_RESET_CNT]++;
-		atomic_set(&ipc->in_use_ipc, 0);
+	        dev_info(ipc->dev, "%s: chub reset done! (cnt:%d)\n",
+	                __func__, ipc->err_cnt[CHUB_ERR_RESET_CNT]);
+	        ipc->err_cnt[CHUB_ERR_RESET_CNT]++;
+	        atomic_set(&ipc->in_use_ipc, 0);
 	}
 out:
 	msleep(100); /* wakeup delay */
@@ -1428,17 +1433,18 @@ static __init int contexthub_ipc_hw_init(struct platform_device *pdev,
 {
 	int ret;
 	int irq;
-	struct resource *res;
 	const char *os;
 	const char *resetmode;
 	const char *selectos;
 	struct device *dev = &pdev->dev;
 	struct device_node *node = dev->of_node;
+#if defined(CONFIG_SOC_EXYNOS9610)
+	struct clk *clk;
+	struct resource *res;
 	const char *string_array[10];
 	int chub_clk_len;
-	struct clk *clk;
 	int i;
-
+#endif
 	if (!node) {
 		dev_err(dev, "driver doesn't support non-dt\n");
 		return -ENODEV;
@@ -1539,7 +1545,6 @@ static __init int contexthub_ipc_hw_init(struct platform_device *pdev,
 		return PTR_ERR(chub->cmu_chub_qch);
 	}
 #endif
-
 	/* get addresses information to set BAAW */
 	if (of_property_read_u32_index
 		(node, "baaw,baaw-p-apm-chub", 0,
@@ -1565,6 +1570,7 @@ static __init int contexthub_ipc_hw_init(struct platform_device *pdev,
 		return -ENODEV;
 	}
 
+#if defined(CONFIG_SOC_EXYNOS9610)
 	/* disable chub irq list (for sensor irq) */
 	of_property_read_u32(node, "chub-irq-pin-len", &chub->irq_pin_len);
 	if (chub->irq_pin_len) {
@@ -1586,15 +1592,17 @@ static __init int contexthub_ipc_hw_init(struct platform_device *pdev,
 			dev_info(&pdev->dev, "get chub irq_pin:%d\n", chub->irq_pins[i]);
 		}
 	}
-#if defined(CONFIG_SOC_EXYNOS9610)
 	cal_dll_apm_enable();
-#endif
 
 	clk = devm_clk_get_and_prepare(dev, "chub_bus");
 	if (!clk)
 		return -ENODEV;
 	chub->clkrate = clk_get_rate(clk);
-
+#endif
+	if(!chub->clkrate)
+		/* default clkrate for TEMP */
+		chub->clkrate = 4000000;
+#if defined(CONFIG_SOC_EXYNOS9610)
 	chub_clk_len = of_property_count_strings(node, "clock-names");
 	of_property_read_string_array(node, "clock-names", string_array, chub_clk_len);
 	for (i = 0; i < chub_clk_len; i++) {
@@ -1603,7 +1611,22 @@ static __init int contexthub_ipc_hw_init(struct platform_device *pdev,
 			return -ENODEV;
 		dev_info(&pdev->dev, "clk_name: %s enable\n", __clk_get_name(clk));
 	}
-
+#endif
+#if defined(CONFIG_SOC_EXYNOS9630)
+#if 0
+	chub->vdd_sensor_en = get_iomem(pdev, "vdd_sensor_en", NULL);
+	if (IS_ERR(chub->vdd_sensor_en)) {
+		pr_info("vdd_sensor_en not found\n");
+		return -ENODEV;
+	}
+	ret = __raw_readl(chub->vdd_sensor_en + REG_GPH2_CON);
+	__raw_writel(ret | 1 << 12, chub->vdd_sensor_en + REG_GPH2_CON);
+	ret = __raw_readl(chub->vdd_sensor_en + REG_GPH2_DAT);
+	__raw_writel(ret | 1 << 3, chub->vdd_sensor_en + REG_GPH2_DAT);
+	msleep(100);
+	pr_info("vdd_sensor_en CON:0x%lx DAT:0x%lx\n", __raw_readl(chub->vdd_sensor_en + REG_GPH2_CON), __raw_readl(chub->vdd_sensor_en + REG_GPH2_DAT));
+#endif
+#endif
 	return 0;
 }
 
