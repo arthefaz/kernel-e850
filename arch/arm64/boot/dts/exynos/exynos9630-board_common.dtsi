@@ -221,7 +221,8 @@
 					reg = <0x00>;
 					interrupts = <GIC_SPI INTREQ_COMB_NONSECURE_SYSREG_VGPIO2AP IRQ_TYPE_LEVEL_HIGH>;
 					pinctrl-names = "default";
-					pinctrl-0 = <&pm_wrstbi>;
+					pinctrl-0 = <&pm_wrstbi &smpl_warn>;
+					gpios = <&gpg0 0 0>;
 					/* RTC: wtsr/smpl */
 					wtsr_en = "enabled"; /* enable */
 					smpl_en = "enabled"; /* enable */
@@ -236,6 +237,21 @@
 					init_time,mon = <0>;
 					init_time,year = <119>;
 					init_time,wday = <2>;
+					/* SMPL_WARN */
+					smpl_warn_en = <1>; /* 1 : enable , 0 : disable */
+					/* range of SMPL_WARN_LEVEL */
+					/* 0x00 : 2.1V, 0x20 : 2.3V, 0x40 : 2.5V, 0x60 : 2.7V 0x80 : 2.9V */
+					/* 0xA0 : 3.1V, 0xC0 : 3.3V */
+					smpl_warn_vth = <0x80>;
+					/* SMPL_WARN_HYS[4:3] 00(Reserved), 01(200mV), 10(300mV), 11(Reserved) */
+					smpl_warn_hys = <0x00>;
+					/* OCP_WARN */
+					ocp_warn_b2_en = <1>; /* 1 : enable, 0 : disable */
+					ocp_warn_b2_cnt = <0>; /* ocp warn reset timing control, 0 : 2 clock, 1 : 32 clock */
+					ocp_warn_b2_dvs_mask = <0>; /* ocp warn mask when dvs, 0 : not masked, 1 : masked  */
+					ocp_warn_b3_en = <1>; /* 1 : enable, 0 : disable */
+					ocp_warn_b3_cnt = <0>; /* ocp warn reset timing control, 0 : 2 clock, 1 : 32 clock */
+					ocp_warn_b3_dvs_mask = <0>; /* ocp warn mask when dvs, 0 : not masked, 1 : masked  */
 
 					s2mpu10-keys {
 						button@1 {
@@ -555,6 +571,10 @@
 					s2mpu11,wakeup = "enabled";
 					reg = <0x00>; /* TODO: Check */
 					wtsr_en = <1>; /* 0 : disable, 1: enable */
+					/* OCP_WARN */
+					ocp_warn_b2_en = <1>; /* 1 : enable, 0 : disable */
+					ocp_warn_b2_cnt = <0>; /* ocp warn reset timing control, 0 : 2 clock, 1 : 32 clock */
+					ocp_warn_b2_dvs_mask = <0>; /* ocp warn mask when dvs, 0 : not masked, 1 : masked  */
 
 					regulators {
 						s_b1_reg: BUCK1 {
