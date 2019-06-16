@@ -192,7 +192,7 @@
 			sched-energy-data = <&DEIMOS_ENERGY>;
 			cpu-idle-states = <&DEIMOS_CPU_SLEEP>;
 		};
-		
+
 		idle-states {
 			entry-method = "arm,psci";
 
@@ -203,7 +203,7 @@
 				entry-latency-us = <70>;
 				exit-latency-us = <160>;
 				min-residency-us = <2000>;
-				status = "okay";
+				status = "disabled";
 			};
 
 			DEIMOS_CPU_SLEEP: deimos-cpu-sleep {
@@ -213,7 +213,7 @@
 				entry-latency-us = <150>;
 				exit-latency-us = <190>;
 				min-residency-us = <2500>;
-				status = "okay";
+				status = "disabled";
 			};
 		};
 
