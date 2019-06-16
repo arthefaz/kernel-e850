@@ -731,6 +731,29 @@ static int __init dbg_snapshot_init_dt(void)
 	return init_fn(np);
 }
 
+static void __init dbg_snapshot_boot_cnt(void)
+{
+	unsigned int reg;
+
+	reg = __raw_readl(dbg_snapshot_get_base_vaddr() +
+				DSS_OFFSET_KERNEL_BOOT_CNT_MAGIC);
+	if (reg == DSS_BOOT_CNT_MAGIC) {
+		reg = __raw_readl(dbg_snapshot_get_base_vaddr() +
+					DSS_OFFSET_KERNEL_BOOT_CNT);
+		reg += 1;
+		writel(reg, dbg_snapshot_get_base_vaddr() +
+					DSS_OFFSET_KERNEL_BOOT_CNT);
+	} else {
+		reg = 1;
+		writel(reg, dbg_snapshot_get_base_vaddr() +
+					DSS_OFFSET_KERNEL_BOOT_CNT);
+		writel(DSS_BOOT_CNT_MAGIC, dbg_snapshot_get_base_vaddr() +
+						DSS_OFFSET_KERNEL_BOOT_CNT_MAGIC);
+	}
+
+	dev_info(dss_desc.dev, "Kernel Booting SEQ #%u\n", reg);
+}
+
 static int __init dbg_snapshot_init(void)
 {
 	dbg_snapshot_init_desc();
@@ -744,6 +767,7 @@ static int __init dbg_snapshot_init(void)
 	 */
 		dbg_snapshot_log_idx_init();
 		dbg_snapshot_fixmap();
+		dbg_snapshot_boot_cnt();
 		dbg_snapshot_init_dt();
 		dbg_snapshot_helper_init();
 		dbg_snapshot_utils_init();
