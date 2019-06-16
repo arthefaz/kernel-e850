@@ -110,6 +110,12 @@ void dbg_snapshot_scratch_reg(unsigned int val)
 		__raw_writel(val, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_SCRATCH);
 }
 
+void dbg_snapshot_scratch_clear(void)
+{
+	if (dbg_snapshot_get_enable("header"))
+		__raw_writel(DSS_SIGN_RESET, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_SCRATCH);
+}
+
 bool dbg_snapshot_is_scratch(void)
 {
 	return __raw_readl(dbg_snapshot_get_base_vaddr() +

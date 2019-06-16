@@ -98,6 +98,7 @@ static void exynos_power_off(void)
 #ifdef CONFIG_EXYNOS_ACPM
 			exynos_acpm_reboot();
 #endif
+			dbg_snapshot_scratch_clear();
 			pr_emerg("%s: Set PS_HOLD Low.\n", __func__);
 			writel(readl(exynos_pmu_base + PS_HOLD_CONTROL) & 0xFFFFFEFF,
 						exynos_pmu_base + PS_HOLD_CONTROL);
