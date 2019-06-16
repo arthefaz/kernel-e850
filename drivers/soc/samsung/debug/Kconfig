@@ -30,17 +30,6 @@ config PC_ITERATION
         help
           Print out Program Counter as iteration value.
 
-config EXYNOS_CORESIGHT_MAINTAIN_DBG_REG
-        bool "Save/Restore Debug Registers"
-        depends on EXYNOS_CORESIGHT
-        default n
-        help
-          When core power is down, debug registers are not mainained data
-          and OS-lock is set. To maintain data, debug registers's data must
-          save in /restore from memory. If OS-lock is set, debugging to use
-          trace32 is impossible. So OS-lock must clear when core power is up.
-          This config must enable only using iTSP program.
-
 config EXYNOS_ADV_TRACER
         bool "Exynos Advanced Tracer"
         default n
