@@ -65,6 +65,7 @@ struct exynos_chipid_info {
 	u64 unique_id;
 	u64 memsize;
 	struct exynos_chipid_variant *drv_data;
+	struct platform_device *pdev;
 };
 
 extern struct exynos_chipid_info exynos_soc_info;

@@ -252,9 +252,11 @@ static int __init exynos_chipid_probe(struct platform_device *pdev)
 		goto free_rev;
 
 	soc_device_to_device(soc_dev);
-	dev_info(&pdev->dev, "Exynos: CPU[%s] CPU_REV[0x%x] Detected\n",
+	dev_set_socdata(&pdev->dev, "Exynos", "ChipID");
+	dev_info(&pdev->dev, "CPU[%s] CPU_REV[0x%x] Detected\n",
 			product_id_to_name(exynos_soc_info.product_id),
 			exynos_soc_info.revision);
+	exynos_soc_info.pdev = pdev;
 	return 0;
 free_rev:
 	kfree(soc_dev_attr->revision);
@@ -381,8 +383,14 @@ static int __init chipid_sysfs_init(void)
 	int ret = 0;
 
 	ret = subsys_system_register(&chipid_subsys, chipid_sysfs_groups);
-	if (ret)
-		pr_err("fail to register exynos-snapshop subsys\n");
+	if (ret) {
+		if (exynos_soc_info.pdev) {
+			dev_err(&exynos_soc_info.pdev->dev,
+				"fail to register exynos-snapshop subsys\n");
+		} else {
+			pr_err("fail to register exynos-snapshop subsys\n");
+		}
+	}
 
 	return ret;
 }
