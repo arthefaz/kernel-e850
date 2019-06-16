@@ -30,6 +30,7 @@
 
 extern void (*arm_pm_restart)(enum reboot_mode reboot_mode, const char *cmd);
 static void __iomem *exynos_pmu_base = NULL;
+static struct device *exynos_reboot_dev;
 
 static const char * const big_cores[] = {
 	"arm,mongoose",
@@ -90,7 +91,7 @@ static void exynos_power_off(void)
 {
 	int poweroff_try = 0;
 
-	pr_info("%s: Power off %d \n", __func__, s2mpu10_read_pwron_status());
+	dev_info(exynos_reboot_dev, "%s: Power off %d \n", __func__, s2mpu10_read_pwron_status());
 
 	while (1) {
 		/* wait for power button release */
@@ -99,16 +100,16 @@ static void exynos_power_off(void)
 			exynos_acpm_reboot();
 #endif
 			dbg_snapshot_scratch_clear();
-			pr_emerg("%s: Set PS_HOLD Low.\n", __func__);
+			dev_emerg(exynos_reboot_dev, "%s: Set PS_HOLD Low.\n", __func__);
 			writel(readl(exynos_pmu_base + PS_HOLD_CONTROL) & 0xFFFFFEFF,
 						exynos_pmu_base + PS_HOLD_CONTROL);
 
 			++poweroff_try;
-			pr_emerg("%s: Should not reach here! (poweroff_try:%d)\n",
+			dev_emerg(exynos_reboot_dev, "%s: Should not reach here! (poweroff_try:%d)\n",
 				 __func__, poweroff_try);
 		} else {
 			/* if power button is not released, wait and check TA again */
-			pr_info("%s: PowerButton is not released.\n", __func__);
+			dev_info(exynos_reboot_dev, "%s: PowerButton is not released.\n", __func__);
 		}
 		mdelay(1000);
 	}
@@ -116,7 +117,7 @@ static void exynos_power_off(void)
 #else
 static void exynos_power_off(void)
 {
-	pr_info("Exynos power off does not support.\n");
+	dev_info(exynos_reboot_dev, "Exynos power off does not support.\n");
 }
 #endif
 #endif
@@ -150,10 +151,10 @@ static void exynos_reboot(enum reboot_mode mode, const char *cmd)
 	/* Check by each SoC */
 	soc_id = exynos_soc_info.product_id;
 	revision = exynos_soc_info.revision;
-	pr_info("SOC ID %X. Revision: %x\n", soc_id, revision);
+	dev_info(exynos_reboot_dev, "SOC ID %X. Revision: %x\n", soc_id, revision);
 
 	/* Do S/W Reset */
-	pr_emerg("%s: Exynos SoC reset right now\n", __func__);
+	dev_emerg(exynos_reboot_dev, "%s: Exynos SoC reset right now\n", __func__);
 	__raw_writel(SWRESET, exynos_pmu_base + SYSTEM_CONFIGURATION);
 
 	/* Wait for S/W reset */
@@ -168,7 +169,7 @@ static int __init exynos_reboot_setup(struct device_node *np)
 	if (!of_property_read_u32(np, "pmu_base", &id)) {
 		exynos_pmu_base = ioremap(id, SZ_16K);
 		if (!exynos_pmu_base) {
-			pr_err("%s: failed to map to exynos-pmu-base address 0x%x\n",
+			dev_err(exynos_reboot_dev, "%s: failed to map to exynos-pmu-base address 0x%x\n",
 				__func__, id);
 			err = -ENOMEM;
 		}
@@ -176,7 +177,13 @@ static int __init exynos_reboot_setup(struct device_node *np)
 
 	of_node_put(np);
 
-	pr_info("[Exynos Reboot]: Success to register arm_pm_restart\n");
+	exynos_reboot_dev = create_empty_device();
+	if (!exynos_reboot_dev) {
+		panic("[Exynos Reboot] : fail to register empty device\n");
+	} else {
+		dev_set_socdata(exynos_reboot_dev, "Exynos", "Reboot");
+		dev_info(exynos_reboot_dev, "Success to register arm_pm_restart\n");
+	}
 
 #ifndef CONFIG_DEBUG_SNAPSHOT
 	/* If Debug-Snapshot is disabed, This code prevents entering fastboot */
