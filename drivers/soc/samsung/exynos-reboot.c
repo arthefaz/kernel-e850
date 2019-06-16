@@ -21,7 +21,6 @@
 #include <linux/soc/samsung/exynos-soc.h>
 #include <soc/samsung/exynos-debug.h>
 #include <linux/debug-snapshot.h>
-#include "../../../lib/debug-snapshot-local.h"
 
 #ifdef CONFIG_EXYNOS_ACPM
 #include <soc/samsung/acpm_ipc_ctrl.h>
@@ -99,7 +98,6 @@ static void exynos_power_off(void)
 #ifdef CONFIG_EXYNOS_ACPM
 			exynos_acpm_reboot();
 #endif
-			dbg_snapshot_scratch_reg(DSS_SIGN_RESET);
 			pr_emerg("%s: Set PS_HOLD Low.\n", __func__);
 			writel(readl(exynos_pmu_base + PS_HOLD_CONTROL) & 0xFFFFFEFF,
 						exynos_pmu_base + PS_HOLD_CONTROL);
