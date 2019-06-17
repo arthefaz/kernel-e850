@@ -330,29 +330,24 @@ void usbpd_manager_inform_event(struct usbpd_data *pd_data,
 	switch (event) {
 	case MANAGER_DISCOVER_IDENTITY_ACKED:
 		usbpd_manager_get_identity(pd_data);
-		usbpd_manager_command_to_policy(pd_data->dev,
-				MANAGER_REQ_VDM_DISCOVER_SVID);
+		usbpd_manager_command_to_policy(pd_data->dev, MANAGER_REQ_VDM_DISCOVER_SVID);
 		break;
 	case MANAGER_DISCOVER_SVID_ACKED:
 		usbpd_manager_get_svids(pd_data);
-		usbpd_manager_command_to_policy(pd_data->dev,
-				MANAGER_REQ_VDM_DISCOVER_MODE);
+		usbpd_manager_command_to_policy(pd_data->dev, MANAGER_REQ_VDM_DISCOVER_MODE);
 		break;
 	case MANAGER_DISCOVER_MODE_ACKED:
 		ret = usbpd_manager_get_modes(pd_data);
 		if (ret == USBPD_DP_SUPPORT)
-			usbpd_manager_command_to_policy(pd_data->dev,
-								MANAGER_REQ_VDM_ENTER_MODE);
+			usbpd_manager_command_to_policy(pd_data->dev, MANAGER_REQ_VDM_ENTER_MODE);
 		break;
 	case MANAGER_ENTER_MODE_ACKED:
 		usbpd_manager_enter_mode(pd_data);
-		usbpd_manager_command_to_policy(pd_data->dev,
-			MANAGER_REQ_VDM_STATUS_UPDATE);
+		usbpd_manager_command_to_policy(pd_data->dev, MANAGER_REQ_VDM_STATUS_UPDATE);
 		break;
 	case MANAGER_STATUS_UPDATE_ACKED:
 		usbpd_manager_get_status(pd_data);
-		usbpd_manager_command_to_policy(pd_data->dev,
-			MANAGER_REQ_VDM_DisplayPort_Configure);
+		usbpd_manager_command_to_policy(pd_data->dev, MANAGER_REQ_VDM_DisplayPort_Configure);
 		break;
 	case MANAGER_DisplayPort_Configure_ACKED:
 		usbpd_manager_get_configure(pd_data);
@@ -361,27 +356,22 @@ void usbpd_manager_inform_event(struct usbpd_data *pd_data,
 		usbpd_manager_get_attention(pd_data);
 		break;
 	case MANAGER_NEW_POWER_SRC:
-		usbpd_manager_command_to_policy(pd_data->dev,
-				MANAGER_REQ_NEW_POWER_SRC);
+		usbpd_manager_command_to_policy(pd_data->dev, MANAGER_REQ_NEW_POWER_SRC);
 		break;
 	case MANAGER_UVDM_SEND_MESSAGE:
-		usbpd_manager_command_to_policy(pd_data->dev,
-				MANAGER_REQ_UVDM_SEND_MESSAGE);
+		usbpd_manager_command_to_policy(pd_data->dev, MANAGER_REQ_UVDM_SEND_MESSAGE);
 		break;
 	case MANAGER_UVDM_RECEIVE_MESSAGE:
 		usbpd_manager_receive_samsung_uvdm_message(pd_data);
 		break;
 	case MANAGER_START_DISCOVER_IDENTITY:
-		usbpd_manager_command_to_policy(pd_data->dev,
-					MANAGER_REQ_VDM_DISCOVER_IDENTITY);
+		usbpd_manager_command_to_policy(pd_data->dev, MANAGER_REQ_VDM_DISCOVER_IDENTITY);
 		break;
 	case MANAGER_SEND_PR_SWAP:
-		usbpd_manager_command_to_policy(pd_data->dev,
-					MANAGER_REQ_PR_SWAP);
+		usbpd_manager_command_to_policy(pd_data->dev, MANAGER_REQ_PR_SWAP);
 		break;
 	case MANAGER_SEND_DR_SWAP:
-		usbpd_manager_command_to_policy(pd_data->dev,
-					MANAGER_REQ_DR_SWAP);
+		usbpd_manager_command_to_policy(pd_data->dev, MANAGER_REQ_DR_SWAP);
 		break;
 	default:
 		pr_info("%s: not matched event(%d)\n", __func__, event);
@@ -842,8 +832,8 @@ int usbpd_manager_get_configure(struct usbpd_data *pd_data)
 
 	if (manager->SVID_0 == TypeC_DP_SUPPORT)
 		ifconn_event_work(pdic_data, IFCONN_NOTIFY_MANAGER,
-						IFCONN_NOTIFY_ID_DP_LINK_CONF,
-						IFCONN_NOTIFY_EVENT_ATTACH, manager);
+			IFCONN_NOTIFY_ID_DP_LINK_CONF,
+			IFCONN_NOTIFY_EVENT_ATTACH, manager);
 
 	return 0;
 }

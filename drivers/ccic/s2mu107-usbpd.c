@@ -101,7 +101,7 @@ static int s2mu107_usbpd_set_cc_control(struct s2mu107_usbpd_data  *pdic_data,
 	   int val);
 static void s2mu107_usbpd_set_rp_scr_sel(struct s2mu107_usbpd_data *pdic_data,
 	   CCIC_RP_SCR_SEL scr_sel);
-int s2mu107_usbpd_check_msg(void *_data, u64 *val);
+static int s2mu107_usbpd_check_msg(void *_data, u64 *val);
 static int s2mu107_usbpd_bulk_read(struct i2c_client *i2c, u8 reg, int count,
 	   u8 *buf);
 char *rid_text[] = {
@@ -497,7 +497,7 @@ static void s2mu107_usbpd_get_cc_voltage(struct s2mu107_usbpd_data *usbpd_data)
 #endif
 }
 
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_IFCONN_NOTIFIER)
 static void process_dr_swap(struct s2mu107_usbpd_data *usbpd_data)
 {
 	struct i2c_client *i2c = usbpd_data->i2c;
@@ -1492,7 +1492,7 @@ static int s2mu107_set_data_role(void *_data, int val)
 
 	pdic_data->data_role = val;
 
-#if defined(CONFIG_CCIC_NOTIFIER)
+#if defined(CONFIG_IFCONN_NOTIFIER)
 	process_dr_swap(pdic_data);
 #endif
 	return 0;
@@ -1594,7 +1594,7 @@ static void s2mu107_usbpd_set_rp_scr_sel(struct s2mu107_usbpd_data *pdic_data,
 	}
 }
 
-int s2mu107_usbpd_check_msg(void *_data, u64 *val)
+static int s2mu107_usbpd_check_msg(void *_data, u64 *val)
 {
 	struct usbpd_data *data = (struct usbpd_data *) _data;
 	int data_type = 0;
@@ -1740,7 +1740,7 @@ int s2mu107_usbpd_check_msg(void *_data, u64 *val)
 				*val |= one << VDM_ENTER_MODE;
 				break;
 			case Discover_Modes:
-				*val |= one << VDM_ENTER_MODE;
+				*val |= one << VDM_DISCOVER_MODE;
 				break;
 			case Discover_SVIDs:
 				*val |= one << VDM_DISCOVER_SVID;
