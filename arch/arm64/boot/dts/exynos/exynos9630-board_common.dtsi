@@ -1048,6 +1048,13 @@
 		pinctrl-0 = <&if_pmic_irq>;
 		s2mu107,irq-gpio = <&gpa0 4 1>;
 		s2mu107,wakeup;
+		flash_led {
+			flash-gpio = <&gpp2 2 0>;
+			torch-gpio = <&gpp2 3 0>;
+			flash_current = <1400>;
+			torch_current = <125>;
+			status = "okay";
+		};
 	};
 
 	s2mu107-fuelgauge@3B {
