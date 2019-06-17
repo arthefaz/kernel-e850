@@ -1984,7 +1984,7 @@ int displayport_audio_config(u32 sst_id, struct displayport_audio_config_data *a
 		displayport_audio_wait_buf_full(sst_id);
 		displayport->sst[sst_id]->audio_state = AUDIO_WAIT_BUF_FULL;
 	} else if (audio_config_data->audio_enable == AUDIO_DMA_REQ_HIGH) {
-		displayport_audio_dma_force_req_release(sst_id);
+		displayport_reg_set_dma_req_gen(sst_id, 1);
 		displayport->sst[sst_id]->audio_state = AUDIO_DMA_REQ_HIGH;
 	} else
 		displayport_info("Not support audio_enable = %d\n", audio_config_data->audio_enable);

@@ -2050,7 +2050,6 @@ void displayport_audio_enable(u32 sst_id,
 	displayport_reg_set_dp_audio_enable(sst_id, audio_config_data->audio_enable);
 	displayport_set_audio_ch_status(sst_id, audio_config_data);
 	displayport_reg_set_audio_ch_status_same(sst_id, 1);
-	displayport_reg_set_dma_req_gen(sst_id, 1);
 	displayport_reg_set_audio_master_mode_enable(sst_id, audio_config_data->audio_enable);
 	displayport_reg_print_audio_state(sst_id);
 }
@@ -2072,11 +2071,6 @@ void displayport_audio_wait_buf_full(u32 sst_id)
 	displayport_reg_set_audio_master_mode_enable(sst_id, 0);
 	displayport_reg_set_dma_req_gen(sst_id, 0);
 	displayport_info("SST%d displayport_audio_wait_buf_full\n", sst_id + 1);
-}
-
-void displayport_audio_dma_force_req_release(u32 sst_id)
-{
-	displayport_info("SST%d skip displayport_audio_dma_force_req_release(not need)", sst_id + 1);
 }
 
 void displayport_audio_bist_enable(u32 sst_id,

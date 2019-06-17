@@ -1160,13 +1160,13 @@ void displayport_audio_enable(u32 sst_id,
 		struct displayport_audio_config_data *audio_config_data);
 void displayport_audio_disable(u32 sst_id);
 void displayport_audio_wait_buf_full(u32 sst_id);
-void displayport_audio_dma_force_req_release(u32 sst_id);
 void displayport_audio_bist_enable(u32 sst_id,
 		struct displayport_audio_config_data audio_config_data);
 void displayport_audio_init_config(u32 sst_id);
 void displayport_audio_bist_config(u32 sst_id,
 		struct displayport_audio_config_data audio_config_data);
 void displayport_reg_print_audio_state(u32 sst_id);
+void displayport_reg_set_dma_req_gen(u32 sst_id, u32 en);
 
 void displayport_reg_set_hdcp22_system_enable(u32 en);
 void displayport_reg_set_hdcp22_mode(u32 en);
