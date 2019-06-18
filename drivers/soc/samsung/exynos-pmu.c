@@ -13,7 +13,6 @@
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
 #include <linux/platform_device.h>
-#include <asm/smp_plat.h>
 #include <soc/samsung/exynos-pmu.h>
 
 /**
@@ -49,30 +48,46 @@ EXPORT_SYMBOL(exynos_pmu_read);
 EXPORT_SYMBOL(exynos_pmu_write);
 EXPORT_SYMBOL(exynos_pmu_update);
 
-/**
- * CPU power control registers in PMU are arranged at regular intervals
- * (interval = 0x8). pmu_cpu_offset calculates how far cpu is from address
- * of first cpu. This expression is based on cpu and cluster id in MPIDR,
- * refer below.
+#define PMU_CPU_CONFIG_BASE			0x1000
+#define PMU_CPU_STATUS_BASE			0x1004
+#define CPU_LOCAL_PWR_CFG			0x1
 
- * cpu address offset : ((cluster id << 2) | (cpu id)) * 0x8
- */
+static int pmu_cpu_offset(unsigned int cpu)
+{
+	unsigned int offset = 0;
 
-#ifdef CONFIG_SOC_EXYNOS9810
-#define CPU_PER_OFFSET		0x8
-#define phy_cluster(cpu)	!MPIDR_AFFINITY_LEVEL(cpu_logical_map(cpu), 1)
-#else
-#define CPU_PER_OFFSET		0x80
-#define phy_cluster(cpu)	MPIDR_AFFINITY_LEVEL(cpu_logical_map(cpu), 1)
-#endif
+	switch (cpu) {
+	case 0:
+		offset = 0x0;
+		break;
+	case 1:
+		offset = 0x80;
+		break;
+	case 2:
+		offset = 0x100;
+		break;
+	case 3:
+		offset = 0x180;
+		break;
+	case 4:
+		offset = 0x200;
+		break;
+	case 5:
+		offset = 0x280;
+		break;
+	case 6:
+		offset = 0x400;
+		break;
+	case 7:
+		offset = 0x480;
+		break;
+	default:
+		BUG();
+		break;
+	}
+	return offset;
+}
 
-#define phy_cpu(cpu)	MPIDR_AFFINITY_LEVEL(cpu_logical_map(cpu), 0)
-
-#define pmu_cpu_offset(cpu)	(((phy_cluster(cpu) << 2)| phy_cpu(cpu)) * CPU_PER_OFFSET)
-
-#define PMU_CPU_CONFIG_BASE			0x2000
-#define PMU_CPU_STATUS_BASE			0x2004
-#define CPU_LOCAL_PWR_CFG			0xF
 static void pmu_cpu_ctrl(unsigned int cpu, int enable)
 {
 	unsigned int offset;
@@ -192,7 +207,7 @@ static struct bus_type exynos_info_subsys = {
 	.dev_name = "exynos_info",
 };
 
-#define NR_CPUS_PER_CLUSTER		4
+#define NR_CPUS_PER_CLUSTER		6
 static ssize_t core_status_show(struct kobject *kobj,
 			struct kobj_attribute *attr, char *buf)
 {

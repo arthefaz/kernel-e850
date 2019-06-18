@@ -12,6 +12,8 @@
 #ifndef __EXYNOS_PMU_H
 #define __EXYNOS_PMU_H __FILE__
 
+#include <asm/smp_plat.h>
+
 /**
  * struct exynos_cpu_power_ops
  *
@@ -30,6 +32,9 @@ struct exynos_cpu_power_ops {
         int (*cluster_state)(unsigned int cpu);
 };
 extern struct exynos_cpu_power_ops exynos_cpu;
+
+#define phy_cluster(cpu)	MPIDR_AFFINITY_LEVEL(cpu_logical_map(cpu), 1)
+#define phy_cpu(cpu)		MPIDR_AFFINITY_LEVEL(cpu_logical_map(map), 0)
 
 /**
  * The APIs to control the PMU
