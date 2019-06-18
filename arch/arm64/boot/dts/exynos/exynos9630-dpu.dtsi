@@ -209,7 +209,7 @@
 		out_idx = <0>;
 
 		/* pixel per clock */
-		ppc = <2>;
+		ppc = <1>;
 		line_mem_cnt = <4>;
 		cycle_per_line = <8>;   /* 4ppc */
 
