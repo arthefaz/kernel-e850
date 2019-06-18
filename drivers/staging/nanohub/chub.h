@@ -226,6 +226,8 @@ struct contexthub_ipc_info {
 #define REG_CHUB_CPU_STATUS_BIT_STANDBYWFI	(28)
 
 #elif defined(CONFIG_SOC_EXYNOS9630)
+/* for 9630, clk should be : 360000000, 180000000, 120000000 */
+#define CHUB_DLL_CLK				360000000
 #define REG_CHUB_CPU_CONFIGURATION		(0x0)
 #define REG_CHUB_CPU_STATUS			(0x4)
 #define REG_CHUB_CPU_OPTION			(0xc)

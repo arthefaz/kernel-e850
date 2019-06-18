@@ -406,7 +406,7 @@ static void contexthub_select_os(struct contexthub_ipc_info *ipc)
 {
 	int trycnt = 0;
 	u8 val = (u8) ipc_read_val(AP);
-	if(!val){
+	if (!val) {
 		dev_warn(ipc->dev, "%s os number is invalid\n");
 		val = 1;
 	}
@@ -989,7 +989,7 @@ int contexthub_poweron(struct contexthub_ipc_info *ipc)
 			return ret;
 		}
 
-		if(!strcmp(ipc->os_name, "os.checked_0.bin") || ipc->os_name[0] != 'o') {
+		if (!strcmp(ipc->os_name, "os.checked_0.bin") || ipc->os_name[0] != 'o') {
 			map = ipc_get_base(IPC_REG_BL_MAP);
 			ipc->sel_os = !(map->bootmode);
 		} else
@@ -1446,8 +1446,8 @@ static __init int contexthub_ipc_hw_init(struct platform_device *pdev,
 	const char *selectos;
 	struct device *dev = &pdev->dev;
 	struct device_node *node = dev->of_node;
-#if defined(CONFIG_SOC_EXYNOS9610)
 	struct clk *clk;
+#if defined(CONFIG_SOC_EXYNOS9610)
 	struct resource *res;
 	const char *string_array[10];
 	int chub_clk_len;
@@ -1603,15 +1603,21 @@ static __init int contexthub_ipc_hw_init(struct platform_device *pdev,
 		}
 	}
 	cal_dll_apm_enable();
-
+#endif
 	clk = devm_clk_get_and_prepare(dev, "chub_bus");
 	if (!clk)
 		return -ENODEV;
 	chub->clkrate = clk_get_rate(clk);
+#if defined(CONFIG_SOC_EXYNOS9630)
+	dev_info(dev, "clk set before: %lu\n", chub->clkrate);
+	clk_set_rate(clk, CHUB_DLL_CLK);
+	msleep(10);
+	chub->clkrate = clk_get_rate(clk);
+	dev_info(dev, "clk set after: %lu\n", chub->clkrate);
 #endif
-	if(!chub->clkrate)
-		/* default clkrate for TEMP */
-		chub->clkrate = 4000000;
+	if (!chub->clkrate)
+		/* default clkrate */
+		chub->clkrate = 400000000;
 #if defined(CONFIG_SOC_EXYNOS9610)
 	chub_clk_len = of_property_count_strings(node, "clock-names");
 	of_property_read_string_array(node, "clock-names", string_array, chub_clk_len);
