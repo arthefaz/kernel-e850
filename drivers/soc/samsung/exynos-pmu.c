@@ -220,15 +220,16 @@ static ssize_t core_status_show(struct kobject *kobj,
 		 * "cpu % NR_CPUS_PER_CLUSTER == 0" means that
 		 * the cpu is a first one of each cluster.
 		 */
-		if (!(cpu % NR_CPUS_PER_CLUSTER)) {
-			n += scnprintf(buf + n, 26, "%s shared_cache : %d\n",
-				(!cpu) ? "boot" : "nonboot",
-				pmu_shared_cache_state(cpu));
-
-			n += scnprintf(buf + n, 24, "%s Noncpu : %d\n",
-				(!cpu) ? "boot" : "nonboot",
-				pmu_noncpu_state(cpu));
-		}
+		if (0)
+			if (!(cpu % NR_CPUS_PER_CLUSTER)) {
+				n += scnprintf(buf + n, 26, "%s shared_cache : %d\n",
+					(!cpu) ? "boot" : "nonboot",
+					pmu_shared_cache_state(cpu));
+	
+				n += scnprintf(buf + n, 24, "%s Noncpu : %d\n",
+					(!cpu) ? "boot" : "nonboot",
+					pmu_noncpu_state(cpu));
+			}
 		n += scnprintf(buf + n, 24, "CPU%d : %d\n",
 				cpu, pmu_cpu_state(cpu));
 	}
