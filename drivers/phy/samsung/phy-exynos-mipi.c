@@ -743,6 +743,7 @@ static int __set_phy_cfg_0503_0004_dcphy(void __iomem *regs, int option, u32 *cf
 static int __set_phy_cfg_0503_0005_dphy(void __iomem *regs, int option, u32 *cfg)
 {
 	int i;
+	u32 mode = cfg[TYPE] >> 16;
 	u32 settle_clk_sel = 1;
 	u32 skew_delay_sel = 0;
 	u32 skew_cal_en = 0;
