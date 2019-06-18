@@ -156,6 +156,9 @@ static void exynos_reboot(enum reboot_mode mode, const char *cmd)
 	/* Do S/W Reset */
 	pr_emerg("%s: Exynos SoC reset right now\n", __func__);
 	__raw_writel(SWRESET, exynos_pmu_base + SYSTEM_CONFIGURATION);
+
+	/* Wait for S/W reset */
+	dbg_snapshot_spin_func();
 }
 
 static int __init exynos_reboot_setup(struct device_node *np)
