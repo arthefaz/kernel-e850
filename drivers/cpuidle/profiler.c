@@ -272,7 +272,6 @@ static void cpuidle_profile_stop(void)
 void cpuidle_profile_idle_ip(unsigned long long val)
 {
 	struct idle_ip *ip;
-	int i = 0;
 
 	/*
 	 * Return if profile is not started
@@ -289,7 +288,7 @@ void cpuidle_profile_idle_ip(unsigned long long val)
 		 *                      == 1, it means non-idle.
 		 * So, profiler only count IP with a bit value of 1.
 		 */
-		if (val & (0x1 << i++))
+		if (val & ((unsigned long long)1 << ip->index))
 			ip->count++;
 	}
 }
