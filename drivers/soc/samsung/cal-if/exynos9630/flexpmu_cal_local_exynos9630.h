@@ -525,6 +525,8 @@ struct pmucal_seq g2d_status[] = {
 };
 
 struct pmucal_seq g3d_on[] = {
+	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "G3D_OUT", 0x10e60000, 0x1f20, (0xffffffff << 0), (0x2 << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_DELAY, "delay", 0, 0, 0, 0x118, 0, 0, 0, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "G3D_CONFIGURATION", 0x10e60000, 0x1f00, (0x1 << 0), (0x1 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WAIT, "G3D_STATUS", 0x10e60000, 0x1f04, (0x1 << 0), (0x1 << 0), 0, 0, 0xffffffff, 0),
 };
@@ -579,8 +581,6 @@ struct pmucal_seq g3d_save[] = {
 };
 
 struct pmucal_seq g3d_off[] = {
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "G3D_OUT", 0x10e60000, 0x1f20, (0xffffffff << 0), (0x2 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_DELAY, "delay", 0, 0, 0, 0x118, 0, 0, 0, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "G3D_CONFIGURATION", 0x10e60000, 0x1f00, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WAIT, "G3D_STATUS", 0x10e60000, 0x1f04, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
 };
@@ -1555,4 +1555,3 @@ struct pmucal_pd pmucal_pd_list[] = {
 };
 unsigned int pmucal_pd_list_size = ARRAY_SIZE(pmucal_pd_list);
 #endif
-
