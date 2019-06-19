@@ -2033,7 +2033,7 @@ int __weak __cpufreq_driver_target(struct cpufreq_policy *policy,
 	unsigned int old_target_freq = target_freq;
 	int index;
 
-	if (cpufreq_disabled())
+	if (cpufreq_disabled() || !policy->freq_table)
 		return -ENODEV;
 
 	/* Make sure that target_freq is within supported range */
