@@ -23,7 +23,7 @@
 
 int dpp_log_level = 6;
 
-struct dpp_device *dpp_drvdata[MAX_DPP_CNT];
+struct dpp_device *dpp_drvdata[SOC_DPP_CNT];
 
 static u32 default_fmt[DEFAULT_FMT_CNT] = {
 	DECON_PIXEL_FORMAT_ARGB_8888, DECON_PIXEL_FORMAT_ABGR_8888,

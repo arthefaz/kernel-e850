@@ -3157,7 +3157,7 @@ static int decon_register_subdevs(struct decon_device *decon)
 		return ret;
 	}
 
-	for (i = 0;  i < MAX_DPP_CNT; ++i)
+	for (i = 0;  i < SOC_DPP_CNT; ++i)
 		decon->dpp_sd[i] = NULL;
 	ret = dpu_get_sd_by_drvname(decon, DPP_MODULE_NAME);
 	if (ret)

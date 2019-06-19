@@ -41,10 +41,9 @@ extern int dpp_log_level;
 
 #define DPP_MODULE_NAME		"exynos-dpp"
 
-#if defined(CONFIG_SOC_EXYNOS9830)
 #define MAX_DPP_CNT		7 /* + ODMA case */
-#elif defined(CONFIG_SOC_EXYNOS9630)
-#define MAX_DPP_CNT		4 /* + ODMA case */
+#if defined(CONFIG_SOC_EXYNOS9630)
+#define SOC_DPP_CNT		4 /* + ODMA case */
 #endif
 
 #define MAX_FMT_CNT		64
@@ -249,7 +248,7 @@ struct dpp_device {
 	struct dpp_restriction restriction;
 };
 
-extern struct dpp_device *dpp_drvdata[MAX_DPP_CNT];
+extern struct dpp_device *dpp_drvdata[SOC_DPP_CNT];
 
 static inline struct dpp_device *get_dpp_drvdata(u32 id)
 {
