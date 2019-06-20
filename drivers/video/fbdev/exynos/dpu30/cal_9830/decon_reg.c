@@ -206,17 +206,6 @@ static void decon_reg_set_sram_share(u32 id, enum decon_fifo_mode fifo_mode)
 	}
 }
 
-static void decon_reg_set_scaled_image_size(u32 id,
-		enum decon_dsi_mode dsi_mode, struct exynos_panel_info *lcd_info)
-{
-	u32 val, mask;
-
-	val = SCALED_SIZE_HEIGHT_F(lcd_info->yres) |
-			SCALED_SIZE_WIDTH_F(lcd_info->xres);
-	mask = SCALED_SIZE_HEIGHT_MASK | SCALED_SIZE_WIDTH_MASK;
-	decon_write_mask(id, SCALED_SIZE_CONTROL_0, val, mask);
-}
-
 static void decon_reg_set_outfifo_size_ctl0(u32 id, u32 width, u32 height)
 {
 	u32 val;
@@ -224,7 +213,6 @@ static void decon_reg_set_outfifo_size_ctl0(u32 id, u32 width, u32 height)
 
 	/* OUTFIFO_0 */
 	val = OUTFIFO_HEIGHT_F(height) | OUTFIFO_WIDTH_F(width);
-	mask = OUTFIFO_HEIGHT_MASK | OUTFIFO_WIDTH_MASK;
 	decon_write(id, OUTFIFO_SIZE_CONTROL_0, val);
 
 	/* may be implemented later by considering 1/2H transfer */
@@ -233,28 +221,22 @@ static void decon_reg_set_outfifo_size_ctl0(u32 id, u32 width, u32 height)
 	decon_write_mask(id, OUTFIFO_TH_CONTROL_0, th, mask);
 }
 
-static void decon_reg_set_outfifo_size_ctl1(u32 id, u32 width, u32 height)
+static void decon_reg_set_outfifo_size_ctl1(u32 id, u32 width)
 {
-	u32 val, mask;
+	u32 val;
 
 	val = OUTFIFO_1_WIDTH_F(width);
-	mask = OUTFIFO_1_WIDTH_MASK;
-
-	/* OUTFIFO_1 */
-	decon_write_mask(id, OUTFIFO_SIZE_CONTROL_1, val, mask);
+	decon_write(id, OUTFIFO_SIZE_CONTROL_1, val);
 }
 
 static void decon_reg_set_outfifo_size_ctl2(u32 id, u32 width, u32 height)
 {
-	u32 val, mask;
+	u32 val;
 
 	val = OUTFIFO_COMPRESSED_SLICE_HEIGHT_F(height) |
 			OUTFIFO_COMPRESSED_SLICE_WIDTH_F(width);
-	mask = OUTFIFO_COMPRESSED_SLICE_HEIGHT_MASK |
-				OUTFIFO_COMPRESSED_SLICE_WIDTH_MASK;
 
-	/* OUTFIFO_2 */
-	decon_write_mask(id, OUTFIFO_SIZE_CONTROL_2, val, mask);
+	decon_write(id, OUTFIFO_SIZE_CONTROL_2, val);
 }
 
 static void decon_reg_set_rgb_order(u32 id, enum decon_rgb_order order)
@@ -300,22 +282,6 @@ u32 decon_reg_get_latency_monitor_value(u32 id)
 	return count;
 }
 #endif
-
-static void decon_reg_set_blender_bg_image_size(u32 id,
-		enum decon_dsi_mode dsi_mode, struct exynos_panel_info *lcd_info)
-{
-	u32 width, val, mask;
-
-	width = lcd_info->xres;
-
-	if (dsi_mode == DSI_MODE_DUAL_DSI)
-		width = width * 2;
-
-	val = BLENDER_BG_HEIGHT_F(lcd_info->yres) | BLENDER_BG_WIDTH_F(width);
-	mask = BLENDER_BG_HEIGHT_MASK | BLENDER_BG_WIDTH_MASK;
-	decon_write_mask(id, BLENDER_BG_IMAGE_SIZE_0, val, mask);
-
-}
 
 static void decon_reg_set_data_path(u32 id, enum decon_data_path d_path,
 		enum decon_scaler_path s_path)
@@ -394,12 +360,10 @@ static u32 decon_reg_get_data_path_cfg(u32 id, enum decon_path_cfg con_id)
 
 static void decon_reg_set_scaled_size(u32 id, u32 scaled_w, u32 scaled_h)
 {
-	u32 val, mask;
+	u32 val;
 
-	val = SCALED_SIZE_HEIGHT_F(scaled_h) |
-			SCALED_SIZE_WIDTH_F(scaled_w);
-	mask = SCALED_SIZE_HEIGHT_MASK | SCALED_SIZE_WIDTH_MASK;
-	decon_write_mask(id, SCALED_SIZE_CONTROL_0, val, mask);
+	val = SCALED_SIZE_HEIGHT_F(scaled_h) | SCALED_SIZE_WIDTH_F(scaled_w);
+	decon_write(id, SCALED_SIZE_CONTROL_0, val);
 }
 
 /*
@@ -420,7 +384,7 @@ static void decon_reg_set_data_path_size(u32 id, u32 width, u32 height, bool is_
 	/* OUTFIFO size is compressed size if DSC is enabled */
 	decon_reg_set_outfifo_size_ctl0(id, outfifo_w, height);
 	if (dsc_cnt == 2)
-		decon_reg_set_outfifo_size_ctl1(id, outfifo_w, 0);
+		decon_reg_set_outfifo_size_ctl1(id, outfifo_w);
 	if (is_dsc)
 		decon_reg_set_outfifo_size_ctl2(id, slice_w, slice_h);
 
@@ -441,18 +405,8 @@ static void decon_reg_config_data_path_size(u32 id,
 	u32 width, u32 height, u32 overlap_w,
 	struct decon_dsc *p, struct decon_param *param)
 {
-	u32 dual_dsc = 0;
-	u32 dual_dsi = 0;
-	u32 dsim_if0 = 1;
-	u32 dsim_if1 = 0;
 	u32 width_f;
 	u32 sw;
-
-	dual_dsc = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DUAL_DSC);
-	dsim_if0 = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DSIM_IF0);
-	dsim_if1 = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DSIM_IF1);
-	if (dsim_if0 && dsim_if1)
-		dual_dsi = 1;
 
 	/* OUTFIFO */
 	if (param->lcd_info->dsc.en) {
@@ -465,7 +419,7 @@ static void decon_reg_config_data_path_size(u32 id,
 					sw, p->slice_height);
 		} else if (param->lcd_info->dsc.cnt == 2) {	/* DSC 2EA */
 			decon_reg_set_outfifo_size_ctl0(id, width_f, height);
-			decon_reg_set_outfifo_size_ctl1(id, width_f, 0);
+			decon_reg_set_outfifo_size_ctl1(id, width_f);
 			decon_reg_set_outfifo_size_ctl2(id,
 					sw, p->slice_height);
 		}
@@ -1187,7 +1141,6 @@ static void dsc_reg_set_encoder(u32 id, struct decon_param *p,
 	struct decon_dsc *dsc_enc, u32 chk_en)
 {
 	u32 dsc_id;
-	u32 dscc_en = 1;
 	u32 ds_en = 0;
 	u32 sm_ch = 0;
 	struct exynos_panel_info *lcd_info = p->lcd_info;
@@ -1202,8 +1155,7 @@ static void dsc_reg_set_encoder(u32 id, struct decon_param *p,
 	sm_ch = dsc_get_slice_mode_change(lcd_info);
 	decon_dbg("slice mode change(%d)\n", sm_ch);
 
-	dscc_en = decon_reg_get_data_path_cfg(id, PATH_CON_ID_DSCC_EN);
-	dsc_calc_pps_info(lcd_info, dscc_en, dsc_enc);
+	dsc_calc_pps_info(lcd_info, (lcd_info->dsc.cnt == 2) ? 1 : 0, dsc_enc);
 
 	if (id == 1) {
 		dsc_reg_config_control(DECON_DSC_ENC1, ds_en, sm_ch,
@@ -1314,6 +1266,19 @@ static void decon_reg_configure_lcd(u32 id, struct decon_param *p)
 	decon_reg_per_frame_off(id);
 }
 
+static void decon_reg_set_blender_bg_size(u32 id, enum decon_dsi_mode dsi_mode,
+		u32 bg_w, u32 bg_h)
+{
+	u32 width, val;
+
+	width = bg_w;
+	if (dsi_mode == DSI_MODE_DUAL_DSI)
+		width = width * 2;
+
+	val = BLENDER_BG_HEIGHT_F(bg_h) | BLENDER_BG_WIDTH_F(width);
+	decon_write(id, BLENDER_BG_IMAGE_SIZE_0, val);
+}
+
 static void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p)
 {
 	struct exynos_panel_info *lcd_info = p->lcd_info;
@@ -1330,9 +1295,10 @@ static void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p)
 
 	decon_reg_set_operation_mode(id, psr->psr_mode);
 
-	decon_reg_set_blender_bg_image_size(id, psr->dsi_mode, lcd_info);
+	decon_reg_set_blender_bg_size(id, psr->dsi_mode,
+					lcd_info->xres, lcd_info->yres);
 
-	decon_reg_set_scaled_image_size(id, psr->dsi_mode, lcd_info);
+	decon_reg_set_scaled_size(id, lcd_info->xres, lcd_info->yres);
 
 #if defined(CONFIG_EXYNOS_LATENCY_MONITOR)
 	/* once enable at init */
@@ -1377,22 +1343,6 @@ static void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p)
 		decon_reg_config_data_path_size(id,
 			lcd_info->xres, lcd_info->yres, overlap_w, NULL, p);
 	}
-}
-
-
-static void decon_reg_set_blender_bg_size(u32 id, enum decon_dsi_mode dsi_mode,
-		u32 bg_w, u32 bg_h)
-{
-	u32 width, val, mask;
-
-	width = bg_w;
-
-	if (dsi_mode == DSI_MODE_DUAL_DSI)
-		width = width * 2;
-
-	val = BLENDER_BG_HEIGHT_F(bg_h) | BLENDER_BG_WIDTH_F(width);
-	mask = BLENDER_BG_HEIGHT_MASK | BLENDER_BG_WIDTH_MASK;
-	decon_write_mask(id, BLENDER_BG_IMAGE_SIZE_0, val, mask);
 }
 
 static int decon_reg_stop_perframe(u32 id, u32 dsi_idx,
@@ -1705,9 +1655,10 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 
 	decon_reg_set_operation_mode(id, psr->psr_mode);
 
-	decon_reg_set_blender_bg_image_size(id, psr->dsi_mode, lcd_info);
+	decon_reg_set_blender_bg_size(id, psr->dsi_mode,
+					lcd_info->xres, lcd_info->yres);
 
-	decon_reg_set_scaled_image_size(id, psr->dsi_mode, lcd_info);
+	decon_reg_set_scaled_size(id, lcd_info->xres, lcd_info->yres);
 
 #if defined(CONFIG_EXYNOS_LATENCY_MONITOR)
 	/* enable once at init time */
@@ -1991,8 +1942,9 @@ void decon_reg_set_mres(u32 id, struct decon_param *p)
 		return;
 	}
 
-	decon_reg_set_blender_bg_image_size(id, psr->dsi_mode, lcd_info);
-	decon_reg_set_scaled_image_size(id, psr->dsi_mode, lcd_info);
+	decon_reg_set_blender_bg_size(id, psr->dsi_mode,
+					lcd_info->xres, lcd_info->yres);
+	decon_reg_set_scaled_size(id, lcd_info->xres, lcd_info->yres);
 
 	if (lcd_info->dsc.en)
 		dsc_reg_init(id, p, overlap_w, 0);
@@ -2011,8 +1963,8 @@ void decon_reg_release_resource(u32 id, struct decon_mode_info *psr)
 void decon_reg_config_wb_size(u32 id, struct exynos_panel_info *lcd_info,
 		struct decon_param *param)
 {
-	decon_reg_set_blender_bg_image_size(id, DSI_MODE_SINGLE,
-			lcd_info);
+	decon_reg_set_blender_bg_size(id, DSI_MODE_SINGLE,
+					lcd_info->xres, lcd_info->yres);
 	decon_reg_config_data_path_size(id, lcd_info->xres,
 			lcd_info->yres, 0, NULL, param);
 }
