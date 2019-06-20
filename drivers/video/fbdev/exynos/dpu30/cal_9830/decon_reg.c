@@ -630,30 +630,6 @@ static void dsc_reg_swreset(u32 dsc_id)
 	dsc_write_mask(dsc_id, DSC_CONTROL0, 1, DSC_SW_RESET);
 }
 
-static void dsc_reg_set_dcg_all(u32 dsc_id, u32 en)
-{
-	u32 val = 0;
-
-	val = en ? DSC_DCG_EN_ALL_MASK : 0;
-	dsc_write_mask(dsc_id, DSC_CONTROL0, val, DSC_DCG_EN_ALL_MASK);
-}
-
-static void dsc_reg_set_swap(u32 dsc_id, u32 bit_s, u32 byte_s, u32 word_s)
-{
-	u32 val;
-
-	val = DSC_SWAP(bit_s, byte_s, word_s);
-	dsc_write_mask(dsc_id, DSC_CONTROL0, val, DSC_SWAP_MASK);
-}
-
-static void dsc_reg_set_flatness_det_th(u32 dsc_id, u32 th)
-{
-	u32 val;
-
-	val = DSC_FLATNESS_DET_TH_F(th);
-	dsc_write_mask(dsc_id, DSC_CONTROL0, val, DSC_FLATNESS_DET_TH_MASK);
-}
-
 static void dsc_reg_set_slice_mode_change(u32 dsc_id, u32 en)
 {
 	u32 val;
@@ -662,36 +638,12 @@ static void dsc_reg_set_slice_mode_change(u32 dsc_id, u32 en)
 	dsc_write_mask(dsc_id, DSC_CONTROL0, val, DSC_SLICE_MODE_CH_MASK);
 }
 
-static void dsc_reg_set_auto_clock_gate(u32 dsc_id, u32 en)
-{
-	u32 val;
-
-	val = DSC_CG_EN_F(en);
-	dsc_write_mask(dsc_id, DSC_CONTROL0, val, DSC_CG_EN_MASK);
-}
-
 static void dsc_reg_set_dual_slice(u32 dsc_id, u32 en)
 {
 	u32 val;
 
 	val = DSC_DUAL_SLICE_EN_F(en);
 	dsc_write_mask(dsc_id, DSC_CONTROL0, val, DSC_DUAL_SLICE_EN_MASK);
-}
-
-static void dsc_reg_set_remainder(u32 dsc_id, u32 remain)
-{
-	u32 val;
-
-	val = DSC_REMAINDER_F(remain);
-	dsc_write_mask(dsc_id, DSC_CONTROL3, val, DSC_REMAINDER_MASK);
-}
-
-static void dsc_reg_set_grpcntline(u32 dsc_id, u32 line)
-{
-	u32 val;
-
-	val = DSC_GRPCNTLINE_F(line);
-	dsc_write_mask(dsc_id, DSC_CONTROL3, val, DSC_GRPCNTLINE_MASK);
 }
 
 /*
@@ -703,24 +655,6 @@ static void dsc_reg_set_grpcntline(u32 dsc_id, u32 line)
  * - PPS04 ~ PPS35 except reserved
  * - PPS58 ~ PPS59
  */
-static void dsc_reg_set_pps_04_comp_cfg(u32 dsc_id, u32 comp_cfg)
-{
-	u32 val, mask;
-
-	val = PPS04_COMP_CFG(comp_cfg);
-	mask = PPS04_COMP_CFG_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS04_07, val, mask);
-}
-
-static void dsc_reg_set_pps_05_bit_per_pixel(u32 dsc_id, u32 bpp)
-{
-	u32 val, mask;
-
-	val = PPS05_BPP(bpp);
-	mask = PPS05_BPP_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS04_07, val, mask);
-}
-
 static void dsc_reg_set_pps_06_07_picture_height(u32 dsc_id, u32 height)
 {
 	u32 val, mask;
@@ -728,133 +662,6 @@ static void dsc_reg_set_pps_06_07_picture_height(u32 dsc_id, u32 height)
 	val = PPS06_07_PIC_HEIGHT(height);
 	mask = PPS06_07_PIC_HEIGHT_MASK;
 	dsc_write_mask(dsc_id, DSC_PPS04_07, val, mask);
-}
-
-static void dsc_reg_set_pps_08_09_picture_width(u32 dsc_id, u32 width)
-{
-	u32 val, mask;
-
-	val = PPS08_09_PIC_WIDHT(width);
-	mask = PPS08_09_PIC_WIDHT_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS08_11, val, mask);
-}
-
-static void dsc_reg_set_pps_10_11_slice_height(u32 dsc_id, u32 slice_height)
-{
-	u32 val, mask;
-
-	val = PPS10_11_SLICE_HEIGHT(slice_height);
-	mask = PPS10_11_SLICE_HEIGHT_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS08_11, val, mask);
-}
-
-static void dsc_reg_set_pps_12_13_slice_width(u32 dsc_id, u32 slice_width)
-{
-	u32 val, mask;
-
-	val = PPS12_13_SLICE_WIDTH(slice_width);
-	mask = PPS12_13_SLICE_WIDTH_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS12_15, val, mask);
-}
-
-/* chunk_size = slice_width */
-static void dsc_reg_set_pps_14_15_chunk_size(u32 dsc_id, u32 chunk_size)
-{
-	u32 val, mask;
-
-	val = PPS14_15_CHUNK_SIZE(chunk_size);
-	mask = PPS14_15_CHUNK_SIZE_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS12_15, val, mask);
-}
-
-static void dsc_reg_set_pps_16_17_init_xmit_delay(u32 dsc_id, u32 xmit_delay)
-{
-	u32 val, mask;
-
-	val = PPS16_17_INIT_XMIT_DELAY(xmit_delay);
-	mask = PPS16_17_INIT_XMIT_DELAY_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS16_19, val, mask);
-}
-
-static void dsc_reg_set_pps_18_19_init_dec_delay(u32 dsc_id, u32 dec_delay)
-{
-	u32 val, mask;
-
-	val = PPS18_19_INIT_DEC_DELAY(dec_delay);
-	mask = PPS18_19_INIT_DEC_DELAY_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS16_19, val, mask);
-}
-
-static void dsc_reg_set_pps_21_initial_scale_value(u32 dsc_id, u32 scale_value)
-{
-	u32 val, mask;
-
-	val = PPS21_INIT_SCALE_VALUE(scale_value);
-	mask = PPS21_INIT_SCALE_VALUE_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS20_23, val, mask);
-}
-
-static void dsc_reg_set_pps_22_23_scale_increment_interval(u32 dsc_id, u32 sc_inc)
-{
-	u32 val, mask;
-
-	val = PPS22_23_SCALE_INC_INTERVAL(sc_inc);
-	mask = PPS22_23_SCALE_INC_INTERVAL_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS20_23, val, mask);
-}
-
-static void dsc_reg_set_pps_24_25_scale_decrement_interval(u32 dsc_id, u32 sc_dec)
-{
-	u32 val, mask;
-
-	val = PPS24_25_SCALE_DEC_INTERVAL(sc_dec);
-	mask = PPS24_25_SCALE_DEC_INTERVAL_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS24_27, val, mask);
-}
-
-static void dsc_reg_set_pps_27_first_line_bpg_offset(u32 dsc_id, u32 fl_bpg_off)
-{
-	u32 val, mask;
-
-	val = PPS27_FL_BPG_OFFSET(fl_bpg_off);
-	mask = PPS27_FL_BPG_OFFSET_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS24_27, val, mask);
-}
-
-static void dsc_reg_set_pps_28_29_nfl_bpg_offset(u32 dsc_id, u32 nfl_bpg_off)
-{
-	u32 val, mask;
-
-	val = PPS28_29_NFL_BPG_OFFSET(nfl_bpg_off);
-	mask = PPS28_29_NFL_BPG_OFFSET_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS28_31, val, mask);
-}
-
-static void dsc_reg_set_pps_30_31_slice_bpg_offset(u32 dsc_id, u32 slice_bpg_off)
-{
-	u32 val, mask;
-
-	val = PPS30_31_SLICE_BPG_OFFSET(slice_bpg_off);
-	mask = PPS30_31_SLICE_BPG_OFFSET_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS28_31, val, mask);
-}
-
-static void dsc_reg_set_pps_32_33_initial_offset(u32 dsc_id, u32 init_off)
-{
-	u32 val, mask;
-
-	val = PPS32_33_INIT_OFFSET(init_off);
-	mask = PPS32_33_INIT_OFFSET_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS32_35, val, mask);
-}
-
-static void dsc_reg_set_pps_34_35_final_offset(u32 dsc_id, u32 fin_off)
-{
-	u32 val, mask;
-
-	val = PPS34_35_FINAL_OFFSET(fin_off);
-	mask = PPS34_35_FINAL_OFFSET_MASK;
-	dsc_write_mask(dsc_id, DSC_PPS32_35, val, mask);
 }
 
 static void dsc_reg_set_pps_58_59_rc_range_param0(u32 dsc_id, u32 rc_range_param)
@@ -955,31 +762,27 @@ static void dsc_get_partial_update_info(u32 slice_cnt, u32 dsc_cnt, bool in_slic
 	}
 }
 
-static void dsc_reg_config_control(u32 dsc_id, u32 ds_en, u32 sm_ch)
+static void dsc_reg_config_control(u32 dsc_id, u32 ds_en, u32 sm_ch,
+		u32 slice_width)
 {
-	dsc_reg_set_dcg_all(dsc_id, 0);	/* No clock gating */
-	dsc_reg_set_swap(dsc_id, 0x0, 0x1, 0x0);
-	/* flatness detection is fixed 2@8bpc / 8@10bpc / 32@12bpc */
-	dsc_reg_set_flatness_det_th(dsc_id, 0x2);
-	dsc_reg_set_auto_clock_gate(dsc_id, 0);	/* No auto clock gating */
-	dsc_reg_set_dual_slice(dsc_id, ds_en);
-	dsc_reg_set_slice_mode_change(dsc_id, sm_ch);
-}
+	u32 val;
+	u32 remainder, grpcntline;
 
-static void dsc_reg_config_control_width(u32 dsc_id, u32 slice_width)
-{
-
-	u32 dsc_remainder;
-	u32 dsc_grpcntline;
+	val = DSC_SWAP(0x0, 0x1, 0x0);
+	val |= DSC_DUAL_SLICE_EN_F(ds_en);
+	val |= DSC_SLICE_MODE_CH_F(sm_ch);
+	val |= DSC_FLATNESS_DET_TH_F(0x2);
+	dsc_write(dsc_id, DSC_CONTROL0, val);
 
 	if (slice_width % 3)
-		dsc_remainder = slice_width % 3;
+		remainder = slice_width % 3;
 	else
-		dsc_remainder = 3;
+		remainder = 3;
 
-	dsc_reg_set_remainder(dsc_id, dsc_remainder);
-	dsc_grpcntline = (slice_width + 2) / 3;
-	dsc_reg_set_grpcntline(dsc_id, dsc_grpcntline);
+	grpcntline = (slice_width + 2) / 3;
+
+	val = DSC_REMAINDER_F(remainder) | DSC_GRPCNTLINE_F(grpcntline);
+	dsc_write(dsc_id, DSC_CONTROL3, val);
 }
 
 /*
@@ -1145,43 +948,51 @@ static void dsc_calc_pps_info(struct exynos_panel_info *lcd_info, u32 dscc_en,
 
 static void dsc_reg_set_pps(u32 dsc_id, struct decon_dsc *dsc_enc)
 {
-	dsc_reg_set_pps_04_comp_cfg(dsc_id, dsc_enc->comp_cfg);
-	dsc_reg_set_pps_05_bit_per_pixel(dsc_id, dsc_enc->bit_per_pixel);
-	dsc_reg_set_pps_06_07_picture_height(dsc_id, dsc_enc->pic_height);
+	u32 val;
+	u32 initial_dec_delay;
 
-	dsc_reg_set_pps_08_09_picture_width(dsc_id, dsc_enc->pic_width);
-	dsc_reg_set_pps_10_11_slice_height(dsc_id, dsc_enc->slice_height);
-	dsc_reg_set_pps_12_13_slice_width(dsc_id, dsc_enc->slice_width);
-	dsc_reg_set_pps_14_15_chunk_size(dsc_id, dsc_enc->chunk_size);
+	val = PPS04_COMP_CFG(dsc_enc->comp_cfg);
+	val |= PPS05_BPP(dsc_enc->bit_per_pixel);
+	val |= PPS06_07_PIC_HEIGHT(dsc_enc->pic_height);
+	dsc_write(dsc_id, DSC_PPS04_07, val);
 
-	dsc_reg_set_pps_16_17_init_xmit_delay(dsc_id,
-		dsc_enc->initial_xmit_delay);
+	val = PPS08_09_PIC_WIDHT(dsc_enc->pic_width);
+	val |= PPS10_11_SLICE_HEIGHT(dsc_enc->slice_height);
+	dsc_write(dsc_id, DSC_PPS08_11, val);
+
+	val = PPS12_13_SLICE_WIDTH(dsc_enc->slice_width);
+	val |= PPS14_15_CHUNK_SIZE(dsc_enc->chunk_size);
+	dsc_write(dsc_id, DSC_PPS12_15, val);
+
 #ifndef VESA_SCR_V4
-	dsc_reg_set_pps_18_19_init_dec_delay(dsc_id, 0x01B4);
+	initial_dec_delay = 0x01B4;
 #else
-	dsc_reg_set_pps_18_19_init_dec_delay(dsc_id,
-		dsc_enc->initial_dec_delay);
+	initial_dec_delay = dsc_enc->initial_dec_delay;
 #endif
-	dsc_reg_set_pps_21_initial_scale_value(dsc_id,
-		dsc_enc->initial_scale_value);
+	val = PPS18_19_INIT_DEC_DELAY(initial_dec_delay);
+	val |= PPS16_17_INIT_XMIT_DELAY(dsc_enc->initial_xmit_delay);
+	dsc_write(dsc_id, DSC_PPS16_19, val);
 
-	dsc_reg_set_pps_22_23_scale_increment_interval(dsc_id,
-		dsc_enc->scale_increment_interval);
-	dsc_reg_set_pps_24_25_scale_decrement_interval(dsc_id,
-		dsc_enc->scale_decrement_interval);
+	val = PPS21_INIT_SCALE_VALUE(dsc_enc->initial_scale_value);
+	val |= PPS22_23_SCALE_INC_INTERVAL(dsc_enc->scale_increment_interval);
+	dsc_write(dsc_id, DSC_PPS20_23, val);
 
-	dsc_reg_set_pps_27_first_line_bpg_offset(dsc_id,
-		dsc_enc->first_line_bpg_offset);
-	dsc_reg_set_pps_28_29_nfl_bpg_offset(dsc_id, dsc_enc->nfl_bpg_offset);
+	val = PPS24_25_SCALE_DEC_INTERVAL(dsc_enc->scale_decrement_interval);
+	val |= PPS27_FL_BPG_OFFSET(dsc_enc->first_line_bpg_offset);
+	dsc_write(dsc_id, DSC_PPS24_27, val);
 
-	dsc_reg_set_pps_30_31_slice_bpg_offset(dsc_id,
-		dsc_enc->slice_bpg_offset);
-	dsc_reg_set_pps_32_33_initial_offset(dsc_id, dsc_enc->initial_offset);
-	dsc_reg_set_pps_34_35_final_offset(dsc_id, dsc_enc->final_offset);
+	val = PPS28_29_NFL_BPG_OFFSET(dsc_enc->nfl_bpg_offset);
+	val |= PPS30_31_SLICE_BPG_OFFSET(dsc_enc->slice_bpg_offset);
+	dsc_write(dsc_id, DSC_PPS28_31, val);
+
+	val = PPS32_33_INIT_OFFSET(dsc_enc->initial_offset);
+	val |= PPS34_35_FINAL_OFFSET(dsc_enc->final_offset);
+	dsc_write(dsc_id, DSC_PPS32_35, val);
 
 	/* min_qp0 = 0 , max_qp0 = 4 , bpg_off0 = 2 */
 	dsc_reg_set_pps_58_59_rc_range_param0(dsc_id,
 		dsc_enc->rc_range_parameters);
+
 #ifndef VESA_SCR_V4
 	/* PPS79 ~ PPS87 : 3HF4 is different with VESA SCR v4 */
 	dsc_write(dsc_id, 0x006C, 0x1AB62AF6);
@@ -1395,20 +1206,17 @@ static void dsc_reg_set_encoder(u32 id, struct decon_param *p,
 	dsc_calc_pps_info(lcd_info, dscc_en, dsc_enc);
 
 	if (id == 1) {
-		dsc_reg_config_control(DECON_DSC_ENC1, ds_en, sm_ch);
-		dsc_reg_config_control_width(DECON_DSC_ENC1,
-					dsc_enc->slice_width);
+		dsc_reg_config_control(DECON_DSC_ENC1, ds_en, sm_ch,
+				dsc_enc->slice_width);
 		dsc_reg_set_pps(DECON_DSC_ENC1, dsc_enc);
 	} else if (id == 2) {	/* only for DP */
-		dsc_reg_config_control(DECON_DSC_ENC2, ds_en, sm_ch);
-		dsc_reg_config_control_width(DECON_DSC_ENC2,
-					dsc_enc->slice_width);
+		dsc_reg_config_control(DECON_DSC_ENC2, ds_en, sm_ch,
+				dsc_enc->slice_width);
 		dsc_reg_set_pps(DECON_DSC_ENC2, dsc_enc);
 	} else {
 		for (dsc_id = 0; dsc_id < lcd_info->dsc.cnt; dsc_id++) {
-			dsc_reg_config_control(dsc_id, ds_en, sm_ch);
-			dsc_reg_config_control_width(dsc_id,
-						dsc_enc->slice_width);
+			dsc_reg_config_control(dsc_id, ds_en, sm_ch,
+					dsc_enc->slice_width);
 			dsc_reg_set_pps(dsc_id, dsc_enc);
 		}
 	}
