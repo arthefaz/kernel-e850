@@ -1517,7 +1517,6 @@ int xhci_bus_suspend(struct usb_hcd *hcd)
 	struct xhci_bus_state *bus_state;
 	unsigned long flags;
 	int is_port_connect = 0;
-	int ret;
 	u32 portsc_buf[USB_MAXCHILDREN];
 	bool wake_enabled;
 
