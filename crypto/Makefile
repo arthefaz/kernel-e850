@@ -137,11 +137,8 @@ obj-$(CONFIG_CRYPTO_USER_API_HASH) += algif_hash.o
 obj-$(CONFIG_CRYPTO_USER_API_SKCIPHER) += algif_skcipher.o
 obj-$(CONFIG_CRYPTO_USER_API_RNG) += algif_rng.o
 obj-$(CONFIG_CRYPTO_USER_API_AEAD) += algif_aead.o
-<<<<<<< HEAD
-obj-$(CONFIG_CRYPTO_DISKCIPHER) += diskcipher.o
-=======
 obj-$(CONFIG_CRYPTO_ZSTD) += zstd.o
->>>>>>> android-4.14-q
+obj-$(CONFIG_CRYPTO_DISKCIPHER) += diskcipher.o
 
 ecdh_generic-y := ecc.o
 ecdh_generic-y += ecdh.o
