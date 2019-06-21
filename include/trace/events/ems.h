@@ -837,6 +837,51 @@ TRACE_EVENT(ems_service,
 	TP_printk("comm=%s pid=%d util=%lu service_cpu=%d event=%s",
 			__entry->comm, __entry->pid, __entry->util, __entry->service_cpu, __entry->event)
 );
+
+/*
+ * Tracepoint for updating spared cpus
+ */
+TRACE_EVENT(ecs_update_spared_cpus,
+
+	TP_PROTO(unsigned int prev_cpus, unsigned int next_cpus),
+
+	TP_ARGS(prev_cpus, next_cpus),
+
+	TP_STRUCT__entry(
+		__field(	unsigned int,	prev_cpus		)
+		__field(	unsigned int,	next_cpus		)
+	),
+
+	TP_fast_assign(
+		__entry->prev_cpus		= prev_cpus;
+		__entry->next_cpus		= next_cpus;
+	),
+
+	TP_printk("prev_cpus=%#x next_cpus=%#x", __entry->prev_cpus, __entry->next_cpus)
+);
+
+/*
+ * Tracepoint for updating system status
+ */
+TRACE_EVENT(ecs_update_system_status,
+
+	TP_PROTO(unsigned int heavy_cpus, unsigned int busy_cpus),
+
+	TP_ARGS(heavy_cpus, busy_cpus),
+
+	TP_STRUCT__entry(
+		__field(	unsigned int,	heavy_cpus		)
+		__field(	unsigned int,	busy_cpus		)
+	),
+
+	TP_fast_assign(
+		__entry->heavy_cpus		= heavy_cpus;
+		__entry->busy_cpus		= busy_cpus;
+	),
+
+	TP_printk("heavy_cpus=%#x busy_cpus=%#x", __entry->heavy_cpus, __entry->busy_cpus)
+);
+
 #endif /* _TRACE_EMS_H */
 
 /* This part must be outside protection */

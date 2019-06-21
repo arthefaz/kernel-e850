@@ -5300,6 +5300,7 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		walt_inc_cumulative_runnable_avg(rq, p);
 	}
 
+	ecs_update();
 	hrtick_update(rq);
 }
 
@@ -5373,6 +5374,7 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 
 	util_est_dequeue(&rq->cfs, p, task_sleep);
 	util_est_dequeue_multi_load(&rq->cfs, p, task_sleep);
+	ecs_update();
 	hrtick_update(rq);
 }
 
@@ -10420,6 +10422,11 @@ static int load_balance(int this_cpu, struct rq *this_rq,
 	schedstat_inc(sd->lb_count[idle]);
 
 redo:
+	if (ecs_is_sparing_cpu(env.dst_cpu)) {
+		*continue_balancing = 0;
+		goto out_balanced;
+	}
+
 	if (!should_we_balance(&env)) {
 		*continue_balancing = 0;
 		goto out_balanced;
@@ -10952,6 +10959,9 @@ static void nohz_balancer_kick(bool only_update)
 	if (ilb_cpu >= nr_cpu_ids)
 		return;
 
+	if (ecs_is_sparing_cpu(ilb_cpu))
+		return;
+
 	if (test_and_set_bit(NOHZ_BALANCE_KICK, nohz_flags(ilb_cpu)))
 		return;
 
@@ -11452,6 +11462,7 @@ static void task_tick_fair(struct rq *rq, struct task_struct *curr, int queued)
 #ifdef CONFIG_EXYNOS_PSTATE_MODE_CHANGER
 	exynos_emc_update(rq->cpu);
 #endif
+	ecs_update();
 }
 
 /*

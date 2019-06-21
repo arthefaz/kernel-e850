@@ -107,6 +107,11 @@ extern bool lbt_overutilized(int cpu, int level);
 extern void update_lbt_overutil(int cpu, unsigned long capacity);
 extern void lb_update_misfit_status(struct task_struct *p, struct rq *rq, unsigned long task_h_load);
 
+/*
+ * Core sparing
+ */
+extern void ecs_update(void);
+extern int ecs_is_sparing_cpu(int cpu);
 #else /* CONFIG_SCHED_EMS */
 
 /*
@@ -202,6 +207,11 @@ static inline bool lbt_overutilized(int cpu, int level)
 static inline void update_lbt_overutil(int cpu, unsigned long capacity) { }
 static inline void lb_update_misfit_status(struct task_struct *p, struct rq *rq, unsigned long task_h_load) { }
 
+/*
+ * Core sparing
+ */
+static inline void ecs_update(void) { }
+static inline int ecs_is_sparing_cpu(int cpu) { return 0; }
 #endif /* CONFIG_SCHED_EMS */
 
 extern unsigned int frt_disable_cpufreq;

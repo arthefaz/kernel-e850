@@ -2715,6 +2715,9 @@ static int find_idle_cpu(struct task_struct *task, int wake_flags)
 			if (!idle_cpu(cpu))
 				continue;
 
+			if (ecs_is_sparing_cpu(cpu))
+				continue;
+
 			cpu_prio = cpu_rq(cpu)->rt.highest_prio.curr;
 			if (cpu_prio < max_prio)
 				continue;
@@ -2771,6 +2774,9 @@ static int find_recessive_cpu(struct task_struct *task, int wake_flags)
 
 	do {
 		for_each_cpu_and(cpu, &dom->cpus, &candidate_cpus) {
+			if (ecs_is_sparing_cpu(cpu))
+				continue;
+
 			cpu_load = frt_cpu_util_wake(cpu, task) + task_util(task);
 
 			if (cpu_load > capacity_orig_of(cpu))
@@ -2831,6 +2837,9 @@ static int find_lowest_rq_fluid(struct task_struct *task, int wake_flags)
 	 */
 	for_each_cpu(cpu, cpu_active_mask) {
 		if (cpu != cpumask_first(cpu_coregroup_mask(cpu)))
+			continue;
+
+		if (ecs_is_sparing_cpu(cpu))
 			continue;
 
 		if (find_victim_rt_rq(task, cpu_coregroup_mask(cpu), &best_cpu) != -1)
