@@ -30,4 +30,8 @@ obj-$(CONFIG_CGROUP_CPUACCT) += cpuacct.o
 obj-$(CONFIG_CPU_FREQ) += cpufreq.o
 obj-$(CONFIG_CPU_FREQ_GOV_SCHEDUTIL) += cpufreq_schedutil.o
 obj-$(CONFIG_MEMBARRIER) += membarrier.o
+<<<<<<< HEAD
 obj-$(CONFIG_SCHED_EMS) += ems/
+=======
+obj-$(CONFIG_PSI) += psi.o
+>>>>>>> android-4.14-q

@@ -265,13 +265,11 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 
 static void sugov_get_util(unsigned long *util, unsigned long *max, int cpu)
 {
-	unsigned long max_cap, rt;
+	unsigned long max_cap;
 
 	max_cap = arch_scale_cpu_capacity(NULL, cpu);
 
-	rt = sched_get_rt_rq_util(cpu);
-
-	*util = boosted_cpu_util(cpu) + rt;
+	*util = boosted_cpu_util(cpu);
 	*util = min(*util, max_cap);
 	*max = max_cap;
 }
@@ -664,9 +662,15 @@ fail:
 	policy->governor_data = NULL;
 	sugov_tunables_free(tunables);
 
+<<<<<<< HEAD
 free_sg_policy:
+=======
+stop_kthread:
+	sugov_kthread_stop(sg_policy);
+>>>>>>> android-4.14-q
 	mutex_unlock(&global_tunables_lock);
 
+free_sg_policy:
 	sugov_policy_free(sg_policy);
 
 disable_fast_switch:

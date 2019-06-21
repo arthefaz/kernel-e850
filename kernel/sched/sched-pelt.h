@@ -23,11 +23,14 @@ static const u32 runnable_avg_yN_sum[] = {
 #define LOAD_AVG_MAX 47742
 #define LOAD_AVG_MAX_N 345
 
+<<<<<<< HEAD
 static const u32 __accumulated_sum_N32[] = {
 	     0, 23371, 35056, 40899, 43820, 45281,
 	 46011, 46376, 46559, 46650, 46696, 46719,
 };
 
+=======
+>>>>>>> android-4.14-q
 #endif
 
 #ifdef CONFIG_PELT_UTIL_HALFLIFE_16
@@ -39,6 +42,7 @@ static const u32 runnable_avg_yN_inv[] = {
 };
 
 static const u32 runnable_avg_yN_sum[] = {
+<<<<<<< HEAD
 	    0,22380,22411,22441,22470,22497,22523,22548,22572,22595,22617,
 	22638,22658,22677,22696,22714,22731,
 };
@@ -55,6 +59,15 @@ static const u32 __accumulated_sum_N32[] = {
 	 45461, 45461, 45461, 45461, 45461, 45461,
 	 45461, 45461, 45461, 45461,
 };
+=======
+	    0,  980, 1919, 2818, 3679, 4503, 5292, 6048, 6772, 7465, 8129,
+	 8764, 9373, 9956,10514,11048,11560,
+};
+
+#define LOAD_AVG_PERIOD 16
+#define LOAD_AVG_MAX 24130
+#define LOAD_AVG_MAX_N 172
+>>>>>>> android-4.14-q
 
 #endif
 
@@ -65,6 +78,7 @@ static const u32 runnable_avg_yN_inv[] = {
 };
 
 static const u32 runnable_avg_yN_sum[] = {
+<<<<<<< HEAD
 	    0,20844,20053,19327,18661,18051,17491,16978,16507,
 };
 
@@ -90,3 +104,13 @@ static const u32 __accumulated_sum_N32[] = {
 
 #endif
 
+=======
+	    0,  939, 1800, 2589, 3313, 3977, 4585, 5143, 5655,
+};
+
+#define LOAD_AVG_PERIOD 8
+#define LOAD_AVG_MAX 12326
+#define LOAD_AVG_MAX_N 85
+
+#endif
+>>>>>>> android-4.14-q
