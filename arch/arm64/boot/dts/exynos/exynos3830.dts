@@ -28,6 +28,7 @@
 #include "exynos3830-debug.dtsi"
 #include "exynos3830-pm-domains.dtsi"
 #include "exynos3830-bts.dtsi"
+#include <dt-bindings/soc/samsung/exynos-ecs.h>
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
@@ -254,6 +255,46 @@
 				};
 				rt {
 					boost_ratio = <0 0 0>;
+				};
+			};
+
+			ecs {
+				enabled = <1>;
+
+				ecs-modes {
+					ecs-mode-0 {
+						mode-name = "NO SPARING";
+						cpus = "0-7";
+						enabled = <1>;
+						mode = <NORMAL>;
+					};
+					ecs-mode-1 {
+						mode-name = "SPARING NON_BOOT";
+						cpus = "0-3";
+						enabled = <1>;
+						mode = <SAVING>;
+					};
+				};
+
+				ecs-domains {
+					ecs-domain-0 {
+						domain-name = "BOOT";
+						cpus = "0-3";
+						role = <TRIGGER>;
+						cpu-heavy-thr = <0xffffffff>;
+						cpu-busy-thr = <256>;
+						cpu-nr-running-thr = <1>;
+						domain-nr-running-thr = <4>;
+					};
+					ecs-domain-1 {
+						domain-name = "NON-BOOT";
+						cpus = "4-7";
+						role = <TRIGGER_AND_SAVER>;
+						cpu-heavy-thr = <0xffffffff>;
+						cpu-busy-thr = <256>;
+						cpu-nr-running-thr = <1>;
+						domain-nr-running-thr = <4>;
+					};
 				};
 			};
 		};
