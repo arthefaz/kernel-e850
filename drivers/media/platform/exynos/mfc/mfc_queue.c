@@ -221,23 +221,23 @@ struct mfc_buf *mfc_get_move_buf_addr(struct mfc_ctx *ctx,
 		return NULL;
 	}
 
-	mfc_buf = list_entry(from_queue->head.next, struct mfc_buf, list);
+	list_for_each_entry(mfc_buf, &from_queue->head, list) {
+		if (mfc_buf->addr[0][0] == addr) {
+			mfc_debug(2, "[DPB] addr[0]: 0x%08llx\n", mfc_buf->addr[0][0]);
 
-	if (mfc_buf->addr[0][0] == addr) {
-		mfc_debug(2, "[DPB] addr[0]: 0x%08llx\n", mfc_buf->addr[0][0]);
+			list_del(&mfc_buf->list);
+			from_queue->count--;
 
-		list_del(&mfc_buf->list);
-		from_queue->count--;
+			list_add_tail(&mfc_buf->list, &to_queue->head);
+			to_queue->count++;
 
-		list_add_tail(&mfc_buf->list, &to_queue->head);
-		to_queue->count++;
-
-		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
-		return mfc_buf;
-	} else {
-		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
-		return NULL;
+			spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
+			return mfc_buf;
+		}
 	}
+
+	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
+	return NULL;
 }
 
 struct mfc_buf *mfc_get_move_buf_index(struct mfc_ctx *ctx,
@@ -251,7 +251,6 @@ struct mfc_buf *mfc_get_move_buf_index(struct mfc_ctx *ctx,
 
 	mfc_debug(4, "Looking for this index: %d\n", index);
 	list_for_each_entry(mfc_buf, &from_queue->head, list) {
-
 		if (mfc_buf->dpb_index == index) {
 			mfc_debug(2, "[DPB] buf[%d][%d] addr[0]: 0x%08llx\n",
 					mfc_buf->vb.vb2_buf.index, mfc_buf->dpb_index, mfc_buf->addr[0][0]);

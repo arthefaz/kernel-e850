@@ -1236,6 +1236,10 @@ static void __mfc_nal_q_handle_reuse_buffer(struct mfc_ctx *ctx, DecoderOutputSt
 					dst_mb->vb.vb2_buf.index, dst_mb->dpb_index, disp_addr);
 			dst_mb->used = 0;
 			clear_bit(dst_mb->dpb_index, &dec->available_dpb);
+		} else {
+			mfc_err_ctx("[NALQ][DPB] couldn't find DPB 0x%08llx\n",
+								disp_addr);
+			mfc_print_dpb_table(ctx);
 		}
 	}
 }
@@ -1565,6 +1569,8 @@ static void __mfc_nal_q_move_released_buf(struct mfc_ctx *ctx, unsigned long rel
 						dst_mb->vb.vb2_buf.index, dst_mb->dpb_index, dst_mb->addr[0][0]);
 				dst_mb->used = 0;
 				clear_bit(dst_mb->dpb_index, &dec->available_dpb);
+			} else {
+				mfc_debug(2, "[NALQ][DPB] buf[%d] couldn't search in dst_nal\n", i);
 			}
 		}
 	}

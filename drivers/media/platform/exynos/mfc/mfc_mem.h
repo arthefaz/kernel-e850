@@ -40,12 +40,13 @@ static inline void mfc_print_dpb_table(struct mfc_ctx *ctx)
 	struct mfc_dec *dec = ctx->dec_priv;
 	struct mfc_buf *mfc_buf = NULL;
 	unsigned long flags;
-	int i, found = 0;
+	int i, found = 0, in_nal_q = 0;
 
 	mfc_debug(2, "[DPB] dynamic_used: %#lx, queued: %#lx, table_used: %#lx\n",
 			dec->dynamic_used, dec->queued_dpb, dec->dpb_table_used);
 	for (i = 0; i < MFC_MAX_DPBS; i++) {
 		found = 0;
+		in_nal_q = 0;
 		spin_lock_irqsave(&ctx->buf_queue_lock, flags);
 		list_for_each_entry(mfc_buf, &ctx->dst_buf_queue.head, list) {
 			if (i == mfc_buf->dpb_index) {
@@ -57,17 +58,19 @@ static inline void mfc_print_dpb_table(struct mfc_ctx *ctx)
 			list_for_each_entry(mfc_buf, &ctx->dst_buf_nal_queue.head, list) {
 				if (i == mfc_buf->dpb_index) {
 					found = 1;
+					in_nal_q = 1;
 					break;
 				}
 			}
 		}
 		spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
-		mfc_debug(2, "[%d] dpb [%d] %#010llx %#010llx (%s, %s, %s)\n",
+		mfc_debug(2, "[%d] dpb [%d] %#010llx %#010llx (%s, %s, %s%s)\n",
 				i, found ? mfc_buf->vb.vb2_buf.index : -1,
 				dec->dpb[i].addr[0], dec->dpb[i].addr[1],
 				dec->dpb[i].mapcnt ? "map" : "unmap",
 				dec->dpb[i].ref ? "ref" : "free",
-				dec->dpb[i].queued ? "Q" : "DQ");
+				dec->dpb[i].queued ? "Q" : "DQ",
+				in_nal_q ? " in NALQ" : "");
 	}
 }
 
