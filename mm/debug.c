@@ -101,11 +101,7 @@ EXPORT_SYMBOL(dump_vma);
 
 void dump_mm(const struct mm_struct *mm)
 {
-<<<<<<< HEAD
-	pr_emerg("mm %p mmap %p seqnum %llu task_size %lu\n"
-=======
 	pr_emerg("mm %px mmap %px seqnum %llu task_size %lu\n"
->>>>>>> android-4.14-q
 #ifdef CONFIG_MMU
 		"get_unmapped_area %px\n"
 #endif
