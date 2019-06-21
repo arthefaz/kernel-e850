@@ -120,13 +120,8 @@ extern void tick_nohz_idle_restart_tick(void);
 extern void tick_nohz_idle_enter(void);
 extern void tick_nohz_idle_exit(void);
 extern void tick_nohz_irq_exit(void);
-<<<<<<< HEAD
-extern ktime_t tick_nohz_get_sleep_length(void);
-extern ktime_t tick_nohz_get_sleep_length_cpu(int cpu);
-=======
 extern bool tick_nohz_idle_got_tick(void);
 extern ktime_t tick_nohz_get_sleep_length(ktime_t *delta_next);
->>>>>>> android-4.14-q
 extern unsigned long tick_nohz_get_idle_calls(void);
 extern unsigned long tick_nohz_get_idle_calls_cpu(int cpu);
 extern u64 get_cpu_idle_time_us(int cpu, u64 *last_update_time);

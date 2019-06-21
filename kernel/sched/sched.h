@@ -1931,7 +1931,6 @@ extern unsigned int sysctl_sched_use_walt_cpu_util;
 extern unsigned int walt_ravg_window;
 extern bool walt_disabled;
 
-<<<<<<< HEAD
 #ifdef CONFIG_SCHED_WALT
 #define walt_util(util_var, demand_sum) {\
 	u64 sum = demand_sum << SCHED_CAPACITY_SHIFT;\
@@ -2029,9 +2028,6 @@ unsigned long _task_util_est(struct task_struct *p);
 unsigned long task_util_est(struct task_struct *p);
 
 #endif
-=======
-#endif /* CONFIG_SMP */
->>>>>>> android-4.14-q
 
 static inline void sched_rt_avg_update(struct rq *rq, u64 rt_delta)
 {

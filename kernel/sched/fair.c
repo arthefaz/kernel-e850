@@ -3142,16 +3142,10 @@ static int
 __update_load_avg_se(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
 	if (___update_load_avg(now, cpu, &se->avg,
-<<<<<<< HEAD
 				  se->on_rq * scale_load_down(se->load.weight),
 				  cfs_rq->curr == se, NULL, NULL)) {
 		if (schedtune_util_est_en(task_of(se)))
 			cfs_se_util_change(&se->avg);
-=======
-			       se->on_rq * scale_load_down(se->load.weight),
-			       cfs_rq->curr == se, NULL, NULL)) {
-		cfs_se_util_change(&se->avg);
-
 #ifdef UTIL_EST_DEBUG
 		/*
 		 * Trace utilization only for actual tasks.
@@ -3172,7 +3166,6 @@ __update_load_avg_se(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_entit
 			trace_sched_util_est_cpu(cpu, cfs_rq);
 		}
 #endif /* UTIL_EST_DEBUG */
->>>>>>> android-4.14-q
 
 		return 1;
 	}
@@ -3493,18 +3486,7 @@ int update_rt_rq_load_avg(u64 now, int cpu, struct rt_rq *rt_rq, int running)
 	int decayed, removed_util = 0;
 	struct sched_avg *sa = &rt_rq->avg;
 
-<<<<<<< HEAD
-	if (atomic_long_read(&rt_rq->removed_load_avg)) {
-		long r = atomic_long_xchg(&rt_rq->removed_load_avg, 0);
-		sub_positive(&sa->load_avg, r);
-		sub_positive(&sa->load_sum, r * LOAD_AVG_MAX);
-#ifdef CONFIG_RT_GROUP_SCHED
-		rt_rq->propagate_avg = 1;
-#endif
-	}
-=======
 	ret = ___update_load_avg(now, cpu, &rt_rq->avg, running, running, NULL, rt_rq);
->>>>>>> android-4.14-q
 
 	if (atomic_long_read(&rt_rq->removed_util_avg)) {
 		long r = atomic_long_xchg(&rt_rq->removed_util_avg, 0);
@@ -3699,14 +3681,6 @@ static inline unsigned long cfs_rq_load_avg(struct cfs_rq *cfs_rq)
 
 static int idle_balance(struct rq *this_rq, struct rq_flags *rf);
 
-<<<<<<< HEAD
-static inline unsigned long task_util(struct task_struct *p)
-{
-#ifdef CONFIG_SCHED_WALT
-	if (!walt_disabled && sysctl_sched_use_walt_task_util) {
-		return (p->ravg.demand / (walt_ravg_window >> SCHED_CAPACITY_SHIFT));
-	}
-=======
 static inline int task_fits_capacity(struct task_struct *p, long capacity);
 
 static inline void update_misfit_status(struct task_struct *p, struct rq *rq)
@@ -3733,25 +3707,10 @@ static inline unsigned long task_util(struct task_struct *p)
 	if (likely(!walt_disabled && sysctl_sched_use_walt_task_util))
 		return (p->ravg.demand /
 			(walt_ravg_window >> SCHED_CAPACITY_SHIFT));
->>>>>>> android-4.14-q
 #endif
 	return READ_ONCE(p->se.avg.util_avg);
 }
 
-<<<<<<< HEAD
-inline unsigned long _task_util_est(struct task_struct *p)
-{
-	struct util_est ue = READ_ONCE(p->se.avg.util_est);
-
-	return schedtune_util_est_en(p) ? max(ue.ewma, ue.enqueued)
-					: task_util(p);
-}
-
-inline unsigned long task_util_est(struct task_struct *p)
-{
-	return schedtune_util_est_en(p) ? max(READ_ONCE(p->se.avg.util_avg), _task_util_est(p))
-					: task_util(p);
-=======
 static inline unsigned long _task_util_est(struct task_struct *p)
 {
 	struct util_est ue = READ_ONCE(p->se.avg.util_est);
@@ -3767,7 +3726,6 @@ static inline unsigned long task_util_est(struct task_struct *p)
 			(walt_ravg_window >> SCHED_CAPACITY_SHIFT));
 #endif
 	return max(task_util(p), _task_util_est(p));
->>>>>>> android-4.14-q
 }
 
 static inline void util_est_enqueue(struct cfs_rq *cfs_rq,
@@ -3783,10 +3741,6 @@ static inline void util_est_enqueue(struct cfs_rq *cfs_rq,
 	enqueued += (_task_util_est(p) | UTIL_AVG_UNCHANGED);
 	WRITE_ONCE(cfs_rq->avg.util_est.enqueued, enqueued);
 
-<<<<<<< HEAD
-	/* Update plots for Task and CPU estimated utilization */
-=======
->>>>>>> android-4.14-q
 	trace_sched_util_est_task(p, &p->se.avg);
 	trace_sched_util_est_cpu(cpu_of(rq_of(cfs_rq)), cfs_rq);
 }
@@ -3794,10 +3748,7 @@ static inline void util_est_enqueue(struct cfs_rq *cfs_rq,
 /*
  * Check if a (signed) value is within a specified (unsigned) margin,
  * based on the observation that:
-<<<<<<< HEAD
-=======
  *
->>>>>>> android-4.14-q
  *     abs(x) < y := (unsigned)(x + y - 1) < (2 * y - 1)
  *
  * NOTE: this only works when value + maring < INT_MAX.
@@ -3830,10 +3781,7 @@ util_est_dequeue(struct cfs_rq *cfs_rq, struct task_struct *p, bool task_sleep)
 	}
 	WRITE_ONCE(cfs_rq->avg.util_est.enqueued, ue.enqueued);
 
-<<<<<<< HEAD
 	/* Update plots for CPU's estimated utilization */
-=======
->>>>>>> android-4.14-q
 	trace_sched_util_est_cpu(cpu_of(rq_of(cfs_rq)), cfs_rq);
 
 	/*
@@ -3843,12 +3791,9 @@ util_est_dequeue(struct cfs_rq *cfs_rq, struct task_struct *p, bool task_sleep)
 	if (!task_sleep)
 		return;
 
-<<<<<<< HEAD
 	if (!schedtune_util_est_en(p))
 		return;
 
-=======
->>>>>>> android-4.14-q
 	/*
 	 * If the PELT values haven't changed since enqueue time,
 	 * skip the util_est update.
@@ -3863,11 +3808,7 @@ util_est_dequeue(struct cfs_rq *cfs_rq, struct task_struct *p, bool task_sleep)
 	 */
 	ue.enqueued = (task_util(p) | UTIL_AVG_UNCHANGED);
 	last_ewma_diff = ue.enqueued - ue.ewma;
-<<<<<<< HEAD
 	if (within_margin(last_ewma_diff, capacity_orig_of(task_cpu(p)) / 100))
-=======
-	if (within_margin(last_ewma_diff, (SCHED_CAPACITY_SCALE / 100)))
->>>>>>> android-4.14-q
 		return;
 
 	/*
@@ -3892,10 +3833,7 @@ util_est_dequeue(struct cfs_rq *cfs_rq, struct task_struct *p, bool task_sleep)
 	ue.ewma >>= UTIL_EST_WEIGHT_SHIFT;
 	WRITE_ONCE(p->se.avg.util_est, ue);
 
-<<<<<<< HEAD
 	/* Update plots for Task's estimated utilization */
-=======
->>>>>>> android-4.14-q
 	trace_sched_util_est_task(p, &p->se.avg);
 }
 
@@ -3936,11 +3874,8 @@ static inline int idle_balance(struct rq *rq, struct rq_flags *rf)
 	return 0;
 }
 
-<<<<<<< HEAD
-=======
 static inline void update_misfit_status(struct task_struct *p, struct rq *rq) {}
 
->>>>>>> android-4.14-q
 static inline void
 util_est_enqueue(struct cfs_rq *cfs_rq, struct task_struct *p) {}
 
@@ -7328,7 +7263,6 @@ static int select_idle_sibling(struct task_struct *p, int prev, int target)
 	return select_idle_sibling_cstate_aware(p, prev, target);
 }
 
-<<<<<<< HEAD
 /*
  * cpu_util_wake: Compute cpu utilization with any contributions from
  * the waking task p removed.
@@ -7395,8 +7329,6 @@ static int cpu_util_wake(int cpu, struct task_struct *p)
 	return min_t(unsigned long, util, capacity_orig_of(cpu));
 }
 
-=======
->>>>>>> android-4.14-q
 static inline int task_fits_capacity(struct task_struct *p, long capacity)
 {
 	return capacity * 1024 > boosted_task_util(p) * capacity_margin;
@@ -7471,11 +7403,7 @@ int find_best_target(struct task_struct *p, int *backup_cpu,
 			 * so prev_cpu will receive a negative bias due to the double
 			 * accounting. However, the blocked utilization may be zero.
 			 */
-<<<<<<< HEAD
-			wake_util = cpu_util_wake(i, p);
-=======
 			wake_util = cpu_util_without(i, p);
->>>>>>> android-4.14-q
 			new_util = wake_util + task_util_est(p);
 
 			/*
@@ -9678,7 +9606,6 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 			if (lbt_overutilized(i, env->sd->level)) {
 				*overutilized = true;
 
-<<<<<<< HEAD
 				if (rq_has_misfit(rq))
 					*misfit_task = true;
 			}
@@ -9689,10 +9616,6 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 				if (rq_has_misfit(rq))
 					*misfit_task = true;
 			}
-=======
-			if (rq->misfit_task_load)
-				*misfit_task = true;
->>>>>>> android-4.14-q
 		}
 	}
 

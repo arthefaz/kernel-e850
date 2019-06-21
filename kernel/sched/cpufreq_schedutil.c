@@ -662,12 +662,8 @@ fail:
 	policy->governor_data = NULL;
 	sugov_tunables_free(tunables);
 
-<<<<<<< HEAD
-free_sg_policy:
-=======
 stop_kthread:
 	sugov_kthread_stop(sg_policy);
->>>>>>> android-4.14-q
 	mutex_unlock(&global_tunables_lock);
 
 free_sg_policy:

@@ -377,11 +377,6 @@ void cpus_write_lock(void)
 
 void cpus_write_unlock(void)
 {
-<<<<<<< HEAD
-	cpu_hotplug.active_writer = NULL;
-	mutex_unlock(&cpu_hotplug.lock);
-	cpuhp_lock_release();
-=======
 	/*
 	 * We can't have hotplug operations before userspace starts running,
 	 * and some init codepaths will knowingly not take the hotplug lock.
@@ -392,7 +387,6 @@ void cpus_write_unlock(void)
 		return;
 
 	percpu_rwsem_assert_held(&cpu_hotplug_lock);
->>>>>>> android-4.14-q
 }
 
 /*

@@ -15,23 +15,16 @@
 
 #include <linux/cpufreq.h>
 #include <linux/cpufreq_times.h>
-<<<<<<< HEAD
-#include <linux/jiffies.h>
-=======
 #include <linux/hashtable.h>
 #include <linux/init.h>
 #include <linux/jiffies.h>
 #include <linux/proc_fs.h>
->>>>>>> 818299f6bdae
 #include <linux/sched.h>
 #include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/threads.h>
 
-<<<<<<< HEAD
-static DEFINE_SPINLOCK(task_time_in_state_lock); /* task->time_in_state */
-=======
 #define UID_HASH_BITS 10
 
 static DECLARE_HASHTABLE(uid_hash_table, UID_HASH_BITS);
@@ -52,7 +45,6 @@ struct uid_entry {
 	struct concurrent_times *concurrent_times;
 	u64 time_in_state[0];
 };
->>>>>>> 818299f6bdae
 
 /**
  * struct cpu_freqs - per-cpu frequency information
@@ -71,14 +63,6 @@ struct cpu_freqs {
 static struct cpu_freqs *all_freqs[NR_CPUS];
 
 static unsigned int next_offset;
-
-<<<<<<< HEAD
-void cpufreq_task_times_init(struct task_struct *p)
-{
-	void *temp;
-	unsigned long flags;
-	unsigned int max_state;
-=======
 
 /* Caller must hold rcu_read_lock() */
 static struct uid_entry *find_uid_entry_rcu(uid_t uid)
@@ -324,16 +308,11 @@ static int concurrent_policy_time_seq_show(struct seq_file *m, void *v)
 void cpufreq_task_times_init(struct task_struct *p)
 {
 	unsigned long flags;
->>>>>>> 818299f6bdae
 
 	spin_lock_irqsave(&task_time_in_state_lock, flags);
 	p->time_in_state = NULL;
 	spin_unlock_irqrestore(&task_time_in_state_lock, flags);
 	p->max_state = 0;
-<<<<<<< HEAD
-
-	max_state = READ_ONCE(next_offset);
-=======
 }
 
 void cpufreq_task_times_alloc(struct task_struct *p)
@@ -341,7 +320,6 @@ void cpufreq_task_times_alloc(struct task_struct *p)
 	void *temp;
 	unsigned long flags;
 	unsigned int max_state = READ_ONCE(next_offset);
->>>>>>> 818299f6bdae
 
 	/* We use one array to avoid multiple allocs per task */
 	temp = kcalloc(max_state, sizeof(p->time_in_state[0]), GFP_ATOMIC);
@@ -375,12 +353,9 @@ void cpufreq_task_times_exit(struct task_struct *p)
 	unsigned long flags;
 	void *temp;
 
-<<<<<<< HEAD
-=======
 	if (!p->time_in_state)
 		return;
 
->>>>>>> 818299f6bdae
 	spin_lock_irqsave(&task_time_in_state_lock, flags);
 	temp = p->time_in_state;
 	p->time_in_state = NULL;
@@ -422,24 +397,14 @@ void cpufreq_acct_update_power(struct task_struct *p, u64 cputime)
 {
 	unsigned long flags;
 	unsigned int state;
-<<<<<<< HEAD
-<<<<<<< HEAD
-	struct cpu_freqs *freqs = all_freqs[task_cpu(p)];
-=======
-=======
 	unsigned int active_cpu_cnt = 0;
 	unsigned int policy_cpu_cnt = 0;
 	unsigned int policy_first_cpu;
->>>>>>> android-4.14-q
 	struct uid_entry *uid_entry;
 	struct cpu_freqs *freqs = all_freqs[task_cpu(p)];
 	struct cpufreq_policy *policy;
 	uid_t uid = from_kuid_munged(current_user_ns(), task_uid(p));
-<<<<<<< HEAD
->>>>>>> 818299f6bdae
-=======
 	int cpu = 0;
->>>>>>> android-4.14-q
 
 	if (!freqs || is_idle_task(p) || p->flags & PF_EXITING)
 		return;
@@ -451,17 +416,12 @@ void cpufreq_acct_update_power(struct task_struct *p, u64 cputime)
 	    p->time_in_state)
 		p->time_in_state[state] += cputime;
 	spin_unlock_irqrestore(&task_time_in_state_lock, flags);
-<<<<<<< HEAD
-=======
 
 	spin_lock_irqsave(&uid_lock, flags);
 	uid_entry = find_or_register_uid_locked(uid);
 	if (uid_entry && state < uid_entry->max_state)
 		uid_entry->time_in_state[state] += cputime;
 	spin_unlock_irqrestore(&uid_lock, flags);
-<<<<<<< HEAD
->>>>>>> 818299f6bdae
-=======
 
 	rcu_read_lock();
 	uid_entry = find_uid_entry_rcu(uid);
@@ -508,7 +468,6 @@ static int cpufreq_times_get_index(struct cpu_freqs *freqs, unsigned int freq)
 			return index;
         }
 	return -1;
->>>>>>> android-4.14-q
 }
 
 void cpufreq_times_create_policy(struct cpufreq_policy *policy)
@@ -550,10 +509,6 @@ void cpufreq_times_create_policy(struct cpufreq_policy *policy)
 		all_freqs[cpu] = freqs;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
 static void uid_entry_reclaim(struct rcu_head *rcu)
 {
 	struct uid_entry *uid_entry = container_of(rcu, struct uid_entry, rcu);
@@ -562,7 +517,6 @@ static void uid_entry_reclaim(struct rcu_head *rcu)
 	kfree(uid_entry);
 }
 
->>>>>>> android-4.14-q
 void cpufreq_task_times_remove_uids(uid_t uid_start, uid_t uid_end)
 {
 	struct uid_entry *uid_entry;
@@ -584,13 +538,8 @@ void cpufreq_task_times_remove_uids(uid_t uid_start, uid_t uid_end)
 	spin_unlock_irqrestore(&uid_lock, flags);
 }
 
-<<<<<<< HEAD
->>>>>>> 818299f6bdae
-void cpufreq_times_record_transition(struct cpufreq_freqs *freq)
-=======
 void cpufreq_times_record_transition(struct cpufreq_policy *policy,
 	unsigned int new_freq)
->>>>>>> android-4.14-q
 {
 	int index;
 	struct cpu_freqs *freqs = all_freqs[policy->cpu];
@@ -601,8 +550,6 @@ void cpufreq_times_record_transition(struct cpufreq_policy *policy,
 	if (index >= 0)
 		WRITE_ONCE(freqs->last_index, index);
 }
-<<<<<<< HEAD
-=======
 
 static const struct seq_operations uid_time_in_state_seq_ops = {
 	.start = uid_seq_start,
@@ -682,4 +629,3 @@ static int __init cpufreq_times_init(void)
 }
 
 early_initcall(cpufreq_times_init);
->>>>>>> 818299f6bdae

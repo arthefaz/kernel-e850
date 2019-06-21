@@ -8,11 +8,8 @@
 
 #include <linux/slab.h>
 #include <linux/irq_work.h>
-<<<<<<< HEAD
 #include <linux/ems.h>
-=======
 #include "tune.h"
->>>>>>> android-4.14-q
 
 #include "walt.h"
 #include <trace/events/sched.h>
