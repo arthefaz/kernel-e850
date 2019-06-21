@@ -1035,7 +1035,7 @@ static int gpu_cooling_table_init(void)
 	for (i = 0; i < num_level; i++) {
 		freq = gpu_dvfs_get_clock(i);
 
-		if (freq > gpu_dvfs_get_max_freq())
+		if (freq > gpu_dvfs_get_max_freq() || freq == 0)
 			continue;
 
 		gpu_freq_table[count].flags = 0;
