@@ -68,6 +68,9 @@ struct fscrypt_info {
 	 */
 	struct crypto_cipher *ci_essiv_tfm;
 
+#ifdef CONFIG_CRYPTO_DISKCIPHER
+	struct crypto_diskcipher *ci_dtfm;
+#endif
 	/*
 	 * Encryption mode used for this inode.  It corresponds to either
 	 * ci_data_mode or ci_filename_mode, depending on the inode type.
@@ -85,17 +88,8 @@ struct fscrypt_info {
 	u8 ci_data_mode;
 	u8 ci_filename_mode;
 	u8 ci_flags;
-<<<<<<< HEAD
-#ifdef CONFIG_CRYPTO_DISKCIPHER
-	struct crypto_diskcipher *ci_dtfm;
-#endif
-	struct crypto_skcipher *ci_ctfm;
-	struct crypto_cipher *ci_essiv_tfm;
-	u8 ci_master_key[FS_KEY_DESCRIPTOR_SIZE];
-=======
 	u8 ci_master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
 	u8 ci_nonce[FS_KEY_DERIVATION_NONCE_SIZE];
->>>>>>> android-4.14-q
 };
 
 typedef enum {
@@ -135,9 +129,6 @@ extern int fscrypt_do_page_crypto(const struct inode *inode,
 				  gfp_t gfp_flags);
 extern struct page *fscrypt_alloc_bounce_page(struct fscrypt_ctx *ctx,
 					      gfp_t gfp_flags);
-<<<<<<< HEAD
-extern void fscrypt_free_bounce_page(void *pool);
-=======
 extern const struct dentry_operations fscrypt_d_ops;
 
 extern void __printf(3, 4) __cold
@@ -163,7 +154,6 @@ union fscrypt_iv {
 
 void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
 			 const struct fscrypt_info *ci);
->>>>>>> android-4.14-q
 
 /* fname.c */
 extern int fname_encrypt(struct inode *inode, const struct qstr *iname,
@@ -171,8 +161,15 @@ extern int fname_encrypt(struct inode *inode, const struct qstr *iname,
 extern bool fscrypt_fname_encrypted_size(const struct inode *inode,
 					 u32 orig_len, u32 max_len,
 					 u32 *encrypted_len_ret);
+extern void fscrypt_free_bounce_page(void *pool);
 
 /* keyinfo.c */
+
+enum cipher_flags {
+	CRYPT_MODE_SKCIPHER,
+	CRYPT_MODE_ESSIV,
+	CRYPT_MODE_DISKCIPHER,
+};
 
 struct fscrypt_mode {
 	const char *friendly_name;
@@ -180,7 +177,7 @@ struct fscrypt_mode {
 	int keysize;
 	int ivsize;
 	bool logged_impl_name;
-	bool needs_essiv;
+	enum cipher_flags flags;
 };
 
 extern void __exit fscrypt_essiv_cleanup(void);

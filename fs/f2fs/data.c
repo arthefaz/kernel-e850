@@ -210,9 +210,6 @@ static void f2fs_read_end_io(struct bio *bio)
 		return;
 	}
 
-<<<<<<< HEAD
-end_io:
-=======
 	if (first_page != NULL &&
 		__read_io_type(first_page) == F2FS_RD_DATA) {
 		trace_android_fs_dataread_end(first_page->mapping->host,
@@ -220,7 +217,7 @@ end_io:
 						bio->bi_iter.bi_size);
 	}
 
->>>>>>> android-4.14-q
+end_io:
 	__read_end_io(bio);
 }
 
@@ -557,15 +554,6 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
 		bio_put(bio);
 		return -EFAULT;
 	}
-<<<<<<< HEAD
-	fio->op_flags |= fio->encrypted_page ? REQ_NOENCRYPT : 0;
-	bio_set_op_attrs(bio, fio->op, fio->op_flags);
-
-	if (f2fs_may_encrypt_bio(inode, fio))
-		fscrypt_set_bio(inode, bio, PG_DUN(inode, fio->page));
-
-	__submit_bio(fio->sbi, bio, fio->type);
-=======
 
 	if (fio->io_wbc && !is_read_io(fio->op))
 		wbc_account_io(fio->io_wbc, page, PAGE_SIZE);
@@ -574,9 +562,15 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
 
 	inc_page_count(fio->sbi, is_read_io(fio->op) ?
 			__read_io_type(page): WB_DATA_TYPE(fio->page));
->>>>>>> android-4.14-q
+
+	fio->op_flags |= fio->encrypted_page ? REQ_NOENCRYPT : 0;
+	bio_set_op_attrs(bio, fio->op, fio->op_flags);
+
+	if (f2fs_may_encrypt_bio(inode, fio))
+		fscrypt_set_bio(inode, bio, PG_DUN(inode, fio->page));
 
 	__f2fs_submit_read_bio(fio->sbi, bio, fio->type);
+
 	return 0;
 }
 
@@ -586,13 +580,10 @@ void f2fs_submit_page_write(struct f2fs_io_info *fio)
 	enum page_type btype = PAGE_TYPE_OF_BIO(fio->type);
 	struct f2fs_bio_info *io = sbi->write_io[btype] + fio->temp;
 	struct page *bio_page;
-<<<<<<< HEAD
 	int err = 0;
 	struct inode *inode;
 	bool bio_encrypted;
 	u64 dun;
-=======
->>>>>>> android-4.14-q
 
 	f2fs_bug_on(sbi, is_read_io(fio->op));
 
@@ -701,16 +692,11 @@ static struct bio *f2fs_grab_read_bio(struct inode *inode, block_t blkaddr,
 		ctx->bio = bio;
 		ctx->enabled_steps = post_read_steps;
 		bio->bi_private = ctx;
-<<<<<<< HEAD
 		bio_set_op_attrs(bio, REQ_OP_READ,
 			(f2fs_encrypted_inode(inode) ?
 			 REQ_NOENCRYPT :
 			 0));
 
-		/* wait the page to be moved by cleaning */
-		f2fs_wait_on_block_writeback(sbi, blkaddr);
-=======
->>>>>>> android-4.14-q
 	}
 
 	return bio;
@@ -732,17 +718,13 @@ static int f2fs_submit_page_read(struct inode *inode, struct page *page,
 		bio_put(bio);
 		return -EFAULT;
 	}
-<<<<<<< HEAD
+	ClearPageError(page);
+	inc_page_count(F2FS_I_SB(inode), F2FS_RD_DATA);
 
 	if (f2fs_may_encrypt_bio(inode, NULL))
 		fscrypt_set_bio(inode, bio, PG_DUN(inode, page));
 
-	__submit_bio(F2FS_I_SB(inode), bio, DATA);
-=======
-	ClearPageError(page);
-	inc_page_count(F2FS_I_SB(inode), F2FS_RD_DATA);
 	__f2fs_submit_read_bio(F2FS_I_SB(inode), bio, DATA);
->>>>>>> android-4.14-q
 	return 0;
 }
 

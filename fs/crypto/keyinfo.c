@@ -17,6 +17,7 @@
 #include <crypto/algapi.h>
 #include <crypto/sha.h>
 #include <crypto/skcipher.h>
+#include <crypto/diskcipher.h>
 #include "fscrypt_private.h"
 
 static struct crypto_shash *essiv_hash_tfm;
@@ -147,7 +148,7 @@ static struct fscrypt_mode available_modes[] = {
 		.cipher_str = "cbc(aes)",
 		.keysize = 16,
 		.ivsize = 16,
-		.needs_essiv = true,
+		.flags = CRYPT_MODE_ESSIV,
 	},
 	[FS_ENCRYPTION_MODE_AES_128_CTS] = {
 		.friendly_name = "AES-128-CTS-CBC",
@@ -229,6 +230,35 @@ static int find_and_derive_key(const struct inode *inode,
 	return err;
 }
 
+#if defined(CONFIG_CRYPTO_DISKCIPHER)
+/* Allocate and key a diskcipher cipher object for the given encryption mode */
+static struct crypto_diskcipher *
+allocate_diskcipher_for_mode(struct fscrypt_mode *mode, const u8 *raw_key,
+			const struct inode *inode)
+{
+	struct crypto_diskcipher *tfm;
+	int err;
+	bool force = (mode->flags == CRYPT_MODE_DISKCIPHER) ? 0 : 1;
+
+	tfm = crypto_alloc_diskcipher(mode->cipher_str, 0, 0, force);
+	if (IS_ERR(tfm)) {
+		fscrypt_warn(inode->i_sb,
+				"error allocating '%s' transform for inode %lu: %ld",
+				mode->cipher_str, inode->i_ino, PTR_ERR(tfm));
+		return tfm;
+	}
+	err = crypto_diskcipher_setkey(tfm, raw_key, mode->keysize, 0);
+	if (err)
+		goto err_free_dtfm;
+
+	return tfm;
+
+err_free_dtfm:
+	crypto_free_diskcipher(tfm);
+	return ERR_PTR(err);
+}
+#endif
+
 /* Allocate and key a symmetric cipher object for the given encryption mode */
 static struct crypto_skcipher *
 allocate_skcipher_for_mode(struct fscrypt_mode *mode, const u8 *raw_key,
@@ -274,7 +304,12 @@ struct fscrypt_master_key {
 	struct hlist_node mk_node;
 	refcount_t mk_refcount;
 	const struct fscrypt_mode *mk_mode;
-	struct crypto_skcipher *mk_ctfm;
+	union {
+		struct crypto_skcipher *mk_ctfm;
+#if defined(CONFIG_CRYPTO_DISKCIPHER)
+		struct crypto_diskcipher *mk_dtfm;
+#endif
+	} cipher_tfm;
 	u8 mk_descriptor[FS_KEY_DESCRIPTOR_SIZE];
 	u8 mk_raw[FS_MAX_KEY_SIZE];
 };
@@ -282,7 +317,11 @@ struct fscrypt_master_key {
 static void free_master_key(struct fscrypt_master_key *mk)
 {
 	if (mk) {
-		crypto_free_skcipher(mk->mk_ctfm);
+		crypto_free_skcipher(mk->cipher_tfm.mk_ctfm);
+#if defined(CONFIG_CRYPTO_DISKCIPHER)
+		if (mk->cipher_tfm.mk_dtfm)
+			crypto_free_diskcipher(mk->cipher_tfm.mk_dtfm);
+#endif
 		kzfree(mk);
 	}
 }
@@ -294,26 +333,6 @@ static void put_master_key(struct fscrypt_master_key *mk)
 	hash_del(&mk->mk_node);
 	spin_unlock(&fscrypt_master_keys_lock);
 
-<<<<<<< HEAD
-#if defined(CONFIG_CRYPTO_DISKCIPHER)
-	if ((ci->ci_dtfm && ci->ci_ctfm) || (ci->ci_dtfm && !virt_addr_valid(ci->ci_dtfm)) ||
-		(ci->ci_ctfm && !virt_addr_valid(ci->ci_ctfm)) ||
-		(ci->ci_essiv_tfm && !virt_addr_valid(ci->ci_essiv_tfm)))
-		pr_warn("fscrypto: mode:d:%d,f:%d, dt:%p(%d), ct:%p(%d), ess:%p(%d)\n",
-					ci->ci_data_mode, ci->ci_filename_mode,
-					ci->ci_dtfm, virt_addr_valid(ci->ci_dtfm),
-					ci->ci_ctfm, virt_addr_valid(ci->ci_ctfm),
-					ci->ci_essiv_tfm, virt_addr_valid(ci->ci_essiv_tfm));
-
-	if (ci->ci_dtfm && virt_addr_valid(ci->ci_dtfm))
-		crypto_free_req_diskcipher(ci->ci_dtfm);
-#endif
-	if (ci->ci_ctfm && virt_addr_valid(ci->ci_ctfm))
-		crypto_free_skcipher(ci->ci_ctfm);
-	if (ci->ci_essiv_tfm && virt_addr_valid(ci->ci_essiv_tfm))
-		crypto_free_cipher(ci->ci_essiv_tfm);
-	kmem_cache_free(fscrypt_info_cachep, ci);
-=======
 	free_master_key(mk);
 }
 
@@ -380,10 +399,23 @@ fscrypt_get_master_key(const struct fscrypt_info *ci, struct fscrypt_mode *mode,
 		return ERR_PTR(-ENOMEM);
 	refcount_set(&mk->mk_refcount, 1);
 	mk->mk_mode = mode;
-	mk->mk_ctfm = allocate_skcipher_for_mode(mode, raw_key, inode);
-	if (IS_ERR(mk->mk_ctfm)) {
-		err = PTR_ERR(mk->mk_ctfm);
-		mk->mk_ctfm = NULL;
+#if defined(CONFIG_CRYPTO_DISKCIPHER)
+	if (S_ISREG(inode->i_mode)) {
+		mk->cipher_tfm.mk_dtfm = allocate_diskcipher_for_mode(mode, raw_key, inode);
+		if (IS_ERR(mk->cipher_tfm.mk_dtfm)) {
+			fscrypt_warn(inode->i_sb, "fails to get diskipher: %p", mk->cipher_tfm.mk_dtfm);
+			mk->cipher_tfm.mk_dtfm = NULL;
+		} else
+			goto end_get_tfm;
+	}
+	mk->cipher_tfm.mk_ctfm = allocate_skcipher_for_mode(mode, raw_key, inode);
+end_get_tfm:
+#else
+	mk->cipher_tfm.mk_ctfm = allocate_skcipher_for_mode(mode, raw_key, inode);
+#endif
+	if (IS_ERR(mk->cipher_tfm.mk_ctfm)) {
+		err = PTR_ERR(mk->cipher_tfm.mk_ctfm);
+		mk->cipher_tfm.mk_ctfm = NULL;
 		goto err_free_mk;
 	}
 	memcpy(mk->mk_descriptor, ci->ci_master_key_descriptor,
@@ -395,7 +427,6 @@ fscrypt_get_master_key(const struct fscrypt_info *ci, struct fscrypt_mode *mode,
 err_free_mk:
 	free_master_key(mk);
 	return ERR_PTR(err);
->>>>>>> android-4.14-q
 }
 
 static int derive_essiv_salt(const u8 *key, int keysize, u8 *salt)
@@ -482,17 +513,33 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
 		mk = fscrypt_get_master_key(ci, mode, raw_key, inode);
 		if (IS_ERR(mk))
 			return PTR_ERR(mk);
-		ctfm = mk->mk_ctfm;
+		ctfm = mk->cipher_tfm.mk_ctfm;
 	} else {
 		mk = NULL;
+#if defined(CONFIG_CRYPTO_DISKCIPHER)
+		if (S_ISREG(inode->i_mode)) {
+			ci->ci_dtfm = allocate_diskcipher_for_mode(mode, raw_key, inode);
+			if (IS_ERR(ci->ci_dtfm)) {
+				fscrypt_warn(inode->i_sb, "fails to get diskipher: %p", ci->ci_dtfm);
+				ci->ci_dtfm = NULL;
+			} else
+				goto end_get_tfm;
+		}
+#endif
 		ctfm = allocate_skcipher_for_mode(mode, raw_key, inode);
 		if (IS_ERR(ctfm))
 			return PTR_ERR(ctfm);
 	}
+#if defined(CONFIG_CRYPTO_DISKCIPHER)
+	ci->ci_ctfm = ctfm;
+end_get_tfm:
+	ci->ci_master_key = mk;
+#else
 	ci->ci_master_key = mk;
 	ci->ci_ctfm = ctfm;
+#endif
 
-	if (mode->needs_essiv) {
+	if (mode->flags == CRYPT_MODE_ESSIV) {
 		/* ESSIV implies 16-byte IVs which implies !DIRECT_KEY */
 		WARN_ON(mode->ivsize != AES_BLOCK_SIZE);
 		WARN_ON(ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY);
@@ -516,6 +563,10 @@ static void put_crypt_info(struct fscrypt_info *ci)
 	if (ci->ci_master_key) {
 		put_master_key(ci->ci_master_key);
 	} else {
+#if defined(CONFIG_CRYPTO_DISKCIPHER)
+		if (ci->ci_dtfm)
+			crypto_free_diskcipher(ci->ci_dtfm);
+#endif
 		crypto_free_skcipher(ci->ci_ctfm);
 		crypto_free_cipher(ci->ci_essiv_tfm);
 	}
@@ -565,19 +616,9 @@ int fscrypt_get_encryption_info(struct inode *inode)
 	crypt_info->ci_flags = ctx.flags;
 	crypt_info->ci_data_mode = ctx.contents_encryption_mode;
 	crypt_info->ci_filename_mode = ctx.filenames_encryption_mode;
-<<<<<<< HEAD
-	crypt_info->ci_ctfm = NULL;
-	crypt_info->ci_essiv_tfm = NULL;
-#if defined(CONFIG_CRYPTO_DISKCIPHER)
-	crypt_info->ci_dtfm = NULL;
-#endif
-	memcpy(crypt_info->ci_master_key, ctx.master_key_descriptor,
-				sizeof(crypt_info->ci_master_key));
-=======
 	memcpy(crypt_info->ci_master_key_descriptor, ctx.master_key_descriptor,
 	       FS_KEY_DESCRIPTOR_SIZE);
 	memcpy(crypt_info->ci_nonce, ctx.nonce, FS_KEY_DERIVATION_NONCE_SIZE);
->>>>>>> android-4.14-q
 
 	mode = select_encryption_mode(crypt_info, inode);
 	if (IS_ERR(mode)) {
@@ -596,55 +637,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
 	if (!raw_key)
 		goto out;
 
-<<<<<<< HEAD
-	res = validate_user_key(crypt_info, &ctx, raw_key, FS_KEY_DESC_PREFIX,
-				keysize);
-	if (res && inode->i_sb->s_cop->key_prefix) {
-		int res2 = validate_user_key(crypt_info, &ctx, raw_key,
-					     inode->i_sb->s_cop->key_prefix,
-					     keysize);
-		if (res2) {
-			if (res2 == -ENOKEY)
-				res = -ENOKEY;
-			goto out;
-		}
-	} else if (res) {
-		goto out;
-	}
-#if defined(CONFIG_CRYPTO_DISKCIPHER)
-	if (S_ISREG(inode->i_mode)) {
-		/* try discipher first */
-		crypt_info->ci_dtfm = crypto_alloc_diskcipher(cipher_str, 0, 0, 1);
-		if (crypt_info->ci_dtfm && !IS_ERR(crypt_info->ci_dtfm)) {
-			res = crypto_diskcipher_setkey(crypt_info->ci_dtfm,
-				raw_key, keysize, 0);
-			if (!res) {
-				if (cmpxchg(&inode->i_crypt_info, NULL, crypt_info) == NULL)
-					crypt_info = NULL;
-				pr_debug("%s: (inode %p:%lu, fscrypt:%p) uses diskcipher tfm\n",
-					__func__, inode, inode->i_ino, inode->i_crypt_info);
-				goto out;
-			} else {
-				pr_warn("%s: error %d fails to set diskciher key\n",
-					__func__, res);
-				crypto_free_diskcipher(crypt_info->ci_dtfm);
-			}
-		}
-		/* clear diskcipher. use skcipher */
-		pr_debug("%s: (inode %lu) fails to get diskcipher (%s, %d)\n",
-			 __func__, inode->i_ino, cipher_str, res);
-		crypt_info->ci_dtfm = NULL;
-	}
-#endif
-	ctfm = crypto_alloc_skcipher(cipher_str, 0, 0);
-	if (!ctfm || IS_ERR(ctfm)) {
-		res = ctfm ? PTR_ERR(ctfm) : -ENOMEM;
-		pr_debug("%s: error %d (inode %lu) allocating crypto tfm\n",
-			 __func__, res, inode->i_ino);
-=======
 	res = find_and_derive_key(inode, &ctx, raw_key, mode);
 	if (res)
->>>>>>> android-4.14-q
 		goto out;
 
 	res = setup_crypto_transform(crypt_info, mode, raw_key, inode);

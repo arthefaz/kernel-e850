@@ -3596,12 +3596,6 @@ static inline bool f2fs_may_encrypt(struct inode *inode)
 static inline int block_unaligned_IO(struct inode *inode,
 				struct kiocb *iocb, struct iov_iter *iter)
 {
-<<<<<<< HEAD
-	return ((f2fs_post_read_required(inode) &&
-			!fscrypt_disk_encrypted(inode)) ||
-			(rw == WRITE && test_opt(F2FS_I_SB(inode), LFS)) ||
-			F2FS_I_SB(inode)->s_ndevs);
-=======
 	unsigned int i_blkbits = READ_ONCE(inode->i_blkbits);
 	unsigned int blocksize_mask = (1 << i_blkbits) - 1;
 	loff_t offset = iocb->ki_pos;
@@ -3626,7 +3620,7 @@ static inline bool f2fs_force_buffered_io(struct inode *inode,
 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
 	int rw = iov_iter_rw(iter);
 
-	if (f2fs_post_read_required(inode))
+	if (f2fs_post_read_required(inode) && !fscrypt_disk_encrypted(inode))
 		return true;
 	if (sbi->s_ndevs)
 		return true;
@@ -3663,7 +3657,6 @@ static inline bool is_journalled_quota(struct f2fs_sb_info *sbi)
 		return true;
 #endif
 	return false;
->>>>>>> android-4.14-q
 }
 
 #endif
