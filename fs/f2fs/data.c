@@ -580,7 +580,6 @@ void f2fs_submit_page_write(struct f2fs_io_info *fio)
 	enum page_type btype = PAGE_TYPE_OF_BIO(fio->type);
 	struct f2fs_bio_info *io = sbi->write_io[btype] + fio->temp;
 	struct page *bio_page;
-	int err = 0;
 	struct inode *inode;
 	bool bio_encrypted;
 	u64 dun;
