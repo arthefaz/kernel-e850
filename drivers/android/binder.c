@@ -2332,13 +2332,8 @@ static size_t binder_get_object(struct binder_proc *proc,
 	struct binder_object_header *hdr;
 	size_t object_size = 0;
 
-<<<<<<< HEAD
-	if (buffer->data_size < sizeof(*hdr) ||
-	    offset > buffer->data_size - sizeof(*hdr) ||
-=======
 	read_size = min_t(size_t, sizeof(*object), buffer->data_size - offset);
 	if (offset > buffer->data_size || read_size < sizeof(*hdr) ||
->>>>>>> android-4.14-q
 	    !IS_ALIGNED(offset, sizeof(u32)))
 		return 0;
 	binder_alloc_copy_from_buffer(&proc->alloc, object, buffer,
@@ -2509,16 +2504,10 @@ static void binder_transaction_buffer_release(struct binder_proc *proc,
 	binder_size_t off_start_offset, buffer_offset, off_end_offset;
 
 	binder_debug(BINDER_DEBUG_TRANSACTION,
-<<<<<<< HEAD
-		     "%d(%s) buffer release %d, size %zd-%zd, failed at %pK\n",
+		     "%d(%s) buffer release %d, size %zd-%zd, failed at %llx\n",
 		     proc->pid, proc->tsk->comm, buffer->debug_id,
-		     buffer->data_size, buffer->offsets_size, failed_at);
-=======
-		     "%d buffer release %d, size %zd-%zd, failed at %llx\n",
-		     proc->pid, buffer->debug_id,
 		     buffer->data_size, buffer->offsets_size,
 		     (unsigned long long)failed_at);
->>>>>>> android-4.14-q
 
 	if (buffer->target_node)
 		binder_dec_node(buffer->target_node, 1, 0);
@@ -2877,20 +2866,11 @@ static int binder_translate_fd_array(struct binder_fd_array_object *fda,
 	 * Convert the address to an offset relative to
 	 * the base of the transaction buffer.
 	 */
-<<<<<<< HEAD
-	parent_buffer = parent->buffer -
-		binder_alloc_get_user_buffer_offset(&target_proc->alloc);
-	fd_array = (u32 *)(parent_buffer + (uintptr_t)fda->parent_offset);
-	if (!IS_ALIGNED((unsigned long)fd_array, sizeof(u32))) {
-		binder_user_error("%d:%d(%s:%s) parent offset not aligned correctly.\n",
-				  proc->pid, thread->pid, proc->tsk->comm, thread->task->comm);
-=======
 	fda_offset = (parent->buffer - (uintptr_t)t->buffer->user_data) +
 		fda->parent_offset;
 	if (!IS_ALIGNED((unsigned long)fda_offset, sizeof(u32))) {
-		binder_user_error("%d:%d parent offset not aligned correctly.\n",
-				  proc->pid, thread->pid);
->>>>>>> android-4.14-q
+		binder_user_error("%d:%d(%s:%s) parent offset not aligned correctly.\n",
+				  proc->pid, thread->pid, proc->tsk->comm, thread->task->comm);
 		return -EINVAL;
 	}
 	for (fdi = 0; fdi < fda->num_fds; fdi++) {
@@ -3364,12 +3344,9 @@ static void binder_transaction(struct binder_proc *proc,
 		extra_buffers_size += ALIGN(secctx_sz, sizeof(u64));
 	}
 
-<<<<<<< HEAD
 #ifdef CONFIG_DEBUG_SNAPSHOT_BINDER
 	dss_binder_transaction(reply, t, t->from ? t->from : thread, target_node ? target_node->debug_id : 0);
 #endif
-=======
->>>>>>> android-4.14-q
 	trace_binder_transaction(reply, t, target_node);
 
 	t->buffer = binder_alloc_new_buf(&target_proc->alloc, tr->data_size,
@@ -3391,19 +3368,11 @@ static void binder_transaction(struct binder_proc *proc,
 				    ALIGN(tr->offsets_size, sizeof(void *)) +
 				    ALIGN(extra_buffers_size, sizeof(void *)) -
 				    ALIGN(secctx_sz, sizeof(u64));
-<<<<<<< HEAD
-		char *kptr = t->buffer->data + buf_offset;
-
-		t->security_ctx = (uintptr_t)kptr +
-		    binder_alloc_get_user_buffer_offset(&target_proc->alloc);
-		memcpy(kptr, secctx, secctx_sz);
-=======
 
 		t->security_ctx = (uintptr_t)t->buffer->user_data + buf_offset;
 		binder_alloc_copy_to_buffer(&target_proc->alloc,
 					    t->buffer, buf_offset,
 					    secctx, secctx_sz);
->>>>>>> android-4.14-q
 		security_release_secctx(secctx, secctx_sz);
 		secctx = NULL;
 	}
@@ -3412,32 +3381,19 @@ static void binder_transaction(struct binder_proc *proc,
 	t->buffer->target_node = target_node;
 	trace_binder_transaction_alloc_buf(t->buffer);
 
-<<<<<<< HEAD
-	if (copy_from_user(t->buffer->data, (const void __user *)(uintptr_t)
-			   tr->data.ptr.buffer, tr->data_size)) {
-		binder_user_error("%d:%d(%s:%s) got transaction with invalid data ptr\n",
-				proc->pid, thread->pid, proc->tsk->comm, thread->task->comm);
-=======
 	if (binder_alloc_copy_user_to_buffer(
 				&target_proc->alloc,
 				t->buffer, 0,
 				(const void __user *)
 					(uintptr_t)tr->data.ptr.buffer,
 				tr->data_size)) {
-		binder_user_error("%d:%d got transaction with invalid data ptr\n",
-				proc->pid, thread->pid);
->>>>>>> android-4.14-q
+		binder_user_error("%d:%d(%s:%s) got transaction with invalid data ptr\n",
+				proc->pid, thread->pid, proc->tsk->comm, thread->task->comm);
 		return_error = BR_FAILED_REPLY;
 		return_error_param = -EFAULT;
 		return_error_line = __LINE__;
 		goto err_copy_data_failed;
 	}
-<<<<<<< HEAD
-	if (copy_from_user(offp, (const void __user *)(uintptr_t)
-			   tr->data.ptr.offsets, tr->offsets_size)) {
-		binder_user_error("%d:%d(%s:%s) got transaction with invalid offsets ptr\n",
-				proc->pid, thread->pid, proc->tsk->comm, thread->task->comm);
-=======
 	if (binder_alloc_copy_user_to_buffer(
 				&target_proc->alloc,
 				t->buffer,
@@ -3445,9 +3401,8 @@ static void binder_transaction(struct binder_proc *proc,
 				(const void __user *)
 					(uintptr_t)tr->data.ptr.offsets,
 				tr->offsets_size)) {
-		binder_user_error("%d:%d got transaction with invalid offsets ptr\n",
-				proc->pid, thread->pid);
->>>>>>> android-4.14-q
+		binder_user_error("%d:%d(%s:%s) got transaction with invalid offsets ptr\n",
+				proc->pid, thread->pid, proc->tsk->comm, thread->task->comm);
 		return_error = BR_FAILED_REPLY;
 		return_error_param = -EFAULT;
 		return_error_line = __LINE__;
@@ -3479,15 +3434,6 @@ static void binder_transaction(struct binder_proc *proc,
 	for (buffer_offset = off_start_offset; buffer_offset < off_end_offset;
 	     buffer_offset += sizeof(binder_size_t)) {
 		struct binder_object_header *hdr;
-<<<<<<< HEAD
-		size_t object_size = binder_validate_object(t->buffer, *offp);
-
-		if (object_size == 0 || *offp < off_min) {
-			binder_user_error("%d:%d(%s:%s) got transaction with invalid offset (%lld, min %lld max %lld)"\
-					  " or object.\n",
-					  proc->pid, thread->pid, proc->tsk->comm, thread->task->comm,
-					  (u64)*offp,
-=======
 		size_t object_size;
 		struct binder_object object;
 		binder_size_t object_offset;
@@ -3500,10 +3446,9 @@ static void binder_transaction(struct binder_proc *proc,
 		object_size = binder_get_object(target_proc, t->buffer,
 						object_offset, &object);
 		if (object_size == 0 || object_offset < off_min) {
-			binder_user_error("%d:%d got transaction with invalid offset (%lld, min %lld max %lld) or object.\n",
-					  proc->pid, thread->pid,
+			binder_user_error("%d:%d(%s:%s) got transaction with invalid offset (%lld, min %lld max %lld) or object.\n",
+					  proc->pid, thread->pid, proc->tsk->comm, thread->task->comm,
 					  (u64)object_offset,
->>>>>>> android-4.14-q
 					  (u64)off_min,
 					  (u64)t->buffer->data_size);
 			return_error = BR_FAILED_REPLY;
@@ -3625,13 +3570,6 @@ static void binder_transaction(struct binder_proc *proc,
 				return_error_line = __LINE__;
 				goto err_bad_offset;
 			}
-<<<<<<< HEAD
-			if (copy_from_user(sg_bufp,
-					   (const void __user *)(uintptr_t)
-					   bp->buffer, bp->length)) {
-				binder_user_error("%d:%d(%s:%s) got transaction with invalid offsets ptr\n",
-						  proc->pid, thread->pid, proc->tsk->comm, thread->task->comm);
-=======
 			if (binder_alloc_copy_user_to_buffer(
 						&target_proc->alloc,
 						t->buffer,
@@ -3639,9 +3577,8 @@ static void binder_transaction(struct binder_proc *proc,
 						(const void __user *)
 							(uintptr_t)bp->buffer,
 						bp->length)) {
-				binder_user_error("%d:%d got transaction with invalid offsets ptr\n",
-						  proc->pid, thread->pid);
->>>>>>> android-4.14-q
+				binder_user_error("%d:%d(%s:%s) got transaction with invalid offsets ptr\n",
+						  proc->pid, thread->pid, proc->tsk->comm, thread->task->comm);
 				return_error_param = -EFAULT;
 				return_error = BR_FAILED_REPLY;
 				return_error_line = __LINE__;
@@ -3995,7 +3932,6 @@ static int binder_thread_write(struct binder_proc *proc,
 			if (IS_ERR_OR_NULL(buffer)) {
 				if (PTR_ERR(buffer) == -EPERM) {
 					binder_user_error(
-<<<<<<< HEAD
 						"%d:%d(%s:%s) BC_FREE_BUFFER u%016llx matched unreturned or currently freeing buffer\n",
 						proc->pid, thread->pid, proc->tsk->comm, thread->task->comm,
 						(u64)data_ptr);
@@ -4003,15 +3939,6 @@ static int binder_thread_write(struct binder_proc *proc,
 					binder_user_error(
 						"%d:%d(%s:%s) BC_FREE_BUFFER u%016llx no match\n",
 						proc->pid, thread->pid, proc->tsk->comm, thread->task->comm,
-=======
-						"%d:%d BC_FREE_BUFFER u%016llx matched unreturned or currently freeing buffer\n",
-						proc->pid, thread->pid,
-						(u64)data_ptr);
-				} else {
-					binder_user_error(
-						"%d:%d BC_FREE_BUFFER u%016llx no match\n",
-						proc->pid, thread->pid,
->>>>>>> android-4.14-q
 						(u64)data_ptr);
 				}
 				break;
@@ -4661,13 +4588,7 @@ retry:
 
 		trd->data_size = t->buffer->data_size;
 		trd->offsets_size = t->buffer->offsets_size;
-<<<<<<< HEAD
-		trd->data.ptr.buffer = (binder_uintptr_t)
-			((uintptr_t)t->buffer->data +
-			binder_alloc_get_user_buffer_offset(&proc->alloc));
-=======
 		trd->data.ptr.buffer = (uintptr_t)t->buffer->user_data;
->>>>>>> android-4.14-q
 		trd->data.ptr.offsets = trd->data.ptr.buffer +
 					ALIGN(t->buffer->data_size,
 					    sizeof(void *));
@@ -5385,13 +5306,8 @@ static int binder_mmap(struct file *filp, struct vm_area_struct *vma)
 	return 0;
 
 err_bad_arg:
-<<<<<<< HEAD
 	pr_err("%s: %d(%s) %lx-%lx %s failed %d\n", __func__,
 		proc->pid, proc->tsk->comm, vma->vm_start, vma->vm_end, failure_string, ret);
-=======
-	pr_err("%s: %d %lx-%lx %s failed %d\n", __func__,
-	       proc->pid, vma->vm_start, vma->vm_end, failure_string, ret);
->>>>>>> android-4.14-q
 	return ret;
 }
 
@@ -5400,14 +5316,9 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	struct binder_proc *proc;
 	struct binder_device *binder_dev;
 
-<<<<<<< HEAD
-	binder_debug(BINDER_DEBUG_OPEN_CLOSE, "%s: %d:%d (%s:%s)\n", __func__,
+	binder_debug(BINDER_DEBUG_OPEN_CLOSE, "%s: %d:%d(%s:%s)\n", __func__,
 		     current->group_leader->pid, current->pid,
 		     current->group_leader->comm, current->comm);
-=======
-	binder_debug(BINDER_DEBUG_OPEN_CLOSE, "%s: %d:%d\n", __func__,
-		     current->group_leader->pid, current->pid);
->>>>>>> android-4.14-q
 
 	proc = kzalloc(sizeof(*proc), GFP_KERNEL);
 	if (proc == NULL)
