@@ -198,6 +198,22 @@ static void idma_reg_set_sbwc(u32 id, enum dpp_comp_type ct, u32 rcv_num)
 				IDMA_RECOVERY_NUM_MASK);
 }
 
+static void idma_reg_set_sbwcl(u32 id, enum dpp_comp_type ct, u32 size_32x, u32 rcv_num)
+{
+	u32 val = 0;
+
+	if (ct == COMP_TYPE_SBWCL)
+		val = ~0;
+
+	dma_write_mask(id, IDMA_IN_CON, val, IDMA_SBWC_LOSSY_EN | IDMA_SBWC_EN);
+	dma_write_mask(id, IDMA_SBWC_PARAM,
+			IDMA_CHM_LOSSY_BYTENUM(size_32x) | IDMA_LUM_LOSSY_BYTENUM(size_32x),
+			IDMA_CHM_LOSSY_BYTENUM_MASK | IDMA_LUM_LOSSY_BYTENUM_MASK);
+	dma_write_mask(id, IDMA_RECOVERY_CTRL, val, IDMA_RECOVERY_EN);
+	dma_write_mask(id, IDMA_RECOVERY_CTRL, IDMA_RECOVERY_NUM(rcv_num),
+				IDMA_RECOVERY_NUM_MASK);
+}
+
 static void idma_reg_set_deadlock(u32 id, u32 en, u32 dl_num)
 {
 	u32 val = en ? ~0 : 0;
@@ -664,7 +680,7 @@ static void dma_reg_set_base_addr(u32 id, struct dpp_params_info *p,
 	dpp_dbg("dpp%d: base addr 1p(0x%lx) 2p(0x%lx) 3p(0x%lx) 4p(0x%lx)\n", id,
 			(unsigned long)p->addr[0], (unsigned long)p->addr[1],
 			(unsigned long)p->addr[2], (unsigned long)p->addr[3]);
-	if (p->comp_type == COMP_TYPE_SBWC)
+	if ((p->comp_type == COMP_TYPE_SBWC) || (p->comp_type == COMP_TYPE_SBWCL))
 		dpp_dbg("dpp%d: [stride] yh(0x%lx) yp(0x%lx) ch(0x%lx) cp(0x%lx)\n", id,
 			(unsigned long)p->yhd_y2_strd, (unsigned long)p->ypl_c2_strd,
 			(unsigned long)p->chd_strd, (unsigned long)p->cpl_strd);
@@ -851,6 +867,7 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 		const unsigned long attr)
 {
 	int deadlock_cnt = 0;
+	u32 size_32x = 2;
 
 	if (test_bit(DPP_ATTR_CSC, &attr) && test_bit(DPP_ATTR_DPP, &attr))
 		dpp_reg_set_csc_params(id, p->eq_mode);
@@ -883,8 +900,33 @@ void dpp_reg_configure_params(u32 id, struct dpp_params_info *p,
 	if (test_bit(DPP_ATTR_AFBC, &attr))
 		idma_reg_set_afbc(id, p->comp_type, p->rcv_num);
 
-	if (test_bit(DPP_ATTR_SBWC, &attr))
-		idma_reg_set_sbwc(id, p->comp_type, p->rcv_num);
+	if (test_bit(DPP_ATTR_SBWC, &attr)) {
+		if (p->comp_type == COMP_TYPE_SBWCL) {
+			switch (p->format) {
+			case DECON_PIXEL_FORMAT_NV12M_SBWC_8B_L50:
+			case DECON_PIXEL_FORMAT_NV12N_SBWC_8B_L50:
+			case DECON_PIXEL_FORMAT_NV12M_SBWC_10B_L40:
+			case DECON_PIXEL_FORMAT_NV12N_SBWC_10B_L40:
+				size_32x = 2;
+				break;
+			case DECON_PIXEL_FORMAT_NV12M_SBWC_8B_L75:
+			case DECON_PIXEL_FORMAT_NV12N_SBWC_8B_L75:
+			case DECON_PIXEL_FORMAT_NV12M_SBWC_10B_L60:
+			case DECON_PIXEL_FORMAT_NV12N_SBWC_10B_L60:
+				size_32x = 3;
+				break;
+			case DECON_PIXEL_FORMAT_NV12M_SBWC_10B_L80:
+			case DECON_PIXEL_FORMAT_NV12N_SBWC_10B_L80:
+				size_32x = 4;
+				break;
+			default:
+				dpp_err("dpp%d idma lossy sbwc config error occur\n", id);
+				break;
+			}
+			idma_reg_set_sbwcl(id, p->comp_type, size_32x, p->rcv_num);
+		} else
+			idma_reg_set_sbwc(id, p->comp_type, p->rcv_num);
+	}
 
 	/*
 	 * To check HW stuck

@@ -113,6 +113,7 @@
 #define IDMA_PIXEL_ALPHA_MASK			(0xff << 24)
 #define IDMA_IN_IC_MAX(_v)			((_v) << 16)
 #define IDMA_IN_IC_MAX_MASK			(0xff << 16)
+#define IDMA_SBWC_LOSSY_EN			(1 << 14)
 #define IDMA_IMG_FORMAT(_v)			((_v) << 8)
 #define IDMA_IMG_FORMAT_MASK			(0x3f << 8)
 #define IDMA_IMG_FORMAT_ARGB8888		(0)
@@ -235,16 +236,15 @@
 
 /* [9630] SWBC_PARAM is added */
 #define IDMA_SBWC_PARAM				0x0064
+#define IDMA_SBWC_CRC_EN			(1 << 16)
+#define IDMA_CHM_LOSSY_BYTENUM(_v)		((_v) << 8)
+#define IDMA_CHM_LOSSY_BYTENUM_MASK		(0xf << 8)
+#define IDMA_LUM_LOSSY_BYTENUM(_v)		((_v) << 4)
+#define IDMA_LUM_LOSSY_BYTENUM_MASK		(0xf << 4)
 #define IDMA_CHM_BLK_SIZE(_v)			((_v) << 2)
 #define IDMA_CHM_BLK_SIZE_MASK			(0x3 << 2)
-#define IDMA_CHM_BLK_SIZE_32_4			(0)
-#define IDMA_CHM_BLK_SIZE_16_8			(1)
-#define IDMA_CHM_BLK_SIZE_64_4			(2)
 #define IDMA_LUM_BLK_SIZE(_v)			((_v) << 0)
 #define IDMA_LUM_BLK_SIZE_MASK			(0x3 << 0)
-#define IDMA_LUM_BLK_SIZE_16_16			(0)
-#define IDMA_LUM_BLK_SIZE_32_8			(1)
-#define IDMA_LUM_BLK_SIZE_64_4			(2)
 
 /*
 // Not support in 9630
