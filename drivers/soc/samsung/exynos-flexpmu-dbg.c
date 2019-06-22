@@ -29,7 +29,7 @@
 	exynos_flexpmu_dbg_ ## __name ## _read
 
 #define BUF_MAX_LINE	10
-#define BUF_LINE_SIZE	30
+#define BUF_LINE_SIZE	255
 #define BUF_SIZE	(BUF_MAX_LINE * BUF_LINE_SIZE)
 
 #define DEC_PRINT	1
