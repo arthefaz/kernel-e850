@@ -167,6 +167,75 @@ static void dpp_get_base_addr_params(struct dpp_params_info *p)
 		break;
 
 	/* for lossy SBWC */
+	case DECON_PIXEL_FORMAT_NV12N_SBWC_8B_L50: /* single fd : [0]-Y_PL */
+		/* calc CbCr Payload base */
+		p->addr[1] = SBWCL_8B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h, 50);
+	case DECON_PIXEL_FORMAT_NV12M_SBWC_8B_L50:
+		/* payload */
+		p->addr[3] = p->addr[1];
+		p->addr[1] = p->addr[0];
+		p->ypl_c2_strd = SBWCL_8B_STRIDE(p->src.f_w, 50);
+		p->cpl_strd = p->ypl_c2_strd;
+		/* meaningless header */
+		p->addr[0] = p->addr[1];
+		p->addr[2] = p->addr[3];
+		break;
+
+	case DECON_PIXEL_FORMAT_NV12N_SBWC_8B_L75: /* single fd : [0]-Y_PL */
+		/* calc CbCr Payload base */
+		p->addr[1] = SBWCL_8B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h, 75);
+	case DECON_PIXEL_FORMAT_NV12M_SBWC_8B_L75:
+		/* payload */
+		p->addr[3] = p->addr[1];
+		p->addr[1] = p->addr[0];
+		p->ypl_c2_strd = SBWCL_8B_STRIDE(p->src.f_w, 75);
+		p->cpl_strd = p->ypl_c2_strd;
+		/* meaningless header */
+		p->addr[0] = p->addr[1];
+		p->addr[2] = p->addr[3];
+		break;
+
+	case DECON_PIXEL_FORMAT_NV12N_SBWC_10B_L40: /* single fd : [0]-Y_PL */
+		/* calc CbCr Payload base */
+		p->addr[1] = SBWCL_10B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h, 40);
+	case DECON_PIXEL_FORMAT_NV12M_SBWC_10B_L40:
+		/* payload */
+		p->addr[3] = p->addr[1];
+		p->addr[1] = p->addr[0];
+		p->ypl_c2_strd = SBWCL_10B_STRIDE(p->src.f_w, 40);
+		p->cpl_strd = p->ypl_c2_strd;
+		/* meaningless header */
+		p->addr[0] = p->addr[1];
+		p->addr[2] = p->addr[3];
+		break;
+
+	case DECON_PIXEL_FORMAT_NV12N_SBWC_10B_L60: /* single fd : [0]-Y_PL */
+		/* calc CbCr Payload base */
+		p->addr[1] = SBWCL_10B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h, 60);
+	case DECON_PIXEL_FORMAT_NV12M_SBWC_10B_L60:
+		/* payload */
+		p->addr[3] = p->addr[1];
+		p->addr[1] = p->addr[0];
+		p->ypl_c2_strd = SBWCL_10B_STRIDE(p->src.f_w, 60);
+		p->cpl_strd = p->ypl_c2_strd;
+		/* meaningless header */
+		p->addr[0] = p->addr[1];
+		p->addr[2] = p->addr[3];
+		break;
+
+	case DECON_PIXEL_FORMAT_NV12N_SBWC_10B_L80: /* single fd : [0]-Y_PL */
+		/* calc CbCr Payload base */
+		p->addr[1] = SBWCL_10B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h, 80);
+	case DECON_PIXEL_FORMAT_NV12M_SBWC_10B_L80:
+		/* payload */
+		p->addr[3] = p->addr[1];
+		p->addr[1] = p->addr[0];
+		p->ypl_c2_strd = SBWCL_10B_STRIDE(p->src.f_w, 80);
+		p->cpl_strd = p->ypl_c2_strd;
+		/* meaningless header */
+		p->addr[0] = p->addr[1];
+		p->addr[2] = p->addr[3];
+		break;
 
 	default:
 		dpp_dbg("%s: YUV format(%d) doesn't require BASE ADDR Calc.\n",
@@ -409,7 +478,8 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 		return -EINVAL;
 	}
 
-	if (!test_bit(DPP_ATTR_SBWC, &dpp->attr) && (p->comp_type == COMP_TYPE_SBWC)) {
+	if (!test_bit(DPP_ATTR_SBWC, &dpp->attr)
+		&& ((p->comp_type == COMP_TYPE_SBWC) || (p->comp_type == COMP_TYPE_SBWCL))) {
 		dpp_err("Not support SBWC in DPP%d - SBWC Ch only!\n", dpp->id);
 		return -EINVAL;
 	}
