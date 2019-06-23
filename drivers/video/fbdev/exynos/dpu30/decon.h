@@ -1232,6 +1232,7 @@ int decon_create_esd_thread(struct decon_device *decon);
 void decon_destroy_esd_thread(struct decon_device *decon);
 int decon_create_psr_info(struct decon_device *decon);
 void decon_destroy_psr_info(struct decon_device *decon);
+void decon_get_edid(struct decon_device *decon, struct decon_edid_data *edid_data);
 
 /* DECON to writeback interface functions */
 int decon_wb_register_irq(struct decon_device *decon);

@@ -18,6 +18,7 @@
 #include <linux/of_address.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/irq.h>
+#include <drm/drm_edid.h>
 #include <media/v4l2-subdev.h>
 #if defined(CONFIG_EXYNOS_ALT_DVFS)
 #include <soc/samsung/exynos-alt.h>
@@ -26,6 +27,7 @@
 #include "decon.h"
 #include "dsim.h"
 #include "dpp.h"
+#include "displayport.h"
 #include "format.h"
 //#include "../../../../soc/samsung/pwrcal/pwrcal.h"
 //#include "../../../../soc/samsung/pwrcal/S5E8890/S5E8890-vclk.h"
@@ -377,6 +379,27 @@ int decon_create_vsync_thread(struct decon_device *decon)
 err:
 	device_remove_file(decon->dev, &dev_attr_vsync);
 	return ret;
+}
+
+void decon_get_edid(struct decon_device *decon, struct decon_edid_data *edid_data)
+{
+	struct edid edid;
+	const u8 edid_header[] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00};
+
+	decon_dbg("%s: edid size = %d, header size = %d\n", __func__,
+			sizeof(struct edid), sizeof(edid_header));
+	memset(&edid, 0, sizeof(struct edid));
+	memcpy(&edid, edid_header, sizeof(edid_header));
+
+	/*
+	 * If you want to manipulate EDID information, use member variables
+	 * of edid structure in here.
+	 *
+	 * ex) edid.width_cm = xx; edid.height_cm = yy
+	 */
+
+	memcpy(edid_data->edid_data, &edid, EDID_BLOCK_SIZE);
+	edid_data->size = EDID_BLOCK_SIZE;
 }
 
 void decon_destroy_vsync_thread(struct decon_device *decon)
