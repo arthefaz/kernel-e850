@@ -39,6 +39,7 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/pm_runtime.h>
+#include <sound/samsung/abox.h>
 
 #include <linux/exynos-pci-ctrl.h>
 #include <linux/exynos-pci-noti.h>
@@ -399,6 +400,11 @@ static int s51xx_pcie_probe(struct pci_dev *pdev,
 	pr_err("Set Doorbell register addres.\n");
 	s51xx_pcie->doorbell_addr = devm_ioremap_wc(&pdev->dev,
 				s51xx_pcie->dbaddr_base + s51xx_pcie->dbaddr_offset, SZ_4);
+
+	ret = abox_pci_doorbell_paddr_set(s51xx_pcie->dbaddr_base + s51xx_pcie->dbaddr_offset);
+	if (!ret)
+		dev_err(dev, "PCIe doorbell setting for ABOX is failed \n");
+
 	pr_info("s51xx_pcie.doorbell_addr = %p  (start 0x%lx offset : %lx)\n",
 		s51xx_pcie->doorbell_addr, (unsigned long int)s51xx_pcie->dbaddr_base,
 					(unsigned long int)s51xx_pcie->dbaddr_offset);
