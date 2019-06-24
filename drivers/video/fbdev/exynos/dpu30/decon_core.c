@@ -2842,6 +2842,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	struct decon_color_mode_info cm_info;
 	struct decon_readback_attribute readback_attr;
 	struct decon_edid_data edid_data;
+	struct dpp_ch_restriction dpp_ch_restriction;
 
 	int ret = 0;
 	u32 crtc;
@@ -3104,6 +3105,39 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			ret = -EFAULT;
 			break;
 		}
+		break;
+
+	case EXYNOS_GET_DPP_CNT:
+		if (copy_to_user((u32 __user *)arg, &decon->dt.dpp_cnt,
+					sizeof(u32))) {
+			ret = -EFAULT;
+			break;
+		}
+		break;
+
+	case EXYNOS_GET_DPP_RESTRICTION:
+		if (copy_from_user(&dpp_ch_restriction,
+				(struct dpp_ch_restriction __user *)arg,
+				sizeof(struct dpp_ch_restriction))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		if (dpp_ch_restriction.id >= decon->dt.dpp_cnt) {
+			ret = -EINVAL;
+			decon_err("invalid DPP(%d) channel number\n", i);
+			break;
+		}
+
+		v4l2_subdev_call(decon->dpp_sd[dpp_ch_restriction.id], core,
+				ioctl, DPP_GET_RESTRICTION, &dpp_ch_restriction);
+		if (copy_to_user((struct dpp_ch_restriction __user *)arg,
+				&dpp_ch_restriction,
+				sizeof(struct dpp_ch_restriction))) {
+			ret = -EFAULT;
+			break;
+		}
+
 		break;
 
 	case EXYNOS_GET_COLOR_MODE_NUM:
