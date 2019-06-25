@@ -105,6 +105,12 @@
 #define GLOBAL_CONTROL_DECON_EN_F		(1 << 0)
 
 #define RESOURCE_OCCUPANCY_INFO_0		0x0010
+#define SEL_SRAM5				(3 << 10)
+#define SEL_SRAM4				(3 << 8)
+#define SEL_SRAM3				(3 << 6)
+#define SEL_SRAM2				(3 << 4)
+#define SEL_SRAM1				(3 << 2)
+#define SEL_SRAM0				(3 << 0)
 #define RESOURCE_OCCUPANCY_INFO_1		0x0014
 #define RESOURCE_OCCUPANCY_INFO_2		0x0018
 

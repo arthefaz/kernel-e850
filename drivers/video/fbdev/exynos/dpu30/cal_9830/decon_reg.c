@@ -175,7 +175,7 @@ static void decon_reg_set_sram_share(u32 id, enum decon_fifo_mode fifo_mode)
 		if (id == 0)
 			val = SRAM0_SHARE_ENABLE_F | SRAM1_SHARE_ENABLE_F;
 		else if (id == 1)
-			val = SRAM2_SHARE_ENABLE_F | SRAM3_SHARE_ENABLE_F;
+			val = SRAM3_SHARE_ENABLE_F | SRAM4_SHARE_ENABLE_F;
 		else if (id == 2)
 			val = 0;
 		break;
@@ -196,9 +196,14 @@ static void decon_reg_set_sram_share(u32 id, enum decon_fifo_mode fifo_mode)
 
 	decon_write(id, SRAM_SHARE_ENABLE_MAIN, val);
 
-	/* for CWB */
-	val = SRAM5_SHARE_ENABLE_F;
-	decon_write(id, SRAM_SHARE_ENABLE_SUB, val);
+	/*
+	 * for CWB: DECON2 can't use CWB in a HW basis
+	 * SW only supports for DECON0 LCD path.
+	 */
+	if (id == 0) {
+		val = SRAM5_SHARE_ENABLE_F;
+		decon_write(id, SRAM_SHARE_ENABLE_SUB, val);
+	}
 }
 
 static void decon_reg_set_scaled_image_size(u32 id,
