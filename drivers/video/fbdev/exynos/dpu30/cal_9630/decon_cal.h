@@ -17,7 +17,7 @@
 
 #define CEIL(x)			((x-(u32)(x) > 0 ? (u32)(x+1) : (u32)(x)))
 
-#define BTS_DPU_MAX		3 /* DPU0 ~ 2 */
+#define BTS_DPU_MAX		1 /* DPU0 ~ 2 */
 #define BTS_DPP_MAX		4 /* DPP0 ~ 5 */
 
 enum decon_idma_type {
