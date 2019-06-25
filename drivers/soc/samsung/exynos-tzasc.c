@@ -285,6 +285,10 @@ static int exynos_tzasc_probe(struct platform_device *pdev)
 		"PA of tzasc_fail_info : %llx\n",
 		data->fail_info_pa);
 
+#ifdef CONFIG_EXYNOS_TZASC_ILLEGAL_READ_LOGGING
+	data->info_flag = STR_INFO_FLAG;
+#endif
+
 	ret = of_property_read_u32(data->dev->of_node, "irqcnt", &data->irqcnt);
 	if (ret) {
 		dev_err(data->dev,
@@ -321,10 +325,6 @@ static int exynos_tzasc_probe(struct platform_device *pdev)
 			goto out_with_dma_free;
 		}
 	}
-
-#ifdef CONFIG_EXYNOS_TZASC_ILLEGAL_READ_LOGGING
-	data->info_flag = STR_INFO_FLAG;
-#endif
 
 	dev_info(data->dev, "Exynos TZASC driver probe done!\n");
 
