@@ -28,7 +28,7 @@
 #define TZASC_SMC_INTR_STATUS_OVERLAP_MASK		(1 << 16)
 
 /* TZASC Fail Address High Register */
-#define TZASC_FAIL_ADDR_HIGH_MASK			(0xFF << 0)
+#define TZASC_FAIL_ADDR_HIGH_MASK			(0xF << 0)
 
 /* TZASC Fail Control Register */
 #define TZASC_FAIL_CONTROL_DIRECTION_MASK		(1 << 24)
@@ -74,7 +74,6 @@ struct tzasc_info_data {
 	dma_addr_t fail_info_pa;
 
 	unsigned int ch_num;
-	unsigned int interleaving;
 	unsigned int tzc_ver;
 
 	unsigned int irq[MAX_NUM_OF_TZASC_CHANNEL];
@@ -83,5 +82,34 @@ struct tzasc_info_data {
 	unsigned int info_flag;
 	int need_log;
 };
+
+/*
+ * TZC380 - TZASC address traslation
+ *
+ * If the number of TZASC channels is 2 in TZC380 model
+ * then the addresses in TZASC fail address registers
+ * should be translated to physical address depending on
+ * a specific formula.
+ */
+static inline unsigned int mif_addr_to_pa(unsigned int mif_addr,
+					  unsigned int ch)
+{
+	unsigned long ta, sa;
+	unsigned int ba, bit_8th;
+
+	ta = (mif_addr & 0x7FFFFF00) << 1;
+	ba = (mif_addr & 0xFF);
+	sa = mif_addr << 1;
+
+	bit_8th = (((sa & (1 << 12)) >> 12) ^
+		  ((sa & (1 << 14)) >> 14) ^
+		  ((sa & (1 << 16)) >> 16) ^
+		  ((sa & (1 << 18)) >> 18) ^
+		  ((sa & (1 << 21)) >> 21) ^
+		  ch) << 8;
+
+	return ta | bit_8th | ba;
+}
+
 #endif	/* __ASSEMBLY__ */
 #endif	/* __EXYNOS_TZASC_H */

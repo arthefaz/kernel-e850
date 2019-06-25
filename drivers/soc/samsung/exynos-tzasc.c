@@ -58,7 +58,7 @@ static irqreturn_t exynos_tzasc_irq_handler(int irq, void *dev_id)
 static irqreturn_t exynos_tzasc_irq_handler_thread(int irq, void *dev_id)
 {
 	struct tzasc_info_data *data = dev_id;
-	unsigned int intr_stat, fail_ctrl, fail_id, addr_low;
+	unsigned int intr_stat, fail_ctrl, fail_id, addr_low, tzc_ver, ch_num;
 	unsigned long addr_high;
 	int i;
 
@@ -69,8 +69,11 @@ static irqreturn_t exynos_tzasc_irq_handler_thread(int irq, void *dev_id)
 
 	pr_info("===============[TZASC FAIL DETECTION]===============\n");
 
+	tzc_ver = data->tzc_ver;
+	ch_num = data->ch_num;
+
 	/* Parse fail register information */
-	for (i = 0; i < data->ch_num; i++) {
+	for (i = 0; i < ch_num; i++) {
 		pr_info("[Channel %d]\n", i);
 
 		intr_stat = data->fail_info[i].tzasc_intr_stat;
@@ -82,11 +85,14 @@ static irqreturn_t exynos_tzasc_irq_handler_thread(int irq, void *dev_id)
 			continue;
 		}
 
-		addr_low = data->fail_info[i].tzasc_fail_addr_low <<
-				data->interleaving;
-		addr_high = (data->fail_info[i].tzasc_fail_addr_high &
-				TZASC_FAIL_ADDR_HIGH_MASK) <<
-				data->interleaving;
+		addr_low = data->fail_info[i].tzasc_fail_addr_low;
+		addr_high = data->fail_info[i].tzasc_fail_addr_high &
+				TZASC_FAIL_ADDR_HIGH_MASK;
+
+		if ((tzc_ver == TZASC_VERSION_TZC380) && (ch_num == 2)) {
+			addr_low = mif_addr_to_pa(addr_low, i);
+			addr_high <<= 1;
+		}
 
 		pr_info("- Fail Adddress : %#lx\n",
 			addr_high ?
@@ -103,7 +109,7 @@ static irqreturn_t exynos_tzasc_irq_handler_thread(int irq, void *dev_id)
 			"Non-secure" :
 			"Secure");
 
-		if (data->tzc_ver == TZASC_VERSION_TZC380) {
+		if (tzc_ver == TZASC_VERSION_TZC380) {
 			pr_info("- Fail Privilege : %s\n",
 				fail_ctrl & TZASC_DREX_FAIL_CONTROL_PRIVILEGED_MASK ?
 				"Privileged" :
@@ -111,7 +117,7 @@ static irqreturn_t exynos_tzasc_irq_handler_thread(int irq, void *dev_id)
 
 			pr_info("- Fail AXID : %#x\n",
 				fail_id & TZASC_DREX_FAIL_ID_AXID_MASK);
-		} else {	/* (data->tzc_ver == TZASC_VERSION_TZC400) */
+		} else {	/* (tzc_ver == TZASC_VERSION_TZC400) */
 			pr_info("- Fail Vnet : %#x\n",
 				fail_id & TZASC_SMC_FAIL_ID_VNET_MASK);
 
@@ -128,7 +134,7 @@ static irqreturn_t exynos_tzasc_irq_handler_thread(int irq, void *dev_id)
 			"Two or more failures occurred" :
 			"Only one failure occurred");
 
-		if (data->tzc_ver == TZASC_VERSION_TZC380) {
+		if (tzc_ver == TZASC_VERSION_TZC380) {
 			pr_info("- Region Setup Fail : %s\n",
 				intr_stat & TZASC_DREX_INTR_STATUS_RS_FAIL_MASK ?
 				"Region setup failure is detected" :
@@ -141,7 +147,7 @@ static irqreturn_t exynos_tzasc_irq_handler_thread(int irq, void *dev_id)
 				intr_stat & TZASC_DREX_INTR_STATUS_WLAST_ERROR_MASK ?
 				"WLAST mismatch is detected" :
 				"No WLAST mismatch");
-		} else {	/* (data->tzc_ver == TZASC_VERSION_TZC400) */
+		} else {	/* (tzc_ver == TZASC_VERSION_TZC400) */
 			pr_info("- Overlap : %s\n",
 				intr_stat & TZASC_SMC_INTR_STATUS_OVERLAP_MASK ?
 				"Region overlap violation" :
@@ -195,16 +201,6 @@ static int exynos_tzasc_probe(struct platform_device *pdev)
 		dev_err(data->dev,
 			"Fail to get TZASC channel number(%d) from dt\n",
 			data->ch_num);
-		goto out;
-	}
-
-	ret = of_property_read_u32(data->dev->of_node,
-				   "interleaving_shift",
-				   &data->interleaving);
-	if (ret) {
-		dev_err(data->dev,
-			"Fail to get TZASC interleaving shift number(%d) from dt\n",
-			data->interleaving);
 		goto out;
 	}
 
@@ -347,7 +343,6 @@ out_with_dma_free:
 	data->fail_info_pa = 0;
 
 	data->ch_num = 0;
-	data->interleaving = 0;
 	data->tzc_ver = 0;
 	data->irqcnt = 0;
 	data->info_flag = 0;
@@ -378,7 +373,6 @@ static int exynos_tzasc_remove(struct platform_device *pdev)
 		data->irq[i] = 0;
 
 	data->ch_num = 0;
-	data->interleaving = 0;
 	data->tzc_ver = 0;
 	data->irqcnt = 0;
 	data->info_flag = 0;
