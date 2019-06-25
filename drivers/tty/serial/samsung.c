@@ -147,16 +147,16 @@ static int exynos_s3c24xx_panic_handler(struct notifier_block *nb,
 		"UBRDIV	0x%08x	"
 		"UINTP	0x%08x	"
 		"UINTM	0x%08x\n"
-		, readl(port->membase + S3C2410_ULCON)
-		, readl(port->membase + S3C2410_UCON)
-		, readl(port->membase + S3C2410_UFCON)
-		, readl(port->membase + S3C2410_UMCON)
-		, readl(port->membase + S3C2410_UTRSTAT)
-		, readl(port->membase + S3C2410_UERSTAT)
-		, readl(port->membase + S3C2410_UMSTAT)
-		, readl(port->membase + S3C2410_UBRDIV)
-		, readl(port->membase + S3C64XX_UINTP)
-		, readl(port->membase + S3C64XX_UINTM)
+		, readl_no_log(port->membase + S3C2410_ULCON)
+		, readl_no_log(port->membase + S3C2410_UCON)
+		, readl_no_log(port->membase + S3C2410_UFCON)
+		, readl_no_log(port->membase + S3C2410_UMCON)
+		, readl_no_log(port->membase + S3C2410_UTRSTAT)
+		, readl_no_log(port->membase + S3C2410_UERSTAT)
+		, readl_no_log(port->membase + S3C2410_UMSTAT)
+		, readl_no_log(port->membase + S3C2410_UBRDIV)
+		, readl_no_log(port->membase + S3C64XX_UINTP)
+		, readl_no_log(port->membase + S3C64XX_UINTM)
 	);
 
 	return 0;
@@ -182,17 +182,17 @@ static void uart_sfr_dump(struct s3c24xx_uart_port *ourport)
 		"UBRDIV	0x%08x	"
 		"UINTP	0x%08x	"
 		"UINTM	0x%08x	\n"
-		, readl(port->membase + S3C2410_ULCON)
-		, readl(port->membase + S3C2410_UCON)
-		, readl(port->membase + S3C2410_UFCON)
-		, readl(port->membase + S3C2410_UMCON)
-		, readl(port->membase + S3C2410_UTRSTAT)
-		, readl(port->membase + S3C2410_UERSTAT)
-		, readl(port->membase + S3C2410_UFSTAT)
-		, readl(port->membase + S3C2410_UMSTAT)
-		, readl(port->membase + S3C2410_UBRDIV)
-		, readl(port->membase + S3C64XX_UINTP)
-		, readl(port->membase + S3C64XX_UINTM)
+		, readl_no_log(port->membase + S3C2410_ULCON)
+		, readl_no_log(port->membase + S3C2410_UCON)
+		, readl_no_log(port->membase + S3C2410_UFCON)
+		, readl_no_log(port->membase + S3C2410_UMCON)
+		, readl_no_log(port->membase + S3C2410_UTRSTAT)
+		, readl_no_log(port->membase + S3C2410_UERSTAT)
+		, readl_no_log(port->membase + S3C2410_UFSTAT)
+		, readl_no_log(port->membase + S3C2410_UMSTAT)
+		, readl_no_log(port->membase + S3C2410_UBRDIV)
+		, readl_no_log(port->membase + S3C64XX_UINTP)
+		, readl_no_log(port->membase + S3C64XX_UINTM)
 	);
 }
 
@@ -3351,7 +3351,7 @@ struct samsung_early_console_data {
 
 static void samsung_early_busyuart(struct uart_port *port)
 {
-	while (!(readl(port->membase + S3C2410_UTRSTAT) & S3C2410_UTRSTAT_TXFE))
+	while (!(readl_no_log(port->membase + S3C2410_UTRSTAT) & S3C2410_UTRSTAT_TXFE))
 		;
 }
 
@@ -3359,18 +3359,18 @@ static void samsung_early_busyuart_fifo(struct uart_port *port)
 {
 	struct samsung_early_console_data *data = port->private_data;
 
-	while (readl(port->membase + S3C2410_UFSTAT) & data->txfull_mask)
+	while (readl_no_log(port->membase + S3C2410_UFSTAT) & data->txfull_mask)
 		;
 }
 
 static void samsung_early_putc(struct uart_port *port, int c)
 {
-	if (readl(port->membase + S3C2410_UFCON) & S3C2410_UFCON_FIFOMODE)
+	if (readl_no_log(port->membase + S3C2410_UFCON) & S3C2410_UFCON_FIFOMODE)
 		samsung_early_busyuart_fifo(port);
 	else
 		samsung_early_busyuart(port);
 
-	writeb(c, port->membase + S3C2410_UTXH);
+	writeb_no_log(c, port->membase + S3C2410_UTXH);
 }
 
 static void samsung_early_write(struct console *con, const char *s, unsigned n)
