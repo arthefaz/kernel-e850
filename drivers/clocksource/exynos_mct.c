@@ -97,7 +97,7 @@ static void exynos4_mct_write(unsigned int value, unsigned long offset)
 	u32 mask;
 	u32 i;
 
-	writel_relaxed(value, reg_base + offset);
+	writel_relaxed_no_log(value, reg_base + offset);
 
 	if (likely(offset >= EXYNOS4_MCT_L_BASE(0))) {
 		stat_addr = (offset & EXYNOS4_MCT_L_MASK) + MCT_L_WSTAT_OFFSET;
@@ -147,8 +147,8 @@ static void exynos4_mct_write(unsigned int value, unsigned long offset)
 
 	/* Wait maximum 1 ms until written values are applied */
 	for (i = 0; i < loops_per_jiffy / 1000 * HZ; i++)
-		if (readl_relaxed(reg_base + stat_addr) & mask) {
-			writel_relaxed(mask, reg_base + stat_addr);
+		if (readl_relaxed_no_log(reg_base + stat_addr) & mask) {
+			writel_relaxed_no_log(mask, reg_base + stat_addr);
 			return;
 		}
 
@@ -160,7 +160,7 @@ static void exynos4_mct_frc_start(void)
 {
 	u32 reg;
 
-	reg = readl_relaxed(reg_base + EXYNOS4_MCT_G_TCON);
+	reg = readl_relaxed_no_log(reg_base + EXYNOS4_MCT_G_TCON);
 	reg |= MCT_G_TCON_START;
 	exynos4_mct_write(reg, EXYNOS4_MCT_G_TCON);
 }
@@ -178,12 +178,12 @@ static void exynos4_mct_frc_start(void)
 static u64 exynos4_read_count_64(void)
 {
 	unsigned int lo, hi;
-	u32 hi2 = readl_relaxed(reg_base + EXYNOS4_MCT_G_CNT_U);
+	u32 hi2 = readl_relaxed_no_log(reg_base + EXYNOS4_MCT_G_CNT_U);
 
 	do {
 		hi = hi2;
-		lo = readl_relaxed(reg_base + EXYNOS4_MCT_G_CNT_L);
-		hi2 = readl_relaxed(reg_base + EXYNOS4_MCT_G_CNT_U);
+		lo = readl_relaxed_no_log(reg_base + EXYNOS4_MCT_G_CNT_L);
+		hi2 = readl_relaxed_no_log(reg_base + EXYNOS4_MCT_G_CNT_U);
 	} while (hi != hi2);
 
 	return ((u64)hi << 32) | lo;
@@ -201,7 +201,7 @@ static u64 exynos4_read_count_64(void)
 #if !IS_ENABLED(CONFIG_ARM_ARCH_TIMER)
 static u32 notrace exynos4_read_count_32(void)
 {
-	return readl_relaxed(reg_base + EXYNOS4_MCT_G_CNT_L);
+	return readl_relaxed_no_log(reg_base + EXYNOS4_MCT_G_CNT_L);
 }
 
 static u64 exynos4_frc_read(struct clocksource *cs)
@@ -262,7 +262,7 @@ static void exynos4_mct_comp0_stop(void)
 {
 	unsigned int tcon;
 
-	tcon = readl_relaxed(reg_base + EXYNOS4_MCT_G_TCON);
+	tcon = readl_relaxed_no_log(reg_base + EXYNOS4_MCT_G_TCON);
 	tcon &= ~(MCT_G_TCON_COMP0_ENABLE | MCT_G_TCON_COMP0_AUTO_INC);
 
 	exynos4_mct_write(tcon, EXYNOS4_MCT_G_TCON);
@@ -274,7 +274,7 @@ static void exynos4_mct_comp0_start(bool periodic, unsigned long cycles)
 	unsigned int tcon;
 	u64 comp_cycle;
 
-	tcon = readl_relaxed(reg_base + EXYNOS4_MCT_G_TCON);
+	tcon = readl_relaxed_no_log(reg_base + EXYNOS4_MCT_G_TCON);
 
 	if (periodic) {
 		tcon |= MCT_G_TCON_COMP0_AUTO_INC;
@@ -368,7 +368,7 @@ static void exynos4_mct_tick_stop(struct mct_clock_event_device *mevt, int force
 	exynos4_mct_write(0x1, mevt->base + MCT_L_INT_CSTAT_OFFSET);
 
 	if (force || !clockevent_state_periodic(&mevt->evt)) {
-		tmp = readl_relaxed(reg_base + mevt->base + MCT_L_TCON_OFFSET);
+		tmp = readl_relaxed_no_log(reg_base + mevt->base + MCT_L_TCON_OFFSET);
 		tmp &= ~(MCT_L_TCON_INT_START | MCT_L_TCON_TIMER_START | MCT_L_TCON_INTERVAL_MODE);
 		exynos4_mct_write(tmp, mevt->base + MCT_L_TCON_OFFSET);
 	}
