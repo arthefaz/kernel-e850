@@ -48,6 +48,10 @@
 
 #define TZASC_NEED_FAIL_INFO_LOGGING			(0x1EED)
 #define TZASC_SKIP_FAIL_INFO_LOGGING			(0x2419)
+#define TZASC_NO_TZASC_FAIL_INTERRUPT			(0x7017)
+
+#define TZASC_HANDLE_INTERRUPT_THREAD			(1)
+#define TZASC_DO_NOT_HANDLE_INTERRUPT_THREAD		(0)
 
 /* Flag whether fail read information is logged */
 #define STR_INFO_FLAG					(0x45545A43)	/* ETZC */
@@ -81,6 +85,7 @@ struct tzasc_info_data {
 
 	unsigned int info_flag;
 	int need_log;
+	int need_handle;
 };
 
 /*
