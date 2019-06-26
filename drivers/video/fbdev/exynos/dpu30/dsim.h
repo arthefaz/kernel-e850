@@ -196,6 +196,7 @@ struct dsim_device {
 	enum dsim_state state;
 	struct device *dev;
 	struct dsim_resources res;
+	struct exynos_pm_domain *pd;
 
 	unsigned int data_lane;
 	u32 data_lane_cnt;

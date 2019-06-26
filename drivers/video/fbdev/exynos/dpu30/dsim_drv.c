@@ -45,6 +45,8 @@
 #include "dsim.h"
 #include "./panels/exynos_panel_drv.h"
 
+#include <soc/samsung/exynos-pd.h>
+
 int dsim_log_level = 6;
 
 struct dsim_device *dsim_drvdata[MAX_DSIM_CNT];
@@ -61,6 +63,9 @@ static char *dsim_state_names[] = {
 
 static int dsim_runtime_suspend(struct device *dev);
 static int dsim_runtime_resume(struct device *dev);
+static struct exynos_pm_domain *dpu_get_pm_domain(void);
+static int dpu_power_on(struct dsim_device *dsim);
+static int dpu_power_off(struct dsim_device *dsim);
 
 int dsim_call_panel_ops(struct dsim_device *dsim, u32 cmd, void *arg)
 {
@@ -747,6 +752,9 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 0);
 #endif
 
+#if defined(CONFIG_EXYNOS_DIRECT_PD_CTRL)
+	exynos_sysmmu_control(dsim->dev, true);
+#endif
 	pm_runtime_get_sync(dsim->dev);
 
 	/* DPHY power on : iso release */
@@ -856,6 +864,9 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 	if (state == DSIM_STATE_OFF)
 		dsim_set_panel_power(dsim, 0);
 
+#if defined(CONFIG_EXYNOS_DIRECT_PD_CTRL)
+	exynos_sysmmu_control(dsim->dev, false);
+#endif
 	pm_runtime_put_sync(dsim->dev);
 
 	dsim_dbg("%s %s -\n", __func__, dsim_state_names[dsim->state]);
@@ -945,7 +956,8 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 
 	dsim_phy_power_off(dsim);
 
-	pm_runtime_put_sync(dsim->dev);
+	dpu_power_off(dsim);
+
 #if defined(CONFIG_CPU_IDLE)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
 #endif
@@ -971,7 +983,7 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 0);
 #endif
 
-	pm_runtime_get_sync(dsim->dev);
+	dpu_power_on(dsim);
 
 	/* DPHY power on : iso release */
 	dsim_phy_power_on(dsim);
@@ -1302,6 +1314,8 @@ static int dsim_parse_dt(struct dsim_device *dsim, struct device *dev)
 		dsim->phy_ex = NULL;
 	}
 
+	dsim->pd = dpu_get_pm_domain();
+
 	dsim->dev = dev;
 
 	return 0;
@@ -1459,6 +1473,117 @@ static int dsim_register_panel(struct dsim_device *dsim)
 	pm_runtime_put_sync(dsim->dev);
 
 	dsim_info("%s -\n", __func__);
+
+	return 0;
+}
+
+static struct exynos_pm_domain *dpu_get_pm_domain(void)
+{
+	struct platform_device *pdev = NULL;
+	struct device_node *np = NULL;
+	struct exynos_pm_domain *pd_temp, *pd = NULL;
+
+	if (!IS_ENABLED(CONFIG_EXYNOS_DIRECT_PD_CTRL)) {
+		dsim_info("DPU direct power domain control is disabled\n");
+		return NULL;
+	}
+
+	for_each_compatible_node(np, NULL, "samsung,exynos-pd") {
+		if (!of_device_is_available(np))
+			continue;
+
+		pdev = of_find_device_by_node(np);
+		pd_temp = (struct exynos_pm_domain *)platform_get_drvdata(pdev);
+		if (!strcmp("pd-dpu", (const char *)(pd_temp->genpd.name))) {
+			pd = pd_temp;
+			break;
+		}
+	}
+
+	if(pd == NULL)
+		dsim_err("%s: dpu pm_domain is null\n", __func__);
+
+	dsim_info("DPU direct power domain control is enabled\n");
+
+	return pd;
+}
+
+static int dpu_power_on(struct dsim_device *dsim)
+{
+	int status;
+
+	if (!dsim->pd) {
+		pm_runtime_get_sync(dsim->dev);
+		return 0;
+	}
+
+	mutex_lock(&dsim->pd->access_lock);
+
+	status = cal_pd_status(dsim->pd->cal_pdid);
+	if (status) {
+		dsim_info("%s: Already dpu power on\n",__func__);
+		mutex_unlock(&dsim->pd->access_lock);
+		return 0;
+	}
+
+	if (cal_pd_control(dsim->pd->cal_pdid, 1) != 0) {
+		dsim_err("%s: failed to dpu power on\n", __func__);
+		mutex_unlock(&dsim->pd->access_lock);
+		return -1;
+	}
+
+	status = cal_pd_status(dsim->pd->cal_pdid);
+	if (!status) {
+		dsim_err("%s: status error : dpu power on\n", __func__);
+		mutex_unlock(&dsim->pd->access_lock);
+		return -1;
+	}
+
+	exynos_sysmmu_control(dsim->dev, true);
+	dsim_runtime_resume(dsim->dev);
+
+	mutex_unlock(&dsim->pd->access_lock);
+	dsim_info("dpu power on\n");
+
+	return 0;
+}
+
+static int dpu_power_off(struct dsim_device *dsim)
+{
+	int status;
+
+	if (!dsim->pd) {
+		pm_runtime_put_sync(dsim->dev);
+		return 0;
+	}
+
+	mutex_lock(&dsim->pd->access_lock);
+
+	status = cal_pd_status(dsim->pd->cal_pdid);
+	if (!status) {
+		dsim_info("%s: Already dpu power off\n",__func__);
+		mutex_unlock(&dsim->pd->access_lock);
+		return 0;
+	}
+
+	exynos_sysmmu_control(dsim->dev, false);
+	dsim_runtime_suspend(dsim->dev);
+
+	if (cal_pd_control(dsim->pd->cal_pdid, 0) != 0) {
+		dsim_err("%s: failed to dpu power off\n", __func__);
+		mutex_unlock(&dsim->pd->access_lock);
+		return -1;
+	}
+
+	status = cal_pd_status(dsim->pd->cal_pdid);
+	if (status) {
+		dsim_err("%s: status error : dpu power off\n", __func__);
+		mutex_unlock(&dsim->pd->access_lock);
+		return -1;
+	}
+
+	mutex_unlock(&dsim->pd->access_lock);
+	dsim_info("dpu power off\n");
 
 	return 0;
 }
