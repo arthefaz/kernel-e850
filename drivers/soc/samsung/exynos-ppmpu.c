@@ -33,6 +33,8 @@ static irqreturn_t exynos_ppmpu_irq_handler(int irq, void *dev_id)
 	uint32_t dir = 0;
 	uint32_t irq_idx;
 
+	pr_info("PPMPU_FAIL_DETECTOR: Implemented PPMPU Fail Detector HardIRQ handler!\n");
+
 	for (irq_idx = 0; irq_idx < data->irqcnt; irq_idx++) {
 		if (irq == data->irq[irq_idx])
 			break;
@@ -56,12 +58,17 @@ static irqreturn_t exynos_ppmpu_irq_handler(int irq, void *dev_id)
 				    (dir << PPMPU_DIRECTION_SHIFT) |
 				    irq_idx,
 				    data->info_flag);
-	if ((data->need_log != PPMPU_NEED_FAIL_INFO_LOGGING) &&
-		(data->need_log != PPMPU_SKIP_FAIL_INFO_LOGGING))
-		pr_err("%s:ppmpu_fail_info buffer is invalid! ret(%#x)\n",
-			__func__, data->need_log);
-
-	pr_info("PPMPU_FAIL_DETECTOR: Implemented PPMPU Fail Detector HardIRQ handler!\n");
+	if ((data->need_log == PPMPU_NEED_FAIL_INFO_LOGGING) ||
+		(data->need_log == PPMPU_SKIP_FAIL_INFO_LOGGING)) {
+		data->need_handle = PPMPU_HANDLE_INTERRUPT_THREAD;
+	} else if (data->need_log == PPMPU_NO_PPMPU_FAIL_INTERRUPT) {
+		pr_err("PPMPU_FAIL_DETECTOR: This interrupt is not for PPMPU\n");
+		data->need_handle = PPMPU_DO_NOT_HANDLE_INTERRUPT_THREAD;
+	} else {
+		pr_err("PPMPU_FAIL_DETECTOR: Failed to get fail information! ret(%#x)\n",
+			data->need_log);
+		data->need_handle = PPMPU_DO_NOT_HANDLE_INTERRUPT_THREAD;
+	}
 
 	return IRQ_WAKE_THREAD;
 }
@@ -72,6 +79,9 @@ static irqreturn_t exynos_ppmpu_irq_handler_thread(int irq, void *dev_id)
 	unsigned int intr_stat, addr_low;
 	unsigned long addr_high;
 	int i;
+
+	if (data->need_handle == PPMPU_DO_NOT_HANDLE_INTERRUPT_THREAD)
+		return IRQ_HANDLED;
 
 	if (data->need_log == PPMPU_SKIP_FAIL_INFO_LOGGING) {
 		pr_info("PPMPU_FAIL_DETECTOR: Ignore PPMPU illegal reads\n");

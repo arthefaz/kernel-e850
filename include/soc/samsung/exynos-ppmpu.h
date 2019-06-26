@@ -36,6 +36,10 @@
 
 #define PPMPU_NEED_FAIL_INFO_LOGGING			(0x1EED)
 #define PPMPU_SKIP_FAIL_INFO_LOGGING			(0x2419)
+#define PPMPU_NO_PPMPU_FAIL_INTERRUPT			(0x7017)
+
+#define PPMPU_HANDLE_INTERRUPT_THREAD			(1)
+#define PPMPU_DO_NOT_HANDLE_INTERRUPT_THREAD		(0)
 
 /* Flag whether fail read information is logged */
 #define STR_INFO_FLAG					(0x50504D50)	/* PPMP */
@@ -71,6 +75,7 @@ struct ppmpu_info_data {
 
 	unsigned int info_flag;
 	int need_log;
+	int need_handle;
 };
 #endif	/* __ASSEMBLY__ */
 #endif	/* __EXYNOS_PPMPU_H */
