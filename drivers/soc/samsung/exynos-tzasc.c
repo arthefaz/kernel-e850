@@ -192,6 +192,7 @@ static irqreturn_t exynos_tzasc_irq_handler_thread(int irq, void *dev_id)
 static int exynos_tzasc_probe(struct platform_device *pdev)
 {
 	struct tzasc_info_data *data;
+	unsigned long irqf = IRQF_SHARED;
 	int ret, i;
 
 	data = devm_kzalloc(&pdev->dev, sizeof(struct tzasc_info_data), GFP_KERNEL);
@@ -311,6 +312,9 @@ static int exynos_tzasc_probe(struct platform_device *pdev)
 		"The number of TZASC interrupt : %d\n",
 		data->irqcnt);
 
+	if (data->tzc_ver == TZASC_VERSION_TZC400)
+		irqf = IRQF_ONESHOT;
+
 	for (i = 0; i < data->irqcnt; i++) {
 		data->irq[i] = irq_of_parse_and_map(data->dev->of_node, i);
 		if (!data->irq[i]) {
@@ -325,7 +329,7 @@ static int exynos_tzasc_probe(struct platform_device *pdev)
 						data->irq[i],
 						exynos_tzasc_irq_handler,
 						exynos_tzasc_irq_handler_thread,
-						IRQF_ONESHOT,
+						irqf,
 						pdev->name,
 						data);
 		if (ret) {
