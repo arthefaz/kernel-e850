@@ -307,6 +307,8 @@ void decon_reg_update_req_global(u32 id);
 void decon_reg_set_pll_sleep(u32 id, u32 en);
 void decon_reg_set_pll_wakeup(u32 id, u32 en);
 
+/* Latency monitoring */
+u32 decon_reg_get_latency_monitor_value(u32 id);
 /*********************************************************************/
 
 #endif /* __SAMSUNG_DECON_CAL_H__ */

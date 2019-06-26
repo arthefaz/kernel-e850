@@ -271,6 +271,11 @@
 #define OUTFIFO_PIXEL_ORDER_SWAP_MASK		(0x7 << 4)
 #define OUTFIFO_PIXEL_ORDER_SWAP_GET(_v)	(((_v) >> 4) & 0x7)
 
+#define OUTFIFO_LATENCY_MONITOR			0x0138
+#define LATENCY_COUNTER_CLEAR			(1 << 29)
+#define LATENCY_COUNTER_ENABLE			(1 << 28)
+#define LATENCY_COUNTER_VALUE_GET(_v)		(((_v) >> 0) & 0xffffff)
+
 #define READ_URGENT_CONTROL_0			0x0140
 #define READ_URGETN_GENERATION_EN_F		(0x1 << 0)
 

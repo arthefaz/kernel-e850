@@ -266,6 +266,41 @@ static void decon_reg_set_rgb_order(u32 id, enum decon_rgb_order order)
 	decon_write_mask(id, OUTFIFO_DATA_ORDER_CONTROL, val, mask);
 }
 
+#if defined(CONFIG_EXYNOS_LATENCY_MONITOR)
+/* need to set at init time */
+void decon_reg_set_latency_monitor_enable(u32 id, u32 en)
+{
+	u32 val, mask;
+
+	val = en ? ~0 : 0;
+	mask = LATENCY_COUNTER_ENABLE;
+	decon_write_mask(id, OUTFIFO_LATENCY_MONITOR, val, mask);
+}
+
+/*
+ * @framedone : read -> clear
+ * return : ACLK cycle count
+ */
+u32 decon_reg_get_latency_monitor_value(u32 id)
+{
+	u32 val, mask;
+	u32 count;
+
+	/* get count */
+	val = decon_read(id, OUTFIFO_LATENCY_MONITOR);
+	count =  LATENCY_COUNTER_VALUE_GET(val);
+
+	/* clear */
+	val = LATENCY_COUNTER_CLEAR;
+	mask = LATENCY_COUNTER_CLEAR;
+	decon_write_mask(id, OUTFIFO_LATENCY_MONITOR, val, mask);
+
+	decon_dbg("latency_count = %d\n", count);
+
+	return count;
+}
+#endif
+
 static void decon_reg_set_blender_bg_image_size(u32 id,
 		enum decon_dsi_mode dsi_mode, struct exynos_panel_info *lcd_info)
 {
@@ -1491,6 +1526,11 @@ static void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p)
 
 	decon_reg_set_scaled_image_size(id, psr->dsi_mode, lcd_info);
 
+#if defined(CONFIG_EXYNOS_LATENCY_MONITOR)
+	/* once enable at init */
+	decon_reg_set_latency_monitor_enable(id, 1);
+#endif
+
 	/*
 	 * same as decon_reg_configure_lcd(...) function
 	 * except using decon_reg_update_req_global(id)
@@ -1860,6 +1900,11 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 	decon_reg_set_blender_bg_image_size(id, psr->dsi_mode, lcd_info);
 
 	decon_reg_set_scaled_image_size(id, psr->dsi_mode, lcd_info);
+
+#if defined(CONFIG_EXYNOS_LATENCY_MONITOR)
+	/* enable once at init time */
+	decon_reg_set_latency_monitor_enable(id, 1);
+#endif
 
 	if (id == 2) {
 		/* Set a TRIG mode */
