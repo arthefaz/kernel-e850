@@ -174,42 +174,51 @@ static void idma_reg_set_test_pattern(u32 id, u32 pat_id, u32 *pat_dat)
 
 static void idma_reg_set_afbc(u32 id, enum dpp_comp_type ct, u32 rcv_num)
 {
-	u32 val = 0;
+	u32 afbc_en = 0;
+	u32 rcv_en = 0;
 
 	if (ct == COMP_TYPE_AFBC)
-		val = ~0;
+		afbc_en = IDMA_AFBC_EN;
+	if (ct != COMP_TYPE_NONE)
+		rcv_en = IDMA_RECOVERY_EN;
 
-	dma_write_mask(id, IDMA_IN_CON, val, IDMA_AFBC_EN);
-	dma_write_mask(id, IDMA_RECOVERY_CTRL, val, IDMA_RECOVERY_EN);
+	dma_write_mask(id, IDMA_IN_CON, afbc_en, IDMA_AFBC_EN);
+	dma_write_mask(id, IDMA_RECOVERY_CTRL, rcv_en, IDMA_RECOVERY_EN);
 	dma_write_mask(id, IDMA_RECOVERY_CTRL, IDMA_RECOVERY_NUM(rcv_num),
 				IDMA_RECOVERY_NUM_MASK);
 }
 
 static void idma_reg_set_sbwc(u32 id, enum dpp_comp_type ct, u32 rcv_num)
 {
-	u32 val = 0;
+	u32 sbwc_en = 0;
+	u32 rcv_en = 0;
 
 	if (ct == COMP_TYPE_SBWC)
-		val = ~0;
+		sbwc_en = IDMA_SBWC_EN;
+	if (ct != COMP_TYPE_NONE)
+		rcv_en = IDMA_RECOVERY_EN;
 
-	dma_write_mask(id, IDMA_IN_CON, val, IDMA_SBWC_EN);
-	dma_write_mask(id, IDMA_RECOVERY_CTRL, val, IDMA_RECOVERY_EN);
+	dma_write_mask(id, IDMA_IN_CON, sbwc_en, IDMA_SBWC_EN);
+	dma_write_mask(id, IDMA_RECOVERY_CTRL, rcv_en, IDMA_RECOVERY_EN);
 	dma_write_mask(id, IDMA_RECOVERY_CTRL, IDMA_RECOVERY_NUM(rcv_num),
 				IDMA_RECOVERY_NUM_MASK);
 }
 
 static void idma_reg_set_sbwcl(u32 id, enum dpp_comp_type ct, u32 size_32x, u32 rcv_num)
 {
-	u32 val = 0;
+	u32 sbwc_en = 0;
+	u32 rcv_en = 0;
 
 	if (ct == COMP_TYPE_SBWCL)
-		val = ~0;
+		sbwc_en = IDMA_SBWC_LOSSY_EN | IDMA_SBWC_EN;
+	if (ct != COMP_TYPE_NONE)
+		rcv_en = IDMA_RECOVERY_EN;
 
-	dma_write_mask(id, IDMA_IN_CON, val, IDMA_SBWC_LOSSY_EN | IDMA_SBWC_EN);
+	dma_write_mask(id, IDMA_IN_CON, sbwc_en, IDMA_SBWC_LOSSY_EN | IDMA_SBWC_EN);
 	dma_write_mask(id, IDMA_SBWC_PARAM,
 			IDMA_CHM_LOSSY_BYTENUM(size_32x) | IDMA_LUM_LOSSY_BYTENUM(size_32x),
 			IDMA_CHM_LOSSY_BYTENUM_MASK | IDMA_LUM_LOSSY_BYTENUM_MASK);
-	dma_write_mask(id, IDMA_RECOVERY_CTRL, val, IDMA_RECOVERY_EN);
+	dma_write_mask(id, IDMA_RECOVERY_CTRL, rcv_en, IDMA_RECOVERY_EN);
 	dma_write_mask(id, IDMA_RECOVERY_CTRL, IDMA_RECOVERY_NUM(rcv_num),
 				IDMA_RECOVERY_NUM_MASK);
 }
