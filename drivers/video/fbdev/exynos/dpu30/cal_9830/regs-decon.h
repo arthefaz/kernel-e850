@@ -197,6 +197,7 @@
 #define TIMER_VALUE_MASK			(0xffffffff << 0)
 
 #define PLL_SLEEP_CONTROL			0x0090
+#define SLEEP_CTRL_MODE_F			(1 << 8)
 #define PLL_SLEEP_MASK_OUTIF1			(1 << 5)
 #define PLL_SLEEP_MASK_OUTIF0			(1 << 4)
 #define PLL_SLEEP_EN_OUTIF1_F			(1 << 1)

@@ -1782,6 +1782,11 @@ static void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 }
 
 #if defined(CONFIG_EXYNOS_PLL_SLEEP)
+/*
+ * SLEEP_CTRL_MODE_F @ EVT1
+ * 0 = Bypass shadow update request to DSIMIF
+ * 1 = Postpone shadow update request to DSIMIF until PLL lock
+ */
 void decon_reg_set_pll_sleep(u32 id, u32 en)
 {
 	u32 val, mask;
@@ -1793,6 +1798,7 @@ void decon_reg_set_pll_sleep(u32 id, u32 en)
 	}
 	val = en ? ~0 : 0;
 	mask = (id == 0) ? PLL_SLEEP_EN_OUTIF0_F : PLL_SLEEP_EN_OUTIF1_F;
+	mask |= SLEEP_CTRL_MODE_F;
 	decon_write_mask(id, PLL_SLEEP_CONTROL, val, mask);
 }
 
