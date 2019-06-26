@@ -197,6 +197,7 @@ static irqreturn_t exynos_ppmpu_irq_handler_thread(int irq, void *dev_id)
 static int exynos_ppmpu_probe(struct platform_device *pdev)
 {
 	struct ppmpu_info_data *data;
+	unsigned long irqf = IRQF_SHARED;
 	int ret, i;
 
 	data = devm_kzalloc(&pdev->dev, sizeof(struct ppmpu_info_data), GFP_KERNEL);
@@ -295,6 +296,9 @@ static int exynos_ppmpu_probe(struct platform_device *pdev)
 		"The number of PPMPU interrupt : %d\n",
 		data->irqcnt);
 
+	if (of_property_read_bool(data->dev->of_node, "irq-shared") == false)
+		irqf = IRQF_ONESHOT;
+
 	for (i = 0; i < data->irqcnt; i++) {
 		data->irq[i] = irq_of_parse_and_map(data->dev->of_node, i);
 		if (!data->irq[i]) {
@@ -309,7 +313,7 @@ static int exynos_ppmpu_probe(struct platform_device *pdev)
 						data->irq[i],
 						exynos_ppmpu_irq_handler,
 						exynos_ppmpu_irq_handler_thread,
-						IRQF_ONESHOT,
+						irqf,
 						pdev->name,
 						data);
 		if (ret) {
