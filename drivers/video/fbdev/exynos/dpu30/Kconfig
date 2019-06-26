@@ -136,6 +136,11 @@ config EXYNOS_SUPPORT_READBACK
 	bool "Support readback buffer"
 		depends on EXYNOS_DPU30
 		default n
+
+config EXYNOS_LATENCY_MONITOR
+	bool "Read Data Latency Monitor"
+		depends on EXYNOS_DPU30
+		default n
 endif
 
 source "drivers/video/fbdev/exynos/dpu30/panels/Kconfig"
