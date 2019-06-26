@@ -124,30 +124,27 @@ int bts_get_bwindex(const char *name)
 
 	spin_lock(&btsdev->lock);
 
-	for (index = 0; (bw[index].name != NULL) && (index < btsdev->num_bts); index++)
-		if (!strcmp(bw[index].name, name))
-			break;
+	for (index = 0; (bw[index].name != NULL) && (index < btsdev->num_bts); index++) {
+		if (!strcmp(bw[index].name, name)) {
+			ret = index;
+			goto out;
+		}
+	}
 
 	if (index == btsdev->num_bts) {
-		spin_unlock(&btsdev->lock);
 		ret = -EINVAL;
 		goto out;
 	} else {
-		bw[index].name = devm_kmalloc(btsdev->dev, sizeof(char) * (strlen(name) + 1), GFP_ATOMIC);
+		bw[index].name = devm_kstrdup(btsdev->dev, name, GFP_ATOMIC);
 		if (bw[index].name == NULL) {
 			dev_err(btsdev->dev, "failed to allocate bandwidth name\n");
-			spin_unlock(&btsdev->lock);
 			ret = -ENOMEM;
 			goto out;
 		}
-		strlcpy(bw[index].name, name, sizeof(bw[index].name));
-
-		spin_unlock(&btsdev->lock);
-
 		ret = index;
 	}
-
 out:
+	spin_unlock(&btsdev->lock);
 	return ret;
 }
 EXPORT_SYMBOL(bts_get_bwindex);
