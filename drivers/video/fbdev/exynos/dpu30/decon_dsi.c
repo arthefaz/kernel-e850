@@ -22,6 +22,10 @@
 #if defined(CONFIG_EXYNOS_ALT_DVFS)
 #include <soc/samsung/exynos-alt.h>
 #endif
+#if defined(CONFIG_EXYNOS_LATENCY_MONITOR)
+#include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
+#include <soc/samsung/exynos-devfreq.h>
+#endif
 
 #include "decon.h"
 #include "dsim.h"
@@ -67,6 +71,11 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 		if (decon->state == DECON_STATE_TUI)
 			decon_info("%s:%d TUI Frame Done\n", __func__, __LINE__);
 
+#if defined(CONFIG_EXYNOS_LATENCY_MONITOR)
+		decon_info("[LATENCY] cycle=%d @ACLK=%lu KHz\n",
+			decon_reg_get_latency_monitor_value(decon->id),
+			exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
+#endif
 #if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
 		if (decon->readback.request) {
 			decon_dbg("[CWB] Decon FrameDone!(%d)\n", decon->frame_cnt);
