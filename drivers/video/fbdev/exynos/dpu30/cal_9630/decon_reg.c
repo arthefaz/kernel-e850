@@ -850,11 +850,11 @@ static void dsc_get_partial_update_info(u32 slice_cnt, u32 dsc_cnt, bool in_slic
 			sm_ch[DECON_DSC_ENC1] = 1;
 		} else {
 			if (in_slice[0]) {
-				ds_en[DECON_DSC_ENC0] = 0;
-				sm_ch[DECON_DSC_ENC0] = 1;
+				ds_en[DECON_DSC_ENC0] = 1;
+				sm_ch[DECON_DSC_ENC0] = 0;
 			} else if (in_slice[1]) {
-				ds_en[DECON_DSC_ENC0] = 0;
-				sm_ch[DECON_DSC_ENC0] = 1;
+				ds_en[DECON_DSC_ENC0] = 1;
+				sm_ch[DECON_DSC_ENC0] = 0;
 			} else {
 				ds_en[DECON_DSC_ENC0] = 1;
 				sm_ch[DECON_DSC_ENC0] = 0;
