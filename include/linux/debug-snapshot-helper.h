@@ -44,6 +44,8 @@ struct dbg_snapshot_helper_ops {
 
 	int (*soc_is_power_cpu)(void *);
 	int (*soc_smc_call)(unsigned long, unsigned long, unsigned long, unsigned long);
+
+	void (*soc_do_dpm_policy)(void *);
 };
 
 extern void dbg_snapshot_register_soc_ops(struct dbg_snapshot_helper_ops *ops);

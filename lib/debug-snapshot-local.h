@@ -20,16 +20,17 @@
 #include <linux/debug-snapshot-helper.h>
 #include "debug-snapshot-log.h"
 
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 #include <linux/clk-provider.h>
-#endif
 
-extern void dbg_snapshot_log_idx_init(void);
-extern void dbg_snapshot_utils_init(void);
-extern void dbg_snapshot_helper_init(void);
+extern void (*arm_pm_restart)(char str, const char *cmd);
+
+extern void dbg_snapshot_init_log_idx(void);
+extern void dbg_snapshot_init_utils(void);
+extern void dbg_snapshot_init_helper(void);
+extern void __iomem *dbg_snapshot_get_header_vaddr(void);
 extern void __iomem *dbg_snapshot_get_base_vaddr(void);
 extern void __iomem *dbg_snapshot_get_base_paddr(void);
-
+extern void dbg_snapshot_scratch_reg(unsigned int val);
 extern void dbg_snapshot_print_panic_report(void);
 extern void dbg_snapshot_dump_task_info(void);
 
@@ -38,7 +39,6 @@ extern void dbg_snapshot_set_core_panic_stat(unsigned int val, unsigned cpu);
 extern void dbg_snapshot_recall_hardlockup_core(void);
 
 extern struct dbg_snapshot_helper_ops *dss_soc_ops;
-
 
 /* SoC Specific define, This will be removed */
 #define DSS_REG_MCT_ADDR	(0)
@@ -54,14 +54,24 @@ struct dbg_snapshot_base {
 	size_t paddr;
 	unsigned int persist;
 	unsigned int enabled;
+	unsigned int enabled_no_dump;
 };
 
 struct dbg_snapshot_item {
+	int id;
 	char *name;
 	struct dbg_snapshot_base entry;
 	unsigned char *head_ptr;
 	unsigned char *curr_ptr;
 	unsigned long long time;
+};
+
+struct dbg_snapshot_dpm_item {
+	char *first_node;
+	char *second_node;
+	char *node;
+	int policy;
+	int value;
 };
 
 struct dbg_snapshot_bl {
@@ -92,16 +102,6 @@ struct dbg_snapshot_desc {
 	struct list_head sfrdump_list;
 	raw_spinlock_t ctrl_lock;
 	raw_spinlock_t nmi_lock;
-	unsigned int header_num;
-	unsigned int kevents_num;
-	unsigned int log_kernel_num;
-	unsigned int log_platform_num;
-	unsigned int log_fatal_num;
-	unsigned int log_sfr_num;
-	unsigned int log_pstore_num;
-	unsigned int log_etm_num;
-	unsigned int log_cnt;
-
 	unsigned int callstack;
 	unsigned long hardlockup_core_mask;
 	unsigned long hardlockup_core_pc[DSS_NR_CPUS];
@@ -109,12 +109,31 @@ struct dbg_snapshot_desc {
 	int hardlockup_detected;
 	int allcorelockup_detected;
 	int no_wdt_dev;
+	int debug_level;
+	int log_cnt;
 };
 
+struct dbg_snapshot_dpm {
+	unsigned int version;
+	bool enabled;
+	bool enabled_debug;
+	bool enabled_dump_mode;
+	bool enabled_dump_mode_file;
+
+	unsigned int pre_log;
+	unsigned int p_el1_da;
+	unsigned int p_el1_sp_pc;
+	unsigned int p_el1_ia;
+	unsigned int p_el1_undef;
+	unsigned int p_el1_inv;
+	unsigned int p_el1_serror;
+};
 
 extern struct dbg_snapshot_base dss_base;
 extern struct dbg_snapshot_log *dss_log;
 extern struct dbg_snapshot_desc dss_desc;
 extern struct dbg_snapshot_item dss_items[];
+extern struct dbg_snapshot_dpm_item dpm_items[];
+extern struct dbg_snapshot_dpm dss_dpm;
 extern int dbg_snapshot_log_size;
 #endif

@@ -8,23 +8,12 @@
 #include <linux/debug-snapshot-binder.h>
 #endif
 
-#ifdef DSS_ANALYZER
-
-#define TASK_COMM_LEN 16
-#define NR_CPUS 8
-#undef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
-#include <stdio.h>
-#include <stdlib.h>
-
-#else // DSS_ANALYZER
-
+#include <generated/autoconf.h>
 #include <linux/clk-provider.h>
 #include <linux/debug-snapshot.h>
 #include <linux/debug-snapshot-helper.h>
 
-#endif // DSS_ANALYZER
-
-#include <dt-bindings/soc/samsung/debug-snapshot-table.h>
+#include <dt-bindings/soc/samsung/debug-snapshot-def.h>
 
 /*  Size domain */
 #define DSS_KEEP_HEADER_SZ		(SZ_256 * 3)
@@ -60,6 +49,8 @@
 #define DSS_SIGN_NORMAL_REBOOT		0xCAFE
 #define DSS_SIGN_FORCE_REBOOT		0xDAFE
 #define DSS_SIGN_LOCKUP			0xDEADBEEF
+#define DSS_SIGN_DEBUG_TEST		0xDB6
+
 #define DSS_BOOT_CNT_MAGIC		0xFACEDB90
 
 /*  Specific Address Information */
@@ -74,8 +65,8 @@
 #define DSS_OFFSET_DEBUG_TEST_CURR	(0x170)
 #define DSS_OFFSET_DEBUG_TEST_TOTAL	(0x178)
 #define DSS_OFFSET_DEBUG_LEVEL		(0x180)
-#define DSS_OFFSET_DEBUG_TEST_RUN	(0x138)
 #define DSS_OFFSET_DEBUG_TEST_BUFFER(n)	(0x190 + (0x8 * n))
+#define DSS_OFFSET_DEBUG_TEST_RUN		(0x138)
 #define DSS_OFFSET_LAST_LOGBUF		(0x200)
 #define DSS_OFFSET_BL_BOOT_CNT_MAGIC	(0x250)
 #define DSS_OFFSET_BL_BOOT_CNT		(0x254)
@@ -98,11 +89,7 @@ struct dbg_snapshot_log {
 	struct __task_log {
 		unsigned long long time;
 		unsigned long sp;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		struct task_struct *task;
-#else
-		void *task;
-#endif
 		char task_comm[TASK_COMM_LEN];
 		int pid;
 	} task[DSS_NR_CPUS][DSS_LOG_MAX_NUM];
@@ -110,13 +97,8 @@ struct dbg_snapshot_log {
 	struct __work_log {
 		unsigned long long time;
 		unsigned long sp;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		struct worker *worker;
 		work_func_t fn;
-#else
-		void *worker;
-		void *fn;
-#endif
 		char task_comm[TASK_COMM_LEN];
 		int en;
 	} work[DSS_NR_CPUS][DSS_LOG_MAX_NUM];
@@ -126,11 +108,7 @@ struct dbg_snapshot_log {
 		unsigned long sp;
 		char *modes;
 		unsigned int state;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		u32 num_online_cpus;
-#else
-		unsigned int num_online_cpus;
-#endif
 		int delta;
 		int en;
 	} cpuidle[DSS_NR_CPUS][DSS_LOG_MAX_NUM];
@@ -140,11 +118,7 @@ struct dbg_snapshot_log {
 		unsigned long sp;
 		char log[DSS_LOG_GEN_LEN];
 		void *fn;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		struct device *dev;
-#else
-		void *dev;
-#endif
 		int en;
 		int state;
 		int core;
@@ -155,11 +129,7 @@ struct dbg_snapshot_log {
 		unsigned long sp;
 		int irq;
 		void *fn;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		struct irq_desc *desc;
-#else
-		void *desc;
-#endif
 		unsigned long long latency;
 		int en;
 	} irq[DSS_NR_CPUS][DSS_LOG_MAX_NUM * 2];
@@ -168,18 +138,10 @@ struct dbg_snapshot_log {
 		unsigned long long time;
 		unsigned long sp;
 		unsigned long long jiffies;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		raw_spinlock_t *lock;
 #ifdef CONFIG_DEBUG_SPINLOCK
 		u16 next;
 		u16 owner;
-#endif
-#else
-		void *lock;
-#ifdef CONFIG_DEBUG_SPINLOCK
-		unsigned short next;
-		unsigned short owner;
-#endif
 #endif
 		int en;
 		void *caller[DSS_CALLSTACK_MAX_NUM];
@@ -189,37 +151,24 @@ struct dbg_snapshot_log {
 	struct __irqs_disabled_log {
 		unsigned long long time;
 		unsigned long index;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		struct task_struct *task;
-#else
-		void *task;
-#endif
 		char *task_comm;
 		void *caller[DSS_CALLSTACK_MAX_NUM];
 	} irqs_disabled[DSS_NR_CPUS][SZ_32];
 #endif
-#ifdef CONFIG_DEBUG_SNAPSHOT_CLK
 	struct __clk_log {
 		unsigned long long time;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		struct clk_hw *clk;
-#else
-		void *clk;
-#endif
 		const char *f_name;
 		int mode;
 		unsigned long arg;
 	} clk[DSS_LOG_MAX_NUM];
-#endif
-#ifdef CONFIG_DEBUG_SNAPSHOT_PMU
 	struct __pmu_log {
 		unsigned long long time;
 		unsigned int id;
 		const char *f_name;
 		int mode;
 	} pmu[DSS_LOG_MAX_NUM];
-#endif
-#ifdef CONFIG_DEBUG_SNAPSHOT_FREQ
 	struct __freq_log {
 		unsigned long long time;
 		int cpu;
@@ -229,23 +178,15 @@ struct dbg_snapshot_log {
 		unsigned long target_freq;
 		int en;
 	} freq[DSS_LOG_MAX_NUM];
-#endif
-#ifdef CONFIG_DEBUG_SNAPSHOT_DM
 	struct __dm_log {
 		unsigned long long time;
 		int cpu;
 		int dm_num;
 		unsigned long min_freq;
 		unsigned long max_freq;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		s32 wait_dmt;
 		s32 do_dmt;
-#else
-		int wait_dmt;
-		int do_dmt;
-#endif
 	} dm[DSS_LOG_MAX_NUM];
-#endif
 #ifdef CONFIG_DEBUG_SNAPSHOT_REG
 	struct __reg_log {
 		unsigned long long time;
@@ -256,20 +197,13 @@ struct dbg_snapshot_log {
 		void *caller[DSS_CALLSTACK_MAX_NUM];
 	} reg[DSS_NR_CPUS][DSS_LOG_MAX_NUM];
 #endif
-#ifdef CONFIG_DEBUG_SNAPSHOT_HRTIMER
 	struct __hrtimer_log {
 		unsigned long long time;
 		unsigned long long now;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		struct hrtimer *timer;
-#else
-		void *timer;
-#endif
 		void *fn;
 		int en;
 	} hrtimers[DSS_NR_CPUS][DSS_LOG_MAX_NUM];
-#endif
-#ifdef CONFIG_DEBUG_SNAPSHOT_REGULATOR
 	struct __regulator_log {
 		unsigned long long time;
 		unsigned long long acpm_time;
@@ -280,58 +214,35 @@ struct dbg_snapshot_log {
 		unsigned int raw_volt;
 		int en;
 	} regulator[DSS_LOG_MAX_NUM];
-#endif
-#ifdef CONFIG_DEBUG_SNAPSHOT_THERMAL
 	struct __thermal_log {
 		unsigned long long time;
 		int cpu;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
-		struct exynos_tmu_platform_data *data;
-#else
-		void *data;
-#endif
+		struct exynos_tmu_data *data;
 		unsigned int temp;
 		char *cooling_device;
 		unsigned int cooling_state;
 	} thermal[DSS_LOG_MAX_NUM];
-#endif
-#ifdef CONFIG_DEBUG_SNAPSHOT_ACPM
 	struct __acpm_log {
 		unsigned long long time;
 		unsigned long long acpm_time;
 		char log[9];
 		unsigned int data;
 	} acpm[DSS_LOG_MAX_NUM];
-#endif
-#ifdef CONFIG_DEBUG_SNAPSHOT_I2C
 	struct __i2c_log {
 		unsigned long long time;
 		int cpu;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		struct i2c_adapter *adap;
 		struct i2c_msg *msgs;
-#else
-		void *adp;
-		void *msgs;
-#endif
 		int num;
 		int en;
 	} i2c[DSS_LOG_MAX_NUM];
-#endif
-#ifdef CONFIG_DEBUG_SNAPSHOT_SPI
 	struct __spi_log {
 		unsigned long long time;
 		int cpu;
-#ifdef CONFIG_DEBUG_SNAPSHOT_LINUX_BUILD
 		struct spi_controller *ctlr;
 		struct spi_message *cur_msg;
-#else
-		void *ctlr;
-		void *cur_msg;
-#endif
 		int en;
 	} spi[DSS_LOG_MAX_NUM];
-#endif
 #ifdef CONFIG_DEBUG_SNAPSHOT_BINDER
 	struct __binder_log {
 		unsigned long long time;
@@ -342,7 +253,7 @@ struct dbg_snapshot_log {
 	} binder[DSS_API_MAX_NUM << 2];
 #endif
 
-#ifndef CONFIG_DEBUG_SNAPSHOT_MINIMIZED_MODE
+#ifndef CONFIG_DEBUG_SNAPSHOT_USER_MODE
 	struct __printkl_log {
 		unsigned long long time;
 		int cpu;

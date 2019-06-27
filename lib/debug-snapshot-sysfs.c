@@ -80,16 +80,15 @@ static ssize_t dss_enable_store(struct device *dev,
 		return count;
 
 	name[count - 1] = '\0';
-
-	en = dbg_snapshot_get_enable(name);
+	en = dbg_snapshot_get_enable_item(name);
 
 	if (en == -1)
 		dev_info(dss_desc.dev, "echo name > enabled\n");
 	else {
 		if (en)
-			dbg_snapshot_set_enable(name, false);
+			dbg_snapshot_set_enable_item(name, false);
 		else
-			dbg_snapshot_set_enable(name, true);
+			dbg_snapshot_set_enable_item(name, true);
 	}
 
 	kfree(name);
@@ -164,75 +163,6 @@ static ssize_t dss_irqlog_exlist_store(struct device *dev,
 	return count;
 }
 
-#ifdef CONFIG_DEBUG_SNAPSHOT_IRQ_EXIT
-static ssize_t dss_irqexit_exlist_show(struct device *dev,
-				struct device_attribute *attr, char *buf)
-{
-	unsigned long i;
-	ssize_t n = 0;
-
-	n = scnprintf(buf, 36, "Excluded irq number\n");
-	for (i = 0; i < ARRAY_SIZE(dss_irqexit_exlist); i++) {
-		if (dss_irqexit_exlist[i] == 0)
-			break;
-		n += scnprintf(buf + n, 24, "IRQ num: %-4d\n", dss_irqexit_exlist[i]);
-	}
-	return n;
-}
-
-static ssize_t dss_irqexit_exlist_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	unsigned long i;
-	unsigned long irq;
-
-	irq = simple_strtoul(buf, NULL, 0);
-	dev_info(dss_desc.dev, "irq number : %lu\n", irq);
-
-	for (i = 0; i < ARRAY_SIZE(dss_irqexit_exlist); i++) {
-		if (dss_irqexit_exlist[i] == 0)
-			break;
-	}
-
-	if (i == ARRAY_SIZE(dss_irqexit_exlist)) {
-		dev_err(dss_desc.dev, "list is full\n");
-		return count;
-	}
-
-	if (irq != 0) {
-		dss_irqexit_exlist[i] = irq;
-		dev_info(dss_desc.dev, "success inserting %lu to list\n", irq);
-	}
-	return count;
-}
-
-static ssize_t dss_irqexit_threshold_show(struct device *dev,
-					struct device_attribute *attr, char *buf)
-{
-	ssize_t n;
-
-	n = scnprintf(buf, 46, "threshold : %12u us\n", dss_irqexit_threshold);
-	return n;
-}
-
-static ssize_t dss_irqexit_threshold_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	unsigned long val;
-
-	val = simple_strtoul(buf, NULL, 0);
-	dev_info(dss_desc.dev, "threshold value : %lu\n", val);
-
-	if (val != 0) {
-		dss_irqexit_threshold = (unsigned int)val;
-		dev_info(dss_desc.dev, "success %lu to threshold\n", val);
-	}
-	return count;
-}
-#endif
-
 #ifdef CONFIG_DEBUG_SNAPSHOT_REG
 static ssize_t dss_reg_exlist_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
@@ -283,15 +213,6 @@ __ATTR(callstack, 0644, dss_callstack_show, dss_callstack_store);
 static struct device_attribute dss_irqlog_attr =
 __ATTR(exlist_irqdisabled, 0644, dss_irqlog_exlist_show,
 					dss_irqlog_exlist_store);
-#ifdef CONFIG_DEBUG_SNAPSHOT_IRQ_EXIT
-static struct device_attribute dss_irqexit_attr =
-__ATTR(exlist_irqexit, 0644, dss_irqexit_exlist_show,
-					dss_irqexit_exlist_store);
-
-static struct device_attribute dss_irqexit_threshold_attr =
-__ATTR(threshold_irqexit, 0644, dss_irqexit_threshold_show,
-					dss_irqexit_threshold_store);
-#endif
 #ifdef CONFIG_DEBUG_SNAPSHOT_REG
 
 static struct device_attribute dss_reg_attr =
@@ -302,10 +223,6 @@ static struct attribute *dss_sysfs_attrs[] = {
 	&dss_enable_attr.attr,
 	&dss_callstack_attr.attr,
 	&dss_irqlog_attr.attr,
-#ifdef CONFIG_DEBUG_SNAPSHOT_IRQ_EXIT
-	&dss_irqexit_attr.attr,
-	&dss_irqexit_threshold_attr.attr,
-#endif
 #ifdef CONFIG_DEBUG_SNAPSHOT_REG
 	&dss_reg_attr.attr,
 #endif

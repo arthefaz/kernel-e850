@@ -234,6 +234,9 @@ static void __init setup_machine_fdt(phys_addr_t dt_phys)
 	/* Scan dvfs paramter information, address that loaded on DRAM and size */
 	of_scan_flat_dt(early_init_dt_scan_ect, NULL);
 #endif
+#if defined(CONFIG_DEBUG_SNAPSHOT)
+	of_scan_flat_dt(dbg_snapshot_early_init_dt_scan_dpm, NULL);
+#endif
 }
 
 static void __init request_standard_resources(void)

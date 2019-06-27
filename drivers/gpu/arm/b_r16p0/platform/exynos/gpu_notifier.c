@@ -94,7 +94,7 @@ static int gpu_tmu_notifier(struct notifier_block *notifier,
 {
 	int frequency;
 	struct exynos_context *platform = (struct exynos_context *)pkbdev->platform_context;
-#if defined(CONFIG_DEBUG_SNAPSHOT_THERMAL) || defined(CONFIG_EXYNOS_SNAPSHOT_THERMAL)
+#if defined(CONFIG_DEBUG_SNAPSHOT) || defined(CONFIG_EXYNOS_SNAPSHOT_THERMAL)
 	char *cooling_device_name = "GPU";
 #endif
 
@@ -117,7 +117,7 @@ static int gpu_tmu_notifier(struct notifier_block *notifier,
 #endif
 #if defined(CONFIG_EXYNOS_SNAPSHOT_THERMAL)
 		exynos_ss_thermal(NULL, 0, cooling_device_name, frequency);
-#elif defined(CONFIG_DEBUG_SNAPSHOT_THERMAL)
+#elif defined(CONFIG_DEBUG_SNAPSHOT)
 		dbg_snapshot_thermal(NULL, 0, cooling_device_name, frequency);
 #endif
 	}

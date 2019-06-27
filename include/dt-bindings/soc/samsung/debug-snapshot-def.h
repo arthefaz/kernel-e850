@@ -10,13 +10,13 @@
  * (at your option) any later version.
  */
 
-#ifndef DEBUG_SNAPSHOT_TABLE_H
-#define DEBUG_SNAPSHOT_TABLE_H
+#ifndef DEBUG_SNAPSHOT_DEFINE_H
+#define DEBUG_SNAPSHOT_DEFINE_H
 
-/************************************************************************
+/*
  * This definition is default settings.
  * We must use bootloader settings first.
-*************************************************************************/
+ */
 
 #define SZ_16				0x00000010
 #define SZ_32				0x00000020
@@ -96,5 +96,119 @@
 #define DSS_LOG_PSTORE_ADDR		(DSS_START_ADDR + DSS_LOG_PSTORE_OFFSET)
 #define DSS_LOG_KEVENTS_ADDR		(DSS_START_ADDR + DSS_LOG_KEVENTS_OFFSET)
 #define DSS_LOG_FATAL_ADDR		(DSS_START_ADDR + DSS_LOG_FATAL_OFFSET)
+
+/* KEVENT ID */
+#define DSS_ITEM_HEADER			"header"
+#define DSS_ITEM_HEADER_ID		(0)
+#define DSS_ITEM_KERNEL			"log_kernel"
+#define DSS_ITEM_KERNEL_ID		(1)
+#define DSS_ITEM_PLATFORM		"log_platform"
+#define DSS_ITEM_PLATFORM_ID		(2)
+#define DSS_ITEM_FATAL			"log_fatal"
+#define DSS_ITEM_FATAL_ID		(3)
+#define DSS_ITEM_KEVENTS		"log_kevents"
+#define DSS_ITEM_KEVENTS_ID		(4)
+#define DSS_ITEM_PSTORE			"log_pstore"
+#define DSS_ITEM_PSTORE_ID		(5)
+#define DSS_ITEM_SFR			"log_sfr"
+#define DSS_ITEM_SFR_ID			(6)
+#define DSS_ITEM_S2D			"log_s2d"
+#define DSS_ITEM_S2D_ID			(7)
+#define DSS_ITEM_ARRDUMP_RESET		"log_arrdumpreset"
+#define DSS_ITEM_ARRDUMP_RESET_ID	(8)
+#define DSS_ITEM_ARRDUMP_PANIC		"log_arrdumppanic"
+#define DSS_ITEM_ARRDUMP_PANIC_ID	(9)
+#define DSS_ITEM_ETM			"log_etm"
+#define DSS_ITEM_ETM_ID			(10)
+#define DSS_ITEM_BCM			"log_bcm"
+#define DSS_ITEM_BCM_ID			(11)
+#define DSS_ITEM_LLC			"log_llc"
+#define DSS_ITEM_LLC_ID			(12)
+#define DSS_ITEM_DBGC			"log_dbgc"
+#define DSS_ITEM_DBGC_ID		(13)
+
+#define DSS_LOG_TASK			"task_log"
+#define DSS_LOG_TASK_ID			(0)
+#define DSS_LOG_WORK			"work_log"
+#define DSS_LOG_WORK_ID			(1)
+#define DSS_LOG_CPUIDLE			"cpuidle_log"
+#define DSS_LOG_CPUIDLE_ID		(2)
+#define DSS_LOG_SUSPEND			"suspend_log"
+#define DSS_LOG_SUSPEND_ID		(3)
+#define DSS_LOG_IRQ			"irq_log"
+#define DSS_LOG_IRQ_ID			(4)
+#define DSS_LOG_SPINLOCK		"spinlock_log"
+#define DSS_LOG_SPINLOCK_ID		(5)
+#define DSS_LOG_IRQ_DISABLED		"irq_disabled_log"
+#define DSS_LOG_IRQ_DISABLED_ID		(6)
+#define DSS_LOG_REG			"reg_log"
+#define DSS_LOG_REG_ID			(7)
+#define DSS_LOG_HRTIMER			"hrtimer_log"
+#define DSS_LOG_HRTIMER_ID		(8)
+#define DSS_LOG_CLK			"clk_log"
+#define DSS_LOG_CLK_ID			(9)
+#define DSS_LOG_PMU			"pmu_log"
+#define DSS_LOG_PMU_ID			(10)
+#define DSS_LOG_FREQ			"freq_log"
+#define DSS_LOG_FREQ_ID			(11)
+#define DSS_LOG_DM			"dm_log"
+#define DSS_LOG_DM_ID			(12)
+#define DSS_LOG_REGULATOR		"regulator_log"
+#define DSS_LOG_REGULATOR_ID		(13)
+#define DSS_LOG_THERMAL			"thermal_log"
+#define DSS_LOG_THERMAL_ID		(14)
+#define DSS_LOG_I2C			"i2c_log"
+#define DSS_LOG_I2C_ID			(15)
+#define DSS_LOG_SPI			"spi_log"
+#define DSS_LOG_SPI_ID			(16)
+#define DSS_LOG_BINDER			"binder_log"
+#define DSS_LOG_BINDER_ID		(17)
+#define DSS_LOG_ACPM			"acpm_log"
+#define DSS_LOG_ACPM_ID			(18)
+#define DSS_LOG_PRINTK			"printk_log"
+#define DSS_LOG_PRINTK_ID		(19)
+#define DSS_LOG_PRINTKL			"printkl_log"
+#define DSS_LOG_PRINTKL_ID		(20)
+
+/* ACTION */
+#define GO_DEFAULT			"default"
+#define GO_DEFAULT_ID			0
+#define GO_PANIC			"panic"
+#define GO_PANIC_ID			1
+#define GO_WATCHDOG			"watchdog"
+#define GO_WATCHDOG_ID			2
+#define GO_S2D				"s2d"
+#define GO_S2D_ID			3
+#define GO_ARRAYDUMP			"arraydump"
+#define GO_ARRAYDUMP_ID			4
+#define GO_SCANDUMP			"scandump"
+#define GO_SCANDUMP_ID			5
+
+/* EXCEPTION POLICY */
+#define DPM_F				"feature"
+#define DPM_P				"policy"
+#define DPM_C				"config"
+
+#define DPM_P_EL1_DA			"el1_da"
+#define DPM_P_EL1_IA			"el1_ia"
+#define DPM_P_EL1_UNDEF			"el1_undef"
+#define DPM_P_EL1_SP_PC			"el1_sp_pc"
+#define DPM_P_EL1_INV			"el1_inv"
+#define DPM_P_EL1_SERROR		"el1_serror"
+
+/* CUSTOM POLICY, CONFIG */
+#define DPM_P_ITMON			"itmon"
+#define DPM_C_ITMON			"itmon"
+
+#define DPM_P_ITMON_ERR_FATAL		"err_fatal"
+#define DPM_P_ITMON_ERR_DREX_TMOUT	"err_drex_tmout"
+#define DPM_P_ITMON_ERR_IP		"err_ip"
+#define DPM_P_ITMON_ERR_CPU		"err_cpu"
+#define DPM_P_ITMON_ERR_CP		"err_cp"
+#define DPM_P_ITMON_ERR_CHUB		"err_chub"
+
+/* ITMON CONFIG */
+#define DPM_C_ITMON_PANIC_COUNT		"panic_count"
+#define DPM_C_ITMON_PANIC_CPU_COUNT	"panic_count_cpu"
 
 #endif

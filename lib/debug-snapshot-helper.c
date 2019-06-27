@@ -44,47 +44,62 @@ static int  dbg_snapshot_soc_dummy_func_smc(unsigned long dummy1,
 
 static struct dbg_snapshot_helper_ops dss_soc_dummy_ops = {
 	.soc_early_panic		= dbg_snapshot_soc_dummy_func,
-	.soc_prepare_panic_entry 	= dbg_snapshot_soc_dummy_func,
-	.soc_prepare_panic_exit 	= dbg_snapshot_soc_dummy_func,
-	.soc_post_panic_entry 		= dbg_snapshot_soc_dummy_func,
-	.soc_post_panic_exit 		= dbg_snapshot_soc_dummy_func,
-	.soc_post_reboot_entry 		= dbg_snapshot_soc_dummy_func,
-	.soc_post_reboot_exit 		= dbg_snapshot_soc_dummy_func,
-	.soc_save_context_entry 	= dbg_snapshot_soc_dummy_func,
+	.soc_prepare_panic_entry	= dbg_snapshot_soc_dummy_func,
+	.soc_prepare_panic_exit		= dbg_snapshot_soc_dummy_func,
+	.soc_post_panic_entry		= dbg_snapshot_soc_dummy_func,
+	.soc_post_panic_exit		= dbg_snapshot_soc_dummy_func,
+	.soc_post_reboot_entry		= dbg_snapshot_soc_dummy_func,
+	.soc_post_reboot_exit		= dbg_snapshot_soc_dummy_func,
+	.soc_save_context_entry		= dbg_snapshot_soc_dummy_func,
 	.soc_save_context_exit		= dbg_snapshot_soc_dummy_func,
 	.soc_save_core			= dbg_snapshot_soc_dummy_func,
 	.soc_save_system		= dbg_snapshot_soc_dummy_func,
 	.soc_dump_info			= dbg_snapshot_soc_dummy_func,
-	.soc_start_watchdog 		= dbg_snapshot_soc_dummy_func,
-	.soc_expire_watchdog 		= dbg_snapshot_soc_dummy_func,
-	.soc_stop_watchdog 		= dbg_snapshot_soc_dummy_func,
-	.soc_kick_watchdog 		= dbg_snapshot_soc_dummy_func,
+	.soc_start_watchdog		= dbg_snapshot_soc_dummy_func,
+	.soc_expire_watchdog		= dbg_snapshot_soc_dummy_func,
+	.soc_stop_watchdog		= dbg_snapshot_soc_dummy_func,
+	.soc_kick_watchdog		= dbg_snapshot_soc_dummy_func,
 	.soc_is_power_cpu		= dbg_snapshot_soc_dummy_func_int,
 	.soc_smc_call			= dbg_snapshot_soc_dummy_func_smc,
+	.soc_do_dpm_policy		= dbg_snapshot_soc_dummy_func,
 };
 
 struct dbg_snapshot_helper_ops *dss_soc_ops;
 
+void __iomem *dbg_snapshot_get_header_vaddr(void)
+{
+	if (dbg_snapshot_get_enable_item(DSS_ITEM_HEADER))
+		return (void __iomem *)(dss_items[DSS_ITEM_HEADER_ID].entry.vaddr);
+	else
+		return (void __iomem *)(0);
+}
+
 void __iomem *dbg_snapshot_get_base_vaddr(void)
 {
-	return (void __iomem *)(dss_base.vaddr);
+	if (dbg_snapshot_get_enable())
+		return (void __iomem *)(dss_base.vaddr);
+	else
+		return (void __iomem *)(0);
 }
 
 void __iomem *dbg_snapshot_get_base_paddr(void)
 {
-	return (void __iomem *)(dss_base.paddr);
+	if (dbg_snapshot_get_enable())
+		return (void __iomem *)(dss_base.paddr);
+	else
+		return (void __iomem *)(0);
 }
 
 static void dbg_snapshot_set_core_power_stat(unsigned int val, unsigned cpu)
 {
-	if (dbg_snapshot_get_enable("header"))
+	if (dbg_snapshot_get_enable())
 		__raw_writel(val, (dbg_snapshot_get_base_vaddr() +
 					DSS_OFFSET_CORE_POWER_STAT + cpu * 4));
 }
 
 unsigned int dbg_snapshot_get_core_panic_stat(unsigned cpu)
 {
-	if (dbg_snapshot_get_enable("header"))
+	if (dbg_snapshot_get_enable())
 		return __raw_readl(dbg_snapshot_get_base_vaddr() +
 					DSS_OFFSET_PANIC_STAT + cpu * 4);
 	else
@@ -93,38 +108,237 @@ unsigned int dbg_snapshot_get_core_panic_stat(unsigned cpu)
 
 void dbg_snapshot_set_core_panic_stat(unsigned int val, unsigned cpu)
 {
-	if (dbg_snapshot_get_enable("header"))
+	if (dbg_snapshot_get_enable())
 		__raw_writel(val, (dbg_snapshot_get_base_vaddr() +
 					DSS_OFFSET_PANIC_STAT + cpu * 4));
 }
 
 static void dbg_snapshot_report_reason(unsigned int val)
 {
-	if (dbg_snapshot_get_enable("header"))
+	if (dbg_snapshot_get_enable())
 		__raw_writel(val, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_EMERGENCY_REASON);
+}
+
+int dbg_snapshot_get_debug_level_reg(void)
+{
+	int ret = DSS_DEBUG_LEVEL_MID;
+
+	if (dbg_snapshot_get_enable()) {
+		int val = __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_LEVEL);
+
+		if ((val & GENMASK(31, 16)) == DSS_DEBUG_LEVEL_PREFIX)
+			ret = val & GENMASK(15, 0);
+	}
+
+	return ret;
 }
 
 void dbg_snapshot_scratch_reg(unsigned int val)
 {
-	if (dbg_snapshot_get_enable("header"))
+	if (dbg_snapshot_get_enable())
 		__raw_writel(val, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_SCRATCH);
 }
 
 void dbg_snapshot_scratch_clear(void)
 {
-	if (dbg_snapshot_get_enable("header"))
+	if (dbg_snapshot_get_enable())
 		__raw_writel(DSS_SIGN_RESET, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_SCRATCH);
 }
 
 bool dbg_snapshot_is_scratch(void)
 {
-	return __raw_readl(dbg_snapshot_get_base_vaddr() +
-			DSS_OFFSET_SCRATCH) == DSS_SIGN_SCRATCH;
+	if (dbg_snapshot_get_enable())
+		return __raw_readl(dbg_snapshot_get_base_vaddr() +
+				DSS_OFFSET_SCRATCH) == DSS_SIGN_SCRATCH;
+	else
+		return false;
+}
+
+void dbg_snapshot_set_debug_test_reg(unsigned int val)
+{
+	if (dbg_snapshot_get_enable()) {
+		if (val)
+			__raw_writel(DSS_SIGN_DEBUG_TEST, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST);
+		else
+			__raw_writel(DSS_SIGN_RESET, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST);
+	}
+}
+
+bool dbg_snapshot_debug_test_enabled(void)
+{
+	if (dbg_snapshot_get_enable())
+		return __raw_readl(dbg_snapshot_get_base_vaddr() +
+			DSS_OFFSET_DEBUG_TEST) == DSS_SIGN_DEBUG_TEST;
+	else
+		return false;
+}
+
+void dbg_snapshot_set_debug_test_case(unsigned int val)
+{
+	if (dbg_snapshot_get_enable())
+		__raw_writel(val, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_CASE);
+}
+
+unsigned int dbg_snapshot_get_debug_test_case(void)
+{
+	unsigned int ret = 0xffffffff;
+
+	if (dbg_snapshot_get_enable())
+		ret = __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_CASE);
+	return ret;
+}
+
+void dbg_snapshot_set_debug_test_next(unsigned int val)
+{
+	if (dbg_snapshot_get_enable())
+		__raw_writel(val, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_NEXT);
+}
+
+unsigned int dbg_snapshot_get_debug_test_next(void)
+{
+	unsigned int ret = 0xffffffff;
+
+	if (dbg_snapshot_get_enable())
+		ret = __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_NEXT);
+	return ret;
+}
+
+void dbg_snapshot_set_debug_test_panic(unsigned int val)
+{
+	if (dbg_snapshot_get_enable())
+		__raw_writel(val, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_PANIC);
+
+}
+
+unsigned int dbg_snapshot_get_debug_test_panic(void)
+{
+	unsigned int ret = 0xffffffff;
+
+	if (dbg_snapshot_get_enable())
+		ret = __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_PANIC);
+	return ret;
+}
+
+void dbg_snapshot_set_debug_test_wdt(unsigned int val)
+{
+	if (dbg_snapshot_get_enable())
+		__raw_writel(val, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_WDT);
+
+}
+
+unsigned int dbg_snapshot_get_debug_test_wdt(void)
+{
+	unsigned int ret = 0xffffffff;
+
+	if (dbg_snapshot_get_enable())
+		ret = __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_WDT);
+	return ret;
+}
+
+void dbg_snapshot_set_debug_test_wtsr(unsigned int val)
+{
+	if (dbg_snapshot_get_enable())
+		__raw_writel(val, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_WTSR);
+}
+
+unsigned int dbg_snapshot_get_debug_test_wtsr(void)
+{
+	unsigned int ret = 0xffffffff;
+
+	if (dbg_snapshot_get_enable())
+		ret = __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_WTSR);
+	return ret;
+}
+
+void dbg_snapshot_set_debug_test_smpl(unsigned int val)
+{
+	if (dbg_snapshot_get_enable())
+		__raw_writel(val, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_SMPL);
+}
+
+unsigned int dbg_snapshot_get_debug_test_smpl(void)
+{
+	unsigned int ret = 0xffffffff;
+
+	if (dbg_snapshot_get_enable())
+		ret = __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_SMPL);
+	return ret;
+}
+
+void dbg_snapshot_set_debug_test_curr(unsigned int val)
+{
+	if (dbg_snapshot_get_enable())
+		__raw_writel(val, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_CURR);
+}
+
+unsigned int dbg_snapshot_get_debug_test_curr(void)
+{
+	unsigned int ret = 0xffffffff;
+
+	if (dbg_snapshot_get_enable())
+		ret = __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_CURR);
+	return ret;
+}
+
+void dbg_snapshot_set_debug_test_total(unsigned int val)
+{
+	if (dbg_snapshot_get_enable())
+		__raw_writel(val, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_TOTAL);
+}
+
+unsigned int dbg_snapshot_get_debug_test_total(void)
+{
+	unsigned int ret = 0xffffffff;
+
+	if (dbg_snapshot_get_enable())
+		ret = __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_TOTAL);
+	return ret;
+}
+
+void dbg_snapshot_set_debug_test_run(unsigned int test_id, unsigned int var)
+{
+	unsigned int ret;
+
+	if (dbg_snapshot_get_enable()) {
+		ret = __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_RUN);
+		if (!var)
+			ret &= ~(1 << test_id);
+		else
+			ret |= (1 << test_id);
+		__raw_writel(ret, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_RUN);
+	}
+}
+
+unsigned int dbg_snapshot_get_debug_test_run(unsigned int test_id)
+{
+	unsigned int ret;
+
+	if (!dbg_snapshot_get_enable())
+		return 0;
+
+	ret = __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_RUN);
+	return ret & (1 << test_id);
+}
+
+void dbg_snapshot_clear_debug_test_runflag(void)
+{
+	if (!dbg_snapshot_get_enable())
+		return;
+
+	__raw_writel(0, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_RUN);
+}
+
+unsigned int dbg_snapshot_get_debug_test_runflag(void)
+{
+	if (!dbg_snapshot_get_enable())
+		return 0;
+
+	return __raw_readl(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_RUN);
 }
 
 void dbg_snapshot_set_debug_test_buffer_addr(u64 paddr, unsigned int cpu)
 {
-	if (!dbg_snapshot_get_enable("header"))
+	if (!dbg_snapshot_get_enable())
 		return;
 
 	__raw_writeq(paddr, dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_BUFFER(cpu));
@@ -132,7 +346,7 @@ void dbg_snapshot_set_debug_test_buffer_addr(u64 paddr, unsigned int cpu)
 
 unsigned int dbg_snapshot_get_debug_test_buffer_addr(unsigned int cpu)
 {
-	if (!dbg_snapshot_get_enable("header"))
+	if (!dbg_snapshot_get_enable())
 		return 0;
 
 	return __raw_readq(dbg_snapshot_get_base_vaddr() + DSS_OFFSET_DEBUG_TEST_BUFFER(cpu));
@@ -145,7 +359,7 @@ unsigned long dbg_snapshot_get_last_pc_paddr(void)
 	 * if ESS is enabled. But we should also consider cases that are not so.
 	 */
 
-	if (dbg_snapshot_get_enable("header"))
+	if (dbg_snapshot_get_enable())
 		return ((unsigned long)dbg_snapshot_get_base_paddr() + DSS_OFFSET_CORE_LAST_PC);
 	else
 		return virt_to_phys((void *)dss_desc.hardlockup_core_pc);
@@ -153,7 +367,7 @@ unsigned long dbg_snapshot_get_last_pc_paddr(void)
 
 unsigned long dbg_snapshot_get_last_pc(unsigned int cpu)
 {
-	if (dbg_snapshot_get_enable("header"))
+	if (dbg_snapshot_get_enable())
 		return __raw_readq(dbg_snapshot_get_base_vaddr() +
 				DSS_OFFSET_CORE_LAST_PC + cpu * 8);
 	else
@@ -162,8 +376,11 @@ unsigned long dbg_snapshot_get_last_pc(unsigned int cpu)
 
 unsigned long dbg_snapshot_get_spare_vaddr(unsigned int offset)
 {
-	return (unsigned long)(dbg_snapshot_get_base_vaddr() +
+	if (dbg_snapshot_get_enable())
+		return (unsigned long)(dbg_snapshot_get_base_vaddr() +
 				DSS_OFFSET_SPARE_BASE + offset);
+	else
+		return 0;
 }
 
 unsigned long dbg_snapshot_get_spare_paddr(unsigned int offset)
@@ -171,9 +388,11 @@ unsigned long dbg_snapshot_get_spare_paddr(unsigned int offset)
 	unsigned long base_vaddr = 0;
 	unsigned long base_paddr = (unsigned long)dbg_snapshot_get_base_paddr();
 
-	if (base_paddr)
-		base_vaddr = (unsigned long)(base_paddr +
+	if (dbg_snapshot_get_enable()) {
+		if (base_paddr)
+			base_vaddr = (unsigned long)(base_paddr +
 				DSS_OFFSET_SPARE_BASE + offset);
+	}
 
 	return base_vaddr;
 }
@@ -182,9 +401,11 @@ unsigned int dbg_snapshot_get_item_size(char* name)
 {
 	unsigned long i;
 
-	for (i = 0; i < dss_desc.log_cnt; i++) {
-		if (!strncmp(dss_items[i].name, name, strlen(name)))
-			return dss_items[i].entry.size;
+	if (dbg_snapshot_get_enable()) {
+		for (i = 0; i < dss_desc.log_cnt; i++) {
+			if (!strncmp(dss_items[i].name, name, strlen(name)))
+				return dss_items[i].entry.size;
+		}
 	}
 	return 0;
 }
@@ -194,9 +415,11 @@ unsigned long dbg_snapshot_get_item_vaddr(char *name)
 {
 	unsigned long i;
 
-	for (i = 0; i < dss_desc.log_cnt; i++) {
-		if (!strncmp(dss_items[i].name, name, strlen(name)))
-			return dss_items[i].entry.vaddr;
+	if (dbg_snapshot_get_enable()) {
+		for (i = 0; i < dss_desc.log_cnt; i++) {
+			if (!strncmp(dss_items[i].name, name, strlen(name)))
+				return dss_items[i].entry.vaddr;
+		}
 	}
 	return 0;
 }
@@ -205,17 +428,39 @@ unsigned int dbg_snapshot_get_item_paddr(char* name)
 {
 	unsigned long i;
 
-	for (i = 0; i < dss_desc.log_cnt; i++) {
-		if (!strncmp(dss_items[i].name, name, strlen(name)))
-			return dss_items[i].entry.paddr;
+	if (dbg_snapshot_get_enable()) {
+		for (i = 0; i < dss_desc.log_cnt; i++) {
+			if (!strncmp(dss_items[i].name, name, strlen(name)))
+				return dss_items[i].entry.paddr;
+		}
 	}
 	return 0;
 }
 EXPORT_SYMBOL(dbg_snapshot_get_item_paddr);
 
+unsigned long dbg_snapshot_get_item_curr_ptr(char *name)
+{
+	unsigned long i;
+
+	if (dbg_snapshot_get_enable()) {
+		for (i = 0; i < dss_desc.log_cnt; i++) {
+			if (!strncmp(dss_items[i].name, name, strlen(name))) {
+				if (dss_items[i].entry.enabled)
+					return (unsigned long)dss_items[i].curr_ptr;
+				break;
+			}
+		}
+	}
+	return 0;
+}
+EXPORT_SYMBOL(dbg_snapshot_get_item_curr_ptr);
+
 int dbg_snapshot_get_hardlockup(void)
 {
-	return dss_desc.hardlockup_detected;
+	if (dbg_snapshot_get_enable()) {
+		return dss_desc.hardlockup_detected;
+	} else
+		return 0;
 }
 EXPORT_SYMBOL(dbg_snapshot_get_hardlockup);
 
@@ -223,7 +468,7 @@ int dbg_snapshot_set_hardlockup(int val)
 {
 	unsigned long flags;
 
-	if (unlikely(!dss_base.enabled))
+	if (!dbg_snapshot_get_enable())
 		return 0;
 
 	raw_spin_lock_irqsave(&dss_desc.ctrl_lock, flags);
@@ -241,7 +486,9 @@ EXPORT_SYMBOL(dbg_snapshot_is_hardlockup);
 
 int dbg_snapshot_early_panic(void)
 {
-	dss_soc_ops->soc_early_panic(NULL);
+	if (dbg_snapshot_get_enable())
+		dss_soc_ops->soc_early_panic(NULL);
+
 	return 0;
 }
 
@@ -249,7 +496,7 @@ int dbg_snapshot_prepare_panic(void)
 {
 	unsigned long cpu;
 
-	if (unlikely(!dss_base.enabled))
+	if (!dbg_snapshot_get_enable())
 		return 0;
 	/*
 	 * kick watchdog to prevent unexpected reset during panic sequence
@@ -260,7 +507,7 @@ int dbg_snapshot_prepare_panic(void)
 	dss_soc_ops->soc_prepare_panic_entry(NULL);
 
 	/* Again disable log_kevents */
-	dbg_snapshot_set_enable("log_kevents", false);
+	dbg_snapshot_set_enable_item("log_kevents", false);
 
 	for_each_possible_cpu(cpu) {
 		if (dss_soc_ops->soc_is_power_cpu((void *)cpu))
@@ -276,27 +523,24 @@ EXPORT_SYMBOL(dbg_snapshot_prepare_panic);
 
 int dbg_snapshot_post_panic(void)
 {
-	if (dss_base.enabled) {
-		dbg_snapshot_recall_hardlockup_core();
-#ifdef CONFIG_DEBUG_SNAPSHOT_PMU
-		dbg_snapshot_dump_sfr();
-#endif
-		dbg_snapshot_save_context(NULL);
+	if (!dbg_snapshot_get_enable())
+		return 0;
 
-		dbg_snapshot_print_panic_report();
+	dbg_snapshot_recall_hardlockup_core();
 
-		dss_soc_ops->soc_post_panic_entry(NULL);
+	dbg_snapshot_dump_sfr();
 
-#ifdef CONFIG_DEBUG_SNAPSHOT_PANIC_REBOOT
-		if (!dss_desc.no_wdt_dev) {
-#ifdef CONFIG_DEBUG_SNAPSHOT_WATCHDOG_RESET
-			if (dss_desc.hardlockup_detected || num_online_cpus() > 1) {
-				/* for stall cpu */
-				dbg_snapshot_spin_func();
-			}
-#endif
+	dbg_snapshot_save_context(NULL);
+
+	dbg_snapshot_print_panic_report();
+
+	dss_soc_ops->soc_post_panic_entry(NULL);
+
+	if (!dss_desc.no_wdt_dev) {
+		if (dss_desc.hardlockup_detected || num_online_cpus() > 1) {
+			/* for stall cpu */
+			dbg_snapshot_spin_func();
 		}
-#endif
 	}
 	dss_soc_ops->soc_post_panic_exit(NULL);
 
@@ -312,8 +556,7 @@ EXPORT_SYMBOL(dbg_snapshot_post_panic);
 
 int dbg_snapshot_dump_panic(char *str, size_t len)
 {
-	if (unlikely(!dss_base.enabled) ||
-		!dbg_snapshot_get_enable("header"))
+	if (!dbg_snapshot_get_enable())
 		return 0;
 
 	/*  This function is only one which runs in panic funcion */
@@ -328,7 +571,7 @@ int dbg_snapshot_post_reboot(char *cmd)
 {
 	int cpu;
 
-	if (unlikely(!dss_base.enabled))
+	if (!dbg_snapshot_get_enable())
 		return 0;
 
 	dss_soc_ops->soc_post_reboot_entry(NULL);
@@ -336,9 +579,9 @@ int dbg_snapshot_post_reboot(char *cmd)
 	dbg_snapshot_report_reason(DSS_SIGN_NORMAL_REBOOT);
 
 	if (!cmd)
-		dbg_snapshot_scratch_reg(DSS_SIGN_RESET);
+		dbg_snapshot_scratch_clear();
 	else if (strcmp((char *)cmd, "bootloader") && strcmp((char *)cmd, "ramdump"))
-		dbg_snapshot_scratch_reg(DSS_SIGN_RESET);
+		dbg_snapshot_scratch_clear();
 
 	dev_emerg(dss_desc.dev, "debug-snapshot: normal reboot done\n");
 
@@ -358,7 +601,7 @@ EXPORT_SYMBOL(dbg_snapshot_post_reboot);
 static int dbg_snapshot_reboot_handler(struct notifier_block *nb,
 				    unsigned long l, void *p)
 {
-	if (unlikely(!dss_base.enabled))
+	if (!dbg_snapshot_get_enable())
 		return 0;
 
 	dev_emerg(dss_desc.dev, "debug-snapshot: normal reboot starting\n");
@@ -369,16 +612,13 @@ static int dbg_snapshot_reboot_handler(struct notifier_block *nb,
 static int dbg_snapshot_panic_handler(struct notifier_block *nb,
 				   unsigned long l, void *buf)
 {
-	dbg_snapshot_report_reason(DSS_SIGN_PANIC);
-	if (unlikely(!dss_base.enabled))
+	if (!dbg_snapshot_get_enable())
 		return 0;
 
-#ifdef CONFIG_DEBUG_SNAPSHOT_PANIC_REBOOT
+	dbg_snapshot_report_reason(DSS_SIGN_PANIC);
+
 	local_irq_disable();
 	dev_emerg(dss_desc.dev, "debug-snapshot: panic - reboot[%s]\n", __func__);
-#else
-	dev_emerg(dss_desc.dev, "debug-snapshot: panic - normal[%s]\n", __func__);
-#endif
 	dbg_snapshot_dump_task_info();
 	dev_emerg(dss_desc.dev, "linux_banner: %s\n", linux_banner);
 
@@ -393,6 +633,11 @@ static struct notifier_block nb_panic_block = {
 	.notifier_call = dbg_snapshot_panic_handler,
 };
 
+void dbg_snapshot_soc_do_dpm_policy(int policy)
+{
+	dss_soc_ops->soc_do_dpm_policy(&policy);
+}
+
 void dbg_snapshot_panic_handler_safe(void)
 {
 	char *cpu_num[SZ_16] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
@@ -400,7 +645,7 @@ void dbg_snapshot_panic_handler_safe(void)
 	int cpu = raw_smp_processor_id();
 	size_t len;
 
-	if (unlikely(!dss_base.enabled))
+	if (!dbg_snapshot_get_enable())
 		return;
 
 	strncat(text, cpu_num[cpu], 1);
@@ -417,7 +662,7 @@ void dbg_snapshot_register_soc_ops(struct dbg_snapshot_helper_ops *ops)
 		dss_soc_ops = ops;
 }
 
-void __init dbg_snapshot_helper_init(void)
+void __init dbg_snapshot_init_helper(void)
 {
 	register_reboot_notifier(&nb_reboot_block);
 	atomic_notifier_chain_register(&panic_notifier_list, &nb_panic_block);

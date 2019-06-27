@@ -1999,10 +1999,10 @@ menuconfig DEBUG_SNAPSHOT
 	bool "Debug SnapShot Support"
 	default n
 
-config DEBUG_SNAPSHOT_LINUX_BUILD
-	bool "May be built in LINUX environment"
-	depends on DEBUG_SNAPSHOT
-	default y
+config DEBUG_SNAPSHOT_USER_MODE
+	bool "Enable User Mode, Most of debug feature are disabled"
+	depends on DEBUG_SNAPSHOT_CALLSTACK
+	default n
 
 config DEBUG_SNAPSHOT_CALLSTACK
 	int "shown callstack level"
@@ -2012,90 +2012,19 @@ config DEBUG_SNAPSHOT_CALLSTACK
 
 config DEBUG_SNAPSHOT_IRQ_DISABLED
 	bool "Enable debugging of interrupt disable event by kevent(EXPERIMENTAL)"
-	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_USER_MODE
 	default n
 
 config DEBUG_SNAPSHOT_SPINLOCK
 	bool "Enable debugging of spinlock event by kevent(EXPERIMENTAL)"
-	depends on DEBUG_SNAPSHOT && DEBUG_SPINLOCK && !DEBUG_SNAPSHOT_MINIMIZED_MODE
-	default y
-
-config DEBUG_SNAPSHOT_CLK
-	bool "Enable debugging of clock event by kevent(EXPERIMENTAL)"
-	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
-	default y
-
-config DEBUG_SNAPSHOT_PMU
-	bool "Enable debugging of pmu event by kevent(EXPERIMENTAL)"
-	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
-	default y
-
-config DEBUG_SNAPSHOT_FREQ
-	bool "Enable debugging of frequence event by kevent(EXPERIMENTAL)"
-	depends on DEBUG_SNAPSHOT && PM_DEVFREQ
-	default y
-
-config DEBUG_SNAPSHOT_DM
-	bool "Enable debugging of dvfs manager event by kevent(EXPERIMENTAL)"
-	depends on DEBUG_SNAPSHOT && EXYNOS_DVFS_MANAGER && !DEBUG_SNAPSHOT_MINIMIZED_MODE
-	default y
-
-config DEBUG_SNAPSHOT_HRTIMER
-	bool "Enable debugging of hrtimer by kevent"
-	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
 	default y
 
 config DEBUG_SNAPSHOT_REG
 	bool "Enable debugging of accessing register by kevent"
-	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_USER_MODE
 	default n
-
-config DEBUG_SNAPSHOT_REGULATOR
-	bool "Enable debugging of regulator and pmic driver"
-	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
-	default y
-
-config DEBUG_SNAPSHOT_ACPM
-	bool "Enable debugging of acpm framework"
-	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
-	default y
-
-config DEBUG_SNAPSHOT_THERMAL
-	bool "Enable debugging of thermal driver"
-	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE && EXYNOS_THERMAL
-	default y
-
-config DEBUG_SNAPSHOT_I2C
-	bool "Enable debugging of i2c driver"
-	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
-	default y
-
-config DEBUG_SNAPSHOT_SPI
-	bool "Enable debugging of spi driver"
-	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
-	default y
 
 config DEBUG_SNAPSHOT_BINDER
 	bool "Enable debugging of binder driver"
-	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_MINIMIZED_MODE
+	depends on DEBUG_SNAPSHOT && !DEBUG_SNAPSHOT_USER_MODE
 	default y
-
-config DEBUG_SNAPSHOT_PANIC_REBOOT
-	bool "Enable forced reboot after panic for ramdump"
-	depends on DEBUG_SNAPSHOT
-	default y
-
-config DEBUG_SNAPSHOT_WATCHDOG_RESET
-	bool "Support watchdog reset when hardlockup detect"
-	depends on DEBUG_SNAPSHOT && DEBUG_SNAPSHOT_PANIC_REBOOT
-	default y
-
-config DEBUG_SNAPSHOT_CRASH_KEY
-	bool "Support Crash Key to artificial panic for debugging"
-	depends on DEBUG_SNAPSHOT && KEYBOARD_GPIO
-	default y
-
-config DEBUG_SNAPSHOT_MINIMIZED_MODE
-	bool "Support minimized feature configuration"
-	depends on DEBUG_SNAPSHOT
-	default n

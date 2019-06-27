@@ -837,7 +837,7 @@ static int fimc_is_tmu_notifier(struct notifier_block *nb,
 #ifdef CONFIG_EXYNOS_THERMAL
 	int ret = 0, fps = 0;
 	struct fimc_is_resourcemgr *resourcemgr;
-#if IS_ENABLED(CONFIG_EXYNOS_SNAPSHOT_THERMAL) || IS_ENABLED(CONFIG_DEBUG_SNAPSHOT_THERMAL)
+#if IS_ENABLED(CONFIG_EXYNOS_SNAPSHOT_THERMAL) || IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
 	char *cooling_device_name = "ISP";
 #endif
 	resourcemgr = container_of(nb, struct fimc_is_resourcemgr, tmu_notifier);
@@ -876,7 +876,7 @@ static int fimc_is_tmu_notifier(struct notifier_block *nb,
 
 #if IS_ENABLED(CONFIG_EXYNOS_SNAPSHOT_THERMAL)
 	exynos_ss_thermal(NULL, 0, cooling_device_name, resourcemgr->limited_fps);
-#elif IS_ENABLED(CONFIG_DEBUG_SNAPSHOT_THERMAL)
+#elif IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
 	dbg_snapshot_thermal(NULL, 0, cooling_device_name, resourcemgr->limited_fps);
 #endif
 

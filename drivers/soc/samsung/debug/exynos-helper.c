@@ -264,9 +264,7 @@ static void exynos_post_panic_entry(void *val)
 
 static void exynos_post_panic_exit(void *val)
 {
-#ifdef CONFIG_DEBUG_SNAPSHOT_PANIC_REBOOT
 	arm_pm_restart(REBOOT_COLD, "panic");
-#endif
 }
 
 static void exynos_post_reboot_entry(void *val)
@@ -519,16 +517,12 @@ static void exynos_save_context_exit(void *val)
 
 static void exynos_start_watchdog(void *val)
 {
-#ifdef CONFIG_S3C2410_WATCHDOG
 	s3c2410wdt_keepalive_emergency(true, 0);
-#endif
 }
 
 static void exynos_expire_watchdog(void *val)
 {
-#ifdef CONFIG_S3C2410_WATCHDOG
 	s3c2410wdt_set_emergency_reset(100, 0);
-#endif
 }
 
 static void exynos_stop_watchdog(void *val)
@@ -538,9 +532,7 @@ static void exynos_stop_watchdog(void *val)
 
 static void exynos_kick_watchdog(void *val)
 {
-#ifdef CONFIG_S3C2410_WATCHDOG
 	s3c2410wdt_keepalive_emergency(false, 0);
-#endif
 }
 
 static int exynos_is_power_cpu(void *cpu)
@@ -553,8 +545,33 @@ static int exynos_is_power_cpu(void *cpu)
 #endif
 }
 
+extern int adv_tracer_arraydump(void);
+static void exynos_do_dpm_policy(void *val)
+{
+	int policy = (int)(*(int *)val);
+	switch(policy) {
+	case GO_DEFAULT_ID:
+		break;
+	case GO_PANIC_ID:
+		if (!in_panic)
+			panic("%s", __func__);
+		break;
+	case GO_WATCHDOG_ID:
+	case GO_S2D_ID:
+		s3c2410wdt_set_emergency_reset(3, 0);
+		dbg_snapshot_spin_func();
+		break;
+	case GO_ARRAYDUMP_ID:
+		adv_tracer_arraydump();
+		break;
+	case GO_SCANDUMP_ID:
+		/* BURN_IN CTRL */
+		break;
+	}
+}
+
 struct dbg_snapshot_helper_ops exynos_debug_ops = {
-	.soc_early_panic 	= exynos_early_panic,
+	.soc_early_panic	= exynos_early_panic,
 	.soc_prepare_panic_entry = exynos_prepare_panic_entry,
 	.soc_prepare_panic_exit	= exynos_prepare_panic_exit,
 	.soc_post_panic_entry	= exynos_post_panic_entry,
@@ -572,6 +589,7 @@ struct dbg_snapshot_helper_ops exynos_debug_ops = {
 	.soc_kick_watchdog	= exynos_kick_watchdog,
 	.soc_is_power_cpu	= exynos_is_power_cpu,
 	.soc_smc_call		= exynos_smc,
+	.soc_do_dpm_policy	= exynos_do_dpm_policy,
 };
 
 void __init dbg_snapshot_soc_helper_init(void)

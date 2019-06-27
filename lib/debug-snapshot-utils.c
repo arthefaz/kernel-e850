@@ -47,7 +47,7 @@ void dbg_snapshot_hook_hardlockup_entry(void *v_regs)
 	int cpu = raw_smp_processor_id();
 	unsigned int val;
 
-	if (!dss_base.enabled)
+	if (!dbg_snapshot_get_enable())
 		return;
 
 	if (!dss_desc.hardlockup_core_mask) {
@@ -103,7 +103,7 @@ void dbg_snapshot_hook_hardlockup_exit(void)
 {
 	int cpu = raw_smp_processor_id();
 
-	if (!dss_base.enabled ||
+	if (!dbg_snapshot_get_enable() ||
 		!dss_desc.hardlockup_core_mask) {
 		return;
 	}
@@ -128,6 +128,9 @@ void dbg_snapshot_recall_hardlockup_core(void)
 #endif
 	unsigned long cpu_mask = 0, tmp_bit = 0;
 	unsigned long last_pc_addr = 0, timeout;
+
+	if (!dbg_snapshot_get_enable())
+		goto out;
 
 	if (dss_desc.allcorelockup_detected) {
 		dev_emerg(dss_desc.dev, "debug-snapshot: skip recall hardlockup for dump of each core\n");
@@ -175,7 +178,7 @@ void dbg_snapshot_save_system(void *unused)
 {
 	struct dbg_snapshot_mmu_reg *mmu_reg;
 
-	if (!dbg_snapshot_get_enable("header"))
+	if (!dbg_snapshot_get_enable())
 		return;
 
 	mmu_reg = per_cpu(dss_mmu_reg, raw_smp_processor_id());
@@ -196,7 +199,7 @@ int dbg_snapshot_save_core(void *v_regs)
 	struct pt_regs *core_reg =
 			per_cpu(dss_core_reg, smp_processor_id());
 
-	if(!dbg_snapshot_get_enable("header"))
+	if (!dbg_snapshot_get_enable())
 		return 0;
 
 	if (!regs)
@@ -216,7 +219,7 @@ int dbg_snapshot_save_context(void *v_regs)
 	unsigned long flags;
 	struct pt_regs *regs = (struct pt_regs *)v_regs;
 
-	if (unlikely(!dss_base.enabled))
+	if (!dbg_snapshot_get_enable())
 		return 0;
 
 	dss_soc_ops->soc_save_context_entry(NULL);
@@ -297,6 +300,9 @@ void dbg_snapshot_dump_task_info(void)
 	struct task_struct *frst_thr;
 	struct task_struct *curr_thr;
 
+	if (!dbg_snapshot_get_enable())
+		return;
+
 	dev_info(dss_desc.dev, "\n");
 	dev_info(dss_desc.dev, " current proc : %d %s\n", current->pid, current->comm);
 	dev_info(dss_desc.dev, " ----------------------------------------------------------------------------------------------------------------------------\n");
@@ -329,7 +335,6 @@ void dbg_snapshot_dump_task_info(void)
 	dev_info(dss_desc.dev, " ----------------------------------------------------------------------------------------------------------------------------\n");
 }
 
-#ifdef CONFIG_DEBUG_SNAPSHOT_CRASH_KEY
 void dbg_snapshot_check_crash_key(unsigned int code, int value)
 {
 	static bool volup_p;
@@ -370,7 +375,7 @@ void dbg_snapshot_check_crash_key(unsigned int code, int value)
 		}
 	}
 }
-#endif
+EXPORT_SYMBOL(dbg_snapshot_check_crash_key);
 
 void __init dbg_snapshot_allcorelockup_detector_init(void)
 {
@@ -397,12 +402,12 @@ void __init dbg_snapshot_allcorelockup_detector_init(void)
 			ret == 0 ? "success" : "failed", ret);
 }
 
-void __init dbg_snapshot_utils_init(void)
+void __init dbg_snapshot_init_utils(void)
 {
 	size_t vaddr;
 	int i;
 
-	vaddr = dss_items[dss_desc.header_num].entry.vaddr;
+	vaddr = dss_items[DSS_ITEM_HEADER_ID].entry.vaddr;
 
 	for (i = 0; i < DSS_NR_CPUS; i++) {
 		per_cpu(dss_mmu_reg, i) = (struct dbg_snapshot_mmu_reg *)
@@ -419,6 +424,9 @@ void __init dbg_snapshot_utils_init(void)
 
 static int __init dbg_snapshot_utils_save_systems_all(void)
 {
+	if (!dbg_snapshot_get_enable())
+		return 0;
+
 	smp_call_function(dbg_snapshot_save_system, NULL, 1);
 	dbg_snapshot_save_system(NULL);
 

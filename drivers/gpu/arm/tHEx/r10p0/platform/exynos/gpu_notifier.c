@@ -57,7 +57,7 @@ static int gpu_tmu_notifier(struct notifier_block *notifier,
 {
 	int frequency;
 	struct exynos_context *platform = (struct exynos_context *)pkbdev->platform_context;
-#ifdef CONFIG_DEBUG_SNAPSHOT_THERMAL
+#ifdef CONFIG_DEBUG_SNAPSHOT
 	char *cooling_device_name = "GPU";
 #endif
 
@@ -76,7 +76,7 @@ static int gpu_tmu_notifier(struct notifier_block *notifier,
 		gpu_tmu_normal_work(pkbdev);
 	} else if (event == GPU_THROTTLING || event == GPU_TRIPPING) {
 		gpu_dvfs_clock_lock(GPU_DVFS_MAX_LOCK, TMU_LOCK, frequency);
-#ifdef CONFIG_DEBUG_SNAPSHOT_THERMAL
+#ifdef CONFIG_DEBUG_SNAPSHOT
 		dbg_snapshot_thermal(NULL, 0, cooling_device_name, frequency);
 #endif
 	}

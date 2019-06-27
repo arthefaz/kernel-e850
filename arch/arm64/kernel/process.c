@@ -273,11 +273,11 @@ void __show_regs(struct pt_regs *regs)
 	if (!user_mode(regs)) {
 		dbg_snapshot_save_context(regs);
 		/*
-		*  If you want to see more kernel events after panic,
-		*  you should modify dbg_snapshot_set_enable's function 2nd parameter
-		*  to true.
-		*/
-		dbg_snapshot_set_enable("log_kevents", false);
+		 *  If you want to see more kernel events after panic,
+		 *  you should modify dbg_snapshot_set_enable's function 2nd parameter
+		 *  to true.
+		 */
+		dbg_snapshot_set_enable_item("log_kevents", false);
 	}
 
 	pr_info("TIF_FOREIGN_FPSTATE: %d, FP/SIMD depth %d, cpu: %d\n",
