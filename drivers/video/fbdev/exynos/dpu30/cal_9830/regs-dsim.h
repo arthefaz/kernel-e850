@@ -404,6 +404,14 @@
 #define DSIM_OPTION_SUITE				(0x010C)
 #define	DSIM_OPTION_SUITE_UPDT_EN_MASK			(0x1 << 0)
 
+#define DSIM_VT_HTIMING0				(0x0110)
+#define DSIM_VT_HTIMING0_HSA_PERIOD(_x)			((_x) << 16)
+#define DSIM_VT_HTIMING0_HACT_PERIOD(_x)		((_x) << 0)
+
+#define DSIM_VT_HTIMING1				(0X0114)
+#define DSIM_VT_HTIMING1_HFP_PERIOD(_x)			((_x) << 16)
+#define DSIM_VT_HTIMING1_HBP_PERIOD(_x)			((_x) << 0)
+
 /*
  * DPHY  registers
  */

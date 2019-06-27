@@ -14,7 +14,7 @@
 
 /* dsim version */
 #define DSIM_VER_EVT0			0x02040000
-//#define DSIM_VER_EVT1			0x02040000
+#define DSIM_VER_EVT1			0x02050000
 
 /* These definitions are need to guide from AP team */
 #define DSIM_STOP_STATE_CNT		0xA
@@ -311,6 +311,15 @@ const u32 b_dphyctl[14] = {
 };
 
 /***************************** DPHY CAL functions *******************************/
+static u32 dsim_reg_get_version(u32 id)
+{
+	u32 version;
+
+	version = dsim_read(id, DSIM_VERSION);
+
+	return version;
+}
+
 #if defined(CONFIG_EXYNOS_DSIM_DITHER)
 static void dsim_reg_set_dphy_dither_en(u32 id, u32 en)
 {
@@ -1013,6 +1022,48 @@ static void dsim_reg_set_porch(u32 id, struct exynos_panel_info *lcd)
 	}
 }
 
+static void dsim_reg_set_vt_htiming0(u32 id, u32 hsa_period, u32 hact_period)
+{
+	u32 val = DSIM_VT_HTIMING0_HSA_PERIOD(hsa_period)
+		| DSIM_VT_HTIMING0_HACT_PERIOD(hact_period);
+
+	dsim_write(id, DSIM_VT_HTIMING0, val);
+}
+
+static void dsim_reg_set_vt_htiming1(u32 id, u32 hfp_period, u32 hbp_period)
+{
+	u32 val = DSIM_VT_HTIMING1_HFP_PERIOD(hfp_period)
+		| DSIM_VT_HTIMING1_HBP_PERIOD(hbp_period);
+
+	dsim_write(id, DSIM_VT_HTIMING1, val);
+}
+
+static void dsim_reg_set_hperiod(u32 id, struct exynos_panel_info *lcd)
+{
+	u32 vclk,  wclk;
+	u32 hblank, vblank;
+	u32 hact_period, hsa_period, hbp_period, hfp_period;
+
+	if (dsim_reg_get_version(id) != DSIM_VER_EVT1)
+		return;
+
+	if (lcd->mode == DECON_VIDEO_MODE) {
+		hblank = lcd->hsa + lcd->hbp + lcd->hfp;
+		vblank = lcd->vsa + lcd->vbp + lcd->vfp;
+		vclk = (lcd->xres + hblank) * (lcd->yres + vblank) * lcd->fps;
+		wclk = lcd->hs_clk * 1000000 / 16;
+
+		/* round calculation to reduce fps error */
+		hact_period = DIV_ROUND_CLOSEST(lcd->xres * wclk, vclk);
+		hsa_period = DIV_ROUND_CLOSEST(lcd->hsa * wclk, vclk);
+		hbp_period = DIV_ROUND_CLOSEST(lcd->hbp * wclk, vclk);
+		hfp_period = DIV_ROUND_CLOSEST(lcd->hfp * wclk, vclk);
+
+		dsim_reg_set_vt_htiming0(id, hsa_period, hact_period);
+		dsim_reg_set_vt_htiming1(id, hfp_period, hbp_period);
+	}
+}
+
 static void dsim_reg_set_pixel_format(u32 id, u32 pixformat)
 {
 	u32 val = DSIM_CONFIG_PIXEL_FORMAT(pixformat);
@@ -1444,6 +1495,9 @@ static void dsim_reg_set_vt_compensate(u32 id, u32 compensate)
 {
 	u32 val = DSIM_VIDEO_TIMER_COMPENSATE(compensate);
 
+	if(dsim_reg_get_version(id) == DSIM_VER_EVT1)
+		return;
+
 	dsim_write_mask(id, DSIM_VIDEO_TIMER, val,
 			DSIM_VIDEO_TIMER_COMPENSATE_MASK);
 }
@@ -1670,6 +1724,7 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	dsim_reg_enable_shadow(id, 1);
 	if (lcd_info->mode == DECON_VIDEO_MODE) {
 		dsim_reg_set_video_mode(id, DSIM_CONFIG_VIDEO_MODE);
+		dsim_reg_set_hperiod(id, lcd_info);
 		dsim_dbg("%s: video mode set\n", __func__);
 	} else {
 		dsim_reg_set_video_mode(id, 0);
