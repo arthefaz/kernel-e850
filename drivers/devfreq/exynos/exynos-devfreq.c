@@ -1134,7 +1134,7 @@ static int exynos_devfreq_target(struct device *dev, unsigned long *target_freq,
 	dev_dbg(dev, "LV_%d, %uKhz, %uuV ======> LV_%d, %uKhz, %uuV\n",
 		data->old_idx, data->old_freq, data->old_volt,
 		data->new_idx, data->new_freq, data->new_volt);
-#ifdef CONFIG_DEBUG_SNAPSHOT_FREQ
+#ifdef CONFIG_DEBUG_SNAPSHOT
 	dbg_snapshot_freq(data->ess_flag, data->old_freq, data->new_freq, DSS_FLAG_IN);
 #endif
 	do_gettimeofday(&before_setfreq);
@@ -1147,7 +1147,7 @@ static int exynos_devfreq_target(struct device *dev, unsigned long *target_freq,
 	}
 
 	do_gettimeofday(&after_setfreq);
-#ifdef CONFIG_DEBUG_SNAPSHOT_FREQ
+#ifdef CONFIG_DEBUG_SNAPSHOT
 	dbg_snapshot_freq(data->ess_flag, data->old_freq, data->new_freq, DSS_FLAG_OUT);
 #endif
 

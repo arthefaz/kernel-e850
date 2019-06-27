@@ -57,7 +57,7 @@ void acpm_fw_log_level(unsigned int on)
 
 void acpm_ramdump(void)
 {
-#ifdef CONFIG_DEBUG_SNAPSHOT_ACPM
+#ifdef CONFIG_DEBUG_SNAPSHOT
 	if (acpm_debug->dump_size)
 		memcpy(acpm_debug->dump_dram_base, acpm_debug->dump_base, acpm_debug->dump_size);
 #endif
@@ -672,7 +672,7 @@ static void log_buffer_init(struct device *dev, struct device_node *node)
 	if (prop)
 		acpm_debug->period = be32_to_cpup(prop);
 
-#ifdef CONFIG_DEBUG_SNAPSHOT_ACPM
+#ifdef CONFIG_DEBUG_SNAPSHOT
 	acpm_debug->dump_dram_base = kzalloc(acpm_debug->dump_size, GFP_KERNEL);
 	dbg_snapshot_printk("[ACPM] acpm framework SRAM dump to dram base: 0x%x\n",
 			virt_to_phys(acpm_debug->dump_dram_base));
