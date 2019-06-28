@@ -6066,11 +6066,8 @@ void __init sched_init(void)
 
 	init_schedstats();
 
-<<<<<<< HEAD
 	psi_init();
-=======
 	init_ems();
->>>>>>> 78ae72181ddd... sched: support EMSv2.0
 
 	scheduler_running = 1;
 }

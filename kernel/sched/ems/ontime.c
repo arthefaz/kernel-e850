@@ -9,11 +9,7 @@
 
 #include "../sched.h"
 #include "../tune.h"
-<<<<<<< HEAD
-#include "./ems.h"
-=======
 #include "ems.h"
->>>>>>> 78ae72181ddd... sched: support EMSv2.0
 
 /****************************************************************/
 /*			On-time migration			*/

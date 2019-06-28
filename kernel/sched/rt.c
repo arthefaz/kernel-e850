@@ -12,11 +12,8 @@
 #include "tune.h"
 
 #include "walt.h"
-<<<<<<< HEAD
-=======
 #include "sched-pelt.h"
 #include "ems/ems.h"
->>>>>>> 78ae72181ddd... sched: support EMSv2.0
 #include <trace/events/sched.h>
 
 #ifdef CONFIG_SCHED_USE_FLUID_RT

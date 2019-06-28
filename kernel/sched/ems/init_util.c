@@ -9,11 +9,8 @@
 #include <trace/events/ems.h>
 
 #include "../sched.h"
-<<<<<<< HEAD
-=======
 #include "../sched-pelt.h"
 #include "ems.h"
->>>>>>> 78ae72181ddd... sched: support EMSv2.0
 
 enum {
 	INHERIT_CFS_RQ = 0,
