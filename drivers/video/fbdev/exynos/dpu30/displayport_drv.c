@@ -2363,7 +2363,9 @@ static int displayport_s_dv_timings(struct v4l2_subdev *sd,
 
 	if (displayport->sst[sst_id]->bist_used == 0) {
 		if (displayport_check_pixel_clock_for_hdr(sst_id, displayport,
-				displayport_setting_videoformat) == true) {
+				displayport_setting_videoformat) == true
+				&& displayport_setting_videoformat >= V3840X2160P50
+				&& displayport_setting_videoformat < V640X10P60SACRC) {
 			displayport_info("sink support HDR\n");
 			/* BPC_10 should be enabled when support HDR */
 			displayport->sst[sst_id]->bpc = BPC_10;
