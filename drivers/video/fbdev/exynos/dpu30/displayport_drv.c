@@ -1048,6 +1048,32 @@ int displayport_wait_audio_off_change(u32 sst_id,
 	return ret;
 }
 
+int displayport_wait_decon_run(u32 sst_id,
+		struct displayport_device *displayport,	int max_wait_time)
+{
+	int ret = 0;
+	int wait_cnt = max_wait_time;
+
+	displayport_info("SST%d wait_decon_run start\n", sst_id + 1);
+	displayport_info("max_wait_time = %dms\n", max_wait_time);
+
+	do {
+		wait_cnt--;
+		usleep_range(1000, 1030);
+	} while ((displayport->sst[sst_id]->decon_run != 0) && (wait_cnt > 0));
+
+	displayport_info("wait_decon_run time = %dms\n", max_wait_time - wait_cnt);
+
+	if (wait_cnt <= 0)
+		displayport_err("SST%d wait_decon_run timeout\n", sst_id + 1);
+
+	ret = wait_cnt;
+
+	displayport_info("SST%d wait_decon_run end\n", sst_id + 1);
+
+	return ret;
+}
+
 void displayport_on_by_hpd_high(u32 sst_id, struct displayport_device *displayport)
 {
 	int timeout = 0;
@@ -1075,6 +1101,7 @@ void displayport_on_by_hpd_high(u32 sst_id, struct displayport_device *displaypo
 	}
 
 #if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
+	displayport_wait_decon_run(sst_id, displayport, 3000);
 	dp_ado_switch_set_state(edid_audio_informs());
 #endif
 }
