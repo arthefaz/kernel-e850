@@ -130,7 +130,6 @@ invalid:
 	return ERR_PTR(-ENOKEY);
 }
 
-<<<<<<< HEAD
 static struct fscrypt_mode available_modes[] = {
 	[FS_ENCRYPTION_MODE_AES_256_XTS] = {
 		.friendly_name = "AES-256-XTS",
@@ -163,23 +162,13 @@ static struct fscrypt_mode available_modes[] = {
 		.keysize = 32,
 		.ivsize = 32,
 	},
-=======
-static const struct {
-	const char *cipher_str;
-	int keysize;
-} available_modes[] = {
-	[FS_ENCRYPTION_MODE_AES_256_XTS] = { "xts(aes)",
-					     FS_AES_256_XTS_KEY_SIZE },
-	[FS_ENCRYPTION_MODE_AES_256_CTS] = { "cts(cbc(aes))",
-					     FS_AES_256_CTS_KEY_SIZE },
-	[FS_ENCRYPTION_MODE_AES_128_CBC] = { "cbc(aes)",
-					     FS_AES_128_CBC_KEY_SIZE },
-	[FS_ENCRYPTION_MODE_AES_128_CTS] = { "cts(cbc(aes))",
-					     FS_AES_128_CTS_KEY_SIZE },
-	[FS_ENCRYPTION_MODE_SPECK128_256_XTS] = { "xts(speck128)",	64 },
-	[FS_ENCRYPTION_MODE_SPECK128_256_CTS] = { "cts(cbc(speck128))",	32 },
-	[FS_ENCRYPTION_MODE_PRIVATE] = {"xts(aes)-disk", 64},
->>>>>>> 85d8d338758a... [RAMEN9610-14970] fs: support FS_ENCRYPTION_MODE_PRIVATE for fmp
+	[FS_ENCRYPTION_MODE_PRIVATE] = {
+		.friendly_name = "AES_256-XTS-diskcipher",
+		.cipher_str = "xts(aes)-disk",
+		.keysize = 64,
+		.ivsize = 16,
+		.flags = CRYPT_MODE_DISKCIPHER,
+	},
 };
 
 static struct fscrypt_mode *
@@ -655,64 +644,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
 	if (!raw_key)
 		goto out;
 
-<<<<<<< HEAD
 	res = find_and_derive_key(inode, &ctx, raw_key, mode);
 	if (res)
-=======
-	res = validate_user_key(crypt_info, &ctx, raw_key, FS_KEY_DESC_PREFIX,
-				keysize);
-	if (res && inode->i_sb->s_cop->key_prefix) {
-		int res2 = validate_user_key(crypt_info, &ctx, raw_key,
-					     inode->i_sb->s_cop->key_prefix,
-					     keysize);
-		if (res2) {
-			if (res2 == -ENOKEY)
-				res = -ENOKEY;
-			goto out;
-		}
-	} else if (res) {
-		goto out;
-	}
-#if defined(CONFIG_CRYPTO_DISKCIPHER)
-	if (S_ISREG(inode->i_mode)) {
-		/* try discipher first */
-		bool force = /* force can use skcipher */
-		    (crypt_info->ci_data_mode == FS_ENCRYPTION_MODE_PRIVATE) ? 0 : 1;
-
-		crypt_info->ci_dtfm = crypto_alloc_diskcipher(cipher_str, 0, 0, 1);
-		if (crypt_info->ci_dtfm && !IS_ERR(crypt_info->ci_dtfm)) {
-			res = crypto_diskcipher_setkey(crypt_info->ci_dtfm,
-				raw_key, keysize, 0);
-			if (!res) {
-				if (cmpxchg(&inode->i_crypt_info, NULL, crypt_info) == NULL)
-					crypt_info = NULL;
-				pr_debug("%s: (inode %p:%lu, fscrypt:%p) uses diskcipher tfm\n",
-					__func__, inode, inode->i_ino, inode->i_crypt_info);
-				goto out;
-			} else {
-				pr_warn("%s: error %d fails to set diskciher key\n",
-					__func__, res);
-				crypto_free_diskcipher(crypt_info->ci_dtfm);
-			}
-		}
-		/* clear diskcipher. use skcipher */
-		pr_debug("%s: (inode %lu) fails to get diskcipher (%s, %d)\n",
-			 __func__, inode->i_ino, cipher_str, res);
-		crypt_info->ci_dtfm = NULL;
-		if (!force) {
-			pr_debug("error to use diskciher '%s' transform for inode %lu: %d, force:%d",
-			    cipher_str, inode->i_ino, res, force);
-			res = -EINVAL;
-			goto out;
-		}
-	}
-#endif
-	ctfm = crypto_alloc_skcipher(cipher_str, 0, 0);
-	if (!ctfm || IS_ERR(ctfm)) {
-		res = ctfm ? PTR_ERR(ctfm) : -ENOMEM;
-		pr_debug("%s: error %d (inode %lu) allocating crypto tfm\n",
-			 __func__, res, inode->i_ino);
->>>>>>> 85d8d338758a... [RAMEN9610-14970] fs: support FS_ENCRYPTION_MODE_PRIVATE for fmp
 		goto out;
 
 	res = setup_crypto_transform(crypt_info, mode, raw_key, inode);
