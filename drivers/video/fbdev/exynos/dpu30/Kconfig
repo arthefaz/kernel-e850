@@ -47,7 +47,12 @@ config EXYNOS_CHANGE_HIBER_CNT
         default n
 
 config EXYNOS_DIRECT_PD_CTRL
-	bool "Support Direct DPU power domain control (EXPERIMENTAL)"
+	bool "Support Direct DPU Power Domain Control For Hibernation (EXPERIMENTAL)"
+        depends on EXYNOS_DPU30 && EXYNOS_HIBERNATION
+        default n
+
+config EXYNOS_HIBERNATION_EARLY_WAKEUP
+	bool "Support Hibernation Early Wakeup (EXPERIMENTAL)"
         depends on EXYNOS_DPU30 && EXYNOS_HIBERNATION
         default n
 
