@@ -72,29 +72,6 @@ static const struct backlight_ops exynos_backlight_ops = {
 	.update_status	= exynos_backlight_update_status,
 };
 
-static int exynos_panel_parse_bl(struct exynos_panel_device *panel)
-{
-	int ret = 0;
-
-	DPU_DEBUG_PANEL("%s +\n", __func__);
-
-	ret = of_property_read_u32(panel->dev->of_node, "max-brightness",
-			&panel->bl->props.max_brightness);
-	if (ret < 0)
-		return ret;
-
-	ret = of_property_read_u32(panel->dev->of_node, "dft-brightness",
-			&panel->bl->props.brightness);
-	if (ret < 0)
-		return ret;
-
-	DPU_INFO_PANEL("max brightness : %d\n", panel->bl->props.max_brightness);
-	DPU_INFO_PANEL("default brightness : %d\n", panel->bl->props.brightness);
-	DPU_DEBUG_PANEL("%s -\n", __func__);
-
-	return ret;
-}
-
 static int exynos_panel_parse_gpios(struct exynos_panel_device *panel)
 {
 	struct device_node *n = panel->dev->of_node;
@@ -504,6 +481,7 @@ static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 {
 	u32 res[2];
 	struct exynos_panel_info *lcd_info = &panel->lcd_info;
+	u32 max_br, dft_br;
 
 	of_property_read_u32(np, "mode", &lcd_info->mode);
 	of_property_read_u32_array(np, "resolution", res, 2);
@@ -520,6 +498,17 @@ static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 	of_property_read_u32(np, "type_of_ddi", &lcd_info->ddi_type);
 	DPU_DEBUG_PANEL("LCD size(%dx%d), DDI type(%d)\n", res[0], res[1],
 			lcd_info->ddi_type);
+
+
+	panel->bl->props.max_brightness = DEFAULT_MAX_BRIGHTNESS;
+	panel->bl->props.brightness = DEFAULT_BRIGHTNESS;
+	if (!of_property_read_u32(np, "max-brightness", &max_br))
+		panel->bl->props.max_brightness = max_br;
+	if (!of_property_read_u32(np, "dft-brightness", &dft_br))
+		panel->bl->props.brightness = dft_br;
+
+	DPU_INFO_PANEL("max brightness : %d\n", panel->bl->props.max_brightness);
+	DPU_INFO_PANEL("default brightness : %d\n", panel->bl->props.brightness);
 
 	exynos_panel_get_timing_info(lcd_info, np);
 	exynos_panel_get_dsc_info(lcd_info, np);
@@ -636,12 +625,6 @@ static int exynos_panel_parse_dt(struct exynos_panel_device *panel)
 
 	panel->id = of_alias_get_id(panel->dev->of_node, "panel");
 	DPU_INFO_PANEL("panel-%d parsing DT...\n", panel->id);
-
-	ret = exynos_panel_parse_bl(panel);
-	if (ret) {
-		DPU_ERR_PANEL("failed to parse backlight info in DT\n");
-		goto err;
-	}
 
 	ret = exynos_panel_parse_gpios(panel);
 	if (ret)

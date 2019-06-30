@@ -46,6 +46,9 @@ extern int dpu_panel_log_level;
 #define MAX_PANEL_SUPPORT	10
 #define MAX_PANEL_ID_NUM	3
 
+#define DEFAULT_MAX_BRIGHTNESS	255
+#define DEFAULT_BRIGHTNESS	127
+
 extern struct exynos_panel_device *panel_drvdata;
 extern struct exynos_panel_ops panel_s6e3ha9_ops;
 extern struct exynos_panel_ops panel_s6e3ha8_ops;
