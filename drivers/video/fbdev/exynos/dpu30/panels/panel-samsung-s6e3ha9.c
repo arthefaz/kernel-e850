@@ -125,6 +125,7 @@ static int s6e3ha9_set_light(struct exynos_panel_device *panel, u32 br_val)
 
 	mutex_lock(&panel->ops_lock);
 
+	DPU_INFO_PANEL("requested brightness value = %d\n", br_val);
 #if 1
 	/* 8-bit : BCCTL(B1h) 48th - D5(BIT_EXT_SEL) = 1 {[7:0]<<8 | [7:0]} */
 	data[0] = br_val;
