@@ -752,9 +752,6 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 0);
 #endif
 
-#if defined(CONFIG_EXYNOS_DIRECT_PD_CTRL)
-	exynos_sysmmu_control(dsim->dev, true);
-#endif
 	pm_runtime_get_sync(dsim->dev);
 
 	/* DPHY power on : iso release */
@@ -864,9 +861,6 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 	if (state == DSIM_STATE_OFF)
 		dsim_set_panel_power(dsim, 0);
 
-#if defined(CONFIG_EXYNOS_DIRECT_PD_CTRL)
-	exynos_sysmmu_control(dsim->dev, false);
-#endif
 	pm_runtime_put_sync(dsim->dev);
 
 	dsim_dbg("%s %s -\n", __func__, dsim_state_names[dsim->state]);
@@ -1539,7 +1533,6 @@ static int dpu_power_on(struct dsim_device *dsim)
 		return -1;
 	}
 
-	exynos_sysmmu_control(dsim->dev, true);
 	dsim_runtime_resume(dsim->dev);
 
 	mutex_unlock(&dsim->pd->access_lock);
@@ -1566,7 +1559,6 @@ static int dpu_power_off(struct dsim_device *dsim)
 		return 0;
 	}
 
-	exynos_sysmmu_control(dsim->dev, false);
 	dsim_runtime_suspend(dsim->dev);
 
 	if (cal_pd_control(dsim->pd->cal_pdid, 0) != 0) {
@@ -1722,6 +1714,9 @@ static int dsim_runtime_suspend(struct device *dev)
 
 	DPU_EVENT_LOG(DPU_EVT_DSIM_SUSPEND, &dsim->sd, ktime_set(0, 0));
 	dsim_dbg("%s +\n", __func__);
+#if defined(CONFIG_EXYNOS_DIRECT_PD_CTRL)
+	exynos_sysmmu_control(dsim->dev, false);
+#endif
 	clk_disable_unprepare(dsim->res.aclk);
 	dsim_dbg("%s -\n", __func__);
 	return 0;
@@ -1733,6 +1728,9 @@ static int dsim_runtime_resume(struct device *dev)
 
 	DPU_EVENT_LOG(DPU_EVT_DSIM_RESUME, &dsim->sd, ktime_set(0, 0));
 	dsim_dbg("%s: +\n", __func__);
+#if defined(CONFIG_EXYNOS_DIRECT_PD_CTRL)
+	exynos_sysmmu_control(dsim->dev, true);
+#endif
 	clk_prepare_enable(dsim->res.aclk);
 	dsim_dbg("%s -\n", __func__);
 	return 0;
