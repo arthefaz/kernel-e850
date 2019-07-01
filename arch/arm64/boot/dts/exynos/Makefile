@@ -11,6 +11,8 @@ dtb-$(CONFIG_SOC_EXYNOS9630) += exynos9630.dtb \
 				exynos9630-smdk9630.dtbo \
 				exynos9630-erd9630.dtbo \
 
+dtb-$(CONFIG_SOC_EXYNOS3830) += exynos3830-smdk3830.dtb
+
 always		:= $(dtb-y) $(dtbo-y)
 subdir-y	:= $(dts-dirs)
 clean-files	:= *.dtb *.dtbo
