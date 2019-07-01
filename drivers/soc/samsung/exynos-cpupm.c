@@ -607,7 +607,7 @@ static ssize_t show_power_mode(struct kobject *kobj,
 {
 	struct power_mode *mode = container_of(attr, struct power_mode, attr);
 
-	return sprintf(buf, "%s\n",
+	return snprintf(buf, PAGE_SIZE, "%s\n",
 		atomic_read(&mode->disable) > 0 ? "disabled" : "enabled");
 }
 
@@ -646,14 +646,15 @@ static ssize_t show_idle_ip_list(struct kobject *kobj,
 	int i, ret = 0;
 
 	for (i = 0; i < fix_idle_ip_count; i++)
-		ret += sprintf(buf + ret, "[fix:%d] %s\n",
+		ret += snprintf(buf + ret, PAGE_SIZE - ret, "[fix:%d] %s\n",
 				fix_idle_ip_arr[i].reg_index,
 				fix_idle_ip_arr[i].name);
 
 	spin_lock_irqsave(&idle_ip_list_lock, flags);
 
 	list_for_each_entry(ip, &idle_ip_list, list)
-		ret += sprintf(buf + ret, "[%d] %s\n", ip->index, ip->name);
+		ret += snprintf(buf + ret, PAGE_SIZE - ret, "[%d] %s\n",
+				ip->index, ip->name);
 
 	spin_unlock_irqrestore(&idle_ip_list_lock, flags);
 

@@ -541,14 +541,14 @@ static ssize_t
 clipped_freq_show(struct device *dev, struct device_attribute *devattr,
 		       char *buf)
 {
-	return sprintf(buf, "%d\n", data->clipped_freq);
+	return snprintf(buf, PAGE_SIZE, "%d\n", ocp_data->clipped_freq);
 }
 
 static ssize_t
 total_trans_show(struct device *dev, struct device_attribute *devattr,
 		       char *buf)
 {
-	return sprintf(buf, "%llu\n", data->stats->total_trans);
+	return snprintf(buf, PAGE_SIZE, "%llu\n", ocp_data->stats->total_trans);
 }
 
 static ssize_t
@@ -562,8 +562,9 @@ time_in_state_show(struct device *dev, struct device_attribute *devattr,
 	update_ocp_stats(stats);
 
 	for (i = 0; i < stats->max_state; i++) {
-		len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],
-			(unsigned long long)jiffies_64_to_clock_t(stats->time_in_state[i]));
+		len += snprintf(buf + len, PAGE_SIZE - len, "%u %llu\n",
+				stats->freq_table[i],
+				(unsigned long long)jiffies_64_to_clock_t(stats->time_in_state[i]));
 	}
 
 	return len;
