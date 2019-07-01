@@ -289,6 +289,7 @@ static inline void might_fault(void) { }
 
 extern struct atomic_notifier_head panic_notifier_list;
 extern long (*panic_blink)(int state);
+extern bool in_panic;
 __printf(1, 2)
 void panic(const char *fmt, ...) __noreturn __cold;
 void nmi_panic(struct pt_regs *regs, const char *msg);
