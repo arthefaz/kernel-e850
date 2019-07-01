@@ -399,7 +399,7 @@ void decon_get_edid(struct decon_device *decon, struct decon_edid_data *edid_dat
 	struct edid edid;
 	const u8 edid_header[] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00};
 
-	decon_dbg("%s: edid size = %d, header size = %d\n", __func__,
+	decon_dbg("%s: edid size = %lu, header size = %lu\n", __func__,
 			sizeof(struct edid), sizeof(edid_header));
 	memset(&edid, 0, sizeof(struct edid));
 	memcpy(&edid, edid_header, sizeof(edid_header));
