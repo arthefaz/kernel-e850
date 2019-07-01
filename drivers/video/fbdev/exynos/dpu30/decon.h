@@ -43,9 +43,7 @@
 
 #include "./panels/exynos_panel.h"
 #include "dsim.h"
-#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 #include "displayport.h"
-#endif
 #include "hdr_metadata.h"
 #include "format.h"
 
