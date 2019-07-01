@@ -46,6 +46,9 @@ static const char * __init product_id_to_name(unsigned int product_id)
 	case EXYNOS3250_SOC_ID:
 		soc_name = "EXYNOS3250";
 		break;
+	case EXYNOS3830_SOC_ID:
+		soc_name = "EXYNOS3830";
+		break;
 	case EXYNOS4210_SOC_ID:
 		soc_name = "EXYNOS4210";
 		break;
