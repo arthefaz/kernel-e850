@@ -14,6 +14,7 @@
  */
 
 /dts-v1/;
+//#include <dt-bindings/clock/exynosXXXX.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/exynos3830.h>
 #include "exynos3830-pinctrl.dtsi"
@@ -28,21 +29,17 @@
 	aliases {
 		pinctrl0 = &pinctrl_0;
 		pinctrl1 = &pinctrl_1;
+		pinctrl2 = &pinctrl_2;
 		pinctrl3 = &pinctrl_3;
-#if 0
 		pinctrl4 = &pinctrl_4;
 		pinctrl5 = &pinctrl_5;
-		pinctrl6 = &pinctrl_6;
-		pinctrl7 = &pinctrl_7;
-#endif
-
 		uart0 = &serial_0;
 
 	};
 
 	chipid@10000000 {
-		compatible = "samsung,exynos9810-chipid";
-		reg = <0x0 0x10000000 0x100>;
+		compatible = "samsung,exynos4210-chipid";
+		reg = <0x0 0x10000000 0x10>;
 	};
 
 	cpus {
@@ -57,15 +54,15 @@
 		};
 	};
 
-	gic:interrupt-controller@10100000 {
+	gic:interrupt-controller@12a00000 {
 		compatible = "arm,cortex-a15-gic", "arm,cortex-a9-gic";
 		#interrupt-cells = <3>;
 		#address-cells = <0>;
 		interrupt-controller;
-		reg =	<0x0 0x10101000 0x1000>,
-			<0x0 0x10102000 0x1000>,
-			<0x0 0x10104000 0x2000>,
-			<0x0 0x10106000 0x2000>;
+		reg =	<0x0 0x12a01000 0x1000>,
+			<0x0 0x12a02000 0x1000>,
+			<0x0 0x12a04000 0x2000>,
+			<0x0 0x12a06000 0x2000>;
 		interrupts = <1 9 0xf04>;
 	};
 
@@ -84,9 +81,9 @@
 		use-physical-timer;
 	};
 
-	clock: clock-controller@0x15a80000 {
+	clock: clock-controller@0x120e0000 {
 		compatible = "samsung,emulator-clock";
-		reg = <0x0 0x15a80000 0x8000>;
+		reg = <0x0 0x120e0000 0x8000>;
 		#clock-cells = <1>;
 	};
 
@@ -107,34 +104,36 @@
 			#interrupt-cells = <1>;
 			#address-cells = <0>;
 			#size-cells = <0>;
-			interrupt-map = <0 &gic 0 INTREQ__MCT_G0 0>,
-					<1 &gic 0 INTREQ__MCT_G1 0>,
-					<2 &gic 0 INTREQ__MCT_G2 0>,
-					<3 &gic 0 INTREQ__MCT_G3 0>,
-					<4 &gic 0 INTREQ__MCT_L0 0>,
-					<5 &gic 0 INTREQ__MCT_L1 0>,
-					<6 &gic 0 INTREQ__MCT_L2 0>,
-					<7 &gic 0 INTREQ__MCT_L3 0>,
-					<8 &gic 0 INTREQ__MCT_L4 0>,
-					<9 &gic 0 INTREQ__MCT_L5 0>,
-					<10 &gic 0 INTREQ__MCT_L6 0>,
-					<11 &gic 0 INTREQ__MCT_L7 0>;
+			interrupt-map = <0 &gic 0 INTREQ__MCT_G0 IRQ_TYPE_LEVEL_HIGH>,
+					<1 &gic 0 INTREQ__MCT_G1 IRQ_TYPE_LEVEL_HIGH>,
+					<2 &gic 0 INTREQ__MCT_G2 IRQ_TYPE_LEVEL_HIGH>,
+					<3 &gic 0 INTREQ__MCT_G3 IRQ_TYPE_LEVEL_HIGH>,
+					<4 &gic 0 INTREQ__MCT_L0 IRQ_TYPE_LEVEL_HIGH>,
+					<5 &gic 0 INTREQ__MCT_L1 IRQ_TYPE_LEVEL_HIGH>,
+					<6 &gic 0 INTREQ__MCT_L2 IRQ_TYPE_LEVEL_HIGH>,
+					<7 &gic 0 INTREQ__MCT_L3 IRQ_TYPE_LEVEL_HIGH>,
+					<8 &gic 0 INTREQ__MCT_L4 IRQ_TYPE_LEVEL_HIGH>,
+					<9 &gic 0 INTREQ__MCT_L5 IRQ_TYPE_LEVEL_HIGH>,
+					<10 &gic 0 INTREQ__MCT_L6 IRQ_TYPE_LEVEL_HIGH>,
+					<11 &gic 0 INTREQ__MCT_L7 IRQ_TYPE_LEVEL_HIGH>;
 		};
 	};
 
-	serial_0: uart@10440000 {
+	/* TODO: USI UART ?? */
+	serial_0: uart@13820000 {
 		compatible = "samsung,exynos-uart";
 		samsung,separate-uart-clk;
-		reg = <0x0 0x10440000 0x100>;
-		samsung,fifo-size = <64>;
-		interrupts = <0 381 0>;
+		reg = <0x0 0x13820000 0x100>;
+		samsung,fifo-size = <256>;
+		interrupts = <0 INTREQ__UART 0>;
 		//pinctrl-names = "default";
 		//pinctrl-0 = <&uart0_bus>;
 		clocks = <&clock 30>, <&clock 20>, <&clock 10>;
 		clock-names = "gate_pclk0", "gate_uart0", "sclk_uart0";
 		status = "disabled";
 	};
-
+	/* TBD */
+/*
 	dwmmc_2: dwmmc2@13D00000 {
 		compatible = "samsung,exynos-dw-mshc";
 		reg = <0x0 0x13D00000 0x2000>;
@@ -142,29 +141,66 @@
 		interrupts = <0 250 0>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-/*
+
 		clocks = <&clock MMC_CARD>, <&clock GATE_MMC_CARD>;
 		clock-names = "ciu", "ciu_gate";
-*/
 		status = "disabled";
 	 };
-
+*/
 	/* ALIVE */
-	pinctrl_0: pinctrl@15850000 {
+	pinctrl_0: pinctrl@11850000 {
 		compatible = "samsung,exynos3830-pinctrl";
-		reg = <0x0 0x15850000 0x1000>;
-		interrupts = <0 INTREQ__ALIVE_EINT0 0>, <0 INTREQ__ALIVE_EINT1 0>, <0 INTREQ__ALIVE_EINT2 0>,
-			     <0 INTREQ__ALIVE_EINT3 0>, <0 INTREQ__ALIVE_EINT4 0>, <0 INTREQ__ALIVE_EINT5 0>,
-			     <0 INTREQ__ALIVE_EINT6 0>, <0 INTREQ__ALIVE_EINT7 0>, <0 INTREQ__ALIVE_EINT8 0>,
-			     <0 INTREQ__ALIVE_EINT9 0>, <0 INTREQ__ALIVE_EINT10 0>, <0 INTREQ__ALIVE_EINT11 0>,
-			     <0 INTREQ__ALIVE_EINT12 0>, <0 INTREQ__ALIVE_EINT13 0>, <0 INTREQ__ALIVE_EINT14 0>,
-			     <0 INTREQ__ALIVE_EINT15 0>, <0 INTREQ__ALIVE_EINT16 0>, <0 INTREQ__ALIVE_EINT17 0>,
-			     <0 INTREQ__ALIVE_EINT18 0>, <0 INTREQ__ALIVE_EINT19 0>, <0 INTREQ__ALIVE_EINT20 0>,
-			     <0 INTREQ__ALIVE_EINT21 0>, <0 INTREQ__ALIVE_EINT22 0>, <0 INTREQ__ALIVE_EINT23 0>,
-			     <0 INTREQ__ALIVE_EINT24 0>, <0 INTREQ__ALIVE_EINT25 0>, <0 INTREQ__ALIVE_EINT26 0>,
-			     <0 INTREQ__ALIVE_EINT27 0>, <0 INTREQ__ALIVE_EINT28 0>, <0 INTREQ__ALIVE_EINT29 0>,
-			     <0 INTREQ__ALIVE_EINT30 0>, <0 INTREQ__ALIVE_EINT31 0>, <0 INTREQ__ALIVE_EINT32 0>,
-			     <0 INTREQ__ALIVE_EINT33 0>;
+		reg = <0x0 0x11850000 0x1000>;
+		interrupts = <GIC_SPI INTREQ__ALIVE_EINT0 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT1 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT2 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT3 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT4 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT5 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT6 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT7 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT8 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT9 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT10 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT11 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT12 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT13 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT14 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT15 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT16 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT17 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT18 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT19 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT20 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT21 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT22 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT23 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT24 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT25 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT26 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT27 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT28 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT29 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT30 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__ALIVE_EINT31 IRQ_TYPE_LEVEL_HIGH>;
+
+		wakeup-interrupt-controller {
+			compatible = "samsung,exynos7-wakeup-eint";
+		};
+	};
+
+	/* CMGP */
+	pinctrl_1: pinctrl@11c30000 {
+		compatible = "samsung,exynos3830-pinctrl";
+		reg = <0x0 0x11c30000 0x1000>;
+		interrupts = <GIC_SPI INTREQ__CMGP_EXT_INTM00 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__CMGP_EXT_INTM01 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__CMGP_EXT_INTM02 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__CMGP_EXT_INTM03 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__CMGP_EXT_INTM04 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__CMGP_EXT_INTM05 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__CMGP_EXT_INTM06 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__CMGP_EXT_INTM07 IRQ_TYPE_LEVEL_HIGH>;
 
 		wakeup-interrupt-controller {
 			compatible = "samsung,exynos7-wakeup-eint";
@@ -172,70 +208,29 @@
 	};
 
 	/* AUD */
-	pinctrl_1: pinctrl@18C60000{
+	pinctrl_2: pinctrl@146a0000 {
 		compatible = "samsung,exynos3830-pinctrl";
-		reg = <0x0 0x18C60000 0x1000>;
+		reg = <0x0 0x146a0000 0x1000>;
 	};
 
-	/* CMGP */
-	pinctrl_3: pinctrl@15C30000{
+	/* HSI */
+	pinctrl_3: pinctrl@13430000 {
 		compatible = "samsung,exynos3830-pinctrl";
-		reg = <0x0 0x15C30000 0x1000>;
-		interrupts = <0 INTREQ__EXT_INTM0_0 0>, <0 INTREQ__EXT_INTM0_1 0>,
-			     <0 INTREQ__EXT_INTM0_2 0>, <0 INTREQ__EXT_INTM0_3 0>,
-			     <0 INTREQ__EXT_INTM0_4 0>, <0 INTREQ__EXT_INTM0_5 0>,
-			     <0 INTREQ__EXT_INTM0_6 0>, <0 INTREQ__EXT_INTM0_7 0>,
-			     <0 INTREQ__EXT_INTM1_0 0>, <0 INTREQ__EXT_INTM1_1 0>,
-			     <0 INTREQ__EXT_INTM1_2 0>, <0 INTREQ__EXT_INTM1_3 0>,
-			     <0 INTREQ__EXT_INTM1_4 0>, <0 INTREQ__EXT_INTM1_5 0>,
-			     <0 INTREQ__EXT_INTM1_6 0>, <0 INTREQ__EXT_INTM1_7 0>,
-			     <0 INTREQ__EXT_INTM1_8 0>, <0 INTREQ__EXT_INTM1_9 0>,
-			     <0 INTREQ__EXT_INTM2_0 0>, <0 INTREQ__EXT_INTM2_1 0>,
-			     <0 INTREQ__EXT_INTM2_2 0>, <0 INTREQ__EXT_INTM2_3 0>,
-			     <0 INTREQ__EXT_INTM2_4 0>, <0 INTREQ__EXT_INTM2_5 0>,
-			     <0 INTREQ__EXT_INTM2_6 0>, <0 INTREQ__EXT_INTM2_7 0>,
-			     <0 INTREQ__EXT_INTM2_8 0>, <0 INTREQ__EXT_INTM2_9 0>,
-			     <0 INTREQ__EXT_INTM3_0 0>, <0 INTREQ__EXT_INTM3_1 0>;
-
-		wakeup-interrupt-controller {
-			compatible = "samsung,exynos7-wakeup-eint";
-		};
+		reg = <0x0 0x13430000 0x1000>;
+		interrupts = <GIC_SPI INTREQ__GPIO_HSI IRQ_TYPE_LEVEL_HIGH>;
 	};
 
-#if 0
-	/* FSYS0 */
-	pinctrl_4: pinctrl@13030000 {
+	/* CORE */
+	pinctrl_4: pinctrl@12070000 {
 		compatible = "samsung,exynos3830-pinctrl";
-		reg = <0x0 0x13030000 0x1000>;
-		interrupts = <0 INTREQ__GPIO_FSYS0 0>;
+		reg = <0x0 0x12070000 0x1000>;
+		interrupts = <GIC_SPI INTREQ__GPIO_CORE IRQ_TYPE_LEVEL_HIGH>;
 	};
 
-	/* FSYS1 */
-	pinctrl_5: pinctrl@13C40000 {
+	/* PERI */
+	pinctrl_5: pinctrl@139b0000 {
 		compatible = "samsung,exynos3830-pinctrl";
-		reg = <0x0 0x13C40000 0x1000>;
-		interrupts = <0 INTREQ__GPIO_FSYS1 0>;
+		reg = <0x0 0x139b0000 0x1000>;
+		interrupts = <GIC_SPI INTREQ__GPIO_PERI IRQ_TYPE_LEVEL_HIGH>;
 	};
-
-	/* PERIC0 */
-	pinctrl_6: pinctrl@10430000 {
-		compatible = "samsung,exynos3830-pinctrl";
-		reg = <0x0 0x10430000 0x1000>;
-		interrupts = <0 INTREQ__GPIO_PERIC0 0>;
-	};
-
-	/* PERIC1 */
-	pinctrl_7: pinctrl@10830000 {
-		compatible = "samsung,exynos3830-pinctrl";
-		reg = <0x0 0x10830000 0x1000>;
-		interrupts = <0 INTREQ__GPIO_PERIC1 0>;
-	};
-
-	/* VTS */
-	pinctrl_8: pinctrl@15580000 {
-		compatible = "samsung,exynos3830-pinctrl";
-		reg = <0x0 0x15580000 0x1000>;
-	};
-#endif
-
 };
