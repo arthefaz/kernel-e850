@@ -16,6 +16,7 @@
 #include "mfc_nal_q.h"
 #include "mfc_run.h"
 #include "mfc_sync.h"
+#include "mfc_meminfo.h"
 
 #include "mfc_queue.h"
 #include "mfc_utils.h"
@@ -296,6 +297,9 @@ static void __mfc_dec_src_stop_streaming(struct mfc_ctx *ctx)
 
 	mfc_init_queue(&ctx->src_buf_queue);
 
+	if (meminfo_enable == 1)
+		mfc_meminfo_cleanup_inbuf_q(ctx);
+
 	while (index < MFC_MAX_BUFFERS) {
 		index = find_next_bit(&ctx->src_ctrls_avail,
 				MFC_MAX_BUFFERS, index);
@@ -429,6 +433,8 @@ static void mfc_dec_buf_queue(struct vb2_buffer *vb)
 		if (debug_ts == 1)
 			mfc_info_ctx("[TS] framerate: %ld, timestamp: %lld\n",
 					ctx->framerate, buf->vb.vb2_buf.timestamp);
+		if (meminfo_enable == 1)
+			mfc_meminfo_add_inbuf(ctx, vb);
 
 		MFC_TRACE_CTX("Q src[%d] fd: %d, %#llx\n",
 				vb->index, vb->planes[0].m.fd, buf->addr[0][0]);

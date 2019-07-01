@@ -16,6 +16,7 @@
 #include "mfc_nal_q.h"
 #include "mfc_run.h"
 #include "mfc_sync.h"
+#include "mfc_meminfo.h"
 
 #include "mfc_qos.h"
 #include "mfc_queue.h"
@@ -333,6 +334,8 @@ static void mfc_enc_stop_streaming(struct vb2_queue *q)
 
 	if (q->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		mfc_cleanup_enc_dst_queue(ctx);
+		if (meminfo_enable == 1)
+			mfc_meminfo_cleanup_outbuf_q(ctx);
 
 		while (index < MFC_MAX_BUFFERS) {
 			index = find_next_bit(&ctx->dst_ctrls_avail,
@@ -361,6 +364,8 @@ static void mfc_enc_stop_streaming(struct vb2_queue *q)
 
 		mfc_move_all_bufs(ctx, &ctx->src_buf_queue, &ctx->ref_buf_queue, MFC_QUEUE_ADD_BOTTOM);
 		mfc_cleanup_enc_src_queue(ctx);
+		if (meminfo_enable == 1)
+			mfc_meminfo_cleanup_inbuf_q(ctx);
 
 		while (index < MFC_MAX_BUFFERS) {
 			index = find_next_bit(&ctx->src_ctrls_avail,
@@ -403,6 +408,8 @@ static void mfc_enc_buf_queue(struct vb2_buffer *vb)
 		/* Mark destination as available for use by MFC */
 		mfc_add_tail_buf(ctx, &ctx->dst_buf_queue, buf);
 		mfc_qos_update_framerate(ctx, 0, 1);
+		if (meminfo_enable == 1)
+			mfc_meminfo_add_outbuf(ctx,vb);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		for (i = 0; i < ctx->src_fmt->mem_planes; i++)
 			mfc_debug(2, "[BUFINFO] ctx[%d] add src index: %d, addr[%d]: 0x%08llx\n",
@@ -412,6 +419,8 @@ static void mfc_enc_buf_queue(struct vb2_buffer *vb)
 		if (debug_ts == 1)
 			mfc_info_ctx("[TS] framerate: %ld, timestamp: %lld\n",
 					ctx->framerate, buf->vb.vb2_buf.timestamp);
+		if (meminfo_enable == 1)
+			mfc_meminfo_add_inbuf(ctx, vb);
 
 		mfc_qos_update_last_framerate(ctx, buf->vb.vb2_buf.timestamp);
 		mfc_qos_update_framerate(ctx, 0, 0);

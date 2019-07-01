@@ -51,6 +51,7 @@
 #define MFC_SFR_LOGGING_COUNT_SET2	32
 #define MFC_LOGGING_DATA_SIZE		950
 #define MFC_MAX_DEFAULT_PARAM		100
+#define MFC_NUM_EXTRA_DPB		5
 
 /* OTF */
 #define HWFC_MAX_BUF			10
@@ -80,6 +81,9 @@
 #define MFC_FMT_FLAG_SBWCL_60		0x0002
 #define MFC_FMT_FLAG_SBWCL_75		0x0004
 #define MFC_FMT_FLAG_SBWCL_80		0x0008
+
+/* MFC meminfo */
+#define MFC_MEMINFO_MAX_NUM		10
 
 /*
  *  MFC region id for smc
@@ -414,6 +418,8 @@ struct mfc_debugfs {
 	struct dentry *llc_disable;
 	struct dentry *perf_boost_mode;
 	struct dentry *drm_predict_disable;
+	struct dentry *meminfo_enable;
+	struct dentry *meminfo;
 };
 
 /**
@@ -430,6 +436,30 @@ struct mfc_special_buf {
 	dma_addr_t			daddr;
 	void				*vaddr;
 	size_t				size;
+};
+
+struct mfc_mem {
+	struct list_head	list;
+	dma_addr_t		addr;
+	size_t			size;
+};
+
+enum mfc_meminfo_type {
+	MFC_MEMINFO_FW			= 0,
+	MFC_MEMINFO_INTERNAL		= 1,
+	MFC_MEMINFO_INPUT		= 2,
+	MFC_MEMINFO_OUTPUT		= 3,
+	MFC_MEMINFO_CTX_ALL		= 4,
+	MFC_MEMINFO_CTX_MAX		= 5,
+	MFC_MEMINFO_DEV_ALL		= 6,
+};
+
+struct mfc_meminfo {
+	enum mfc_meminfo_type	type;
+	const char		*name;
+	unsigned int		count;
+	size_t			size;
+	size_t			total;
 };
 
 struct mfc_bw_data {
@@ -975,6 +1005,8 @@ struct mfc_dev {
 	char *reg_buf;
 	unsigned int *reg_val;
 	unsigned int reg_cnt;
+
+	struct mfc_meminfo meminfo[MFC_MEMINFO_DEV_ALL + 1];
 };
 
 /**
@@ -1428,6 +1460,7 @@ struct mfc_bitrate {
 
 struct dpb_table {
 	dma_addr_t addr[MFC_MAX_PLANES];
+	size_t size;
 	int fd[MFC_MAX_PLANES];
 	int mapcnt;
 	int ref;
@@ -1693,6 +1726,13 @@ struct mfc_ctx {
 	/* wait queue */
 	wait_queue_head_t cmd_wq;
 	struct mfc_listable_wq hwlock_wq;
+
+	/* mem info */
+	struct mfc_buf_queue	meminfo_inbuf_q;
+	struct mfc_buf_queue	meminfo_outbuf_q;
+	spinlock_t		meminfo_queue_lock;
+	struct mfc_meminfo	meminfo[MFC_MEMINFO_MAX_NUM];
+	size_t			meminfo_size[MFC_MEMINFO_CTX_MAX + 1];
 };
 
 #endif /* __MFC_DATA_STRUCT_H */

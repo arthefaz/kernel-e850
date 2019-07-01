@@ -680,7 +680,7 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 	struct mfc_dec *dec;
 	struct mfc_buf *mfc_buf;
 	unsigned long flags;
-	int index;
+	int index, plane;
 
 	if (!ctx) {
 		mfc_err("[DPB] no mfc context to run\n");
@@ -714,6 +714,11 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 			call_dop(dev, dump_and_stop_debug_mode, dev);
 		}
 	}
+
+	dec->dpb[index].size = 0;
+	for (plane = 0; plane < vb->num_planes; ++plane)
+		dec->dpb[index].size += vb->planes[plane].length;
+
 	dec->dpb[index].queued = 1;
 	dec->dpb_table_used |= (1UL << index);
 	mutex_unlock(&dec->dpb_mutex);

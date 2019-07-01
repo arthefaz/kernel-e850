@@ -35,6 +35,7 @@
 #include "mfc_watchdog.h"
 #include "mfc_debugfs.h"
 #include "mfc_sync.h"
+#include "mfc_meminfo.h"
 
 #include "mfc_pm.h"
 #include "mfc_perf_measure.h"
@@ -103,6 +104,7 @@ static void __mfc_deinit_dec_ctx(struct mfc_ctx *ctx)
 	mfc_delete_queue(&ctx->dst_buf_queue);
 	mfc_delete_queue(&ctx->src_buf_nal_queue);
 	mfc_delete_queue(&ctx->dst_buf_nal_queue);
+	mfc_delete_queue(&ctx->meminfo_inbuf_q);
 
 	mfc_mem_cleanup_user_shared_handle(ctx, &dec->sh_handle_hdr);
 	kfree(dec->hdr10_plus_info);
@@ -128,6 +130,7 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	mfc_create_queue(&ctx->dst_buf_queue);
 	mfc_create_queue(&ctx->src_buf_nal_queue);
 	mfc_create_queue(&ctx->dst_buf_nal_queue);
+	mfc_create_queue(&ctx->meminfo_inbuf_q);
 
 	for (i = 0; i < MFC_MAX_BUFFERS; i++) {
 		INIT_LIST_HEAD(&ctx->src_ctrls[i]);
@@ -223,6 +226,8 @@ static void __mfc_deinit_enc_ctx(struct mfc_ctx *ctx)
 	mfc_delete_queue(&ctx->src_buf_nal_queue);
 	mfc_delete_queue(&ctx->dst_buf_nal_queue);
 	mfc_delete_queue(&ctx->ref_buf_queue);
+	mfc_delete_queue(&ctx->meminfo_inbuf_q);
+	mfc_delete_queue(&ctx->meminfo_outbuf_q);
 
 	mfc_mem_cleanup_user_shared_handle(ctx, &enc->sh_handle_svc);
 	mfc_mem_cleanup_user_shared_handle(ctx, &enc->sh_handle_roi);
@@ -252,6 +257,8 @@ static int __mfc_init_enc_ctx(struct mfc_ctx *ctx)
 	mfc_create_queue(&ctx->src_buf_nal_queue);
 	mfc_create_queue(&ctx->dst_buf_nal_queue);
 	mfc_create_queue(&ctx->ref_buf_queue);
+	mfc_create_queue(&ctx->meminfo_inbuf_q);
+	mfc_create_queue(&ctx->meminfo_outbuf_q);
 
 	for (i = 0; i < MFC_MAX_BUFFERS; i++) {
 		INIT_LIST_HEAD(&ctx->src_ctrls[i]);
@@ -524,6 +531,7 @@ static int mfc_open(struct file *file)
 	init_waitqueue_head(&ctx->cmd_wq);
 	mfc_init_listable_wq_ctx(ctx);
 	spin_lock_init(&ctx->buf_queue_lock);
+	spin_lock_init(&ctx->meminfo_queue_lock);
 
 	if (mfc_is_decoder_node(node))
 		ret = __mfc_init_dec_ctx(ctx);
@@ -781,6 +789,10 @@ static int mfc_release(struct file *file)
 	/* Free resources */
 	vb2_queue_release(&ctx->vq_src);
 	vb2_queue_release(&ctx->vq_dst);
+
+	mfc_meminfo_cleanup_inbuf_q(ctx);
+	if (ctx->type == MFCINST_ENCODER)
+		mfc_meminfo_cleanup_outbuf_q(ctx);
 
 	if (ctx->type == MFCINST_DECODER)
 		__mfc_deinit_dec_ctx(ctx);

@@ -31,6 +31,7 @@ extern unsigned int llc_disable;
 extern unsigned int perf_boost_mode;
 extern unsigned int drm_predict_disable;
 extern unsigned int reg_test;
+extern unsigned int meminfo_enable;
 
 #define mfc_debug(level, fmt, args...)				\
 	do {							\
