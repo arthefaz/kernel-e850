@@ -151,9 +151,7 @@ static void idma_reg_set_afbc(u32 id, enum dpp_comp_type ct, u32 rcv_num)
 		rcv_en = IDMA_RECOVERY_EN;
 
 	dma_write_mask(id, IDMA_IN_CON, afbc_en, IDMA_AFBC_EN);
-	dma_write_mask(id, IDMA_RECOVERY_CTRL, rcv_en, IDMA_RECOVERY_EN);
-	dma_write_mask(id, IDMA_RECOVERY_CTRL, IDMA_RECOVERY_NUM(rcv_num),
-				IDMA_RECOVERY_NUM_MASK);
+	dma_write(id, IDMA_RECOVERY_CTRL, rcv_en | IDMA_RECOVERY_NUM(rcv_num));
 }
 
 static void idma_reg_set_sbwc(u32 id, enum dpp_comp_type ct, u32 rcv_num)
@@ -167,18 +165,14 @@ static void idma_reg_set_sbwc(u32 id, enum dpp_comp_type ct, u32 rcv_num)
 		rcv_en = IDMA_RECOVERY_EN;
 
 	dma_write_mask(id, IDMA_IN_CON, sbwc_en, IDMA_SBWC_EN);
-	dma_write_mask(id, IDMA_RECOVERY_CTRL, rcv_en, IDMA_RECOVERY_EN);
-	dma_write_mask(id, IDMA_RECOVERY_CTRL, IDMA_RECOVERY_NUM(rcv_num),
-				IDMA_RECOVERY_NUM_MASK);
+	dma_write(id, IDMA_RECOVERY_CTRL, rcv_en | IDMA_RECOVERY_NUM(rcv_num));
 }
 
 static void idma_reg_set_deadlock(u32 id, u32 en, u32 dl_num)
 {
-	u32 val = en ? ~0 : 0;
-
-	dma_write_mask(id, IDMA_DEADLOCK_EN, val, IDMA_DEADLOCK_TIMER_EN);
-	dma_write_mask(id, IDMA_DEADLOCK_EN, IDMA_DEADLOCK_TIMER(dl_num),
-				IDMA_DEADLOCK_TIMER_MASK);
+	u32 val = en ? IDMA_DEADLOCK_TIMER_EN : 0;
+	val |= IDMA_DEADLOCK_TIMER(dl_num);
+	dma_write(id, IDMA_DEADLOCK_EN, val);
 }
 
 /****************** ODMA CAL functions ******************/
@@ -328,7 +322,7 @@ static int dpp_reg_wait_sw_reset_status(u32 id)
 
 static void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 {
-	u32 val, mask;
+	u32 val;
 	u32 csc_id = CSC_CUSTOMIZED_START; /* CSC_BT601/625/525 */
 	u32 c00, c01, c02;
 	u32 c10, c11, c12;
@@ -351,22 +345,20 @@ static void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 	c21 = csc_y2r_3x3_t[csc_id][2][1];
 	c22 = csc_y2r_3x3_t[csc_id][2][2];
 
-	mask = (DPP_CSC_COEF_H_MASK | DPP_CSC_COEF_L_MASK);
 	val = (DPP_CSC_COEF_H(c01) | DPP_CSC_COEF_L(c00));
-	dpp_write_mask(id, DPP_CSC_COEF0, val, mask);
+	dpp_write(id, DPP_CSC_COEF0, val);
 
 	val = (DPP_CSC_COEF_H(c10) | DPP_CSC_COEF_L(c02));
-	dpp_write_mask(id, DPP_CSC_COEF1, val, mask);
+	dpp_write(id, DPP_CSC_COEF1, val);
 
 	val = (DPP_CSC_COEF_H(c12) | DPP_CSC_COEF_L(c11));
-	dpp_write_mask(id, DPP_CSC_COEF2, val, mask);
+	dpp_write(id, DPP_CSC_COEF2, val);
 
 	val = (DPP_CSC_COEF_H(c21) | DPP_CSC_COEF_L(c20));
-	dpp_write_mask(id, DPP_CSC_COEF3, val, mask);
+	dpp_write(id, DPP_CSC_COEF3, val);
 
-	mask = DPP_CSC_COEF_L_MASK;
 	val = DPP_CSC_COEF_L(c22);
-	dpp_write_mask(id, DPP_CSC_COEF4, val, mask);
+	dpp_write(id, DPP_CSC_COEF4, val);
 
 	dpp_dbg("---[DPP%d Y2R CSC Type: std=%d, rng=%d]---\n",
 		id, csc_std, csc_rng);
@@ -457,10 +449,8 @@ static void dpp_reg_set_v_coef(u32 id, u32 v_ratio)
 
 static void dpp_reg_set_scale_ratio(u32 id, struct dpp_params_info *p)
 {
-	dpp_write_mask(id, DPP_MAIN_H_RATIO, DPP_H_RATIO(p->h_ratio),
-			DPP_H_RATIO_MASK);
-	dpp_write_mask(id, DPP_MAIN_V_RATIO, DPP_V_RATIO(p->v_ratio),
-			DPP_V_RATIO_MASK);
+	dpp_write(id, DPP_MAIN_H_RATIO, DPP_H_RATIO(p->h_ratio));
+	dpp_write(id, DPP_MAIN_V_RATIO, DPP_V_RATIO(p->v_ratio));
 
 	dpp_reg_set_h_coef(id, p->h_ratio);
 	dpp_reg_set_v_coef(id, p->v_ratio);
@@ -477,17 +467,6 @@ static void dpp_reg_set_scaled_img_size(u32 id, u32 w, u32 h)
 {
 	dpp_write(id, DPP_SCALED_IMG_SIZE,
 			DPP_SCALED_IMG_HEIGHT(h) | DPP_SCALED_IMG_WIDTH(w));
-}
-
-static void dpp_reg_set_alpha_type(u32 id, u32 type)
-{
-	/* [type] 0=per-frame, 1=per-pixel */
-	dpp_write_mask(id, DPP_IN_CON, DPP_ALPHA_SEL(type), DPP_ALPHA_SEL_MASK);
-}
-
-static void dpp_reg_set_format(u32 id, u32 fmt)
-{
-	dpp_write_mask(id, DPP_IN_CON, DPP_IMG_FORMAT(fmt), DPP_IMG_FORMAT_MASK);
 }
 
 static void dpp_reg_set_eotf_lut(u32 id, struct dpp_params_info *p)
@@ -858,6 +837,7 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 {
 	u32 dma_fmt;
 	u32 alpha_type = 0; /* 0: per-frame, 1: per-pixel */
+	u32 val, mask;
 	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
 
 	if (fmt_info->fmt == DECON_PIXEL_FORMAT_RGB_565 && p->is_comp)
@@ -872,8 +852,10 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 	if (test_bit(DPP_ATTR_IDMA, &attr)) {
 		idma_reg_set_format(id, dma_fmt);
 		if (test_bit(DPP_ATTR_DPP, &attr)) {
-			dpp_reg_set_alpha_type(id, alpha_type);
-			dpp_reg_set_format(id, fmt_info->dpp_fmt);
+			val = DPP_ALPHA_SEL(alpha_type) |
+				DPP_IMG_FORMAT(fmt_info->dpp_fmt);
+			mask = DPP_ALPHA_SEL_MASK | DPP_IMG_FORMAT_MASK;
+			dpp_write_mask(id, DPP_IN_CON, val, mask);
 		}
 	} else if (test_bit(DPP_ATTR_ODMA, &attr)) {
 		odma_reg_set_format(id, dma_fmt);
