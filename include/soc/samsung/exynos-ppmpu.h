@@ -42,7 +42,7 @@
 #define PPMPU_DO_NOT_HANDLE_INTERRUPT_THREAD		(0)
 
 /* Flag whether fail read information is logged */
-#define STR_INFO_FLAG					(0x50504D50)	/* PPMP */
+#define PPMPU_STR_INFO_FLAG				(0x50504D50)	/* PPMP */
 
 /* Direction of illegal access */
 #define PPMPU_ILLEGAL_ACCESS_READ			(0)

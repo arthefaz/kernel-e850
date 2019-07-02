@@ -54,7 +54,7 @@
 #define TZASC_DO_NOT_HANDLE_INTERRUPT_THREAD		(0)
 
 /* Flag whether fail read information is logged */
-#define STR_INFO_FLAG					(0x45545A43)	/* ETZC */
+#define TZASC_STR_INFO_FLAG				(0x45545A43)	/* ETZC */
 
 /* Version number of TZC */
 #define TZASC_VERSION_TZC380				(380)		/* DREX */

@@ -297,7 +297,7 @@ static int exynos_tzasc_probe(struct platform_device *pdev)
 		data->fail_info_pa);
 
 #ifdef CONFIG_EXYNOS_TZASC_ILLEGAL_READ_LOGGING
-	data->info_flag = STR_INFO_FLAG;
+	data->info_flag = TZASC_STR_INFO_FLAG;
 #endif
 
 	ret = of_property_read_u32(data->dev->of_node, "irqcnt", &data->irqcnt);

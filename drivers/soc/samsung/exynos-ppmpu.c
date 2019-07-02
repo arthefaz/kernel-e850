@@ -25,6 +25,7 @@
 #include <linux/smc.h>
 
 #include <soc/samsung/exynos-ppmpu.h>
+#include <soc/samsung/exynos-tzasc.h>
 
 
 static irqreturn_t exynos_ppmpu_irq_handler(int irq, void *dev_id)
@@ -76,7 +77,7 @@ static irqreturn_t exynos_ppmpu_irq_handler(int irq, void *dev_id)
 static irqreturn_t exynos_ppmpu_irq_handler_thread(int irq, void *dev_id)
 {
 	struct ppmpu_info_data *data = dev_id;
-	unsigned int intr_stat, addr_low;
+	unsigned int intr_stat, addr_low, tzc_ver, ch_num;
 	unsigned long addr_high;
 	int i;
 
@@ -90,8 +91,11 @@ static irqreturn_t exynos_ppmpu_irq_handler_thread(int irq, void *dev_id)
 
 	pr_info("===============[PPMPU FAIL DETECTION]===============\n");
 
+	tzc_ver = data->tzc_ver;
+	ch_num = data->ch_num;
+
 	/* Parse fail register information */
-	for (i = 0; i < data->ch_num; i++) {
+	for (i = 0; i < ch_num; i++) {
 		pr_info("[Channel %d]\n", i);
 
 		intr_stat = data->fail_info[i].ppmpu_intr_stat;
@@ -107,6 +111,11 @@ static irqreturn_t exynos_ppmpu_irq_handler_thread(int irq, void *dev_id)
 			addr_low = data->fail_info[i].ppmpu_illegal_read_addr_low;
 			addr_high = data->fail_info[i].ppmpu_illegal_read_addr_high &
 					PPMPU_ILLEGAL_ADDR_HIGH_MASK;
+
+			if ((tzc_ver == TZASC_VERSION_TZC380) && (ch_num == 2)) {
+				addr_low = mif_addr_to_pa(addr_low, i);
+				addr_high <<= 1;
+			}
 
 			pr_info("- [READ] Illegal Adddress : %#lx\n",
 				addr_high ?
@@ -139,6 +148,11 @@ static irqreturn_t exynos_ppmpu_irq_handler_thread(int irq, void *dev_id)
 			addr_low = data->fail_info[i].ppmpu_illegal_write_addr_low;
 			addr_high = data->fail_info[i].ppmpu_illegal_write_addr_high &
 					PPMPU_ILLEGAL_ADDR_HIGH_MASK;
+
+			if ((tzc_ver == TZASC_VERSION_TZC380) && (ch_num == 2)) {
+				addr_low = mif_addr_to_pa(addr_low, i);
+				addr_high <<= 1;
+			}
 
 			pr_info("- [WRITE] Illegal Adddress : %#lx\n",
 				addr_high ?
@@ -300,7 +314,7 @@ static int exynos_ppmpu_probe(struct platform_device *pdev)
 		data->fail_info_pa);
 
 #ifdef CONFIG_EXYNOS_PPMPU_ILLEGAL_READ_LOGGING
-	data->info_flag = STR_INFO_FLAG;
+	data->info_flag = PPMPU_STR_INFO_FLAG;
 #endif
 
 	ret = of_property_read_u32(data->dev->of_node, "irqcnt", &data->irqcnt);
