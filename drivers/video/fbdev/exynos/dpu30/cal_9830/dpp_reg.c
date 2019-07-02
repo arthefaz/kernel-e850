@@ -44,29 +44,11 @@ static void idma_reg_set_irq_enable(u32 id)
 	dma_write_mask(id, IDMA_IRQ, ~0, IDMA_IRQ_ENABLE);
 }
 
-static void idma_reg_set_in_qos_lut(u32 id, u32 lut_id, u32 qos_t)
+static void idma_reg_set_dynamic_gating(u32 id, u32 en)
 {
-	u32 reg_id;
+	u32 val = en ? ~0: 0;
 
-	if (lut_id == 0)
-		reg_id = IDMA_QOS_LUT07_00;
-	else
-		reg_id = IDMA_QOS_LUT15_08;
-	dma_write(id, reg_id, qos_t);
-}
-
-static void idma_reg_set_sram_clk_gate_en(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	dma_write_mask(id, IDMA_DYNAMIC_GATING_EN, val, IDMA_SRAM_CG_EN);
-}
-
-static void idma_reg_set_dynamic_gating_en_all(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	dma_write_mask(id, IDMA_DYNAMIC_GATING_EN, val, IDMA_DG_EN_ALL);
+	dma_write(id, IDMA_DYNAMIC_GATING_EN, val);
 }
 
 static void idma_reg_clear_irq(u32 id, u32 irq)
@@ -77,12 +59,6 @@ static void idma_reg_clear_irq(u32 id, u32 irq)
 static void idma_reg_set_sw_reset(u32 id)
 {
 	dma_write_mask(id, IDMA_ENABLE, ~0, IDMA_SRESET);
-}
-
-static void idma_reg_set_assigned_mo(u32 id, u32 mo)
-{
-	dma_write_mask(id, IDMA_ENABLE, IDMA_ASSIGNED_MO(mo),
-			IDMA_ASSIGNED_MO_MASK);
 }
 
 static int idma_reg_wait_sw_reset_status(u32 id)
@@ -116,12 +92,6 @@ static void idma_reg_set_pixel_alpha(u32 id, u32 alpha)
 {
 	dma_write_mask(id, IDMA_IN_CON, IDMA_PIXEL_ALPHA(alpha),
 			IDMA_PIXEL_ALPHA_MASK);
-}
-
-static void idma_reg_set_in_ic_max(u32 id, u32 ic_max)
-{
-	dma_write_mask(id, IDMA_IN_CON, IDMA_IN_IC_MAX(ic_max),
-			IDMA_IN_IC_MAX_MASK);
 }
 
 static void idma_reg_set_rotation(u32 id, u32 rot)
@@ -311,18 +281,11 @@ static void dpp_reg_set_irq_enable(u32 id)
 	dpp_write_mask(id, DPP_IRQ, ~0, DPP_IRQ_ENABLE);
 }
 
-static void dpp_reg_set_clock_gate_en_all(u32 id, u32 en)
+static void dpp_reg_set_dynamic_gating(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = en ? DPP_DG_EN_ALL : 0;
 
-	dpp_write_mask(id, DPP_ENABLE, val, DPP_ALL_CLOCK_GATE_EN_MASK);
-}
-
-static void dpp_reg_set_dynamic_gating_en_all(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	dpp_write_mask(id, DPP_DYNAMIC_GATING_EN, val, DPP_DG_EN_ALL);
+	dpp_write(id, DPP_DYNAMIC_GATING_EN, val);
 }
 
 static void dpp_reg_set_linecnt(u32 id, u32 en)
@@ -986,21 +949,14 @@ void dpp_reg_init(u32 id, const unsigned long attr)
 	if (test_bit(DPP_ATTR_IDMA, &attr)) {
 		idma_reg_set_irq_mask_all(id, 0);
 		idma_reg_set_irq_enable(id);
-		idma_reg_set_in_qos_lut(id, 0, 0x44444444);
-		idma_reg_set_in_qos_lut(id, 1, 0x44444444);
-		/* TODO: clock gating will be enabled */
-		idma_reg_set_sram_clk_gate_en(id, 0);
-		idma_reg_set_dynamic_gating_en_all(id, 0);
 		idma_reg_set_pixel_alpha(id, 0xFF);
-		idma_reg_set_in_ic_max(id, 0x40);
-		idma_reg_set_assigned_mo(id, 0x40);
+		idma_reg_set_dynamic_gating(id, 0);
 	}
 
 	if (test_bit(DPP_ATTR_DPP, &attr)) {
 		dpp_reg_set_irq_mask_all(id, 0);
 		dpp_reg_set_irq_enable(id);
-		dpp_reg_set_clock_gate_en_all(id, 0);
-		dpp_reg_set_dynamic_gating_en_all(id, 0);
+		dpp_reg_set_dynamic_gating(id, 0);
 		dpp_reg_set_linecnt(id, 1);
 	}
 
