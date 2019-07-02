@@ -409,7 +409,7 @@ struct sysmmu_drvdata {
 	bool has_vcr;			/* SysMMU has VM control register */
 	int no_rpm_control;
 	struct exynos_iommu_event_log log;
-	int *reg_set;
+	const unsigned int *reg_set;
 };
 
 struct exynos_vm_region {
