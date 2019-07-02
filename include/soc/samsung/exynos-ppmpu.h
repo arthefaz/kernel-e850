@@ -68,7 +68,9 @@ struct ppmpu_info_data {
 
 	struct ppmpu_fail_info *fail_info;
 	dma_addr_t fail_info_pa;
+
 	unsigned int ch_num;
+	unsigned int tzc_ver;
 
 	unsigned int irq[MAX_NUM_OF_PPMPU_CHANNEL * 2];
 	unsigned int irqcnt;

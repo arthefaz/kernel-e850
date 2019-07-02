@@ -218,6 +218,25 @@ static int exynos_ppmpu_probe(struct platform_device *pdev)
 		goto out;
 	}
 
+	ret = of_property_read_u32(data->dev->of_node,
+				   "tzc_ver",
+				   &data->tzc_ver);
+	if (ret) {
+		dev_err(data->dev,
+			"Fail to get TZC version(%d) from dt\n",
+			data->tzc_ver);
+		goto out;
+	}
+
+	if ((data->tzc_ver != TZASC_VERSION_TZC380) &&
+		(data->tzc_ver != TZASC_VERSION_TZC400)) {
+		dev_err(data->dev,
+			"Invalid TZC version(%d)\n",
+			data->tzc_ver);
+		ret = -EINVAL;
+		goto out;
+	}
+
 	ret = exynos_smc(SMC_CMD_CHECK_PPMPU_CH_NUM,
 				data->ch_num,
 				sizeof(struct ppmpu_fail_info),
@@ -296,7 +315,7 @@ static int exynos_ppmpu_probe(struct platform_device *pdev)
 		"The number of PPMPU interrupt : %d\n",
 		data->irqcnt);
 
-	if (of_property_read_bool(data->dev->of_node, "irq-shared") == false)
+	if (data->tzc_ver == TZASC_VERSION_TZC400)
 		irqf = IRQF_ONESHOT;
 
 	for (i = 0; i < data->irqcnt; i++) {
@@ -339,6 +358,11 @@ out_with_dma_free:
 	data->fail_info = NULL;
 	data->fail_info_pa = 0;
 
+	data->ch_num = 0;
+	data->tzc_ver = 0;
+	data->irqcnt = 0;
+	data->info_flag = 0;
+
 out:
 	return ret;
 }
@@ -365,6 +389,7 @@ static int exynos_ppmpu_remove(struct platform_device *pdev)
 		data->irq[i] = 0;
 
 	data->ch_num = 0;
+	data->tzc_ver = 0;
 	data->irqcnt = 0;
 	data->info_flag = 0;
 
