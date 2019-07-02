@@ -144,10 +144,10 @@ TRACE_EVENT(ems_candidates,
 TRACE_EVENT(ems_compute_eff,
 
 	TP_PROTO(struct task_struct *p, int cpu,
-		unsigned long cpu_util_with, unsigned int c_weight, unsigned int e_weight,
+		unsigned long cpu_util_with, unsigned int eff_weight,
 		unsigned long capacity, unsigned long energy, unsigned int eff),
 
-	TP_ARGS(p, cpu, cpu_util_with, c_weight, e_weight, capacity, energy, eff),
+	TP_ARGS(p, cpu, cpu_util_with, eff_weight, capacity, energy, eff),
 
 	TP_STRUCT__entry(
 		__array(	char,		comm,	TASK_COMM_LEN	)
@@ -156,8 +156,7 @@ TRACE_EVENT(ems_compute_eff,
 		__field(	int,		cpu			)
 		__field(	unsigned long,	task_util		)
 		__field(	unsigned long,	cpu_util_with		)
-		__field(	unsigned int,	c_weight		)
-		__field(	unsigned int,	e_weight		)
+		__field(	unsigned int,	eff_weight		)
 		__field(	unsigned long,	capacity		)
 		__field(	unsigned long,	energy			)
 		__field(	unsigned int,	eff			)
@@ -170,18 +169,17 @@ TRACE_EVENT(ems_compute_eff,
 		__entry->cpu		= cpu;
 		__entry->task_util	= p->se.avg.ml.util_avg;
 		__entry->cpu_util_with	= cpu_util_with;
-		__entry->c_weight	= c_weight;
-		__entry->e_weight	= e_weight;
+		__entry->eff_weight	= eff_weight;
 		__entry->capacity	= capacity;
 		__entry->energy		= energy;
 		__entry->eff		= eff;
 	),
 
-	TP_printk("comm=%s pid=%d sse=%d cpu=%d task_util=%lu cpu_util_with=%lu c_weight=%u e_weight=%u capacity=%lu energy=%lu eff=%u",
+	TP_printk("comm=%s pid=%d sse=%d cpu=%d task_util=%lu cpu_util_with=%lu eff_weight=%u capacity=%lu energy=%lu eff=%u",
 		__entry->comm, __entry->pid, __entry->sse, __entry->cpu,
 		__entry->task_util, __entry->cpu_util_with,
-		__entry->c_weight, __entry->e_weight,
-		__entry->capacity, __entry->energy, __entry->eff)
+		__entry->eff_weight, __entry->capacity,
+		__entry->energy, __entry->eff)
 );
 
 /*

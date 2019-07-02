@@ -47,10 +47,8 @@ static DEFINE_PER_CPU(struct energy_table, energy_table);
 
 /* capacity energy weight */
 struct ce_weight {
-	unsigned int c_weight;
-	unsigned int e_weight;
-	unsigned int c_weight_perf;
-	unsigned int e_weight_perf;
+	unsigned int eff_weight;
+	unsigned int eff_weight_perf;
 };
 static DEFINE_PER_CPU(struct ce_weight, weight);
 
@@ -81,8 +79,7 @@ compute_energy(struct energy_table *table, struct task_struct *p,
 }
 
 static unsigned int
-compute_efficiency(struct task_struct *p, int target_cpu,
-			unsigned int c_weight, unsigned int e_weight)
+compute_efficiency(struct task_struct *p, int target_cpu, unsigned int eff_weight)
 {
 	struct energy_table *table = &per_cpu(energy_table, target_cpu);
 	unsigned long max_util = 0;
@@ -137,12 +134,12 @@ compute_efficiency(struct task_struct *p, int target_cpu,
 	 * Compute performance efficiency
 	 *  efficiency = capacity / energy
 	 */
-	capacity = (capacity * c_weight) << (SCHED_CAPACITY_SHIFT * 2);
-	energy = compute_energy(table, p, target_cpu, cap_idx) * e_weight;
+	capacity = (capacity * eff_weight) << (SCHED_CAPACITY_SHIFT * 2);
+	energy = compute_energy(table, p, target_cpu, cap_idx);
 	eff = capacity / energy;
 
 	trace_ems_compute_eff(p, target_cpu, ml_cpu_util_with(target_cpu, p),
-			c_weight, e_weight, capacity, energy, eff);
+				eff_weight, capacity, energy, eff);
 
 	return eff;
 }
@@ -166,9 +163,7 @@ static int find_best_eff(struct enrg_env *env, unsigned int *eff, int idle)
 	for_each_cpu(cpu, &candidates) {
 		unsigned int eff;
 
-		eff = compute_efficiency(env->p, cpu,
-					env->c_weight[cpu],
-					env->e_weight[cpu]);
+		eff = compute_efficiency(env->p, cpu, env->eff_weight[cpu]);
 		if (eff > best_eff) {
 			best_eff = eff;
 			best_cpu = cpu;
@@ -195,13 +190,10 @@ static void get_ready_env(struct enrg_env *env)
 		 * The weight is separated into the value for normal mode and
 		 * the value for performance mode.
 		 */
-		if (env->prefer_perf) {
-			env->c_weight[cpu] = per_cpu(weight, cpu).c_weight_perf;
-			env->e_weight[cpu] = per_cpu(weight, cpu).e_weight_perf;
-		} else {
-			env->c_weight[cpu] = per_cpu(weight, cpu).c_weight;
-			env->e_weight[cpu] = per_cpu(weight, cpu).e_weight;
-		}
+		if (env->prefer_perf)
+			env->eff_weight[cpu] = per_cpu(weight, cpu).eff_weight_perf;
+		else
+			env->eff_weight[cpu] = per_cpu(weight, cpu).eff_weight;
 
 		/*
 		 * Basically, all active cpus are candidates. But if
@@ -312,12 +304,10 @@ static ssize_t show_ce_weight(struct kobject *kobj,
 
 	for_each_possible_cpu(cpu) {
 		len += sprintf(buf + len,
-			"[cpu%d] (normal) C:E = %d:%d, (performance) C:E %d:%d\n",
+			"[cpu%d] (normal) eff_weight = %3d, (performance) eff_weight %3d\n",
 			cpu,
-			per_cpu(weight, cpu).c_weight,
-			per_cpu(weight, cpu).e_weight,
-			per_cpu(weight, cpu).c_weight_perf,
-			per_cpu(weight, cpu).e_weight_perf);
+			per_cpu(weight, cpu).eff_weight,
+			per_cpu(weight, cpu).eff_weight_perf);
 	}
 
 	return len;
@@ -327,24 +317,20 @@ static ssize_t store_ce_weight(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf,
 		size_t count)
 {
-	int cpu, c_weight, e_weight, c_weight_perf, e_weight_perf;
+	int cpu, eff_weight, eff_weight_perf;
 
-	if (sscanf(buf, "%d %d %d %d %d",
-			&cpu, &c_weight, &e_weight,
-			&c_weight_perf, &e_weight_perf) != 5)
+	if (sscanf(buf, "%d %d %d",
+			&cpu, &eff_weight, &eff_weight_perf) != 3)
 		return -EINVAL;
 
 	if (!cpumask_test_cpu(cpu, cpu_possible_mask))
 		return -EINVAL;
 
-	if (c_weight < 0 || e_weight < 0 ||
-			c_weight_perf < 0 || e_weight_perf < 0)
+	if (eff_weight < 0 || eff_weight_perf < 0)
 		return -EINVAL;
 
-	per_cpu(weight, cpu).c_weight = c_weight;
-	per_cpu(weight, cpu).e_weight = e_weight;
-	per_cpu(weight, cpu).c_weight_perf = c_weight_perf;
-	per_cpu(weight, cpu).e_weight_perf = e_weight_perf;
+	per_cpu(weight, cpu).eff_weight = eff_weight;
+	per_cpu(weight, cpu).eff_weight_perf = eff_weight_perf;
 
 	return count;
 }
@@ -755,18 +741,12 @@ static int __init init_sched_energy_data(void)
 		 * Capacity-Energy weight is OPTIONAL.
 		 * If weight node does not exist, default value of weight is 1.
 		 */
-		if (of_property_read_u32(cpu_phandle, "capacity-weight",
-						&per_cpu(weight, cpu).c_weight))
-			per_cpu(weight, cpu).c_weight = 1;
-		if (of_property_read_u32(cpu_phandle, "energy-weight",
-						&per_cpu(weight, cpu).e_weight))
-			per_cpu(weight, cpu).e_weight = 1;
-		if (of_property_read_u32(cpu_phandle, "capacity-weight-perf",
-						&per_cpu(weight, cpu).c_weight_perf))
-			per_cpu(weight, cpu).c_weight_perf = 1;
-		if (of_property_read_u32(cpu_phandle, "energy-weight-perf",
-						&per_cpu(weight, cpu).e_weight_perf))
-			per_cpu(weight, cpu).e_weight_perf = 1;
+		if (of_property_read_u32(cpu_phandle, "efficiency-weight",
+						&per_cpu(weight, cpu).eff_weight))
+			per_cpu(weight, cpu).eff_weight = 100;
+		if (of_property_read_u32(cpu_phandle, "efficiency-weight-perf",
+						&per_cpu(weight, cpu).eff_weight_perf))
+			per_cpu(weight, cpu).eff_weight_perf = 100;
 
 		of_node_put(cpu_phandle);
 		of_node_put(cpu_node);
