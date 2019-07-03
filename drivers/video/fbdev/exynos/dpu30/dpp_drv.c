@@ -364,7 +364,7 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
 
 	if (!test_bit(DPP_ATTR_ROT, &dpp->attr) && (p->rot > DPP_ROT_180)) {
-		dpp_err("Not support rotation(%d) in DPP%d - L5 only!\n",
+		dpp_err("Not support rotation(%d) in DPP%d\n",
 				p->rot, dpp->id);
 		return -EINVAL;
 	}
@@ -382,24 +382,24 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 	}
 
 	if (!test_bit(DPP_ATTR_CSC, &dpp->attr) && IS_YUV(fmt_info)) {
-		dpp_err("Not support YUV format(%d) in DPP%d - L2/3/4/5 only!\n",
+		dpp_err("Not support YUV format(%d) in DPP%d\n",
 			p->format, dpp->id);
 		return -EINVAL;
 	}
 
 	if (!test_bit(DPP_ATTR_AFBC, &dpp->attr) && p->is_comp) {
-		dpp_err("Not support AFBC decoding in DPP%d - L0/1/4/5 only!\n",
+		dpp_err("Not support AFBC decoding in DPP%d\n",
 				dpp->id);
 		return -EINVAL;
 	}
 
 	if (!test_bit(DPP_ATTR_SCALE, &dpp->attr) && p->is_scale) {
-		dpp_err("Not support SCALING in DPP%d - L3/L5 only!\n", dpp->id);
+		dpp_err("Not support SCALING in DPP%d\n", dpp->id);
 		return -EINVAL;
 	}
 
 	if (!test_bit(DPP_ATTR_SBWC, &dpp->attr) && (p->comp_type == COMP_TYPE_SBWC)) {
-		dpp_err("Not support SBWC in DPP%d - L3/L5 only!\n", dpp->id);
+		dpp_err("Not support SBWC in DPP%d\n", dpp->id);
 		return -EINVAL;
 	}
 
