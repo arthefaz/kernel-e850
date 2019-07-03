@@ -942,13 +942,13 @@ void dpp_reg_init(u32 id, const unsigned long attr)
 		idma_reg_set_irq_mask_all(id, 0);
 		idma_reg_set_irq_enable(id);
 		idma_reg_set_pixel_alpha(id, 0xFF);
-		idma_reg_set_dynamic_gating(id, 0);
+		idma_reg_set_dynamic_gating(id, 1);
 	}
 
 	if (test_bit(DPP_ATTR_DPP, &attr)) {
 		dpp_reg_set_irq_mask_all(id, 0);
 		dpp_reg_set_irq_enable(id);
-		dpp_reg_set_dynamic_gating(id, 0);
+		dpp_reg_set_dynamic_gating(id, 1);
 		dpp_reg_set_linecnt(id, 1);
 	}
 
