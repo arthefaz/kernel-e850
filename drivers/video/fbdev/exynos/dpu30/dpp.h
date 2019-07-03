@@ -245,7 +245,7 @@ static inline u32 dpp_read(u32 id, u32 reg_id)
 static inline u32 dpp_read_mask(u32 id, u32 reg_id, u32 mask)
 {
 	u32 val = dpp_read(id, reg_id);
-	val &= (~mask);
+	val &= (mask);
 	return val;
 }
 
