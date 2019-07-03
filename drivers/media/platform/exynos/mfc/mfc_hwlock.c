@@ -452,13 +452,20 @@ void mfc_cleanup_work_bit_and_try_run(struct mfc_ctx *ctx)
 	mfc_try_run(dev);
 }
 
-void mfc_cache_flush(struct mfc_dev *dev, int is_drm)
+void mfc_cache_flush(struct mfc_dev *dev, int is_drm,
+		enum mfc_do_cache_flush do_cache_flush)
 {
-	mfc_cmd_cache_flush(dev);
-	if (mfc_wait_for_done_dev(dev, MFC_REG_R2H_CMD_CACHE_FLUSH_RET)) {
-		mfc_err_dev("Failed to CACHE_FLUSH\n");
-		dev->logging_data->cause |= (1 << MFC_CAUSE_FAIL_CHACHE_FLUSH);
-		call_dop(dev, dump_and_stop_always, dev);
+	if (do_cache_flush == MFC_CACHEFLUSH) {
+		mfc_cmd_cache_flush(dev);
+		if (mfc_wait_for_done_dev(dev,
+				MFC_REG_R2H_CMD_CACHE_FLUSH_RET)) {
+			mfc_err_dev("Failed to CACHE_FLUSH\n");
+			dev->logging_data->cause |=
+				(1 << MFC_CAUSE_FAIL_CACHE_FLUSH);
+			call_dop(dev, dump_and_stop_always, dev);
+		}
+	} else if (do_cache_flush == MFC_NO_CACHEFLUSH) {
+		mfc_debug_dev(2, "F/W has already done cache flush with prediction\n");
 	}
 
 	mfc_pm_clock_off(dev);
@@ -472,7 +479,7 @@ void mfc_cache_flush(struct mfc_dev *dev, int is_drm)
  *  1: NAL_START command should be handled
  * -1: Error
 */
-static int __mfc_nal_q_just_run(struct mfc_ctx *ctx, int need_cache_flush)
+static int __mfc_nal_q_just_run(struct mfc_ctx *ctx, int drm_switch)
 {
 	struct mfc_dev *dev = ctx->dev;
 	nal_queue_handle *nal_q_handle = dev->nal_q_handle;
@@ -489,8 +496,9 @@ static int __mfc_nal_q_just_run(struct mfc_ctx *ctx, int need_cache_flush)
 			mfc_nal_q_init(dev, nal_q_handle);
 
 			/* enable NAL QUEUE */
-			if (need_cache_flush)
-				mfc_cache_flush(dev, ctx->is_drm);
+			if (drm_switch)
+				mfc_cache_flush(dev,
+						ctx->is_drm, MFC_CACHEFLUSH);
 
 			mfc_info_ctx("[NALQ] start NAL QUEUE\n");
 			mfc_nal_q_start(dev, nal_q_handle);
@@ -680,8 +688,10 @@ static int __mfc_just_run_enc(struct mfc_ctx *ctx)
 int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 {
 	struct mfc_ctx *ctx = dev->ctx[new_ctx_index];
+	struct mfc_ctx *next_ctx = NULL;
 	unsigned int ret = 0;
-	int need_cache_flush = 0;
+	int drm_switch = 0;
+	int next_ctx_index;
 
 	if (ctx->state == MFCINST_RUNNING)
 		mfc_clean_ctx_int_flags(ctx);
@@ -698,16 +708,16 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 	/* Last frame has already been sent to MFC
 	 * Now obtaining frames from MFC buffer */
 
-	/* Check if cache flush command is needed */
+	/* Check if drm switch occurs */
 	if (dev->curr_ctx_is_drm != ctx->is_drm)
-		need_cache_flush = 1;
+		drm_switch = 1;
 	else
 		dev->curr_ctx_is_drm = ctx->is_drm;
 
-	mfc_debug(2, "need_cache_flush = %d, is_drm = %d\n", need_cache_flush, ctx->is_drm);
+	mfc_debug(2, "drm_switch = %d, is_drm = %d\n", drm_switch, ctx->is_drm);
 
 	if (dev->nal_q_handle) {
-		ret = __mfc_nal_q_just_run(ctx, need_cache_flush);
+		ret = __mfc_nal_q_just_run(ctx, drm_switch);
 		if (ret == 0) {
 			mfc_debug(2, "NAL_Q was handled\n");
 			return ret;
@@ -726,8 +736,37 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 		dev->continue_clock_on = false;
 	}
 
-	if (need_cache_flush)
-		mfc_cache_flush(dev, ctx->is_drm);
+	/* Predicted DRM switch, so cache flush was done by F/W */
+	if (ctx->drm_switch_prediction == MFC_DRM_SWITCH_PREDICTED) {
+		/* Prediction Success, so do not cache flush  */
+		if (drm_switch)
+			mfc_cache_flush(dev, ctx->is_drm, MFC_NO_CACHEFLUSH);
+	/* No Prediction was made, or predicted no DRM switch */
+	} else if (ctx->drm_switch_prediction == MFC_DRM_SWITCH_NOT_PREDICTED) {
+		/* Now, we know cache flush is needed */
+		if (drm_switch)
+			mfc_cache_flush(dev, ctx->is_drm, MFC_CACHEFLUSH);
+	}
+	ctx->drm_switch_prediction = MFC_DRM_SWITCH_NOT_PREDICTED;
+
+	/*
+	 * Prediction code - if another context is ready,
+	 * see if it will cause Normal<->Secure switch.
+	 * If so, lets the F/W do CACHE_FLUSH successively after a command.
+	 */
+	next_ctx_index = mfc_get_next_ctx(dev);
+	if (next_ctx_index >= 0) {
+		next_ctx = dev->ctx[next_ctx_index];
+		/* Next ctx causes Normal<->Secure switch */
+		if (ctx->is_drm != next_ctx->is_drm) {
+			next_ctx->drm_switch_prediction =
+				MFC_DRM_SWITCH_PREDICTED;
+			dev->cache_flush_flag = 1;
+		} else {
+			next_ctx->drm_switch_prediction =
+				MFC_DRM_SWITCH_NOT_PREDICTED;
+		}
+	}
 
 	if (ctx->type == MFCINST_DECODER) {
 		ret = __mfc_just_run_dec(ctx);
@@ -739,6 +778,16 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 	}
 
 	if (ret) {
+		/*
+		 * Cancel switch prediction for next context(if it exists),
+		 * and clear the reserved F/W cache flush
+		 */
+		if (next_ctx) {
+			next_ctx->drm_switch_prediction =
+				MFC_DRM_SWITCH_NOT_PREDICTED;
+			dev->cache_flush_flag = 0;
+		}
+
 		/* Check again the ctx condition and clear work bits
 		 * if ctx is not available. */
 		if (mfc_ctx_ready_clear_bit(ctx, &dev->work_bits) == 0)

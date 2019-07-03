@@ -197,6 +197,16 @@ enum mfc_vb_flag {
 	MFC_FLAG_LAST_FRAME		= 31,
 };
 
+enum mfc_do_cache_flush {
+	MFC_NO_CACHEFLUSH		= 0,
+	MFC_CACHEFLUSH			= 1,
+};
+
+enum mfc_drm_switch_prediction {
+	MFC_DRM_SWITCH_NOT_PREDICTED	= 0,
+	MFC_DRM_SWITCH_PREDICTED	= 1,
+};
+
 struct mfc_ctx;
 
 enum mfc_debug_cause {
@@ -214,7 +224,7 @@ enum mfc_debug_cause {
 	MFC_CAUSE_FAIL_WAKEUP			= 10,
 	MFC_CAUSE_FAIL_RISC_ON			= 11,
 	MFC_CAUSE_FAIL_DPB_FLUSH		= 12,
-	MFC_CAUSE_FAIL_CHACHE_FLUSH		= 13,
+	MFC_CAUSE_FAIL_CACHE_FLUSH		= 13,
 	/* last information */
 	MFC_LAST_INFO_BLACK_BAR                 = 26,
 	MFC_LAST_INFO_NAL_QUEUE                 = 27,
@@ -874,6 +884,7 @@ struct mfc_dev {
 	/* for DRM */
 	int curr_ctx_is_drm;
 	int num_drm_inst;
+	int cache_flush_flag;
 	struct mfc_special_buf fw_buf;
 	struct mfc_special_buf drm_fw_buf;
 
@@ -1595,6 +1606,7 @@ struct mfc_ctx {
 
 	/* for DRM */
 	int is_drm;
+	enum mfc_drm_switch_prediction drm_switch_prediction;
 
 	int is_dpb_realloc;
 	enum mfc_dec_wait_state wait_state;

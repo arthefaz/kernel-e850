@@ -189,6 +189,30 @@ int mfc_get_new_ctx(struct mfc_dev *dev)
 	return new_ctx_index;
 }
 
+int mfc_get_next_ctx(struct mfc_dev *dev)
+{
+	unsigned long wflags;
+	int curr_ctx_index = dev->curr_ctx;
+	int next_ctx_index = (curr_ctx_index + 1) % MFC_NUM_CONTEXTS;
+
+	spin_lock_irqsave(&dev->work_bits.lock, wflags);
+
+	mfc_debug_dev(2, "Current context: %d (bits %08lx)\n",
+			dev->curr_ctx, dev->work_bits.bits);
+
+	while (!test_bit(next_ctx_index, &dev->work_bits.bits)) {
+		next_ctx_index = (next_ctx_index + 1) % MFC_NUM_CONTEXTS;
+		if (next_ctx_index == curr_ctx_index) {
+			/* No other context to run */
+			spin_unlock_irqrestore(&dev->work_bits.lock, wflags);
+			return -EAGAIN;
+		}
+	}
+
+	spin_unlock_irqrestore(&dev->work_bits.lock, wflags);
+	return next_ctx_index;
+}
+
 int __mfc_dec_ctx_ready_set_bit(struct mfc_ctx *ctx, struct mfc_bits *data, bool set)
 {
 	struct mfc_dev *dev = ctx->dev;

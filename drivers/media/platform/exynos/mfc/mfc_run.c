@@ -211,7 +211,7 @@ int mfc_run_sleep(struct mfc_dev *dev)
 	mfc_pm_clock_on(dev);
 
 	if (need_cache_flush)
-		mfc_cache_flush(dev, ctx->is_drm);
+		mfc_cache_flush(dev, ctx->is_drm, MFC_CACHEFLUSH);
 
 	mfc_cmd_sleep(dev);
 

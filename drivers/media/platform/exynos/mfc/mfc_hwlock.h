@@ -71,7 +71,7 @@ int mfc_get_hwlock_ctx(struct mfc_ctx *ctx);
 void mfc_release_hwlock_dev(struct mfc_dev *dev);
 void mfc_release_hwlock_ctx(struct mfc_ctx *ctx);
 
-void mfc_cache_flush(struct mfc_dev *dev, int is_drm);
+void mfc_cache_flush(struct mfc_dev *dev, int is_drm, enum mfc_do_cache_flush);
 
 void mfc_try_run(struct mfc_dev *dev);
 void mfc_cleanup_work_bit_and_try_run(struct mfc_ctx *ctx);
