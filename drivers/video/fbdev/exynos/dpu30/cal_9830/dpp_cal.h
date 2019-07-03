@@ -35,8 +35,8 @@ struct dpp_params_info {
 	enum decon_pixel_format format;
 	dma_addr_t addr[MAX_PLANE_ADDR_CNT];
 	enum dpp_csc_eq eq_mode;
-	int h_ratio;
-	int v_ratio;
+	u32 h_ratio;
+	u32 v_ratio;
 
 	unsigned long rcv_num;
 	enum dpp_comp_type comp_type;
