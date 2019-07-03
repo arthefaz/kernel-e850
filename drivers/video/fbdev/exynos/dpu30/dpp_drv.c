@@ -450,6 +450,12 @@ static int dpp_check_limitation(struct dpp_device *dpp, struct dpp_params_info *
 		return -EINVAL;
 	}
 
+	if (p->is_comp && (p->comp_type == COMP_TYPE_SBWC)) {
+		dpp_err("Not support AFBC & SBWC at the same time in DPP%d\n",
+			dpp->id);
+		return -EINVAL;
+	}
+
 	if (p->is_block && p->is_scale) {
 		dpp_err("Not support [BLOCK+SCALE] at the same time in DPP%d\n",
 			dpp->id);
