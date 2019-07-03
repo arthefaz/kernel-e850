@@ -1341,25 +1341,27 @@ static int __mfc_itmon_notifier(struct notifier_block *nb, unsigned long action,
 	struct itmon_notifier *itmon_info = nb_data;
 	int is_mfc_itmon = 0, is_master = 0;
 	int is_mmcache_itmon = 0;
+	int ret = NOTIFY_OK;
 
 	dev = container_of(nb, struct mfc_dev, itmon_nb);
 
 	if (IS_ERR_OR_NULL(itmon_info))
-		return NOTIFY_DONE;
+		return ret;
 
 	/* print dump if it is an MFC ITMON error */
 	if (itmon_info->port &&
 			strncmp("MFC", itmon_info->port, sizeof("MFC") - 1) == 0) {
-		if (itmon_info->master &&
+		is_mfc_itmon = 1;
+		is_master = 1;
+	} else if (itmon_info->master &&
 			strncmp("MFC", itmon_info->master, sizeof("MFC") - 1) == 0) {
-			is_mfc_itmon = 1;
-			is_master = 1;
-		}
+		is_mfc_itmon = 1;
+		is_master = 1;
 	} else if (itmon_info->dest &&
 			strncmp("MFC", itmon_info->dest, sizeof("MFC") - 1) == 0) {
 		is_mfc_itmon = 1;
 		is_master = 0;
-	} else if (itmon_info->port &&
+	} else if (itmon_info->port && dev->has_mmcache &&
 			strncmp("M-CACHE", itmon_info->port, sizeof("M-CACHE") - 1) == 0) {
 		is_mmcache_itmon = 1;
 		is_master = 1;
@@ -1382,8 +1384,9 @@ static int __mfc_itmon_notifier(struct notifier_block *nb, unsigned long action,
 		}
 		dev_err(dev->device, "mfc_itmon_notifier: %s -\n", is_mfc_itmon ? "MFC" : "MMCACHE");
 		dev->itmon_notified = 1;
+		ret = NOTIFY_BAD;
 	}
-	return NOTIFY_BAD;
+	return ret;
 }
 #endif
 
