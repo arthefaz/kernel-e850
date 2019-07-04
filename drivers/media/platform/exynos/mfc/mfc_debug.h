@@ -29,6 +29,7 @@ extern unsigned int mmcache_dump;
 extern unsigned int mmcache_disable;
 extern unsigned int llc_disable;
 extern unsigned int perf_boost_mode;
+extern unsigned int drm_predict_disable;
 extern unsigned int reg_test;
 
 #define mfc_debug(level, fmt, args...)				\

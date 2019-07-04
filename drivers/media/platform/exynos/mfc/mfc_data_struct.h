@@ -392,6 +392,7 @@ struct mfc_debugfs {
 	struct dentry *mmcache_disable;
 	struct dentry *llc_disable;
 	struct dentry *perf_boost_mode;
+	struct dentry *drm_predict_disable;
 };
 
 /**

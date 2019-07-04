@@ -736,35 +736,44 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 		dev->continue_clock_on = false;
 	}
 
-	/* Predicted DRM switch, so cache flush was done by F/W */
-	if (ctx->drm_switch_prediction == MFC_DRM_SWITCH_PREDICTED) {
-		/* Prediction Success, so do not cache flush  */
-		if (drm_switch)
-			mfc_cache_flush(dev, ctx->is_drm, MFC_NO_CACHEFLUSH);
-	/* No Prediction was made, or predicted no DRM switch */
-	} else if (ctx->drm_switch_prediction == MFC_DRM_SWITCH_NOT_PREDICTED) {
-		/* Now, we know cache flush is needed */
+	if (drm_predict_disable) {
 		if (drm_switch)
 			mfc_cache_flush(dev, ctx->is_drm, MFC_CACHEFLUSH);
-	}
-	ctx->drm_switch_prediction = MFC_DRM_SWITCH_NOT_PREDICTED;
+	} else {
+		/* Predicted DRM switch, so cache flush was done by F/W */
+		if (ctx->drm_switch_prediction
+				== MFC_DRM_SWITCH_PREDICTED) {
+			/* Prediction Success, so do not cache flush  */
+			if (drm_switch)
+				mfc_cache_flush(dev, ctx->is_drm,
+						MFC_NO_CACHEFLUSH);
+		/* No Prediction was made, or predicted no DRM switch */
+		} else if (ctx->drm_switch_prediction
+				== MFC_DRM_SWITCH_NOT_PREDICTED) {
+			/* Now, we know cache flush is needed */
+			if (drm_switch)
+				mfc_cache_flush(dev, ctx->is_drm,
+						MFC_CACHEFLUSH);
+		}
+		ctx->drm_switch_prediction = MFC_DRM_SWITCH_NOT_PREDICTED;
 
-	/*
-	 * Prediction code - if another context is ready,
-	 * see if it will cause Normal<->Secure switch.
-	 * If so, lets the F/W do CACHE_FLUSH successively after a command.
-	 */
-	next_ctx_index = mfc_get_next_ctx(dev);
-	if (next_ctx_index >= 0) {
-		next_ctx = dev->ctx[next_ctx_index];
-		/* Next ctx causes Normal<->Secure switch */
-		if (ctx->is_drm != next_ctx->is_drm) {
-			next_ctx->drm_switch_prediction =
-				MFC_DRM_SWITCH_PREDICTED;
-			dev->cache_flush_flag = 1;
-		} else {
-			next_ctx->drm_switch_prediction =
-				MFC_DRM_SWITCH_NOT_PREDICTED;
+		/*
+		 * Prediction code - if another context is ready,
+		 * see if it will cause Normal<->Secure switch.
+		 * If so, let F/W do CACHE_FLUSH successively after a command.
+		 */
+		next_ctx_index = mfc_get_next_ctx(dev);
+		if (next_ctx_index >= 0) {
+			next_ctx = dev->ctx[next_ctx_index];
+			/* Next ctx causes Normal<->Secure switch */
+			if (ctx->is_drm != next_ctx->is_drm) {
+				next_ctx->drm_switch_prediction =
+					MFC_DRM_SWITCH_PREDICTED;
+				dev->cache_flush_flag = 1;
+			} else {
+				next_ctx->drm_switch_prediction =
+					MFC_DRM_SWITCH_NOT_PREDICTED;
+			}
 		}
 	}
 
@@ -778,14 +787,16 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 	}
 
 	if (ret) {
-		/*
-		 * Cancel switch prediction for next context(if it exists),
-		 * and clear the reserved F/W cache flush
-		 */
-		if (next_ctx) {
-			next_ctx->drm_switch_prediction =
-				MFC_DRM_SWITCH_NOT_PREDICTED;
-			dev->cache_flush_flag = 0;
+		if (!drm_predict_disable) {
+			/*
+			 * Cancel switch prediction for next context(if exists),
+			 * and clear the reserved F/W cache flush
+			 */
+			if (next_ctx) {
+				next_ctx->drm_switch_prediction =
+					MFC_DRM_SWITCH_NOT_PREDICTED;
+				dev->cache_flush_flag = 0;
+			}
 		}
 
 		/* Check again the ctx condition and clear work bits

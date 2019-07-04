@@ -33,6 +33,7 @@ unsigned int mmcache_dump;
 unsigned int mmcache_disable;
 unsigned int llc_disable;
 unsigned int perf_boost_mode;
+unsigned int drm_predict_disable;
 unsigned int reg_test;
 
 static int __mfc_info_show(struct seq_file *s, void *unused)
@@ -282,4 +283,6 @@ void mfc_init_debugfs(struct mfc_dev *dev)
 			0644, debugfs->root, &llc_disable);
 	debugfs->perf_boost_mode = debugfs_create_u32("perf_boost_mode",
 			0644, debugfs->root, &perf_boost_mode);
+	debugfs->drm_predict_disable = debugfs_create_u32("drm_predict_disable",
+			0644, debugfs->root, &drm_predict_disable);
 }
