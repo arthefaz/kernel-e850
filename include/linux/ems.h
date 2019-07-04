@@ -41,10 +41,16 @@ extern void exynos_post_init_entity_util_avg(struct sched_entity *se);
 /*
  * energy model
  */
+enum {
+	STATES_FREQ = 0,
+	STATES_PMQOS,
+	NUM_OF_REQUESTS,
+};
 extern void init_sched_energy_table(struct cpumask *cpus, int table_size,
 				unsigned long *f_table, unsigned int *v_table,
 				int max_f, int min_f);
-extern void update_capacity_qos(struct cpumask *cpus, unsigned long freq, unsigned long max);
+extern void rebuild_sched_energy_table(struct cpumask *cpus, int clipped_freq,
+						int max_freq, int type);
 
 
 /*
@@ -121,8 +127,8 @@ static inline void exynos_post_init_entity_util_avg(struct sched_entity *se) { }
 static inline void init_sched_energy_table(struct cpumask *cpus, int table_size,
 				unsigned long *f_table, unsigned int *v_table,
 				int max_f, int min_f) { }
-static inline void update_capacity_qos(struct cpumask *cpus, unsigned long freq, unsigned long max) { }
-
+static inline void reconstruct_sched_energy_table_qos(struct cpumask *cpus,
+					int clipped_freq, int max_freq) { }
 
 /*
  * multi load

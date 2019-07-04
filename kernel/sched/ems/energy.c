@@ -42,6 +42,8 @@ struct energy_table {
 	struct energy_state *states;
 
 	unsigned int nr_states;
+	unsigned int nr_states_orig;
+	unsigned int nr_states_requests[NUM_OF_REQUESTS];
 };
 static DEFINE_PER_CPU(struct energy_table, energy_table);
 
@@ -360,12 +362,6 @@ late_initcall(init_ce_weight);
  * : Capacity of cpu. It is same as cpu_capacity_orig normally but it can be
  *   changed by CPU frequency restriction.
  *
- * cpu_capacity_cpufreq{_s}
- * : Capacity of cpu restricted by CPUFreq.
- *
- * cpu_capacity_qos{_s}
- * : Capacity of cpu restricted by PM QoS.
- *
  * cpu_capacity_ratio{_s}
  * : Ratio between capacity of sse and uss. It is used for calculating
  *   cpu utilization in Multi Load for optimization.
@@ -375,12 +371,6 @@ static DEFINE_PER_CPU(unsigned long, cpu_capacity_orig_s) = SCHED_CAPACITY_SCALE
 
 static DEFINE_PER_CPU(unsigned long, cpu_capacity) = SCHED_CAPACITY_SCALE;
 static DEFINE_PER_CPU(unsigned long, cpu_capacity_s) = SCHED_CAPACITY_SCALE;
-
-static DEFINE_PER_CPU(unsigned long, cpu_capacity_freq) = SCHED_CAPACITY_SCALE;
-static DEFINE_PER_CPU(unsigned long, cpu_capacity_freq_s) = SCHED_CAPACITY_SCALE;
-
-static DEFINE_PER_CPU(unsigned long, cpu_capacity_qos) = SCHED_CAPACITY_SCALE;
-static DEFINE_PER_CPU(unsigned long, cpu_capacity_qos_s) = SCHED_CAPACITY_SCALE;
 
 static DEFINE_PER_CPU(unsigned long, cpu_capacity_ratio) = SCHED_CAPACITY_SCALE;
 static DEFINE_PER_CPU(unsigned long, cpu_capacity_ratio_s) = SCHED_CAPACITY_SCALE;
@@ -401,88 +391,6 @@ unsigned long capacity_ratio(int cpu, int sse)
 	return sse ? per_cpu(cpu_capacity_ratio_s, cpu) : per_cpu(cpu_capacity_ratio, cpu);
 }
 
-static inline void __update_capacity(int cpu)
-{
-	unsigned long capacity, ratio;
-
-	/* update USS capacity */
-	capacity = min(per_cpu(cpu_capacity_freq, cpu),
-		       per_cpu(cpu_capacity_qos, cpu));
-	per_cpu(cpu_capacity, cpu) = capacity;
-	topology_set_cpu_scale(cpu, per_cpu(cpu_capacity, cpu));
-
-	/* update SSE capacity */
-	capacity = min(per_cpu(cpu_capacity_freq_s, cpu),
-		       per_cpu(cpu_capacity_qos_s, cpu));
-	per_cpu(cpu_capacity_s, cpu) = capacity;
-
-	/* update capacity ratio */
-	ratio = (per_cpu(cpu_capacity, cpu) << SCHED_CAPACITY_SHIFT);
-	ratio /= per_cpu(cpu_capacity_s, cpu);
-	per_cpu(cpu_capacity_ratio, cpu) = ratio;
-
-	ratio = (per_cpu(cpu_capacity_s, cpu) << SCHED_CAPACITY_SHIFT);
-	ratio /= per_cpu(cpu_capacity, cpu);
-	per_cpu(cpu_capacity_ratio_s, cpu) = ratio;
-}
-
-#define RESTRICT_CAPACITY_CPUFREQ	1
-#define RESTRICT_CAPACITY_PMQOS		2
-
-#define scale_capacity(cap, max)	((cap * max) >> SCHED_CAPACITY_SHIFT)
-static void
-update_capacity(struct cpumask *mask,
-			unsigned long clipped_freq,
-			unsigned long max_freq,
-			int type)
-{
-	unsigned long max_scale;
-	int cpu;
-
-	max_scale = (clipped_freq << SCHED_CAPACITY_SHIFT);
-	max_scale /= max_freq;
-
-	for_each_cpu(cpu, mask) {
-		unsigned long new_capacity;
-		unsigned long *capacity, *capacity_s;
-
-		if (type == RESTRICT_CAPACITY_CPUFREQ) {
-			capacity = &per_cpu(cpu_capacity_freq, cpu);
-			capacity_s = &per_cpu(cpu_capacity_freq_s, cpu);
-		} else if (type == RESTRICT_CAPACITY_PMQOS) {
-			capacity = &per_cpu(cpu_capacity_qos, cpu);
-			capacity_s = &per_cpu(cpu_capacity_qos_s, cpu);
-		} else
-			break;
-
-		new_capacity = per_cpu(cpu_capacity_orig, cpu) * max_scale;
-		new_capacity >>= SCHED_CAPACITY_SHIFT;
-		*capacity = new_capacity;
-
-		new_capacity = per_cpu(cpu_capacity_orig_s, cpu) * max_scale;
-		new_capacity >>= SCHED_CAPACITY_SHIFT;
-		*capacity_s = new_capacity;
-
-		__update_capacity(cpu);
-	}
-}
-
-static void
-update_capacity_freq(struct cpumask *cpus,
-			unsigned long clipped_freq,
-			unsigned long max_freq)
-{
-	update_capacity(cpus, clipped_freq, max_freq, RESTRICT_CAPACITY_CPUFREQ);
-}
-
-void
-update_capacity_qos(struct cpumask *cpus,
-			unsigned long clipped_freq,
-			unsigned long max_freq)
-{
-	update_capacity(cpus, clipped_freq, max_freq, RESTRICT_CAPACITY_PMQOS);
-}
-
 static int sched_cpufreq_policy_callback(struct notifier_block *nb,
 					unsigned long event, void *data)
 {
@@ -497,8 +405,8 @@ static int sched_cpufreq_policy_callback(struct notifier_block *nb,
 	 * overutil condition changes accordingly, so the cpu capcacity is updated
 	 * whenever policy is changed.
 	 */
-	update_capacity_freq(policy->related_cpus,
-		policy->max, policy->cpuinfo.max_freq);
+	rebuild_sched_energy_table(policy->related_cpus, policy->max,
+					policy->cpuinfo.max_freq, STATES_FREQ);
 
 	return NOTIFY_OK;
 }
@@ -689,6 +597,160 @@ void init_sched_energy_table(struct cpumask *cpus, int table_size,
 	}
 
 	topology_update();
+}
+
+static DEFINE_SPINLOCK(rebuilding_lock);
+
+static inline int
+find_nr_states(struct energy_table *table, int clipped_freq)
+{
+	int i;
+
+	for (i = table->nr_states_orig - 1; i >= 0; i--) {
+		if (table->states[i].frequency <= clipped_freq)
+			break;
+	}
+
+	return i + 1;
+}
+
+static inline int
+find_min_nr_states(struct energy_table *table)
+{
+	int i, min = table->nr_states_orig;
+
+	for (i = 0; i < NUM_OF_REQUESTS; i++) {
+		if (table->nr_states_requests[i] < min)
+			min = table->nr_states_requests[i];
+	}
+
+	return min;
+}
+
+static bool
+update_nr_states(struct cpumask *cpus, int clipped_freq, int max_freq, int type)
+{
+	struct energy_table *table, *cursor;
+	int cpu, nr_states, nr_states_request;
+
+	if (type >= NUM_OF_REQUESTS)
+		return false;
+
+	table = &per_cpu(energy_table, cpumask_any(cpus));
+	if (!table || !table->states)
+		return false;
+
+	/* find new nr_states for requester */
+	nr_states_request = find_nr_states(table, clipped_freq);
+	if (!nr_states_request)
+		return false;
+
+	for_each_cpu(cpu, cpus) {
+		cursor = &per_cpu(energy_table, cpu);
+		cursor->nr_states_requests[type] = nr_states_request;
+	}
+
+	/*
+	 * find min nr_states among nr_states of requesters
+	 * If nr_states in energy table is not changed, skip rebuilding.
+	 */
+	nr_states = find_min_nr_states(table);
+	if (nr_states == table->nr_states)
+		return false;
+
+	/* Update clipped state of all cpus which are clipped */
+	for_each_cpu(cpu, cpus) {
+		cursor = &per_cpu(energy_table, cpu);
+		cursor->nr_states = nr_states;
+	}
+
+	return true;
+}
+
+static void
+__rebuild_sched_energy_table(struct cpumask *cpus,
+				int clipped_freq,
+				int max_freq, int type)
+{
+	struct energy_table *table;
+	int cpu, mips, max_mips = 0;
+	unsigned long freq, max_mips_freq = 0;
+
+	/*
+	 * Find fastest cpu among the cpu to which the energy table is allocated.
+	 * The mips and max frequency of fastest cpu are needed to calculate
+	 * capacity.
+	 */
+	for_each_possible_cpu(cpu) {
+		table = &per_cpu(energy_table, cpu);
+		if (!table->states)
+			continue;
+
+		freq = table->states[table->nr_states - 1].frequency;
+		mips = max(table->mips, table->mips_s);
+		if (mips * freq > max_mips * max_mips_freq) {
+			max_mips = mips;
+			max_mips_freq = freq;
+		}
+	}
+
+	/*
+	 * Calculate and fill capacity table.
+	 * Recalculate the capacity whenever frequency domain changes because
+	 * the fastest cpu may have changed and the capacity needs to be
+	 * recalculated.
+	 */
+	for_each_possible_cpu(cpu) {
+		struct sched_domain *sd;
+		int last_state;
+		unsigned long ratio;
+
+		table = &per_cpu(energy_table, cpu);
+		if (!table->states)
+			continue;
+
+		fill_cap_table(table, max_mips, max_mips_freq);
+
+		last_state = table->nr_states - 1;
+
+		/* update capacity */
+		per_cpu(cpu_capacity_s, cpu) = table->states[last_state].cap_s;
+		per_cpu(cpu_capacity, cpu) = table->states[last_state].cap;
+		topology_set_cpu_scale(cpu, table->states[last_state].cap);
+
+		/* update capacity ratio */
+		ratio = (per_cpu(cpu_capacity, cpu) << SCHED_CAPACITY_SHIFT);
+		ratio /= per_cpu(cpu_capacity_s, cpu);
+		per_cpu(cpu_capacity_ratio, cpu) = ratio;
+
+		ratio = (per_cpu(cpu_capacity_s, cpu) << SCHED_CAPACITY_SHIFT);
+		ratio /= per_cpu(cpu_capacity, cpu);
+		per_cpu(cpu_capacity_ratio_s, cpu) = ratio;
+
+		rcu_read_lock();
+		for_each_domain(cpu, sd)
+			update_group_capacity(sd, cpu);
+		rcu_read_unlock();
+	}
+}
+
+void
+rebuild_sched_energy_table(struct cpumask *cpus,
+				int clipped_freq,
+				int max_freq, int type)
+{
+	spin_lock(&rebuilding_lock);
+
+	/*
+	 * Update nr_states in energy table depending on clipped_freq.
+	 * If there's no update, skip rebuilding energy table.
+	 */
+	if (!update_nr_states(cpus, clipped_freq, max_freq, type))
+		goto unlock;
+
+	__rebuild_sched_energy_table(cpus, clipped_freq, max_freq, type);
+unlock:
+	spin_unlock(&rebuilding_lock);
 }
 
 static int __init init_sched_energy_data(void)
