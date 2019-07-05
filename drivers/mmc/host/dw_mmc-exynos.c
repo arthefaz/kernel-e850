@@ -25,6 +25,7 @@
 #include "dw_mmc.h"
 #include "dw_mmc-pltfm.h"
 #include "dw_mmc-exynos.h"
+#include "dw_mmc-exynos-fmp.h"
 
 extern int cal_pll_mmc_set_ssc(unsigned int mfr, unsigned int mrr, unsigned int ssc_on);
 extern int cal_pll_mmc_check(void);
@@ -1160,46 +1161,6 @@ static int dw_mci_exynos_misc_control(struct dw_mci *host,
 	return ret;
 }
 
-#ifdef CONFIG_MMC_DW_EXYNOS_FMP
-static int dw_mci_exynos_crypto_engine_cfg(struct dw_mci *host,
-					   void *desc,
-					   struct mmc_data *data,
-					   struct page *page, int sector_offset, bool cmdq_enabled)
-{
-	return exynos_mmc_fmp_cfg(host, desc, data, page, sector_offset, cmdq_enabled);
-}
-
-static int dw_mci_exynos_crypto_engine_clear(struct dw_mci *host, void *desc, bool cmdq_enabled)
-{
-	return exynos_mmc_fmp_clear(host, desc, cmdq_enabled);
-}
-
-static int dw_mci_exynos_access_control_get_dev(struct dw_mci *host)
-{
-	return exynos_mmc_smu_get_dev(host);
-}
-
-static int dw_mci_exynos_access_control_sec_cfg(struct dw_mci *host)
-{
-	return exynos_mmc_smu_sec_cfg(host);
-}
-
-static int dw_mci_exynos_access_control_init(struct dw_mci *host)
-{
-	return exynos_mmc_smu_init(host);
-}
-
-static int dw_mci_exynos_access_control_abort(struct dw_mci *host)
-{
-	return exynos_mmc_smu_abort(host);
-}
-
-static int dw_mci_exynos_access_control_resume(struct dw_mci *host)
-{
-	return exynos_mmc_smu_resume(host);
-}
-#endif
-
 static const struct dw_mci_drv_data exynos_drv_data = {
 	.caps = exynos_dwmmc_caps,
 	.num_caps		= ARRAY_SIZE(exynos_dwmmc_caps),
@@ -1209,17 +1170,12 @@ static const struct dw_mci_drv_data exynos_drv_data = {
 	.execute_tuning = dw_mci_exynos_execute_tuning,
 	.hwacg_control = dw_mci_card_int_hwacg_ctrl,
 	.misc_control = dw_mci_exynos_misc_control,
-#ifdef CONFIG_MMC_DW_EXYNOS_FMP
-	.crypto_engine_cfg = dw_mci_exynos_crypto_engine_cfg,
-	.crypto_engine_clear = dw_mci_exynos_crypto_engine_clear,
-	.access_control_get_dev = dw_mci_exynos_access_control_get_dev,
-	.access_control_sec_cfg = dw_mci_exynos_access_control_sec_cfg,
-	.access_control_init = dw_mci_exynos_access_control_init,
-	.access_control_abort = dw_mci_exynos_access_control_abort,
-	.access_control_resume = dw_mci_exynos_access_control_resume,
-#endif
-
-	.ssclk_control = dw_mci_ssclk_control,
+	.crypto_engine_cfg = exynos_mmc_fmp_cfg,
+	.crypto_engine_clear = exynos_mmc_fmp_clear,
+	.crypto_engine_sec_cfg = exynos_mmc_fmp_sec_cfg,
+	.access_control_init = exynos_mmc_smu_init,
+	.access_control_abort = exynos_mmc_smu_abort,
+	.access_control_resume = exynos_mmc_smu_resume,
 };
 
 static const struct of_device_id dw_mci_exynos_match[] = {

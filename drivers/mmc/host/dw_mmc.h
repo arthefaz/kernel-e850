@@ -982,9 +982,9 @@ struct dw_mci_drv_data {
 				  void *desc,
 				  struct mmc_data *data,
 				  struct page *page, int sector_offset, bool cmdq_enabled);
-	int (*crypto_engine_clear)(struct dw_mci *host, void *desc, bool cmdq_enabled);
-	int (*access_control_get_dev)(struct dw_mci *host);
-	int (*access_control_sec_cfg)(struct dw_mci *host);
+	int (*crypto_engine_clear)(struct dw_mci *host, void *desc,
+					bool cmdq_enabled);
+	int (*crypto_engine_sec_cfg)(struct dw_mci *host);
 	int (*access_control_init)(struct dw_mci *host);
 	int (*access_control_abort)(struct dw_mci *host);
 	int (*access_control_resume)(struct dw_mci *host);

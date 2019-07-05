@@ -14,42 +14,102 @@
 #include <linux/blkdev.h>
 #include <linux/mmc/core.h>
 #include <linux/mmc/host.h>
-#include <linux/mmc/dw_mmc.h>
 #include <linux/mmc/mmc.h>
+#include <crypto/diskcipher.h>
+#include <crypto/fmp.h>
+#include <crypto/smu.h>
 
 #include "dw_mmc.h"
 #include "dw_mmc-exynos.h"
-#include "../card/queue.h"
+#include "../core/queue.h"
 
-static int check_data_equal(void *data1, void *data2)
+static inline void exynos_mmc_smu_entry0_init(struct dw_mci *host)
 {
-	return data1 == data2;
+	mci_writel(host, MPSBEGIN0, 0);
+	mci_writel(host, MPSEND0, 0xffffffff);
+	mci_writel(host, MPSLUN0, 0xff);
+	mci_writel(host, MPSCTRL0, DWMCI_MPSCTRL_BYPASS);
 }
 
-static int is_valid_bio_data(struct bio *bio)
+int exynos_mmc_smu_init(struct dw_mci *host)
 {
-	if (bio->fmp_ci.private_enc_mode < 0 ||
-			bio->fmp_ci.private_enc_mode > EXYNOS_FMP_DISK_ENC)
-		return false;
+	struct dw_mci_exynos_priv_data *priv = host->priv;
 
-	if (bio->fmp_ci.private_algo_mode < 0 ||
-			bio->fmp_ci.private_algo_mode > EXYNOS_FMP_ALGO_MODE_AES_XTS)
-		return false;
+	if (!priv || (priv->smu == SMU_ID_MAX)) {
+		exynos_mmc_smu_entry0_init(host);
+		return 0;
+	}
 
-	return true;
+	dev_info(host->dev, "%s with id:%d\n", __func__, priv->smu);
+	return exynos_smu_init(priv->smu, SMU_INIT);
 }
 
-static struct bio *is_get_bio(struct mmc_data *data, bool cmdq_enabled)
+int exynos_mmc_smu_resume(struct dw_mci *host)
+{
+	struct dw_mci_exynos_priv_data *priv = host->priv;
+	int fmp_id;
+
+	if (!priv)
+		return 0;
+
+	if (priv->smu < SMU_ID_MAX)
+		fmp_id = priv->smu;
+	else if (priv->fmp < SMU_ID_MAX)
+		fmp_id = priv->fmp;
+	else {
+		exynos_mmc_smu_entry0_init(host);
+		return 0;
+	}
+
+	dev_info(host->dev, "%s with id:%d\n", __func__, fmp_id);
+	return exynos_smu_resume(fmp_id);
+}
+
+int exynos_mmc_smu_abort(struct dw_mci *host)
+{
+	struct dw_mci_exynos_priv_data *priv = host->priv;
+
+	if (!priv || (priv->smu == SMU_ID_MAX))
+		return 0;
+
+	dev_info(host->dev, "%s with id:%d\n", __func__, priv->smu);
+	return exynos_smu_abort(priv->smu, SMU_ABORT);
+}
+
+#ifdef CONFIG_MMC_DW_EXYNOS_FMP
+int exynos_mmc_fmp_sec_cfg(struct dw_mci *host)
+{
+	struct dw_mci_exynos_priv_data *priv = host->priv;
+
+	if (!priv || (priv->fmp == SMU_ID_MAX))
+		return 0;
+
+	if (priv->fmp != SMU_EMBEDDED)
+		dev_err(host->dev, "%s is fails id:%d\n",
+				__func__, priv->fmp);
+
+
+	dev_info(host->dev, "%s with id:%d\n", __func__, priv->fmp);
+	return exynos_fmp_sec_config(priv->fmp);
+}
+
+static struct bio *get_bio(struct dw_mci *host,
+				struct mmc_data *data, bool cmdq_enabled)
 {
 	struct bio *bio = NULL;
+	struct dw_mci_exynos_priv_data *priv;
 
-	if (!data) {
-		pr_err("%s: Invalid MMC data\n", __func__);
+	if (!host || !data) {
+		pr_err("%s: Invalid MMC:%p data:%p\n", __func__, host, data);
 		return NULL;
 	}
 
+	priv = host->priv;
+	if (priv->fmp == SMU_ID_MAX)
+		return NULL;
+
 	if (cmdq_enabled) {
-#if 0 /* CMDQ is not implemented on the current kernel */
+#if 0
 		struct mmc_cmdq_req *cmdq_req;
 		struct mmc_request *mrq;
 
@@ -66,429 +126,107 @@ static struct bio *is_get_bio(struct mmc_data *data, bool cmdq_enabled)
 	} else {
 		struct mmc_queue_req *mq_rq;
 		struct mmc_blk_request *brq;
+		struct request *req;
 
 		brq = container_of(data, struct mmc_blk_request, data);
 		if (!brq)
 			return NULL;
 
 		mq_rq = container_of(brq, struct mmc_queue_req, brq);
-		if (!mq_rq || !mq_rq->req || !mq_rq->req->bio)
-			return NULL;
-		bio = mq_rq->req->bio;
+		req = mmc_queue_req_to_req(mq_rq);
 
-		if (!virt_addr_valid(bio))
-			return NULL;
+		if (virt_addr_valid(mq_rq) && virt_addr_valid(req) &&
+				virt_addr_valid(req->bio))
+			bio = req->bio;
 	}
 
-	return bio;
-}
-
-static int is_mmc_fmp_test_enabled(struct mmc_data *mmc_data,
-				struct platform_device *pdev,
-				bool cmdq_enabled)
-{
-	struct bio *bio;
-	struct exynos_fmp *fmp = dev_get_drvdata(&pdev->dev);
-
-	if (!fmp)
-		return FALSE;
-
-	bio = is_get_bio(mmc_data, cmdq_enabled);
-	if (!bio) {
-		fmp->test_mode = 0;
-		return FALSE;
-	}
-
-	if (check_data_equal((void *)bio->bi_private, (void *)fmp->test_bh)
-			&& (uint64_t)fmp->test_bh) {
-		fmp->test_mode = 1;
-		return TRUE;
-	}
-
-	fmp->test_mode = 0;
-	return FALSE;
-}
-
-static int exynos_mmc_fmp_key_size_cfg(struct fmp_crypto_setting *crypto,
-					uint32_t key_size)
-{
-	int ret = 0;
-	uint32_t size;
-
-	if (!crypto || !key_size) {
-		pr_err("%s: Invalid fmp data or size.\n", __func__);
-		ret = -EINVAL;
-		goto out;
-	}
-
-	size = key_size;
-	if (crypto->algo_mode == EXYNOS_FMP_ALGO_MODE_AES_XTS)
-		size = size >> 1;
-
-	switch (size) {
-	case FMP_KEY_SIZE_16:
-		crypto->key_size = EXYNOS_FMP_KEY_SIZE_16;
-		break;
-	case FMP_KEY_SIZE_32:
-		crypto->key_size = EXYNOS_FMP_KEY_SIZE_32;
-		break;
-	default:
-		pr_err("%s: FMP doesn't support key size %d\n", __func__, size);
-		ret = -EINVAL;
-		goto out;
-	}
-out:
-	return ret;
-}
-
-static int exynos_mmc_fmp_iv_cfg(struct fmp_crypto_setting *crypto,
-					sector_t sector,
-					int sector_offset,
-					pgoff_t page_index)
-{
-	int ret = 0;
-
-	if (!crypto) {
-		pr_err("%s: Invalid fmp data\n", __func__);
-		ret = -EINVAL;
-		goto out;
-	}
-
-	crypto->index = page_index;
-	crypto->sector = sector + sector_offset;
-out:
-	return ret;
-}
-
-static int exynos_mmc_fmp_key_cfg(struct fmp_crypto_setting *crypto,
-				unsigned char *key, unsigned long key_length)
-{
-	int ret = 0;
-
-	if (!crypto) {
-		pr_err("%s: Invalid fmp data\n", __func__);
-		ret = -EINVAL;
-		goto out;
-	}
-	memset(crypto->key, 0, FMP_MAX_KEY_SIZE);
-	memcpy(crypto->key, key, key_length);
-out:
-	return ret;
-}
-
-static int exynos_mmc_fmp_disk_cfg(struct mmc_data *mmc_data,
-				struct fmp_crypto_setting *crypto,
-				int sector_offset, bool cmdq_enabled)
-{
-	int ret = 0;
-	struct bio *bio;
-
-	if (!crypto) {
-		pr_err("%s: Invalid fmp data\n", __func__);
-		ret = -EINVAL;
-		goto err;
-	}
-
-	memset(crypto, 0, sizeof(struct fmp_crypto_setting));
-
-	crypto->enc_mode = EXYNOS_FMP_DISK_ENC;
-
-	bio = is_get_bio(mmc_data, cmdq_enabled);
-	if (!bio)
-		goto bypass_out;
-
-	if ((bio->fmp_ci.private_algo_mode == EXYNOS_FMP_BYPASS_MODE) ||
-			/* direct IO case */
-			(bio->fmp_ci.private_enc_mode == EXYNOS_FMP_FILE_ENC))
-		goto bypass_out;
-
-	if (!is_valid_bio_data(bio))
-		goto bypass_out;
-
-	if (!bio->fmp_ci.key) {
-		pr_err("%s: Invalid disk key\n", __func__);
-		ret = -EINVAL;
-		goto err;
-	}
-
-	crypto->algo_mode = bio->fmp_ci.private_algo_mode;
-	ret = exynos_mmc_fmp_key_size_cfg(crypto, bio->fmp_ci.key_length);
-	if (ret)
-		goto bypass_out;
-
-	ret = exynos_mmc_fmp_iv_cfg(crypto, bio->bi_iter.bi_sector,
-					sector_offset, 0);
-	if (ret) {
-		pr_err("%s: Fail to configure fmp iv. ret(%d)\n",
-				__func__, ret);
-		ret = -EINVAL;
-		goto err;
-	}
-err:
-	return ret;
-bypass_out:
-	crypto->algo_mode = EXYNOS_FMP_BYPASS_MODE;
-	ret = 0;
-
-	return ret;
-}
-
-static int exynos_mmc_fmp_direct_io_cfg(struct mmc_data *mmc_data,
-				struct fmp_crypto_setting *crypto,
-				int sector_offset, bool cmdq_enabled)
-{
-	int ret = 0;
-	struct bio *bio;
-
-	if (!crypto) {
-		pr_err("%s: Invalid fmp data\n", __func__);
-		ret = -EINVAL;
-		goto err;
-	}
-
-	memset(crypto, 0, sizeof(struct fmp_crypto_setting));
-
-	crypto->enc_mode = EXYNOS_FMP_FILE_ENC;
-
-	bio = is_get_bio(mmc_data, cmdq_enabled);
-	if (!bio || (bio->fmp_ci.private_algo_mode == EXYNOS_FMP_BYPASS_MODE))
-		goto bypass_out;
-
-	if (!is_valid_bio_data(bio))
-		goto bypass_out;
-
-	crypto->algo_mode = bio->fmp_ci.private_algo_mode;
-	ret = exynos_mmc_fmp_key_size_cfg(crypto, bio->fmp_ci.key_length);
-	if (ret)
-		goto bypass_out;
-
-	ret = exynos_mmc_fmp_iv_cfg(crypto, bio->bi_iter.bi_sector,
-					sector_offset, 0);
-	if (ret) {
-		pr_err("%s: Fail to configure fmp iv. ret(%d)\n",
-				__func__, ret);
-		ret = -EINVAL;
-		goto err;
-	}
-
-	ret = exynos_mmc_fmp_key_cfg(crypto, bio->fmp_ci.key,
-					bio->fmp_ci.key_length);
-	if (ret) {
-		pr_err("%s: Fail to configure fmp key. ret(%d)\n",
-				__func__, ret);
-		ret = -EINVAL;
-		goto err;
-	}
-err:
-	return ret;
-bypass_out:
-	crypto->algo_mode = EXYNOS_FMP_BYPASS_MODE;
-	ret = 0;
-	return ret;
-}
-
-static int exynos_mmc_fmp_file_cfg(struct mmc_data *mmc_data,
-				struct page *page,
-				struct fmp_crypto_setting *crypto,
-				int sector_offset, bool cmdq_enabled)
-{
-	int ret = 0;
-	struct bio *bio;
-	pgoff_t page_index;
-	struct _fmp_ci *ci;
-
-	if (!crypto) {
-		pr_err("%s: Invalid fmp data\n", __func__);
-		ret = -EINVAL;
-		goto err;
-	}
-
-	memset(crypto, 0, sizeof(struct fmp_crypto_setting));
-
-	crypto->enc_mode = EXYNOS_FMP_FILE_ENC;
-
-	if (!page || !page->mapping || PageAnon(page))
-		goto bypass_out;
-
-	bio = is_get_bio(mmc_data, cmdq_enabled);
-	if (!bio || !virt_addr_valid(bio))
-		goto bypass_out;
-
-	ci = &page->mapping->fmp_ci;
-	if (ci->private_algo_mode == EXYNOS_FMP_BYPASS_MODE)
-		goto bypass_out;
-
-	crypto->algo_mode = ci->private_algo_mode;
-	ret = exynos_mmc_fmp_key_size_cfg(crypto, ci->key_length);
-	if (ret)
-		goto bypass_out;
-
-	ret = exynos_mmc_fmp_iv_cfg(crypto, bio->bi_iter.bi_sector,
-					sector_offset, page_index);
-	if (ret) {
-		pr_err("%s: Fail to configure fmp iv. ret(%d)\n",
-				__func__, ret);
-		ret = -EINVAL;
-		goto err;
-	}
-
-	ret = exynos_mmc_fmp_key_cfg(crypto, ci->key, ci->key_length);
-	if (ret) {
-		pr_err("%s: Fail to configure fmp key. ret(%d)\n",
-				__func__, ret);
-		ret = -EINVAL;
-		goto err;
-	}
-err:
-	return ret;
-bypass_out:
-	crypto->algo_mode = EXYNOS_FMP_BYPASS_MODE;
-	ret = 0;
-	return ret;
-}
-
-int exynos_mmc_fmp_host_set_device(struct platform_device *host_pdev,
-				struct platform_device *pdev,
-				struct exynos_fmp_variant_ops *fmp_vops)
-{
-	struct dw_mci *host;
-	struct dw_mci_exynos_priv_data *priv;
-
-	if (!host_pdev || !pdev || !fmp_vops) {
-		pr_err("%s: Fail to set device for fmp host\n", __func__);
-		return -EINVAL;
-	}
-
-	host = dev_get_drvdata(&host_pdev->dev);
-	if (!host) {
-		pr_err("%s: Invalid Host device\n", __func__);
-		return -ENODEV;
-	}
-
-	priv = host->priv;
-	if (!priv) {
-		pr_err("%s: Invalid Host device private data\n", __func__);
-		return -ENODEV;
-	}
-
-	priv->fmp.pdev = pdev;
-	priv->fmp.vops = fmp_vops;
-
-	return 0;
-}
-EXPORT_SYMBOL(exynos_mmc_fmp_host_set_device);
-
-static inline void exynos_mmc_fmp_bypass(void *desc, bool cmdq_enabled)
-{
-	if (cmdq_enabled) {
-		SET_CMDQ_FAS((struct fmp_table_setting *)desc, 0);
-		SET_CMDQ_DAS((struct fmp_table_setting *)desc, 0);
-	} else {
-		SET_FAS((struct fmp_table_setting *)desc, 0);
-		SET_DAS((struct fmp_table_setting *)desc, 0);
-	}
+	if (virt_addr_valid(bio))
+		return bio;
+	else
+		return NULL;
 }
 
 int exynos_mmc_fmp_cfg(struct dw_mci *host,
-				void *desc,
-				struct mmc_data *mmc_data,
-				struct page *page,
-				int sector_offset,
-				bool cmdq_enabled)
+		       void *desc,
+		       struct mmc_data *mmc_data,
+		       struct page *page, int sector_offset, bool cmdq_enabled)
 {
-	int ret;
-	struct fmp_data_setting data;
-	struct dw_mci_exynos_priv_data *priv;
+	struct fmp_request req;
+	struct bio *bio = get_bio(host, mmc_data, cmdq_enabled);
+	struct crypto_diskcipher *dtfm;
+	sector_t iv;
 
-	if (!host) {
-		pr_err("%s: Invalid Host device\n", __func__);
-		return -ENODEV;
-	}
+	if (!bio)
+		goto no_crypto;
 
-	priv = host->priv;
-	if (!priv || !priv->fmp.pdev) {
-		exynos_mmc_fmp_bypass(desc, cmdq_enabled);
+	/* fill fmp_data_setting */
+	dtfm = crypto_diskcipher_get(bio);
+	if (dtfm) {
+		iv = bio->bi_iter.bi_sector + (sector_t)sector_offset;
+		req.table = desc;
+		req.cmdq_enabled = 0;
+		req.iv = &iv;
+		req.ivsize = sizeof(iv);
+
+#ifdef CONFIG_EXYNOS_FMP_FIPS
+		/* check fips flag. use fmp without diskcipher */
+		if (!dtfm->algo) {
+			if (exynos_fmp_crypt((void *)dtfm, &req))
+				goto no_crypto;
+			return 0;
+		}
+#endif
+		if (crypto_diskcipher_set_crypt(dtfm, &req)) {
+			pr_warn("%s: fails to set crypt\n", __func__);
+			return -EINVAL;
+		}
 		return 0;
 	}
-
-	ret = is_mmc_fmp_test_enabled(mmc_data, priv->fmp.pdev, cmdq_enabled);
-	if (ret == TRUE)
-		goto out_test;
-
-	ret = exynos_mmc_fmp_disk_cfg(mmc_data, &data.disk, sector_offset, cmdq_enabled);
-	if (ret) {
-		pr_err("%s: Fail to configure FMP Disk Encryption. ret(%d)\n",
-				__func__, ret);
-		return -EINVAL;
-	}
-
-	if (data.disk.algo_mode != EXYNOS_FMP_BYPASS_MODE)
-		goto file_cfg;
-
-	ret = exynos_mmc_fmp_direct_io_cfg(mmc_data, &data.file,
-			sector_offset, cmdq_enabled);
-	if (ret) {
-		pr_err("%s: Fail to configure FMP direct IO File Encryption. ret(%d)\n",
-				__func__, ret);
-		return -EINVAL;
-	}
-
-	if (data.file.algo_mode != EXYNOS_FMP_BYPASS_MODE)
-		goto out;
-
-file_cfg:
-	ret = exynos_mmc_fmp_file_cfg(mmc_data, page, &data.file,
-			sector_offset, cmdq_enabled);
-	if (ret) {
-		pr_err("%s: Fail to configure FMP File Encryption. ret(%d)\n",
-				__func__, ret);
-		return -EINVAL;
-	}
-
-out:
-	data.mapping = page->mapping;
-out_test:
-	data.table = (struct fmp_table_setting *)desc;
-	data.cmdq_enabled = cmdq_enabled;
-	return priv->fmp.vops->config(priv->fmp.pdev, &data);
+no_crypto:
+	exynos_fmp_bypass(desc, cmdq_enabled);
+	return 0;
 }
-EXPORT_SYMBOL(exynos_mmc_fmp_cfg);
 
 int exynos_mmc_fmp_clear(struct dw_mci *host, void *desc, bool cmdq_enabled)
 {
 	int ret = 0;
-	struct dw_mci_exynos_priv_data *priv;
-	struct fmp_data_setting data;
+	struct bio *bio = get_bio(host, host->data, cmdq_enabled);
+	struct fmp_request req;
+	struct crypto_diskcipher *dtfm;
+	struct fmp_crypto_info *ci;
 
-	if (!host) {
-		pr_err("%s: Invalid Host device\n", __func__);
-		ret = -ENODEV;
-		goto err;
-	}
+	if (!bio)
+		return 0;
 
-	priv = host->priv;
-	if (!priv || !priv->fmp.pdev) {
-		ret = 0;
-		goto err;
-	}
+	dtfm = crypto_diskcipher_get(bio);
+	if (dtfm) {
+		req.table = desc;
+#ifdef CONFIG_EXYNOS_FMP_FIPS
+		/* check fips flag. use fmp without diskcipher */
+		if (!dtfm->algo) {
+			ci = (struct fmp_crypto_info *)dtfm;
 
-	data.table = (struct fmp_table_setting *)desc;
-	if (cmdq_enabled) {
-		if (!GET_CMDQ_FAS(data.table))
+			if (ci && (ci->enc_mode == EXYNOS_FMP_FILE_ENC))
+				ret = exynos_fmp_clear((void *)dtfm, &req);
+			if (ret)
+				pr_err("%s: Fail to clear desc for fips (%d)\n",
+					__func__, ret);
 			return ret;
-	} else {
-		if (!GET_FAS(data.table))
-			return ret;
+		}
+#endif
+		/* clear key on descrptor */
+		ci = crypto_tfm_ctx(crypto_diskcipher_tfm(dtfm));
+		if (ci) {
+			if (ci->enc_mode == EXYNOS_FMP_FILE_ENC)
+				ret = crypto_diskcipher_clear_crypt(dtfm, &req);
+		} else {
+			pr_err("%s: Fail to get ci (%p)\n", __func__, ci);
+			return -EINVAL;
+		}
 	}
 
-	ret = priv->fmp.vops->clear(priv->fmp.pdev, &data);
-	if (ret) {
-		pr_err("%s: Fail to clear FMP desc (%d)\n",
-			__func__, ret);
-		ret = -EINVAL;
-		goto err;
-	}
-err:
+	if (ret)
+		pr_err("%s: Fail to clear desc (%d)\n", __func__, ret);
 	return ret;
 }
-
+#endif

@@ -1059,8 +1059,8 @@ static inline int dw_mci_prepare_desc32(struct dw_mci *host,
 			 * isn't still owned by IDMAC as IDMAC's write
 			 * ops and CPU's read ops are asynchronous.
 			 */
-			if (readl_poll_timeout_atomic(&desc->des0, val,
-						      IDMAC_OWN_CLR64(val),
+			if (readl_poll_timeout_atomic(&desc->des0, val, val,
+						      //IDMAC_OWN_CLR64(val),
 						      10, 100 * USEC_PER_MSEC))
 				goto err_own_bit;
 
@@ -4148,23 +4148,15 @@ int dw_mci_probe(struct dw_mci *host)
 			drv_data->hwacg_control(host, HWACG_Q_ACTIVE_DIS);
 	}
 
-	if (drv_data && drv_data->access_control_get_dev) {
-		ret = drv_data->access_control_get_dev(host);
-		if (ret == -EPROBE_DEFER)
-			dev_err(host->dev, "%s: Access control device not probed yet.(%d)\n",
-				__func__, ret);
-		else if (ret)
-			dev_err(host->dev, "%s, Fail to get Access control device.(%d)\n",
-				__func__, ret);
-	}
-
-	if (drv_data && drv_data->access_control_sec_cfg) {
-		ret = drv_data->access_control_sec_cfg(host);
+	/* init fmp config */
+	if (drv_data && drv_data->crypto_engine_sec_cfg) {
+		ret = drv_data->crypto_engine_sec_cfg(host);
 		if (ret)
 			dev_err(host->dev, "%s: Fail to control security config.(%x)\n",
 				__func__, ret);
 	}
 
+	/* init smu config */
 	if (drv_data && drv_data->access_control_init) {
 		ret = drv_data->access_control_init(host);
 		if (ret)
@@ -4493,8 +4485,8 @@ int dw_mci_runtime_resume(struct device *dev)
 			drv_data->hwacg_control(host, HWACG_Q_ACTIVE_DIS);
 	}
 
-	if (drv_data && drv_data->access_control_sec_cfg) {
-		ret = drv_data->access_control_sec_cfg(host);
+	if (drv_data && drv_data->crypto_engine_sec_cfg) {
+		ret = drv_data->crypto_engine_sec_cfg(host);
 		if (ret)
 			dev_err(host->dev, "%s: Fail to control security config.(%x)\n",
 				__func__, ret);
