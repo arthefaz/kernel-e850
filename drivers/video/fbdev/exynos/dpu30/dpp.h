@@ -32,6 +32,9 @@
 #if defined(CONFIG_SOC_EXYNOS9630)
 #include "./cal_9630/regs-dpp.h"
 #include "./cal_9630/dpp_cal.h"
+#elif defined(CONFIG_SOC_EXYNOS3830)
+#include "./cal_3830/regs-dpp.h"
+#include "./cal_3830/dpp_cal.h"
 #endif
 
 extern int dpp_log_level;
@@ -39,7 +42,11 @@ extern int dpp_log_level;
 #define DPP_MODULE_NAME		"exynos-dpp"
 
 #define MAX_DPP_CNT		7 /* + ODMA case */
-#if defined(CONFIG_SOC_EXYNOS9630)
+#if defined(CONFIG_SOC_EXYNOS9830)
+#define SOC_DPP_CNT		7 /* + ODMA case */
+#elif defined(CONFIG_SOC_EXYNOS9630)
+#define SOC_DPP_CNT		4 /* + ODMA case */
+#elif defined(CONFIG_SOC_EXYNOS3830)
 #define SOC_DPP_CNT		4 /* + ODMA case */
 #endif
 
