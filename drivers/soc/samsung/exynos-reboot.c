@@ -91,8 +91,9 @@ static void exynos_power_off(void)
 {
 	int poweroff_try = 0;
 
-	pr_info("%s: Power off %d \n", __func__, s2mpu10_read_pwron_status());
+	//pr_info("%s: Power off %d \n", __func__, s2mpu10_read_pwron_status());
 
+#if 0
 	while (1) {
 		/* wait for power button release */
 		if (!s2mpu10_read_pwron_status()) {
@@ -113,6 +114,7 @@ static void exynos_power_off(void)
 		}
 		mdelay(1000);
 	}
+#endif
 }
 #else
 static void exynos_power_off(void)
