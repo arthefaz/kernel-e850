@@ -1133,6 +1133,39 @@ static inline int __mfc_enc_vui_sar_idc(enum v4l2_mpeg_video_h264_vui_sar_idc sa
 	return t[sar];
 }
 
+static int __mfc_enc_get_roi(struct mfc_ctx *ctx, int value)
+{
+	struct mfc_enc *enc = ctx->enc_priv;
+	int index = 0;
+
+	if (enc->sh_handle_roi.fd == -1) {
+		enc->sh_handle_roi.fd = value;
+		if (mfc_mem_get_user_shared_handle(ctx, &enc->sh_handle_roi))
+			return -EINVAL;
+		mfc_debug(2, "[MEMINFO][ROI] shared handle fd: %d, vaddr: 0x%p\n",
+				enc->sh_handle_roi.fd,
+				enc->sh_handle_roi.vaddr);
+	}
+	index = enc->roi_index;
+
+	/* Copy the ROI info from shared buf */
+	memcpy(&enc->roi_info[index], enc->sh_handle_roi.vaddr,
+			sizeof(struct mfc_enc_roi_info));
+	if (enc->roi_info[index].size > enc->roi_buf[index].size) {
+		mfc_err_ctx("[MEMINFO][ROI] roi info size %d is over\n",
+				enc->roi_info[index].size);
+		return -EINVAL;
+	}
+
+	/* Copy the ROI map buffer from user's map buf */
+	if (copy_from_user(enc->roi_buf[index].vaddr,
+				enc->roi_info[index].addr,
+				enc->roi_info[index].size))
+		return -EFAULT;
+
+	return 0;
+}
+
 static int __mfc_enc_set_param(struct mfc_ctx *ctx, struct v4l2_control *ctrl)
 {
 	struct mfc_enc *enc = ctx->enc_priv;
@@ -1866,7 +1899,6 @@ static int __mfc_enc_set_ctrl_val(struct mfc_ctx *ctx, struct v4l2_control *ctrl
 	struct mfc_ctx_ctrl *ctx_ctrl;
 	int ret = 0;
 	int found = 0;
-	int index = 0;
 
 	mfc_debug(5, "[CTRLS] id: %#x, value: %d\n", ctrl->id, ctrl->value);
 
@@ -1965,28 +1997,9 @@ static int __mfc_enc_set_ctrl_val(struct mfc_ctx *ctx, struct v4l2_control *ctrl
 				if (ctx_ctrl->id == V4L2_CID_MPEG_VIDEO_H264_PROFILE)
 					ctx_ctrl->val = __mfc_enc_h264_profile(ctx, (enum v4l2_mpeg_video_h264_profile)(ctrl->value));
 				if (ctx_ctrl->id == V4L2_CID_MPEG_VIDEO_ROI_CONTROL) {
-					if (enc->sh_handle_roi.fd == -1) {
-						enc->sh_handle_roi.fd = ctrl->value;
-						if (mfc_mem_get_user_shared_handle(ctx,
-									&enc->sh_handle_roi))
-							return -EINVAL;
-						mfc_debug(2, "[MEMINFO][ROI] shared handle fd: %d, vaddr: 0x%p\n",
-								enc->sh_handle_roi.fd,
-								enc->sh_handle_roi.vaddr);
-					}
-					index = enc->roi_index;
-					memcpy(&enc->roi_info[index],
-							enc->sh_handle_roi.vaddr,
-							sizeof(struct mfc_enc_roi_info));
-					if (enc->roi_info[index].size > enc->roi_buf[index].size) {
-						mfc_err_ctx("[MEMINFO][ROI] roi info size %d is over\n",
-							enc->roi_info[index].size);
-						return -EINVAL;
-					}
-					if (copy_from_user(enc->roi_buf[index].vaddr,
-							enc->roi_info[index].addr,
-							enc->roi_info[index].size))
-						return -EFAULT;
+					ret = __mfc_enc_get_roi(ctx, ctrl->value);
+					if (ret)
+						return ret;
 				}
 
 				found = 1;

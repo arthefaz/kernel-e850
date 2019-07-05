@@ -877,13 +877,41 @@ static int mfc_enc_cleanup_buf_ctrls(struct mfc_ctx *ctx,
 	return 0;
 }
 
+static void __mfc_enc_set_roi(struct mfc_ctx *ctx, struct mfc_buf_ctrl *buf_ctrl)
+{
+	struct mfc_enc *enc = ctx->enc_priv;
+	int index = 0;
+	unsigned int reg = 0;
+
+	index = enc->roi_index;
+	if (enc->roi_info[index].enable) {
+		enc->roi_index = (index + 1) % MFC_MAX_EXTRA_BUF;
+		reg |= enc->roi_info[index].enable;
+		reg &= ~(0xFF << 8);
+		reg |= (enc->roi_info[index].lower_qp << 8);
+		reg &= ~(0xFFFF << 16);
+		reg |= (enc->roi_info[index].upper_qp << 16);
+		/*
+		 * When the 8bit ROI, both lower_qp and upper_qp
+		 * is valid only for VP8 and VP9.
+		 */
+		mfc_debug(3, "[ROI] buffer[%d] en %d QP lower %d upper %d reg %#x\n",
+				index, enc->roi_info[index].enable,
+				enc->roi_info[index].lower_qp,
+				enc->roi_info[index].upper_qp,
+				reg);
+	} else {
+		mfc_debug(3, "[ROI] buffer[%d] is not enabled\n", index);
+	}
+
+	buf_ctrl->val = reg;
+	buf_ctrl->old_val2 = index;
+}
+
 static int mfc_enc_to_buf_ctrls(struct mfc_ctx *ctx, struct list_head *head)
 {
 	struct mfc_ctx_ctrl *ctx_ctrl;
 	struct mfc_buf_ctrl *buf_ctrl;
-	struct mfc_enc *enc = ctx->enc_priv;
-	int index = 0;
-	unsigned int reg = 0;
 
 	list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 		if (!(ctx_ctrl->type & MFC_CTRL_TYPE_SET) || !ctx_ctrl->has_new)
@@ -900,28 +928,8 @@ static int mfc_enc_to_buf_ctrls(struct mfc_ctx *ctx, struct list_head *head)
 					buf_ctrl->updated = 0;
 
 				ctx_ctrl->has_new = 0;
-				if (buf_ctrl->id == V4L2_CID_MPEG_VIDEO_ROI_CONTROL) {
-					index = enc->roi_index;
-					if (enc->roi_info[index].enable) {
-						enc->roi_index =
-							(index + 1) % MFC_MAX_EXTRA_BUF;
-						reg |= enc->roi_info[index].enable;
-						reg &= ~(0xFF << 8);
-						reg |= (enc->roi_info[index].lower_qp << 8);
-						reg &= ~(0xFFFF << 16);
-						reg |= (enc->roi_info[index].upper_qp << 16);
-						mfc_debug(3, "[ROI] buffer[%d] en %d, "
-								"QP lower %d upper %d reg %#x\n",
-								index, enc->roi_info[index].enable,
-								enc->roi_info[index].lower_qp,
-								enc->roi_info[index].upper_qp,
-								reg);
-					} else {
-						mfc_debug(3, "[ROI] buffer[%d] is not enabled\n", index);
-					}
-					buf_ctrl->val = reg;
-					buf_ctrl->old_val2 = index;
-				}
+				if (buf_ctrl->id == V4L2_CID_MPEG_VIDEO_ROI_CONTROL)
+					__mfc_enc_set_roi(ctx, buf_ctrl);
 				break;
 			}
 		}
@@ -1135,6 +1143,7 @@ static void __mfc_enc_set_buf_ctrls_exception(struct mfc_ctx *ctx,
 	if (buf_ctrl->id == V4L2_CID_MPEG_VIDEO_ROI_CONTROL) {
 		MFC_WRITEL(enc->roi_buf[buf_ctrl->old_val2].daddr,
 				MFC_REG_E_ROI_BUFFER_ADDR);
+		/* TODO: QO val? ctrl->value is regs info */
 		mfc_debug(3, "[ROI] buffer[%d] addr %#llx, QP val: %#x\n",
 				buf_ctrl->old_val2,
 				enc->roi_buf[buf_ctrl->old_val2].daddr,
