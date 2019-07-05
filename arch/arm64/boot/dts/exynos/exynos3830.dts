@@ -39,6 +39,11 @@
 
 	};
 
+	ect {
+		parameter_address = <0x90000000>;
+		parameter_size = <0x4B000>;
+	};
+
 	chipid@10000000 {
 		compatible = "samsung,exynos9-chipid";
 		reg = <0x0 0x10000000 0x100>;
