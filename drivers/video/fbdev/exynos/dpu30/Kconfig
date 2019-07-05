@@ -95,7 +95,7 @@ config EXYNOS_CURSOR
 config EXYNOS_DSIM_DITHER
 	bool "DSIM SSCG feature"
         depends on EXYNOS_MIPI_DSIM
-        default y
+        default n
 
 config DECON_BTS_LEGACY
 	bool "Legacy BTS scheme of display"
