@@ -585,10 +585,20 @@ static struct exynos_mipi_phy_data mipi_phy_m4m4 = {
 	.slock = __SPIN_LOCK_UNLOCKED(mipi_phy_m4m4.slock),
 };
 
+static struct exynos_mipi_phy_data mipi_phy_m4s0 = {
+	.flags = MIPI_PHY_MxMx_UNIQUE,
+	.active_count = 0,
+	.slock = __SPIN_LOCK_UNLOCKED(mipi_phy_m4s0.slock),
+};
+
 static const struct of_device_id exynos_mipi_phy_of_table[] = {
 	{
 		.compatible = "samsung,mipi-phy-m4m4",
 		.data = &mipi_phy_m4m4,
+	},
+	{
+		.compatible = "samsung,mipi-phy-m4s0",
+		.data = &mipi_phy_m4s0,
 	},
 	{ },
 };

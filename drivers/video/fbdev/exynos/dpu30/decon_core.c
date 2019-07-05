@@ -40,6 +40,9 @@
 #elif defined(CONFIG_SOC_EXYNOS9630) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
 #include <dt-bindings/soc/samsung/exynos9630-devfreq.h>
 #include <dt-bindings/clock/exynos9630.h>
+#elif defined(CONFIG_SOC_EXYNOS3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
+#include <dt-bindings/soc/samsung/exynos3830-devfreq.h>
+#include <dt-bindings/clock/exynos3830.h>
 #endif
 #include <soc/samsung/exynos-devfreq.h>
 
@@ -3157,7 +3160,7 @@ static int decon_register_subdevs(struct decon_device *decon)
 		return ret;
 	}
 
-	for (i = 0;  i < MAX_DPP_CNT; ++i)
+	for (i = 0;  i < SOC_DPP_CNT; ++i)
 		decon->dpp_sd[i] = NULL;
 	ret = dpu_get_sd_by_drvname(decon, DPP_MODULE_NAME);
 	if (ret)

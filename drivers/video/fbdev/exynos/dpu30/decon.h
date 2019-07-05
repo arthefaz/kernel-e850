@@ -44,6 +44,9 @@
 #elif defined(CONFIG_SOC_EXYNOS9630)
 #include "./cal_9630/regs-decon.h"
 #include "./cal_9630/decon_cal.h"
+#elif defined(CONFIG_SOC_EXYNOS3830)
+#include "./cal_3830/regs-decon.h"
+#include "./cal_3830/decon_cal.h"
 #endif
 
 #include "./panels/exynos_panel.h"
@@ -65,6 +68,9 @@
 #elif defined(CONFIG_SOC_EXYNOS9630)
 #define MAX_DECON_WIN		4
 #define MAX_DPP_SUBDEV		5
+#elif defined(CONFIG_SOC_EXYNOS3830)
+#define MAX_DECON_WIN		4
+#define MAX_DPP_SUBDEV		4
 #endif
 
 #define DISP_RESTRICTION_VER	20180608
