@@ -24,3 +24,4 @@ obj-$(CONFIG_SOC_EXYNOS9810_EVT1)            += exynos9810/cal_data.o
 obj-$(CONFIG_SOC_EXYNOS9810_EVT0)            += exynos9810_evt0/cal_data.o
 obj-$(CONFIG_SOC_EXYNOS9610)			+= exynos9610/cal_data.o
 obj-$(CONFIG_SOC_EXYNOS9630)			+= exynos9630/cal_data.o
+obj-$(CONFIG_SOC_EXYNOS3830)			+= exynos3830/cal_data.o
