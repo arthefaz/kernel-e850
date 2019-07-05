@@ -841,7 +841,7 @@ struct disp_pwr_state decon_pwr_state[] = {
 	},
 };
 
-int decon_update_pwr_state(struct decon_device *decon, u32 mode)
+int decon_update_pwr_state(struct decon_device *decon, enum disp_pwr_mode mode)
 {
 	int ret = 0;
 
@@ -884,7 +884,7 @@ int decon_update_pwr_state(struct decon_device *decon, u32 mode)
 		}
 	}
 
-	ret = decon_pwr_state[mode].set_pwr_state((void *)decon);
+	ret = decon_pwr_state[mode].set_pwr_state(decon);
 	if (ret < 0) {
 		decon_err("DECON:ERR:%s: failed to set mode(%d)\n",
 				__func__, mode);
@@ -2849,7 +2849,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	bool active;
 	u32 crc_bit, crc_start;
 	u32 crc_data[2];
-	u32 pwr;
+	enum disp_pwr_mode pwr;
 	int i;
 	u32 cm_num;
 
