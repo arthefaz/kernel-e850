@@ -20,6 +20,7 @@
 #include <dt-bindings/clock/exynos3830.h>
 #include "exynos3830-pinctrl.dtsi"
 #include "exynos3830-rmem.dtsi"
+#include "exynos3830-sysmmu.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
@@ -267,5 +268,41 @@
 	pmu_system_controller: system-controller@11860000 {
 		compatible = "samsung,exynos3830-pmu", "syscon";
 		reg = <0x0 0x11860000 0x10000>;
+	};
+
+	iommu-domain_dpu {
+		compatible = "samsung,exynos-iommu-bus";
+		#address-cells = <2>;
+		#size-cells = <1>;
+		ranges;
+
+		domain-clients = <>;
+	};
+
+	iommu-domain_aud {
+		compatible = "samsung,exynos-iommu-bus";
+		#address-cells = <2>;
+		#size-cells = <1>;
+		ranges;
+
+		domain-clients = <>;
+	};
+
+	iommu-domain_is {
+		compatible = "samsung,exynos-iommu-bus";
+		#address-cells = <2>;
+		#size-cells = <1>;
+		ranges;
+
+		domain-clients = <>;
+	};
+
+	iommu-domain_mfcmscl {
+		compatible = "samsung,exynos-iommu-bus";
+		#address-cells = <2>;
+		#size-cells = <1>;
+		ranges;
+
+		domain-clients = <>;
 	};
 };
