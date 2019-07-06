@@ -721,7 +721,7 @@ static struct samsung_pin_bank_data exynos3830_pin_banks3[] = {
 static struct samsung_pin_bank_data exynos3830_pin_banks4[] = {
 	/* Must start with EINTG banks, ordered by EINT group number. */
 	EXYNOS9_PIN_BANK_EINTG(bank_type_6, 4, 0x000, "gpf0", 0x00, 0x00),
-	EXYNOS9_PIN_BANK_EINTG(bank_type_6, 8, 0x020, "gpf1", 0x04, 0x08),
+	EXYNOS9_PIN_BANK_EINTG(bank_type_6, 8, 0x020, "gpf1", 0x04, 0x04),
 };
 
 /* pin banks of exynos3830 pin-controller 5 (PERI) */
