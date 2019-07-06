@@ -547,7 +547,6 @@ static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 	DPU_DEBUG_PANEL("LCD size(%dx%d), DDI type(%d)\n", res[0], res[1],
 			lcd_info->ddi_type);
 
-
 	panel->bl->props.max_brightness = DEFAULT_MAX_BRIGHTNESS;
 	panel->bl->props.brightness = DEFAULT_BRIGHTNESS;
 	if (!of_property_read_u32(np, "max-brightness", &max_br))
@@ -557,6 +556,10 @@ static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 
 	DPU_INFO_PANEL("max brightness : %d\n", panel->bl->props.max_brightness);
 	DPU_INFO_PANEL("default brightness : %d\n", panel->bl->props.brightness);
+
+#if defined(CONFIG_EXYNOS_DECON_DQE)
+	snprintf(lcd_info->ddi_name, MAX_DDI_NAME_LEN, "%s", np->name);
+#endif
 
 	exynos_panel_get_timing_info(lcd_info, np);
 	exynos_panel_get_dsc_info(lcd_info, np);
