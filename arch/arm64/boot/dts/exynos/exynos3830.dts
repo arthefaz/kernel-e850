@@ -30,7 +30,8 @@
 		pinctrl0 = &pinctrl_0;
 		pinctrl1 = &pinctrl_1;
 		pinctrl2 = &pinctrl_2;
-		pinctrl3 = &pinctrl_3;
+		/* TODO: HCI block off state, cannot access gpio */
+		/* pinctrl3 = &pinctrl_3; */
 		pinctrl4 = &pinctrl_4;
 		pinctrl5 = &pinctrl_5;
 		uart0 = &serial_0;
@@ -38,20 +39,33 @@
 	};
 
 	chipid@10000000 {
-		compatible = "samsung,exynos4210-chipid";
-		reg = <0x0 0x10000000 0x10>;
+		compatible = "samsung,exynos9-chipid";
+		reg = <0x0 0x10000000 0x100>;
 	};
 
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
 
-		cpu@0000 {
+		cpu-map {
+			cluster0 {
+				coregroup0 {
+					core0 {
+						cpu = <&cpu0>;
+					};
+				};
+			};
+		};
+
+		cpu0: cpu@0000 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0000>;
 			enable-method = "psci";
+		//	sched-energy-data = <&ANANKE_ENERGY>;
+		//	cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
+
 	};
 
 	gic:interrupt-controller@12a00000 {
@@ -96,7 +110,7 @@
 		interrupts =	<0>, <1>, <2>, <3>,
 				<4>, <5>, <6>, <7>,
 				<8>, <9>, <10>, <11>;
-		clocks = <&clock 1>, <&clock 15>;
+		clocks = <&clock 1>, <&clock 21>;
 		clock-names = "fin_pll", "mct";
 		use-clockevent-only;
 
@@ -119,17 +133,20 @@
 		};
 	};
 
-	/* TODO: USI UART ?? */
 	serial_0: uart@13820000 {
 		compatible = "samsung,exynos-uart";
 		samsung,separate-uart-clk;
 		reg = <0x0 0x13820000 0x100>;
-		samsung,fifo-size = <256>;
+		samsung,fifo-size = <64>;
 		interrupts = <0 INTREQ__UART 0>;
-		//pinctrl-names = "default";
-		//pinctrl-0 = <&uart0_bus>;
-		clocks = <&clock 30>, <&clock 20>, <&clock 10>;
-		clock-names = "gate_pclk0", "gate_uart0", "sclk_uart0";
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart0_bus>;
+		samsung,usi-serial-v2;
+		samsung,dbg-uart-ch;
+		samsung,dbg-uart-baud = <115200>;
+		samsung,dbg-word-len = <8>;
+		clocks = <&clock 9>, <&clock 15>;
+		clock-names = "gate_uart_clk0", "ipclk_uart0";
 		status = "disabled";
 	};
 	/* TBD */
