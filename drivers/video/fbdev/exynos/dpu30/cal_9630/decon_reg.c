@@ -1537,7 +1537,9 @@ static int decon_reg_stop_perframe(u32 id, u32 dsi_idx,
 
 	/* perframe stop */
 	decon_reg_per_frame_off(id);
-
+#if defined(CONFIG_EXYNOS_DECON_DQE)
+	decon_reg_update_req_dqe(id);
+#endif
 	decon_reg_update_req_global(id);
 
 	/* timeout : 1 / fps + 20% margin */
@@ -1574,7 +1576,9 @@ static int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr,
 
 	/* instant stop */
 	decon_reg_direct_on_off(id, 0);
-
+#if defined(CONFIG_EXYNOS_DECON_DQE)
+	decon_reg_update_req_dqe(id);
+#endif
 	decon_reg_update_req_global(id);
 
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
@@ -1887,6 +1891,9 @@ int decon_reg_start(u32 id, struct decon_mode_info *psr)
 #endif
 
 	decon_reg_direct_on_off(id, 1);
+#if defined(CONFIG_EXYNOS_DECON_DQE)
+	decon_reg_update_req_dqe(id);
+#endif
 	decon_reg_update_req_global(id);
 
 	/*
