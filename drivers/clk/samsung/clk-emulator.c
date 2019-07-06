@@ -35,7 +35,7 @@ struct samsung_fixed_rate_clock emulator_fixed_rate_ext_clks[] __initdata = {
 /* After complete to prepare clock tree, these will be removed. */
 struct samsung_fixed_rate_clock emulator_fixed_rate_clks[] __initdata = {
 	FRATE(CLK_GATE_UART0, "gate_uart_clk0", NULL, 0, 26000000),
-	FRATE(CLK_UART0, "ipclk_uart0", NULL, 0, 133000000),
+	FRATE(CLK_UART0, "ipclk_uart0", NULL, 0, 200000000),
 	FRATE(CLK_MCT, "mct", NULL, 0, 26000000),
 	/* for Emulator */
 	/*
