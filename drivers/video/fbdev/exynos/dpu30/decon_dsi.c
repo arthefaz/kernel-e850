@@ -39,6 +39,9 @@
 #ifdef CONFIG_EXYNOS_ALT_DVFS
 struct task_struct *devfreq_change_task;
 #endif
+#if defined(CONFIG_EXYNOS_DECON_DQE)
+#include "dqe.h"
+#endif
 
 /* DECON irq handler for DSI interface */
 static irqreturn_t decon_irq_handler(int irq, void *dev_data)
@@ -1046,7 +1049,10 @@ int decon_exit_hiber(struct decon_device *decon)
 
 	decon_to_init_param(decon, &p);
 	decon_reg_init(decon->id, decon->dt.out_idx[0], &p);
-
+#if defined(CONFIG_EXYNOS_DECON_DQE)
+	dqe_restore_context();
+	dqe_reg_start(decon->id, decon->lcd_info);
+#endif
 	/*
 	 * After hibernation exit, If panel is partial size, DECON and DSIM
 	 * are also set as same partial size.

@@ -369,14 +369,6 @@ enum HAL_color_transform {
 	HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA = 6,
 };
 
-/* decon supported color mode */
-enum decon_supported_color_mode {
-	DECON_COLOR_MODE_NATIVE = 0,
-	DECON_COLOR_MODE_SRGB,
-	DECON_COLOR_MODE_DCI_P3,
-	DECON_COLOR_MODE_NUM_MAX,
-};
-
 /* intents num and information in each color mode*/
 struct decon_render_intents_num_info {
 	u32 color_mode;
@@ -411,6 +403,14 @@ struct decon_color_mode_with_render_intent_info {
 enum decon_color_mode {
 	HAL_COLOR_MODE_NATIVE = 0,
 	HAL_COLOR_MODE_NUM_MAX,
+};
+
+/* decon supported color mode */
+enum decon_supported_color_mode {
+	DECON_COLOR_MODE_NATIVE = 0,
+	DECON_COLOR_MODE_SRGB,
+	DECON_COLOR_MODE_DCI_P3,
+	DECON_COLOR_MODE_NUM_MAX,
 };
 
 struct decon_color_mode_info {

@@ -111,6 +111,11 @@ enum decon_scaler_path {
 	SCALERPATH_VGRF	= 0x2,
 };
 
+enum decon_enhance_path {
+	ENHANCEPATH_ENHANCE_ALL_OFF     = 0x0,
+	ENHANCEPATH_DQE_ON              = 0x2,
+};
+
 enum decon_path_cfg {
 	PATH_CON_ID_DSIM_IF0 = 0,
 	PATH_CON_ID_DSIM_IF1 = 1,
@@ -312,6 +317,10 @@ void decon_reg_set_pll_wakeup(u32 id, u32 en);
 
 /* Latency monitoring */
 u32 decon_reg_get_latency_monitor_value(u32 id);
+
+/* Related data path */
+void decon_reg_set_data_path(u32 id, enum decon_data_path d_path,
+		enum decon_scaler_path s_path, enum decon_enhance_path e_path);
 /*********************************************************************/
 
 #endif /* __SAMSUNG_DECON_CAL_H__ */
