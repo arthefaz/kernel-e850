@@ -1049,7 +1049,7 @@ static int decon_debug_cmd_lp_ref_show(struct seq_file *s, void *unused)
 	struct dsim_device *dsim = get_dsim_drvdata(0);
 	int i;
 
-	/* DSU_MODE_1 is used in stead of 1 in MCD */
+	/* DSU_MODE_1 is used in stead of 1 */
 	seq_printf(s, "%u\n", dsim->panel->lcd_info.mres_mode);
 
 	for (i = 0; i < dsim->panel->lcd_info.mres.number; i++)

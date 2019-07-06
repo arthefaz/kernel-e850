@@ -1,5 +1,5 @@
 /*
- * linux/drivers/video/fbdev/exynos/dpu_9810/decon_reg.c
+ * linux/drivers/video/fbdev/exynos/dpu30/cal_9630/decon_reg.c
  *
  * Copyright 2013-2017 Samsung Electronics
  *	  SeungBeom Park <sb1.park@samsung.com>
@@ -2362,7 +2362,7 @@ void __decon_dump(u32 id, void __iomem *regs, void __iomem *base_regs, bool dsc_
 	}
 }
 
-/* 9830 chip dependent HW limitation
+/* 	chip dependent HW limitation
  *	: returns 0 if no error
  *	: otherwise returns -EPERM for HW-wise not permitted
  */

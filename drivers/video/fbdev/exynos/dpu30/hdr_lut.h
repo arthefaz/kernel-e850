@@ -14,9 +14,7 @@
 
 #include <linux/types.h>
 
-#if defined(CONFIG_SOC_EXYNOS9830)
-#define MAX_EOTF	(65)
-#elif defined(CONFIG_SOC_EXYNOS9630)
+#if defined(CONFIG_SOC_EXYNOS9630)
 #define MAX_OETF	(33)
 #define MAX_EOTF	(129)
 #endif

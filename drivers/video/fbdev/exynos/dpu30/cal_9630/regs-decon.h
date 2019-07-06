@@ -1,5 +1,5 @@
 /*
- * linux/drivers/video/fbdev/exynos/dpu_9810/regs_decon.h
+ * linux/drivers/video/fbdev/exynos/dpu_9630/regs_decon.h
  *
  * Register definition file for Samsung DECON driver
  *

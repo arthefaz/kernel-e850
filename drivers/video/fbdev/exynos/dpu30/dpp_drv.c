@@ -440,13 +440,7 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 	}
 
 
-#if defined(CONFIG_SOC_EXYNOS9830)
-	if (!test_bit(DPP_ATTR_HDR, &dpp->attr) && (p->hdr > DPP_HDR_OFF)) {
-		dpp_err("Not support HDR in DPP%d - No H/W!\n",
-				dpp->id);
-		return -EINVAL;
-	}
-#elif defined(CONFIG_SOC_EXYNOS9630)
+#if defined(CONFIG_SOC_EXYNOS9630)
 	if (!test_bit(DPP_ATTR_HDR10P, &dpp->attr) && (p->hdr > DPP_HDR_OFF)) {
 		dpp_err("Not support HDR in DPP%d - No H/W!\n",
 				dpp->id);
@@ -952,25 +946,9 @@ static irqreturn_t dma_irq_handler(int irq, void *priv)
 	if (dpp->state == DPP_STATE_OFF)
 		goto irq_end;
 
-	if (test_bit(DPP_ATTR_ODMA, &dpp->attr)) { /* ODMA case */
-#if defined(CONFIG_SOC_EXYNOS9830)
-		irqs = odma_reg_get_irq_and_clear(dpp->id);
-		if ((irqs & ODMA_WRITE_SLAVE_ERROR) ||
-			       (irqs & ODMA_STATUS_DEADLOCK_IRQ)) {
-			dpp_err("odma%d error irq occur(0x%x)\n", dpp->id, irqs);
-			dpp_dump(dpp);
-			goto irq_end;
-		}
-		if (irqs & ODMA_STATUS_FRAMEDONE_IRQ) {
-			dpp_dbg("dpp%d framedone irq occurs\n", dpp->id);
-			dpp->d.done_count++;
-			wake_up_interruptible_all(&dpp->framedone_wq);
-			DPU_EVENT_LOG(DPU_EVT_DPP_FRAMEDONE, &dpp->sd,
-					ktime_set(0, 0));
-			goto irq_end;
-		}
-#endif
-	} else { /* IDMA case */
+	//if (test_bit(DPP_ATTR_ODMA, &dpp->attr)) { /* ODMA case */
+	//} else { /* IDMA case */
+	if (!test_bit(DPP_ATTR_ODMA, &dpp->attr)) { /* IDMA case */
 		irqs = idma_reg_get_irq_and_clear(dpp->id);
 
 		if (irqs & IDMA_RECOVERY_TRG_IRQ) {
