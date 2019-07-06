@@ -520,6 +520,8 @@ static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 	DPU_DEBUG_PANEL("LCD size(%dx%d), DDI type(%d)\n", res[0], res[1],
 			lcd_info->ddi_type);
 
+	snprintf(lcd_info->ddi_name, MAX_DDI_NAME_LEN, "%s", np->name);
+
 	exynos_panel_get_timing_info(lcd_info, np);
 	exynos_panel_get_dsc_info(lcd_info, np);
 	exynos_panel_get_mres_info(lcd_info, np);

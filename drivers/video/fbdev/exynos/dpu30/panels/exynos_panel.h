@@ -26,6 +26,7 @@ enum type_of_ddi {
 
 #define MAX_RES_NUMBER		5
 #define HDR_CAPA_NUM		4
+#define MAX_DDI_NAME_LEN	50
 
 struct lcd_res_info {
 	unsigned int width;
@@ -122,5 +123,6 @@ struct exynos_panel_info {
 	struct lcd_hdr_info hdr;
 	struct dsc_slice dsc_slice;
 	unsigned int bpc;
+	char ddi_name[MAX_DDI_NAME_LEN];
 };
 #endif /* __EXYNOS_PANEL_H__ */
