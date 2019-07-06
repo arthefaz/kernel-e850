@@ -133,4 +133,9 @@ config EXYNOS_LIMIT_ROTATION
         default n
 endif
 
+config EXYNOS_DECON_DQE
+	bool "Samsung Exynos DQE driver"
+	depends on EXYNOS_DPU30
+	default n
+
 source "drivers/video/fbdev/exynos/dpu30/panels/Kconfig"
