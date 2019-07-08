@@ -20,4 +20,11 @@ config EXYNOS9630_BTS
         help
           Enable BTS (Bus traffic shaper) support for exynos9630
 
+config EXYNOS3830_BTS
+        bool "Bus traffic shaper support for exynos3830"
+        default y
+        depends on SOC_EXYNOS3830
+        help
+          Enable BTS (Bus traffic shaper) support for exynos3830
+
 endif
