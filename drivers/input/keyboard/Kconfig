@@ -760,4 +760,9 @@ config KEYBOARD_S2MPU10
 	tristate "Samsung Electronics S2MPU10 Powerkey Controller"
 	depends on I2C
 	depends on MFD_S2MPU10
+
+config KEYBOARD_S2MPU12
+	tristate "Samsung Electronics S2MPU12 Powerkey Controller"
+	depends on I2C
+	depends on MFD_S2MPU12
 endif

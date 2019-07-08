@@ -225,6 +225,7 @@ obj-$(CONFIG_MFD_S2MU107)	+= s2mu107_core.o s2mu107_irq.o
 obj-$(CONFIG_MFD_S2MPU09)	+= s2mpu09-core.o s2mpu09-irq.o
 obj-$(CONFIG_MFD_S2MPU10)	+= s2mpu10-core.o s2mpu10-irq.o
 obj-$(CONFIG_MFD_S2MPU11)	+= s2mpu11-core.o s2mpu11-notifier.o
+obj-$(CONFIG_MFD_S2MPU12)	+= s2mpu12-core.o s2mpu12-irq.o
 obj-$(CONFIG_MFD_S2MPB02)	+= s2mpb02-core.o s2mpb02-irq.o
 obj-$(CONFIG_MFD_SYSCON)	+= syscon.o
 obj-$(CONFIG_MFD_LM3533)	+= lm3533-core.o lm3533-ctrlbank.o
