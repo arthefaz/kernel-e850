@@ -731,8 +731,6 @@ static int __set_phy_cfg_0503_0004_dcphy(void __iomem *regs, int option, u32 *cf
 			update_bits(regs + 0x0130 + (i * 0x100), 0, 8, cfg[SETTLE]);    /* SD_TIME_CON0 */
 			update_bits(regs + 0x0130 + (i * 0x100), 8, 1, settle_clk_sel); /* SD_TIME_CON0 */
 			writel(0x00000032, regs + 0x0134 + (i * 0x100)); /* SD_TIME_CON1 */
-			update_bits(regs + 0x0140 + (i * 0x100), 0, 1, skew_cal_en); /* SD_DESKEW_CON0 */
-			writel(0x00000000, regs + 0x0150 + (i * 0x100)); /* SD_DESKEW_CON4 */
 			writel(0x00001500, regs + 0x0164 + (i * 0x100)); /* SD_CRC_CON1 */
 			writel(0x00000030, regs + 0x0168 + (i * 0x100)); /* SD_CRC_CON2 */
 		}
