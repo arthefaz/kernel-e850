@@ -673,7 +673,7 @@ int __init vclk_initialize(void)
 
 	ra_init();
 
-	asv_table_ver = asv_table_init();
+//	asv_table_ver = asv_table_init();
 
 	vclk_bind();
 
