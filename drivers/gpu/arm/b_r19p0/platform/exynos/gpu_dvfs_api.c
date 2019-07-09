@@ -16,7 +16,6 @@
  */
 
 #include <mali_kbase.h>
-#include <soc/samsung/bts.h>
 #ifdef CONFIG_EXYNOS_ASV
 #include <soc/samsung/asv-exynos.h>
 #endif
@@ -155,6 +154,7 @@ int gpu_set_target_clk_vol(int clk, bool pending_is_allowed)
 #define BS_G3D_PERFORMANCE BS_G3D_PEFORMANCE
 #endif
 
+#ifdef CONFIG_EXYNOS_BTS
 	/* MALI_SEC_INTEGRATION : for EXYNOS_BTS */
 	if (platform->gpu_bts_support) {
 		if (target_clk >= platform->mo_min_clock && !platform->is_set_bts) {
@@ -165,6 +165,7 @@ int gpu_set_target_clk_vol(int clk, bool pending_is_allowed)
 			platform->is_set_bts = 0;
 		}
 	}
+#endif
 
 	mutex_unlock(&platform->gpu_clock_lock);
 
