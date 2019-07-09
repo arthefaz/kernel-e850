@@ -1383,6 +1383,7 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 	unsigned int is_hdr10_plus_sei = 0;
 	unsigned int is_disp_res_change = 0;
 	unsigned int disp_err;
+	unsigned int is_uncomp = 0;
 	int i, index;
 
 	if (MFC_FEATURE_SUPPORT(dev, dev->pdata->color_aspect_dec)) {
@@ -1411,6 +1412,11 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 		dspl_y_addr = pOutStr->DisplayAddr[0];
 		frame_type = pOutStr->DisplayFrameType & MFC_REG_DISPLAY_FRAME_MASK;
 	}
+
+	if (MFC_FEATURE_SUPPORT(dev, dev->pdata->sbwc_uncomp) && ctx->is_sbwc)
+		is_uncomp = (pOutStr->DisplayStatus
+				>> MFC_REG_DISP_STATUS_UNCOMP_SHIFT)
+				& MFC_REG_DISP_STATUS_UNCOMP_MASK;
 
 	dst_mb = mfc_find_del_buf(ctx, &ctx->dst_buf_nal_queue, dspl_y_addr);
 	if (!dst_mb) {
@@ -1483,6 +1489,11 @@ static void __mfc_nal_q_handle_frame_output_del(struct mfc_ctx *ctx,
 			mfc_debug(2, "[NALQ][HDR+] HDR10 plus dyanmic SEI metadata parsed\n");
 		} else {
 			dec->hdr10_plus_info[index].valid = 0;
+		}
+
+		if (is_uncomp) {
+			mfc_set_vb_flag(dst_mb, MFC_FLAG_UNCOMP);
+			mfc_debug(2, "[NALQ][SBWC] uncompressed\n");
 		}
 
 		for (i = 0; i < raw->num_planes; i++)

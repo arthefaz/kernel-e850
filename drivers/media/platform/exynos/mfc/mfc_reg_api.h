@@ -69,6 +69,10 @@
 #define mfc_get_scratch_change()	((MFC_READL(MFC_REG_D_DISPLAY_STATUS)		\
 						>> MFC_REG_DISP_STATUS_NEED_SCRATCH_CHANGE_SHIFT)	\
 						& MFC_REG_DISP_STATUS_NEED_SCRATCH_CHANGE_MASK)
+#define mfc_get_uncomp()	((MFC_READL(MFC_REG_D_DISPLAY_STATUS)		\
+						>> MFC_REG_DISP_STATUS_UNCOMP_SHIFT)	\
+						& MFC_REG_DISP_STATUS_UNCOMP_MASK)
+
 #define mfc_get_disp_frame_type()	(MFC_READL(MFC_REG_D_DISPLAY_FRAME_TYPE)	\
 						& MFC_REG_DISPLAY_FRAME_MASK)
 #define mfc_get_dec_frame_type()	(MFC_READL(MFC_REG_D_DECODED_FRAME_TYPE)	\

@@ -198,6 +198,7 @@ enum mfc_vb_flag {
 	MFC_FLAG_BLACKBAR_DETECT	= 5,
 	MFC_FLAG_HDR_PLUS		= 6,
 	MFC_FLAG_DISP_RES_CHANGE	= 7,
+	MFC_FLAG_UNCOMP			= 8,
 	MFC_FLAG_CSD			= 29,
 	MFC_FLAG_EMPTY_DATA		= 30,
 	MFC_FLAG_LAST_FRAME		= 31,
@@ -537,6 +538,7 @@ struct mfc_platdata {
 	struct mfc_feature static_info_enc;
 	struct mfc_feature hdr10_plus;
 	struct mfc_feature vp9_stride_align;
+	struct mfc_feature sbwc_uncomp;
 
 	/*
 	 * new variables should be added above
@@ -1471,6 +1473,8 @@ struct mfc_dec {
 	unsigned int color_space;
 
 	unsigned int decoding_order;
+
+	unsigned int uncomp_pixfmt;
 	/*
 	 * new variables should be added above
 	 * ============ boundary line ============

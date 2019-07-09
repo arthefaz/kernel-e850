@@ -306,6 +306,36 @@ static void __mfc_dec_change_format(struct mfc_ctx *ctx)
 		mfc_info_ctx("[FRAME] format is changed to %s\n", ctx->dst_fmt->name);
 }
 
+static void __mfc_dec_uncomp_format(struct mfc_ctx *ctx)
+{
+	struct mfc_dec *dec = ctx->dec_priv;
+	u32 org_fmt = ctx->dst_fmt->fourcc;
+
+	switch (org_fmt) {
+		case V4L2_PIX_FMT_NV12M_SBWC_8B:
+			dec->uncomp_pixfmt = V4L2_PIX_FMT_NV12M;
+			break;
+		case V4L2_PIX_FMT_NV21M_SBWC_8B:
+			dec->uncomp_pixfmt = V4L2_PIX_FMT_NV21M;
+			break;
+		case V4L2_PIX_FMT_NV12N_SBWC_8B:
+			dec->uncomp_pixfmt = V4L2_PIX_FMT_NV12N;
+			break;
+		case V4L2_PIX_FMT_NV12M_SBWC_10B:
+			if (ctx->mem_type_10bit)
+				dec->uncomp_pixfmt = V4L2_PIX_FMT_NV12M_P010;
+			else
+				dec->uncomp_pixfmt = V4L2_PIX_FMT_NV12M_S10B;
+			break;
+		case V4L2_PIX_FMT_NV12N_SBWC_10B:
+			dec->uncomp_pixfmt = V4L2_PIX_FMT_NV12N_10B;
+			break;
+		default:
+			break;
+	}
+	mfc_debug(2, "[SBWC] uncompressed format is %d\n", dec->uncomp_pixfmt);
+}
+
 static int __mfc_dec_update_disp_res(struct mfc_ctx *ctx, struct v4l2_format *f)
 {
 	struct v4l2_pix_format_mplane *pix_fmt_mp = &f->fmt.pix_mp;
@@ -411,6 +441,9 @@ static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 		/* only NV16(61) format is supported for 422 format */
 		/* only 2 plane is supported for 10bit */
 		__mfc_dec_change_format(ctx);
+
+		if (ctx->is_sbwc)
+			__mfc_dec_uncomp_format(ctx);
 
 		raw = &ctx->raw_buf;
 		/* Width and height are set to the dimensions
@@ -1076,6 +1109,9 @@ static int __mfc_dec_get_ctrl_val(struct mfc_ctx *ctx, struct v4l2_control *ctrl
 		break;
 	case V4L2_CID_MPEG_MFC_GET_DRIVER_INFO:
 		ctrl->value = MFC_DRIVER_INFO;
+		break;
+	case V4L2_CID_MPEG_VIDEO_UNCOMP_FMT:
+		ctrl->value = dec->uncomp_pixfmt;
 		break;
 	default:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {

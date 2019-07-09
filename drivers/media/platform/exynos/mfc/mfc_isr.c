@@ -202,6 +202,7 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx, unsigned int err)
 	unsigned int is_video_signal_type = 0, is_colour_description = 0;
 	unsigned int is_content_light = 0, is_display_colour = 0;
 	unsigned int is_hdr10_plus_sei = 0;
+	unsigned int is_uncomp = 0;
 	unsigned int i, index;
 
 	if (MFC_FEATURE_SUPPORT(dev, dev->pdata->color_aspect_dec)) {
@@ -229,6 +230,9 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx, unsigned int err)
 		dspl_y_addr = (dma_addr_t)mfc_get_disp_y_addr();
 		frame_type = mfc_get_disp_frame_type();
 	}
+
+	if (MFC_FEATURE_SUPPORT(dev, dev->pdata->sbwc_uncomp) && ctx->is_sbwc)
+		is_uncomp = mfc_get_uncomp();
 
 	dst_mb = mfc_find_del_buf(ctx, &ctx->dst_buf_queue, dspl_y_addr);
 	if (dst_mb) {
@@ -292,6 +296,11 @@ static void __mfc_handle_frame_output_del(struct mfc_ctx *ctx, unsigned int err)
 			mfc_debug(2, "[HDR+] HDR10 plus dyanmic SEI metadata parsed\n");
 		} else {
 			dec->hdr10_plus_info[index].valid = 0;
+		}
+
+		if (is_uncomp) {
+			mfc_set_vb_flag(dst_mb, MFC_FLAG_UNCOMP);
+			mfc_debug(2, "[SBWC] uncompressed\n");
 		}
 
 		if (ctx->dst_fmt->mem_planes == 1) {
