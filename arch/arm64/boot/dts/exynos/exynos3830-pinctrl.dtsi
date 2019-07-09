@@ -244,7 +244,7 @@
 	};
 
 	/* PERI */
-	pinctrl@139B0000 {
+	pinctrl@139b0000 {
 		gpg0: gpg0 {
 			gpio-controller;
 			#gpio-cells = <2>;
