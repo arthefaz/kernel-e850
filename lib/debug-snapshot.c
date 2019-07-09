@@ -51,7 +51,7 @@ struct dbg_snapshot_ops dss_ops = {
 
 struct dbg_snapshot_bl *dss_bl;
 struct dbg_snapshot_item dss_items[] = {
-	{DSS_ITEM_HEADER_ID,	DSS_ITEM_HEADER,	{0, 0, 0, false, false, true}, NULL ,NULL, 0, },
+	{DSS_ITEM_HEADER_ID,	DSS_ITEM_HEADER,	{0, 0, 0, false, true, true}, NULL ,NULL, 0, },
 	{DSS_ITEM_KERNEL_ID,	DSS_ITEM_KERNEL,	{0, 0, 0, false, false, false}, NULL ,NULL, 0, },
 	{DSS_ITEM_PLATFORM_ID,	DSS_ITEM_PLATFORM,	{0, 0, 0, false, false, false}, NULL ,NULL, 0, },
 	{DSS_ITEM_FATAL_ID,	DSS_ITEM_FATAL,		{0, 0, 0, false, false, false}, NULL ,NULL, 0, },
