@@ -759,7 +759,7 @@ static struct samsung_pin_ctrl exynos3830_pin_ctrl[] = {
 		/* pin-controller instance 2 AUD data */
 		.pin_banks	= exynos3830_pin_banks2,
 		.nr_banks	= ARRAY_SIZE(exynos3830_pin_banks2),
-		.eint_gpio_init = exynos_eint_gpio_init,
+		//.eint_gpio_init = exynos_eint_gpio_init,
 		.suspend	= exynos_pinctrl_suspend,
 		.resume		= exynos_pinctrl_resume,
 	}, {
