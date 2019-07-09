@@ -78,9 +78,10 @@ struct ontime_dom *get_current_dom(int cpu)
 unsigned long get_upper_boundary(int cpu, struct task_struct *p)
 {
 	struct ontime_dom *curr = get_current_dom(cpu);
+	unsigned long capacity = capacity_cpu(cpu, p->sse);
 
 	if (curr)
-		return u_boundary(curr, p);
+		return (capacity * u_boundary(curr, p)) / 100;
 	else
 		return ULONG_MAX;
 }
@@ -88,9 +89,10 @@ unsigned long get_upper_boundary(int cpu, struct task_struct *p)
 static inline unsigned long get_lower_boundary(int cpu, struct task_struct *p)
 {
 	struct ontime_dom *curr = get_current_dom(cpu);
+	unsigned long capacity = capacity_cpu(cpu, p->sse);
 
 	if (curr)
-		return l_boundary(curr, p);
+		return (capacity * l_boundary(curr, p)) / 100;
 	else
 		return 0;
 }
@@ -141,7 +143,7 @@ void ontime_select_fit_cpus(struct task_struct *p, struct cpumask *fit_cpus)
 	 *
 	 * fit_cpus = cpu_active_mask
 	 */
-	if (runnable < l_boundary(curr, p)) {
+	if (runnable < get_lower_boundary(src_cpu, p)) {
 		cpumask_copy(&mask, cpu_active_mask);
 		goto done;
 	}
@@ -156,7 +158,7 @@ void ontime_select_fit_cpus(struct task_struct *p, struct cpumask *fit_cpus)
 	 *
 	 * fit_cpus = current cpus & faster cpus
 	 */
-	if (runnable < u_boundary(curr, p)) {
+	if (runnable < get_upper_boundary(src_cpu, p)) {
 		cpumask_or(&mask, &mask, &curr->cpus);
 		list_for_each_entry_continue(curr, &dom_list, list)
 			cpumask_or(&mask, &mask, &curr->cpus);
@@ -526,10 +528,10 @@ static ssize_t store_##_name(struct kobject *k, const char *buf, size_t count)	\
 static struct ontime_attr _name##_attr =					\
 __ATTR(_name, 0644, show_##_name, store_##_name)
 
-show_store_attr(upper_boundary, unsigned long, 1024);
-show_store_attr(lower_boundary, unsigned long, 1024);
-show_store_attr(upper_boundary_s, unsigned long, 1024);
-show_store_attr(lower_boundary_s, unsigned long, 1024);
+show_store_attr(upper_boundary, unsigned long, 100);
+show_store_attr(lower_boundary, unsigned long, 100);
+show_store_attr(upper_boundary_s, unsigned long, 100);
+show_store_attr(lower_boundary_s, unsigned long, 100);
 
 static ssize_t show(struct kobject *kobj, struct attribute *at, char *buf)
 {
