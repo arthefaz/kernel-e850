@@ -39,6 +39,8 @@
 #define PLL_LOCK_CNT_MARGIN_RATIO	0	/* 10% ~ 20% */
 #define PLL_LOCK_CNT_MARGIN	(PLL_LOCK_CNT_MULT * PLL_LOCK_CNT_MARGIN_RATIO / 100)
 
+#define LPRX_BIAS_SLEEP_EN		0x800
+
 u32 DSIM_PHY_BIAS_CON_VAL[] = {
 	0x00000010,
 	0x00000110,
@@ -54,7 +56,7 @@ u32 DSIM_PHY_PLL_CON_VAL[] = {
 	0x00000000,
 	0x00000000,
 	0x00000500,
-	0x0000008E, /* Need to check default value of PLL_CON6 */
+	0x0000008E,
 	0x00001450,
 	0x00000A28,
 };
@@ -65,8 +67,8 @@ u32 DSIM_PHY_MC_GNR_CON_VAL[] = {
 };
 u32 DSIM_PHY_MC_ANA_CON_VAL[] = {
 	/* EDGE_CON[14:12] DPHY=3'b111, CPHY=3'b001 */
-	0x00007033, /* Need to check default value of MC_ANA_CON0 */
-	0x00000000,
+	0x00007033,
+	0x00000004, /* BIAS SLEEP ENABLE */
 	0x00000002,
 };
 
@@ -78,7 +80,7 @@ u32 DSIM_PHY_MD_GNR_CON_VAL[] = {
 /* Need to check reg_cnt */
 u32 DSIM_PHY_MD_ANA_CON_VAL[] = {
 	0x00007033,
-	0x00000000,
+	0x00000004, /* BIAS SLEEP ENABLE */
 	0x00000000,
 	0x00000000,
 };
@@ -536,11 +538,19 @@ static void dsim_reg_set_md_gnr_con(u32 id, u32 *blk_ctl)
 static void dsim_reg_set_md_ana_con(u32 id, u32 *blk_ctl)
 {
 	u32 i;
+	u32 version;
+	u32 blk_con_2;
+
+	version = dsim_reg_get_version(id);
 
 	for (i = 0; i < MAX_DSIM_DATALANE_CNT; i++) {
 		dsim_phy_write(id, DSIM_PHY_MD_ANA_CON0(i), blk_ctl[0]);
 		dsim_phy_write(id, DSIM_PHY_MD_ANA_CON1(i), blk_ctl[1]);
-		dsim_phy_write(id, DSIM_PHY_MD_ANA_CON2(i), blk_ctl[2]);
+		if (version == DSIM_VER_EVT1 && i == 0)
+			blk_con_2 = blk_ctl[2] | LPRX_BIAS_SLEEP_EN;
+		else
+			blk_con_2 = blk_ctl[2];
+		dsim_phy_write(id, DSIM_PHY_MD_ANA_CON2(i), blk_con_2);
 		dsim_phy_write(id, DSIM_PHY_MD_ANA_CON3(i), blk_ctl[3]);
 	}
 }
