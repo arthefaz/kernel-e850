@@ -210,17 +210,6 @@ int __init dbg_snapshot_early_init_dt_scan_dpm_feature(unsigned long node, const
 	char *move;
 	int len, len2;
 
-	/* Version */
-	prop = of_get_flat_dt_prop(node, "version", &len);
-	if (prop) {
-		val = be32_to_cpup(prop);
-		dss_dpm.version = val;
-		dss_dpm.enabled = true;
-		pr_info("dpm: v%01d.%02d\n", val / 100, val % 100);
-	} else {
-		pr_info("dpm: version is not found\n");
-	}
-
 	item1 = of_get_flat_dt_subnode_by_name(node, "debug");
 	if (item1 == -FDT_ERR_NOTFOUND) {
 		dss_dpm.enabled_debug = false;
@@ -500,9 +489,23 @@ int __init dbg_snapshot_early_init_dt_scan_dpm(unsigned long node, const char *u
 		int depth, void *data)
 {
 	unsigned long next, root = node;
+	unsigned int val;
+	const __be32 *prop;
+	int len;
 
 	if (depth != 1 || (strcmp(uname, "dpm") != 0))
 		return 0;
+
+	/* version */
+	prop = of_get_flat_dt_prop(root, "version", &len);
+	if (prop) {
+		val = be32_to_cpup(prop);
+		dss_dpm.version = val;
+		dss_dpm.enabled = true;
+		pr_info("dpm: v%01d.%02d\n", val / 100, val % 100);
+	} else {
+		pr_info("dpm: version is not found\n");
+	}
 
 	/* feature setting */
 	next = of_get_flat_dt_subnode_by_name(root, DPM_F);
