@@ -1,0 +1,108 @@
+/*
+ * SAMSUNG EXYNOS3830 board device tree source
+ *
+ * Copyright (c) 2018 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+/dts-v1/;
+#include "exynos3830.dts"
+
+/ {
+	compatible = "samsung,exynos3830", "samsung,SMDK3830";
+	board_id = <0x0>;
+	board_rev = <0x0>;
+
+//	fragment@model {
+//		target-path = "/";
+//		__overlay__ {
+			#address-cells = <2>;
+			#size-cells = <1>;
+			
+			model = "Samsung SMDK3830 board based on EXYNOS3830";
+
+			fixed-rate-clocks {
+				oscclk {
+					compatible = "samsung,exynos9630-oscclk";
+					clock-frequency = <26000000>;
+				};
+			};
+
+			firmware {
+				android {
+					compatible = "android,firmware";
+
+					/* TODO: vbmeta */
+					/*
+					vbmeta {
+						compatible = "android,vbmeta";
+						parts = "vbmeta,boot,system,vendor,dtbo";
+					};
+					*/
+
+					/* TODO: vendor early mount */
+					/*
+					fstab {
+						compatible = "android,fstab";
+						vendor {
+							compatible = "android,vendor";
+							dev = "/dev/block/platform/13600000.ufs/by-name/vendor";
+							type = "ext4";
+							mnt_flags = "ro";
+							fsmgr_flags = "wait";
+							fsmgr_flags = "wait,avb";
+						};
+					};
+					*/
+				};
+			};
+
+			gpio_keys {
+				status = "okay";
+				compatible = "gpio-keys";
+				pinctrl-names = "default";
+				pinctrl-0 = <&key_voldown &key_volup>;
+
+				button@1 {
+					label = "gpio-keys: KEY_VOLUMEDOWN";
+					linux,code = <114>;
+					gpios = <&gpa1 0 0xf>;
+				};
+				button@2 {
+					label = "gpio-keys: KEY_VOLUMEUP";
+					linux,code = <115>;
+					gpios = <&gpa0 7 0xf>;
+				};
+			};
+//		}; /* end of __overlay__ */
+//	}; /* end of fragment */
+}; /* end of root */
+
+&serial_0 {
+	status = "okay";
+};
+
+&pinctrl_0 {
+	key_voldown: key-voldown {
+		samsung,pins = "gpa1-0";
+		samsung,pin-function = <0xf>;
+		samsung,pin-pud = <0>;
+		samsung,pin-drv = <0>;
+	};
+
+	key_volup: key-volup {
+		samsung,pins = "gpa0-7";
+		samsung,pin-function = <0xf>;
+		samsung,pin-pud = <0>;
+		samsung,pin-drv = <0>;
+	};
+};
+
+&panel_0 {
+    /* reset, power */
+    gpios = <&gpg2 5 0x1>, <&gpg1 1 0x1>;
+};

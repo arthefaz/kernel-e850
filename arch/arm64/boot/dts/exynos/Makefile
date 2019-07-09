@@ -4,14 +4,17 @@ dtb-$(CONFIG_ARCH_EXYNOS) += \
 	exynos5433-tm2e.dtb	\
 	exynos7-espresso.dtb
 
-dtb-$(CONFIG_SOC_EXYNOS9610) += exynos9610.dtb
-dtb-$(CONFIG_SOC_EXYNOS9610) += \
-	exynos9610-erd9610.dtbo
+dtb-$(CONFIG_SOC_EXYNOS9610) += exynos9610.dtb \
+				exynos9610-erd9610.dtbo
+
 dtb-$(CONFIG_SOC_EXYNOS9630) += exynos9630.dtb \
 				exynos9630-smdk9630.dtbo \
 				exynos9630-erd9630.dtbo \
 
-dtb-$(CONFIG_SOC_EXYNOS3830) += exynos3830-smdk3830.dtb
+dtb-$(CONFIG_SOC_EXYNOS3830) += exynos3830.dtb \
+				exynos3830-smdk3830.dtbo \
+
+dtb-$(CONFIG_SOC_EXYNOS3830) += exynos3830-cramfs-smdk3830.dtb
 
 always		:= $(dtb-y) $(dtbo-y)
 subdir-y	:= $(dts-dirs)
