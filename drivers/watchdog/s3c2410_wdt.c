@@ -82,11 +82,13 @@
 
 #define EXYNOS_CLUSTER0_NONCPU_INT_EN		(0x1244)
 #define EXYNOS_CLUSTER2_NONCPU_INT_EN		(0x1644)
-
 #define EXYNOS9630_CLUSTER0_NONCPU_INT_EN	(0x1344)
 #define EXYNOS9630_CLUSTER1_NONCPU_INT_EN	(0x1544)
+
 #define EXYNOS9630_CLUSTER0_NONCPU_OUT		(0x1320)
 #define EXYNOS9630_CLUSTER1_NONCPU_OUT		(0x1520)
+#define EXYNOS3_CLUSTER0_NONCPU_OUT		(0x1220)
+#define EXYNOS3_CLUSTER1_NONCPU_OUT		(0x1620)
 
 /* These quirks require that we have a PMU register map */
 #define QUIRKS_HAVE_PMUREG			(QUIRK_HAS_PMU_CONFIG | \
@@ -313,6 +315,31 @@ static const struct s3c2410_wdt_variant drv_data_exynos9630_v2 = {
 		  QUIRK_HAS_DBGACK_BIT | QUIRK_HAS_WTMINCNT_REG,
 };
 
+static const struct s3c2410_wdt_variant drv_data_exynos3_v1 = {
+	.noncpu_int_en = EXYNOS_CLUSTER0_NONCPU_INT_EN,
+	.noncpu_out = EXYNOS3_CLUSTER0_NONCPU_OUT,
+	.mask_bit = 2,
+	.cnt_en_bit = 7,
+	.rst_stat_reg = EXYNOS5_RST_STAT_REG_OFFSET,
+	.rst_stat_bit = 24,	/* CLUSTER0 WDTRESET */
+	.pmu_reset_func = s3c2410wdt_noncpu_int_en,
+	.pmu_count_en_func = s3c2410wdt_noncpu_out,
+	.quirks = QUIRK_HAS_PMU_CONFIG | QUIRK_HAS_RST_STAT | QUIRK_HAS_WTCLRINT_REG |
+		  QUIRK_HAS_DBGACK_BIT | QUIRK_HAS_WTMINCNT_REG,
+};
+
+static const struct s3c2410_wdt_variant drv_data_exynos3_v2 = {
+	.noncpu_int_en = EXYNOS_CLUSTER2_NONCPU_INT_EN,
+	.noncpu_out = EXYNOS3_CLUSTER1_NONCPU_OUT,
+	.mask_bit = 2,
+	.cnt_en_bit = 7,
+	.rst_stat_reg = EXYNOS5_RST_STAT_REG_OFFSET,
+	.rst_stat_bit = 23,	/* CLUSTER1 WDTRESET */
+	.pmu_reset_func = s3c2410wdt_noncpu_int_en,
+	.pmu_count_en_func = s3c2410wdt_noncpu_out,
+	.quirks = QUIRK_HAS_PMU_CONFIG | QUIRK_HAS_RST_STAT | QUIRK_HAS_WTCLRINT_REG |
+		  QUIRK_HAS_DBGACK_BIT | QUIRK_HAS_WTMINCNT_REG,
+};
 
 static const struct of_device_id s3c2410_wdt_match[] = {
 	{ .compatible = "samsung,s3c2410-wdt",
@@ -339,6 +366,10 @@ static const struct of_device_id s3c2410_wdt_match[] = {
 	  .data = &drv_data_exynos9630_v1 },
 	{ .compatible = "samsung,exynos9630-v2-wdt",
 	  .data = &drv_data_exynos9630_v2 },
+	{ .compatible = "samsung,exynos3-v1-wdt",
+	  .data = &drv_data_exynos3_v1 },
+	{ .compatible = "samsung,exynos3-v2-wdt",
+	  .data = &drv_data_exynos3_v2 },
 
 	{},
 };
