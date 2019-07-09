@@ -8,5 +8,6 @@ TARGET_DTBO_CFG=exynos3830_dtboimg.cfg
 FILES="
 arch/arm64/boot/Image:kernel
 arch/arm64/boot/dts/exynos/exynos3830-smdk3830.dtb:dtb.img
+dtbo.img:dtbo.img
 vmlinux:vmlinux
 "
