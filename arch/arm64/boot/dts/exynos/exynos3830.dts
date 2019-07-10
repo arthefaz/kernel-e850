@@ -38,6 +38,8 @@
 		pinctrl4 = &pinctrl_4;
 		pinctrl5 = &pinctrl_5;
 		uart0 = &serial_0;
+		mshc0 = &dwmmc_0;
+		mshc2 = &dwmmc_2;
 
 	};
 
@@ -242,21 +244,7 @@
 		clock-names = "gate_uart_clk0", "ipclk_uart0";
 		status = "disabled";
 	};
-	/* TBD */
-/*
-	dwmmc_2: dwmmc2@13D00000 {
-		compatible = "samsung,exynos-dw-mshc";
-		reg = <0x0 0x13D00000 0x2000>;
-		reg-names = "dw_mmc";
-		interrupts = <0 250 0>;
-		#address-cells = <1>;
-		#size-cells = <0>;
 
-		clocks = <&clock MMC_CARD>, <&clock GATE_MMC_CARD>;
-		clock-names = "ciu", "ciu_gate";
-		status = "disabled";
-	 };
-*/
 	/* ALIVE */
 	pinctrl_0: pinctrl@11850000 {
 		compatible = "samsung,exynos3830-pinctrl";
@@ -492,4 +480,29 @@
         gpu_vk_boost_mif_min_lock = <1014000>;
         gpu_bts_support = <1>;
     };
+
+	dwmmc_0: dwmmc0@12100000 {
+		compatible = "samsung,exynos-dw-mshc";
+		reg = <0x0 0x12100000 0x2000>;
+		reg-names = "dw_mmc";
+		interrupts = <0 INTREQ__MMC_EMBD_CORE 0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&clock DOUT_CORE_MMC_EMBD>;
+		clock-names = "ciu";
+		status = "disabled";
+	 };
+
+	dwmmc_2: dwmmc2@13500000 {
+		compatible = "samsung,exynos-dw-mshc";
+		reg = <0x0 0x13500000 0x2000>;
+		reg-names = "dw_mmc";
+		interrupts = <0 INTREQ__MMC_CARD 0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&clock HSI_MMC_CARD>;
+		clock-names = "ciu";
+		status = "disabled";
+	 };
+
 };
