@@ -3884,14 +3884,16 @@ static int synaptics_power_ctrl(void *data, bool on)
 		return PTR_ERR(regulator_avdd);
 	}
 
+
 	tsp_debug_info(true, dev, "%s: %s\n", __func__, on ? "on" : "off");
 
 	if (on) {
-		retval = regulator_enable(pdata->regul_dvdd);
+/*		retval = regulator_enable(pdata->regul_dvdd);
 		if (retval) {
 			tsp_debug_err(true, dev, "%s: Failed to enable vdd: %d\n", __func__, retval);
 			return retval;
 		}
+*/
 
 		retval = regulator_enable(regulator_avdd);
 		if (retval) {
@@ -3907,7 +3909,7 @@ static int synaptics_power_ctrl(void *data, bool on)
 			tsp_debug_err(true, dev, "%s: Failed to configure tsp_attn pin\n", __func__);
 
 	} else {
-		regulator_disable(pdata->regul_dvdd);
+//		regulator_disable(pdata->regul_dvdd);
 
 		if (regulator_is_enabled(regulator_avdd))
 			regulator_disable(regulator_avdd);
@@ -3964,10 +3966,11 @@ static int synaptics_parse_dt(struct i2c_client *client)
 	pdata->num_of_tx = lines[1];
 	pdata->max_touch_width = max(pdata->num_of_rx, pdata->num_of_tx);
 
-	if (of_property_read_string(np, "synaptics,regulator_dvdd", &pdata->regulator_dvdd)) {
+/*	if (of_property_read_string(np, "synaptics,regulator_dvdd", &pdata->regulator_dvdd)) {
 		tsp_debug_err(true, dev, "Failed to get regulator_dvdd name property\n");
 		return -EINVAL;
 	}
+*/
 
 	if (of_property_read_string(np, "synaptics,regulator_avdd", &pdata->regulator_avdd)) {
 		tsp_debug_err(true, dev, "Failed to get regulator_avdd name property\n");
@@ -3976,13 +3979,13 @@ static int synaptics_parse_dt(struct i2c_client *client)
 
 	pdata->power = synaptics_power_ctrl;
 
-	pdata->regul_dvdd = regulator_get(dev, pdata->regulator_dvdd);
+/*	pdata->regul_dvdd = regulator_get(dev, pdata->regulator_dvdd);
 	if (IS_ERR(pdata->regul_dvdd)) {
 		tsp_debug_err(true, dev, "%s: Failed to get %s regulator.\n",
 			 __func__, pdata->regulator_dvdd);
 		return PTR_ERR(pdata->regul_dvdd);
 	}
-
+*/
 	/* Optional parmeters(those values are not mandatory)
 	 * do not return error value even if fail to get the value
 	 */
@@ -4291,8 +4294,8 @@ static int synaptics_rmi4_remove(struct i2c_client *client)
 	unsigned char attr_count;
 	struct synaptics_rmi4_data *rmi4_data = i2c_get_clientdata(client);
 	struct synaptics_rmi4_device_info *rmi;
-	struct device *dev = &client->dev;
-	struct synaptics_rmi4_platform_data *pdata = dev->platform_data;
+//	struct device *dev = &client->dev;
+//	struct synaptics_rmi4_platform_data *pdata = dev->platform_data;
 
 	rmi = &(rmi4_data->rmi4_mod_info);
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -4312,7 +4315,7 @@ static int synaptics_rmi4_remove(struct i2c_client *client)
 	rmi4_data->board->power(rmi4_data, false);
 	rmi4_data->touch_stopped = true;
 
-	regulator_put(pdata->regul_dvdd);
+//	regulator_put(pdata->regul_dvdd);
 
 	synaptics_rmi4_release_support_fn(rmi4_data);
 
