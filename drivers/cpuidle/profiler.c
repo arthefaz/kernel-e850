@@ -382,7 +382,7 @@ static int cpu_idle_ratio(int cpu)
 	return calculate_percent(cpu_idle_time(cpu));
 }
 
-static ssize_t show_result(struct device *kobj,
+static ssize_t show_result(struct device *dev,
 				     struct device_attribute *attr,
 				     char *buf)
 {
@@ -580,8 +580,8 @@ static ssize_t store_cpuidle_profile(struct device *dev,
 
 	return count;
 }
-static ssize_t show_cpuidle_auto_profile(struct kobject *kobj,
-				     struct kobj_attribute *attr,
+static ssize_t show_cpuidle_auto_profile(struct device *dev,
+				     struct device_attribute *attr,
 				     char *buf)
 {
 
@@ -591,8 +591,8 @@ static ssize_t show_cpuidle_auto_profile(struct kobject *kobj,
 		return snprintf(buf, PAGE_SIZE, "CPUIDLE: Auto profile is done\n");
 }
 
-static ssize_t store_cpuidle_auto_profile(struct kobject *kobj,
-				      struct kobj_attribute *attr,
+static ssize_t store_cpuidle_auto_profile(struct device *dev,
+				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
 	unsigned int timeout;
@@ -609,14 +609,12 @@ static ssize_t store_cpuidle_auto_profile(struct kobject *kobj,
 }
 
 
-static struct device_attribute cpuidle_profile_attr =
-	__ATTR(profile, 0644, show_cpuidle_profile, store_cpuidle_profile);
-static struct kobj_attribute cpuidle_auto_profile_attr =
-	__ATTR(auto_profile, 0644, show_cpuidle_auto_profile, store_cpuidle_auto_profile);
+static DEVICE_ATTR(profile, 0644, show_cpuidle_profile, store_cpuidle_profile);
+static DEVICE_ATTR(auto_profile, 0644, show_cpuidle_auto_profile, store_cpuidle_auto_profile);
 
 static struct attribute *cpuidle_profile_attrs[] = {
-	&cpuidle_profile_attr.attr,
-	&cpuidle_auto_profile_attr.attr,
+	&dev_attr_profile.attr,
+	&dev_attr_auto_profile.attr,
 	NULL,
 };
 

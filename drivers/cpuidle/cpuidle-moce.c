@@ -264,8 +264,8 @@ static FACTOR_TYPE get_factor_type(const char *name)
 	return type;
 }
 
-static ssize_t show_factor(struct kobject *kobj,
-				struct attribute *attr, char *buf)
+static ssize_t show_factor(struct device *dev,
+				struct device_attribute *attr, char *buf)
 {
 	struct bias_cpuidle *bias_idle;
 	struct factor *factor;
@@ -298,7 +298,7 @@ static ssize_t show_factor(struct kobject *kobj,
 	return size;
 }
 
-static ssize_t store_factor(struct kobject *kobj, struct attribute *attr,
+static ssize_t store_factor(struct device *dev, struct device_attribute *attr,
 					const char *buf, size_t size)
 {
 	struct bias_cpuidle *bias_idle;
@@ -342,13 +342,11 @@ static ssize_t store_factor(struct kobject *kobj, struct attribute *attr,
 	return size;
 }
 
-static struct global_attr freq_factor =
-__ATTR(freq_factor, S_IRUGO | S_IWUSR,
-		show_factor, store_factor);
+static DEVICE_ATTR(freq_factor, S_IRUGO | S_IWUSR, show_factor, store_factor);
 /* Add sysfs node for the new factor  */
 
 static struct attribute *cpuidle_moce_attrs[] = {
-	&freq_factor.attr,
+	&dev_attr_freq_factor.attr,
 	NULL,
 };
 
