@@ -173,9 +173,10 @@ static void gpu_power_suspend(struct kbase_device *kbdev)
 		return;
 
 	GPU_LOG(DVFS_INFO, DUMMY, 0u, 0u, "power suspend\n");
+#ifdef CONFIG_REGULATOR
 	if (platform->dvs_status)
 		gpu_control_enable_customization(kbdev);
-
+#endif
 	ret = pm_runtime_suspend(kbdev->dev);
 
 #ifdef CONFIG_MALI_DVFS
