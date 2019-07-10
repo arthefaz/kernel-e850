@@ -29,13 +29,13 @@ config EXYNOS_SOC_NAME
 
 config MALI_DVFS
     bool "Enable EXYNOS DVFS"
-    default y
+    default n
     help
       Choose this option to enable DVFS in the Mali Midgard DDK.
 
 config MALI_RT_PM
     bool "Enable EXYNOS Runtime power management"
-    default y
+    default n
     help
       Choose this option to enable runtime power management in the Mali Midgard DDK.
 
@@ -56,13 +56,13 @@ config MALI_DEBUG_SYS
 
 config MALI_SEC_CL_BOOST
     bool "Enable EXYNOS cl booster"
-    default y
+    default n
     help
       Enables open cl dvfs booster.
 
 config MALI_PM_QOS
     bool "Enable DVFS with QoS"
-    default y
+    default n
     help
       Choose this option to enable PM_QOS in the Mali tTRx DDK.
 
@@ -96,7 +96,7 @@ config MALI_ASV_CALIBRATION_SUPPORT
 
 config MALI_SEC_VK_BOOST
 	bool "Enable GPU VK JOB PMQOS BOOST"
-	default y
+	default n
 	help
 	  Choose this option to enable VK JOB PMQOS BOOST in the Mali tTRx DDK.
 
