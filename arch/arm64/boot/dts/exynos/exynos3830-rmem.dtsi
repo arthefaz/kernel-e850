@@ -84,5 +84,10 @@
 			compatible = "samsung,exynos-gnss";
 			reg = <0x0 0xEE000000 0x00800000>;
 		};
+
+		wifibt_if {
+			compatible = "exynos,wifibt_if";
+			size = <0x1000000>; /* 16MB */
+		};
 	};
 };

@@ -30,6 +30,7 @@
 #include "exynos3830-bts.dtsi"
 #include "exynos3830-mfc.dtsi"
 #include <dt-bindings/soc/samsung/exynos-ecs.h>
+#include "exynos3830-wlbt.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
