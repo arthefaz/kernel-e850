@@ -268,6 +268,7 @@ void lb_update_misfit_status(struct task_struct *p, struct rq *rq,
 /****************************************************************/
 /*				SYSFS				*/
 /****************************************************************/
+#define STR_LEN 8
 #define lbt_attr_init(_attr, _name, _mode, _show, _store)		\
 	sysfs_attr_init(&_attr.attr);					\
 	_attr.attr.name = _name;					\
@@ -334,6 +335,61 @@ static ssize_t store_overutil_ratio(struct kobject *kobj,
 	return count;
 }
 
+enum {
+	PRE_OVERUTILIZED_CPUS = 0,
+	NUM_OF_OTHER_LBT_NODES,
+};
+
+static const char *lbt_othres_names[NUM_OF_OTHER_LBT_NODES] = {
+	"pre_overutilized_cpus",
+};
+
+static ssize_t show_pre_overutlized_cpus(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%#x\n", *(unsigned int *)cpumask_bits(&pre_overutilized_cpus));
+}
+
+static ssize_t store_pre_overutlized_cpus(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf,
+		size_t count)
+{
+	char str[STR_LEN];
+	int i;
+
+	if (strlen(buf) >= STR_LEN)
+		return -EINVAL;
+
+	if (!sscanf(buf, "%s", str))
+		return -EINVAL;
+
+	if (str[0] == '0' && str[1] == 'x') {
+		for (i = 0; i+2 < STR_LEN; i++) {
+			str[i] = str[i + 2];
+			str[i+2] = '\n';
+		}
+	}
+
+	cpumask_parse(str, &pre_overutilized_cpus);
+
+	return count;
+}
+
+static ssize_t
+(*lbt_show_others[NUM_OF_OTHER_LBT_NODES])(struct kobject *kobj,
+			struct kobj_attribute *attr, char *buf) =
+{
+	&show_pre_overutlized_cpus,
+};
+
+static ssize_t
+(*lbt_store_others[NUM_OF_OTHER_LBT_NODES])(struct kobject *kobj,
+			struct kobj_attribute *attr, const char *buf,
+			size_t count) =
+{
+	&store_pre_overutlized_cpus,
+};
+
 static int alloc_lbt_sysfs(int size)
 {
 	if (size < 0)
@@ -364,7 +420,7 @@ static int __init lbt_sysfs_init(void)
 	int depth = get_topology_depth();
 	int i;
 
-	if (alloc_lbt_sysfs(depth + 1))
+	if (alloc_lbt_sysfs(depth + NUM_OF_OTHER_LBT_NODES + 1))
 		goto out;
 
 	for (i = 0; i <= depth; i++) {
@@ -378,6 +434,14 @@ static int __init lbt_sysfs_init(void)
 
 		lbt_attr_init(lbt_kattrs[i], name, 0644,
 				show_overutil_ratio, store_overutil_ratio);
+		lbt_attrs[i] = &lbt_kattrs[i].attr;
+	}
+
+	for (i = depth + 1; i <= depth + NUM_OF_OTHER_LBT_NODES; i++) {
+		int index = i - (depth + 1);
+
+		lbt_attr_init(lbt_kattrs[i], lbt_othres_names[index], 0644,
+				lbt_show_others[index], lbt_store_others[index]);
 		lbt_attrs[i] = &lbt_kattrs[i].attr;
 	}
 
