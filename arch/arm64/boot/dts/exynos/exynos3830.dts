@@ -354,4 +354,10 @@
 		compatible = "samsung,exynos-acpm-dvfs";
 		acpm-ipc-channel = <5>;
 	};
+
+	acpm_mfd_bus: acpm_mfd_bus@11A50000 {
+		compatible = "samsung,exynos-acpm-mfd-bus";
+		status = "disabled";
+	};
+
 };
