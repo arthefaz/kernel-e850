@@ -31,7 +31,7 @@ static int __init get_revision(char *str)
 	if (res)
 		pr_info("%s: Get Board Revision fail!!\n", __func__);
 	else
-		pr_info("Board Revision = 0x%x\n", board_rev);
+		pr_info("Board Revision = 0x%lx\n", board_rev);
 	return 0;
 }
 
