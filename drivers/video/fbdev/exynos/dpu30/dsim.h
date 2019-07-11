@@ -230,6 +230,7 @@ struct dsim_device {
 #endif
 	unsigned int ddi_seq_size;
 	unsigned char ddi_seq[512];
+	int brightness;
 };
 
 int dsim_call_panel_ops(struct dsim_device *dsim, u32 cmd, void *arg);

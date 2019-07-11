@@ -219,7 +219,6 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 #endif /* #if defined(S6E3HA8_BRIGHTNESS_CONTROL) */
 
 	dsim_write_data_seq(dsim, false, 0x35); /* TE on */
-
 	/* ESD flag: [2]=VLIN3, [6]=VLIN1 error check*/
 	dsim_write_data_seq(dsim, false, 0xED, 0x44);
 
@@ -235,6 +234,12 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 #endif
 	dsim_write_data_table(dsim, SEQ_FFC);
 
+	if (panel->id_index == 1) {
+		dsim_write_data_seq(dsim, false, 0x53, 0x20);
+		dsim_write_data_seq(dsim, false, 0x51, 0x01, 0xff);
+	}
+	/* set brightness to MAX */
+	dsim_write_data_seq(dsim, false, 0x51, DEFAULT_MAX_BRIGHTNESS);
 	dsim_write_data_seq(dsim, false, 0x29); /* display on */
 
 	mutex_unlock(&panel->ops_lock);
