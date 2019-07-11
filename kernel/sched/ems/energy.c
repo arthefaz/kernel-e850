@@ -28,14 +28,14 @@ struct energy_state {
 };
 
 /*
- * Each cpu can have its own mips, coefficient and energy table. Generally,
- * cpus in the same frequency domain have the same mips, coefficient and
- * energy table.
+ * Each cpu can have its own mips_per_mhz, coefficient and energy table.
+ * Generally, cpus in the same frequency domain have the same mips_per_mhz,
+ * coefficient and energy table.
  */
 struct energy_table {
-	unsigned int mips;
+	unsigned int mips_per_mhz;
 	unsigned int coefficient;
-	unsigned int mips_s;
+	unsigned int mips_per_mhz_s;
 	unsigned int coefficient_s;
 	unsigned int static_coefficient;
 
@@ -46,6 +46,7 @@ struct energy_table {
 	unsigned int nr_states_requests[NUM_OF_REQUESTS];
 };
 static DEFINE_PER_CPU(struct energy_table, energy_table);
+#define get_energy_table(cpu)	&per_cpu(energy_table, cpu)
 
 /* capacity energy weight */
 struct ce_weight {
@@ -83,7 +84,7 @@ compute_energy(struct energy_table *table, struct task_struct *p,
 static unsigned int
 compute_efficiency(struct task_struct *p, int target_cpu, unsigned int eff_weight)
 {
-	struct energy_table *table = &per_cpu(energy_table, target_cpu);
+	struct energy_table *table = get_energy_table(target_cpu);
 	unsigned long max_util = 0;
 	unsigned long capacity, energy;
 	unsigned int eff;
@@ -267,7 +268,7 @@ out:
  */
 int find_allowed_capacity(int cpu, unsigned int freq, int power)
 {
-	struct energy_table *table = &per_cpu(energy_table, cpu);
+	struct energy_table *table = get_energy_table(cpu);
 	unsigned long new_power = 0;
 	int i;
 
@@ -290,7 +291,7 @@ int find_allowed_capacity(int cpu, unsigned int freq, int power)
 
 int find_step_power(int cpu, int step)
 {
-	struct energy_table *table = &per_cpu(energy_table, cpu);
+	struct energy_table *table = get_energy_table(cpu);
 	int max_idx = table->nr_states - 1;
 
 	if (!step)
@@ -416,6 +417,17 @@ static struct notifier_block sched_cpufreq_policy_notifier = {
 };
 
 static void
+fill_frequency_table(struct energy_table *table, unsigned long *f_table)
+{
+	int i, index = 0;
+
+	for (i = table->nr_states - 1; i >=0; i--) {
+		table->states[index].frequency = f_table[i];
+		index++;
+	}
+}
+
+static void
 fill_power_table(struct energy_table *table, int table_size,
 			unsigned long *f_table, unsigned int *v_table,
 			int max_f, int min_f)
@@ -453,26 +465,27 @@ fill_power_table(struct energy_table *table, int table_size,
 		table->states[index].power_s = power_s;
 		table->states[index].static_power = static_power;
 
-		/* save frequency to energy table */
-		table->states[index].frequency = f_table[i];
 		index++;
 	}
 }
 
 static void
-fill_cap_table(struct energy_table *table, int max_mips, unsigned long max_mips_freq)
+fill_cap_table(struct energy_table *table, unsigned long max_mips)
 {
-	int i, m = table->mips, m_s = table->mips_s;
+	int i;
+	int mpm = table->mips_per_mhz;
+	int mpm_s = table->mips_per_mhz_s;
 	unsigned long f;
 
 	for (i = 0; i < table->nr_states; i++) {
 		f = table->states[i].frequency;
 
 		/*
-		 * capacity = freq/max_freq * mips/max_mips * 1024
+		 *     mips(f) = f * mips_per_mhz
+		 * capacity(f) = mips(f) / max_mips * 1024
 		 */
-		table->states[i].cap = f * m * 1024 / max_mips_freq / max_mips;
-		table->states[i].cap_s = f * m_s * 1024 / max_mips_freq / max_mips;
+		table->states[i].cap = f * mpm * 1024 / max_mips;
+		table->states[i].cap_s = f * mpm_s * 1024 / max_mips;
 	}
 }
 
@@ -487,116 +500,6 @@ static void show_energy_table(struct energy_table *table, int cpu)
 			table->states[i].cap_s, table->states[i].power_s,
 			table->states[i].static_power);
 	}
-}
-
-/*
- * Whenever frequency domain is registered, and energy table corresponding to
- * the domain is created. Because cpu in the same frequency domain has the same
- * energy table. Capacity is calculated based on the max frequency of the fastest
- * cpu, so once the frequency domain of the faster cpu is regsitered, capacity
- * is recomputed.
- */
-void init_sched_energy_table(struct cpumask *cpus, int table_size,
-				unsigned long *f_table, unsigned int *v_table,
-				int max_f, int min_f)
-{
-	struct energy_table *table;
-	int cpu, i, mips, valid_table_size = 0;
-	int max_mips = 0;
-	unsigned long max_mips_freq = 0;
-	int last_state;
-
-	cpumask_and(cpus, cpus, cpu_possible_mask);
-	if (cpumask_empty(cpus))
-		return;
-
-	mips = per_cpu(energy_table, cpumask_any(cpus)).mips;
-	for_each_cpu(cpu, cpus) {
-		/*
-		 * All cpus in a frequency domain must have the same capacity
-		 * because cpu and frequency domain always are same.
-		 * Verifying domain is enough to check the mips so it does not
-		 * need to check mips_s.
-		 */
-		if (mips != per_cpu(energy_table, cpu).mips) {
-			pr_warn("cpu%d has different cpacity!!\n", cpu);
-			return;
-		}
-	}
-
-	/* get size of valid frequency table to allocate energy table */
-	for (i = 0; i < table_size; i++) {
-		if (f_table[i] > max_f || f_table[i] < min_f)
-			continue;
-
-		valid_table_size++;
-	}
-
-	/* there is no valid row in the table, energy table is not created */
-	if (!valid_table_size)
-		return;
-
-	/* allocate memory for energy table and fill power table */
-	for_each_cpu(cpu, cpus) {
-		table = &per_cpu(energy_table, cpu);
-		table->states = kcalloc(valid_table_size,
-				sizeof(struct energy_state), GFP_KERNEL);
-		if (unlikely(!table->states))
-			return;
-
-		table->nr_states = valid_table_size;
-		fill_power_table(table, table_size, f_table, v_table, max_f, min_f);
-	}
-
-	/*
-	 * Find fastest cpu among the cpu to which the energy table is allocated.
-	 * The mips and max frequency of fastest cpu are needed to calculate
-	 * capacity.
-	 */
-	for_each_possible_cpu(cpu) {
-		table = &per_cpu(energy_table, cpu);
-		if (!table->states)
-			continue;
-
-		mips = max(table->mips, table->mips_s);
-		if (mips > max_mips) {
-			max_mips = mips;
-
-			last_state = table->nr_states - 1;
-			max_mips_freq = table->states[last_state].frequency;
-		}
-	}
-
-	/*
-	 * Calculate and fill capacity table.
-	 * Recalculate the capacity whenever frequency domain changes because
-	 * the fastest cpu may have changed and the capacity needs to be
-	 * recalculated.
-	 */
-	for_each_possible_cpu(cpu) {
-		struct sched_domain *sd;
-
-		table = &per_cpu(energy_table, cpu);
-		if (!table->states)
-			continue;
-
-		fill_cap_table(table, max_mips, max_mips_freq);
-		show_energy_table(table, cpu);
-
-		last_state = table->nr_states - 1;
-		per_cpu(cpu_capacity_orig_s, cpu) = table->states[last_state].cap_s;
-		per_cpu(cpu_capacity_orig, cpu) = table->states[last_state].cap;
-		per_cpu(cpu_capacity_s, cpu) = table->states[last_state].cap_s;
-		per_cpu(cpu_capacity, cpu) = table->states[last_state].cap;
-		topology_set_cpu_scale(cpu, table->states[last_state].cap);
-
-		rcu_read_lock();
-		for_each_domain(cpu, sd)
-			update_group_capacity(sd, cpu);
-		rcu_read_unlock();
-	}
-
-	topology_update();
 }
 
 static DEFINE_SPINLOCK(rebuilding_lock);
@@ -636,7 +539,7 @@ update_nr_states(struct cpumask *cpus, int clipped_freq, int max_freq, int type)
 	if (type >= NUM_OF_REQUESTS)
 		return false;
 
-	table = &per_cpu(energy_table, cpumask_any(cpus));
+	table = get_energy_table(cpumask_any(cpus));
 	if (!table || !table->states)
 		return false;
 
@@ -646,7 +549,7 @@ update_nr_states(struct cpumask *cpus, int clipped_freq, int max_freq, int type)
 		return false;
 
 	for_each_cpu(cpu, cpus) {
-		cursor = &per_cpu(energy_table, cpu);
+		cursor = get_energy_table(cpu);
 		cursor->nr_states_requests[type] = nr_states_request;
 	}
 
@@ -660,21 +563,18 @@ update_nr_states(struct cpumask *cpus, int clipped_freq, int max_freq, int type)
 
 	/* Update clipped state of all cpus which are clipped */
 	for_each_cpu(cpu, cpus) {
-		cursor = &per_cpu(energy_table, cpu);
+		cursor = get_energy_table(cpu);
 		cursor->nr_states = nr_states;
 	}
 
 	return true;
 }
 
-static void
-__rebuild_sched_energy_table(struct cpumask *cpus,
-				int clipped_freq,
-				int max_freq, int type)
+static unsigned long find_max_mips(void)
 {
 	struct energy_table *table;
-	int cpu, mips, max_mips = 0;
-	unsigned long freq, max_mips_freq = 0;
+	unsigned long max_mips = 0;
+	int cpu;
 
 	/*
 	 * Find fastest cpu among the cpu to which the energy table is allocated.
@@ -682,60 +582,87 @@ __rebuild_sched_energy_table(struct cpumask *cpus,
 	 * capacity.
 	 */
 	for_each_possible_cpu(cpu) {
-		table = &per_cpu(energy_table, cpu);
+		unsigned long max_f, mpm;
+		unsigned long mips;
+
+		table = get_energy_table(cpu);
 		if (!table->states)
 			continue;
 
-		freq = table->states[table->nr_states - 1].frequency;
-		mips = max(table->mips, table->mips_s);
-		if (mips * freq > max_mips * max_mips_freq) {
+		/* max mips = max_f * mips_per_mhz */
+		max_f = table->states[table->nr_states - 1].frequency;
+		mpm = max(table->mips_per_mhz, table->mips_per_mhz_s);
+		mips = max_f * mpm;
+		if (mips > max_mips)
 			max_mips = mips;
-			max_mips_freq = freq;
-		}
 	}
 
-	/*
-	 * Calculate and fill capacity table.
-	 * Recalculate the capacity whenever frequency domain changes because
-	 * the fastest cpu may have changed and the capacity needs to be
-	 * recalculated.
-	 */
-	for_each_possible_cpu(cpu) {
-		struct sched_domain *sd;
-		int last_state;
-		unsigned long ratio;
+	return max_mips;
+}
 
-		table = &per_cpu(energy_table, cpu);
+static void
+update_capacity(struct energy_table *table, int cpu, bool init)
+{
+	int last_state = table->nr_states - 1;
+	unsigned long ratio;
+	struct sched_domain *sd;
+
+	if (last_state < 0)
+		return;
+
+	/*
+	 * update cpu_capacity_orig{_s},
+	 * this value never changes after initialization.
+	 */
+	if (init) {
+		per_cpu(cpu_capacity_orig_s, cpu) = table->states[last_state].cap_s;
+		per_cpu(cpu_capacity_orig, cpu) = table->states[last_state].cap;
+	}
+
+	/* update cpu_capacity{_s} */
+	per_cpu(cpu_capacity_s, cpu) = table->states[last_state].cap_s;
+	per_cpu(cpu_capacity, cpu) = table->states[last_state].cap;
+
+	/* update cpu_capacity_ratio{_s} */
+	ratio = (per_cpu(cpu_capacity, cpu) << SCHED_CAPACITY_SHIFT);
+	ratio /= per_cpu(cpu_capacity_s, cpu);
+	per_cpu(cpu_capacity_ratio, cpu) = ratio;
+	ratio = (per_cpu(cpu_capacity_s, cpu) << SCHED_CAPACITY_SHIFT);
+	ratio /= per_cpu(cpu_capacity, cpu);
+	per_cpu(cpu_capacity_ratio_s, cpu) = ratio;
+
+	/* announce capacity update to cfs */
+	topology_set_cpu_scale(cpu, table->states[last_state].cap);
+	rcu_read_lock();
+	for_each_domain(cpu, sd)
+		update_group_capacity(sd, cpu);
+	rcu_read_unlock();
+}
+
+static void
+__rebuild_sched_energy_table(void)
+{
+	struct energy_table *table;
+	int cpu, max_mips = 0;
+
+	max_mips = find_max_mips();
+	for_each_possible_cpu(cpu) {
+		table = get_energy_table(cpu);
 		if (!table->states)
 			continue;
 
-		fill_cap_table(table, max_mips, max_mips_freq);
-
-		last_state = table->nr_states - 1;
-
-		/* update capacity */
-		per_cpu(cpu_capacity_s, cpu) = table->states[last_state].cap_s;
-		per_cpu(cpu_capacity, cpu) = table->states[last_state].cap;
-		topology_set_cpu_scale(cpu, table->states[last_state].cap);
-
-		/* update capacity ratio */
-		ratio = (per_cpu(cpu_capacity, cpu) << SCHED_CAPACITY_SHIFT);
-		ratio /= per_cpu(cpu_capacity_s, cpu);
-		per_cpu(cpu_capacity_ratio, cpu) = ratio;
-
-		ratio = (per_cpu(cpu_capacity_s, cpu) << SCHED_CAPACITY_SHIFT);
-		ratio /= per_cpu(cpu_capacity, cpu);
-		per_cpu(cpu_capacity_ratio_s, cpu) = ratio;
-
-		rcu_read_lock();
-		for_each_domain(cpu, sd)
-			update_group_capacity(sd, cpu);
-		rcu_read_unlock();
+		fill_cap_table(table, max_mips);
+		update_capacity(table, cpu, false);
 	}
 }
 
-void
-rebuild_sched_energy_table(struct cpumask *cpus,
+/*
+ * Because capacity is a relative value computed based on max_mips, it must be
+ * recalculated if maximum mips is changed. If maximum mips changes when max
+ * frequency is changed by policy->max or pm_qos, recalculate capacity of
+ * energy table.
+ */
+void rebuild_sched_energy_table(struct cpumask *cpus,
 				int clipped_freq,
 				int max_freq, int type)
 {
@@ -748,9 +675,82 @@ rebuild_sched_energy_table(struct cpumask *cpus,
 	if (!update_nr_states(cpus, clipped_freq, max_freq, type))
 		goto unlock;
 
-	__rebuild_sched_energy_table(cpus, clipped_freq, max_freq, type);
+	__rebuild_sched_energy_table();
 unlock:
 	spin_unlock(&rebuilding_lock);
+}
+
+/*
+ * Whenever frequency domain is registered, and energy table corresponding to
+ * the domain is created. Because cpu in the same frequency domain has the same
+ * energy table. Capacity is calculated based on the max frequency of the fastest
+ * cpu, so once the frequency domain of the faster cpu is regsitered, capacity
+ * is recomputed.
+ */
+void init_sched_energy_table(struct cpumask *cpus, int table_size,
+				unsigned long *f_table, unsigned int *v_table,
+				int max_f, int min_f)
+{
+	struct energy_table *table;
+	int i, cpu, valid_table_size = 0;
+	unsigned long max_mips;
+
+	/* get size of valid frequency table to allocate energy table */
+	for (i = 0; i < table_size; i++) {
+		if (f_table[i] > max_f || f_table[i] < min_f)
+			continue;
+
+		valid_table_size++;
+	}
+
+	/* there is no valid row in the table, energy table is not created */
+	if (!valid_table_size)
+		return;
+
+	/* allocate memory for energy table and fill frequency */
+	for_each_cpu(cpu, cpus) {
+		table = get_energy_table(cpu);
+		table->states = kcalloc(valid_table_size,
+				sizeof(struct energy_state), GFP_KERNEL);
+		if (unlikely(!table->states))
+			return;
+
+		table->nr_states = valid_table_size;
+		fill_frequency_table(table, f_table);
+	}
+
+	/*
+	 * Because 'capacity' column of energy table is a relative value, the
+	 * previously configured capacity of energy table can be reconfigurated
+	 * based on the maximum mips whenever new cpu's energy table is
+	 * initialized. On the other hand, since 'power' column of energy table
+	 * is an obsolute value, it needs to be configured only once at the
+	 * initialization of the energy table.
+	 */
+	max_mips = find_max_mips();
+	for_each_possible_cpu(cpu) {
+		table = get_energy_table(cpu);
+		if (!table->states)
+			continue;
+
+		/*
+		 * 1. fill power column of energy table only for the cpu that
+		 *    initializes the energy table.
+		 */
+		if (cpumask_test_cpu(cpu, cpus))
+			fill_power_table(table, table_size,
+					f_table, v_table, max_f, min_f);
+
+		/* 2. fill capacity column of energy table */
+		fill_cap_table(table, max_mips);
+
+		/* 3. update per-cpu capacity variable */
+		update_capacity(table, cpu, true);
+
+		show_energy_table(get_energy_table(cpu), cpu);
+	}
+
+	topology_update();
 }
 
 static int __init init_sched_energy_data(void)
@@ -773,9 +773,9 @@ static int __init init_sched_energy_data(void)
 			return -ENODATA;
 		}
 
-		table = &per_cpu(energy_table, cpu);
-		if (of_property_read_u32(cpu_phandle, "capacity-mips", &table->mips)) {
-			pr_warn("No capacity-mips data\n");
+		table = get_energy_table(cpu);
+		if (of_property_read_u32(cpu_phandle, "mips-per-mhz", &table->mips_per_mhz)) {
+			pr_warn("No mips-per-mhz data\n");
 			return -ENODATA;
 		}
 
@@ -794,8 +794,8 @@ static int __init init_sched_energy_data(void)
 		 * Data for sse is OPTIONAL.
 		 * If it does not fill sse data, sse table and uss table are same.
 		 */
-		if (of_property_read_u32(cpu_phandle, "capacity-mips-s", &table->mips_s))
-			table->mips_s = table->mips;
+		if (of_property_read_u32(cpu_phandle, "mips-per-mhz-s", &table->mips_per_mhz_s))
+			table->mips_per_mhz_s = table->mips_per_mhz;
 		if (of_property_read_u32(cpu_phandle, "power-coefficient-s", &table->coefficient_s))
 			table->coefficient_s = table->coefficient;
 
@@ -813,9 +813,9 @@ static int __init init_sched_energy_data(void)
 		of_node_put(cpu_phandle);
 		of_node_put(cpu_node);
 
-		pr_info("cpu%d mips=%d coefficient=%d mips_s=%d coefficient_s=%d static_coefficient=%d\n",
-			cpu, table->mips, table->coefficient,
-			table->mips_s, table->coefficient_s, table->static_coefficient);
+		pr_info("cpu%d mips_per_mhz=%d coefficient=%d mips_per_mhz_s=%d coefficient_s=%d static_coefficient=%d\n",
+			cpu, table->mips_per_mhz, table->coefficient,
+			table->mips_per_mhz_s, table->coefficient_s, table->static_coefficient);
 	}
 
 	cpufreq_register_notifier(&sched_cpufreq_policy_notifier, CPUFREQ_POLICY_NOTIFIER);
