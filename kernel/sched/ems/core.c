@@ -13,7 +13,7 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/ems.h>
 
-static void select_fit_cpus(struct enrg_env *env)
+static void select_fit_cpus(struct tp_env *env)
 {
 	struct cpumask *fit_cpus = &env->fit_cpus;
 	struct task_struct *p = env->p;
@@ -119,7 +119,7 @@ int exynos_select_task_rq(struct task_struct *p, int prev_cpu,
 				int sd_flag, int sync, int wake)
 {
 	int target_cpu = -1;
-	struct enrg_env env = {
+	struct tp_env env = {
 		.p = p,
 		.prefer_perf = global_boost() || schedtune_prefer_perf(p),
 		.prefer_idle = schedtune_prefer_idle(p),

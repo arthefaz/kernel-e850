@@ -13,7 +13,8 @@
 
 extern struct kobject *ems_kobj;
 
-struct enrg_env {
+/* structure for task placement environment */
+struct tp_env {
 	struct task_struct *p;
 
 	int prefer_perf;
@@ -56,7 +57,7 @@ extern unsigned long ml_cpu_util_without(int cpu, struct task_struct *p);
 extern void init_part(void);
 
 /* efficiency cpu selection */
-extern int find_best_cpu(struct enrg_env *env);
+extern int find_best_cpu(struct tp_env *env);
 
 /* ontime migration */
 extern void ontime_select_fit_cpus(struct task_struct *p, struct cpumask *fit_cpus);

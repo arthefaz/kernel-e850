@@ -146,7 +146,7 @@ compute_efficiency(struct task_struct *p, int target_cpu, unsigned int eff_weigh
 	return eff;
 }
 
-static int find_best_eff(struct enrg_env *env, unsigned int *eff, int idle)
+static int find_best_eff(struct tp_env *env, unsigned int *eff, int idle)
 {
 	unsigned int best_eff = 0;
 	int best_cpu = -1;
@@ -180,7 +180,7 @@ static int find_best_eff(struct enrg_env *env, unsigned int *eff, int idle)
 	return best_cpu;
 }
 
-static void get_ready_env(struct enrg_env *env)
+static void get_ready_env(struct tp_env *env)
 {
 	int cpu;
 
@@ -214,7 +214,7 @@ static void get_ready_env(struct enrg_env *env)
 		*(unsigned int *)cpumask_bits(&env->idle_candidates));
 }
 
-int find_best_cpu(struct enrg_env *env)
+int find_best_cpu(struct tp_env *env)
 {
 	unsigned int best_eff = 0;
 	int best_cpu;
