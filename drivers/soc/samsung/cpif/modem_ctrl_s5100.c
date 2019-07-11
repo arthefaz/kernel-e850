@@ -751,7 +751,10 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 {
 	struct link_device *ld = get_current_link(mc->bootd);
 	struct mem_link_device *mld = to_mem_link_device(ld);
-	u32 crash_type = ld->crash_type;
+	u32 crash_type;
+
+	ld->crash_reason.type = CRASH_REASON_MIF_FORCED;
+	crash_type = ld->crash_reason.type;
 
 	mif_err("+++\n");
 
@@ -761,7 +764,7 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 		mif_err("do not need to set dump_noti\n");
 	}
 
-	ld->link_trigger_cp_crash(mld, crash_type, "forced crash is called");
+	ld->link_trigger_cp_crash(mld, crash_type, "Forced reset by AP");
 
 	mif_err("---\n");
 	return 0;

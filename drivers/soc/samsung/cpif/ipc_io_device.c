@@ -188,14 +188,50 @@ static long ipc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return p_state;
 
 	case IOCTL_TRIGGER_CP_CRASH:
-		if (mc->ops.trigger_cp_crash) {
+	{
+		char *buff = ld->crash_reason.string;
+		void __user *user_buff = (void __user *)arg;
+
+		switch (ld->protocol) {
+		case PROTOCOL_SIPC:
 			if (arg)
-				ld->crash_type = arg;
-			mif_err("%s: IOCTL_TRIGGER_CP_CRASH (%d)\n", iod->name, ld->crash_type);
-			return mc->ops.trigger_cp_crash(mc);
+				ld->crash_reason.type = arg;
+			mif_err("%s: IOCTL_TRIGGER_CP_CRASH (%d)\n",
+					iod->name, arg);
+			break;
+
+		case PROTOCOL_SIT:
+			ld->crash_reason.type =
+				CRASH_REASON_RIL_TRIGGER_CP_CRASH;
+
+			strcpy(buff, CP_CRASH_TAG_RILD);
+			buff = buff + strlen(CP_CRASH_TAG_RILD);
+
+			if (arg) {
+				if (copy_from_user(buff, user_buff, CP_CRASH_INFO_SIZE
+							- strlen(CP_CRASH_TAG_RILD))) {
+					mif_err("%s: copy_from_user() error\n", iod->name);
+					mif_info("No argument from USER\n");
+				}
+			}
+			else
+				mif_info("No argument from USER\n");
+
+			mif_info("Crash Reason:%s\n", buff);
+			break;
+
+		default:
+			mif_err("ERR - unknown protocol\n");
+			break;
 		}
-		mif_err("%s: !mc->ops.modem_force_crash_exit\n", iod->name);
-		return -EINVAL;
+
+		if (!mc->ops.trigger_cp_crash) {
+			mif_err("%s: trigger_cp_crash is null\n", iod->name);
+			return -EINVAL;
+		}
+
+		return mc->ops.trigger_cp_crash(mc);
+	}
 
 	default:
 		 /* If you need to handle the ioctl for specific link device,

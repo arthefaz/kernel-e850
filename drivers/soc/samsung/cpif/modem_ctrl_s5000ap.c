@@ -46,6 +46,7 @@ static irqreturn_t cp_wdt_handler(int irq, void *arg)
 	struct modem_ctl *mc = (struct modem_ctl *)arg;
 	struct io_device *iod;
 	enum modem_state new_state;
+	struct link_device *ld = get_current_link(mc->bootd);
 
 	mif_disable_irq(&mc->irq_cp_wdt);
 	mif_info("%s: CP_WDT occurred\n", mc->name);
@@ -56,6 +57,7 @@ static irqreturn_t cp_wdt_handler(int irq, void *arg)
 	mif_set_snapshot(false);
 
 	new_state = STATE_CRASH_WATCHDOG;
+	ld->crash_reason.type = CRASH_REASON_CP_WDOG_CRASH;
 
 	mif_info("new_state:%s\n", cp_state_str(new_state));
 
@@ -559,11 +561,11 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 {
 	struct link_device *ld = get_current_link(mc->bootd);
 	struct mem_link_device *mld = to_mem_link_device(ld);
-	u32 crash_type = ld->crash_type;
+	u32 crash_type = ld->crash_reason.type;
 
 	mif_info("+++\n");
 
-	ld->link_trigger_cp_crash(mld, crash_type, "forced crash is called");
+	ld->link_trigger_cp_crash(mld, crash_type, "Forced reset by AP");
 
 	mif_info("---\n");
 	return 0;
@@ -575,6 +577,10 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 static struct modem_ctl *g_mc;
 int modem_force_crash_exit_ext(void)
 {
+	struct link_device *ld = get_current_link(g_mc->bootd);
+
+	ld->crash_reason.type = CRASH_REASON_MIF_FORCED;
+
 	if (!g_mc) {
 		mif_err("g_mc is null\n");
 		return -1;

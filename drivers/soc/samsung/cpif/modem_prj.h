@@ -124,8 +124,12 @@ struct modem_sec_req {
 } __packed;
 #define IOCTL_REQ_SECURITY		_IOW(IOCTL_MAGIC, 0x53, struct modem_sec_req)
 
-/* Crash reason */
-#define CRASH_REASON_SIZE	512
+/* Crash Reason */
+#define CP_CRASH_INFO_SIZE	512
+#define CP_CRASH_TAG_RILD	"RILD trigger CP reset - "
+#define CP_CRASH_TAG_CPIF	"AP trigger CP reset - "
+#define CP_CRASH_TAG_CP		"CP malfunction - "
+
 enum crash_type {
 	CRASH_REASON_CP_ACT_CRASH = 0,
 	CRASH_REASON_RIL_MNR,
@@ -137,26 +141,29 @@ enum crash_type {
 	CRASH_REASON_MIF_RIL_BAD_CH,
 	CRASH_REASON_MIF_RX_BAD_DATA,
 	CRASH_REASON_MIF_ZMC,
-	CRASH_REASON_MIF_RSV_0,
-	CRASH_REASON_MIF_RSV_1,
+	CRASH_REASON_MIF_MDM_CTRL,
+	CRASH_REASON_MIF_RSV,
 	CRASH_REASON_MIF_RSV_MAX = 12,
 	CRASH_REASON_CP_SRST,
 	CRASH_REASON_CP_RSV_0,
 	CRASH_REASON_CP_RSV_MAX = 15,
+	CRASH_REASON_RIL_TRIGGER_CP_CRASH,
+	CRASH_REASON_CP_WDOG_CRASH,
+	CRASH_REASON_MIF_FORCED,
+	CRASH_REASON_NONE = 0xFFFF,
 };
+
 struct crash_reason {
-	u32 owner;
-	char string[CRASH_REASON_SIZE];
+	u32 type;
+	char string[CP_CRASH_INFO_SIZE];
 } __packed;
-#define IOCTL_GET_CP_CRASH_REASON	_IOR(IOCTL_MAGIC, 0x55, struct crash_reason)
+#define IOCTL_GET_CP_CRASH_REASON      _IOR(IOCTL_MAGIC, 0x55, struct crash_reason)
 
 /*
  * Definitions for IO devices
  */
 #define MAX_IOD_RXQ_LEN		2048
 
-#define CP_CRASH_INFO_SIZE	512
-#define CP_CRASH_TAG		"CP Crash "
 
 #define IPv6			6
 #define SOURCE_MAC_ADDR		{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC}
@@ -475,7 +482,7 @@ struct link_device {
 	struct mif_buff_mng *mif_buff_mng;
 
 	/* Save reason of forced crash */
-	unsigned int crash_type;
+	struct crash_reason crash_reason;
 
 	int (*init_comm)(struct link_device *ld, struct io_device *iod);
 	void (*terminate_comm)(struct link_device *ld, struct io_device *iod);
@@ -594,9 +601,6 @@ struct modem_shared {
 	/* for IPC Logger */
 	struct mif_storage storage;
 	spinlock_t lock;
-
-	/* CP crash information */
-	char cp_crash_info[530];
 
 	/* loopbacked IP address
 	 * default is 0.0.0.0 (disabled)

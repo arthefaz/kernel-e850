@@ -325,42 +325,82 @@ static long bootdump_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 		return p_state;
 
 	case IOCTL_TRIGGER_CP_CRASH:
+	{
+		char *buff = ld->crash_reason.string;
+		void __user *user_buff = (void __user *)arg;
+
+		switch (ld->protocol) {
+		case PROTOCOL_SIPC:
+			if (arg)
+				ld->crash_reason.type = arg;
+			mif_err("%s: IOCTL_TRIGGER_CP_CRASH (%d)\n",
+					iod->name, arg);
+			break;
+
+		case PROTOCOL_SIT:
+			ld->crash_reason.type =
+				CRASH_REASON_RIL_TRIGGER_CP_CRASH;
+
+			strcpy(buff, CP_CRASH_TAG_RILD);
+
+			if (arg) {
+				if (copy_from_user(buff + strlen(CP_CRASH_TAG_RILD), user_buff,
+							CP_CRASH_INFO_SIZE - strlen(CP_CRASH_TAG_RILD))) {
+					mif_err("%s: copy_from_user() error\n", iod->name);
+					mif_info("No argument from USER\n");
+				}
+			} else
+				mif_info("No argument from USER\n");
+
+			mif_info("Crash Reason:%s\n", buff);
+			break;
+
+		default:
+			mif_err("ERR - unknown protocol\n");
+			break;
+		}
+
 		if (!mc->ops.trigger_cp_crash) {
 			mif_err("%s: trigger_cp_crash is null\n", iod->name);
 			return -EINVAL;
 		}
 
-		if (arg)
-			ld->crash_type = arg;
-
-		mif_err("%s: IOCTL_TRIGGER_CP_CRASH:%d\n", iod->name, ld->crash_type);
 		return mc->ops.trigger_cp_crash(mc);
+	}
 
 	case IOCTL_TRIGGER_KERNEL_PANIC:
 	{
-		char *buff = iod->msd->cp_crash_info + strlen(CP_CRASH_TAG);
+		char *buff = ld->crash_reason.string;
 		void __user *user_buff = (void __user *)arg;
 
 		mif_info("%s: IOCTL_TRIGGER_KERNEL_PANIC\n", iod->name);
-		strcpy(iod->msd->cp_crash_info, CP_CRASH_TAG);
 
-		if (arg) {
-			if (copy_from_user(buff, user_buff, CP_CRASH_INFO_SIZE)) {
-				mif_err("%s: copy_from_user() error\n", iod->name);
-				return -EFAULT;
+		if (ld->crash_reason.type == CRASH_REASON_CP_ACT_CRASH) {
+			mif_info("Type is CP ACT CRASH\n");
+			strcpy(buff, CP_CRASH_TAG_CP);
+			if (arg) {
+				if (copy_from_user(
+					(void *)((unsigned long)buff + strlen(CP_CRASH_TAG_CP)),
+					user_buff,
+					CP_CRASH_INFO_SIZE - strlen(CP_CRASH_TAG_CP)))
+					return -EFAULT;
 			}
+
+			mif_info("%s\n", buff);
 		}
+
+		mif_info("Crash Reason: %s\n", buff);
 
 #if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)
 		if (check_cp_upload_cnt())
-			panic(iod->msd->cp_crash_info);
+			panic(buff);
 		else {
 			mif_info("Wait another IOCTL_TRIGGER_KERNEL_PANIC\n");
 			while (1)
 				msleep(1000);
 		}
 #else
-		panic(iod->msd->cp_crash_info);
+		panic(buff);
 #endif
 		return 0;
 	}

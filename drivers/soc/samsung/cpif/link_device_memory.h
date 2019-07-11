@@ -353,8 +353,6 @@ struct mem_link_device {
 	spinlock_t state_lock;
 	enum link_state state;
 
-	struct crash_reason crash_reason;
-
 	struct wake_lock tx_timer_wlock;
 	struct wake_lock sbd_tx_timer_wlock;
 

@@ -317,7 +317,7 @@ static void handle_no_cp_crash_ack(unsigned long arg)
 	}
 }
 
-static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_reason_owner, char *crash_reason_string)
+static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_type, char *crash_reason_string)
 {
 	struct link_device *ld = &mld->link_dev;
 	struct modem_ctl *mc = ld->mc;
@@ -338,13 +338,24 @@ static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_reason_
 	iowrite32(ld->magic_crash, mld->legacy_link_dev.magic);
 	iowrite32(0, mld->legacy_link_dev.mem_access);
 
-
 	/* Disable debug Snapshot */
 	mif_set_snapshot(false);
 
-	mld->crash_reason.owner = crash_reason_owner;
-	strlcpy(mld->crash_reason.string, crash_reason_string,
-		CRASH_REASON_SIZE);
+	if (ld->crash_reason.type != crash_type)
+		ld->crash_reason.type = crash_type;
+
+	if (((crash_type >= CRASH_REASON_MIF_TX_ERR) &&
+			(crash_type <= CRASH_REASON_MIF_RSV_MAX)) ||
+			(crash_type == CRASH_REASON_MIF_FORCED)) {
+		strlcat(ld->crash_reason.string, CP_CRASH_TAG_CPIF,
+				CP_CRASH_INFO_SIZE);
+		if (crash_reason_string)
+			strlcat(ld->crash_reason.string, crash_reason_string,
+					CP_CRASH_INFO_SIZE);
+	}
+
+	mif_info("CP Crash type:%d string:%s\n", crash_type,
+			ld->crash_reason.string);
 
 	stop_net_ifaces(ld);
 
@@ -364,7 +375,7 @@ static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_reason_
 
 #ifdef CONFIG_LINK_DEVICE_SHMEM
 	if (ld->interrupt_types == INTERRUPT_MAILBOX) {
-		update_ctrl_msg(mld->ap2cp_united_status, mld->crash_reason.owner,
+		update_ctrl_msg(mld->ap2cp_united_status, ld->crash_reason.type,
 				mc->sbi_crash_type_mask, mc->sbi_crash_type_pos);
 
 		/* Send CRASH_EXIT command to a CP */
@@ -387,7 +398,7 @@ static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_reason_
 
 	mif_err("%s->%s: CP_CRASH_REQ by %d, %s <%pf>\n",
 				ld->name, mc->name,
-				crash_reason_owner, crash_reason_string,
+				ld->crash_reason.type, ld->crash_reason.string,
 				CALLER);
 }
 
@@ -638,6 +649,9 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 		mcu_ipc_reg_dump(0);
 #endif
 
+	ld->crash_reason.type = CRASH_REASON_NONE;
+	mif_err("Set crash_reason type:%d\n", ld->crash_reason.type);
+
 	mld->state = LINK_STATE_IPC;
 	complete_all(&mc->init_cmpl);
 	modem_notify_event(MODEM_EVENT_ONLINE, mc);
@@ -654,6 +668,8 @@ static void cmd_crash_reset_handler(struct mem_link_device *mld)
 
 	spin_lock_irqsave(&mld->state_lock, flags);
 	mld->state = LINK_STATE_OFFLINE;
+	if (ld->crash_reason.type == CRASH_REASON_NONE)
+		ld->crash_reason.type = CRASH_REASON_CP_ACT_CRASH;
 	spin_unlock_irqrestore(&mld->state_lock, flags);
 
 	mif_err("%s<-%s: ERR! CP_CRASH_RESET\n", ld->name, mc->name);
@@ -672,6 +688,8 @@ static void cmd_crash_exit_handler(struct mem_link_device *mld)
 
 	spin_lock_irqsave(&mld->state_lock, flags);
 	mld->state = LINK_STATE_CP_CRASH;
+	if (ld->crash_reason.type == CRASH_REASON_NONE)
+		ld->crash_reason.type = CRASH_REASON_CP_ACT_CRASH;
 	spin_unlock_irqrestore(&mld->state_lock, flags);
 
 	if (timer_pending(&mld->crash_ack_timer))
@@ -2575,10 +2593,9 @@ static void shmem_close_tx(struct link_device *ld)
 static int get_cp_crash_reason(struct link_device *ld, struct io_device *iod,
 		unsigned long arg)
 {
-	struct mem_link_device *mld = to_mem_link_device(ld);
 	int ret;
 
-	ret = copy_to_user((void __user *)arg, &mld->crash_reason,
+	ret = copy_to_user((void __user *)arg, &ld->crash_reason,
 		sizeof(struct crash_reason));
 	if (ret) {
 		mif_err("ERR! copy_to_user fail!\n");
