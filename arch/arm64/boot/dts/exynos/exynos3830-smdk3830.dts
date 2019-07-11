@@ -26,6 +26,21 @@
 
 			model = "Samsung SMDK3830 board based on EXYNOS3830";
 
+			firmware {
+				android {
+					compatible = "android,firmware";
+					fstab {
+						compatible = "android,fstab";
+						vendor {
+							compatible = "android,vendor";
+							dev = "/dev/block/platform/12100000.dwmmc0/by-name/vendor";
+							type = "ext4";
+							mnt_flags = "ro";
+							fsmgr_flags = "wait";
+						};
+					};
+				};
+			};
 		}; /* end of __overlay__ */
 	}; /* end of fragment */
 }; /* end of root */
