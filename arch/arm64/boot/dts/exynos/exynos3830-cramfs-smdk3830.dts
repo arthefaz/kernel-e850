@@ -112,6 +112,7 @@
 							label = "pmic-keys: KEY_POWER";
 							linux,code = <116>;
 							wakeup = <1>;
+							force_key_irq_en = <1>;
 						};
 					};
 

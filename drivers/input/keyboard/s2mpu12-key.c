@@ -46,6 +46,8 @@
 int expander_power_keystate = 0;	/* key_pressed_show for 3x4 keypad */
 EXPORT_SYMBOL(expander_power_keystate);
 
+static int force_key_irq_en = 0;
+
 struct device *sec_power_key;
 EXPORT_SYMBOL(sec_power_key);
 
@@ -662,6 +664,8 @@ static struct power_keys_platform_data *power_keys_get_devtree_pdata(
 
 		if (of_property_read_u32(pp, "linux,input-type", &button->type))
 			button->type = EV_KEY;
+		if (of_property_read_u32(pp, "force_key_irq_en", &force_key_irq_en))
+			force_key_irq_en = 0;
 	}
 
 	if (pdata->nbuttons == 0) {
@@ -835,7 +839,10 @@ static int power_keys_probe(struct platform_device *pdev)
 	sleep_monitor_register_ops(ddata, &power_keys_sleep_monitor_ops,
 			SLEEP_MONITOR_KEY);
 #endif
-
+	if (force_key_irq_en) {
+		enable_irq(ddata->irq_pwronf);
+		enable_irq(ddata->irq_pwronr);
+	}
 	pr_info("%s done\n", __func__);
 	return 0;
 
