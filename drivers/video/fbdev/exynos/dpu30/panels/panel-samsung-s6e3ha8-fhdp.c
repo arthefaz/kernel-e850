@@ -2,7 +2,7 @@
  * Copyright (c) 2018 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
- * Samsung S6E3HA8 Panel driver.
+ * Samsung S6E3HA8 FHD+ Panel driver.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -179,15 +179,17 @@ static unsigned char PASET_TABLE[][5] = {
 	{0x2B, 0x00, 0x00, 0x05, 0xC7},
 };
 
-static int s6e3ha8_suspend(struct exynos_panel_device *panel)
+static int s6e3ha8_fhdp_suspend(struct exynos_panel_device *panel)
 {
 	return 0;
 }
 
-static int s6e3ha8_displayon(struct exynos_panel_device *panel)
+static int s6e3ha8_fhdp_displayon(struct exynos_panel_device *panel)
 {
 	struct exynos_panel_info *lcd = &panel->lcd_info;
 	struct dsim_device *dsim = get_dsim_drvdata(0);
+	int dsc_en = panel->lcd_info.dsc.en;
+	int mres_idx = 1;
 
 	DPU_INFO_PANEL("%s +\n", __func__);
 
@@ -237,23 +239,7 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 
 	dsim_write_data_seq(dsim, false, 0x29); /* display on */
 
-	mutex_unlock(&panel->ops_lock);
-
-	DPU_INFO_PANEL("%s -\n", __func__);
-	return 0;
-}
-
-static int s6e3ha8_mres(struct exynos_panel_device *panel, int mres_idx)
-{
-	int dsc_en;
-	struct dsim_device *dsim = get_dsim_drvdata(0);
-
-	dsc_en = panel->lcd_info.mres.res_info[mres_idx].dsc_en;
-
-	DPU_INFO_PANEL("%s +\n", __func__);
-
-	mutex_lock(&panel->ops_lock);
-
+#if 1	/* change to FHD+ */
 	dsim_write_data_seq(dsim, false,  0x9F, 0xA5, 0xA5);
 	/* DSC related configuration */
 	if (dsc_en) {
@@ -273,40 +259,47 @@ static int s6e3ha8_mres(struct exynos_panel_device *panel, int mres_idx)
 	/* DDI scaling configuration */
 	dsim_write_data_table(dsim, SCALER_TABLE[mres_idx]);
 	dsim_write_data_seq(dsim, false,  0xF0, 0xA5, 0xA5);
+#endif
 
 	mutex_unlock(&panel->ops_lock);
+
 	DPU_INFO_PANEL("%s -\n", __func__);
-
 	return 0;
 }
 
-static int s6e3ha8_doze(struct exynos_panel_device *panel)
+
+static int s6e3ha8_fhdp_mres(struct exynos_panel_device *panel, int mres_idx)
 {
 	return 0;
 }
 
-static int s6e3ha8_doze_suspend(struct exynos_panel_device *panel)
+static int s6e3ha8_fhdp_doze(struct exynos_panel_device *panel)
 {
 	return 0;
 }
 
-static int s6e3ha8_dump(struct exynos_panel_device *panel)
+static int s6e3ha8_fhdp_doze_suspend(struct exynos_panel_device *panel)
 {
 	return 0;
 }
 
-static int s6e3ha8_read_state(struct exynos_panel_device *panel)
+static int s6e3ha8_fhdp_dump(struct exynos_panel_device *panel)
 {
 	return 0;
 }
 
-struct exynos_panel_ops panel_s6e3ha8_ops = {
-	.id		= {0x460091, 0x430491, 0xffffff},
-	.suspend	= s6e3ha8_suspend,
-	.displayon	= s6e3ha8_displayon,
-	.mres		= s6e3ha8_mres,
-	.doze		= s6e3ha8_doze,
-	.doze_suspend	= s6e3ha8_doze_suspend,
-	.dump		= s6e3ha8_dump,
-	.read_state	= s6e3ha8_read_state,
+static int s6e3ha8_fhdp_read_state(struct exynos_panel_device *panel)
+{
+	return 0;
+}
+
+struct exynos_panel_ops panel_s6e3ha8_fhdp_ops = {
+	.id		= {0x460092, 0x430492, 0xffffff},
+	.suspend	= s6e3ha8_fhdp_suspend,
+	.displayon	= s6e3ha8_fhdp_displayon,
+	.mres		= s6e3ha8_fhdp_mres,
+	.doze		= s6e3ha8_fhdp_doze,
+	.doze_suspend	= s6e3ha8_fhdp_doze_suspend,
+	.dump		= s6e3ha8_fhdp_dump,
+	.read_state	= s6e3ha8_fhdp_read_state,
 };

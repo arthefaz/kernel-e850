@@ -47,8 +47,9 @@ extern int dpu_panel_log_level;
 #define MAX_PANEL_ID_NUM	3
 
 extern struct exynos_panel_device *panel_drvdata;
-extern struct exynos_panel_ops panel_s6e3ha9_ops;
+extern struct exynos_panel_ops panel_s6e3ha8_fhdp_ops;
 extern struct exynos_panel_ops panel_s6e3ha8_ops;
+extern struct exynos_panel_ops panel_s6e3ha9_ops;
 extern struct exynos_panel_ops panel_s6e3fa0_ops;
 extern struct exynos_panel_ops panel_ana6705_ops;
 
