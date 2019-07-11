@@ -307,7 +307,7 @@ static ssize_t show_ce_weight(struct kobject *kobj,
 
 	for_each_possible_cpu(cpu) {
 		len += sprintf(buf + len,
-			"[cpu%d] (normal) eff_weight = %3d, (performance) eff_weight %3d\n",
+			"[cpu%d] (normal) eff_weight=%3d, (performance) eff_weight=%3d\n",
 			cpu,
 			per_cpu(weight, cpu).eff_weight,
 			per_cpu(weight, cpu).eff_weight_perf);

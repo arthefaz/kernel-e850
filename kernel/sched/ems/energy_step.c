@@ -440,8 +440,7 @@ static int esgov_kthread_create(struct esgov_policy *esg_policy)
 	kthread_init_work(&esg_policy->work, esgov_work);
 	kthread_init_worker(&esg_policy->worker);
 	thread = kthread_create(kthread_worker_fn, &esg_policy->worker,
-				"esgov:%d",
-				cpumask_first(policy->related_cpus));
+				"esgov:%d", cpumask_first(policy->related_cpus));
 	if (IS_ERR(thread)) {
 		pr_err("failed to create esgov thread: %ld\n", PTR_ERR(thread));
 		return PTR_ERR(thread);

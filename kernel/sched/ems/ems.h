@@ -70,7 +70,7 @@ extern int global_boost(void);
 extern int find_allowed_capacity(int cpu, unsigned int new, int power);
 extern int find_step_power(int cpu, int step);
 
-static inline cpu_overutilized(unsigned long capacity, unsigned long util)
+static inline int cpu_overutilized(unsigned long capacity, unsigned long util)
 {
 	return (capacity * 1024) < (util * 1280);
 }
