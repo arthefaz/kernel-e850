@@ -506,6 +506,8 @@
 		clocks = <&clock DOUT_CORE_MMC_EMBD>;
 		clock-names = "ciu";
 		status = "disabled";
+		fmp-id = <0>;
+		smu-id = <0>;
 	 };
 
 	dwmmc_2: dwmmc2@13500000 {
@@ -657,4 +659,10 @@
 		#phy-cells = <1>;
 		ranges;
        };
+
+	fmp: fmp {
+		compatible = "samsung,exynos-fmp";
+		exynos,block-type = "mmcblk0p";
+		exynos,fips-block_offset = <5>;
+	};
 };
