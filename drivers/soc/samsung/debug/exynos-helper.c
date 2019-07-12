@@ -248,7 +248,7 @@ static void exynos_prepare_panic_exit(void *val)
 	modem_send_panic_noti_ext();
 #endif
 #if defined(CONFIG_ACPM_DVFS)
-	acpm_stop_log();
+//	acpm_stop_log();
 #endif
 }
 
@@ -546,7 +546,8 @@ static void exynos_kick_watchdog(void *val)
 static int exynos_is_power_cpu(void *cpu)
 {
 #ifdef CONFIG_EXYNOS_PMU
-	return exynos_cpu.power_state((unsigned int)(unsigned long)cpu);
+//	return exynos_cpu.power_state((unsigned int)(unsigned long)cpu);
+	return 0;
 #else
 	return 0;
 #endif
