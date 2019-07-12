@@ -2553,12 +2553,12 @@ static int decon_set_win_config(struct decon_device *decon,
 {
 	int num_of_window = 0;
 	struct decon_reg_data *regs;
-	struct sync_file *sync_ifile;
+	struct sync_file *sync_ifile = NULL;
 	int i, j, ret = 0;
 	bool readback_req = false;
 #if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
 	struct sync_file *sync_ofile;
-	int readback_fence;
+	int readback_fence = -1;
 #endif
 
 	decon_dbg("%s +\n", __func__);
@@ -3149,7 +3149,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 
 		if (dpp_ch_restriction.id >= decon->dt.dpp_cnt) {
 			ret = -EINVAL;
-			decon_err("invalid DPP(%d) channel number\n", i);
+			decon_err("invalid DPP(%d) channel number\n", dpp_ch_restriction.id);
 			break;
 		}
 
