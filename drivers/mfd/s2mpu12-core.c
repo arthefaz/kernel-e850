@@ -463,11 +463,11 @@ static int s2mpu12_i2c_probe(struct i2c_client *i2c,
 	i2c_set_clientdata(s2mpu12->rtc, s2mpu12);
 
 	pr_info("%s device found: rev.0x%2x\n", __func__, s2mpu12->pmic_rev);
-#if 0
+
 	ret = s2mpu12_irq_init(s2mpu12);
 	if (ret < 0)
 		goto err_irq_init;
-#endif
+
 	ret = mfd_add_devices(s2mpu12->dev, -1, s2mpu12_devs,
 			      ARRAY_SIZE(s2mpu12_devs), NULL, 0, NULL);
 	if (ret < 0)
