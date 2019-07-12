@@ -28,6 +28,7 @@
 #include "exynos3830-debug.dtsi"
 #include "exynos3830-pm-domains.dtsi"
 #include "exynos3830-bts.dtsi"
+#include "exynos3830-mfc.dtsi"
 #include <dt-bindings/soc/samsung/exynos-ecs.h>
 
 / {
@@ -46,6 +47,7 @@
 		uart0 = &serial_0;
 		mshc0 = &dwmmc_0;
 		mshc2 = &dwmmc_2;
+		mfc0 = &mfc_0;
 
 	};
 
@@ -683,7 +685,7 @@
 		#size-cells = <1>;
 		ranges;
 
-		domain-clients = <>;
+		domain-clients = <&mfc_0>;
 	};
 
 	acpm {

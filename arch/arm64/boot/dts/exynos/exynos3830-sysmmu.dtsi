@@ -143,6 +143,6 @@
 			<(SYSMMU_PORT_PREFETCH_PREDICTION_WRITE(0x1) | SYSMMU_BL1) SYSMMU_ID_MASK(0x2B, 0x3F)>;
 		port-name = "MFC, JPEG, MCSC, MSCL";
 		#iommu-cells = <0>;
-/*		power-domains = <&pd_mfc0>; */
+		power-domains = <&pd_mfcmscl>;
 	};
 };
