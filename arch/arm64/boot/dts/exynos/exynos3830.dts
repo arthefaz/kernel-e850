@@ -64,7 +64,7 @@
 	};
 
 	chosen: chosen {
-		bootargs = "earlycon=exynos4210,0x13820000 console=ttySAC0,115200n8 androidboot.dtbo_idx=0 skip_initramfs rootwait ro root=/dev/mmcblk0p2 init=/init clk_ignore_unused androidboot.hardware=exynos3830 androidboot.selinux=permissive androidboot.debug_level=0x4948 firmware_class.path=/vendor/firmware nosmp";
+		bootargs = "earlycon=exynos4210,0x13820000 console=ttySAC0,115200n8 androidboot.dtbo_idx=0 skip_initramfs rootwait ro root=/dev/mmcblk0p2 init=/init clk_ignore_unused androidboot.hardware=exynos3830 androidboot.selinux=permissive androidboot.debug_level=0x4948 firmware_class.path=/vendor/firmware";
 		//bootargs = "earlycon=exynos4210,0x13820000 console=ttySAC0,115200n8 androidboot.dtbo_idx=0 root=/dev/ram0 rw ramdisk=8192 initrd=0x84000000,8M init=/linuxrc mem=512M clk_ignore_unused";
 		linux,initrd-start = <0x84000000>;
 		linux,initrd-end = <0x842FFFFF>;
