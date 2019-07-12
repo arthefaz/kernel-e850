@@ -1463,8 +1463,11 @@ static ssize_t show_bcm_dbg_data_pd(struct file *fp, struct kobject *kobj,
 
 	count += snprintf(buf, PAGE_SIZE, "=== IPC node info ===\n");
 
-	count += snprintf(buf + count, PAGE_SIZE, "IPC node name: %s\n",
-					data->ipc_node->name);
+	if (data->ipc_node)
+		count += snprintf(buf + count, PAGE_SIZE, "IPC node name: %s\n",
+						data->ipc_node->name);
+	else
+		count += snprintf(buf + count, PAGE_SIZE, "IPC node: (null)\n");
 
 	count += snprintf(buf + count, PAGE_SIZE,
 				"\n=== Local Power Domain info ===\n");
