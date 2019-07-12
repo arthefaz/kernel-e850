@@ -178,7 +178,7 @@
 
 		max_win = <4>;
 		default_win = <3>;
-		default_ch = <0>;
+		default_ch = <3>;
 		psr_mode = <2>;         /* 0: video mode, 1: DP command mode, 2: MIPI command mode */
 		trig_mode = <0>;        /* 0: hw trigger, 1: sw trigger */
 		dsi_mode = <0>;         /* 0: single dsi, 1: dual dsi */
