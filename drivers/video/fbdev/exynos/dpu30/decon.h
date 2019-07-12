@@ -1503,6 +1503,9 @@ void decon_hiber_finish(struct decon_device *decon);
 						struct decon_disp_info)
 #define EXYNOS_DISP_RESTRICTIONS	_IOW('F', 261, \
 						struct dpp_restrictions_info)
+#define EXYNOS_GET_DPP_CNT		_IOW('F', 262, __u32)
+#define EXYNOS_GET_DPP_RESTRICTION	_IOW('F', 263, \
+						struct dpp_ch_restriction)
 
 #define S3CFB_START_CRC			_IOW('F', 270, u32)
 #define S3CFB_SEL_CRC_BITS		_IOW('F', 271, u32)
