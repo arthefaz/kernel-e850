@@ -260,13 +260,16 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(usb_otg),
 	POWER_SUPPLY_ATTR(charge_enabled),
 	POWER_SUPPLY_ATTR(fuelgauge_reset),
+	POWER_SUPPLY_ATTR(factory_mode),
 	POWER_SUPPLY_ATTR(soh),
+	POWER_SUPPLY_ATTR(pd_support),
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_ATTR(charge_counter_ext),
 	/* Properties of type `const char *' */
 	POWER_SUPPLY_ATTR(model_name),
 	POWER_SUPPLY_ATTR(manufacturer),
 	POWER_SUPPLY_ATTR(serial_number),
+	POWER_SUPPLY_ATTR(afc_charger_mode),
 
 	POWER_SUPPLY_ATTR(vchgin),
 	POWER_SUPPLY_ATTR(vwcin),
@@ -282,6 +285,9 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(itx),
 	POWER_SUPPLY_ATTR(co_enable),
 	POWER_SUPPLY_ATTR(rr_enable),
+	POWER_SUPPLY_ATTR(pm_factory),
+	POWER_SUPPLY_ATTR(tdie),
+	POWER_SUPPLY_ATTR(fast_iavg),
 	POWER_SUPPLY_ATTR(usbpd_reset),
 	POWER_SUPPLY_ATTR(usbpd_test_read),
 };

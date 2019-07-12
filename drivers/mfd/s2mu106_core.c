@@ -1,7 +1,7 @@
 /*
  * s2mu106.c - mfd core driver for the s2mu106
  *
- * Copyright (C) 2018 Samsung Electronics
+ * Copyright (C) 2019 Samsung Electronics
  *
  *
  * This program is free software; you can redistribute it and/or modify
@@ -31,9 +31,6 @@
 static struct mfd_cell s2mu106_devs[] = {
 #if defined(CONFIG_CHARGER_S2MU106)
 	{ .name = "s2mu106-charger", },
-#endif
-#if defined(CONFIG_BATTERY_S2MU00X)
-	{ .name = "s2mu00x-battery", },
 #endif
 #if defined(CONFIG_LEDS_S2MU106_FLASH)
 	{ .name = "leds-s2mu106", },
@@ -205,7 +202,7 @@ static int of_s2mu106_dt(struct device *dev,
 #endif /* CONFIG_OF */
 
 static int s2mu106_i2c_probe(struct i2c_client *i2c,
-				const struct i2c_device_id *dev_id)
+			     const struct i2c_device_id *dev_id)
 {
 	struct s2mu106_dev *s2mu106;
 	struct s2mu106_platform_data *pdata = i2c->dev.platform_data;
@@ -246,7 +243,10 @@ static int s2mu106_i2c_probe(struct i2c_client *i2c,
 	s2mu106->irq = i2c->irq;
 	if (pdata) {
 		s2mu106->pdata = pdata;
-
+#if defined(CONFIG_CHARGER_S2MU106) || defined(CONFIG_LEDS_S2MU106) || \
+    defined(CONFIG_HV_MUIC_S2MU106_AFC) || defined(CONFIG_MUIC_S2MU106) || \
+    defined(CONFIG_PM_S2MU106) || defined(CONFIG_MST_S2MU106) || \
+    defined(CONFIG_MOTOR_S2MU106) || defined(CONFIG_REGULATOR_S2MU106)
 		pdata->irq_base = irq_alloc_descs(-1, 0, S2MU106_IRQ_NR, -1);
 		if (pdata->irq_base < 0) {
 			pr_err("%s:%s irq_alloc_descs Fail! ret(%d)\n",
@@ -255,7 +255,7 @@ static int s2mu106_i2c_probe(struct i2c_client *i2c,
 			goto err;
 		} else
 			s2mu106->irq_base = pdata->irq_base;
-
+#endif
 		s2mu106->irq_gpio = pdata->irq_gpio;
 		s2mu106->wakeup = pdata->wakeup;
 	} else {
