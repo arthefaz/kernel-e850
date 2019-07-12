@@ -1413,6 +1413,7 @@ static void exynos_usbdrd_utmi_tune(struct exynos_usbdrd_phy *phy_drd,
 
 	dev_info(phy_drd->dev, "%s\n", __func__);
 
+	return;
 	if (phy_state >= OTG_STATE_A_IDLE) {
 		/* for host mode */
 		for (i = 0; hs_tune_param[i].value != EXYNOS_USB_TUNE_LAST; i++) {
