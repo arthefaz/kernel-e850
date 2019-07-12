@@ -158,7 +158,6 @@ void decon_dump(struct decon_device *decon)
 {
 	int acquired = console_trylock();
 	void __iomem *base_regs = get_decon_drvdata(0)->res.regs;
-	u32 dsc_en = get_decon_drvdata(0)->lcd_info->dsc.en;
 
 	if (IS_DECON_OFF_STATE(decon)) {
 		decon_info("%s: DECON%d is disabled, state(%d)\n",
@@ -166,12 +165,7 @@ void decon_dump(struct decon_device *decon)
 		return;
 	}
 
-	/* decon2 needs decon0 setting info */
-	if (decon->id)
-		__decon_dump(0, base_regs, base_regs, dsc_en);
-
-	__decon_dump(decon->id, decon->res.regs, base_regs,
-			decon->lcd_info->dsc.en);
+	__decon_dump(decon->id, decon->res.regs, base_regs, 0);
 
 	if (decon->dt.out_type == DECON_OUT_DSI)
 		v4l2_subdev_call(decon->out_sd[0], core, ioctl,

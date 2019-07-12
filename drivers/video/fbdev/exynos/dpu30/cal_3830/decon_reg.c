@@ -200,6 +200,9 @@ static void decon_reg_set_blender_bg_image_size(u32 id,
 	mask = BLENDER_BG_HEIGHT_MASK | BLENDER_BG_WIDTH_MASK;
 	decon_write_mask(id, BLENDER_BG_IMAGE_SIZE_0, val, mask);
 
+    val = (lcd_info->yres) * width;
+    decon_write(id, BLENDER_BG_IMAGE_SIZE_1, val);
+
 }
 
 static void decon_reg_set_data_path(u32 id, enum decon_data_path d_path,
@@ -1113,18 +1116,16 @@ static void decon_print_hex_dump(void __iomem *regs, const void *buf, size_t len
 void __decon_dump(u32 id, void __iomem *regs, void __iomem *base_regs, bool dsc_en)
 {
 	decon_info("\n=== DECON%d SFR DUMP ===\n", id);
-	decon_print_hex_dump(regs, regs + 0x0000, 0x520);
+	decon_print_hex_dump(regs, regs + 0x0000, 0x480);
 
 	decon_info("\n=== DECON%d SHADOW SFR DUMP ===\n", id);
-	decon_print_hex_dump(regs, regs + SHADOW_OFFSET, 0x2B0);
+	decon_print_hex_dump(regs, regs + SHADOW_OFFSET + 0x0000, 0x304);
 
 	decon_info("\n=== DECON0 WINDOW SFR DUMP ===\n");
-	decon_print_hex_dump(base_regs, base_regs + 0x1000, 0x564);
+	decon_print_hex_dump(base_regs, base_regs + 0x1000, 0x310);
 
 	decon_info("\n=== DECON0 WINDOW SHADOW SFR DUMP ===\n");
-	decon_print_hex_dump(base_regs,
-		base_regs + SHADOW_OFFSET + 0x1000, 0x120);
-
+	decon_print_hex_dump(base_regs, base_regs + SHADOW_OFFSET + 0x1000, 0x220);
 }
 
 /* 3830 chip dependent HW limitation
