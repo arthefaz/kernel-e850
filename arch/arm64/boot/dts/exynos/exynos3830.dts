@@ -22,6 +22,7 @@
 #include "exynos3830-sysmmu.dtsi"
 #include "exynos3830-dpu.dtsi"
 #include "exynos3830-usi.dtsi"
+#include "exynos3830-debug.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
