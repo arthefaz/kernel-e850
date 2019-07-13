@@ -2017,6 +2017,7 @@ config DEBUG_SNAPSHOT_IRQ_DISABLED
 
 config DEBUG_SNAPSHOT_SPINLOCK
 	bool "Enable debugging of spinlock event by kevent(EXPERIMENTAL)"
+	depends on DEBUG_SNAPSHOT && DEBUG_SPINLOCK && !DEBUG_SNAPSHOT_USER_MODE
 	default y
 
 config DEBUG_SNAPSHOT_REG
