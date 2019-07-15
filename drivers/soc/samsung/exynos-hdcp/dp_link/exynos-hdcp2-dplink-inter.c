@@ -65,8 +65,11 @@ int hdcp_dplink_auth_check(enum auth_signal hdcp_signal)
 				auth_proc_state = HDCP_AUTH_PROCESS_DONE;
 			break;
 		case HDCP_RP_READY:
-			if (auth_proc_state == HDCP_AUTH_PROCESS_DONE)
+			if (auth_proc_state == HDCP_AUTH_PROCESS_DONE) {
 				ret = hdcp_dplink_authenticate();
+				if (ret == 0)
+					auth_proc_state = HDCP_AUTH_PROCESS_DONE;
+			}
 			break;
 		default:
 			ret = HDCP_ERROR_INVALID_STATE;
