@@ -70,7 +70,7 @@
 #define MAX_DPP_SUBDEV		5
 #elif defined(CONFIG_SOC_EXYNOS3830)
 #define MAX_DECON_WIN		4
-#define MAX_DPP_SUBDEV		4
+#define MAX_DPP_SUBDEV		5
 #endif
 
 #define DISP_RESTRICTION_VER	20180608
