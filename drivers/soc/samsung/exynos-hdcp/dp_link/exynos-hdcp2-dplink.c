@@ -13,7 +13,6 @@
 #include <linux/uaccess.h>
 #include <linux/smc.h>
 #include <asm/cacheflush.h>
-#include <linux/exynos_ion.h>
 #include <linux/smc.h>
 #include <linux/types.h>
 #include <linux/delay.h>
@@ -36,6 +35,8 @@ int dplink_emul_handler(int cmd)
 	return 0;
 }
 #endif
+
+extern uint32_t func_test_mode;
 
 /* current link data */
 static struct hdcp_link_data *lk_data;
@@ -154,12 +155,11 @@ int do_dplink_auth(struct hdcp_link_info *lk_handle)
 				/* if it is a repeater, verify Rcv ID list */
 				UPDATE_LINK_STATE(lk_data, LINK_ST_A6_WAIT_RECEIVER_ID_LIST);
 				hdcp_info("It`s repeater link !\n");
-#if defined(CONFIG_HDCP2_FUNC_TEST_MODE)
-				hdcp_enabled = 1;
-				hdcp_info("it`s func test mode.\n");
-#else
-				hdcp_enabled = 0;
-#endif
+				if (func_test_mode) {
+					hdcp_enabled = 1;
+					hdcp_info("it`s func test mode.\n");
+				} else
+					hdcp_enabled = 0;
 			} else {
 				/* if it is not a repeater, complete authentication */
 				UPDATE_LINK_STATE(lk_data, LINK_ST_A5_AUTHENTICATED);
@@ -242,9 +242,11 @@ int hdcp_dplink_authenticate(void)
 	auth_end_flag = HDCP_AUTH_PROCESS_ON;
 
 	for (; retry_cnt < HDCP_AUTH_RETRY_COUNT; retry_cnt++) {
-		drm_flag_checker = exynos_smc(SMC_CHECK_STREAM_TYPE_FLAG, 0, 0, 0);
-		if (drm_flag_checker == DRM_OFF)
-			break;
+		if (!func_test_mode) {
+			drm_flag_checker = exynos_smc(SMC_CHECK_STREAM_TYPE_FLAG, 0, 0, 0);
+			if (drm_flag_checker == DRM_OFF)
+				break;
+		}
 
 		if (!rp_ready) {
 			hdcp_clear_session(ss_info.ss_id);
@@ -335,9 +337,9 @@ int hdcp_dplink_dp_link_flag_check(enum dp_state flag)
 	int ret = 0;
 
 	dp_link_flag = flag;
-#if defined(CONFIG_HDCP2_FUNC_TEST_MODE)
-	drm_flag = DRM_ON;
-#endif
+	if (func_test_mode)
+		drm_flag = DRM_ON;
+
 	ret = hdcp_dplink_auth_check();
 
 	return ret;

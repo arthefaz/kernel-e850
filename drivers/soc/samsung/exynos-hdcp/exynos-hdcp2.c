@@ -13,11 +13,7 @@
 #include <linux/uaccess.h>
 #include <linux/smc.h>
 #include <asm/cacheflush.h>
-#include <linux/exynos_ion.h>
 #include <linux/smc.h>
-#if defined(CONFIG_ION)
-#include <linux/ion.h>
-#endif
 #include "iia_link/exynos-hdcp2-iia-auth.h"
 #include "exynos-hdcp2-teeif.h"
 #include "iia_link/exynos-hdcp2-iia-selftest.h"
@@ -36,6 +32,12 @@ enum hdcp_result hdcp_link_ioc_authenticate(void);
 
 
 static uint32_t inst_num;
+
+#if defined(CONFIG_HDCP2_FUNC_TEST_MODE)
+uint32_t func_test_mode = 1;
+#else
+uint32_t func_test_mode;
+#endif
 
 static long hdcp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -156,7 +158,7 @@ static long hdcp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		struct hdcp_enc_info enc_info;
 		size_t packet_len = 0;
 		uint8_t pes_priv[HDCP_PRIVATE_DATA_LEN];
-		ion_phys_addr_t input_phys, output_phys;
+		unsigned long input_phys, output_phys;
 		struct hdcp_session_node *ss_node;
 		struct hdcp_link_node *lk_node;
 		struct hdcp_link_data *lk_data;
@@ -184,8 +186,8 @@ static long hdcp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (!lk_data)
 			return HDCP_ERROR_INVALID_INPUT;
 
-		input_phys = (ion_phys_addr_t)enc_info.input_phys;
-		output_phys = (ion_phys_addr_t)enc_info.output_phys;
+		input_phys = (unsigned long)enc_info.input_phys;
+		output_phys = (unsigned long)enc_info.output_phys;
 
 		/* set input counters */
 		memset(&(lk_data->tx_ctx.input_ctr), 0x00, HDCP_INPUT_CTR_LEN);
@@ -293,6 +295,14 @@ static long hdcp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	}
+
+	case (uint32_t)HDCP_FUNC_TEST_MODE:
+	{
+		func_test_mode = 1;
+		hdcp_info("HDCP DRM always enable mode on\n");
+		break;
+	}
+
 
 	default:
 		hdcp_err("HDCP: Invalid IOC num(%d)\n", cmd);

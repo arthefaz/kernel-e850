@@ -13,11 +13,7 @@
 #include <linux/uaccess.h>
 #include <linux/smc.h>
 #include <asm/cacheflush.h>
-#include <linux/exynos_ion.h>
 #include <linux/smc.h>
-#if defined(CONFIG_ION)
-#include <linux/ion.h>
-#endif
 #include "exynos-hdcp2-iia-auth.h"
 #include "../exynos-hdcp2-teeif.h"
 #include "exynos-hdcp2-iia-selftest.h"

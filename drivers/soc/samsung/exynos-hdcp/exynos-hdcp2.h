@@ -211,6 +211,7 @@ struct hdcp_wrapped_key {
 #define HDCP_IOC_DPLINK_TX_EMUL 	_IOWR('S', 110, int)
 #define HDCP_IOC_DPLINK_TX_SELFTEST	_IOWR('S', 120, int)
 #define HDCP_IOC_WRAP_KEY		_IOWR('S', 200, struct hdcp_wrapped_key)
+#define HDCP_FUNC_TEST_MODE		_IOWR('S', 220, int)
 
 typedef struct hdcp_tx_link_handle {
         uint32_t ss_handle;
