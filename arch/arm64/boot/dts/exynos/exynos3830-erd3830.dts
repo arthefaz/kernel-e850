@@ -14,8 +14,8 @@
 #include "exynos3830-board_common.dtsi"
 
 / {
-	compatible = "samsung,exynos3830", "samsung,SMDK3830";
-	board_id = <0x1>;
+	compatible = "samsung,exynos3830", "samsung,ERD3830";
+	board_id = <0x0>;
 	board_rev = <0x0>;
 
 	fragment@model {
@@ -24,7 +24,7 @@
 			#address-cells = <2>;
 			#size-cells = <1>;
 
-			model = "Samsung SMDK3830 board based on EXYNOS3830";
+			model = "Samsung ERD3830 board based on EXYNOS3830";
 
 			usb_hs_tune:hs_tune {
 				status = "disabled";
