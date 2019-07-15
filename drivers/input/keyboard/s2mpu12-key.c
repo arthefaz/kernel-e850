@@ -56,6 +56,8 @@ struct power_button_data {
 	struct input_dev *input;
 	struct timer_list timer;
 	struct work_struct work;
+	struct delayed_work key_work;
+	struct workqueue_struct *irq_wqueue;
 	struct workqueue_struct *workqueue;
 	unsigned int timer_debounce;	/* in msecs */
 	unsigned int irq;
@@ -155,6 +157,7 @@ static void power_keys_disable_button(struct power_button_data *bdata)
 		if (bdata->timer_debounce)
 			del_timer_sync(&bdata->timer);
 
+		cancel_delayed_work_sync(&bdata->key_work);
 		bdata->disabled = true;
 	}
 }
@@ -505,14 +508,8 @@ static void power_keys_power_report_event(struct power_button_data *bdata)
 
 	wake_lock_timeout(&ddata->key_wake_lock, WAKELOCK_TIME);
 
-	if (button->code == KEY_POWER) {
-		printk(KERN_INFO "%s: [%s][%s]KEY_POWER\n",
-			__func__, (!!state) ? "P" : "R", bdata->isr_status ? "I":"R");
+	if (button->code == KEY_POWER)
 		bdata->isr_status = false;
-	}
-	if ((button->code == KEY_HOMEPAGE) && !!state) {
-		printk(KERN_INFO "HOME key is pressed\n");
-	}
 
 	dbg_snapshot_check_crash_key(button->code, state);
 
@@ -530,6 +527,17 @@ static void power_keys_power_report_event(struct power_button_data *bdata)
 #endif
 }
 
+static void s2mpu12_keys_work_func(struct work_struct *work)
+{
+	struct power_button_data *bdata = container_of(work,
+						       struct power_button_data,
+						       key_work.work);
+
+	power_keys_power_report_event(bdata);
+
+	if (bdata->button->wakeup)
+		pm_relax(bdata->input->dev.parent);
+}
 
 static irqreturn_t power_keys_rising_irq_handler(int irq, void *dev_id)
 {
@@ -539,7 +547,8 @@ static irqreturn_t power_keys_rising_irq_handler(int irq, void *dev_id)
 
 	bdata->key_pressed = true;
 	bdata->isr_status = true;
-	power_keys_power_report_event(bdata);
+
+	queue_delayed_work(bdata->irq_wqueue, &bdata->key_work, 0);
 
 	return IRQ_HANDLED;
 }
@@ -552,7 +561,9 @@ static irqreturn_t power_keys_falling_irq_handler(int irq, void *dev_id)
 
 	bdata->key_pressed = false;
 	bdata->isr_status = true;
-	power_keys_power_report_event(bdata);
+
+	queue_delayed_work(bdata->irq_wqueue, &bdata->key_work, 0);
+
 	return IRQ_HANDLED;
 }
 
@@ -704,7 +715,7 @@ static void power_remove_key(struct power_button_data *bdata)
 	free_irq(bdata->irq, bdata);
 	if (bdata->timer_debounce)
 		del_timer_sync(&bdata->timer);
-	cancel_work_sync(&bdata->work);
+	cancel_delayed_work_sync(&bdata->key_work);
 	if (gpio_is_valid(bdata->button->gpio))
 		gpio_free(bdata->button->gpio);
 }
@@ -780,6 +791,13 @@ static int power_keys_probe(struct platform_device *pdev)
 
 		if (button->wakeup)
 			wakeup = 1;
+
+		bdata->irq_wqueue = create_singlethread_workqueue("s2mpu12-key-wqueue");
+		if (!bdata->irq_wqueue) {
+			pr_err("%s: fail to create workqueue\n", __func__);
+			goto fail1;
+		}
+		INIT_DELAYED_WORK(&bdata->key_work, s2mpu12_keys_work_func);
 
 		input_set_capability(input, button->type ?: EV_KEY, button->code);
 	}

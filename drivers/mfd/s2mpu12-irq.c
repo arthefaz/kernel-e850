@@ -28,8 +28,11 @@
 #include <linux/of_irq.h>
 #include <linux/sizes.h>
 #include <linux/io.h>
+#include <linux/workqueue.h>
 
 #define S2MPU12_IBI_CNT		4
+
+u8 irq_reg[S2MPU12_IRQ_GROUP_NR] = {0};
 
 static const u8 s2mpu12_mask_reg[] = {
 	[PMIC_INT1] = S2MPU12_PMIC_INT1M,
@@ -159,7 +162,7 @@ static struct irq_chip s2mpu12_irq_chip = {
 	.irq_unmask		= s2mpu12_irq_unmask,
 };
 
-static void s2mpu12_report_irq(struct s2mpu12_dev *s2mpu12, u8 *irq_reg)
+static void s2mpu12_report_irq(struct s2mpu12_dev *s2mpu12)
 {
 	int i;
 
@@ -174,7 +177,7 @@ static void s2mpu12_report_irq(struct s2mpu12_dev *s2mpu12, u8 *irq_reg)
 	}
 }
 
-static int s2mpu12_power_key_detection(struct s2mpu12_dev *s2mpu12, u8 *irq_reg)
+static int s2mpu12_power_key_detection(struct s2mpu12_dev *s2mpu12)
 {
 	int ret, i;
 	u8 val;
@@ -191,7 +194,7 @@ static int s2mpu12_power_key_detection(struct s2mpu12_dev *s2mpu12, u8 *irq_reg)
 
 		if (val & S2MPU12_STATUS1_PWRON) {
 			irq_reg[PMIC_INT1] = S2MPU12_FALLING_EDGE;
-			s2mpu12_report_irq(s2mpu12, irq_reg);
+			s2mpu12_report_irq(s2mpu12);
 
 			/* clear irq */
 			for (i = 0; i < S2MPU12_IRQ_GROUP_NR; i++)
@@ -200,7 +203,7 @@ static int s2mpu12_power_key_detection(struct s2mpu12_dev *s2mpu12, u8 *irq_reg)
 			irq_reg[PMIC_INT1] = S2MPU12_RISING_EDGE;
 		} else {
 			irq_reg[PMIC_INT1] = S2MPU12_RISING_EDGE;
-			s2mpu12_report_irq(s2mpu12, irq_reg);
+			s2mpu12_report_irq(s2mpu12);
 
 			/* clear irq */
 			for (i = 0; i < S2MPU12_IRQ_GROUP_NR; i++)
@@ -215,7 +218,17 @@ power_key_err:
 	return 1;
 }
 
-static int s2mpu12_notifier(struct s2mpu12_dev *s2mpu12, u8 *irq_reg)
+static void s2mpu12_irq_work_func(struct work_struct *work)
+{
+	pr_info("%s: master pmic interrupt"
+		"(0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x)\n",
+		 __func__,
+		 irq_reg[PMIC_INT1], irq_reg[PMIC_INT2],
+		 irq_reg[PMIC_INT3], irq_reg[PMIC_INT4],
+		 irq_reg[PMIC_INT5], irq_reg[PMIC_INT6]);
+}
+
+static int s2mpu12_notifier(struct s2mpu12_dev *s2mpu12)
 {
 	int ret;
 	ret = s2mpu12_bulk_read(s2mpu12->pmic, S2MPU12_PMIC_INT1,
@@ -225,17 +238,16 @@ static int s2mpu12_notifier(struct s2mpu12_dev *s2mpu12, u8 *irq_reg)
 			MFD_DEV_NAME, __func__, ret);
 		return 1;
 	}
-	pr_info("%s: master pmic interrupt"
-		"(0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x)\n",
-		 __func__,
-		 irq_reg[PMIC_INT1], irq_reg[PMIC_INT2],
-		 irq_reg[PMIC_INT3], irq_reg[PMIC_INT4],
-		 irq_reg[PMIC_INT5], irq_reg[PMIC_INT6]);
+
+	queue_delayed_work(s2mpu12->irq_wqueue, &s2mpu12->irq_work, 0);
 
 	/* Power-key W/A */
-	ret = s2mpu12_power_key_detection(s2mpu12, irq_reg);
+	ret = s2mpu12_power_key_detection(s2mpu12);
 	if (ret)
 		pr_err("%s: POWER-KEY detection error\n", __func__);
+
+	/* Report IRQ */
+	s2mpu12_report_irq(s2mpu12);
 
 	return 0;
 }
@@ -257,7 +269,6 @@ static irqreturn_t s2mpu12_irq_thread(int irq, void *data)
 {
 	struct s2mpu12_dev *s2mpu12 = data;
 	u8 ibi_src[S2MPU12_IBI_CNT] = {0};
-	u8 irq_reg[S2MPU12_IRQ_GROUP_NR] = {0};
 	int ret;
 
 	/* Read VGPIO_RX_MONITOR */
@@ -265,7 +276,7 @@ static irqreturn_t s2mpu12_irq_thread(int irq, void *data)
 
 	/* notify Master PMIC */
 	if (ibi_src[0] & S2MPU12_IBI0_PMIC_M) {
-		ret = s2mpu12_notifier(s2mpu12, irq_reg);
+		ret = s2mpu12_notifier(s2mpu12);
 		if (ret)
 			return IRQ_NONE;
 	}
@@ -273,10 +284,20 @@ static irqreturn_t s2mpu12_irq_thread(int irq, void *data)
 	if (ibi_src[0] & S2MPU12_IBI0_CODEC)
 		pr_info("%s: IBI from codec\n", __func__);
 
-	/* Report IRQ */
-	s2mpu12_report_irq(s2mpu12, irq_reg);
-
 	return IRQ_HANDLED;
+}
+
+static int s2mpu12_set_wqueue(struct s2mpu12_dev *s2mpu12)
+{
+	s2mpu12->irq_wqueue = create_singlethread_workqueue("s2mpu12-wqueue");
+	if (!s2mpu12->irq_wqueue) {
+		pr_err("%s: fail to create workqueue\n", __func__);
+		return 1;
+	}
+
+	INIT_DELAYED_WORK(&s2mpu12->irq_work, s2mpu12_irq_work_func);
+
+	return 0;
 }
 
 static void s2mpu12_set_vgpio_monitor(struct s2mpu12_dev *s2mpu12)
@@ -300,6 +321,9 @@ int s2mpu12_irq_init(struct s2mpu12_dev *s2mpu12)
 
 	/* Set VGPIO monitor */
 	s2mpu12_set_vgpio_monitor(s2mpu12);
+
+	/* Set workqueue */
+	s2mpu12_set_wqueue(s2mpu12);
 
 	/* Mask individual interrupt sources */
 	for (i = 0; i < S2MPU12_IRQ_GROUP_NR; i++) {
@@ -356,6 +380,7 @@ int s2mpu12_irq_init(struct s2mpu12_dev *s2mpu12)
 	if (ret) {
 		dev_err(s2mpu12->dev, "Failed to request IRQ %d: %d\n",
 			s2mpu12->irq, ret);
+		destroy_workqueue(s2mpu12->irq_wqueue);
 		return ret;
 	}
 
@@ -368,4 +393,7 @@ void s2mpu12_irq_exit(struct s2mpu12_dev *s2mpu12)
 		free_irq(s2mpu12->irq, s2mpu12);
 
 	iounmap(s2mpu12->mem_base);
+
+	cancel_delayed_work_sync(&s2mpu12->irq_work);
+	destroy_workqueue(s2mpu12->irq_wqueue);
 }

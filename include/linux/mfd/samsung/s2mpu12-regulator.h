@@ -353,6 +353,10 @@ struct s2mpu12_dev {
 
 	/* VGPIO_RX_MONITOR */
 	void __iomem *mem_base;
+
+	/* Work queue */
+	struct workqueue_struct *irq_wqueue;
+	struct delayed_work irq_work;
 };
 
 enum s2mpu12_types {
