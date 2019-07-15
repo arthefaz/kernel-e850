@@ -226,16 +226,9 @@ int hdcp_dplink_authenticate(void)
 {
 	int ret;
 	static int retry_cnt;
-	uint32_t drm_flag_checker;
 
 	auth_proc_state = HDCP_AUTH_PROCESS_IDLE;
 	for (; retry_cnt < HDCP_AUTH_RETRY_COUNT; retry_cnt++) {
-		if (!func_test_mode) {
-			drm_flag_checker = exynos_smc(SMC_CHECK_STREAM_TYPE_FLAG, 0, 0, 0);
-			if (drm_flag_checker == DRM_OFF)
-				break;
-		}
-
 		if (!rp_ready) {
 			hdcp_clear_session(ss_info.ss_id);
 			if (hdcp_session_open(&ss_info))
