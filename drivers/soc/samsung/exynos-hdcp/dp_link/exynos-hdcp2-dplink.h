@@ -14,13 +14,13 @@
 int dplink_emul_handler(int cmd);
 #endif
 
-enum {
+enum dp_state {
 	HDCP_AUTH_PROCESS_ON   = 0x0,
 	HDCP_AUTH_PROCESS_STOP = 0x1,
 	HDCP_AUTH_PROCESS_DONE = 0x2
 };
 
-enum {
+enum drm_state {
 	DRM_OFF = 0x0,
 	DRM_ON = 0x1,
 	DRM_SAME_STREAM_TYPE = 0x2	/* If the previous contents and stream_type id are the same flag */
@@ -46,8 +46,8 @@ int hdcp_dplink_cancel_auth(void);
 int hdcp_dplink_stream_manage(void);
 int hdcp_dplink_is_auth_state(void);
 int hdcp_dplink_auth_check(void);
-int hdcp_dplink_drm_flag_check(int flag);
-int hdcp_dplink_dp_link_flag_check(int flag);
+int hdcp_dplink_drm_flag_check(enum drm_state flag);
+int hdcp_dplink_dp_link_flag_check(enum dp_state flag);
 void hdcp_clear_session(uint32_t id);
 
 extern void reset_dp_hdcp_module(void);

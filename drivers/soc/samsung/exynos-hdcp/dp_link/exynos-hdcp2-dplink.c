@@ -25,7 +25,7 @@
 #include "exynos-hdcp2-dplink-auth.h"
 
 #define HDCP_AUTH_RETRY_COUNT	5
-#define HDCP_AUTH_REAUTH_COUNT	2
+#define HDCP_AUTH_REAUTH_COUNT	3
 
 #define RECVID_WIAT_RETRY_COUNT	5
 
@@ -42,9 +42,9 @@ static struct hdcp_link_data *lk_data;
 
 extern struct hdcp_session_list g_hdcp_session_list;
 extern uint8_t rp_ready;
-uint8_t auth_end_flag;
-int drm_flag;
-int dp_link_flag;
+enum dp_state auth_end_flag;
+enum drm_state drm_flag;
+enum dp_state dp_link_flag;
 struct hdcp_sess_info ss_info;
 struct hdcp_link_info lk_info;
 
@@ -237,9 +237,15 @@ int hdcp_dplink_authenticate(void)
 {
 	int ret;
 	static int retry_cnt;
+	uint32_t drm_flag_checker;
 
 	auth_end_flag = HDCP_AUTH_PROCESS_ON;
+
 	for (; retry_cnt < HDCP_AUTH_RETRY_COUNT; retry_cnt++) {
+		drm_flag_checker = exynos_smc(SMC_CHECK_STREAM_TYPE_FLAG, 0, 0, 0);
+		if (drm_flag_checker == DRM_OFF)
+			break;
+
 		if (!rp_ready) {
 			hdcp_clear_session(ss_info.ss_id);
 			if (hdcp_session_open(&ss_info))
@@ -272,14 +278,9 @@ int hdcp_dplink_authenticate(void)
 			}
 			/* retry */
 			dplink_clear_irqflag_all();
-			hdcp_err("HDCP auth failed. retry(%d)!\n", retry_cnt);
-			retry_cnt++;
-			if (retry_cnt == HDCP_AUTH_REAUTH_COUNT) {
+			hdcp_err("HDCP auth failed. retry(%d)\n", retry_cnt);
+			if (retry_cnt > HDCP_AUTH_REAUTH_COUNT)
 				reset_dp_hdcp_module();
-			} else if (retry_cnt > HDCP_AUTH_REAUTH_COUNT) {
-				retry_cnt = 0;
-				break;
-			}
 		}
 	}
 
@@ -304,7 +305,7 @@ int hdcp_dplink_auth_check(void)
 	return 1;
 }
 
-int hdcp_dplink_drm_flag_check(int flag)
+int hdcp_dplink_drm_flag_check(enum drm_state flag)
 {
 	int ret = 0;
 	int i = 0;
@@ -315,9 +316,10 @@ int hdcp_dplink_drm_flag_check(int flag)
 	}
 
 	for (i = 0; i < 1000; i++) {
-		drm_flag = exynos_smc(SMC_CHECK_STREAM_TYPE_FALG, 0, 0, 0);
+		drm_flag = exynos_smc(SMC_CHECK_STREAM_TYPE_FLAG, 0, 0, 0);
 		if (drm_flag)
 			break;
+
 		msleep(500);
 	}
 
@@ -328,7 +330,7 @@ int hdcp_dplink_drm_flag_check(int flag)
 	return ret;
 }
 
-int hdcp_dplink_dp_link_flag_check(int flag)
+int hdcp_dplink_dp_link_flag_check(enum dp_state flag)
 {
 	int ret = 0;
 
@@ -429,4 +431,3 @@ int hdcp_dplink_is_auth_state(void)
 		return 0;
 	#endif
 }
-
