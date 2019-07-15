@@ -35,7 +35,6 @@ int hdcp_dplink_auth_check(enum auth_signal hdcp_signal)
 
 #if defined(CONFIG_HDCP2_FUNC_TEST_MODE)
 	ret = exynos_smc(SMC_DRM_HDCP_FUNC_TEST, 1, 0, 0);
-	return ret;
 #endif
 	switch (hdcp_signal) {
 		case HDCP_DRM_OFF:
@@ -111,7 +110,7 @@ int hdcp_dplink_cancel_auth(void)
 	uint32_t ret = 0;
 
 	hdcp_info("Cancel authenticate.\n");
-	ret = exynos_smc(SMC_DRM_HDCP_AUTH_INFO, DP_HDCP22_DISABLE, 0, 0);
+	ret = exynos_smc(SMC_DRM_HDCP_AUTH_INFO, DP_HPD_STATUS_ZERO, 0, 0);
 	auth_proc_state = HDCP_AUTH_PROCESS_STOP;
 
 	return dplink_set_integrity_fail();
