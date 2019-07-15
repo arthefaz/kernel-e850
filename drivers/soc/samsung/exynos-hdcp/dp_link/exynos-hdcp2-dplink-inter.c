@@ -28,36 +28,20 @@ extern uint32_t func_test_mode;
 #define DRM_WAIT_RETRY_COUNT	1000
 /* current link data */
 enum auth_state auth_proc_state;
-enum drm_state drm_flag;
 
 int hdcp_dplink_auth_check(enum auth_signal hdcp_signal)
 {
 	int ret = 0;
-#ifndef CONFIG_HDCP2_FUNC_TEST_MODE
-	int i = 0;
-#endif
-	enum drm_state drm_flag;
 
+#if defined(CONFIG_HDCP2_FUNC_TEST_MODE)
+	ret = exynos_smc(SMC_DRM_HDCP_FUNC_TEST, 1, 0, 0);
+	return ret;
+#endif
 	switch (hdcp_signal) {
 		case HDCP_DRM_OFF:
-			drm_flag = DRM_OFF;
 			ret = 0;
 			break;
 		case HDCP_DRM_ON:
-#ifdef CONFIG_HDCP2_FUNC_TEST_MODE
-			drm_flag = DRM_ON;
-#else
-			for (i = 0; i < DRM_WAIT_RETRY_COUNT; i++) {
-				drm_flag = exynos_smc(SMC_CHECK_STREAM_TYPE_FLAG, 0, 0, 0);
-				if (drm_flag)
-					break;
-
-				msleep(500);
-			}
-#endif
-			if ((drm_flag == DRM_SAME_STREAM_TYPE && auth_proc_state == HDCP_AUTH_PROCESS_DONE) || drm_flag == DRM_OFF)
-				return 0;
-
 			ret = exynos_smc(SMC_DRM_HDCP_AUTH_INFO, DP_HDCP22_DISABLE, 0, 0);
 			dplink_clear_irqflag_all();
 			ret = hdcp_dplink_authenticate();
