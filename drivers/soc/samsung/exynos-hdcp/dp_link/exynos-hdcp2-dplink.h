@@ -49,6 +49,7 @@ int hdcp_dplink_auth_check(void);
 int hdcp_dplink_drm_flag_check(enum drm_state flag);
 int hdcp_dplink_dp_link_flag_check(enum dp_state flag);
 void hdcp_clear_session(uint32_t id);
+void hdcp_dplink_clear_all(void);
 
 extern void reset_dp_hdcp_module(void);
 #endif
