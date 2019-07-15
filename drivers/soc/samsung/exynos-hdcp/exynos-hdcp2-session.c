@@ -46,11 +46,10 @@ enum hdcp_result hdcp_session_open(struct hdcp_sess_info *ss_info)
 
 	hdcp_session_list_add((struct hdcp_session_node *)new_ss_node, (struct hdcp_session_list *)&g_hdcp_session_list);
 
-/* TODO: Only for IIA */
-#if 0
+    /* TODO: Only for IIA */
+    /* It would be okay to call this here in both(dp, iia) cases */
 	if (hdcp_unwrap_key(ss_info->wkey))
 		return HDCP_ERROR_WRAP_FAIL;
-#endif
 
 	return HDCP_SUCCESS;
 }

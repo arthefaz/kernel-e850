@@ -105,7 +105,7 @@ int hdcp_dplink_send(uint32_t msg_name, uint8_t *data, uint32_t size)
 		hdcp_err("Error while sending bak to user\n");
 		return -1;
 	}
-	
+
 	return 0;
 }
 

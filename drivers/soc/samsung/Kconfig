@@ -270,3 +270,4 @@ endif
 
 source "drivers/soc/samsung/cpif/Kconfig"
 source "drivers/soc/samsung/gnssif/Kconfig"
+source "drivers/soc/samsung/exynos-hdcp/Kconfig"
