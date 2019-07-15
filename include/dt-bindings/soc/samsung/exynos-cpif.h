@@ -76,4 +76,15 @@
 #define LINK_ATTR_MASK_XMIT_BTDLR	(0x1 << 10)
 #define LINK_ATTR_MASK_XMIT_BTDLR_SPI	(0x1 << 11)
 
+/* modem_protocol */
+#define PROTOCOL_SIPC	0
+#define PROTOCOL_SIT	1
+
+/* sipc_version */
+#define NO_SIPC_VER	0
+#define	SIPC_VER_40	40
+#define	SIPC_VER_41	41
+#define SIPC_VER_42	42
+#define	SIPC_VER_50	50
+
 #endif /* _DT_BINDINGS_EXYNOS_CPIF_H */
