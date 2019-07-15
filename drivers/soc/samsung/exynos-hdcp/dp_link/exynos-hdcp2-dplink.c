@@ -37,6 +37,7 @@ int dplink_emul_handler(int cmd)
 
 extern uint32_t func_test_mode;
 
+static DEFINE_MUTEX(hdcp_auth_mutex);
 /* current link data */
 static struct hdcp_link_data *lk_data;
 
@@ -227,16 +228,20 @@ int hdcp_dplink_authenticate(void)
 	int ret;
 	static int retry_cnt;
 
+	mutex_lock(&hdcp_auth_mutex);
 	auth_proc_state = HDCP_AUTH_PROCESS_IDLE;
 	for (; retry_cnt < HDCP_AUTH_RETRY_COUNT; retry_cnt++) {
 		if (!rp_ready) {
 			hdcp_clear_session(ss_info.ss_id);
-			if (hdcp_session_open(&ss_info))
+			if (hdcp_session_open(&ss_info)) {
+				mutex_unlock(&hdcp_auth_mutex);
 				return -ENOMEM;
+			}
 
 			lk_info.ss_id = ss_info.ss_id;
 			if (hdcp_link_open(&lk_info, HDCP_LINK_TYPE_DP)) {
 				hdcp_session_close(&ss_info);
+				mutex_unlock(&hdcp_auth_mutex);
 				return -ENOMEM;
 			}
 
@@ -251,6 +256,7 @@ int hdcp_dplink_authenticate(void)
 		if (ret == HDCP_SUCCESS) {
 			hdcp_info("Success HDCP authenticate done.\n");
 			retry_cnt = 0;
+			mutex_unlock(&hdcp_auth_mutex);
 			return 0;
 		} else {
 			/* auth_proc_state flag check */
@@ -266,6 +272,7 @@ int hdcp_dplink_authenticate(void)
 	}
 
 	retry_cnt = 0;
+	mutex_unlock(&hdcp_auth_mutex);
 	return -EACCES;
 }
 
