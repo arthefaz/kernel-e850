@@ -705,6 +705,7 @@ struct modem_ctl {
 	struct work_struct link_work;
 	struct work_struct dislink_work;
 	struct work_struct wakeup_work;
+	struct work_struct suspend_work;
 
 	struct wake_lock mc_wake_lock;
 	struct mutex pcie_onoff_lock;
@@ -718,7 +719,6 @@ struct modem_ctl {
 	bool reserve_doorbell_int;
 	bool pcie_registered;
 	bool pcie_powered_on;
-	bool pcie_tx_working;
 	atomic_t pcie_pm_suspended;
 	bool pcie_pm_resume_wait;
 	bool device_reboot;

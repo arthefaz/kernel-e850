@@ -2618,9 +2618,8 @@ static void pcie_send_ap2cp_irq(struct mem_link_device *mld, u16 mask)
 	struct link_device *ld = &mld->link_dev;
 	struct modem_ctl *mc = ld->mc;
 	unsigned long flags;
- 
+
 	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
-	mc->pcie_tx_working = true;
 
 	if (mutex_is_locked(&mc->pcie_onoff_lock)) {
 		mif_err("Reserve doorbell interrupt: PCI on/off working\n");
@@ -2642,7 +2641,6 @@ static void pcie_send_ap2cp_irq(struct mem_link_device *mld, u16 mask)
 		s5100_force_crash_exit_ext();
 
 exit:
-	mc->pcie_tx_working = false;
 	spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
 }
 
