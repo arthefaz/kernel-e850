@@ -55,6 +55,44 @@ struct ce_weight {
 };
 static DEFINE_PER_CPU(struct ce_weight, weight);
 
+__weak int get_gov_next_cap(int dst_cpu, struct task_struct *p)
+{
+	return -1;
+}
+
+static int
+default_get_next_cap(int dst_cpu, struct task_struct *p)
+{
+	struct energy_table *table = get_energy_table(dst_cpu);
+	unsigned long next_cap = 0;
+	int cpu;
+
+	for_each_cpu(cpu, cpu_coregroup_mask(dst_cpu)) {
+		unsigned long util;
+
+		if (cpu == dst_cpu) { /* util with task */
+			util = ml_cpu_util_with(cpu, p);
+
+			/* if it is over-capacity, give up eifficiency calculatation */
+			if (util > table->states[table->nr_states - 1].cap)
+				return 0;
+		}
+		else /* util without task */
+			util = ml_cpu_util_without(cpu, p);
+
+		/*
+		 * The cpu in the coregroup has same capacity and the
+		 * capacity depends on the cpu with biggest utilization.
+		 * Find biggest utilization in the coregroup and use it
+		 * as max floor to know what capacity the cpu will have.
+		 */
+		if (util > next_cap)
+			next_cap = util;
+	}
+
+	return next_cap;
+}
+
 static inline unsigned int
 __compute_energy(unsigned long util, unsigned long cap,
 				unsigned long dp, unsigned long sp)
@@ -85,44 +123,25 @@ static unsigned int
 compute_efficiency(struct task_struct *p, int target_cpu, unsigned int eff_weight)
 {
 	struct energy_table *table = get_energy_table(target_cpu);
-	unsigned long max_util = 0;
+	unsigned long next_cap = 0;
 	unsigned long capacity, energy;
 	unsigned int eff;
 	unsigned int cap_idx;
-	int cpu, i;
+	int i;
 
 	/* energy table does not exist */
 	if (!table->nr_states)
 		return 0;
 
-	/* Get utilization of cpu in coregroup with task */
-	for_each_cpu(cpu, cpu_coregroup_mask(target_cpu)) {
-		unsigned long util;
+	/* Get next capacity of cpu in coregroup with task */
+	next_cap = get_gov_next_cap(target_cpu, p);
+	if ((int)next_cap < 0)
+		next_cap = default_get_next_cap(target_cpu, p);
 
-		if (cpu == target_cpu) {
-			util = ml_cpu_util_with(cpu, p);
-
-			/* if it is over-capacity, give up eifficiency calculatation */
-			if (util > table->states[table->nr_states - 1].cap)
-				return 0;
-		} else
-			util = ml_cpu_util_without(cpu, p);
-
-		/*
-		 * The cpu in the coregroup has same capacity and the
-		 * capacity depends on the cpu with biggest utilization.
-		 * Find biggest utilization in the coregroup to know
-		 * what capacity the cpu will have.
-		 */
-		if (util > max_util)
-			max_util = util;
-	}
-
-	/* Find the capacity index according to biggest utilization in coregroup. */
+	/* Find the capacity index according to next capacity */
 	cap_idx = table->nr_states - 1;
-	max_util = max_util + (max_util >> 2);
 	for (i = 0; i < table->nr_states; i++) {
-		if (table->states[i].cap >= max_util) {
+		if (table->states[i].cap >= next_cap) {
 			cap_idx = i;
 			break;
 		}

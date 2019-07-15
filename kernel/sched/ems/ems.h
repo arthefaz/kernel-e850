@@ -69,6 +69,7 @@ extern int global_boost(void);
 /* energy_step_wise_governor */
 extern int find_allowed_capacity(int cpu, unsigned int new, int power);
 extern int find_step_power(int cpu, int step);
+extern int get_gov_next_cap(int dst, struct task_struct *p);
 
 /* core sparing */
 extern struct cpumask *ecs_sparing_cpus(void);

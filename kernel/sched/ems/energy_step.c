@@ -103,40 +103,6 @@ static struct esgov_policy * esg_find_esg_pol_qos_class(int class)
 	return NULL;
 }
 
-unsigned int get_gov_target_util(int src, int dst, struct task_struct *p)
-{
-	struct esgov_policy *esg_policy = per_cpu(esgov_policy, dst);
-	int cpu, task_util = ml_task_util(p);
-	int target_util = 0;
-
-	if (unlikely(!esg_policy || !esg_policy->enabled)) {
-		if (src == dst)
-			return ml_cpu_util_without(dst, p);
-		else
-			return ml_cpu_util_with(dst, p);
-	}
-
-	/* get max util of the cluster of this cpu */
-	for_each_cpu(cpu, esg_policy->policy->cpus) {
-		struct esgov_cpu *esg_cpu = &per_cpu(esgov_cpu, cpu);
-		int cpu_max, sutil = esg_cpu->sutil;
-
-		if (src == cpu)
-			sutil -= task_util;
-		if (dst == cpu)
-			sutil += task_util;
-
-		cpu_max = max(sutil, esg_cpu->eutil);
-		if (cpu_max > target_util)
-			target_util = cpu_max;
-	}
-
-	target_util = max(esg_policy->min_cap, target_util);
-	target_util = min(esg_policy->max_cap, target_util);
-
-	return target_util;
-}
-
 static void esg_update_step(struct esgov_policy *esg_policy, int step)
 {
 	int cpu = cpumask_first(&esg_policy->cpus);
@@ -708,6 +674,44 @@ struct cpufreq_governor energy_step_gov = {
 };
 
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ENERGYSTEP
+int get_gov_next_cap(int dst_cpu, struct task_struct *p)
+{
+	struct esgov_policy *esg_policy = per_cpu(esgov_policy, dst_cpu);
+	int cpu, next_cap = 0;
+	int task_util;
+
+	if (unlikely(!esg_policy || !esg_policy->enabled))
+		return -ENODEV;
+
+	/* get task util and convert to uss */
+	task_util = ml_task_util(p);
+	if (p->sse)
+		task_util *= capacity_ratio(task_cpu(p), USS);
+
+	/* get max util of the cluster of this cpu */
+	for_each_cpu(cpu, esg_policy->policy->cpus) {
+		struct esgov_cpu *esg_cpu = &per_cpu(esgov_cpu, cpu);
+		int cpu_util, sutil = esg_cpu->sutil;
+		int task_util;
+
+		/* calculate cpu util with{out} task */
+		if (cpu == dst_cpu && cpu != task_cpu(p))
+			sutil += task_util;
+		else if (cpu != dst_cpu && cpu == task_cpu(p))
+			sutil -= task_util;
+
+		cpu_util = max(sutil, esg_cpu->eutil);
+		if (cpu_util > next_cap)
+			next_cap = cpu_util;
+	}
+
+	/* max floor depends on CPUFreq min/max lock */
+	next_cap = max(esg_policy->min_cap, next_cap);
+	next_cap = min(esg_policy->max_cap, next_cap);
+
+	return next_cap;
+}
+
 unsigned long cpufreq_governor_get_util(unsigned int cpu)
 {
 	struct esgov_cpu *esg_cpu = &per_cpu(esgov_cpu, cpu);
