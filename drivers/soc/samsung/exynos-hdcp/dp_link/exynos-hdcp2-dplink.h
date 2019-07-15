@@ -14,10 +14,16 @@
 int dplink_emul_handler(int cmd);
 #endif
 
-enum dp_state {
-	HDCP_AUTH_PROCESS_ON   = 0x0,
-	HDCP_AUTH_PROCESS_STOP = 0x1,
-	HDCP_AUTH_PROCESS_DONE = 0x2
+enum auth_state {
+	HDCP_AUTH_PROCESS_IDLE	= 0x1,
+	HDCP_AUTH_PROCESS_STOP	= 0x2,
+	HDCP_AUTH_PROCESS_DONE	= 0x3
+};
+
+enum auth_signal {
+	HDCP_DRM_OFF	= 0x100,
+	HDCP_DRM_ON	= 0x200,
+	HDCP_RP_READY	= 0x300,
 };
 
 enum drm_state {
@@ -33,23 +39,8 @@ enum drm_state {
  *  - ENOMEM: hdcp context open fail
  *  - EACCES: authentication fail
  */
+int hdcp_dplink_get_rxinfo(uint8_t *status);
 int hdcp_dplink_authenticate(void);
-
 int do_dplink_auth(struct hdcp_link_info *lk_handle);
-int hdcp_dplink_get_rxstatus(uint8_t *status);
-int hdcp_dplink_set_paring_available(void);
-int hdcp_dplink_set_hprime_available(void);
-int hdcp_dplink_set_rp_ready(void);
-int hdcp_dplink_set_reauth(void);
-int hdcp_dplink_set_integrity_fail(void);
-int hdcp_dplink_cancel_auth(void);
-int hdcp_dplink_stream_manage(void);
-int hdcp_dplink_is_auth_state(void);
-int hdcp_dplink_auth_check(void);
-int hdcp_dplink_drm_flag_check(enum drm_state flag);
-int hdcp_dplink_dp_link_flag_check(enum dp_state flag);
 void hdcp_clear_session(uint32_t id);
-void hdcp_dplink_clear_all(void);
-
-extern void reset_dp_hdcp_module(void);
 #endif

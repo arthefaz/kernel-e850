@@ -22,11 +22,10 @@
 #include "exynos-hdcp2-dplink.h"
 #include "exynos-hdcp2-dplink-if.h"
 #include "exynos-hdcp2-dplink-auth.h"
+#include "exynos-hdcp2-dplink-inter.h"
 
 #define HDCP_AUTH_RETRY_COUNT	5
-#define HDCP_AUTH_REAUTH_COUNT	3
-
-#define RECVID_WIAT_RETRY_COUNT	5
+#define RECVID_WAIT_RETRY_COUNT	5
 
 #if defined(CONFIG_HDCP2_EMULATION_MODE)
 int dplink_emul_handler(int cmd)
@@ -43,29 +42,19 @@ static struct hdcp_link_data *lk_data;
 
 extern struct hdcp_session_list g_hdcp_session_list;
 extern uint8_t rp_ready;
-enum dp_state auth_end_flag;
-enum drm_state drm_flag;
-enum dp_state dp_link_flag;
+extern enum auth_state auth_proc_state;
 struct hdcp_sess_info ss_info;
 struct hdcp_link_info lk_info;
 
-static char *hdcp_link_st_str[] = {
-	"ST_INIT",
-	"ST_H0_NO_RX_ATTACHED",
-	"ST_H1_TX_LOW_VALUE_CONTENT",
-	"ST_A0_DETERMINE_RX_HDCP_CAP",
-	"ST_A1_EXCHANGE_MASTER_KEY",
-	"ST_A2_LOCALITY_CHECK",
-	"ST_A3_EXCHANGE_SESSION_KEY",
-	"ST_A4_TEST_REPEATER",
-	"ST_A5_AUTHENTICATED",
-	"ST_A6_WAIT_RECEIVER_ID_LIST",
-	"ST_A7_VERIFY_RECEIVER_ID_LIST",
-	"ST_A8_SEND_RECEIVER_ID_LIST_ACK",
-	"ST_A9_CONTENT_STREAM_MGT",
-	"ST_END",
-	NULL
-};
+int hdcp_dplink_get_rxinfo(uint8_t *status)
+{
+	int ret = 0;
+
+	ret = hdcp_dplink_recv(HDCP22_MSG_RXSTATUS_R, status, sizeof(uint8_t));
+	hdcp_info("RxStatus: %x\n", *status);
+
+	return ret;
+}
 
 int do_dplink_auth(struct hdcp_link_info *lk_handle)
 {
@@ -178,7 +167,7 @@ int do_dplink_auth(struct hdcp_link_info *lk_handle)
 		case LINK_ST_A6_WAIT_RECEIVER_ID_LIST:
 			rval = dplink_wait_for_receiver_id_list(lk_data);
 			if (rval == -TX_AUTH_ERROR_TIME_EXCEED) {
-				if (retry_recvid < RECVID_WIAT_RETRY_COUNT) {
+				if (retry_recvid < RECVID_WAIT_RETRY_COUNT) {
 					/* retry hdcp authentication in case of timeout */
 					hdcp_dplink_config(DP_HDCP22_DISABLE);
 					UPDATE_LINK_STATE(lk_data, LINK_ST_A0_DETERMINE_RX_HDCP_CAP);
@@ -239,8 +228,7 @@ int hdcp_dplink_authenticate(void)
 	static int retry_cnt;
 	uint32_t drm_flag_checker;
 
-	auth_end_flag = HDCP_AUTH_PROCESS_ON;
-
+	auth_proc_state = HDCP_AUTH_PROCESS_IDLE;
 	for (; retry_cnt < HDCP_AUTH_RETRY_COUNT; retry_cnt++) {
 		if (!func_test_mode) {
 			drm_flag_checker = exynos_smc(SMC_CHECK_STREAM_TYPE_FLAG, 0, 0, 0);
@@ -272,77 +260,20 @@ int hdcp_dplink_authenticate(void)
 			retry_cnt = 0;
 			return 0;
 		} else {
-			/* auth_end_flag flag check */
-			if (auth_end_flag == HDCP_AUTH_PROCESS_STOP) {
+			/* auth_proc_state flag check */
+			if (auth_proc_state == HDCP_AUTH_PROCESS_STOP) {
 				hdcp_info("Stop authenticate.\n");
-				auth_end_flag = HDCP_AUTH_PROCESS_ON;
+				auth_proc_state = HDCP_AUTH_PROCESS_IDLE;
 				break;
 			}
 			/* retry */
 			dplink_clear_irqflag_all();
 			hdcp_err("HDCP auth failed. retry(%d)\n", retry_cnt);
-			if (retry_cnt > HDCP_AUTH_REAUTH_COUNT)
-				reset_dp_hdcp_module();
 		}
 	}
 
 	retry_cnt = 0;
 	return -EACCES;
-}
-
-int hdcp_dplink_auth_check(void)
-{
-	int ret;
-
-	if (drm_flag && dp_link_flag) {
-		ret = exynos_smc(SMC_DRM_HDCP_AUTH_INFO, DP_HDCP22_DISABLE, 0, 0);
-		dplink_clear_irqflag_all();
-		ret = hdcp_dplink_authenticate();
-		if (ret == 0)
-			dp_link_flag = HDCP_AUTH_PROCESS_DONE;
-
-		return ret;
-	}
-
-	return 1;
-}
-
-int hdcp_dplink_drm_flag_check(enum drm_state flag)
-{
-	int ret = 0;
-	int i = 0;
-
-	if (flag == DRM_OFF) {
-		drm_flag = DRM_OFF;
-		return 0;
-	}
-
-	for (i = 0; i < 1000; i++) {
-		drm_flag = exynos_smc(SMC_CHECK_STREAM_TYPE_FLAG, 0, 0, 0);
-		if (drm_flag)
-			break;
-
-		msleep(500);
-	}
-
-	if (drm_flag == DRM_SAME_STREAM_TYPE && dp_link_flag == HDCP_AUTH_PROCESS_DONE)
-		return 0;
-
-	ret = hdcp_dplink_auth_check();
-	return ret;
-}
-
-int hdcp_dplink_dp_link_flag_check(enum dp_state flag)
-{
-	int ret = 0;
-
-	dp_link_flag = flag;
-	if (func_test_mode)
-		drm_flag = DRM_ON;
-
-	ret = hdcp_dplink_auth_check();
-
-	return ret;
 }
 
 void hdcp_clear_session(uint32_t id)
@@ -362,83 +293,4 @@ int hdcp_dplink_stream_manage(void)
 	hdcp_info("stream manage updated.\n");
 	/* todo: update stream manage information */
 	return 0;
-}
-
-int hdcp_dplink_get_rxstatus(uint8_t *status)
-{
-	int ret = 0;
-
-	ret = hdcp_dplink_recv(HDCP22_MSG_RXSTATUS_R, status, sizeof(uint8_t));
-#if defined(HDCP_DEBUG)
-	hdcp_info("RxStatus: %x\n", *status);
-#endif
-	return ret;
-}
-
-int hdcp_dplink_set_paring_available(void)
-{
-	hdcp_info("pairing avaible\n");
-	return dplink_set_paring_available();
-}
-
-int hdcp_dplink_set_hprime_available(void)
-{
-	hdcp_info("h-prime avaible\n");
-	return dplink_set_hprime_available();
-}
-
-int hdcp_dplink_set_rp_ready(void)
-{
-	hdcp_info("ready avaible\n");
-	return dplink_set_rp_ready();
-}
-
-int hdcp_dplink_set_reauth(void)
-{
-	uint32_t ret = 0;
-
-	hdcp_info("reauth requested.\n");
-	ret = exynos_smc(SMC_DRM_HDCP_AUTH_INFO, DP_HDCP22_DISABLE, 0, 0);
-	return dplink_set_reauth_req();
-}
-
-int hdcp_dplink_set_integrity_fail(void)
-{
-	uint32_t ret = 0;
-
-	hdcp_info("integrity check fail.\n");
-	ret = exynos_smc(SMC_DRM_HDCP_AUTH_INFO, DP_HDCP22_DISABLE, 0, 0);
-	return dplink_set_integrity_fail();
-}
-
-int hdcp_dplink_cancel_auth(void)
-{
-	uint32_t ret = 0;
-
-	hdcp_info("Cancel authenticate.\n");
-	ret = exynos_smc(SMC_DRM_HDCP_AUTH_INFO, DP_HDCP22_DISABLE, 0, 0);
-	auth_end_flag = HDCP_AUTH_PROCESS_STOP;
-
-	return dplink_set_integrity_fail();
-}
-
-void hdcp_dplink_clear_all(void)
-{
-	uint32_t ret = 0;
-
-	hdcp_info("HDCP flag clear\n");
-	ret = exynos_smc(SMC_DRM_HDCP_AUTH_INFO, DP_HDCP22_DISABLE, 0, 0);
-	dplink_clear_irqflag_all();
-}
-
-int hdcp_dplink_is_auth_state(void)
-{
-	return 0;
-	/* todo: check link auth status */
-	#if 0
-	if (lk_data->state == LINK_ST_A5_AUTHENTICATED)
-		return 1;
-	else
-		return 0;
-	#endif
 }

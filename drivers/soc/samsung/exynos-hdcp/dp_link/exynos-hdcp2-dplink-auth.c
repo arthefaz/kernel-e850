@@ -14,6 +14,7 @@
 #include "exynos-hdcp2-dplink-auth.h"
 #include "exynos-hdcp2-dplink-if.h"
 #include "exynos-hdcp2-dplink.h"
+#include "exynos-hdcp2-dplink-inter.h"
 
 #define MAX_LC_RETRY 10
 
@@ -838,7 +839,7 @@ static int check_h_prime_ready(void)
 		}
 
 		/* check as polling mode */
-		hdcp_dplink_get_rxstatus(&status);
+		hdcp_dplink_get_rxinfo(&status);
 		if (status & DP_RXSTATUS_HPRIME_AVAILABLE) {
 			/* reset flag */
 			hprime_ready = 0;
@@ -881,7 +882,7 @@ static int check_pairing_ready(void)
 		}
 
 		/* check as polling mode */
-		hdcp_dplink_get_rxstatus(&status);
+		hdcp_dplink_get_rxinfo(&status);
 		if (status & DP_RXSTATUS_PAIRING_AVAILABLE) {
 			/* reset flag */
 			pairing_ready = 0;
@@ -917,7 +918,7 @@ static int check_rcvidlist_ready(void)
 		}
 
 		/* check as polling mode */
-		hdcp_dplink_get_rxstatus(&status);
+		hdcp_dplink_get_rxinfo(&status);
 		if (status & DP_RXSTATUS_READY) {
 			rp_ready++;
 			return 0;

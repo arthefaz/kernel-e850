@@ -17,6 +17,150 @@
  * generate data for a session data
  */
 
+extern struct hdcp_session_list g_hdcp_session_list;
+
+enum hdcp_result hdcp_session_open(struct hdcp_sess_info *ss_info)
+{
+	struct hdcp_session_data *new_ss = NULL;
+	struct hdcp_session_node *new_ss_node = NULL;
+
+	/* do open session */
+	new_ss_node = (struct hdcp_session_node *)kzalloc(sizeof(struct hdcp_session_node), GFP_KERNEL);
+
+	if (!new_ss_node) {
+		return HDCP_ERROR_INVALID_HANDLE;
+	}
+
+	new_ss = hdcp_session_data_create();
+	if (!new_ss) {
+		kfree(new_ss_node);
+		return HDCP_ERROR_INVALID_HANDLE;
+	}
+
+	/* send session info to SWD */
+	/* todo: add error check */
+
+	UPDATE_SESSION_STATE(new_ss, SESS_ST_LINK_SETUP);
+	ss_info->ss_id = new_ss->id;
+	new_ss_node->ss_data = new_ss;
+
+	hdcp_session_list_add((struct hdcp_session_node *)new_ss_node, (struct hdcp_session_list *)&g_hdcp_session_list);
+
+/* TODO: Only for IIA */
+#if 0
+	if (hdcp_unwrap_key(ss_info->wkey))
+		return HDCP_ERROR_WRAP_FAIL;
+#endif
+
+	return HDCP_SUCCESS;
+}
+
+enum hdcp_result hdcp_session_close(struct hdcp_sess_info *ss_info)
+{
+	struct hdcp_session_node *ss_node;
+	struct hdcp_session_data *ss_data;
+	uint32_t ss_handle;
+
+	ss_handle = ss_info->ss_id;
+
+	ss_node = hdcp_session_list_find(ss_handle, &g_hdcp_session_list);
+	if (!ss_node) {
+		return HDCP_ERROR_INVALID_HANDLE;
+	}
+
+	ss_data = ss_node->ss_data;
+	if (ss_data->state != SESS_ST_LINK_SETUP)
+		return HDCP_ERROR_INVALID_STATE;
+
+	ss_handle = ss_info->ss_id;
+	UPDATE_SESSION_STATE(ss_data, SESS_ST_END);
+
+	hdcp_session_list_del(ss_node, &g_hdcp_session_list);
+	hdcp_session_data_destroy(&(ss_node->ss_data));
+
+	return HDCP_SUCCESS;
+}
+
+enum hdcp_result hdcp_link_open(struct hdcp_link_info *link_info, uint32_t lk_type)
+{
+	struct hdcp_session_node *ss_node = NULL;
+	struct hdcp_link_node *new_lk_node = NULL;
+	struct hdcp_link_data *new_lk_data = NULL;
+	int ret = HDCP_SUCCESS;
+	uint32_t ss_handle;
+
+	ss_handle = link_info->ss_id;
+
+	do {
+		/* find Session node which will contain new Link */
+		ss_node = hdcp_session_list_find(ss_handle, &g_hdcp_session_list);
+		if (!ss_node) {
+			ret = HDCP_ERROR_INVALID_INPUT;
+			break;
+		}
+
+		/* make a new link node and add it to the session */
+		new_lk_node = (struct hdcp_link_node *)kzalloc(sizeof(struct hdcp_link_node), GFP_KERNEL);
+		if (!new_lk_node) {
+			ret = HDCP_ERROR_MALLOC_FAILED;
+			break;
+		}
+		new_lk_data = hdcp_link_data_create();
+		if (!new_lk_data) {
+			ret = HDCP_ERROR_MALLOC_FAILED;
+			break;
+		}
+
+		UPDATE_LINK_STATE(new_lk_data, LINK_ST_H0_NO_RX_ATTATCHED);
+
+		new_lk_data->ss_ptr = ss_node;
+		new_lk_data->lk_type = lk_type;
+		new_lk_node->lk_data = new_lk_data;
+
+		hdcp_link_list_add(new_lk_node, &ss_node->ss_data->ln);
+
+		link_info->ss_id = ss_node->ss_data->id;
+		link_info->lk_id = new_lk_data->id;
+	} while (0);
+
+	if (ret != HDCP_SUCCESS) {
+		if (new_lk_node)
+			kfree(new_lk_node);
+		if (new_lk_data)
+			hdcp_link_data_destroy(&new_lk_data);
+
+		return HDCP_ERROR_LINK_OPEN_FAILED;
+	}
+	else
+		UPDATE_LINK_STATE(new_lk_data, LINK_ST_H1_TX_LOW_VALUE_CONTENT);
+
+	return HDCP_SUCCESS;
+}
+
+enum hdcp_result hdcp_link_close(struct hdcp_link_info *lk_info)
+{
+	struct hdcp_session_node *ss_node = NULL;
+	struct hdcp_link_node *lk_node = NULL;
+
+	/* find Session node which contain the Link */
+	ss_node = hdcp_session_list_find(lk_info->ss_id, &g_hdcp_session_list);
+
+	if (!ss_node)
+		return HDCP_ERROR_INVALID_INPUT;
+
+	lk_node = hdcp_link_list_find(lk_info->lk_id, &ss_node->ss_data->ln);
+	if (!lk_node)
+		return HDCP_ERROR_INVALID_INPUT;
+
+	UPDATE_LINK_STATE(lk_node->lk_data, LINK_ST_H0_NO_RX_ATTATCHED);
+
+	hdcp_link_list_del(lk_node, &ss_node->ss_data->ln);
+	hdcp_link_data_destroy(&(lk_node->lk_data));
+
+	return HDCP_SUCCESS;
+}
+
+
 struct hdcp_session_data *hdcp_session_data_create(void)
 {
 	struct hdcp_session_data *new_ss_data = NULL;
