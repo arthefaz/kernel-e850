@@ -33,8 +33,7 @@
  */
 #define DSIM_CMD_ALLOW_VALUE		4
 #define DSIM_STABLE_VFP_VALUE		2
-#define TE_PROTECT_ON_TIME		158 /* 15.8ms*/
-#define TE_TIMEOUT_TIME			180 /* 18ms */
+#define TE_MARGIN			5 /* 5% */
 
 #define PLL_LOCK_CNT_MULT		500
 #define PLL_LOCK_CNT_MARGIN_RATIO	0	/* 10% ~ 20% */
@@ -1188,6 +1187,13 @@ static void dsim_reg_set_cmd_te_ctrl1(u32 id, u32 teprotecton, u32 tetout)
 	dsim_write(id, DSIM_CMD_TE_CTRL1, val);
 }
 
+static void dsim_reg_get_cmd_timer(unsigned int fps, unsigned int *te_protect,
+		unsigned int *te_timeout, u32 hs_clk)
+{
+	*te_protect = hs_clk * (100 - TE_MARGIN) * 100 / fps / 16;
+	*te_timeout = hs_clk * (100 + TE_MARGIN * 2) * 100 / fps / 16;
+}
+
 static void dsim_reg_set_cmd_ctrl(u32 id, struct exynos_panel_info *lcd_info,
 						struct dsim_clks *clks)
 {
@@ -1195,9 +1201,12 @@ static void dsim_reg_set_cmd_ctrl(u32 id, struct exynos_panel_info *lcd_info,
 	unsigned int time_te_protect_on;
 	unsigned int time_te_tout;
 
-	time_stable_vfp = lcd_info->xres * DSIM_STABLE_VFP_VALUE * 3 / 100;
-	time_te_protect_on = (clks->hs_clk * TE_PROTECT_ON_TIME) / 16;
-	time_te_tout = (clks->hs_clk * TE_TIMEOUT_TIME) / 16;
+	if (lcd_info->dsc.en)
+		time_stable_vfp = lcd_info->xres * DSIM_STABLE_VFP_VALUE / 100;
+	else
+		time_stable_vfp = lcd_info->xres * DSIM_STABLE_VFP_VALUE * 3 / 100;
+	dsim_reg_get_cmd_timer(lcd_info->fps, &time_te_protect_on,
+			&time_te_tout, clks->hs_clk);
 	dsim_reg_set_cmd_te_ctrl0(id, time_stable_vfp);
 	dsim_reg_set_cmd_te_ctrl1(id, time_te_protect_on, time_te_tout);
 }
