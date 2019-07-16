@@ -40,7 +40,7 @@ static int s2mu106_pm_enable(struct s2mu106_pmeter_data *pmeter,
 	u8 addr1 = S2MU106_PM_REQ_BOX_CO1;
 	u8 addr2 = S2MU106_PM_REQ_BOX_CO2;
 	u8 data1, data2;
-	
+
 	/* Default PM mode = continuous */
 	if (mode == REQUEST_RESPONSE_MODE) {
 		pr_info ("%s PM mode : Request Response mode (RR)\n", __func__);
@@ -83,7 +83,7 @@ static int s2mu106_pm_get_vchgin(struct s2mu106_pmeter_data *pmeter)
 
 	if (data1 < 0 || data2 < 0)
 		return -EINVAL;
-	
+
 	charge_voltage = ((data1 << 4) | (data2 >> 4)) * 5;
 	pr_info ("%s, data1 : 0x%2x, data2 : 0x%2x, voltage = %d\n",
 			__func__, data1, data2, charge_voltage);
@@ -97,7 +97,7 @@ static int s2mu106_pm_get_vwcin(struct s2mu106_pmeter_data *pmeter)
 
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL1_VWCIN, &data1);
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL2_VWCIN, &data2);
-	
+
 	if (data1 < 0 || data2 < 0)
 		return -EINVAL;
 
@@ -114,7 +114,7 @@ static int s2mu106_pm_get_vbyp(struct s2mu106_pmeter_data *pmeter)
 
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL1_VBYP, &data1);
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL2_VBYP, &data2);
-	
+
 	if (data1 < 0 || data2 < 0)
 		return -EINVAL;
 
@@ -131,7 +131,7 @@ static int s2mu106_pm_get_vsysa(struct s2mu106_pmeter_data *pmeter)
 
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL1_VSYS, &data1);
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL2_VSYS, &data2);
-	
+
 	if (data1 < 0 || data2 < 0)
 		return -EINVAL;
 
@@ -150,7 +150,7 @@ static int s2mu106_pm_get_vbata(struct s2mu106_pmeter_data *pmeter)
 
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL1_VBAT, &data1);
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL2_VBAT, &data2);
-	
+
 	if (data1 < 0 || data2 < 0)
 		return -EINVAL;
 
@@ -169,7 +169,7 @@ static int s2mu106_pm_get_vgpadc(struct s2mu106_pmeter_data *pmeter)
 
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL1_VGPADC, &data1);
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL2_VGPADC, &data2);
-	
+
 	if (data1 < 0 || data2 < 0)
 		return -EINVAL;
 
@@ -188,7 +188,7 @@ static int s2mu106_pm_get_vcc1(struct s2mu106_pmeter_data *pmeter)
 
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL1_VCC1, &data1);
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL2_VCC1, &data2);
-	
+
 	if (data1 < 0 || data2 < 0)
 		return -EINVAL;
 
@@ -207,7 +207,7 @@ static int s2mu106_pm_get_vcc2(struct s2mu106_pmeter_data *pmeter)
 
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL1_VCC2, &data1);
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL2_VCC2, &data2);
-	
+
 	if (data1 < 0 || data2 < 0)
 		return -EINVAL;
 
@@ -246,7 +246,7 @@ static int s2mu106_pm_get_iwcin(struct s2mu106_pmeter_data *pmeter)
 
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL1_IWCIN, &data1);
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL2_IWCIN, &data2);
-	
+
 	if (data1 < 0 || data2 < 0)
 		return -EINVAL;
 
@@ -264,7 +264,7 @@ static int s2mu106_pm_get_iotg(struct s2mu106_pmeter_data *pmeter)
 
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL1_IOTG, &data1);
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL2_IOTG, &data2);
-	
+
 	if (data1 < 0 || data2 < 0)
 		return -EINVAL;
 
@@ -282,7 +282,7 @@ static int s2mu106_pm_get_itx(struct s2mu106_pmeter_data *pmeter)
 
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL1_ITX, &data1);
 	s2mu106_read_reg(pmeter->i2c, S2MU106_PM_VAL2_ITX, &data2);
-	
+
 	if (data1 < 0 || data2 < 0)
 		return -EINVAL;
 
@@ -371,7 +371,7 @@ static irqreturn_t s2mu106_vchgin_isr(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
-#endif	
+#endif
 static const struct of_device_id s2mu106_pmeter_match_table[] = {
 	{ .compatible = "samsung,s2mu106-pmeter",},
 	{},

@@ -34,7 +34,6 @@
 static enum power_supply_property s2mu106_fuelgauge_props[] = {
 };
 
-static void low_vbat_power_off(void);
 static int s2mu106_get_vbat(struct s2mu106_fuelgauge_data *fuelgauge);
 static int s2mu106_get_ocv(struct s2mu106_fuelgauge_data *fuelgauge);
 static int s2mu106_get_current(struct s2mu106_fuelgauge_data *fuelgauge);
@@ -358,7 +357,7 @@ static int s2mu106_get_temperature(struct s2mu106_fuelgauge_data *fuelgauge)
 
 	pr_info("%s: temperature (%d)\n", __func__, temperature);
 
-	return temperature*100;
+	return temperature;
 
 err:
 	mutex_unlock(&fuelgauge->fg_lock);
@@ -928,17 +927,6 @@ static int s2mu106_get_rawsoc(struct s2mu106_fuelgauge_data *fuelgauge)
 		fuelgauge->ui_soc, fuelgauge->is_charging, avg_vbat,
 		float_voltage, avg_current, fg_mode_reg);
 
-	if (fuelgauge->ui_soc == 0 && avg_vbat <= 3250 && avg_current <= 5) {
-		pr_info("%s, UI SOC 0%! VBAT 3250!\n", __func__);
-
-		/* low vbat power off flag */
-		s2mu106_read_reg_byte(fuelgauge->i2c, 0x49, &temp);
-		temp |= 0x80;
-		s2mu106_write_and_verify_reg_byte(fuelgauge->i2c, 0x49, temp);
-
-		low_vbat_power_off();
-	}
-
 	if ((fuelgauge->is_charging == true) &&
 		((fuelgauge->ui_soc >= 98) || ((avg_vbat > float_voltage) && (avg_current < 500)))) {
 		if (fuelgauge->mode == CURRENT_MODE) { /* switch to VOLTAGE_MODE */
@@ -1343,12 +1331,7 @@ static int s2mu106_fg_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_TEMP:
 	/* Target Temperature */
 	case POWER_SUPPLY_PROP_TEMP_AMBIENT:
-		if (batt_temp_flag) {
-			val->intval = BATT_TEMP_CONSTANT;
-			pr_err("set battery temp is unchanged, batt_temp_flag = %d\n", batt_temp_flag);
-			break;
-		}
-		val->intval = ntc_show_batt_temp();
+		val->intval = s2mu106_get_temperature(fuelgauge);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TEMP:
 		val->intval = s2mu106_get_temperature(fuelgauge);
@@ -1412,15 +1395,6 @@ static int s2mu106_fg_set_property(struct power_supply *psy,
 	return 0;
 }
 
-static void low_vbat_power_off(void)
-{
-	pr_info("%s, Set Power off\n", __func__);
-
-	mdelay(300);
-
-	orderly_poweroff(true);
-}
-
 static void s2mu106_fg_isr_work(struct work_struct *work)
 {
 	struct s2mu106_fuelgauge_data *fuelgauge =
@@ -1469,45 +1443,6 @@ static irqreturn_t s2mu106_fg_irq_thread(int irq, void *irq_data)
 	return IRQ_HANDLED;
 }
 
-static int s2mu106_fuelgauge_get_cell_id(struct s2mu106_fuelgauge_data *fuelgauge)
-{
-	/* TODO: Get battery profile index */
-
-	return 2;
-}
-
-static void s2mu106_fuelgauge_select_table(struct s2mu106_fuelgauge_data *fuelgauge)
-{
-	fuelgauge->info.battery_profile_index = s2mu106_fuelgauge_get_cell_id(fuelgauge);
-
-	if (fuelgauge->info.battery_profile_index == 1) {
-		fuelgauge->info.battery_table3 = fuelgauge->info.battery_table3_cell1;
-		fuelgauge->info.battery_table4 = fuelgauge->info.battery_table4_cell1;
-		fuelgauge->info.soc_arr_val = fuelgauge->info.soc_arr_val_cell1;
-		fuelgauge->info.ocv_arr_val = fuelgauge->info.ocv_arr_val_cell1;
-		fuelgauge->info.batcap = fuelgauge->info.batcap_cell1;
-		fuelgauge->info.accum = fuelgauge->info.accum_cell1;
-		fuelgauge->info.battery_param_ver =
-			fuelgauge->info.battery_param_ver_cell1;
-	} else {
-		fuelgauge->info.battery_table3 = fuelgauge->info.battery_table3_cell2;
-		fuelgauge->info.battery_table4 = fuelgauge->info.battery_table4_cell2;
-		fuelgauge->info.soc_arr_val = fuelgauge->info.soc_arr_val_cell2;
-		fuelgauge->info.ocv_arr_val = fuelgauge->info.ocv_arr_val_cell2;
-		fuelgauge->info.batcap = fuelgauge->info.batcap_cell2;
-		fuelgauge->info.accum = fuelgauge->info.accum_cell2;
-		fuelgauge->info.battery_param_ver =
-			fuelgauge->info.battery_param_ver_cell2;
-	}
-
-	pr_info("%s: Use cell %d, Ver.: %d, table3: 0x%02x, table4: 0x%02x, soc_arr_val: 0d%d, "
-			"ocv_arr_val: 0d%d, batcap: 0x%02x, accum: 0x%02x\n",
-			__func__, fuelgauge->info.battery_profile_index, fuelgauge->info.battery_param_ver,
-			fuelgauge->info.battery_table3[0], fuelgauge->info.battery_table4[0],
-			fuelgauge->info.soc_arr_val[0], fuelgauge->info.ocv_arr_val[0],
-			fuelgauge->info.batcap[0], fuelgauge->info.accum[0]);
-}
-
 #ifdef CONFIG_OF
 static int s2mu106_fuelgauge_parse_dt(struct s2mu106_fuelgauge_data *fuelgauge)
 {
@@ -1518,11 +1453,6 @@ static int s2mu106_fuelgauge_parse_dt(struct s2mu106_fuelgauge_data *fuelgauge)
 	if (np == NULL) {
 		pr_err("%s np NULL\n", __func__);
 	} else {
-		fuelgauge->pdata->fg_irq = of_get_named_gpio(np, "fuelgauge,fuel_int", 0);
-		if (fuelgauge->pdata->fg_irq < 0)
-			pr_err("%s error reading fg_irq = %d\n",
-					__func__, fuelgauge->pdata->fg_irq);
-
 		ret = of_property_read_u32(np, "fuelgauge,fuel_alert_vol",
 				&fuelgauge->pdata->fuel_alert_vol);
 		if (ret < 0) {
@@ -1551,69 +1481,44 @@ static int s2mu106_fuelgauge_parse_dt(struct s2mu106_fuelgauge_data *fuelgauge)
 		if (!np) {
 			pr_err("%s battery node NULL\n", __func__);
 		} else {
-			/* get cell1 battery data */
-			ret = of_property_read_u32_array(np, "battery,battery_table3_cell1", fuelgauge->info.battery_table3_cell1, 88);
+			/* get battery data */
+			ret = of_property_read_u32_array(np, "battery,battery_table3",
+							 fuelgauge->info.battery_table3, 88);
 			if (ret < 0)
-				pr_err("%s error reading battery,battery_table3_cell1\n", __func__);
-			ret = of_property_read_u32_array(np, "battery,battery_table4_cell1", fuelgauge->info.battery_table4_cell1, 22);
-			if (ret < 0)
-				pr_err("%s error reading battery,battery_table4_cell1\n", __func__);
+				pr_err("%s error reading battery,battery_table3\n", __func__);
 
-			ret = of_property_read_u32_array(np, "battery,batcap_cell1", fuelgauge->info.batcap_cell1, 4);
+			ret = of_property_read_u32_array(np, "battery,battery_table4",
+							 fuelgauge->info.battery_table4, 22);
 			if (ret < 0)
-				pr_err("%s error reading battery,batcap_cell1\n", __func__);
+				pr_err("%s error reading battery,battery_table4\n", __func__);
 
-			ret = of_property_read_u32_array(np, "battery,soc_arr_val_cell1", fuelgauge->info.soc_arr_val_cell1, 22);
+			ret = of_property_read_u32_array(np, "battery,batcap",
+							 fuelgauge->info.batcap, 4);
 			if (ret < 0)
-				pr_err("%s error reading battery,soc_arr_val_cell1\n", __func__);
-			ret = of_property_read_u32_array(np, "battery,ocv_arr_val_cell1", fuelgauge->info.ocv_arr_val_cell1, 22);
-			if (ret < 0)
-				pr_err("%s error reading battery,ocv_arr_val_cell1\n", __func__);
+				pr_err("%s error reading battery,batcap\n", __func__);
 
-			ret = of_property_read_u32_array(np, "battery,accum_cell1", fuelgauge->info.accum_cell1, 2);
+			ret = of_property_read_u32_array(np, "battery,soc_arr_val",
+							 fuelgauge->info.soc_arr_val, 22);
+			if (ret < 0)
+				pr_err("%s error reading battery,soc_arr_val\n", __func__);
+
+			ret = of_property_read_u32_array(np, "battery,ocv_arr_val",
+							 fuelgauge->info.ocv_arr_val, 22);
+			if (ret < 0)
+				pr_err("%s error reading battery,ocv_arr_val\n", __func__);
+
+			ret = of_property_read_u32_array(np, "battery,accum",
+							 fuelgauge->info.accum, 2);
 			if (ret < 0) {
-				fuelgauge->info.accum_cell1[1]=0x00; // REG 0x44
-				fuelgauge->info.accum_cell1[0]=0x08; // REG 0x45
+				fuelgauge->info.accum[1]=0x00; // REG 0x44
+				fuelgauge->info.accum[0]=0x08; // REG 0x45
 				pr_err("%s There is no cell1 accumulative rate in DT. Use default value(0x800)\n", __func__);
 			}
 
-			ret = of_property_read_u32(np, "battery,battery_param_ver_cell1",
-					&fuelgauge->info.battery_param_ver_cell1);
+			ret = of_property_read_u32(np, "battery,battery_param_ver",
+					&fuelgauge->info.battery_param_ver);
 			if (ret < 0)
-				pr_err("%s There is no cell1 battery parameter version\n", __func__);
-
-			/* get cell2 battery data */
-			ret = of_property_read_u32_array(np, "battery,battery_table3_cell2", fuelgauge->info.battery_table3_cell2, 88);
-			if (ret < 0)
-				pr_err("%s error reading battery,battery_table3_cell2\n", __func__);
-
-			ret = of_property_read_u32_array(np, "battery,battery_table4_cell2", fuelgauge->info.battery_table4_cell2, 22);
-			if (ret < 0)
-				pr_err("%s error reading battery,battery_table4_cell2\n", __func__);
-
-			ret = of_property_read_u32_array(np, "battery,batcap_cell2", fuelgauge->info.batcap_cell2, 4);
-			if (ret < 0)
-				pr_err("%s error reading battery,batcap_cell2\n", __func__);
-
-			ret = of_property_read_u32_array(np, "battery,soc_arr_val_cell2", fuelgauge->info.soc_arr_val_cell2, 22);
-			if (ret < 0)
-				pr_err("%s error reading battery,soc_arr_val_cell2\n", __func__);
-
-			ret = of_property_read_u32_array(np, "battery,ocv_arr_val_cell2", fuelgauge->info.ocv_arr_val_cell2, 22);
-			if (ret < 0)
-				pr_err("%s error reading battery,ocv_arr_val_cell2\n", __func__);
-
-			ret = of_property_read_u32_array(np, "battery,accum_cell2", fuelgauge->info.accum_cell2, 2);
-			if (ret < 0) {
-				fuelgauge->info.accum_cell2[1]=0x00; // REG 0x44
-				fuelgauge->info.accum_cell2[0]=0x08; // REG 0x45
-				pr_err("%s There is no cell2 accumulative rate in DT. Use default value(0x800)\n", __func__);
-			}
-
-			ret = of_property_read_u32(np, "battery,battery_param_ver_cell2",
-					&fuelgauge->info.battery_param_ver_cell2);
-			if (ret < 0)
-				pr_err("%s There is no cell2 battery parameter version\n", __func__);
+				pr_err("%s There is no battery parameter version\n", __func__);
 
 			ret = of_property_read_u32(np, "battery,low_temp_limit",
 					&fuelgauge->low_temp_limit);
@@ -1687,8 +1592,6 @@ static int s2mu106_fuelgauge_probe(struct i2c_client *client,
 	} else {
 		fuelgauge->pdata = client->dev.platform_data;
 	}
-
-	s2mu106_fuelgauge_select_table(fuelgauge);
 
 	i2c_set_clientdata(client, fuelgauge);
 

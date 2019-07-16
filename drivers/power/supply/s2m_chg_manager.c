@@ -1049,7 +1049,7 @@ static int get_battery_info(struct s2m_chg_manager_info *battery)
 		pr_err("%s: battery status = %d, charger status = %d\n",
 				__func__, battery->status, value.intval);
 
-	psy = power_supply_get_by_name("s2mu107-pmeter");
+	psy = power_supply_get_by_name("s2mu106_pmeter");
 	if (!psy)
 		return -EINVAL;
 
@@ -1857,7 +1857,7 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 	psy = power_supply_get_by_name(battery->pdata->fuelgauge_name);
 	if (!psy)
 		pr_info("%s: there's no fuelgauge driver\n", __func__);
-	
+
 	ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_CAPACITY, &value);
 	if (ret < 0)
 		pr_err("%s: Fail to execute property\n", __func__);

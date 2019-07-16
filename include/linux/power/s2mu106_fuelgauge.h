@@ -83,29 +83,13 @@ struct fg_info {
 	int soc;
 	int battery_profile_index;
 
-	int *battery_table3;
-	int *battery_table4;
-	int *soc_arr_val;
-	int *ocv_arr_val;
-	int *batcap;
-	int *accum;
+	int battery_table3[88];
+	int battery_table4[22];
+	int soc_arr_val[22];
+	int ocv_arr_val[22];
+	int batcap[4];
+	int accum[2];
 	int battery_param_ver;
-
-	int battery_table3_cell1[88];
-	int battery_table4_cell1[22];
-	int soc_arr_val_cell1[22];
-	int ocv_arr_val_cell1[22];
-	int batcap_cell1[4];
-	int accum_cell1[2];
-	int battery_param_ver_cell1;
-
-	int battery_table3_cell2[88];
-	int battery_table4_cell2[22];
-	int soc_arr_val_cell2[22];
-	int ocv_arr_val_cell2[22];
-	int batcap_cell2[4];
-	int accum_cell2[2];
-	int battery_param_ver_cell2;
 };
 
 struct s2mu106_platform_data {
