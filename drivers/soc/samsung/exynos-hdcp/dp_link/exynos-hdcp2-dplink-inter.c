@@ -28,6 +28,7 @@ extern uint32_t func_test_mode;
 #define DRM_WAIT_RETRY_COUNT	1000
 /* current link data */
 enum auth_state auth_proc_state;
+enum dp_state dp_hdcp_state;
 
 int hdcp_dplink_auth_check(enum auth_signal hdcp_signal)
 {
@@ -123,6 +124,11 @@ void hdcp_dplink_clear_all(void)
 	hdcp_info("HDCP flag clear\n");
 	ret = exynos_smc(SMC_DRM_HDCP_AUTH_INFO, DP_HDCP22_DISABLE, 0, 0);
 	dplink_clear_irqflag_all();
+}
+
+void hdcp_dplink_connect_state(enum dp_state state)
+{
+	dp_hdcp_state = state;
 }
 
 int hdcp_dplink_is_auth_state(void)

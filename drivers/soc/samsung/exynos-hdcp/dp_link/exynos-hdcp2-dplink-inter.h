@@ -28,5 +28,6 @@ int hdcp_dplink_stream_manage(void);
 int hdcp_dplink_is_auth_state(void);
 int hdcp_dplink_auth_check(enum auth_signal);
 void hdcp_dplink_clear_all(void);
+void hdcp_dplink_connect_state(enum dp_state state);
 extern void reset_dp_hdcp_module(void);
 #endif

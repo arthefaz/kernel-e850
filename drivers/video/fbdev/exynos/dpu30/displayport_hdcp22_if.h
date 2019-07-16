@@ -10,6 +10,7 @@
 
 int displayport_hdcp22_irq_handler(void);
 int displayport_hdcp22_authenticate(void);
+void displayport_hdcp22_notify_state(enum dp_state state);
 
 #define HDCP_SUPPORT
 #define HDCP_2_2
@@ -24,3 +25,4 @@ extern int hdcp_dplink_set_integrity_fail(void);
 extern int hdcp_dplink_cancel_auth(void);
 extern void hdcp_dplink_clear_all(void);
 extern int hdcp_dplink_auth_check(enum auth_signal);
+extern void hdcp_dplink_connect_state(enum dp_state state);
