@@ -285,14 +285,14 @@ static void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 		c01 = dpp_reg_csc_y2r_3x3[csc_id][0][1];
 		c02 = dpp_reg_csc_y2r_3x3[csc_id][0][2];
 
-		c10 = dpp_reg_csc_y2r_3x3[csc_id][0][0];
-		c11 = dpp_reg_csc_y2r_3x3[csc_id][0][1];
-		c12 = dpp_reg_csc_y2r_3x3[csc_id][0][2];
+		c10 = dpp_reg_csc_y2r_3x3[csc_id][1][0];
+		c11 = dpp_reg_csc_y2r_3x3[csc_id][1][1];
+		c12 = dpp_reg_csc_y2r_3x3[csc_id][1][2];
 
 
-		c20 = dpp_reg_csc_y2r_3x3[csc_id][0][0];
-		c21 = dpp_reg_csc_y2r_3x3[csc_id][0][1];
-		c22 = dpp_reg_csc_y2r_3x3[csc_id][0][2];
+		c20 = dpp_reg_csc_y2r_3x3[csc_id][2][0];
+		c21 = dpp_reg_csc_y2r_3x3[csc_id][2][1];
+		c22 = dpp_reg_csc_y2r_3x3[csc_id][2][2];
 	} else {
 		dpp_warn("[DPP%d] Undefined CSC Type!(std=%d)\n", id, csc_std);
 	}

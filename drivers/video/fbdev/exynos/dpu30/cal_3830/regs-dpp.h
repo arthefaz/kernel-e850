@@ -180,7 +180,7 @@
 
 #define IDMA_CHROMINANCE_STRIDE			0x0020
 #define IDMA_CHROM_STRIDE(_v)			((_v) << 0)
-#define IDMA_CHROM_STRIDE_MASK			(0xFF << 0)
+#define IDMA_CHROM_STRIDE_MASK			(0xFFFF << 0)
 
 #define IDMA_BLOCK_OFFSET			0x0024
 #define IDMA_BLK_OFFSET_Y(_v)			((_v) << 16)
@@ -199,7 +199,7 @@
 
 #define IDMA_IN_REQ_DEST			0x0048
 #define IDMA_IN_REG_DEST_SEL(_v)		((_v) << 0)
-#define IDMA_IN_REG_DEST_SEL_MASK		(0x2 << 0)
+#define IDMA_IN_REG_DEST_SEL_MASK		(0x3 << 0)
 
 #define IDMA_DEADLOCK_EN			0x0050
 
@@ -291,9 +291,9 @@
 
 #define DPP_IMG_SIZE				0x0018
 #define DPP_IMG_HEIGHT(_v)			((_v) << 16)
-#define DPP_IMG_HEIGHT_MASK			(0x3FF << 16)
+#define DPP_IMG_HEIGHT_MASK			(0x7FF << 16)
 #define DPP_IMG_WIDTH(_v)			((_v) << 0)
-#define DPP_IMG_WIDTH_MASK			(0x3FF << 0)
+#define DPP_IMG_WIDTH_MASK			(0x7FF << 0)
 
 /*
  * (00-01-02) : Reg0.L-Reg0.H-Reg1.L
