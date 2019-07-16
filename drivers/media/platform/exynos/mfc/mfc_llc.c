@@ -51,7 +51,7 @@ void mfc_llc_flush(struct mfc_dev *dev)
 	if (llc_disable)
 		return;
 
-	llc_flush(MFC_DISPLAY_WAY);
+	llc_flush(LLC_REGION_MFC_DISPLAY);
 	mfc_debug_dev(2, "[LLC] flushed\n");
 	MFC_TRACE_DEV("[LLC] flushed\n");
 
