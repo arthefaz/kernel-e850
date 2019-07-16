@@ -10,6 +10,7 @@
  */
 
 #include <dt-bindings/interrupt-controller/exynos3830.h>
+#include "exynos3830_battery_data.dtsi"
 
 / {
 	fragment@common {
@@ -253,5 +254,41 @@
 		pinctrl-0 = <&if_pmic_irq>;
 		s2mu106,irq-gpio = <&gpa1 1 0>;
 		s2mu106,wakeup;
+	};
+
+	s2mu106-charger {
+		status = "okay";
+		battery,charger_name = "s2mu106-charger";
+		battery,chg_gpio_en = <0>;
+		battery,chg_polarity_en = <0>;
+		battery,chg_gpio_status = <0>;
+		battery,chg_polarity_status = <0>;
+		battery,chg_float_voltage = <4350>;
+		battery,chg_recharge_vcell = <4250>;
+		battery,chg_full_vcell = <4300>;
+		battery,full_check_type = <2>;
+		battery,full_check_type_2nd = <2>;
+		battery,input_current_limit = <
+			500 450 500 1200 500 1200 1200 1000 1000 1000
+			1000 500 500 1200 1000 500 450>;
+		battery,fast_charging_current =	<
+			500 450 500 1200 500 1200 1200 1000 1000 1000
+			1000 500 500 1200 1000 500 450>;
+		battery,full_check_current_1st = <
+			300 0 300 300 300 300 300 300 300 300
+			300 300 300 300 300 300 0>;
+		battery,full_check_current_2nd = <
+			100 0 100 100 100 100 100 100 100 100
+			100 100 100 100 100 100 0>;
+	};
+
+	s2mu106-fuelgauge@3B {
+		compatible = "samsung,s2mu106-fuelgauge";
+		reg = <0x3B>;
+		pinctrl-names = "default";
+		fuelgauge,fuel_alert_vol = <3400>;
+		fuelgauge,fuel_alert_soc = <1>;
+		fuelgauge,type_str = "SDI";
+		fuelgauge,model_type = <1>;
 	};
 };
