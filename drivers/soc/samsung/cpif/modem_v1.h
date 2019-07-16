@@ -78,12 +78,6 @@ enum modem_interrupt {
 	INTERRUPT_MAX
 };
 
-enum control_msg_type {
-	MAILBOX_SR = 0,
-	DRAM,
-	DRAM_HYBRID, /* for CPs with pcie */
-	CONTROL_MSG_INTERFACE_MAX
-};
 
 enum modem_network {
 	UMTS_NETWORK,
@@ -433,7 +427,6 @@ struct modem_data {
 	bool sim_polarity;
 
 	/* several 4 byte length info in ipc region */
-	enum control_msg_type cmsg_type;
 	u32 offset_ap_version;
 	u32 offset_cp_version;
 	u32 offset_cmsg_offset;
@@ -442,14 +435,16 @@ struct modem_data {
 	u32 offset_buff_desc_offset;
 
 	/* ctrl messages between cp and ap */
-	u32 ap2cp_msg;
-	u32 cp2ap_msg;
-	u32 cp2ap_united_status;
-	u32 ap2cp_united_status;
-	u32 cp2ap_dvfsreq_cpu;
-	u32 cp2ap_dvfsreq_mif;
-	u32 cp2ap_dvfsreq_int;
-	u32 ap2cp_kerneltime;
+	u32 ap2cp_msg[2];
+	u32 cp2ap_msg[2];
+	u32 cp2ap_united_status[2];
+	u32 ap2cp_united_status[2];
+	u32 cp2ap_dvfsreq_cpu[2];
+	u32 cp2ap_dvfsreq_mif[2];
+	u32 cp2ap_dvfsreq_int[2];
+	u32 ap2cp_kerneltime[2];
+	u32 ap2cp_kerneltime_sec[2];
+	u32 ap2cp_kerneltime_usec[2];
 
 	/* Status Bit Info */
 	unsigned int sbi_lte_active_mask;

@@ -371,12 +371,12 @@ static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_reason_
 				mc->sbi_crash_type_mask, mc->sbi_crash_type_pos);
 
 		/* Send CRASH_EXIT command to a CP */
-		if (ld->cmsg_type == MAILBOX_SR)
+		if (mld->ap2cp_msg->type == MAILBOX_SR)
 			mcu_ipc_reg_dump(0);
 
 		send_ipc_irq(mld, cmd2int(CMD_CRASH_EXIT));
 
-		if (ld->cmsg_type == MAILBOX_SR)
+		if (mld->ap2cp_msg->type == MAILBOX_SR)
 			mcu_ipc_reg_dump(0);
 	}
 #endif
@@ -484,19 +484,10 @@ static void write_clk_table_to_shmem(struct mem_link_device *mld)
 	clk_tb = (struct clock_table *)mld->clk_table;
 
 	strcpy(clk_tb->parser_version, "CT0");
-	clk_tb->total_table_count = 4;
+	clk_tb->total_table_count = 1;
 
-	strcpy(clk_tb->table_info[0].table_name, "CL0");
-	clk_tb->table_info[0].table_count = mld->cl0_table.num_of_table;
-
-	strcpy(clk_tb->table_info[1].table_name, "CL1");
-	clk_tb->table_info[1].table_count = mld->cl1_table.num_of_table;
-
-	strcpy(clk_tb->table_info[2].table_name, "MIF");
-	clk_tb->table_info[2].table_count = mld->mif_table.num_of_table;
-
-	strcpy(clk_tb->table_info[3].table_name, "INT");
-	clk_tb->table_info[3].table_count = mld->int_table.num_of_table;
+	strcpy(clk_tb->table_info[0].table_name, "MIF");
+	clk_tb->table_info[0].table_count = mld->mif_table.num_of_table;
 
 	clk_data = (u32 *)&(clk_tb->table_info[clk_tb->total_table_count]);
 
@@ -566,13 +557,13 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 				phone_start_count = 101;
 				set_dflags(127);
 #ifdef CONFIG_MCU_IPC
-				if (ld->cmsg_type == MAILBOX_SR)
+				if (mld->ap2cp_msg->type == MAILBOX_SR)
 					mcu_ipc_reg_dump(0);
 #endif
 				send_ipc_irq(mld,
 					cmd2int(phone_start_count - 100));
 #ifdef CONFIG_MCU_IPC
-				if (ld->cmsg_type == MAILBOX_SR)
+				if (mld->ap2cp_msg->type == MAILBOX_SR)
 					mcu_ipc_reg_dump(0);
 #endif
 				return;
@@ -583,12 +574,12 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 					cmd2int(phone_start_count - 100),
 					mc->name);
 #ifdef CONFIG_MCU_IPC
-				if (ld->cmsg_type == MAILBOX_SR)
+				if (mld->ap2cp_msg->type == MAILBOX_SR)
 					mcu_ipc_reg_dump(0);
 #endif
 				send_ipc_irq(mld, cmd2int(phone_start_count - 100));
 #ifdef CONFIG_MCU_IPC
-				if (ld->cmsg_type == MAILBOX_SR)
+				if (mld->ap2cp_msg->type == MAILBOX_SR)
 					mcu_ipc_reg_dump(0);
 #endif
 			} else {
@@ -611,12 +602,12 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 		if (rild_ready(ld)) {
 			mif_err("%s: INIT_END -> %s\n", ld->name, mc->name);
 #ifdef CONFIG_MCU_IPC
-			if (ld->cmsg_type == MAILBOX_SR)
+			if (mld->ap2cp_msg->type == MAILBOX_SR)
 				mcu_ipc_reg_dump(0);
 #endif
 			send_ipc_irq(mld, cmd2int(CMD_INIT_END));
 #ifdef CONFIG_MCU_IPC
-			if (ld->cmsg_type == MAILBOX_SR)
+			if (mld->ap2cp_msg->type == MAILBOX_SR)
 				mcu_ipc_reg_dump(0);
 #endif
 			atomic_set(&mld->cp_boot_done, 1);
@@ -634,19 +625,19 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 	if (rild_ready(ld)) {
 		mif_err("%s: INIT_END -> %s\n", ld->name, mc->name);
 #ifdef CONFIG_MCU_IPC
-		if (ld->cmsg_type == MAILBOX_SR)
+		if (mld->ap2cp_msg->type == MAILBOX_SR)
 			mcu_ipc_reg_dump(0);
 #endif
 		send_ipc_irq(mld, cmd2int(CMD_INIT_END));
 #ifdef CONFIG_MCU_IPC
-		if (ld->cmsg_type == MAILBOX_SR)
+		if (mld->ap2cp_msg->type == MAILBOX_SR)
 			mcu_ipc_reg_dump(0);
 #endif
 		atomic_set(&mld->cp_boot_done, 1);
 	}
 
 #ifdef CONFIG_MCU_IPC
-	if (ld->cmsg_type == MAILBOX_SR)
+	if (mld->ap2cp_msg->type == MAILBOX_SR)
 		mcu_ipc_reg_dump(0);
 #endif
 
@@ -847,12 +838,7 @@ static enum hrtimer_restart tx_timer_func(struct hrtimer *timer)
 	need_schedule = false;
 	mask = 0;
 
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (ld->link_type == LINKDEV_PCIE)
-		cp_runtime_link(mc, LINK_TX_TIMER, 0);
-#endif
 	spin_lock_irqsave(&mc->lock, flags);
-
 	if (unlikely(!ipc_active(mld)))
 		goto exit;
 
@@ -913,16 +899,11 @@ exit:
 		hrtimer_start(timer, ktime, HRTIMER_MODE_REL);
 	} else {
 #ifdef CONFIG_LINK_DEVICE_PCIE
-		if ((ld->link_type == LINKDEV_PCIE) && !wake_lock_active(&mld->tx_timer_wlock))
+		if ((ld->link_type == LINKDEV_PCIE) && wake_lock_active(&mld->tx_timer_wlock))
 			wake_unlock(&mld->tx_timer_wlock);
 #endif
 	}
-
 	spin_unlock_irqrestore(&mc->lock, flags);
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (ld->link_type == LINKDEV_PCIE)
-		cp_runtime_dislink(mc, LINK_TX_TIMER, 0);
-#endif
 
 	return HRTIMER_NORESTART;
 }
@@ -938,19 +919,13 @@ static int tx_func(struct mem_link_device *mld, struct hrtimer *timer,
 	unsigned long flags;
 	int ret = 0;
 
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (ld->link_type == LINKDEV_PCIE)
-		cp_runtime_link(mc, LINK_TX_TIMER, 0);
-#endif
 	spin_lock_irqsave(&mc->lock, flags);
-
 	if (unlikely(!ipc_active(mld))) {
 		spin_unlock_irqrestore(&mc->lock, flags);
 		dev_kfree_skb_any(skb);
 		goto exit;
 	}
 	spin_unlock_irqrestore(&mc->lock, flags);
-
 
 	if (unlikely(under_tx_flow_ctrl(mld, dev))) {
 		ret = check_tx_flow_ctrl(mld, dev);
@@ -999,11 +974,6 @@ static int tx_func(struct mem_link_device *mld, struct hrtimer *timer,
 #endif
 
 exit:
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (ld->link_type == LINKDEV_PCIE)
-		cp_runtime_dislink(mc, LINK_TX_TIMER, 0);
-#endif
-
 	if (need_schedule) {
 		ktime_t ktime = ktime_set(0, mld->tx_period_ms * NSEC_PER_MSEC);
 		hrtimer_start(timer, ktime, HRTIMER_MODE_REL);
@@ -1142,10 +1112,6 @@ static enum hrtimer_restart sbd_tx_timer_func(struct hrtimer *timer)
 	u16 mask = 0;
 	unsigned long flags = 0;
 
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (ld->link_type == LINKDEV_PCIE)
-		cp_runtime_link(mc, LINK_SBD_TX_TIMER, 0);
-#endif
 	spin_lock_irqsave(&mc->lock, flags);
 	if (unlikely(!ipc_active(mld))) {
 		spin_unlock_irqrestore(&mc->lock, flags);
@@ -1231,11 +1197,6 @@ exit:
 		hrtimer_start(timer, ktime, HRTIMER_MODE_REL);
 	}
 
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (ld->link_type == LINKDEV_PCIE)
-		cp_runtime_dislink(mc, LINK_SBD_TX_TIMER, 0);
-#endif
-
 	return HRTIMER_NORESTART;
 }
 
@@ -1249,10 +1210,6 @@ static int sbd_tx_func(struct mem_link_device *mld, struct hrtimer *timer,
 	unsigned long flags = 0;
 	int ret = 0;
 
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (ld->link_type == LINKDEV_PCIE)
-		cp_runtime_link(mc, LINK_SBD_TX_TIMER, 0);
-#endif
 	spin_lock_irqsave(&mc->lock, flags);
 	if (unlikely(!ipc_active(mld))) {
 		spin_unlock_irqrestore(&mc->lock, flags);
@@ -1260,7 +1217,6 @@ static int sbd_tx_func(struct mem_link_device *mld, struct hrtimer *timer,
 		goto exit;
 	}
 	spin_unlock_irqrestore(&mc->lock, flags);
-
 
 	if (unlikely(sbd_under_tx_flow_ctrl(rb))) {
 		ret = sbd_check_tx_flow_ctrl(rb);
@@ -1311,11 +1267,6 @@ static int sbd_tx_func(struct mem_link_device *mld, struct hrtimer *timer,
 #endif
 
 exit:
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (ld->link_type == LINKDEV_PCIE)
-		cp_runtime_dislink(mc, LINK_SBD_TX_TIMER, 0);
-#endif
-
 	if (need_schedule) {
 		ktime_t ktime = ktime_set(0, mld->tx_period_ms * NSEC_PER_MSEC);
 		hrtimer_start(timer, ktime, HRTIMER_MODE_REL);
@@ -1463,7 +1414,11 @@ static int xmit_to_cp(struct mem_link_device *mld, struct io_device *iod,
 {
 	struct link_device *ld = &mld->link_dev;
 
-	if (ld->is_bootdump_ch(ch)) /* for boot and dump operation */
+	/* for boot/dump
+	 * 1) assume that link (ex. PCI) is ready
+	 * 2) do not need send_ipc_irq()
+	 */
+	if (ld->is_bootdump_ch(ch))
 		return xmit_to_legacy_link(mld, ch, skb, IPC_MAP_NORM_RAW);
 
 	if (unlikely(!ipc_active(mld)))
@@ -2031,16 +1986,8 @@ static int shmem_send(struct link_device *ld, struct io_device *iod,
 		    struct sk_buff *skb)
 {
 	struct mem_link_device *mld = to_mem_link_device(ld);
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	struct modem_ctl *mc = ld->mc;
-#endif
 	u8 ch = iod->ch;
 	int ret = -ENODEV;
-
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (ld->link_type == LINKDEV_PCIE)
-		cp_runtime_link(mc, LINK_SEND, iod->ch);
-#endif
 
 	if (ld->is_ps_ch(iod->ch)) {
 		if (unlikely(atomic_read(&ld->netif_stopped) > 0)) {
@@ -2065,11 +2012,6 @@ static int shmem_send(struct link_device *ld, struct io_device *iod,
 	ret = xmit_to_cp(mld, iod, ch, skb);
 
 exit:
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (ld->link_type == LINKDEV_PCIE)
-		cp_runtime_dislink(mc, LINK_SEND, iod->ch);
-#endif
-
 	return ret;
 }
 
@@ -2675,27 +2617,33 @@ static void pcie_send_ap2cp_irq(struct mem_link_device *mld, u16 mask)
 {
 	struct link_device *ld = &mld->link_dev;
 	struct modem_ctl *mc = ld->mc;
-	int wait_counter = 0;
+	unsigned long flags;
+ 
+	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
+	mc->pcie_tx_working = true;
 
-	if (in_interrupt() || irqs_disabled()) {
-		/* If runtime PM state is not RPM_ACTIVE */
-		while (mc->dev->power.runtime_status != RPM_ACTIVE) {
-			udelay(100);
-			if (++wait_counter == 10) {
-				mif_err("Can't send interrupt in tasklet!!!\n");
-				mif_err("Reserve doorbell interrupt\n");
-				set_ctrl_msg(mld->ap2cp_msg, mask);
-				mc->reserve_doorbell_int = true;
-				return;
-			}
-		}
+	if (mutex_is_locked(&mc->pcie_onoff_lock)) {
+		mif_err("Reserve doorbell interrupt: PCI on/off working\n");
+		set_ctrl_msg(mld->ap2cp_msg, mask);
+		mc->reserve_doorbell_int = true;
+		goto exit;
+	}
 
+	if (!mc->pcie_powered_on) {
+		mif_err("Reserve doorbell interrupt: PCI not powered on\n");
+		set_ctrl_msg(mld->ap2cp_msg, mask);
+		mc->reserve_doorbell_int = true;
+		s5100_try_gpio_cp_wakeup(mc);
+		goto exit;
 	}
 
 	set_ctrl_msg(mld->ap2cp_msg, mask);
-
 	if (s51xx_pcie_send_doorbell_int(mc->s51xx_pdev, mld->intval_ap2cp_msg) != 0)
 		s5100_force_crash_exit_ext();
+
+exit:
+	mc->pcie_tx_working = false;
+	spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
 }
 
 static inline u16 pcie_read_ap2cp_irq(struct mem_link_device *mld)
@@ -3115,7 +3063,7 @@ void shmem_restore_mif_freq(struct mem_link_device *mld)
 }
 
 #if defined(CONFIG_ECT)
-static int exynos_devfreq_parse_ect(struct mem_link_device *mld, char *dvfs_domain_name)
+static int parse_ect(struct mem_link_device *mld, char *dvfs_domain_name)
 {
 	int i, counter = 0;
 	void *dvfs_block;
@@ -3129,25 +3077,25 @@ static int exynos_devfreq_parse_ect(struct mem_link_device *mld, char *dvfs_doma
 	if (dvfs_domain == NULL)
 		return -ENODEV;
 
-	if (!strcmp(dvfs_domain_name, "dvfs_mif")) {
+	if (!strcmp(dvfs_domain_name, "MIF")) {
 		mld->mif_table.num_of_table = dvfs_domain->num_of_level;
 		for (i = dvfs_domain->num_of_level - 1; i >= 0; i--) {
 			mld->mif_table.freq[i] = dvfs_domain->list_level[counter++].level;
 			mif_err("MIF_LEV[%d] : %u\n", i + 1, mld->mif_table.freq[i]);
 		}
-	} else if (!strcmp(dvfs_domain_name, "dvfs_cpucl0")) {
+	} else if (!strcmp(dvfs_domain_name, "CPUCL0")) {
 		mld->cl0_table.num_of_table = dvfs_domain->num_of_level;
 		for (i = dvfs_domain->num_of_level - 1; i >= 0; i--) {
 			mld->cl0_table.freq[i] = dvfs_domain->list_level[counter++].level;
 			mif_err("CL0_LEV[%d] : %u\n", i + 1, mld->cl0_table.freq[i]);
 		}
-	} else if (!strcmp(dvfs_domain_name, "dvfs_cpucl1")) {
+	} else if (!strcmp(dvfs_domain_name, "CPUCL1")) {
 		mld->cl1_table.num_of_table = dvfs_domain->num_of_level;
 		for (i = dvfs_domain->num_of_level - 1; i >= 0; i--) {
 			mld->cl1_table.freq[i] = dvfs_domain->list_level[counter++].level;
 			mif_err("CL1_LEV[%d] : %u\n", i + 1, mld->cl1_table.freq[i]);
 		}
-	} else if (!strcmp(dvfs_domain_name, "dvfs_int")) {
+	} else if (!strcmp(dvfs_domain_name, "INT")) {
 		mld->int_table.num_of_table = dvfs_domain->num_of_level;
 		for (i = dvfs_domain->num_of_level - 1; i >= 0; i--) {
 			mld->int_table.freq[i] = dvfs_domain->list_level[counter++].level;
@@ -3158,7 +3106,7 @@ static int exynos_devfreq_parse_ect(struct mem_link_device *mld, char *dvfs_doma
 	return 0;
 }
 #else
-static int exynos_devfreq_parse_ect(struct mem_link_device *mld, char *dvfs_domain_name)
+static int parse_ect(struct mem_link_device *mld, char *dvfs_domain_name)
 {
 	mif_err("ECT is not defined(%s)\n", __func__);
 
@@ -3272,11 +3220,11 @@ static int shmem_register_pcie(struct link_device *ld)
 	static int is_registered = 0;
 	struct mem_link_device *mld = to_mem_link_device(ld);
 
-	mif_err("S5100 EP driver initialization start.\n");
+	mif_err("CP EP driver initialization start.\n");
 
 	msleep(200);
 
-	cp_runtime_link(ld->mc, LINK_REGISTER_PCI, 0);
+	s5100_poweron_pcie(mc);
 
 	if (is_registered == 0) {
 		/* initialize the pci_dev for modem_ctl */
@@ -3292,9 +3240,7 @@ static int shmem_register_pcie(struct link_device *ld)
 		// debug: mif_err("MSI Control Reg : 0x%x\n", msi_val);
 
 		s51xx_pcie_set_cp_wake_gpio(mc->s51xx_pdev, mc->gpio_cp_wakeup);
-
 		request_pcie_msi_int(ld, pdev);
-
 		first_save_s51xx_status(mc->s51xx_pdev);
 
 		is_registered = 1;
@@ -3308,8 +3254,9 @@ static int shmem_register_pcie(struct link_device *ld)
 	print_msi_register(mc->s51xx_pdev);
 
 	mc->pcie_registered = true;
+	atomic_set(&mc->pcie_pm_suspended, 0);
 
-	mif_err("S5100 EP driver initialization end.\n");
+	mif_err("CP EP driver initialization end.\n");
 
 	return 0;
 }
@@ -3681,7 +3628,6 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	u32 cp_num;
 	struct device_node *np_acpm = NULL;
 	u32 acpm_addr;
-	u32 cmsg_offset;
 
 	mif_err("+++\n");
 
@@ -3751,7 +3697,6 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 
 	ld->ipc_version = modem->ipc_version;
 	ld->interrupt_types = modem->interrupt_types;
-	ld->cmsg_type = modem->cmsg_type;
 
 	ld->mdm_data = modem;
 
@@ -3842,6 +3787,8 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 		ld->is_dump_ch = sipc5_dump_ch;
 		ld->is_bootdump_ch = sipc5_bootdump_ch;
 		ld->is_ipc_ch = sipc5_ipc_ch;
+		ld->is_csd_ch = sipc_csd_ch;
+		ld->is_log_ch = sipc_log_ch;
 		break;
 	case PROTOCOL_SIT:
 		ld->chid_fmt_0 = EXYNOS_CH_ID_FMT_0;
@@ -3868,6 +3815,8 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 		ld->is_dump_ch = exynos_dump_ch;
 		ld->is_bootdump_ch = exynos_bootdump_ch;
 		ld->is_ipc_ch = exynos_ipc_ch;
+		ld->is_csd_ch = exynos_rcs_ch;
+		ld->is_log_ch = exynos_log_ch;
 		break;
 	default:
 		mif_err("protocol error %d\n", ld->protocol);
@@ -4027,7 +3976,7 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 		mld->ulpath->magic = SHM_2CP_UL_PATH_CTL_MAGIC;
 	}
 #endif
-	if (ld->cmsg_type == DRAM) {
+	if (modem->offset_ap_version != 0) {
 		mld->ap_version = (u32 __iomem *)(mld->base + modem->offset_ap_version);
 		mld->cp_version = (u32 __iomem *)(mld->base + modem->offset_cp_version);
 		mld->cmsg_offset = (u32 __iomem *)(mld->base + modem->offset_cmsg_offset);
@@ -4062,9 +4011,8 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	/*
 	 * Retrieve SHMEM MBOX#, IRQ#, etc.
 	 */
-	cmsg_offset = ioread32(mld->cmsg_offset);
-	mld->cp2ap_msg = (u32 __iomem *)(mld->base + cmsg_offset + CP2AP_MSG_OFFSET);
-	mld->ap2cp_msg = (u32 __iomem *)(mld->base + cmsg_offset + AP2CP_MSG_OFFSET);
+	mld->cp2ap_msg = construct_ctrl_msg(modem->cp2ap_msg, mld->base, CP2AP_MSG_OFFSET);
+	mld->ap2cp_msg = construct_ctrl_msg(modem->ap2cp_msg, mld->base, AP2CP_MSG_OFFSET);
 
 	mld->irq_cp2ap_msg = modem->mbx->irq_cp2ap_msg;
 	mld->int_ap2cp_msg = modem->mbx->int_ap2cp_msg;
@@ -4089,6 +4037,10 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 		}
 	}
 #endif
+
+	mld->cp2ap_dvfsreq_cpu = construct_ctrl_msg(modem->cp2ap_dvfsreq_cpu, mld->base, 0);
+	mld->cp2ap_dvfsreq_mif = construct_ctrl_msg(modem->cp2ap_dvfsreq_mif, mld->base, 0);
+	mld->cp2ap_dvfsreq_int = construct_ctrl_msg(modem->cp2ap_dvfsreq_int, mld->base, 0);
 
 	mld->irq_perf_req_cpu = modem->mbx->irq_cp2ap_perf_req_cpu;
 	mld->irq_perf_req_mif = modem->mbx->irq_cp2ap_perf_req_mif;
@@ -4202,33 +4154,24 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 
 	/* Parsing devfreq, cpufreq table from ECT */
 	mif_err("Parsing MIF table...\n");
-	err = exynos_devfreq_parse_ect(mld, "dvfs_mif");
+	err = parse_ect(mld, "MIF");
 	if (err < 0)
 		mif_err("Can't get MIF table!!!!!\n");
-
-	mif_err("Parsing CL0 table...\n");
-	err = exynos_devfreq_parse_ect(mld, "dvfs_cpucl0");
-	if (err < 0)
-		mif_err("Can't get CPU table!!!!!\n");
-
-	mif_err("Parsing CL1 table...\n");
-	err = exynos_devfreq_parse_ect(mld, "dvfs_cpucl1");
-	if (err < 0)
-		mif_err("Can't get CPU table!!!!!\n");
-
-	mif_err("Parsing INT table...\n");
-	err = exynos_devfreq_parse_ect(mld, "dvfs_int");
-	if (err < 0)
-		mif_err("Can't get INT table!!!!!\n");
 
 	/**
 	 * For TX Flow-control command from CP
 	 */
-	cmsg_offset = ioread32(mld->cmsg_offset);
-	mld->cp2ap_united_status = (u32 __iomem *)(mld->base + cmsg_offset + CP2AP_STATUS_OFFSET);
-	mld->ap2cp_united_status = (u32 __iomem *)(mld->base + cmsg_offset + AP2CP_STATUS_OFFSET);
-	mld->ap2cp_kerneltime_sec = (u32 __iomem *)(mld->base + cmsg_offset + AP2CP_KERNELTIME_SEC);
-	mld->ap2cp_kerneltime_usec = (u32 __iomem *)(mld->base + cmsg_offset + AP2CP_KERNELTIME_USEC);
+	mld->cp2ap_united_status = construct_ctrl_msg(modem->cp2ap_united_status,
+					mld->base, CP2AP_STATUS_OFFSET);
+	mld->ap2cp_united_status = construct_ctrl_msg(modem->ap2cp_united_status,
+					mld->base, AP2CP_STATUS_OFFSET);
+	mld->ap2cp_kerneltime = construct_ctrl_msg(modem->ap2cp_kerneltime,
+					mld->base, 0);
+	mld->ap2cp_kerneltime_sec = construct_ctrl_msg(modem->ap2cp_kerneltime_sec,
+					mld->base, AP2CP_KERNELTIME_SEC);
+	mld->ap2cp_kerneltime_usec = construct_ctrl_msg(modem->ap2cp_kerneltime_usec,
+					mld->base, AP2CP_KERNELTIME_USEC);
+
 	mld->irq_cp2ap_status = modem->mbx->irq_cp2ap_status;
 	mld->tx_flowctrl_cmd = 0;
 

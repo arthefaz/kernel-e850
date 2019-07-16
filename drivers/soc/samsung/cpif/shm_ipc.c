@@ -22,6 +22,7 @@
 #include <linux/shm_ipc.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/of_fdt.h>
+#include <linux/debug-snapshot.h>
 
 #include "modem_utils.h"
 
@@ -208,12 +209,16 @@ static int cp_shmem_check_mem_map_on_cp(struct device *dev)
 			shmem_index = SHMEM_IPC;
 		else if (!strncmp((const char *)&name, "SSV\0", sizeof(name)))
 			shmem_index = SHMEM_VSS;
+#if defined(CONFIG_SOC_EXYNOS9820)
 		else if (!strncmp((const char *)&name, "APV\0", sizeof(name)))
 			shmem_index = SHMEM_VPA;
+#endif
 		else if (!strncmp((const char *)&name, "GOL\0", sizeof(name)))
 			shmem_index = SHMEM_BTL;
 		else if (!strncmp((const char *)&name, "B2L\0", sizeof(name)))
 			shmem_index = SHMEM_L2B;
+		else if (!strncmp((const char *)&name, "PKP\0", sizeof(name)))
+			shmem_index = SHMEM_PKTPROC;
 		else
 			continue;
 
@@ -232,23 +237,25 @@ static int cp_shmem_check_mem_map_on_cp(struct device *dev)
 /*
  * Export functions - legacy
  */
-#define RMEM_CP_MSI_0	"cp_msi_rmem"
-
 unsigned long shm_get_msi_base(void)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+	return cp_shmem_get_base(0, SHMEM_MSI);
+#else
 	int i;
 
 	for (i = 0; i < MAX_CP_RMEM; i++) {
 		if (!_cp_rmem[i].name)
 			continue;
 
-		if (strncmp(_cp_rmem[i].name, RMEM_CP_MSI_0, strlen(RMEM_CP_MSI_0)) == 0) {
+		if (strncmp(_cp_rmem[i].name, "cp_msi_rmem", strlen("cp_msi_rmem")) == 0) {
 			mif_info("p_base:0x%08lx\n", _cp_rmem[i].p_base);
 			return _cp_rmem[i].p_base;
 		}
 	}
 
 	return 0;
+#endif
 }
 EXPORT_SYMBOL(shm_get_msi_base);
 
@@ -420,11 +427,14 @@ static int cp_shmem_probe(struct platform_device *pdev)
 			if (!_cp_shmem[i][j].name)
 				continue;
 
-			mif_info("%d %d %s 0x%08lx 0x%08x %d\n",
-				_cp_shmem[i][j].cp_num, _cp_shmem[i][j].index, _cp_shmem[i][j].name,
+			mif_info("%d %d %d %s 0x%08lx 0x%08x %d\n",
+				_cp_shmem[i][j].cp_num, _cp_shmem[i][j].rmem, _cp_shmem[i][j].index, _cp_shmem[i][j].name,
 				_cp_shmem[i][j].p_base, _cp_shmem[i][j].size, _cp_shmem[i][j].cached);
 		}
 	}
+
+	/* Set ramdump for rmem index 0 */
+	dbg_snapshot_add_bl_item_info("log_cpmem", (u32)_cp_rmem[0].p_base, _cp_rmem[0].size);
 
 	mif_info("---\n");
 

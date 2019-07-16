@@ -86,6 +86,15 @@ config GPIO_DS_DETECT
 	bool "Support GPIO DS Detect"
 	default n
 
+config CP_UART_NOTI
+	bool "Support CP UART notification API"
+	default n
+
+config PMU_UART_SWITCH
+	bool "Support AP <-> CP UART switch by PMU"
+	depends on CP_UART_NOTI
+	default n
+
 config CP_BTL
 	bool "Support CP BTL(Back Trace Log) feature"
 	default n
@@ -96,7 +105,6 @@ config HW_REV_DETECT
 
 config MODEM_IF_QOS
 	bool "Implement QoS for sbd"
-	depends on LINK_DEVICE_SHMEM
 	default n
 	---help---
 	  This enables Qos for SBD model

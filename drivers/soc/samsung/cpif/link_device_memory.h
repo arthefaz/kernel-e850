@@ -32,6 +32,7 @@
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
 #include <linux/debugfs.h>
+#include <linux/mcu_ipc.h>
 
 #include "modem_prj.h"
 #include "modem_utils.h"
@@ -126,7 +127,7 @@ enum mem_iface_type {
 
 #ifdef GROUP_MEM_CP_CRASH
 
-#define FORCE_CRASH_ACK_TIMEOUT		(10 * HZ)
+#define FORCE_CRASH_ACK_TIMEOUT		(5 * HZ)
 
 #endif
 
@@ -181,6 +182,22 @@ enum mem_ipc_mode {
 struct freq_table {
 	int num_of_table;
 	u32 freq[FREQ_MAX_LV];
+};
+
+struct ctrl_msg {
+	u32 type;
+	union {
+		u32 sr_num;
+		u32 __iomem *addr;
+	};
+};
+
+enum control_msg_type {
+	MAILBOX_SR = 1,
+	DRAM_V1,
+	DRAM_V2,
+	GPIO,
+	CONTROL_MSG_INTERFACE_MAX
 };
 
 struct mem_link_device {
@@ -389,16 +406,16 @@ struct mem_link_device {
 	u32 __iomem *buff_desc_offset;
 
 	/* Location for control messages in shared memory */
-	u32 __iomem *ap2cp_msg;
-	u32 __iomem *cp2ap_msg;
-	u32 __iomem *ap2cp_united_status;
-	u32 __iomem *cp2ap_united_status;
-	u32 __iomem *cp2ap_dvfsreq_cpu;
-	u32 __iomem *cp2ap_dvfsreq_mif;
-	u32 __iomem *cp2ap_dvfsreq_int;
-	u32 __iomem *ap2cp_kerneltime;	/* for DRAM hybrid */
-	u32 __iomem *ap2cp_kerneltime_sec;
-	u32 __iomem *ap2cp_kerneltime_usec;
+	struct ctrl_msg *ap2cp_msg;
+	struct ctrl_msg *cp2ap_msg;
+	struct ctrl_msg *ap2cp_united_status;
+	struct ctrl_msg *cp2ap_united_status;
+	struct ctrl_msg *cp2ap_dvfsreq_cpu;
+	struct ctrl_msg *cp2ap_dvfsreq_mif;
+	struct ctrl_msg *cp2ap_dvfsreq_int;
+	struct ctrl_msg *ap2cp_kerneltime;	/* for DRAM_V1 and MAILBOX_SR */
+	struct ctrl_msg *ap2cp_kerneltime_sec;	/* for DRAM_V2 */
+	struct ctrl_msg *ap2cp_kerneltime_usec;	/* for DRAM_V2 */
 
 	u32 __iomem *doorbell_addr;
 	struct pci_dev *s51xx_pdev;
@@ -639,31 +656,138 @@ static inline enum dev_format dev_id(enum sipc_ch_id ch)
 
 #endif
 
-static inline u32 get_ctrl_msg(u32 __iomem *addr)
+static inline struct ctrl_msg *construct_ctrl_msg(u32 *arr_from_dt, u8 __iomem *base,
+							u32 offset)
 {
-	return ioread32(addr);
+
+	struct ctrl_msg *ret = kmalloc(sizeof(struct ctrl_msg), GFP_ATOMIC);
+
+	if (!ret)
+		return NULL;
+	ret->type = arr_from_dt[0];
+
+	switch (ret->type) {
+	case MAILBOX_SR:
+		ret->sr_num = arr_from_dt[1];
+		break;
+	case DRAM_V1:
+		ret->addr = (u32 __iomem *)(base + arr_from_dt[1]);
+		break;
+	case DRAM_V2:
+		ret->addr = (u32 __iomem *)(base + arr_from_dt[1] + offset);
+		break;
+	default:
+		mif_err("ERR! wrong type for ctrl msg\n");
+		return NULL;
+	}
+
+	return ret;
 }
 
-static inline void set_ctrl_msg(u32 __iomem *addr, u32 msg)
+static inline void init_ctrl_msg(struct ctrl_msg *cmsg)
 {
-	iowrite32(msg, addr);
+	switch (cmsg->type) {
+	case MAILBOX_SR:
+		/* nothing to do */
+		break;
+	case DRAM_V1:
+	case DRAM_V2:
+		*cmsg->addr = 0;
+		break;
+	case GPIO:
+		break;
+	default:
+		break;
+	}
+
+}
+static inline u32 get_ctrl_msg(struct ctrl_msg *cmsg)
+{
+	u32 val = 0;
+
+	switch (cmsg->type) {
+	case MAILBOX_SR:
+#if defined(CONFIG_MCU_IPC)
+		val = mbox_get_value(MCU_CP, cmsg->sr_num);
+#endif
+		break;
+	case DRAM_V1:
+	case DRAM_V2:
+		val = ioread32(cmsg->addr);
+		break;
+	case GPIO:
+		break;
+	default:
+		break;
+	}
+
+	return val;
 }
 
-/* get a part of 4 byte length msg */
-static inline u32 extract_ctrl_msg(u32 __iomem *addr, u32 mask, u32 pos)
+static inline void set_ctrl_msg(struct ctrl_msg *cmsg, u32 msg)
 {
-	return (ioread32(addr) >> pos) & mask;
+	switch (cmsg->type) {
+	case MAILBOX_SR:
+#if defined(CONFIG_MCU_IPC)
+		mbox_set_value(MCU_CP, cmsg->sr_num, msg);
+#endif
+		break;
+	case DRAM_V1:
+	case DRAM_V2:
+		iowrite32(msg, cmsg->addr);
+		break;
+	case GPIO:
+		break;
+	default:
+		break;
+	}
 }
 
-/* set a part of 4 byte length msg */
-static inline void update_ctrl_msg(u32 __iomem *addr, u32 msg, u32 mask, u32 pos)
+static inline u32 extract_ctrl_msg(struct ctrl_msg *cmsg, u32 mask, u32 pos)
 {
-	u32 val;
+	u32 val = 0;
 
-	val = ioread32(addr);
-	val &= ~(mask << pos);
-	val |= (msg & mask) << pos;
-	iowrite32(val, addr);
+	switch (cmsg->type) {
+	case MAILBOX_SR:
+#if defined(CONFIG_MCU_IPC)
+		val = mbox_extract_value(MCU_CP, cmsg->sr_num, mask, pos);
+#endif
+		break;
+	case DRAM_V1:
+	case DRAM_V2:
+		val = (ioread32(cmsg->addr) >> pos) & mask;
+		break;
+	case GPIO:
+		break;
+	default:
+		break;
+	}
+
+	return val;
+}
+
+static inline void update_ctrl_msg(struct ctrl_msg *cmsg, u32 msg, u32 mask, u32 pos)
+{
+	u32 val = 0;
+
+	switch (cmsg->type) {
+	case MAILBOX_SR:
+#if defined(CONFIG_MCU_IPC)
+		mbox_update_value(MCU_CP, cmsg->sr_num, msg, mask, pos);
+#endif
+		break;
+	case DRAM_V1:
+	case DRAM_V2:
+		val = ioread32(cmsg->addr);
+		val &= ~(mask << pos);
+		val |= (msg & mask) << pos;
+		iowrite32(val, cmsg->addr);
+		break;
+	case GPIO:
+		break;
+	default:
+		break;
+	}
 }
 
 #ifdef GROUP_MEM_LINK_DEVICE

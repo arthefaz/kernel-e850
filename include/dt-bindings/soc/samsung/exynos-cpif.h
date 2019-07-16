@@ -30,9 +30,11 @@
 /* Shared Reg Type
  * compatible with enum modem_shared_reg
  */
-#define MAILBOX_SR		0
-#define DRAM			1
-#define DRAM_HYBRID		2
+#define MAILBOX_SR		1
+#define DRAM_V1			2
+#define DRAM_V2			3
+#define GPIO			4
+
 /* IO device type
  * compatible with enum modem_io
  */

@@ -69,7 +69,8 @@ static int bootdump_release(struct inode *inode, struct file *filp)
 	struct link_device *ld;
 	int i;
 
-	if (atomic_dec_and_test(&iod->opened)) {
+	if (atomic_dec_and_test(&iod->opened) ||
+			!strncmp(current->comm, "cbd", 3)) {
 		skb_queue_purge(&iod->sk_rx_q);
 
 		/* purge multi_frame queue */

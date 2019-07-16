@@ -209,6 +209,24 @@ static inline bool sipc5_ipc_ch(u8 ch)
 		? true : false;
 }
 
+static inline bool sipc_ps_ch(u8 ch)
+{
+	return (ch >= SIPC_CH_ID_PDP_0 && ch <= SIPC_CH_ID_PDP_14) ?
+		true : false;
+}
+
+static inline bool sipc_csd_ch(u8 ch)
+{
+	return (ch >= SIPC_CH_ID_CS_VT_DATA && ch <= SIPC_CH_ID_CS_VT_VIDEO) ?
+		true : false;
+}
+
+static inline bool sipc_log_ch(u8 ch)
+{
+	return (ch >= SIPC_CH_ID_CPLOG1 && ch <= SIPC_CH_ID_CPLOG2) ?
+		true : false;
+}
+
 struct sipc5_frame_data {
 	/* Frame length calculated from the length fields */
 	unsigned int len;

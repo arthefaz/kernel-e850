@@ -125,25 +125,65 @@ read_exit:
 	return ret;
 }
 
+#define IOCTL_GET_BTL_SIZE	_IO('o', 0x59)
+static long btl_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+	struct cp_btl *btl = NULL;
+	size_t btl_size;
+	int ret = 0;
+
+	btl = (struct cp_btl *)filep->private_data;
+	if (!btl) {
+		mif_err("btl is null\n");
+		return -ENODEV;
+	}
+	btl_size = btl->mem.size;
+
+	switch (cmd) {
+	case IOCTL_GET_BTL_SIZE:
+		mif_info("IOCTL_BTL_FULL_DUMP:%d 0x%08x\n", btl->id, btl_size);
+		ret = copy_to_user((void __user *)arg, &btl_size, sizeof(btl_size));
+		if (ret) {
+			mif_err("copy_to_user() error:%d\n", ret);
+			return ret;
+		}
+		break;
+
+	default:
+		mif_err("Invalid ioctl:0x%08x\n", cmd);
+		ret = -ENOIOCTLCMD;
+		break;
+	}
+
+	return ret;
+}
+
 /* Command line parameter */
 static bool _is_enabled[MAX_BTL_ID] = {false, false};
 
-static int __init btl_setup_enable_0(char *str)
+static int __init btl_setup_enable(char *str)
 {
 	if (!strcmp(str, "ON") || !strcmp(str, "on"))
 		_is_enabled[BTL_ID_0] = true;
 
-	mif_info("%s:%d\n", str, _is_enabled[BTL_ID_0]);
+	if (!strcmp(str, "DUAL_ON") || !strcmp(str, "dual_on")) {
+		_is_enabled[BTL_ID_0] = true;
+		_is_enabled[BTL_ID_1] = true;
+	}
+
+	mif_info("%s enable:%d/%d\n", str, _is_enabled[BTL_ID_0], _is_enabled[BTL_ID_1]);
 
 	return 0;
 }
-__setup("androidboot.cp_reserved_mem=", btl_setup_enable_0);
+__setup("androidboot.cp_btl=", btl_setup_enable);
 
 /* Create */
 static const struct file_operations btl_file_ops = {
 	.open = btl_open,
 	.release = btl_release,
-	.read = btl_read
+	.read = btl_read,
+	.unlocked_ioctl = btl_ioctl,
+	.compat_ioctl = btl_ioctl,
 };
 
 int cp_btl_create(struct cp_btl *btl, struct device *dev)

@@ -271,18 +271,6 @@ static inline void dump2hex(char *buff, size_t buff_size,
 	*dest = 0;
 }
 
-static inline bool sipc_csd_ch(u8 ch)
-{
-	return (ch >= SIPC_CH_ID_CS_VT_DATA && ch <= SIPC_CH_ID_CS_VT_VIDEO) ?
-		true : false;
-}
-
-static inline bool sipc_log_ch(u8 ch)
-{
-	return (ch >= SIPC_CH_ID_CPLOG1 && ch <= SIPC_CH_ID_CPLOG2) ?
-		true : false;
-}
-
 static bool wakeup_log_enable;
 inline void set_wakeup_packet_log(bool enable)
 {
@@ -299,23 +287,23 @@ void set_dflags(unsigned long flag)
 	dflags = flag;
 }
 
-static inline bool log_enabled(u8 ch)
+static inline bool log_enabled(u8 ch, struct link_device *ld)
 {
 	unsigned long flags = get_log_flags();
 
-	if (sipc5_fmt_ch(ch))
+	if (ld->is_fmt_ch(ch))
 		return test_bit(DEBUG_FLAG_FMT, &flags);
-	else if (sipc5_boot_ch(ch))
+	else if (ld->is_boot_ch(ch))
 		return test_bit(DEBUG_FLAG_BOOT, &flags);
-	else if (sipc5_dump_ch(ch))
+	else if (ld->is_dump_ch(ch))
 		return test_bit(DEBUG_FLAG_DUMP, &flags);
-	else if (sipc5_rfs_ch(ch))
+	else if (ld->is_rfs_ch(ch))
 		return test_bit(DEBUG_FLAG_RFS, &flags);
-	else if (sipc_csd_ch(ch))
+	else if (ld->is_csd_ch(ch))
 		return test_bit(DEBUG_FLAG_CSVT, &flags);
-	else if (sipc_log_ch(ch))
+	else if (ld->is_log_ch(ch))
 		return test_bit(DEBUG_FLAG_LOG, &flags);
-	else if (sipc_ps_ch(ch))
+	else if (ld->is_ps_ch(ch))
 		return test_bit(DEBUG_FLAG_PS, &flags);
 	else
 		return false;
@@ -324,7 +312,10 @@ static inline bool log_enabled(u8 ch)
 /* print ipc packet */
 void mif_pkt(u8 ch, const char *tag, struct sk_buff *skb)
 {
-	if (!log_enabled(ch))
+	if (!skbpriv(skb)->ld)
+		return;
+
+	if (!log_enabled(ch, skbpriv(skb)->ld))
 		return;
 
 	if (unlikely(!skb)) {
@@ -1061,6 +1052,9 @@ void mif_enable_irq(struct modem_irq *irq)
 {
 	unsigned long flags;
 
+	if (irq->registered == false)
+		return;
+
 	spin_lock_irqsave(&irq->lock, flags);
 
 	if (irq->active) {
@@ -1106,33 +1100,6 @@ void mif_disable_irq(struct modem_irq *irq)
 
 exit:
 	spin_unlock_irqrestore(&irq->lock, flags);
-}
-
-void mif_disable_irq_sync(struct modem_irq *irq)
-{
-	if (irq->registered == false)
-		return;
-
-	spin_lock(&irq->lock);
-
-	if (!irq->active) {
-		spin_unlock(&irq->lock);
-		mif_err("%s(#%d) is not active <%pf>\n",
-				irq->name, irq->num, CALLER);
-		return;
-	}
-
-	spin_unlock(&irq->lock);
-
-	disable_irq(irq->num);
-	enable_irq_wake(irq->num);
-
-	spin_lock(&irq->lock);
-	irq->active = false;
-	spin_unlock(&irq->lock);
-
-	mif_info("%s(#%d) is disabled <%pf>\n",
-		irq->name, irq->num, CALLER);
 }
 
 struct file *mif_open_file(const char *path)
@@ -1229,7 +1196,7 @@ void mif_set_snapshot(bool enable)
 {
 	if (!enable)
 		acpm_stop_log();
-	dbg_snapshot_set_enable("log_kevents", enable);
+	dbg_snapshot_set_enable_item("log_kevents", enable);
 }
 
 static LIST_HEAD(bm_list);

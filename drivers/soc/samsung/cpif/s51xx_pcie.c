@@ -88,8 +88,6 @@ inline int s51xx_pcie_send_doorbell_int(struct pci_dev *pdev, int int_num)
 	int cnt = 0;
 	u16 cmd;
 
-	s5100_check_doorbell_ready();
-
 	if (s51xx_pcie->link_status == 0) {
 		mif_err_limited("Can't send Interrupt(not enabled)!!!\n");
 		return -EAGAIN;
@@ -430,25 +428,25 @@ void print_msi_register(struct pci_dev *pdev)
 	u32 msi_val;
 
 	pci_read_config_dword(pdev, 0x50, &msi_val);
-	mif_err("MSI Control Reg(0x50) : 0x%x\n", msi_val);
+	mif_info("MSI Control Reg(0x50) : 0x%x\n", msi_val);
 	pci_read_config_dword(pdev, 0x54, &msi_val);
-	mif_err("MSI Message Reg(0x54) : 0x%x\n", msi_val);
+	mif_info("MSI Message Reg(0x54) : 0x%x\n", msi_val);
 	pci_read_config_dword(pdev, 0x58, &msi_val);
-	mif_err("MSI MsgData Reg(0x58) : 0x%x\n", msi_val);
+	mif_info("MSI MsgData Reg(0x58) : 0x%x\n", msi_val);
 
 	if (msi_val == 0x0) {
-		mif_err("MSI Message Reg == 0x0 - set MSI again!!!\n");
+		mif_info("MSI Message Reg == 0x0 - set MSI again!!!\n");
 		pci_restore_msi_state(pdev);
 
-		mif_err("exynos_pcie_msi_init_ext is not implemented\n");
+		mif_info("exynos_pcie_msi_init_ext is not implemented\n");
 		/* exynos_pcie_msi_init_ext(s51xx_pcie.pcie_channel_num); */
 
 		pci_read_config_dword(pdev, 0x50, &msi_val);
-		mif_err("Recheck - MSI Control Reg : 0x%x (0x50)\n", msi_val);
+		mif_info("Recheck - MSI Control Reg : 0x%x (0x50)\n", msi_val);
 		pci_read_config_dword(pdev, 0x54, &msi_val);
-		mif_err("Recheck - MSI Message Reg : 0x%x (0x54)\n", msi_val);
+		mif_info("Recheck - MSI Message Reg : 0x%x (0x54)\n", msi_val);
 		pci_read_config_dword(pdev, 0x58, &msi_val);
-		mif_err("Recheck - MSI MsgData Reg : 0x%x (0x58)\n", msi_val);
+		mif_info("Recheck - MSI MsgData Reg : 0x%x (0x58)\n", msi_val);
 	}
 }
 

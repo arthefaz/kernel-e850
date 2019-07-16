@@ -31,6 +31,7 @@
 #include <linux/netdevice.h>
 #include <linux/pm_runtime.h>
 #include <linux/version.h>
+#include <soc/samsung/exynos-itmon.h>
 #ifdef CONFIG_LINK_DEVICE_PCIE
 #include <linux/pci.h>
 #endif
@@ -223,12 +224,6 @@ struct __packed sipc_fmt_hdr {
 	u8  cmd_type;
 };
 
-static inline bool sipc_ps_ch(u8 ch)
-{
-	return (ch >= SIPC_CH_ID_PDP_0 && ch <= SIPC_CH_ID_PDP_14) ?
-		true : false;
-}
-
 /* Channel 0, 5, 6, 27, 255 are reserved in SIPC5.
  * see SIPC5 spec: 2.2.2 Channel Identification (Ch ID) Field.
  * They do not need to store in `iodevs_tree_fmt'
@@ -419,7 +414,6 @@ struct link_device {
 	struct list_head  list;
 	enum modem_link link_type;
 	enum modem_interrupt interrupt_types;
-	enum control_msg_type cmsg_type;
 
 	struct modem_ctl *mc;
 	struct modem_shared *msd;
@@ -454,6 +448,8 @@ struct link_device {
 	bool (*is_dump_ch)(u8 ch);
 	bool (*is_bootdump_ch)(u8 ch);
 	bool (*is_ipc_ch)(u8 ch);
+	bool (*is_csd_ch)(u8 ch);
+	bool (*is_log_ch)(u8 ch);
 
 	/* SIPC version */
 	enum sipc_ver ipc_version;
@@ -564,8 +560,6 @@ struct modemctl_ops {
 
 	int (*suspend)(struct modem_ctl *);
 	int (*resume)(struct modem_ctl *);
-	int (*runtime_suspend)(struct modem_ctl *);
-	int (*runtime_resume)(struct modem_ctl *);
 };
 
 /* for IPC Logger */
@@ -710,25 +704,24 @@ struct modem_ctl {
 	struct workqueue_struct *wakeup_wq;
 	struct work_struct link_work;
 	struct work_struct dislink_work;
+	struct work_struct wakeup_work;
 
 	struct wake_lock mc_wake_lock;
+	struct mutex pcie_onoff_lock;
+	spinlock_t pcie_tx_lock;
+	spinlock_t pcie_pm_lock;
 	struct pci_driver pci_driver;
 
 	int int_pcie_link_ack;
 	int pcie_ch_num;
 
 	bool reserve_doorbell_int;
-	bool recover_pcie_link;
 	bool pcie_registered;
+	bool pcie_powered_on;
+	bool pcie_tx_working;
+	atomic_t pcie_pm_suspended;
+	bool pcie_pm_resume_wait;
 	bool device_reboot;
-
-	u32 boot_done_cnt;
-
-	atomic_t runtime_link_cnt[LINK_ID_MAX];
-	atomic_t runtime_dislink_cnt[LINK_ID_MAX];
-
-	atomic_t runtime_link_iod_cnt[SIPC5_CH_ID_MAX];
-	atomic_t runtime_dislink_iod_cnt[SIPC5_CH_ID_MAX];
 
 	int s5100_gpio_cp_pwr;
 	int s5100_gpio_cp_reset;
@@ -746,6 +739,8 @@ struct modem_ctl {
 
 	bool s5100_cp_reset_required;
 	bool s5100_iommu_map_enabled;
+
+	struct notifier_block pm_notifier;
 #endif
 
 #if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)
@@ -773,6 +768,9 @@ struct modem_ctl {
 	struct io_device *iod;
 	struct io_device *bootd;
 
+#if defined(CONFIG_EXYNOS_ITMON)
+	struct notifier_block itmon_nb;
+#endif
 	void (*gpio_revers_bias_clear)(void);
 	void (*gpio_revers_bias_restore)(void);
 	void (*modem_complete)(struct modem_ctl *mc);
@@ -833,8 +831,6 @@ const struct file_operations *get_ipc_io_fops(void);
 int sipc5_init_io_device(struct io_device *iod);
 void sipc5_deinit_io_device(struct io_device *iod);
 
-
-
 #if defined(CONFIG_RPS) && defined(CONFIG_ARGOS)
 extern struct net init_net;
 extern int sec_argos_register_notifier(struct notifier_block *n, char *label);
@@ -843,70 +839,5 @@ int mif_init_argos_notifier(void);
 #else
 static inline int mif_init_argos_notifier(void) { return 0; }
 #endif
-
-#ifdef CONFIG_LINK_DEVICE_PCIE
-static inline int cp_runtime_link(struct modem_ctl *mc,
-		enum runtime_link_id link_id, unsigned int iod_id)
-{
-	int ret = 0;
-
-#ifdef CONFIG_PM
-	int cnt = 0;
-
-	atomic_inc(&mc->runtime_link_cnt[link_id]);
-	if (link_id == LINK_SEND)
-		atomic_inc(&mc->runtime_link_iod_cnt[iod_id]);
-
-	if (in_interrupt())
-		ret = pm_runtime_get(mc->dev);
-	else if (irqs_disabled()) {
-		mif_info("irqs_disabled!! 1\n");
-		ret = pm_runtime_get(mc->dev);
-		mif_info("irqs_disabled!! 2\n");
-	} else {
-		while (pm_runtime_enabled(mc->dev) == false) {
-			usleep_range(10000, 11000);
-			cnt++;
-		}
-		if (cnt)
-			mif_err_limited("pm_runtime_enabled wait count:%d\n",
-					cnt);
-
-		ret = pm_runtime_get_sync(mc->dev);
-		if (ret < 0)
-			mif_err_limited("pm_runtime_get_sync ERR:%d\n", ret);
-	}
-#endif /* CONFIG_PM */
-
-	return ret;
-}
-
-static inline int cp_runtime_dislink(struct modem_ctl *mc,
-		enum runtime_link_id link_id, unsigned int iod_id)
-{
-#ifdef CONFIG_PM
-	atomic_inc(&mc->runtime_dislink_cnt[link_id]);
-	if (link_id == LINK_SEND)
-		atomic_inc(&mc->runtime_dislink_iod_cnt[iod_id]);
-
-	pm_runtime_mark_last_busy(mc->dev);
-	pm_runtime_put_autosuspend(mc->dev);
-#endif /* CONFIG_PM */
-	return 0;
-}
-
-static inline int cp_runtime_dislink_no_autosuspend(struct modem_ctl *mc,
-		enum runtime_link_id link_id, unsigned int iod_id)
-{
-#ifdef CONFIG_PM
-	atomic_inc(&mc->runtime_dislink_cnt[link_id]);
-	if (link_id == LINK_SEND)
-		atomic_inc(&mc->runtime_dislink_iod_cnt[iod_id]);
-
-	pm_runtime_put_sync(mc->dev);
-#endif /* CONFIG_PM */
-	return 0;
-}
-#endif /* CONFIG_LINK_DEVICE_PCIE */
 
 #endif

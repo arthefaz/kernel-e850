@@ -99,7 +99,7 @@ static int vnet_stop(struct net_device *ndev)
 	return 0;
 }
 
-static int vnet_xmit(struct sk_buff *skb, struct net_device *ndev)
+static netdev_tx_t vnet_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
 	struct vnet *vnet = netdev_priv(ndev);
 	struct io_device *iod = vnet->iod;
@@ -266,8 +266,13 @@ drop:
 }
 
 #if defined(CONFIG_MODEM_IF_LEGACY_QOS) || defined(CONFIG_MODEM_IF_QOS)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+static u16 vnet_select_queue(struct net_device *dev, struct sk_buff *skb,
+		struct net_device *sb_dev, select_queue_fallback_t fallback)
+#else
 static u16 vnet_select_queue(struct net_device *dev, struct sk_buff *skb,
 		void *accel_priv, select_queue_fallback_t fallback)
+#endif
 {
 	return (skb && skb->priomark == RAW_HPRIO) ? 1 : 0;
 }

@@ -54,6 +54,7 @@
 #include "modem_prj.h"
 #include "modem_variation.h"
 #include "modem_utils.h"
+#include "cpif_version.h"
 
 #define FMT_WAKE_TIME   (HZ/2)
 #define RAW_WAKE_TIME   (HZ*6)
@@ -473,8 +474,6 @@ static int parse_dt_mbox_pdata(struct device *dev, struct device_node *np,
 	struct modem_mbox *mbox;
 	int ret = 0;
 
-	mif_dt_read_u32(np, "mif,control_msg_type", pdata->cmsg_type);
-
 	if ((pdata->link_type != LINKDEV_SHMEM) &&
 			(pdata->link_type != LINKDEV_PCIE)) {
 		mif_err("mbox: link type error:0x%08x\n", pdata->link_type);
@@ -492,6 +491,7 @@ static int parse_dt_mbox_pdata(struct device *dev, struct device_node *np,
 	mif_dt_read_u32(np, "mif,int_ap2cp_wakeup", mbox->int_ap2cp_wakeup);
 	mif_dt_read_u32(np, "mif,int_ap2cp_status", mbox->int_ap2cp_status);
 	mif_dt_read_u32(np, "mif,int_ap2cp_active", mbox->int_ap2cp_active);
+	mif_dt_read_u32(np, "mif,int_ap2cp_uart_noti", mbox->int_ap2cp_uart_noti);
 
 	mif_dt_read_u32(np, "mif,irq_cp2ap_msg", mbox->irq_cp2ap_msg);
 	mif_dt_read_u32(np, "mif,irq_cp2ap_status", mbox->irq_cp2ap_status);
@@ -516,23 +516,23 @@ static int parse_dt_ipc_region_pdata(struct device *dev, struct device_node *np,
 					struct modem_data *pdata)
 {
 	int ret = 0;
-	if (pdata->cmsg_type == DRAM) {
-		mif_dt_read_u32(np, "offset_ap_version", pdata->offset_ap_version);
-		mif_dt_read_u32(np, "offset_cp_version", pdata->offset_cp_version);
-		mif_dt_read_u32(np, "offset_cmsg_offset", pdata->offset_cmsg_offset);
-		mif_dt_read_u32(np, "offset_srinfo_offset", pdata->offset_srinfo_offset);
-		mif_dt_read_u32(np, "offset_clk_table_offset", pdata->offset_clk_table_offset);
-		mif_dt_read_u32(np, "offset_buff_desc_offset", pdata->offset_buff_desc_offset);
-	} else if (pdata->cmsg_type == DRAM_HYBRID) {
-		mif_dt_read_u32(np, "reg_ap2cp_msg", pdata->ap2cp_msg);
-		mif_dt_read_u32(np, "reg_cp2ap_msg", pdata->cp2ap_msg);
-		mif_dt_read_u32(np, "reg_cp2ap_united_status", pdata->cp2ap_united_status);
-		mif_dt_read_u32(np, "reg_ap2cp_united_status", pdata->ap2cp_united_status);
-		mif_dt_read_u32(np, "reg_cp2ap_dvfsreq_cpu", pdata->cp2ap_dvfsreq_cpu);
-		mif_dt_read_u32(np, "reg_cp2ap_dvfsreq_mif", pdata->cp2ap_dvfsreq_mif);
-		mif_dt_read_u32(np, "reg_cp2ap_dvfsreq_int", pdata->cp2ap_dvfsreq_int);
-		mif_dt_read_u32(np, "reg_ap2cp_kerneltime", pdata->ap2cp_kerneltime);
-	}
+
+	mif_dt_read_u32_noerr(np, "offset_ap_version", pdata->offset_ap_version);
+	mif_dt_read_u32_noerr(np, "offset_cp_version", pdata->offset_cp_version);
+	mif_dt_read_u32_noerr(np, "offset_cmsg_offset", pdata->offset_cmsg_offset);
+	mif_dt_read_u32_noerr(np, "offset_srinfo_offset", pdata->offset_srinfo_offset);
+	mif_dt_read_u32_noerr(np, "offset_clk_table_offset", pdata->offset_clk_table_offset);
+	mif_dt_read_u32_noerr(np, "offset_buff_desc_offset", pdata->offset_buff_desc_offset);
+	of_property_read_u32_array(np, "ap2cp_msg", pdata->ap2cp_msg, 2);
+	of_property_read_u32_array(np, "cp2ap_msg", pdata->cp2ap_msg, 2);
+	of_property_read_u32_array(np, "cp2ap_united_status", pdata->cp2ap_united_status, 2);
+	of_property_read_u32_array(np, "ap2cp_united_status", pdata->ap2cp_united_status, 2);
+	of_property_read_u32_array(np, "cp2ap_dvfsreq_cpu", pdata->cp2ap_dvfsreq_cpu, 2);
+	of_property_read_u32_array(np, "cp2ap_dvfsreq_mif", pdata->cp2ap_dvfsreq_mif, 2);
+	of_property_read_u32_array(np, "cp2ap_dvfsreq_int", pdata->cp2ap_dvfsreq_int, 2);
+	of_property_read_u32_array(np, "ap2cp_kerneltime", pdata->ap2cp_kerneltime, 2);
+	of_property_read_u32_array(np, "ap2cp_kerneltime_sec", pdata->ap2cp_kerneltime_sec, 2);
+	of_property_read_u32_array(np, "ap2cp_kerneltime_usec", pdata->ap2cp_kerneltime_usec, 2);
 
 
 	/* Status Bit Info */
@@ -550,6 +550,8 @@ static int parse_dt_ipc_region_pdata(struct device *dev, struct device_node *np,
 	mif_dt_read_u32(np, "sbi_ap_status_pos", pdata->sbi_ap_status_pos);
 	mif_dt_read_u32(np, "sbi_crash_type_mask", pdata->sbi_crash_type_mask);
 	mif_dt_read_u32(np, "sbi_crash_type_pos", pdata->sbi_crash_type_pos);
+	mif_dt_read_u32(np, "sbi_uart_noti_mask", pdata->sbi_uart_noti_mask);
+	mif_dt_read_u32(np, "sbi_uart_noti_pos", pdata->sbi_uart_noti_pos);
 
 	mif_dt_read_u32_noerr(np, "sbi_ap2cp_kerneltime_sec_mask",
 			pdata->sbi_ap2cp_kerneltime_sec_mask);
@@ -785,6 +787,8 @@ static int cpif_probe(struct platform_device *pdev)
 	enum mif_sim_mode sim_mode;
 	int err;
 
+	mif_info("Exynos CP interface driver %s\n", cpif_driver_version);
+
 	mif_err("%s: +++ (%s)\n",
 		pdev->name, CONFIG_OPTION_REGION);
 
@@ -937,29 +941,8 @@ static int modem_resume(struct device *pdev)
 	return 0;
 }
 
-static int modem_runtime_suspend(struct device *pdev)
-{
-	struct modem_ctl *mc = dev_get_drvdata(pdev);
-
-	if (mc->ops.runtime_suspend)
-		mc->ops.runtime_suspend(mc);
-
-	return 0;
-}
-
-static int modem_runtime_resume(struct device *pdev)
-{
-	struct modem_ctl *mc = dev_get_drvdata(pdev);
-
-	if (mc->ops.runtime_resume)
-		mc->ops.runtime_resume(mc);
-
-	return 0;
-}
-
 static const struct dev_pm_ops cpif_pm_ops = {
 	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(modem_suspend, modem_resume)
-	SET_RUNTIME_PM_OPS(modem_runtime_suspend, modem_runtime_resume, NULL)
 };
 
 static struct platform_driver cpif_driver = {
