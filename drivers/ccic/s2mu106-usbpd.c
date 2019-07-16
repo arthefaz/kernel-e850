@@ -127,6 +127,8 @@ void s2mu106_rprd_mode_change(struct s2mu106_usbpd_data *usbpd_data, u8 mode)
 	struct i2c_client *i2c = usbpd_data->i2c;
 	struct device *dev = &i2c->dev;
 	struct usbpd_data *pd_data = dev_get_drvdata(dev);
+	u64 one = 1;
+
 	pr_info("%s, mode=0x%x\n", __func__, mode);
 
 	mutex_lock(&usbpd_data->_mutex);
@@ -146,7 +148,8 @@ void s2mu106_rprd_mode_change(struct s2mu106_usbpd_data *usbpd_data, u8 mode)
 		s2mu106_usbpd_set_rp_scr_sel(usbpd_data, PLUG_CTRL_RP80);
 		msleep(S2MU106_ROLE_SWAP_TIME_MS);
 		s2mu106_assert_drp(pd_data);
-		usbpd_data->status_reg |= PLUG_ATTACH;
+//		usbpd_data->status_reg |= PLUG_ATTACH;
+		usbpd_data->status_reg |= one << PLUG_ATTACH;
 		schedule_delayed_work(&usbpd_data->plug_work, 0);
 		break;
 	case TYPE_C_ATTACH_UFP: /* SNK */
@@ -164,7 +167,8 @@ void s2mu106_rprd_mode_change(struct s2mu106_usbpd_data *usbpd_data, u8 mode)
 		s2mu106_usbpd_set_rp_scr_sel(usbpd_data, PLUG_CTRL_RP80);
 		msleep(S2MU106_ROLE_SWAP_TIME_MS);
 		s2mu106_assert_drp(pd_data);
-		usbpd_data->status_reg |= PLUG_ATTACH;
+//		usbpd_data->status_reg |= PLUG_ATTACH;
+		usbpd_data->status_reg |= one << PLUG_ATTACH;
 		schedule_delayed_work(&usbpd_data->plug_work, 0);
 		break;
 	case TYPE_C_ATTACH_DRP: /* DRP */
@@ -761,21 +765,13 @@ static void s2mu106_assert_rp(void *_data)
 
 static unsigned s2mu106_get_status(void *_data, u64 flag)
 {
-#if 0
-	unsigned ret;
-#endif
 	struct usbpd_data *data = (struct usbpd_data *) _data;
 	struct s2mu106_usbpd_data *pdic_data = data->phy_driver_data;
-#if 0
-	if (pdic_data->status_reg & flag) {
-		ret = pdic_data->status_reg & flag;
-		pdic_data->status_reg &= ~flag; /* clear the flag */
-		return ret;
-#elif
+	u64 one = 1;
+
 	if (pdic_data->status_reg & (one << flag)) {
 		pdic_data->status_reg &= ~(one << flag); /* clear the flag */
 		return 1;
-#endif
 	} else {
 		return 0;
 	}
@@ -809,13 +805,13 @@ static bool s2mu106_poll_status(void *_data)
 
 	/* when occur detach & attach atomic */
 	if (intr[4] & S2MU106_REG_INT_STATUS4_USB_DETACH) {
-		status_reg_val |= PLUG_DETACH;
+		status_reg_val |= 1 <<PLUG_DETACH;
 	}
 
 	mutex_lock(&pdic_data->lpm_mutex);
 	if ((intr[4] & S2MU106_REG_INT_STATUS4_PLUG_IRQ) &&
 			!pdic_data->lpm_mode && !pdic_data->is_water_detect)
-		status_reg_val |= PLUG_ATTACH;
+		status_reg_val |= 1 << PLUG_ATTACH;
 	else if (pdic_data->lpm_mode &&
 				(intr[4] & S2MU106_REG_INT_STATUS4_PLUG_IRQ) &&
 									!pdic_data->is_water_detect)
@@ -827,32 +823,32 @@ static bool s2mu106_poll_status(void *_data)
 		mutex_lock(&pdic_data->lpm_mutex);
 		if ((intr[4] & S2MU106_REG_INT_STATUS4_PLUG_IRQ) &&
 				!pdic_data->lpm_mode && !pdic_data->is_water_detect)
-			status_reg_val |= PLUG_ATTACH;
+			status_reg_val |= 1 << PLUG_ATTACH;
 		mutex_unlock(&pdic_data->lpm_mutex);
 	}
 
 	if (intr[5] & S2MU106_REG_INT_STATUS5_HARD_RESET)
-		status_reg_val |= MSG_HARDRESET;
+		status_reg_val |= 1 << MSG_HARDRESET;
 
 	if (intr[0] & S2MU106_REG_INT_STATUS0_MSG_GOODCRC)
-		status_reg_val |= MSG_GOODCRC;
+		status_reg_val |= 1 << MSG_GOODCRC;
 
 	if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_PR_SWAP)
-		status_reg_val |= MSG_PR_SWAP;
+		status_reg_val |= 1 << MSG_PR_SWAP;
 
 	if (intr[2] & S2MU106_REG_INT_STATUS2_MSG_SOFTRESET)
-		status_reg_val |= MSG_SOFTRESET;
+		status_reg_val |= 1 << MSG_SOFTRESET;
 
 	if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_DR_SWAP)
-		status_reg_val |= MSG_DR_SWAP;
+		status_reg_val |= 1 << MSG_DR_SWAP;
 
 	if (intr[0] & S2MU106_REG_INT_STATUS0_MSG_ACCEPT)
-		status_reg_val |= MSG_ACCEPT;
+		status_reg_val |= 1 << MSG_ACCEPT;
 
 	/* function that support dp control */
 	if (intr[4] & S2MU106_REG_INT_STATUS4_MSG_PASS) {
 		if (intr[3] & S2MU106_REG_INT_STATUS3_UNS_CMD_DATA)
-			status_reg_val |= MSG_RID;
+			status_reg_val |= 1 << MSG_RID;
 		else {
 			usbpd_protocol_rx(data);
 			if (data->msg_received == 0)
@@ -865,31 +861,31 @@ static bool s2mu106_poll_status(void *_data)
 				s2mu106_usbpd_check_msg(data, &status_reg_val);
 
 			if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_PSRDY)
-				status_reg_val |= MSG_PSRDY;
+				status_reg_val |= 1 << MSG_PSRDY;
 
 			if (intr[2] & S2MU106_REG_INT_STATUS2_MSG_REQUEST)
-				status_reg_val |= MSG_REQUEST;
+				status_reg_val |= 1 << MSG_REQUEST;
 
 			if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_REJECT)
-				status_reg_val |= MSG_REJECT;
+				status_reg_val |= 1 << MSG_REJECT;
 
 			if (intr[2] & S2MU106_REG_INT_STATUS2_MSG_WAIT)
-				status_reg_val |= MSG_WAIT;
+				status_reg_val |= 1 << MSG_WAIT;
 
 			if (intr[4] & S2MU106_REG_INT_STATUS4_MSG_ERROR)
-				status_reg_val |= MSG_ERROR;
+				status_reg_val |= 1 << MSG_ERROR;
 
 			if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_PING)
-				status_reg_val |= MSG_PING;
+				status_reg_val |= 1 << MSG_PING;
 
 			if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_GETSNKCAP)
-				status_reg_val |= MSG_GET_SNK_CAP;
+				status_reg_val |= 1 << MSG_GET_SNK_CAP;
 
 			if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_GETSRCCAP)
-				status_reg_val |= MSG_GET_SRC_CAP;
+				status_reg_val |= 1 << MSG_GET_SRC_CAP;
 
 			if (intr[2] & S2MU106_REG_INT_STATUS2_MSG_VCONN_SWAP)
-				status_reg_val |= MSG_VCONN_SWAP;
+				status_reg_val |= 1 << MSG_VCONN_SWAP;
 		}
 	}
 out:
@@ -1088,10 +1084,14 @@ static int s2mu106_set_cc_control(void *_data, int val)
 
 static int s2mu106_vbus_on_check(void *_data)
 {
+#if defined(CONFIG_PM_S2MU106)
 	struct usbpd_data *data = (struct usbpd_data *) _data;
 	struct s2mu106_usbpd_data *pdic_data = data->phy_driver_data;
 
 	return s2mu106_usbpd_check_vbus(pdic_data, 3500, VBUS_ON);
+#else
+	return 1;
+#endif
 }
 
 static void s2mu106_set_pwr_opmode(void *_data, int mode)
@@ -1329,6 +1329,8 @@ int s2mu106_usbpd_check_msg(void *_data, u64 *val)
 	int msg_type = 0;
 	int vdm_type = 0;
 	int vdm_command = 0;
+	u64 shift = 0;
+	u64 one = 1;
 
 	dev_info(data->dev, "%s\n", __func__);
 
@@ -1345,16 +1347,20 @@ int s2mu106_usbpd_check_msg(void *_data, u64 *val)
 	if (data_type == USBPD_DATA_MSG) {
 		switch (msg_type) {
 		case USBPD_Source_Capabilities:
-			*val |= MSG_SRC_CAP;
+			shift = MSG_SRC_CAP;
+			*val |= one << shift;
 			break;
 		case USBPD_Request:
-			*val |= MSG_REQUEST;
+			shift = MSG_REQUEST;
+			*val |= one << shift;
 			break;
 		case USBPD_Sink_Capabilities:
-			*val |= MSG_SNK_CAP;
+			shift = MSG_SNK_CAP;
+			*val |= one << shift;
 			break;
 		case USBPD_BIST:
-			*val |= MSG_BIST;
+			shift = MSG_BIST;
+			*val |= one << shift;
 			break;
 		case USBPD_Vendor_Defined:
 			vdm_command = data->protocol_rx.data_obj[0].structured_vdm.command;
@@ -1362,34 +1368,43 @@ int s2mu106_usbpd_check_msg(void *_data, u64 *val)
 
 			if (vdm_type == Unstructured_VDM) {
 				dev_info(data->dev, "%s : uvdm msg received!\n", __func__);
-				*val |=  UVDM_MSG;
+				shift = UVDM_MSG;
+				*val |= one << shift;
 				break;
 			}
 
 			switch (vdm_command) {
 			case DisplayPort_Status_Update:
-				*val |= VDM_DP_STATUS_UPDATE;
+				shift = VDM_DP_STATUS_UPDATE;
+				*val |= one << shift;
 				break;
 			case DisplayPort_Configure:
-				*val |= VDM_DP_CONFIGURE;
+				shift = VDM_DP_CONFIGURE;
+				*val |= one << shift;
 				break;
 			case Attention:
-				*val |= VDM_ATTENTION;
+				shift = VDM_ATTENTION;
+				*val |= one << shift;
 				break;
 			case Exit_Mode:
-				*val |= VDM_EXIT_MODE;
+				shift = VDM_EXIT_MODE;
+				*val |= one << shift;
 				break;
 			case Enter_Mode:
-				*val |= VDM_ENTER_MODE;
+				shift = VDM_ENTER_MODE;
+				*val |= one << shift;
 				break;
 			case Discover_Modes:
-				*val |= VDM_ENTER_MODE;
+				shift = VDM_ENTER_MODE;
+				*val |= one << shift;
 				break;
 			case Discover_SVIDs:
-				*val |= VDM_DISCOVER_SVID;
+				shift = VDM_DISCOVER_SVID;
+				*val |= one << shift;
 				break;
 			case Discover_Identity:
-				*val |= VDM_DISCOVER_IDENTITY;
+				shift = VDM_DISCOVER_IDENTITY;
+				*val |= one << shift;
 				break;
 			default:
 				break;
@@ -2783,10 +2798,12 @@ static int s2mu106_usbpd_irq_init(struct s2mu106_usbpd_data *_data)
 static void s2mu106_usbpd_init_configure(struct s2mu106_usbpd_data *_data)
 {
 	s2mu106_usbpd_test_read(_data);
+#if defined(CONFIG_PM_S2MU106)
 	s2mu106_usbpd_get_pmeter_volt(_data);
 	s2mu106_usbpd_get_pmeter_current(_data);
 	pr_info("%s, chgin(%d), chgin_i(%d)\n", __func__,
 							_data->pm_chgin, _data->pm_chgin_i);
+#endif
 	usbpd_charger_test_read(_data);
 	s2mu106_set_normal_mode(_data);
 	pr_info("%s, usbpd irq gpio value(%d)\n", __func__,
