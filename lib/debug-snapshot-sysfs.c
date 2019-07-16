@@ -163,47 +163,6 @@ static ssize_t dss_irqlog_exlist_store(struct device *dev,
 	return count;
 }
 
-#ifdef CONFIG_DEBUG_SNAPSHOT_REG
-static ssize_t dss_reg_exlist_show(struct device *dev,
-				struct device_attribute *attr, char *buf)
-{
-	unsigned long i;
-	ssize_t n = 0;
-
-	n = scnprintf(buf, 36, "excluded register address\n");
-	for (i = 0; i < ARRAY_SIZE(dss_reg_exlist); i++) {
-		if (dss_reg_exlist[i].addr == 0)
-			break;
-		n += scnprintf(buf + n, 40, "register addr: %08zx size: %08zx\n",
-				dss_reg_exlist[i].addr, dss_reg_exlist[i].size);
-	}
-	return n;
-}
-
-static ssize_t dss_reg_exlist_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	unsigned long i;
-	size_t addr;
-
-	addr = simple_strtoul(buf, NULL, 0);
-	dev_info(dss_desc.dev, "register addr: %zx\n", addr);
-
-	for (i = 0; i < ARRAY_SIZE(dss_reg_exlist); i++) {
-		if (dss_reg_exlist[i].addr == 0)
-			break;
-	}
-	if (addr != 0) {
-		dss_reg_exlist[i].size = SZ_4K;
-		dss_reg_exlist[i].addr = addr;
-		dev_info(dss_desc.dev, "success %zx to threshold\n", (addr));
-	}
-	return count;
-}
-#endif
-
-
 static struct device_attribute dss_enable_attr =
 __ATTR(enabled, 0644, dss_enable_show, dss_enable_store);
 
@@ -213,19 +172,11 @@ __ATTR(callstack, 0644, dss_callstack_show, dss_callstack_store);
 static struct device_attribute dss_irqlog_attr =
 __ATTR(exlist_irqdisabled, 0644, dss_irqlog_exlist_show,
 					dss_irqlog_exlist_store);
-#ifdef CONFIG_DEBUG_SNAPSHOT_REG
-
-static struct device_attribute dss_reg_attr =
-__ATTR(exlist_reg, 0644, dss_reg_exlist_show, dss_reg_exlist_store);
-#endif
 
 static struct attribute *dss_sysfs_attrs[] = {
 	&dss_enable_attr.attr,
 	&dss_callstack_attr.attr,
 	&dss_irqlog_attr.attr,
-#ifdef CONFIG_DEBUG_SNAPSHOT_REG
-	&dss_reg_attr.attr,
-#endif
 	NULL,
 };
 

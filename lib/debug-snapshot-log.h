@@ -190,11 +190,10 @@ struct dbg_snapshot_log {
 #ifdef CONFIG_DEBUG_SNAPSHOT_REG
 	struct __reg_log {
 		unsigned long long time;
-		int read;
-		size_t val;
-		size_t reg;
-		int en;
-		void *caller[DSS_CALLSTACK_MAX_NUM];
+		void *addr;
+		void *caller;
+		char io_type;
+		char data_type;
 	} reg[DSS_NR_CPUS][DSS_LOG_MAX_NUM];
 #endif
 	struct __hrtimer_log {

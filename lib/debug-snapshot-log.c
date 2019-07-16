@@ -123,31 +123,6 @@ int dss_irqlog_exlist[DSS_EX_MAX_NUM] = {
 	-1,
 };
 
-#ifdef CONFIG_DEBUG_SNAPSHOT_REG
-struct dss_reg_list {
-	size_t addr;
-	size_t size;
-};
-
-static struct dss_reg_list dss_reg_exlist[] = {
-/*
- *  if it wants to reduce effect enabled reg feautre to system,
- *  you must add these registers - mct, serial
- *  because they are called very often.
- *  physical address, size ex) {0x10C00000, 0x1000},
- */
-	{DSS_REG_MCT_ADDR, DSS_REG_MCT_SIZE},
-	{DSS_REG_UART_ADDR, DSS_REG_UART_SIZE},
-	{0, 0},
-	{0, 0},
-	{0, 0},
-	{0, 0},
-	{0, 0},
-	{0, 0},
-	{0, 0},
-};
-#endif
-
 static char *dss_freq_name[] = {
 	"LITTLE", "BIG", "INT", "MIF", "ISP", "DISP", "INTCAM", "AUD", "IVA", "SCORE", "FSYS0",
 };
@@ -1254,80 +1229,24 @@ void dbg_snapshot_acpm(unsigned long long timestamp, const char *log, unsigned i
 }
 
 #ifdef CONFIG_DEBUG_SNAPSHOT_REG
-static phys_addr_t virt_to_phys_high(size_t vaddr)
-{
-	phys_addr_t paddr = 0;
-	pgd_t *pgd;
-	pmd_t *pmd;
-	pte_t *pte;
-
-	if (virt_addr_valid((void *) vaddr)) {
-		paddr = virt_to_phys((void *) vaddr);
-		goto out;
-	}
-
-	pgd = pgd_offset_k(vaddr);
-	if (pgd_none(*pgd) || unlikely(pgd_bad(*pgd)))
-		goto out;
-
-	if (pgd_val(*pgd) & 2) {
-		paddr = pgd_val(*pgd) & SECTION_MASK;
-		goto out;
-	}
-
-	pmd = pmd_offset((pud_t *)pgd, vaddr);
-	if (pmd_none_or_clear_bad(pmd))
-		goto out;
-
-	pte = pte_offset_kernel(pmd, vaddr);
-	if (pte_none(*pte))
-		goto out;
-
-	paddr = pte_val(*pte) & PAGE_MASK;
-
-out:
-	return paddr | (vaddr & UL(SZ_4K - 1));
-}
-
-void dbg_snapshot_reg(unsigned int read, size_t val, size_t reg, int en)
+void dbg_snapshot_reg(char io_type, char data_type, void *addr)
 {
 	struct dbg_snapshot_item *item = &dss_items[DSS_ITEM_KEVENTS_ID];
 	struct dbg_snapshot_log_item *log_item = &dss_log_items[DSS_LOG_REG_ID];
-	int cpu = raw_smp_processor_id();
-	unsigned long i, j;
-	size_t phys_reg, start_addr, end_addr;
 
 	if (unlikely(!dss_base.enabled || !item->entry.enabled || !log_item->entry.enabled))
 		return;
 
-	if (dss_reg_exlist[0].addr == 0)
-		return;
+	{
+		int cpu = raw_smp_processor_id();
+		unsigned long i = atomic_inc_return(&dss_log_misc.reg_log_idx[cpu]) &
+			(ARRAY_SIZE(dss_log->reg[0]) - 1);
 
-	phys_reg = virt_to_phys_high(reg);
-	if (unlikely(!phys_reg))
-		return;
-
-	for (j = 0; j < ARRAY_SIZE(dss_reg_exlist); j++) {
-		if (dss_reg_exlist[j].addr == 0)
-			break;
-		start_addr = dss_reg_exlist[j].addr;
-		end_addr = start_addr + dss_reg_exlist[j].size;
-		if (start_addr <= phys_reg && phys_reg <= end_addr)
-			return;
-	}
-
-	i = atomic_inc_return(&dss_log_misc.reg_log_idx[cpu]) &
-		(ARRAY_SIZE(dss_log->reg[0]) - 1);
-
-	dss_log->reg[cpu][i].time = cpu_clock(cpu);
-	dss_log->reg[cpu][i].read = read;
-	dss_log->reg[cpu][i].val = val;
-	dss_log->reg[cpu][i].reg = phys_reg;
-	dss_log->reg[cpu][i].en = en;
-
-	for (j = 0; j < dss_desc.callstack; j++) {
-		dss_log->reg[cpu][i].caller[j] =
-			(void *)((size_t)return_address(j + 1));
+		dss_log->reg[cpu][i].time = cpu_clock(cpu);
+		dss_log->reg[cpu][i].io_type = io_type;
+		dss_log->reg[cpu][i].data_type = data_type;
+		dss_log->reg[cpu][i].addr = addr;
+		dss_log->reg[cpu][i].caller = __builtin_return_address(0);
 	}
 }
 #endif

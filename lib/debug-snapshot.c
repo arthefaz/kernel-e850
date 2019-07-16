@@ -231,7 +231,7 @@ static inline void dbg_snapshot_hook_logger(const char *name,
 		/*  save the address of last_buf to physical address */
 		last_buf = (size_t)item->curr_ptr;
 
-		__raw_writel(item->entry.paddr + (last_buf - item->entry.vaddr),
+		__raw_writel_no_log(item->entry.paddr + (last_buf - item->entry.vaddr),
 			dbg_snapshot_get_base_vaddr() + DSS_OFFSET_LAST_PLATFORM_LOGBUF);
 	}
 }
@@ -253,7 +253,7 @@ static inline void dbg_snapshot_hook_logbuf(const char *buf, size_t size, int fa
 			last_buf = (size_t)item->curr_ptr;
 
 			if (item == (struct dbg_snapshot_item *)&dss_items[DSS_ITEM_KERNEL_ID])
-				__raw_writel(item->entry.paddr + (last_buf - item->entry.vaddr),
+				__raw_writel_no_log(item->entry.paddr + (last_buf - item->entry.vaddr),
 					dbg_snapshot_get_header_vaddr() + DSS_OFFSET_LAST_LOGBUF);
 
 			if (fatal == 1)

@@ -115,9 +115,9 @@ extern void dbg_snapshot_irqs_disabled(unsigned long flags);
 #endif
 
 #ifdef CONFIG_DEBUG_SNAPSHOT_REG
-extern void dbg_snapshot_reg(unsigned int read, size_t val, size_t reg, int en);
+extern void dbg_snapshot_reg(char io_type, char data_type, void *addr);
 #else
-#define dbg_snapshot_reg(a, b, c, d)		do { } while (0)
+#define dbg_snapshot_reg(a, b, c)		do { } while (0)
 #endif
 
 #ifdef CONFIG_DEBUG_SNAPSHOT_SPINLOCK
@@ -144,7 +144,7 @@ void dbg_snapshot_check_crash_key(unsigned int code, int value);
 #define dbg_snapshot_pmu(a, b, c)		do { } while (0)
 #define dbg_snapshot_freq(a, b, c, d)		do { } while (0)
 #define dbg_snapshot_irq_var(v)			v = 0
-#define dbg_snapshot_reg(a, b, c, d)		do { } while (0)
+#define dbg_snapshot_reg(a, b, c)		do { } while (0)
 #define dbg_snapshot_hrtimer(a, b, c, d)	do { } while (0)
 #define dbg_snapshot_i2c(a, b, c, d)		do { } while (0)
 #define dbg_snapshot_hook_pmsg(a, b)		do { } while (0)
