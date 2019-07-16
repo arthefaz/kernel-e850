@@ -57,6 +57,7 @@
 		hdr10_plus = <0 0x0>;
 		vp9_stride_align = <0 0x0>;
 		sbwc_uncomp = <0 0x0>;
+		mem_clear = <0 0x0>;
 
 		/* Default 10bit format for decoding (1: P010, 0: 8+2) */
 		P010_decoding = <1>;
