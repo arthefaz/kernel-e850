@@ -539,6 +539,7 @@ struct mfc_platdata {
 	struct mfc_feature hdr10_plus;
 	struct mfc_feature vp9_stride_align;
 	struct mfc_feature sbwc_uncomp;
+	struct mfc_feature mem_clear;
 
 	/*
 	 * new variables should be added above
