@@ -35,9 +35,10 @@ struct miscdevice hdcp;
 static DEFINE_MUTEX(hdcp_lock);
 struct hdcp_session_list g_hdcp_session_list;
 enum hdcp_result hdcp_link_ioc_authenticate(void);
+extern enum dp_state dp_hdcp_state;
 
 struct hdcp_ctx {
-	struct work_struct work;
+	struct delayed_work work;
 	/* debugfs root */
 	struct dentry *debug_dir;
 	/* seclog can be disabled via debugfs */
@@ -366,14 +367,23 @@ static void exynos_hdcp_worker(struct work_struct *work)
 {
 	int ret;
 
+	if (dp_hdcp_state == DP_DISCONNECT) {
+		hdcp_err("dp_disconnected\n");
+		return;
+	}
+
 	hdcp_info("Exynos HDCP interrupt occur by LDFW.\n");
 	ret = hdcp_dplink_auth_check(HDCP_DRM_ON);
 }
 
 static irqreturn_t exynos_hdcp_irq_handler(int irq, void *dev_id)
 {
-	if (h_ctx.enabled)
-		schedule_work(&h_ctx.work);
+	if (h_ctx.enabled) {
+		if (dp_hdcp_state == DP_HDCP_READY)
+			schedule_delayed_work(&h_ctx.work, msecs_to_jiffies(0));
+		else
+			schedule_delayed_work(&h_ctx.work, msecs_to_jiffies(2500));
+	}
 
 	return IRQ_HANDLED;
 }
@@ -409,7 +419,7 @@ static int exynos_hdcp_probe(struct platform_device *pdev)
 		return err;
 	}
 	/* Set workqueue for Secure log as bottom half */
-	INIT_WORK(&h_ctx.work, exynos_hdcp_worker);
+	INIT_DELAYED_WORK(&h_ctx.work, exynos_hdcp_worker);
 	h_ctx.enabled = true;
 	err = exynos_smc(SMC_HDCP_NOTIFY_INTR_NUM, 0, 0, hwirq);
 
@@ -465,10 +475,7 @@ static int __init hdcp_init(void)
 static void __exit hdcp_exit(void)
 {
 	/* todo: do clear sequence */
-
-	if (h_ctx.enabled)
-		schedule_work(&h_ctx.work);
-	flush_work(&h_ctx.work);
+	cancel_delayed_work_sync(&h_ctx.work);
 
 	misc_deregister(&hdcp);
 	hdcp_session_list_destroy(&g_hdcp_session_list);

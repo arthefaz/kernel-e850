@@ -625,6 +625,12 @@ struct displayport_sst {
 	struct displayport_vc_config *vc_config;
 };
 
+enum dp_state {
+	DP_DISCONNECT,
+	DP_CONNECT,
+	DP_HDCP_READY,
+};
+
 struct displayport_device {
 	struct device *dev;
 	struct displayport_resources res;

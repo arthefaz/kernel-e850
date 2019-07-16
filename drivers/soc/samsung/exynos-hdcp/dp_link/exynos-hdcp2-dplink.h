@@ -14,6 +14,12 @@
 int dplink_emul_handler(int cmd);
 #endif
 
+enum dp_state {
+	DP_DISCONNECT,
+	DP_CONNECT,
+	DP_HDCP_READY,
+};
+
 enum auth_state {
 	HDCP_AUTH_PROCESS_IDLE	= 0x1,
 	HDCP_AUTH_PROCESS_STOP	= 0x2,
