@@ -661,4 +661,11 @@
 		compatible = "samsung,exynos-seclog";
 		interrupts = <GIC_SPI INTREQ__SECURE_LOG IRQ_TYPE_LEVEL_HIGH>;
 	};
+
+	/* tbase */
+	tee {
+		compatible = "samsung,exynos-tee";
+		interrupts = <GIC_SPI INTREQ__TBASE IRQ_TYPE_LEVEL_HIGH>;
+	};
+
 };

@@ -8,3 +8,7 @@ endif
 if SOC_EXYNOS9630
 source "drivers/gud/gud-exynos9630/Kconfig"
 endif
+
+if SOC_EXYNOS3830
+source "drivers/gud/gud-exynos3830/Kconfig"
+endif
