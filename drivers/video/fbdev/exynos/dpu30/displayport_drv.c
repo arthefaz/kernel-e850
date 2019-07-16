@@ -53,8 +53,6 @@ static u64 reduced_resolution;
 struct displayport_debug_param g_displayport_debug_param;
 
 extern enum hdcp22_auth_def hdcp22_auth_state;
-enum dp_state dp_hdcp_state;
-
 struct displayport_device *displayport_drvdata;
 EXPORT_SYMBOL(displayport_drvdata);
 
@@ -1149,7 +1147,7 @@ void displayport_hpd_changed(int state)
 		/* PHY power on */
 		displayport_reg_sw_reset();
 		displayport_reg_init(); /* for AUX ch read/write. */
-		dp_hdcp_state = DP_CONNECT;
+		displayport_hdcp22_notify_state(DP_CONNECT);
 
 		displayport->auto_test_mode = 0;
 		displayport->sst[sst_id]->best_video = EDID_DEFAULT_TIMINGS_IDX;
@@ -2072,7 +2070,7 @@ static void displayport_hdcp22_run(struct work_struct *work)
 		goto exit_hdcp;
 	}
 
-	dp_hdcp_state = DP_HDCP_READY;
+	displayport_hdcp22_notify_state(DP_HDCP_READY);
 	ret = displayport_hdcp22_authenticate();
 	if (ret) {
 #ifdef CONFIG_SEC_DISPLAYPORT_BIGDATA
@@ -2663,7 +2661,7 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 			displayport->ccic_notify_dp_conf = CCIC_NOTIFY_DP_PIN_UNKNOWN;
 			displayport->ccic_link_conf = false;
 			displayport->ccic_hpd = false;
-			dp_hdcp_state = DP_DISCONNECT;
+			displayport_hdcp22_notify_state(DP_DISCONNECT);
 			displayport_hpd_changed(0);
 			displayport_aux_onoff(displayport, 0);
 			break;
@@ -2724,7 +2722,7 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 			break;
 		case CCIC_NOTIFY_LOW:
 			displayport->ccic_hpd = false;
-			dp_hdcp_state = DP_DISCONNECT;
+			displayport_hdcp22_notify_state(DP_DISCONNECT);
 			displayport_hpd_changed(0);
 			break;
 		case CCIC_NOTIFY_HIGH:

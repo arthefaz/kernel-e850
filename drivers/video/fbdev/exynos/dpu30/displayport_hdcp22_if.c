@@ -132,3 +132,10 @@ int displayport_hdcp22_authenticate()
 	return 0;
 #endif
 }
+
+void displayport_hdcp22_notify_state(enum dp_state state)
+{
+#if defined(CONFIG_EXYNOS_HDCP2)
+	hdcp_dplink_connect_state(state);
+#endif
+}
