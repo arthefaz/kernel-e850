@@ -147,9 +147,7 @@ static int __mfc_init_dec_ctx(struct mfc_ctx *ctx)
 	mfc_qos_reset_framerate(ctx);
 
 	ctx->qos_ratio = 100;
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	INIT_LIST_HEAD(&ctx->qos_list);
-#endif
 	INIT_LIST_HEAD(&ctx->bitrate_list);
 	INIT_LIST_HEAD(&ctx->ts_list);
 
@@ -275,9 +273,7 @@ static int __mfc_init_enc_ctx(struct mfc_ctx *ctx)
 	p = &enc->params;
 	p->ivf_header_disable = 1;
 
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	INIT_LIST_HEAD(&ctx->qos_list);
-#endif
 	INIT_LIST_HEAD(&ctx->ts_list);
 
 	enc->sh_handle_svc.fd = -1;
@@ -877,7 +873,6 @@ static const struct v4l2_file_operations mfc_fops = {
 	.mmap = mfc_mmap,
 };
 
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 static int __mfc_parse_mfc_qos_platdata(struct device_node *np, char *node_name,
 	struct mfc_qos *qosdata, struct mfc_dev *dev)
 {
@@ -902,11 +897,12 @@ static int __mfc_parse_mfc_qos_platdata(struct device_node *np, char *node_name,
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_EXYNOS_BTS
 	qosdata->bts_scen_idx = bts_get_scenindex(qosdata->name);
+#endif
 
 	return 0;
 }
-#endif
 
 int mfc_sysmmu_fault_handler(struct iommu_domain *iodmn, struct device *device,
 		unsigned long addr, int id, void *param)
@@ -983,11 +979,9 @@ static void __mfc_create_bitrate_table(struct mfc_dev *dev)
 static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 {
 	struct mfc_platdata	*pdata = mfc->pdata;
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	struct device_node *np_qos;
 	char node_name[50];
 	int i;
-#endif
 
 	if (!np) {
 		pr_err("there is no device node\n");
@@ -1051,7 +1045,6 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 				pdata->enc_param_val, pdata->enc_param_num);
 	}
 
-#ifdef CONFIG_EXYNOS_BTS
 	of_property_read_u32_array(np, "bw_enc_h264", &pdata->mfc_bw_info.bw_enc_h264.peak, 3);
 	of_property_read_u32_array(np, "bw_enc_hevc", &pdata->mfc_bw_info.bw_enc_hevc.peak, 3);
 	of_property_read_u32_array(np, "bw_enc_hevc_10bit", &pdata->mfc_bw_info.bw_enc_hevc_10bit.peak, 3);
@@ -1084,10 +1077,10 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 		of_property_read_u32_array(np, "sbwc_bw_dec_mpeg4", &pdata->mfc_bw_info_sbwc.bw_dec_mpeg4.peak, 3);
 	}
 
+#ifdef CONFIG_EXYNOS_BTS
 	pdata->mfc_bw_index = bts_get_bwindex("mfc");
 #endif
 
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	/* QoS */
 	of_property_read_u32(np, "num_default_qos_steps", &pdata->num_default_qos_steps);
 	of_property_read_u32(np, "num_encoder_qos_steps", &pdata->num_encoder_qos_steps);
@@ -1131,7 +1124,9 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_EXYNOS_BTS
 	pdata->qos_boost_table->bts_scen_idx = bts_get_scenindex(pdata->qos_boost_table->name);
+#endif
 
 	/* QoS weight */
 	of_property_read_u32(np, "qos_weight_h264_hevc", &pdata->qos_weight.weight_h264_hevc);
@@ -1145,7 +1140,7 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 	of_property_read_u32(np, "qos_weight_gpb", &pdata->qos_weight.weight_gpb);
 	of_property_read_u32(np, "qos_weight_num_of_tile", &pdata->qos_weight.weight_num_of_tile);
 	of_property_read_u32(np, "qos_weight_super64_bframe", &pdata->qos_weight.weight_super64_bframe);
-#endif
+
 	/* Bitrate control for QoS */
 	of_property_read_u32(np, "num_mfc_freq", &pdata->num_mfc_freq);
 	if (pdata->num_mfc_freq)
@@ -1407,9 +1402,7 @@ static int mfc_probe(struct platform_device *pdev)
 {
 	struct mfc_dev *dev;
 	int ret = -ENOENT;
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	int i;
-#endif
 
 	dev_set_socdata(&pdev->dev, "Exynos", "MFC");
 
@@ -1550,9 +1543,7 @@ static int mfc_probe(struct platform_device *pdev)
 	dev->mfc_idle_timer.function = mfc_idle_checker;
 	mutex_init(&dev->idle_qos_mutex);
 
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	INIT_LIST_HEAD(&dev->qos_queue);
-#endif
 
 	/* default FW alloc is added */
 	dev->butler_wq = alloc_workqueue("mfc/butler", WQ_UNBOUND
@@ -1566,7 +1557,6 @@ static int mfc_probe(struct platform_device *pdev)
 	/* dump information call-back function */
 	dev->dump_ops = &mfc_dump_ops;
 
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	atomic_set(&dev->qos_req_cur, 0);
 	mutex_init(&dev->qos_mutex);
 
@@ -1590,7 +1580,6 @@ static int mfc_probe(struct platform_device *pdev)
 				dev->pdata->encoder_qos_table[i].freq_mif,
 				dev->pdata->encoder_qos_table[i].name,
 				dev->pdata->encoder_qos_table[i].bts_scen_idx);
-#endif
 
 	iovmm_set_fault_handler(dev->device,
 		mfc_sysmmu_fault_handler, dev);

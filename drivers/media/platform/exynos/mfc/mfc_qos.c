@@ -777,6 +777,7 @@ void __mfc_qos_off_all(struct mfc_dev *dev)
 	__mfc_qos_operate(dev, MFC_QOS_REMOVE, MFC_QOS_TABLE_TYPE_DEFAULT, 0);
 	mutex_unlock(&dev->qos_mutex);
 }
+#endif
 
 void mfc_qos_idle_worker(struct work_struct *work)
 {
@@ -792,13 +793,14 @@ void mfc_qos_idle_worker(struct work_struct *work)
 		return;
 	}
 
+#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	__mfc_qos_off_all(dev);
+#endif
 	mfc_info_dev("[QoS][MFCIDLE] MFC go to QoS idle mode\n");
 
 	mfc_change_idle_mode(dev, MFC_IDLE_MODE_IDLE);
 	mutex_unlock(&dev->idle_qos_mutex);
 }
-#endif
 
 #define COL_FRAME_RATE		0
 #define COL_FRAME_INTERVAL	1

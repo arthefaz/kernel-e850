@@ -425,7 +425,6 @@ struct mfc_special_buf {
 	size_t				size;
 };
 
-#ifdef CONFIG_EXYNOS_BTS
 struct mfc_bw_data {
 	unsigned int	peak;
 	unsigned int	read;
@@ -448,9 +447,7 @@ struct mfc_bw_info {
 	struct mfc_bw_data bw_dec_vp9_10bit;
 	struct mfc_bw_data bw_dec_mpeg4;
 };
-#endif
 
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 /*
  * threshold_mb - threshold of total MB(macroblock) count
  * Total MB count can be calculated by
@@ -489,7 +486,6 @@ struct mfc_qos_weight {
 	unsigned int weight_num_of_tile;
 	unsigned int weight_super64_bframe;
 };
-#endif
 
 struct mfc_feature {
 	unsigned int support;
@@ -518,7 +514,6 @@ struct mfc_platdata {
 	unsigned int support_sbwcl;
 	/* HDR10+ */
 	unsigned int max_hdr_win;
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	/* QoS */
 	unsigned int num_default_qos_steps;
 	unsigned int num_encoder_qos_steps;
@@ -529,7 +524,6 @@ struct mfc_platdata {
 	struct mfc_qos *default_qos_table;
 	struct mfc_qos *encoder_qos_table;
 	struct mfc_qos_boost *qos_boost_table;
-#endif
 	int num_mfc_freq;
 	unsigned int mfc_freqs[MAX_NUM_MFC_FREQ];
 	unsigned int max_Kbps[MAX_NUM_MFC_BPS];
@@ -560,14 +554,10 @@ struct mfc_platdata {
 	unsigned int enc_param_addr[MFC_MAX_DEFAULT_PARAM];
 	unsigned int enc_param_val[MFC_MAX_DEFAULT_PARAM];
 
-#ifdef CONFIG_EXYNOS_BTS
 	struct mfc_bw_info mfc_bw_info;
 	struct mfc_bw_info mfc_bw_info_sbwc;
 	unsigned int mfc_bw_index;
-#endif
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	struct mfc_qos_weight qos_weight;
-#endif
 };
 
 /************************ NAL_Q data structure ************************/
@@ -918,16 +908,16 @@ struct mfc_dev {
 	struct workqueue_struct *butler_wq;
 	struct work_struct butler_work;
 
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	struct list_head qos_queue;
 	atomic_t qos_req_cur;
+#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	struct pm_qos_request qos_req_mfc;
 	struct pm_qos_request qos_req_int;
 	struct pm_qos_request qos_req_mif;
 	struct pm_qos_request qos_req_cluster[MAX_NUM_CLUSTER];
+#endif
 	struct mutex qos_mutex;
 	int mfc_freq_by_bps;
-#endif
 	struct mfc_bitrate_table bitrate_table[MAX_NUM_MFC_FREQ];
 	int bps_ratio;
 
@@ -1646,10 +1636,8 @@ struct mfc_ctx {
 	unsigned long last_framerate;
 	unsigned int qos_ratio;
 
-#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	int qos_req_step;
 	struct list_head qos_list;
-#endif
 
 	struct mfc_timestamp ts_array[MAX_TIME_INDEX];
 	struct list_head ts_list;
