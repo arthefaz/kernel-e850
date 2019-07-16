@@ -51,6 +51,7 @@
 		mshc0 = &dwmmc_0;
 		mshc2 = &dwmmc_2;
 		mfc0 = &mfc_0;
+		scaler0 = &scaler_0;
 
 	};
 
@@ -607,7 +608,16 @@
 		#size-cells = <1>;
 		ranges;
 
-		domain-clients = <&mfc_0>;
+		domain-clients = <&mfc_0>, <&scaler_0>;
+	};
+
+	scaler_0: scaler@12CB0000 {
+		compatible = "samsung,exynos5-scaler";
+		reg = <0x0 0x12CB0000 0x3000>;
+		interrupts = <0 170 0>;
+		clocks = <&clock GATE_M2M_QCH>;
+		clock-names = "gate";
+		iommus = <&sysmmu_mfcmscl>;
 	};
 
 	acpm {
