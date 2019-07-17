@@ -22,6 +22,8 @@
 		ranges;
 
 		list-scen = "default",
+			    "g3d_performance",
+			    "mfc_performance",
 			    "camera_default";
 
 		bts_nrt_mem0 {
@@ -157,6 +159,26 @@
 				qmax0_limit_r = <0x1>;
 				qmax0_limit_w = <0x1>;
 			};
+			g3d_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				qurgent_on = <0>;
+				blocking_on = <0>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x2>;
+				wmo = <0x2>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
 
 		};
 		bts_gnss {
@@ -223,6 +245,30 @@
 				awqos = <0x4>;
 				rmo = <0x6>;
 				wmo = <0x6>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			mfc_performance {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0xC>;
+				wmo = <0xC>;
+				qurgent_on = <0>;
+				blocking_on = <1>;
+				qmax0_limit_r = <0x1>;
+				qmax0_limit_w = <0x1>;
+			};
+			camera_default {
+				stat_on = <1>;
+				bypass = <0>;
+				arqos = <0x4>;
+				awqos = <0x4>;
+				rmo = <0x4>;
+				wmo = <0x4>;
 				qurgent_on = <0>;
 				blocking_on = <1>;
 				qmax0_limit_r = <0x1>;
