@@ -4511,7 +4511,8 @@ err_clk_ciu:
 	if (ret)
 		dev_err(host->dev, "failed to enable ciu clock\n");
 err_clk_biu:
-	clk_disable_unprepare(host->biu_clk);
+	if (!IS_ERR(host->biu_clk))
+		clk_disable_unprepare(host->biu_clk);
 
 #ifdef CONFIG_CPU_IDLE
 	dw_mci_sicd_control(host, true);
@@ -4546,7 +4547,8 @@ void dw_mci_remove(struct dw_mci *host)
 		reset_control_assert(host->pdata->rstc);
 
 	dw_mci_ciu_clk_dis(host);
-	clk_disable_unprepare(host->biu_clk);
+	if (!IS_ERR(host->biu_clk))
+		clk_disable_unprepare(host->biu_clk);
 }
 EXPORT_SYMBOL(dw_mci_remove);
 
@@ -4563,8 +4565,10 @@ int dw_mci_runtime_suspend(struct device *dev)
 	dw_mci_ciu_clk_dis(host);
 
 	if (host->slot &&
-	    (mmc_can_gpio_cd(host->slot->mmc) || !mmc_card_is_removable(host->slot->mmc)))
-		clk_disable_unprepare(host->biu_clk);
+	    (mmc_can_gpio_cd(host->slot->mmc) || !mmc_card_is_removable(host->slot->mmc))) {
+		if (!IS_ERR(host->biu_clk))
+			clk_disable_unprepare(host->biu_clk);
+	}
 
 	return 0;
 }
@@ -4578,9 +4582,11 @@ int dw_mci_runtime_resume(struct device *dev)
 
 	if (host->slot &&
 	    (mmc_can_gpio_cd(host->slot->mmc) || !mmc_card_is_removable(host->slot->mmc))) {
-		ret = clk_prepare_enable(host->biu_clk);
-		if (ret)
-			return ret;
+		if (!IS_ERR(host->biu_clk)) {
+			ret = clk_prepare_enable(host->biu_clk);
+			if (ret)
+				return ret;
+		}
 	}
 
 	ret = dw_mci_ciu_clk_en(host);
@@ -4645,8 +4651,10 @@ int dw_mci_runtime_resume(struct device *dev)
 
 err:
 	if (host->slot &&
-	    (mmc_can_gpio_cd(host->slot->mmc) || !mmc_card_is_removable(host->slot->mmc)))
-		clk_disable_unprepare(host->biu_clk);
+	    (mmc_can_gpio_cd(host->slot->mmc) || !mmc_card_is_removable(host->slot->mmc))) {
+		if (!IS_ERR(host->biu_clk))
+			clk_disable_unprepare(host->biu_clk);
+	}
 
 	return ret;
 }
