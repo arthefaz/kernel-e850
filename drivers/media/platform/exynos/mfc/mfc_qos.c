@@ -260,7 +260,6 @@ static void __mfc_qos_set(struct mfc_ctx *ctx, int table_type, int i)
 	}
 #endif
 
-	mutex_lock(&dev->qos_mutex);
 	if (atomic_read(&dev->qos_req_cur) == 0) {
 		__mfc_qos_operate(dev, MFC_QOS_ADD, table_type, i);
 	} else {
@@ -272,7 +271,6 @@ static void __mfc_qos_set(struct mfc_ctx *ctx, int table_type, int i)
 				(dev->mfc_freq_by_bps > qos_table[i].freq_mfc))
 			__mfc_qos_operate(dev, MFC_QOS_UPDATE, table_type, i);
 	}
-	mutex_unlock(&dev->qos_mutex);
 }
 
 static inline unsigned long __mfc_qos_get_weighted_mb(struct mfc_ctx *ctx,
@@ -572,14 +570,13 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 #ifdef CONFIG_EXYNOS_BTS
 	struct bts_bw curr_mfc_bw, curr_mfc_bw_ctx;
 #endif
-	unsigned long flags;
 
 	if (perf_boost_mode) {
 		mfc_info_ctx("[QoS][BOOST] skip control\n");
 		return;
 	}
 
-	spin_lock_irqsave(&dev->qos_lock, flags);
+	mutex_lock(&dev->qos_mutex);
 	list_for_each_entry(qos_ctx, &dev->qos_queue, qos_list)
 		if (qos_ctx == ctx)
 			found = 1;
@@ -606,7 +603,6 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 		curr_mfc_bw.write += curr_mfc_bw_ctx.write;
 #endif
 	}
-	spin_unlock_irqrestore(&dev->qos_lock, flags);
 
 	if (dec_found) {
 		/* default table */
@@ -650,6 +646,7 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 #else
 	__mfc_qos_set(ctx, table_type, i);
 #endif
+	mutex_unlock(&dev->qos_mutex);
 }
 
 void mfc_qos_off(struct mfc_ctx *ctx)
@@ -665,15 +662,14 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 #ifdef CONFIG_EXYNOS_BTS
 	struct bts_bw mfc_bw, mfc_bw_ctx;
 #endif
-	unsigned long flags;
 
 	if (perf_boost_mode) {
 		mfc_info_ctx("[QoS][BOOST] skip control\n");
 		return;
 	}
 
+	mutex_lock(&dev->qos_mutex);
 	if (list_empty(&dev->qos_queue)) {
-		mutex_lock(&dev->qos_mutex);
 		if (atomic_read(&dev->qos_req_cur) != 0) {
 			mfc_err_ctx("[QoS] MFC request count is wrong!\n");
 			__mfc_qos_operate(dev, MFC_QOS_REMOVE, table_type, 0);
@@ -688,7 +684,6 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 	mfc_bw.write = 0;
 #endif
 
-	spin_lock_irqsave(&dev->qos_lock, flags);
 	/* get the hw macroblock */
 	list_for_each_entry(qos_ctx, &dev->qos_queue, qos_list) {
 		if (qos_ctx == ctx) {
@@ -710,7 +705,6 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 	}
 	if (found)
 		list_del(&ctx->qos_list);
-	spin_unlock_irqrestore(&dev->qos_lock, flags);
 
 	if (dec_found) {
 		/* default table */
@@ -750,9 +744,7 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 	dev->mfc_freq_by_bps = __mfc_qos_get_freq_by_bps(dev, total_bps);
 
 	if (list_empty(&dev->qos_queue) || total_mb == 0) {
-		mutex_lock(&dev->qos_mutex);
 		__mfc_qos_operate(dev, MFC_QOS_REMOVE, table_type, 0);
-		mutex_unlock(&dev->qos_mutex);
 	} else {
 #ifdef CONFIG_EXYNOS_BTS
 		__mfc_qos_set(ctx, &mfc_bw, table_type, i);
@@ -760,6 +752,8 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 		__mfc_qos_set(ctx, table_type, i);
 #endif
 	}
+
+	mutex_unlock(&dev->qos_mutex);
 }
 #endif
 
