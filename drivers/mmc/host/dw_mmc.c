@@ -4382,10 +4382,12 @@ int dw_mci_probe(struct dw_mci *host)
 		reset_control_assert(host->pdata->rstc);
 
  err_clk_ciu:
-	clk_disable_unprepare(host->ciu_clk);
+	if (!IS_ERR(host->ciu_clk))
+		clk_disable_unprepare(host->ciu_clk);
 
  err_clk_biu:
-	clk_disable_unprepare(host->biu_clk);
+	if (!IS_ERR(host->biu_clk))
+		clk_disable_unprepare(host->biu_clk);
 
 #ifdef CONFIG_CPU_IDLE
 	exynos_update_ip_idle_status(host->idle_ip_index, 1);
@@ -4426,8 +4428,11 @@ void dw_mci_remove(struct dw_mci *host)
 	if (!IS_ERR(host->pdata->rstc))
 		reset_control_assert(host->pdata->rstc);
 
-	clk_disable_unprepare(host->ciu_clk);
-	clk_disable_unprepare(host->biu_clk);
+	if (!IS_ERR(host->ciu_clk))
+		clk_disable_unprepare(host->ciu_clk);
+
+	if (!IS_ERR(host->biu_clk))
+		clk_disable_unprepare(host->biu_clk);
 }
 
 EXPORT_SYMBOL(dw_mci_remove);
@@ -4440,11 +4445,14 @@ int dw_mci_runtime_suspend(struct device *dev)
 	if (host->use_dma && host->dma_ops->exit)
 		host->dma_ops->exit(host);
 
-	clk_disable_unprepare(host->ciu_clk);
+	if (!IS_ERR(host->ciu_clk))
+		clk_disable_unprepare(host->ciu_clk);
 
 	if (host->slot &&
-	    (mmc_can_gpio_cd(host->slot->mmc) || !mmc_card_is_removable(host->slot->mmc)))
-		clk_disable_unprepare(host->biu_clk);
+	    (mmc_can_gpio_cd(host->slot->mmc) || !mmc_card_is_removable(host->slot->mmc))) {
+		if (!IS_ERR(host->biu_clk))
+			clk_disable_unprepare(host->biu_clk);
+	}
 
 	return 0;
 }
@@ -4459,17 +4467,22 @@ int dw_mci_runtime_resume(struct device *dev)
 
 	if (host->slot &&
 	    (mmc_can_gpio_cd(host->slot->mmc) || !mmc_card_is_removable(host->slot->mmc))) {
-		ret = clk_prepare_enable(host->biu_clk);
-		if (ret)
-			return ret;
+		if (!IS_ERR(host->biu_clk)) {
+			ret = clk_prepare_enable(host->biu_clk);
+			if (ret)
+				return ret;
+		}
 	}
 
-	ret = clk_prepare_enable(host->ciu_clk);
-	if (ret)
-		goto err;
+	if (!IS_ERR(host->ciu_clk)) {
+		ret = clk_prepare_enable(host->ciu_clk);
+		if (ret)
+			goto err;
+	}
 
 	if (!dw_mci_ctrl_reset(host, SDMMC_CTRL_ALL_RESET_FLAGS)) {
-		clk_disable_unprepare(host->ciu_clk);
+		if (!IS_ERR(host->ciu_clk))
+			clk_disable_unprepare(host->ciu_clk);
 		ret = -ENODEV;
 		goto err;
 	}
@@ -4531,8 +4544,10 @@ int dw_mci_runtime_resume(struct device *dev)
 
  err:
 	if (host->slot &&
-	    (mmc_can_gpio_cd(host->slot->mmc) || !mmc_card_is_removable(host->slot->mmc)))
-		clk_disable_unprepare(host->biu_clk);
+	    (mmc_can_gpio_cd(host->slot->mmc) || !mmc_card_is_removable(host->slot->mmc))) {
+		if (!IS_ERR(host->biu_clk))
+			clk_disable_unprepare(host->biu_clk);
+	}
 
 	return ret;
 }
