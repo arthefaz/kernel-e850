@@ -30,7 +30,7 @@
 		reg = <0x0 0x11862000 0x20>;
 		cal_id = <0xB1380001>;
 		need_smc = <0x13010204>;
-		status = "okay";
+		status = "disabled";
 		#power-domain-cells = <0>;
 	};
 
@@ -57,7 +57,7 @@
 		reg = <0x0 0x11861c80 0x20>;
 		cal_id = <0xB1380004>;
 		need_smc = <0x13410204>;
-		status = "okay";
+		status = "disabled";
 		#power-domain-cells = <0>;
 	};
 
@@ -66,7 +66,7 @@
 		reg = <0x0 0x11861d00 0x20>;
 		cal_id = <0xB1380005>;
 		need_smc = <0x11410204>;
-		status = "okay";
+		status = "disabled";
 		#power-domain-cells = <0>;
 	};
 
