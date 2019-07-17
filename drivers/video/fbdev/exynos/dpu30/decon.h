@@ -698,7 +698,7 @@ struct dpu_size_err_info {
 };
 
 /* Definitions below are used in the DECON */
-#define	DPU_EVENT_LOG_MAX	SZ_1K	/* 1024 */
+#define	DPU_EVENT_LOG_MAX	SZ_2K	/* 2048 */
 #define	DPU_EVENT_PRINT_MAX	(DPU_EVENT_LOG_MAX >> 1)
 #define	DPU_EVENT_LOG_RETRY	3
 #define DPU_EVENT_KEEP_CNT	3
@@ -741,7 +741,7 @@ typedef enum dpu_f_evt_type {
 	DPU_F_EVT_MAX,
 } dpu_f_evt_t;
 
-#define DPU_FENCE_EVENT_LOG_MAX		SZ_512
+#define DPU_FENCE_EVENT_LOG_MAX		SZ_1K
 #define DPU_FENCE_EVENT_LOG_RETRY	2
 #define MAX_DPU_FENCE_NAME		32
 
