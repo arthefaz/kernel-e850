@@ -423,6 +423,14 @@
 		status = "disabled";
 	};
 
+	exynos_flexpmu_dbg {
+		compatible = "samsung,exynos-flexpmu-dbg";
+		#address-cells = <2>;
+		#size-cells = <1>;
+		data-base = <0x204D400>;
+		data-size = <0x400>;
+	};
+
     /* mali */
     mali: mali@11500000 {
         compatible = "arm,mali";
