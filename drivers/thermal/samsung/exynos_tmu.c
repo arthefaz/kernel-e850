@@ -60,7 +60,7 @@
 #include <soc/samsung/exynos-cpuhp.h>
 
 /* Exynos generic registers */
-#if defined(CONFIG_SOC_EXYNOS9810)
+#if defined(CONFIG_SOC_EXYNOS9810) || defined(CONFIG_SOC_EXYNOS3830)
 /* Exynos9810 */
 #define EXYNOS_TMU_REG_TRIMINFO7_0(p)	(((p) - 0) * 4)
 #define EXYNOS_TMU_REG_TRIMINFO15_8(p)	(((p) - 8) * 4 + 0x400)
@@ -274,6 +274,9 @@
 #define PMUREG_AUD_STATUS_MASK			0x1
 #elif defined(CONFIG_SOC_EXYNOS9630)
 #define PMUREG_AUD_STATUS			0x1984
+#define PMUREG_AUD_STATUS_MASK			0x1
+#elif defined(CONFIG_SOC_EXYNOS3830)
+#define PMUREG_AUD_STATUS			0x2084
 #define PMUREG_AUD_STATUS_MASK			0x1
 #endif
 static struct acpm_tmu_cap cap;
@@ -971,6 +974,7 @@ static const struct of_device_id exynos_tmu_match[] = {
 	{ .compatible = "samsung,exynos9810-tmu", },
 	{ .compatible = "samsung,exynos9820-tmu", },
 	{ .compatible = "samsung,exynos9630-tmu", },
+	{ .compatible = "samsung,exynos3830-tmu", },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, exynos_tmu_match);
@@ -983,6 +987,8 @@ static int exynos_of_get_soc_type(struct device_node *np)
 		return SOC_ARCH_EXYNOS9820;
 	if (of_device_is_compatible(np, "samsung,exynos9630-tmu"))
 		return SOC_ARCH_EXYNOS9630;
+	if (of_device_is_compatible(np, "samsung,exynos3830-tmu"))
+		return SOC_ARCH_EXYNOS3830;
 
 	return -EINVAL;
 }
@@ -1110,6 +1116,7 @@ static int exynos_map_dt_data(struct platform_device *pdev)
 	case SOC_ARCH_EXYNOS9810:
 	case SOC_ARCH_EXYNOS9820:
 	case SOC_ARCH_EXYNOS9630:
+	case SOC_ARCH_EXYNOS3830:
 		data->tmu_initialize = exynos98X0_tmu_initialize;
 		data->tmu_control = exynos98X0_tmu_control;
 		data->tmu_read = exynos98X0_tmu_read;
@@ -1212,7 +1219,7 @@ all_temp_show(struct device *dev, struct device_attribute *devattr,
 	u32 temp_code, temp_cel;
 
 	for (i = 0; i < data->num_of_sensors; i++) {
-#if defined(CONFIG_SOC_EXYNOS9810)
+#if defined(CONFIG_SOC_EXYNOS9810) || defined(CONFIG_SOC_EXYNOS3830)
 		if (data->sensor_info[i].sensor_num < 2) {
 			reg_offset = 0;
 			bit_offset = EXYNOS_TMU_TEMP_SHIFT * data->sensor_info[i].sensor_num;
