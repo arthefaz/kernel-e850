@@ -693,6 +693,8 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 	int drm_switch = 0;
 	int next_ctx_index;
 
+	atomic_inc(&dev->hw_run_cnt);
+
 	if (ctx->state == MFCINST_RUNNING)
 		mfc_clean_ctx_int_flags(ctx);
 

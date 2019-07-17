@@ -16,6 +16,7 @@
 #endif
 
 #include "mfc_qos.h"
+#include "mfc_utils.h"
 
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 enum {
@@ -755,6 +756,48 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 
 	mutex_unlock(&dev->qos_mutex);
 }
+
+void __mfc_qos_off_all(struct mfc_dev *dev)
+{
+	struct mfc_ctx *qos_ctx, *tmp_ctx;
+
+	mutex_lock(&dev->qos_mutex);
+	if (list_empty(&dev->qos_queue)) {
+		mfc_err_dev("[QoS][MFCIDLE] MFC QoS list already empty (%d)\n",
+				atomic_read(&dev->qos_req_cur));
+		mutex_unlock(&dev->qos_mutex);
+		return;
+	}
+
+	/* Delete all of QoS list */
+	list_for_each_entry_safe(qos_ctx, tmp_ctx, &dev->qos_queue, qos_list)
+		list_del(&qos_ctx->qos_list);
+
+	/* Select the opend ctx structure for QoS remove */
+	__mfc_qos_operate(dev, MFC_QOS_REMOVE, MFC_QOS_TABLE_TYPE_DEFAULT, 0);
+	mutex_unlock(&dev->qos_mutex);
+}
+
+void mfc_qos_idle_worker(struct work_struct *work)
+{
+	struct mfc_dev *dev;
+
+	dev = container_of(work, struct mfc_dev, mfc_idle_work);
+
+	mutex_lock(&dev->idle_qos_mutex);
+	if (dev->idle_mode == MFC_IDLE_MODE_CANCEL) {
+		mfc_change_idle_mode(dev, MFC_IDLE_MODE_NONE);
+		mfc_debug_dev(2, "[QoS][MFCIDLE] idle mode is canceled\n");
+		mutex_unlock(&dev->idle_qos_mutex);
+		return;
+	}
+
+	__mfc_qos_off_all(dev);
+	mfc_info_dev("[QoS][MFCIDLE] MFC go to QoS idle mode\n");
+
+	mfc_change_idle_mode(dev, MFC_IDLE_MODE_IDLE);
+	mutex_unlock(&dev->idle_qos_mutex);
+}
 #endif
 
 #define COL_FRAME_RATE		0
@@ -1005,29 +1048,50 @@ static int __mfc_qos_get_bps_section(struct mfc_ctx *ctx, u32 bytesused)
 	return bps_section;
 }
 
-void mfc_qos_update_framerate(struct mfc_ctx *ctx, u32 bytesused)
+void mfc_qos_update_framerate(struct mfc_ctx *ctx, u32 bytesused,
+		int idle_trigger_only)
 {
+	struct mfc_dev *dev = ctx->dev;
 	int bps_section;
-	bool update = false;
+	bool update_bps = false, update_framerate = false, update_idle = false;
 
+	/* 1) Idle mode trigger */
+	mutex_lock(&dev->idle_qos_mutex);
+	if (dev->idle_mode == MFC_IDLE_MODE_IDLE) {
+		mfc_debug(2, "[QoS][MFCIDLE] restart QoS control\n");
+		mfc_change_idle_mode(dev, MFC_IDLE_MODE_NONE);
+		update_idle = true;
+	} else if (dev->idle_mode == MFC_IDLE_MODE_RUNNING) {
+		mfc_debug(2, "[QoS][MFCIDLE] restart QoS control, cancel idle\n");
+		mfc_change_idle_mode(dev, MFC_IDLE_MODE_CANCEL);
+		update_idle = true;
+	}
+	mutex_unlock(&dev->idle_qos_mutex);
+
+	if (idle_trigger_only)
+		goto update_qos;
+
+	/* 2) bitrate is updated */
 	if (ctx->type == MFCINST_DECODER) {
 		bps_section = __mfc_qos_get_bps_section(ctx, bytesused);
 		if (ctx->last_bps_section != bps_section) {
 			mfc_debug(2, "[QoS] bps section changed: %d -> %d\n",
 					ctx->last_bps_section, bps_section);
 			ctx->last_bps_section = bps_section;
-			update = true;
+			update_bps = true;
 		}
 	}
 
+	/* 3) framerate is updated */
 	if (ctx->last_framerate != 0 && ctx->last_framerate != ctx->framerate) {
 		mfc_debug(2, "[QoS] fps changed: %ld -> %ld, qos ratio: %d\n",
 				ctx->framerate, ctx->last_framerate, ctx->qos_ratio);
 		ctx->framerate = ctx->last_framerate;
-		update = true;
+		update_framerate = true;
 	}
 
-	if (update)
+update_qos:
+	if (update_idle || update_bps || update_framerate)
 		mfc_qos_on(ctx);
 }
 
