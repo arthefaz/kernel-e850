@@ -108,7 +108,7 @@ struct dbg_snapshot_log_idx {
 #ifdef CONFIG_DEBUG_SNAPSHOT_REGULATOR
 	atomic_t regulator_log_idx;
 #endif
-#ifdef CONFIG_DEBUG_SNAPSHOT_REGULATOR
+#ifdef CONFIG_DEBUG_SNAPSHOT_THERMAL
 	atomic_t thermal_log_idx;
 #endif
 #ifdef CONFIG_DEBUG_SNAPSHOT_I2C
