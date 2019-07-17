@@ -154,16 +154,16 @@ int mfc_set_dec_codec_buffers(struct mfc_ctx *ctx)
 		reg |= (0x1 << MFC_REG_D_INIT_BUF_OPT_COPY_NOT_CODED_SHIFT);
 		mfc_debug(2, "Notcoded frame copy mode start\n");
 	}
-	/* Enable 10bit Dithering when only 8+2 10bit format */
-	if (ctx->is_10bit && !ctx->mem_type_10bit && !ctx->is_sbwc) {
+
+	/* Enable 10bit Dithering when only display device is not support 10bit */
+	if (dev->pdata->dithering_enable)
 		reg |= (0x1 << MFC_REG_D_INIT_BUF_OPT_DITHERING_EN_SHIFT);
+	if (ctx->is_10bit && !ctx->mem_type_10bit && !ctx->is_sbwc)
 		/* 64byte align, It is vaid only for VP9 */
 		reg |= (0x1 << MFC_REG_D_INIT_BUF_OPT_STRIDE_SIZE_ALIGN);
-	} else {
+	else
 		/* 16byte align, It is vaid only for VP9 */
 		reg &= ~(0x1 << MFC_REG_D_INIT_BUF_OPT_STRIDE_SIZE_ALIGN);
-	}
-
 	if (IS_VP9_DEC(ctx) && MFC_FEATURE_SUPPORT(dev, dev->pdata->vp9_stride_align)) {
 		reg &= ~(0x3 << MFC_REG_D_INIT_BUF_OPT_STRIDE_SIZE_ALIGN);
 		reg |= (0x2 << MFC_REG_D_INIT_BUF_OPT_STRIDE_SIZE_ALIGN);

@@ -499,8 +499,9 @@ struct mfc_platdata {
 	unsigned int axid_mask;
 	unsigned int mfc_fault_num;
 	unsigned int trans_info_offset;
-	/* Default 10bit format for decoding */
+	/* Default 10bit format for decoding and dithering for display */
 	unsigned int P010_decoding;
+	unsigned int dithering_enable;
 	/* Formats */
 	unsigned int support_10bit;
 	unsigned int support_422;

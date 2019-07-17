@@ -1019,8 +1019,9 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 	of_property_read_u32_array(np, "sbwc_uncomp", &pdata->sbwc_uncomp.support, 2);
 	of_property_read_u32_array(np, "mem_clear", &pdata->mem_clear.support, 2);
 
-	/* Default 10bit format for decoding */
+	/* Default 10bit format for decoding and dithering for display */
 	of_property_read_u32(np, "P010_decoding", &pdata->P010_decoding);
+	of_property_read_u32(np, "dithering_enable", &pdata->dithering_enable);
 
 	/* Formats */
 	of_property_read_u32(np, "support_10bit", &pdata->support_10bit);
