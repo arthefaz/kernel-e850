@@ -329,6 +329,11 @@ int cal_cluster_status(unsigned int cluster)
 #endif
 }
 
+extern int cal_is_lastcore_detecting(unsigned int cpu)
+{
+	return pmucal_is_lastcore_detecting(cpu);
+}
+
 int cal_dfs_get_asv_table(unsigned int id, unsigned int *table)
 {
 	return fvmap_get_voltage_table(id, table);
