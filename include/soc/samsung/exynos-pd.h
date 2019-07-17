@@ -92,7 +92,7 @@ static inline struct exynos_pm_domain *exynos_pd_lookup_name(const char *domain_
 }
 static inline int exynos_pd_status(struct exynos_pm_domain *pd)
 {
-	return NULL;
+	return 1;
 }
 #endif
 
