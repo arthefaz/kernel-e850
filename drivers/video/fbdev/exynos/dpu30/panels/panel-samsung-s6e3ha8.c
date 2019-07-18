@@ -239,7 +239,7 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 		dsim_write_data_seq(dsim, false, 0x51, 0x01, 0xff);
 	}
 	/* set brightness to MAX */
-	dsim_write_data_seq(dsim, false, 0x51, DEFAULT_MAX_BRIGHTNESS);
+	dsim_write_data_seq(dsim, false, 0x51, MAX_BRIGHTNESS);
 	dsim_write_data_seq(dsim, false, 0x29); /* display on */
 
 	mutex_unlock(&panel->ops_lock);

@@ -45,7 +45,8 @@ extern int dpu_panel_log_level;
 #define MAX_REGULATORS		3
 #define MAX_PANEL_SUPPORT	10
 #define MAX_PANEL_ID_NUM	3
-#define DEFAULT_MAX_BRIGHTNESS	255
+#define MIN_BRIGHTNESS 		0
+#define MAX_BRIGHTNESS		255
 #define DEFAULT_BRIGHTNESS	127
 
 extern struct exynos_panel_device *panel_drvdata;
@@ -106,12 +107,16 @@ struct exynos_panel_device {
 	struct device *dev;
 	struct v4l2_subdev sd;
 	struct mutex ops_lock;
+	struct mutex bl_lock;
 	struct exynos_panel_resources res;
 	struct backlight_device *bl;
 	struct exynos_panel_info lcd_info;
 	struct exynos_panel_ops *ops;
 	bool cabc_enabled;
 	enum power_mode power_mode;
+	int brightness;
+	int max_brightness;
+	int user_brightness;
 };
 
 static inline struct exynos_panel_device *get_panel_drvdata(void)

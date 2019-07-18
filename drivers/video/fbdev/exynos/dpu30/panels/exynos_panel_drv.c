@@ -38,11 +38,16 @@ static int exynos_backlight_get_brightness(struct backlight_device *bl)
 	return bl->props.brightness;
 }
 
+static void exynos_backlight_update(int brightness)
+{
+	struct dsim_device *dsim = get_dsim_drvdata(0);
+	dsim_write_data_seq(dsim, false, 0x51, brightness);
+
+}
 static int exynos_backlight_update_status(struct backlight_device *bl)
 {
 	int brightness = bl->props.brightness;
 	struct exynos_panel_device *panel = dev_get_drvdata(&bl->dev);
-	struct dsim_device *dsim = get_dsim_drvdata(0);
 
 	DPU_INFO_PANEL("%s: brightness = %d\n", __func__, brightness);
 #if 0
@@ -52,9 +57,10 @@ static int exynos_backlight_update_status(struct backlight_device *bl)
 		brightness = 0;
 #endif
 
+	panel->user_brightness = brightness;
 	if (brightness >= 0) {
 		mutex_lock(&panel->ops_lock);
-		dsim_write_data_seq(dsim, false, 0x51, brightness);
+		exynos_backlight_update(brightness);
 		mutex_unlock(&panel->ops_lock);
 	} else {
 		/* DO update brightness using dsim_wr_data */
@@ -62,7 +68,7 @@ static int exynos_backlight_update_status(struct backlight_device *bl)
 		return -EINVAL;
 	}
 
-	dsim->brightness = brightness;
+	panel->brightness = brightness;
 	return 0;
 
 }
@@ -815,6 +821,126 @@ static ssize_t panel_cabc_mode_store(struct device *dev,
 static DEVICE_ATTR(cabc_mode, 0660, panel_cabc_mode_show,
 			panel_cabc_mode_store);
 
+static ssize_t panel_thermal_max_brightness_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	ssize_t count = 0;
+	struct exynos_panel_device *panel = dev_get_drvdata(dev);
+
+	count = snprintf(buf, PAGE_SIZE, "max_brightness = %d\n",
+			panel->max_brightness);
+
+	return count;
+}
+
+static ssize_t panel_thermal_max_brightness_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct exynos_panel_device *panel = dev_get_drvdata(dev);
+	unsigned int value = 0;
+	int ret;
+	int old_brightness;
+
+	ret = kstrtouint(buf, 0, &value);
+	if (ret < 0)
+		return ret;
+
+	mutex_lock(&panel->bl_lock);
+
+	old_brightness = panel->brightness;
+
+	if (value > MAX_BRIGHTNESS) {
+		panel->max_brightness = MAX_BRIGHTNESS;
+		panel->brightness = panel->user_brightness;
+	} else if ((value >= MIN_BRIGHTNESS) && (value <= MAX_BRIGHTNESS)) {
+		panel->max_brightness = value;
+		if (panel->user_brightness > panel->max_brightness)
+			panel->brightness = panel->max_brightness;
+		else
+			panel->brightness = panel->user_brightness;
+	} else {
+		goto end;
+	}
+
+	if (old_brightness != panel->brightness) {
+		exynos_backlight_update(panel->brightness);
+	}
+
+end:
+	mutex_unlock(&panel->bl_lock);
+
+	pr_info("%s: %d\n", __func__, panel->max_brightness);
+
+	return count;
+}
+
+static DEVICE_ATTR(thermal_max_brightness, 0600, panel_thermal_max_brightness_show,
+			panel_thermal_max_brightness_store);
+
+
+static ssize_t panel_thermal_brightness_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	ssize_t count = 0;
+	struct exynos_panel_device *panel = dev_get_drvdata(dev);
+
+	count = snprintf(buf, PAGE_SIZE, "brightness = %d\n",
+			panel->brightness);
+
+	return count;
+}
+
+static ssize_t panel_thermal_brightness_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct exynos_panel_device *panel = dev_get_drvdata(dev);
+	unsigned int value = 0;
+	int ret;
+
+	ret = kstrtouint(buf, 0, &value);
+	if (ret < 0)
+		return ret;
+
+	mutex_lock(&panel->bl_lock);
+
+	if (value <= panel->max_brightness) {
+		panel->brightness = value;
+		exynos_backlight_update(panel->brightness);
+	} else if (value <= MAX_BRIGHTNESS) {
+		panel->user_brightness = value;
+	} else {
+		pr_err("%s, brightness value is wrong[%d]\n",
+				__func__, value);
+	}
+
+	mutex_unlock(&panel->bl_lock);
+
+	pr_info("%s: %d\n", __func__, panel->brightness);
+
+	return count;
+}
+
+static DEVICE_ATTR(thermal_brightness, 0600, panel_thermal_brightness_show,
+			panel_thermal_brightness_store);
+
+static int exynos_panel_register_thermal_sysfs(struct exynos_panel_device *panel)
+{
+	int ret = 0;
+
+	ret = device_create_file(panel->dev, &dev_attr_thermal_brightness);
+	if (ret) {
+		DPU_ERR_PANEL("failed to create thermal_brightness\n");
+		return ret;
+	}
+	ret = device_create_file(panel->dev, &dev_attr_thermal_max_brightness);
+	if (ret) {
+		DPU_ERR_PANEL("failed to create thermal_max_brightness\n");
+		return ret;
+	}
+
+	return ret;
+}
+
 static int exynos_panel_probe(struct platform_device *pdev)
 {
 	struct exynos_panel_device *panel;
@@ -832,8 +958,11 @@ static int exynos_panel_probe(struct platform_device *pdev)
 
 	panel->dev = &pdev->dev;
 	panel_drvdata = panel;
+	panel->max_brightness = MAX_BRIGHTNESS;
+	panel->brightness = DEFAULT_BRIGHTNESS;
 
 	mutex_init(&panel->ops_lock);
+	mutex_init(&panel->bl_lock);
 
 	if (IS_ENABLED(CONFIG_EXYNOS_DECON_LCD_CABC))
 		panel->cabc_enabled = true;
@@ -848,6 +977,12 @@ static int exynos_panel_probe(struct platform_device *pdev)
 		}
 
 		panel->power_mode = POWER_SAVE_OFF;
+	}
+
+	ret = exynos_panel_register_thermal_sysfs(panel);
+	if (ret) {
+		DPU_ERR_PANEL("failed to create thermal brightness sysfs\n");
+		goto err;
 	}
 
 	panel->bl = devm_backlight_device_register(panel->dev,
@@ -875,7 +1010,8 @@ static int exynos_panel_probe(struct platform_device *pdev)
 
 err_dev_file:
 	device_remove_file(panel->dev, &dev_attr_cabc_mode);
-
+	device_remove_file(panel->dev, &dev_attr_thermal_brightness);
+	device_remove_file(panel->dev, &dev_attr_thermal_max_brightness);
 err:
 	DPU_DEBUG_PANEL("%s -\n", __func__);
 	return ret;
