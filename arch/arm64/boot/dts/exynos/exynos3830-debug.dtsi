@@ -24,6 +24,12 @@
 		use_multistage_wdt_irq = <261>;
 	};
 
+	ITMON@0 {
+		compatible = "samsung,exynos-itmon";
+		interrupts = <0 INTREQ__TREX_D_CORE_DEBUG_INT 0>,
+			     <0 INTREQ__TREX_P_CORE_DEBUG_INT 0>;
+	};
+
 	exynos-debug-test {
 		compatible = "samsung,exynos-debug-test";
 		enabled = "dbg_test";
