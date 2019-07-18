@@ -54,7 +54,7 @@
 		mshc2 = &dwmmc_2;
 		mfc0 = &mfc_0;
 		scaler0 = &scaler_0;
-
+		contexthub0 = &contexthub_0;
 	};
 
 	ect {
@@ -1633,5 +1633,27 @@
 		irqcnt = <2>;
 		interrupts = <GIC_SPI INTREQ__DMC_INTR_MIF0 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI INTREQ__DMC_INTR_MIF1 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	contexthub_0: contexthub {
+		compatible = "samsung,exynos-nanohub";
+		/* INTREQ_MAILBOX_CHUB2AP, INTREQ_WDT_CHUB */
+		interrupts = <0 50 0>,<0 73 0>;
+		/* mailbox, sram, dumpgpr, chub reset &
+		chub cpu reset, baaw_p_apm_shub, chub cpu clock */
+		reg =	<0x0 0x11a00000 0x200>,	/* MAILBOX_AP_CHUB */
+			<0x0 0x10e00000 0x40000>, /* intMEM_Instr */
+			<0x0 0x10cf0000 0x100>,	/* DUMP_GPR_SHUB */
+			<0x0 0x11862d00 0x10>,	/* CHUB_CPU_CONFIGURATION */
+			<0x0 0x10d20000 0x10>,	/* BAAW_C_SHUB to access the mailbox and rtc */
+			<0x0 0x11800800 0x10>,	/*CHUB_CMU_CHUB_CONTROLLER_OPTION*/
+			<0x0 0x11bd0040 0x10>;    /* GPH2_CON */
+	        reg-names = "mailbox", "sram", "dumpgpr",
+		                "chub_reset", "chub_baaw",
+				"cmu_chub_qch", "vdd_sensor_en";
+		/* BAAW_C_SHUB = BAAW_P_APM_CHUB */
+		baaw,baaw-p-apm-chub = <0x40300 0x40900 0x11900>;
+		/* none, pass, os.checked_0.bin */
+		os-type = "os.checked_0.bin";
 	};
 };
