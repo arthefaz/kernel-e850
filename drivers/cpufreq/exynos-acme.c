@@ -1226,7 +1226,7 @@ static int init_dm(struct exynos_cpufreq_domain *domain,
 	return register_exynos_dm_freq_scaler(domain->dm_type, dm_scaler);
 }
 
-static __init int init_slack_timer(struct exynos_cpufreq_domain *domain,
+static __init void init_slack_timer(struct exynos_cpufreq_domain *domain,
 		struct device_node *dn)
 {
 	int cpu;
@@ -1234,28 +1234,25 @@ static __init int init_slack_timer(struct exynos_cpufreq_domain *domain,
 
 	timer_node = of_find_node_by_type(dn, "slack-timer-domain");
 	if (!timer_node)
-		return -EINVAL;
+		return;
 
 	for_each_cpu(cpu, &domain->cpus) {
 		struct exynos_slack_timer *slack_timer =
 			&per_cpu(exynos_slack_timer, cpu);
 
 		/* parsing slack info */
-		if (of_property_read_u32(timer_node, "enabled", &slack_timer->enabled))
-			return -EINVAL;
-
-		if (slack_timer->enabled) {
-			if (of_property_read_u32(timer_node, "expired_time", &slack_timer->expired_time))
-				slack_timer->expired_time = DEFAULT_EXPIRED_TIME;
-
-			slack_timer->min = ULONG_MAX;
-
-			/* Initialize slack-timer */
-			setup_timer(&slack_timer->timer, slack_nop_timer, TIMER_PINNED);
+		if (of_property_read_u32(timer_node, "expired_time", &slack_timer->expired_time)) {
+			slack_timer->enabled = 0;
+			break;
 		}
+
+		slack_timer->min = ULONG_MAX;
+
+		/* Initialize slack-timer */
+		setup_timer(&slack_timer->timer, slack_nop_timer, TIMER_PINNED);
 	}
+
 	pr_info("Success: Initialize Slack Timer");
-	return 0;
 }
 
 static __init int init_domain(struct exynos_cpufreq_domain *domain,
@@ -1293,9 +1290,7 @@ static __init int init_domain(struct exynos_cpufreq_domain *domain,
 	domain->resume_freq = cal_dfs_get_resume_freq(domain->cal_id);
 
 	/* Initialize slack timer */
-	ret = init_slack_timer(domain, dn);
-	if (ret)
-		return ret;
+	init_slack_timer(domain, dn);
 
 	ret = init_table(domain);
 	if (ret)
