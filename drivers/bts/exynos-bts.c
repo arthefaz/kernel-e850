@@ -33,6 +33,7 @@ static bool btsdbg_log = false;
 
 static struct pm_qos_request exynos_mif_qos;
 static struct pm_qos_request exynos_int_qos;
+static unsigned int int_request_disable;
 
 static struct bts_device *btsdev;
 
@@ -41,7 +42,7 @@ static void bts_calc_bw(void)
 	unsigned int i = 0;
 	unsigned int total_read = 0;
 	unsigned int total_write = 0;
-	unsigned int mif_freq, int_freq;
+	unsigned int mif_freq, int_freq = 0;
 
 	mutex_lock(&btsdev->mutex_lock);
 
@@ -63,13 +64,15 @@ static void bts_calc_bw(void)
 		btsdev->peak_bw = (total_write / NUM_CHANNEL);
 
 	mif_freq = (btsdev->total_bw * 100) / BUS_WIDTH / MIF_UTIL;
-	int_freq = (btsdev->peak_bw * 100) / BUS_WIDTH / INT_UTIL;
+	if (!int_request_disable)
+		int_freq = (btsdev->peak_bw * 100) / BUS_WIDTH / INT_UTIL;
 
 	BTSDBG_LOG(btsdev->dev, "BW: T:%.8u R:%.8u W:%.8u P:%.8u MIF:%.8u INT:%.8u\n",
 			btsdev->total_bw, total_read, total_write, btsdev->peak_bw, mif_freq, int_freq);
 
 	pm_qos_update_request(&exynos_mif_qos, mif_freq);
-	pm_qos_update_request(&exynos_int_qos, int_freq);
+	if (!int_request_disable)
+		pm_qos_update_request(&exynos_int_qos, int_freq);
 
 	mutex_unlock(&btsdev->mutex_lock);
 }
@@ -2078,6 +2081,9 @@ static int bts_parse_data(struct device_node *np, struct bts_device *data)
 			goto err;
 		}
 
+		if (of_property_read_u32(np, "int_request_disable", &int_request_disable))
+			int_request_disable = 0;
+
 		i = 0;
 
 		for_each_child_of_node(np, child_np) {
@@ -2194,7 +2200,8 @@ static int bts_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, btsdev);
 
 	pm_qos_add_request(&exynos_mif_qos, PM_QOS_BUS_THROUGHPUT, 0);
-	pm_qos_add_request(&exynos_int_qos, PM_QOS_DEVICE_THROUGHPUT, 0);
+	if (!int_request_disable)
+		pm_qos_add_request(&exynos_int_qos, PM_QOS_DEVICE_THROUGHPUT, 0);
 
 	ret = exynos_bts_debugfs_init();
 	if (ret)
