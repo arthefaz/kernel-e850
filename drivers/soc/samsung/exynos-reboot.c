@@ -14,84 +14,67 @@
 #include <linux/of.h>
 #include <linux/input.h>
 #include <linux/delay.h>
-#include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/reboot.h>
 #include <linux/soc/samsung/exynos-soc.h>
-#include <soc/samsung/exynos-debug.h>
 #include <linux/debug-snapshot.h>
-
 #ifdef CONFIG_EXYNOS_ACPM
 #include <soc/samsung/acpm_ipc_ctrl.h>
 #endif
-#include <soc/samsung/exynos-pmu.h>
 #include <linux/mfd/samsung/s2mpu12-regulator.h>
 
-extern void (*arm_pm_restart)(enum reboot_mode reboot_mode, const char *cmd);
-static void __iomem *exynos_pmu_base = NULL;
-static struct device *exynos_reboot_dev;
-
-static const char * const big_cores[] = {
-	"arm,mongoose",
-	"arm,meerkat",
-	"arm,cortex-a73",
-	NULL,
-};
-
-static bool is_big_cpu(struct device_node *cn)
-{
-	const char * const *lc;
-	for (lc = big_cores; *lc; lc++)
-		if (of_device_is_compatible(cn, *lc))
-			return true;
-	return false;
-}
-
-int soc_has_big(void)
-{
-	struct device_node *cn = NULL;
-	u32 big_cpu_cnt = 0;
-
-	/* find arm,mongoose compatable in device tree */
-	while ((cn = of_find_node_by_type(cn, "cpu"))) {
-		if (is_big_cpu(cn))
-			big_cpu_cnt++;
-	}
-	return big_cpu_cnt;
-}
-
-#define CPU_RESET_DISABLE_FROM_SOFTRESET	(0x041C)
-#define CPU_RESET_DISABLE_FROM_WDTRESET	(0x0414)
-#define BIG_CPU0_RESET			(0x220C)
-#define BIG_NONCPU_ETC_RESET		(0x242C)
-#define	PMU_CPU_OFFSET			(0x80)
 #define SWRESET				(0x2)
 #define SYSTEM_CONFIGURATION		(0x3a00)
-#define RESET_SEQUENCER_CONFIGURATION	(0x0500)
 #define PS_HOLD_CONTROL			(0x030C)
-#define EXYNOS_PMU_SYSIP_DAT0			(0x0810)
-
-#define INFORM_NONE		0x0
-#define INFORM_RAMDUMP		0xd
-#define INFORM_RECOVERY		0xf
+#define EXYNOS_PMU_SYSIP_DAT0		(0x0810)
 
 #define REBOOT_MODE_NORMAL		0x00
 #define REBOOT_MODE_CHARGE		0x0A
-/* Reboot into fastboot mode */
 #define REBOOT_MODE_FASTBOOT		0xFC
-/* Reboot into recovery */
 #define REBOOT_MODE_RECOVERY		0xFF
-/* Reboot into recovery */
 #define REBOOT_MODE_FACTORY		0xFD
 
-#if !defined(CONFIG_SEC_REBOOT)
-#ifdef CONFIG_OF
-static void exynos_power_off(void)
-{
-	int poweroff_try = 0;
+extern void (*arm_pm_restart)(enum reboot_mode reboot_mode, const char *cmd);
 
-	dev_info(exynos_reboot_dev, "%s: Power off %d \n", __func__, s2mpu12_read_pwron_status());
+struct exynos_reboot_variant {
+	int ps_hold_reg;
+	int ps_hold_data_bit;
+	int swreset_reg;
+	int swreset_bit;
+	int reboot_mode_reg;
+	void (*reboot)(enum reboot_mode mode, const char *cmd);
+	void (*power_off)(void);
+	void (*reset_control)(void);
+};
+
+static struct exynos_exynos_reboot {
+	struct device *dev;
+	const struct exynos_reboot_variant *variant;
+	void __iomem *reg_base;
+	char reset_reason[SZ_32];
+} exynos_reboot;
+
+static const struct exynos_reboot_variant *exynos_reboot_get_variant(struct platform_device *pdev)
+{
+	const struct exynos_reboot_variant *variant = of_device_get_match_data(&pdev->dev);
+
+	if (!variant) {
+		/* Device matched by platform_device_id */
+		variant = (const struct exynos_reboot_variant *)
+			   platform_get_device_id(pdev)->driver_data;
+	}
+
+	return variant;
+}
+
+static void exynos_power_off_v1(void)
+{
+	const struct exynos_reboot_variant *variant = exynos_reboot.variant;
+	int poweroff_try = 0;
+	unsigned int val = 0;
+
+	dev_info(exynos_reboot.dev, "Power off(%d)\n", s2mpu12_read_pwron_status());
 
 	while (1) {
 		/* wait for power button release */
@@ -100,120 +83,162 @@ static void exynos_power_off(void)
 			exynos_acpm_reboot();
 #endif
 			dbg_snapshot_scratch_clear();
-			dev_emerg(exynos_reboot_dev, "%s: Set PS_HOLD Low.\n", __func__);
-			writel(readl(exynos_pmu_base + PS_HOLD_CONTROL) & 0xFFFFFEFF,
-						exynos_pmu_base + PS_HOLD_CONTROL);
+			dev_emerg(exynos_reboot.dev, "Set PS_HOLD Low.\n");
+			val = readl((void *)((long)exynos_reboot.reg_base + variant->ps_hold_reg));
+			writel(val & ~(1 << variant->ps_hold_data_bit),
+					(void *)((long)exynos_reboot.reg_base + variant->ps_hold_reg));
 
 			++poweroff_try;
-			dev_emerg(exynos_reboot_dev, "%s: Should not reach here! (poweroff_try:%d)\n",
-				 __func__, poweroff_try);
+			dev_emerg(exynos_reboot.dev, "Should not reach here! (poweroff_try:%d)\n", poweroff_try);
 		} else {
 			/* if power button is not released, wait and check TA again */
-			dev_info(exynos_reboot_dev, "%s: PowerButton is not released.\n", __func__);
+			dev_info(exynos_reboot.dev, "PowerButton is not released.\n");
 		}
 		mdelay(1000);
 	}
 }
-#else
-static void exynos_power_off(void)
-{
-	dev_info(exynos_reboot_dev, "Exynos power off does not support.\n");
-}
-#endif
-#endif
 
-static void exynos_reboot(enum reboot_mode mode, const char *cmd)
+static void exynos_restart_v1(enum reboot_mode mode, const char *cmd)
 {
+	const struct exynos_reboot_variant *variant = exynos_reboot.variant;
+	u32 reboot_mode = REBOOT_MODE_NORMAL;
 	u32 soc_id, revision;
-	void __iomem *addr;
 
-	if (!exynos_pmu_base)
-		return;
 #ifdef CONFIG_EXYNOS_ACPM
 	exynos_acpm_reboot();
 #endif
-	printk("[%s] reboot cmd: %s\n", __func__, cmd);
-
-	addr = exynos_pmu_base + EXYNOS_PMU_SYSIP_DAT0;
+	dev_info(exynos_reboot.dev, "reboot command: %s\n", cmd);
+	dbg_snapshot_scratch_clear();
 	if (cmd) {
-		if (!strcmp((char *)cmd, "charge")) {
-			__raw_writel(REBOOT_MODE_CHARGE, addr);
-		} else if (!strcmp(cmd, "bootloader") || !strcmp(cmd, "bl") ||
-				!strcmp((char *)cmd, "fastboot") || !strcmp(cmd, "fb")) {
-			__raw_writel(REBOOT_MODE_FASTBOOT, addr);
-		} else if (!strcmp(cmd, "recovery")) {
-			__raw_writel(REBOOT_MODE_RECOVERY, addr);
-		} else if (!strcmp(cmd, "sfactory")) {
-			__raw_writel(REBOOT_MODE_FACTORY, addr);
-		}
+		if (!strcmp(cmd, "charge"))
+			reboot_mode = REBOOT_MODE_CHARGE;
+		else if (!strcmp(cmd, "bootloader") || !strcmp(cmd, "bl") ||
+				!strcmp(cmd, "fastboot") || !strcmp(cmd, "fb"))
+			reboot_mode = REBOOT_MODE_FASTBOOT;
+		else if (!strcmp(cmd, "recovery"))
+			reboot_mode = REBOOT_MODE_RECOVERY;
+		else if (!strcmp(cmd, "sfactory"))
+			reboot_mode = REBOOT_MODE_FACTORY;
 	}
+	writel(reboot_mode, (void *)((long)exynos_reboot.reg_base + variant->reboot_mode_reg));
 
+	if (variant->reset_control)
+		variant->reset_control();
 	/* Check by each SoC */
 	soc_id = exynos_soc_info.product_id;
 	revision = exynos_soc_info.revision;
-	dev_info(exynos_reboot_dev, "SOC ID %X. Revision: %x\n", soc_id, revision);
+	dev_info(exynos_reboot.dev, "SOC ID %X. Revision: %x\n", soc_id, revision);
 
 	/* Do S/W Reset */
-	dev_emerg(exynos_reboot_dev, "%s: Exynos SoC reset right now\n", __func__);
-	__raw_writel(SWRESET, exynos_pmu_base + SYSTEM_CONFIGURATION);
+	dev_emerg(exynos_reboot.dev, "Exynos SoC reset right now\n");
+	writel(1 << variant->swreset_bit, (void *)((long)exynos_reboot.reg_base + variant->swreset_reg));
 
 	/* Wait for S/W reset */
 	dbg_snapshot_spin_func();
 }
 
-static int __init exynos_reboot_setup(struct device_node *np)
+static ssize_t reset_reason_show(struct device *dev,
+			         struct device_attribute *attr, char *buf)
 {
-	int err = 0;
-	u32 id;
+	return snprintf(buf, SZ_32, "%s\n", exynos_reboot.reset_reason);
+}
+DEVICE_ATTR_RO(reset_reason);
 
-	if (!of_property_read_u32(np, "pmu_base", &id)) {
-		exynos_pmu_base = ioremap(id, SZ_16K);
-		if (!exynos_pmu_base) {
-			dev_err(exynos_reboot_dev, "%s: failed to map to exynos-pmu-base address 0x%x\n",
-				__func__, id);
-			err = -ENOMEM;
-		}
+static struct attribute *exynos_reboot_attrs[] = {
+	&dev_attr_reset_reason.attr,
+	NULL,
+};
+
+ATTRIBUTE_GROUPS(exynos_reboot);
+
+static int exynos_reboot_probe(struct platform_device *pdev)
+{
+	struct resource *resource;
+
+	dev_set_socdata(&pdev->dev, "Exynos", "Reboot");
+
+	exynos_reboot.dev = &pdev->dev;
+	exynos_reboot.variant = exynos_reboot_get_variant(pdev);
+
+	resource = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	exynos_reboot.reg_base = devm_ioremap_resource(&pdev->dev, resource);
+	if (IS_ERR(exynos_reboot.reg_base)) {
+		dev_err(&pdev->dev, "failed ioremap\n");
+		return -EINVAL;
 	}
 
-	of_node_put(np);
+	if (!exynos_reboot.variant) {
+		dev_err(&pdev->dev, "variant is null\n");
+		return -ENODEV;
+	}
 
-	exynos_reboot_dev = create_empty_device();
-	if (!exynos_reboot_dev) {
-		panic("[Exynos Reboot] : fail to register empty device\n");
+	if (exynos_reboot.variant->reboot) {
+		arm_pm_restart = exynos_reboot.variant->reboot;
+		dev_info(&pdev->dev, "Success to register arm_pm_restart\n");
+	}
+
+	if (exynos_reboot.variant->power_off) {
+		pm_power_off = exynos_reboot.variant->power_off;
+		dev_info(&pdev->dev, "Success to register pm_power_off\n");
+	}
+
+	if (sysfs_create_groups(&pdev->dev.kobj, exynos_reboot_groups)) {
+		dev_err(&pdev->dev, "failed create sysfs\n");
+		return -ENOMEM;
 	} else {
-		dev_set_socdata(exynos_reboot_dev, "Exynos", "Reboot");
-		dev_info(exynos_reboot_dev, "Success to register arm_pm_restart\n");
+		dev_info(&pdev->dev, "Success to register sysfs\n");
 	}
 
-#ifndef CONFIG_DEBUG_SNAPSHOT
-	/* If Debug-Snapshot is disabed, This code prevents entering fastboot */
-	writel(0, exynos_pmu_base + RESET_SEQUENCER_CONFIGURATION);
-#endif
-	return err;
+	return 0;
 }
 
-static const struct of_device_id reboot_of_match[] __initconst = {
-	{ .compatible = "exynos,reboot", .data = exynos_reboot_setup},
+static const struct exynos_reboot_variant drv_data_v1 = {
+	.ps_hold_reg = PS_HOLD_CONTROL,
+	.ps_hold_data_bit = 8,
+	.swreset_reg = SYSTEM_CONFIGURATION,
+	.swreset_bit = 1,
+	.reboot_mode_reg = EXYNOS_PMU_SYSIP_DAT0,
+	.reboot = exynos_restart_v1,
+	.power_off = exynos_power_off_v1,
+};
+
+static const struct of_device_id exynos_reboot_match[] = {
+	{
+		.compatible = "exynos,reboot-v1",
+		.data = &drv_data_v1,
+	},
 	{},
 };
 
-typedef int (*reboot_initcall_t)(const struct device_node *);
+static const struct platform_device_id exynos_reboot_ids[] = {
+	{
+		.name = "exynos-reboot",
+		.driver_data = (unsigned long)&drv_data_v1,
+	},
+	{},
+};
+
+static struct platform_driver exynos_reboot_driver = {
+	.driver = {
+		.name = "exynos-reboot",
+		.owner = THIS_MODULE,
+		.of_match_table	= of_match_ptr(exynos_reboot_match),
+		.groups = exynos_reboot_groups,
+	},
+	.probe		= exynos_reboot_probe,
+	.id_table	= exynos_reboot_ids,
+};
+
+static int __init reset_reason_setup(char *str)
+{
+	strncpy(exynos_reboot.reset_reason, str, strlen(str));
+
+	return 1;
+}
+__setup("androidboot.bootreason=", reset_reason_setup);
+
 static int __init exynos_reboot_init(void)
 {
-	struct device_node *np;
-	const struct of_device_id *matched_np;
-	reboot_initcall_t init_fn;
-
-	np = of_find_matching_node_and_match(NULL, reboot_of_match, &matched_np);
-	if (!np)
-		return -ENODEV;
-
-	arm_pm_restart = exynos_reboot;
-#if !defined(CONFIG_SEC_REBOOT)
-	pm_power_off = exynos_power_off;
-#endif
-	init_fn = (reboot_initcall_t)matched_np->data;
-
-	return init_fn(np);
+	return platform_driver_register(&exynos_reboot_driver);
 }
 subsys_initcall(exynos_reboot_init);
