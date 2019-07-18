@@ -598,9 +598,7 @@
 
 	usbdrd_phy0: phy@135d0000 {
 		compatible = "samsung,exynos-usbdrd-phy";
-		reg = <0x0 0x135d0000 0x200>,
-			<0x0 0x130A0000 0x2800>,
-			<0x0 0x130B0000 0x800>;
+		reg = <0x0 0x135d0000 0x200>;
 		interrupts = <0 INTREQ__HSI2C_1 0>,
 			     <0 INTREQ__HSI2C_0 0>;
 		clocks = <&clock OSCCLK>, <&clock GATE_USB20DRD_TOP_QCH_LINK>;
@@ -621,7 +619,7 @@
 		/* if Main phy has the other phy, it must be set to 1. jusf for usbphy_info */
 		has_other_phy = <0>;
 		/* if combo phy is used, it must be set to 1. usbphy_sub_info is enabled */
-		has_combo_phy = <1>;
+		has_combo_phy = <0>;
 		sub_phy_version = <0x400>;
 
 		/* ip type */
