@@ -879,7 +879,7 @@
 		#address-cells = <2>;
 		#size-cells = <1>;
 		ranges;
-		//samsung,power-domain = <&pd_usb>;
+		samsung,power-domain = <&pd_hsi>;
 		status = "disabled";
 
 		usbdrd_dwc3: dwc3 {
