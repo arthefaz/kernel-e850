@@ -78,7 +78,7 @@ static inline void pr_ipc_msg(int level, u8 ch, const char *prefix,
 	offset = strlen(str);
 	dump2hex((str + offset), msg, (len > MAX_HEX_LEN ? MAX_HEX_LEN : len));
 
-	gif_err("%s\n", str);
+	gif_info("%s\n", str);
 }
 
 void gnss_log_ipc_pkt(struct sk_buff *skb, enum direction dir)
@@ -119,10 +119,119 @@ void gnss_log_ipc_pkt(struct sk_buff *skb, enum direction dir)
 
 	/**
 	* Print an IPC message with the prefix
-    */
+	*/
 	msg = skb->data + hdr_len;
 	msg_len = (skb->len - hdr_len);
 
 	pr_ipc_msg(log_info.fmt_msg, ch, prefix, msg, msg_len);
 }
 
+void gif_init_irq(struct gnss_irq *irq, unsigned int num, const char *name,
+                  unsigned long flags)
+{
+        spin_lock_init(&irq->lock);
+        irq->num = num;
+        strncpy(irq->name, name, sizeof(irq->name) - 1);
+        irq->flags = flags;
+        gif_info("name:%s num:%d flags:0x%08lX\n", name, num, flags);
+
+}
+
+int gif_request_irq(struct gnss_irq *irq, irq_handler_t isr, void *data)
+{
+	int ret;
+
+	ret = request_irq(irq->num, isr, irq->flags, irq->name, data);
+	if (ret) {
+		gif_err("%s: ERR! request_irq fail (%d)\n", irq->name, ret);
+		return ret;
+	}
+
+	enable_irq_wake(irq->num);
+	irq->active = true;
+	irq->registered = true;
+
+	gif_info("%s(#%d) handler registered (flags:0x%08lX)\n",
+		irq->name, irq->num, irq->flags);
+
+	return 0;
+}
+
+void gif_enable_irq(struct gnss_irq *irq)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&irq->lock, flags);
+
+	if (irq->active) {
+		gif_err("%s(#%d) is already active <%pf>\n",
+			irq->name, irq->num, CALLER);
+		goto exit;
+	}
+
+	enable_irq(irq->num);
+	enable_irq_wake(irq->num);
+
+	irq->active = true;
+
+	gif_info("%s(#%d) is enabled <%pf>\n",
+		irq->name, irq->num, CALLER);
+
+exit:
+	spin_unlock_irqrestore(&irq->lock, flags);
+}
+
+
+void gif_disable_irq_nosync(struct gnss_irq *irq)
+{
+	unsigned long flags;
+
+	if (irq->registered == false)
+		return;
+
+	spin_lock_irqsave(&irq->lock, flags);
+
+	if (!irq->active) {
+		gif_err("%s(#%d) is not active <%pf>\n",
+			irq->name, irq->num, CALLER);
+		goto exit;
+	}
+
+	disable_irq_nosync(irq->num);
+	disable_irq_wake(irq->num);
+
+	irq->active = false;
+
+	gif_info("%s(#%d) is disabled <%pf>\n",
+			irq->name, irq->num, CALLER);
+
+exit:
+	spin_unlock_irqrestore(&irq->lock, flags);
+}
+
+void gif_disable_irq_sync(struct gnss_irq *irq)
+{
+	if (irq->registered == false)
+		return;
+
+	spin_lock(&irq->lock);
+
+	if (!irq->active) {
+		spin_unlock(&irq->lock);
+		gif_err("%s(#%d) is not active <%pf>\n",
+				irq->name, irq->num, CALLER);
+		return;
+	}
+
+	spin_unlock(&irq->lock);
+
+	disable_irq(irq->num);
+	disable_irq_wake(irq->num);
+
+	spin_lock(&irq->lock);
+	irq->active = false;
+	spin_unlock(&irq->lock);
+
+	gif_info("%s(#%d) is disabled <%pf>\n",
+			irq->name, irq->num, CALLER);
+}

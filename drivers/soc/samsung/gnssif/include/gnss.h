@@ -18,6 +18,8 @@
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
 
+#define MAX_NAME_LEN            64
+
 /**
  * struct gnss_io_t - declaration for io_device
  * @name:	device name
@@ -54,7 +56,6 @@ enum gnss_bcmd_ctrl {
 enum gnss_reg_type {
 	GNSS_REG_RX_IPC_MSG,
 	GNSS_REG_TX_IPC_MSG,
-	GNSS_REG_WAKE_LOCK,
 	GNSS_REG_RX_HEAD,
 	GNSS_REG_RX_TAIL,
 	GNSS_REG_TX_HEAD,
@@ -69,16 +70,18 @@ enum gnss_ipc_vector {
 };
 
 struct gnss_mbox {
-	int int_ap2gnss_bcmd;
-	int int_ap2gnss_req_fault_info;
-	int int_ap2gnss_ipc_msg;
-	int int_ap2gnss_ack_wake_set;
-	int int_ap2gnss_ack_wake_clr;
+	/* ap2gnss */
+	int int_bcmd;
+	int int_req_fault_info;
+	int int_ipc_msg;
+	int int_ack_wake_set;
 
-	int irq_gnss2ap_bcmd;
-	int irq_gnss2ap_rsp_fault_info;
-	int irq_gnss2ap_ipc_msg;
-	int irq_gnss2ap_req_wake_clr;
+	/* gnss2ap */
+	int irq_bcmd;
+	int irq_rsp_fault_info;
+	int irq_ipc_msg;
+	int irq_req_wake_clr;
+	int irq_simple_lock;
 
 	unsigned reg_bcmd_ctrl[BCMD_CTRL_COUNT];
 
@@ -108,8 +111,8 @@ struct gnss_fault_data_area {
 	u32 device;
 };
 
-/* platform data */
-struct gnss_data {
+/* Platform data */
+struct gnss_pdata {
 	char *name;
 	char *device_node_name;
 
@@ -123,26 +126,24 @@ struct gnss_data {
 
 	struct gnss_fault_data_area fault_info;
 
-	/* Information of IO devices */
 	struct gnss_io_t *iodev;
-
-	/* SHDMEM ADDR */
 	struct shmem_link_device *shmd;
+
 	u32 shmem_base;
 	u32 shmem_size;
 	u32 ipcmem_offset;
 	u32 ipc_size;
 	u32 ipc_reg_cnt;
-
-	u8 __iomem *gnss_base;
-	u8 __iomem *ipc_base;
 };
 
-struct shmem_conf {
-	u32 shmem_base;
-	u32 shmem_size;
+struct gnss_irq {
+	spinlock_t lock;
+	unsigned int num;
+	char name[MAX_NAME_LEN];
+	unsigned long flags;
+	bool active;
+	bool registered;
 };
-
 
 #ifdef CONFIG_OF
 #define gif_dt_read_enum(np, prop, dest) \
@@ -187,7 +188,7 @@ struct shmem_conf {
 #define CALLER	(__builtin_return_address(0))
 
 #define gif_err_limited(fmt, ...) \
-	 printk_ratelimited(KERN_ERR "%s: " pr_fmt(fmt), __func__, ##__VA_ARGS__)
+	 printk_ratelimited(KERN_ERR LOG_TAG "%s: " pr_fmt(fmt), __func__, ##__VA_ARGS__)
 #define gif_err(fmt, ...) \
 	pr_err(LOG_TAG "%s: " pr_fmt(fmt), __func__, ##__VA_ARGS__)
 #define gif_debug(fmt, ...) \

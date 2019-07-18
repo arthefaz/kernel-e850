@@ -49,7 +49,7 @@ void gnss_write_reg(struct shmem_link_device *shmd,
 	if (gnss_reg) {
 		switch (gnss_reg->device) {
 		case GNSS_IPC_MBOX:
-			mbox_set_value(shmd->mbx->id, gnss_reg->value.index, value);
+			gnss_mbox_set_value(shmd->mbx->id, gnss_reg->value.index, value);
 			break;
 		case GNSS_IPC_SHMEM:
 			iowrite32(value, gnss_reg->value.addr);
@@ -72,7 +72,7 @@ u32 gnss_read_reg(struct shmem_link_device *shmd, enum gnss_reg_type reg)
 	if (gnss_reg) {
 		switch (gnss_reg->device) {
 		case GNSS_IPC_MBOX:
-			ret = mbox_get_value(shmd->mbx->id, gnss_reg->value.index);
+			ret = gnss_mbox_get_value(shmd->mbx->id, gnss_reg->value.index);
 			break;
 		case GNSS_IPC_SHMEM:
 			ret = ioread32(gnss_reg->value.addr);
@@ -96,7 +96,7 @@ u32 gnss_read_reg(struct shmem_link_device *shmd, enum gnss_reg_type reg)
  */
 static inline u16 recv_int2ap(struct shmem_link_device *shmd)
 {
-	return (u16)mbox_get_value(shmd->mbx->id, shmd->mbx->irq_gnss2ap_ipc_msg);
+	return (u16)gnss_mbox_get_value(shmd->mbx->id, shmd->mbx->irq_ipc_msg);
 }
 
 /**
@@ -107,7 +107,7 @@ static inline u16 recv_int2ap(struct shmem_link_device *shmd)
 static inline void send_int2gnss(struct shmem_link_device *shmd, u16 mask)
 {
 	gnss_write_reg(shmd, GNSS_REG_TX_IPC_MSG, mask);
-	mbox_set_interrupt(shmd->mbx->id, shmd->mbx->int_ap2gnss_ipc_msg);
+	gnss_mbox_set_interrupt(shmd->mbx->id, shmd->mbx->int_ipc_msg);
 }
 
 /**
@@ -383,7 +383,7 @@ static void ipc_rx_task(unsigned long data)
  *   shmem_irq_handler -> udl_handler
  *   shmem_irq_handler -> ipc_rx_task -> msg_handler -> rx_ipc_frames ->  ...
  */
-static void shmem_irq_msg_handler(void *data)
+static irqreturn_t shmem_irq_msg_handler(int irq, void *data)
 {
 	struct shmem_link_device *shmd = (struct shmem_link_device *)data;
 	//struct mem_status *mst = gnss_msq_get_free_slot(&shmd->rx_msq);
@@ -401,6 +401,8 @@ static void shmem_irq_msg_handler(void *data)
 	*/
 
 	tasklet_hi_schedule(&shmd->rx_tsk);
+
+	return IRQ_HANDLED;
 }
 
 /**
@@ -630,10 +632,6 @@ static int shmem_send(struct link_device *ld, struct io_device *iod,
 	struct shmem_link_device *shmd = to_shmem_link_device(ld);
 	int len = skb->len;
 
-#ifndef USE_SIMPLE_WAKE_LOCK
-	wake_lock_timeout(&shmd->wlock, IPC_WAKELOCK_TIMEOUT);
-#endif
-
 	shmem_try_send_ipc(shmd, iod, skb);
 
 	return len;
@@ -665,14 +663,14 @@ static void shmem_remap_ipc_region(struct shmem_link_device *shmd)
 
 	reg_base = (u32 *)(tmap + shmd->ipc_mem.size - sh_reg_size);
 
-	gif_err("RX region : %x @ %p\n", dev->rxq.size, dev->rxq.buff);
-	gif_err("TX region : %x @ %p\n", dev->txq.size, dev->txq.buff);
+	gif_info("RX region : %x @ %p\n", dev->rxq.size, dev->rxq.buff);
+	gif_info("TX region : %x @ %p\n", dev->txq.size, dev->txq.buff);
 
 	for (i = 0; i < GNSS_REG_COUNT; i++) {
 		shreg = shmd->reg[i];
 		if (shreg && (shreg->device == GNSS_IPC_SHMEM)) {
 			shreg->value.addr = reg_base + shreg->value.index;
-			gif_err("Reg %s -> %p\n", shreg->name, shreg->value.addr);
+			gif_info("Reg %s -> %p\n", shreg->name, shreg->value.addr);
 		}
 	}
 }
@@ -779,7 +777,7 @@ shmem_dump_mem_to_fault:
 static int shmem_dump_fault_mbx_to_user(struct link_device *ld,
 			void __user *user_dst, u32 size)
 {
-	struct gnss_data *pdata;
+	struct gnss_pdata *pdata;
 	struct gnss_mbox *mbx;
 	u32 *dump_info;
 	unsigned int max_size;
@@ -787,7 +785,7 @@ static int shmem_dump_fault_mbx_to_user(struct link_device *ld,
 	int err = 0;
 	int i;
 
-	pdata = ld->gnss_data;
+	pdata = ld->pdata;
 	mbx = pdata->mbx;
 
 	reg_cnt = pdata->fault_info.size;
@@ -808,7 +806,7 @@ static int shmem_dump_fault_mbx_to_user(struct link_device *ld,
 	}
 
 	for (i = 0; i < reg_cnt; i++)
-		dump_info[i] = mbox_get_value(mbx->id,
+		dump_info[i] = gnss_mbox_get_value(mbx->id,
 				pdata->fault_info.value.index + i);
 
 	err = copy_to_user(user_dst, dump_info, size);
@@ -823,33 +821,40 @@ shmem_dump_mbx_to_fault:
 	return err;
 }
 
-static ssize_t rx_int_count_show(struct device *dev,
+static ssize_t map_info_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	struct gnss_data *gnss;
-	gnss = (struct gnss_data *)dev->platform_data;
-	return sprintf(buf, "%d\n", gnss->shmd->rx_int_count);
+	struct gnss_pdata *pdata = (struct gnss_pdata *)dev->platform_data;
+
+	return sprintf(buf, "Reserved Region: 0x00000000 0x%08X\n"
+			"Fault Region: 0x%08X 0x%08X\n"
+			"IPC Region: 0x%08X 0x%08X\n",
+			pdata->shmem_size,
+			pdata->fault_info.value.index, pdata->fault_info.size,
+			pdata->ipcmem_offset, pdata->ipc_size);
 }
 
-static ssize_t rx_int_count_store(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count)
+static ssize_t shm_status_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
-	struct gnss_data *gnss;
-	int val = 0;
-	int ret;
-	gnss = (struct gnss_data *)dev->platform_data;
-	ret = sscanf(buf, "%u", &val);
+	struct gnss_pdata *pdata = (struct gnss_pdata *)dev->platform_data;
+	struct shmem_link_device *shmd = pdata->shmd;
 
-	if (val == 0)
-		gnss->shmd->rx_int_count = 0;
-	return count;
+	return sprintf(buf, "TX head: 0x%08X\nTX tail: 0x%08X\n"
+			"RX head: 0x%08X\nRX tail: 0x%08X\n\n"
+			"int2gnss: 0x%08X\nint2ap: 0x%08X\n"
+			"rx_int_count: 0x%08X\n",
+			get_txq_head(shmd), get_txq_tail(shmd),
+			get_rxq_head(shmd), get_rxq_tail(shmd),
+			read_int2gnss(shmd), recv_int2ap(shmd), shmd->rx_int_count);
 }
 
-static DEVICE_ATTR_RW(rx_int_count);
+static DEVICE_ATTR_RO(map_info);
+static DEVICE_ATTR_RO(shm_status);
 
 static struct attribute *shmem_attrs[] = {
-	&dev_attr_rx_int_count.attr,
+	&dev_attr_map_info.attr,
+	&dev_attr_shm_status.attr,
 	NULL,
 };
 
@@ -858,27 +863,61 @@ static const struct attribute_group shmem_group = {		\
 	.name = "shmem",
 };
 
+static void __iomem *get_nc_region(phys_addr_t base, size_t size)
+{
+	int i;
+	unsigned int num_pages = (size >> PAGE_SHIFT);
+	pgprot_t prot = pgprot_writecombine(PAGE_KERNEL);
+	struct page **pages;
+	void *v_addr;
+
+	if (!base)
+		return NULL;
+
+	if (size > (num_pages << PAGE_SHIFT))
+		num_pages++;
+
+	pages = kmalloc(sizeof(struct page *) * num_pages, GFP_ATOMIC);
+	if (!pages) {
+		gif_err("%s: pages allocation fail!\n", __func__);
+		return NULL;
+	}
+
+	for (i = 0; i < num_pages; i++) {
+		pages[i] = phys_to_page(base);
+		base += PAGE_SIZE;
+	}
+
+	v_addr = vmap(pages, num_pages, VM_MAP, prot);
+	if (v_addr == NULL)
+		gif_err("%s: Failed to vmap pages\n", __func__);
+
+	kfree(pages);
+
+	return (void __iomem *)v_addr;
+}
+
 struct link_device *create_link_device_shmem(struct platform_device *pdev)
 {
 	struct shmem_link_device *shmd = NULL;
 	struct link_device *ld = NULL;
-	struct gnss_data *gnss = NULL;
+	struct gnss_pdata *pdata = NULL;
 	struct device *dev = &pdev->dev;
 	int err = 0;
 
 	gif_info("+++\n");
 
 	/* Get the gnss (platform) data */
-	gnss = (struct gnss_data *)dev->platform_data;
-	if (!gnss) {
+	pdata = (struct gnss_pdata *)dev->platform_data;
+	if (!pdata) {
 		gif_err("ERR! gnss == NULL\n");
 		return NULL;
 	}
-	gif_err("%s: %s\n", "SHMEM", gnss->name);
+	gif_info("%s: %s\n", "SHMEM", pdata->name);
 
-	if (!gnss->mbx) {
+	if (!pdata->mbx) {
 		gif_err("%s: ERR! %s->mbx == NULL\n",
-			"SHMEM", gnss->name);
+			"SHMEM", pdata->name);
 		return NULL;
 	}
 
@@ -889,10 +928,10 @@ struct link_device *create_link_device_shmem(struct platform_device *pdev)
 		goto error;
 	}
 	ld = &shmd->ld;
-	shmd->mbx = gnss->mbx;
+	shmd->mbx = pdata->mbx;
 
 	/* Retrieve gnss data and SHMEM control data from the gnss data */
-	ld->gnss_data = gnss;
+	ld->pdata = pdata;
 	ld->timeout_cnt = 0;
 	ld->name = "GNSS_SHDMEM";
 
@@ -912,31 +951,26 @@ struct link_device *create_link_device_shmem(struct platform_device *pdev)
 	ld->skb_rxq = &ld->sk_fmt_rx_q;
 
 	/* Initialize GNSS Reserved mem */
-#if defined(CONFIG_SOC_EXYNOS9610)
-	shmd->res_mem.size = gnss->shmem_size;
-#else
-	shmd->res_mem.size = gnss->ipcmem_offset;
-#endif
-	shmd->res_mem.paddr = gnss->shmem_base;
-	shmd->res_mem.vaddr = shm_request_region(shmd->res_mem.paddr,
-			shmd->res_mem.size);
+	shmd->res_mem.size = pdata->shmem_size;
+	shmd->res_mem.paddr = pdata->shmem_base;
+	shmd->res_mem.vaddr = get_nc_region(shmd->res_mem.paddr, shmd->res_mem.size);
 	if (!shmd->res_mem.vaddr) {
 		gif_err("%s: ERR! gnss_reserved_region fail\n", ld->name);
 		goto error;
 	}
-	gif_err("%s: Reserved Region "
+	gif_info("%s: Reserved Region "
 		"phys_addr:0x%08X virt_addr:0x%p size: %d\n", ld->name,
 		shmd->res_mem.paddr, shmd->res_mem.vaddr, shmd->res_mem.size);
 
 	/* Initialize GNSS fault info area */
-	if (gnss->fault_info.device == GNSS_IPC_SHMEM) {
+	if (pdata->fault_info.device == GNSS_IPC_SHMEM) {
 		ld->dump_fault_to_user = shmem_dump_fault_mem_to_user;
-		shmd->fault_mem.size = gnss->fault_info.size;
-		shmd->fault_mem.paddr = gnss->shmem_base + gnss->fault_info.value.index;
-		shmd->fault_mem.vaddr = shm_request_region(
+		shmd->fault_mem.size = pdata->fault_info.size;
+		shmd->fault_mem.paddr = pdata->shmem_base + pdata->fault_info.value.index;
+		shmd->fault_mem.vaddr = get_nc_region(
 				shmd->fault_mem.paddr, shmd->fault_mem.size);
 		if (!shmd->fault_mem.vaddr) {
-			gif_err("%s: ERR! fault shm_request_region fail\n",
+			gif_err("%s: ERR! fault get_nc_region fail\n",
 					ld->name);
 			goto error;
 		}
@@ -946,22 +980,22 @@ struct link_device *create_link_device_shmem(struct platform_device *pdev)
 			shmd->fault_mem.size);
 	} else {
 		ld->dump_fault_to_user = shmem_dump_fault_mbx_to_user;
-		shmd->fault_mem.size = gnss->fault_info.size;
+		shmd->fault_mem.size = pdata->fault_info.size;
 	}
 
 	/* Initialize GNSS IPC region */
-	shmd->ipc_reg_cnt = gnss->ipc_reg_cnt;
-	shmd->reg = gnss->reg;
+	shmd->ipc_reg_cnt = pdata->ipc_reg_cnt;
+	shmd->reg = pdata->reg;
 
-	shmd->ipc_mem.size = gnss->ipc_size;
-	shmd->ipc_mem.paddr = gnss->shmem_base + gnss->ipcmem_offset;
-	shmd->ipc_mem.vaddr = shm_request_region(shmd->ipc_mem.paddr,
+	shmd->ipc_mem.size = pdata->ipc_size;
+	shmd->ipc_mem.paddr = pdata->shmem_base + pdata->ipcmem_offset;
+	shmd->ipc_mem.vaddr = get_nc_region(shmd->ipc_mem.paddr,
 			shmd->ipc_mem.size);
 	if (!shmd->ipc_mem.vaddr) {
-		gif_err("%s: ERR! shm_request_region fail\n", ld->name);
+		gif_err("%s: ERR! get_nc_region fail\n", ld->name);
 		goto error;
 	}
-	gif_err("%s: IPC Region "
+	gif_info("%s: IPC Region "
 		"phys_addr:0x%08X virt_addr:0x%8p size:%d\n", ld->name,
 		shmd->ipc_mem.paddr, shmd->ipc_mem.vaddr, shmd->ipc_mem.size);
 
@@ -972,12 +1006,6 @@ struct link_device *create_link_device_shmem(struct platform_device *pdev)
 			ld->name, err);
 		goto error;
 	}
-
-#ifndef USE_SIMPLE_WAKE_LOCK
-	/* Initialize locks, completions, and bottom halves */
-	snprintf(shmd->wlock_name, MIF_MAX_NAME_LEN, "%s_wlock", ld->name);
-	wake_lock_init(&shmd->wlock, WAKE_LOCK_SUSPEND, shmd->wlock_name);
-#endif
 
 	tasklet_init(&shmd->rx_tsk, ipc_rx_task, (unsigned long)shmd);
 	INIT_DELAYED_WORK(&shmd->msg_rx_dwork, msg_rx_work);
@@ -997,16 +1025,16 @@ struct link_device *create_link_device_shmem(struct platform_device *pdev)
 	spin_lock_init(&shmd->rx_msq.lock);
 
 	/* Register interrupt handlers */
-	err = mbox_request_irq(shmd->mbx->id, shmd->mbx->irq_gnss2ap_ipc_msg,
+	err = gnss_mbox_register_irq(shmd->mbx->id, shmd->mbx->irq_ipc_msg,
 			       shmem_irq_msg_handler, shmd);
 	if (err) {
-		gif_err("%s: ERR! mbox_request_irq fail (err %d)\n",
+		gif_err("%s: ERR! gnss_mbox_request_irq fail (err %d)\n",
 			ld->name, err);
 		goto error;
 	}
 
-	/* Link link device to gnss_data */
-	gnss->shmd = shmd;
+	/* Link link device to gnss_pdata */
+	pdata->shmd = shmd;
 
 	if (sysfs_create_group(&pdev->dev.kobj, &shmem_group))
 		gif_err("failed to create sysfs node\n");

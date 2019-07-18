@@ -49,8 +49,6 @@ enum sensor_power {
 	SENSOR_ON,
 };
 
-#define USE_SIMPLE_WAKE_LOCK
-
 struct kepler_bcmd_args {
 	u16 flags;
 	u16 cmd_id;
@@ -240,7 +238,7 @@ struct link_device {
 	char *name;
 
 	/* GNSS data */
-	struct gnss_data *gnss_data;
+	struct gnss_pdata *pdata;
 
 	/* GNSS control */
 	struct gnss_ctl *gc;
@@ -320,8 +318,8 @@ struct gnssctl_ops {
 	int (*gnss_release_reset)(struct gnss_ctl *);
 	int (*gnss_power_on)(struct gnss_ctl *);
 	int (*gnss_req_fault_info)(struct gnss_ctl *);
-	int (*suspend_gnss_ctrl)(struct gnss_ctl *);
-	int (*resume_gnss_ctrl)(struct gnss_ctl *);
+	int (*suspend)(struct gnss_ctl *);
+	int (*resume)(struct gnss_ctl *);
 	int (*change_sensor_gpio)(struct gnss_ctl *);
 	int (*set_sensor_power)(struct gnss_ctl *, enum sensor_power);
 	int (*req_bcmd)(struct gnss_ctl *, u16, u16, u32, u32);
@@ -330,7 +328,7 @@ struct gnssctl_ops {
 struct gnss_ctl {
 	struct device *dev;
 	char *name;
-	struct gnss_data *gnss_data;
+	struct gnss_pdata *pdata;
 	enum gnss_state gnss_state;
 
 	struct clk *ccore_qch_lh_gnss;
@@ -344,24 +342,24 @@ struct gnss_ctl {
 
 	/* Wakelock for gnss_ctl */
 	struct wake_lock gc_fault_wake_lock;
-	struct wake_lock gc_wake_lock;
-	struct wake_lock gc_bcmd_wake_lock;
 
-	int wake_lock_irq;
-	int req_init_irq;
 	struct completion fault_cmpl;
 	struct completion bcmd_cmpl;
-	struct completion req_init_cmpl;
+	struct completion sw_init_cmpl;
 
 	struct pinctrl *gnss_gpio;
 	struct pinctrl_state *gnss_sensor_gpio;
 
 	struct regulator *vdd_sensor_reg;
+
+	struct gnss_irq irq_gnss_active;
+	struct gnss_irq irq_gnss_wdt;
+	struct gnss_irq irq_gnss_sw_init;
 };
 
 extern int exynos_init_gnss_io_device(struct io_device *iod);
 
-int init_gnssctl_device(struct gnss_ctl *mc, struct gnss_data *pdata);
+int init_gnssctl_device(struct gnss_ctl *mc, struct gnss_pdata *pdata);
 struct link_device *create_link_device_shmem(struct platform_device *pdev);
 
 #endif

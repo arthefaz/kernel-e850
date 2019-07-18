@@ -81,6 +81,9 @@ obj-$(CONFIG_EXYNOS_PSTATE_HAFM_TB)	+= exynos-hafm-tb.o
 
 obj-$(CONFIG_EXYNOS_MODEM_IF) += cpif/
 
+# GNSS interface driver
+obj-$(CONFIG_EXYNOS_GNSS_IF) += gnssif/
+
 # Exynos PPMPU fail detector
 obj-$(CONFIG_EXYNOS_PPMPU_FAIL_DETECTOR)	+= exynos-ppmpu.o
 

@@ -40,14 +40,13 @@
 #include <linux/of_reserved_mem.h>
 #endif
 
-#include <linux/mcu_ipc.h>
-
+#include "gnss_mbox.h"
 #include "gnss_prj.h"
 
 static struct gnss_ctl *create_ctl_device(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct gnss_data *pdata = pdev->dev.platform_data;
+	struct gnss_pdata *pdata = pdev->dev.platform_data;
 	struct gnss_ctl *gnssctl;
 	struct clk *qch_clk;
 	int ret;
@@ -62,7 +61,7 @@ static struct gnss_ctl *create_ctl_device(struct platform_device *pdev)
 	gnssctl->dev = dev;
 	gnssctl->gnss_state = STATE_OFFLINE;
 
-	gnssctl->gnss_data = pdata;
+	gnssctl->pdata = pdata;
 	gnssctl->name = pdata->name;
 
 	qch_clk = devm_clk_get(dev, "ccore_qch_lh_gnss");
@@ -89,7 +88,7 @@ static struct gnss_ctl *create_ctl_device(struct platform_device *pdev)
 
 static struct io_device *create_io_device(struct platform_device *pdev,
 		struct gnss_io_t *io_t, struct link_device *ld,
-		struct gnss_ctl *gnssctl, struct gnss_data *pdata)
+		struct gnss_ctl *gnssctl, struct gnss_pdata *pdata)
 {
 	int ret;
 	struct device *dev = &pdev->dev;
@@ -128,12 +127,12 @@ static struct io_device *create_io_device(struct platform_device *pdev,
 #ifdef CONFIG_OF_RESERVED_MEM
 static int gnss_dma_device_init(struct reserved_mem *rmem, struct device *dev)
 {
-	struct gnss_data *pdata;
+	struct gnss_pdata *pdata;
 	if (!dev && !dev->platform_data)
 		return -ENODEV;
 
 	// Save reserved memory information.
-	pdata = (struct gnss_data *)dev->platform_data;
+	pdata = (struct gnss_pdata *)dev->platform_data;
 	pdata->shmem_base = rmem->base;
 	pdata->shmem_size = rmem->size;
 
@@ -158,15 +157,15 @@ static int __init gnss_if_reserved_mem_setup(struct reserved_mem *remem)
 
 	return 0;
 }
-RESERVEDMEM_OF_DECLARE(gnss_if, "exynos,gnss_if", gnss_if_reserved_mem_setup);
+RESERVEDMEM_OF_DECLARE(gnss_rmem, "samsung,exynos-gnss", gnss_if_reserved_mem_setup);
 #endif
 
 #ifdef CONFIG_OF
 static int parse_dt_common_pdata(struct device_node *np,
-					struct gnss_data *pdata)
+					struct gnss_pdata *pdata)
 {
 	gif_dt_read_string(np, "shmem,name", pdata->name);
-	gif_dt_read_string(np, "shmem,device_node_name", pdata->device_node_name);
+	gif_dt_read_string(np, "device_node_name", pdata->device_node_name);
 	gif_dt_read_u32(np, "shmem,ipc_offset", pdata->ipcmem_offset);
 	gif_dt_read_u32(np, "shmem,ipc_size", pdata->ipc_size);
 	gif_dt_read_u32(np, "shmem,ipc_reg_cnt", pdata->ipc_reg_cnt);
@@ -175,7 +174,7 @@ static int parse_dt_common_pdata(struct device_node *np,
 }
 
 static int parse_dt_mbox_pdata(struct device *dev, struct device_node *np,
-					struct gnss_data *pdata)
+					struct gnss_pdata *pdata)
 {
 	struct gnss_mbox *mbox = pdata->mbx;
 	struct device_node *mbox_info;
@@ -189,27 +188,26 @@ static int parse_dt_mbox_pdata(struct device *dev, struct device_node *np,
 
 	mbox_info = of_parse_phandle(np, "mbox_info", 0);
 	if (IS_ERR(mbox_info)) {
-		mbox->id = MCU_GNSS;
+		mbox->id = MBOX_REGION_GNSS;
 	} else {
-		gif_dt_read_u32(mbox_info, "mcu,id", mbox->id);
+		gif_dt_read_u32(mbox_info, "mbox,id", mbox->id);
 		of_node_put(mbox_info);
 	}
 
-	gif_dt_read_u32(np, "mbx,int_ap2gnss_bcmd", mbox->int_ap2gnss_bcmd);
-	gif_dt_read_u32(np, "mbx,int_ap2gnss_req_fault_info",
-			mbox->int_ap2gnss_req_fault_info);
-	gif_dt_read_u32(np, "mbx,int_ap2gnss_ipc_msg", mbox->int_ap2gnss_ipc_msg);
-	gif_dt_read_u32(np, "mbx,int_ap2gnss_ack_wake_set",
-			mbox->int_ap2gnss_ack_wake_set);
-	gif_dt_read_u32(np, "mbx,int_ap2gnss_ack_wake_clr",
-			mbox->int_ap2gnss_ack_wake_clr);
+	gif_dt_read_u32(np, "mbx,int_bcmd", mbox->int_bcmd);
+	gif_dt_read_u32(np, "mbx,int_req_fault_info",
+			mbox->int_req_fault_info);
+	gif_dt_read_u32(np, "mbx,int_ipc_msg", mbox->int_ipc_msg);
+	gif_dt_read_u32(np, "mbx,int_ack_wake_set",
+			mbox->int_ack_wake_set);
 
-	gif_dt_read_u32(np, "mbx,irq_gnss2ap_bcmd", mbox->irq_gnss2ap_bcmd);
-	gif_dt_read_u32(np, "mbx,irq_gnss2ap_rsp_fault_info",
-			mbox->irq_gnss2ap_rsp_fault_info);
-	gif_dt_read_u32(np, "mbx,irq_gnss2ap_ipc_msg", mbox->irq_gnss2ap_ipc_msg);
-	gif_dt_read_u32(np, "mbx,irq_gnss2ap_req_wake_clr",
-			mbox->irq_gnss2ap_req_wake_clr);
+	gif_dt_read_u32(np, "mbx,irq_bcmd", mbox->irq_bcmd);
+	gif_dt_read_u32(np, "mbx,irq_rsp_fault_info",
+			mbox->irq_rsp_fault_info);
+	gif_dt_read_u32(np, "mbx,irq_ipc_msg", mbox->irq_ipc_msg);
+	gif_dt_read_u32(np, "mbx,irq_req_wake_clr",
+			mbox->irq_req_wake_clr);
+	gif_dt_read_u32(np, "mbx,irq_simple_lock", mbox->irq_simple_lock);
 
 	gif_dt_read_u32_array(np, "mbx,reg_bcmd_ctrl", mbox->reg_bcmd_ctrl,
 			      BCMD_CTRL_COUNT);
@@ -238,14 +236,13 @@ static int alloc_gnss_reg(struct device *dev, struct gnss_shared_reg **areg,
 const char *dt_reg_prop_table[GNSS_REG_COUNT] = {
 	[GNSS_REG_RX_IPC_MSG] = "reg_rx_ipc_msg",
 	[GNSS_REG_TX_IPC_MSG] = "reg_tx_ipc_msg",
-	[GNSS_REG_WAKE_LOCK] = "reg_wake_lock",
 	[GNSS_REG_RX_HEAD] = "reg_rx_head",
 	[GNSS_REG_RX_TAIL] = "reg_rx_tail",
 	[GNSS_REG_TX_HEAD] = "reg_tx_head",
 	[GNSS_REG_TX_TAIL] = "reg_tx_tail",
 };
 
-static int parse_dt_reg_mbox_pdata(struct device *dev, struct gnss_data *pdata)
+static int parse_dt_reg_mbox_pdata(struct device *dev, struct gnss_pdata *pdata)
 {
 	int i;
 	unsigned int err;
@@ -275,7 +272,7 @@ parse_dt_reg_nomem:
 	return -ENOMEM;
 }
 
-static int parse_dt_fault_pdata(struct device *dev, struct gnss_data *pdata)
+static int parse_dt_fault_pdata(struct device *dev, struct gnss_pdata *pdata)
 {
 	struct device_node *np = dev->of_node;
 	u32 tmp[3];
@@ -291,15 +288,15 @@ static int parse_dt_fault_pdata(struct device *dev, struct gnss_data *pdata)
 	return 0;
 }
 
-static struct gnss_data *gnss_if_parse_dt_pdata(struct device *dev)
+static struct gnss_pdata *gnss_if_parse_dt_pdata(struct device *dev)
 {
-	struct gnss_data *pdata;
+	struct gnss_pdata *pdata;
 	int i;
 	u32 ret;
 
-	pdata = devm_kzalloc(dev, sizeof(struct gnss_data), GFP_KERNEL);
+	pdata = devm_kzalloc(dev, sizeof(struct gnss_pdata), GFP_KERNEL);
 	if (!pdata) {
-		gif_err("gnss_data: alloc fail\n");
+		gif_err("gnss_pdata: alloc fail\n");
 		return ERR_PTR(-ENOMEM);
 	}
 	dev->platform_data = pdata;
@@ -324,7 +321,7 @@ static struct gnss_data *gnss_if_parse_dt_pdata(struct device *dev)
 
 	ret = parse_dt_reg_mbox_pdata(dev, pdata);
 	if (ret != 0) {
-		gif_err("Failed to parse mbox register pdata.\n");
+		gif_err("Failed to parse mailbox register pdata.\n");
 		goto parse_dt_pdata_err;
 	}
 
@@ -336,13 +333,13 @@ static struct gnss_data *gnss_if_parse_dt_pdata(struct device *dev)
 
 	for (i = 0; i < GNSS_REG_COUNT; i++) {
 		if (pdata->reg[i])
-			gif_err("Found reg: [%d:%d] %s\n",
+			gif_info("Found reg: [%d:%d] %s\n",
 					pdata->reg[i]->device,
 					pdata->reg[i]->value.index,
 					pdata->reg[i]->name);
 	}
 
-	gif_err("Fault info: %s [%d:%d:%d]\n",
+	gif_info("Fault info: %s [%d:%d:%d]\n",
 			pdata->fault_info.name,
 			pdata->fault_info.device,
 			pdata->fault_info.value.index,
@@ -361,28 +358,44 @@ parse_dt_pdata_err:
 	return ERR_PTR(-EINVAL);
 }
 
-static const struct of_device_id sec_gnss_match[] = {
-	{ .compatible = "samsung,gnss_shdmem_if", },
+static const struct of_device_id gnss_dt_match[] = {
+	{ .compatible = "samsung,exynos-gnss", },
 	{},
 };
-MODULE_DEVICE_TABLE(of, sec_gnss_match);
+MODULE_DEVICE_TABLE(of, gnss_dt_match);
 #else /* !CONFIG_OF */
-static struct gnss_data *gnss_if_parse_dt_pdata(struct device *dev)
+static struct gnss_pdata *gnss_if_parse_dt_pdata(struct device *dev)
 {
 	return ERR_PTR(-ENODEV);
 }
 #endif /* CONFIG_OF */
 
+static ssize_t gnss_status_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct gnss_ctl *gc = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%s\n", get_gnss_state_str(gc->gnss_state));
+}
+
+static DEVICE_ATTR_RO(gnss_status);
+
+static struct attribute *gnss_attrs[] = {
+	&dev_attr_gnss_status.attr,
+	NULL,
+};
+ATTRIBUTE_GROUPS(gnss);
+
 static int gnss_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct gnss_data *pdata = dev->platform_data;
+	struct gnss_pdata *pdata = dev->platform_data;
 	struct gnss_ctl *ctl;
 	struct io_device *iod;
 	struct link_device *ld;
 	unsigned size;
 
-	gif_err("%s: +++\n", pdev->name);
+	gif_info("%s: +++\n", pdev->name);
 
 	if (!dev->of_node) {
 		gif_err("No DT data!\n");
@@ -437,6 +450,9 @@ static int gnss_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, ctl);
 
+	if (sysfs_create_groups(&dev->kobj, gnss_groups))
+		gif_err("failed to create gnss groups node\n");
+
 	gif_err("%s: ---\n", pdata->name);
 
 	return 0;
@@ -468,26 +484,24 @@ static int gnss_suspend(struct device *pdev)
 {
 	struct gnss_ctl *gc = dev_get_drvdata(pdev);
 
-	/* Matt - Implement Suspend */
-	if (gc->ops.suspend_gnss_ctrl != NULL) {
-		gif_err("%s: pd_active:0\n", gc->name);
-		gc->ops.suspend_gnss_ctrl(gc);
+	if (!gc->ops.suspend) {
+		gif_err("ops.suspend is null\n");
+		return -EPERM;
 	}
 
-	return 0;
+	return gc->ops.suspend(gc);
 }
 
 static int gnss_resume(struct device *pdev)
 {
 	struct gnss_ctl *gc = dev_get_drvdata(pdev);
 
-	/* Matt - Implement Resume */
-	if (gc->ops.resume_gnss_ctrl != NULL) {
-		gif_err("%s: pd_active:1\n", gc->name);
-		gc->ops.resume_gnss_ctrl(gc);
+	if (!gc->ops.resume) {
+		gif_err("ops.resume is null\n");
+		return -EPERM;
 	}
 
-	return 0;
+	return gc->ops.resume(gc);
 }
 #else
 #define gnss_suspend	NULL
@@ -503,16 +517,16 @@ static struct platform_driver gnss_driver = {
 	.probe = gnss_probe,
 	.shutdown = gnss_shutdown,
 	.driver = {
-		.name = "gif_exynos",
+		.name = "gnss_interface",
 		.owner = THIS_MODULE,
 		.pm = &gnss_pm_ops,
 #ifdef CONFIG_OF
-		.of_match_table = of_match_ptr(sec_gnss_match),
+		.of_match_table = of_match_ptr(gnss_dt_match),
 #endif
 	},
 };
 
 module_platform_driver(gnss_driver);
 
+MODULE_DESCRIPTION("Exynos GNSS interface driver");
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Samsung GNSS Interface Driver");

@@ -32,9 +32,6 @@
 
 #define WAKE_TIME   (HZ/2) /* 500 msec */
 
-static void exynos_build_header(struct io_device *iod, struct link_device *ld,
-		u8 *buff, u16 cfg, u8 ctl, size_t count);
-
 static inline void iodev_lock_wlock(struct io_device *iod)
 {
 	if (iod->waketime > 0 && !wake_lock_active(&iod->wakelock)) {
@@ -279,7 +276,7 @@ static int misc_open(struct inode *inode, struct file *filp)
 
 	ref_cnt = atomic_inc_return(&iod->opened);
 
-	gif_err("%s (opened %d) by %s\n", iod->name, ref_cnt, current->comm);
+	gif_info("%s (opened %d) by %s\n", iod->name, ref_cnt, current->comm);
 
 	return 0;
 }
@@ -293,7 +290,7 @@ static int misc_release(struct inode *inode, struct file *filp)
 
 	ref_cnt = atomic_dec_return(&iod->opened);
 
-	gif_err("%s (opened %d) by %s\n", iod->name, ref_cnt, current->comm);
+	gif_info("%s (opened %d) by %s\n", iod->name, ref_cnt, current->comm);
 
 	return 0;
 }
@@ -354,6 +351,7 @@ static int send_bcmd(struct io_device *iod, unsigned long arg)
 	gif_info("flags : %d, cmd_id : %d, param1 : %d, param2 : %d(0x%x)\n",
 			bcmd_args.flags, bcmd_args.cmd_id, bcmd_args.param1,
 			bcmd_args.param2, bcmd_args.param2);
+
 	err = gc->ops.req_bcmd(gc, bcmd_args.cmd_id, bcmd_args.flags,
 				bcmd_args.param1, bcmd_args.param2);
 	if (err == -EIO) { /* BCMD timeout */
@@ -523,7 +521,7 @@ static long misc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case GNSS_IOCTL_RESET:
-		gif_err("%s: GNSS_IOCTL_RESET\n", iod->name);
+		gif_info("%s: GNSS_IOCTL_RESET\n", iod->name);
 
 		if (!gc->ops.gnss_hold_reset) {
 			gif_err("%s: !gc->ops.gnss_reset\n", iod->name);
@@ -534,7 +532,7 @@ static long misc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return 0;
 
 	case GNSS_IOCTL_REQ_FAULT_INFO:
-		gif_err("%s: GNSS_IOCTL_REQ_FAULT_INFO\n", iod->name);
+		gif_info("%s: GNSS_IOCTL_REQ_FAULT_INFO\n", iod->name);
 
 		if (!gc->ops.gnss_req_fault_info) {
 			gif_err("%s: !gc->ops.req_fault_info\n", iod->name);
@@ -542,7 +540,7 @@ static long misc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		size = gc->ops.gnss_req_fault_info(gc);
 
-		gif_err("gnss_req_fault_info returned %d\n", size);
+		gif_info("gnss_req_fault_info returned %d\n", size);
 
 		if (size < 0) {
 			gif_err("Can't get fault info from Kepler\n");
@@ -571,7 +569,7 @@ static long misc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return parsing_read_firmware(iod, arg);
 
 	case GNSS_IOCTL_CHANGE_SENSOR_GPIO:
-		gif_err("%s: GNSS_IOCTL_CHANGE_SENSOR_GPIO\n", iod->name);
+		gif_info("%s: GNSS_IOCTL_CHANGE_SENSOR_GPIO\n", iod->name);
 
 		if (!gc->ops.change_sensor_gpio) {
 			gif_err("%s: !gc->ops.change_sensor_gpio\n", iod->name);
@@ -580,15 +578,14 @@ static long misc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return gc->ops.change_sensor_gpio(gc);
 
 	case GNSS_IOCTL_CHANGE_TCXO_MODE:
-		gif_err("%s: GNSS_IOCTL_CHANGE_TCXO_MODE\n", iod->name);
+		gif_info("%s: GNSS_IOCTL_CHANGE_TCXO_MODE\n", iod->name);
 		return change_tcxo_mode(gc, arg);
 
 	case GNSS_IOCTL_SET_SENSOR_POWER:
-		gif_err("%s: GNSS_IOCTL_SENSOR_POWER\n", iod->name);
+		gif_info("%s: GNSS_IOCTL_SENSOR_POWER\n", iod->name);
 		return set_sensor_power(gc, arg);
 
 	default:
-
 		gif_err("%s: ERR! undefined cmd 0x%X\n", iod->name, cmd);
 		return -EINVAL;
 	}
@@ -663,6 +660,27 @@ static long misc_compat_ioctl(struct file *filp,
 	return misc_ioctl(filp, cmd, realarg);
 }
 #endif
+
+static void exynos_build_header(struct io_device *iod, struct link_device *ld,
+				u8 *buff, u16 cfg, u8 ctl, size_t count)
+{
+	u16 *exynos_header = (u16 *)(buff + EXYNOS_START_OFFSET);
+	u16 *frame_seq = (u16 *)(buff + EXYNOS_FRAME_SEQ_OFFSET);
+	u16 *frag_cfg = (u16 *)(buff + EXYNOS_FRAG_CONFIG_OFFSET);
+	u16 *size = (u16 *)(buff + EXYNOS_LEN_OFFSET);
+	struct exynos_seq_num *seq_num = &(iod->seq_num);
+
+	*exynos_header = EXYNOS_START_MASK;
+	*frame_seq = ++seq_num->frame_cnt;
+	*frag_cfg = cfg;
+	*size = (u16)(EXYNOS_HEADER_SIZE + count);
+	buff[EXYNOS_CH_ID_OFFSET] = 0; /* single channel, should be 0. */
+
+	if (cfg == EXYNOS_SINGLE_MASK)
+		*frag_cfg = cfg;
+
+	buff[EXYNOS_CH_SEQ_OFFSET] = ++seq_num->ch_cnt[0];
+}
 
 static ssize_t misc_write(struct file *filp, const char __user *data,
 			size_t count, loff_t *fpos)
@@ -789,27 +807,6 @@ static const struct file_operations misc_io_fops = {
 	.write = misc_write,
 	.read = misc_read,
 };
-
-static void exynos_build_header(struct io_device *iod, struct link_device *ld,
-				u8 *buff, u16 cfg, u8 ctl, size_t count)
-{
-	u16 *exynos_header = (u16 *)(buff + EXYNOS_START_OFFSET);
-	u16 *frame_seq = (u16 *)(buff + EXYNOS_FRAME_SEQ_OFFSET);
-	u16 *frag_cfg = (u16 *)(buff + EXYNOS_FRAG_CONFIG_OFFSET);
-	u16 *size = (u16 *)(buff + EXYNOS_LEN_OFFSET);
-	struct exynos_seq_num *seq_num = &(iod->seq_num);
-
-	*exynos_header = EXYNOS_START_MASK;
-	*frame_seq = ++seq_num->frame_cnt;
-	*frag_cfg = cfg;
-	*size = (u16)(EXYNOS_HEADER_SIZE + count);
-	buff[EXYNOS_CH_ID_OFFSET] = 0; /* single channel, should be 0. */
-
-	if (cfg == EXYNOS_SINGLE_MASK)
-		*frag_cfg = cfg;
-
-	buff[EXYNOS_CH_SEQ_OFFSET] = ++seq_num->ch_cnt[0];
-}
 
 int exynos_init_gnss_io_device(struct io_device *iod)
 {

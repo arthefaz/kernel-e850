@@ -15,7 +15,7 @@
 #ifndef __GNSS_LINK_DEVICE_SHMEM_H__
 #define __GNSS_LINK_DEVICE_SHMEM_H__
 
-#include <linux/mcu_ipc.h>
+#include "gnss_mbox.h"
 #include "gnss_link_device_memory.h"
 
 #define IPC_WAKELOCK_TIMEOUT		(HZ)
@@ -67,12 +67,8 @@ struct shmem_link_device {
 	struct shmem_ipc_device *dev;
 
 	/* MBOX number & IRQ */
-	int int_ap2gnss_ipc_msg;
-	int irq_gnss2ap_ipc_msg;
-
-	/* Wakelock for SHMEM device */
-	struct wake_lock wlock;
-	char wlock_name[GNSS_MAX_NAME_LEN];
+	int int_ipc_msg;
+	int irq_ipc_msg;
 
 	/* for locking TX process */
 	spinlock_t tx_lock;
@@ -251,7 +247,7 @@ static inline void set_rxq_tail(struct shmem_link_device *shmd, u32 out)
  */
 static inline u16 read_int2gnss(struct shmem_link_device *shmd)
 {
-	return mbox_get_value(MCU_GNSS, shmd->int_ap2gnss_ipc_msg);
+	return gnss_mbox_get_value(shmd->mbx->id, shmd->int_ipc_msg);
 }
 
 /**
