@@ -237,6 +237,9 @@
 #define INTREQ__PWM3	219
 #define INTREQ__PWM4	220
 #define INTREQ__SPI_0	221
+
+#define INTREQ__SECURE_LOG	224
+
 #define INTREQ__TMU	226
 #define INTREQ__UART	227
 #define INTREQ__WDT_0	228
