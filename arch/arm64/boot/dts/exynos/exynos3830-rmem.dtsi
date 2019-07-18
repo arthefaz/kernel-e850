@@ -10,6 +10,7 @@
  */
 
 #include <dt-bindings/soc/samsung/debug-snapshot-table.h>
+#include <dt-bindings/soc/samsung/exynos3830-seclog.h>
 
 / {
 	reserved_memory: reserved-memory {
@@ -68,6 +69,9 @@
 			};
 		};
 
-
+		seclog_mem {
+			compatible = "exynos,seclog";
+			reg = <0 SECLOG_LOG_BUF_BASE SECLOG_LOG_BUF_TOTAL_SIZE>;
+		};
 	};
 };

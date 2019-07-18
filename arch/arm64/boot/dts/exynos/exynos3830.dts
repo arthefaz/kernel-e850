@@ -655,4 +655,10 @@
 		exynos,block-type = "mmcblk0p";
 		exynos,fips-block_offset = <5>;
 	};
+
+	/* Secure Log */
+	seclog {
+		compatible = "samsung,exynos-seclog";
+		interrupts = <GIC_SPI INTREQ__SECURE_LOG IRQ_TYPE_LEVEL_HIGH>;
+	};
 };
