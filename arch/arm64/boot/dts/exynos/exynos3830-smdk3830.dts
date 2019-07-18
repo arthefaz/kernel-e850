@@ -12,6 +12,7 @@
 /dts-v1/;
 /plugin/;
 #include "exynos3830-board_common.dtsi"
+#include "exynos3830-smdk3830-cp-s318ap-sit.dtsi"
 
 / {
 	compatible = "samsung,exynos3830", "samsung,SMDK3830";
