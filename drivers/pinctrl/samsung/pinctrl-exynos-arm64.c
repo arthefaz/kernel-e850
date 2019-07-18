@@ -753,22 +753,22 @@ static struct samsung_pin_ctrl exynos3830_pin_ctrl[] = {
 		.nr_banks	= ARRAY_SIZE(exynos3830_pin_banks1),
 		.eint_gpio_init = exynos_eint_gpio_init,
 		.eint_wkup_init = exynos_eint_wkup_init,
-		.suspend	= exynos_pinctrl_suspend,
-		.resume		= exynos_pinctrl_resume,
+		//.suspend	= exynos_pinctrl_suspend,
+		//.resume	= exynos_pinctrl_resume,
 	}, {
 		/* pin-controller instance 2 AUD data */
 		.pin_banks	= exynos3830_pin_banks2,
 		.nr_banks	= ARRAY_SIZE(exynos3830_pin_banks2),
 		//.eint_gpio_init = exynos_eint_gpio_init,
-		.suspend	= exynos_pinctrl_suspend,
-		.resume		= exynos_pinctrl_resume,
+		//.suspend	= exynos_pinctrl_suspend,
+		//.resume	= exynos_pinctrl_resume,
 	}, {
 		/* pin-controller instance 3 HSI data */
 		.pin_banks	= exynos3830_pin_banks3,
 		.nr_banks	= ARRAY_SIZE(exynos3830_pin_banks3),
 		.eint_gpio_init = exynos_eint_gpio_init,
-		.suspend	= exynos_pinctrl_suspend,
-		.resume		= exynos_pinctrl_resume,
+		//.suspend	= exynos_pinctrl_suspend,
+		//.resume	= exynos_pinctrl_resume,
 	}, {
 		/* pin-controller instance 4 CORE data */
 		.pin_banks	= exynos3830_pin_banks4,
