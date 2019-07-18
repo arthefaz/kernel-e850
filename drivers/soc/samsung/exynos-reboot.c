@@ -26,7 +26,7 @@
 #include <soc/samsung/acpm_ipc_ctrl.h>
 #endif
 #include <soc/samsung/exynos-pmu.h>
-#include <linux/mfd/samsung/s2mpu10-regulator.h>
+#include <linux/mfd/samsung/s2mpu12-regulator.h>
 
 extern void (*arm_pm_restart)(enum reboot_mode reboot_mode, const char *cmd);
 static void __iomem *exynos_pmu_base = NULL;
@@ -91,11 +91,11 @@ static void exynos_power_off(void)
 {
 	int poweroff_try = 0;
 
-	dev_info(exynos_reboot_dev, "%s: Power off %d \n", __func__, s2mpu10_read_pwron_status());
+	dev_info(exynos_reboot_dev, "%s: Power off %d \n", __func__, s2mpu12_read_pwron_status());
 
 	while (1) {
 		/* wait for power button release */
-		if (!s2mpu10_read_pwron_status()) {
+		if (!s2mpu12_read_pwron_status()) {
 #ifdef CONFIG_EXYNOS_ACPM
 			exynos_acpm_reboot();
 #endif
