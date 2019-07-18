@@ -4,6 +4,7 @@
 #include "../pmucal_rae.h"
 #include "../pmucal_system.h"
 #include "../pmucal_powermode.h"
+#include "../pmucal_gnss.h"
 
 #include "flexpmu_cal_cpu_exynos3830.h"
 #include "flexpmu_cal_local_exynos3830.h"
@@ -11,6 +12,7 @@
 #include "flexpmu_cal_system_exynos3830.h"
 #include "flexpmu_cal_powermode_exynos3830.h"
 #include "flexpmu_cal_define_exynos3830.h"
+#include "pmucal_gnss_exynos3830.h"
 
 #ifdef CONFIG_CP_PMUCAL
 #include "../pmucal_cp.h"

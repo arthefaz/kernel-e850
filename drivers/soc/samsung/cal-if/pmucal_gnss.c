@@ -142,6 +142,35 @@ int pmucal_gnss_reset_req_clear(void)
 	return 0;
 }
 
+/**
+ *  pmucal_gnss_active_clear - gnss_active clear
+ *		        exposed to PWRCAL interface.
+ *
+ *  Returns 0 on success. Otherwise, negative error code.
+ */
+int pmucal_gnss_active_clear(void)
+{
+	int ret;
+
+	pr_info("%s%s()\n", PMUCAL_PREFIX, __func__);
+
+	if (!pmucal_gnss_list.active_clear) {
+		pr_err("%s there is no sequence element active_clear.\n",
+				PMUCAL_PREFIX);
+		return -ENOENT;
+	}
+
+	ret = pmucal_rae_handle_gnss_seq(pmucal_gnss_list.active_clear,
+				pmucal_gnss_list.num_active_clear);
+	if (ret) {
+		pr_err("%s %s: error on handling gnss_reset_req_clear sequence.\n",
+				PMUCAL_PREFIX, __func__);
+		return ret;
+	}
+
+	return 0;
+}
+
 int pmucal_is_gnss_regs(int reg)
 {
 	int i;
@@ -170,6 +199,13 @@ int pmucal_is_gnss_regs(int reg)
 
 	for (i = 0; i < pmucal_gnss_list.num_gnss_reset_req_clear; i++) {
 		if (reg == pmucal_gnss_list.gnss_reset_req_clear[i].base_pa + pmucal_gnss_list.gnss_reset_req_clear[i].offset) {
+			is_gnss_regs = 1;
+			goto out;
+		}
+	}
+
+	for (i = 0; i < pmucal_gnss_list.num_active_clear; i++) {
+		if (reg == pmucal_gnss_list.active_clear[i].base_pa + pmucal_gnss_list.active_clear[i].offset) {
 			is_gnss_regs = 1;
 			goto out;
 		}
@@ -232,6 +268,14 @@ int __init pmucal_gnss_initialize(void)
 				pmucal_gnss_list.num_gnss_reset_req_clear);
 	if (ret) {
 		pr_err("%s %s: error on PA2VA conversion. aborting gnss_reset_req_clear...\n",
+				PMUCAL_PREFIX, __func__);
+		goto out;
+	}
+
+	ret = pmucal_rae_phy2virt(pmucal_gnss_list.active_clear,
+				pmucal_gnss_list.num_active_clear);
+	if (ret) {
+		pr_err("%s %s: error on PA2VA conversion. aborting gnss active clear...\n",
 				PMUCAL_PREFIX, __func__);
 		goto out;
 	}

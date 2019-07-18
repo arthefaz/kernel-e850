@@ -112,7 +112,7 @@ static int pmucal_rae_wait(struct pmucal_seq *seq)
 			break;
 		timeout++;
 		udelay(1);
-		if (timeout > 2000) {
+		if (timeout > 5000) {
 			u32 reg;
 			reg = __raw_readl(seq->base_va + seq->offset);
 			pr_err("%s %s:timed out during wait. (value:0x%x, seq_idx = %d)\n",
@@ -419,6 +419,69 @@ int pmucal_rae_handle_cp_seq(struct pmucal_seq *seq, unsigned int seq_size)
 				pr_info("%s%s\t%s = 0x%08x\n", PMUCAL_PREFIX, "raw_read", seq[i].sfr_name,
 						__raw_readl(seq[i].base_va + seq[i].offset));
 			}
+			break;
+		case PMUCAL_COND_READ:
+			if (pmucal_rae_check_condition(&seq[i]))
+				pmucal_rae_read(&seq[i]);
+			break;
+		case PMUCAL_COND_WRITE:
+			if (pmucal_rae_check_condition(&seq[i]))
+				pmucal_rae_write(&seq[i]);
+			break;
+		case PMUCAL_WAIT:
+		case PMUCAL_WAIT_TWO:
+			ret = pmucal_rae_wait(&seq[i]);
+			if (ret)
+				return ret;
+			pr_info("%s%s\t%s = 0x%08x(expected = 0x%08x)\n", PMUCAL_PREFIX, "raw_read", seq[i].sfr_name,
+				__raw_readl(seq[i].base_va + seq[i].offset) & seq[i].mask, seq[i].value);
+			break;
+		case PMUCAL_DELAY:
+			udelay(seq[i].value);
+			break;
+		default:
+			pr_err("%s %s:invalid PMUCAL access type\n", PMUCAL_PREFIX, __func__);
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+#endif
+
+/**
+ *  pmucal_rae_handle_gnss_seq - handles a sequence array based on each element's access_type.
+ *			    exposed to PMUCAL common logics.(CP)
+ *
+ *  @seq: Sequence array to be handled.
+ *  @seq_size: Array size of seq.
+ *
+ *  Returns 0 on success. Otherwise, negative error code.
+ */
+
+#ifdef CONFIG_GNSS_PMUCAL
+static unsigned int pmucal_rae_gnss_seq_idx;
+int pmucal_rae_handle_gnss_seq(struct pmucal_seq *seq, unsigned int seq_size)
+{
+	int ret, i;
+	u32 reg;
+
+	for (i = 0; i < seq_size; i++) {
+		pmucal_rae_gnss_seq_idx = i;
+
+		switch (seq[i].access_type) {
+		case PMUCAL_READ:
+			pmucal_rae_read(&seq[i]);
+			pr_info("%s%s\t%s = 0x%08x\n", PMUCAL_PREFIX, "raw_read", seq[i].sfr_name,
+					__raw_readl(seq[i].base_va + seq[i].offset));
+			break;
+		case PMUCAL_WRITE:
+			reg = __raw_readl(seq[i].base_va + seq[i].offset);
+			reg = (reg & ~seq[i].mask) | seq[i].value;
+			pr_info("%s%s\t%s = 0x%08x\n", PMUCAL_PREFIX, "raw_write", seq[i].sfr_name, reg);
+			pmucal_rae_write(&seq[i]);
+			pr_info("%s%s\t%s = 0x%08x\n", PMUCAL_PREFIX, "raw_read", seq[i].sfr_name,
+					__raw_readl(seq[i].base_va + seq[i].offset));
 			break;
 		case PMUCAL_COND_READ:
 			if (pmucal_rae_check_condition(&seq[i]))

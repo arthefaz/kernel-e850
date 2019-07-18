@@ -450,6 +450,11 @@ void cal_gnss_reset_req_clear(void)
 {
 	pmucal_gnss_reset_req_clear();
 }
+
+void cal_gnss_active_clear(void)
+{
+	pmucal_gnss_active_clear();
+}
 #endif
 
 int __init cal_if_init(void *dev)
