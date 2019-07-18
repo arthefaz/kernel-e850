@@ -23,6 +23,12 @@ struct gb_qos_request {
 
 struct rq;
 
+enum {
+	STATES_FREQ = 0,
+	STATES_PMQOS,
+	NUM_OF_REQUESTS,
+};
+
 #ifdef CONFIG_SCHED_EMS
 /*
  * core
@@ -41,11 +47,6 @@ extern void post_init_entity_multi_load(struct sched_entity *se, u64 now);
 /*
  * energy model
  */
-enum {
-	STATES_FREQ = 0,
-	STATES_PMQOS,
-	NUM_OF_REQUESTS,
-};
 extern void init_sched_energy_table(struct cpumask *cpus, int table_size,
 				unsigned long *f_table, unsigned int *v_table,
 				int max_f, int min_f);
@@ -131,8 +132,8 @@ static inline void post_init_entity_multi_load(struct sched_entity *se, u64 now)
 static inline void init_sched_energy_table(struct cpumask *cpus, int table_size,
 				unsigned long *f_table, unsigned int *v_table,
 				int max_f, int min_f) { }
-static inline void reconstruct_sched_energy_table_qos(struct cpumask *cpus,
-					int clipped_freq, int max_freq) { }
+static inline void rebuild_sched_energy_table(struct cpumask *cpus, int clipped_freq,
+						int max_freq, int type) { }
 
 /*
  * multi load
@@ -140,7 +141,7 @@ static inline void reconstruct_sched_energy_table_qos(struct cpumask *cpus,
 static inline unsigned long ml_boosted_cpu_util(int cpu) { return 0; }
 static inline void init_multi_load(struct sched_entity *se) { }
 
-static inline void set_task_rq_multi_load(struct sched_entity *se, struct cfs_rq *prev, struct cfs_rq *next);
+static inline void set_task_rq_multi_load(struct sched_entity *se, struct cfs_rq *prev, struct cfs_rq *next) { }
 static inline void update_tg_cfs_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se, struct cfs_rq *gcfs_rq) { }
 static inline int update_cfs_rq_multi_load(u64 now, struct cfs_rq *cfs_rq) { return 0; }
 static inline void attach_entity_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se) { }

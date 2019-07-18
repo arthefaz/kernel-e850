@@ -371,7 +371,7 @@ void post_init_entity_multi_load(struct sched_entity *se, u64 now)
 				__func__, inherit_type);
 	}
 
-	if (entity_is_task(se)) {
+	if (!se->my_q) {
 		struct task_struct *p = task_of(se);
 		if (p->sched_class != &fair_sched_class)
 			se->ml.last_update_time = now;
@@ -619,22 +619,22 @@ static void update_multi_load(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sc
 
 static int __update_multi_load_blocked_se(u64 now, struct sched_entity *se)
 {
-	update_multi_load(now, rq_of(se->cfs_rq)->cpu, NULL, se, &se->avg, 0, 0);
+	update_multi_load(now, se->cfs_rq->rq->cpu, NULL, se, &se->avg, 0, 0);
 
 	return 0;
 }
 
 static int __update_multi_load_se(u64 now, struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
-	update_multi_load(now, rq_of(se->cfs_rq)->cpu, NULL, se, &se->avg,
-				se_weight(se) * se->on_rq, cfs_rq->curr == se);
+	update_multi_load(now, se->cfs_rq->rq->cpu, NULL, se, &se->avg,
+			scale_load_down(se->load.weight) * se->on_rq, cfs_rq->curr == se);
 
 	return 0;
 }
 
 static int __update_multi_load_cfs_rq(u64 now, struct cfs_rq *cfs_rq)
 {
-	update_multi_load(now, rq_of(cfs_rq)->cpu, cfs_rq, cfs_rq->curr, &cfs_rq->avg,
+	update_multi_load(now, cfs_rq->rq->cpu, cfs_rq, cfs_rq->curr, &cfs_rq->avg,
 			scale_load_down(cfs_rq->load.weight), cfs_rq->curr != NULL);
 
 	return 0;
@@ -770,7 +770,7 @@ int update_cfs_rq_multi_load(u64 now, struct cfs_rq *cfs_rq)
 		sub_positive(&ml->util_avg, r);
 		sub_positive(&ml->util_sum, r * divider);
 
-		cfs_rq->propagate = 1;
+		cfs_rq->propagate_avg = 1;
 
 		decayed = 1;
 	}
