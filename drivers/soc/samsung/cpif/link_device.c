@@ -2073,6 +2073,14 @@ static int link_load_cp_image(struct link_device *ld, struct io_device *iod,
 		return -EFAULT;
 	}
 
+	if (mld->boot_base == NULL) {
+		mld->boot_base = cp_shmem_get_nc_region(cp_shmem_get_base(ld->mdm_data->cp_num, SHMEM_CP), mld->boot_size);
+		if (!mld->boot_base) {
+			mif_err("Failed to vmap boot_region\n");
+			return -EINVAL;		/* TODO : need better return */
+		}
+	}
+
 	/* Calculate size of valid space which BL will download */
 	valid_space = (img.mode) ? mld->size : mld->boot_size;
 	/* Calculate base address (0: BOOT_MODE, 1: DUMP_MODE) */
@@ -2206,6 +2214,7 @@ static int shmem_security_request(struct link_device *ld, struct io_device *iod,
 	uint32_t try_cnt = 0;
 #endif
 	u32 cp_num = ld->mdm_data->cp_num;
+	struct mem_link_device *mld = ld->mdm_data->mld;
 
 	err = copy_from_user(&msr, (const void __user *)arg, sizeof(msr));
 	if (err) {
@@ -2220,7 +2229,17 @@ static int shmem_security_request(struct link_device *ld, struct io_device *iod,
 #if !defined(CONFIG_CP_SECURE_BOOT)
 	if (msr.mode == 0)
 		shmem_check_modem_binary_crc(ld);
+	/* boot_base should be unmapped after its usage on crc check */
+	if (mld->boot_base != NULL) {
+		vunmap(mld->boot_base);
+		mld->boot_base = NULL;
+	}
 #else
+	/* boot_base is in no use at this point */
+	if (mld->boot_base != NULL) {
+		vunmap(mld->boot_base);
+		mld->boot_base = NULL;
+	}
 	exynos_smc(SMC_ID_CLK, SSS_CLK_ENABLE, 0, 0);
 	if ((msr.mode == 0) && cp_shmem_get_mem_map_on_cp_flag(cp_num))
 		msr.mode |= cp_shmem_get_base(cp_num, SHMEM_CP);
@@ -3905,13 +3924,9 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 #ifdef CONFIG_LINK_DEVICE_SHMEM
 	if (link_type == LINKDEV_SHMEM) {
 		mld->boot_size = cp_shmem_get_size(cp_num, SHMEM_CP) + cp_shmem_get_size(cp_num, SHMEM_VSS);
-		mld->boot_base = cp_shmem_get_nc_region(cp_shmem_get_base(cp_num, SHMEM_CP), mld->boot_size);
-		if (!mld->boot_base) {
-			mif_err("Failed to vmap boot_region\n");
-			goto error;
-		}
-		mif_err("boot_base=%pK, boot_size=%lu\n",
-			mld->boot_base, (unsigned long)mld->boot_size);
+		mld->boot_base = NULL;
+		mif_err("boot_base=NULL, boot_size=%lu\n",
+			(unsigned long)mld->boot_size);
 	}
 #endif
 
