@@ -216,32 +216,6 @@ static void dwc3_otg_drv_vbus(struct otg_fsm *fsm, int on)
 						on ? "on" : "off");
 }
 
-void dwc3_otg_check_bus_act(struct dwc3 *dwc)
-{
-	u32 reg;
-	u32 xm_wtran, xm_rtran, xm_ch_status;
-	int retries = 100;
-
-	reg = dwc3_readl(dwc->regs, DWC3_GDBGLSPMUX_HST);
-	reg |= BUS_ACTIVITY_CHECK;
-	dwc3_writel(dwc->regs, DWC3_GDBGLSPMUX_HST, reg);
-
-	do {
-		reg = readl(phycon_base_addr + LINK_DEBUG_L);
-		xm_ch_status = reg & 0x3FF;
-		xm_rtran = (reg >> READ_TRANS_OFFSET) & 0x3FFFFF;
-		reg = readl(phycon_base_addr + LINK_DEBUG_H);
-		xm_wtran = reg & 0x3FFFFF;
-
-		if (!xm_rtran && !xm_wtran)
-			break;
-		mdelay(1);
-	} while (--retries);
-
-	pr_info("%s %s: retries = %d\n", __func__,
-		retries ? "clear" : "timeout", retries);
-}
-
 int exynos_usbdrd_inform_dp_use(int use, int lane_cnt)
 {
 	int ret = 0;
@@ -309,7 +283,6 @@ int dwc3_otg_phy_enable(struct otg_fsm *fsm, int owner, bool on)
 		if (dotg->combo_phy_control == 0) {
 			dwc3_core_exit(dwc);
 err:
-			dwc3_otg_check_bus_act(dwc);
 			pm_runtime_put_sync_suspend(dev);
 			if (!dotg->pm_qos_int_val)
 				pm_qos_update_request(&dotg->pm_qos_int_req, 0);
