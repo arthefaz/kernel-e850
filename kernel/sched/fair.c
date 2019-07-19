@@ -3483,8 +3483,8 @@ unsigned long sched_get_rt_rq_util(int cpu)
 {
 	struct rt_rq *rt_rq;
 
-	//if (frt_disable_cpufreq)
-		//return 0;
+	if (frt_disable_cpufreq)
+		return 0;
 
 	rt_rq = &(cpu_rq(cpu)->rt);
 	return rt_rq->avg.util_avg;
