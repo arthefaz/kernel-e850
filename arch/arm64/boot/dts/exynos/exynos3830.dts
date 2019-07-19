@@ -252,6 +252,28 @@
 			pm_qos-min-class = <3>;
 			pm_qos-max-class = <4>;
 
+			dm-constraints {
+				mif-perf {
+					const-type = <CONSTRAINT_MIN>;
+					dm-type = <DM_MIF>;
+					/*  cpu     mif  */
+					table = < 1794000  1014000
+						1638000  1014000
+						1508000  845000
+						1378000  845000
+						1248000  845000
+						1105000  676000
+						949000  676000
+						806000  676000
+						650000  546000
+						546000  546000
+						442000  421000
+						351000  421000
+						208000       0
+						>;
+				};
+			};
+
 			slack_timer {
 				device_type = "slack-timer-domain";
 			};
@@ -268,6 +290,28 @@
 			/* PM QoS Class ID*/
 			pm_qos-min-class = <5>;
 			pm_qos-max-class = <6>;
+
+			dm-constraints {
+				mif-perf {
+					const-type = <CONSTRAINT_MIN>;
+					dm-type = <DM_MIF>;
+					/*  cpu     mif  */
+					table = < 1794000  1014000
+						1638000  1014000
+						1508000  845000
+						1378000  845000
+						1248000  845000
+						1105000  676000
+						949000  676000
+						806000  676000
+						650000  546000
+						546000  546000
+						442000  421000
+						351000  421000
+						208000       0
+						>;
+				};
+			};
 
 			slack_timer {
 				device_type = "slack-timer-domain";
