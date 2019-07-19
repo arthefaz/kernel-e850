@@ -35,7 +35,7 @@ config MALI_DVFS
 
 config MALI_RT_PM
     bool "Enable EXYNOS Runtime power management"
-    default n
+    default y
     help
       Choose this option to enable runtime power management in the Mali Midgard DDK.
 

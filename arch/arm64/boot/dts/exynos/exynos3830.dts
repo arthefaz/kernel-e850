@@ -739,7 +739,7 @@
                    <GIC_SPI INTREQ__G3D_IRQGPU IRQ_TYPE_LEVEL_HIGH>;
         interrupt-names = "JOB", "MMU", "GPU";
         g3d_cmu_cal_id = <ACPM_DVFS_G3D>;
-        /*samsung,power-domain = <&pd_g3d>; Please enable this when pm-domain is updated.*/
+        samsung,power-domain = <&pd_g3d>;
         g3d_genpd_name = "pd-g3d";
         #cooling-cells = <2>; /* min followed by max */
         governor = "interactive";
@@ -758,7 +758,7 @@
                              260000     0   70   1   421000  442000       0 >;
         gpu_sustainable_info = <0 0 0 0 0>;
         gpu_pmqos_cpu_cluster_num = <2>;
-        gpu_pmu_status_reg_offset = <0x1f04>;
+        gpu_pmu_status_reg_offset = <0x1d04>;
         gpu_pmu_status_local_pwr_mask = <0x1>; /*0x1 << 0*/
         gpu_max_clock = <754000>;
         gpu_max_clock_limit = <754000>;
