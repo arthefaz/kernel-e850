@@ -62,29 +62,6 @@
 
 #define RUNTIME_PM_AFFINITY_CORE 2
 
-static void __iomem *cmgp2pmu_ap_ioaddr;
-void init_pinctl_cp2ap_wakeup(struct modem_ctl *mc)
-{
-	u32 temp;
-
-	cmgp2pmu_ap_ioaddr = devm_ioremap(mc->dev, 0x15c70288, SZ_64);
-	if (cmgp2pmu_ap_ioaddr == NULL) {
-		mif_err("Fail to ioremap for cmgp2pmu_ap_ioaddr\n");
-		return;
-	}
-
-	temp = __raw_readl(cmgp2pmu_ap_ioaddr);
-	mif_err("BEFORE 0x15c70288: %08X\n", temp);
-	temp = temp | (1<<26);
-
-	__raw_writel(temp, cmgp2pmu_ap_ioaddr);
-
-	temp = __raw_readl(cmgp2pmu_ap_ioaddr);
-	mif_err("AFTER 0x15c70288: %08X\n", temp);
-
-	devm_ioremap_release(mc->dev, cmgp2pmu_ap_ioaddr);
-}
-
 static struct modem_ctl *g_mc;
 
 static int register_phone_active_interrupt(struct modem_ctl *mc);
@@ -1269,8 +1246,6 @@ int s5100_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 		mif_err("failed to register PM notifier_call\n");
 		return ret;
 	}
-
-	init_pinctl_cp2ap_wakeup(mc);
 
 #if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)
 	mc->modem_nb.notifier_call = s5100_modem_notifier;
