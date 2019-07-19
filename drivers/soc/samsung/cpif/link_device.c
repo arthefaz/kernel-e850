@@ -299,12 +299,10 @@ static void handle_no_cp_crash_ack(unsigned long arg)
 
 #ifdef CONFIG_LINK_DEVICE_PCIE
 	if (ld->link_type == LINKDEV_PCIE) {
-		if (gpio_get_value(mc->s5100_gpio_phone_active) == 0) {
-			mif_info("Phone_active GPIO is LOW - Response of CP\n");
+		if (mif_gpio_get_value(mc->s5100_gpio_phone_active, true) == 0) {
 			mif_info("Set s5100_cp_reset_required to FALSE\n");
 			mc->s5100_cp_reset_required = false;
 		} else {
-			mif_info("Phone_active GPIO is HIGH - NO response of CP\n");
 			mif_info("Set s5100_cp_reset_required to TRUE\n");
 			mc->s5100_cp_reset_required = true;
 		}
@@ -687,12 +685,10 @@ static void cmd_crash_exit_handler(struct mem_link_device *mld)
 
 #ifdef CONFIG_LINK_DEVICE_PCIE
 	if (ld->link_type == LINKDEV_PCIE) {
-		if (gpio_get_value(mc->s5100_gpio_phone_active) == 0) {
-			mif_info("Phone_active GPIO is LOW - Response of CP\n");
+		if (mif_gpio_get_value(mc->s5100_gpio_phone_active, true) == 0) {
 			mif_info("Set s5100_cp_reset_required to FALSE\n");
 			mc->s5100_cp_reset_required = false;
 		} else {
-			mif_info("Phone_active GPIO is HIGH - NO response of CP\n");
 			mif_info("Set s5100_cp_reset_required to TRUE\n");
 			mc->s5100_cp_reset_required = true;
 		}
@@ -3440,7 +3436,7 @@ static ssize_t cp_uart_sel_show(struct device *dev,
 	struct modem_ctl *mc = ld->mc;
 	int value;
 
-	value = s5100_get_gpio_2cp_uart_sel(mc);
+	value = mif_gpio_get_value(mc->s5100_gpio_2cp_uart_sel, true);
 
 	return sprintf(buf, "%d\n", value);
 }
@@ -3458,7 +3454,7 @@ static ssize_t cp_uart_sel_store(struct device *dev,
 
 	ret = kstrtouint(buf, 0, &val);
 	if (ret == 1)
-		s5100_set_gpio_2cp_uart_sel(mc, (int)val);
+		mif_gpio_set_value(mc->s5100_gpio_2cp_uart_sel, (int)val, 0);
 
 	return count;
 }

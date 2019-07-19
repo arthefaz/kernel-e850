@@ -2754,6 +2754,16 @@ int gpiod_cansleep(const struct gpio_desc *desc)
 }
 EXPORT_SYMBOL_GPL(gpiod_cansleep);
 
+#ifdef CONFIG_EXYNOS_MODEM_IF
+int gpiod_get_consumer_name(struct gpio_desc *desc, char **name)
+{
+	VALIDATE_DESC(desc);
+	*name = (char *)desc->label;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(gpiod_get_consumer_name);
+#endif
+
 /**
  * gpiod_to_irq() - return the IRQ corresponding to a GPIO
  * @desc: gpio whose IRQ will be returned (already requested)

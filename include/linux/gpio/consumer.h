@@ -127,6 +127,9 @@ int gpiod_is_active_low(const struct gpio_desc *desc);
 int gpiod_cansleep(const struct gpio_desc *desc);
 
 int gpiod_to_irq(const struct gpio_desc *desc);
+#ifdef CONFIG_EXYNOS_MODEM_IF
+int gpiod_get_consumer_name(struct gpio_desc *desc, char **name);
+#endif
 
 /* Convert between the old gpio_ and new gpiod_ interfaces */
 struct gpio_desc *gpio_to_desc(unsigned gpio);
@@ -401,6 +404,14 @@ static inline int gpiod_to_irq(const struct gpio_desc *desc)
 	WARN_ON(1);
 	return -EINVAL;
 }
+
+#ifdef CONFIG_EXYNOS_MODEM_IF
+static inline int gpiod_get_consumer_name(struct gpio_desc *desc, char **name)
+{
+	WARN_ON(1);
+	return -EINVAL;
+}
+#endif
 
 static inline struct gpio_desc *gpio_to_desc(unsigned gpio)
 {

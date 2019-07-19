@@ -84,10 +84,7 @@ void print_msi_register(struct pci_dev *pdev);
 int s5100_force_crash_exit_ext(void);
 int s5100_poweron_pcie(struct modem_ctl *mc);
 int s5100_poweroff_pcie(struct modem_ctl *mc);
-int s5100_set_gpio_2cp_uart_sel(struct modem_ctl *mc, int value);
-int s5100_get_gpio_2cp_uart_sel(struct modem_ctl *mc);
 int s5100_try_gpio_cp_wakeup(struct modem_ctl *mc);
-int s5100_get_gpio_cp_wakeup(struct modem_ctl *mc);
 int s5100_send_panic_noti_ext(void);
 
 #endif /* __S51xx_PCIE_H__ */

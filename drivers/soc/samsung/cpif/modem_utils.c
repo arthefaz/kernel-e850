@@ -37,6 +37,7 @@
 #include <linux/mutex.h>
 #include <linux/irq.h>
 #include <linux/gpio.h>
+#include <linux/gpio/consumer.h>
 #include <linux/delay.h>
 #include <linux/wakelock.h>
 #include <linux/debug-snapshot.h>
@@ -1100,6 +1101,56 @@ void mif_disable_irq(struct modem_irq *irq)
 
 exit:
 	spin_unlock_irqrestore(&irq->lock, flags);
+}
+
+void mif_gpio_set_value(unsigned int gpio, int value, int delay_ms)
+{
+	char *name = NULL;
+	struct gpio_desc *desc = NULL;
+
+	if (!gpio_is_valid(gpio)) {
+		mif_err("SET GPIO %d is failed\n", gpio);
+		return;
+	}
+
+	gpio_set_value(gpio, value);
+
+	desc = gpio_to_desc(gpio);
+	if (desc != NULL && gpiod_get_consumer_name(desc, &name) == 0)
+		mif_info("SET GPIO %s = %d (wait %dms)\n", name, value, delay_ms);
+	else
+		mif_info("SET GPIO %d = %d (wait %dms)\n", gpio, value, delay_ms);
+
+	if (delay_ms > 0) {
+		if (in_interrupt())
+			mdelay(delay_ms);
+		else
+			msleep(delay_ms);
+	}
+}
+
+int mif_gpio_get_value(unsigned int gpio, bool log_print)
+{
+	int value;
+	char *name = NULL;
+	struct gpio_desc *desc = NULL;
+
+	if (!gpio_is_valid(gpio)) {
+		mif_err("GET GPIO %d is failed\n", gpio);
+		return -EINVAL;
+	}
+
+	value = gpio_get_value(gpio);
+
+	if (log_print) {
+		desc = gpio_to_desc(gpio);
+		if (desc != NULL && gpiod_get_consumer_name(desc, &name) == 0)
+			mif_info("GET GPIO %s = %d\n", name, value);
+		else
+			mif_info("GET GPIO %d = %d\n", gpio, value);
+	}
+
+	return value;
 }
 
 struct file *mif_open_file(const char *path)
