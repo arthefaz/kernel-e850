@@ -188,6 +188,9 @@ unlock:
 
 int ecs_is_sparing_cpu(int cpu)
 {
+	if (!ecs_gov.enabled)
+		return false;
+
 	return !cpumask_test_cpu(cpu, &ecs_gov.cpus);
 }
 
@@ -550,8 +553,8 @@ static int __init ecs_parse_dt(void)
 			goto failure;
 
 	return 0;
+
 failure:
-	pr_warn("ECS: failed to parse dt\n");
 	return -EINVAL;
 }
 
@@ -628,9 +631,16 @@ failure:
 
 static int __init init_core_sparing(void)
 {
+	/* Explicit assignment for ecs_gov */
+	ecs_gov.enabled = 0;
+	cpumask_copy(&ecs_gov.cpus, cpu_active_mask);
+
 	/* parse dt */
-	if (ecs_parse_dt())
+	if (ecs_parse_dt()) {
+		pr_info("Not support core sparing governor\n");
 		goto failure;
+	}
+
 	/* init sysfs */
 	if (ecs_sysfs_init())
 		goto failure;
@@ -640,6 +650,5 @@ static int __init init_core_sparing(void)
 	return 0;
 
 failure:
-	pr_warn("ECS: Initialization failed \n");
 	return 0;
 } late_initcall(init_core_sparing);

@@ -223,25 +223,29 @@ out:
 	return service_cpu;
 }
 
-static void __init build_prefer_cpus(void)
+static int __init build_prefer_cpus(void)
 {
 	struct device_node *dn, *child;
 	int index = 0;
 
-	dn = of_find_node_by_name(NULL, "ems");
-	dn = of_find_node_by_name(dn, "service");
+	dn = of_find_node_by_path("/cpus/ems/service");
+	if (!dn) {
+		pr_info("Not support EMS service\n");
+		return -ENODEV;
+	}
+
 	service_count = of_get_child_count(dn);
 
 	services = kcalloc(service_count, sizeof(struct prefer_perf_service), GFP_KERNEL);
 	if (!services)
-		return;
+		return -ENOMEM;
 
 	for_each_child_of_node(dn, child) {
 		const char *mask[NR_CPUS];
 		int i, proplen;
 
 		if (index >= service_count)
-			return;
+			return 0;
 
 		of_property_read_u32(child, "boost",
 					&services[index].boost);
@@ -307,6 +311,8 @@ heavy:
 next:
 		index++;
 	}
+
+	return 0;
 }
 
 static ssize_t show_kpp(struct kobject *kobj,
@@ -487,7 +493,8 @@ static int __init init_service(void)
 
 	init_kpp();
 
-	build_prefer_cpus();
+	if (build_prefer_cpus())
+		return 0;
 
 	service_kobj = kobject_create_and_add("service", ems_kobj);
 	if (!service_kobj) {

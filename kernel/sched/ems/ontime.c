@@ -60,16 +60,15 @@ static inline struct sched_entity *se_of(struct sched_avg *sa)
 	return container_of(sa, struct sched_entity, avg);
 }
 
-struct ontime_dom *get_current_dom(int cpu)
+static struct ontime_dom *get_dom(int cpu)
 {
-	struct ontime_dom *curr;
+	struct ontime_dom *curr = NULL;
 
-	list_for_each_entry(curr, &dom_list, list) {
+	list_for_each_entry(curr, &dom_list, list)
 		if (cpumask_test_cpu(cpu, &curr->cpus))
-			return curr;
-	}
+			break;
 
-	return NULL;
+	return curr;
 }
 
 #define u_boundary(dom, p)	(p->sse ? dom->upper_boundary_s : dom->upper_boundary)
@@ -77,24 +76,24 @@ struct ontime_dom *get_current_dom(int cpu)
 
 unsigned long get_upper_boundary(int cpu, struct task_struct *p)
 {
-	struct ontime_dom *curr = get_current_dom(cpu);
+	struct ontime_dom *curr = get_dom(cpu);
 	unsigned long capacity = capacity_cpu(cpu, p->sse);
 
-	if (curr)
-		return (capacity * u_boundary(curr, p)) / 100;
-	else
+	if (!curr)
 		return ULONG_MAX;
+
+	return (capacity * u_boundary(curr, p)) / 100;
 }
 
 static inline unsigned long get_lower_boundary(int cpu, struct task_struct *p)
 {
-	struct ontime_dom *curr = get_current_dom(cpu);
+	struct ontime_dom *curr = get_dom(cpu);
 	unsigned long capacity = capacity_cpu(cpu, p->sse);
 
-	if (curr)
-		return (capacity * l_boundary(curr, p)) / 100;
-	else
+	if (!curr)
 		return 0;
+
+	return (capacity * l_boundary(curr, p)) / 100;
 }
 
 static inline int check_migrate_faster(int src, int dst, int sse)
@@ -120,7 +119,7 @@ void ontime_select_fit_cpus(struct task_struct *p, struct cpumask *fit_cpus)
 	u32 runnable = ml_task_runnable(p);
 	struct cpumask mask;
 
-	curr = get_current_dom(src_cpu);
+	curr = get_dom(src_cpu);
 	if (!curr)
 		return;
 
@@ -357,6 +356,9 @@ void ontime_migration(void)
 {
 	int cpu;
 
+	if (list_empty(&dom_list))
+		return;
+
 	if (!spin_trylock(&om_lock))
 		return;
 
@@ -445,6 +447,9 @@ int ontime_can_migrate_task(struct task_struct *p, int dst_cpu)
 {
 	int src_cpu = task_cpu(p);
 	u32 runnable;
+
+	if (list_empty(&dom_list))
+		return true;
 
 	if (!schedtune_ontime(p))
 		return true;
@@ -666,6 +671,11 @@ static int __init init_ontime(void)
 	dn = of_find_node_by_path("/cpus/ems");
 	if (!dn)
 		return 0;
+
+	if (!of_get_child_by_name(dn, "ontime")) {
+		pr_info("Not support ontime migration\n");
+		return 0;
+	}
 
 	if (!cpumask_equal(cpu_possible_mask, cpu_all_mask))
 		return 0;
