@@ -390,6 +390,8 @@
 			pm_qos-min-class = <3>;
 			pm_qos-max-class = <4>;
 
+			#cooling-cells = <2>; /* min followed by max */
+
 			dm-constraints {
 				mif-perf {
 					const-type = <CONSTRAINT_MIN>;
@@ -428,6 +430,8 @@
 			/* PM QoS Class ID*/
 			pm_qos-min-class = <5>;
 			pm_qos-max-class = <6>;
+
+			#cooling-cells = <2>; /* min followed by max */
 
 			dm-constraints {
 				mif-perf {
