@@ -21,43 +21,43 @@
 #include <linux/interrupt.h>
 #include <linux/debug-snapshot-helper.h>
 
+#ifdef CONFIG_DEBUG_SNAPSHOT
 extern struct dbg_snapshot_helper_ops *dss_soc_ops;
+#endif
+static struct device *exynos_handler_dev;
 
 struct exynos_handler {
-	int		irq;
+	unsigned int	irq;
 	char		name[SZ_16];
-	irqreturn_t	(*handle_irq)(int irq, void *data);
+	void		*handler;
 };
-
-static int handler_nr_irq;
-static struct exynos_handler *ecc_handler;
 
 static irqreturn_t exynos_ecc_handler(int irq, void *data)
 {
 	struct exynos_handler *ecc = (struct exynos_handler *)data;
 
+#ifdef CONFIG_DEBUG_SNAPSHOT
 	dss_soc_ops->soc_dump_info(NULL);
-
+#endif
 	panic("Detected ECC error: irq: %d, name: %s", ecc->irq, ecc->name);
 	return 0;
 }
 
 static int __init exynos_handler_setup(struct device_node *np)
 {
-	int err = 0, i;
+	struct exynos_handler *ecc_handler;
+	int err = 0;
+	int handler_nr_irq, i;
 
-	if (of_property_read_u32(np, "handler_nr_irq", &handler_nr_irq)) {
-		handler_nr_irq = 0;
-		pr_err("%s: handler_nr_irq property is not defined in device tree\n", __func__);
-	}
-	pr_info("%s: handler_nr_irq = %d\n", __func__, handler_nr_irq);
+	handler_nr_irq = of_irq_count(np);
+	dev_info(exynos_handler_dev, "%s: handler_nr_irq = %d\n", __func__, handler_nr_irq);
 
 	/* memory alloc for handler */
 	if (handler_nr_irq > 0) {
 		ecc_handler = kzalloc(sizeof(struct exynos_handler) * handler_nr_irq,
 					GFP_KERNEL);
 		if (!ecc_handler) {
-			pr_err("%s: fail to kzalloc\n", __func__);
+			dev_err(exynos_handler_dev, "%s: fail to kzalloc\n", __func__);
 			err = -ENOMEM;
 			goto out;
 		}
@@ -68,19 +68,21 @@ static int __init exynos_handler_setup(struct device_node *np)
 		ecc_handler[i].irq = irq_of_parse_and_map(np, i);
 		snprintf(ecc_handler[i].name, sizeof(ecc_handler[i].name),
 				"ecc_handler%d", i);
-		ecc_handler[i].handle_irq = exynos_ecc_handler;
+		ecc_handler[i].handler = (void *)exynos_ecc_handler;
 
 		err = request_irq(ecc_handler[i].irq,
-				ecc_handler[i].handle_irq,
-				IRQ_TYPE_LEVEL_HIGH | IRQF_NOBALANCING | IRQF_GIC_MULTI_TARGET,
+				ecc_handler[i].handler,
+				IRQF_NOBALANCING | IRQF_GIC_MULTI_TARGET,
 				ecc_handler[i].name, &ecc_handler[i]);
 		if (err) {
-			pr_err("unable to request irq%d for %s ecc handler\n",
-					ecc_handler[i].irq, ecc_handler[i].name);
+			dev_err(exynos_handler_dev,
+				"unable to request irq%u for %s ecc handler\n",
+				ecc_handler[i].irq, ecc_handler[i].name);
 			break;
 		} else {
-			pr_info("Success to request irq%d for %s ecc handler\n",
-					ecc_handler[i].irq, ecc_handler[i].name);
+			dev_info(exynos_handler_dev,
+				"Success to request irq%u for %s ecc handler\n",
+				ecc_handler[i].irq, ecc_handler[i].name);
 		}
 	}
 
@@ -104,6 +106,11 @@ static int __init exynos_handler_init(void)
 	np = of_find_matching_node_and_match(NULL, handler_of_match, &matched_np);
 	if (!np)
 		return -ENODEV;
+
+	exynos_handler_dev = create_empty_device();
+	if (!exynos_handler_dev)
+		panic("Exynos: create empty device fail\n");
+	dev_set_socdata(exynos_handler_dev, "Exynos", "Handler");
 
 	init_fn = (handler_initcall_t)matched_np->data;
 
