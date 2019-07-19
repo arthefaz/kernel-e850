@@ -325,7 +325,7 @@ void dbg_snapshot_dump_sfr(void)
 		dev_emerg(dss_desc.dev, "debug-snapshot: %s is disabled, %d\n", item->name, item->entry.enabled);
 		return;
 	} else {
-		dev_emerg(dss_desc.dev, "debug-snapshot: %s is disabled, %d\n", item->name, item->entry.enabled);
+		dev_emerg(dss_desc.dev, "debug-snapshot: %s is enabled, %d\n", item->name, item->entry.enabled);
 	}
 
 	if (list_empty(&dss_desc.sfrdump_list)) {
@@ -341,22 +341,11 @@ void dbg_snapshot_dump_sfr(void)
 			/* may off */
 			continue;
 
-		for (i = 0; i < sfrdump->num; i++) {
-			ret = of_property_read_u32_index(np, "addr", i, &reg);
-			if (ret < 0) {
-				dev_err(dss_desc.dev, "debug-snapshot: failed to get address information - %s\n",
-					sfrdump->name);
-				break;
-			}
-			if (reg == 0xFFFFFFFF || reg == 0)
-				break;
-			offset = reg - sfrdump->phy_reg;
-			if (reg < offset) {
-				dev_err(dss_desc.dev, "debug-snapshot: invalid address information - %s: 0x%08x\n",
-				sfrdump->name, reg);
-				break;
-			}
-			val = __raw_readl(sfrdump->reg + offset);
+		for (i = 0; i < (int)(sfrdump->size >> 2); i++) {
+			offset = i * 4;
+			reg = sfrdump->phy_reg + offset;
+
+			val = __raw_readl_no_log(sfrdump->reg + offset);
 			snprintf(buf, SZ_64, "0x%X = 0x%0X\n",reg, val);
 			size = (unsigned int)strlen(buf);
 			if (unlikely((dbg_snapshot_check_eob(item, size))))
@@ -374,37 +363,18 @@ static int dbg_snapshot_sfr_dump_init(struct device_node *np)
 {
 	struct device_node *dump_np;
 	struct dbg_snapshot_sfrdump *sfrdump;
-	char *dump_str;
-	int count, ret, i;
 	u32 phy_regs[2];
-
-	ret = of_property_count_strings(np, "sfr-dump-list");
-	if (ret < 0) {
-		dev_err(dss_desc.dev, "failed to get sfr-dump-list\n");
-		return ret;
-	}
-	count = ret;
+	int ret = 0;
 
 	INIT_LIST_HEAD(&dss_desc.sfrdump_list);
-	for (i = 0; i < count; i++) {
-		ret = of_property_read_string_index(np, "sfr-dump-list", i,
-						(const char **)&dump_str);
-		if (ret < 0) {
-			dev_err(dss_desc.dev, "failed to get sfr-dump-list\n");
-			continue;
-		}
-
-		dump_np = of_get_child_by_name(np, dump_str);
-		if (!dump_np) {
-			dev_err(dss_desc.dev, "failed to get %s node, count:%d\n", dump_str, count);
-			continue;
-		}
+	for_each_child_of_node(np, dump_np) {
 
 		sfrdump = kzalloc(sizeof(struct dbg_snapshot_sfrdump), GFP_KERNEL);
 		if (!sfrdump) {
 			dev_err(dss_desc.dev, "failed to get memory region of dbg_snapshot_sfrdump\n");
 			of_node_put(dump_np);
-			continue;
+			ret = -ENOMEM;
+			break;
 		}
 
 		ret = of_property_read_u32_array(dump_np, "reg", phy_regs, 2);
@@ -417,22 +387,24 @@ static int dbg_snapshot_sfr_dump_init(struct device_node *np)
 
 		sfrdump->reg = ioremap(phy_regs[0], phy_regs[1]);
 		if (!sfrdump->reg) {
-			dev_err(dss_desc.dev, "failed to get i/o address %s node\n", dump_str);
+			dev_err(dss_desc.dev, "failed to get i/o address %s node\n", dump_np->name);
 			of_node_put(dump_np);
 			kfree(sfrdump);
 			continue;
 		}
-		sfrdump->name = dump_str;
 
-		ret = of_property_count_u32_elems(dump_np, "addr");
-		if (ret < 0) {
-			dev_err(dss_desc.dev, "failed to get addr count\n");
+		/* check 4 bytes alignment */
+		if ((phy_regs[0] & 0x3) ||(phy_regs[1] & 0x3)) {
+			dev_err(dss_desc.dev, "(%s) Invalid alignments (4 bytes)\n", dump_np->name);
 			of_node_put(dump_np);
 			kfree(sfrdump);
 			continue;
 		}
+
 		sfrdump->phy_reg = phy_regs[0];
-		sfrdump->num = ret;
+		sfrdump->size = phy_regs[1];
+		sfrdump->name = dump_np->name;
+		sfrdump->node = dump_np;
 
 		ret = of_property_count_u32_elems(dump_np, "cal-pd-id");
 		if (ret < 0)
@@ -440,13 +412,16 @@ static int dbg_snapshot_sfr_dump_init(struct device_node *np)
 		else
 			sfrdump->pwr_mode = true;
 
-		sfrdump->node = dump_np;
 		list_add(&sfrdump->list, &dss_desc.sfrdump_list);
 
 		dev_info(dss_desc.dev, "success to regsiter %s\n", sfrdump->name);
 		of_node_put(dump_np);
 		ret = 0;
 	}
+
+	if (!ret && list_empty(&dss_desc.sfrdump_list))
+		dev_info(dss_desc.dev, "There is no sfr dump list\n");
+
 	return ret;
 }
 

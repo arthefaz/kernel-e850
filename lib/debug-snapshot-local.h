@@ -88,10 +88,10 @@ struct dbg_snapshot_bl {
 };
 
 struct dbg_snapshot_sfrdump {
-	char *name;
+	const char *name;
 	void __iomem *reg;
 	unsigned int phy_reg;
-	unsigned int num;
+	unsigned int size;
 	struct device_node *node;
 	struct list_head list;
 	bool pwr_mode;
