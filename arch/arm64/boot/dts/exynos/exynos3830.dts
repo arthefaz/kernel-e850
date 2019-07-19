@@ -210,6 +210,9 @@
 			pm_qos-min-class = <3>;
 			pm_qos-max-class = <4>;
 
+			slack_timer {
+				device_type = "slack-timer-domain";
+			};
 		};
 
 		cpufreq_domain1: domain@1 {
@@ -224,6 +227,10 @@
 			pm_qos-min-class = <5>;
 			pm_qos-max-class = <6>;
 
+			slack_timer {
+				device_type = "slack-timer-domain";
+				expired_time = <80>;	/* 80ms */
+			};
 		};
 	};
 
