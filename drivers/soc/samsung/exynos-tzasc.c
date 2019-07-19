@@ -32,8 +32,6 @@ static irqreturn_t exynos_tzasc_irq_handler(int irq, void *dev_id)
 	struct tzasc_info_data *data = dev_id;
 	uint32_t irq_idx;
 
-	pr_info("TZASC_FAIL_DETECTOR: Implemented TZASC Fail Detector HardIRQ handler!\n");
-
 	for (irq_idx = 0; irq_idx < data->irqcnt; irq_idx++) {
 		if (irq == data->irq[irq_idx])
 			break;
@@ -51,7 +49,6 @@ static irqreturn_t exynos_tzasc_irq_handler(int irq, void *dev_id)
 		(data->need_log == TZASC_SKIP_FAIL_INFO_LOGGING)) {
 		data->need_handle = TZASC_HANDLE_INTERRUPT_THREAD;
 	} else if (data->need_log == TZASC_NO_TZASC_FAIL_INTERRUPT) {
-		pr_err("TZASC_FAIL_DETECTOR: This interrupt is not for TZASC\n");
 		data->need_handle = TZASC_DO_NOT_HANDLE_INTERRUPT_THREAD;
 	} else {
 		pr_err("TZASC_FAIL_DETECTOR: Failed to get fail information! ret(%#x)\n",
@@ -73,7 +70,7 @@ static irqreturn_t exynos_tzasc_irq_handler_thread(int irq, void *dev_id)
 		return IRQ_HANDLED;
 
 	if (data->need_log == TZASC_SKIP_FAIL_INFO_LOGGING) {
-		pr_info("TZASC_FAIL_DETECTOR: Ignore TZASC illegal reads\n");
+		pr_debug("TZASC_FAIL_DETECTOR: Ignore TZASC illegal reads\n");
 		return IRQ_HANDLED;
 	}
 
