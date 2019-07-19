@@ -856,11 +856,11 @@ static void ipi_cpu_stop(unsigned int cpu, struct pt_regs *regs)
 		raw_spin_unlock(&stop_lock);
 	}
 
+	dbg_snapshot_save_context(regs);
+
 	set_cpu_online(cpu, false);
 
 	local_irq_disable();
-
-	dbg_snapshot_save_context(regs);
 	exynos_sdm_flush_secdram();
 
 	while (1)

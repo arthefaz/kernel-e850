@@ -29,6 +29,7 @@
 #include <asm/cputype.h>
 #include <asm/smp_plat.h>
 #include <asm/core_regs.h>
+#include "system-regs.h"
 
 #include <soc/samsung/exynos-bcm_dbg.h>
 
@@ -42,195 +43,6 @@
 
 extern void (*arm_pm_restart)(enum reboot_mode str, const char *cmd);
 static struct device *exynos_helper_dev;
-
-static struct err_variant arm64_err_type_1[] = {
-	ERR_VAR("AV", 31, 31),
-	ERR_VAR("Valid", 30, 30),
-	ERR_VAR("UC", 29, 29),
-	ERR_VAR("ER", 28, 28),
-	ERR_VAR("OF", 27, 27),
-	ERR_VAR("MV", 26, 26),
-	ERR_VAR("CE", 25, 24),
-	ERR_VAR("DE", 23, 23),
-	ERR_VAR("PN", 22, 22),
-	ERR_VAR("UET", 21, 20),
-	ERR_VAR("RES0", 19, 16),
-	ERR_VAR("IERR", 15, 8),
-	ERR_VAR("SERR", 7, 0),
-	ERR_VAR("END", 64, 64),
-};
-
-static struct err_variant arm64_err_type_2[] = {
-	ERR_VAR("Count1", 63, 56),
-	ERR_VAR("Count0", 55, 48),
-	ERR_VAR("RES1", 47, 41),
-	ERR_VAR("Syndrom", 40, 32),
-	ERR_VAR("Stype2", 31, 28),
-	ERR_VAR("SType1", 27, 24),
-	ERR_VAR("SType0", 23, 16),
-	ERR_VAR("Type", 15, 12),
-	ERR_VAR("RES0", 11, 6),
-	ERR_VAR("RE", 5, 5),
-	ERR_VAR("SynValid", 4, 4),
-	ERR_VAR("AddrValid", 3, 3),
-	ERR_VAR("UnContained", 2, 2),
-	ERR_VAR("UC", 1, 1),
-	ERR_VAR("Vaild", 0, 0),
-	ERR_VAR("END", 64, 64),
-};
-
-static struct err_variant arm64_err_type_3[] = {
-	ERR_VAR("RES0", 63, 32),
-	ERR_VAR("A", 31, 31),
-	ERR_VAR("RES0", 30, 25),
-	ERR_VAR("RES2", 24, 16),
-	ERR_VAR("AEType", 15, 14),
-	ERR_VAR("RES1", 13, 13),
-	ERR_VAR("EXT", 12, 12),
-	ERR_VAR("AET", 11, 10),
-	ERR_VAR("EA", 9, 9),
-	ERR_VAR("EA", 8, 6),
-	ERR_VAR("DFSC", 5, 0),
-	ERR_VAR("END", 64, 64),
-};
-
-static struct err_variant arm64_err_type_4[] = {
-	ERR_VAR("Fatal", 63, 63),
-	ERR_VAR("RES0", 62, 48),
-	ERR_VAR("Other error count", 47, 40),
-	ERR_VAR("Repeat error count", 39, 32),
-	ERR_VAR("Valid", 31, 31),
-	ERR_VAR("RAMID", 30, 24),
-	ERR_VAR("RES0", 23, 21),
-	ERR_VAR("CPUID", 20, 18),
-	ERR_VAR("RES0", 17, 12),
-	ERR_VAR("RAM address", 11, 0),
-	ERR_VAR("END", 64, 64),
-};
-
-static struct err_variant arm64_err_type_TCR[] = {
-//	ERR_VAR("HPD1", 42, 42),
-//	ERR_VAR("HPD0", 41, 41),
-//	ERR_VAR("HD", 40, 40),
-//	ERR_VAR("HA", 39, 39),
-	ERR_VAR("TBI1", 38, 38),
-	ERR_VAR("TBI0", 37, 37),
-//	ERR_VAR("AS", 36, 36),
-//	ERR_VAR("IPS", 34, 32),
-//	ERR_VAR("TG1", 31, 30),
-//	ERR_VAR("SH1", 29, 28),
-//	ERR_VAR("ORGN1", 27, 26),
-//	ERR_VAR("IRGN1", 25, 24),
-//	ERR_VAR("EPD1", 23, 23),
-//	ERR_VAR("A1", 22, 22),
-//	ERR_VAR("T1SZ", 21, 16),
-//	ERR_VAR("TG0", 15, 14),
-//	ERR_VAR("SH0", 13, 12),
-//	ERR_VAR("ORGN0", 11, 10),
-//	ERR_VAR("IRGN0", 9, 8),
-//	ERR_VAR("EPD0", 7, 7),
-//	ERR_VAR("T1SZ", 5, 0),
-//	ERR_VAR("END", 64, 64),
-};
-
-static struct err_variant arm64_err_type_VBAR[] = {
-	ERR_VAR("VBA[63:56]", 63, 56),
-	ERR_VAR("VBA[55]", 55, 55),
-	ERR_VAR("END", 64, 64),
-};
-
-static struct err_variant arm64_err_type_L2ECTLR[] = {
-	ERR_VAR("L2AsyncErr", 30, 30),
-	ERR_VAR("END", 64, 64),
-};
-
-static struct err_variant arm64_err_type_L3ECTLR[] = {
-	ERR_VAR("L3IntrnAsyncErr", 30, 30),
-	ERR_VAR("ExtBusAsyncErr", 29, 29),
-	ERR_VAR("EnTmrIncChk", 3, 3),
-	ERR_VAR("ClusterQactiveCtl", 2, 0),
-	ERR_VAR("END", 64, 64),
-};
-
-enum {
-	FEMERR0SR = 0,
-	LSMERR0SR,
-	TBWMERR0SR,
-	L2MERR0SR,
-	L3MERR0SR,
-	DISR_EL1,
-	ERXSTATUS_EL1,
-	CPUMERRSR,
-	L2MERRSR,
-	TCR_EL1,
-	VBAR_EL1,
-	L2ECTLR_EL1,
-	L3ECTLR
-};
-
-static struct err_variant_data exynos_cpu_err_table[] = {
-	ERR_REG(arm64_err_type_2, 0, "FEMERR0SR"),
-	ERR_REG(arm64_err_type_2, 0, "LSMERR0SR"),
-	ERR_REG(arm64_err_type_2, 0, "TBWMERR0SR"),
-	ERR_REG(arm64_err_type_2, 0, "L2MERR0SR"),
-	ERR_REG(arm64_err_type_2, 0, "L3MERR0SR"),
-	ERR_REG(arm64_err_type_3, 31, "DISR_EL1"),
-	ERR_REG(arm64_err_type_1, 30, "ERXSTATUS_EL1"),
-	ERR_REG(arm64_err_type_4, 31, "CPUMERRSR"),
-	ERR_REG(arm64_err_type_4, 31, "L2MERRSR"),
-	ERR_REG(arm64_err_type_TCR, 0xFF, "TCR_EL1"),
-	ERR_REG(arm64_err_type_VBAR, 0xFF, "VBAR_EL1"),
-	ERR_REG(arm64_err_type_L2ECTLR, 30, "L2ECTLR_EL1"),
-	ERR_REG(arm64_err_type_L3ECTLR, 30, "L3ECTLR")
-};
-
-void exynos_err_parse(u32 reg_idx, u64 reg, struct err_variant_data *exynos_cpu_err)
-{
-	u8 i = 0;
-	u8 fld_offset, fld_end;
-	u64 valid;
-	u32 field;
-	const struct err_variant *variant;
-
-
-	if (exynos_cpu_err->valid_bit == 0xFF)
-		goto run_valid;
-
-	valid = reg & BIT(exynos_cpu_err->valid_bit);
-	if (!valid) {
-		dev_emerg(exynos_helper_dev, "%s valid_bit(%d) is NOT set (0x%lx)\n",
-				exynos_cpu_err->reg_name, exynos_cpu_err->valid_bit, valid);
-		return;
-	}
-
-run_valid:
-	variant = exynos_cpu_err->variant;
-	while (true) {
-		fld_offset = variant[i].fld_offset;
-		fld_end = variant[i].fld_end;
-
-		if (fld_end > 63)
-			break;
-
-		field = (reg & GENMASK_ULL(fld_end, fld_offset)) >> fld_offset;
-		if (field != 0)
-			dev_emerg(exynos_helper_dev, "%s (%d:%d) %s 0x%lx\n",
-				exynos_cpu_err->reg_name,
-				fld_end, fld_offset,
-				variant[i].fld_name, field);
-		i++;
-	};
-};
-
-static void exynos_cpu_err_parse(u32 reg_idx, u64 reg)
-{
-	if (reg_idx >= ARRAY_SIZE(exynos_cpu_err_table)) {
-		dev_err(exynos_helper_dev, "%s: there is no parse data\n", __func__);
-		return;
-	}
-
-	exynos_err_parse(reg_idx, reg, &exynos_cpu_err_table[reg_idx]);
-}
 
 static void exynos_early_panic(void *val)
 {
@@ -396,95 +208,143 @@ static void exynos_save_system(void *val)
 #endif
 }
 
-void exynos_dump_common_cpu_reg(void)
+static u64 read_ERRSELR_EL1(void)
 {
-	unsigned long reg1, reg2;
+	u64 reg;
 
-	asm volatile ("mrs %0, vbar_el1\n\t"
-			"mrs %1, tcr_el1\n"
-			: "=r" (reg1), "=r" (reg2));
+	asm volatile ("mrs %0, S3_0_c5_c3_1\n" : "=r" (reg));
+	return reg;
+}
 
-	exynos_cpu_err_parse(VBAR_EL1, reg1);
-	exynos_cpu_err_parse(TCR_EL1, reg2);
+static void write_ERRSELR_EL1(u64 val)
+{
+	asm volatile ("msr S3_0_c5_c3_1, %0\n"
+			"isb\n"
+			:: "r" ((__u64)val));
+}
+
+static u64 read_ERRIDR_EL1(void)
+{
+	u64 reg;
+
+	asm volatile ("mrs %0, S3_0_c5_c3_0\n" : "=r" (reg));
+	return reg;
+}
+
+static u64 read_ERXSTATUS_EL1(void)
+{
+	u64 reg;
+
+	asm volatile ("mrs %0, S3_0_c5_c4_2\n" : "=r" (reg));
+	return reg;
+}
+
+static void __attribute__((unused)) write_ERXSTATUS_EL1(u64 val)
+{
+	asm volatile ("msr S3_0_c5_c4_2, %0\n"
+			"isb\n"
+			:: "r" ((__u64)val));
+}
+
+static u64 read_ERXMISC0_EL1(void)
+{
+	u64 reg;
+
+	asm volatile ("mrs %0, S3_0_c5_c5_0\n" : "=r" (reg));
+	return reg;
+}
+
+static u64 read_ERXMISC1_EL1(void)
+{
+	u64 reg;
+
+	asm volatile ("mrs %0, S3_0_c5_c5_1\n" : "=r" (reg));
+	return reg;
+}
+
+static u64 read_ERXADDR_EL1(void)
+{
+	u64 reg;
+
+	asm volatile ("mrs %0, S3_0_c5_c4_3\n" : "=r" (reg));
+	return reg;
 }
 
 static void exynos_dump_info(void *val)
 {
-#if 0
 	/*
 	 *  Output CPU Memory Error syndrome Register
 	 *  CPUMERRSR, L2MERRSR
 	 */
 #ifdef CONFIG_ARM64
-	unsigned long reg1, reg2, reg3;
+	ERRSELR_EL1_t errselr_el1;
+	ERRIDR_EL1_t erridr_el1;
+	ERXSTATUS_EL1_t erxstatus_el1;
+	ERXMISC0_EL1_t erxmisc0_el1;
+	ERXMISC1_EL1_t erxmisc1_el1;
+	ERXADDR_EL1_t erxaddr_el1;
+	int i;
 
-	if (read_cpuid_implementor() == ARM_CPU_IMP_SEC) {
-		switch (read_cpuid_part_number()) {
-		case ARM_CPU_PART_MONGOOSE:
-		case ARM_CPU_PART_MEERKAT:
-			break;
-		default:
-			break;
+	switch (read_cpuid_part_number()) {
+	case ARM_CPU_PART_CORTEX_A55:
+	case ARM_CPU_PART_CORTEX_A76:
+
+		asm volatile ("HINT #16");
+		erridr_el1.reg = read_ERRIDR_EL1();
+		dev_emerg(exynos_helper_dev, "ECC err check erridr_el1.NUM = [0x%lx]\n",
+								(unsigned long)erridr_el1.field.NUM);
+
+		for (i = 0; i < (int)erridr_el1.field.NUM; i++) {
+			errselr_el1.reg = read_ERRSELR_EL1();
+			errselr_el1.field.SEL = i;
+			write_ERRSELR_EL1(errselr_el1.reg);
+
+			isb();
+
+			erxstatus_el1.reg = read_ERXSTATUS_EL1();
+			if (erxstatus_el1.field.Valid) {
+				if (erxstatus_el1.field.AV) {
+					erxaddr_el1.reg = read_ERXADDR_EL1();
+					dev_emerg(exynos_helper_dev,
+						"Error Address : [0x%lx]\n",
+							(unsigned long)erxaddr_el1.reg);
+				}
+				if (erxstatus_el1.field.OF)
+					dev_emerg(exynos_helper_dev,
+						"There was more than one error has occurred."
+						"the other error have been discarded.\n");
+				if (erxstatus_el1.field.ER)
+					dev_emerg(exynos_helper_dev,
+						"Error Reported by external abort\n");
+				if (erxstatus_el1.field.UE)
+					dev_emerg(exynos_helper_dev,
+						"Uncorrected Error (Not defferred)\n");
+				if (erxstatus_el1.field.DE)
+					dev_emerg(exynos_helper_dev,
+						"Deffered Error\n");
+				if (erxstatus_el1.field.MV) {
+					erxmisc0_el1.reg = read_ERXMISC0_EL1();
+					erxmisc1_el1.reg = read_ERXMISC1_EL1();
+					dev_emerg(exynos_helper_dev,
+						"ERXMISC0_EL1 = [0x%lx] ERXMISC1_EL1 = [0x%lx]"
+						"ERXSTATUS_EL1[15:8] = [0x%lx]"
+						"ERXSTATUS_EL1[7:0] = [0x%lx]\n",
+						(unsigned long)erxmisc0_el1.reg,
+						(unsigned long)erxmisc1_el1.reg,
+						(unsigned long)erxstatus_el1.field.IERR,
+						(unsigned long)erxstatus_el1.field.SERR);
+				}
+			} else {
+				dev_emerg(exynos_helper_dev,
+					"ERRSELR_EL1.SEL = %d, NOT VALID, "
+					"ERXSTATUS_EL1 = [0x%lx]\n",
+					i, (unsigned long)erxstatus_el1.reg);
+			}
 		}
-	} else {
-		switch (read_cpuid_part_number()) {
-		case ARM_CPU_PART_CORTEX_A57:
-		case ARM_CPU_PART_CORTEX_A53:
-			asm volatile ("mrs %0, S3_1_c11_c0_3\n\t"
-					: "=r" (reg1));
-			dev_emerg("exynos_helper_dev, L2ECTLR_EL1: %016lx", reg1);
-			exynos_cpu_err_parse(L2ECTLR_EL1, reg1);
 
-			asm volatile ("mrs %0, S3_1_c15_c2_2\n\t"
-					"mrs %1, S3_1_c15_c2_3\n"
-					: "=r" (reg1), "=r" (reg2));
-			dev_emerg(exynos_helper_dev, "CPUMERRSR: %016lx, L2MERRSR: %016lx\n", reg1, reg2);
-			exynos_cpu_err_parse(CPUMERRSR, reg1);
-			exynos_cpu_err_parse(L2MERRSR, reg2);
-			break;
-		case ARM_CPU_PART_ANANKE:
-		case ARM_CPU_PART_CORTEX_A73:
-			asm volatile ("mrs %0, S3_1_c11_c0_3\n\t"
-					"mrs %1, S3_1_c15_c2_3\n"
-					: "=r" (reg1), "=r" (reg2));
-			dev_emerg(exynos_helper_dev, "L2ECTLR_EL1: %016lx, L2MERRSR: %016lx\n", reg1, reg2);
-			exynos_cpu_err_parse(L2ECTLR_EL1, reg1);
-			exynos_cpu_err_parse(L2MERRSR, reg2);
-			break;
-		case ARM_CPU_PART_CORTEX_A75:
-			asm volatile ("HINT #16");
-			asm volatile ("mrs %0, S3_0_c12_c1_1\n" : "=r" (reg1)); /* read DISR_EL1 */
-			dev_emerg(exynos_helper_dev, "DISR_EL1: %016lx\n", reg1);
-			exynos_cpu_err_parse(DISR_EL1, reg1);
-
-			asm volatile ("msr S3_0_c5_c3_1, %0\n"
-					"isb\n"
-					:: "r" (0)); /* set CPU ERRSELR_EL1 */
-
-			asm volatile ("mrs %0, S3_0_c5_c4_2\n"
-					"mrs %1, S3_0_c5_c4_3\n"
-					"mrs %2, S3_0_c5_c5_0\n"
-					: "=r" (reg1), "=r" (reg2), "=r" (reg3));
-			dev_emerg(exynos_helper_dev, "CPU : ERXSTATUS_EL1: %016lx, ERXADDR_EL1: %016lx, "
-					"ERXMISC0_EL1: %016lx\n", reg1, reg2, reg3);
-			exynos_cpu_err_parse(ERXSTATUS_EL1, reg1);
-
-			asm volatile ("msr S3_0_c5_c3_1, %0\n"
-					"isb\n"
-					:: "r" (1)); /* set DSU ERRSELR_EL1 */
-
-			asm volatile ("mrs %0, S3_0_c5_c4_2\n"
-					"mrs %1, S3_0_c5_c4_3\n"
-					"mrs %2, S3_0_c5_c5_0\n"
-					: "=r" (reg1), "=r" (reg2), "=r" (reg3));
-			dev_emerg(exynos_helper_dev, "DSU : ERXSTATUS_EL1: %016lx, ERXADDR_EL1: %016lx, "
-					"ERXMISC0_EL1: %016lx\n", reg1, reg2, reg3);
-			exynos_cpu_err_parse(ERXSTATUS_EL1, reg1);
-
-			break;
-		default:
-			break;
-		}
+		break;
+	default:
+		break;
 	}
 #else
 	unsigned long reg0;
@@ -499,7 +359,6 @@ static void exynos_dump_info(void *val)
 		dev_emerg(exynos_helper_dev, "CPUMERRSR: %08lx_%08lx, L2MERRSR: %08lx_%08lx\n",
 				reg1, reg0, reg3, reg2);
 	}
-#endif
 #endif
 }
 
