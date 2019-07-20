@@ -514,7 +514,7 @@ static void win_update_set_partial_size(struct decon_device *decon,
 			decon->lcd_info, in_slice,
 			lcd_info.xres, lcd_info.yres);
 #if defined(CONFIG_EXYNOS_DECON_DQE)
-	dqe_reg_start(decon->id, &lcd_info);
+	decon_dqe_start(decon, &lcd_info);
 #endif
 	DPU_DEBUG_WIN("SET: vfp %d vbp %d vsa %d hfp %d hbp %d hsa %d w %d h %d\n",
 			lcd_info.vfp, lcd_info.vbp, lcd_info.vsa,

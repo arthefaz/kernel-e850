@@ -239,7 +239,7 @@ static void dqe_init_context(void)
 			tune_mode[i][k] = tune_mode[i-1][k];
 }
 
-int dqe_save_context(void)
+static int dqe_save_context(void)
 {
 	int i;
 	struct dqe_device *dqe = dqe_drvdata;
@@ -272,7 +272,7 @@ int dqe_save_context(void)
 	return 0;
 }
 
-int dqe_restore_context(void)
+static int dqe_restore_context(void)
 {
 	int i;
 	struct dqe_device *dqe = dqe_drvdata;
@@ -305,7 +305,7 @@ int dqe_restore_context(void)
 	if (dqe->ctx.hsc_on) {
 		if (decon) {
 			dqe_reg_set_hsc_full_pxl_num(decon->lcd_info);
-			dqe_info("dqe DQEHSC_FULL_PXL_NUM: %d\n",
+			dqe_dbg("dqe DQEHSC_FULL_PXL_NUM: %d\n",
 				dqe_reg_get_hsc_full_pxl_num());
 		}
 		dqe_reg_set_hsc_on(1);
@@ -354,8 +354,6 @@ static void decon_dqe_update_req(struct decon_device *decon)
 
 static void decon_dqe_update_context(struct decon_device *decon)
 {
-	struct decon_mode_info psr;
-
 	if (IS_DQE_OFF_STATE(decon)) {
 		dqe_err("decon is not enabled!(%d)\n", (decon) ? (decon->state) : -1);
 		return;
@@ -365,9 +363,8 @@ static void decon_dqe_update_context(struct decon_device *decon)
 
 	dqe_restore_context();
 
-	decon_to_psr_info(decon, &psr);
-	decon_reg_update_req_dqe(decon->id);
-	decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_ENABLE);
+	if (decon->lcd_info->mode == DECON_VIDEO_MODE)
+		decon_reg_update_req_dqe(decon->id);
 
 	decon_hiber_unblock(decon);
 }
@@ -1950,6 +1947,52 @@ void decon_dqe_sw_reset(struct decon_device *decon)
 		return;
 
 	dqe_reg_hsc_sw_reset(decon);
+}
+
+void decon_dqe_lpd_data_read(struct decon_device *decon)
+{
+	struct dqe_device *dqe = dqe_drvdata;
+
+	if (!decon->hiber.enabled)
+		return;
+
+	if (decon->id)
+		return;
+
+	dqe_reg_hsc_lpd_read(dqe);
+
+	dqe_dbg("dqe lpd data read (%x, %x) DQECON (%x)\n",
+		dqe->lpd_data[0], dqe->lpd_data[1], dqe_read(DQECON));
+}
+
+void decon_dqe_lpd_data_write(struct decon_device *decon)
+{
+	struct dqe_device *dqe = dqe_drvdata;
+
+	if (!decon->hiber.enabled)
+		return;
+
+	if (decon->id)
+		return;
+
+	dqe_reg_set_lpd_mode_exit(1);
+	dqe_reg_hsc_lpd_write(dqe);
+}
+
+void decon_dqe_restore_context(struct decon_device *decon)
+{
+	if (decon->id)
+		return;
+
+	dqe_restore_context();
+}
+
+void decon_dqe_start(struct decon_device *decon, struct exynos_panel_info *lcd_info)
+{
+	if (decon->id)
+		return;
+
+	dqe_reg_start(decon->id, lcd_info);
 }
 
 void decon_dqe_enable(struct decon_device *decon)

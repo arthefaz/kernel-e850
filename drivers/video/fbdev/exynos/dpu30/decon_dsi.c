@@ -68,6 +68,9 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 		decon_hiber_trig_reset(decon);
 		if (decon->state == DECON_STATE_TUI)
 			decon_info("%s:%d TUI Frame Done\n", __func__, __LINE__);
+#if defined(CONFIG_EXYNOS_DECON_DQE)
+		decon_dqe_lpd_data_read(decon);
+#endif
 	}
 
 	if (ext_irq & DPU_RESOURCE_CONFLICT_INT_PEND)
@@ -979,8 +982,9 @@ int decon_exit_hiber(struct decon_device *decon)
 	decon_to_init_param(decon, &p);
 	decon_reg_init(decon->id, decon->dt.out_idx[0], &p);
 #if defined(CONFIG_EXYNOS_DECON_DQE)
-	dqe_restore_context();
-	dqe_reg_start(decon->id, decon->lcd_info);
+	decon_dqe_restore_context(decon);
+	decon_dqe_lpd_data_write(decon);
+	decon_dqe_start(decon, decon->lcd_info);
 #endif
 	/*
 	 * After hibernation exit, If panel is partial size, DECON and DSIM
