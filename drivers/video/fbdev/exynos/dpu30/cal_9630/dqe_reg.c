@@ -105,6 +105,47 @@ u32 dqe_reg_get_hsc_full_pxl_num(void)
 	return dqe_read_mask(DQEHSC_CONTROL1, HSC_FULL_PXL_NUM_MASK);
 }
 
+void dqe_reg_set_lpd_mode_exit(u32 on)
+{
+	dqe_write_mask(DQECON, on ? ~0 : 0, DQE_LPD_MODE_EXIT_MASK);
+}
+
+void dqe_reg_hsc_lpd_read(struct dqe_device *dqe) {
+
+	u32 val, mask;
+
+	val = DQE_LPD_WR_DIR(0) | DQE_LPD_ADDR(0);
+	mask = DQE_LPD_WR_DIR_MASK | DQE_LPD_ADDR_MASK;
+	dqe_write_mask(DQE_LPD_DATA_CONTROL, val, mask);
+
+	mask = DQE_LPD_DATA_MASK;
+	dqe->lpd_data[0] = dqe_read_mask(DQE_LPD_DATA_CONTROL, mask);
+
+
+	val = DQE_LPD_WR_DIR(0) | DQE_LPD_ADDR(1);
+	mask = DQE_LPD_WR_DIR_MASK | DQE_LPD_ADDR_MASK;
+	dqe_write_mask(DQE_LPD_DATA_CONTROL, val, mask);
+
+	mask = DQE_LPD_DATA_MASK;
+	dqe->lpd_data[1] = dqe_read_mask(DQE_LPD_DATA_CONTROL, mask);
+}
+
+void dqe_reg_hsc_lpd_write(struct dqe_device *dqe) {
+
+	u32 val[2] = {0,};
+	u32 mask;
+
+	val[0] = DQE_LPD_WR_DIR(1) | DQE_LPD_ADDR(0)| DQE_LPD_DATA(dqe->lpd_data[0]) ;
+	mask = DQE_LPD_DATA_ALL_MASK;
+	dqe_write_mask(DQE_LPD_DATA_CONTROL, val[0], mask);
+
+	val[1] = DQE_LPD_WR_DIR(1) | DQE_LPD_ADDR(1)| DQE_LPD_DATA(dqe->lpd_data[1]) ;
+	mask = DQE_LPD_DATA_ALL_MASK;
+	dqe_write_mask(DQE_LPD_DATA_CONTROL, val[1], mask);
+
+	dqe_dbg("dqe lpd data write (%x, %x) DQECON (%x)\n", val[0], val[1], dqe_read(DQECON));
+}
+
 void dqe_reg_set_aps_on(u32 on)
 {
 	dqe_write_mask(DQECON, on ? ~0 : 0, DQE_APS_ON_MASK);

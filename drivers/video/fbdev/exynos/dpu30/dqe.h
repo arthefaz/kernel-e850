@@ -101,12 +101,15 @@ struct dqe_ctx {
 	u32 boosted_on;
 };
 
+#define LPD_DATA_SIZE 0x44
+
 struct dqe_device {
 	struct device *dev;
 	struct decon_device *decon;
 	struct mutex lock;
 	struct mutex restore_lock;
 	struct dqe_ctx ctx;
+	u32 lpd_data[LPD_DATA_SIZE];
 };
 
 extern int dqe_log_level;
@@ -125,6 +128,9 @@ u32 dqe_reg_get_hsc_on(void);
 void dqe_reg_hsc_sw_reset(struct decon_device *decon);
 void dqe_reg_set_hsc_full_pxl_num(struct exynos_panel_info *lcd_info);
 u32 dqe_reg_get_hsc_full_pxl_num(void);
+void dqe_reg_set_lpd_mode_exit(u32 on);
+void dqe_reg_hsc_lpd_read(struct dqe_device *dqe);
+void dqe_reg_hsc_lpd_write(struct dqe_device *dqe);
 void dqe_reg_set_aps_on(u32 on);
 u32 dqe_reg_get_aps_on(void);
 void dqe_reg_set_aps_full_pxl_num(struct exynos_panel_info *lcd_info);

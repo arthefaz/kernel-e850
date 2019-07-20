@@ -18,7 +18,7 @@
 #define DQE_GAMMA_ON_GET(_v)		(((_v) >> 2) & 0x1)
 #define DQE_CGC_ON_MASK			(0x3 << 0)
 #define DQE_CGC_ON_GET(_v)		(((_v) >> 0) & 0x3)
-#define DQECON_ALL_MASK			(0xffffffff << 0)
+#define DQECON_ALL_MASK			(0xff << 0)
 
 /* IMG_SIZE_SET */
 #define DQEIMG_SIZESET			0x0004
