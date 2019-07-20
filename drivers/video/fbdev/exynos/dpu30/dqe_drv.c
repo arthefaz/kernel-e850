@@ -106,8 +106,6 @@ static void dqe_dump(void)
 		return;
 	}
 
-	decon_hiber_block_exit(decon);
-
 	decon_info("\n=== DQE SFR DUMP ===\n");
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			decon->res.regs + DQE_BASE , 0x600, false);
@@ -115,8 +113,6 @@ static void dqe_dump(void)
 	decon_info("\n=== DQE SHADOW SFR DUMP ===\n");
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
 			decon->res.regs + SHADOW_DQE_OFFSET, 0x600, false);
-
-	decon_hiber_unblock(decon);
 
 	if (acquired)
 		console_unlock();
@@ -332,24 +328,6 @@ static int dqe_restore_context(void)
 	mutex_unlock(&dqe->restore_lock);
 
 	return 0;
-}
-
-static void decon_dqe_update_req(struct decon_device *decon)
-{
-	struct decon_mode_info psr;
-
-	if (IS_DQE_OFF_STATE(decon)) {
-		dqe_err("decon is not enabled!(%d)\n", (decon) ? (decon->state) : -1);
-		return;
-	}
-
-	decon_hiber_block_exit(decon);
-
-	decon_to_psr_info(decon, &psr);
-	decon_reg_update_req_dqe(decon->id);
-	decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_ENABLE);
-
-	decon_hiber_unblock(decon);
 }
 
 static void decon_dqe_update_context(struct decon_device *decon)
@@ -1095,7 +1073,7 @@ static ssize_t decon_dqe_aps_onoff_show(struct device *dev,
 static ssize_t decon_dqe_aps_onoff_store(struct device *dev, struct device_attribute *attr,
 		const char *buffer, size_t count)
 {
-	int i, ret = 0;
+	int ret = 0;
 	unsigned int value = 0;
 	struct dqe_device *dqe = dev_get_drvdata(dev);
 	struct decon_device *decon = get_decon_drvdata(0);
@@ -1104,7 +1082,7 @@ static ssize_t decon_dqe_aps_onoff_store(struct device *dev, struct device_attri
 
 	mutex_lock(&dqe->lock);
 
-	/*if (count <= 0)*/ {
+	if (count <= 0) {
 		dqe_err("aps_onoff write count error\n");
 		ret = -1;
 		goto err;
@@ -1128,9 +1106,7 @@ static ssize_t decon_dqe_aps_onoff_store(struct device *dev, struct device_attri
 		dqe->ctx.aps_on = DQE_APS_ON_MASK;
 
 	dqe->ctx.need_udpate = true;
-
-	dqe_restore_context();
-
+#if 0
 	switch (value) {
 	case 1:
 		dqe_write(DQEAPS_FULL_PXL_NUM, 0);
@@ -1172,8 +1148,8 @@ static ssize_t decon_dqe_aps_onoff_store(struct device *dev, struct device_attri
 		dqe_read(DQEAPS_FULL_PXL_NUM));
 	dqe_info("dqe DQEAPS_FULL_IMG_SIZESET: %x\n",
 		dqe_read(DQEAPS_FULL_IMG_SIZESET));
-
-	decon_dqe_update_req(decon);
+#endif
+	decon_dqe_update_context(decon);
 
 	mutex_unlock(&dqe->lock);
 
@@ -1285,7 +1261,7 @@ static ssize_t decon_dqe_aps_lux_store(struct device *dev, struct device_attribu
 
 	mutex_lock(&dqe->lock);
 
-	/*if (count <= 0)*/ {
+	if (count <= 0) {
 		dqe_err("aps_lux write count error\n");
 		ret = -1;
 		goto err;
@@ -1296,6 +1272,8 @@ static ssize_t decon_dqe_aps_lux_store(struct device *dev, struct device_attribu
 		ret = -1;
 		goto err;
 	}
+
+	decon_hiber_block_exit(decon);
 
 	ret = kstrtouint(buffer, 0, &value);
 	if (ret < 0)
@@ -1317,7 +1295,10 @@ static ssize_t decon_dqe_aps_lux_store(struct device *dev, struct device_attribu
 
 	dqe_reg_set_aps_on(1);
 
-	decon_dqe_update_req(decon);
+	if (decon->lcd_info->mode == DECON_VIDEO_MODE)
+		decon_reg_update_req_dqe(decon->id);
+
+	decon_hiber_unblock(decon);
 
 	mutex_unlock(&dqe->lock);
 
@@ -1618,7 +1599,7 @@ err:
 	return ret;
 }
 
-static ssize_t decon_dqe_off_store(struct device *dev, struct device_attribute *attr,
+static ssize_t decon_dqe_off_ctrl_store(struct device *dev, struct device_attribute *attr,
 		const char *buffer, size_t count)
 {
 	int ret = 0;
@@ -1651,23 +1632,22 @@ static ssize_t decon_dqe_off_store(struct device *dev, struct device_attribute *
 	switch (value) {
 	case 0:
 		dqe->ctx.cgc_on = 0;
+		dqe->ctx.gamma_on = 0;
+		dqe->ctx.hsc_on = 0;
+		dqe->ctx.aps_on = 0;
 		break;
 	case 1:
-		dqe->ctx.gamma_on = 0;
+		dqe->ctx.cgc_on = 0;
 		break;
 	case 2:
-		dqe->ctx.hsc_on = 0;
+		dqe->ctx.gamma_on = 0;
 		break;
 	case 3:
-		dqe->ctx.aps_on = 0;
-		break;
-	case 9:
-		dqe->ctx.cgc_on = 0;
-		dqe->ctx.gamma_on = 0;
 		dqe->ctx.hsc_on = 0;
+		break;
+	case 4:
 		dqe->ctx.aps_on = 0;
 		break;
-
 	default:
 		break;
 	}
@@ -1687,9 +1667,9 @@ err:
 	return ret;
 }
 
-static DEVICE_ATTR(dqe_off, 0660,
+static DEVICE_ATTR(off_ctrl, 0660,
 	NULL,
-	decon_dqe_off_store);
+	decon_dqe_off_ctrl_store);
 
 static DEVICE_ATTR(aosp_colors, 0660,
 	decon_dqe_aosp_color_show,
@@ -1700,10 +1680,15 @@ static ssize_t decon_dqe_dump_show(struct device *dev,
 {
 	int val = 0;
 	ssize_t count = 0;
+	struct decon_device *decon = get_decon_drvdata(0);
 
 	dqe_info("%s\n", __func__);
 
+	decon_hiber_block_exit(decon);
+
 	dqe_dump();
+
+	decon_hiber_unblock(decon);
 
 	count = snprintf(buf, PAGE_SIZE, "dump = %d\n", val);
 
@@ -1726,7 +1711,7 @@ static struct attribute *dqe_attrs[] = {
 	&dev_attr_tune_mode2.attr,
 	&dev_attr_tune_mode3.attr,
 	&dev_attr_aosp_colors.attr,
-	&dev_attr_dqe_off.attr,
+	&dev_attr_off_ctrl.attr,
 	&dev_attr_dump.attr,
 	NULL,
 };
