@@ -56,6 +56,7 @@ extern struct exynos_panel_ops panel_ana6705_ops;
 struct exynos_panel_resources {
 	int lcd_reset;
 	int lcd_power[2];
+	int lcd_detect;
 	struct regulator *regulator[MAX_REGULATORS];
 };
 
@@ -130,5 +131,6 @@ static inline struct exynos_panel_device *get_panel_drvdata(void)
 #define EXYNOS_PANEL_IOC_DOZE_SUSPEND	_IOW('P', 8, u32)
 #define EXYNOS_PANEL_IOC_DUMP		_IOW('P', 9, u32)
 #define EXYNOS_PANEL_IOC_READ_STATE	_IOR('P', 10, u32)
+#define EXYNOS_PANEL_IOC_CHECK_CONNECT	_IOR('P', 11, u32)
 
 #endif /* __EXYNOS_PANEL_DRV_H__ */

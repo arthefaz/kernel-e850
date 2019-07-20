@@ -120,6 +120,17 @@ static int exynos_panel_parse_gpios(struct exynos_panel_device *panel)
 		}
 	}
 
+	if (of_get_property(n, "detect-gpio", NULL) != NULL) {
+		res->lcd_detect = of_get_named_gpio(n, "detect-gpio", 0);
+		if (res->lcd_detect < 0) {
+			res->lcd_detect = -1;
+			DPU_INFO_PANEL("not support LCD detect GPIO");
+		}
+	} else {
+		res->lcd_detect = -1;
+		DPU_INFO_PANEL("not support LCD detect GPIO");
+	}
+
 	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
 }
@@ -278,6 +289,32 @@ static int exynos_panel_set_power(struct exynos_panel_device *panel, bool on)
 	DPU_DEBUG_PANEL("%s(%d) -\n", __func__, on);
 
 	return 0;
+}
+
+static int exynos_panel_check_connect(struct exynos_panel_device *panel)
+{
+	struct exynos_panel_resources *res = &panel->res;
+	int ret, ret2 = 0;
+
+	DPU_INFO_PANEL("%s +\n", __func__);
+
+	if (res->lcd_detect >= 0) {
+		ret = gpio_request_one(res->lcd_detect,
+				GPIOF_IN, "lcd_detect");
+		if (ret < 0)
+			DPU_ERR_PANEL("failed to set LCD detect pin\n");
+		else {
+			if (gpio_get_value(res->lcd_detect)) {
+				DPU_ERR_PANEL("panel is not connected...\n");
+				ret2 = -ENODEV;
+			}
+		}
+		gpio_free(res->lcd_detect);
+	}
+
+	DPU_INFO_PANEL("%s -\n", __func__);
+
+	return ret2;
 }
 
 static int exynos_panel_calc_slice_width(u32 dsc_cnt, u32 slice_num, u32 xres)
@@ -704,6 +741,9 @@ static long exynos_panel_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *a
 		break;
 	case EXYNOS_PANEL_IOC_READ_STATE:
 		ret = call_panel_ops(panel, read_state, panel);
+		break;
+	case EXYNOS_PANEL_IOC_CHECK_CONNECT:
+		ret = exynos_panel_check_connect(panel);
 		break;
 	default:
 		DPU_ERR_PANEL("not supported ioctl by panel driver\n");
