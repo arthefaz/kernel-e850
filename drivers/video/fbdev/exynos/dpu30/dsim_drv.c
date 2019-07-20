@@ -677,6 +677,19 @@ int dsim_set_panel_power(struct dsim_device *dsim, bool on)
 	return ret;
 }
 
+int dsim_check_panel_connect(struct dsim_device *dsim)
+{
+	struct v4l2_subdev *sd;
+
+	if (IS_ERR_OR_NULL(dsim->panel)) {
+		dsim_err("%s: panel ptr is NULL\n", __func__);
+		return -ENOMEM;
+	}
+
+	sd = &dsim->panel->sd;
+	return v4l2_subdev_call(sd, core, ioctl, EXYNOS_PANEL_IOC_CHECK_CONNECT, NULL);
+}
+
 static char *rpm_status_name[] = {
 	"RPM_ACTIVE",
 	"RPM_RESUMING",
