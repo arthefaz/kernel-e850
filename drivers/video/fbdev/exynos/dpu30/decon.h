@@ -1104,9 +1104,9 @@ struct decon_device {
 	struct mutex lock;
 	struct mutex pm_lock;
 	spinlock_t slock;
+	atomic_t bypass;
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 	struct decon_esd esd;
-	atomic_t bypass;
 	struct decon_reg_data last_regs;
 #endif
 
@@ -1416,7 +1416,6 @@ static inline void decon_enter_shutdown_reset(struct decon_device *decon)
 	atomic_set(&decon->is_shutdown, 0);
 }
 
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 static inline void decon_set_bypass(struct decon_device *decon, bool on)
 {
 	atomic_set(&decon->bypass, !!on);
@@ -1436,7 +1435,6 @@ static inline bool decon_is_bypass(struct decon_device *decon)
 {
 	return atomic_read(&decon->bypass);
 }
-#endif
 
 enum disp_pwr_mode {
 	DISP_PWR_OFF = 0,

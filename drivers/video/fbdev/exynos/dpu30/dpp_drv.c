@@ -45,8 +45,10 @@ void dpp_dump(struct dpp_device *dpp)
 void dpp_op_timer_handler(struct timer_list *arg)
 {
 	struct dpp_device *dpp = from_timer(dpp, arg, op_timer);
+	struct decon_device *decon = get_decon_drvdata(0);
 
-	dpp_dump(dpp);
+	if (!decon_is_bypass(decon))
+		dpp_dump(dpp);
 
 	if (dpp->dpp_config->config.compression)
 		dpp_info("Compression Source is %s of DPP[%d]\n",

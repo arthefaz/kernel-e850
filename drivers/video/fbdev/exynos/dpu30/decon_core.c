@@ -1058,14 +1058,13 @@ int decon_wait_for_vsync(struct decon_device *decon, u32 timeout)
 {
 	ktime_t timestamp;
 	struct decon_mode_info psr;
-	int ret;
+	struct dsim_device *dsim;
+	int ret = 0;
 
 	decon_to_psr_info(decon, &psr);
 
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 	if (decon_is_bypass(decon))
 		return 0;
-#endif
 
 	if (psr.trig_mode != DECON_HW_TRIG)
 		return 0;
@@ -1092,10 +1091,18 @@ int decon_wait_for_vsync(struct decon_device *decon, u32 timeout)
 			decon_err("decon%d wait for vsync timeout\n", decon->id);
 		}
 
-		return -ETIMEDOUT;
+		if (psr.out_type == DECON_OUT_DSI) {
+			dsim = v4l2_get_subdevdata(decon->out_sd[0]);
+			if (dsim_check_panel_connect(dsim) == -ENODEV) {
+				decon_err("panel is not connected.....");
+				decon_bypass_on(decon);
+			} else
+				ret = -ETIMEDOUT;
+		} else
+			ret = -ETIMEDOUT;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int decon_find_biggest_block_rect(struct decon_device *decon,
@@ -2147,10 +2154,8 @@ static void decon_update_regs(struct decon_device *decon,
 
 		decon_wait_for_vstatus(decon, 50);
 		if (decon_reg_wait_update_done_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 			if (decon_is_bypass(decon))
 				goto end;
-#endif
 			decon_up_list_saved();
 #if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 			decon_dump_afbc_handle(decon, old_dma_bufs);
@@ -2453,19 +2458,12 @@ static int decon_set_win_config(struct decon_device *decon,
 	mutex_lock(&decon->lock);
 
 	if (IS_DECON_OFF_STATE(decon) ||
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 		decon_is_bypass(decon) ||
-#endif
 		decon->state == DECON_STATE_TUI ||
 		IS_ENABLED(CONFIG_EXYNOS_VIRTUAL_DISPLAY)) {
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 		decon_warn("decon-%d skip win_config(state:%s, bypass:%s)\n",
 				decon->id, decon_state_names[decon->state],
 				decon_is_bypass(decon) ? "on" : "off");
-#else
-		decon_warn("decon-%d skip win_config(state:%s)\n",
-				decon->id, decon_state_names[decon->state]);
-#endif
 		win_data->retire_fence = decon_create_fence(decon, &sync_file);
 		if (win_data->retire_fence < 0)
 			goto err;
