@@ -363,6 +363,9 @@ static void decon_reg_set_blender_bg_size(u32 id, enum decon_dsi_mode dsi_mode,
 	val = BLENDER_BG_HEIGHT_F(bg_h) | BLENDER_BG_WIDTH_F(width);
 	mask = BLENDER_BG_HEIGHT_MASK | BLENDER_BG_WIDTH_MASK;
 	decon_write_mask(id, BLENDER_BG_IMAGE_SIZE_0, val, mask);
+
+	val = bg_w * bg_h;
+	decon_write(id, BLENDER_BG_IMAGE_SIZE_1, val);
 }
 
 static int decon_reg_stop_perframe(u32 id, u32 dsi_idx,
@@ -985,7 +988,7 @@ void decon_reg_get_crc_data(u32 id, u32 *w0_data, u32 *w1_data)
 }
 
 u32 DPU_DMA2CH(u32 dma)
-{	
+{
 	u32 ch_id;
 
 	switch (dma) {
@@ -1011,7 +1014,7 @@ u32 DPU_DMA2CH(u32 dma)
 }
 
 u32 DPU_CH2DMA(u32 ch)
-{	
+{
 	u32 dma;
 
 	switch (ch) {
