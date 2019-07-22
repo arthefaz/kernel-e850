@@ -389,6 +389,9 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 	u32 rx_fifo_depth = DSIM_RX_FIFO_MAX_DEPTH;
 	struct decon_device *decon = get_decon_drvdata(0);
 	struct dsim_regs regs;
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+	int ret2;
+#endif
 
 	decon_hiber_block_exit(decon);
 
@@ -414,6 +417,15 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 
 	if (!wait_for_completion_timeout(&dsim->rd_comp, MIPI_RD_TIMEOUT)) {
 		dsim_err("MIPI DSIM read Timeout!\n");
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+		decon_set_esd_recovery(decon, true);
+		decon_bypass_on(decon);
+		if (decon->esd.thread) {
+			ret2 = wake_up_process(decon->esd.thread);
+			dsim_info("%s:%d, wakeup esd thread(%d)\n", __func__,
+				__LINE__, ret2);
+		}
+#endif
 		return -ETIMEDOUT;
 	}
 
@@ -625,6 +637,9 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 		dsim_dbg("dsim%d vt_status(vsync) irq occurs\n", dsim->id);
 		if (decon) {
 			decon->vsync.timestamp = ktime_get();
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+			decon_set_esd_timestamp(decon, decon->vsync.timestamp);
+#endif
 			wake_up_interruptible_all(&decon->vsync.wait);
 		}
 	}

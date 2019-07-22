@@ -945,10 +945,15 @@ struct decon_vsync {
 };
 
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+#define DDI_PWR_STATE_CHECK_TRY	2
+#define ESD_SLEEP_TIME          4
 struct decon_esd {
 #define ESD_SLEEP_TIME		4
 	struct mutex lock;
 	struct task_struct *thread;
+	bool need_check;
+	atomic_t need_recovery;
+	atomic64_t timestamp;
 };
 #endif
 
@@ -1436,6 +1441,28 @@ static inline bool decon_is_bypass(struct decon_device *decon)
 	return atomic_read(&decon->bypass);
 }
 
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+static inline void decon_set_esd_recovery(struct decon_device *decon, bool on)
+{
+	atomic_set(&decon->esd.need_recovery, !!on);
+}
+
+static inline bool decon_get_esd_recovery(struct decon_device *decon)
+{
+	return atomic_read(&decon->esd.need_recovery);
+}
+
+static inline void decon_set_esd_timestamp(struct decon_device *decon, ktime_t time)
+{
+	atomic64_set(&decon->esd.timestamp, time);
+}
+
+static inline long long decon_get_esd_timestamp(struct decon_device *decon)
+{
+	return atomic64_read(&decon->esd.timestamp);
+}
+#endif
+
 enum disp_pwr_mode {
 	DISP_PWR_OFF = 0,
 	DISP_PWR_DOZE,
@@ -1532,6 +1559,10 @@ int decon_update_last_regs(struct decon_device *decon,
 
 void decon_hiber_start(struct decon_device *decon);
 void decon_hiber_finish(struct decon_device *decon);
+
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+int decon_handle_recovery(struct decon_device *decon);
+#endif
 
 /* IOCTL commands */
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, __u32)

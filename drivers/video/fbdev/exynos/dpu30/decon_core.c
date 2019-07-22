@@ -570,6 +570,10 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 #if defined(CONFIG_EXYNOS_DECON_DQE)
 	decon_dqe_enable(decon);
 #endif
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+	if (decon->dt.out_type == DECON_OUT_DSI)
+		decon->esd.need_check = true;
+#endif
 
 err:
 	return ret;
@@ -722,6 +726,11 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 
 	if (atomic_read(&decon->up.remaining_frame))
 		kthread_flush_worker(&decon->up.worker);
+
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+	if (decon->dt.out_type == DECON_OUT_DSI)
+		decon->esd.need_check = false;
+#endif
 
 	decon_to_psr_info(decon, &psr);
 	decon_reg_set_int(decon->id, &psr, 0);
@@ -1074,6 +1083,9 @@ int decon_wait_for_vsync(struct decon_device *decon, u32 timeout)
 	struct decon_mode_info psr;
 	struct dsim_device *dsim;
 	int ret = 0;
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+	int ret2;
+#endif
 
 	decon_to_psr_info(decon, &psr);
 
@@ -1108,10 +1120,24 @@ int decon_wait_for_vsync(struct decon_device *decon, u32 timeout)
 		if (psr.out_type == DECON_OUT_DSI) {
 			dsim = v4l2_get_subdevdata(decon->out_sd[0]);
 			if (dsim_check_panel_connect(dsim) == -ENODEV) {
-				decon_err("panel is not connected.....");
+				decon_err("%s:%d, panel is not connected...\n",
+						__func__, __LINE__);
 				decon_bypass_on(decon);
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+			} else {
+				decon_set_esd_recovery(decon, true);
+				decon_bypass_on(decon);
+				if (decon->esd.thread) {
+					ret2 = wake_up_process(decon->esd.thread);
+					decon_info("%s:%d, wakeup esd thread(%d)\n",
+							__func__, __LINE__, ret2);
+				}
+				ret = 0;
+			}
+#else
 			} else
 				ret = -ETIMEDOUT;
+#endif /* #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION) */
 		} else
 			ret = -ETIMEDOUT;
 	}
@@ -4002,6 +4028,10 @@ decon_init_done:
 #if defined(CONFIG_EXYNOS_DECON_DQE)
 	decon_dqe_sw_reset(decon);
 	decon_dqe_enable(decon);
+#endif
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+	if (decon->dt.out_type == DECON_OUT_DSI)
+		decon->esd.need_check = true;
 #endif
 	return 0;
 }
