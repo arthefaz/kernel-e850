@@ -1054,8 +1054,8 @@ static void dsim_reg_set_hperiod(u32 id, struct exynos_panel_info *lcd)
 	if (lcd->mode == DECON_VIDEO_MODE) {
 		hblank = lcd->hsa + lcd->hbp + lcd->hfp;
 		vblank = lcd->vsa + lcd->vbp + lcd->vfp;
-		vclk = DIV_ROUND_CLOSEST((width + hblank) * (height + vblank) * lcd->fps, 1000000);
-		wclk = DIV_ROUND_CLOSEST(lcd->hs_clk, 16);
+		vclk = DIV_ROUND_CLOSEST((width + hblank) * (height + vblank) * lcd->fps, 1000); /* khz */
+		wclk = DIV_ROUND_CLOSEST(lcd->hs_clk * 1000, 16); /* khz */
 
 		/* round calculation to reduce fps error */
 		hact_period = DIV_ROUND_CLOSEST(width * wclk, vclk);
