@@ -126,16 +126,18 @@ u32 displayport_get_decon_id(u32 sst_id)
 u32 displayport_get_sst_id_with_decon_id(u32 decon_id)
 {
 	u32 i = 0;
+	int ret_val = SST1;
 	struct displayport_device *displayport = get_displayport_drvdata();
 
 	for (i = SST1; i < MAX_SST_CNT; i++) {
 		if (decon_id == displayport->sst[i]->decon_id) {
 			displayport_dbg("SST%d connect DECON%d\n", i + 1, decon_id);
+			ret_val = displayport->sst[i]->id;
 			break;
 		}
 	}
 
-	return displayport->sst[i]->id;
+	return ret_val;
 }
 
 int displayport_get_sst_id_with_port_number(u8 port_number, u8 get_sst_id_type)
