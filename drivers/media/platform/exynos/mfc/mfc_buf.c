@@ -473,40 +473,14 @@ void mfc_release_dbg_info_buffer(struct mfc_dev *dev)
 }
 
 /* Allocation buffer of ROI macroblock information */
-static int __mfc_alloc_enc_roi_buffer(struct mfc_ctx *ctx, struct mfc_special_buf *roi_buf)
+static int __mfc_alloc_enc_roi_buffer(struct mfc_ctx *ctx, size_t size,
+					struct mfc_special_buf *roi_buf)
 {
 	struct mfc_dev *dev = ctx->dev;
-	unsigned int mb_width, mb_height;
-	unsigned int lcu_width = 0, lcu_height = 0;
 
-	mb_width = WIDTH_MB(ctx->crop_width);
-	mb_height = HEIGHT_MB(ctx->crop_height);
-
-	switch (ctx->codec_mode) {
-	case MFC_REG_CODEC_H264_ENC:
-		roi_buf->size = ((((mb_width * (mb_height + 1) / 2) + 15) / 16) * 16) * 2;
-		break;
-	case MFC_REG_CODEC_MPEG4_ENC:
-	case MFC_REG_CODEC_VP8_ENC:
-		roi_buf->size = mb_width * mb_height;
-		break;
-	case MFC_REG_CODEC_VP9_ENC:
-		lcu_width = (ctx->crop_width + 63) / 64;
-		lcu_height = (ctx->crop_height + 63) / 64;
-		roi_buf->size = lcu_width * lcu_height * 4;
-		break;
-	case MFC_REG_CODEC_HEVC_ENC:
-		lcu_width = (ctx->crop_width + 31) / 32;
-		lcu_height = (ctx->crop_height + 31) / 32;
-		roi_buf->size = lcu_width * lcu_height;
-		break;
-	default:
-		mfc_err_ctx("Codec type(%d) should be checked!\n", ctx->codec_mode);
-		return -ENOMEM;
-	}
-
-
+	roi_buf->size = size;
 	roi_buf->buftype = MFCBUF_NORMAL;
+
 	if (roi_buf->dma_buf == NULL) {
 		if (mfc_mem_ion_alloc(dev, roi_buf)) {
 			mfc_err_ctx("[ROI] Allocating ROI buffer failed\n");
@@ -525,10 +499,41 @@ static int __mfc_alloc_enc_roi_buffer(struct mfc_ctx *ctx, struct mfc_special_bu
 int mfc_alloc_enc_roi_buffer(struct mfc_ctx *ctx)
 {
 	struct mfc_enc *enc = ctx->enc_priv;
+	unsigned int mb_width, mb_height;
+	unsigned int lcu_width = 0, lcu_height = 0;
+	size_t size;
 	int i;
 
+	mb_width = WIDTH_MB(ctx->crop_width);
+	mb_height = HEIGHT_MB(ctx->crop_height);
+
+	switch (ctx->codec_mode) {
+	case MFC_REG_CODEC_H264_ENC:
+		size = ((((mb_width * (mb_height + 1) / 2) + 15) / 16) * 16) * 2;
+		break;
+	case MFC_REG_CODEC_MPEG4_ENC:
+	case MFC_REG_CODEC_VP8_ENC:
+		size = mb_width * mb_height;
+		break;
+	case MFC_REG_CODEC_VP9_ENC:
+		lcu_width = (ctx->crop_width + 63) / 64;
+		lcu_height = (ctx->crop_height + 63) / 64;
+		size = lcu_width * lcu_height * 4;
+		break;
+	case MFC_REG_CODEC_HEVC_ENC:
+		lcu_width = (ctx->crop_width + 31) / 32;
+		lcu_height = (ctx->crop_height + 31) / 32;
+		size = lcu_width * lcu_height;
+		break;
+	default:
+		mfc_debug(2, "ROI not supported codec type(%d). Allocate with default size\n",
+				ctx->codec_mode);
+		size = mb_width * mb_height;
+		break;
+	}
+
 	for (i = 0; i < MFC_MAX_EXTRA_BUF; i++) {
-		if (__mfc_alloc_enc_roi_buffer(ctx, &enc->roi_buf[i]) < 0) {
+		if (__mfc_alloc_enc_roi_buffer(ctx, size, &enc->roi_buf[i]) < 0) {
 			mfc_err_ctx("[ROI] Allocating remapping buffer[%d] failed\n", i);
 			return -ENOMEM;
 		}
