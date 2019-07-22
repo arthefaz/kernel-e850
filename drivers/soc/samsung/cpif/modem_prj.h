@@ -656,10 +656,6 @@ struct modem_ctl {
 	unsigned int gpio_cp_status;
 	unsigned int irq_cp_status;
 
-	/* for performance tuning */
-	unsigned int gpio_perf_req;
-	unsigned int irq_perf_req;
-
 #ifdef CONFIG_LINK_DEVICE_SHMEM
 	unsigned int mbx_pda_active;
 	unsigned int mbx_phone_active;
@@ -667,7 +663,6 @@ struct modem_ctl {
 	unsigned int mbx_ap_status;
 	unsigned int mbx_cp_wakeup;
 	unsigned int mbx_cp_status;
-	unsigned int mbx_perf_req;
 
 	/* for notify uart connection with direction*/
 	unsigned int mbx_uart_noti;
@@ -756,8 +751,6 @@ struct modem_ctl {
 #endif
 	bool uart_connect;
 	bool uart_dir;
-
-	struct work_struct pm_qos_work;
 
 	const struct attribute_group *group;
 

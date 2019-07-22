@@ -339,31 +339,6 @@ struct modem_mbox {
 	unsigned int irq_cp2ap_wakelock;
 	unsigned int irq_cp2ap_rat_mode;
 	unsigned int irq_cp2ap_change_ul_path;
-
-	/* Performance request */
-	unsigned int mbx_ap2cp_perf_req;
-	unsigned int mbx_cp2ap_perf_req;
-	unsigned int mbx_cp2ap_perf_req_cpu;
-	unsigned int mbx_cp2ap_perf_req_mif;
-	unsigned int mbx_cp2ap_perf_req_int;
-
-	unsigned int int_ap2cp_perf_req;
-	unsigned int irq_cp2ap_perf_req;
-	unsigned int irq_cp2ap_perf_req_cpu;
-	unsigned int irq_cp2ap_perf_req_mif;
-	unsigned int irq_cp2ap_perf_req_int;
-
-	unsigned int mbx_ap2cp_lock_value;
-
-	/* Clk table Info */
-	unsigned int *ap_clk_table;
-	unsigned int ap_clk_cnt;
-
-	unsigned int *mif_clk_table;
-	unsigned int mif_clk_cnt;
-
-	unsigned int *int_clk_table;
-	unsigned int int_clk_cnt;
 };
 #endif
 
@@ -439,9 +414,6 @@ struct modem_data {
 	u32 cp2ap_msg[2];
 	u32 cp2ap_united_status[2];
 	u32 ap2cp_united_status[2];
-	u32 cp2ap_dvfsreq_cpu[2];
-	u32 cp2ap_dvfsreq_mif[2];
-	u32 cp2ap_dvfsreq_int[2];
 	u32 ap2cp_kerneltime[2];
 	u32 ap2cp_kerneltime_sec[2];
 	u32 ap2cp_kerneltime_usec[2];

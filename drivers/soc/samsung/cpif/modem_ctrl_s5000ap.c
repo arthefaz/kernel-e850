@@ -814,8 +814,6 @@ static void s5000ap_get_pdata(struct modem_ctl *mc, struct modem_data *modem)
 
 	mc->mbx_ap_status = mbx->mbx_ap2cp_status;
 	mc->mbx_cp_status = mbx->mbx_cp2ap_status;
-	mc->mbx_perf_req = mbx->mbx_cp2ap_perf_req;
-	mc->irq_perf_req = mbx->irq_cp2ap_perf_req;
 
 	mc->int_uart_noti = mbx->int_ap2cp_uart_noti;
 

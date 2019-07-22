@@ -278,19 +278,6 @@ struct mem_link_device {
 	unsigned int sbi_cp_status_mask;
 	unsigned int sbi_cp_status_pos;
 
-	unsigned int mbx_perf_req;
-	unsigned int mbx_perf_req_cpu;
-	unsigned int mbx_perf_req_mif;
-	unsigned int mbx_perf_req_int;
-	unsigned int irq_perf_req;
-	unsigned int irq_perf_req_cpu;
-	unsigned int irq_perf_req_mif;
-	unsigned int irq_perf_req_int;
-	struct work_struct pm_qos_work;
-	struct work_struct pm_qos_work_cpu;
-	struct work_struct pm_qos_work_mif;
-	struct work_struct pm_qos_work_int;
-
 	struct freq_table cl0_table;
 	struct freq_table cl1_table;
 	struct freq_table mif_table;
@@ -303,17 +290,6 @@ struct mem_link_device {
 	unsigned int irq_cp2ap_rat_mode;		/* INTR# for pcie */
 
 	unsigned int irq_cp2ap_change_ul_path;
-
-	unsigned int *ap_clk_table;
-	unsigned int ap_clk_cnt;
-
-	unsigned int *mif_clk_table;
-	unsigned int mif_clk_cnt;
-
-	unsigned int *int_clk_table;
-	unsigned int int_clk_cnt;
-
-	int current_mif_val;
 
 	unsigned int mbx_cp2ap_status;	/* MBOX# for TX FLOWCTL */
 	unsigned int irq_cp2ap_status;	/* INTR# for TX FLOWCTL */
@@ -410,9 +386,6 @@ struct mem_link_device {
 	struct ctrl_msg *cp2ap_msg;
 	struct ctrl_msg *ap2cp_united_status;
 	struct ctrl_msg *cp2ap_united_status;
-	struct ctrl_msg *cp2ap_dvfsreq_cpu;
-	struct ctrl_msg *cp2ap_dvfsreq_mif;
-	struct ctrl_msg *cp2ap_dvfsreq_int;
 	struct ctrl_msg *ap2cp_kerneltime;	/* for DRAM_V1 and MAILBOX_SR */
 	struct ctrl_msg *ap2cp_kerneltime_sec;	/* for DRAM_V2 */
 	struct ctrl_msg *ap2cp_kerneltime_usec;	/* for DRAM_V2 */
@@ -789,13 +762,6 @@ static inline void update_ctrl_msg(struct ctrl_msg *cmsg, u32 msg, u32 mask, u32
 		break;
 	}
 }
-
-#ifdef GROUP_MEM_LINK_DEVICE
-
-void shmem_unlock_mif_freq(struct mem_link_device *mld);
-void shmem_restore_mif_freq(struct mem_link_device *mld);
-
-#endif
 
 #ifdef GROUP_MEM_LINK_SNAPSHOT
 

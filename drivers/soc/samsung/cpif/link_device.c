@@ -24,7 +24,6 @@
 #include <linux/platform_device.h>
 #include <linux/kallsyms.h>
 #include <linux/suspend.h>
-#include <linux/pm_qos.h>
 #include <linux/reboot.h>
 #include <linux/smc.h>
 #include <linux/pci.h>
@@ -2836,147 +2835,7 @@ static irqreturn_t shmem_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static struct pm_qos_request pm_qos_req_mif;
-static struct pm_qos_request pm_qos_req_cl0;
-static struct pm_qos_request pm_qos_req_cl1;
-static struct pm_qos_request pm_qos_req_int;
-
-static void shmem_qos_work_cpu(struct work_struct *work)
-{
-	struct mem_link_device *mld =
-		container_of(work, struct mem_link_device, pm_qos_work_cpu);
-	int qos_val = 0;
-	int cpu_val;
-
-#ifdef CONFIG_LINK_DEVICE_SHMEM
-	if (mld->link_dev.link_type == LINKDEV_SHMEM)
-		qos_val = mbox_get_value(MCU_CP, mld->mbx_perf_req_cpu);
-#endif
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (mld->link_dev.link_type == LINKDEV_PCIE)
-		qos_val = ioread32(mld->cp2ap_dvfsreq_cpu);
-#endif
-
-	mif_err("pm_qos:0x%x requested\n", qos_val);
-
-	cpu_val = (qos_val & 0xff);
-	if (qos_val & BIT(31)) {
-		/* CL0 - Big */
-		if (cpu_val > 0 && cpu_val <= mld->cl0_table.num_of_table) {
-			mif_err("Lock CL0[%d] : %u\n", cpu_val,
-					mld->cl0_table.freq[cpu_val - 1]);
-			pm_qos_update_request(&pm_qos_req_cl0,
-				mld->cl0_table.freq[cpu_val - 1]);
-		} else {
-			mif_err("Unlock CL0(req_val : %d)\n", qos_val);
-			pm_qos_update_request(&pm_qos_req_cl0, 0);
-		}
-	} else {
-		/* CL1 - Little */
-		if (cpu_val > 0 && cpu_val <= mld->cl1_table.num_of_table) {
-			mif_err("Lock CL1[%d] : %u\n", cpu_val,
-					mld->cl1_table.freq[cpu_val - 1]);
-			pm_qos_update_request(&pm_qos_req_cl1,
-				mld->cl1_table.freq[cpu_val - 1]);
-		} else {
-			mif_err("Unlock CL1(req_val : %d)\n", qos_val);
-			pm_qos_update_request(&pm_qos_req_cl1, 0);
-		}
-	}
-}
-
-static void shmem_qos_work_mif(struct work_struct *work)
-{
-	struct mem_link_device *mld =
-		container_of(work, struct mem_link_device, pm_qos_work_mif);
-	int qos_val = 0;
-	int mif_val;
-
-#ifdef CONFIG_LINK_DEVICE_SHMEM
-	if (mld->link_dev.link_type == LINKDEV_SHMEM)
-		qos_val = mbox_get_value(MCU_CP, mld->mbx_perf_req_mif);
-#endif
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (mld->link_dev.link_type == LINKDEV_PCIE)
-		qos_val = ioread32(mld->cp2ap_dvfsreq_mif);
-#endif
-
-	mif_err("pm_qos:0x%x requested\n", qos_val);
-
-	mif_val = (qos_val & 0xff);
-	if (mif_val > 0 && mif_val <= mld->mif_table.num_of_table) {
-		mif_err("Lock MIF[%d] : %u\n", mif_val,
-				mld->mif_table.freq[mif_val - 1]);
-		pm_qos_update_request(&pm_qos_req_mif, mld->mif_table.freq[mif_val - 1]);
-	} else {
-		mif_err("Unlock MIF(req_val : %d)\n", qos_val);
-		pm_qos_update_request(&pm_qos_req_mif, 0);
-	}
-
-	/* Save current mif_val */
-	mld->current_mif_val = mif_val;
-}
-
-static void shmem_qos_work_int(struct work_struct *work)
-{
-	struct mem_link_device *mld =
-		container_of(work, struct mem_link_device, pm_qos_work_int);
-	int qos_val = 0;
-	int int_val;
-
-#ifdef CONFIG_LINK_DEVICE_SHMEM
-	if (mld->link_dev.link_type == LINKDEV_SHMEM)
-		qos_val = mbox_get_value(MCU_CP, mld->mbx_perf_req_int);
-#endif
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if (mld->link_dev.link_type == LINKDEV_PCIE)
-		qos_val = ioread32(mld->cp2ap_dvfsreq_int);
-#endif
-
-	mif_err("pm_qos:0x%x requested\n", qos_val);
-
-	int_val = (qos_val & 0xff);
-	if (int_val > 0 && int_val <= mld->int_table.num_of_table) {
-		mif_err("Lock INT[%d] : %u\n", int_val,
-				mld->int_table.freq[int_val - 1]);
-		pm_qos_update_request(&pm_qos_req_int, mld->int_table.freq[int_val - 1]);
-	} else {
-		mif_err("Unlock INT(req_val : %d)\n", qos_val);
-		pm_qos_update_request(&pm_qos_req_int, 0);
-	}
-}
-
 #ifdef CONFIG_MCU_IPC
-static irqreturn_t shmem_qos_cpu_req_handler(int irq, void *data)
-{
-	struct mem_link_device *mld = (struct mem_link_device *)data;
-	mif_err("%s\n", __func__);
-
-	schedule_work(&mld->pm_qos_work_cpu);
-
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t shmem_qos_mif_req_handler(int irq, void *data)
-{
-	struct mem_link_device *mld = (struct mem_link_device *)data;
-	mif_err("%s\n", __func__);
-
-	schedule_work(&mld->pm_qos_work_mif);
-
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t shmem_qos_int_req_handler(int irq, void *data)
-{
-	struct mem_link_device *mld = (struct mem_link_device *)data;
-	mif_err("%s\n", __func__);
-
-	schedule_work(&mld->pm_qos_work_int);
-
-	return IRQ_HANDLED;
-}
-
 static irqreturn_t shmem_cp2ap_wakelock_handler(int irq, void *data)
 {
 	struct mem_link_device *mld = (struct mem_link_device *)data;
@@ -3049,31 +2908,6 @@ static irqreturn_t shmem_cp2ap_change_ul_path_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 #endif
-
-void shmem_unlock_mif_freq(struct mem_link_device *mld)
-{
-	if (mld) {
-		mif_err("Currnet MIF value: %d)\n", mld->current_mif_val);
-		mif_err("Unlock MIF\n");
-		pm_qos_update_request(&pm_qos_req_mif, 0);
-	}
-}
-
-void shmem_restore_mif_freq(struct mem_link_device *mld)
-{
-	int mif_val;
-
-	if (mld) {
-		mif_val = mld->current_mif_val;
-		mif_err("Currnet MIF value: %d)\n", mif_val);
-
-		if (mif_val > 0 && mif_val <= mld->mif_table.num_of_table) {
-			mif_err("Lock MIF[%d] : %u\n", mif_val,
-					mld->mif_table.freq[mif_val - 1]);
-			pm_qos_update_request(&pm_qos_req_mif, mld->mif_table.freq[mif_val - 1]);
-		}
-	}
-}
 
 #if defined(CONFIG_ECT)
 static int parse_ect(struct mem_link_device *mld, char *dvfs_domain_name)
@@ -4047,14 +3881,6 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	}
 #endif
 
-	mld->cp2ap_dvfsreq_cpu = construct_ctrl_msg(modem->cp2ap_dvfsreq_cpu, mld->base, 0);
-	mld->cp2ap_dvfsreq_mif = construct_ctrl_msg(modem->cp2ap_dvfsreq_mif, mld->base, 0);
-	mld->cp2ap_dvfsreq_int = construct_ctrl_msg(modem->cp2ap_dvfsreq_int, mld->base, 0);
-
-	mld->irq_perf_req_cpu = modem->mbx->irq_cp2ap_perf_req_cpu;
-	mld->irq_perf_req_mif = modem->mbx->irq_cp2ap_perf_req_mif;
-	mld->irq_perf_req_int = modem->mbx->irq_cp2ap_perf_req_int;
-
 #ifdef CONFIG_LINK_DEVICE_PCIE
 	/* Set doorbell interrupt value for separating interrupts */
 	mld->intval_ap2cp_msg = modem->mbx->int_ap2cp_msg + DOORBELL_INT_ADD;
@@ -4062,50 +3888,6 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 				+ DOORBELL_INT_ADD;
 	mld->intval_ap2cp_active = modem->mbx->int_ap2cp_active
 				+ DOORBELL_INT_ADD;
-#endif
-
-	/* QOS requests */
-	mld->ap_clk_table = modem->mbx->ap_clk_table;
-	mld->ap_clk_cnt = modem->mbx->ap_clk_cnt;
-
-	mld->mif_clk_table = modem->mbx->mif_clk_table;
-	mld->mif_clk_cnt = modem->mbx->mif_clk_cnt;
-
-	mld->int_clk_table = modem->mbx->int_clk_table;
-	mld->int_clk_cnt = modem->mbx->int_clk_cnt;
-
-	pm_qos_add_request(&pm_qos_req_cl0, PM_QOS_CLUSTER0_FREQ_MIN, 0);
-	pm_qos_add_request(&pm_qos_req_cl1, PM_QOS_CLUSTER1_FREQ_MIN, 0);
-	pm_qos_add_request(&pm_qos_req_mif, PM_QOS_BUS_THROUGHPUT, 0);
-	pm_qos_add_request(&pm_qos_req_int, PM_QOS_DEVICE_THROUGHPUT, 0);
-
-	INIT_WORK(&mld->pm_qos_work_cpu, shmem_qos_work_cpu);
-	INIT_WORK(&mld->pm_qos_work_mif, shmem_qos_work_mif);
-	INIT_WORK(&mld->pm_qos_work_int, shmem_qos_work_int);
-
-#ifdef CONFIG_MCU_IPC
-	if (ld->interrupt_types == INTERRUPT_MAILBOX) {
-		err = mbox_request_irq(MCU_CP, mld->irq_perf_req_cpu, shmem_qos_cpu_req_handler, mld);
-		if (err) {
-			mif_err("%s: ERR! mbox_request_irq(MCU_CP, %u) fail (%d)\n",
-				ld->name, mld->irq_perf_req_cpu, err);
-			goto error;
-		}
-
-		err = mbox_request_irq(MCU_CP, mld->irq_perf_req_mif, shmem_qos_mif_req_handler, mld);
-		if (err) {
-			mif_err("%s: ERR! mbox_request_irq(MCU_CP, %u) fail (%d)\n",
-				ld->name, mld->irq_perf_req_mif, err);
-			goto error;
-		}
-
-		err = mbox_request_irq(MCU_CP, mld->irq_perf_req_int, shmem_qos_int_req_handler, mld);
-		if (err) {
-			mif_err("%s: ERR! mbox_request_irq(MCU_CP, %u) fail (%d)\n",
-				ld->name, mld->irq_perf_req_int, err);
-			goto error;
-		}
-	}
 #endif
 
 	/**

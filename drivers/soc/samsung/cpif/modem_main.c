@@ -495,12 +495,6 @@ static int parse_dt_mbox_pdata(struct device *dev, struct device_node *np,
 
 	mif_dt_read_u32(np, "mif,irq_cp2ap_msg", mbox->irq_cp2ap_msg);
 	mif_dt_read_u32(np, "mif,irq_cp2ap_status", mbox->irq_cp2ap_status);
-	mif_dt_read_u32(np, "mif,irq_cp2ap_perf_req_cpu",
-		mbox->irq_cp2ap_perf_req_cpu);
-	mif_dt_read_u32(np, "mif,irq_cp2ap_perf_req_mif",
-		mbox->irq_cp2ap_perf_req_mif);
-	mif_dt_read_u32(np, "mif,irq_cp2ap_perf_req_int",
-		mbox->irq_cp2ap_perf_req_int);
 	mif_dt_read_u32(np, "mif,irq_cp2ap_active", mbox->irq_cp2ap_active);
 	mif_dt_read_u32(np, "mif,irq_cp2ap_wakelock", mbox->irq_cp2ap_wakelock);
 	mif_dt_read_u32(np, "mif,irq_cp2ap_ratmode", mbox->irq_cp2ap_rat_mode);
@@ -527,9 +521,6 @@ static int parse_dt_ipc_region_pdata(struct device *dev, struct device_node *np,
 	of_property_read_u32_array(np, "cp2ap_msg", pdata->cp2ap_msg, 2);
 	of_property_read_u32_array(np, "cp2ap_united_status", pdata->cp2ap_united_status, 2);
 	of_property_read_u32_array(np, "ap2cp_united_status", pdata->ap2cp_united_status, 2);
-	of_property_read_u32_array(np, "cp2ap_dvfsreq_cpu", pdata->cp2ap_dvfsreq_cpu, 2);
-	of_property_read_u32_array(np, "cp2ap_dvfsreq_mif", pdata->cp2ap_dvfsreq_mif, 2);
-	of_property_read_u32_array(np, "cp2ap_dvfsreq_int", pdata->cp2ap_dvfsreq_int, 2);
 	of_property_read_u32_array(np, "ap2cp_kerneltime", pdata->ap2cp_kerneltime, 2);
 	of_property_read_u32_array(np, "ap2cp_kerneltime_sec", pdata->ap2cp_kerneltime_sec, 2);
 	of_property_read_u32_array(np, "ap2cp_kerneltime_usec", pdata->ap2cp_kerneltime_usec, 2);
