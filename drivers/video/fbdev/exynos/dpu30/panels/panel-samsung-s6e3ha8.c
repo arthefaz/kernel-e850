@@ -282,11 +282,16 @@ static int s6e3ha8_mres(struct exynos_panel_device *panel, int mres_idx)
 
 static int s6e3ha8_doze(struct exynos_panel_device *panel)
 {
+	DPU_INFO_PANEL("%s +\n", __func__);
+	s6e3ha8_displayon(panel);
+
 	return 0;
 }
 
 static int s6e3ha8_doze_suspend(struct exynos_panel_device *panel)
 {
+	DPU_INFO_PANEL("%s +\n", __func__);
+
 	return 0;
 }
 
