@@ -292,7 +292,6 @@ static int parse_dt_common_pdata(struct device_node *np,
 	mif_dt_read_string(np, "mif,name", pdata->name);
 	mif_dt_read_u32(np, "mif,cp_num", pdata->cp_num);
 
-	mif_dt_read_enum(np, "mif,modem_net", pdata->modem_net);
 	mif_dt_read_enum(np, "mif,modem_type", pdata->modem_type);
 	mif_dt_read_enum(np, "mif,ipc_version", pdata->ipc_version);
 
