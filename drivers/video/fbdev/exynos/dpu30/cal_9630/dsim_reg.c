@@ -1042,19 +1042,27 @@ static void dsim_reg_set_hperiod(u32 id, struct exynos_panel_info *lcd)
 {
 	u32 vclk,  wclk;
 	u32 hblank, vblank;
+	u32 width, height;
 	u32 hact_period, hsa_period, hbp_period, hfp_period;
+
+	if (lcd->dsc.en)
+		width = lcd->xres / 3;
+	else
+		width = lcd->xres;
+
+	height = lcd->yres;
 
 	if (lcd->mode == DECON_VIDEO_MODE) {
 		hblank = lcd->hsa + lcd->hbp + lcd->hfp;
 		vblank = lcd->vsa + lcd->vbp + lcd->vfp;
-		vclk = (lcd->xres + hblank) * (lcd->yres + vblank) * lcd->fps;
-		wclk = lcd->hs_clk * 1000000 / 16;
+		vclk = DIV_ROUND_CLOSEST((width + hblank) * (height + vblank) * lcd->fps, 1000000);
+		wclk = DIV_ROUND_CLOSEST(lcd->hs_clk, 16);
 
 		/* round calculation to reduce fps error */
-		hact_period = lcd->xres * wclk / vclk + 0.5;
-		hsa_period = lcd->hsa * wclk / vclk + 0.5;
-		hbp_period = lcd->hbp * wclk / vclk + 0.5;
-		hfp_period = lcd->hfp * wclk / vclk + 0.5;
+		hact_period = DIV_ROUND_CLOSEST(width * wclk, vclk);
+		hsa_period = DIV_ROUND_CLOSEST(lcd->hsa * wclk, vclk);
+		hbp_period = DIV_ROUND_CLOSEST(lcd->hbp * wclk, vclk);
+		hfp_period = DIV_ROUND_CLOSEST(lcd->hfp * wclk, vclk);
 
 		dsim_reg_set_hact_period(id, hact_period);
 		dsim_reg_set_hsa_period(id, hsa_period);
@@ -1722,7 +1730,8 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	dsim_reg_enable_dsc(id, lcd_info->dsc.en);
 
 	/* shadow disable */
-	dsim_reg_enable_shadow(id, 0);
+	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE)
+		dsim_reg_enable_shadow(id, 0);
 
 	if (lcd_info->mode == DECON_VIDEO_MODE) {
 		dsim_reg_disable_hsa(id, 0);
