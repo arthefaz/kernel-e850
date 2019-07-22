@@ -495,7 +495,7 @@ static unsigned int get_next_freq(struct esgov_policy *esg_policy, unsigned long
 	return cpufreq_driver_resolve_freq(policy, freq);
 }
 
-static unsigned long esg_get_target_util(unsigned long max, int cpu)
+static unsigned long esgov_get_eutil(unsigned long max, int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
 	struct part *pa = &rq->pa;
@@ -531,7 +531,7 @@ static void esgov_update_cpu_util(struct esgov_cpu *esg_cpu)
 	sutil = sutil + (sutil >> 2);
 	esg_cpu->sutil = sutil;
 
-	eutil = esg_get_target_util(max, esg_cpu->cpu);
+	eutil = esgov_get_eutil(max, esg_cpu->cpu);
 	esg_cpu->eutil = eutil;
 
 	util = max(sutil, eutil);
@@ -564,15 +564,17 @@ static unsigned int esgov_get_target_util(struct esgov_cpu *esg_cpu)
 	unsigned long max_util = 0;
 	unsigned int cpu;
 
-	/* update this cpu util */
-	esgov_update_cpu_util(esg_cpu);
-
-	/* get max util of the cluster of this cpu */
+	/* get max util in the cluster */
 	for_each_cpu(cpu, policy->cpus) {
 		struct esgov_cpu *esg_cpu = &per_cpu(esgov_cpu, cpu);
+		unsigned long cpu_util;
 
-		if (esg_cpu->util > max_util)
-			max_util = esg_cpu->util;
+		/* If cpu is tickless status, ignore eutil */
+		cpu_util = test_bit(NOHZ_TICK_STOPPED, nohz_flags(cpu)) ?
+				esg_cpu->sutil : esg_cpu->util;
+
+		if (cpu_util > max_util)
+			max_util = cpu_util;
 	}
 
 	return max_util;
@@ -585,8 +587,13 @@ esgov_update(struct update_util_data *hook, u64 time, unsigned int flags)
 	struct esgov_policy *esg_policy = esg_cpu->esg_policy;
 	unsigned int target_util, target_freq;
 
-	target_util = esgov_get_target_util(esg_cpu);
+	/* update this cpu util */
+	esgov_update_cpu_util(esg_cpu);
 
+	if (!esgov_check_rate_delay(esg_policy, target_freq, time))
+		return;
+
+	target_util = esgov_get_target_util(esg_cpu);
 	/* update target util of the cluster of this cpu */
 	if (esg_policy->util == target_util)
 		return;
@@ -594,9 +601,6 @@ esgov_update(struct update_util_data *hook, u64 time, unsigned int flags)
 	/* get target freq for new target util */
 	target_freq = get_next_freq(esg_policy, target_util);
 	if (esg_policy->target_freq == target_freq)
-		return;
-
-	if (!esgov_check_rate_delay(esg_policy, target_freq, time))
 		return;
 
 	if (!esg_policy->work_in_progress) {
