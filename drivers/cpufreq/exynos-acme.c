@@ -1504,8 +1504,10 @@ static int __init exynos_cpufreq_init(void)
 		struct cpufreq_policy *policy;
 		enable_domain(domain);
 		policy = cpufreq_cpu_get_raw(cpumask_first(&domain->cpus));
-		if (policy)
+		if (policy) {
 			exynos_cpufreq_cooling_register(domain->dn, policy);
+			slack_update_min(policy);
+		}
 
 		set_boot_qos(domain);
 	}
