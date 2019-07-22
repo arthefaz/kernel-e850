@@ -2036,7 +2036,7 @@ void dpu_sysreg_dphy_reset(void __iomem *sysreg, u32 dsim_id, u32 rst)
 	u32 old = readl(sysreg + DISP_DPU_MIPI_PHY_CON);
 	u32 val = rst ? ~0 : 0;
 	u32 mask;
-	
+
 	/* exynos3830 only can support dsim id 0 */
 	BUG_ON(dsim_id);
 
@@ -2441,6 +2441,7 @@ void dsim_reg_set_partial_update(u32 id, struct exynos_panel_info *lcd_info)
 {
 	dsim_reg_set_vresol(id, lcd_info->yres);
 	dsim_reg_set_hresol(id, lcd_info->xres, lcd_info);
+	dsim_reg_set_threshold(id, lcd_info->xres);
 	dsim_reg_set_porch(id, lcd_info);
 	dsim_reg_set_num_of_transfer(id, lcd_info->yres);
 }
