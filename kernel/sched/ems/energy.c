@@ -293,7 +293,7 @@ int find_allowed_capacity(int cpu, unsigned int freq, int power)
 
 	/* find power budget for new frequency */
 	for (i = 0; i < table->nr_states; i++)
-		if (table->states[i].frequency == freq)
+		if (table->states[i].frequency >= freq)
 			break;
 
 	/* calaculate new power budget */

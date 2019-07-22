@@ -31,7 +31,6 @@ struct esgov_policy {
 
 	unsigned int		target_freq;	/* target frequency at the current status */
 	int			util;		/* target util  */
-	int			capacity;	/* allowed capacity at the current frequency */
 	u64			last_freq_update_time;
 
 	/* The next fields are for the tunnables */
@@ -76,6 +75,9 @@ struct esgov_cpu {
 	int			util;		/* target util */
 	int			sutil;		/* scheduler util */
 	int			eutil;		/* esg util */
+
+	int			capacity;
+	int			last_idx;
 };
 
 struct kobject *esg_kobj;
@@ -110,46 +112,6 @@ static void esg_update_step(struct esgov_policy *esg_policy, int step)
 	esg_policy->step = step;
 	esg_policy->step_power = find_step_power(cpu, esg_policy->step);
 }
-
-static void esg_update_allowed_cap(int cpu, unsigned int new_freq, unsigned int old_freq)
-{
-	int capacity;
-	struct esgov_policy *esg_policy = per_cpu(esgov_policy, cpu);
-
-	if (unlikely(!esg_policy || !esg_policy->step || !esg_policy->enabled))
-		return;
-
-	capacity = find_allowed_capacity(cpu, new_freq, esg_policy->step_power);
-
-	trace_esg_update_capacity(cpu, new_freq, old_freq, capacity);
-
-	esg_policy->capacity = capacity;
-}
-
-static int esg_cpufreq_callback(struct notifier_block *nb,
-					unsigned long val, void *data)
-{
-	struct cpufreq_freqs *freq = data;
-	struct cpumask mask;
-
-	if (freq->flags & CPUFREQ_CONST_LOOPS)
-		return NOTIFY_OK;
-
-	if (val != CPUFREQ_POSTCHANGE)
-		return NOTIFY_OK;
-
-	cpumask_and(&mask, cpu_coregroup_mask(freq->cpu), cpu_online_mask);
-	if (cpumask_first(&mask) != freq->cpu)
-		return NOTIFY_OK;
-
-	esg_update_allowed_cap(freq->cpu, freq->new, freq->old);
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block esg_cpufreq_notifier = {
-	.notifier_call  = esg_cpufreq_callback,
-};
 
 static void esg_update_freq_range(int cpu, int min, int max, int flag)
 {
@@ -495,27 +457,35 @@ static unsigned int get_next_freq(struct esgov_policy *esg_policy, unsigned long
 	return cpufreq_driver_resolve_freq(policy, freq);
 }
 
-static unsigned long esgov_get_eutil(unsigned long max, int cpu)
+static unsigned long esgov_get_eutil(struct esgov_cpu *esg_cpu, unsigned long max)
 {
-	struct rq *rq = cpu_rq(cpu);
+	struct esgov_policy *esg_policy = per_cpu(esgov_policy, esg_cpu->cpu);
+	struct rq *rq = cpu_rq(esg_cpu->cpu);
 	struct part *pa = &rq->pa;
-	int active_ratio, util, cur_idx, prev_idx;
-	struct esgov_policy *esg_policy = per_cpu(esgov_policy, cpu);
+	unsigned int freq;
+	int active_ratio, util, prev_idx;
 
 	if (unlikely(!esg_policy || !esg_policy->step))
 		return 0;
 
+	if (esg_cpu->last_idx == pa->hist_idx)
+		return esg_cpu->eutil;
+
+	/* update and get the active ratio */
 	update_cpu_active_ratio(rq, NULL, EMS_PART_UPDATE);
 
-	cur_idx = pa->hist_idx;
-	prev_idx = cur_idx ? (cur_idx - 1) : 9;
+	esg_cpu->last_idx = pa->hist_idx;
+	prev_idx = esg_cpu->last_idx ? (esg_cpu->last_idx - 1) : 9;
+	active_ratio = (pa->hist[esg_cpu->last_idx] + pa->hist[prev_idx]) >> 1;
 
-	//active_ratio = (pa->hist[cur_idx] + pa->hist[prev_idx]) >> 1;
-	active_ratio = pa->hist[cur_idx];
+	/* update the capacity */
+	freq = (esg_cpu->eutil * esg_policy->pol.max) / max;
+	esg_cpu->capacity = find_allowed_capacity(esg_cpu->cpu, freq, esg_policy->step_power);
 
-	util = (esg_policy->capacity * active_ratio) >> SCHED_CAPACITY_SHIFT;
+	/* calculate eutil */
+	util = (esg_cpu->capacity * active_ratio) >> SCHED_CAPACITY_SHIFT;
 
-	trace_esg_cpu_eutil(cpu, esg_policy->capacity, active_ratio, max, util);
+	trace_esg_cpu_eutil(esg_cpu->cpu, esg_cpu->capacity, active_ratio, max, util);
 
 	return util;
 }
@@ -531,7 +501,7 @@ static void esgov_update_cpu_util(struct esgov_cpu *esg_cpu)
 	sutil = sutil + (sutil >> 2);
 	esg_cpu->sutil = sutil;
 
-	eutil = esgov_get_eutil(max, esg_cpu->cpu);
+	eutil = esgov_get_eutil(esg_cpu, max);
 	esg_cpu->eutil = eutil;
 
 	util = max(sutil, eutil);
@@ -556,6 +526,7 @@ static bool esgov_check_rate_delay(struct esgov_policy *esg_policy,
 
 	return true;
 }
+
 /* returns target util of the cluster of this cpu */
 static unsigned int esgov_get_target_util(struct esgov_cpu *esg_cpu)
 {
@@ -757,9 +728,6 @@ static int __init esgov_register(void)
 	esg_kobj = kobject_create_and_add("energy_step", ems_kobj);
 	if (!esg_kobj)
 		return -EINVAL;
-
-	cpufreq_register_notifier(&esg_cpufreq_notifier,
-					CPUFREQ_TRANSITION_NOTIFIER);
 
 	cpufreq_register_notifier(&esg_cpufreq_policy_notifier,
 					CPUFREQ_POLICY_NOTIFIER);
