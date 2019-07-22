@@ -449,6 +449,7 @@ struct pmucal_seq chub_status[] = {
 
 enum pmucal_local_pdnum {
 	PD_CHUB,
+	PD_MAX,
 };
 
 struct pmucal_pd pmucal_pd_list[] = {
