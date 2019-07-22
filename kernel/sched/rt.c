@@ -308,7 +308,7 @@ static int __init init_frt(void)
 	struct device_node *dn;
 	int cpu, tcpu, cnt = 0;
 
-	dn = of_find_node_by_path("/cpus/ems");
+	dn = of_find_node_by_path("/ems");
 	if (!dn)
 		return 0;
 

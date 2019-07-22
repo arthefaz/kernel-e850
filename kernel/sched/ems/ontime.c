@@ -686,7 +686,7 @@ static int __init init_ontime(void)
 
 	INIT_LIST_HEAD(&dom_list);
 
-	dn = of_find_node_by_path("/cpus/ems");
+	dn = of_find_node_by_path("/ems");
 	if (!dn)
 		return 0;
 

@@ -642,7 +642,7 @@ default_setting:
 
 static int __init init_lbt(void)
 {
-	struct device_node *dn = of_find_node_by_path("/cpus/ems");
+	struct device_node *dn = of_find_node_by_path("/ems");
 
 	if (alloc_lbt_overutil()) {
 		pr_err("LBT(%s): failed to allocate lbt_overutil\n", __func__);

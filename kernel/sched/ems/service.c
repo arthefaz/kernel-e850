@@ -228,7 +228,7 @@ static int __init build_prefer_cpus(void)
 	struct device_node *dn, *child;
 	int index = 0;
 
-	dn = of_find_node_by_path("/cpus/ems/service");
+	dn = of_find_node_by_path("/ems/service");
 	if (!dn) {
 		pr_info("Not support EMS service\n");
 		return -ENODEV;

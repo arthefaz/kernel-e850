@@ -1631,7 +1631,7 @@ static int __init parse_part(void)
 	char name[15];
 	int cpu, cnt = 0, limit = -1, boost = -1;
 
-	dn = of_find_node_by_path("/cpus/ems/part");
+	dn = of_find_node_by_path("/ems/part");
 	if (!dn)
 		return 0;
 

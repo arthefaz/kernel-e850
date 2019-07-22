@@ -198,7 +198,7 @@ static int __init emst_init(void)
 	if (!emst_kobj)
 		return -EINVAL;
 
-	ems_dn = of_find_node_by_path("/cpus/ems");
+	ems_dn = of_find_node_by_path("/ems");
 	if (!ems_dn)
 		return -EINVAL;
 
