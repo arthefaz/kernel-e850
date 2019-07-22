@@ -410,17 +410,17 @@ static struct regulator_desc regulators[S2MPU12_REGULATOR_MAX] = {
 		 _LDO(_STEP2), _REG(_L36CTRL), _REG(_L36CTRL), _TIME(_LDO)),
 
 	BUCK_DESC("BUCK1", _BUCK(1), &_buck_ops(), _BUCK(_MIN1),
-		  _BUCK(_STEP1), _REG(_B1OUT2), _REG(_B1CTRL), _TIME(_BUCK1)),
+		  _BUCK(_STEP1), _REG(_B1OUT1), _REG(_B1CTRL), _TIME(_BUCK1)),
 	BUCK_DESC("BUCK2", _BUCK(2), &_buck_ops(), _BUCK(_MIN1),
-		  _BUCK(_STEP1), _REG(_B2OUT2), _REG(_B2CTRL), _TIME(_BUCK2)),
+		  _BUCK(_STEP1), _REG(_B2OUT1), _REG(_B2CTRL), _TIME(_BUCK2)),
 /*
 	BUCK_DESC("BUCK3", _BUCK(3), &_buck_ops(), _BUCK(_MIN1),
 		  _BUCK(_STEP1), _REG(_B3OUT), _REG(_B3CTRL), _TIME(_BUCK3)),
  */
 	BUCK_DESC("BUCK4", _BUCK(4), &_buck_ops(), _BUCK(_MIN2),
-		  _BUCK(_STEP2), _REG(_B4OUT2), _REG(_B4CTRL), _TIME(_BUCK4)),
+		  _BUCK(_STEP2), _REG(_B4OUT1), _REG(_B4CTRL), _TIME(_BUCK4)),
 	BUCK_DESC("BUCK5", _BUCK(5), &_buck_ops(), _BUCK(_MIN3),
-		  _BUCK(_STEP3), _REG(_B5OUT2), _REG(_B5CTRL), _TIME(_BUCK5)),
+		  _BUCK(_STEP3), _REG(_B5OUT1), _REG(_B5CTRL), _TIME(_BUCK5)),
 };
 #ifdef CONFIG_OF
 static int s2mpu12_pmic_dt_parse_pdata(struct s2mpu12_dev *iodev,
