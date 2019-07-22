@@ -72,8 +72,10 @@ static void win_update_adjust_region(struct decon_device *decon,
 	r2.bottom = div_h * decon->win_up.rect_h - 1;
 
 	/* TODO: Now, 4 slices must be used. This will be modified */
-	r2.left = 0;
-	r2.right = decon->lcd_info->xres - 1;
+	if (decon->lcd_info->dsc.en) {
+		r2.left = 0;
+		r2.right = decon->lcd_info->xres - 1;
+	}
 
 	memcpy(&regs->up_region, &r2, sizeof(struct decon_rect));
 
