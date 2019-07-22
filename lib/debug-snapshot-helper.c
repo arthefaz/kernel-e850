@@ -577,6 +577,7 @@ int dbg_snapshot_post_reboot(char *cmd)
 	dss_soc_ops->soc_post_reboot_entry(NULL);
 
 	dbg_snapshot_report_reason(DSS_SIGN_NORMAL_REBOOT);
+	dbg_snapshot_scratch_clear();
 	dev_emerg(dss_desc.dev, "debug-snapshot: normal reboot done\n");
 	dbg_snapshot_save_context(NULL);
 

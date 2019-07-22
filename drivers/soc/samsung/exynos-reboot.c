@@ -108,7 +108,6 @@ static void exynos_restart_v1(enum reboot_mode mode, const char *cmd)
 	exynos_acpm_reboot();
 #endif
 	dev_info(exynos_reboot.dev, "reboot command: %s\n", cmd);
-	dbg_snapshot_scratch_clear();
 	if (cmd) {
 		if (!strcmp(cmd, "charge"))
 			reboot_mode = REBOOT_MODE_CHARGE;
