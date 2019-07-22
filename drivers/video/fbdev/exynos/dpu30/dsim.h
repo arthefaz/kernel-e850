@@ -234,6 +234,8 @@ struct dsim_device {
 	int esd_test;
 	bool esd_recovering;
 #endif
+	unsigned int ddi_seq_size;
+	unsigned char ddi_seq[512];
 };
 
 int dsim_call_panel_ops(struct dsim_device *dsim, u32 cmd, void *arg);
