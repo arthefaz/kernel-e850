@@ -709,7 +709,6 @@ static void dpp_check_data_g_ch(int id)
 		dma_write(id, IDMA_DEBUG_CONTROL, sel[i]);
 		/* dummy dpp data read */
 		/* temp code */
-		dpp_read(id, DPP_CFG_ERR_STATE);
 		data[i] = dma_read(id, IDMA_DEBUG_DATA);
 
 		dpp_info("[0x%08x: %08x]\n", sel[i], data[i]);
@@ -822,8 +821,10 @@ void __dpp_dump(u32 id, void __iomem *regs, void __iomem *dma_regs,
 	dma_dump_regs(id, dma_regs);
 	dma_reg_dump_debug_regs(id);
 
-	dpp_dump_regs(id, regs, attr);
-	dpp_reg_dump_debug_regs(id);
+	if (test_bit(DPP_ATTR_DPP, &attr)) {
+		dpp_dump_regs(id, regs, attr);
+		dpp_reg_dump_debug_regs(id);
+	}
 }
 
 static const struct dpu_fmt dpu_cal_formats_list[] = {};
