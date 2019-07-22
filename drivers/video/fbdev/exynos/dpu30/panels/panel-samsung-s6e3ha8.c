@@ -302,8 +302,55 @@ static int s6e3ha8_dump(struct exynos_panel_device *panel)
 
 static int s6e3ha8_read_state(struct exynos_panel_device *panel)
 {
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
+	int ret = 0;
+	u8 buf[2] = {0x0};
+	int i = 0;
+	int RETRY = 2; /* several retries are allowed */
+	bool esd_detect = false;
+	struct dsim_device *dsim = get_dsim_drvdata(0);
+
+	dsim_dbg("%s, read DDI for checking ESD\n", __func__);
+
+	for (i = 0; i < RETRY; i++) {
+		ret = dsim_read_data(dsim, MIPI_DSI_DCS_READ,
+					MIPI_DCS_GET_POWER_MODE, 0x1, buf);
+		if (ret == -ETIMEDOUT) {
+			dsim_info("recovery is already operated\n");
+			return DSIM_ESD_OK;
+		} else if ((ret < 0) && (ret != -ETIMEDOUT)) {
+			dsim_err("Failed to read panel REG 0x%02X!: 0x%02x, i(%d)\n",
+					MIPI_DCS_GET_POWER_MODE,
+					*(unsigned int *)buf & 0xFF, i);
+			if (dsim->state != DSIM_STATE_ON)
+				return DSIM_ESD_OK;
+			usleep_range(1000, 1100);
+			continue;
+		}
+
+		if ((buf[0] & 0x7c) == 0x1c) {
+			dsim_dbg("s6e3ha8 panel REG 0x%02X=0x%02x\n",
+					MIPI_DCS_GET_POWER_MODE, buf[0]);
+			break;
+		}
+
+		dsim_err("s6e3ha8 panel REG 0x%02X Not match: 0x%02x, i(%d)\n",
+					MIPI_DCS_GET_POWER_MODE,
+					*(unsigned int *)buf & 0xFF, i);
+		esd_detect = true;
+	}
+
+	if (i < RETRY)
+		return DSIM_ESD_OK;
+	else if (esd_detect)
+		return DSIM_ESD_ERROR;
+	else
+		return DSIM_ESD_CHECK_ERROR;
+#else
 	return 0;
+#endif /* #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION) */
 }
+
 
 struct exynos_panel_ops panel_s6e3ha8_ops = {
 	.id		= {0x460091, 0x430491, 0xffffff},
