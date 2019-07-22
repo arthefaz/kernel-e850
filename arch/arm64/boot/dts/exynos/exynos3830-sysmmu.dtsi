@@ -34,7 +34,7 @@
 			<(SYSMMU_PORT_PREFETCH_PREDICTION_READ(0x1) | SYSMMU_BL1) SYSMMU_ID_MASK(0x8, 0xF)>;
 		port-name = "DPU";
 		#iommu-cells = <0>;
-/*		power-domains = <&pd_dpu>; */
+		power-domains = <&pd_dpu>;
 	};
 
 	sysmmu_aud: sysmmu@14850000 {
