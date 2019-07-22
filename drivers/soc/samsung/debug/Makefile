@@ -21,4 +21,5 @@ obj-$(CONFIG_EXYNOS_ADV_TRACER) 	+= exynos-adv-tracer.o exynos-adv-tracer-ipc.o
 obj-$(CONFIG_EXYNOS_ADV_TRACER_S2D)	+= exynos-adv-tracer-s2d.o
 obj-$(CONFIG_EXYNOS_ADV_TRACER_MISC)	+= exynos-adv-tracer-misc.o
 obj-$(CONFIG_EXYNOS_DEBUG_TEST)         += exynos-debug-test.o
+obj-$(CONFIG_EXYNOS_EHLD)               += exynos-ehld.o
 obj-$(CONFIG_EXYNOS_HALT)		+= exynos-halt.o

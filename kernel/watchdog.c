@@ -30,6 +30,8 @@
 #include <linux/kvm_para.h>
 #include <linux/kthread.h>
 
+#include <soc/samsung/exynos-ehld.h>
+
 static DEFINE_MUTEX(watchdog_mutex);
 
 #if defined(CONFIG_HARDLOCKUP_DETECTOR) || defined(CONFIG_HAVE_NMI_WATCHDOG) \
@@ -863,6 +865,8 @@ static void watchdog_check_hardlockup_other_cpu(void)
 	 *  watchdog_thresh * 2 / 5, so 3 samples gets us back to slightly over
 	 *  watchdog_thresh (over by 20%).
 	 */
+	exynos_ehld_event_raw_update_allcpu();
+
 	if (__this_cpu_read(hrtimer_interrupts) % 3 != 0)
 		return;
 

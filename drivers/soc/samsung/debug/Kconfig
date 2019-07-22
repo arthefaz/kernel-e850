@@ -50,6 +50,11 @@ config EXYNOS_DEBUG_TEST
 	default y
 	depends on ARCH_EXYNOS && EXYNOS_DEBUG && DEBUG_SNAPSHOT
 
+config EXYNOS_EHLD
+	bool "Exynos support Early Hardlockup Detector"
+	default n
+	depends on ARCH_EXYNOS && EXYNOS_DEBUG
+
 config EXYNOS_HALT
 	bool "Exynos support HALT"
 	default n
