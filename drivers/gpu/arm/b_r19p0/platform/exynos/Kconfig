@@ -29,7 +29,7 @@ config EXYNOS_SOC_NAME
 
 config MALI_DVFS
     bool "Enable EXYNOS DVFS"
-    default n
+    default y
     help
       Choose this option to enable DVFS in the Mali Midgard DDK.
 
@@ -62,7 +62,7 @@ config MALI_SEC_CL_BOOST
 
 config MALI_PM_QOS
     bool "Enable DVFS with QoS"
-    default n
+    default y
     help
       Choose this option to enable PM_QOS in the Mali tTRx DDK.
 
