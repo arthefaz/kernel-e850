@@ -587,6 +587,9 @@ static const unsigned int extcon_id[] = {
 };
 #endif
 
+#define MAX_EDID_BLOCK 4
+#define EDID_BLOCK_SIZE 128
+
 struct edid_data {
 	int max_support_clk;
 	bool support_10bpc;
@@ -601,7 +604,7 @@ struct edid_data {
 	u32 edid_serial;
 
 	int edid_data_size;
-	u8 *edid_buf;
+	u8 edid_buf[MAX_EDID_BLOCK * EDID_BLOCK_SIZE];
 };
 
 struct displayport_sst {
@@ -707,12 +710,9 @@ struct displayport_debug_param {
 
 #define EDID_ADDRESS 0x50
 #define AUX_DATA_BUF_COUNT 16
-#define EDID_BUF_COUNT 256
 #define AUX_RETRY_COUNT 3
 #define AUX_TIMEOUT_1800us 0x03
 
-#define MAX_EDID_BLOCK 4
-#define EDID_BLOCK_SIZE 128
 #define DATA_BLOCK_TAG_CODE_MASK 0xE0
 #define DATA_BLOCK_LENGTH_MASK 0x1F
 #define DATA_BLOCK_TAG_CODE_BIT_POSITION 5
@@ -1192,7 +1192,7 @@ void displyaport_reg_set_vc_payload_id_timeslot_delete(u32 ch,
 
 int displayport_reg_stand_alone_crc_sorting(void);
 
-int edid_read(u32 sst_id, struct displayport_device *displayport, u8 **data);
+int edid_read(u32 sst_id, struct displayport_device *displayport);
 int edid_update(u32 sst_id, struct displayport_device *displayport);
 struct v4l2_dv_timings edid_preferred_preset(void);
 void edid_set_preferred_preset(int mode);
