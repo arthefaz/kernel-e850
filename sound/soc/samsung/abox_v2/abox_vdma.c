@@ -705,7 +705,7 @@ static int samsung_abox_vdma_probe(struct platform_device *pdev)
 	struct abox_vdma_info *info;
 	int ret = 0;
 
-	dev_dbg(dev, "%s\n", __func__);
+	dev_info(dev, "%s\n", __func__);
 
 	if (id < 0) {
 		abox_vdma_card.dev = dev;
@@ -822,7 +822,6 @@ void abox_vdma_init(struct device *dev_abox)
 			abox_vdma_ipc_handler, dev_abox);
 	abox_register_ipc_handler(dev_abox, IPC_PCMCAPTURE,
 			abox_vdma_ipc_handler, dev_abox);
-
 	for (i = 0; i < VDMA_COUNT_MAX; i++) {
 		pdev = platform_device_register_data(dev_abox, DEVICE_NAME,
 				PCMTASK_VDMA_ID_BASE + i, NULL, 0);

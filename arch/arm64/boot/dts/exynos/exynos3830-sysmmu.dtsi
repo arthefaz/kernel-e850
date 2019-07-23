@@ -55,7 +55,7 @@
 			<(SYSMMU_PORT_NO_PREFETCH_READWRITE(0x1) | SYSMMU_BL1) SYSMMU_ID_MASK(0x3, 0x3)>;
 		port-name = "ABOX";
 		#iommu-cells = <0>;
-/*		power-domains = <&pd_aud>; */
+/*		power-domains = <&pd_aud>;*/
 	};
 
 	sysmmu_is0: sysmmu@14550000 {

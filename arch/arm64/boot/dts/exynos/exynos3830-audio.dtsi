@@ -19,7 +19,7 @@
 		interrupts = <GIC_SPI INTREQ__AUD_ABOX_GIC400_MCPU IRQ_TYPE_LEVEL_HIGH>;
 	};
 
-	abox: abox@14e50000 {
+	abox: abox@14a50000 {
 		compatible = "samsung,abox";
 		reg = <0x0 0x14a50000 0x10000>, <0x0 0x14a10000 0x10000>,
 			<0x0 0x14b00000 0x2d000>, <0x0 0x14ae0000 0x10000>;
@@ -28,8 +28,8 @@
 		#size-cells = <1>;
 		ranges;
 		iommus = <&sysmmu_aud>;
-		clocks = <&clock PLL_OUT_AUD>, <&clock DOUT_CLK_AUD_AUDIF>,
-			<&clock DOUT_CLK_AUD_BUS>, <&clock DOUT_CLK_AUD_CNT>;
+		clocks = <&clock PLL_AUD_OUT>, <&clock DOUT_CLK_AUD_AUDIF>,
+			<&clock DOUT_CLK_AUD_BUSD>, <&clock DOUT_CLK_AUD_CNT>;
 		clock-names = "pll", "audif", "bus", "cnt";
 		#sound-dai-cells = <1>;
 		samsung,quirks = "try to asrc off";
@@ -64,7 +64,7 @@
 
 		abox_core1: abox-core@14a55080 {
 			compatible = "samsung,abox-core";
-			reg = <0x0 0x14e55080 0x80>, <0x0 0x14e55100 0x4>;
+			reg = <0x0 0x14a55080 0x80>, <0x0 0x14a55100 0x4>;
 			reg-names = "gpr", "status";
 			samsung,id = <1>;
 			samsung,type = "CA32";
@@ -380,42 +380,6 @@
 			 * pinctrl-0 = <&aud_i2s2_bus>;
 			 * pinctrl-1 = <&aud_i2s2_idle>;
 			 */
-			#sound-dai-cells = <0>;
-		};
-
-		abox_uaif_3: abox-uaif@14a50530 {
-			compatible = "samsung,abox-uaif";
-			reg = <0x0 0x14a50530 0x10>;
-			reg-names = "sfr";
-			samsung,id = <3>;
-			clocks = <&clock DOUT_CLK_AUD_UAIF3>, <&clock GATE_ABOX_QCH_BCLK3>;
-			clock-names = "bclk", "bclk_gate";
-			#sound-dai-cells = <0>;
-		};
-
-		abox_uaif_4: abox-uaif@14a50540 {
-			compatible = "samsung,abox-uaif";
-			reg = <0x0 0x14a50540 0x10>;
-			reg-names = "sfr";
-			samsung,id = <4>;
-			clocks = <&clock DOUT_CLK_AUD_UAIF4>, <&clock GATE_ABOX_QCH_BCLK4>;
-			clock-names = "bclk", "bclk_gate";
-			#sound-dai-cells = <0>;
-		};
-
-		abox_dsif: abox-dsif@14a50570 {
-			compatible = "samsung,abox-dsif";
-			reg = <0x0 0x14a50570 0x10>;
-			reg-names = "sfr";
-			samsung,id = <5>;
-			clocks = <&clock DOUT_CLK_AUD_DSIF>, <&clock GATE_ABOX_QCH_BCLK_DSIF>;
-			clock-names = "bclk", "bclk_gate";
-			/* DSIF and UAIF2 shares GPIO */
-			/*
-			pinctrl-names = "default", "sleep";
-			pinctrl-0 = <&aud_dsd_bus>;
-			pinctrl-1 = <&aud_dsd_idle>;
-			*/
 			#sound-dai-cells = <0>;
 		};
 

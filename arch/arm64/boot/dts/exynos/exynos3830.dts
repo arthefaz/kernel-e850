@@ -33,6 +33,7 @@
 #include <dt-bindings/soc/samsung/exynos-ecs.h>
 #include "exynos3830-wlbt.dtsi"
 #include "exynos3830-ems.dtsi"
+#include "exynos3830-audio.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
@@ -590,7 +591,7 @@
 		#size-cells = <1>;
 		ranges;
 
-		domain-clients = <>;
+		domain-clients = <&abox>;
 	};
 
 	iommu-domain_is {

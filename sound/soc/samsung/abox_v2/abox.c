@@ -70,8 +70,8 @@
 #define ABOX_PAD_NORMAL				(0x19A0)
 #define ABOX_PAD_NORMAL_MASK			(0x00000800)
 #elif defined(CONFIG_SOC_EXYNOS3830)
-#define ABOX_PAD_NORMAL                         (0x20a0)
-#define ABOX_PAD_NORMAL_MASK                    (0x00000800)
+#define ABOX_PAD_NORMAL				(0x20a0)
+#define ABOX_PAD_NORMAL_MASK			(0x00000800)
 
 #endif
 
@@ -1063,17 +1063,14 @@ int abox_register_ipc_handler(struct device *dev, int ipc_id,
 	struct abox_data *data = dev_get_drvdata(dev);
 	struct abox_ipc_action *action = NULL;
 	bool new_handler = true;
-
 	if (ipc_id >= IPC_ID_COUNT)
 		return -EINVAL;
-
 	list_for_each_entry(action, &data->ipc_actions, list) {
 		if (action->ipc_id == ipc_id && action->data == dev_id) {
 			new_handler = false;
 			break;
 		}
 	}
-
 	if (new_handler) {
 		action = devm_kzalloc(dev, sizeof(*action), GFP_KERNEL);
 		if (IS_ERR_OR_NULL(action)) {
@@ -1085,9 +1082,7 @@ int abox_register_ipc_handler(struct device *dev, int ipc_id,
 		action->data = dev_id;
 		list_add_tail(&action->list, &data->ipc_actions);
 	}
-
 	action->handler = ipc_handler;
-
 	return 0;
 }
 EXPORT_SYMBOL(abox_register_ipc_handler);
@@ -2996,10 +2991,12 @@ static int samsung_abox_probe(struct platform_device *pdev)
 
 	abox_qos_init(dev);
 
+	/*
 	pm_runtime_enable(dev);
 	pm_runtime_set_autosuspend_delay(dev, 500);
 	pm_runtime_use_autosuspend(dev);
 	pm_runtime_get(dev);
+	*/
 
 	data->qos_nb.notifier_call = abox_qos_notifier;
 	pm_qos_add_notifier(PM_QOS_AUD_THROUGHPUT, &data->qos_nb);
