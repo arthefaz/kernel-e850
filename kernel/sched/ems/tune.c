@@ -18,14 +18,28 @@
 
 struct emst_dom {
 	int		boost_ratio;	/* boost_ratio of this group at the current freq */
+	int		weight;		/* weight of this group for core selction */
+	int		idle_weight;	/* idle_weight of this group for core selection */
+	int		freq_boost;	/* freq_boost of this group at the current freq */
 };
 
 struct emst_group {
 	struct emst_dom	*dom[NR_CPUS];
 	struct kobject	kobj;
 };
-struct emst_group emst_grp[STUNE_GROUP_COUNT];
+
+struct emst_mode {
+	int idx;
+	const char *desc;
+
+	struct emst_group emst_grp[STUNE_GROUP_COUNT];
+	struct kobject	  kobj;
+};
+static struct emst_mode *emst_modes;
+
 bool emst_init_f;
+static int cur_mode;
+static int max_mode;
 
 char *stune_group_name[] = {
 	"root",
@@ -36,7 +50,7 @@ char *stune_group_name[] = {
 };
 
 static struct kobject *emst_kobj;
-DEFINE_PER_CPU(int, emst_boost_ratio);	/* maximum boot ratio of cpu */
+DEFINE_PER_CPU(int, emst_freq_boost);	/* maximum boot ratio of cpu */
 
 /**********************************************************************
  * common APIs                                                        *
@@ -44,7 +58,7 @@ DEFINE_PER_CPU(int, emst_boost_ratio);	/* maximum boot ratio of cpu */
 extern struct reciprocal_value schedtune_spc_rdiv;
 unsigned long emst_boost(int cpu, unsigned long util)
 {
-	int boost = per_cpu(emst_boost_ratio, cpu);
+	int boost = per_cpu(emst_freq_boost, cpu);
 	unsigned long capacity = capacity_cpu(cpu, 0);
 	unsigned long boosted_util = 0;
 	long long margin = 0;
@@ -81,21 +95,24 @@ unsigned long emst_boost(int cpu, unsigned long util)
 /* Update maximum values of boost groups of this cpu */
 void emst_cpu_update(int cpu, u64 now)
 {
-	int idx, boost_ratio_max;
+	int idx, freq_boost_max = 0;
+	struct emst_group *emst_grp;
+
 	if (unlikely(!emst_init_f))
 		return;
 
+	emst_grp = emst_modes[cur_mode].emst_grp;
+
 	/* The root boost group is always active */
-	boost_ratio_max = emst_grp[0].dom[cpu]->boost_ratio;
+	freq_boost_max = emst_grp[0].dom[cpu]->freq_boost;
 	for (idx = 1; idx < STUNE_GROUP_COUNT; ++idx) {
 		int val;
 		if (schedtune_cpu_boost_group_active(idx, cpu, now))
 			continue;
 
-		/* This boost group is active and has more high value */
-		val = emst_grp[idx].dom[cpu]->boost_ratio;
-		if (boost_ratio_max < val)
-			boost_ratio_max = val;
+		val = emst_grp[idx].dom[cpu]->freq_boost;
+		if (freq_boost_max < val)
+			freq_boost_max = val;
 	}
 
 	/*
@@ -103,7 +120,29 @@ void emst_cpu_update(int cpu, u64 now)
 	 * are neagtive. Avoids under-accounting of cpu capacity which may cause
 	 * task stacking and frequency spikes.
 	 */
-	per_cpu(emst_boost_ratio, cpu) = max(boost_ratio_max, 0);
+	per_cpu(emst_freq_boost, cpu) = max(freq_boost_max, 0);
+}
+
+#define DEFAULT_WEIGHT	(100)
+int emst_get_weight(struct task_struct *p, int cpu, int idle)
+{
+	int st_idx, weight;
+	struct emst_group *groups;
+	struct emst_dom *dom;
+
+	if (unlikely(!emst_init_f))
+		return DEFAULT_WEIGHT;
+
+	st_idx = schedtune_task_group_idx(p);
+	groups = emst_modes[cur_mode].emst_grp;
+	dom = groups[st_idx].dom[cpu];
+
+	if (idle)
+		weight = dom->idle_weight;
+	else
+		weight = dom->weight;
+
+	return weight;
 }
 
 /**********************************************************************
@@ -139,21 +178,60 @@ static ssize_t show_##name(struct kobject *k, char *buf)			\
 static ssize_t store_##name(struct kobject *k, const char *buf, size_t count)	\
 {										\
 	struct emst_group *group = container_of(k, struct emst_group, kobj);	\
-	int cpu, val;							\
+	int cpu, val, tmp;							\
 										\
-	if (!sscanf(buf, "%d %d", &cpu, &val))					\
+	if (sscanf(buf, "%d %d", &cpu, &val) != 2)				\
 		return -EINVAL;							\
 										\
 	if (cpu < 0 || cpu >= NR_CPUS || val < -200 || val > 500)		\
+		return -EINVAL;							\
+										\
+	for_each_cpu(tmp, cpu_coregroup_mask(cpu))				\
+		group->dom[tmp]->type = val;					\
+	return count;								\
+}
+
+#define emst_show_weight(name, type)						\
+static ssize_t show_##name(struct kobject *k, char *buf)			\
+{										\
+	struct emst_group *group = container_of(k, struct emst_group, kobj);	\
+	int cpu, ret = 0;							\
+										\
+	for_each_possible_cpu(cpu) {						\
+		ret += sprintf(buf + ret, "cpu:%d weight:%3d\n",		\
+					cpu, group->dom[cpu]->type);		\
+	}									\
+										\
+	return ret;								\
+}
+
+#define emst_store_weight(name, type)						\
+static ssize_t store_##name(struct kobject *k, const char *buf, size_t count)	\
+{										\
+	struct emst_group *group = container_of(k, struct emst_group, kobj);	\
+	int cpu, val;								\
+										\
+	if (sscanf(buf, "%d %d", &cpu, &val) != 2)				\
+		return -EINVAL;							\
+										\
+	if (cpu < 0 || cpu >= NR_CPUS || val < 0)				\
 		return -EINVAL;							\
 										\
 	group->dom[cpu]->type = val;						\
 	return count;								\
 }
 
-emst_store(boost, boost_ratio);
-emst_show(boost, boost_ratio);
-emst_attr_rw(boost);
+emst_store(freq_boost, freq_boost);
+emst_show(freq_boost, freq_boost);
+emst_attr_rw(freq_boost);
+
+emst_store_weight(weight, weight);
+emst_show_weight(weight, weight);
+emst_attr_rw(weight);
+
+emst_store_weight(idle_weight, idle_weight);
+emst_show_weight(idle_weight, idle_weight);
+emst_attr_rw(idle_weight);
 
 static ssize_t show(struct kobject *kobj, struct attribute *at, char *buf)
 {
@@ -173,88 +251,254 @@ static const struct sysfs_ops emst_sysfs_ops = {
 	.store	= store,
 };
 
-static struct attribute *emst_attrs[] = {
-	&boost_attr.attr,
+static struct attribute *emst_grp_attrs[] = {
+	&freq_boost_attr.attr,
+	&weight_attr.attr,
+	&idle_weight_attr.attr,
 	NULL
 };
 
-static struct kobj_type ktype_fb = {
+static struct kobj_type ktype_emst_grp = {
 	.sysfs_ops	= &emst_sysfs_ops,
-	.default_attrs	= emst_attrs,
+	.default_attrs	= emst_grp_attrs,
 };
+
+static ssize_t
+show_mode_idx(struct kobject *k, char *buf)
+{
+	struct emst_mode *mode = container_of(k, struct emst_mode, kobj);
+	int ret;
+
+	ret = sprintf(buf, "%d\n", mode->idx);
+
+	return ret;
+}
+
+static struct emst_attr mode_idx_attr =
+__ATTR(idx, 0444, show_mode_idx, NULL);
+
+static ssize_t
+show_mode_desc(struct kobject *k, char *buf)
+{
+	struct emst_mode *mode = container_of(k, struct emst_mode, kobj);
+	int ret;
+
+	ret = sprintf(buf, "%s\n", mode->desc);
+
+	return ret;
+}
+
+static struct emst_attr mode_desc_attr =
+__ATTR(desc, 0444, show_mode_desc, NULL);
+
+static struct attribute *emst_mode_attrs[] = {
+	&mode_idx_attr.attr,
+	&mode_desc_attr.attr,
+	NULL
+};
+
+static struct kobj_type ktype_emst_mode = {
+	.sysfs_ops	= &emst_sysfs_ops,
+	.default_attrs	= emst_mode_attrs,
+};
+
+static ssize_t
+show_cur_mode(struct kobject *k, struct kobj_attribute *attr, char *buf)
+{
+	int ret;
+
+	ret = sprintf(buf, "%d\n", cur_mode);
+
+	return ret;
+}
+
+static ssize_t
+store_cur_mode(struct kobject *k, struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int mode;
+
+	if (sscanf(buf, "%d", &mode) != 1)
+		return -EINVAL;
+
+	if (mode < 0 || mode > max_mode)
+		return -EINVAL;
+
+	cur_mode = mode;
+
+	return count;
+}
+
+static struct kobj_attribute cur_mode_attr =
+__ATTR(cur_mode, 0644, show_cur_mode, store_cur_mode);
 
 /**********************************************************************
  * initialization                                                     *
  **********************************************************************/
-static int __init emst_init(void)
+static get_coregroup_count(void)
 {
-	struct device_node *ems_dn, *emst_dn, *dn;
-	struct emst_dom *cur;
-	int idx;
-	char name[15];
-	u32 val[NR_CPUS];
+	int cnt = 0, cpu;
 
-	emst_kobj = kobject_create_and_add("emst", ems_kobj);
-	if (!emst_kobj)
-		return -EINVAL;
-
-	ems_dn = of_find_node_by_path("/ems");
-	if (!ems_dn)
-		return -EINVAL;
-
-	emst_dn = of_find_node_by_name(ems_dn, "ems-tune");
-	if (!emst_dn)
-		return -EINVAL;
-
-	for (idx = 0; idx < STUNE_GROUP_COUNT; ++idx) {
-		int cnt, cpu, tmp;
-
-		/* get the stune group name */
-		snprintf(name, sizeof(name), "%s", stune_group_name[idx]);
-
-		/* find node for this group */
-		dn = of_find_node_by_name(emst_dn, name);
-		if (!dn) {
-			pr_warn("%s: %s is not registered on the DT\n", __func__, name);
+	for_each_possible_cpu(cpu) {
+		if (cpu != cpumask_first(cpu_coregroup_mask(cpu)))
 			continue;
-		}
 
-		/* connect kobject */
-		if (kobject_init_and_add(&emst_grp[idx].kobj, &ktype_fb, emst_kobj, name))
-			pr_warn("%s: failed to initialize kobject of %s\n", __func__, name);
+		cnt++;
+	}
 
-		/* allocate emst_dom */
-		cnt = 0;
+	return cnt;
+}
+
+#define parse_member(member)								\
+static int										\
+emst_parse_##member(struct device_node *dn, struct emst_dom **dom,			\
+					int coregrp_cnt, char *grp_name)		\
+{											\
+	int cnt, cpu, tmp;								\
+	u32 val[NR_CPUS];								\
+											\
+	if (of_property_read_u32_array(dn, grp_name, (u32 *)&val, coregrp_cnt)) {	\
+		pr_warn("%s: failed to get %s of %s\n",					\
+					__func__, dn->name, grp_name);			\
+		return -EINVAL;								\
+	}										\
+											\
+	cnt = 0;									\
+	for_each_possible_cpu(cpu) {							\
+		if (cpu != cpumask_first(cpu_coregroup_mask(cpu)))			\
+			continue;							\
+											\
+		for_each_cpu(tmp, cpu_coregroup_mask(cpu))				\
+			dom[tmp]->member = val[cnt];					\
+											\
+		cnt++;									\
+	}										\
+											\
+	return 0;									\
+}
+
+parse_member(weight);
+parse_member(idle_weight);
+parse_member(freq_boost);
+
+static int emst_parse_dt(struct device_node *mode_dn, struct emst_group *emst_grp, int mode_idx)
+{
+	int idx;
+	struct device_node *dn;
+	int coregrp_cnt;
+
+	/* Get index of this mode */
+	if (of_property_read_u32(mode_dn, "idx", &emst_modes[mode_idx].idx)) {
+		pr_warn("%s: no idx member in this mode\n", __func__);
+		return -EINVAL;
+	}
+
+	/* Get description of this mode */
+	if (of_property_read_string(mode_dn, "desc", &emst_modes[mode_idx].desc)) {
+		pr_warn("%s: no desc member in this mode\n", __func__);
+		return -EINVAL;
+	}
+
+	coregrp_cnt = get_coregroup_count();
+
+	for (idx = 0; idx < STUNE_GROUP_COUNT; idx++) {
+		char grp_name[16];
+		int cpu;
+		struct emst_dom **dom = emst_grp[idx].dom;
+
+		/* Get the stune group name */
+		snprintf(grp_name, sizeof(grp_name), "%s", stune_group_name[idx]);
+
+		/* Allocate emst_dom */
 		for_each_possible_cpu(cpu) {
-			if (cpu != cpumask_first(cpu_coregroup_mask(cpu)))
-				continue;
-
-			cur = kzalloc(sizeof(struct emst_dom), GFP_KERNEL);
+			struct emst_dom *cur = kzalloc(sizeof(struct emst_dom), GFP_KERNEL);
 			if (!cur) {
 				pr_warn("%s: failed to allocate emst_dom\n", __func__);
 				continue;
 			}
 
-			for_each_cpu(tmp, cpu_coregroup_mask(cpu))
-				emst_grp[idx].dom[tmp] = cur;
-
-			cnt++;
+			dom[cpu] = cur;
 		}
 
-		/* parse boost ratio */
-		if (of_property_read_u32_array(dn, "boost_ratio", (u32 *)&val, cnt))
-			continue;
-
-		cnt = 0;
-		for_each_possible_cpu(cpu) {
-			if (cpu != cpumask_first(cpu_coregroup_mask(cpu)))
-				continue;
-
-			emst_grp[idx].dom[cpu]->boost_ratio = val[cnt];
-			cnt++;
+		/* parsing weight to calculate efficiency */
+		dn = of_find_node_by_name(mode_dn, "weight");
+		if (!dn) {
+			pr_warn("%s: no weight node in this mode\n", __func__);
+			return -EINVAL;
 		}
+		emst_parse_weight(dn, dom, coregrp_cnt, grp_name);
+
+		/* parsing idle weight to calculate efficiency */
+		dn = of_find_node_by_name(mode_dn, "idle-weight");
+		if (!dn) {
+			pr_warn("%s: no idle-weight node in this mode\n", __func__);
+			return -EINVAL;
+		}
+		emst_parse_idle_weight(dn, dom, coregrp_cnt, grp_name);
+
+		/* parsing freq boost to speed up frequency ramp-up */
+		dn = of_find_node_by_name(mode_dn, "freq-boost");
+		if (!dn) {
+			pr_warn("%s: no freq-boost node in this mode\n", __func__);
+			return -EINVAL;
+		}
+		emst_parse_freq_boost(dn, dom, coregrp_cnt, grp_name);
 	}
 
+	return 0;
+}
+
+static int __init emst_init(void)
+{
+	struct device_node *emst_dn, *mode_dn;
+	int child_count, mode_idx;
+
+	emst_dn = of_find_node_by_path("/ems/ems-tune");
+	if (!emst_dn)
+		return -EINVAL;
+
+	child_count = of_get_child_count(emst_dn);
+	if (!child_count)
+		return -EINVAL;
+
+	emst_modes = kzalloc(sizeof(struct emst_mode) * child_count, GFP_KERNEL);
+	if (!emst_modes)
+		return -ENOMEM;
+
+	emst_kobj = kobject_create_and_add("emst", ems_kobj);
+	if (!emst_kobj)
+		return -EINVAL;
+
+	if (sysfs_create_file(emst_kobj, &cur_mode_attr.attr))
+		return -ENOMEM;
+
+	mode_idx = 0;
+	for_each_child_of_node(emst_dn, mode_dn) {
+		int idx;
+		struct kobject *mode_kobj = &emst_modes[mode_idx].kobj;
+		struct emst_group *emst_grp = emst_modes[mode_idx].emst_grp;
+
+		/* Connect kobject for this mode */
+		if (kobject_init_and_add(mode_kobj, &ktype_emst_mode, emst_kobj, mode_dn->name))
+			return -EINVAL;
+
+		for (idx = 0; idx < STUNE_GROUP_COUNT; idx++) {
+			char grp_name[16];
+			struct kobject *grp_kobj = &emst_grp[idx].kobj;
+
+			snprintf(grp_name, sizeof(grp_name), "%s", stune_group_name[idx]);
+			if (kobject_init_and_add(grp_kobj, &ktype_emst_grp, mode_kobj, grp_name))
+				pr_warn("%s: failed to initialize kobject of %s\n", __func__, grp_name);
+		}
+
+		if (emst_parse_dt(mode_dn, emst_modes[mode_idx].emst_grp, mode_idx)) {
+			/* not allow failure to parse emst dt */
+			BUG();
+		}
+
+		mode_idx++;
+	}
+
+	max_mode = mode_idx - 1;
 	emst_init_f = true;
 
 	return 0;

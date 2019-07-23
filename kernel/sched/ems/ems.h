@@ -74,6 +74,9 @@ extern int get_gov_next_cap(int dst, struct task_struct *p);
 /* core sparing */
 extern struct cpumask *ecs_sparing_cpus(void);
 
+/* EMSTune pre-defined tunable set support */
+extern int emst_get_weight(struct task_struct *p, int cpu, int idle);
+
 static inline int cpu_overutilized(unsigned long capacity, unsigned long util)
 {
 	return (capacity * 1024) < (util * 1280);
