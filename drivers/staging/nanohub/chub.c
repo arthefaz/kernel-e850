@@ -346,6 +346,7 @@ static void contexthub_handle_debug(struct contexthub_ipc_info *ipc,
 	/* set status in CHUB_ST_ERR */
 	if ((err == CHUB_ERR_ITMON) || (err == CHUB_ERR_FW_WDT) || (err == CHUB_ERR_FW_FAULT) || (err == CHUB_ERR_CHUB_NO_RESPONSE)) {
 		atomic_set(&ipc->chub_status, CHUB_ST_ERR);
+		chub_dbg_dump_hw(ipc, CHUB_ERR_ITMON);
 		goto error_handler;
 	}
 
@@ -717,6 +718,7 @@ static int contexthub_hw_reset(struct contexthub_ipc_info *ipc,
 static void contexthub_config_init(struct contexthub_ipc_info *chub)
 {
 	/* BAAW-P-APM-CHUB for CHUB to access APM_CMGP. 1 window is used */
+	/* SAME AS BAAW-C-CHUB FOR EXYNOS3830 */
 	if (chub->chub_baaw) {
 		IPC_HW_WRITE_BAAW_CHUB0(chub->chub_baaw,
 					chub->baaw_info.baaw_p_apm_chub_start);
@@ -1224,7 +1226,9 @@ static void handle_irq(struct contexthub_ipc_info *ipc, enum irq_evt_chub evt)
 	case IRQ_EVT_C2A_INT:
 		if (atomic_read(&ipc->irq1_apInt) == C2A_OFF) {
 			atomic_set(&ipc->irq1_apInt, C2A_ON);
-			contexthub_notify_host(ipc);
+			/* until unknown interrupt from CHUB is fixed */
+			if (atomic_read(&ipc->chub_status) == CHUB_ST_RUN)
+				contexthub_notify_host(ipc);
 		}
 		break;
 	case IRQ_EVT_C2A_INTCLR:
@@ -1370,6 +1374,7 @@ static irqreturn_t contexthub_irq_wdt_handler(int irq, void *data)
 }
 #endif
 
+#if defined(CONFIG_SOC_EXYNOS9610)
 static struct clk *devm_clk_get_and_prepare(struct device *dev,
 	const char *name)
 {
@@ -1398,7 +1403,6 @@ error:
 	return clk;
 }
 
-#if defined(CONFIG_SOC_EXYNOS9610)
 extern int cal_dll_apm_enable(void);
 #endif
 
@@ -1546,6 +1550,8 @@ static __init int contexthub_ipc_hw_init(struct platform_device *pdev,
 	}
 #endif
 	/* get addresses information to set BAAW */
+	/* same as baaw-c-chub for exynos3830 */
+
 	if (of_property_read_u32_index
 		(node, "baaw,baaw-p-apm-chub", 0,
 		 &chub->baaw_info.baaw_p_apm_chub_start)) {
@@ -1663,9 +1669,11 @@ static int chub_itmon_notifier(struct notifier_block *nb,
 	struct itmon_notifier *itmon_data = nb_data;
 
 	if (itmon_data && itmon_data->master &&
-		((!strncmp("CM4_SHUB_CD", itmon_data->master, sizeof("CM4_SHUB_CD") - 1)) ||
-		(!strncmp("CM4_SHUB_P", itmon_data->master, sizeof("CM4_SHUB_P") - 1)) ||
-		(!strncmp("PDMA_SHUB", itmon_data->master, sizeof("PDMA_SHUB") - 1)))) {
+		((!strncmp("CM4_CHUB", itmon_data->master, sizeof("CM4_CHUB") - 1))           ||
+		 (!strncmp("CHUB CM4_CHUB", itmon_data->master, sizeof("CHUB CM4_CHUB") - 1)) ||
+		 (!strncmp("CM4_SHUB_CD", itmon_data->master, sizeof("CM4_SHUB_CD") - 1))     ||
+		 (!strncmp("CM4_SHUB_P", itmon_data->master, sizeof("CM4_SHUB_P") - 1))       ||
+		 (!strncmp("PDMA_SHUB", itmon_data->master, sizeof("PDMA_SHUB") - 1)))) {
 		dev_info(data->dev, "%s: chub(%s) itmon detected: action:%d!!\n",
 			__func__, itmon_data->master, action);
 		contexthub_handle_debug(data, CHUB_ERR_ITMON, 1);

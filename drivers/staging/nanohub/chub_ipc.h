@@ -69,7 +69,7 @@
 #define BL_OFFSET		(0x0)
 #if defined(CONFIG_SOC_EXYNOS9630)
 #define MAP_INFO_OFFSET (0x200)
-#elif defined(CONFIG_SOC_EXYNOS9610)
+#elif defined(CONFIG_SOC_EXYNOS9610) || defined(CONFIG_SOC_EXYNOS3830)
 #define MAP_INFO_OFFSET (256)
 #endif
 #define MAP_INFO_MAX_SIZE (128)
