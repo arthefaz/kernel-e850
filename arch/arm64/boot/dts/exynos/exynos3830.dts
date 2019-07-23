@@ -710,6 +710,7 @@
 	tee {
 		compatible = "samsung,exynos-tee";
 		interrupts = <GIC_SPI INTREQ__TBASE IRQ_TYPE_LEVEL_HIGH>;
+	};
 
 	exynos_dm: exynos-dm@17000000 {
 		compatible = "samsung,exynos-dvfs-manager";
