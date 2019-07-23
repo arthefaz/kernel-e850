@@ -19,6 +19,11 @@
 #include "pmucal_cp_exynos3830.h"
 #endif
 
+#ifdef CONFIG_SHUB_PMUCAL
+#include "../pmucal_shub.h"
+#include "pmucal_chub_exynos3830.h"
+#endif
+
 #include "cmucal-node.c"
 #include "cmucal-qch.c"
 #include "cmucal-sfr.c"

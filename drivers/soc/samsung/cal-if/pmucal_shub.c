@@ -31,7 +31,7 @@ int pmucal_shub_standbywfi_status(void)
 		return -ENOENT;
 	}
 
-	pmucal_rae_handle_shub_seq(pmucal_shub_list.status,
+	pmucal_rae_handle_seq(pmucal_shub_list.status,
 				pmucal_shub_list.num_status);
 
 	pr_err("shub_status: 0x%X\n", pmucal_shub_list.status->value);
@@ -58,7 +58,7 @@ int pmucal_shub_reset_assert(void)
 		return -ENOENT;
 	}
 
-	ret = pmucal_rae_handle_shub_seq(pmucal_shub_list.reset_assert,
+	ret = pmucal_rae_handle_seq(pmucal_shub_list.reset_assert,
 				pmucal_shub_list.num_reset_assert);
 	if (ret) {
 		pr_err("%s %s: error on handling shub-reset_assert sequence.\n",
@@ -86,7 +86,7 @@ int pmucal_shub_reset_release_config(void)
 		return -ENOENT;
 	}
 
-	ret = pmucal_rae_handle_shub_seq(pmucal_shub_list.reset_release_config,
+	ret = pmucal_rae_handle_seq(pmucal_shub_list.reset_release_config,
 				pmucal_shub_list.num_reset_release_config);
 	if (ret) {
 		pr_err("%s %s: error on handling shub-reset_release_config sequence.\n",
@@ -94,7 +94,7 @@ int pmucal_shub_reset_release_config(void)
 		return ret;
 	}
 
-	pr_info("%s doing\n", __func__);
+	pr_info("%s done\n", __func__);
 	return 0;
 }
 int pmucal_shub_reset_release(void)
@@ -107,7 +107,7 @@ int pmucal_shub_reset_release(void)
 		return -ENOENT;
 	}
 
-	ret = pmucal_rae_handle_shub_seq(pmucal_shub_list.reset_release,
+	ret = pmucal_rae_handle_seq(pmucal_shub_list.reset_release,
 				pmucal_shub_list.num_reset_release);
 	if (ret) {
 		pr_err("%s %s: error on handling shub-reset_release sequence.\n",
@@ -150,7 +150,7 @@ out:
 }
 
 /**
- *  pmucal_cp_initialize - Initialize function of PMUCAL SHUB common logic.
+ *  pmucal_shub_initialize - Initialize function of PMUCAL SHUB common logic.
  *		            exposed to PWRCAL interface.
  *
  *  Returns 0 on success. Otherwise, negative error code.
