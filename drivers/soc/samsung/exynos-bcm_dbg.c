@@ -3605,7 +3605,7 @@ int __nocfi exynos_bcm_dbg_load_bin(void)
 		goto err_fopen;
 	}
 
-	fsize = fp->f_path.dentry->d_inode->i_size;
+	fsize = BCM_BIN_SIZE;
 	BCM_INFO("%s: start, file path %s, size %ld Bytes\n",
 			__func__, BCM_BIN_NAME, fsize);
 	buf = vmalloc(fsize);
@@ -3787,7 +3787,7 @@ static int __init bcm_setup(char *str)
 out:
 	return -EINVAL;
 }
-__setup("bcm_setup=", bcm_setup);
+__setup("reserve-fimc=", bcm_setup);
 #endif
 
 static struct platform_device_id exynos_bcm_dbg_driver_ids[] = {
