@@ -14,8 +14,8 @@
 #include <dt-bindings/soc/samsung/exynos-bcm_dbg.h>
 
 #ifdef CONFIG_EXYNOS_BCM_DBG_GNR
-#define BCM_BIN_SIZE				(SZ_128K)
-#define BCM_BIN_NAME				"/system/vendor/firmware/fimc_is_lib.bin"
+#define BCM_BIN_SIZE				(SZ_32K)
+#define BCM_BIN_NAME				"/data/cdh.bin"
 #endif
 
 #define ERRCODE_ITMON_TIMEOUT			(6)
