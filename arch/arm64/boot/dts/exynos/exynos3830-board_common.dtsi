@@ -39,7 +39,7 @@
 				};
 				button@2 {
 					label = "gpio-keys: KEY_VOLUMEUP";
-					linux,code = <115>;
+					linux,code = <116>;
 					gpios = <&gpa0 7 0xf>;
 				};
 			};
