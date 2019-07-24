@@ -70,16 +70,16 @@ static int pmu_cpu_offset(unsigned int cpu)
 		offset = 0x180;
 		break;
 	case 4:
-		offset = 0x200;
-		break;
-	case 5:
-		offset = 0x280;
-		break;
-	case 6:
 		offset = 0x400;
 		break;
-	case 7:
+	case 5:
 		offset = 0x480;
+		break;
+	case 6:
+		offset = 0x500;
+		break;
+	case 7:
+		offset = 0x580;
 		break;
 	default:
 		BUG();
