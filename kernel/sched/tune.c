@@ -462,6 +462,23 @@ int schedtune_cpu_boost(int cpu)
 	return bg->boost_max;
 }
 
+int schedtune_task_group_idx(struct task_struct *p)
+{
+	struct schedtune *st;
+	int group_idx;
+
+	if (unlikely(!schedtune_initialized))
+		return 0;
+
+	/* Get task cgroup idx */
+	rcu_read_lock();
+	st = task_schedtune(p);
+	group_idx = st->idx;
+	rcu_read_unlock();
+
+	return group_idx;
+}
+
 int schedtune_task_boost(struct task_struct *p)
 {
 	struct schedtune *st;
