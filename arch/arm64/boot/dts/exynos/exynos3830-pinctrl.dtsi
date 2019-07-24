@@ -323,6 +323,54 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 		};
+
+		aud_codec_mclk: aud-codec-mclk {
+			samsung,pins = "gpb0-0";
+			samsung,pin-function = <2>;
+			samsung,pin-pud = <1>;
+		};
+
+		aud_codec_mclk_idle: aud-codec-mclk-idle {
+			samsung,pins = "gpb0-0";
+			samsung,pin-function = <0>;
+			samsung,pin-pud = <1>;
+		};
+
+		aud_i2s0_bus: aud-i2s0-bus {
+			samsung,pins = "gpb0-1", "gpb0-2", "gpb0-3", "gpb0-4";
+			samsung,pin-function = <2>;
+			samsung,pin-pud = <1>;
+		};
+
+		aud_i2s0_idle: aud-i2s0-idle {
+			samsung,pins = "gpb0-1", "gpb0-2", "gpb0-3", "gpb0-4";
+			samsung,pin-function = <0>;
+			samsung,pin-pud = <1>;
+		};
+
+		aud_i2s1_bus: aud-i2s1-bus {
+			samsung,pins = "gpb1-0", "gpb1-1", "gpb1-2", "gpb1-3";
+			samsung,pin-function = <2>;
+			samsung,pin-pud = <1>;
+		};
+
+		aud_i2s1_idle: aud-i2s1-idle {
+			samsung,pins = "gpb1-0", "gpb1-1", "gpb1-2", "gpb1-3";
+			samsung,pin-function = <0>;
+			samsung,pin-pud = <1>;
+		};
+
+		aud_fm_bus: aud-fm-bus {
+			samsung,pins = "gpb1-4";
+			samsung,pin-function = <2>;
+			samsung,pin-pud = <1>;
+		};
+
+		aud_fm_idle: aud-fm-idle {
+			samsung,pins = "gpb1-4";
+			samsung,pin-function = <0>;
+			samsung,pin-pud = <1>;
+		};
 	};
 
 	/* HSI */
