@@ -9,6 +9,7 @@
 #include <linux/slab.h>
 #include <linux/of.h>
 #include <linux/reciprocal_div.h>
+#include <linux/miscdevice.h>
 
 #include <trace/events/ems.h>
 
@@ -143,6 +144,145 @@ int emst_get_weight(struct task_struct *p, int cpu, int idle)
 		weight = dom->weight;
 
 	return weight;
+}
+
+/**********************************************************************
+ * Multi requests interface (Platform/Kernel)                         *
+ **********************************************************************/
+struct emst_mode_object {
+	char *name;
+	struct miscdevice emst_mode_miscdev;
+};
+static struct emst_mode_object emst_mode_obj;
+
+static DEFINE_SPINLOCK(emst_mode_lock);
+static struct plist_head emst_req_list = PLIST_HEAD_INIT(emst_req_list);
+
+static int emst_get_mode(void)
+{
+	if (plist_head_empty(&emst_req_list))
+		return 0;
+
+	return plist_last(&emst_req_list)->prio;
+}
+
+void __emst_update_request(struct emst_mode_request *req, s32 new_value,
+			char *func, unsigned int line)
+{
+	unsigned long flags;
+	int next_mode;
+
+	/* ignore if the request is active and the value does not change */
+	if (req->active && req->node.prio == new_value)
+		return;
+
+	/* ignore if the value is out of range */
+	if (new_value < 0 || new_value > (s32)max_mode)
+		return;
+
+	spin_lock_irqsave(&emst_mode_lock, flags);
+
+	/*
+	 * If the request already added to the list updates the value, remove
+	 * the request from the list and add it again.
+	 */
+	if (req->active)
+		plist_del(&req->node, &emst_req_list);
+	else {
+		req->func = func;
+		req->line = line;
+		req->active = 1;
+	}
+
+	plist_node_init(&req->node, new_value);
+	plist_add(&req->node, &emst_req_list);
+
+	next_mode = emst_get_mode();
+	if (cur_mode != next_mode)
+		cur_mode = next_mode;
+
+	spin_unlock_irqrestore(&emst_mode_lock, flags);
+}
+
+static int emst_mode_open(struct inode *inode, struct file *filp)
+{
+	struct emst_mode_request *req = kzalloc(sizeof(struct emst_mode_request), GFP_KERNEL);
+
+	if (!req)
+		return -ENOMEM;
+
+	filp->private_data = req;
+
+	return 0;
+}
+
+static int emst_mode_release(struct inode *inode, struct file *filp)
+{
+	struct emst_mode_request *req;
+
+	req = filp->private_data;
+	if (req->active)
+		plist_del(&req->node, &emst_req_list);
+	kfree(req);
+
+	return 0;
+}
+
+static ssize_t emst_mode_read(struct file *filp, char __user *buf,
+		size_t count, loff_t *f_pos)
+{
+	s32 value;
+	unsigned long flags;
+
+	spin_lock_irqsave(&emst_mode_lock, flags);
+	value = emst_get_mode();
+	spin_unlock_irqrestore(&emst_mode_lock, flags);
+
+	return simple_read_from_buffer(buf, count, f_pos, &value, sizeof(s32));
+}
+
+static ssize_t emst_mode_write(struct file *filp, const char __user *buf,
+		size_t count, loff_t *f_pos)
+{
+	s32 value;
+	struct emst_mode_request *req;
+
+	if (count == sizeof(s32)) {
+		if (copy_from_user(&value, buf, sizeof(s32)))
+			return -EFAULT;
+	} else {
+		int ret;
+
+		ret = kstrtos32_from_user(buf, count, 16, &value);
+		if (ret)
+			return ret;
+	}
+
+	req = filp->private_data;
+	emst_update_request(req, value);
+
+	return count;
+}
+
+static const struct file_operations emst_mode_fops = {
+	.write = emst_mode_write,
+	.read = emst_mode_read,
+	.open = emst_mode_open,
+	.release = emst_mode_release,
+	.llseek = noop_llseek,
+};
+
+static int register_emst_mode_misc(void)
+{
+	int ret;
+
+	emst_mode_obj.emst_mode_miscdev.minor = MISC_DYNAMIC_MINOR;
+	emst_mode_obj.emst_mode_miscdev.name = "mode";
+	emst_mode_obj.emst_mode_miscdev.fops = &emst_mode_fops;
+
+	ret = misc_register(&emst_mode_obj.emst_mode_miscdev);
+
+	return ret;
 }
 
 /**********************************************************************
@@ -302,34 +442,65 @@ static struct kobj_type ktype_emst_mode = {
 	.default_attrs	= emst_mode_attrs,
 };
 
+static struct emst_mode_request emst_user_req;
 static ssize_t
-show_cur_mode(struct kobject *k, struct kobj_attribute *attr, char *buf)
+show_user_mode(struct kobject *k, struct kobj_attribute *attr, char *buf)
 {
 	int ret;
 
-	ret = sprintf(buf, "%d\n", cur_mode);
+	if (!emst_user_req.active)
+		ret = sprintf(buf, "user request has never come\n");
+	else
+		ret = sprintf(buf, "req_mode:%d (%s:%d)\n",
+					(emst_user_req.node).prio,
+					emst_user_req.func,
+					emst_user_req.line);
 
 	return ret;
 }
 
 static ssize_t
-store_cur_mode(struct kobject *k, struct kobj_attribute *attr, const char *buf, size_t count)
+store_user_mode(struct kobject *k, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	int mode;
 
 	if (sscanf(buf, "%d", &mode) != 1)
 		return -EINVAL;
 
+	/* ignore if requested mode is out of range */
 	if (mode < 0 || mode > max_mode)
 		return -EINVAL;
 
-	cur_mode = mode;
+	emst_update_request(&emst_user_req, mode);
 
 	return count;
 }
 
-static struct kobj_attribute cur_mode_attr =
-__ATTR(cur_mode, 0644, show_cur_mode, store_cur_mode);
+static struct kobj_attribute user_mode_attr =
+__ATTR(user_mode, 0644, show_user_mode, store_user_mode);
+
+static ssize_t
+show_req_modes(struct kobject *k, struct kobj_attribute *attr, char *buf)
+{
+	struct emst_mode_request *req;
+	int ret = 0;
+	int tot_reqs = 0;
+
+	plist_for_each_entry(req, &emst_req_list, node) {
+		tot_reqs++;
+		ret += sprintf(buf + ret, "%d: %d (%s:%d)\n", tot_reqs,
+							(req->node).prio,
+							req->func,
+							req->line);
+	}
+
+	ret += sprintf(buf + ret, "Current mode: %d, Requests: total=%d\n",
+							emst_get_mode(), tot_reqs);
+
+	return ret;
+}
+static struct kobj_attribute req_modes_attr =
+__ATTR(req_modes, 0444, show_req_modes, NULL);
 
 /**********************************************************************
  * initialization                                                     *
@@ -468,7 +639,10 @@ static int __init emst_init(void)
 	if (!emst_kobj)
 		return -EINVAL;
 
-	if (sysfs_create_file(emst_kobj, &cur_mode_attr.attr))
+	if (sysfs_create_file(emst_kobj, &user_mode_attr.attr))
+		return -ENOMEM;
+
+	if (sysfs_create_file(emst_kobj, &req_modes_attr.attr))
 		return -ENOMEM;
 
 	mode_idx = 0;
@@ -498,6 +672,7 @@ static int __init emst_init(void)
 		mode_idx++;
 	}
 
+	register_emst_mode_misc();
 	max_mode = mode_idx - 1;
 	emst_init_f = true;
 

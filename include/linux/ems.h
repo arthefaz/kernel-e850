@@ -21,6 +21,17 @@ struct gb_qos_request {
 	bool active;
 };
 
+struct emst_mode_request {
+	struct plist_node node;
+	bool active;
+	char *func;
+	unsigned int line;
+};
+
+#define emst_update_request(req, new_value)	do {				\
+	__emst_update_request(req, new_value, (char *)__func__, __LINE__);	\
+} while(0);
+
 struct rq;
 
 enum {
@@ -112,6 +123,11 @@ extern void lb_update_misfit_status(struct task_struct *p, struct rq *rq, unsign
  */
 extern void ecs_update(void);
 extern int ecs_is_sparing_cpu(int cpu);
+
+/*
+ * EMStune
+ */
+extern void __emst_update_request(struct emst_mode_request *req, s32 new_value, char *func, unsigned int line);
 #else /* CONFIG_SCHED_EMS */
 
 /*
@@ -212,6 +228,11 @@ static inline void lb_update_misfit_status(struct task_struct *p, struct rq *rq,
  */
 static inline void ecs_update(void) { }
 static inline int ecs_is_sparing_cpu(int cpu) { return 0; }
+
+/*
+ * EMStune
+ */
+static void __emst_update_request(struct emst_mode_request *req, s32 new_value, char *func, unsigned int line) { }
 #endif /* CONFIG_SCHED_EMS */
 
 extern unsigned int frt_disable_cpufreq;
