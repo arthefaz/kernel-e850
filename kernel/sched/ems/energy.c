@@ -48,13 +48,6 @@ struct energy_table {
 static DEFINE_PER_CPU(struct energy_table, energy_table);
 #define get_energy_table(cpu)	&per_cpu(energy_table, cpu)
 
-/* capacity energy weight */
-struct ce_weight {
-	unsigned int eff_weight;
-	unsigned int eff_weight_perf;
-};
-static DEFINE_PER_CPU(struct ce_weight, weight);
-
 __weak int get_gov_next_cap(int dst_cpu, struct task_struct *p)
 {
 	return -1;
@@ -204,19 +197,18 @@ static void get_ready_env(struct tp_env *env)
 {
 	int cpu;
 
+	for_each_cpu(cpu, cpu_active_mask) {
+		/*
+		 * The weight is pre-defined in EMSTune.
+		 * We can get weight depending on current emst mode.
+		 */
+		env->eff_weight[cpu] = emst_get_weight(env->p, cpu, idle_cpu(cpu));
+	}
+
 	cpumask_copy(&env->candidates, &env->fit_cpus);
 	cpumask_clear(&env->idle_candidates);
 
 	for_each_cpu(cpu, &env->fit_cpus) {
-		/*
-		 * The weight is separated into the value for normal mode and
-		 * the value for performance mode.
-		 */
-		if (env->prefer_perf)
-			env->eff_weight[cpu] = per_cpu(weight, cpu).eff_weight_perf;
-		else
-			env->eff_weight[cpu] = per_cpu(weight, cpu).eff_weight;
-
 		/*
 		 * Basically, all active cpus are candidates. But if
 		 * env->prefer_idle is set to '1', the idle cpus are included in
@@ -318,59 +310,6 @@ int find_step_power(int cpu, int step)
 
 	return (table->states[max_idx].power - table->states[0].power) / step;
 }
-
-static ssize_t show_ce_weight(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	int cpu, len = 0;
-
-	for_each_possible_cpu(cpu) {
-		len += sprintf(buf + len,
-			"[cpu%d] (normal) eff_weight=%3d, (performance) eff_weight=%3d\n",
-			cpu,
-			per_cpu(weight, cpu).eff_weight,
-			per_cpu(weight, cpu).eff_weight_perf);
-	}
-
-	return len;
-}
-
-static ssize_t store_ce_weight(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf,
-		size_t count)
-{
-	int cpu, eff_weight, eff_weight_perf;
-
-	if (sscanf(buf, "%d %d %d",
-			&cpu, &eff_weight, &eff_weight_perf) != 3)
-		return -EINVAL;
-
-	if (!cpumask_test_cpu(cpu, cpu_possible_mask))
-		return -EINVAL;
-
-	if (eff_weight < 0 || eff_weight_perf < 0)
-		return -EINVAL;
-
-	per_cpu(weight, cpu).eff_weight = eff_weight;
-	per_cpu(weight, cpu).eff_weight_perf = eff_weight_perf;
-
-	return count;
-}
-
-static struct kobj_attribute ce_weight_attr =
-__ATTR(ce_weight, 0644, show_ce_weight, store_ce_weight);
-
-static int __init init_ce_weight(void)
-{
-	int ret;
-
-	ret = sysfs_create_file(ems_kobj, &ce_weight_attr.attr);
-	if (ret)
-		pr_err("%s: faile to create sysfs file\n", __func__);
-
-	return 0;
-}
-late_initcall(init_ce_weight);
 
 /*
  * Information of per_cpu cpu capacity variable
@@ -821,17 +760,6 @@ static int __init init_sched_energy_data(void)
 			table->mips_per_mhz_s = table->mips_per_mhz;
 		if (of_property_read_u32(cpu_phandle, "power-coefficient-s", &table->coefficient_s))
 			table->coefficient_s = table->coefficient;
-
-		/*
-		 * Capacity-Energy weight is OPTIONAL.
-		 * If weight node does not exist, default value of weight is 1.
-		 */
-		if (of_property_read_u32(cpu_phandle, "efficiency-weight",
-						&per_cpu(weight, cpu).eff_weight))
-			per_cpu(weight, cpu).eff_weight = 100;
-		if (of_property_read_u32(cpu_phandle, "efficiency-weight-perf",
-						&per_cpu(weight, cpu).eff_weight_perf))
-			per_cpu(weight, cpu).eff_weight_perf = 100;
 
 		of_node_put(cpu_phandle);
 		of_node_put(cpu_node);
