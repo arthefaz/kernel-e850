@@ -2606,7 +2606,7 @@ static int displayport_init_resources(struct displayport_device *displayport, st
 	displayport_info("link_regs: start(0x%x), end(0x%x)\n", (u32)res->start, (u32)res->end);
 
 	displayport->res.link_regs = devm_ioremap_resource(displayport->dev, res);
-	if (!displayport->res.link_regs) {
+	if (IS_ERR(displayport->res.link_regs)) {
 		displayport_err("failed to remap DisplayPort LINK SFR region\n");
 		return -EINVAL;
 	}

@@ -957,7 +957,7 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 			(u32)res->start, (u32)res->end);
 
 	dpp->res.dma_regs = devm_ioremap_resource(dpp->dev, res);
-	if (!dpp->res.dma_regs) {
+	if (IS_ERR(dpp->res.dma_regs)) {
 		dpp_err("failed to remap DPU_DMA SFR region\n");
 		return -EINVAL;
 	}
@@ -973,7 +973,7 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 				(u32)res->start, (u32)res->end);
 
 		dpp->res.dma_com_regs = devm_ioremap_resource(dpp->dev, res);
-		if (!dpp->res.dma_com_regs) {
+		if (IS_ERR(dpp->res.dma_com_regs)) {
 			dpp_err("failed to remap DPU_DMA COMMON SFR region\n");
 			return -EINVAL;
 		}
@@ -1006,7 +1006,7 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 				(u32)res->start, (u32)res->end);
 
 		dpp->res.regs = devm_ioremap_resource(dpp->dev, res);
-		if (!dpp->res.regs) {
+		if (IS_ERR(dpp->res.regs)) {
 			dpp_err("failed to remap DPP SFR region\n");
 			return -EINVAL;
 		}
