@@ -498,9 +498,9 @@
 	};
 
 	/* AUD */
-	pinctrl_2: pinctrl@146a0000 {
+	pinctrl_2: pinctrl@14a60000 {
 		compatible = "samsung,exynos3830-pinctrl";
-		reg = <0x0 0x146a0000 0x1000>;
+		reg = <0x0 0x14a60000 0x1000>;
 	};
 
 	/* HSI */
