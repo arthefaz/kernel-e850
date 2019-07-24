@@ -180,7 +180,7 @@ static int s6e3fa0_set_light(struct exynos_panel_device *panel, u32 br_val)
 }
 
 struct exynos_panel_ops panel_s6e3fa0_ops = {
-	.id		= {0x244040, 0xffffff, 0xffffff},
+	.id		= {0x244040, 0xffffff, 0xffffff, 0xffffff},
 	.suspend	= s6e3fa0_suspend,
 	.displayon	= s6e3fa0_displayon,
 	.mres		= s6e3fa0_mres,

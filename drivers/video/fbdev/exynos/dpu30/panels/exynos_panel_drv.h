@@ -44,7 +44,7 @@ extern int dpu_panel_log_level;
 
 #define MAX_REGULATORS		3
 #define MAX_PANEL_SUPPORT	10
-#define MAX_PANEL_ID_NUM	3
+#define MAX_PANEL_ID_NUM	4
 
 #define DEFAULT_MAX_BRIGHTNESS	255
 #define DEFAULT_BRIGHTNESS	127
