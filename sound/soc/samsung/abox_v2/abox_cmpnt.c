@@ -28,10 +28,6 @@ enum asrc_tick {
 	TICK_UAIF0 = 0x1,
 	TICK_UAIF1 = 0x2,
 	TICK_UAIF2 = 0x3,
-	TICK_UAIF3 = 0x4,
-	TICK_UAIF4 = 0x5,
-	TICK_UAIF5 = 0x6,
-	TICK_UAIF6 = 0x7,
 	TICK_USB = 0x8,
 	TICK_BCLK_CP = 0x9,
 	TICK_BCLK_SPDY = 0xA,
@@ -1301,10 +1297,6 @@ static const char * const asrc_source_enum_texts[] = {
 	"UAIF0",
 	"UAIF1",
 	"UAIF2",
-	"UAIF3",
-	"UAIF4",
-	"UAIF5",
-	"UAIF6",
 	"USB",
 	"BCLK_CP",
 	"BCLK_SPDY"
@@ -1316,10 +1308,6 @@ static const unsigned int asrc_source_enum_values[] = {
 	TICK_UAIF0,
 	TICK_UAIF1,
 	TICK_UAIF2,
-	TICK_UAIF3,
-	TICK_UAIF4,
-	TICK_UAIF5,
-	TICK_UAIF6,
 	TICK_USB,
 	TICK_BCLK_CP,
 	TICK_BCLK_SPDY,
@@ -1625,10 +1613,6 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
-	case ABOX_UAIF3:
-	case ABOX_UAIF4:
-	case ABOX_UAIF5:
-	case ABOX_UAIF6:
 		snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL0, &val);
 		val &= ABOX_ROUTE_UAIF_SPK_MASK(id - ABOX_UAIF0);
 		val >>= ABOX_ROUTE_UAIF_SPK_L(id - ABOX_UAIF0);
@@ -1636,31 +1620,6 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 		case 0x1:
 			ret = ABOX_SIFS0;
 			break;
-		case 0x2:
-			ret = ABOX_SIFS1;
-			break;
-		case 0x3:
-			ret = ABOX_SIFS2;
-			break;
-		case 0x4:
-			ret = ABOX_SIFS3;
-			break;
-		case 0x5:
-			ret = ABOX_SIFS4;
-			break;
-		case 0x6:
-			ret = ABOX_SIFS5;
-			break;
-		default:
-			ret = ABOX_NONE;
-			break;
-		}
-		break;
-	case ABOX_DSIF:
-		snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL0, &val);
-		val &= ABOX_ROUTE_DSIF_MASK;
-		val >>= ABOX_ROUTE_DSIF_L;
-		switch (val) {
 		case 0x2:
 			ret = ABOX_SIFS1;
 			break;
@@ -1725,7 +1684,7 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 			ret = ABOX_UAIF2;
 			break;
 		case 0xb:
-			ret = ABOX_UAIF3;
+			ret = ABOX_UAIF2;
 			break;
 		default:
 			ret = ABOX_NONE;
@@ -1772,16 +1731,16 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 			ret = ABOX_UAIF2;
 			break;
 		case 0xb:
-			ret = ABOX_UAIF3;
+			ret = ABOX_UAIF2;
 			break;
 		case 0xc:
-			ret = ABOX_UAIF4;
+			ret = ABOX_UAIF2;
 			break;
 		case 0xd:
-			ret = ABOX_UAIF5;
+			ret = ABOX_UAIF2;
 			break;
 		case 0xe:
-			ret = ABOX_UAIF6;
+			ret = ABOX_UAIF2;
 			break;
 		case 0x10:
 			ret = ABOX_BI_PDI0;
@@ -2079,10 +2038,6 @@ static enum abox_dai get_sink_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
-	case ABOX_UAIF3:
-	case ABOX_UAIF4:
-	case ABOX_UAIF5:
-	case ABOX_UAIF6:
 	case ABOX_SPDY:
 		for (_id = ABOX_RSRC0; _id <= ABOX_NSRC5; _id++) {
 			if (get_source_dai_id(data, _id) == id &&
@@ -2098,7 +2053,7 @@ static enum abox_dai get_sink_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_SIFS3:
 	case ABOX_SIFS4:
 	case ABOX_SIFS5:
-		for (_id = ABOX_UAIF0; _id <= ABOX_DSIF; _id++) {
+		for (_id = ABOX_UAIF0; _id <= ABOX_UAIF2; _id++) {
 			if (get_source_dai_id(data, _id) == id) {
 				ret = _id;
 				break;
@@ -2377,11 +2332,6 @@ static int sifs_hw_params_fixup(struct snd_soc_dai *dai,
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
-	case ABOX_UAIF3:
-	case ABOX_UAIF4:
-	case ABOX_UAIF5:
-	case ABOX_UAIF6:
-	case ABOX_DSIF:
 		_dai = find_dai(cmpnt->card, _id);
 		abox_if_hw_params_fixup(_dai, params, stream);
 		break;
@@ -2424,11 +2374,6 @@ static int sifm_hw_params_fixup(struct snd_soc_dai *dai,
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
-	case ABOX_UAIF3:
-	case ABOX_UAIF4:
-	case ABOX_UAIF5:
-	case ABOX_UAIF6:
-	case ABOX_DSIF:
 	case ABOX_SPDY:
 		_dai = find_dai(cmpnt->card, _id);
 		abox_if_hw_params_fixup(_dai, params, stream);
@@ -3592,8 +3537,7 @@ static const struct snd_kcontrol_new spus_out11_controls[] = {
 static const char * const spusm_texts[] = {
 	"RESERVED", "RESERVED", "RESERVED", "RESERVED",
 	"RESERVED", "RESERVED", "RESERVED", "RESERVED",
-	"UAIF0", "UAIF1", "UAIF2", "UAIF3",
-	"UAIF4", "UAIF5", "UAIF6", "RESERVED",
+	"UAIF0", "UAIF1", "UAIF2", "RESERVED",
 	"BI_PDI0", "BI_PDI1", "BI_PDI2", "BI_PDI3",
 	"BI_PDI4", "BI_PDI5", "BI_PDI6", "BI_PDI7",
 	"RX_PDI0", "RX_PDI1", "RESERVED", "RESERVED",
@@ -3635,7 +3579,7 @@ int abox_cmpnt_sifsm_prepare(struct device *dev, struct abox_data *data,
 
 		src = get_source_dai_id(data, ABOX_SIFST);
 		switch (src) {
-		case ABOX_UAIF0 ... ABOX_UAIF6:
+		case ABOX_UAIF0 ... ABOX_UAIF2:
 			idx = src - ABOX_UAIF0;
 			ret = snd_soc_component_read(cmpnt,
 					ABOX_UAIF_CTRL1(idx), &reg_val);
@@ -3960,26 +3904,6 @@ static SOC_ENUM_SINGLE_DECL(uaif2_spk_enum, ABOX_ROUTE_CTRL0,
 static const struct snd_kcontrol_new uaif2_spk_controls[] = {
 	SOC_DAPM_ENUM("MUX", uaif2_spk_enum),
 };
-static SOC_ENUM_SINGLE_DECL(uaif3_spk_enum, ABOX_ROUTE_CTRL0,
-		ABOX_ROUTE_UAIF_SPK_L(3), uaif_spkx_texts);
-static const struct snd_kcontrol_new uaif3_spk_controls[] = {
-	SOC_DAPM_ENUM("MUX", uaif3_spk_enum),
-};
-static SOC_ENUM_SINGLE_DECL(uaif4_spk_enum, ABOX_ROUTE_CTRL0,
-		ABOX_ROUTE_UAIF_SPK_L(4), uaif_spkx_texts);
-static const struct snd_kcontrol_new uaif4_spk_controls[] = {
-	SOC_DAPM_ENUM("MUX", uaif4_spk_enum),
-};
-static SOC_ENUM_SINGLE_DECL(uaif5_spk_enum, ABOX_ROUTE_CTRL0,
-		ABOX_ROUTE_UAIF_SPK_L(5), uaif_spkx_texts);
-static const struct snd_kcontrol_new uaif5_spk_controls[] = {
-	SOC_DAPM_ENUM("MUX", uaif5_spk_enum),
-};
-static SOC_ENUM_SINGLE_DECL(uaif6_spk_enum, ABOX_ROUTE_CTRL0,
-		ABOX_ROUTE_UAIF_SPK_L(6), uaif_spkx_texts);
-static const struct snd_kcontrol_new uaif6_spk_controls[] = {
-	SOC_DAPM_ENUM("MUX", uaif6_spk_enum),
-};
 
 static const char * const dsif_spk_texts[] = {
 	"RESERVED", "RESERVED", "SIFS1", "SIFS2", "SIFS3", "SIFS4", "SIFS5",
@@ -3999,18 +3923,6 @@ static const struct snd_kcontrol_new uaif1_controls[] = {
 static const struct snd_kcontrol_new uaif2_controls[] = {
 	SOC_DAPM_SINGLE("UAIF2 Switch", SND_SOC_NOPM, 0, 1, 1),
 };
-static const struct snd_kcontrol_new uaif3_controls[] = {
-	SOC_DAPM_SINGLE("UAIF3 Switch", SND_SOC_NOPM, 0, 1, 1),
-};
-static const struct snd_kcontrol_new uaif4_controls[] = {
-	SOC_DAPM_SINGLE("UAIF4 Switch", SND_SOC_NOPM, 0, 1, 1),
-};
-static const struct snd_kcontrol_new uaif5_controls[] = {
-	SOC_DAPM_SINGLE("UAIF5 Switch", SND_SOC_NOPM, 0, 1, 1),
-};
-static const struct snd_kcontrol_new uaif6_controls[] = {
-	SOC_DAPM_SINGLE("UAIF6 Switch", SND_SOC_NOPM, 0, 1, 1),
-};
 static const struct snd_kcontrol_new dsif_controls[] = {
 	SOC_DAPM_SINGLE("DSIF Switch", SND_SOC_NOPM, 0, 1, 1),
 };
@@ -4021,7 +3933,7 @@ static const struct snd_kcontrol_new spdy_controls[] = {
 static const char * const rsrcx_texts[] = {
 	"RESERVED", "SIFS0", "SIFS1", "SIFS2",
 	"SIFS3", "SIFS4", "RESERVED", "RESERVED",
-	"UAIF0", "UAIF1", "UAIF2", "UAIF3",
+	"UAIF0", "UAIF1", "UAIF2",
 };
 static SOC_ENUM_SINGLE_DECL(rsrc0_enum, ABOX_ROUTE_CTRL2, ABOX_ROUTE_RSRC_L(0),
 		rsrcx_texts);
@@ -4037,8 +3949,7 @@ static const struct snd_kcontrol_new rsrc1_controls[] = {
 static const char * const nsrcx_texts[] = {
 	"RESERVED", "SIFS0", "SIFS1", "SIFS2",
 	"SIFS3", "SIFS4", "SIFS5", "RESERVED",
-	"UAIF0", "UAIF1", "UAIF2", "UAIF3",
-	"UAIF4", "UAIF5", "UAIF6", "RESERVED",
+	"UAIF0", "UAIF1", "UAIF2", "RESERVED",
 	"BI_PDI0", "BI_PDI1", "BI_PDI2", "BI_PDI3",
 	"BI_PDI4", "BI_PDI5", "BI_PDI6", "BI_PDI7",
 	"RX_PDI0", "RX_PDI1", "RESERVED", "RESERVED",
@@ -4313,28 +4224,14 @@ static const struct snd_soc_dapm_widget cmpnt_widgets[] = {
 	SND_SOC_DAPM_MUX("UAIF0 SPK", SND_SOC_NOPM, 0, 0, uaif0_spk_controls),
 	SND_SOC_DAPM_MUX("UAIF1 SPK", SND_SOC_NOPM, 0, 0, uaif1_spk_controls),
 	SND_SOC_DAPM_MUX("UAIF2 SPK", SND_SOC_NOPM, 0, 0, uaif2_spk_controls),
-	SND_SOC_DAPM_MUX("UAIF3 SPK", SND_SOC_NOPM, 0, 0, uaif3_spk_controls),
-	SND_SOC_DAPM_MUX("UAIF4 SPK", SND_SOC_NOPM, 0, 0, uaif4_spk_controls),
-	SND_SOC_DAPM_MUX("UAIF5 SPK", SND_SOC_NOPM, 0, 0, uaif5_spk_controls),
-	SND_SOC_DAPM_MUX("UAIF6 SPK", SND_SOC_NOPM, 0, 0, uaif6_spk_controls),
-	SND_SOC_DAPM_MUX("DSIF SPK", SND_SOC_NOPM, 0, 0, dsif_spk_controls),
 
 	SND_SOC_DAPM_SWITCH("UAIF0 PLA", SND_SOC_NOPM, 0, 0, uaif0_controls),
 	SND_SOC_DAPM_SWITCH("UAIF1 PLA", SND_SOC_NOPM, 0, 0, uaif1_controls),
 	SND_SOC_DAPM_SWITCH("UAIF2 PLA", SND_SOC_NOPM, 0, 0, uaif2_controls),
-	SND_SOC_DAPM_SWITCH("UAIF3 PLA", SND_SOC_NOPM, 0, 0, uaif3_controls),
-	SND_SOC_DAPM_SWITCH("UAIF4 PLA", SND_SOC_NOPM, 0, 0, uaif4_controls),
-	SND_SOC_DAPM_SWITCH("UAIF5 PLA", SND_SOC_NOPM, 0, 0, uaif5_controls),
-	SND_SOC_DAPM_SWITCH("UAIF6 PLA", SND_SOC_NOPM, 0, 0, uaif6_controls),
-	SND_SOC_DAPM_SWITCH("DSIF PLA", SND_SOC_NOPM, 0, 0, dsif_controls),
 
 	SND_SOC_DAPM_SWITCH("UAIF0 CAP", SND_SOC_NOPM, 0, 0, uaif0_controls),
 	SND_SOC_DAPM_SWITCH("UAIF1 CAP", SND_SOC_NOPM, 0, 0, uaif1_controls),
 	SND_SOC_DAPM_SWITCH("UAIF2 CAP", SND_SOC_NOPM, 0, 0, uaif2_controls),
-	SND_SOC_DAPM_SWITCH("UAIF3 CAP", SND_SOC_NOPM, 0, 0, uaif3_controls),
-	SND_SOC_DAPM_SWITCH("UAIF4 CAP", SND_SOC_NOPM, 0, 0, uaif4_controls),
-	SND_SOC_DAPM_SWITCH("UAIF5 CAP", SND_SOC_NOPM, 0, 0, uaif5_controls),
-	SND_SOC_DAPM_SWITCH("UAIF6 CAP", SND_SOC_NOPM, 0, 0, uaif6_controls),
 	SND_SOC_DAPM_SWITCH("SPDY CAP", SND_SOC_NOPM, 0, 0, spdy_controls),
 
 	SND_SOC_DAPM_MUX("NSRC0", SND_SOC_NOPM, 0, 0, nsrc0_controls),
@@ -4636,48 +4533,10 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"UAIF2 SPK", "SIFS4", "SIFS4 OUT"},
 	{"UAIF2 SPK", "SIFS5", "SIFS5 OUT"},
 	{"UAIF2 SPK", "SIFMS", "SIFMS"},
-	{"UAIF3 SPK", "SIFS0", "SIFS0 OUT"},
-	{"UAIF3 SPK", "SIFS1", "SIFS1 OUT"},
-	{"UAIF3 SPK", "SIFS2", "SIFS2 OUT"},
-	{"UAIF3 SPK", "SIFS3", "SIFS3 OUT"},
-	{"UAIF3 SPK", "SIFS4", "SIFS4 OUT"},
-	{"UAIF3 SPK", "SIFS5", "SIFS5 OUT"},
-	{"UAIF3 SPK", "SIFMS", "SIFMS"},
-	{"UAIF4 SPK", "SIFS0", "SIFS0 OUT"},
-	{"UAIF4 SPK", "SIFS1", "SIFS1 OUT"},
-	{"UAIF4 SPK", "SIFS2", "SIFS2 OUT"},
-	{"UAIF4 SPK", "SIFS3", "SIFS3 OUT"},
-	{"UAIF4 SPK", "SIFS4", "SIFS4 OUT"},
-	{"UAIF4 SPK", "SIFS5", "SIFS5 OUT"},
-	{"UAIF4 SPK", "SIFMS", "SIFMS"},
-	{"UAIF5 SPK", "SIFS0", "SIFS0 OUT"},
-	{"UAIF5 SPK", "SIFS1", "SIFS1 OUT"},
-	{"UAIF5 SPK", "SIFS2", "SIFS2 OUT"},
-	{"UAIF5 SPK", "SIFS3", "SIFS3 OUT"},
-	{"UAIF5 SPK", "SIFS4", "SIFS4 OUT"},
-	{"UAIF5 SPK", "SIFS5", "SIFS5 OUT"},
-	{"UAIF5 SPK", "SIFMS", "SIFMS"},
-	{"UAIF6 SPK", "SIFS0", "SIFS0 OUT"},
-	{"UAIF6 SPK", "SIFS1", "SIFS1 OUT"},
-	{"UAIF6 SPK", "SIFS2", "SIFS2 OUT"},
-	{"UAIF6 SPK", "SIFS3", "SIFS3 OUT"},
-	{"UAIF6 SPK", "SIFS4", "SIFS4 OUT"},
-	{"UAIF6 SPK", "SIFS5", "SIFS5 OUT"},
-	{"UAIF6 SPK", "SIFMS", "SIFMS"},
-	{"DSIF SPK", "SIFS1", "SIFS1 OUT"},
-	{"DSIF SPK", "SIFS2", "SIFS2 OUT"},
-	{"DSIF SPK", "SIFS3", "SIFS3 OUT"},
-	{"DSIF SPK", "SIFS4", "SIFS4 OUT"},
-	{"DSIF SPK", "SIFS5", "SIFS5 OUT"},
 
 	{"UAIF0 PLA", "UAIF0 Switch", "UAIF0 SPK"},
 	{"UAIF1 PLA", "UAIF1 Switch", "UAIF1 SPK"},
 	{"UAIF2 PLA", "UAIF2 Switch", "UAIF2 SPK"},
-	{"UAIF3 PLA", "UAIF3 Switch", "UAIF3 SPK"},
-	{"UAIF4 PLA", "UAIF4 Switch", "UAIF4 SPK"},
-	{"UAIF5 PLA", "UAIF5 Switch", "UAIF5 SPK"},
-	{"UAIF6 PLA", "UAIF6 Switch", "UAIF6 SPK"},
-	{"DSIF PLA", "DSIF Switch", "DSIF SPK"},
 
 	{"SIFS0", NULL, "SIFS0 Capture"},
 	{"SIFS1", NULL, "SIFS1 Capture"},
@@ -4707,10 +4566,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC0", "UAIF0", "UAIF0 CAP"},
 	{"NSRC0", "UAIF1", "UAIF1 CAP"},
 	{"NSRC0", "UAIF2", "UAIF2 CAP"},
-	{"NSRC0", "UAIF3", "UAIF3 CAP"},
-	{"NSRC0", "UAIF4", "UAIF4 CAP"},
-	{"NSRC0", "UAIF5", "UAIF5 CAP"},
-	{"NSRC0", "UAIF6", "UAIF6 CAP"},
 	{"NSRC0", "SPDY", "SPDY CAP"},
 
 	{"NSRC1", "SIFS0", "SIFS0 OUT"},
@@ -4722,10 +4577,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC1", "UAIF0", "UAIF0 CAP"},
 	{"NSRC1", "UAIF1", "UAIF1 CAP"},
 	{"NSRC1", "UAIF2", "UAIF2 CAP"},
-	{"NSRC1", "UAIF3", "UAIF3 CAP"},
-	{"NSRC1", "UAIF4", "UAIF4 CAP"},
-	{"NSRC1", "UAIF5", "UAIF5 CAP"},
-	{"NSRC1", "UAIF6", "UAIF6 CAP"},
 	{"NSRC1", "SPDY", "SPDY CAP"},
 
 	{"NSRC2", "SIFS0", "SIFS0 OUT"},
@@ -4737,10 +4588,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC2", "UAIF0", "UAIF0 CAP"},
 	{"NSRC2", "UAIF1", "UAIF1 CAP"},
 	{"NSRC2", "UAIF2", "UAIF2 CAP"},
-	{"NSRC2", "UAIF3", "UAIF3 CAP"},
-	{"NSRC2", "UAIF4", "UAIF4 CAP"},
-	{"NSRC2", "UAIF5", "UAIF5 CAP"},
-	{"NSRC2", "UAIF6", "UAIF6 CAP"},
 	{"NSRC2", "SPDY", "SPDY CAP"},
 
 	{"NSRC3", "SIFS0", "SIFS0 OUT"},
@@ -4752,10 +4599,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC3", "UAIF0", "UAIF0 CAP"},
 	{"NSRC3", "UAIF1", "UAIF1 CAP"},
 	{"NSRC3", "UAIF2", "UAIF2 CAP"},
-	{"NSRC3", "UAIF3", "UAIF3 CAP"},
-	{"NSRC3", "UAIF4", "UAIF4 CAP"},
-	{"NSRC3", "UAIF5", "UAIF5 CAP"},
-	{"NSRC3", "UAIF6", "UAIF6 CAP"},
 	{"NSRC3", "SPDY", "SPDY CAP"},
 
 	{"NSRC4", "SIFS0", "SIFS0 OUT"},
@@ -4767,10 +4610,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC4", "UAIF0", "UAIF0 CAP"},
 	{"NSRC4", "UAIF1", "UAIF1 CAP"},
 	{"NSRC4", "UAIF2", "UAIF2 CAP"},
-	{"NSRC4", "UAIF3", "UAIF3 CAP"},
-	{"NSRC4", "UAIF4", "UAIF4 CAP"},
-	{"NSRC4", "UAIF5", "UAIF5 CAP"},
-	{"NSRC4", "UAIF6", "UAIF6 CAP"},
 	{"NSRC4", "SPDY", "SPDY CAP"},
 
 	{"SPUM ASRC0", NULL, "NSRC0"},
@@ -4973,17 +4812,9 @@ int abox_cmpnt_reset_cnt_val(struct device *dev,
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
-	case ABOX_UAIF3:
-	case ABOX_UAIF4:
-	case ABOX_UAIF5:
-	case ABOX_UAIF6:
 		idx = id - ABOX_UAIF0;
 		sifs_id = val & ABOX_ROUTE_UAIF_SPK_MASK(idx);
 		sifs_id = (sifs_id >> ABOX_ROUTE_UAIF_SPK_L(idx)) - 1;
-		break;
-	case ABOX_DSIF:
-		sifs_id = val & ABOX_ROUTE_DSIF_MASK;
-		sifs_id = (sifs_id >> ABOX_ROUTE_DSIF_L) - 1;
 		break;
 	default:
 		return -EINVAL;
@@ -5415,10 +5246,6 @@ int abox_cmpnt_hw_params_fixup_helper(struct snd_soc_pcm_runtime *rtd,
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
-	case ABOX_UAIF3:
-	case ABOX_UAIF4:
-	case ABOX_UAIF5:
-	case ABOX_UAIF6:
 	case ABOX_SPDY:
 		ret = abox_if_hw_params_fixup(dai, params, stream);
 		break;

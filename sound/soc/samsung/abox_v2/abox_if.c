@@ -133,143 +133,6 @@ static int abox_spdy_trigger(struct snd_pcm_substream *substream,
 	return ret;
 }
 
-static int abox_dsif_set_bclk_ratio(struct snd_soc_dai *dai, unsigned int ratio)
-{
-	struct device *dev = dai->dev;
-	struct abox_if_data *data = snd_soc_dai_get_drvdata(dai);
-	unsigned int rate = dai->rate;
-	int ret;
-
-	dev_dbg(dev, "%s(%u)\n", __func__, ratio);
-
-	ret = clk_set_rate(data->clk_bclk, rate * ratio);
-	if (ret < 0)
-		dev_err(dev, "bclk set error=%d\n", ret);
-	else
-		dev_info(dev, "rate=%u, bclk=%lu\n", rate,
-				clk_get_rate(data->clk_bclk));
-
-	return ret;
-}
-
-static int abox_dsif_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
-{
-	struct device *dev = dai->dev;
-	struct abox_if_data *data = snd_soc_dai_get_drvdata(dai);
-	struct snd_soc_component *cmpnt = data->cmpnt;
-	unsigned int ctrl;
-	int ret = 0;
-
-	dev_info(dev, "%s(0x%08x)\n", __func__, fmt);
-
-	pm_runtime_get_sync(dev);
-
-	snd_soc_component_read(cmpnt, ABOX_DSIF_CTRL, &ctrl);
-
-	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
-	case SND_SOC_DAIFMT_PDM:
-		break;
-	default:
-		ret = -EINVAL;
-	}
-
-	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
-	case SND_SOC_DAIFMT_NB_NF:
-	case SND_SOC_DAIFMT_NB_IF:
-		set_value_by_name(ctrl, ABOX_DSIF_BCLK_POLARITY, 1);
-		break;
-	case SND_SOC_DAIFMT_IB_NF:
-	case SND_SOC_DAIFMT_IB_IF:
-		set_value_by_name(ctrl, ABOX_DSIF_BCLK_POLARITY, 0);
-		break;
-	default:
-		ret = -EINVAL;
-	}
-
-	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
-	case SND_SOC_DAIFMT_CBS_CFS:
-		break;
-	default:
-		ret = -EINVAL;
-	}
-
-	snd_soc_component_write(cmpnt, ABOX_DSIF_CTRL, ctrl);
-
-	pm_runtime_mark_last_busy(dev);
-	pm_runtime_put_autosuspend(dev);
-
-	return ret;
-}
-
-static int abox_dsif_set_channel_map(struct snd_soc_dai *dai,
-		unsigned int tx_num, unsigned int *tx_slot,
-		unsigned int rx_num, unsigned int *rx_slot)
-{
-	struct device *dev = dai->dev;
-	struct abox_if_data *data = snd_soc_dai_get_drvdata(dai);
-	struct snd_soc_component *cmpnt = data->cmpnt;
-
-	dev_info(dev, "%s\n", __func__);
-
-	snd_soc_component_update_bits(cmpnt, ABOX_DSIF_CTRL, ABOX_ORDER_MASK,
-			(tx_slot[0] ? 1 : 0) << ABOX_ORDER_L);
-
-	return 0;
-}
-
-static int abox_dsif_hw_params(struct snd_pcm_substream *substream,
-		struct snd_pcm_hw_params *hw_params, struct snd_soc_dai *dai)
-{
-	struct device *dev = dai->dev;
-	struct abox_if_data *data = snd_soc_dai_get_drvdata(dai);
-	unsigned int channels, rate, width;
-
-	dev_info(dev, "%s[%c]\n", __func__,
-			(substream->stream == SNDRV_PCM_STREAM_CAPTURE) ?
-			'C' : 'P');
-
-	channels = params_channels(hw_params);
-	rate = params_rate(hw_params);
-	width = params_width(hw_params);
-
-	dev_info(dev, "rate=%u, width=%d, channel=%u, bclk=%lu\n",
-			rate,
-			width,
-			channels,
-			clk_get_rate(data->clk_bclk));
-
-	switch (params_format(hw_params)) {
-	case SNDRV_PCM_FORMAT_S32:
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	switch (channels) {
-	case 2:
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		abox_cmpnt_reset_cnt_val(dev, data->cmpnt, dai->id);
-
-	return 0;
-}
-
-static int abox_dsif_digital_mute(struct snd_soc_dai *dai, int mute)
-{
-	struct device *dev = dai->dev;
-	struct abox_if_data *data = snd_soc_dai_get_drvdata(dai);
-	struct snd_soc_component *cmpnt = data->cmpnt;
-
-	dev_info(dev, "%s(%d)\n", __func__, mute);
-
-	return snd_soc_component_update_bits(cmpnt, ABOX_DSIF_CTRL,
-				ABOX_ENABLE_MASK, !mute << ABOX_ENABLE_L);
-}
-
 static int abox_uaif_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
 	struct device *dev = dai->dev;
@@ -350,7 +213,7 @@ static int abox_uaif_set_tristate(struct snd_soc_dai *dai, int tristate)
 	dev_info(dev, "%s(%d)\n", __func__, tristate);
 
 	clk = ABOX_BCLK_UAIF0 + id;
-	if (clk < ABOX_BCLK_UAIF0 || clk >= ABOX_BCLK_DSIF)
+	if (clk < ABOX_BCLK_UAIF0 || clk >= ABOX_BCLK_UAIF2)
 		return -EINVAL;
 
 	abox_request_cpu_gear(dev, abox_data, ABOX_CPU_GEAR_DAI + id,
@@ -513,29 +376,6 @@ static struct snd_soc_dai_driver abox_spdy_dai_drv = {
 	.ops = &abox_spdy_dai_ops,
 };
 
-static const struct snd_soc_dai_ops abox_dsif_dai_ops = {
-	.set_bclk_ratio	= abox_dsif_set_bclk_ratio,
-	.set_fmt	= abox_dsif_set_fmt,
-	.set_channel_map	= abox_dsif_set_channel_map,
-	.startup	= abox_if_startup,
-	.shutdown	= abox_if_shutdown,
-	.hw_params	= abox_dsif_hw_params,
-	.hw_free	= abox_if_hw_free,
-	.digital_mute	= abox_dsif_digital_mute,
-};
-
-static struct snd_soc_dai_driver abox_dsif_dai_drv = {
-	.playback = {
-		.channels_min = 2,
-		.channels_max = 2,
-		.rates = ABOX_SAMPLING_RATES,
-		.rate_min = 8000,
-		.rate_max = 384000,
-		.formats = SNDRV_PCM_FMTBIT_S32,
-	},
-	.ops = &abox_dsif_dai_ops,
-};
-
 static const struct snd_soc_dai_ops abox_uaif_dai_ops = {
 	.set_fmt	= abox_uaif_set_fmt,
 	.set_tristate	= abox_uaif_set_tristate,
@@ -675,22 +515,6 @@ const char *abox_spdy_get_str_name(int id, int stream)
 			"SPDY Playback" : "SPDY Capture";
 }
 
-enum abox_dai abox_dsif_get_dai_id(int id)
-{
-	return ABOX_DSIF;
-}
-
-const char *abox_dsif_get_dai_name(int id)
-{
-	return "DSIF";
-}
-
-const char *abox_dsif_get_str_name(int id, int stream)
-{
-	return (stream == SNDRV_PCM_STREAM_PLAYBACK) ?
-			"DSIF Playback" : "DSIF Capture";
-}
-
 enum abox_dai abox_uaif_get_dai_id(int id)
 {
 	return ABOX_UAIF0 + id;
@@ -699,8 +523,7 @@ enum abox_dai abox_uaif_get_dai_id(int id)
 const char *abox_uaif_get_dai_name(int id)
 {
 	static const char * const names[] = {
-		"UAIF0", "UAIF1", "UAIF2", "UAIF3", "UAIF4",
-		"UAIF5", "UAIF6", "UAIF7", "UAIF8", "UAIF9",
+		"UAIF0", "UAIF1", "UAIF2",
 	};
 
 	return (id < ARRAY_SIZE(names)) ? names[id] : ERR_PTR(-EINVAL);
@@ -710,15 +533,9 @@ const char *abox_uaif_get_str_name(int id, int stream)
 {
 	static const char * const names_pla[] = {
 		"UAIF0 Playback", "UAIF1 Playback", "UAIF2 Playback",
-		"UAIF3 Playback", "UAIF4 Playback", "UAIF5 Playback",
-		"UAIF6 Playback", "UAIF7 Playback", "UAIF8 Playback",
-		"UAIF9 Playback",
 	};
 	static const char * const names_cap[] = {
 		"UAIF0 Capture", "UAIF1 Capture", "UAIF2 Capture",
-		"UAIF3 Capture", "UAIF4 Capture", "UAIF5 Capture",
-		"UAIF6 Capture", "UAIF7 Capture", "UAIF8 Capture",
-		"UAIF9 Capture",
 	};
 	const char *ret;
 
@@ -741,15 +558,6 @@ static const struct of_device_id samsung_abox_if_match[] = {
 			.get_dai_name = abox_uaif_get_dai_name,
 			.get_str_name = abox_uaif_get_str_name,
 			.base_dai_drv = &abox_uaif_dai_drv,
-		},
-	},
-	{
-		.compatible = "samsung,abox-dsif",
-		.data = (void *)&(struct abox_if_of_data){
-			.get_dai_id = abox_dsif_get_dai_id,
-			.get_dai_name = abox_dsif_get_dai_name,
-			.get_str_name = abox_dsif_get_str_name,
-			.base_dai_drv = &abox_dsif_dai_drv,
 		},
 	},
 	{

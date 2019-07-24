@@ -815,7 +815,7 @@ void abox_vdma_init(struct device *dev_abox)
 	struct platform_device *pdev;
 	int i;
 
-	dev_info(dev_abox, "%s\n", __func__);
+	dev_dbg(dev_abox, "%s\n", __func__);
 
 	abox_vdma_dev_abox = dev_abox;
 	abox_register_ipc_handler(dev_abox, IPC_PCMPLAYBACK,
