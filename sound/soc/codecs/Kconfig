@@ -533,6 +533,10 @@ config SND_SOC_CX20442
 	tristate
 	depends on TTY
 
+config SND_SOC_AUD3004X
+	tristate "AUD3004X Codec Driver"
+	default y
+
 config SND_SOC_JZ4740_CODEC
 	select REGMAP_MMIO
 	tristate

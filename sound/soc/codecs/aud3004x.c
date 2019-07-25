@@ -1,0 +1,1887 @@
+/*
+ * sound/soc/codec/aud3004x.c
+ *
+ * ALSA SoC Audio Layer - Samsung Codec Driver
+ *
+ * Copyright (C) 2019 Samsung Electronics
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include <linux/module.h>
+#include <linux/moduleparam.h>
+#include <linux/init.h>
+#include <linux/io.h>
+#include <linux/delay.h>
+#include <linux/pm.h>
+#include <linux/pm_runtime.h>
+#include <linux/regmap.h>
+#include <linux/slab.h>
+#include <sound/core.h>
+#include <sound/pcm.h>
+#include <sound/pcm_params.h>
+#include <sound/soc.h>
+#include <sound/jack.h>
+#include <sound/initval.h>
+#include <sound/tlv.h>
+#include <sound/samsung/abox.h>
+#include <linux/i2c.h>
+#include <linux/regulator/consumer.h>
+#include <linux/gpio.h>
+#include <linux/of.h>
+#include <linux/of_gpio.h>
+#include <linux/input.h>
+#include <linux/completion.h>
+#include <soc/samsung/acpm_mfd.h>
+
+#include "aud3004x.h"
+
+#define AUD3004X_CODEC_VER 10000
+
+#ifdef CONFIG_SND_SOC_SAMSUNG_VERBOSE_DEBUG
+#ifdef dev_dbg
+#undef dev_dbg
+#endif
+#define dev_dbg dev_err
+#endif
+
+void aud3004x_usleep(unsigned int u_sec)
+{
+	usleep_range(u_sec, u_sec + 10);
+}
+
+int aud3004x_acpm_read_reg(unsigned int slave, unsigned int reg,
+		unsigned int *val)
+{
+	int ret;
+	u8 reg_val;
+
+	ret = exynos_acpm_read_reg(0, slave, reg, &reg_val);
+	*val = reg_val;
+
+	if (ret)
+		pr_err("[%s] acpm ipc read failed! err: %d\n", __func__, ret);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(aud3004x_acpm_read_reg);
+
+int aud3004x_acpm_write_reg(unsigned int slave, unsigned int reg,
+		unsigned int val)
+{
+	int ret;
+
+	ret = exynos_acpm_write_reg(0, slave, reg, val);
+
+	if (ret)
+		pr_err("[%s] acpm ipc write failed! err: %d\n", __func__, ret);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(aud3004x_acpm_write_reg);
+
+int aud3004x_acpm_update_reg(unsigned int slave, unsigned int reg,
+		unsigned int val, unsigned int mask)
+{
+	int ret;
+
+	ret = exynos_acpm_update_reg(0, slave, reg, val, mask);
+
+	if (ret)
+		pr_err("[%s] acpm ipc update failed! err: %d\n", __func__, ret);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(aud3004x_acpm_update_reg);
+
+void regcache_cache_switch(struct aud3004x_priv *aud3004x, bool on)
+{
+	int p_map;
+
+	if (!on)
+		mutex_lock(&aud3004x->regcache_lock);
+	else
+		mutex_unlock(&aud3004x->regcache_lock);
+
+	if (aud3004x->is_suspend)
+		for (p_map = AUD3004D; p_map <= AUD3004O; p_map++)
+			regcache_cache_only(aud3004x->regmap[p_map], on);
+}
+
+static void i2c_client_change(struct aud3004x_priv *aud3004x, int client)
+{
+	struct device *dev = aud3004x->dev;
+	struct i2c_client *i2c = to_i2c_client(dev);
+	struct snd_soc_codec *codec = aud3004x->codec;
+
+	if (client != CODEC_CLOSE) {
+		mutex_lock(&aud3004x->regmap_lock);
+		i2c = aud3004x->i2c_priv[client];
+		codec->component.regmap = aud3004x->regmap[client];
+	} else {
+		mutex_unlock(&aud3004x->regmap_lock);
+		i2c = aud3004x->i2c_priv[AUD3004D];
+		codec->component.regmap = aud3004x->regmap[AUD3004D];
+	}
+}
+
+static int i2c_client_return(unsigned int reg)
+{
+	switch (reg) {
+	case 0x300 ... 0x3FF:
+		return AUD3004O;
+	case 0x700 ... 0x7FF:
+		return AUD3004D;
+	case 0x800 ... 0x8FF:
+		return AUD3004A;
+	default:
+		return false;
+	}
+}
+
+unsigned int aud3004x_read(struct aud3004x_priv *aud3004x, unsigned int reg)
+{
+	struct device *dev = aud3004x->dev;
+	struct i2c_client *i2c = to_i2c_client(dev);
+	struct snd_soc_codec *codec = aud3004x->codec;
+	int client;
+
+	client = i2c_client_return(reg);
+	if (!client)
+		return -EINVAL;
+	else
+		i2c = aud3004x->i2c_priv[client];
+
+	return snd_soc_read(codec, reg & 0xFF);
+}
+
+int aud3004x_write(struct aud3004x_priv *aud3004x, unsigned int reg,
+		unsigned int val)
+{
+	struct device *dev = aud3004x->dev;
+	struct i2c_client *i2c = to_i2c_client(dev);
+	struct snd_soc_codec *codec = aud3004x->codec;
+	int client;
+
+	client = i2c_client_return(reg);
+	if (!client)
+		return -EINVAL;
+	else
+		i2c = aud3004x->i2c_priv[client];
+
+	return snd_soc_write(codec, reg & 0xFF, val);
+}
+
+int aud3004x_update_bits(struct aud3004x_priv *aud3004x, unsigned int reg,
+		unsigned int mask, unsigned int value)
+{
+	struct device *dev = aud3004x->dev;
+	struct i2c_client *i2c = to_i2c_client(dev);
+	struct snd_soc_codec *codec = aud3004x->codec;
+	int client;
+
+	client = i2c_client_return(reg);
+	if (!client)
+		return -EINVAL;
+	else
+		i2c = aud3004x->i2c_priv[client];
+
+	return snd_soc_update_bits(codec, reg & 0xFF, mask, value);
+}
+
+/*
+ * Return Value
+ * True: If the register value cannot be cached, hence we have to read from the
+ * hardware directly.
+ * False: If the register value can be read from cache.
+ */
+static bool aud3004x_volatile_register(struct device *dev, unsigned int reg)
+{
+	/*
+	 * For all the registers for which we want to restore the value during
+	 * regcache_sync operation, we need to return true here. For registers
+	 * whose value need not be cached and restored should return false here.
+	 *
+	 * For the time being, let us cache the value of all registers other
+	 * than the IRQ pending and IRQ status registers.
+	 */
+	switch (reg) {
+	case 0x01 ... 0x06:
+		return true;
+	default:
+		return false;
+	}
+}
+
+/*
+ * Return Value
+ * True: If the register value can be read
+ * False: If the register cannot be read
+ */
+static bool aud3004x_readable_register(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case 0x08 ... 0x0F:
+	case 0x10 ... 0x29:
+	case 0x2F ... 0x4E:
+	case 0x50 ... 0x86:
+	case 0x88 ... 0x8E:
+	case 0x90 ... 0x9E:
+	case 0xA0 ... 0xFC:
+		return true;
+	default:
+		return false;
+	}
+}
+
+/*
+ * Return Value
+ * True: If the register value can be write
+ * False: If the register cannot be write
+ */
+static bool aud3004x_writeable_register(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case 0x08 ... 0x0D:
+	case 0x10 ... 0x25:
+	case 0x2F ... 0x4E:
+	case 0x50 ... 0x56:
+	case 0x58 ... 0x74:
+	case 0x77 ... 0x7F:
+	case 0x88 ... 0x8E:
+	case 0x90 ... 0x97:
+	case 0x9B ... 0x9E:
+	case 0xA0 ... 0xEF:
+		return true;
+	default:
+		return false;
+	}
+}
+
+const struct regmap_config aud3004x_regmap = {
+	.reg_bits = 8,
+	.val_bits = 8,
+
+	/*
+	 * "i3c" string should be described in the name field
+	 * this will be used for the i3c inteface,
+	 * when read/write operations are used in the regmap driver.
+	 * APM functions will be called instead of the I2C
+	 * refer to the "drivers/base/regmap/regmap-i2c.c
+	 */
+	.name = "i3c, AUD3004X",
+	.max_register = AUD3004X_REGCACHE_SYNC_END,
+	.readable_reg = aud3004x_readable_register,
+	.writeable_reg = aud3004x_writeable_register,
+	.volatile_reg = aud3004x_volatile_register,
+	.use_single_rw = true,
+	.cache_type = REGCACHE_RBTREE,
+};
+
+static bool aud3004x_volatile_analog_register(struct device *dev, unsigned int reg)
+{
+	/*
+	 * For all the registers for which we want to restore the value during
+	 * regcache_sync operation, we need to return true here. For registers
+	 * whose value need not be cached and restored should return false here.
+	 *
+	 * For the time being, let us cache the value of all registers other
+	 * than the IRQ pending and IRQ status registers.
+	 */
+	switch (reg) {
+	default:
+		return false;
+	}
+}
+
+static bool aud3004x_readable_analog_register(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case 0x00 ... 0x1F:
+	case 0x30 ... 0x38:
+	case 0x50 ... 0x62:
+	case 0x70 ... 0x8C:
+	case 0x90 ... 0xA3:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static bool aud3004x_writeable_analog_register(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case 0x00 ... 0x1F:
+	case 0x30 ... 0x38:
+	case 0x50 ... 0x62:
+	case 0x70 ... 0x79:
+	case 0x90 ... 0xA3:
+		return true;
+	default:
+		return false;
+	}
+}
+
+const struct regmap_config aud3004x_analog_regmap = {
+	.reg_bits = 8,
+	.val_bits = 8,
+	.name = "i3c, AUD3004X_ANALOG",
+	.max_register = AUD3004X_REGCACHE_SYNC_END,
+	.readable_reg = aud3004x_readable_analog_register,
+	.writeable_reg = aud3004x_writeable_analog_register,
+	.volatile_reg = aud3004x_volatile_analog_register,
+	.use_single_rw = true,
+	.cache_type = REGCACHE_RBTREE,
+};
+
+static bool aud3004x_volatile_otp_register(struct device *dev, unsigned int reg)
+{
+	/*
+	 * For all the registers for which we want to restore the value during
+	 * regcache_sync operation, we need to return true here. For registers
+	 * whose value need not be cached and restored should return false here.
+	 *
+	 * For the time being, let us cache the value of all registers other
+	 * than the IRQ pending and IRQ status registers.
+	 */
+	switch (reg) {
+	default:
+		return false;
+	}
+}
+
+static bool aud3004x_readable_otp_register(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case 0x00 ... 0xB1:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static bool aud3004x_writeable_otp_register(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case 0x00 ... 0xB1:
+		return true;
+	default:
+		return false;
+	}
+}
+
+const struct regmap_config aud3004x_otp_regmap = {
+	.reg_bits = 8,
+	.val_bits = 8,
+	.name = "i3c, AUD3004X_OTP",
+	.max_register = AUD3004X_REGCACHE_SYNC_END,
+	.readable_reg = aud3004x_readable_otp_register,
+	.writeable_reg = aud3004x_writeable_otp_register,
+	.volatile_reg = aud3004x_volatile_otp_register,
+	.use_single_rw = true,
+	.cache_type = REGCACHE_RBTREE,
+};
+
+bool read_from_cache(struct device *dev, unsigned int reg, int map_type)
+{
+	bool result = false;
+
+	switch (map_type) {
+	case AUD3004D:
+		result = aud3004x_readable_register(dev, reg) &&
+			(!aud3004x_volatile_register(dev, reg));
+		break;
+	case AUD3004A:
+		result = aud3004x_readable_analog_register(dev, reg) &&
+			(!aud3004x_volatile_analog_register(dev, reg));
+		break;
+	case AUD3004O:
+		result = aud3004x_readable_otp_register(dev, reg) &&
+			(!aud3004x_volatile_otp_register(dev, reg));
+		break;
+	}
+
+	return result;
+}
+EXPORT_SYMBOL_GPL(read_from_cache);
+
+bool write_to_hw(struct device *dev, unsigned int reg, int map_type)
+{
+	bool result = false;
+
+	switch (map_type) {
+	case AUD3004D:
+		result = aud3004x_writeable_register(dev, reg) &&
+			(!aud3004x_volatile_register(dev, reg));
+		break;
+	case AUD3004A:
+		result = aud3004x_writeable_analog_register(dev, reg) &&
+			(!aud3004x_volatile_analog_register(dev, reg));
+		break;
+	case AUD3004O:
+		result = aud3004x_writeable_otp_register(dev, reg) &&
+			(!aud3004x_volatile_otp_register(dev, reg));
+		break;
+	}
+
+	return result;
+}
+
+/*
+ * TLV_DB_SCALE_ITEM (TLV: Threshold Limit Value)
+ *
+ * For various properties, the dB values don't change linearly with respect to
+ * the digital value of related bit-field. At most, they are quasi-linear,
+ * that means they are linear for various ranges of digital values. Following
+ * table define such ranges of various properties.
+ *
+ * TLV_DB_RANGE_HEAD(num)
+ * num defines the number of linear ranges of dB values.
+ *
+ * s0, e0, TLV_DB_SCALE_ITEM(min, step, mute),
+ * s0: digital start value of this range (inclusive)
+ * e0: digital end valeu of this range (inclusive)
+ * min: dB value corresponding to s0
+ * step: the delta of dB value in this range
+ * mute: ?
+ *
+ * Example:
+ *	TLV_DB_RANGE_HEAD(3),
+ *	0, 1, TLV_DB_SCALE_ITEM(-2000, 2000, 0),
+ *	2, 4, TLV_DB_SCALE_ITEM(1000, 1000, 0),
+ *	5, 6, TLV_DB_SCALE_ITEM(3800, 8000, 0),
+ *
+ * The above code has 3 linear ranges with following digital-dB mapping.
+ * (0...6) -> (-2000dB, 0dB, 1000dB, 2000dB, 3000dB, 3800dB, 4600dB),
+ *
+ * DECLARE_TLV_DB_SCALE
+ *
+ * This macro is used in case where there is a linear mapping between
+ * the digital value and dB value.
+ *
+ * DECLARE_TLV_DB_SCALE(name, min, step, mute)
+ *
+ * name: name of this dB scale
+ * min: minimum dB value corresponding to digital 0
+ * step: the delta of dB value
+ * mute: ?
+ *
+ * NOTE: The information is mostly for user-space consumption, to be viewed
+ * alongwith amixer.
+ */
+
+/*
+ * aud3004x_dvol_adc_tlv - Digital volume for ADC
+ *
+ * Map as per data-sheet:
+ * 0x00 ~ 0xE0 : +42dB to -70dB, step 0.5dB
+ * 0xE0 ~ 0xE5 : -70dB to -80dB, step 2.0dB
+ *
+ * When the map is in descending order, we need to set the invert bit
+ * and arrange the map in ascending order. The offsets are calculated as
+ * (max - offset).
+ *
+ * offset_in_table = max - offset_actual;
+ *
+ * DVOL_ADCL : reg(0x34), shift(0), width(8), invert(1), max(0xE5)
+ * DVOL_ADCR : reg(0x35), shift(0), width(8), invert(1), max(0xE5)
+ * DVOL_ADCC : reg(0x36), shift(0), width(8), invert(1), max(0xE5)
+ */
+static const unsigned int aud3004x_dvol_adc_tlv[] = {
+	TLV_DB_RANGE_HEAD(2),
+	0x00, 0x05, TLV_DB_SCALE_ITEM(-8000, 200, 0),
+	0x06, 0xE5, TLV_DB_SCALE_ITEM(-6950, 50, 0),
+};
+
+/*
+ * aud3004x_adc_dat_src - I2S channel input data selection
+ *
+ * Map as per data-sheet:
+ * 00 : ADC Left Channel Data
+ * 01 : ADC Right Channel Data
+ * 10 : ADC Center Channel Data
+ * 11 : Zero data
+ *
+ * SEL_ADC0 : reg(0x23), shift(0), width(2)
+ * SEL_ADC1 : reg(0x23), shift(2), width(2)
+ * SEL_ADC2 : reg(0x23), shift(4), width(2)
+ * SEL_ADC3 : reg(0x23), shift(6), width(2)
+ */
+static const char * const aud3004x_adc_dat_src[] = {
+		"ADCL", "ADCR", "Zero1", "Zero2"
+};
+
+static SOC_ENUM_SINGLE_DECL(aud3004x_adc_dat_enum0, AUD3004X_23_IF_FORM4,
+		SEL_ADC0_SHIFT, aud3004x_adc_dat_src);
+
+static SOC_ENUM_SINGLE_DECL(aud3004x_adc_dat_enum1,	AUD3004X_23_IF_FORM4,
+		SEL_ADC1_SHIFT, aud3004x_adc_dat_src);
+
+static SOC_ENUM_SINGLE_DECL(aud3004x_adc_dat_enum2,	AUD3004X_23_IF_FORM4,
+		SEL_ADC2_SHIFT, aud3004x_adc_dat_src);
+
+static SOC_ENUM_SINGLE_DECL(aud3004x_adc_dat_enum3, AUD3004X_23_IF_FORM4,
+		SEL_ADC3_SHIFT, aud3004x_adc_dat_src);
+
+/*
+ * aud3004x_dvol_dac_tlv - Maximum headphone gain for EAR/RCV path
+ *
+ * Map as per data-sheet:
+ * 0x00 ~ 0xE0 : +42dB to -70dB, step 0.5dB
+ * 0xE1 ~ 0xE5 : -72dB to -80dB, step 2.0dB
+ * 0xE6 : -82.4dB
+ * 0xE7 ~ 0xE9 : -84.3dB to -96.3dB, step 6dB
+ *
+ * When the map is in descending order, we need to set the invert bit
+ * and arrange the map in ascending order. The offsets are calculated as
+ * (max - offset).
+ *
+ * offset_in_table = max - offset_actual;
+ *
+ * DVOL_DAL : reg(0x41), shift(0), width(8), invert(1), max(0xE9)
+ * DVOL_DAR : reg(0x42), shift(0), width(8), invert(1), max(0xE9)
+ */
+static const unsigned int aud3004x_dvol_dac_tlv[] = {
+	TLV_DB_RANGE_HEAD(4),
+	0x01, 0x03, TLV_DB_SCALE_ITEM(-9630, 600, 0),
+	0x04, 0x04, TLV_DB_SCALE_ITEM(-8240, 0, 0),
+	0x05, 0x09, TLV_DB_SCALE_ITEM(-8000, 200, 0),
+	0x0A, 0xE9, TLV_DB_SCALE_ITEM(-7000, 50, 0),
+};
+
+/*
+ * aud3004x_dac_mixl_mode_text - DACL Mixer Selection
+ *
+ * Map as per data-sheet:
+ * 000 : Data L
+ * 001 : (L+R)/2 Mono
+ * 010 : (L+R) Mono
+ * 011 : (L+R)/2 Polarity Changed
+ * 100 : (L+R) Polarity Changed
+ * 101 : Zero Padding
+ * 110 : Data L Polarity Changed
+ * 111 : Data R Polarity Changed
+ *
+ * DAC_MIXL : reg(0x44), shift(4), width(3)
+ */
+static const char * const aud3004x_dac_center_mixer_text[] = {
+		"Data L", "LR/2 PolCh", "Reserv1", "LR/2",
+		"Reserv2", "Data R" "Zero1", "Zero2"
+};
+
+static SOC_ENUM_SINGLE_DECL(aud3004x_dac_center_mixer_enum,
+		AUD3004X_45_PLAY_MIX1, DAC_MIXC_SHIFT, aud3004x_dac_center_mixer_text);
+
+static int codec_enable_get(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = !(aud3004x->is_suspend);
+
+	return 0;
+}
+
+static int codec_enable_put(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	int value = ucontrol->value.integer.value[0];
+
+	if (value)
+		aud3004x_enable(codec->dev);
+	else
+		aud3004x_disable(codec->dev);
+
+	dev_info(codec->dev, "%s: codec enable : %s\n",
+			__func__, (value) ? "On" : "Off");
+
+	return 0;
+}
+
+/*
+ * struct snd_kcontrol_new aud3004x_snd_control
+ *
+ * Every distinct bit-fields within the CODEC SFR range may be considered
+ * as a control elements. Such control elements are defined here.
+ *
+ * Depending on the access mode of these registers, different macros are
+ * used to define these control elements.
+ *
+ * SOC_ENUM: 1-to-1 mapping between bit-field value and provided text
+ * SOC_SINGLE: Single register, value is a number
+ * SOC_SINGLE_TLV: Single register, value corresponds to a TLV scale
+ * SOC_SINGLE_TLV_EXT: Above + custom get/set operation for this value
+ * SOC_SINGLE_RANGE_TLV: Register value is an offset from minimum value
+ * SOC_DOUBLE: Two bit-fields are updated in a single register
+ * SOC_DOUBLE_R: Two bit-fields in 2 different registers are updated
+ */
+
+/*
+ * All the data goes into aud3004x_snd_controls.
+ * All path inter-connections goes into aud3004x_dapm_routes
+ */
+static const struct snd_kcontrol_new aud3004x_snd_controls[] = {
+	/*
+	 * ADC(Tx) path control
+	 */
+	SOC_SINGLE_TLV("ADC Left Gain", AUD3004X_34_AD_VOLL,
+			DVOL_ADC_SHIFT,
+			ADC_DVOL_MAXNUM, 1, aud3004x_dvol_adc_tlv),
+
+	SOC_SINGLE_TLV("ADC Right Gain", AUD3004X_35_AD_VOLR,
+			DVOL_ADC_SHIFT,
+			ADC_DVOL_MAXNUM, 1, aud3004x_dvol_adc_tlv),
+
+	SOC_ENUM("ADC DAT Mux0", aud3004x_adc_dat_enum0),
+
+	SOC_ENUM("ADC DAT Mux1", aud3004x_adc_dat_enum1),
+
+	SOC_ENUM("ADC DAT Mux2", aud3004x_adc_dat_enum2),
+
+	SOC_ENUM("ADC DAT Mux3", aud3004x_adc_dat_enum3),
+
+	/*
+	 * DAC(Rx) path control
+	 */
+	SOC_DOUBLE_R_TLV("DAC Gain", AUD3004X_41_PLAY_VOLL, AUD3004X_42_PLAY_VOLR,
+			DVOL_DA_SHIFT,
+			DAC_DVOL_MINNUM, 1, aud3004x_dvol_dac_tlv),
+
+	SOC_SINGLE_TLV("DAC Center Gain", AUD3004X_43_PLAY_VOLC,
+			DVOL_DA_SHIFT,
+			DAC_DVOL_MINNUM, 1, aud3004x_dvol_dac_tlv),
+
+	SOC_ENUM("DAC Center Mixer", aud3004x_dac_center_mixer_enum),
+
+	/*
+	 * Codec control
+	 */
+	SOC_SINGLE_EXT("Codec Enable", SND_SOC_NOPM, 0, 1, 0,
+			codec_enable_get, codec_enable_put),
+};
+
+/*
+ * ADC(Tx) functions
+ */
+
+/*
+ * aud3004x_adc_digital_mute() - Set ADC digital Mute
+ *
+ * @codec: SoC audio codec device
+ * @channel: Digital mute control for ADC channel
+ * @on: mic mute is true, mic unmute is false
+ *
+ * Desc: When ADC path turn on, analog block noise can be recorded.
+ * For remove this, ADC path was muted always except that it was used.
+ */
+void aud3004x_adc_digital_mute(struct snd_soc_codec *codec,
+		unsigned int channel, bool on)
+{
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+
+	dev_dbg(codec->dev, "%s called, %s\n", __func__, on ? "Mute" : "Unmute");
+
+	if (on) {
+		aud3004x_update_bits(aud3004x, AUD3004X_30_ADC1, channel, channel);
+	} else {
+		msleep(200);
+		aud3004x_update_bits(aud3004x, AUD3004X_30_ADC1, channel, 0);
+	}
+
+	dev_dbg(codec->dev, "%s: channel: %d work done.\n", __func__, channel);
+}
+
+static int vmid_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+static int dvmid_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+static int mic1_pga_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+static int mic2_pga_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+static int mic3_pga_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+static int dmic1_pga_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+static int dmic2_pga_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+static int adc_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	unsigned int mic_on;
+
+	mic_on = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
+	dev_dbg(codec->dev, "%s called, mic status = 0x%02x, event = %d\n",
+			__func__, mic_on, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		/* Disable ADC digital mute after configuring ADC */
+		aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, false);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		/* Enable ADC digital mute before configuring ADC */
+		aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+/*
+ * DAC(Rx) functions
+ */
+/*
+ * aud3004x_dac_soft_mute() - Set DAC soft mute
+ *
+ * @codec: SoC audio codec device
+ * @channel: Soft mute control for DAC channel
+ * @on: dac mute is true, dac unmute is false
+ *
+ * Desc: When DAC path turn on, analog block noise can be played.
+ * For remove this, DAC path was muted always except that it was used.
+ */
+static void aud3004x_dac_soft_mute(struct snd_soc_codec *codec,
+		unsigned int channel, bool on)
+{
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+
+	dev_dbg(codec->dev, "%s called, %s\n", __func__, on ? "Mute" : "Unmute");
+
+	if (on)
+		aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1, channel, channel);
+	else
+		aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1, channel, 0);
+
+	dev_dbg(codec->dev, "%s: channel: %d work done.\n", __func__, channel);
+}
+
+static int dac_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+static int spkdrv_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		/* DAC mute disable */
+		aud3004x_dac_soft_mute(codec, DA_SMUTEC_MASK, false);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		/* DAC mute enable */
+		aud3004x_dac_soft_mute(codec, DA_SMUTEC_MASK, true);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+static int epdrv_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		/* DAC mute disable */
+		aud3004x_dac_soft_mute(codec, DA_SMUTEC_MASK, false);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		/* DAC mute enable */
+		aud3004x_dac_soft_mute(codec, DA_SMUTEC_MASK, true);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+static int hpdrv_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		/* DAC mute disable */
+		aud3004x_dac_soft_mute(codec, DA_SMUTEL_MASK | DA_SMUTER_MASK, false);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		/* DAC mute enable */
+		aud3004x_dac_soft_mute(codec, DA_SMUTEL_MASK | DA_SMUTER_MASK, true);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+static int linedrv_ev(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
+	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		/* DAC mute disable */
+		aud3004x_dac_soft_mute(codec, DA_SMUTEC_MASK, false);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		/* DAC mute enable */
+		aud3004x_dac_soft_mute(codec, DA_SMUTEC_MASK, true);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		break;
+	}
+	return 0;
+}
+
+/*
+ * dapm widget controls set
+ */
+
+/* INP SEL */
+static const char * const aud3004x_inp_sel_src_l[] = {
+	"AMIC_R ADC_L", "AMIC_L ADC_L", "Not Used", "Zero ADC_L",
+	"DMIC1L ADC_L", "DMIC1R ADC_L", "DMIC2L ADC_L", "DMIC2R ADC_L"
+};
+static const char * const aud3004x_inp_sel_src_r[] = {
+	"AMIC_L ADC_R", "AMIC_R ADC_R", "Not Used", "Zero ADC_R",
+	"DMIC1L ADC_R", "DMIC1R ADC_R", "DMIC2L ADC_R", "DMIC2R ADC_R"
+};
+
+static SOC_ENUM_SINGLE_DECL(aud3004x_inp_sel_enum_l, AUD3004X_31_ADC2,
+		INP_SEL_L_SHIFT, aud3004x_inp_sel_src_l);
+static SOC_ENUM_SINGLE_DECL(aud3004x_inp_sel_enum_r, AUD3004X_31_ADC2,
+		INP_SEL_R_SHIFT, aud3004x_inp_sel_src_r);
+
+static const struct snd_kcontrol_new aud3004x_inp_sel_l =
+		SOC_DAPM_ENUM("INP_SEL_L", aud3004x_inp_sel_enum_l);
+static const struct snd_kcontrol_new aud3004x_inp_sel_r =
+		SOC_DAPM_ENUM("INP_SEL_R", aud3004x_inp_sel_enum_r);
+
+/* MIC On */
+static const struct snd_kcontrol_new mic1_on[] = {
+	SOC_DAPM_SINGLE("MIC1 On", AUD3004X_1F_CHOP2, MIC1_ON_SHIFT, 1, 0),
+};
+static const struct snd_kcontrol_new mic2_on[] = {
+	SOC_DAPM_SINGLE("MIC2 On", AUD3004X_1F_CHOP2, MIC2_ON_SHIFT, 1, 0),
+};
+static const struct snd_kcontrol_new mic3_on[] = {
+	SOC_DAPM_SINGLE("MIC3 On", AUD3004X_1F_CHOP2, MIC3_ON_SHIFT, 1, 0),
+};
+
+/* ADC Mixer */
+static const struct snd_kcontrol_new adcl_mix[] = {
+	SOC_DAPM_SINGLE("MIC1L Switch", AUD3004X_1E_CHOP1,
+			MIX_MIC1L_SHIFT, 1, 0),
+	SOC_DAPM_SINGLE("MIC2L Switch", AUD3004X_1E_CHOP1,
+			MIX_MIC2L_SHIFT, 1, 0),
+	SOC_DAPM_SINGLE("MIC3L Switch", AUD3004X_1E_CHOP1,
+			MIX_MIC3L_SHIFT, 1, 0),
+};
+static const struct snd_kcontrol_new adcr_mix[] = {
+	SOC_DAPM_SINGLE("MIC1R Switch", AUD3004X_1E_CHOP1,
+			MIX_MIC1R_SHIFT, 1, 0),
+	SOC_DAPM_SINGLE("MIC2R Switch", AUD3004X_1E_CHOP1,
+			MIX_MIC2R_SHIFT, 1, 0),
+	SOC_DAPM_SINGLE("MIC3R Switch", AUD3004X_1E_CHOP1,
+			MIX_MIC3R_SHIFT, 1, 0),
+};
+
+/* DMIC On */
+static const struct snd_kcontrol_new dmic1_on[] = {
+	SOC_DAPM_SINGLE("DMIC1 On", AUD3004X_1E_CHOP1, DMIC1_ON_SHIFT, 1, 0),
+};
+static const struct snd_kcontrol_new dmic2_on[] = {
+	SOC_DAPM_SINGLE("DMIC2 On", AUD3004X_1E_CHOP1, DMIC2_ON_SHIFT, 1, 0),
+};
+
+/* Rx Devices */
+static const struct snd_kcontrol_new spk_on[] = {
+	SOC_DAPM_SINGLE("SPK On", AUD3004X_1F_CHOP2, SPK_ON_SHIFT, 1, 0),
+};
+static const struct snd_kcontrol_new ep_on[] = {
+	SOC_DAPM_SINGLE("EP On", AUD3004X_1F_CHOP2, EP_ON_SHIFT, 1, 0),
+};
+static const struct snd_kcontrol_new hp_on[] = {
+	SOC_DAPM_SINGLE("HP On", AUD3004X_1F_CHOP2, HP_ON_SHIFT, 1, 0),
+};
+static const struct snd_kcontrol_new lineout_on[] = {
+	SOC_DAPM_SINGLE("LINEOUT On", AUD3004X_1F_CHOP2, LINEOUT_ON_SHIFT, 1, 0),
+};
+
+static const struct snd_soc_dapm_widget aud3004x_dapm_widgets[] = {
+	/*
+	 * ADC(Tx) dapm widget
+	 */
+	SND_SOC_DAPM_INPUT("IN1L"),
+	SND_SOC_DAPM_INPUT("IN2L"),
+	SND_SOC_DAPM_INPUT("IN3L"),
+
+	SND_SOC_DAPM_SUPPLY("VMID", SND_SOC_NOPM, 0, 0, vmid_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY("DVMID", SND_SOC_NOPM, 0, 0, dvmid_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_PGA_E("MIC1_PGA", SND_SOC_NOPM, 0, 0, NULL, 0, mic1_pga_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_PGA_E("MIC2_PGA", SND_SOC_NOPM, 0, 0, NULL, 0, mic2_pga_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_PGA_E("MIC3_PGA", SND_SOC_NOPM, 0, 0, NULL, 0, mic3_pga_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_PGA_E("DMIC1_PGA", SND_SOC_NOPM, 0, 0, NULL, 0, dmic1_pga_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_PGA_E("DMIC2_PGA", SND_SOC_NOPM, 0, 0, NULL, 0, dmic2_pga_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_SWITCH("MIC1", SND_SOC_NOPM, 0, 0, mic1_on),
+	SND_SOC_DAPM_SWITCH("MIC2", SND_SOC_NOPM, 0, 0, mic2_on),
+	SND_SOC_DAPM_SWITCH("MIC3", SND_SOC_NOPM, 0, 0, mic3_on),
+
+	SND_SOC_DAPM_MIXER("ADCL Mixer", SND_SOC_NOPM, 0, 0, adcl_mix,
+			ARRAY_SIZE(adcl_mix)),
+	SND_SOC_DAPM_MIXER("ADCR Mixer", SND_SOC_NOPM, 0, 0, adcr_mix,
+			ARRAY_SIZE(adcr_mix)),
+
+	SND_SOC_DAPM_SWITCH("DMIC1", SND_SOC_NOPM, 0, 0, dmic1_on),
+	SND_SOC_DAPM_SWITCH("DMIC2", SND_SOC_NOPM, 0, 0, dmic2_on),
+
+	SND_SOC_DAPM_MUX("INP_SEL_L", SND_SOC_NOPM, 0, 0, &aud3004x_inp_sel_l),
+	SND_SOC_DAPM_MUX("INP_SEL_R", SND_SOC_NOPM, 0, 0, &aud3004x_inp_sel_r),
+
+	SND_SOC_DAPM_ADC_E("ADC", "AIF Capture", SND_SOC_NOPM, 0, 0, adc_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_ADC_E("ADC", "AIF2 Capture", SND_SOC_NOPM, 0, 0, adc_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+
+	/*
+	 * DAC(Rx) dapm widget
+	 */
+	SND_SOC_DAPM_SWITCH("SPK", SND_SOC_NOPM, 0, 0, spk_on),
+	SND_SOC_DAPM_SWITCH("EP", SND_SOC_NOPM, 0, 0, ep_on),
+	SND_SOC_DAPM_SWITCH("HP", SND_SOC_NOPM, 0, 0, hp_on),
+	SND_SOC_DAPM_SWITCH("LINEOUT", SND_SOC_NOPM, 0, 0, lineout_on),
+
+	SND_SOC_DAPM_OUT_DRV_E("SPKDRV", SND_SOC_NOPM, 0, 0, NULL, 0, spkdrv_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_OUT_DRV_E("EPDRV", SND_SOC_NOPM, 0, 0, NULL, 0, epdrv_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_OUT_DRV_E("HPDRV", SND_SOC_NOPM, 0, 0, NULL, 0, hpdrv_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_OUT_DRV_E("LINEDRV", SND_SOC_NOPM, 0, 0, NULL, 0, linedrv_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_DAC_E("DAC", "AIF Playback", SND_SOC_NOPM, 0, 0, dac_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_DAC_E("DAC", "AIF2 Playback", SND_SOC_NOPM, 0, 0, dac_ev,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+			SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_OUTPUT("SPKOUTLN"),
+	SND_SOC_DAPM_OUTPUT("EPOUTLN"),
+	SND_SOC_DAPM_OUTPUT("HPOUTLN"),
+	SND_SOC_DAPM_OUTPUT("LINEOUTLN"),
+};
+
+static const struct snd_soc_dapm_route aud3004x_dapm_routes[] = {
+	/*
+	 * ADC(Tx) dapm route
+	 */
+	{"MIC1_PGA", NULL, "IN1L"},
+	{"MIC1_PGA", NULL, "VMID"},
+	{"MIC1", "MIC1 On", "MIC1_PGA"},
+
+	{"MIC2_PGA", NULL, "IN2L"},
+	{"MIC2_PGA", NULL, "VMID"},
+	{"MIC2", "MIC2 On", "MIC2_PGA"},
+
+	{"MIC3_PGA", NULL, "IN3L"},
+	{"MIC3_PGA", NULL, "VMID"},
+	{"MIC3", "MIC3 On", "MIC3_PGA"},
+
+	{"ADCL Mixer", "MIC1L Switch", "MIC1"},
+	{"ADCR Mixer", "MIC1R Switch", "MIC1"},
+	{"ADCL Mixer", "MIC2L Switch", "MIC2"},
+	{"ADCR Mixer", "MIC2R Switch", "MIC2"},
+	{"ADCL Mixer", "MIC3L Switch", "MIC3"},
+	{"ADCR Mixer", "MIC3R Switch", "MIC3"},
+
+	{"DMIC1_PGA", NULL, "IN1L"},
+	{"DMIC1_PGA", NULL, "DVMID"},
+	{"DMIC1", "DMIC1 On", "DMIC1_PGA"},
+
+	{"DMIC2_PGA", NULL, "IN2L"},
+	{"DMIC2_PGA", NULL, "DVMID"},
+	{"DMIC2", "DMIC2 On", "DMIC2_PGA"},
+
+	{"INP_SEL_L", "AMIC_L ADC_L", "ADCL Mixer"},
+	{"INP_SEL_L", "AMIC_R ADC_L", "ADCR Mixer"},
+	{"INP_SEL_L", "DMIC1L ADC_L", "DMIC1"},
+	{"INP_SEL_L", "DMIC1R ADC_L", "DMIC1"},
+	{"INP_SEL_L", "DMIC2L ADC_L", "DMIC2"},
+	{"INP_SEL_L", "DMIC2R ADC_L", "DMIC2"},
+
+	{"INP_SEL_R", "AMIC_L ADC_R", "ADCL Mixer"},
+	{"INP_SEL_R", "AMIC_R ADC_R", "ADCR Mixer"},
+	{"INP_SEL_R", "DMIC1L ADC_R", "DMIC1"},
+	{"INP_SEL_R", "DMIC1R ADC_R", "DMIC1"},
+	{"INP_SEL_R", "DMIC2L ADC_R", "DMIC2"},
+	{"INP_SEL_R", "DMIC2R ADC_R", "DMIC2"},
+
+	{"ADC", NULL, "INP_SEL_L"},
+	{"ADC", NULL, "INP_SEL_R"},
+
+	{"AIF Capture", NULL, "ADC"},
+	{"AIF2 Capture", NULL, "ADC"},
+
+	/*
+	 * DAC(Rx) dapm route
+	 */
+	{"DAC", NULL, "AIF Playback"},
+	{"DAC", NULL, "AIF2 Playback"},
+
+	{"SPKDRV", NULL, "DAC"},
+	{"SPK", "SPK On", "SPKDRV"},
+	{"SPKOUTLN", NULL, "SPK"},
+
+	{"EPDRV", NULL, "DAC"},
+	{"EP", "EP On", "EPDRV"},
+	{"EPOUTLN", NULL, "EP"},
+
+	{"HPDRV", NULL, "DAC"},
+	{"HP", "HP On", "HPDRV"},
+	{"HPOUTLN", NULL, "HP"},
+
+	{"LINEDRV", NULL, "DAC"},
+	{"LINEOUT", "LINEOUT On", "LINEDRV"},
+	{"LINEOUTLN", NULL, "LINEOUT"},
+};
+
+static int aud3004x_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
+{
+	struct snd_soc_codec *codec = dai->codec;
+
+	dev_dbg(codec->dev, "%s called. fmt: %d\n", __func__, fmt);
+
+	return 0;
+}
+
+static int aud3004x_dai_startup(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *dai)
+{
+	struct snd_soc_codec *codec = dai->codec;
+
+	dev_dbg(codec->dev, "(%s) %s completed\n",
+			substream->stream ? "C" : "P", __func__);
+
+	return 0;
+}
+
+/*
+ * capture_hw_params() - Register setting for capture
+ *
+ * @codec: SoC audio codec device
+ * @cur_aifrate: current sample rate
+ *
+ * Desc: Set codec register related sample rate format before capture.
+ */
+static void capture_hw_params(struct snd_soc_codec *codec,
+		unsigned int cur_aifrate)
+{
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+
+	dev_dbg(codec->dev, "%s called. priv_aif: %d, cur_aif %d\n",
+			__func__, aud3004x->capture_aifrate, cur_aifrate);
+
+	if (aud3004x->capture_aifrate != cur_aifrate) {
+		switch (cur_aifrate) {
+		case AUD3004X_SAMPLE_RATE_48KHZ:
+			break;
+		case AUD3004X_SAMPLE_RATE_192KHZ:
+			break;
+		case AUD3004X_SAMPLE_RATE_384KHZ:
+			break;
+		default:
+			dev_err(codec->dev, "%s: sample rate error!\n", __func__);
+			break;
+		}
+		aud3004x->capture_aifrate = cur_aifrate;
+	}
+}
+
+/*
+ * playback_hw_params() - Register setting for playback
+ *
+ * @codec: SoC audio codec device
+ * @cur_aifrate: current sample rate
+ *
+ * Desc: Set codec register related sample rate format before playback.
+ */
+static void playback_hw_params(struct snd_soc_codec *codec,
+		unsigned int cur_aifrate)
+{
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+
+	dev_dbg(codec->dev, "%s called. priv_aif: %d, cur_aif %d\n",
+			__func__, aud3004x->playback_aifrate, cur_aifrate);
+
+	if (aud3004x->playback_aifrate != cur_aifrate) {
+		switch (cur_aifrate) {
+		case AUD3004X_SAMPLE_RATE_48KHZ:
+			break;
+		case AUD3004X_SAMPLE_RATE_192KHZ:
+			break;
+		default:
+			dev_err(codec->dev, "%s: sample rate error!\n", __func__);
+			break;
+		}
+		aud3004x->playback_aifrate = cur_aifrate;
+	}
+}
+
+static int aud3004x_dai_hw_params(struct snd_pcm_substream *substream,
+		struct snd_pcm_hw_params *params,
+		struct snd_soc_dai *dai)
+{
+	struct snd_soc_codec *codec = dai->codec;
+	unsigned int cur_aifrate, width, channels;
+
+	/* Get params */
+	cur_aifrate = params_rate(params);
+	width = params_width(params);
+	channels = params_channels(params);
+
+	dev_dbg(codec->dev, "(%s) %s called. aifrate: %d, width: %d, channels: %d\n",
+			substream->stream ? "C" : "P", __func__, cur_aifrate, width, channels);
+
+	switch (width) {
+	case BIT_RATE_16:
+		break;
+	case BIT_RATE_32:
+		break;
+	default:
+		dev_err(codec->dev, "%s: bit rate error!\n", __func__);
+		break;
+	}
+
+	if (substream->stream)
+		capture_hw_params(codec, cur_aifrate);
+	else
+		playback_hw_params(codec, cur_aifrate);
+
+	return 0;
+}
+
+static void aud3004x_dai_shutdown(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *dai)
+{
+	struct snd_soc_codec *codec = dai->codec;
+
+	dev_dbg(codec->dev, "(%s) %s completed\n",
+			substream->stream ? "C" : "P", __func__);
+}
+
+static const struct snd_soc_dai_ops aud3004x_dai_ops = {
+	.set_fmt = aud3004x_dai_set_fmt,
+	.startup = aud3004x_dai_startup,
+	.hw_params = aud3004x_dai_hw_params,
+	.shutdown = aud3004x_dai_shutdown,
+};
+
+#define AUD3004X_RATES		SNDRV_PCM_RATE_8000_192000
+#define AUD3004X_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE | \
+							SNDRV_PCM_FMTBIT_S20_3LE | \
+							SNDRV_PCM_FMTBIT_S24_LE  | \
+							SNDRV_PCM_FMTBIT_S32_LE)
+
+static struct snd_soc_dai_driver aud3004x_dai[] = {
+	{
+		.name = "aud3004x-aif",
+		.id = 1,
+		.playback = {
+			.stream_name = "AIF Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = AUD3004X_RATES,
+			.formats = AUD3004X_FORMATS,
+		},
+		.capture = {
+			.stream_name = "AIF Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = AUD3004X_RATES,
+			.formats = AUD3004X_FORMATS,
+		},
+		.ops = &aud3004x_dai_ops,
+		.symmetric_rates = 1,
+	},
+	{
+		.name = "aud3004x-aif2",
+		.id = 2,
+		.playback = {
+			.stream_name = "AIF2 Playback",
+			.channels_min = 1,
+			.channels_max = 2,
+			.rates = AUD3004X_RATES,
+			.formats = AUD3004X_FORMATS,
+		},
+		.capture = {
+			.stream_name = "AIF2 Capture",
+			.channels_min = 1,
+			.channels_max = 2,
+			.rates = AUD3004X_RATES,
+			.formats = AUD3004X_FORMATS,
+		},
+		.ops = &aud3004x_dai_ops,
+		.symmetric_rates = 1,
+	},
+};
+
+static void aud3004x_regmap_sync(struct device *dev)
+{
+	struct aud3004x_priv *aud3004x = dev_get_drvdata(dev);
+	struct snd_soc_codec *codec = aud3004x->codec;
+	unsigned char reg[AUD3004X_REGCACHE_SYNC_END] = {0,};
+	int p_reg, p_map;
+
+	for (p_map = AUD3004D; p_map <= AUD3004O; p_map++) {
+		i2c_client_change(aud3004x, p_map);
+
+		/* Read from Cache */
+		for (p_reg = 0; p_reg < AUD3004X_REGCACHE_SYNC_END; p_reg++) {
+			if (read_from_cache(dev, p_reg, p_map))
+				reg[p_reg] = (unsigned char) snd_soc_read(codec, p_reg);
+		}
+
+		regcache_cache_bypass(aud3004x->regmap[p_map], true);
+		/* Update HW */
+		for (p_reg = 0; p_reg < AUD3004X_REGCACHE_SYNC_END; p_reg++)
+			if (write_to_hw(dev, p_reg, p_map))
+				snd_soc_write(codec, p_reg, reg[p_reg]);
+		regcache_cache_bypass(aud3004x->regmap[p_map], false);
+
+		i2c_client_change(aud3004x, CODEC_CLOSE);
+	}
+}
+
+static void aud3004x_reg_restore(struct snd_soc_codec *codec)
+{
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+
+	aud3004x_update_bits(aud3004x, AUD3004X_D0_DCTR_CM,
+			PDB_JD_CLK_EN_MASK, PDB_JD_CLK_EN_MASK);
+
+	msleep(40);
+	aud3004x_regmap_sync(codec->dev);
+}
+
+int aud3004x_regulators_enable(struct snd_soc_codec *codec)
+{
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	int ret;
+
+	ret = regulator_enable(aud3004x->vdd);
+	ret = regulator_enable(aud3004x->vdd2);
+
+	return ret;
+}
+
+void aud3004x_regulators_disable(struct snd_soc_codec *codec)
+{
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+
+	if (aud3004x->regulator_count == 0) {
+		regulator_disable(aud3004x->vdd);
+		regulator_disable(aud3004x->vdd2);
+	}
+}
+
+int aud3004x_enable(struct device *dev)
+{
+	struct aud3004x_priv *aud3004x = dev_get_drvdata(dev);
+	int p_map;
+
+	dev_dbg(dev, "(*) %s\n", __func__);
+	aud3004x->is_suspend = false;
+	aud3004x->regulator_count++;
+
+	//abox_enable_mclk(true);
+//	aud3004x_acpm_update_reg(AUD3004X_CLOSE_ADDR, AUD3004X_F59_ETC_OTP3,
+//			EN_OSC_32K_MASK, EN_OSC_32K_MASK);
+
+	aud3004x_regulators_enable(aud3004x->codec);
+
+	/* Disable cache_only feature and sync the cache with h/w */
+	for (p_map = AUD3004D; p_map <= AUD3004O; p_map++)
+		regcache_cache_only(aud3004x->regmap[p_map], false);
+
+	aud3004x_reg_restore(aud3004x->codec);
+
+	return 0;
+}
+
+int aud3004x_disable(struct device *dev)
+{
+	struct aud3004x_priv *aud3004x = dev_get_drvdata(dev);
+	int p_map;
+
+	dev_dbg(dev, "(*) %s\n", __func__);
+
+	aud3004x->is_suspend = true;
+	aud3004x->regulator_count--;
+
+	/* As device is going to suspend-state, limit the writes to cache */
+	for (p_map = AUD3004D; p_map <= AUD3004O; p_map++)
+		regcache_cache_only(aud3004x->regmap[p_map], true);
+
+	if (aud3004x->is_probe_done)
+		i2c_client_change(aud3004x, CODEC_CLOSE);
+	aud3004x_regulators_disable(aud3004x->codec);
+
+	//abox_enable_mclk(false);
+
+	return 0;
+}
+
+static int aud3004x_sys_resume(struct device *dev)
+{
+#ifndef CONFIG_PM
+	struct aud3004x_priv *aud3004x = dev_get_drvdata(dev);
+
+	if (!aud3004x->is_suspend) {
+		dev_dbg(dev, "(*)aud3004x not resuming, cp functioning\n");
+		return 0;
+	}
+	dev_dbg(dev, "(*) %s\n", __func__);
+	aud3004x->pm_suspend = false;
+	aud3004x_enable(dev);
+#endif
+
+	return 0;
+}
+
+static int aud3004x_sys_suspend(struct device *dev)
+{
+#ifndef CONFIG_PM
+	struct aud3004x_priv *aud3004x = dev_get_drvdata(dev);
+
+	if (abox_is_on()) {
+		dev_dbg(dev, "(*)Don't suspend aud3004x, cp functioning\n");
+		return 0;
+	}
+	dev_dbg(dev, "(*) %s\n", __func__);
+	aud3004x->pm_suspend = true;
+	aud3004x_disable(dev);
+#endif
+
+	return 0;
+}
+
+#ifdef CONFIG_PM
+static int aud3004x_runtime_resume(struct device *dev)
+{
+	dev_dbg(dev, "(*) %s\n", __func__);
+	aud3004x_enable(dev);
+
+	return 0;
+}
+
+static int aud3004x_runtime_suspend(struct device *dev)
+{
+	dev_dbg(dev, "(*) %s\n", __func__);
+	aud3004x_disable(dev);
+
+	return 0;
+}
+#endif
+
+static const struct dev_pm_ops aud3004x_pm = {
+	SET_SYSTEM_SLEEP_PM_OPS(
+			aud3004x_sys_suspend,
+			aud3004x_sys_resume)
+#ifdef CONFIG_PM
+	SET_RUNTIME_PM_OPS(
+			aud3004x_runtime_suspend,
+			aud3004x_runtime_resume,
+			NULL)
+#endif
+};
+
+static void aud3004x_i2c_parse_dt(struct aud3004x_priv *aud3004x)
+{
+	struct device *dev = aud3004x->dev;
+	struct device_node *np = dev->of_node;
+	unsigned int feature_flag;
+	int ret;
+
+	/* model feature flag */
+	ret = of_property_read_u32(dev->of_node, "use-feature-flag", &feature_flag);
+	if (!ret)
+		aud3004x->model_feature_flag = feature_flag;
+	else
+		aud3004x->model_feature_flag = 0;
+
+	aud3004x->dmic_bias_gpio = of_get_named_gpio(np, "dmic-bias-gpio", 0);
+	if (aud3004x->dmic_bias_gpio < 0)
+		dev_err(dev, "%s: cannot find dmic bias gpio in the dt\n", __func__);
+	else
+		dev_dbg(dev, "%s: dmic bias gpio = %d\n",
+				__func__, aud3004x->dmic_bias_gpio);
+
+	dev_dbg(dev, "Codec Feature Flag: 0x%02x\n", feature_flag);
+}
+
+/*
+ * aud3004x_register_initialize() - Codec reigster initialize
+ *
+ * When system boot, codec should successful probe with specific parameters.
+ * These specific values change the chip default register value
+ * to arbitrary value in booting in order to modify an issue
+ * that cannot be predicted during the design.
+ *
+ * The values provided in this function are hard-coded register values, and we
+ * need not update these values as per bit-fields.
+ */
+static void aud3004x_register_initialize(void *context)
+{
+	struct snd_soc_codec *codec = (struct snd_soc_codec *)context;
+//	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+
+#ifdef CONFIG_PM
+	pm_runtime_get_sync(codec->dev);
+#else
+	aud3004x_enable(codec->dev);
+#endif
+
+	dev_dbg(codec->dev, "%s called, setting defaults\n", __func__);
+
+	/* ADC/DAC Mute */
+	aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
+	aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
+
+	/* All boot time hardware access is done. Put the device to sleep. */
+#ifdef CONFIG_PM
+	pm_runtime_put_sync(codec->dev);
+#else
+	aud3004x_disable(codec->dev);
+#endif
+}
+
+static int aud3004x_codec_probe(struct snd_soc_codec *codec)
+{
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+
+	pr_err("Codec Digital Driver Probe: (%s)\n", __func__);
+
+	aud3004x->codec = codec;
+
+	/* register codec power */
+	aud3004x->vdd = devm_regulator_get(codec->dev, "vdd_aldo1");
+	if (IS_ERR(aud3004x->vdd)) {
+		dev_warn(codec->dev, "failed to get regulator vdd\n");
+		return PTR_ERR(aud3004x->vdd);
+	}
+
+	aud3004x->vdd2 = devm_regulator_get(codec->dev, "vdd_aldo2");
+	if (IS_ERR(aud3004x->vdd2)) {
+		dev_warn(codec->dev, "failed to get regulator vdd2\n");
+		return PTR_ERR(aud3004x->vdd2);
+	}
+
+	/* initialize codec_priv variable */
+	aud3004x->codec_ver = AUD3004X_CODEC_VER;
+	aud3004x->playback_aifrate = 0;
+	aud3004x->capture_aifrate = 0;
+	aud3004x->mic_status = 0;
+
+	/* initialize workqueue */
+	/* initialize workqueue for adc mute handling */
+#if 0
+	INIT_WORK(&aud3004x->adc_mute_work, aud3004x_adc_mute_work);
+	aud3004x->adc_mute_wq = create_singlethread_workqueue("adc_mute_wq");
+	if (aud3004x->adc_mute_wq == NULL) {
+		dev_err(codec->dev, "Failed to create adc_mute_wq\n");
+		return -ENOMEM;
+	}
+#endif
+
+	/* initialize mutex lock */
+	mutex_init(&aud3004x->regcache_lock);
+	mutex_init(&aud3004x->regmap_lock);
+
+	msleep(20);
+
+	/* dt parse for codec */
+	aud3004x_i2c_parse_dt(aud3004x);
+	/* register value init for codec */
+	aud3004x_register_initialize(codec);
+
+	/* dmic bias gpio initialize */
+	if (aud3004x->dmic_bias_gpio > 0) {
+		if (gpio_request(aud3004x->dmic_bias_gpio, "aud3004x_dmic_bias") < 0)
+			dev_err(aud3004x->dev, "%s: Request for %d GPIO failed\n",
+					__func__, (int)aud3004x->dmic_bias_gpio);
+		if (gpio_direction_output(aud3004x->dmic_bias_gpio, 0) < 0)
+			dev_err(aud3004x->dev, "%s: GPIO direction to output failed!\n",
+					__func__);
+	}
+
+	/* Ignore suspend status for DAPM endpoint */
+	snd_soc_dapm_ignore_suspend(snd_soc_codec_get_dapm(codec), "SPKOUTLN");
+	snd_soc_dapm_ignore_suspend(snd_soc_codec_get_dapm(codec), "EPOUTLN");
+	snd_soc_dapm_ignore_suspend(snd_soc_codec_get_dapm(codec), "HPOUTLN");
+	snd_soc_dapm_ignore_suspend(snd_soc_codec_get_dapm(codec), "LINEOUTLN");
+	snd_soc_dapm_ignore_suspend(snd_soc_codec_get_dapm(codec), "IN1L");
+	snd_soc_dapm_ignore_suspend(snd_soc_codec_get_dapm(codec), "IN2L");
+	snd_soc_dapm_ignore_suspend(snd_soc_codec_get_dapm(codec), "IN3L");
+	snd_soc_dapm_ignore_suspend(snd_soc_codec_get_dapm(codec), "AIF Playback");
+	snd_soc_dapm_ignore_suspend(snd_soc_codec_get_dapm(codec), "AIF Capture");
+	snd_soc_dapm_ignore_suspend(snd_soc_codec_get_dapm(codec), "AIF2 Playback");
+	snd_soc_dapm_ignore_suspend(snd_soc_codec_get_dapm(codec), "AIF2 Capture");
+	snd_soc_dapm_sync(snd_soc_codec_get_dapm(codec));
+
+	dev_dbg(codec->dev, "Codec probe done. Codec Ver: %d\n",
+			aud3004x->codec_ver);
+	aud3004x->is_probe_done = true;
+
+	/* Jack probe */
+//	aud3004x_jack_probe(codec);
+
+	return 0;
+}
+
+static int aud3004x_codec_remove(struct snd_soc_codec *codec)
+{
+//	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+
+	dev_dbg(codec->dev, "(*) %s called\n", __func__);
+
+//	destroy_workqueue(aud3004x->adc_mute_wq);
+
+//	aud3004x_jack_remove(codec);
+	aud3004x_regulators_disable(codec);
+
+	return 0;
+}
+
+static struct regmap *get_digital_regmap(struct device *dev)
+{
+	struct aud3004x_priv *aud3004x = dev_get_drvdata(dev);
+
+	return aud3004x->regmap[AUD3004D];
+}
+
+static struct snd_soc_codec_driver soc_codec_dev_aud3004x = {
+	.probe = aud3004x_codec_probe,
+	.remove = aud3004x_codec_remove,
+	.component_driver = {
+		.controls = aud3004x_snd_controls,
+		.num_controls = ARRAY_SIZE(aud3004x_snd_controls),
+		.dapm_widgets = aud3004x_dapm_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(aud3004x_dapm_widgets),
+		.dapm_routes = aud3004x_dapm_routes,
+		.num_dapm_routes = ARRAY_SIZE(aud3004x_dapm_routes),
+	},
+	.ignore_pmdown_time = true,
+	.idle_bias_off = true,
+	.get_regmap = get_digital_regmap,
+};
+
+static int aud3004x_i2c_probe(struct i2c_client *i2c,
+		const struct i2c_device_id *id)
+{
+	struct aud3004x_priv *aud3004x;
+	struct device *dev;
+	int ret;
+
+	dev_dbg(&i2c->dev, "Codec I2C Probe: (%s) name: %s, i2c addr: 0x%02x\n",
+		__func__, id->name, (int) i2c->addr);
+
+	aud3004x = kzalloc(sizeof(struct aud3004x_priv), GFP_KERNEL);
+	if (aud3004x == NULL)
+		return -ENOMEM;
+
+	aud3004x->dev = &i2c->dev;
+	aud3004x->is_probe_done = false;
+	aud3004x->regulator_count = 0;
+
+	aud3004x->i2c_priv[AUD3004D] = i2c;
+	aud3004x->i2c_priv[AUD3004A] = i2c_new_dummy(i2c->adapter, AUD3004X_ANALOG_ADDR);
+	aud3004x->i2c_priv[AUD3004O] = i2c_new_dummy(i2c->adapter, AUD3004X_OTP_ADDR);
+
+	aud3004x->regmap[AUD3004D] =
+		devm_regmap_init_i2c(aud3004x->i2c_priv[AUD3004D], &aud3004x_regmap);
+	if (IS_ERR(aud3004x->regmap[AUD3004D])) {
+		dev_err(&i2c->dev, "Failed to allocate digital regmap: %li\n",
+				PTR_ERR(aud3004x->regmap[AUD3004D]));
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	aud3004x->regmap[AUD3004A] =
+		devm_regmap_init_i2c(aud3004x->i2c_priv[AUD3004A], &aud3004x_analog_regmap);
+	if (IS_ERR(aud3004x->regmap[AUD3004A])) {
+		dev_err(&i2c->dev, "Failed to allocate analog regmap: %li\n",
+				PTR_ERR(aud3004x->regmap[AUD3004A]));
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	aud3004x->regmap[AUD3004O] =
+		devm_regmap_init_i2c(aud3004x->i2c_priv[AUD3004O], &aud3004x_otp_regmap);
+	if (IS_ERR(aud3004x->regmap[AUD3004O])) {
+		dev_err(&i2c->dev, "Failed to allocate otp regmap: %li\n",
+				PTR_ERR(aud3004x->regmap[AUD3004O]));
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	i2c_set_clientdata(aud3004x->i2c_priv[AUD3004D], aud3004x);
+	i2c_set_clientdata(aud3004x->i2c_priv[AUD3004A], aud3004x);
+	i2c_set_clientdata(aud3004x->i2c_priv[AUD3004O], aud3004x);
+
+	dev = &aud3004x->i2c_priv[AUD3004D]->dev;
+	ret = snd_soc_register_codec(dev, &soc_codec_dev_aud3004x,
+			aud3004x_dai, ARRAY_SIZE(aud3004x_dai));
+	if (ret < 0) {
+		dev_err(&i2c->dev, "Failed to register digital codec: %d\n", ret);
+		goto err;
+	}
+
+#ifdef CONFIG_PM
+	pm_runtime_enable(aud3004x->dev);
+#endif
+
+	return ret;
+err:
+	kfree(aud3004x);
+	return ret;
+}
+
+static int aud3004x_i2c_remove(struct i2c_client *i2c)
+{
+	struct aud3004x_priv *aud3004x = dev_get_drvdata(&i2c->dev);
+
+	dev_dbg(aud3004x->dev, "(*) %s called\n", __func__);
+
+	snd_soc_unregister_codec(&i2c->dev);
+	kfree(aud3004x);
+
+	return 0;
+}
+
+static const struct i2c_device_id aud3004x_i2c_id[] = {
+	{ "aud3004x", 3004 },
+	{ }
+};
+MODULE_DEVICE_TABLE(i2c, aud3004x_i2c_id);
+
+const struct of_device_id aud3004x_of_match[] = {
+	{ .compatible = "codec,aud3004x", },
+	{ },
+};
+
+static struct i2c_driver aud3004x_i2c_driver = {
+	.driver = {
+		.name = "aud3004x",
+		.owner = THIS_MODULE,
+		.pm = &aud3004x_pm,
+		.of_match_table = of_match_ptr(aud3004x_of_match),
+	},
+	.probe = aud3004x_i2c_probe,
+	.remove = aud3004x_i2c_remove,
+	.id_table = aud3004x_i2c_id,
+};
+
+module_i2c_driver(aud3004x_i2c_driver);
+
+MODULE_DESCRIPTION("ASoC AUD3004X driver");
+MODULE_LICENSE("GPL v2");
+MODULE_ALIAS("platform:AUD3004X-codec");

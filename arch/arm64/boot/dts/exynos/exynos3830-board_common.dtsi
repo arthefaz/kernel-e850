@@ -114,6 +114,23 @@
 				status = "okay";
 				#address-cells = <1>;
 				#size-cells = <0>;
+				codec_aud3004x: aud3004x@07 {
+					compatible = "codec,aud3004x";
+					#sound-dai-cells = <0>;
+					reg = <0x07>;
+					i2c-speedy-address;
+					dmic-bias-gpio = <&gpg2 1 0xf>;
+					pinctrl-names = "default";
+					io-channels = <&exynos_adc 3>,<&exynos_adc 4>;
+					io-channel-names = "adc-gdet","adc-ear";
+					#io-channel-cells = <1>;
+					mic-adc-range = <1404>;
+					but-zones-list = <&but_zones 226 0 200>,
+						<&but_zones 582 201 400>,
+						<&but_zones 115 401 600>,
+						<&but_zones 114 601 1161>;
+					btn-release-value = <1404>;
+				};
 				s2mpu12mfd@00 {
 					compatible = "samsung,s2mpu12mfd";
 					acpm-ipc-channel = <2>;

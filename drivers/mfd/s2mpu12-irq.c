@@ -29,6 +29,7 @@
 #include <linux/sizes.h>
 #include <linux/io.h>
 #include <linux/workqueue.h>
+#include <sound/aud3004x.h>
 
 #define S2MPU12_IBI_CNT		4
 
@@ -280,9 +281,18 @@ static irqreturn_t s2mpu12_irq_thread(int irq, void *data)
 		if (ret)
 			return IRQ_NONE;
 	}
+
+#if 0
 	/* notify Codec */
 	if (ibi_src[0] & S2MPU12_IBI0_CODEC)
 		pr_info("%s: IBI from codec\n", __func__);
+		/* TODO : IRQ from s2mpu11 codec */
+		if (codec_notifier_flag)
+			aud3004x_call_notifier();
+		else
+			pr_err("%s: codec handler not registered!\n", __func__);
+	}
+#endif
 
 	return IRQ_HANDLED;
 }
