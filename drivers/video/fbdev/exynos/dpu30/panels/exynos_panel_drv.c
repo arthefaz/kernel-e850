@@ -569,6 +569,9 @@ static int exynos_panel_register(struct exynos_panel_device *panel, u32 id)
 	int panel_id, i;
 	const __be32 *cur;
 
+	if (IS_ENABLED(CONFIG_EXYNOS_VIRTUAL_DISPLAY))
+		id = 0;
+
 	for (i = 0; i < MAX_PANEL_SUPPORT; ++i) {
 		np = of_parse_phandle(n, "lcd_info", i);
 		if (!np) {
@@ -591,8 +594,10 @@ static int exynos_panel_register(struct exynos_panel_device *panel, u32 id)
 				/* parsing lcd info */
 				panel->lcd_info.id = id;
 				exynos_panel_parse_lcd_info(panel, np);
-				if (exynos_panel_register_ops(panel))
-					BUG();
+				if (!IS_ENABLED(CONFIG_EXYNOS_VIRTUAL_DISPLAY)) {
+					if (exynos_panel_register_ops(panel))
+						BUG();
+				}
 
 				break;
 			}
