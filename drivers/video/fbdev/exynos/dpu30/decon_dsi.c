@@ -504,7 +504,7 @@ static void decon_esd_process(int esd, struct decon_device *decon)
 	}
 }
 
-#define ESD_VSYNC_CHECK_TIME	100	/* unit : ms */
+#define ESD_VSYNC_CHECK_TIME	200	/* unit : ms */
 static int decon_esd_check(struct decon_device *decon, bool time_check)
 {
 	ktime_t time = ktime_get();
@@ -536,7 +536,7 @@ static int decon_esd_thread(void *data)
 {
 	struct decon_device *decon = data;
 	int esd_status = DSIM_ESD_OK;
-	bool time_check = true;
+	bool time_check = false;
 
 	while (!kthread_should_stop()) {
 		/* Loop for ESD detection */
@@ -551,19 +551,17 @@ static int decon_esd_thread(void *data)
 			continue;
 		}
 
-		if (IS_DECON_HIBER_STATE(decon))
-			time_check = false;
-		else
-			time_check = true;
-
 		decon_hiber_block_exit(decon);
 		if (IS_DECON_ON_STATE(decon)) {
 			mutex_lock(&decon->esd.lock);
 			if (decon->esd.need_check) {
 				if (decon_get_esd_recovery(decon))
 					esd_status = DSIM_ESD_ERROR;
-				else
+				else {
 					esd_status = decon_esd_check(decon, time_check);
+					if (decon_get_esd_recovery(decon))
+						esd_status = DSIM_ESD_ERROR;
+				}
 				decon_esd_process(esd_status, decon);
 				decon_set_esd_recovery(decon, false);
 			}
