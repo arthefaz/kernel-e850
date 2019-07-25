@@ -65,7 +65,7 @@
 						 DSS_LOG_IRQ,				/* enabled */
 						 DSS_LOG_SPINLOCK,			/* enabled */
 						/*  DSS_LOG_IRQ_DISABLED, */		/* disabled */
-						/*  DSS_LOG_REG, */			/* disabled */
+						 DSS_LOG_REG,				/* enabled */
 						 DSS_LOG_HRTIMER,			/* enabled */
 						 DSS_LOG_CLK,				/* enabled */
 						 DSS_LOG_PMU,				/* enabled */
