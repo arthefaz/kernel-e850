@@ -61,6 +61,8 @@
 
 		/* Default 10bit format for decoding (1: P010, 0: 8+2) */
 		P010_decoding = <1>;
+		/* Dithering option for 8bit display device */
+		dithering_enable = <0>;
 
 		/* Formats */
 		support_10bit = <0>;
