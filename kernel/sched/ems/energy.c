@@ -436,11 +436,15 @@ static struct notifier_block sched_cpufreq_policy_notifier = {
 };
 
 static void
-fill_frequency_table(struct energy_table *table, unsigned long *f_table)
+fill_frequency_table(struct energy_table *table, int table_size,
+			unsigned long *f_table, int max_f, int min_f)
 {
 	int i, index = 0;
 
-	for (i = table->nr_states - 1; i >=0; i--) {
+	for (i = table_size - 1; i >=0; i--) {
+		if (f_table[i] > max_f || f_table[i] < min_f)
+			continue;
+
 		table->states[index].frequency = f_table[i];
 		index++;
 	}
@@ -735,7 +739,7 @@ void init_sched_energy_table(struct cpumask *cpus, int table_size,
 			return;
 
 		table->nr_states = valid_table_size;
-		fill_frequency_table(table, f_table);
+		fill_frequency_table(table, table_size, f_table, max_f, min_f);
 	}
 
 	/*
