@@ -172,7 +172,7 @@ struct dbg_snapshot_log {
 	struct __freq_log {
 		unsigned long long time;
 		int cpu;
-		int type;
+		int freq_type;
 		char *freq_name;
 		unsigned long old_freq;
 		unsigned long target_freq;

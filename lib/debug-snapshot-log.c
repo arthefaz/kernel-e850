@@ -656,93 +656,6 @@ void dbg_snapshot_save_log(int cpu, unsigned long where)
 
 }
 
-static void dbg_snapshot_get_sec(unsigned long long ts, unsigned long *sec, unsigned long *msec)
-{
-	*sec = ts / NSEC_PER_SEC;
-	*msec = (ts % NSEC_PER_SEC) / USEC_PER_MSEC;
-}
-
-static void dbg_snapshot_print_last_irq(int cpu)
-{
-	unsigned long idx, sec, msec;
-	char fn_name[KSYM_NAME_LEN];
-
-	idx = atomic_read(&dss_log_misc.irq_log_idx[cpu]) & (ARRAY_SIZE(dss_log->irq[0]) - 1);
-	dbg_snapshot_get_sec(dss_log->irq[cpu][idx].time, &sec, &msec);
-	lookup_symbol_name((unsigned long)dss_log->irq[cpu][idx].fn, fn_name);
-
-	dev_info(dss_desc.dev, "%-16s: [%4lu] %10lu.%06lu sec, %10s: %24s, %8s: %8d, %10s: %2d, %s\n",
-			">>> last irq", idx, sec, msec,
-			"handler", fn_name,
-			"irq", dss_log->irq[cpu][idx].irq,
-			"en", dss_log->irq[cpu][idx].en,
-			(dss_log->irq[cpu][idx].en == 1) ? "[Missmatch]" : "");
-}
-
-static void dbg_snapshot_print_last_task(int cpu)
-{
-	unsigned long idx, sec, msec;
-	struct task_struct *task;
-
-	idx = atomic_read(&dss_log_misc.task_log_idx[cpu]) & (ARRAY_SIZE(dss_log->task[0]) - 1);
-	dbg_snapshot_get_sec(dss_log->task[cpu][idx].time, &sec, &msec);
-	task = dss_log->task[cpu][idx].task;
-
-	dev_info(dss_desc.dev, "%-16s: [%4lu] %10lu.%06lu sec, %10s: %24s, %8s: 0x%-16p, %10s: %16llu\n",
-			">>> last task", idx, sec, msec,
-			"task_comm", (task) ? task->comm : "NULL",
-			"task", task,
-			"exec_start", (task) ? task->se.exec_start : 0);
-}
-
-static void dbg_snapshot_print_last_work(int cpu)
-{
-	unsigned long idx, sec, msec;
-	char fn_name[KSYM_NAME_LEN];
-
-	idx = atomic_read(&dss_log_misc.work_log_idx[cpu]) & (ARRAY_SIZE(dss_log->work[0]) - 1);
-	dbg_snapshot_get_sec(dss_log->work[cpu][idx].time, &sec, &msec);
-	lookup_symbol_name((unsigned long)dss_log->work[cpu][idx].fn, fn_name);
-
-	dev_info(dss_desc.dev, "%-16s: [%4lu] %10lu.%06lu sec, %10s: %24s, %8s: %20s, %3s: %3d %s\n",
-			">>> last work", idx, sec, msec,
-			"task_name", dss_log->work[cpu][idx].task_comm,
-			"work_fn", fn_name,
-			"en", dss_log->work[cpu][idx].en,
-			(dss_log->work[cpu][idx].en == 1) ? "[Missmatch]" : "");
-}
-
-static void dbg_snapshot_print_last_cpuidle(int cpu)
-{
-	unsigned long idx, sec, msec;
-
-	idx = atomic_read(&dss_log_misc.cpuidle_log_idx[cpu]) & (ARRAY_SIZE(dss_log->cpuidle[0]) - 1);
-	dbg_snapshot_get_sec(dss_log->cpuidle[cpu][idx].time, &sec, &msec);
-
-	dev_info(dss_desc.dev, "%-16s: [%4lu] %10lu.%06lu sec, %10s: %24d, %8s: %4s, %6s: %3d, %12s: %2d, %3s: %3d %s\n",
-			">>> last cpuidle", idx, sec, msec,
-			"stay time", dss_log->cpuidle[cpu][idx].delta,
-			"modes", dss_log->cpuidle[cpu][idx].modes,
-			"state", dss_log->cpuidle[cpu][idx].state,
-			"online_cpus", dss_log->cpuidle[cpu][idx].num_online_cpus,
-			"en", dss_log->cpuidle[cpu][idx].en,
-			(dss_log->cpuidle[cpu][idx].en == 1) ? "[Missmatch]" : "");
-}
-
-static void dbg_snapshot_print_lastinfo(void)
-{
-	int cpu;
-
-	dev_info(dss_desc.dev, "<last info>\n");
-	for (cpu = 0; cpu < DSS_NR_CPUS; cpu++) {
-		dev_info(dss_desc.dev, "CPU ID: %d -----------------------------------------------\n", cpu);
-		dbg_snapshot_print_last_task(cpu);
-		dbg_snapshot_print_last_work(cpu);
-		dbg_snapshot_print_last_irq(cpu);
-		dbg_snapshot_print_last_cpuidle(cpu);
-	}
-}
-
 void dbg_snapshot_regulator(unsigned long long timestamp, char* f_name, unsigned int addr, unsigned int volt, unsigned int rvolt, int en)
 {
 	struct dbg_snapshot_item *item = &dss_items[DSS_ITEM_KEVENTS_ID];
@@ -973,12 +886,145 @@ void dbg_snapshot_print_notifier_call(void **nl, unsigned long func, int en)
 	}
 }
 
+void dbg_snapshot_freq(int type, unsigned long old_freq, unsigned long target_freq, int en)
+{
+	struct dbg_snapshot_item *item = &dss_items[DSS_ITEM_KEVENTS_ID];
+	struct dbg_snapshot_log_item *log_item = &dss_log_items[DSS_LOG_FREQ_ID];
+
+	if (unlikely(!dss_base.enabled || !item->entry.enabled || !log_item->entry.enabled))
+		return;
+	{
+		int cpu = raw_smp_processor_id();
+		unsigned long i = atomic_inc_return(&dss_log_misc.freq_log_idx) &
+				(ARRAY_SIZE(dss_log->freq) - 1);
+
+		if (atomic_read(&dss_log_misc.freq_log_idx) > atomic_read(&dss_lastinfo.freq_last_idx[type]))
+			atomic_set(&dss_lastinfo.freq_last_idx[type], atomic_read(&dss_log_misc.freq_log_idx));
+
+		dss_log->freq[i].time = cpu_clock(cpu);
+		dss_log->freq[i].cpu = cpu;
+		dss_log->freq[i].freq_name = dss_freq_name[type];
+		dss_log->freq[i].freq_type = type;
+		dss_log->freq[i].old_freq = old_freq;
+		dss_log->freq[i].target_freq = target_freq;
+		dss_log->freq[i].en = en;
+	}
+}
+
+static void dbg_snapshot_get_sec(unsigned long long ts, unsigned long *sec, unsigned long *msec)
+{
+	*sec = ts / NSEC_PER_SEC;
+	*msec = (ts % NSEC_PER_SEC) / USEC_PER_MSEC;
+}
+
+static void dbg_snapshot_print_last_irq(int cpu)
+{
+	struct dbg_snapshot_log_item *log_item = &dss_log_items[DSS_LOG_IRQ_ID];
+	unsigned long idx, sec, msec;
+	char fn_name[KSYM_NAME_LEN];
+
+	if (!log_item->entry.enabled)
+		return;
+
+	idx = atomic_read(&dss_log_misc.irq_log_idx[cpu]) & (ARRAY_SIZE(dss_log->irq[0]) - 1);
+	dbg_snapshot_get_sec(dss_log->irq[cpu][idx].time, &sec, &msec);
+	lookup_symbol_name((unsigned long)dss_log->irq[cpu][idx].fn, fn_name);
+
+	dev_info(dss_desc.dev, "%-16s: [%4ld] %10lu.%06lu sec, %10s: %24s, %8s: %8d, %10s: %2d, %s\n",
+			">>> last irq", idx, sec, msec,
+			"handler", fn_name,
+			"irq", dss_log->irq[cpu][idx].irq,
+			"en", dss_log->irq[cpu][idx].en,
+			(dss_log->irq[cpu][idx].en == 1) ? "[Missmatch]" : "");
+}
+
+static void dbg_snapshot_print_last_task(int cpu)
+{
+	struct dbg_snapshot_log_item *log_item = &dss_log_items[DSS_LOG_TASK_ID];
+	unsigned long idx, sec, msec;
+	struct task_struct *task;
+
+	if (!log_item->entry.enabled)
+		return;
+
+	idx = atomic_read(&dss_log_misc.task_log_idx[cpu]) & (ARRAY_SIZE(dss_log->task[0]) - 1);
+	dbg_snapshot_get_sec(dss_log->task[cpu][idx].time, &sec, &msec);
+	task = dss_log->task[cpu][idx].task;
+
+	dev_info(dss_desc.dev, "%-16s: [%4lu] %10lu.%06lu sec, %10s: %24s, %8s: 0x%-16p, %10s: %16llu\n",
+			">>> last task", idx, sec, msec,
+			"task_comm", (task) ? task->comm : "NULL",
+			"task", task,
+			"exec_start", (task) ? task->se.exec_start : 0);
+}
+
+static void dbg_snapshot_print_last_work(int cpu)
+{
+	struct dbg_snapshot_log_item *log_item = &dss_log_items[DSS_LOG_WORK_ID];
+	unsigned long idx, sec, msec;
+	char fn_name[KSYM_NAME_LEN];
+
+	if (!log_item->entry.enabled)
+		return;
+
+	idx = atomic_read(&dss_log_misc.work_log_idx[cpu]) & (ARRAY_SIZE(dss_log->work[0]) - 1);
+	dbg_snapshot_get_sec(dss_log->work[cpu][idx].time, &sec, &msec);
+	lookup_symbol_name((unsigned long)dss_log->work[cpu][idx].fn, fn_name);
+
+	dev_info(dss_desc.dev, "%-16s: [%4lu] %10lu.%06lu sec, %10s: %24s, %8s: %20s, %3s: %3d %s\n",
+			">>> last work", idx, sec, msec,
+			"task_name", dss_log->work[cpu][idx].task_comm,
+			"work_fn", fn_name,
+			"en", dss_log->work[cpu][idx].en,
+			(dss_log->work[cpu][idx].en == 1) ? "[Missmatch]" : "");
+}
+
+static void dbg_snapshot_print_last_cpuidle(int cpu)
+{
+	struct dbg_snapshot_log_item *log_item = &dss_log_items[DSS_LOG_CPUIDLE_ID];
+	unsigned long idx, sec, msec;
+
+	if (!log_item->entry.enabled)
+		return;
+
+	idx = atomic_read(&dss_log_misc.cpuidle_log_idx[cpu]) & (ARRAY_SIZE(dss_log->cpuidle[0]) - 1);
+	dbg_snapshot_get_sec(dss_log->cpuidle[cpu][idx].time, &sec, &msec);
+
+	dev_info(dss_desc.dev, "%-16s: [%4lu] %10lu.%06lu sec, %10s: %24d, %8s: %4s, %6s: %3d, %12s: %2d, %3s: %3d %s\n",
+			">>> last cpuidle", idx, sec, msec,
+			"stay time", dss_log->cpuidle[cpu][idx].delta,
+			"modes", dss_log->cpuidle[cpu][idx].modes,
+			"state", dss_log->cpuidle[cpu][idx].state,
+			"online_cpus", dss_log->cpuidle[cpu][idx].num_online_cpus,
+			"en", dss_log->cpuidle[cpu][idx].en,
+			(dss_log->cpuidle[cpu][idx].en == 1) ? "[Missmatch]" : "");
+}
+
+static void dbg_snapshot_print_lastinfo(void)
+{
+	int cpu;
+
+	dev_info(dss_desc.dev, "<last info>\n");
+	for (cpu = 0; cpu < DSS_NR_CPUS; cpu++) {
+		dev_info(dss_desc.dev, "CPU ID: %d -----------------------------------------------\n", cpu);
+		dbg_snapshot_print_last_task(cpu);
+		dbg_snapshot_print_last_work(cpu);
+		dbg_snapshot_print_last_irq(cpu);
+		dbg_snapshot_print_last_cpuidle(cpu);
+	}
+}
+
+
 static void dbg_snapshot_print_freqinfo(void)
 {
+	struct dbg_snapshot_log_item *log_item = &dss_log_items[DSS_LOG_FREQ_ID];
 	unsigned long idx, sec, msec;
 	char *freq_name;
 	unsigned int i;
 	unsigned long old_freq, target_freq;
+
+	if (!log_item->entry.enabled)
+		return;
 
 	dev_info(dss_desc.dev, "\n<freq info>\n");
 
@@ -999,31 +1045,6 @@ static void dbg_snapshot_print_freqinfo(void)
 					"target_freq", target_freq/1000,
 					"en", dss_log->freq[idx].en,
 					(dss_log->freq[idx].en == 1) ? "[Missmatch]" : "");
-	}
-}
-
-void dbg_snapshot_freq(int type, unsigned long old_freq, unsigned long target_freq, int en)
-{
-	struct dbg_snapshot_item *item = &dss_items[DSS_ITEM_KEVENTS_ID];
-	struct dbg_snapshot_log_item *log_item = &dss_log_items[DSS_LOG_FREQ_ID];
-
-	if (unlikely(!dss_base.enabled || !item->entry.enabled || !log_item->entry.enabled))
-		return;
-	{
-		int cpu = raw_smp_processor_id();
-		unsigned long i = atomic_inc_return(&dss_log_misc.freq_log_idx) &
-				(ARRAY_SIZE(dss_log->freq) - 1);
-
-		if (atomic_read(&dss_log_misc.freq_log_idx) > atomic_read(&dss_lastinfo.freq_last_idx[type]))
-			atomic_set(&dss_lastinfo.freq_last_idx[type], atomic_read(&dss_log_misc.freq_log_idx));
-
-		dss_log->freq[i].time = cpu_clock(cpu);
-		dss_log->freq[i].cpu = cpu;
-		dss_log->freq[i].freq_name = dss_freq_name[type];
-		dss_log->freq[i].type = type;
-		dss_log->freq[i].old_freq = old_freq;
-		dss_log->freq[i].target_freq = target_freq;
-		dss_log->freq[i].en = en;
 	}
 }
 
@@ -1064,9 +1085,7 @@ static void dbg_snapshot_print_irq(void)
 
 void dbg_snapshot_print_panic_report(void)
 {
-	struct dbg_snapshot_item *item = &dss_items[DSS_ITEM_KEVENTS_ID];
-
-	if (unlikely(!dss_base.enabled || !item->entry.enabled))
+	if (unlikely(!dss_base.enabled))
 		return;
 
 	dev_info(dss_desc.dev, "============================================================\n");
