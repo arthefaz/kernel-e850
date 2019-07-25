@@ -692,6 +692,12 @@ config CHARGER_S2MCS02
 	help
 	  Say Y here to enable support for the S2MCS02 charger.
 
+config FAKE_BATT
+	tristate "SMDK board only support"
+	depends on MANAGER_S2M_CHARGER
+	help
+	  Say Y here to enable support for S2MXXXX charging manager driver on SMDK board.
+
 config MANAGER_S2M_CHARGER
 	tristate "S2M_CHG_MANAGER battery driver"
 	help

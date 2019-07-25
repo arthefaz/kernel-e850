@@ -1351,7 +1351,38 @@ static void check_charging_full(struct s2m_chg_manager_info *battery)
 		pr_info("%s: Full charged, charger off\n", __func__);
 	}
 }
+#ifdef CONFIG_FAKE_BATT
+static void bat_monitor_work(struct work_struct *work)
+{
+	struct s2m_chg_manager_info *battery = container_of(work,
+							    struct s2m_chg_manager_info,
+							    monitor_work.work);
 
+	pr_info("%s: start monitoring\n", __func__);
+
+	battery->battery_valid = false;
+
+	get_battery_info(battery);
+
+	check_health(battery);
+
+	check_charging_full(battery);
+
+	power_supply_changed(battery->psy_battery);
+
+	pr_err(	"%s: Status(%s), Health(%s), Cable(%d), Recharging(%d))"
+		"\n", __func__,
+		bat_status_str[battery->status],
+		health_str[battery->health],
+		battery->cable_type,
+		battery->is_recharging);
+
+	alarm_cancel(&battery->monitor_alarm);
+	alarm_start_relative(&battery->monitor_alarm,
+			     ktime_set(battery->monitor_alarm_interval, 0));
+	wake_unlock(&battery->monitor_wake_lock);
+}
+#else
 static void bat_monitor_work(struct work_struct *work)
 {
 	struct s2m_chg_manager_info *battery = container_of(work,
@@ -1362,6 +1393,7 @@ static void bat_monitor_work(struct work_struct *work)
 	int ret;
 
 	pr_info("%s: start monitoring\n", __func__);
+
 	psy = power_supply_get_by_name(battery->pdata->charger_name);
 	if (!psy)
 		return;
@@ -1397,6 +1429,7 @@ continue_monitor:
 			     ktime_set(battery->monitor_alarm_interval, 0));
 	wake_unlock(&battery->monitor_wake_lock);
 }
+#endif
 
 #ifdef CONFIG_OF
 static int s2m_chg_manager_parse_dt(struct device *dev,
@@ -1776,6 +1809,9 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 	if (!psy)
 		pr_info("%s: there's no charger driver\n", __func__);
 	else {
+#ifdef CONFIG_FAKE_BATT
+		battery->battery_valid = false;
+#else
 		ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_PRESENT, &value);
 		if (ret < 0)
 			pr_err("%s: Fail to execute property\n", __func__);
@@ -1784,6 +1820,7 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 			battery->battery_valid = false;
 		else
 			battery->battery_valid = true;
+#endif
 	}
 	/* Register battery as "POWER_SUPPLY_TYPE_BATTERY" */
 	battery->psy_battery_desc.name = "battery";
