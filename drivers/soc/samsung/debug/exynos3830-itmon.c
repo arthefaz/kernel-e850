@@ -198,12 +198,16 @@ struct itmon_platdata {
 	struct itmon_traceinfo traceinfo[TRANS_TYPE_NUM];
 	struct list_head tracelist[TRANS_TYPE_NUM];
 	ktime_t last_time;
-	bool panic_go;
 	bool cp_crash_in_progress;
 	unsigned int sysfs_tmout_val;
-	bool sysfs_scandump;
-	bool sysfs_s2d;
+
 	bool err_fatal;
+	bool err_ip;
+	bool err_drex_tmout;
+	bool err_cpu;
+	bool err_cp;
+	bool err_chub;
+
 	unsigned int err_cnt;
 	unsigned int err_cnt_by_cpu;
 	bool probed;
@@ -420,18 +424,6 @@ static const struct of_device_id itmon_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, itmon_dt_match);
 
-static void itmon_switch_s2d(struct itmon_dev *itmon)
-{
-	struct itmon_platdata *pdata = itmon->pdata;
-
-	if (pdata->err_fatal) {
-		dev_err(itmon->dev,
-			"ITMON Runs Scan2DRAM Trigger by err_fatal : %d\n", pdata->err_fatal);
-		s3c2410wdt_set_emergency_reset(3, 0);
-		dbg_snapshot_spin_func();
-	}
-}
-
 static struct itmon_rpathinfo *itmon_get_rpathinfo(struct itmon_dev *itmon,
 					       unsigned int id,
 					       char *dest_name)
@@ -578,8 +570,7 @@ static void itmon_post_handler_apply_policy(struct itmon_dev *itmon,
 	case NOTIFY_BAD:
 		dev_err(itmon->dev, "notify calls response NOTIFY_BAD\n"
 				    "ITMON goes the PANIC & Debug Action\n");
-		pdata->err_fatal = true;
-		pdata->panic_go = true;
+		pdata->err_ip = true;
 		break;
 	}
 }
@@ -624,8 +615,7 @@ static void itmon_post_handler_by_dest(struct itmon_dev *itmon,
 	if (traceinfo->errcode == ERRCODE_TMOUT &&
 		traceinfo->snode_dirty == true &&
 		traceinfo->path_type == BUS_DATA) {
-			pdata->err_fatal = true;
-			pdata->panic_go = true;
+		pdata->err_drex_tmout = true;
 	}
 }
 
@@ -647,27 +637,14 @@ static void itmon_post_handler_by_master(struct itmon_dev *itmon,
 		interval = ktime_sub(now, pdata->last_time);
 		pdata->last_time = now;
 		pdata->err_cnt_by_cpu++;
+		pdata->err_cpu = true;
 
-		if (traceinfo->errcode == ERRCODE_TMOUT &&
-			traceinfo->snode_dirty == true) {
-			pdata->err_fatal = true;
-			pdata->panic_go = true;
-			dev_err(itmon->dev,
-				"ITMON try to run PANIC, even CPU transaction detected - %s",
-				itmon_errcode[traceinfo->errcode]);
-		} else {
-			dev_err(itmon->dev, "ITMON skips CPU transaction detected - "
-				"err_cnt_by_cpu: %u, interval: %lluns\n",
-				pdata->err_cnt_by_cpu,
-				(unsigned long long)ktime_to_ns(interval));
-		}
+		dev_err(itmon->dev, "CPU transaction detected - "
+			"err_cnt_by_cpu: %u, interval: %lluns\n",
+			pdata->err_cnt_by_cpu,
+			(unsigned long long)ktime_to_ns(interval));
 	} else if (!strncmp(traceinfo->port, CP_COMMON_STR, strlen(CP_COMMON_STR))) {
-		if (1) {
-			/* In Special case, ITMON should skip stopping system */
-		} else {
-			/* In most of case, ITMON should stop the system with CP Crash */
-		}
-		pdata->err_fatal = false;
+		pdata->err_cp = true;
 	}
 }
 
@@ -1167,8 +1144,6 @@ static int itmon_search_node(struct itmon_dev *itmon, struct itmon_nodegroup *gr
 				if (BIT_PROT_CHK_ERR_OCCURRED(val) && (val & GENMASK(31, 1))) {
 					itmon_report_prot_chk_rawdata(itmon, &node[bit]);
 					pdata->err_fatal = true;
-					/* Go panic now */
-					pdata->panic_go = true;
 					ret = true;
 				}
 			}
@@ -1183,8 +1158,6 @@ static int itmon_search_node(struct itmon_dev *itmon, struct itmon_nodegroup *gr
 					if (freeze & BIT(1))
 						itmon_report_timeout(itmon, &node[bit], TRANS_TYPE_READ);
 					pdata->err_fatal = true;
-					/* Go panic now */
-					pdata->panic_go = true;
 					ret = true;
 				}
 			}
@@ -1228,8 +1201,6 @@ static int itmon_search_node(struct itmon_dev *itmon, struct itmon_nodegroup *gr
 					if (BIT_PROT_CHK_ERR_OCCURRED(val) && (val & GENMASK(31, 1))) {
 						itmon_report_prot_chk_rawdata(itmon, &node[bit]);
 						pdata->err_fatal = true;
-						/* Go panic now */
-						pdata->panic_go = true;
 						ret = true;
 					}
 				}
@@ -1244,8 +1215,6 @@ static int itmon_search_node(struct itmon_dev *itmon, struct itmon_nodegroup *gr
 						if (freeze & BIT(1))
 							itmon_report_timeout(itmon, &node[bit], TRANS_TYPE_READ);
 						pdata->err_fatal = true;
-						/* Go panic now */
-						pdata->panic_go = true;
 						ret = true;
 					}
 				}
@@ -1256,6 +1225,54 @@ static int itmon_search_node(struct itmon_dev *itmon, struct itmon_nodegroup *gr
  exit:
 	spin_unlock_irqrestore(&itmon->ctrl_lock, flags);
 	return ret;
+}
+
+static void itmon_do_dpm_policy(struct itmon_dev *itmon)
+{
+	struct itmon_platdata *pdata = itmon->pdata;
+	int policy;
+
+	if (pdata->err_fatal) {
+		policy = dbg_snapshot_get_dpm_item_policy(DPM_P, DPM_P_ITMON, DPM_P_ITMON_ERR_FATAL);
+		if (policy != GO_DEFAULT_ID)
+			dbg_snapshot_soc_do_dpm_policy(policy);
+		pdata->err_fatal = false;
+	}
+
+	if (pdata->err_drex_tmout) {
+		policy = dbg_snapshot_get_dpm_item_policy(DPM_P, DPM_P_ITMON, DPM_P_ITMON_ERR_DREX_TMOUT);
+		if (policy != GO_DEFAULT_ID)
+			dbg_snapshot_soc_do_dpm_policy(policy);
+		pdata->err_drex_tmout = false;
+	}
+
+	if (pdata->err_ip) {
+		policy = dbg_snapshot_get_dpm_item_policy(DPM_P, DPM_P_ITMON, DPM_P_ITMON_ERR_IP);
+		if (policy != GO_DEFAULT_ID)
+			dbg_snapshot_soc_do_dpm_policy(policy);
+		pdata->err_ip = false;
+	}
+
+	if (pdata->err_chub) {
+		policy = dbg_snapshot_get_dpm_item_policy(DPM_P, DPM_P_ITMON, DPM_P_ITMON_ERR_CHUB);
+		if (policy != GO_DEFAULT_ID)
+			dbg_snapshot_soc_do_dpm_policy(policy);
+		pdata->err_chub = false;
+	}
+
+	if (pdata->err_cp) {
+		policy = dbg_snapshot_get_dpm_item_policy(DPM_P, DPM_P_ITMON, DPM_P_ITMON_ERR_CP);
+		if (policy != GO_DEFAULT_ID)
+			dbg_snapshot_soc_do_dpm_policy(policy);
+		pdata->err_cp = false;
+	}
+
+	if (pdata->err_cpu) {
+		policy = dbg_snapshot_get_dpm_item_policy(DPM_P, DPM_P_ITMON, DPM_P_ITMON_ERR_CPU);
+		if (policy != GO_DEFAULT_ID)
+			dbg_snapshot_soc_do_dpm_policy(policy);
+		pdata->err_cpu = false;
+	}
 }
 
 static irqreturn_t itmon_irq_handler(int irq, void *data)
@@ -1270,22 +1287,10 @@ static irqreturn_t itmon_irq_handler(int irq, void *data)
 	for (i = 0; i < (int)ARRAY_SIZE(nodegroup); i++) {
 		if (irq == nodegroup[i].irq) {
 			group = &pdata->nodegroup[i];
-			if (group->phy_regs != 0) {
-				dev_err(itmon->dev,
-					"\nITMON Detected: %d irq, %s group, 0x%x vec, "
-					"err_cnt:%u err_cnt_by_cpu:%u\n",
-					irq, group->name,
-					__raw_readl(group->regs),
-					pdata->err_cnt,
-					pdata->err_cnt_by_cpu);
-			} else {
-				dev_err(itmon->dev,
-					"\nITMON Detected: %d irq, %s group, "
-					"err_cnt:%u err_cnt_by_cpu:%u\n",
-					irq, group->name,
-					pdata->err_cnt,
-					pdata->err_cnt_by_cpu);
-			}
+			dev_err(itmon->dev,
+				"\n%s: %d irq, %s group, 0x%x vec",
+				__func__, irq, group->name,
+				group->phy_regs == 0 ? 0 : __raw_readl(group->regs));
 			break;
 		}
 	}
@@ -1294,15 +1299,16 @@ static irqreturn_t itmon_irq_handler(int irq, void *data)
 	if (!ret) {
 		dev_err(itmon->dev, "ITMON could not detect any error\n");
 	} else {
-		if (pdata->sysfs_s2d)
-			itmon_switch_s2d(itmon);
+		dev_err(itmon->dev,
+			"\nITMON Detected: err_fatal:%d, err_drex_tmout:%d, err_cpu:%d, err_cnt:%u, err_cnt_by_cpu:%u\n",
+			pdata->err_fatal,
+			pdata->err_drex_tmout,
+			pdata->err_cpu,
+			pdata->err_cnt,
+			pdata->err_cnt_by_cpu);
 
-		if (pdata->err_cnt > PANIC_GO_THRESHOLD)
-			pdata->panic_go = true;
+		itmon_do_dpm_policy(itmon);
 	}
-
-	if (pdata->panic_go)
-		panic("ITMON occurs the PANIC, Transaction is invalid from IPs");
 
 	return IRQ_HANDLED;
 }
@@ -1340,66 +1346,6 @@ static ssize_t itmon_timeout_fix_val_store(struct kobject *kobj,
 	if (!ret) {
 	if (val > 0 && val <= 0xFFFFF)
 		pdata->sysfs_tmout_val = val;
-	} else {
-		dev_err(g_itmon->dev, "%s: kstrtoul return value is %d\n", __func__, ret);
-	}
-
-	return count;
-}
-
-static ssize_t itmon_scandump_show(struct kobject *kobj,
-			         struct kobj_attribute *attr, char *buf)
-{
-	ssize_t n = 0;
-	struct itmon_platdata *pdata = g_itmon->pdata;
-
-	n = scnprintf(buf + n, 24, "scandump mode is %sable : %d\n",
-		pdata->sysfs_scandump == 1 ? "en" : "dis",
-		pdata->sysfs_scandump);
-
-	return n;
-}
-
-static ssize_t itmon_scandump_store(struct kobject *kobj,
-				struct kobj_attribute *attr,
-				const char *buf, size_t count)
-{
-	unsigned long val = 0;
-	int ret;
-
-	ret = kstrtoul(buf, 16, &val);
-	if (!ret) {
-		g_itmon->pdata->sysfs_scandump = !!val;
-	} else {
-		dev_err(g_itmon->dev, "%s: kstrtoul return value is %d\n", __func__, ret);
-	}
-
-	return count;
-}
-
-static ssize_t itmon_s2d_show(struct kobject *kobj,
-			         struct kobj_attribute *attr, char *buf)
-{
-	ssize_t n = 0;
-	struct itmon_platdata *pdata = g_itmon->pdata;
-
-	n = scnprintf(buf + n, 24, "s2d mode is %sable : %d\n",
-		pdata->sysfs_s2d == 1 ? "en" : "dis",
-		pdata->sysfs_s2d);
-
-	return n;
-}
-
-static ssize_t itmon_s2d_store(struct kobject *kobj,
-				struct kobj_attribute *attr,
-				const char *buf, size_t count)
-{
-	unsigned long val = 0;
-	int ret;
-
-	ret = kstrtoul(buf, 16, &val);
-	if (!ret) {
-		g_itmon->pdata->sysfs_s2d = !!val;
 	} else {
 		dev_err(g_itmon->dev, "%s: kstrtoul return value is %d\n", __func__, ret);
 	}
@@ -1603,10 +1549,6 @@ static struct kobj_attribute itmon_timeout_attr =
 	__ATTR(timeout_en, 0644, itmon_timeout_show, itmon_timeout_store);
 static struct kobj_attribute itmon_timeout_fix_attr =
 	__ATTR(set_val, 0644, itmon_timeout_fix_val_show, itmon_timeout_fix_val_store);
-static struct kobj_attribute itmon_scandump_attr =
-	__ATTR(scandump_en, 0644, itmon_scandump_show, itmon_scandump_store);
-static struct kobj_attribute itmon_s2d_attr =
-        __ATTR(s2d_en, 0644, itmon_s2d_show, itmon_s2d_store);
 static struct kobj_attribute itmon_timeout_val_attr =
 	__ATTR(timeout_val, 0644, itmon_timeout_val_show, itmon_timeout_val_store);
 static struct kobj_attribute itmon_timeout_freeze_attr =
@@ -1617,8 +1559,6 @@ static struct attribute *itmon_sysfs_attrs[] = {
 	&itmon_timeout_fix_attr.attr,
 	&itmon_timeout_val_attr.attr,
 	&itmon_timeout_freeze_attr.attr,
-	&itmon_scandump_attr.attr,
-	&itmon_s2d_attr.attr,
 	NULL,
 };
 
@@ -1657,10 +1597,15 @@ static int itmon_logging_panic_handler(struct notifier_block *nb,
 		if (!ret) {
 			dev_info(itmon->dev, "No found error in %s\n", __func__);
 		} else {
-			dev_info(itmon->dev, "Found errors in %s\n", __func__);
+			dev_err(itmon->dev,
+				"\nITMON Detected: err_fatal:%d, err_drex_tmout:%d, err_cpu:%d, err_cnt:%u, err_cnt_by_cpu:%u\n",
+				pdata->err_fatal,
+				pdata->err_drex_tmout,
+				pdata->err_cpu,
+				pdata->err_cnt,
+				pdata->err_cnt_by_cpu);
 
-			if (pdata->sysfs_s2d)
-				itmon_switch_s2d(itmon);
+			itmon_do_dpm_policy(itmon);
 		}
 	}
 	return 0;
@@ -1751,7 +1696,6 @@ static int itmon_probe(struct platform_device *pdev)
 		INIT_LIST_HEAD(&pdata->tracelist[i]);
 
 	pdata->cp_crash_in_progress = false;
-	pdata->sysfs_s2d = true;
 
 	itmon_init(itmon, true);
 
