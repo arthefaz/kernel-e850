@@ -142,15 +142,15 @@ int exynos_select_task_rq(struct task_struct *p, int prev_cpu,
 		}
 	}
 
+	select_fit_cpus(&env);
+
 	if (sysctl_sched_sync_hint_enable && sync) {
 		target_cpu = smp_processor_id();
-		if (cpumask_test_cpu(target_cpu, &p->cpus_allowed)) {
+		if (cpumask_test_cpu(target_cpu, &env.fit_cpus)) {
 			trace_ems_select_task_rq(p, target_cpu, wake, "sync");
 			return target_cpu;
 		}
 	}
-
-	select_fit_cpus(&env);
 
 	/* There is no fit cpus */
 	if (cpumask_empty(&env.fit_cpus)) {
