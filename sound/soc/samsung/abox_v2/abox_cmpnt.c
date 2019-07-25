@@ -3905,15 +3905,6 @@ static const struct snd_kcontrol_new uaif2_spk_controls[] = {
 	SOC_DAPM_ENUM("MUX", uaif2_spk_enum),
 };
 
-static const char * const dsif_spk_texts[] = {
-	"RESERVED", "RESERVED", "SIFS1", "SIFS2", "SIFS3", "SIFS4", "SIFS5",
-};
-static SOC_ENUM_SINGLE_DECL(dsif_spk_enum, ABOX_ROUTE_CTRL0, ABOX_ROUTE_DSIF_L,
-		dsif_spk_texts);
-static const struct snd_kcontrol_new dsif_spk_controls[] = {
-	SOC_DAPM_ENUM("MUX", dsif_spk_enum),
-};
-
 static const struct snd_kcontrol_new uaif0_controls[] = {
 	SOC_DAPM_SINGLE("UAIF0 Switch", SND_SOC_NOPM, 0, 1, 1),
 };
@@ -3922,9 +3913,6 @@ static const struct snd_kcontrol_new uaif1_controls[] = {
 };
 static const struct snd_kcontrol_new uaif2_controls[] = {
 	SOC_DAPM_SINGLE("UAIF2 Switch", SND_SOC_NOPM, 0, 1, 1),
-};
-static const struct snd_kcontrol_new dsif_controls[] = {
-	SOC_DAPM_SINGLE("DSIF Switch", SND_SOC_NOPM, 0, 1, 1),
 };
 static const struct snd_kcontrol_new spdy_controls[] = {
 	SOC_DAPM_SINGLE("SPDY Switch", SND_SOC_NOPM, 0, 1, 1),

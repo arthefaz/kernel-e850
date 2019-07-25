@@ -40,7 +40,6 @@ static bool volatile_reg_legacy(struct device *dev, unsigned int reg)
 	case ABOX_UAIF_STATUS(2):
 	case ABOX_UAIF_STATUS(3):
 	case ABOX_UAIF_STATUS(4):
-	case ABOX_DSIF_STATUS:
 	case ABOX_RDMA_CTRL1(0):
 	case ABOX_RDMA_STATUS(0):
 	case ABOX_RDMA_CTRL1(1):
@@ -152,8 +151,6 @@ static bool readable_reg_legacy(struct device *dev, unsigned int reg)
 	case ABOX_UAIF_CTRL0(4):
 	case ABOX_UAIF_CTRL1(4):
 	case ABOX_UAIF_STATUS(4):
-	case ABOX_DSIF_CTRL:
-	case ABOX_DSIF_STATUS:
 	case ABOX_RDMA_CTRL0(0):
 	case ABOX_RDMA_CTRL1(0):
 	case ABOX_RDMA_BUF_STR(0):
@@ -527,7 +524,6 @@ static bool writeable_reg_legacy(struct device *dev, unsigned int reg)
 	case ABOX_UAIF_CTRL1(3):
 	case ABOX_UAIF_CTRL0(4):
 	case ABOX_UAIF_CTRL1(4):
-	case ABOX_DSIF_CTRL:
 	case ABOX_RDMA_CTRL0(0):
 	case ABOX_RDMA_CTRL1(0):
 	case ABOX_RDMA_BUF_STR(0):
@@ -1191,7 +1187,6 @@ static bool volatile_reg_9830(struct device *dev, unsigned int reg)
 	case ABOX_UAIF_STATUS(4):
 	case ABOX_UAIF_STATUS(5):
 	case ABOX_UAIF_STATUS(6):
-	case ABOX_DSIF_STATUS:
 	case ABOX_RDMA_CTRL1(0):
 	case ABOX_RDMA_STATUS(0):
 	case ABOX_RDMA_CTRL1(1):
@@ -1319,8 +1314,6 @@ static bool readable_reg_9830(struct device *dev, unsigned int reg)
 	case ABOX_UAIF_CTRL0(4) ... ABOX_UAIF_STATUS(4):
 	case ABOX_UAIF_CTRL0(5) ... ABOX_UAIF_STATUS(5):
 	case ABOX_UAIF_CTRL0(6) ... ABOX_UAIF_STATUS(6):
-	case ABOX_DSIF_CTRL:
-	case ABOX_DSIF_STATUS:
 		return true;
 
 	case ABOX_RDMA_CTRL0(0) ... ABOX_RDMA_STATUS(11):
@@ -1504,7 +1497,6 @@ static bool writeable_reg_9830(struct device *dev, unsigned int reg)
 	case ABOX_UAIF_CTRL0(4) ... ABOX_UAIF_IRQ_CTRL(4):
 	case ABOX_UAIF_CTRL0(5) ... ABOX_UAIF_IRQ_CTRL(5):
 	case ABOX_UAIF_CTRL0(6) ... ABOX_UAIF_IRQ_CTRL(6):
-	case ABOX_DSIF_CTRL:
 		return true;
 
 	case ABOX_RDMA_CTRL0(0) ... ABOX_RDMA_STATUS(11):
@@ -1637,7 +1629,6 @@ static bool volatile_reg_9630(struct device *dev, unsigned int reg)
 	case ABOX_UAIF_STATUS(4):
 	case ABOX_UAIF_STATUS(5):
 	case ABOX_UAIF_STATUS(6):
-	case ABOX_DSIF_STATUS:
 	case ABOX_RDMA_CTRL1(0):
 	case ABOX_RDMA_STATUS(0):
 	case ABOX_RDMA_CTRL1(1):
@@ -1766,8 +1757,6 @@ static bool readable_reg_9630(struct device *dev, unsigned int reg)
 	case ABOX_UAIF_CTRL0(4) ... ABOX_UAIF_STATUS(4):
 	case ABOX_UAIF_CTRL0(5) ... ABOX_UAIF_STATUS(5):
 	case ABOX_UAIF_CTRL0(6) ... ABOX_UAIF_STATUS(6):
-	case ABOX_DSIF_CTRL:
-	case ABOX_DSIF_STATUS:
 	case ABOX_SPDYIF_CTRL:
 		return true;
 
@@ -1953,7 +1942,6 @@ static bool writeable_reg_9630(struct device *dev, unsigned int reg)
 	case ABOX_UAIF_CTRL0(4) ... ABOX_UAIF_IRQ_CTRL(4):
 	case ABOX_UAIF_CTRL0(5) ... ABOX_UAIF_IRQ_CTRL(5):
 	case ABOX_UAIF_CTRL0(6) ... ABOX_UAIF_IRQ_CTRL(6):
-	case ABOX_DSIF_CTRL:
 	case ABOX_SPDYIF_CTRL:
 		return true;
 
