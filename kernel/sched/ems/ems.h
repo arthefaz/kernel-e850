@@ -76,6 +76,7 @@ extern struct cpumask *ecs_sparing_cpus(void);
 
 /* EMSTune pre-defined tunable set support */
 extern int emst_get_weight(struct task_struct *p, int cpu, int idle);
+extern const struct cpumask *emst_get_candidate_cpus(struct task_struct *p);
 
 static inline int cpu_overutilized(unsigned long capacity, unsigned long util)
 {

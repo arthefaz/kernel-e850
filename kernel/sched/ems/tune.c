@@ -26,6 +26,8 @@ struct emst_dom {
 };
 
 struct emst_group {
+	struct cpumask	candidate_cpus; /* candidate_cpus of this group for core selection */
+
 	struct emst_dom	*dom[NR_CPUS];
 	struct kobject	kobj;
 };
@@ -145,6 +147,23 @@ int emst_get_weight(struct task_struct *p, int cpu, int idle)
 		weight = dom->weight;
 
 	return weight;
+}
+
+const struct cpumask *emst_get_candidate_cpus(struct task_struct *p)
+{
+	int st_idx;
+	struct emst_group *group;
+
+	if (unlikely(!emst_init_f))
+		return cpu_active_mask;
+
+	st_idx = schedtune_task_group_idx(p);
+	group = &emst_modes[cur_mode].emst_grp[st_idx];
+
+	if (unlikely(cpumask_empty(&group->candidate_cpus)))
+		return cpu_active_mask;
+
+	return &group->candidate_cpus;
 }
 
 /**********************************************************************
@@ -374,6 +393,47 @@ emst_store_weight(idle_weight, idle_weight);
 emst_show_weight(idle_weight, idle_weight);
 emst_attr_rw(idle_weight);
 
+#define STR_LEN 10
+static ssize_t
+store_candidate_cpus(struct kobject *k, const char *buf, size_t count)
+{
+	char str[STR_LEN];
+	int i;
+	struct cpumask candidate_cpus;
+	struct emst_group *group = container_of(k, struct emst_group, kobj);
+
+	if (strlen(buf) >= STR_LEN)
+		return -EINVAL;
+
+	if (!sscanf(buf, "%s", str))
+		return -EINVAL;
+
+	if (str[0] == '0' && str[1] == 'x') {
+		for (i = 0; i+2 < STR_LEN; i++) {
+			str[i] = str[i + 2];
+			str[i+2] = '\n';
+		}
+	}
+
+	cpumask_parse(str, &candidate_cpus);
+	cpumask_copy(&group->candidate_cpus, &candidate_cpus);
+
+	return count;
+}
+
+static ssize_t
+show_candidate_cpus(struct kobject *k, char *buf)
+{
+	unsigned int candidate_cpus;
+	struct emst_group *group = container_of(k, struct emst_group, kobj);
+
+	candidate_cpus = *(unsigned int *)cpumask_bits(&group->candidate_cpus);
+
+	return snprintf(buf, 30, "candidate cpu : 0x%x\n", candidate_cpus);
+}
+
+emst_attr_rw(candidate_cpus);
+
 static ssize_t show(struct kobject *kobj, struct attribute *at, char *buf)
 {
 	struct emst_attr *attr = container_of(at, struct emst_attr, attr);
@@ -396,6 +456,7 @@ static struct attribute *emst_grp_attrs[] = {
 	&freq_boost_attr.attr,
 	&weight_attr.attr,
 	&idle_weight_attr.attr,
+	&candidate_cpus_attr.attr,
 	NULL
 };
 
@@ -548,6 +609,24 @@ emst_parse_##member(struct device_node *dn, struct emst_dom **dom,			\
 	return 0;									\
 }
 
+static int
+emst_parse_candidate_cpus(struct device_node *dn, struct emst_group *grp, char *grp_name)
+{
+	const char *val;
+	struct cpumask mask;
+
+	if (of_property_read_string(dn, grp_name, &val)) {
+		pr_warn("%s: failed to get %s of %s\n",
+					__func__, dn->name, grp_name);
+		return -EINVAL;
+	}
+
+	cpulist_parse(val, &mask);
+	cpumask_copy(&grp->candidate_cpus, &mask);
+
+	return 0;
+}
+
 parse_member(weight);
 parse_member(idle_weight);
 parse_member(freq_boost);
@@ -590,6 +669,14 @@ static int emst_parse_dt(struct device_node *mode_dn, struct emst_group *emst_gr
 
 			dom[cpu] = cur;
 		}
+
+		/* parsing candidate cpus for this cgroup */
+		dn = of_find_node_by_name(mode_dn, "candidate-cpus");
+		if (!dn) {
+			pr_warn("%s: no candidate cpus node in this mode\n", __func__);
+			return -EINVAL;
+		}
+		emst_parse_candidate_cpus(dn, &emst_grp[idx], grp_name);
 
 		/* parsing weight to calculate efficiency */
 		dn = of_find_node_by_name(mode_dn, "weight");
