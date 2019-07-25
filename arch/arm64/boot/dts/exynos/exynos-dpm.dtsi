@@ -15,17 +15,22 @@
 
 #include <dt-bindings/soc/samsung/debug-snapshot-def.h>
 
-/dts-v1/;
 
 / {
 	dpm {
+		version = <100>;
+		chip-id = <9630>;
+
 		security {
-			/* TODO */
+			cp_mem_not_clear        = <0>;
+			dbg_mem_enable          = <0>;
+			seh_enable              = <0>;
+			pm_test_enable          = <0>;
+			seclog_enable           = <0>;
+			sdm_enable              = <0>;
 		};
 
 		feature {
-			version = <100>;
-
 			/* debug feature */
 			debug {
 				enabled = <1>;
@@ -33,8 +38,8 @@
 
 			/* dump-mode support */
 			dump-mode {
-				enabled = <0>;
-				file-support = <1>;
+				enabled = <1>;
+				file-support = <0>;
 			};
 
 			/* DebugSnapshot logging */
@@ -45,13 +50,13 @@
 					 DSS_ITEM_FATAL,				/* enabled */
 					 DSS_ITEM_PSTORE,				/* enabled */
 					 DSS_ITEM_SFR,					/* enabled */
-					 DSS_ITEM_S2D,					/* enabled */
+					 /* DSS_ITEM_S2D, */				/* disabled */
 					 DSS_ITEM_ARRDUMP_RESET,			/* enabled */
-					 DSS_ITEM_ARRDUMP_PANIC,			/* enabled */
-					 DSS_ITEM_ETM,					/* enabled */
+					 /* DSS_ITEM_ARRDUMP_PANIC, */			/* disabled */
+					 /* DSS_ITEM_ETM, */				/* disabled */
 					 DSS_ITEM_BCM,					/* enabled */
-					 DSS_ITEM_LLC,					/* enabled */
-					 DSS_ITEM_DBGC;					/* enabled */
+					 DSS_ITEM_LLC;					/* enabled */
+					 /* DSS_ITEM_DBGC; */				/* disabled */
 				event {
 					method = DSS_LOG_TASK,				/* enabled */
 						 DSS_LOG_WORK,				/* enabled */
