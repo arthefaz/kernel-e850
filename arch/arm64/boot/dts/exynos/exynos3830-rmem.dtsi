@@ -9,7 +9,7 @@
  * published by the Free Software Foundation.
  */
 
-#include <dt-bindings/soc/samsung/debug-snapshot-table.h>
+#include <dt-bindings/soc/samsung/debug-snapshot-def.h>
 #include <dt-bindings/soc/samsung/exynos3830-seclog.h>
 
 / {
