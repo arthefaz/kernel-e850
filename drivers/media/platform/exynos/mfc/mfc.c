@@ -889,6 +889,9 @@ static int __mfc_parse_mfc_qos_platdata(struct device_node *np, char *node_name,
 	of_property_read_u32(np_qos, "freq_mfc", &qosdata->freq_mfc);
 	of_property_read_u32(np_qos, "freq_int", &qosdata->freq_int);
 	of_property_read_u32(np_qos, "freq_mif", &qosdata->freq_mif);
+	of_property_read_u32(np_qos, "mo_value", &qosdata->mo_value);
+	of_property_read_u32(np_qos, "mo_10bit_value", &qosdata->mo_10bit_value);
+	of_property_read_u32(np_qos, "mo_uhd_enc60_value", &qosdata->mo_uhd_enc60_value);
 	of_property_read_u32(np_qos, "time_fw", &qosdata->time_fw);
 
 	of_property_read_string(np_qos, "bts_scen", &qosdata->name);
@@ -897,7 +900,7 @@ static int __mfc_parse_mfc_qos_platdata(struct device_node *np, char *node_name,
 		return -EINVAL;
 	}
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 	qosdata->bts_scen_idx = bts_get_scenindex(qosdata->name);
 #endif
 
@@ -1077,7 +1080,7 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 		of_property_read_u32_array(np, "sbwc_bw_dec_mpeg4", &pdata->mfc_bw_info_sbwc.bw_dec_mpeg4.peak, 3);
 	}
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 	pdata->mfc_bw_index = bts_get_bwindex("mfc");
 #endif
 
@@ -1124,7 +1127,7 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 		return -EINVAL;
 	}
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 	pdata->qos_boost_table->bts_scen_idx = bts_get_scenindex(pdata->qos_boost_table->name);
 #endif
 

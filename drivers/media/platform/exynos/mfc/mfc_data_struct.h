@@ -17,10 +17,17 @@
 #define CONFIG_MFC_USE_BUS_DEVFREQ
 #endif
 
+#ifdef CONFIG_EXYNOS_BTS
+#define CONFIG_MFC_USE_BTS
+#ifdef CONFIG_EXYNOS9610_BTS
+#define CONFIG_MFC_NO_RENEWAL_BTS
+#endif
+#endif
+
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 #include <linux/pm_qos.h>
 #endif
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 #include <soc/samsung/bts.h>
 #endif
 #include <linux/videodev2.h>
@@ -458,6 +465,9 @@ struct mfc_qos {
 	unsigned int freq_mfc;
 	unsigned int freq_int;
 	unsigned int freq_mif;
+	unsigned int mo_value;
+	unsigned int mo_10bit_value;
+	unsigned int mo_uhd_enc60_value;
 	unsigned int time_fw;
 	unsigned int bts_scen_idx;
 	const char *name;

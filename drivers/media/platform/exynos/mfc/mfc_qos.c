@@ -11,7 +11,7 @@
  */
 
 #include <linux/err.h>
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 #include <soc/samsung/bts.h>
 #endif
 
@@ -51,12 +51,17 @@ void mfc_perf_boost_enable(struct mfc_dev *dev)
 				qos_boost_table->freq_mif);
 	}
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 	if (perf_boost_mode & MFC_PERF_BOOST_MO) {
 		if (pdata->mo_control) {
+#ifdef CONFIG_MFC_NO_RENEWAL_BTS
+			bts_update_scen(BS_MFC_UHD_10BIT, 1);
+			mfc_debug(3, "[QoS][BOOST] BTS(MO): UHD_10BIT\n");
+#else
 			bts_add_scenario(qos_boost_table->bts_scen_idx);
 			mfc_debug_dev(3, "[QoS][BOOST] BTS(MO) add idx %d (%s)\n",
 					qos_boost_table->bts_scen_idx, qos_boost_table->name);
+#endif
 		}
 	}
 #endif
@@ -84,13 +89,18 @@ void mfc_perf_boost_disable(struct mfc_dev *dev)
 		mfc_debug_dev(3, "[QoS][BOOST] DVFS off\n");
 	}
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 	if (perf_boost_mode & MFC_PERF_BOOST_MO) {
 		if (pdata->mo_control) {
+#ifdef CONFIG_MFC_NO_RENEWAL_BTS
+			bts_update_scen(BS_MFC_UHD_10BIT, 0);
+			mfc_debug(3, "[QoS][BOOST] BTS(MO) off\n");
+#else
 			bts_del_scenario(pdata->qos_boost_table->bts_scen_idx);
 			mfc_debug_dev(3, "[QoS][BOOST] BTS(MO) del idx %d (%s)\n",
 					pdata->qos_boost_table->bts_scen_idx,
 					pdata->qos_boost_table->name);
+#endif
 		}
 	}
 #endif
@@ -134,14 +144,26 @@ static void __mfc_qos_operate(struct mfc_dev *dev, int opr_type, int table_type,
 				PM_QOS_BUS_THROUGHPUT,
 				qos_table[idx].freq_mif);
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 		if (pdata->mo_control) {
+#ifdef CONFIG_MFC_NO_RENEWAL_BTS
+			bts_update_scen(BS_MFC_UHD_ENC60, qos_table[idx].mo_uhd_enc60_value);
+			bts_update_scen(BS_MFC_UHD_10BIT, qos_table[idx].mo_10bit_value);
+			bts_update_scen(BS_MFC_UHD, qos_table[idx].mo_value);
+			MFC_TRACE_CTX("BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
+					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
+					qos_table[idx].mo_uhd_enc60_value);
+			mfc_debug(2, "[QoS] BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
+					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
+					qos_table[idx].mo_uhd_enc60_value);
+#else
 			bts_add_scenario(qos_table[idx].bts_scen_idx);
 			dev->prev_bts_scen_idx = qos_table[idx].bts_scen_idx;
 			MFC_TRACE_DEV("BTS(MO) add idx %d (%s)\n",
 					qos_table[idx].bts_scen_idx, qos_table[idx].name);
 			mfc_debug_dev(2, "[QoS] BTS(MO) add idx %d (%s)\n",
 					qos_table[idx].bts_scen_idx, qos_table[idx].name);
+#endif
 		}
 #endif
 
@@ -165,8 +187,19 @@ static void __mfc_qos_operate(struct mfc_dev *dev, int opr_type, int table_type,
 		pm_qos_update_request(&dev->qos_req_int, qos_table[idx].freq_int);
 		pm_qos_update_request(&dev->qos_req_mif, qos_table[idx].freq_mif);
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 		if (pdata->mo_control) {
+#ifdef CONFIG_MFC_NO_RENEWAL_BTS
+			bts_update_scen(BS_MFC_UHD_ENC60, qos_table[idx].mo_uhd_enc60_value);
+			bts_update_scen(BS_MFC_UHD_10BIT, qos_table[idx].mo_10bit_value);
+			bts_update_scen(BS_MFC_UHD, qos_table[idx].mo_value);
+			MFC_TRACE_CTX("BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
+					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
+					qos_table[idx].mo_uhd_enc60_value);
+			mfc_debug(2, "[QoS] BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
+					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
+					qos_table[idx].mo_uhd_enc60_value);
+#else
 			bts_add_scenario(qos_table[idx].bts_scen_idx);
 			bts_del_scenario(dev->prev_bts_scen_idx);
 			dev->prev_bts_scen_idx = qos_table[idx].bts_scen_idx;
@@ -174,6 +207,7 @@ static void __mfc_qos_operate(struct mfc_dev *dev, int opr_type, int table_type,
 					qos_table[idx].bts_scen_idx, qos_table[idx].name);
 			mfc_debug_dev(2, "[QoS] BTS(MO) update idx %d (%s)\n",
 					qos_table[idx].bts_scen_idx, qos_table[idx].name);
+#endif
 		}
 #endif
 
@@ -191,11 +225,17 @@ static void __mfc_qos_operate(struct mfc_dev *dev, int opr_type, int table_type,
 		pm_qos_remove_request(&dev->qos_req_int);
 		pm_qos_remove_request(&dev->qos_req_mif);
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 		if (pdata->mo_control) {
+#ifdef CONFIG_MFC_NO_RENEWAL_BTS
+			bts_update_scen(BS_MFC_UHD_ENC60, 0);
+			bts_update_scen(BS_MFC_UHD_10BIT, 0);
+			bts_update_scen(BS_MFC_UHD, 0);
+#else
 			bts_del_scenario(dev->prev_bts_scen_idx);
 			MFC_TRACE_DEV("BTS(MO) del idx %d\n", dev->prev_bts_scen_idx);
 			mfc_debug_dev(2, "[QoS] BTS(MO) del idx %d\n", dev->prev_bts_scen_idx);
+#endif
 		}
 
 		if (pdata->bw_control) {
@@ -211,7 +251,7 @@ static void __mfc_qos_operate(struct mfc_dev *dev, int opr_type, int table_type,
 		mfc_debug_dev(2, "[QoS] QoS remove\n");
 		break;
 	case MFC_QOS_BW:
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 		if (pdata->bw_control) {
 			bts_update_bw(dev->pdata->mfc_bw_index, dev->mfc_bw);
 			MFC_TRACE_DEV("BTS(BW) update (peak: %d, read: %d, write: %d)\n",
@@ -227,7 +267,7 @@ static void __mfc_qos_operate(struct mfc_dev *dev, int opr_type, int table_type,
 	}
 }
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 static void __mfc_qos_set(struct mfc_ctx *ctx, struct bts_bw *curr_mfc_bw, int table_type, int i)
 #else
 static void __mfc_qos_set(struct mfc_ctx *ctx, int table_type, int i)
@@ -252,7 +292,7 @@ static void __mfc_qos_set(struct mfc_ctx *ctx, int table_type, int i)
 			qos_table[i].freq_mfc, qos_table[i].freq_int,
 			qos_table[i].freq_mif);
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 	if (curr_mfc_bw->peak != dev->mfc_bw.peak) {
 		dev->mfc_bw.peak = curr_mfc_bw->peak;
 		dev->mfc_bw.read = curr_mfc_bw->read;
@@ -419,7 +459,7 @@ static inline unsigned long __mfc_qos_get_mb_per_second(struct mfc_ctx *ctx)
 	return __mfc_qos_get_weighted_mb(ctx, mb);
 }
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 static void __mfc_qos_get_bw_per_second(struct mfc_ctx *ctx, struct bts_bw *curr_mfc_bw_ctx)
 {
 	struct mfc_bw_data bw_data;
@@ -568,7 +608,7 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 	unsigned int fw_time, sw_time;
 	int i, found = 0, dec_found = 0, num_qos_steps;
 	int table_type = MFC_QOS_TABLE_TYPE_DEFAULT;
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 	struct bts_bw curr_mfc_bw, curr_mfc_bw_ctx;
 #endif
 
@@ -585,7 +625,7 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 	if (!found)
 		list_add_tail(&ctx->qos_list, &dev->qos_queue);
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 	curr_mfc_bw.peak = 0;
 	curr_mfc_bw.read = 0;
 	curr_mfc_bw.write = 0;
@@ -597,7 +637,7 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 		hw_mb += __mfc_qos_get_mb_per_second(qos_ctx);
 		total_fps += (qos_ctx->framerate / 1000);
 		total_bps += qos_ctx->Kbps;
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 		__mfc_qos_get_bw_per_second(qos_ctx, &curr_mfc_bw_ctx);
 		curr_mfc_bw.peak += curr_mfc_bw_ctx.peak;
 		curr_mfc_bw.read += curr_mfc_bw_ctx.read;
@@ -642,7 +682,7 @@ void mfc_qos_on(struct mfc_ctx *ctx)
 	/* search the suitable independent mfc freq using bps */
 	dev->mfc_freq_by_bps = __mfc_qos_get_freq_by_bps(dev, total_bps);
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 	__mfc_qos_set(ctx, &curr_mfc_bw, table_type, i);
 #else
 	__mfc_qos_set(ctx, table_type, i);
@@ -660,7 +700,7 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 	unsigned int fw_time, sw_time;
 	int i, found = 0, dec_found = 0, num_qos_steps;
 	int table_type = MFC_QOS_TABLE_TYPE_DEFAULT;
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 	struct bts_bw mfc_bw, mfc_bw_ctx;
 #endif
 
@@ -679,7 +719,7 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 		return;
 	}
 
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 	mfc_bw.peak = 0;
 	mfc_bw.read = 0;
 	mfc_bw.write = 0;
@@ -697,7 +737,7 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 		hw_mb += __mfc_qos_get_mb_per_second(qos_ctx);
 		total_fps += (qos_ctx->framerate / 1000);
 		total_bps += qos_ctx->Kbps;
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 		__mfc_qos_get_bw_per_second(qos_ctx, &mfc_bw_ctx);
 		mfc_bw.peak += mfc_bw_ctx.peak;
 		mfc_bw.read += mfc_bw_ctx.read;
@@ -747,7 +787,7 @@ void mfc_qos_off(struct mfc_ctx *ctx)
 	if (list_empty(&dev->qos_queue) || total_mb == 0) {
 		__mfc_qos_operate(dev, MFC_QOS_REMOVE, table_type, 0);
 	} else {
-#ifdef CONFIG_EXYNOS_BTS
+#ifdef CONFIG_MFC_USE_BTS
 		__mfc_qos_set(ctx, &mfc_bw, table_type, i);
 #else
 		__mfc_qos_set(ctx, table_type, i);
