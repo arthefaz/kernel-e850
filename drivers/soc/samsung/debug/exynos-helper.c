@@ -24,6 +24,7 @@
 #include <soc/samsung/exynos-debug.h>
 #include <soc/samsung/exynos-pmu.h>
 #include <soc/samsung/exynos-sdm.h>
+#include <soc/samsung/exynos-adv-tracer.h>
 
 #include <asm/cacheflush.h>
 #include <asm/cputype.h>
@@ -404,7 +405,6 @@ static int exynos_is_power_cpu(void *cpu)
 #endif
 }
 
-extern int adv_tracer_arraydump(void);
 static void exynos_do_dpm_policy(void *val)
 {
 	int policy = (int)(*(int *)val);
