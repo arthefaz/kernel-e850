@@ -125,4 +125,36 @@
 			cti-offset = <0xb20000>;
 		};
 	};
+
+	exynos-ehld {
+		compatible = "exynos-ehld";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		cs_base = <0x16000000>;
+
+		cpu0 {
+			dbg-offset = <0x410000>;
+		};
+		cpu1 {
+			dbg-offset = <0x510000>;
+		};
+		cpu2 {
+			dbg-offset = <0x610000>;
+		};
+		cpu3 {
+			dbg-offset = <0x710000>;
+		};
+		cpu4 {
+			dbg-offset = <0x810000>;
+		};
+		cpu5 {
+			dbg-offset = <0x910000>;
+		};
+		cpu6 {
+			dbg-offset = <0xa10000>;
+		};
+		cpu7 {
+			dbg-offset = <0xb10000>;
+		};
+	};
 };
