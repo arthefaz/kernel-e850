@@ -3541,6 +3541,11 @@ static int decon_acquire_windows(struct decon_device *decon)
 {
 	int i, ret;
 
+	if (IS_ENABLED(CONFIG_EXYNOS_VIRTUAL_DISPLAY)) {
+		decon_info("virtual display is enabled\n");
+		return 0;
+	}
+
 	for (i = 0; i < decon->dt.max_win; i++) {
 		ret = decon_acquire_window(decon, i);
 		if (ret < 0) {

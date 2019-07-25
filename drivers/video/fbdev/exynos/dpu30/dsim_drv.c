@@ -1449,10 +1449,12 @@ static int dsim_register_panel(struct dsim_device *dsim)
 	dsim_read_panel_id(dsim, &panel_id);
 	dsim_info("panel_id = 0x%x\n", panel_id);
 
-	ret = dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_REGISTER, &panel_id);
-	if (ret) {
-		dsim_err("%s: cannot find proper panel\n", __func__);
-		BUG();
+	if (!IS_ENABLED(CONFIG_EXYNOS_VIRTUAL_DISPLAY)) {
+		ret = dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_REGISTER, &panel_id);
+		if (ret) {
+			dsim_err("%s: cannot find proper panel\n", __func__);
+			BUG();
+		}
 	}
 
 	dsim->clks.hs_clk = dsim->panel->lcd_info.hs_clk;
