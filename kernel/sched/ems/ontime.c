@@ -611,7 +611,6 @@ parse_ontime(struct device_node *dn, struct ontime_dom *dom, int cnt)
 {
 	struct device_node *ontime, *coregroup;
 	char name[15];
-	unsigned long capacity, capacity_s;
 	int prop;
 	int res = 0;
 
@@ -624,13 +623,6 @@ parse_ontime(struct device_node *dn, struct ontime_dom *dom, int cnt)
 	if (!coregroup)
 		goto disable;
 	dom->coregroup = cnt;
-
-	capacity = capacity_cpu_orig(cpumask_first(&dom->cpus), 0);
-	capacity_s = capacity_cpu_orig(cpumask_first(&dom->cpus), 1);
-
-	/* If capacity of this coregroup is 0, disable ontime of this coregroup */
-	if (capacity == 0)
-		goto disable;
 
 	/* If any of ontime parameter isn't, disable ontime of this coregroup */
 	res |= of_property_read_s32(coregroup, "upper-boundary", &prop);
