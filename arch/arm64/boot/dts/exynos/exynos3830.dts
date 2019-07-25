@@ -26,6 +26,7 @@
 #include "exynos3830-dpu.dtsi"
 #include "exynos3830-usi.dtsi"
 #include "exynos3830-debug.dtsi"
+#include "exynos-dpm.dtsi"
 #include "exynos3830-pm-domains.dtsi"
 #include "exynos3830-bts.dtsi"
 #include "exynos3830-mfc.dtsi"
