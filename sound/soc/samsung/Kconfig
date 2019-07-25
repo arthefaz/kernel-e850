@@ -214,6 +214,10 @@ config SND_SOC_SAMSUNG_EXYNOS9610_MADERA
 	select EXTCON_MADERA_INPUT_EVENT
 	select SND_SOC_CS35L35
 
+config SND_SOC_SAMSUNG_EXYNOS3830_SOUND
+        tristate "Madera audio codec support on exynos3830"
+        depends on SND_SOC_SAMSUNG
+
 config SND_SOC_ARNDALE_RT5631_ALC5631
         tristate "Audio support for RT5631(ALC5631) on Arndale Board"
         depends on I2C
