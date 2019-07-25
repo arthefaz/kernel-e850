@@ -508,12 +508,38 @@ struct ontime_attr {
 	ssize_t (*store)(struct kobject *, const char *, size_t count);
 };
 
+static unsigned long read_upper_boundary(struct ontime_dom *dom)
+{
+	return capacity_cpu(cpumask_any(&dom->cpus), 0)
+				* dom->upper_boundary / 100;
+}
+
+static unsigned long read_upper_boundary_s(struct ontime_dom *dom)
+{
+	return capacity_cpu(cpumask_any(&dom->cpus), 1)
+				* dom->upper_boundary_s / 100;
+}
+
+static unsigned long read_lower_boundary(struct ontime_dom *dom)
+{
+	return capacity_cpu(cpumask_any(&dom->cpus), 0)
+				* dom->lower_boundary / 100;
+}
+
+static unsigned long read_lower_boundary_s(struct ontime_dom *dom)
+{
+	return capacity_cpu(cpumask_any(&dom->cpus), 1)
+				* dom->lower_boundary_s / 100;
+}
+
 #define show_store_attr(_name, _type, _max)					\
 static ssize_t show_##_name(struct kobject *k, char *buf)			\
 {										\
 	struct ontime_dom *dom = container_of(k, struct ontime_dom, kobj);	\
 										\
-	return sprintf(buf, "%u\n", (unsigned int)dom->_name);			\
+	return sprintf(buf, "%u%% (cap=%u)\n",					\
+			(unsigned int)dom->_name,				\
+			(unsigned int)read_##_name(dom));			\
 }										\
 										\
 static ssize_t store_##_name(struct kobject *k, const char *buf, size_t count)	\
