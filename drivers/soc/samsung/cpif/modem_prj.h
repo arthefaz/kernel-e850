@@ -693,6 +693,9 @@ struct modem_ctl {
 	void __iomem *ap2cp_cfg_ioaddr;
 #endif
 
+	unsigned int sbi_ds_det_mask;
+	unsigned int sbi_ds_det_pos;
+
 #ifdef CONFIG_LINK_DEVICE_PCIE
 	struct irq_chip *apwake_irq_chip;
 	struct pci_dev *s51xx_pdev;

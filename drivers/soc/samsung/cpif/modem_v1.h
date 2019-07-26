@@ -440,9 +440,10 @@ struct modem_data {
 
 	unsigned int sbi_uart_noti_mask;
 	unsigned int sbi_uart_noti_pos;
-
 	unsigned int sbi_crash_type_mask;
 	unsigned int sbi_crash_type_pos;
+	unsigned int sbi_ds_det_mask;
+	unsigned int sbi_ds_det_pos;
 
 	/* ulpath offset for 2CP models */
 	u32 ulpath_offset;

@@ -16,7 +16,7 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/gpio.h>
-#include <linux/delay.h>
+#include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
 #include <linux/fs.h>
@@ -28,7 +28,6 @@
 #include <linux/sec_sysfs.h>
 #include <linux/clk.h>
 #include <linux/pci.h>
-#include <linux/delay.h>
 #include <linux/regulator/consumer.h>
 #include <soc/samsung/acpm_mfd.h>
 #include <linux/reboot.h>
@@ -50,10 +49,6 @@
 
 #ifdef CONFIG_EXYNOS_BUSMONITOR
 #include <linux/exynos-busmon.h>
-#endif
-
-#if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)
-#include <linux/modem_notifier.h>
 #endif
 
 #define MIF_INIT_TIMEOUT	(300 * HZ)
@@ -384,6 +379,76 @@ static int register_cp2ap_wakeup_interrupt(struct modem_ctl *mc)
 	return ret;
 }
 
+static int ds_detect = 2;
+module_param(ds_detect, int, S_IRUGO | S_IWUSR | S_IWGRP | S_IRGRP);
+MODULE_PARM_DESC(ds_detect, "Dual SIM detect");
+
+static ssize_t ds_detect_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", ds_detect);
+}
+
+static ssize_t ds_detect_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	int ret;
+	int value;
+
+	ret = kstrtoint(buf, 0, &value);
+	if (ret != 0) {
+		mif_err("invalid value:%d with %d\n", value, ret);
+		return -EINVAL;
+	}
+
+	ds_detect = value;
+	mif_info("set ds_detect: %d\n", ds_detect);
+
+	return count;
+}
+static DEVICE_ATTR_RW(ds_detect);
+
+static struct attribute *sim_attrs[] = {
+	&dev_attr_ds_detect.attr,
+	NULL,
+};
+
+static const struct attribute_group sim_group = {
+	.attrs = sim_attrs,
+	.name = "sim",
+};
+
+static int get_ds_detect(void)
+{
+	if (ds_detect > 2 || ds_detect < 1)
+		ds_detect = 2;
+
+	mif_info("Dual SIM detect = %d\n", ds_detect);
+	return ds_detect - 1;
+}
+
+static int init_control_messages(struct modem_ctl *mc)
+{
+	struct link_device *ld = get_current_link(mc->iod);
+	struct mem_link_device *mld = to_mem_link_device(ld);
+	int ds_det;
+
+	set_ctrl_msg(mld->ap2cp_united_status, 0);
+
+	ds_det = get_ds_detect();
+	if (ds_det < 0) {
+		mif_err("ds_det error:%d\n", ds_det);
+		return -EINVAL;
+	}
+
+	update_ctrl_msg(mld->ap2cp_united_status, ds_det, mc->sbi_ds_det_mask,
+			mc->sbi_ds_det_pos);
+	mif_info("ds_det:%d\n", ds_det);
+
+	return 0;
+}
+
 static int power_on_cp(struct modem_ctl *mc)
 {
 	struct link_device *ld = get_current_link(mc->iod);
@@ -587,6 +652,9 @@ static int start_normal_boot(struct modem_ctl *mc)
 	int ret = 0;
 
 	mif_info("+++\n");
+
+	if (init_control_messages(mc))
+		mif_err("Failed to initialize control messages\n");
 
 	/* 2cp dump WA */
 	if (timer_pending(&mld->crash_ack_timer))
@@ -1150,6 +1218,9 @@ static void s5100_get_pdata(struct modem_ctl *mc, struct modem_data *pdata)
 		return;
 	}
 	mif_info("S5100 PCIe Channel Number : %d\n", mc->pcie_ch_num);
+
+	mc->sbi_ds_det_mask = pdata->sbi_ds_det_mask;
+	mc->sbi_ds_det_pos = pdata->sbi_ds_det_pos;
 }
 
 #ifdef CONFIG_EXYNOS_BUSMONITOR
@@ -1198,6 +1269,7 @@ static int s5100_modem_notifier(struct notifier_block *nb,
 int s5100_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 {
 	int ret = 0;
+	struct platform_device *pdev = to_platform_device(mc->dev);
 	struct resource __maybe_unused *sysram_alive;
 
 	mif_err("+++\n");
@@ -1251,6 +1323,9 @@ int s5100_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 	mc->modem_nb.notifier_call = s5100_modem_notifier;
 	register_modem_event_notifier(&mc->modem_nb);
 #endif
+
+	if (sysfs_create_group(&pdev->dev.kobj, &sim_group))
+		mif_err("failed to create sysfs node related sim\n");
 
 	mif_err("---\n");
 

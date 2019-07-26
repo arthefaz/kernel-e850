@@ -180,7 +180,7 @@ static ssize_t ds_detect_store(struct device *dev,
 	int value;
 
 	ret = kstrtoint(buf, 0, &value);
-	if (ret || value > 2 || value < 0) {
+	if (ret != 0) {
 		mif_err("invalid value:%d with %d\n", value, ret);
 		return -EINVAL;
 	}
@@ -202,11 +202,15 @@ static const struct attribute_group sim_group = {
 	.name = "sim",
 };
 
-static int get_ds_detect(struct device_node *np)
+static int get_ds_detect()
 {
+	if (ds_detect > 2 || ds_detect < 1)
+		ds_detect = 2;
+
 	mif_info("Dual SIM detect = %d\n", ds_detect);
 	return ds_detect - 1;
 }
+
 #endif
 
 static int init_control_messages(struct modem_ctl *mc)
@@ -215,7 +219,6 @@ static int init_control_messages(struct modem_ctl *mc)
 	struct device_node *np = pdev->dev.of_node;
 	struct modem_data *modem = mc->mdm_data;
 	struct mem_link_device *mld = modem->mld;
-	unsigned int sbi_ds_det_mask, sbi_ds_det_pos;
 	unsigned int sbi_sys_rev_mask, sbi_sys_rev_pos;
 	int ds_det;
 #ifdef CONFIG_CP_BTL
@@ -240,8 +243,6 @@ static int init_control_messages(struct modem_ctl *mc)
 
 	mif_dt_read_u32(np, "sbi_sys_rev_mask", sbi_sys_rev_mask);
 	mif_dt_read_u32(np, "sbi_sys_rev_pos", sbi_sys_rev_pos);
-	mif_dt_read_u32(np, "sbi_ds_det_mask", sbi_ds_det_mask);
-	mif_dt_read_u32(np, "sbi_ds_det_pos", sbi_ds_det_pos);
 
 	ds_det = get_ds_detect(np);
 	if (ds_det < 0) {
@@ -249,8 +250,8 @@ static int init_control_messages(struct modem_ctl *mc)
 		return -EINVAL;
 	}
 
-	update_ctrl_msg(mld->ap2cp_united_status, ds_det, sbi_ds_det_mask,
-			sbi_ds_det_pos);
+	update_ctrl_msg(mld->ap2cp_united_status, ds_det, mc->sbi_ds_det_mask,
+			mc->sbi_ds_det_pos);
 	mif_info("ds_det:%d\n", ds_det);
 
 #ifndef CONFIG_HW_REV_DETECT
@@ -832,6 +833,9 @@ static void s5000ap_get_pdata(struct modem_ctl *mc, struct modem_data *modem)
 
 	mc->sbi_crash_type_mask = modem->sbi_crash_type_mask;
 	mc->sbi_crash_type_pos = modem->sbi_crash_type_pos;
+
+	mc->sbi_ds_det_mask = modem->sbi_ds_det_mask;
+	mc->sbi_ds_det_pos = modem->sbi_ds_det_pos;
 }
 
 #if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)

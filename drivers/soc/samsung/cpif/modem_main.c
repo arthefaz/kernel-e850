@@ -542,6 +542,8 @@ static int parse_dt_ipc_region_pdata(struct device *dev, struct device_node *np,
 	mif_dt_read_u32(np, "sbi_crash_type_pos", pdata->sbi_crash_type_pos);
 	mif_dt_read_u32(np, "sbi_uart_noti_mask", pdata->sbi_uart_noti_mask);
 	mif_dt_read_u32(np, "sbi_uart_noti_pos", pdata->sbi_uart_noti_pos);
+	mif_dt_read_u32(np, "sbi_ds_det_mask", pdata->sbi_ds_det_mask);
+	mif_dt_read_u32(np, "sbi_ds_det_pos", pdata->sbi_ds_det_pos);
 
 	mif_dt_read_u32_noerr(np, "sbi_ap2cp_kerneltime_sec_mask",
 			pdata->sbi_ap2cp_kerneltime_sec_mask);
