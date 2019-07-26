@@ -55,6 +55,8 @@ void mfc_set_risc_base_addr(struct mfc_dev *dev,
 
 void mfc_cmd_host2risc(struct mfc_dev *dev, int cmd)
 {
+	int ret = 0;
+
 	mfc_debug_dev(1, "Issue the command: %d%s\n",
 			cmd, dev->cache_flush_flag ? " with cache flush" : "");
 	MFC_TRACE_DEV(">> CMD : %d, (dev:0x%lx, bits:%lx, owned:%d, wl:%d, trans:%d)\n",
@@ -72,9 +74,18 @@ void mfc_cmd_host2risc(struct mfc_dev *dev, int cmd)
 	if (cmd != MFC_REG_H2R_CMD_STOP_QUEUE)
 		MFC_WRITEL(0x0, MFC_REG_RISC2HOST_CMD);
 
-	/* Start the timeout watchdog */
-	if ((cmd != MFC_REG_H2R_CMD_NAL_QUEUE) && (cmd != MFC_REG_H2R_CMD_STOP_QUEUE))
+	if ((cmd != MFC_REG_H2R_CMD_NAL_QUEUE) && (cmd != MFC_REG_H2R_CMD_STOP_QUEUE)) {
+		/* Start the timeout watchdog */
 		mfc_watchdog_start_tick(dev);
+		if (cmd != MFC_REG_H2R_CMD_NAL_ABORT) {
+			/* Check the fw status */
+			ret = mfc_wait_fw_status(dev);
+			if (ret != 0) {
+				mfc_err_dev("Failed to wait firmware status\n");
+				call_dop(dev, dump_and_stop_always, dev);
+			}
+		}
+	}
 
 	if (dbg_enable) {
 		/* For FW debugging */

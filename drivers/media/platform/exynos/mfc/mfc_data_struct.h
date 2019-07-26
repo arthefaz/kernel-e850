@@ -582,6 +582,7 @@ struct mfc_platdata {
 	struct mfc_feature vp9_stride_align;
 	struct mfc_feature sbwc_uncomp;
 	struct mfc_feature mem_clear;
+	struct mfc_feature wait_fw_status;
 
 	/*
 	 * new variables should be added above

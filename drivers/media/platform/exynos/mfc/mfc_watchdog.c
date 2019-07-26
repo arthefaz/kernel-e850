@@ -343,8 +343,9 @@ static void __mfc_dump_state(struct mfc_dev *dev, int curr_ctx)
 	dev_err(dev->device, "has 2sysmmu:%d, has hwfc:%d, has mmcache:%d, has llc:%d, shutdown:%d, sleep:%d, itmon_notified:%d\n",
 			dev->has_2sysmmu, dev->has_hwfc, dev->has_mmcache, dev->has_llc,
 			dev->shutdown, dev->sleep, dev->itmon_notified);
-	dev_err(dev->device, "options debug_level:%d, debug_mode:%d, mmcache:%d, llc:%d, perf_boost:%d\n",
-			debug_level, dev->pdata->debug_mode, dev->mmcache.is_on_status, dev->llc_on_status, perf_boost_mode);
+	dev_err(dev->device, "options debug_level:%d, debug_mode:%d, mmcache:%d, llc:%d, perf_boost:%d, wait_fw_status %d\n",
+			debug_level, dev->pdata->debug_mode, dev->mmcache.is_on_status, dev->llc_on_status, perf_boost_mode,
+			dev->pdata->wait_fw_status.support);
 	if (nal_q_handle)
 		dev_err(dev->device, "NAL-Q state:%d, exception:%d, in_exe_cnt: %d, out_exe_cnt: %d\n",
 				nal_q_handle->nal_q_state, nal_q_handle->nal_q_exception,

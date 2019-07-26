@@ -1036,6 +1036,7 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 	of_property_read_u32_array(np, "vp9_stride_align", &pdata->vp9_stride_align.support, 2);
 	of_property_read_u32_array(np, "sbwc_uncomp", &pdata->sbwc_uncomp.support, 2);
 	of_property_read_u32_array(np, "mem_clear", &pdata->mem_clear.support, 2);
+	of_property_read_u32_array(np, "wait_fw_status", &pdata->wait_fw_status.support, 2);
 
 	/* Default 10bit format for decoding and dithering for display */
 	of_property_read_u32(np, "P010_decoding", &pdata->P010_decoding);

@@ -27,6 +27,29 @@
 			MFC_WRITEL(0, MFC_REG_RISC2HOST_INT);	\
 		} while (0)
 
+static inline int mfc_wait_fw_status(struct mfc_dev *dev)
+{
+	unsigned int status;
+	unsigned long timeout;
+
+	if (MFC_FEATURE_SUPPORT(dev, dev->pdata->wait_fw_status)) {
+		status = MFC_READL(MFC_REG_FIRMWARE_STATUS_INFO);
+		if (status & 0x1)
+			return 0;
+
+		timeout = jiffies + msecs_to_jiffies(MFC_BW_TIMEOUT);
+		do {
+			if (time_after(jiffies, timeout)) {
+				mfc_err_dev("Timeout while waiting MFC F/W done\n");
+				return -EIO;
+			}
+			status = MFC_READL(MFC_REG_FIRMWARE_STATUS_INFO);
+		} while ((status & 0x1) == 0);
+	}
+
+	return 0;
+}
+
 static inline int mfc_wait_pending(struct mfc_dev *dev)
 {
 	unsigned int status;
