@@ -295,7 +295,7 @@
 						};
 
 						l10_reg: LDO10 {
-							regulator-name = "vdd_ldo10";
+							regulator-name = "vqmmc";
 							regulator-min-microvolt = <1800000>;
 							regulator-max-microvolt = <3375000>;
 							regulator-always-on;
@@ -421,7 +421,7 @@
 						};
 
 						l24_reg: LDO24 {
-							regulator-name = "vdd_ldo24";
+							regulator-name = "vmmc";
 							regulator-min-microvolt = <1800000>;
 							regulator-max-microvolt = <3375000>;
 							regulator-always-on;
@@ -656,7 +656,7 @@
 &dwmmc_2 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	status = "disabled";
+	status = "okay";
 	num-slots = <1>;
 	supports-4bit;
 	supports-cmd23;
