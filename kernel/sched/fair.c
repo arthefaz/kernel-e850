@@ -8665,6 +8665,9 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 	if (!ontime_can_migrate_task(p, env->dst_cpu))
 		return 0;
 
+	if (!emst_can_migrate_task(p, env->dst_cpu))
+		return 0;
+
 #ifdef CONFIG_SCHED_TUNE
 	if (smaller_cpu_capacity(env->dst_cpu, env->src_cpu) &&
 	    schedtune_prefer_perf(p))
