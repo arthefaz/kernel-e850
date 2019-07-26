@@ -565,10 +565,10 @@ static int can_enter_power_mode(int cpu, struct power_mode *mode)
 	if (cpus_busy(mode->target_residency, &mode->siblings))
 		return 0;
 
-	if (cpus_last_core_detecting(cpu, &mode->siblings))
+	if (mode->system_idle && system_busy())
 		return 0;
 
-	if (mode->system_idle && system_busy())
+	if (cpus_last_core_detecting(cpu, &mode->siblings))
 		return 0;
 
 	return 1;
