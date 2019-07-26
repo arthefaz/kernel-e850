@@ -34,6 +34,47 @@ static int sse_mode;
 /*********************************************************************
  *                          HELPER FUNCTION                          *
  *********************************************************************/
+
+unsigned int get_cpufreq_max_limit(void)
+{
+	struct list_head *domains = get_domain_list();
+	struct exynos_cpufreq_domain *domain;
+	unsigned int pm_qos_max;
+	int scale = -1;
+
+	if (!domains) {
+		pr_err("failed to get domains!\n");
+		return -ENXIO;
+	}
+
+	list_for_each_entry_reverse(domain, domains, list) {
+		scale++;
+
+		/* get value of minimum PM QoS */
+		pm_qos_max = pm_qos_request(domain->pm_qos_max_class);
+		if (pm_qos_max > 0) {
+			pm_qos_max = min(pm_qos_max, domain->max_freq);
+			pm_qos_max = max(pm_qos_max, domain->min_freq);
+
+			/*
+			 * To manage frequencies of all domains at once,
+			 * scale down frequency as multiple of 4.
+			 * ex) domain2 = freq
+			 *     domain1 = freq /4
+			 *     domain0 = freq /16
+			 */
+			pm_qos_max = pm_qos_max >> (scale * SCALE_SIZE);
+			return pm_qos_max;
+		}
+	}
+
+	/*
+	 * If there is no QoS at all domains, it returns minimum
+	 * frequency of last domain
+	 */
+	return first_domain()->min_freq >> (scale * SCALE_SIZE);
+}
+
 static struct exynos_cpufreq_domain* first_domain(void)
 {
 	return list_first_entry(get_domain_list(),
