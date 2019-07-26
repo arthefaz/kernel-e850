@@ -518,6 +518,9 @@ static int s2mpu12_suspend(struct device *dev)
 	struct i2c_client *i2c = container_of(dev, struct i2c_client, dev);
 	struct s2mpu12_dev *s2mpu12 = i2c_get_clientdata(i2c);
 
+	if (device_may_wakeup(dev))
+		enable_irq_wake(s2mpu12->irq);
+
 	disable_irq(s2mpu12->irq);
 
 	return 0;
@@ -527,6 +530,13 @@ static int s2mpu12_resume(struct device *dev)
 {
 	struct i2c_client *i2c = container_of(dev, struct i2c_client, dev);
 	struct s2mpu12_dev *s2mpu12 = i2c_get_clientdata(i2c);
+
+#if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
+	pr_info("%s:%s\n", MFD_DEV_NAME, __func__);
+#endif /* CONFIG_SAMSUNG_PRODUCT_SHIP */
+
+	if (device_may_wakeup(dev))
+		disable_irq_wake(s2mpu12->irq);
 
 	enable_irq(s2mpu12->irq);
 

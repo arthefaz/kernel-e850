@@ -66,6 +66,7 @@ struct power_button_data {
 	bool disabled;
 	bool key_pressed;
 	bool key_state;
+	bool suspended;
 };
 
 struct power_keys_drvdata {
@@ -548,6 +549,21 @@ static irqreturn_t power_keys_rising_irq_handler(int irq, void *dev_id)
 	bdata->key_pressed = true;
 	bdata->isr_status = true;
 
+	if (bdata->button->wakeup) {
+		const struct power_keys_button *button = bdata->button;
+
+		pm_stay_awake(bdata->input->dev.parent);
+		if (bdata->suspended  &&
+		    (button->type == 0 || button->type == EV_KEY)) {
+			/*
+			 * Simulate wakeup key press in case the key has
+			 * already released by the time we got interrupt
+			 * handler to run.
+			 */
+			input_report_key(bdata->input, button->code, 1);
+		}
+	}
+
 	queue_delayed_work(bdata->irq_wqueue, &bdata->key_work, 0);
 
 	return IRQ_HANDLED;
@@ -934,6 +950,7 @@ static int power_keys_suspend(struct device *dev)
 			struct power_button_data *bdata = &ddata->button_data[i];
 			if ((bdata->button->wakeup) && (bdata->irq))
 				enable_irq_wake(bdata->irq);
+			bdata->suspended = true;
 		}
 	} else {
 		mutex_lock(&input->mutex);
@@ -965,6 +982,7 @@ static int power_keys_resume(struct device *dev)
 			struct power_button_data *bdata = &ddata->button_data[i];
 			if ((bdata->button->wakeup) && (bdata->irq))
 				disable_irq_wake(bdata->irq);
+			bdata->suspended = false;
 		}
 	} else {
 		mutex_lock(&input->mutex);
