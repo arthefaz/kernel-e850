@@ -10,6 +10,7 @@
 #include <linux/of.h>
 #include <linux/reciprocal_div.h>
 #include <linux/miscdevice.h>
+#include <linux/uaccess.h>
 
 #include <trace/events/ems.h>
 
