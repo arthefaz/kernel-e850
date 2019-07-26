@@ -166,6 +166,11 @@ const struct cpumask *emst_get_candidate_cpus(struct task_struct *p)
 	return &group->candidate_cpus;
 }
 
+bool emst_can_migrate_task(struct task_struct *p, int dst_cpu)
+{
+	return cpumask_test_cpu(dst_cpu, emst_get_candidate_cpus(p));
+}
+
 /**********************************************************************
  * Multi requests interface (Platform/Kernel)                         *
  **********************************************************************/
