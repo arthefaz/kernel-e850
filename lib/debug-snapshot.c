@@ -25,6 +25,7 @@
 #include <linux/of_address.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/sched/clock.h>
+#include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/libfdt.h>
 
@@ -489,6 +490,35 @@ static int __init dbg_snapshot_init_desc(void)
 }
 
 #ifdef CONFIG_OF_RESERVED_MEM
+int __init dbg_snapshot_reserved_mem_check(unsigned long node, unsigned long size)
+{
+	const char *name;
+	unsigned int i;
+	int ret = 0;
+
+	name = of_get_flat_dt_prop(node, "compatible", NULL);
+	if (!name)
+		goto out;
+
+	if (!strstr(name, "debug-snapshot"))
+		goto out;
+
+	if (size == 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	for (i = 0; i < (unsigned int)ARRAY_SIZE(dss_items); i++) {
+		if (strnstr(name, dss_items[i].name, strlen(name)))
+			break;
+	}
+
+	if (i == ARRAY_SIZE(dss_items) || !dss_items[i].entry.enabled)
+		ret = -EINVAL;
+out:
+	return ret;
+}
+
 static int __init dbg_snapshot_item_reserved_mem_setup(struct reserved_mem *remem)
 {
 	unsigned int i;

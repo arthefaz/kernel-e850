@@ -128,7 +128,16 @@ extern void dbg_snapshot_spinlock(void *lock, int en);
 
 void dbg_snapshot_check_crash_key(unsigned int code, int value);
 
+#ifdef CONFIG_OF_RESERVED_MEM
+extern int dbg_snapshot_reserved_mem_check(unsigned long node, unsigned long size);
 #else
+static inline int dbg_snapshot_reserved_mem_check(unsigned long node, unsigned long size)
+{
+	return 0;
+}
+#endif
+
+#else /* CONFIG_DEBUG_SNAPSHOT */
 #define dbg_snapshot_acpm(a, b, c)		do { } while (0)
 #define dbg_snapshot_task(a, b)			do { } while (0)
 #define dbg_snapshot_work(a, b, c, d)		do { } while (0)
@@ -225,6 +234,10 @@ static inline int dbg_snapshot_get_hardlockup(void)
 }
 
 static inline int dbg_snapshot_is_hardlockup(void)
+{
+	return 0;
+}
+static inline int dbg_snapshot_reserved_mem_check(unsigned long node, unsigned long size)
 {
 	return 0;
 }
