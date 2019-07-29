@@ -3184,12 +3184,12 @@ static irqreturn_t sc_irq_handler(int irq, void *priv)
 			struct vb2_sc_buffer *svb =
 					container_of(mb, typeof(*svb), mb);
 
-			dst_vb->vb2_buf.timestamp =
+			dst_vb->reserved2 =
 				(__u32)ktime_us_delta(ktime_get(), svb->ktime);
 
 			if (sc_show_stat & 0x4)
 				dev_info(sc->dev, "H/W time : %ld us\n",
-				(unsigned long)dst_vb->vb2_buf.timestamp);
+				(unsigned long)dst_vb->reserved2);
 		}
 
 		v4l2_m2m_buf_done(src_vb,
