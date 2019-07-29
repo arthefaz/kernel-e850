@@ -240,6 +240,7 @@
 
 #define INTREQ__SECURE_LOG	224
 #define INTREQ__TBASE   223
+#define INTREQ__RPMB	225
 
 #define INTREQ__TMU	226
 #define INTREQ__UART	227
