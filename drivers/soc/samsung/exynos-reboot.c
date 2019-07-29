@@ -152,15 +152,15 @@ ATTRIBUTE_GROUPS(exynos_reboot);
 
 static int exynos_reboot_probe(struct platform_device *pdev)
 {
-	struct resource *resource;
+	struct resource *res;
 
 	dev_set_socdata(&pdev->dev, "Exynos", "Reboot");
 
 	exynos_reboot.dev = &pdev->dev;
 	exynos_reboot.variant = exynos_reboot_get_variant(pdev);
 
-	resource = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	exynos_reboot.reg_base = devm_ioremap_resource(&pdev->dev, resource);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	exynos_reboot.reg_base = devm_ioremap(&pdev->dev, res->start, resource_size(res));
 	if (IS_ERR(exynos_reboot.reg_base)) {
 		dev_err(&pdev->dev, "failed ioremap\n");
 		return -EINVAL;
