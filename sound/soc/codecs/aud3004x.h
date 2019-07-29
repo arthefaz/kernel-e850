@@ -20,6 +20,7 @@
 #define CONFIG_SND_SOC_SAMSUNG_VERBOSE_DEBUG 1
 
 #define AUD3004X_COMMON_ADDR			0x00
+#define AUD3004X_PMIC_ADDR				0x01
 #define AUD3004X_OTP_ADDR				0x03
 #define AUD3004X_DIGITAL_ADDR			0x07
 #define AUD3004X_ANALOG_ADDR			0X08
@@ -69,7 +70,10 @@ struct aud3004x_priv {
 	/* saved information */
 	int codec_ver;
 	bool is_suspend;
+	bool pm_suspend;
 	bool is_probe_done;
+	bool playback_on;
+	bool capture_on;
 	unsigned int playback_aifrate;
 	unsigned int capture_aifrate;
 	unsigned int lvol;
@@ -151,19 +155,26 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AUD3004X_43_PLAY_VOLC		0x743
 #define AUD3004X_44_PLAY_MODE2		0x744
 #define AUD3004X_45_PLAY_MIX1		0x745
+#define AUD3004X_46_PLAY_MIX2		0x746
+#define AUD3004X_47_TRIM_DAC0		0x747
+#define AUD3004x_48_TRIM_DAC1		0x748
 #define AUD3004X_49_DSMDWA1_DA		0x749
 #define AUD3004X_4A_DSMDWA2_DA		0x74A
 #define AUD3004X_4B_DSM_OPT1		0x74B
 #define AUD3004X_4C_DSM_OPT2		0x74C
 #define AUD3004X_4D_DSM_OPT3		0x74D
+#define AUD3004X_4E_OFFSET_OPT		0x74E
 
 /* Adaptive Volume Control for Playback Path */
 #define AUD3004X_50_AVC1			0x750
 #define AUD3004X_53_AVC4			0x753
+#define AUD3004X_58_AVC9			0x758
+#define AUD3004X_5C_AVC13			0x75C
 #define AUD3004X_71_AVC34			0x771
 #define AUD3004X_72_AVC35			0x772
 #define AUD3004X_73_AVC36			0x773
 #define AUD3004X_74_AVC37			0x774
+#define AUD3004X_7A_AVC43			0x77A
 #define AUD3004X_7C_OCPCTRL0		0x77C
 
 /* DAC Digital DSM Control */
@@ -175,6 +186,15 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AUD3004X_97_TEST_VBAT0		0x797
 #define AUD3004X_9D_AVC_TIMER_M1	0x79D
 #define AUD3004X_9E_AVC_TIMER_M2	0x79E
+
+/* Auto SEQ - Detail Control */
+#define AUD3004X_A6_AUTO_HP7		0x7A6
+#define AUD3004X_B0_AUTO_COM1		0x7B0
+#define AUD3004X_B1_AUTO_SPK1		0x7B1
+#define AUD3004X_B5_ODSEL11			0x7B5
+#define AUD3004X_B8_ODSEL3			0x7B8
+#define AUD3004X_B9_ODSEL4			0x7B9
+#define AUD3004X_BB_ODSEL6			0x7BB
 
 /* HP Management Unit Control */
 #define AUD3004X_C0_ACTR_JD1		0x7C0
@@ -231,10 +251,18 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 /* Analog Clock Control */
 #define AUD3004X_150_CTRL_EP		0x850
 #define AUD3004X_153_CTRL_SPK1		0x853
+#define AUD3004X_156_CTRL_SPK4		0x856
 #define AUD3004X_157_CTRL_SPK5		0x857
 #define AUD3004X_158_MIX_DA1		0x858
 #define AUD3004X_159_MIX_DA2		0x859
+#define AUD3004X_15B_CTRL_DCTC		0x85B
 #define AUD3004X_15E_VOL_EP			0x85E
+#define AUD3004X_15F_OVP1			0x85F
+#define AUD3004X_160_OVP2			0x860
+
+/* OTP Register for Analog */
+#define AUD3004X_2A6_CTRL_IREF5		0x3A6
+#define AUD3004X_2B0_CTRL_HPS		0x3B0
 
 /* AUD3004X_01_IRQ1PEND */
 #define ST_JACKIN_R					BIT(7)
@@ -383,11 +411,26 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define COM_CLK_GATE_MASK			BIT(COM_CLK_GATE_SHIFT)
 
 /* AUD3004X_11_CLKGATE1 */
+#define DSML_CLK_GATE_SHIFT			6
+#define DSML_CLK_GATE_MASK			BIT(DSML_CLK_GATE_SHIFT)
+
+#define DSMR_CLK_GATE_SHIFT			5
+#define DSMR_CLK_GATE_MASK			BIT(DSMR_CLK_GATE_SHIFT)
+
+#define DSMC_CLK_GATE_SHIFT			4
+#define DSMC_CLK_GATE_MASK			BIT(DSMC_CLK_GATE_SHIFT)
+
+#define APC_CLK_GATE_SHIFT			3
+#define APC_CLK_GATE_MASK			BIT(APC_CLK_GATE_SHIFT)
+
 #define DAC_CIC_CGL_SHIFT			2
 #define DAC_CIC_CGL_MASK			BIT(DAC_CIC_CGL_SHIFT)
 
 #define DAC_CIC_CGR_SHIFT			1
 #define DAC_CIC_CGR_MASK			BIT(DAC_CIC_CGR_SHIFT)
+
+#define DAC_CIC_CGC_SHIFT			0
+#define DAC_CIC_CGC_MASK			BIT(DAC_CIC_CGC_SHIFT)
 
 /* AUD3004X_12_CLKGATE2 */
 #define CED_CLK_GATE_SHIFT			5
@@ -440,14 +483,14 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define CLK_MODE_MONO				2
 
 #define DAC_DSEL_SHIFT				3
-#define DAC_DSEL_MASK				BIT(DAC_FSEL_SHIFT)
+#define DAC_DSEL_MASK				BIT(DAC_DSEL_SHIFT)
 
 #define DSM_DSEL_128FS				0
 #define DSM_DSEL_64FS				1
 
 #define DAC_FSEL_SHIFT				1
 #define DAC_FSEL_WIDTH				2
-#define DAC_FSEL_MASK				MASK(DAC_DSEL_WIDTH, DAC_DSEL_SHIFT)
+#define DAC_FSEL_MASK				MASK(DAC_FSEL_WIDTH, DAC_FSEL_SHIFT)
 
 #define CLK_DAC_256_STEREO			0
 #define CLK_DAC_512_UHQA			1
@@ -867,6 +910,12 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define DAC_MIXC_WIDTH				3
 #define DAC_MIXC_MASK				MASK(DAC_MIXC_WIDTH, DAC_MIXC_SHIFT)
 
+#define MIXC_DATA_L					0
+#define MIXC_LR_BY_2_POL_CH			1
+#define MIXC_LR_BY_2				3
+#define MIXC_DATA_R					5
+#define MIXC_ZERO					7
+
 /* AUD3004X_49_DSMDWA1_DA */
 #define DWAENB_SHIFT				5
 #define DWAENB_WIDTH				3
@@ -991,6 +1040,19 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define DTH_OPTLV_OPTION2			2
 #define DTH_OPTLV_OPTION3			3
 
+/* AUD3004X_4E_OFFSET_OPT */
+#define OFFSET_RNGL_SHIFT			4
+#define OFFSET_RNGL_WIDTH			2
+#define OFFSET_RNGL_MASK			MASK(OFFSET_RNGL_WIDTH, OFFSET_RNGL_SHIFT)
+
+#define OFFSET_RNGR_SHIFT			2
+#define OFFSET_RNGR_WIDTH			2
+#define OFFSET_RNGR_MASK			MASK(OFFSET_RNGR_WIDTH, OFFSET_RNGL_SHIFT)
+
+#define OFFSET_RNGC_SHIFT			0
+#define OFFSET_RNGC_WIDTH			2
+#define OFFSET_RNGC_MASK			MASK(OFFSET_RNGC_WIDTH, OFFSET_RNGC_SHIFT)
+
 /* AUD3004X_50_AVC1 */
 #define AVC_CON_FLAG_SHIFT			6
 #define AVC_CON_FLAG_MASK			BIT(AVC_CON_FLAG_SHIFT)
@@ -1051,6 +1113,11 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AVC_DELAY3_48K				0xE9
 #define AVC_DELAY3_192K				0x39
 #define AVC_DELAY3_384K				0x3A
+
+/* AUD3004X_7A_AVC43 */
+#define DRC_LIMIT_SHIFT				3
+#define DRC_LIMIT_WIDTH				5
+#define DRC_LIMIT_MASK				MASK(DRC_LIMIT_WIDTH, DRC_LIMIT_SHIFT)
 
 /* AUD3004X_7C_OCPCTRL0 */
 #define OCP_EN_SHIFT				1
@@ -1182,6 +1249,15 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define CTRV_DIG_LDO_SHIFT			4
 #define CTRV_DIG_LDO_WIDTH			3
 #define CTRV_DIG_LDO_MASK			MASK(CTRV_DIG_LDO_WIDTH, CTRV_DIG_LDO_SHIFT)
+
+#define DLDO_1_1V					0
+#define DLDO_1_15V					1
+#define DLDO_1_2V					2
+#define DLDO_1_25V					3
+#define DLDO_1_3V					4
+#define DLDO_1_4V					5
+#define DLDO_1_5V					6
+#define DLDO_1_6V					7
 
 #define EN_DLDO_BYPASS_SHIFT		3
 #define EN_DLDO_BYPASS_MASK			BIT(EN_DLDO_BYPASS_SHIFT)
