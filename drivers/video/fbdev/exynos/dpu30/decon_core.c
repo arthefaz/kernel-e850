@@ -2150,8 +2150,11 @@ static void decon_update_regs(struct decon_device *decon,
 
 #if defined(CONFIG_EXYNOS_BTS)
 	/* add calc and update bw : cur > prev */
-	decon->bts.ops->bts_calc_bw(decon, regs);
-	decon->bts.ops->bts_update_bw(decon, regs, 0);
+	/* TODO: if multi resolution requeset X */
+	if (regs->dpp_config[DECON_WIN_UPDATE_IDX].state != DECON_WIN_STATE_MRESOL) {
+		decon->bts.ops->bts_calc_bw(decon, regs);
+		decon->bts.ops->bts_update_bw(decon, regs, 0);
+	}
 #endif
 
 	DPU_EVENT_LOG_WINCON(&decon->sd, regs);
@@ -2171,6 +2174,10 @@ static void decon_update_regs(struct decon_device *decon,
 			goto end;
 		}
 	} else {
+		if (regs->dpp_config[DECON_WIN_UPDATE_IDX].state &
+				DECON_WIN_STATE_MRESOL)
+			dpu_set_mres_config(decon, regs);
+
 		decon_save_cur_buf_info(decon, regs);
 		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 		goto end;
@@ -2228,7 +2235,9 @@ static void decon_update_regs(struct decon_device *decon,
 end:
 #if defined(CONFIG_EXYNOS_BTS)
 	/* add update bw : cur < prev */
-	decon->bts.ops->bts_update_bw(decon, regs, 1);
+	/* TODO: if multi resolution requeset X */
+	if (regs->dpp_config[DECON_WIN_UPDATE_IDX].state != DECON_WIN_STATE_MRESOL)
+		decon->bts.ops->bts_update_bw(decon, regs, 1);
 #endif
 
 	/*
@@ -2241,8 +2250,10 @@ end:
 
 fence_err:
 	decon_release_old_bufs(decon, regs, old_dma_bufs, old_plane_cnt);
-	decon_signal_fence(decon, regs->retire_fence);
-	dma_fence_put(regs->retire_fence);
+	if (regs->dpp_config[DECON_WIN_UPDATE_IDX].state != DECON_WIN_STATE_MRESOL) {
+		decon_signal_fence(decon, regs->retire_fence);
+		dma_fence_put(regs->retire_fence);
+	}
 	DPU_EVENT_LOG(DPU_EVT_FENCE_RELEASE, &decon->sd, ktime_set(0, 0));
 
 #if defined(CONFIG_EXYNOS_AFBC_DEBUG)
