@@ -534,7 +534,8 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 	 */
 	DPU_FULL_RECT(&decon->win_up.prev_up_region, decon->lcd_info);
 
-	if (!decon->id && !decon->eint_status) {
+	if ((decon->dt.psr_mode == DECON_MIPI_COMMAND_MODE) &&
+		(decon->dt.trig_mode == DECON_HW_TRIG) && !decon->eint_status) {
 		enable_irq(decon->res.irq);
 		decon->eint_status = 1;
 	}
@@ -3990,7 +3991,7 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	unsigned long aclk_khz;
 	int dpp_id = decon->dt.dft_ch;
 
-	if (decon->id || (decon->dt.out_type != DECON_OUT_DSI) ||
+	if ((decon->dt.out_type != DECON_OUT_DSI) ||
 			IS_ENABLED(CONFIG_EXYNOS_VIRTUAL_DISPLAY)) {
 		decon->state = DECON_STATE_OFF;
 		decon_info("decon%d doesn't need to display\n", decon->id);
