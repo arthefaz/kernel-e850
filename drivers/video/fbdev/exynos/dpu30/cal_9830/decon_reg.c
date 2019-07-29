@@ -471,23 +471,18 @@ static void decon_reg_set_interface(u32 id, struct decon_mode_info *psr)
 			mask =  DSIM_CONNECTION_DSIM0_MASK
 				| DSIM_CONNECTION_DSIM1_MASK;
 		} else { /* single dsi : DSIM0 only */
-			if (dsim_if0) {
-				if (id == 0) {
-					/* DECON0 - DSIMIF0 - DSIM0 */
-					val = DSIM_CONNECTION_DSIM0_F(0);
-					mask =  DSIM_CONNECTION_DSIM0_MASK;
-				} else if (id == 1) {
-					/* DECON1 - DSIMIF0 - DSIM0 */
-					val = DSIM_CONNECTION_DSIM0_F(2);
-					mask =  DSIM_CONNECTION_DSIM0_MASK;
-				}
-			}
-			if (dsim_if1) {
-				if (id == 0) {
-					/* DECON0 - DSIMIF1 - DSIM0 */
-					val = DSIM_CONNECTION_DSIM0_F(1);
-					mask =  DSIM_CONNECTION_DSIM0_MASK;
-				}
+			if ((id == 0) && dsim_if0) {
+				/* DECON0 - DSIMIF0 - DSIM0 */
+				val = DSIM_CONNECTION_DSIM0_F(0);
+				mask = DSIM_CONNECTION_DSIM0_MASK;
+			} else if ((id == 0) && dsim_if1) {
+				/* DECON0 - DSIMIF1 - DSIM1 */
+				val = DSIM_CONNECTION_DSIM1_F(0);
+				mask = DSIM_CONNECTION_DSIM1_MASK;
+			} else if (id == 1) {
+				/* DECON1 - DSIMIF1 - DSIM1 */
+				val = DSIM_CONNECTION_DSIM1_F(2);
+				mask = DSIM_CONNECTION_DSIM1_MASK;
 			}
 		}
 
@@ -1233,15 +1228,19 @@ static void decon_reg_configure_lcd(u32 id, struct decon_param *p)
 	decon_reg_set_rgb_order(id, rgb_order);
 
 	if (lcd_info->dsc.en) {
-		if (lcd_info->dsc.cnt == 1)
-			d_path = (id == 0) ?
-				DPATH_DSCENC0_OUTFIFO0_DSIMIF0 :
-				DECON2_DSCENC2_OUTFIFO0_DPIF;
-		else if (lcd_info->dsc.cnt == 2 && !id)
+		if (lcd_info->dsc.cnt == 1) {
+			if (id == 0)	  /* DSCENC0 -> DECON0 OUTFIFO0 -> DSIMIF0 */
+				d_path = DPATH_DSCENC0_OUTFIFO0_DSIMIF0;
+			else if (id == 1) /* DSCENC1 -> DECON1 OUTFIFO0 -> DSIMIF1 */
+				d_path = DECON1_DSCENC1_OUTFIFO0_DSIMIF0;
+			else if (id == 2) /* DSCENC2 --> DECON2 OUTFIFO0 -> DPIF */
+				d_path = DECON2_DSCENC2_OUTFIFO0_DPIF;
+		} else if (lcd_info->dsc.cnt == 2 && !id) {
 			d_path = DPATH_DSCC_DSCENC01_OUTFIFO01_DSIMIF0;
-		else
+		} else {
 			decon_err("[decon%d] dsc_cnt=%d : not supported\n",
 				id, lcd_info->dsc.cnt);
+		}
 
 		decon_reg_set_data_path(id, d_path, s_path);
 		/* call decon_reg_config_data_path_size () inside */
@@ -1317,15 +1316,19 @@ static void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p)
 	decon_reg_set_rgb_order(id, rgb_order);
 
 	if (lcd_info->dsc.en) {
-		if (lcd_info->dsc.cnt == 1)
-			d_path = (id == 0) ?
-				DPATH_DSCENC0_OUTFIFO0_DSIMIF0 :
-				DECON2_DSCENC2_OUTFIFO0_DPIF;
-		else if (lcd_info->dsc.cnt == 2 && !id)
+		if (lcd_info->dsc.cnt == 1) {
+			if (id == 0)	  /* DSCENC0 -> DECON0 OUTFIFO0 -> DSIMIF0 */
+				d_path = DPATH_DSCENC0_OUTFIFO0_DSIMIF0;
+			else if (id == 1) /* DSCENC1 -> DECON1 OUTFIFO0 -> DSIMIF1 */
+				d_path = DECON1_DSCENC1_OUTFIFO0_DSIMIF0;
+			else if (id == 2) /* DSCENC2 --> DECON2 OUTFIFO0 -> DPIF */
+				d_path = DECON2_DSCENC2_OUTFIFO0_DPIF;
+		} else if (lcd_info->dsc.cnt == 2 && !id) {
 			d_path = DPATH_DSCC_DSCENC01_OUTFIFO01_DSIMIF0;
-		else
+		} else {
 			decon_err("[decon%d] dsc_cnt=%d : not supported\n",
 				id, lcd_info->dsc.cnt);
+		}
 
 		decon_reg_set_data_path(id, d_path, s_path);
 		/* call decon_reg_config_data_path_size () inside */
@@ -1839,6 +1842,13 @@ void decon_reg_set_trigger(u32 id, struct decon_mode_info *psr,
 				HW_TRIG_EN : HW_TRIG_MASK_DECON;
 		mask = HW_TRIG_EN | HW_TRIG_MASK_DECON;
 	}
+
+	/* TODO: This configuration will be changed to connected DDI */
+	if (id == 0)
+		val |= HW_TRIG_SEL_FROM_DDI0;
+	else if (id == 1)
+		val |= HW_TRIG_SEL_FROM_DDI1;
+	mask |= HW_TRIG_SEL_MASK;
 
 	decon_write_mask(id, HW_SW_TRIG_CONTROL, val, mask);
 }
