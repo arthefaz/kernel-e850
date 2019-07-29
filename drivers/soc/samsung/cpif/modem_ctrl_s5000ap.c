@@ -519,7 +519,7 @@ static int start_normal_boot(struct modem_ctl *mc)
 	update_ctrl_msg(mld->ap2cp_united_status, 1, mc->sbi_ap_status_mask,
 			mc->sbi_ap_status_pos);
 	mif_info("ap_status=%u\n", extract_ctrl_msg(mld->ap2cp_united_status,
-				mc->sbi_ap_status_mask, mc->sbi_cp_status_pos));
+				mc->sbi_ap_status_mask, mc->sbi_ap_status_pos));
 
 	update_ctrl_msg(mld->ap2cp_united_status, 1, mc->sbi_pda_active_mask,
 			mc->sbi_pda_active_pos);
