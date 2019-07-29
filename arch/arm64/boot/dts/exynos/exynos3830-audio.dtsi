@@ -35,7 +35,7 @@
 		samsung,quirks = "try to asrc off";
 		samsung,ipc-tx-area = <0x1 0x850000 0x18000>;
 		samsung,ipc-rx-area = <0x1 0x868000 0x18000>;
-		samsung,handshake-area = <0x0 0x2f2e0 0x20>;
+		samsung,handshake-area = <0x0 0x10fc0 0x20>;
 		samsung,abox-gic = <&abox_gic>;
 		samsung,uaif-max-div = <512>;
 		samsung,pm-qos-int = <0 0 0 0 0>;
@@ -47,9 +47,9 @@
 			reg-names = "gpr";
 			samsung,id = <0>;
 			samsung,type = "CA32";
-			samsung,pmu_power = <0x2e00 0x1>; /* AUD_CPU0_CONFIGURATION */
-			samsung,pmu_enable = <0x2e20 0x1>; /* AUD_CPU0_OUT */
-			samsung,pmu_standby = <0x2e24 0x11>; /* AUD_CPU0_IN */
+			samsung,pmu_power = <0x2d80 0x1>; /* AUD_CPU0_CONFIGURATION */
+			samsung,pmu_enable = <0x2da0 0x1>; /* AUD_CPU0_OUT */
+			samsung,pmu_standby = <0x2da4 0x11>; /* AUD_CPU0_IN */
 			abox_firmware_sram0: abox-firmware-sram0 {
 				samsung,name = "calliope_sram.bin";
 				samsung,area = <0>; /* 0:SRAM, 1:DRAM */
@@ -68,9 +68,9 @@
 			reg-names = "gpr", "status";
 			samsung,id = <1>;
 			samsung,type = "CA32";
-			samsung,pmu_power = <0x2e80 0x1>; /* AUD_CPU1_CONFIGURATION */
-			samsung,pmu_enable = <0x2ea0 0x1>; /* AUD_CPU1_OUT */
-			samsung,pmu_standby = <0x2ea4 0x1>; /* AUD_CPU1_IN */
+			samsung,pmu_power = <0x2e00 0x1>; /* AUD_CPU1_CONFIGURATION */
+			samsung,pmu_enable = <0x2e20 0x1>; /* AUD_CPU1_OUT */
+			samsung,pmu_standby = <0x2e24 0x1>; /* AUD_CPU1_IN */
 			abox_firmware_sram1: abox-firmware-sram1 {
 				samsung,name = "calliope_sram_2.bin";
 				samsung,area = <0>; /* 0:SRAM, 1:DRAM */
@@ -387,7 +387,7 @@
 			compatible = "samsung,abox-spdy";
 			reg = <0x0 0x14a50580 0x10>;
 			reg-names = "sfr";
-			samsung,id = <6>;
+			samsung,id = <3>;
 			clocks = <&clock DOUT_CLK_AUD_FM>, <&clock GATE_ABOX_QCH_FM>;
 			clock-names = "bclk", "bclk_gate";
 			/*pinctrl-names = "default", "sleep";

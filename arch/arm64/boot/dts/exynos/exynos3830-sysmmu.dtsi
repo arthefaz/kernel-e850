@@ -42,7 +42,7 @@
 		compatible = "samsung,exynos-sysmmu";
 		reg = <0x0 0x14850000 0x9000>;
 		interrupts = <0 INTREQ__SYSMMU_ABOX_S1_NS IRQ_TYPE_LEVEL_HIGH>,
-			     <0 INTREQ__SYSMMU_ABOX_S1_S  IRQ_TYPE_LEVEL_HIGH>;
+			     <0 INTREQ__SYSMMU_ABOX_S1_S IRQ_TYPE_LEVEL_HIGH>;
 		qos = <15>;
 
 		sysmmu,secure-irq;
@@ -55,7 +55,7 @@
 			<(SYSMMU_PORT_NO_PREFETCH_READWRITE(0x1) | SYSMMU_BL1) SYSMMU_ID_MASK(0x3, 0x3)>;
 		port-name = "ABOX";
 		#iommu-cells = <0>;
-/*		power-domains = <&pd_aud>;*/
+		power-domains = <&pd_aud>;
 	};
 
 	sysmmu_is0: sysmmu@14550000 {

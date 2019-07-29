@@ -842,7 +842,7 @@
 			usb_audio_offloading = <0>;
 			//abox = <&abox>; /* Temporary block */
 			/* support USB L2 sleep */
-			 ldos = <3>;
+			ldos = <3>;
 			ldo_number = <1 2 11>;
 			/* INT min lock support */
 			usb-pm-qos-int = <400000>;
