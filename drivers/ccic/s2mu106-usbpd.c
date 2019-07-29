@@ -788,6 +788,7 @@ static bool s2mu106_poll_status(void *_data)
 	u64 status_reg_val = 0;
 	msg_header_type header;
 	int data_obj_num = 0;
+	u64 one = 1;
 
 	ret = s2mu106_usbpd_bulk_read(i2c, S2MU106_REG_INT_STATUS0,
 			S2MU106_MAX_NUM_INT_STATUS, intr);
@@ -805,13 +806,13 @@ static bool s2mu106_poll_status(void *_data)
 
 	/* when occur detach & attach atomic */
 	if (intr[4] & S2MU106_REG_INT_STATUS4_USB_DETACH) {
-		status_reg_val |= 1 <<PLUG_DETACH;
+		status_reg_val |= one <<PLUG_DETACH;
 	}
 
 	mutex_lock(&pdic_data->lpm_mutex);
 	if ((intr[4] & S2MU106_REG_INT_STATUS4_PLUG_IRQ) &&
 			!pdic_data->lpm_mode && !pdic_data->is_water_detect)
-		status_reg_val |= 1 << PLUG_ATTACH;
+		status_reg_val |= one << PLUG_ATTACH;
 	else if (pdic_data->lpm_mode &&
 				(intr[4] & S2MU106_REG_INT_STATUS4_PLUG_IRQ) &&
 									!pdic_data->is_water_detect)
@@ -823,32 +824,32 @@ static bool s2mu106_poll_status(void *_data)
 		mutex_lock(&pdic_data->lpm_mutex);
 		if ((intr[4] & S2MU106_REG_INT_STATUS4_PLUG_IRQ) &&
 				!pdic_data->lpm_mode && !pdic_data->is_water_detect)
-			status_reg_val |= 1 << PLUG_ATTACH;
+			status_reg_val |= one << PLUG_ATTACH;
 		mutex_unlock(&pdic_data->lpm_mutex);
 	}
 
 	if (intr[5] & S2MU106_REG_INT_STATUS5_HARD_RESET)
-		status_reg_val |= 1 << MSG_HARDRESET;
+		status_reg_val |= one << MSG_HARDRESET;
 
 	if (intr[0] & S2MU106_REG_INT_STATUS0_MSG_GOODCRC)
-		status_reg_val |= 1 << MSG_GOODCRC;
+		status_reg_val |= one << MSG_GOODCRC;
 
 	if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_PR_SWAP)
-		status_reg_val |= 1 << MSG_PR_SWAP;
+		status_reg_val |= one << MSG_PR_SWAP;
 
 	if (intr[2] & S2MU106_REG_INT_STATUS2_MSG_SOFTRESET)
-		status_reg_val |= 1 << MSG_SOFTRESET;
+		status_reg_val |= one << MSG_SOFTRESET;
 
 	if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_DR_SWAP)
-		status_reg_val |= 1 << MSG_DR_SWAP;
+		status_reg_val |= one << MSG_DR_SWAP;
 
 	if (intr[0] & S2MU106_REG_INT_STATUS0_MSG_ACCEPT)
-		status_reg_val |= 1 << MSG_ACCEPT;
+		status_reg_val |= one << MSG_ACCEPT;
 
 	/* function that support dp control */
 	if (intr[4] & S2MU106_REG_INT_STATUS4_MSG_PASS) {
 		if (intr[3] & S2MU106_REG_INT_STATUS3_UNS_CMD_DATA)
-			status_reg_val |= 1 << MSG_RID;
+			status_reg_val |= one << MSG_RID;
 		else {
 			usbpd_protocol_rx(data);
 			if (data->msg_received == 0)
@@ -861,31 +862,31 @@ static bool s2mu106_poll_status(void *_data)
 				s2mu106_usbpd_check_msg(data, &status_reg_val);
 
 			if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_PSRDY)
-				status_reg_val |= 1 << MSG_PSRDY;
+				status_reg_val |= one << MSG_PSRDY;
 
 			if (intr[2] & S2MU106_REG_INT_STATUS2_MSG_REQUEST)
-				status_reg_val |= 1 << MSG_REQUEST;
+				status_reg_val |= one << MSG_REQUEST;
 
 			if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_REJECT)
-				status_reg_val |= 1 << MSG_REJECT;
+				status_reg_val |= one << MSG_REJECT;
 
 			if (intr[2] & S2MU106_REG_INT_STATUS2_MSG_WAIT)
-				status_reg_val |= 1 << MSG_WAIT;
+				status_reg_val |= one << MSG_WAIT;
 
 			if (intr[4] & S2MU106_REG_INT_STATUS4_MSG_ERROR)
-				status_reg_val |= 1 << MSG_ERROR;
+				status_reg_val |= one << MSG_ERROR;
 
 			if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_PING)
-				status_reg_val |= 1 << MSG_PING;
+				status_reg_val |= one << MSG_PING;
 
 			if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_GETSNKCAP)
-				status_reg_val |= 1 << MSG_GET_SNK_CAP;
+				status_reg_val |= one << MSG_GET_SNK_CAP;
 
 			if (intr[1] & S2MU106_REG_INT_STATUS1_MSG_GETSRCCAP)
-				status_reg_val |= 1 << MSG_GET_SRC_CAP;
+				status_reg_val |= one << MSG_GET_SRC_CAP;
 
 			if (intr[2] & S2MU106_REG_INT_STATUS2_MSG_VCONN_SWAP)
-				status_reg_val |= 1 << MSG_VCONN_SWAP;
+				status_reg_val |= one << MSG_VCONN_SWAP;
 		}
 	}
 out:
