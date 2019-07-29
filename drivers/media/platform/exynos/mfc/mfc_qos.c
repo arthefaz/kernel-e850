@@ -56,7 +56,7 @@ void mfc_perf_boost_enable(struct mfc_dev *dev)
 		if (pdata->mo_control) {
 #ifdef CONFIG_MFC_NO_RENEWAL_BTS
 			bts_update_scen(BS_MFC_UHD_10BIT, 1);
-			mfc_debug(3, "[QoS][BOOST] BTS(MO): UHD_10BIT\n");
+			mfc_debug_dev(3, "[QoS][BOOST] BTS(MO): UHD_10BIT\n");
 #else
 			bts_add_scenario(qos_boost_table->bts_scen_idx);
 			mfc_debug_dev(3, "[QoS][BOOST] BTS(MO) add idx %d (%s)\n",
@@ -94,7 +94,7 @@ void mfc_perf_boost_disable(struct mfc_dev *dev)
 		if (pdata->mo_control) {
 #ifdef CONFIG_MFC_NO_RENEWAL_BTS
 			bts_update_scen(BS_MFC_UHD_10BIT, 0);
-			mfc_debug(3, "[QoS][BOOST] BTS(MO) off\n");
+			mfc_debug_dev(3, "[QoS][BOOST] BTS(MO) off\n");
 #else
 			bts_del_scenario(pdata->qos_boost_table->bts_scen_idx);
 			mfc_debug_dev(3, "[QoS][BOOST] BTS(MO) del idx %d (%s)\n",
@@ -150,10 +150,10 @@ static void __mfc_qos_operate(struct mfc_dev *dev, int opr_type, int table_type,
 			bts_update_scen(BS_MFC_UHD_ENC60, qos_table[idx].mo_uhd_enc60_value);
 			bts_update_scen(BS_MFC_UHD_10BIT, qos_table[idx].mo_10bit_value);
 			bts_update_scen(BS_MFC_UHD, qos_table[idx].mo_value);
-			MFC_TRACE_CTX("BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
+			MFC_TRACE_DEV("BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
 					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
 					qos_table[idx].mo_uhd_enc60_value);
-			mfc_debug(2, "[QoS] BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
+			mfc_debug_dev(2, "[QoS] BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
 					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
 					qos_table[idx].mo_uhd_enc60_value);
 #else
@@ -193,10 +193,10 @@ static void __mfc_qos_operate(struct mfc_dev *dev, int opr_type, int table_type,
 			bts_update_scen(BS_MFC_UHD_ENC60, qos_table[idx].mo_uhd_enc60_value);
 			bts_update_scen(BS_MFC_UHD_10BIT, qos_table[idx].mo_10bit_value);
 			bts_update_scen(BS_MFC_UHD, qos_table[idx].mo_value);
-			MFC_TRACE_CTX("BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
+			MFC_TRACE_DEV("BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
 					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
 					qos_table[idx].mo_uhd_enc60_value);
-			mfc_debug(2, "[QoS] BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
+			mfc_debug_dev(2, "[QoS] BTS(MO) update - uhd:%d, uhd_10bit:%d, uhd_enc60:%d\n",
 					qos_table[idx].mo_value, qos_table[idx].mo_10bit_value,
 					qos_table[idx].mo_uhd_enc60_value);
 #else

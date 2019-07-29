@@ -901,7 +901,9 @@ static int __mfc_parse_mfc_qos_platdata(struct device_node *np, char *node_name,
 	}
 
 #ifdef CONFIG_MFC_USE_BTS
+#ifndef CONFIG_MFC_NO_RENEWAL_BTS
 	qosdata->bts_scen_idx = bts_get_scenindex(qosdata->name);
+#endif
 #endif
 
 	return 0;
@@ -1081,7 +1083,9 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 	}
 
 #ifdef CONFIG_MFC_USE_BTS
+#ifndef CONFIG_MFC_NO_RENEWAL_BTS
 	pdata->mfc_bw_index = bts_get_bwindex("mfc");
+#endif
 #endif
 
 	/* QoS */
@@ -1128,7 +1132,9 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 	}
 
 #ifdef CONFIG_MFC_USE_BTS
+#ifndef CONFIG_MFC_NO_RENEWAL_BTS
 	pdata->qos_boost_table->bts_scen_idx = bts_get_scenindex(pdata->qos_boost_table->name);
+#endif
 #endif
 
 	/* QoS weight */
