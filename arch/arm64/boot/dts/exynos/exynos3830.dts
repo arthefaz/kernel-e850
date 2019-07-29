@@ -925,6 +925,12 @@
 		interrupts = <GIC_SPI INTREQ__TBASE IRQ_TYPE_LEVEL_HIGH>;
 	};
 
+	/* Secure RPMB */
+	mmc-srpmb {
+		compatible = "samsung,mmc-srpmb";
+		interrupts = <GIC_SPI INTREQ__RPMB IRQ_TYPE_LEVEL_HIGH>;
+	};
+
 	exynos_dm: exynos-dm@17000000 {
 		compatible = "samsung,exynos-dvfs-manager";
 		reg = <0x0 0x17000000 0x0>;
