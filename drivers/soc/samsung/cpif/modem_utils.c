@@ -1247,7 +1247,7 @@ void mif_set_snapshot(bool enable)
 {
 	if (!enable)
 		acpm_stop_log();
-	dbg_snapshot_set_enable("log_kevents", enable);
+	dbg_snapshot_set_enable_item("log_kevents", enable);
 }
 
 static LIST_HEAD(bm_list);
