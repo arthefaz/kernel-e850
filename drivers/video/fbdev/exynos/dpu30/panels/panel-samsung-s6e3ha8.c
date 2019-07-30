@@ -182,7 +182,7 @@ static int s6e3ha8_suspend(struct exynos_panel_device *panel)
 static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 {
 	struct exynos_panel_info *lcd = &panel->lcd_info;
-	struct dsim_device *dsim = get_dsim_drvdata(0);
+	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
 
 	DPU_INFO_PANEL("%s +\n", __func__);
 
@@ -199,6 +199,7 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 		DPU_ERR_PANEL("fail to set MIPI_DSI_DSC_PPS command\n");
 
 	dsim_write_data_seq_delay(dsim, 120, 0x11); /* sleep out: 120ms delay */
+
 	dsim_write_data_seq(dsim, false, 0xB9, 0x00, 0xB0, 0x8F, 0x09, 0x00, 0x00,
 			0x00, 0x11, 0x01);
 	dsim_write_data_seq(dsim, false, 0x1A, 0x1F, 0x00, 0x00, 0x00, 0x00);
@@ -210,6 +211,8 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 	dsim_write_data_table(dsim, BCCTL);
 	dsim_write_data_seq(dsim, false, 0xF7, 0x03);
 	dsim_write_data_seq(dsim, false, 0x53, 0x20);
+
+	dsim_write_data_seq(dsim, false, 0x51, 0x80);
 
 	dsim_write_data_seq(dsim, false, 0x35); /* TE on */
 
@@ -239,7 +242,7 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 static int s6e3ha8_mres(struct exynos_panel_device *panel, int mres_idx)
 {
 	int dsc_en;
-	struct dsim_device *dsim = get_dsim_drvdata(0);
+	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
 
 	dsc_en = panel->lcd_info.mres.res_info[mres_idx].dsc_en;
 
@@ -296,7 +299,7 @@ static int s6e3ha8_read_state(struct exynos_panel_device *panel)
 static int s6e3ha8_set_light(struct exynos_panel_device *panel, u32 br_val)
 {
 	u8 data[2] = {0, };
-	struct dsim_device *dsim = get_dsim_drvdata(0);
+	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
 
 	DPU_DEBUG_PANEL("%s +\n", __func__);
 

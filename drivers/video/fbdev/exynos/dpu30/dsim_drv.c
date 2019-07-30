@@ -1415,7 +1415,7 @@ static int dsim_register_panel(struct dsim_device *dsim)
 
 	dsim_info("%s +\n", __func__);
 
-	dsim->panel = get_panel_drvdata();
+	dsim->panel = get_panel_drvdata(dsim->id);
 	if (dsim->panel->found == true) {
 		/* clock and data lane count are stored for DSIM init */
 		dsim->clks.hs_clk = dsim->panel->lcd_info.hs_clk;

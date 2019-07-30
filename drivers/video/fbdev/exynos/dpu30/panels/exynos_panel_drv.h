@@ -46,10 +46,13 @@ extern int dpu_panel_log_level;
 #define MAX_PANEL_SUPPORT	10
 #define MAX_PANEL_ID_NUM	4
 
+/* for dual display */
+#define MAX_PANEL_DRV_SUPPORT	3
+
 #define DEFAULT_MAX_BRIGHTNESS	255
 #define DEFAULT_BRIGHTNESS	127
 
-extern struct exynos_panel_device *panel_drvdata;
+extern struct exynos_panel_device *panel_drvdata[MAX_PANEL_DRV_SUPPORT];
 extern struct exynos_panel_ops panel_s6e3ha9_ops;
 extern struct exynos_panel_ops panel_s6e3ha8_ops;
 extern struct exynos_panel_ops panel_s6e3fa0_ops;
@@ -113,9 +116,9 @@ struct exynos_panel_device {
 	enum power_mode power_mode;
 };
 
-static inline struct exynos_panel_device *get_panel_drvdata(void)
+static inline struct exynos_panel_device *get_panel_drvdata(u32 panel_idx)
 {
-	return panel_drvdata;
+	return panel_drvdata[panel_idx];
 }
 
 #define call_panel_ops(q, op, args...)				\

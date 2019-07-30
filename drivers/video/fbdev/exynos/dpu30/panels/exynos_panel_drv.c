@@ -21,7 +21,7 @@
 
 int dpu_panel_log_level = 7;
 
-struct exynos_panel_device *panel_drvdata;
+struct exynos_panel_device *panel_drvdata[MAX_PANEL_DRV_SUPPORT];
 EXPORT_SYMBOL(panel_drvdata);
 
 static struct exynos_panel_ops *panel_list[MAX_PANEL_SUPPORT];
@@ -41,9 +41,14 @@ static int exynos_backlight_get_brightness(struct backlight_device *bl)
 static int exynos_backlight_update_status(struct backlight_device *bl)
 {
 	u32 brightness = bl->props.brightness;
-	struct dsim_device *dsim = get_dsim_drvdata(0);
+	struct dsim_device *dsim;
+	struct exynos_panel_device *panel;
 
-	DPU_INFO_PANEL("%s: brightness = %d\n", __func__, brightness);
+	panel = dev_get_drvdata(&bl->dev);
+	dsim = get_dsim_drvdata(panel->id);
+
+	DPU_INFO_PANEL("%s: panel-%d, brightness = %d\n", __func__, panel->id,
+			brightness);
 #if 0
 	if (bl->props.power != FB_BLANK_UNBLANK ||
 			bl->props.fb_blank != FB_BLANK_UNBLANK ||
@@ -765,7 +770,6 @@ static int exynos_panel_probe(struct platform_device *pdev)
 	}
 
 	panel->dev = &pdev->dev;
-	panel_drvdata = panel;
 
 	mutex_init(&panel->ops_lock);
 
@@ -797,6 +801,8 @@ static int exynos_panel_probe(struct platform_device *pdev)
 	if (ret) {
 		goto err_dev_file;
 	}
+
+	panel_drvdata[panel->id] = panel;
 
 	exynos_panel_list_up();
 	exynos_panel_find_id(panel);

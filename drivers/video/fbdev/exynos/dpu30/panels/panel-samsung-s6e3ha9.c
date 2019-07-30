@@ -41,7 +41,7 @@ static int s6e3ha9_suspend(struct exynos_panel_device *panel)
 static int s6e3ha9_displayon(struct exynos_panel_device *panel)
 {
 	struct exynos_panel_info *lcd = &panel->lcd_info;
-	struct dsim_device *dsim = get_dsim_drvdata(0);
+	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
 
 	DPU_INFO_PANEL("%s +\n", __func__);
 
@@ -119,7 +119,7 @@ static int s6e3ha9_read_state(struct exynos_panel_device *panel)
 static int s6e3ha9_set_light(struct exynos_panel_device *panel, u32 br_val)
 {
 	u8 data[2] = {0, };
-	struct dsim_device *dsim = get_dsim_drvdata(0);
+	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
 
 	DPU_DEBUG_PANEL("%s +\n", __func__);
 
