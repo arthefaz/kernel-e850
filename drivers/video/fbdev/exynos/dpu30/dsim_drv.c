@@ -1375,7 +1375,8 @@ static int dsim_init_resources(struct dsim_device *dsim, struct platform_device 
 		dsim_info("dphy_extra res: start(0x%x), end(0x%x)\n",
 				(u32)res->start, (u32)res->end);
 
-		dsim->res.phy_regs_ex = devm_ioremap_resource(dsim->dev, res);
+		dsim->res.phy_regs_ex = devm_ioremap(dsim->dev, res->start,
+							resource_size(res));
 		if (IS_ERR(dsim->res.phy_regs_ex)) {
 			dsim_err("failed to remap DSIM DPHY(EXTRA) SFR region\n");
 			return -EINVAL;
