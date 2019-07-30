@@ -119,10 +119,9 @@ int s6e3fa0_displayon(struct exynos_panel_device *panel)
 	if (panel->cabc_enabled)
 		s6e3fa0_cabc_mode_unlocked(panel->power_mode);
 
-#if 0
 	/* enable brightness control */
 	dsim_write_data_seq_delay(dsim, 12, 0x53, 0x20, 0x00);
-#endif
+
 	if (lcd->mode == DECON_MIPI_COMMAND_MODE)
 		dsim_write_data_seq_delay(dsim, 12, 0x35); /* TE on */
 
