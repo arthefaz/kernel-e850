@@ -345,34 +345,7 @@ struct modem_mbox {
 /* platform data */
 struct modem_data {
 	char *name;
-
 	u32 cp_num;
-
-	unsigned int gpio_cp_on;
-	unsigned int gpio_cp_off;
-	unsigned int gpio_reset_req_n;
-	unsigned int gpio_cp_reset;
-
-	/* for broadcasting AP's PM state (active or sleep) */
-	unsigned int gpio_pda_active;
-
-	/* for checking aliveness of CP */
-	unsigned int gpio_phone_active;
-	unsigned int irq_phone_active;
-
-	/* for AP-CP IPC interrupt */
-	unsigned int gpio_ipc_int2ap;
-	unsigned int irq_ipc_int2ap;
-	unsigned long irqf_ipc_int2ap;	/* IRQ flags */
-	unsigned int gpio_ipc_int2cp;
-
-	/* for AP-CP power management (PM) handshaking */
-	unsigned int gpio_ap_wakeup;
-	unsigned int irq_ap_wakeup;
-	unsigned int gpio_ap_status;
-	unsigned int gpio_cp_wakeup;
-	unsigned int gpio_cp_status;
-	unsigned int irq_cp_status;
 
 	struct modem_mbox *mbx;
 	struct mem_link_device *mld;

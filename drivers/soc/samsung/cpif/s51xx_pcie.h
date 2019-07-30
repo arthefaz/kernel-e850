@@ -35,7 +35,6 @@ struct s51xx_pcie {
 	u64 dbaddr_base;
 	u32 dbaddr_offset;
 
-	unsigned int gpio_cp_wakeup;
 	u32 link_status;
 	bool suspend_try;
 
@@ -75,7 +74,6 @@ static inline int pcie_iommu_map(int ch_num, unsigned long iova, phys_addr_t pad
 
 int s51xx_pcie_request_msi_int(struct pci_dev *pdev, int int_num);
 void __iomem *s51xx_pcie_get_doorbell_address(void);
-void s51xx_pcie_set_cp_wake_gpio(struct pci_dev *pdev, int cp_wakeup);
 int s51xx_pcie_send_doorbell_int(struct pci_dev *pdev, int int_num);
 void s51xx_pcie_save_state(struct pci_dev *pdev);
 void s51xx_pcie_restore_state(struct pci_dev *pdev);

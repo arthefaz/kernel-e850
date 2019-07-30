@@ -160,13 +160,6 @@ send_doorbell_again:
 	return 0;
 }
 
-void s51xx_pcie_set_cp_wake_gpio(struct pci_dev *pdev, int cp_wakeup)
-{
-	struct s51xx_pcie *s51xx_pcie = pci_get_drvdata(pdev);
-
-	s51xx_pcie->gpio_cp_wakeup = cp_wakeup;
-}
-
 void first_save_s51xx_status(struct pci_dev *pdev)
 {
 	struct s51xx_pcie *s51xx_pcie = pci_get_drvdata(pdev);

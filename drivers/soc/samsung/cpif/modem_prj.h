@@ -629,32 +629,11 @@ struct modem_ctl {
 	/* completion for waiting for CP power-off */
 	struct completion off_cmpl;
 
-	unsigned int gpio_cp_on;
-	unsigned int gpio_cp_off;
-	unsigned int gpio_reset_req_n;
-	unsigned int gpio_cp_reset;
-
 	/* for broadcasting AP's PM state (active or sleep) */
-	unsigned int gpio_pda_active;
 	unsigned int int_pda_active;
-
-	/* for checking aliveness of CP */
-	unsigned int gpio_phone_active;
-	unsigned int irq_phone_active;
-	struct modem_irq irq_cp_active;
-
-	/* for AP-CP power management (PM) handshaking */
-	unsigned int gpio_ap_wakeup;
-	unsigned int irq_ap_wakeup;
-
-	unsigned int gpio_ap_status;
-	unsigned int int_ap_status;
-
-	unsigned int gpio_cp_wakeup;
 	unsigned int int_cp_wakeup;
-
-	unsigned int gpio_cp_status;
-	unsigned int irq_cp_status;
+	/* for checking aliveness of CP */
+	unsigned int irq_phone_active;
 
 #ifdef CONFIG_LINK_DEVICE_SHMEM
 	unsigned int mbx_pda_active;

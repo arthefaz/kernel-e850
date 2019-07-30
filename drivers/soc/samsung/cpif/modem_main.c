@@ -318,155 +318,6 @@ static int parse_dt_common_pdata(struct device_node *np,
 	return 0;
 }
 
-#if !defined(CONFIG_LINK_DEVICE_SHMEM) && !defined(CONFIG_LINK_DEVICE_PCIE)
-static int __parse_dt_mandatory_gpio_pdata(struct device_node *np,
-					   struct modem_data *pdata)
-{
-	int ret = 0;
-
-	/* GPIO_CP_ON */
-	pdata->gpio_cp_on = of_get_named_gpio(np, "mif,gpio_cp_on", 0);
-	if (!gpio_is_valid(pdata->gpio_cp_on)) {
-		mif_err("cp_on: Invalied gpio pins\n");
-		return -EINVAL;
-	}
-
-	mif_err("gpio_cp_on: %d\n", pdata->gpio_cp_on);
-	ret = gpio_request(pdata->gpio_cp_on, "CP_ON");
-	if (ret)
-		mif_err("fail to request gpio %s:%d\n", "CP_ON", ret);
-	gpio_direction_output(pdata->gpio_cp_on, 0);
-
-	/* GPIO_CP_RESET */
-	pdata->gpio_cp_reset = of_get_named_gpio(np, "mif,gpio_cp_reset", 0);
-	if (!gpio_is_valid(pdata->gpio_cp_reset)) {
-		mif_err("cp_rst: Invalied gpio pins\n");
-		return -EINVAL;
-	}
-
-	mif_err("gpio_cp_reset: %d\n", pdata->gpio_cp_reset);
-	ret = gpio_request(pdata->gpio_cp_reset, "CP_RST");
-	if (ret)
-		mif_err("fail to request gpio %s:%d\n", "CP_RST", ret);
-	gpio_direction_output(pdata->gpio_cp_reset, 0);
-
-	/* GPIO_PDA_ACTIVE */
-	pdata->gpio_pda_active = of_get_named_gpio(np,
-						"mif,gpio_pda_active", 0);
-	if (!gpio_is_valid(pdata->gpio_pda_active)) {
-		mif_err("pda_active: Invalied gpio pins\n");
-		return -EINVAL;
-	}
-
-	mif_err("gpio_pda_active: %d\n", pdata->gpio_pda_active);
-	ret = gpio_request(pdata->gpio_pda_active, "PDA_ACTIVE");
-	if (ret)
-		mif_err("fail to request gpio %s:%d\n", "PDA_ACTIVE", ret);
-	gpio_direction_output(pdata->gpio_pda_active, 0);
-
-	/* GPIO_PHONE_ACTIVE */
-	pdata->gpio_phone_active = of_get_named_gpio(np,
-						"mif,gpio_phone_active", 0);
-	if (!gpio_is_valid(pdata->gpio_phone_active)) {
-		mif_err("phone_active: Invalied gpio pins\n");
-		return -EINVAL;
-	}
-
-	mif_err("gpio_phone_active: %d\n", pdata->gpio_phone_active);
-	ret = gpio_request(pdata->gpio_phone_active, "PHONE_ACTIVE");
-	if (ret)
-		mif_err("fail to request gpio %s:%d\n", "PHONE_ACTIVE", ret);
-	gpio_direction_input(pdata->gpio_phone_active);
-
-	/* GPIO_IPC_INT2CP */
-	pdata->gpio_ipc_int2cp = of_get_named_gpio(np,
-						"mif,gpio_ipc_int2cp", 0);
-	if (gpio_is_valid(pdata->gpio_ipc_int2cp)) {
-		mif_err("gpio_ipc_int2cp: %d\n", pdata->gpio_ipc_int2cp);
-		ret = gpio_request(pdata->gpio_ipc_int2cp, "IPC_INT2CP");
-		if (ret)
-			mif_err("fail to request gpio %s:%d\n",
-				"SEND_SIG", ret);
-		else
-			gpio_direction_output(pdata->gpio_ipc_int2cp, 0);
-	}
-
-	return ret;
-}
-#endif
-
-static void __parse_dt_optional_gpio_pdata(struct device_node *np,
-					   struct modem_data *pdata)
-{
-	int ret;
-
-	/* GPIO_CP_WAKEUP */
-	pdata->gpio_cp_wakeup = of_get_named_gpio(np,
-						"mif,gpio_cp_wakeup", 0);
-	if (gpio_is_valid(pdata->gpio_cp_wakeup)) {
-		mif_err("gpio_cp_wakeup: %d\n", pdata->gpio_cp_wakeup);
-		ret = gpio_request(pdata->gpio_cp_wakeup, "CP_WAKEUP");
-		if (ret)
-			mif_err("fail to request gpio %s:%d\n",
-				"CP_WAKEUP", ret);
-		else
-			gpio_direction_output(pdata->gpio_cp_wakeup, 0);
-	}
-
-	/* GPIO_AP_STATUS */
-	pdata->gpio_ap_status = of_get_named_gpio(np,
-						"mif,gpio_ap_status", 0);
-	if (gpio_is_valid(pdata->gpio_ap_status)) {
-		mif_err("gpio_ap_status: %d\n", pdata->gpio_ap_status);
-		ret = gpio_request(pdata->gpio_ap_status, "AP_STATUS");
-		if (ret)
-			mif_err("fail to request gpio %s:%d\n",
-				"AP_STATUS", ret);
-		else
-			gpio_direction_output(pdata->gpio_ap_status, 0);
-	}
-
-	/* GPIO_AP_WAKEUP */
-	pdata->gpio_ap_wakeup = of_get_named_gpio(np,
-						"mif,gpio_ap_wakeup", 0);
-	if (gpio_is_valid(pdata->gpio_ap_wakeup)) {
-		mif_err("gpio_ap_wakeup: %d\n", pdata->gpio_ap_wakeup);
-		ret = gpio_request(pdata->gpio_ap_wakeup, "AP_WAKEUP");
-		if (ret)
-			mif_err("fail to request gpio %s:%d\n",
-				"AP_WAKEUP", ret);
-		else
-			gpio_direction_input(pdata->gpio_ap_wakeup);
-	}
-
-	/* GPIO_CP_STATUS */
-	pdata->gpio_cp_status = of_get_named_gpio(np,
-						"mif,gpio_cp_status", 0);
-	if (gpio_is_valid(pdata->gpio_cp_status)) {
-		mif_err("gpio_cp_status: %d\n", pdata->gpio_cp_status);
-		ret = gpio_request(pdata->gpio_cp_status, "CP_STATUS");
-		if (ret)
-			mif_err("fail to request gpio %s:%d\n",
-				"CP_STATUS", ret);
-		else
-			gpio_direction_input(pdata->gpio_cp_status);
-	}
-}
-
-static int parse_dt_gpio_pdata(struct device_node *np, struct modem_data *pdata)
-{
-	int err = 0;
-
-#if !defined(CONFIG_LINK_DEVICE_SHMEM) && !defined(CONFIG_LINK_DEVICE_PCIE)
-	err = __parse_dt_mandatory_gpio_pdata(np, pdata);
-	if (err)
-		return err;
-#endif
-	__parse_dt_optional_gpio_pdata(np, pdata);
-
-	return err;
-}
-
 static int parse_dt_mbox_pdata(struct device *dev, struct device_node *np,
 					struct modem_data *pdata)
 {
@@ -617,11 +468,6 @@ static struct modem_data *modem_if_parse_dt_pdata(struct device *dev)
 
 	if (parse_dt_common_pdata(dev->of_node, pdata)) {
 		mif_err("DT error: failed to parse common\n");
-		goto error;
-	}
-
-	if (parse_dt_gpio_pdata(dev->of_node, pdata)) {
-		mif_err("DT error: failed to parse gpio\n");
 		goto error;
 	}
 
@@ -904,9 +750,6 @@ static int modem_suspend(struct device *pdev)
 {
 	struct modem_ctl *mc = dev_get_drvdata(pdev);
 
-	if (mc->gpio_pda_active)
-		gpio_set_value(mc->gpio_pda_active, 0);
-
 	if (mc->ops.suspend)
 		mc->ops.suspend(mc);
 
@@ -921,9 +764,6 @@ static int modem_resume(struct device *pdev)
 	struct modem_ctl *mc = dev_get_drvdata(pdev);
 
 	set_wakeup_packet_log(false);
-
-	if (mc->gpio_pda_active)
-		gpio_set_value(mc->gpio_pda_active, 1);
 
 	if (mc->ops.resume)
 		mc->ops.resume(mc);

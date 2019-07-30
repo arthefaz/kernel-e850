@@ -3086,7 +3086,6 @@ static int shmem_register_pcie(struct link_device *ld)
 		// debug: pci_read_config_dword(s51xx_pcie.s51xx_pdev, 0x50, &msi_val);
 		// debug: mif_err("MSI Control Reg : 0x%x\n", msi_val);
 
-		s51xx_pcie_set_cp_wake_gpio(mc->s51xx_pdev, mc->gpio_cp_wakeup);
 		request_pcie_msi_int(ld, pdev);
 		first_save_s51xx_status(mc->s51xx_pdev);
 
