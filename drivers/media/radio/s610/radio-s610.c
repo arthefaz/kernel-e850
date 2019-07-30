@@ -1450,7 +1450,7 @@ static int s610_radio_s_ctrl(struct v4l2_ctrl *ctrl)
 			__func__, ctrl->val,  ret);
 		break;
 	case V4L2_CID_S610_REG_RW:
-		fmspeedy_set_reg(radio->speedy_reg_addr, (u32)ctrl->val);
+		/*fmspeedy_set_reg(radio->speedy_reg_addr, (u32)ctrl->val);*/
 		FDEBUG(radio, "%s(), REG_RW  val:0x%xh, ret : %d\n",
 			__func__, ctrl->val, ret);
 		break;
@@ -1964,7 +1964,7 @@ static irqreturn_t s610_hw_irq_handle(int irq, void *devid)
 MODULE_ALIAS("platform:s610-radio");
 static const struct of_device_id exynos_fm_of_match[] = {
 		{
-				.compatible = "samsung,exynos9610-fm",
+				.compatible = "samsung,exynos3830-fm",
 		},
 		{},
 };

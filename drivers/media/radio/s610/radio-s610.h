@@ -17,7 +17,7 @@
 
 #define IDLE_POLLING_ENABLE
 
-#define USE_AUDIO_PM
+//#define USE_AUDIO_PM
 
 /* DEBUG :: Print debug for debug *******/
 #define  SUPPORT_FM_DEBUG
