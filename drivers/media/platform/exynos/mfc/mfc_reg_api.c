@@ -613,7 +613,7 @@ void mfc_set_pixel_format(struct mfc_ctx *ctx, unsigned int format)
 		mfc_set_bits(reg, 0x1, 9, sbwc);
 
 	MFC_WRITEL(reg, MFC_REG_PIXEL_FORMAT);
-	mfc_debug(2, "[FRAME] pix format: %d, mem_type_10bit for 10bit: %d, sbwc: %d (reg: %#x)\n",
+	mfc_debug(2, "[FRAME] pix format: %d, mem_type_10bit: %d, sbwc: %d (reg: %#x)\n",
 			pix_val, ctx->mem_type_10bit, sbwc, reg);
 }
 

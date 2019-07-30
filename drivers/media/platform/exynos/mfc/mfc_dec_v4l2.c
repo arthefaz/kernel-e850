@@ -156,6 +156,34 @@ static int mfc_dec_enum_fmt_vid_out_mplane(struct file *file, void *prov,
 	return __mfc_dec_enum_fmt(dev, f, MFC_FMT_STREAM);
 }
 
+static void __mfc_dec_fix_10bit_memtype(struct mfc_ctx *ctx, unsigned int format)
+{
+	struct mfc_dev *dev = ctx->dev;
+
+	switch (format) {
+	case V4L2_PIX_FMT_NV12N_10B:
+	case V4L2_PIX_FMT_NV12M_S10B:
+	case V4L2_PIX_FMT_NV16M_S10B:
+	case V4L2_PIX_FMT_NV21M_S10B:
+	case V4L2_PIX_FMT_NV61M_S10B:
+		ctx->mem_type_10bit = 0;
+		break;
+	case V4L2_PIX_FMT_NV12M_P010:
+	case V4L2_PIX_FMT_NV16M_P210:
+	case V4L2_PIX_FMT_NV21M_P010:
+	case V4L2_PIX_FMT_NV61M_P210:
+		ctx->mem_type_10bit = 1;
+		break;
+	default:
+		mfc_err_ctx("[10BIT] not supported 10bit format: %d\n", format);
+		if (dev->pdata->P010_decoding)
+			ctx->mem_type_10bit = 1;
+		else
+			ctx->mem_type_10bit = 0;
+		break;
+	}
+}
+
 static void __mfc_dec_change_format(struct mfc_ctx *ctx)
 {
 	struct mfc_dev *dev = ctx->dev;
@@ -175,16 +203,25 @@ static void __mfc_dec_change_format(struct mfc_ctx *ctx)
 		case V4L2_PIX_FMT_NV12M_P010:
 		case V4L2_PIX_FMT_NV12M_SBWC_8B:
 		case V4L2_PIX_FMT_NV12M_SBWC_10B:
-			ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV16M_S10B);
+			if (dev->pdata->P010_decoding)
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV16M_P210);
+			else
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV16M_S10B);
 			break;
 		case V4L2_PIX_FMT_NV21M:
 		case V4L2_PIX_FMT_NV61M:
 		case V4L2_PIX_FMT_NV21M_S10B:
 		case V4L2_PIX_FMT_NV21M_P010:
-			ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV61M_S10B);
+			if (dev->pdata->P010_decoding)
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV61M_P210);
+			else
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV61M_S10B);
 			break;
 		default:
-			ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV16M_S10B);
+			if (dev->pdata->P010_decoding)
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV16M_P210);
+			else
+				ctx->dst_fmt = __mfc_dec_find_format(ctx, V4L2_PIX_FMT_NV16M_S10B);
 			break;
 		}
 		ctx->raw_buf.num_planes = 2;
@@ -304,6 +341,9 @@ static void __mfc_dec_change_format(struct mfc_ctx *ctx)
 
 	if (org_fmt != ctx->dst_fmt->fourcc)
 		mfc_info_ctx("[FRAME] format is changed to %s\n", ctx->dst_fmt->name);
+
+	if (ctx->is_10bit)
+		__mfc_dec_fix_10bit_memtype(ctx, ctx->dst_fmt->fourcc);
 }
 
 static void __mfc_dec_uncomp_format(struct mfc_ctx *ctx)

@@ -254,8 +254,13 @@ void mfc_dec_calc_dpb_size(struct mfc_ctx *ctx)
 
 	__mfc_set_linear_stride_size(ctx, ctx->dst_fmt);
 
+	/*
+	 * In case of 10bit,
+	 * we do not update to min dpb size.
+	 * Because min size may be different from the 10bit mem_type be used.
+	 */
 	for (i = 0; i < raw->num_planes; i++) {
-		if (raw->plane_size[i] < ctx->min_dpb_size[i]) {
+		if (!ctx->is_10bit && (raw->plane_size[i] < ctx->min_dpb_size[i])) {
 			mfc_info_ctx("[FRAME] plane[%d] size is changed %d -> %d\n",
 					i, raw->plane_size[i], ctx->min_dpb_size[i]);
 			raw->plane_size[i] = ctx->min_dpb_size[i];
