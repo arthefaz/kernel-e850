@@ -231,6 +231,8 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AUD3004X_F8_STATUS9			0x7F8
 
 /* Analog Recording Path Control */
+#define AUD3004X_106_DSM_AD			0x806
+#define AUD3004X_107_LPF_AD			0x807
 #define AUD3004X_110_PD_REF			0x810
 #define AUD3004X_111_PD_AD1			0x811
 #define AUD3004X_112_PD_AD2			0x812
@@ -263,6 +265,9 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AUD3004X_160_OVP2			0x860
 
 /* OTP Register for Analog */
+#define AUD3004X_2A2_CTRL_IREF1		0x3A2
+#define AUD3004X_2A3_CTRL_IREF2		0x3A3
+#define AUD3004X_2A4_CTRL_IREF3		0X3A4
 #define AUD3004X_2A6_CTRL_IREF5		0x3A6
 #define AUD3004X_2B0_CTRL_HPS		0x3B0
 
@@ -1502,6 +1507,24 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define GPADC_AVG_DONE_SHIFT		4
 #define GPADC_AVG_DONE_MASK			BIT(GPADC_AVG_DONE_SHIFT)
 
+/* AUD3004X_106_DSM_AD */
+#define EN_BST_CHOP_SHIFT			3
+#define EN_BST_CHOP_MASK			BIT(EN_BST_CHOP_SHIFT)
+
+#define EN_DWAC_SHIFT				2
+#define EN_DWAC_MASK				BIT(EN_DWAC_SHIFT)
+
+#define EN_DWAL_SHIFT				1
+#define EN_DWAL_MASK				BIT(EN_DWAL_SHIFT)
+
+#define EN_DWAR_SHIFT				0
+#define EN_DWAR_MASK				BIT(EN_DWAR_SHIFT)
+
+/* AUD3004X_107_LPF_AD */
+#define CTMF_LPF_SHIFT				0
+#define CTMF_LPF_WIDTH				5
+#define CTMF_LPF_MASK				MASK(CTMF_LPF_WIDTH, CTMF_LPF_SHIFT)
+
 /* AUD3004X_110_PD_REF */
 #define PDB_VMID_SHIFT				5
 #define PDB_VMID_MASK				BIT(PDB_VMID_SHIFT)
@@ -1830,6 +1853,29 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 
 #define EN_EP_COMPEN_SW_SHIFT		1
 #define EN_EP_COMPEN_SW_MASK		BIT(EN_EP_COMPEN_SW_SHIFT)
+
+/* AUD3004X_2A2_CTRL_IREF1 */
+#define CTMI_VCM_SHIFT				4
+#define CTMI_VCM_WIDTH				3
+#define CTMI_VCM_MASK				MASK(CTMI_VCM_WIDTH, CTMI_VCM_SHIFT)
+
+#define CTMI_MIX_SHIFT				0
+#define CTMI_MIX_WIDTH				3
+#define CTMI_MIX_MASK				MASK(CTMI_MIX_WIDTH, CTMI_MIX_SHIFT)
+
+/* AUD3004X_2A3_CTRL_IREF2 */
+#define CTMI_INT1_SHIFT				0
+#define CTMI_INT1_WIDTH				3
+#define CTMI_INT1_MASK				MASK(CTMI_INT1_WIDTH, CTMI_INT1_SHIFT)
+
+/* AUD3004X_2A4_CTRL_IREF3 */
+#define CTMI_LN_BUFF_SHIFT			4
+#define CTMI_LN_BUFF_WIDTH			3
+#define CTMI_LN_BUFF_MASK			MASK(CTMI_LN_BUFF_WIDTH, CTMI_LN_BUFF_SHIFT)
+
+#define CTMI_MIC_PGA_SHIFT			0
+#define CTMI_MIC_PGA_WIDTH			3
+#define CTMI_MIC_PGA_MASK			MASK(CTMI_MIC_PGA_WIDTH, CTMI_MIC_PGA_SHIFT)
 
 #endif /* _AUD3004X_H */
 
