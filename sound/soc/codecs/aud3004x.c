@@ -740,17 +740,92 @@ static int dvmid_ev(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event)
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
+		/* DMIC Clock Gate Enable */
+		aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
+				DMIC_CLK_GATE_MASK | ADC_CLK_GATE_MASK | COM_CLK_GATE_MASK,
+				DMIC_CLK_GATE_MASK | ADC_CLK_GATE_MASK | COM_CLK_GATE_MASK);
+		aud3004x_update_bits(aud3004x, AUD3004X_12_CLKGATE2,
+				ADC_CIC_CGL_MASK | ADC_CIC_CGR_MASK,
+				ADC_CIC_CGL_MASK | ADC_CIC_CGR_MASK);
+
+		/* DMIC PRE Gain */
+		aud3004x_update_bits(aud3004x, AUD3004X_32_ADC3,
+				DMIC_CLK_ZTIE_MASK, 0);
+		aud3004x_update_bits(aud3004x, AUD3004X_32_ADC3,
+				DMIC_GAIN_PRE_MASK, DMIC_GAIN_3 << DMIC_GAIN_PRE_SHIFT);
+
+		/* 2ND HPF ON */
+		aud3004x_update_bits(aud3004x, AUD3004X_37_AD_HPF,
+				ADC_GT_37_MASK | HPF_ORDER_MASK | HPF_ENL_MASK |
+				HPF_ENR_MASK | HPF_ENC_MASK,
+				ADC_GT_37_0 << ADC_GT_37_SHIFT |
+				HPF_ORDER_2ND << HPF_ORDER_SHIFT |
+				HPF_ENL_MASK | HPF_ENR_MASK | HPF_ENC_MASK);
+
+		/* Gain Setting */
+		aud3004x_write(aud3004x, AUD3004X_38_AD_TRIM1, 0xBA);
+		aud3004x_write(aud3004x, AUD3004X_39_AD_TRIM2, 0x24);
+
+		/* DMIC Path Selection */
+		aud3004x_update_bits(aud3004x, AUD3004X_31_ADC2,
+				EN_DMIC_MASK | EN_DMIC_MASK);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
+		/* Compensation Filter/OSR */
+		switch (aud3004x->capture_aifrate) {
+		case AUD3004X_SAMPLE_RATE_48KHZ:
+			aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
+				CP_TYPE_SEL_MASK | DMIC_OSR_MASK,
+				FILTER_TYPE_NORMAL_DMIC << CP_TYPE_SEL_SHIFT |
+				DMIC_OSR_64 << DMIC_OSR_SHIFT);
+			break;
+		case AUD3004X_SAMPLE_RATE_192KHZ:
+			aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
+				CP_TYPE_SEL_MASK | DMIC_OSR_MASK,
+				FILTER_TYPE_UHQA_WO_LP_DMIC << CP_TYPE_SEL_SHIFT |
+				DMIC_OSR_64 << DMIC_OSR_SHIFT);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
+		/* Compensation Filter/OSR off */
+		aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
+				CP_TYPE_SEL_MASK | DMIC_OSR_MASK,
+				FILTER_TYPE_NORMAL_AMIC << CP_TYPE_SEL_SHIFT |
+				DMIC_OSR_NO << DMIC_OSR_SHIFT);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+		/* Gain Clear */
+		aud3004x_write(aud3004x, AUD3004X_38_AD_TRIM1, 0x05);
+		aud3004x_write(aud3004x, AUD3004X_39_AD_TRIM2, 0x03);
+
+		/* 2ND HPF OFF */
+		aud3004x_update_bits(aud3004x, AUD3004X_37_AD_HPF,
+				ADC_GT_37_MASK | HPF_ORDER_MASK | HPF_ENL_MASK |
+				HPF_ENR_MASK | HPF_ENC_MASK,
+				ADC_GT_37_1 << ADC_GT_37_SHIFT |
+				HPF_ORDER_1ST << HPF_ORDER_SHIFT |
+				0 << HPF_ENL_SHIFT | 0 << HPF_ENR_SHIFT | 0 << HPF_ENC_SHIFT);
+
+		/* DMIC Clock Gate Disble */
+		aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
+				DMIC_CLK_GATE_MASK | ADC_CLK_GATE_MASK, 0);
+		aud3004x_update_bits(aud3004x, AUD3004X_12_CLKGATE2,
+				ADC_CIC_CGL_MASK | ADC_CIC_CGR_MASK, 0);
+
+		/* DMIC PRE Gain */
+		aud3004x_update_bits(aud3004x, AUD3004X_32_ADC3,
+				DMIC_CLK_ZTIE_MASK, DMIC_CLK_ZTIE_MASK);
+		aud3004x_update_bits(aud3004x, AUD3004X_32_ADC3,
+				DMIC_GAIN_PRE_MASK, DMIC_GAIN_7 << DMIC_GAIN_PRE_SHIFT);
+
+		/* DMIC Path Selection */
+		aud3004x_update_bits(aud3004x, AUD3004X_31_ADC2,
+				EN_DMIC_MASK | 0);
 		break;
 	}
 	return 0;
@@ -820,17 +895,32 @@ static int dmic1_pga_ev(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event)
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	unsigned int mic_on;
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	mic_on = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
+
+	if(!(mic_on & DMIC1_ON_MASK)) {
+		dev_dbg(codec->dev, "%s: DMIC1 is not enabled, returning.\n", __func__);
+		return 0;
+	}
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		break;
 	case SND_SOC_DAPM_POST_PMU:
+		/* DMIC1 Enable */
+		aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
+				DMIC_EN1_MASK, DMIC_EN1_MASK);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+		/* DMIC1 Disable */
+		aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
+				DMIC_EN1_MASK, 0);
 		break;
 	}
 	return 0;
@@ -840,17 +930,32 @@ static int dmic2_pga_ev(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event)
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	unsigned int mic_on;
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+
+	mic_on = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
+
+	if(!(mic_on & DMIC2_ON_MASK)) {
+		dev_dbg(codec->dev, "%s: DMIC2 is not enabled, returning.\n", __func__);
+		return 0;
+	}
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		break;
 	case SND_SOC_DAPM_POST_PMU:
+		/* DMIC2 Enable */
+		aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
+				DMIC_EN2_MASK, DMIC_EN2_MASK);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+		/* DMIC2 Disable */
+		aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
+				DMIC_EN2_MASK, 0);
 		break;
 	}
 	return 0;
@@ -1645,10 +1750,21 @@ static void capture_hw_params(struct snd_soc_codec *codec,
 	if (aud3004x->capture_aifrate != cur_aifrate) {
 		switch (cur_aifrate) {
 		case AUD3004X_SAMPLE_RATE_48KHZ:
+			/* 48K output format selection */
+			aud3004x_update_bits(aud3004x, AUD3004X_29_IF_FORM6,
+					ADC_OUT_FORMAT_SEL_MASK, ADC_FM_48K_AT_48K);
+
+			/* UHQA I/O strength selection */
+			aud3004x_update_bits(aud3004x, AUD3004X_2F_DMIC_ST,
+					DMIC_ST_MASK, DMIC_IO_ST_1);
 			break;
 		case AUD3004X_SAMPLE_RATE_192KHZ:
-			break;
-		case AUD3004X_SAMPLE_RATE_384KHZ:
+			/* 192K output format selection */
+			aud3004x_update_bits(aud3004x, AUD3004X_29_IF_FORM6,
+					ADC_OUT_FORMAT_SEL_MASK, ADC_FM_192K_AT_192K);
+			/* UHQA I/O strength selection */
+			aud3004x_update_bits(aud3004x, AUD3004X_2F_DMIC_ST,
+					DMIC_ST_MASK, DMIC_IO_ST_2);
 			break;
 		default:
 			dev_err(codec->dev, "%s: sample rate error!\n", __func__);

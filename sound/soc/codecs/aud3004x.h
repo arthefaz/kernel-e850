@@ -147,6 +147,8 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AUD3004X_34_AD_VOLL			0x734
 #define AUD3004X_35_AD_VOLR			0x735
 #define AUD3004X_37_AD_HPF			0x737
+#define AUD3004X_38_AD_TRIM1		0x738
+#define AUD3004X_39_AD_TRIM2		0x739
 
 /* Playback Path Digital Setting */
 #define AUD3004X_40_PLAY_MODE1		0x740
@@ -793,6 +795,15 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define ADC_DVOL_MAXNUM				0xE5
 
 /* AUD3004X_37_AD_HPF */
+#define ADC_GT_37_SHIFT				6
+#define ADC_GT_37_WIDTH				2
+#define ADC_GT_37_MASK				MASK(ADC_GT_37_WIDTH, ADC_GT_37_SHIFT)
+
+#define ADC_GT_37_0					0
+#define ADC_GT_37_1					1
+#define ADC_GT_37_2					2
+#define ADC_GT_37_3					3
+
 #define HPF_SEL_SHIFT				4
 #define HPF_SEL_WIDTH				2
 #define HPF_SEL_MASK				MASK(HPF_SEL_WIDTH, HPF_SEL_SHIFT)
