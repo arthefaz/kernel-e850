@@ -64,7 +64,8 @@ EXPORT_SYMBOL(exynos_pd_status);
  */
 static void exynos_pd_power_on_pre(struct exynos_pm_domain *pd)
 {
-	exynos_update_ip_idle_status(pd->idle_ip_index, 0);
+	if (!pd->skip_idle_ip)
+		exynos_update_ip_idle_status(pd->idle_ip_index, 0);
 
 	if (pd->devfreq_index >= 0) {
 		exynos_bts_scitoken_setting(true);
@@ -86,7 +87,8 @@ static void exynos_pd_power_off_pre(struct exynos_pm_domain *pd)
 
 static void exynos_pd_power_off_post(struct exynos_pm_domain *pd)
 {
-	exynos_update_ip_idle_status(pd->idle_ip_index, 1);
+	if (!pd->skip_idle_ip)
+		exynos_update_ip_idle_status(pd->idle_ip_index, 1);
 
 	if (pd->devfreq_index >= 0) {
 		exynos_bts_scitoken_setting(false);
@@ -358,7 +360,10 @@ static __init int exynos_pd_dt_parse(void)
 			return -EINVAL;
 		}
 
-		pd->idle_ip_index = exynos_get_idle_ip_index(pd->name);
+		if (of_property_read_bool(np, "skip-idle-ip"))
+			pd->skip_idle_ip = true;
+		else
+			pd->idle_ip_index = exynos_get_idle_ip_index(pd->name);
 
 		mutex_init(&pd->access_lock);
 		platform_set_drvdata(pdev, pd);
