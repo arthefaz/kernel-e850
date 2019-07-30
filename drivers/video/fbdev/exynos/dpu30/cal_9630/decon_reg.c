@@ -2360,6 +2360,15 @@ void __decon_dump(u32 id, void __iomem *regs, void __iomem *base_regs, bool dsc_
 		decon_print_hex_dump(base_regs,
 			base_regs + SHADOW_OFFSET + 0x5000, 0x80);
 	}
+#if defined(CONFIG_EXYNOS_DECON_DQE)
+	decon_info("\n=== DQE SFR DUMP ===\n");
+	decon_print_hex_dump(regs, regs + 0x2000, 0x20);
+	decon_print_hex_dump(regs, regs + 0x2300, 0x40);
+
+	decon_info("\n=== DQE SHADOW SFR DUMP ===\n");
+	decon_print_hex_dump(regs, regs + 0x9000, 0x20);
+	decon_print_hex_dump(regs, regs + 0x9300, 0x40);
+#endif
 }
 
 /* 	chip dependent HW limitation
