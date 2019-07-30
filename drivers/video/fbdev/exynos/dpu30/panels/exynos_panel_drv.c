@@ -758,6 +758,7 @@ static int exynos_panel_probe(struct platform_device *pdev)
 {
 	struct exynos_panel_device *panel;
 	int ret = 0;
+	char name[16];
 
 	DPU_DEBUG_PANEL("%s +\n", __func__);
 
@@ -788,17 +789,17 @@ static int exynos_panel_probe(struct platform_device *pdev)
 		panel->power_mode = POWER_SAVE_OFF;
 	}
 
-	panel->bl = devm_backlight_device_register(panel->dev,
-			dev_name(panel->dev), NULL, panel,
-			&exynos_backlight_ops, NULL);
-	if (IS_ERR(panel->bl)) {
-		DPU_ERR_PANEL("failed to register backlight device\n");
-		ret = PTR_ERR(panel->bl);
+	ret = exynos_panel_parse_dt(panel);
+	if (ret) {
 		goto err_dev_file;
 	}
 
-	ret = exynos_panel_parse_dt(panel);
-	if (ret) {
+	snprintf(name, sizeof(name), "panel_%d", panel->id);
+	panel->bl = devm_backlight_device_register(panel->dev, name, NULL,
+			panel, &exynos_backlight_ops, NULL);
+	if (IS_ERR(panel->bl)) {
+		DPU_ERR_PANEL("failed to register backlight device\n");
+		ret = PTR_ERR(panel->bl);
 		goto err_dev_file;
 	}
 
