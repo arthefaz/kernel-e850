@@ -122,6 +122,13 @@ int s6e3fa0_displayon(struct exynos_panel_device *panel)
 	/* enable brightness control */
 	dsim_write_data_seq_delay(dsim, 12, 0x53, 0x20, 0x00);
 
+#ifdef CONFIG_SOC_EXYNOS3830
+	/* parameter index jump */
+	dsim_write_data_seq_delay(dsim, 12, 0xB0, 0x05);
+	/* IG_EOT_ERR=1 */
+	dsim_write_data_seq_delay(dsim, 12, 0xE7, 0x47);
+#endif
+
 	if (lcd->mode == DECON_MIPI_COMMAND_MODE)
 		dsim_write_data_seq_delay(dsim, 12, 0x35); /* TE on */
 
