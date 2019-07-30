@@ -553,6 +553,11 @@ struct decon_win_config_data {
 	struct decon_win_config config[MAX_DECON_WIN + 2];
 };
 
+enum lcd_status {
+	LCD_OFF	= 0,
+	LCD_ON	= 1,
+};
+
 enum hwc_ver {
 	HWC_INIT = 0,
 	HWC_1_0 = 1,
@@ -1164,6 +1169,8 @@ struct decon_device {
 
 	bool mres_enabled;
 	bool low_persistence;
+	/* display LCD on/off notifier */
+	struct atomic_notifier_head lcd_status_notifier_list;
 };
 
 static inline struct decon_device *get_decon_drvdata(u32 id)
@@ -1556,6 +1563,10 @@ int dpu_pm_domain_check_status(struct exynos_pm_domain *pm_domain);
 int decon_set_out_sd_state(struct decon_device *decon, enum decon_state state);
 int decon_update_last_regs(struct decon_device *decon,
 		struct decon_reg_data *regs);
+
+int register_lcd_status_notifier(struct notifier_block *nb);
+int unregister_lcd_status_notifier(struct notifier_block *nb);
+void lcd_status_notifier(u32 lcd_status);
 
 void decon_hiber_start(struct decon_device *decon);
 void decon_hiber_finish(struct decon_device *decon);
