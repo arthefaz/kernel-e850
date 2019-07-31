@@ -24,8 +24,8 @@
 #include "abox_util.h"
 #include "abox_gic.h"
 
-#define GICD_PA_BASE 0x14EF1000
-#define GICC_PA_BASE 0x14EF2000
+#define GICD_PA_BASE 0x14AF1000
+#define GICC_PA_BASE 0x14AF2000
 
 int abox_gicd_write(unsigned int offset, unsigned int value)
 {

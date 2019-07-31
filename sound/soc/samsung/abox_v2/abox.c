@@ -2991,12 +2991,10 @@ static int samsung_abox_probe(struct platform_device *pdev)
 
 	abox_qos_init(dev);
 
-	/*
 	pm_runtime_enable(dev);
 	pm_runtime_set_autosuspend_delay(dev, 500);
 	pm_runtime_use_autosuspend(dev);
 	pm_runtime_get(dev);
-	*/
 
 	data->qos_nb.notifier_call = abox_qos_notifier;
 	pm_qos_add_notifier(PM_QOS_AUD_THROUGHPUT, &data->qos_nb);

@@ -1070,7 +1070,8 @@ static struct snd_soc_dai_link exynos3830_dai[100] = {
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.capture_only = 1,
 		.ignore_suspend = 1,
-	},	{
+	},	
+	{
 		.name = "DEBUG0",
 		.stream_name = "DEBUG0",
 		.codec_name = "snd-soc-dummy",
