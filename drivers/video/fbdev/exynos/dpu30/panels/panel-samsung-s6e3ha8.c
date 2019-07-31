@@ -231,6 +231,12 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 #endif
 	dsim_write_data_table(dsim, SEQ_FFC);
 
+	/* vrefresh rate configuration */
+	if (panel->lcd_info.fps == 60)
+		dsim_write_data_seq(dsim, false, 0xBB, 0x05, 0x0C);
+	else if (panel->lcd_info.fps == 30)
+		dsim_write_data_seq(dsim, false, 0xBB, 0x05, 0x1C);
+
 	dsim_write_data_seq(dsim, false, 0x29); /* display on */
 
 	mutex_unlock(&panel->ops_lock);
@@ -327,6 +333,43 @@ static int s6e3ha8_set_light(struct exynos_panel_device *panel, u32 br_val)
 	return 0;
 }
 
+static int s6e3ha8_set_vrefresh(struct exynos_panel_device *panel, u32 refresh)
+{
+	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
+
+	DPU_DEBUG_PANEL("%s +\n", __func__);
+	DPU_DEBUG_PANEL("applied vrefresh(%d), requested vrefresh(%d)\n",
+			panel->lcd_info.fps, refresh);
+
+	if (panel->lcd_info.fps == refresh) {
+		DPU_INFO_PANEL("prev and req fps are same(%d)\n", refresh);
+		return 0;
+	}
+
+	mutex_lock(&panel->ops_lock);
+
+	dsim_write_data_seq(dsim, false, 0xF0, 0x5A, 0x5A);
+
+	if (refresh == 60) {
+		dsim_write_data_seq(dsim, false, 0xBB, 0x05, 0x0C);
+	} else if (refresh == 30) {
+		dsim_write_data_seq(dsim, false, 0xBB, 0x05, 0x1C);
+	} else {
+		DPU_INFO_PANEL("not supported fps(%d)\n", refresh);
+		goto end;
+	}
+
+	panel->lcd_info.fps = refresh;
+
+end:
+	dsim_write_data_seq(dsim, false, 0xF0, 0xA5, 0xA5);
+
+	mutex_unlock(&panel->ops_lock);
+	DPU_DEBUG_PANEL("%s -\n", __func__);
+
+	return 0;
+}
+
 struct exynos_panel_ops panel_s6e3ha8_ops = {
 	.id		= {0x460091, 0x430491, 0xffffff, 0xffffff},
 	.suspend	= s6e3ha8_suspend,
@@ -337,4 +380,5 @@ struct exynos_panel_ops panel_s6e3ha8_ops = {
 	.dump		= s6e3ha8_dump,
 	.read_state	= s6e3ha8_read_state,
 	.set_light	= s6e3ha8_set_light,
+	.set_vrefresh	= s6e3ha8_set_vrefresh,
 };

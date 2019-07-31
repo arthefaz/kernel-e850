@@ -2101,6 +2101,7 @@ static void decon_update_regs(struct decon_device *decon,
 	struct decon_dma_buf_data old_dma_bufs[decon->dt.max_win][MAX_PLANE_CNT];
 	int old_plane_cnt[MAX_DECON_WIN];
 	struct decon_mode_info psr;
+	struct dsim_device *dsim;
 	int i, j, err;
 
 	if (!decon->systrace.pid)
@@ -2175,8 +2176,14 @@ static void decon_update_regs(struct decon_device *decon,
 		}
 	} else {
 		if (regs->dpp_config[DECON_WIN_UPDATE_IDX].state &
-				DECON_WIN_STATE_MRESOL)
+				DECON_WIN_STATE_MRESOL) {
 			dpu_set_mres_config(decon, regs);
+			dsim = container_of(decon->out_sd[0], struct dsim_device, sd);
+			decon_info("requested vrefresh rate = %d\n",
+					regs->dpp_config[DECON_WIN_UPDATE_IDX].plane_alpha);
+			dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_SET_VREFRESH,
+					&(regs->dpp_config[DECON_WIN_UPDATE_IDX].plane_alpha));
+		}
 
 		decon_save_cur_buf_info(decon, regs);
 		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
