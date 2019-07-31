@@ -265,10 +265,14 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AUD3004X_160_OVP2			0x860
 
 /* OTP Register for Analog */
+
+#define AUD3004X_28B_SPKOFF_S_0		0x38B
 #define AUD3004X_2A2_CTRL_IREF1		0x3A2
 #define AUD3004X_2A3_CTRL_IREF2		0x3A3
 #define AUD3004X_2A4_CTRL_IREF3		0X3A4
 #define AUD3004X_2A6_CTRL_IREF5		0x3A6
+#define AUD3004X_2A7_SPK_MODE		0x3A7
+#define AUD3004X_2A8_RCV_MODE		0x3A8
 #define AUD3004X_2B0_CTRL_HPS		0x3B0
 
 /* AUD3004X_01_IRQ1PEND */
@@ -1143,6 +1147,13 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define DIG_MUTE_DATA_C_MASK		BIT(DIG_MUTE_DATA_C_SHIFT)
 
 /* AUD3004X_92_BOOST_CTRL0 */
+#define DBFS_ADJ_SHIFT				4
+#define DBFS_ADJ_WIDTH				4
+#define DBFS_ADJ_MASK				MASK(DBFS_ADJ_WIDTH, DBFS_ADJ_SHIFT)
+
+#define DBFS_ADJ_0					0
+#define DBFS_ADJ_1					1
+
 #define BOOST_CTRL_EN_SHIFT			3
 #define BOOST_CTRL_EN_MASK			BIT(BOOST_CTRL_EN_SHIFT)
 

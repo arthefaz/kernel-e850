@@ -1133,8 +1133,19 @@ static int dac_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	unsigned int chop_val;
+	bool hp_on, spk_on, ep_on, lineout_on;
+
+	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
+	spk_on = chop_val & SPK_ON_MASK;
+	ep_on = chop_val & EP_ON_MASK;
+	lineout_on = chop_val & LINEOUT_ON_MASK;
+	hp_on = chop_val & HP_ON_MASK;
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
+	dev_dbg(codec->dev,
+			"chop_val = %d, hp_on: %d, spk_on: %d, ep_on: %d, lineout: %d\n",
+			chop_val, hp_on, spk_on, ep_on, lineout_on);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
@@ -1157,9 +1168,187 @@ static int dac_ev(struct snd_soc_dapm_widget *w,
 		/* Clock Mode selection */
 		aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
 				DAC_FSEL_MASK, CLK_DAC_512_UHQA << DAC_FSEL_SHIFT);
+#if 0
+		if (hp_on) {
+			switch (aud3004x->playback_aifrate) {
+				case AUD3004X_SAMPLE_RATE_48KHZ:
+					if (ep_on | lineout_on) {
+						/* Compensation Mode selection */
+						aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+								DAC_CH_MODE_MASK,
+								DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT);
 
+						/* Clock Mode selection */
+						aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
+								DAC_FSEL_MASK,
+								CLK_DAC_512_UHQA << DAC_FSEL_SHIFT);
+
+						/* Play Mode Selection */
+						aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
+								PLAY_MODE_SEL_MASK,
+								DAC_FREQ_TRIPLE_48K << PLAY_MODE_SEL_SHIFT);
+					}
+					else if (spk_on) {
+						/* Compensation Mode selection */
+						aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+								DAC_CH_MODE_MASK | CCH_COM_SEL_MASK,
+								DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT |
+								COM_SEL_48K_SPK << CCH_COM_SEL_SHIFT);
+
+						/* Clock Mode selection */
+						aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
+								DAC_FSEL_MASK,
+								CLK_DAC_512_UHQA << DAC_FSEL_SHIFT);
+
+						/* Play Mode Selection */
+						aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
+								PLAY_MODE_SEL_MASK,
+								DAC_FREQ_TRIPLE_48K << PLAY_MODE_SEL_SHIFT);
+					}
+					else {
+						/* Compensation Mode selection */
+						aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+								DAC_CH_MODE_MASK,
+								DAC_CH_MODE_STEREO << DAC_CH_MODE_SHIFT);
+
+						/* Clock Mode selection */
+						aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
+								DAC_FSEL_MASK,
+								CLK_DAC_256_STEREO << DAC_FSEL_SHIFT);
+
+						/* Play Mode Selection */
+						aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
+								PLAY_MODE_SEL_MASK,
+								DAC_FREQ_STEREO_48K << PLAY_MODE_SEL_SHIFT);
+					}
+					break;
+				case AUD3004X_SAMPLE_RATE_192KHZ:
+					/* Compensation Mode selection */
+					aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+							DAC_CH_MODE_MASK,
+							DAC_CH_MODE_STEREO << DAC_CH_MODE_SHIFT);
+
+					/* Clock Mode selection */
+					aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
+							DAC_FSEL_MASK,
+							CLK_DAC_512_UHQA << DAC_FSEL_SHIFT);
+
+					/* Play Mode Selection */
+					aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
+							PLAY_MODE_SEL_MASK, DAC_FREQ_STEREO_192K << PLAY_MODE_SEL_SHIFT);
+					break;
+			}
+		}
+		else {
+			if (ep_on | lineout_on) {
+				/* Compensation Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+						DAC_CH_MODE_MASK,
+						DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT);
+
+				/* Clock Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
+						DAC_FSEL_MASK,
+						CLK_DAC_512_UHQA << DAC_FSEL_SHIFT);
+
+				/* Play Mode Selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
+						PLAY_MODE_SEL_MASK,
+						DAC_FREQ_TRIPLE_48K << PLAY_MODE_SEL_SHIFT);
+			}
+			else if (spk_on) {
+				/* Compensation Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+						DAC_CH_MODE_MASK | CCH_COM_SEL_MASK,
+						DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT |
+						COM_SEL_48K_SPK << CCH_COM_SEL_SHIFT);
+
+				/* Clock Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
+						DAC_FSEL_MASK,
+						CLK_DAC_512_UHQA << DAC_FSEL_SHIFT);
+
+				/* Play Mode Selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
+						PLAY_MODE_SEL_MASK,
+						DAC_FREQ_TRIPLE_48K << PLAY_MODE_SEL_SHIFT);
+			}
+			else {
+				dev_dbg(codec->dev,
+						"%s called, Control Status Error", __func__);
+			}
+		}
+#endif
 		break;
+#if 0
 	case SND_SOC_DAPM_PRE_PMD:
+		if (hp_on) {
+			if (!spk_on && !ep_on && !lineout_on) {
+				/* Compensation Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+						DAC_CH_MODE_MASK,
+						DAC_CH_MODE_STEREO << DAC_CH_MODE_SHIFT);
+
+				/* Clock Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
+						DAC_FSEL_MASK,
+						CLK_DAC_256_STEREO << DAC_FSEL_SHIFT);
+
+				/* Play Mode Selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
+						PLAY_MODE_SEL_MASK,
+						DAC_FREQ_STEREO_48K << PLAY_MODE_SEL_SHIFT);
+			}
+		}
+		else {
+			if (ep_on | lineout_on) {
+				/* Compensation Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+						DAC_CH_MODE_MASK,
+						DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT);
+
+				/* Clock Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
+						DAC_FSEL_MASK,
+						CLK_DAC_512_UHQA << DAC_FSEL_SHIFT);
+
+				/* Play Mode Selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
+						PLAY_MODE_SEL_MASK,
+						DAC_FREQ_TRIPLE_48K << PLAY_MODE_SEL_SHIFT);
+			}
+			else if (spk_on) {
+				/* Compensation Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+						DAC_CH_MODE_MASK | CCH_COM_SEL_MASK,
+						DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT |
+						COM_SEL_48K_SPK << CCH_COM_SEL_SHIFT);
+
+				/* Clock Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
+						DAC_FSEL_MASK,
+						CLK_DAC_512_UHQA << DAC_FSEL_SHIFT);
+
+				/* Play Mode Selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
+						PLAY_MODE_SEL_MASK,
+						DAC_FREQ_TRIPLE_48K << PLAY_MODE_SEL_SHIFT);
+			}
+			else {
+				/* Compensation Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+						DAC_CH_MODE_MASK, 0);
+
+				/* Clock Mode selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
+						DAC_FSEL_MASK, 0);
+
+				/* Play Mode Selection */
+				aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
+						PLAY_MODE_SEL_MASK, 0);
+			}
+		}
+#endif
 		/* Clock Mode selection */
 		aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
 				DAC_FSEL_MASK, 0 << DAC_FSEL_SHIFT);
@@ -1182,6 +1371,11 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	unsigned int chop_val;
+	bool hp_on;
+
+	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
+	hp_on = chop_val & HP_ON_MASK;
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
@@ -1195,7 +1389,7 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 		/* Compensation Mode selection for Speaker */
 		aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
 				DAC_CH_MODE_MASK | CCH_COM_SEL_MASK,
-				DAC_CH_MODE_STEREO << DAC_CH_MODE_SHIFT |
+				DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT |
 				COM_SEL_48K_SPK << CCH_COM_SEL_SHIFT);
 
 		/* Testmode Enable */
@@ -1205,17 +1399,25 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_write(aud3004x, AUD3004X_110_PD_REF, 0x10);
 
 		/* Speaker Boost enable */
+		aud3004x_acpm_write_reg(AUD3004X_PMIC_ADDR, 0x26, 0xBA);
 		aud3004x_update_bits(aud3004x, AUD3004X_92_BOOST_CTRL0,
-				BOOST_CTRL_EN_MASK, BOOST_CTRL_EN_MASK);
+				DBFS_ADJ_MASK | BOOST_CTRL_EN_MASK,
+				DBFS_ADJ_1 | BOOST_CTRL_EN_MASK);
 
+		/* Speaker EXT_BST enable */
+		aud3004x_acpm_write_reg(AUD3004X_PMIC_ADDR, 0x14, 0x84);
+
+		/* RCV Mode Dump */
+		aud3004x_write(aud3004x, AUD3004X_28B_SPKOFF_S_0,
+				aud3004x_read(aud3004x, AUD3004X_2A8_RCV_MODE);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | ADC_RESETB_MASK,
-				AVC_RESETB_MASK | ADC_RESETB_MASK);
+				AVC_RESETB_MASK | DAC_RESETB_MASK,
+				AVC_RESETB_MASK | DAC_RESETB_MASK);
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK, RSTB_ADC_MASK);
+				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -1245,15 +1447,27 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+		/* Speaker EXT_BST disable */
+		aud3004x_acpm_write_reg(AUD3004X_PMIC_ADDR, 0x14, 0x04);
+
 		/* Speaker Boost disable */
 		aud3004x_update_bits(aud3004x, AUD3004X_92_BOOST_CTRL0,
-				BOOST_CTRL_EN_MASK, 0);
+				DBFS_ADJ_MASK | BOOST_CTRL_EN_MASK, 0);
+		aud3004x_acpm_write_reg(AUD3004X_PMIC_ADDR, 0x26, 0x2A);
 
 		/* PDB VMID/IGEN disable */
 		aud3004x_write(aud3004x, AUD3004X_110_PD_REF, 0x00);
 
 		/* Testmode Disable */
 		aud3004x_write(aud3004x, AUD3004X_B5_ODSEL11, 0x00);
+
+		/* Compensation Mode selection */
+		if (hp_on)
+			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+					DAC_CH_MODE_MASK, DAC_CH_MODE_STEREO << DAC_CH_MODE_SHIFT);
+		else
+			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+					DAC_CH_MODE_MASK, DAC_CH_MODE_MONO << DAC_CH_MODE_SHIFT);
 
 		/* Clock Gate clear */
 		aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
@@ -1268,6 +1482,11 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	unsigned int chop_val;
+	bool hp_on;
+
+	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
+	hp_on = chop_val & HP_ON_MASK;
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
@@ -1289,7 +1508,7 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_write(aud3004x, AUD3004X_53_AVC4, 0x86);
 
 		/* DRC Range Selection */
-		aud3004x_write(aud3004x, AUD3004X_7A_AVC43, 0x50);
+		aud3004x_write(aud3004x, AUD3004X_7A_AVC43, 0x38);
 
 		/* Testmode Enable */
 		aud3004x_write(aud3004x, AUD3004X_B5_ODSEL11, 0xFE);
@@ -1312,14 +1531,17 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 		/* EP Mix */
 		aud3004x_write(aud3004x, AUD3004X_159_MIX_DA2, 0x80);
 
+		/* SPK Mode Dump */
+		aud3004x_write(aud3004x, AUD3004X_28B_SPKOFF_S_0,
+				aud3004x_read(aud3004x, AUD3004X_2A7_SPK_MODE);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | ADC_RESETB_MASK,
-				AVC_RESETB_MASK | ADC_RESETB_MASK);
+				AVC_RESETB_MASK | DAC_RESETB_MASK,
+				AVC_RESETB_MASK | DAC_RESETB_MASK);
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK, RSTB_ADC_MASK);
+				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -1375,6 +1597,14 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 		/* CP Frequency Control clear */
 		aud3004x_write(aud3004x, AUD3004X_150_CTRL_EP, 0x08);
 
+		/* Compensation Mode selection */
+		if (hp_on)
+			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+					DAC_CH_MODE_MASK, DAC_CH_MODE_STEREO << DAC_CH_MODE_SHIFT);
+		else
+			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+					DAC_CH_MODE_MASK, DAC_CH_MODE_MONO << DAC_CH_MODE_SHIFT);
+
 		/* Clock Gate clear */
 		aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
 				DSMC_CLK_GATE_MASK | DAC_CIC_CGC_MASK, 0);
@@ -1411,7 +1641,7 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 				DAC_CIC_CGL_MASK | DAC_CIC_CGR_MASK);
 
 		/* Cross talk Enable */
-		aud3004x_write(aud3004x, AUD3004X_58_AVC9, 0x01);
+		aud3004x_write(aud3004x, AUD3004X_58_AVC9, 0x00);
 
 		/* Compensation Mode selection */
 		if (ep_on | lineout_on)
@@ -1420,7 +1650,7 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 		else if (spk_on)
 			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
 					DAC_CH_MODE_MASK | CCH_COM_SEL_MASK,
-					DAC_CH_MODE_STEREO << DAC_CH_MODE_SHIFT |
+					DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT |
 					COM_SEL_48K_SPK << CCH_COM_SEL_SHIFT);
 		else
 			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
@@ -1460,10 +1690,10 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | ADC_RESETB_MASK,
-				AVC_RESETB_MASK | ADC_RESETB_MASK);
+				AVC_RESETB_MASK | DAC_RESETB_MASK,
+				AVC_RESETB_MASK | DAC_RESETB_MASK);
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK, RSTB_ADC_MASK);
+				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -1504,6 +1734,19 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 		/* Cross talk disable */
 		aud3004x_write(aud3004x, AUD3004X_58_AVC9, 0x00);
 
+		/* Compensation Mode selection */
+		if (ep_on | lineout_on)
+			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+					DAC_CH_MODE_MASK, DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT);
+		else if (spk_on)
+			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+					DAC_CH_MODE_MASK | CCH_COM_SEL_MASK,
+					DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT |
+					COM_SEL_48K_SPK << CCH_COM_SEL_SHIFT);
+		else
+			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+					DAC_CH_MODE_MASK, DAC_CH_MODE_MONO << DAC_CH_MODE_SHIFT);
+
 		/* Clock Gate clear */
 		aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
 				DSML_CLK_GATE_MASK | DSMR_CLK_GATE_MASK |
@@ -1538,10 +1781,10 @@ static int linedrv_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | ADC_RESETB_MASK,
-				AVC_RESETB_MASK | ADC_RESETB_MASK);
+				AVC_RESETB_MASK | DAC_RESETB_MASK,
+				AVC_RESETB_MASK | DAC_RESETB_MASK);
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK, RSTB_ADC_MASK);
+				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -2291,7 +2534,7 @@ static void aud3004x_register_initialize(void *context)
 	aud3004x_write(aud3004x, AUD3004X_BB_ODSEL6, 0x60);
 
 	/* OVP Setting */
-	aud3004x_write(aud3004x, AUD3004X_15F_OVP1, 0x1E);
+	aud3004x_write(aud3004x, AUD3004X_15F_OVP1, 0x2E);
 	aud3004x_write(aud3004x, AUD3004X_160_OVP2, 0x12);
 
 	/* OTP HP Current */
