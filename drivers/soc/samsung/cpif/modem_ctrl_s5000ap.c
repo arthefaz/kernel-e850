@@ -204,7 +204,7 @@ static const struct attribute_group sim_group = {
 	.name = "sim",
 };
 
-static int get_ds_detect()
+static int get_ds_detect(struct device_node *np)
 {
 	if (ds_detect > 2 || ds_detect < 1)
 		ds_detect = 2;
