@@ -494,6 +494,9 @@ static int exynos_cpufreq_target(struct cpufreq_policy *policy,
 	if (!domain)
 		return -EINVAL;
 
+	if (!domain->enabled)
+		return -EINVAL;
+
 	target_freq = apply_pm_qos(domain, policy, target_freq);
 
 	if (list_empty(&domain->dm_list))
