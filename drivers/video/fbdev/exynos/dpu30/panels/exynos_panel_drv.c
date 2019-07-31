@@ -8,6 +8,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <asm/byteorder.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -478,6 +479,51 @@ static void exynos_panel_get_hdr_info(struct exynos_panel_info *info,
 	}
 }
 
+#define DISPLAY_MODE_ITEM_CNT	3
+
+static void exynos_panel_get_display_modes(struct exynos_panel_info *info,
+		struct device_node *np)
+{
+	int size;
+	u32 len;
+	int i;
+	const unsigned int *addr;
+	unsigned int *mode_item;
+
+	DPU_INFO_PANEL("%s +\n", __func__);
+
+	size = of_property_count_u32_elems(np, "display_mode");
+	if (size < 0) {
+		DPU_INFO_PANEL("This panel doesn't support display mode\n");
+		return;
+	}
+
+	info->display_mode_count = size / DISPLAY_MODE_ITEM_CNT;
+	DPU_INFO_PANEL("supported display mode count(%d)\n", info->display_mode_count);
+
+	addr = of_get_property(np, "display_mode", &len);
+
+	for (i = 0; i < info->display_mode_count; ++i) {
+		mode_item = (unsigned int *)&addr[i * DISPLAY_MODE_ITEM_CNT];
+		info->display_mode[i].index = i;
+		info->display_mode[i].width = be32_to_cpu(mode_item[0]);
+		info->display_mode[i].height = be32_to_cpu(mode_item[1]);
+		info->display_mode[i].fps = be32_to_cpu(mode_item[2]);
+		info->display_mode[i].mm_width = info->width;
+		info->display_mode[i].mm_height = info->height;
+
+		DPU_INFO_PANEL("display mode[%d] : %dx%d@%d, %dmm x %dmm\n",
+				info->display_mode[i].index,
+				info->display_mode[i].width,
+				info->display_mode[i].height,
+				info->display_mode[i].fps,
+				info->display_mode[i].mm_width,
+				info->display_mode[i].mm_height);
+	}
+
+	DPU_INFO_PANEL("%s -\n", __func__);
+}
+
 static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 		struct device_node *np)
 {
@@ -516,6 +562,7 @@ static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 	exynos_panel_get_dsc_info(lcd_info, np);
 	exynos_panel_get_mres_info(lcd_info, np);
 	exynos_panel_get_hdr_info(lcd_info, np);
+	exynos_panel_get_display_modes(lcd_info, np);
 }
 
 static void exynos_panel_list_up(void)

@@ -1546,6 +1546,10 @@ void decon_hiber_finish(struct decon_device *decon);
 /* Readback */
 #define EXYNOS_GET_READBACK_ATTRIBUTE	_IOW('F', 614, struct decon_readback_attribute)
 
+/* Display Mode Support */
+#define EXYNOS_GET_DISPLAY_MODE_NUM	_IOW('F', 700, u32)
+#define EXYNOS_GET_DISPLAY_MODE		_IOW('F', 701, struct exynos_display_mode)
+
 /* EDID data */
 #define EXYNOS_GET_EDID		_IOW('F', 800, struct decon_edid_data)
 #endif /* ___SAMSUNG_DECON_H__ */

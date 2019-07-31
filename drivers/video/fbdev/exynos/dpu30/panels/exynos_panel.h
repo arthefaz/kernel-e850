@@ -86,6 +86,17 @@ struct exynos_dsc {
 	u32 enc_sw;
 };
 
+#define MAX_DISPLAY_MODE		32
+
+struct exynos_display_mode {
+	u32 index;
+	u32 width;
+	u32 height;
+	u32 mm_width;
+	u32 mm_height;
+	u32 fps;
+};
+
 struct exynos_panel_info {
 	unsigned int id; /* panel id. It is used for finding connected panel */
 	enum decon_psr_mode mode;
@@ -122,5 +133,8 @@ struct exynos_panel_info {
 	struct lcd_hdr_info hdr;
 	struct dsc_slice dsc_slice;
 	unsigned int bpc;
+
+	int display_mode_count;
+	struct exynos_display_mode display_mode[MAX_DISPLAY_MODE];
 };
 #endif /* __EXYNOS_PANEL_H__ */

@@ -2862,6 +2862,8 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	struct decon_readback_attribute readback_attr;
 	struct decon_edid_data edid_data;
 	struct dpp_ch_restriction dpp_ch_restriction;
+	struct exynos_display_mode display_mode;
+	struct exynos_display_mode *mode;
 
 	int ret = 0;
 	u32 crtc;
@@ -3243,6 +3245,43 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			ret = -EFAULT;
 		}
 
+		break;
+
+	case EXYNOS_GET_DISPLAY_MODE_NUM:
+		if (copy_to_user((int __user *)arg, &lcd_info->display_mode_count,
+					sizeof(int))) {
+			ret = -EFAULT;
+			break;
+		}
+		break;
+
+	case EXYNOS_GET_DISPLAY_MODE:
+		if (copy_from_user(&display_mode,
+				   (struct exynos_display_mode __user *)arg,
+				   sizeof(display_mode))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		if (display_mode.index >= lcd_info->display_mode_count) {
+			decon_err("not valid display mode index(%d)\n",
+					display_mode.index);
+			ret = -EINVAL;
+			break;
+		}
+
+		mode = &lcd_info->display_mode[display_mode.index];
+		memcpy(&display_mode, mode, sizeof(display_mode));
+
+		decon_info("display mode[%d] : %dx%d@%d(%dx%dmm)\n",
+				display_mode.index, mode->width, mode->height,
+				mode->fps, mode->mm_width, mode->mm_height);
+
+		if (copy_to_user((struct exynos_display_mode __user *)arg,
+					&display_mode, sizeof(display_mode))) {
+			ret = -EFAULT;
+			break;
+		}
 		break;
 
 	default:
