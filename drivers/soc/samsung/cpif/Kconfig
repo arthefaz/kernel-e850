@@ -116,5 +116,11 @@ config MODEM_IF_NET_GRO
 	---help---
 	 This enables GRO(Generic Receive Offload) feature
 
+config SUSPEND_DURING_VOICE_CALL
+	bool "control wake_lock by voice call start/end notification"
+	default n
+	---help---
+	  This enables AP suspend during PCM over PCIE
+
 endmenu
 endif

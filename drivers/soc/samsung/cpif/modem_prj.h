@@ -702,6 +702,13 @@ struct modem_ctl {
 	bool pcie_pm_resume_wait;
 	bool device_reboot;
 
+#if defined(CONFIG_SUSPEND_DURING_VOICE_CALL)
+	bool pcie_voice_call_on;
+	struct work_struct call_on_work;
+	struct work_struct call_off_work;
+	struct notifier_block abox_call_state_nb;
+#endif
+
 	int s5100_gpio_cp_pwr;
 	int s5100_gpio_cp_reset;
 	int s5100_gpio_cp_ps_hold;
@@ -748,6 +755,7 @@ struct modem_ctl {
 #if defined(CONFIG_EXYNOS_ITMON)
 	struct notifier_block itmon_nb;
 #endif
+
 	void (*gpio_revers_bias_clear)(void);
 	void (*gpio_revers_bias_restore)(void);
 	void (*modem_complete)(struct modem_ctl *mc);
