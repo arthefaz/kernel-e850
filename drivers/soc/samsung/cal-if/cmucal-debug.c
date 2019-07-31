@@ -19,6 +19,31 @@ static unsigned int margin;
 extern unsigned int dbg_offset;
 static unsigned int cmu_top_base = 0x0;
 
+/*
+blk_hwacg_feature : It will print all the gate clocks of the specified block.
+parameters:
+addr : address of the block
+*/
+void blk_hwacg_feature(unsigned long addr)
+{
+	struct cmucal_clk *clk;
+	int size, reg;
+	int i;
+
+	size = cmucal_get_list_size(GATE_TYPE);
+	for (i = 0; i < size ; i++) {
+		clk = cmucal_get_node(i | GATE_TYPE);
+		if (clk &&((clk->paddr & 0xFFFF0000) == (addr & 0xFFFF0000)))
+		{
+			reg = readl(clk->offset + dbg_offset);
+			if ((reg & 0x70) != 0x30)
+				printk("name %s : [0x%x] active\n", clk->name, reg);
+			else
+				printk("name %s : [0x%x] idle\n", clk->name, reg);
+		}
+	}
+}
+
 void print_clk_on_blk(void)
 {
 	struct cmucal_clk *clk;
@@ -150,9 +175,12 @@ vclk_write_clk_info(struct file *filp, const char __user *ubuf,
 		   size_t cnt, loff_t *ppos)
 {
 	char buf[MAX_NAME_SIZE + 1];
+	char *c_buf;
 	unsigned int id;
+	unsigned long c_addr;
 	size_t ret;
 
+	c_buf = buf;
 	ret = cnt;
 
 	if (cnt == 0)
@@ -171,6 +199,9 @@ vclk_write_clk_info(struct file *filp, const char __user *ubuf,
 
 	if (!strcmp(buf, "hwacg")) {
 		print_clk_on_blk();
+	} else if(!strcmp(strsep(&c_buf," "),"blk_hwacg")) {
+		if (kstrtol(strsep(&c_buf," "), 16, &c_addr) == 0)
+			blk_hwacg_feature(c_addr);
 	} else {
 		id = cmucal_get_id(buf);
 		clk_info = cmucal_get_node(id);
