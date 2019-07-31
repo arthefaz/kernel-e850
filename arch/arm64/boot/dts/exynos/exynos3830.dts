@@ -608,7 +608,7 @@
 		#size-cells = <1>;
 		ranges;
 
-		domain-clients = <&mfc_0>, <&scaler_0>;
+		domain-clients = <&mfc_0>, <&scaler_0>, <&smfc>;
 	};
 
 	scaler_0: scaler@12CB0000 {
@@ -618,6 +618,16 @@
 		clocks = <&clock GATE_M2M_QCH>;
 		clock-names = "gate";
 		iommus = <&sysmmu_mfcmscl>;
+	};
+
+	smfc: smfc@12C90000 {
+		compatible = "samsung,exynos8890-jpeg";
+		reg = <0x0 0x12C90000 0x1000>;
+		interrupts = <0 INTREQ__JPEG 0>;
+		clocks = <&clock MFCMSCL_JPEG>;
+		clock-names = "gate";
+		iommus = <&sysmmu_mfcmscl>;
+		smfc,int_qos_minlock = <534000>;
 	};
 
 	acpm {
