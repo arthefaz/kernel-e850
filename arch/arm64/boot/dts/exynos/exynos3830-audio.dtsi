@@ -95,8 +95,8 @@
 
 		abox_rdma_1: abox-rdma@14a51100 {
 			compatible = "samsung,abox-rdma-compr";
-			reg = <0x0 0x14a51100 0x100>, <0x0 0x14f2f600 0x70>;
-			reg-names = "sfr", "mailbox";
+			reg = <0x0 0x14a51100 0x100>;/*, <0x0 0x14f2f600 0x70>;*/
+			reg-names = "sfr"; /*, mailbox; */
 			samsung,id = <1>;
 			samsung,type = "compress";
 			samsung,buffer_type = "dma";
