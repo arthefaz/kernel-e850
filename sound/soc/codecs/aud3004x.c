@@ -158,7 +158,7 @@ unsigned int aud3004x_read(struct aud3004x_priv *aud3004x, unsigned int reg)
 	}
 
 	i2c = aud3004x->i2c_priv[client];
-	ret =  snd_soc_read(codec, reg & 0xFF);
+	ret = snd_soc_read(codec, reg & 0xFF);
 	mutex_unlock(&aud3004x->regmap_lock);
 
 	return ret;
@@ -1409,7 +1409,7 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 
 		/* RCV Mode Dump */
 		aud3004x_write(aud3004x, AUD3004X_28B_SPKOFF_S_0,
-				aud3004x_read(aud3004x, AUD3004X_2A8_RCV_MODE);
+				aud3004x_read(aud3004x, AUD3004X_2A8_RCV_MODE));
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
@@ -1533,7 +1533,7 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 
 		/* SPK Mode Dump */
 		aud3004x_write(aud3004x, AUD3004X_28B_SPKOFF_S_0,
-				aud3004x_read(aud3004x, AUD3004X_2A7_SPK_MODE);
+				aud3004x_read(aud3004x, AUD3004X_2A7_SPK_MODE));
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */

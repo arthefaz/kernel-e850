@@ -29,11 +29,15 @@
 #include <linux/sizes.h>
 #include <linux/io.h>
 #include <linux/workqueue.h>
+
+#include <soc/samsung/acpm_mfd.h>
 #include <sound/aud3004x.h>
 
 #define S2MPU12_IBI_CNT		4
+#define CODEC_IRQ_CNT	8
 
 u8 irq_reg[S2MPU12_IRQ_GROUP_NR] = {0};
+u8 irq_codec[CODEC_IRQ_CNT];
 
 static const u8 s2mpu12_mask_reg[] = {
 	[PMIC_INT1] = S2MPU12_PMIC_INT1M,
@@ -219,6 +223,17 @@ power_key_err:
 	return 1;
 }
 
+int codec_notifier_flag = 0;
+
+void set_codec_notifier_flag(bool on)
+{
+	if (on)
+		codec_notifier_flag = true;
+	else
+		codec_notifier_flag = false;
+
+}
+
 static void s2mpu12_irq_work_func(struct work_struct *work)
 {
 	pr_info("%s: master pmic interrupt"
@@ -229,27 +244,67 @@ static void s2mpu12_irq_work_func(struct work_struct *work)
 		 irq_reg[PMIC_INT5], irq_reg[PMIC_INT6]);
 }
 
-static int s2mpu12_notifier(struct s2mpu12_dev *s2mpu12)
+static int s2mpu12_pmic_notifier(struct s2mpu12_dev *s2mpu12)
 {
 	int ret;
-	ret = s2mpu12_bulk_read(s2mpu12->pmic, S2MPU12_PMIC_INT1,
-				S2MPU12_NUM_IRQ_PMIC_REGS, &irq_reg[PMIC_INT1]);
-	if (ret) {
-		pr_err("%s:%s Failed to read pmic interrupt: %d\n",
-			MFD_DEV_NAME, __func__, ret);
-		return 1;
-	}
 
 	queue_delayed_work(s2mpu12->irq_wqueue, &s2mpu12->irq_work, 0);
 
 	/* Power-key W/A */
 	ret = s2mpu12_power_key_detection(s2mpu12);
-	if (ret)
+	if (ret) {
 		pr_err("%s: POWER-KEY detection error\n", __func__);
-
+		return 1;
+	}
 	/* Report IRQ */
 	s2mpu12_report_irq(s2mpu12);
 
+	return 0;
+}
+
+static int s2mpu12_ibi_notifier(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
+{
+	int ret;
+	u8 state = ibi_src[0];
+
+	if (state & S2MPU12_IBI0_CODEC || state & S2MPU12_IBI0_PMIC_M) {
+		ret = s2mpu12_pmic_notifier(s2mpu12);
+
+		if (state & S2MPU12_IBI0_CODEC) {
+			if (codec_notifier_flag)
+				aud3004x_call_notifier(irq_codec, CODEC_IRQ_CNT);
+			else
+				pr_err("%s: codec handler not registered!\n", __func__);
+		}
+
+		if (ret)
+			return 1;
+	}
+	return 0;
+}
+
+static int s2mpu12_check_ibi_source(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
+{
+	int ret;
+	int check;
+	u8 state = ibi_src[0];
+
+	if (state & S2MPU12_IBI0_CODEC || state & S2MPU12_IBI0_PMIC_M) {
+		ret = s2mpu12_bulk_read(s2mpu12->pmic, S2MPU12_PMIC_INT1,
+					S2MPU12_NUM_IRQ_PMIC_REGS,
+					&irq_reg[PMIC_INT1]);
+
+		if (state & S2MPU12_IBI0_CODEC) {
+			check = exynos_acpm_bulk_read(0, 0x07, 0x01, 6, &irq_codec[0]);
+			check = exynos_acpm_bulk_read(0, 0x07, 0xF0, 2, &irq_codec[6]);
+		}
+
+		if (ret) {
+			pr_err("%s:%s Failed to read pmic interrupt: %d\n",
+				MFD_DEV_NAME, __func__, ret);
+			return 1;
+		}
+	}
 	return 0;
 }
 
@@ -275,24 +330,15 @@ static irqreturn_t s2mpu12_irq_thread(int irq, void *data)
 	/* Read VGPIO_RX_MONITOR */
 	s2mpu12_read_vgpio_monitor(s2mpu12, ibi_src);
 
-	/* notify Master PMIC */
-	if (ibi_src[0] & S2MPU12_IBI0_PMIC_M) {
-		ret = s2mpu12_notifier(s2mpu12);
-		if (ret)
-			return IRQ_NONE;
-	}
+	/* Check IBI source */
+	ret = s2mpu12_check_ibi_source(s2mpu12, ibi_src);
+	if (ret)
+		return IRQ_NONE;
 
-#if 0
-	/* notify Codec */
-	if (ibi_src[0] & S2MPU12_IBI0_CODEC)
-		pr_info("%s: IBI from codec\n", __func__);
-		/* TODO : IRQ from s2mpu11 codec */
-		if (codec_notifier_flag)
-			aud3004x_call_notifier();
-		else
-			pr_err("%s: codec handler not registered!\n", __func__);
-	}
-#endif
+	/* notify IBI source */
+	ret = s2mpu12_ibi_notifier(s2mpu12, ibi_src);
+	if (ret)
+		return IRQ_NONE;
 
 	return IRQ_HANDLED;
 }

@@ -92,9 +92,12 @@ void aud3004x_usleep(unsigned int u_sec);
 int aud3004x_acpm_read_reg(unsigned int slave, unsigned int reg, unsigned int *val);
 int aud3004x_acpm_write_reg(unsigned int slave, unsigned int reg, unsigned int val);
 int aud3004x_acpm_update_reg(unsigned int slave, unsigned int reg, unsigned int val, unsigned mask);
+unsigned int aud3004x_read(struct aud3004x_priv *aud3004x, unsigned int reg);
+int aud3004x_write(struct aud3004x_priv *aud3004x, unsigned int reg, unsigned int val);
+int aud3004x_update_bits(struct aud3004x_priv *aud3004x, unsigned int reg, unsigned int mask, unsigned int value);
 /* Jack Functions */
 bool aud3004x_notifier_check(void);
-void aud3004x_call_notifier(void);
+void aud3004x_call_notifier(u8 irq_codec[], int count);
 int aud3004x_jack_probe(struct snd_soc_codec *codec);
 int aud3004x_jack_remove(struct snd_soc_codec *codec);
 
@@ -113,6 +116,8 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AUD3004X_02_IRQ2PEND		0x702
 #define AUD3004X_03_IRQ3PEND		0x703
 #define AUD3004X_04_IRQ4PEND		0x704
+#define AUD3004X_05_IRQ5PEND		0x705
+#define AUD3004X_06_IRQ6PEND		0x706
 #define AUD3004X_08_IRQ1M			0x708
 #define AUD3004X_09_IRQ2M			0x709
 #define AUD3004X_0A_IRQ3M			0x70A
@@ -275,6 +280,9 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AUD3004X_2A8_RCV_MODE		0x3A8
 #define AUD3004X_2B0_CTRL_HPS		0x3B0
 
+/* COMMON Register */
+#define AUD3004X_007_IRQM				0x07
+
 /* AUD3004X_01_IRQ1PEND */
 #define ST_JACKIN_R					BIT(7)
 #define ST_JACKOUT_R				BIT(6)
@@ -296,6 +304,7 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define JACK_DET_F					BIT(0)
 
 /* AUD3004X_03_IRQ3PEND */
+#define IMP_CHECK_DONE_R			BIT(5)
 #define ST_POLE_R					BIT(4)
 #define ANT_MDET_R					BIT(3)
 #define ANT_MDET2_R					BIT(2)
@@ -303,11 +312,24 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define BTN_DET_R					BIT(0)
 
 /* AUD3004X_04_IRQ4PEND */
+#define IMP_CHECK_DONE_F			BIT(5)
 #define ST_POLE_F					BIT(4)
 #define ANT_MDET_F					BIT(3)
 #define ANT_MDET2_F					BIT(2)
 #define ANT_LDET_F					BIT(1)
 #define BTN_DET_F					BIT(0)
+
+/* AUD3004X_05_IRQ5PEND */
+#define OCP_IRQ_R					BIT(5)
+#define ASEQ_IRQ_R					BIT(4)
+#define I2S_IRQ_R					BIT(2)
+#define NOISE_IRQ_R					BIT(1)
+
+/* AUD3004X_06_IRQ6PEND */
+#define OCP_IRQ_F					BIT(5)
+#define ASEQ_IRQ_F					BIT(4)
+#define I2S_IRQ_F					BIT(2)
+#define NOISE_IRQ_F					BIT(1)
 
 /* AUD3004X_08_IRQ1M */
 #define ST_JACKIN_R_M_SHIFT			7
@@ -1887,6 +1909,10 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define CTMI_MIC_PGA_SHIFT			0
 #define CTMI_MIC_PGA_WIDTH			3
 #define CTMI_MIC_PGA_MASK			MASK(CTMI_MIC_PGA_WIDTH, CTMI_MIC_PGA_SHIFT)
+
+/* AUD3004X_007_IRQM */
+#define CDC_IRQM_SHIFT				1
+#define CDC_IRQM_MASK				BIT(CDC_IRQM_SHIFT)
 
 #endif /* _AUD3004X_H */
 

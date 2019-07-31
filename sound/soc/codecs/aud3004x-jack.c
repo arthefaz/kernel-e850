@@ -19,7 +19,7 @@
 #include <linux/input.h>
 #include <linux/of_gpio.h>
 #include <linux/wakelock.h>
-#include <linux/mfd/samsung/s2mpu10-regulator.h>
+#include <linux/mfd/samsung/s2mpu12-regulator.h>
 #include <sound/aud3004x.h>
 #include <uapi/linux/input-event-codes.h>
 
@@ -372,15 +372,9 @@ static void aud3004x_buttons_work(struct work_struct *work)
 static bool fake_jack_check(struct aud3004x_jack *jackdet)
 {
 	struct aud3004x_priv *aud3004x = jackdet->p_aud3004x;
-	struct snd_soc_codec *codec = jackdet->codec;
 	unsigned int jack_status_bit = 0;
 
-	/* Check jack det status */
-	i2c_client_change(aud3004x, AUD3004D);
-	jack_status_bit = snd_soc_read(codec, AUD3004X_F0_STATUS1);
-	i2c_client_change(aud3004x, CODEC_CLOSE);
-
-	jack_status_bit = jack_status_bit & JACK_DET_MASK;
+	jack_status_bit = aud3004x_read(aud3004x, AUD3004X_F0_STATUS1);
 
 	if (!jack_status_bit) {
 		dev_err(aud3004x->dev, "%s, jack is not inserted.\n", __func__);
@@ -402,7 +396,6 @@ static bool aud3004x_jackstate_register(struct aud3004x_jack *jackdet)
 {
 	struct aud3004x_priv *aud3004x = jackdet->p_aud3004x;
 	struct earjack_state *jackstate = &jackdet->jack_state;
-	struct snd_soc_codec *codec = jackdet->codec;
 	struct device *dev = jackdet->p_aud3004x->dev;
 	unsigned int cur_jack, prv_jack;
 
@@ -420,24 +413,18 @@ static bool aud3004x_jackstate_register(struct aud3004x_jack *jackdet)
 				dev_dbg(dev, "Priv: JACK_4POLE -> Cur: JACK_OUT\n");
 			if (prv_jack & JACK_POLE_DEC)
 				dev_dbg(dev, "Priv: JACK_POLE_DEC -> Cur: JACK_OUT\n");
-			i2c_client_change(aud3004x, AUD3004D);
 
-			snd_soc_write(codec, AUD3004X_E4_DCTR_FSM3, 0x00);
-			/* Pole value reset */
-			snd_soc_write(codec, AUD3004X_E3_DCTR_FSM2, 0x00);
-			/* Micbias HQ mode reset */
-			snd_soc_write(codec, AUD3004X_E5_DCTR_FSM4, 0x02);
-
-			i2c_client_change(aud3004x, CODEC_CLOSE);
+			aud3004x_write(aud3004x, AUD3004X_E4_DCTR_FSM3, 0x00);
+			/* Pole Value Reset */
+			aud3004x_write(aud3004x, AUD3004X_E3_DCTR_FSM2, 0x00);
+			/* HQ Mode Reset */
+			aud3004x_write(aud3004x, AUD3004X_E5_DCTR_FSM4, 0x02);
 		} else if (prv_jack & JACK_APCHK) {
 			dev_dbg(dev, "Priv: JACK_APCHK -> Cur: JACK_OUT\n");
-			i2c_client_change(aud3004x, AUD3004D);
 
-			snd_soc_write(codec, AUD3004X_E4_DCTR_FSM3, 0x10);
+			aud3004x_write(aud3004x, AUD3004X_E4_DCTR_FSM3, 0x10);
 			aud3004x_usleep(100);
-			snd_soc_write(codec, AUD3004X_E4_DCTR_FSM3, 0x00);
-
-			i2c_client_change(aud3004x, CODEC_CLOSE);
+			aud3004x_write(aud3004x, AUD3004X_E4_DCTR_FSM3, 0x00);
 		} else {
 			goto err;
 		}
@@ -452,17 +439,14 @@ static bool aud3004x_jackstate_register(struct aud3004x_jack *jackdet)
 	case JACK_WATER:
 		if (prv_jack & JACK_APCHK) {
 			dev_dbg(dev, "Priv: JACK_APCHK -> Cur: JACK_WATER\n");
-			i2c_client_change(aud3004x, AUD3004D);
 
-			/* IRQ masking on */
-			snd_soc_write(codec, AUD3004X_08_IRQ1M, 0x01);
-			snd_soc_write(codec, AUD3004X_09_IRQ2M, 0x01);
+			/* IRQ Masking ON */
+			aud3004x_write(aud3004x, AUD3004X_08_IRQ1M, 0x01);
+			aud3004x_write(aud3004x, AUD3004X_09_IRQ2M, 0x01);
 
-			/* AP Polling start */
-			snd_soc_write(codec, AUD3004X_E4_DCTR_FSM3, 0x40);
+			/* AP Polling START */
+			aud3004x_write(aud3004x, AUD3004X_E4_DCTR_FSM3, 0x40);
 			aud3004x_usleep(100);
-
-			i2c_client_change(aud3004x, CODEC_CLOSE);
 		} else {
 			goto err;
 		}
@@ -470,17 +454,14 @@ static bool aud3004x_jackstate_register(struct aud3004x_jack *jackdet)
 	case JACK_WATER_OUT:
 		if (prv_jack & JACK_WATER) {
 			dev_dbg(dev, "Priv: JACK_WATER -> Cur: JACK_WATER_OUT\n");
-			i2c_client_change(aud3004x, AUD3004D);
 
-			/* IRQ masking off */
-			snd_soc_write(codec, AUD3004X_08_IRQ1M, 0x00);
-			snd_soc_write(codec, AUD3004X_09_IRQ2M, 0x00);
+			/* IRQ Masking OFF */
+			aud3004x_write(aud3004x, AUD3004X_08_IRQ1M, 0x00);
+			aud3004x_write(aud3004x, AUD3004X_09_IRQ2M, 0x00);
 
-			/* AP Polling stop */
-			snd_soc_write(codec, AUD3004X_E4_DCTR_FSM3, 0x00);
+			/* AP Polling STOP */
+			aud3004x_write(aud3004x, AUD3004X_E4_DCTR_FSM3, 0x00);
 			aud3004x_usleep(100);
-
-			i2c_client_change(aud3004x, CODEC_CLOSE);
 		} else {
 			goto err;
 		}
@@ -488,13 +469,10 @@ static bool aud3004x_jackstate_register(struct aud3004x_jack *jackdet)
 	case JACK_POLE_DEC:
 		if (prv_jack & (JACK_APCHK | JACK_OUT)) {
 			dev_dbg(dev, "Priv: JACK_APCHK -> Cur: JACK_POLE_DEC\n");
-			i2c_client_change(aud3004x, AUD3004D);
 
-			snd_soc_write(codec, AUD3004X_E4_DCTR_FSM3, 0x20);
+			aud3004x_write(aud3004x, AUD3004X_E4_DCTR_FSM3, 0x20);
 			aud3004x_usleep(100);
-			snd_soc_write(codec, AUD3004X_E4_DCTR_FSM3, 0x00);
-
-			i2c_client_change(aud3004x, CODEC_CLOSE);
+			aud3004x_write(aud3004x, AUD3004X_E4_DCTR_FSM3, 0x00);
 		} else {
 			goto err;
 		}
@@ -502,13 +480,10 @@ static bool aud3004x_jackstate_register(struct aud3004x_jack *jackdet)
 	case JACK_3POLE:
 		if (prv_jack & JACK_POLE_DEC) {
 			dev_dbg(dev, "Priv: JACK_POLE_DEC -> Cur: JACK_3POLE\n");
-			i2c_client_change(aud3004x, AUD3004D);
 
-			/* Pole value : 3pole */
-			snd_soc_write(codec, AUD3004X_E3_DCTR_FSM2, 0x20);
+			/* 3 POLE */
+			aud3004x_write(aud3004x, AUD3004X_E3_DCTR_FSM2, 0x20);
 			aud3004x_usleep(100);
-
-			i2c_client_change(aud3004x, CODEC_CLOSE);
 		} else {
 			goto err;
 		}
@@ -516,13 +491,10 @@ static bool aud3004x_jackstate_register(struct aud3004x_jack *jackdet)
 	case JACK_4POLE:
 		if (prv_jack & JACK_POLE_DEC) {
 			dev_dbg(dev, "Priv: JACK_POLE_DEC -> Cur: JACK_4POLE\n");
-			i2c_client_change(aud3004x, AUD3004D);
 
-			/* Pole value : 4pole */
-			snd_soc_write(codec, AUD3004X_E3_DCTR_FSM2, 0x30);
+			/* 4 POLE */
+			aud3004x_write(aud3004x, AUD3004X_E3_DCTR_FSM2, 0x30);
 			aud3004x_usleep(100);
-
-			i2c_client_change(aud3004x, CODEC_CLOSE);
 		} else {
 			goto err;
 		}
@@ -698,23 +670,11 @@ static int return_gdet_adc_thd(struct aud3004x_jack *jackdet)
  */
 static void read_gdet_adc(struct aud3004x_jack *jackdet)
 {
+#if 0
 	struct aud3004x_priv *aud3004x = jackdet->p_aud3004x;
 	struct earjack_state *jackstate = &jackdet->jack_state;
 	struct snd_soc_codec *codec = jackdet->codec;
-
-	/* GDET Pull-up registance 500k */
-	i2c_client_change(aud3004x, AUD3004D);
-	snd_soc_write(codec, AUD3004X_D1_DCTR_TEST1, 0x08);
-	snd_soc_write(codec, AUD3004X_C0_ACTR_JD1, 0x72);
-	i2c_client_change(aud3004x, CODEC_CLOSE);
-
-	jackstate->gdet_adc = adc_get_value(jackdet, 0);
-
-	/* GDET Pull-up registance 2M */
-	i2c_client_change(aud3004x, AUD3004D);
-	snd_soc_write(codec, AUD3004X_C0_ACTR_JD1, 0x76);
-	snd_soc_write(codec, AUD3004X_D1_DCTR_TEST1, 0x00);
-	i2c_client_change(aud3004x, CODEC_CLOSE);
+#endif
 }
 
 /*
@@ -775,27 +735,12 @@ static void aud3004x_gdet_adc_work(struct work_struct *work)
  */
 void aud3004x_configure_mic_bias(struct aud3004x_jack *jackdet)
 {
-	struct snd_soc_codec *codec = jackdet->codec;
 	struct aud3004x_priv *aud3004x = jackdet->p_aud3004x;
 
-	i2c_client_change(aud3004x, AUD3004D);
-
-	/* Configure Mic1 Bias Voltage */
-	snd_soc_update_bits(codec, AUD3004X_C3_ACTR_MCB1,
-			CTRV_MCB1_NS_MASK,
-			(jackdet->mic_bias1_voltage << CTRV_MCB1_NS_SHIFT));
-
 	/* Configure Mic2 Bias Voltage */
-	snd_soc_update_bits(codec, AUD3004X_C3_ACTR_MCB1,
-			CTRV_MCB2_NS_MASK,
-			(jackdet->mic_bias2_voltage << CTRV_MCB2_NS_SHIFT));
-
-	/* Configure Mic3 Bias Voltage */
-	snd_soc_update_bits(codec, AUD3004X_C4_ACTR_MCB2,
-			CTRV_MCB3_NS_MASK,
-			(jackdet->mic_bias3_voltage << CTRV_MCB3_NS_SHIFT));
-
-	i2c_client_change(aud3004x, CODEC_CLOSE);
+	aud3004x_update_bits(aud3004x, AUD3004X_C6_ACTR_MCB4,
+			CTRV_MCB2_MASK,
+			(jackdet->mic_bias2_voltage << CTRV_MCB2_SHIFT));
 }
 
 /*
@@ -867,150 +812,14 @@ static int aud3004x_register_inputdev(struct aud3004x_jack *jackdet)
 
 static void aud3004x_jack_parse_dt(struct aud3004x_priv *aud3004x)
 {
+#if 0
 	struct aud3004x_jack *jackdet = aud3004x->p_jackdet;
 	struct device *dev = aud3004x->dev;
 	struct of_phandle_args args;
 	int bias_v_conf, mic_range, btn_rel_val, delay;
 	int thd_adc;
 	int i, ret;
-
-	/*
-	 * Set mic bias 1/2/3 voltages
-	 */
-	/* Mic Bias 1 */
-	ret = of_property_read_u32(dev->of_node, "mic-bias1-voltage", &bias_v_conf);
-	if (!ret &&
-			((bias_v_conf >= MIC_BIAS1_VO_2_6V) &&
-			 (bias_v_conf <= MIC_BIAS1_VO_2_8V))) {
-		jackdet->mic_bias1_voltage = bias_v_conf;
-	} else {
-		jackdet->mic_bias1_voltage = MIC_BIAS1_VO_2_8V;
-		dev_warn(dev, "Property 'mic-bias1-voltage' %s",
-				ret ? "not found, default set 2.8V" : "used invalid value");
-	}
-
-	/* Mic Bias 2 */
-	ret = of_property_read_u32(dev->of_node, "mic-bias2-voltage", &bias_v_conf);
-	if (!ret &&
-			((bias_v_conf >= MIC_BIAS2_VO_0_7V) &&
-			 (bias_v_conf <= MIC_BIAS2_VO_2_8V))) {
-		jackdet->mic_bias2_voltage = bias_v_conf;
-	} else {
-		jackdet->mic_bias2_voltage = MIC_BIAS2_VO_2_8V;
-		dev_warn(dev, "Property 'mic-bias2-voltage' %s",
-				ret ? "not found, default set 2.8V" : "used invalid value");
-	}
-
-	/* Mic Bias 3 */
-	ret = of_property_read_u32(dev->of_node, "mic-bias3-voltage", &bias_v_conf);
-	if (!ret &&
-			((bias_v_conf >= MIC_BIAS3_VO_2_6V) &&
-			 (bias_v_conf <= MIC_BIAS3_VO_2_8V))) {
-		jackdet->mic_bias3_voltage = bias_v_conf;
-	} else {
-		jackdet->mic_bias3_voltage = MIC_BIAS3_VO_2_8V;
-		dev_warn(dev, "Property 'mic-bias3-voltage' %s",
-				ret ? "not found, default set 2.8V" : "used invalid value");
-	}
-
-	dev_dbg(dev, "Bias voltage values: bias1=%d, bias2=%d, bias3=%d\n",
-			jackdet->mic_bias1_voltage,
-			jackdet->mic_bias2_voltage,
-			jackdet->mic_bias3_voltage);
-
-	/*
-	 * Set mic detect tuning values
-	 */
-	/* GDET adc check delay time */
-	ret = of_property_read_u32(dev->of_node, "gdet-delay", &delay);
-	if (!ret)
-		jackdet->gdet_delay = delay;
-	else
-		jackdet->gdet_delay = AUD3004X_GDET_DELAY;
-
-	/* Mic bias on delay time */
-	ret = of_property_read_u32(dev->of_node, "mic-det-delay", &delay);
-	if (!ret)
-		jackdet->mdet_delay = delay;
-	else
-		jackdet->mdet_delay = AUD3004X_MDET_DELAY;
-
-	/* Mic det adc range */
-	ret = of_property_read_u32(dev->of_node, "mic-adc-range", &mic_range);
-	if (!ret)
-		jackdet->mic_adc_range = mic_range;
-	else
-		jackdet->mic_adc_range = AUD3004X_MIC_ADC_DEFAULT;
-
-	dev_dbg(dev, "GDET delay: %d, MDET delay: %d, Mic adc range: %d\n",
-			jackdet->gdet_delay, jackdet->mdet_delay, jackdet->mic_adc_range);
-
-	/*
-	 * Set button adc tuning values
-	 */
-	/* Button adc check delay time */
-	ret = of_property_read_u32(dev->of_node, "btn-adc-delay", &delay);
-	if (!ret)
-		jackdet->btn_adc_delay = delay;
-	else
-		jackdet->btn_adc_delay = AUD3004X_BTN_ADC_DELAY;
-
-	/* Button press adc value, a maximum of 4 buttons are supported */
-	for (i = 0; i < 4; i++) {
-		if (of_parse_phandle_with_args(dev->of_node,
-					"but-zones-list", "#list-but-cells", i, &args))
-			break;
-		jackdet->jack_buttons_zones[i].code = args.args[0];
-		jackdet->jack_buttons_zones[i].adc_low = args.args[1];
-		jackdet->jack_buttons_zones[i].adc_high = args.args[2];
-	}
-
-	/* Button release adc value */
-	ret = of_property_read_u32(dev->of_node, "btn-release-value", &btn_rel_val);
-	if (!ret)
-		jackdet->btn_release_value = btn_rel_val;
-	else
-		jackdet->btn_release_value = AUD3004X_BTN_REL_DEFAULT;
-
-	dev_dbg(dev, "Button adc check delay: %d\n",
-			jackdet->btn_adc_delay);
-	for (i = 0; i < 4; i++)
-		dev_dbg(dev, "Button Press: code(%d), low(%d), high(%d)\n",
-				jackdet->jack_buttons_zones[i].code,
-				jackdet->jack_buttons_zones[i].adc_low,
-				jackdet->jack_buttons_zones[i].adc_high);
-	dev_dbg(dev, "Button Release: %d\n", jackdet->btn_release_value);
-
-	/* Set gdet adc threshold value */
-	ret = of_property_read_u32(dev->of_node, "adc-thd-fake-jack", &thd_adc);
-	if (!ret)
-		jackdet->adc_thd_fake_jack = thd_adc;
-	else
-		jackdet->adc_thd_fake_jack = AUD3004X_ADC_THD_FAKE_JACK;
-
-	ret = of_property_read_u32(dev->of_node, "adc-thd-auxcable", &thd_adc);
-	if (!ret)
-		jackdet->adc_thd_auxcable = thd_adc;
-	else
-		jackdet->adc_thd_auxcable = AUD3004X_ADC_THD_AUXCABLE;
-
-	ret = of_property_read_u32(dev->of_node, "adc-thd-water-in", &thd_adc);
-	if (!ret)
-		jackdet->adc_thd_water_in = thd_adc;
-	else
-		jackdet->adc_thd_water_in = AUD3004X_ADC_THD_WATER_IN;
-
-	ret = of_property_read_u32(dev->of_node, "adc-thd-water-out", &thd_adc);
-	if (!ret)
-		jackdet->adc_thd_water_out = thd_adc;
-	else
-		jackdet->adc_thd_water_out = AUD3004X_ADC_THD_WATER_OUT;
-
-	dev_dbg(dev, "GDET adc threshold value: %d %d %d %d\n",
-			jackdet->adc_thd_fake_jack,
-			jackdet->adc_thd_auxcable,
-			jackdet->adc_thd_water_in,
-			jackdet->adc_thd_water_out);
+#endif
 }
 
 static void aud3004x_jack_register_initialize(struct snd_soc_codec *codec)
@@ -1025,43 +834,24 @@ static void aud3004x_jack_register_initialize(struct snd_soc_codec *codec)
 
 	dev_dbg(codec->dev, "%s called, setting defaults\n", __func__);
 
-	i2c_client_change(aud3004x, AUD3004D);
-
-	/* Jack HMU On basic value */
-	snd_soc_write(codec, AUD3004X_B7_ODSEL8, 0x08);
-	snd_soc_write(codec, AUD3004X_B8_ODSEL9, 0x02);
-	snd_soc_write(codec, AUD3004X_C0_ACTR_JD1, 0x76);
-	snd_soc_write(codec, AUD3004X_C1_ACTR_JD2, 0x07);
-	snd_soc_write(codec, AUD3004X_CA_ACTR_IMP4, 0x67);
-	snd_soc_write(codec, AUD3004X_D4_DCTR_TEST4, 0x04);
-	snd_soc_write(codec, AUD3004X_DA_DCTR_DBNC3, 0xC0);
-	snd_soc_write(codec, AUD3004X_E9_DCTR_IMP3, 0x82);
+	/* Jack HMU Basic */
+	aud3004x_write(aud3004x, AUD3004X_DA_DCTR_DBNC3, 0xC0);
+	aud3004x_write(aud3004x, AUD3004X_C0_ACTR_JD1, 0x76);
 
 	/* IRQ Un-Masking */
-	snd_soc_write(codec, AUD3004X_08_IRQ1M, 0x00);
-	snd_soc_write(codec, AUD3004X_09_IRQ2M, 0x00);
-	snd_soc_write(codec, AUD3004X_0A_IRQ3M, 0x0E);
-	snd_soc_write(codec, AUD3004X_0B_IRQ4M, 0x0E);
+	aud3004x_write(aud3004x, AUD3004X_08_IRQ1M, 0x00);
+	aud3004x_write(aud3004x, AUD3004X_09_IRQ2M, 0x00);
+	aud3004x_write(aud3004x, AUD3004X_0A_IRQ3M, 0x0E);
+	aud3004x_write(aud3004x, AUD3004X_0B_IRQ4M, 0x0E);
 
-	/* Pin Mode */
-	snd_soc_write(codec, AUD3004X_D0_DCTR_CM, 0x23);
+#if 0
+	/* 5 Pin Mode */
+	aud3004x_write(aud3004x, AUD3004X_D0_DCTR_CM, 0x0B);
 
-	i2c_client_change(aud3004x, CODEC_CLOSE);
-	i2c_client_change(aud3004x, AUD3004A);
+	/* Antenna */
+	aud3004x_write(aud3004x, AUD3004X_D0_DCTR_CM, 0x13);
+#endif
 
-	/* JACK EN_OUTTIEL, EN_OUTTIER */
-	snd_soc_write(codec, AUD3004X_13A_POP_HP, 0x70);
-
-	i2c_client_change(aud3004x, CODEC_CLOSE);
-
-	/* ADC OTP value write */
-	aud3004x_acpm_write_reg(AUD3004X_CLOSE_ADDR, AUD3004X_F63_WTP_ADC1, 0xC8);
-	aud3004x_acpm_write_reg(AUD3004X_CLOSE_ADDR, AUD3004X_F64_WTP_ADC2, 0x2E);
-	aud3004x_acpm_write_reg(AUD3004X_CLOSE_ADDR, AUD3004X_F65_WTP_ADC3, 0x09);
-	aud3004x_acpm_write_reg(AUD3004X_CLOSE_ADDR, AUD3004X_F67_OTP_ADC2, 0xC8);
-	aud3004x_acpm_write_reg(AUD3004X_CLOSE_ADDR, AUD3004X_F68_OTP_ADC3, 0x2E);
-	aud3004x_acpm_write_reg(AUD3004X_CLOSE_ADDR, AUD3004X_F69_OTP_ADC4, 0x09);
-	aud3004x_acpm_write_reg(AUD3004X_CLOSE_ADDR, AUD3004X_F6A_OTP_ADC5, 0x55);
 
 	/* All boot time hardware access is done. Put the device to sleep. */
 #ifdef CONFIG_PM
@@ -1079,15 +869,11 @@ static void aud3004x_jack_register_exit(struct snd_soc_codec *codec)
 	aud3004x_acpm_update_reg(AUD3004X_COMMON_ADDR,
 			AUD3004X_007_IRQM, CDC_IRQM_MASK, CDC_IRQM_MASK);
 
-	i2c_client_change(aud3004x, AUD3004D);
-
 	/* IRQ Masking */
-	snd_soc_write(codec, AUD3004X_08_IRQ1M, 0xFF);
-	snd_soc_write(codec, AUD3004X_09_IRQ2M, 0xFF);
-	snd_soc_write(codec, AUD3004X_0A_IRQ3M, 0xFF);
-	snd_soc_write(codec, AUD3004X_0B_IRQ4M, 0xFF);
-
-	i2c_client_change(aud3004x, CODEC_CLOSE);
+	aud3004x_write(aud3004x, AUD3004X_08_IRQ1M, 0xFF);
+	aud3004x_write(aud3004x, AUD3004X_09_IRQ2M, 0xFF);
+	aud3004x_write(aud3004x, AUD3004X_0A_IRQ3M, 0xFF);
+	aud3004x_write(aud3004x, AUD3004X_0B_IRQ4M, 0xFF);
 } 
 
 struct codec_notifier_struct {
@@ -1247,11 +1033,12 @@ int aud3004x_register_notifier(struct notifier_block *n,
  * If the interrup belongs to codec, then it notify the interrupt to the codec.
  * The notifier is the way to communicate between them.
  */
-void aud3004x_call_notifier()
+void aud3004x_call_notifier(u8 irq_codec[], int count)
 {
 	struct aud3004x_priv *aud3004x = codec_notifier_t.aud3004x;
 	struct aud3004x_jack *jackdet = aud3004x->p_jackdet;
-
+	unsigned int i;
+/*
 	aud3004x_acpm_read_reg(AUD3004X_DIGITAL_ADDR,
 			AUD3004X_01_IRQ1PEND, &jackdet->irq_val[0]);
 	aud3004x_acpm_read_reg(AUD3004X_DIGITAL_ADDR,
@@ -1268,6 +1055,27 @@ void aud3004x_call_notifier()
 			AUD3004X_F0_STATUS1, &jackdet->irq_val[6]);
 	aud3004x_acpm_read_reg(AUD3004X_DIGITAL_ADDR,
 			AUD3004X_F1_STATUS2, &jackdet->irq_val[7]);
+
+	aud3004x_acpm_read_reg(AUD3004X_DIGITAL_ADDR,
+			0x01, &jackdet->irq_val[0]);
+	aud3004x_acpm_read_reg(AUD3004X_DIGITAL_ADDR,
+			0x02, &jackdet->irq_val[1]);
+	aud3004x_acpm_read_reg(AUD3004X_DIGITAL_ADDR,
+			0x03, &jackdet->irq_val[2]);
+	aud3004x_acpm_read_reg(AUD3004X_DIGITAL_ADDR,
+			0x04, &jackdet->irq_val[3]);
+	aud3004x_acpm_read_reg(AUD3004X_DIGITAL_ADDR,
+			0x05, &jackdet->irq_val[4]);
+	aud3004x_acpm_read_reg(AUD3004X_DIGITAL_ADDR,
+			0x06, &jackdet->irq_val[5]);
+	aud3004x_acpm_read_reg(AUD3004X_DIGITAL_ADDR,
+			0xF0, &jackdet->irq_val[6]);
+	aud3004x_acpm_read_reg(AUD3004X_DIGITAL_ADDR,
+			0xF1, &jackdet->irq_val[7]);
+*/
+	for (i = 0; i < count; i++) {
+		jackdet->irq_val[i] = irq_codec[i];
+	}
 
 	dev_dbg(aud3004x->dev,
 			"[IRQ] %s(%d) 0x1:%02x 0x2:%02x 0x3:%02x 0x4:%02x 0x5:%02x 0x6:%02x st1:%02x st2:%02x\n",
@@ -1371,6 +1179,7 @@ int aud3004x_jack_probe(struct snd_soc_codec *codec)
 	aud3004x_register_inputdev(jackdet);
 	/* register value init for jack */
 	aud3004x_jack_register_initialize(codec);
+
 	/* Slave PMIC CODEC IRQ Un-Masking */
 	aud3004x_acpm_update_reg(AUD3004X_COMMON_ADDR,
 			AUD3004X_007_IRQM, 0, CDC_IRQM_MASK);
