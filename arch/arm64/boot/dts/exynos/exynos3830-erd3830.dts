@@ -48,7 +48,7 @@
 					&abox_wdma_4>;
 				samsung,prefix = "ABOX", "ABOX", "ABOX", "ABOX",
 					"ABOX", "ABOX",
-					"ABOX RDMA0", "ABOX ComprTx0", "ABOX RDMA2", "ABOX RDMA3",
+					"ABOX RDMA0", "ABOX RDMA1", "ABOX RDMA2", "ABOX RDMA3",
 					"ABOX RDMA4", "ABOX RDMA5", "ABOX RDMA6", "ABOX RDMA7",
 					"ABOX RDMA8", "ABOX RDMA9", "ABOX RDMA10", "ABOX RDMA11",
 					"ABOX WDMA0", "ABOX WDMA1", "ABOX WDMA2", "ABOX WDMA3",

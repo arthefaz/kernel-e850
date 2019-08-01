@@ -94,11 +94,11 @@
 		};
 
 		abox_rdma_1: abox-rdma@14a51100 {
-			compatible = "samsung,abox-rdma-compr";
-			reg = <0x0 0x14a51100 0x100>, <0x0 0x14b2f600 0x70>;
-			reg-names = "sfr", "mailbox";
+			compatible = "samsung,abox-rdma";
+			reg = <0x0 0x14a51100 0x100>;
+			reg-names = "sfr";
 			samsung,id = <1>;
-			samsung,type = "compress";
+			samsung,type = "normal";
 			samsung,buffer_type = "dma";
 			#sound-dai-cells = <1>;
 		};
