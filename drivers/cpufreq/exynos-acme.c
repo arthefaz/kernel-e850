@@ -51,56 +51,6 @@ static DEFINE_PER_CPU(struct exynos_slack_timer, exynos_slack_timer);
  *                          HELPER FUNCTION                          *
  *********************************************************************/
 
-static void slack_update_min(struct cpufreq_policy *policy)
-{
-	unsigned int cpu;
-	unsigned long max_cap, min_cap;
-	struct exynos_slack_timer *slack_timer;
-
-	max_cap = arch_scale_cpu_capacity(NULL, policy->cpu);
-
-	/* min_cap is minimum value making higher frequency than policy->min */
-	min_cap = (max_cap * policy->min) / policy->max;
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ENERGYSTEP
-	min_cap -= 1;
-#else
-	min_cap = (min_cap * 4 / 5) + 1;
-#endif
-	for_each_cpu(cpu, policy->cpus) {
-		slack_timer = &per_cpu(exynos_slack_timer, cpu);
-		slack_timer->min = min_cap;
-	}
-}
-
-static s64 get_next_event_time_ms(unsigned int cpu)
-{
-	return ktime_to_us(ktime_sub(*(get_next_event_cpu(cpu)), ktime_get()));
-}
-
-static int need_slack_timer(unsigned int cpu)
-{
-	struct exynos_slack_timer *slack_timer = &per_cpu(exynos_slack_timer, cpu);
-	unsigned long util = cpufreq_governor_get_util(cpu);
-
-	if ((util > slack_timer->min) &&
-		(get_next_event_time_ms(cpu) > slack_timer->expired_time))
-		return 1;
-
-	return 0;
-}
-
-static void slack_nop_timer(unsigned long data)
-{
-	/*
-	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
-	 * to decrease its frequency if it is not set to minimum already.
-	 *
-	 * This is important for platforms where CPU with higher frequencies
-	 * consume higher power even at IDLE.
-	 */
-	trace_exynos_slack_func(smp_processor_id());
-}
-
 static struct exynos_cpufreq_domain *find_domain(unsigned int cpu)
 {
 	struct exynos_cpufreq_domain *domain;
@@ -674,6 +624,60 @@ static int dm_scaler(int dm_type, void *devdata, unsigned int target_freq,
 	cpufreq_cpu_put(policy);
 
 	return ret;
+}
+
+/*********************************************************************
+ *                     CPUFREQ SLACK TIMER                           *
+ *********************************************************************/
+
+static void slack_update_min(struct cpufreq_policy *policy)
+{
+	unsigned int cpu;
+	unsigned long max_cap, min_cap;
+	struct exynos_slack_timer *slack_timer;
+
+	max_cap = arch_scale_cpu_capacity(NULL, policy->cpu);
+
+	/* min_cap is minimum value making higher frequency than policy->min */
+	min_cap = (max_cap * policy->min) / policy->max;
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ENERGYSTEP
+	min_cap -= 1;
+#else
+	min_cap = (min_cap * 4 / 5) + 1;
+#endif
+	for_each_cpu(cpu, policy->cpus) {
+		slack_timer = &per_cpu(exynos_slack_timer, cpu);
+		slack_timer->min = min_cap;
+	}
+}
+
+static s64 get_next_event_time_ms(unsigned int cpu)
+{
+	return ktime_to_us(ktime_sub(*(get_next_event_cpu(cpu)), ktime_get()));
+}
+
+static int need_slack_timer(unsigned int cpu)
+{
+	struct exynos_slack_timer *slack_timer = &per_cpu(exynos_slack_timer, cpu);
+	unsigned long util = cpufreq_governor_get_util(cpu);
+
+	if ((util > slack_timer->min) &&
+		(get_next_event_time_ms(cpu) > slack_timer->expired_time))
+		return 1;
+
+	return 0;
+}
+
+static void slack_nop_timer(unsigned long data)
+{
+	/*
+	 * The purpose of slack-timer is to wake up the CPU from IDLE, in order
+	 * to decrease its frequency if it is not set to minimum already.
+	 *
+	 * This is important for platforms where CPU with higher frequencies
+	 * consume higher power even at IDLE.
+	 */
+	trace_exynos_slack_func(smp_processor_id());
 }
 
 /*********************************************************************
