@@ -864,13 +864,13 @@ int s5100_poweroff_pcie(struct modem_ctl *mc)
 	}
 
 	/* prior Tx might lead cp2ap_wakeup = 1
-	 * wait for a while (50ms) before pci power off
-	 * cp2ap_wakeup = 1 in 20ms from Tx and cp2ap_wakeup = 0 in 300ms from = 1
+	 * wait for a while (30ms) before pci power off
+	 * cp2ap_wakeup = 1 in 20ms from Tx and cp2ap_wakeup = 0 in 50ms from = 1
 	 */
 	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
 	/* wait Tx done if it is running */
 	spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
-	msleep(50);
+	msleep(30);
 	if (mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 1) {
 		mif_err("skip pci power off : Tx was working\n");
 		goto exit;
