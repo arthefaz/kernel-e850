@@ -99,7 +99,7 @@ static inline bool pmucal_rae_check_value(struct pmucal_seq *seq)
 		return false;
 }
 
-static int pmucal_rae_wait(struct pmucal_seq *seq)
+static int pmucal_rae_wait(struct pmucal_seq *seq, unsigned int idx)
 {
 	u32 timeout = 0;
 
@@ -115,8 +115,8 @@ static int pmucal_rae_wait(struct pmucal_seq *seq)
 		if (timeout > 5000) {
 			u32 reg;
 			reg = __raw_readl(seq->base_va + seq->offset);
-			pr_err("%s %s:timed out during wait. (value:0x%x, seq_idx = %d)\n",
-						PMUCAL_PREFIX, __func__, reg, pmucal_rae_seq_idx);
+			pr_err("%s %s:timed out during wait. reg:%s (value:0x%x, seq_idx = %d)\n",
+						PMUCAL_PREFIX, __func__, seq->sfr_name, reg, idx);
 			return -ETIMEDOUT;
 		}
 	}
@@ -162,7 +162,7 @@ static inline void pmucal_clr_bit_atomic(struct pmucal_seq *seq)
 	__raw_writel(seq->value, seq->base_va + (seq->offset | 0x8000));
 }
 
-static int pmucal_rae_write_retry(struct pmucal_seq *seq, bool inversion)
+static int pmucal_rae_write_retry(struct pmucal_seq *seq, bool inversion, unsigned int idx)
 {
 	u32 timeout = 0, count = 0, i = 0;
 	bool retry = true;
@@ -187,7 +187,7 @@ static int pmucal_rae_write_retry(struct pmucal_seq *seq, bool inversion)
 			u32 reg;
 			reg = __raw_readl(seq->cond_base_va + seq->cond_offset);
 			pr_err("%s %s:timed out during write-retry. (value:0x%x, seq_idx = %d)\n",
-					PMUCAL_PREFIX, __func__, reg, pmucal_rae_seq_idx);
+					PMUCAL_PREFIX, __func__, reg, idx);
 			return -ETIMEDOUT;
 		}
 	}
@@ -283,7 +283,7 @@ int pmucal_rae_restore_seq(struct pmucal_seq *seq, unsigned int seq_size)
 			break;
 		case PMUCAL_WAIT:
 		case PMUCAL_WAIT_TWO:
-			ret = pmucal_rae_wait(&seq[i]);
+			ret = pmucal_rae_wait(&seq[i], i);
 			if (ret)
 				return ret;
 			break;
@@ -334,23 +334,23 @@ int pmucal_rae_handle_seq(struct pmucal_seq *seq, unsigned int seq_size)
 			break;
 		case PMUCAL_WAIT:
 		case PMUCAL_WAIT_TWO:
-			ret = pmucal_rae_wait(&seq[i]);
+			ret = pmucal_rae_wait(&seq[i], i);
 			if (ret)
 				return ret;
 			break;
 		case PMUCAL_WRITE_WAIT:
 			pmucal_rae_write(&seq[i]);
-			ret = pmucal_rae_wait(&seq[i]);
+			ret = pmucal_rae_wait(&seq[i], i);
 			if (ret)
 				return ret;
 			break;
 		case PMUCAL_WRITE_RETRY:
-			ret = pmucal_rae_write_retry(&seq[i], false);
+			ret = pmucal_rae_write_retry(&seq[i], false, i);
 			if (ret)
 				return ret;
 			break;
 		case PMUCAL_WRITE_RETRY_INV:
-			ret = pmucal_rae_write_retry(&seq[i], true);
+			ret = pmucal_rae_write_retry(&seq[i], true, i);
 			if (ret)
 				return ret;
 			break;
@@ -430,7 +430,7 @@ int pmucal_rae_handle_cp_seq(struct pmucal_seq *seq, unsigned int seq_size)
 			break;
 		case PMUCAL_WAIT:
 		case PMUCAL_WAIT_TWO:
-			ret = pmucal_rae_wait(&seq[i]);
+			ret = pmucal_rae_wait(&seq[i], i);
 			if (ret)
 				return ret;
 			pr_info("%s%s\t%s = 0x%08x(expected = 0x%08x)\n", PMUCAL_PREFIX, "raw_read", seq[i].sfr_name,
@@ -493,7 +493,7 @@ int pmucal_rae_handle_gnss_seq(struct pmucal_seq *seq, unsigned int seq_size)
 			break;
 		case PMUCAL_WAIT:
 		case PMUCAL_WAIT_TWO:
-			ret = pmucal_rae_wait(&seq[i]);
+			ret = pmucal_rae_wait(&seq[i], i);
 			if (ret)
 				return ret;
 			pr_info("%s%s\t%s = 0x%08x(expected = 0x%08x)\n", PMUCAL_PREFIX, "raw_read", seq[i].sfr_name,
