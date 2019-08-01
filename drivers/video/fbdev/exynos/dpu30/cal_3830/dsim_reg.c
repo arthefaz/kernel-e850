@@ -943,6 +943,71 @@ static void dsim_reg_set_porch(u32 id, struct exynos_panel_info *lcd)
 	}
 }
 
+static void dsim_reg_set_hact_period(u32 id, u32 hact_period)
+{
+	u32 val = DSIM_VT_HTIMING0_HACT_PERIOD(hact_period);
+
+	dsim_write_mask(id, DSIM_VT_HTIMING0, val,
+			DSIM_VT_HTIMING0_HACT_PERIOD_MASK);
+}
+
+static void dsim_reg_set_hsa_period(u32 id, u32 hsa_period)
+{
+	u32 val = DSIM_VT_HTIMING0_HSA_PERIOD(hsa_period);
+
+	dsim_write_mask(id, DSIM_VT_HTIMING0, val,
+			DSIM_VT_HTIMING0_HSA_PERIOD_MASK);
+}
+
+static void dsim_reg_set_hbp_period(u32 id, u32 hbp_period)
+{
+	u32 val = DSIM_VT_HTIMING1_HBP_PERIOD(hbp_period);
+
+	dsim_write_mask(id, DSIM_VT_HTIMING1, val,
+			DSIM_VT_HTIMING1_HBP_PERIOD_MASK);
+}
+
+static void dsim_reg_set_hfp_period(u32 id, u32 hfp_period)
+{
+	u32 val = DSIM_VT_HTIMING1_HFP_PERIOD(hfp_period);
+
+	dsim_write_mask(id, DSIM_VT_HTIMING1, val,
+			DSIM_VT_HTIMING1_HFP_PERIOD_MASK);
+}
+
+static void dsim_reg_set_hperiod(u32 id, struct exynos_panel_info *lcd)
+{
+	u32 vclk,  wclk;
+	u32 hblank, vblank;
+	u32 width, height;
+	u32 hact_period, hsa_period, hbp_period, hfp_period;
+
+	if (lcd->dsc.en)
+		width = lcd->xres / 3;
+	else
+		width = lcd->xres;
+
+	height = lcd->yres;
+
+	if (lcd->mode == DECON_VIDEO_MODE) {
+		hblank = lcd->hsa + lcd->hbp + lcd->hfp;
+		vblank = lcd->vsa + lcd->vbp + lcd->vfp;
+		vclk = DIV_ROUND_CLOSEST((width + hblank) * (height + vblank) * lcd->fps, 1000); /* khz */
+		wclk = DIV_ROUND_CLOSEST(lcd->hs_clk * 1000, 16); /* khz */
+
+		/* round calculation to reduce fps error */
+		hact_period = DIV_ROUND_CLOSEST(width * wclk, vclk);
+		hsa_period = DIV_ROUND_CLOSEST(lcd->hsa * wclk, vclk);
+		hbp_period = DIV_ROUND_CLOSEST(lcd->hbp * wclk, vclk);
+		hfp_period = DIV_ROUND_CLOSEST(lcd->hfp * wclk, vclk);
+
+		dsim_reg_set_hact_period(id, hact_period);
+		dsim_reg_set_hsa_period(id, hsa_period);
+		dsim_reg_set_hbp_period(id, hbp_period);
+		dsim_reg_set_hfp_period(id, hfp_period);
+	}
+}
+
 static void dsim_reg_set_video_mode(u32 id, u32 mode)
 {
 	u32 val = mode ? ~0 : 0;
@@ -1330,14 +1395,6 @@ static void dsim_reg_set_threshold(u32 id, u32 threshold)
 	dsim_write(id, DSIM_THRESHOLD, val);
 }
 
-static void dsim_reg_set_vt_compensate(u32 id, u32 compensate)
-{
-	u32 val = DSIM_VIDEO_TIMER_COMPENSATE(compensate);
-
-	dsim_write_mask(id, DSIM_VIDEO_TIMER, val,
-			DSIM_VIDEO_TIMER_COMPENSATE_MASK);
-}
-
 static void dsim_reg_set_vstatus_int(u32 id, u32 vstatus)
 {
 	u32 val = DSIM_VIDEO_TIMER_VSTATUS_INTR_SEL(vstatus);
@@ -1550,7 +1607,7 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	dsim_reg_set_config_options(id, lcd_info->data_lane -1, 1, 0,
 			DSIM_PIXEL_FORMAT_RGB24, 0);
 
-	/* CPSR & VIDEO MODE can be set when shadow enable on */
+	/* CPSR & VIDEO MODE & HPERIOD can be set only when shadow enable on */
 	/* shadow enable */
 	dsim_reg_enable_shadow(id, 1);
 	if (lcd_info->mode == DECON_VIDEO_MODE) {
@@ -1564,7 +1621,8 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	dsim_reg_enable_dsc(id, lcd_info->dsc.en);
 
 	/* shadow disable */
-	dsim_reg_enable_shadow(id, 0);
+	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE)
+		dsim_reg_enable_shadow(id, 0);
 
 	if (lcd_info->mode == DECON_VIDEO_MODE) {
 		dsim_reg_disable_hsa(id, 0);
@@ -1596,7 +1654,7 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
 		dsim_reg_set_cmd_ctrl(id, lcd_info, clks);
 	} else if (lcd_info->mode == DECON_VIDEO_MODE) {
-		dsim_reg_set_vt_compensate(id, lcd_info->vt_compensation);
+		dsim_reg_set_hperiod(id, lcd_info);
 		dsim_reg_set_vstatus_int(id, DSIM_VSYNC);
 	}
 
@@ -1960,6 +2018,14 @@ void dsim_reg_preinit(u32 id)
 	clks.hs_clk = 898;
 	clks.esc_clk = 20;
 	memset(&lcd_info, 0, sizeof(struct exynos_panel_info));
+	lcd_info.vfp = 20;
+	lcd_info.vbp = 2;
+	lcd_info.vsa = 2;
+	lcd_info.hfp = 20;
+	lcd_info.hbp = 20;
+	lcd_info.hsa = 20;
+	lcd_info.fps = 60;
+	lcd_info.hs_clk = 898;
 	lcd_info.mode = DECON_MIPI_COMMAND_MODE;
 	lcd_info.xres = 1080;
 	lcd_info.yres = 1920;
