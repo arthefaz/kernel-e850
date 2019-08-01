@@ -618,7 +618,7 @@ retry:
 			s3c2410wdt_set_emergency_reset(0, 0);
 		}
 
-		if (is_acpm_stop_log)
+		if (!is_acpm_stop_log)
 			queue_work(update_log_wq, &acpm_debug->update_log_work);
 	}
 
