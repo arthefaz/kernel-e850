@@ -209,6 +209,8 @@ extern u32 abox_read_gpr(int core_id, int gpr_id);
  * @return		call state
  */
 extern bool abox_get_call_state(void);
+extern void abox_set_bclk_ratio(unsigned int rate);
+extern void abox_reset_bclk_ratio(void);
 
 #else /* !CONFIG_SND_SOC_SAMSUNG_ABOX */
 
