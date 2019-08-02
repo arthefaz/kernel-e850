@@ -245,6 +245,9 @@ static irqreturn_t ap_wakeup_handler(int irq, void *data)
 			mc->pcie_pm_resume_wait = true;
 		} else {
 			mif_err("abnormal gpio_val = %d in suspended\n", gpio_val);
+			mc->apwake_irq_chip->irq_set_type(
+				irq_get_irq_data(mc->s5100_irq_ap_wakeup.num),
+				IRQF_TRIGGER_HIGH);
 			mif_enable_irq(&mc->s5100_irq_ap_wakeup);
 		}
 		spin_unlock_irqrestore(&mc->pcie_pm_lock, flags);
