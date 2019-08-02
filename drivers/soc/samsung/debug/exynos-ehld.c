@@ -83,6 +83,7 @@ static struct perf_event_attr exynos_ehld_attr = {
 	.type           = PERF_TYPE_HARDWARE,
 	.config         = PERF_COUNT_HW_INSTRUCTIONS,
 	.size           = sizeof(struct perf_event_attr),
+	.sample_period  = GENMASK_ULL(31, 0),
 	.pinned         = 1,
 	.disabled       = 1,
 };
@@ -551,12 +552,6 @@ static int exynos_ehld_setup(void)
 {
 	struct exynos_ehld_ctrl *ctrl;
 	int err, cpu;
-	u64 period;
-
-	/* clock cycles per tick: */
-	period = (u64)(1000000) * 1000;
-	do_div(period, HZ);
-	exynos_ehld_attr.sample_period = period;
 
 	/* register pm notifier */
 	register_pm_notifier(&exynos_ehld_nb);
