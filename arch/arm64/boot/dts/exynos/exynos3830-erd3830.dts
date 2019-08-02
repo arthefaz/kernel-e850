@@ -368,7 +368,7 @@
 						sound-dai = <&abox_uaif_0>;
 					};
 					codec {
-						sound-dai = <&dummy_audio_codec>;
+						sound-dai = <&codec_aud3004x>;
 					};
 				};
 				uaif1 {
@@ -377,7 +377,6 @@
 						sound-dai = <&abox_uaif_1>;
 					};
 					codec {
-						/*sound-dai = <&tfa9874 0>;*/
 						sound-dai = <&dummy_audio_codec>;
 					};
 				};
