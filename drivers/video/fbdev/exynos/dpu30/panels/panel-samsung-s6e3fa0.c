@@ -149,11 +149,14 @@ int s6e3fa0_mres(struct exynos_panel_device *panel, int mres_idx)
 
 int s6e3fa0_doze(struct exynos_panel_device *panel)
 {
+	DPU_INFO_PANEL("%s +\n", __func__);
+	s6e3fa0_displayon(panel);
 	return 0;
 }
 
 int s6e3fa0_doze_suspend(struct exynos_panel_device *panel)
 {
+	DPU_INFO_PANEL("%s +\n", __func__);
 	return 0;
 }
 

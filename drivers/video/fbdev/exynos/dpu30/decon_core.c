@@ -604,6 +604,13 @@ static int decon_doze(struct decon_device *decon)
 	enum decon_state next_state = DECON_STATE_DOZE;
 
 	mutex_lock(&decon->lock);
+
+	if (decon->lcd_info->mode != DECON_MIPI_COMMAND_MODE) {
+		decon_warn("decon-%d %s is operating only MIPI COMMAND MODE\n",
+				decon->id, __func__);
+		goto out;
+	}
+
 	if (decon->state == next_state) {
 		decon_warn("decon-%d %s already %s state\n", decon->id,
 				__func__, decon_state_names[decon->state]);
@@ -820,6 +827,13 @@ static int decon_doze_suspend(struct decon_device *decon)
 	enum decon_state next_state = DECON_STATE_DOZE_SUSPEND;
 
 	mutex_lock(&decon->lock);
+
+	if (decon->lcd_info->mode != DECON_MIPI_COMMAND_MODE) {
+		decon_warn("decon-%d %s is operating only MIPI COMMAND MODE\n",
+				decon->id, __func__);
+		goto out;
+	}
+
 	if (decon->state == next_state) {
 		decon_warn("decon-%d %s already %s state\n", decon->id,
 				__func__, decon_state_names[decon->state]);

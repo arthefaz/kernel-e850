@@ -770,7 +770,7 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 	/* DPHY power on : iso release */
 	dsim_phy_power_on(dsim);
 
-	panel_ctrl = (state == DSIM_STATE_ON) ? true : false;
+	panel_ctrl = (dsim->state == DSIM_STATE_OFF) ? true : false;
 	dsim_reg_init(dsim->id, &dsim->panel->lcd_info, &dsim->clks, panel_ctrl);
 	dsim_reg_start(dsim->id);
 
@@ -800,7 +800,7 @@ static int dsim_enable(struct dsim_device *dsim)
 		goto out;
 	}
 
-	if (prev_state != DSIM_STATE_INIT)
+	if (prev_state == DSIM_STATE_OFF)
 		dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DISPLAYON, NULL);
 
 	dsim_info("dsim-%d %s - (state:%s -> %s)\n", dsim->id, __func__,
