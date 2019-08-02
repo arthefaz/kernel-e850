@@ -1540,8 +1540,6 @@ static struct snd_soc_dai_link exynos3830_dai[100] = {
 		.dpcm_playback = 1,
 		.dpcm_capture = 1,
 	},
-	{
-	},
 };
 
 static const struct snd_kcontrol_new exynos3830_controls[] = {

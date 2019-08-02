@@ -1683,9 +1683,6 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 		case 0xa:
 			ret = ABOX_UAIF2;
 			break;
-		case 0xb:
-			ret = ABOX_UAIF2;
-			break;
 		default:
 			ret = ABOX_NONE;
 			break;
@@ -1728,18 +1725,6 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 			ret = ABOX_UAIF1;
 			break;
 		case 0xa:
-			ret = ABOX_UAIF2;
-			break;
-		case 0xb:
-			ret = ABOX_UAIF2;
-			break;
-		case 0xc:
-			ret = ABOX_UAIF2;
-			break;
-		case 0xd:
-			ret = ABOX_UAIF2;
-			break;
-		case 0xe:
 			ret = ABOX_UAIF2;
 			break;
 		case 0x10:
