@@ -16,21 +16,21 @@
 
 static int *pcm_buffer;
 static int prval_stereo_48khz_1khz[] = {
-	0x085f0000,  0x085f0000,  0x109a0000,  0x109a0000,  0x188c0000,  0x188c0000,  0x20130000,  0x20130000,
-	0x270d0000,  0x270d0000,  0x2d5c0000,  0x2d5c0000,  0x32e50000,  0x32e50000,  0x378e0000,  0x378e0000,
-	0x3b440000,  0x3b440000,  0x3df70000,  0x3df70000,  0x3f9a0000,  0x3f9a0000,  0x40260000,  0x40260000,
-	0x3f9a0000,  0x3f9a0000,  0x3df70000,  0x3df70000,  0x3b440000,  0x3b440000,  0x378e0000,  0x378e0000,
-	0x32e50000,  0x32e50000,  0x2d5c0000,  0x2d5c0000,  0x270d0000,  0x270d0000,  0x20130000,  0x20130000,
-	0x188c0000,  0x188c0000,  0x109a0000,  0x109a0000,  0x085f0000,  0x085f0000,  0x0000,  0x0000,
-	0xf7a10000,  0xf7a10000,  0xef660000,  0xef660000,  0xe7740000,  0xe7740000,  0xdfed0000,  0xdfed0000,
-	0xd8f30000,  0xd8f30000,  0xd2a40000,  0xd2a40000,  0xcd1b0000,  0xcd1b0000,  0xc8720000,  0xc8720000,
-	0xc4bc0000,  0xc4bc0000,  0xc2090000,  0xc2090000,  0xc0660000,  0xc0660000,  0xbfda0000,  0xbfda0000,
-	0xc0660000,  0xc0660000,  0xc2090000,  0xc2090000,  0xc4bc0000,  0xc4bc0000,  0xc8720000,  0xc8720000,
-	0xcd1b0000,  0xcd1b0000,  0xd2a40000,  0xd2a40000,  0xd8f30000,  0xd8f30000,  0xdfed0000,  0xdfed0000,
-	0xe7740000,  0xe7740000,  0xef660000,  0xef660000,  0xf7a10000,  0xf7a10000,  0x0000,  0x0000,
+	0x085f,  0x085f,  0x109a,  0x109a,  0x188c,  0x188c,  0x2013,  0x2013,
+	0x270d,  0x270d,  0x2d5c,  0x2d5c,  0x32e5,  0x32e5,  0x378e,  0x378e,
+	0x3b44,  0x3b44,  0x3df7,  0x3df7,  0x3f9a,  0x3f9a,  0x4026,  0x4026,
+	0x3f9a,  0x3f9a,  0x3df7,  0x3df7,  0x3b44,  0x3b44,  0x378e,  0x378e,
+	0x32e5,  0x32e5,  0x2d5c,  0x2d5c,  0x270d,  0x270d,  0x2013,  0x2013,
+	0x188c,  0x188c,  0x109a,  0x109a,  0x085f,  0x085f,  0x0000,  0x0000,
+	0xf7a1,  0xf7a1,  0xef66,  0xef66,  0xe774,  0xe774,  0xdfed,  0xdfed,
+	0xd8f3,  0xd8f3,  0xd2a4,  0xd2a4,  0xcd1b,  0xcd1b,  0xc872,  0xc872,
+	0xc4bc,  0xc4bc,  0xc209,  0xc209,  0xc066,  0xc066,  0xbfda,  0xbfda,
+	0xc066,  0xc066,  0xc209,  0xc209,  0xc4bc,  0xc4bc,  0xc872,  0xc872,
+	0xcd1b,  0xcd1b,  0xd2a4,  0xd2a4,  0xd8f3,  0xd8f3,  0xdfed,  0xdfed,
+	0xe774,  0xe774,  0xef66,  0xef66,  0xf7a1,  0xf7a1,  0x0000,  0x0000,
 };
 
-static unsigned int abox_uaif1_rdma0_48KHz_32bit_stereo[][2] = {
+static unsigned int abox_uaif0_rdma0_48KHz_16bit_stereo[][2] = {
 	{ 0x40,   0x00000021 }, /* ROUTE_CTRL0 */
 	{ 0x200,  0x02020204 }, /* SPUS_CTRL_FC0 */
 	{ 0x204,  0x00000009 }, /* SPUS_CTRL1 */
@@ -83,7 +83,7 @@ void abox_set_bclk_ratio(unsigned int rate)
 
 	pinctrl_pm_select_default_state(dev);
 
-	abox_disable_qchannel(dev, abox_data, ABOX_BCLK_UAIF1, 1);
+	abox_disable_qchannel(dev, abox_data, ABOX_BCLK_UAIF0, 1);
 
 	ret = clk_enable(data->clk_bclk);
 	if (ret < 0) {
@@ -103,7 +103,7 @@ void abox_set_bclk_ratio(unsigned int rate)
 		return;
 	}
 
-	ret = clk_set_rate(data->clk_bclk, rate * 2 * 32);
+	ret = clk_set_rate(data->clk_bclk, rate * 2 * 16);
 	if (ret < 0) {
 		dev_err(dev, "bclk set error: %d\n", ret);
 		return;
@@ -115,12 +115,12 @@ void abox_set_bclk_ratio(unsigned int rate)
 			*pcm_buffer++ = prval_stereo_48khz_1khz[j];
 	}
 
-	for (i = 0; i < ARRAY_SIZE(abox_uaif1_rdma0_48KHz_32bit_stereo); i++) {
-		writel(abox_uaif1_rdma0_48KHz_32bit_stereo[i][1],
-			abox_data->sfr_base + abox_uaif1_rdma0_48KHz_32bit_stereo[i][0]);
+	for (i = 0; i < ARRAY_SIZE(abox_uaif0_rdma0_48KHz_16bit_stereo); i++) {
+		writel(abox_uaif0_rdma0_48KHz_16bit_stereo[i][1],
+			abox_data->sfr_base + abox_uaif0_rdma0_48KHz_16bit_stereo[i][0]);
 		dev_info(abox_data->dev, "offset: %x, value = %x\n",
-			abox_uaif1_rdma0_48KHz_32bit_stereo[i][0],
-			abox_uaif1_rdma0_48KHz_32bit_stereo[i][1]);
+			abox_uaif0_rdma0_48KHz_16bit_stereo[i][0],
+			abox_uaif0_rdma0_48KHz_16bit_stereo[i][1]);
 	}
 }
 
@@ -131,14 +131,14 @@ void abox_reset_bclk_ratio(void)
 	struct abox_if_data *data = dev_get_drvdata(dev);
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(abox_uaif1_rdma0_48KHz_32bit_stereo); i++) {
-		writel(0, abox_data->sfr_base + abox_uaif1_rdma0_48KHz_32bit_stereo[i][0]);
+	for (i = 0; i < ARRAY_SIZE(abox_uaif0_rdma0_48KHz_16bit_stereo); i++) {
+		writel(0, abox_data->sfr_base + abox_uaif0_rdma0_48KHz_16bit_stereo[i][0]);
 	}
 
 	clk_disable(data->clk_bclk);
 	clk_disable(data->clk_bclk_gate);
 
-	abox_disable_qchannel(dev, abox_data, ABOX_BCLK_UAIF1, 0);
+	abox_disable_qchannel(dev, abox_data, ABOX_BCLK_UAIF0, 0);
 
 	pinctrl_pm_select_sleep_state(dev);
 
