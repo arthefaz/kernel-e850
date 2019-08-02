@@ -1593,7 +1593,6 @@ static void abox_restore_data(struct device *dev)
 	abox_restore_components(dev, data);
 	abox_tplg_restore(dev);
 	abox_cmpnt_restore(dev);
-	abox_effect_restore();
 	data->restored = true;
 	wake_up_all(&data->wait_queue);
 }
