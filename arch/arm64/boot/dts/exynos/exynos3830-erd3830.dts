@@ -52,7 +52,7 @@
 					"ABOX WDMA0", "ABOX WDMA1", "ABOX WDMA2", "ABOX WDMA3",
 					"ABOX WDMA4";
 
-				samsung,aux = <&abox_effect &abox_tplg>;
+				samsung,aux = <&abox_tplg>;
 
 				rdma0 {
 					cpu {

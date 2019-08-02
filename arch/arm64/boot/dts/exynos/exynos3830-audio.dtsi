@@ -396,12 +396,6 @@
 			#sound-dai-cells = <0>;
 		};
 
-		abox_effect: abox-effect@14f2e000 {
-			compatible = "samsung,abox-effect";
-			reg = <0x0 0x14f2e000 0x1000>;
-			reg-names = "reg";
-		};
-
 		abox_debug: abox-debug@0 {
 			compatible = "samsung,abox-debug";
 			memory-region = <&abox_rmem>;
