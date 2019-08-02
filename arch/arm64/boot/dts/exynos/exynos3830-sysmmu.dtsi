@@ -24,6 +24,7 @@
 			     <0 INTREQ__SMMU_DPU_S  IRQ_TYPE_LEVEL_HIGH>;
 		qos = <15>;
 
+		sysmmu,hold-rpm-on-boot;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x130D0000>;
 		sysmmu,tlb_property =
