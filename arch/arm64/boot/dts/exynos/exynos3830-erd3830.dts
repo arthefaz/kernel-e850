@@ -35,6 +35,8 @@
 			sound {
 				compatible = "samsung,exynos3830-madera";
 
+				status = "disable";
+
 				samsung,routing = "SPEAKER", "OUTL",
 						"AEC Loopback", "SPEAKER FB",
 						"ABOX SPDY Capture", "VINPUT_FM";
