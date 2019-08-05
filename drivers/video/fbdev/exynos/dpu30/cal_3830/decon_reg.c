@@ -638,8 +638,9 @@ void decon_reg_set_trigger(u32 id, struct decon_mode_info *psr,
 		val = (en == DECON_TRIG_ENABLE) ? SW_TRIG_EN : 0;
 		mask = HW_TRIG_EN | SW_TRIG_EN;
 	} else { /* DECON_HW_TRIG */
-		val = (en == DECON_TRIG_ENABLE) ?
-				HW_TRIG_EN : HW_TRIG_MASK_DECON;
+		val = HW_TRIG_EN;
+		if (en == DECON_TRIG_DISABLE)
+				val |= HW_TRIG_MASK_DECON;
 		mask = HW_TRIG_EN | HW_TRIG_MASK_DECON;
 	}
 
