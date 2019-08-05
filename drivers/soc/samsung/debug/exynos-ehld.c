@@ -27,6 +27,7 @@
 #include <soc/samsung/exynos-ehld.h>
 
 //#define DEBUG
+#define EHLD_TASK_SUPPORT
 
 #ifdef DEBUG
 #define ehld_printk(f, str...) printk(str)
@@ -130,6 +131,9 @@ static int exynos_ehld_stop_cpu(unsigned int cpu)
 	if (event) {
 		ctrl->ehld_running = 0;
 		perf_event_disable(event);
+		perf_event_release_kernel(event);
+		ctrl->event = NULL;
+
 		ehld_printk(1, "@%s: cpu%d event disabled\n", __func__, cpu);
 	}
 
@@ -184,6 +188,13 @@ void exynos_ehld_event_raw_update_allcpu(void)
 					val |= MSB_PADDING;
 				data->pmpcsr[count] = val;
 				data->event[count] = __raw_readl(ctrl->dbg_base + PMU_OFFSET);
+
+				ehld_printk(0, "%s: cpu%d: 0x400:%x, 0xC00:%x, 0xE04:%x\n",
+						__func__, cpu,
+						__raw_readl(ctrl->dbg_base + PMU_OFFSET + 0x400),
+						__raw_readl(ctrl->dbg_base + PMU_OFFSET + 0xC00),
+						__raw_readl(ctrl->dbg_base + PMU_OFFSET + 0xE04));
+
 				DBG_LOCK(ctrl->dbg_base + PMU_OFFSET);
 			}
 			raw_spin_unlock_irqrestore(&ctrl->lock, flags);
@@ -284,27 +295,7 @@ void exynos_ehld_stop(void)
 	put_online_cpus();
 }
 
-static enum cpuhp_state hp_online;
-
-static void exynos_ehld_shutdown(void)
-{
-	struct perf_event *event;
-	struct exynos_ehld_ctrl *ctrl;
-	int cpu;
-
-	cpuhp_remove_state(hp_online);
-
-	for_each_possible_cpu(cpu) {
-		ctrl = per_cpu_ptr(&ehld_ctrl, cpu);
-		event = ctrl->event;
-		if (!event)
-			continue;
-		perf_event_disable(event);
-		ctrl->event = NULL;
-		perf_event_release_kernel(event);
-	}
-}
-
+#ifdef EHLD_TASK_SUPPORT
 static int ehld_task_should_run(unsigned int cpu)
 {
 	if (ehld_main.suspending && ehld_main.need_to_task)
@@ -379,6 +370,27 @@ static struct smp_hotplug_thread ehld_threads = {
 	.park			= ehld_disable,
 	.unpark			= ehld_enable,
 };
+#else
+static enum cpuhp_state hp_online;
+void exynos_ehld_shutdown(void)
+{
+	struct perf_event *event;
+	struct exynos_ehld_ctrl *ctrl;
+	int cpu;
+
+	cpuhp_remove_state(hp_online);
+
+	for_each_possible_cpu(cpu) {
+		ctrl = per_cpu_ptr(&ehld_ctrl, cpu);
+		event = ctrl->event;
+		if (!event)
+			continue;
+		perf_event_disable(event);
+		ctrl->event = NULL;
+		perf_event_release_kernel(event);
+	}
+}
+#endif
 
 #ifdef CONFIG_HARDLOCKUP_DETECTOR_OTHER_CPU
 #define NUM_TRACE_HARDLOCKUP	(NUM_TRACE / 3)
@@ -551,7 +563,7 @@ static int __init exynos_ehld_init_dt(void)
 static int exynos_ehld_setup(void)
 {
 	struct exynos_ehld_ctrl *ctrl;
-	int err, cpu;
+	int cpu;
 
 	/* register pm notifier */
 	register_pm_notifier(&exynos_ehld_nb);
@@ -568,14 +580,12 @@ static int exynos_ehld_setup(void)
 		memset((void *)&ctrl->data, 0, sizeof(struct exynos_ehld_data));
 	}
 
-	err = cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "exynos-ehld:online",
-				exynos_ehld_start_cpu, exynos_ehld_stop_cpu);
-	if (err < 0) {
-		exynos_ehld_shutdown();
-		return err;
-	}
-
+#ifdef EHLD_TASK_SUPPORT
 	return smpboot_register_percpu_thread(&ehld_threads);
+#else
+	return cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "exynos-ehld:online",
+				exynos_ehld_start_cpu, exynos_ehld_stop_cpu);
+#endif
 }
 
 int __init exynos_ehld_init(void)
