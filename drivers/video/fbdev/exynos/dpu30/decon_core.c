@@ -363,7 +363,9 @@ int decon_tui_protection(bool tui_en)
 		aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
 				EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
+
 #if defined(CONFIG_EXYNOS_BTS)
+		decon->bts.ops->bts_acquire_bw(decon);
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
 				exynos_devfreq_get_domain_freq(DEVFREQ_MIF),
 				exynos_devfreq_get_domain_freq(DEVFREQ_INT),
