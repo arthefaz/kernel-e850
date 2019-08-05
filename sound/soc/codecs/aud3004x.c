@@ -130,14 +130,14 @@ static void i2c_client_change(struct aud3004x_priv *aud3004x, int client)
 static int i2c_client_return(unsigned int reg)
 {
 	switch (reg) {
-	case 0x700 ... 0x7FF:
+	case 0x00 ... 0xFF:
 		return AUD3004D;
-	case 0x800 ... 0x8FF:
+	case 0x100 ... 0x1FF:
 		return AUD3004A;
-	case 0x300 ... 0x3FF:
+	case 0x200 ... 0x2FF:
 		return AUD3004O;
 	default:
-		return false;
+		return CODEC_CLOSE;
 	}
 }
 
@@ -152,13 +152,21 @@ unsigned int aud3004x_read(struct aud3004x_priv *aud3004x, unsigned int reg)
 	mutex_lock(&aud3004x->regmap_lock);
 	client = i2c_client_return(reg);
 
-	if (!client) {
+	if (client == CODEC_CLOSE) {
+		pr_err("%s client error!\n", __func__);
 		mutex_unlock(&aud3004x->regmap_lock);
 		return -EINVAL;
 	}
 
-	i2c = aud3004x->i2c_priv[client];
-	ret = snd_soc_read(codec, reg & 0xFF);
+	if (client == AUD3004D) {
+		ret = snd_soc_read(codec, reg);
+	} else {
+		i2c = aud3004x->i2c_priv[client];
+		codec->component.regmap = aud3004x->regmap[client];
+		ret = snd_soc_read(codec, reg & 0xFF);
+		i2c = aud3004x->i2c_priv[AUD3004D];
+		codec->component.regmap = aud3004x->regmap[AUD3004D];
+	}
 	mutex_unlock(&aud3004x->regmap_lock);
 
 	return ret;
@@ -176,13 +184,21 @@ int aud3004x_write(struct aud3004x_priv *aud3004x, unsigned int reg,
 	mutex_lock(&aud3004x->regmap_lock);
 	client = i2c_client_return(reg);
 
-	if (!client) {
+	if (client == CODEC_CLOSE) {
+		pr_err("%s client error!\n", __func__);
 		mutex_unlock(&aud3004x->regmap_lock);
 		return -EINVAL;
 	}
 
-	i2c = aud3004x->i2c_priv[client];
-	ret = snd_soc_write(codec, reg & 0xFF, val);
+	if (client == AUD3004D) {
+		ret = snd_soc_write(codec, reg, val);
+	} else {
+		i2c = aud3004x->i2c_priv[client];
+		codec->component.regmap = aud3004x->regmap[client];
+		ret = snd_soc_write(codec, reg & 0xFF, val);
+		i2c = aud3004x->i2c_priv[AUD3004D];
+		codec->component.regmap = aud3004x->regmap[AUD3004D];
+	}
 	mutex_unlock(&aud3004x->regmap_lock);
 
 	return ret;
@@ -200,13 +216,21 @@ int aud3004x_update_bits(struct aud3004x_priv *aud3004x, unsigned int reg,
 	mutex_lock(&aud3004x->regmap_lock);
 	client = i2c_client_return(reg);
 
-	if (!client) {
+	if (client == CODEC_CLOSE) {
+		pr_err("%s client error!\n", __func__);
 		mutex_unlock(&aud3004x->regmap_lock);
 		return -EINVAL;
 	}
 
-	i2c = aud3004x->i2c_priv[client];
-	ret = snd_soc_update_bits(codec, reg & 0xFF, mask, value);
+	if (client == AUD3004D) {
+		ret = snd_soc_update_bits(codec, reg, mask, value);
+	} else {
+		i2c = aud3004x->i2c_priv[client];
+		codec->component.regmap = aud3004x->regmap[client];
+		ret = snd_soc_update_bits(codec, reg & 0xFF, mask, value);
+		i2c = aud3004x->i2c_priv[AUD3004D];
+		codec->component.regmap = aud3004x->regmap[AUD3004D];
+	}
 	mutex_unlock(&aud3004x->regmap_lock);
 
 	return ret;
@@ -516,6 +540,43 @@ static const unsigned int aud3004x_dvol_adc_tlv[] = {
 	0x06, 0xE5, TLV_DB_SCALE_ITEM(-6950, 50, 0),
 };
 
+static int dmic_bias_get(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	bool bias_flag;
+
+	bias_flag = gpio_get_value(aud3004x->dmic_bias_gpio);
+	dev_err(aud3004x->dev, "%s, dmic bias gpio: %d\n", __func__, bias_flag);
+
+	if (bias_flag < 0)
+		dev_err(aud3004x->dev, "%s, dmic bias gpio read error!\n", __func__);
+	else
+		ucontrol->value.integer.value[0] = bias_flag;
+
+	return 0;
+}
+
+static int dmic_bias_put(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	int value = ucontrol->value.integer.value[0];
+
+	if (gpio_is_valid(aud3004x->dmic_bias_gpio)) {
+		gpio_direction_output(aud3004x->dmic_bias_gpio, value);
+
+		dev_info(aud3004x->dev, "%s: dmic bias : %s\n",
+				__func__, (value) ? "On" : "Off");
+	} else {
+		dev_err(aud3004x->dev, "%s, dmic bias gpio not valid!\n", __func__);
+	}
+
+	return 0;
+}
+
 /*
  * aud3004x_adc_dat_src - I2S channel input data selection
  *
@@ -656,6 +717,9 @@ static const struct snd_kcontrol_new aud3004x_snd_controls[] = {
 	SOC_SINGLE_TLV("ADC Right Gain", AUD3004X_35_AD_VOLR,
 			DVOL_ADC_SHIFT,
 			ADC_DVOL_MAXNUM, 1, aud3004x_dvol_adc_tlv),
+
+	SOC_SINGLE_EXT("DMIC Bias", SND_SOC_NOPM, 0, 1, 0,
+			dmic_bias_get, dmic_bias_put),
 
 	SOC_ENUM("ADC DAT Mux0", aud3004x_adc_dat_enum0),
 
@@ -2524,6 +2588,13 @@ static void aud3004x_register_initialize(void *context)
 
 	dev_dbg(codec->dev, "%s called, setting defaults\n", __func__);
 
+	/* PDB_JD_CLK_EN */
+	aud3004x_update_bits(aud3004x, AUD3004X_D0_DCTR_CM,
+			PDB_JD_CLK_EN_MASK, 0);
+	msleep(20);
+	aud3004x_update_bits(aud3004x, AUD3004X_D0_DCTR_CM,
+			PDB_JD_CLK_EN_MASK, PDB_JD_CLK_EN_MASK);
+
 	/* RESET clear */
 	aud3004x_write(aud3004x, AUD3004X_14_RESETB0, 0x03);
 
@@ -2581,12 +2652,6 @@ static void aud3004x_register_initialize(void *context)
 	aud3004x_write(aud3004x, AUD3004X_1A_DRIVER_MUTE, 0x0F);
 	aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
 	aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
-
-	/* PDB_JD_CLK_EN */
-	aud3004x_update_bits(aud3004x, AUD3004X_D0_DCTR_CM,	PDB_JD_CLK_EN_MASK, 0);
-	msleep(20);
-	aud3004x_update_bits(aud3004x, AUD3004X_D0_DCTR_CM,
-			PDB_JD_CLK_EN_MASK, PDB_JD_CLK_EN_MASK);
 
 	/* All boot time hardware access is done. Put the device to sleep. */
 #ifdef CONFIG_PM
