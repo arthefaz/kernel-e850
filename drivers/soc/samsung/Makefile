@@ -89,3 +89,6 @@ obj-$(CONFIG_EXYNOS_PPMPU_FAIL_DETECTOR)	+= exynos-ppmpu.o
 
 # Exynos TZASC fail detector
 obj-$(CONFIG_EXYNOS_TZASC_FAIL_DETECTOR)	+= exynos-tzasc.o
+
+# Exynos CPU Performance
+obj-$(CONFIG_EXYNOS_CPU_PERF)	+= exynos_cpu_perf/

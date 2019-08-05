@@ -1,0 +1,10 @@
+/*
+ * Exynos CPU Performance
+ * Device driver handle for testing kernel memcpy bandwidth
+ */
+
+/ {
+	exynos_perf_ncmemcpy {
+		compatible = "samsung,exynos_perf_ncmemcpy";
+	};
+};

@@ -34,6 +34,7 @@
 #include "exynos3830-wlbt.dtsi"
 #include "exynos3830-ems.dtsi"
 #include "exynos3830-audio.dtsi"
+#include "exynos_perf_ncmemcpy.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
