@@ -87,7 +87,7 @@ int dbg_snapshot_add_bl_item_info(const char *name, unsigned int paddr, unsigned
 	if (!dbg_snapshot_get_enable())
 		return -ENODEV;
 
-	if (dss_bl->item_count >= SZ_16)
+	if (dss_bl->item_count >= DSS_MAX_BL_SIZE)
 		return -ENOMEM;
 
 	memcpy(dss_bl->item[dss_bl->item_count].name, name, strlen(name) + 1);

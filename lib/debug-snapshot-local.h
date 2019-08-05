@@ -84,7 +84,7 @@ struct dbg_snapshot_bl {
 		unsigned int paddr;
 		unsigned int size;
 		unsigned int enabled;
-	} item[SZ_16];
+	} item[DSS_MAX_BL_SIZE];
 };
 
 struct dbg_snapshot_sfrdump {
