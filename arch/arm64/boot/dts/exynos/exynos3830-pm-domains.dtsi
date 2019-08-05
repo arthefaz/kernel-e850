@@ -23,6 +23,7 @@
 		status = "okay";
 		power-down-ok = <PD_OK_AUD>;
 		#power-domain-cells = <0>;
+		skip-idle-ip;
 	};
 
 	pd_dpu: pd-dpu@11862000 {
@@ -32,6 +33,7 @@
 		need_smc = <0x13010204>;
 		status = "okay";
 		#power-domain-cells = <0>;
+		skip-idle-ip;
 	};
 
 	pd_mfcmscl: pd-mfcmscl@11861d80 {
