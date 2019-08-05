@@ -234,8 +234,8 @@ static irqreturn_t ap_wakeup_handler(int irq, void *data)
 	}
 	check_link_order = gpio_val;
 
-	if (atomic_read(&mc->pcie_pm_suspended)) {
-		spin_lock_irqsave(&mc->pcie_pm_lock, flags);
+	spin_lock_irqsave(&mc->pcie_pm_lock, flags);
+	if (mc->pcie_pm_suspended) {
 		if (gpio_val == 1) {
 			/* try to block system suspend */
 			if (!wake_lock_active(&mc->mc_wake_lock))
@@ -253,6 +253,7 @@ static irqreturn_t ap_wakeup_handler(int irq, void *data)
 		spin_unlock_irqrestore(&mc->pcie_pm_lock, flags);
 		return IRQ_HANDLED;
 	}
+	spin_unlock_irqrestore(&mc->pcie_pm_lock, flags);
 
 	queue_work_on(RUNTIME_PM_AFFINITY_CORE, mc->wakeup_wq,
 			(gpio_val == 1 ? &mc->wakeup_work : &mc->suspend_work));
@@ -1063,13 +1064,16 @@ static int s5100_pm_notifier(struct notifier_block *notifier,
 	switch (pm_event) {
 	case PM_SUSPEND_PREPARE:
 		mif_info("Suspend prepare\n");
-		atomic_set(&mc->pcie_pm_suspended, 1);
+
+		spin_lock_irqsave(&mc->pcie_pm_lock, flags);
+		mc->pcie_pm_suspended = true;
+		spin_unlock_irqrestore(&mc->pcie_pm_lock, flags);
 		break;
 	case PM_POST_SUSPEND:
 		mif_info("Resume done\n");
-		atomic_set(&mc->pcie_pm_suspended, 0);
 
 		spin_lock_irqsave(&mc->pcie_pm_lock, flags);
+		mc->pcie_pm_suspended = false;
 		if (mc->pcie_pm_resume_wait) {
 			mif_err("cp2ap wakeup_work resume\n");
 			mc->pcie_pm_resume_wait = false;

@@ -3115,9 +3115,7 @@ static int shmem_register_pcie(struct link_device *ld)
 	}
 
 	print_msi_register(mc->s51xx_pdev);
-
 	mc->pcie_registered = true;
-	atomic_set(&mc->pcie_pm_suspended, 0);
 
 	mif_err("CP EP driver initialization end.\n");
 

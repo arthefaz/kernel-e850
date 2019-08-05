@@ -700,7 +700,7 @@ struct modem_ctl {
 	bool reserve_doorbell_int;
 	bool pcie_registered;
 	bool pcie_powered_on;
-	atomic_t pcie_pm_suspended;
+	bool pcie_pm_suspended;
 	bool pcie_pm_resume_wait;
 	bool device_reboot;
 
