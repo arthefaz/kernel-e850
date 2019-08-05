@@ -2605,7 +2605,7 @@ static int aud3004x_codec_probe(struct snd_soc_codec *codec)
 	aud3004x->codec = codec;
 
 	/* register codec power */
-	aud3004x->vdd = devm_regulator_get(codec->dev, "vdd_aldo1");
+	aud3004x->vdd = devm_regulator_get(codec->dev, "vdd_mldo");
 	if (IS_ERR(aud3004x->vdd)) {
 		dev_warn(codec->dev, "failed to get regulator vdd\n");
 		return PTR_ERR(aud3004x->vdd);

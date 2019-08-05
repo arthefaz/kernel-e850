@@ -110,6 +110,10 @@
 				shmem,ipc_reg_cnt = <32>;
 			};
 
+			but_zones: but_zones {
+				#list-but-cells = <3>;
+			};
+
 			acpm_mfd_bus@11A50000 {
 				status = "okay";
 				#address-cells = <1>;
@@ -119,9 +123,9 @@
 					#sound-dai-cells = <0>;
 					reg = <0x07>;
 					i2c-speedy-address;
-					dmic-bias-gpio = <&gpg2 1 0xf>;
+					dmic-bias-gpio = <&gpg2 7 0xf>;
 					pinctrl-names = "default";
-					io-channels = <&exynos_adc 3>,<&exynos_adc 4>;
+					io-channels = <&exynos_adc 7>,<&exynos_adc 6>;
 					io-channel-names = "adc-gdet","adc-ear";
 					#io-channel-cells = <1>;
 					mic-adc-range = <1404>;
