@@ -2001,7 +2001,7 @@ menuconfig DEBUG_SNAPSHOT
 
 config DEBUG_SNAPSHOT_USER_MODE
 	bool "Enable User Mode, Most of debug feature are disabled"
-	depends on DEBUG_SNAPSHOT_CALLSTACK
+	depends on DEBUG_SNAPSHOT
 	default n
 
 config DEBUG_SNAPSHOT_CALLSTACK

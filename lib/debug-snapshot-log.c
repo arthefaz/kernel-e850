@@ -424,6 +424,7 @@ bool dbg_snapshot_dumper_one(void *v_dumper, char *line, size_t size, size_t *le
 						en == DSS_FLAG_IN ? "IN" : "OUT");
 		break;
 	}
+#ifndef CONFIG_DEBUG_SNAPSHOT_USER_MODE
 	case DSS_LOG_PRINTK_ID:
 	{
 		char *log;
@@ -477,6 +478,7 @@ bool dbg_snapshot_dumper_one(void *v_dumper, char *line, size_t size, size_t *le
 						msg, val, callstack[0], callstack[1], callstack[2], callstack[3]);
 		break;
 	}
+#endif
 	default:
 		snprintf(line, size, "unsupported inforation to dump\n");
 		goto out;
