@@ -29,10 +29,8 @@ static int regmap_apm_byte_reg_read(void *context, unsigned int reg,
 	if (reg > 0xff)
 		return -EINVAL;
 
-	ret = exynos_acpm_read_reg(1, i2c->addr, reg, &reg_val);
+	ret = exynos_acpm_read_reg(0, i2c->addr, reg, &reg_val);
 	*val = reg_val;
-//	pr_err("aud3003x reg_read - i2c: 0x%02x, reg: 0x%02x, val: 0x%02x\n",
-//			i2c->addr, reg, (int)*val);
 
 	if (ret < 0)
 		return ret;
@@ -49,9 +47,7 @@ static int regmap_apm_byte_reg_write(void *context, unsigned int reg,
 	if (val > 0xff || reg > 0xff)
 		return -EINVAL;
 
-	pr_err("aud3003x-acpm-write i2c: 0x%02x, reg: 0x%02x, val: 0x%02x\n",
-			i2c->addr, reg, val);
-	return exynos_acpm_write_reg(1, i2c->addr, reg, val);
+	return exynos_acpm_write_reg(0, i2c->addr, reg, val);
 }
 
 static struct regmap_bus regmap_apm_byte = {

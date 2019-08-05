@@ -51,7 +51,7 @@ static int codec_read_reg(unsigned short addr, u8 reg, u8 *dest)
 {
 	int ret;
 
-	ret = exynos_acpm_read_reg(1, addr, reg, dest);
+	ret = exynos_acpm_read_reg(0, addr, reg, dest);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;
@@ -64,7 +64,7 @@ static int codec_write_reg(unsigned short addr, u8 reg, u8 value)
 {
 	int ret;
 
-	ret = exynos_acpm_write_reg(1, addr, reg, value);
+	ret = exynos_acpm_write_reg(0, addr, reg, value);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;
