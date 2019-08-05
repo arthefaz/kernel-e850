@@ -487,12 +487,15 @@ struct decon_reg_data {
 	bool mres_update;
 	u32 lcd_width;
 	u32 lcd_height;
+
+	u32 fps;
 	int mres_idx;
 };
 
 struct decon_win_config_data {
 	int	retire_fence;
 	int	fd_odma;
+	u32	fps;
 	struct decon_win_config config[MAX_DECON_WIN + 2];
 };
 

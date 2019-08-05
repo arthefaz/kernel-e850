@@ -2184,7 +2184,7 @@ static void decon_update_regs(struct decon_device *decon,
 			decon_info("requested vrefresh rate = %d\n",
 					regs->dpp_config[DECON_WIN_UPDATE_IDX].plane_alpha);
 			dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_SET_VREFRESH,
-					&(regs->dpp_config[DECON_WIN_UPDATE_IDX].plane_alpha));
+					&(regs->fps));
 		}
 
 		decon_save_cur_buf_info(decon, regs);
@@ -2626,6 +2626,7 @@ static int decon_set_win_config(struct decon_device *decon,
 #endif
 	} else {
 		win_data->retire_fence = -1;
+		regs->fps = win_data->fps;
 	}
 
 	dpu_prepare_win_update_config(decon, win_data, regs);
