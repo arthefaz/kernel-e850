@@ -101,7 +101,7 @@ static void __mfc_set_linear_stride_size(struct mfc_ctx *ctx,
 	case V4L2_PIX_FMT_RGB32X:
 	case V4L2_PIX_FMT_BGR32:
 	case V4L2_PIX_FMT_ARGB32:
-		raw->stride[0] = ALIGN((ctx->img_width * (ctx->rgb_bpp / 8)), 16);
+		raw->stride[0] = ALIGN(ctx->img_width, 16) * (ctx->rgb_bpp / 8);
 		raw->stride[1] = 0;
 		raw->stride[2] = 0;
 		break;
