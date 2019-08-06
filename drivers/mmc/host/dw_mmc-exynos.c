@@ -23,6 +23,7 @@
 #include <linux/smc.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
+#include <soc/samsung/exynos-pmu.h>
 
 #include "dw_mmc.h"
 #include "dw_mmc-pltfm.h"
@@ -257,6 +258,15 @@ static int dw_mci_exynos_priv_init(struct dw_mci *host)
 	struct dw_mci_exynos_priv_data *priv = host->priv;
 	u32 temp;
 	int ret = 0;
+
+	if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM) {
+		pm_runtime_enable(host->dev);
+		pm_runtime_get_sync(host->dev);
+		if (priv->pinctrl && priv->clk_drive_base)
+			pinctrl_select_state(priv->pinctrl, priv->clk_drive_base);
+		if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD)
+			exynos_pmu_update(priv->pmu.offset, priv->pmu.mask, priv->pmu.val);
+	}
 
 	priv->saved_strobe_ctrl = mci_readl(host, HS400_DLINE_CTRL);
 	priv->saved_dqs_en = mci_readl(host, HS400_DQS_EN);
@@ -570,6 +580,7 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 {
 	struct dw_mci_exynos_priv_data *priv;
 	struct device_node *np = host->dev->of_node;
+	struct device_node *mmc_pmu;
 	u32 timing[4];
 	u32 div = 0, voltage_int_extra = 0;
 	int idx;
@@ -637,32 +648,38 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 	/* Swapping clock drive strength */
 	of_property_read_u32(np, "clk-drive-number", &priv->clk_drive_number);
 
+
+
+	id = of_alias_get_id(host->dev->of_node, "mshc");
 	priv->pinctrl = devm_pinctrl_get(host->dev);
 
-	if (IS_ERR(priv->pinctrl)) {
-		priv->pinctrl = NULL;
-	} else {
-		priv->clk_drive_base = pinctrl_lookup_state(priv->pinctrl, "default");
-		priv->clk_drive_str[0] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-1x");
-		priv->clk_drive_str[1] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-2x");
-		priv->clk_drive_str[2] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-3x");
-		priv->clk_drive_str[3] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-4x");
-		priv->clk_drive_str[4] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-5x");
-		priv->clk_drive_str[5] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-6x");
+        if (IS_ERR(priv->pinctrl)) {
+                priv->pinctrl = NULL;
+        } else {
+                if (id == 0)
+                        priv->clk_drive_base = pinctrl_lookup_state(priv->pinctrl, "default");
+                else
+                        priv->clk_drive_base = pinctrl_lookup_state(priv->pinctrl, "init");
+                priv->clk_drive_str[0] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-1x");
+                priv->clk_drive_str[1] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-2x");
+                priv->clk_drive_str[2] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-3x");
+                priv->clk_drive_str[3] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-4x");
+                priv->clk_drive_str[4] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-5x");
+                priv->clk_drive_str[5] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-6x");
 
-		for (i = 0; i < 6; i++) {
-			if (IS_ERR(priv->clk_drive_str[i]))
-				priv->clk_drive_str[i] = NULL;
-		}
+                for (i = 0; i < 6; i++) {
+                        if (IS_ERR(priv->clk_drive_str[i]))
+                                priv->clk_drive_str[i] = NULL;
+               }
 
-		priv->pins_config[0] = pinctrl_lookup_state(priv->pinctrl, "pins-as-pdn");
-		priv->pins_config[1] = pinctrl_lookup_state(priv->pinctrl, "pins-as-func");
+                priv->pins_config[0] = pinctrl_lookup_state(priv->pinctrl, "pins-as-pdn");
+                priv->pins_config[1] = pinctrl_lookup_state(priv->pinctrl, "pins-as-func");
 
-		for (i = 0; i < 2; i++) {
-			if (IS_ERR(priv->pins_config[i]))
-				priv->pins_config[i] = NULL;
-		}
-	}
+                for (i = 0; i < 2; i++) {
+                        if (IS_ERR(priv->pins_config[i]))
+                                priv->pins_config[i] = NULL;
+                }
+        }
 
 	of_property_read_u32(np, "samsung,dw-mshc-ciu-div", &div);
 	priv->ciu_div = div;
@@ -772,6 +789,27 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 	default:
 		ret = -ENODEV;
 	}
+
+	if (of_find_property(np, "use-runtime-pm", NULL))
+		priv->runtime_pm_flag |= DW_MMC_EXYNOS_ENABLE_RUNTIME_PM;
+
+	mmc_pmu = of_get_child_by_name(np, "mmc-pmu-pad");
+	if (mmc_pmu) {
+		if (of_property_read_u32(mmc_pmu, "offset", &(priv->pmu.offset))) {
+			dev_err(host->dev, "failed to set pmu offset\n");
+			priv->pmu.offset = 0x1CA0;
+		}
+		if (of_property_read_u32(mmc_pmu, "mask", &(priv->pmu.mask))) {
+			dev_err(host->dev, "failed to set pmu mask\n");
+			priv->pmu.mask = 0x800;
+		}
+		if (of_property_read_u32(mmc_pmu, "val", &(priv->pmu.val))) {
+			dev_err(host->dev, "failed to set pmu val\n");
+			priv->pmu.val = 0x800;
+		}
+		priv->runtime_pm_flag |= DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD;
+	}
+
 	host->priv = priv;
  err_ref_clk:
 	return ret;
@@ -1281,7 +1319,7 @@ static int dw_mci_exynos_request_ext_irq(struct dw_mci *host, irq_handler_t func
 				     IRQF_TRIGGER_RISING |
 				     IRQF_TRIGGER_FALLING |
 				     IRQF_ONESHOT, "tflash_det", host) == 0) {
-			dev_info(host->dev, "success to request irq for card detect.\n");
+			dev_info(host->dev, "success to request irq for card detect. IRQ NUmber is : %d\n", ext_cd_irq);
 			enable_irq_wake(ext_cd_irq);
 		} else
 			dev_info(host->dev, "cannot request irq for card detect.\n");

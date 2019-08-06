@@ -48,6 +48,12 @@ struct exynos_fmp_data {
 	struct platform_device *pdev;
 };
 
+struct exynos_mmc_pmu {
+	u32 offset;
+	u32 mask;
+	u32 val;
+};
+
 /* Exynos implementation specific driver private data */
 struct dw_mci_exynos_priv_data {
 	u8 ctrl_type;
@@ -58,6 +64,8 @@ struct dw_mci_exynos_priv_data {
 	u32 tuned_sample;
 	u32 cur_speed;
 	u32 dqs_delay;
+	u32 runtime_pm_flag;
+	struct exynos_mmc_pmu pmu;
 	u32 saved_dqs_en;
 	u32 saved_strobe_ctrl;
 	u32 hs200_timing;
@@ -87,6 +95,8 @@ struct dw_mci_exynos_priv_data {
 #define DW_MMC_EXYNOS_BYPASS_FOR_ALL_PASS	BIT(0)
 #define DW_MMC_EXYNOS_ENABLE_SHIFT		BIT(1)
 #define DW_MMC_EXYNOS_USE_PHASE_DETECT		BIT(2)
+#define DW_MMC_EXYNOS_ENABLE_RUNTIME_PM		BIT(0)
+#define DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD	BIT(1)
 };
 
 #define phase6_en      BIT(6)
