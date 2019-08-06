@@ -2698,6 +2698,8 @@ static void sc_job_finish(struct sc_dev *sc, struct sc_ctx *ctx)
 
 	spin_lock_irqsave(&sc->slock, flags);
 
+	del_timer(&sc->wdt.timer);
+
 	if (ctx->context_type == SC_CTX_V4L2_TYPE) {
 		ctx = v4l2_m2m_get_curr_priv(sc->m2m.m2m_dev);
 		if (!ctx || !ctx->m2m_ctx) {
