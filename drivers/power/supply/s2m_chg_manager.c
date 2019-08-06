@@ -1118,6 +1118,8 @@ static int get_battery_health(struct s2m_chg_manager_info *battery)
 
 static int get_temperature_health(struct s2m_chg_manager_info *battery)
 {
+	return POWER_SUPPLY_HEALTH_GOOD;
+#if 0
 	int health = POWER_SUPPLY_HEALTH_UNKNOWN;
 
 	switch (battery->health) {
@@ -1165,6 +1167,7 @@ static int get_temperature_health(struct s2m_chg_manager_info *battery)
 		battery->is_temp_control = false;
 #endif
 	return health;
+#endif
 }
 
 #if defined(CONFIG_BAT_TEMP)

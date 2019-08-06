@@ -356,6 +356,7 @@ static int s2mu106_get_temperature(struct s2mu106_fuelgauge_data *fuelgauge)
 	temperature = ((temperature * 100) >> 8)/10;
 
 	pr_info("%s: temperature (%d)\n", __func__, temperature);
+	temperature = 250;
 
 	return temperature;
 
