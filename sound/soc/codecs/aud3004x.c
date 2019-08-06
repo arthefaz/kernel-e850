@@ -1036,9 +1036,22 @@ static int mic3_pga_ev(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
+		/* MIC3 MIX Switch Control */
+		aud3004x_write(aud3004x, AUD3004X_130_MIX_AD1,
+				(aud3004x_read(aud3004x, AUD3004X_1E_CHOP1) & 0xC0));
+
 		/* MIC3 BST Volume Control */
 		aud3004x_write(aud3004x, AUD3004X_136_VOL_AD3, 0x40);
-		aud3004x_write(aud3004x, AUD3004X_130_MIX_AD1, 0x03);
+
+		/* MIC Bias Enable for TEST */
+		aud3004x_write(aud3004x, 0xc5, 0x0a);
+		aud3004x_write(aud3004x, 0xd2, 0x60);
+
+#if 0
+		/* MIC3 BST Enable */
+		aud3004x_write(aud3004x, AUD3004X_112_PD_AD2, 0x08);
+#endif
+
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* MIC3 Auto Power ON */
@@ -1051,8 +1064,18 @@ static int mic3_pga_ev(struct snd_soc_dapm_widget *w,
 				APW_MIC3L_MASK, 0 << APW_MIC3L_SHIFT);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+#if 0
+		/* MIC3 BST Disable */
+		aud3004x_write(aud3004x, AUD3004X_112_PD_AD2, 0x00);
+#endif
+		/* MIC Bias Disable for TEST */
+		aud3004x_write(aud3004x, 0xc5, 0x00);
+		aud3004x_write(aud3004x, 0xd2, 0x00);
+
 		/* MIC3 BST Volume Control */
 		aud3004x_write(aud3004x, AUD3004X_136_VOL_AD3, 0x54);
+
+		/* MIC3 MIX Switch Control */
 		aud3004x_write(aud3004x, AUD3004X_130_MIX_AD1, 0x00);
 		break;
 	}
