@@ -90,7 +90,7 @@
 			<(SYSMMU_PORT_PREFETCH_PREDICTION_WRITE(0x1) | SYSMMU_BL1) SYSMMU_ID_MASK(0x19, 0x1F)>;
 		port-name = "CSISX2, IPP";
 		#iommu-cells = <0>;
-/*		power-domains = <&pd_csis>; */
+		power-domains = <&pd_is>;
 	};
 
 	sysmmu_is1: sysmmu@14570000 {
@@ -114,7 +114,7 @@
 			<(SYSMMU_PORT_PREFETCH_PREDICTION_WRITE(0x1)     | SYSMMU_BL1) SYSMMU_ID_MASK(0x2, 0x3)>;
 		port-name = "ITP, MCSC, VRA, GDC";
 		#iommu-cells = <0>;
-/*		power-domains = <&pd_csis>; */
+		power-domains = <&pd_is>;
 	};
 
 	sysmmu_mfcmscl: sysmmu@12C50000 {
