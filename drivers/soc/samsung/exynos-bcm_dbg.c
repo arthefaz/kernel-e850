@@ -1333,14 +1333,16 @@ static int exynos_bcm_dbg_early_init(struct exynos_bcm_dbg_data *data)
 	}
 
 	/* glb_auto mode set */
-	exynos_bcm_dbg_set_base_info(&ipc_base_info, BCM_EVT_GLBAUTO_CONT,
-					BCM_EVT_SET, 0);
+	if (data->glb_auto_en) {
+		exynos_bcm_dbg_set_base_info(&ipc_base_info, BCM_EVT_GLBAUTO_CONT,
+						BCM_EVT_SET, 0);
 
-	ret = exynos_bcm_dbg_glb_auto_ctrl(&ipc_base_info,
-					&data->glb_auto_en, data);
-	if (ret) {
-		BCM_ERR("%s: failed set mode\n", __func__);
-		return ret;
+		ret = exynos_bcm_dbg_glb_auto_ctrl(&ipc_base_info,
+						&data->glb_auto_en, data);
+		if (ret) {
+			BCM_ERR("%s: failed set mode\n", __func__);
+			return ret;
+		}
 	}
 
 	return 0;
@@ -2807,6 +2809,11 @@ static ssize_t show_get_glbauto(struct file *fp, struct kobject *kobj,
 	if (off > 0)
 		return 0;
 
+	if (!data->glb_auto_en) {
+		BCM_ERR("%s: don't support glb_auto_en\n", __func__);
+		return -ENODEV;
+	}
+
 	exynos_bcm_dbg_set_base_info(&ipc_base_info, BCM_EVT_GLBAUTO_CONT,
 					BCM_EVT_GET, 0);
 
@@ -2855,6 +2862,11 @@ static ssize_t store_glbauto_ctrl(struct file *fp, struct kobject *kobj,
 	ret = kstrtouint(buf, 0, &glb_en);
 	if (ret)
 		return ret;
+
+	if (!data->glb_auto_en) {
+		BCM_ERR("%s: don't support glb_auto_en\n", __func__);
+		return -ENODEV;
+	}
 
 	exynos_bcm_dbg_set_base_info(&ipc_base_info, BCM_EVT_GLBAUTO_CONT,
 					BCM_EVT_SET, 0);
