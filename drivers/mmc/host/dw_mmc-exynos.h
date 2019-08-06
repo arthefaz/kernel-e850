@@ -41,6 +41,12 @@
 #define TUNING_PHASE_14		14
 #define TUNING_PHASE_15		15
 
+struct exynos_mmc_pmu {
+	u32 offset;
+	u32 mask;
+	u32 val;
+};
+
 /* Exynos implementation specific driver private data */
 struct dw_mci_exynos_priv_data {
 	u8 ctrl_type;
@@ -71,15 +77,19 @@ struct dw_mci_exynos_priv_data {
 	int cd_gpio;
 	u32 caps;
 	u32 ctrl_flag;
+	u32 runtime_pm_flag;
 	u32 ctrl_windows;
 	u32 ignore_phase;
 	u32 selclk_drv;
 	u32 voltage_int_extra;
 	enum smu_id	fmp;
 	enum smu_id	smu;
+	struct exynos_mmc_pmu pmu;
 
 #define DW_MMC_EXYNOS_BYPASS_FOR_ALL_PASS	BIT(0)
 #define DW_MMC_EXYNOS_ENABLE_SHIFT		BIT(1)
+#define DW_MMC_EXYNOS_ENABLE_RUNTIME_PM		BIT(0)
+#define DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD	BIT(1)
 };
 
 #define phase6_en      BIT(6)

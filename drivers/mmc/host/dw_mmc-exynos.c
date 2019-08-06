@@ -21,6 +21,7 @@
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/pinconf.h>
 #include <linux/smc.h>
+#include <soc/samsung/exynos-pmu.h>
 
 #include "dw_mmc.h"
 #include "dw_mmc-pltfm.h"
@@ -197,6 +198,15 @@ static inline u8 dw_mci_exynos_get_ciu_div(struct dw_mci *host)
 static int dw_mci_exynos_priv_init(struct dw_mci *host)
 {
 	struct dw_mci_exynos_priv_data *priv = host->priv;
+
+	if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM) {
+		pm_runtime_enable(host->dev);
+		pm_runtime_get_sync(host->dev);
+		if (priv->pinctrl && priv->clk_drive_base)
+			pinctrl_select_state(priv->pinctrl, priv->clk_drive_base);
+		if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD)
+			exynos_pmu_update(priv->pmu.offset, priv->pmu.mask, priv->pmu.val);
+	}
 
 	priv->saved_strobe_ctrl = mci_readl(host, HS400_DLINE_CTRL);
 	priv->saved_dqs_en = mci_readl(host, HS400_DQS_EN);
@@ -476,6 +486,7 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 {
 	struct dw_mci_exynos_priv_data *priv;
 	struct device_node *np = host->dev->of_node;
+	struct device_node *mmc_pmu;
 	u32 timing[4];
 	u32 div = 0, voltage_int_extra = 0;
 	int idx;
@@ -548,7 +559,7 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 	if (IS_ERR(priv->pinctrl)) {
 		priv->pinctrl = NULL;
 	} else {
-		priv->clk_drive_base = pinctrl_lookup_state(priv->pinctrl, "default");
+		priv->clk_drive_base = pinctrl_lookup_state(priv->pinctrl, "init");
 		priv->clk_drive_str[0] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-1x");
 		priv->clk_drive_str[1] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-2x");
 		priv->clk_drive_str[2] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-3x");
@@ -652,6 +663,27 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 	default:
 		ret = -ENODEV;
 	}
+
+	if (of_find_property(np, "use-runtime-pm", NULL))
+		priv->runtime_pm_flag |= DW_MMC_EXYNOS_ENABLE_RUNTIME_PM;
+
+	mmc_pmu = of_get_child_by_name(np, "mmc-pmu-pad");
+	if (mmc_pmu) {
+		if (of_property_read_u32(mmc_pmu, "offset", &(priv->pmu.offset))) {
+			dev_err(host->dev, "failed to set pmu offset\n");
+			priv->pmu.offset = 0x1CA0;
+		}
+		if (of_property_read_u32(mmc_pmu, "mask", &(priv->pmu.mask))) {
+			dev_err(host->dev, "failed to set pmu mask\n");
+			priv->pmu.mask = 0x800;
+		}
+		if (of_property_read_u32(mmc_pmu, "val", &(priv->pmu.val))) {
+			dev_err(host->dev, "failed to set pmu val\n");
+			priv->pmu.val = 0x800;
+		}
+		priv->runtime_pm_flag |= DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD;
+	}
+
 	host->priv = priv;
  err_ref_clk:
 	return ret;
