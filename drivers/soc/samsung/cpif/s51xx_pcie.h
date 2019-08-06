@@ -81,7 +81,7 @@ void disable_msi_int(struct pci_dev *pdev);
 void print_msi_register(struct pci_dev *pdev);
 int s5100_force_crash_exit_ext(void);
 int s5100_poweron_pcie(struct modem_ctl *mc);
-int s5100_poweroff_pcie(struct modem_ctl *mc);
+int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off);
 int s5100_try_gpio_cp_wakeup(struct modem_ctl *mc);
 int s5100_send_panic_noti_ext(void);
 

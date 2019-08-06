@@ -159,7 +159,7 @@ static void pcie_dislink_work(struct work_struct *ws)
 {
 	struct modem_ctl *mc;
 	mc = container_of(ws, struct modem_ctl, dislink_work);
-	s5100_poweroff_pcie(mc);
+	s5100_poweroff_pcie(mc, false);
 }
 
 static void pcie_clean_dislink(struct modem_ctl *mc)
@@ -171,7 +171,7 @@ static void pcie_clean_dislink(struct modem_ctl *mc)
 		if (exynos_check_pcie_link_status(mc->pcie_ch_num) == 0)
 #endif
 			mif_err("dislinked unexpectedly, force dislink!!\n");
-		s5100_poweroff_pcie(mc);
+		s5100_poweroff_pcie(mc, true);
 	}
 
 	if (!mc->pcie_powered_on)
@@ -850,7 +850,7 @@ static int start_dump_boot(struct modem_ctl *mc)
 	return err;
 }
 
-int s5100_poweroff_pcie(struct modem_ctl *mc)
+int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 {
 	struct link_device *ld = get_current_link(mc->iod);
 	struct mem_link_device *mld = to_mem_link_device(ld);
@@ -871,13 +871,15 @@ int s5100_poweroff_pcie(struct modem_ctl *mc)
 	 * wait for a while (30ms) before pci power off
 	 * cp2ap_wakeup = 1 in 20ms from Tx and cp2ap_wakeup = 0 in 50ms from = 1
 	 */
-	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
-	/* wait Tx done if it is running */
-	spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
-	msleep(30);
-	if (mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 1) {
-		mif_err("skip pci power off : Tx was working\n");
-		goto exit;
+	if (!force_off) {
+		spin_lock_irqsave(&mc->pcie_tx_lock, flags);
+		/* wait Tx done if it is running */
+		spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
+		msleep(30);
+		if (mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 1) {
+			mif_err("skip pci power off : Tx was working\n");
+			goto exit;
+		}
 	}
 
 	if (mld->msi_irq_base_enabled == 1) {
