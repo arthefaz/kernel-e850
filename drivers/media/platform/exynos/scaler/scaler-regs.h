@@ -294,7 +294,8 @@
 
 static inline void sc_hwset_clk_request(struct sc_dev *sc, bool enable)
 {
-	if (sc->version >= SCALER_VERSION(5, 0, 1))
+	if (sc->version >= SCALER_VERSION(5, 0, 1) ||
+	    sc->version == SCALER_VERSION(4, 2, 0))
 		writel(enable ? 1 : 0, sc->regs + SCALER_CLK_REQ);
 }
 
