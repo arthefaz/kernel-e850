@@ -37,37 +37,37 @@ struct pmucal_seq pmucal_lpm_init[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "EXT_REGULATOR_MIF_DURATION", 0x11860000, 0x0e00, (0xffffffff << 0), (0x7D0 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "EXT_REGULATOR_CP_DURATION", 0x11860000, 0x0e04, (0xffffffff << 0), (0x528 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "EXT_REGULATOR_DURATION", 0x11860000, 0x0e08, (0xffffffff << 0), (0x7D0 << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "TCXO_STABLE_DURATION", 0x11860000, 0x0e10, (0xffffffff << 0), (0x66c << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CPUCL0_QCH_SCLK", 0x10900000, 0x3044, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER1_QCH_SCLK", 0x10800000, 0x3038, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 };
 unsigned int pmucal_lpm_init_size = ARRAY_SIZE(pmucal_lpm_init);
 /* individual sequence descriptor for each power mode - enter, exit, early_wakeup */
 struct pmucal_seq enter_sicd[] = {
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "CP_INT_EN", 0x11860000, 0x3044, (0xffffffff << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq save_sicd[] = {
 };
 
 struct pmucal_seq exit_sicd[] = {
-	PMUCAL_SEQ_DESC(PMUCAL_CLR_BIT_ATOMIC, "CP_INT_EN", 0x11860000, 0x3044, (0xffffffff << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP_INT_EN", 0x11860000, 0x3944, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP26_INTR_BID_CLEAR", 0x11870000, 0x1a0c, (0xffffffff << 0), (0x00000040 << 0), 0x11870000, 0x1a08, (0x1 << 6), (0x0 << 0) | (0x0 << 6)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), (0x0 << 0) | (0x0 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP2_INT_EN", 0x11860000, 0x3964, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP31_INTR_BID_CLEAR", 0x11870000, 0x1f0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1f08, (0xffffffff << 0), 0),
 };
 
 struct pmucal_seq earlywkup_sicd[] = {
-	PMUCAL_SEQ_DESC(PMUCAL_CLR_BIT_ATOMIC, "CP_INT_EN", 0x11860000, 0x3044, (0xffffffff << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP_INT_EN", 0x11860000, 0x3944, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP26_INTR_BID_CLEAR", 0x11870000, 0x1a0c, (0xffffffff << 0), (0x00000040 << 0), 0x11870000, 0x1a08, (0x1 << 6), (0x0 << 0) | (0x0 << 6)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), (0x0 << 0) | (0x0 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP2_INT_EN", 0x11860000, 0x3964, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP31_INTR_BID_CLEAR", 0x11870000, 0x1f0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1f08, (0xffffffff << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSTEM_CTRL", 0x11860000, 0x3a10, (0x1 << 14), (0x0 << 14), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP4_INTR_BID_CLEAR", 0x11870000, 0x040c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0408, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP4_INTR_BID_CLEAR", 0x11870000, 0x040c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0408, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
 };
 
 struct pmucal_seq enter_sleep[] = {
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "CP_INT_EN", 0x11860000, 0x3044, (0xffffffff << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 0), (0x1 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER0_QCH_SCLK", 0x10900000, 0x3044, (0x7 << 0), (0x2 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER1_QCH_SCLK", 0x10800000, 0x3038, (0x7 << 0), (0x2 << 0), 0, 0, 0xffffffff, 0),
@@ -798,18 +798,18 @@ struct pmucal_seq save_sleep[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_COND_SAVE_RESTORE, "AUD_HCHGEN_CLKMUX", 0x14A00000, 0x840, 0xffffffff, 0, 0x11860000, 0x2084, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CPUCL1_CLKDIV2PH", 0x10800000, 0x840, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CPUCL0_CLKDIV2PH", 0x10900000, 0x840, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-//	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "G3D_SHORTSTOP", 0x11400000, 0x0820, (0xffffffff << 0), (0xFFFFFFFF << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_COND_SAVE_RESTORE, "G3D_SHORTSTOP", 0x11400000, 0x0820, (0xffffffff << 0), (0xFFFFFFFF << 0), 0x11860000, 0x1d04, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CPUCL0_SHORTSTOP", 0x10900000, 0x0820, (0xffffffff << 0), (0xFFFFFFFF << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CPUCL1_SHORTSTOP", 0x10800000, 0x0820, (0xffffffff << 0), (0xFFFFFFFF << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq exit_sleep[] = {
-	PMUCAL_SEQ_DESC(PMUCAL_CLR_BIT_ATOMIC, "CP_INT_EN", 0x11860000, 0x3044, (0xffffffff << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP_INT_EN", 0x11860000, 0x3944, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP26_INTR_BID_CLEAR", 0x11870000, 0x1a0c, (0xffffffff << 0), (0x00000040 << 0), 0x11870000, 0x1a08, (0x1 << 6), (0x0 << 0) | (0x0 << 6)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), (0x0 << 0) | (0x0 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP2_INT_EN", 0x11860000, 0x3964, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP31_INTR_BID_CLEAR", 0x11870000, 0x1f0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1f08, (0xffffffff << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0208, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0208, (0x1 << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER0_QCH_SCLK", 0x10900000, 0x3044, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER1_QCH_SCLK", 0x10800000, 0x3038, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
@@ -817,40 +817,34 @@ struct pmucal_seq exit_sleep[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_BUS_COMPONENT_DRCG_EN", 0x12020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL0_BUS_COMPONENT_DRCG_EN", 0x10920000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL1_BUS_COMPONENT_DRCG_EN", 0x10820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-//	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_HSI_BUS_COMPONENT_DRCG_EN", 0x13420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_COND_WRITE, "SYSREG_HSI_BUS_COMPONENT_DRCG_EN", 0x13420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0x11860000, 0x1c84, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_MIF0_BUS_COMPONENT_DRCG_EN", 0x10420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_MIF1_BUS_COMPONENT_DRCG_EN", 0x10520000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_PERI_BUS_COMPONENT_DRCG_EN", 0x10020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xa << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xb << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xc << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xd << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xe << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xf << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0x10 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0x11 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0x12 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0x13 << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq earlywkup_sleep[] = {
-	PMUCAL_SEQ_DESC(PMUCAL_CLR_BIT_ATOMIC, "CP_INT_EN", 0x11860000, 0x3044, (0xffffffff << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP_INT_EN", 0x11860000, 0x3944, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP26_INTR_BID_CLEAR", 0x11870000, 0x1a0c, (0xffffffff << 0), (0x00000040 << 0), 0x11870000, 0x1a08, (0x1 << 6), (0x0 << 0) | (0x0 << 6)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), (0x0 << 0) | (0x0 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP2_INT_EN", 0x11860000, 0x3964, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP31_INTR_BID_CLEAR", 0x11870000, 0x1f0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1f08, (0xffffffff << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER0_QCH_SCLK", 0x10900000, 0x3044, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER1_QCH_SCLK", 0x10800000, 0x3038, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSTEM_CTRL", 0x11860000, 0x3a10, (0x1 << 14), (0x0 << 14), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP4_INTR_BID_CLEAR", 0x11870000, 0x040c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0408, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP4_INTR_BID_CLEAR", 0x11870000, 0x040c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0408, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
 };
 
 struct pmucal_seq enter_sleep_usbl2[] = {
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "CP_INT_EN", 0x11860000, 0x3044, (0xffffffff << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 0), (0x1 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_USB20DRD_TOP_QCH_LINK", 0x13400000, 0x3034, (0x7 << 0), (0x4 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_USB20DRD_TOP_QCH_20CTRL", 0x13400000, 0x3030, (0x7 << 0), (0x4 << 0), 0, 0, 0xffffffff, 0),
@@ -966,7 +960,7 @@ struct pmucal_seq save_sleep_usbl2[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_COND_SAVE_RESTORE, "PLL_CON0_MUX_CLKCMU_HSI_MMC_CARD_USER", 0x13400000, 0x610, 0xffffffff, 0, 0x11860000, 0x1c84, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_COND_SAVE_RESTORE, "PLL_CON0_MUX_CLKCMU_HSI_BUS_USER", 0x13400000, 0x600, 0xffffffff, 0, 0x11860000, 0x1c84, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_COND_SAVE_RESTORE, "PLL_CON0_MUX_CLKCMU_G3D_SWITCH_USER", 0x11400000, 0x600, 0xffffffff, 0, 0x11860000, 0x1d04, (0x1 << 0), (0x1 << 0)),
-	PMUCAL_SEQ_DESC(PMUCAL_COND_SAVE_RESTORE, "PLL_CON0_MUX_CLKCMU_DPU_USER", 0x13000000, 0x600, 0xffffffff, 0, 0x11860000, 0x2004, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_COND_SAVE_RESTORE, "PLL_CON0_MUX_CLKCMU_DPU_USER", 0x13000000, 0x600, 0xffffffff, 0, 0x11860000, 0x2004, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON0_MUX_CLKCMU_CORE_SSS_USER", 0x12000000, 0x630, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON0_MUX_CLKCMU_CORE_MMC_EMBD_USER", 0x12000000, 0x620, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_CON0_MUX_CLKCMU_CORE_CCI_USER", 0x12000000, 0x610, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
@@ -1585,18 +1579,18 @@ struct pmucal_seq save_sleep_usbl2[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_COND_SAVE_RESTORE, "AUD_HCHGEN_CLKMUX", 0x14A00000, 0x840, 0xffffffff, 0, 0x11860000, 0x2084, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CPUCL1_CLKDIV2PH", 0x10800000, 0x840, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CPUCL0_CLKDIV2PH", 0x10900000, 0x840, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "G3D_SHORTSTOP", 0x11400000, 0x0820, (0xffffffff << 0), (0xFFFFFFFF << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_COND_SAVE_RESTORE, "G3D_SHORTSTOP", 0x11400000, 0x0820, (0xffffffff << 0), (0xFFFFFFFF << 0), 0x11860000, 0x1d04, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CPUCL0_SHORTSTOP", 0x10900000, 0x0820, (0xffffffff << 0), (0xFFFFFFFF << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CPUCL1_SHORTSTOP", 0x10800000, 0x0820, (0xffffffff << 0), (0xFFFFFFFF << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq exit_sleep_usbl2[] = {
-	PMUCAL_SEQ_DESC(PMUCAL_CLR_BIT_ATOMIC, "CP_INT_EN", 0x11860000, 0x3044, (0xffffffff << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP_INT_EN", 0x11860000, 0x3944, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP26_INTR_BID_CLEAR", 0x11870000, 0x1a0c, (0xffffffff << 0), (0x00000040 << 0), 0x11870000, 0x1a08, (0x1 << 6), (0x0 << 0) | (0x0 << 6)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), (0x0 << 0) | (0x0 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP2_INT_EN", 0x11860000, 0x3964, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP31_INTR_BID_CLEAR", 0x11870000, 0x1f0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1f08, (0xffffffff << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0208, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0208, (0x1 << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON0_MUX_CLKCMU_HSI_BUS_USER", 0x13400000, 0x0600, (0x1 << 4), (0x1 << 4), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON0_MUX_CLKCMU_HSI_USB20DRD_USER", 0x13400000, 0x0620, (0x1 << 4), (0x1 << 4), 0, 0, 0xffffffff, 0),
@@ -1612,29 +1606,24 @@ struct pmucal_seq exit_sleep_usbl2[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_BUS_COMPONENT_DRCG_EN", 0x12020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL0_BUS_COMPONENT_DRCG_EN", 0x10920000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL1_BUS_COMPONENT_DRCG_EN", 0x10820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_HSI_BUS_COMPONENT_DRCG_EN", 0x13420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_COND_WRITE, "SYSREG_HSI_BUS_COMPONENT_DRCG_EN", 0x13420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0x11860000, 0x1c84, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_MIF0_BUS_COMPONENT_DRCG_EN", 0x10420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_MIF1_BUS_COMPONENT_DRCG_EN", 0x10520000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_PERI_BUS_COMPONENT_DRCG_EN", 0x10020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xa << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xb << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xc << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xd << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xe << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0xf << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0x10 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0x11 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0x12 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_SET_BIT_ATOMIC, "TOP_OUT", 0x11860000, 0x3920, (0xffffffff << 0), (0x13 << 0), 0, 0, 0xffffffff, 0),
 };
 
 struct pmucal_seq earlywkup_sleep_usbl2[] = {
-	PMUCAL_SEQ_DESC(PMUCAL_CLR_BIT_ATOMIC, "CP_INT_EN", 0x11860000, 0x3044, (0xffffffff << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP_INT_EN", 0x11860000, 0x3944, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP26_INTR_BID_CLEAR", 0x11870000, 0x1a0c, (0xffffffff << 0), (0x00000040 << 0), 0x11870000, 0x1a08, (0x1 << 6), (0x0 << 0) | (0x0 << 6)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), (0x0 << 0) | (0x0 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP2_INT_EN", 0x11860000, 0x3964, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP31_INTR_BID_CLEAR", 0x11870000, 0x1f0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1f08, (0xffffffff << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON0_MUX_CLKCMU_HSI_BUS_USER", 0x13400000, 0x0600, (0x1 << 4), (0x1 << 4), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "PLL_CON0_MUX_CLKCMU_HSI_USB20DRD_USER", 0x13400000, 0x0620, (0x1 << 4), (0x1 << 4), 0, 0, 0xffffffff, 0),
@@ -1647,12 +1636,12 @@ struct pmucal_seq earlywkup_sleep_usbl2[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER0_QCH_SCLK", 0x10900000, 0x3044, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER1_QCH_SCLK", 0x10800000, 0x3038, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSTEM_CTRL", 0x11860000, 0x3a10, (0x1 << 14), (0x0 << 14), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP4_INTR_BID_CLEAR", 0x11870000, 0x040c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0408, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP4_INTR_BID_CLEAR", 0x11870000, 0x040c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0408, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
 };
 
 struct pmucal_seq enter_stop[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 0), (0x1 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
 };
 
@@ -1661,16 +1650,17 @@ struct pmucal_seq save_stop[] = {
 
 struct pmucal_seq exit_stop[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP_INT_EN", 0x11860000, 0x3944, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP26_INTR_BID_CLEAR", 0x11870000, 0x1a0c, (0xffffffff << 0), (0x00000040 << 0), 0x11870000, 0x1a08, (0x1 << 6), (0x0 << 0) | (0x0 << 6)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), (0x0 << 0) | (0x0 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP2_INT_EN", 0x11860000, 0x3964, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP31_INTR_BID_CLEAR", 0x11870000, 0x1f0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1f08, (0xffffffff << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0208, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0208, (0x1 << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_APM_BUS_COMPONENT_DRCG_EN", 0x11820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_BUS_COMPONENT_DRCG_EN", 0x12020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL0_BUS_COMPONENT_DRCG_EN", 0x10920000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL1_BUS_COMPONENT_DRCG_EN", 0x10820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_HSI_BUS_COMPONENT_DRCG_EN", 0x13420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_COND_WRITE, "SYSREG_HSI_BUS_COMPONENT_DRCG_EN", 0x13420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0x11860000, 0x1c84, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_MIF0_BUS_COMPONENT_DRCG_EN", 0x10420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_MIF1_BUS_COMPONENT_DRCG_EN", 0x10520000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_PERI_BUS_COMPONENT_DRCG_EN", 0x10020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
@@ -1678,13 +1668,14 @@ struct pmucal_seq exit_stop[] = {
 
 struct pmucal_seq earlywkup_stop[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP_INT_EN", 0x11860000, 0x3944, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP26_INTR_BID_CLEAR", 0x11870000, 0x1a0c, (0xffffffff << 0), (0x00000040 << 0), 0x11870000, 0x1a08, (0x1 << 6), (0x0 << 0) | (0x0 << 6)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY_INV, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), (0x0 << 0) | (0x0 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "WAKEUP2_INT_EN", 0x11860000, 0x3964, (0xffffffff << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP27_INTR_BID_CLEAR", 0x11870000, 0x1b0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1b08, (0xffffffff << 0), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP31_INTR_BID_CLEAR", 0x11870000, 0x1f0c, (0xffffffff << 0), (0xffffffff << 0), 0x11870000, 0x1f08, (0xffffffff << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSTEM_CTRL", 0x11860000, 0x3a10, (0x1 << 14), (0x0 << 14), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP4_INTR_BID_CLEAR", 0x11870000, 0x040c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0408, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP4_INTR_BID_CLEAR", 0x11870000, 0x040c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0408, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
 };
 
 /* global array for supported low power modes - exposed to common logic */
@@ -1872,5 +1863,6 @@ struct pmucal_system_sequencer pmucal_system_mif_list[NUM_SYS_POWERMODE] = {
 		.num_down = ARRAY_SIZE(mif_sequencer_stop_down),
 	},
 };
+
 unsigned int pmucal_system_sequencer_list_size = NUM_SYS_POWERMODE;
 #endif

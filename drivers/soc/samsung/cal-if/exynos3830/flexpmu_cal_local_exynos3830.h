@@ -134,6 +134,7 @@ struct pmucal_seq dpu_save[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_DPU_QCH_S_DMA", 0x13000000, 0x301c, 0xffffffff, 0, 0x11860000, 0x2004, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_DPU_QCH_S_DECON", 0x13000000, 0x3018, 0xffffffff, 0, 0x11860000, 0x2004, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "QCH_CON_DPU_CMU_DPU_QCH", 0x13000000, 0x3014, 0xffffffff, 0, 0x11860000, 0x2004, (0x1 << 0), (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_PPMU_DPU_QCH", 0x13000000, 0x3030, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_CMU_DPU_CONTROLLER_OPTION", 0x13000000, 0x0800, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "SYSREG_DPU_BUS_COMPONENT_DRCG_EN", 0x13020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "DPU_DPP_DPP_VG0_DYNAMIC_GATING_EN", 0x13050000, 0x4A54, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
@@ -144,6 +145,7 @@ struct pmucal_seq dpu_save[] = {
 };
 
 struct pmucal_seq dpu_off[] = {
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_PPMU_DPU_QCH", 0x13000000, 0x3030, (0x7 << 0), (0x2 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "DPU_CONFIGURATION", 0x11860000, 0x2000, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WAIT, "DPU_STATUS", 0x11860000, 0x2004, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
 };

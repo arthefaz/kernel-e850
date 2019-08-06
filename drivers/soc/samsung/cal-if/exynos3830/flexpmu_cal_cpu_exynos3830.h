@@ -3,13 +3,13 @@
 /* individual sequence descriptor for each core - on, off, status */
 struct pmucal_seq core00_on[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 0), (0x0 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0208, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0208, (0x1 << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core00_off[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 0), (0x1 << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 8), (0x1 << 8), 0x11870000, 0x0108, (0x1 << 8), (0x1 << 8) | (0x1 << 8)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0108, (0x1 << 0), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 8), (0x1 << 8), 0x11870000, 0x0108, (0x1 << 8), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core00_status[] = {
@@ -17,13 +17,13 @@ struct pmucal_seq core00_status[] = {
 };
 struct pmucal_seq core01_on[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 1), (0x0 << 1), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 1), (0x1 << 1), 0x11870000, 0x0208, (0x1 << 1), (0x1 << 1) | (0x1 << 1)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 1), (0x1 << 1), 0x11870000, 0x0208, (0x1 << 1), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU1_INT_EN", 0x11860000, 0x10c4, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core01_off[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 1), (0x1 << 1), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 1), (0x1 << 1), 0x11870000, 0x0108, (0x1 << 1), (0x1 << 1) | (0x1 << 1)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 9), (0x1 << 9), 0x11870000, 0x0108, (0x1 << 9), (0x1 << 9) | (0x1 << 9)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 1), (0x1 << 1), 0x11870000, 0x0108, (0x1 << 1), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 9), (0x1 << 9), 0x11870000, 0x0108, (0x1 << 9), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU1_INT_EN", 0x11860000, 0x10c4, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core01_status[] = {
@@ -31,13 +31,13 @@ struct pmucal_seq core01_status[] = {
 };
 struct pmucal_seq core02_on[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 2), (0x0 << 2), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 2), (0x1 << 2), 0x11870000, 0x0208, (0x1 << 2), (0x1 << 2) | (0x1 << 2)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 2), (0x1 << 2), 0x11870000, 0x0208, (0x1 << 2), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU2_INT_EN", 0x11860000, 0x1144, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core02_off[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 2), (0x1 << 2), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 2), (0x1 << 2), 0x11870000, 0x0108, (0x1 << 2), (0x1 << 2) | (0x1 << 2)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 10), (0x1 << 10), 0x11870000, 0x0108, (0x1 << 10), (0x1 << 10) | (0x1 << 10)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 2), (0x1 << 2), 0x11870000, 0x0108, (0x1 << 2), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 10), (0x1 << 10), 0x11870000, 0x0108, (0x1 << 10), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU2_INT_EN", 0x11860000, 0x1144, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core02_status[] = {
@@ -45,13 +45,13 @@ struct pmucal_seq core02_status[] = {
 };
 struct pmucal_seq core03_on[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 3), (0x1 << 3), 0x11870000, 0x0208, (0x1 << 3), (0x1 << 3) | (0x1 << 3)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 3), (0x1 << 3), 0x11870000, 0x0208, (0x1 << 3), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU3_INT_EN", 0x11860000, 0x11c4, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core03_off[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 3), (0x1 << 3), 0x11870000, 0x0108, (0x1 << 3), (0x1 << 3) | (0x1 << 3)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 11), (0x1 << 11), 0x11870000, 0x0108, (0x1 << 11), (0x1 << 11) | (0x1 << 11)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 3), (0x1 << 3), 0x11870000, 0x0108, (0x1 << 3), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 11), (0x1 << 11), 0x11870000, 0x0108, (0x1 << 11), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU3_INT_EN", 0x11860000, 0x11c4, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core03_status[] = {
@@ -59,13 +59,13 @@ struct pmucal_seq core03_status[] = {
 };
 struct pmucal_seq core10_on[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 4), (0x0 << 4), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 4), (0x1 << 4), 0x11870000, 0x0208, (0x1 << 4), (0x1 << 4) | (0x1 << 4)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 4), (0x1 << 4), 0x11870000, 0x0208, (0x1 << 4), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER1_CPU0_INT_EN", 0x11860000, 0x1444, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core10_off[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 4), (0x1 << 4), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 4), (0x1 << 4), 0x11870000, 0x0108, (0x1 << 4), (0x1 << 4) | (0x1 << 4)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 12), (0x1 << 12), 0x11870000, 0x0108, (0x1 << 12), (0x1 << 12) | (0x1 << 12)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 4), (0x1 << 4), 0x11870000, 0x0108, (0x1 << 4), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 12), (0x1 << 12), 0x11870000, 0x0108, (0x1 << 12), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER1_CPU0_INT_EN", 0x11860000, 0x1444, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core10_status[] = {
@@ -73,13 +73,13 @@ struct pmucal_seq core10_status[] = {
 };
 struct pmucal_seq core11_on[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 5), (0x0 << 5), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 5), (0x1 << 5), 0x11870000, 0x0208, (0x1 << 5), (0x1 << 5) | (0x1 << 5)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 5), (0x1 << 5), 0x11870000, 0x0208, (0x1 << 5), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER1_CPU1_INT_EN", 0x11860000, 0x14c4, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core11_off[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 5), (0x1 << 5), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 5), (0x1 << 5), 0x11870000, 0x0108, (0x1 << 5), (0x1 << 5) | (0x1 << 5)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 13), (0x1 << 13), 0x11870000, 0x0108, (0x1 << 13), (0x1 << 13) | (0x1 << 13)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 5), (0x1 << 5), 0x11870000, 0x0108, (0x1 << 5), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 13), (0x1 << 13), 0x11870000, 0x0108, (0x1 << 13), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER1_CPU1_INT_EN", 0x11860000, 0x14c4, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core11_status[] = {
@@ -87,13 +87,13 @@ struct pmucal_seq core11_status[] = {
 };
 struct pmucal_seq core12_on[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 6), (0x0 << 6), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 6), (0x1 << 6), 0x11870000, 0x0208, (0x1 << 6), (0x1 << 6) | (0x1 << 6)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 6), (0x1 << 6), 0x11870000, 0x0208, (0x1 << 6), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER1_CPU2_INT_EN", 0x11860000, 0x1544, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core12_off[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 6), (0x1 << 6), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 6), (0x1 << 6), 0x11870000, 0x0108, (0x1 << 6), (0x1 << 6) | (0x1 << 6)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 14), (0x1 << 14), 0x11870000, 0x0108, (0x1 << 14), (0x1 << 14) | (0x1 << 14)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 6), (0x1 << 6), 0x11870000, 0x0108, (0x1 << 6), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 14), (0x1 << 14), 0x11870000, 0x0108, (0x1 << 14), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER1_CPU2_INT_EN", 0x11860000, 0x1544, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core12_status[] = {
@@ -101,13 +101,13 @@ struct pmucal_seq core12_status[] = {
 };
 struct pmucal_seq core13_on[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 7), (0x0 << 7), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 7), (0x1 << 7), 0x11870000, 0x0208, (0x1 << 7), (0x1 << 7) | (0x1 << 7)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 7), (0x1 << 7), 0x11870000, 0x0208, (0x1 << 7), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER1_CPU3_INT_EN", 0x11860000, 0x15c4, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core13_off[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "GRP2_INTR_BID_ENABLE", 0x11870000, 0x0200, (0x1 << 7), (0x1 << 7), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 7), (0x1 << 7), 0x11870000, 0x0108, (0x1 << 7), (0x1 << 7) | (0x1 << 7)),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE_RETRY, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 15), (0x1 << 15), 0x11870000, 0x0108, (0x1 << 15), (0x1 << 15) | (0x1 << 15)),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 7), (0x1 << 7), 0x11870000, 0x0108, (0x1 << 7), 0),
+	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP1_INTR_BID_CLEAR", 0x11870000, 0x010c, (0x1 << 15), (0x1 << 15), 0x11870000, 0x0108, (0x1 << 15), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER1_CPU3_INT_EN", 0x11860000, 0x15c4, (0x1 << 3), (0x1 << 3), 0, 0, 0xffffffff, 0),
 };
 struct pmucal_seq core13_status[] = {
