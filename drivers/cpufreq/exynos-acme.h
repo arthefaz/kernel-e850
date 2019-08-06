@@ -13,6 +13,8 @@
 #include <linux/timer.h>
 
 #define DEFAULT_EXPIRED_TIME 70
+#define CPUFREQ_RESTART 0x1 << 0
+#define CPUFREQ_SUSPEND 0x1 << 1
 
 struct exynos_slack_timer {
 	/* for slack timer */

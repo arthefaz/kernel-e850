@@ -44,6 +44,11 @@ LIST_HEAD(domains);
  */
 LIST_HEAD(ready_list);
 
+/*
+ * flag to constrain frequency
+ */
+static unsigned int cpufreq_constraint_flag;
+
 /* slack timer per cpu */
 static DEFINE_PER_CPU(struct exynos_slack_timer, exynos_slack_timer);
 
@@ -112,28 +117,17 @@ int exynos_cpufreq_domain_count(void)
 	return last_domain()->id + 1;
 }
 
-/* __enable_domain/__disable_domain MUST be called with holding domain->lock */
-static inline void __enable_domain(struct exynos_cpufreq_domain *domain)
-{
-	domain->enabled = true;
-}
-
-static inline void __disable_domain(struct exynos_cpufreq_domain *domain)
-{
-	domain->enabled = false;
-}
-
 static void enable_domain(struct exynos_cpufreq_domain *domain)
 {
 	mutex_lock(&domain->lock);
-	__enable_domain(domain);
+	domain->enabled = true;
 	mutex_unlock(&domain->lock);
 }
 
 static void disable_domain(struct exynos_cpufreq_domain *domain)
 {
 	mutex_lock(&domain->lock);
-	__disable_domain(domain);
+	domain->enabled = false;
 	mutex_unlock(&domain->lock);
 }
 
@@ -474,36 +468,22 @@ static int exynos_cpufreq_target(struct cpufreq_policy *policy,
 
 static int __exynos_cpufreq_suspend(struct exynos_cpufreq_domain *domain)
 {
-	unsigned int freq;
+	struct cpumask mask;
 
 	if (!domain)
 		return -EINVAL;
 
+	cpumask_and(&mask, &domain->cpus, cpu_online_mask);
+	if (cpumask_empty(&mask))
+		return 0;
+
 	/* To handle reboot faster, it does not thrrotle frequency of domain0 */
 	if (system_state == SYSTEM_RESTART && domain->id != 0)
-		freq = domain->min_freq;
-	else
-		freq = domain->resume_freq;
+		cpufreq_constraint_flag |= CPUFREQ_RESTART;
 
-	pm_qos_update_request(&domain->min_qos_req, freq);
-	pm_qos_update_request(&domain->max_qos_req, freq);
+	cpufreq_update_policy(cpumask_any(&mask));
 
-	/* To sync current freq with resume freq, check until they become same */
-	mutex_lock(&domain->lock);
-	while (domain->old > freq) {
-		mutex_unlock(&domain->lock);
-		update_freq(domain, freq);
-		mutex_lock(&domain->lock);
-	}
-
-	/*
-	 * Although cpufreq governor is stopped in cpufreq_suspend(),
-	 * afterwards, frequency change can be requested by
-	 * PM QoS. To prevent chainging frequency after
-	 * cpufreq suspend, disable scaling for all domains.
-	 */
-	__disable_domain(domain);
-	mutex_unlock(&domain->lock);
+	disable_domain(domain);
 
 	return 0;
 }
@@ -517,13 +497,18 @@ static int exynos_cpufreq_suspend(struct cpufreq_policy *policy)
 
 static int __exynos_cpufreq_resume(struct exynos_cpufreq_domain *domain)
 {
+	struct cpumask mask;
+
 	if (!domain)
 		return -EINVAL;
 
+	cpumask_and(&mask, &domain->cpus, cpu_online_mask);
+	if (cpumask_empty(&mask))
+		return 0;
+
 	enable_domain(domain);
 
-	pm_qos_update_request(&domain->min_qos_req, domain->min_freq);
-	pm_qos_update_request(&domain->max_qos_req, domain->max_freq);
+	cpufreq_update_policy(cpumask_any(&mask));
 
 	return 0;
 }
@@ -559,11 +544,13 @@ static int exynos_cpufreq_pm_notifier(struct notifier_block *notifier,
 
 	switch (pm_event) {
 	case PM_SUSPEND_PREPARE:
+		cpufreq_constraint_flag |= CPUFREQ_SUSPEND;
 		list_for_each_entry_reverse(domain, &domains, list)
 			if (__exynos_cpufreq_suspend(domain))
 				return NOTIFY_BAD;
 		break;
 	case PM_POST_SUSPEND:
+		cpufreq_constraint_flag &= ~CPUFREQ_SUSPEND;
 		list_for_each_entry_reverse(domain, &domains, list)
 			if (__exynos_cpufreq_resume(domain))
 				return NOTIFY_BAD;
@@ -813,11 +800,27 @@ static int exynos_cpufreq_policy_callback(struct notifier_block *nb,
 {
 	struct cpufreq_policy *policy = data;
 	struct exynos_cpufreq_domain *domain = find_domain(policy->cpu);
+	unsigned int freq;
 
 	if (!domain)
 		return NOTIFY_OK;
 
 	switch (event) {
+	case CPUFREQ_ADJUST:
+		if (cpufreq_constraint_flag) {
+			if (cpufreq_constraint_flag & CPUFREQ_RESTART)
+				freq = domain->min_freq;
+			else if (cpufreq_constraint_flag & CPUFREQ_SUSPEND)
+				freq = domain->resume_freq;
+			else
+				return NOTIFY_DONE;
+
+			cpufreq_verify_within_limits(policy, freq, freq);
+		}
+		else
+			return NOTIFY_DONE;
+		break;
+
 	case CPUFREQ_NOTIFY:
 		arch_set_freq_scale(&domain->cpus, domain->old, policy->max);
 
