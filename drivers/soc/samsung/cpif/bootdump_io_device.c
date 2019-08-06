@@ -333,7 +333,7 @@ static long bootdump_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 		case PROTOCOL_SIPC:
 			if (arg)
 				ld->crash_reason.type = arg;
-			mif_err("%s: IOCTL_TRIGGER_CP_CRASH (%d)\n",
+			mif_err("%s: IOCTL_TRIGGER_CP_CRASH (%lu)\n",
 					iod->name, arg);
 			break;
 
