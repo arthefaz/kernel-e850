@@ -92,7 +92,13 @@
 
 		abox_rmem: abox_rmem@0xE9400000 {
 			compatible = "exynos,abox_rmem";
-			reg = <0x0 0xE9400000 0x4200000>;
+			reg = <0x0 0xE9400000 0x2800000>;
+		};
+
+		abox_slog: abox-slog {
+			compatible = "exynos,abox_slog";
+			/* linear area for cp call */
+			reg = <0x0 0xE6C00000 0x2800000>;
 		};
 	};
 };
