@@ -23,6 +23,7 @@
 #include <linux/smc.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
+#include <linux/delay.h>
 #include <soc/samsung/exynos-pmu.h>
 
 #include "dw_mmc.h"
@@ -268,6 +269,15 @@ static int dw_mci_exynos_priv_init(struct dw_mci *host)
 	if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM) {
 		pm_runtime_enable(host->dev);
 		pm_runtime_get_sync(host->dev);
+		if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD)
+			exynos_pmu_update(priv->pmu.offset, priv->pmu.mask, priv->pmu.val);
+	}
+
+	if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM) {
+		pm_runtime_enable(host->dev);
+		pm_runtime_get_sync(host->dev);
+		if (priv->pinctrl && priv->clk_drive_base)
+			pinctrl_select_state(priv->pinctrl, priv->clk_drive_base);
 		if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD)
 			exynos_pmu_update(priv->pmu.offset, priv->pmu.mask, priv->pmu.val);
 	}
