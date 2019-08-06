@@ -75,7 +75,7 @@ static void update_total_ratio(struct bias_cpuidle *bias_idle)
 
 	for_each_state(state) {
 		/*
-		 * The total_ratio is '0' in c1(state == 0),
+		 * The total_ratio is '100' in c1(state == 0),
 		 */
 		if (!state)
 			continue;
@@ -530,7 +530,7 @@ static int __init dt_init_bias_idle(int cpu, struct factor *sub_table)
 	 * the c1 state is not specified in the device tree,
 	 * so set it separately.
 	 */
-	bias_idle->total_ratio[0] = 0;
+	bias_idle->total_ratio[0] = DEFAULT_RATIO;
 
 	for (i = 0; ; i++) {
 		state_node = of_parse_phandle(cpu_node, "cpu-idle-states", i);
