@@ -45,7 +45,7 @@
 #include "fm_low_struc.h"
 #include "radio-s610.h"
 
-#include "../../../../sound/soc/samsung/abox/abox.h"
+#include "../../../../sound/soc/samsung/abox_v2/abox.h"
 
 static int radio_region;
 module_param(radio_region, int, 0);
