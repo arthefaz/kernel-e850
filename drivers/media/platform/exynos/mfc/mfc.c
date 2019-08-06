@@ -1018,7 +1018,7 @@ static int __mfc_parse_dt(struct device_node *np, struct mfc_dev *mfc)
 	of_property_read_u32(np, "trans_info_offset", &pdata->trans_info_offset);
 
 	/* LLC(Last Level Cache) */
-	mfc->has_llc = of_property_read_bool(np, "llc");
+	of_property_read_u32(np, "llc", &mfc->has_llc);
 
 	/* NAL-Q size */
 	of_property_read_u32(np, "nal_q_entry_size", &pdata->nal_q_entry_size);

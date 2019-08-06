@@ -908,8 +908,8 @@ struct mfc_dev {
 	bool has_hwfc;
 	bool has_mmcache;
 	bool has_cmu;
-	bool has_llc;
 
+	int has_llc;
 	int llc_on_status;
 
 	struct mfc_special_buf common_ctx_buf;
