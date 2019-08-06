@@ -635,7 +635,7 @@
 
 	/* Swapping clock drive strength */
 	clk-drive-number = <4>;
-	pinctrl-names = "default",
+	pinctrl-names = "init",
 		"fast-slew-rate-1x",
 		"fast-slew-rate-2x",
 		"fast-slew-rate-3x",
@@ -669,6 +669,8 @@
 	use-fine-tuning;
 	card-init-hwacg-ctrl;
 	skip-init-mmc-scan;
+	use-runtime-pm;
+	skip-init-no-tray;
 	fifo-depth = <0x40>;
 	desc-size = <4>;
 	card-detect-delay = <200>;
@@ -684,7 +686,7 @@
 
 	/* Swapping clock drive strength */
 	clk-drive-number = <6>;
-	pinctrl-names = "default",
+	pinctrl-names = "init",
 		"fast-slew-rate-1x",
 		"fast-slew-rate-1_5x",
 		"fast-slew-rate-2x",
@@ -708,6 +710,12 @@
 		reg = <0>;
 		bus-width = <4>;
 		disable-wp;
+	};
+
+	mmc-pmu-pad {
+		offset = <0x1CA0>;
+		mask = <0x800>;
+		val = <0x800>;
 	};
 };
 

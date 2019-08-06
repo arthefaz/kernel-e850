@@ -762,6 +762,7 @@
 		#size-cells = <0>;
 		clocks = <&clock HSI_MMC_CARD>;
 		clock-names = "ciu";
+		samsung,power-domain = <&pd_hsi>;
 		status = "disabled";
 	 };
 
