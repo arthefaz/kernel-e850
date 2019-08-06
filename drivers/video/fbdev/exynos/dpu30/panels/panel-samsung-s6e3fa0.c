@@ -19,6 +19,7 @@ int s6e3fa0_suspend(struct exynos_panel_device *panel)
 
 	mutex_lock(&panel->ops_lock);
 	dsim_write_data_seq_delay(dsim, 20, 0x28, 0x00, 0x00);
+	dsim_write_data_seq_delay(dsim, 120, 0x10, 0x00, 0x00);
 	mutex_unlock(&panel->ops_lock);
 
 	return 0;
