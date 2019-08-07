@@ -460,7 +460,7 @@
 							regulator-name = "vdd_ldo28";
 							regulator-min-microvolt = <1600000>;
 							regulator-max-microvolt = <1950000>;
-							regulator-always-on;
+							regulator-boot-on;
 							regulator-ramp-delay = <12000>;
 							regulator-initial-mode = <3>;
 						};
