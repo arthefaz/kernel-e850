@@ -724,6 +724,38 @@ add_mode(struct power_mode **modes, struct power_mode *new)
 	pr_warn("The number of modes exceeded\n");
 }
 
+static void __init virtual_cluster_init(void)
+{
+	struct device_node *dn = of_find_node_by_path("/cpupm/vcpu_topology");
+	if (dn) {
+		int i, cluster_cnt = 0;
+
+		of_property_read_u32(dn, "vcluster_cnt", &cluster_cnt);
+
+		pr_info("%s:Virtual Cluster Info\n", __func__);
+		for (i = 0 ; i < cluster_cnt ; i++) {
+			int cpu;
+			char name[20];
+			const char *buf;
+			struct cpumask sibling;
+
+			snprintf(name, sizeof(name), "vcluster%d_sibling", i);
+			if (!of_property_read_string(dn, name, &buf)) {
+				cpulist_parse(buf, &sibling);
+
+				pr_info("Cluster%d : ", i);
+				for_each_cpu(cpu, &sibling) {
+					per_cpu(vcluster_id, cpu) = i;
+					pr_info("%d ", cpu);
+				}
+				pr_info("\n");
+			}
+		}
+	} else {
+		pr_info("No Virtual Cluster Info\n");
+	}
+}
+
 static int __init cpu_power_mode_init(void)
 {
 	struct device_node *dn = NULL;
@@ -799,32 +831,7 @@ static int __init cpu_power_mode_init(void)
 	if (attr_count)
 		cpupm_sysfs_node_init(attr_count);
 
-	dn = of_find_node_by_path("/cpupm/vcpu_topology");
-	if (dn){
-		int i, cluster_cnt = 0;
-		of_property_read_u32(dn, "vcluster_cnt", &cluster_cnt);
-
-		pr_info("%s:Virtual Cluster Info\n", __func__);
-		for (i = 0 ; i < cluster_cnt ; i++) {
-			int cpu;
-			char name[20];
-			struct cpumask sibling;
-			snprintf(name, sizeof(name), "vcluster%d_sibling", i);
-			if (!of_property_read_string(dn, name, &buf)) {
-				cpulist_parse(buf, &sibling);
-
-				pr_info("Cluster%d : ", i);
-				for_each_cpu(cpu, &sibling) {
-					per_cpu(vcluster_id, cpu) = i;
-					pr_info("%d ", cpu);
-				}
-				pr_info("\n");
-			}
-		}
-	}else {
-		pr_info("No Virtual Cluster Info\n");
-	}
-
+	virtual_cluster_init();
 	return 0;
 }
 
