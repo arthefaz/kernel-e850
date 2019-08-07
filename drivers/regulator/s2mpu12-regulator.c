@@ -800,8 +800,18 @@ static int s2mpu12_pmic_probe(struct platform_device *pdev)
 #ifdef CONFIG_DRV_SAMSUNG_PMIC
 	create_s2mpu12_sysfs(s2mpu12);
 #endif
-	pr_info("%s s2mpu12 pmic driver Loading end\n", __func__);
 
+	s2mpu12_update_reg(s2mpu12->i2c, S2MPU12_PMIC_SEL_VGPIO0,
+			(V_PWREN_MIF << B2_VGPIO_SEL) | (V_PWREN_CPUCL0 << B1_VGPIO_SEL),
+			(VGPIO_SEL_MASK << B2_VGPIO_SEL) | (VGPIO_SEL_MASK << B1_VGPIO_SEL));
+	s2mpu12_update_reg(s2mpu12->i2c, S2MPU12_PMIC_SEL_VGPIO2,
+			(V_PWREN_MIF << L6_VGPIO_SEL) | (V_PWREN_MIF << L4_VGPIO_SEL) | (V_PWREN_MIF << L3_VGPIO_SEL),
+			(VGPIO_SEL_MASK << L6_VGPIO_SEL) | (VGPIO_SEL_MASK << L4_VGPIO_SEL) | (VGPIO_SEL_MASK << L3_VGPIO_SEL));
+	s2mpu12_update_reg(s2mpu12->i2c, S2MPU12_PMIC_SEL_VGPIO3,
+			(V_PWREN_MIF << L9_VGPIO_SEL)| (V_PWREN_CPUCL0 << L8_VGPIO_SEL) | (V_PWREN_MIF << L7_VGPIO_SEL),
+			(VGPIO_SEL_MASK << L9_VGPIO_SEL)| (VGPIO_SEL_MASK << L8_VGPIO_SEL) | (VGPIO_SEL_MASK << L7_VGPIO_SEL));
+
+	pr_info("%s s2mpu12 pmic driver Loading end\n", __func__);
 	return 0;
 err:
 	for (i = 0; i < S2MPU12_REGULATOR_MAX; i++)

@@ -253,6 +253,51 @@ enum S2MPU12_regulators {
 
 #define SEC_PMIC_REV(iodev)		(iodev)->pmic_rev
 
+#define V_PWREN_CPUCL0			(0)
+#define V_PWREN_MIF			(1)
+#define V_PWREN_CP			(2)
+#define V_PWREN_CLK			(3)
+
+#define VGPIO_SEL_MASK			(3)
+/* SELVGPIO0 */
+#define B4_VGPIO_SEL			(6)
+#define B3_VGPIO_SEL			(4)
+#define B2_VGPIO_SEL			(2)
+#define B1_VGPIO_SEL			(0)
+
+/* SELVGPIO2 */
+#define L6_VGPIO_SEL			(6)
+#define L5_VGPIO_SEL			(4)
+#define L4_VGPIO_SEL			(2)
+#define L3_VGPIO_SEL			(0)
+
+/* SELVGPIO3 */
+#define L10_VGPIO_SEL			(6)
+#define L9_VGPIO_SEL			(4)
+#define L8_VGPIO_SEL			(2)
+#define L7_VGPIO_SEL			(0)
+
+/* SELVGPIO4 */
+#define L14_VGPIO_SEL			(6)
+#define L13_VGPIO_SEL			(4)
+#define L12_VGPIO_SEL			(2)
+#define L11_VGPIO_SEL			(0)
+
+/* SELVGPIO5 */
+#define L18_VGPIO_SEL			(6)
+#define L17_VGPIO_SEL			(4)
+#define L16_VGPIO_SEL			(2)
+#define L15_VGPIO_SEL			(0)
+
+/* SELVGPIO6 */
+#define L22_VGPIO_SEL			(6)
+#define L21_VGPIO_SEL			(4)
+#define L20_VGPIO_SEL			(2)
+#define L19_VGPIO_SEL			(0)
+
+/* SELVGPIO10 */
+#define L36_VGPIO_SEL			(2)
+#define L35_VGPIO_SEL			(0)
 /* Mask */
 
 /* VGPIO_RX_MONITOR ADDR. */
