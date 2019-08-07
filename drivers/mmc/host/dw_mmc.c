@@ -2366,6 +2366,16 @@ static void dw_mci_ssclk_control(struct mmc_host *mmc, int enable)
 		drv_data->ssclk_control(host, enable);
 }
 
+static void dw_mci_runtime_pm_control(struct mmc_host *mmc, int enable)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	const struct dw_mci_drv_data *drv_data = host->drv_data;
+
+	if (drv_data && drv_data->runtime_pm_control)
+		drv_data->runtime_pm_control(host, enable);
+}
+
 static const struct mmc_host_ops dw_mci_ops = {
 	.request = dw_mci_request,
 	.pre_req = dw_mci_pre_req,
@@ -2382,6 +2392,7 @@ static const struct mmc_host_ops dw_mci_ops = {
 	.init_card = dw_mci_init_card,
 	.prepare_hs400_tuning = dw_mci_prepare_hs400_tuning,
 	.ssclk_control = dw_mci_ssclk_control,
+	.runtime_pm_control = dw_mci_runtime_pm_control,
 };
 
 static void dw_mci_request_end(struct dw_mci *host, struct mmc_request *mrq)
@@ -4410,6 +4421,7 @@ int dw_mci_probe(struct dw_mci *host)
 #endif
 	/* Now that slots are all setup, we can enable card detect */
 	dw_mci_enable_cd(host);
+	drv_data->runtime_pm_control(host,0);
 
 	return 0;
 
@@ -4437,6 +4449,7 @@ int dw_mci_probe(struct dw_mci *host)
 #ifdef CONFIG_CPU_IDLE
 	exynos_update_ip_idle_status(host->idle_ip_index, 1);
 #endif
+	drv_data->runtime_pm_control(host,0);
 	return ret;
 }
 

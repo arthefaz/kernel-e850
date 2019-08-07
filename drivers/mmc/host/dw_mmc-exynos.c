@@ -195,6 +195,19 @@ static inline u8 dw_mci_exynos_get_ciu_div(struct dw_mci *host)
 	return SDMMC_CLKSEL_GET_DIV(mci_readl(host, CLKSEL)) + 1;
 }
 
+static void dw_mci_exynos_runtime_pm_control(struct dw_mci *host, int enable)
+{
+	struct dw_mci_exynos_priv_data *priv = host->priv;
+
+	if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM) {
+		if (enable) {
+			pm_runtime_get_sync(host->dev);
+		} else {
+			pm_runtime_put_sync(host->dev);
+		}
+	}
+}
+
 static int dw_mci_exynos_priv_init(struct dw_mci *host)
 {
 	struct dw_mci_exynos_priv_data *priv = host->priv;
@@ -281,6 +294,14 @@ static void dw_mci_exynos_set_clksel_timing(struct dw_mci *host, u32 timing)
 #ifdef CONFIG_PM
 static int dw_mci_exynos_runtime_resume(struct device *dev)
 {
+	struct dw_mci *host = dev_get_drvdata(dev);
+	struct dw_mci_exynos_priv_data *priv = host->priv;
+
+	if (priv->pinctrl && priv->clk_drive_base)
+		pinctrl_select_state(priv->pinctrl, priv->clk_drive_base);
+	if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD)
+		exynos_pmu_update(priv->pmu.offset, priv->pmu.mask, priv->pmu.val);
+
 	return dw_mci_runtime_resume(dev);
 }
 
@@ -1236,6 +1257,7 @@ static const struct dw_mci_drv_data exynos_drv_data = {
 	.access_control_abort = exynos_mmc_smu_abort,
 	.access_control_resume = exynos_mmc_smu_resume,
 	.ssclk_control = dw_mci_exynos_ssclk_control,
+	.runtime_pm_control = dw_mci_exynos_runtime_pm_control,
 };
 
 static const struct of_device_id dw_mci_exynos_match[] = {

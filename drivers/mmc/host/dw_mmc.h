@@ -994,6 +994,7 @@ struct dw_mci_drv_data {
 	int (*access_control_abort)(struct dw_mci *host);
 	int (*access_control_resume)(struct dw_mci *host);
 	void (*ssclk_control)(struct dw_mci *host, int enable);
+	void (*runtime_pm_control)(struct dw_mci *host, int enable);
 };
 
 struct dw_mci_sfr_ram_dump {
