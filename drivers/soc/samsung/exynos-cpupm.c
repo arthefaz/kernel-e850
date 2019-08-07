@@ -288,12 +288,6 @@ struct power_mode {
 /* Maximum number of power modes manageable per cpu */
 #define MAX_MODE	5
 
-/* Iterator for power mode */
-#define for_each_mode(mode, array, pos)			\
-	for ((pos) = 0, (mode) = (array)[0];		\
-		(mode) = (array)[(pos)],		\
-		(pos) < MAX_MODE; (pos)++)
-
 /*
  * Main struct of CPUPM
  * Each cpu has its own data structure and main purpose of this struct is to
@@ -804,7 +798,10 @@ static int cluster_sibling_weight(unsigned int cpu)
 	int pos;
 
 	cpumask_clear(&mask);
-	for_each_mode(mode, pm->modes, pos) {
+
+	for (pos = 0; pos < MAX_MODE; pos++) {
+		mode = pm->modes[pos];
+
 		if (mode->type == POWERMODE_TYPE_CLUSTER) {
 			cpumask_and(&mask, &mode->siblings, cpu_online_mask);
 			break;
