@@ -1126,6 +1126,9 @@ struct decon_device {
 	unsigned long cur_using_dpp;
 	unsigned long dpp_err_stat;
 
+	unsigned long prev_req_win;
+	unsigned long cur_req_win;
+
 	struct mutex lock;
 	struct mutex pm_lock;
 	spinlock_t slock;

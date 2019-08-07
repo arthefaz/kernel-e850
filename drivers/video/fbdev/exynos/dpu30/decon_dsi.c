@@ -1138,6 +1138,7 @@ int decon_enter_hiber(struct decon_device *decon)
 		decon_set_protected_content(decon, NULL);
 #endif
 		decon->cur_using_dpp = 0;
+		decon->cur_req_win = 0;
 		decon_dpp_stop(decon, false);
 	}
 

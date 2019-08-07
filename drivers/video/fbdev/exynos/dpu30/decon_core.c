@@ -237,7 +237,7 @@ void decon_dpp_stop(struct decon_device *decon, bool do_reset)
 	bool rst = false;
 	struct v4l2_subdev *sd;
 
-	for (i = 0; i < decon->dt.dpp_cnt; i++) {
+	for (i = 0; i < decon->dt.dpp_cnt; i++) { /* dpp channel order */
 		if (test_bit(i, &decon->prev_used_dpp) &&
 				!test_bit(i, &decon->cur_using_dpp)) {
 			sd = decon->dpp_sd[i];
@@ -251,6 +251,11 @@ void decon_dpp_stop(struct decon_device *decon, bool do_reset)
 			clear_bit(i, &decon->dpp_err_stat);
 		}
 	}
+
+	for (i = 0; i < decon->dt.max_win; i++) /* window number order */
+		if (test_bit(i, &decon->prev_req_win) &&
+				!test_bit(i, &decon->cur_req_win))
+			clear_bit(i, &decon->prev_req_win);
 }
 
 static void decon_free_unused_buf(struct decon_device *decon,
@@ -726,6 +731,7 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 		decon_set_protected_content(decon, NULL);
 #endif
 		decon->cur_using_dpp = 0;
+		decon->cur_req_win = 0;
 		decon_dpp_stop(decon, false);
 	}
 
@@ -936,6 +942,7 @@ static int decon_dp_disable(struct decon_device *decon)
 		decon_set_protected_content(decon, NULL);
 #endif
 		decon->cur_using_dpp = 0;
+		decon->cur_req_win = 0;
 		decon_dpp_stop(decon, false);
 	}
 
@@ -1495,11 +1502,46 @@ void decon_reg_chmap_validate(struct decon_device *decon,
 	}
 }
 
-static void decon_check_used_dpp(struct decon_device *decon,
+static int decon_check_rsc_conflict(struct decon_device *decon,
+				unsigned long cur_dpps, unsigned long cur_wins)
+{
+	struct decon_device *other_decon;
+	int i;
+
+	for (i = 0; i < decon->dt.decon_cnt; ++i) {
+		other_decon = get_decon_drvdata(i);
+		if (other_decon->id == decon->id)
+			continue;
+
+		if (other_decon->prev_used_dpp & cur_dpps) {
+			decon_err("DPP resources conflict\n");
+			decon_err("\tdecon%d prev(0x%lx), decon%d cur(0x%lx)\n",
+					other_decon->id, other_decon->prev_used_dpp,
+					decon->id, cur_dpps);
+			return -EINVAL;
+		}
+
+		if (other_decon->prev_req_win & cur_wins) {
+			decon_err("WINDOW resources conflict\n");
+			decon_err("\tdecon%d prev(0x%lx), decon%d cur(0x%lx)\n",
+					other_decon->id, other_decon->prev_req_win,
+					decon->id, cur_wins);
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
+static int decon_check_used_dpp(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
 	int i = 0;
-	decon->cur_using_dpp = 0;
+	unsigned long prev_dpps, prev_wins;
+	unsigned long cur_dpps = 0, cur_wins = 0;
+
+	prev_dpps = decon->prev_used_dpp;
+	prev_wins = decon->prev_req_win;
 
 	for (i = 0; i < decon->dt.max_win; i++) {
 		struct decon_win *win = decon->win[i];
@@ -1510,15 +1552,36 @@ static void decon_check_used_dpp(struct decon_device *decon,
 
 		if ((regs->win_regs[i].wincon & WIN_EN_F(i)) &&
 			(!regs->win_regs[i].winmap_state)) {
-			set_bit(win->dpp_id, &decon->cur_using_dpp);
-			set_bit(win->dpp_id, &decon->prev_used_dpp);
+			set_bit(win->dpp_id, &cur_dpps);
+			set_bit(win->dpp_id, &prev_dpps);
+		}
+
+		if (regs->win_regs[i].wincon & WIN_EN_F(i)) {
+			set_bit(i, &cur_wins);
+			set_bit(i, &prev_wins);
 		}
 	}
 
 	if (decon->dt.out_type == DECON_OUT_WB || regs->readback.request) {
-		set_bit(ODMA_WB, &decon->cur_using_dpp);
-		set_bit(ODMA_WB, &decon->prev_used_dpp);
+		set_bit(ODMA_WB, &cur_dpps);
+		set_bit(ODMA_WB, &prev_dpps);
 	}
+
+	/* check resource conflict here */
+	if (decon_check_rsc_conflict(decon, cur_dpps, cur_wins))
+		return -EINVAL;
+
+	/*
+	 * prev_used_dpp and prev_req_win of decon structure are NOT updated
+	 * when resource conflict occurs.
+	 * If not, sw and hw resource information will be mis-matched.
+	 */
+	decon->prev_used_dpp = prev_dpps;
+	decon->cur_using_dpp = cur_dpps;
+	decon->prev_req_win = prev_wins;
+	decon->cur_req_win = cur_wins;
+
+	return 0;
 }
 
 void decon_dpp_wait_wb_framedone(struct decon_device *decon)
@@ -1570,6 +1633,7 @@ static int decon_set_dpp_config(struct decon_device *decon,
 			if (regs->num_of_window != 0)
 				regs->num_of_window--;
 			clear_bit(win->dpp_id, &decon->cur_using_dpp);
+			clear_bit(i, &decon->cur_req_win);
 			set_bit(win->dpp_id, &decon->dpp_err_stat);
 			err_cnt++;
 		}
@@ -2160,7 +2224,19 @@ static void decon_update_regs(struct decon_device *decon,
 	decon_update_afbc_info(decon, regs, true);
 #endif
 
-	decon_check_used_dpp(decon, regs);
+	if (decon_check_used_dpp(decon, regs)) {
+		/*
+		 * If this is the first handling of update_handler thread
+		 * after unblanked, HW trigger is unmasked. It makes unnecessary
+		 * data transmission
+		 */
+		if ((decon->dt.psr_mode == DECON_MIPI_COMMAND_MODE) &&
+				(decon->dt.trig_mode == DECON_HW_TRIG))
+			decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_DISABLE);
+		decon_save_cur_buf_info(decon, regs);
+		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+		goto fence_err;
+	}
 
 	decon_update_hdr_info(decon, regs);
 
@@ -4105,6 +4181,8 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 
 	set_bit(dpp_id, &decon->cur_using_dpp);
 	set_bit(dpp_id, &decon->prev_used_dpp);
+	set_bit(decon->dt.dft_win, &decon->prev_req_win);
+	set_bit(decon->dt.dft_win, &decon->cur_req_win);
 	memset(&config, 0, sizeof(struct decon_win_config));
 	config.dpp_parm.addr[0] = fbinfo->fix.smem_start;
 	config.format = DECON_PIXEL_FORMAT_BGRA_8888;
