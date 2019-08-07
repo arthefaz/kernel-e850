@@ -36,8 +36,7 @@ struct esgov_policy {
 	/* The next fields are for the tunnables */
 	int			step;
 	unsigned long		step_power;	/* allowed energy at a step */
-	s64			up_rate_delay_ns;
-	s64			down_rate_delay_ns;
+	s64			rate_delay_ns;
 
 	/* Tracking min max information */
 	int			min_cap;	/* allowed max capacity */
@@ -293,8 +292,7 @@ static struct esgov_policy *esgov_policy_alloc(struct cpufreq_policy *policy)
 		goto free_allocation;
 
 	esg_update_step(esg_policy, val);
-	esg_policy->up_rate_delay_ns = 4 * NSEC_PER_MSEC;
-	esg_policy->down_rate_delay_ns = 4 * NSEC_PER_MSEC;
+	esg_policy->rate_delay_ns = 4 * NSEC_PER_MSEC;
 
 	/* Init Sysfs */
 	if (kobject_init_and_add(&esg_policy->kobj, &ktype_esg, esg_kobj,
@@ -511,18 +509,12 @@ static void esgov_update_cpu_util(struct esgov_cpu *esg_cpu)
 	trace_esg_cpu_util(esg_cpu->cpu, eutil, sutil, max, util);
 }
 
-static bool esgov_check_rate_delay(struct esgov_policy *esg_policy,
-				unsigned int target_freq, u64 time)
+static bool esgov_check_rate_delay(struct esgov_policy *esg_policy, u64 time)
 {
 	s64 delta_ns = time - esg_policy->last_freq_update_time;
 
-	if (target_freq > esg_policy->target_freq) {
-		if (delta_ns < esg_policy->up_rate_delay_ns)
-			return false;
-	} else {
-		if (delta_ns < esg_policy->down_rate_delay_ns)
-			return false;
-	}
+	if (delta_ns < esg_policy->rate_delay_ns)
+		return false;
 
 	return true;
 }
@@ -561,7 +553,7 @@ esgov_update(struct update_util_data *hook, u64 time, unsigned int flags)
 	/* update this cpu util */
 	esgov_update_cpu_util(esg_cpu);
 
-	if (!esgov_check_rate_delay(esg_policy, target_freq, time))
+	if (!esgov_check_rate_delay(esg_policy, time))
 		return;
 
 	target_util = esgov_get_target_util(esg_cpu);
