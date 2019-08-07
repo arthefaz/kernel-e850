@@ -1478,10 +1478,11 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | DAC_RESETB_MASK,
-				AVC_RESETB_MASK | DAC_RESETB_MASK);
+				AVC_RESETB_MASK | CORE_RESETB_MASK | SYSTEM_RESET_MASK,
+				AVC_RESETB_MASK | CORE_RESETB_MASK | SYSTEM_RESET_MASK);
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
+				RSTB_DAC_DSM_MASK | DAC_RESETB_MASK,
+				RSTB_DAC_DSM_MASK | DAC_RESETB_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -1507,7 +1508,7 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 
 		/* Reset off DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | RSTB_ADC_MASK | ADC_RESETB_MASK, 0);
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
 
 		break;
 	case SND_SOC_DAPM_POST_PMD:
@@ -1602,10 +1603,11 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | DAC_RESETB_MASK,
-				AVC_RESETB_MASK | DAC_RESETB_MASK);
+				AVC_RESETB_MASK | CORE_RESETB_MASK | SYSTEM_RESET_MASK,
+				AVC_RESETB_MASK | CORE_RESETB_MASK | SYSTEM_RESET_MASK);
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
+				RSTB_DAC_DSM_MASK | DAC_RESETB_MASK,
+				RSTB_DAC_DSM_MASK | DAC_RESETB_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -1631,7 +1633,7 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 
 		/* Reset off DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | RSTB_ADC_MASK | ADC_RESETB_MASK, 0);
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
 
 		break;
 	case SND_SOC_DAPM_POST_PMD:
@@ -1754,10 +1756,11 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | DAC_RESETB_MASK,
-				AVC_RESETB_MASK | DAC_RESETB_MASK);
+				AVC_RESETB_MASK | CORE_RESETB_MASK | SYSTEM_RESET_MASK,
+				AVC_RESETB_MASK | CORE_RESETB_MASK | SYSTEM_RESET_MASK);
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
+				RSTB_DAC_DSM_MASK | DAC_RESETB_MASK,
+				RSTB_DAC_DSM_MASK | DAC_RESETB_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -1783,7 +1786,7 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 
 		/* Reset off DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | RSTB_ADC_MASK | ADC_RESETB_MASK, 0);
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
 
 		break;
 	case SND_SOC_DAPM_POST_PMD:
@@ -1845,10 +1848,11 @@ static int linedrv_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | DAC_RESETB_MASK,
-				AVC_RESETB_MASK | DAC_RESETB_MASK);
+				AVC_RESETB_MASK | CORE_RESETB_MASK | SYSTEM_RESET_MASK,
+				AVC_RESETB_MASK | CORE_RESETB_MASK | SYSTEM_RESET_MASK);
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
+				RSTB_DAC_DSM_MASK | DAC_RESETB_MASK,
+				RSTB_DAC_DSM_MASK | DAC_RESETB_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -1874,7 +1878,7 @@ static int linedrv_ev(struct snd_soc_dapm_widget *w,
 
 		/* Reset off DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | RSTB_ADC_MASK | ADC_RESETB_MASK, 0);
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
 
 		break;
 	case SND_SOC_DAPM_POST_PMD:
