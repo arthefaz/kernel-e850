@@ -94,74 +94,6 @@ static void print_mc_state(struct modem_ctl *mc)
 		dump, ap_status, phone_active);
 }
 
-static ssize_t modem_ctrl_show(struct device *dev,
-			struct device_attribute *attr, char *buf)
-{
-	int ret = 0;
-	struct modem_ctl *mc = dev_get_drvdata(dev);
-	struct link_device *ld = get_current_link(mc->iod);
-	struct platform_device *pdev = to_platform_device(mc->dev);
-
-	ret = snprintf(buf, PAGE_SIZE, "Start S5100 PCIe\n");
-
-	mdelay(100);
-
-	exynos_pcie_host_v1_poweron(mc->pcie_ch_num);
-	s51xx_pcie_init(mc);
-
-	request_pcie_msi_int(ld, pdev);
-
-	exynos_pcie_host_v1_poweroff(mc->pcie_ch_num);
-
-	return ret;
-}
-
-static ssize_t modem_ctrl_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct modem_ctl *mc = dev_get_drvdata(dev);
-	long ops_num;
-	int ret;
-
-	ret = kstrtol(buf, 10, &ops_num);
-
-	if (ret != 0)
-		return count;
-
-	switch (ops_num) {
-	case 0:
-		mif_err(">>>>Queuing DISLINK work<<<<\n");
-		queue_work(mc->wakeup_wq, &mc->dislink_work);
-		break;
-	case 1:
-		mif_err(">>>>Queuing LINK work<<<<\n");
-		queue_work(mc->wakeup_wq, &mc->link_work);
-		break;
-	default:
-		mif_err("Wrong operation number\n");
-		mif_err("0 - Queuing Dislink work.\n");
-		mif_err("1 - Queuing Link work.\n");
-	}
-
-	return count;
-}
-
-static DEVICE_ATTR(modem_ctrl, 0644, modem_ctrl_show, modem_ctrl_store);
-
-static void pcie_link_work(struct work_struct *ws)
-{
-	struct modem_ctl *mc;
-	mc = container_of(ws, struct modem_ctl, link_work);
-	s5100_poweron_pcie(mc);
-}
-
-static void pcie_dislink_work(struct work_struct *ws)
-{
-	struct modem_ctl *mc;
-	mc = container_of(ws, struct modem_ctl, dislink_work);
-	s5100_poweroff_pcie(mc, false);
-}
-
 static void pcie_clean_dislink(struct modem_ctl *mc)
 {
 	if (mc->pcie_powered_on) {
@@ -191,8 +123,7 @@ static void cp2ap_wakeup_work(struct work_struct *ws)
 	if (mc->phone_state == STATE_CRASH_EXIT)
 		return;
 
-	queue_work_on(RUNTIME_PM_AFFINITY_CORE, mc->wakeup_wq,
-			&mc->link_work);
+	s5100_poweron_pcie(mc);
 }
 
 static void cp2ap_suspend_work(struct work_struct *ws)
@@ -208,8 +139,7 @@ static void cp2ap_suspend_work(struct work_struct *ws)
 	if (mc->phone_state == STATE_CRASH_EXIT)
 		return;
 
-	queue_work_on(RUNTIME_PM_AFFINITY_CORE, mc->wakeup_wq,
-			&mc->dislink_work);
+	s5100_poweroff_pcie(mc, false);
 }
 
 /* It means initial GPIO level. */
@@ -1312,14 +1242,8 @@ int s5100_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 		return -EINVAL;
 	}
 
-	INIT_WORK(&mc->link_work, pcie_link_work);
-	INIT_WORK(&mc->dislink_work, pcie_dislink_work);
 	INIT_WORK(&mc->wakeup_work, cp2ap_wakeup_work);
 	INIT_WORK(&mc->suspend_work, cp2ap_suspend_work);
-
-	ret = device_create_file(mc->dev, &dev_attr_modem_ctrl);
-	if (ret)
-		mif_err("can't create modem_ctrl!!!\n");
 
 	register_reboot_notifier(&nb_reboot_block);
 

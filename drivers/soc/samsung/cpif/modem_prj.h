@@ -683,8 +683,6 @@ struct modem_ctl {
 	struct irq_chip *apwake_irq_chip;
 	struct pci_dev *s51xx_pdev;
 	struct workqueue_struct *wakeup_wq;
-	struct work_struct link_work;
-	struct work_struct dislink_work;
 	struct work_struct wakeup_work;
 	struct work_struct suspend_work;
 
