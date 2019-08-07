@@ -709,6 +709,7 @@
 &panel_0 {
     /* reset, power */
     gpios = <&gpg2 5 0x1>, <&gpg1 1 0x1>;
+	regulator_1p8v = "vdd_ldo28";
 };
 
 &udc {
