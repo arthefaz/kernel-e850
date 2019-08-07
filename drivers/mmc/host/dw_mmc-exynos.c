@@ -258,6 +258,19 @@ static int exynos_mmc_iocc_enable(struct dw_mci *host)
 	return ret;
 }
 
+static void dw_mci_exynos_runtime_pm_control(struct dw_mci *host, int enable)
+{
+	struct dw_mci_exynos_priv_data *priv = host->priv;
+
+	if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM) {
+		if (enable) {
+			pm_runtime_get_sync(host->dev);
+		} else {
+			pm_runtime_put_sync(host->dev);
+		}
+	}
+}
+
 static int dw_mci_exynos_priv_init(struct dw_mci *host)
 {
 	struct dw_mci_exynos_priv_data *priv = host->priv;
@@ -370,9 +383,15 @@ static void dw_mci_exynos_set_clksel_timing(struct dw_mci *host, u32 timing)
 static int dw_mci_exynos_runtime_resume(struct device *dev)
 {
 	struct dw_mci *host = dev_get_drvdata(dev);
+	struct dw_mci_exynos_priv_data *priv = host->priv;
 
 	if(exynos_mmc_iocc_enable(host))
 		dev_err(host->dev,"mmc io coherency enable fail!\n");
+
+	if (priv->pinctrl && priv->clk_drive_base)
+		pinctrl_select_state(priv->pinctrl, priv->clk_drive_base);
+	if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD)
+		exynos_pmu_update(priv->pmu.offset, priv->pmu.mask, priv->pmu.val);
 
 	return dw_mci_runtime_resume(dev);
 }
@@ -1474,6 +1493,7 @@ static const struct dw_mci_drv_data exynos_drv_data = {
 #endif
 	.ssclk_control = dw_mci_exynos_ssclk_control,
 	.dump_reg = dw_mci_reg_dump,
+	.runtime_pm_control = dw_mci_exynos_runtime_pm_control,
 };
 
 static const struct of_device_id dw_mci_exynos_match[] = {

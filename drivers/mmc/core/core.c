@@ -2254,6 +2254,9 @@ void mmc_rescan(struct work_struct *work)
 		return;
 	host->rescan_entered = 1;
 
+	/* runtime_pm enable */
+	host->ops->runtime_pm_control(host, 1);
+
 	if (host->trigger_card_event && host->ops->card_event) {
 		mmc_claim_host(host);
 		host->ops->card_event(host);
@@ -2293,7 +2296,12 @@ void mmc_rescan(struct work_struct *work)
 			host->ops->get_cd(host) == 0) {
 		mmc_power_off(host);
 		mmc_release_host(host);
+		/* runtime_pm disable */
+		host->ops->runtime_pm_control(host, 0);
 		goto out;
+	} else {
+		/* runtime_pm disable */
+		host->ops->runtime_pm_control(host, 1);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(freqs); i++) {
@@ -2309,7 +2317,8 @@ void mmc_rescan(struct work_struct *work)
 			break;
 	}
 	mmc_release_host(host);
-
+	/* runtime_pm disable */
+	host->ops->runtime_pm_control(host, 0);
  out:
 	if (host->caps & MMC_CAP_NEEDS_POLL)
 		mmc_schedule_delayed_work(&host->detect, HZ);

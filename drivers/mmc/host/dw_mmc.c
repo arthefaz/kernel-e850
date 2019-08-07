@@ -2458,7 +2458,16 @@ static void dw_mci_restore_host(struct mmc_host *mmc)
 		   SDMMC_INT_TXDR | SDMMC_INT_RXDR | DW_MCI_ERROR_FLAGS |
 		   SDMMC_INT_VOLT_SWITCH);
 	mci_writel(host, CTRL, SDMMC_CTRL_INT_ENABLE);
+}
 
+static void dw_mci_runtime_pm_control(struct mmc_host *mmc, int enable)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	const struct dw_mci_drv_data *drv_data = host->drv_data;
+
+	if (drv_data && drv_data->runtime_pm_control)
+		drv_data->runtime_pm_control(host, enable);
 }
 #endif
 
@@ -2477,6 +2486,7 @@ static const struct mmc_host_ops dw_mci_ops = {
 	.start_signal_voltage_switch = dw_mci_switch_voltage,
 	.init_card 		= dw_mci_init_card,
 	.prepare_hs400_tuning 	= dw_mci_prepare_hs400_tuning,
+	.runtime_pm_control 	= dw_mci_runtime_pm_control,
 };
 
 static void dw_mci_request_end(struct dw_mci *host, struct mmc_request *mrq)
