@@ -174,7 +174,7 @@
 							regulator-max-microvolt = <1200000>;
 							regulator-always-on;
 							regulator-ramp-delay = <12000>;
-							regulator-initial-mode = <3>;
+							regulator-initial-mode = <1>;
 						};
 
 						b2_reg: BUCK2 {
@@ -183,7 +183,7 @@
 							regulator-max-microvolt = <1200000>;
 							regulator-always-on;
 							regulator-ramp-delay = <12000>;
-							regulator-initial-mode = <3>;
+							regulator-initial-mode = <1>;
 						};
 /*
 						b3_reg: BUCK3 {
@@ -237,7 +237,7 @@
 							regulator-max-microvolt = <1300000>;
 							regulator-always-on;
 							regulator-ramp-delay = <12000>;
-							regulator-initial-mode = <3>;
+							regulator-initial-mode = <1>;
 						};
 
 						l4_reg: LDO4 {
@@ -246,7 +246,7 @@
 							regulator-max-microvolt = <1950000>;
 							regulator-always-on;
 							regulator-ramp-delay = <12000>;
-							regulator-initial-mode = <3>;
+							regulator-initial-mode = <1>;
 						};
 
 						l5_reg: LDO5 {
@@ -264,7 +264,7 @@
 							regulator-max-microvolt = <1187500>;
 							regulator-always-on;
 							regulator-ramp-delay = <12000>;
-							regulator-initial-mode = <3>;
+							regulator-initial-mode = <1>;
 						};
 
 						l7_reg: LDO7 {
@@ -273,7 +273,7 @@
 							regulator-max-microvolt = <1300000>;
 							regulator-always-on;
 							regulator-ramp-delay = <12000>;
-							regulator-initial-mode = <3>;
+							regulator-initial-mode = <1>;
 						};
 
 						l8_reg: LDO8 {
@@ -282,7 +282,7 @@
 							regulator-max-microvolt = <1300000>;
 							regulator-always-on;
 							regulator-ramp-delay = <12000>;
-							regulator-initial-mode = <3>;
+							regulator-initial-mode = <1>;
 						};
 
 						l9_reg: LDO9 {
@@ -291,7 +291,7 @@
 							regulator-max-microvolt = <1300000>;
 							regulator-always-on;
 							regulator-ramp-delay = <12000>;
-							regulator-initial-mode = <3>;
+							regulator-initial-mode = <1>;
 						};
 
 						l10_reg: LDO10 {
