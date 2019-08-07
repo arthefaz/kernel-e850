@@ -303,16 +303,14 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define JACK_DET_F					BIT(0)
 
 /* AUD3004X_03_IRQ3PEND */
-#define IMP_CHECK_DONE_R			BIT(5)
-#define ST_POLE_R					BIT(4)
+#define ST_POLE_R					BIT(5)
 #define ANT_MDET_R					BIT(3)
 #define ANT_MDET2_R					BIT(2)
 #define ANT_LDET_R					BIT(1)
 #define BTN_DET_R					BIT(0)
 
 /* AUD3004X_04_IRQ4PEND */
-#define IMP_CHECK_DONE_F			BIT(5)
-#define ST_POLE_F					BIT(4)
+#define ST_POLE_F					BIT(5)
 #define ANT_MDET_F					BIT(3)
 #define ANT_MDET2_F					BIT(2)
 #define ANT_LDET_F					BIT(1)
@@ -385,7 +383,7 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define IRQ2M_MASK_ALL				0xFF
 
 /* AUD3004X_0A_IRQ3M */
-#define ST_POLE_R_SHIFT				4
+#define ST_POLE_R_SHIFT				5
 #define ST_POLE_R_MASK				BIT(ST_POLE_R_SHIFT)
 
 #define ANT_MDET_R_M_SHIFT			3
@@ -403,7 +401,7 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define IRQ3M_MASK_ALL				0x3F
 
 /* AUD3004X_0B_IRQ4M */
-#define ST_POLE_F_SHIFT				4
+#define ST_POLE_F_SHIFT				5
 #define ST_POLE_F_MASK				BIT(ST_POLE_F_SHIFT)
 
 #define ANT_MDET_F_M_SHIFT			3

@@ -38,6 +38,8 @@
 
 u8 irq_reg[S2MPU12_IRQ_GROUP_NR] = {0};
 u8 irq_codec[CODEC_IRQ_CNT];
+u8 irq_codec_m[CODEC_IRQ_CNT-2];
+bool codec_irq_flag = false;
 
 static const u8 s2mpu12_mask_reg[] = {
 	[PMIC_INT1] = S2MPU12_PMIC_INT1M,
@@ -264,16 +266,23 @@ static int s2mpu12_pmic_notifier(struct s2mpu12_dev *s2mpu12)
 
 static int s2mpu12_ibi_notifier(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 {
-	int ret;
+	int ret, i;
 	u8 state = ibi_src[0];
 
 	if (state & S2MPU12_IBI0_CODEC || state & S2MPU12_IBI0_PMIC_M) {
-		ret = s2mpu12_pmic_notifier(s2mpu12);
+		for (i = PMIC_INT1; i <= PMIC_INT6; i++) {
+			if (irq_reg[i]) {
+				ret = s2mpu12_pmic_notifier(s2mpu12);
+				break;
+			}
+		}
 
-		if (state & S2MPU12_IBI0_CODEC) {
-			if (codec_notifier_flag)
-				aud3004x_call_notifier(irq_codec, CODEC_IRQ_CNT);
-			else
+		if (codec_irq_flag & codec_notifier_flag) {
+			aud3004x_call_notifier(irq_codec, CODEC_IRQ_CNT);
+			codec_irq_flag = false;
+		}
+		else {
+			if (codec_irq_flag)
 				pr_err("%s: codec handler not registered!\n", __func__);
 		}
 
@@ -294,9 +303,17 @@ static int s2mpu12_check_ibi_source(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 					S2MPU12_NUM_IRQ_PMIC_REGS,
 					&irq_reg[PMIC_INT1]);
 
-		if (state & S2MPU12_IBI0_CODEC) {
-			check = exynos_acpm_bulk_read(0, 0x07, 0x01, 6, &irq_codec[0]);
-			check = exynos_acpm_bulk_read(0, 0x07, 0xF0, 2, &irq_codec[6]);
+		check = exynos_acpm_bulk_read(0, 0x07, 0x08, 6, &irq_codec_m[0]);
+		check = exynos_acpm_bulk_read(0, 0x07, 0x01, 6, &irq_codec[0]);
+		check = exynos_acpm_bulk_read(0, 0x07, 0xF0, 2, &irq_codec[6]);
+
+		for (int i = 0; i < 6; i++) {
+			irq_codec[i] = irq_codec[i] & (~irq_codec_m[i]);
+		}
+
+		if (irq_codec[0] | irq_codec[1] | irq_codec[2] |
+				irq_codec[3] | irq_codec[4] | irq_codec[5]) {
+			codec_irq_flag = true;
 		}
 
 		if (ret) {

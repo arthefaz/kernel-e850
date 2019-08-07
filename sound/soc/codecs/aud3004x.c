@@ -2759,7 +2759,7 @@ static int aud3004x_codec_probe(struct snd_soc_codec *codec)
 	aud3004x->is_probe_done = true;
 
 	/* Jack probe */
-//	aud3004x_jack_probe(codec);
+	aud3004x_jack_probe(codec);
 
 	return 0;
 }
@@ -2780,7 +2780,7 @@ static int aud3004x_codec_remove(struct snd_soc_codec *codec)
 		}
 	}
 
-//	aud3004x_jack_remove(codec);
+	aud3004x_jack_remove(codec);
 	aud3004x_regulators_disable(codec);
 
 	return 0;
