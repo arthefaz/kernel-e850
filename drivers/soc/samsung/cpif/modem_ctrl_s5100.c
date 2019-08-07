@@ -232,6 +232,9 @@ static irqreturn_t cp_active_handler(int irq, void *data)
 	old_state = mc->phone_state;
 	new_state = STATE_CRASH_EXIT;
 
+	if (ld->crash_reason.type == CRASH_REASON_NONE)
+		ld->crash_reason.type = CRASH_REASON_CP_ACT_CRASH;
+
 	mif_info("Set s5100_cp_reset_required to false\n");
 	mc->s5100_cp_reset_required = false;
 
@@ -687,7 +690,8 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 	struct mem_link_device *mld = to_mem_link_device(ld);
 	u32 crash_type;
 
-	ld->crash_reason.type = CRASH_REASON_MIF_FORCED;
+	if (ld->crash_reason.type == CRASH_REASON_NONE)
+		ld->crash_reason.type = CRASH_REASON_MIF_FORCED;
 	crash_type = ld->crash_reason.type;
 
 	mif_err("+++\n");

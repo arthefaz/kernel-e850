@@ -650,6 +650,7 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 #endif
 
 	ld->crash_reason.type = CRASH_REASON_NONE;
+	memset(ld->crash_reason.string, 0, CP_CRASH_INFO_SIZE);
 	mif_err("Set crash_reason type:%d\n", ld->crash_reason.type);
 
 	mld->state = LINK_STATE_IPC;
