@@ -730,9 +730,9 @@ static void __init virtual_cluster_init(void)
 	if (dn) {
 		int i, cluster_cnt = 0;
 
+		pr_info("%s:Virtual Cluster Info\n", __func__);
 		of_property_read_u32(dn, "vcluster_cnt", &cluster_cnt);
 
-		pr_info("%s:Virtual Cluster Info\n", __func__);
 		for (i = 0 ; i < cluster_cnt ; i++) {
 			int cpu;
 			char name[20];
@@ -743,16 +743,17 @@ static void __init virtual_cluster_init(void)
 			if (!of_property_read_string(dn, name, &buf)) {
 				cpulist_parse(buf, &sibling);
 
-				pr_info("Cluster%d : ", i);
-				for_each_cpu(cpu, &sibling) {
+				if (cpumask_empty(&sibling))
+					continue;
+
+				for_each_cpu(cpu, &sibling)
 					per_cpu(vcluster_id, cpu) = i;
-					pr_info("%d ", cpu);
-				}
-				pr_info("\n");
+
+				pr_info("\tCluster%d : CPU%*pbl\n", i, cpumask_pr_args(&sibling));
 			}
 		}
 	} else {
-		pr_info("No Virtual Cluster Info\n");
+		pr_info("vcluster: No Virtual Cluster Info\n");
 	}
 }
 
