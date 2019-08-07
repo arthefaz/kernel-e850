@@ -137,7 +137,7 @@ int exynos_get_idle_ip_index(const char *ip_name)
 
 	if (ip_index >= IDLE_IP_MAX) {
 		pr_err("Up to 64 idle-ip can be supported[failed %s].", ip_name);
-		return -1;
+		goto free;
 	}
 
 	ip = kzalloc(sizeof(struct idle_ip), GFP_KERNEL);
@@ -151,6 +151,9 @@ int exynos_get_idle_ip_index(const char *ip_name)
 	exynos_update_ip_idle_status(ip->index, 0);
 
 	return ip->index;
+free:
+	kfree(ip);
+	return -1;
 }
 
 static void __init fix_idle_ip_init(void)
