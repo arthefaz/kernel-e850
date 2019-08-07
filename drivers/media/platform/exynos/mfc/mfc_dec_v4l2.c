@@ -452,7 +452,7 @@ static int mfc_dec_g_fmt_vid_cap_mplane(struct file *file, void *priv,
 	MFC_TRACE_CTX("** DEC g_fmt(state:%d wait_state:%d)\n",
 			ctx->state, ctx->wait_state);
 
-	if (dec && dec->disp_res_change) {
+	if (dec->disp_res_change) {
 		if (__mfc_dec_update_disp_res(ctx, f) == 0)
 			return 0;
 	}

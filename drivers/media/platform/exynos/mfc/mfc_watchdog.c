@@ -156,6 +156,10 @@ static void mfc_merge_errorinfo_data(struct mfc_dev *dev, bool px_fault)
 	}
 
 	/* driver info */
+	if (idx >= MFC_LOGGING_DATA_SIZE) {
+		dev_err(dev->device, "logging data size exceed: %d\n", idx);
+		return;
+	}
 	ret = snprintf(errorinfo + idx, 3, "/");
 	idx += ret;
 	idx = __mfc_change_hex_to_ascii(dev, dev->logging_data->curr_ctx, 2, errorinfo, idx);
@@ -179,6 +183,10 @@ static void mfc_merge_errorinfo_data(struct mfc_dev *dev, bool px_fault)
 		idx = __mfc_change_hex_to_ascii(dev, dev->logging_data->last_dst_addr[i], 8, errorinfo, idx);
 
 	/* last trace info */
+	if (idx >= MFC_LOGGING_DATA_SIZE) {
+		dev_err(dev->device, "logging data size exceed: %d\n", idx);
+		return;
+	}
 	ret = snprintf(errorinfo + idx, 3, "/");
 	idx += ret;
 

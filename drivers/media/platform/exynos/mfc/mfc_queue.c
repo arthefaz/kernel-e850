@@ -682,11 +682,6 @@ void mfc_store_dpb(struct mfc_ctx *ctx, struct vb2_buffer *vb)
 	unsigned long flags;
 	int index, plane;
 
-	if (!ctx) {
-		mfc_err("[DPB] no mfc context to run\n");
-		return;
-	}
-
 	dec = ctx->dec_priv;
 	if (!dec) {
 		mfc_err_ctx("[DPB] no mfc decoder to run\n");
