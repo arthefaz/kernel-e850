@@ -29,7 +29,7 @@
 				pinctrl-0 = <&cp_tray_det>,
 							<&sub_ant_hb_ctl_0 &sub_ant_hb_ctl_1>,
 							<&tdd_trx_sw1>,
-							<&tx_b13_14_20_sw>,
+							<&tx_b13_14_20_sw &b21_lan_en>,
 							<&drx_hb_lna_en1 &drx_hb_lna_en2>,
 							<&drx_mb_lna_en1 &drx_mb_lna_en2 &drx_mb_lna_en3 &drx_mb_lna_en4>,
 							<&prx_tr_b28_29_71_sw &prx_tr_b21_34_sw>,
@@ -355,68 +355,74 @@
 		samsung,pin-pud = <0>;
 	};
 
-	drx_hb_lna_en1: drx_hb_lna_en1 {
+	b21_lan_en: b21_lan_en {
 		samsung,pins = "gpa2-0";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
 	};
 
-	drx_hb_lna_en2: drx_hb_lna_en2 {
+	drx_hb_lna_en1: drx_hb_lna_en1 {
 		samsung,pins = "gpa2-1";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
 	};
 
-	drx_mb_lna_en1: drx_mb_lna_en1 {
+	drx_hb_lna_en2: drx_hb_lna_en2 {
 		samsung,pins = "gpa2-2";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
 	};
 
-	drx_mb_lna_en2: drx_mb_lna_en2 {
+	drx_mb_lna_en1: drx_mb_lna_en1 {
 		samsung,pins = "gpa2-3";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
 	};
 
-	drx_mb_lna_en3: drx_mb_lna_en3 {
+	drx_mb_lna_en2: drx_mb_lna_en2 {
 		samsung,pins = "gpa2-4";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
 	};
 
-	prx_tr_b28_29_71_sw: prx_tr_b28_29_71_sw {
+	drx_mb_lna_en3: drx_mb_lna_en3 {
 		samsung,pins = "gpa2-5";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
 	};
 
-	drx_mb_lna_en4: drx_mb_lna_en4 {
+	prx_tr_b28_29_71_sw: prx_tr_b28_29_71_sw {
 		samsung,pins = "gpa2-6";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
 	};
 
-	prx_tr_b21_34_sw: prx_tr_b21_34_sw {
+	drx_mb_lna_en4: drx_mb_lna_en4 {
 		samsung,pins = "gpa2-7";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
 	};
 
-	drx_mlb3_lna_en1: drx_mlb3_lna_en1 {
+	prx_tr_b21_34_sw: prx_tr_b21_34_sw {
 		samsung,pins = "gpa3-0";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
 	};
 
-	drx_mlb3_lna_en2: drx_mlb3_lna_en2 {
+	drx_mlb3_lna_en1: drx_mlb3_lna_en1 {
 		samsung,pins = "gpa3-1";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
 	};
 
-	drx_mlb3_lna_en3: drx_mlb3_lna_en3 {
+	drx_mlb3_lna_en2: drx_mlb3_lna_en2 {
 		samsung,pins = "gpa3-2";
+		samsung,pin-function = <3>;
+		samsung,pin-pud = <0>;
+	};
+
+	drx_mlb3_lna_en3: drx_mlb3_lna_en3 {
+		samsung,pins = "gpa3-3";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
 	};
