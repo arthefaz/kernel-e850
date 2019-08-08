@@ -195,29 +195,18 @@ static int decon_get_protect_id(int dma_id)
 	int prot_id = 0;
 
 	switch (dma_id) {
-#if defined(CONFIG_SOC_EXYNOS9830)
-	case 0: /* GF0 */
+	case 0:	/* VG0 */
 		prot_id = PROT_L0;
 		break;
-	case 1: /* GF1 */
+	case 1: /* G1 */
 		prot_id = PROT_L1;
 		break;
-	case 2: /* VG */
+	case 2: /* G2 */
 		prot_id = PROT_L2;
 		break;
-	case 3: /* VGS */
+	case 3: /* G0 */
 		prot_id = PROT_L3;
 		break;
-	case 4: /* VGF */
-		prot_id = PROT_L4;
-		break;
-	case 5: /* VGRFS */
-		prot_id = PROT_L5;
-		break;
-	case 6: /* WB */
-		prot_id = PROT_WB1;
-		break;
-#endif
 	default:
 		decon_err("Unknown DMA_ID (%d)\n", dma_id);
 		break;
