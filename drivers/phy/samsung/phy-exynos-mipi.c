@@ -822,6 +822,44 @@ static int __set_phy_cfg_0503_0005_dphy(void __iomem *regs, int option, u32 *cfg
 	return 0;
 }
 
+static int __set_phy_cfg_0503_0008_dphy(void __iomem *regs, int option, u32 *cfg)
+{
+	int i;
+	u32 settle_clk_sel = 1;
+	u32 skew_delay_sel = 0;
+	u32 skew_cal_en = 0;
+	u32 hs_mode_sel = 1;
+
+	if (cfg[SPEED] >= PHY_REF_SPEED) {
+		settle_clk_sel = 0;
+		skew_cal_en = 1;
+		hs_mode_sel = 0;
+
+		if (cfg[SPEED] >= 3000 && cfg[SPEED] <= 4500)
+			skew_delay_sel = 1;
+		else if (cfg[SPEED] >= 2000 && cfg[SPEED] < 3000)
+			skew_delay_sel = 2;
+		else if (cfg[SPEED] >= 1500 && cfg[SPEED] < 2000)
+			skew_delay_sel = 3;
+		else
+			skew_delay_sel = 0;
+	}
+
+	/* clock */
+	writel(0x00000002, regs + 0x1018); /* DPHY_ACTRL_SC_06 */
+
+	/* data */
+	for (i = 0; i <= cfg[LANES]; i++) {
+		update_bits(regs + 0x143C + (i * 0x400), 5, 2, skew_delay_sel); /* DPHY_ACTRL_SD_08 */
+		update_bits(regs + 0x14E0 + (i * 0x400), 0, 1, skew_cal_en); /* DPHY_DCTRL_SD_13 */
+
+		update_bits(regs + 0x14AC + (i * 0x400), 2, 1, hs_mode_sel); /* DPHY_DCTRL_SD_05 */
+		update_bits(regs + 0x14B0 + (i * 0x400), 0, 8, cfg[SETTLE]); /* DPHY_DCTRL_SD_06 */
+	}
+
+	return 0;
+}
+
 static const struct exynos_mipi_phy_cfg phy_cfg_table[] = {
 	{
 		.major = 0x0501,
@@ -884,6 +922,12 @@ static const struct exynos_mipi_phy_cfg phy_cfg_table[] = {
 		.minor = 0x0005,
 		.mode = 0xD,
 		.set = __set_phy_cfg_0503_0005_dphy,
+	},
+	{
+		.major = 0x0503,
+		.minor = 0x0008,
+		.mode = 0xD,
+		.set = __set_phy_cfg_0503_0008_dphy,
 	},
 	{ },
 };
@@ -962,6 +1006,12 @@ static struct exynos_mipi_phy_data mipi_phy_m0s4s4s4s4s2 = {
 	.slock = __SPIN_LOCK_UNLOCKED(mipi_phy_m0s4s4s4s4s2.slock),
 };
 
+static struct exynos_mipi_phy_data mipi_phy_m0s4s4s2 = {
+	.flags = MIPI_PHY_MxSx_SHARED,
+	.active_count = 0,
+	.slock = __SPIN_LOCK_UNLOCKED(mipi_phy_m0s4s4s2.slock),
+};
+
 static const struct of_device_id exynos_mipi_phy_of_table[] = {
 	{
 		.compatible = "samsung,mipi-phy-m4s4-top",
@@ -998,6 +1048,10 @@ static const struct of_device_id exynos_mipi_phy_of_table[] = {
 	{
 		.compatible = "samsung,mipi-phy-m0s4s4s4s4s2",
 		.data = &mipi_phy_m0s4s4s4s4s2,
+	},
+	{
+		.compatible = "samsung,mipi-phy-m0s4s4s2",
+		.data = &mipi_phy_m0s4s4s2,
 	},
 	{ },
 };
