@@ -2479,8 +2479,14 @@ int aud3004x_disable(struct device *dev)
 	for (p_map = AUD3004D; p_map <= AUD3004O; p_map++)
 		regcache_cache_only(aud3004x->regmap[p_map], true);
 
-	if (aud3004x->is_probe_done)
-		i2c_client_change(aud3004x, CODEC_CLOSE);
+	if (aud3004x->is_probe_done) {
+		if (aud3004x->regmap_lock.owner.counter != (long long)0) {
+			pr_err("[%s] mutex_lock %d\n", __func__,
+					aud3004x->regmap_lock.owner.counter);
+			i2c_client_change(aud3004x, CODEC_CLOSE);
+		}
+	}
+
 	aud3004x_regulators_disable(aud3004x->codec);
 
 	//abox_enable_mclk(false);
@@ -2760,11 +2766,19 @@ static int aud3004x_codec_probe(struct snd_soc_codec *codec)
 
 static int aud3004x_codec_remove(struct snd_soc_codec *codec)
 {
-//	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
 
 	dev_dbg(codec->dev, "(*) %s called\n", __func__);
 
+	pr_err("[%s] mutex_lock %d\n", __func__,
+			aud3004x->regmap_lock.owner.counter);
+
 //	destroy_workqueue(aud3004x->adc_mute_wq);
+	if (aud3004x->is_probe_done) {
+		if (aud3004x->regmap_lock.owner.counter != (long long)0) {
+			i2c_client_change(aud3004x, CODEC_CLOSE);
+		}
+	}
 
 //	aud3004x_jack_remove(codec);
 	aud3004x_regulators_disable(codec);
