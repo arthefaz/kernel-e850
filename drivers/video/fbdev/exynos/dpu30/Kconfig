@@ -26,6 +26,13 @@ config EXYNOS_DISPLAYPORT
 	help
 	  Enable DISPLAYPORT driver.
 
+config EXYNOS_DECON_DQE
+	bool "Samsung Exynos DQE driver"
+	depends on EXYNOS_DPU30
+	default n
+	help
+	  Enable DQE driver.
+
 config EXYNOS_WINDOW_UPDATE
         bool "Support Window Update Mode"
         depends on EXYNOS_DPU30
@@ -36,10 +43,12 @@ config EXYNOS_BLOCK_MODE
         depends on EXYNOS_DPU30
         default y
 
+if !EXYNOS_DECON_DQE
 config EXYNOS_HIBERNATION
 	bool "Support Display Hibernation Mode"
         depends on EXYNOS_DPU30
         default n
+endif
 
 config EXYNOS_CHANGE_HIBER_CNT
 	bool "Change Hibernation Entry Count at Runtime"

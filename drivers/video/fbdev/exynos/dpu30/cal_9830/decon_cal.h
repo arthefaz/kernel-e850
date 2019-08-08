@@ -269,6 +269,9 @@ void decon_reg_update_req_and_unmask(u32 id, struct decon_mode_info *psr);
 int decon_reg_wait_update_done_timeout(u32 id, unsigned long timeout);
 int decon_reg_wait_update_done_and_mask(u32 id,
 		struct decon_mode_info *psr, u32 timeout);
+#if defined(CONFIG_EXYNOS_DECON_DQE)
+void decon_reg_update_req_dqe(u32 id);
+#endif
 
 /* For window update and multi resolution feature */
 int decon_reg_wait_idle_status_timeout(u32 id, unsigned long timeout);
