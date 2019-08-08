@@ -30,6 +30,7 @@
 #include "exynos3830-pm-domains.dtsi"
 #include "exynos3830-bts.dtsi"
 #include "exynos3830-mfc.dtsi"
+#include "exynos3830-camera.dtsi"
 #include <dt-bindings/soc/samsung/exynos-ecs.h>
 #include "exynos3830-wlbt.dtsi"
 #include "exynos3830-ems.dtsi"
@@ -632,7 +633,11 @@
 		#size-cells = <1>;
 		ranges;
 
-		domain-clients = <>;
+		domain-clients = <&exynos_is>,
+						<&is_sensor0>,
+						<&is_sensor1>,
+						<&is_sensor2>,
+						<&camerapp_gdc>;
 	};
 
 	iommu-domain_mfcmscl {
