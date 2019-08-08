@@ -506,6 +506,35 @@ void DPU_EVENT_LOG_MEMMAP(dpu_event_t type, struct v4l2_subdev *sd,
 	memcpy(log->data.memmap.shd_addr, shd_addr, sizeof(shd_addr));
 }
 
+static void dpu_print_log_update_handler(struct seq_file *s,
+				struct decon_update_reg_data *reg)
+{
+	int i;
+	struct decon_win_config *config;
+	char *str_state[5] = {"DISABLED", "COLOR", "BUFFER", "UPDATE", "CURSOR"};
+	const struct dpu_fmt *fmt;
+
+	for (i = 0; i < MAX_DECON_WIN; i++) {
+		config = &reg->win_config[i];
+
+		if (config->state == DECON_WIN_STATE_DISABLED)
+			continue;
+
+		fmt = dpu_find_fmt_info(config->format);
+
+		seq_printf(s, "\t\t\tWIN%d: %s[0x%llx] SRC[%d %d %d %d %d %d] ",
+				i, str_state[config->state],
+				(config->state == DECON_WIN_STATE_BUFFER) ?
+				config->dpp_parm.addr[0] : 0,
+				config->src.x, config->src.y, config->src.w,
+				config->src.h, config->src.f_w, config->src.f_h);
+		seq_printf(s, "DST[%d %d %d %d %d %d] CH%d %s\n",
+				config->dst.x, config->dst.y, config->dst.w,
+				config->dst.h, config->dst.f_w, config->dst.f_h,
+				config->channel, fmt->name);
+	}
+}
+
 /* display logged events related with DECON */
 void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 {
@@ -515,9 +544,6 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 	struct timeval tv;
 	ktime_t prev_ktime;
 	struct dsim_device *dsim;
-	struct decon_win_config *config;
-	char *str_state[3] = {"DISABLED", "COLOR", "BUFFER"};
-	int i;
 
 	if (IS_ERR_OR_NULL(decon->d.event_log))
 		return;
@@ -602,19 +628,7 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 			break;
 		case DPU_EVT_UPDATE_HANDLER:
 			seq_printf(s, "%20s  ", "UPDATE_HANDLER\n");
-
-			for (i = 0; i < MAX_DECON_WIN; i++) {
-				config = &log->data.reg.win_config[i];
-
-				if (config->state == DECON_WIN_STATE_DISABLED)
-					continue;
-
-				seq_printf(s, "\t\t\tWIN%d: %s[0x%lx] SRC[%d %d %d %d]\n",
-						i, str_state[config->state],
-						(config->state == DECON_WIN_STATE_BUFFER) ?
-						(unsigned long)config->dpp_parm.addr[0] : 0,
-						config->src.x, config->src.y, config->src.w, config->src.h);
-			}
+			dpu_print_log_update_handler(s, &log->data.reg);
 			seq_printf(s, "\t\t\tPartial Size (%d,%d,%d,%d)\n",
 					log->data.reg.win.x,
 					log->data.reg.win.y,
