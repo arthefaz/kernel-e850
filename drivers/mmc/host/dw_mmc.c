@@ -881,8 +881,10 @@ static void dw_mci_idmac_stop_dma(struct dw_mci *host)
 
 static void dw_mci_dmac_complete_dma(void *arg)
 {
+	int ret;
 	struct dw_mci *host = arg;
 	struct mmc_data *data = host->data;
+	const struct dw_mci_drv_data *drv_data = host->drv_data;
 
 	dev_vdbg(host->dev, "DMA complete\n");
 
@@ -890,6 +892,15 @@ static void dw_mci_dmac_complete_dma(void *arg)
 		/* Invalidate cache after read */
 		dma_sync_sg_for_cpu(mmc_dev(host->slot->mmc),
 				    data->sg, data->sg_len, DMA_FROM_DEVICE);
+
+	if (drv_data && drv_data->crypto_engine_clear) {
+		ret = drv_data->crypto_engine_clear(host, host->sg_cpu, false);
+		if (ret) {
+			dev_err(host->dev,
+					"%s: failed to clear crypto engine(%d)\n",
+					__func__, ret);
+		}
+	}
 
 	host->dma_ops->cleanup(host);
 
@@ -981,7 +992,9 @@ static inline int dw_mci_prepare_desc64(struct dw_mci *host,
 	unsigned int desc_len;
 	struct idmac_desc_64addr *desc_first, *desc_last, *desc;
 	u32 val;
-	int i;
+	int i, ret;
+	const struct dw_mci_drv_data *drv_data = host->drv_data;
+	int sector_offset = 0;
 
 	desc_first = desc_last = desc = host->sg_cpu;
 
@@ -1020,6 +1033,18 @@ static inline int dw_mci_prepare_desc64(struct dw_mci *host,
 			desc->des4 = mem_addr & 0xffffffff;
 			desc->des5 = mem_addr >> 32;
 
+			if (drv_data && drv_data->crypto_engine_cfg) {
+				ret = drv_data->crypto_engine_cfg(host, desc,
+					data, sg_page(&data->sg[i]),
+					sector_offset, false);
+				if (ret) {
+					dev_err(host->dev,
+						"%s: fail to set crypto (%d)\n",
+						__func__, ret);
+					return -EPERM;
+				}
+				sector_offset += desc_len / DW_MMC_SECTOR_SIZE;
+			}
 			/* Update physical address for the next desc */
 			mem_addr += desc_len;
 
