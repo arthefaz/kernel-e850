@@ -83,7 +83,7 @@ static irqreturn_t cp_active_handler(int irq, void *arg)
 	enum modem_state old_state = mc->phone_state;
 	enum modem_state new_state = mc->phone_state;
 
-	cp_active = extract_ctrl_msg(mld->cp2ap_united_status, mc->sbi_lte_active_mask,
+	cp_active = extract_ctrl_msg(&mld->cp2ap_united_status, mc->sbi_lte_active_mask,
 			mc->sbi_lte_active_pos);
 
 	mif_info("old_state:%s cp_on:%d cp_active:%d\n",
@@ -227,8 +227,8 @@ static int init_control_messages(struct modem_ctl *mc)
 	unsigned int sbi_ext_backtrace_mask, sbi_ext_backtrace_pos;
 #endif
 
-	set_ctrl_msg(mld->ap2cp_united_status, 0);
-	set_ctrl_msg(mld->cp2ap_united_status, 0);
+	set_ctrl_msg(&mld->ap2cp_united_status, 0);
+	set_ctrl_msg(&mld->cp2ap_united_status, 0);
 
 	if (!np) {
 		mif_err("non-DT project, can't set mailbox regs\n");
@@ -239,7 +239,7 @@ static int init_control_messages(struct modem_ctl *mc)
 	mif_info("btl enable:%d\n", mc->mdm_data->btl.enabled);
 	mif_dt_read_u32(np, "sbi_ext_backtrace_mask", sbi_ext_backtrace_mask);
 	mif_dt_read_u32(np, "sbi_ext_backtrace_pos", sbi_ext_backtrace_pos);
-	update_ctrl_msg(mld->ap2cp_united_status, mc->mdm_data->btl.enabled,
+	update_ctrl_msg(&mld->ap2cp_united_status, mc->mdm_data->btl.enabled,
 				sbi_ext_backtrace_mask, sbi_ext_backtrace_pos);
 #endif
 
@@ -252,7 +252,7 @@ static int init_control_messages(struct modem_ctl *mc)
 		return -EINVAL;
 	}
 
-	update_ctrl_msg(mld->ap2cp_united_status, ds_det, mc->sbi_ds_det_mask,
+	update_ctrl_msg(&mld->ap2cp_united_status, ds_det, mc->sbi_ds_det_mask,
 			mc->sbi_ds_det_pos);
 	mif_info("ds_det:%d\n", ds_det);
 
@@ -264,7 +264,7 @@ static int init_control_messages(struct modem_ctl *mc)
 		return -EINVAL;
 	}
 
-	update_ctrl_msg(mld->ap2cp_united_status, hw_rev, sbi_sys_rev_mask,
+	update_ctrl_msg(&mld->ap2cp_united_status, hw_rev, sbi_sys_rev_mask,
 			sbi_sys_rev_pos);
 	mif_info("hw_rev:0x%x\n", hw_rev);
 
@@ -484,8 +484,8 @@ static int start_normal_boot(struct modem_ctl *mc)
 		ld->link_start_normal_boot(ld, mc->iod);
 	}
 
-	mif_info("cp_united_status:0x%08x\n", get_ctrl_msg(mld->cp2ap_united_status));
-	mif_info("ap_united_status:0x%08x\n", get_ctrl_msg(mld->ap2cp_united_status));
+	mif_info("cp_united_status:0x%08x\n", get_ctrl_msg(&mld->cp2ap_united_status));
+	mif_info("ap_united_status:0x%08x\n", get_ctrl_msg(&mld->ap2cp_united_status));
 
 	if (mc->ap2cp_cfg_ioaddr) {
 		mif_info("Before setting AP2CP_CFG:0x%08x\n",
@@ -499,12 +499,12 @@ static int start_normal_boot(struct modem_ctl *mc)
 		mif_info("AP2CP_CFG is ok:0x%08x\n", ret);
 	}
 
-	while (extract_ctrl_msg(mld->cp2ap_united_status, mld->sbi_cp_status_mask,
+	while (extract_ctrl_msg(&mld->cp2ap_united_status, mld->sbi_cp_status_mask,
 				mld->sbi_cp_status_pos) == 0) {
 		if (--cnt > 0) {
 			usleep_range(10000, 20000);
 		} else {
-			mif_err("cp_status error:%d\n", extract_ctrl_msg(mld->cp2ap_united_status,
+			mif_err("cp_status error:%d\n", extract_ctrl_msg(&mld->cp2ap_united_status,
 						mld->sbi_cp_status_mask, mld->sbi_cp_status_pos));
 			return -EACCES;
 		}
@@ -512,18 +512,18 @@ static int start_normal_boot(struct modem_ctl *mc)
 
 	mif_disable_irq(&mc->irq_cp_wdt);
 
-	cp_status = extract_ctrl_msg(mld->cp2ap_united_status,
+	cp_status = extract_ctrl_msg(&mld->cp2ap_united_status,
 				mld->sbi_cp_status_mask, mld->sbi_cp_status_pos);
 	mif_info("cp_status=%u\n", cp_status);
 
-	update_ctrl_msg(mld->ap2cp_united_status, 1, mc->sbi_ap_status_mask,
+	update_ctrl_msg(&mld->ap2cp_united_status, 1, mc->sbi_ap_status_mask,
 			mc->sbi_ap_status_pos);
-	mif_info("ap_status=%u\n", extract_ctrl_msg(mld->ap2cp_united_status,
+	mif_info("ap_status=%u\n", extract_ctrl_msg(&mld->ap2cp_united_status,
 				mc->sbi_ap_status_mask, mc->sbi_ap_status_pos));
 
-	update_ctrl_msg(mld->ap2cp_united_status, 1, mc->sbi_pda_active_mask,
+	update_ctrl_msg(&mld->ap2cp_united_status, 1, mc->sbi_pda_active_mask,
 			mc->sbi_pda_active_pos);
-	mif_info("ap_united_status:0x%08x\n", get_ctrl_msg(mld->ap2cp_united_status));
+	mif_info("ap_united_status:0x%08x\n", get_ctrl_msg(&mld->ap2cp_united_status));
 
 	mif_info("---\n");
 	return 0;
@@ -650,8 +650,8 @@ void send_uart_noti_to_modem(int val)
 	}
 #endif
 
-	update_ctrl_msg(mld->ap2cp_united_status, val, g_mc->sbi_uart_noti_mask, g_mc->sbi_uart_noti_pos);
-	mif_info("val:%d ap_united_status:0x%08x\n", val, get_ctrl_msg(mld->ap2cp_united_status));
+	update_ctrl_msg(&mld->ap2cp_united_status, val, g_mc->sbi_uart_noti_mask, g_mc->sbi_uart_noti_pos);
+	mif_info("val:%d ap_united_status:0x%08x\n", val, get_ctrl_msg(&mld->ap2cp_united_status));
 	mbox_set_interrupt(MCU_CP, g_mc->int_uart_noti);
 }
 EXPORT_SYMBOL(send_uart_noti_to_modem);
@@ -682,8 +682,8 @@ static int start_dump_boot(struct modem_ctl *mc)
 	if (ret)
 		return ret;
 
-	mif_info("cp_united_status:0x%08x\n", get_ctrl_msg(mld->cp2ap_united_status));
-	mif_info("ap_united_status:0x%08x\n", get_ctrl_msg(mld->ap2cp_united_status));
+	mif_info("cp_united_status:0x%08x\n", get_ctrl_msg(&mld->cp2ap_united_status));
+	mif_info("ap_united_status:0x%08x\n", get_ctrl_msg(&mld->ap2cp_united_status));
 
 	if (mc->ap2cp_cfg_ioaddr) {
 		mif_info("Before setting AP2CP_CFG:0x%08x\n",
@@ -699,29 +699,29 @@ static int start_dump_boot(struct modem_ctl *mc)
 		cal_cp_reset_release();
 	}
 
-	while (extract_ctrl_msg(mld->cp2ap_united_status, mld->sbi_cp_status_mask,
+	while (extract_ctrl_msg(&mld->cp2ap_united_status, mld->sbi_cp_status_mask,
 				mld->sbi_cp_status_pos) == 0) {
 		if (--cnt > 0) {
 			usleep_range(10000, 20000);
 		} else {
-			mif_err("cp_status error:%d\n", extract_ctrl_msg(mld->cp2ap_united_status,
+			mif_err("cp_status error:%d\n", extract_ctrl_msg(&mld->cp2ap_united_status,
 						mld->sbi_cp_status_mask, mld->sbi_cp_status_pos));
 			return -EACCES;
 		}
 	}
 
-	cp_status = extract_ctrl_msg(mld->cp2ap_united_status,
+	cp_status = extract_ctrl_msg(&mld->cp2ap_united_status,
 				mld->sbi_cp_status_mask, mld->sbi_cp_status_pos);
 	mif_info("cp_status=%u\n", cp_status);
 
-	update_ctrl_msg(mld->ap2cp_united_status, 1, mc->sbi_ap_status_mask,
+	update_ctrl_msg(&mld->ap2cp_united_status, 1, mc->sbi_ap_status_mask,
 			mc->sbi_ap_status_pos);
-	mif_info("ap_status=%u\n", extract_ctrl_msg(mld->ap2cp_united_status,
+	mif_info("ap_status=%u\n", extract_ctrl_msg(&mld->ap2cp_united_status,
 				mc->sbi_ap_status_mask, mc->sbi_cp_status_pos));
 
-	update_ctrl_msg(mld->ap2cp_united_status, 1, mc->sbi_pda_active_mask,
+	update_ctrl_msg(&mld->ap2cp_united_status, 1, mc->sbi_pda_active_mask,
 			mc->sbi_pda_active_pos);
-	mif_info("ap_united_status:0x%08x\n", get_ctrl_msg(mld->ap2cp_united_status));
+	mif_info("ap_united_status:0x%08x\n", get_ctrl_msg(&mld->ap2cp_united_status));
 
 	mif_info("---\n");
 	return 0;
@@ -736,22 +736,22 @@ static int suspend_cp(struct modem_ctl *mc)
 	get_utc_time(&t);
 	mif_err("time = %d.%d\n", t.sec + (t.min * 60), t.us);
 
-	if(mld->ap2cp_kerneltime != NULL) {
-		update_ctrl_msg(mld->ap2cp_kerneltime, t.min * 60,
+	if (mld->ap2cp_kerneltime_sec.type == DRAM_V2) {
+		set_ctrl_msg(&mld->ap2cp_kerneltime_sec, t.sec + (t.min * 60));
+		set_ctrl_msg(&mld->ap2cp_kerneltime_usec, t.us);
+	} else {
+		update_ctrl_msg(&mld->ap2cp_kerneltime, t.min * 60,
 				modem->sbi_ap2cp_kerneltime_sec_mask,
 				modem->sbi_ap2cp_kerneltime_sec_pos);
-		update_ctrl_msg(mld->ap2cp_kerneltime, t.us,
+		update_ctrl_msg(&mld->ap2cp_kerneltime, t.us,
 				modem->sbi_ap2cp_kerneltime_usec_mask,
 				modem->sbi_ap2cp_kerneltime_usec_pos);
 	}
-	else {
-		set_ctrl_msg(mld->ap2cp_kerneltime_sec, t.sec + (t.min * 60));
-		set_ctrl_msg(mld->ap2cp_kerneltime_usec, t.us);
-	}
+
 
 	mif_err("%s: pda_active:0\n", mc->name);
 
-	update_ctrl_msg(mld->ap2cp_united_status, 0, mc->sbi_pda_active_mask,
+	update_ctrl_msg(&mld->ap2cp_united_status, 0, mc->sbi_pda_active_mask,
 			mc->sbi_pda_active_pos);
 
 	mbox_set_interrupt(MCU_CP, mc->int_pda_active);
@@ -768,22 +768,21 @@ static int resume_cp(struct modem_ctl *mc)
 	get_utc_time(&t);
 	mif_err("time = %d.%d\n", t.sec + (t.min * 60), t.us);
 
-	if(mld->ap2cp_kerneltime != NULL) {
-		update_ctrl_msg(mld->ap2cp_kerneltime, t.min * 60,
+	if (mld->ap2cp_kerneltime_sec.type == DRAM_V2) {
+		set_ctrl_msg(&mld->ap2cp_kerneltime_sec, t.sec + (t.min * 60));
+		set_ctrl_msg(&mld->ap2cp_kerneltime_usec, t.us);
+	} else {
+		update_ctrl_msg(&mld->ap2cp_kerneltime, t.min * 60,
 				modem->sbi_ap2cp_kerneltime_sec_mask,
 				modem->sbi_ap2cp_kerneltime_sec_pos);
-		update_ctrl_msg(mld->ap2cp_kerneltime, t.us,
+		update_ctrl_msg(&mld->ap2cp_kerneltime, t.us,
 				modem->sbi_ap2cp_kerneltime_usec_mask,
 				modem->sbi_ap2cp_kerneltime_usec_pos);
-	}
-	else {
-		set_ctrl_msg(mld->ap2cp_kerneltime_sec, t.sec + (t.min * 60));
-		set_ctrl_msg(mld->ap2cp_kerneltime_usec, t.us);
 	}
 
 	mif_err("%s: pda_active:1\n", mc->name);
 
-	update_ctrl_msg(mld->ap2cp_united_status, 1, mc->sbi_pda_active_mask,
+	update_ctrl_msg(&mld->ap2cp_united_status, 1, mc->sbi_pda_active_mask,
 			mc->sbi_pda_active_pos);
 
 	mbox_set_interrupt(MCU_CP, mc->int_pda_active);

@@ -380,13 +380,13 @@ struct mem_link_device {
 	u32 __iomem *buff_desc_offset;
 
 	/* Location for control messages in shared memory */
-	struct ctrl_msg *ap2cp_msg;
-	struct ctrl_msg *cp2ap_msg;
-	struct ctrl_msg *ap2cp_united_status;
-	struct ctrl_msg *cp2ap_united_status;
-	struct ctrl_msg *ap2cp_kerneltime;	/* for DRAM_V1 and MAILBOX_SR */
-	struct ctrl_msg *ap2cp_kerneltime_sec;	/* for DRAM_V2 */
-	struct ctrl_msg *ap2cp_kerneltime_usec;	/* for DRAM_V2 */
+	struct ctrl_msg ap2cp_msg;
+	struct ctrl_msg cp2ap_msg;
+	struct ctrl_msg ap2cp_united_status;
+	struct ctrl_msg cp2ap_united_status;
+	struct ctrl_msg ap2cp_kerneltime;	/* for DRAM_V1 and MAILBOX_SR */
+	struct ctrl_msg ap2cp_kerneltime_sec;	/* for DRAM_V2 */
+	struct ctrl_msg ap2cp_kerneltime_usec;	/* for DRAM_V2 */
 
 	u32 __iomem *doorbell_addr;
 	struct pci_dev *s51xx_pdev;
@@ -627,32 +627,29 @@ static inline enum dev_format dev_id(enum sipc_ch_id ch)
 
 #endif
 
-static inline struct ctrl_msg *construct_ctrl_msg(u32 *arr_from_dt, u8 __iomem *base,
-							u32 offset)
+static inline int construct_ctrl_msg(struct ctrl_msg *cmsg, u32 *arr_from_dt,
+					u8 __iomem *base, u32 offset)
 {
+	if (!cmsg)
+		return -EINVAL;
 
-	struct ctrl_msg *ret = kmalloc(sizeof(struct ctrl_msg), GFP_ATOMIC);
-
-	if (!ret)
-		return NULL;
-	ret->type = arr_from_dt[0];
-
-	switch (ret->type) {
+	cmsg->type = arr_from_dt[0];
+	switch (cmsg->type) {
 	case MAILBOX_SR:
-		ret->sr_num = arr_from_dt[1];
+		cmsg->sr_num = arr_from_dt[1];
 		break;
 	case DRAM_V1:
-		ret->addr = (u32 __iomem *)(base + arr_from_dt[1]);
+		cmsg->addr = (u32 __iomem *)(base + arr_from_dt[1]);
 		break;
 	case DRAM_V2:
-		ret->addr = (u32 __iomem *)(base + arr_from_dt[1] + offset);
+		cmsg->addr = (u32 __iomem *)(base + arr_from_dt[1] + offset);
 		break;
 	default:
 		mif_err("ERR! wrong type for ctrl msg\n");
-		return NULL;
+		return -EINVAL;
 	}
 
-	return ret;
+	return 0;
 }
 
 static inline void init_ctrl_msg(struct ctrl_msg *cmsg)

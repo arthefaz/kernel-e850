@@ -224,8 +224,8 @@ static irqreturn_t ap_wakeup_handler(int irq, void *data)
 static irqreturn_t cp_active_handler(int irq, void *data)
 {
 	struct modem_ctl *mc = (struct modem_ctl *)data;
-	struct link_device *ld = get_current_link(mc->iod);
-	struct mem_link_device *mld = to_mem_link_device(ld);
+	struct link_device *ld;
+	struct mem_link_device *mld;
 	struct io_device *iod;
 	int cp_active;
 	enum modem_state old_state;
@@ -235,6 +235,9 @@ static irqreturn_t cp_active_handler(int irq, void *data)
 		mif_err_limited("modem_ctl is NOT initialized - IGNORING interrupt\n");
 		goto irq_done;
 	}
+
+	ld = get_current_link(mc->iod);
+	mld = to_mem_link_device(ld);
 
 	if (mc->s51xx_pdev == NULL) {
 		mif_err_limited("S5100 is NOT initialized - IGNORING interrupt\n");
@@ -401,7 +404,7 @@ static int init_control_messages(struct modem_ctl *mc)
 	struct mem_link_device *mld = to_mem_link_device(ld);
 	int ds_det;
 
-	set_ctrl_msg(mld->ap2cp_united_status, 0);
+	set_ctrl_msg(&mld->ap2cp_united_status, 0);
 
 	ds_det = get_ds_detect();
 	if (ds_det < 0) {
@@ -409,7 +412,7 @@ static int init_control_messages(struct modem_ctl *mc)
 		return -EINVAL;
 	}
 
-	update_ctrl_msg(mld->ap2cp_united_status, ds_det, mc->sbi_ds_det_mask,
+	update_ctrl_msg(&mld->ap2cp_united_status, ds_det, mc->sbi_ds_det_mask,
 			mc->sbi_ds_det_pos);
 	mif_info("ds_det:%d\n", ds_det);
 
@@ -442,8 +445,8 @@ static int power_on_cp(struct modem_ctl *mc)
 	mif_gpio_set_value(mc->s5100_gpio_cp_dump_noti, 0, 0);
 
 	/* Clear shared memory */
-	init_ctrl_msg(mld->ap2cp_msg);
-	init_ctrl_msg(mld->cp2ap_msg);
+	init_ctrl_msg(&mld->ap2cp_msg);
+	init_ctrl_msg(&mld->cp2ap_msg);
 
 	print_mc_state(mc);
 
@@ -891,8 +894,8 @@ exit:
 
 int s5100_poweron_pcie(struct modem_ctl *mc)
 {
-	struct link_device *ld = get_current_link(mc->iod);
-	struct mem_link_device *mld = to_mem_link_device(ld);
+	struct link_device *ld;
+	struct mem_link_device *mld;
 	int ret;
 	u32 cp_num;
 
@@ -900,6 +903,9 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 		mif_info("Skip pci power on : mc is NULL\n");
 		return 0;
 	}
+
+	ld = get_current_link(mc->iod);
+	mld = to_mem_link_device(ld);
 
 	if (mc->phone_state == STATE_OFFLINE) {
 		mif_info("Skip pci power on : phone_state is OFFLINE\n");
@@ -974,7 +980,7 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 		mld->msi_irq_base_enabled = 1;
 	}
 
-	if (mc->pcie_registered == true) {
+	if ((mc->s51xx_pdev != NULL) && mc->pcie_registered) {
 		/* DBG */
 		mif_info("DBG: doorbell: pcie_registered = %d, doorbell_reserved = %d\n",
 			mc->pcie_registered, mc->reserve_doorbell_int);

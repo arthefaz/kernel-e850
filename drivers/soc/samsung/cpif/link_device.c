@@ -375,16 +375,16 @@ static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_type, c
 
 #ifdef CONFIG_LINK_DEVICE_SHMEM
 	if (ld->interrupt_types == INTERRUPT_MAILBOX) {
-		update_ctrl_msg(mld->ap2cp_united_status, ld->crash_reason.type,
+		update_ctrl_msg(&mld->ap2cp_united_status, ld->crash_reason.type,
 				mc->sbi_crash_type_mask, mc->sbi_crash_type_pos);
 
 		/* Send CRASH_EXIT command to a CP */
-		if (mld->ap2cp_msg->type == MAILBOX_SR)
+		if (mld->ap2cp_msg.type == MAILBOX_SR)
 			mcu_ipc_reg_dump(0);
 
 		send_ipc_irq(mld, cmd2int(CMD_CRASH_EXIT));
 
-		if (mld->ap2cp_msg->type == MAILBOX_SR)
+		if (mld->ap2cp_msg.type == MAILBOX_SR)
 			mcu_ipc_reg_dump(0);
 	}
 #endif
@@ -565,13 +565,13 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 				phone_start_count = 101;
 				set_dflags(127);
 #ifdef CONFIG_MCU_IPC
-				if (mld->ap2cp_msg->type == MAILBOX_SR)
+				if (mld->ap2cp_msg.type == MAILBOX_SR)
 					mcu_ipc_reg_dump(0);
 #endif
 				send_ipc_irq(mld,
 					cmd2int(phone_start_count - 100));
 #ifdef CONFIG_MCU_IPC
-				if (mld->ap2cp_msg->type == MAILBOX_SR)
+				if (mld->ap2cp_msg.type == MAILBOX_SR)
 					mcu_ipc_reg_dump(0);
 #endif
 				return;
@@ -582,12 +582,12 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 					cmd2int(phone_start_count - 100),
 					mc->name);
 #ifdef CONFIG_MCU_IPC
-				if (mld->ap2cp_msg->type == MAILBOX_SR)
+				if (mld->ap2cp_msg.type == MAILBOX_SR)
 					mcu_ipc_reg_dump(0);
 #endif
 				send_ipc_irq(mld, cmd2int(phone_start_count - 100));
 #ifdef CONFIG_MCU_IPC
-				if (mld->ap2cp_msg->type == MAILBOX_SR)
+				if (mld->ap2cp_msg.type == MAILBOX_SR)
 					mcu_ipc_reg_dump(0);
 #endif
 			} else {
@@ -610,12 +610,12 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 		if (rild_ready(ld)) {
 			mif_err("%s: INIT_END -> %s\n", ld->name, mc->name);
 #ifdef CONFIG_MCU_IPC
-			if (mld->ap2cp_msg->type == MAILBOX_SR)
+			if (mld->ap2cp_msg.type == MAILBOX_SR)
 				mcu_ipc_reg_dump(0);
 #endif
 			send_ipc_irq(mld, cmd2int(CMD_INIT_END));
 #ifdef CONFIG_MCU_IPC
-			if (mld->ap2cp_msg->type == MAILBOX_SR)
+			if (mld->ap2cp_msg.type == MAILBOX_SR)
 				mcu_ipc_reg_dump(0);
 #endif
 			atomic_set(&mld->cp_boot_done, 1);
@@ -633,19 +633,19 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 	if (rild_ready(ld)) {
 		mif_err("%s: INIT_END -> %s\n", ld->name, mc->name);
 #ifdef CONFIG_MCU_IPC
-		if (mld->ap2cp_msg->type == MAILBOX_SR)
+		if (mld->ap2cp_msg.type == MAILBOX_SR)
 			mcu_ipc_reg_dump(0);
 #endif
 		send_ipc_irq(mld, cmd2int(CMD_INIT_END));
 #ifdef CONFIG_MCU_IPC
-		if (mld->ap2cp_msg->type == MAILBOX_SR)
+		if (mld->ap2cp_msg.type == MAILBOX_SR)
 			mcu_ipc_reg_dump(0);
 #endif
 		atomic_set(&mld->cp_boot_done, 1);
 	}
 
 #ifdef CONFIG_MCU_IPC
-	if (mld->ap2cp_msg->type == MAILBOX_SR)
+	if (mld->ap2cp_msg.type == MAILBOX_SR)
 		mcu_ipc_reg_dump(0);
 #endif
 
@@ -2623,37 +2623,37 @@ static int get_cp_crash_reason(struct link_device *ld, struct io_device *iod,
 #ifdef CONFIG_LINK_DEVICE_SHMEM
 static u16 shmem_recv_cp2ap_irq(struct mem_link_device *mld)
 {
-	return get_ctrl_msg(mld->cp2ap_msg);
+	return get_ctrl_msg(&mld->cp2ap_msg);
 }
 
 static u16 shmem_recv_cp2ap_status(struct mem_link_device *mld)
 {
-	return (u16)extract_ctrl_msg(mld->cp2ap_united_status, mld->sbi_cp_status_mask,
+	return (u16)extract_ctrl_msg(&mld->cp2ap_united_status, mld->sbi_cp_status_mask,
 			mld->sbi_cp_status_pos);
 }
 
 static void shmem_send_ap2cp_irq(struct mem_link_device *mld, u16 mask)
 {
-	set_ctrl_msg(mld->ap2cp_msg, mask);
+	set_ctrl_msg(&mld->ap2cp_msg, mask);
 
 	mbox_set_interrupt(MCU_CP, mld->int_ap2cp_msg);
 }
 
 static inline u16 shmem_read_ap2cp_irq(struct mem_link_device *mld)
 {
-	return (u16)get_ctrl_msg(mld->ap2cp_msg);
+	return (u16)get_ctrl_msg(&mld->ap2cp_msg);
 }
 #endif
 
 #ifdef CONFIG_LINK_DEVICE_PCIE
 static u16 pcie_recv_cp2ap_irq(struct mem_link_device *mld)
 {
-	return (u16) get_ctrl_msg(mld->cp2ap_msg);
+	return (u16)get_ctrl_msg(&mld->cp2ap_msg);
 }
 
 static u16 pcie_recv_cp2ap_status(struct mem_link_device *mld)
 {
-	return (u16) get_ctrl_msg(mld->cp2ap_united_status);
+	return (u16)get_ctrl_msg(&mld->cp2ap_united_status);
 }
 
 static void pcie_send_ap2cp_irq(struct mem_link_device *mld, u16 mask)
@@ -2666,20 +2666,20 @@ static void pcie_send_ap2cp_irq(struct mem_link_device *mld, u16 mask)
 
 	if (mutex_is_locked(&mc->pcie_onoff_lock)) {
 		mif_err("Reserve doorbell interrupt: PCI on/off working\n");
-		set_ctrl_msg(mld->ap2cp_msg, mask);
+		set_ctrl_msg(&mld->ap2cp_msg, mask);
 		mc->reserve_doorbell_int = true;
 		goto exit;
 	}
 
 	if (!mc->pcie_powered_on) {
 		mif_err("Reserve doorbell interrupt: PCI not powered on\n");
-		set_ctrl_msg(mld->ap2cp_msg, mask);
+		set_ctrl_msg(&mld->ap2cp_msg, mask);
 		mc->reserve_doorbell_int = true;
 		s5100_try_gpio_cp_wakeup(mc);
 		goto exit;
 	}
 
-	set_ctrl_msg(mld->ap2cp_msg, mask);
+	set_ctrl_msg(&mld->ap2cp_msg, mask);
 	if (s51xx_pcie_send_doorbell_int(mc->s51xx_pdev, mld->intval_ap2cp_msg) != 0)
 		s5100_force_crash_exit_ext();
 
@@ -2689,7 +2689,7 @@ exit:
 
 static inline u16 pcie_read_ap2cp_irq(struct mem_link_device *mld)
 {
-	return (u16) get_ctrl_msg(mld->ap2cp_msg);
+	return (u16)get_ctrl_msg(&mld->ap2cp_msg);
 }
 #endif
 
@@ -2871,7 +2871,7 @@ static irqreturn_t shmem_cp2ap_wakelock_handler(int irq, void *data)
 	unsigned int req;
 	mif_err("%s\n", __func__);
 
-	req = extract_ctrl_msg(mld->cp2ap_united_status, mld->sbi_cp2ap_wakelock_mask,
+	req = extract_ctrl_msg(&mld->cp2ap_united_status, mld->sbi_cp2ap_wakelock_mask,
 			mld->sbi_cp2ap_wakelock_pos);
 
 	if (req == 0) {
@@ -2902,7 +2902,7 @@ static irqreturn_t shmem_cp2ap_rat_mode_handler(int irq, void *data)
 	struct mem_link_device *mld = (struct mem_link_device *)data;
 	unsigned int req;
 
-	req = extract_ctrl_msg(mld->cp2ap_united_status, mld->sbi_cp_rat_mode_mask,
+	req = extract_ctrl_msg(&mld->cp2ap_united_status, mld->sbi_cp_rat_mode_mask,
 			mld->sbi_cp_rat_mode_pos);
 
 	mif_err("value: %u\n", req);
@@ -3880,8 +3880,8 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	/*
 	 * Retrieve SHMEM MBOX#, IRQ#, etc.
 	 */
-	mld->cp2ap_msg = construct_ctrl_msg(modem->cp2ap_msg, mld->base, CP2AP_MSG_OFFSET);
-	mld->ap2cp_msg = construct_ctrl_msg(modem->ap2cp_msg, mld->base, AP2CP_MSG_OFFSET);
+	construct_ctrl_msg(&mld->cp2ap_msg, modem->cp2ap_msg, mld->base, CP2AP_MSG_OFFSET);
+	construct_ctrl_msg(&mld->ap2cp_msg, modem->ap2cp_msg, mld->base, AP2CP_MSG_OFFSET);
 
 	mld->irq_cp2ap_msg = modem->mbx->irq_cp2ap_msg;
 	mld->int_ap2cp_msg = modem->mbx->int_ap2cp_msg;
@@ -3978,15 +3978,15 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	/**
 	 * For TX Flow-control command from CP
 	 */
-	mld->cp2ap_united_status = construct_ctrl_msg(modem->cp2ap_united_status,
+	construct_ctrl_msg(&mld->cp2ap_united_status, modem->cp2ap_united_status,
 					mld->base, CP2AP_STATUS_OFFSET);
-	mld->ap2cp_united_status = construct_ctrl_msg(modem->ap2cp_united_status,
+	construct_ctrl_msg(&mld->ap2cp_united_status, modem->ap2cp_united_status,
 					mld->base, AP2CP_STATUS_OFFSET);
-	mld->ap2cp_kerneltime = construct_ctrl_msg(modem->ap2cp_kerneltime,
+	construct_ctrl_msg(&mld->ap2cp_kerneltime, modem->ap2cp_kerneltime,
 					mld->base, 0);
-	mld->ap2cp_kerneltime_sec = construct_ctrl_msg(modem->ap2cp_kerneltime_sec,
+	construct_ctrl_msg(&mld->ap2cp_kerneltime_sec, modem->ap2cp_kerneltime_sec,
 					mld->base, AP2CP_KERNELTIME_SEC);
-	mld->ap2cp_kerneltime_usec = construct_ctrl_msg(modem->ap2cp_kerneltime_usec,
+	construct_ctrl_msg(&mld->ap2cp_kerneltime_usec, modem->ap2cp_kerneltime_usec,
 					mld->base, AP2CP_KERNELTIME_USEC);
 
 	mld->irq_cp2ap_status = modem->mbx->irq_cp2ap_status;
