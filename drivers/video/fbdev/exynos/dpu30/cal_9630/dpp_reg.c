@@ -814,6 +814,8 @@ void dpp_reg_init(u32 id, const unsigned long attr)
 		idma_reg_set_pixel_alpha(id, 0xFF);
 		idma_reg_set_in_ic_max(id, 0x20);
 		idma_reg_set_assigned_mo(id, 0x20);
+		/* to prevent irq storm that may occur in the OFF STATE */
+		idma_reg_clear_irq(id, IDMA_ALL_IRQ_CLEAR);
 	}
 
 	if (test_bit(DPP_ATTR_DPP, &attr)) {
@@ -822,6 +824,8 @@ void dpp_reg_init(u32 id, const unsigned long attr)
 		dpp_reg_set_clock_gate_en_all(id, 0);
 		dpp_reg_set_dynamic_gating_en_all(id, 0);
 		dpp_reg_set_linecnt(id, 1);
+		/* to prevent irq storm that may occur in the OFF STATE */
+		dpp_reg_clear_irq(id, DPP_ALL_IRQ_CLEAR);
 	}
 }
 
