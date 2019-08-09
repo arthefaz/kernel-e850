@@ -1659,6 +1659,8 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 		decon_reg_init_probe(id, dsi_idx, p);
 		if (psr->psr_mode == DECON_MIPI_COMMAND_MODE)
 			decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
+		/* to prevent irq storm that may occur in the OFF STATE */
+		decon_reg_clear_int_all(id);
 		return -EBUSY;
 	}
 
