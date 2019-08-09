@@ -273,7 +273,10 @@
 				timing,h-porch = <2 2 2>;
 				timing,v-porch = <10 3 1>;
 				timing,dsi-hs-clk = <898>;
-				timing,pmsk = <2 276 2 20165>;
+				timing,pmsk = <2 276 2 20165	/* p m s k */
+						13 6 0 0 	/* MFR MRR SEL_PF ICP */
+						0 0 0 0 	/* AFC_ENB EXTAFC FEED_EN FSEL */
+						0 0>;		/* FOUT_MASK RSEL */
 				timing,dsi-escape-clk = <20>;
 				mic_en = <0>;           /* 0: Disable, 1: Enable */
 				mic_ratio = <2>;        /* 0: 1/2 mic, 1: 1/3 mic */
