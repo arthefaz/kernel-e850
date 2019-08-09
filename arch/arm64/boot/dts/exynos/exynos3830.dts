@@ -856,8 +856,8 @@
 	usbdrd_phy0: phy@135d0000 {
 		compatible = "samsung,exynos-usbdrd-phy";
 		reg = <0x0 0x135d0000 0x200>;
-		interrupts = <0 INTREQ__HSI2C_1 0>,
-			     <0 INTREQ__HSI2C_0 0>;
+		interrupts = <0 INTREQ__USB2_REMOTE_WAKEUP 0>,
+			     <0 INTREQ__USB2_REMOTE_CONNECT 0>;
 		clocks = <&clock OSCCLK>, <&clock GATE_USB20DRD_TOP_QCH_LINK>;
 		clock-names = "ext_xtal", "aclk";
 		samsung,pmu-syscon = <&pmu_system_controller>;
