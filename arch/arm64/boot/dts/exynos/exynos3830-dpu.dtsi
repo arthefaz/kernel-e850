@@ -153,8 +153,6 @@
 
 	panel_0: panel_0 {
 		compatible = "samsung,exynos-panel";
-		max-brightness = <255>;
-		dft-brightness = <127>;
 		ddi_id = <0x244040>;
 		lcd_info = <&s6e3fa0>;
 	};
