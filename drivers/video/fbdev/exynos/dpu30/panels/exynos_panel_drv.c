@@ -54,7 +54,8 @@ static int exynos_backlight_update_status(struct backlight_device *bl)
 
 	if (brightness >= 0) {
 		mutex_lock(&panel->ops_lock);
-		dsim_write_data_seq(dsim, false, 0x51, brightness);
+		if (bl->props.fb_blank != FB_BLANK_POWERDOWN)
+			dsim_write_data_seq(dsim, false, 0x51, brightness);
 		mutex_unlock(&panel->ops_lock);
 	} else {
 		/* DO update brightness using dsim_wr_data */
