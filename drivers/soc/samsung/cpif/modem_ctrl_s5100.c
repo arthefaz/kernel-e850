@@ -113,13 +113,6 @@ static void pcie_clean_dislink(struct modem_ctl *mc)
 static void cp2ap_wakeup_work(struct work_struct *ws)
 {
 	struct modem_ctl *mc = container_of(ws, struct modem_ctl, wakeup_work);
-
-	mc->apwake_irq_chip->irq_set_type(
-			irq_get_irq_data(mc->s5100_irq_ap_wakeup.num),
-			IRQF_TRIGGER_LOW);
-
-	mif_enable_irq(&mc->s5100_irq_ap_wakeup);
-
 	if (mc->phone_state == STATE_CRASH_EXIT)
 		return;
 
@@ -129,13 +122,6 @@ static void cp2ap_wakeup_work(struct work_struct *ws)
 static void cp2ap_suspend_work(struct work_struct *ws)
 {
 	struct modem_ctl *mc = container_of(ws, struct modem_ctl, suspend_work);
-
-	mc->apwake_irq_chip->irq_set_type(
-			irq_get_irq_data(mc->s5100_irq_ap_wakeup.num),
-			IRQF_TRIGGER_HIGH);
-
-	mif_enable_irq(&mc->s5100_irq_ap_wakeup);
-
 	if (mc->phone_state == STATE_CRASH_EXIT)
 		return;
 
@@ -184,6 +170,12 @@ static irqreturn_t ap_wakeup_handler(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 	spin_unlock_irqrestore(&mc->pcie_pm_lock, flags);
+
+	mc->apwake_irq_chip->irq_set_type(
+		irq_get_irq_data(mc->s5100_irq_ap_wakeup.num),
+		(gpio_val == 1 ? IRQF_TRIGGER_LOW : IRQF_TRIGGER_HIGH));
+
+	mif_enable_irq(&mc->s5100_irq_ap_wakeup);
 
 	queue_work_on(RUNTIME_PM_AFFINITY_CORE, mc->wakeup_wq,
 			(gpio_val == 1 ? &mc->wakeup_work : &mc->suspend_work));
@@ -392,10 +384,11 @@ static int power_on_cp(struct modem_ctl *mc)
 	struct modem_data __maybe_unused *modem = mc->mdm_data;
 	struct mem_link_device *mld = to_mem_link_device(ld);
 
-	mif_info("%s: %s: +++\n", mc->name, __func__);
+	mif_info("%s: +++\n", mc->name);
 
 	mif_disable_irq(&mc->s5100_irq_phone_active);
 	mif_disable_irq(&mc->s5100_irq_ap_wakeup);
+	drain_workqueue(mc->wakeup_wq);
 
 	print_mc_state(mc);
 
@@ -430,7 +423,7 @@ static int power_on_cp(struct modem_ctl *mc)
 
 static int power_off_cp(struct modem_ctl *mc)
 {
-	mif_info("%s: %s: +++\n", mc->name, __func__);
+	mif_info("%s: +++\n", mc->name);
 
 	if (mc->phone_state == STATE_OFFLINE)
 		goto exit;
@@ -456,13 +449,14 @@ static int power_shutdown_cp(struct modem_ctl *mc)
 {
 	int i;
 
-	mif_err("+++\n");
+	mif_err("%s: +++\n", mc->name);
 
 	if (mc->phone_state == STATE_OFFLINE)
 		goto exit;
 
 	mif_disable_irq(&mc->s5100_irq_phone_active);
 	mif_disable_irq(&mc->s5100_irq_ap_wakeup);
+	drain_workqueue(mc->wakeup_wq);
 
 	/* wait for cp_active for 3 seconds */
 	for (i = 0; i < 150; i++) {
@@ -489,12 +483,13 @@ static int power_reset_dump_cp(struct modem_ctl *mc)
 {
 	struct s51xx_pcie *s51xx_pcie = pci_get_drvdata(mc->s51xx_pdev);
 
-	mif_info("%s: %s: +++\n", mc->name, __func__);
+	mif_info("%s: +++\n", mc->name);
 
 	mc->phone_state = STATE_OFFLINE;
-	pcie_clean_dislink(mc);
 	mif_disable_irq(&mc->s5100_irq_phone_active);
 	mif_disable_irq(&mc->s5100_irq_ap_wakeup);
+	drain_workqueue(mc->wakeup_wq);
+	pcie_clean_dislink(mc);
 
 	if (s51xx_pcie->link_status == 1) {
 		mif_err("link_satus:%d\n", s51xx_pcie->link_status);
@@ -524,7 +519,7 @@ static int power_reset_cp(struct modem_ctl *mc)
 {
 	struct s51xx_pcie *s51xx_pcie = pci_get_drvdata(mc->s51xx_pdev);
 
-	mif_info("%s: %s: +++\n", mc->name, __func__);
+	mif_info("%s: +++\n", mc->name);
 
 	mc->phone_state = STATE_OFFLINE;
 	pcie_clean_dislink(mc);
@@ -791,6 +786,8 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 	unsigned long flags;
 
 	mutex_lock(&mc->pcie_onoff_lock);
+	mif_info("+++\n");
+
 	if (!mc->pcie_powered_on &&
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 			(exynos_pcie_rc_chk_link_status(mc->pcie_ch_num) == 0)) {
@@ -850,6 +847,7 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 		wake_unlock(&mc->mc_wake_lock);
 
 exit:
+	mif_info("---\n");
 	mutex_unlock(&mc->pcie_onoff_lock);
 	return 0;
 }
@@ -872,6 +870,7 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 	}
 
 	mutex_lock(&mc->pcie_onoff_lock);
+	mif_info("+++\n");
 	if (mc->pcie_powered_on &&
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 			(exynos_pcie_rc_chk_link_status(mc->pcie_ch_num) != 0)) {
@@ -959,6 +958,7 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 	mc->pcie_powered_on = true;
 
 exit:
+	mif_info("---\n");
 	mutex_unlock(&mc->pcie_onoff_lock);
 	return 0;
 }
