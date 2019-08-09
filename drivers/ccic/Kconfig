@@ -35,3 +35,11 @@ config CCIC_SYSFS
 	help
 	  If you say yes here you will get support for
 	  sysfs system.
+
+config PDIC_DP
+	bool "Support DisplayPort"
+	depends on USE_CCIC
+	default n
+	help
+	  If you say yes here you will get support for
+	  DisplayPort

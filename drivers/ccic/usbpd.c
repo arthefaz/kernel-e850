@@ -557,6 +557,7 @@ inline unsigned usbpd_wait_msg(struct usbpd_data *pd_data,
 				unsigned msg_status, unsigned ms)
 {
 	unsigned long ret;
+	u64 one = 1;
 
 	ret = pd_data->phy_ops.get_status(pd_data, msg_status);
 	if (ret) {
@@ -564,10 +565,10 @@ inline unsigned usbpd_wait_msg(struct usbpd_data *pd_data,
 		return ret;
 	}
 
-	pr_info("%s, %d\n", __func__, __LINE__);
+	pr_info("%s, msg(%d), ms(%d)\n", __func__, msg_status, ms);
 	/* wait */
 	reinit_completion(&pd_data->msg_arrived);
-	pd_data->wait_for_msg_arrived = msg_status;
+	pd_data->wait_for_msg_arrived = one << msg_status;
 	ret = wait_for_completion_timeout(&pd_data->msg_arrived,
 			msecs_to_jiffies(ms));
 

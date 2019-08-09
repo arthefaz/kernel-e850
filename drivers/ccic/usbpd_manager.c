@@ -52,9 +52,7 @@ static char DP_Pin_Assignment_Print[7][40] = {
     {"DP_Pin_Assignment_D"},
     {"DP_Pin_Assignment_E"},
     {"DP_Pin_Assignment_F"},
-
 };
-
 
 #if defined(CONFIG_PDIC_PD30)
 int (*fp_sec_pd_select_pps)(int num, int ppsVol, int ppsCur);

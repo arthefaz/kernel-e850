@@ -391,9 +391,10 @@ policy_state usbpd_policy_src_ready(struct policy_data *policy)
 */
 	pd_data->phy_ops.get_data_role(pd_data, &data_role);
 
+#if 0
 	if (data_role == USBPD_DFP)
 		usbpd_manager_vdm_request_enabled(pd_data);
-
+#endif
 	return PE_SRC_Ready;
 }
 
@@ -1192,8 +1193,10 @@ policy_state usbpd_policy_snk_ready(struct policy_data *policy)
 	/* 6) Data Role Check */
 	pd_data->phy_ops.get_data_role(pd_data, &data_role);
 
+#if 0
 	if (data_role == USBPD_DFP)
 		usbpd_manager_vdm_request_enabled(pd_data);
+#endif
 
 	return PE_SNK_Ready;
 }
