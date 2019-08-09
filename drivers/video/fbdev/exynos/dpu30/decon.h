@@ -661,6 +661,9 @@ typedef enum dpu_event_type {
 	DPU_EVT_MEM_MAP,
 	DPU_EVT_MEM_UNMAP,
 
+	DPU_EVT_ACQUIRE_RSC,
+	DPU_EVT_RELEASE_RSC,
+
 	DPU_EVT_MAX, /* End of EVENT */
 } dpu_event_t;
 
@@ -728,6 +731,13 @@ struct disp_log_memmap {
 	int dpp_ch;
 };
 
+struct disp_log_rsc {
+	unsigned long prev_used_dpp;
+	unsigned long cur_using_dpp;
+	unsigned long prev_req_win;
+	unsigned long cur_req_win;
+};
+
 /**
  * struct dpu_log - Display Subsystem Log
  * This struct includes DECON/DSIM/DPP
@@ -744,6 +754,7 @@ struct dpu_log {
 		struct disp_log_cursor cursor;
 		struct disp_log_winup winup;
 		struct disp_log_memmap memmap;
+		struct disp_log_rsc rsc;
 	} data;
 };
 

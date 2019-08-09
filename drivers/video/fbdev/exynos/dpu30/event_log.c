@@ -84,6 +84,13 @@ static inline void dpu_event_log_decon
 		log->data.cursor.ypos = decon->cursor.ypos;
 		log->data.cursor.elapsed = ktime_sub(ktime_get(), log->time);
 		break;
+	case DPU_EVT_ACQUIRE_RSC:
+	case DPU_EVT_RELEASE_RSC:
+		log->data.rsc.prev_used_dpp = decon->prev_used_dpp;
+		log->data.rsc.cur_using_dpp = decon->cur_using_dpp;
+		log->data.rsc.prev_req_win = decon->prev_req_win;
+		log->data.rsc.cur_req_win = decon->cur_req_win;
+		break;
 	default:
 		/* Any remaining types will be log just time and type */
 		break;
@@ -255,6 +262,8 @@ void DPU_EVENT_LOG(dpu_event_t type, struct v4l2_subdev *sd, ktime_t time)
 	case DPU_EVT_RSC_CONFLICT:
 	case DPU_EVT_DECON_FRAMESTART:
 	case DPU_EVT_CURSOR_POS:	/* cursor async */
+	case DPU_EVT_ACQUIRE_RSC:
+	case DPU_EVT_RELEASE_RSC:
 		dpu_event_log_decon(type, sd, time);
 		break;
 	case DPU_EVT_DSIM_FRAMEDONE:
@@ -504,6 +513,56 @@ static void dpu_print_log_update_handler(struct seq_file *s,
 	}
 }
 
+#define RSC_BUF_CNT	16
+static void dpu_print_log_resource_info(struct decon_device *decon,
+				struct seq_file *s, struct disp_log_rsc *rsc)
+{
+	char buf_prev_dpp[RSC_BUF_CNT] = {0, };
+	char buf_cur_dpp[RSC_BUF_CNT] = {0, };
+	char buf_prev_win[RSC_BUF_CNT] = {0, };
+	char buf_cur_win[RSC_BUF_CNT] = {0, };
+	int i, offset;
+
+	offset = 0;
+	for (i = 0; i < decon->dt.dpp_cnt; ++i) {
+		if (!test_bit(i, &rsc->prev_used_dpp))
+			continue;
+
+		snprintf(buf_prev_dpp + (offset * 2), RSC_BUF_CNT, " %d", i);
+		offset++;
+	}
+
+	offset = 0;
+	for (i = 0; i < decon->dt.dpp_cnt; ++i) {
+		if (!test_bit(i, &rsc->cur_using_dpp))
+			continue;
+
+		snprintf(buf_cur_dpp + (offset * 2), RSC_BUF_CNT, " %d", i);
+		offset++;
+	}
+
+	offset = 0;
+	for (i = 0; i < decon->dt.max_win; ++i) {
+		if (!test_bit(i, &rsc->prev_req_win))
+			continue;
+
+		snprintf(buf_prev_win + (offset * 2), RSC_BUF_CNT, " %d", i);
+		offset++;
+	}
+
+	offset = 0;
+	for (i = 0; i < decon->dt.max_win; ++i) {
+		if (!test_bit(i, &rsc->cur_req_win))
+			continue;
+
+		snprintf(buf_cur_win + (i * 2), RSC_BUF_CNT, " %d", i);
+		offset++;
+	}
+
+	seq_printf(s, "CH: PREV[%s] CUR[%s],  WIN: PREV[%s] CUR[%s]\n",
+			buf_prev_dpp, buf_cur_dpp, buf_prev_win, buf_cur_win);
+}
+
 /* display logged events related with DECON */
 void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 {
@@ -701,6 +760,14 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 			break;
 		case DPU_EVT_DMA_RECOVERY:
 			seq_printf(s, "%20s  %20s", "DMA_FRAMEDONE", "-\n");
+			break;
+		case DPU_EVT_ACQUIRE_RSC:
+			seq_printf(s, "%20s  ", "ACQUIRE_RSC");
+			dpu_print_log_resource_info(decon, s, &log->data.rsc);
+			break;
+		case DPU_EVT_RELEASE_RSC:
+			seq_printf(s, "%20s  ", "RELEASE_RSC");
+			dpu_print_log_resource_info(decon, s, &log->data.rsc);
 			break;
 		case DPU_EVT_CURSOR_POS:
 			tv = ktime_to_timeval(log->data.cursor.elapsed);

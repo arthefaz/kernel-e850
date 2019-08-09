@@ -256,6 +256,8 @@ void decon_dpp_stop(struct decon_device *decon, bool do_reset)
 		if (test_bit(i, &decon->prev_req_win) &&
 				!test_bit(i, &decon->cur_req_win))
 			clear_bit(i, &decon->prev_req_win);
+
+	DPU_EVENT_LOG(DPU_EVT_RELEASE_RSC, &decon->sd, ktime_set(0, 0));
 }
 
 static void decon_free_unused_buf(struct decon_device *decon,
@@ -1581,6 +1583,7 @@ static int decon_check_used_dpp(struct decon_device *decon,
 	decon->prev_req_win = prev_wins;
 	decon->cur_req_win = cur_wins;
 
+	DPU_EVENT_LOG(DPU_EVT_ACQUIRE_RSC, &decon->sd, ktime_set(0, 0));
 	return 0;
 }
 
