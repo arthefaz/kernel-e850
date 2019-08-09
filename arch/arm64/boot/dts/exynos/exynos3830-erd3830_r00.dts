@@ -13,6 +13,7 @@
 /plugin/;
 #include "exynos3830-board_common.dtsi"
 #include "exynos3830-erd3830-cp-s318ap-sit.dtsi"
+#include "exynos3830-erd3830-camera.dtsi"
 
 #define BOARD_ID	0x0
 #define BOARD_REV	0x0
