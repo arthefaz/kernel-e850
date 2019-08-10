@@ -20,7 +20,6 @@
 
 #include "../dpp.h"
 #include "../dpp_coef.h"
-// TODO : KKJ #include "../hdr_lut.h"
 #include "../format.h"
 
 /****************** IDMA CAL functions ******************/
@@ -36,36 +35,12 @@ static void idma_reg_set_irq_enable(u32 id)
 	dma_write_mask(id, IDMA_IRQ, ~0, IDMA_IRQ_ENABLE);
 }
 
-static void idma_reg_set_in_qos_lut(u32 id, u32 lut_id, u32 qos_t)
-{
-	u32 reg_id;
-
-	if (lut_id == 0)
-		reg_id = IDMA_QOS_LUT07_00;
-	else
-		reg_id = IDMA_QOS_LUT15_08;
-	dma_write(id, reg_id, qos_t);
-}
-
-static void idma_reg_set_sfr_clk_gate_en(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	dma_write_mask(id, IDMA_ENABLE, val, IDMA_SFR_CLOCK_GATE_EN);
-}
-
-static void idma_reg_set_sram_clk_gate_en(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	dma_write_mask(id, IDMA_ENABLE, val, IDMA_SRAM_CLOCK_GATE_EN);
-}
-
 static void idma_reg_set_dynamic_gating_en(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
 
-	dma_write_mask(id, IDMA_DYNAMIC_GATING_EN, IDMA_DG_EN(val),IDMA_DG_EN_MASK);
+	val &= IDMA_DG_EN_MASK;
+	dma_write(id, IDMA_DYNAMIC_GATING_EN, val);
 }
 
 static void idma_reg_clear_irq(u32 id, u32 irq)
@@ -109,12 +84,6 @@ static void idma_reg_set_pixel_alpha(u32 id, u32 alpha)
 {
 	dma_write_mask(id, IDMA_OUT_CON, IDMA_OUT_FRAME_ALPHA(alpha),
 			IDMA_OUT_FRAME_ALPHA_MASK);
-}
-
-static void idma_reg_set_in_ic_max(u32 id, u32 ic_max)
-{
-	dma_write_mask(id, IDMA_IN_CON, IDMA_IN_IC_MAX(ic_max),
-			IDMA_IN_IC_MAX_MASK);
 }
 
 static void idma_reg_set_flip(u32 id, u32 flip)
@@ -176,18 +145,11 @@ static void dpp_reg_set_irq_enable(u32 id)
 	dpp_write_mask(id, DPP_IRQ, ~0, DPP_IRQ_ENABLE);
 }
 
-static void dpp_reg_set_clock_gate_en_all(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	dpp_write_mask(id, DPP_ENABLE, val, DPP_ALL_CLOCK_GATE_EN_MASK);
-}
-
 static void dpp_reg_set_dynamic_gating_en_all(u32 id, u32 en)
 {
-	u32 val = en ? ~0 : 0;
+	u32 val = en ? DPP_DG_EN_ALL : 0;
 
-	dpp_write_mask(id, DPP_DYNAMIC_GATING_EN, val, DPP_DG_EN_ALL);
+	dpp_write(id, DPP_DYNAMIC_GATING_EN, val);
 }
 
 static void dpp_reg_set_linecnt(u32 id, u32 en)
@@ -257,7 +219,7 @@ static const u16 dpp_reg_csc_y2r_3x3[4][3][3] = {
 
 static void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 {
-	u32 val, mask;
+	u32 val;
 	u32 csc_id = CSC_CUSTOMIZED_START; /* CSC_BT601/625/525 */
 	u32 c00, c01, c02;
 	u32 c10, c11, c12;
@@ -297,22 +259,20 @@ static void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 		dpp_warn("[DPP%d] Undefined CSC Type!(std=%d)\n", id, csc_std);
 	}
 
-	mask = (DPP_CSC_COEF_H_MASK | DPP_CSC_COEF_L_MASK);
 	val = (DPP_CSC_COEF_H(c01) | DPP_CSC_COEF_L(c00));
-	dpp_write_mask(id, DPP_CSC_COEF0, val, mask);
+	dpp_write(id, DPP_CSC_COEF0, val);
 
 	val = (DPP_CSC_COEF_H(c10) | DPP_CSC_COEF_L(c02));
-	dpp_write_mask(id, DPP_CSC_COEF1, val, mask);
+	dpp_write(id, DPP_CSC_COEF1, val);
 
 	val = (DPP_CSC_COEF_H(c12) | DPP_CSC_COEF_L(c11));
-	dpp_write_mask(id, DPP_CSC_COEF2, val, mask);
+	dpp_write(id, DPP_CSC_COEF2, val);
 
 	val = (DPP_CSC_COEF_H(c21) | DPP_CSC_COEF_L(c20));
-	dpp_write_mask(id, DPP_CSC_COEF3, val, mask);
+	dpp_write(id, DPP_CSC_COEF3, val);
 
-	mask = DPP_CSC_COEF_L_MASK;
 	val = DPP_CSC_COEF_L(c22);
-	dpp_write_mask(id, DPP_CSC_COEF4, val, mask);
+	dpp_write(id, DPP_CSC_COEF4, val);
 
 	dpp_dbg("---[DPP%d Y2R CSC Type: std=%d, rng=%d]---\n",
 		id, csc_std, csc_rng);
@@ -492,20 +452,13 @@ void dpp_reg_init(u32 id, const unsigned long attr)
 	if (test_bit(DPP_ATTR_IDMA, &attr)) {
 		idma_reg_set_irq_mask_all(id, 0);
 		idma_reg_set_irq_enable(id);
-		idma_reg_set_in_qos_lut(id, 0, 0x44444444);
-		idma_reg_set_in_qos_lut(id, 1, 0x44444444);
-		/* TODO: clock gating will be enabled */
-		idma_reg_set_sfr_clk_gate_en(id, 0);
-		idma_reg_set_sram_clk_gate_en(id, 0);
 		idma_reg_set_dynamic_gating_en(id, 0);
 		idma_reg_set_pixel_alpha(id, 0xFF);
-		idma_reg_set_in_ic_max(id, 0x40);
 	}
 
 	if (test_bit(DPP_ATTR_DPP, &attr)) {
 		dpp_reg_set_irq_mask_all(id, 0);
 		dpp_reg_set_irq_enable(id);
-		dpp_reg_set_clock_gate_en_all(id, 0);
 		dpp_reg_set_dynamic_gating_en_all(id, 0);
 		dpp_reg_set_linecnt(id, 1);
 	}
