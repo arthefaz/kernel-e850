@@ -154,4 +154,7 @@ int xmit_to_legacy_link(struct mem_link_device *mld, enum sipc_ch_id ch,
 		struct sk_buff *skb, enum legacy_ipc_map legacy_buffer_index);
 struct sk_buff *recv_from_legacy_link(struct mem_link_device *mld,
 		struct legacy_ipc_device *dev, unsigned int in, int *ret);
+bool check_legacy_tx_pending(struct mem_link_device *mld);
+
 #endif /* end of __BOOT_H__ */
+

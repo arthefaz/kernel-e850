@@ -1371,6 +1371,17 @@ static int xmit_ipc_to_rb(struct mem_link_device *mld, enum sipc_ch_id ch,
 
 	return ret;
 }
+
+bool check_mem_link_tx_pending(struct mem_link_device *mld)
+{
+	struct sbd_link_device *sl = &mld->sbd_link_dev;
+
+	if (sbd_active(sl))
+		return check_sbd_tx_pending(mld);
+	else
+		return check_legacy_tx_pending(mld);
+}
+
 #endif
 
 static int xmit_ipc_to_dev(struct mem_link_device *mld, u8 ch, struct sk_buff *skb,

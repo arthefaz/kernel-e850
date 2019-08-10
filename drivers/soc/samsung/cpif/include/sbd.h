@@ -590,6 +590,7 @@ int create_sbd_link_device(struct link_device *ld, struct sbd_link_device *sl,
 			   u8 *shmem_base, unsigned int shmem_size);
 
 int init_sbd_link(struct sbd_link_device *sl);
+bool check_sbd_tx_pending(struct mem_link_device *mld);
 
 int sbd_pio_tx(struct sbd_ring_buffer *rb, struct sk_buff *skb);
 struct sk_buff *sbd_pio_rx(struct sbd_ring_buffer *rb);

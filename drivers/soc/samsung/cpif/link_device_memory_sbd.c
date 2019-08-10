@@ -502,6 +502,25 @@ int sbd_pio_tx(struct sbd_ring_buffer *rb, struct sk_buff *skb)
 	return count;
 }
 
+bool check_sbd_tx_pending(struct mem_link_device *mld)
+{
+	int i;
+	unsigned int wp, rp;
+	struct sbd_link_device *sl = &mld->sbd_link_dev;
+
+	for (i = 0; i < sl->num_channels; i++) {
+		wp = sl->wp[UL][i];
+		rp = sl->rp[UL][i];
+
+		if (wp != rp) {
+			mif_info("ch: %d, wp: %u, rp: %u", sbd_id2ch(sl, i), wp, rp);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 /**
 @}
 */

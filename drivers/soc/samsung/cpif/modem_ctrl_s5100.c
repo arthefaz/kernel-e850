@@ -798,17 +798,16 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 		goto exit;
 	}
 
-	/* prior Tx might lead cp2ap_wakeup = 1
-	 * wait for a while (30ms) before pci power off
-	 * cp2ap_wakeup = 1 in 20ms from Tx and cp2ap_wakeup = 0 in 50ms from = 1
+	/* CP reads Tx RP (or tail) after CP2AP_WAKEUP = 1.
+	 * skip pci power off if CP2AP_WAKEUP = 1 or Tx pending.
 	 */
 	if (!force_off) {
 		spin_lock_irqsave(&mc->pcie_tx_lock, flags);
 		/* wait Tx done if it is running */
 		spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
-		msleep(30);
-		if (mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 1) {
-			mif_err("skip pci power off : Tx was working\n");
+		if (mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 1 ||
+				check_mem_link_tx_pending(mld)) {
+			mif_err("skip pci power off : condition not met\n");
 			goto exit;
 		}
 	}

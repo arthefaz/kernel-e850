@@ -307,3 +307,24 @@ bad_msg:
 no_mem:
 	return NULL;
 }
+
+bool check_legacy_tx_pending(struct mem_link_device *mld)
+{
+	int i;
+	unsigned int head, tail;
+	struct legacy_ipc_device *dev;
+
+	for (i = IPC_MAP_FMT ; i < MAX_SIPC_MAP ; i++) {
+		dev = mld->legacy_link_dev.dev[i];
+		head = get_txq_head(dev);
+		tail = get_txq_tail(dev);
+
+		if (head != tail) {
+			mif_info("idx: %d, head: %u, tail: %u", i, head, tail);
+			return true;
+		}
+	}
+
+	return false;
+}
+
