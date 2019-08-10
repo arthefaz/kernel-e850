@@ -616,6 +616,26 @@ void decon_destroy_psr_info(struct decon_device *decon)
 	device_remove_file(decon->dev, &dev_attr_psr_info);
 }
 
+static ssize_t decon_show_hiber_exit(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct decon_device *decon = dev_get_drvdata(dev);
+	char *p = buf;
+	int len = 0;
+
+	decon_dbg("%s +\n", __func__);
+
+	if (!decon->hiber.early_wakeup_enable)
+		return len;
+
+	decon->hiber.early_wakeup_cnt++;
+	kthread_queue_work(&decon->hiber.exit_worker, &decon->hiber.exit_work);
+	len = sprintf(p, "%d\n", decon->hiber.early_wakeup_cnt);
+
+	decon_dbg("%s -\n", __func__);
+	return len;
+}
+static DEVICE_ATTR(hiber_exit, S_IRUGO, decon_show_hiber_exit, NULL);
 
 /* Framebuffer interface related callback functions */
 static u32 fb_visual(u32 bits_per_pixel, unsigned short palette_sz)
@@ -1122,9 +1142,25 @@ static void decon_hiber_handler(struct kthread_work *work)
 	atomic_dec(&decon->hiber.remaining_hiber);
 }
 
+static void decon_exit_hiber_handler(struct kthread_work *work)
+{
+	struct decon_hiber *hiber =
+		container_of(work, struct decon_hiber, exit_work);
+	struct decon_device *decon =
+		container_of(hiber, struct decon_device, hiber);
+
+	if (!decon || !decon->hiber.enabled)
+		return;
+
+	decon_dbg("%s +\n", __func__);
+	decon_exit_hiber(decon);
+	decon_dbg("%s -\n", __func__);
+}
+
 int decon_register_hiber_work(struct decon_device *decon)
 {
 	struct sched_param param;
+	int ret = 0;
 
 	decon->hiber.enabled = false;
 	if (!IS_ENABLED(CONFIG_EXYNOS_HIBERNATION)) {
@@ -1152,6 +1188,35 @@ int decon_register_hiber_work(struct decon_device *decon)
 	decon->hiber.hiber_enter_cnt = DECON_ENTER_HIBER_CNT;
 	decon->hiber.enabled = true;
 	decon_info("display supports hibernation mode\n");
+
+	/* register asynchronous hibernation early wakeup feature */
+	decon->hiber.early_wakeup_enable = false;
+	if (!IS_ENABLED(CONFIG_EXYNOS_HIBERNATION_EARLY_WAKEUP) || (decon->id)) {
+		decon_info("hibernation early wakeup is disabled\n");
+		return 0;
+	}
+
+	/* initialize exit hibernation thread */
+	kthread_init_worker(&decon->hiber.exit_worker);
+	decon->hiber.exit_thread = kthread_run(kthread_worker_fn,
+			&decon->hiber.exit_worker, "decon_exit_hiber");
+	if (IS_ERR(decon->hiber.exit_thread)) {
+		decon->hiber.exit_thread = NULL;
+		decon_err("failed to run exit hibernation thread\n");
+		return PTR_ERR(decon->hiber.exit_thread);
+	}
+	param.sched_priority = 20;
+	sched_setscheduler_nocheck(decon->hiber.exit_thread, SCHED_FIFO, &param);
+	kthread_init_work(&decon->hiber.exit_work, decon_exit_hiber_handler);
+	decon->hiber.early_wakeup_cnt = 0;
+
+	ret = device_create_file(decon->dev, &dev_attr_hiber_exit);
+	if (ret) {
+		decon_err("failed to create hiber exit file\n");
+		return ret;
+	}
+	decon->hiber.early_wakeup_enable = true;
+	decon_info("hibernation early wakeup is enabled\n");
 
 	return 0;
 }

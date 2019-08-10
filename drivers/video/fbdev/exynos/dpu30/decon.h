@@ -912,6 +912,9 @@ struct decon_hiber {
 	struct task_struct *thread;
 	struct kthread_worker worker;
 	struct kthread_work work;
+	struct task_struct *exit_thread;
+	struct kthread_worker exit_worker;
+	struct kthread_work exit_work;
 	struct dentry *profile;
 	atomic_t trig_cnt;
 	atomic_t block_cnt;
@@ -941,6 +944,10 @@ struct decon_hiber {
 #if defined(CONFIG_EXYNOS_CHANGE_HIBER_CNT)
 	struct dentry *hiber_cnt;
 #endif
+	struct dentry *hiber_exit;
+	/* hibernation exit count only increasing through sysfs */
+	u32 early_wakeup_cnt;
+	bool early_wakeup_enable;
 
 	int frame_cnt;
 	int fps;

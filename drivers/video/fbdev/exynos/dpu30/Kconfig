@@ -46,6 +46,11 @@ config EXYNOS_CHANGE_HIBER_CNT
         depends on EXYNOS_DPU30 && EXYNOS_HIBERNATION
         default n
 
+config EXYNOS_HIBERNATION_EARLY_WAKEUP
+	bool "Support Hibernation Early Wakeup (EXPERIMENTAL)"
+	depends on EXYNOS_DPU30 && EXYNOS_HIBERNATION
+	default n
+
 config EXYNOS_DOZE
 	bool "Support DOZE mode"
         depends on EXYNOS_DPU30
