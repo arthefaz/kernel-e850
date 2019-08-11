@@ -102,7 +102,7 @@ static void idle_exit(struct cpuidle_stats *stats, int cancel)
 
 static int get_cluster_index(int cpu)
 {
-	int index;
+	int index = 0;
 	int i;
 	for (i = 0; i < MAX_CLUSTER; i++) {
 		if (cpu <= cluster_last_cpu[i]) {
@@ -119,7 +119,7 @@ static int get_cluster_index(int cpu)
  */
 void exynos_perf_cpu_idle_enter(int cpu, int index)
 {
-	int freq_index;
+	int freq_index = 0;
 	int cluster_index;
 	uint cpufreq;
 	int i;
@@ -143,7 +143,7 @@ void exynos_perf_cpu_idle_enter(int cpu, int index)
 
 void exynos_perf_cpu_idle_exit(int cpu, int index, int cancel)
 {
-	int freq_index;
+	int freq_index = 0;
 	int cluster_index;
 	uint cpufreq;
 	int i;
@@ -506,6 +506,7 @@ static int __init exynos_perf_cpuidle_profile_init(void)
 	fops.open		= run_debugfs_open;
 	fops.write		= run_seq_write;
 	fops.read		= seq_read;
+	fops.read_iter		= NULL;
 	fops.llseek		= seq_lseek;
 	fops.release		= single_release;
 

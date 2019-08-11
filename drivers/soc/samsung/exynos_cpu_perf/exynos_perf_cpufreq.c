@@ -319,6 +319,7 @@ static int __init exynos_perf_cpufreq_profile_init(void)
 	fops.open		= run_debugfs_open;
 	fops.write		= run_seq_write;
 	fops.read		= seq_read;
+	fops.read_iter		= NULL;
 	fops.llseek		= seq_lseek;
 	fops.release		= single_release;
 
