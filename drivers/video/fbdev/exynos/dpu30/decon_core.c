@@ -3003,7 +3003,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 
 		if (dpp_ch_restriction.id >= decon->dt.dpp_cnt) {
 			ret = -EINVAL;
-			decon_err("invalid DPP(%d) channel number\n", i);
+			decon_err("invalid DPP(%d) channel number\n", dpp_ch_restriction.id);
 			break;
 		}
 
