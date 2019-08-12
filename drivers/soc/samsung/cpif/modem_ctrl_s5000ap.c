@@ -623,6 +623,56 @@ EXPORT_SYMBOL(modem_send_panic_noti_ext);
 
 
 #ifdef CONFIG_CP_UART_NOTI
+#ifdef CONFIG_PMU_UART_SWITCH
+#if defined(CONFIG_SOC_EXYNOS9630)
+static void __iomem *uart_txd_addr; /* SEL_TXD_GPIO_UART_DEBUG */
+static void __iomem *uart_rxd_addr; /* SEL_RXD_CP_UART */
+void change_to_cp_uart() {
+	if (uart_txd_addr == NULL) {
+		uart_txd_addr = devm_ioremap(g_mc->dev, 0x10E2062C, SZ_64);
+		if (uart_txd_addr == NULL){
+			mif_err("Err: failed to ioremap UART TXD!\n");
+			return;
+		}
+	}
+	if (uart_rxd_addr == NULL) {
+		uart_rxd_addr = devm_ioremap(g_mc->dev, 0x10E20650, SZ_64);
+		if (uart_rxd_addr == NULL){
+			mif_err("Err: failed to ioremap UART RXD!\n");
+			return;
+		}
+	}
+	mif_info("CHANGE TO CP UART\n");
+	__raw_writel(0x2, uart_txd_addr);
+	mif_info("SEL_TXD_GPIO_UART_DEBUG val: %08X\n", __raw_readl(uart_txd_addr));
+	__raw_writel(0x1, uart_rxd_addr);
+	mif_info("SEL_RXD_CP_UART val: %08X\n", __raw_readl(uart_rxd_addr));
+}
+
+void change_to_ap_uart() {
+	if (uart_txd_addr == NULL) {
+		uart_txd_addr = devm_ioremap(g_mc->dev, 0x10E2062C, SZ_64);
+		if (uart_txd_addr == NULL){
+			mif_err("Err: failed to ioremap UART TXD!\n");
+			return;
+		}
+	}
+	if (uart_rxd_addr == NULL) {
+		uart_rxd_addr = devm_ioremap(g_mc->dev, 0x10E20650, SZ_64);
+		if (uart_rxd_addr == NULL){
+			mif_err("Err: failed to ioremap UART RXD!\n");
+			return;
+		}
+	}
+	mif_info("CHANGE TO CP UART\n");
+	__raw_writel(0x0, uart_txd_addr);
+	mif_info("SEL_TXD_GPIO_UART_DEBUG val: %08X\n", __raw_readl(uart_txd_addr));
+	__raw_writel(0x0, uart_rxd_addr);
+	mif_info("SEL_RXD_CP_UART val: %08X\n", __raw_readl(uart_rxd_addr));
+}
+#endif /* End of CONFIG_SOC_EXYNOS9630 */
+#endif /* End of CONFIG_PMU_UART_SWITCH */
+
 void send_uart_noti_to_modem(int val)
 {
 	struct modem_data *modem;
@@ -636,13 +686,13 @@ void send_uart_noti_to_modem(int val)
 	modem = g_mc->mdm_data;
 	mld = modem->mld;
 
-#ifdef CONFIG_PMU_UART_SWITCH /* TODO */
+#ifdef CONFIG_PMU_UART_SWITCH
 	switch (val) {
 	case MODEM_CTRL_UART_CP:
-		mif_info("CP UART\n");
+		change_to_cp_uart();
 		break;
 	case MODEM_CTRL_UART_AP:
-		mif_info("AP UART\n");
+		change_to_ap_uart();
 		break;
 	default:
 		mif_err("Invalid val:%d\n", val);
