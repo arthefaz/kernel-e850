@@ -39,7 +39,7 @@
 #define SCALER_INT_EN			0x08
 #define SCALER_INT_EN_FRAME_END		(1 << 0)
 #define SCALER_INT_EN_ALL		0x807fffff
-#define SCALER_INT_EN_ALL_v3		0x82ffffff
+#define SCALER_INT_EN_ALL_v3		0x83ffffff
 #define SCALER_INT_EN_ALL_v4		0xb2ffffff
 #define SCALER_INT_EN_ALL_v5		0xe0ffffff
 #define SCALER_INT_EN_ALL_v6		0xfcffffff
