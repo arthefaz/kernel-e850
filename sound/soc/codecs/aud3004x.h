@@ -122,6 +122,7 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AUD3004X_09_IRQ2M			0x09
 #define AUD3004X_0A_IRQ3M			0x0A
 #define AUD3004X_0B_IRQ4M			0x0B
+#define AUD3004X_0C_IRQ5M			0x0C
 
 /* Clock and Reset */
 #define AUD3004X_10_CLKGATE0		0x10
@@ -183,6 +184,10 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AUD3004X_74_AVC37			0x74
 #define AUD3004X_7A_AVC43			0x7A
 #define AUD3004X_7C_OCPCTRL0		0x7C
+
+/* Interrupt Register for LV */
+#define AUD3004X_8B_OVP_INTR_POS	0X8B
+#define AUD3004X_8C_OVP_INTR_NEG	0X8C
 
 /* DAC Digital DSM Control */
 #define AUD3004X_90_BOOST_HR0		0x90
@@ -268,6 +273,7 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define AUD3004X_15E_VOL_EP			0x15E
 #define AUD3004X_15F_OVP1			0x15F
 #define AUD3004X_160_OVP2			0x160
+#define AUD3004X_161_OVP3			0x161
 
 /* OTP Register for Analog */
 #define AUD3004X_28B_SPKOFF_S_0		0x28B
@@ -1086,7 +1092,7 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 
 #define OFFSET_RNGR_SHIFT			2
 #define OFFSET_RNGR_WIDTH			2
-#define OFFSET_RNGR_MASK			MASK(OFFSET_RNGR_WIDTH, OFFSET_RNGL_SHIFT)
+#define OFFSET_RNGR_MASK			MASK(OFFSET_RNGR_WIDTH, OFFSET_RNGR_SHIFT)
 
 #define OFFSET_RNGC_SHIFT			0
 #define OFFSET_RNGC_WIDTH			2
@@ -1883,6 +1889,40 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 
 #define EN_EP_COMPEN_SW_SHIFT		1
 #define EN_EP_COMPEN_SW_MASK		BIT(EN_EP_COMPEN_SW_SHIFT)
+
+/* AUD3004X_15F_OVP1 */
+#define OVP_MUTE_SEL_SHIFT			6
+#define OVP_MUTE_SEL_WIDTH			2
+#define OVP_MUTE_SEL_MASK			MASK(OVP_MUTE_SEL_WIDTH, OVP_MUTE_SEL_SHIFT)
+
+#define CTRV_SURGE_REFP_SHIFT		4
+#define CTRV_SURGE_REFP_WIDTH		3
+#define CTRV_SURGE_REFP_MASK		MASK(CTRV_SURGE_REFP_WIDTH, CTRV_SURGE_REFP_SHIFT)
+
+#define CTRV_SURGE_REFN_SHIFT		0
+#define CTRV_SURGE_REFN_WIDTH		3
+#define CTRV_SURGE_REFN_MASK		MASK(CTRV_SURGE_REFN_WIDTH, CTRV_SURGE_REFN_SHIFT)
+
+/* AUD3004X_160_OVP2 */
+#define OVP_TIME_SLOT_SHIFT			6
+#define OVP_TIME_SLOT_WIDTH			2
+#define OVP_TIME_SLOT_MASK			MASK(OVP_TIME_SLOT_WIDTH, OVP_TIME_SLOT_SHIFT)
+
+#define OVP_MASK_SHIFT				5
+#define OVP_MASK_MASK				BIT(OVP_MASK_SHIFT)
+
+#define OVP_APON_SHIFT				4
+#define OVP_APON_MASK				BIT(OVP_APON_SHIFT)
+
+#define OVP_UNMUTE_SHIFT			3
+#define OVP_UNMUTE_MASK				BIT(OVP_UNMUTE_SHIFT)
+
+#define OVP_POL_SHIFT				2
+#define OVP_POL_MASK				BIT(OVP_POL_SHIFT)
+
+#define CTMI_SURGE_SHIFT			0
+#define CTMI_SURGE_WIDTH			2
+#define CTMI_SURGE_MASK				MASK(CTMI_SURGE_WIDTH, CTMI_SURGE_SHIFT)
 
 /* AUD3004X_2A2_CTRL_IREF1 */
 #define CTMI_VCM_SHIFT				4

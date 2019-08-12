@@ -577,6 +577,64 @@ static int dmic_bias_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int ovp1_value_get(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	unsigned long ovp_control;
+
+	ovp_control = aud3004x_read(aud3004x, AUD3004X_15F_OVP1);
+
+	ucontrol->value.integer.value[0] = ovp_control;
+
+	return 0;
+}
+
+static int ovp1_value_put(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	int value = ucontrol->value.integer.value[0];
+
+	aud3004x_write(aud3004x, AUD3004X_15F_OVP1, value);
+
+	dev_info(codec->dev, "%s: ovp1_tuning_value: 0x%x.\n",
+			__func__, value);
+
+	return 0;
+}
+
+static int ovp2_value_get(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	unsigned long ovp_control;
+
+	ovp_control = aud3004x_read(aud3004x, AUD3004X_160_OVP2);
+
+	ucontrol->value.integer.value[0] = ovp_control;
+
+	return 0;
+}
+
+static int ovp2_value_put(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	int value = ucontrol->value.integer.value[0];
+
+	aud3004x_write(aud3004x, AUD3004X_160_OVP2, value);
+
+	dev_info(codec->dev, "%s: ovp2_tuning_value: 0x%x.\n",
+			__func__, value);
+
+	return 0;
+}
+
 /*
  * aud3004x_adc_dat_src - I2S channel input data selection
  *
@@ -720,6 +778,12 @@ static const struct snd_kcontrol_new aud3004x_snd_controls[] = {
 
 	SOC_SINGLE_EXT("DMIC Bias", SND_SOC_NOPM, 0, 1, 0,
 			dmic_bias_get, dmic_bias_put),
+
+	SOC_SINGLE_EXT("OVP1 Tuning Value", SND_SOC_NOPM, 0, 100, 0,
+			ovp1_value_get, ovp1_value_put),
+
+	SOC_SINGLE_EXT("OVP2 Tuning Value", SND_SOC_NOPM, 0, 100, 0,
+			ovp2_value_get, ovp2_value_put),
 
 	SOC_ENUM("ADC DAT Mux0", aud3004x_adc_dat_enum0),
 
@@ -1786,7 +1850,6 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 
 		/* Cross talk disable */
 		aud3004x_write(aud3004x, AUD3004X_58_AVC9, 0x00);
-
 		/* Clock Gate clear */
 		aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
 				DSML_CLK_GATE_MASK | DSMR_CLK_GATE_MASK |
@@ -2318,12 +2381,13 @@ static void aud3004x_dai_shutdown(struct snd_pcm_substream *substream,
 		aud3004x->capture_on = false;
 	else
 		aud3004x->playback_on = false;
-
+#if 0
 	if ((aud3004x->capture_on == false) && (aud3004x->playback_on == false)) {
 		/* Internal Clock Off */
 		aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
 				COM_CLK_GATE_MASK, 0);
 	}
+#endif
 }
 
 static const struct snd_soc_dai_ops aud3004x_dai_ops = {
@@ -2624,7 +2688,7 @@ static void aud3004x_register_initialize(void *context)
 
 	/* OVP Setting */
 	aud3004x_write(aud3004x, AUD3004X_15F_OVP1, 0x2E);
-	aud3004x_write(aud3004x, AUD3004X_160_OVP2, 0x12);
+	aud3004x_write(aud3004x, AUD3004X_160_OVP2, 0x1A);
 
 	/* OTP HP Current */
 	aud3004x_write(aud3004x, AUD3004X_2B0_CTRL_HPS, 0x59);
@@ -2666,10 +2730,18 @@ static void aud3004x_register_initialize(void *context)
 	aud3004x_acpm_write_reg(AUD3004X_CLOSE_ADDR, 0x47, 0x90);
 	aud3004x_acpm_write_reg(AUD3004X_CLOSE_ADDR, 0x48, 0x8A);
 
+	/* MDET Comp */
+	aud3004x_acpm_write_reg(AUD3004X_CLOSE_ADDR, 0x97, 0x66);
+
 	/* ADC/DAC Mute */
 	aud3004x_write(aud3004x, AUD3004X_1A_DRIVER_MUTE, 0x0F);
 	aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
 	aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
+
+
+	/* OVP Interrupt */
+	aud3004x_write(aud3004x, AUD3004X_8B_OVP_INTR_POS, 0xCF);
+	aud3004x_write(aud3004x, AUD3004X_8C_OVP_INTR_NEG, 0xCF);
 
 	/* All boot time hardware access is done. Put the device to sleep. */
 #ifdef CONFIG_PM
