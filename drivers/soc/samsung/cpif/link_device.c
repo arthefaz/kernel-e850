@@ -3693,7 +3693,7 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 		break;
 	default:
 		mif_err("protocol error %d\n", ld->protocol);
-		return NULL;
+		goto error;
 	}
 
 	ld->enable_rx_int = shmem_enable_rx_int;
