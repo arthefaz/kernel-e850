@@ -2852,12 +2852,27 @@ static bool sc_process_2nd_stage(struct sc_dev *sc, struct sc_ctx *ctx)
 	}
 
 	/* no rotation */
+	if (ctx->bl_op) {
+		if (sc->variant->blending) {
+			struct sc_frame *src_blend_frame =
+					&ctx->src_blend_frame;
+			sc_hwset_blend_src_addr(sc, src_blend_frame);
+			sc_hwset_blend(sc, ctx->bl_op, ctx->pre_multi,
+				       ctx->g_alpha, &ctx->src_blend_cfg);
+		} else {
+			sc_hwset_blend(sc, ctx->bl_op, ctx->pre_multi,
+				       ctx->g_alpha, NULL);
+		}
+	}
 
 	sc_hwset_hratio(sc, h_ratio, pre_h_ratio);
 	sc_hwset_vratio(sc, v_ratio, pre_v_ratio);
 
-	sc_hwset_polyphase_hcoef(sc, h_ratio, h_ratio, 0);
-	sc_hwset_polyphase_vcoef(sc, v_ratio, v_ratio, 0);
+	/* version(4, 2, 0) is SC_BI */
+	if (sc->version != SCALER_VERSION(4, 2, 0)) {
+		sc_hwset_polyphase_hcoef(sc, h_ratio, h_ratio, 0);
+		sc_hwset_polyphase_vcoef(sc, v_ratio, v_ratio, 0);
+	}
 
 	sc_hwset_src_pos(sc, s_frame->crop.left, s_frame->crop.top,
 			s_frame->sc_fmt->h_shift, s_frame->sc_fmt->v_shift);
@@ -3063,7 +3078,7 @@ static int sc_run_next_job(struct sc_dev *sc)
 
 	sc_set_dithering(ctx);
 
-	if (ctx->bl_op) {
+	if (ctx->bl_op && !test_bit(CTX_INT_FRAME, &ctx->flags)) {
 		if (sc->variant->blending) {
 			struct sc_frame *src_blend_frame =
 					&ctx->src_blend_frame;
