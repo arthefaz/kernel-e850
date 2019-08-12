@@ -22,6 +22,8 @@
 #ifdef CONFIG_EXYNOS_ACPM
 #include <soc/samsung/acpm_ipc_ctrl.h>
 #endif
+#include <soc/samsung/exynos-pmu.h>
+#include <soc/samsung/exynos-debug.h>
 #include <linux/mfd/samsung/s2mpu12-regulator.h>
 
 #define SWRESET				(0x2)
@@ -34,6 +36,11 @@
 #define REBOOT_MODE_FASTBOOT		0xFC
 #define REBOOT_MODE_RECOVERY		0xFF
 #define REBOOT_MODE_FACTORY		0xFD
+#define REBOOT_MODE_USBRECOVERY		0xFE
+
+#ifdef CONFIG_EXYNOS_REBOOT_USB_RECOVERY
+#define PMU_OFFSET_DREXCAL7		0x09BC
+#endif
 
 extern void (*arm_pm_restart)(enum reboot_mode reboot_mode, const char *cmd);
 
@@ -120,6 +127,15 @@ static void exynos_restart_v1(enum reboot_mode mode, const char *cmd)
 			reboot_mode = REBOOT_MODE_FACTORY;
 	}
 	writel(reboot_mode, (void *)((long)exynos_reboot.reg_base + variant->reboot_mode_reg));
+
+#ifdef CONFIG_EXYNOS_REBOOT_USB_RECOVERY
+	/* Add reboot usb booting mode and WDT0 right now */
+	if (!strcmp(cmd, "usbrecovery")) {
+		exynos_pmu_update(PMU_OFFSET_DREXCAL7, 0x01, 0x01);
+		s3c2410wdt_set_emergency_reset(1, 0);
+		while (1);
+	}
+#endif
 
 	if (variant->reset_control)
 		variant->reset_control();
