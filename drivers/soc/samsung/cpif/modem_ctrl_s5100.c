@@ -878,17 +878,19 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 	mc->pcie_powered_on = false;
 	exynos_pcie_host_v1_poweroff(mc->pcie_ch_num);
 
-	if (mc->reserve_doorbell_int) {
-		msleep(20);
-		s5100_try_gpio_cp_wakeup(mc);
-	}
-
 	if (wake_lock_active(&mc->mc_wake_lock))
 		wake_unlock(&mc->mc_wake_lock);
 
 exit:
 	mif_info("---\n");
 	mutex_unlock(&mc->pcie_onoff_lock);
+
+	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
+	if (!mc->pcie_powered_on && mc->reserve_doorbell_int) {
+		s5100_try_gpio_cp_wakeup(mc);
+	}
+	spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
+
 	return 0;
 }
 
@@ -896,6 +898,7 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 {
 	struct link_device *ld;
 	struct mem_link_device *mld;
+	unsigned long flags;
 	int ret;
 	u32 cp_num;
 
@@ -982,19 +985,11 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 
 	if ((mc->s51xx_pdev != NULL) && mc->pcie_registered) {
 		/* DBG */
-		mif_info("DBG: doorbell: pcie_registered = %d, doorbell_reserved = %d\n",
-			mc->pcie_registered, mc->reserve_doorbell_int);
-
+		mif_info("DBG: doorbell: pcie_registered = %d\n", mc->pcie_registered);
 		if (s51xx_pcie_send_doorbell_int(mc->s51xx_pdev, mc->int_pcie_link_ack) != 0) {
 			/* DBG */
 			mif_err("DBG: s5100pcie_send_doorbell_int() func. is failed !!!\n");
 			s5100_force_crash_exit_ext();
-		}
-
-		if (mc->reserve_doorbell_int) {
-			mc->reserve_doorbell_int = false;
-			if (s51xx_pcie_send_doorbell_int(mc->s51xx_pdev, mld->intval_ap2cp_msg) != 0)
-				s5100_force_crash_exit_ext();
 		}
 	}
 
@@ -1013,6 +1008,16 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 exit:
 	mif_info("---\n");
 	mutex_unlock(&mc->pcie_onoff_lock);
+
+	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
+	if (mc->pcie_powered_on && mc->reserve_doorbell_int) {
+		mif_info("DBG: doorbell: doorbell_reserved = %d\n", mc->reserve_doorbell_int);
+		mc->reserve_doorbell_int = false;
+		if (s51xx_pcie_send_doorbell_int(mc->s51xx_pdev, mld->intval_ap2cp_msg) != 0)
+			s5100_force_crash_exit_ext();
+	}
+	spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
+
 	return 0;
 }
 

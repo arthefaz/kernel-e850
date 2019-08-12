@@ -353,9 +353,6 @@ struct mem_link_device {
 	spinlock_t state_lock;
 	enum link_state state;
 
-	struct wake_lock tx_timer_wlock;
-	struct wake_lock sbd_tx_timer_wlock;
-
 	struct net_device dummy_net;
 	struct napi_struct mld_napi;
 	unsigned int rx_int_enable;

@@ -195,17 +195,6 @@ enum link_state {
 	LINK_STATE_CP_CRASH
 };
 
-#ifdef CONFIG_LINK_DEVICE_PCIE
-enum runtime_link_id {
-	LINK_SEND = 0,
-	LINK_CP,
-	LINK_SBD_TX_TIMER,
-	LINK_TX_TIMER,
-	LINK_REGISTER_PCI,
-	LINK_ID_MAX,
-};
-#endif /* CONFIG_LINK_DEVICE_PCIE */
-
 struct sim_state {
 	bool online;	/* SIM is online? */
 	bool changed;	/* online is changed? */

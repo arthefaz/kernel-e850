@@ -906,16 +906,7 @@ static enum hrtimer_restart tx_timer_func(struct hrtimer *timer)
 exit:
 	if (need_schedule) {
 		ktime_t ktime = ktime_set(0, mld->tx_period_ms * NSEC_PER_MSEC);
-#ifdef CONFIG_LINK_DEVICE_PCIE
-		if ((ld->link_type == LINKDEV_PCIE) && !wake_lock_active(&mld->tx_timer_wlock))
-			wake_lock(&mld->tx_timer_wlock);
-#endif
 		hrtimer_start(timer, ktime, HRTIMER_MODE_REL);
-	} else {
-#ifdef CONFIG_LINK_DEVICE_PCIE
-		if ((ld->link_type == LINKDEV_PCIE) && wake_lock_active(&mld->tx_timer_wlock))
-			wake_unlock(&mld->tx_timer_wlock);
-#endif
 	}
 	spin_unlock_irqrestore(&mc->lock, flags);
 
@@ -981,11 +972,6 @@ static int tx_func(struct mem_link_device *mld, struct hrtimer *timer,
 	dev_consume_skb_any(skb);
 
 	send_ipc_irq(mld, mask2int(mask));
-
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if ((ld->link_type == LINKDEV_PCIE) && (mc->reserve_doorbell_int == true))
-		wake_lock_timeout(&mld->sbd_tx_timer_wlock, msecs_to_jiffies(3000));
-#endif
 
 exit:
 	if (need_schedule) {
@@ -1200,11 +1186,6 @@ static enum hrtimer_restart sbd_tx_timer_func(struct hrtimer *timer)
 		spin_unlock_irqrestore(&mc->lock, flags);
 	}
 
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if ((ld->link_type == LINKDEV_PCIE) && (mc->reserve_doorbell_int == true))
-		wake_lock_timeout(&mld->sbd_tx_timer_wlock, msecs_to_jiffies(3000));
-#endif
-
 exit:
 	if (need_schedule) {
 		ktime_t ktime = ktime_set(0, mld->tx_period_ms * NSEC_PER_MSEC);
@@ -1274,11 +1255,6 @@ static int sbd_tx_func(struct mem_link_device *mld, struct hrtimer *timer,
 	}
 	send_ipc_irq(mld, mask2int(mask));
 	spin_unlock_irqrestore(&mc->lock, flags);
-
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if ((ld->link_type == LINKDEV_PCIE) && (mc->reserve_doorbell_int == true))
-		wake_lock_timeout(&mld->sbd_tx_timer_wlock, msecs_to_jiffies(3000));
-#endif
 
 exit:
 	if (need_schedule) {
@@ -2052,10 +2028,6 @@ static void link_prepare_normal_boot(struct link_device *ld, struct io_device *i
 	spin_unlock_irqrestore(&mld->state_lock, flags);
 
 	cancel_tx_timer(mld, &mld->tx_timer);
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if ((ld->link_type == LINKDEV_PCIE) && wake_lock_active(&mld->tx_timer_wlock))
-		wake_unlock(&mld->tx_timer_wlock);
-#endif
 
 	if (ld->sbd_ipc) {
 #ifdef CONFIG_LTE_MODEM_XMM7260
@@ -2063,10 +2035,6 @@ static void link_prepare_normal_boot(struct link_device *ld, struct io_device *i
 #endif
 		cancel_tx_timer(mld, &mld->sbd_tx_timer);
 		cancel_datalloc_timer(mld);
-#ifdef CONFIG_LINK_DEVICE_PCIE
-		if ((ld->link_type == LINKDEV_PCIE) &&  wake_lock_active(&mld->sbd_tx_timer_wlock))
-			wake_unlock(&mld->sbd_tx_timer_wlock);
-#endif
 
 		if (mld->iosm) {
 			memset(mld->base + CMD_RGN_OFFSET, 0, CMD_RGN_SIZE);
@@ -2680,6 +2648,7 @@ static void pcie_send_ap2cp_irq(struct mem_link_device *mld, u16 mask)
 	}
 
 	set_ctrl_msg(&mld->ap2cp_msg, mask);
+	mc->reserve_doorbell_int = false;
 	if (s51xx_pcie_send_doorbell_int(mc->s51xx_pdev, mld->intval_ap2cp_msg) != 0)
 		s5100_force_crash_exit_ext();
 
@@ -3922,12 +3891,6 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	mld->irq_cp2ap_wakelock = modem->mbx->irq_cp2ap_wakelock;
 
 	wake_lock_init(&mld->cp_wakelock, WAKE_LOCK_SUSPEND, ld->name);
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	wake_lock_init(&mld->tx_timer_wlock, WAKE_LOCK_SUSPEND,
-			"tx_timer_wlock");
-	wake_lock_init(&mld->sbd_tx_timer_wlock, WAKE_LOCK_SUSPEND,
-			"sbd_tx_timer_wlock");
-#endif
 
 #ifdef CONFIG_MCU_IPC
 	if (ld->interrupt_types == INTERRUPT_MAILBOX) {
