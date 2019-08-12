@@ -1020,24 +1020,22 @@ static int dsim_reg_wait_idle_status(u32 id, u32 is_vm)
 	u32 cnt = 1000;
 	u32 reg_id, val, status;
 
-	if (is_vm)
+	if (is_vm) {
 		reg_id = DSIM_LINK_STATUS0;
-	else
-		reg_id = DSIM_LINK_STATUS1;
 
-	do {
-		val = dsim_read(id, reg_id);
-		status = is_vm ? DSIM_LINK_STATUS0_VIDEO_MODE_STATUS_GET(val) :
-				DSIM_LINK_STATUS1_CMD_MODE_STATUS_GET(val);
-		if (status == DSIM_STATUS_IDLE)
-			break;
-		cnt--;
-		udelay(10);
-	} while (cnt);
+		do {
+			val = dsim_read(id, reg_id);
+			status = DSIM_LINK_STATUS0_VIDEO_MODE_STATUS_GET(val);
+			if (status == DSIM_STATUS_IDLE)
+				break;
+			cnt--;
+			udelay(10);
+		} while (cnt);
 
-	if (!cnt) {
-		dsim_err("dsim%d wait timeout idle status(%u)\n", id, status);
-		return -EBUSY;
+		if (!cnt) {
+			dsim_err("dsim%d wait timeout idle status(%u)\n", id, status);
+			return -EBUSY;
+		}
 	}
 
 	return 0;
