@@ -238,7 +238,6 @@ static void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 
 		c20 = csc_y2r_3x3_t[csc_id][2][0];
 		c21 = csc_y2r_3x3_t[csc_id][2][1];
-
 		c22 = csc_y2r_3x3_t[csc_id][2][2];
 	} else if ((csc_std >= CSC_BT_2020) && (csc_std <= CSC_DCI_P3)) {
 		csc_id = (csc_std % 2) * 2  + csc_rng;
@@ -257,6 +256,17 @@ static void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 		c22 = dpp_reg_csc_y2r_3x3[csc_id][2][2];
 	} else {
 		dpp_warn("[DPP%d] Undefined CSC Type!(std=%d)\n", id, csc_std);
+		c00 = csc_y2r_3x3_t[csc_id][0][0];
+		c01 = csc_y2r_3x3_t[csc_id][0][1];
+		c02 = csc_y2r_3x3_t[csc_id][0][2];
+
+		c10 = csc_y2r_3x3_t[csc_id][1][0];
+		c11 = csc_y2r_3x3_t[csc_id][1][1];
+		c12 = csc_y2r_3x3_t[csc_id][1][2];
+
+		c20 = csc_y2r_3x3_t[csc_id][2][0];
+		c21 = csc_y2r_3x3_t[csc_id][2][1];
+		c22 = csc_y2r_3x3_t[csc_id][2][2];
 	}
 
 	val = (DPP_CSC_COEF_H(c01) | DPP_CSC_COEF_L(c00));
