@@ -990,7 +990,7 @@ static void dsim_reg_set_hperiod(u32 id, struct exynos_panel_info *lcd)
 	u32 hact_period, hsa_period, hbp_period, hfp_period;
 
 	if (lcd->dsc.en)
-		width = lcd->xres / 3;
+		width = lcd->dsc.enc_sw * lcd->dsc.slice_num;
 	else
 		width = lcd->xres;
 
