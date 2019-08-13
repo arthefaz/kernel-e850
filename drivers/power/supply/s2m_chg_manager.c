@@ -79,7 +79,7 @@ static int set_charging_current(struct s2m_chg_manager_info *battery, int coeff)
 {
 	union power_supply_propval value;
 	struct power_supply *psy;
-	int input_current = 0, charging_current = 0, topoff_current = 0, ret;
+	int input_current = 0, charging_current = 0, topoff_current = 0, ret = 0;
 #if defined(CONFIG_SMALL_CHARGER)
 	int small_limit_curr = battery->small_limit_current;
 #endif
@@ -1897,18 +1897,19 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 	psy = power_supply_get_by_name(battery->pdata->fuelgauge_name);
 	if (!psy)
 		pr_info("%s: there's no fuelgauge driver\n", __func__);
-
-	ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_CAPACITY, &value);
-	if (ret < 0)
-		pr_err("%s: Fail to execute property\n", __func__);
-
-	battery->capacity = value.intval / 10;
+	else {
+		ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_CAPACITY, &value);
+		if (ret < 0)
+			pr_err("%s: Fail to execute property\n", __func__);
+		battery->capacity = value.intval / 10;
+	}
 
 	/* Set float voltage for charger */
 	psy = power_supply_get_by_name(battery->pdata->charger_name);
 	if (!psy)
 		pr_info("%s: there's no charger driver\n", __func__);
-	else {value.intval = battery->pdata->chg_float_voltage;
+	else {
+		value.intval = battery->pdata->chg_float_voltage;
 		ret = power_supply_set_property(psy, POWER_SUPPLY_PROP_VOLTAGE_MAX, &value);
 		if (ret < 0)
 			pr_err("%s: Fail to execute property\n", __func__);
