@@ -4421,7 +4421,8 @@ int dw_mci_probe(struct dw_mci *host)
 #endif
 	/* Now that slots are all setup, we can enable card detect */
 	dw_mci_enable_cd(host);
-	drv_data->runtime_pm_control(host,0);
+	if (drv_data && drv_data->runtime_pm_control)
+		drv_data->runtime_pm_control(host,0);
 
 	return 0;
 
@@ -4449,7 +4450,9 @@ int dw_mci_probe(struct dw_mci *host)
 #ifdef CONFIG_CPU_IDLE
 	exynos_update_ip_idle_status(host->idle_ip_index, 1);
 #endif
-	drv_data->runtime_pm_control(host,0);
+	if (drv_data && drv_data->runtime_pm_control)
+		drv_data->runtime_pm_control(host,0);
+
 	return ret;
 }
 
