@@ -2775,24 +2775,38 @@ static void sc_watchdog(unsigned long arg)
 
 }
 
-static void sc_set_csc_coef(struct sc_ctx *ctx)
+static void sc_set_csc_coef(struct sc_ctx *ctx, struct sc_frame *s_frame,
+		struct sc_frame *d_frame, bool is_2nd_processing)
 {
-	struct sc_frame *s_frame, *d_frame;
 	struct sc_dev *sc;
 	enum sc_csc_idx idx;
 
 	sc = ctx->sc_dev;
-	s_frame = &ctx->s_frame;
-	d_frame = &ctx->d_frame;
 
-	if (s_frame->sc_fmt->is_alphablend_fmt)
-		idx = CSC_Y2R;
-	else if (s_frame->sc_fmt->is_rgb == d_frame->sc_fmt->is_rgb)
-		idx = NO_CSC;
-	else if (s_frame->sc_fmt->is_rgb)
-		idx = CSC_R2Y;
-	else
-		idx = CSC_Y2R;
+	if (test_bit(CTX_INT_FRAME, &ctx->flags) && ctx->bl_op) {
+	/* MSCL blending is always blending from YUV to YUV.
+	 * 1st processing is scaling from YUV to YUV.
+	 * So, in 1st processing idx should be NO_CSC.
+	 * And, 2st processing is blending and scaling from YUV to YUV.
+	 * But, HW get RGB as output of blending.
+	 * And then, do CSC from RGB to YUV automatically.
+	 * So, we should consider this as CSC from YUV to RGB,
+	 * although it is CSC from YUV to YUV.
+	 */
+		if (is_2nd_processing)
+			idx = CSC_Y2R;
+		else
+			idx = NO_CSC;
+	} else {
+		if (s_frame->sc_fmt->is_alphablend_fmt)
+			idx = CSC_Y2R;
+		else if (s_frame->sc_fmt->is_rgb == d_frame->sc_fmt->is_rgb)
+			idx = NO_CSC;
+		else if (s_frame->sc_fmt->is_rgb)
+			idx = CSC_R2Y;
+		else
+			idx = CSC_Y2R;
+	}
 
 	sc_hwset_csc_coef(sc, idx, &ctx->csc);
 }
@@ -2824,6 +2838,8 @@ static bool sc_process_2nd_stage(struct sc_dev *sc, struct sc_ctx *ctx)
 	v4l_bound_align_image(&s_frame->crop.width, limit->min_w, limit->max_w,
 			walign, &s_frame->crop.height, limit->min_h,
 			limit->max_h, halign, 0);
+
+	sc_set_csc_coef(ctx, s_frame, d_frame, true);
 
 	sc_hwset_src_image_format(sc, s_frame->sc_fmt);
 	sc_hwset_dst_image_format(sc, d_frame->sc_fmt);
@@ -3003,7 +3019,7 @@ static int sc_run_next_job(struct sc_dev *sc)
 		d_frame = &ctx->i_frame->frame;
 	}
 
-	sc_set_csc_coef(ctx);
+	sc_set_csc_coef(ctx, s_frame, d_frame, false);
 
 	sc_hwset_src_image_format(sc, s_frame->sc_fmt);
 	sc_hwset_dst_image_format(sc, d_frame->sc_fmt);
