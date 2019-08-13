@@ -1416,10 +1416,11 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
 				MUTE_SPK_MASK, MUTE_SPK_MASK);
 
-		/* Reset off DAC path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
-
+		if (!hp_on) {
+			/* Reset off DAC path */
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
+		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		/* Speaker EXT_BST disable */
@@ -1465,11 +1466,11 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 			/* Play Mode Selection */
 			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
 					PLAY_MODE_SEL_MASK, 0);
-		}
 
-		/* Clock Gate clear */
-		aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
-				DSMC_CLK_GATE_MASK | DAC_CIC_CGC_MASK, 0);
+			/* Clock Gate clear */
+			aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
+					DSMC_CLK_GATE_MASK | DAC_CIC_CGC_MASK, 0);
+		}
 		break;
 	}
 	return 0;
@@ -1575,10 +1576,11 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
 				MUTE_EP_MASK, MUTE_EP_MASK);
 
-		/* Reset off DAC path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
-
+		if (!hp_on) {
+			/* Reset off DAC path */
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
+		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		/* EP Mix disable */
@@ -1635,11 +1637,11 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 			/* Play Mode Selection */
 			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
 					PLAY_MODE_SEL_MASK, 0);
-		}
 
-		/* Clock Gate clear */
-		aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
-				DSMC_CLK_GATE_MASK | DAC_CIC_CGC_MASK, 0);
+			/* Clock Gate clear */
+			aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
+					DSMC_CLK_GATE_MASK | DAC_CIC_CGC_MASK, 0);
+		}
 		break;
 	}
 	return 0;
@@ -1787,12 +1789,25 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
 				MUTE_HP_MASK, MUTE_HP_MASK);
 
-		/* Reset off DAC path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
+		if (!ep_on && !lineout_on && !spk_on) {
+			/* Reset off DAC path */
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
+		}
 
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+		/* CP Frequency Control clear */
+		aud3004x_write(aud3004x, AUD3004X_150_CTRL_EP, 0x08);
+		aud3004x_write(aud3004x, AUD3004X_B0_AUTO_COM1, 0x0D);
+
+		/* DAC Trim clear */
+		aud3004x_write(aud3004x, AUD3004X_47_TRIM_DAC0, 0xC9);
+		aud3004x_write(aud3004x, AUD3004x_48_TRIM_DAC1, 0x65);
+
+		/* Cross talk disable */
+		aud3004x_write(aud3004x, AUD3004X_58_AVC9, 0x00);
+
 		if (ep_on | lineout_on) {
 			/* Compensation Mode selection */
 			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
@@ -1838,24 +1853,14 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 			/* Play Mode Selection */
 			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
 					PLAY_MODE_SEL_MASK, 0);
+
+			/* Clock Gate clear */
+			aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
+					DSML_CLK_GATE_MASK | DSMR_CLK_GATE_MASK |
+					DAC_CIC_CGL_MASK | DAC_CIC_CGR_MASK, 0);
+			aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
+					OVP_CLK_GATE_MASK, 0);
 		}
-
-		/* CP Frequency Control clear */
-		aud3004x_write(aud3004x, AUD3004X_150_CTRL_EP, 0x08);
-		aud3004x_write(aud3004x, AUD3004X_B0_AUTO_COM1, 0x0D);
-
-		/* DAC Trim clear */
-		aud3004x_write(aud3004x, AUD3004X_47_TRIM_DAC0, 0xC9);
-		aud3004x_write(aud3004x, AUD3004x_48_TRIM_DAC1, 0x65);
-
-		/* Cross talk disable */
-		aud3004x_write(aud3004x, AUD3004X_58_AVC9, 0x00);
-		/* Clock Gate clear */
-		aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
-				DSML_CLK_GATE_MASK | DSMR_CLK_GATE_MASK |
-				DAC_CIC_CGL_MASK | DAC_CIC_CGR_MASK, 0);
-		aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
-				OVP_CLK_GATE_MASK, 0);
 		break;
 	}
 	return 0;
@@ -1927,10 +1932,11 @@ static int linedrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
 				MUTE_LINE_MASK, MUTE_LINE_MASK);
 
-		/* Reset off DAC path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
-
+		if (!hp_on) {
+			/* Reset off DAC path */
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
+		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		if (hp_on) {
@@ -1961,11 +1967,11 @@ static int linedrv_ev(struct snd_soc_dapm_widget *w,
 			/* Play Mode Selection */
 			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
 					PLAY_MODE_SEL_MASK, 0);
-		}
 
-		/* Clock Gate clear */
-		aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
-				DSMC_CLK_GATE_MASK | DAC_CIC_CGC_MASK, 0);
+			/* Clock Gate clear */
+			aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
+					DSMC_CLK_GATE_MASK | DAC_CIC_CGC_MASK, 0);
+		}
 		break;
 	}
 	return 0;
