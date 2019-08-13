@@ -579,7 +579,6 @@ int dbg_snapshot_post_reboot(char *cmd)
 	dbg_snapshot_report_reason(DSS_SIGN_NORMAL_REBOOT);
 	dbg_snapshot_scratch_clear();
 	dev_emerg(dss_desc.dev, "debug-snapshot: normal reboot done\n");
-	dbg_snapshot_save_context(NULL);
 
 	/* clear DSS_SIGN_PANIC when normal reboot */
 	for_each_possible_cpu(cpu) {
