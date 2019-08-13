@@ -1688,6 +1688,19 @@ static int chub_itmon_notifier(struct notifier_block *nb,
 }
 #endif
 
+static int chub_panic_handler(struct notifier_block *nb,
+                               unsigned long action, void *data)
+{
+	chub_dbg_dump_ram(CHUB_ERR_KERNEL_PANIC);
+	return NOTIFY_OK;
+}
+
+static struct notifier_block chub_panic_notifier = {
+        .notifier_call  = chub_panic_handler,
+        .next           = NULL,
+        .priority       = 0     /* priority: INT_MAX >= x >= 0 */
+};
+
 static int contexthub_ipc_probe(struct platform_device *pdev)
 {
 	struct contexthub_ipc_info *chub;
@@ -1764,6 +1777,8 @@ static int contexthub_ipc_probe(struct platform_device *pdev)
 	chub->itmon_nb.notifier_call = chub_itmon_notifier;
 	itmon_notifier_chain_register(&chub->itmon_nb);
 #endif
+	atomic_notifier_chain_register(&panic_notifier_list,
+					&chub_panic_notifier);
 
 	/* init fw runtime log */
 	chub->chub_rt_log.buffer = vzalloc(SZ_512K * 2);

@@ -142,6 +142,7 @@ enum chub_err_type {
 	CHUB_ERR_COMMS,
 	CHUB_ERR_RESET_CNT,
 	CHUB_ERR_NANOHUB, /* nanohub dbg error */
+	CHUB_ERR_KERNEL_PANIC,
 	CHUB_ERR_MAX,
 };
 

@@ -107,7 +107,7 @@ out:
 #endif
 
 /* dump hw into dram (chub reserved mem) */
-static void chub_dbg_dump_ram(struct contexthub_ipc_info *ipc, enum chub_err_type reason)
+void chub_dbg_dump_ram(enum chub_err_type reason)
 {
 	if (p_dbg_dump) {
 		p_dbg_dump->time = sched_clock();
@@ -117,6 +117,8 @@ static void chub_dbg_dump_ram(struct contexthub_ipc_info *ipc, enum chub_err_typ
 		memcpy_fromio(&p_dbg_dump->sram[p_dbg_dump->sram_start],
 			      ipc_get_base(IPC_REG_DUMP),
 			      ipc_get_chub_mem_size());
+		if (reason == CHUB_ERR_KERNEL_PANIC)
+			chub_dbg_dump_gpr(&p_dbg_dump->chub);
 	}
 }
 
@@ -161,7 +163,7 @@ void chub_dbg_dump_hw(struct contexthub_ipc_info *ipc, enum chub_err_type reason
 	dev_info(ipc->dev, "%s: reason:%d\n", __func__, reason);
 
 	chub_dbg_dump_gpr(ipc);
-	chub_dbg_dump_ram(ipc, reason);
+	chub_dbg_dump_ram(reason);
 
 #ifdef CONFIG_CHRE_SENSORHUB_HAL
 	nanohub_add_dump_request(ipc->data);

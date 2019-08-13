@@ -27,4 +27,5 @@ void chub_dbg_dump_hw(struct contexthub_ipc_info *ipc, enum chub_err_type reason
 void chub_dbg_print_hw(struct contexthub_ipc_info *ipc);
 int chub_dbg_check_and_download_image(struct contexthub_ipc_info *ipc);
 void chub_dbg_dump_on_reset(struct contexthub_ipc_info *ipc);
+void chub_dbg_dump_ram(enum chub_err_type reason);
 #endif /* __CHUB_DEBUG_H */
