@@ -1071,6 +1071,12 @@ static int s5100_pm_notifier(struct notifier_block *notifier,
 		if (mc->pcie_pm_resume_wait) {
 			mif_err("cp2ap wakeup_work resume\n");
 			mc->pcie_pm_resume_wait = false;
+
+			mc->apwake_irq_chip->irq_set_type(
+				irq_get_irq_data(mc->s5100_irq_ap_wakeup.num),
+				IRQF_TRIGGER_LOW);
+			mif_enable_irq(&mc->s5100_irq_ap_wakeup);
+
 			queue_work_on(RUNTIME_PM_AFFINITY_CORE, mc->wakeup_wq,
 				&mc->wakeup_work);
 		}
