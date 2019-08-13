@@ -2190,12 +2190,10 @@ static void decon_update_regs(struct decon_device *decon,
 			goto end;
 		}
 	} else {
-		if (regs->dpp_config[DECON_WIN_UPDATE_IDX].state &
+		if (regs->dpp_config[DECON_WIN_UPDATE_IDX].state ==
 				DECON_WIN_STATE_MRESOL) {
 			dpu_set_mres_config(decon, regs);
 			dsim = container_of(decon->out_sd[0], struct dsim_device, sd);
-			decon_info("requested vrefresh rate = %d\n",
-					regs->dpp_config[DECON_WIN_UPDATE_IDX].plane_alpha);
 			dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_SET_VREFRESH,
 					&(regs->fps));
 		}

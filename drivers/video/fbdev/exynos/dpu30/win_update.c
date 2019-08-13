@@ -268,7 +268,7 @@ static bool dpu_need_mres_config(struct decon_device *decon,
 		goto end;
 	}
 
-	if (!(mres_config->state & DECON_WIN_STATE_MRESOL))
+	if (!(mres_config->state == DECON_WIN_STATE_MRESOL))
 		goto end;
 
 	/* requested LCD resolution */
