@@ -1379,7 +1379,7 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 				DBFS_ADJ_1 | BOOST_CTRL_EN_MASK);
 
 		/* Speaker EXT_BST enable */
-		aud3004x_acpm_write_reg(AUD3004X_PMIC_ADDR, 0x14, 0x84);
+		aud3004x_acpm_update_reg(AUD3004X_PMIC_ADDR, 0x14, BIT(7), BIT(7));
 
 		/* RCV Mode Dump */
 		aud3004x_write(aud3004x, AUD3004X_28B_SPKOFF_S_0,
@@ -1423,7 +1423,7 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		/* Speaker EXT_BST disable */
-		aud3004x_acpm_write_reg(AUD3004X_PMIC_ADDR, 0x14, 0x04);
+		aud3004x_acpm_update_reg(AUD3004X_PMIC_ADDR, 0x14, 0, BIT(7));
 
 		/* Speaker Boost disable */
 		aud3004x_update_bits(aud3004x, AUD3004X_92_BOOST_CTRL0,
