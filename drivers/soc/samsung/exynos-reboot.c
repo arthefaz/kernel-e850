@@ -53,6 +53,7 @@ struct exynos_reboot_variant {
 	void (*reboot)(enum reboot_mode mode, const char *cmd);
 	void (*power_off)(void);
 	void (*reset_control)(void);
+	int (*power_key_chk)(void);
 };
 
 static struct exynos_exynos_reboot {
@@ -81,11 +82,11 @@ static void exynos_power_off_v1(void)
 	int poweroff_try = 0;
 	unsigned int val = 0;
 
-	dev_info(exynos_reboot.dev, "Power off(%d)\n", s2mpu12_read_pwron_status());
+	dev_info(exynos_reboot.dev, "Power off key(%d)\n", variant->power_key_chk());
 
 	while (1) {
 		/* wait for power button release */
-		if (!s2mpu12_read_pwron_status()) {
+		if (!variant->power_key_chk()) {
 #ifdef CONFIG_EXYNOS_ACPM
 			exynos_acpm_reboot();
 #endif
@@ -215,6 +216,7 @@ static const struct exynos_reboot_variant drv_data_v1 = {
 	.reboot_mode_reg = EXYNOS_PMU_SYSIP_DAT0,
 	.reboot = exynos_restart_v1,
 	.power_off = exynos_power_off_v1,
+	.power_key_chk = exynos_power_key_pressed_chk,
 };
 
 static const struct of_device_id exynos_reboot_match[] = {

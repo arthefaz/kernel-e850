@@ -47,6 +47,7 @@ int expander_power_keystate = 0;	/* key_pressed_show for 3x4 keypad */
 EXPORT_SYMBOL(expander_power_keystate);
 
 static int force_key_irq_en = 0;
+static int power_key_last_state = 0;
 
 struct device *sec_power_key;
 EXPORT_SYMBOL(sec_power_key);
@@ -548,6 +549,7 @@ static irqreturn_t power_keys_rising_irq_handler(int irq, void *dev_id)
 
 	bdata->key_pressed = true;
 	bdata->isr_status = true;
+	power_key_last_state = 1;
 
 	if (bdata->button->wakeup) {
 		const struct power_keys_button *button = bdata->button;
@@ -577,6 +579,7 @@ static irqreturn_t power_keys_falling_irq_handler(int irq, void *dev_id)
 
 	bdata->key_pressed = false;
 	bdata->isr_status = true;
+	power_key_last_state = 0;
 
 	queue_delayed_work(bdata->irq_wqueue, &bdata->key_work, 0);
 
@@ -624,6 +627,12 @@ static void power_keys_close(struct input_dev *input)
 	disable_irq(ddata->irq_pwronr);
 	mutex_unlock(&ddata->disable_lock);
 }
+
+int exynos_power_key_pressed_chk(void)
+{
+	return power_key_last_state;
+}
+EXPORT_SYMBOL(exynos_power_key_pressed_chk);
 
 /*
  * Handlers for alternative sources of platform_data

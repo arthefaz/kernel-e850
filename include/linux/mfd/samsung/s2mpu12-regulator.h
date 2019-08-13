@@ -424,6 +424,7 @@ extern int s2mpu12_read_word(struct i2c_client *i2c, u8 reg);
 extern int s2mpu12_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask);
 
 extern int s2mpu12_read_pwron_status(void);
+extern int exynos_power_key_pressed_chk(void);
 extern void set_codec_notifier_flag(bool on);
 
 #endif /* __LINUX_MFD_S2MPU12_PRIV_H */
