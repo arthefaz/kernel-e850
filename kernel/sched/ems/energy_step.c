@@ -659,7 +659,6 @@ int get_gov_next_cap(int dst_cpu, struct task_struct *p)
 	for_each_cpu(cpu, esg_policy->policy->cpus) {
 		struct esgov_cpu *esg_cpu = &per_cpu(esgov_cpu, cpu);
 		int cpu_util, sutil = esg_cpu->sutil;
-		int task_util;
 
 		/* calculate cpu util with{out} task */
 		if (cpu == dst_cpu && cpu != task_cpu(p))
