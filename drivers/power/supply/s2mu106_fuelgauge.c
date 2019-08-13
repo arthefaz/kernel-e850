@@ -607,7 +607,7 @@ err:
 void s2mu106_batcap_learning(struct s2mu106_fuelgauge_data *fuelgauge)
 {
 	int bat_w = 0;
-	u8 data[2], temp;
+	u8 data[2] = {0, }, temp = 0;
 	int range = (BAT_L_CON[5] == 0) ? 900:800;
 	int gap_cap = 0;
 
@@ -1142,10 +1142,14 @@ static int s2mu106_get_ocv(struct s2mu106_fuelgauge_data *fuelgauge)
 			goto ocv_soc_mapping;
 		}
 	}
-	ocv = ocv_arr[high_index];
-	ocv += ((ocv_arr[low_index] - ocv_arr[high_index]) *
-					(soc - soc_arr[high_index])) /
-					(soc_arr[low_index] - soc_arr[high_index]);
+
+	if ((high_index >= 0 && high_index < TABLE_SIZE) &&
+	    (low_index >= 0 && low_index < TABLE_SIZE)) {
+		ocv = ocv_arr[high_index];
+		ocv += ((ocv_arr[low_index] - ocv_arr[high_index]) *
+			(soc - soc_arr[high_index])) /
+			(soc_arr[low_index] - soc_arr[high_index]);
+	}
 
 ocv_soc_mapping:
 	dev_info(&fuelgauge->i2c->dev, "%s: soc (%d), ocv (%d)\n", __func__, soc, ocv);

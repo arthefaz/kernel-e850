@@ -744,7 +744,7 @@ static int power_keys_probe(struct platform_device *pdev)
 	struct power_keys_platform_data *pdata = dev_get_platdata(dev);
 	struct power_keys_drvdata *ddata = NULL;
 	struct input_dev *input;
-	int i, ret;
+	int i, ret = 0;
 	int wakeup = 0;
 
 	pr_info("%s start\n", __func__);

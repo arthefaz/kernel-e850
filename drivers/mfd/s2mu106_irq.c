@@ -230,17 +230,21 @@ static void s2mu106_irq_lock(struct irq_data *data)
 static void s2mu106_irq_sync_unlock(struct irq_data *data)
 {
 	struct s2mu106_dev *s2mu106 = irq_get_chip_data(data->irq);
+	struct i2c_client *i2c;
+	int mask_reg_size = sizeof(s2mu106_mask_reg) /
+			    sizeof(s2mu106_mask_reg[0]);
 	int i;
 	u8 mask_reg;
-	struct i2c_client *i2c;
 
 	for (i = 0; i < S2MU106_IRQ_GROUP_NR; i++) {
-		mask_reg = s2mu106_mask_reg[i];
+
+		if (i >= 0 && i <= mask_reg_size)
+			mask_reg = s2mu106_mask_reg[i];
 		i2c = get_i2c(s2mu106, i);
 
-		if (mask_reg == S2MU106_REG_INVALID ||
-				IS_ERR_OR_NULL(i2c))
+		if (mask_reg == S2MU106_REG_INVALID || IS_ERR_OR_NULL(i2c))
 			continue;
+
 		s2mu106->irq_masks_cache[i] = s2mu106->irq_masks_cur[i];
 
 		s2mu106_write_reg(i2c, s2mu106_mask_reg[i],
@@ -396,11 +400,11 @@ static irqreturn_t s2mu106_irq_thread(int irq, void *data)
 static int irq_is_enable = true;
 int s2mu106_irq_init(struct s2mu106_dev *s2mu106)
 {
-	int i;
-	int ret;
+	int i, ret, cur_irq;
 	struct i2c_client *i2c = s2mu106->i2c;
-	int cur_irq;
 	u8 i2c_data;
+	int mask_reg_size = sizeof(s2mu106_mask_reg) /
+			    sizeof(s2mu106_mask_reg[0]);
 
 	if (!s2mu106->irq_gpio) {
 		dev_warn(s2mu106->dev, "No interrupt specified.\n");
@@ -437,8 +441,11 @@ int s2mu106_irq_init(struct s2mu106_dev *s2mu106)
 
 		if (IS_ERR_OR_NULL(i2c))
 			continue;
-		if (s2mu106_mask_reg[i] == S2MU106_REG_INVALID)
-			continue;
+
+		if (i >= 0 && i <= mask_reg_size)
+			if (s2mu106_mask_reg[i] == S2MU106_REG_INVALID)
+				continue;
+
 		s2mu106_write_reg(i2c, s2mu106_mask_reg[i], 0xFF);
 	}
 
