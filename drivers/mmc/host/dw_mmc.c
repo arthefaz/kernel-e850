@@ -4548,10 +4548,12 @@ int dw_mci_probe(struct dw_mci *host)
 #endif
 	/* Now that slots are all setup, we can enable card detect */
 	dw_mci_enable_cd(host);
+	if (drv_data && drv_data->runtime_pm_control)
+		drv_data->runtime_pm_control(host,0);
 
 	return 0;
 
- err_workqueue:
+err_workqueue:
 	destroy_workqueue(host->card_workqueue);
 	destroy_workqueue(host->sd_card_det_workqueue);
 	destroy_workqueue(pm_workqueue);
@@ -4578,6 +4580,9 @@ err_clk_biu:
 #ifdef CONFIG_CPU_IDLE
 	dw_mci_sicd_control(host, true);
 #endif
+	if (drv_data && drv_data->runtime_pm_control)
+		drv_data->runtime_pm_control(host,0);
+
 	return ret;
 }
 EXPORT_SYMBOL(dw_mci_probe);
