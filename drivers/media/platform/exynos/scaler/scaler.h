@@ -280,6 +280,7 @@ struct sc_variant {
 	u8 initphase:1;
 	u8 pixfmt_10bit:1;
 	u8 extra_buf:1;
+	u8 is_bilinear:1;
 };
 
 /*

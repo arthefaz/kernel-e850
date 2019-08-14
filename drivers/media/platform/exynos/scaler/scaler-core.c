@@ -588,6 +588,7 @@ static const struct sc_variant sc_variant[] = {
 		.prescale		= 0,
 		.ratio_20bit		= 1,
 		.initphase		= 1,
+		.is_bilinear		= 1,
 	}, {
 		.limit_input = {
 			.min_w		= 16,
@@ -2884,8 +2885,7 @@ static bool sc_process_2nd_stage(struct sc_dev *sc, struct sc_ctx *ctx)
 	sc_hwset_hratio(sc, h_ratio, pre_h_ratio);
 	sc_hwset_vratio(sc, v_ratio, pre_v_ratio);
 
-	/* version(4, 2, 0) is SC_BI */
-	if (sc->version != SCALER_VERSION(4, 2, 0)) {
+	if (!sc->variant->is_bilinear) {
 		sc_hwset_polyphase_hcoef(sc, h_ratio, h_ratio, 0);
 		sc_hwset_polyphase_vcoef(sc, v_ratio, v_ratio, 0);
 	}
@@ -3069,8 +3069,7 @@ static int sc_run_next_job(struct sc_dev *sc)
 	sc_hwset_hratio(sc, h_ratio, pre_h_ratio);
 	sc_hwset_vratio(sc, v_ratio, pre_v_ratio);
 
-	/* version(4, 2, 0) is SC_BI */
-	if (sc->version != SCALER_VERSION(4, 2, 0)) {
+	if (!sc->variant->is_bilinear) {
 		sc_hwset_polyphase_hcoef(sc, h_ratio, ch_ratio,
 				ctx->dnoise_ft.strength);
 		sc_hwset_polyphase_vcoef(sc, v_ratio, cv_ratio,
