@@ -255,7 +255,7 @@ err:
 
 static FACTOR_TYPE get_factor_type(const char *name)
 {
-	FACTOR_TYPE type;
+	FACTOR_TYPE type = 0;
 
 	if (!strcmp(name, "freq-factor"))
 		type = FREQ_FACTOR;
@@ -515,7 +515,7 @@ static int __init dt_init_bias_idle(int cpu, struct factor *sub_table)
 	struct device_node *cpu_node;
 	struct device_node *state_node;
 	struct bias_cpuidle *bias_idle;
-	int i, size;
+	int i, size = 0;
 
 	cpu_node = of_cpu_device_node_get(cpu);
 	bias_idle = &per_cpu(bias_cpuidle, cpu);
