@@ -57,7 +57,7 @@ static irqreturn_t cp_wdt_handler(int irq, void *arg)
 	mif_set_snapshot(false);
 
 	new_state = STATE_CRASH_WATCHDOG;
-	ld->crash_reason.type = CRASH_REASON_CP_WDOG_CRASH;
+	ld->crash_reason.type = CRASH_REASON_CP_ACT_CRASH;
 
 	mif_info("new_state:%s\n", cp_state_str(new_state));
 
