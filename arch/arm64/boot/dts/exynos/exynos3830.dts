@@ -1625,4 +1625,13 @@
 		samsung,power-domain = <&pd_aud>;
 		status = "okay";
 	};
+
+	tzasc {
+		compatible = "samsung,exynos-tzasc";
+		channel = <2>;
+		tzc_ver = <380>;
+		irqcnt = <2>;
+		interrupts = <GIC_SPI INTREQ__DMC_INTR_MIF0 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__DMC_INTR_MIF1 IRQ_TYPE_LEVEL_HIGH>;
+	};
 };
