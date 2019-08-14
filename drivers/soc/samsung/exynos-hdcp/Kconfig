@@ -18,7 +18,7 @@ config HDCP2_EMULATION_MODE
 
 config HDCP2_DP_ENABLE
          bool "HDCP2 DP protocol support"
-         default y
+         default n
          help
            Enable HDCP2 DP protocol support
 
