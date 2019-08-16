@@ -157,7 +157,13 @@ struct crash_reason {
 	u32 type;
 	char string[CP_CRASH_INFO_SIZE];
 } __packed;
-#define IOCTL_GET_CP_CRASH_REASON      _IOR(IOCTL_MAGIC, 0x55, struct crash_reason)
+#define IOCTL_GET_CP_CRASH_REASON	_IOR(IOCTL_MAGIC, 0x55, struct crash_reason)
+
+#define CPIF_VERSION_SIZE	20
+struct cpif_version {
+	char string[CPIF_VERSION_SIZE];
+} __packed;
+#define IOCTL_GET_CPIF_VERSION		_IOR('o', 0x56, struct cpif_version)
 
 /*
  * Definitions for IO devices

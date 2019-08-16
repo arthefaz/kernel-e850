@@ -48,6 +48,7 @@
 #include <soc/samsung/acpm_ipc_ctrl.h>
 #include "modem_prj.h"
 #include "modem_utils.h"
+#include "cpif_version.h"
 
 #define CMD_SUSPEND	((u16)(0x00CA))
 #define CMD_RESUME	((u16)(0x00CB))
@@ -1484,6 +1485,11 @@ bool __skb_free_head_cp_zerocopy(struct sk_buff *skb)
 	}
 
 	return false;
+}
+
+const char *get_cpif_driver_version(void)
+{
+	return &(cpif_driver_version[0]);
 }
 
 #if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)

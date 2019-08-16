@@ -581,6 +581,8 @@ static inline unsigned int get_mif_buff_used_count(struct mif_buff_mng *bm)
 extern struct mif_buff_mng *g_mif_buff_mng;
 void set_dflags(unsigned long flag);
 
+const char *get_cpif_driver_version(void);
+
 #if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)
 enum rmnet_link_type {
 	RMNET_LINK_4G = 0,

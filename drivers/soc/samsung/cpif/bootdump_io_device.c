@@ -165,6 +165,7 @@ static long bootdump_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 	struct link_device *ld = get_current_link(iod);
 	struct modem_ctl *mc = iod->mc;
 	enum modem_state p_state;
+	struct cpif_version version;
 	int ret = 0;
 
 	switch (cmd) {
@@ -428,6 +429,18 @@ static long bootdump_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 
 		mif_info("%s: IOCTL_GET_CP_CRASH_REASON\n", iod->name);
 		return ld->get_cp_crash_reason(ld, iod, arg);
+
+	case IOCTL_GET_CPIF_VERSION:
+		mif_info("%s: IOCTL_GET_CPIF_VERSION\n", iod->name);
+
+		strncpy(version.string, get_cpif_driver_version(), sizeof(version.string) - 1);
+		ret = copy_to_user((void __user *)arg, &version, sizeof(version));
+		if (ret) {
+			mif_err("copy_to_user() error:%d\n", ret);
+			return ret;
+		}
+
+		return 0;
 
 	default:
 		 /* If you need to handle the ioctl for specific link device,

@@ -54,7 +54,6 @@
 #include "modem_prj.h"
 #include "modem_variation.h"
 #include "modem_utils.h"
-#include "cpif_version.h"
 
 #define FMT_WAKE_TIME   (HZ/2)
 #define RAW_WAKE_TIME   (HZ*6)
@@ -625,7 +624,7 @@ static int cpif_probe(struct platform_device *pdev)
 	enum mif_sim_mode sim_mode;
 	int err;
 
-	mif_info("Exynos CP interface driver %s\n", cpif_driver_version);
+	mif_info("Exynos CP interface driver %s\n", get_cpif_driver_version());
 
 	mif_err("%s: +++ (%s)\n",
 		pdev->name, CONFIG_OPTION_REGION);
