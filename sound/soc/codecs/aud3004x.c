@@ -1293,10 +1293,9 @@ static int dac_ev(struct snd_soc_dapm_widget *w,
 	lineout_on = chop_val & LINEOUT_ON_MASK;
 	hp_on = chop_val & HP_ON_MASK;
 
-	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
-	dev_dbg(codec->dev,
-			"chop_val = %d, hp_on: %d, spk_on: %d, ep_on: %d, lineout: %d\n",
-			chop_val, hp_on, spk_on, ep_on, lineout_on);
+	dev_dbg(codec->dev, "%s called, event = %d, chop_val = %d,"
+			"hp_on: %d, spk_on: %d, ep_on: %d, lineout: %d\n",
+			__func__, event, chop_val, hp_on, spk_on, ep_on, lineout_on);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
@@ -2411,11 +2410,68 @@ static void aud3004x_dai_shutdown(struct snd_pcm_substream *substream,
 #endif
 }
 
+static int aud3004x_dai_hw_free(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *dai)
+{
+	struct snd_soc_codec *codec = dai->codec;
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	unsigned int chop_val;
+	bool hp_on, spk_on, ep_on, lineout_on;
+
+	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
+	spk_on = chop_val & SPK_ON_MASK;
+	ep_on = chop_val & EP_ON_MASK;
+	lineout_on = chop_val & LINEOUT_ON_MASK;
+	hp_on = chop_val & HP_ON_MASK;
+
+	dev_dbg(codec->dev, "(%s) %s completed\n",
+			substream->stream ? "C" : "P", __func__);
+
+	if (substream->stream) {
+		/* Capture Stream */
+	} else {
+		/* Playback Stream */
+		if (hp_on) {
+			/* DAC mute enable */
+			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
+
+			/* Auto Power Off */
+			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_HP_MASK, 0);
+			aud3004x_usleep(1000);
+		} else if (ep_on) {
+			/* DAC mute enable */
+			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
+
+			/* Auto Power Off */
+			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_EP_MASK, 0);
+			aud3004x_usleep(1000);
+		} else if (spk_on) {
+			/* DAC mute enable */
+			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
+
+			/* Auto Power Off */
+			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_SPK_MASK, 0);
+			aud3004x_usleep(1000);
+		} else if (lineout_on) {
+			/* DAC mute enable */
+			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
+
+			/* Auto Power Off */
+			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_LINE_MASK, 0);
+			aud3004x_usleep(1000);
+		} else {
+			dev_dbg(codec->dev, "%s, Not found off control\n", __func__);
+		}
+	}
+	return 0;
+}
+
 static const struct snd_soc_dai_ops aud3004x_dai_ops = {
 	.set_fmt = aud3004x_dai_set_fmt,
 	.startup = aud3004x_dai_startup,
 	.hw_params = aud3004x_dai_hw_params,
 	.shutdown = aud3004x_dai_shutdown,
+	.hw_free = aud3004x_dai_hw_free,
 };
 
 #define AUD3004X_RATES		SNDRV_PCM_RATE_8000_192000
