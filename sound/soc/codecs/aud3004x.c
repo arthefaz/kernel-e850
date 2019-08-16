@@ -38,7 +38,7 @@
 
 #include "aud3004x.h"
 
-#define AUD3004X_CODEC_VER 10000
+#define AUD3004X_CODEC_VER 10020
 
 #ifdef CONFIG_SND_SOC_SAMSUNG_VERBOSE_DEBUG
 #ifdef dev_dbg
@@ -849,6 +849,12 @@ static int vmid_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	unsigned int chop_val;
+	bool dac_on;
+
+	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
+	dac_on = chop_val & (SPK_ON_MASK |
+			EP_ON_MASK | HP_ON_MASK | LINEOUT_ON_MASK);
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
@@ -856,8 +862,8 @@ static int vmid_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_PRE_PMU:
 		/* Clock Gate */
 		aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
-				SEQ_CLK_GATE_MASK | ADC_CLK_GATE_MASK,
-				SEQ_CLK_GATE_MASK | ADC_CLK_GATE_MASK);
+				SEQ_CLK_GATE_MASK | ADC_CLK_GATE_MASK | COM_CLK_GATE_MASK,
+				SEQ_CLK_GATE_MASK | ADC_CLK_GATE_MASK | COM_CLK_GATE_MASK);
 		aud3004x_update_bits(aud3004x, AUD3004X_12_CLKGATE2,
 				ADC_CIC_CGL_MASK | ADC_CIC_CGR_MASK,
 				ADC_CIC_CGL_MASK | ADC_CIC_CGR_MASK);
@@ -902,11 +908,14 @@ static int vmid_ev(struct snd_soc_dapm_widget *w,
 
 		/* Clock Gate */
 		aud3004x_update_bits(aud3004x, AUD3004X_12_CLKGATE2,
-				ADC_CIC_CGL_MASK | ADC_CIC_CGR_MASK,
-				0 << ADC_CIC_CGL_SHIFT | 0 << ADC_CIC_CGR_SHIFT);
+				ADC_CIC_CGL_MASK | ADC_CIC_CGR_MASK, 0);
 		aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
-				SEQ_CLK_GATE_MASK | ADC_CLK_GATE_MASK,
-				0 << SEQ_CLK_GATE_SHIFT | 0 << ADC_CLK_GATE_SHIFT);
+				ADC_CLK_GATE_MASK, 0);
+
+		if (!dac_on) {
+			aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
+					SEQ_CLK_GATE_MASK | COM_CLK_GATE_MASK, 0);
+		}
 		break;
 	}
 	return 0;
@@ -917,6 +926,12 @@ static int dvmid_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	unsigned int chop_val;
+	bool dac_on;
+
+	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
+	dac_on = chop_val & (SPK_ON_MASK |
+			EP_ON_MASK | HP_ON_MASK | LINEOUT_ON_MASK);
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
@@ -984,12 +999,6 @@ static int dvmid_ev(struct snd_soc_dapm_widget *w,
 				HPF_ORDER_1ST << HPF_ORDER_SHIFT |
 				0 << HPF_ENL_SHIFT | 0 << HPF_ENR_SHIFT | 0 << HPF_ENC_SHIFT);
 
-		/* DMIC Clock Gate Disble */
-		aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
-				DMIC_CLK_GATE_MASK | ADC_CLK_GATE_MASK, 0);
-		aud3004x_update_bits(aud3004x, AUD3004X_12_CLKGATE2,
-				ADC_CIC_CGL_MASK | ADC_CIC_CGR_MASK, 0);
-
 		/* DMIC PRE Gain */
 		aud3004x_update_bits(aud3004x, AUD3004X_32_ADC3,
 				DMIC_CLK_ZTIE_MASK, DMIC_CLK_ZTIE_MASK);
@@ -999,6 +1008,17 @@ static int dvmid_ev(struct snd_soc_dapm_widget *w,
 		/* DMIC Path Selection */
 		aud3004x_update_bits(aud3004x, AUD3004X_31_ADC2,
 				EN_DMIC_MASK, 0);
+
+		/* DMIC Clock Gate Disble */
+		aud3004x_update_bits(aud3004x, AUD3004X_12_CLKGATE2,
+				ADC_CIC_CGL_MASK | ADC_CIC_CGR_MASK, 0);
+		aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
+				DMIC_CLK_GATE_MASK | ADC_CLK_GATE_MASK, 0);
+
+		if (!dac_on) {
+			aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
+					COM_CLK_GATE_MASK, 0);
+		}
 		break;
 	}
 	return 0;
@@ -1009,13 +1029,13 @@ static int mic1_pga_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	unsigned int mic_on;
+	unsigned int chop_val;
+
+	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
-	mic_on = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
-
-	if(!(mic_on & MIC1_ON_MASK)) {
+	if(!(chop_val & MIC1_ON_MASK)) {
 		dev_dbg(codec->dev, "%s: MIC1 is not enabled, returning.\n", __func__);
 		return 0;
 	}
@@ -1048,13 +1068,13 @@ static int mic2_pga_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	unsigned int mic_on;
+	unsigned int chop_val;
+
+	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
-	mic_on = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
-
-	if(!(mic_on & MIC2_ON_MASK)) {
+	if(!(chop_val & MIC2_ON_MASK)) {
 		dev_dbg(codec->dev, "%s: MIC2 is not enabled, returning.\n", __func__);
 		return 0;
 	}
@@ -1087,35 +1107,21 @@ static int mic3_pga_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	unsigned int mic_on;
+	unsigned int chop_val;
+
+	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
-	mic_on = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
-
-	if(!(mic_on & MIC3_ON_MASK)) {
+	if(!(chop_val & MIC3_ON_MASK)) {
 		dev_dbg(codec->dev, "%s: MIC3 is not enabled, returning.\n", __func__);
 		return 0;
 	}
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		/* MIC3 MIX Switch Control */
-		aud3004x_write(aud3004x, AUD3004X_130_MIX_AD1,
-				(aud3004x_read(aud3004x, AUD3004X_1E_CHOP1) & 0xC0) >> 6);
-
 		/* MIC3 BST Volume Control */
 		aud3004x_write(aud3004x, AUD3004X_136_VOL_AD3, 0x40);
-
-		/* MIC Bias Enable for TEST */
-		aud3004x_write(aud3004x, 0xc5, 0x0a);
-		aud3004x_write(aud3004x, 0xd2, 0x60);
-
-#if 0
-		/* MIC3 BST Enable */
-		aud3004x_write(aud3004x, AUD3004X_112_PD_AD2, 0x08);
-#endif
-
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* MIC3 Auto Power ON */
@@ -1128,19 +1134,8 @@ static int mic3_pga_ev(struct snd_soc_dapm_widget *w,
 				APW_MIC3L_MASK, 0 << APW_MIC3L_SHIFT);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
-#if 0
-		/* MIC3 BST Disable */
-		aud3004x_write(aud3004x, AUD3004X_112_PD_AD2, 0x00);
-#endif
-		/* MIC Bias Disable for TEST */
-		aud3004x_write(aud3004x, 0xc5, 0x00);
-		aud3004x_write(aud3004x, 0xd2, 0x00);
-
 		/* MIC3 BST Volume Control */
 		aud3004x_write(aud3004x, AUD3004X_136_VOL_AD3, 0x54);
-
-		/* MIC3 MIX Switch Control */
-		aud3004x_write(aud3004x, AUD3004X_130_MIX_AD1, 0x00);
 		break;
 	}
 
@@ -1152,13 +1147,13 @@ static int dmic1_pga_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	unsigned int mic_on;
+	unsigned int dmic_on;
+
+	dmic_on = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
-	mic_on = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
-
-	if(!(mic_on & DMIC1_ON_MASK)) {
+	if(!(dmic_on & DMIC1_ON_MASK)) {
 		dev_dbg(codec->dev, "%s: DMIC1 is not enabled, returning.\n", __func__);
 		return 0;
 	}
@@ -1172,11 +1167,11 @@ static int dmic1_pga_ev(struct snd_soc_dapm_widget *w,
 				DMIC_EN1_MASK, DMIC_EN1_MASK);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
-		break;
-	case SND_SOC_DAPM_POST_PMD:
 		/* DMIC1 Disable */
 		aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
 				DMIC_EN1_MASK, 0);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
 		break;
 	}
 	return 0;
@@ -1187,13 +1182,13 @@ static int dmic2_pga_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	unsigned int mic_on;
+	unsigned int dmic_on;
+
+	dmic_on = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
-	mic_on = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
-
-	if(!(mic_on & DMIC2_ON_MASK)) {
+	if(!(dmic_on & DMIC2_ON_MASK)) {
 		dev_dbg(codec->dev, "%s: DMIC2 is not enabled, returning.\n", __func__);
 		return 0;
 	}
@@ -1207,11 +1202,11 @@ static int dmic2_pga_ev(struct snd_soc_dapm_widget *w,
 				DMIC_EN2_MASK, DMIC_EN2_MASK);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
-		break;
-	case SND_SOC_DAPM_POST_PMD:
 		/* DMIC2 Disable */
 		aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
 				DMIC_EN2_MASK, 0);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
 		break;
 	}
 	return 0;
@@ -1222,18 +1217,28 @@ static int adc_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	unsigned int mic_on;
+	unsigned int chop_val1, chop_val2, amic_on, dmic_on;
+	bool dac_on;
 
-	mic_on = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
-	dev_dbg(codec->dev, "%s called, mic status = 0x%02x, event = %d\n",
-			__func__, mic_on, event);
+	chop_val1 = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
+	chop_val2 = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
+	dmic_on = chop_val1 & (DMIC1_ON_MASK | DMIC2_ON_MASK);
+	amic_on = chop_val2 & (MIC1_ON_MASK | MIC2_ON_MASK | MIC3_ON_MASK);
+	dac_on = chop_val2 & (SPK_ON_MASK |
+			EP_ON_MASK | HP_ON_MASK | LINEOUT_ON_MASK);
+
+	dev_dbg(codec->dev, "%s called, amic status = 0x%02x, "
+			"dmic status = 0x%02x, event = %d\n",
+			__func__, amic_on, dmic_on, event);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		/* Reset ADC Path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK | ADC_RESETB_MASK | CORE_RESETB_MASK,
-				RSTB_ADC_MASK | ADC_RESETB_MASK | CORE_RESETB_MASK);
+				RSTB_ADC_MASK | ADC_RESETB_MASK |
+				CORE_RESETB_MASK | SYSTEM_RESET_MASK,
+				RSTB_ADC_MASK | ADC_RESETB_MASK |
+				CORE_RESETB_MASK | SYSTEM_RESET_MASK);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* Disable ADC digital mute after configuring ADC */
@@ -1244,8 +1249,14 @@ static int adc_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+		/* Reset ADC Path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
 				RSTB_ADC_MASK | ADC_RESETB_MASK, 0);
+
+		if (!dac_on) {
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+				CORE_RESETB_MASK, 0);
+		}
 		break;
 	}
 	return 0;
@@ -1284,25 +1295,30 @@ static int dac_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	unsigned int chop_val;
-	bool hp_on, spk_on, ep_on, lineout_on;
+	unsigned int chop_val1, chop_val2;
+	bool hp_on, spk_on, ep_on, lineout_on, mic_on;
 
-	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
-	spk_on = chop_val & SPK_ON_MASK;
-	ep_on = chop_val & EP_ON_MASK;
-	lineout_on = chop_val & LINEOUT_ON_MASK;
-	hp_on = chop_val & HP_ON_MASK;
+	chop_val1 = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
+	chop_val2 = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
+	spk_on = chop_val1 & SPK_ON_MASK;
+	ep_on = chop_val1 & EP_ON_MASK;
+	lineout_on = chop_val1 & LINEOUT_ON_MASK;
+	hp_on = chop_val1 & HP_ON_MASK;
+	mic_on = (chop_val1 & (MIC1_ON_MASK | MIC2_ON_MASK | MIC3_ON_MASK)) |
+		(chop_val2 & (DMIC1_ON_MASK | DMIC2_ON_MASK));
 
 	dev_dbg(codec->dev, "%s called, event = %d, chop_val = %d,"
 			"hp_on: %d, spk_on: %d, ep_on: %d, lineout: %d\n",
-			__func__, event, chop_val, hp_on, spk_on, ep_on, lineout_on);
+			__func__, event, chop_val1, hp_on, spk_on, ep_on, lineout_on);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		/* Clock Gate */
 		aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
-				SEQ_CLK_GATE_MASK | AVC_CLK_GATE_MASK | DAC_CLK_GATE_MASK,
-				SEQ_CLK_GATE_MASK | AVC_CLK_GATE_MASK | DAC_CLK_GATE_MASK);
+				SEQ_CLK_GATE_MASK | AVC_CLK_GATE_MASK |
+				DAC_CLK_GATE_MASK | COM_CLK_GATE_MASK,
+				SEQ_CLK_GATE_MASK | AVC_CLK_GATE_MASK |
+				DAC_CLK_GATE_MASK | COM_CLK_GATE_MASK);
 
 		/* DAC Trim */
 		aud3004x_write(aud3004x, AUD3004X_46_PLAY_MIX2, 0x00);
@@ -1316,14 +1332,44 @@ static int dac_ev(struct snd_soc_dapm_widget *w,
 				2 << OFFSET_RNGC_SHIFT);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
+		/* Reset off DAC path */
+		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
+		if (!mic_on) {
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+						CORE_RESETB_MASK, 0);
+		}
+
 		/* Offset Range control clear */
 		aud3004x_update_bits(aud3004x, AUD3004X_4E_OFFSET_OPT,
 				OFFSET_RNGL_MASK | OFFSET_RNGR_MASK | OFFSET_RNGC_MASK, 0);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+		/* Compensation Mode selection */
+		aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
+				DAC_CH_MODE_MASK | CCH_COM_SEL_MASK, 0);
+
+		/* Clock Mode selection */
+		aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
+				DAC_FSEL_MASK, 0);
+
+		/* Play Mode Selection */
+		aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
+				PLAY_MODE_SEL_MASK, 0);
+
+		/* Clock Gate clear */
+		aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
+				DSML_CLK_GATE_MASK | DSMR_CLK_GATE_MASK | DSMC_CLK_GATE_MASK |
+				DAC_CIC_CGL_MASK | DAC_CIC_CGR_MASK | DAC_CIC_CGC_MASK, 0);
+
 		/* Clock Gate disable */
 		aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
-				SEQ_CLK_GATE_MASK | AVC_CLK_GATE_MASK | DAC_CLK_GATE_MASK, 0);
+				AVC_CLK_GATE_MASK | DAC_CLK_GATE_MASK | OVP_CLK_GATE_MASK, 0);
+
+		if (!mic_on) {
+			aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
+					SEQ_CLK_GATE_MASK | COM_CLK_GATE_MASK, 0);
+		}
 		break;
 	}
 	return 0;
@@ -1334,11 +1380,6 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	unsigned int chop_val;
-	bool hp_on;
-
-	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
-	hp_on = chop_val & HP_ON_MASK;
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
@@ -1410,10 +1451,8 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, false);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
-		if (!hp_on) {
-			/* DAC mute enable */
-			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
-		}
+		/* DAC mute enable */
+		aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
 
 		/* Auto Power Off */
 		aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_SPK_MASK, 0);
@@ -1421,12 +1460,6 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 		/* Analog PGA Mute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
 				MUTE_SPK_MASK, MUTE_SPK_MASK);
-
-		if (!hp_on) {
-			/* Reset off DAC path */
-			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-					AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
-		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		/* Speaker EXT_BST disable */
@@ -1442,40 +1475,6 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 
 		/* Testmode Disable */
 		aud3004x_write(aud3004x, AUD3004X_B5_ODSEL11, 0x00);
-
-		if (hp_on) {
-			/* Compensation Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
-					DAC_CH_MODE_MASK | CCH_COM_SEL_MASK,
-					DAC_CH_MODE_STEREO << DAC_CH_MODE_SHIFT |
-					0 << CCH_COM_SEL_SHIFT);
-
-			/* Clock Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
-					DAC_FSEL_MASK,
-					CLK_DAC_256_STEREO << DAC_FSEL_SHIFT);
-
-			/* Play Mode Selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
-					PLAY_MODE_SEL_MASK,
-					DAC_FREQ_STEREO_48K << PLAY_MODE_SEL_SHIFT);
-		} else {
-			/* Compensation Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
-					DAC_CH_MODE_MASK | CCH_COM_SEL_MASK, 0);
-
-			/* Clock Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
-					DAC_FSEL_MASK, 0);
-
-			/* Play Mode Selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
-					PLAY_MODE_SEL_MASK, 0);
-
-			/* Clock Gate clear */
-			aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
-					DSMC_CLK_GATE_MASK | DAC_CIC_CGC_MASK, 0);
-		}
 		break;
 	}
 	return 0;
@@ -1486,11 +1485,6 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	unsigned int chop_val;
-	bool hp_on;
-
-	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
-	hp_on = chop_val & HP_ON_MASK;
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
@@ -1575,10 +1569,8 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, false);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
-		if (!hp_on) {
-			/* DAC mute enable */
-			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
-		}
+		/* DAC mute enable */
+		aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
 
 		/* Auto Power Off */
 		aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_EP_MASK, 0);
@@ -1586,12 +1578,6 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 		/* Analog PGA Mute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
 				MUTE_EP_MASK, MUTE_EP_MASK);
-
-		if (!hp_on) {
-			/* Reset off DAC path */
-			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-					AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
-		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		/* EP Mix disable */
@@ -1619,39 +1605,6 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 
 		/* CP Frequency Control clear */
 		aud3004x_write(aud3004x, AUD3004X_150_CTRL_EP, 0x08);
-
-		if (hp_on) {
-			/* Compensation Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
-					DAC_CH_MODE_MASK,
-					DAC_CH_MODE_STEREO << DAC_CH_MODE_SHIFT);
-
-			/* Clock Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
-					DAC_FSEL_MASK,
-					CLK_DAC_256_STEREO << DAC_FSEL_SHIFT);
-
-			/* Play Mode Selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
-					PLAY_MODE_SEL_MASK,
-					DAC_FREQ_STEREO_48K << PLAY_MODE_SEL_SHIFT);
-		} else {
-			/* Compensation Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
-					DAC_CH_MODE_MASK, 0);
-
-			/* Clock Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
-					DAC_FSEL_MASK, 0);
-
-			/* Play Mode Selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
-					PLAY_MODE_SEL_MASK, 0);
-
-			/* Clock Gate clear */
-			aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
-					DSMC_CLK_GATE_MASK | DAC_CIC_CGC_MASK, 0);
-		}
 		break;
 	}
 	return 0;
@@ -1663,13 +1616,12 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
 	unsigned int chop_val;
-	bool hp_on, spk_on, ep_on, lineout_on;
+	bool spk_on, ep_on, lineout_on;
 
 	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
 	spk_on = chop_val & SPK_ON_MASK;
 	ep_on = chop_val & EP_ON_MASK;
 	lineout_on = chop_val & LINEOUT_ON_MASK;
-	hp_on = chop_val & HP_ON_MASK;
 
 	dev_dbg(codec->dev, "%s called, chop = 0x%02x, event = %d\n",
 			__func__, chop_val, event);
@@ -1787,10 +1739,8 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, false);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
-		if (!ep_on && !lineout_on && !spk_on) {
-			/* DAC mute enable */
-			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
-		}
+		/* DAC mute enable */
+		aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
 
 		/* Auto Power Off */
 		aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_HP_MASK, 0);
@@ -1798,13 +1748,6 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 		/* Analog PGA Mute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
 				MUTE_HP_MASK, MUTE_HP_MASK);
-
-		if (!ep_on && !lineout_on && !spk_on) {
-			/* Reset off DAC path */
-			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-					AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
-		}
-
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		/* CP Frequency Control clear */
@@ -1817,58 +1760,6 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 
 		/* Cross talk disable */
 		aud3004x_write(aud3004x, AUD3004X_58_AVC9, 0x00);
-
-		if (ep_on | lineout_on) {
-			/* Compensation Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
-					DAC_CH_MODE_MASK,
-					DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT);
-
-			/* Clock Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
-					DAC_FSEL_MASK,
-					CLK_DAC_512_UHQA << DAC_FSEL_SHIFT);
-
-			/* Play Mode Selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
-					PLAY_MODE_SEL_MASK,
-					DAC_FREQ_TRIPLE_48K << PLAY_MODE_SEL_SHIFT);
-		} else if (spk_on) {
-			/* Compensation Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
-					DAC_CH_MODE_MASK | CCH_COM_SEL_MASK,
-					DAC_CH_MODE_TRIPLE << DAC_CH_MODE_SHIFT |
-					COM_SEL_48K_SPK << CCH_COM_SEL_SHIFT);
-
-			/* Clock Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
-					DAC_FSEL_MASK,
-					CLK_DAC_512_UHQA << DAC_FSEL_SHIFT);
-
-			/* Play Mode Selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
-					PLAY_MODE_SEL_MASK,
-					DAC_FREQ_TRIPLE_48K << PLAY_MODE_SEL_SHIFT);
-		} else {
-			/* Compensation Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
-					DAC_CH_MODE_MASK, 0);
-
-			/* Clock Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
-					DAC_FSEL_MASK, 0);
-
-			/* Play Mode Selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
-					PLAY_MODE_SEL_MASK, 0);
-
-			/* Clock Gate clear */
-			aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
-					DSML_CLK_GATE_MASK | DSMR_CLK_GATE_MASK |
-					DAC_CIC_CGL_MASK | DAC_CIC_CGR_MASK, 0);
-			aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
-					OVP_CLK_GATE_MASK, 0);
-		}
 		break;
 	}
 	return 0;
@@ -1879,11 +1770,6 @@ static int linedrv_ev(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	unsigned int chop_val;
-	bool hp_on;
-
-	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
-	hp_on = chop_val & HP_ON_MASK;
 
 	dev_dbg(codec->dev, "%s called, event = %d\n", __func__, event);
 
@@ -1935,10 +1821,8 @@ static int linedrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, false);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
-		if (!hp_on) {
-			/* DAC mute enable */
-			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
-		}
+		/* DAC mute enable */
+		aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
 
 		/* Auto Power Off */
 		aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_LINE_MASK, 0);
@@ -1946,46 +1830,8 @@ static int linedrv_ev(struct snd_soc_dapm_widget *w,
 		/* Analog PGA Mute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
 				MUTE_LINE_MASK, MUTE_LINE_MASK);
-
-		if (!hp_on) {
-			/* Reset off DAC path */
-			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-					AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
-		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
-		if (hp_on) {
-			/* Compensation Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
-					DAC_CH_MODE_MASK,
-					DAC_CH_MODE_STEREO << DAC_CH_MODE_SHIFT);
-
-			/* Clock Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
-					DAC_FSEL_MASK,
-					CLK_DAC_256_STEREO << DAC_FSEL_SHIFT);
-
-			/* Play Mode Selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
-					PLAY_MODE_SEL_MASK,
-					DAC_FREQ_STEREO_48K << PLAY_MODE_SEL_SHIFT);
-		} else {
-			/* Compensation Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_44_PLAY_MODE2,
-					DAC_CH_MODE_MASK, 0);
-
-			/* Clock Mode selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_16_CLK_MODE_SEL,
-					DAC_FSEL_MASK, 0);
-
-			/* Play Mode Selection */
-			aud3004x_update_bits(aud3004x, AUD3004X_40_PLAY_MODE1,
-					PLAY_MODE_SEL_MASK, 0);
-
-			/* Clock Gate clear */
-			aud3004x_update_bits(aud3004x, AUD3004X_11_CLKGATE1,
-					DSMC_CLK_GATE_MASK | DAC_CIC_CGC_MASK, 0);
-		}
 		break;
 	}
 	return 0;
@@ -2241,15 +2087,10 @@ static int aud3004x_dai_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
 	struct snd_soc_codec *codec = dai->codec;
-	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+//	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
 
 	dev_dbg(codec->dev, "(%s) %s completed\n",
 			substream->stream ? "C" : "P", __func__);
-
-	/* Internal Clock On */
-	aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
-			COM_CLK_GATE_MASK, COM_CLK_GATE_MASK);
-
 	return 0;
 }
 
@@ -2401,13 +2242,6 @@ static void aud3004x_dai_shutdown(struct snd_pcm_substream *substream,
 		aud3004x->capture_on = false;
 	else
 		aud3004x->playback_on = false;
-#if 0
-	if ((aud3004x->capture_on == false) && (aud3004x->playback_on == false)) {
-		/* Internal Clock Off */
-		aud3004x_update_bits(aud3004x, AUD3004X_10_CLKGATE0,
-				COM_CLK_GATE_MASK, 0);
-	}
-#endif
 }
 
 static int aud3004x_dai_hw_free(struct snd_pcm_substream *substream,
@@ -2415,53 +2249,50 @@ static int aud3004x_dai_hw_free(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_codec *codec = dai->codec;
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	unsigned int chop_val;
-	bool hp_on, spk_on, ep_on, lineout_on;
+	unsigned int chop_val1, chop_val2;
+	bool hp_on, spk_on, ep_on, lineout_on, mic_on;
 
-	chop_val = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
-	spk_on = chop_val & SPK_ON_MASK;
-	ep_on = chop_val & EP_ON_MASK;
-	lineout_on = chop_val & LINEOUT_ON_MASK;
-	hp_on = chop_val & HP_ON_MASK;
+	chop_val1 = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
+	chop_val2 = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
+	spk_on = chop_val1 & SPK_ON_MASK;
+	ep_on = chop_val1 & EP_ON_MASK;
+	lineout_on = chop_val1 & LINEOUT_ON_MASK;
+	hp_on = chop_val1 & HP_ON_MASK;
+	mic_on = (chop_val1 & (MIC1_ON_MASK | MIC2_ON_MASK | MIC3_ON_MASK)) |
+		(chop_val2 & (DMIC1_ON_MASK | DMIC2_ON_MASK));
 
 	dev_dbg(codec->dev, "(%s) %s completed\n",
 			substream->stream ? "C" : "P", __func__);
 
 	if (substream->stream) {
 		/* Capture Stream */
+#if 0
+		if (mic_on) {
+
+		}
+#endif
 	} else {
 		/* Playback Stream */
-		if (hp_on) {
-			/* DAC mute enable */
-			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
+		/* DAC mute enable */
+		aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
 
+		if (hp_on) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_HP_MASK, 0);
-			aud3004x_usleep(1000);
-		} else if (ep_on) {
-			/* DAC mute enable */
-			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
-
+		}
+		if (ep_on) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_EP_MASK, 0);
-			aud3004x_usleep(1000);
-		} else if (spk_on) {
-			/* DAC mute enable */
-			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
-
+		}
+		if (spk_on) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_SPK_MASK, 0);
-			aud3004x_usleep(1000);
-		} else if (lineout_on) {
-			/* DAC mute enable */
-			aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
-
+		}
+		if (lineout_on) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_LINE_MASK, 0);
-			aud3004x_usleep(1000);
-		} else {
-			dev_dbg(codec->dev, "%s, Not found off control\n", __func__);
 		}
+		aud3004x_usleep(500);
 	}
 	return 0;
 }
@@ -2753,9 +2584,6 @@ static void aud3004x_register_initialize(void *context)
 	msleep(20);
 	aud3004x_update_bits(aud3004x, AUD3004X_D0_DCTR_CM,
 			PDB_JD_CLK_EN_MASK, PDB_JD_CLK_EN_MASK);
-
-	/* RESET clear */
-	aud3004x_write(aud3004x, AUD3004X_14_RESETB0, 0x03);
 
 	/* HP Driver Current */
 	aud3004x_write(aud3004x, AUD3004X_A6_AUTO_HP7, 0x1B);
