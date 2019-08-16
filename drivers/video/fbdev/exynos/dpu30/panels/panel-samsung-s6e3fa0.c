@@ -180,6 +180,8 @@ static int s6e3fa0_set_light(struct exynos_panel_device *panel, u32 br_val)
 
 	mutex_lock(&panel->ops_lock);
 
+	DPU_INFO_PANEL("requested brightness value = %d\n", br_val);
+
 	/* WRDISBV(8bit): 1st DBV[7:0] */
 	data = br_val & 0xFF;
 	dsim_write_data_seq(dsim, 12, 0x51, data);
