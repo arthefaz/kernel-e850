@@ -627,7 +627,7 @@
 	supports-8bit;
 	supports-cmd23;
 	supports-erase;
-	supports-hs400-enhanced-strobe;
+	mmc-hs400-enhanced-strobe;
 	card-init-hwacg-ctrl;
 	fifo-depth = <0x40>;
 	non-removable;
