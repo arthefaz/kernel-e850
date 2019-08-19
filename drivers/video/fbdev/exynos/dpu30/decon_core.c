@@ -2317,6 +2317,7 @@ static void decon_update_regs(struct decon_device *decon,
 		if (!(regs->dpp_config[DECON_WIN_UPDATE_IDX].state & DECON_WIN_STATE_MRESOL)
 				&& (decon->dt.psr_mode == DECON_MIPI_COMMAND_MODE)
 				&& (decon->dt.trig_mode == DECON_HW_TRIG)) {
+			decon_reg_wait_update_done_timeout(decon->id, SHADOW_UPDATE_TIMEOUT);
 			decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_DISABLE);
 			DPU_EVENT_LOG(DPU_EVT_TRIG_MASK, &decon->sd, ktime_set(0, 0));
 			DPU_EVENT_LOG(DPU_EVT_STORE_RSC, &decon->sd, ktime_set(0, 0));
