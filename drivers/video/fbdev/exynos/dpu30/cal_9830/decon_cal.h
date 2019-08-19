@@ -307,7 +307,7 @@ void decon_reg_get_crc_data(u32 id, u32 *w0_data, u32 *w1_data);
 /* DPU hw limitation check */
 struct decon_device;
 struct decon_win_config;
-int decon_check_global_limitation(struct decon_device *decon,
+int decon_reg_check_global_limitation(struct decon_device *decon,
 		struct decon_win_config *config);
 
 /* TODO: this will be removed later */

@@ -2265,7 +2265,7 @@ void __decon_dump(u32 id, void __iomem *regs, void __iomem *base_regs, bool dsc_
  *	: returns 0 if no error
  *	: otherwise returns -EPERM for HW-wise not permitted
  */
-int decon_check_global_limitation(struct decon_device *decon,
+int decon_reg_check_global_limitation(struct decon_device *decon,
 		struct decon_win_config *config)
 {
 	int ret = 0;
@@ -2287,14 +2287,6 @@ int decon_check_global_limitation(struct decon_device *decon,
 
 		if (config[i].state == DECON_WIN_STATE_CURSOR)
 			cursor_cnt++;
-
-		if (config[i].channel < 0 ||
-				config[i].channel >= decon->dt.dpp_cnt) {
-			ret = -EINVAL;
-			decon_err("invalid dpp channel(%d)\n",
-					config[i].channel);
-			goto err;
-		}
 
 		/* case 1 : In one axi domain, a channel has
 		 *	compression & src.w over 2048
