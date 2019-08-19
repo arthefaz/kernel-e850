@@ -86,10 +86,20 @@ static inline void dpu_event_log_decon
 		break;
 	case DPU_EVT_ACQUIRE_RSC:
 	case DPU_EVT_RELEASE_RSC:
+	case DPU_EVT_STORE_RSC:
 		log->data.rsc.prev_used_dpp = decon->prev_used_dpp;
 		log->data.rsc.cur_using_dpp = decon->cur_using_dpp;
 		log->data.rsc.prev_req_win = decon->prev_req_win;
 		log->data.rsc.cur_req_win = decon->cur_req_win;
+		if (IS_DECON_ON_STATE(decon)) {
+			log->data.rsc.hw_ch_info =
+				decon_read(decon->id, RESOURCE_OCCUPANCY_INFO_1);
+			log->data.rsc.hw_win_info =
+				decon_read(decon->id, RESOURCE_OCCUPANCY_INFO_2);
+		} else {
+			log->data.rsc.hw_ch_info = 0xFFFFFFFF;
+			log->data.rsc.hw_win_info = 0xFFFFFFFF;
+		}
 		break;
 	default:
 		/* Any remaining types will be log just time and type */
@@ -264,6 +274,7 @@ void DPU_EVENT_LOG(dpu_event_t type, struct v4l2_subdev *sd, ktime_t time)
 	case DPU_EVT_CURSOR_POS:	/* cursor async */
 	case DPU_EVT_ACQUIRE_RSC:
 	case DPU_EVT_RELEASE_RSC:
+	case DPU_EVT_STORE_RSC:
 		dpu_event_log_decon(type, sd, time);
 		break;
 	case DPU_EVT_DSIM_FRAMEDONE:
@@ -559,8 +570,10 @@ static void dpu_print_log_resource_info(struct decon_device *decon,
 		offset++;
 	}
 
-	seq_printf(s, "CH: PREV[%s] CUR[%s],  WIN: PREV[%s] CUR[%s]\n",
+	seq_printf(s, "\t\t\tCH: PREV[%s] CUR[%s], WIN: PREV[%s] CUR[%s]\n",
 			buf_prev_dpp, buf_cur_dpp, buf_prev_win, buf_cur_win);
+	seq_printf(s, "\t\t\tRSC_CH[0x%x], RSC_WIN[0x%x]\n",
+			rsc->hw_ch_info, rsc->hw_win_info);
 }
 
 /* display logged events related with DECON */
@@ -762,11 +775,15 @@ void DPU_EVENT_SHOW(struct seq_file *s, struct decon_device *decon)
 			seq_printf(s, "%20s  %20s", "DMA_FRAMEDONE", "-\n");
 			break;
 		case DPU_EVT_ACQUIRE_RSC:
-			seq_printf(s, "%20s  ", "ACQUIRE_RSC");
+			seq_printf(s, "%20s  ", "ACQUIRE_RSC\n");
 			dpu_print_log_resource_info(decon, s, &log->data.rsc);
 			break;
 		case DPU_EVT_RELEASE_RSC:
-			seq_printf(s, "%20s  ", "RELEASE_RSC");
+			seq_printf(s, "%20s  ", "RELEASE_RSC\n");
+			dpu_print_log_resource_info(decon, s, &log->data.rsc);
+			break;
+		case DPU_EVT_STORE_RSC:
+			seq_printf(s, "%20s  ", "STORE_RSC\n");
 			dpu_print_log_resource_info(decon, s, &log->data.rsc);
 			break;
 		case DPU_EVT_CURSOR_POS:

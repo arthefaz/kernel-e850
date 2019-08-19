@@ -663,6 +663,7 @@ typedef enum dpu_event_type {
 
 	DPU_EVT_ACQUIRE_RSC,
 	DPU_EVT_RELEASE_RSC,
+	DPU_EVT_STORE_RSC,
 
 	DPU_EVT_MAX, /* End of EVENT */
 } dpu_event_t;
@@ -736,6 +737,8 @@ struct disp_log_rsc {
 	unsigned long cur_using_dpp;
 	unsigned long prev_req_win;
 	unsigned long cur_req_win;
+	unsigned int hw_ch_info;  /* DPP channels actually occupied by HW */
+	unsigned int hw_win_info; /* windows actually occupied by HW */
 };
 
 /**

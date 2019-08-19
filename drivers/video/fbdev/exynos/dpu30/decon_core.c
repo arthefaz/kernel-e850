@@ -2275,10 +2275,33 @@ static void decon_update_regs(struct decon_device *decon,
 			dsim = container_of(decon->out_sd[0], struct dsim_device, sd);
 			dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_SET_VREFRESH,
 					&(regs->fps));
+		} else {
+			if ((decon->dt.psr_mode == DECON_MIPI_COMMAND_MODE) &&
+					(decon->dt.trig_mode == DECON_HW_TRIG)) {
+				decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_ENABLE);
+				DPU_EVENT_LOG(DPU_EVT_TRIG_UNMASK, &decon->sd,
+						ktime_set(0, 0));
+			}
+
+			for (i = 0; i < decon->dt.max_win; i++)
+				decon_reg_set_win_enable(decon->id, i, false);
+			decon_reg_all_win_shadow_update_req(decon->id);
+			decon_reg_update_req_global(decon->id);
+
+			DPU_EVENT_LOG(DPU_EVT_STORE_RSC, &decon->sd, ktime_set(0, 0));
 		}
 
 		decon_save_cur_buf_info(decon, regs);
 		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+
+		if (!(regs->dpp_config[DECON_WIN_UPDATE_IDX].state & DECON_WIN_STATE_MRESOL)
+				&& (decon->dt.psr_mode == DECON_MIPI_COMMAND_MODE)
+				&& (decon->dt.trig_mode == DECON_HW_TRIG)) {
+			decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_DISABLE);
+			DPU_EVENT_LOG(DPU_EVT_TRIG_MASK, &decon->sd, ktime_set(0, 0));
+			DPU_EVENT_LOG(DPU_EVT_STORE_RSC, &decon->sd, ktime_set(0, 0));
+		}
+
 		goto end;
 	}
 
