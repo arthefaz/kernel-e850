@@ -68,6 +68,12 @@ struct decon_device *decon_drvdata[MAX_DECON_CNT];
 EXPORT_SYMBOL(decon_drvdata);
 
 /*
+ * This spin lock protects to read and write prev_used_dpp and prev_req_win
+ * variables when multi display is in operation.
+ */
+DEFINE_SPINLOCK(g_slock);
+
+/*
  * This variable is moved from decon_ioctl function,
  * because stack frame of decon_ioctl is over.
  */
@@ -247,15 +253,23 @@ void decon_dpp_stop(struct decon_device *decon, bool do_reset)
 
 			v4l2_subdev_call(sd, core, ioctl, DPP_STOP, (bool *)rst);
 
-			clear_bit(i, &decon->prev_used_dpp);
 			clear_bit(i, &decon->dpp_err_stat);
 		}
 	}
+
+	spin_lock(&g_slock);
+
+	for (i = 0; i < decon->dt.dpp_cnt; i++)
+		if (test_bit(i, &decon->prev_used_dpp) &&
+				!test_bit(i, &decon->cur_using_dpp))
+			clear_bit(i, &decon->prev_used_dpp);
 
 	for (i = 0; i < decon->dt.max_win; i++) /* window number order */
 		if (test_bit(i, &decon->prev_req_win) &&
 				!test_bit(i, &decon->cur_req_win))
 			clear_bit(i, &decon->prev_req_win);
+
+	spin_unlock(&g_slock);
 
 	DPU_EVENT_LOG(DPU_EVT_RELEASE_RSC, &decon->sd, ktime_set(0, 0));
 }
@@ -1542,6 +1556,8 @@ static int decon_check_used_dpp(struct decon_device *decon,
 	unsigned long prev_dpps, prev_wins;
 	unsigned long cur_dpps = 0, cur_wins = 0;
 
+	spin_lock(&g_slock);
+
 	prev_dpps = decon->prev_used_dpp;
 	prev_wins = decon->prev_req_win;
 
@@ -1570,8 +1586,10 @@ static int decon_check_used_dpp(struct decon_device *decon,
 	}
 
 	/* check resource conflict here */
-	if (decon_check_rsc_conflict(decon, cur_dpps, cur_wins))
+	if (decon_check_rsc_conflict(decon, cur_dpps, cur_wins)) {
+		spin_unlock(&g_slock);
 		return -EINVAL;
+	}
 
 	/*
 	 * prev_used_dpp and prev_req_win of decon structure are NOT updated
@@ -1582,6 +1600,8 @@ static int decon_check_used_dpp(struct decon_device *decon,
 	decon->cur_using_dpp = cur_dpps;
 	decon->prev_req_win = prev_wins;
 	decon->cur_req_win = cur_wins;
+
+	spin_unlock(&g_slock);
 
 	DPU_EVENT_LOG(DPU_EVT_ACQUIRE_RSC, &decon->sd, ktime_set(0, 0));
 	return 0;
