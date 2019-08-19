@@ -2536,7 +2536,7 @@ void decon_set_full_size_win(struct decon_device *decon,
 int decon_check_global_limitation(struct decon_device *decon,
 		struct decon_win_config *config)
 {
-	int i;
+	int i, j;
 	int ret = 0;
 
 	for (i = 0; i < MAX_DECON_WIN; i++) {
@@ -2548,6 +2548,20 @@ int decon_check_global_limitation(struct decon_device *decon,
 			ret = -EINVAL;
 			decon_err("invalid dpp ch(%d)\n", config[i].channel);
 			goto err;
+		}
+
+		for (j = 0; j < MAX_DECON_WIN; ++j) {
+			if (config[j].state != DECON_WIN_STATE_BUFFER)
+				continue;
+			if (i == j)
+				continue;
+
+			if (config[i].channel == config[j].channel) {
+				ret = -EINVAL;
+				decon_err("win%d and %d try to connect ch%d\n",
+						i, j, config[i].channel);
+				goto err;
+			}
 		}
 	}
 
