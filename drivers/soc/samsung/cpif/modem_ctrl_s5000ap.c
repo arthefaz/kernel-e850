@@ -1012,7 +1012,7 @@ int s5000ap_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 
 #if defined(CONFIG_EXYNOS_ITMON)
 	mc->itmon_nb.notifier_call = cp_itmon_notifier;
-	/* itmon_notifier_chain_register(&mc->itmon_nb); */
+	itmon_notifier_chain_register(&mc->itmon_nb);
 #endif
 	mif_info("---\n");
 	return 0;
