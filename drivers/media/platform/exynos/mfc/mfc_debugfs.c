@@ -37,6 +37,7 @@ unsigned int perf_boost_mode;
 unsigned int drm_predict_disable;
 unsigned int reg_test;
 unsigned int meminfo_enable;
+unsigned int feature_option;
 
 static int __mfc_info_show(struct seq_file *s, void *unused)
 {
@@ -124,6 +125,10 @@ static int __mfc_debug_info_show(struct seq_file *s, void *unused)
 	seq_puts(s, "1   (1 << 0): DVFS (INT/MFC/MIF)\n");
 	seq_puts(s, "2   (1 << 1): MO value\n");
 	seq_puts(s, "4   (1 << 2): CPU frequency\n");
+
+	seq_puts(s, "-----Feature options (bit setting)\n");
+	seq_puts(s, "ex) echo 1 > /d/mfc/feture_option (recon sbwc off)\n");
+	seq_puts(s, "1   (1 << 0): recon SBWC disable\n");
 
 	return 0;
 }
@@ -409,4 +414,6 @@ void mfc_init_debugfs(struct mfc_dev *dev)
 			0444, debugfs->root, dev, &mfc_meminfo_fops);
 	debugfs->meminfo_enable = debugfs_create_u32("meminfo_enable",
 			0644, debugfs->root, &meminfo_enable);
+	debugfs->feature_option = debugfs_create_u32("feature_option",
+			0644, debugfs->root, &feature_option);
 }

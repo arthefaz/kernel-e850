@@ -174,6 +174,8 @@ static void __mfc_set_enc_params(struct mfc_ctx *ctx)
 	/* cyclic intra refresh */
 	MFC_RAW_WRITEL(p->intra_refresh_mb, MFC_REG_E_IR_SIZE);
 
+	mfc_set_pixel_format(ctx, ctx->src_fmt->fourcc);
+
 	reg = MFC_RAW_READL(MFC_REG_E_ENC_OPTIONS);
 	/* frame skip mode */
 	mfc_clear_set_bits(reg, 0x3, 0, p->frame_skip_mode);
@@ -195,6 +197,10 @@ static void __mfc_set_enc_params(struct mfc_ctx *ctx)
 	mfc_clear_bits(reg, 0x1, 18);
 	if (nal_q_parallel_disable)
 		mfc_set_bits(reg, 0x1, 18, 0x1);
+
+	mfc_clear_set_bits(reg, 0x3, 7, enc->sbwc_option);
+	mfc_debug(2, "[SBWC] option is %d\n", enc->sbwc_option);
+
 	/* compressor ratio of input source */
 	if (dev->pdata->support_sbwcl && ctx->is_sbwc_lossy) {
 		if (ctx->sbwcl_ratio == 50 || ctx->sbwcl_ratio == 60)
@@ -203,8 +209,6 @@ static void __mfc_set_enc_params(struct mfc_ctx *ctx)
 			mfc_clear_set_bits(reg, 0x3, 24, 2);
 	}
 	MFC_RAW_WRITEL(reg, MFC_REG_E_ENC_OPTIONS);
-
-	mfc_set_pixel_format(ctx, ctx->src_fmt->fourcc);
 
 	if (ctx->src_fmt->type & MFC_FMT_RGB) {
 		reg = MFC_RAW_READL(MFC_REG_PIXEL_FORMAT);

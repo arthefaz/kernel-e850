@@ -522,6 +522,37 @@ void mfc_get_img_size(struct mfc_ctx *ctx, enum mfc_get_img_size img_size)
 	}
 }
 
+void __mfc_enc_check_sbwc_option(struct mfc_ctx *ctx, unsigned int *sbwc)
+{
+	struct mfc_enc *enc = ctx->enc_priv;
+
+	/*
+	 * compressor option for encoder
+	 * - feature_option enable and SBWC format: apply in input source and DPB (0)
+	 * - feature_option enable and not SBWC format: apply only in DPB (2)
+	 * - feature_option disable and SBWC format: apply only in input source (1)
+	 * - feature_option disable and not SBWC format: no SBWC
+	 */
+	if (!(feature_option & MFC_OPTION_RECON_SBWC_DISABLE)) {
+		if (*sbwc == 1) {
+			enc->sbwc_option = 0;
+			mfc_debug(2, "[SBWC] apply in input source and DPB\n");
+		} else {
+			enc->sbwc_option = 2;
+			*sbwc = 1;
+			mfc_debug(2, "[SBWC] enable SBWC and apply SBWC only in DPB\n");
+		}
+	} else {
+		if (*sbwc == 1) {
+			enc->sbwc_option = 1;
+			mfc_debug(2, "[SBWC] apply SBWC only in input source\n");
+		} else {
+			enc->sbwc_option = 0;
+			mfc_debug(2, "[SBWC] no SBWC\n");
+		}
+	}
+}
+
 void mfc_set_pixel_format(struct mfc_ctx *ctx, unsigned int format)
 {
 	struct mfc_dev *dev = ctx->dev;
@@ -609,8 +640,12 @@ void mfc_set_pixel_format(struct mfc_ctx *ctx, unsigned int format)
 	if (pix_val < 4)
 		mfc_set_bits(reg, 0x3, 4, ctx->mem_type_10bit);
 
-	if (dev->pdata->support_sbwc)
+	if (dev->pdata->support_sbwc) {
+		if (ctx->type == MFCINST_ENCODER && pix_val < 4)
+			__mfc_enc_check_sbwc_option(ctx, &sbwc);
+
 		mfc_set_bits(reg, 0x1, 9, sbwc);
+	}
 
 	MFC_WRITEL(reg, MFC_REG_PIXEL_FORMAT);
 	mfc_debug(2, "[FRAME] pix format: %d, mem_type_10bit: %d, sbwc: %d (reg: %#x)\n",

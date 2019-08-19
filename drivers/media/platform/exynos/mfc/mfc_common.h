@@ -173,8 +173,10 @@
 				(((fmt)->fourcc) == V4L2_PIX_FMT_NV12N_SBWC_10B))
 #define IS_SBWC_FMT(fmt)	(IS_SBWC_8B(fmt) || IS_SBWC_10B(fmt))
 
-#define IS_2BIT_NEED(ctx)	((ctx->is_10bit && !ctx->mem_type_10bit &&	\
-				!ctx->is_sbwc_lossy) || ctx->is_sbwc)
+#define IS_2BIT_NEED(ctx)	(((ctx)->is_10bit && !(ctx)->mem_type_10bit &&	\
+				!(ctx)->is_sbwc_lossy) || (ctx)->is_sbwc)
+#define IS_SBWC_DPB(ctx)	((ctx)->is_sbwc || (ctx)->is_sbwc_lossy ||	\
+				((ctx)->enc_priv->sbwc_option == 2))
 
 /* Extra information for Decoder */
 #define	DEC_SET_DUAL_DPB		(1 << 0)
