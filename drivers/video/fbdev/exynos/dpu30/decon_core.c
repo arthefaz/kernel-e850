@@ -2533,6 +2533,30 @@ void decon_set_full_size_win(struct decon_device *decon,
 	config->dst.f_h = decon->lcd_info->yres;
 }
 
+int decon_check_global_limitation(struct decon_device *decon,
+		struct decon_win_config *config)
+{
+	int i;
+	int ret = 0;
+
+	for (i = 0; i < MAX_DECON_WIN; i++) {
+		if (config[i].state != DECON_WIN_STATE_BUFFER)
+			continue;
+
+		if (config[i].channel < 0 ||
+				config[i].channel >= decon->dt.dpp_cnt) {
+			ret = -EINVAL;
+			decon_err("invalid dpp ch(%d)\n", config[i].channel);
+			goto err;
+		}
+	}
+
+	ret = decon_reg_check_global_limitation(decon, config);
+
+err:
+	return ret;
+}
+
 static int decon_prepare_win_config(struct decon_device *decon,
 		struct decon_win_config_data *win_data,
 		struct decon_reg_data *regs)
