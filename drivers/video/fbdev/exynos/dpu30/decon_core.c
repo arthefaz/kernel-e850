@@ -1847,7 +1847,7 @@ void decon_wait_for_vstatus(struct decon_device *decon, u32 timeout)
 {
 	int ret;
 
-	if (decon->id)
+	if (decon->dt.out_type != DECON_OUT_DSI)
 		return;
 
 	decon_systrace(decon, 'C', "decon_frame_start", 1);
