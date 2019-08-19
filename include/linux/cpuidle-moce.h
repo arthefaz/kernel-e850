@@ -9,6 +9,12 @@
  * MOCE can vary the target residency and exit latency in accordance with the frequency
  */
 
+typedef enum _factor_type {
+	NO_FACTOR = -1,
+	FREQ_FACTOR,
+	/* Add enum value for new-factor */
+} factor_type;
+
 /*
  * Information about each factor that affects idle state entry,
  * initialized through the device tree.
@@ -21,15 +27,12 @@ struct factor {
 	spinlock_t		lock;
 
 	/* factor type */
-	int			type;
+	factor_type		type;
 
-	/* factor domain */
-	int			domain;
+	/* factor sibling-cpus */
+	struct cpumask		cpus;
 
-	/* weight of factor per c-state */
-	unsigned int		*weight;
-
-	/* ratio table of factor */
+	/* factor ratio */
 	unsigned int		size;
 	unsigned int		ratio;
 	unsigned int		*ratio_table;
@@ -40,11 +43,11 @@ struct factor {
  * and is managed by the per-cpu variable.
  */
 struct bias_cpuidle {
-	/* check biased */
+	/* moce active or not */
 	bool			biased;
 
-	/*total ratio of factors per c-state */
-	unsigned int		*total_ratio;
+	/*total ratio of factors */
+	unsigned int		total_ratio;
 
 	/* head of factor list */
 	struct list_head	factor_list;
@@ -52,8 +55,8 @@ struct bias_cpuidle {
 
 #ifdef CONFIG_ARM64_EXYNOS_MOCE
 /* CPUIdle MOCE APIs */
-extern unsigned int exynos_moce_get_ratio(int state, unsigned int cpu);
+extern unsigned int exynos_moce_get_ratio(unsigned int cpu);
 #else
-static inline unsigned int exynos_moce_get_ratio(int state, unsigned int cpu)
-{return 1; }
+static inline unsigned int exynos_moce_get_ratio(unsigned int cpu)
+{ return 100; }
 #endif
