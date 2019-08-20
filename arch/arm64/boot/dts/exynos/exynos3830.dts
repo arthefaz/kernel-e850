@@ -627,26 +627,15 @@
 		domain-clients = <&abox>;
 	};
 
-	iommu-domain_is {
-		compatible = "samsung,exynos-iommu-bus";
-		#address-cells = <2>;
-		#size-cells = <1>;
-		ranges;
-
-		domain-clients = <&exynos_is>,
-						<&is_sensor0>,
-						<&is_sensor1>,
-						<&is_sensor2>,
-						<&camerapp_gdc>;
-	};
-
 	iommu-domain_mfcmscl {
 		compatible = "samsung,exynos-iommu-bus";
 		#address-cells = <2>;
 		#size-cells = <1>;
 		ranges;
 
-		domain-clients = <&mfc_0>, <&scaler_0>, <&smfc>;
+		domain-clients = <&mfc_0>, <&scaler_0>, <&smfc>,
+					<&exynos_is>, <&is_sensor0>, <&is_sensor1>,
+					<&is_sensor2>, <&camerapp_gdc>;
 	};
 
 	scaler_0: scaler@12CB0000 {
