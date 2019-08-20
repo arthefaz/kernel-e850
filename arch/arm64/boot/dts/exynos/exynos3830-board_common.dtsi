@@ -114,6 +114,11 @@
 				#list-but-cells = <3>;
 			};
 
+			exynos_rgt {
+				compatible = "samsung,exynos-rgt";
+				num-acpm-pmic = <1>;
+			};
+
 			acpm_mfd_bus@11A50000 {
 				status = "okay";
 				#address-cells = <1>;
