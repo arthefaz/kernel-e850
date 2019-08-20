@@ -58,10 +58,8 @@ static void __mfc_dump_regs(struct mfc_dev *dev)
 
 	dev_err(dev->device, "-----------dumping MFC registers\n");
 
-	if (!mfc_pm_get_pwr_ref_cnt(dev) || !mfc_pm_get_clk_ref_cnt(dev)) {
-		dev_err(dev->device, "Power(%d) or clock(%d) is not enabled\n",
-				mfc_pm_get_pwr_ref_cnt(dev),
-				mfc_pm_get_clk_ref_cnt(dev));
+	if (!mfc_pm_get_pwr_ref_cnt(dev)) {
+		dev_err(dev->device, "Power(%d) is not enabled\n", mfc_pm_get_pwr_ref_cnt(dev));
 		return;
 	}
 
@@ -656,10 +654,8 @@ static void __mfc_dump_info(struct mfc_dev *dev)
 {
 	__mfc_dump_info_without_regs(dev);
 
-	if (!mfc_pm_get_pwr_ref_cnt(dev) || !mfc_pm_get_clk_ref_cnt(dev)) {
-		dev_err(dev->device, "Power(%d) or clock(%d) is not enabled\n",
-				mfc_pm_get_pwr_ref_cnt(dev),
-				mfc_pm_get_clk_ref_cnt(dev));
+	if (!mfc_pm_get_pwr_ref_cnt(dev)) {
+		dev_err(dev->device, "Power(%d) is not enabled\n", mfc_pm_get_pwr_ref_cnt(dev));
 		return;
 	}
 
