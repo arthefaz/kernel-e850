@@ -497,8 +497,6 @@ static int exynos_flexpmu_dbg_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, flexpmu_dbg_info);
 
-	__raw_writel(0, flexpmu_dbg_base +
-			(DATA_LINE * DID_MIF_ALWAYS_ON) + 0xC);
 	return 0;
 
 err_dbgfs_probe:

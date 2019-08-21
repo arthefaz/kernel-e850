@@ -62,13 +62,11 @@ void exynos_system_idle_exit(int cancel)
 }
 
 #define PMU_EINT_WAKEUP_MASK	0x60C
-#define EINT7_VOL_UP		(0x1 << 7)
 static void exynos_set_wakeupmask(enum sys_powerdown mode)
 {
 	int i;
 	u64 eintmask = exynos_get_eint_wake_mask();
 
-	eintmask = eintmask & ~(EINT7_VOL_UP);
 	/* Set external interrupt mask */
 	exynos_pmu_write(PMU_EINT_WAKEUP_MASK, (u32)eintmask);
 
