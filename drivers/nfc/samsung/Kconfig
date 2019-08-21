@@ -42,8 +42,8 @@ config SEC_NFC_IF_I2C_GPIO
         select I2C_ALGOBIT
         select I2C_GPIO
 endchoice
-config SEC_NFC_CLK_REQ
-        bool "SEC NFC CLK REQ"
+config SEC_NFC_GPIO_CLK
+        bool "SEC NFC GPIO CLK"
         default n
         help
           SAMSUNG NFC CLR REQ feature.
@@ -52,7 +52,13 @@ config SEC_NFC_CLK_REQ
 
           Say Y here to compile support for SAMSUNG NFC CLK REQ feature into the
           kernel.
+config SEC_NFC_DEDICATED_CLK
+        bool "SEC NFC DEDICATED CLK"
+        default n
 config SEC_NFC_LDO_EN
         bool "SEC NFC LDO"
-        default y
+        default n
+config SEC_NFC_PMIC_LDO
+        bool "SEC NFC PMIC LDO"
+        default n
 endmenu

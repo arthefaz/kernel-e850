@@ -38,7 +38,7 @@
 #include <linux/fs.h>
 #include <asm/uaccess.h>
 #include <linux/clk-provider.h>
-#ifdef CONFIG_SEC_NFC_CLK_REQ
+#ifdef CONFIG_SEC_NFC_GPIO_CLK
 #include <linux/interrupt.h>
 #endif
 #include <linux/wakelock.h>
@@ -87,9 +87,12 @@ struct sec_nfc_info {
     struct sec_nfc_platform_data *pdata;
     struct sec_nfc_i2c_info i2c_info;
     struct wake_lock nfc_wake_lock;
-#ifdef  CONFIG_SEC_NFC_CLK_REQ
+#ifdef  CONFIG_SEC_NFC_GPIO_CLK
     bool clk_ctl;
     bool clk_state;
+#endif
+#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+    void __iomem *clkctrl;
 #endif
 };
 
@@ -368,7 +371,7 @@ void sec_nfc_i2c_remove(struct device *dev)
 }
 #endif /* CONFIG_SEC_NFC_IF_I2C */
 
-#ifdef  CONFIG_SEC_NFC_CLK_REQ
+#ifdef  CONFIG_SEC_NFC_GPIO_CLK
 static irqreturn_t sec_nfc_clk_irq_thread(int irq, void *dev_id)
 {
     struct sec_nfc_info *info = dev_id;
@@ -433,12 +436,16 @@ void sec_nfc_clk_ctl_disable(struct sec_nfc_info *info)
 #else
 #define sec_nfc_clk_ctl_enable(x)
 #define sec_nfc_clk_ctl_disable(x)
-#endif /* CONFIG_SEC_NFC_CLK_REQ */
+#endif /* CONFIG_SEC_NFC_GPIO_CLK */
 
 static void sec_nfc_set_mode(struct sec_nfc_info *info,
                     enum sec_nfc_mode mode)
 {
     struct sec_nfc_platform_data *pdata = info->pdata;
+
+#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+    unsigned int val = readl(info->clkctrl);
+#endif
 
     /* intfo lock is aleady gotten before calling this function */
     if (info->mode == mode) {
@@ -467,12 +474,20 @@ static void sec_nfc_set_mode(struct sec_nfc_info *info,
         msleep(SEC_NFC_VEN_WAIT_TIME);
         gpio_set_value(pdata->ven, SEC_NFC_PW_ON);
         sec_nfc_clk_ctl_enable(info);
+#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+        val |= 0xC0000000;
+        writel(val, info->clkctrl);
+#endif
 #ifdef CONFIG_SEC_NFC_IF_I2C
         enable_irq_wake(info->i2c_info.i2c_dev->irq);
 #endif
         msleep(SEC_NFC_VEN_WAIT_TIME/2);
     } else {
         sec_nfc_clk_ctl_disable(info);
+#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+        val &= ~0xC0000000;
+        writel(val, info->clkctrl);
+#endif
 #ifdef CONFIG_SEC_NFC_IF_I2C
         disable_irq_wake(info->i2c_info.i2c_dev->irq);
 #endif
@@ -633,8 +648,16 @@ static int sec_nfc_parse_dt(struct device *dev,
 #ifdef CONFIG_SEC_NFC_LDO_EN
     pdata->pvdd_en = of_get_named_gpio(np, "sec-nfc,ldo_en",0);
 #endif
+#ifdef CONFIG_SEC_NFC_PMIC_LDO
+    if (of_property_read_string(np, "sec-nfc,pmic-ldo", &pdata->pvdd_regulator_name))
+        pr_err("%s: Failed to get %s regulator.\n", __func__, pdata->pvdd_regulator_name);
+#endif
 
-#ifdef CONFIG_SEC_NFC_CLK_REQ
+#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+    if(of_property_read_u32(np, "clkctrl-reg", (u32 *)&pdata->clkctrl_addr))
+        return -EINVAL;
+#endif
+#ifdef CONFIG_SEC_NFC_GPIO_CLK
     pdata->clk_req = of_get_named_gpio(np, "sec-nfc,clk_req-gpio", 0);
     pdata->clk = clk_get(dev, "OSC_NFC");
 #endif
@@ -697,6 +720,17 @@ static int __sec_nfc_probe(struct device *dev)
         dev_err(dev, "failed to register Device\n");
         goto err_dev_reg;
     }
+
+#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+    if (pdata->clkctrl_addr != 0) {
+        info->clkctrl = ioremap_nocache(pdata->clkctrl_addr, 0x80);
+        if (!info->clkctrl) {
+            dev_err(dev, "cannot remap nfc clock register\n");
+            ret = -ENXIO;
+            goto err_iomap;
+        }
+    }
+#endif
 #ifdef CONFIG_SEC_NFC_LDO_EN
     {
         ret = gpio_request(pdata->pvdd_en, "ldo_en");
@@ -704,17 +738,28 @@ static int __sec_nfc_probe(struct device *dev)
             pr_err("failed to request about pvdd_en pin\n");
             goto err_dev_reg;
         }
-        //if (!lpcharge)
+        if (!is_charging_mode)
             gpio_direction_output(pdata->pvdd_en, NFC_I2C_LDO_ON);
         pr_info("pvdd en: %d\n", gpio_get_value(pdata->pvdd_en));
     }
 #endif
+#ifdef CONFIG_SEC_NFC_PMIC_LDO
+    if (!is_charging_mode) {
+        pdata->pvdd_regulator = regulator_get(NULL, pdata->pvdd_regulator_name);
+        if (IS_ERR(pdata->pvdd_regulator))
+            pr_err("%s: Failed to get %s pmic regulator.\n", __func__, pdata->pvdd_regulator);
+        ret = regulator_enable(pdata->pvdd_regulator);
+        pr_err("%s: Failed to enable pmic regulator: %d\n", __func__, ret);
+    }
+#endif
+
     ret = gpio_request(pdata->ven, "nfc_ven");
     if (ret) {
         dev_err(dev, "failed to get gpio ven\n");
         goto err_gpio_ven;
     }
-    gpio_direction_output(pdata->ven, SEC_NFC_PW_OFF);
+    if (!is_charging_mode)
+        gpio_direction_output(pdata->ven, SEC_NFC_PW_OFF);
 
     if (pdata->firm) {
         ret = gpio_request(pdata->firm, "nfc_firm");
@@ -734,6 +779,10 @@ static int __sec_nfc_probe(struct device *dev)
 err_gpio_firm:
     gpio_free(pdata->ven);
 err_gpio_ven:
+#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+    iounmap(info->clkctrl);
+err_iomap:
+#endif
 err_dev_reg:
     mutex_destroy(&info->mutex);
     kfree(info);
@@ -751,8 +800,10 @@ static int __sec_nfc_remove(struct device *dev)
 
     dev_dbg(info->dev, "%s\n", __func__);
 
+#ifdef CONFIG_SEC_NFC_GPIO_CLK
     if (pdata->clk)
         clk_unprepare(pdata->clk);
+#endif
 
     misc_deregister(&info->miscdev);
     sec_nfc_set_mode(info, SEC_NFC_MODE_OFF);
@@ -846,6 +897,16 @@ static struct i2c_driver sec_nfc_driver = {
         .of_match_table = nfc_match_table,
     },
 };
+
+static int __init is_poweroff_charging_mode(char *str)
+{
+    if (strncmp("charger", str, 7) == 0)
+        is_charging_mode = true;
+    else {
+        is_charging_mode = false;
+    }
+    return 0;
+} early_param("androidboot.mode", is_poweroff_charging_mode);
 
 static int __init sec_nfc_init(void)
 {

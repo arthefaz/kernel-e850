@@ -752,3 +752,34 @@
 //	hs_tune_param = <&usb_hs_tune>;
 //	ss_tune_param = <&usb_ss_tune>;
 };
+
+&pinctrl_5 {
+	nfc_pd: nfc-pd {
+		samsung,pins ="gpg1-0";
+		samsung,pin-con-pdn =<3>;
+		samsung,pin-pud-pdn = <0>;
+	};
+};
+
+&i2c_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	sec-nfc@27 {
+		compatible = "sec-nfc";
+		reg = <0x27>;
+
+		sec-nfc,ven-gpio = <&gpg1 0 0>; // ok
+		sec-nfc,firm-gpio = <&gpg1 6 0>; // ok
+
+		sec-nfc,irq-gpio = <&gpa0 5 0>; // ok
+		sec-nfc,clk_req-gpio = <&gpa3 4 0>; // ok
+		sec-nfc,ldo_en = <&gpa0 6 0>; // ok
+
+		clock-names = "OSC_NFC";
+		clocks = <&clock OSC_NFC>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&xclkout &nfc_pd>;
+	};
+};

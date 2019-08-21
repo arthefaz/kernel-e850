@@ -623,6 +623,12 @@
 			#interrupt-cells = <2>;
 		};
 
+		xclkout: xclkout {
+			samsung,pins = "gpq0-2";
+			samsung,pin-function = <2>;
+			samsung,pin-pud = <0>;
+		};
+
 		/* usi_hsi2c_0 */
 		hsi2c0_bus: hsi2c0-bus {
 			samsung,pins = "gpc1-0", "gpc1-1";

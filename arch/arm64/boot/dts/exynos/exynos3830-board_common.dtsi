@@ -10,6 +10,7 @@
  */
 
 #include <dt-bindings/interrupt-controller/exynos3830.h>
+#include <dt-bindings/clock/exynos3830.h>
 #include "exynos3830_battery_data.dtsi"
 
 / {

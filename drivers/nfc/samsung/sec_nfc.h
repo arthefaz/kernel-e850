@@ -14,8 +14,12 @@
  */
 
 #include <linux/platform_device.h>
-#ifdef CONFIG_SEC_NFC_CLK_REQ
+#ifdef CONFIG_SEC_NFC_GPIO_CLK
 #include <linux/clk.h>
+#endif
+#ifdef CONFIG_SEC_NFC_PMIC_LDO
+#include <linux/regulator/consumer.h>
+#include <linux/err.h>
 #endif
 
 #ifdef CONFIG_SEC_NFC_I2C /* support old driver configuration */
@@ -64,7 +68,7 @@ struct sec_nfc_platform_data {
 	int pvdd_en;
 	unsigned int tvdd;
 	unsigned int avdd;
-#ifdef CONFIG_SEC_NFC_CLK_REQ
+#ifdef CONFIG_SEC_NFC_GPIO_CLK
 	unsigned int clk_req;
 	struct   clk *clk;
 #endif
@@ -74,6 +78,13 @@ struct sec_nfc_platform_data {
 	u32 firm_gpio_flags;
 	u32 irq_gpio_flags;
 	const char *nfc_pvdd;
+#ifdef CONFIG_SEC_NFC_PMIC_LDO
+    const char *pvdd_regulator_name;
+    struct regulator *pvdd_regulator;
+#endif
+#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+    phys_addr_t clkctrl_addr;
+#endif
 };
 
 enum sec_nfc_mode {
@@ -105,7 +116,7 @@ enum sec_nfc_wake {
 	SEC_NFC_WAKE_UP,
 };
 
-extern unsigned int lpcharge;
+bool is_charging_mode;
 
 #define NFC_I2C_LDO_ON  1
 #define NFC_I2C_LDO_OFF 0
