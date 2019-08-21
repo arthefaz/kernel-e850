@@ -630,6 +630,11 @@ static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg
 
 	switch (cmd) {
 	case DPP_WIN_CONFIG:
+		if (!arg) {
+			dpp_err("failed to get dpp_config\n");
+			ret = -EINVAL;
+			break;
+		}
 		dpp->dpp_config = (struct dpp_config *)arg;
 		ret = dpp_set_config(dpp);
 		if (ret)
@@ -637,6 +642,11 @@ static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg
 		break;
 
 	case DPP_CURSOR_WIN_CONFIG:
+		if (!arg) {
+			dpp_err("failed to get cursor_config\n");
+			ret = -EINVAL;
+			break;
+		}
 		dpp->dpp_config = (struct dpp_config *)arg;
 		ret = dpp_set_cursor_config(dpp);
 		if (ret)
