@@ -50,7 +50,7 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 	u32 irq_sts_reg;
 	u32 ext_irq = 0;
 
-	if (IS_ERR_OR_NULL(decon)) {
+	if (!decon) {
 		decon_err("%s decon has null pointer\n", __func__);
 		BUG();
 	}
