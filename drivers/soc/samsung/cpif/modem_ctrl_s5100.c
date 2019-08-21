@@ -846,8 +846,9 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 		spin_lock_irqsave(&mc->pcie_tx_lock, flags);
 		/* wait Tx done if it is running */
 		spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
-		if (mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 1 ||
-				check_mem_link_tx_pending(mld)) {
+		msleep(30);
+		if (check_mem_link_tx_pending(mld) ||
+			mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 1) {
 			mif_err("skip pci power off : condition not met\n");
 			goto exit;
 		}
@@ -886,9 +887,8 @@ exit:
 	mutex_unlock(&mc->pcie_onoff_lock);
 
 	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
-	if (!mc->pcie_powered_on && mc->reserve_doorbell_int) {
+	if (!mc->pcie_powered_on && mc->reserve_doorbell_int)
 		s5100_try_gpio_cp_wakeup(mc);
-	}
 	spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
 
 	return 0;
