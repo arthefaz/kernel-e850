@@ -51,7 +51,7 @@ extern int exynos_pcie_host_v1_poweroff(int ch_num);
 //extern int exynos_pcie_rc_chk_link_status(int ch_num);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 extern int exynos_pcie_rc_chk_link_status(int ch_num);
-extern int exynos_pcie_rc_l1ss_ctrl(struct pci_dev *pdev, int enable, int id);
+extern int exynos_pcie_rc_l1ss_ctrl(int enable, int id);
 #else
 extern int exynos_check_pcie_link_status(int ch_num);
 extern int exynos_pcie_host_v1_l1ss_ctrl(int enable, int id);
