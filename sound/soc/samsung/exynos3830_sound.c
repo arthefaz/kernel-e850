@@ -1149,6 +1149,8 @@ static struct snd_soc_dai_link exynos3830_dai[100] = {
 		.name = "UAIF2",
 		.stream_name = "UAIF2",
 		.platform_name = "snd-soc-dummy",
+		.codec_name = "snd-soc-dummy",
+		.codec_dai_name = "snd-soc-dummy-dai",
 		.no_pcm = 1,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
@@ -1570,6 +1572,10 @@ static const struct snd_soc_dapm_widget exynos3830_widgets[] = {
 	SND_SOC_DAPM_INPUT("VINPUT_FM"),
 };
 
+static const struct snd_soc_dapm_route exynos3830_routes[] = {
+
+};
+
 static struct snd_soc_codec_conf codec_conf[MADERA_CODEC_MAX];
 
 static struct snd_soc_aux_dev aux_dev[MADERA_AUX_MAX];
@@ -1587,6 +1593,8 @@ static struct snd_soc_card exynos3830_madera = {
 	.num_controls = ARRAY_SIZE(exynos3830_controls),
 	.dapm_widgets = exynos3830_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(exynos3830_widgets),
+	.dapm_routes = exynos3830_routes,
+	.num_dapm_routes = ARRAY_SIZE(exynos3830_routes),
 
 	.set_bias_level = madera_set_bias_level,
 	.set_bias_level_post = madera_set_bias_level_post,

@@ -362,9 +362,11 @@
 			samsung,id = <1>;
 			clocks = <&clock DOUT_CLK_AUD_UAIF1>, <&clock GATE_ABOX_QCH_BCLK1>;
 			clock-names = "bclk", "bclk_gate";
-			pinctrl-names = "default", "sleep";
-			pinctrl-0 = <&aud_i2s1_bus>;
-			pinctrl-1 = <&aud_i2s1_idle>;
+			/*
+			 * pinctrl-names = "default", "sleep";
+			 * pinctrl-0 = <&aud_i2s1_bus>;
+			 * pinctrl-1 = <&aud_i2s1_idle>;
+			 */
 			#sound-dai-cells = <0>;
 		};
 
@@ -375,11 +377,6 @@
 			samsung,id = <2>;
 			clocks = <&clock DOUT_CLK_AUD_UAIF2>, <&clock GATE_ABOX_QCH_BCLK2>;
 			clock-names = "bclk", "bclk_gate";
-			/* This GPIO is used by NFC
-			 * pinctrl-names = "default", "sleep";
-			 * pinctrl-0 = <&aud_i2s2_bus>;
-			 * pinctrl-1 = <&aud_i2s2_idle>;
-			 */
 			#sound-dai-cells = <0>;
 		};
 
@@ -390,9 +387,9 @@
 			samsung,id = <3>;
 			clocks = <&clock DOUT_CLK_AUD_FM>, <&clock GATE_ABOX_QCH_FM>;
 			clock-names = "bclk", "bclk_gate";
-			pinctrl-names = "default", "sleep";
+			/*pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&aud_fm_bus>;
-			pinctrl-1 = <&aud_fm_idle>;
+			pinctrl-1 = <&aud_fm_idle>;*/
 			#sound-dai-cells = <0>;
 		};
 
