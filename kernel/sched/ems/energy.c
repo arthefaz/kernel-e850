@@ -117,8 +117,7 @@ compute_efficiency(struct task_struct *p, int target_cpu, unsigned int eff_weigh
 {
 	struct energy_table *table = get_energy_table(target_cpu);
 	unsigned long next_cap = 0;
-	unsigned long capacity, energy;
-	unsigned int eff;
+	unsigned long capacity, energy, eff;
 	unsigned int cap_idx;
 	int i;
 
@@ -161,7 +160,7 @@ compute_efficiency(struct task_struct *p, int target_cpu, unsigned int eff_weigh
 
 static int find_best_eff(struct tp_env *env, unsigned int *eff, int idle)
 {
-	unsigned int best_eff = 0;
+	unsigned long best_eff = 0;
 	int best_cpu = -1;
 	int cpu;
 	struct cpumask candidates;
@@ -176,7 +175,7 @@ static int find_best_eff(struct tp_env *env, unsigned int *eff, int idle)
 
 	/* find best efficiency cpu */
 	for_each_cpu(cpu, &candidates) {
-		unsigned int eff;
+		unsigned long eff;
 
 		eff = compute_efficiency(env->p, cpu, env->eff_weight[cpu]);
 		if (eff > best_eff) {

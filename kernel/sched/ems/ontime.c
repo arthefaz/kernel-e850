@@ -116,7 +116,7 @@ void ontime_select_fit_cpus(struct task_struct *p, struct cpumask *fit_cpus)
 {
 	struct ontime_dom *curr;
 	int src_cpu = task_cpu(p);
-	u32 runnable = ml_task_runnable(p);
+	unsigned long runnable = ml_task_runnable(p);
 	struct cpumask mask;
 
 	curr = get_dom(src_cpu);
@@ -188,7 +188,7 @@ pick_heavy_task(struct sched_entity *se, int *boost_migration)
 {
 	struct task_struct *heaviest_task = NULL;
 	struct task_struct *p = container_of(se, struct task_struct, se);
-	u32 runnable, max_ratio = 0;
+	unsigned long runnable, max_ratio = 0;
 	int task_count = 0;
 
 	/*
@@ -211,7 +211,7 @@ pick_heavy_task(struct sched_entity *se, int *boost_migration)
 
 	se = __pick_first_entity(se->cfs_rq);
 	while (se && task_count < TASK_TRACK_COUNT) {
-		int task_ratio;
+		unsigned long task_ratio;
 
 		/* Skip non-task entity */
 		if (entity_is_cfs_rq(se))
@@ -446,7 +446,7 @@ void ontime_migration(void)
 int ontime_can_migrate_task(struct task_struct *p, int dst_cpu)
 {
 	int src_cpu = task_cpu(p);
-	u32 runnable;
+	unsigned long runnable;
 
 	if (list_empty(&dom_list))
 		return true;

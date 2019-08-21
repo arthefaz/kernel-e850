@@ -145,7 +145,7 @@ TRACE_EVENT(ems_compute_eff,
 
 	TP_PROTO(struct task_struct *p, int cpu,
 		unsigned long cpu_util_with, unsigned int eff_weight,
-		unsigned long capacity, unsigned long energy, unsigned int eff),
+		unsigned long capacity, unsigned long energy, unsigned long eff),
 
 	TP_ARGS(p, cpu, cpu_util_with, eff_weight, capacity, energy, eff),
 
@@ -159,7 +159,7 @@ TRACE_EVENT(ems_compute_eff,
 		__field(	unsigned int,	eff_weight		)
 		__field(	unsigned long,	capacity		)
 		__field(	unsigned long,	energy			)
-		__field(	unsigned int,	eff			)
+		__field(	unsigned long,	eff			)
 	),
 
 	TP_fast_assign(
@@ -175,7 +175,7 @@ TRACE_EVENT(ems_compute_eff,
 		__entry->eff		= eff;
 	),
 
-	TP_printk("comm=%s pid=%d sse=%d cpu=%d task_util=%lu cpu_util_with=%lu eff_weight=%u capacity=%lu energy=%lu eff=%u",
+	TP_printk("comm=%s pid=%d sse=%d cpu=%d task_util=%lu cpu_util_with=%lu eff_weight=%u capacity=%lu energy=%lu eff=%lu",
 		__entry->comm, __entry->pid, __entry->sse, __entry->cpu,
 		__entry->task_util, __entry->cpu_util_with,
 		__entry->eff_weight, __entry->capacity,
@@ -188,7 +188,7 @@ TRACE_EVENT(ems_compute_eff,
 TRACE_EVENT(ems_best_eff,
 
 	TP_PROTO(struct task_struct *p, unsigned int candidates, int idle,
-			int best_cpu, unsigned int best_eff),
+			int best_cpu, unsigned long best_eff),
 
 	TP_ARGS(p, candidates, idle, best_cpu, best_eff),
 
@@ -198,7 +198,7 @@ TRACE_EVENT(ems_best_eff,
 		__field(	unsigned int,	candidates		)
 		__field(	int,		idle			)
 		__field(	int,		best_cpu		)
-		__field(	unsigned int,	best_eff		)
+		__field(	unsigned long,	best_eff		)
 	),
 
 	TP_fast_assign(
@@ -210,7 +210,7 @@ TRACE_EVENT(ems_best_eff,
 		__entry->best_eff	= best_eff;
 	),
 
-	TP_printk("comm=%s pid=%d candidates=%#x idle=%d best_cpu=%d best_eff=%u",
+	TP_printk("comm=%s pid=%d candidates=%#x idle=%d best_cpu=%d best_eff=%lu",
 		__entry->comm, __entry->pid, __entry->candidates, __entry->idle,
 		__entry->best_cpu, __entry->best_eff)
 );
@@ -459,7 +459,7 @@ TRACE_EVENT(ems_util_est_task,
 		__field( pid_t,		pid			)
 		__field( int,		cpu			)
 		__field( int,		sse			)
-		__field( unsigned int,	util_avg		)
+		__field( unsigned long,	util_avg		)
 		__field( unsigned int,	est_enqueued		)
 		__field( unsigned int,	est_ewma		)
 	),
@@ -474,7 +474,7 @@ TRACE_EVENT(ems_util_est_task,
 		__entry->est_ewma		= ml->util_est.ewma;
 	),
 
-	TP_printk("comm=%s pid=%d cpu=%d sse=%d util_avg=%u util_est_ewma=%u util_est_enqueued=%u",
+	TP_printk("comm=%s pid=%d cpu=%d sse=%d util_avg=%lu util_est_ewma=%u util_est_enqueued=%u",
 		  __entry->comm,
 		  __entry->pid,
 		  __entry->cpu,
@@ -495,7 +495,7 @@ TRACE_EVENT(ems_util_est_cpu,
 
 	TP_STRUCT__entry(
 		__field( int,		cpu			)
-		__field( unsigned int,	util_avg		)
+		__field( unsigned long,	util_avg		)
 		__field( unsigned int,	util_est_enqueued	)
 		__field( unsigned int,	util_est_enqueued_s	)
 	),
@@ -507,7 +507,7 @@ TRACE_EVENT(ems_util_est_cpu,
 		__entry->util_est_enqueued_s	= cfs_rq->ml.util_est_s.enqueued;
 	),
 
-	TP_printk("cpu=%d util_avg=%u util_est_enqueued=%u util_est_enqueued_s=%u",
+	TP_printk("cpu=%d util_avg=%lu util_est_enqueued=%u util_est_enqueued_s=%u",
 		  __entry->cpu,
 		  __entry->util_avg,
 		  __entry->util_est_enqueued,

@@ -460,7 +460,7 @@ static unsigned long esgov_get_eutil(struct esgov_cpu *esg_cpu, unsigned long ma
 	struct esgov_policy *esg_policy = per_cpu(esgov_policy, esg_cpu->cpu);
 	struct rq *rq = cpu_rq(esg_cpu->cpu);
 	struct part *pa = &rq->pa;
-	unsigned int freq;
+	unsigned long freq;
 	int active_ratio, util, prev_idx;
 
 	if (unlikely(!esg_policy || !esg_policy->step))

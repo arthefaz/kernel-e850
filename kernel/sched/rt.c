@@ -159,7 +159,7 @@ static const struct attribute_group frt_group = {
 static int frt_find_prefer_cpu(struct task_struct *task)
 {
 	int cpu, allowed_cpu = 0;
-	unsigned int coverage_thr;
+	unsigned long coverage_thr;
 	struct frt_dom *dom;
 
 	list_for_each_entry(dom, &frt_list, list) {
@@ -2576,7 +2576,7 @@ unsigned long frt_cpu_util_wake(int cpu, struct task_struct *p)
 {
 	struct cfs_rq *cfs_rq = &cpu_rq(cpu)->cfs;
 	struct rt_rq *rt_rq = &cpu_rq(cpu)->rt;
-	unsigned int util;
+	unsigned long util;
 
 	util = READ_ONCE(cfs_rq->avg.util_avg) + READ_ONCE(rt_rq->avg.util_avg);
 
@@ -2595,7 +2595,7 @@ unsigned long frt_cpu_util_wake(int cpu, struct task_struct *p)
 		return util;
 
 	/* Discount task's blocked util from CPU's util */
-	util -= min_t(unsigned int, util, task_util(p));
+	util -= min_t(unsigned long, util, task_util(p));
 
 	return min_t(unsigned long, util, capacity_orig_of(cpu));
 }

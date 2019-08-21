@@ -345,7 +345,7 @@ static int exynos_cpufreq_driver_init(struct cpufreq_policy *policy)
 static unsigned int exynos_cpufreq_resolve(struct cpufreq_policy *policy,
 						unsigned int target_freq)
 {
-	unsigned int index;
+	int index;
 
 	index = cpufreq_frequency_table_target(policy, target_freq, CPUFREQ_RELATION_L);
 	if (index < 0) {
@@ -732,9 +732,9 @@ static int exynos_cpufreq_pm_qos_callback(struct notifier_block *nb,
 	/* If 'sugov_get_freq()' fail, we just update frequency with pm qos val */
 	if (next_freq) {
 		if (pm_qos_class == domain->pm_qos_min_class)
-			val = max_t(unsigned int, val, next_freq);
+			val = max_t(unsigned long, val, next_freq);
 		else
-			val = min_t(unsigned int, val, next_freq);
+			val = min_t(unsigned long, val, next_freq);
 	}
 
 	if (update_freq(domain, val))
