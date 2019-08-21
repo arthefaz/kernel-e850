@@ -26,6 +26,7 @@
 #include <linux/modem_notifier.h>
 #include <soc/samsung/cal-if.h>
 #include <soc/samsung/exynos-modem-ctrl.h>
+#include <soc/samsung/exynos-pmu.h>
 #include "modem_prj.h"
 #include "modem_utils.h"
 #include "link_device_memory.h"
@@ -621,13 +622,13 @@ int modem_send_panic_noti_ext(void)
 }
 EXPORT_SYMBOL(modem_send_panic_noti_ext);
 
-
 #ifdef CONFIG_CP_UART_NOTI
 #ifdef CONFIG_PMU_UART_SWITCH
 #if defined(CONFIG_SOC_EXYNOS9630)
 static void __iomem *uart_txd_addr; /* SEL_TXD_GPIO_UART_DEBUG */
 static void __iomem *uart_rxd_addr; /* SEL_RXD_CP_UART */
-void change_to_cp_uart() {
+void change_to_cp_uart(void)
+{
 	if (uart_txd_addr == NULL) {
 		uart_txd_addr = devm_ioremap(g_mc->dev, 0x10E2062C, SZ_64);
 		if (uart_txd_addr == NULL){
@@ -649,7 +650,8 @@ void change_to_cp_uart() {
 	mif_info("SEL_RXD_CP_UART val: %08X\n", __raw_readl(uart_rxd_addr));
 }
 
-void change_to_ap_uart() {
+void change_to_ap_uart(void)
+{
 	if (uart_txd_addr == NULL) {
 		uart_txd_addr = devm_ioremap(g_mc->dev, 0x10E2062C, SZ_64);
 		if (uart_txd_addr == NULL){
@@ -670,8 +672,33 @@ void change_to_ap_uart() {
 	__raw_writel(0x0, uart_rxd_addr);
 	mif_info("SEL_RXD_CP_UART val: %08X\n", __raw_readl(uart_rxd_addr));
 }
-#endif /* End of CONFIG_SOC_EXYNOS9630 */
-#endif /* End of CONFIG_PMU_UART_SWITCH */
+#elif defined(CONFIG_SOC_EXYNOS3830)
+void change_to_cp_uart(void)
+{
+	int ret = 0;
+
+	ret = exynos_pmu_write(0x0760, 0x11002000);
+	if (ret < 0) {
+		mif_err("ERR(%d) set CP UART_IO_SHARE_CTRL\n", ret);
+		return;
+	}
+
+	mif_info("CHANGE TO CP UART\n");
+}
+
+void change_to_ap_uart(void)
+{
+	int ret = 0;
+
+	ret = exynos_pmu_write(0x0760, 0x00120000);
+	if (ret < 0) {
+		mif_err("ERR(%d) set AP UART_IO_SHARE_CTRL\n", ret);
+		return;
+	}
+
+	mif_info("CHANGE TO AP UART\n");
+}
+#endif /* CONFIG_SOC_EXYNOSxxxx */
 
 void send_uart_noti_to_modem(int val)
 {
@@ -705,7 +732,8 @@ void send_uart_noti_to_modem(int val)
 	mbox_set_interrupt(MCU_CP, g_mc->int_uart_noti);
 }
 EXPORT_SYMBOL(send_uart_noti_to_modem);
-#endif
+#endif /* CONFIG_PMU_UART_SWITCH */
+#endif /* CONFIG_CP_UART_NOTI */
 
 static int start_dump_boot(struct modem_ctl *mc)
 {
