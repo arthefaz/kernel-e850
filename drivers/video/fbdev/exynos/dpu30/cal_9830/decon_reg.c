@@ -2281,12 +2281,26 @@ int decon_reg_check_global_limitation(struct decon_device *decon,
 	const struct dpu_fmt *fmt_info;
 #endif
 
+	if ((config[decon->dt.wb_win].state == DECON_WIN_STATE_BUFFER) &&
+			config[decon->dt.wb_win].channel != (decon->dt.dpp_cnt - 1)) {
+		ret = -EINVAL;
+		goto err;
+	}
+
 	for (i = 0; i < MAX_DECON_WIN; i++) {
 		if (config[i].state != DECON_WIN_STATE_BUFFER)
 			continue;
 
 		if (config[i].state == DECON_WIN_STATE_CURSOR)
 			cursor_cnt++;
+
+		/* window cannot be connected to writeback channel */
+		if (config[i].channel >= decon->dt.dpp_cnt - 1) {
+			ret = -EINVAL;
+			decon_err("invalid channel(%d) + window(%d)\n",
+					config[i].channel, i);
+			goto err;
+		}
 
 		/* case 1 : In one axi domain, a channel has
 		 *	compression & src.w over 2048
