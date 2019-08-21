@@ -146,7 +146,7 @@ config EXYNOS_PM_DOMAINS
 
 config EXYNOS_CONTENT_PATH_PROTECTION
 	bool "Exynos Content Path Protection"
-	default n
+	default y
 	help
 	  Enable content path protection of EXYNOS.
 
