@@ -1496,10 +1496,6 @@ static int decon_set_win_buffer(struct decon_device *decon,
 	u32 buf_size = 0;
 	const struct dpu_fmt *fmt_info;
 
-	ret = decon_check_limitation(decon, idx, config);
-	if (ret)
-		goto err;
-
 	fmt_info = dpu_find_fmt_info(config->format);
 
 	if (decon->dt.out_type == DECON_OUT_WB) {
@@ -2457,14 +2453,16 @@ static int decon_prepare_win_config(struct decon_device *decon,
 			break;
 		case DECON_WIN_STATE_BUFFER:
 		case DECON_WIN_STATE_CURSOR:	/* cursor async */
-			if (decon_set_win_blocking_mode(decon, i, win_config, regs))
-				break;
+			ret = decon_check_limitation(decon, i, config);
+			if (!ret) {
+				if (decon_set_win_blocking_mode(decon, i, win_config, regs))
+					break;
 
-			regs->num_of_window++;
-			ret = decon_set_win_buffer(decon, config, regs, i);
-			if (!ret)
-				color_map = false;
-
+				regs->num_of_window++;
+				ret = decon_set_win_buffer(decon, config, regs, i);
+				if (!ret)
+					color_map = false;
+			}
 			regs->is_cursor_win[i] = false;
 			if (config->state == DECON_WIN_STATE_CURSOR) {
 				regs->is_cursor_win[i] = true;

@@ -124,6 +124,10 @@ static void win_update_check_limitation(struct decon_device *decon,
 			continue;
 
 		fmt_info = dpu_find_fmt_info(config->format);
+		if (!fmt_info) {
+			DPU_DEBUG_WIN("Do not surpport format(%d)\n", config->format);
+			goto change_full;
+		}
 		if (IS_YUV(fmt_info)) {
 			/* check alignment for NV12/NV21 format */
 			update.x = regs->up_region.left;
