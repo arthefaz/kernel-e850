@@ -125,14 +125,14 @@
 		sbwc_bw_dec_mpeg4	= <0 0 0>;
 
 		/* QoS */
-		num_default_qos_steps = <2>;
-		num_encoder_qos_steps = <2>;
-		max_mb = <244800>;
+		num_default_qos_steps = <3>;
+		num_encoder_qos_steps = <3>;
+		max_mb = <957331>;
 		mfc_freq_control = <0>;
 		mo_control = <0>;
 		bw_control = <1>;
-		num_mfc_freq = <2>;
-		mfc_freqs = <267000 400000>;
+		num_mfc_freq = <3>;
+		mfc_freqs = <267000 400000 667000>;
 		/* spec: 20M */
 		max_Kbps = <20480 20480>;
 
@@ -161,18 +161,26 @@
 		mfc_default_qos_table {
 			mfc_d_qos_variant_0 {
 				thrd_mb = <0>;
-				freq_mfc = <267000>;
-				freq_int = <200000>;
-				freq_mif = <421000>;
-				time_fw = <322>;
+				freq_mfc = <400000>;
+				freq_int = <334000>;
+				freq_mif = <546000>;
+				time_fw = <304>;
 				bts_scen = "default";
 			};
 			mfc_d_qos_variant_1 {
-				thrd_mb = <110727>;
-				freq_mfc = <400000>;
-				freq_int = <533000>;
-				freq_mif = <1352000>;
-				time_fw = <156>;
+				thrd_mb = <250850>;
+				freq_mfc = <667000>;
+				freq_int = <534000>;
+				freq_mif = <1014000>;
+				time_fw = <171>;
+				bts_scen = "default";
+			};
+			mfc_d_qos_variant_2 {
+				thrd_mb = <510138>;
+				freq_mfc = <667000>;
+				freq_int = <667000>;
+				freq_mif = <1014000>;
+				time_fw = <136>;
 				bts_scen = "default";
 			};
 		};
@@ -181,18 +189,26 @@
 		mfc_encoder_qos_table {
 			mfc_e_qos_variant_0 {
 				thrd_mb = <0>;
-				freq_mfc = <267000>;
-				freq_int = <200000>;
-				freq_mif = <421000>;
-				time_fw = <322>;
+				freq_mfc = <400000>;
+				freq_int = <334000>;
+				freq_mif = <546000>;
+				time_fw = <304>;
 				bts_scen = "default";
 			};
 			mfc_e_qos_variant_1 {
-				thrd_mb = <110727>;
-				freq_mfc = <400000>;
-				freq_int = <533000>;
-				freq_mif = <1352000>;
-				time_fw = <156>;
+				thrd_mb = <250850>;
+				freq_mfc = <667000>;
+				freq_int = <534000>;
+				freq_mif = <1014000>;
+				time_fw = <171>;
+				bts_scen = "default";
+			};
+			mfc_e_qos_variant_2 {
+				thrd_mb = <510138>;
+				freq_mfc = <667000>;
+				freq_int = <667000>;
+				freq_mif = <1014000>;
+				time_fw = <136>;
 				bts_scen = "default";
 			};
 		};
@@ -201,9 +217,9 @@
 		mfc_perf_boost_table {
 			num_cluster = <2>;
 			freq_cluster = <1742000 1898000>;
-			freq_mfc = <267000>;
-			freq_int = <200000>;
-			freq_mif = <546000>;
+			freq_mfc = <667000>;
+			freq_int = <667000>;
+			freq_mif = <1539000>;
 			bts_scen = "default";
 		};
 	};
