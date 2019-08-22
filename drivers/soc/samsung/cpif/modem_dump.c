@@ -94,8 +94,14 @@ int cp_get_log_dump(struct io_device *iod, struct link_device *ld, unsigned long
 	cp_num = ld->mdm_data->cp_num;
 	switch (log_dump.idx) {
 	case LOG_IDX_SHMEM:
+#ifdef CONFIG_CACHED_LEGACY_RAW_RX_BUFFER
+		base = phys_to_virt(cp_shmem_get_base(cp_num, SHMEM_IPC));
+		size = cp_shmem_get_size(cp_num, SHMEM_IPC);
+		__inval_dcache_area((void *)base, size);
+#else
 		base = mld->base;
 		size = mld->size;
+#endif
 		break;
 
 	case LOG_IDX_VSS:

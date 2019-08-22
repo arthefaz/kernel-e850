@@ -105,7 +105,11 @@ int create_legacy_link_device(struct mem_link_device *mld)
 	atomic_set(&dev->rxq.busy, 0);
 	dev->rxq.head = &map->raw_rx_head;
 	dev->rxq.tail = &map->raw_rx_tail;
+#ifdef CONFIG_CACHED_LEGACY_RAW_RX_BUFFER
+	dev->rxq.buff = phys_to_virt(cp_shmem_get_base(bl->ld->mdm_data->cp_num, SHMEM_IPC) + SZ_2M);
+#else
 	dev->rxq.buff = &map->raw_rx_buff[0];
+#endif
 	dev->rxq.size = BOOT_RAW_RX_BUFF_SZ;
 
 	dev->msg_mask = MASK_SEND_RAW;
@@ -149,6 +153,11 @@ int init_legacy_link(struct legacy_link_device *bl)
 		skb_queue_purge(dev->skb_rxq);
 		atomic_set(&dev->rxq.busy, 0);
 		dev->req_ack_cnt[RX] = 0;
+
+#ifdef CONFIG_CACHED_LEGACY_RAW_RX_BUFFER
+		if (i == IPC_MAP_NORM_RAW)
+			__inval_dcache_area((void *)dev->rxq.buff, dev->rxq.size);
+#endif
 	}
 
 	iowrite32(bl->ld->magic_ipc, bl->magic);

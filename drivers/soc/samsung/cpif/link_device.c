@@ -1699,6 +1699,23 @@ static int legacy_ipc_rx_func_napi(struct mem_link_device *mld, struct legacy_ip
 	if (unlikely(circ_empty(in, out)))
 		return 0;
 
+#ifdef CONFIG_CACHED_LEGACY_RAW_RX_BUFFER
+	if (dev->id == IPC_MAP_NORM_RAW) {
+		char *src = get_rxq_buff(dev);
+		if (!src) {
+			mif_err_limited("get_rxq_buff() error\n");
+			return -EINVAL;
+		}
+
+		if ((out + size) <= qsize) {
+			__inval_dcache_area((void *)(src + out), size);
+		} else {
+			__inval_dcache_area((void *)(src + out), qsize - out);
+			__inval_dcache_area((void *)src, size - (qsize - out));
+		}
+	}
+#endif
+
 	while ((budget != 0) && (rcvd < size)) {
 		struct sk_buff *skb;
 		u8 ch;
@@ -1756,6 +1773,23 @@ static int legacy_ipc_rx_func(struct mem_link_device *mld, struct legacy_ipc_dev
 
 	if (unlikely(circ_empty(in, out)))
 		return 0;
+
+#ifdef CONFIG_CACHED_LEGACY_RAW_RX_BUFFER
+	if (dev->id == IPC_MAP_NORM_RAW) {
+		char *src = get_rxq_buff(dev);
+		if (!src) {
+			mif_err_limited("get_rxq_buff() error\n");
+			return -EINVAL;
+		}
+
+		if ((out + size) <= qsize) {
+			__inval_dcache_area((void *)(src + out), size);
+		} else {
+			__inval_dcache_area((void *)(src + out), qsize - out);
+			__inval_dcache_area((void *)src, size - (qsize - out));
+		}
+	}
+#endif
 
 	while (rcvd < size) {
 		struct sk_buff *skb;
@@ -3763,7 +3797,11 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	 * Initialize SHMEM maps for IPC (physical map -> logical map)
 	 */
 	mld->size = cp_shmem_get_size(cp_num, SHMEM_IPC);
+#ifdef CONFIG_CACHED_LEGACY_RAW_RX_BUFFER
+	mld->base = cp_shmem_get_nc_region(cp_shmem_get_base(cp_num, SHMEM_IPC), SZ_2M);
+#else
 	mld->base = cp_shmem_get_region(cp_num, SHMEM_IPC);
+#endif
 	if (!mld->base) {
 		mif_err("Failed to vmap ipc_region\n");
 		goto error;

@@ -33,6 +33,7 @@
 #include <linux/mm.h>
 #include <linux/debugfs.h>
 #include <linux/mcu_ipc.h>
+#include <asm/cacheflush.h>
 
 #include "modem_prj.h"
 #include "modem_utils.h"
