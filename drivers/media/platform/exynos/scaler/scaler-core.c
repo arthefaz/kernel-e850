@@ -1387,6 +1387,13 @@ static int sc_v4l2_s_crop(struct file *file, void *fh,
 		struct sc_frame *src_blend_frame = &ctx->src_blend_frame;
 		struct sc_src_blend_cfg *cfg = &ctx->src_blend_cfg;
 
+		/* Bound an image to have crop position in limit */
+		v4l_bound_align_image(&cfg->blend_src_h_pos, 0,
+				cfg->blend_src_width - rect.width, w_align,
+				&cfg->blend_src_v_pos, 0,
+				cfg->blend_src_height - rect.height, h_align,
+				0);
+
 		if (cfg->blend_src_h_pos + rect.width > cfg->blend_src_width) {
 			v4l2_err(&ctx->sc_dev->m2m.v4l2_dev,
 				"Invalid range(x) of blending image: %d\n",
