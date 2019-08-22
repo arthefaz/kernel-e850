@@ -1273,9 +1273,19 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define CTRV_MCB2_WIDTH				2
 #define CTRV_MCB2_MASK				MASK(CTRV_MCB2_WIDTH, CTRV_MCB2_SHIFT)
 
+#define MIC_BIAS2_VO_3_0V			3
+#define MIC_BIAS2_VO_2_6V			2
+#define MIC_BIAS2_VO_2_8V			1
+#define MIC_BIAS2_VO_1_7V			0
+
 #define CTRV_MCB_LDO_SHIFT			0
 #define CTRV_MCB_LDO_WIDTH			2
 #define CTRV_MCB_LDO_MASK			MASK(CTRV_MCB_LDO_WIDTH, CTRV_MCB_LDO_SHIFT)
+
+#define MIC_BIAS_LDO_3_2V			3
+#define MIC_BIAS_LDO_2_88V			2
+#define MIC_BIAS_LDO_2_64V			1
+#define MIC_BIAS_LDO_2_0V			0
 
 /* AUD3004X_CB_ACTR_GP */
 #define EN_SPK_HVS_SHIFT			7

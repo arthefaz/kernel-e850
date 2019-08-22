@@ -363,33 +363,6 @@ static void aud3004x_buttons_work(struct work_struct *work)
 }
 
 /*
- * fake_jack_check() - Check fake inserted jack
- *
- * @jackdet: jack information struct
- *
- * Desc: When earjack detected, check whether or not fake inserted jack.
- * If jack was fake inserted, return false. If not, return true.
- */
-static bool fake_jack_check(struct aud3004x_jack *jackdet)
-{
-	struct aud3004x_priv *aud3004x = jackdet->p_aud3004x;
-	unsigned int jack_status_bit = 0;
-
-	regcache_cache_switch(aud3004x, false);
-	jack_status_bit = aud3004x_read(aud3004x, AUD3004X_F0_STATUS1);
-	regcache_cache_switch(aud3004x, true);
-
-	jack_status_bit = jack_status_bit & JACK_DET_MASK;
-
-	if (false) {
-		dev_err(aud3004x->dev, "%s, jack is not inserted.\n", __func__);
-		return false;
-	}
-
-	return true;
-}
-
-/*
  * aud3004x_jackstate_register() - Register setting following jack status
  *
  * @jackdet: jack information struct
@@ -567,9 +540,6 @@ static void aud3004x_jack_det_work(struct work_struct *work)
 		container_of(work, struct aud3004x_jack, jack_det_work.work);
 	struct earjack_state *jackstate = &jackdet->jack_state;
 	struct device *dev = jackdet->p_aud3004x->dev;
-#ifdef CONFIG_SND_SOC_AUD3004X_HP_VTS
-	struct aud3004x_priv *aud3004x = jackdet->p_aud3004x;
-#endif
 
 	mutex_lock(&jackdet->mdet_lock);
 	dev_dbg(dev, "%s called, cur_jack_state: 0x%02x.\n",
@@ -577,18 +547,8 @@ static void aud3004x_jack_det_work(struct work_struct *work)
 
 	/* Pole value decision */
 	if (jackstate->cur_jack_state & JACK_POLE_DEC) {
-		/* Check fake insert condition */
-		if (!fake_jack_check(jackdet)) {
-			queue_delayed_work(jackdet->gdet_adc_wq, &jackdet->gdet_adc_work,
-					msecs_to_jiffies(jackdet->fake_insert_retry_delay));
-			mutex_unlock(&jackdet->mdet_lock);
-			wake_unlock(&jackdet->jack_wake_lock);
-			return;
-		}
-
 		/* Read mdet adc value for detect mic */
-//		jackstate->mdet_adc = adc_get_value(jackdet, 1);
-		jackstate->mdet_adc = 1000;
+		jackstate->mdet_adc = adc_get_value(jackdet, 1);
 
 		if (jackstate->mdet_adc > jackdet->mic_adc_range) {
 			aud3004x_jackstate_set(jackdet, JACK_4POLE);
@@ -610,31 +570,11 @@ static void aud3004x_jack_det_work(struct work_struct *work)
 		dev_dbg(dev, "%s mic adc: %d, jack type: %s\n", __func__,
 				jackstate->mdet_adc,
 				(jackstate->cur_jack_state & JACK_4POLE) ? "4POLE" : "3POLE");
-
-#ifdef CONFIG_SND_SOC_AUD3004X_HP_VTS
-		if (jackstate->cur_jack_state & JACK_4POLE) {
-			/* HP VTS Enable */
-			aud3004x->hp_vts_on = true;
-			if (aud3004x->is_suspend) {
-				regcache_cache_switch(aud3004x, false);
-				aud3004x_hp_vts(aud3004x, true);
-				regcache_cache_switch(aud3004x, true);
-			}
-		}
-#endif
 	} else {
 		/* Send the jack out event to the audio framework */
 		input_report_switch(jackdet->input, SW_HEADPHONE_INSERT, 0);
 		input_report_switch(jackdet->input, SW_MICROPHONE_INSERT, 0);
 		input_sync(jackdet->input);
-
-#ifdef CONFIG_SND_SOC_AUD3004X_HP_VTS
-		/* HP VTS Disable */
-		aud3004x->hp_vts_on = false;
-		regcache_cache_switch(aud3004x, false);
-		aud3004x_hp_vts(aud3004x, false);
-		regcache_cache_switch(aud3004x, true);
-#endif
 	}
 
 	dev_dbg(dev, "%s called, Jack %s, Mic %s\n", __func__,
@@ -650,8 +590,7 @@ static int return_gdet_adc_thd(struct aud3004x_jack *jackdet)
 	struct earjack_state *jackstate = &jackdet->jack_state;
 
 	/* Detect the type of inserted jack using gdet adc */
-// if (jackstate->gdet_adc < jackdet->adc_thd_fake_jack)
-	if (true)
+	if (jackstate->gdet_adc < jackdet->adc_thd_fake_jack)
 		return JACK_RET_JACK;
 	else if (jackstate->gdet_adc >= jackdet->adc_thd_fake_jack &&
 			jackstate->gdet_adc < jackdet->adc_thd_auxcable)
@@ -686,8 +625,7 @@ static void read_gdet_adc(struct aud3004x_jack *jackdet)
 	aud3004x_write(aud3004x, AUD3004X_D1_DCTR_TEST1, 0x08);
 	aud3004x_write(aud3004x, AUD3004X_C0_ACTR_JD1, 0x72);
 
-//	jackstate->gdet_adc = adc_get_value(jackdet, 0);
-	jackstate->gdet_adc = 0;
+	jackstate->gdet_adc = adc_get_value(jackdet, 0);
 
 	/* GDET Pull-up registance 2M */
 	aud3004x_write(aud3004x, AUD3004X_C0_ACTR_JD1, 0x76);
@@ -835,13 +773,11 @@ static void aud3004x_jack_parse_dt(struct aud3004x_priv *aud3004x)
 {
 	struct aud3004x_jack *jackdet = aud3004x->p_jackdet;
 	struct device *dev = aud3004x->dev;
-#if 0
 	struct of_phandle_args args;
-	int  mic_range, btn_rel_val, delay;
+	int bias_v_conf, mic_range, btn_rel_val, delay;
 	int thd_adc;
 	int i, ret;
-#endif
-
+#if 0
 	jackdet->gdet_delay = AUD3004X_GDET_DELAY;
 	jackdet->mdet_delay = AUD3004X_MDET_DELAY;
 	jackdet->mic_adc_range = AUD3004X_MIC_ADC_DEFAULT;
@@ -851,11 +787,65 @@ static void aud3004x_jack_parse_dt(struct aud3004x_priv *aud3004x)
 	jackdet->adc_thd_auxcable = AUD3004X_ADC_THD_AUXCABLE;
 	jackdet->adc_thd_water_in = AUD3004X_ADC_THD_WATER_IN;
 	jackdet->adc_thd_water_out = AUD3004X_ADC_THD_WATER_OUT;
-#if 0
 
 	/*
 	 * Set mic detect tuning values
 	 */
+	/* Mic Bias 1 */
+	ret = of_property_read_u32(dev->of_node, "mic-bias1-voltage", &bias_v_conf);
+	if (!ret &&
+			((bias_v_conf >= MIC_BIAS1_VO_2_6V) &&
+			 (bias_v_conf <= MIC_BIAS1_VO_2_8V))) {
+		jackdet->mic_bias1_voltage = bias_v_conf;
+	} else {
+		jackdet->mic_bias1_voltage = MIC_BIAS1_VO_2_8V;
+		dev_warn(dev, "Property 'mic-bias1-voltage' %s",
+				ret ? "not found, default set 2.8V" : "used invalid value");
+	}
+
+	/* Mic Bias 2 */
+	ret = of_property_read_u32(dev->of_node, "mic-bias2-voltage", &bias_v_conf);
+	if (!ret &&
+			((bias_v_conf >= MIC_BIAS2_VO_0_7V) &&
+			 (bias_v_conf <= MIC_BIAS2_VO_2_8V))) {
+		jackdet->mic_bias2_voltage = bias_v_conf;
+	} else {
+		jackdet->mic_bias2_voltage = MIC_BIAS2_VO_2_8V;
+		dev_warn(dev, "Property 'mic-bias2-voltage' %s",
+				ret ? "not found, default set 2.8V" : "used invalid value");
+	}
+
+	/* Mic Bias 3 */
+	ret = of_property_read_u32(dev->of_node, "mic-bias3-voltage", &bias_v_conf);
+	if (!ret &&
+			((bias_v_conf >= MIC_BIAS3_VO_2_6V) &&
+			 (bias_v_conf <= MIC_BIAS3_VO_2_8V))) {
+		jackdet->mic_bias3_voltage = bias_v_conf;
+	} else {
+		jackdet->mic_bias3_voltage = MIC_BIAS3_VO_2_8V;
+		dev_warn(dev, "Property 'mic-bias3-voltage' %s",
+				ret ? "not found, default set 2.8V" : "used invalid value");
+	}
+	dev_dbg(dev, "Bias voltage values: bias1=%d, bias2=%d, bias3=%d\n",
+			jackdet->mic_bias1_voltage,
+			jackdet->mic_bias2_voltage,
+			jackdet->mic_bias3_voltage);
+
+#endif
+	/* Mic Bias 2 */
+	ret = of_property_read_u32(dev->of_node, "mic-bias2-voltage", &bias_v_conf);
+	if (!ret &&
+			((bias_v_conf >= MIC_BIAS2_VO_1_7V) &&
+			 (bias_v_conf <= MIC_BIAS2_VO_3_0V))) {
+		jackdet->mic_bias2_voltage = bias_v_conf;
+	} else {
+		jackdet->mic_bias2_voltage = MIC_BIAS2_VO_2_6V;
+		dev_warn(dev, "Property 'mic-bias2-voltage' %s",
+				ret ? "not found, default set 2.6V" : "used invalid value");
+	}
+	dev_dbg(dev, "Bias voltage values: bias2=%d\n",
+			jackdet->mic_bias2_voltage);
+
 	/* GDET adc check delay time */
 	ret = of_property_read_u32(dev->of_node, "gdet-delay", &delay);
 	if (!ret)
@@ -940,7 +930,6 @@ static void aud3004x_jack_parse_dt(struct aud3004x_priv *aud3004x)
 		jackdet->adc_thd_water_out = thd_adc;
 	else
 		jackdet->adc_thd_water_out = AUD3004X_ADC_THD_WATER_OUT;
-#endif
 
 	dev_dbg(dev, "GDET adc threshold value: %d %d %d %d\n",
 			jackdet->adc_thd_fake_jack,
@@ -1025,16 +1014,7 @@ static int return_irq_type(struct aud3004x_jack *jackdet)
 	pend6 = jackdet->irq_val[5];
 	stat1 = jackdet->irq_val[6];
 	stat2 = jackdet->irq_val[7];
-#if 0
-	if (jackstate->irq_masking)
-		return IRQ_ST_MASKING;
 
-	if (pend5 & (OVP_MUTER_R | OVP_MUTEL_R))
-		return IRQ_ST_OVP_IN;
-	else if (pend6 & (OVP_MUTER_F | OVP_MUTEL_F))
-		return IRQ_ST_OVP_OUT;
-	else if ((pend1 & ST_APCHECK_R) || (pend2 & ST_MOIST_F))
-#endif
 	if ((pend1 & ST_APCHECK_R) || (pend2 & ST_MOIST_F))
 		return IRQ_ST_APCHECK;
 	else if (pend3 & ST_POLE_R)
@@ -1090,13 +1070,6 @@ static int aud3004x_notifier_handler(struct notifier_block *nb,
 		queue_delayed_work(jackdet->gdet_adc_wq, &jackdet->gdet_adc_work,
 				msecs_to_jiffies(jackdet->gdet_delay));
 		break;
-#if 0
-	case IRQ_ST_IMP_CHK:
-		dev_dbg(dev, "[IRQ] %s Jack impedance check, line: %d\n",
-				__func__, __LINE__);
-		/* Call impedance calculator */
-		break;
-#endif
 	case IRQ_ST_JACKDET:
 		dev_dbg(dev, "[IRQ] %s Jack detected, read mic adc, line: %d\n",
 				__func__, __LINE__);
