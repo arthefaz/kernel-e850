@@ -363,14 +363,13 @@ static void dpu_bts_find_max_disp_freq(struct decon_device *decon,
 	decon->bts.peak = max_disp_ch_bw;
 	decon->bts.max_disp_freq = max_disp_ch_bw * 100 / (16 * BUS_UTIL) + 1;
 
-	if (decon->dt.out_type == DECON_OUT_DP)
-		op_fps = decon->lcd_info->fps;
+	op_fps = decon->lcd_info->fps;
 
 	resol_clock = dpu_bts_get_aclk(decon->lcd_info->xres,
 			decon->lcd_info->yres, op_fps);
 
-	DPU_DEBUG_BTS("\tDECON%d : resol clock = %d Khz\n",
-		decon->id, decon->bts.resol_clk);
+	DPU_DEBUG_BTS("\tDECON%d : resol clock = %d Khz @%d fps\n",
+		decon->id, decon->bts.resol_clk, op_fps);
 
 	for (i = 0; i < decon->dt.max_win; ++i) {
 		if ((config[i].state != DECON_WIN_STATE_BUFFER) &&
@@ -497,10 +496,11 @@ void dpu_bts_calc_bw(struct decon_device *decon, struct decon_reg_data *regs)
 			#endif
 		}
 
-		DPU_DEBUG_BTS("\tDPP%d : bpp(%d) src w(%d) h(%d) rot(%d)\n",
+		DPU_DEBUG_BTS("\tDPP%d : bpp(%d) src w(%d) h(%d) rot(%d) fmt(%s)\n",
 				idx, bts_info.dpp[idx].bpp,
 				bts_info.dpp[idx].src_w, bts_info.dpp[idx].src_h,
-				bts_info.dpp[idx].rotation);
+				bts_info.dpp[idx].rotation,
+				fmt_info->name);
 		DPU_DEBUG_BTS("\t\t\t\tdst x(%d) right(%d) y(%d) bottom(%d)\n",
 				bts_info.dpp[idx].dst.x1,
 				bts_info.dpp[idx].dst.x2,
@@ -622,9 +622,10 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 		config.src.w = config.dst.w = decon->lcd_info->xres;
 		config.src.h = config.dst.h = decon->lcd_info->yres;
 		resol_clock = decon->lcd_info->xres * decon->lcd_info->yres *
-			LCD_REFRESH_RATE * 11 / 10 / 1000 + 1;
+			decon->lcd_info->fps * 11 / 10 / 1000 + 1;
 		aclk_freq = dpu_bts_calc_aclk_disp(decon, &config, resol_clock);
-		DPU_DEBUG_BTS("Initial calculated disp freq(%lu)\n", aclk_freq);
+		DPU_DEBUG_BTS("Initial calculated disp freq(%lu) @%d fps\n",
+				aclk_freq, decon->lcd_info->fps);
 		/*
 		 * If current disp freq is higher than calculated freq,
 		 * it must not be set. if not, underrun can occur.
@@ -715,7 +716,6 @@ void dpu_bts_release_bw(struct decon_device *decon)
 
 void dpu_bts_init(struct decon_device *decon)
 {
-	int comp_ratio;
 	int i;
 	struct v4l2_subdev *sd = NULL;
 	const char *scen_name[DPU_BS_MAX] = {
@@ -758,11 +758,6 @@ void dpu_bts_init(struct decon_device *decon)
 
 	DPU_DEBUG_BTS("BTS_BW_TYPE(%d) -\n", decon->bts.bw_idx);
 
-	if (decon->lcd_info->dsc.en)
-		comp_ratio = 3;
-	else
-		comp_ratio = 1;
-
 	if (decon->dt.out_type == DECON_OUT_DP) {
 		/*
 		* Decon2-DP : various resolutions are available
@@ -772,16 +767,16 @@ void dpu_bts_init(struct decon_device *decon)
 				/ 10 / 1000 + 1);
 	} else {
 		/*
-		 * Resol clock(KHZ) = lcd width x lcd height x 63(refresh rate) x
-		 *               1.1(10% margin) x comp_ratio(1/3 DSC) / 2(2PPC) /
-		 *		1000(for KHZ) + 1(for raising to a unit)
+		 * Resol clock(KHZ) =
+		 *	lcd width x lcd height x fps(refresh rate) x
+		 *	1.1(10% margin) / 1000(for KHZ) + 1(for raising to a unit)
 		 */
 		decon->bts.resol_clk = (u32)((u64)decon->lcd_info->xres *
 				(u64)decon->lcd_info->yres *
-				LCD_REFRESH_RATE * 11 / 10 / 1000 + 1);
+				decon->lcd_info->fps * 11 / 10 / 1000 + 1);
 	}
-	DPU_DEBUG_BTS("[Init: D%d] resol clock = %d Khz\n",
-		decon->id, decon->bts.resol_clk);
+	DPU_DEBUG_BTS("[Init: D%d] resol clock = %d Khz @%d fps\n",
+		decon->id, decon->bts.resol_clk, decon->lcd_info->fps);
 
 	pm_qos_add_request(&decon->bts.mif_qos, PM_QOS_BUS_THROUGHPUT, 0);
 	pm_qos_add_request(&decon->bts.int_qos, PM_QOS_DEVICE_THROUGHPUT, 0);
