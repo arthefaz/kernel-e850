@@ -183,7 +183,7 @@ static irqreturn_t ap_wakeup_handler(int irq, void *data)
 
 	if (gpio_val == check_link_order) {
 		mif_info("CP2AP_WAKEUP val is same with before : %d\n", gpio_val);
-		mif_enable_irq(&mc->s5100_irq_ap_wakeup);
+		s5100_force_crash_exit_ext();
 		return IRQ_HANDLED;
 	}
 	check_link_order = gpio_val;
@@ -212,7 +212,6 @@ static irqreturn_t ap_wakeup_handler(int irq, void *data)
 	mc->apwake_irq_chip->irq_set_type(
 		irq_get_irq_data(mc->s5100_irq_ap_wakeup.num),
 		(gpio_val == 1 ? IRQF_TRIGGER_LOW : IRQF_TRIGGER_HIGH));
-
 	mif_enable_irq(&mc->s5100_irq_ap_wakeup);
 
 	queue_work_on(RUNTIME_PM_AFFINITY_CORE, mc->wakeup_wq,
