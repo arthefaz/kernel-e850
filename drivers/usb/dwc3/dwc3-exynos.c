@@ -35,7 +35,7 @@
 #include <linux/io.h>
 #include <linux/usb/otg-fsm.h>
 
-//#include <soc/samsung/exynos-cpupm.h>
+#include <soc/samsung/exynos-cpupm.h>
 
 /* -------------------------------------------------------------------------- */
 
@@ -476,8 +476,8 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 
 	exynos->dev = dev;
 
-	//exynos->idle_ip_index = exynos_get_idle_ip_index(dev_name(dev));
-	//exynos_update_ip_idle_status(exynos->idle_ip_index, 0);
+	exynos->idle_ip_index = exynos_get_idle_ip_index(dev_name(dev));
+	exynos_update_ip_idle_status(exynos->idle_ip_index, 0);
 
 	ret = dwc3_exynos_clk_get(exynos);
 	if (ret)
@@ -592,7 +592,7 @@ static int dwc3_exynos_runtime_suspend(struct device *dev)
 	dwc3_exynos_clk_disable(exynos);
 
 	/* inform what USB state is idle to IDLE_IP */
-	//exynos_update_ip_idle_status(exynos->idle_ip_index, 1);
+	exynos_update_ip_idle_status(exynos->idle_ip_index, 1);
 
 	return 0;
 }
@@ -605,7 +605,7 @@ static int dwc3_exynos_runtime_resume(struct device *dev)
 	dev_info(dev, "%s\n", __func__);
 
 	/* inform what USB state is not idle to IDLE_IP */
-	//exynos_update_ip_idle_status(exynos->idle_ip_index, 0);
+	exynos_update_ip_idle_status(exynos->idle_ip_index, 0);
 
 	ret = dwc3_exynos_clk_enable(exynos);
 	if (ret) {
@@ -635,7 +635,7 @@ static int dwc3_exynos_suspend(struct device *dev)
 		regulator_disable(exynos->vdd10);
 
 	/* inform what USB state is idle to IDLE_IP */
-	//exynos_update_ip_idle_status(exynos->idle_ip_index, 1);
+	exynos_update_ip_idle_status(exynos->idle_ip_index, 1);
 
 	return 0;
 }
@@ -648,7 +648,7 @@ static int dwc3_exynos_resume(struct device *dev)
 	dev_info(dev, "%s\n", __func__);
 
 	/* inform what USB state is not idle to IDLE_IP */
-	//exynos_update_ip_idle_status(exynos->idle_ip_index, 0);
+	exynos_update_ip_idle_status(exynos->idle_ip_index, 0);
 
 	if (exynos->vdd33) {
 		ret = regulator_enable(exynos->vdd33);
