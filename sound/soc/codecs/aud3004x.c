@@ -38,7 +38,7 @@
 
 #include "aud3004x.h"
 
-#define AUD3004X_CODEC_VER 10020
+#define AUD3004X_CODEC_VER 10021
 
 #ifdef CONFIG_SND_SOC_SAMSUNG_VERBOSE_DEBUG
 #ifdef dev_dbg
@@ -742,6 +742,32 @@ static int codec_enable_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static const char * const aud3004x_hpf_sel_text[] = {
+	"15Hz", "33Hz", "60Hz", "113Hz"
+};
+
+static const char * const aud3004x_hpf_order_text[] = {
+	"2nd", "1st"
+};
+
+static const char * const aud3004x_hpf_ch_text[] = {
+	"Off", "On"
+};
+
+static SOC_ENUM_SINGLE_DECL(aud3004x_hpf_sel_enum, AUD3004X_37_AD_HPF,
+		HPF_SEL_SHIFT, aud3004x_hpf_sel_text);
+
+static SOC_ENUM_SINGLE_DECL(aud3004x_hpf_order_enum, AUD3004X_37_AD_HPF,
+		HPF_ORDER_SHIFT, aud3004x_hpf_order_text);
+
+static SOC_ENUM_SINGLE_DECL(aud3004x_hpf_ch_enum_l, AUD3004X_37_AD_HPF,
+		HPF_ENL_SHIFT, aud3004x_hpf_ch_text);
+
+static SOC_ENUM_SINGLE_DECL(aud3004x_hpf_ch_enum_r, AUD3004X_37_AD_HPF,
+		HPF_ENR_SHIFT, aud3004x_hpf_ch_text);
+
+static SOC_ENUM_SINGLE_DECL(aud3004x_hpf_ch_enum_c, AUD3004X_37_AD_HPF,
+		HPF_ENC_SHIFT, aud3004x_hpf_ch_text);
 /*
  * struct snd_kcontrol_new aud3004x_snd_control
  *
@@ -792,6 +818,16 @@ static const struct snd_kcontrol_new aud3004x_snd_controls[] = {
 	SOC_ENUM("ADC DAT Mux2", aud3004x_adc_dat_enum2),
 
 	SOC_ENUM("ADC DAT Mux3", aud3004x_adc_dat_enum3),
+
+	SOC_ENUM("HPF Tuning", aud3004x_hpf_sel_enum),
+
+	SOC_ENUM("HPF Order", aud3004x_hpf_order_enum),
+
+	SOC_ENUM("HPF Left", aud3004x_hpf_ch_enum_l),
+
+	SOC_ENUM("HPF Right", aud3004x_hpf_ch_enum_r),
+
+	SOC_ENUM("HPF Center", aud3004x_hpf_ch_enum_c),
 
 	/*
 	 * DAC(Rx) path control
