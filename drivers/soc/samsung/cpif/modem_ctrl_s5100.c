@@ -60,6 +60,12 @@
 #include <soc/samsung/exynos-s2mpu.h>
 #endif
 
+#ifdef CONFIG_CP_LCD_NOTIFIER
+#include "../../../video/fbdev/exynos/dpu30/decon.h"
+static int s5100_lcd_notifier(struct notifier_block *notifier,
+		unsigned long event, void *v);
+#endif /* CONFIG_CP_LCD_NOTIFIER */
+
 #define MIF_INIT_TIMEOUT	(300 * HZ)
 
 #define msecs_to_loops(t) (loops_per_jiffy / 1000 * HZ * t)
@@ -692,6 +698,11 @@ static int complete_normal_boot(struct modem_ctl *mc)
 	int err = 0;
 	unsigned long remain;
 	struct io_device *iod;
+#ifdef CONFIG_CP_LCD_NOTIFIER
+	int __maybe_unused ret;
+	struct modem_data __maybe_unused *modem = mc->mdm_data;
+	struct mem_link_device __maybe_unused *mld = modem->mld;
+#endif
 
 	mif_info("+++\n");
 
@@ -730,6 +741,17 @@ static int complete_normal_boot(struct modem_ctl *mc)
 #if defined(CONFIG_CPIF_TP_MONITOR)
 	tpmon_start(1);
 #endif
+#ifdef CONFIG_CP_LCD_NOTIFIER
+	if (mc->lcd_notifier.notifier_call == NULL) {
+		mif_info("Register lcd notifier\n");
+		mc->lcd_notifier.notifier_call = s5100_lcd_notifier;
+		ret = register_lcd_status_notifier(&mc->lcd_notifier);
+		if (ret) {
+			mif_err("failed to register LCD notifier");
+			return ret;
+		}
+	}
+#endif /* CONFIG_CP_LCD_NOTIFIER */
 
 	mif_info("---\n");
 
@@ -1069,9 +1091,11 @@ static int suspend_cp(struct modem_ctl *mc)
 		}
 	} while (0);
 
+#ifndef CONFIG_CP_LCD_NOTIFIER
 	modem_ctrl_set_kerneltime(mc);
 	mif_gpio_set_value(mc->s5100_gpio_ap_status, 0, 0);
 	mif_gpio_get_value(mc->s5100_gpio_ap_status, true);
+#endif
 
 	return 0;
 }
@@ -1081,10 +1105,11 @@ static int resume_cp(struct modem_ctl *mc)
 	if (!mc)
 		return 0;
 
+#ifndef CONFIG_CP_LCD_NOTIFIER
 	modem_ctrl_set_kerneltime(mc);
 	mif_gpio_set_value(mc->s5100_gpio_ap_status, 1, 0);
 	mif_gpio_get_value(mc->s5100_gpio_ap_status, true);
-
+#endif
 	return 0;
 }
 
@@ -1347,6 +1372,37 @@ static int s5100_modem_notifier(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 #endif
+
+#ifdef CONFIG_CP_LCD_NOTIFIER
+static int s5100_lcd_notifier(struct notifier_block *notifier,
+		unsigned long event, void *v)
+{
+	struct modem_ctl *mc =
+		container_of(notifier, struct modem_ctl, lcd_notifier);
+
+	switch (event) {
+	case LCD_OFF:
+		mif_info("LCD_OFF Notification\n");
+		modem_ctrl_set_kerneltime(mc);
+		mif_gpio_set_value(mc->s5100_gpio_ap_status, 0, 0);
+		mif_gpio_get_value(mc->s5100_gpio_ap_status, true);
+		break;
+
+	case LCD_ON:
+		mif_info("LCD_ON Notification\n");
+		modem_ctrl_set_kerneltime(mc);
+		mif_gpio_set_value(mc->s5100_gpio_ap_status, 1, 0);
+		mif_gpio_get_value(mc->s5100_gpio_ap_status, true);
+		break;
+
+	default:
+		mif_info("lcd_event %ld\n", event);
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+#endif /* CONFIG_CP_LCD_NOTIFIER */
 
 int s5100_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 {

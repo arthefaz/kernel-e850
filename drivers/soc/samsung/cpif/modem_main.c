@@ -341,6 +341,8 @@ static int parse_dt_mbox_pdata(struct device *dev, struct device_node *np,
 	mif_dt_read_u32(np, "mif,int_ap2cp_wakeup", mbox->int_ap2cp_wakeup);
 	mif_dt_read_u32(np, "mif,int_ap2cp_status", mbox->int_ap2cp_status);
 	mif_dt_read_u32(np, "mif,int_ap2cp_active", mbox->int_ap2cp_active);
+	mif_dt_read_u32(np, "mif,int_ap2cp_lcd_status",
+			mbox->int_ap2cp_lcd_status);
 	mif_dt_read_u32(np, "mif,int_ap2cp_uart_noti", mbox->int_ap2cp_uart_noti);
 
 	mif_dt_read_u32(np, "mif,irq_cp2ap_msg", mbox->irq_cp2ap_msg);
@@ -391,6 +393,8 @@ static int parse_dt_ipc_region_pdata(struct device *dev, struct device_node *np,
 	mif_dt_read_u32(np, "sbi_ap_status_pos", pdata->sbi_ap_status_pos);
 	mif_dt_read_u32(np, "sbi_crash_type_mask", pdata->sbi_crash_type_mask);
 	mif_dt_read_u32(np, "sbi_crash_type_pos", pdata->sbi_crash_type_pos);
+	mif_dt_read_u32(np, "sbi_lcd_status_mask", pdata->sbi_lcd_status_mask);
+	mif_dt_read_u32(np, "sbi_lcd_status_pos", pdata->sbi_lcd_status_pos);
 	mif_dt_read_u32(np, "sbi_uart_noti_mask", pdata->sbi_uart_noti_mask);
 	mif_dt_read_u32(np, "sbi_uart_noti_pos", pdata->sbi_uart_noti_pos);
 	mif_dt_read_u32(np, "sbi_ds_det_mask", pdata->sbi_ds_det_mask);

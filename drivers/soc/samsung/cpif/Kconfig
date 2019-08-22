@@ -143,5 +143,11 @@ config CPIF_CHECK_SJTAG_STATUS
 	---help---
 	  Check secure JTAG status to disable CP memory dump
 
+config CP_LCD_NOTIFIER
+	bool "Enable LCD notifier for CP"
+	default n
+	---help---
+	  This enables LCD notifier for CP
+
 endmenu
 endif

@@ -330,6 +330,7 @@ struct modem_mbox {
 	unsigned int int_ap2cp_active;
 	unsigned int int_ap2cp_wakeup;
 	unsigned int int_ap2cp_status;
+	unsigned int int_ap2cp_lcd_status;
 	unsigned int int_ap2cp_uart_noti;
 
 	unsigned int irq_cp2ap_msg;
@@ -417,6 +418,8 @@ struct modem_data {
 	unsigned int sbi_crash_type_pos;
 	unsigned int sbi_ds_det_mask;
 	unsigned int sbi_ds_det_pos;
+	unsigned int sbi_lcd_status_mask;
+	unsigned int sbi_lcd_status_pos;
 
 	/* ulpath offset for 2CP models */
 	u32 ulpath_offset;

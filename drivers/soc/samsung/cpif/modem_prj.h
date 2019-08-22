@@ -639,6 +639,9 @@ struct modem_ctl {
 	/* for checking aliveness of CP */
 	unsigned int irq_phone_active;
 
+	/* for broadcasting AP LCD state */
+	unsigned int int_lcd_status;
+
 #ifdef CONFIG_LINK_DEVICE_SHMEM
 	unsigned int mbx_pda_active;
 	unsigned int mbx_phone_active;
@@ -671,6 +674,9 @@ struct modem_ctl {
 
 	unsigned int sbi_crash_type_mask;
 	unsigned int sbi_crash_type_pos;
+
+	unsigned int sbi_lcd_status_mask;
+	unsigned int sbi_lcd_status_pos;
 
 	unsigned int ap2cp_cfg_addr;
 	void __iomem *ap2cp_cfg_ioaddr;
@@ -763,6 +769,8 @@ struct modem_ctl {
 	void (*gpio_revers_bias_clear)(void);
 	void (*gpio_revers_bias_restore)(void);
 	void (*modem_complete)(struct modem_ctl *mc);
+
+	struct notifier_block lcd_notifier;
 };
 
 static inline bool cp_offline(struct modem_ctl *mc)

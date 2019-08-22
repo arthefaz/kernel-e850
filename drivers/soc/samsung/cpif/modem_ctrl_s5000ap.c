@@ -37,6 +37,11 @@
 #if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)
 #include <linux/modem_notifier.h>
 #endif
+#ifdef CONFIG_CP_LCD_NOTIFIER
+#include "../../../video/fbdev/exynos/dpu30/decon.h"
+static int s5000ap_lcd_notifier(struct notifier_block *notifier,
+		unsigned long event, void *v);
+#endif /* CONFIG_CP_LCD_NOTIFIER */
 
 #define MIF_INIT_TIMEOUT	(15 * HZ)
 
@@ -544,6 +549,12 @@ static int complete_normal_boot(struct modem_ctl *mc)
 	struct io_device *iod;
 	unsigned long remain;
 	int err = 0;
+#ifdef CONFIG_CP_LCD_NOTIFIER
+	int ret;
+	struct modem_data *modem = mc->mdm_data;
+	struct mem_link_device *mld = modem->mld;
+#endif
+
 	mif_info("+++\n");
 
 	reinit_completion(&mc->init_cmpl);
@@ -564,6 +575,21 @@ static int complete_normal_boot(struct modem_ctl *mc)
 #if defined(CONFIG_CPIF_TP_MONITOR)
 	tpmon_start(1);
 #endif
+#ifdef CONFIG_CP_LCD_NOTIFIER
+	if (mc->lcd_notifier.notifier_call == NULL) {
+		mif_info("Register lcd notifier\n");
+		mc->lcd_notifier.notifier_call = s5000ap_lcd_notifier;
+		ret = register_lcd_status_notifier(&mc->lcd_notifier);
+		if (ret) {
+			mif_err("failed to register LCD notifier");
+			return ret;
+		}
+	}
+
+	mif_info("Set LCD_ON status\n");
+	update_ctrl_msg(&mld->ap2cp_united_status, 1, mc->sbi_lcd_status_mask,
+			mc->sbi_lcd_status_pos);
+#endif /* CONFIG_CP_LCD_NOTIFIER */
 
 	mif_info("---\n");
 
@@ -907,6 +933,10 @@ static void s5000ap_get_pdata(struct modem_ctl *mc, struct modem_data *modem)
 
 	mc->sbi_ds_det_mask = modem->sbi_ds_det_mask;
 	mc->sbi_ds_det_pos = modem->sbi_ds_det_pos;
+
+	mc->sbi_lcd_status_mask = modem->sbi_lcd_status_mask;
+	mc->sbi_lcd_status_pos = modem->sbi_lcd_status_pos;
+	mc->int_lcd_status = mbx->int_ap2cp_lcd_status;
 }
 
 #if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)
@@ -954,6 +984,43 @@ static int cp_itmon_notifier(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 #endif
+
+#ifdef CONFIG_CP_LCD_NOTIFIER
+static int s5000ap_lcd_notifier(struct notifier_block *notifier,
+		unsigned long event, void *v)
+{
+	struct modem_ctl *mc =
+		container_of(notifier, struct modem_ctl, lcd_notifier);
+	struct modem_data *modem = mc->mdm_data;
+	struct mem_link_device *mld = modem->mld;
+
+	switch (event) {
+	case LCD_OFF:
+		mif_info("LCD_OFF Notification\n");
+		modem_ctrl_set_kerneltime(mc);
+		update_ctrl_msg(&mld->ap2cp_united_status, 0,
+				mc->sbi_lcd_status_mask,
+				mc->sbi_lcd_status_pos);
+		mbox_set_interrupt(MCU_CP, mc->int_lcd_status);
+		break;
+
+	case LCD_ON:
+		mif_info("LCD_ON Notification\n");
+		modem_ctrl_set_kerneltime(mc);
+		update_ctrl_msg(&mld->ap2cp_united_status, 1,
+				mc->sbi_lcd_status_mask,
+				mc->sbi_lcd_status_pos);
+		mbox_set_interrupt(MCU_CP, mc->int_lcd_status);
+		break;
+
+	default:
+		mif_info("lcd_event %ld\n", event);
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+#endif /* CONFIG_CP_LCD_NOTIFIER */
 
 int s5000ap_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 {
