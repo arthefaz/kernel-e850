@@ -2899,7 +2899,7 @@ static irqreturn_t shmem_cp2ap_wakelock_handler(int irq, void *data)
 }
 #endif
 
-#if defined(CONFIG_PCI_EXYNOS)
+#if defined(CONFIG_MCU_IPC) && defined(CONFIG_PCI_EXYNOS)
 static irqreturn_t shmem_cp2ap_rat_mode_handler(int irq, void *data)
 {
 	struct mem_link_device *mld = (struct mem_link_device *)data;
@@ -3944,7 +3944,7 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	/**
 	 * Retrieve SHMEM MBOX# and IRQ# for RAT_MODE
 	 */
-#if defined(CONFIG_PCI_EXYNOS)
+#if defined(CONFIG_MCU_IPC) && defined(CONFIG_PCI_EXYNOS)
 	mld->irq_cp2ap_rat_mode = modem->mbx->irq_cp2ap_rat_mode;
 
 	err = mbox_request_irq(MCU_CP, mld->irq_cp2ap_rat_mode,
