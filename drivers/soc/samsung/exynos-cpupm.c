@@ -109,16 +109,19 @@ static void cpu_disable(unsigned int cpu)
 {
 	cal_cpu_disable(cpu);
 }
+
 static DEFINE_PER_CPU(int, vcluster_id);
 static void cluster_enable(unsigned int cpu_id)
 {
 	unsigned int cluster_id = per_cpu(vcluster_id, cpu_id);
+
 	cal_cluster_enable(cluster_id);
 }
 
 static void cluster_disable(unsigned int cpu_id)
 {
 	unsigned int cluster_id = per_cpu(vcluster_id, cpu_id);
+
 	cal_cluster_disable(cluster_id);
 }
 
@@ -146,8 +149,6 @@ static int fix_idle_ip_count;
  * array of fix-idle-ip
  */
 struct fix_idle_ip fix_idle_ip_arr[FIX_IDLE_IP_MAX];
-
-struct kobj_attribute idle_ip_attr;
 
 static int get_index_last_entry(struct list_head *head)
 {
@@ -593,6 +594,15 @@ void exynos_cpu_pm_exit(int cpu, int cancel)
 	spin_unlock(&cpupm_lock);
 }
 
+static int __init exynos_cpupm_late_init(void)
+{
+	initcall_done = true;
+
+	return 0;
+}
+late_initcall(exynos_cpupm_late_init);
+#endif /* CONFIG_ARM64_EXYNOS_CPUIDLE */
+
 /******************************************************************************
  *                               sysfs interface                              *
  ******************************************************************************/
@@ -635,9 +645,11 @@ static ssize_t store_power_mode(struct kobject *kobj,
 static ssize_t show_idle_ip_list(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
+	int ret = 0;
+#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
 	struct idle_ip *ip;
 	unsigned long flags;
-	int i, ret = 0;
+	int i;
 
 	for (i = 0; i < fix_idle_ip_count; i++)
 		ret += snprintf(buf + ret, PAGE_SIZE - ret, "[fix:%d] %s\n",
@@ -651,6 +663,7 @@ static ssize_t show_idle_ip_list(struct kobject *kobj,
 				ip->index, ip->name);
 
 	spin_unlock_irqrestore(&idle_ip_list_lock, flags);
+#endif
 
 	return ret;
 }
@@ -663,6 +676,7 @@ static ssize_t show_idle_ip_list(struct kobject *kobj,
  */
 static struct attribute *attr_pool[10];
 
+static struct kobj_attribute idle_ip_attr;
 static struct kobject *cpupm_kobj;
 static struct attribute_group attr_group;
 
@@ -696,7 +710,6 @@ out:
 	_attr.show	= _show;				\
 	_attr.store	= _store;
 
-#endif /* CONFIG_ARM64_EXYNOS_CPUIDLE */
 
 /******************************************************************************
  *                                Initialization                              *
@@ -709,7 +722,7 @@ add_mode(struct power_mode **modes, struct power_mode *new)
 
 	for (i = 0; i < MAX_MODE; i++) {
 		mode = modes[i];
-		if (IS_NULL(mode)) {
+		if (mode == NULL) {
 			modes[i] = new;
 			return;
 		}
@@ -832,23 +845,16 @@ static int __init exynos_cpupm_init(void)
 {
 	cpu_power_mode_init();
 
+#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
 	spin_lock_init(&cpupm_lock);
-
 	fix_idle_ip_init();
+#endif
 
 	cpupm_initialized = 1;
 
 	return 0;
 }
 arch_initcall(exynos_cpupm_init);
-
-static int __init exynos_cpupm_late_init(void)
-{
-	initcall_done = true;
-
-	return 0;
-}
-late_initcall(exynos_cpupm_late_init);
 
 /******************************************************************************
  *                               CPU HOTPLUG                                  *
