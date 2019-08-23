@@ -479,12 +479,9 @@ static ssize_t gicd_read(struct file *file, struct kobject *kobj,
 
 	dev_dbg(dev, "%s(%lld, %zu)\n", __func__, off, size);
 
-	if (pm_runtime_get_if_in_use(dev_abox) > 0) {
-		abox_gicd_dump(data->dev_gic, buf, off, size);
-		pm_runtime_put(dev_abox);
-	} else {
-		return -EFAULT;
-	}
+	pm_runtime_get(dev_abox);
+	abox_gicd_dump(data->dev_gic, buf, off, size);
+	pm_runtime_put(dev_abox);
 
 	return size;
 }
