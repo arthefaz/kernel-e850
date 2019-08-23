@@ -415,6 +415,7 @@ struct abox_data {
 	unsigned long long audio_mode_time;
 	enum audio_mode audio_mode;
 	enum sound_type sound_type;
+	int callpath_param;
 	struct wakeup_source ws;
 };
 

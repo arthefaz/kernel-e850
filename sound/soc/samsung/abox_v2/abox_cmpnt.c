@@ -579,6 +579,38 @@ static const unsigned int audio_mode_enum_values[] = {
 SOC_VALUE_ENUM_SINGLE_DECL(audio_mode_enum, SND_SOC_NOPM, 0, 0,
 		audio_mode_enum_texts, audio_mode_enum_values);
 
+static int callpath_param_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
+	struct device *dev = cmpnt->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "%s\n", __func__);
+
+	ucontrol->value.integer.value[0] = data->callpath_param;
+
+	return 0;
+}
+
+static int callpath_param_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
+	struct device *dev = cmpnt->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+	long val = ucontrol->value.integer.value[0];
+	ABOX_IPC_MSG msg;
+	struct IPC_SYSTEM_MSG *system_msg = &msg.msg.system;
+
+	dev_info(dev, "%s(%u)\n", __func__, val);
+
+	msg.ipcid = IPC_SYSTEM;
+	system_msg->msgtype = ABOX_SET_CALLINFO;
+	system_msg->param1 = data->callpath_param = val;
+	return abox_request_ipc(dev, msg.ipcid, &msg, sizeof(msg), 0, 0);
+}
+
 static int sound_type_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -1092,6 +1124,7 @@ static const struct snd_kcontrol_new cmpnt_controls[] = {
 			audio_mode_get, audio_mode_put),
 	SOC_VALUE_ENUM_EXT("Sound Type", sound_type_enum,
 			sound_type_get, sound_type_put),
+	SOC_SINGLE_EXT("Call Path Param", 0, 0, 0x1ffff, 0, callpath_param_get, callpath_param_put),
 	SOC_SINGLE_EXT("Tickle", 0, 0, 1, 0, tickle_get, tickle_put),
 	SOC_SINGLE_EXT("Wakelock", 0, 0, 1, 0,
 			wake_lock_get, wake_lock_put),
