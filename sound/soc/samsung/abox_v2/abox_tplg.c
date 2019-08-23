@@ -45,7 +45,8 @@ struct abox_tplg_kcontrol_data {
 	struct list_head list;
 	int gid;
 	int id;
-	unsigned int value;
+	unsigned int value[128];
+	int count;
 	bool is_volatile;
 	struct snd_soc_component *cmpnt;
 	struct snd_kcontrol_new *kcontrol_new;
@@ -127,6 +128,20 @@ static int abox_tplg_get_gid(struct snd_soc_tplg_private *priv)
 	return ret;
 }
 
+static int abox_tplg_get_min(struct snd_soc_tplg_private *priv)
+{
+	int ret = abox_tplg_get_int(priv, ABOX_TKN_MIN);
+
+	return (ret < 0) ? 0 : ret;
+}
+
+static int abox_tplg_get_count(struct snd_soc_tplg_private *priv)
+{
+	int ret = abox_tplg_get_int(priv, ABOX_TKN_COUNT);
+
+	return (ret < 1) ? 1 : ret;
+}
+
 static bool abox_tplg_is_volatile(struct snd_soc_tplg_private *priv)
 {
 	return abox_tplg_get_bool(priv, ABOX_TKN_VOLATILE);
@@ -159,17 +174,20 @@ static int abox_tplg_ipc_get(struct device *dev, int gid, int id)
 	return 0;
 }
 
-static int abox_tplg_ipc_get_complete(int gid, int id, unsigned int value)
+static int abox_tplg_ipc_get_complete(int gid, int id, unsigned int *value)
 {
 	struct abox_tplg_kcontrol_data *kdata;
+	int i;
 
 	list_for_each_entry(kdata, &kcontrol_list, list) {
 		if (kdata->gid == gid && kdata->id == id) {
 			struct device *dev = kdata->cmpnt->dev;
 
-			dev_dbg(dev, "%s: %#x, %#x, %d\n", __func__, gid, id,
-					value);
-			kdata->value = value;
+			for (i = 0; i < kdata->count; i++) {
+				dev_dbg(dev, "%s: %#x, %#x, %d\n", __func__, 
+						gid, id, value[i]);
+				kdata->value[i] = value[i];
+			}
 			complete(&report_control_completion);
 			return 0;
 		}
@@ -179,18 +197,20 @@ static int abox_tplg_ipc_get_complete(int gid, int id, unsigned int value)
 }
 
 static int abox_tplg_ipc_put(struct device *dev, int gid, int id,
-		unsigned int value)
+		unsigned int *value, int count)
 {
 	ABOX_IPC_MSG msg;
 	struct IPC_SYSTEM_MSG *system_msg = &msg.msg.system;
+	int i;
 
-	dev_dbg(dev, "%s(%#x, %d, %u)\n", __func__, gid, id, value);
+	dev_dbg(dev, "%s(%#x, %d, %u)\n", __func__, gid, id, value[0]);
 
 	msg.ipcid = IPC_SYSTEM;
 	system_msg->msgtype = ABOX_UPDATE_COMPONENT_CONTROL;
 	system_msg->param1 = gid;
 	system_msg->param2 = id;
-	system_msg->bundle.param_s32[0] = value;
+	for (i = 0; i < count; i++)
+		system_msg->bundle.param_s32[i] = value[i];
 
 	return abox_tplg_request_ipc(&msg);
 }
@@ -204,7 +224,8 @@ static inline int abox_tplg_kcontrol_get(struct device *dev,
 static inline int abox_tplg_kcontrol_put(struct device *dev,
 		struct abox_tplg_kcontrol_data *kdata)
 {
-	return abox_tplg_ipc_put(dev, kdata->gid, kdata->id, kdata->value);
+	return abox_tplg_ipc_put(dev, kdata->gid, kdata->id, kdata->value, 
+			kdata->count);
 }
 
 static inline int abox_tplg_widget_get(struct device *dev,
@@ -216,7 +237,7 @@ static inline int abox_tplg_widget_get(struct device *dev,
 static inline int abox_tplg_widget_put(struct device *dev,
 		struct abox_tplg_widget_data *wdata)
 {
-	return abox_tplg_ipc_put(dev, wdata->gid, wdata->id, wdata->value);
+	return abox_tplg_ipc_put(dev, wdata->gid, wdata->id, &wdata->value, 1);
 }
 
 static int abox_tplg_mixer_event(struct snd_soc_dapm_widget *w,
@@ -344,7 +365,7 @@ static int abox_tplg_dapm_get_mux(struct snd_kcontrol *kcontrol,
 		if (ret < 0)
 			return ret;
 
-		ucontrol->value.enumerated.item[0] = kdata->value;
+		ucontrol->value.enumerated.item[0] = kdata->value[0];
 
 		ret = snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
 		if (ret < 0)
@@ -367,7 +388,7 @@ static int abox_tplg_dapm_put_mux(struct snd_kcontrol *kcontrol,
 	dev_dbg(dev, "%s(%s, %s)\n", __func__, kcontrol->id.name,
 			e->texts[value]);
 
-	kdata->value = value;
+	kdata->value[0] = value;
 	if (pm_runtime_active(dev_abox)) {
 		ret = abox_tplg_kcontrol_put(dev, kdata);
 		if (ret < 0)
@@ -381,6 +402,7 @@ static int abox_tplg_info_mixer(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_info *uinfo)
 {
 	struct soc_mixer_control *mc = (struct soc_mixer_control*)kcontrol->private_value;
+	struct abox_tplg_kcontrol_data *kdata = mc->dobj.private;
 
 	snd_soc_info_volsw_sx(kcontrol, uinfo);
 	/* Android's libtinyalsa uses min and max of
@@ -389,6 +411,7 @@ static int abox_tplg_info_mixer(struct snd_kcontrol *kcontrol,
 	 */
 	uinfo->value.integer.min = mc->min;
 	uinfo->value.integer.max = mc->platform_max;
+	uinfo->count = kdata->count;
 	return 0;
 }
 
@@ -399,7 +422,7 @@ static int abox_tplg_get_mixer(struct snd_kcontrol *kcontrol,
 	struct abox_tplg_kcontrol_data *kdata = mc->dobj.private;
 	struct snd_soc_component *cmpnt = kdata->cmpnt;
 	struct device *dev = cmpnt->dev;
-	int ret;
+	int i, ret;
 
 	dev_dbg(dev, "%s(%s)\n", __func__, kcontrol->id.name);
 
@@ -408,7 +431,9 @@ static int abox_tplg_get_mixer(struct snd_kcontrol *kcontrol,
 		if (ret < 0) 
 			return ret;
 	}
-	ucontrol->value.integer.value[0] = kdata->value;
+
+	for (i = 0; i < kdata->count; i++)
+		ucontrol->value.integer.value[i] = kdata->value[i];
 
 	return 0;
 }
@@ -420,12 +445,13 @@ static int abox_tplg_put_mixer(struct snd_kcontrol *kcontrol,
 	struct abox_tplg_kcontrol_data *kdata = mc->dobj.private;
 	struct snd_soc_component *cmpnt = kdata->cmpnt;
 	struct device *dev = cmpnt->dev;
-	unsigned int value = (unsigned int)ucontrol->value.integer.value[0];
-	int ret;
+	long *value = ucontrol->value.integer.value;
+	int i, ret;
 	
-	dev_dbg(dev, "%s(%s, %u)\n", __func__, kcontrol->id.name, value);
+	dev_dbg(dev, "%s(%s, %ld)\n", __func__, kcontrol->id.name, value[0]);
 
-	kdata->value = value;
+	for (i = 0; i < kdata->count; i++)
+		kdata->value[i] = value[i];
 	if (pm_runtime_active(dev_abox)) {
 		ret = abox_tplg_kcontrol_put(dev, kdata);
 		if (ret < 0)
@@ -452,7 +478,7 @@ static int abox_tplg_dapm_get_mixer(struct snd_kcontrol *kcontrol,
 		if (ret < 0)
 			return ret;
 
-		ucontrol->value.enumerated.item[0] = kdata->value;
+		ucontrol->value.enumerated.item[0] = kdata->value[0];
 
 		ret = snd_soc_dapm_put_volsw(kcontrol, ucontrol);
 		if (ret < 0)
@@ -475,7 +501,7 @@ static int abox_tplg_dapm_put_mixer(struct snd_kcontrol *kcontrol,
 
 	dev_dbg(dev, "%s(%s, %u)\n", __func__, kcontrol->id.name, value);
 
-	kdata->value = value;
+	kdata->value[0] = value;
 	if (pm_runtime_active(dev_abox)) {
 		ret = abox_tplg_kcontrol_put(dev, kdata);
 		if (ret < 0)
@@ -504,9 +530,9 @@ static int abox_tplg_dapm_get_pin(struct snd_kcontrol *kcontrol,
 		if (ret < 0)
 			return ret;
 
-		ucontrol->value.enumerated.item[0] = kdata->value;
+		ucontrol->value.enumerated.item[0] = kdata->value[0];
 
-		if (kdata->value)
+		if (kdata->value[0])
 			snd_soc_dapm_enable_pin(dapm, pin);
 		else
 			snd_soc_dapm_disable_pin(dapm, pin);
@@ -535,14 +561,14 @@ static int abox_tplg_dapm_put_pin(struct snd_kcontrol *kcontrol,
 
 	dev_dbg(dev, "%s(%s, %u)\n", __func__, kcontrol->id.name, value);
 
-	kdata->value = value;
+	kdata->value[0] = value;
 	if (pm_runtime_active(dev_abox)) {
 		ret = abox_tplg_kcontrol_put(dev, kdata);
 		if (ret < 0)
 			return ret;
 	}
 
-	if (kdata->value)
+	if (kdata->value[0])
 		snd_soc_dapm_enable_pin(dapm, pin);
 	else
 		snd_soc_dapm_disable_pin(dapm, pin);
@@ -721,6 +747,7 @@ static int abox_tplg_control_load_enum(struct snd_soc_component *cmpnt,
 
 	kdata->gid = gid;
 	kdata->id = id;
+	kdata->count = abox_tplg_get_count(&tplg_ec->priv);
 	kdata->is_volatile = abox_tplg_is_volatile(&tplg_ec->priv);
 	kdata->cmpnt = cmpnt;
 	kdata->kcontrol_new = kctl;
@@ -765,6 +792,7 @@ static int abox_tplg_control_load_mixer(struct snd_soc_component *cmpnt,
 
 	kdata->gid = gid;
 	kdata->id = id;
+	kdata->count = abox_tplg_get_count(&tplg_mc->priv);
 	kdata->is_volatile = abox_tplg_is_volatile(&tplg_mc->priv);
 	kdata->cmpnt = cmpnt;
 	kdata->kcontrol_new = kctl;
@@ -784,7 +812,7 @@ static int abox_tplg_control_load_sx(struct snd_soc_component *cmpnt,
 
 		tplg_mc = container_of(hdr, struct snd_soc_tplg_mixer_control, hdr);
 		/* Current ALSA topology doesn't process soc_mixer_control->min. */
-		mc->min = abox_tplg_get_int(&tplg_mc->priv, ABOX_TKN_MIN);
+		mc->min = abox_tplg_get_min(&tplg_mc->priv);
 		return abox_tplg_control_load_mixer(cmpnt, kctl, hdr);
 }
 
@@ -1046,7 +1074,7 @@ static irqreturn_t abox_tplg_ipc_handler(int ipc_id, void *dev_id,
 	switch (system->msgtype) {
 	case ABOX_REPORT_COMPONENT_CONTROL:
 		if (abox_tplg_ipc_get_complete(system->param1, system->param2,
-				system->bundle.param_s32[0]) >= 0)
+				(unsigned int *)system->bundle.param_s32) >= 0)
 			ret = IRQ_HANDLED;
 		break;
 	default:
@@ -1059,6 +1087,7 @@ static irqreturn_t abox_tplg_ipc_handler(int ipc_id, void *dev_id,
 int abox_tplg_restore(struct device *dev)
 {
 	struct abox_tplg_kcontrol_data *kdata;
+	int i;
 
 	dev_dbg(dev, "%s\n", __func__);
 
@@ -1067,6 +1096,7 @@ int abox_tplg_restore(struct device *dev)
 		case SND_SOC_TPLG_CTL_ENUM:
 		case SND_SOC_TPLG_CTL_ENUM_VALUE:
 		case SND_SOC_TPLG_CTL_VOLSW:
+		case SND_SOC_TPLG_CTL_VOLSW_SX:
 		case SND_SOC_TPLG_DAPM_CTL_ENUM_DOUBLE:
 		case SND_SOC_TPLG_DAPM_CTL_ENUM_VIRT:
 		case SND_SOC_TPLG_DAPM_CTL_ENUM_VALUE:
@@ -1074,8 +1104,12 @@ int abox_tplg_restore(struct device *dev)
 			/* Restore non-zero value only, because
 			 * value in firmware is already zero after reset.
 			 */
-			if (kdata->value)
-				abox_tplg_kcontrol_put(dev, kdata);
+			for (i = 0; i < kdata->count; i++) {
+				if (kdata->value[i]) {
+					abox_tplg_kcontrol_put(dev, kdata);
+					break;
+				}
+			}
 			break;
 		default:
 			dev_warn(dev, "unknown control %s:%d\n",
