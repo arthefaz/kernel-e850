@@ -219,11 +219,11 @@ static void abox_dump_auto_dump_work_func(struct work_struct *work)
 		set_fs(KERNEL_DS);
 		if (likely(info->file_created)) {
 			filp = filp_open(filename, O_RDWR | O_APPEND | O_CREAT,
-					0660);
+					0664);
 			dev_dbg(dev, "appended\n");
 		} else {
 			filp = filp_open(filename, O_RDWR | O_TRUNC | O_CREAT,
-					0660);
+					0664);
 			info->file_created = true;
 			dev_dbg(dev, "created\n");
 		}
