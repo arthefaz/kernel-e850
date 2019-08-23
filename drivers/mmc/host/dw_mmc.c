@@ -3508,7 +3508,7 @@ static void dw_mci_timeout_timer(unsigned long data)
 {
 	struct dw_mci *host = (struct dw_mci *)data;
 	struct mmc_request *mrq;
-	unsigned int int_mask;
+	u32 int_mask;
 
 	if (host && host->mrq) {
 		host->sw_timeout_chk = true;
