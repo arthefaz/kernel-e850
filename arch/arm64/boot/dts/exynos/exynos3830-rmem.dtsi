@@ -152,11 +152,13 @@
 		wifibt_if {
 			compatible = "exynos,wifibt_if";
 			size = <0x1000000>; /* 16MB */
-        };
+		};
 
-		abox_rmem: abox_rmem@0xE9400000 {
+		abox_rmem: abox_rmem {
 			compatible = "exynos,abox_rmem";
-			reg = <0x0 0xE9400000 0x2800000>;
+			size = <0x4400000>;
+			alloc-ranges = <0x0 0xC0000000 0x20000000>;
+			alignment = <0x0 0x00400000>;
 		};
 
 		abox_slog: abox-slog {
