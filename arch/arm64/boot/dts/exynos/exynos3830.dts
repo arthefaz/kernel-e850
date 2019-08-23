@@ -275,6 +275,7 @@
                        psci-index = <256>;
                        type = <POWERMODE_TYPE_SYSTEM>;
                        siblings = "0-7";
+		       entry-allowed = "0-7";
                        system-idle;
                };
 	};
