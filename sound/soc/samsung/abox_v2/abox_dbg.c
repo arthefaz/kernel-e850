@@ -560,6 +560,8 @@ static int samsung_abox_debug_probe(struct platform_device *pdev)
 	bin_attr_calliope_sram.private = data->sram_base;
 	bin_attr_calliope_dram.private = data->dram_base;
 	bin_attr_calliope_log.private = data->dram_base + 0xb00000;
+	bin_attr_calliope_slog.size = data->slog_size - 0x900000;
+	bin_attr_calliope_slog.private = data->slog_base + 0x900000;
 	bin_attr_calliope_slog.size = data->slog_size;
 	bin_attr_calliope_slog.private = data->slog_base;
 	for (i = 0; i < ARRAY_SIZE(calliope_bin_attrs); i++) {
