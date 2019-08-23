@@ -570,8 +570,7 @@ out:
 	}
 #endif
 	if (!get_evt) {
-		CSP_PRINTF_ERROR("%s:%s: fails pending wait (%d): irq:%d, evt:%d\n",
-			NAME_PREFIX, __func__, trycnt, cur_evt->irq, cur_evt->evt);
+		CSP_PRINTF_ERROR("%s:%s: fails pending wait (%d)", NAME_PREFIX, __func__, trycnt);
 		ipc_dump();
 	}
 	ENABLE_IRQ(LOCK_ADD_EVT, &flag);

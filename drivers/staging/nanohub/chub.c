@@ -507,7 +507,7 @@ int contexthub_ipc_read(struct contexthub_ipc_info *ipc, uint8_t *rx, int max_le
 {
 	unsigned long flag;
 	int size = 0;
-	int ret;
+	int ret = 0;
 	void *rxbuf;
 	u64 time = 0; /* for debug */
 
@@ -1314,14 +1314,14 @@ static irqreturn_t contexthub_irq_handler(int irq, void *data)
 			if (!(status & (1 << irq_num))) {
 				err = CHUB_ERR_EVTQ_NO_HW_TRIGGER;
 				CSP_PRINTF_ERROR
-						 ("%s: no-hw-trigger irq:%d(%d+%d), evt:%d, status:0x%x->0x%x(SR:0x%x)\n", __func__,
-						  irq_num, cur_evt->irq, start_index, evt, status_org, status, ipc_hw_read_int_status_reg(AP));
+					 ("%s: no-hw-trigger irq:%d(%d+%d), evt:%d, status:0x%x->0x%x(SR:0x%x)\n", __func__,
+					  irq_num, cur_evt->irq, start_index, evt, status_org, status, ipc_hw_read_int_status_reg(AP));
 			}
 		} else {
 			err = CHUB_ERR_EVTQ_EMTPY;
 			CSP_PRINTF_ERROR
-					 ("%s: evt-empty irq:%d(%d+%d), evt:%d, status:0x%x->0x%x(SR:0x%x)\n", __func__,
-					  irq_num, cur_evt->irq, start_index, evt, status_org, status, ipc_hw_read_int_status_reg(AP));
+				 ("%s: evt-empty irq:%d(%d), evt:%d, status:0x%x->0x%x(SR:0x%x)\n", __func__,
+				  irq_num, start_index, evt, status_org, status, ipc_hw_read_int_status_reg(AP));
 			break;
 		}
 		ipc_hw_clear_int_pend_reg(AP, irq_num);

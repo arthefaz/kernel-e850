@@ -1461,10 +1461,13 @@ static ssize_t chub_dev_read(struct file *file, char *buffer,
 static int nanohub_match_name(struct device *dev, const void *data)
 {
 	const char *name = data;
-	if(dev->kobj.name == NULL)
+
+	if(dev->kobj.name == NULL) {
 		pr_info("nanohub device name invalid\n");
-	else
-		pr_info("nanohub device name = %s\n", dev->kobj.name);
+		return 0;
+	}
+
+	pr_info("nanohub device name = %s\n", dev->kobj.name);
 	return !strcmp(dev->kobj.name, name);
 }
 
@@ -1499,11 +1502,12 @@ static ssize_t chub_dev_write(struct file *file, const char *buffer,
 	ret = copy_from_user(&num_os, buffer, sizeof(num_os));
 
 	if(num_os > 0 && num_os < SENSOR_VARIATION) {
-        ipc->sel_os = true;
+		ipc->sel_os = true;
+		strncpy(ipc->os_name, os_image[num_os], sizeof(ipc->os_name) - 1);
 		pr_info("%s saved os name: %s\n", __func__, os_image[num_os]);
-        strncpy(ipc->os_name, os_image[num_os], sizeof(ipc->os_name));
-    } else
+	} else {
 		pr_warn("%s num_os is invalid %d\n", __func__, num_os);
+	}
 
 	return 0;
 }
