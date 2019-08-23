@@ -38,6 +38,7 @@
 #include <soc/samsung/exynos-pmu.h>
 #include <linux/mcu_ipc.h>
 
+#undef CONFIG_SCSC_FM
 #ifdef CONFIG_SCSC_FM
 #include <scsc/scsc_mx.h>
 #endif
