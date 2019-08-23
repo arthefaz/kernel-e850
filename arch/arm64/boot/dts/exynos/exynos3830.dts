@@ -268,6 +268,15 @@
 			type = <POWERMODE_TYPE_CLUSTER>;
 			siblings = "4-7";
 		};
+
+               sicd {
+                       device_type = "cpupm";
+                       target-residency = <10000>;
+                       psci-index = <256>;
+                       type = <POWERMODE_TYPE_SYSTEM>;
+                       siblings = "0-7";
+                       system-idle;
+               };
 	};
 
 	gic:interrupt-controller@12a00000 {
