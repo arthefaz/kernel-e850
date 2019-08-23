@@ -133,17 +133,16 @@ static void exynos_abox_panic_handler(void)
 	static bool has_run;
 	struct abox_data *data = p_abox_data;
 	struct device *dev = data ? (data->dev ? data->dev : NULL) : NULL;
-	size_t size;
 
 	dev_dbg(dev, "%s\n", __func__);
 
-	if (has_run) {
-		dev_info(dev, "already dumped\n");
-		return;
-	}
-	has_run = true;
-
 	if (abox_is_on() && dev) {
+		if (has_run) {
+			dev_info(dev, "already dumped\n");
+			return;
+		}
+		has_run = true;
+
 		abox_dbg_dump_gpr(dev, data, ABOX_DBG_DUMP_KERNEL, "panic");
 		writel(0x504E4943, data->sram_base + data->sram_size -
 				sizeof(u32));
@@ -157,11 +156,6 @@ static void exynos_abox_panic_handler(void)
 		dev_info(dev, "%s: dump is skipped due to no power\n",
 				__func__);
 	}
-
-	/* copy dram to slog for debugging */
-	size = min((size_t)DRAM_FIRMWARE_SIZE, data->slog_size);
-	dev_info(dev, "copy %#zxbytes from dram to slog\n", size);
-	memcpy(data->slog_base, data->dram_base, size);
 }
 
 static int abox_panic_handler(struct notifier_block *nb,
