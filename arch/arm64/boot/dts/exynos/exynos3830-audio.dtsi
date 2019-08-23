@@ -413,7 +413,7 @@
 		};
 		ext_bin_1: ext-bin@1 {
 			compatible = "samsung,abox-ext-bin";
-			samsung,name = "dsm.bin";
+			samsung,name = "dummy.bin";
 			samsung,area = <1>;
 			samsung,offset = <0x500800>;
 		};
