@@ -47,14 +47,16 @@
 					&abox_rdma_4 &abox_rdma_5 &abox_rdma_6 &abox_rdma_7
 					&abox_rdma_8 &abox_rdma_9 &abox_rdma_10 &abox_rdma_11
 					&abox_wdma_0 &abox_wdma_1 &abox_wdma_2 &abox_wdma_3
-					&abox_wdma_4>;
+					&abox_wdma_4 &abox_ddma_0 &abox_ddma_1 &abox_ddma_2
+					&abox_ddma_3 &abox_ddma_4 &abox_ddma_5>;
 				samsung,prefix = "ABOX", "ABOX", "ABOX", "ABOX",
 					"ABOX", "ABOX",
 					"ABOX RDMA0", "ABOX RDMA1", "ABOX RDMA2", "ABOX RDMA3",
 					"ABOX RDMA4", "ABOX RDMA5", "ABOX RDMA6", "ABOX RDMA7",
 					"ABOX RDMA8", "ABOX RDMA9", "ABOX RDMA10", "ABOX RDMA11",
 					"ABOX WDMA0", "ABOX WDMA1", "ABOX WDMA2", "ABOX WDMA3",
-					"ABOX WDMA4";
+					"ABOX WDMA4", "ABOX DBG0", "ABOX DBG1", "ABOX DBG2",
+					"ABOX DBG3", "ABOX DBG4", "ABOX DBG5";
 
 				samsung,aux = <&abox_tplg>;
 

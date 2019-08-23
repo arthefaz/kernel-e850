@@ -48,7 +48,7 @@
 #define MADERA_DAI_ID			0x4793
 #define CS35L41_DAI_ID			0x3541
 #define ABOX_BE_DAI_ID(c, i)		(0xbe00 | (c) << 4 | (i))
-#define MADERA_CODEC_MAX		32
+#define MADERA_CODEC_MAX		40
 #define MADERA_AUX_MAX			2
 #define RDMA_COUNT			12
 #define WDMA_COUNT			5
