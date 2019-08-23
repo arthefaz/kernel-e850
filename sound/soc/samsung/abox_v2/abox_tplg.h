@@ -27,6 +27,7 @@ enum abox_tplg_tkn {
 	ABOX_TKN_PERIOD_SIZE,
 	ABOX_TKN_PERIODS,
 	ABOX_TKN_PACKED,
+	ABOX_TKN_MIN,
 };
 
 enum abox_tplg_event_types {

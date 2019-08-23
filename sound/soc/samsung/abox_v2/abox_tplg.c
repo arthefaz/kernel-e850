@@ -377,6 +377,64 @@ static int abox_tplg_dapm_put_mux(struct snd_kcontrol *kcontrol,
 	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
 }
 
+static int abox_tplg_info_mixer(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_info *uinfo)
+{
+	struct soc_mixer_control *mc = (struct soc_mixer_control*)kcontrol->private_value;
+
+	snd_soc_info_volsw_sx(kcontrol, uinfo);
+	/* Android's libtinyalsa uses min and max of
+	 * uinfo as it is,
+	 * not the number of levels.
+	 */
+	uinfo->value.integer.min = mc->min;
+	uinfo->value.integer.max = mc->platform_max;
+	return 0;
+}
+
+static int abox_tplg_get_mixer(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc = (struct soc_mixer_control*)kcontrol->private_value;
+	struct abox_tplg_kcontrol_data *kdata = mc->dobj.private;
+	struct snd_soc_component *cmpnt = kdata->cmpnt;
+	struct device *dev = cmpnt->dev;
+	int ret;
+
+	dev_dbg(dev, "%s(%s)\n", __func__, kcontrol->id.name);
+
+	if(pm_runtime_active(dev_abox)) {
+		ret = abox_tplg_kcontrol_get(dev, kdata);
+		if (ret < 0) 
+			return ret;
+	}
+	ucontrol->value.integer.value[0] = kdata->value;
+
+	return 0;
+}
+
+static int abox_tplg_put_mixer(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc = (struct soc_mixer_control*)kcontrol->private_value;
+	struct abox_tplg_kcontrol_data *kdata = mc->dobj.private;
+	struct snd_soc_component *cmpnt = kdata->cmpnt;
+	struct device *dev = cmpnt->dev;
+	unsigned int value = (unsigned int)ucontrol->value.integer.value[0];
+	int ret;
+	
+	dev_dbg(dev, "%s(%s, %u)\n", __func__, kcontrol->id.name, value);
+
+	kdata->value = value;
+	if (pm_runtime_active(dev_abox)) {
+		ret = abox_tplg_kcontrol_put(dev, kdata);
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
+}
+
 static int abox_tplg_dapm_get_mixer(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
@@ -518,6 +576,11 @@ static const struct snd_soc_tplg_kcontrol_ops abox_tplg_kcontrol_ops[] = {
 		abox_tplg_dapm_get_pin,
 		abox_tplg_dapm_put_pin,
 		snd_soc_dapm_info_pin_switch,
+	}, {
+		SND_SOC_TPLG_CTL_VOLSW_SX,
+		abox_tplg_get_mixer,
+		abox_tplg_put_mixer,
+		abox_tplg_info_mixer,
 	},
 };
 
@@ -712,6 +775,19 @@ static int abox_tplg_control_load_mixer(struct snd_soc_component *cmpnt,
 	return 0;
 }
 
+static int abox_tplg_control_load_sx(struct snd_soc_component *cmpnt,
+		struct snd_kcontrol_new *kctl,
+		struct snd_soc_tplg_ctl_hdr *hdr)
+{
+		struct snd_soc_tplg_mixer_control *tplg_mc;
+		struct soc_mixer_control *mc = (struct soc_mixer_control*)kctl->private_value;
+
+		tplg_mc = container_of(hdr, struct snd_soc_tplg_mixer_control, hdr);
+		/* Current ALSA topology doesn't process soc_mixer_control->min. */
+		mc->min = abox_tplg_get_int(&tplg_mc->priv, ABOX_TKN_MIN);
+		return abox_tplg_control_load_mixer(cmpnt, kctl, hdr);
+}
+
 int abox_tplg_control_load(struct snd_soc_component *cmpnt,
 		int index,
 		struct snd_kcontrol_new *kctl,
@@ -737,6 +813,10 @@ int abox_tplg_control_load(struct snd_soc_component *cmpnt,
 	case SND_SOC_TPLG_DAPM_CTL_PIN:
 		if (kctl->access & SNDRV_CTL_ELEM_ACCESS_READWRITE)
 			ret = abox_tplg_control_load_mixer(cmpnt, kctl, hdr);
+		break;
+	case SND_SOC_TPLG_CTL_VOLSW_SX:
+		if (kctl->access & SNDRV_CTL_ELEM_ACCESS_READWRITE)
+			ret = abox_tplg_control_load_sx(cmpnt, kctl, hdr);
 		break;
 	default:
 		dev_warn(dev, "unknown control %s:%d\n", hdr->name,
