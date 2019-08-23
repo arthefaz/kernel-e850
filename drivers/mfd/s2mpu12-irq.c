@@ -266,7 +266,7 @@ static int s2mpu12_pmic_notifier(struct s2mpu12_dev *s2mpu12)
 
 static int s2mpu12_ibi_notifier(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 {
-	int ret, i;
+	int ret = 0, i;
 	u8 state = ibi_src[0];
 
 	if (state & S2MPU12_IBI0_CODEC || state & S2MPU12_IBI0_PMIC_M) {
