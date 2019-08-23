@@ -46,7 +46,7 @@ static unsigned long long idle_ip_bit_field;
  */
 LIST_HEAD(idle_ip_list);
 
-static int fix_idle_ip_max;
+static int fix_idle_ip_count;
 
 /*
  * array of fix-idle-ip
@@ -67,6 +67,33 @@ static int get_index_last_entry(struct list_head *head)
 	return ip->index;
 }
 
+static bool check_fix_idle_ip(void)
+{
+	unsigned int val, mask;
+
+	if (fix_idle_ip_count <= 0)
+		return false;
+
+	exynos_pmu_read(PMU_IDLE_IP, &val);
+	/*
+	 * Up to 32 fix-idle-ip are supported.
+	 * HW register value is
+	 * 			== 0, it means non-idle.
+	 * 			== 1, it means idle.
+	 */
+	mask = (1 << fix_idle_ip_count) - 1;
+	val = ~val & mask;
+	if (val) {
+#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
+		cpuidle_profile_fix_idle_ip(val, fix_idle_ip_count);
+#endif
+
+		return true;
+	}
+
+	return false;
+}
+
 static bool check_idle_ip(void)
 {
 	unsigned long flags;
@@ -83,30 +110,7 @@ static bool check_idle_ip(void)
 	}
 	spin_unlock_irqrestore(&idle_ip_bit_field_lock, flags);
 
-	return false;
-}
-
-static bool check_fix_idle_ip(void)
-{
-	unsigned int val;
-
-	exynos_pmu_read(PMU_IDLE_IP, &val);
-	/*
-	 * Up to 32 fix-idle-ip are supported.
-	 * HW register value is
-	 * 			== 0, it means non-idle.
-	 * 			== 1, it means idle.
-	 */
-	val = ~val << (32 - fix_idle_ip_max);
-	if (val) {
-#ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
-		cpuidle_profile_fix_idle_ip(val, fix_idle_ip_max);
-#endif
-
-		return true;
-	}
-
-	return false;
+	return check_fix_idle_ip();
 }
 
 /*
@@ -171,11 +175,11 @@ static void __init fix_idle_ip_init(void)
 	int i;
 	const char *ip_name;
 
-	fix_idle_ip_max = of_property_count_strings(dn, "fix-idle-ip");
-	if (fix_idle_ip_max < 0 || fix_idle_ip_max > FIX_IDLE_IP_MAX)
+	fix_idle_ip_count = of_property_count_strings(dn, "fix-idle-ip");
+	if (fix_idle_ip_count <= 0 || fix_idle_ip_count > FIX_IDLE_IP_MAX)
 		return;
 
-	for (i = 0; i < fix_idle_ip_max; i++) {
+	for (i = 0; i < fix_idle_ip_count; i++) {
 		of_property_read_string_index(dn, "fix-idle-ip", i, &ip_name);
 		fix_idle_ip_arr[i].name = ip_name;
 		fix_idle_ip_arr[i].reg_index = i;
@@ -448,9 +452,6 @@ static int system_busy(void)
 	if (check_idle_ip())
 		return 1;
 
-	if (check_fix_idle_ip())
-		return 1;
-
 	return 0;
 }
 
@@ -648,7 +649,7 @@ static ssize_t show_idle_ip_list(struct kobject *kobj,
 	unsigned long flags;
 	int i, ret = 0;
 
-	for (i = 0; i < fix_idle_ip_max; i++)
+	for (i = 0; i < fix_idle_ip_count; i++)
 		ret += sprintf(buf + ret, "[fix:%d] %s\n",
 				fix_idle_ip_arr[i].reg_index,
 				fix_idle_ip_arr[i].name);
