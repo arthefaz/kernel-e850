@@ -1055,6 +1055,8 @@ struct decon_freq_hop {
 	u32 request_k;	/* user requested k value */
 };
 
+#define MAX_EDID_BLOCK 4
+#define EDID_BLOCK_SIZE 128
 struct decon_edid_data {
 	int size;
 	u8 edid_data[EDID_BLOCK_SIZE * MAX_EDID_BLOCK];
