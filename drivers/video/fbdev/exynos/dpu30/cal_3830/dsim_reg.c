@@ -2084,6 +2084,8 @@ void dsim_reg_init(u32 id, struct exynos_panel_info *lcd_info, struct dsim_clks 
 	if (dsim->state == DSIM_STATE_INIT) {
 		if (dsim_reg_get_link_clock(dsim->id)) {
 			dsim_info("dsim%d is already enabled in bootloader\n", dsim->id);
+			/* to prevent irq storm that may occur in the OFF STATE */
+			dsim_reg_clear_int(id, 0xffffffff);
 			return;
 		}
 	}
