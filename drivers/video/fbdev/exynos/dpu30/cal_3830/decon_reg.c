@@ -294,7 +294,7 @@ static int decon_reg_stop_perframe(u32 id, struct decon_mode_info *psr, u32 fps)
 	return ret;
 }
 
-int decon_reg_stop_inst(u32 id, struct decon_mode_info *psr,
+int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr,
 		u32 fps)
 {
 	int ret = 0;
@@ -501,6 +501,8 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 		decon_reg_init_probe(id, dsi_idx, p);
 		if (psr->psr_mode == DECON_MIPI_COMMAND_MODE)
 			decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
+		/* to prevent irq storm that may occur in the OFF STATE */
+		decon_reg_clear_int_all(id);
 		return -EBUSY;
 	}
 
@@ -559,7 +561,7 @@ int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr, bool rst,
 	if (ret < 0) {
 		decon_err("%s, failed to perframe_stop\n", __func__);
 		/* if fails, call decon instant off */
-		ret = decon_reg_stop_inst(id, psr, fps);
+		ret = decon_reg_stop_inst(id, 0, psr, fps);
 		if (ret < 0)
 			decon_err("%s, failed to instant_stop\n", __func__);
 	}
