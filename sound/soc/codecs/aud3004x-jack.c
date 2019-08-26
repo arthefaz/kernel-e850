@@ -296,6 +296,27 @@ static bool after_button_error_chk(struct aud3004x_jack *jackdet)
 
 	return true;
 }
+
+static void reset_mic3_boost(struct aud3004x_jack *jackdet)
+{
+	struct aud3004x_priv *aud3004x = jackdet->p_aud3004x;
+
+	regcache_cache_switch(aud3004x, false);
+
+	/* Ear-mic BST3 Reset */
+	aud3004x_update_bits(aud3004x, AUD3004X_B6_ODSEL1,
+			T_RESETB_BST3_MASK, T_RESETB_BST3_MASK);
+	aud3004x_update_bits(aud3004x, AUD3004X_113_PD_AD3,
+			RESETB_BST3_MASK, 0);
+	msleep(40);
+	aud3004x_update_bits(aud3004x, AUD3004X_B6_ODSEL1,
+			T_RESETB_BST3_MASK, 0);
+	aud3004x_update_bits(aud3004x, AUD3004X_113_PD_AD3,
+			RESETB_BST3_MASK, RESETB_BST3_MASK);
+
+	regcache_cache_switch(aud3004x, true);
+}
+
 /*
  * aud3004x_buttons_work() - Process button interrupt
  *
@@ -356,6 +377,8 @@ static void aud3004x_buttons_work(struct work_struct *work)
 			}
 		}
 	} else {
+		/* Ear-mic BST3 Reset */
+		reset_mic3_boost(jackdet);
 		/* Button released */
 		process_button_ev(jackdet, BUTTON_RELEASE);
 	}

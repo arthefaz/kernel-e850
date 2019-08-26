@@ -38,7 +38,7 @@
 
 #include "aud3004x.h"
 
-#define AUD3004X_CODEC_VER 10023
+#define AUD3004X_CODEC_VER 10024
 
 #ifdef CONFIG_SND_SOC_SAMSUNG_VERBOSE_DEBUG
 #ifdef dev_dbg
@@ -1447,7 +1447,8 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_write(aud3004x, AUD3004X_42_PLAY_VOLR, 0x54);
 
 		/* Testmode Enable */
-		aud3004x_write(aud3004x, AUD3004X_B5_ODSEL11, 0x80);
+		aud3004x_update_bits(aud3004x, AUD3004X_B5_ODSEL0,
+				T_PDB_IGEN_MASK, T_PDB_IGEN_MASK);
 
 		/* PDB VMID/IGEN */
 		aud3004x_write(aud3004x, AUD3004X_110_PD_REF, 0x10);
@@ -1510,7 +1511,8 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_write(aud3004x, AUD3004X_110_PD_REF, 0x00);
 
 		/* Testmode Disable */
-		aud3004x_write(aud3004x, AUD3004X_B5_ODSEL11, 0x00);
+		aud3004x_update_bits(aud3004x, AUD3004X_B5_ODSEL0,
+				T_PDB_IGEN_MASK, 0);
 		break;
 	}
 	return 0;
@@ -1560,7 +1562,7 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_write(aud3004x, AUD3004X_7A_AVC43, 0x38);
 
 		/* Testmode Enable */
-		aud3004x_write(aud3004x, AUD3004X_B5_ODSEL11, 0xFE);
+		aud3004x_write(aud3004x, AUD3004X_B5_ODSEL0, 0xFE);
 		aud3004x_write(aud3004x, AUD3004X_B8_ODSEL3, 0x03);
 		aud3004x_write(aud3004x, AUD3004X_B9_ODSEL4, 0x80);
 		aud3004x_write(aud3004x, AUD3004X_B9_ODSEL4, 0xC0);
@@ -1629,7 +1631,7 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_write(aud3004x, AUD3004X_110_PD_REF, 0x00);
 
 		/* Testmode Disable */
-		aud3004x_write(aud3004x, AUD3004X_B5_ODSEL11, 0x00);
+		aud3004x_write(aud3004x, AUD3004X_B5_ODSEL0, 0x00);
 		aud3004x_write(aud3004x, AUD3004X_B8_ODSEL3, 0x00);
 		aud3004x_write(aud3004x, AUD3004X_B9_ODSEL4, 0x00);
 
