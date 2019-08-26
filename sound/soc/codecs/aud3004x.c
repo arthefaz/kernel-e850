@@ -38,7 +38,7 @@
 
 #include "aud3004x.h"
 
-#define AUD3004X_CODEC_VER 10021
+#define AUD3004X_CODEC_VER 10022
 
 #ifdef CONFIG_SND_SOC_SAMSUNG_VERBOSE_DEBUG
 #ifdef dev_dbg
@@ -2679,10 +2679,11 @@ static void aud3004x_register_initialize(void *context)
 	aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
 	aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
 
-
+#if 0
 	/* OVP Interrupt */
 	aud3004x_write(aud3004x, AUD3004X_8B_OVP_INTR_POS, 0xCF);
 	aud3004x_write(aud3004x, AUD3004X_8C_OVP_INTR_NEG, 0xCF);
+#endif
 
 	/* All boot time hardware access is done. Put the device to sleep. */
 #ifdef CONFIG_PM
@@ -2701,7 +2702,7 @@ static int aud3004x_codec_probe(struct snd_soc_codec *codec)
 	aud3004x->codec = codec;
 
 	/* register codec power */
-	aud3004x->vdd = devm_regulator_get(codec->dev, "vdd_mldo");
+	aud3004x->vdd = devm_regulator_get(codec->dev, "vdd_aldo1");
 	if (IS_ERR(aud3004x->vdd)) {
 		dev_warn(codec->dev, "failed to get regulator vdd\n");
 		return PTR_ERR(aud3004x->vdd);

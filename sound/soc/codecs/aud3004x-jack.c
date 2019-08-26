@@ -970,7 +970,6 @@ static void aud3004x_jack_register_initialize(struct snd_soc_codec *codec)
 	aud3004x_write(aud3004x, AUD3004X_09_IRQ2M, 0x00);
 	aud3004x_write(aud3004x, AUD3004X_0A_IRQ3M, 0xDE);
 	aud3004x_write(aud3004x, AUD3004X_0B_IRQ4M, 0xDE);
-	aud3004x_write(aud3004x, AUD3004X_0C_IRQ5M, 0x00);
 
 #if 0
 	/* 5 Pin Mode */
