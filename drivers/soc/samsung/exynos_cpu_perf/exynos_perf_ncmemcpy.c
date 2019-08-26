@@ -8,6 +8,7 @@
  * published by the Free Software Foundation.
 */
 
+#include <linux/of.h>
 #include <linux/debugfs.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
@@ -38,22 +39,12 @@
 #define _PMU_COUNT_64
 #include "exynos_perf_pmufunc.h"
 
-#if defined(CONFIG_SOC_EXYNOS8895)
-#include <dt-bindings/clock/exynos8895.h>
-#elif defined(CONFIG_SOC_EXYNOS9810)
-#include <dt-bindings/clock/exynos9810.h>
-#elif defined(CONFIG_SOC_EXYNOS9820)
-#include <dt-bindings/clock/exynos9820.h>
-#elif defined(CONFIG_SOC_EXYNOS9830)
-#include <dt-bindings/clock/exynos9830.h>
-#elif defined(CONFIG_SOC_EXYNOS3830)
-#include <dt-bindings/clock/exynos3830.h>
-#endif
 #include <soc/samsung/cal-if.h>
 
 #define EVENT_MAX	7
 
 struct device *memcpy_dev;
+static uint cal_id_mif = 0;
 
 enum memtype {
 	MT_CACHE = 1,
@@ -105,7 +96,6 @@ static uint level = 2;
 static uint setway = 1;
 
 static int events[7] = {0x50,0x51,0x52,0x53,0x60,0x61,0};
-//static int events[7] = {0xf,0x2DC,0x2DD,0x2DE,0x0,0x0,0};
 
 #define GiB	(1024*1024*1024LL)
 #define GB	1000000000LL
@@ -142,9 +132,9 @@ static u64 nano_time(void)
 	return (t.tv_sec * NS_PER_SEC + t.tv_nsec);
 }
 
-static void memset_ptrn(ulong *p, size_t count)
+static void memset_ptrn(ulong *p, uint count)
 {
-	int j, idx;
+	uint j, idx;
 	for (j = 0; j < count; j += sizeof(p)) {
 		idx = j % ARRAY_SIZE(patterns);
 		*p++ = patterns[idx];
@@ -309,7 +299,7 @@ void func_perf(void *src, void *dst)
 {
 	u64 start_ns, end_ns, bw, sum_ns, avg_us;
 	ulong chk_sum;
-	size_t total_size;
+	uint total_size;
 	uint iter;
 	int i, k;
 	uint xfer_size = start_size;
@@ -360,7 +350,7 @@ void func_perf(void *src, void *dst)
 		chk_sum = 0;
 		v[0] = v[1] = v[2] = v[3] = v[4] = v[5] = v[6] = 0;
 		cpufreq = cpufreq_quick_get(core) / 1000;
-		mif = (uint)cal_dfs_get_rate(ACPM_DVFS_MIF) / 1000;
+		mif = (uint)cal_dfs_get_rate(cal_id_mif) / 1000;
 		switch (func) {
 			case FT_MEMCPY:
 				MEMCPY_FUNC(memcpy(dst, src + align, xfer_size), flush, 0, pmu, chk, 0);
@@ -411,6 +401,13 @@ static int perf_main(void)
 	uint buf_size;
 	u64 start_ns, end_ns;
 	start_ns = nano_time();
+
+	/* dma address */
+	if (!dma_set_mask(dev, DMA_BIT_MASK(64))) {
+		pr_info("[%s] dma_mask: 64-bits ok\n", prefix);
+	} else if (!dma_set_mask(dev, DMA_BIT_MASK(32))) {
+		pr_info("[%s] dma_mask: 32-bits ok\n", prefix);
+	}
 
 	buf_size = (align == 0)? end_size : end_size + 64;
 	gfp = GFP_KERNEL;
@@ -481,6 +478,59 @@ static int perf_main(void)
 		func_perf(src_cpu, dst_cpu);
 		dma_free_coherent(dev, buf_size, src_cpu, src_dma);
 		kfree(dst_cpu);
+#if 0
+	} else if (type == MT_ION) {
+//		alloc_ctx = vb2_ion_create_context(dev, SZ_4K, VB2ION_CTX_IOMMU | VB2ION_CTX_VMCONTIG);
+		alloc_ctx = vb2_ion_create_context(dev, SZ_4K, VB2ION_CTX_VMCONTIG);
+		if (IS_ERR(alloc_ctx)) {
+			pr_info("-----> ion context failed = %ld\n", PTR_ERR(alloc_ctx));
+			return 0;
+		}
+		cookie = vb2_ion_private_alloc(alloc_ctx, buf_size * 2);
+		if (IS_ERR(cookie)) {
+			pr_info("-----> ion alloc failed = %ld\n", PTR_ERR(cookie));
+			return 0;
+		}
+		src_cpu = vb2_ion_private_vaddr(cookie);
+		if (src_cpu == NULL) {
+			pr_info("-----> ion vaddr failed\n");
+			return 0;
+		}
+		dst_cpu = src_cpu + buf_size;
+		vb2_ion_sync_for_device(cookie, 0, buf_size * 2, DMA_BIDIRECTIONAL);
+
+		func_perf(src_cpu, dst_cpu);
+		func_perf(dst_cpu, src_cpu);
+
+		vb2_ion_private_free(cookie);
+		vb2_ion_destroy_context(alloc_ctx);
+	} else if (type == MT_ION_INF) {
+		alloc_ctx = vb2_ion_create_context(dev, SZ_4K, VB2ION_CTX_VMCONTIG);
+		if (IS_ERR(alloc_ctx)) {
+			pr_info("-----> ion context failed = %ld\n", PTR_ERR(alloc_ctx));
+			return 0;
+		}
+		cookie = vb2_ion_private_alloc(alloc_ctx, buf_size * 2);
+		if (IS_ERR(cookie)) {
+			pr_info("-----> ion alloc failed = %ld\n", PTR_ERR(cookie));
+			return 0;
+		}
+		src_cpu = vb2_ion_private_vaddr(cookie);
+		if (src_cpu == NULL) {
+			pr_info("-----> ion vaddr failed\n");
+			return 0;
+		}
+		dst_cpu = src_cpu + buf_size;
+		vb2_ion_sync_for_device(cookie, 0, buf_size * 2, DMA_BIDIRECTIONAL);
+
+		while (1) {
+			func_perf(src_cpu, dst_cpu);
+			func_perf(dst_cpu, src_cpu);
+		}
+
+		vb2_ion_private_free(cookie);
+		vb2_ion_destroy_context(alloc_ctx);
+#endif
 	} else {
 		pr_info("[%s] type = %d invalid!\n", prefix, type);
 	}
@@ -737,8 +787,12 @@ static struct platform_driver memcpy_driver = {
 //-------------------
 static int __init perf_init(void)
 {
+	struct device_node *dn = NULL;
 	struct dentry *root, *d;
 	int ret;
+
+	dn = of_find_node_by_name(dn, "exynos_perf_ncmemcpy");
+	of_property_read_u32(dn, "cal-id-mif", &cal_id_mif);
 
 	root = debugfs_create_dir("exynos_perf_ncmemcpy", NULL);
 	if (!root) {

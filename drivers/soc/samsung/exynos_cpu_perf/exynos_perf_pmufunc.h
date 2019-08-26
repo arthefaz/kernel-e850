@@ -9,13 +9,13 @@ typedef unsigned long ccnt_t;
 #ifdef _PMU_COUNT_64
 static inline void pmu_enable_counter(u64 val)
 {
-	val = 1 << val;
+	val = 1L << val;
 	asm volatile("msr PMCNTENSET_EL0, %0" : : "r" (val));
 }
 
 static inline void pmu_disable_counter(u64 val)
 {
-	val = 1 << val;
+	val = 1L << val;
 	asm volatile("msr PMCNTENCLR_EL0, %0" : : "r" (val));
 }
 

@@ -15,18 +15,7 @@
 #include <linux/kthread.h>
 #include <linux/sched.h>
 #include <linux/gpu_cooling.h>
-
-#if defined(CONFIG_SOC_EXYNOS8895)
-#include <dt-bindings/clock/exynos8895.h>
-#elif defined(CONFIG_SOC_EXYNOS9810)
-#include <dt-bindings/clock/exynos9810.h>
-#elif defined(CONFIG_SOC_EXYNOS9820)
-#include <dt-bindings/clock/exynos9820.h>
-#elif defined(CONFIG_SOC_EXYNOS9830)
-#include <dt-bindings/clock/exynos9830.h>
-#elif defined(CONFIG_SOC_EXYNOS3830)
-#include <dt-bindings/clock/exynos3830.h>
-#endif
+#include <linux/of.h>
 #include <soc/samsung/cal-if.h>
 
 #define MAX_CLUSTER 3
@@ -39,6 +28,8 @@ static const char *prefix = "exynos_perf";
 static uint cluster_last_cpu[MAX_CLUSTER];
 static uint cluster_first_cpu[MAX_CLUSTER];
 static int cluster_count = 0;
+static uint cal_id_mif = 0;
+static uint cal_id_g3d = 0;
 
 static int is_running = 0;
 static void *buf = NULL;
@@ -146,7 +137,7 @@ static int cpufreq_log_thread(void *data)
 		cpu = cluster_first_cpu[i];
 		ret += snprintf(buf + ret, buf_size - ret, "0%d-cpu%d_max ", grp_num, cpu);
 		ret += snprintf(buf + ret, buf_size - ret, "0%d-cpu%d_cur ", grp_num, cpu);
-		if (i == 1) { // if big cluster
+		if (i == (cluster_count-1)) { // if big cluster
 			ret += snprintf(buf + ret, buf_size - ret, "0%d-cpu%d_siop ", grp_num, cpu);
 			ret += snprintf(buf + ret, buf_size - ret, "0%d-cpu%d_ocp ", grp_num, cpu);
 		}
@@ -188,15 +179,15 @@ static int cpufreq_log_thread(void *data)
 			cpu_max[i] = cpufreq_quick_get_max(cpu) / 1000;
 			cpu_cur[i] = cpufreq_quick_get(cpu) / 1000;
 			ret += snprintf(buf + ret, buf_size - ret, "%d %d ", cpu_max[i], cpu_cur[i]);
-			if (i == 1) {
+			if (i == (cluster_count-1)) {
 				ret += snprintf(buf + ret, buf_size - ret, "%d %d ", siop, ocp);
 			}
 		}
 		// mif
-		mif = (uint)cal_dfs_cached_get_rate(ACPM_DVFS_MIF) / 1000;
+		mif = (uint)cal_dfs_cached_get_rate(cal_id_mif) / 1000;
 		// gpu
 		gpu_util = gpu_dvfs_get_utilization();
-		gpu = (uint)cal_dfs_cached_get_rate(ACPM_DVFS_G3D) / 1000;
+		gpu = (uint)cal_dfs_cached_get_rate(cal_id_g3d) / 1000;
 		ret += snprintf(buf + ret, buf_size - ret, "%d %d %d ", mif, gpu_util, gpu);
 		// task
 		tsk = find_task_by_vpid(pid);
@@ -302,12 +293,17 @@ static struct file_operations run_debugfs_fops;
 
 
 /*--------------------------------------*/
-// MAIN 
+// MAIN
 
 static int __init exynos_perf_cpufreq_profile_init(void)
 {
+	struct device_node *dn = NULL;
 	struct dentry *root, *d;
 	struct file_operations fops;
+
+	dn = of_find_node_by_name(dn, "exynos_perf_ncmemcpy");
+	of_property_read_u32(dn, "cal-id-mif", &cal_id_mif);
+	of_property_read_u32(dn, "cal-id-g3d", &cal_id_g3d);
 
 	root = debugfs_create_dir("exynos_perf_cpufreq", NULL);
 	if (!root) {
