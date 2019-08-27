@@ -391,7 +391,7 @@ static int s51xx_pcie_probe(struct pci_dev *pdev,
 	s51xx_pcie->dbaddr_base = tmp_rsc->start;
 
 	pr_err("Set Doorbell register addres.\n");
-	s51xx_pcie->doorbell_addr = devm_ioremap_wc(&pdev->dev,
+	s51xx_pcie->doorbell_addr = devm_ioremap(&pdev->dev,
 				s51xx_pcie->dbaddr_base + s51xx_pcie->dbaddr_offset, SZ_4);
 
 	ret = abox_pci_doorbell_paddr_set(s51xx_pcie->dbaddr_base + s51xx_pcie->dbaddr_offset);
