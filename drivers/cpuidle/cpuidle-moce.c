@@ -304,6 +304,10 @@ static ssize_t store_factor(struct device *dev, struct device_attribute *attr,
 	}
 
 	cpumask_copy(&mask, &factor->cpus);
+	if (cpumask_empty(&mask)) {
+		kfree(new_ratio_table);
+		return -EINVAL;
+	}
 
 	/* change ratio table of sibling-cpus */
 	for_each_cpu(cpu, &mask) {
