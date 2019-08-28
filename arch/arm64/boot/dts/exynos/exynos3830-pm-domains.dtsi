@@ -61,6 +61,7 @@
 		need_smc = <0x13410204>;
 		status = "okay";
 		#power-domain-cells = <0>;
+		skip-idle-ip;
 	};
 
 	pd_g3d: pd-g3d@11861d00 {
