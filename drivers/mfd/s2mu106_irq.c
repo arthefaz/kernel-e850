@@ -238,7 +238,7 @@ static void s2mu106_irq_sync_unlock(struct irq_data *data)
 
 	for (i = 0; i < S2MU106_IRQ_GROUP_NR; i++) {
 
-		if (i >= 0 && i <= mask_reg_size)
+		if (i >= 0 && i < mask_reg_size)
 			mask_reg = s2mu106_mask_reg[i];
 		i2c = get_i2c(s2mu106, i);
 
@@ -442,7 +442,7 @@ int s2mu106_irq_init(struct s2mu106_dev *s2mu106)
 		if (IS_ERR_OR_NULL(i2c))
 			continue;
 
-		if (i >= 0 && i <= mask_reg_size)
+		if (i >= 0 && i < mask_reg_size)
 			if (s2mu106_mask_reg[i] == S2MU106_REG_INVALID)
 				continue;
 
