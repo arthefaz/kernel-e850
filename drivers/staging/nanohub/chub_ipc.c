@@ -89,6 +89,7 @@ bool ipc_have_sensor_info(struct sensor_map *sensor_map)
 	return false;
 }
 
+#ifdef CHUB_IPC
 void ipc_set_sensor_id(enum sensor_type type, enum vendor_sensor_list_id id)
 {
 	struct sensor_map *ipc_sensor_map = ipc_get_base(IPC_REG_IPC_SENSORINFO);
@@ -97,18 +98,6 @@ void ipc_set_sensor_id(enum sensor_type type, enum vendor_sensor_list_id id)
 		ipc_sensor_map->active_sensor_list[type] = id;
 		ipc_sensor_map->index++;
 	}
-}
-
-void *ipc_get_sensor_base(void)
-{
-	struct sensor_map *ipc_sensor_map = ipc_get_base(IPC_REG_IPC_SENSORINFO);
-
-	if (ipc_have_sensor_info(ipc_sensor_map))
-		return &ipc_sensor_map->active_sensor_list[0];
-
-	CSP_PRINTF_INFO("%s: fails to get ipc_sensor_map:%p, magic:%s\n",
-		__func__, ipc_sensor_map, ipc_sensor_map ? ipc_sensor_map->magic : NULL);
-	return NULL;
 }
 
 enum vendor_sensor_list_id ipc_get_sensor_id(enum sensor_type type)
@@ -121,6 +110,19 @@ enum vendor_sensor_list_id ipc_get_sensor_id(enum sensor_type type)
 	CSP_PRINTF_INFO("%s: fails to get ipc_sensor_map:%p, type:%d, magic:%s\n",
 		__func__, ipc_sensor_map, type, ipc_sensor_map ? ipc_sensor_map->magic : NULL);
 	return sensor_list_no_active;
+}
+#endif
+
+void *ipc_get_sensor_base(void)
+{
+	struct sensor_map *ipc_sensor_map = ipc_get_base(IPC_REG_IPC_SENSORINFO);
+
+	if (ipc_have_sensor_info(ipc_sensor_map))
+		return &ipc_sensor_map->active_sensor_list[0];
+
+	CSP_PRINTF_INFO("%s: fails to get ipc_sensor_map:%p, magic:%s\n",
+		__func__, ipc_sensor_map, ipc_sensor_map ? ipc_sensor_map->magic : NULL);
+	return NULL;
 }
 
 /* ipc address control functions */

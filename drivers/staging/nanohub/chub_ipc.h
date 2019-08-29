@@ -393,26 +393,6 @@ struct ipc_buf {
 	struct ipc_channel_buf ch[IPC_CH_BUF_NUM];
 };
 
-/* sensor list and id sync with chre sensorhal */
-enum vendor_sensor_list_id {
-	sensor_list_no_active,
-	sensor_list_rpr051_prox,
-	sensor_list_rpr051_ligth,
-	sensor_list_bmi160_accel,
-	sensor_list_bmi160_accel_ucal,
-	sensor_list_bmi160_gyro,
-	sensor_list_bmi160_gyro_ucal,
-#if defined(CONFIG_SOC_EXYNOS9610)
-	sensor_list_stlis3mdl_mag,
-	sensor_list_stlis3mdl_mag_ucal,
-#elif defined(CONFIG_SOC_EXYNOS9630)
-	sensor_list_akmak09918_mag,
-	sensor_list_akmak09918_mag_ucal,
-#endif
-	sensor_list_bmp280_press,
-	sensor_list_max,
-};
-
 enum sensor_type {
     SENSOR_TYPE_META_DATA = 0,
     SENSOR_TYPE_ACCELEROMETER = 1,
@@ -452,13 +432,13 @@ enum sensor_type {
     SENSOR_TYPE_ACCELEROMETER_UNCALIBRATED = 35,
     SENSOR_TYPE_MAX,
 };
-
+#ifdef CHUB_IPC
 struct sensor_info {
 	bool active;
 	int type;
 	enum vendor_sensor_list_id id;
 };
-
+#endif
 struct sensor_map {
 	char magic[16];
 	int index;
@@ -534,8 +514,10 @@ struct ipc_map_area {
 	__raw_write32((val), (base) + REG_MAILBOX_MCUCTL)
 
 bool ipc_have_sensor_info(struct sensor_map *sensor_map);
+#ifdef CHUB_IPC
 void ipc_set_sensor_id(enum sensor_type type, enum vendor_sensor_list_id id);
 enum vendor_sensor_list_id ipc_get_sensor_id(enum sensor_type type);
+#endif
 void *ipc_get_sensor_base(void);
 
 /* channel ctrl functions */
