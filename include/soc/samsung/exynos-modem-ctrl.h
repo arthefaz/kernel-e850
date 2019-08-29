@@ -1,17 +1,21 @@
 /*
- * Copyright (C) 2015 Samsung Electronics Co.Ltd
- * http://www.samsung.com
+ * Copyright (C) 2015-2019, Samsung Electronics.
  *
- * EXYNOS MODEM CONTROL driver
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
  *
- * This program is free software; you can redistribute  it and/or modify it
- * under  the terms of  the GNU General  Public License as published by the
- * Free Software Foundation;  either version 2 of the  License, or (at your
- * option) any later version.
-*/
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
-#ifndef __EXYNOS_MODEM_CTRL_H
-#define __EXYNOS_MODEM_CTRL_H
+#ifndef __EXYNOS_MODEM_CTRL_H__
+#define __EXYNOS_MODEM_CTRL_H__
+
+#include <linux/skbuff.h>
 
 #include <linux/skbuff.h>
 
@@ -25,9 +29,10 @@ extern int modem_send_panic_noti_ext(void);
 static inline int modem_force_crash_exit_ext(void) { return 0; }
 static inline int modem_send_panic_noti_ext(void) { return 0; }
 #endif
+
+#if defined(CONFIG_CP_ZEROCOPY) || defined(CONFIG_CP_PKTPROC_V2)
 extern bool __skb_free_head_cp_zerocopy(struct sk_buff *skb);
 
-#if defined(CONFIG_CP_ZEROCOPY)
 /**
  @brief		skb_free_head_cp_zerocopy
  @param skb	the pointer to skbuff
@@ -50,4 +55,4 @@ extern void send_uart_noti_to_modem(int val);
 static inline void send_uart_noti_to_modem(int val) { return; }
 #endif
 
-#endif
+#endif /* __EXYNOS_MODEM_CTRL_H__ */
