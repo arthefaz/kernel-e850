@@ -7,6 +7,7 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 
+#define S612_REV_1	(0x030100)
 #define S620_REV_0	(0x100000)
 
 #define USE_SPUR_CANCEL
@@ -90,6 +91,7 @@ typedef u32 TIME;
 #define FM_SLV_INT	(0x00000040)
 #define AUDIO_CTRL	(0x00000024)
 #define AUDIO_FIFO	(0x00000028)
+#define AUDIO_LR_DATA	(0x0000002C)
 #define FM_SPEEDY_MA_SIZE	1024
 
 /* FMSPDY INT Mask bits */

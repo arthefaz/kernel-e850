@@ -8,7 +8,7 @@
 extern struct s610_radio *gradio;
 
 /* Numeric identifier embedded in the code. */
-const u32 build_identifier_integer = 0x3ac6bb6b;
+const u32 build_identifier_integer = 12416569;
 void (*handler_if_count)(struct s610_radio *radio) = NULL;
 void (*handler_audio_pause)(struct s610_radio *radio) = NULL;
 extern u32 *vol_level_init;
@@ -71,12 +71,10 @@ void fm_initialize(struct s610_radio *radio)
 	fm_iclkaux_set(radio->iclkaux);
 
 	/* Set the demod reg. */
-	if (radio->rfchip_ver == S620_REV_0) {
-		radio->low->fm_config.demod_conf_ini |= 0x2C000;
-		dev_info(radio->dev, "%s():demod_conf_ini[%08X]",
-			__func__,
-			radio->low->fm_config.demod_conf_ini);
-	}
+	radio->low->fm_config.demod_conf_ini |= 0x2C000;
+	dev_info(radio->dev, "%s():demod_conf_ini[%08X]", __func__,
+		radio->low->fm_config.demod_conf_ini);
+
 	fmspeedy_set_reg(0xFFF2A9, radio->low->fm_config.demod_conf_ini);
 	if (radio->vol_3db_att)
 		fmspeedy_set_reg_field(0xFFF2A9, 10, (0x01 << 10), 1);
@@ -339,8 +337,8 @@ void fm_set_freq(struct s610_radio *radio, u32 freq, bool mix_hi)
 	radio->low->fm_tune_info.rx_setup.fm_freq_khz = freq;
 	radio->low->fm_tune_info.rx_setup.fm_freq_hz = freq * 1000;
 
-	if (radio->dual_clk_on && (radio->rfchip_ver == S620_REV_0)
-			&& is_freq_in_spur(radio->low->fm_state.freq, fm_dual_clk_init, radio->dual_clk_on)) {
+	if (is_freq_in_spur(radio->low->fm_state.freq, fm_dual_clk_init,
+			radio->dual_clk_on) && radio->dual_clk_on) {
 		if (mix_hi) {
 			radio->low->fm_tune_info.lo_setup.rx_lo_req_freq =
 				radio->low->fm_tune_info.rx_setup.fm_freq_hz + 225220;
@@ -387,7 +385,7 @@ void fm_set_freq(struct s610_radio *radio, u32 freq, bool mix_hi)
 	fm_idle_periodic_cancel((unsigned long) radio);
 #endif	/*IDLE_POLLING_ENABLE*/
 
-	if (radio->trf_on && (radio->rfchip_ver == S620_REV_0)) {
+	if (radio->trf_on) {
 		if (is_freq_in_spur(radio->low->fm_state.freq, fm_spur_trf_init, radio->trf_on)) {
 			// 100000, 104000
 			fmspeedy_set_reg_field(0xFFF2A9, 7, (0x0001<<7), 0);
@@ -508,7 +506,7 @@ void fm_set_freq(struct s610_radio *radio, u32 freq, bool mix_hi)
 	if (radio->seek_status == FM_TUNER_PRESET_MODE)
 		udelay(100);
 
-	if (radio->dual_clk_on && (radio->rfchip_ver == S620_REV_0)) {
+	if (radio->dual_clk_on) {
 		if (is_freq_in_spur(radio->low->fm_state.freq, fm_dual_clk_init, radio->dual_clk_on)) {
 			fmspeedy_set_reg_field(0xFFF255, 21, (0x0001<<21), 1); /* FMCLK_40_32M, default = 1 */
 			/* Set up Demod IF */
@@ -1503,7 +1501,7 @@ void fm_sx_reset(void)
 		fmspeedy_set_reg(0xFFF251, 0x2C0000);
 		fmspeedy_set_reg(0xFFF252, 0x040000);
 		fmspeedy_set_reg(0xFFF253, 0x008840);
-	} else {
+	} else/* if (gradio->rfchip_ver == S612_REV_1)*/ {
 		fmspeedy_set_reg(0xFFF240, 0x009020);
 		fmspeedy_set_reg(0xFFF241, 0x004600);
 		fmspeedy_set_reg(0xFFF242, 0x27365E);
@@ -1524,30 +1522,24 @@ void fm_sx_reset(void)
 		fmspeedy_set_reg(0xFFF252, 0x040000);
 		fmspeedy_set_reg(0xFFF253, 0x00883C);
 	}
-
 	API_EXIT(gradio);
 }
 
 void fm_sx_start(void)
 {
 	API_ENTRY(gradio);
-
 	if (gradio->rfchip_ver == S620_REV_0) {
 		fmspeedy_set_reg(0xFFF253, 0x0F8840);
 		udelay(50);
-
 		fmspeedy_set_reg(0xFFF240, 0x3CB03E);
 		udelay(20);
-
 		fmspeedy_set_reg(0xFFF253, 0x0F8840);
 		fmspeedy_set_reg(0xFFF240, 0x14B03E);
-	} else {
+	} else/* if (gradio->rfchip_ver == S612_REV_1)*/ {
 		fmspeedy_set_reg(0xFFF253, 0x0F883C);
 		udelay(50);
-
 		fmspeedy_set_reg(0xFFF240, 0x3C9020);
 		udelay(20);
-
 		fmspeedy_set_reg(0xFFF253, 0x0B883C);
 		fmspeedy_set_reg(0xFFF240, 0x149020);
 	}
@@ -1562,13 +1554,10 @@ bool fm_aux_pll_initialize(void)
 
 	API_ENTRY(gradio);
 
-	if (gradio->rfchip_ver == S620_REV_0) {
-		fmspeedy_set_reg_field(0xFFF221, 0, 0x0001, 0); /* PLL_CLK_EN, default = 1 */
-		udelay(20);
-		dev_info(gradio->dev, "%s():PLL_CLK_EN[%02X]",
-			__func__,
-			fmspeedy_get_reg_field(0xFFF221, 0, 0x0001));
-	}
+	fmspeedy_set_reg_field(0xFFF221, 0, 0x0001, 0); /* PLL_CLK_EN, default = 1 */
+	udelay(20);
+	dev_info(gradio->dev, "%s():PLL_CLK_EN[%02X]",	__func__,
+		fmspeedy_get_reg_field(0xFFF221, 0, 0x0001));
 
 	fmspeedy_set_reg_field(0xFFF255, 10, (0x0001<<10), 1); /* FMCLK_from240M, default = 0 */
 	fmspeedy_set_reg_field(0xFFF255, 21, (0x0001<<21), 0); /* FMCLK_40_32M, default = 1 */
@@ -1606,7 +1595,11 @@ bool fm_aux_pll_initialize(void)
 	fmspeedy_set_reg_field(0xFFF257, 7, (0x0001<<7), 0); /* PLL1_SEL_CONTROL, default = 0 */
 	fmspeedy_set_reg_field(0xFFF257, 6, (0x0001<<6), 0); /* PLL1_SEL_BW_TYP, default = 0 */
 	fmspeedy_set_reg_field(0xFFF257, 9, (0x0003<<9), 1); /* PLL1_VCO_TUNE, default = 0 */
-	fmspeedy_set_reg_field(0xFFF257, 8, (0x0001<<8), 0); /* PLL1_SEL_HP, default = 0 */
+	if (gradio->rfchip_ver == S620_REV_0)
+		fmspeedy_set_reg_field(0xFFF257, 8, (0x0001<<8), 0); /* PLL1_SEL_HP, default = 0 */
+	else/* if (gradio->rfchip_ver == S612_REV_1)*/
+		fmspeedy_set_reg_field(0xFFF257, 8, (0x0001<<8), 1); /* PLL1_SEL_HP, default = 1 */
+
 	fmspeedy_set_reg_field(0xFFF257, 15, (0x00FF<<15), 12); /* PLL2_FB_DIV, default = 0 */
 	fmspeedy_set_reg_field(0xFFF257, 27, (0x0003<<27), 3); /* PLL2_LOCK_OUT, default = 0 */
 	fmspeedy_set_reg_field(0xFFF257, 25, (0x0003<<25), 3); /* _PLL2_LOCK_IN, default = 0 */
@@ -1614,7 +1607,10 @@ bool fm_aux_pll_initialize(void)
 	fmspeedy_set_reg_field(0xFFF257, 12, (0x0007<<12), 4); /* PLL2_CPCBUS, default = 0 */
 	fmspeedy_set_reg_field(0xFFF257, 11, (0x0001<<11), 0); /* PLL2_BYPASS, default = 0 */
 #else
-	fmspeedy_set_reg(0xFFF257, 0x1F864201);
+	if (gradio->rfchip_ver == S620_REV_0)
+		fmspeedy_set_reg(0xFFF257, 0x1F864201);
+	else /*if (gradio->rfchip_ver == S612_REV_1)*/
+		fmspeedy_set_reg(0xFFF257, 0x1F864301);
 #endif
 
 #if 0
@@ -1690,12 +1686,9 @@ void fm_aux_pll_off(void)
 	fmspeedy_set_reg(0xFFF258, 0x05040000);
 	fmspeedy_set_reg(0xFFF259, 0x21);
 
-	if (gradio->rfchip_ver == S620_REV_0) {
-		fmspeedy_set_reg_field(0xFFF221, 0, 0x0001, 1); /* PLL_CLK_EN, default = 1 */
-		dev_info(gradio->dev, "%s():PLL_CLK_EN[%02X]",
-			__func__,
-			fmspeedy_get_reg_field(0xFFF221, 0, 0x0001));
-	}
+	fmspeedy_set_reg_field(0xFFF221, 0, 0x0001, 1); /* PLL_CLK_EN, default = 1 */
+	dev_info(gradio->dev, "%s():PLL_CLK_EN[%02X]",	__func__,
+		fmspeedy_get_reg_field(0xFFF221, 0, 0x0001));
 }
 
 /****************************************************************************
@@ -1791,6 +1784,14 @@ static void fm_tuner_control_mute(struct s610_radio *radio)
 	bool mute = radio->low->fm_state.mute_forced
 			|| radio->low->fm_state.mute_audio
 			|| (!radio->low->fm_tuner_state.tune_done);
+
+	if (mute)
+		fmspeedy_set_reg(0xFFF2CA, 0x2516);
+	else
+		fmspeedy_set_reg(0xFFF2CA, radio->low->fm_config.mute_coeffs_soft);
+
+	udelay(100);
+
 	fm_set_mute(mute);
 }
 
@@ -2596,7 +2597,7 @@ int init_low_struc(struct s610_radio *radio)
 				sizeof(u32) * radio->tc_on);
 #endif
 #ifdef	USE_S612_DUAL_CLOCKING
-	if ((!radio->dual_clk_on) && (radio->rfchip_ver == S620_REV_0)) {
+	if (!radio->dual_clk_on) {
 		memcpy(radio->low->fm_dual_clk, filter_freq_spur_case_1,
 				sizeof(filter_freq_spur_case_1));
 		fm_dual_clk_init = radio->low->fm_dual_clk;
@@ -2604,7 +2605,7 @@ int init_low_struc(struct s610_radio *radio)
 	}
 #endif	/* USE_S612_DUAL_CLOCKING */
 #ifdef USE_SPUR_CANCEL_TRF
-	if ((!radio->trf_on) && (radio->rfchip_ver == S620_REV_0)) {
+	if (!radio->trf_on) {
 		memcpy(radio->low->fm_spur_trf, filter_freq_spur_select,
 				sizeof(filter_freq_spur_select));
 		fm_spur_trf_init = radio->low->fm_spur_trf;

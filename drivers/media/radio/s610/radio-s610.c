@@ -1451,7 +1451,14 @@ static int s610_radio_s_ctrl(struct v4l2_ctrl *ctrl)
 			__func__, ctrl->val,  ret);
 		break;
 	case V4L2_CID_S610_REG_RW:
-		/*fmspeedy_set_reg(radio->speedy_reg_addr, (u32)ctrl->val);*/
+		if ((radio->speedy_reg_addr >= 0xFFF210)
+				&& (radio->speedy_reg_addr <= 0xFFF3DF))
+			fmspeedy_set_reg(radio->speedy_reg_addr, (u32)ctrl->val);
+		else
+			dev_err(radio->v4l2dev.dev,
+				"%s(), V4L2_CID_S610_REG_RW, skip addr:0x%xh\n",
+					__func__, radio->speedy_reg_addr);
+
 		FDEBUG(radio, "%s(), REG_RW  val:0x%xh, ret : %d\n",
 			__func__, ctrl->val, ret);
 		break;
@@ -2348,7 +2355,7 @@ static int s610_radio_probe(struct platform_device *pdev)
 #endif	/* RDS_POLLING_ENABLE */
 
 	/* all aux pll off for WIFI/BT */
-	radio->rfchip_ver = S620_REV_0;
+	radio->rfchip_ver = S612_REV_1;
 
 	ret = of_property_read_u32(dnode, "fm_iclk_aux", &radio->iclkaux);
 	if (ret)

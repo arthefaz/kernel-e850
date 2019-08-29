@@ -365,6 +365,28 @@ int fmspeedy_set_reg_field_work(u32 addr, u32 shift, u32 mask, u32 data)
 	return ret;
 }
 
+void fm_audio_check(void)
+{
+	u32 read;
+
+	API_ENTRY(gradio);
+
+	spin_lock_irq(&gradio->slock);
+	atomic_set(&gradio->is_doing, 1);
+
+	read = read32(gradio->fmspeedy_base + AUDIO_FIFO);
+	dev_err(gradio->dev, "AUDIO_FIFO : 0x%08x\n", read);
+
+	read = read32(gradio->fmspeedy_base + AUDIO_LR_DATA);
+	dev_err(gradio->dev, "AUDIO_LR_DATA : 0x%08x\n", read);
+
+	atomic_set(&gradio->is_doing, 0);
+	spin_unlock_irq(&gradio->slock);
+
+	API_EXIT(gradio);
+}
+
+
 /****************************************************************************
  NAME
  fm_audio_control   -  Audio out enable/disable
