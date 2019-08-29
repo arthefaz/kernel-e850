@@ -886,8 +886,10 @@ exit:
 	mutex_unlock(&mc->pcie_onoff_lock);
 
 	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
-	if (!mc->pcie_powered_on && mc->reserve_doorbell_int)
+	if (!mc->pcie_powered_on && mc->reserve_doorbell_int) {
+		mif_info("DBG: doorbell_reserved = %d\n", mc->reserve_doorbell_int);
 		s5100_try_gpio_cp_wakeup(mc);
+	}
 	spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
 
 	return 0;
@@ -923,6 +925,11 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 			(exynos_check_pcie_link_status(mc->pcie_ch_num) != 0)) {
 #endif
 		mif_err("skip pci power on : already powered on\n");
+		goto exit;
+	}
+
+	if(mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 0) {
+		mif_err("skip pci power on : condition not met\n");
 		goto exit;
 	}
 
