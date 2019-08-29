@@ -284,7 +284,7 @@
 
 				mcu,name = "cp_mailbox";
 				mcu,id = <0>;
-				mcu,irq_affinity_mask = <3>;
+				mcu,irq_affinity_mask = <0>;
 			};
 
 			/* Shared memory information*/
