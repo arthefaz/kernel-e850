@@ -85,6 +85,8 @@
 
 #define MIF_HIP_CFG_Q_NUM       6
 
+#define MIF_NO_IRQ		0xff
+
 /* Current versions supported by this HIP */
 #define HIP4_SUPPORTED_V1	3
 #define HIP4_SUPPORTED_V2	4
@@ -159,7 +161,7 @@ struct hip4_hip_config_version_4 {
 	u8  reserved4[16];
 } __packed;
 
-struct hip4_hip_config_version_3 {
+struct hip4_hip_config_version_5 {
 	/* Host owned */
 	u32 magic_number;       /* 0xcaba0401 */
 	u16 hip_config_ver;     /* Version of this configuration structure = 2*/
@@ -228,7 +230,7 @@ struct hip4_hip_q {
 
 struct hip4_hip_control {
 	struct hip4_hip_init             init;
-	struct hip4_hip_config_version_3 config_v3 __aligned(32);
+	struct hip4_hip_config_version_5 config_v5 __aligned(32);
 	struct hip4_hip_config_version_4 config_v4 __aligned(32);
 	u32                              scoreboard[256] __aligned(64);
 	struct hip4_hip_q                q[MIF_HIP_CFG_Q_NUM] __aligned(64);
@@ -290,9 +292,6 @@ struct hip4_priv {
 	/* Wakelock for modem_ctl */
 	struct wake_lock             hip4_wake_lock;
 #endif
-
-	/* Control the hip4 init */
-	atomic_t                     rx_ready;
 
 	/* Control the hip4 deinit */
 	atomic_t                     closing;
@@ -376,9 +375,9 @@ int scsc_wifi_transmit_frame(struct slsi_hip4 *hip, bool ctrl_packet, struct sk_
 #define scsc_wifi_get_hip_config_version_4_u8(buff_ptr, member) le16_to_cpu((((struct hip4_hip_config_version_4 *)(buff_ptr))->member))
 #define scsc_wifi_get_hip_config_version_4_u16(buff_ptr, member) le16_to_cpu((((struct hip4_hip_config_version_4 *)(buff_ptr))->member))
 #define scsc_wifi_get_hip_config_version_4_u32(buff_ptr, member) le32_to_cpu((((struct hip4_hip_config_version_4 *)(buff_ptr))->member))
-#define scsc_wifi_get_hip_config_version_3_u8(buff_ptr, member) le16_to_cpu((((struct hip4_hip_config_version_3 *)(buff_ptr))->member))
-#define scsc_wifi_get_hip_config_version_3_u16(buff_ptr, member) le16_to_cpu((((struct hip4_hip_config_version_3 *)(buff_ptr))->member))
-#define scsc_wifi_get_hip_config_version_3_u32(buff_ptr, member) le32_to_cpu((((struct hip4_hip_config_version_3 *)(buff_ptr))->member))
+#define scsc_wifi_get_hip_config_version_5_u8(buff_ptr, member) le16_to_cpu((((struct hip4_hip_config_version_5 *)(buff_ptr))->member))
+#define scsc_wifi_get_hip_config_version_5_u16(buff_ptr, member) le16_to_cpu((((struct hip4_hip_config_version_5 *)(buff_ptr))->member))
+#define scsc_wifi_get_hip_config_version_5_u32(buff_ptr, member) le32_to_cpu((((struct hip4_hip_config_version_5 *)(buff_ptr))->member))
 #define scsc_wifi_get_hip_config_u8(buff_ptr, member, ver) le16_to_cpu((((struct hip4_hip_config_version_##ver *)(buff_ptr->config_v##ver))->member))
 #define scsc_wifi_get_hip_config_u16(buff_ptr, member, ver) le16_to_cpu((((struct hip4_hip_config_version_##ver *)(buff_ptr->config_v##ver))->member))
 #define scsc_wifi_get_hip_config_u32(buff_ptr, member, ver) le32_to_cpu((((struct hip4_hip_config_version_##ver *)(buff_ptr->config_v##ver))->member))

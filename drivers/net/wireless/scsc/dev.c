@@ -389,7 +389,9 @@ struct slsi_dev *slsi_dev_attach(struct device *dev, struct scsc_mx *core, struc
 	if (wifi_kic_register(sdev) < 0)
 		SLSI_ERR(sdev, "failed to register Wi-Fi KIC ops\n");
 #endif
-
+#ifdef CONFIG_SCSC_WLAN_ENHANCED_PKT_FILTER
+	sdev->enhanced_pkt_filter_enabled = true;
+#endif
 	sdev->device_state = SLSI_DEVICE_STATE_STOPPED;
 	sdev->current_tspec_id = -1;
 	sdev->tspec_error_code = -1;
@@ -558,6 +560,10 @@ int __init slsi_dev_load(void)
 	sap_dbg_init();
 	sap_test_init();
 
+/* Always create devnode if TW Android P on */
+#if defined(ANDROID_VERSION) && ANDROID_VERSION >= 90000
+	slsi_create_sysfs_macaddr();
+#endif
 	SLSI_INFO_NODEV("--- Maxwell Wi-Fi driver loaded successfully ---\n");
 	return 0;
 }
@@ -566,6 +572,9 @@ void __exit slsi_dev_unload(void)
 {
 	SLSI_INFO_NODEV("Unloading Maxwell Wi-Fi driver\n");
 
+#if defined(ANDROID_VERSION) && ANDROID_VERSION >= 90000
+	slsi_destroy_sysfs_macaddr();
+#endif
 	/* Unregister SAPs */
 	sap_mlme_deinit();
 	sap_ma_deinit();

@@ -48,8 +48,7 @@ static atomic_t in_read;
 /* It is less efficent, but we simplify the implementation */
 static spinlock_t  g_spinlock;
 
-static bool hip4_sampler_enable=true;
-
+static bool hip4_sampler_enable = true;
 module_param(hip4_sampler_enable, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(hip4_sampler_enable, "Enable hip4_sampler_enable. Run-time option - (default: Y)");
 
@@ -374,8 +373,8 @@ void hip4_sampler_tput_monitor(void *client_ctx, u32 state, u32 tput_tx, u32 tpu
 	if ((g_tput_tx == tput_tx) && (g_tput_rx == tput_rx))
 		return;
 
-	g_tput_rx == tput_tx;
-	g_tput_rx == tput_rx;
+	g_tput_tx = tput_tx;
+	g_tput_rx = tput_rx;
 
 	if (hip4_sampler_dynamic) {
 		/* Call the dynamic switcher with the computed bps

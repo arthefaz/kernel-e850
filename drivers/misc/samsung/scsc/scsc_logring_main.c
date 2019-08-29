@@ -82,8 +82,9 @@ int __init samlog_init(void)
 	pr_info("Samlog Loaded.\n");
 	scsc_printk_tag(FORCE_PRK, NO_TAG, "Samlog Started.\n");
 	scsc_printk_tag(NO_ECHO_PRK, NO_TAG,
-			"Allocated ring buffer of size %zd bytes.\n",
-			rb->bsz);
+	                "Allocated ring buffer of size %zd bytes at %p - %p\n",
+	                rb->bsz, virt_to_phys((const volatile void *)rb->buf),
+	                virt_to_phys((const volatile void *)(rb->buf + rb->bsz)));
 	scsc_printk_tag(NO_ECHO_PRK, NO_TAG,
 			"Using THROWAWAY DYNAMIC per-reader buffer.\n");
 
@@ -221,6 +222,7 @@ ADD_DEBUG_MODULE_PARAM(kic_common, SCSC_FULL_DEBUG, KIC_COMMON);
 ADD_DEBUG_MODULE_PARAM(wlbtd, SCSC_FULL_DEBUG, WLBTD);
 ADD_DEBUG_MODULE_PARAM(wlog, SCSC_DEBUG, WLOG);
 ADD_DEBUG_MODULE_PARAM(lerna, SCSC_FULL_DEBUG, LERNA);
+ADD_DEBUG_MODULE_PARAM(mxcfg, SCSC_FULL_DEBUG, MX_CFG);
 #ifdef CONFIG_SCSC_DEBUG_COMPATIBILITY
 ADD_DEBUG_MODULE_PARAM(init_deinit,  SCSC_FULL_DEBUG, SLSI_INIT_DEINIT);
 ADD_DEBUG_MODULE_PARAM(netdev,  SCSC_DBG4, SLSI_NETDEV);
@@ -256,7 +258,7 @@ ADD_DEBUG_MODULE_PARAM(test_me, SCSC_FULL_DEBUG, TEST_ME);
 /* Extend this list when you add ADD_DEBUG_MODULE_PARAM, above.
  * You must also extend "enum scsc_logring_tags"
  */
-int *scsc_droplevels[] = {
+int *scsc_droplevels[MAX_TAG + 1] = {
 	&scsc_droplevel_binary,
 	&scsc_droplevel_bin_wifi_ctrl_rx,
 	&scsc_droplevel_bin_wifi_data_rx,
@@ -295,6 +297,7 @@ int *scsc_droplevels[] = {
 	&scsc_droplevel_wlbtd,
 	&scsc_droplevel_wlog,
 	&scsc_droplevel_lerna,
+	&scsc_droplevel_mxcfg,
 #ifdef CONFIG_SCSC_DEBUG_COMPATIBILITY
 	&scsc_droplevel_init_deinit,
 	&scsc_droplevel_netdev,

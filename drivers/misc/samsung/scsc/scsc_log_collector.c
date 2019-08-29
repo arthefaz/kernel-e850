@@ -25,7 +25,7 @@
 #include "scsc_wlbtd.h"
 #endif
 
-#define SCSC_NUM_CHUNKS_SUPPORTED	12
+#define SCSC_NUM_CHUNKS_SUPPORTED	13
 
 #define TO_RAM				0
 #define TO_FILE				1
@@ -42,6 +42,7 @@ static u8 chunk_supported_sbl[SCSC_NUM_CHUNKS_SUPPORTED] = {
 	SCSC_LOG_RESERVED_BT,
 	SCSC_LOG_RESERVED_WLAN,
 	SCSC_LOG_RESERVED_RADIO,
+	SCSC_LOG_MINIMOREDUMP,
 	SCSC_LOG_CHUNK_LOGRING,
 };
 
@@ -123,8 +124,8 @@ static void collection_worker(struct work_struct *work)
 	struct scsc_log_status *ls;
 
 	ls = container_of(work, struct scsc_log_status, collect_work);
-	if (!ls)
-		return;
+	/* ls cannot be NULL due to pointer arithmetic */
+
 	pr_info("SCSC running scheduled Log Collection - collect reason:%d reason code:%d\n",
 		 ls->collect_reason, ls->reason_code);
 	scsc_log_collector_collect(ls->collect_reason, ls->reason_code);

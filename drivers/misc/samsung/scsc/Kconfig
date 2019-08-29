@@ -56,6 +56,11 @@ config SCSC_WLBTD
 	---help---
 	   Uses generic netlink messages to communicate events to userspace daemon which takes necessary actions e.g. taking moredump
 
+config SCSC_WRITE_INFO_FILE_WLBTD
+	bool "SCSC flag to decide whether to write file via wlbtd or not"
+	depends on SCSC_WLBTD
+	default n
+
 config SCSC_QOS
 	bool "Samsung SCSC kernel PM QoS support"
 	default y
@@ -80,7 +85,7 @@ config SCSC_CLK20MHZ
 	depends on SCSC_CORE
 
 config SCSC_CLK20MHZ_TEST
-	bool "Samsung SCSC USB 20MHz Clock Test"
+	tristate "Samsung SCSC USB 20MHz Clock Test"
 	depends on SCSC_CLK20MHZ
 
 config SCSC_FM
@@ -88,7 +93,7 @@ config SCSC_FM
 	depends on SCSC_CORE
 
 config SCSC_FM_TEST
-	bool "Samsung SCSC MX250 Test for enabling LDOs used for FM"
+	tristate "Samsung SCSC MX250 Test for enabling LDOs used for FM"
 	depends on SCSC_FM
 
 config SCSC_MMAP
@@ -162,3 +167,23 @@ config SCSC_LOG_COLLECTION
 	---help---
 	  Enable LOG collection to collect Chunks (host and FW) and generate a SBL file
 
+config SCSC_COMMON_HCF
+	bool "Enable Common HCF loader"
+	depends on SCSC_CORE
+	default n
+	---help---
+	  Enable Common HCF loader
+
+config SCSC_WLBT_AUTORECOVERY_PERMANENT_DISABLE
+	bool "Permanently disable WLBT autorecovery, ignroring module parameter"
+	depends on SCSC_CORE
+	default n
+	---help---
+	  Override module parameter, and disable recovery
+
+config SCSC_MX450_GDB_SUPPORT
+	bool "Enable GDB Channels for MX450"
+	depends on SCSC_CORE
+	default n
+	---help---
+	  Enable GDB Channels for MX450

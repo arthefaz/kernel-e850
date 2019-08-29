@@ -19,6 +19,7 @@
 #ifdef CONFIG_ANDROID
 #include "scsc_wifilogger_rings.h"
 #endif
+#include "nl80211_vendor.h"
 
 #define SLSI_MAX_CHAN_2G_BAND          14
 
@@ -477,7 +478,20 @@ int slsi_scan(struct wiphy *wiphy, struct net_device *dev,
 		r = -EBUSY;
 		goto exit;
 	}
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+	if (ndev_vif->is_wips_running && (ndev_vif->vif_type == FAPI_VIFTYPE_STATION) &&
+	    (ndev_vif->sta.vif_status == SLSI_VIF_STATUS_CONNECTED)) {
+		int ret = 0;
 
+		SLSI_NET_DBG3(dev, SLSI_CFG80211, "Scan invokes DRIVER_BCN_ABORT\n");
+		ret = slsi_mlme_set_forward_beacon(sdev, dev, FAPI_ACTION_STOP);
+
+		if (!ret) {
+			ret = slsi_send_forward_beacon_abort_vendor_event(sdev,
+									  SLSI_FORWARD_BEACON_ABORT_REASON_SCANNING);
+		}
+	}
+#endif
 	SLSI_NET_DBG3(dev, SLSI_CFG80211, "channels:%d, ssids:%d, ie_len:%d, vif_index:%d\n", request->n_channels,
 		      request->n_ssids, (int)request->ie_len, ndev_vif->ifnum);
 
@@ -493,7 +507,7 @@ int slsi_scan(struct wiphy *wiphy, struct net_device *dev,
 		ndev_vif->unsync.slsi_p2p_continuous_fullscan = false;
 	}
 
-	/* Update scan timing for P2P social channels scan. */
+	/* Update scan timing for P2P social channels scan.*/
 	if ((request->ie) &&
 	    cfg80211_find_vendor_ie(WLAN_OUI_WFA, WLAN_OUI_TYPE_WFA_P2P, request->ie, request->ie_len) &&
 	    request->ssids && SLSI_IS_P2P_SSID(request->ssids[0].ssid, request->ssids[0].ssid_len)) {
@@ -504,7 +518,7 @@ int slsi_scan(struct wiphy *wiphy, struct net_device *dev,
 		if (!ndev_vif->drv_in_p2p_procedure) {
 			if (delayed_work_pending(&ndev_vif->unsync.unset_channel_expiry_work)) {
 				cancel_delayed_work(&ndev_vif->unsync.unset_channel_expiry_work);
-				slsi_mlme_spare_signal_1(sdev, dev);
+				slsi_mlme_unset_channel_req(sdev, dev);
 				ndev_vif->driver_channel = 0;
 				}
 		}
@@ -989,41 +1003,36 @@ int slsi_connect(struct wiphy *wiphy, struct net_device *dev,
 #endif
 						 capability);
 	if (!ndev_vif->sta.sta_bss) {
-		if (!sme->bssid) {
-			struct cfg80211_ssid ssid;
+		struct cfg80211_ssid ssid;
 
-			SLSI_NET_DBG3(dev, SLSI_CFG80211, "BSS info is not available - Perform scan\n");
-			ssid.ssid_len = sme->ssid_len;
-			memcpy(ssid.ssid, sme->ssid, ssid.ssid_len);
-			r = slsi_mlme_connect_scan(sdev, dev, 1, &ssid, sme->channel);
-			if (r) {
-				SLSI_NET_ERR(dev, "slsi_mlme_connect_scan failed\n");
-				goto exit;
-			}
-			ndev_vif->sta.sta_bss = cfg80211_get_bss(wiphy,
-								sme->channel,
-								sme->bssid,
-								sme->ssid,
-								sme->ssid_len,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
-								IEEE80211_BSS_TYPE_ANY,
-#else
-								capability,
-#endif
-								capability);
-			if (!ndev_vif->sta.sta_bss) {
-				SLSI_NET_ERR(dev, "cfg80211_get_bss(%.*s, %pM) Not found\n", (int)sme->ssid_len, sme->ssid, sme->bssid);
-				/*Set previous status in case of failure */
-				ndev_vif->vif_type = prev_vif_type;
-				r = -ENOENT;
-				goto exit;
-			}
-			channel = ndev_vif->sta.sta_bss->channel;
-			bssid = ndev_vif->sta.sta_bss->bssid;
-		} else {
-			/* The cfg80211 timeout for bss is 3 seconds so the sta_bss can be NULL */
-			SLSI_NET_DBG1(dev, SLSI_CFG80211, "sta_bss is not available for %.*s, %pM\n", (int)sme->ssid_len, sme->ssid, sme->bssid);
+		SLSI_NET_DBG3(dev, SLSI_CFG80211, "BSS info is not available - Perform scan\n");
+		ssid.ssid_len = sme->ssid_len;
+		memcpy(ssid.ssid, sme->ssid, ssid.ssid_len);
+		r = slsi_mlme_connect_scan(sdev, dev, 1, &ssid, sme->channel);
+		if (r) {
+			SLSI_NET_ERR(dev, "slsi_mlme_connect_scan failed\n");
+			goto exit;
 		}
+		ndev_vif->sta.sta_bss = cfg80211_get_bss(wiphy,
+							sme->channel,
+							sme->bssid,
+							sme->ssid,
+							sme->ssid_len,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
+							IEEE80211_BSS_TYPE_ANY,
+#else
+							capability,
+#endif
+							capability);
+		if (!ndev_vif->sta.sta_bss) {
+			SLSI_NET_ERR(dev, "cfg80211_get_bss(%.*s, %pM) Not found\n", (int)sme->ssid_len, sme->ssid, sme->bssid);
+			/*Set previous status in case of failure */
+			ndev_vif->vif_type = prev_vif_type;
+			r = -ENOENT;
+			goto exit;
+		}
+		channel = ndev_vif->sta.sta_bss->channel;
+		bssid = ndev_vif->sta.sta_bss->bssid;
 	} else {
 		channel = ndev_vif->sta.sta_bss->channel;
 		bssid = ndev_vif->sta.sta_bss->bssid;
@@ -1080,8 +1089,9 @@ int slsi_connect(struct wiphy *wiphy, struct net_device *dev,
 	if (sme->auth_type == NL80211_AUTHTYPE_SAE && (sme->flags & CONNECT_REQ_EXTERNAL_AUTH_SUPPORT)) {
 		const u8 *rsn;
 
+		SLSI_NET_DBG1(dev, SLSI_CFG80211, "N AKM Suites: : %1d\n", sme->crypto.n_akm_suites);
 		ndev_vif->sta.crypto.wpa_versions = 3;
-		rsn = cfg80211_find_ie(WLAN_EID_RSN, ndev_vif->sta.sta_bss->ies->data, ndev_vif->sta.sta_bss->ies->len);
+		rsn = cfg80211_find_ie(WLAN_EID_RSN, sme->ie, sme->ie_len);
 		if (rsn) {
 			int pos;
 
@@ -1094,7 +1104,6 @@ int slsi_connect(struct wiphy *wiphy, struct net_device *dev,
 		ndev_vif->sta.crypto.wpa_versions = 0;
 	}
 #endif
-
 	r = slsi_mlme_connect(sdev, dev, sme, channel, bssid);
 	if (r != 0) {
 		ndev_vif->sta.is_wps = false;
@@ -1188,7 +1197,7 @@ int slsi_disconnect(struct wiphy *wiphy, struct net_device *dev,
 		if (r != 0)
 			SLSI_NET_ERR(dev, "Disconnection returned with failure\n");
 		/* Even if we fail to disconnect cleanly, tidy up. */
-		r = slsi_handle_disconnect(sdev, dev, peer->address, 0);
+		r = slsi_handle_disconnect(sdev, dev, peer->address, 0, NULL, 0);
 
 		break;
 	}
@@ -1380,7 +1389,7 @@ int slsi_del_station(struct wiphy *wiphy, struct net_device *dev,
 			if (r != 0)
 				SLSI_NET_ERR(dev, "Disconnection returned with failure\n");
 			/* Even if we fail to disconnect cleanly, tidy up. */
-			r = slsi_handle_disconnect(sdev, dev, peer->address, WLAN_REASON_DEAUTH_LEAVING);
+			r = slsi_handle_disconnect(sdev, dev, peer->address, WLAN_REASON_DEAUTH_LEAVING, NULL, 0);
 		}
 	}
 
@@ -1957,13 +1966,13 @@ static int slsi_ap_start_validate(struct net_device *dev, struct slsi_dev *sdev,
 		goto exit_with_error;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 9))
-	if ((ndev_vif->chan->hw_value <= 14) && (!sdev->fw_2g_40mhz_enabled) &&
+	if ((ndev_vif->chan->hw_value <= 14) && (!sdev->fw_SoftAp_2g_40mhz_enabled) &&
 	    (ndev_vif->chandef->width == NL80211_CHAN_WIDTH_40)) {
 		SLSI_NET_ERR(dev, "Configuration error: 40 MHz on 2.4 GHz is not supported. Channel_no: %d Channel_width: %d\n", ndev_vif->chan->hw_value, slsi_get_chann_info(sdev, ndev_vif->chandef));
 		goto exit_with_error;
 	}
 #else
-	if ((ndev_vif->chan->hw_value <= 14) && (!sdev->fw_2g_40mhz_enabled) &&
+	if ((ndev_vif->chan->hw_value <= 14) && (!sdev->fw_SoftAp_2g_40mhz_enabled) &&
 	    (ndev_vif->channel_type > NL80211_CHAN_HT20)) {
 		SLSI_NET_ERR(dev, "Configuration error: 40 MHz on 2.4 GHz is not supported. Channel_no: %d Channel_width: %d\n", ndev_vif->chan->hw_value, slsi_get_chann_info(sdev, ndev_vif->channel_type));
 		goto exit_with_error;
@@ -2047,21 +2056,23 @@ int slsi_start_ap(struct wiphy *wiphy, struct net_device *dev,
 #ifdef CONFIG_SCSC_WLAN_WIFI_SHARING
 	ndev_sta_vif = netdev_priv(wlan_dev);
 	if (SLSI_IS_VIF_INDEX_MHS(sdev, ndev_vif)) {
-		SLSI_MUTEX_LOCK(ndev_sta_vif->vif_mutex);
-		if ((ndev_sta_vif->activated) && (ndev_sta_vif->vif_type == FAPI_VIFTYPE_STATION) &&
-		    (ndev_sta_vif->sta.vif_status == SLSI_VIF_STATUS_CONNECTING ||
-		     ndev_sta_vif->sta.vif_status == SLSI_VIF_STATUS_CONNECTED)) {
-			invalid_channel = slsi_select_wifi_sharing_ap_channel(wiphy, dev, settings, sdev,
-									      &wifi_sharing_channel_switched);
-			skip_indoor_check_for_wifi_sharing = 1;
-			if (invalid_channel) {
-				SLSI_NET_ERR(dev, "Rejecting AP start req at host (invalid channel)\n");
-				SLSI_MUTEX_UNLOCK(ndev_sta_vif->vif_mutex);
-				r = -EINVAL;
-				goto exit_with_vif_mutex;
+		if (ndev_sta_vif) {
+			SLSI_MUTEX_LOCK(ndev_sta_vif->vif_mutex);
+			if ((ndev_sta_vif->activated) && (ndev_sta_vif->vif_type == FAPI_VIFTYPE_STATION) &&
+			    (ndev_sta_vif->sta.vif_status == SLSI_VIF_STATUS_CONNECTING ||
+			     ndev_sta_vif->sta.vif_status == SLSI_VIF_STATUS_CONNECTED)) {
+				invalid_channel = slsi_select_wifi_sharing_ap_channel(wiphy, dev, settings, sdev,
+										      &wifi_sharing_channel_switched);
+				skip_indoor_check_for_wifi_sharing = 1;
+				if (invalid_channel) {
+					SLSI_NET_ERR(dev, "Rejecting AP start req at host (invalid channel)\n");
+					SLSI_MUTEX_UNLOCK(ndev_sta_vif->vif_mutex);
+					r = -EINVAL;
+					goto exit_with_vif_mutex;
+				}
 			}
+			SLSI_MUTEX_UNLOCK(ndev_sta_vif->vif_mutex);
 		}
-		SLSI_MUTEX_UNLOCK(ndev_sta_vif->vif_mutex);
 	}
 #endif
 
@@ -2127,8 +2138,11 @@ int slsi_start_ap(struct wiphy *wiphy, struct net_device *dev,
 		goto exit_with_vif_mutex;
 
 	if (ndev_vif->iftype == NL80211_IFTYPE_P2P_GO) {
+		struct net_device   *p2p_dev;
+
 		slsi_p2p_group_start_remove_unsync_vif(sdev);
-		SLSI_ETHER_COPY(device_address, sdev->netdev_addresses[SLSI_NET_INDEX_P2P]);
+		p2p_dev = slsi_get_netdev(sdev, SLSI_NET_INDEX_P2P);
+		SLSI_ETHER_COPY(device_address, p2p_dev->dev_addr);
 		if (keep_alive_period != SLSI_P2PGO_KEEP_ALIVE_PERIOD_SEC)
 			if (slsi_set_uint_mib(sdev, NULL, SLSI_PSID_UNIFI_MLMEGO_KEEP_ALIVE_TIMEOUT,
 					      keep_alive_period) != 0) {
@@ -2174,7 +2188,7 @@ int slsi_start_ap(struct wiphy *wiphy, struct net_device *dev,
 	} else if (sdev->fw_ht_enabled && sdev->allow_switch_40_mhz &&
 			   slsi_get_max_bw_mhz(sdev, ndev_vif->chandef->chan->center_freq) >= 40 &&
 			   ((ndev_vif->chandef->chan->hw_value < 165 && ndev_vif->chandef->chan->hw_value >= 36) ||
-			   (ndev_vif->chandef->chan->hw_value < 12 && sdev->fw_2g_40mhz_enabled &&
+			   (ndev_vif->chandef->chan->hw_value < 12 && sdev->fw_SoftAp_2g_40mhz_enabled &&
 			   ndev_vif->iftype == NL80211_IFTYPE_P2P_GO))) {
 		/* HT40 configuration (5GHz/2GHz and HT) */
 		u16  oper_chan = ndev_vif->chandef->chan->hw_value;
@@ -2391,7 +2405,6 @@ int slsi_start_ap(struct wiphy *wiphy, struct net_device *dev,
 	if (SLSI_IS_VIF_INDEX_MHS(sdev, ndev_vif))
 		ndev_vif->chan = settings->chandef.chan;
 #endif
-
 	if (r != 0) {
 		SLSI_NET_ERR(dev, "Start ap failed: resultcode = %d frequency = %d\n", r,
 			     settings->chandef.chan->center_freq);
@@ -2399,7 +2412,12 @@ int slsi_start_ap(struct wiphy *wiphy, struct net_device *dev,
 	} else if (ndev_vif->iftype == NL80211_IFTYPE_P2P_GO) {
 		SLSI_P2P_STATE_CHANGE(sdev, P2P_GROUP_FORMED_GO);
 	}
-
+#ifdef CONFIG_SCSC_WLAN_SET_NUM_ANTENNAS
+	if (ndev_vif->iftype == NL80211_IFTYPE_AP) {
+		/* Don't care results. */
+		slsi_set_num_antennas(dev, 1 /*SISO*/);
+	}
+#endif
 	ndev_vif->ap.beacon_interval = settings->beacon_interval;
 	ndev_vif->ap.ssid_len = settings->ssid_len;
 	memcpy(ndev_vif->ap.ssid, settings->ssid, settings->ssid_len);
@@ -2728,7 +2746,8 @@ static int slsi_wlan_mgmt_tx(struct slsi_dev *sdev, struct net_device *dev,
 		/* vif is active*/
 		if (ieee80211_is_auth(mgmt->frame_control)) {
 			SLSI_NET_DBG1(dev, SLSI_CFG80211, "Transmit on the current frequency\n");
-			r = slsi_mlme_send_frame_mgmt(sdev, dev, buf, len, FAPI_DATAUNITDESCRIPTOR_IEEE802_11_FRAME, FAPI_MESSAGETYPE_IEEE80211_MGMT_NOT_ACTION, host_tag, 0, wait * 1000, 0);
+			r = slsi_mlme_send_frame_mgmt(sdev, dev, buf, len, FAPI_DATAUNITDESCRIPTOR_IEEE802_11_FRAME,
+						      FAPI_MESSAGETYPE_IEEE80211_MGMT, host_tag, 0, wait * 1000, 0);
 			if (r)
 				return r;
 		} else if (ndev_vif->vif_type == FAPI_VIFTYPE_UNSYNCHRONISED) {
@@ -3227,7 +3246,12 @@ static const u32                   slsi_cipher_suites[] = {
 	WLAN_CIPHER_SUITE_CCMP,
 	WLAN_CIPHER_SUITE_AES_CMAC,
 	WLAN_CIPHER_SUITE_SMS4,
-	WLAN_CIPHER_SUITE_PMK
+	WLAN_CIPHER_SUITE_PMK,
+	WLAN_CIPHER_SUITE_GCMP,
+	WLAN_CIPHER_SUITE_GCMP_256,
+	WLAN_CIPHER_SUITE_CCMP_256,
+	WLAN_CIPHER_SUITE_BIP_GMAC_128,
+	WLAN_CIPHER_SUITE_BIP_GMAC_256
 };
 
 static const struct ieee80211_txrx_stypes
@@ -3465,6 +3489,7 @@ struct slsi_dev                           *slsi_cfg80211_new(struct device *dev)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
 #ifdef CONFIG_SCSC_WLAN_ENABLE_MAC_RANDOMISATION
 	wiphy->features |= NL80211_FEATURE_SCAN_RANDOM_MAC_ADDR;
+	wiphy->features |= NL80211_FEATURE_SCHED_SCAN_RANDOM_MAC_ADDR;
 #endif
 #endif
 #ifdef CONFIG_SCSC_WLAN_SAE_CONFIG

@@ -131,7 +131,7 @@ endif
 
 config SCSC_WLAN_MAC_ADDRESS_FILENAME
 	string "MAC address filename"
-	default "/sys/module/scsc_wlan/parameters/mac_addr"
+	default "/efs/wifi/.mac.info"
 	---help---
 	  Select the programmed MAC address file.
 
@@ -176,6 +176,12 @@ config SCSC_WLAN_SINGLE_ANTENNA
 	  This option tells if there is support for single
 	  antenna or dual antenna.
 
+config SCSC_AP_INTERFACE_NAME
+        string "AP net device interface name"
+        default "wlan1"
+        ---help---
+          AP net device interface name.
+
 config SCSC_WLAN_ACS_ENABLE
         bool "ACS Support"
         default y
@@ -195,19 +201,6 @@ config SCSC_WLAN_MHS_STATIC_INTERFACE
         ---help---
           This option tells if AP interface has been created
           statically or dynamically.
-
-config SCSC_WLAN_ENHANCED_PKT_FILTER
-        bool "Enable enhanced packet filtering in suspend"
-        default n
-        ---help---
-          This option tells if UDP packet filtering in suspend is
-          supported or not.
-
-config SCSC_ENHANCED_PACKET_STATS
-        bool "Enable enhanced packet stats"
-        default n
-        ---help---
-          This option tells whether enhanced packet stats collection
           is enabled or not.
 
 config SCSC_WLAN_PRIORITISE_IMP_FRAMES
@@ -222,3 +215,50 @@ config SCSC_WIFI_NAN_ENABLE
         default n
         ---help---
           This option tells whether WiFi NAN is enabled or not.
+
+config SCSC_WLAN_ENHANCED_PKT_FILTER
+        bool "Enable enhanced packet filtering in suspend"
+        default n
+        ---help---
+          This option tells if UDP packet filtering in suspend is
+          supported or not.
+
+config SCSC_WLAN_SET_NUM_ANTENNAS
+        bool "Enable configuring of number of antennas"
+        default n
+        ---help---
+          This option tells whether configuring of number of antennas is enabled or not.
+
+config SCSC_ENHANCED_PACKET_STATS
+        bool "Enable enhanced packet stats"
+        default n
+        ---help---
+          This option tells whether enhanced packet stats collection
+          is enabled or not.
+
+config SCSC_WLAN_LOW_LATENCY_MODE
+        bool "Support enabling/disabling roaming as per latency mode"
+        default n
+        ---help---
+          This option tells whether support is provided for enabling
+          or disabling roaming as per the latency mode.
+
+config SCSC_WLAN_SET_PREFERRED_ANTENNA
+        bool "Enable the driver to set preferred antenna"
+        default y
+        ---help---
+          This option enables the driver to set the preferred antenna.
+
+config SLSI_WLAN_STA_FWD_BEACON
+        bool "Forwarding beacon support"
+        default n
+        ---help---
+          This option tells if beacon forwarding in STA mode is enabled or not.
+          When it is enabled, Driver deliver beacon info of connected AP to Supplicant.
+
+config SCSC_WLAN_STA_ENHANCED_ARP_DETECT
+        bool "Enable enhanced arp detection"
+        default n
+        ---help---
+          This option tells whether enhanced arp detection
+          is enabled or not.

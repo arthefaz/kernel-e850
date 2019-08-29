@@ -308,6 +308,7 @@ struct slsi_scan_result {
 	struct sk_buff *probe_resp;
 	struct sk_buff *beacon;
 	struct slsi_scan_result *next;
+	int band;
 };
 
 /* Per Interface Scan Data
@@ -331,7 +332,23 @@ struct slsi_ssid_map {
 	u8 ssid[32];
 	u8 ssid_len;
 	u8 age;
+	int band;
 };
+
+#ifdef CONFIG_SCSC_WLAN_STA_ENHANCED_ARP_DETECT
+struct slsi_enhanced_arp_counters {
+	u16 arp_req_count_from_netdev;
+	u16 arp_req_count_to_lower_mac;
+	u16 arp_req_rx_count_by_lower_mac;
+	u16 arp_req_count_tx_success;
+	u16 arp_rsp_rx_count_by_lower_mac;
+	u16 arp_rsp_rx_count_by_upper_mac;
+	u16 arp_rsp_count_to_netdev;
+	u16 arp_rsp_count_out_of_order_drop;
+	u16 ap_link_active;
+	bool is_duplicate_addr_detected;
+};
+#endif
 
 struct slsi_peer {
 	/* Flag MUST be set last when creating a record and immediately when removing.
@@ -551,11 +568,18 @@ struct slsi_vif_sta {
 	struct list_head        network_map;
 
 	struct slsi_wmm_ac wmm_ac[4];
-	bool                      nd_offload_enabled;
+	bool                    nd_offload_enabled;
+	unsigned long           data_rate_mbps;
+	unsigned long           max_rate_mbps;
 
 	/*This structure is used to store last disconnected bss info and valid even when vif is deactivated. */
 	struct slsi_last_connected_bss last_connected_bss;
 	struct cfg80211_crypto_settings crypto;
+
+	/* Variable to indicate if roamed_ind needs to be dropped in driver, to maintain roam synchronization. */
+	atomic_t                drop_roamed_ind;
+	u8                      *vendor_disconnect_ies;
+	int                     vendor_disconnect_ies_len;
 };
 
 struct slsi_vif_unsync {
@@ -686,7 +710,9 @@ struct netdev_vif {
 	atomic_t                    is_registered;         /* Has the net dev been registered */
 	bool                        is_available;          /* Has the net dev been opened AND is usable */
 	bool                        is_fw_test;            /* Is the device in use as a test device via UDI */
-
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+	bool                        is_wips_running;
+#endif
 	/* Structure can be accessed by cfg80211 ops, procfs/ioctls and as a result
 	 * of receiving MLME indications e.g. MLME-CONNECT-IND that can affect the
 	 * status of the interface eg. STA connect failure will delete the VIF.
@@ -787,12 +813,23 @@ struct netdev_vif {
 	u32 throughput_rx;
 	u32 throughput_tx_bps;
 	u32 throughput_rx_bps;
+#ifdef CONFIG_SCSC_WLAN_STA_ENHANCED_ARP_DETECT
+	bool enhanced_arp_detect_enabled;
+	struct slsi_enhanced_arp_counters enhanced_arp_stats;
+	u8 target_ip_addr[4];
+	int enhanced_arp_host_tag[5];
+#endif
 };
 
 struct slsi_802_11d_reg_domain {
 	u8                         *countrylist;
 	struct ieee80211_regdomain *regdomain;
 	int                        country_len;
+};
+
+struct slsi_apf_capabilities {
+	u16 version;
+	u16 max_length;
 };
 
 #ifdef CONFIG_SCSC_WLAN_WES_NCHO
@@ -856,9 +893,12 @@ struct slsi_dev_config {
 
 	u8                                      host_state;
 
-	int                                      rssi_boost_5g;
-	int                                      rssi_boost_2g;
-	bool                                   disable_ch12_ch13;
+	int                                     rssi_boost_5g;
+	int                                     rssi_boost_2g;
+	bool                                    disable_ch12_ch13;
+	bool                                    fw_enhanced_arp_detect_supported;
+	bool                                    fw_apf_supported;
+	struct                                  slsi_apf_capabilities apf_cap;
 };
 
 #define SLSI_DEVICE_STATE_ATTACHING 0
@@ -1095,7 +1135,7 @@ struct slsi_dev {
 	int                        wifi_sharing_5g_restricted_channels[25];
 	int                        num_5g_restricted_channels;
 #endif
-	bool                       fw_2g_40mhz_enabled;
+	bool                       fw_SoftAp_2g_40mhz_enabled;
 	bool                       nan_enabled;
 	u16                        assoc_result_code; /* Status of latest association in STA mode */
 	bool                       allow_switch_40_mhz; /* Used in AP cert to disable HT40 when not configured */
@@ -1121,6 +1161,10 @@ struct slsi_dev {
 	int                        recovery_timeout; /* ms autorecovery completion timeout */
 #ifdef CONFIG_SCSC_WLAN_ENABLE_MAC_RANDOMISATION
 	bool                            fw_mac_randomization_enabled;
+#endif
+
+#ifdef CONFIG_SCSC_WLAN_ENHANCED_PKT_FILTER
+	bool                       enhanced_pkt_filter_enabled;
 #endif
 };
 

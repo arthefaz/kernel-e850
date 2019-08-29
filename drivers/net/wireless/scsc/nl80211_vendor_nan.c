@@ -49,6 +49,38 @@ static bool slsi_nan_is_subscribe_id_active(struct netdev_vif *ndev_vif, u32 id)
 	return ndev_vif->nan.subscribe_id_map & BIT(id);
 }
 
+/*Note: vendor IE length of the stitched info may not be correct. Caller
+ *      has to depend on return value for full length of IE.
+ */
+static u32 slsi_nan_stitch_ie(u8 *buff, u32 buff_len, u16 oui_type_subtype, u8 *dest_buff)
+{
+	u8 samsung_oui[] = {0x00, 0x16, 0x32};
+	u8 *pos = buff;
+	u32 dest_buff_len = 0;
+
+	while (buff_len - (pos - buff) > 2 + sizeof(samsung_oui) + 2) {
+		/* check if buffer is alteast al long as IE length */
+		if (pos[1] + 2 + pos - buff > buff_len) {
+			pos = buff + buff_len;
+			continue;
+		}
+		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC &&
+		    memcmp(samsung_oui, &pos[2], sizeof(samsung_oui)) == 0 &&
+		    memcmp((u8 *)&oui_type_subtype, &pos[5], sizeof(oui_type_subtype)) == 0) {
+			if (!dest_buff_len) {
+				memcpy(dest_buff, pos, pos[1] + 2);
+				dest_buff_len = pos[1] + 2;
+			} else {
+				memcpy(&dest_buff[dest_buff_len], &pos[7], pos[1] - 5);
+				dest_buff_len += pos[1] - 5;
+			}
+		}
+		pos += pos[1] + 2;
+	}
+
+	return dest_buff_len;
+}
+
 void slsi_nan_get_mac(struct slsi_dev *sdev, char *nan_mac_addr)
 {
 	memset(nan_mac_addr, 0, ETH_ALEN);
@@ -98,6 +130,122 @@ static void slsi_vendor_nan_command_reply(struct wiphy *wiphy, u32 status, u32 e
 
 	if (cfg80211_vendor_cmd_reply(reply))
 		SLSI_ERR_NODEV("FAILED to reply nan coammnd. response_type:%d\n", response_type);
+}
+
+static int slsi_nan_get_sdea_params_nl(struct slsi_dev *sdev, struct slsi_nan_sdea_ctrl_params *sdea_params,
+				       const struct nlattr *iter, int nl_attr_id)
+{
+	switch (nl_attr_id) {
+	case NAN_REQ_ATTR_SDEA_PARAM_NDP_TYPE:
+		sdea_params->ndp_type = nla_get_u8(iter);
+		sdea_params->config_nan_data_path = 1;
+		break;
+	case NAN_REQ_ATTR_SDEA_PARAM_SECURITY_CFG:
+		sdea_params->security_cfg = nla_get_u8(iter);
+		sdea_params->config_nan_data_path = 1;
+		break;
+	case NAN_REQ_ATTR_SDEA_PARAM_RANGING_STATE:
+		sdea_params->ranging_state = nla_get_u8(iter);
+		sdea_params->config_nan_data_path = 1;
+		break;
+	case NAN_REQ_ATTR_SDEA_PARAM_RANGE_REPORT:
+		sdea_params->range_report = nla_get_u8(iter);
+		sdea_params->config_nan_data_path = 1;
+		break;
+	case NAN_REQ_ATTR_SDEA_PARAM_QOS_CFG:
+		sdea_params->qos_cfg = nla_get_u8(iter);
+		sdea_params->config_nan_data_path = 1;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static int slsi_nan_get_ranging_cfg_nl(struct slsi_dev *sdev, struct slsi_nan_ranging_cfg *ranging_cfg,
+				       const struct nlattr *iter, int nl_attr_id)
+{
+	switch (nl_attr_id) {
+	case NAN_REQ_ATTR_RANGING_CFG_INTERVAL:
+		ranging_cfg->ranging_interval_msec = nla_get_u32(iter);
+		break;
+	case NAN_REQ_ATTR_RANGING_CFG_INDICATION:
+		ranging_cfg->config_ranging_indications = nla_get_u32(iter);
+		break;
+	case NAN_REQ_ATTR_RANGING_CFG_INGRESS_MM:
+		ranging_cfg->distance_ingress_mm = nla_get_u32(iter);
+		break;
+	case NAN_REQ_ATTR_RANGING_CFG_EGRESS_MM:
+		ranging_cfg->distance_egress_mm = nla_get_u32(iter);
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static int slsi_nan_get_security_info_nl(struct slsi_dev *sdev, struct slsi_nan_security_info *sec_info,
+					 const struct nlattr *iter, int nl_attr_id)
+{
+	u32 len = 0;
+
+	switch (nl_attr_id) {
+	case NAN_REQ_ATTR_CIPHER_TYPE:
+		sec_info->cipher_type = nla_get_u32(iter);
+		break;
+	case NAN_REQ_ATTR_SECURITY_KEY_TYPE:
+		sec_info->key_info.key_type = nla_get_u8(iter);
+		break;
+	case NAN_REQ_ATTR_SECURITY_PMK_LEN:
+		len = nla_get_u32(iter);
+		sec_info->key_info.body.pmk_info.pmk_len = len;
+		break;
+	case NAN_REQ_ATTR_SECURITY_PMK:
+		memcpy(sec_info->key_info.body.pmk_info.pmk, nla_data(iter), len);
+		break;
+	case NAN_REQ_ATTR_SECURITY_PASSPHRASE_LEN:
+		len = nla_get_u32(iter);
+		sec_info->key_info.body.passphrase_info.passphrase_len = len;
+		break;
+	case NAN_REQ_ATTR_SECURITY_PASSPHRASE:
+		memcpy(sec_info->key_info.body.passphrase_info.passphrase, nla_data(iter), len);
+		break;
+	case NAN_REQ_ATTR_SCID_LEN:
+		sec_info->scid_len = nla_get_u32(iter);
+		break;
+	case NAN_REQ_ATTR_SCID:
+		memcpy(sec_info->scid, nla_data(iter), sec_info->scid_len);
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static int slsi_nan_get_range_resp_cfg_nl(struct slsi_dev *sdev, struct slsi_nan_range_response_cfg *cfg,
+					  const struct nlattr *iter, int nl_attr_id)
+{
+	switch (nl_attr_id) {
+	case NAN_REQ_ATTR_RANGE_RESPONSE_CFG_PUBLISH_ID:
+		cfg->publish_id = nla_get_u16(iter);
+		break;
+
+	case NAN_REQ_ATTR_RANGE_RESPONSE_CFG_REQUESTOR_ID:
+		cfg->requestor_instance_id = nla_get_u32(iter);
+		break;
+
+	case NAN_REQ_ATTR_RANGE_RESPONSE_CFG_PEER_ADDR:
+		memcpy(cfg->peer_addr, nla_data(iter), ETH_ALEN);
+		break;
+
+	case NAN_REQ_ATTR_RANGE_RESPONSE_CFG_RANGING_RESPONSE:
+		cfg->ranging_response = nla_get_u8(iter);
+		break;
+
+	default:
+		return -EINVAL;
+	}
+	return 0;
 }
 
 static int slsi_nan_enable_get_nl_params(struct slsi_dev *sdev, struct slsi_hal_nan_enable_req *hal_req,
@@ -243,6 +391,29 @@ static int slsi_nan_enable_get_nl_params(struct slsi_dev *sdev, struct slsi_hal_
 			hal_req->config_5g_channel = 1;
 			break;
 
+		case NAN_REQ_ATTR_SUBSCRIBE_SID_BEACON_VAL:
+			hal_req->subscribe_sid_beacon_val = nla_get_u8(iter);
+			hal_req->config_subscribe_sid_beacon = 1;
+			break;
+
+		case NAN_REQ_ATTR_DW_2G4_INTERVAL:
+			hal_req->dw_2dot4g_interval_val = nla_get_u8(iter);
+			/* valid range for 2.4G is 1-5 */
+			if (hal_req->dw_2dot4g_interval_val > 0  && hal_req->dw_2dot4g_interval_val < 5)
+				hal_req->config_2dot4g_dw_band = 1;
+			break;
+
+		case NAN_REQ_ATTR_DW_5G_INTERVAL:
+			hal_req->dw_5g_interval_val = nla_get_u8(iter);
+			/* valid range for 5g is 0-5 */
+			if (hal_req->dw_5g_interval_val < 5)
+				hal_req->config_5g_dw_band = 1;
+			break;
+
+		case NAN_REQ_ATTR_DISC_MAC_ADDR_RANDOM_INTERVAL:
+			hal_req->disc_mac_addr_rand_interval_sec = nla_get_u8(iter);
+			break;
+
 		default:
 			SLSI_ERR(sdev, "Unexpected NAN enable attribute TYPE:%d\n", type);
 			return SLSI_HAL_NAN_STATUS_INVALID_PARAM;
@@ -352,7 +523,7 @@ int slsi_nan_disable(struct wiphy *wiphy, struct wireless_dev *wdev, const void 
 static int slsi_nan_publish_get_nl_params(struct slsi_dev *sdev, struct slsi_hal_nan_publish_req *hal_req,
 					  const void *data, int len)
 {
-	int type, tmp;
+	int type, tmp, r;
 	const struct nlattr *iter;
 
 	memset(hal_req, 0, sizeof(*hal_req));
@@ -430,9 +601,31 @@ static int slsi_nan_publish_get_nl_params(struct slsi_dev *sdev, struct slsi_hal
 			hal_req->recv_indication_cfg = nla_get_u8(iter);
 			break;
 
+		case NAN_REQ_ATTR_PUBLISH_SDEA_LEN:
+			hal_req->sdea_service_specific_info_len = nla_get_u16(iter);
+			break;
+
+		case NAN_REQ_ATTR_PUBLISH_SDEA:
+			memcpy(hal_req->sdea_service_specific_info, nla_data(iter),
+			       hal_req->sdea_service_specific_info_len);
+			break;
+
+		case NAN_REQ_ATTR_RANGING_AUTO_RESPONSE:
+			hal_req->ranging_auto_response = nla_get_u8(iter);
+			break;
+
 		default:
-			SLSI_ERR(sdev, "Unexpected NAN publish attribute TYPE:%d\n", type);
-			return SLSI_HAL_NAN_STATUS_INVALID_PARAM;
+			r = slsi_nan_get_sdea_params_nl(sdev, &hal_req->sdea_params, iter, type);
+			if (r)
+				r = slsi_nan_get_ranging_cfg_nl(sdev, &hal_req->ranging_cfg, iter, type);
+			if (r)
+				r = slsi_nan_get_security_info_nl(sdev, &hal_req->sec_info, iter, type);
+			if (r)
+				r = slsi_nan_get_range_resp_cfg_nl(sdev, &hal_req->range_response_cfg, iter, type);
+			if (r) {
+				SLSI_ERR(sdev, "Unexpected NAN publish attribute TYPE:%d\n", type);
+				return SLSI_HAL_NAN_STATUS_INVALID_PARAM;
+			}
 		}
 	}
 	return SLSI_HAL_NAN_STATUS_SUCCESS;
@@ -441,7 +634,7 @@ static int slsi_nan_publish_get_nl_params(struct slsi_dev *sdev, struct slsi_hal
 int slsi_nan_publish(struct wiphy *wiphy, struct wireless_dev *wdev, const void *data, int len)
 {
 	struct slsi_dev *sdev = SDEV_FROM_WIPHY(wiphy);
-	struct slsi_hal_nan_publish_req hal_req;
+	struct slsi_hal_nan_publish_req *hal_req;
 	struct net_device *dev = slsi_nan_get_netdev(sdev);
 	struct netdev_vif *ndev_vif;
 	int ret;
@@ -449,15 +642,24 @@ int slsi_nan_publish(struct wiphy *wiphy, struct wireless_dev *wdev, const void 
 	u32 publish_id = 0;
 
 	if (!dev) {
-		SLSI_ERR(sdev, "NAN netif not active!!");
+		SLSI_ERR(sdev, "NAN netif not active!!\n");
 		ret = -EINVAL;
 		reply_status = SLSI_HAL_NAN_STATUS_NAN_NOT_ALLOWED;
 		goto exit;
 	}
 
+	hal_req = kmalloc(sizeof(*hal_req), GFP_KERNEL);
+	if (!hal_req) {
+		SLSI_ERR(sdev, "failed to alloc hal_req\n");
+		reply_status = SLSI_HAL_NAN_STATUS_NO_RESOURCE_AVAILABLE;
+		ret = -ENOMEM;
+		goto exit;
+	}
+
 	ndev_vif = netdev_priv(dev);
-	reply_status = slsi_nan_publish_get_nl_params(sdev, &hal_req, data, len);
+	reply_status = slsi_nan_publish_get_nl_params(sdev, hal_req, data, len);
 	if (reply_status != SLSI_HAL_NAN_STATUS_SUCCESS) {
+		kfree(hal_req);
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -471,22 +673,22 @@ int slsi_nan_publish(struct wiphy *wiphy, struct wireless_dev *wdev, const void 
 		goto exit_with_lock;
 	}
 
-	if (!hal_req.publish_id) {
-		hal_req.publish_id = slsi_nan_get_new_publish_id(ndev_vif);
-	} else if (!slsi_nan_is_publish_id_active(ndev_vif, hal_req.publish_id)) {
-		SLSI_WARN(sdev, "Publish id %d not found. map:%x\n", hal_req.publish_id,
+	if (!hal_req->publish_id) {
+		hal_req->publish_id = slsi_nan_get_new_publish_id(ndev_vif);
+	} else if (!slsi_nan_is_publish_id_active(ndev_vif, hal_req->publish_id)) {
+		SLSI_WARN(sdev, "Publish id %d not found. map:%x\n", hal_req->publish_id,
 			  ndev_vif->nan.publish_id_map);
 		reply_status = SLSI_HAL_NAN_STATUS_INVALID_PUBLISH_SUBSCRIBE_ID;
 		ret = -EINVAL;
 		goto exit_with_lock;
 	}
 
-	if (hal_req.publish_id) {
-		ret = slsi_mlme_nan_publish(sdev, dev, &hal_req, hal_req.publish_id);
+	if (hal_req->publish_id) {
+		ret = slsi_mlme_nan_publish(sdev, dev, hal_req, hal_req->publish_id);
 		if (ret)
 			reply_status = SLSI_HAL_NAN_STATUS_INTERNAL_FAILURE;
 		else
-			publish_id = hal_req.publish_id;
+			publish_id = hal_req->publish_id;
 	} else {
 		reply_status = SLSI_HAL_NAN_STATUS_INVALID_PUBLISH_SUBSCRIBE_ID;
 		SLSI_WARN(sdev, "Too Many concurrent PUBLISH REQ(map:%x)\n",
@@ -495,6 +697,7 @@ int slsi_nan_publish(struct wiphy *wiphy, struct wireless_dev *wdev, const void 
 	}
 exit_with_lock:
 	SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
+	kfree(hal_req);
 exit:
 	slsi_vendor_nan_command_reply(wiphy, reply_status, ret, NAN_RESPONSE_PUBLISH, publish_id, NULL);
 	return ret;
@@ -555,7 +758,7 @@ exit:
 static int slsi_nan_subscribe_get_nl_params(struct slsi_dev *sdev, struct slsi_hal_nan_subscribe_req *hal_req,
 					    const void *data, int len)
 {
-	int type, tmp;
+	int type, tmp, r;
 	const struct nlattr *iter;
 
 	memset(hal_req, 0, sizeof(*hal_req));
@@ -654,9 +857,31 @@ static int slsi_nan_subscribe_get_nl_params(struct slsi_dev *sdev, struct slsi_h
 			hal_req->recv_indication_cfg = nla_get_u8(iter);
 			break;
 
+		case NAN_REQ_ATTR_PUBLISH_SDEA_LEN:
+			hal_req->sdea_service_specific_info_len = nla_get_u16(iter);
+			break;
+
+		case NAN_REQ_ATTR_PUBLISH_SDEA:
+			memcpy(hal_req->sdea_service_specific_info, nla_data(iter),
+			       hal_req->sdea_service_specific_info_len);
+			break;
+
+		case NAN_REQ_ATTR_RANGING_AUTO_RESPONSE:
+			hal_req->ranging_auto_response = nla_get_u8(iter);
+			break;
+
 		default:
-			SLSI_ERR(sdev, "Unexpected NAN subscribe attribute TYPE:%d\n", type);
-			return SLSI_HAL_NAN_STATUS_INVALID_PARAM;
+			r = slsi_nan_get_sdea_params_nl(sdev, &hal_req->sdea_params, iter, type);
+			if (r)
+				r = slsi_nan_get_ranging_cfg_nl(sdev, &hal_req->ranging_cfg, iter, type);
+			if (r)
+				r = slsi_nan_get_security_info_nl(sdev, &hal_req->sec_info, iter, type);
+			if (r)
+				r = slsi_nan_get_range_resp_cfg_nl(sdev, &hal_req->range_response_cfg, iter, type);
+			if (r) {
+				SLSI_ERR(sdev, "Unexpected NAN subscribe attribute TYPE:%d\n", type);
+				return SLSI_HAL_NAN_STATUS_INVALID_PARAM;
+			}
 		}
 	}
 	return SLSI_HAL_NAN_STATUS_SUCCESS;
@@ -821,6 +1046,15 @@ static int slsi_nan_followup_get_nl_params(struct slsi_dev *sdev, struct slsi_ha
 
 		case NAN_REQ_ATTR_FOLLOWUP_RECV_IND_CFG:
 			hal_req->recv_indication_cfg = nla_get_u8(iter);
+			break;
+
+		case NAN_REQ_ATTR_PUBLISH_SDEA_LEN:
+			hal_req->sdea_service_specific_info_len =  nla_get_u16(iter);
+			break;
+
+		case NAN_REQ_ATTR_PUBLISH_SDEA:
+			memcpy(hal_req->sdea_service_specific_info, nla_data(iter),
+			       hal_req->sdea_service_specific_info_len);
 			break;
 
 		default:
@@ -1081,6 +1315,30 @@ static int slsi_nan_config_get_nl_params(struct slsi_dev *sdev, struct slsi_hal_
 				}
 			}
 			break;
+
+		case NAN_REQ_ATTR_SUBSCRIBE_SID_BEACON_VAL:
+			hal_req->subscribe_sid_beacon_val = nla_get_u8(iter);
+			hal_req->config_subscribe_sid_beacon = 1;
+			break;
+
+		case NAN_REQ_ATTR_DW_2G4_INTERVAL:
+			hal_req->dw_2dot4g_interval_val = nla_get_u8(iter);
+			/* valid range for 2.4G is 1-5 */
+			if (hal_req->dw_2dot4g_interval_val > 0  && hal_req->dw_2dot4g_interval_val < 6)
+				hal_req->config_2dot4g_dw_band = 1;
+			break;
+
+		case NAN_REQ_ATTR_DW_5G_INTERVAL:
+			hal_req->dw_5g_interval_val = nla_get_u8(iter);
+			/* valid range for 5g is 0-5 */
+			if (hal_req->dw_5g_interval_val < 6)
+				hal_req->config_5g_dw_band = 1;
+			break;
+
+		case NAN_REQ_ATTR_DISC_MAC_ADDR_RANDOM_INTERVAL:
+			hal_req->disc_mac_addr_rand_interval_sec = nla_get_u8(iter);
+			break;
+
 		default:
 			SLSI_ERR(sdev, "Unexpected NAN config attribute TYPE:%d\n", type);
 			return SLSI_HAL_NAN_STATUS_INVALID_PARAM;
@@ -1191,7 +1449,7 @@ int slsi_nan_get_capabilities(struct wiphy *wiphy, struct wireless_dev *wdev, co
 		goto exit_with_mibrsp;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(get_values); i++) {
+	for (i = 0; i < (int)ARRAY_SIZE(get_values); i++) {
 		if (values[i].type == SLSI_MIB_TYPE_UINT) {
 			*capabilities_mib_val[i] = values[i].u.uintValue;
 			SLSI_DBG2(sdev, SLSI_GSCAN, "MIB value = %ud\n", *capabilities_mib_val[i]);
@@ -1219,7 +1477,6 @@ void slsi_nan_event(struct slsi_dev *sdev, struct net_device *dev, struct sk_buf
 	u16 event, identifier, evt_reason;
 	u8 *mac_addr;
 	u16 hal_event;
-	struct nlattr *nlattr_start;
 	struct netdev_vif *ndev_vif;
 	enum slsi_nan_disc_event_type disc_event_type = 0;
 
@@ -1227,7 +1484,22 @@ void slsi_nan_event(struct slsi_dev *sdev, struct net_device *dev, struct sk_buf
 	event = fapi_get_u16(skb, u.mlme_nan_event_ind.event);
 	identifier = fapi_get_u16(skb, u.mlme_nan_event_ind.identifier);
 	mac_addr = fapi_get_buff(skb, u.mlme_nan_event_ind.address_or_identifier);
-	evt_reason = fapi_get_u16(skb, u.mlme_nan_event_ind.reason_code);
+
+	switch(fapi_get_u16(skb, u.mlme_nan_event_ind.reason_code)) {
+	case FAPI_REASONCODE_NAN_SERVICE_TERMINATED_TIMEOUT:
+	case FAPI_REASONCODE_NAN_SERVICE_TERMINATED_COUNT_REACHED:
+	case FAPI_REASONCODE_NAN_SERVICE_TERMINATED_DISCOVERY_SHUTDOWN:
+	case FAPI_REASONCODE_NAN_SERVICE_TERMINATED_USER_REQUEST:
+	case FAPI_REASONCODE_NAN_TRANSMIT_FOLLOWUP_SUCCESS:
+		evt_reason = SLSI_HAL_NAN_STATUS_SUCCESS;
+		break;
+	case FAPI_REASONCODE_NAN_TRANSMIT_FOLLOWUP_FAILURE:
+		evt_reason = SLSI_HAL_NAN_STATUS_PROTOCOL_FAILURE;
+		break;
+	default :
+		evt_reason = SLSI_HAL_NAN_STATUS_INTERNAL_FAILURE;
+		break;
+	}
 
 	switch (event) {
 	case FAPI_EVENT_WIFI_EVENT_NAN_PUBLISH_TERMINATED:
@@ -1251,6 +1523,9 @@ void slsi_nan_event(struct slsi_dev *sdev, struct net_device *dev, struct sk_buf
 		disc_event_type = NAN_EVENT_ID_JOINED_CLUSTER;
 		hal_event = SLSI_NL80211_NAN_DISCOVERY_ENGINE_EVENT;
 		break;
+	case FAPI_EVENT_WIFI_EVENT_NAN_TRANSMIT_FOLLOWUP:
+		hal_event = SLSI_NL80211_NAN_TRANSMIT_FOLLOWUP_STATUS;
+		break;
 	default:
 		return;
 	}
@@ -1270,28 +1545,18 @@ void slsi_nan_event(struct slsi_dev *sdev, struct net_device *dev, struct sk_buf
 		return;
 	}
 
-	nlattr_start = nla_nest_start(nl_skb, NL80211_ATTR_VENDOR_DATA);
-	if (!nlattr_start) {
-		SLSI_ERR(sdev, "failed to put NL80211_ATTR_VENDOR_DATA\n");
-		/* Dont use slsi skb wrapper for this free */
-		kfree_skb(nl_skb);
-		return;
-	}
-
+	res |= nla_put_be16(nl_skb, NAN_EVT_ATTR_STATUS, evt_reason);
 	switch (hal_event) {
 	case SLSI_NL80211_NAN_PUBLISH_TERMINATED_EVENT:
 		res |= nla_put_be16(nl_skb, NAN_EVT_ATTR_PUBLISH_ID, identifier);
-		res |= nla_put_be16(nl_skb, NAN_EVT_ATTR_PUBLISH_ID, evt_reason);
-		ndev_vif->nan.publish_id_map &= ~BIT(identifier);
+		ndev_vif->nan.publish_id_map &= (u32)~BIT(identifier);
 		break;
 	case SLSI_NL80211_NAN_MATCH_EXPIRED_EVENT:
 		res |= nla_put_be16(nl_skb, NAN_EVT_ATTR_MATCH_PUBLISH_SUBSCRIBE_ID, identifier);
-		res |= nla_put_be16(nl_skb, NAN_EVT_ATTR_MATCH_REQUESTOR_INSTANCE_ID, evt_reason);
 		break;
 	case SLSI_NL80211_NAN_SUBSCRIBE_TERMINATED_EVENT:
 		res |= nla_put_be16(nl_skb, NAN_EVT_ATTR_SUBSCRIBE_ID, identifier);
-		res |= nla_put_be16(nl_skb, NAN_EVT_ATTR_SUBSCRIBE_REASON, evt_reason);
-		ndev_vif->nan.subscribe_id_map &= ~BIT(identifier);
+		ndev_vif->nan.subscribe_id_map &= (u32)~BIT(identifier);
 		break;
 	case SLSI_NL80211_NAN_DISCOVERY_ENGINE_EVENT:
 		res |= nla_put_be16(nl_skb, NAN_EVT_ATTR_DISCOVERY_ENGINE_EVT_TYPE, disc_event_type);
@@ -1306,86 +1571,72 @@ void slsi_nan_event(struct slsi_dev *sdev, struct net_device *dev, struct sk_buf
 		return;
 	}
 
-	nla_nest_end(nl_skb, nlattr_start);
-
 	cfg80211_vendor_event(nl_skb, GFP_KERNEL);
 }
 
 void slsi_nan_followup_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
 {
 	u16 tag_id, tag_len;
-	u8  *fapi_data_p, *ptr;
-	u8  followup_ie_header[] = {0xdd, 0, 0, 0x16, 0x32, 0x0b, 0x05};
-	int fapi_data_len;
+	u8  *stitched_ie_p, *ptr;
+	int stitched_ie_len;
 	struct slsi_hal_nan_followup_ind *hal_evt;
 	struct sk_buff *nl_skb;
 	int res;
-	struct nlattr *nlattr_start;
+
+	SLSI_DBG3(sdev, SLSI_GSCAN, "\n");
+	stitched_ie_len = fapi_get_datalen(skb); /* max length of stitched_ie */
+	if (!stitched_ie_len) {
+		SLSI_ERR(sdev, "mlme_nan_followup_ind no mbulk data\n");
+		return;
+	}
+	stitched_ie_p = kmalloc(stitched_ie_len, GFP_KERNEL);
+	if (!stitched_ie_p) {
+		SLSI_ERR(sdev, "No memory for followup_ind fapi_data\n");
+		return;
+	}
 
 	hal_evt = kmalloc(sizeof(*hal_evt), GFP_KERNEL);
 	if (!hal_evt) {
-		SLSI_ERR(sdev, "No memory for service_ind\n");
+		SLSI_ERR(sdev, "No memory for followup_ind\n");
+		kfree(stitched_ie_p);
+		return;
+	}
+	memset(hal_evt, 0, sizeof(*hal_evt));
+	stitched_ie_len = slsi_nan_stitch_ie(fapi_get_data(skb), stitched_ie_len, 0x050b, stitched_ie_p);
+	if (!stitched_ie_len) {
+		SLSI_ERR(sdev, "No followup ind IE\n");
+		kfree(hal_evt);
+		kfree(stitched_ie_p);
 		return;
 	}
 	hal_evt->publish_subscribe_id = fapi_get_u16(skb, u.mlme_nan_followup_ind.publish_subscribe_id);
-	hal_evt->requestor_instance_id = fapi_get_u16(skb, u.mlme_nan_followup_ind.requestor_instance_id);
-	fapi_data_p = fapi_get_data(skb);
-	fapi_data_len = fapi_get_datalen(skb);
-	if (!fapi_data_len) {
-		SLSI_ERR(sdev, "mlme_nan_followup_ind no mbulk data\n");
-		kfree(hal_evt);
-		return;
-	}
+	hal_evt->requestor_instance_id = fapi_get_u16(skb, u.mlme_nan_followup_ind.peer_id);
+	ptr = stitched_ie_p + 7; /* 7 = ie_id(1), ie_len(1), oui(3) type/subtype(2)*/
 
-	memset(&hal_evt, 0, sizeof(hal_evt));
-
-	while (fapi_data_len) {
-		ptr = fapi_data_p;
-		if (fapi_data_len < ptr[1] + 2) {
-			SLSI_ERR(sdev, "len err[avail:%d,ie:%d]\n", fapi_data_len, fapi_data_p[1] + 2);
+	ether_addr_copy(hal_evt->addr, ptr);
+	ptr += ETH_ALEN;
+	ptr += 1; /* skip priority */
+	hal_evt->dw_or_faw = *ptr;
+	ptr += 1;
+	while (stitched_ie_len > (ptr - stitched_ie_p) + 4) {
+		tag_id = *(u16 *)ptr;
+		ptr += 2;
+		tag_len = *(u16 *)ptr;
+		ptr += 2;
+		if (stitched_ie_p[1] + 2 < (ptr - stitched_ie_p) + tag_len) {
+			SLSI_ERR(sdev, "TLV error\n");
 			kfree(hal_evt);
+			kfree(stitched_ie_p);
 			return;
 		}
-		if (ptr[1] < sizeof(followup_ie_header) - 2 + 6 + 1 + 1) {
-			SLSI_ERR(sdev, "len err[min:%d,ie:%d]\n", (u32)sizeof(followup_ie_header) - 2 + 6 + 1 + 1,
-				 fapi_data_p[1] + 2);
-			kfree(hal_evt);
-			return;
+		if (tag_id == SLSI_FAPI_NAN_SERVICE_SPECIFIC_INFO) {
+			hal_evt->service_specific_info_len = tag_len;
+			memcpy(hal_evt->service_specific_info, ptr, tag_len);
+		} else if (tag_id == SLSI_FAPI_NAN_SDEA) {
+			hal_evt->sdea_service_specific_info_len = tag_len;
+			memcpy(hal_evt->sdea_service_specific_info, ptr, tag_len);
 		}
-		if (followup_ie_header[0] != ptr[0] ||  followup_ie_header[2] != ptr[2] ||
-		    followup_ie_header[3] != ptr[3] ||  followup_ie_header[4] != ptr[4] ||
-		    followup_ie_header[5] != ptr[5] || followup_ie_header[6] != ptr[6]) {
-			SLSI_ERR(sdev, "unknown IE:%x-%d\n", fapi_data_p[0], fapi_data_p[1] + 2);
-			kfree(hal_evt);
-			return;
-		}
-
-		ptr += sizeof(followup_ie_header);
-
-		ether_addr_copy(hal_evt->addr, ptr);
-		ptr += ETH_ALEN;
-		ptr += 1; /* skip priority */
-		hal_evt->dw_or_faw = *ptr;
-		ptr += 1;
-		while (fapi_data_p[1] + 2 > (ptr - fapi_data_p) + 4) {
-			tag_id = *(u16 *)ptr;
-			ptr += 2;
-			tag_len = *(u16 *)ptr;
-			ptr += 2;
-			if (fapi_data_p[1] + 2 < (ptr - fapi_data_p) + tag_len) {
-				SLSI_ERR(sdev, "TLV error\n");
-				kfree(hal_evt);
-				return;
-			}
-			if (tag_id == SLSI_FAPI_NAN_SERVICE_SPECIFIC_INFO) {
-				hal_evt->service_specific_info_len = tag_len;
-				memcpy(hal_evt->service_specific_info, ptr, tag_len);
-			}
-			ptr += tag_len;
-		}
-
-		fapi_data_p += fapi_data_p[1] + 2;
-		fapi_data_len -= fapi_data_p[1] + 2;
+		ptr += tag_len;
 	}
 
 #ifdef CONFIG_SCSC_WLAN_DEBUG
@@ -1403,15 +1654,7 @@ void slsi_nan_followup_ind(struct slsi_dev *sdev, struct net_device *dev, struct
 	if (!nl_skb) {
 		SLSI_ERR(sdev, "NO MEM for nl_skb!!!\n");
 		kfree(hal_evt);
-		return;
-	}
-
-	nlattr_start = nla_nest_start(nl_skb, NL80211_ATTR_VENDOR_DATA);
-	if (!nlattr_start) {
-		SLSI_ERR(sdev, "failed to put NL80211_ATTR_VENDOR_DATA\n");
-		kfree(hal_evt);
-		/* Dont use slsi skb wrapper for this free */
-		kfree_skb(nl_skb);
+		kfree(stitched_ie_p);
 		return;
 	}
 
@@ -1425,141 +1668,142 @@ void slsi_nan_followup_ind(struct slsi_dev *sdev, struct net_device *dev, struct
 	if (hal_evt->service_specific_info_len)
 		res |= nla_put(nl_skb, NAN_EVT_ATTR_FOLLOWUP_SERVICE_SPECIFIC_INFO, hal_evt->service_specific_info_len,
 			       hal_evt->service_specific_info);
+	res |= nla_put_u16(nl_skb, NAN_EVT_ATTR_SDEA_LEN, hal_evt->sdea_service_specific_info_len);
+	if (hal_evt->sdea_service_specific_info_len)
+		res |= nla_put(nl_skb, NAN_EVT_ATTR_SDEA, hal_evt->sdea_service_specific_info_len,
+			       hal_evt->sdea_service_specific_info);
 
 	if (res) {
 		SLSI_ERR(sdev, "Error in nla_put*:%x\n", res);
 		kfree(hal_evt);
+		kfree(stitched_ie_p);
 		/* Dont use slsi skb wrapper for this free */
 		kfree_skb(nl_skb);
 		return;
 	}
 
-	nla_nest_end(nl_skb, nlattr_start);
-
 	cfg80211_vendor_event(nl_skb, GFP_KERNEL);
 	kfree(hal_evt);
+	kfree(stitched_ie_p);
 }
 
 void slsi_nan_service_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *skb)
 {
 	u16 tag_id, tag_len;
-	u8  *fapi_data_p, *ptr;
-	u8  match_ie_header[] = {0xdd, 0, 0, 0x16, 0x32, 0x0b, 0x04};
-	int fapi_data_len;
+	u8  *stitched_ie_p, *ptr;
+	const u8 *ie_ptr;
+	int stitched_ie_len, ie_len;
 	struct slsi_hal_nan_match_ind *hal_evt;
 	struct sk_buff *nl_skb;
-	int res, i;
-	struct slsi_hal_nan_receive_post_discovery *discovery_attr;
-	struct slsi_hal_nan_further_availability_channel *famchan;
-	struct nlattr *nlattr_start, *nlattr_nested;
+	int res;
 
 	SLSI_DBG3(sdev, SLSI_GSCAN, "\n");
+
+	stitched_ie_len = fapi_get_datalen(skb); /* max length of stitched_ie */
+	if (!stitched_ie_len) {
+		SLSI_ERR(sdev, "mlme_nan_service_ind no mbulk data\n");
+		return;
+	}
+
+	stitched_ie_p = kmalloc(stitched_ie_len, GFP_KERNEL);
+	if (!stitched_ie_p) {
+		SLSI_ERR(sdev, "No memory for service_ind fapi_data\n");
+		return;
+	}
 
 	hal_evt = kmalloc(sizeof(*hal_evt), GFP_KERNEL);
 	if (!hal_evt) {
 		SLSI_ERR(sdev, "No memory for service_ind\n");
-		return;
-	}
-
-	hal_evt->publish_subscribe_id = fapi_get_u16(skb, u.mlme_nan_service_ind.publish_subscribe_id);
-	hal_evt->requestor_instance_id = fapi_get_u32(skb, u.mlme_nan_service_ind.requestor_instance_id);
-	fapi_data_p = fapi_get_data(skb);
-	fapi_data_len = fapi_get_datalen(skb);
-	if (!fapi_data_len) {
-		SLSI_ERR(sdev, "mlme_nan_followup_ind no mbulk data\n");
-		kfree(hal_evt);
+		kfree(stitched_ie_p);
 		return;
 	}
 
 	memset(hal_evt, 0, sizeof(*hal_evt));
+	stitched_ie_len = slsi_nan_stitch_ie(fapi_get_data(skb), stitched_ie_len, 0x040b, stitched_ie_p);
+	if (!stitched_ie_len) {
+		SLSI_ERR(sdev, "No match ind IE\n");
+		kfree(hal_evt);
+		kfree(stitched_ie_p);
+		return;
+	}
+	hal_evt->publish_subscribe_id = fapi_get_u16(skb, u.mlme_nan_service_ind.publish_subscribe_id);
+	hal_evt->requestor_instance_id = fapi_get_u16(skb, u.mlme_nan_service_ind.peer_id);
 
-	while (fapi_data_len) {
-		ptr = fapi_data_p;
-		if (fapi_data_len < ptr[1] + 2) {
-			SLSI_ERR(sdev, "len err[avail:%d,ie:%d]\n", fapi_data_len, fapi_data_p[1] + 2);
+	/* 7 = ie_id(1), ie_len(1), oui(3) type/subtype(2)*/
+	ptr = stitched_ie_p + 7;
+	ether_addr_copy(hal_evt->addr, ptr);
+	ptr += ETH_ALEN;
+	hal_evt->match_occurred_flag = *ptr;
+	ptr += 1;
+	hal_evt->out_of_resource_flag = *ptr;
+	ptr += 1;
+	hal_evt->rssi_value = *ptr;
+	ptr += 1 + 8; /* skip 8 bytes related to datapath and ranging*/
+	while (stitched_ie_len > (ptr - stitched_ie_p) + 4) {
+		tag_id = *(u16 *)ptr;
+		ptr += 2;
+		tag_len = *(u16 *)ptr;
+		ptr += 2;
+		if (stitched_ie_p[1] + 2 < (ptr - stitched_ie_p) + tag_len) {
+			SLSI_ERR(sdev, "TLV error\n");
 			kfree(hal_evt);
+			kfree(stitched_ie_p);
 			return;
 		}
-		if (ptr[1] < sizeof(match_ie_header) - 2 + 6 + 1 + 1 + 1) {
-			SLSI_ERR(sdev, "len err[min:%d,ie:%d]\n", (u32)sizeof(match_ie_header) - 2 + 6 + 1 + 1,
-				 fapi_data_p[1] + 2);
-			kfree(hal_evt);
-			return;
-		}
-		if (match_ie_header[0] != ptr[0] ||  match_ie_header[2] != ptr[2] ||
-		    match_ie_header[3] != ptr[3] ||  match_ie_header[4] != ptr[4] ||
-		    match_ie_header[5] != ptr[5] || match_ie_header[6] != ptr[6]) {
-			SLSI_ERR(sdev, "unknown IE:%x-%d\n", fapi_data_p[0], fapi_data_p[1] + 2);
-			kfree(hal_evt);
-			return;
-		}
+		switch (tag_id) {
+		case SLSI_FAPI_NAN_SERVICE_SPECIFIC_INFO:
+			hal_evt->service_specific_info_len = tag_len;
+			memcpy(hal_evt->service_specific_info, ptr, tag_len);
+			break;
 
-		ptr += sizeof(match_ie_header);
+		case SLSI_FAPI_NAN_SDEA:
+			hal_evt->sdea_service_specific_info_len = tag_len;
+			memcpy(hal_evt->sdea_service_specific_info, ptr, tag_len);
+			break;
 
-		ether_addr_copy(hal_evt->addr, ptr);
-		ptr += ETH_ALEN;
-		hal_evt->match_occurred_flag = *ptr;
-		ptr += 1;
-		hal_evt->out_of_resource_flag = *ptr;
-		ptr += 1;
-		hal_evt->rssi_value = *ptr;
-		ptr += 1;
-		while (fapi_data_p[1] + 2 > (ptr - fapi_data_p) + 4) {
-			tag_id = *(u16 *)ptr;
-			ptr += 2;
-			tag_len = *(u16 *)ptr;
-			ptr += 2;
-			if (fapi_data_p[1] + 2 < (ptr - fapi_data_p) + tag_len) {
-				SLSI_ERR(sdev, "TLV error\n");
-				kfree(hal_evt);
-				return;
-			}
-			switch (tag_id) {
-			case SLSI_FAPI_NAN_SERVICE_SPECIFIC_INFO:
-				hal_evt->service_specific_info_len = tag_len;
-				memcpy(hal_evt->service_specific_info, ptr, tag_len);
-				break;
-			case SLSI_FAPI_NAN_CONFIG_PARAM_CONNECTION_CAPAB:
-				hal_evt->is_conn_capability_valid = 1;
-				if (*ptr & BIT(0))
-					hal_evt->conn_capability.is_wfd_supported = 1;
-				if (*ptr & BIT(1))
-					hal_evt->conn_capability.is_wfds_supported = 1;
-				if (*ptr & BIT(2))
-					hal_evt->conn_capability.is_tdls_supported = 1;
-				if (*ptr & BIT(3))
-					hal_evt->conn_capability.wlan_infra_field = 1;
-				break;
-			case SLSI_FAPI_NAN_CONFIG_PARAM_POST_DISCOVER_PARAM:
-				discovery_attr = &hal_evt->discovery_attr[hal_evt->num_rx_discovery_attr];
-				discovery_attr->type = ptr[0];
-				discovery_attr->role = ptr[1];
-				discovery_attr->duration = ptr[2];
-				discovery_attr->avail_interval_bitmap = le32_to_cpu(*(__le32 *)&ptr[3]);
-				ether_addr_copy(discovery_attr->addr, &ptr[7]);
-				discovery_attr->infrastructure_ssid_len = ptr[13];
-				if (discovery_attr->infrastructure_ssid_len)
-					memcpy(discovery_attr->infrastructure_ssid_val, &ptr[14],
-					       discovery_attr->infrastructure_ssid_len);
-				hal_evt->num_rx_discovery_attr++;
-				break;
-			case SLSI_FAPI_NAN_CONFIG_PARAM_FURTHER_AVAIL_CHANNEL_MAP:
-				famchan = &hal_evt->famchan[hal_evt->num_chans];
-				famchan->entry_control = ptr[0];
-				famchan->class_val =  ptr[1];
-				famchan->channel = ptr[2];
-				famchan->mapid = ptr[3];
-				famchan->avail_interval_bitmap = le32_to_cpu(*(__le32 *)&ptr[4]);
-				hal_evt->num_chans++;
-				break;
-			case SLSI_FAPI_NAN_CLUSTER_ATTRIBUTE:
-				break;
-			}
-			ptr += tag_len;
+		case SLSI_FAPI_NAN_SDF_MATCH_FILTER:
+			hal_evt->sdf_match_filter_len = tag_len;
+			memcpy(hal_evt->sdf_match_filter, ptr, tag_len);
+			break;
 		}
+		ptr += tag_len;
+	}
 
-		fapi_data_p += fapi_data_p[1] + 2;
-		fapi_data_len -= fapi_data_p[1] + 2;
+	ie_ptr = fapi_get_data(skb);
+	ie_len = fapi_get_datalen(skb);
+#define SLSI_OUI 0x001632
+#define SLSI_OUI_TYPE_NAN_PARAMS 0x0b
+#define SLSI_OUI_TYPE_RTT_PARAMS 0x0a
+	while (ie_ptr && (fapi_get_datalen(skb) > ie_ptr - fapi_get_data(skb))) {
+		ie_ptr = cfg80211_find_vendor_ie(SLSI_OUI, SLSI_OUI_TYPE_NAN_PARAMS, ie_ptr, ie_len);
+		if (!ie_ptr)
+			break;
+		if (ie_len > 9 && ie_ptr[1] > 5 && ie_ptr[6] == 9) {
+			hal_evt->sec_info.cipher_type = ie_ptr[8];
+			break;
+		}
+		ie_len -= ie_ptr[1] + 2;
+		if (ie_len < 3)
+			ie_ptr = NULL;
+		else
+			ie_ptr += ie_ptr[1] + 2;
+	}
+
+	ie_ptr = fapi_get_data(skb);
+	ie_len = fapi_get_datalen(skb);
+	while (ie_ptr && (fapi_get_datalen(skb) > ie_ptr - fapi_get_data(skb))) {
+		ie_ptr = cfg80211_find_vendor_ie(SLSI_OUI, SLSI_OUI_TYPE_RTT_PARAMS, ie_ptr, ie_len);
+		if (!ie_ptr)
+			break;
+		if (ie_len >= 0x35 && ie_ptr[1] == 0x33 && ie_ptr[6] == 2)
+			hal_evt->range_measurement_mm = ie_ptr[43];
+			hal_evt->ranging_event_type = 0;
+			break;
+		ie_len -= ie_ptr[1] + 2;
+		if (ie_len < 3)
+			ie_ptr = NULL;
+		else
+			ie_ptr += ie_ptr[1] + 2;
 	}
 
 #ifdef CONFIG_SCSC_WLAN_DEBUG
@@ -1575,18 +1819,9 @@ void slsi_nan_service_ind(struct slsi_dev *sdev, struct net_device *dev, struct 
 	if (!nl_skb) {
 		SLSI_ERR(sdev, "NO MEM for nl_skb!!!\n");
 		kfree(hal_evt);
+		kfree(stitched_ie_p);
 		return;
 	}
-
-	nlattr_start = nla_nest_start(nl_skb, NL80211_ATTR_VENDOR_DATA);
-	if (!nlattr_start) {
-		SLSI_ERR(sdev, "failed to put NL80211_ATTR_VENDOR_DATA\n");
-		kfree(hal_evt);
-		/* Dont use slsi skb wrapper for this free */
-		kfree_skb(nl_skb);
-		return;
-	}
-
 	res = nla_put_u16(nl_skb, NAN_EVT_ATTR_MATCH_PUBLISH_SUBSCRIBE_ID, hal_evt->publish_subscribe_id);
 	res |= nla_put_u32(nl_skb, NAN_EVT_ATTR_MATCH_REQUESTOR_INSTANCE_ID, hal_evt->requestor_instance_id);
 	res |= nla_put(nl_skb, NAN_EVT_ATTR_MATCH_ADDR, ETH_ALEN, hal_evt->addr);
@@ -1598,91 +1833,28 @@ void slsi_nan_service_ind(struct slsi_dev *sdev, struct net_device *dev, struct 
 	if (hal_evt->sdf_match_filter_len)
 		res |= nla_put(nl_skb, NAN_EVT_ATTR_MATCH_SDF_MATCH_FILTER, hal_evt->sdf_match_filter_len,
 			hal_evt->sdf_match_filter);
+	res |= nla_put_u16(nl_skb, NAN_EVT_ATTR_SDEA_LEN, hal_evt->sdea_service_specific_info_len);
+	if (hal_evt->sdea_service_specific_info_len)
+		res |= nla_put(nl_skb, NAN_EVT_ATTR_SDEA, hal_evt->sdea_service_specific_info_len,
+			hal_evt->sdea_service_specific_info);
 
 	res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_MATCH_OCCURRED_FLAG, hal_evt->match_occurred_flag);
 	res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_OUT_OF_RESOURCE_FLAG, hal_evt->out_of_resource_flag);
 	res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_RSSI_VALUE, hal_evt->rssi_value);
-	res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_CONN_CAPABILITY_IS_IBSS_SUPPORTED,
-		hal_evt->is_conn_capability_valid);
-	if (hal_evt->is_conn_capability_valid) {
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_CONN_CAPABILITY_IS_IBSS_SUPPORTED,
-			hal_evt->conn_capability.is_ibss_supported);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_CONN_CAPABILITY_IS_WFD_SUPPORTED,
-			hal_evt->conn_capability.is_wfd_supported);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_CONN_CAPABILITY_IS_WFDS_SUPPORTED,
-			hal_evt->conn_capability.is_wfds_supported);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_CONN_CAPABILITY_IS_TDLS_SUPPORTED,
-			hal_evt->conn_capability.is_tdls_supported);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_CONN_CAPABILITY_IS_MESH_SUPPORTED,
-			hal_evt->conn_capability.is_mesh_supported);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_CONN_CAPABILITY_WLAN_INFRA_FIELD,
-			hal_evt->conn_capability.wlan_infra_field);
-	}
-
-	res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_NUM_RX_DISCOVERY_ATTR, hal_evt->num_rx_discovery_attr);
-	for (i = 0; i < hal_evt->num_rx_discovery_attr; i++) {
-		nlattr_nested = nla_nest_start(nl_skb, NAN_EVT_ATTR_MATCH_RX_DISCOVERY_ATTR);
-		if (!nlattr_nested) {
-			SLSI_ERR(sdev, "Error in nla_nest_start\n");
-			/* Dont use slsi skb wrapper for this free */
-			kfree_skb(nl_skb);
-			kfree(hal_evt);
-			return;
-		}
-		discovery_attr = &hal_evt->discovery_attr[i];
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_DISC_ATTR_TYPE, discovery_attr->type);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_DISC_ATTR_ROLE, discovery_attr->role);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_DISC_ATTR_DURATION, discovery_attr->duration);
-		res |= nla_put_u32(nl_skb, NAN_EVT_ATTR_MATCH_DISC_ATTR_AVAIL_INTERVAL_BITMAP,
-		       discovery_attr->avail_interval_bitmap);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_DISC_ATTR_MAPID, discovery_attr->mapid);
-		res |= nla_put(nl_skb, NAN_EVT_ATTR_MATCH_DISC_ATTR_ADDR, ETH_ALEN, discovery_attr->addr);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_DISC_ATTR_MESH_ID_LEN, discovery_attr->mesh_id_len);
-		if (discovery_attr->mesh_id_len)
-			res |= nla_put(nl_skb, NAN_EVT_ATTR_MATCH_DISC_ATTR_MESH_ID, discovery_attr->mesh_id_len,
-			       discovery_attr->mesh_id);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_DISC_ATTR_INFRASTRUCTURE_SSID_LEN,
-		       discovery_attr->infrastructure_ssid_len);
-		if (discovery_attr->infrastructure_ssid_len)
-			res |= nla_put(nl_skb, NAN_EVT_ATTR_MATCH_DISC_ATTR_INFRASTRUCTURE_SSID_VAL,
-			       discovery_attr->infrastructure_ssid_len, discovery_attr->infrastructure_ssid_val);
-		nla_nest_end(nl_skb, nlattr_nested);
-	}
-
-	res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_NUM_CHANS, hal_evt->num_chans);
-	for (i = 0; i < hal_evt->num_chans; i++) {
-		nlattr_nested = nla_nest_start(nl_skb, NAN_EVT_ATTR_MATCH_FAMCHAN);
-		if (!nlattr_nested) {
-			SLSI_ERR(sdev, "Error in nla_nest_start\n");
-			/* Dont use slsi skb wrapper for this free */
-			kfree_skb(nl_skb);
-			kfree(hal_evt);
-			return;
-		}
-		famchan = &hal_evt->famchan[i];
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_FAM_ENTRY_CONTROL, famchan->entry_control);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_FAM_CLASS_VAL, famchan->class_val);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_FAM_CHANNEL, famchan->channel);
-		res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_FAM_MAPID, famchan->mapid);
-		res |= nla_put_u32(nl_skb, NAN_EVT_ATTR_MATCH_FAM_AVAIL_INTERVAL_BITMAP,
-				   famchan->avail_interval_bitmap);
-	}
-
-	res |= nla_put_u8(nl_skb, NAN_EVT_ATTR_MATCH_CLUSTER_ATTRIBUTE_LEN, hal_evt->cluster_attribute_len);
-	if (hal_evt->cluster_attribute_len)
-		res |= nla_put(nl_skb, NAN_EVT_ATTR_MATCH_CLUSTER_ATTRIBUTE, hal_evt->cluster_attribute_len,
-			       hal_evt->cluster_attribute);
+	res |= nla_put_u32(nl_skb, NAN_EVT_ATTR_RANGE_MEASUREMENT_MM, hal_evt->range_measurement_mm);
+	res |= nla_put_u32(nl_skb, NAN_EVT_ATTR_RANGEING_EVENT_TYPE, hal_evt->ranging_event_type);
+	res |= nla_put_u32(nl_skb, NAN_EVT_ATTR_SECURITY_CIPHER_TYPE, hal_evt->sec_info.cipher_type);
 
 	if (res) {
 		SLSI_ERR(sdev, "Error in nla_put*:%x\n", res);
 		/* Dont use slsi skb wrapper for this free */
 		kfree_skb(nl_skb);
 		kfree(hal_evt);
+		kfree(stitched_ie_p);
 		return;
 	}
 
-	nla_nest_end(nl_skb, nlattr_start);
-
 	cfg80211_vendor_event(nl_skb, GFP_KERNEL);
 	kfree(hal_evt);
+	kfree(stitched_ie_p);
 }

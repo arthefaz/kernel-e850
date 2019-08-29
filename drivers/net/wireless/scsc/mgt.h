@@ -29,6 +29,7 @@
 #define SLSI_IEEE8021X_TYPE_EAP_PACKET   0
 
 #define SLSI_EAPOL_KEY_INFO_KEY_TYPE_BIT_IN_LOWER_BYTE      BIT(3) /* Group = 0, Pairwise = 1 */
+#define SLSI_EAPOL_KEY_INFO_ACK_BIT_IN_LOWER_BYTE           BIT(7)
 #define SLSI_EAPOL_KEY_INFO_MIC_BIT_IN_HIGHER_BYTE          BIT(0)
 #define SLSI_EAPOL_KEY_INFO_SECURE_BIT_IN_HIGHER_BYTE       BIT(1)
 /* pkt_data would start from 802.1X Authentication field (pkt_data[0] = Version).
@@ -188,6 +189,17 @@
 #define SLSI_DHCP_MESSAGE_TYPE_INFORM     0x08
 #define SLSI_DHCP_MESSAGE_TYPE_FORCERENEW 0x09
 #define SLSI_DHCP_MESSAGE_TYPE_INVALID    0x0A
+
+#ifdef CONFIG_SCSC_WLAN_STA_ENHANCED_ARP_DETECT
+#define SLSI_MAX_ARP_SEND_FRAME  8
+#endif
+#define SLSI_ARP_SRC_IP_ADDR_OFFSET   14
+#define SLSI_ARP_DEST_IP_ADDR_OFFSET  24
+#define SLSI_IS_GRATUITOUS_ARP(frame) (!memcmp(&frame[SLSI_ARP_SRC_IP_ADDR_OFFSET],\
+					       &frame[SLSI_ARP_DEST_IP_ADDR_OFFSET], 4))
+#define SLSI_ARP_REPLY_OPCODE  2
+#define SLSI_ARP_REQUEST_OPCODE  1
+#define SLSI_ARP_OPCODE_OFFSET  6
 
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(4, 4, 0))
 	#define WLAN_CATEGORY_WNM 10
@@ -438,9 +450,11 @@ int slsi_del_station(struct wiphy *wiphy, struct net_device *dev, const u8 *mac)
 int slsi_del_station(struct wiphy *wiphy, struct net_device *dev, u8 *mac);
 #endif
 
+int slsi_sta_ieee80211_mode(struct net_device *dev, u16 current_bss_channel_frequency);
 int slsi_vif_activated(struct slsi_dev *sdev, struct net_device *dev);
 void slsi_vif_deactivated(struct slsi_dev *sdev, struct net_device *dev);
-int slsi_handle_disconnect(struct slsi_dev *sdev, struct net_device *dev, u8 *peer_address, u16 reason);
+int slsi_handle_disconnect(struct slsi_dev *sdev, struct net_device *dev, u8 *peer_address, u16 reason,
+			   u8 *disassoc_rsp_ie, int disassoc_rsp_ie_len);
 int slsi_band_update(struct slsi_dev *sdev, int band);
 int slsi_ip_address_changed(struct slsi_dev *sdev, struct net_device *dev, __be32 ipaddress);
 int slsi_send_gratuitous_arp(struct slsi_dev *sdev, struct net_device *dev);
@@ -469,20 +483,34 @@ int slsi_is_mdns_packet(u8 *data);
 int slsi_is_tcp_sync_packet(struct net_device *dev, struct sk_buff *skb);
 #endif
 
+#ifdef CONFIG_SCSC_WLAN_ENHANCED_PKT_FILTER
+int slsi_set_enhanced_pkt_filter(struct net_device *dev, u8 pkt_filter_enable);
+#endif
 void slsi_set_packet_filters(struct slsi_dev *sdev, struct net_device *dev);
 int  slsi_update_packet_filters(struct slsi_dev *sdev, struct net_device *dev);
 int  slsi_clear_packet_filters(struct slsi_dev *sdev, struct net_device *dev);
 int slsi_ap_prepare_add_info_ies(struct netdev_vif *ndev_vif, const u8 *ies, size_t ies_len);
 int slsi_set_mib_roam(struct slsi_dev *dev, struct net_device *ndev, u16 psid, int value);
+#ifdef CONFIG_SCSC_WLAN_SET_PREFERRED_ANTENNA
+int slsi_set_mib_preferred_antenna(struct slsi_dev *dev, u16 value);
+#endif
 void slsi_reset_throughput_stats(struct net_device *dev);
 int slsi_set_mib_rssi_boost(struct slsi_dev *sdev, struct net_device *dev, u16 psid, int index, int boost);
+#ifdef CONFIG_SCSC_WLAN_LOW_LATENCY_MODE
+int slsi_set_mib_soft_roaming_enabled(struct slsi_dev *sdev, struct net_device *dev, bool enable);
+#endif
+#ifdef CONFIG_SCSC_WLAN_STA_ENHANCED_ARP_DETECT
+int slsi_read_enhanced_arp_rx_count_by_lower_mac(struct slsi_dev *sdev, struct net_device *dev, u16 psid);
+void slsi_fill_enhanced_arp_out_of_order_drop_counter(struct netdev_vif *ndev_vif,
+						      struct sk_buff *skb);
+#endif
 void slsi_modify_ies_on_channel_switch(struct net_device *dev, struct cfg80211_ap_settings *settings,
 				       u8 *ds_params_ie, u8 *ht_operation_ie, struct ieee80211_mgmt  *mgmt,
 				       u16 beacon_ie_head_len);
 #ifdef CONFIG_SCSC_WLAN_WIFI_SHARING
 bool slsi_if_valid_wifi_sharing_channel(struct slsi_dev *sdev, int freq);
 void slsi_extract_valid_wifi_sharing_channels(struct slsi_dev *sdev);
-int slsi_check_if_non_indoor_channel(struct slsi_dev *sdev, int freq);
+int slsi_check_if_non_indoor_non_dfs_channel(struct slsi_dev *sdev, int freq);
 int slsi_select_wifi_sharing_ap_channel(struct wiphy *wiphy, struct net_device *dev,
 					 struct cfg80211_ap_settings *settings, struct slsi_dev *sdev,
 					 int *wifi_sharing_channel_switched);
@@ -524,9 +552,20 @@ void slsi_update_supported_channels_regd_flags(struct slsi_dev *sdev);
 #ifdef CONFIG_SCSC_WLAN_HANG_TEST
 int slsi_test_send_hanged_vendor_event(struct net_device *dev);
 #endif
+#ifdef CONFIG_SLSI_WLAN_STA_FWD_BEACON
+int slsi_send_forward_beacon_vendor_event(struct slsi_dev *sdev, const u8 *ssid, const int ssid_len, const u8 *bssid,
+					  u8 channel, const u16 beacon_int, const u64 timestamp, const u64 sys_time);
+int slsi_send_forward_beacon_abort_vendor_event(struct slsi_dev *sdev, u16 reason_code);
+#endif
 void slsi_wlan_dump_public_action_subtype(struct slsi_dev *sdev, struct ieee80211_mgmt *mgmt, bool tx);
 void slsi_reset_channel_flags(struct slsi_dev *sdev);
 
+/* Sysfs based mac address override */
+void slsi_create_sysfs_macaddr(void);
+void slsi_destroy_sysfs_macaddr(void);
 int slsi_find_chan_idx(u16 chan, u8 hw_mode);
-
+#ifdef CONFIG_SCSC_WLAN_SET_NUM_ANTENNAS
+int slsi_set_num_antennas(struct net_device *dev, const u16 num_of_antennas);
+#endif
+int slsi_set_latency_mode(struct net_device *dev, int latency_mode, int cmd_len);
 #endif /*__SLSI_MGT_H__*/

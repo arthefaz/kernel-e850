@@ -1,4 +1,9 @@
 / {
+	i3c_apm_pmic: syscon@11A50000 {
+		compatible = "i3c_apm_pmic", "syscon";
+		reg = <0x0 0x11A50000 0x1800>;
+	};
+
 	dbus_baaw: syscon@14C20000 {			// PMU_DBUS_BAAW
 		compatible = "dbus_baaw", "syscon";
 		reg = <0x0 0x14C20000 0x300>;
@@ -33,6 +38,7 @@
 		interrupt-names = "MBOX","ALIVE","CFG_REQ","WDOG";
 		/* PMU alive handle */
 		samsung,syscon-phandle = <&pmu_system_controller>;
+		samsung,i3c_apm_pmic-syscon-phandle = <&i3c_apm_pmic>;
 		samsung,dbus_baaw-syscon-phandle = <&dbus_baaw>;
 		samsung,pbus_baaw-syscon-phandle = <&pbus_baaw>;
 		samsung,wlbt_remap-syscon-phandle = <&wlbt_remap_base>;

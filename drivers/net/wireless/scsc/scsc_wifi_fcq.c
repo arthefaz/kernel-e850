@@ -67,6 +67,10 @@ uint scsc_wifi_fcq_minimum_smod = 50;
 module_param(scsc_wifi_fcq_minimum_smod, uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(scsc_wifi_fcq_minimum_smod, "Initial value of minimum smod - peer normal (default = 50)");
 
+uint scsc_wifi_fcq_distribution_delay_ms;
+module_param(scsc_wifi_fcq_distribution_delay_ms, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(scsc_wifi_fcq_distribution_delay_ms, "Distribution time in ms (default = 0)");
+
 #define SCSC_WIFI_FCQ_SMOD_RESUME_HYSTERESIS 10
 #define SCSC_WIFI_FCQ_QMOD_RESUME_HYSTERESIS 10
 #define SCSC_WIFI_FCQ_GMOD_RESUME_HYSTERESIS 30
@@ -90,7 +94,8 @@ struct peers_cache {
 	bool is_unicast;
 };
 
-LIST_HEAD(peers_cache_list);
+static LIST_HEAD(peers_cache_list);
+static DEFINE_SPINLOCK(peers_cache_lock);
 
 /* AC qmod mapping */
 /* 0 - indicates not active */
@@ -168,7 +173,7 @@ static inline void fcq_stop_all_queues(struct slsi_dev *sdev)
 {
 	int i;
 	struct peers_cache *pc_node, *next;
-
+	spin_lock_bh(&peers_cache_lock);
 	list_for_each_entry_safe(pc_node, next, &peers_cache_list, list) {
 		/* Stop queues all queues */
 		for (i = 0; i < SLSI_NETIF_Q_PER_PEER; i++) {
@@ -176,6 +181,7 @@ static inline void fcq_stop_all_queues(struct slsi_dev *sdev)
 			netif_stop_subqueue(pc_node->dev, pc_node->qs->ac_q[i].head.netif_queue_id);
 		}
 	}
+	spin_unlock_bh(&peers_cache_lock);
 }
 
 /* Should be called from locked context */
@@ -184,6 +190,7 @@ static inline void fcq_wake_all_queues(struct slsi_dev *sdev)
 	int i;
 	struct peers_cache *pc_node, *next;
 
+	spin_lock_bh(&peers_cache_lock);
 	list_for_each_entry_safe(pc_node, next, &peers_cache_list, list) {
 		/* Wake queues that reported to be active, leave stopped the others. Do not wake queues in pause state */
 		for (i = 0; i < SLSI_NETIF_Q_PER_PEER; i++) {
@@ -195,6 +202,7 @@ static inline void fcq_wake_all_queues(struct slsi_dev *sdev)
 			}
 		}
 	}
+	spin_unlock_bh(&peers_cache_lock);
 }
 
 void scsc_wifi_fcq_pause_queues(struct slsi_dev *sdev)
@@ -231,7 +239,7 @@ static bool fcq_redistribute_qmod_before_stopping(struct scsc_wifi_fcq_data_qset
 	for (i = 1; i < SLSI_NETIF_Q_PER_PEER; i++) {
 		queue = &qs->ac_q[i].head;
 		if (queue->can_be_distributed &&
-		    (ktime_compare(ktime_get(), ktime_add_ms(queue->empty_t, 5000)) > 0)) {
+		    (ktime_compare(ktime_get(), ktime_add_ms(queue->empty_t, scsc_wifi_fcq_distribution_delay_ms)) > 0)) {
 			/* This queue could be redistributed */
 			qs->ac_inuse &= ~(1 << i);
 			/* To prevent further reallocation */
@@ -305,6 +313,7 @@ static void fcq_redistribute_smod(struct net_device *dev, struct slsi_dev *sdev,
 	/* Saturate if number is lower than certian low level */
 	if (new_smod < scsc_wifi_fcq_minimum_smod)
 		new_smod = scsc_wifi_fcq_minimum_smod;
+	spin_lock_bh(&peers_cache_lock);
 	list_for_each_entry_safe(pc_node, next, &peers_cache_list, list) {
 		if (pc_node->is_unicast) {
 			qs_redis = pc_node->qs;
@@ -335,6 +344,7 @@ static void fcq_redistribute_smod(struct net_device *dev, struct slsi_dev *sdev,
 			fcq_redistribute_qmod(pc_node->dev, pc_node->qs, sdev, pc_node->peer_index, pc_node->vif);
 		}
 	}
+	spin_unlock_bh(&peers_cache_lock);
 }
 
 #ifdef EXPERIMENTAL_DYNAMIC_SMOD_ADAPTATION
@@ -347,6 +357,7 @@ static int fcq_redistribute_smod_before_stopping(struct net_device *dev, struct 
 		return false;
 
 	/* Search for nodes that were empty and are candidates to be redistributed */
+	spin_lock_bh(&peers_cache_lock);
 	list_for_each_entry_safe(pc_node, next, &peers_cache_list, list) {
 		if (pc_node->is_unicast) {
 			if (pc_node->qs->can_be_distributed &&
@@ -354,12 +365,14 @@ static int fcq_redistribute_smod_before_stopping(struct net_device *dev, struct 
 				pc_node->qs->in_sleep = true;
 				total_in_sleep += 1;
 				SLSI_DBG4_NODEV(SLSI_WIFI_FCQ, "Smod qs empty. Can be redistributed for vif %d peer_index %d qs->can_be_distributed %d\n", pc_node->vif, pc_node->peer_index, pc_node->qs->can_be_distributed);
-				fcq_redistribute_smod(dev, sdev, total_to_distribute);
 				pc_node->qs->can_be_distributed = false;
+				spin_unlock_bh(&peers_cache_lock);
+				fcq_redistribute_smod(dev, sdev, total_to_distribute);
 				return true;
 			}
 		}
 	}
+	spin_unlock_bh(&peers_cache_lock);
 	return false;
 }
 #endif
@@ -591,12 +604,15 @@ int scsc_wifi_fcq_transmit_data(struct net_device *dev, struct scsc_wifi_fcq_dat
 
 	spin_lock_bh(&qs->cp_lock);
 	/* Check caller matches an existing peer record */
+	spin_lock_bh(&peers_cache_lock);
 	list_for_each_entry_safe(pc_node, next, &peers_cache_list, list) {
 		if (pc_node->qs == qs && pc_node->peer_index == peer_index &&
 		    pc_node->vif == vif && pc_node->dev == dev) {
+			spin_unlock_bh(&peers_cache_lock);
 			goto found;
 		}
 	}
+	spin_unlock_bh(&peers_cache_lock);
 	SLSI_DBG4_NODEV(SLSI_WIFI_FCQ, "Packet dropped. Detected incorrect peer record\n");
 	spin_unlock_bh(&qs->cp_lock);
 	return -EINVAL;
@@ -1040,7 +1056,9 @@ int scsc_wifi_fcq_unicast_qset_init(struct net_device *dev, struct scsc_wifi_fcq
 	pc_new_node->is_unicast = true;
 
 	SLSI_DBG1_NODEV(SLSI_WIFI_FCQ, "Add new peer qs %p vif %d peer->aid %d\n", qs, vif, peer->aid);
+	spin_lock_bh(&peers_cache_lock);
 	list_add_tail(&pc_new_node->list, &peers_cache_list);
+	spin_unlock_bh(&peers_cache_lock);
 
 	if (total == 0) {
 		/* No peers. Reset gcod. */
@@ -1087,7 +1105,9 @@ int scsc_wifi_fcq_multicast_qset_init(struct net_device *dev, struct scsc_wifi_f
 	pc_node->is_unicast = false;
 
 	SLSI_DBG1_NODEV(SLSI_WIFI_FCQ, "Add Multicast Qset %p vif %d peer->aid 0\n", qs, vif);
+	spin_lock_bh(&peers_cache_lock);
 	list_add_tail(&pc_node->list, &peers_cache_list);
+	spin_unlock_bh(&peers_cache_lock);
 
 	fcq_redistribute_qmod(pc_node->dev, pc_node->qs, sdev, pc_node->peer_index, pc_node->vif);
 
@@ -1136,12 +1156,14 @@ void scsc_wifi_fcq_qset_deinit(struct net_device *dev, struct scsc_wifi_fcq_data
 	else
 		SLSI_DBG1_NODEV(SLSI_WIFI_FCQ, "Delete qs %p vif %d Multicast\n", qs, vif);
 
+	spin_lock_bh(&peers_cache_lock);
 	list_for_each_entry_safe(pc_node, next, &peers_cache_list, list) {
 		if (pc_node->qs == qs) {
 			list_del(&pc_node->list);
 			kfree(pc_node);
 		}
 	}
+	spin_unlock_bh(&peers_cache_lock);
 	/* Only count unicast qs */
 	if (total > 0 && peer)
 		total--;

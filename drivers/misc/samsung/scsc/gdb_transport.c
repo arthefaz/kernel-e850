@@ -11,7 +11,6 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <scsc/scsc_logring.h>
-
 #include "mifintrbit.h"
 
 struct clients_node {
@@ -110,10 +109,14 @@ void gdb_transport_release(struct gdb_transport *gdb_transport)
 	list_for_each_entry_safe(gdb_transport_node, gdb_transport_node_next, &gdb_transport_module.gdb_transport_list, list) {
 		if (gdb_transport_node->gdb_transport == gdb_transport) {
 			match = true;
+			SCSC_TAG_INFO(GDB_TRANS, "release client\n");
+			/* Wait for client to close */
+			mutex_lock(&gdb_transport->channel_open_mutex);
 			/* Need to notify clients using the transport has been released */
 			list_for_each_entry_safe(gdb_client_node, gdb_client_next, &gdb_transport_module.clients_list, list) {
 				gdb_client_node->gdb_client->remove(gdb_client_node->gdb_client, gdb_transport);
 			}
+			mutex_unlock(&gdb_transport->channel_open_mutex);
 			list_del(&gdb_transport_node->list);
 			kfree(gdb_transport_node);
 		}
@@ -149,10 +152,15 @@ int gdb_transport_init(struct gdb_transport *gdb_transport, struct scsc_mx *mx, 
 	memset(gdb_transport, 0, sizeof(struct gdb_transport));
 	num_packets = mem_length / packet_size;
 	mutex_init(&gdb_transport->channel_handler_mutex);
+	mutex_init(&gdb_transport->channel_open_mutex);
 	gdb_transport->mx = mx;
 
 	if (type == GDB_TRANSPORT_M4)
 		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_M4, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport);
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+	else if (type == GDB_TRANSPORT_M4_1)
+		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_M4_1, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport);
+#endif
 	else
 		r = mif_stream_init(&gdb_transport->mif_istream, SCSC_MIF_ABS_TARGET_R4, MIF_STREAM_DIRECTION_IN, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_ALLOC, gdb_input_irq_handler, gdb_transport);
 	if (r) {
@@ -162,6 +170,10 @@ int gdb_transport_init(struct gdb_transport *gdb_transport, struct scsc_mx *mx, 
 
 	if (type == GDB_TRANSPORT_M4)
 		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_M4, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport);
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+	else if (type == GDB_TRANSPORT_M4_1)
+		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_M4_1, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport);
+#endif
 	else
 		r = mif_stream_init(&gdb_transport->mif_ostream, SCSC_MIF_ABS_TARGET_R4, MIF_STREAM_DIRECTION_OUT, num_packets, packet_size, mx, MIF_STREAM_INTRBIT_TYPE_RESERVED, gdb_output_irq_handler, gdb_transport);
 	if (r) {
@@ -176,7 +188,6 @@ int gdb_transport_init(struct gdb_transport *gdb_transport, struct scsc_mx *mx, 
 	gdb_transport_node->gdb_transport = gdb_transport;
 	/* Add gdb_transport node */
 	list_add_tail(&gdb_transport_node->list, &gdb_transport_module.gdb_transport_list);
-
 	gdb_transport->type = type;
 	gdb_transport_probe_registered_clients(gdb_transport);
 	return 0;
@@ -184,8 +195,10 @@ int gdb_transport_init(struct gdb_transport *gdb_transport, struct scsc_mx *mx, 
 
 void gdb_transport_send(struct gdb_transport *gdb_transport, void *message, uint32_t message_length)
 {
-	/*int i;*/
 	char msg[300];
+
+	if (message_length > sizeof(msg))
+		return;
 
 	memcpy(msg, message, message_length);
 

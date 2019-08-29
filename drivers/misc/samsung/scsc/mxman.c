@@ -28,12 +28,14 @@
 #include "panicmon.h"
 #include "mxproc.h"
 #include "mxlog_transport.h"
+#include "mxsyserr.h"
 #ifdef CONFIG_SCSC_SMAPPER
 #include "mifsmapper.h"
 #endif
 #ifdef CONFIG_SCSC_QOS
 #include "mifqos.h"
 #endif
+#include "mxfwconfig.h"
 #include <scsc/kic/slsi_kic_lib.h>
 #include <scsc/scsc_release.h>
 #include <scsc/scsc_mx.h>
@@ -82,6 +84,7 @@ static struct work_struct	wlbtd_work;
 #define SCSC_PANIC_TECH_BT     (0x2 << 13)
 #define SCSC_PANIC_TECH_UNSP   (0x3 << 13)
 
+#define SCSC_PANIC_CODE_MASK 0xFFFF
 #define SCSC_PANIC_ORIGIN_MASK  0x8000
 #define SCSC_PANIC_TECH_MASK    0x6000
 #define SCSC_PANIC_SUBCODE_MASK_LEGACY 0x0FFF
@@ -183,6 +186,35 @@ static ssize_t sysfs_store_memdump(struct kobject *kobj, struct kobj_attribute *
 				   const char *buf, size_t count);
 static struct kobj_attribute memdump_attr =
 		__ATTR(memdump, 0660, sysfs_show_memdump, sysfs_store_memdump);
+
+
+#ifdef CONFIG_SCSC_LOG_COLLECTION
+static int mxman_minimoredump_collect(struct scsc_log_collector_client *collect_client, size_t size)
+{
+	int ret = 0;
+	struct mxman *mxman = (struct mxman *) collect_client->prv;
+
+	if (!mxman || !mxman->start_dram)
+		return ret;
+
+	SCSC_TAG_INFO(MXMAN, "Collecting Minimoredump runtime_length %d fw_image_size %d\n",
+		mxman->fwhdr.fw_runtime_length, mxman->fw_image_size);
+	/* collect RAM sections of FW */
+	ret = scsc_log_collector_write(mxman->start_dram + mxman->fw_image_size,
+		mxman->fwhdr.fw_runtime_length - mxman->fw_image_size, 1);
+
+	return ret;
+}
+
+struct scsc_log_collector_client mini_moredump_client = {
+	.name = "minimoredump",
+	.type = SCSC_LOG_MINIMOREDUMP,
+	.collect_init = NULL,
+	.collect = mxman_minimoredump_collect,
+	.collect_end = NULL,
+	.prv = NULL,
+};
+#endif
 
 /* Retrieve memdump in sysfs global */
 static ssize_t sysfs_show_memdump(struct kobject *kobj,
@@ -292,12 +324,14 @@ static u32 is_fm_on;
 #endif
 
 static int firmware_runtime_flags;
+static int syserr_command;
 /**
  * This mxman reference is initialized/nullified via mxman_init/deinit
  * called by scsc_mx_create/destroy on module probe/remove.
  */
 static struct mxman *active_mxman;
 static bool send_fw_config_to_active_mxman(uint32_t fw_runtime_flags);
+static bool send_syserr_cmd_to_active_mxman(u32 syserr_cmd);
 
 static int fw_runtime_flags_setter(const char *val, const struct kernel_param *kp)
 {
@@ -330,6 +364,37 @@ module_param_cb(firmware_runtime_flags, &fw_runtime_kops, NULL, 0200);
 MODULE_PARM_DESC(firmware_runtime_flags,
 		 "0 = Proceed as normal (default); nnn = Provides FW runtime flags bitmask: unknown bits will be ignored.");
 
+static int syserr_setter(const char *val, const struct kernel_param *kp)
+{
+	int ret = -EINVAL;
+	u32 syserr_cmd = 0;
+
+	if (!val)
+		return ret;
+	ret = kstrtouint(val, 10, &syserr_cmd);
+	if (!ret) {
+		u8 sub_system = (u8)(syserr_cmd / 10);
+		u8 level = (u8)(syserr_cmd % 10);
+
+		if (((sub_system > 2) && (sub_system < 8)) || (sub_system > 8) || (level > 7))
+			ret = -EINVAL;
+		else if (send_syserr_cmd_to_active_mxman(syserr_cmd))
+			syserr_command = syserr_cmd;
+		else
+			ret = -EINVAL;
+	}
+	return ret;
+}
+
+static struct kernel_param_ops syserr_kops = {
+	.set = syserr_setter,
+	.get = NULL
+};
+
+module_param_cb(syserr_command, &syserr_kops, NULL, 0200);
+MODULE_PARM_DESC(syserr_command,
+		 "Decimal XY - Trigger Type X(0,1,2,8), Level Y(1-7). Some combinations not supported");
+
 /**
  * Maxwell Agent Management Messages.
  *
@@ -346,7 +411,9 @@ enum {
 	MM_FW_CONFIG = 5,
 	MM_HALT_RSP = 6,
 	MM_FM_RADIO_CONFIG = 7,
-	MM_LERNA_CONFIG = 8
+	MM_LERNA_CONFIG = 8,
+	MM_SYSERR_IND = 9,
+	MM_SYSERR_CMD = 10
 } ma_msg;
 
 /**
@@ -357,6 +424,15 @@ struct ma_msg_packet {
 
 	uint8_t ma_msg; /* Message from ma_msg enum */
 	uint32_t arg;	/* Optional arg set by f/w in some to-host messages */
+} __packed;
+
+/**
+ * Special case Maxwell management, carrying FM radio configuration structure
+ */
+struct ma_msg_packet_fm_radio_config {
+
+	uint8_t ma_msg;				/* Message from ma_msg enum */
+	struct wlbt_fm_params fm_params;	/* FM Radio parameters */
 } __packed;
 
 static bool send_fw_config_to_active_mxman(uint32_t fw_runtime_flags)
@@ -395,16 +471,43 @@ static bool send_fw_config_to_active_mxman(uint32_t fw_runtime_flags)
 	return ret;
 }
 
-/**
- * Special case Maxwell management, carrying FM radio configuration structure
- */
+static bool send_syserr_cmd_to_active_mxman(u32 syserr_cmd)
+{
+	bool ret = false;
+	struct srvman *srvman = NULL;
+
+	SCSC_TAG_INFO(MXMAN, "\n");
+	if (!active_mxman) {
+		SCSC_TAG_ERR(MXMAN, "Active MXMAN NOT FOUND...cannot send running FW config.\n");
+		return ret;
+	}
+
+	mutex_lock(&active_mxman->mxman_mutex);
+	srvman = scsc_mx_get_srvman(active_mxman->mx);
+	if (srvman && srvman->error) {
+		mutex_unlock(&active_mxman->mxman_mutex);
+		SCSC_TAG_INFO(MXMAN, "Called during error - ignore\n");
+		return ret;
+	}
+
+	if (active_mxman->mxman_state == MXMAN_STATE_STARTED) {
+		struct ma_msg_packet message = { .ma_msg = MM_SYSERR_CMD,
+			.arg = syserr_cmd};
+
+		SCSC_TAG_INFO(MXMAN, "MM_SYSERR_CMD - Args %02d\n", message.arg);
+		mxmgmt_transport_send(scsc_mx_get_mxmgmt_transport(active_mxman->mx),
+				MMTRANS_CHAN_ID_MAXWELL_MANAGEMENT, &message,
+				sizeof(message));
+		ret = true;
+	} else {
+		SCSC_TAG_INFO(MXMAN, "MXMAN is NOT STARTED...cannot send MM_SYSERR_CMD msg.\n");
+	}
+	mutex_unlock(&active_mxman->mxman_mutex);
+
+	return ret;
+}
+
 #ifdef CONFIG_SCSC_FM
-struct ma_msg_packet_fm_radio_config {
-
-	uint8_t ma_msg;				/* Message from ma_msg enum */
-	struct wlbt_fm_params fm_params;	/* FM Radio parameters */
-} __packed;
-
 static bool send_fm_params_to_active_mxman(struct wlbt_fm_params *params)
 {
 	bool ret = false;
@@ -635,6 +738,11 @@ static void mxman_message_handler(const void *message, void *data)
 		SCSC_TAG_INFO(MXMAN, "Received MM_LERNA_CONFIG message from firmware\n");
 		scsc_lerna_response(message);
 		break;
+	case MM_SYSERR_IND:
+		/* System Error report from firmware */
+		SCSC_TAG_INFO(MXMAN, "Received MM_SYSERR_IND message from firmware\n");
+		mx_syserr_handler(mxman, message);
+		break;
 	default:
 		/* HERE: Unknown message, raise fault */
 		SCSC_TAG_WARNING(MXMAN, "Received unknown message from the firmware: msg->ma_msg=%d\n", msg->ma_msg);
@@ -783,11 +891,25 @@ static int transports_init(struct mxman *mxman)
 		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
 		return r;
 	}
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+	/* Initialise gdb transport for cortex-M4 */
+	r = gdb_transport_init(scsc_mx_get_gdb_transport_m4_1(mx), mx, GDB_TRANSPORT_M4_1);
+	if (r) {
+		SCSC_TAG_ERR(MXMAN, "gdb_transport_init() failed %d\n", r);
+		gdb_transport_release(scsc_mx_get_gdb_transport_r4(mx));
+		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
+		return r;
+	}
+#endif
+
 	/* Initialise mxlog transport */
 	r = mxlog_transport_init(scsc_mx_get_mxlog_transport(mx), mx);
 	if (r) {
 		SCSC_TAG_ERR(MXMAN, "mxlog_transport_init() failed %d\n", r);
 		gdb_transport_release(scsc_mx_get_gdb_transport_m4(mx));
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+		gdb_transport_release(scsc_mx_get_gdb_transport_m4_1(mx));
+#endif
 		gdb_transport_release(scsc_mx_get_gdb_transport_r4(mx));
 		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
 		return r;
@@ -801,6 +923,9 @@ static int transports_init(struct mxman *mxman)
 	if (!mxconf) {
 		SCSC_TAG_ERR(MXMAN, "miframman_alloc() failed\n");
 		gdb_transport_release(scsc_mx_get_gdb_transport_m4(mx));
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+		gdb_transport_release(scsc_mx_get_gdb_transport_m4_1(mx));
+#endif
 		gdb_transport_release(scsc_mx_get_gdb_transport_r4(mx));
 		mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mx));
 		mxlog_transport_release(scsc_mx_get_mxlog_transport(mx));
@@ -812,19 +937,28 @@ static int transports_init(struct mxman *mxman)
 	mxconf->version.minor = MXCONF_VERSION_MINOR;
 
 	/* Pass pre-existing FM status to FW */
-#if (MXCONF_VERSION_MINOR >= 3)
 	mxconf->flags = 0;
 #ifdef CONFIG_SCSC_FM
 	mxconf->flags |= is_fm_on ? MXCONF_FLAGS_FM_ON : 0;
 #endif
 	SCSC_TAG_INFO(MXMAN, "mxconf flags 0x%08x\n", mxconf->flags);
-#endif
+
 	/* serialise mxmgmt transport */
 	mxmgmt_transport_config_serialise(scsc_mx_get_mxmgmt_transport(mx), &mxconf->mx_trans_conf);
 	/* serialise Cortex-R4 gdb transport */
 	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_r4(mx), &mxconf->mx_trans_conf_gdb_r4);
 	/* serialise Cortex-M4 gdb transport */
 	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_m4(mx), &mxconf->mx_trans_conf_gdb_m4);
+
+	/* Default to Fleximac M4_1 monitor channel not in use.
+	 * Allows CONFIG_SCSC_MX450_GDB_SUPPORT to be turned off in Kconfig even though mxconf
+	 * struct v5 defines M4_1 channel
+	 */
+	mxconf->mx_trans_conf_gdb_m4_1.from_ap_stream_conf.buf_conf.buffer_loc = 0;
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+	/* serialise Cortex-M4 gdb transport */
+	gdb_transport_config_serialise(scsc_mx_get_gdb_transport_m4_1(mx), &mxconf->mx_trans_conf_gdb_m4_1);
+#endif
 	/* serialise mxlog transport */
 	mxlog_transport_config_serialise(scsc_mx_get_mxlog_transport(mx), &mxconf->mxlogconf);
 	SCSC_TAG_DEBUG(MXMAN, "read_bit_idx=%d write_bit_idx=%d buffer=%p num_packets=%d packet_size=%d read_index=%d write_index=%d\n",
@@ -837,6 +971,13 @@ static int transports_init(struct mxman *mxman)
 		       *scsc_mx_get_mxlog_transport(mx)->mif_stream.buffer.write_index
 		      );
 
+	/* Need to initialise fwconfig or else random data can make firmware data abort. */
+	mxconf->fwconfig.offset = 0;
+	mxconf->fwconfig.size = 0;
+#ifdef CONFIG_SCSC_COMMON_HCF
+	/* Load Common Config HCF */
+	mxfwconfig_load(mxman->mx, &mxconf->fwconfig);
+#endif
 	return 0;
 }
 
@@ -846,6 +987,9 @@ static void transports_release(struct mxman *mxman)
 	mxmgmt_transport_release(scsc_mx_get_mxmgmt_transport(mxman->mx));
 	gdb_transport_release(scsc_mx_get_gdb_transport_r4(mxman->mx));
 	gdb_transport_release(scsc_mx_get_gdb_transport_m4(mxman->mx));
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+	gdb_transport_release(scsc_mx_get_gdb_transport_m4_1(mxman->mx));
+#endif
 	miframman_free(scsc_mx_get_ramman(mxman->mx), mxman->mxconf);
 }
 
@@ -1088,6 +1232,7 @@ static int mxman_start(struct mxman *mxman)
 	miframabox_init(scsc_mx_get_aboxram(mxman->mx), start_mifram_heap2 + length_mifram_heap2);
 	mifmboxman_init(scsc_mx_get_mboxman(mxman->mx));
 	mifintrbit_init(scsc_mx_get_intrbit(mxman->mx), mif);
+	mxfwconfig_init(mxman->mx);
 
 	/* Initialise transports */
 	r = transports_init(mxman);
@@ -1113,6 +1258,12 @@ static int mxman_start(struct mxman *mxman)
 	mxlog_init(scsc_mx_get_mxlog(mxman->mx), mxman->mx, mxman->fw_build_id);
 #ifdef CONFIG_SCSC_MXLOGGER
 	mxlogger_init(mxman->mx, scsc_mx_get_mxlogger(mxman->mx), MXL_POOL_SZ);
+
+#ifdef CONFIG_SCSC_LOG_COLLECTION
+	/* Register minimoredump  client */
+	mini_moredump_client.prv = mxman;
+	scsc_log_collector_register_client(&mini_moredump_client);
+#endif
 #endif
 #ifdef CONFIG_SCSC_SMAPPER
 	/* Initialize SMAPPER */
@@ -1192,17 +1343,29 @@ static int mxman_start(struct mxman *mxman)
 
 static bool is_bug_on_enabled(struct scsc_mx *mx)
 {
-	bool bug_on_enabled = false;
+	bool bug_on_enabled;
+	const struct firmware *firm;
+	int r;
+
+	if (memdump == 3)
+		bug_on_enabled = true;
+	else
+		bug_on_enabled = false;
 #ifdef CONFIG_SCSC_LOG_COLLECTION
+	(void)firm; /* unused */
+	(void)r; /* unused */
 	return bug_on_enabled;
 #else
+	/* non SABLE platforms should also follow /sys/wifi/memdump if enabled */
+	if (disable_recovery_handling == MEMDUMP_FILE_FOR_RECOVERY)
+		return bug_on_enabled;
+
+	/* for legacy platforms (including Andorid P) using .memdump.info */
 #if defined(ANDROID_VERSION) && (ANDROID_VERSION >= 90000)
 	#define MX140_MEMDUMP_INFO_FILE	"/data/vendor/conn/.memdump.info"
 #else
 	#define MX140_MEMDUMP_INFO_FILE	"/data/misc/conn/.memdump.info"
 #endif
-	const struct firmware *firm;
-	int r;
 
 	SCSC_TAG_INFO(MX_FILE, "Loading %s file\n", MX140_MEMDUMP_INFO_FILE);
 	r = mx140_request_file(mx, MX140_MEMDUMP_INFO_FILE, &firm);
@@ -1345,12 +1508,25 @@ static void process_panic_record(struct mxman *mxman)
 {
 	u32 *r4_panic_record = NULL;
 	u32 *m4_panic_record = NULL;
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+	u32 *m4_1_panic_record = NULL;
+#endif
 	u32 r4_panic_record_length = 0;	/* in u32s */
 	u32 m4_panic_record_length = 0; /* in u32s */
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+	u32 m4_1_panic_record_length = 0; /* in u32s */
+#endif
+	u32 full_panic_code = 0;
 	bool r4_panic_record_ok = false;
 	bool m4_panic_record_ok = false;
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+	bool m4_1_panic_record_ok = false;
+#endif
 	bool r4_sympathetic_panic_flag = false;
 	bool m4_sympathetic_panic_flag = false;
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+	bool m4_1_sympathetic_panic_flag = false;
+#endif
 
 	/* some configurable delay before accessing the panic record */
 	msleep(panic_record_delay);
@@ -1367,6 +1543,11 @@ static void process_panic_record(struct mxman *mxman)
 		if (mxman->fwhdr.m4_panic_record_offset) {
 			m4_panic_record = (u32 *)(mxman->fw + mxman->fwhdr.m4_panic_record_offset);
 			m4_panic_record_ok = fw_parse_m4_panic_record(m4_panic_record, &m4_panic_record_length);
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+		} else if (mxman->fwhdr.m4_1_panic_record_offset) {
+			m4_1_panic_record = (u32 *)(mxman->fw + mxman->fwhdr.m4_1_panic_record_offset);
+			m4_1_panic_record_ok = fw_parse_m4_panic_record(m4_panic_record, &m4_1_panic_record_length);
+#endif
 		} else {
 			SCSC_TAG_INFO(MXMAN, "M4 panic record doesn't exist in the firmware header\n");
 		}
@@ -1377,10 +1558,15 @@ static void process_panic_record(struct mxman *mxman)
 			SCSC_TAG_WARNING(MXMAN, "Bad panic record length/subversion\n");
 			break;
 		case SCSC_R4_V2_MINOR_52:
-			if (r4_panic_record_ok)
-				mxman->scsc_panic_code |= SCSC_PANIC_SUBCODE_MASK_LEGACY & r4_panic_record[2];
-			else if (m4_panic_record_ok)
-				mxman->scsc_panic_code |= SCSC_PANIC_SUBCODE_MASK_LEGACY & m4_panic_record[2];
+			if (r4_panic_record_ok) {
+				full_panic_code = r4_panic_record[2];
+				mxman->scsc_panic_code |= SCSC_PANIC_CODE_MASK & full_panic_code;
+			} else if (m4_panic_record_ok)
+				mxman->scsc_panic_code |= SCSC_PANIC_CODE_MASK & m4_panic_record[2];
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+			else if (m4_1_panic_record_ok)
+				mxman->scsc_panic_code |= SCSC_PANIC_CODE_MASK & m4_1_panic_record[2];
+#endif
 			/* Set unspecified technology for now */
 			mxman->scsc_panic_code |= SCSC_PANIC_TECH_UNSP;
 			print_panic_code_legacy(mxman->scsc_panic_code);
@@ -1400,7 +1586,8 @@ static void process_panic_record(struct mxman *mxman)
 				if (r4_sympathetic_panic_flag == false) {
 					/* process R4 record */
 					SCSC_TAG_INFO(MXMAN, "process R4 record\n");
-					mxman->scsc_panic_code |= SCSC_PANIC_SUBCODE_MASK & r4_panic_record[3];
+					full_panic_code = r4_panic_record[3];
+					mxman->scsc_panic_code |= SCSC_PANIC_CODE_MASK & full_panic_code;
 					print_panic_code(mxman->scsc_panic_code);
 					break;
 				}
@@ -1414,7 +1601,27 @@ static void process_panic_record(struct mxman *mxman)
 				if (m4_sympathetic_panic_flag == false) {
 					/* process M4 record */
 					SCSC_TAG_INFO(MXMAN, "process M4 record\n");
-					mxman->scsc_panic_code |= SCSC_PANIC_SUBCODE_MASK & m4_panic_record[3];
+					mxman->scsc_panic_code |= SCSC_PANIC_CODE_MASK & m4_panic_record[3];
+				} else if (r4_panic_record_ok) {
+					/* process R4 record */
+					SCSC_TAG_INFO(MXMAN, "process R4 record\n");
+					mxman->scsc_panic_code |= SCSC_PANIC_CODE_MASK & r4_panic_record[3];
+				}
+				print_panic_code(mxman->scsc_panic_code);
+			}
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT /* this is wrong but not sure what is "right" */
+/* "sympathetic panics" are not really a thing on the Neus architecture unless */
+/* generated by the host                                                       */
+			if (m4_1_panic_record_ok) {
+				m4_1_sympathetic_panic_flag = fw_parse_get_m4_sympathetic_panic_flag(m4_panic_record);
+				SCSC_TAG_INFO(MXMAN, "m4_1_panic_record_ok=%d m4_1_sympathetic_panic_flag=%d\n",
+						m4_1_panic_record_ok,
+						m4_1_sympathetic_panic_flag
+					);
+				if (m4_1_sympathetic_panic_flag == false) {
+					/* process M4 record */
+					SCSC_TAG_INFO(MXMAN, "process M4_1 record\n");
+					mxman->scsc_panic_code |= SCSC_PANIC_SUBCODE_MASK & m4_1_panic_record[3];
 				} else if (r4_panic_record_ok) {
 					/* process R4 record */
 					SCSC_TAG_INFO(MXMAN, "process R4 record\n");
@@ -1422,8 +1629,16 @@ static void process_panic_record(struct mxman *mxman)
 				}
 				print_panic_code(mxman->scsc_panic_code);
 			}
+#endif
 			break;
 		}
+	}
+	if (r4_panic_record_ok) {
+		/* Populate syserr info with panic equivalent  */
+		mxman->last_syserr.subsys = (u8) ((full_panic_code >> SYSERR_SUB_SYSTEM_POSN) & SYSERR_SUB_SYSTEM_MASK);
+		mxman->last_syserr.level = MX_SYSERR_LEVEL_7;
+		mxman->last_syserr.type = (u8) ((full_panic_code >> SYSERR_TYPE_POSN) & SYSERR_TYPE_MASK);
+		mxman->last_syserr.subcode = (u16) ((full_panic_code >> SYSERR_SUB_CODE_POSN) & SYSERR_SUB_CODE_MASK);
 	}
 }
 
@@ -1440,8 +1655,10 @@ static void mxman_failure_work(struct work_struct *work)
 	int used = 0, r = 0;
 
 #ifdef CONFIG_ANDROID
-	wake_lock(&mxman->recovery_wake_lock);
+	wake_lock(&mxman->failure_recovery_wake_lock);
 #endif
+	/* Take mutex shared with syserr recovery */
+	mutex_lock(&mxman->mxman_recovery_mutex);
 
 	slsi_kic_system_event(slsi_kic_system_event_category_error,
 			      slsi_kic_system_events_subsystem_crashed, GFP_KERNEL);
@@ -1456,9 +1673,10 @@ static void mxman_failure_work(struct work_struct *work)
 	if (mxman->mxman_state != MXMAN_STATE_STARTED && mxman->mxman_state != MXMAN_STATE_STARTING) {
 		SCSC_TAG_WARNING(MXMAN, "Not in started state: mxman->mxman_state=%d\n", mxman->mxman_state);
 #ifdef CONFIG_ANDROID
-		wake_unlock(&mxman->recovery_wake_lock);
+		wake_unlock(&mxman->failure_recovery_wake_lock);
 #endif
 		mutex_unlock(&mxman->mxman_mutex);
+		mutex_unlock(&mxman->mxman_recovery_mutex);
 		return;
 	}
 
@@ -1478,13 +1696,20 @@ static void mxman_failure_work(struct work_struct *work)
 
 	mxman->mxman_state = mxman->mxman_next_state;
 
+	/* Mark any single service recovery as no longer in progress */
+	mxman->syserr_recovery_in_progress = false;
+	mxman->last_syserr_recovery_time = 0;
+
+	/* Safe to allow syserr recovery thread to run */
+	mutex_unlock(&mxman->mxman_recovery_mutex);
+
 	if (mxman->mxman_state != MXMAN_STATE_FAILED
-	    && mxman->mxman_state != MXMAN_STATE_FREEZED) {
+	    && mxman->mxman_state != MXMAN_STATE_FROZEN) {
 		WARN_ON(mxman->mxman_state != MXMAN_STATE_FAILED
-			&& mxman->mxman_state != MXMAN_STATE_FREEZED);
+			&& mxman->mxman_state != MXMAN_STATE_FROZEN);
 		SCSC_TAG_ERR(MXMAN, "Bad state=%d\n", mxman->mxman_state);
 #ifdef CONFIG_ANDROID
-		wake_unlock(&mxman->recovery_wake_lock);
+		wake_unlock(&mxman->failure_recovery_wake_lock);
 #endif
 		mutex_unlock(&mxman->mxman_mutex);
 		return;
@@ -1492,9 +1717,16 @@ static void mxman_failure_work(struct work_struct *work)
 	/* Signal panic to r4 and m4 processors */
 	SCSC_TAG_INFO(MXMAN, "Setting MIFINTRBIT_RESERVED_PANIC_R4\n");
 	mif->irq_bit_set(mif, MIFINTRBIT_RESERVED_PANIC_R4, SCSC_MIF_ABS_TARGET_R4); /* SCSC_MIFINTR_TARGET_R4 */
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
 	SCSC_TAG_INFO(MXMAN, "Setting MIFINTRBIT_RESERVED_PANIC_M4\n");
 	mif->irq_bit_set(mif, MIFINTRBIT_RESERVED_PANIC_M4, SCSC_MIF_ABS_TARGET_M4); /* SCSC_MIFINTR_TARGET_M4 */
-	srvman_freeze_services(srvman);
+	SCSC_TAG_INFO(MXMAN, "Setting MIFINTRBIT_RESERVED_PANIC_M4_1\n");
+	mif->irq_bit_set(mif, MIFINTRBIT_RESERVED_PANIC_M4_1, SCSC_MIF_ABS_TARGET_M4_1); /* SCSC_MIFINTR_TARGET_M4 */
+#else
+	SCSC_TAG_INFO(MXMAN, "Setting MIFINTRBIT_RESERVED_PANIC_M4\n");
+	mif->irq_bit_set(mif, MIFINTRBIT_RESERVED_PANIC_M4, SCSC_MIF_ABS_TARGET_M4); /* SCSC_MIFINTR_TARGET_M4 */
+#endif
+	srvman_freeze_services(srvman, &mxman->last_syserr);
 	if (mxman->mxman_state == MXMAN_STATE_FAILED) {
 		mxman->last_panic_time = local_clock();
 		process_panic_record(mxman);
@@ -1596,6 +1828,12 @@ static void mxman_failure_work(struct work_struct *work)
 		/* Clean up the MIF following error handling */
 		if (mif->mif_cleanup && mxman_recovery_disabled())
 			mif->mif_cleanup(mif);
+	} else {
+		/* Populate syserr info with panic equivalent for host induced panic */
+		mxman->last_syserr.subsys = SYSERR_SUB_SYSTEM_HOST;
+		mxman->last_syserr.level = MX_SYSERR_LEVEL_7;
+		mxman->last_syserr.type = 0;
+		mxman->last_syserr.subcode = mxman->scsc_panic_code;
 	}
 	SCSC_TAG_INFO(MXMAN, "Auto-recovery: %s\n",
 		mxman_recovery_disabled() ? "off" : "on");
@@ -1619,7 +1857,7 @@ static void mxman_failure_work(struct work_struct *work)
 		complete(&mxman->recovery_completion);
 
 #ifdef CONFIG_ANDROID
-	wake_unlock(&mxman->recovery_wake_lock);
+	wake_unlock(&mxman->failure_recovery_wake_lock);
 #endif
 }
 
@@ -1647,6 +1885,80 @@ static void failure_wq_start(struct mxman *mxman)
 		SCSC_TAG_INFO(MXMAN, "error handling disabled\n");
 	else
 		queue_work(mxman->failure_wq, &mxman->failure_work);
+}
+
+/*
+ * workqueue thread
+ */
+static void mxman_syserr_recovery_work(struct work_struct *work)
+{
+	struct mxman  *mxman = container_of(work, struct mxman, syserr_recovery_work);
+	struct srvman *srvman;
+
+#ifdef CONFIG_ANDROID
+	wake_lock(&mxman->syserr_recovery_wake_lock);
+#endif
+	if (!mutex_trylock(&mxman->mxman_recovery_mutex)) {
+		SCSC_TAG_WARNING(MXMAN, "Syserr during full reset - ignored\n");
+#ifdef CONFIG_ANDROID
+		wake_unlock(&mxman->syserr_recovery_wake_lock);
+#endif
+		return;
+	}
+
+	mutex_lock(&mxman->mxman_mutex);
+
+	if (mxman->mxman_state != MXMAN_STATE_STARTED && mxman->mxman_state != MXMAN_STATE_STARTING) {
+		SCSC_TAG_WARNING(MXMAN, "Syserr reset ignored: mxman->mxman_state=%d\n", mxman->mxman_state);
+#ifdef CONFIG_ANDROID
+		wake_unlock(&mxman->syserr_recovery_wake_lock);
+#endif
+		mutex_unlock(&mxman->mxman_mutex);
+		return;
+	}
+
+	srvman = scsc_mx_get_srvman(mxman->mx);
+
+	srvman_freeze_sub_system(srvman, &mxman->last_syserr);
+
+#ifdef CONFIG_SCSC_WLBTD
+#ifdef CONFIG_SCSC_LOG_COLLECTION
+	/* Wait for log generation if not finished */
+	SCSC_TAG_INFO(MXMAN, "Wait for syserr sable logging\n");
+	scsc_wlbtd_wait_for_sable_logging();
+	SCSC_TAG_INFO(MXMAN, "Syserr sable logging complete\n");
+#endif
+#endif
+
+	srvman_unfreeze_sub_system(srvman, &mxman->last_syserr);
+
+#ifdef CONFIG_ANDROID
+	wake_unlock(&mxman->syserr_recovery_wake_lock);
+#endif
+	mutex_unlock(&mxman->mxman_mutex);
+}
+
+static void syserr_recovery_wq_init(struct mxman *mxman)
+{
+	mxman->syserr_recovery_wq = create_singlethread_workqueue("syserr_recovery_wq");
+	INIT_WORK(&mxman->syserr_recovery_work, mxman_syserr_recovery_work);
+}
+
+static void syserr_recovery_wq_stop(struct mxman *mxman)
+{
+	cancel_work_sync(&mxman->syserr_recovery_work);
+	flush_workqueue(mxman->syserr_recovery_wq);
+}
+
+static void syserr_recovery_wq_deinit(struct mxman *mxman)
+{
+	syserr_recovery_wq_stop(mxman);
+	destroy_workqueue(mxman->syserr_recovery_wq);
+}
+
+static void syserr_recovery_wq_start(struct mxman *mxman)
+{
+	queue_work(mxman->syserr_recovery_wq, &mxman->syserr_recovery_work);
 }
 
 static void print_mailboxes(struct mxman *mxman)
@@ -1861,6 +2173,7 @@ static void mxman_stop(struct mxman *mxman)
 
 	panicmon_deinit(scsc_mx_get_panicmon(mxman->mx));
 	transports_release(mxman);
+	mxfwconfig_unload(mxman->mx);
 
 	mxlog_release(scsc_mx_get_mxlog(mxman->mx));
 	/* unregister channel handler */
@@ -1869,6 +2182,7 @@ static void mxman_stop(struct mxman *mxman)
 	fw_crc_wq_stop(mxman);
 
 	/* Unitialise components (they may perform some checks - e.g. all memory freed) */
+	mxfwconfig_deinit(mxman->mx);
 	mifintrbit_deinit(scsc_mx_get_intrbit(mxman->mx));
 	miframman_deinit(scsc_mx_get_ramman(mxman->mx));
 	miframman_deinit(scsc_mx_get_ramman2(mxman->mx));
@@ -1912,6 +2226,10 @@ void mxman_close(struct mxman *mxman)
 			return;
 		}
 #ifdef CONFIG_SCSC_MXLOGGER
+#ifdef CONFIG_SCSC_LOG_COLLECTION
+		/* Unregister minimoredump client */
+		scsc_log_collector_unregister_client(&mini_moredump_client);
+#endif
 		/**
 		 * Deinit mxlogger on last service stop...BUT before asking for HALT
 		 */
@@ -1939,6 +2257,10 @@ void mxman_close(struct mxman *mxman)
 			return;
 		}
 #ifdef CONFIG_SCSC_MXLOGGER
+#ifdef CONFIG_SCSC_LOG_COLLECTION
+		/* Unregister minimoredump client */
+		scsc_log_collector_unregister_client(&mini_moredump_client);
+#endif
 		/**
 		 * Deinit mxlogger on last service stop...BUT before asking for HALT
 		 */
@@ -1955,6 +2277,18 @@ void mxman_close(struct mxman *mxman)
 		mutex_unlock(&mxman->mxman_mutex);
 		return;
 	}
+}
+
+void mxman_syserr(struct mxman *mxman, struct mx_syserr_decode *syserr)
+{
+	mxman->syserr_recovery_in_progress = true;
+
+	mxman->last_syserr.subsys = syserr->subsys;
+	mxman->last_syserr.level = syserr->level;
+	mxman->last_syserr.type = syserr->type;
+	mxman->last_syserr.subcode = syserr->subcode;
+
+	syserr_recovery_wq_start(mxman);
 }
 
 void mxman_fail(struct mxman *mxman, u16 scsc_panic_code, const char *reason)
@@ -1976,6 +2310,12 @@ void mxman_fail(struct mxman *mxman, u16 scsc_panic_code, const char *reason)
 	} else {
 		SCSC_TAG_WARNING(MXMAN, "Not in MXMAN_STATE_STARTED state, ignore (state %d)\n", mxman->mxman_state);
 	}
+
+	/* Populate syserr info with panic equivalent or best we can */
+	mxman->last_syserr.subsys = scsc_panic_code >> SYSERR_SUB_SYSTEM_POSN;
+	mxman->last_syserr.level = MX_SYSERR_LEVEL_7;
+	mxman->last_syserr.type = scsc_panic_code;
+	mxman->last_syserr.subcode = scsc_panic_code;
 }
 
 void mxman_freeze(struct mxman *mxman)
@@ -1983,7 +2323,7 @@ void mxman_freeze(struct mxman *mxman)
 	SCSC_TAG_WARNING(MXMAN, "WLBT FW frozen\n");
 
 	if (mxman->mxman_state == MXMAN_STATE_STARTED) {
-		mxman->mxman_next_state = MXMAN_STATE_FREEZED;
+		mxman->mxman_next_state = MXMAN_STATE_FROZEN;
 		failure_wq_start(mxman);
 	} else {
 		SCSC_TAG_WARNING(MXMAN, "Not in MXMAN_STATE_STARTED state, ignore (state %d)\n", mxman->mxman_state);
@@ -2000,14 +2340,19 @@ void mxman_init(struct mxman *mxman, struct scsc_mx *mx)
 #endif
 	fw_crc_wq_init(mxman);
 	failure_wq_init(mxman);
+	syserr_recovery_wq_init(mxman);
 #ifdef CONFIG_SCSC_WLBTD
 	wlbtd_wq_init(mxman);
 #endif
 	mutex_init(&mxman->mxman_mutex);
+	mutex_init(&mxman->mxman_recovery_mutex);
 	init_completion(&mxman->recovery_completion);
 #ifdef CONFIG_ANDROID
-	wake_lock_init(&mxman->recovery_wake_lock, WAKE_LOCK_SUSPEND, "mxman_recovery");
+	wake_lock_init(&mxman->failure_recovery_wake_lock, WAKE_LOCK_SUSPEND, "mxman_recovery");
+	wake_lock_init(&mxman->syserr_recovery_wake_lock, WAKE_LOCK_SUSPEND, "mxman_syserr_recovery");
 #endif
+	mxman->syserr_recovery_in_progress = false;
+	mxman->last_syserr_recovery_time = 0;
 
 	/* set the initial state */
 	mxman->mxman_state = MXMAN_STATE_STOPPED;
@@ -2034,12 +2379,15 @@ void mxman_deinit(struct mxman *mxman)
 	mxproc_remove_info_proc_dir(&mxman->mxproc);
 	fw_crc_wq_deinit(mxman);
 	failure_wq_deinit(mxman);
+	syserr_recovery_wq_deinit(mxman);
 #ifdef CONFIG_SCSC_WLBTD
 	wlbtd_wq_deinit(mxman);
 #endif
 #ifdef CONFIG_ANDROID
-	wake_lock_destroy(&mxman->recovery_wake_lock);
+	wake_lock_destroy(&mxman->failure_recovery_wake_lock);
+	wake_lock_destroy(&mxman->syserr_recovery_wake_lock);
 #endif
+	mutex_destroy(&mxman->mxman_recovery_mutex);
 	mutex_destroy(&mxman->mxman_mutex);
 }
 
@@ -2349,18 +2697,23 @@ EXPORT_SYMBOL(mx140_log_dump);
 
 bool mxman_recovery_disabled(void)
 {
+#ifdef CONFIG_SCSC_WLBT_AUTORECOVERY_PERMANENT_DISABLE
+	/* Add option to kill autorecovery, ignoring module parameter
+	 * to work around platform that enables it against our wishes
+	 */
+	SCSC_TAG_ERR(MXMAN, "CONFIG_SCSC_WLBT_AUTORECOVERY_PERMANENT_DISABLE is set\n");
+	return true;
+#endif
 	/* If FW has panicked when recovery was disabled, don't allow it to
 	 * be enabled. The horse has bolted.
 	 */
 	if (disable_recovery_until_reboot)
 		return true;
 
-#ifdef CONFIG_SCSC_WLBTD
 	if (disable_recovery_handling == MEMDUMP_FILE_FOR_RECOVERY)
 		return disable_recovery_from_memdump_file;
-#endif
-
-	return disable_recovery_handling ? true : false;
+	else
+		return disable_recovery_handling ? true : false;
 }
 EXPORT_SYMBOL(mxman_recovery_disabled);
 

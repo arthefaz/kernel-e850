@@ -41,8 +41,8 @@ enum events {
 
 	EVENT_SCSC,
 	EVENT_SYSTEM_PROPERTY,
+	EVENT_WRITE_FILE,
 	EVENT_SABLE,
-
 	/* This must be last! */
 	__EVENT_MAX,
 };
@@ -78,5 +78,7 @@ static const struct genl_multicast_group scsc_mcgrp[] = {
 int scsc_wlbtd_init(void);
 int scsc_wlbtd_deinit(void);
 int call_wlbtd(const char *script_path);
+int wlbtd_write_file(const char *path, const char *content);
 int call_wlbtd_sable(u8 trigger_code, u16 reason_code);
+void scsc_wlbtd_wait_for_sable_logging(void);
 int scsc_wlbtd_get_and_print_build_type(void);

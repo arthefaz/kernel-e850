@@ -58,13 +58,16 @@
 #define WLBT_PBUS_SYSREG		(WLBT_PBUS_BASE + 0x50000)
 #define WLBT_PBUS_BOOT			(WLBT_PBUS_BASE + 0x60000)
 
+#define VGPIO_TX_MONITOR	0x1700
+#define VGPIO_TX_MON_BIT29	BIT(29)
+
 /* Exynos 3830 UM - TODO */
 #define WLBT_CONFIGURATION	0x3100
 #define LOCAL_PWR_CFG		BIT(0) /* Control power state 0: Power down 1: Power on */
 
 /* Exynos 3830 UM - TODO */
 #define WLBT_STATUS		0x3104
-#define STATUS			BIT(0) /* Status 0 : Power down 1 : Power on */
+#define WLBT_STATUS_BIT0	BIT(0) /* Status 0 : Power down 1 : Power on */
 
 /* Exynos 3830 UM - TODO */
 #define WLBT_STATES		0x3108 /* STATES [7:0] States index for debugging
@@ -72,6 +75,8 @@
 					* 0x10 : Power up
 					* 0x80 : Power down
 					* */
+#define WLBT_OPTION		0x310C
+#define WLBT_OPTION_DATA	BIT(3)
 
 /* Exynos 3830 UM - TODO */
 #define WLBT_CTRL_NS            0x3110 /* WLBT Control SFR non-secure */

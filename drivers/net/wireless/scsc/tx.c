@@ -76,7 +76,9 @@ static int slsi_tx_eapol(struct slsi_dev *sdev, struct net_device *dev, struct s
 		 *  In M4 packet,
 		 *   - MIC bit set in key info
 		 *   - Key type bit set in key info (pairwise=1, Group=0)
-		 *   - Key Data Length would be 0
+		 *   - ACK bit will not be set
+		 *   - Secure bit will be set in key type RSN (WPA2/WPA3 Personal/WPA3 Enterprise)
+		 *   - Key Data length check for Zero is for WPA as Secure bit will not be set
 		 */
 		if ((skb->len - sizeof(struct ethhdr)) >= 99)
 			eapol = skb->data + sizeof(struct ethhdr);
@@ -85,9 +87,10 @@ static int slsi_tx_eapol(struct slsi_dev *sdev, struct net_device *dev, struct s
 
 			if ((eapol[SLSI_EAPOL_TYPE_POS] == SLSI_EAPOL_TYPE_RSN_KEY || eapol[SLSI_EAPOL_TYPE_POS] == SLSI_EAPOL_TYPE_WPA_KEY) &&
 			    (eapol[SLSI_EAPOL_KEY_INFO_LOWER_BYTE_POS] & SLSI_EAPOL_KEY_INFO_KEY_TYPE_BIT_IN_LOWER_BYTE) &&
+			    (!(eapol[SLSI_EAPOL_KEY_INFO_LOWER_BYTE_POS] & SLSI_EAPOL_KEY_INFO_ACK_BIT_IN_LOWER_BYTE)) &&
 			    (eapol[SLSI_EAPOL_KEY_INFO_HIGHER_BYTE_POS] & SLSI_EAPOL_KEY_INFO_MIC_BIT_IN_HIGHER_BYTE) &&
-			    (eapol[SLSI_EAPOL_KEY_DATA_LENGTH_HIGHER_BYTE_POS] == 0) &&
-			    (eapol[SLSI_EAPOL_KEY_DATA_LENGTH_LOWER_BYTE_POS] == 0)) {
+			    ((eapol[SLSI_EAPOL_KEY_INFO_HIGHER_BYTE_POS] & SLSI_EAPOL_KEY_INFO_SECURE_BIT_IN_HIGHER_BYTE) ||
+			    ((eapol[SLSI_EAPOL_KEY_DATA_LENGTH_HIGHER_BYTE_POS] == 0) && (eapol[SLSI_EAPOL_KEY_DATA_LENGTH_LOWER_BYTE_POS] == 0)))) {
 				msg_type = FAPI_MESSAGETYPE_EAPOL_KEY_M4;
 				dwell_time = 0;
 			}
@@ -125,7 +128,7 @@ static int slsi_tx_eapol(struct slsi_dev *sdev, struct net_device *dev, struct s
 	}
 
 	/* EAPOL/WAI frames are send via the MLME */
-	tx_bytes_tmp = skb->len; // len copy to avoid null pointer of skb
+	tx_bytes_tmp = skb->len; /*len copy to avoid null pointer of skb*/
 	ret = slsi_mlme_send_frame_data(sdev, dev, skb, msg_type, 0, dwell_time, 0);
 	if (!ret)
 		peer->sinfo.tx_bytes += tx_bytes_tmp; //skb->len;
@@ -156,7 +159,7 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 	enum slsi_traffic_q tq;
 	u32 dwell_time = 0;
 	u8 *frame;
-	u32 arp_opcode;
+	u16 arp_opcode;
 	u32 dhcp_message_type = SLSI_DHCP_MESSAGE_TYPE_INVALID;
 
 	if (slsi_is_test_mode_enabled()) {
@@ -196,9 +199,15 @@ int slsi_tx_data(struct slsi_dev *sdev, struct net_device *dev, struct sk_buff *
 		case ETH_P_ARP:
 			SLSI_NET_DBG2(dev, SLSI_MLME, "transmit ARP frame from SLSI_NETIF_Q_PRIORITY\n");
 			frame = skb->data + sizeof(struct ethhdr);
-			arp_opcode = frame[6] << 8 | frame[7];
-			if ((arp_opcode == 1) &&
-			    memcmp(&frame[14], &frame[24], 4)) { /*opcode 1: ARP request(except gratuitous ARP)*/
+			arp_opcode = frame[SLSI_ARP_OPCODE_OFFSET] << 8 | frame[SLSI_ARP_OPCODE_OFFSET + 1];
+			if ((arp_opcode == SLSI_ARP_REQUEST_OPCODE) &&
+			    !SLSI_IS_GRATUITOUS_ARP(frame)) {
+#ifdef CONFIG_SCSC_WLAN_STA_ENHANCED_ARP_DETECT
+				if (ndev_vif->enhanced_arp_detect_enabled &&
+				    !memcmp(&frame[SLSI_ARP_DEST_IP_ADDR_OFFSET], &ndev_vif->target_ip_addr, 4)) {
+					ndev_vif->enhanced_arp_stats.arp_req_count_from_netdev++;
+				}
+#endif
 				dwell_time = sdev->fw_dwell_time;
 			}
 			return slsi_mlme_send_frame_data(sdev, dev, skb, FAPI_MESSAGETYPE_ARP, 0, dwell_time, 0);

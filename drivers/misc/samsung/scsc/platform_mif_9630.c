@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (c) 2014 - 2018 Samsung Electronics Co., Ltd. All rights reserved
+ * Copyright (c) 2014 - 2019 Samsung Electronics Co., Ltd. All rights reserved
  *
  ****************************************************************************/
 
@@ -19,9 +19,7 @@
 #include <linux/iommu.h>
 #include <linux/slab.h>
 #include <linux/io.h>
-#ifndef CONFIG_SOC_EXYNOS7570
 #include <linux/smc.h>
-#endif
 #ifdef CONFIG_OF
 #include <linux/of.h>
 #include <linux/of_address.h>
@@ -31,18 +29,13 @@
 #include <linux/regmap.h>
 #include <linux/delay.h>
 #include <scsc/scsc_logring.h>
-#ifdef CONFIG_SOC_EXYNOS7570
-#include "mif_reg.h"
-#elif defined(CONFIG_SOC_EXYNOS7872)
-#include "mif_reg_S5E7872.h"
-#elif defined(CONFIG_SOC_EXYNOS7885)
-#include "mif_reg_S5E7885.h"
-#elif defined(CONFIG_SOC_EXYNOS9610)
-#include "mif_reg_S5E9610.h"
-#endif
+#include "mif_reg_S5E9630.h"
 #include "platform_mif_module.h"
 #ifdef CONFIG_ARCH_EXYNOS
 #include <linux/soc/samsung/exynos-soc.h>
+#endif
+#ifdef CONFIG_SOC_EXYNOS9630
+#include <linux/mfd/samsung/s2mpu11-regulator.h>
 #endif
 
 #ifdef CONFIG_SCSC_SMAPPER
@@ -53,14 +46,8 @@
 #include <linux/pm_qos.h>
 #endif
 
-#if !defined(CONFIG_SOC_EXYNOS7872) && !defined(CONFIG_SOC_EXYNOS7570) \
-	&& !defined(CONFIG_SOC_EXYNOS7885) && !defined(CONFIG_SOC_EXYNOS9610) && !defined(CONFIG_SOC_EXYNOS9630)
-#error Target processor CONFIG_SOC_EXYNOS7570 or CONFIG_SOC_EXYNOS7872 or CONFIG_SOC_EXYNOS7885 or CONFIG_SOC_EXYNOS9610 not selected
-#endif
-
-#if defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-/* TODO: this will be put in a header */
-extern int exynos_acpm_set_flag(void);
+#if !defined(CONFIG_SOC_EXYNOS9630)
+#error Target processor CONFIG_SOC_EXYNOS9630 not selected
 #endif
 
 #ifdef CONFIG_SCSC_LOG_COLLECTION
@@ -81,18 +68,13 @@ module_param(chv_disable_irq, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(chv_disable_irq, "Do not register for irq");
 #endif
 
-#ifdef CONFIG_SCSC_GPR4_CON_DEBUG
-static u32          reg_bkp;
-static bool         reg_update;
-static void __iomem *gpio_base;
-static bool         gpr4_debug;
-module_param(gpr4_debug, bool, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(gpr4_debug, "GPR4 PIO muxes switching to the Maxwell. Default = N. Effective on Maxwell power on");
-#endif
-
 static bool enable_platform_mif_arm_reset = true;
 module_param(enable_platform_mif_arm_reset, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(enable_platform_mif_arm_reset, "Enables WIFIBT ARM cores reset");
+
+static bool disable_apm_setup;
+module_param(disable_apm_setup, bool, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(disable_apm_setup, "Disable host APM setup");
 
 #ifdef CONFIG_SCSC_QOS
 struct qos_table {
@@ -126,24 +108,15 @@ struct platform_mif {
 	size_t        reg_size;
 	void __iomem  *base;
 
-#if defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	/* register MBOX memory space for M4 */
-	size_t        reg_start_m4;
-	size_t        reg_size_m4;
-	void __iomem  *base_m4;
-#endif
 	/* register CMU memory space */
 	struct regmap *cmu_base;
-#ifdef CONFIG_SCSC_CLK20MHZ
-	u32           usbpll_delay;
-#endif
 
 	void __iomem  *con0_base;
 
 	/* pmu syscon regmap */
 	struct regmap *pmureg;
-#if defined(CONFIG_SOC_EXYNOS9610)
-	struct regmap *baaw_p_wlbt;
+#if defined(CONFIG_SOC_EXYNOS9630)
+	struct regmap *i3c_apm_pmic;
 	struct regmap *dbus_baaw;
 	struct regmap *pbus_baaw;
 	struct regmap *wlbt_remap;
@@ -196,13 +169,11 @@ struct platform_mif {
 	void *suspendresume_data;
 };
 
+static void power_supplies_on(struct platform_mif *platform);
+
 extern int mx140_log_dump(void);
 
 #define platform_mif_from_mif_abs(MIF_ABS_PTR) container_of(MIF_ABS_PTR, struct platform_mif, interface)
-
-#ifdef CONFIG_SCSC_CLK20MHZ
-static void __platform_mif_usbpll_claim(struct platform_mif *platform, bool wlbt);
-#endif
 
 inline void platform_mif_reg_write(struct platform_mif *platform, u16 offset, u32 value)
 {
@@ -213,18 +184,6 @@ inline u32 platform_mif_reg_read(struct platform_mif *platform, u16 offset)
 {
 	return readl(platform->base + offset);
 }
-
-#if defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-inline void platform_mif_reg_write_m4(struct platform_mif *platform, u16 offset, u32 value)
-{
-	writel(value, platform->base_m4 + offset);
-}
-
-inline u32 platform_mif_reg_read_m4(struct platform_mif *platform, u16 offset)
-{
-	return readl(platform->base_m4 + offset);
-}
-#endif
 
 #ifdef CONFIG_SCSC_SMAPPER
 inline void platform_mif_reg_write_smapper(struct platform_mif *platform, u16 offset, u32 value)
@@ -641,113 +600,94 @@ irqreturn_t platform_wdog_isr(int irq, void *data)
 		disable_irq_nosync(platform->wlbt_irq[PLATFORM_MIF_WDOG].irq_num);
 		atomic_inc(&platform->wlbt_irq[PLATFORM_MIF_WDOG].irq_disabled_cnt);
 	}
-#ifdef CONFIG_SOC_EXYNOS9610
+
 	ret = regmap_update_bits(platform->pmureg, WLBT_CTRL_NS,
 				 WLBT_RESET_REQ_CLR, WLBT_RESET_REQ_CLR);
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Clearing WLBT_RESET_REQ\n");
 	if (ret < 0)
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
 				 "Failed to Set WLBT_CTRL_NS[WLBT_RESET_REQ_CLR]: %d\n", ret);
-#else
-	ret = regmap_update_bits(platform->pmureg, WIFI_CTRL_NS,
-				 WIFI_RESET_REQ_CLR, WIFI_RESET_REQ_CLR);
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Clearing WIFI_RESET_REQ\n");
-	if (ret < 0)
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-				 "Failed to Set WIFI_CTRL_NS[WIFI_RESET_REQ_CLR]: %d\n", ret);
-#endif
+
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_SOC_EXYNOS9610
 /*
  * Attached array contains the replacement PMU boot code which should
  * be programmed using the CBUS during the config phase.
  */
 uint32_t ka_patch[] = {
-	/* Low temp fix 28/1
-	 * Maxwell142 PMU+PROC combined boot ROM
-	 * IP Version: 0xA3
-	 * Major Version: 0xF, Minor Version: 0xF
-	 * PMU ROM version: 0x4
-	 * PROC  ROM version: 0x0
-	 */
-	0x90750002,
-	0x11a4c218,
-	0x75671191,
-	0x9075e090,
-	0x54b3e5e7,
-	0x30f76001,
-	0xb14315a2,
-	0xb4b2e503,
-	0xb153fb03,
-	0xa90185fc,
-	0xacf50774,
-	0x75fdadb5,
-	0xb47508a0,
-	0x54b3e501,
-	0x75fa7001,
-	0x907500b4,
-	0x78cb8018,
-	0x80837982,
-	0x07a075c5,
-	0xb0783779,
-	0xb40754e6,
-	0x0b800207,
-	0xc404f6d9,
-	0xaf7590f5,
-	0x75038000,
-	0x53229090,
-	0xce53eff7,
-	0xd90479fe,
-	0xfdce53fe,
-	0xfed90c79,
-	0x75fbce53,
-	0x91530b92,
-	0xf7ce53fd,
-	0x5308f943,
+	// Maxwell142 PMU+PROC combined boot ROM
+	// IP Version: 0xA3
+	// Major Version: 0xF, Minor Version: 0xF
+	// PMU ROM version: 0x4
+	// PROC  ROM version: 0x0
+	// From excite 0605
+	0xe8750002,
+	0x1189113f,
+	0x0e807558,
+	0xe030b3e5,
+	0x11a230fb,
+	0xb1f50774,
+	0x75fdb2b5,
+	0x077400b1,
+	0xadb5acf5,
+	0x01b443fd,
+	0xe020b3e5,
+	0xfeb453fb,
+	0xd880a3d2,
+	0x83798278,
+	0xa075d280,
+	0x78377907,
+	0x0754e6b0,
+	0x800207b4,
+	0x04f6d90b,
+	0x7580f5c4,
+	0x038000af,
+	0x22098075,
+	0x53f7f753,
+	0x0479fece,
+	0xce53fed9,
+	0xd90c79fd,
+	0xfbce53fe,
+	0x53b79275,
+	0x0074fd91,
+	0xce5392f5,
+	0xb79275f7,
+	0x5302f943,
 	0xf922fef9,
 	0xfbd8fed9,
 	0x019e7522,
-	0x75cfc175,
-	0xc375a4c2,
-	0x47c4754a,
-	0x75a4c575,
-	0xc7756dc6,
-	0x03d27540,
-	0x7510d375,
-	0xca7500c9,
-	0x00cb75d0,
-	0x7500cc75,
-	0x9b75009a,
-	0x009c75c0,
-	0x78009d75,
+	0x7501d275,
+	0xc17580d5,
+	0x74047880,
+	0x838012c3,
+	0x78c0c175,
 	0x12827402,
-	0xc6438b80,
-	0x74097802,
-	0x8b8012e7,
-	0x75d09075,
-	0x9e750291,
-	0x01a97502,
-	0x00000022,
+	0x80758380,
+	0x0291750d,
+	0x75039375,
+	0xa975029e,
+	0x00002201,
 };
 
-extern bool reset_failed;
+//extern bool reset_failed;
 
 irqreturn_t platform_cfg_req_isr(int irq, void *data)
 {
 	struct platform_mif *platform = (struct platform_mif *)data;
-	const u64 EXYNOS_WLBT = 0x1;
 	u64 ret64 = 0;
-	s32 ret = 0;
+	const u64 EXYNOS_WLBT = 0x1;
+	/*s32 ret = 0;*/
 	unsigned int ka_addr = 0x1000;
 	uint32_t *ka_patch_addr = ka_patch;
-	u32 id;
+	//u32 id;
 
 #define CHECK(x) do { \
 	int retval = (x); \
-	if (retval < 0) \
+	if (retval < 0) {\
+		pr_err("%s failed at L%d", __FUNCTION__, __LINE__); \
 		goto cfg_error; \
+	} \
 } while (0)
 
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INT received\n");
@@ -764,9 +704,6 @@ irqreturn_t platform_cfg_req_isr(int irq, void *data)
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
 			"Spurious CFG_REQ IRQ from WLBT!\n");
 
-		regmap_read(platform->pmureg, CENTRAL_SEQ_WLBT_STATUS, &val);
-		SCSC_TAG_INFO(PLAT_MIF, "CENTRAL_SEQ_WLBT_STATUS 0x%x\n", val);
-
 		regmap_read(platform->pmureg, WLBT_CTRL_NS, &val);
 		SCSC_TAG_INFO(PLAT_MIF, "WLBT_CTRL_NS 0x%x\n", val);
 
@@ -776,17 +713,14 @@ irqreturn_t platform_cfg_req_isr(int irq, void *data)
 		regmap_read(platform->pmureg, WLBT_DEBUG, &val);
 		SCSC_TAG_INFO(PLAT_MIF, "WLBT_DEBUG 0x%x\n", val);
 
-		reset_failed = true; /* prevent further interaction with HW */
+		//reset_failed = true; /* prevent further interaction with HW */
 
 		return IRQ_HANDLED;
 	}
 
-	/* CBUS should be ready before we get CFG_REQ, but we suspect
-	 * CBUS is not ready yet. add some delay to see if that helps
-	 */
-	udelay(100);
-
 	/* Set TZPC to non-secure mode */
+	/* http://caeweb/~wshi/skylark/project-skylark.sim-basic/sky/regs/pmu_conf/pmu_conf/doc/main.html
+	*/
 	ret64 = exynos_smc(SMC_CMD_CONN_IF, (EXYNOS_WLBT << 32) | EXYNOS_SET_CONN_TZPC, 0, 0);
 	if (ret64)
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
@@ -795,73 +729,99 @@ irqreturn_t platform_cfg_req_isr(int irq, void *data)
 		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
 		"SMC_CMD_CONN_IF run successfully : %llu\n", ret64);
 
-	/* WLBT_REMAP */
-	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "WLBT_REMAP begin\n");
-	CHECK(regmap_write(platform->wlbt_remap, 0x0, WLBT_DBUS_BAAW_0_START >> 12));
-	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "WLBT_REMAP end\n");
-
-	/* CHIP_VERSION_ID - overload with EMA settings */
-	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "CHIP_VERSION_ID begin\n");
-	regmap_read(platform->wlbt_remap, 0x10, &id);
-	id &= ~CHIP_VERSION_ID_EMA_MASK;
-	id |= CHIP_VERSION_ID_EMA_VALUE;
-	CHECK(regmap_write(platform->wlbt_remap, 0x10, id));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "CHIP_VERSION_ID 0x%x end\n", id);
+	/* WLBT_REMAP PMU_REMAP - PROC_RMP_BOOT_ADDR 0x14450400 */
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "WLBT_REMAP begin\n");
+	CHECK(regmap_write(platform->wlbt_remap, 0x400, WLBT_DBUS_BAAW_0_START >> 12));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "WLBT_REMAP end\n");
 
 	/* DBUS_BAAW regions */
-	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "DBUS_BAAW begin\n");
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "DBUS_BAAW begin\n"); // PMU_DBUS_BAAW
+
+	/* Shared DRAM mapping. The destination address is the location reserved
+	 * by the kernel.
+	 */
 	CHECK(regmap_write(platform->dbus_baaw, 0x0, WLBT_DBUS_BAAW_0_START >> 12));
 	CHECK(regmap_write(platform->dbus_baaw, 0x4, WLBT_DBUS_BAAW_0_END >> 12));
-	CHECK(regmap_write(platform->dbus_baaw, 0x8, platform->mem_start >> 12));
+	CHECK(regmap_write(platform->dbus_baaw, 0x8, platform->mem_start >> 12)); // FW AP base addr >> 12
 	CHECK(regmap_write(platform->dbus_baaw, 0xC, WLBT_BAAW_ACCESS_CTRL));
-	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "DBUS_BAAW end\n");
+#if 0
+	/* Additional DRAM mappings for future use */
+	CHECK(regmap_write(platform->dbus_baaw, 0x10, 0x000C0000));
+	CHECK(regmap_write(platform->dbus_baaw, 0x14, 0x000D0000));
+	CHECK(regmap_write(platform->dbus_baaw, 0x18, 0x000D0000));
+	CHECK(regmap_write(platform->dbus_baaw, 0x1C, WLBT_BAAW_ACCESS_CTRL));
+
+	CHECK(regmap_write(platform->dbus_baaw, 0x20, 0x000D0000));
+	CHECK(regmap_write(platform->dbus_baaw, 0x24, 0x000E0000));
+	CHECK(regmap_write(platform->dbus_baaw, 0x28, 0x000E0000));
+	CHECK(regmap_write(platform->dbus_baaw, 0x2C, WLBT_BAAW_ACCESS_CTRL));
+
+	CHECK(regmap_write(platform->dbus_baaw, 0x30, 0x000E0000));
+	CHECK(regmap_write(platform->dbus_baaw, 0x34, 0x000F0000));
+	CHECK(regmap_write(platform->dbus_baaw, 0x38, 0x000F0000));
+	CHECK(regmap_write(platform->dbus_baaw, 0x3C, WLBT_BAAW_ACCESS_CTRL));
+#endif
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "DBUS_BAAW end\n");
 
 	/* PBUS_BAAW regions */
-	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "PBUS_BAAW begin\n");
-	CHECK(regmap_write(platform->pbus_baaw, 0x0, WLBT_PBUS_BAAW_0_START >> 12));
-	CHECK(regmap_write(platform->pbus_baaw, 0x4, WLBT_PBUS_BAAW_0_END >> 12));
+	/* ref wlbt_if_S5E9630.c, updated for MX450 memory map */
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PBUS_BAAW begin\n");
+
+	/* Range for CP2WLBT mailbox */
+	CHECK(regmap_write(platform->pbus_baaw, 0x0, WLBT_CBUS_BAAW_0_START >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x4, WLBT_CBUS_BAAW_0_END >> 12));
 	CHECK(regmap_write(platform->pbus_baaw, 0x8, WLBT_PBUS_MBOX_CP2WLBT_BASE >> 12));
 	CHECK(regmap_write(platform->pbus_baaw, 0xC, WLBT_BAAW_ACCESS_CTRL));
 
-	CHECK(regmap_write(platform->pbus_baaw, 0x10, WLBT_PBUS_BAAW_1_START >> 12));
-	CHECK(regmap_write(platform->pbus_baaw, 0x14, WLBT_PBUS_BAAW_1_END >> 12));
-	CHECK(regmap_write(platform->pbus_baaw, 0x18, WLBT_PBUS_MBOX_SHUB2WLBT_BASE >> 12));
+	/* Range includes AP2WLBT,APM2WLBT,GNSS2WLBT mailboxes */
+	CHECK(regmap_write(platform->pbus_baaw, 0x10, WLBT_CBUS_BAAW_1_START >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x14, WLBT_CBUS_BAAW_1_END >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x18, WLBT_PBUS_MBOX_GNSS2WLBT_BASE >> 12));
 	CHECK(regmap_write(platform->pbus_baaw, 0x1C, WLBT_BAAW_ACCESS_CTRL));
-
-	CHECK(regmap_write(platform->pbus_baaw, 0x20, WLBT_PBUS_BAAW_2_START >> 12));
-	CHECK(regmap_write(platform->pbus_baaw, 0x24, WLBT_PBUS_BAAW_2_END >> 12));
-	CHECK(regmap_write(platform->pbus_baaw, 0x28, WLBT_PBUS_USI_CMG00_BASE >> 12));
+#if 0
+	/* These mappings are not yet used by WLBT FW */
+	CHECK(regmap_write(platform->pbus_baaw, 0x20, WLBT_CBUS_BAAW_2_START >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x24, WLBT_CBUS_BAAW_2_END >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x28, WLBT_PBUS_GPIO_CMGP_BASE >> 12));
 	CHECK(regmap_write(platform->pbus_baaw, 0x2C, WLBT_BAAW_ACCESS_CTRL));
 
-	CHECK(regmap_write(platform->pbus_baaw, 0x30, WLBT_PBUS_BAAW_3_START >> 12));
-	CHECK(regmap_write(platform->pbus_baaw, 0x34, WLBT_PBUS_BAAW_3_END >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x30, WLBT_CBUS_BAAW_3_START >>12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x34, WLBT_CBUS_BAAW_3_END >> 12));
 	CHECK(regmap_write(platform->pbus_baaw, 0x38, WLBT_PBUS_SYSREG_CMGP2WLBT_BASE >> 12));
 	CHECK(regmap_write(platform->pbus_baaw, 0x3C, WLBT_BAAW_ACCESS_CTRL));
 
-	CHECK(regmap_write(platform->pbus_baaw, 0x40, WLBT_PBUS_BAAW_4_START >> 12));
-	CHECK(regmap_write(platform->pbus_baaw, 0x44, WLBT_PBUS_BAAW_4_END >> 12));
-	CHECK(regmap_write(platform->pbus_baaw, 0x48, WLBT_PBUS_GPIO_CMGP_BASE >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x40, WLBT_CBUS_BAAW_4_START >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x44, WLBT_CBUS_BAAW_4_END >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x48, WLBT_PBUS_USI_CMG00_BASE >> 12));
 	CHECK(regmap_write(platform->pbus_baaw, 0x4C, WLBT_BAAW_ACCESS_CTRL));
 
-	CHECK(regmap_write(platform->pbus_baaw, 0x50, WLBT_PBUS_BAAW_5_START >> 12));
-	CHECK(regmap_write(platform->pbus_baaw, 0x54, WLBT_PBUS_BAAW_5_END >> 12));
-	CHECK(regmap_write(platform->pbus_baaw, 0x58, WLBT_PBUS_SHUB_BASE >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x50, WLBT_CBUS_BAAW_5_START >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x54, WLBT_CBUS_BAAW_5_END >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x58, WLBT_PBUS_CHUB_USICHUB0_BASE >> 12));
 	CHECK(regmap_write(platform->pbus_baaw, 0x5C, WLBT_BAAW_ACCESS_CTRL));
-	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "PBUS_BAAW end\n");
 
-	/* PMU boot bug workaround */
-	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "BOOT_WLBT begin\n");
+	CHECK(regmap_write(platform->pbus_baaw, 0x60, WLBT_CBUS_BAAW_6_START >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x64, WLBT_CBUS_BAAW_6_START >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x68, WLBT_PBUS_CHUB_BASE >> 12));
+	CHECK(regmap_write(platform->pbus_baaw, 0x6C, WLBT_BAAW_ACCESS_CTRL));
+#endif
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PBUS_BAAW end\n");
+
+	/* PMU boot patch */
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "BOOT_WLBT begin\n");
 	CHECK(regmap_write(platform->boot_cfg, 0x0, 0x1));
-	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "BOOT_WLBT done\n");
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "BOOT_WLBT done\n");
 
 	while (ka_patch_addr < (ka_patch + ARRAY_SIZE(ka_patch))) {
 		CHECK(regmap_write(platform->boot_cfg, ka_addr, *ka_patch_addr));
 		ka_addr += sizeof(ka_patch[0]);
 		ka_patch_addr++;
 	}
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "KA patch done\n");
 
 	/* Notify PMU of configuration done */
 	CHECK(regmap_write(platform->boot_cfg, 0x0, 0x0));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "BOOT config done\n");
 
 	/* BOOT_CFG_ACK */
 	CHECK(regmap_write(platform->boot_cfg, 0x4, 0x1));
@@ -870,17 +830,17 @@ irqreturn_t platform_cfg_req_isr(int irq, void *data)
 	/* Delay to allow HW to clear CFG_REQ and hence de-assert IRQ, which
 	 * it does in response to CFG_ACK
 	 */
-	udelay(100);
+	//udelay(100);
 
 	/* Release ownership of MASK_PWR_REQ */
 	/* See sequence in 9.6.6 */
-	ret = regmap_update_bits(platform->pmureg, WLBT_CTRL_NS,
+	/*ret = regmap_update_bits(platform->pmureg, WLBT_CTRL_NS,
 				 MASK_PWR_REQ, 0);
 	if (ret < 0) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
 			"Failed to clear WLBT_CTRL_NS[MASK_PWR_REQ]: %d\n", ret);
 		goto cfg_error;
-	}
+	}*/
 
 	/* Mark as CFQ_REQ handled, so boot may continue */
 	platform->boot_state = WLBT_BOOT_CFG_DONE;
@@ -891,6 +851,7 @@ irqreturn_t platform_cfg_req_isr(int irq, void *data)
 	/* Re-enable IRQ here to allow spurious interrupt to be tracked */
 	enable_irq(platform->wlbt_irq[PLATFORM_MIF_CFG_REQ].irq_num);
 
+	/* as per wlbt_if_S5E9630.c - end */
 	return IRQ_HANDLED;
 cfg_error:
 	platform->boot_state = WLBT_BOOT_CFG_ERROR;
@@ -898,7 +859,6 @@ cfg_error:
 	complete(&platform->cfg_ack);
 	return IRQ_HANDLED;
 }
-#endif
 
 static void platform_mif_unregister_irq(struct platform_mif *platform)
 {
@@ -912,9 +872,7 @@ static void platform_mif_unregister_irq(struct platform_mif *platform)
 	/* if ALIVE irq is required  */
 	devm_free_irq(platform->dev, platform->wlbt_irq[PLATFORM_MIF_ALIVE].irq_num, platform);
 #endif
-#ifdef CONFIG_SOC_EXYNOS9610
 	devm_free_irq(platform->dev, platform->wlbt_irq[PLATFORM_MIF_CFG_REQ].irq_num, platform);
-#endif
 }
 
 static int platform_mif_register_irq(struct platform_mif *platform)
@@ -964,7 +922,6 @@ static int platform_mif_register_irq(struct platform_mif *platform)
 	}
 #endif
 
-#ifdef CONFIG_SOC_EXYNOS9610
 	/* Mark as WLBT in reset before enabling IRQ to guard against spurious IRQ */
 	platform->boot_state = WLBT_BOOT_IN_RESET;
 	smp_wmb(); /* commit before irq */
@@ -981,7 +938,10 @@ static int platform_mif_register_irq(struct platform_mif *platform)
 		err = -ENODEV;
 		return err;
 	}
-#endif
+
+	/* Leave disabled until ready to handle */
+	disable_irq_nosync(platform->wlbt_irq[PLATFORM_MIF_CFG_REQ].irq_num);
+
 	return 0;
 }
 
@@ -999,92 +959,57 @@ static char *platform_mif_get_uid(struct scsc_mif_abs *interface)
 	return "0";
 }
 
-/* WLBT Power domain */
-static int platform_mif_power(struct scsc_mif_abs *interface, bool power)
+static void wlbt_regdump(struct platform_mif *platform)
 {
-	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
-	u32                 val = 0;
-	s32                 ret = 0;
-#ifdef CONFIG_SOC_EXYNOS9610
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "power %d\n", power);
+	u32 val = 0;
 
-	if (power)
-		val = MASK_PWR_REQ;
+	regmap_read(platform->pmureg, WLBT_CTRL_S, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_CTRL_S 0x%x\n", val);
 
-	/* See sequence in 9.6.6 */
-	ret = regmap_update_bits(platform->pmureg, WLBT_CTRL_NS,
-				 MASK_PWR_REQ, val);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WLBT_CTRL_NS[MASK_PWR_REQ]: %d\n", ret);
-		return ret;
-	}
-#else
-	/* See sequence in 8.6.6 */
-	/* WIFI power on/off control  If WIFI_PWRON = 1
-	 * and WIFI_START=1, WIFI enters to UP state.
-	 * This bit is 0 as default value because WIFI
-	 * should be reset at AP boot mode after Power-on Reset.
-	 */
-	if (power)
-		val = WIFI_PWRON;
-	ret = regmap_update_bits(platform->pmureg, WIFI_CTRL_NS,
-				 WIFI_PWRON, val);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WIFI_CTRL_NS[WIFI_PWRON]: %d\n", ret);
-		return ret;
-	}
+	regmap_read(platform->pmureg, WLBT_CONFIGURATION, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_CONFIGURATION 0x%x\n", val);
+
+	regmap_read(platform->pmureg, WLBT_CTRL_NS, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_CTRL_NS 0x%x\n", val);
+
+	regmap_read(platform->pmureg, WLBT_IN, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_IN 0x%x\n", val);
+
+	regmap_read(platform->pmureg, WLBT_OUT, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_OUT 0x%x\n", val);
+
+	regmap_read(platform->pmureg, WLBT_STATUS, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_STATUS 0x%x\n", val);
+
+	regmap_read(platform->pmureg, WLBT_STATES, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_STATES 0x%x\n", val);
+
+	regmap_read(platform->pmureg, WLBT_DEBUG, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_DEBUG 0x%x\n", val);
+
+#if 0
+	/* Delay to let PMU process the cfg_ack */
+	udelay(10000);
+	regmap_read(platform->boot_cfg, 0x0, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "BOOT_SOURCE 0x%x\n", val);
+
+	regmap_read(platform->boot_cfg, 0x4, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "BOOT_CFG_ACK 0x%x\n", val);
 #endif
-	return 0;
-}
-
-/* WLBT RESET */
-static int platform_mif_hold_reset(struct scsc_mif_abs *interface, bool reset)
-{
-	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
-	u32                 val = 0;
-	s32                 ret = 0;
-#ifdef CONFIG_SOC_EXYNOS9610
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "reset %d\n", reset);
-	if (reset)
-		val = WLBT_RESET_SET;
-	/* See sequence in 9.6.6 */
-	ret = regmap_update_bits(platform->pmureg, WLBT_CTRL_NS,
-				 WLBT_RESET_SET, val);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WLBT_CTRL_NS[WLBT_RESET_SET]: %d\n", ret);
-		return ret;
-	}
-#else
-	if (reset)
-		val = WIFI_RESET_SET;
-	/* See sequence in 8.6.6 */
-	ret = regmap_update_bits(platform->pmureg, WIFI_CTRL_NS,
-				 WIFI_RESET_SET, val);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WIFI_CTRL_NS[WIFI_RESET_SET]: %d\n", ret);
-		return ret;
-	}
-#endif
-	return 0;
 }
 
 /* WLBT START */
 static int platform_mif_start(struct scsc_mif_abs *interface, bool start)
 {
 	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
-	u32                 val = 0;
-	s32                 ret = 0;
 
-#ifdef CONFIG_SOC_EXYNOS9610
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "start %d\n", start);
+	/* done as part of platform_mif_pmu_reset_release() init_done sequence */
+#if 0
+	//s32                 ret = 0;
 	if (start)
 		val = WLBT_START;
 
-	/* See sequence in 9.6.6 */
+	/* See sequence in TODO update when available */
 	ret = regmap_update_bits(platform->pmureg, WLBT_CTRL_S,
 				 WLBT_START, val);
 	if (ret < 0) {
@@ -1093,54 +1018,244 @@ static int platform_mif_start(struct scsc_mif_abs *interface, bool start)
 		return ret;
 	}
 	SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"update WIFI_CTRL_S[WIFI_START]: %d\n", ret);
+			"update WIFI_CTRL_S[WLBT_START]: %d\n", ret);
 
+#endif
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "start %d\n", start);
 	/* At this point WLBT should assert the CFG_REQ IRQ, so wait for it */
 	if (start &&
 	    wait_for_completion_timeout(&platform->cfg_ack, WLBT_BOOT_TIMEOUT) == 0) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "Timeout waiting for CFG_REQ IRQ\n");
-		regmap_read(platform->pmureg, CENTRAL_SEQ_WLBT_STATUS, &val);
-		SCSC_TAG_INFO(PLAT_MIF, "CENTRAL_SEQ_WLBT_STATUS 0x%x\n", val);
-		regmap_read(platform->pmureg, WLBT_DEBUG, &val);
-		SCSC_TAG_INFO(PLAT_MIF, "WLBT_DEBUG 0x%x\n", val);
+		wlbt_regdump(platform);
 		return -ETIMEDOUT;
 	}
+
+	wlbt_regdump(platform);
+
 	/* only continue if CFG_REQ IRQ configured WLBT/PMU correctly */
 	if (platform->boot_state == WLBT_BOOT_CFG_ERROR) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "CFG_REQ failed to configure WLBT.\n");
 		return -EIO;
 	}
-#else
-	if (start)
-		val = WIFI_START;
-	/* See sequence in 8.6.6 */
-	ret = regmap_update_bits(platform->pmureg, WIFI_CTRL_S,
-				 WIFI_START, val);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WIFI_CTRL_S[WIFI_START]: %d\n", ret);
-		return ret;
-	}
-#endif
 	return 0;
 }
 
 static int platform_mif_pmu_reset_release(struct scsc_mif_abs *interface)
 {
-	int                 ret = 0;
 	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
+	int		ret = 0;
+	u32		val = 0;
+	u32		v = 0;
+	unsigned long	timeout;
+	static bool	init_done;
 
-#ifdef CONFIG_SOC_EXYNOS9610
 	/* We're now ready for the IRQ */
 	platform->boot_state = WLBT_BOOT_WAIT_CFG_REQ;
 	smp_wmb(); /* commit before irq */
-#endif
-	ret = platform_mif_power(interface, true);
-	if (ret)
+
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "on boot_state = WLBT_BOOT_WAIT_CFG_REQ\n");
+
+	/* INIT SEQUENCE - First WLBT boot only
+	 * Cold reset wrt. AP power sequencer, cold reset for WLBT
+	 */
+	if (!init_done) {
+		/* init sequence from excite
+		 * //20190812 APM team Change PMUCAL guide doc.
+		 * SetBits((uinteger)REG_WLBT_CTRL_S, 3, 0x1, 0x1);
+		 * SetBits((uinteger)REG_WLBT_OPTION, 3, 0x1, 0x1);
+		 * udelay(1000);
+		 * SetBits((uinteger)SYSTEM_OUT, 9, 0x1, 0x1);
+		 * SetBits((uinteger)REG_WLBT_CONFIGURATION, 0, 0x1, 0x1);
+		 * while (GetBits((uinteger)REG_VGPIO_TX_MONITOR, 29, 0x1) != 0x1)
+		 * ;
+		 * while (GetBits((uinteger)REG_WLBT_STATUS, 0, 0x1) != 0x1)
+		 * ;
+		 * while (GetBits((uinteger)REG_WLBT_IN, 4, 0x1) != 0x1)
+		 * ;
+		 */
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "init\n");
+
+		/* WLBT_CTRL_S[WLBT_START] = 1 enable */
+		ret = regmap_update_bits(platform->pmureg, WLBT_CTRL_S,
+				WLBT_START, WLBT_START);
+		if (ret < 0) {
+			SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
+					"Failed to update WLBT_CTRL_S[WLBT_START]: %d\n", ret);
+			return ret;
+		}
+		regmap_read(platform->pmureg, WLBT_CTRL_S, &val);
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+			"updated successfully WLBT_CTRL_S[WLBT_START]: 0x%x\n", val);
+
+		/* WLBT_OPTION[WLBT_OPTION_DATA] = 1 Power On */
+		ret = regmap_update_bits(platform->pmureg, WLBT_OPTION,
+				WLBT_OPTION_DATA, WLBT_OPTION_DATA);
+		if (ret < 0) {
+			SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
+				"Failed to update WLBT_OPTION[WLBT_OPTION_DATA]: %d\n", ret);
+			return ret;
+		}
+		regmap_read(platform->pmureg, WLBT_OPTION, &val);
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+			"updated successfully WLBT_OPTION[WLBT_OPTION_DATA]: 0x%x\n", val);
+
+		/* SYSTEM_OUT[PWRRGTON_CON] = 1 Power On */
+		ret = regmap_update_bits(platform->pmureg, SYSTEM_OUT,
+				PWRRGTON_CON, PWRRGTON_CON);
+		if (ret < 0) {
+			SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
+				"Failed to update SYSTEM_OUT[PWRRGTON_CON]: %d\n", ret);
+			return ret;
+		}
+		regmap_read(platform->pmureg, SYSTEM_OUT, &val);
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+			"updated successfully SYSTEM_OUT[PWRRGTON_CON]: 0x%x\n", val);
+
+		/* WLBT_CONFIGURATION[LOCAL_PWR_CFG] = 1 Power On */
+		ret = regmap_update_bits(platform->pmureg, WLBT_CONFIGURATION,
+				LOCAL_PWR_CFG, LOCAL_PWR_CFG);
+		if (ret < 0) {
+			SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
+				"Failed to update WLBT_CONFIGURATION[LOCAL_PWR_CFG]: %d\n", ret);
+			return ret;
+		}
+		regmap_read(platform->pmureg, WLBT_CONFIGURATION, &val);
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+			"updated successfully WLBT_CONFIGURATION[PWRRGTON_CON]: 0x%x\n", val);
+
+		/* VGPIO_TX_MONITOR[VGPIO_TX_MON_BIT29] = 0x1 */
+		timeout = jiffies + msecs_to_jiffies(500);
+		do {
+			regmap_read(platform->i3c_apm_pmic, VGPIO_TX_MONITOR, &val);
+			val &= (u32)VGPIO_TX_MON_BIT29;
+			if (val) {
+				SCSC_TAG_INFO(PLAT_MIF, "VGPIO_TX_MONITOR 0x%x\n", val);
+				break;
+			}
+		} while (time_before(jiffies, timeout));
+
+		if (!val) {
+			regmap_read(platform->i3c_apm_pmic, VGPIO_TX_MONITOR, &val);
+			SCSC_TAG_INFO(PLAT_MIF, "timeout waiting for VGPIO_TX_MONITOR time-out: "
+						"VGPIO_TX_MONITOR 0x%x\n", val);
+		}
+
+		/* wait for power up complete WLBT_STATUS[WLBT_STATUS_BIT0] = 1 for Power On */
+		timeout = jiffies + msecs_to_jiffies(500);
+		do {
+			regmap_read(platform->pmureg, WLBT_STATUS, &val);
+			val &= (u32)WLBT_STATUS_BIT0;
+			if (val) {
+				/* Power On complete */
+				SCSC_TAG_INFO(PLAT_MIF, "Power On complete: WLBT_STATUS 0x%x\n", val);
+				/* re affirming power on by reading WLBT_STATES */
+				/* STATES[7:0] = 0x10 for Power Up */
+				regmap_read(platform->pmureg, WLBT_STATES, &v);
+				SCSC_TAG_INFO(PLAT_MIF, "Power On complete: WLBT_STATES 0x%x\n", v);
+				break;
+			}
+		} while (time_before(jiffies, timeout));
+
+		if (!val) {
+			regmap_read(platform->pmureg, WLBT_STATUS, &val);
+			SCSC_TAG_INFO(PLAT_MIF, "timeout waiting for power on time-out: "
+						"WLBT_STATUS 0x%x, WLBT_STATES 0x%x\n", val, v);
+		}
+
+		/* wait for WLBT_IN[BUS_READY] = 1 for BUS READY state */
+		timeout = jiffies + msecs_to_jiffies(500);
+		do {
+			regmap_read(platform->pmureg, WLBT_IN, &val);
+			val &= (u32)BUS_READY;
+			if (val) {
+				/* BUS ready indication signal -> 1: BUS READY state */
+				SCSC_TAG_INFO(PLAT_MIF, "Bus Ready: WLBT_IN 0x%x\n", val);
+
+				/* OK to break */
+				break;
+			}
+		} while (time_before(jiffies, timeout));
+
+		if (!val) {
+			regmap_read(platform->pmureg, WLBT_IN, &val);
+			SCSC_TAG_INFO(PLAT_MIF, "timeout waiting for Bus Ready: WLBT_IN 0x%x\n", val);
+		}
+
+		init_done = true;
+
+		goto init_code_done;
+	}
+
+	/* RESET RELEASE - Subsequent WLBT reboots */
+	/* wlbt_if_reset_release - from excite code
+	 * 20190812 APM team Change PMUCAL guide doc.
+	 * SetBits((uinteger)REG_WLBT_CONFIGURATION, 0, 0x1, 0x1);
+	 * while (GetBits((uinteger)REG_WLBT_STATUS, 0, 0x1) != 0x1)
+	 *	;
+	 * while (GetBits((uinteger)REG_WLBT_IN, 4, 0x1) != 0x1)
+		;
+	 */
+
+	/* Warm reset wrt. AP power sequencer, but cold reset for WLBT */
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "release\n");
+
+	/* Power Down */
+	ret = regmap_update_bits(platform->pmureg, WLBT_CONFIGURATION,
+			LOCAL_PWR_CFG, 0x1);
+	if (ret < 0) {
+		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
+			"Failed to update WLBT_CONFIGURATION[LOCAL_PWR_CFG]: %d\n", ret);
 		return ret;
-	ret = platform_mif_hold_reset(interface, false);
-	if (ret)
-		return ret;
+	}
+	regmap_read(platform->pmureg, WLBT_CONFIGURATION, &val);
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+		"updated successfully WLBT_CONFIGURATION[LOCAL_PWR_CFG]: 0x%x\n", val);
+
+	/* wait for power up complete WLBT_STATUS[0] = 0 for power down */
+	timeout = jiffies + msecs_to_jiffies(500);
+	do {
+		regmap_read(platform->pmureg, WLBT_STATUS, &val);
+		val &= (u32)WLBT_STATUS_BIT0;
+		if (val) {
+			/* Power up complete */
+			SCSC_TAG_INFO(PLAT_MIF, "Power up complete: WLBT_STATUS 0x%x\n", val);
+			/* re affirming power down by reading WLBT_STATES */
+			/* STATES[7:0] = 0x80 for Power Down */
+			regmap_read(platform->pmureg, WLBT_STATES, &v);
+			SCSC_TAG_INFO(PLAT_MIF, "Power up complete: WLBT_STATES 0x%x\n", v);
+			break;
+		}
+	} while (time_before(jiffies, timeout));
+
+	if (!val) {
+		regmap_read(platform->pmureg, WLBT_STATUS, &val);
+		SCSC_TAG_INFO(PLAT_MIF, "Timeout waiting for Power up complete: "
+					"WLBT_STATUS 0x%x, WLBT_STATES 0x%x\n", val, v);
+	}
+
+	/* wait for WLBT_IN[BUS_READY] = 0 for BUS RESET RELEASED state */
+	timeout = jiffies + msecs_to_jiffies(500);
+	do {
+		regmap_read(platform->pmureg, WLBT_IN, &val);
+		val &= (u32)BUS_READY;
+		if (val) {
+			/* BUS ready indication signal -> 1: BUS RESET RELEASED Normal state */
+			SCSC_TAG_INFO(PLAT_MIF, "Bus Ready: WLBT_IN 0x%x\n", val);
+
+			/* OK to break */
+			break;
+		}
+	} while (time_before(jiffies, timeout));
+
+	if (!val) {
+		regmap_read(platform->pmureg, WLBT_IN, &val);
+		SCSC_TAG_INFO(PLAT_MIF, "Timeout waiting for Bus Ready: WLBT_IN 0x%x != 0\n", val);
+	}
+
+init_code_done:
+	/* Now handle the CFG_REQ IRQ */
+	enable_irq(platform->wlbt_irq[PLATFORM_MIF_CFG_REQ].irq_num);
+
 	ret = platform_mif_start(interface, true);
 	if (ret)
 		return ret;
@@ -1148,291 +1263,102 @@ static int platform_mif_pmu_reset_release(struct scsc_mif_abs *interface)
 	return ret;
 }
 
-int __platform_mif_9610_recover_reset(struct platform_mif *platform)
-{
-	unsigned long       timeout;
-	int                 ret;
-	u32                 val;
-
-	SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "Attempt to recover WLBT HW reset");
-
-	/*
-	 * Set CFG_ACK = 1
-	 * Poll CFG_REQ until REQ == 0
-	 * Set CFG_ACK = 0
-	 * Poll CENTRAL_SEQ_WLBT_STATUS SM status again
-	 * Print WLBT_DEBUG at each step.
-	 * (Remember to set "echo 1 > /sys/kernel/debug/exynos-rgt/vqmmc/enable" before the test).
-	 */
-
-	/* CFG_ACK = 1 */
-	regmap_write(platform->boot_cfg, 0x4, 0x1);
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Force BOOT_CFG_ACK = 1\n");
-
-	regmap_read(platform->pmureg, CENTRAL_SEQ_WLBT_STATUS, &val);
-	SCSC_TAG_INFO(PLAT_MIF, "CENTRAL_SEQ_WLBT_STATUS 0x%x\n", val);
-	regmap_read(platform->pmureg, WLBT_DEBUG, &val);
-	SCSC_TAG_INFO(PLAT_MIF, "WLBT_DEBUG 0x%x\n", val);
-
-	/* TBD poll CFG_REQ status */
-	udelay(250);
-
-	/* CFG_ACK = 0 */
-	regmap_write(platform->boot_cfg, 0x4, 0x0);
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Force BOOT_CFG_ACK = 0\n");
-
-	regmap_read(platform->pmureg, CENTRAL_SEQ_WLBT_STATUS, &val);
-	SCSC_TAG_INFO(PLAT_MIF, "CENTRAL_SEQ_WLBT_STATUS 0x%x\n", val);
-	regmap_read(platform->pmureg, WLBT_DEBUG, &val);
-	SCSC_TAG_INFO(PLAT_MIF, "WLBT_DEBUG 0x%x\n", val);
-
-	/* Check WLBT_STATUS again */
-	timeout = jiffies + msecs_to_jiffies(500);
-	do {
-		regmap_read(platform->pmureg, CENTRAL_SEQ_WLBT_STATUS, &val);
-		val &= STATES;
-		val >>= 16;
-		if (val == 0x80) {
-			ret = 0;	/* Recovered OK */
-			goto done;
-		}
-	} while (time_before(jiffies, timeout));
-	ret = -ETIME;
-
-done:
-	regmap_read(platform->pmureg, CENTRAL_SEQ_WLBT_STATUS, &val);
-	SCSC_TAG_INFO(PLAT_MIF, "CENTRAL_SEQ_WLBT_STATUS 0x%x\n", val);
-	regmap_read(platform->pmureg, WLBT_DEBUG, &val);
-	SCSC_TAG_INFO(PLAT_MIF, "WLBT_DEBUG 0x%x\n", val);
-
-	if (ret == 0)
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "Recovered reset");
-	else
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "Reset not recovered");
-
-	/* Save log at point of failure, last to show recovery attempt */
-#ifdef CONFIG_SCSC_LOG_COLLECTION
-	scsc_log_collector_schedule_collection(SCSC_LOG_HOST_COMMON, SCSC_LOG_HOST_COMMON_RECOVER_RST);
-#else
-	mx140_log_dump();
-#endif
-	return ret;
-}
-
-static int platform_mif_pmu_reset(struct scsc_mif_abs *interface, u8 rst_case)
+static int platform_mif_pmu_reset_assert(struct scsc_mif_abs *interface)
 {
 	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
 	unsigned long       timeout;
 	int                 ret;
 	u32                 val;
 
-	if (rst_case == 0 || rst_case > 2) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Incorrect pmu reset case %d\n", rst_case);
-		return -EIO;
-	}
+	/* wlbt_if_reset_assertion() - from wlbt_if_S5E9630.c
+	 * 20190812 APM team Change PMUCAL guide doc.
+	 * SetBits((uinteger)REG_WLBT_OPTION, 3, 0x1, 0x1);
+	 * SetBits((uinteger)SYSTEM_OUT, 9, 0x1, 0x1);
+	 * while (GetBits((uinteger)REG_VGPIO_TX_MONITOR, 29, 0x1) != 0x1)
+	 * ;
+	 * udelay(1000);
+	 * SetBits((uinteger)REG_WLBT_CONFIGURATION, 0, 0x1, 0x0);
+	 * udelay(1000);
+	 * while (GetBits((uinteger)REG_WLBT_STATUS, 0, 0x1) != 0x0)
+	 * ;
+	 */
 
-#if defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	ret = regmap_update_bits(platform->pmureg, RESET_AHEAD_WIFI_PWR_REG,
-				 SYS_PWR_CFG_2, 0);
+	ret = regmap_update_bits(platform->pmureg, WLBT_OPTION,
+			WLBT_OPTION_DATA, WLBT_OPTION_DATA);
 	if (ret < 0) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update RESET_ASB_WIFI_SYS_PWR_REG %d\n", ret);
+				"Failed to update WLBT_OPTION[WLBT_OPTION_DATA]: %d\n", ret);
 		return ret;
 	}
-#elif defined(CONFIG_SOC_EXYNOS7570)
-	ret = regmap_update_bits(platform->pmureg, RESET_ASB_WIFI_SYS_PWR_REG,
-				 SYS_PWR_CFG_2, 0);
+	regmap_read(platform->pmureg, WLBT_OPTION, &val);
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+			"updated successfully WLBT_OPTION[WLBT_OPTION_DATA]: 0x%x\n", val);
+
+	ret = regmap_update_bits(platform->pmureg, SYSTEM_OUT,
+			PWRRGTON_CON, PWRRGTON_CON);
 	if (ret < 0) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update RESET_ASB_WIFI_SYS_PWR_REG %d\n", ret);
+				"Failed to update SYSTEM_OUT[PWRRGTON_CON]: %d\n", ret);
 		return ret;
 	}
+	regmap_read(platform->pmureg, SYSTEM_OUT, &val);
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+			"updated successfully SYSTEM_OUT[PWRRGTON_CON]: 0x%x\n", val);
 
-#endif
-#ifdef CONFIG_SOC_EXYNOS9610
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "rst_case %d\n", rst_case);
-
-	/* Revert power control ownership to AP, as WLBT is going down (S9.6.6). */
-	ret = regmap_update_bits(platform->pmureg, WLBT_CTRL_NS,
-				 MASK_PWR_REQ, MASK_PWR_REQ);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WLBT_CTRL_NS[MASK_PWR_REQ]: %d\n", ret);
-		return ret;
-	}
-
-	/* reset sequence as per excite implementation for Leman */
-	ret = regmap_update_bits(platform->pmureg, CENTRAL_SEQ_WLBT_CONFIGURATION,
-				 SYS_PWR_CFG_16, 0);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update CENTRAL_SEQ_WLBT_CONFIGURATION %d\n", ret);
-		return ret;
-	}
-
-	ret = regmap_update_bits(platform->pmureg, RESET_AHEAD_WLBT_SYS_PWR_REG,
-				 SYS_PWR_CFG_2, 0);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update RESET_AHEAD_WLBT_SYS_PWR_REG %d\n", ret);
-		return ret;
-	}
-
-	ret = regmap_update_bits(platform->pmureg, CLEANY_BUS_WLBT_SYS_PWR_REG,
-				 SYS_PWR_CFG, 0);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update CLEANY_BUS_WLBT_SYS_PWR_REG%d\n", ret);
-		return ret;
-	}
-
-	ret = regmap_update_bits(platform->pmureg, LOGIC_RESET_WLBT_SYS_PWR_REG,
-				 SYS_PWR_CFG_2, 0);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update LOGIC_RESET_WLBT_SYS_PWR_REG %d\n", ret);
-		return ret;
-	}
-
-	ret = regmap_update_bits(platform->pmureg, TCXO_GATE_WLBT_SYS_PWR_REG,
-				 SYS_PWR_CFG, 0);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update TCXO_GATE_WLBT_SYS_PWR_REG %d\n", ret);
-		return ret;
-	}
-
-	ret = regmap_update_bits(platform->pmureg, WLBT_DISABLE_ISO_SYS_PWR_REG,
-				 SYS_PWR_CFG, 1);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WLBT_DISABLE_ISO_SYS_PWR_REG %d\n", ret);
-		return ret;
-	}
-
-	ret = regmap_update_bits(platform->pmureg, WLBT_RESET_ISO_SYS_PWR_REG,
-				 SYS_PWR_CFG, 0);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WLBT_RESET_ISO_SYS_PWR_REG %d\n", ret);
-		return ret;
-	}
-
-	/* rst_case is always 2 on 9610 */
-	ret = platform_mif_hold_reset(interface, true);
-
-	if (ret)
-		return ret;
-
+	/* VGPIO_TX_MONITOR = 0x1 */
 	timeout = jiffies + msecs_to_jiffies(500);
 	do {
-		regmap_read(platform->pmureg, CENTRAL_SEQ_WLBT_STATUS, &val);
-		val &= STATES;
-		val >>= 16;
-		if (val == 0x80) {
-			/* OK. Switch CTRL_NS[MASK_PWR_REQ] ownership to FW following
-			 * reset. WLBT PWR_REQ is cleared when it's put in reset.
-			 * The SW PWR_REQ remains asserted, but as ownership is now FW,
-			 * it'll be ignored. This leaves it as we found it.
-			 */
-			platform_mif_power(interface, false);
+		regmap_read(platform->i3c_apm_pmic, VGPIO_TX_MONITOR, &val);
+		val &= (u32)VGPIO_TX_MON_BIT29;
+		if (val) {
+			SCSC_TAG_INFO(PLAT_MIF, "VGPIO_TX_MONITOR 0x%x\n", val);
+			break;
+		}
+	} while (time_before(jiffies, timeout));
+
+	if (!val) {
+		regmap_read(platform->i3c_apm_pmic, VGPIO_TX_MONITOR, &val);
+		SCSC_TAG_INFO(PLAT_MIF, "timeout waiting for VGPIO_TX_MONITOR time-out: "
+				"VGPIO_TX_MONITOR 0x%x\n", val);
+	}
+
+	/* Power Down */
+	ret = regmap_write_bits(platform->pmureg, WLBT_CONFIGURATION,
+		LOCAL_PWR_CFG, 0x0);
+	if (ret < 0) {
+		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
+			"Failed to update WLBT_CONFIGURATION[LOCAL_PWR_CFG]: %d\n", ret);
+		return ret;
+	}
+	regmap_read(platform->pmureg, WLBT_CONFIGURATION, &val);
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+		"updated successfully WLBT_CONFIGURATION[LOCAL_PWR_CFG]: 0x%x\n", val);
+
+	/* Wait for power Off WLBT_STATUS[WLBT_STATUS_BIT0] = 0 */
+	timeout = jiffies + msecs_to_jiffies(500);
+	do {
+		regmap_read(platform->pmureg, WLBT_STATUS, &val);
+		val &= (u32)WLBT_STATUS_BIT0;
+		if (val == 0) {
+			SCSC_TAG_INFO(PLAT_MIF, "WLBT_STATUS 0x%x\n", val);
+			/* re affirming power down by reading WLBT_STATES */
+			/* STATES[7:0] = 0x80 for Power Down */
+			regmap_read(platform->pmureg, WLBT_STATES, &val);
+			SCSC_TAG_INFO(PLAT_MIF, "Power down complete: WLBT_STATES 0x%x\n", val);
 
 			return 0; /* OK - return */
 		}
 	} while (time_before(jiffies, timeout));
 
-	SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-		"Timeout waiting for CENTRAL_SEQ_WLBT_STATUS SM status\n");
-	regmap_read(platform->pmureg, CENTRAL_SEQ_WLBT_STATUS, &val);
-	SCSC_TAG_INFO(PLAT_MIF, "CENTRAL_SEQ_WLBT_STATUS 0x%x\n", val);
+	/* Timed out */
+	SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "Timeout waiting for WLBT_STATUS status\n");
+
+	regmap_read(platform->pmureg, WLBT_STATUS, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_STATUS 0x%x\n", val);
 	regmap_read(platform->pmureg, WLBT_DEBUG, &val);
 	SCSC_TAG_INFO(PLAT_MIF, "WLBT_DEBUG 0x%x\n", val);
-
-#if 0
-	/* Try to recovery in case of reset failure */
-	ret = __platform_mif_9610_recover_reset(platform);
-	if (!ret)
-		return 0;
-#endif
-#else
-	/* 7885, 7872, 7570 */
-	ret = regmap_update_bits(platform->pmureg, CLEANY_BUS_WIFI_SYS_PWR_REG,
-				 SYS_PWR_CFG, 0);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update CLEANY_BUS_WIFI_SYS_PWR_REG%d\n", ret);
-		return ret;
-	}
-
-	ret = regmap_update_bits(platform->pmureg, LOGIC_RESET_WIFI_SYS_PWR_REG,
-				 SYS_PWR_CFG_2, 0);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update LOGIC_RESET_WIFI_SYS_PWR_REG %d\n", ret);
-		return ret;
-	}
-
-	ret = regmap_update_bits(platform->pmureg, TCXO_GATE_WIFI_SYS_PWR_REG,
-				 SYS_PWR_CFG, 0);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update TCXO_GATE_WIFI_SYS_PWR_REG %d\n", ret);
-		return ret;
-	}
-#endif
-#if defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	ret = regmap_update_bits(platform->pmureg, WIFI_DISABLE_ISO_SYS_PWR_REG,
-				 SYS_PWR_CFG, 1);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WIFI_DISABLE_ISO_SYS_PWR_REG %d\n", ret);
-		return ret;
-	}
-
-	ret = regmap_update_bits(platform->pmureg, WIFI_RESET_ISO_SYS_PWR_REG,
-				 SYS_PWR_CFG, 0);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WIFI_RESET_ISO_SYS_PWR_REG %d\n", ret);
-		return ret;
-	}
-#endif
-#ifdef CONFIG_SOC_EXYNOS9610
-	(void)platform;
-	(void)timeout;
-	(void)ret;
-	(void)val;
-#else
-	/* 7885, 7872, 7570 */
-	ret = regmap_update_bits(platform->pmureg, CENTRAL_SEQ_WIFI_CONFIGURATION,
-				 SYS_PWR_CFG_16, 0);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update CENTRAL_SEQ_WIFI_CONFIGURATION %d\n", ret);
-		return ret;
-	}
-
-	if (rst_case == 1)
-		ret = platform_mif_power(interface, false);
-	else
-		ret = platform_mif_hold_reset(interface, true);
-
-	if (ret)
-		return ret;
-
-	timeout = jiffies + msecs_to_jiffies(500);
-	do {
-		regmap_read(platform->pmureg, CENTRAL_SEQ_WIFI_STATUS, &val);
-		val &= STATES;
-		val >>= 16;
-		if (val == 0x80)
-			return 0;
-	} while (time_before(jiffies, timeout));
-
-	SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-		"Timeout waiting for CENTRAL_SEQ_WIFI_STATUS SM status\n");
-#endif
+	regmap_read(platform->pmureg, WLBT_STATES, &val);
+	SCSC_TAG_INFO(PLAT_MIF, "WLBT_STATES 0x%x\n", val);
 	return -ETIME;
 }
 
@@ -1442,7 +1368,6 @@ static int platform_mif_reset(struct scsc_mif_abs *interface, bool reset)
 {
 	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
 	u32                 ret = 0;
-	u32                 val;
 
 	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "\n");
 
@@ -1453,53 +1378,12 @@ static int platform_mif_reset(struct scsc_mif_abs *interface, bool reset)
 				"SOC_VERSION: product_id 0x%x, rev 0x%x\n",
 				exynos_soc_info.product_id, exynos_soc_info.revision);
 #endif
-#ifdef CONFIG_SOC_EXYNOS9610
-			(void)val;
-#else
-			/* Enable R4 access to MIF resources */
-			/* Address is fixed and its value is in the dts */
-			/* It defines the base address of DRAM space which WIFI accesses.
-			 * Default value is 0x0_6000_0000. It can configure only MSB 14-bit.
-			 * You must align this base address with WIFI memory access size that WIFI_MEM_SIZE
-			 * defines
-			 */
-			/* >>12 represents 4K aligment (see size)*/
-			val = (platform->mem_start & 0xFFFFFC000) >> 12;
-			regmap_write(platform->pmureg, WIFI2AP_MEM_CONFIG1, val);
-			/* Size */
-			/*It defines the DRAM memory size to which WLBT can
-			 *      access.
-			 *      Definition of the size has 4 KB resolution defined from
-			 *      minimum 4 KB to maximum 1GB.
-			 *      20'b0000_0000_0000_0000_0001 = 4KB
-			 *      20'b0000_0000_0000_0000_0010 = 8KB
-			 *      20'b0000_0000_0001_0000_0000 = 1 MB
-			 *      20'b0000_0000_0010_0000_0000 = 2 MB
-			 *      20'b0000_0000_0100_0000_0000 = 4 MB (default)
-			 *      20'b0000_0000_1000_0000_0000 = 8 MB
-			 *      20'b0000_1000_0000_0000_0000 = 128 MB
-			 *      20'b0100_0000_0000_0000_0000 = 1 GB
-			 */
-			/* Size is fixed and its value is in the dts */
-			/* >>12 represents 4K aligment (see address)*/
-			val = platform->mem_size >> 12;
-			regmap_write(platform->pmureg, WIFI2AP_MEM_CONFIG0, val);
-#endif
-#if (defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)) && defined(CONFIG_ACPM_DVFS)
-			/* Immediately prior to reset release, set up ACPM
-			 * to ensure BUCK2 gets the right voltage
-			 */
-			exynos_acpm_set_flag();
-#endif
+			power_supplies_on(platform);
+
 			ret = platform_mif_pmu_reset_release(interface);
 		} else {
 			/* Put back into reset */
-			ret = platform_mif_pmu_reset(interface, 2);
-#if !defined(CONFIG_SOC_EXYNOS9610)
-			/* WLBT should be stopped/powered-down at this point */
-			regmap_write(platform->pmureg, WIFI2AP_MEM_CONFIG1, 0x00000);
-			regmap_write(platform->pmureg, WIFI2AP_MEM_CONFIG0, 0x00000);
-#endif
+			ret = platform_mif_pmu_reset_assert(interface);
 		}
 	} else
 		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Not resetting ARM Cores - enable_platform_mif_arm_reset: %d\n",
@@ -1556,45 +1440,15 @@ static void *platform_mif_map(struct scsc_mif_abs *interface, size_t *allocated)
 
 	/* Initialise MIF registers with documented defaults */
 	/* MBOXes */
-	for (i = 0; i < NUM_MBOX_PLAT; i++) {
+	for (i = 0; i < NUM_MBOX_PLAT; i++)
 		platform_mif_reg_write(platform, MAILBOX_WLBT_REG(ISSR(i)), 0x00000000);
-#if defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-		platform_mif_reg_write_m4(platform, MAILBOX_WLBT_REG(ISSR(i)), 0x00000000);
-#endif
-	}
+
 	/* MRs */ /*1's - set all as Masked */
 	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTMR0), 0xffff0000);
 	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTMR1), 0x0000ffff);
-#ifdef CONFIG_SOC_EXYNOS7570
-	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTMR2), 0x0000ffff);
-#elif defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	platform_mif_reg_write_m4(platform, MAILBOX_WLBT_REG(INTMR1), 0x0000ffff);
-#endif
-
 	/* CRs */ /* 1's - clear all the interrupts */
 	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTCR0), 0xffff0000);
 	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTCR1), 0x0000ffff);
-#ifdef CONFIG_SOC_EXYNOS7570
-	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTCR2), 0x0000ffff);
-#elif defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	platform_mif_reg_write_m4(platform, MAILBOX_WLBT_REG(INTCR1), 0x0000ffff);
-#endif
-#if !defined(CONFIG_SOC_EXYNOS9610)
-	/*Set WLBT_BOOT_TEST_RST_CFG to 0 to boot from external DRAM */
-	regmap_write(platform->pmureg, WLBT_BOOT_TEST_RST_CFG, 0x00000);
-#endif
-	/* Add more requrired initialization here: */
-
-#ifdef CONFIG_SCSC_GPR4_CON_DEBUG
-	/* PIO muxes switching to the Maxwell subsystem */
-	/* GPR4_CON (0x13750040) = 0x00666666 */
-	if (gpr4_debug) {
-		reg_bkp = readl(gpio_base);
-		writel(0x00666666, gpio_base);
-		SCSC_TAG_WARNING_DEV(PLAT_MIF, platform->dev, "[WARNING] Changing GPR4_CON from 0x%x to 0x%x", reg_bkp, readl(gpio_base));
-		reg_update = true;
-	}
-#endif
 
 #ifdef CONFIG_SCSC_CHV_SUPPORT
 	if (chv_disable_irq == true) {
@@ -1621,27 +1475,12 @@ static void platform_mif_unmap(struct scsc_mif_abs *interface, void *mem)
 {
 	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
 
-#ifdef CONFIG_SCSC_GPR4_CON_DEBUG
-	u32                 prev;
-
-	if (gpr4_debug && reg_update) {
-		prev = readl(gpio_base);
-		writel(reg_bkp, gpio_base);
-		SCSC_TAG_WARNING_DEV(PLAT_MIF, platform->dev, "[WARNING] Restoring GPR4_CON from 0x%x to 0x%x", prev, readl(gpio_base));
-	}
-	reg_update = false;
-#endif
 	/* Avoid unused parameter error */
 	(void)mem;
 
 	/* MRs */ /*1's - set all as Masked */
 	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTMR0), 0xffff0000);
 	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTMR1), 0x0000ffff);
-#ifdef CONFIG_SOC_EXYNOS7570
-	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTMR2), 0x0000ffff);
-#elif defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	platform_mif_reg_write_m4(platform, MAILBOX_WLBT_REG(INTMR1), 0x0000ffff);
-#endif
 
 #ifdef CONFIG_SCSC_CHV_SUPPORT
 	/* Restore PIO changed by Maxwell subsystem */
@@ -1654,11 +1493,6 @@ static void platform_mif_unmap(struct scsc_mif_abs *interface, void *mem)
 	/* CRs */ /* 1's - clear all the interrupts */
 	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTCR0), 0xffff0000);
 	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTCR1), 0x0000ffff);
-#ifdef CONFIG_SOC_EXYNOS7570
-	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(INTCR2), 0x0000ffff);
-#elif defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	platform_mif_reg_write_m4(platform, MAILBOX_WLBT_REG(INTCR1), 0x0000ffff);
-#endif
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Unmap: virt %p phys %lx\n", platform->mem, (uintptr_t)platform->mem_start);
 	platform_mif_unmap_region(platform->mem);
 	platform->mem = NULL;
@@ -1695,33 +1529,9 @@ static void platform_mif_irq_bit_set(struct scsc_mif_abs *interface, int bit_num
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "Incorrect INT number: %d\n", bit_num);
 		return;
 	}
-#ifdef CONFIG_SOC_EXYNOS9610
+
 	reg = INTGR1;
 	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(reg), (1 << bit_num));
-	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "Setting INTGR1: bit %d on target %d\n", bit_num, target);
-#else
-	/* Generate INT to R4/M4 - VIC */
-	if (target == SCSC_MIF_ABS_TARGET_R4)
-		reg = INTGR1;
-	else if (target == SCSC_MIF_ABS_TARGET_M4)
-#ifdef CONFIG_SOC_EXYNOS7570
-		reg = INTGR2;
-#elif defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-		reg = INTGR1;
-#endif
-	else {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "Incorrect Target %d\n", target);
-		return;
-	}
-#endif
-#ifdef CONFIG_SOC_EXYNOS7570
-	platform_mif_reg_write(platform, MAILBOX_WLBT_REG(reg), (1 << bit_num));
-#elif defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	if (target == SCSC_MIF_ABS_TARGET_R4)
-		platform_mif_reg_write(platform, MAILBOX_WLBT_REG(reg), (1 << bit_num));
-	else
-		platform_mif_reg_write_m4(platform, MAILBOX_WLBT_REG(reg), (1 << bit_num));
-#endif
 	SCSC_TAG_DEBUG_DEV(PLAT_MIF, platform->dev, "Setting INTGR1: bit %d on target %d\n", bit_num, target);
 }
 
@@ -1976,61 +1786,24 @@ static void platform_mif_dump_register(struct scsc_mif_abs *interface)
 
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTGR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTGR0)));
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTGR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTGR1)));
-#ifdef CONFIG_SOC_EXYNOS7570
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTGR2 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTGR2)));
-#elif defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTGR1(M4) 0x%08x\n", platform_mif_reg_read_m4(platform, MAILBOX_WLBT_REG(INTGR1)));
-#endif
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTCR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTCR0)));
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTCR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTCR1)));
-#ifdef CONFIG_SOC_EXYNOS7570
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTCR2 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTCR2)));
-#elif defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTCR1(M4) 0x%08x\n", platform_mif_reg_read_m4(platform, MAILBOX_WLBT_REG(INTCR1)));
-#endif
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMR0)));
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMR1)));
-#ifdef CONFIG_SOC_EXYNOS7570
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMR2 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMR2)));
-#elif defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMR1(M4) 0x%08x\n", platform_mif_reg_read_m4(platform, MAILBOX_WLBT_REG(INTMR1)));
-#endif
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTSR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTSR0)));
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTSR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTSR1)));
-#ifdef CONFIG_SOC_EXYNOS7570
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTSR2 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTSR2)));
-#elif defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTSR1(M4) 0x%08x\n", platform_mif_reg_read_m4(platform, MAILBOX_WLBT_REG(INTSR1)));
-#endif
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMSR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMSR0)));
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMSR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMSR1)));
-#ifdef CONFIG_SOC_EXYNOS7570
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMSR2 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMSR2)));
-#elif defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMSR1(M4) 0x%08x\n", platform_mif_reg_read_m4(platform, MAILBOX_WLBT_REG(INTMSR1)));
-#endif
 
 	spin_unlock_irqrestore(&platform->mif_spinlock, flags);
 }
 
 static void platform_mif_cleanup(struct scsc_mif_abs *interface)
 {
-#ifdef CONFIG_SCSC_CLK20MHZ
-	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
-
-	/* Restore USBPLL owenership to the AP so that USB driver may control it */
-	__platform_mif_usbpll_claim(platform, false);
-#endif
 }
 
 static void platform_mif_restart(struct scsc_mif_abs *interface)
 {
-#ifdef CONFIG_SCSC_CLK20MHZ
-	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
-
-	/* Restore USBPLL owenership to the wlbt */
-	__platform_mif_usbpll_claim(platform, true);
-#endif
 }
 
 #ifdef CONFIG_OF_RESERVED_MEM
@@ -2046,46 +1819,6 @@ static int __init platform_mif_wifibt_if_reserved_mem_setup(struct reserved_mem 
 RESERVEDMEM_OF_DECLARE(wifibt_if, "exynos,wifibt_if", platform_mif_wifibt_if_reserved_mem_setup);
 #endif
 
-#ifdef CONFIG_SCSC_CLK20MHZ
-static void __platform_mif_usbpll_claim(struct platform_mif *platform, bool wlbt)
-{
-
-	s32 ret = 0;
-
-	if (!platform->cmu_base) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "USBPLL claim not enabled\n");
-		return;
-	}
-
-	/* Set USBPLL ownership, by setting AP2WLBT_USBPLL_WPLL_SEL */
-
-	if (wlbt) {
-		/* WLBT f/w has control */
-		ret = regmap_update_bits(platform->cmu_base, USBPLL_CON1, AP2WLBT_USBPLL_WPLL_SEL, 0);
-		if (ret < 0)
-			goto error;
-	} else {
-		/* Ensure PLL runs */
-		ret = regmap_update_bits(platform->cmu_base, USBPLL_CON1, AP2WLBT_USBPLL_WPLL_EN, AP2WLBT_USBPLL_WPLL_EN);
-		if (ret < 0)
-			goto error;
-
-		/* AP has control */
-		udelay(platform->usbpll_delay);
-		ret = regmap_update_bits(platform->cmu_base, USBPLL_CON1, AP2WLBT_USBPLL_WPLL_SEL, AP2WLBT_USBPLL_WPLL_SEL);
-		if (ret < 0)
-			goto error;
-	}
-
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "USBPLL_CON1 assigned to %s\n", wlbt ? "WLBT" : "AP");
-	return;
-
-error:
-	SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "Failed to update USBPLL_CON1 to %s\n", wlbt ? "WLBT" : "AP");
-
-}
-#endif
-
 struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 {
 	struct scsc_mif_abs *platform_if;
@@ -2094,14 +1827,7 @@ struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 	int                 err = 0;
 	u8                  i = 0;
 	struct resource     *reg_res;
-#if defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	struct resource     *reg_res_m4;
-#endif
-#ifdef CONFIG_SCSC_CLK20MHZ
-	/* usb pll ownership */
-	const char          *usbowner  = NULL;
-	u32                 usbdelay   = 0;
-#endif
+
 #ifdef CONFIG_SCSC_SMAPPER
 	u32                 smapper_banks = 0;
 #endif
@@ -2188,20 +1914,9 @@ struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 #ifdef CONFIG_SCSC_SMAPPER
 	platform->smapper = NULL;
 #endif
-#if defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	/* TZASC configuration is required for WLBT to access DRAM from Katmai onward */
-	/* Base address should be 4KB aligned. This call needs proper support in EL3_MON */
-	err = exynos_smc(EXYNOS_SMC_WLBT_TZASC_CMD, WLBT_TZASC, platform->mem_start,
-			platform->mem_size);
-	/* Anyway we keep on WLBT initialization even if TZASC failed to minimize disruption*/
-	if (err)
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-				 "WLBT Failed to configure TZASC, err=%d. DRAM could be NOT accessible in secure mode\n", err);
-	else
-		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "WLBT TZASC configured OK\n");
-#endif
 
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "platform->mem_start 0x%x platform->mem_size 0x%x\n",  (u32)platform->mem_start, (u32)platform->mem_size);
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "platform->mem_start 0x%x platform->mem_size 0x%x\n",
+			(u32)platform->mem_start, (u32)platform->mem_size);
 	if (platform->mem_start == 0)
 		SCSC_TAG_WARNING_DEV(PLAT_MIF, platform->dev, "platform->mem_start is 0");
 
@@ -2235,70 +1950,8 @@ struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 		err = -EBUSY;
 		goto error_exit;
 	}
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "platform->reg_start %lx size %x base %p\n", (uintptr_t)platform->reg_start, (u32)platform->reg_size, platform->base);
-
-#if defined(CONFIG_SOC_EXYNOS7872) || defined(CONFIG_SOC_EXYNOS7885)
-	/* Memory resource for M4 MBOX bank - Phys Address of MAILBOX_WLBT register map */
-	reg_res_m4 = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (!reg_res_m4) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "Error getting mem resource for MAILBOX_WLBT\n");
-		err = -ENOENT;
-		goto error_exit;
-	}
-	platform->reg_start_m4 = reg_res_m4->start;
-	platform->reg_size_m4 = resource_size(reg_res_m4);
-
-	platform->base_m4 =
-		devm_ioremap_nocache(platform->dev, reg_res_m4->start, resource_size(reg_res_m4));
-
-	if (!platform->base_m4) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Error mapping M4 register region\n");
-		err = -EBUSY;
-		goto error_exit;
-	}
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "platform->reg_start_m4 %lx size_m4 %x base_m4 %p\n", (uintptr_t)platform->reg_start_m4, (u32)platform->reg_size_m4, platform->base_m4);
-#endif
-
-#ifdef CONFIG_SCSC_CLK20MHZ
-	/* Get usbpll,owner if Maxwell has to provide 20Mhz clock to USB subsystem */
-	platform->cmu_base = NULL;
-	if (of_property_read_string(pdev->dev.of_node, "usbpll,owner", &usbowner)) {
-		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "usbpll,owner of_property does not exist or is invalid\n");
-		goto cont;
-	} else {
-		if (strcasecmp(usbowner, "y"))
-			goto skip_usbpll;
-
-		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "usbpll,owner is enabled\n");
-
-		/* CMU_FSYS reg map - syscon */
-		platform->cmu_base = syscon_regmap_lookup_by_phandle(platform->dev->of_node,
-							   "samsung,syscon-cmu_fsys");
-		if (IS_ERR(platform->cmu_base)) {
-			SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-				"syscon regmap lookup failed. Aborting. %ld\n", PTR_ERR(platform->cmu_base));
-			goto skip_usbpll;
-		}
-
-		if (of_property_read_u32(pdev->dev.of_node, "usbpll,udelay", &usbdelay))
-			goto skip_usbpll;
-		platform->usbpll_delay = usbdelay;
-
-		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Mapping CMU_FSYS with %dus delay\n", usbdelay);
-
-		goto cont;
-skip_usbpll:
-		platform->cmu_base = NULL;
-		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "usbpll owner skipped\n");
-	}
-cont:
-#endif
-#ifdef CONFIG_SCSC_GPR4_CON_DEBUG
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Mapping GPR4_CON 0x13750040\n");
-	gpio_base =
-		devm_ioremap_nocache(platform->dev, 0x13750040, 4);
-#endif
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "platform->reg_start %lx size %x base %p\n",
+		(uintptr_t)platform->reg_start, (u32)platform->reg_size, platform->base);
 
 	/* Get the 4 IRQ resources */
 	for (i = 0; i < 4; i++) {
@@ -2307,22 +1960,27 @@ cont:
 
 		irq_res = platform_get_resource(pdev, IORESOURCE_IRQ, i);
 		if (!irq_res) {
-			SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev, "No IRQ resource at index %d\n", i);
+			SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
+				"No IRQ resource at index %d\n", i);
 			err = -ENOENT;
 			goto error_exit;
 		}
 
 		if (!strcmp(irq_res->name, "MBOX")) {
-			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "MBOX irq %d flag 0x%x\n", (u32)irq_res->start, (u32)irq_res->flags);
+			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "MBOX irq %d flag 0x%x\n",
+				(u32)irq_res->start, (u32)irq_res->flags);
 			irqtag = PLATFORM_MIF_MBOX;
 		} else if (!strcmp(irq_res->name, "ALIVE")) {
-			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "ALIVE irq %d flag 0x%x\n", (u32)irq_res->start, (u32)irq_res->flags);
+			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "ALIVE irq %d flag 0x%x\n",
+				(u32)irq_res->start, (u32)irq_res->flags);
 			irqtag = PLATFORM_MIF_ALIVE;
 		} else if (!strcmp(irq_res->name, "WDOG")) {
-			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "WDOG irq %d flag 0x%x\n", (u32)irq_res->start, (u32)irq_res->flags);
+			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "WDOG irq %d flag 0x%x\n",
+				(u32)irq_res->start, (u32)irq_res->flags);
 			irqtag = PLATFORM_MIF_WDOG;
 		} else if (!strcmp(irq_res->name, "CFG_REQ")) {
-			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "CFG_REQ irq %d flag 0x%x\n", (u32)irq_res->start, (u32)irq_res->flags);
+			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "CFG_REQ irq %d flag 0x%x\n",
+				(u32)irq_res->start, (u32)irq_res->flags);
 			irqtag = PLATFORM_MIF_CFG_REQ;
 		} else {
 			SCSC_TAG_ERR_DEV(PLAT_MIF, &pdev->dev, "Invalid irq res name: %s\n",
@@ -2340,22 +1998,23 @@ cont:
 							   "samsung,syscon-phandle");
 	if (IS_ERR(platform->pmureg)) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"syscon regmap lookup failed. Aborting. %ld\n", PTR_ERR(platform->pmureg));
+			"syscon regmap lookup failed. Aborting. %ld\n",
+				PTR_ERR(platform->pmureg));
 		err = -EINVAL;
 		goto error_exit;
 	}
 
-#ifdef CONFIG_SOC_EXYNOS9610
 	/* Completion event and state used to indicate CFG_REQ IRQ occurred */
 	init_completion(&platform->cfg_ack);
 	platform->boot_state = WLBT_BOOT_IN_RESET;
 
-	/* BAAW_P_WLBT */
-	platform->baaw_p_wlbt = syscon_regmap_lookup_by_phandle(platform->dev->of_node,
-							   "samsung,baaw_p_wlbt-syscon-phandle");
-	if (IS_ERR(platform->baaw_p_wlbt)) {
+	/* I3C_APM_PMIC */
+	platform->i3c_apm_pmic = syscon_regmap_lookup_by_phandle(platform->dev->of_node,
+							   "samsung,i3c_apm_pmic-syscon-phandle");
+	if (IS_ERR(platform->i3c_apm_pmic)) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"baaw_p_wlbt regmap lookup failed. Aborting. %ld\n", PTR_ERR(platform->baaw_p_wlbt));
+			"i3c_apm_pmic regmap lookup failed. Aborting. %ld\n",
+				PTR_ERR(platform->i3c_apm_pmic));
 		err = -EINVAL;
 		goto error_exit;
 	}
@@ -2365,7 +2024,8 @@ cont:
 							   "samsung,dbus_baaw-syscon-phandle");
 	if (IS_ERR(platform->dbus_baaw)) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"dbus_baaw regmap lookup failed. Aborting. %ld\n", PTR_ERR(platform->dbus_baaw));
+			"dbus_baaw regmap lookup failed. Aborting. %ld\n",
+				PTR_ERR(platform->dbus_baaw));
 		err = -EINVAL;
 		goto error_exit;
 	}
@@ -2375,7 +2035,8 @@ cont:
 							   "samsung,pbus_baaw-syscon-phandle");
 	if (IS_ERR(platform->pbus_baaw)) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"pbus_baaw regmap lookup failed. Aborting. %ld\n", PTR_ERR(platform->pbus_baaw));
+			"pbus_baaw regmap lookup failed. Aborting. %ld\n",
+				PTR_ERR(platform->pbus_baaw));
 		err = -EINVAL;
 		goto error_exit;
 	}
@@ -2385,7 +2046,8 @@ cont:
 							   "samsung,wlbt_remap-syscon-phandle");
 	if (IS_ERR(platform->wlbt_remap)) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"wlbt_remap regmap lookup failed. Aborting. %ld\n", PTR_ERR(platform->wlbt_remap));
+			"wlbt_remap regmap lookup failed. Aborting. %ld\n",
+				PTR_ERR(platform->wlbt_remap));
 		err = -EINVAL;
 		goto error_exit;
 	}
@@ -2395,11 +2057,12 @@ cont:
 							   "samsung,boot_cfg-syscon-phandle");
 	if (IS_ERR(platform->boot_cfg)) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"boot_cfg regmap lookup failed. Aborting. %ld\n", PTR_ERR(platform->boot_cfg));
+			"boot_cfg regmap lookup failed. Aborting. %ld\n",
+				PTR_ERR(platform->boot_cfg));
 		err = -EINVAL;
 		goto error_exit;
 	}
-#endif
+
 #ifdef CONFIG_SCSC_SMAPPER
 	/* SMAPPER parsing */
 	if (!of_property_read_u32(pdev->dev.of_node, "smapper_num_banks", &smapper_banks))
@@ -2409,22 +2072,9 @@ cont:
 #ifdef CONFIG_SCSC_QOS
 	platform_mif_parse_qos(platform, platform->dev->of_node);
 #endif
-#ifdef CONFIG_SCSC_CLK20MHZ
-	/* Assign USBPLL ownership to WLBT f/w */
-	__platform_mif_usbpll_claim(platform, true);
-#endif
-
 	/* Initialize spinlock */
 	spin_lock_init(&platform->mif_spinlock);
 
-#ifndef CONFIG_SOC_EXYNOS9610
-	/* Clear WIFI_ACTIVE flag in WAKEUP_STAT */
-	err = regmap_update_bits(platform->pmureg, WIFI_CTRL_NS, WIFI_ACTIVE_CLR, 1);
-	if (err < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to Set WIFI_CTRL_NS[WIFI_ACTIVE_CLR]: %d\n", err);
-	}
-#endif
 	return platform_if;
 
 error_exit:
@@ -2434,12 +2084,6 @@ error_exit:
 
 void platform_mif_destroy_platform(struct platform_device *pdev, struct scsc_mif_abs *interface)
 {
-#ifdef CONFIG_SCSC_CLK20MHZ
-	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
-
-	/* Assign USBPLL ownership to AP */
-	__platform_mif_usbpll_claim(platform, false);
-#endif
 }
 
 struct platform_device *platform_mif_get_platform_dev(struct scsc_mif_abs *interface)
@@ -2503,7 +2147,7 @@ void platform_mif_resume(struct scsc_mif_abs *interface)
 	 * This must be done first as the resume_handler may use the MIF.
 	 */
 	platform_mif_reg_restore(platform);
-#ifdef CONFIG_SOC_EXYNOS9610
+
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Clear WLBT_ACTIVE_CLR flag\n");
 	/* Clear WLBT_ACTIVE_CLR flag in WLBT_CTRL_NS */
 	ret = regmap_update_bits(platform->pmureg, WLBT_CTRL_NS, WLBT_ACTIVE_CLR, 1);
@@ -2511,14 +2155,54 @@ void platform_mif_resume(struct scsc_mif_abs *interface)
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
 			"Failed to Set WLBT_CTRL_NS[WLBT_ACTIVE_CLR]: %d\n", ret);
 	}
-#else
-	/* Clear WIFI_ACTIVE flag in WAKEUP_STAT */
-	ret = regmap_update_bits(platform->pmureg, WIFI_CTRL_NS, WIFI_ACTIVE_CLR, 1);
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to Set WIFI_CTRL_NS[WIFI_ACTIVE_CLR]: %d\n", ret);
-	}
-#endif
+
 	if (platform->resume_handler)
 		platform->resume_handler(interface, platform->suspendresume_data);
+}
+
+
+/* Temporary workaround to power up slave PMIC LDOs before FW APM/WLBT signalling
+ * is complete
+ */
+static void power_supplies_on(struct platform_mif *platform)
+{
+	struct i2c_client i2c;
+
+	/* HACK: Note only addr field is needed by s2mpu11_write_reg() */
+	i2c.addr = 0x1;
+
+	/* The APM IPC in FW will be used instead */
+	if (disable_apm_setup) {
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "WLBT LDOs firmware controlled\n");
+		return;
+	}
+
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "WLBT LDOs on (PMIC i2c_addr = 0x%x)\n", i2c.addr);
+
+	/* SLAVE PMIC
+	 * echo 0x22 > /sys/kernel/debug/s2mpu11-regs/i2caddr
+	 * echo 0xE0 > /sys/kernel/debug/s2mpu11-regs/i2cdata
+	 *
+	 * echo 0x23 > /sys/kernel/debug/s2mpu11-regs/i2caddr
+	 * echo 0xE8 > /sys/kernel/debug/s2mpu11-regs/i2cdata
+	 *
+	 * echo 0x24 > /sys/kernel/debug/s2mpu11-regs/i2caddr
+	 * echo 0xEC > /sys/kernel/debug/s2mpu11-regs/i2cdata
+	 *
+	 * echo 0x25 > /sys/kernel/debug/s2mpu11-regs/i2caddr
+	 * echo 0xEC > /sys/kernel/debug/s2mpu11-regs/i2cdata
+	 *
+	 * echo 0x26 > /sys/kernel/debug/s2mpu11-regs/i2caddr
+	 * echo 0xFC > /sys/kernel/debug/s2mpu11-regs/i2cdata
+	 *
+	 * echo 0x27 > /sys/kernel/debug/s2mpu11-regs/i2caddr
+	 * echo 0xFC > /sys/kernel/debug/s2mpu11-regs/i2cdata
+	 */
+
+	s2mpu11_write_reg(&i2c, 0x22, 0xe0);
+	s2mpu11_write_reg(&i2c, 0x23, 0xe8);
+	s2mpu11_write_reg(&i2c, 0x24, 0xec);
+	s2mpu11_write_reg(&i2c, 0x25, 0xec);
+	s2mpu11_write_reg(&i2c, 0x26, 0xfc);
+	s2mpu11_write_reg(&i2c, 0x27, 0xfc);
 }

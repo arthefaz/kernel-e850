@@ -26,9 +26,11 @@
 #define FIELD_TO_DSCP			2
 
 /* DSCP */
+/* (RFC5865) */
+#define DSCP_VA		0x2C
+/* (RFC3246) */
+#define DSCP_EF		0x2E
 /* (RFC2597) */
-#define DSCP_EF_PHB	0x2E
-#define DSCP_EF		0x2C
 #define DSCP_AF43	0x26
 #define DSCP_AF42	0x24
 #define DSCP_AF41	0x22
@@ -48,8 +50,9 @@
 #define CS4		0x20
 #define CS3		0x18
 #define CS2		0x10
-#define CS1		0x08
 #define CS0		0x00
+/* (RFC3662) */
+#define CS1		0x08
 
 #ifndef CONFIG_ARM
 static bool tcp_ack_suppression_disable;
@@ -136,6 +139,7 @@ static int slsi_net_open(struct net_device *dev)
 	struct netdev_vif *ndev_vif = netdev_priv(dev);
 	struct slsi_dev   *sdev = ndev_vif->sdev;
 	int               err;
+	unsigned char	  dev_addr_zero_check[ETH_ALEN];
 
 	if (WARN_ON(ndev_vif->is_available))
 		return -EINVAL;
@@ -158,7 +162,6 @@ static int slsi_net_open(struct net_device *dev)
 
 	if (!sdev->netdev_up_count) {
 		slsi_get_hw_mac_address(sdev, sdev->hw_addr);
-
 		/* Assign Addresses */
 		SLSI_ETHER_COPY(sdev->netdev_addresses[SLSI_NET_INDEX_WLAN], sdev->hw_addr);
 
@@ -176,14 +179,18 @@ static int slsi_net_open(struct net_device *dev)
 		sdev->initial_scan = true;
 	}
 
+	memset(dev_addr_zero_check, 0, ETH_ALEN);
+	if (!memcmp(dev->dev_addr, dev_addr_zero_check, ETH_ALEN)) {
 #ifdef CONFIG_SCSC_WLAN_WIFI_SHARING
-	if (SLSI_IS_VIF_INDEX_MHS(sdev, ndev_vif))
-		SLSI_ETHER_COPY(dev->dev_addr, sdev->netdev_addresses[SLSI_NET_INDEX_P2P]);
-	else
-		SLSI_ETHER_COPY(dev->dev_addr, sdev->netdev_addresses[ndev_vif->ifnum]);
+		if (SLSI_IS_VIF_INDEX_MHS(sdev, ndev_vif))
+			SLSI_ETHER_COPY(dev->dev_addr, sdev->netdev_addresses[SLSI_NET_INDEX_P2P]);
+		else
+			SLSI_ETHER_COPY(dev->dev_addr, sdev->netdev_addresses[ndev_vif->ifnum]);
 #else
-	SLSI_ETHER_COPY(dev->dev_addr, sdev->netdev_addresses[ndev_vif->ifnum]);
+		SLSI_ETHER_COPY(dev->dev_addr, sdev->netdev_addresses[ndev_vif->ifnum]);
 #endif
+	}
+	SLSI_ETHER_COPY(dev->perm_addr, sdev->netdev_addresses[ndev_vif->ifnum]);
 	SLSI_MUTEX_LOCK(ndev_vif->vif_mutex);
 #ifdef CONFIG_SCSC_WLAN_DEBUG
 	if (ndev_vif->iftype == NL80211_IFTYPE_MONITOR) {
@@ -323,10 +330,45 @@ static u16 slsi_get_priority_from_tos_dscp(u8 *frame, u16 proto)
 	default:
 		return FAPI_PRIORITY_QOS_UP0;
 	}
-
+/* DSCP table based in RFC8325 from Android 10 */
+#if (defined(ANDROID_VERSION) && ANDROID_VERSION >= 100000)
 	switch (dscp) {
-	case DSCP_EF_PHB:
+	case CS7:
+		return FAPI_PRIORITY_QOS_UP7;
+	case CS6:
 	case DSCP_EF:
+	case DSCP_VA:
+		return FAPI_PRIORITY_QOS_UP6;
+	case CS5:
+		return FAPI_PRIORITY_QOS_UP5;
+	case DSCP_AF41:
+	case DSCP_AF42:
+	case DSCP_AF43:
+	case CS4:
+	case DSCP_AF31:
+	case DSCP_AF32:
+	case DSCP_AF33:
+	case CS3:
+		return FAPI_PRIORITY_QOS_UP4;
+	case DSCP_AF21:
+	case DSCP_AF22:
+	case DSCP_AF23:
+		return FAPI_PRIORITY_QOS_UP3;
+	case CS2:
+	case DSCP_AF11:
+	case DSCP_AF12:
+	case DSCP_AF13:
+	case CS0:
+		return FAPI_PRIORITY_QOS_UP0;
+	case CS1:
+		return FAPI_PRIORITY_QOS_UP1;
+	default:
+		return FAPI_PRIORITY_QOS_UP0;
+	}
+#else
+	switch (dscp) {
+	case DSCP_EF:
+	case DSCP_VA:
 		return FAPI_PRIORITY_QOS_UP6;
 	case DSCP_AF43:
 	case DSCP_AF42:
@@ -361,6 +403,7 @@ static u16 slsi_get_priority_from_tos_dscp(u8 *frame, u16 proto)
 	default:
 		return FAPI_PRIORITY_QOS_UP0;
 	}
+#endif
 }
 
 #endif
@@ -628,7 +671,6 @@ void slsi_tdls_move_packets(struct slsi_dev *sdev, struct net_device *dev,
 		slsi_spinlock_unlock(&tcp_ack->lock);
 	}
 
-	slsi_spinlock_lock(&netdev_vif->peer_lock);
 	/**
 	 * For TDLS connection set PEER valid to true. After this ndo_select_queue() will select TDLSQ instead of STAQ
 	 * For TDLS teardown set PEER valid to false. After this ndo_select_queue() will select STAQ instead of TDLSQ
@@ -726,7 +768,6 @@ void slsi_tdls_move_packets(struct slsi_dev *sdev, struct net_device *dev,
 	if (unlikely(skb_to_free))
 		kfree_skb_list(skb_to_free);
 #endif
-	slsi_spinlock_unlock(&netdev_vif->peer_lock);
 
 	/* Teardown - after teardown there should not be any packet in TDLS queues */
 	if (!connection)
@@ -1019,7 +1060,10 @@ exit:
 
 static int  slsi_set_mac_address(struct net_device *dev, void *addr)
 {
-	SLSI_NET_DBG1(dev, SLSI_NETDEV, "slsi_set_mac_address\n");
+	struct sockaddr *sa = (struct sockaddr *)addr;
+
+	SLSI_NET_DBG1(dev, SLSI_NETDEV, "slsi_set_mac_address %pM\n", sa->sa_data);
+	SLSI_ETHER_COPY(dev->dev_addr, sa->sa_data);
 	return 0;
 }
 

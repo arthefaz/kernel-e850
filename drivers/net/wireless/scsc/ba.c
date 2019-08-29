@@ -112,7 +112,7 @@ static void slsi_ba_signal_process_complete(struct net_device *dev)
 	atomic_set(&ndev_vif->ba_flush, 1);
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
 	conf_hip4_ver = scsc_wifi_get_hip_config_version(&sdev->hip4_inst.hip_control->init);
-	if (conf_hip4_ver == 3)
+	if (conf_hip4_ver == 5)
 		slsi_skb_schedule_work(&ndev_vif->rx_data);
 #else
 	slsi_skb_schedule_work(&ndev_vif->rx_data);
@@ -180,6 +180,9 @@ static int ba_consume_frame_or_get_buffer_index(struct net_device *dev, struct s
 {
 	int i;
 	u16 sn_temp;
+#ifdef CONFIG_SCSC_WLAN_STA_ENHANCED_ARP_DETECT
+	struct netdev_vif *ndev_vif = netdev_priv(dev);
+#endif
 
 	*stop_timer = false;
 
@@ -247,6 +250,11 @@ static int ba_consume_frame_or_get_buffer_index(struct net_device *dev, struct s
 					ba_add_frame_to_ba_complete(dev, frame_desc);
 				} else {
 					SLSI_NET_DBG1(dev, SLSI_RX_BA, "old frame, drop: sn=%d, expected_sn=%d\n", sn, ba_session_rx->expected_sn);
+#ifdef CONFIG_SCSC_WLAN_STA_ENHANCED_ARP_DETECT
+					if (ndev_vif->enhanced_arp_detect_enabled)
+						slsi_fill_enhanced_arp_out_of_order_drop_counter(ndev_vif,
+												 frame_desc->signal);
+#endif
 					slsi_kfree_skb(frame_desc->signal);
 				}
 			}

@@ -32,6 +32,9 @@ struct gdb_transport;
 enum gdb_transport_enum {
 	GDB_TRANSPORT_R4 = 0,
 	GDB_TRANSPORT_M4,
+#ifdef CONFIG_SCSC_MX450_GDB_SUPPORT
+	GDB_TRANSPORT_M4_1,
+#endif
 };
 /**
  * Transport channel callback handler. This will be invoked each time a message on a channel is
@@ -72,6 +75,7 @@ struct gdb_transport {
 	gdb_channel_handler     channel_handler_fn;
 	void                    *channel_handler_data;
 	struct mutex            channel_handler_mutex;
+	struct mutex            channel_open_mutex;
 	/* Transport processor type  */
 	enum gdb_transport_enum type;
 };
