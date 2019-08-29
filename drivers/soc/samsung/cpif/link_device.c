@@ -448,18 +448,18 @@ static void cmd_init_start_handler(struct mem_link_device *mld)
 		ld->name, mc->name, mc->name, mc_state(mc),
 		atomic_read(&mld->cp_boot_done));
 
-	if (!ld->sbd_ipc) {
-		mif_err("%s: LINK_ATTR_SBD_IPC is NOT set\n", ld->name);
-		return;
-	}
-
 #if defined(CONFIG_CP_PKTPROC) || defined(CONFIG_CP_PKTPROC_V2)
 	err = pktproc_init(&mld->pktproc);
 	if (err < 0) {
-		mif_err("pktproc.init() error %d\n", err);
+		mif_err("pktproc_init() error %d\n", err);
 		return;
 	}
 #endif
+
+	if (!ld->sbd_ipc) {
+		mif_err("%s: LINK_ATTR_SBD_IPC is NOT set\n", ld->name);
+		goto init_exit;
+	}
 
 	err = init_sbd_link(&mld->sbd_link_dev);
 	if (err < 0) {
@@ -473,6 +473,8 @@ static void cmd_init_start_handler(struct mem_link_device *mld)
 		ld->aligned = false;
 
 	sbd_activate(&mld->sbd_link_dev);
+
+init_exit:
 	send_ipc_irq(mld, cmd2int(CMD_PIF_INIT_DONE));
 
 	mif_err("%s: PIF_INIT_DONE -> %s\n", ld->name, mc->name);

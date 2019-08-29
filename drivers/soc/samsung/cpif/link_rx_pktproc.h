@@ -72,15 +72,15 @@ struct pktproc_desc_ringbuf {
 /* SktBuf mode */
 struct pktproc_desc_sktbuf {
 	u32 data_addr;
+	u8 data_addr_msb:4, reserved0:4;
 	u8 control;
-	u8 reserved1;
 	u8 status;
-	u8 reserved2;
+	u8 lro:5, reserved1:3;
 	u16 length;
 	u16 filter_result;
 	u16 information;
 	u8 channel_id;
-	u8 reserved3;
+	u8 reserved2:4, itg:2, reserved3:2;
 } __packed;
 
 /* Statistics */
@@ -169,13 +169,11 @@ enum pktproc_desc_mode {
 /*
  * PktProc version
  * 1: Single queue, ringbuf desc mode
- * 2: Multi queue, ringbuf/sktbuf desc mode with restriction
- * 3: Multi queue, dedicated interrupt for all queues, ringbuf/sktbuf desc mode
+ * 2: Multi queue, ringbuf/sktbuf desc mode
  */
 enum pktproc_version {
 	PKTPROC_V1 = 1,
 	PKTPROC_V2,
-	PKTPROC_V3,
 	MAX_VERSION
 };
 

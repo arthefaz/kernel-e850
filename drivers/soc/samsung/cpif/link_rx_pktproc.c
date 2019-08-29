@@ -168,6 +168,7 @@ static int pktproc_fill_data_addr(struct pktproc_queue *q)
 		desc[*q->fore_ptr].data_addr = (u32)(addr - q->data) +
 						q->q_info->data_base +
 						(NET_SKB_PAD + NET_IP_ALIGN);
+		desc[*q->fore_ptr].data_addr_msb = 0;
 
 		if (*q->fore_ptr == 0)
 			desc[*q->fore_ptr].control |= (1 << 7);	/* HEAD */
@@ -229,6 +230,7 @@ static int pktproc_get_pkt_from_sktbuf_mode(struct pktproc_queue *q, struct sk_b
 	}
 	if (!q->ppa->use_hw_iocc)
 		__inval_dcache_area(src + NET_SKB_PAD + NET_IP_ALIGN, len);
+	pp_debug("len:%d ch_id:%d src:%pK\n", len, ch_id, src);
 
 	/* Build skb */
 	if (q->use_memcpy) {
@@ -245,7 +247,7 @@ static int pktproc_get_pkt_from_sktbuf_mode(struct pktproc_queue *q, struct sk_b
 	} else {
 		tmp_len = SKB_DATA_ALIGN(len + NET_SKB_PAD + NET_IP_ALIGN);
 		tmp_len += SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
-		skb = build_skb(src, tmp_len);
+		skb = __build_skb(src, tmp_len);
 		if (unlikely(!skb)) {
 			mif_err_limited("__build_skb() error\n");
 			q->stat.err_nomem++;
