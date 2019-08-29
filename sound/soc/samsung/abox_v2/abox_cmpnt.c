@@ -1,4 +1,4 @@
-/* sound/soc/samsung/abox_v2/abox_cmpnt.c
+/* sound/soc/samsung/abox/abox_cmpnt.c
  *
  * ALSA SoC Audio Layer - Samsung Abox Component driver
  *
@@ -28,6 +28,10 @@ enum asrc_tick {
 	TICK_UAIF0 = 0x1,
 	TICK_UAIF1 = 0x2,
 	TICK_UAIF2 = 0x3,
+	TICK_UAIF3 = 0x4,
+	TICK_UAIF4 = 0x5,
+	TICK_UAIF5 = 0x6,
+	TICK_UAIF6 = 0x7,
 	TICK_USB = 0x8,
 	TICK_BCLK_CP = 0x9,
 	TICK_BCLK_SPDY = 0xA,
@@ -1297,6 +1301,10 @@ static const char * const asrc_source_enum_texts[] = {
 	"UAIF0",
 	"UAIF1",
 	"UAIF2",
+	"UAIF3",
+	"UAIF4",
+	"UAIF5",
+	"UAIF6",
 	"USB",
 	"BCLK_CP",
 	"BCLK_SPDY"
@@ -1308,6 +1316,10 @@ static const unsigned int asrc_source_enum_values[] = {
 	TICK_UAIF0,
 	TICK_UAIF1,
 	TICK_UAIF2,
+	TICK_UAIF3,
+	TICK_UAIF4,
+	TICK_UAIF5,
+	TICK_UAIF6,
 	TICK_USB,
 	TICK_BCLK_CP,
 	TICK_BCLK_SPDY,
@@ -1613,6 +1625,10 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
+	case ABOX_UAIF3:
+	case ABOX_UAIF4:
+	case ABOX_UAIF5:
+	case ABOX_UAIF6:
 		snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL0, &val);
 		val &= ABOX_ROUTE_UAIF_SPK_MASK(id - ABOX_UAIF0);
 		val >>= ABOX_ROUTE_UAIF_SPK_L(id - ABOX_UAIF0);
@@ -1620,6 +1636,31 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 		case 0x1:
 			ret = ABOX_SIFS0;
 			break;
+		case 0x2:
+			ret = ABOX_SIFS1;
+			break;
+		case 0x3:
+			ret = ABOX_SIFS2;
+			break;
+		case 0x4:
+			ret = ABOX_SIFS3;
+			break;
+		case 0x5:
+			ret = ABOX_SIFS4;
+			break;
+		case 0x6:
+			ret = ABOX_SIFS5;
+			break;
+		default:
+			ret = ABOX_NONE;
+			break;
+		}
+		break;
+	case ABOX_DSIF:
+		snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL0, &val);
+		val &= ABOX_ROUTE_DSIF_MASK;
+		val >>= ABOX_ROUTE_DSIF_L;
+		switch (val) {
 		case 0x2:
 			ret = ABOX_SIFS1;
 			break;
@@ -1683,6 +1724,9 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 		case 0xa:
 			ret = ABOX_UAIF2;
 			break;
+		case 0xb:
+			ret = ABOX_UAIF3;
+			break;
 		default:
 			ret = ABOX_NONE;
 			break;
@@ -1726,6 +1770,18 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 			break;
 		case 0xa:
 			ret = ABOX_UAIF2;
+			break;
+		case 0xb:
+			ret = ABOX_UAIF3;
+			break;
+		case 0xc:
+			ret = ABOX_UAIF4;
+			break;
+		case 0xd:
+			ret = ABOX_UAIF5;
+			break;
+		case 0xe:
+			ret = ABOX_UAIF6;
 			break;
 		case 0x10:
 			ret = ABOX_BI_PDI0;
@@ -2023,6 +2079,10 @@ static enum abox_dai get_sink_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
+	case ABOX_UAIF3:
+	case ABOX_UAIF4:
+	case ABOX_UAIF5:
+	case ABOX_UAIF6:
 	case ABOX_SPDY:
 		for (_id = ABOX_RSRC0; _id <= ABOX_NSRC5; _id++) {
 			if (get_source_dai_id(data, _id) == id &&
@@ -2038,7 +2098,7 @@ static enum abox_dai get_sink_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_SIFS3:
 	case ABOX_SIFS4:
 	case ABOX_SIFS5:
-		for (_id = ABOX_UAIF0; _id <= ABOX_UAIF2; _id++) {
+		for (_id = ABOX_UAIF0; _id <= ABOX_DSIF; _id++) {
 			if (get_source_dai_id(data, _id) == id) {
 				ret = _id;
 				break;
@@ -2317,6 +2377,11 @@ static int sifs_hw_params_fixup(struct snd_soc_dai *dai,
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
+	case ABOX_UAIF3:
+	case ABOX_UAIF4:
+	case ABOX_UAIF5:
+	case ABOX_UAIF6:
+	case ABOX_DSIF:
 		_dai = find_dai(cmpnt->card, _id);
 		abox_if_hw_params_fixup(_dai, params, stream);
 		break;
@@ -2359,6 +2424,11 @@ static int sifm_hw_params_fixup(struct snd_soc_dai *dai,
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
+	case ABOX_UAIF3:
+	case ABOX_UAIF4:
+	case ABOX_UAIF5:
+	case ABOX_UAIF6:
+	case ABOX_DSIF:
 	case ABOX_SPDY:
 		_dai = find_dai(cmpnt->card, _id);
 		abox_if_hw_params_fixup(_dai, params, stream);
@@ -2467,6 +2537,317 @@ static int wdma_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 {
 	return abox_dma_hw_params_fixup(rtd->cpu_dai->dev,
 			snd_soc_dpcm_get_substream(rtd, stream), params);
+}
+
+unsigned int abox_cmpnt_sif_get_dst_format(struct abox_data *data,
+		int stream, int id)
+{
+	static const enum ABOX_CONFIGMSG configmsg_p[] = {
+		SET_SIFS0_FORMAT, SET_SIFS1_FORMAT, SET_SIFS2_FORMAT,
+		SET_SIFS3_FORMAT, SET_SIFS4_FORMAT, SET_SIFS5_FORMAT,
+	};
+	static const enum ABOX_CONFIGMSG configmsg_c[] = {
+		SET_SIFM0_FORMAT, SET_SIFM1_FORMAT, SET_SIFM2_FORMAT,
+		SET_SIFM3_FORMAT, SET_SIFM4_FORMAT, SET_SIFM5_FORMAT,
+		SET_SIFM6_FORMAT, SET_SIFM7_FORMAT,
+	};
+	const enum ABOX_CONFIGMSG *configmsg;
+	unsigned int width, channels, format;
+
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if (id >= ARRAY_SIZE(configmsg_p)) {
+			dev_err(data->dev, "%s(%d, %d): invalid argument\n",
+					__func__, stream, id);
+			return -EINVAL;
+		}
+		configmsg = configmsg_p;
+	} else {
+		if (id >= ARRAY_SIZE(configmsg_c)) {
+			dev_err(data->dev, "%s(%d, %d): invalid argument\n",
+					__func__, stream, id);
+			return -EINVAL;
+		}
+		configmsg = configmsg_c;
+	}
+
+	width = get_sif_width(data, configmsg[id]);
+	channels = get_sif_channels(data, configmsg[id]);
+	format = abox_get_format(width, channels);
+
+	return format;
+}
+
+void abox_cmpnt_register_event_notifier(struct abox_data *data,
+		enum abox_widget w, int (*notify)(void *priv, bool en),
+		void *priv)
+{
+	struct abox_event_notifier *event_notifier = &data->event_notifier[w];
+
+	WRITE_ONCE(event_notifier->priv, priv);
+	WRITE_ONCE(event_notifier->notify, notify);
+}
+
+void abox_cmpnt_unregister_event_notifier(struct abox_data *data,
+		enum abox_widget w)
+{
+	struct abox_event_notifier *event_notifier = &data->event_notifier[w];
+
+	WRITE_ONCE(event_notifier->notify, NULL);
+	WRITE_ONCE(event_notifier->priv, NULL);
+}
+
+static int notify_event(struct abox_data *data, enum abox_widget w, int e)
+{
+	struct abox_event_notifier event_notifier;
+	bool en;
+
+	switch (e) {
+	case SND_SOC_DAPM_POST_PMU:
+	case SND_SOC_DAPM_PRE_PMU:
+		en = true;
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+	case SND_SOC_DAPM_POST_PMD:
+		en = false;
+		break;
+	default:
+		return 0;
+	};
+
+	event_notifier = data->event_notifier[w];
+
+	if (event_notifier.notify)
+		return event_notifier.notify(event_notifier.priv, en);
+	else
+		return 0;
+}
+
+static int spus_in0_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN0, e);
+}
+
+static int spus_in1_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN1, e);
+}
+
+static int spus_in2_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN2, e);
+}
+
+static int spus_in3_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN3, e);
+}
+
+static int spus_in4_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN4, e);
+}
+
+static int spus_in5_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN5, e);
+}
+
+static int spus_in6_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN6, e);
+}
+
+static int spus_in7_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN7, e);
+}
+static int spus_in8_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN8, e);
+}
+static int spus_in9_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN9, e);
+}
+
+static int spus_in10_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN10, e);
+}
+
+static int spus_in11_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SPUS_IN11, e);
+}
+
+static int sifs0_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SIFS0, e);
+}
+
+static int sifs1_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SIFS1, e);
+}
+
+static int sifs2_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SIFS2, e);
+}
+
+static int sifs3_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SIFS3, e);
+}
+
+static int sifs4_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SIFS4, e);
+}
+
+static int sifs5_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_SIFS5, e);
+}
+
+static int nsrc0_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_NSRC0, e);
+}
+
+static int nsrc1_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_NSRC1, e);
+}
+
+static int nsrc2_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_NSRC2, e);
+}
+
+static int nsrc3_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_NSRC3, e);
+}
+
+static int nsrc4_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *k, int e)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_NSRC4, e);
 }
 
 static int asrc_get_idx(struct snd_soc_dapm_widget *w)
@@ -2863,6 +3244,24 @@ static void asrc_release_id(struct snd_soc_dapm_widget *w, int stream)
 
 	asrc_set_channels(id, stream, 0);
 	asrc_put_active(w, stream, 0);
+}
+
+unsigned int abox_cmpnt_asrc_get_dst_format(struct abox_data *data,
+		int stream, int id)
+{
+	struct snd_soc_component *cmpnt = data->cmpnt;
+	int width, channels;
+	unsigned int val;
+
+	channels = asrc_get_channels(id, stream);
+
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+		snd_soc_component_read(cmpnt, ABOX_SPUS_ASRC_CTRL(id), &val);
+	else
+		snd_soc_component_read(cmpnt, ABOX_SPUM_ASRC_CTRL(id), &val);
+	width = val & ABOX_ASRC_BIT_WIDTH_MASK >> ABOX_ASRC_BIT_WIDTH_L;
+
+	return (width << 0x3) | (channels - 1);
 }
 
 void abox_cmpnt_asrc_release(struct abox_data *data, int stream, int idx)
@@ -3318,7 +3717,7 @@ static int asrc_event(struct snd_soc_dapm_widget *w, int e, int stream)
 	struct snd_pcm_hw_params params, tgt_params;
 	unsigned int tgt_rate = 0, tgt_width = 0;
 	unsigned int rate = 0, width = 0, channels = 0;
-	int ret = 0;
+	int id, ret = 0;
 
 	dev_dbg(dev, "%s(%s, %d)\n", __func__, w->name, e);
 
@@ -3373,6 +3772,14 @@ static int asrc_event(struct snd_soc_dapm_widget *w, int e, int stream)
 	case SND_SOC_DAPM_POST_PMD:
 		/* ASRC will be released in DMA stop. */
 		break;
+	}
+
+	if (asrc_get_active(data->cmpnt, idx, stream)) {
+		id = asrc_get_id(data->cmpnt, idx, stream);
+		if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+			notify_event(data, ABOX_WIDGET_SPUS_ASRC0 + id, e);
+		else
+			notify_event(data, ABOX_WIDGET_SPUM_ASRC0 + id, e);
 	}
 
 	return ret;
@@ -3522,7 +3929,8 @@ static const struct snd_kcontrol_new spus_out11_controls[] = {
 static const char * const spusm_texts[] = {
 	"RESERVED", "RESERVED", "RESERVED", "RESERVED",
 	"RESERVED", "RESERVED", "RESERVED", "RESERVED",
-	"UAIF0", "UAIF1", "UAIF2", "RESERVED",
+	"UAIF0", "UAIF1", "UAIF2", "UAIF3",
+	"UAIF4", "UAIF5", "UAIF6", "RESERVED",
 	"BI_PDI0", "BI_PDI1", "BI_PDI2", "BI_PDI3",
 	"BI_PDI4", "BI_PDI5", "BI_PDI6", "BI_PDI7",
 	"RX_PDI0", "RX_PDI1", "RESERVED", "RESERVED",
@@ -3564,7 +3972,7 @@ int abox_cmpnt_sifsm_prepare(struct device *dev, struct abox_data *data,
 
 		src = get_source_dai_id(data, ABOX_SIFST);
 		switch (src) {
-		case ABOX_UAIF0 ... ABOX_UAIF2:
+		case ABOX_UAIF0 ... ABOX_UAIF6:
 			idx = src - ABOX_UAIF0;
 			ret = snd_soc_component_read(cmpnt,
 					ABOX_UAIF_CTRL1(idx), &reg_val);
@@ -3889,6 +4297,35 @@ static SOC_ENUM_SINGLE_DECL(uaif2_spk_enum, ABOX_ROUTE_CTRL0,
 static const struct snd_kcontrol_new uaif2_spk_controls[] = {
 	SOC_DAPM_ENUM("MUX", uaif2_spk_enum),
 };
+static SOC_ENUM_SINGLE_DECL(uaif3_spk_enum, ABOX_ROUTE_CTRL0,
+		ABOX_ROUTE_UAIF_SPK_L(3), uaif_spkx_texts);
+static const struct snd_kcontrol_new uaif3_spk_controls[] = {
+	SOC_DAPM_ENUM("MUX", uaif3_spk_enum),
+};
+static SOC_ENUM_SINGLE_DECL(uaif4_spk_enum, ABOX_ROUTE_CTRL0,
+		ABOX_ROUTE_UAIF_SPK_L(4), uaif_spkx_texts);
+static const struct snd_kcontrol_new uaif4_spk_controls[] = {
+	SOC_DAPM_ENUM("MUX", uaif4_spk_enum),
+};
+static SOC_ENUM_SINGLE_DECL(uaif5_spk_enum, ABOX_ROUTE_CTRL0,
+		ABOX_ROUTE_UAIF_SPK_L(5), uaif_spkx_texts);
+static const struct snd_kcontrol_new uaif5_spk_controls[] = {
+	SOC_DAPM_ENUM("MUX", uaif5_spk_enum),
+};
+static SOC_ENUM_SINGLE_DECL(uaif6_spk_enum, ABOX_ROUTE_CTRL0,
+		ABOX_ROUTE_UAIF_SPK_L(6), uaif_spkx_texts);
+static const struct snd_kcontrol_new uaif6_spk_controls[] = {
+	SOC_DAPM_ENUM("MUX", uaif6_spk_enum),
+};
+
+static const char * const dsif_spk_texts[] = {
+	"RESERVED", "RESERVED", "SIFS1", "SIFS2", "SIFS3", "SIFS4", "SIFS5",
+};
+static SOC_ENUM_SINGLE_DECL(dsif_spk_enum, ABOX_ROUTE_CTRL0, ABOX_ROUTE_DSIF_L,
+		dsif_spk_texts);
+static const struct snd_kcontrol_new dsif_spk_controls[] = {
+	SOC_DAPM_ENUM("MUX", dsif_spk_enum),
+};
 
 static const struct snd_kcontrol_new uaif0_controls[] = {
 	SOC_DAPM_SINGLE("UAIF0 Switch", SND_SOC_NOPM, 0, 1, 1),
@@ -3899,6 +4336,21 @@ static const struct snd_kcontrol_new uaif1_controls[] = {
 static const struct snd_kcontrol_new uaif2_controls[] = {
 	SOC_DAPM_SINGLE("UAIF2 Switch", SND_SOC_NOPM, 0, 1, 1),
 };
+static const struct snd_kcontrol_new uaif3_controls[] = {
+	SOC_DAPM_SINGLE("UAIF3 Switch", SND_SOC_NOPM, 0, 1, 1),
+};
+static const struct snd_kcontrol_new uaif4_controls[] = {
+	SOC_DAPM_SINGLE("UAIF4 Switch", SND_SOC_NOPM, 0, 1, 1),
+};
+static const struct snd_kcontrol_new uaif5_controls[] = {
+	SOC_DAPM_SINGLE("UAIF5 Switch", SND_SOC_NOPM, 0, 1, 1),
+};
+static const struct snd_kcontrol_new uaif6_controls[] = {
+	SOC_DAPM_SINGLE("UAIF6 Switch", SND_SOC_NOPM, 0, 1, 1),
+};
+static const struct snd_kcontrol_new dsif_controls[] = {
+	SOC_DAPM_SINGLE("DSIF Switch", SND_SOC_NOPM, 0, 1, 1),
+};
 static const struct snd_kcontrol_new spdy_controls[] = {
 	SOC_DAPM_SINGLE("SPDY Switch", SND_SOC_NOPM, 0, 1, 1),
 };
@@ -3906,7 +4358,7 @@ static const struct snd_kcontrol_new spdy_controls[] = {
 static const char * const rsrcx_texts[] = {
 	"RESERVED", "SIFS0", "SIFS1", "SIFS2",
 	"SIFS3", "SIFS4", "RESERVED", "RESERVED",
-	"UAIF0", "UAIF1", "UAIF2",
+	"UAIF0", "UAIF1", "UAIF2", "UAIF3",
 };
 static SOC_ENUM_SINGLE_DECL(rsrc0_enum, ABOX_ROUTE_CTRL2, ABOX_ROUTE_RSRC_L(0),
 		rsrcx_texts);
@@ -3922,7 +4374,8 @@ static const struct snd_kcontrol_new rsrc1_controls[] = {
 static const char * const nsrcx_texts[] = {
 	"RESERVED", "SIFS0", "SIFS1", "SIFS2",
 	"SIFS3", "SIFS4", "SIFS5", "RESERVED",
-	"UAIF0", "UAIF1", "UAIF2", "RESERVED",
+	"UAIF0", "UAIF1", "UAIF2", "UAIF3",
+	"UAIF4", "UAIF5", "UAIF6", "RESERVED",
 	"BI_PDI0", "BI_PDI1", "BI_PDI2", "BI_PDI3",
 	"BI_PDI4", "BI_PDI5", "BI_PDI6", "BI_PDI7",
 	"RX_PDI0", "RX_PDI1", "RESERVED", "RESERVED",
@@ -4050,42 +4503,78 @@ static const struct snd_soc_dapm_widget cmpnt_widgets[] = {
 	SND_SOC_DAPM_PGA("SIFST-SPUS IN11", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_DEMUX("SIFST", SND_SOC_NOPM, 0, 0, sifst_controls),
 
-	SND_SOC_DAPM_MUX("SPUS IN0", SND_SOC_NOPM, 0, 0, spus_in0_controls),
-	SND_SOC_DAPM_MUX("SPUS IN1", SND_SOC_NOPM, 0, 0, spus_in1_controls),
-	SND_SOC_DAPM_MUX("SPUS IN2", SND_SOC_NOPM, 0, 0, spus_in2_controls),
-	SND_SOC_DAPM_MUX("SPUS IN3", SND_SOC_NOPM, 0, 0, spus_in3_controls),
-	SND_SOC_DAPM_MUX("SPUS IN4", SND_SOC_NOPM, 0, 0, spus_in4_controls),
-	SND_SOC_DAPM_MUX("SPUS IN5", SND_SOC_NOPM, 0, 0, spus_in5_controls),
-	SND_SOC_DAPM_MUX("SPUS IN6", SND_SOC_NOPM, 0, 0, spus_in6_controls),
-	SND_SOC_DAPM_MUX("SPUS IN7", SND_SOC_NOPM, 0, 0, spus_in7_controls),
-	SND_SOC_DAPM_MUX("SPUS IN8", SND_SOC_NOPM, 0, 0, spus_in8_controls),
-	SND_SOC_DAPM_MUX("SPUS IN9", SND_SOC_NOPM, 0, 0, spus_in9_controls),
-	SND_SOC_DAPM_MUX("SPUS IN10", SND_SOC_NOPM, 0, 0, spus_in10_controls),
-	SND_SOC_DAPM_MUX("SPUS IN11", SND_SOC_NOPM, 0, 0, spus_in11_controls),
+	SND_SOC_DAPM_MUX_E("SPUS IN0", SND_SOC_NOPM, 0, 0, spus_in0_controls,
+			spus_in0_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SPUS IN1", SND_SOC_NOPM, 0, 0, spus_in1_controls,
+			spus_in1_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SPUS IN2", SND_SOC_NOPM, 0, 0, spus_in2_controls,
+			spus_in2_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SPUS IN3", SND_SOC_NOPM, 0, 0, spus_in3_controls,
+			spus_in3_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SPUS IN4", SND_SOC_NOPM, 0, 0, spus_in4_controls,
+			spus_in4_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SPUS IN5", SND_SOC_NOPM, 0, 0, spus_in5_controls,
+			spus_in5_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SPUS IN6", SND_SOC_NOPM, 0, 0, spus_in6_controls,
+			spus_in6_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SPUS IN7", SND_SOC_NOPM, 0, 0, spus_in7_controls,
+			spus_in7_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SPUS IN8", SND_SOC_NOPM, 0, 0, spus_in8_controls,
+			spus_in8_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SPUS IN9", SND_SOC_NOPM, 0, 0, spus_in9_controls,
+			spus_in9_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SPUS IN10", SND_SOC_NOPM, 0, 0, spus_in10_controls,
+			spus_in10_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SPUS IN11", SND_SOC_NOPM, 0, 0, spus_in11_controls,
+			spus_in11_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC0", SND_SOC_NOPM, 0, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC1", SND_SOC_NOPM, 1, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC2", SND_SOC_NOPM, 2, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC3", SND_SOC_NOPM, 3, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC4", SND_SOC_NOPM, 4, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC5", SND_SOC_NOPM, 5, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC6", SND_SOC_NOPM, 6, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC7", SND_SOC_NOPM, 7, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC8", SND_SOC_NOPM, 8, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC9", SND_SOC_NOPM, 9, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC10", SND_SOC_NOPM, 10, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC11", SND_SOC_NOPM, 11, 0, NULL, 0,
-			spus_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spus_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_DEMUX("SPUS OUT0", SND_SOC_NOPM, 0, 0, spus_out0_controls),
 	SND_SOC_DAPM_DEMUX("SPUS OUT1", SND_SOC_NOPM, 0, 0, spus_out1_controls),
 	SND_SOC_DAPM_DEMUX("SPUS OUT2", SND_SOC_NOPM, 0, 0, spus_out2_controls),
@@ -4174,12 +4663,24 @@ static const struct snd_soc_dapm_widget cmpnt_widgets[] = {
 	SND_SOC_DAPM_PGA("SPUS OUT10-SIFS5", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("SPUS OUT11-SIFS5", SND_SOC_NOPM, 0, 0, NULL, 0),
 
-	SND_SOC_DAPM_MIXER("SIFS0", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_MUX("SIFS1", SND_SOC_NOPM, 0, 0, sifs1_controls),
-	SND_SOC_DAPM_MUX("SIFS2", SND_SOC_NOPM, 0, 0, sifs2_controls),
-	SND_SOC_DAPM_MUX("SIFS3", SND_SOC_NOPM, 0, 0, sifs3_controls),
-	SND_SOC_DAPM_MUX("SIFS4", SND_SOC_NOPM, 0, 0, sifs4_controls),
-	SND_SOC_DAPM_MUX("SIFS5", SND_SOC_NOPM, 0, 0, sifs5_controls),
+	SND_SOC_DAPM_MIXER_E("SIFS0", SND_SOC_NOPM, 0, 0, NULL, 0,
+			sifs0_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SIFS1", SND_SOC_NOPM, 0, 0, sifs1_controls,
+			sifs1_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SIFS2", SND_SOC_NOPM, 0, 0, sifs2_controls,
+			sifs2_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SIFS3", SND_SOC_NOPM, 0, 0, sifs3_controls,
+			sifs3_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SIFS4", SND_SOC_NOPM, 0, 0, sifs4_controls,
+			sifs4_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("SIFS5", SND_SOC_NOPM, 0, 0, sifs5_controls,
+			sifs5_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_SWITCH("SIFS0 OUT", SND_SOC_NOPM, 0, 0,
 			sifs0_out_controls),
@@ -4197,32 +4698,61 @@ static const struct snd_soc_dapm_widget cmpnt_widgets[] = {
 	SND_SOC_DAPM_MUX("UAIF0 SPK", SND_SOC_NOPM, 0, 0, uaif0_spk_controls),
 	SND_SOC_DAPM_MUX("UAIF1 SPK", SND_SOC_NOPM, 0, 0, uaif1_spk_controls),
 	SND_SOC_DAPM_MUX("UAIF2 SPK", SND_SOC_NOPM, 0, 0, uaif2_spk_controls),
+	SND_SOC_DAPM_MUX("UAIF3 SPK", SND_SOC_NOPM, 0, 0, uaif3_spk_controls),
+	SND_SOC_DAPM_MUX("UAIF4 SPK", SND_SOC_NOPM, 0, 0, uaif4_spk_controls),
+	SND_SOC_DAPM_MUX("UAIF5 SPK", SND_SOC_NOPM, 0, 0, uaif5_spk_controls),
+	SND_SOC_DAPM_MUX("UAIF6 SPK", SND_SOC_NOPM, 0, 0, uaif6_spk_controls),
+	SND_SOC_DAPM_MUX("DSIF SPK", SND_SOC_NOPM, 0, 0, dsif_spk_controls),
 
 	SND_SOC_DAPM_SWITCH("UAIF0 PLA", SND_SOC_NOPM, 0, 0, uaif0_controls),
 	SND_SOC_DAPM_SWITCH("UAIF1 PLA", SND_SOC_NOPM, 0, 0, uaif1_controls),
 	SND_SOC_DAPM_SWITCH("UAIF2 PLA", SND_SOC_NOPM, 0, 0, uaif2_controls),
+	SND_SOC_DAPM_SWITCH("UAIF3 PLA", SND_SOC_NOPM, 0, 0, uaif3_controls),
+	SND_SOC_DAPM_SWITCH("UAIF4 PLA", SND_SOC_NOPM, 0, 0, uaif4_controls),
+	SND_SOC_DAPM_SWITCH("UAIF5 PLA", SND_SOC_NOPM, 0, 0, uaif5_controls),
+	SND_SOC_DAPM_SWITCH("UAIF6 PLA", SND_SOC_NOPM, 0, 0, uaif6_controls),
+	SND_SOC_DAPM_SWITCH("DSIF PLA", SND_SOC_NOPM, 0, 0, dsif_controls),
 
 	SND_SOC_DAPM_SWITCH("UAIF0 CAP", SND_SOC_NOPM, 0, 0, uaif0_controls),
 	SND_SOC_DAPM_SWITCH("UAIF1 CAP", SND_SOC_NOPM, 0, 0, uaif1_controls),
 	SND_SOC_DAPM_SWITCH("UAIF2 CAP", SND_SOC_NOPM, 0, 0, uaif2_controls),
+	SND_SOC_DAPM_SWITCH("UAIF3 CAP", SND_SOC_NOPM, 0, 0, uaif3_controls),
+	SND_SOC_DAPM_SWITCH("UAIF4 CAP", SND_SOC_NOPM, 0, 0, uaif4_controls),
+	SND_SOC_DAPM_SWITCH("UAIF5 CAP", SND_SOC_NOPM, 0, 0, uaif5_controls),
+	SND_SOC_DAPM_SWITCH("UAIF6 CAP", SND_SOC_NOPM, 0, 0, uaif6_controls),
 	SND_SOC_DAPM_SWITCH("SPDY CAP", SND_SOC_NOPM, 0, 0, spdy_controls),
 
-	SND_SOC_DAPM_MUX("NSRC0", SND_SOC_NOPM, 0, 0, nsrc0_controls),
-	SND_SOC_DAPM_MUX("NSRC1", SND_SOC_NOPM, 0, 0, nsrc1_controls),
-	SND_SOC_DAPM_MUX("NSRC2", SND_SOC_NOPM, 0, 0, nsrc2_controls),
-	SND_SOC_DAPM_MUX("NSRC3", SND_SOC_NOPM, 0, 0, nsrc3_controls),
-	SND_SOC_DAPM_MUX("NSRC4", SND_SOC_NOPM, 0, 0, nsrc4_controls),
+	SND_SOC_DAPM_MUX_E("NSRC0", SND_SOC_NOPM, 0, 0, nsrc0_controls,
+			nsrc0_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("NSRC1", SND_SOC_NOPM, 0, 0, nsrc1_controls,
+			nsrc1_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("NSRC2", SND_SOC_NOPM, 0, 0, nsrc2_controls,
+			nsrc2_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("NSRC3", SND_SOC_NOPM, 0, 0, nsrc3_controls,
+			nsrc3_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MUX_E("NSRC4", SND_SOC_NOPM, 0, 0, nsrc4_controls,
+			nsrc4_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_PGA_E("SPUM ASRC0", SND_SOC_NOPM, 0, 0, NULL, 0,
-			spum_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spum_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUM ASRC1", SND_SOC_NOPM, 1, 0, NULL, 0,
-			spum_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spum_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUM ASRC2", SND_SOC_NOPM, 2, 0, NULL, 0,
-			spum_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spum_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUM ASRC3", SND_SOC_NOPM, 3, 0, NULL, 0,
-			spum_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spum_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_PGA_E("SPUM ASRC4", SND_SOC_NOPM, 4, 0, NULL, 0,
-			spum_asrc_event, SND_SOC_DAPM_PRE_PMU),
+			spum_asrc_event,
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_DEMUX("SIFM0", SND_SOC_NOPM, 0, 0, sifm0_controls),
 	SND_SOC_DAPM_DEMUX("SIFM1", SND_SOC_NOPM, 0, 0, sifm1_controls),
@@ -4506,10 +5036,48 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"UAIF2 SPK", "SIFS4", "SIFS4 OUT"},
 	{"UAIF2 SPK", "SIFS5", "SIFS5 OUT"},
 	{"UAIF2 SPK", "SIFMS", "SIFMS"},
+	{"UAIF3 SPK", "SIFS0", "SIFS0 OUT"},
+	{"UAIF3 SPK", "SIFS1", "SIFS1 OUT"},
+	{"UAIF3 SPK", "SIFS2", "SIFS2 OUT"},
+	{"UAIF3 SPK", "SIFS3", "SIFS3 OUT"},
+	{"UAIF3 SPK", "SIFS4", "SIFS4 OUT"},
+	{"UAIF3 SPK", "SIFS5", "SIFS5 OUT"},
+	{"UAIF3 SPK", "SIFMS", "SIFMS"},
+	{"UAIF4 SPK", "SIFS0", "SIFS0 OUT"},
+	{"UAIF4 SPK", "SIFS1", "SIFS1 OUT"},
+	{"UAIF4 SPK", "SIFS2", "SIFS2 OUT"},
+	{"UAIF4 SPK", "SIFS3", "SIFS3 OUT"},
+	{"UAIF4 SPK", "SIFS4", "SIFS4 OUT"},
+	{"UAIF4 SPK", "SIFS5", "SIFS5 OUT"},
+	{"UAIF4 SPK", "SIFMS", "SIFMS"},
+	{"UAIF5 SPK", "SIFS0", "SIFS0 OUT"},
+	{"UAIF5 SPK", "SIFS1", "SIFS1 OUT"},
+	{"UAIF5 SPK", "SIFS2", "SIFS2 OUT"},
+	{"UAIF5 SPK", "SIFS3", "SIFS3 OUT"},
+	{"UAIF5 SPK", "SIFS4", "SIFS4 OUT"},
+	{"UAIF5 SPK", "SIFS5", "SIFS5 OUT"},
+	{"UAIF5 SPK", "SIFMS", "SIFMS"},
+	{"UAIF6 SPK", "SIFS0", "SIFS0 OUT"},
+	{"UAIF6 SPK", "SIFS1", "SIFS1 OUT"},
+	{"UAIF6 SPK", "SIFS2", "SIFS2 OUT"},
+	{"UAIF6 SPK", "SIFS3", "SIFS3 OUT"},
+	{"UAIF6 SPK", "SIFS4", "SIFS4 OUT"},
+	{"UAIF6 SPK", "SIFS5", "SIFS5 OUT"},
+	{"UAIF6 SPK", "SIFMS", "SIFMS"},
+	{"DSIF SPK", "SIFS1", "SIFS1 OUT"},
+	{"DSIF SPK", "SIFS2", "SIFS2 OUT"},
+	{"DSIF SPK", "SIFS3", "SIFS3 OUT"},
+	{"DSIF SPK", "SIFS4", "SIFS4 OUT"},
+	{"DSIF SPK", "SIFS5", "SIFS5 OUT"},
 
 	{"UAIF0 PLA", "UAIF0 Switch", "UAIF0 SPK"},
 	{"UAIF1 PLA", "UAIF1 Switch", "UAIF1 SPK"},
 	{"UAIF2 PLA", "UAIF2 Switch", "UAIF2 SPK"},
+	{"UAIF3 PLA", "UAIF3 Switch", "UAIF3 SPK"},
+	{"UAIF4 PLA", "UAIF4 Switch", "UAIF4 SPK"},
+	{"UAIF5 PLA", "UAIF5 Switch", "UAIF5 SPK"},
+	{"UAIF6 PLA", "UAIF6 Switch", "UAIF6 SPK"},
+	{"DSIF PLA", "DSIF Switch", "DSIF SPK"},
 
 	{"SIFS0", NULL, "SIFS0 Capture"},
 	{"SIFS1", NULL, "SIFS1 Capture"},
@@ -4539,6 +5107,10 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC0", "UAIF0", "UAIF0 CAP"},
 	{"NSRC0", "UAIF1", "UAIF1 CAP"},
 	{"NSRC0", "UAIF2", "UAIF2 CAP"},
+	{"NSRC0", "UAIF3", "UAIF3 CAP"},
+	{"NSRC0", "UAIF4", "UAIF4 CAP"},
+	{"NSRC0", "UAIF5", "UAIF5 CAP"},
+	{"NSRC0", "UAIF6", "UAIF6 CAP"},
 	{"NSRC0", "SPDY", "SPDY CAP"},
 
 	{"NSRC1", "SIFS0", "SIFS0 OUT"},
@@ -4550,6 +5122,10 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC1", "UAIF0", "UAIF0 CAP"},
 	{"NSRC1", "UAIF1", "UAIF1 CAP"},
 	{"NSRC1", "UAIF2", "UAIF2 CAP"},
+	{"NSRC1", "UAIF3", "UAIF3 CAP"},
+	{"NSRC1", "UAIF4", "UAIF4 CAP"},
+	{"NSRC1", "UAIF5", "UAIF5 CAP"},
+	{"NSRC1", "UAIF6", "UAIF6 CAP"},
 	{"NSRC1", "SPDY", "SPDY CAP"},
 
 	{"NSRC2", "SIFS0", "SIFS0 OUT"},
@@ -4561,6 +5137,10 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC2", "UAIF0", "UAIF0 CAP"},
 	{"NSRC2", "UAIF1", "UAIF1 CAP"},
 	{"NSRC2", "UAIF2", "UAIF2 CAP"},
+	{"NSRC2", "UAIF3", "UAIF3 CAP"},
+	{"NSRC2", "UAIF4", "UAIF4 CAP"},
+	{"NSRC2", "UAIF5", "UAIF5 CAP"},
+	{"NSRC2", "UAIF6", "UAIF6 CAP"},
 	{"NSRC2", "SPDY", "SPDY CAP"},
 
 	{"NSRC3", "SIFS0", "SIFS0 OUT"},
@@ -4572,6 +5152,10 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC3", "UAIF0", "UAIF0 CAP"},
 	{"NSRC3", "UAIF1", "UAIF1 CAP"},
 	{"NSRC3", "UAIF2", "UAIF2 CAP"},
+	{"NSRC3", "UAIF3", "UAIF3 CAP"},
+	{"NSRC3", "UAIF4", "UAIF4 CAP"},
+	{"NSRC3", "UAIF5", "UAIF5 CAP"},
+	{"NSRC3", "UAIF6", "UAIF6 CAP"},
 	{"NSRC3", "SPDY", "SPDY CAP"},
 
 	{"NSRC4", "SIFS0", "SIFS0 OUT"},
@@ -4583,6 +5167,10 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC4", "UAIF0", "UAIF0 CAP"},
 	{"NSRC4", "UAIF1", "UAIF1 CAP"},
 	{"NSRC4", "UAIF2", "UAIF2 CAP"},
+	{"NSRC4", "UAIF3", "UAIF3 CAP"},
+	{"NSRC4", "UAIF4", "UAIF4 CAP"},
+	{"NSRC4", "UAIF5", "UAIF5 CAP"},
+	{"NSRC4", "UAIF6", "UAIF6 CAP"},
 	{"NSRC4", "SPDY", "SPDY CAP"},
 
 	{"SPUM ASRC0", NULL, "NSRC0"},
@@ -4785,9 +5373,17 @@ int abox_cmpnt_reset_cnt_val(struct device *dev,
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
+	case ABOX_UAIF3:
+	case ABOX_UAIF4:
+	case ABOX_UAIF5:
+	case ABOX_UAIF6:
 		idx = id - ABOX_UAIF0;
 		sifs_id = val & ABOX_ROUTE_UAIF_SPK_MASK(idx);
 		sifs_id = (sifs_id >> ABOX_ROUTE_UAIF_SPK_L(idx)) - 1;
+		break;
+	case ABOX_DSIF:
+		sifs_id = val & ABOX_ROUTE_DSIF_MASK;
+		sifs_id = (sifs_id >> ABOX_ROUTE_DSIF_L) - 1;
 		break;
 	default:
 		return -EINVAL;
@@ -5219,6 +5815,10 @@ int abox_cmpnt_hw_params_fixup_helper(struct snd_soc_pcm_runtime *rtd,
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
+	case ABOX_UAIF3:
+	case ABOX_UAIF4:
+	case ABOX_UAIF5:
+	case ABOX_UAIF6:
 	case ABOX_SPDY:
 		ret = abox_if_hw_params_fixup(dai, params, stream);
 		break;
@@ -5502,3 +6102,4 @@ int abox_cmpnt_register(struct device *adev)
 
 	return snd_soc_register_component(adev, cmpnt_drv, dai_drv, num_dai);
 }
+
