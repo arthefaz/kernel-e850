@@ -109,6 +109,8 @@ struct aud3004x_jack {
 	int btn_adc_delay;
 	struct jack_buttons_zone jack_buttons_zones[4];
 	int btn_release_value;
+	unsigned int jackin_dbnc_time;
+	unsigned int jackout_dbnc_time;
 	/* gdet adc thd */
 	int adc_thd_fake_jack;
 	int adc_thd_auxcable;

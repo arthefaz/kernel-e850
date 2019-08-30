@@ -38,7 +38,7 @@
 
 #include "aud3004x.h"
 
-#define AUD3004X_CODEC_VER 10024
+#define AUD3004X_CODEC_VER 10025
 
 #ifdef CONFIG_SND_SOC_SAMSUNG_VERBOSE_DEBUG
 #ifdef dev_dbg

@@ -792,12 +792,16 @@ static int aud3004x_register_inputdev(struct aud3004x_jack *jackdet)
 #define AUD3004X_ADC_THD_WATER_IN			120
 #define AUD3004X_ADC_THD_WATER_OUT			3280
 
+#define AUD3004X_JACKIN_DBNC_DEFAULT		0xA0
+#define AUD3004X_JACKOUT_DBNC_DEFAULT		0x00
+
 static void aud3004x_jack_parse_dt(struct aud3004x_priv *aud3004x)
 {
 	struct aud3004x_jack *jackdet = aud3004x->p_jackdet;
 	struct device *dev = aud3004x->dev;
 	struct of_phandle_args args;
 	int bias_v_conf, mic_range, btn_rel_val, delay;
+	int jackin_dbnc, jackout_dbnc;
 	int thd_adc;
 	int i, ret;
 #if 0
@@ -894,6 +898,22 @@ static void aud3004x_jack_parse_dt(struct aud3004x_priv *aud3004x)
 			jackdet->gdet_delay, jackdet->mdet_delay, jackdet->mic_adc_range);
 
 	/*
+	 * Jack Detect Tuning Values
+	 */
+	/* Jack-in debounce time */
+	ret = of_property_read_u32(dev->of_node, "jackin-dbnc-time", &jackin_dbnc);
+	if (!ret)
+		jackdet->jackin_dbnc_time = A2D_JACK_DBNC_IN_MASK & jackin_dbnc;
+	else
+		jackdet->jackin_dbnc_time = AUD3004X_JACKIN_DBNC_DEFAULT;
+
+	/* Jack-out debounce time */
+	ret = of_property_read_u32(dev->of_node, "jackout-dbnc-time", &jackout_dbnc);
+	if (!ret)
+		jackdet->jackout_dbnc_time = A2D_JACK_DBNC_OUT_MASK & jackout_dbnc;
+	else
+		jackdet->jackout_dbnc_time = AUD3004X_JACKOUT_DBNC_DEFAULT;
+	/*
 	 * Set button adc tuning values
 	 */
 	/* Button adc check delay time */
@@ -964,6 +984,7 @@ static void aud3004x_jack_parse_dt(struct aud3004x_priv *aud3004x)
 static void aud3004x_jack_register_initialize(struct snd_soc_codec *codec)
 {
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	struct aud3004x_jack *jackdet = aud3004x->p_jackdet;
 
 #ifdef CONFIG_PM
 	pm_runtime_get_sync(codec->dev);
@@ -991,6 +1012,9 @@ static void aud3004x_jack_register_initialize(struct snd_soc_codec *codec)
 	aud3004x_write(aud3004x, AUD3004X_D0_DCTR_CM, 0x13);
 #endif
 
+	/* Jack in/out debounce time */
+	aud3004x_write(aud3004x, AUD3004X_D8_DCTR_DBNC1,
+			jackdet->jackin_dbnc_time | jackdet->jackout_dbnc_time);
 
 	/* All boot time hardware access is done. Put the device to sleep. */
 #ifdef CONFIG_PM
