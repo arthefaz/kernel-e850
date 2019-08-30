@@ -108,7 +108,7 @@
 #define mfc_get_consumed_stream()		MFC_READL(MFC_REG_D_DECODED_NAL_SIZE)
 #define mfc_get_dpb_count()			MFC_READL(MFC_REG_D_MIN_NUM_DPB)
 #define mfc_get_min_dpb_size(x)		MFC_READL(MFC_REG_D_MIN_FIRST_PLANE_DPB_SIZE + (x * 4))
-#define mfc_get_min_dpb_size_2bit(x)		MFC_READL(MFC_REG_D_FIRST_PLANE_2BIT_DPB_SIZE + (x * 4))
+#define mfc_get_min_dpb_size_2bit(x)		MFC_READL(MFC_REG_D_MIN_FIRST_PLANE_2BIT_DPB_SIZE + (x * 4))
 #define mfc_get_scratch_size()		MFC_READL(MFC_REG_D_MIN_SCRATCH_BUFFER_SIZE)
 #define mfc_get_stride_size(x)		MFC_READL(MFC_REG_D_FIRST_PLANE_DPB_STRIDE_SIZE + (x * 4))
 #define mfc_get_stride_size_2bit(x)		MFC_READL(MFC_REG_D_FIRST_PLANE_2BIT_DPB_STRIDE_SIZE + (x * 4))
