@@ -22,8 +22,6 @@
 
 #define CPUHP_USER_NAME_LEN	16
 
-#define TYPE_MIN_SUPPORT	(1024)
-
 struct cpuhp_user {
 	struct list_head	list;
 	char name[CPUHP_USER_NAME_LEN];
@@ -252,19 +250,8 @@ static struct cpumask cpuhp_get_online_cpus(void)
 
 	cpumask_setall(&mask);
 
-	list_for_each_entry(user, &cpuhp.users, list) {
-		if (user->type != TYPE_MIN_SUPPORT)
-			continue;
-
-		cpumask_or(&mask, &mask, &user->online_cpus);
-	}
-
-	list_for_each_entry(user, &cpuhp.users, list) {
-		if (user->type == TYPE_MIN_SUPPORT)
-			continue;
-
+	list_for_each_entry(user, &cpuhp.users, list)
 		cpumask_and(&mask, &mask, &user->online_cpus);
-	}
 
 	if (cpumask_empty(&mask) || !cpumask_test_cpu(0, &mask)) {
 		scnprintf(buf, sizeof(buf), "%*pbl", cpumask_pr_args(&mask));
@@ -646,27 +633,29 @@ static int exynos_cpuhp_pm_qos_callback(struct notifier_block *nb,
 {
 	int pm_qos_class = *((int *)v);
 	struct cpumask mask;
-	int i = 0;
+	int i = 0, max;
 
 	if (val < 0)
 		return NOTIFY_BAD;
 
 	cpumask_clear(&mask);
 
-	do {
-		cpumask_set_cpu(i, &mask);
-	} while(++i < val && i < nr_cpu_ids);
-
 	switch (pm_qos_class) {
 	case PM_QOS_CPU_ONLINE_MIN:
-		exynos_cpuhp_request("HP_QOS_MIN", mask, TYPE_MIN_SUPPORT);
+		max = val;
 		break;
 	case PM_QOS_CPU_ONLINE_MAX:
-		exynos_cpuhp_request("HP_QOS_MAX", mask, 0);
+		max = nr_cpu_ids - val;
 		break;
 	default:
 		return NOTIFY_BAD;
 	}
+
+	do {
+		cpumask_set_cpu(i, &mask);
+	} while(++i < max && i < nr_cpu_ids);
+
+	exynos_cpuhp_request("HP_QOS", mask, 0);
 
 	return NOTIFY_OK;
 }
@@ -679,8 +668,7 @@ struct notifier_block	hp_qos_max_notifier;
 
 static void __init cpuhp_pm_qos_init(void)
 {
-	exynos_cpuhp_register("HP_QOS_MIN", *cpu_online_mask, TYPE_MIN_SUPPORT);
-	exynos_cpuhp_register("HP_QOS_MAX", *cpu_online_mask, 0);
+	exynos_cpuhp_register("HP_QOS", *cpu_online_mask, 0);
 
 	hp_qos_min_notifier.notifier_call = exynos_cpuhp_pm_qos_callback;
 	hp_qos_min_notifier.priority = INT_MAX;
