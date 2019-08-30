@@ -608,5 +608,12 @@ extern void *cmucal_get_sfr_node(unsigned int id);
 extern unsigned int cmucal_get_id(char *name);
 extern unsigned int cmucal_get_id_by_addr(unsigned int addr);
 extern void (*cal_data_init)(void);
+#ifdef CONFIG_CMUCAL_DEBUG
 extern void cmucal_dbg_set_cmu_top_base(u32 base_addr);
+#else
+static inline void cmucal_dbg_set_cmu_top_base(u32 base_addr)
+{
+	return ;
+}
+#endif
 #endif
