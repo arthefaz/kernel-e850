@@ -385,7 +385,6 @@ struct sbd_link_device {
 	The number of link channels for AP-CP IPC
 	*/
 	unsigned int num_channels;
-	unsigned int ps_channel_start; /* for fast search ps channel */
 
 	/*
 	Table of link attributes

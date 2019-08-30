@@ -178,9 +178,6 @@ int init_sbd_link(struct sbd_link_device *sl)
 		if (unlikely(!ipc_dev))
 			return -ENODEV;
 
-		if (!sl->ps_channel_start && sipc_ps_ch(sbd_id2ch(sl, i)))
-			sl->ps_channel_start = i;
-
 		link_attr = &sl->link_attr[i];
 
 		ipc_dev->id = link_attr->id;
@@ -385,7 +382,6 @@ int create_sbd_link_device(struct link_device *ld, struct sbd_link_device *sl,
 #endif
 
 	sl->num_channels = init_ctrl_tables(sl, num_iodevs, iodevs);
-	sl->ps_channel_start = 0;
 	sl->reset_zerocopy_done = 1;
 
 	ret = create_sbd_mem_map(sl);

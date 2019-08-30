@@ -1750,8 +1750,12 @@ static int legacy_ipc_rx_func_napi(struct mem_link_device *mld, struct legacy_ip
 		 * in pass_skb_to_demux().
 		 */
 		rcvd += skb->len;
-		*work_done += 1;
-		budget--;
+
+		if (ld->is_ps_ch(ch)) {
+			budget--;
+			*work_done += 1;
+		}
+
 		pass_skb_to_demux(mld, skb);
 	}
 
@@ -2365,15 +2369,15 @@ static int sbd_link_rx_func_napi(struct sbd_link_device *sl, struct link_device 
 		int ps_rcvd = 0;
 		if (unlikely(rb_empty(rb)))
 			continue;
-		if (budget <= 0)
-			break;
-		if (i < sl->ps_channel_start)
+		if ((budget <= 0) && ld->is_ps_ch(sbd_id2ch(sl, i)))
+			continue;
+		if (!ld->is_ps_ch(sbd_id2ch(sl, i)))
 			ret = rx_ipc_frames_from_rb(rb);
 		else /* ps channels */
 			ret = sbd_ipc_rx_func_napi(ld, rb->iod, budget, &ps_rcvd);
 		if ((ret == -EBUSY) || (ret == -ENOMEM))
 			break;
-		if (i >= sl->ps_channel_start) {
+		if (ld->is_ps_ch(sbd_id2ch(sl, i))) {
 			/* count budget only for ps frames */
 			budget -= ps_rcvd;
 			*work_done += ps_rcvd;
