@@ -633,7 +633,7 @@ static int exynos_cpuhp_pm_qos_callback(struct notifier_block *nb,
 {
 	int pm_qos_class = *((int *)v);
 	struct cpumask mask;
-	int i = 0, max;
+	int cpu = 0, max;
 
 	if (val < 0)
 		return NOTIFY_BAD;
@@ -642,18 +642,18 @@ static int exynos_cpuhp_pm_qos_callback(struct notifier_block *nb,
 
 	switch (pm_qos_class) {
 	case PM_QOS_CPU_ONLINE_MIN:
-		max = val;
-		break;
+		return NOTIFY_OK;
+
 	case PM_QOS_CPU_ONLINE_MAX:
-		max = nr_cpu_ids - val;
+		max = val;
 		break;
 	default:
 		return NOTIFY_BAD;
 	}
 
 	do {
-		cpumask_set_cpu(i, &mask);
-	} while(++i < max && i < nr_cpu_ids);
+		cpumask_set_cpu(cpu, &mask);
+	} while(++cpu < max && cpu < nr_cpu_ids);
 
 	exynos_cpuhp_request("HP_QOS", mask, 0);
 
