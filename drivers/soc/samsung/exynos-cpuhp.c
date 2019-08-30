@@ -679,12 +679,7 @@ struct notifier_block	hp_qos_max_notifier;
 
 static void __init cpuhp_pm_qos_init(void)
 {
-	struct cpumask mask;
-
-	cpumask_clear(&mask);
-	cpumask_set_cpu(0, &mask);
-
-	exynos_cpuhp_register("HP_QOS_MIN", mask, TYPE_MIN_SUPPORT);
+	exynos_cpuhp_register("HP_QOS_MIN", *cpu_online_mask, TYPE_MIN_SUPPORT);
 	exynos_cpuhp_register("HP_QOS_MAX", *cpu_online_mask, 0);
 
 	hp_qos_min_notifier.notifier_call = exynos_cpuhp_pm_qos_callback;
