@@ -600,7 +600,7 @@ static int ovp1_value_put(struct snd_kcontrol *kcontrol,
 
 	aud3004x_write(aud3004x, AUD3004X_15F_OVP1, value);
 
-	dev_info(codec->dev, "%s: ovp1_tuning_value: 0x%x.\n",
+	dev_info(codec->dev, "%s: ovp surge: 0x%x.\n",
 			__func__, value);
 
 	return 0;
@@ -629,7 +629,7 @@ static int ovp2_value_put(struct snd_kcontrol *kcontrol,
 
 	aud3004x_write(aud3004x, AUD3004X_160_OVP2, value);
 
-	dev_info(codec->dev, "%s: ovp2_tuning_value: 0x%x.\n",
+	dev_info(codec->dev, "%s: ovp setting value: 0x%x.\n",
 			__func__, value);
 
 	return 0;
@@ -805,10 +805,10 @@ static const struct snd_kcontrol_new aud3004x_snd_controls[] = {
 	SOC_SINGLE_EXT("DMIC Bias", SND_SOC_NOPM, 0, 1, 0,
 			dmic_bias_get, dmic_bias_put),
 
-	SOC_SINGLE_EXT("OVP1 Tuning Value", SND_SOC_NOPM, 0, 100, 0,
+	SOC_SINGLE_EXT("OVP Surge", SND_SOC_NOPM, 0, 100, 0,
 			ovp1_value_get, ovp1_value_put),
 
-	SOC_SINGLE_EXT("OVP2 Tuning Value", SND_SOC_NOPM, 0, 100, 0,
+	SOC_SINGLE_EXT("OVP Setting", SND_SOC_NOPM, 0, 100, 0,
 			ovp2_value_get, ovp2_value_put),
 
 	SOC_ENUM("ADC DAT Mux0", aud3004x_adc_dat_enum0),
@@ -1343,7 +1343,7 @@ static int dac_ev(struct snd_soc_dapm_widget *w,
 	mic_on = (chop_val1 & (MIC1_ON_MASK | MIC2_ON_MASK | MIC3_ON_MASK)) |
 		(chop_val2 & (DMIC1_ON_MASK | DMIC2_ON_MASK));
 
-	dev_dbg(codec->dev, "%s called, event = %d, chop_val = %d,"
+	dev_dbg(codec->dev, "%s called, event = %d, chop_val = %d, "
 			"hp_on: %d, spk_on: %d, ep_on: %d, lineout: %d\n",
 			__func__, event, chop_val1, hp_on, spk_on, ep_on, lineout_on);
 
@@ -1553,7 +1553,8 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_write(aud3004x, AUD3004X_42_PLAY_VOLR, 0x54);
 
 		/* CP Frequency Control */
-		aud3004x_write(aud3004x, AUD3004X_150_CTRL_EP, 0x48);
+		aud3004x_update_bits(aud3004x, AUD3004X_150_CTRL_EP,
+				PDB_CP_INRUSH_MASK, PDB_CP_INRUSH_MASK);
 
 		/* Offset Range Control */
 		aud3004x_write(aud3004x, AUD3004X_53_AVC4, 0x86);
@@ -1642,7 +1643,8 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_write(aud3004x, AUD3004X_53_AVC4, 0x80);
 
 		/* CP Frequency Control clear */
-		aud3004x_write(aud3004x, AUD3004X_150_CTRL_EP, 0x08);
+		aud3004x_update_bits(aud3004x, AUD3004X_150_CTRL_EP,
+				PDB_CP_INRUSH_MASK, 0);
 		break;
 	}
 	return 0;
@@ -1675,12 +1677,10 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 				DSML_CLK_GATE_MASK | DSMR_CLK_GATE_MASK |
 				DAC_CIC_CGL_MASK | DAC_CIC_CGR_MASK);
 
-		/* Cross talk Enable */
-		aud3004x_write(aud3004x, AUD3004X_58_AVC9, 0x00);
-
 		/* CP Frequency Control */
 		aud3004x_write(aud3004x, AUD3004X_B0_AUTO_COM1, 0x0C);
-		aud3004x_write(aud3004x, AUD3004X_150_CTRL_EP, 0x00);
+		aud3004x_update_bits(aud3004x, AUD3004X_150_CTRL_EP,
+				EN_CP_AUTOSEL_MASK, 0);
 
 		switch (aud3004x->playback_aifrate) {
 		case AUD3004X_SAMPLE_RATE_48KHZ:
@@ -1789,15 +1789,13 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		/* CP Frequency Control clear */
-		aud3004x_write(aud3004x, AUD3004X_150_CTRL_EP, 0x08);
+		aud3004x_update_bits(aud3004x, AUD3004X_150_CTRL_EP,
+				EN_CP_AUTOSEL_MASK, EN_CP_AUTOSEL_MASK);
 		aud3004x_write(aud3004x, AUD3004X_B0_AUTO_COM1, 0x0D);
 
 		/* DAC Trim clear */
 		aud3004x_write(aud3004x, AUD3004X_47_TRIM_DAC0, 0xC9);
 		aud3004x_write(aud3004x, AUD3004x_48_TRIM_DAC1, 0x65);
-
-		/* Cross talk disable */
-		aud3004x_write(aud3004x, AUD3004X_58_AVC9, 0x00);
 		break;
 	}
 	return 0;
