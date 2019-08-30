@@ -284,6 +284,7 @@ static ssize_t store_factor(struct device *dev, struct device_attribute *attr,
 	int ntokens;
 	unsigned int cpu;
 	unsigned int *new_ratio_table;
+	unsigned int *old_ratio_table;
 	unsigned long flags;
 	factor_type type = get_factor_type(attr->attr.name);
 
@@ -309,6 +310,8 @@ static ssize_t store_factor(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 	}
 
+	old_ratio_table = factor->ratio_table;
+
 	/* change ratio table of sibling-cpus */
 	for_each_cpu(cpu, &mask) {
 		bias_idle = &per_cpu(bias_cpuidle, cpu);
@@ -321,12 +324,13 @@ static ssize_t store_factor(struct device *dev, struct device_attribute *attr,
 
 		spin_lock_irqsave(&factor->lock, flags);
 
-		kfree(factor->ratio_table);
 		factor->ratio_table = new_ratio_table;
 		factor->size = ntokens;
 
 		spin_unlock_irqrestore(&factor->lock, flags);
 	}
+
+	kfree(old_ratio_table);
 
 	return size;
 }
