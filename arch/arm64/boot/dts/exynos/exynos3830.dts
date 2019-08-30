@@ -141,6 +141,7 @@
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
+			moce-factors = <&ANANKE_FREQ_FACTOR>;
 		};
 		cpu1: cpu@0001 {
 			device_type = "cpu";
@@ -149,6 +150,7 @@
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
+			moce-factors = <&ANANKE_FREQ_FACTOR>;
 		};
 		cpu2: cpu@0002 {
 			device_type = "cpu";
@@ -157,6 +159,7 @@
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
+			moce-factors = <&ANANKE_FREQ_FACTOR>;
 		};
 		cpu3: cpu@0003 {
 			device_type = "cpu";
@@ -165,6 +168,7 @@
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
+			moce-factors = <&ANANKE_FREQ_FACTOR>;
 		};
 		cpu4: cpu@0004 {
 			device_type = "cpu";
@@ -173,6 +177,7 @@
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
+			moce-factors = <&ANANKE_FREQ_FACTOR>;
 		};
 		cpu5: cpu@0005 {
 			device_type = "cpu";
@@ -181,6 +186,7 @@
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
+			moce-factors = <&ANANKE_FREQ_FACTOR>;
 		};
 		cpu6: cpu@0006 {
 			device_type = "cpu";
@@ -189,6 +195,7 @@
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
+			moce-factors = <&ANANKE_FREQ_FACTOR>;
 		};
 		cpu7: cpu@0007 {
 			device_type = "cpu";
@@ -197,6 +204,7 @@
 			enable-method = "psci";
 			sched-energy-data = <&ANANKE_ENERGY>;
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
+			moce-factors = <&ANANKE_FREQ_FACTOR>;
 		};
 
 		idle-states {
@@ -210,6 +218,17 @@
 				exit-latency-us = <160>;
 				min-residency-us = <2000>;
 				status = "okay";
+			};
+		};
+
+		moce {
+			#define FREQ_FACTOR     0
+
+			/* factor table format: [ratio][factor][ratio]...[ratio] */
+			ANANKE_FREQ_FACTOR: ananke-freq-factor {
+				sibling-cpus = "0-7";
+				type = <FREQ_FACTOR>;
+				ratio-table = <100>;
 			};
 		};
 
