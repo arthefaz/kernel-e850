@@ -1657,6 +1657,8 @@
 		compatible = "samsung,exynos-nanohub";
 		/* INTREQ_MAILBOX_CHUB2AP, INTREQ_WDT_CHUB */
 		interrupts = <0 50 0>,<0 73 0>;
+		clocks = <&clock DOUT_CLK_CHUB_BUS>;
+		clock-names = "chub_bus";
 		/* mailbox, sram, dumpgpr, chub reset &
 		chub cpu reset, baaw_p_apm_shub, chub cpu clock */
 		reg =	<0x0 0x11a00000 0x200>,	/* MAILBOX_AP_CHUB */
