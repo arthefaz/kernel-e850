@@ -248,10 +248,10 @@ static bool dpu_need_mres_config(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
 	struct decon_win_config *mres_config = &win_config[DECON_WIN_UPDATE_IDX];
-	struct lcd_res_info *supported_res;
+	struct exynos_display_mode_info *supported_mode;
 	int i;
 
-	regs->mres_update = false;
+	regs->mode_update = false;
 
 	if (!decon->mres_enabled) {
 		DPU_DEBUG_MRES("multi-resolution feature is disabled\n");
@@ -283,24 +283,26 @@ static bool dpu_need_mres_config(struct decon_device *decon,
 		goto end;
 	}
 
-	/* match supported and requested LCD resolution */
-	for (i = 0; i < decon->lcd_info->mres.number; i++) {
-		supported_res = &decon->lcd_info->mres.res_info[i];
-		if ((supported_res->width == regs->lcd_width) &&
-			(supported_res->height == regs->lcd_height)) {
-			regs->mres_update = true;
-			regs->mres_idx = i;
+	/* match supported and requested display mode(resolution & fps) */
+	for (i = 0; i < decon->lcd_info->display_mode_count; i++) {
+		supported_mode = &decon->lcd_info->display_mode[i];
+		if ((supported_mode->mode.width == regs->lcd_width) &&
+			(supported_mode->mode.height == regs->lcd_height) &&
+			(supported_mode->mode.fps == regs->fps)) {
+			regs->mode_update = true;
+			regs->mode_idx = i;
 			break;
 		}
 	}
 
-	DPU_DEBUG_MRES("update(%d), mode(%d), resolution(%d %d -> %d %d)\n",
-			regs->mres_update, regs->mres_idx,
+	DPU_DEBUG_MRES("update(%d), mode idx(%d), mode(%dx%d@%d -> %dx%d@%d)\n",
+			regs->mode_update, regs->mode_idx,
 			decon->lcd_info->xres, decon->lcd_info->yres,
-			regs->lcd_width, regs->lcd_height);
+			decon->lcd_info->fps,
+			regs->lcd_width, regs->lcd_height, regs->fps);
 
 end:
-	return regs->mres_update;
+	return regs->mode_update;
 }
 
 void dpu_prepare_win_update_config(struct decon_device *decon,
@@ -363,9 +365,9 @@ void dpu_prepare_win_update_config(struct decon_device *decon,
 void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs)
 {
 	struct dsim_device *dsim = get_dsim_drvdata(0);
-	struct lcd_mres_info *mres_info = &dsim->panel->lcd_info.mres;
+	struct exynos_display_mode_info *mode_info = dsim->panel->lcd_info.display_mode;
 	struct decon_param p;
-	int idx;
+	u32 idx;
 
 	if (!decon->mres_enabled) {
 		DPU_DEBUG_MRES("multi-resolution feature is disabled\n");
@@ -382,7 +384,7 @@ void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs
 		return;
 	}
 
-	if (!regs->mres_update)
+	if (!regs->mode_update)
 		return;
 
 	if (IS_ERR_OR_NULL(dsim)) {
@@ -399,17 +401,16 @@ void dpu_set_mres_config(struct decon_device *decon, struct decon_reg_data *regs
 	/* backup current LCD resolution information to previous one */
 	dsim->panel->lcd_info.xres = regs->lcd_width;
 	dsim->panel->lcd_info.yres = regs->lcd_height;
-	dsim->panel->lcd_info.mres_mode = regs->mres_idx;
-	idx = regs->mres_idx;
-	dsim->panel->lcd_info.dsc.en = mres_info->res_info[idx].dsc_en;
-	dsim->panel->lcd_info.dsc.slice_h = mres_info->res_info[idx].dsc_height;
-	dsim->panel->lcd_info.dsc.enc_sw =
-		dsim->panel->lcd_info.dsc_slice.dsc_enc_sw[idx];
-	dsim->panel->lcd_info.dsc.dec_sw =
-		dsim->panel->lcd_info.dsc_slice.dsc_dec_sw[idx];
+	dsim->panel->lcd_info.cur_mode_idx = regs->mode_idx;
+	idx = regs->mode_idx;
+
+	dsim->panel->lcd_info.dsc.en = mode_info[idx].dsc_en;
+	dsim->panel->lcd_info.dsc.slice_h = mode_info[idx].dsc_height;
+	dsim->panel->lcd_info.dsc.enc_sw = mode_info[idx].dsc_enc_sw;
+	dsim->panel->lcd_info.dsc.dec_sw = mode_info[idx].dsc_dec_sw;
 
 	/* transfer LCD resolution change commands to panel */
-	dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_MRES, &regs->mres_idx);
+	dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_MRES, &regs->mode_idx);
 
 	/* DECON and DSIM are reconfigured by changed LCD resolution */
 	dsim_reg_set_mres(dsim->id, &dsim->panel->lcd_info);

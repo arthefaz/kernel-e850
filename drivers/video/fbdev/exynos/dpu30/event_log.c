@@ -1040,11 +1040,11 @@ static int decon_debug_cmd_lp_ref_show(struct seq_file *s, void *unused)
 	struct dsim_device *dsim = get_dsim_drvdata(0);
 	int i;
 
-	/* DSU_MODE_1 is used in stead of 1 in MCD */
-	seq_printf(s, "%u\n", dsim->panel->lcd_info.mres_mode);
+	seq_printf(s, "%u\n", dsim->panel->lcd_info.cur_mode_idx);
 
-	for (i = 0; i < dsim->panel->lcd_info.mres.number; i++)
-		seq_printf(s, "%u\n", dsim->panel->lcd_info.cmd_underrun_cnt[i]);
+	for (i = 0; i < dsim->panel->lcd_info.display_mode_count; i++)
+		seq_printf(s, "%u\n",
+				dsim->panel->lcd_info.display_mode[i].cmd_lp_ref);
 
 	return 0;
 }
@@ -1061,7 +1061,7 @@ static ssize_t decon_debug_cmd_lp_ref_write(struct file *file, const char __user
 	int ret;
 	unsigned int cmd_lp_ref;
 	struct dsim_device *dsim;
-	int idx;
+	u32 idx;
 
 	buf_data = kmalloc(count, GFP_KERNEL);
 	if (buf_data == NULL)
@@ -1077,8 +1077,8 @@ static ssize_t decon_debug_cmd_lp_ref_write(struct file *file, const char __user
 
 	dsim = get_dsim_drvdata(0);
 
-	idx = dsim->panel->lcd_info.mres_mode;
-	dsim->panel->lcd_info.cmd_underrun_cnt[idx] = cmd_lp_ref;
+	idx = dsim->panel->lcd_info.cur_mode_idx;
+	dsim->panel->lcd_info.display_mode[idx].cmd_lp_ref = cmd_lp_ref;
 
 out:
 	kfree(buf_data);

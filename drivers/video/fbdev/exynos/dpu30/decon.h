@@ -543,12 +543,12 @@ struct decon_reg_data {
 	bool is_cursor_win[MAX_DECON_WIN];
 	int cursor_win;
 
-	bool mres_update;
+	bool mode_update;
 	u32 lcd_width;
 	u32 lcd_height;
 
 	u32 fps;
-	int mres_idx;
+	u32 mode_idx;
 };
 
 struct decon_win_config_data {

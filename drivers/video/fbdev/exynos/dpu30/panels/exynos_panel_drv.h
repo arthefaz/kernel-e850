@@ -67,7 +67,7 @@ struct exynos_panel_ops {
 	u32 id[MAX_PANEL_ID_NUM];
 	int (*suspend)(struct exynos_panel_device *panel);
 	int (*displayon)(struct exynos_panel_device *panel);
-	int (*mres)(struct exynos_panel_device *panel, int mres_idx);
+	int (*mres)(struct exynos_panel_device *panel, u32 mode_idx);
 	int (*doze)(struct exynos_panel_device *panel);
 	int (*doze_suspend)(struct exynos_panel_device *panel);
 	int (*dump)(struct exynos_panel_device *panel);

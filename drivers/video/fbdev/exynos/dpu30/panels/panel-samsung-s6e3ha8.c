@@ -245,12 +245,12 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 	return 0;
 }
 
-static int s6e3ha8_mres(struct exynos_panel_device *panel, int mres_idx)
+static int s6e3ha8_mres(struct exynos_panel_device *panel, u32 mode_idx)
 {
-	int dsc_en;
+	bool dsc_en;
 	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
 
-	dsc_en = panel->lcd_info.mres.res_info[mres_idx].dsc_en;
+	dsc_en = panel->lcd_info.display_mode[mode_idx].dsc_en;
 
 	DPU_INFO_PANEL("%s +\n", __func__);
 
@@ -261,19 +261,19 @@ static int s6e3ha8_mres(struct exynos_panel_device *panel, int mres_idx)
 	if (dsc_en) {
 		dsim_write_data_type_seq(dsim, MIPI_DSI_DSC_PRA, 0x1);
 		dsim_write_data_type_table(dsim, MIPI_DSI_DSC_PPS,
-				PPS_TABLE[mres_idx]);
+				PPS_TABLE[mode_idx / 2]);
 	} else {
 		dsim_write_data_type_seq(dsim, MIPI_DSI_DSC_PRA, 0x0);
 	}
 	dsim_write_data_seq(dsim, false,  0x9F, 0x5A, 0x5A);
 
 	/* partial update configuration */
-	dsim_write_data_table(dsim, CASET_TABLE[mres_idx]);
-	dsim_write_data_table(dsim, PASET_TABLE[mres_idx]);
+	dsim_write_data_table(dsim, CASET_TABLE[mode_idx / 2]);
+	dsim_write_data_table(dsim, PASET_TABLE[mode_idx / 2]);
 
 	dsim_write_data_seq(dsim, false,  0xF0, 0x5A, 0x5A);
 	/* DDI scaling configuration */
-	dsim_write_data_table(dsim, SCALER_TABLE[mres_idx]);
+	dsim_write_data_table(dsim, SCALER_TABLE[mode_idx / 2]);
 	dsim_write_data_seq(dsim, false,  0xF0, 0xA5, 0xA5);
 
 	mutex_unlock(&panel->ops_lock);

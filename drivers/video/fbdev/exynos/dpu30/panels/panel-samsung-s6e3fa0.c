@@ -135,7 +135,7 @@ int s6e3fa0_displayon(struct exynos_panel_device *panel)
 	return 0;
 }
 
-int s6e3fa0_mres(struct exynos_panel_device *panel, int mres_idx)
+int s6e3fa0_mres(struct exynos_panel_device *panel, u32 mode_idx)
 {
 	return 0;
 }

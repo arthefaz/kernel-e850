@@ -89,6 +89,7 @@ struct exynos_dsc {
 
 #define MAX_DISPLAY_MODE		32
 
+/* exposed to user */
 struct exynos_display_mode {
 	u32 index;
 	u32 width;
@@ -96,6 +97,17 @@ struct exynos_display_mode {
 	u32 mm_width;
 	u32 mm_height;
 	u32 fps;
+};
+
+/* used internally by driver */
+struct exynos_display_mode_info {
+	struct exynos_display_mode mode;
+	u32 cmd_lp_ref;
+	bool dsc_en;
+	u32 dsc_width;
+	u32 dsc_height;
+	u32 dsc_dec_sw;
+	u32 dsc_enc_sw;
 };
 
 struct exynos_panel_info {
@@ -127,17 +139,15 @@ struct exynos_panel_info {
 
 	enum type_of_ddi ddi_type;
 	unsigned int data_lane;
-	unsigned int cmd_underrun_cnt[MAX_RES_NUMBER];
 	unsigned int vt_compensation;
-	unsigned int mres_mode;
 	struct lcd_mres_info mres;
 	struct lcd_hdr_info hdr;
-	struct dsc_slice dsc_slice;
 	unsigned int bpc;
 	int display_mode_count;
-	struct exynos_display_mode display_mode[MAX_DISPLAY_MODE];
 #if defined(CONFIG_EXYNOS_DECON_DQE)
 	char ddi_name[MAX_DDI_NAME_LEN];
 #endif
+	unsigned int cur_mode_idx;
+	struct exynos_display_mode_info display_mode[MAX_DISPLAY_MODE];
 };
 #endif /* __EXYNOS_PANEL_H__ */
