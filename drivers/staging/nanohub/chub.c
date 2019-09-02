@@ -1378,7 +1378,6 @@ static irqreturn_t contexthub_irq_wdt_handler(int irq, void *data)
 }
 #endif
 
-#if defined(CONFIG_SOC_EXYNOS9610)
 static struct clk *devm_clk_get_and_prepare(struct device *dev,
 	const char *name)
 {
@@ -1407,6 +1406,7 @@ error:
 	return clk;
 }
 
+#if defined(CONFIG_SOC_EXYNOS9610)
 extern int cal_dll_apm_enable(void);
 #endif
 
@@ -1608,7 +1608,7 @@ static __init int contexthub_ipc_hw_init(struct platform_device *pdev,
 	if (!clk)
 		return -ENODEV;
 	chub->clkrate = clk_get_rate(clk);
-#if defined(CONFIG_SOC_EXYNOS9630)
+#if defined(CONFIG_SOC_EXYNOS9630) || defined(CONFIG_SOC_EXYNOS3830)
 	dev_info(dev, "clk set before: %lu\n", chub->clkrate);
 	clk_set_rate(clk, CHUB_DLL_CLK);
 	msleep(10);

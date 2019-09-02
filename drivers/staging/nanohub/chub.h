@@ -233,6 +233,10 @@ struct contexthub_ipc_info {
 #define REG_CHUB_CPU_OPTION			(0xc)
 #define ENABLE_SYSRESETREQ			BIT(9)
 #define CHUB_RESET_RELEASE_VALUE 		(0x1)
+
+#elif defined(CONFIG_SOC_EXYNOS3830)
+#define CHUB_DLL_CLK				360000000
+
 #else
 #define REG_CHUB_CPU_STATUS			(0x0)
 #define REG_CHUB_CPU_OPTION			(0x0)
