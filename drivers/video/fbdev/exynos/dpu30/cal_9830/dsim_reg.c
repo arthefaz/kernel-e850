@@ -1612,7 +1612,7 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	u32 threshold;
 	u32 num_of_slice;
 	u32 num_of_transfer;
-	int idx;
+	u32 idx;
 
 	/* shadow read disable */
 	dsim_reg_enable_shadow_read(id, 1);
@@ -1632,9 +1632,9 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	dsim_reg_set_stop_state_cnt(id);
 
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
-		/* DSU_MODE_1 is used in stead of 1 in MCD */
-		idx = lcd_info->mres_mode;
-		dsim_reg_set_cm_underrun_lp_ref(id, lcd_info->cmd_underrun_cnt[idx]);
+		idx = lcd_info->cur_mode_idx;
+		dsim_reg_set_cm_underrun_lp_ref(id,
+				lcd_info->display_mode[idx].cmd_lp_ref);
 	}
 
 	if (lcd_info->dsc.en)
@@ -2114,6 +2114,7 @@ void dsim_reg_preinit(u32 id)
 	struct dsim_device *dsim = get_dsim_drvdata(id);
 	struct dsim_clks clks;
 	struct exynos_panel_info lcd_info;
+	u32 idx;
 
 	/* default configuration just for reading panel id */
 	memset(&clks, 0, sizeof(struct dsim_clks));
@@ -2127,7 +2128,9 @@ void dsim_reg_preinit(u32 id)
 	lcd_info.dphy_pms.m = 127;
 	lcd_info.dphy_pms.s = 0;
 	lcd_info.data_lane = 4;
-	lcd_info.cmd_underrun_cnt[0] = 3022;
+	lcd_info.cur_mode_idx = 0;
+	idx = lcd_info.cur_mode_idx;
+	lcd_info.display_mode[idx].cmd_lp_ref = 3022;
 
 	/* DPHY reset control from SYSREG(0) */
 	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 0);
@@ -2521,7 +2524,7 @@ void dsim_reg_set_mres(u32 id, struct exynos_panel_info *lcd_info)
 	u32 threshold;
 	u32 num_of_slice;
 	u32 num_of_transfer;
-	int idx;
+	u32 idx;
 
 	if (lcd_info->mode != DECON_MIPI_COMMAND_MODE) {
 		dsim_info("%s: mode[%d] doesn't support multi resolution\n",
@@ -2529,8 +2532,9 @@ void dsim_reg_set_mres(u32 id, struct exynos_panel_info *lcd_info)
 		return;
 	}
 
-	idx = lcd_info->mres_mode;
-	dsim_reg_set_cm_underrun_lp_ref(id, lcd_info->cmd_underrun_cnt[idx]);
+	idx = lcd_info->cur_mode_idx;
+	dsim_reg_set_cm_underrun_lp_ref(id,
+			lcd_info->display_mode[idx].cmd_lp_ref);
 
 	if (lcd_info->dsc.en) {
 		threshold = lcd_info->dsc.enc_sw * lcd_info->dsc.slice_num;
