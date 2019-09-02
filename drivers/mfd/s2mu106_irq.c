@@ -442,11 +442,12 @@ int s2mu106_irq_init(struct s2mu106_dev *s2mu106)
 		if (IS_ERR_OR_NULL(i2c))
 			continue;
 
-		if (i >= 0 && i < mask_reg_size)
+		if (i >= 0 && i < mask_reg_size) {
 			if (s2mu106_mask_reg[i] == S2MU106_REG_INVALID)
 				continue;
 
-		s2mu106_write_reg(i2c, s2mu106_mask_reg[i], 0xFF);
+			s2mu106_write_reg(i2c, s2mu106_mask_reg[i], 0xFF);
+		}
 	}
 
 	/* Register with genirq */
