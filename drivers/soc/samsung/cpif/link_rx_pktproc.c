@@ -808,6 +808,12 @@ int pktproc_create(struct platform_device *pdev, struct mem_link_device *mld, u3
 			goto create_error;
 		}
 
+		if ((q->q_info->desc_base + q->desc_size) > q->q_info->data_base) {
+			mif_err("Descriptor overflow:0x%08x 0x%08x 0x%08x\n",
+				q->q_info->desc_base, q->desc_size, q->q_info->data_base);
+			goto create_error;
+		}
+
 		if (ppa->use_exclusive_irq) {
 			q->irq_handler = pktproc_irq_handler;
 
