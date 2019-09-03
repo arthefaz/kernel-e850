@@ -60,19 +60,20 @@ static irqreturn_t cp_mbox_irq_handler(int irq, void *data)
 	/* Check raised interrupts */
 	irq_stat = mcu_ipc_readl(id, EXYNOS_MCU_IPC_INTSR0) & 0xFFFF0000;
 
-	/* Only clear and handle unmasked interrupts */
-	irq_stat &= mcu_dat[id].unmasked_irq << 16;
-
 	/* Interrupt Clear */
 	mcu_ipc_writel(id, irq_stat, EXYNOS_MCU_IPC_INTCR0);
 	spin_unlock(&mcu_dat[id].reg_lock);
 
 	for (i = 0; i < 16; i++) {
 		if (irq_stat & (1 << (i + 16))) {
-			if ((1 << (i + 16)) & mcu_dat[id].registered_irq)
+			if ((1 << (i + 16)) & mcu_dat[id].registered_irq) {
 				mcu_dat[id].hd[i].handler(i, mcu_dat[id].hd[i].data);
-			else
-				mif_err("Unregistered INT received:%d 0x%x\n", i, irq_stat);
+			} else {
+				mif_err_limited("mcu_ipc unregistered:%d %d 0x%08x 0x%08lx 0x%08x\n",
+							id, i, irq_stat,
+							mcu_dat[id].unmasked_irq << 16,
+							mcu_ipc_readl(id, EXYNOS_MCU_IPC_INTMR0));
+			}
 
 			irq_stat &= ~(1 << (i + 16));
 		}
@@ -100,6 +101,9 @@ int mbox_request_irq(enum mcu_ipc_region id, u32 int_num, irq_handler_t handler,
 
 	spin_unlock_irqrestore(&mcu_dat[id].reg_lock, flags);
 
+	mbox_enable_irq(id, int_num);
+	mif_info("id:%d num:%d intmr0:0x%08x\n", id, int_num, mcu_ipc_readl(id, EXYNOS_MCU_IPC_INTMR0));
+
 	return 0;
 }
 EXPORT_SYMBOL(mbox_request_irq);
@@ -110,6 +114,9 @@ int mbox_unregister_irq(enum mcu_ipc_region id, u32 int_num, irq_handler_t handl
 
 	if (!handler || (mcu_dat[id].hd[int_num].handler != handler))
 		return -EINVAL;
+
+	mbox_disable_irq(id, int_num);
+	mif_info("id:%d num:%d intmr0:0x%08x\n", id, int_num, mcu_ipc_readl(id, EXYNOS_MCU_IPC_INTMR0));
 
 	spin_lock_irqsave(&mcu_dat[id].reg_lock, flags);
 
@@ -306,6 +313,9 @@ void mbox_sw_reset(enum mcu_ipc_region id)
 	mcu_ipc_writel(id, reg_val, EXYNOS_MCU_IPC_MCUCTLR);
 
 	udelay(5);
+
+	mcu_ipc_writel(id, ~(mcu_dat[id].unmasked_irq) << 16, EXYNOS_MCU_IPC_INTMR0);
+	mif_info("id:%d intmr0:0x%08x\n", id, mcu_ipc_readl(id, EXYNOS_MCU_IPC_INTMR0));
 }
 EXPORT_SYMBOL(mbox_sw_reset);
 
@@ -450,6 +460,9 @@ static int cp_mbox_probe(struct platform_device *pdev)
 
 	spin_lock_init(&mcu_dat[id].lock);
 	spin_lock_init(&mcu_dat[id].reg_lock);
+
+	mcu_ipc_writel(id, 0xFFFF0000, EXYNOS_MCU_IPC_INTMR0);
+	mif_info("id:%d intmr0:0x%08x\n", id, mcu_ipc_readl(id, EXYNOS_MCU_IPC_INTMR0));
 
 	mif_err("---\n");
 
