@@ -194,9 +194,9 @@ static long ipc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 					mif_err("%s: copy_from_user() error\n", iod->name);
 					mif_info("No argument from USER\n");
 				}
-			}
-			else
+			} else {
 				mif_info("No argument from USER\n");
+			}
 
 			mif_info("Crash Reason:%s\n", buff);
 			break;

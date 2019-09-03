@@ -931,7 +931,7 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 		goto exit;
 	}
 
-	if(mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 0) {
+	if (mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 0) {
 		mif_err("skip pci power on : condition not met\n");
 		goto exit;
 	}

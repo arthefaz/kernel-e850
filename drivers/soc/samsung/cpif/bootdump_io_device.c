@@ -340,7 +340,7 @@ static long bootdump_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 				ld->crash_reason.type = arg;
 				mif_err("%s: IOCTL_TRIGGER_CP_CRASH (%lu)\n",
 						iod->name, arg);
-				sprintf(buff, "%s%lu",CP_CRASH_TAG_RILD, arg);
+				sprintf(buff, "%s%lu", CP_CRASH_TAG_RILD, arg);
 			} else {
 				mif_err("%s: IOCTL_TRIGGER_CP_CRASH\n",
 						iod->name);

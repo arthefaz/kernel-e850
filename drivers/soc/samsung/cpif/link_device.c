@@ -2160,8 +2160,7 @@ unsigned long shmem_calculate_CRC32(const unsigned char *buf, unsigned long len)
 		return 0L;
 
 	ul_crc = CRC32_XINIT;
-	while (len--)
-	{
+	while (len--) {
 		ul_crc = CRC32_TABLE[(ul_crc ^ *buf++) & 0xFF] ^ (ul_crc >> 8);
 	}
 
@@ -3102,7 +3101,7 @@ static int shmem_register_pcie(struct link_device *ld)
 {
 	struct modem_ctl *mc = ld->mc;
 	struct platform_device *pdev = to_platform_device(mc->dev);
-	static int is_registered = 0;
+	static int is_registered;
 	struct mem_link_device *mld = to_mem_link_device(ld);
 
 	mif_err("CP EP driver initialization start.\n");

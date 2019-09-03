@@ -631,14 +631,14 @@ void change_to_cp_uart(void)
 {
 	if (uart_txd_addr == NULL) {
 		uart_txd_addr = devm_ioremap(g_mc->dev, 0x10E2062C, SZ_64);
-		if (uart_txd_addr == NULL){
+		if (uart_txd_addr == NULL) {
 			mif_err("Err: failed to ioremap UART TXD!\n");
 			return;
 		}
 	}
 	if (uart_rxd_addr == NULL) {
 		uart_rxd_addr = devm_ioremap(g_mc->dev, 0x10E20650, SZ_64);
-		if (uart_rxd_addr == NULL){
+		if (uart_rxd_addr == NULL) {
 			mif_err("Err: failed to ioremap UART RXD!\n");
 			return;
 		}
@@ -654,14 +654,14 @@ void change_to_ap_uart(void)
 {
 	if (uart_txd_addr == NULL) {
 		uart_txd_addr = devm_ioremap(g_mc->dev, 0x10E2062C, SZ_64);
-		if (uart_txd_addr == NULL){
+		if (uart_txd_addr == NULL) {
 			mif_err("Err: failed to ioremap UART TXD!\n");
 			return;
 		}
 	}
 	if (uart_rxd_addr == NULL) {
 		uart_rxd_addr = devm_ioremap(g_mc->dev, 0x10E20650, SZ_64);
-		if (uart_rxd_addr == NULL){
+		if (uart_rxd_addr == NULL) {
 			mif_err("Err: failed to ioremap UART RXD!\n");
 			return;
 		}
