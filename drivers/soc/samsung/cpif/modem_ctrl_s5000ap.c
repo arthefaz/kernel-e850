@@ -125,6 +125,15 @@ static int __init console_setup(char *str)
 	return 0;
 }
 __setup("androidboot.hw_rev=", console_setup);
+
+static int __init set_hw_revision(char *str)
+{
+	get_option(&str, &hw_rev);
+	mif_info("Hardware revision:0x%x\n", hw_rev);
+
+	return 0;
+}
+__setup("revision=", set_hw_revision);
 #else
 static int get_system_rev(struct device_node *np)
 {
