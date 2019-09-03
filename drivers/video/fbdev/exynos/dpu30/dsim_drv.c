@@ -439,11 +439,8 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 		switch (rx_fifo & 0xff) {
 		case MIPI_DSI_RX_ACKNOWLEDGE_AND_ERROR_REPORT:
 			ret = dsim_reg_rx_err_handler(dsim->id, rx_fifo);
-			if (ret < 0) {
-				dsim_to_regs_param(dsim, &regs);
-				__dsim_dump(dsim->id, &regs);
+			if (ret < 0)
 				goto exit;
-			}
 			break;
 		case MIPI_DSI_RX_END_OF_TRANSMISSION:
 			dsim_dbg("EoTp was received from LCD module.\n");
@@ -456,28 +453,39 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 			break;
 		case MIPI_DSI_RX_DCS_SHORT_READ_RESPONSE_2BYTE:
 		case MIPI_DSI_RX_GENERIC_SHORT_READ_RESPONSE_2BYTE:
-			dsim_dbg("2bytes Short Packet was received from LCD\n");
+			if (cnt < 2) {
+				dsim_err("2bytes Short Packet was received from LCD\n");
+				dsim_err("But requested max return packet size : %d", cnt);
+			} else
+				dsim_dbg("2bytes Short Packet was received from LCD\n");
 			for (i = 0; i < 2; i++)
-				buf[i] = (rx_fifo >> (8 + i * 8)) & 0xff;
+				if (i < cnt)
+					buf[i] = (rx_fifo >> (8 + i * 8)) & 0xff;
 			rx_size = 2;
 			break;
 		case MIPI_DSI_RX_DCS_LONG_READ_RESPONSE:
 		case MIPI_DSI_RX_GENERIC_LONG_READ_RESPONSE:
 			dsim_dbg("Long Packet was received from LCD module.\n");
 			rx_size = (rx_fifo & 0x00ffff00) >> 8;
-			dsim_dbg("rx fifo : %8x, response : %x, rx_size : %d\n",
-					rx_fifo, rx_fifo & 0xff, rx_size);
+			if (cnt < rx_size) {
+				dsim_err("rx fifo : %8x, response : %x, rx_size : %d\n",
+						rx_fifo, rx_fifo & 0xff, rx_size);
+				dsim_err("But requested max return packet size : %d", cnt);
+			} else
+				dsim_dbg("rx fifo : %8x, response : %x, rx_size : %d\n",
+						rx_fifo, rx_fifo & 0xff, rx_size);
 			/* Read data from RX packet payload */
 			for (i = 0; i < rx_size >> 2; i++) {
 				rx_fifo = dsim_reg_get_rx_fifo(dsim->id);
 				for (j = 0; j < 4; j++)
-					buf[(i*4)+j] = (u8)(rx_fifo >> (j * 8)) & 0xff;
+					if ((4 * i + j) < cnt)
+						buf[4 * i + j] = (u8)(rx_fifo >> (j * 8)) & 0xff;
 			}
 			if (rx_size % 4) {
 				rx_fifo = dsim_reg_get_rx_fifo(dsim->id);
 				for (j = 0; j < rx_size % 4; j++)
-					buf[4 * i + j] =
-						(u8)(rx_fifo >> (j * 8)) & 0xff;
+					if ((4 * i + j) < cnt)
+						buf[4 * i + j] = (u8)(rx_fifo >> (j * 8)) & 0xff;
 			}
 			break;
 		default:
