@@ -165,6 +165,9 @@ static int pktproc_fill_data_addr(struct pktproc_queue *q)
 			spin_unlock_irqrestore(&q->lock, flags);
 			return -ENOMEM;
 		}
+		if (!q->ppa->use_hw_iocc)
+			__inval_dcache_area(addr, MIF_BUFF_DEFAULT_CELL_SIZE);
+
 		desc[*q->fore_ptr].data_addr = (u32)(addr - q->data) +
 						q->q_info->data_base +
 						(NET_SKB_PAD + NET_IP_ALIGN);
@@ -229,7 +232,7 @@ static int pktproc_get_pkt_from_sktbuf_mode(struct pktproc_queue *q, struct sk_b
 		goto rx_error_on_desc;
 	}
 	if (!q->ppa->use_hw_iocc)
-		__inval_dcache_area(src + NET_SKB_PAD + NET_IP_ALIGN, len);
+		__inval_dcache_area(src, MIF_BUFF_DEFAULT_CELL_SIZE);
 	pp_debug("len:%d ch_id:%d src:%pK\n", len, ch_id, src);
 
 	/* Build skb */
