@@ -149,7 +149,6 @@ send_doorbell_again:
 			goto send_doorbell_again;
 		}
 		mif_err("[Need to CHECK] Can't send doorbell int (0x%x)\n", reg);
-		s51xx_pcie_chk_ep_conf(pdev);
 		/* temporary block
 		exynos_pcie_host_v1_register_dump(s51xx_pcie.pcie_channel_num);
 		*/
