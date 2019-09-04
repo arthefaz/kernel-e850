@@ -34,5 +34,6 @@ void cpif_get_clat_addr(u32 id, struct in6_addr *paddr);
 void cpif_set_clat_addr(u32 id, struct in6_addr addr);
 void cpif_get_v4_filter(u32 id, u32 *paddr);
 void cpif_set_v4_filter(u32 id, u32 addr);
+bool is_heading_toward_clat(struct sk_buff *skb);
 
 #endif /* __CPIF_CLAT_INFO_H__ */

@@ -131,3 +131,26 @@ void cpif_set_v4_filter(u32 id, u32 addr)
 	mif_info("get clat v4 address (id %d): %pI4\n", id,
 			&g_clat_info.clat_v4_filter[id]);
 }
+
+bool is_heading_toward_clat(struct sk_buff *skb)
+{
+	struct ipv6hdr *ip_header = ipv6_hdr(skb);
+	unsigned long flags;
+	int i = 0;
+
+	if (ip_header->version ==4)
+		return false;
+
+	spin_lock_irqsave(&g_clat_info.lock, flags);
+
+	for (i=0; i < NUM_CLAT_ADDR; i++) {
+		if (memcmp(&g_clat_info.clat_addr[i], &ip_header->daddr, 16) == 0) {
+			spin_unlock_irqrestore(&g_clat_info.lock, flags);
+			return true;
+		}
+	}
+
+	spin_unlock_irqrestore(&g_clat_info.lock, flags);
+
+	return false;
+}

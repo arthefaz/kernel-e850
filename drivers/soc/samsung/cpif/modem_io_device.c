@@ -36,6 +36,7 @@
 #include "modem_prj.h"
 #include "modem_utils.h"
 #include "modem_dump.h"
+#include "cpif_clat_info.h"
 
 static ssize_t show_waketime(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -417,7 +418,7 @@ static int rx_multi_pdp(struct sk_buff *skb)
 	skb_reset_transport_header(skb);
 	skb_reset_network_header(skb);
 
-	if (!l2forward && check_gro_support(skb)) {
+	if (!l2forward && check_gro_support(skb) && !is_heading_toward_clat(skb)) {
 		ret = napi_gro_receive(napi_get_current(), skb);
 		if (ret == GRO_DROP) {
 			mif_err_limited("%s: %s<-%s: ERR! napi_gro_receive\n",
