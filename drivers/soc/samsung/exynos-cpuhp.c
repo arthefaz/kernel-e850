@@ -11,6 +11,7 @@
  */
 
 #include <linux/cpu.h>
+#include <linux/cpumask.h>
 #include <linux/fb.h>
 #include <linux/kthread.h>
 #include <linux/pm_qos.h>
@@ -34,9 +35,6 @@ static struct {
 
 	/* flag for suspend */
 	bool			suspended;
-
-	/* flag for debug print */
-	bool			debug;
 
 	/* list head for requester */
 	struct list_head	users;
@@ -83,7 +81,7 @@ static inline void cpuhp_enable(bool enable)
 }
 
 /* find user matched name. if return NULL, there is no user matched name */
-static struct cpuhp_user* cpuhp_find_user(char *name)
+static struct cpuhp_user *cpuhp_find_user(char *name)
 {
 	struct cpuhp_user *user;
 
@@ -150,7 +148,7 @@ int exynos_cpuhp_register(char *name, struct cpumask mask, int type)
 	list_add(&user->list, &cpuhp.users);
 
 	scnprintf(buf, sizeof(buf), "%*pbl", cpumask_pr_args(&user->online_cpus));
-	pr_info("CPUHP: reigstered new user(name:%s, mask:%s)\n", user->name, buf);;
+	pr_info("CPUHP: reigstered new user(name:%s, mask:%s)\n", user->name, buf);
 
 	/* applying new user's request */
 	ret = cpuhp_do();
@@ -189,51 +187,6 @@ int exynos_cpuhp_request(char *name, struct cpumask mask, int type)
 /**********************************************************************************/
 /*				 cpu hp operater				  */
 /**********************************************************************************/
-/* legacy hotplug in */
-static int cpuhp_in(const struct cpumask *mask)
-{
-	int cpu, ret = 0;
-
-	for_each_cpu(cpu, mask) {
-		ret = cpu_up(cpu);
-		if (ret) {
-			/*
-			 * If it fails to enable cpu,
-			 * it cancels cpu hotplug request and retries later.
-			 */
-			pr_err("%s: Failed to hotplug in CPU%d with error %d\n",
-								__func__, cpu, ret);
-			break;
-		}
-	}
-
-	return ret;
-}
-
-/* legacy hotplug out */
-static int cpuhp_out(const struct cpumask *mask)
-{
-	int cpu, ret = 0;
-
-	/*
-	 * Reverse order of cpu,
-	 * explore cpu7, cpu6, cpu5, ... cpu1
-	 */
-	for (cpu = nr_cpu_ids - 1; cpu > 0; cpu--) {
-		if (!cpumask_test_cpu(cpu, mask))
-			continue;
-
-		ret = cpu_down(cpu);
-		if (ret) {
-			pr_err("%s: Failed to hotplug out CPU%d with error %d\n",
-								__func__, cpu, ret);
-			break;
-		}
-	}
-
-	return ret;
-}
-
 /*
  * Return last target online cpu mask
  * Returns the cpu_mask INTERSECTIONS of all users in the user list.
@@ -251,7 +204,7 @@ static struct cpumask cpuhp_get_online_cpus(void)
 
 	if (cpumask_empty(&mask) || !cpumask_test_cpu(0, &mask)) {
 		scnprintf(buf, sizeof(buf), "%*pbl", cpumask_pr_args(&mask));
-		panic("CPUHP: Online mask(%s) is wrong \n", buf);
+		panic("CPUHP: Online mask(%s) is wrong\n", buf);
 	}
 
 	return mask;
@@ -263,10 +216,25 @@ static struct cpumask cpuhp_get_online_cpus(void)
  */
 static int cpuhp_cpu_up(struct cpumask enable_cpus)
 {
-	if (!cpumask_empty(&enable_cpus))
-		if (cpuhp_in(&enable_cpus))
-			pr_info("failed to cpuhp_cpu_up\n");
-	return 0;
+	int cpu, ret = 0;
+
+	for_each_cpu(cpu, &enable_cpus) {
+		if (cpumask_test_cpu(cpu, cpu_online_mask))
+			continue;
+
+		ret = cpu_up(cpu);
+		if (ret) {
+			/*
+			 * If it fails to enable cpu,
+			 * it cancels cpu hotplug request and retries later.
+			 */
+			pr_err("%s: Failed to hotplug in CPU%d with error %d\n",
+								__func__, cpu, ret);
+			break;
+		}
+	}
+
+	return ret;
 }
 
 /*
@@ -275,24 +243,38 @@ static int cpuhp_cpu_up(struct cpumask enable_cpus)
  */
 static int cpuhp_cpu_down(struct cpumask disable_cpus)
 {
-	if (!cpumask_empty(&disable_cpus))
-		if (cpuhp_out(&disable_cpus))
-			pr_info("failed to cpuhp_cpu_down\n");
-	return 0;
+	int cpu, ret = 0;
+
+	/*
+	 * Reverse order of cpu,
+	 * explore cpu7, cpu6, cpu5, ... cpu1
+	 */
+	for (cpu = nr_cpu_ids - 1; cpu > 0; cpu--) {
+		if (!cpumask_test_cpu(cpu, &disable_cpus))
+			continue;
+
+		if (!cpumask_test_cpu(cpu, cpu_online_mask))
+			continue;
+
+		ret = cpu_down(cpu);
+		if (ret)
+			pr_err("%s: Failed to hotplug out CPU%d with error %d\n",
+								__func__, cpu, ret);
+	}
+
+	return ret;
 }
 
 /* print cpu control informatoin for deubgging */
-static void cpuhp_print_debug_info(struct cpumask online_cpus, int fast_hp)
+static void cpuhp_print_debug_info(struct cpumask online_cpus)
 {
 	char new_buf[10], pre_buf[10];
 
-	scnprintf(pre_buf, sizeof(pre_buf), "%*pbl", cpumask_pr_args(&cpuhp.online_cpus));
+	scnprintf(pre_buf, sizeof(pre_buf), "%*pbl", cpumask_pr_args(cpu_online_mask));
 	scnprintf(new_buf, sizeof(new_buf), "%*pbl", cpumask_pr_args(&online_cpus));
-	dbg_snapshot_printk("%s: %s -> %s fast_hp=%d\n", __func__, pre_buf, new_buf, fast_hp);
 
-	/* print cpu control information */
-	if (cpuhp.debug)
-		pr_info("%s: %s -> %s fast_hp=%d\n", __func__, pre_buf, new_buf, fast_hp);
+	dbg_snapshot_printk("CPUHP: %s -> %s\n", pre_buf, new_buf);
+	pr_info("CPUHP: %s -> %s\n", pre_buf, new_buf);
 }
 
 /*
@@ -312,29 +294,33 @@ static int cpuhp_do(void)
 	if (!cpuhp.enabled || cpuhp.suspended)
 		return 0;
 
+	if (!cpumask_equal(&cpuhp.online_cpus, cpu_online_mask)) {
+		char new_buf[10], pre_buf[10];
+		scnprintf(pre_buf, sizeof(pre_buf), "%*pbl", cpumask_pr_args(&cpuhp.online_cpus));
+		scnprintf(new_buf, sizeof(new_buf), "%*pbl", cpumask_pr_args(cpu_online_mask));
+		pr_warn("CPUHP: Somebody did cpu-hotplug(target:%s, cur:%s\n", pre_buf, new_buf);
+	}
+
 	online_cpus = cpuhp_get_online_cpus();
-	cpuhp_print_debug_info(online_cpus, fast_hp);
 
-	/* if there is no mask change, skip */
-	if (cpumask_equal(&cpuhp.online_cpus, &online_cpus))
-		goto out;
+	if (cpumask_equal(&online_cpus, cpu_online_mask))
+		return 0;
 
-	/* get the enable cpu  mask for new online cpu */
-	cpumask_andnot(&enable_cpus, &online_cpus, &cpuhp.online_cpus);
-	/* get the disable cpu mask for new offline cpu */
-	cpumask_andnot(&disable_cpus, &cpuhp.online_cpus, &online_cpus);
+	cpuhp_print_debug_info(online_cpus);
+
+	/* get the enable cpus mask for new online cpu */
+	cpumask_andnot(&enable_cpus, &online_cpus, cpu_online_mask);
+	/* get the disable cpus mask for new offline cpu */
+	cpumask_andnot(&disable_cpus, cpu_online_mask, &online_cpus);
 
 	if (!cpumask_empty(&enable_cpus))
-		ret = cpuhp_cpu_up(enable_cpus, fast_hp);
-	if (ret)
-		goto out;
+		ret = cpuhp_cpu_up(enable_cpus);
 
 	if (!cpumask_empty(&disable_cpus))
-		ret = cpuhp_cpu_down(disable_cpus, fast_hp);
+		ret = cpuhp_cpu_down(disable_cpus);
 
 	cpumask_copy(&cpuhp.online_cpus, &online_cpus);
 
-out:
 	return ret;
 }
 
@@ -355,7 +341,7 @@ static int cpuhp_control(bool enable)
 		 * If it success to enable all CPUs, clear cpuhp.enabled flag.
 		 * Since then all hotplug requests are ignored.
 		 */
-		ret = cpuhp_in(&mask);
+		ret = cpuhp_cpu_up(mask);
 		if (!ret) {
 			/*
 			 * In this position, can't use cpuhp_enable()
@@ -434,21 +420,6 @@ __ATTR(name##_online_cpu, 0644,							\
 attr_online_cpu(set);
 
 /*
- * It shows cpuhp driver requested online_cpu
- *
- * #cat /sys/power/cpuhp/online_cpu
- */
-static ssize_t show_online_cpu(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	unsigned int online_cpus;
-
-	online_cpus = *(unsigned int *)cpumask_bits(&cpuhp.online_cpus);
-
-	return snprintf(buf, 30, "online cpu: 0x%x\n", online_cpus);
-}
-
-/*
  * It shows users information(name, requesting cpu_mask, type)
  * registered in cpu-hp user_list
  *
@@ -457,7 +428,7 @@ static ssize_t show_online_cpu(struct kobject *kobj,
 static ssize_t show_users(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	unsigned int online_cpus;							\
+	unsigned int online_cpus;
 	struct cpuhp_user *user;
 	ssize_t ret = 0;
 
@@ -499,48 +470,14 @@ static ssize_t store_enable(struct kobject *kobj,
 	return count;
 }
 
-/*
- * User can control en/disable debug mode
- *
- * #echo 1 > /sys/power/cpuhp/debug => enable
- * #echo 0 > /sys/power/cpuhp/debug => disable
- *
- * When it is enabled, information is printed every time there is a cpu control
- */
-static ssize_t show_debug(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	return snprintf(buf, 10, "%d\n", cpuhp.debug);
-}
-
-static ssize_t store_debug(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf,
-		size_t count)
-{
-	int input;
-
-	if (!sscanf(buf, "%d", &input))
-		return -EINVAL;
-
-	cpuhp.debug = !!input;
-
-	return count;
-}
-
 static struct kobj_attribute cpuhp_enabled =
 __ATTR(enabled, 0644, show_enable, store_enable);
-static struct kobj_attribute cpuhp_debug =
-__ATTR(debug, 0644, show_debug, store_debug);
-static struct kobj_attribute cpuhp_online_cpu =
-__ATTR(online_cpu, 0444, show_online_cpu, NULL);
 static struct kobj_attribute cpuhp_users =
 __ATTR(users, 0444, show_users, NULL);
 
 static struct attribute *cpuhp_attrs[] = {
-	&cpuhp_online_cpu.attr,
 	&cpuhp_set_online_cpu.attr,
 	&cpuhp_enabled.attr,
-	&cpuhp_debug.attr,
 	&cpuhp_users.attr,
 	NULL,
 };
