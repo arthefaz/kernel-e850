@@ -43,6 +43,7 @@
 
 #include "modem_prj.h"
 #include "modem_utils.h"
+#include "modem_ctrl.h"
 #include "link_device.h"
 #include "link_device_memory.h"
 #include "s51xx_pcie.h"
@@ -1035,6 +1036,8 @@ static int suspend_cp(struct modem_ctl *mc)
 	if (!mc)
 		return 0;
 
+	modem_ctrl_set_kerneltime(mc);
+
 	if (mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 1) {
 		mif_err("abort suspend");
 		return -EBUSY;
@@ -1050,6 +1053,8 @@ static int resume_cp(struct modem_ctl *mc)
 {
 	if (!mc)
 		return 0;
+
+	modem_ctrl_set_kerneltime(mc);
 
 	mif_gpio_set_value(mc->s5100_gpio_ap_status, 1, 0);
 	mif_gpio_get_value(mc->s5100_gpio_ap_status, true);

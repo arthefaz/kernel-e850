@@ -29,6 +29,7 @@
 #include <soc/samsung/exynos-pmu.h>
 #include "modem_prj.h"
 #include "modem_utils.h"
+#include "modem_ctrl.h"
 #include "link_device_memory.h"
 #ifdef CONFIG_LINK_DEVICE_PCIE
 #include "s51xx_pcie.h"
@@ -809,23 +810,8 @@ static int suspend_cp(struct modem_ctl *mc)
 {
 	struct modem_data *modem = mc->mdm_data;
 	struct mem_link_device *mld = modem->mld;
-	struct utc_time t;
 
-	get_utc_time(&t);
-	mif_err("time = %d.%d\n", t.sec + (t.min * 60), t.us);
-
-	if (mld->ap2cp_kerneltime_sec.type == DRAM_V2) {
-		set_ctrl_msg(&mld->ap2cp_kerneltime_sec, t.sec + (t.min * 60));
-		set_ctrl_msg(&mld->ap2cp_kerneltime_usec, t.us);
-	} else {
-		update_ctrl_msg(&mld->ap2cp_kerneltime, t.min * 60,
-				modem->sbi_ap2cp_kerneltime_sec_mask,
-				modem->sbi_ap2cp_kerneltime_sec_pos);
-		update_ctrl_msg(&mld->ap2cp_kerneltime, t.us,
-				modem->sbi_ap2cp_kerneltime_usec_mask,
-				modem->sbi_ap2cp_kerneltime_usec_pos);
-	}
-
+	modem_ctrl_set_kerneltime(mc);
 
 	mif_err("%s: pda_active:0\n", mc->name);
 
@@ -841,22 +827,8 @@ static int resume_cp(struct modem_ctl *mc)
 {
 	struct modem_data *modem = mc->mdm_data;
 	struct mem_link_device *mld = modem->mld;
-	struct utc_time t;
 
-	get_utc_time(&t);
-	mif_err("time = %d.%d\n", t.sec + (t.min * 60), t.us);
-
-	if (mld->ap2cp_kerneltime_sec.type == DRAM_V2) {
-		set_ctrl_msg(&mld->ap2cp_kerneltime_sec, t.sec + (t.min * 60));
-		set_ctrl_msg(&mld->ap2cp_kerneltime_usec, t.us);
-	} else {
-		update_ctrl_msg(&mld->ap2cp_kerneltime, t.min * 60,
-				modem->sbi_ap2cp_kerneltime_sec_mask,
-				modem->sbi_ap2cp_kerneltime_sec_pos);
-		update_ctrl_msg(&mld->ap2cp_kerneltime, t.us,
-				modem->sbi_ap2cp_kerneltime_usec_mask,
-				modem->sbi_ap2cp_kerneltime_usec_pos);
-	}
+	modem_ctrl_set_kerneltime(mc);
 
 	mif_err("%s: pda_active:1\n", mc->name);
 

@@ -27,8 +27,8 @@ obj-$(CONFIG_LINK_DEVICE_PCIE) += link_device.o \
 				   link_device_memory_legacy.o \
 				   modem_notifier.o
 
-obj-$(CONFIG_SEC_MODEM_S5000AP) += modem_ctrl_s5000ap.o
-obj-$(CONFIG_SEC_MODEM_S5100) += modem_ctrl_s5100.o
+obj-$(CONFIG_SEC_MODEM_S5000AP) += modem_ctrl_s5000ap.o modem_ctrl.o
+obj-$(CONFIG_SEC_MODEM_S5100) += modem_ctrl_s5100.o modem_ctrl.o
 
 obj-$(CONFIG_CP_ZEROCOPY) += link_rx_zerocopy.o
 obj-$(CONFIG_CP_PKTPROC) += link_rx_pktproc.o
