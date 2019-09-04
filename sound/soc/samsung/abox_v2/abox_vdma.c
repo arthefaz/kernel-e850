@@ -13,6 +13,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/memblock.h>
 #include <linux/version.h>
+#include <linux/file.h>
+#include <linux/uaccess.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
@@ -43,6 +45,8 @@ struct abox_vdma_info {
 	int id;
 	bool legacy;
 	char name[NAME_LENGTH];
+	struct file *filp;
+	mm_segment_t old_fs;
 	struct abox_vdma_rtd rtd[SNDRV_PCM_STREAM_LAST + 1];
 };
 
@@ -162,6 +166,7 @@ static int abox_vdma_hw_params(struct snd_pcm_substream *substream,
 	struct device *dev = info->dev;
 	ABOX_IPC_MSG msg;
 	struct IPC_PCMTASK_MSG *pcmtask_msg = &msg.msg.pcmtask;
+	char filename[SZ_64];
 	int ret;
 
 	dev_dbg(dev, "%s[%c]\n", __func__, substream_to_char(substream));
@@ -189,6 +194,11 @@ static int abox_vdma_hw_params(struct snd_pcm_substream *substream,
 	if (ret < 0)
 		return ret;
 
+	info->old_fs = get_fs();
+	set_fs(KERNEL_DS);
+	sprintf(filename, "/data/abox/abox_vdma-%d.raw", info->id);
+	info->filp = filp_open(filename, O_RDWR|O_APPEND|O_CREAT, 0660);
+	set_fs(info->old_fs);
 	dev_info(dev, "%s:Total=%u PrdSz=%u(%u) #Prds=%u rate=%u, width=%d, channels=%u\n",
 			snd_pcm_stream_str(substream),
 			params_buffer_bytes(params), params_period_size(params),
@@ -214,6 +224,11 @@ static int abox_vdma_hw_free(struct snd_pcm_substream *substream)
 	msg.task_id = pcmtask_msg->channel_id = id;
 	pcmtask_msg->msgtype = PCM_PLTDAI_HW_FREE;
 	abox_vdma_request_ipc(&msg, 0, 0);
+
+	if (!IS_ERR_OR_NULL(info->filp)) {
+		vfs_fsync(info->filp, 0);
+		filp_close(info->filp, NULL);
+	}
 
 	return snd_pcm_lib_free_pages(substream);
 }
@@ -317,6 +332,45 @@ static int abox_vdma_ack(struct snd_pcm_substream *substream)
 	return abox_vdma_request_ipc(&msg, 1, 0);
 }
 
+static void *get_dma_ptr(struct snd_pcm_runtime *runtime, int channel,
+		unsigned long hwoff)
+{
+	return runtime->dma_area + hwoff + channel * (runtime->dma_bytes /
+			runtime->channels);
+}
+
+static int abox_vdma_copy_user(struct snd_pcm_substream *substream, int
+		channel, unsigned long hwoff, void *buf, unsigned long bytes)
+{
+	struct snd_soc_pcm_runtime *soc_rtd = substream->private_data;
+	int id = soc_rtd->dai_link->id;
+	struct abox_vdma_info *info = abox_vdma_get_info(id);
+	bool is_playback;
+
+	is_playback = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+
+	if (is_playback) {
+		if (copy_from_user(get_dma_ptr(substream->runtime, channel,
+						hwoff), (void __user *)buf,
+					bytes))
+			return -EFAULT;
+		info->old_fs = get_fs();
+		set_fs(KERNEL_DS);
+		if (!IS_ERR_OR_NULL(info->filp))
+			vfs_write(info->filp, get_dma_ptr(substream->runtime,
+						channel, hwoff), bytes,
+					&info->filp->f_pos);
+		set_fs(info->old_fs);
+	} else {
+		if (copy_to_user((void __user *)buf,
+					get_dma_ptr(substream->runtime,
+						channel, hwoff), bytes))
+			return -EFAULT;
+	}
+
+	return 0;
+}
+
 static struct snd_pcm_ops abox_vdma_ops = {
 	.open		= abox_vdma_open,
 	.close		= abox_vdma_close,
@@ -328,6 +382,7 @@ static struct snd_pcm_ops abox_vdma_ops = {
 	.prepare	= abox_vdma_prepare,
 	.trigger	= abox_vdma_trigger,
 	.pointer	= abox_vdma_pointer,
+	.copy_user	= abox_vdma_copy_user,
 	.ack		= abox_vdma_ack,
 };
 
