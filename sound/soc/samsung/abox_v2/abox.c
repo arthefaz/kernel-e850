@@ -2662,6 +2662,7 @@ static int abox_pm_notifier(struct notifier_block *nb,
 {
 	struct abox_data *data = container_of(nb, struct abox_data, pm_nb);
 	struct device *dev = data->dev;
+	int ret;
 
 	dev_dbg(dev, "%s(%lu)\n", __func__, action);
 
@@ -2670,6 +2671,17 @@ static int abox_pm_notifier(struct notifier_block *nb,
 		pm_runtime_barrier(dev);
 		abox_cpu_gear_barrier();
 		flush_workqueue(data->ipc_workqueue);
+		if (abox_is_clearable(dev, data)) {
+			if (atomic_read(&dev->power.child_count) < 1)
+				abox_qos_print(dev, ABOX_QOS_AUD);
+
+			ret = pm_runtime_suspend(dev);
+			if (ret < 0) {
+				dev_info(dev, "runtime suspend: %d\n", ret);
+				abox_print_power_usage(dev, NULL);
+				return NOTIFY_BAD;
+			}
+		}
 		break;
 	default:
 		/* Nothing to do */
