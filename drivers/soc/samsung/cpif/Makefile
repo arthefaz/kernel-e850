@@ -8,7 +8,7 @@ obj-$(CONFIG_SHM_IPC) += shm_ipc.o
 
 obj-$(CONFIG_BOOT_DEVICE_SPI) += boot_device_spi.o
 
-obj-y += modem_main.o modem_variation.o modem_io_device.o net_io_device.o bootdump_io_device.o ipc_io_device.o modem_utils.o modem_dump.o
+obj-y += modem_main.o modem_variation.o modem_io_device.o net_io_device.o bootdump_io_device.o ipc_io_device.o modem_utils.o modem_dump.o cpif_clat_info.o
 
 obj-$(CONFIG_LINK_DEVICE_SHMEM) += link_device.o \
 				   link_device_memory_snapshot.o \
