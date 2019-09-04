@@ -42,9 +42,9 @@ void dpp_dump(struct dpp_device *dpp)
 		console_unlock();
 }
 
-void dpp_op_timer_handler(struct timer_list *arg)
+void dpp_op_timer_handler(unsigned long arg)
 {
-	struct dpp_device *dpp = from_timer(dpp, arg, op_timer);
+	struct dpp_device *dpp = (struct dpp_device *)arg;
 
 	dpp_dump(dpp);
 
@@ -528,8 +528,8 @@ static int dpp_set_config(struct dpp_device *dpp)
 	/* set all parameters to dpp hw */
 	dpp_reg_configure_params(dpp->id, &params, dpp->attr);
 
-	dpp->op_timer.expires = (jiffies + 1 * HZ);
-	mod_timer(&dpp->op_timer, dpp->op_timer.expires);
+	dpp->d.op_timer.expires = (jiffies + 1 * HZ);
+	mod_timer(&dpp->d.op_timer, dpp->d.op_timer.expires);
 
 	DPU_EVENT_LOG(DPU_EVT_DPP_WINCON, &dpp->sd, ktime_set(0, 0));
 
@@ -558,7 +558,7 @@ static int dpp_stop(struct dpp_device *dpp, bool reset)
 	if (test_bit(DPP_ATTR_DPP, &dpp->attr))
 		disable_irq(dpp->res.irq);
 
-	del_timer(&dpp->op_timer);
+	del_timer(&dpp->d.op_timer);
 	dpp_reg_deinit(dpp->id, reset, dpp->attr);
 
 	dpp_dbg("dpp%d is stopped\n", dpp->id);
@@ -868,7 +868,7 @@ static irqreturn_t dpp_irq_handler(int irq, void *priv)
 	dpp_irq = dpp_reg_get_irq_and_clear(dpp->id);
 
 irq_end:
-	del_timer(&dpp->op_timer);
+	del_timer(&dpp->d.op_timer);
 	spin_unlock(&dpp->slock);
 	return IRQ_HANDLED;
 }
@@ -943,7 +943,7 @@ static irqreturn_t dma_irq_handler(int irq, void *priv)
 
 irq_end:
 	if (!test_bit(DPP_ATTR_DPP, &dpp->attr))
-		del_timer(&dpp->op_timer);
+		del_timer(&dpp->d.op_timer);
 
 	spin_unlock(&dpp->dma_slock);
 	return IRQ_HANDLED;
@@ -1132,7 +1132,7 @@ static int dpp_probe(struct platform_device *pdev)
 
 	dpp_init_subdev(dpp);
 	platform_set_drvdata(pdev, dpp);
-	timer_setup(&dpp->op_timer, dpp_op_timer_handler, 0);
+	setup_timer(&dpp->d.op_timer, dpp_op_timer_handler, (unsigned long)dpp);
 
 	/* dpp becomes output device of connected DECON in case of writeback */
 	ret = dpp_set_output_device(dpp);
