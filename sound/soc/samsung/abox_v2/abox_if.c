@@ -216,9 +216,6 @@ static int abox_uaif_set_tristate(struct snd_soc_dai *dai, int tristate)
 	if (clk < ABOX_BCLK_UAIF0 || clk >= ABOX_BCLK_UAIF2)
 		return -EINVAL;
 
-	abox_request_cpu_gear(dev, abox_data, ABOX_CPU_GEAR_DAI + id,
-			1, "set_tristate");
-
 	return abox_disable_qchannel(dev, abox_data, clk, !tristate);
 }
 
