@@ -121,6 +121,12 @@ static irqreturn_t abox_wdma_ipc_handler(int ipc, void *dev_id,
 	case PCM_PLTDAI_ACK:
 		data->ack_enabled = !!pcmtask_msg->param.trigger;
 		break;
+	case PCM_TX_BARGE_IN_DETECT:
+		schedule_work(&abox_data->notify_bargein_detect_work);
+		break;
+	case PCM_TX_SEAMLESS_BUF_RDY:
+		schedule_work(&abox_data->notify_seamless_buf_done_work);
+		break;
 	default:
 		dev_warn(dev, "unknown message: %d\n", pcmtask_msg->msgtype);
 		return IRQ_NONE;

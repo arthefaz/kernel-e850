@@ -358,6 +358,35 @@ out:
 	return ret;
 }
 
+static void abox_notify_bargein_detect_work_func(struct work_struct *work)
+{
+	struct abox_data *data = container_of(work, struct abox_data,
+			notify_bargein_detect_work);
+	u32 keyword_type = 1;
+	char env[100] = {0,};
+	char *envp[2] = {env, NULL};
+	struct device *dev = data->dev;
+
+	dev_info(dev, "%s: barge in detection\n", __func__);
+	snprintf(env, sizeof(env), "VOICE_WAKEUP_WORD_ID=%x", keyword_type);
+
+	kobject_uevent_env(&dev->kobj, KOBJ_CHANGE, envp);
+}
+
+static void abox_seamless_buf_done_work_func(struct work_struct *work)
+{
+	struct abox_data *data = container_of(work, struct abox_data,
+			notify_seamless_buf_done_work);
+	char env[100] = {0,};
+	char *envp[2] = {env, NULL};
+	struct device *dev = data->dev;
+
+	dev_info(dev, "%s: seamless buffer is copied\n", __func__);
+	snprintf(env, sizeof(env), "VOICE_SEAMLESS_BUFFER_RDY");
+
+	kobject_uevent_env(&dev->kobj, KOBJ_CHANGE, envp);
+}
+
 static bool __abox_ipc_queue_empty(struct abox_data *data)
 {
 	return (data->ipc_queue_end == data->ipc_queue_start);
@@ -2821,6 +2850,10 @@ static int samsung_abox_probe(struct platform_device *pdev)
 			abox_register_component_work_func);
 	INIT_WORK(&data->restore_data_work, abox_restore_data_work_func);
 	INIT_WORK(&data->boot_done_work, abox_boot_done_work_func);
+	INIT_WORK(&data->notify_bargein_detect_work,
+			abox_notify_bargein_detect_work_func);
+	INIT_WORK(&data->notify_seamless_buf_done_work,
+			abox_seamless_buf_done_work_func);
 	INIT_DEFERRABLE_WORK(&data->boot_clear_work, abox_boot_clear_work_func);
 	INIT_DELAYED_WORK(&data->wdt_work, abox_wdt_work_func);
 	INIT_LIST_HEAD(&data->firmware_extra);

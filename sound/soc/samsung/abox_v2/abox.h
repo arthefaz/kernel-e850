@@ -402,6 +402,8 @@ struct abox_data {
 	bool no_profiling;
 	enum calliope_state calliope_state;
 	bool failsafe;
+	struct work_struct notify_bargein_detect_work;
+	struct work_struct notify_seamless_buf_done_work;
 	struct notifier_block qos_nb;
 	struct notifier_block pm_nb;
 	struct notifier_block modem_nb;
