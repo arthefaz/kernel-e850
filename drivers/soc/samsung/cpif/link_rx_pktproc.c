@@ -724,20 +724,6 @@ int pktproc_create(struct platform_device *pdev, struct mem_link_device *mld, u3
 	mif_info("Total data buffer size:0x%08x Queue:%d Size by queue:0x%08x\n",
 					data_size, ppa->num_queue, data_size_by_q);
 
-	/* Buffer manager */
-	switch (ppa->desc_mode) {
-	case DESC_MODE_SKTBUF:
-		ppa->manager = init_mif_buff_mng(ppa->data_base, data_size, MIF_BUFF_DEFAULT_CELL_SIZE);
-		if (ppa->manager == NULL) {
-			mif_err("init_mif_buff_mng() error\n");
-			ret = -ENOMEM;
-			goto create_error;
-		}
-		break;
-	default:
-		break;
-	}
-
 	/* Create queue */
 	for (i = 0; i < ppa->num_queue; i++) {
 		struct pktproc_queue *q;
@@ -771,14 +757,13 @@ int pktproc_create(struct platform_device *pdev, struct mem_link_device *mld, u3
 			goto create_error;
 		}
 
-		/* Data buffer region */
-		q->data = ppa->data_base;
-		q->q_info->data_base = ppa->cp_base + ppa->data_rgn_offset;
-		q->data_size = data_size;
-
-		/* Descriptor region */
+		/* Descriptor, data buffer region */
 		switch (ppa->desc_mode) {
 		case DESC_MODE_RINGBUF:
+			q->data = ppa->data_base + (i * data_size_by_q);
+			q->q_info->data_base = ppa->cp_base + ppa->data_rgn_offset + (i * data_size_by_q);
+			q->data_size = data_size_by_q;
+
 			q->q_info->num_desc = data_size_by_q / PKTPROC_MAX_PACKET_SIZE;
 
 			q->desc_ringbuf = ppa->desc_base +
@@ -790,7 +775,20 @@ int pktproc_create(struct platform_device *pdev, struct mem_link_device *mld, u3
 			q->get_packet = pktproc_get_pkt_from_ringbuf_mode;
 			break;
 		case DESC_MODE_SKTBUF:
+			/* Use only one buffer manager for all queues */
+			if (ppa->manager == NULL) {
+				ppa->manager = init_mif_buff_mng(ppa->data_base, data_size, MIF_BUFF_DEFAULT_CELL_SIZE);
+				if (ppa->manager == NULL) {
+					mif_err("init_mif_buff_mng() error\n");
+					ret = -ENOMEM;
+					goto create_error;
+				}
+			}
 			q->manager = ppa->manager;
+			q->data = ppa->data_base;
+			q->q_info->data_base = ppa->cp_base + ppa->data_rgn_offset;
+			q->data_size = data_size;
+
 			q->use_memcpy = 0;
 			q->stat.use_memcpy_cnt = 0;
 
