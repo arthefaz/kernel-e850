@@ -17,8 +17,6 @@
 
 #include <linux/skbuff.h>
 
-#include <linux/skbuff.h>
-
 #define MODEM_CTRL_UART_AP 0
 #define MODEM_CTRL_UART_CP 1
 
