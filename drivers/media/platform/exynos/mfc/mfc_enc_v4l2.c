@@ -1474,7 +1474,7 @@ static int __mfc_enc_set_param(struct mfc_ctx *ctx, struct v4l2_control *ctrl)
 		p->codec.mpeg4.rc_b_frame_qp = ctrl->value;
 		break;
 	case V4L2_CID_MPEG_MFC51_VIDEO_MPEG4_VOP_TIME_RES:
-		p->codec.mpeg4.vop_time_res = ctrl->value;
+		p->rc_framerate = ctrl->value;
 		break;
 	case V4L2_CID_MPEG_MFC51_VIDEO_MPEG4_VOP_FRM_DELTA:
 		p->codec.mpeg4.vop_frm_delta = ctrl->value;

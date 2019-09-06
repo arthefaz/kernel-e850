@@ -1094,7 +1094,6 @@ struct mfc_mpeg4_enc_params {
 	u8 rc_min_qp_b;
 	u8 rc_max_qp_b;
 	u8 rc_p_frame_qp;
-	u16 vop_time_res;
 	u16 vop_frm_delta;
 };
 
