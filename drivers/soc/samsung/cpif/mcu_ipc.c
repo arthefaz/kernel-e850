@@ -60,6 +60,9 @@ static irqreturn_t cp_mbox_irq_handler(int irq, void *data)
 	/* Check raised interrupts */
 	irq_stat = mcu_ipc_readl(id, EXYNOS_MCU_IPC_INTSR0) & 0xFFFF0000;
 
+	/* Only clear and handle unmasked interrupts */
+	irq_stat &= ~(mcu_ipc_readl(id, EXYNOS_MCU_IPC_INTMR0)) & 0xFFFF0000;
+
 	/* Interrupt Clear */
 	mcu_ipc_writel(id, irq_stat, EXYNOS_MCU_IPC_INTCR0);
 	spin_unlock(&mcu_dat[id].reg_lock);
