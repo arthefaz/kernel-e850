@@ -218,12 +218,10 @@ void exynos_update_ip_idle_status(int ip_index, int idle)
 		return;
 
 	spin_lock_irqsave(&idle_ip_bit_field_lock, flags);
-
 	if (idle)
 		idle_ip_bit_field &= ~(val << ip_index);
 	else
 		idle_ip_bit_field |= (val << ip_index);
-
 	spin_unlock_irqrestore(&idle_ip_bit_field_lock, flags);
 }
 
@@ -302,8 +300,8 @@ enum {
 };
 
 /* Macros for CPUPM state */
-#define set_state_run(object)		(object)->state = CPUPM_STATE_RUN
-#define set_state_powerdown(object)	(object)->state = CPUPM_STATE_POWERDOWN
+#define set_state_run(object)		((object)->state = CPUPM_STATE_RUN)
+#define set_state_powerdown(object)	((object)->state = CPUPM_STATE_POWERDOWN)
 #define check_state_run(object)		((object)->state == CPUPM_STATE_RUN)
 #define check_state_powerdown(object)	((object)->state == CPUPM_STATE_POWERDOWN)
 
@@ -744,12 +742,13 @@ add_mode(struct power_mode **modes, struct power_mode *new)
 static void __init virtual_cluster_init(void)
 {
 	struct device_node *dn = of_find_node_by_path("/cpupm/vcpu_topology");
+
 	if (dn) {
 		int i, cluster_cnt = 0;
 
-		pr_info("%s:Virtual Cluster Info\n", __func__);
-		of_property_read_u32(dn, "vcluster_cnt", &cluster_cnt);
+		pr_info("vcluster: Virtual Cluster Info\n");
 
+		of_property_read_u32(dn, "vcluster_cnt", &cluster_cnt);
 		for (i = 0 ; i < cluster_cnt ; i++) {
 			int cpu;
 			char name[20];
@@ -849,6 +848,7 @@ static int __init cpu_power_mode_init(void)
 		cpupm_sysfs_node_init(attr_count);
 
 	virtual_cluster_init();
+
 	return 0;
 }
 
@@ -883,7 +883,6 @@ static int cluster_sibling_weight(unsigned int cpu)
 	}
 
 	cpumask_clear(&mask);
-
 	for (pos = 0; pos < MAX_MODE; pos++) {
 		mode = pm->modes[pos];
 
@@ -932,6 +931,7 @@ static int cpuhp_cpupm_offline(unsigned int cpu)
 static int cpuhp_cpupm_enable_idle(unsigned int cpu)
 {
 	struct cpuidle_device *dev = per_cpu(cpuidle_devices, cpu);
+
 	cpuidle_enable_device(dev);
 
 	return 0;
@@ -939,6 +939,7 @@ static int cpuhp_cpupm_enable_idle(unsigned int cpu)
 static int cpuhp_cpupm_disable_idle(unsigned int cpu)
 {
 	struct cpuidle_device *dev = per_cpu(cpuidle_devices, cpu);
+
 	cpuidle_disable_device(dev);
 
 	return 0;
