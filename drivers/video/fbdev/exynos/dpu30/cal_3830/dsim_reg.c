@@ -1936,6 +1936,30 @@ static int dsim_reg_set_smddi_ulps(u32 id, u32 en, u32 lanes)
 	return ret;
 }
 
+/*
+ * enter or exit ulps mode
+ *
+ * Parameter
+ *	1 : enter ULPS mode
+ *	0 : not used
+ */
+int dsim_reg_set_magnaddi_ulps(u32 id, u32 en, u32 lanes)
+{
+	int ret = 0;
+
+	if (en) {
+		/* Enable ULPS clock and data lane */
+		dsim_reg_enter_ulps(id, 1);
+
+		/* Check ULPS request for data lane */
+		ret = dsim_reg_wait_enter_ulps_state(id, lanes);
+		if (ret)
+			return ret;
+	}
+
+	return ret;
+}
+
 static int dsim_reg_set_ulps_by_ddi(u32 id, u32 ddi_type, u32 lanes, u32 en)
 {
 	int ret;
@@ -1945,8 +1969,7 @@ static int dsim_reg_set_ulps_by_ddi(u32 id, u32 ddi_type, u32 lanes, u32 en)
 		ret = dsim_reg_set_smddi_ulps(id, en, lanes);
 		break;
 	case TYPE_OF_MAGNA_DDI:
-		dsim_err("This ddi(%d) doesn't support ULPS\n", ddi_type);
-		ret = -EINVAL;
+		ret = dsim_reg_set_magnaddi_ulps(id, en, lanes);
 		break;
 	case TYPE_OF_NORMAL_DDI:
 	default:
