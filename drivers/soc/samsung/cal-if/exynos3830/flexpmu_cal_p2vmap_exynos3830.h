@@ -52,5 +52,6 @@ struct p2v_map pmucal_p2v_list[] = {
 	DEFINE_PHY(0x12c20000),
 	DEFINE_PHY(0x10c00000),
 	DEFINE_PHY(0x14060000),
+	DEFINE_PHY(0x11a50000),  /* for CP/GNSS cal */
 };
 unsigned int pmucal_p2v_list_size = ARRAY_SIZE(pmucal_p2v_list);
