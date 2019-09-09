@@ -28,6 +28,7 @@ struct clat_info {
 	spinlock_t lock;
 };
 
+int cpif_init_clat_info(void);
 void cpif_get_plat_prefix(u32 id, struct in6_addr *paddr);
 void cpif_set_plat_prefix(u32 id, struct in6_addr addr);
 void cpif_get_clat_addr(u32 id, struct in6_addr *paddr);

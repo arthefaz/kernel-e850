@@ -19,6 +19,12 @@
 
 static struct clat_info g_clat_info;
 
+int cpif_init_clat_info()
+{
+	spin_lock_init(&g_clat_info.lock);
+	return 0;
+}
+
 void cpif_get_plat_prefix(u32 id, struct in6_addr *paddr)
 {
 	unsigned long flags;

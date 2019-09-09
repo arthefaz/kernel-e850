@@ -861,6 +861,10 @@ static int cpif_probe(struct platform_device *pdev)
         if (sysfs_create_groups(clat_kobject, clat_groups))
                 mif_err("failed to create clat groups node\n");
 
+	err = cpif_init_clat_info();
+	if (err < 0)
+		mif_err("failed to initialize clat_info(%d)\n", err);
+
 	err = mif_init_argos_notifier();
 	if (err < 0)
 		mif_err("failed to initialize argos_notifier(%d)\n", err);
