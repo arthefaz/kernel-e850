@@ -188,6 +188,7 @@ int mbox_check_irq(enum mcu_ipc_region id, u32 int_num)
 	/* Interrupt must have been masked. */
 	if (test_bit(int_num, &mcu_dat[id].unmasked_irq)) {
 		spin_unlock_irqrestore(&mcu_dat[id].reg_lock, flags);
+		mif_err_limited("Mailbox interrupt (id: %d, num: %d) is unmasked!\n", id, int_num);
 		return -EINVAL;
 	}
 

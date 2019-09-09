@@ -2442,8 +2442,10 @@ static int mld_rx_int_poll(struct napi_struct *napi, int budget)
 	if (ld->interrupt_types == INTERRUPT_MAILBOX)
 		ret = mbox_check_irq(MCU_CP, mld->irq_cp2ap_msg);
 #endif
-	if (IS_ERR_VALUE((unsigned long)ret))
+	if (IS_ERR_VALUE((unsigned long)ret)) {
+		mif_err_limited("mbox check irq fails: err: %d\n", ret);
 		goto dummy_poll_complete;
+	}
 
 	mld->rx_poll_count++;
 
