@@ -363,7 +363,8 @@ static void dpu_bts_find_max_disp_freq(struct decon_device *decon,
 	decon->bts.peak = max_disp_ch_bw;
 	decon->bts.max_disp_freq = max_disp_ch_bw * 100 / (16 * BUS_UTIL) + 1;
 
-	op_fps = decon->lcd_info->fps;
+	op_fps = (decon->lcd_info->fps < LCD_REFRESH_RATE) ?
+				LCD_REFRESH_RATE : decon->lcd_info->fps;
 
 	resol_clock = dpu_bts_get_aclk(decon->lcd_info->xres,
 			decon->lcd_info->yres, op_fps);
@@ -602,6 +603,7 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 #endif
 	struct decon_win_config config;
 	u64 resol_clock;
+	u64 op_fps = LCD_REFRESH_RATE;
 	u32 aclk_freq = 0;
 
 #if defined(CONFIG_DECON_BTS_LEGACY) && defined(CONFIG_EXYNOS_DISPLAYPORT)
@@ -621,8 +623,10 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 		memset(&config, 0, sizeof(struct decon_win_config));
 		config.src.w = config.dst.w = decon->lcd_info->xres;
 		config.src.h = config.dst.h = decon->lcd_info->yres;
+		op_fps = (decon->lcd_info->fps < LCD_REFRESH_RATE) ?
+				LCD_REFRESH_RATE : decon->lcd_info->fps;
 		resol_clock = decon->lcd_info->xres * decon->lcd_info->yres *
-			decon->lcd_info->fps * 11 / 10 / 1000 + 1;
+				op_fps * 11 / 10 / 1000 + 1;
 		aclk_freq = dpu_bts_calc_aclk_disp(decon, &config, resol_clock);
 		DPU_DEBUG_BTS("Initial calculated disp freq(%lu) @%d fps\n",
 				aclk_freq, decon->lcd_info->fps);
