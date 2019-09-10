@@ -75,9 +75,6 @@ RESERVEDMEM_OF_DECLARE(modem_if, "exynos,modem_if", cp_rmem_setup);
 /*
  * Shared memory
  */
-#define MAX_CP_NUM	2
-#define MAX_CP_SHMEM	20
-
 struct cp_shared_mem {
 	char *name;
 	u32 index;

@@ -132,5 +132,11 @@ config CPIF_TP_MONITOR
 	---help---
 	  This enables CP network throughput monitor
 
+config LINK_DEVICE_PCIE_S2MPU
+	bool "Use PCIE S2MPU"
+	default n
+	---help---
+	  Gate some addresses AP and CP shared
+
 endmenu
 endif

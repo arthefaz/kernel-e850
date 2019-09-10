@@ -725,6 +725,9 @@ struct modem_ctl {
 
 	bool s5100_cp_reset_required;
 	bool s5100_iommu_map_enabled;
+#if defined(CONFIG_LINK_DEVICE_PCIE_S2MPU)
+	bool s5100_s2mpu_enabled;
+#endif
 
 	struct notifier_block pm_notifier;
 #endif

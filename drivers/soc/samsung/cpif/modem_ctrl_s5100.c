@@ -56,6 +56,10 @@
 #include <sound/samsung/abox.h>
 #endif
 
+#ifdef CONFIG_LINK_DEVICE_PCIE_S2MPU
+#include <soc/samsung/exynos-s2mpu.h>
+#endif
+
 #define MIF_INIT_TIMEOUT	(300 * HZ)
 
 #define msecs_to_loops(t) (loops_per_jiffy / 1000 * HZ * t)
@@ -910,6 +914,9 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 	unsigned long flags;
 	int ret;
 	u32 cp_num;
+#if defined(CONFIG_LINK_DEVICE_PCIE_S2MPU)
+	u32 shmem_idx;
+#endif
 
 	if (mc == NULL) {
 		mif_info("Skip pci power on : mc is NULL\n");
@@ -949,6 +956,28 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 
 	if (exynos_pcie_host_v1_poweron(mc->pcie_ch_num) != 0)
 		goto exit;
+
+#if defined(CONFIG_LINK_DEVICE_PCIE_S2MPU)
+	if (!mc->s5100_s2mpu_enabled) {
+		mc->s5100_s2mpu_enabled = true;
+		cp_num = ld->mdm_data->cp_num;
+
+		for (shmem_idx = 0 ; shmem_idx < MAX_CP_SHMEM ; shmem_idx++) {
+			if (shmem_idx == SHMEM_MSI)
+				continue;
+
+			if (cp_shmem_get_base(cp_num, shmem_idx)) {
+				ret = (int) exynos_set_dev_stage2_ap("hsi2", 0,
+					cp_shmem_get_base(cp_num, shmem_idx),
+					cp_shmem_get_size(cp_num, shmem_idx), ATTR_RW);
+				mif_info("pcie s2mpu idx:%d - addr:0x%08lx size:0x%08x ret:%d\n",
+					shmem_idx,
+					cp_shmem_get_base(cp_num, shmem_idx),
+					cp_shmem_get_size(cp_num, shmem_idx), ret);
+			}
+		}
+	}
+#endif
 
 	if (mc->s5100_iommu_map_enabled == false) {
 		mc->s5100_iommu_map_enabled = true;

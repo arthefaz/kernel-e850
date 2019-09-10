@@ -15,6 +15,9 @@
 #ifndef __SHMEM_IPC_H__
 #define __SHMEM_IPC_H__
 
+#define MAX_CP_NUM	2
+#define MAX_CP_SHMEM	20
+
 #define SHMEM_CP		0
 #define SHMEM_VSS		1
 #define SHMEM_L2B		2
