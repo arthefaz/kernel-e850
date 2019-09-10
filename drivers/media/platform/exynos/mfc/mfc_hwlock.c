@@ -848,8 +848,8 @@ void mfc_hwlock_handler_irq(struct mfc_dev *dev, struct mfc_ctx *ctx,
 
 			spin_unlock_irqrestore(&dev->hwlock.lock, flags);
 
-			mfc_release_hwlock_ctx(ctx);
 			mfc_wake_up_ctx(ctx, reason, err);
+			mfc_release_hwlock_ctx(ctx);
 			queue_work(dev->butler_wq, &dev->butler_work);
 		} else {
 			mfc_debug(2, "No preempt_ctx and no waiting module\n");
@@ -862,8 +862,8 @@ void mfc_hwlock_handler_irq(struct mfc_dev *dev, struct mfc_ctx *ctx,
 
 				spin_unlock_irqrestore(&dev->hwlock.lock, flags);
 
-				mfc_release_hwlock_ctx(ctx);
 				mfc_wake_up_ctx(ctx, reason, err);
+				mfc_release_hwlock_ctx(ctx);
 				queue_work(dev->butler_wq, &dev->butler_work);
 			} else {
 				mfc_debug(2, "There is a ctx to run\n");
