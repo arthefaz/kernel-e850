@@ -741,7 +741,7 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 		mif_err("do not need to set dump_noti\n");
 	}
 
-	ld->link_trigger_cp_crash(mld, crash_type, "Forced reset by AP");
+	ld->link_trigger_cp_crash(mld, crash_type, "Forced crash is called");
 
 	mif_err("---\n");
 	return 0;

@@ -333,19 +333,10 @@ static long bootdump_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 
 		switch (ld->protocol) {
 		case PROTOCOL_SIPC:
-			ld->crash_reason.type =
-				CRASH_REASON_RIL_TRIGGER_CP_CRASH;
-
-			if (arg) {
+			if (arg)
 				ld->crash_reason.type = arg;
-				mif_err("%s: IOCTL_TRIGGER_CP_CRASH (%lu)\n",
-						iod->name, arg);
-				sprintf(buff, "%s%lu", CP_CRASH_TAG_RILD, arg);
-			} else {
-				mif_err("%s: IOCTL_TRIGGER_CP_CRASH\n",
-						iod->name);
-				sprintf(buff, "%s", CP_CRASH_TAG_RILD);
-			}
+			mif_err("%s: IOCTL_TRIGGER_CP_CRASH (%lu)\n",
+					iod->name, arg);
 			break;
 
 		case PROTOCOL_SIT:
@@ -386,20 +377,35 @@ static long bootdump_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 
 		mif_info("%s: IOCTL_TRIGGER_KERNEL_PANIC\n", iod->name);
 
-		if (ld->crash_reason.type == CRASH_REASON_CP_ACT_CRASH) {
-			mif_info("Type is CP ACT CRASH\n");
-			strcpy(buff, CP_CRASH_TAG_CP);
+		switch (ld->protocol) {
+		case PROTOCOL_SIPC:
+			strcpy(buff, CP_CRASH_TAG);
 			if (arg) {
-				if (copy_from_user(
-					(void *)((unsigned long)buff + strlen(CP_CRASH_TAG_CP)),
+				if (copy_from_user((void *)((unsigned long)buff	+ strlen(CP_CRASH_TAG)),
 					user_buff,
-					CP_CRASH_INFO_SIZE - strlen(CP_CRASH_TAG_CP)))
+					CP_CRASH_INFO_SIZE - strlen(CP_CRASH_TAG)))
 					return -EFAULT;
 			}
+			break;
 
-			mif_info("%s\n", buff);
+		case PROTOCOL_SIT:
+			if (ld->crash_reason.type == CRASH_REASON_CP_ACT_CRASH) {
+				mif_info("Type is CP ACT CRASH\n");
+				strcpy(buff, CP_CRASH_TAG_CP);
+				if (arg) {
+					if (copy_from_user(
+						(void *)((unsigned long)buff + strlen(CP_CRASH_TAG_CP)),
+						user_buff,
+						CP_CRASH_INFO_SIZE - strlen(CP_CRASH_TAG_CP)))
+						return -EFAULT;
+				}
+			}
+			break;
+
+		default:
+			mif_err("ERR - unknown protocol\n");
+			break;
 		}
-
 		mif_info("Crash Reason: %s\n", buff);
 
 #if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)

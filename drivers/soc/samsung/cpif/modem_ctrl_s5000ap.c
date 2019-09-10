@@ -567,7 +567,7 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 
 	mif_info("+++\n");
 
-	ld->link_trigger_cp_crash(mld, crash_type, "Forced reset by AP");
+	ld->link_trigger_cp_crash(mld, crash_type, "Forced crash is called");
 
 	mif_info("---\n");
 	return 0;

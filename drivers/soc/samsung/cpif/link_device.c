@@ -344,16 +344,50 @@ static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_type, c
 	if (ld->crash_reason.type != crash_type)
 		ld->crash_reason.type = crash_type;
 
-	if (((crash_type >= CRASH_REASON_MIF_TX_ERR) &&
-			(crash_type <= CRASH_REASON_MIF_RSV_MAX)) ||
-			(crash_type == CRASH_REASON_MIF_FORCED)) {
-		strlcat(ld->crash_reason.string, CP_CRASH_TAG_CPIF,
-				CP_CRASH_INFO_SIZE);
-		if (crash_reason_string)
-			strlcat(ld->crash_reason.string, crash_reason_string,
-					CP_CRASH_INFO_SIZE);
-	}
+	switch (ld->protocol) {
+	case PROTOCOL_SIPC:
+		switch (crash_type) {
+		case CRASH_REASON_USER:		/* RILD CP Crash */
+		case CRASH_REASON_MIF_TX_ERR:
+		case CRASH_REASON_MIF_RIL_BAD_CH:
+		case CRASH_REASON_MIF_RX_BAD_DATA:
+		case CRASH_REASON_MIF_ZMC:
+		case CRASH_REASON_MIF_MDM_CTRL:
+		case CRASH_REASON_MIF_FORCED:
+			if (crash_reason_string)
+				strlcat(ld->crash_reason.string, crash_reason_string,
+						CP_CRASH_INFO_SIZE);
+			break;
 
+		default:
+			break;
+		}
+		break;
+
+	case PROTOCOL_SIT:
+		switch (crash_type) {
+		case CRASH_REASON_MIF_TX_ERR:
+		case CRASH_REASON_MIF_RIL_BAD_CH:
+		case CRASH_REASON_MIF_RX_BAD_DATA:
+		case CRASH_REASON_MIF_ZMC:
+		case CRASH_REASON_MIF_MDM_CTRL:
+		case CRASH_REASON_MIF_FORCED:
+			strlcat(ld->crash_reason.string, CP_CRASH_TAG_CPIF,
+					CP_CRASH_INFO_SIZE);
+			if (crash_reason_string)
+				strlcat(ld->crash_reason.string, crash_reason_string,
+						CP_CRASH_INFO_SIZE);
+			break;
+
+		default:
+			break;
+		}
+		break;
+
+	default:
+		mif_err("ERR - unknown protocol\n");
+		break;
+	}
 	mif_info("CP Crash type:%d string:%s\n", crash_type,
 			ld->crash_reason.string);
 
