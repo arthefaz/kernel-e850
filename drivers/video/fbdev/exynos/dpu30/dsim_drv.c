@@ -420,7 +420,7 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 	if (!wait_for_completion_timeout(&dsim->rd_comp, MIPI_RD_TIMEOUT)) {
 		dsim_err("MIPI DSIM read Timeout!\n");
 		if (dsim_reg_get_datalane_status(dsim->id) == DSIM_DATALANE_STATUS_BTA) {
-			if (decon_reg_get_run_status(dsim->id)) {
+			if (decon_reg_get_run_status(decon->id)) {
 				dsim_reset_panel(dsim);
 				dpu_hw_recovery_process(decon);
 			} else {
@@ -428,7 +428,7 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 				dsim_reg_recovery_process(dsim);
 			}
 		} else
-			dsim_err("datalane status is %d\n", dsim_reg_get_datalane_status(id));
+			dsim_err("datalane status is %d\n", dsim_reg_get_datalane_status(dsim->id));
 
 		return -ETIMEDOUT;
 	}
