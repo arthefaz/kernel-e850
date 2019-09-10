@@ -1109,6 +1109,8 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 	unsigned long err_info = 0;
 	struct mmc_request *mrq;
 	struct mmc_cmdq_context_info *ctx_info = &mmc->cmdq_ctx;
+	int is_done_dbr;
+	u8 rmeci;
 
 	status = cmdq_readl(cq_host, CQIS);
 	cmdq_writel(cq_host, status, CQIS);
@@ -1140,6 +1142,16 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 		       mmc_hostname(mmc), err, status, err_info);
 
 		if (err_info & CQ_RMEFV) {
+			rmeci = (u8)(err_info & CQ_RMECI);
+			spin_lock(&cq_host->lock);
+			if (rmeci == (u8)MMC_SEND_STATUS &&
+					!test_bit(tag, &ctx_info->curr_dbr)) {
+				ctx_info->dump_state = CMDQ_DUMP_CMD13P_ERR;
+				cmdq_dumpregs(cq_host);
+				return IRQ_NONE;
+			}
+			spin_unlock(&cq_host->lock);
+
 			tag = GET_CMD_ERR_TAG(err_info);
 			pr_err("%s: %s: CMD err tag: %lu\n", mmc_hostname(mmc), __func__, tag);
 			if (!(test_bit(tag, &ctx_info->curr_dbr))) {

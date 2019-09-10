@@ -295,6 +295,7 @@ struct mmc_slot {
 #define CMDQ_DUMP_CQIS_DTEFV		6
 #define CMDQ_DUMP_CQIS_INV_RED		7
 #define CMDQ_DUMP_DCMD_ERR		8
+#define CMDQ_DUMP_CMD13P_ERR		9
 
 /**
  * mmc_cmdq_context_info - describes the contexts of cmdq
