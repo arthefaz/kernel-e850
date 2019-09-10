@@ -13,7 +13,7 @@
  */
 #include "cpif_clat_info.h"
 #ifdef CONFIG_HW_FORWARD
-#include <soc/samsung/exynos-dit.h>
+#include <soc/samsung/hw_forward.h>
 #endif
 #include "modem_v1.h"
 
