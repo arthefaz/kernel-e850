@@ -65,6 +65,7 @@ void exynos_system_idle_exit(int cancel)
 }
 
 #define PMU_EINT_WAKEUP_MASK	0x60C
+#define PMU_EINT_WAKEUP_MASK2	0x61C
 static void exynos_set_wakeupmask(enum sys_powerdown mode)
 {
 	int i;
@@ -73,6 +74,7 @@ static void exynos_set_wakeupmask(enum sys_powerdown mode)
 
 	/* Set external interrupt mask */
 	exynos_pmu_write(PMU_EINT_WAKEUP_MASK, (u32)eintmask);
+	exynos_pmu_write(PMU_EINT_WAKEUP_MASK2, (u32)(eintmask >> 32));
 
 	for (i = 0; i < pm_info->num_wakeup_mask; i++) {
 		exynos_pmu_write(pm_info->wakeup_stat_offset[i], 0);
