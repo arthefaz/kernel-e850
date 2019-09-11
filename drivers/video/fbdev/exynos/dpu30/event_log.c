@@ -532,42 +532,39 @@ static void dpu_print_log_resource_info(struct decon_device *decon,
 	char buf_cur_dpp[RSC_BUF_CNT] = {0, };
 	char buf_prev_win[RSC_BUF_CNT] = {0, };
 	char buf_cur_win[RSC_BUF_CNT] = {0, };
-	int i, offset;
+	int i;
+	int len = 0;
 
-	offset = 0;
+	len = 0;
 	for (i = 0; i < decon->dt.dpp_cnt; ++i) {
 		if (!test_bit(i, &rsc->prev_used_dpp))
 			continue;
 
-		snprintf(buf_prev_dpp + (offset * 2), RSC_BUF_CNT, " %d", i);
-		offset++;
+		len += snprintf(buf_prev_dpp + len, RSC_BUF_CNT - len, " %d", i);
 	}
 
-	offset = 0;
+	len = 0;
 	for (i = 0; i < decon->dt.dpp_cnt; ++i) {
 		if (!test_bit(i, &rsc->cur_using_dpp))
 			continue;
 
-		snprintf(buf_cur_dpp + (offset * 2), RSC_BUF_CNT, " %d", i);
-		offset++;
+		len += snprintf(buf_cur_dpp + len, RSC_BUF_CNT - len, " %d", i);
 	}
 
-	offset = 0;
+	len = 0;
 	for (i = 0; i < decon->dt.max_win; ++i) {
 		if (!test_bit(i, &rsc->prev_req_win))
 			continue;
 
-		snprintf(buf_prev_win + (offset * 2), RSC_BUF_CNT, " %d", i);
-		offset++;
+		len += snprintf(buf_prev_win + len, RSC_BUF_CNT - len, " %d", i);
 	}
 
-	offset = 0;
+	len = 0;
 	for (i = 0; i < decon->dt.max_win; ++i) {
 		if (!test_bit(i, &rsc->cur_req_win))
 			continue;
 
-		snprintf(buf_cur_win + (i * 2), RSC_BUF_CNT, " %d", i);
-		offset++;
+		len += snprintf(buf_cur_win + len, RSC_BUF_CNT - len, " %d", i);
 	}
 
 	seq_printf(s, "\t\t\tCH: PREV[%s] CUR[%s], WIN: PREV[%s] CUR[%s]\n",
