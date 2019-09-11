@@ -141,7 +141,7 @@ static void dsim_long_data_wr(struct dsim_device *dsim, unsigned long d0, u32 d1
 			dsim_reg_wr_tx_payload(dsim->id, payload);
 		}
 	}
-	dsim->pl_cnt += d1;
+	dsim->pl_cnt += ALIGN(d1, 4);
 }
 
 static int dsim_wait_for_cmd_fifo_empty(struct dsim_device *dsim, bool must_wait)
@@ -213,12 +213,12 @@ static bool dsim_is_fifo_empty_status(struct dsim_device *dsim)
 		return false;
 }
 
-int dsim_check_ph_threshold(struct dsim_device *dsim)
+int dsim_check_ph_threshold(struct dsim_device *dsim, u32 cmd_cnt)
 {
 	int cnt = 5000;
 	u32 available = 0;
 
-	available = dsim_reg_is_writable_ph_fifo_state(dsim->id);
+	available = dsim_reg_is_writable_ph_fifo_state(dsim->id, cmd_cnt);
 
 	/* Wait FIFO empty status during 50ms */
 	if (!available) {
@@ -270,6 +270,157 @@ int dsim_check_pl_threshold(struct dsim_device *dsim, u32 d1)
 	return cnt;
 }
 
+int dsim_cal_pl_sum(struct exynos_dsim_cmd set_cmd[], int cmd_cnt, struct exynos_dsim_cmd_set *set)
+{
+	int i;
+	int pl_size;
+	int pl_sum_total = 0;
+	int pl_sum = 0;
+	struct exynos_dsim_cmd *cmd;
+
+	set->cnt = 1;
+	set->index[0] = cmd_cnt - 1;
+
+	for (i = 0; i < cmd_cnt; i++) {
+		cmd = &set_cmd[i];
+
+		switch (cmd->type) {
+			/* long packet types of packet types for command. */
+			case MIPI_DSI_GENERIC_LONG_WRITE:
+			case MIPI_DSI_DCS_LONG_WRITE:
+			case MIPI_DSI_DSC_PPS:
+				if (cmd->data_len > DSIM_PL_FIFO_THRESHOLD) {
+					dsim_err("Don't support for pl size exceeding %d\n",
+							DSIM_PL_FIFO_THRESHOLD);
+					return -EINVAL;
+				}
+				pl_size = ALIGN(cmd->data_len, 4);
+				pl_sum += pl_size;
+				pl_sum_total += pl_size;
+				if (pl_sum > DSIM_PL_FIFO_THRESHOLD) {
+					set->index[set->cnt-1] = i - 1;
+					set->cnt++;
+					pl_sum = ALIGN(cmd->data_len, 4);
+				}
+				break;
+		}
+		dsim_dbg("pl_sum_total : %d\n", pl_sum_total);
+	}
+
+	return pl_sum_total;
+}
+
+int dsim_write_cmd_set(struct dsim_device *dsim, struct exynos_dsim_cmd cmd_list[],
+		int cmd_cnt, bool wait_vsync)
+{
+	int i, j = 0;
+	int ret = 0;
+	int cnt = 5000;
+	int pl_sum;
+	struct decon_device *decon = get_decon_drvdata(dsim->id);
+	struct exynos_dsim_cmd *cmd;
+	struct exynos_dsim_cmd_set set;
+
+	decon_hiber_block_exit(decon);
+	mutex_lock(&dsim->cmd_lock);
+
+	if (!IS_DSIM_ON_STATE(dsim)) {
+		dsim_warn("DSIM is not ready. state(%d)\n", dsim->state);
+		ret = -EINVAL;
+		goto err_exit;
+	}
+
+	/* check PH available */
+	if (!dsim_check_ph_threshold(dsim, cmd_cnt)) {
+		ret = -EINVAL;
+		dsim_err("DSIM_%d cmd wr timeout @ don't available ph\n", dsim->id);
+		goto err_exit;
+	}
+
+	/* check PL available */
+	pl_sum = dsim_cal_pl_sum(cmd_list, cmd_cnt, &set);
+	if (!dsim_check_pl_threshold(dsim, pl_sum)) {
+		ret = -EINVAL;
+		dsim_err("DSIM don't available pl, pl_cnt @ fifo : %d, pl_sum : %d",
+				dsim->pl_cnt, pl_sum);
+		goto err_exit;
+	}
+	/* check line cnt value */
+	if (!dsim_check_linecount(dsim)) {
+		ret = -EINVAL;
+		dsim_err("DSIM cmd wr timeout @ line count '0', pl_cnt @ = %d\n", dsim->pl_cnt);
+		goto err_exit;
+	}
+
+	for (i = 0; i < set.cnt; i++) {
+
+		/* packet go enable */
+		dsim_reg_enable_packetgo(dsim->id, 1);
+
+		for (; j < cmd_cnt; j++) {
+			cmd = &cmd_list[j];
+
+			switch (cmd->type) {
+			/* short packet types of packet types for command. */
+			case MIPI_DSI_GENERIC_SHORT_WRITE_0_PARAM:
+			case MIPI_DSI_GENERIC_SHORT_WRITE_1_PARAM:
+			case MIPI_DSI_GENERIC_SHORT_WRITE_2_PARAM:
+			case MIPI_DSI_DCS_SHORT_WRITE:
+			case MIPI_DSI_DCS_SHORT_WRITE_PARAM:
+			case MIPI_DSI_DSC_PRA:
+			case MIPI_DSI_COLOR_MODE_OFF:
+			case MIPI_DSI_COLOR_MODE_ON:
+			case MIPI_DSI_SHUTDOWN_PERIPHERAL:
+			case MIPI_DSI_TURN_ON_PERIPHERAL:
+				dsim_reg_wr_tx_header(dsim->id, cmd->type, cmd->data_buf[0],
+						cmd->data_buf[1], false);
+				break;
+
+				/* long packet types of packet types for command. */
+			case MIPI_DSI_GENERIC_LONG_WRITE:
+			case MIPI_DSI_DCS_LONG_WRITE:
+			case MIPI_DSI_DSC_PPS:
+				dsim_long_data_wr(dsim, (unsigned long)cmd->data_buf, cmd->data_len);
+				dsim_reg_wr_tx_header(dsim->id, cmd->type, cmd->data_len & 0xff,
+						(cmd->data_len & 0xff00) >> 8, false);
+				break;
+
+			default:
+					dsim_info("data id %x is not supported.\n", cmd->type);
+					ret = -EINVAL;
+			}
+
+			if (j == set.index[i])
+				break;
+		}
+
+		if (set.cnt == 1) {
+			if(wait_vsync)
+				decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+		}
+		/* set packet go ready*/
+		dsim_reg_set_packetgo_ready(dsim->id);
+
+		do {
+			if (dsim_is_fifo_empty_status(dsim))
+				break;
+			udelay(10);
+		} while (cnt--);
+		if (!cnt) {
+			dsim_err("DSIM command set fail, cmd_cnt : %d\n", cmd_cnt);
+			ret = -EINVAL;
+			goto err_exit;
+		}
+	}
+
+err_exit:
+	mutex_unlock(&dsim->cmd_lock);
+	decon_hiber_unblock(decon);
+
+	return ret;
+
+}
+
 int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1, bool wait_empty)
 {
 	int ret = 0;
@@ -289,7 +440,7 @@ int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1, 
 	dsim_reg_clear_int(dsim->id, DSIM_INTSRC_SFR_PH_FIFO_EMPTY);
 
 	/* Check available status of PH FIFO before writing command */
-	if (!dsim_check_ph_threshold(dsim)) {
+	if (!dsim_check_ph_threshold(dsim, 1)) {
 		ret = -EINVAL;
 		dsim_err("ID(%d): DSIM cmd wr timeout @ don't available ph 0x%lx\n", id, d0);
 		goto err_exit;
@@ -341,7 +492,7 @@ int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1, 
 			ret = -EINVAL;
 			goto err_exit;
 		}
-		if (!dsim_check_pl_threshold(dsim, d1)) {
+		if (!dsim_check_pl_threshold(dsim, ALIGN(d1, 4))) {
 			ret = -EINVAL;
 			dsim_err("ID(%d): DSIM don't available pl 0x%lx\n, pl_cnt : %d, wc : %d",
 					id, d0, dsim->pl_cnt, d1);

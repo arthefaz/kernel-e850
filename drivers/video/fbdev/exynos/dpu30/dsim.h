@@ -204,6 +204,17 @@ struct dsim_fb_handover {
 	size_t phys_size;
 };
 
+struct exynos_dsim_cmd {
+	u8 type;
+	size_t data_len;
+	const unsigned char *data_buf;
+};
+
+struct exynos_dsim_cmd_set {
+	u32 cnt;
+	u32 index[32];
+};
+
 struct dsim_device {
 	int id;
 	enum dsim_state state;
@@ -253,6 +264,9 @@ int dsim_set_panel_power(struct dsim_device *dsim, bool on);
 void dsim_to_regs_param(struct dsim_device *dsim, struct dsim_regs *regs);
 
 void dsim_reg_recovery_process(struct dsim_device *dsim);
+
+int dsim_write_cmd_set(struct dsim_device *dsim, struct exynos_dsim_cmd cmd_list[],
+		int cmd_cnt, bool wait_vsync);
 
 static inline struct dsim_device *get_dsim_drvdata(u32 id)
 {
