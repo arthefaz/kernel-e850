@@ -2243,6 +2243,7 @@ static void decon_update_regs(struct decon_device *decon,
 	decon_update_afbc_info(decon, regs, true);
 #endif
 
+	decon_to_psr_info(decon, &psr);
 	if (decon_check_used_dpp(decon, regs)) {
 		/*
 		 * If this is the first handling of update_handler thread
@@ -2270,7 +2271,6 @@ static void decon_update_regs(struct decon_device *decon,
 
 	DPU_EVENT_LOG_WINCON(&decon->sd, regs);
 
-	decon_to_psr_info(decon, &psr);
 	if (regs->num_of_window) {
 		if (__decon_update_regs(decon, regs) < 0) {
 #if defined(CONFIG_EXYNOS_AFBC_DEBUG)
