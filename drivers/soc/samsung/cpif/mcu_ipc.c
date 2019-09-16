@@ -407,6 +407,19 @@ static int cp_mbox_set_affinity(enum mcu_ipc_region id, struct device *dev, int 
 
 	return irq_set_affinity(irq, cpumask_of(affinity));
 }
+
+int mcu_ipc_set_affinity(enum mcu_ipc_region id, int affinity)
+{
+	if (id >= MCU_MAX) {
+		mif_err("id error:%d\n", id);
+		return -1;
+	}
+
+	irq_set_affinity(mcu_dat[id].irq, cpumask_of(affinity));
+
+	return 0;
+}
+EXPORT_SYMBOL(mcu_ipc_set_affinity);
 #endif /* CONFIG_ARGOS */
 
 static int cp_mbox_probe(struct platform_device *pdev)
@@ -454,6 +467,7 @@ static int cp_mbox_probe(struct platform_device *pdev)
 		mif_err("Can't request MCU_IPC IRQ\n");
 		return err;
 	}
+	mcu_dat[id].irq = irq;
 
 	cp_mbox_clear_all_interrupt(id);
 

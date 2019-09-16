@@ -319,6 +319,9 @@ struct io_device {
 	struct miscdevice  miscdev;
 	struct net_device *ndev;
 	struct list_head node_ndev;
+#if defined(CONFIG_CPIF_TP_MONITOR)
+	struct list_head node_all_ndev;
+#endif
 
 	/* CH and Format for channel on the link */
 	unsigned int ch;
@@ -528,6 +531,10 @@ struct link_device {
 	int (*register_pcie)(struct link_device *ld);
 #endif
 };
+
+#if defined(CONFIG_MODEM_IF_NET_GRO)
+extern long gro_flush_time;
+#endif
 
 #define pm_to_link_device(pm)	container_of(pm, struct link_device, pm)
 

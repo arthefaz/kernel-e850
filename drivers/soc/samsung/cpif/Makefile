@@ -38,6 +38,8 @@ obj-$(CONFIG_LINK_CONTROL_MSG_IOSM) += link_ctrlmsg_iosm.o
 
 obj-$(CONFIG_CP_BTL) += cp_btl.o
 
+obj-$(CONFIG_CPIF_TP_MONITOR) += cpif_tp_monitor.o
+
 ifeq ($(CONFIG_RPS), y)
 ifeq ($(CONFIG_ARGOS), y)
 obj-y += modem_argos_notifier.o

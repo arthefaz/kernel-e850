@@ -33,5 +33,5 @@ extern void mbox_update_value(enum mcu_ipc_region id, u32 mbx_num, u32 msg, u32 
 extern u32 mbox_extract_value(enum mcu_ipc_region id, u32 mbx_num, u32 mask, u32 pos);
 extern void mbox_sw_reset(enum mcu_ipc_region id);
 extern void mcu_ipc_reg_dump(enum mcu_ipc_region id);
-
+extern int mcu_ipc_set_affinity(enum mcu_ipc_region id, int affinity);
 #endif /* __MCU_IPC_H__ */

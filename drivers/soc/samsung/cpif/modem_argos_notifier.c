@@ -175,8 +175,6 @@ static void mif_update_ndevs_rps(const char *ndev_prefix, unsigned int rps_value
 }
 
 #ifdef CONFIG_MODEM_IF_NET_GRO
-extern long gro_flush_time;
-
 static void mif_argos_notifier_gro_flushtime(unsigned long speed)
 {
 	int loop;

@@ -256,6 +256,10 @@ static void shmem_handle_cp_crash(struct mem_link_device *mld,
 	iowrite32(ld->magic_crash, mld->legacy_link_dev.magic);
 	iowrite32(0, mld->legacy_link_dev.mem_access);
 
+#if defined(CONFIG_CPIF_TP_MONITOR)
+	tpmon_stop();
+#endif
+
 	stop_net_ifaces(ld);
 	purge_txq(mld);
 
@@ -683,6 +687,10 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 			mcu_ipc_reg_dump(0);
 #endif
 		atomic_set(&mld->cp_boot_done, 1);
+
+#if defined(CONFIG_CPIF_TP_MONITOR)
+		tpmon_start(1);
+#endif
 	}
 
 #ifdef CONFIG_MCU_IPC
@@ -4066,6 +4074,14 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	err = pktproc_create(pdev, mld, cp_shmem_get_base(cp_num, SHMEM_PKTPROC), cp_shmem_get_size(cp_num, SHMEM_PKTPROC));
 	if (err < 0) {
 		mif_err("pktproc_create() error %d\n", err);
+		goto error;
+	}
+#endif
+
+#if defined(CONFIG_CPIF_TP_MONITOR)
+	err = tpmon_create(pdev, ld);
+	if (err < 0) {
+		mif_err("tpmon_create() error %d\n", err);
 		goto error;
 	}
 #endif

@@ -126,5 +126,11 @@ config CACHED_LEGACY_RAW_RX_BUFFER
 	bool "Set cached RX RAW buffer for high data performance"
 	default n
 
+config CPIF_TP_MONITOR
+	bool "Support CP network throughput monitor"
+	default n
+	---help---
+	  This enables CP network throughput monitor
+
 endmenu
 endif

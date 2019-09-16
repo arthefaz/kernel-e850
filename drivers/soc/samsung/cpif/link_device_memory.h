@@ -44,6 +44,7 @@
 #include "include/legacy.h"
 #include "link_rx_pktproc.h"
 #include "boot_device_spi.h"
+#include "cpif_tp_monitor.h"
 
 #ifdef GROUP_MEM_TYPE
 
@@ -406,6 +407,8 @@ struct mem_link_device {
 	struct pktproc_adaptor pktproc;
 
 	struct cpboot_spi *boot_spi;
+
+	struct cpif_tpmon tpmon;
 };
 
 #define to_mem_link_device(ld) \

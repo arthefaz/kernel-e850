@@ -76,6 +76,7 @@ struct mcu_ipc_drv_data {
 	spinlock_t lock;
 	spinlock_t reg_lock;
 
+	int irq;
 };
 
 static struct mcu_ipc_drv_data mcu_dat[MCU_MAX];
