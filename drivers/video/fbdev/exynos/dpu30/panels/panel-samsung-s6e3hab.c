@@ -113,10 +113,34 @@ static int s6e3hab_suspend(struct exynos_panel_device *panel)
 	return 0;
 }
 
+static u32 s6e3hab_find_table_index(u32 yres)
+{
+	u32 i, val;
+
+	for (i = 0; i < MAX_SUPPORT_MRES; i++) {
+		val = (PPS_TABLE[i][6] << 8) | (PPS_TABLE[i][7] << 0);
+		if (yres == val) {
+			DPU_INFO_PANEL("%s: found index=%d\n", __func__, i);
+			return i;
+		}
+	}
+
+	DPU_INFO_PANEL("%s: no match for yres(%d) -> forcing FHD+ mode\n",
+			__func__, yres);
+	/* FHD+ mode */
+	return 1;
+}
+
 static int s6e3hab_displayon(struct exynos_panel_device *panel)
 {
+	bool dsc_en;
+	u32 yres, tab_idx;
 	struct exynos_panel_info *lcd = &panel->lcd_info;
 	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
+
+	dsc_en = lcd->dsc.en;
+	yres = lcd->yres;
+	tab_idx = s6e3hab_find_table_index(yres);
 
 	DPU_INFO_PANEL("%s +\n", __func__);
 
@@ -170,28 +194,37 @@ static int s6e3hab_displayon(struct exynos_panel_device *panel)
 
 	dsim_write_data_seq(dsim, false, 0x29); /* display on */
 
+
+	/*
+	 * To prevent the screen noise display in the multi-resolution mode.
+	 * If the last mode is FHD+ or HD+,
+	 * noise can be seen during LCD on because WQHD+ mode
+	 */
+	dsim_write_data_seq(dsim, false, 0x9F, 0xA5, 0xA5);
+	/* DSC related configuration */
+	if (dsc_en) {
+		dsim_write_data_type_seq(dsim, MIPI_DSI_DSC_PRA, 0x1);
+		dsim_write_data_type_table(dsim, MIPI_DSI_DSC_PPS,
+				PPS_TABLE[tab_idx]);
+	} else {
+		dsim_write_data_type_seq(dsim, MIPI_DSI_DSC_PRA, 0x0);
+	}
+	dsim_write_data_seq(dsim, false, 0x9F, 0x5A, 0x5A);
+
+	/* partial update configuration */
+	dsim_write_data_table(dsim, CASET_TABLE[tab_idx]);
+	dsim_write_data_table(dsim, PASET_TABLE[tab_idx]);
+
+	dsim_write_data_seq(dsim, false, 0xF0, 0x5A, 0x5A);
+	/* DDI scaling configuration */
+	dsim_write_data_table(dsim, SCALER_TABLE[tab_idx]);
+	dsim_write_data_seq(dsim, false, 0xF0, 0xA5, 0xA5);
+
+
 	mutex_unlock(&panel->ops_lock);
 
 	DPU_INFO_PANEL("%s -\n", __func__);
 	return 0;
-}
-
-static u32 s6e3hab_find_table_index(u32 yres)
-{
-	u32 i, val;
-
-	for (i = 0; i < MAX_SUPPORT_MRES; i++) {
-		val = (PPS_TABLE[i][6] << 8) | (PPS_TABLE[i][7] << 0);
-		if (yres == val) {
-			DPU_INFO_PANEL("%s: found index=%d\n", __func__, i);
-			return i;
-		}
-	}
-
-	DPU_INFO_PANEL("%s: no match for yres(%d) -> forcing FHD+ mode\n",
-			__func__, yres);
-	/* FHD+ mode */
-	return 1;
 }
 
 static int s6e3hab_mres(struct exynos_panel_device *panel, u32 mode_idx)
