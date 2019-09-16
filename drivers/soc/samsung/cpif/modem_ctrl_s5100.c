@@ -741,7 +741,11 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 		mif_err("do not need to set dump_noti\n");
 	}
 
-	ld->link_trigger_cp_crash(mld, crash_type, "Forced crash is called");
+	if (ld->protocol == PROTOCOL_SIT &&
+			crash_type == CRASH_REASON_RIL_TRIGGER_CP_CRASH)
+		ld->link_trigger_cp_crash(mld, crash_type, ld->crash_reason.string);
+	else
+		ld->link_trigger_cp_crash(mld, crash_type, "Forced crash is called");
 
 	mif_err("---\n");
 	return 0;

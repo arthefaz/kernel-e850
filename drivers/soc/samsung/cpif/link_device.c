@@ -321,6 +321,7 @@ static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_type, c
 {
 	struct link_device *ld = &mld->link_dev;
 	struct modem_ctl *mc = ld->mc;
+	char string[CP_CRASH_INFO_SIZE];
 
 	if (!cp_online(mc) && !cp_booting(mc)) {
 		mif_err("%s: %s.state %s != ONLINE <%pf>\n",
@@ -341,21 +342,26 @@ static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_type, c
 	/* Disable debug Snapshot */
 	mif_set_snapshot(false);
 
+	memset(string, 0, CP_CRASH_INFO_SIZE);
+	if (crash_reason_string)
+		strcpy(string, crash_reason_string);
+	memset(ld->crash_reason.string, 0, CP_CRASH_INFO_SIZE);
+
 	if (ld->crash_reason.type != crash_type)
 		ld->crash_reason.type = crash_type;
 
 	switch (ld->protocol) {
 	case PROTOCOL_SIPC:
 		switch (crash_type) {
-		case CRASH_REASON_USER:		/* RILD CP Crash */
+		case CRASH_REASON_USER:
 		case CRASH_REASON_MIF_TX_ERR:
 		case CRASH_REASON_MIF_RIL_BAD_CH:
 		case CRASH_REASON_MIF_RX_BAD_DATA:
 		case CRASH_REASON_MIF_ZMC:
 		case CRASH_REASON_MIF_MDM_CTRL:
 		case CRASH_REASON_MIF_FORCED:
-			if (crash_reason_string)
-				strlcat(ld->crash_reason.string, crash_reason_string,
+			if (strlen(string))
+				strlcat(ld->crash_reason.string, string,
 						CP_CRASH_INFO_SIZE);
 			break;
 
@@ -372,10 +378,9 @@ static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_type, c
 		case CRASH_REASON_MIF_ZMC:
 		case CRASH_REASON_MIF_MDM_CTRL:
 		case CRASH_REASON_MIF_FORCED:
-			strlcat(ld->crash_reason.string, CP_CRASH_TAG_CPIF,
-					CP_CRASH_INFO_SIZE);
-			if (crash_reason_string)
-				strlcat(ld->crash_reason.string, crash_reason_string,
+		case CRASH_REASON_RIL_TRIGGER_CP_CRASH:
+			if (strlen(string))
+				strlcat(ld->crash_reason.string, string,
 						CP_CRASH_INFO_SIZE);
 			break;
 

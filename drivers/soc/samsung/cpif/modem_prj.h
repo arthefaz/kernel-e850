@@ -127,9 +127,6 @@ struct modem_sec_req {
 /* Crash Reason */
 #define CP_CRASH_INFO_SIZE	512
 #define CP_CRASH_TAG		"CP Crash "
-#define CP_CRASH_TAG_RILD	"RILD trigger CP reset - "
-#define CP_CRASH_TAG_CPIF	"AP trigger CP reset - "
-#define CP_CRASH_TAG_CP		"CP malfunction - "
 
 enum crash_type {
 	CRASH_REASON_CP_ACT_CRASH = 0,

@@ -59,7 +59,7 @@ static irqreturn_t cp_wdt_handler(int irq, void *arg)
 	mif_set_snapshot(false);
 
 	new_state = STATE_CRASH_WATCHDOG;
-	ld->crash_reason.type = CRASH_REASON_CP_ACT_CRASH;
+	ld->crash_reason.type = CRASH_REASON_CP_WDOG_CRASH;
 
 	mif_info("new_state:%s\n", cp_state_str(new_state));
 
@@ -567,7 +567,11 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 
 	mif_info("+++\n");
 
-	ld->link_trigger_cp_crash(mld, crash_type, "Forced crash is called");
+	if (ld->protocol == PROTOCOL_SIT &&
+			crash_type == CRASH_REASON_RIL_TRIGGER_CP_CRASH)
+		ld->link_trigger_cp_crash(mld, crash_type, ld->crash_reason.string);
+	else
+		ld->link_trigger_cp_crash(mld, crash_type, "Forced crash is called");
 
 	mif_info("---\n");
 	return 0;

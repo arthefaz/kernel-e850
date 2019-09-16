@@ -185,18 +185,11 @@ static long ipc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			ld->crash_reason.type =
 				CRASH_REASON_RIL_TRIGGER_CP_CRASH;
 
-			strcpy(buff, CP_CRASH_TAG_RILD);
-			buff = buff + strlen(CP_CRASH_TAG_RILD);
-
 			if (arg) {
-				if (copy_from_user(buff, user_buff, CP_CRASH_INFO_SIZE
-							- strlen(CP_CRASH_TAG_RILD))) {
-					mif_err("%s: copy_from_user() error\n", iod->name);
+				if (copy_from_user(buff, user_buff, CP_CRASH_INFO_SIZE))
 					mif_info("No argument from USER\n");
-				}
-			} else {
+			} else
 				mif_info("No argument from USER\n");
-			}
 
 			mif_info("Crash Reason:%s\n", buff);
 			break;
