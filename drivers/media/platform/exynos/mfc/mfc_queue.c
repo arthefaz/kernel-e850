@@ -571,6 +571,11 @@ struct mfc_buf *mfc_search_for_dpb(struct mfc_ctx *ctx)
 	 */
 	mfc_debug(2, "[DPB] All enqueued DPBs are referencing or there's no DPB in DRV (in %d/total %d)\n",
 			ctx->dst_buf_queue.count, ctx->dpb_count + 5);
+	if (!(dec->queued_dpb & ~dec->dynamic_used)) {
+		mfc_debug(2, "[DPB] All enqueued DPBs are referencing\n");
+		ctx->clear_work_bit = 1;
+	}
+
 	__mfc_print_dpb_queue(ctx, dec);
 	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 
@@ -622,6 +627,10 @@ struct mfc_buf *mfc_search_move_dpb_nal_q(struct mfc_ctx *ctx)
 	 */
 	mfc_debug(2, "[NALQ][DPB] All enqueued DPBs are referencing or there's no DPB in DRV (in %d/total %d)\n",
 			ctx->dst_buf_queue.count + ctx->dst_buf_nal_queue.count, ctx->dpb_count + 5);
+	if (!(dec->queued_dpb & ~dec->dynamic_used)) {
+		mfc_debug(2, "[NALQ][DPB] All enqueued DPBs are referencing\n");
+		ctx->clear_work_bit = 1;
+	}
 	__mfc_print_dpb_queue(ctx, dec);
 	spin_unlock_irqrestore(&ctx->buf_queue_lock, flags);
 
