@@ -161,14 +161,14 @@
 		mfc_default_qos_table {
 			mfc_d_qos_variant_0 {
 				thrd_mb = <0>;
-				freq_mfc = <400000>;
-				freq_int = <334000>;
+				freq_mfc = <267000>;
+				freq_int = <200000>;
 				freq_mif = <546000>;
-				time_fw = <304>;
+				time_fw = <383>;
 				bts_scen = "default";
 			};
 			mfc_d_qos_variant_1 {
-				thrd_mb = <250850>;
+				thrd_mb = <251461>;
 				freq_mfc = <667000>;
 				freq_int = <534000>;
 				freq_mif = <1014000>;
