@@ -537,24 +537,18 @@ static void write_clk_table_to_shmem(struct mem_link_device *mld)
 	clk_tb = (struct clock_table *)mld->clk_table;
 
 	strcpy(clk_tb->parser_version, "CT0");
-	clk_tb->total_table_count = 1;
+	clk_tb->total_table_count = 3;
 
 	strcpy(clk_tb->table_info[0].table_name, "MIF");
 	clk_tb->table_info[0].table_count = mld->mif_table.num_of_table;
 
+	strcpy(clk_tb->table_info[1].table_name, "CP");
+	clk_tb->table_info[1].table_count = mld->cp_table.num_of_table;
+
+	strcpy(clk_tb->table_info[2].table_name, "MDM");
+	clk_tb->table_info[2].table_count = mld->modem_table.num_of_table;
+
 	clk_data = (u32 *)&(clk_tb->table_info[clk_tb->total_table_count]);
-
-	/* CL0 */
-	for (i = 0; i < mld->cl0_table.num_of_table; i++) {
-		*clk_data = mld->cl0_table.freq[i];
-		clk_data++;
-	}
-
-	/* CL1 */
-	for (i = 0; i < mld->cl1_table.num_of_table; i++) {
-		*clk_data = mld->cl1_table.freq[i];
-		clk_data++;
-	}
 
 	/* MIF */
 	for (i = 0; i < mld->mif_table.num_of_table; i++) {
@@ -562,9 +556,15 @@ static void write_clk_table_to_shmem(struct mem_link_device *mld)
 		clk_data++;
 	}
 
-	/* INT */
-	for (i = 0; i < mld->int_table.num_of_table; i++) {
-		*clk_data = mld->int_table.freq[i];
+	/* CP */
+	for (i = 0; i < mld->cp_table.num_of_table; i++) {
+		*clk_data = mld->cp_table.freq[i];
+		clk_data++;
+	}
+
+	/* MODEM */
+	for (i = 0; i < mld->modem_table.num_of_table; i++) {
+		*clk_data = mld->modem_table.freq[i];
 		clk_data++;
 	}
 
@@ -3009,26 +3009,26 @@ static int parse_ect(struct mem_link_device *mld, char *dvfs_domain_name)
 	if (!strcmp(dvfs_domain_name, "MIF")) {
 		mld->mif_table.num_of_table = dvfs_domain->num_of_level;
 		for (i = dvfs_domain->num_of_level - 1; i >= 0; i--) {
-			mld->mif_table.freq[i] = dvfs_domain->list_level[counter++].level;
-			mif_err("MIF_LEV[%d] : %u\n", i + 1, mld->mif_table.freq[i]);
+			mld->mif_table.freq[i] =
+				dvfs_domain->list_level[counter++].level;
+			mif_err("MIF_LEV[%d] : %u\n", i + 1,
+					mld->mif_table.freq[i]);
 		}
-	} else if (!strcmp(dvfs_domain_name, "CPUCL0")) {
-		mld->cl0_table.num_of_table = dvfs_domain->num_of_level;
+	} else if (!strcmp(dvfs_domain_name, "CP")) {
+		mld->cp_table.num_of_table = dvfs_domain->num_of_level;
 		for (i = dvfs_domain->num_of_level - 1; i >= 0; i--) {
-			mld->cl0_table.freq[i] = dvfs_domain->list_level[counter++].level;
-			mif_err("CL0_LEV[%d] : %u\n", i + 1, mld->cl0_table.freq[i]);
+			mld->cp_table.freq[i] =
+				dvfs_domain->list_level[counter++].level;
+			mif_err("CP_LEV[%d] : %u\n", i + 1,
+					mld->cp_table.freq[i]);
 		}
-	} else if (!strcmp(dvfs_domain_name, "CPUCL1")) {
-		mld->cl1_table.num_of_table = dvfs_domain->num_of_level;
+	} else if (!strcmp(dvfs_domain_name, "MODEM")) {
+		mld->modem_table.num_of_table = dvfs_domain->num_of_level;
 		for (i = dvfs_domain->num_of_level - 1; i >= 0; i--) {
-			mld->cl1_table.freq[i] = dvfs_domain->list_level[counter++].level;
-			mif_err("CL1_LEV[%d] : %u\n", i + 1, mld->cl1_table.freq[i]);
-		}
-	} else if (!strcmp(dvfs_domain_name, "INT")) {
-		mld->int_table.num_of_table = dvfs_domain->num_of_level;
-		for (i = dvfs_domain->num_of_level - 1; i >= 0; i--) {
-			mld->int_table.freq[i] = dvfs_domain->list_level[counter++].level;
-			mif_err("INT_LEV[%d] : %u\n", i + 1, mld->int_table.freq[i]);
+			mld->modem_table.freq[i] =
+				dvfs_domain->list_level[counter++].level;
+			mif_err("MODEM_LEV[%d] : %u\n", i + 1,
+					mld->modem_table.freq[i]);
 		}
 	}
 
@@ -3039,10 +3039,9 @@ static int parse_ect(struct mem_link_device *mld, char *dvfs_domain_name)
 {
 	mif_err("ECT is not defined(%s)\n", __func__);
 
-	mld->cl0_table.num_of_table = 0;
-	mld->cl1_table.num_of_table = 0;
 	mld->mif_table.num_of_table = 0;
-	mld->int_table.num_of_table = 0;
+	mld->cp_table.num_of_table = 0;
+	mld->modem_table.num_of_table = 0;
 
 	return 0;
 }
@@ -4021,10 +4020,20 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 #endif
 
 	/* Parsing devfreq, cpufreq table from ECT */
-	mif_err("Parsing MIF table...\n");
+	mif_info("Parsing MIF frequency table...\n");
 	err = parse_ect(mld, "MIF");
 	if (err < 0)
-		mif_err("Can't get MIF table!!!!!\n");
+		mif_err("Can't get MIF frequency table!!!!!\n");
+
+	mif_info("Parsing CP frequency table...\n");
+	err = parse_ect(mld, "CP");
+	if (err < 0)
+		mif_err("Can't get CP frequency table!!!!!\n");
+
+	mif_info("Parsing MODEM frequency table...\n");
+	err = parse_ect(mld, "MODEM");
+	if (err < 0)
+		mif_err("Can't get MODEM frequency table!!!!!\n");
 
 	/**
 	 * For TX Flow-control command from CP

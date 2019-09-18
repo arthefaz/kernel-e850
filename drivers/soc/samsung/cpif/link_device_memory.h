@@ -280,10 +280,9 @@ struct mem_link_device {
 	unsigned int sbi_cp_status_mask;
 	unsigned int sbi_cp_status_pos;
 
-	struct freq_table cl0_table;
-	struct freq_table cl1_table;
 	struct freq_table mif_table;
-	struct freq_table int_table;
+	struct freq_table cp_table;
+	struct freq_table modem_table;
 
 	unsigned int irq_cp2ap_wakelock;	/* INTR# for wakelock */
 
