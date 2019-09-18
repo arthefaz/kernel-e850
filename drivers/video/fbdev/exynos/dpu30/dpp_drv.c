@@ -42,6 +42,23 @@ void dpp_dump(struct dpp_device *dpp)
 		console_unlock();
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
+void dpp_op_timer_handler(unsigned long arg)
+{
+	struct dpp_device *dpp = from_timer(dpp, (struct timer_list *)arg, op_timer);
+	struct decon_device *decon = get_decon_drvdata(0);
+
+	if (!decon_is_bypass(decon))
+		dpp_dump(dpp);
+
+	if (dpp->dpp_config->config.compression)
+		dpp_info("Compression Source is %s of DPP[%d]\n",
+			dpp->dpp_config->config.dpp_parm.comp_src == DPP_COMP_SRC_G2D ?
+			"G2D" : "GPU", dpp->id);
+
+	dpp_info("DPP[%d] irq hasn't been occured", dpp->id);
+}
+#else
 void dpp_op_timer_handler(struct timer_list *arg)
 {
 	struct dpp_device *dpp = from_timer(dpp, arg, op_timer);
@@ -57,6 +74,7 @@ void dpp_op_timer_handler(struct timer_list *arg)
 
 	dpp_info("DPP[%d] irq hasn't been occured", dpp->id);
 }
+#endif
 
 static int dpp_wb_wait_for_framedone(struct dpp_device *dpp)
 {
@@ -1182,7 +1200,11 @@ static int dpp_probe(struct platform_device *pdev)
 
 	dpp_init_subdev(dpp);
 	platform_set_drvdata(pdev, dpp);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
+	timer_setup(&dpp->op_timer, (void (*)(struct timer_list *))dpp_op_timer_handler, 0);
+#else
 	timer_setup(&dpp->op_timer, dpp_op_timer_handler, 0);
+#endif
 
 	/* dpp becomes output device of connected DECON in case of writeback */
 	ret = dpp_set_output_device(dpp);

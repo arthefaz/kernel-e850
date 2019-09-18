@@ -503,6 +503,39 @@ exit:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
+static void dsim_cmd_fail_detector(unsigned long arg)
+{
+	struct dsim_device *dsim = from_timer(dsim, (struct timer_list *)arg, cmd_timer);
+	struct decon_device *decon = get_decon_drvdata(0);
+	struct dsim_regs regs;
+
+	decon_hiber_block(decon);
+
+	dsim_dbg("%s +\n", __func__);
+	if (IS_DSIM_OFF_STATE(dsim)) {
+		dsim_err("%s: DSIM is not ready. state(%d)\n", __func__,
+				dsim->state);
+		goto exit;
+	}
+
+	/* If already FIFO empty even though the timer is no pending */
+	if (!timer_pending(&dsim->cmd_timer)
+			&& dsim_reg_header_fifo_is_empty(dsim->id)) {
+		reinit_completion(&dsim->ph_wr_comp);
+		dsim_reg_clear_int(dsim->id, DSIM_INTSRC_SFR_PH_FIFO_EMPTY);
+		goto exit;
+	}
+
+	dsim_to_regs_param(dsim, &regs);
+	__dsim_dump(dsim->id, &regs);
+
+exit:
+	decon_hiber_unblock(decon);
+	dsim_dbg("%s -\n", __func__);
+	return;
+}
+#else
 static void dsim_cmd_fail_detector(struct timer_list *arg)
 {
 	struct dsim_device *dsim = from_timer(dsim, arg, cmd_timer);
@@ -534,6 +567,7 @@ exit:
 	dsim_dbg("%s -\n", __func__);
 	return;
 }
+#endif
 
 #if defined(CONFIG_EXYNOS_BTS)
 #if 0
@@ -1721,7 +1755,11 @@ static int dsim_probe(struct platform_device *pdev)
 
 	dsim_init_subdev(dsim);
 	platform_set_drvdata(pdev, dsim);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
+	timer_setup(&dsim->cmd_timer, (void (*)(struct timer_list *))dsim_cmd_fail_detector, 0);
+#else
 	timer_setup(&dsim->cmd_timer, dsim_cmd_fail_detector, 0);
+#endif
 
 #if defined(CONFIG_CPU_IDLE)
 	dsim->idle_ip_index = exynos_get_idle_ip_index(dev_name(&pdev->dev));
