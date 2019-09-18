@@ -123,6 +123,9 @@ static void tpmon_set_rps(struct tpmon_data *rps_data)
 	char mask[MAX_RPS_STRING];
 	unsigned long flags;
 
+	if (!rps_data->enable)
+		return;
+
 	spin_lock_irqsave(&rps_data->tpmon->net_node_lock, flags);
 
 	mif_info("Change RPS at %ldMbps\n", rps_data->tpmon->rx_mega_bps);
@@ -148,6 +151,9 @@ static void tpmon_set_rps(struct tpmon_data *rps_data)
 #if defined(CONFIG_MODEM_IF_NET_GRO)
 static void tpmon_set_gro(struct tpmon_data *gro_data)
 {
+	if (!gro_data->enable)
+		return;
+
 	mif_info("Change GRO at %ldMbps. flush time:%ld\n",
 			gro_data->tpmon->rx_mega_bps, gro_data->values[gro_data->curr_value]);
 	gro_flush_time = gro_data->values[gro_data->curr_value];
@@ -157,6 +163,9 @@ static void tpmon_set_gro(struct tpmon_data *gro_data)
 #if defined(CONFIG_MCU_IPC)
 static void tpmon_set_irq_affinity(struct tpmon_data *irq_affinity_data)
 {
+	if (!irq_affinity_data->enable)
+		return;
+
 	mif_info("Change IRQ affinity at %ldMbps. CPU:%d\n",
 			irq_affinity_data->tpmon->rx_mega_bps,
 			irq_affinity_data->values[irq_affinity_data->curr_value]);
@@ -168,6 +177,9 @@ static void tpmon_set_irq_affinity(struct tpmon_data *irq_affinity_data)
 static void tpmon_qos_work(struct work_struct *ws)
 {
 	struct cpif_tpmon *tpmon = container_of(ws, struct cpif_tpmon, qos_work);
+
+	if (!tpmon->mif_data.enable)
+		return;
 
 	mif_info("Change freq at %ldMbps. mif_freq:0x%x\n",
 			tpmon->rx_mega_bps, tpmon->mif_data.values[tpmon->mif_data.curr_value]);
@@ -250,21 +262,25 @@ int tpmon_start(u32 interval_sec)
 
 #if defined(CONFIG_RPS)
 	tpmon->rps_data.curr_value = 0;
-	tpmon_set_rps(&tpmon->rps_data);
+	if (tpmon->rps_data.enable)
+		tpmon_set_rps(&tpmon->rps_data);
 #endif
 
 #if defined(CONFIG_MODEM_IF_NET_GRO)
 	tpmon->gro_data.curr_value = 0;
-	tpmon_set_gro(&tpmon->gro_data);
+	if (tpmon->gro_data.enable)
+		tpmon_set_gro(&tpmon->gro_data);
 #endif
 
 #if defined(CONFIG_MCU_IPC)
 	tpmon->irq_affinity_data.curr_value = 0;
-	tpmon_set_irq_affinity(&tpmon->irq_affinity_data);
+	if (tpmon->irq_affinity_data.enable)
+		tpmon_set_irq_affinity(&tpmon->irq_affinity_data);
 #endif
 
 	tpmon->mif_data.curr_value = 0;
-	schedule_work(&tpmon->qos_work);
+	if (tpmon->mif_data.enable)
+		schedule_work(&tpmon->qos_work);
 
 	tpmon->interval_sec = interval_sec;
 	ktime = ktime_set(interval_sec, 0);
@@ -294,22 +310,19 @@ int tpmon_stop(void)
  * Init
  */
 static int tpmon_get_dt(struct device_node *np, struct cpif_tpmon *tpmon, struct tpmon_data *data,
-			char *threshold_name, char *value_name, char *enable_name)
+			char *enable_name, char *threshold_name, char *value_name)
 {
 	int ret = 0;
-	u32 val;
+	u32 val = 0;
 
 	data->tpmon = tpmon;
 
 	ret = of_property_read_u32(np, enable_name, &val);
-	if (ret) {
-		mif_info("%s is not defined\n", enable_name);
+	if (ret || !val) {
+		mif_info("%s is not enabled:%d %d\n", enable_name, ret, val);
 		return 0;
 	}
-	if (!val) {
-		mif_info("%s is not enabled\n", enable_name);
-		return 0;
-	}
+	mif_info("%s is enabled\n", enable_name);
 	data->enable = true;
 
 	ret = of_property_count_u32_elems(np, threshold_name);
@@ -367,27 +380,27 @@ int tpmon_create(struct platform_device *pdev, struct link_device *ld)
 	INIT_LIST_HEAD(&tpmon->net_node_list);
 
 	ret = tpmon_get_dt(np, tpmon, &tpmon->rps_data,
-				"tp_rps_threshold", "tp_rps_cpu_mask", "enable_rps_boost");
+				"enable_rps_boost", "tp_rps_threshold", "tp_rps_cpu_mask");
 	if (ret)
 		goto create_error;
 #endif
 
 #if defined(CONFIG_MODEM_IF_NET_GRO)
 	ret = tpmon_get_dt(np, tpmon, &tpmon->gro_data,
-				"tp_gro_threshold", "tp_gro_flush_usec", "enable_gro_boost");
+				"enable_gro_boost", "tp_gro_threshold", "tp_gro_flush_usec");
 	if (ret)
 		goto create_error;
 #endif
 
 #if defined(CONFIG_MCU_IPC)
 	ret = tpmon_get_dt(np, tpmon, &tpmon->irq_affinity_data,
-			"tp_irq_affinity_threshold", "tp_irq_affinity_cpu", "enable_irq_affinity_boost");
+			"enable_irq_affinity_boost", "tp_irq_affinity_threshold", "tp_irq_affinity_cpu");
 	if (ret)
 		goto create_error;
 #endif
 
 	ret = tpmon_get_dt(np, tpmon, &tpmon->mif_data,
-			"tp_mif_threshold", "tp_mif_value", "enable_mif_boost");
+			"enable_mif_boost", "tp_mif_threshold", "tp_mif_value");
 	if (ret)
 		goto create_error;
 
