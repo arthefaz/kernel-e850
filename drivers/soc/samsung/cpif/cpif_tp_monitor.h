@@ -53,10 +53,7 @@ struct cpif_tpmon {
 #if defined(CONFIG_MODEM_IF_NET_GRO)
 	struct tpmon_data gro_data;
 #endif
-#if defined(CONFIG_MCU_IPC)
 	struct tpmon_data irq_affinity_data;
-#endif
-
 	struct tpmon_data mif_data;
 	struct pm_qos_request qos_mif;
 	struct workqueue_struct *qos_wq;

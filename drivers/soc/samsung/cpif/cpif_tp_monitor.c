@@ -160,7 +160,6 @@ static void tpmon_set_gro(struct tpmon_data *gro_data)
 }
 #endif
 
-#if defined(CONFIG_MCU_IPC)
 static void tpmon_set_irq_affinity(struct tpmon_data *irq_affinity_data)
 {
 	if (!irq_affinity_data->enable)
@@ -169,9 +168,15 @@ static void tpmon_set_irq_affinity(struct tpmon_data *irq_affinity_data)
 	mif_info("Change IRQ affinity at %ldMbps. CPU:%d\n",
 			irq_affinity_data->tpmon->rx_mega_bps,
 			irq_affinity_data->values[irq_affinity_data->curr_value]);
+
+#if defined(CONFIG_LINK_DEVICE_SHMEM) && defined(CONFIG_MCU_IPC)
 	mcu_ipc_set_affinity(0, irq_affinity_data->values[irq_affinity_data->curr_value]);
-}
 #endif
+
+#if defined(CONFIG_LINK_DEVICE_PCIE)
+	/* TODO */
+#endif
+}
 
 /* Frequency */
 static void tpmon_qos_work(struct work_struct *ws)
@@ -199,14 +204,15 @@ static enum hrtimer_restart tpmon_timer(struct hrtimer *timer)
 	if (tpmon_need_to_set_data(&tpmon->rps_data))
 		tpmon_set_rps(&tpmon->rps_data);
 #endif
+
 #if defined(CONFIG_MODEM_IF_NET_GRO)
 	if (tpmon_need_to_set_data(&tpmon->gro_data))
 		tpmon_set_gro(&tpmon->gro_data);
 #endif
-#if defined(CONFIG_MCU_IPC)
+
 	if (tpmon_need_to_set_data(&tpmon->irq_affinity_data))
 		tpmon_set_irq_affinity(&tpmon->irq_affinity_data);
-#endif
+
 	if (tpmon_need_to_set_data(&tpmon->mif_data))
 		schedule_work(&tpmon->qos_work);
 
@@ -272,11 +278,9 @@ int tpmon_start(u32 interval_sec)
 		tpmon_set_gro(&tpmon->gro_data);
 #endif
 
-#if defined(CONFIG_MCU_IPC)
 	tpmon->irq_affinity_data.curr_value = 0;
 	if (tpmon->irq_affinity_data.enable)
 		tpmon_set_irq_affinity(&tpmon->irq_affinity_data);
-#endif
 
 	tpmon->mif_data.curr_value = 0;
 	if (tpmon->mif_data.enable)
@@ -392,12 +396,10 @@ int tpmon_create(struct platform_device *pdev, struct link_device *ld)
 		goto create_error;
 #endif
 
-#if defined(CONFIG_MCU_IPC)
 	ret = tpmon_get_dt(np, tpmon, &tpmon->irq_affinity_data,
 			"enable_irq_affinity_boost", "tp_irq_affinity_threshold", "tp_irq_affinity_cpu");
 	if (ret)
 		goto create_error;
-#endif
 
 	ret = tpmon_get_dt(np, tpmon, &tpmon->mif_data,
 			"enable_mif_boost", "tp_mif_threshold", "tp_mif_value");
