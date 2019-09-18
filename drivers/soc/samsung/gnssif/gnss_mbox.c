@@ -54,6 +54,9 @@ int gnss_mbox_register_irq(enum gnss_mbox_region id, u32 int_num, irq_handler_t 
 
 	spin_unlock_irqrestore(&_gnss_mbox[id].lock, flags);
 
+	gnss_mbox_enable_irq(id, int_num);
+	gif_info("id:%d num:%d intmr0:0x%08x\n", id, int_num, gnss_mbox_readl(id, EXYNOS_MBOX_INTMR0));
+
 	return 0;
 }
 EXPORT_SYMBOL(gnss_mbox_register_irq);
@@ -64,6 +67,9 @@ int gnss_mbox_unregister_irq(enum gnss_mbox_region id, u32 int_num, irq_handler_
 
 	if (!handler || (_gnss_mbox[id].hd[int_num].handler != handler))
 		return -EINVAL;
+
+	gnss_mbox_disable_irq(id, int_num);
+	gif_info("id:%d num:%d intmr0:0x%08x\n", id, int_num, gnss_mbox_readl(id, EXYNOS_MBOX_INTMR0));
 
 	spin_lock_irqsave(&_gnss_mbox[id].lock, flags);
 
@@ -210,9 +216,12 @@ void gnss_mbox_sw_reset(enum gnss_mbox_region id)
 	reg_val = gnss_mbox_readl(id, EXYNOS_MBOX_MCUCTLR);
 	reg_val |= (0x1 << MBOX_MCUCTLR_MSWRST);
 
-	gnss_mbox_writel(id, reg_val, EXYNOS_MBOX_MCUCTLR) ;
+	gnss_mbox_writel(id, reg_val, EXYNOS_MBOX_MCUCTLR);
 
 	udelay(5);
+
+	gnss_mbox_writel(id, ~(_gnss_mbox[id].unmasked_irq) << 16, EXYNOS_MBOX_INTMR0);
+	gif_info("id:%d intmr0:0x%08x\n", id, gnss_mbox_readl(id, EXYNOS_MBOX_INTMR0));
 }
 EXPORT_SYMBOL(gnss_mbox_sw_reset);
 
@@ -236,7 +245,7 @@ static irqreturn_t gnss_mbox_handler(int irq, void *data)
 	irq_stat = gnss_mbox_readl(id, EXYNOS_MBOX_INTSR0) & 0xFFFF0000;
 
 	/* Only clear and handle unmasked interrupts */
-	irq_stat &= _gnss_mbox[id].unmasked_irq << 16;
+	irq_stat &= ~(gnss_mbox_readl(id, EXYNOS_MBOX_INTMR0)) & 0xFFFF0000;
 
 	/* Interrupt Clear */
 	gnss_mbox_writel(id, irq_stat, EXYNOS_MBOX_INTCR0);
@@ -244,10 +253,14 @@ static irqreturn_t gnss_mbox_handler(int irq, void *data)
 
 	for (i = 0; i < 16; i++) {
 		if (irq_stat & (1 << (i + 16))) {
-			if ((1 << (i + 16)) & _gnss_mbox[id].registered_irq)
+			if ((1 << (i + 16)) & _gnss_mbox[id].registered_irq) {
 				_gnss_mbox[id].hd[i].handler(i, _gnss_mbox[id].hd[i].data);
-			else
-				gif_err("Unregistered INT received:%d 0x%x\n", i, irq_stat);
+			} else {
+				gif_err_limited("Unregistered interrupt:%d %d 0x%08x 0x%08lx 0x%08x\n",
+							id, i, irq_stat,
+							_gnss_mbox[id].unmasked_irq << 16,
+							gnss_mbox_readl(id, EXYNOS_MBOX_INTMR0));
+			}
 
 			irq_stat &= ~(1 << (i + 16));
 		}
@@ -301,6 +314,9 @@ static int gnss_mbox_probe(struct platform_device *pdev)
 
 	spin_lock_init(&_gnss_mbox[id].lock);
 	gnss_mbox_clear_all_interrupt(id);
+
+	gnss_mbox_writel(id, 0xFFFF0000, EXYNOS_MBOX_INTMR0);
+	gif_info("id:%d intmr0:0x%08x\n", id, gnss_mbox_readl(id, EXYNOS_MBOX_INTMR0));
 
 	gif_info("---\n");
 
