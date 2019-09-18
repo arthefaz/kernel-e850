@@ -537,6 +537,7 @@ struct sc_ctx {
 	struct sc_src_blend_cfg		src_blend_cfg;
 	struct delayed_work		qos_work;
 	struct sc_qos_request		pm_qos;
+	struct mutex			pm_qos_lock;
 	int				pm_qos_lv;
 	int				framerate;
 };
