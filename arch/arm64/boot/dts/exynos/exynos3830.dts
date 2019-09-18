@@ -721,26 +721,23 @@
         #cooling-cells = <2>; /* min followed by max */
         governor = "interactive";
         interactive_info = <377000 75 0>;
-        gpu_dvfs_table_size = <9 7>; /*<row col>*/
+        gpu_dvfs_table_size = <6 7>; /*<row col>*/
         /*  8 columns          freq  down   up stay     mif  little     big  */
         gpu_dvfs_table = <  1001000    95  100   1  1539000 2002000       0
                              865000    80   90   1  1539000 2002000       0
                              754000    80   90   1  1352000 1456000       0
-                             598000    70   90   1  1352000 1456000       0
-                             433000    60   80   1  1014000 1053000       0
-                             377000    48   70   1   845000  806000       0
-                             260000    48   70   1   676000  650000       0
-                             156000    48   70   1   546000  546000       0
-                             100000     0   70   1   421000  442000       0 >;
+                             598000    70   90   1  1014000 1053000       0
+                             433000    60   80   1   845000  806000       0
+                             377000     0   70   1   676000  650000       0  >;
         gpu_sustainable_info = <0 0 0 0 0>;
         gpu_pmqos_cpu_cluster_num = <2>;
         gpu_pmu_status_reg_offset = <0x1d04>;
         gpu_pmu_status_local_pwr_mask = <0x1>; /*0x1 << 0*/
         gpu_max_clock = <1001000>;
         gpu_max_clock_limit = <1001000>;
-        gpu_min_clock = <100000>;
-        gpu_dvfs_start_clock = <100000>;
-        gpu_dvfs_bl_config_clock = <156000>;
+        gpu_min_clock = <377000>;
+        gpu_dvfs_start_clock = <377000>;
+        gpu_dvfs_bl_config_clock = <377000>;
         gpu_default_voltage = <800000>;
         gpu_cold_minimum_vol = <0>;
         gpu_voltage_offset_margin = <37500>;
