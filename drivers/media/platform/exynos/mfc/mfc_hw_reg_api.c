@@ -96,6 +96,11 @@ void mfc_cmd_host2risc(struct mfc_dev *dev, int cmd)
 	dev->last_cmd = cmd;
 	dev->last_cmd_time = ktime_to_timeval(ktime_get());
 
+	/* Record if the command incurs cache flush */
+	dev->last_cmd_has_cache_flush =
+		(cmd == MFC_REG_H2R_CMD_CACHE_FLUSH
+		 || dev->cache_flush_flag) ? 1 : 0;
+
 	/* Issue the command */
 	if (!dev->cache_flush_flag)
 		MFC_WRITEL(cmd, MFC_REG_HOST2RISC_CMD);

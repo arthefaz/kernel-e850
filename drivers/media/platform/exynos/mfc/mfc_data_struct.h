@@ -220,11 +220,6 @@ enum mfc_do_cache_flush {
 	MFC_CACHEFLUSH			= 1,
 };
 
-enum mfc_drm_switch_prediction {
-	MFC_DRM_SWITCH_NOT_PREDICTED	= 0,
-	MFC_DRM_SWITCH_PREDICTED	= 1,
-};
-
 enum mfc_idle_mode {
 	MFC_IDLE_MODE_NONE	= 0,
 	MFC_IDLE_MODE_RUNNING	= 1,
@@ -949,6 +944,7 @@ struct mfc_dev {
 	int curr_ctx_is_drm;
 	int num_drm_inst;
 	int cache_flush_flag;
+	int last_cmd_has_cache_flush;
 	struct mfc_special_buf fw_buf;
 	struct mfc_special_buf drm_fw_buf;
 
@@ -1677,7 +1673,6 @@ struct mfc_ctx {
 
 	/* for DRM */
 	int is_drm;
-	enum mfc_drm_switch_prediction drm_switch_prediction;
 
 	int is_dpb_realloc;
 	enum mfc_dec_wait_state wait_state;

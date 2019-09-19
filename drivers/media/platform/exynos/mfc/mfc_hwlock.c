@@ -742,22 +742,15 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 		if (drm_switch)
 			mfc_cache_flush(dev, ctx->is_drm, MFC_CACHEFLUSH);
 	} else {
-		/* Predicted DRM switch, so cache flush was done by F/W */
-		if (ctx->drm_switch_prediction
-				== MFC_DRM_SWITCH_PREDICTED) {
-			/* Prediction Success, so do not cache flush  */
-			if (drm_switch)
-				mfc_cache_flush(dev, ctx->is_drm,
-						MFC_NO_CACHEFLUSH);
-		/* No Prediction was made, or predicted no DRM switch */
-		} else if (ctx->drm_switch_prediction
-				== MFC_DRM_SWITCH_NOT_PREDICTED) {
-			/* Now, we know cache flush is needed */
-			if (drm_switch)
-				mfc_cache_flush(dev, ctx->is_drm,
-						MFC_CACHEFLUSH);
+		/* If Normal <-> Secure switch, check if cache flush was done */
+		if (drm_switch) {
+			mfc_debug(2, "%s\n", dev->last_cmd_has_cache_flush ?
+					"Last command had cache flush" :
+					"Last command had No cache flush");
+			mfc_cache_flush(dev, ctx->is_drm,
+					dev->last_cmd_has_cache_flush ?
+					MFC_NO_CACHEFLUSH : MFC_CACHEFLUSH);
 		}
-		ctx->drm_switch_prediction = MFC_DRM_SWITCH_NOT_PREDICTED;
 
 		/*
 		 * Prediction code - if another context is ready,
@@ -768,14 +761,8 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 		if (next_ctx_index >= 0) {
 			next_ctx = dev->ctx[next_ctx_index];
 			/* Next ctx causes Normal<->Secure switch */
-			if (ctx->is_drm != next_ctx->is_drm) {
-				next_ctx->drm_switch_prediction =
-					MFC_DRM_SWITCH_PREDICTED;
+			if (ctx->is_drm != next_ctx->is_drm)
 				dev->cache_flush_flag = 1;
-			} else {
-				next_ctx->drm_switch_prediction =
-					MFC_DRM_SWITCH_NOT_PREDICTED;
-			}
 		}
 	}
 
@@ -789,20 +776,17 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 	}
 
 	if (ret) {
-		if (!drm_predict_disable) {
-			/*
-			 * Cancel switch prediction for next context(if exists),
-			 * and clear the reserved F/W cache flush
-			 */
-			if (next_ctx) {
-				next_ctx->drm_switch_prediction =
-					MFC_DRM_SWITCH_NOT_PREDICTED;
-				dev->cache_flush_flag = 0;
-			}
-		}
+		/*
+		 * Clear any reserved F/W cache flush for next ctx,
+		 * as this will be newly decided in Prediction code.
+		 */
+		if (!drm_predict_disable)
+			dev->cache_flush_flag = 0;
 
-		/* Check again the ctx condition and clear work bits
-		 * if ctx is not available. */
+		/*
+		 * Check again the ctx condition and clear work bits
+		 * if ctx is not available.
+		 */
 		if (mfc_ctx_ready_clear_bit(ctx, &dev->work_bits) == 0)
 			ctx->clear_work_bit = 0;
 		if (ctx->clear_work_bit) {
