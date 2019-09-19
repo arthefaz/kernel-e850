@@ -104,30 +104,20 @@ int gnss_dbus_write(unsigned int reg_offset, unsigned int val)
 
 static int gnss_pmu_clear_interrupt(enum gnss_int_clear gnss_int)
 {
-	int ret = 0;
-
-	gif_info("gnss_int = %d\n", gnss_int);
 	switch (gnss_int) {
 	case GNSS_INT_WAKEUP_CLEAR:
-		/*TODO*/
 		break;
 	case GNSS_INT_ACTIVE_CLEAR:
 		cal_gnss_active_clear();
 		break;
 	case GNSS_INT_WDT_RESET_CLEAR:
-		/*TODO*/
 		break;
 	default:
 		gif_err("Unexpected interrupt value!\n");
 		return -EIO;
 	}
 
-	if (ret < 0) {
-		gif_err("ERR! GNSS Reset Fail: %d\n", ret);
-		return -EIO;
-	}
-
-	return ret;
+	return 0;
 }
 
 static int gnss_pmu_release_reset(void)

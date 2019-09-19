@@ -348,7 +348,7 @@ static int send_bcmd(struct io_device *iod, unsigned long arg)
 		goto bcmd_exit;
 	}
 
-	gif_info("flags : %d, cmd_id : %d, param1 : %d, param2 : %d(0x%x)\n",
+	gif_info("flags:%d, cmd_id:%d, param1:0x%08x, param2:%d(0x%08x)\n",
 			bcmd_args.flags, bcmd_args.cmd_id, bcmd_args.param1,
 			bcmd_args.param2, bcmd_args.param2);
 

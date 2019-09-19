@@ -298,44 +298,6 @@ static int kepler_resume(struct gnss_ctl *gc)
 	return 0;
 }
 
-static int kepler_change_gpio(struct gnss_ctl *gc)
-{
-	int status = 0;
-
-	gif_info("Change GPIO for sensor\n");
-	if (!IS_ERR(gc->gnss_sensor_gpio)) {
-		status = pinctrl_select_state(gc->gnss_gpio, gc->gnss_sensor_gpio);
-		if (status) {
-			gif_err("Can't change sensor GPIO(%d)\n", status);
-		}
-	} else {
-		gif_err("gnss_sensor_gpio is not valid(0x%p)\n", gc->gnss_sensor_gpio);
-		status = -EIO;
-	}
-
-	return status;
-}
-
-static int kepler_set_sensor_power(struct gnss_ctl *gc, enum sensor_power reg_en)
-{
-	int ret;
-
-	if (reg_en == SENSOR_OFF) {
-		ret = regulator_disable(gc->vdd_sensor_reg);
-		if (ret != 0)
-			gif_err("Failed : Disable sensor power.\n");
-		else
-			gif_info("Success : Disable sensor power.\n");
-	} else {
-		ret = regulator_enable(gc->vdd_sensor_reg);
-		if (ret != 0)
-			gif_err("Failed : Enable sensor power.\n");
-		else
-			gif_info("Success : Enable sensor power.\n");
-	}
-	return ret;
-}
-
 static int kepler_req_bcmd(struct gnss_ctl *gc, u16 cmd_id, u16 flags,
 		u32 param1, u32 param2)
 {
@@ -437,8 +399,6 @@ static void gnss_get_ops(struct gnss_ctl *gc)
 	gc->ops.gnss_req_fault_info = kepler_req_fault_info;
 	gc->ops.suspend = kepler_suspend;
 	gc->ops.resume = kepler_resume;
-	gc->ops.change_sensor_gpio = kepler_change_gpio;
-	gc->ops.set_sensor_power = kepler_set_sensor_power;
 	gc->ops.req_bcmd = kepler_req_bcmd;
 }
 
@@ -537,19 +497,6 @@ int init_gnssctl_device(struct gnss_ctl *gc, struct gnss_pdata *pdata)
 	if (ret < 0) {
 		gif_err("bcmd register mailbox fail\n");
 		goto error;
-	}
-
-	gc->gnss_gpio = devm_pinctrl_get(&pdev->dev);
-	if (IS_ERR(gc->gnss_gpio)) {
-		gif_err("Can't get gpio for GNSS sensor.\n");
-	} else {
-		gc->gnss_sensor_gpio = pinctrl_lookup_state(gc->gnss_gpio,
-				"gnss_sensor");
-	}
-
-	gc->vdd_sensor_reg = devm_regulator_get(gc->dev, "vdd_sensor_2p85");
-	if (IS_ERR(gc->vdd_sensor_reg)) {
-		gif_err("Cannot get the regulator \"vdd_sensor_2p85\"\n");
 	}
 
 	if (sysfs_create_group(&pdev->dev.kobj, &mbox_group))
