@@ -28,6 +28,7 @@
 #include <linux/ip.h>
 #include <linux/tcp.h>
 #include <linux/netdevice.h>
+#include <linux/linkforward.h>
 
 #if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)
 #include <linux/modem_notifier.h>
@@ -386,6 +387,7 @@ static int rx_multi_pdp(struct sk_buff *skb)
 	struct iphdr *iphdr;
 	int len = skb->len;
 	int ret = 0;
+	int __maybe_unused l2forward = 0;
 
 	ndev = iod->ndev;
 	if (!ndev) {
@@ -423,10 +425,16 @@ static int rx_multi_pdp(struct sk_buff *skb)
 	skb_reset_network_header(skb);
 	skb_reset_mac_header(skb);
 
+#ifdef CONFIG_LINK_FORWARD
+	/* Link Forward */
+	l2forward = get_linkforward_mode() ?
+		linkforward_manip_skb(skb, LINK_FORWARD_DIR_REPLY) : 0;
+#endif
+
 #if defined(CONFIG_CP_GRO_EXCEPTION)
-	if (!check_gro_support(skb) || (is_tethering_upstream_device(skb->dev->name) && is_heading_toward_clat(skb))) {
+	if (l2forward || !check_gro_support(skb) || (is_tethering_upstream_device(skb->dev->name) && is_heading_toward_clat(skb))) {
 #else
-	if (!check_gro_support(skb)) {
+	if (l2forward || !check_gro_support(skb)) {
 #endif
 		ret = netif_receive_skb(skb);
 		if (ret != NET_RX_SUCCESS)

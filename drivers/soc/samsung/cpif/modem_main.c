@@ -50,6 +50,9 @@
 #include <linux/shm_ipc.h>
 #include <linux/mcu_ipc.h>
 #endif
+#ifdef CONFIG_LINK_FORWARD
+#include <linux/linkforward.h>
+#endif
 
 #include <soc/samsung/exynos-modem-ctrl.h>
 #include "modem_prj.h"
@@ -640,12 +643,51 @@ static ssize_t modem_state_show(struct device *dev,
 	return sprintf(buf, "%s\n", cp_state_str(mc->phone_state));
 }
 
+#ifdef CONFIG_LINK_FORWARD
+static ssize_t linkforward_state_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return linkforward_get_state(buf);
+}
+
+static ssize_t linkforward_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "linkforward global mode:%d\n",
+			get_linkforward_mode());
+}
+
+static ssize_t linkforward_mode_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	int ret;
+	int val = 0;
+
+	ret = kstrtoint(buf, 10, &val);
+	if ((ret > 3) || (val < 0))
+		return -EINVAL;
+
+	set_linkforward_mode(val);
+
+	ret = count;
+	return ret;
+}
+
+static DEVICE_ATTR_RO(linkforward_state);
+static DEVICE_ATTR_RW(linkforward_mode);
+#endif
+
 static DEVICE_ATTR_WO(do_cp_crash);
 static DEVICE_ATTR_RO(modem_state);
 
 static struct attribute *modem_attrs[] = {
 	&dev_attr_do_cp_crash.attr,
 	&dev_attr_modem_state.attr,
+#ifdef CONFIG_LINK_FORWARD
+	&dev_attr_linkforward_state.attr,
+	&dev_attr_linkforward_mode.attr,
+#endif
 	NULL,
 };
 ATTRIBUTE_GROUPS(modem);
@@ -1094,6 +1136,8 @@ static void cpif_shutdown(struct platform_device *pdev)
 		mc->ops.power_shutdown(mc);
 
 	mc->phone_state = STATE_OFFLINE;
+
+	kobject_put(clat_kobject);
 
 	mif_err("%s\n", mc->name);
 }
