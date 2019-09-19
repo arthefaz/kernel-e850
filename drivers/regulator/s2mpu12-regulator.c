@@ -810,7 +810,12 @@ static int s2mpu12_pmic_probe(struct platform_device *pdev)
 	s2mpu12_update_reg(s2mpu12->i2c, S2MPU12_PMIC_SEL_VGPIO3,
 			(V_PWREN_MIF << L9_VGPIO_SEL)| (V_PWREN_CPUCL0 << L8_VGPIO_SEL) | (V_PWREN_MIF << L7_VGPIO_SEL),
 			(VGPIO_SEL_MASK << L9_VGPIO_SEL)| (VGPIO_SEL_MASK << L8_VGPIO_SEL) | (VGPIO_SEL_MASK << L7_VGPIO_SEL));
+#ifdef CONFIG_SOC_EXYNOS3830
+	/* SICD_DVS voltage settings - BUCK1/2_OUT2 */
+	s2mpu12_write_reg(s2mpu12->i2c, S2MPU12_PMIC_B1OUT2, 0x20);
+	s2mpu12_write_reg(s2mpu12->i2c, S2MPU12_PMIC_B2OUT2, 0x20);
 
+#endif
 	pr_info("%s s2mpu12 pmic driver Loading end\n", __func__);
 	return 0;
 err:
