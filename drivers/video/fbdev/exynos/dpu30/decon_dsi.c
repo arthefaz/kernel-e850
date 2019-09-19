@@ -498,7 +498,7 @@ static void decon_esd_process(int esd, struct decon_device *decon)
 			but DDI is abnormal state(%d)\n", __func__, esd);
 		break;
 	case DSIM_ESD_OK:
-		decon_info("%s, DDI has normal state(%d)\n", __func__, esd);
+		decon_dbg("%s, DDI has normal state(%d)\n", __func__, esd);
 		break;
 	case DSIM_ESD_ERROR:
 		decon_err("%s, ESD is detected(%d)\n", __func__, esd);
@@ -536,7 +536,7 @@ static int decon_esd_thread(void *data)
 			dsim = container_of(decon->out_sd[0],
 					struct dsim_device, sd);
 
-			decon_info("%s, Try to check ESD\n", __func__);
+			decon_dbg("%s, Try to check ESD\n", __func__);
 
 			esd = dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_READ_STATE, NULL);
 			decon_esd_process(esd, decon);
@@ -547,7 +547,7 @@ static int decon_esd_thread(void *data)
 		/* sleep ESD_SLEEP_TIME second when decon is not state on
 		 * and after read DDI state
 		 */
-		decon_info("%s, Sleep %d second\n", __func__, ESD_SLEEP_TIME);
+		decon_dbg("%s, Sleep %d second\n", __func__, ESD_SLEEP_TIME);
 		set_current_state(TASK_INTERRUPTIBLE);
 		schedule_timeout(ESD_SLEEP_TIME * HZ);
 	}
