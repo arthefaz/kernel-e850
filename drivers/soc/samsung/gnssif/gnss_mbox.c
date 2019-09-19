@@ -305,7 +305,7 @@ static int gnss_mbox_probe(struct platform_device *pdev)
 
 	irq = platform_get_irq(pdev, 0);
 
-	gif_init_irq(&_gnss_mbox[id].irq_gnss_mbox, irq, pdev->name, 0);
+	gif_init_irq(&_gnss_mbox[id].irq_gnss_mbox, irq, pdev->name, IRQF_ONESHOT);
 	ret = gif_request_irq(&_gnss_mbox[id].irq_gnss_mbox, gnss_mbox_handler, &_gnss_mbox[id]);
 	if (ret) {
 		gif_err("gif_request_irq() error:%d\n", ret);

@@ -55,7 +55,6 @@ static irqreturn_t kepler_sw_init_isr(int irq, void *arg)
 
 	gif_err_limited("SW_INIT Interrupt occurred!\n");
 
-	gif_disable_irq_nosync(&gc->irq_gnss_sw_init);
 	complete_all(&gc->sw_init_cmpl);
 
 	return IRQ_HANDLED;
@@ -179,13 +178,12 @@ static int kepler_release_reset(struct gnss_ctl *gc)
 			gif_err("Could not enable Qch (%d)\n", ret);
 	}
 
-	gif_enable_irq(&gc->irq_gnss_sw_init);
 	ret = wait_for_completion_timeout(&gc->sw_init_cmpl, timeout);
 	if (ret == 0) {
 		gif_err("%s: sw_init_cmpl TIMEOUT!\n", gc->name);
-		gif_disable_irq_nosync(&gc->irq_gnss_sw_init);
 		return -EIO;
 	}
+	mdelay(100);
 	ret = gc->pmu_ops->req_security();
 	if (ret != 0) {
 		gif_err("req_security error! %d\n", ret);
@@ -220,13 +218,12 @@ static int kepler_power_on(struct gnss_ctl *gc)
 			gif_err("Could not enable Qch (%d)\n", ret);
 	}
 
-	gif_enable_irq(&gc->irq_gnss_sw_init);
 	ret = wait_for_completion_timeout(&gc->sw_init_cmpl, timeout);
 	if (ret == 0) {
 		gif_err("%s: sw_init_cmpl TIMEOUT!\n", gc->name);
-		gif_disable_irq_nosync(&gc->irq_gnss_sw_init);
 		return -EIO;
 	}
+	mdelay(100);
 	ret = gc->pmu_ops->req_security();
 	if (ret != 0) {
 		gif_err("req_security error! %d\n", ret);
@@ -475,7 +472,7 @@ int init_gnssctl_device(struct gnss_ctl *gc, struct gnss_pdata *pdata)
 		goto error;
 	}
 
-	gif_init_irq(&gc->irq_gnss_active, irq, "kepler_active_handler", 0);
+	gif_init_irq(&gc->irq_gnss_active, irq, "kepler_active_handler", IRQF_ONESHOT);
 	ret = gif_request_irq(&gc->irq_gnss_active, kepler_active_isr, gc);
 	if (ret) {
 		gif_err("Request irq fail - kepler_active_isr(%d)\n", ret);
@@ -490,7 +487,7 @@ int init_gnssctl_device(struct gnss_ctl *gc, struct gnss_pdata *pdata)
 		goto error;
 	}
 
-	gif_init_irq(&gc->irq_gnss_wdt, irq, "kepler_wdt_handler", 0);
+	gif_init_irq(&gc->irq_gnss_wdt, irq, "kepler_wdt_handler", IRQF_ONESHOT);
 	ret = gif_request_irq(&gc->irq_gnss_wdt, kepler_wdt_isr, gc);
 	if (ret) {
 		gif_err("Request irq fail - kepler_wdt_isr(%d)\n", ret);
@@ -513,13 +510,12 @@ int init_gnssctl_device(struct gnss_ctl *gc, struct gnss_pdata *pdata)
 		goto error;
 	}
 
-	gif_init_irq(&gc->irq_gnss_sw_init, irq, "kepler_sw_init_handler", 0);
+	gif_init_irq(&gc->irq_gnss_sw_init, irq, "kepler_sw_init_handler", IRQF_ONESHOT);
 	ret = gif_request_irq(&gc->irq_gnss_sw_init, kepler_sw_init_isr, gc);
 	if (ret) {
 		gif_err("Request irq fail - kepler_sw_init_isr(%d)\n", ret);
 		goto error;
 	}
-	gif_disable_irq_sync(&gc->irq_gnss_sw_init);
 
 	/* Initializing Shared Memory for GNSS */
 	gif_info("Initializing shared memory for GNSS.\n");
