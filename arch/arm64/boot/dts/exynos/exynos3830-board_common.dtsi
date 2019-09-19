@@ -67,7 +67,7 @@
 				compatible = "samsung,exynos-gnss-mailbox";
 
 				reg = <0x0 0x11980000 0x180>; /* MAILBOX AP2GNSS */
-				interrupts = <0 53 0>; /* INTREQ__MAILBOX_GNSS2AP */
+				interrupts = <GIC_SPI INTREQ__MAILBOX_GNSS2AP IRQ_TYPE_LEVEL_HIGH>;
 
 				mbox,name = "gnss_mailbox";
 				mbox,id = <0>;
@@ -77,9 +77,10 @@
 				status = "okay";
 				compatible = "samsung,exynos-gnss";
 
-			/* INTREQ__ALIVE_GNSS_ACTIVE, INTREQ__GNSS2AP_WDOG_RESET */
-			/* INTREQ__GNSS2AP_WAKEUP, INTREQ__GNSS_SW_INT */
-				interrupts = <0 37 0>, <0 130 0>, <0 129 0>, <0 128 0>;
+				interrupts = <GIC_SPI INTREQ__ALIVE_GNSS_ACTIVE IRQ_TYPE_LEVEL_HIGH>,
+						<GIC_SPI INTREQ__GNSS_WDOG_RESET IRQ_TYPE_EDGE_RISING>,
+						<GIC_SPI INTREQ__GNSS_WAKEUP_INT IRQ_TYPE_LEVEL_HIGH>,
+						<GIC_SPI INTREQ__GNSS_SW_INT IRQ_TYPE_EDGE_RISING>;
 				interrupt-names = "ACTIVE", "WATCHDOG", "WAKEUP", "SW_INIT";
 				shmem,name = "KEPLER";
 				device_node_name = "gnss_ipc";
