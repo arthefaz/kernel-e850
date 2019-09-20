@@ -898,7 +898,7 @@ static void dpp_parse_dt(struct dpp_device *dpp, struct device *dev)
 	struct dpp_device *dpp0 = get_dpp_drvdata(0);
 	struct dpp_restriction *res = &dpp->restriction;
 	int i;
-	char format_list[128] = {0, };
+	char format_list[256] = {0, };
 	int len = 0, ret;
 
 	dpp->id = of_alias_get_id(dev->of_node, "dpp");
