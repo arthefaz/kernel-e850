@@ -898,9 +898,14 @@ exit:
 	mutex_unlock(&mc->pcie_onoff_lock);
 
 	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
-	if (!mc->pcie_powered_on && mc->reserve_doorbell_int) {
+	if ((mc->s51xx_pdev != NULL) && mc->reserve_doorbell_int) {
 		mif_info("DBG: doorbell_reserved = %d\n", mc->reserve_doorbell_int);
-		s5100_try_gpio_cp_wakeup(mc);
+		if (mc->pcie_powered_on) {
+			mc->reserve_doorbell_int = false;
+			if (s51xx_pcie_send_doorbell_int(mc->s51xx_pdev, mld->intval_ap2cp_msg) != 0)
+				s5100_force_crash_exit_ext();
+		} else
+			s5100_try_gpio_cp_wakeup(mc);
 	}
 	spin_unlock_irqrestore(&mc->pcie_tx_lock, flags);
 
