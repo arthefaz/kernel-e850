@@ -20,17 +20,23 @@
 #include <linux/workqueue.h>
 #include <linux/pm_qos.h>
 
+#define MAX_THRESHOLD	2
 #define MAX_VALUES	3
 #define MAX_RPS_STRING	8
 
 struct tpmon_data {
 	struct cpif_tpmon *tpmon;
 
+	struct list_head data_node;
+
 	bool enable;
 	u32 num_threshold;
-	u32 threshold[MAX_VALUES-1];
+	u32 threshold[MAX_THRESHOLD];
+	u32 num_values;
 	u32 curr_value;
 	u32 values[MAX_VALUES];
+
+	void (*set_data)(struct tpmon_data *);
 };
 
 struct cpif_tpmon {
@@ -38,8 +44,13 @@ struct cpif_tpmon {
 
 	spinlock_t lock;
 
+	struct list_head data_list;
+
 	struct hrtimer timer;
 	u32 interval_sec;
+
+	struct workqueue_struct *qos_wq;
+	struct delayed_work qos_dwork;
 
 	unsigned long rx_bytes;
 	unsigned long rx_bytes_prev;
@@ -47,7 +58,6 @@ struct cpif_tpmon {
 
 #if defined(CONFIG_RPS)
 	struct tpmon_data rps_data;
-	spinlock_t net_node_lock;
 	struct list_head net_node_list;
 #endif
 #if defined(CONFIG_MODEM_IF_NET_GRO)
@@ -55,9 +65,7 @@ struct cpif_tpmon {
 #endif
 	struct tpmon_data irq_affinity_data;
 	struct tpmon_data mif_data;
-	struct pm_qos_request qos_mif;
-	struct workqueue_struct *qos_wq;
-	struct work_struct qos_work;
+	struct pm_qos_request qos_req_mif;
 };
 
 #if defined(CONFIG_CPIF_TP_MONITOR)

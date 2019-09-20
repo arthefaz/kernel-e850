@@ -41,6 +41,7 @@ static unsigned long tpmon_calc_rx_speed_mega_bps(struct cpif_tpmon *tpmon)
 	return tpmon->rx_mega_bps;
 }
 
+/* Check speed changing */
 static bool tpmon_need_to_set_data(struct tpmon_data *data)
 {
 	int i;
@@ -55,11 +56,19 @@ static bool tpmon_need_to_set_data(struct tpmon_data *data)
 	if (i == data->curr_value)
 		return false;
 
+	if (i >= data->num_values) {
+		mif_err_limited("Invalid value:%d %d\n", i, data->num_values);
+		return false;
+	}
+
 	data->curr_value = i;
 
 	return true;
 }
 
+/*
+ * Set data
+ */
 #if defined(CONFIG_RPS)
 /* From net/core/net-sysfs.c */
 static ssize_t tpmon_store_rps_map(struct netdev_rx_queue *queue, const char *buf, ssize_t len)
@@ -121,19 +130,14 @@ static void tpmon_set_rps(struct tpmon_data *rps_data)
 	struct io_device *iod;
 	int ret = 0;
 	char mask[MAX_RPS_STRING];
-	unsigned long flags;
 
 	if (!rps_data->enable)
 		return;
 
-	spin_lock_irqsave(&rps_data->tpmon->net_node_lock, flags);
-
-	mif_info("Change RPS at %ldMbps\n", rps_data->tpmon->rx_mega_bps);
 	snprintf(mask, MAX_RPS_STRING, "%x", rps_data->values[rps_data->curr_value]);
+	mif_info("Change RPS at %ldMbps. mask:%s\n", rps_data->tpmon->rx_mega_bps, mask);
 
 	list_for_each_entry(iod, &rps_data->tpmon->net_node_list, node_all_ndev) {
-		mif_info("RPS[%s] mask:0x%x(%s)\n", iod->name, rps_data->values[rps_data->curr_value], mask);
-
 		if (!iod->name)
 			continue;
 
@@ -143,8 +147,6 @@ static void tpmon_set_rps(struct tpmon_data *rps_data)
 			break;
 		}
 	}
-
-	spin_unlock_irqrestore(&rps_data->tpmon->net_node_lock, flags);
 }
 #endif
 
@@ -179,16 +181,28 @@ static void tpmon_set_irq_affinity(struct tpmon_data *irq_affinity_data)
 }
 
 /* Frequency */
-static void tpmon_qos_work(struct work_struct *ws)
+static void tpmon_set_mif(struct tpmon_data *mif_data)
 {
-	struct cpif_tpmon *tpmon = container_of(ws, struct cpif_tpmon, qos_work);
-
-	if (!tpmon->mif_data.enable)
+	if (!mif_data->enable)
 		return;
 
 	mif_info("Change freq at %ldMbps. mif_freq:0x%x\n",
-			tpmon->rx_mega_bps, tpmon->mif_data.values[tpmon->mif_data.curr_value]);
-	pm_qos_update_request(&tpmon->qos_mif, tpmon->mif_data.values[tpmon->mif_data.curr_value]);
+			mif_data->tpmon->rx_mega_bps, mif_data->values[mif_data->curr_value]);
+	pm_qos_update_request(&mif_data->tpmon->qos_req_mif, mif_data->values[mif_data->curr_value]);
+}
+
+/* Qos work */
+static void tpmon_qos_work(struct work_struct *ws)
+{
+	struct cpif_tpmon *tpmon = container_of(ws, struct cpif_tpmon, qos_dwork.work);
+	struct tpmon_data *data;
+
+	tpmon_calc_rx_speed_mega_bps(tpmon);
+
+	list_for_each_entry(data, &tpmon->data_list, data_node) {
+		if (tpmon_need_to_set_data(data) && data->set_data)
+			data->set_data(data);
+	}
 }
 
 /* Timer */
@@ -199,23 +213,7 @@ static enum hrtimer_restart tpmon_timer(struct hrtimer *timer)
 
 	spin_lock_irqsave(&tpmon->lock, flags);
 
-	tpmon_calc_rx_speed_mega_bps(tpmon);
-#if defined(CONFIG_RPS)
-	if (tpmon_need_to_set_data(&tpmon->rps_data))
-		tpmon_set_rps(&tpmon->rps_data);
-#endif
-
-#if defined(CONFIG_MODEM_IF_NET_GRO)
-	if (tpmon_need_to_set_data(&tpmon->gro_data))
-		tpmon_set_gro(&tpmon->gro_data);
-#endif
-
-	if (tpmon_need_to_set_data(&tpmon->irq_affinity_data))
-		tpmon_set_irq_affinity(&tpmon->irq_affinity_data);
-
-	if (tpmon_need_to_set_data(&tpmon->mif_data))
-		schedule_work(&tpmon->qos_work);
-
+	queue_delayed_work(tpmon->qos_wq, &tpmon->qos_dwork, 0);
 	hrtimer_forward(timer, ktime_get(), ktime_set(tpmon->interval_sec, 0));
 
 	spin_unlock_irqrestore(&tpmon->lock, flags);
@@ -244,17 +242,18 @@ void tpmon_add_net_node(struct list_head *node)
 	struct cpif_tpmon *tpmon = &_tpmon;
 	unsigned long flags;
 
-	spin_lock_irqsave(&tpmon->net_node_lock, flags);
+	spin_lock_irqsave(&tpmon->lock, flags);
 
 	list_add_tail(node, &tpmon->net_node_list);
 
-	spin_unlock_irqrestore(&tpmon->net_node_lock, flags);
+	spin_unlock_irqrestore(&tpmon->lock, flags);
 #endif
 }
 
 int tpmon_start(u32 interval_sec)
 {
 	struct cpif_tpmon *tpmon = &_tpmon;
+	struct tpmon_data *data;
 	ktime_t ktime;
 	unsigned long flags;
 
@@ -266,25 +265,8 @@ int tpmon_start(u32 interval_sec)
 	tpmon->rx_bytes_prev = 0;
 	tpmon->rx_mega_bps = 0;
 
-#if defined(CONFIG_RPS)
-	tpmon->rps_data.curr_value = 0;
-	if (tpmon->rps_data.enable)
-		tpmon_set_rps(&tpmon->rps_data);
-#endif
-
-#if defined(CONFIG_MODEM_IF_NET_GRO)
-	tpmon->gro_data.curr_value = 0;
-	if (tpmon->gro_data.enable)
-		tpmon_set_gro(&tpmon->gro_data);
-#endif
-
-	tpmon->irq_affinity_data.curr_value = 0;
-	if (tpmon->irq_affinity_data.enable)
-		tpmon_set_irq_affinity(&tpmon->irq_affinity_data);
-
-	tpmon->mif_data.curr_value = 0;
-	if (tpmon->mif_data.enable)
-		schedule_work(&tpmon->qos_work);
+	list_for_each_entry(data, &tpmon->data_list, data_node)
+		data->curr_value = MAX_VALUES;
 
 	tpmon->interval_sec = interval_sec;
 	ktime = ktime_set(interval_sec, 0);
@@ -303,7 +285,7 @@ int tpmon_stop(void)
 	spin_lock_irqsave(&tpmon->lock, flags);
 
 	hrtimer_cancel(&tpmon->timer);
-	flush_workqueue(tpmon->qos_wq);
+	cancel_delayed_work(&tpmon->qos_dwork);
 
 	spin_unlock_irqrestore(&tpmon->lock, flags);
 
@@ -313,11 +295,13 @@ int tpmon_stop(void)
 /*
  * Init
  */
-static int tpmon_get_dt(struct device_node *np, struct cpif_tpmon *tpmon, struct tpmon_data *data,
+static int tpmon_fill_data(struct device_node *np, struct cpif_tpmon *tpmon,
+			struct tpmon_data *data, void (*set_data)(struct tpmon_data *),
 			char *enable_name, char *threshold_name, char *value_name)
 {
 	int ret = 0;
 	u32 val = 0;
+	unsigned long flags;
 
 	data->tpmon = tpmon;
 
@@ -335,6 +319,10 @@ static int tpmon_get_dt(struct device_node *np, struct cpif_tpmon *tpmon, struct
 		return -EINVAL;
 	}
 	data->num_threshold = ret;
+	if (data->num_threshold > MAX_THRESHOLD) {
+		mif_err("num_threshold is over max:%d\n", data->num_threshold);
+		return -EINVAL;
+	}
 	ret = of_property_read_u32_array(np, threshold_name, data->threshold, data->num_threshold);
 	if (ret) {
 		mif_err("of_property_read_u32_array error:%d(%s)\n", ret, threshold_name);
@@ -346,11 +334,22 @@ static int tpmon_get_dt(struct device_node *np, struct cpif_tpmon *tpmon, struct
 		mif_err("of_property_count_u32_elems error:%d(%s)\n", ret, value_name);
 		return -EINVAL;
 	}
-	ret = of_property_read_u32_array(np, value_name, data->values, ret);
+	data->num_values = ret;
+	if (data->num_values > MAX_VALUES) {
+		mif_err("num_values is over max:%d\n", data->num_values);
+		return -EINVAL;
+	}
+	ret = of_property_read_u32_array(np, value_name, data->values, data->num_values);
 	if (ret) {
 		mif_err("of_property_read_u32_array error:%d(%s)\n", ret, value_name);
 		return ret;
 	}
+
+	data->set_data = set_data;
+
+	spin_lock_irqsave(&tpmon->lock, flags);
+	list_add_tail(&data->data_node, &tpmon->data_list);
+	spin_unlock_irqrestore(&tpmon->lock, flags);
 
 	return 0;
 }
@@ -379,46 +378,46 @@ int tpmon_create(struct platform_device *pdev, struct link_device *ld)
 	hrtimer_init(&tpmon->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	tpmon->timer.function = tpmon_timer;
 
-#if defined(CONFIG_RPS)
-	spin_lock_init(&tpmon->net_node_lock);
-	INIT_LIST_HEAD(&tpmon->net_node_list);
+	INIT_LIST_HEAD(&tpmon->data_list);
 
-	ret = tpmon_get_dt(np, tpmon, &tpmon->rps_data,
+#if defined(CONFIG_RPS)
+	INIT_LIST_HEAD(&tpmon->net_node_list);
+	ret = tpmon_fill_data(np, tpmon, &tpmon->rps_data, tpmon_set_rps,
 				"enable_rps_boost", "tp_rps_threshold", "tp_rps_cpu_mask");
 	if (ret)
 		goto create_error;
 #endif
 
 #if defined(CONFIG_MODEM_IF_NET_GRO)
-	ret = tpmon_get_dt(np, tpmon, &tpmon->gro_data,
+	ret = tpmon_fill_data(np, tpmon, &tpmon->gro_data, tpmon_set_gro,
 				"enable_gro_boost", "tp_gro_threshold", "tp_gro_flush_usec");
 	if (ret)
 		goto create_error;
 #endif
 
-	ret = tpmon_get_dt(np, tpmon, &tpmon->irq_affinity_data,
-			"enable_irq_affinity_boost", "tp_irq_affinity_threshold", "tp_irq_affinity_cpu");
+	ret = tpmon_fill_data(np, tpmon, &tpmon->irq_affinity_data, tpmon_set_irq_affinity,
+				"enable_irq_affinity_boost", "tp_irq_affinity_threshold", "tp_irq_affinity_cpu");
 	if (ret)
 		goto create_error;
 
-	ret = tpmon_get_dt(np, tpmon, &tpmon->mif_data,
-			"enable_mif_boost", "tp_mif_threshold", "tp_mif_value");
+	ret = tpmon_fill_data(np, tpmon, &tpmon->mif_data, tpmon_set_mif,
+				"enable_mif_boost", "tp_mif_threshold", "tp_mif_value");
 	if (ret)
 		goto create_error;
+	pm_qos_add_request(&tpmon->qos_req_mif, PM_QOS_BUS_THROUGHPUT, 0);
 
-	pm_qos_add_request(&tpmon->qos_mif, PM_QOS_BUS_THROUGHPUT, 0);
 	tpmon->qos_wq = create_singlethread_workqueue("cpif_tpmon_qos_wq");
 	if (!tpmon->qos_wq) {
 		mif_err("create_singlethread_workqueue() error\n");
 		ret = -EINVAL;
 		goto create_error;
 	}
-	INIT_WORK(&tpmon->qos_work, tpmon_qos_work);
+	INIT_DELAYED_WORK(&tpmon->qos_dwork, tpmon_qos_work);
 
 	return ret;
 
 create_error:
-	mif_err("xxx\n");
+	mif_err("Error:%d\n", ret);
 
 	return ret;
 }
