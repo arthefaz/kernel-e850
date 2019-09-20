@@ -923,9 +923,9 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 	struct link_device *ld;
 	struct mem_link_device *mld;
 	unsigned long flags;
+#if defined(CONFIG_LINK_DEVICE_PCIE_S2MPU)
 	int ret;
 	u32 cp_num;
-#if defined(CONFIG_LINK_DEVICE_PCIE_S2MPU)
 	u32 shmem_idx;
 #endif
 
@@ -989,39 +989,6 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 		}
 	}
 #endif
-
-	if (mc->s5100_iommu_map_enabled == false) {
-		mc->s5100_iommu_map_enabled = true;
-		cp_num = ld->mdm_data->cp_num;
-
-		ret = pcie_iommu_map(mc->pcie_ch_num,
-			cp_shmem_get_base(cp_num, SHMEM_IPC),
-			cp_shmem_get_base(cp_num, SHMEM_IPC),
-			cp_shmem_get_size(cp_num, SHMEM_IPC), 7);
-		mif_info("pcie_iommu_map ipc - addr:0x%08lx size:0x%08x ret:%d\n",
-			cp_shmem_get_base(cp_num, SHMEM_IPC),
-			cp_shmem_get_size(cp_num, SHMEM_IPC), ret);
-
-#ifdef CONFIG_CP_PKTPROC_V2
-		ret = pcie_iommu_map(mc->pcie_ch_num,
-			cp_shmem_get_base(cp_num, SHMEM_PKTPROC),
-			cp_shmem_get_base(cp_num, SHMEM_PKTPROC),
-			cp_shmem_get_size(cp_num, SHMEM_PKTPROC), 7);
-		mif_info("pcie_iommu_map pktproc - addr:0x%08lx size:0x%08x ret:%d\n",
-			cp_shmem_get_base(cp_num, SHMEM_PKTPROC),
-			cp_shmem_get_size(cp_num, SHMEM_PKTPROC), ret);
-#endif
-
-#if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)
-		ret = pcie_iommu_map(mc->pcie_ch_num,
-			cp_shmem_get_base(cp_num, SHMEM_C2C),
-			cp_shmem_get_base(cp_num, SHMEM_C2C),
-			cp_shmem_get_size(cp_num, SHMEM_C2C), 7);
-		mif_info("pcie_iommu_map cp2cp - addr:0x%08lx size:0x%X ret:%d\n",
-			cp_shmem_get_base(cp_num, SHMEM_C2C),
-			cp_shmem_get_size(cp_num, SHMEM_C2C), ret);
-#endif
-	}
 
 	if (mc->s51xx_pdev != NULL) {
 		s51xx_pcie_restore_state(mc->s51xx_pdev);

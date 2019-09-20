@@ -59,16 +59,6 @@ extern int exynos_pcie_host_v1_l1ss_ctrl(int enable, int id);
 extern int pci_alloc_irq_vectors_affinity(struct pci_dev *dev, unsigned int min_vecs,
 					unsigned int max_vecs, unsigned int flags,
 					const struct irq_affinity *affd);
-#ifdef CONFIG_EXYNOS_PCIE_IOMMU
-extern int pcie_iommu_map(int ch_num, unsigned long iova, phys_addr_t paddr,
-				size_t size, int prot);
-#else
-static inline int pcie_iommu_map(int ch_num, unsigned long iova, phys_addr_t paddr,
-				size_t size, int prot)
-{
-	return -ENODEV;
-}
-#endif
 
 #define AUTOSUSPEND_TIMEOUT	200
 
