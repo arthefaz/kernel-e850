@@ -111,7 +111,6 @@ config MODEM_IF_QOS
 
 config MODEM_IF_NET_GRO
 	bool "enable GRO feature"
-	depends on LINK_DEVICE_SHMEM
 	default n
 	---help---
 	 This enables GRO(Generic Receive Offload) feature
