@@ -681,7 +681,7 @@ static void __mfc_dump_info_and_stop_hw(struct mfc_dev *dev)
 {
 	MFC_TRACE_DEV("** mfc will stop!!!\n");
 	__mfc_dump_info(dev);
-	BUG();
+	s3c2410wdt_set_emergency_reset(0, 0);
 }
 
 static void __mfc_dump_info_and_stop_hw_debug(struct mfc_dev *dev)
