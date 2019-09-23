@@ -2476,7 +2476,7 @@ static bool abox_is_timer_set(struct abox_data *data)
 	unsigned int val;
 	int ret;
 
-	ret = regmap_read(data->timer_regmap, ABOX_TIMER_PRESET_LSB(1), &val);
+	ret = regmap_read(data->timer_regmap, ABOX_TIMER_CTRL1(0), &val);
 	if (ret < 0)
 		val = 0;
 
