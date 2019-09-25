@@ -1246,9 +1246,27 @@ void __ref modemctl_notify_event(enum modemctl_event evt)
 
 void mif_set_snapshot(bool enable)
 {
-	if (!enable)
+	static bool _disabled_by_cpif;
+	bool need_to_set = false;
+
+	if (enable) {
+		if (_disabled_by_cpif) {
+			need_to_set = true;
+			_disabled_by_cpif = false;
+		}
+	} else {
 		acpm_stop_log();
-	dbg_snapshot_set_enable_item("log_kevents", enable);
+
+		if (dbg_snapshot_get_enable_item("log_kevents")) {
+			need_to_set = true;
+			_disabled_by_cpif = true;
+		}
+	}
+
+	if (need_to_set) {
+		mif_info("%s log_kevents\n", enable ? "enable" : "disable");
+		dbg_snapshot_set_enable_item("log_kevents", enable);
+	}
 }
 
 static LIST_HEAD(bm_list);

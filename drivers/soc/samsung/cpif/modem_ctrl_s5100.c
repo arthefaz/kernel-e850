@@ -271,6 +271,8 @@ static irqreturn_t cp_active_handler(int irq, void *data)
 	if (timer_pending(&mld->crash_ack_timer))
 		del_timer(&mld->crash_ack_timer);
 
+	mif_set_snapshot(false);
+
 	old_state = mc->phone_state;
 	new_state = STATE_CRASH_EXIT;
 
@@ -444,6 +446,8 @@ static int power_on_cp(struct modem_ctl *mc)
 
 	if (!wake_lock_active(&mc->mc_wake_lock))
 		wake_lock(&mc->mc_wake_lock);
+
+	mif_set_snapshot(true);
 
 	mc->phone_state = STATE_OFFLINE;
 	pcie_clean_dislink(mc);
