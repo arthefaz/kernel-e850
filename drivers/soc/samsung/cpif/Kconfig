@@ -137,5 +137,11 @@ config LINK_DEVICE_PCIE_S2MPU
 	---help---
 	  Gate some addresses AP and CP shared
 
+config CPIF_CHECK_SJTAG_STATUS
+	bool "Check secure JTAG status to disable CP memory dump"
+	default n
+	---help---
+	  Check secure JTAG status to disable CP memory dump
+
 endmenu
 endif

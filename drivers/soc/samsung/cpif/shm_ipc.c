@@ -399,6 +399,7 @@ static int cp_shmem_probe(struct platform_device *pdev)
 	int ret = 0;
 	u32 use_map_on_cp = 0;
 	int i, j;
+	bool log_cpmem = true;
 
 	mif_info("+++\n");
 
@@ -431,7 +432,13 @@ static int cp_shmem_probe(struct platform_device *pdev)
 	}
 
 	/* Set ramdump for rmem index 0 */
-	dbg_snapshot_add_bl_item_info("log_cpmem", (u32)_cp_rmem[0].p_base, _cp_rmem[0].size);
+#if defined(CONFIG_CPIF_CHECK_SJTAG_STATUS)
+	if (dbg_snapshot_get_sjtag_status() && !dbg_snapshot_get_dpm_status())
+		log_cpmem = false;
+#endif
+	mif_info("cpmem dump on fastboot is %s\n", log_cpmem ? "enabled" : "disabled");
+	if (log_cpmem)
+		dbg_snapshot_add_bl_item_info("log_cpmem", (u32)_cp_rmem[0].p_base, _cp_rmem[0].size);
 
 	mif_info("---\n");
 
