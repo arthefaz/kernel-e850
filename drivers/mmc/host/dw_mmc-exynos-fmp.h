@@ -16,6 +16,7 @@ int exynos_mmc_fmp_cfg(struct dw_mci *host,
 				struct mmc_data *mmc_data,
 				struct page *page,
 				int sector_offfset,
+				int page_index,
 				bool cmdq_enabled);
 int exynos_mmc_fmp_clear(struct dw_mci *host, void *desc,
 				bool cmdq_enabled);
@@ -25,7 +26,8 @@ int exynos_mmc_fmp_sec_cfg(struct dw_mci *host);
 inline int exynos_mmc_fmp_cfg(struct dw_mci *host,
 		       void *desc,
 		       struct mmc_data *mmc_data,
-		       struct page *page, int sector_offset, bool cmdq_enabled)
+		       struct page *page, int sector_offset, int page_index,
+		       bool cmdq_enabled)
 {
 	return 0;
 }

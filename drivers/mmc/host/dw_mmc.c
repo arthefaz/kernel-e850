@@ -995,6 +995,7 @@ static inline int dw_mci_prepare_desc64(struct dw_mci *host,
 	int i, ret;
 	const struct dw_mci_drv_data *drv_data = host->drv_data;
 	int sector_offset = 0;
+	int page_index = 0;
 
 	desc_first = desc_last = desc = host->sg_cpu;
 
@@ -1036,7 +1037,7 @@ static inline int dw_mci_prepare_desc64(struct dw_mci *host,
 			if (drv_data && drv_data->crypto_engine_cfg) {
 				ret = drv_data->crypto_engine_cfg(host, desc,
 					data, sg_page(&data->sg[i]),
-					sector_offset, false);
+					sector_offset, page_index++, false);
 				if (ret) {
 					dev_err(host->dev,
 						"%s: fail to set crypto (%d)\n",

@@ -149,7 +149,9 @@ static struct bio *get_bio(struct dw_mci *host,
 int exynos_mmc_fmp_cfg(struct dw_mci *host,
 		       void *desc,
 		       struct mmc_data *mmc_data,
-		       struct page *page, int sector_offset, bool cmdq_enabled)
+		       struct page *page, int sector_offset,
+		       int page_index,
+		       bool cmdq_enabled)
 {
 	struct fmp_request req;
 	struct bio *bio = get_bio(host, mmc_data, cmdq_enabled);
@@ -162,7 +164,14 @@ int exynos_mmc_fmp_cfg(struct dw_mci *host,
 	/* fill fmp_data_setting */
 	dtfm = crypto_diskcipher_get(bio);
 	if (dtfm) {
-		iv = bio->bi_iter.bi_sector + (sector_t)sector_offset;
+#ifdef CONFIG_CRYPTO_DISKCIPHER_DUN
+		if (bio_dun(bio))
+			iv = bio_dun(bio) + page_index;
+		else
+			iv = bio->bi_iter.bi_sector + (sector_t) sector_offset;
+#else
+		iv = bio->bi_iter.bi_sector + (sector_t) sector_offset;
+#endif
 		req.table = desc;
 		req.cmdq_enabled = 0;
 		req.iv = &iv;
