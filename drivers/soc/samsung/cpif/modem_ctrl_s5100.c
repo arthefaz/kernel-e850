@@ -188,7 +188,7 @@ static irqreturn_t ap_wakeup_handler(int irq, void *data)
 	mif_disable_irq(&mc->s5100_irq_ap_wakeup);
 
 	if (mc->device_reboot) {
-		mif_info("skip : device is rebooting..!!!\n");
+		mif_err("skip : device is rebooting..!!!\n");
 		return IRQ_HANDLED;
 	}
 
@@ -749,6 +749,11 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 
 	mif_err("+++\n");
 
+	if (mc->device_reboot) {
+		mif_err("skip cp crash : device is rebooting..!!!\n");
+		goto exit;
+	}
+
 	if (mif_gpio_get_value(mc->s5100_gpio_phone_active, true) == 1) {
 		mif_gpio_set_value(mc->s5100_gpio_cp_dump_noti, 1, 0);
 	} else {
@@ -761,6 +766,7 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 	else
 		ld->link_trigger_cp_crash(mld, crash_type, "Forced crash is called");
 
+exit:
 	mif_err("---\n");
 	return 0;
 }
