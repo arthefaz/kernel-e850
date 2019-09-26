@@ -561,6 +561,10 @@ static int complete_normal_boot(struct modem_ctl *mc)
 			iod->modem_state_changed(iod, STATE_ONLINE);
 	}
 
+#if defined(CONFIG_CPIF_TP_MONITOR)
+	tpmon_start(1);
+#endif
+
 	mif_info("---\n");
 
 exit:

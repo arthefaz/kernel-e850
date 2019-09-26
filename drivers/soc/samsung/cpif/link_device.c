@@ -687,10 +687,6 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 			mcu_ipc_reg_dump(0);
 #endif
 		atomic_set(&mld->cp_boot_done, 1);
-
-#if defined(CONFIG_CPIF_TP_MONITOR)
-		tpmon_start(1);
-#endif
 	}
 
 #ifdef CONFIG_MCU_IPC

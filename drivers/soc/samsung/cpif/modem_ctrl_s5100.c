@@ -727,6 +727,10 @@ static int complete_normal_boot(struct modem_ctl *mc)
 
 	print_mc_state(mc);
 
+#if defined(CONFIG_CPIF_TP_MONITOR)
+	tpmon_start(1);
+#endif
+
 	mif_info("---\n");
 
 exit:
