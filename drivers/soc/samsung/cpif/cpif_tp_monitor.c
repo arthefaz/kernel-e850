@@ -17,6 +17,9 @@
 #include "modem_utils.h"
 #include "link_device_memory.h"
 #include "cpif_tp_monitor.h"
+#if defined(CONFIG_LINK_DEVICE_PCIE)
+#include "s51xx_pcie.h"
+#endif
 
 static struct cpif_tpmon _tpmon;
 
@@ -156,7 +159,7 @@ static void tpmon_set_gro(struct tpmon_data *gro_data)
 	if (!gro_data->enable)
 		return;
 
-	mif_info("Change GRO at %ldMbps. flush time:%ld\n",
+	mif_info("Change GRO at %ldMbps. flush time:%u\n",
 			gro_data->tpmon->rx_mega_bps, gro_data->values[gro_data->curr_value]);
 	gro_flush_time = gro_data->values[gro_data->curr_value];
 }
@@ -164,6 +167,13 @@ static void tpmon_set_gro(struct tpmon_data *gro_data)
 
 static void tpmon_set_irq_affinity(struct tpmon_data *irq_affinity_data)
 {
+#if defined(CONFIG_LINK_DEVICE_PCIE)
+	struct modem_ctl *mc = irq_affinity_data->tpmon->ld->mc;
+
+	if (!mc)
+		return;
+#endif
+
 	if (!irq_affinity_data->enable)
 		return;
 
@@ -176,7 +186,8 @@ static void tpmon_set_irq_affinity(struct tpmon_data *irq_affinity_data)
 #endif
 
 #if defined(CONFIG_LINK_DEVICE_PCIE)
-	/* TODO */
+	exynos_pcie_rc_set_affinity(mc->pcie_ch_num,
+		irq_affinity_data->values[irq_affinity_data->curr_value]);
 #endif
 }
 
