@@ -86,7 +86,6 @@ struct cp_shared_mem {
 	void __iomem *v_base;
 };
 
-static int _shmem_count;
 static struct cp_shared_mem _cp_shmem[MAX_CP_NUM][MAX_CP_SHMEM];
 
 static int cp_shmem_setup(struct device *dev)
@@ -96,11 +95,7 @@ static int cp_shmem_setup(struct device *dev)
 	u32 cp_num;
 	u32 shmem_index, rmem_index;
 	u32 offset;
-
-	if (_shmem_count >= MAX_CP_SHMEM) {
-		mif_err("_cp_shmem is full for %d\n", _shmem_count);
-		return -ENOMEM;
-	}
+	u32 count = 0;
 
 	mif_dt_read_u32(dev->of_node, "cp_num", cp_num);
 
@@ -110,6 +105,10 @@ static int cp_shmem_setup(struct device *dev)
 		return -EINVAL;
 	}
 	for_each_child_of_node(regions, child) {
+		if (count >= MAX_CP_SHMEM) {
+			mif_err("_cp_shmem is full for %d\n", count);
+			return -ENOMEM;
+		}
 		mif_dt_read_u32(child, "region,index", shmem_index);
 		_cp_shmem[cp_num][shmem_index].index = shmem_index;
 		_cp_shmem[cp_num][shmem_index].cp_num = cp_num;
@@ -120,7 +119,7 @@ static int cp_shmem_setup(struct device *dev)
 		_cp_shmem[cp_num][shmem_index].p_base = _cp_rmem[rmem_index].p_base + offset;
 		mif_dt_read_u32(child, "region,size", _cp_shmem[cp_num][shmem_index].size);
 		mif_dt_read_bool(child, "region,cached", _cp_shmem[cp_num][shmem_index].cached);
-		_shmem_count++;
+		count++;
 	}
 
 	return 0;
