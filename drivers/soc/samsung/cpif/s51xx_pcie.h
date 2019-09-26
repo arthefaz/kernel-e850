@@ -56,6 +56,7 @@ extern int exynos_pcie_rc_l1ss_ctrl(int enable, int id);
 extern int exynos_check_pcie_link_status(int ch_num);
 extern int exynos_pcie_host_v1_l1ss_ctrl(int enable, int id);
 #endif
+extern int exynos_pcie_rc_set_affinity(int ch_num, int affinity);
 extern int pci_alloc_irq_vectors_affinity(struct pci_dev *dev, unsigned int min_vecs,
 					unsigned int max_vecs, unsigned int flags,
 					const struct irq_affinity *affd);
