@@ -26,8 +26,7 @@
 				status = "okay";
 
 				pinctrl-names = "default";
-				pinctrl-0 = <&cp_tray_det>,
-							<&sub_ant_hb_ctl_0 &sub_ant_hb_ctl_1>,
+				pinctrl-0 = <&sub_ant_hb_ctl_0 &sub_ant_hb_ctl_1>,
 							<&tdd_trx_sw1>,
 							<&tx_b13_14_20_sw &b21_lan_en>,
 							<&drx_hb_lna_en1 &drx_hb_lna_en2>,
@@ -326,11 +325,6 @@
 }; /* end of root */
 
 &pinctrl_0 {
-	cp_tray_det: cp_tray_det {
-		samsung,pins = "gpa0-3";
-		samsung,pin-pud = <0>;
-	};
-
 	sub_ant_hb_ctl_0: sub_ant_hb_ctl_0 {
 		samsung,pins = "gpa1-4";
 		samsung,pin-function = <3>;
