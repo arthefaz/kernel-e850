@@ -270,11 +270,10 @@ static int init_control_messages(struct modem_ctl *mc)
 #ifndef CONFIG_HW_REV_DETECT
 	hw_rev = get_system_rev(np);
 #endif
-	if (hw_rev < 0) {
-		mif_err("hw_rev error:%d\n", hw_rev);
-		return -EINVAL;
+	if ((hw_rev < 0) || (hw_rev > sbi_sys_rev_mask)) {
+		mif_err("hw_rev error:0x%x. set to 0\n", hw_rev);
+		hw_rev = 0;
 	}
-
 	update_ctrl_msg(&mld->ap2cp_united_status, hw_rev, sbi_sys_rev_mask,
 			sbi_sys_rev_pos);
 	mif_info("hw_rev:0x%x\n", hw_rev);
