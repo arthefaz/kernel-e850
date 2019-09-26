@@ -466,7 +466,8 @@ void contexthub_print_rtlog(struct contexthub_ipc_info *ipc, bool loop)
 			dev_warn(ipc->dev, "%s: get token\n", __func__);
 			return;
 		}
-		ipc_logbuf_outprint(&ipc->chub_rt_log, loop);
+		if (ipc_logbuf_outprint(&ipc->chub_rt_log, loop))
+			chub_dbg_dump_hw(ipc, CHUB_ERR_NANOHUB);
 		contexthub_put_token(ipc);
 	}
 }
@@ -489,7 +490,8 @@ retry:
 	}
 	ipc_logbuf_flush_on(1);
 	mutex_lock(&log_mutex);
-	ipc_logbuf_outprint(&ipc->chub_rt_log, 100);
+	if (ipc_logbuf_outprint(&ipc->chub_rt_log, 100))
+		chub_dbg_dump_hw(ipc, CHUB_ERR_NANOHUB);
 	mutex_unlock(&log_mutex);
 	ipc_logbuf_flush_on(0);
 	contexthub_put_token(ipc);
