@@ -93,7 +93,7 @@
 	};
 
 	chosen: chosen {
-		bootargs = "console=ram clk_ignore_unused root=/dev/ram0 androidboot.boot_devices=12100000.dwmmc0 androidboot.dtbo_idx=0 androidboot.hardware=exynos3830 androidboot.debug_level=0x4948 firmware_class.path=/vendor/firmware pmic_info=0x3 ccic_info=0x0";
+		bootargs = "console=ram clk_ignore_unused root=/dev/ram0 androidboot.boot_devices=12100000.dwmmc0 androidboot.dtbo_idx=0 androidboot.hardware=exynos850 androidboot.debug_level=0x4948 firmware_class.path=/vendor/firmware pmic_info=0x3 ccic_info=0x0";
 		linux,initrd-start = <0x84000000>;
 		linux,initrd-end = <0x841FFFFF>;
 	};
