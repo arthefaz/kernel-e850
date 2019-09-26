@@ -208,16 +208,12 @@ static irqreturn_t ap_wakeup_handler(int irq, void *data)
 			/* try to block system suspend */
 			if (!wake_lock_active(&mc->mc_wake_lock))
 				wake_lock(&mc->mc_wake_lock);
-
-			mif_err("cp2ap wakeup_work pending\n");
-			mc->pcie_pm_resume_wait = true;
-		} else {
-			mif_err("abnormal gpio_val = %d in suspended\n", gpio_val);
-			mc->apwake_irq_chip->irq_set_type(
-				irq_get_irq_data(mc->s5100_irq_ap_wakeup.num),
-				IRQF_TRIGGER_HIGH);
-			mif_enable_irq(&mc->s5100_irq_ap_wakeup);
 		}
+
+		mif_err("cp2ap_wakeup work pending. gpio_val : %d\n", gpio_val);
+		mc->pcie_pm_resume_wait = true;
+		mc->pcie_pm_resume_gpio_val = gpio_val;
+
 		spin_unlock_irqrestore(&mc->pcie_pm_lock, flags);
 		return IRQ_HANDLED;
 	}
@@ -1093,6 +1089,8 @@ static int s5100_pm_notifier(struct notifier_block *notifier,
 {
 	struct modem_ctl *mc;
 	unsigned long flags;
+	int gpio_val;
+
 	mc = container_of(notifier, struct modem_ctl, pm_notifier);
 
 	switch (pm_event) {
@@ -1109,16 +1107,18 @@ static int s5100_pm_notifier(struct notifier_block *notifier,
 		spin_lock_irqsave(&mc->pcie_pm_lock, flags);
 		mc->pcie_pm_suspended = false;
 		if (mc->pcie_pm_resume_wait) {
-			mif_err("cp2ap wakeup_work resume\n");
 			mc->pcie_pm_resume_wait = false;
+			gpio_val = mc->pcie_pm_resume_gpio_val;
+
+			mif_err("cp2ap_wakeup work resume. gpio_val : %d\n", gpio_val);
 
 			mc->apwake_irq_chip->irq_set_type(
 				irq_get_irq_data(mc->s5100_irq_ap_wakeup.num),
-				IRQF_TRIGGER_LOW);
+				(gpio_val == 1 ? IRQF_TRIGGER_LOW : IRQF_TRIGGER_HIGH));
 			mif_enable_irq(&mc->s5100_irq_ap_wakeup);
 
 			queue_work_on(RUNTIME_PM_AFFINITY_CORE, mc->wakeup_wq,
-				&mc->wakeup_work);
+				(gpio_val == 1 ? &mc->wakeup_work : &mc->suspend_work));
 		}
 		spin_unlock_irqrestore(&mc->pcie_pm_lock, flags);
 		break;

@@ -700,6 +700,7 @@ struct modem_ctl {
 	bool pcie_powered_on;
 	bool pcie_pm_suspended;
 	bool pcie_pm_resume_wait;
+	int pcie_pm_resume_gpio_val;
 	bool device_reboot;
 
 #if defined(CONFIG_SUSPEND_DURING_VOICE_CALL)
