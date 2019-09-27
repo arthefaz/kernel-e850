@@ -25,6 +25,11 @@
 				compatible = "samsung,exynos-cp";
 				status = "okay";
 
+				pinctrl-names = "default";
+				pinctrl-0 = <&s318ap_tdd_trx_sw1>,
+					<&s318ap_lna_on1 &s318ap_lna_on2 &s318ap_lna_on3 &s318ap_lna_on4 &s318ap_lna_on5>,
+					<&s318ap_lna_on9 &s318ap_lna_on10 &s318ap_lna_on11>;
+
 				interrupts = <GIC_SPI INTREQ_RESET_REQ IRQ_TYPE_NONE>;
 				interrupt-names = "RESET_REQ";
 
@@ -48,6 +53,7 @@
 				mif,int_ap2cp_wakeup = <1>;
 				mif,int_ap2cp_status = <2>;
 				mif,int_ap2cp_active = <3>;
+				mif,int_ap2cp_lcd_status = <4>;
 				mif,int_ap2cp_uart_noti = <15>;
 
 				/* Mailbox interrupt number from CP to AP */
@@ -70,6 +76,8 @@
 				ap2cp_kerneltime = <MAILBOX_SR 9>;
 
 				/* Status bit info for mbx_ap2cp_united_status */
+				sbi_lcd_status_mask = <0x1>;
+				sbi_lcd_status_pos = <27>;
 				sbi_crash_type_mask = <0xf>;
 				sbi_crash_type_pos = <23>;
 				sbi_ext_backtrace_mask = <0x1>;
