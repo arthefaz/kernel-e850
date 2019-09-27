@@ -71,11 +71,11 @@ static void __ecs_update_system_status(struct ecs_domain *domain)
 	for_each_cpu_and(cpu, &domain->cpus, cpu_online_mask) {
 		unsigned long util = ml_cpu_util(cpu);
 
-		if (util > domain->cpu_heavy_thr) {
+		if (util >= domain->cpu_heavy_thr) {
 			cpumask_set_cpu(cpu, &ecs_gov.heavy_cpus);
 			cpumask_set_cpu(cpu, &ecs_gov.busy_cpus);
-		} else if (util > domain->cpu_busy_thr &&
-			   cpu_rq(cpu)->nr_running > domain->cpu_nr_running_thr) {
+		} else if (util >= domain->cpu_busy_thr ||
+			   cpu_rq(cpu)->nr_running >= domain->cpu_nr_running_thr) {
 			cpumask_set_cpu(cpu, &ecs_gov.busy_cpus);
 		}
 
@@ -521,7 +521,7 @@ static int __init ecs_parse_dt(void)
 	struct device_node *root, *dn, *child;
 	unsigned int temp;
 
-	root = of_find_node_by_path("/cpus/ems/ecs");
+	root = of_find_node_by_path("/ems/ecs");
 	if (!root)
 		return -EINVAL;
 
