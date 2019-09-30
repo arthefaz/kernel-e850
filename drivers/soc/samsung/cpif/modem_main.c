@@ -309,11 +309,7 @@ static int parse_dt_common_pdata(struct device_node *np,
 	if (pdata->link_type == LINKDEV_SHMEM)
 		mif_dt_read_u32(np, "ulpath_offset", pdata->ulpath_offset);
 #endif
-	/* srinfo settings */
-	mif_dt_read_u32_noerr(np, "srinfo_offset", pdata->srinfo_offset);
-	mif_dt_read_u32_noerr(np, "srinfo_size", pdata->srinfo_size);
-	/* clk_table offset */
-	mif_dt_read_u32_noerr(np, "clk_table_offset", pdata->clk_table_offset);
+
 
 	return 0;
 }
@@ -369,6 +365,17 @@ static int parse_dt_ipc_region_pdata(struct device *dev, struct device_node *np,
 	mif_dt_read_u32_noerr(np, "offset_srinfo_offset", pdata->offset_srinfo_offset);
 	mif_dt_read_u32_noerr(np, "offset_clk_table_offset", pdata->offset_clk_table_offset);
 	mif_dt_read_u32_noerr(np, "offset_buff_desc_offset", pdata->offset_buff_desc_offset);
+
+	/* control message offset setting (optional)*/
+	mif_dt_read_u32_noerr(np, "cmsg_offset", pdata->cmsg_offset);
+	/* srinfo settings */
+	mif_dt_read_u32(np, "srinfo_offset", pdata->srinfo_offset);
+	mif_dt_read_u32(np, "srinfo_size", pdata->srinfo_size);
+	/* clk_table offset (optional)*/
+	mif_dt_read_u32_noerr(np, "clk_table_offset", pdata->clk_table_offset);
+	/* offset setting for new SIT buffer descriptors (optional) */
+	mif_dt_read_u32_noerr(np, "buff_desc_offset", pdata->buff_desc_offset);
+
 	of_property_read_u32_array(np, "ap2cp_msg", pdata->ap2cp_msg, 2);
 	of_property_read_u32_array(np, "cp2ap_msg", pdata->cp2ap_msg, 2);
 	of_property_read_u32_array(np, "cp2ap_united_status", pdata->cp2ap_united_status, 2);

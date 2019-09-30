@@ -90,7 +90,7 @@ struct __packed legacy_map {
 	char raw_rx_buff[BOOT_RAW_RX_BUFF_SZ];
 };
 
-#endif
+#endif /* end of GROUP_MEM_TYPE_SHMEM */
 
 enum legacy_ipc_map {
 	IPC_MAP_FMT = 0,

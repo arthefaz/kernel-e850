@@ -58,20 +58,6 @@ enum mem_iface_type {
 	MEM_LLI_SHMEM = 0x0400,	/* SHMEM with MIPI-LLI interface           */
 };
 
-#define CMSG_OFFSET		0x70
-#define SRINFO_OFFSET		0x200
-#define SRINFO_SIZE		0x800
-#define CLK_TABLE_OFFSET	0xA00
-#define BUFF_DESC_OFFSET	0xE00
-
-/* control message offset from the start of CMSG area*/
-#define AP2CP_MSG_OFFSET	0x0
-#define CP2AP_MSG_OFFSET	0x4
-#define AP2CP_STATUS_OFFSET	0x8
-#define CP2AP_STATUS_OFFSET	0xC
-#define AP2CP_KERNELTIME_SEC	0x38
-#define AP2CP_KERNELTIME_USEC	0x3C
-
 #define MEM_DPRAM_TYPE_MASK	0x00FF
 #define MEM_SHMEM_TYPE_MASK	0xFF00
 
@@ -372,7 +358,7 @@ struct mem_link_device {
 	/* Location for arguments in shared memory */
 	u32 __iomem *ap_version;
 	u32 __iomem *cp_version;
-	u32 __iomem *cmsg_offset;
+	u32 __iomem *cmsg_offset;	/* address where cmsg offset is written */
 	u32 __iomem *srinfo_offset;
 	u32 __iomem *clk_table_offset;
 	u32 __iomem *buff_desc_offset;
@@ -628,7 +614,7 @@ static inline enum dev_format dev_id(enum sipc_ch_id ch)
 #endif
 
 static inline int construct_ctrl_msg(struct ctrl_msg *cmsg, u32 *arr_from_dt,
-					u8 __iomem *base, u32 offset)
+					u8 __iomem *base)
 {
 	if (!cmsg)
 		return -EINVAL;
@@ -639,10 +625,8 @@ static inline int construct_ctrl_msg(struct ctrl_msg *cmsg, u32 *arr_from_dt,
 		cmsg->sr_num = arr_from_dt[1];
 		break;
 	case DRAM_V1:
-		cmsg->addr = (u32 __iomem *)(base + arr_from_dt[1]);
-		break;
 	case DRAM_V2:
-		cmsg->addr = (u32 __iomem *)(base + arr_from_dt[1] + offset);
+		cmsg->addr = (u32 __iomem *)(base + arr_from_dt[1]);
 		break;
 	default:
 		mif_err("ERR! wrong type for ctrl msg\n");

@@ -56,7 +56,7 @@
 #define SHMEM_MSI		9
 
 /* srinfo_offset */
-#define SRINFO_OFFSET		0x800
+#define SRINFO_OFFSET		0x200
 #define SRINFO_SBD_OFFSET	0xF800
 #define SRINFO_SIZE		0x800
 

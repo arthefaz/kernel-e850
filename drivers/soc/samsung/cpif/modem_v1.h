@@ -424,12 +424,18 @@ struct modem_data {
 	/* ulpath offset for 2CP models */
 	u32 ulpath_offset;
 
-	/* srinfo settings (deprecated) */
+	/* control message offset */
+	u32 cmsg_offset;
+
+	/* srinfo settings */
 	u32 srinfo_offset;
 	u32 srinfo_size;
 
-	/* clk_table offset (deprecated) */
+	/* clk_table offset */
 	u32 clk_table_offset;
+
+	/* new SIT buffer descriptor offset */
+	u32 buff_desc_offset;
 
 	struct cp_btl btl;	/* CP background trace log */
 

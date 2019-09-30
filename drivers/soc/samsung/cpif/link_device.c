@@ -3553,6 +3553,7 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	u32 cp_num;
 	struct device_node *np_acpm = NULL;
 	u32 acpm_addr;
+	u8 __iomem *cmsg_base;
 
 	mif_err("+++\n");
 
@@ -3901,26 +3902,34 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 		mld->ulpath->magic = SHM_2CP_UL_PATH_CTL_MAGIC;
 	}
 #endif
-	if (modem->offset_ap_version != 0) {
+	if (modem->offset_ap_version)
 		mld->ap_version = (u32 __iomem *)(mld->base + modem->offset_ap_version);
+	if (modem->offset_cp_version)
 		mld->cp_version = (u32 __iomem *)(mld->base + modem->offset_cp_version);
+	if (modem->offset_cmsg_offset) {
 		mld->cmsg_offset = (u32 __iomem *)(mld->base + modem->offset_cmsg_offset);
-		mld->srinfo_offset = (u32 __iomem *)(mld->base + modem->offset_srinfo_offset);
-		mld->clk_table_offset = (u32 __iomem *)(mld->base + modem->offset_clk_table_offset);
-		mld->buff_desc_offset = (u32 __iomem *)(mld->base + modem->offset_buff_desc_offset);
-		iowrite32(CMSG_OFFSET, mld->cmsg_offset);
-		iowrite32(SRINFO_OFFSET, mld->srinfo_offset);
-		iowrite32(CLK_TABLE_OFFSET, mld->clk_table_offset);
-		iowrite32(BUFF_DESC_OFFSET, mld->buff_desc_offset);
-
-		mld->srinfo_base = (u32 __iomem *)(mld->base + SRINFO_OFFSET);
-		mld->srinfo_size = SRINFO_SIZE;
-		mld->clk_table = (u32 __iomem *)(mld->base + CLK_TABLE_OFFSET);
+		cmsg_base = mld->base + modem->cmsg_offset;
+		iowrite32(modem->cmsg_offset, mld->cmsg_offset);
 	} else {
-		mld->srinfo_base = (u32 __iomem *)(mld->base + modem->srinfo_offset);
-		mld->srinfo_size = modem->srinfo_size;
-		mld->clk_table = (u32 __iomem *)(mld->base + modem->clk_table_offset);
+		cmsg_base = mld->base;
 	}
+	if (modem->offset_srinfo_offset) {
+		mld->srinfo_offset = (u32 __iomem *)(mld->base + modem->offset_srinfo_offset);
+		iowrite32(modem->srinfo_offset, mld->srinfo_offset);
+	}
+	if (modem->offset_clk_table_offset) {
+		mld->clk_table_offset = (u32 __iomem *)(mld->base + modem->offset_clk_table_offset);
+		iowrite32(modem->clk_table_offset, mld->clk_table_offset);
+	}
+	if (modem->offset_buff_desc_offset) {
+		mld->buff_desc_offset = (u32 __iomem *)(mld->base + modem->offset_buff_desc_offset);
+		iowrite32(modem->buff_desc_offset, mld->buff_desc_offset);
+	}
+
+
+	mld->srinfo_base = (u32 __iomem *)(mld->base + modem->srinfo_offset);
+	mld->srinfo_size = modem->srinfo_size;
+	mld->clk_table = (u32 __iomem *)(mld->base + modem->clk_table_offset);
 
 	if (ld->sbd_ipc) {
 		hrtimer_init(&mld->sbd_tx_timer,
@@ -3936,8 +3945,8 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	/*
 	 * Retrieve SHMEM MBOX#, IRQ#, etc.
 	 */
-	construct_ctrl_msg(&mld->cp2ap_msg, modem->cp2ap_msg, mld->base, CP2AP_MSG_OFFSET);
-	construct_ctrl_msg(&mld->ap2cp_msg, modem->ap2cp_msg, mld->base, AP2CP_MSG_OFFSET);
+	construct_ctrl_msg(&mld->cp2ap_msg, modem->cp2ap_msg, cmsg_base);
+	construct_ctrl_msg(&mld->ap2cp_msg, modem->ap2cp_msg, cmsg_base);
 
 	mld->irq_cp2ap_msg = modem->mbx->irq_cp2ap_msg;
 	mld->int_ap2cp_msg = modem->mbx->int_ap2cp_msg;
@@ -4038,16 +4047,11 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 	/**
 	 * For TX Flow-control command from CP
 	 */
-	construct_ctrl_msg(&mld->cp2ap_united_status, modem->cp2ap_united_status,
-					mld->base, CP2AP_STATUS_OFFSET);
-	construct_ctrl_msg(&mld->ap2cp_united_status, modem->ap2cp_united_status,
-					mld->base, AP2CP_STATUS_OFFSET);
-	construct_ctrl_msg(&mld->ap2cp_kerneltime, modem->ap2cp_kerneltime,
-					mld->base, 0);
-	construct_ctrl_msg(&mld->ap2cp_kerneltime_sec, modem->ap2cp_kerneltime_sec,
-					mld->base, AP2CP_KERNELTIME_SEC);
-	construct_ctrl_msg(&mld->ap2cp_kerneltime_usec, modem->ap2cp_kerneltime_usec,
-					mld->base, AP2CP_KERNELTIME_USEC);
+	construct_ctrl_msg(&mld->cp2ap_united_status, modem->cp2ap_united_status, cmsg_base);
+	construct_ctrl_msg(&mld->ap2cp_united_status, modem->ap2cp_united_status, cmsg_base);
+	construct_ctrl_msg(&mld->ap2cp_kerneltime, modem->ap2cp_kerneltime, cmsg_base);
+	construct_ctrl_msg(&mld->ap2cp_kerneltime_sec, modem->ap2cp_kerneltime_sec, cmsg_base);
+	construct_ctrl_msg(&mld->ap2cp_kerneltime_usec, modem->ap2cp_kerneltime_usec, cmsg_base);
 
 	mld->irq_cp2ap_status = modem->mbx->irq_cp2ap_status;
 	mld->tx_flowctrl_cmd = 0;
