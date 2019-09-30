@@ -657,7 +657,7 @@
 		compatible = "samsung,exynos8890-jpeg";
 		reg = <0x0 0x12C90000 0x1000>;
 		interrupts = <0 INTREQ__JPEG 0>;
-		clocks = <&clock MFCMSCL_JPEG>;
+		clocks = <&clock GATE_JPEG_QCH>;
 		clock-names = "gate";
 		iommus = <&sysmmu_mfcmscl>;
 		smfc,int_qos_minlock = <534000>;
