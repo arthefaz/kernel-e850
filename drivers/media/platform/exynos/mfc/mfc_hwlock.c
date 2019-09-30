@@ -738,7 +738,8 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 		dev->continue_clock_on = false;
 	}
 
-	if (drm_predict_disable) {
+	if (!MFC_FEATURE_SUPPORT(dev, dev->pdata->drm_switch_predict)
+			|| drm_predict_disable) {
 		if (drm_switch)
 			mfc_cache_flush(dev, ctx->is_drm, MFC_CACHEFLUSH);
 	} else {
@@ -780,8 +781,7 @@ int mfc_just_run(struct mfc_dev *dev, int new_ctx_index)
 		 * Clear any reserved F/W cache flush for next ctx,
 		 * as this will be newly decided in Prediction code.
 		 */
-		if (!drm_predict_disable)
-			dev->cache_flush_flag = 0;
+		dev->cache_flush_flag = 0;
 
 		/*
 		 * Check again the ctx condition and clear work bits

@@ -609,6 +609,7 @@ struct mfc_platdata {
 	struct mfc_feature sbwc_uncomp;
 	struct mfc_feature mem_clear;
 	struct mfc_feature wait_fw_status;
+	struct mfc_feature drm_switch_predict;
 
 	/* Encoder default parameter */
 	unsigned int enc_param_num;
