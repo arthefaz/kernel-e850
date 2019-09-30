@@ -48,8 +48,6 @@ static int btl_open(struct inode *inode, struct file *filep)
 		return -ENOMEM;
 	}
 
-	memset(btl->mem.v_base, 0, btl->mem.size);
-
 	return 0;
 }
 
@@ -67,8 +65,6 @@ static int btl_release(struct inode *inode, struct file *filep)
 		mif_err("%s: v_base is null\n", btl->name);
 		return -ENOMEM;
 	}
-
-	memset(btl->mem.v_base, 0, btl->mem.size);
 
 	return 0;
 }
@@ -263,6 +259,7 @@ int cp_btl_create(struct cp_btl *btl, struct device *dev)
 		goto create_exit;
 	}
 
+	memset(btl->mem.v_base, 0, btl->mem.size);
 	atomic_set(&btl->active, 1);
 
 	return 0;
