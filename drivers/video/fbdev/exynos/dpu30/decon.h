@@ -38,13 +38,7 @@
 #include <linux/sync_file.h>
 
 /* TODO: SoC dependency will be removed */
-#if defined(CONFIG_SOC_EXYNOS9830)
-#include "./cal_9830/regs-decon.h"
-#include "./cal_9830/decon_cal.h"
-#elif defined(CONFIG_SOC_EXYNOS9630)
-#include "./cal_9630/regs-decon.h"
-#include "./cal_9630/decon_cal.h"
-#elif defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_EXYNOS3830)
 #include "./cal_3830/regs-decon.h"
 #include "./cal_3830/decon_cal.h"
 #endif
@@ -62,13 +56,7 @@
 
 #define MAX_DECON_CNT		3
 
-#if defined(CONFIG_SOC_EXYNOS9830)
-#define MAX_DECON_WIN		6
-#define MAX_DPP_SUBDEV		7
-#elif defined(CONFIG_SOC_EXYNOS9630)
-#define MAX_DECON_WIN		4
-#define MAX_DPP_SUBDEV		5
-#elif defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_EXYNOS3830)
 #define MAX_DECON_WIN		4
 #define MAX_DPP_SUBDEV		5
 #endif
