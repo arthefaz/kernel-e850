@@ -44,16 +44,9 @@ extern int dpu_panel_log_level;
 
 #define MAX_REGULATORS		3
 #define MAX_PANEL_SUPPORT	10
-#define MAX_PANEL_ID_NUM	4
+#define MAX_PANEL_ID_NUM	3
 
-/* for dual display */
-#define MAX_PANEL_DRV_SUPPORT	3
-
-#define DEFAULT_MAX_BRIGHTNESS	255
-#define DEFAULT_BRIGHTNESS	127
-
-extern struct exynos_panel_device *panel_drvdata[MAX_PANEL_DRV_SUPPORT];
-extern struct exynos_panel_ops panel_s6e3hab_ops;
+extern struct exynos_panel_device *panel_drvdata;
 extern struct exynos_panel_ops panel_s6e3ha9_ops;
 extern struct exynos_panel_ops panel_s6e3ha8_ops;
 extern struct exynos_panel_ops panel_s6e3fa0_ops;
@@ -68,14 +61,12 @@ struct exynos_panel_ops {
 	u32 id[MAX_PANEL_ID_NUM];
 	int (*suspend)(struct exynos_panel_device *panel);
 	int (*displayon)(struct exynos_panel_device *panel);
-	int (*mres)(struct exynos_panel_device *panel, u32 mode_idx);
+	int (*mres)(struct exynos_panel_device *panel, int mres_idx);
 	int (*doze)(struct exynos_panel_device *panel);
 	int (*doze_suspend)(struct exynos_panel_device *panel);
 	int (*dump)(struct exynos_panel_device *panel);
 	int (*read_state)(struct exynos_panel_device *panel);
 	int (*set_cabc_mode)(struct exynos_panel_device *panel, int mode);
-	int (*set_light)(struct exynos_panel_device *panel, u32 br_val);
-	int (*set_vrefresh)(struct exynos_panel_device *panel, u32 refresh);
 };
 
 /*
@@ -118,9 +109,9 @@ struct exynos_panel_device {
 	enum power_mode power_mode;
 };
 
-static inline struct exynos_panel_device *get_panel_drvdata(u32 panel_idx)
+static inline struct exynos_panel_device *get_panel_drvdata(void)
 {
-	return panel_drvdata[panel_idx];
+	return panel_drvdata;
 }
 
 #define call_panel_ops(q, op, args...)				\
@@ -137,7 +128,5 @@ static inline struct exynos_panel_device *get_panel_drvdata(u32 panel_idx)
 #define EXYNOS_PANEL_IOC_DOZE_SUSPEND	_IOW('P', 8, u32)
 #define EXYNOS_PANEL_IOC_DUMP		_IOW('P', 9, u32)
 #define EXYNOS_PANEL_IOC_READ_STATE	_IOR('P', 10, u32)
-#define EXYNOS_PANEL_IOC_SET_LIGHT	_IOW('P', 11, u32)
-#define EXYNOS_PANEL_IOC_SET_VREFRESH	_IOW('P', 12, u32)
 
 #endif /* __EXYNOS_PANEL_DRV_H__ */

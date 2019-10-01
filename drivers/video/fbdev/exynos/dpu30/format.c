@@ -521,7 +521,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 	}, {
 		.name = "NV12M_SBWC_10B",
 		.fmt = DECON_PIXEL_FORMAT_NV12M_SBWC_10B,
-		.dma_fmt = IDMA_IMG_FORMAT_YUV420_P010,
+		.dma_fmt = IDMA_IMG_FORMAT_YVU420_P010,
 		.dpp_fmt = DPP_IMG_FORMAT_YUV420_P010,
 		.bpp = 15,
 		.padding = 9,
@@ -549,7 +549,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 	}, {
 		.name = "NV21M_SBWC_10B",
 		.fmt = DECON_PIXEL_FORMAT_NV21M_SBWC_10B,
-		.dma_fmt = IDMA_IMG_FORMAT_YVU420_P010,
+		.dma_fmt = IDMA_IMG_FORMAT_YUV420_P010,
 		.dpp_fmt = DPP_IMG_FORMAT_YUV420_P010,
 		.bpp = 15,
 		.padding = 9,
@@ -577,7 +577,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 	}, {
 		.name = "NV12N_SBWC_10B",
 		.fmt = DECON_PIXEL_FORMAT_NV12N_SBWC_10B,
-		.dma_fmt = IDMA_IMG_FORMAT_YUV420_P010,
+		.dma_fmt = IDMA_IMG_FORMAT_YVU420_P010,
 		.dpp_fmt = DPP_IMG_FORMAT_YUV420_P010,
 		.bpp = 15,
 		.padding = 9,

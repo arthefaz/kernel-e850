@@ -18,29 +18,20 @@
 #include <linux/of_address.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/irq.h>
-#include <drm/drm_edid.h>
 #include <media/v4l2-subdev.h>
 #if defined(CONFIG_EXYNOS_ALT_DVFS)
 #include <soc/samsung/exynos-alt.h>
-#endif
-#if defined(CONFIG_EXYNOS_LATENCY_MONITOR)
-#include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
-#include <soc/samsung/exynos-devfreq.h>
 #endif
 
 #include "decon.h"
 #include "dsim.h"
 #include "dpp.h"
-#include "displayport.h"
 #include "format.h"
 //#include "../../../../soc/samsung/pwrcal/pwrcal.h"
 //#include "../../../../soc/samsung/pwrcal/S5E8890/S5E8890-vclk.h"
 #include "../../../../../kernel/irq/internals.h"
 #ifdef CONFIG_EXYNOS_ALT_DVFS
 struct task_struct *devfreq_change_task;
-#endif
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-#include "dqe.h"
 #endif
 
 /* DECON irq handler for DSI interface */
@@ -49,11 +40,6 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 	struct decon_device *decon = dev_data;
 	u32 irq_sts_reg;
 	u32 ext_irq = 0;
-
-	if (!decon) {
-		decon_err("%s decon has null pointer\n", __func__);
-		BUG();
-	}
 
 	spin_lock(&decon->slock);
 	if (IS_DECON_OFF_STATE(decon))
@@ -66,7 +52,6 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 	if (irq_sts_reg & DPU_FRAME_START_INT_PEND) {
 		/* VSYNC interrupt, accept it */
 		decon->frame_cnt++;
-		decon_dbg("Decon FrameStart(%d)\n", decon->frame_cnt);
 		wake_up_interruptible_all(&decon->wait_vstatus);
 		if (decon->state == DECON_STATE_TUI)
 			decon_info("%s:%d TUI Frame Start\n", __func__, __LINE__);
@@ -74,23 +59,12 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 
 	if (irq_sts_reg & DPU_FRAME_DONE_INT_PEND) {
 		DPU_EVENT_LOG(DPU_EVT_DECON_FRAMEDONE, &decon->sd, ktime_set(0, 0));
-		DPU_DEBUG_DMA_BUF("frame_done\n");
+		if (decon)
+			DPU_DEBUG_DMA_BUF("frame_done\n");
 		decon->hiber.frame_cnt++;
 		decon_hiber_trig_reset(decon);
 		if (decon->state == DECON_STATE_TUI)
 			decon_info("%s:%d TUI Frame Done\n", __func__, __LINE__);
-
-#if defined(CONFIG_EXYNOS_LATENCY_MONITOR)
-		decon_info("[LATENCY] cycle=%d @ACLK=%lu KHz\n",
-			decon_reg_get_latency_monitor_value(decon->id),
-			exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
-#endif
-#if defined(CONFIG_EXYNOS_SUPPORT_READBACK)
-		if (decon->readback.request) {
-			decon_dbg("[CWB] Decon FrameDone!(%d)\n", decon->frame_cnt);
-			queue_work(decon->readback.wq, &decon->readback.work);
-		}
-#endif
 	}
 
 	if (ext_irq & DPU_RESOURCE_CONFLICT_INT_PEND)
@@ -401,33 +375,6 @@ err:
 	return ret;
 }
 
-void decon_get_edid(struct decon_device *decon, struct decon_edid_data *edid_data)
-{
-	struct edid edid;
-	const u8 edid_header[] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00};
-	const u8 edid_display_name[] = {0x73, 0x61, 0x6d, 0x73, 0x75, 0x6e, 0x67, 0x20, 0x6c, 0x63, 0x64, 0x20, 0x20};
-
-	decon_dbg("%s: edid size = %lu, header size = %lu\n", __func__,
-			sizeof(struct edid), sizeof(edid_header));
-	memset(&edid, 0, sizeof(struct edid));
-	memcpy(&edid, edid_header, sizeof(edid_header));
-
-	/*
-	 * If you want to manipulate EDID information, use member variables
-	 * of edid structure in here.
-	 *
-	 * ex) edid.width_cm = xx; edid.height_cm = yy
-	 */
-	edid.mfg_id[0] = 0x4C;    // manufacturer ID for samsung
-	edid.mfg_id[1] = 0x2D;
-	edid.detailed_timings[0].data.other_data.type = 0xfc;  // for display name
-	memcpy(edid.detailed_timings[0].data.other_data.data.str.str, edid_display_name, 13);
-	edid.checksum = 0x0;
-
-	memcpy(edid_data->edid_data, &edid, EDID_BLOCK_SIZE);
-	edid_data->size = EDID_BLOCK_SIZE;
-}
-
 void decon_destroy_vsync_thread(struct decon_device *decon)
 {
 	device_remove_file(decon->dev, &dev_attr_vsync);
@@ -669,26 +616,6 @@ void decon_destroy_psr_info(struct decon_device *decon)
 	device_remove_file(decon->dev, &dev_attr_psr_info);
 }
 
-static ssize_t decon_show_hiber_exit(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct decon_device *decon = dev_get_drvdata(dev);
-	char *p = buf;
-	int len = 0;
-
-	decon_dbg("%s +\n", __func__);
-
-	if (!decon->hiber.early_wakeup_enable)
-		return len;
-
-	decon->hiber.early_wakeup_cnt++;
-	kthread_queue_work(&decon->hiber.exit_worker, &decon->hiber.exit_work);
-	len = sprintf(p, "%d\n", decon->hiber.early_wakeup_cnt);
-
-	decon_dbg("%s -\n", __func__);
-	return len;
-}
-static DEVICE_ATTR(hiber_exit, S_IRUGO, decon_show_hiber_exit, NULL);
 
 /* Framebuffer interface related callback functions */
 static u32 fb_visual(u32 bits_per_pixel, unsigned short palette_sz)
@@ -1048,10 +975,7 @@ int decon_exit_hiber(struct decon_device *decon)
 
 	decon_to_init_param(decon, &p);
 	decon_reg_init(decon->id, decon->dt.out_idx[0], &p);
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-	dqe_restore_context();
-	dqe_reg_start(decon->id, decon->lcd_info);
-#endif
+
 	/*
 	 * After hibernation exit, If panel is partial size, DECON and DSIM
 	 * are also set as same partial size.
@@ -1138,7 +1062,6 @@ int decon_enter_hiber(struct decon_device *decon)
 		decon_set_protected_content(decon, NULL);
 #endif
 		decon->cur_using_dpp = 0;
-		decon->cur_req_win = 0;
 		decon_dpp_stop(decon, false);
 	}
 
@@ -1199,25 +1122,9 @@ static void decon_hiber_handler(struct kthread_work *work)
 	atomic_dec(&decon->hiber.remaining_hiber);
 }
 
-static void decon_exit_hiber_handler(struct kthread_work *work)
-{
-	struct decon_hiber *hiber =
-		container_of(work, struct decon_hiber, exit_work);
-	struct decon_device *decon =
-		container_of(hiber, struct decon_device, hiber);
-
-	if (!decon || !decon->hiber.enabled)
-		return;
-
-	decon_dbg("%s +\n", __func__);
-	decon_exit_hiber(decon);
-	decon_dbg("%s -\n", __func__);
-}
-
 int decon_register_hiber_work(struct decon_device *decon)
 {
 	struct sched_param param;
-	int ret = 0;
 
 	decon->hiber.enabled = false;
 	if (!IS_ENABLED(CONFIG_EXYNOS_HIBERNATION)) {
@@ -1245,35 +1152,6 @@ int decon_register_hiber_work(struct decon_device *decon)
 	decon->hiber.hiber_enter_cnt = DECON_ENTER_HIBER_CNT;
 	decon->hiber.enabled = true;
 	decon_info("display supports hibernation mode\n");
-
-	/* register asynchronous hibernation early wakeup feature */
-	decon->hiber.early_wakeup_enable = false;
-	if (!IS_ENABLED(CONFIG_EXYNOS_HIBERNATION_EARLY_WAKEUP) || (decon->id)) {
-		decon_info("hibernation early wakeup is disabled\n");
-		return 0;
-	}
-
-	/* initialize exit hibernation thread */
-	kthread_init_worker(&decon->hiber.exit_worker);
-	decon->hiber.exit_thread = kthread_run(kthread_worker_fn,
-			&decon->hiber.exit_worker, "decon_exit_hiber");
-	if (IS_ERR(decon->hiber.exit_thread)) {
-		decon->hiber.exit_thread = NULL;
-		decon_err("failed to run exit hibernation thread\n");
-		return PTR_ERR(decon->hiber.exit_thread);
-	}
-	param.sched_priority = 20;
-	sched_setscheduler_nocheck(decon->hiber.exit_thread, SCHED_FIFO, &param);
-	kthread_init_work(&decon->hiber.exit_work, decon_exit_hiber_handler);
-	decon->hiber.early_wakeup_cnt = 0;
-
-	ret = device_create_file(decon->dev, &dev_attr_hiber_exit);
-	if (ret) {
-		decon_err("failed to create hiber exit file\n");
-		return ret;
-	}
-	decon->hiber.early_wakeup_enable = true;
-	decon_info("hibernation early wakeup is enabled\n");
 
 	return 0;
 }
@@ -1354,35 +1232,4 @@ void dpu_set_freq_hop(struct decon_device *decon, bool en)
 		}
 	}
 #endif
-}
-
-int dpu_hw_recovery_process(struct decon_device *decon)
-{
-	int err = 0;
-	u32 dsi_idx = decon->dt.out_idx[0];
-	u32 fps = decon->lcd_info->fps;
-	struct decon_mode_info psr;
-
-	decon_info("decon%d %s +\n", decon->id, __func__);
-
-	if (decon->dt.out_type != DECON_OUT_DSI) {
-		decon_info("decon%d is not DSI path..exit\n", decon->id);
-		err = -EINVAL;
-		goto out;
-	}
-
-	/* dsim & dphy reset and recover */
-	v4l2_subdev_call(decon->out_sd[0], core, ioctl,
-				DSIM_IOC_RECOVERY_PROC, NULL);
-
-	/* decon instant off */
-	decon_to_psr_info(decon, &psr);
-	err = decon_reg_stop_inst(decon->id, dsi_idx, &psr, fps);
-	if (err < 0)
-		decon_err("%s, failed to instant_stop\n", __func__);
-
-out:
-	decon_info("decon%d %s -\n", decon->id, __func__);
-
-	return err;
 }

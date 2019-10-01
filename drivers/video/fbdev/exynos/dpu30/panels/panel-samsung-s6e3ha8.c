@@ -182,7 +182,7 @@ static int s6e3ha8_suspend(struct exynos_panel_device *panel)
 static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 {
 	struct exynos_panel_info *lcd = &panel->lcd_info;
-	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
+	struct dsim_device *dsim = get_dsim_drvdata(0);
 
 	DPU_INFO_PANEL("%s +\n", __func__);
 
@@ -199,27 +199,24 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 		DPU_ERR_PANEL("fail to set MIPI_DSI_DSC_PPS command\n");
 
 	dsim_write_data_seq_delay(dsim, 120, 0x11); /* sleep out: 120ms delay */
-
 	dsim_write_data_seq(dsim, false, 0xB9, 0x00, 0xB0, 0x8F, 0x09, 0x00, 0x00,
 			0x00, 0x11, 0x01);
 	dsim_write_data_seq(dsim, false, 0x1A, 0x1F, 0x00, 0x00, 0x00, 0x00);
-
-	/* brightness */
-	dsim_write_data_table(dsim, GAMCTL1);
-	dsim_write_data_table(dsim, GAMCTL2);
-	dsim_write_data_table(dsim, GAMCTL3);
-	dsim_write_data_table(dsim, BCCTL);
-	dsim_write_data_seq(dsim, false, 0xF7, 0x03);
-	dsim_write_data_seq(dsim, false, 0x53, 0x20);
-
-	dsim_write_data_seq(dsim, false, 0x51, 0x80);
-
+	if (panel->id_index == 0) {
+		dsim_write_data_seq(dsim, false, 0xC7, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00);
+		dsim_write_data_table(dsim, GAMCTL1);
+		dsim_write_data_table(dsim, GAMCTL2);
+		dsim_write_data_table(dsim, GAMCTL3);
+		dsim_write_data_table(dsim, BCCTL);
+		dsim_write_data_seq(dsim, false, 0xF7, 0x03);
+		dsim_write_data_seq(dsim, false, 0x53, 0x20);
+	}
 	dsim_write_data_seq(dsim, false, 0x35); /* TE on */
-
-	/* ESD flag: [2]=VLIN3, [6]=VLIN1 error check*/
 	dsim_write_data_seq(dsim, false, 0xED, 0x44);
 
-#if defined(CONFIG_EXYNOS_PLL_SLEEP) && defined(CONFIG_SOC_EXYNOS9830_EVT0)
+#if !defined(CONFIG_EXYNOS_EWR)
+#if defined(CONFIG_EXYNOS_PLL_SLEEP)
 	/* TE start timing is advanced due to latency for the PLL_SLEEP
 	 *      default value : 2959(active line) + 25(vbp) - 2 = 0xB9C
 	 *      modified value : default value - 11(modifying line) = 0xB91
@@ -229,14 +226,13 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 #else
 	dsim_write_data_seq(dsim, false, 0xB9, 0x00, 0xB0, 0x9C, 0x09);
 #endif
+#endif
 	dsim_write_data_table(dsim, SEQ_FFC);
 
-	/* vrefresh rate configuration */
-	if (panel->lcd_info.fps == 60)
-		dsim_write_data_seq(dsim, false, 0xBB, 0x05, 0x0C);
-	else if (panel->lcd_info.fps == 30)
-		dsim_write_data_seq(dsim, false, 0xBB, 0x05, 0x1C);
-
+	if (panel->id_index == 1) {
+		dsim_write_data_seq(dsim, false, 0x53, 0x20);
+		dsim_write_data_seq(dsim, false, 0x51, 0x01, 0xff);
+	}
 	dsim_write_data_seq(dsim, false, 0x29); /* display on */
 
 	mutex_unlock(&panel->ops_lock);
@@ -245,12 +241,12 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 	return 0;
 }
 
-static int s6e3ha8_mres(struct exynos_panel_device *panel, u32 mode_idx)
+static int s6e3ha8_mres(struct exynos_panel_device *panel, int mres_idx)
 {
-	bool dsc_en;
-	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
+	int dsc_en;
+	struct dsim_device *dsim = get_dsim_drvdata(0);
 
-	dsc_en = panel->lcd_info.display_mode[mode_idx].dsc_en;
+	dsc_en = panel->lcd_info.mres.res_info[mres_idx].dsc_en;
 
 	DPU_INFO_PANEL("%s +\n", __func__);
 
@@ -261,19 +257,19 @@ static int s6e3ha8_mres(struct exynos_panel_device *panel, u32 mode_idx)
 	if (dsc_en) {
 		dsim_write_data_type_seq(dsim, MIPI_DSI_DSC_PRA, 0x1);
 		dsim_write_data_type_table(dsim, MIPI_DSI_DSC_PPS,
-				PPS_TABLE[mode_idx / 2]);
+				PPS_TABLE[mres_idx]);
 	} else {
 		dsim_write_data_type_seq(dsim, MIPI_DSI_DSC_PRA, 0x0);
 	}
 	dsim_write_data_seq(dsim, false,  0x9F, 0x5A, 0x5A);
 
 	/* partial update configuration */
-	dsim_write_data_table(dsim, CASET_TABLE[mode_idx / 2]);
-	dsim_write_data_table(dsim, PASET_TABLE[mode_idx / 2]);
+	dsim_write_data_table(dsim, CASET_TABLE[mres_idx]);
+	dsim_write_data_table(dsim, PASET_TABLE[mres_idx]);
 
 	dsim_write_data_seq(dsim, false,  0xF0, 0x5A, 0x5A);
 	/* DDI scaling configuration */
-	dsim_write_data_table(dsim, SCALER_TABLE[mode_idx / 2]);
+	dsim_write_data_table(dsim, SCALER_TABLE[mres_idx]);
 	dsim_write_data_seq(dsim, false,  0xF0, 0xA5, 0xA5);
 
 	mutex_unlock(&panel->ops_lock);
@@ -302,76 +298,8 @@ static int s6e3ha8_read_state(struct exynos_panel_device *panel)
 	return 0;
 }
 
-static int s6e3ha8_set_light(struct exynos_panel_device *panel, u32 br_val)
-{
-	u8 data[2] = {0, };
-	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
-
-	DPU_DEBUG_PANEL("%s +\n", __func__);
-
-	mutex_lock(&panel->ops_lock);
-
-#if 1
-	/* 8-bit : BCCTL(B1h) 46th - D4(BIT_EXT_SEL) = 1 {[7:0]<<2 | [7:6]} */
-	data[0] = br_val;
-	dsim_write_data_seq(dsim, false, 0x51, data[0]);
-#else
-	/* 10-bit : BCCTL(B1h) 46th - D4(BIT_EXT_SEL) = 0 */
-	DPU_DEBUG_PANEL("(I: 8bit) br_val = %d\n", br_val);
-	br_val = (br_val << 2) | ((br_val >> 6) & 0x03);
-	DPU_DEBUG_PANEL("(O: 10bit) br_val = %d\n", br_val);
-
-	/* WRDISBV: 1st DBV[7:0], 2nd DBV[9:8] */
-	data[0] = (br_val >> 0) & 0xFF;
-	data[1] = (br_val >> 8) & 0x03;
-	dsim_write_data_seq(dsim, false, 0x51, data[0], data[1]);
-#endif
-
-	mutex_unlock(&panel->ops_lock);
-
-	DPU_DEBUG_PANEL("%s -\n", __func__);
-	return 0;
-}
-
-static int s6e3ha8_set_vrefresh(struct exynos_panel_device *panel, u32 refresh)
-{
-	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
-
-	DPU_DEBUG_PANEL("%s +\n", __func__);
-	DPU_DEBUG_PANEL("applied vrefresh(%d), requested vrefresh(%d)\n",
-			panel->lcd_info.fps, refresh);
-
-	if (panel->lcd_info.fps == refresh) {
-		DPU_INFO_PANEL("prev and req fps are same(%d)\n", refresh);
-		return 0;
-	}
-
-	mutex_lock(&panel->ops_lock);
-
-	dsim_write_data_seq(dsim, false, 0xF0, 0x5A, 0x5A);
-
-	if (refresh == 60) {
-		dsim_write_data_seq(dsim, false, 0xBB, 0x05, 0x0C);
-	} else if (refresh == 30) {
-		dsim_write_data_seq(dsim, false, 0xBB, 0x05, 0x1C);
-	} else {
-		DPU_INFO_PANEL("not supported fps(%d)\n", refresh);
-		goto end;
-	}
-
-	panel->lcd_info.fps = refresh;
-
-end:
-	dsim_write_data_seq(dsim, false, 0xF0, 0xA5, 0xA5);
-
-	mutex_unlock(&panel->ops_lock);
-	DPU_DEBUG_PANEL("%s -\n", __func__);
-
-	return 0;
-}
-
 struct exynos_panel_ops panel_s6e3ha8_ops = {
-	.id		= {0x460091, 0x430491, 0xffffff, 0xffffff},
+	.id		= {0x460091, 0x430491, 0xffffff},
 	.suspend	= s6e3ha8_suspend,
 	.displayon	= s6e3ha8_displayon,
 	.mres		= s6e3ha8_mres,
@@ -379,6 +307,4 @@ struct exynos_panel_ops panel_s6e3ha8_ops = {
 	.doze_suspend	= s6e3ha8_doze_suspend,
 	.dump		= s6e3ha8_dump,
 	.read_state	= s6e3ha8_read_state,
-	.set_light	= s6e3ha8_set_light,
-	.set_vrefresh	= s6e3ha8_set_vrefresh,
 };

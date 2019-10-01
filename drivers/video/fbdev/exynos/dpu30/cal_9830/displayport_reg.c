@@ -17,7 +17,6 @@
 #include "../../../drivers/usb/dwc3/dwc3-exynos.h"
 #endif
 
-#if defined(CONFIG_SOC_EXYNOS9830_EVT0)
 u32 phy_default_value[DEFAULT_SFR_CNT][2] = {
 	/* COMMON */
 	{0x0320, 0x07}, {0x0324, 0x27},	{0x0830, 0x07}, {0x1030, 0x07}, {0x1830, 0x07},
@@ -32,15 +31,6 @@ u32 phy_default_value[DEFAULT_SFR_CNT][2] = {
 	{0x0550, 0xF0}, {0x0558, 0xF0}, {0x0E08, 0x7C}, {0x09E8, 0x3F}, {0x09EC, 0xFF},
 	{0x1E08, 0x7C},	{0x19E8, 0x3F}, {0x19EC, 0xFF},
 };
-#else
-u32 phy_default_value[DEFAULT_SFR_CNT][2] = {
-	/* COMMON */
-	{0x0BBC, 0x77}, {0x10B4, 0x77},	{0x1BBC, 0x77}, {0x20B4, 0x77}, {0x10B0, 0x05},
-	{0x20B0, 0x05}, {0x0298, 0x18},	{0x0594, 0x08}, {0x0420, 0x77}, {0x0858, 0x63},
-	{0x1058, 0x63}, {0x1858, 0x63},	{0x2058, 0x63},	{0x0894, 0x00}, {0x0A1C, 0x00},
-	{0x1094, 0x00}, {0x1894, 0x00},	{0x1A1C, 0x00},	{0x2094, 0x00},
-};
-#endif
 
 u32 phy_tune_parameters[4][4][5] = { /* {amp, post, pre, idrv, accdrv} */
 	{	/* Swing Level_0 */
@@ -179,7 +169,6 @@ void displayport_reg_phy_init_setting(void)
 		displayport_phy_write(phy_default_value[i][0], phy_default_value[i][1]);
 
 	displayport_phy_write_mask(CMN_REG0008, 0, OVRD_AUX_EN);
-	displayport_phy_write_mask(CMN_REG000A, 0xA, ANA_AUX_TX_LVL_CTRL);
 }
 
 void displayport_reg_phy_mode_setting(void)
@@ -2060,6 +2049,7 @@ void displayport_audio_enable(u32 sst_id,
 	displayport_reg_set_dp_audio_enable(sst_id, audio_config_data->audio_enable);
 	displayport_set_audio_ch_status(sst_id, audio_config_data);
 	displayport_reg_set_audio_ch_status_same(sst_id, 1);
+	displayport_reg_set_dma_req_gen(sst_id, 1);
 	displayport_reg_set_audio_master_mode_enable(sst_id, audio_config_data->audio_enable);
 	displayport_reg_print_audio_state(sst_id);
 }
@@ -2081,6 +2071,11 @@ void displayport_audio_wait_buf_full(u32 sst_id)
 	displayport_reg_set_audio_master_mode_enable(sst_id, 0);
 	displayport_reg_set_dma_req_gen(sst_id, 0);
 	displayport_info("SST%d displayport_audio_wait_buf_full\n", sst_id + 1);
+}
+
+void displayport_audio_dma_force_req_release(u32 sst_id)
+{
+	displayport_info("SST%d skip displayport_audio_dma_force_req_release(not need)", sst_id + 1);
 }
 
 void displayport_audio_bist_enable(u32 sst_id,

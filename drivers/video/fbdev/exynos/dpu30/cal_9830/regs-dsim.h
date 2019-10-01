@@ -33,9 +33,6 @@
 #define DSIM_STATUS_IDLE				0
 #define DSIM_STATUS_ACTIVE				1
 
-#define DSIM_LINK_STATUS2				(0x10)
-#define DSIM_LINK_STATUS2_DATALANE_STATUS_GET(x)	((x >> 0) & 0x7)
-
 #define DSIM_LINK_STATUS3				(0x14)
 #define DSIM_LINK_STATUS3_PLL_STABLE			(1 << 0)
 
@@ -71,8 +68,7 @@
 
 #define DSIM_DESKEW_CTRL				(0x24)
 #define DSIM_DESKEW_CTRL_HW_EN				(1 << 15)
-#define DSIM_DESKEW_CTRL_HW_POSITION(_x)		((_x) << 14)
-#define DSIM_DESKEW_CTRL_HW_POSITION_MASK		(1 << 14)
+#define DSIM_DESKEW_CTRL_HW_POSITION			(1 << 14)
 #define DSIM_DESKEW_CTRL_HW_INTERVAL(_x)		((_x) << 2)
 #define DSIM_DESKEW_CTRL_HW_INTERVAL_MASK		(0xfff << 2)
 #define DSIM_DESKEW_CTRL_HW_INIT			(1 << 1)
@@ -165,10 +161,8 @@
 #define DSIM_CONFIG_VC_ID_MASK				(0x3 << 15)
 #define DSIM_CONFIG_PIXEL_FORMAT(_x)			((_x) << 9)
 #define DSIM_CONFIG_PIXEL_FORMAT_MASK			(0x3f << 9)
-#define DSIM_CONFIG_PER_FRAME_READ_EN(_x)		((_x) << 8)
-#define DSIM_CONFIG_PER_FRAME_READ_EN_MASK		(1 << 8)
-#define DSIM_CONFIG_EOTP_EN(_x)				((_x) << 7)
-#define DSIM_CONFIG_EOTP_EN_MASK				(1 << 7)
+#define DSIM_CONFIG_PER_FRAME_READ_EN			(1 << 8)
+#define DSIM_CONFIG_EOTP_EN				(1 << 7)
 #define DSIM_CONFIG_NUM_OF_DATA_LANE(_x)		((_x) << 5)
 #define DSIM_CONFIG_NUM_OF_DATA_LANE_MASK		(0x3 << 5)
 #define DSIM_CONFIG_LANES_EN(_x)			(((_x) & 0x1f) << 0)
@@ -266,8 +260,7 @@
 
 /* Multi slice setting register*/
 #define DSIM_CPRS_CTRL					(0x74)
-#define DSIM_CPRS_CTRL_MULI_SLICE_PACKET(_x)		((_x) << 3)
-#define DSIM_CPRS_CTRL_MULI_SLICE_PACKET_MASK		(1 << 3)
+#define DSIM_CPRS_CTRL_MULI_SLICE_PACKET		(1 << 3)
 #define DSIM_CPRS_CTRL_NUM_OF_SLICE(_x)			((_x) << 0)
 #define DSIM_CPRS_CTRL_NUM_OF_SLICE_MASK		(0x7 << 0)
 #define DSIM_CPRS_CTRL_NUM_OF_SLICE_GET(x)		(((x) >> 0) & 0x7)
@@ -411,14 +404,6 @@
 #define DSIM_OPTION_SUITE				(0x010C)
 #define	DSIM_OPTION_SUITE_UPDT_EN_MASK			(0x1 << 0)
 
-#define DSIM_VT_HTIMING0				(0x0110)
-#define DSIM_VT_HTIMING0_HSA_PERIOD(_x)			((_x) << 16)
-#define DSIM_VT_HTIMING0_HACT_PERIOD(_x)		((_x) << 0)
-
-#define DSIM_VT_HTIMING1				(0X0114)
-#define DSIM_VT_HTIMING1_HFP_PERIOD(_x)			((_x) << 16)
-#define DSIM_VT_HTIMING1_HBP_PERIOD(_x)			((_x) << 0)
-
 /*
  * DPHY  registers
  */
@@ -473,11 +458,9 @@
 #define DSIM_PHY_DITHER_RSEL(_x)		(((_x) & 0xf) << 12)
 #define DSIM_PHY_DITHER_RSEL_MASK		(0xf << 12)
 #define DSIM_PHY_DITHER_EN			(0x1 << 11)
-#define DSIM_PHY_DITHER_FSEL(_x)		(((_x) & 0x1) << 10)
-#define DSIM_PHY_DITHER_FSEL_MASK		(0x1 << 10)
+#define DSIM_PHY_DITHER_FSEL			(0x1 << 10)
 #define DSIM_PHY_DITHER_BYPASS			(0x1 << 9)
-#define DSIM_PHY_DITHER_AFC_ENB(_x)		(((_x) & 0x1) << 8)
-#define DSIM_PHY_DITHER_AFC_ENB_MASK		(0x1 << 8)
+#define DSIM_PHY_DITHER_AFC_ENB			(0x1 << 8)
 #define DSIM_PHY_DITHER_EXTAFC(_x)		(((_x) & 0x1f) << 0)
 #define DSIM_PHY_DITHER_EXTAFC_MASK		(0x1f << 0)
 /* PLL_CON5 */
@@ -594,7 +577,7 @@
 
 /* macros for DPHY timing controls */
 /* MC/MD_TIME_CON0 */
-#define DSIM_PHY_HSTX_CLK_SEL(_x)		(((_x) & 0x1) << 12)
+#define DSIM_PHY_HSTX_CLK_SEL			(0x1 << 12)
 #define DSIM_PHY_TLPX(_x)			(((_x) & 0xff) << 4)
 #define DSIM_PHY_TLPX_MASK			(0xff << 4)
 /* MD only */

@@ -1560,19 +1560,11 @@
 #define SST2_VSC_SDP_DATA_PAYLOAD_FIFO		(0x6D80)
 
 /* PHY register */
-#if defined(CONFIG_SOC_EXYNOS9830_EVT0)
 #define DEFAULT_SFR_CNT			44 /* COMMON + DP settings */
-#else
-#define DEFAULT_SFR_CNT			19
-#endif
 
 #define CMN_REG0008				(0x0020)
 #define OVRD_AUX_EN					(0x01 << 3)
 #define AUX_EN						(0x01 << 2)
-
-#define CMN_REG000A				(0x0028)
-#define ANA_AUX_TX_LVL_CTRL			(0x0F << 3)
-#define ANA_AUX_RX_VCM_P_CTRL		(0x03 << 0)
 
 #define CMN_REG00B8				(0x02E0)
 #define SSC_EN						(0x03 << 4)

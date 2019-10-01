@@ -43,7 +43,9 @@
 
 #include "./panels/exynos_panel.h"
 #include "dsim.h"
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
 #include "displayport.h"
+#endif
 #include "hdr_metadata.h"
 #include "format.h"
 
@@ -53,7 +55,7 @@
 #define MAX_DECON_WIN		6
 #define MAX_DPP_SUBDEV		7
 
-#define DISP_RESTRICTION_VER	20190612
+#define DISP_RESTRICTION_VER	20180608
 
 extern struct decon_device *decon_drvdata[MAX_DECON_CNT];
 extern int decon_log_level;
@@ -304,7 +306,6 @@ enum dpp_rotate {
 
 #define CSC_STANDARD_MASK	0x3F	/* 6 bits */
 #define CSC_RANGE_MASK		0x7	/* 3 bits */
-#define CSC_TRANSFER_MASK	0x1F	/* 5 bits */
 enum dpp_csc_eq {
 	/* eq_mode : 6bits [5:0] */
 	CSC_STANDARD_SHIFT = 0,
@@ -325,10 +326,7 @@ enum dpp_csc_eq {
 	CSC_RANGE_SHIFT = 6,
 	CSC_RANGE_LIMITED = 0x0,
 	CSC_RANGE_FULL = 0x1,
-	CSC_RANGE_EXTENDED = 0x2,
 	CSC_RANGE_UNSPECIFIED = 7,
-	/* transfer : 5bits [13:9] */
-	CSC_TRANSFER_SHIFT = 9,
 };
 
 enum dpp_comp_src {
@@ -339,78 +337,13 @@ enum dpp_comp_src {
 
 enum dpp_hdr_standard {
 	DPP_HDR_OFF = 0,
-	DPP_HDR_ST2084 = 1,
-	DPP_HDR_HLG = 2,
-	DPP_TRANSFER_LINEAR = 3,
-	DPP_TRANSFER_SRGB = 4,
-	DPP_TRANSFER_SMPTE_170M = 5,
-	DPP_TRANSFER_GAMMA2_2 = 6,
-	DPP_TRANSFER_GAMMA2_6 = 7,
-	DPP_TRANSFER_GAMMA2_8 = 8,
+	DPP_HDR_ST2084,
+	DPP_HDR_HLG,
 };
-
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-/* HAL intent info */
-enum HAL_intent_info {
-	HAL_RENDER_INTENT_COLORIMETRIC = 0,
-	HAL_RENDER_INTENT_ENHANCE = 1,
-	HAL_RENDER_INTENT_TONE_MAP_COLORIMETRIC = 2,
-	HAL_RENDER_INTENT_TONE_MAP_ENHANCE = 3,
-};
-
-/* HAL color transform*/
-enum HAL_color_transform {
-	HAL_COLOR_TRANSFORM_IDENTITY = 0,
-	HAL_COLOR_TRANSFORM_ARBITRARY_MATRIX = 1,
-	HAL_COLOR_TRANSFORM_VALUE_INVERSE = 2,
-	HAL_COLOR_TRANSFORM_GRAYSCALE = 3,
-	HAL_COLOR_TRANSFORM_CORRECT_PROTANOPIA = 4,
-	HAL_COLOR_TRANSFORM_CORRECT_DEUTERANOPIA = 5,
-	HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA = 6,
-};
-
-/* intents num and information in each color mode*/
-struct decon_render_intents_num_info {
-	u32 color_mode;
-	u32 render_intent_num;
-};
-
-struct decon_render_intent_info {
-	u32 color_mode;
-	u32 index;
-	u32 render_intent;
-};
-
-/* decon supported intent info */
-enum decon_supported_intent_info {
-	DECON_INTENT_COLORIMETRIC = 0,
-	DECON_INTENT_ENHANCE,
-	DECON_INTENT_NUM_MAX,
-};
-
-#define DECON_MATRIX_ELEMENT_NUM 16
-struct decon_color_transform_info {
-	u32 hint;
-	int matrix[DECON_MATRIX_ELEMENT_NUM];
-};
-
-struct decon_color_mode_with_render_intent_info {
-	u32 color_mode;
-	u32 render_intent;
-};
-#endif
 
 enum decon_color_mode {
 	HAL_COLOR_MODE_NATIVE = 0,
 	HAL_COLOR_MODE_NUM_MAX,
-};
-
-/* decon supported color mode */
-enum decon_supported_color_mode {
-	DECON_COLOR_MODE_NATIVE = 0,
-	DECON_COLOR_MODE_SRGB,
-	DECON_COLOR_MODE_DCI_P3,
-	DECON_COLOR_MODE_NUM_MAX,
 };
 
 struct decon_color_mode_info {
@@ -464,17 +397,6 @@ struct decon_frame {
 	u32 f_h;
 };
 
-struct decon_readback {
-	bool enabled;
-	bool request;
-	bool drm;
-	u8 num_buffers;
-	struct decon_dma_buf_data dma_buf_data[MAX_PLANE_CNT];
-	struct dma_fence *fence;
-	struct work_struct work;
-	struct workqueue_struct *wq;
-};
-
 struct decon_win_config {
 	enum {
 		DECON_WIN_STATE_DISABLED = 0,
@@ -492,8 +414,14 @@ struct decon_win_config {
 			int				fd_idma[3];
 			int				acq_fence;
 			int				rel_fence;
+			int				plane_alpha;
 			enum decon_blending		blending;
-			/* channel id of DECON CHMAP */
+			/*
+			 * TODO: channel will be changed to channel number in the future.
+			 *
+			 * Although the variable name is channel, it indicates
+			 * DPP channel number currently.
+			 */
 			u32				channel;
 			enum decon_pixel_format		format;
 			struct dpp_params		dpp_parm;
@@ -510,20 +438,18 @@ struct decon_win_config {
 	struct decon_frame dst;
 	bool protection;
 	bool compression;
-	int plane_alpha;
 };
 
 struct decon_reg_data {
 	u32 num_of_window;
-	int plane_cnt[MAX_DECON_WIN + 2];
+	int plane_cnt[MAX_DECON_WIN + 1];
 	struct list_head list;
 	struct decon_rect blender_bg;
-	struct decon_win_config dpp_config[MAX_DECON_WIN + 2];
+	struct decon_win_config dpp_config[MAX_DECON_WIN + 1];
 	struct decon_win_rect block_rect[MAX_DECON_WIN];
-	struct decon_window_regs win_regs[MAX_DECON_WIN + 2];
-	struct decon_dma_buf_data dma_buf_data[MAX_DECON_WIN + 2][MAX_PLANE_CNT];
+	struct decon_window_regs win_regs[MAX_DECON_WIN];
+	struct decon_dma_buf_data dma_buf_data[MAX_DECON_WIN + 1][MAX_PLANE_CNT];
 	struct dma_fence *retire_fence;
-	struct decon_readback readback;
 
 	/*
 	 * If window update size is changed, that size has to be applied to
@@ -538,23 +464,20 @@ struct decon_reg_data {
 	/* current update region */
 	struct decon_rect up_region;
 	/* protected contents playback */
-	bool protection[MAX_DECON_WIN + 2];
+	bool protection[MAX_DECON_WIN + 1];
 	/* cursor async */
 	bool is_cursor_win[MAX_DECON_WIN];
 	int cursor_win;
 
-	bool mode_update;
+	bool mres_update;
 	u32 lcd_width;
 	u32 lcd_height;
-
-	u32 fps;
-	u32 mode_idx;
+	int mres_idx;
 };
 
 struct decon_win_config_data {
 	int	retire_fence;
 	int	fd_odma;
-	u32	fps;
 	struct decon_win_config config[MAX_DECON_WIN + 2];
 };
 
@@ -562,7 +485,6 @@ enum hwc_ver {
 	HWC_INIT = 0,
 	HWC_1_0 = 1,
 	HWC_2_0 = 2,
-	HWC_2_3 = 3,
 };
 
 struct decon_disp_info {
@@ -578,11 +500,6 @@ struct dpu_size_info {
 	u32 h_in;
 	u32 w_out;
 	u32 h_out;
-};
-
-struct decon_readback_attribute {
-	u32 format;
-	u32 dataspace;
 };
 
 /**
@@ -649,6 +566,7 @@ typedef enum dpu_event_type {
 	DPU_EVT_DECON_SET_BUFFER,
 	/* cursor async */
 	DPU_EVT_CURSOR_POS,
+	DPU_EVT_CURSOR_UPDATE,
 
 	/* window update */
 	DPU_EVT_WINUP_UPDATE_REGION,
@@ -660,10 +578,6 @@ typedef enum dpu_event_type {
 
 	DPU_EVT_MEM_MAP,
 	DPU_EVT_MEM_UNMAP,
-
-	DPU_EVT_ACQUIRE_RSC,
-	DPU_EVT_RELEASE_RSC,
-	DPU_EVT_STORE_RSC,
 
 	DPU_EVT_MAX, /* End of EVENT */
 } dpu_event_t;
@@ -690,7 +604,7 @@ struct disp_log_pm {
 /* Related with S3CFB_WIN_CONFIG */
 struct decon_update_reg_data {
 	struct decon_window_regs 	win_regs[MAX_DECON_WIN];
-	struct decon_win_config 	win_config[MAX_DECON_WIN + 2];
+	struct decon_win_config 	win_config[MAX_DECON_WIN + 1];
 	struct decon_win_rect 		win;
 };
 
@@ -732,15 +646,6 @@ struct disp_log_memmap {
 	int dpp_ch;
 };
 
-struct disp_log_rsc {
-	unsigned long prev_used_dpp;
-	unsigned long cur_using_dpp;
-	unsigned long prev_req_win;
-	unsigned long cur_req_win;
-	unsigned int hw_ch_info;  /* DPP channels actually occupied by HW */
-	unsigned int hw_win_info; /* windows actually occupied by HW */
-};
-
 /**
  * struct dpu_log - Display Subsystem Log
  * This struct includes DECON/DSIM/DPP
@@ -757,7 +662,6 @@ struct dpu_log {
 		struct disp_log_cursor cursor;
 		struct disp_log_winup winup;
 		struct disp_log_memmap memmap;
-		struct disp_log_rsc rsc;
 	} data;
 };
 
@@ -767,7 +671,7 @@ struct dpu_size_err_info {
 };
 
 /* Definitions below are used in the DECON */
-#define	DPU_EVENT_LOG_MAX	SZ_2K	/* 2048 */
+#define	DPU_EVENT_LOG_MAX	SZ_1K	/* 1024 */
 #define	DPU_EVENT_PRINT_MAX	(DPU_EVENT_LOG_MAX >> 1)
 #define	DPU_EVENT_LOG_RETRY	3
 #define DPU_EVENT_KEEP_CNT	3
@@ -810,7 +714,7 @@ typedef enum dpu_f_evt_type {
 	DPU_F_EVT_MAX,
 } dpu_f_evt_t;
 
-#define DPU_FENCE_EVENT_LOG_MAX		SZ_1K
+#define DPU_FENCE_EVENT_LOG_MAX		SZ_512
 #define DPU_FENCE_EVENT_LOG_RETRY	2
 #define MAX_DPU_FENCE_NAME		32
 
@@ -880,7 +784,6 @@ struct decon_dt_info {
 	int max_win;
 	int dft_win;
 	int dft_ch;
-	int wb_win;
 	const char *pd_name;
 	int dpp_cnt;
 	int dsim_cnt;
@@ -982,9 +885,6 @@ struct decon_hiber {
 	struct task_struct *thread;
 	struct kthread_worker worker;
 	struct kthread_work work;
-	struct task_struct *exit_thread;
-	struct kthread_worker exit_worker;
-	struct kthread_work exit_work;
 	struct dentry *profile;
 	atomic_t trig_cnt;
 	atomic_t block_cnt;
@@ -1014,10 +914,6 @@ struct decon_hiber {
 #if defined(CONFIG_EXYNOS_CHANGE_HIBER_CNT)
 	struct dentry *hiber_cnt;
 #endif
-	struct dentry *hiber_exit;
-	/* hibernation exit count only increasing through sysfs */
-	u32 early_wakeup_cnt;
-	bool early_wakeup_enable;
 
 	int frame_cnt;
 	int fps;
@@ -1098,13 +994,11 @@ struct decon_bts {
 /* cursor async */
 struct decon_cursor {
 	struct decon_reg_data regs;
-	struct mutex unmask_lock;
-	spinlock_t pos_lock;
+	struct mutex lock;
 	u32 xpos;
 	u32 ypos;
 	bool unmask;	/* if true, cursor unmask period */
 	bool enabled;
-	u32 regset_margin;
 };
 
 /* systrace */
@@ -1127,11 +1021,6 @@ struct decon_freq_hop {
 	u32 request_k;	/* user requested k value */
 };
 
-struct decon_edid_data {
-	int size;
-	u8 edid_data[EDID_BLOCK_SIZE * MAX_EDID_BLOCK];
-};
-
 struct decon_device {
 	int id;
 	enum decon_state state;
@@ -1139,9 +1028,6 @@ struct decon_device {
 	unsigned long prev_used_dpp;
 	unsigned long cur_using_dpp;
 	unsigned long dpp_err_stat;
-
-	unsigned long prev_req_win;
-	unsigned long cur_req_win;
 
 	struct mutex lock;
 	struct mutex pm_lock;
@@ -1174,7 +1060,6 @@ struct decon_device {
 	struct decon_cursor cursor;
 	struct decon_fence fence;
 	struct decon_freq_hop freq_hop;
-	struct decon_readback readback;
 
 	int frame_cnt;
 	int frame_cnt_target;
@@ -1294,7 +1179,6 @@ bool decon_validate_x_alignment(struct decon_device *decon, int x, u32 w,
 int decon_wait_for_vsync(struct decon_device *decon, u32 timeout);
 int decon_check_limitation(struct decon_device *decon, int idx,
 		struct decon_win_config *config);
-void decon_readback_wq(struct work_struct *work);
 
 /* DECON to DSI interface functions */
 int decon_register_irq(struct decon_device *decon);
@@ -1309,7 +1193,6 @@ int decon_create_esd_thread(struct decon_device *decon);
 void decon_destroy_esd_thread(struct decon_device *decon);
 int decon_create_psr_info(struct decon_device *decon);
 void decon_destroy_psr_info(struct decon_device *decon);
-void decon_get_edid(struct decon_device *decon, struct decon_edid_data *edid_data);
 
 /* DECON to writeback interface functions */
 int decon_wb_register_irq(struct decon_device *decon);
@@ -1334,8 +1217,6 @@ int decon_displayport_get_config(struct decon_device *dex,
 		struct exynos_displayport_data *displayport_data);
 int decon_displayport_set_config(struct decon_device *dex,
 		struct exynos_displayport_data *displayport_data);
-int decon_displayport_get_edid(struct decon_device *decon,
-		struct decon_edid_data *edid);
 void decon_displayport_under_flow_int_mask(u32 decon_id);
 #endif
 
@@ -1485,6 +1366,8 @@ static inline bool decon_is_bypass(struct decon_device *decon)
 }
 #endif
 
+int decon_update_pwr_state(struct decon_device *decon, u32 mode);
+
 enum disp_pwr_mode {
 	DISP_PWR_OFF = 0,
 	DISP_PWR_DOZE,
@@ -1493,12 +1376,10 @@ enum disp_pwr_mode {
 	DISP_PWR_MAX,
 };
 
-int decon_update_pwr_state(struct decon_device *decon, enum disp_pwr_mode mode);
-
-typedef int (*set_pwr_state_t)(struct decon_device *);
+typedef int (*set_pwr_state_t)(void *);
 
 struct disp_pwr_state {
-	enum decon_state state;
+	u32 state;
 	set_pwr_state_t set_pwr_state;
 };
 
@@ -1581,9 +1462,6 @@ int decon_update_last_regs(struct decon_device *decon,
 
 void decon_hiber_start(struct decon_device *decon);
 void decon_hiber_finish(struct decon_device *decon);
-int dpu_hw_recovery_process(struct decon_device *decon);
-
-u32 decon_processed_linecnt(struct decon_device *decon);
 
 /* IOCTL commands */
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, __u32)
@@ -1598,9 +1476,6 @@ u32 decon_processed_linecnt(struct decon_device *decon);
 						struct decon_disp_info)
 #define EXYNOS_DISP_RESTRICTIONS	_IOW('F', 261, \
 						struct dpp_restrictions_info)
-#define EXYNOS_GET_DPP_CNT		_IOW('F', 262, __u32)
-#define EXYNOS_GET_DPP_RESTRICTION	_IOW('F', 263, \
-						struct dpp_ch_restriction)
 
 #define S3CFB_START_CRC			_IOW('F', 270, u32)
 #define S3CFB_SEL_CRC_BITS		_IOW('F', 271, u32)
@@ -1626,21 +1501,4 @@ u32 decon_processed_linecnt(struct decon_device *decon);
 #define EXYNOS_GET_COLOR_MODE		_IOW('F', 601, struct decon_color_mode_info)
 #define EXYNOS_SET_COLOR_MODE		_IOW('F', 602, __u32)
 
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-#define EXYNOS_GET_RENDER_INTENTS_NUM	_IOW('F', 610, struct decon_render_intents_num_info)
-#define EXYNOS_GET_RENDER_INTENT	_IOW('F', 611, struct decon_render_intent_info)
-
-#define EXYNOS_SET_COLOR_TRANSFORM	_IOW('F', 612, struct decon_color_transform_info)
-#define EXYNOS_SET_COLOR_MODE_WITH_RENDER_INTENT	_IOW('F', 613, struct decon_color_mode_with_render_intent_info)
-#endif
-
-/* Readback */
-#define EXYNOS_GET_READBACK_ATTRIBUTE	_IOW('F', 614, struct decon_readback_attribute)
-
-/* Display Mode Support */
-#define EXYNOS_GET_DISPLAY_MODE_NUM	_IOW('F', 700, u32)
-#define EXYNOS_GET_DISPLAY_MODE		_IOW('F', 701, struct exynos_display_mode)
-
-/* EDID data */
-#define EXYNOS_GET_EDID		_IOW('F', 800, struct decon_edid_data)
 #endif /* ___SAMSUNG_DECON_H__ */

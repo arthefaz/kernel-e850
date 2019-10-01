@@ -111,19 +111,11 @@ enum decon_scaler_path {
 	SCALERPATH_VGRF	= 0x2,
 };
 
-enum decon_enhance_path {
-	ENHANCEPATH_ENHANCE_ALL_OFF     = 0x0,
-	ENHANCEPATH_DQE_ON              = 0x2,
-};
-
 enum decon_path_cfg {
 	PATH_CON_ID_DSIM_IF0 = 0,
 	PATH_CON_ID_DSIM_IF1 = 1,
-	PATH_CON_ID_WB = 2,
 	PATH_CON_ID_DP = 3,
 	PATH_CON_ID_DUAL_DSC = 4,
-	PATH_CON_ID_DSC0 = 4,
-	PATH_CON_ID_DSC1 = 5,
 	PATH_CON_ID_DSCC_EN = 7,
 };
 
@@ -257,8 +249,6 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p);
 int decon_reg_start(u32 id, struct decon_mode_info *psr);
 int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr, bool rst,
 		u32 fps);
-int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info * psr,
-		u32 fps);
 
 /* DECON window control */
 void decon_reg_set_win_enable(u32 id, u32 win_idx, u32 en);
@@ -276,9 +266,6 @@ void decon_reg_update_req_and_unmask(u32 id, struct decon_mode_info *psr);
 int decon_reg_wait_update_done_timeout(u32 id, unsigned long timeout);
 int decon_reg_wait_update_done_and_mask(u32 id,
 		struct decon_mode_info *psr, u32 timeout);
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-void decon_reg_update_req_dqe(u32 id);
-#endif
 
 /* For window update and multi resolution feature */
 int decon_reg_wait_idle_status_timeout(u32 id, unsigned long timeout);
@@ -291,7 +278,6 @@ void decon_reg_set_mres(u32 id, struct decon_param *p);
 void decon_reg_release_resource(u32 id, struct decon_mode_info *psr);
 void decon_reg_config_wb_size(u32 id, struct exynos_panel_info *lcd_info,
 		struct decon_param *param);
-void decon_reg_set_cwb_enable(u32 id, u32 en);
 
 /* DECON interrupt control */
 void decon_reg_set_int(u32 id, struct decon_mode_info *psr, u32 en);
@@ -307,7 +293,7 @@ void decon_reg_get_crc_data(u32 id, u32 *w0_data, u32 *w1_data);
 /* DPU hw limitation check */
 struct decon_device;
 struct decon_win_config;
-int decon_reg_check_global_limitation(struct decon_device *decon,
+int decon_check_global_limitation(struct decon_device *decon,
 		struct decon_win_config *config);
 
 /* TODO: this will be removed later */
@@ -316,15 +302,7 @@ void decon_reg_update_req_global(u32 id);
 /* PLL sleep related functions */
 void decon_reg_set_pll_sleep(u32 id, u32 en);
 void decon_reg_set_pll_wakeup(u32 id, u32 en);
-u32 decon_reg_get_run_status(u32 id);
 
-
-/* Latency monitoring */
-u32 decon_reg_get_latency_monitor_value(u32 id);
-
-/* Related data path */
-void decon_reg_set_data_path(u32 id, enum decon_data_path d_path,
-		enum decon_scaler_path s_path, enum decon_enhance_path e_path);
 /*********************************************************************/
 
 #endif /* __SAMSUNG_DECON_CAL_H__ */

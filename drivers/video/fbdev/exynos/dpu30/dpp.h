@@ -245,7 +245,7 @@ static inline u32 dpp_read(u32 id, u32 reg_id)
 static inline u32 dpp_read_mask(u32 id, u32 reg_id, u32 mask)
 {
 	u32 val = dpp_read(id, reg_id);
-	val &= (mask);
+	val &= (~mask);
 	return val;
 }
 
@@ -346,6 +346,5 @@ void dpp_dump(struct dpp_device *dpp);
 #define DPP_GET_PORT_NUM		_IOR('P', 7, unsigned long)
 #define DPP_GET_RESTRICTION		_IOR('P', 8, unsigned long)
 #define DPP_GET_SHD_ADDR		_IOR('P', 9, unsigned long)
-#define DPP_CURSOR_WIN_CONFIG		_IOW('P', 10, struct dpp_config)
 
 #endif /* __SAMSUNG_DPP_H__ */

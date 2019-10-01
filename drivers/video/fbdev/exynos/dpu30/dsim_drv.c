@@ -45,18 +45,10 @@
 #include "dsim.h"
 #include "./panels/exynos_panel_drv.h"
 
-#include <soc/samsung/exynos-pd.h>
-
 int dsim_log_level = 6;
 
 struct dsim_device *dsim_drvdata[MAX_DSIM_CNT];
 EXPORT_SYMBOL(dsim_drvdata);
-
-/*
- * This global mutex lock protects to initialize or de-initialize DSIM and DPHY
- * hardware when multi display is in operation
- */
-DEFINE_MUTEX(g_dsim_lock);
 
 static char *dsim_state_names[] = {
 	"INIT",
@@ -69,9 +61,6 @@ static char *dsim_state_names[] = {
 
 static int dsim_runtime_suspend(struct device *dev);
 static int dsim_runtime_resume(struct device *dev);
-static struct exynos_pm_domain *dpu_get_pm_domain(void);
-static int dpu_power_on(struct dsim_device *dsim);
-static int dpu_power_off(struct dsim_device *dsim);
 
 int dsim_call_panel_ops(struct dsim_device *dsim, u32 cmd, void *arg)
 {
@@ -284,7 +273,7 @@ int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1, 
 
 	mutex_lock(&dsim->cmd_lock);
 	if (!IS_DSIM_ON_STATE(dsim)) {
-		dsim_warn("DSIM is not ready. state(%d)\n", dsim->state);
+		dsim_err("DSIM is not ready. state(%d)\n", dsim->state);
 		ret = -EINVAL;
 		goto err_exit;
 	}
@@ -419,17 +408,6 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 
 	if (!wait_for_completion_timeout(&dsim->rd_comp, MIPI_RD_TIMEOUT)) {
 		dsim_err("MIPI DSIM read Timeout!\n");
-		if (dsim_reg_get_datalane_status(dsim->id) == DSIM_DATALANE_STATUS_BTA) {
-			if (decon_reg_get_run_status(decon->id)) {
-				dsim_reset_panel(dsim);
-				dpu_hw_recovery_process(decon);
-			} else {
-				dsim_reset_panel(dsim);
-				dsim_reg_recovery_process(dsim);
-			}
-		} else
-			dsim_err("datalane status is %d\n", dsim_reg_get_datalane_status(dsim->id));
-
 		return -ETIMEDOUT;
 	}
 
@@ -774,13 +752,9 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 	/* DPHY power on : iso release */
 	dsim_phy_power_on(dsim);
 
-	mutex_lock(&g_dsim_lock);
-
 	panel_ctrl = (state == DSIM_STATE_ON) ? true : false;
 	dsim_reg_init(dsim->id, &dsim->panel->lcd_info, &dsim->clks, panel_ctrl);
 	dsim_reg_start(dsim->id);
-
-	mutex_unlock(&g_dsim_lock);
 
 	dsim->state = state;
 	enable_irq(dsim->res.irq);
@@ -870,15 +844,10 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 	dsim->state = state;
 	mutex_unlock(&dsim->cmd_lock);
 
-	mutex_lock(&g_dsim_lock);
-
 	if (dsim_reg_stop(dsim->id, dsim->data_lane) < 0) {
 		dsim_to_regs_param(dsim, &regs);
 		__dsim_dump(dsim->id, &regs);
 	}
-
-	mutex_unlock(&g_dsim_lock);
-
 	disable_irq(dsim->res.irq);
 
 	/* HACK */
@@ -971,18 +940,12 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 	mutex_unlock(&dsim->cmd_lock);
 
 	disable_irq(dsim->res.irq);
-
-	mutex_lock(&g_dsim_lock);
-
 	ret = dsim_reg_stop_and_enter_ulps(dsim->id, dsim->panel->lcd_info.ddi_type,
 			dsim->data_lane);
 
-	mutex_unlock(&g_dsim_lock);
-
 	dsim_phy_power_off(dsim);
 
-	dpu_power_off(dsim);
-
+	pm_runtime_put_sync(dsim->dev);
 #if defined(CONFIG_CPU_IDLE)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
 #endif
@@ -1008,20 +971,16 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 0);
 #endif
 
-	dpu_power_on(dsim);
+	pm_runtime_get_sync(dsim->dev);
 
 	/* DPHY power on : iso release */
 	dsim_phy_power_on(dsim);
-
-	mutex_lock(&g_dsim_lock);
 
 	dsim_reg_init(dsim->id, &dsim->panel->lcd_info, &dsim->clks, false);
 	ret = dsim_reg_exit_ulps_and_start(dsim->id, dsim->panel->lcd_info.ddi_type,
 			dsim->data_lane);
 	if (ret < 0)
 		dsim_dump(dsim);
-
-	mutex_unlock(&g_dsim_lock);
 
 	enable_irq(dsim->res.irq);
 
@@ -1154,10 +1113,6 @@ static long dsim_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 
 	case DSIM_IOC_FREE_FB_RES:
 		ret = dsim_free_fb_resource(dsim);
-		break;
-
-	case DSIM_IOC_RECOVERY_PROC:
-		dsim_reg_recovery_process(dsim);
 		break;
 
 	default:
@@ -1347,8 +1302,6 @@ static int dsim_parse_dt(struct dsim_device *dsim, struct device *dev)
 		dsim->phy_ex = NULL;
 	}
 
-	dsim->pd = dpu_get_pm_domain();
-
 	dsim->dev = dev;
 
 	return 0;
@@ -1386,7 +1339,7 @@ static int dsim_init_resources(struct dsim_device *dsim, struct platform_device 
 	dsim_info("res: start(0x%x), end(0x%x)\n", (u32)res->start, (u32)res->end);
 
 	dsim->res.regs = devm_ioremap_resource(dsim->dev, res);
-	if (IS_ERR(dsim->res.regs)) {
+	if (!dsim->res.regs) {
 		dsim_err("failed to remap DSIM SFR region\n");
 		return -EINVAL;
 	}
@@ -1400,7 +1353,7 @@ static int dsim_init_resources(struct dsim_device *dsim, struct platform_device 
 				(u32)res->start, (u32)res->end);
 
 		dsim->res.phy_regs = devm_ioremap_resource(dsim->dev, res);
-		if (IS_ERR(dsim->res.phy_regs)) {
+		if (!dsim->res.phy_regs) {
 			dsim_err("failed to remap DSIM DPHY SFR region\n");
 			return -EINVAL;
 		}
@@ -1414,9 +1367,8 @@ static int dsim_init_resources(struct dsim_device *dsim, struct platform_device 
 		dsim_info("dphy_extra res: start(0x%x), end(0x%x)\n",
 				(u32)res->start, (u32)res->end);
 
-		dsim->res.phy_regs_ex = devm_ioremap(dsim->dev, res->start,
-							resource_size(res));
-		if (IS_ERR(dsim->res.phy_regs_ex)) {
+		dsim->res.phy_regs_ex = devm_ioremap_resource(dsim->dev, res);
+		if (!dsim->res.phy_regs_ex) {
 			dsim_err("failed to remap DSIM DPHY(EXTRA) SFR region\n");
 			return -EINVAL;
 		}
@@ -1454,7 +1406,7 @@ static int dsim_register_panel(struct dsim_device *dsim)
 
 	dsim_info("%s +\n", __func__);
 
-	dsim->panel = get_panel_drvdata(dsim->id);
+	dsim->panel = get_panel_drvdata();
 	if (dsim->panel->found == true) {
 		/* clock and data lane count are stored for DSIM init */
 		dsim->clks.hs_clk = dsim->panel->lcd_info.hs_clk;
@@ -1507,115 +1459,6 @@ static int dsim_register_panel(struct dsim_device *dsim)
 	pm_runtime_put_sync(dsim->dev);
 
 	dsim_info("%s -\n", __func__);
-
-	return 0;
-}
-
-static struct exynos_pm_domain *dpu_get_pm_domain(void)
-{
-	struct platform_device *pdev = NULL;
-	struct device_node *np = NULL;
-	struct exynos_pm_domain *pd_temp, *pd = NULL;
-
-	if (!IS_ENABLED(CONFIG_EXYNOS_DIRECT_PD_CTRL)) {
-		dsim_info("DPU direct power domain control is disabled\n");
-		return NULL;
-	}
-
-	for_each_compatible_node(np, NULL, "samsung,exynos-pd") {
-		if (!of_device_is_available(np))
-			continue;
-
-		pdev = of_find_device_by_node(np);
-		pd_temp = (struct exynos_pm_domain *)platform_get_drvdata(pdev);
-		if (!strcmp("pd-dpu", (const char *)(pd_temp->genpd.name))) {
-			pd = pd_temp;
-			break;
-		}
-	}
-
-	if(pd == NULL)
-		dsim_err("%s: dpu pm_domain is null\n", __func__);
-
-	dsim_info("DPU direct power domain control is enabled\n");
-
-	return pd;
-}
-
-static int dpu_power_on(struct dsim_device *dsim)
-{
-	int status;
-
-	if (!dsim->pd) {
-		pm_runtime_get_sync(dsim->dev);
-		return 0;
-	}
-
-	mutex_lock(&dsim->pd->access_lock);
-
-	status = cal_pd_status(dsim->pd->cal_pdid);
-	if (status) {
-		dsim_info("%s: Already dpu power on\n",__func__);
-		mutex_unlock(&dsim->pd->access_lock);
-		return 0;
-	}
-
-	if (cal_pd_control(dsim->pd->cal_pdid, 1) != 0) {
-		dsim_err("%s: failed to dpu power on\n", __func__);
-		mutex_unlock(&dsim->pd->access_lock);
-		return -1;
-	}
-
-	status = cal_pd_status(dsim->pd->cal_pdid);
-	if (!status) {
-		dsim_err("%s: status error : dpu power on\n", __func__);
-		mutex_unlock(&dsim->pd->access_lock);
-		return -1;
-	}
-
-	dsim_runtime_resume(dsim->dev);
-
-	mutex_unlock(&dsim->pd->access_lock);
-	dsim_info("dpu power on\n");
-
-	return 0;
-}
-
-static int dpu_power_off(struct dsim_device *dsim)
-{
-	int status;
-
-	if (!dsim->pd) {
-		pm_runtime_put_sync(dsim->dev);
-		return 0;
-	}
-
-	mutex_lock(&dsim->pd->access_lock);
-
-	status = cal_pd_status(dsim->pd->cal_pdid);
-	if (!status) {
-		dsim_info("%s: Already dpu power off\n",__func__);
-		mutex_unlock(&dsim->pd->access_lock);
-		return 0;
-	}
-
-	dsim_runtime_suspend(dsim->dev);
-
-	if (cal_pd_control(dsim->pd->cal_pdid, 0) != 0) {
-		dsim_err("%s: failed to dpu power off\n", __func__);
-		mutex_unlock(&dsim->pd->access_lock);
-		return -1;
-	}
-
-	status = cal_pd_status(dsim->pd->cal_pdid);
-	if (status) {
-		dsim_err("%s: status error : dpu power off\n", __func__);
-		mutex_unlock(&dsim->pd->access_lock);
-		return -1;
-	}
-
-	mutex_unlock(&dsim->pd->access_lock);
-	dsim_info("dpu power off\n");
 
 	return 0;
 }
@@ -1754,9 +1597,6 @@ static int dsim_runtime_suspend(struct device *dev)
 
 	DPU_EVENT_LOG(DPU_EVT_DSIM_SUSPEND, &dsim->sd, ktime_set(0, 0));
 	dsim_dbg("%s +\n", __func__);
-#if defined(CONFIG_EXYNOS_DIRECT_PD_CTRL)
-	exynos_sysmmu_control(dsim->dev, false);
-#endif
 	clk_disable_unprepare(dsim->res.aclk);
 	dsim_dbg("%s -\n", __func__);
 	return 0;
@@ -1768,9 +1608,6 @@ static int dsim_runtime_resume(struct device *dev)
 
 	DPU_EVENT_LOG(DPU_EVT_DSIM_RESUME, &dsim->sd, ktime_set(0, 0));
 	dsim_dbg("%s: +\n", __func__);
-#if defined(CONFIG_EXYNOS_DIRECT_PD_CTRL)
-	exynos_sysmmu_control(dsim->dev, true);
-#endif
 	clk_prepare_enable(dsim->res.aclk);
 	dsim_dbg("%s -\n", __func__);
 	return 0;

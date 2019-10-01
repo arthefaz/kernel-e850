@@ -44,11 +44,29 @@ static void idma_reg_set_irq_enable(u32 id)
 	dma_write_mask(id, IDMA_IRQ, ~0, IDMA_IRQ_ENABLE);
 }
 
-static void idma_reg_set_dynamic_gating(u32 id, u32 en)
+static void idma_reg_set_in_qos_lut(u32 id, u32 lut_id, u32 qos_t)
 {
-	u32 val = en ? ~0: 0;
+	u32 reg_id;
 
-	dma_write(id, IDMA_DYNAMIC_GATING_EN, val);
+	if (lut_id == 0)
+		reg_id = IDMA_QOS_LUT07_00;
+	else
+		reg_id = IDMA_QOS_LUT15_08;
+	dma_write(id, reg_id, qos_t);
+}
+
+static void idma_reg_set_sram_clk_gate_en(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	dma_write_mask(id, IDMA_DYNAMIC_GATING_EN, val, IDMA_SRAM_CG_EN);
+}
+
+static void idma_reg_set_dynamic_gating_en_all(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	dma_write_mask(id, IDMA_DYNAMIC_GATING_EN, val, IDMA_DG_EN_ALL);
 }
 
 static void idma_reg_clear_irq(u32 id, u32 irq)
@@ -59,6 +77,12 @@ static void idma_reg_clear_irq(u32 id, u32 irq)
 static void idma_reg_set_sw_reset(u32 id)
 {
 	dma_write_mask(id, IDMA_ENABLE, ~0, IDMA_SRESET);
+}
+
+static void idma_reg_set_assigned_mo(u32 id, u32 mo)
+{
+	dma_write_mask(id, IDMA_ENABLE, IDMA_ASSIGNED_MO(mo),
+			IDMA_ASSIGNED_MO_MASK);
 }
 
 static int idma_reg_wait_sw_reset_status(u32 id)
@@ -92,6 +116,12 @@ static void idma_reg_set_pixel_alpha(u32 id, u32 alpha)
 {
 	dma_write_mask(id, IDMA_IN_CON, IDMA_PIXEL_ALPHA(alpha),
 			IDMA_PIXEL_ALPHA_MASK);
+}
+
+static void idma_reg_set_in_ic_max(u32 id, u32 ic_max)
+{
+	dma_write_mask(id, IDMA_IN_CON, IDMA_IN_IC_MAX(ic_max),
+			IDMA_IN_IC_MAX_MASK);
 }
 
 static void idma_reg_set_rotation(u32 id, u32 rot)
@@ -142,37 +172,37 @@ static void idma_reg_set_test_pattern(u32 id, u32 pat_id, u32 *pat_dat)
 
 static void idma_reg_set_afbc(u32 id, enum dpp_comp_type ct, u32 rcv_num)
 {
-	u32 afbc_en = 0;
-	u32 rcv_en = 0;
+	u32 val = 0;
 
 	if (ct == COMP_TYPE_AFBC)
-		afbc_en = IDMA_AFBC_EN;
-	if (ct != COMP_TYPE_NONE)
-		rcv_en = IDMA_RECOVERY_EN;
+		val = ~0;
 
-	dma_write_mask(id, IDMA_IN_CON, afbc_en, IDMA_AFBC_EN);
-	dma_write(id, IDMA_RECOVERY_CTRL, rcv_en | IDMA_RECOVERY_NUM(rcv_num));
+	dma_write_mask(id, IDMA_IN_CON, val, IDMA_AFBC_EN);
+	dma_write_mask(id, IDMA_RECOVERY_CTRL, val, IDMA_RECOVERY_EN);
+	dma_write_mask(id, IDMA_RECOVERY_CTRL, IDMA_RECOVERY_NUM(rcv_num),
+				IDMA_RECOVERY_NUM_MASK);
 }
 
 static void idma_reg_set_sbwc(u32 id, enum dpp_comp_type ct, u32 rcv_num)
 {
-	u32 sbwc_en = 0;
-	u32 rcv_en = 0;
+	u32 val = 0;
 
 	if (ct == COMP_TYPE_SBWC)
-		sbwc_en = IDMA_SBWC_EN;
-	if (ct != COMP_TYPE_NONE)
-		rcv_en = IDMA_RECOVERY_EN;
+		val = ~0;
 
-	dma_write_mask(id, IDMA_IN_CON, sbwc_en, IDMA_SBWC_EN);
-	dma_write(id, IDMA_RECOVERY_CTRL, rcv_en | IDMA_RECOVERY_NUM(rcv_num));
+	dma_write_mask(id, IDMA_IN_CON, val, IDMA_SBWC_EN);
+	dma_write_mask(id, IDMA_RECOVERY_CTRL, val, IDMA_RECOVERY_EN);
+	dma_write_mask(id, IDMA_RECOVERY_CTRL, IDMA_RECOVERY_NUM(rcv_num),
+				IDMA_RECOVERY_NUM_MASK);
 }
 
 static void idma_reg_set_deadlock(u32 id, u32 en, u32 dl_num)
 {
-	u32 val = en ? IDMA_DEADLOCK_TIMER_EN : 0;
-	val |= IDMA_DEADLOCK_TIMER(dl_num);
-	dma_write(id, IDMA_DEADLOCK_EN, val);
+	u32 val = en ? ~0 : 0;
+
+	dma_write_mask(id, IDMA_DEADLOCK_EN, val, IDMA_DEADLOCK_TIMER_EN);
+	dma_write_mask(id, IDMA_DEADLOCK_EN, IDMA_DEADLOCK_TIMER(dl_num),
+				IDMA_DEADLOCK_TIMER_MASK);
 }
 
 /****************** ODMA CAL functions ******************/
@@ -275,11 +305,18 @@ static void dpp_reg_set_irq_enable(u32 id)
 	dpp_write_mask(id, DPP_IRQ, ~0, DPP_IRQ_ENABLE);
 }
 
-static void dpp_reg_set_dynamic_gating(u32 id, u32 en)
+static void dpp_reg_set_clock_gate_en_all(u32 id, u32 en)
 {
-	u32 val = en ? DPP_DG_EN_ALL : 0;
+	u32 val = en ? ~0 : 0;
 
-	dpp_write(id, DPP_DYNAMIC_GATING_EN, val);
+	dpp_write_mask(id, DPP_ENABLE, val, DPP_ALL_CLOCK_GATE_EN_MASK);
+}
+
+static void dpp_reg_set_dynamic_gating_en_all(u32 id, u32 en)
+{
+	u32 val = en ? ~0 : 0;
+
+	dpp_write_mask(id, DPP_DYNAMIC_GATING_EN, val, DPP_DG_EN_ALL);
 }
 
 static void dpp_reg_set_linecnt(u32 id, u32 en)
@@ -322,7 +359,7 @@ static int dpp_reg_wait_sw_reset_status(u32 id)
 
 static void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 {
-	u32 val;
+	u32 val, mask;
 	u32 csc_id = CSC_CUSTOMIZED_START; /* CSC_BT601/625/525 */
 	u32 c00, c01, c02;
 	u32 c10, c11, c12;
@@ -345,20 +382,22 @@ static void dpp_reg_set_csc_coef(u32 id, u32 csc_std, u32 csc_rng)
 	c21 = csc_y2r_3x3_t[csc_id][2][1];
 	c22 = csc_y2r_3x3_t[csc_id][2][2];
 
+	mask = (DPP_CSC_COEF_H_MASK | DPP_CSC_COEF_L_MASK);
 	val = (DPP_CSC_COEF_H(c01) | DPP_CSC_COEF_L(c00));
-	dpp_write(id, DPP_CSC_COEF0, val);
+	dpp_write_mask(id, DPP_CSC_COEF0, val, mask);
 
 	val = (DPP_CSC_COEF_H(c10) | DPP_CSC_COEF_L(c02));
-	dpp_write(id, DPP_CSC_COEF1, val);
+	dpp_write_mask(id, DPP_CSC_COEF1, val, mask);
 
 	val = (DPP_CSC_COEF_H(c12) | DPP_CSC_COEF_L(c11));
-	dpp_write(id, DPP_CSC_COEF2, val);
+	dpp_write_mask(id, DPP_CSC_COEF2, val, mask);
 
 	val = (DPP_CSC_COEF_H(c21) | DPP_CSC_COEF_L(c20));
-	dpp_write(id, DPP_CSC_COEF3, val);
+	dpp_write_mask(id, DPP_CSC_COEF3, val, mask);
 
+	mask = DPP_CSC_COEF_L_MASK;
 	val = DPP_CSC_COEF_L(c22);
-	dpp_write(id, DPP_CSC_COEF4, val);
+	dpp_write_mask(id, DPP_CSC_COEF4, val, mask);
 
 	dpp_dbg("---[DPP%d Y2R CSC Type: std=%d, rng=%d]---\n",
 		id, csc_std, csc_rng);
@@ -449,23 +488,15 @@ static void dpp_reg_set_v_coef(u32 id, u32 v_ratio)
 
 static void dpp_reg_set_scale_ratio(u32 id, struct dpp_params_info *p)
 {
-	u32 prev_h_ratio, prev_v_ratio;
+	dpp_write_mask(id, DPP_MAIN_H_RATIO, DPP_H_RATIO(p->h_ratio),
+			DPP_H_RATIO_MASK);
+	dpp_write_mask(id, DPP_MAIN_V_RATIO, DPP_V_RATIO(p->v_ratio),
+			DPP_V_RATIO_MASK);
 
-	prev_h_ratio = dpp_read_mask(id, DPP_MAIN_H_RATIO, DPP_H_RATIO_MASK);
-	prev_v_ratio = dpp_read_mask(id, DPP_MAIN_V_RATIO, DPP_V_RATIO_MASK);
+	dpp_reg_set_h_coef(id, p->h_ratio);
+	dpp_reg_set_v_coef(id, p->v_ratio);
 
-	if (prev_h_ratio != p->h_ratio) {
-		dpp_write(id, DPP_MAIN_H_RATIO, DPP_H_RATIO(p->h_ratio));
-		dpp_reg_set_h_coef(id, p->h_ratio);
-	}
-
-	if (prev_v_ratio != p->v_ratio) {
-		dpp_write(id, DPP_MAIN_V_RATIO, DPP_V_RATIO(p->v_ratio));
-		dpp_reg_set_v_coef(id, p->v_ratio);
-	}
-
-	dpp_dbg("h_ratio[%#x:%#x], v_ratio : [%#x:%#x]\n",
-			prev_h_ratio, p->h_ratio, prev_v_ratio, p->v_ratio);
+	dpp_dbg("h_ratio : %#x, v_ratio : %#x\n", p->h_ratio, p->v_ratio);
 }
 
 static void dpp_reg_set_img_size(u32 id, u32 w, u32 h)
@@ -477,6 +508,17 @@ static void dpp_reg_set_scaled_img_size(u32 id, u32 w, u32 h)
 {
 	dpp_write(id, DPP_SCALED_IMG_SIZE,
 			DPP_SCALED_IMG_HEIGHT(h) | DPP_SCALED_IMG_WIDTH(w));
+}
+
+static void dpp_reg_set_alpha_type(u32 id, u32 type)
+{
+	/* [type] 0=per-frame, 1=per-pixel */
+	dpp_write_mask(id, DPP_IN_CON, DPP_ALPHA_SEL(type), DPP_ALPHA_SEL_MASK);
+}
+
+static void dpp_reg_set_format(u32 id, u32 fmt)
+{
+	dpp_write_mask(id, DPP_IN_CON, DPP_IMG_FORMAT(fmt), DPP_IMG_FORMAT_MASK);
 }
 
 static void dpp_reg_set_eotf_lut(u32 id, struct dpp_params_info *p)
@@ -847,7 +889,6 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 {
 	u32 dma_fmt;
 	u32 alpha_type = 0; /* 0: per-frame, 1: per-pixel */
-	u32 val, mask;
 	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
 
 	if (fmt_info->fmt == DECON_PIXEL_FORMAT_RGB_565 && p->is_comp)
@@ -862,10 +903,8 @@ static int dma_dpp_reg_set_format(u32 id, struct dpp_params_info *p,
 	if (test_bit(DPP_ATTR_IDMA, &attr)) {
 		idma_reg_set_format(id, dma_fmt);
 		if (test_bit(DPP_ATTR_DPP, &attr)) {
-			val = DPP_ALPHA_SEL(alpha_type) |
-				DPP_IMG_FORMAT(fmt_info->dpp_fmt);
-			mask = DPP_ALPHA_SEL_MASK | DPP_IMG_FORMAT_MASK;
-			dpp_write_mask(id, DPP_IN_CON, val, mask);
+			dpp_reg_set_alpha_type(id, alpha_type);
+			dpp_reg_set_format(id, fmt_info->dpp_fmt);
 		}
 	} else if (test_bit(DPP_ATTR_ODMA, &attr)) {
 		odma_reg_set_format(id, dma_fmt);
@@ -941,19 +980,22 @@ void dpp_reg_init(u32 id, const unsigned long attr)
 	if (test_bit(DPP_ATTR_IDMA, &attr)) {
 		idma_reg_set_irq_mask_all(id, 0);
 		idma_reg_set_irq_enable(id);
+		idma_reg_set_in_qos_lut(id, 0, 0x44444444);
+		idma_reg_set_in_qos_lut(id, 1, 0x44444444);
+		/* TODO: clock gating will be enabled */
+		idma_reg_set_sram_clk_gate_en(id, 0);
+		idma_reg_set_dynamic_gating_en_all(id, 0);
 		idma_reg_set_pixel_alpha(id, 0xFF);
-		idma_reg_set_dynamic_gating(id, 1);
-		/* to prevent irq storm that may occur in the OFF STATE */
-		idma_reg_clear_irq(id, IDMA_ALL_IRQ_CLEAR);
+		idma_reg_set_in_ic_max(id, 0x40);
+		idma_reg_set_assigned_mo(id, 0x40);
 	}
 
 	if (test_bit(DPP_ATTR_DPP, &attr)) {
 		dpp_reg_set_irq_mask_all(id, 0);
 		dpp_reg_set_irq_enable(id);
-		dpp_reg_set_dynamic_gating(id, 1);
+		dpp_reg_set_clock_gate_en_all(id, 0);
+		dpp_reg_set_dynamic_gating_en_all(id, 0);
 		dpp_reg_set_linecnt(id, 1);
-		/* to prevent irq storm that may occur in the OFF STATE */
-		dpp_reg_clear_irq(id, DPP_ALL_IRQ_CLEAR);
 	}
 
 	if (test_bit(DPP_ATTR_ODMA, &attr)) {
@@ -1322,33 +1364,18 @@ static void dpp_print_hex_dump(void __iomem *regs, const void *buf, size_t len)
 static void dma_dump_regs(u32 id, void __iomem *dma_regs)
 {
 	dpp_info("\n=== DPU_DMA%d SFR DUMP ===\n", id);
-	if (id == ODMA_WB) {
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0000, 0x68);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0074, 0x8);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0094, 0x8);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0300, 0xC);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0354, 0x20);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0400, 0x8);
-	} else {
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0000, 0x74);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0100, 0x44);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0200, 0x8);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0300, 0x24);
-	}
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0000, 0x74);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0100, 0x44);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0200, 0x8);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0300, 0x24);
 
 	dpp_info("=== DPU_DMA%d SHADOW SFR DUMP ===\n", id);
-	if (id == ODMA_WB) {
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0820, 0x7C);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0B00, 0xC);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0C00, 0xC);
-	} else {
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0800, 0x74);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0900, 0x44);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0A00, 0x8);
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0B00, 0x24);
-		/* config_err_status */
-		dpp_print_hex_dump(dma_regs, dma_regs + 0x0B30, 0x4);
-	}
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0800, 0x74);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0900, 0x44);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0A00, 0x8);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0B00, 0x24);
+	/* config_err_status */
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0B30, 0x4);
 }
 
 static void dpp_dump_regs(u32 id, void __iomem *regs, unsigned long attr)

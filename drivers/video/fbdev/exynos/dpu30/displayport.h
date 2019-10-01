@@ -24,8 +24,9 @@
 #include <linux/extcon-provider.h>
 #endif
 #if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
-#include <linux/usb/typec/manager/usb_typec_manager_notifier.h>
-#include <linux/usb/typec/common/pdic_notifier.h>
+#include <linux/usb/manager/usb_typec_manager_notifier.h>
+#include <linux/notifier.h>
+#include <linux/ccic/ccic_notifier.h>
 #endif
 
 #if defined(CONFIG_SOC_EXYNOS9810)
@@ -586,9 +587,6 @@ static const unsigned int extcon_id[] = {
 };
 #endif
 
-#define MAX_EDID_BLOCK 4
-#define EDID_BLOCK_SIZE 128
-
 struct edid_data {
 	int max_support_clk;
 	bool support_10bpc;
@@ -601,17 +599,12 @@ struct edid_data {
 	u8 edid_manufacturer[4];
 	u32 edid_product;
 	u32 edid_serial;
-
-	int edid_data_size;
-	u8 edid_buf[MAX_EDID_BLOCK * EDID_BLOCK_SIZE];
+	u8 *edid_buf;
 };
 
 struct displayport_sst {
 	u32 id;
-
 	u32 decon_id; /* connected decon id */
-	bool decon_run;
-
 	enum displayport_state state;
 	enum hotplug_state hpd_state; /* each SST RX port status */
 
@@ -630,12 +623,6 @@ struct displayport_sst {
 	int audio_buf_empty_check;
 
 	struct displayport_vc_config *vc_config;
-};
-
-enum dp_state {
-	DP_DISCONNECT,
-	DP_CONNECT,
-	DP_HDCP_READY,
 };
 
 struct displayport_device {
@@ -709,9 +696,11 @@ struct displayport_debug_param {
 
 #define EDID_ADDRESS 0x50
 #define AUX_DATA_BUF_COUNT 16
+#define EDID_BUF_COUNT 256
 #define AUX_RETRY_COUNT 3
 #define AUX_TIMEOUT_1800us 0x03
 
+#define EDID_BLOCK_SIZE 128
 #define DATA_BLOCK_TAG_CODE_MASK 0xE0
 #define DATA_BLOCK_LENGTH_MASK 0x1F
 #define DATA_BLOCK_TAG_CODE_BIT_POSITION 5
@@ -1165,13 +1154,13 @@ void displayport_audio_enable(u32 sst_id,
 		struct displayport_audio_config_data *audio_config_data);
 void displayport_audio_disable(u32 sst_id);
 void displayport_audio_wait_buf_full(u32 sst_id);
+void displayport_audio_dma_force_req_release(u32 sst_id);
 void displayport_audio_bist_enable(u32 sst_id,
 		struct displayport_audio_config_data audio_config_data);
 void displayport_audio_init_config(u32 sst_id);
 void displayport_audio_bist_config(u32 sst_id,
 		struct displayport_audio_config_data audio_config_data);
 void displayport_reg_print_audio_state(u32 sst_id);
-void displayport_reg_set_dma_req_gen(u32 sst_id, u32 en);
 
 void displayport_reg_set_hdcp22_system_enable(u32 en);
 void displayport_reg_set_hdcp22_mode(u32 en);
@@ -1191,7 +1180,7 @@ void displyaport_reg_set_vc_payload_id_timeslot_delete(u32 ch,
 
 int displayport_reg_stand_alone_crc_sorting(void);
 
-int edid_read(u32 sst_id, struct displayport_device *displayport);
+int edid_read(u32 sst_id, struct displayport_device *displayport, u8 **data);
 int edid_update(u32 sst_id, struct displayport_device *displayport);
 struct v4l2_dv_timings edid_preferred_preset(void);
 void edid_set_preferred_preset(int mode);

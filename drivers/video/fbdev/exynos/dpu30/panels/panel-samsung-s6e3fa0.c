@@ -15,7 +15,7 @@
 
 int s6e3fa0_suspend(struct exynos_panel_device *panel)
 {
-	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
+	struct dsim_device *dsim = get_dsim_drvdata(0);
 
 	mutex_lock(&panel->ops_lock);
 	dsim_write_data_seq_delay(dsim, 20, 0x28, 0x00, 0x00);
@@ -24,14 +24,14 @@ int s6e3fa0_suspend(struct exynos_panel_device *panel)
 	return 0;
 }
 
-static int s6e3fa0_cabc_mode_unlocked(u32 panel_id, int mode)
+static int s6e3fa0_cabc_mode_unlocked(int mode)
 {
 	int ret = 0;
 	int count;
 	unsigned char buf[] = {0x0, 0x0};
 	unsigned char SEQ_CABC_CMD[] = {0x55, 0x00, 0x00};
 	unsigned char cmd = MIPI_DCS_WRITE_POWER_SAVE; /* 0x55 */
-	struct dsim_device *dsim = get_dsim_drvdata(panel_id);
+	struct dsim_device *dsim = get_dsim_drvdata(0);
 
 	DPU_DEBUG_PANEL("%s: CABC mode[%d] write/read\n", __func__, mode);
 
@@ -83,7 +83,7 @@ static int s6e3fa0_cabc_mode(struct exynos_panel_device *panel, int mode)
 	}
 
 	mutex_lock(&panel->ops_lock);
-	s6e3fa0_cabc_mode_unlocked(panel->id, mode);
+	s6e3fa0_cabc_mode_unlocked(mode);
 	mutex_unlock(&panel->ops_lock);
 	return ret;
 }
@@ -91,7 +91,7 @@ static int s6e3fa0_cabc_mode(struct exynos_panel_device *panel, int mode)
 int s6e3fa0_displayon(struct exynos_panel_device *panel)
 {
 	struct exynos_panel_info *lcd = &panel->lcd_info;
-	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
+	struct dsim_device *dsim = get_dsim_drvdata(0);
 
 	mutex_lock(&panel->ops_lock);
 	dsim_write_data_seq_delay(dsim, 12, 0xF0, 0x5A, 0x5A);
@@ -117,11 +117,10 @@ int s6e3fa0_displayon(struct exynos_panel_device *panel)
 			0x44, 0x44, 0xC0, 0x00, 0x40);
 
 	if (panel->cabc_enabled)
-		s6e3fa0_cabc_mode_unlocked(panel->id, panel->power_mode);
+		s6e3fa0_cabc_mode_unlocked(panel->power_mode);
 
 	/* enable brightness control */
-	dsim_write_data_seq_delay(dsim, 12, 0x53, 0x20);
-	dsim_write_data_seq_delay(dsim, 12, 0x51, 0x7f);
+	dsim_write_data_seq_delay(dsim, 12, 0x53, 0x20, 0x00);
 
 	if (lcd->mode == DECON_MIPI_COMMAND_MODE)
 		dsim_write_data_seq_delay(dsim, 12, 0x35); /* TE on */
@@ -135,7 +134,7 @@ int s6e3fa0_displayon(struct exynos_panel_device *panel)
 	return 0;
 }
 
-int s6e3fa0_mres(struct exynos_panel_device *panel, u32 mode_idx)
+int s6e3fa0_mres(struct exynos_panel_device *panel, int mres_idx)
 {
 	return 0;
 }
@@ -160,27 +159,8 @@ int s6e3fa0_read_state(struct exynos_panel_device *panel)
 	return 0;
 }
 
-static int s6e3fa0_set_light(struct exynos_panel_device *panel, u32 br_val)
-{
-	u8 data = 0;
-	struct dsim_device *dsim = get_dsim_drvdata(panel->id);
-
-	DPU_DEBUG_PANEL("%s +\n", __func__);
-
-	mutex_lock(&panel->ops_lock);
-
-	/* WRDISBV(8bit): 1st DBV[7:0] */
-	data = br_val & 0xFF;
-	dsim_write_data_seq(dsim, 12, 0x51, data);
-
-	mutex_unlock(&panel->ops_lock);
-
-	DPU_DEBUG_PANEL("%s -\n", __func__);
-	return 0;
-}
-
 struct exynos_panel_ops panel_s6e3fa0_ops = {
-	.id		= {0x244040, 0xffffff, 0xffffff, 0xffffff},
+	.id		= {0x244040, 0xffffff, 0xffffff},
 	.suspend	= s6e3fa0_suspend,
 	.displayon	= s6e3fa0_displayon,
 	.mres		= s6e3fa0_mres,
@@ -189,5 +169,4 @@ struct exynos_panel_ops panel_s6e3fa0_ops = {
 	.dump		= s6e3fa0_dump,
 	.read_state	= s6e3fa0_read_state,
 	.set_cabc_mode	= s6e3fa0_cabc_mode,
-	.set_light	= s6e3fa0_set_light,
 };

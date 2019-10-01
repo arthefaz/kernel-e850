@@ -364,7 +364,7 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 	const struct dpu_fmt *fmt_info = dpu_find_fmt_info(p->format);
 
 	if (!test_bit(DPP_ATTR_ROT, &dpp->attr) && (p->rot > DPP_ROT_180)) {
-		dpp_err("Not support rotation(%d) in DPP%d\n",
+		dpp_err("Not support rotation(%d) in DPP%d - L5 only!\n",
 				p->rot, dpp->id);
 		return -EINVAL;
 	}
@@ -382,24 +382,24 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 	}
 
 	if (!test_bit(DPP_ATTR_CSC, &dpp->attr) && IS_YUV(fmt_info)) {
-		dpp_err("Not support YUV format(%d) in DPP%d\n",
+		dpp_err("Not support YUV format(%d) in DPP%d - L2/3/4/5 only!\n",
 			p->format, dpp->id);
 		return -EINVAL;
 	}
 
 	if (!test_bit(DPP_ATTR_AFBC, &dpp->attr) && p->is_comp) {
-		dpp_err("Not support AFBC decoding in DPP%d\n",
+		dpp_err("Not support AFBC decoding in DPP%d - L0/1/4/5 only!\n",
 				dpp->id);
 		return -EINVAL;
 	}
 
 	if (!test_bit(DPP_ATTR_SCALE, &dpp->attr) && p->is_scale) {
-		dpp_err("Not support SCALING in DPP%d\n", dpp->id);
+		dpp_err("Not support SCALING in DPP%d - L3/L5 only!\n", dpp->id);
 		return -EINVAL;
 	}
 
 	if (!test_bit(DPP_ATTR_SBWC, &dpp->attr) && (p->comp_type == COMP_TYPE_SBWC)) {
-		dpp_err("Not support SBWC in DPP%d\n", dpp->id);
+		dpp_err("Not support SBWC in DPP%d - L3/L5 only!\n", dpp->id);
 		return -EINVAL;
 	}
 
@@ -450,12 +450,6 @@ static int dpp_check_limitation(struct dpp_device *dpp, struct dpp_params_info *
 		return -EINVAL;
 	}
 
-	if (p->is_comp && (p->comp_type == COMP_TYPE_SBWC)) {
-		dpp_err("Not support AFBC & SBWC at the same time in DPP%d\n",
-			dpp->id);
-		return -EINVAL;
-	}
-
 	if (p->is_block && p->is_scale) {
 		dpp_err("Not support [BLOCK+SCALE] at the same time in DPP%d\n",
 			dpp->id);
@@ -491,28 +485,6 @@ static int dpp_afbc_enabled(struct dpp_device *dpp, int *afbc_enabled)
 	else
 		*afbc_enabled = 0;
 
-	return ret;
-}
-
-static int dpp_set_cursor_config(struct dpp_device *dpp)
-{
-	struct dpp_params_info params;
-	int ret = 0;
-
-	/* parameters from decon driver are translated for dpp driver */
-	dpp_get_params(dpp, &params);
-
-	/* all parameters must be passed dpp hw limitation */
-	ret = dpp_check_limitation(dpp, &params);
-	if (ret)
-		goto err;
-
-	/* set all parameters to dpp hw */
-	dpp_reg_configure_params(dpp->id, &params, dpp->attr);
-
-	dpp_dbg("dpp%d cursor configuration\n", dpp->id);
-
-err:
 	return ret;
 }
 
@@ -630,25 +602,8 @@ static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg
 
 	switch (cmd) {
 	case DPP_WIN_CONFIG:
-		if (!arg) {
-			dpp_err("failed to get dpp_config\n");
-			ret = -EINVAL;
-			break;
-		}
 		dpp->dpp_config = (struct dpp_config *)arg;
 		ret = dpp_set_config(dpp);
-		if (ret)
-			dpp_err("failed to configure dpp%d\n", dpp->id);
-		break;
-
-	case DPP_CURSOR_WIN_CONFIG:
-		if (!arg) {
-			dpp_err("failed to get cursor_config\n");
-			ret = -EINVAL;
-			break;
-		}
-		dpp->dpp_config = (struct dpp_config *)arg;
-		ret = dpp_set_cursor_config(dpp);
 		if (ret)
 			dpp_err("failed to configure dpp%d\n", dpp->id);
 		break;
@@ -996,7 +951,7 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 			(u32)res->start, (u32)res->end);
 
 	dpp->res.dma_regs = devm_ioremap_resource(dpp->dev, res);
-	if (IS_ERR(dpp->res.dma_regs)) {
+	if (!dpp->res.dma_regs) {
 		dpp_err("failed to remap DPU_DMA SFR region\n");
 		return -EINVAL;
 	}
@@ -1012,7 +967,7 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 				(u32)res->start, (u32)res->end);
 
 		dpp->res.dma_com_regs = devm_ioremap_resource(dpp->dev, res);
-		if (IS_ERR(dpp->res.dma_com_regs)) {
+		if (!dpp->res.dma_com_regs) {
 			dpp_err("failed to remap DPU_DMA COMMON SFR region\n");
 			return -EINVAL;
 		}
@@ -1045,7 +1000,7 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
 				(u32)res->start, (u32)res->end);
 
 		dpp->res.regs = devm_ioremap_resource(dpp->dev, res);
-		if (IS_ERR(dpp->res.regs)) {
+		if (!dpp->res.regs) {
 			dpp_err("failed to remap DPP SFR region\n");
 			return -EINVAL;
 		}

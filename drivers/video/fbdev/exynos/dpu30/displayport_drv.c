@@ -53,6 +53,7 @@ static u64 reduced_resolution;
 struct displayport_debug_param g_displayport_debug_param;
 
 extern enum hdcp22_auth_def hdcp22_auth_state;
+
 struct displayport_device *displayport_drvdata;
 EXPORT_SYMBOL(displayport_drvdata);
 
@@ -126,18 +127,16 @@ u32 displayport_get_decon_id(u32 sst_id)
 u32 displayport_get_sst_id_with_decon_id(u32 decon_id)
 {
 	u32 i = 0;
-	int ret_val = SST1;
 	struct displayport_device *displayport = get_displayport_drvdata();
 
 	for (i = SST1; i < MAX_SST_CNT; i++) {
 		if (decon_id == displayport->sst[i]->decon_id) {
 			displayport_dbg("SST%d connect DECON%d\n", i + 1, decon_id);
-			ret_val = displayport->sst[i]->id;
 			break;
 		}
 	}
 
-	return ret_val;
+	return displayport->sst[i]->id;
 }
 
 int displayport_get_sst_id_with_port_number(u8 port_number, u8 get_sst_id_type)
@@ -1049,32 +1048,6 @@ int displayport_wait_audio_off_change(u32 sst_id,
 	return ret;
 }
 
-int displayport_wait_decon_run(u32 sst_id,
-		struct displayport_device *displayport,	int max_wait_time)
-{
-	int ret = 0;
-	int wait_cnt = max_wait_time;
-
-	displayport_info("SST%d wait_decon_run start\n", sst_id + 1);
-	displayport_info("max_wait_time = %dms\n", max_wait_time);
-
-	do {
-		wait_cnt--;
-		usleep_range(1000, 1030);
-	} while ((displayport->sst[sst_id]->decon_run != 0) && (wait_cnt > 0));
-
-	displayport_info("wait_decon_run time = %dms\n", max_wait_time - wait_cnt);
-
-	if (wait_cnt <= 0)
-		displayport_err("SST%d wait_decon_run timeout\n", sst_id + 1);
-
-	ret = wait_cnt;
-
-	displayport_info("SST%d wait_decon_run end\n", sst_id + 1);
-
-	return ret;
-}
-
 void displayport_on_by_hpd_high(u32 sst_id, struct displayport_device *displayport)
 {
 	int timeout = 0;
@@ -1102,7 +1075,6 @@ void displayport_on_by_hpd_high(u32 sst_id, struct displayport_device *displaypo
 	}
 
 #if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
-	displayport_wait_decon_run(sst_id, displayport, 3000);
 	dp_ado_switch_set_state(edid_audio_informs());
 #endif
 }
@@ -1121,7 +1093,6 @@ void displayport_off_by_hpd_low(u32 sst_id, struct displayport_device *displaypo
 	if (displayport->sst[sst_id]->state == DISPLAYPORT_STATE_ON) {
 		displayport->sst[sst_id]->hpd_state = HPD_UNPLUG;
 		displayport->sst[sst_id]->cur_video = V640X480P60;
-		displayport->sst[sst_id]->best_video = V640X480P60;
 		displayport->sst[sst_id]->bpc = BPC_8;
 		displayport->sst[sst_id]->dyn_range = VESA_RANGE;
 
@@ -1177,7 +1148,6 @@ void displayport_hpd_changed(int state)
 		/* PHY power on */
 		displayport_reg_sw_reset();
 		displayport_reg_init(); /* for AUX ch read/write. */
-		displayport_hdcp22_notify_state(DP_CONNECT);
 
 		displayport->auto_test_mode = 0;
 		displayport->sst[sst_id]->best_video = EDID_DEFAULT_TIMINGS_IDX;
@@ -1220,8 +1190,7 @@ void displayport_hpd_changed(int state)
 		if (displayport->mst_cap == 0) {
 			displayport_info("displayport_on_by_hpd_high in hpd changed\n");
 			displayport_on_by_hpd_high(sst_id, displayport);
-		} else
-			displayport_topology_make();
+		}
 	} else {
 		displayport_reg_print_audio_state(sst_id);
 #if defined(CONFIG_EXYNOS_HDCP2)
@@ -1315,6 +1284,7 @@ static void displayport_hpd_unplug_work(struct work_struct *work)
 	for (i = SST1; i < MAX_SST_CNT; i++) {
 		if (displayport->sst[i]->hpd_state == HPD_UNPLUG_WORK) {
 			displayport_info("hpd_unplug_work\n");
+			displayport_reg_set_sst_interrupt_mask(i, VIDEO_FIFO_UNDER_FLOW_MASK, 0);
 			displayport_topology_delete_vc(i);
 			displayport->sst[i]->hpd_state = HPD_UNPLUG;
 			displayport_off_by_hpd_low(i, displayport);
@@ -1768,8 +1738,7 @@ static irqreturn_t displayport_irq_handler(int irq, void *dev_data)
 	for (i = SST1; i < MAX_SST_CNT; i++) {
 		irq_status_reg = displayport_reg_get_sst_video_interrupt_and_clear(i);
 
-		if ((irq_status_reg & MAPI_FIFO_UNDER_FLOW)
-				&& displayport->sst[i]->decon_run == 1)
+		if (irq_status_reg & MAPI_FIFO_UNDER_FLOW)
 			displayport_info("SST%d VIDEO FIFO_UNDER_FLOW detect\n", i + 1);
 
 		if (displayport->sst[i]->bist_used == 0) {
@@ -2013,7 +1982,7 @@ int displayport_audio_config(u32 sst_id, struct displayport_audio_config_data *a
 		displayport_audio_wait_buf_full(sst_id);
 		displayport->sst[sst_id]->audio_state = AUDIO_WAIT_BUF_FULL;
 	} else if (audio_config_data->audio_enable == AUDIO_DMA_REQ_HIGH) {
-		displayport_reg_set_dma_req_gen(sst_id, 1);
+		displayport_audio_dma_force_req_release(sst_id);
 		displayport->sst[sst_id]->audio_state = AUDIO_DMA_REQ_HIGH;
 	} else
 		displayport_info("Not support audio_enable = %d\n", audio_config_data->audio_enable);
@@ -2101,7 +2070,6 @@ static void displayport_hdcp22_run(struct work_struct *work)
 		goto exit_hdcp;
 	}
 
-	displayport_hdcp22_notify_state(DP_HDCP_READY);
 	ret = displayport_hdcp22_authenticate();
 	if (ret) {
 #ifdef CONFIG_SEC_DISPLAYPORT_BIGDATA
@@ -2164,10 +2132,10 @@ static void hdcp_start(struct displayport_device *displayport)
 #if defined(HDCP_SUPPORT)
 	if (displayport->hdcp_ver == HDCP_VERSION_2_2)
 		queue_delayed_work(displayport->hdcp2_wq, &displayport->hdcp22_work,
-				msecs_to_jiffies(3500));
+				msecs_to_jiffies(2500));
 	else if (displayport->hdcp_ver == HDCP_VERSION_1_3)
 		queue_delayed_work(displayport->dp_wq, &displayport->hdcp13_work,
-				msecs_to_jiffies(5500));
+				msecs_to_jiffies(4500));
 	else
 		displayport_info("HDCP is not supported\n");
 #endif
@@ -2363,9 +2331,7 @@ static int displayport_s_dv_timings(struct v4l2_subdev *sd,
 
 	if (displayport->sst[sst_id]->bist_used == 0) {
 		if (displayport_check_pixel_clock_for_hdr(sst_id, displayport,
-				displayport_setting_videoformat) == true
-				&& displayport_setting_videoformat >= V3840X2160P50
-				&& displayport_setting_videoformat < V640X10P60SACRC) {
+				displayport_setting_videoformat) == true) {
 			displayport_info("sink support HDR\n");
 			/* BPC_10 should be enabled when support HDR */
 			displayport->sst[sst_id]->bpc = BPC_10;
@@ -2605,7 +2571,7 @@ static int displayport_init_resources(struct displayport_device *displayport, st
 	displayport_info("link_regs: start(0x%x), end(0x%x)\n", (u32)res->start, (u32)res->end);
 
 	displayport->res.link_regs = devm_ioremap_resource(displayport->dev, res);
-	if (IS_ERR(displayport->res.link_regs)) {
+	if (!displayport->res.link_regs) {
 		displayport_err("failed to remap DisplayPort LINK SFR region\n");
 		return -EINVAL;
 	}
@@ -2694,7 +2660,6 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 			displayport->ccic_notify_dp_conf = CCIC_NOTIFY_DP_PIN_UNKNOWN;
 			displayport->ccic_link_conf = false;
 			displayport->ccic_hpd = false;
-			displayport_hdcp22_notify_state(DP_DISCONNECT);
 			displayport_hpd_changed(0);
 			displayport_aux_onoff(displayport, 0);
 			break;
@@ -2755,7 +2720,6 @@ static int usb_typec_displayport_notification(struct notifier_block *nb,
 			break;
 		case CCIC_NOTIFY_LOW:
 			displayport->ccic_hpd = false;
-			displayport_hdcp22_notify_state(DP_DISCONNECT);
 			displayport_hpd_changed(0);
 			break;
 		case CCIC_NOTIFY_HIGH:

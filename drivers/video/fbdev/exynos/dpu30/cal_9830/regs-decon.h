@@ -105,16 +105,19 @@
 #define GLOBAL_CONTROL_DECON_EN_F		(1 << 0)
 
 #define RESOURCE_OCCUPANCY_INFO_0		0x0010
-#define SEL_SRAM5				(3 << 10)
-#define SEL_SRAM4				(3 << 8)
-#define SEL_SRAM3				(3 << 6)
-#define SEL_SRAM2				(3 << 4)
-#define SEL_SRAM1				(3 << 2)
-#define SEL_SRAM0				(3 << 0)
 #define RESOURCE_OCCUPANCY_INFO_1		0x0014
 #define RESOURCE_OCCUPANCY_INFO_2		0x0018
 
 #define SRAM_SHARE_ENABLE_MAIN			0x0030
+#define SRAM0_SHARE_ENABLE_F			(1 << 0)
+#define SRAM1_SHARE_ENABLE_F			(1 << 4)
+#define SRAM2_SHARE_ENABLE_F			(1 << 8)
+#define SRAM3_SHARE_ENABLE_F			(1 << 12)
+#define SRAM4_SHARE_ENABLE_F			(1 << 16)
+#define SRAM5_SHARE_ENABLE_F			(1 << 20)
+#define ALL_SRAM_SHARE_ENABLE			(0x11111 << 0)
+#define ALL_SRAM_SHARE_DISABLE			(0x0)
+
 #define SRAM_SHARE_ENABLE_SUB			0x0034
 #define SRAM0_SHARE_ENABLE_F			(1 << 0)
 #define SRAM1_SHARE_ENABLE_F			(1 << 4)
@@ -197,7 +200,6 @@
 #define TIMER_VALUE_MASK			(0xffffffff << 0)
 
 #define PLL_SLEEP_CONTROL			0x0090
-#define SLEEP_CTRL_MODE_F			(1 << 8)
 #define PLL_SLEEP_MASK_OUTIF1			(1 << 5)
 #define PLL_SLEEP_MASK_OUTIF0			(1 << 4)
 #define PLL_SLEEP_EN_OUTIF1_F			(1 << 1)
@@ -271,11 +273,6 @@
 #define OUTFIFO_PIXEL_ORDER_SWAP_MASK		(0x7 << 4)
 #define OUTFIFO_PIXEL_ORDER_SWAP_GET(_v)	(((_v) >> 4) & 0x7)
 
-#define OUTFIFO_LATENCY_MONITOR			0x0138
-#define LATENCY_COUNTER_CLEAR			(1 << 29)
-#define LATENCY_COUNTER_ENABLE			(1 << 28)
-#define LATENCY_COUNTER_VALUE_GET(_v)		(((_v) >> 0) & 0xffffff)
-
 #define READ_URGENT_CONTROL_0			0x0140
 #define READ_URGETN_GENERATION_EN_F		(0x1 << 0)
 
@@ -344,13 +341,12 @@
 #define SCALER_PATH_F(_v)			((_v) << 24)
 #define SCALER_PATH_MASK			(0x3 << 24)
 #define SCALER_PATH_GET(_v)			(((_v) >> 24) & 0x3)
-#define ENHANCE_PATH_F(_v)			((_v) << 12)
-#define ENHANCE_PATH_MASK			(0x7 << 12)
-#define ENHANCE_PATH_GET(_v)			(((_v) >> 12) & 0x7)
+#define EHNANCE_PATH_F(_v)			((_v) << 12)
+#define EHNANCE_PATH_MASK			(0x7 << 12)
+#define EHNANCE_PATH_GET(_v)			(((_v) >> 12) & 0x7)
 #define COMP_OUTIF_PATH_F(_v)			((_v) << 0)
 #define COMP_OUTIF_PATH_MASK			(0xff << 0)
 #define COMP_OUTIF_PATH_GET(_v)			(((_v) >> 0) & 0xff)
-#define CWB_PATH_EN				(1 << 2)
 
 #define DSIM_CONNECTION_CONTROL			0x0250
 #define DSIM_CONNECTION_DSIM1_F(_v)		((_v) << 4)
@@ -399,9 +395,6 @@
 #define CRC_START				(1 << 0)
 
 #define FRAME_COUNT				0x02A0
-
-#define OUTFIFO_COUNTER0			0x0474
-#define OUTFIFO_Y_CNT_GET(_v)			(((_v) >> 16) & 0x3fff)
 
 /* BLENDER */
 #define WIN_CONTROL_0(_win)			(0x1000 + ((_win) * 0x30))
