@@ -219,7 +219,8 @@ struct mem_link_device {
 	phys_addr_t start;
 	size_t size;
 	struct page **pages;		/* pointer to the page table for vmap */
-	u8 __iomem *base;
+	u8 __iomem *base;		/* virtual address of ipc mem start */
+	u8 __iomem *hiprio_base;	/* virtual address of priority queue start */
 
 	/**
 	 * vss region for dump

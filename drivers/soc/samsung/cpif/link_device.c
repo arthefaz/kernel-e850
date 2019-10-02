@@ -3852,6 +3852,12 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 #else
 	mld->base = cp_shmem_get_region(cp_num, SHMEM_IPC);
 #endif
+
+#ifdef CONFIG_MODEM_IF_LEGACY_QOS
+	mld->hiprio_base = cp_shmem_get_nc_region(cp_shmem_get_base(cp_num, SHMEM_IPC)
+			+ modem->legacy_raw_qos_buffer_offset, modem->legacy_raw_qos_txq_size
+			+ modem->legacy_raw_qos_rxq_size);
+#endif
 	if (!mld->base) {
 		mif_err("Failed to vmap ipc_region\n");
 		goto error;

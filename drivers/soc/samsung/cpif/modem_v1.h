@@ -437,6 +437,13 @@ struct modem_data {
 	/* new SIT buffer descriptor offset */
 	u32 buff_desc_offset;
 
+#ifdef CONFIG_MODEM_IF_LEGACY_QOS
+	/* SIT priority queue info */
+	u32 legacy_raw_qos_head_tail_offset;
+	u32 legacy_raw_qos_buffer_offset;
+	u32 legacy_raw_qos_txq_size;
+	u32 legacy_raw_qos_rxq_size; /* unused for now */
+#endif
 	struct cp_btl btl;	/* CP background trace log */
 
 	void (*gpio_revers_bias_clear)(void);

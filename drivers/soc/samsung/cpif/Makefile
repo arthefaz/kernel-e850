@@ -40,6 +40,8 @@ obj-$(CONFIG_CP_BTL) += cp_btl.o
 
 obj-$(CONFIG_CPIF_TP_MONITOR) += cpif_tp_monitor.o
 
+obj-$(CONFIG_MODEM_IF_LEGACY_QOS) += cpif_qos_info.o
+
 ifeq ($(CONFIG_RPS), y)
 ifeq ($(CONFIG_ARGOS), y)
 obj-y += modem_argos_notifier.o

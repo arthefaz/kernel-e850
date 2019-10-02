@@ -32,7 +32,9 @@
 #include "modem_prj.h"
 #include "modem_utils.h"
 #include "modem_dump.h"
-
+#ifdef CONFIG_MODEM_IF_LEGACY_QOS
+#include "cpif_qos_info.h"
+#endif
 
 static int vnet_open(struct net_device *ndev)
 {
@@ -274,7 +276,11 @@ static u16 vnet_select_queue(struct net_device *dev, struct sk_buff *skb,
 		void *accel_priv, select_queue_fallback_t fallback)
 #endif
 {
+#if defined(CONFIG_MODEM_IF_QOS)
 	return (skb && skb->priomark == RAW_HPRIO) ? 1 : 0;
+#elif defined(CONFIG_MODEM_IF_LEGACY_QOS)
+	return (cpif_qos_get_node(skb->sk->sk_uid.val)) ? 1 : 0;
+#endif
 }
 #endif
 

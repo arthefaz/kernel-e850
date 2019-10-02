@@ -12,25 +12,11 @@
 
 #ifdef GROUP_MEM_TYPE_SHMEM
 
-#ifdef CONFIG_MODEM_IF_LEGACY_QOS
-
-#define BOOT_RESERVED_SZ	4040
-#define BOOT_FMT_TX_BUFF_SZ	4096
-#define BOOT_FMT_RX_BUFF_SZ	4096
-#define BOOT_RAW_HPRIO_TX_BUFF_SZ	518144
-#define BOOT_RAW_HPRIO_RX_BUFF_SZ	518144
-#define BOOT_RAW_TX_BUFF_SZ	1048576
-#define BOOT_RAW_RX_BUFF_SZ	2097152
-
-#else
-
 #define BOOT_RESERVED_SZ	4056
 #define BOOT_FMT_TX_BUFF_SZ	4096
 #define BOOT_FMT_RX_BUFF_SZ	4096
 #define BOOT_RAW_TX_BUFF_SZ	2084864
 #define BOOT_RAW_RX_BUFF_SZ	2097152
-
-#endif
 
 #ifdef CONFIG_LINK_DEVICE_PCIE
 #define DOORBELL_INT_ADD		0x10000
@@ -62,14 +48,6 @@ struct __packed legacy_map {
 	u32 fmt_rx_head;
 	u32 fmt_rx_tail;
 
-#ifdef CONFIG_MODEM_IF_LEGACY_QOS
-	u32 raw_hprio_tx_head;
-	u32 raw_hprio_tx_tail;
-
-	u32 raw_hprio_rx_head;
-	u32 raw_hprio_rx_tail;
-#endif
-
 	u32 raw_tx_head;
 	u32 raw_tx_tail;
 
@@ -80,11 +58,6 @@ struct __packed legacy_map {
 
 	char fmt_tx_buff[BOOT_FMT_TX_BUFF_SZ];
 	char fmt_rx_buff[BOOT_FMT_RX_BUFF_SZ];
-
-#ifdef CONFIG_MODEM_IF_LEGACY_QOS
-	char raw_hprio_tx_buff[BOOT_RAW_HPRIO_TX_BUFF_SZ];
-	char raw_hprio_rx_buff[BOOT_RAW_HPRIO_RX_BUFF_SZ];
-#endif
 
 	char raw_tx_buff[BOOT_RAW_TX_BUFF_SZ];
 	char raw_rx_buff[BOOT_RAW_RX_BUFF_SZ];

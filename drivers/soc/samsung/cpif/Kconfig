@@ -107,7 +107,13 @@ config MODEM_IF_QOS
 	bool "Implement QoS for sbd"
 	default n
 	---help---
-	  This enables Qos for SBD model
+	  This enables QoS for SBD model
+
+config MODEM_IF_LEGACY_QOS
+	bool "Implement QoS for legacy buffer"
+	default n
+	---help---
+	  This enables QoS for legacy buffer model
 
 config MODEM_IF_NET_GRO
 	bool "enable GRO feature"

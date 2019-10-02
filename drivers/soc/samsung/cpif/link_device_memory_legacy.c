@@ -7,7 +7,9 @@ int create_legacy_link_device(struct mem_link_device *mld)
 	struct legacy_map *map;
 	struct legacy_ipc_device *dev;
 	struct legacy_link_device *bl = &mld->legacy_link_dev;
-
+#ifdef CONFIG_MODEM_IF_LEGACY_QOS
+	struct modem_data *modem = mld->link_dev.mdm_data;
+#endif
 	bl->ld = &mld->link_dev;
 	map = (struct legacy_map *)mld->base;
 
@@ -60,17 +62,17 @@ int create_legacy_link_device(struct mem_link_device *mld)
 
 	spin_lock_init(&dev->txq.lock);
 	atomic_set(&dev->txq.busy, 0);
-	dev->txq.head = &map->raw_hprio_tx_head;
-	dev->txq.tail = &map->raw_hprio_tx_tail;
-	dev->txq.buff = &map->raw_hprio_tx_buff[0];
-	dev->txq.size = BOOT_RAW_HPRIO_TX_BUFF_SZ;
+	dev->txq.head = (void __iomem *)(mld->base + modem->legacy_raw_qos_head_tail_offset);
+	dev->txq.tail = (void __iomem *)(mld->base + modem->legacy_raw_qos_head_tail_offset + 4);
+	dev->txq.buff = (void __iomem *)(mld->hiprio_base);
+	dev->txq.size = modem->legacy_raw_qos_txq_size;
 
 	spin_lock_init(&dev->rxq.lock);
 	atomic_set(&dev->rxq.busy, 0);
-	dev->rxq.head = &map->raw_hprio_rx_head;
-	dev->rxq.tail = &map->raw_hprio_rx_tail;
-	dev->rxq.buff = &map->raw_hprio_rx_buff[0];
-	dev->rxq.size = BOOT_RAW_HPRIO_RX_BUFF_SZ;
+	dev->rxq.head = (void __iomem *)(mld->base + modem->legacy_raw_qos_head_tail_offset + 8);
+	dev->rxq.tail = (void __iomem *)(mld->base + modem->legacy_raw_qos_head_tail_offset + 12);
+	dev->rxq.buff = (void __iomem *)(mld->hiprio_base + modem->legacy_raw_qos_txq_size);
+	dev->rxq.size = modem->legacy_raw_qos_rxq_size;
 
 	dev->msg_mask = MASK_SEND_RAW;
 	dev->req_ack_mask = MASK_REQ_ACK_RAW;
