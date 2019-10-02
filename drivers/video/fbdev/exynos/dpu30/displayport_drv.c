@@ -28,7 +28,7 @@
 #include <video/mipi_display.h>
 #include <linux/regulator/consumer.h>
 #include <media/v4l2-dv-timings.h>
-#if defined(CONFIG_CPU_IDLE)
+#if defined(HACK_CONFIG_CPU_IDLE)
 #include <soc/samsung/exynos-powermode.h>
 #endif
 #if defined(CONFIG_SND_SOC_SAMSUNG_DISPLAYPORT)
@@ -1211,7 +1211,7 @@ void displayport_hpd_changed(int state)
 		displayport_reg_deinit();
 		displayport_reg_phy_disable();
 		pm_runtime_put_sync(displayport->dev);
-#if defined(CONFIG_CPU_IDLE)
+#if defined(HACK_CONFIG_CPU_IDLE)
 		/* unblock to enter SICD mode */
 		exynos_update_ip_idle_status(displayport->idle_ip_index, 1);
 #endif
@@ -2192,7 +2192,7 @@ int displayport_enable(struct displayport_device *displayport)
 
 	if (displayport_check_sst_on(displayport) != DISPLAYPORT_STATE_ON) {
 		displayport_info("first sst on");
-#if defined(CONFIG_CPU_IDLE)
+#if defined(HACK_CONFIG_CPU_IDLE)
 		/* block to enter SICD mode */
 		exynos_update_ip_idle_status(displayport->idle_ip_index, 0);
 #endif
@@ -3339,7 +3339,7 @@ static int displayport_probe(struct platform_device *pdev)
 	iovmm_set_fault_handler(dev, dpu_sysmmu_fault_handler, NULL);
 #endif
 
-#if defined(CONFIG_CPU_IDLE)
+#if defined(HACK_CONFIG_CPU_IDLE)
 	displayport->idle_ip_index =
 		exynos_get_idle_ip_index(dev_name(&pdev->dev));
 	if (displayport->idle_ip_index < 0)
