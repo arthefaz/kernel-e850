@@ -641,7 +641,8 @@ void mfc_set_pixel_format(struct mfc_ctx *ctx, unsigned int format)
 		mfc_set_bits(reg, 0x3, 4, ctx->mem_type_10bit);
 
 	if (dev->pdata->support_sbwc) {
-		if (ctx->type == MFCINST_ENCODER && pix_val < 4)
+		if (ctx->type == MFCINST_ENCODER && pix_val < 4 &&
+				!(ctx->src_fmt->type & MFC_FMT_422))
 			__mfc_enc_check_sbwc_option(ctx, &sbwc);
 
 		mfc_set_bits(reg, 0x1, 9, sbwc);

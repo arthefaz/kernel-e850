@@ -1814,8 +1814,9 @@ void __mfc_nal_q_handle_frame(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 		dev->nal_q_handle->nal_q_exception = 2;
 		goto leave_handle_frame;
 	}
-	if (is_interlaced) {
+	if (is_interlaced && ctx->is_sbwc) {
 		mfc_err_ctx("[NALQ][SBWC] interlace during decoding is not supported\n");
+		dec->is_interlaced = is_interlaced;
 		dev->nal_q_handle->nal_q_exception = 1;
 		mfc_info_ctx("[NALQ][SBWC] nal_q_exception is set (interlaced)\n");
 		mfc_change_state(ctx, MFCINST_ERROR);
