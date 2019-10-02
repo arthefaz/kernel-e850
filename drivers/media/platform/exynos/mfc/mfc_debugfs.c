@@ -89,9 +89,12 @@ static int __mfc_info_show(struct seq_file *s, void *unused)
 			else
 				codec_name = ctx->dst_fmt->name;
 
-			seq_printf(s, "[CTX:%d] codec: %s(%s), %s, width: %d, height: %d, crop: %d %d %d %d, state: %d\n",
-				ctx->num, ctx->type == MFCINST_DECODER ? "DEC" : "ENC", codec_name,
-				ctx->is_drm ? "DRM" : "Normal",
+			seq_printf(s, "[CTX:%d] %s %s, %s, %s, size: %dx%d, crop: %d %d %d %d, state: %d\n",
+				ctx->num,
+				ctx->type == MFCINST_DECODER ? "DEC" : "ENC",
+				ctx->is_drm ? "Secure" : "Normal",
+				ctx->state > MFCINST_INIT ? ctx->src_fmt->name : "undefined src fmt",
+				ctx->state > MFCINST_INIT ? ctx->dst_fmt->name : "undefined dst fmt",
 				ctx->img_width, ctx->img_height, ctx->crop_width, ctx->crop_height,
 				ctx->crop_left, ctx->crop_top, ctx->state);
 			seq_printf(s, "        queue(src: %d, dst: %d, src_nal: %d, dst_nal: %d, ref: %d)\n",

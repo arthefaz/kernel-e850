@@ -42,16 +42,16 @@ static void __mfc_dump_regs(struct mfc_dev *dev)
 		{ 0x3094, 0x4 },
 		{ 0x30b4, 0x8 },
 		{ 0x3110, 0x10 },
-		{ 0x5000, 0x100 },
+		{ 0x5000, 0x130 },
 		{ 0x5200, 0x300 },
 		{ 0x5600, 0x100 },
 		{ 0x5800, 0x100 },
 		{ 0x5A00, 0x100 },
-		{ 0x6000, 0xC4 },
+		{ 0x6000, 0x188 },
 		{ 0x7000, 0x21C },
 		{ 0x8000, 0x20C },
 		{ 0x9000, 0x10C },
-		{ 0xA000, 0x20C },
+		{ 0xA000, 0x500 },
 		{ 0xB000, 0x444 },
 		{ 0xC000, 0x84 },
 	};
@@ -353,20 +353,25 @@ static void __mfc_dump_state(struct mfc_dev *dev, int curr_ctx)
 			debug_level, dev->pdata->debug_mode, dev->mmcache.is_on_status, dev->llc_on_status, perf_boost_mode,
 			dev->pdata->wait_fw_status.support);
 	if (nal_q_handle)
-		dev_err(dev->device, "NAL-Q state:%d, exception:%d, in_exe_cnt: %d, out_exe_cnt: %d\n",
+		dev_err(dev->device, "NAL-Q state:%d, exception:%d, in_exe_cnt: %d, out_exe_cnt: %d, stop cause: %#x\n",
 				nal_q_handle->nal_q_state, nal_q_handle->nal_q_exception,
 				nal_q_handle->nal_q_in_handle->in_exe_count,
-				nal_q_handle->nal_q_out_handle->out_exe_count);
+				nal_q_handle->nal_q_out_handle->out_exe_count,
+				dev->nal_q_stop_cause);
 
-	for (i = 0; i < MFC_NUM_CONTEXTS; i++)
-		if (dev->ctx[i])
-			dev_err(dev->device, "MFC ctx[%d] %s(%scodec_type:%d) %s, state:%d, queue_cnt(src:%d, dst:%d, ref:%d, qsrc:%d, qdst:%d), interrupt(cond:%d, type:%d, err:%d)\n",
+	for (i = 0; i < MFC_NUM_CONTEXTS; i++) {
+		if (dev->ctx[i]) {
+			dev_err(dev->device, "- MFC ctx[%d] %s %s%s, %s, %s, size: %dx%d, crop: %d %d %d %d, state:%d\n",
 				dev->ctx[i]->num,
 				dev->ctx[i]->type == MFCINST_DECODER ? "DEC" : "ENC",
-				curr_ctx == i ? "curr_ctx! " : "",
-				dev->ctx[i]->codec_mode,
-				dev->ctx[i]->is_drm ? "DRM" : "Normal",
-				dev->ctx[i]->state,
+				dev->ctx[i]->is_drm ? "Secure" : "Normal",
+				curr_ctx == i ? "(curr_ctx!)" : "",
+				dev->ctx[i]->state > MFCINST_INIT ? dev->ctx[i]->src_fmt->name : "undefined src fmt",
+				dev->ctx[i]->state > MFCINST_INIT ? dev->ctx[i]->dst_fmt->name : "undefined dst fmt",
+				dev->ctx[i]->img_width, dev->ctx[i]->img_height,
+				dev->ctx[i]->crop_width, dev->ctx[i]->crop_height,
+				dev->ctx[i]->crop_left, dev->ctx[i]->crop_top, dev->ctx[i]->state);
+			dev_err(dev->device, "	queue_cnt(src:%d, dst:%d, ref:%d, qsrc:%d, qdst:%d), interrupt(cond:%d, type:%d, err:%d)\n",
 				mfc_get_queue_count(&dev->ctx[i]->buf_queue_lock, &dev->ctx[i]->src_buf_queue),
 				mfc_get_queue_count(&dev->ctx[i]->buf_queue_lock, &dev->ctx[i]->dst_buf_queue),
 				mfc_get_queue_count(&dev->ctx[i]->buf_queue_lock, &dev->ctx[i]->ref_buf_queue),
@@ -374,6 +379,8 @@ static void __mfc_dump_state(struct mfc_dev *dev, int curr_ctx)
 				mfc_get_queue_count(&dev->ctx[i]->buf_queue_lock, &dev->ctx[i]->dst_buf_nal_queue),
 				dev->ctx[i]->int_condition, dev->ctx[i]->int_reason,
 				dev->ctx[i]->int_err);
+		}
+	}
 }
 
 static void __mfc_dump_trace(struct mfc_dev *dev)
@@ -569,33 +576,6 @@ void __mfc_dump_buffer_info(struct mfc_dev *dev)
 	}
 }
 
-static void __mfc_dump_struct(struct mfc_dev *dev, int curr_ctx)
-{
-	struct mfc_ctx *ctx = dev->ctx[curr_ctx];
-	int size = 0;
-
-	dev_err(dev->device, "-----------dumping MFC struct info-----------\n");
-
-	/* mfc_ctx */
-	size = (unsigned long)&ctx->fh - (unsigned long)ctx;
-	print_hex_dump(KERN_ERR, "dump mfc_ctx: ", DUMP_PREFIX_OFFSET,
-			32, 4, ctx, size, false);
-
-	if (ctx->type == MFCINST_DECODER && ctx->dec_priv != NULL) {
-		/* mfc_dec */
-		size = (unsigned long)&ctx->dec_priv->dpb[0] - (unsigned long)ctx->dec_priv;
-		print_hex_dump(KERN_ERR, "dump mfc_dec: ", DUMP_PREFIX_OFFSET,
-				32, 4, ctx->dec_priv, size, false);
-	} else if (ctx->type == MFCINST_ENCODER && ctx->enc_priv != NULL) {
-		/* mfc_enc */
-		size = (unsigned long)&ctx->enc_priv->params - (unsigned long)ctx->enc_priv;
-		print_hex_dump(KERN_ERR, "dump mfc_enc: ", DUMP_PREFIX_OFFSET,
-				32, 4, ctx->enc_priv, size, false);
-		print_hex_dump(KERN_ERR, "dump mfc_enc_param: ", DUMP_PREFIX_OFFSET,
-				32, 1, &ctx->enc_priv->params, sizeof(struct mfc_enc_params), false);
-	}
-}
-
 static void __mfc_dump_dpb(struct mfc_dev *dev, int curr_ctx)
 {
 	struct mfc_ctx *ctx = dev->ctx[curr_ctx];
@@ -649,7 +629,6 @@ static void __mfc_dump_info_without_regs(struct mfc_dev *dev)
 		return;
 
 	__mfc_dump_dpb(dev, curr_ctx);
-	__mfc_dump_struct(dev, curr_ctx);
 }
 
 static void __mfc_dump_info(struct mfc_dev *dev)

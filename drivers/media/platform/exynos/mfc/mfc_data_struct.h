@@ -227,6 +227,31 @@ enum mfc_idle_mode {
 	MFC_IDLE_MODE_CANCEL	= 3,
 };
 
+enum mfc_nal_q_stop_cause {
+	/* nal_q stop check cause */
+	NALQ_STOP_DRM			= 0,
+	NALQ_STOP_NO_RUNNING		= 1,
+	NALQ_STOP_OTF			= 2,
+	NALQ_STOP_BPG			= 3,
+	NALQ_STOP_LAST_FRAME		= 4,
+	NALQ_STOP_MULTI_FRAME		= 5,
+	NALQ_STOP_DPB_FULL		= 6,
+	NALQ_STOP_INTERLACE		= 7,
+	NALQ_STOP_BLACK_BAR		= 8,
+	NALQ_STOP_INTER_DRC		= 9,
+	NALQ_STOP_SLICE_MODE		= 10,
+	NALQ_STOP_RC_MODE		= 11,
+	NALQ_STOP_NO_STRUCTURE		= 12,
+	/* nal_q exception cause */
+	NALQ_EXCEPTION_DRC		= 25,
+	NALQ_EXCEPTION_NEED_DPB		= 26,
+	NALQ_EXCEPTION_INTER_DRC	= 27,
+	NALQ_EXCEPTION_SBWC_INTERLACE	= 28,
+	NALQ_EXCEPTION_INTERLACE	= 29,
+	NALQ_EXCEPTION_MULTI_FRAME	= 30,
+	NALQ_EXCEPTION_ERROR		= 31,
+};
+
 struct mfc_ctx;
 
 enum mfc_debug_cause {
@@ -585,12 +610,6 @@ struct mfc_platdata {
 	struct mfc_feature mem_clear;
 	struct mfc_feature wait_fw_status;
 
-	/*
-	 * new variables should be added above
-	 * ============ boundary line ============
-	 * The following variables are excluded from the MFC log dumps
-	 */
-
 	/* Encoder default parameter */
 	unsigned int enc_param_num;
 	unsigned int enc_param_addr[MFC_MAX_DEFAULT_PARAM];
@@ -939,6 +958,8 @@ struct mfc_dev {
 	struct timer_list mfc_idle_timer;
 	struct workqueue_struct *mfc_idle_wq;
 	struct work_struct mfc_idle_work;
+
+	unsigned int nal_q_stop_cause;
 
 	/* for DRM */
 	int curr_ctx_is_drm;
@@ -1526,11 +1547,7 @@ struct mfc_dec {
 	unsigned int decoding_order;
 
 	unsigned int uncomp_pixfmt;
-	/*
-	 * new variables should be added above
-	 * ============ boundary line ============
-	 * The following variables are excluded from the MFC log dumps
-	 */
+
 	/* for Dynamic DPB */
 	struct dpb_table dpb[MFC_MAX_DPBS];
 	struct mutex dpb_mutex;
@@ -1574,11 +1591,6 @@ struct mfc_enc {
 	struct mfc_special_buf roi_buf[MFC_MAX_EXTRA_BUF];
 	struct mfc_enc_roi_info roi_info[MFC_MAX_EXTRA_BUF];
 
-	/*
-	 * new variables should be added above
-	 * ============ boundary line ============
-	 * The following variables are excluded from the MFC log dumps
-	 */
 	struct mfc_enc_params params;
 
 	struct mfc_user_shared_handle sh_handle_svc;
@@ -1708,12 +1720,6 @@ struct mfc_ctx {
 	int batch_mode;
 	bool check_dump;
 	bool mem_type_10bit;
-
-	/*
-	 * new variables should be added above
-	 * ============ boundary line ============
-	 * The following variables are excluded from the MFC log dumps
-	 */
 
 	/* external structure */
 	struct v4l2_fh fh;

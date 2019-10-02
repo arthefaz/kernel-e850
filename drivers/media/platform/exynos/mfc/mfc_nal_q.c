@@ -43,27 +43,32 @@ int mfc_nal_q_check_enable(struct mfc_dev *dev)
 		if (ctx) {
 			/* NAL-Q doesn't support drm */
 			if (ctx->is_drm) {
+				dev->nal_q_stop_cause |= (1 << NALQ_STOP_DRM);
 				mfc_debug(2, "There is a drm ctx. Can't start NAL-Q\n");
 				return 0;
 			}
 			/* NAL-Q can be enabled when all ctx are in running state */
 			if (ctx->state != MFCINST_RUNNING) {
+				dev->nal_q_stop_cause |= (1 << NALQ_STOP_NO_RUNNING);
 				mfc_debug(2, "There is a ctx which is not in running state. "
 						"index: %d, state: %d\n", i, ctx->state);
 				return 0;
 			}
 			/* NAL-Q can't use the command about last frame */
 			if (mfc_check_buf_vb_flag(ctx, MFC_FLAG_LAST_FRAME) == 1) {
+				dev->nal_q_stop_cause |= (1 << NALQ_STOP_LAST_FRAME);
 				mfc_debug(2, "There is a last frame. index: %d\n", i);
 				return 0;
 			}
 			/* NAL-Q doesn't support OTF mode */
 			if (ctx->otf_handle) {
+				dev->nal_q_stop_cause |= (1 << NALQ_STOP_OTF);
 				mfc_debug(2, "There is a OTF node\n");
 				return 0;
 			}
 			/* NAL-Q doesn't support BPG */
 			if (IS_BPG_DEC(ctx) || IS_BPG_ENC(ctx)) {
+				dev->nal_q_stop_cause |= (1 << NALQ_STOP_BPG);
 				mfc_debug(2, "BPG codec type\n");
 				return 0;
 			}
@@ -71,26 +76,32 @@ int mfc_nal_q_check_enable(struct mfc_dev *dev)
 			if (ctx->type == MFCINST_DECODER) {
 				dec = ctx->dec_priv;
 				if (!dec) {
+					dev->nal_q_stop_cause |= (1 << NALQ_STOP_NO_STRUCTURE);
 					mfc_debug(2, "There is no dec\n");
 					return 0;
 				}
 				if ((dec->has_multiframe && CODEC_MULTIFRAME(ctx)) || dec->consumed) {
+					dev->nal_q_stop_cause |= (1 << NALQ_STOP_MULTI_FRAME);
 					mfc_debug(2, "[MULTIFRAME] There is a multi frame or consumed header\n");
 					return 0;
 				}
 				if (dec->is_dpb_full) {
+					dev->nal_q_stop_cause |= (1 << NALQ_STOP_DPB_FULL);
 					mfc_debug(2, "[DPB] All buffers are referenced\n");
 					return 0;
 				}
 				if (dec->is_interlaced) {
+					dev->nal_q_stop_cause |= (1 << NALQ_STOP_INTERLACE);
 					mfc_debug(2, "[INTERLACE] There is a interlaced stream\n");
 					return 0;
 				}
 				if (dec->detect_black_bar) {
+					dev->nal_q_stop_cause |= (1 << NALQ_STOP_BLACK_BAR);
 					mfc_debug(2, "[BLACKBAR] black bar detection is enabled\n");
 					return 0;
 				}
 				if (dec->inter_res_change) {
+					dev->nal_q_stop_cause |= (1 << NALQ_STOP_INTER_DRC);
 					mfc_debug(2, "[DRC] interframe resolution is changed\n");
 					return 0;
 				}
@@ -98,15 +109,18 @@ int mfc_nal_q_check_enable(struct mfc_dev *dev)
 			} else if (ctx->type == MFCINST_ENCODER) {
 				enc = ctx->enc_priv;
 				if (!enc) {
+					dev->nal_q_stop_cause |= (1 << NALQ_STOP_NO_STRUCTURE);
 					mfc_debug(2, "There is no enc\n");
 					return 0;
 				}
 				if (enc->slice_mode == V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_MAX_FIXED_BYTES) {
+					dev->nal_q_stop_cause |= (1 << NALQ_STOP_SLICE_MODE);
 					mfc_debug(2, "There is fixed bytes option(slice mode)\n");
 					return 0;
 				}
 				p = &enc->params;
 				if (p->rc_reaction_coeff <= CBR_I_LIMIT_MAX) {
+					dev->nal_q_stop_cause |= (1 << NALQ_STOP_RC_MODE);
 					mfc_debug(2, "There is CBR_VT option(rc mode)\n");
 					return 0;
 				}
@@ -381,6 +395,7 @@ void mfc_nal_q_init(struct mfc_dev *dev, nal_queue_handle *nal_q_handle)
 		mfc_get_nal_q_info());
 
 	nal_q_handle->nal_q_exception = 0;
+	dev->nal_q_stop_cause = 0;
 
 	mfc_debug_dev_leave();
 
@@ -1723,6 +1738,7 @@ static void __mfc_nal_q_handle_frame_input(struct mfc_ctx *ctx, unsigned int err
 		dec->remained_size = src_mb->vb.vb2_buf.planes[0].bytesused
 			- dec->consumed;
 		dec->has_multiframe = 1;
+		dev->nal_q_stop_cause |= (1 << NALQ_EXCEPTION_MULTI_FRAME);
 		dev->nal_q_handle->nal_q_exception = 1;
 
 		MFC_TRACE_CTX("** consumed:%ld, remained:%ld, addr:0x%08llx\n",
@@ -1794,6 +1810,7 @@ void __mfc_nal_q_handle_frame(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 		mfc_debug(2, "[NALQ][DRC] Resolution change set to %d\n", res_change);
 		mfc_change_state(ctx, MFCINST_RES_CHANGE_INIT);
 		ctx->wait_state = WAIT_G_FMT | WAIT_STOP;
+		dev->nal_q_stop_cause |= (1 << NALQ_EXCEPTION_DRC);
 		dev->nal_q_handle->nal_q_exception = 1;
 		mfc_info_ctx("[NALQ][DRC] nal_q_exception is set (res change)\n");
 		goto leave_handle_frame;
@@ -1801,6 +1818,7 @@ void __mfc_nal_q_handle_frame(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 	if (need_empty_dpb) {
 		mfc_debug(2, "[NALQ][MULTIFRAME] There is multi-frame. consumed:%ld\n", dec->consumed);
 		dec->has_multiframe = 1;
+		dev->nal_q_stop_cause |= (1 << NALQ_EXCEPTION_NEED_DPB);
 		dev->nal_q_handle->nal_q_exception = 1;
 		mfc_info_ctx("[NALQ][MULTIFRAME] nal_q_exception is set\n");
 		goto leave_handle_frame;
@@ -1811,12 +1829,14 @@ void __mfc_nal_q_handle_frame(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 		__mfc_nal_q_get_img_size(ctx, pOutStr, MFC_GET_RESOL_DPB_SIZE);
 		dec->inter_res_change = 1;
 		mfc_info_ctx("[NALQ][DRC] nal_q_exception is set (interframe res change)\n");
+		dev->nal_q_stop_cause |= (1 << NALQ_EXCEPTION_INTER_DRC);
 		dev->nal_q_handle->nal_q_exception = 2;
 		goto leave_handle_frame;
 	}
 	if (is_interlaced && ctx->is_sbwc) {
 		mfc_err_ctx("[NALQ][SBWC] interlace during decoding is not supported\n");
 		dec->is_interlaced = is_interlaced;
+		dev->nal_q_stop_cause |= (1 << NALQ_EXCEPTION_SBWC_INTERLACE);
 		dev->nal_q_handle->nal_q_exception = 1;
 		mfc_info_ctx("[NALQ][SBWC] nal_q_exception is set (interlaced)\n");
 		mfc_change_state(ctx, MFCINST_ERROR);
@@ -1830,6 +1850,7 @@ void __mfc_nal_q_handle_frame(struct mfc_ctx *ctx, DecoderOutputStr *pOutStr)
 	if (is_interlaced && !IS_MPEG4_DEC(ctx)) {
 		mfc_debug(2, "[NALQ][INTERLACE] Progressive -> Interlaced\n");
 		dec->is_interlaced = is_interlaced;
+		dev->nal_q_stop_cause |= (1 << NALQ_EXCEPTION_INTERLACE);
 		dev->nal_q_handle->nal_q_exception = 1;
 		mfc_info_ctx("[NALQ][INTERLACE] nal_q_exception is set\n");
 		goto leave_handle_frame;
@@ -1901,6 +1922,7 @@ int __mfc_nal_q_handle_error(struct mfc_ctx *ctx, EncoderOutputStr *pOutStr, int
 
 	mfc_err_ctx("[NALQ] Interrupt Error: %d\n", pOutStr->ErrorCode);
 
+	dev->nal_q_stop_cause |= (1 << NALQ_EXCEPTION_ERROR);
 	dev->nal_q_handle->nal_q_exception = 1;
 	mfc_info_ctx("[NALQ] nal_q_exception is set (error)\n");
 
