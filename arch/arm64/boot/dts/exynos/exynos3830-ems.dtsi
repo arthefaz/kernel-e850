@@ -122,18 +122,18 @@
 					cpus = "0-3";
 					role = <TRIGGER>;
 					cpu-heavy-thr = <0xffffffff>;
-					cpu-busy-thr = <256>;
-					cpu-nr-running-thr = <1>;
-					domain-nr-running-thr = <4>;
+					cpu-busy-thr = <0>;
+					cpu-nr-running-thr = <2>;
+					domain-nr-running-thr = <6>;
 				};
 				ecs-domain-1 {
 					domain-name = "NON-BOOT";
 					cpus = "4-7";
 					role = <TRIGGER_AND_SAVER>;
 					cpu-heavy-thr = <0xffffffff>;
-					cpu-busy-thr = <256>;
-					cpu-nr-running-thr = <1>;
-					domain-nr-running-thr = <4>;
+					cpu-busy-thr = <0>;
+					cpu-nr-running-thr = <2>;
+					domain-nr-running-thr = <6>;
 				};
 			};
 		};
