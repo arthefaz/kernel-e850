@@ -12,12 +12,6 @@
 
 #ifdef GROUP_MEM_TYPE_SHMEM
 
-#define BOOT_RESERVED_SZ	4056
-#define BOOT_FMT_TX_BUFF_SZ	4096
-#define BOOT_FMT_RX_BUFF_SZ	4096
-#define BOOT_RAW_TX_BUFF_SZ	2084864
-#define BOOT_RAW_RX_BUFF_SZ	2097152
-
 #ifdef CONFIG_LINK_DEVICE_PCIE
 #define DOORBELL_INT_ADD		0x10000
 #define MODEM_INT_NUM			16
@@ -37,31 +31,6 @@ struct __packed shmem_ulpath_table {
 	struct shmem_ulpath_ctl ctl[RMNET_COUNT];
 };
 #endif
-
-struct __packed legacy_map {
-	u32 magic;
-	u32 mem_access;
-
-	u32 fmt_tx_head;
-	u32 fmt_tx_tail;
-
-	u32 fmt_rx_head;
-	u32 fmt_rx_tail;
-
-	u32 raw_tx_head;
-	u32 raw_tx_tail;
-
-	u32 raw_rx_head;
-	u32 raw_rx_tail;
-
-	char reserved[BOOT_RESERVED_SZ]; /* reserved for clk_table, etc. */
-
-	char fmt_tx_buff[BOOT_FMT_TX_BUFF_SZ];
-	char fmt_rx_buff[BOOT_FMT_RX_BUFF_SZ];
-
-	char raw_tx_buff[BOOT_RAW_TX_BUFF_SZ];
-	char raw_rx_buff[BOOT_RAW_RX_BUFF_SZ];
-};
 
 #endif /* end of GROUP_MEM_TYPE_SHMEM */
 

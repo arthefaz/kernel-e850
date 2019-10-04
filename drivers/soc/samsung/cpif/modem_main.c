@@ -364,6 +364,18 @@ static int parse_dt_ipc_region_pdata(struct device *dev, struct device_node *np,
 {
 	int ret = 0;
 
+	/* legacy buffer (fmt, raw) setting */
+	mif_dt_read_u32(np, "legacy_fmt_head_tail_offset",
+			pdata->legacy_fmt_head_tail_offset);
+	mif_dt_read_u32(np, "legacy_fmt_buffer_offset", pdata->legacy_fmt_buffer_offset);
+	mif_dt_read_u32(np, "legacy_fmt_txq_size", pdata->legacy_fmt_txq_size);
+	mif_dt_read_u32(np, "legacy_fmt_rxq_size", pdata->legacy_fmt_rxq_size);
+	mif_dt_read_u32(np, "legacy_raw_head_tail_offset",
+			pdata->legacy_raw_head_tail_offset);
+	mif_dt_read_u32(np, "legacy_raw_buffer_offset", pdata->legacy_raw_buffer_offset);
+	mif_dt_read_u32(np, "legacy_raw_txq_size", pdata->legacy_raw_txq_size);
+	mif_dt_read_u32(np, "legacy_raw_rxq_size", pdata->legacy_raw_rxq_size);
+
 	mif_dt_read_u32_noerr(np, "offset_ap_version", pdata->offset_ap_version);
 	mif_dt_read_u32_noerr(np, "offset_cp_version", pdata->offset_cp_version);
 	mif_dt_read_u32_noerr(np, "offset_cmsg_offset", pdata->offset_cmsg_offset);
@@ -397,7 +409,6 @@ static int parse_dt_ipc_region_pdata(struct device *dev, struct device_node *np,
 	of_property_read_u32_array(np, "ap2cp_kerneltime", pdata->ap2cp_kerneltime, 2);
 	of_property_read_u32_array(np, "ap2cp_kerneltime_sec", pdata->ap2cp_kerneltime_sec, 2);
 	of_property_read_u32_array(np, "ap2cp_kerneltime_usec", pdata->ap2cp_kerneltime_usec, 2);
-
 
 	/* Status Bit Info */
 	mif_dt_read_u32(np, "sbi_lte_active_mask", pdata->sbi_lte_active_mask);

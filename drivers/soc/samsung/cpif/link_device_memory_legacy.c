@@ -4,18 +4,15 @@
 
 int create_legacy_link_device(struct mem_link_device *mld)
 {
-	struct legacy_map *map;
 	struct legacy_ipc_device *dev;
 	struct legacy_link_device *bl = &mld->legacy_link_dev;
-#ifdef CONFIG_MODEM_IF_LEGACY_QOS
 	struct modem_data *modem = mld->link_dev.mdm_data;
-#endif
+
 	bl->ld = &mld->link_dev;
-	map = (struct legacy_map *)mld->base;
 
 	/* magic code and access enable fields */
-	bl->magic = (u32 __iomem *)&map->magic;
-	bl->mem_access = (u32 __iomem *)&map->mem_access;
+	bl->magic = (u32 __iomem *)(mld->base);
+	bl->mem_access = (u32 __iomem *)(mld->base + 4);
 
 	/* IPC_MAP_FMT */
 	bl->dev[IPC_MAP_FMT] = kzalloc(sizeof(struct legacy_ipc_device), GFP_KERNEL);
@@ -26,17 +23,17 @@ int create_legacy_link_device(struct mem_link_device *mld)
 
 	spin_lock_init(&dev->txq.lock);
 	atomic_set(&dev->txq.busy, 0);
-	dev->txq.head = &map->fmt_tx_head;
-	dev->txq.tail = &map->fmt_tx_tail;
-	dev->txq.buff = &map->fmt_tx_buff[0];
-	dev->txq.size = BOOT_FMT_TX_BUFF_SZ;
+	dev->txq.head = (void __iomem *)(mld->base + modem->legacy_fmt_head_tail_offset);
+	dev->txq.tail = (void __iomem *)(mld->base + modem->legacy_fmt_head_tail_offset + 4);
+	dev->txq.buff = (void __iomem *)(mld->base + modem->legacy_fmt_buffer_offset);
+	dev->txq.size = modem->legacy_fmt_txq_size;
 
 	spin_lock_init(&dev->rxq.lock);
 	atomic_set(&dev->rxq.busy, 0);
-	dev->rxq.head = &map->fmt_rx_head;
-	dev->rxq.tail = &map->fmt_rx_tail;
-	dev->rxq.buff = &map->fmt_rx_buff[0];
-	dev->rxq.size = BOOT_FMT_RX_BUFF_SZ;
+	dev->rxq.head = (void __iomem *)(mld->base + modem->legacy_fmt_head_tail_offset + 8);
+	dev->rxq.tail = (void __iomem *)(mld->base + modem->legacy_fmt_head_tail_offset + 12);
+	dev->rxq.buff = (void __iomem *)(mld->base + modem->legacy_fmt_buffer_offset + modem->legacy_fmt_txq_size);
+	dev->rxq.size = modem->legacy_fmt_rxq_size;
 
 	dev->msg_mask = MASK_SEND_FMT;
 	dev->req_ack_mask = MASK_REQ_ACK_FMT;
@@ -98,21 +95,21 @@ int create_legacy_link_device(struct mem_link_device *mld)
 
 	spin_lock_init(&dev->txq.lock);
 	atomic_set(&dev->txq.busy, 0);
-	dev->txq.head = &map->raw_tx_head;
-	dev->txq.tail = &map->raw_tx_tail;
-	dev->txq.buff = &map->raw_tx_buff[0];
-	dev->txq.size = BOOT_RAW_TX_BUFF_SZ;
+	dev->txq.head = (void __iomem *)(mld->base + modem->legacy_raw_head_tail_offset);
+	dev->txq.tail = (void __iomem *)(mld->base + modem->legacy_raw_head_tail_offset + 4);
+	dev->txq.buff = (void __iomem *)(mld->base + modem->legacy_raw_buffer_offset);
+	dev->txq.size = modem->legacy_raw_txq_size;
 
 	spin_lock_init(&dev->rxq.lock);
 	atomic_set(&dev->rxq.busy, 0);
-	dev->rxq.head = &map->raw_rx_head;
-	dev->rxq.tail = &map->raw_rx_tail;
+	dev->rxq.head = (void __iomem *)(mld->base + modem->legacy_raw_head_tail_offset + 8);
+	dev->rxq.tail = (void __iomem *)(mld->base + modem->legacy_raw_head_tail_offset + 12);
 #ifdef CONFIG_CACHED_LEGACY_RAW_RX_BUFFER
-	dev->rxq.buff = phys_to_virt(cp_shmem_get_base(bl->ld->mdm_data->cp_num, SHMEM_IPC) + SZ_2M);
+	dev->rxq.buff = phys_to_virt(cp_shmem_get_base(bl->ld->mdm_data->cp_num, SHMEM_IPC) + modem->legacy_raw_buffer_offset + modem->legacy_raw_txq_size);
 #else
-	dev->rxq.buff = &map->raw_rx_buff[0];
+	dev->rxq.buff = (void __iomem *)(mld->base + modem->legacy_raw_buffer_offset + modem->legacy_raw_txq_size);
 #endif
-	dev->rxq.size = BOOT_RAW_RX_BUFF_SZ;
+	dev->rxq.size = modem->legacy_raw_rxq_size;
 
 	dev->msg_mask = MASK_SEND_RAW;
 	dev->req_ack_mask = MASK_REQ_ACK_RAW;

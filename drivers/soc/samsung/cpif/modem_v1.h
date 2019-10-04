@@ -375,6 +375,16 @@ struct modem_data {
 	/* SIM Detect polarity */
 	bool sim_polarity;
 
+	/* legacy buffer setting */
+	u32 legacy_fmt_head_tail_offset;
+	u32 legacy_fmt_buffer_offset;
+	u32 legacy_fmt_txq_size;
+	u32 legacy_fmt_rxq_size;
+	u32 legacy_raw_head_tail_offset;
+	u32 legacy_raw_buffer_offset;
+	u32 legacy_raw_txq_size;
+	u32 legacy_raw_rxq_size;
+
 	/* several 4 byte length info in ipc region */
 	u32 offset_ap_version;
 	u32 offset_cp_version;
