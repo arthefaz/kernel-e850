@@ -329,8 +329,26 @@ int pr_buffer(const char *tag, const char *data, size_t data_len,
 							size_t max_len);
 
 /* print a sk_buff as hex string */
-#define pr_skb(tag, skb) \
-	pr_buffer(tag, (char *)((skb)->data), (size_t)((skb)->len), (size_t)16)
+#define PRINT_SKBUFF_PROTOCOL_SIT	24
+#define PRINT_SKBUFF_PROTOCOL_SIPC	16
+static inline void pr_skb(const char *tag, struct sk_buff *skb, struct link_device *ld)
+{
+	int length = 0;
+
+	switch (ld->protocol) {
+	case PROTOCOL_SIT:
+		length = PRINT_SKBUFF_PROTOCOL_SIT;
+		break;
+	case PROTOCOL_SIPC:
+		length = PRINT_SKBUFF_PROTOCOL_SIPC;
+		break;
+	default:
+		mif_err("ERR - unknwon protocol\n");
+		break;
+	}
+
+	pr_buffer(tag, (char *)((skb)->data), (size_t)((skb)->len), length);
+}
 
 /* print a urb as hex string */
 #define pr_urb(tag, urb) \

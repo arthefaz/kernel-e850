@@ -325,7 +325,7 @@ void mif_pkt(u8 ch, const char *tag, struct sk_buff *skb)
 		return;
 	}
 
-	pr_skb(tag, skb);
+	pr_skb(tag, skb, skbpriv(skb)->ld);
 }
 
 /* print buffer as hex string */

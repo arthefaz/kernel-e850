@@ -1690,7 +1690,7 @@ static int rx_ipc_frames_from_rb(struct sbd_ring_buffer *rb)
 			u8 fch = ld->get_ch(skb->data);
 			if (fch != ch) {
 				mif_err("frm.ch:%d != rb.ch:%d\n", fch, ch);
-				pr_skb("CRASH", skb);
+				pr_skb("CRASH", skb, ld);
 				dev_kfree_skb_any(skb);
 				link_trigger_cp_crash(mld, CRASH_REASON_MIF_RX_BAD_DATA,
 					"frm.ch is not same with rb.ch");
@@ -1775,7 +1775,7 @@ static int legacy_ipc_rx_func_napi(struct mem_link_device *mld, struct legacy_ip
 		if (!iod) {
 			mif_err("%s: ERR! [%s]No IOD for CH.%d(out:%u)\n",
 				ld->name, dev->name, ch, get_rxq_tail(dev));
-			pr_skb("CRASH", skb);
+			pr_skb("CRASH", skb, ld);
 			dev_kfree_skb_any(skb);
 			link_trigger_cp_crash(mld, CRASH_REASON_MIF_RX_BAD_DATA,
 				"ERR! No IOD from CP");
@@ -1854,7 +1854,7 @@ static int legacy_ipc_rx_func(struct mem_link_device *mld, struct legacy_ipc_dev
 		if (!iod) {
 			mif_err("%s: ERR! [%s]No IOD for CH.%d(out:%u)\n",
 				ld->name, dev->name, ch, get_rxq_tail(dev));
-			pr_skb("CRASH", skb);
+			pr_skb("CRASH", skb, ld);
 			dev_kfree_skb_any(skb);
 			link_trigger_cp_crash(mld, CRASH_REASON_MIF_RX_BAD_DATA,
 				"ERR! No IOD from CP in rx_frames_from_dev()");
