@@ -25,7 +25,6 @@
 #include <linux/of_gpio.h>
 #include <linux/smc.h>
 #include <linux/modem_notifier.h>
-#include <linux/sec_sysfs.h>
 #include <linux/clk.h>
 #include <linux/pci.h>
 #include <linux/regulator/consumer.h>
@@ -470,6 +469,7 @@ static int power_on_cp(struct modem_ctl *mc)
 	print_mc_state(mc);
 
 	mif_gpio_set_value(mc->s5100_gpio_cp_reset, 0, 0);
+	mif_gpio_set_value(mc->s5100_gpio_cp_pwr, 0, 50);
 	mif_gpio_set_value(mc->s5100_gpio_cp_pwr, 1, 50);
 	mif_gpio_set_value(mc->s5100_gpio_cp_reset, 1, 50);
 
