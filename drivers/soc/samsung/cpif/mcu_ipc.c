@@ -462,7 +462,7 @@ static int cp_mbox_probe(struct platform_device *pdev)
 
 	/* Request IRQ */
 	irq = platform_get_irq(pdev, 0);
-	err = devm_request_irq(&pdev->dev, irq, cp_mbox_irq_handler, 0, pdev->name, &mcu_dat[id]);
+	err = devm_request_irq(&pdev->dev, irq, cp_mbox_irq_handler, IRQF_ONESHOT, pdev->name, &mcu_dat[id]);
 	if (err) {
 		mif_err("Can't request MCU_IPC IRQ\n");
 		return err;

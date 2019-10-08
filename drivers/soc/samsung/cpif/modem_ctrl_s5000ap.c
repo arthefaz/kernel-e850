@@ -1063,7 +1063,7 @@ int s5000ap_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 	struct device_node *np = pdev->dev.of_node;
 	int ret = 0;
 	unsigned int irq_num;
-	unsigned long flags = IRQF_NO_SUSPEND | IRQF_NO_THREAD;
+	unsigned long flags = IRQF_NO_SUSPEND | IRQF_NO_THREAD | IRQF_ONESHOT;
 
 	mif_info("+++\n");
 
