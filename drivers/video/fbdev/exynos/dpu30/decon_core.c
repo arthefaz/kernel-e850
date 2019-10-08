@@ -30,6 +30,7 @@
 #include <linux/debugfs.h>
 #include <linux/pinctrl/consumer.h>
 #include <video/mipi_display.h>
+#include <linux/version.h>
 #include <media/v4l2-subdev.h>
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>

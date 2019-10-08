@@ -13,6 +13,7 @@
 #include "dpp.h"
 #include "format.h"
 
+#include <linux/version.h>
 #include <soc/samsung/bts.h>
 #include <media/v4l2-subdev.h>
 #if defined(CONFIG_CAL_IF)
