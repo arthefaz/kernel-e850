@@ -289,7 +289,14 @@ static int run_debugfs_open(struct inode *inode, struct file *file)
 	return single_open(file, run_seq_show, inode->i_private);
 }
 
-static struct file_operations run_debugfs_fops;
+static struct file_operations run_debugfs_fops = {
+	.owner          = THIS_MODULE,
+	.open           = run_debugfs_open,
+	.write          = run_seq_write,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
 
 
 /*--------------------------------------*/
@@ -299,7 +306,6 @@ static int __init exynos_perf_cpufreq_profile_init(void)
 {
 	struct device_node *dn = NULL;
 	struct dentry *root, *d;
-	struct file_operations fops;
 
 	dn = of_find_node_by_name(dn, "exynos_perf_ncmemcpy");
 	of_property_read_u32(dn, "cal-id-mif", &cal_id_mif);
@@ -310,16 +316,6 @@ static int __init exynos_perf_cpufreq_profile_init(void)
 		printk("%s: create debugfs\n", __FILE__);
 		return -ENOMEM;
 	}
-
-	fops.owner		= THIS_MODULE;
-	fops.open		= run_debugfs_open;
-	fops.write		= run_seq_write;
-	fops.read		= seq_read;
-	fops.read_iter		= NULL;
-	fops.llseek		= seq_lseek;
-	fops.release		= single_release;
-
-	run_debugfs_fops	= fops;
 
 	d = debugfs_create_file("run", S_IRUSR, root,
 					(unsigned int *)0,

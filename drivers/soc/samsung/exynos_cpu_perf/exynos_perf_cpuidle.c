@@ -464,9 +464,6 @@ static int freq_debugfs_open(struct inode *inode, struct file *file)
 	return single_open(file, freq_seq_show, inode->i_private);
 }
 
-static struct file_operations freq_debugfs_fops;
-
-
 /*********************************************************************
  *                   Initialize cpuidle profiler                     *
  *********************************************************************/
@@ -491,10 +488,28 @@ exynos_perf_cpu_idle_register(struct cpuidle_driver *drv)
 	cpu_idle_state_count = state_count;
 }
 
+// MAIN
+static struct file_operations run_debugfs_fops = {
+	.owner          = THIS_MODULE,
+	.open           = run_debugfs_open,
+	.write          = run_seq_write,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
+static struct file_operations freq_debugfs_fops = {
+	.owner          = THIS_MODULE,
+	.open           = freq_debugfs_open,
+	.write          = freq_seq_write,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
 static int __init exynos_perf_cpuidle_profile_init(void)
 {
 	struct dentry *root, *d;
-	struct file_operations fops;
 
 	root = debugfs_create_dir("exynos_perf_cpuidle", NULL);
 	if (!root) {
@@ -502,25 +517,11 @@ static int __init exynos_perf_cpuidle_profile_init(void)
 		return -ENOMEM;
 	}
 
-	fops.owner		= THIS_MODULE;
-	fops.open		= run_debugfs_open;
-	fops.write		= run_seq_write;
-	fops.read		= seq_read;
-	fops.read_iter		= NULL;
-	fops.llseek		= seq_lseek;
-	fops.release		= single_release;
-
-	run_debugfs_fops	= fops;
-
 	d = debugfs_create_file("run", S_IRUSR, root,
 					(unsigned int *)0,
 					&run_debugfs_fops);
 	if (!d)
 		return -ENOMEM;
-
-	fops.open		= freq_debugfs_open;
-	fops.write		= freq_seq_write;
-	freq_debugfs_fops	= fops;
 
 	d = debugfs_create_file("freq", S_IRUSR, root,
 					(unsigned int *)0,
