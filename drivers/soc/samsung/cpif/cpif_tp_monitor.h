@@ -64,8 +64,13 @@ struct cpif_tpmon {
 	struct tpmon_data gro_data;
 #endif
 	struct tpmon_data irq_affinity_data;
+
 	struct tpmon_data mif_data;
 	struct pm_qos_request qos_req_mif;
+
+#if defined(CONFIG_LINK_DEVICE_PCIE)
+	struct tpmon_data pci_low_power_data;
+#endif
 };
 
 #if defined(CONFIG_CPIF_TP_MONITOR)

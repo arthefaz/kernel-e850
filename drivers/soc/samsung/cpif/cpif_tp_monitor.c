@@ -18,6 +18,7 @@
 #include "link_device_memory.h"
 #include "cpif_tp_monitor.h"
 #if defined(CONFIG_LINK_DEVICE_PCIE)
+#include <linux/exynos-pci-ctrl.h>
 #include "s51xx_pcie.h"
 #endif
 
@@ -128,19 +129,19 @@ static ssize_t tpmon_store_rps_map(struct netdev_rx_queue *queue, const char *bu
 	return len;
 }
 
-static void tpmon_set_rps(struct tpmon_data *rps_data)
+static void tpmon_set_rps(struct tpmon_data *data)
 {
 	struct io_device *iod;
 	int ret = 0;
 	char mask[MAX_RPS_STRING];
 
-	if (!rps_data->enable)
+	if (!data->enable)
 		return;
 
-	snprintf(mask, MAX_RPS_STRING, "%x", rps_data->values[rps_data->curr_value]);
-	mif_info("Change RPS at %ldMbps. mask:%s\n", rps_data->tpmon->rx_mega_bps, mask);
+	snprintf(mask, MAX_RPS_STRING, "%x", data->values[data->curr_value]);
+	mif_info("Change RPS at %ldMbps. mask:%s\n", data->tpmon->rx_mega_bps, mask);
 
-	list_for_each_entry(iod, &rps_data->tpmon->net_node_list, node_all_ndev) {
+	list_for_each_entry(iod, &data->tpmon->net_node_list, node_all_ndev) {
 		if (!iod->name)
 			continue;
 
@@ -154,53 +155,72 @@ static void tpmon_set_rps(struct tpmon_data *rps_data)
 #endif
 
 #if defined(CONFIG_MODEM_IF_NET_GRO)
-static void tpmon_set_gro(struct tpmon_data *gro_data)
+static void tpmon_set_gro(struct tpmon_data *data)
 {
-	if (!gro_data->enable)
+	if (!data->enable)
 		return;
 
 	mif_info("Change GRO at %ldMbps. flush time:%u\n",
-			gro_data->tpmon->rx_mega_bps, gro_data->values[gro_data->curr_value]);
-	gro_flush_time = gro_data->values[gro_data->curr_value];
+			data->tpmon->rx_mega_bps, data->values[data->curr_value]);
+	gro_flush_time = data->values[data->curr_value];
 }
 #endif
 
-static void tpmon_set_irq_affinity(struct tpmon_data *irq_affinity_data)
+static void tpmon_set_irq_affinity(struct tpmon_data *data)
 {
 #if defined(CONFIG_LINK_DEVICE_PCIE)
-	struct modem_ctl *mc = irq_affinity_data->tpmon->ld->mc;
+	struct modem_ctl *mc = data->tpmon->ld->mc;
 
 	if (!mc)
 		return;
 #endif
 
-	if (!irq_affinity_data->enable)
+	if (!data->enable)
 		return;
 
 	mif_info("Change IRQ affinity at %ldMbps. CPU:%d\n",
-			irq_affinity_data->tpmon->rx_mega_bps,
-			irq_affinity_data->values[irq_affinity_data->curr_value]);
+			data->tpmon->rx_mega_bps, data->values[data->curr_value]);
 
 #if defined(CONFIG_LINK_DEVICE_SHMEM) && defined(CONFIG_MCU_IPC)
-	mcu_ipc_set_affinity(0, irq_affinity_data->values[irq_affinity_data->curr_value]);
+	mcu_ipc_set_affinity(0, data->values[data->curr_value]);
 #endif
 
 #if defined(CONFIG_LINK_DEVICE_PCIE)
-	exynos_pcie_rc_set_affinity(mc->pcie_ch_num,
-		irq_affinity_data->values[irq_affinity_data->curr_value]);
+	exynos_pcie_rc_set_affinity(mc->pcie_ch_num, data->values[data->curr_value]);
 #endif
 }
 
 /* Frequency */
-static void tpmon_set_mif(struct tpmon_data *mif_data)
+static void tpmon_set_mif(struct tpmon_data *data)
 {
-	if (!mif_data->enable)
+	if (!data->enable)
 		return;
 
 	mif_info("Change freq at %ldMbps. mif_freq:0x%x\n",
-			mif_data->tpmon->rx_mega_bps, mif_data->values[mif_data->curr_value]);
-	pm_qos_update_request(&mif_data->tpmon->qos_req_mif, mif_data->values[mif_data->curr_value]);
+			data->tpmon->rx_mega_bps, data->values[data->curr_value]);
+	pm_qos_update_request(&data->tpmon->qos_req_mif, data->values[data->curr_value]);
 }
+
+#if defined(CONFIG_LINK_DEVICE_PCIE)
+static void tpmon_set_pci_low_power(struct tpmon_data *data)
+{
+	struct modem_ctl *mc = data->tpmon->ld->mc;
+
+	if (!data->enable)
+		return;
+
+	if (!mc || !mc->pcie_powered_on)
+		return;
+
+	mif_info("Change PCI low power at %ldMbps. enable:%u\\n",
+			data->tpmon->rx_mega_bps, data->values[data->curr_value]);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+	exynos_pcie_rc_l1ss_ctrl((int)data->values[data->curr_value], PCIE_L1SS_CTRL_MODEM_IF);
+#else
+	exynos_pcie_host_v1_l1ss_ctrl((int)data->values[data->curr_value], PCIE_L1SS_CTRL_MODEM_IF);
+#endif
+}
+#endif
 
 /* Qos work */
 static void tpmon_qos_work(struct work_struct *ws)
@@ -392,6 +412,7 @@ int tpmon_create(struct platform_device *pdev, struct link_device *ld)
 	INIT_LIST_HEAD(&tpmon->data_list);
 
 #if defined(CONFIG_RPS)
+	/* RPS */
 	INIT_LIST_HEAD(&tpmon->net_node_list);
 	ret = tpmon_fill_data(np, tpmon, &tpmon->rps_data, tpmon_set_rps,
 				"enable_rps_boost", "tp_rps_threshold", "tp_rps_cpu_mask");
@@ -400,22 +421,33 @@ int tpmon_create(struct platform_device *pdev, struct link_device *ld)
 #endif
 
 #if defined(CONFIG_MODEM_IF_NET_GRO)
+	/* GRO flush time */
 	ret = tpmon_fill_data(np, tpmon, &tpmon->gro_data, tpmon_set_gro,
 				"enable_gro_boost", "tp_gro_threshold", "tp_gro_flush_usec");
 	if (ret)
 		goto create_error;
 #endif
 
+	/* IRQ affinity */
 	ret = tpmon_fill_data(np, tpmon, &tpmon->irq_affinity_data, tpmon_set_irq_affinity,
 				"enable_irq_affinity_boost", "tp_irq_affinity_threshold", "tp_irq_affinity_cpu");
 	if (ret)
 		goto create_error;
 
+	/* MIF freq */
 	ret = tpmon_fill_data(np, tpmon, &tpmon->mif_data, tpmon_set_mif,
 				"enable_mif_boost", "tp_mif_threshold", "tp_mif_value");
 	if (ret)
 		goto create_error;
 	pm_qos_add_request(&tpmon->qos_req_mif, PM_QOS_BUS_THROUGHPUT, 0);
+
+#if defined(CONFIG_LINK_DEVICE_PCIE)
+	/* PCIe L1SS */
+	ret = tpmon_fill_data(np, tpmon, &tpmon->pci_low_power_data, tpmon_set_pci_low_power,
+				"enable_pci_low_power_boost", "tp_pci_low_power_threshold", "tp_pci_low_power_enable");
+	if (ret)
+		goto create_error;
+#endif
 
 	tpmon->qos_wq = create_singlethread_workqueue("cpif_tpmon_qos_wq");
 	if (!tpmon->qos_wq) {
