@@ -58,6 +58,7 @@ static inline struct nanohub_data *dev_get_nanohub_data(struct device *dev)
 		pr_info("%s io not available!\n", __func__);
 		return NULL;
 	}
+
 	return io->data;
 }
 
