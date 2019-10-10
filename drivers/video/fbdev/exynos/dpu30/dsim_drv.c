@@ -10,7 +10,6 @@
 */
 
 #include <linux/kernel.h>
-#include <linux/version.h>
 #include <linux/errno.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
@@ -39,7 +38,7 @@
 
 #include <soc/samsung/exynos-devfreq.h>
 
-#if defined(HACK_CONFIG_CPU_IDLE)
+#if defined(CONFIG_CPU_IDLE)
 #include <soc/samsung/exynos-cpupm.h>
 #endif
 #include <soc/samsung/exynos-pmu.h>
@@ -827,7 +826,7 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 
 	dsim_dbg("%s %s +\n", __func__, dsim_state_names[dsim->state]);
 
-#if defined(HACK_CONFIG_CPU_IDLE)
+#if defined(CONFIG_CPU_IDLE)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 0);
 #endif
 
@@ -943,7 +942,7 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 	pm_runtime_put_sync(dsim->dev);
 
 	dsim_dbg("%s %s -\n", __func__, dsim_state_names[dsim->state]);
-#if defined(HACK_CONFIG_CPU_IDLE)
+#if defined(CONFIG_CPU_IDLE)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
 #endif
 
@@ -1030,7 +1029,7 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 	dsim_phy_power_off(dsim);
 
 	pm_runtime_put_sync(dsim->dev);
-#if defined(HACK_CONFIG_CPU_IDLE)
+#if defined(CONFIG_CPU_IDLE)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
 #endif
 
@@ -1051,7 +1050,7 @@ static int dsim_exit_ulps(struct dsim_device *dsim)
 		ret = -EBUSY;
 		goto err;
 	}
-#if defined(HACK_CONFIG_CPU_IDLE)
+#if defined(CONFIG_CPU_IDLE)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 0);
 #endif
 
@@ -1770,7 +1769,7 @@ static int dsim_probe(struct platform_device *pdev)
 	timer_setup(&dsim->cmd_timer, dsim_cmd_fail_detector, 0);
 #endif
 
-#if defined(HACK_CONFIG_CPU_IDLE)
+#if defined(CONFIG_CPU_IDLE)
 	dsim->idle_ip_index = exynos_get_idle_ip_index(dev_name(&pdev->dev));
 	dsim_info("dsim idle_ip_index[%d]\n", dsim->idle_ip_index);
 	if (dsim->idle_ip_index < 0)
