@@ -10,6 +10,7 @@
 */
 
 #include <linux/kernel.h>
+#include <linux/version.h>
 #include <linux/errno.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>

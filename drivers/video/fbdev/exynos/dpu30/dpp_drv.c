@@ -10,6 +10,7 @@
 */
 
 #include <linux/module.h>
+#include <linux/version.h>
 #include <linux/clk-provider.h>
 #include <linux/clk.h>
 #include <linux/of.h>
