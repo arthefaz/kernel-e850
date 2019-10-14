@@ -423,6 +423,7 @@ static int s51xx_pcie_probe(struct pci_dev *pdev,
 
 void print_msi_register(struct pci_dev *pdev)
 {
+	struct s51xx_pcie *s51xx_pcie = pci_get_drvdata(pdev);
 	u32 msi_val;
 
 	pci_read_config_dword(pdev, 0x50, &msi_val);
@@ -434,7 +435,13 @@ void print_msi_register(struct pci_dev *pdev)
 
 	if (msi_val == 0x0) {
 		mif_info("MSI Message Reg == 0x0 - set MSI again!!!\n");
-		pci_restore_msi_state(pdev);
+
+		if (s51xx_pcie->pci_saved_configs != NULL) {
+			mif_info("msi restore\n", __func__);
+			pci_restore_msi_state(pdev);
+		} else {
+			mif_info("[skip] msi restore: saved configs is NULL\n", __func__);
+		}
 
 		mif_info("exynos_pcie_msi_init_ext is not implemented\n");
 		/* exynos_pcie_msi_init_ext(s51xx_pcie.pcie_channel_num); */
