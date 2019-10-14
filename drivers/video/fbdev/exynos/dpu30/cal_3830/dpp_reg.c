@@ -798,11 +798,13 @@ static const struct dpu_fmt dpu_cal_formats_list[] = {};
 
 const struct dpu_fmt *dpu_find_cal_fmt_info(enum decon_pixel_format fmt)
 {
-	int i;
+	size_t i;
 
-	for (i = 0; i < ARRAY_SIZE(dpu_cal_formats_list); i++)
-		if (dpu_cal_formats_list[i].fmt == fmt)
-			return &dpu_cal_formats_list[i];
+	if (ARRAY_SIZE(dpu_cal_formats_list) > 0) {
+		for (i = 0; i < ARRAY_SIZE(dpu_cal_formats_list); i++)
+			if (dpu_cal_formats_list[i].fmt == fmt)
+				return &dpu_cal_formats_list[i];
+	}
 
 	return NULL;
 }

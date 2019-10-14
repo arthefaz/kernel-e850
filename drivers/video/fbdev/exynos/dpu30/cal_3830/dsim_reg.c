@@ -938,7 +938,7 @@ static void dsim_reg_set_porch(u32 id, struct exynos_panel_info *lcd)
 		dsim_reg_set_vfp_detail(id,
 				DSIM_CMD_ALLOW_VALUE,
 				DSIM_STABLE_VFP_VALUE);
-		dsim_reg_set_hporch(id, lcd->hfp, lcd->hbp);
+		dsim_reg_set_hporch(id, lcd->hbp, lcd->hfp);
 		dsim_reg_set_sync_area(id, lcd->vsa, lcd->hsa);
 	}
 }
@@ -2503,7 +2503,7 @@ static void dsim_print_hex_dump(void __iomem *regs, const void *buf, size_t len)
 {
 	char prefix_buf[PREFIX_LEN];
 	unsigned long p;
-	int i, row;
+	size_t i, row;
 
 	for (i = 0; i < len; i += ROW_LEN) {
 		p = buf - regs + i;
