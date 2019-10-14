@@ -91,7 +91,7 @@ struct sec_nfc_info {
     bool clk_ctl;
     bool clk_state;
 #endif
-#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+#if defined(CONFIG_SEC_NFC_DEDICATED_CLK) || defined(CONFIG_SEC_NFC_PMU_CLK)
     void __iomem *clkctrl;
 #endif
 };
@@ -377,18 +377,31 @@ static irqreturn_t sec_nfc_clk_irq_thread(int irq, void *dev_id)
     struct sec_nfc_info *info = dev_id;
     struct sec_nfc_platform_data *pdata = info->pdata;
     bool value;
+#ifdef CONFIG_SEC_NFC_PMU_CLK
+    unsigned int val = readl(info->clkctrl);
+#endif
 
     dev_dbg(info->dev, "[NFC]Clock Interrupt is occurred!\n");
     value = gpio_get_value(pdata->clk_req) > 0 ? true : false;
 
     if (value == info->clk_state)
         return IRQ_HANDLED;
-
-    if (value)
+    if (value) {
+#ifdef CONFIG_SEC_NFC_PMU_CLK
+        val &= ~0x00000001; //modify according to register
+        writel(val, info->clkctrl);
+#else
         clk_prepare_enable(pdata->clk);
-    else
+#endif
+    }
+    else {
+#ifdef CONFIG_SEC_NFC_PMU_CLK
+        val |= 0x00000001; //modify according to register
+        writel(val, info->clkctrl);
+#else
         clk_disable_unprepare(pdata->clk);
-
+#endif
+    }
     info->clk_state = value;
 
     return IRQ_HANDLED;
@@ -428,8 +441,10 @@ void sec_nfc_clk_ctl_disable(struct sec_nfc_info *info)
         return;
 
     free_irq(irq, info);
+#ifndef CONFIG_SEC_NFC_PMU_CLK
     if (info->clk_state)
         clk_disable_unprepare(pdata->clk);
+#endif
     info->clk_state = false;
     info->clk_ctl = false;
 }
@@ -442,8 +457,7 @@ static void sec_nfc_set_mode(struct sec_nfc_info *info,
                     enum sec_nfc_mode mode)
 {
     struct sec_nfc_platform_data *pdata = info->pdata;
-
-#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+#if defined(CONFIG_SEC_NFC_DEDICATED_CLK) || defined(CONFIG_SEC_NFC_PMU_CLK)
     unsigned int val = readl(info->clkctrl);
 #endif
 
@@ -474,8 +488,8 @@ static void sec_nfc_set_mode(struct sec_nfc_info *info,
         msleep(SEC_NFC_VEN_WAIT_TIME);
         gpio_set_value(pdata->ven, SEC_NFC_PW_ON);
         sec_nfc_clk_ctl_enable(info);
-#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
-        val |= 0xC0000000;
+#if defined(CONFIG_SEC_NFC_DEDICATED_CLK) || defined(CONFIG_SEC_NFC_PMU_CLK)
+        val |= 0x00000100; //modify according to register
         writel(val, info->clkctrl);
 #endif
 #ifdef CONFIG_SEC_NFC_IF_I2C
@@ -484,8 +498,8 @@ static void sec_nfc_set_mode(struct sec_nfc_info *info,
         msleep(SEC_NFC_VEN_WAIT_TIME/2);
     } else {
         sec_nfc_clk_ctl_disable(info);
-#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
-        val &= ~0xC0000000;
+#if defined(CONFIG_SEC_NFC_DEDICATED_CLK) || defined(CONFIG_SEC_NFC_PMU_CLK)
+        val &= ~0x00000100; //modify according to register
         writel(val, info->clkctrl);
 #endif
 #ifdef CONFIG_SEC_NFC_IF_I2C
@@ -612,12 +626,20 @@ static int sec_nfc_suspend(struct device *dev)
 {
     struct sec_nfc_info *info = SEC_NFC_GET_INFO(dev);
     int ret = 0;
+#ifdef CONFIG_SEC_NFC_GPIO_CLK
+    struct sec_nfc_platform_data *pdata = info->pdata;
+    unsigned int irq;
+#endif
 
     mutex_lock(&info->mutex);
 
     if (info->mode == SEC_NFC_MODE_BOOTLOADER)
         ret = -EPERM;
 
+#ifdef CONFIG_SEC_NFC_GPIO_CLK
+    irq = gpio_to_irq(pdata->clk_req);
+    enable_irq_wake(irq);
+#endif
     mutex_unlock(&info->mutex);
 
     return ret;
@@ -625,6 +647,14 @@ static int sec_nfc_suspend(struct device *dev)
 
 static int sec_nfc_resume(struct device *dev)
 {
+#ifdef CONFIG_SEC_NFC_GPIO_CLK
+    struct sec_nfc_info *info = dev_get_drvdata(dev);
+    struct sec_nfc_platform_data *pdata = info->pdata;
+    unsigned int irq;
+
+    irq = gpio_to_irq(pdata->clk_req);
+    disable_irq_wake(irq);
+#endif
     return 0;
 }
 
@@ -653,13 +683,15 @@ static int sec_nfc_parse_dt(struct device *dev,
         pr_err("%s: Failed to get %s regulator.\n", __func__, pdata->pvdd_regulator_name);
 #endif
 
-#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+#if defined(CONFIG_SEC_NFC_DEDICATED_CLK) || defined(CONFIG_SEC_NFC_PMU_CLK)
     if(of_property_read_u32(np, "clkctrl-reg", (u32 *)&pdata->clkctrl_addr))
         return -EINVAL;
 #endif
 #ifdef CONFIG_SEC_NFC_GPIO_CLK
     pdata->clk_req = of_get_named_gpio(np, "sec-nfc,clk_req-gpio", 0);
+#ifndef CONFIG_SEC_NFC_PMU_CLK
     pdata->clk = clk_get(dev, "OSC_NFC");
+#endif
 #endif
 
     pr_info("%s: irq : %d, ven : %d, firm : %d\n",
@@ -721,7 +753,7 @@ static int __sec_nfc_probe(struct device *dev)
         goto err_dev_reg;
     }
 
-#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+#if defined(CONFIG_SEC_NFC_DEDICATED_CLK) || defined(CONFIG_SEC_NFC_PMU_CLK)
     if (pdata->clkctrl_addr != 0) {
         info->clkctrl = ioremap_nocache(pdata->clkctrl_addr, 0x80);
         if (!info->clkctrl) {
@@ -731,6 +763,7 @@ static int __sec_nfc_probe(struct device *dev)
         }
     }
 #endif
+
 #ifdef CONFIG_SEC_NFC_LDO_EN
     {
         ret = gpio_request(pdata->pvdd_en, "ldo_en");
@@ -770,6 +803,9 @@ static int __sec_nfc_probe(struct device *dev)
         gpio_direction_output(pdata->firm, SEC_NFC_FW_OFF);
     }
 
+#ifdef CONFIG_SEC_NFC_GPIO_CLK
+    device_init_wakeup(dev, true);
+#endif
     wake_lock_init(&info->nfc_wake_lock, WAKE_LOCK_SUSPEND, "nfc_wake_lock");
 
     dev_info(dev, "%s: success info: %p, pdata %p\n", __func__, info, pdata);
@@ -779,7 +815,7 @@ static int __sec_nfc_probe(struct device *dev)
 err_gpio_firm:
     gpio_free(pdata->ven);
 err_gpio_ven:
-#ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+#if defined(CONFIG_SEC_NFC_DEDICATED_CLK) || defined(CONFIG_SEC_NFC_PMU_CLK)
     iounmap(info->clkctrl);
 err_iomap:
 #endif
@@ -801,8 +837,10 @@ static int __sec_nfc_remove(struct device *dev)
     dev_dbg(info->dev, "%s\n", __func__);
 
 #ifdef CONFIG_SEC_NFC_GPIO_CLK
+#ifndef CONFIG_SEC_NFC_PMU_CLK
     if (pdata->clk)
         clk_unprepare(pdata->clk);
+#endif
 #endif
 
     misc_deregister(&info->miscdev);

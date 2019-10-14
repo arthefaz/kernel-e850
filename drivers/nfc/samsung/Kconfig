@@ -55,6 +55,9 @@ config SEC_NFC_GPIO_CLK
 config SEC_NFC_DEDICATED_CLK
         bool "SEC NFC DEDICATED CLK"
         default n
+config SEC_NFC_PMU_CLK
+        bool "SEC NFC PMU CLK"
+        default n
 config SEC_NFC_LDO_EN
         bool "SEC NFC LDO"
         default n

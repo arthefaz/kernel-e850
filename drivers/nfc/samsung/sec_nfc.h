@@ -70,9 +70,10 @@ struct sec_nfc_platform_data {
 	unsigned int avdd;
 #ifdef CONFIG_SEC_NFC_GPIO_CLK
 	unsigned int clk_req;
+#ifndef CONFIG_SEC_NFC_PMU_CLK
 	struct   clk *clk;
 #endif
-
+#endif
 	void (*cfg_gpio)(void);
 	u32 ven_gpio_flags;
 	u32 firm_gpio_flags;
@@ -83,6 +84,9 @@ struct sec_nfc_platform_data {
     struct regulator *pvdd_regulator;
 #endif
 #ifdef CONFIG_SEC_NFC_DEDICATED_CLK
+    phys_addr_t clkctrl_addr;
+#endif
+#if defined(CONFIG_SEC_NFC_DEDICATED_CLK) || defined(CONFIG_SEC_NFC_PMU_CLK)
     phys_addr_t clkctrl_addr;
 #endif
 };

@@ -763,6 +763,20 @@
 	};
 };
 
+&pinctrl_0 {
+        xclkout: xclkout {
+                samsung,pins = "gpq0-2";
+                samsung,pin-function = <2>;
+                samsung,pin-pud = <0>;
+        };
+
+        nfc_clk_req: nfc-clk-req {
+                samsung,pins = "gpa3-4";
+                samsung,pin-function = <0xf>;
+                samsung,pin-pud = <1>;
+        };
+};
+
 &i2c_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -772,16 +786,15 @@
 		compatible = "sec-nfc";
 		reg = <0x27>;
 
-		sec-nfc,ven-gpio = <&gpg1 0 0>; // ok
-		sec-nfc,firm-gpio = <&gpg1 6 0>; // ok
-
-		sec-nfc,irq-gpio = <&gpa0 5 0>; // ok
-		sec-nfc,clk_req-gpio = <&gpa3 4 0>; // ok
-		sec-nfc,ldo_en = <&gpa0 6 0>; // ok
-
+		sec-nfc,ven-gpio = <&gpg1 0 0>;
+		sec-nfc,firm-gpio = <&gpg1 6 0>;
+		sec-nfc,irq-gpio = <&gpa0 5 0>;
+		sec-nfc,clk_req-gpio = <&gpa3 4 0>;
+		sec-nfc,ldo_en = <&gpa0 6 0>;
+		clkctrl-reg = <0x11860a00>;
 		clock-names = "OSC_NFC";
 		clocks = <&clock OSC_NFC>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&xclkout &nfc_pd>;
+		pinctrl-0 = <&xclkout &nfc_pd &nfc_clk_req>;
 	};
 };
