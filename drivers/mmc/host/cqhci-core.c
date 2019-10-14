@@ -717,6 +717,8 @@ static int cqhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	cq_host->qcnt += 1;
 
+	/* Make sure descriptors are ready before ringing the doorbell */
+	wmb();
 	cqhci_writel(cq_host, 1 << tag, CQHCI_TDBR);
 out_unlock:
 	spin_unlock_irqrestore(&cq_host->lock, flags);
