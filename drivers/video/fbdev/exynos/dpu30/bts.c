@@ -26,7 +26,7 @@
 
 #define DISP_FACTOR		100UL
 #define LCD_REFRESH_RATE	63UL
-#define MULTI_FACTOR 		(1UL << 10)
+#define MULTI_FACTOR 		(1U << 10)
 /* bus utilization 70% : same value with INT_UTIL */
 #define BUS_UTIL		70
 
@@ -35,9 +35,9 @@
 #define DPP_SCALE_DOWN		2
 
 #define ACLK_100MHZ_PERIOD	10000UL
-#define ACLK_MHZ_INC_STEP	50UL	/* 50Mhz */
+#define ACLK_MHZ_INC_STEP	50U	/* 50Mhz */
 #define FRAME_TIME_NSEC		1000000000UL	/* 1sec */
-#define TOTAL_BUS_LATENCY	3000UL	/* 3us: BUS(1) + PWT(1) + Requst(1) */
+#define TOTAL_BUS_LATENCY	3000U	/* 3us: BUS(1) + PWT(1) + Requst(1) */
 
 /* tuning parameters for rotation */
 #define ROTATION_FACTOR_BPP	32UL
@@ -79,10 +79,10 @@ static inline u32 dpu_bts_scale_latency(u32 is_s, u32 src_w, u32 dst_w,
 	 * INC for scale-down & DEC for scale-up
 	 */
 	if (is_s == DPP_SCALE_DOWN)
-		line_w = src_w * (src_w * 1000UL) / dst_w;
+		line_w = src_w * (src_w * 1000U) / dst_w;
 	else
-		line_w = src_w * 1000UL;
-	lat_scale = (line_w * lmc) / (ppc * 1000UL);
+		line_w = src_w * 1000U;
+	lat_scale = (line_w * lmc) / (ppc * 1000U);
 
 	return lat_scale;
 }
@@ -183,7 +183,7 @@ static u32 dpu_bts_find_latency_meet_aclk(u32 lat_cycle, u32 line_time,
 		u32 criteria_v, u32 aclk_disp,
 		bool is_yuv10, bool is_rotate, u32 rot_factor)
 {
-	u32 aclk_mhz = aclk_disp / 1000UL;
+	u32 aclk_mhz = aclk_disp / 1000U;
 	u32 aclk_period, lat_time;
 	u32 lat_time_max;
 
@@ -197,7 +197,7 @@ static u32 dpu_bts_find_latency_meet_aclk(u32 lat_cycle, u32 line_time,
 	while (1) {
 		/* aclk_period: nsec x 1000 */
 		aclk_period = dpu_bts_get_aclk_period_time(aclk_mhz);
-		lat_time = (lat_cycle * aclk_period) / 1000UL;
+		lat_time = (lat_cycle * aclk_period) / 1000U;
 		lat_time = lat_time << is_yuv10;
 		lat_time += TOTAL_BUS_LATENCY;
 		if (is_rotate)
@@ -214,7 +214,7 @@ static u32 dpu_bts_find_latency_meet_aclk(u32 lat_cycle, u32 line_time,
 	DPU_DEBUG_BTS("\t(lat_time = %d) (lat_time_max = %d)\n",
 		lat_time, lat_time_max);
 
-	return (aclk_mhz * 1000UL);
+	return (aclk_mhz * 1000U);
 }
 
 /* return : kHz value based on 1-pixel processing pipe-line */
@@ -359,9 +359,12 @@ static void dpu_bts_find_max_disp_freq(struct decon_device *decon,
 			DPU_DEBUG_BTS("\tCH%d = %d\n", i, disp_ch_bw[i]);
 
 	max_disp_ch_bw = disp_ch_bw[0];
-	for (i = 1; i < BTS_DPU_MAX; ++i)
-		if (max_disp_ch_bw < disp_ch_bw[i])
-			max_disp_ch_bw = disp_ch_bw[i];
+
+	if (BTS_DPU_MAX > 1) {
+		for (i = 1; i < BTS_DPU_MAX; ++i)
+			if (max_disp_ch_bw < disp_ch_bw[i])
+				max_disp_ch_bw = disp_ch_bw[i];
+	}
 
 	decon->bts.peak = max_disp_ch_bw;
 	decon->bts.max_disp_freq = max_disp_ch_bw * 100 / (16 * BUS_UTIL) + 1;

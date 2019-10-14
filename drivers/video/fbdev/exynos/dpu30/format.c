@@ -593,7 +593,7 @@ static const struct dpu_fmt dpu_formats_list[] = {
 
 const struct dpu_fmt *dpu_find_fmt_info(enum decon_pixel_format fmt)
 {
-	int i;
+	size_t i;
 	const struct dpu_fmt *fmt_info;
 
 	for (i = 0; i < ARRAY_SIZE(dpu_formats_list); i++)

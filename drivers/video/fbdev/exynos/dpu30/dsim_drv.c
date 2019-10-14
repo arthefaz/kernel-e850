@@ -404,18 +404,22 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 	dsim_reg_clear_int(dsim->id, DSIM_INTSRC_RX_DATA_DONE);
 
 	/* Set the maximum packet size returned */
-	dsim_write_data(dsim,
-		MIPI_DSI_SET_MAXIMUM_RETURN_PACKET_SIZE, cnt, 0, false);
+	ret = dsim_write_data(dsim,
+			MIPI_DSI_SET_MAXIMUM_RETURN_PACKET_SIZE, cnt, 0, false);
+	if (ret < 0)
+		dsim_err("fail to write MIPI_DSI_SET_MAXIMUM_RETURN_PACKET_SIZE command.\n");
 
 	/* Read request */
-	dsim_write_data(dsim, id, addr, 0, true);
+	ret = dsim_write_data(dsim, id, addr, 0, true);
+	if (ret < 0)
+		dsim_err("fail to write 0x%02x command.\n", id);
 
 	dsim_wait_for_cmd_done(dsim);
 
 	if (!wait_for_completion_timeout(&dsim->rd_comp, MIPI_RD_TIMEOUT)) {
 		dsim_err("MIPI DSIM read Timeout!\n");
-		if (dsim_reg_get_datalane_status(id) == DSIM_DATALANE_STATUS_BTA) {
-			if (decon_reg_get_run_status(id)) {
+		if (dsim_reg_get_datalane_status(dsim->id) == DSIM_DATALANE_STATUS_BTA) {
+			if (decon_reg_get_run_status(dsim->id)) {
 				dsim_reset_panel(dsim);
 				dpu_hw_recovery_process(decon);
 			} else {
@@ -423,7 +427,7 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 				dsim_reg_recovery_process(dsim);
 			}
 		} else
-			dsim_err("datalane status is %d\n", dsim_reg_get_datalane_status(id));
+			dsim_err("datalane status is %d\n", dsim_reg_get_datalane_status(dsim->id));
 
 		return -ETIMEDOUT;
 	}

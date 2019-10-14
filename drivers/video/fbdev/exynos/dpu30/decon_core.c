@@ -1923,7 +1923,6 @@ static int decon_set_hdr_info(struct decon_device *decon,
 
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 err_hdr_io:
-#endif
 	/* When the subdev call is failed,
 	 * current hdr_static_info is not copied to prev.
 	 */
@@ -1932,6 +1931,7 @@ err_hdr_io:
 	dma_buf_vunmap(regs->dma_buf_data[win_num][mp_idx].dma_buf, video_meta);
 
 	return -EFAULT;
+#endif
 }
 
 static void decon_update_hdr_info(struct decon_device *decon,
@@ -3000,7 +3000,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 
-		if (dpp_ch_restriction.id >= decon->dt.dpp_cnt) {
+		if ((dpp_ch_restriction.id < 0) || (dpp_ch_restriction.id >= decon->dt.dpp_cnt)) {
 			ret = -EINVAL;
 			decon_err("invalid DPP(%d) channel number\n", dpp_ch_restriction.id);
 			break;
