@@ -25,7 +25,7 @@
 /* the maximum number of PHY for each module */
 #define EXYNOS_MIPI_PHYS_MASTER_NUM	4
 
-#define EXYNOS_MIPI_PHY_M4M4_ISO_BYPASS  BIT(0)
+#define EXYNOS_MIPI_PHY_M4M4_ISO_BYPASS (1U << 0)
 
 #define MIPI_PHY_MxMx_UNIQUE	(0 << 1)
 #define MIPI_PHY_MxMx_SHARED	(1 << 1)
@@ -563,7 +563,7 @@ static int __set_phy_cfg(struct exynos_mipi_phy *state,
 		struct mipi_phy_desc *phy_desc, int option, void *info)
 {
 	u32 *cfg = (u32 *)info;
-	int i;
+	size_t i;
 	int ret = -EINVAL;
 
 	for (i = 0; i < ARRAY_SIZE(phy_cfg_table); i++) {
