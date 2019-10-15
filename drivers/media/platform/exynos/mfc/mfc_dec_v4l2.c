@@ -82,7 +82,7 @@ static int __mfc_dec_check_ctrl_val(struct mfc_ctx *ctx, struct v4l2_control *ct
 
 	if (ctrl->value < c->minimum || ctrl->value > c->maximum
 		|| (c->step != 0 && ctrl->value % c->step != 0)) {
-		mfc_err_ctx("[CTRLS] Invalid control value (%#x)\n", ctrl->value);
+		mfc_err_ctx("[CTRLS] Invalid control id (%#x) value (%d)\n", ctrl->id, ctrl->value);
 		return -ERANGE;
 	}
 
