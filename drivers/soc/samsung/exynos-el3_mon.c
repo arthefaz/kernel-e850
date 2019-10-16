@@ -120,7 +120,7 @@ arch_initcall(exynos_set_debug_mem);
 static void exynos_smart_exception_handler(unsigned int id,
 				unsigned long elr, unsigned long esr,
 				unsigned long sctlr, unsigned long ttbr,
-				unsigned long tcr, unsigned long x6,
+				unsigned long far, unsigned long x6,
 				unsigned int offset)
 {
 	int i;
@@ -142,33 +142,33 @@ static void exynos_smart_exception_handler(unsigned int id,
 								elr, esr);
 		pr_err("sctlr_el1 : 0x%016lx, \tttbr_el1 : 0x%016lx\n",
 								sctlr, ttbr);
-		pr_err("tcr_el1   : 0x%016lx, \tlr (EL1) : 0x%016lx\n\n",
-								tcr, x6);
+		pr_err("far_el1   : 0x%016lx, \tlr (EL1) : 0x%016lx\n\n",
+								far, x6);
 	} else {
 		pr_err("elr_el3   : 0x%016lx, \tesr_el3  : 0x%016lx\n",
 								elr, esr);
 		pr_err("sctlr_el3 : 0x%016lx, \tttbr_el3 : 0x%016lx\n",
 								sctlr, ttbr);
-		pr_err("tcr_el3   : 0x%016lx, \tscr_el3  : 0x%016lx\n\n",
-								tcr, x6);
+		pr_err("far_el3   : 0x%016lx, \tscr_el3  : 0x%016lx\n\n",
+								far, x6);
+	}
 
-		if ((offset > 0x0 && offset < (PAGE_SIZE * 2))
-				&& !(offset % 0x8) && (smc_debug_mem)) {
+	if ((offset > 0x0 && offset < (PAGE_SIZE * 2))
+			&& !(offset % 0x8) && (smc_debug_mem)) {
 
-			/* Invalidate smc_debug_mem for cache coherency */
-			__inval_dcache_area(smc_debug_mem, PAGE_SIZE * 2);
+		/* Invalidate smc_debug_mem for cache coherency */
+		__inval_dcache_area(smc_debug_mem, PAGE_SIZE * 2);
 
-			tmp = (unsigned long)smc_debug_mem;
-			tmp += (unsigned long)offset;
-			ptr = (unsigned long *)tmp;
+		tmp = (unsigned long)smc_debug_mem;
+		tmp += (unsigned long)offset;
+		ptr = (unsigned long *)tmp;
 
-			for (i = 0; i < 15; i++) {
-				pr_err("x%02d : 0x%016lx, \tx%02d : 0x%016lx\n",
-					i * 2, ptr[i * 2],
-					i * 2 + 1, ptr[i * 2 + 1]);
-			}
-			pr_err("x%02d : 0x%016lx\n", i * 2,  ptr[i * 2]);
+		for (i = 0; i < 15; i++) {
+			pr_err("x%02d : 0x%016lx, \tx%02d : 0x%016lx\n",
+				i * 2, ptr[i * 2],
+				i * 2 + 1, ptr[i * 2 + 1]);
 		}
+		pr_err("x%02d : 0x%016lx\n", i * 2,  ptr[i * 2]);
 	}
 
 	pr_err("\n[WARNING] IT'S GOING TO CAUSE KERNEL PANIC FOR DEBUGGING.\n\n");
