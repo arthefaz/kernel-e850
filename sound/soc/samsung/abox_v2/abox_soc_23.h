@@ -12,6 +12,9 @@
 #ifndef __SND_SOC_ABOX_SOC_3_H
 #define __SND_SOC_ABOX_SOC_3_H
 
+/* Sysreg AUD */
+#define SYSREG_AUD_ARAM_OP_MODE		0x040C
+
 /* System */
 #define ABOX_IP_INDEX			0x0000
 #define ABOX_VERSION			0x0004

@@ -2507,6 +2507,9 @@ static int abox_enable(struct device *dev)
 	bool has_reset;
 	int ret = 0;
 
+	/* disable interleaving mode : MO = 4, Interleaving off*/
+	writel(0x0, data->sysreg_base + SYSREG_AUD_ARAM_OP_MODE);
+
 	dev_info(dev, "%s\n", __func__);
 
 	abox_gic_enable_irq(data->dev_gic);
