@@ -935,7 +935,7 @@ static void decon_print_hex_dump(void __iomem *regs, const void *buf, size_t len
 {
 	char prefix_buf[PREFIX_LEN];
 	unsigned long p;
-	int i, row;
+	size_t i, row;
 
 	for (i = 0; i < len; i += ROW_LEN) {
 		p = buf - regs + i;
@@ -981,8 +981,7 @@ int decon_check_global_limitation(struct decon_device *decon,
 		if (config[i].state != DECON_WIN_STATE_BUFFER)
 			continue;
 
-		if (config[i].channel < 0 ||
-				config[i].channel >= decon->dt.dpp_cnt) {
+		if (config[i].channel >= decon->dt.dpp_cnt) {
 			ret = -EINVAL;
 			decon_err("invalid dpp channel(%d)\n",
 					config[i].channel);
