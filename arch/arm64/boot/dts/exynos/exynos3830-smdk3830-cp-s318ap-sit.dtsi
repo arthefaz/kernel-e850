@@ -63,6 +63,16 @@
 				mif,irq_cp2ap_wakelock = <8>;
 				mif,irq_cp2ap_ratmode = <9>;
 
+				/* Legacy Buffers (FMT, RAW) */
+				legacy_fmt_head_tail_offset = <0x8>;
+				legacy_fmt_buffer_offset = <0x1000>;
+				legacy_fmt_txq_size = <0x1000>;
+				legacy_fmt_rxq_size = <0x1000>;
+				legacy_raw_head_tail_offset = <0x18>;
+				legacy_raw_buffer_offset = <0x3000>;
+				legacy_raw_txq_size = <0x1FD000>;
+				legacy_raw_rxq_size = <0x200000>;
+
 				/*
 				 * Control messages containing two elements
 				 * <MAILBOX_SR [shared register number]>
@@ -74,6 +84,12 @@
 				ap2cp_united_status = <MAILBOX_SR 2>;
 				cp2ap_united_status = <MAILBOX_SR 3>;
 				ap2cp_kerneltime = <MAILBOX_SR 9>;
+
+				/* srinfo settings */
+				srinfo_offset = <0>;
+				srinfo_size = <0>;
+				/* clk_table offset */
+				clk_table_offset = <40>;
 
 				/* Status bit info for mbx_ap2cp_united_status */
 				sbi_lcd_status_mask = <0x1>;
