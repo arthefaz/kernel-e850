@@ -157,7 +157,7 @@ static long btl_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 /* Command line parameter */
 static bool _is_enabled[MAX_BTL_ID] = {false, false};
 
-static int __init btl_setup_enable(char *str)
+static int btl_set_enable(char *str)
 {
 	if (!strcmp(str, "ON") || !strcmp(str, "on"))
 		_is_enabled[BTL_ID_0] = true;
@@ -171,7 +171,18 @@ static int __init btl_setup_enable(char *str)
 
 	return 0;
 }
-__setup("androidboot.cp_btl=", btl_setup_enable);
+
+static int __init btl_console_setup(char *str)
+{
+	return btl_set_enable(str);
+}
+__setup("androidboot.cp_reserved_mem=", btl_console_setup);
+
+static int __init btl_console_setup_alt(char *str)
+{
+	return btl_set_enable(str);
+}
+__setup("androidboot.cp_btl=", btl_console_setup_alt);
 
 /* Create */
 static const struct file_operations btl_file_ops = {
