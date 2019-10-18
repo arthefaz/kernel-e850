@@ -439,6 +439,7 @@ struct sensor_info {
 	enum vendor_sensor_list_id id;
 };
 #endif
+
 struct sensor_map {
 	char magic[16];
 	int index;
