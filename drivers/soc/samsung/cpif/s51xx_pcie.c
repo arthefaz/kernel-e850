@@ -323,11 +323,18 @@ int s51xx_pcie_request_msi_int(struct pci_dev *pdev, int int_num)
 
 static void s51xx_pcie_linkdown_cb(struct exynos_pcie_notify *noti)
 {
-	struct pci_dev __maybe_unused *pdev = (struct pci_dev *)noti->user;
+	struct pci_dev *pdev = (struct pci_dev *)noti->user;
+	struct pci_driver *driver = pdev->driver;
+	struct modem_ctl *mc = container_of(driver, struct modem_ctl, pci_driver);
 
 	pr_err("s51xx Link-Down notification callback function!!!\n");
 
-	s5100_force_crash_exit_ext();
+	if(mc->pcie_powered_on == false) {
+		pr_info("%s: skip cp crash during dislink sequence\n", __func__);
+		exynos_pcie_set_perst_gpio(mc->pcie_ch_num, 0);
+	} else {
+		s5100_force_crash_exit_ext();
+	}
 }
 
 static int s51xx_pcie_probe(struct pci_dev *pdev,
@@ -437,10 +444,10 @@ void print_msi_register(struct pci_dev *pdev)
 		mif_info("MSI Message Reg == 0x0 - set MSI again!!!\n");
 
 		if (s51xx_pcie->pci_saved_configs != NULL) {
-			mif_info("msi restore\n", __func__);
+			mif_info("msi restore\n");
 			pci_restore_msi_state(pdev);
 		} else {
-			mif_info("[skip] msi restore: saved configs is NULL\n", __func__);
+			mif_info("[skip] msi restore: saved configs is NULL\n");
 		}
 
 		mif_info("exynos_pcie_msi_init_ext is not implemented\n");
