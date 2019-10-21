@@ -648,6 +648,7 @@ static int pktproc_get_info(struct pktproc_adaptor *ppa, struct device_node *np)
 		break;
 	case PKTPROC_V2:
 		mif_dt_read_u32(np, "pktproc_desc_mode", ppa->desc_mode);
+		mif_dt_read_u32(np, "pktproc_desc_num_ratio_percent", ppa->desc_num_ratio_percent);
 		mif_dt_read_u32(np, "pktproc_num_queue", ppa->num_queue);
 		mif_dt_read_u32(np, "pktproc_use_exclusive_irq", ppa->use_exclusive_irq);
 		break;
@@ -664,10 +665,10 @@ static int pktproc_get_info(struct pktproc_adaptor *ppa, struct device_node *np)
 	mif_dt_read_u32(np, "pktproc_desc_rgn_offset", ppa->desc_rgn_offset);
 	mif_dt_read_u32(np, "pktproc_desc_rgn_size", ppa->desc_rgn_size);
 	mif_dt_read_u32(np, "pktproc_data_rgn_offset", ppa->data_rgn_offset);
-	mif_info("info_rgn 0x%08x 0x%08x desc_rgn 0x%08x 0x%08x data_rgn 0x%08x 0x%08x\n",
+	mif_info("info_rgn 0x%08x 0x%08x desc_rgn 0x%08x 0x%08x %u data_rgn 0x%08x\n",
 		ppa->info_rgn_offset, ppa->info_rgn_size,
 		ppa->desc_rgn_offset, ppa->desc_rgn_size,
-		ppa->data_rgn_offset, ppa->data_rgn_size);
+		ppa->desc_num_ratio_percent, ppa->data_rgn_offset);
 
 	return 0;
 }
@@ -792,7 +793,7 @@ int pktproc_create(struct platform_device *pdev, struct mem_link_device *mld, u3
 			q->use_memcpy = 0;
 			q->stat.use_memcpy_cnt = 0;
 
-			q->q_info->num_desc = data_size_by_q / (q->manager->cell_size * 2);
+			q->q_info->num_desc = (data_size_by_q * ppa->desc_num_ratio_percent) / (q->manager->cell_size * 100);
 
 			q->desc_sktbuf = ppa->desc_base +
 					(i * sizeof(struct pktproc_desc_sktbuf) * q->q_info->num_desc);

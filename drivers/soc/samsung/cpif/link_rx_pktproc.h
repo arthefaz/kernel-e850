@@ -188,9 +188,9 @@ struct pktproc_adaptor {
 	u32 desc_rgn_offset;	/* Offset of descriptor region */
 	u32 desc_rgn_size;	/* Size of descriptor region */
 	u32 data_rgn_offset;	/* Offset of data buffer region */
-	u32 data_rgn_size;	/* Size of data buffer region */
 
 	enum pktproc_desc_mode desc_mode;	/* Descriptor structure mode */
+	u32 desc_num_ratio_percent;		/* Number of descriptors ratio as percent */
 	u32 num_queue;		/* Number of queue */
 	bool use_exclusive_irq;	/* Exclusive interrupt */
 	bool use_hw_iocc;	/* H/W IO cache coherency */
