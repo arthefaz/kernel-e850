@@ -190,7 +190,7 @@
 							regulator-min-microvolt = <500000>;
 							regulator-max-microvolt = <1200000>;
 							regulator-always-on;
-							regulator-ramp-delay = <12000>;
+							regulator-ramp-delay = <6000>;
 							regulator-initial-mode = <1>;
 						};
 
@@ -199,7 +199,7 @@
 							regulator-min-microvolt = <500000>;
 							regulator-max-microvolt = <1200000>;
 							regulator-always-on;
-							regulator-ramp-delay = <12000>;
+							regulator-ramp-delay = <6000>;
 							regulator-initial-mode = <1>;
 						};
 /*
@@ -208,7 +208,7 @@
 							regulator-min-microvolt = <500000>;
 							regulator-max-microvolt = <1200000>;
 							regulator-always-on;
-							regulator-ramp-delay = <12000>;
+							regulator-ramp-delay = <6000>;
 							regulator-initial-mode = <3>;
 						};
  */
@@ -217,7 +217,7 @@
 							regulator-min-microvolt = <900000>;
 							regulator-max-microvolt = <1500000>;
 							regulator-always-on;
-							regulator-ramp-delay = <12000>;
+							regulator-ramp-delay = <6000>;
 							regulator-initial-mode = <3>;
 						};
 
@@ -226,7 +226,7 @@
 							regulator-min-microvolt = <1800000>;
 							regulator-max-microvolt = <2100000>;
 							regulator-always-on;
-							regulator-ramp-delay = <12000>;
+							regulator-ramp-delay = <6000>;
 							regulator-initial-mode = <3>;
 						};
 
