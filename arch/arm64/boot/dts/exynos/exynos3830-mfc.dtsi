@@ -60,6 +60,8 @@
 		mem_clear = <0 0x0>;
 		/* Support from v11.0 (except 11.2) */
 		wait_fw_status = <0 0x0>;
+		/* DRM switch predict for cache flush */
+		drm_switch_predict = <0 0x0>;
 
 		/* Default 10bit format for decoding (1: P010, 0: 8+2) */
 		P010_decoding = <1>;
