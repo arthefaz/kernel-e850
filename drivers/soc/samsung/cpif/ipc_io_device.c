@@ -355,6 +355,10 @@ static ssize_t ipc_write(struct file *filp, const char __user *data,
 			break;
 			case PROTOCOL_SIT:
 				exynos_build_header(iod, ld, buff, cfg_sit, 0, tx_bytes);
+				/* modify next link header for multiframe */
+				if (((cfg_sit >> 8) & EXYNOS_SINGLE_MASK) != EXYNOS_SINGLE_MASK)
+					cfg_sit = modify_next_frame(cfg_sit);
+
 			break;
 			default:
 				mif_err("protocol error %d\n", ld->protocol);
