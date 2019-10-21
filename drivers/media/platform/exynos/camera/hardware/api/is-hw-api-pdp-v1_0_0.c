@@ -456,7 +456,7 @@ void pdp_hw_s_line_row(void __iomem *base, bool pd_enable, int sensor_mode)
 	int margin = 100;
 	u32 val = 0;
 	u32 num_of_turn_on_sroi = 0;
-	u32 density = 0;
+	u32 density = 0, tail_density = 0;
 
 	/*
 	 * stat end interrupt can't use hw limitation
@@ -476,14 +476,27 @@ void pdp_hw_s_line_row(void __iomem *base, bool pd_enable, int sensor_mode)
 
 		switch (sensor_mode) {
 		case VC_SENSOR_MODE_SUPER_PD_2_NORMAL:
-		case VC_SENSOR_MODE_SUPER_PD_2_TAIL:
 			density = 2;
 			break;
 		case VC_SENSOR_MODE_ULTRA_PD_NORMAL:
 		case VC_SENSOR_MODE_ULTRA_PD_2_NORMAL:
+			density = 8;
+			break;
+		case VC_SENSOR_MODE_SUPER_PD_2_TAIL:
+		case VC_SENSOR_MODE_IMX_2X1OCL_2_TAIL:
+			density = tail_density = 2;
+			break;
+		case VC_SENSOR_MODE_2PD_MODE3:
+			density = tail_density = 4;
+			break;
 		case VC_SENSOR_MODE_ULTRA_PD_TAIL:
 		case VC_SENSOR_MODE_ULTRA_PD_2_TAIL:
 			density = 8;
+			tail_density = density / 2;
+			break;
+		case VC_SENSOR_MODE_IMX_2X1OCL_1_TAIL:
+			density = 2;
+			tail_density = density / 2;
 			break;
 		default:
 			err("check for sensor pd mode\n");
@@ -491,9 +504,15 @@ void pdp_hw_s_line_row(void __iomem *base, bool pd_enable, int sensor_mode)
 			break;
 		}
 
-		line_row = max_pos_end_y * density + margin;
-		info_hw("[PDP] LINE_IRQ for pd sensor mode(%d), density: %d, max_pos_end_y: %d, line_row: %d, num_sroi: %d",
-			sensor_mode, density, max_pos_end_y, line_row, num_of_turn_on_sroi);
+		if (tail_density) {
+			line_row = max_pos_end_y * density;
+			line_row += (line_row + tail_density / 2) / tail_density;
+			line_row += margin;
+		} else {
+			line_row = max_pos_end_y * density + margin;
+		}
+		info_hw("[PDP] LINE_IRQ for pd sensor mode(%d), density(%d, tail:%d), max_pos_end_y: %d, line_row: %d, num_sroi: %d",
+			sensor_mode, density, tail_density, max_pos_end_y, line_row, num_of_turn_on_sroi);
 	}
 
 	val = PDP_SET_V(val, PDP_F_IP_INT_COL_CORD, 0);
