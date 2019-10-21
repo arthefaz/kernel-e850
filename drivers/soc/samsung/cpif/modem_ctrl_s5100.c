@@ -913,6 +913,8 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 		goto exit;
 	}
 
+	mc->pcie_powered_on = false;
+
 	if (mc->s51xx_pdev != NULL && (mc->phone_state == STATE_ONLINE ||
 				mc->phone_state == STATE_BOOTING)) {
 		mif_info("save s5100_status - phone_state:%d\n",
@@ -925,7 +927,6 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 	mif_gpio_set_value(mc->s5100_gpio_cp_wakeup, 0, 20);
 	print_mc_state(mc);
 
-	mc->pcie_powered_on = false;
 	exynos_pcie_host_v1_poweroff(mc->pcie_ch_num);
 
 	if (wake_lock_active(&mc->mc_wake_lock))
@@ -1000,6 +1001,8 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 	if (exynos_pcie_host_v1_poweron(mc->pcie_ch_num) != 0)
 		goto exit;
 
+	mc->pcie_powered_on = true;
+
 #if defined(CONFIG_LINK_DEVICE_PCIE_S2MPU)
 	if (!mc->s5100_s2mpu_enabled) {
 		mc->s5100_s2mpu_enabled = true;
@@ -1045,8 +1048,6 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 			s5100_force_crash_exit_ext();
 		}
 	}
-
-	mc->pcie_powered_on = true;
 
 #if defined(CONFIG_SUSPEND_DURING_VOICE_CALL)
 	if (mc->pcie_voice_call_on && (mc->phone_state != STATE_CRASH_EXIT)) {
