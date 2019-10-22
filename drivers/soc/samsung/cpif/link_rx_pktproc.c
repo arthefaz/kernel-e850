@@ -18,6 +18,16 @@
 #include "modem_utils.h"
 #include "link_device_memory.h"
 
+#ifdef CONFIG_CP_PKTPROC_PERF_TEST
+/* port: 5000 -> 5001 */
+unsigned char pktproc_udpRx[28] = {
+	0x45, 0x00, 0x05, 0xB8, 0x00, 0x00, 0x40, 0x00,
+	0x80, 0x11, 0x71, 0xDF, 0xC0, 0xA8, 0x01, 0x03,
+	0xC0, 0xA8, 0x01, 0x02, 0x13, 0x88, 0x13, 0x89,
+	0x05, 0xA4, 0x00, 0x00,
+};
+#endif
+
 /*
  * Get a packet: ringbuf mode
  */
@@ -381,6 +391,128 @@ static int pktproc_clean_rx_ring(struct pktproc_queue *q, int budget, int *work_
 	return ret;
 }
 
+#ifdef CONFIG_CP_PKTPROC_PERF_TEST
+/* copied from shmem_irq_handler() */
+static void pktproc_perftest_napi_schedule(struct mem_link_device *mld)
+{
+	mld->rx_int_count++;
+	if (napi_schedule_prep(&mld->mld_napi)) {
+		struct link_device *ld = &mld->link_dev;
+
+		ld->disable_rx_int(ld);
+		__napi_schedule(&mld->mld_napi);
+	}
+}
+
+static void pktproc_perftest_gen_rx_packet_sktbuf_mode(
+		struct pktproc_queue *q, int packet_num, u16 port_num, u32 *seq_counter)
+{
+	struct pktproc_desc_sktbuf *desc = q->desc_sktbuf;
+	u32 header_len;
+	u32 rear_ptr;
+	u8 *src;
+	u32 *seq;
+	u16 *dst_port;
+	int i;
+	u32 counter;
+
+	header_len = sizeof(pktproc_udpRx);
+	rear_ptr = *q->rear_ptr;
+	counter = *seq_counter;
+
+	for (i = 0 ; i < packet_num ; i++) {
+		/* set desc */
+		desc[rear_ptr].status = 0x11;
+		desc[rear_ptr].length = 0x5B8;	/* 1464 */
+		desc[rear_ptr].filter_result = 0x9;
+		desc[rear_ptr].channel_id = 0xB;
+
+		/* set data */
+		src = desc[rear_ptr].data_addr - q->q_info->data_base + q->data;
+		memset(src, 0x0, desc[rear_ptr].length);
+		memcpy(src, pktproc_udpRx, header_len);
+		seq = (u32 *)(src + header_len);
+		*seq = htonl(counter++);
+		dst_port = (u16 *)(src + 22);
+		*dst_port = htons(port_num);
+
+		rear_ptr = circ_new_ptr(q->q_info->num_desc, rear_ptr, 1);
+	}
+
+	*q->rear_ptr = rear_ptr;
+	*seq_counter = counter;
+}
+
+static int pktproc_perftest_thread(void *arg)
+{
+	struct mem_link_device *mld = (struct mem_link_device *) arg;
+	struct pktproc_adaptor *ppa = &mld->pktproc;
+	struct pktproc_queue *q = ppa->q[0];
+	struct pktproc_perftest *perf = &ppa->perftest;
+	int i, pkts;
+
+	if (perf->session > 2)
+		perf->session = 2;
+
+	/* max 1023 packets per 1ms for 12Gbps */
+	pkts = (perf->session > 0 ? (1023 / perf->session) : 0);
+	do {
+		for (i = 0 ; i < perf->session ; i++) {
+			pktproc_perftest_gen_rx_packet_sktbuf_mode(q, pkts, 5001 + i, &perf->seq_counter[i]);
+		}
+		pktproc_perftest_napi_schedule(mld);
+		udelay(perf->udelay);
+
+		if (kthread_should_stop())
+			break;
+	} while (perf->test_run);
+
+	return 0;
+}
+
+static ssize_t perftest_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct modem_ctl *mc = dev_get_drvdata(dev);
+	struct link_device *ld = get_current_link(mc->iod);
+	struct mem_link_device *mld = to_mem_link_device(ld);
+	struct pktproc_adaptor *ppa = &mld->pktproc;
+	struct pktproc_perftest *perf = &ppa->perftest;
+
+	static struct task_struct *worker_task;
+	int ret;
+	int start;
+	int cpu = 5;
+
+	ret = sscanf(buf, "%d %d %d %d", &start, &perf->session, &cpu, &perf->udelay);
+	if (ret < 1)
+		return -EINVAL;
+
+	switch (start) {
+	case 0:
+		if (perf->test_run)
+			kthread_stop(worker_task);
+
+		perf->seq_counter[0] = 0;
+		perf->seq_counter[1] = 0;
+		perf->test_run = false;
+		break;
+	case 1:
+		if (perf->test_run)
+			kthread_stop(worker_task);
+
+		perf->test_run = true;
+		worker_task = kthread_create_on_cpu(pktproc_perftest_thread,
+			mld, cpu, "perftest");
+		wake_up_process(worker_task);
+		break;
+	}
+
+	return count;
+}
+#endif
+
 /*
  * NAPI
  */
@@ -556,10 +688,16 @@ static ssize_t status_show(struct device *dev, struct device_attribute *attr, ch
 
 static DEVICE_ATTR_RO(region);
 static DEVICE_ATTR_RO(status);
+#ifdef CONFIG_CP_PKTPROC_PERF_TEST
+static DEVICE_ATTR_WO(perftest);
+#endif
 
 static struct attribute *pktproc_attrs[] = {
 	&dev_attr_region.attr,
 	&dev_attr_status.attr,
+#ifdef CONFIG_CP_PKTPROC_PERF_TEST
+	&dev_attr_perftest.attr,
+#endif
 	NULL,
 };
 

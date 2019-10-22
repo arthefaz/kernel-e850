@@ -155,5 +155,12 @@ config CP_LCD_NOTIFIER
 	---help---
 	  This enables LCD notifier for CP
 
+config CP_PKTPROC_PERF_TEST
+	bool "Enable pktproc performance test"
+	depends on CP_PKTPROC || CP_PKTPROC_V2
+	default n
+	---help---
+	  Test pktproc on AP side
+
 endmenu
 endif

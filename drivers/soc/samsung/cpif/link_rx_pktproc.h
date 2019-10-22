@@ -177,6 +177,15 @@ enum pktproc_version {
 	MAX_VERSION
 };
 
+#ifdef CONFIG_CP_PKTPROC_PERF_TEST
+struct pktproc_perftest {
+	bool test_run;
+	int session;
+	int udelay;
+	u32 seq_counter[2];
+};
+#endif
+
 /* PktProc adaptor */
 struct pktproc_adaptor {
 	bool support;	/* Is support PktProc feature? */
@@ -201,6 +210,10 @@ struct pktproc_adaptor {
 	void __iomem *desc_base;	/* Physical region for descriptor */
 	void __iomem *data_base;	/* Physical region for data buffer */
 	struct pktproc_queue *q[PKTPROC_MAX_QUEUE];	/* Logical queue */
+
+#ifdef CONFIG_CP_PKTPROC_PERF_TEST
+	struct pktproc_perftest perftest;
+#endif
 };
 
 #if defined(CONFIG_CP_PKTPROC) || defined(CONFIG_CP_PKTPROC_V2)
