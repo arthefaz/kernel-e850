@@ -151,7 +151,12 @@ static void voice_call_on_work(struct work_struct *ws)
 	if (!mc->pcie_voice_call_on)
 		goto exit;
 
-	if (mc->pcie_powered_on) {
+	if (mc->pcie_powered_on &&
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+			(exynos_pcie_rc_chk_link_status(mc->pcie_ch_num) != 0)) {
+#else
+			(exynos_check_pcie_link_status(mc->pcie_ch_num) != 0)) {
+#endif
 		if (wake_lock_active(&mc->mc_wake_lock))
 			wake_unlock(&mc->mc_wake_lock);
 	}
@@ -170,7 +175,12 @@ static void voice_call_off_work(struct work_struct *ws)
 	if (mc->pcie_voice_call_on)
 		goto exit;
 
-	if (mc->pcie_powered_on) {
+	if (mc->pcie_powered_on &&
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+			(exynos_pcie_rc_chk_link_status(mc->pcie_ch_num) != 0)) {
+#else
+			(exynos_check_pcie_link_status(mc->pcie_ch_num) != 0)) {
+#endif
 		if (!wake_lock_active(&mc->mc_wake_lock))
 			wake_lock(&mc->mc_wake_lock);
 	}
@@ -937,7 +947,7 @@ exit:
 	mutex_unlock(&mc->pcie_onoff_lock);
 
 	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
-	if ((mc->s51xx_pdev != NULL) && mc->reserve_doorbell_int) {
+	if ((mc->s51xx_pdev != NULL) && !mc->device_reboot && mc->reserve_doorbell_int) {
 		mif_info("DBG: doorbell_reserved = %d\n", mc->reserve_doorbell_int);
 		if (mc->pcie_powered_on) {
 			mc->reserve_doorbell_int = false;
