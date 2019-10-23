@@ -33,9 +33,8 @@
 #include "iwp.h"
 #include "mcp.h"
 #include "nq.h"
+#include "protocol.h"
 #include "client.h"
-#include "xen_be.h"
-#include "xen_fe.h"
 #include "build_tag.h"
 
 /* ExySp */
@@ -239,14 +238,6 @@ static const struct file_operations debug_struct_counters_ops = {
 	.llseek = default_llseek,
 };
 
-char *main_vm_id(void)
-{
-	if (is_xen_dom0())
-		return xen_be_vm_id();
-
-	return kzalloc(1, GFP_KERNEL);
-}
-
 static inline int device_user_init(void)
 {
 	struct device *dev;
@@ -304,8 +295,8 @@ static int suspend_notifier(struct notifier_block *nb, unsigned long event,
 	int ret = 0;
 
 	main_ctx.did_hibernate = false;
-	switch (event) {
 #ifdef TRUSTONIC_HIBERNATION_SUPPORT
+	switch (event) {
 	case PM_HIBERNATION_PREPARE:
 		/* Try to stop the TEE nicely (ignore failure) */
 		nq_stop();
@@ -320,8 +311,8 @@ static int suspend_notifier(struct notifier_block *nb, unsigned long event,
 
 		/* Did not hibernate, just restart the TEE */
 		ret = nq_start();
-#endif
 	}
+#endif
 
 	return ret;
 }
@@ -368,7 +359,7 @@ static inline int check_version(void)
 	return 0;
 }
 
-static int mobicore_start_domu(void)
+static int mobicore_start_fe(void)
 {
 	mutex_lock(&main_ctx.start_mutex);
 	if (main_ctx.start_ret != TEE_START_NOT_TRIGGERED)
@@ -433,11 +424,9 @@ static int mobicore_start(void)
 	}
 #endif
 
-	if (is_xen_dom0()) {
-		ret = xen_be_init();
-		if (ret)
-			goto err_xen_be;
-	}
+	ret = protocol_start();
+	if (ret)
+		goto err_protocol;
 
 	ret = device_user_init();
 	if (ret)
@@ -447,9 +436,8 @@ static int mobicore_start(void)
 	goto got_ret;
 
 err_device_user:
-	if (is_xen_dom0())
-		xen_be_exit();
-err_xen_be:
+	protocol_stop();
+err_protocol:
 #ifdef MC_PM_RUNTIME
 	unregister_reboot_notifier(&main_ctx.reboot_notifier);
 	unregister_pm_notifier(&main_ctx.pm_notifier);
@@ -475,10 +463,9 @@ got_ret:
 static void mobicore_stop(void)
 {
 	device_user_exit();
-	if (is_xen_dom0())
-		xen_be_exit();
+	protocol_stop();
 
-	if (!is_xen_domu()) {
+	if (protocol_is_be()) {
 #ifdef MC_PM_RUNTIME
 		unregister_reboot_notifier(&main_ctx.reboot_notifier);
 		unregister_pm_notifier(&main_ctx.pm_notifier);
@@ -575,11 +562,6 @@ static inline void device_admin_exit(void)
 	mc_admin_exit();
 }
 
-/*
- * This function is called by the kernel during startup or by a insmod command.
- * This device is installed and registered as cdev, then interrupt and
- * queue handling is set up
- */
 static int mobicore_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -591,7 +573,7 @@ static int mobicore_probe(struct platform_device *pdev)
 	mc_dev_info("MobiCore %s", MOBICORE_COMPONENT_BUILD_TAG);
 #endif
 	/* Hardware does not support ARM TrustZone -> Cannot continue! */
-	if (!is_xen_domu() && !has_security_extensions()) {
+	if (protocol_is_be() && !has_security_extensions()) {
 		ret = -ENODEV;
 		mc_dev_err(ret, "Hardware doesn't support ARM TrustZone!");
 		return ret;
@@ -651,7 +633,7 @@ static int mobicore_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_common;
 
-	if (!is_xen_domu()) {
+	if (protocol_is_be()) {
 		/* Admin dev is for the daemon to communicate with the driver */
 		ret = device_admin_init();
 		if (ret)
@@ -664,8 +646,15 @@ static int mobicore_probe(struct platform_device *pdev)
 			goto err_start;
 	}
 
+	ret = protocol_init();
+	if (ret) {
+		mc_dev_err(ret, "protocol init failed");
+		goto err_protocol;
+	}
+
 	return 0;
 
+err_protocol:
 err_start:
 	device_admin_exit();
 err_admin:
@@ -702,6 +691,8 @@ static struct platform_driver mc_plat_driver = {
 
 static int __init mobicore_init(void)
 {
+	int ret;
+
 	dev_set_name(g_ctx.mcd, "TEE");
 	/*
 	 * Do not remove or change the following trace.
@@ -712,8 +703,13 @@ static int __init mobicore_init(void)
 		    MCDRVMODULEAPI_VERSION_MINOR);
 
 	/* In a Xen DomU, just register the front-end */
-	if (is_xen_domu())
-		return xen_fe_init(mobicore_probe_not_of, mobicore_start_domu);
+	ret = protocol_early_init(mobicore_probe_not_of, mobicore_start_fe);
+	if (ret) {
+		if (ret == 1)
+			return 0;
+
+		return ret;
+	}
 
 	main_ctx.use_platform_driver =
 		of_find_compatible_node(NULL, NULL, MC_DEVICE_PROPNAME);
@@ -725,16 +721,14 @@ static int __init mobicore_init(void)
 
 static void __exit mobicore_exit(void)
 {
-	if (is_xen_domu())
-		xen_fe_exit();
-
 	if (main_ctx.use_platform_driver)
 		platform_driver_unregister(&mc_plat_driver);
 
-	if (!is_xen_domu())
+	if (protocol_is_be())
 		device_admin_exit();
 
 	device_common_exit();
+	protocol_exit();
 	iwp_exit();
 	mcp_exit();
 	nq_exit();

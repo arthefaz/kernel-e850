@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2013-2018 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2019 TRUSTONIC LIMITED
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -319,7 +319,7 @@ int fc_trace_deinit(void)
 }
 
 /* sid, payload only used for debug purpose */
-int fc_nsiq(u32 session_id, u32 payload, struct fc_s_yield *resp)
+int fc_nsiq(u32 session_id, u32 payload)
 {
 	int ret;
 	union fc_nsiq fc;
@@ -337,12 +337,6 @@ int fc_nsiq(u32 session_id, u32 payload, struct fc_s_yield *resp)
 	/* SWd return status must always be zero */
 	if (fc.out.ret)
 		return -EIO;
-
-	if (resp) {
-		resp->resp = fc.out.resp;
-		resp->ret  = fc.out.ret;
-		resp->code = fc.out.code;
-	}
 
 	return 0;
 }

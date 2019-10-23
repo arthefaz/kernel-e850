@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2013-2018 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2019 TRUSTONIC LIMITED
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -26,6 +26,7 @@
 #include "user.h"
 #include "client.h"
 #include "mcp.h"	/* mcp_get_version */
+#include "protocol.h"
 
 /*
  * Get client object from file pointer
@@ -46,13 +47,10 @@ static inline struct tee_client *get_client(struct file *file)
 static int user_open(struct inode *inode, struct file *file)
 {
 	struct tee_client *client;
-	char *vm_id;
 
 	/* Create client */
 	mc_dev_devel("from %s (%d)", current->comm, current->pid);
-	vm_id = main_vm_id();
-	client = client_create(false, vm_id);
-	kfree(vm_id);
+	client = client_create(false, protocol_vm_id());
 	if (!client)
 		return -ENOMEM;
 
@@ -172,7 +170,7 @@ static long user_ioctl(struct file *file, unsigned int id, unsigned long arg)
 			break;
 		}
 
-		ret = client_mc_open_trustlet(client, trustlet.spid,
+		ret = client_mc_open_trustlet(client,
 					      trustlet.buffer, trustlet.tlen,
 					      trustlet.tci, trustlet.tcilen,
 					      &trustlet.sid);

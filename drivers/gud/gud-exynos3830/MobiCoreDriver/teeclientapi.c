@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2013-2018 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2019 TRUSTONIC LIMITED
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -24,6 +24,7 @@
 #include "main.h"
 #include "mci/mcinq.h"	/* TA termination codes */
 #include "client.h"
+#include "protocol.h"
 
 /* Macros */
 #define _TEEC_GET_PARAM_TYPE(t, i) (((t) >> (4 * (i))) & 0xF)
@@ -179,7 +180,6 @@ static u32 _teec_convert_error(int errno)
 u32 teec_initialize_context(const char *name, struct teec_context *context)
 {
 	struct tee_client *client;
-	char *vm_id = NULL;
 	int ret;
 	(void)name;
 
@@ -198,9 +198,7 @@ u32 teec_initialize_context(const char *name, struct teec_context *context)
 	}
 
 	/* Create client */
-	vm_id = main_vm_id();
-	client = client_create(true, vm_id);
-	kfree(vm_id);
+	client = client_create(true, protocol_vm_id());
 	if (!client)
 		return TEEC_ERROR_OUT_OF_MEMORY;
 
@@ -298,7 +296,9 @@ u32 teec_open_session(struct teec_context *context,
 	do {
 		ret = client_gp_open_session(client, &uuid, &gp_op, &identity,
 					     &gp_ret, &session->imp.session_id);
-		if (!ret || ret != EAGAIN)
+		if (ret != -ECHILD ||
+		    gp_ret.value != TEEC_ERROR_BUSY ||
+		    gp_ret.origin != TEEC_ORIGIN_TEE)
 			break;
 
 		msleep(1000);

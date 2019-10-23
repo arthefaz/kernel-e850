@@ -43,10 +43,9 @@
 #include "mci/mciiwp.h"
 
 #include "main.h"
-#include "admin.h"		/* tee_object* for 'blob' */
-#include "mmu.h"		/* MMU for 'blob' */
+#include "mmu.h"		/* MMU for ta and tci */
 #include "nq.h"
-#include "xen_fe.h"
+#include "protocol_common.h"
 #include "mcp.h"
 
 /* respond timeout for MCP notification, in secs */
@@ -110,8 +109,6 @@ static const char *cmd_to_string(enum cmd_id id)
 		return "close mcp";
 	case MC_MCP_CMD_LOAD_TOKEN:
 		return "load token";
-	case MC_MCP_CMD_CHECK_LOAD_TA:
-		return "check load TA";
 	case MC_MCP_CMD_LOAD_SYSENC_KEY_SO:
 		return "load Key SO";
 	}
@@ -182,13 +179,11 @@ int mcp_wait(struct mcp_session *session, s32 timeout)
 	int ret = 0;
 
 	mutex_lock(&session->notif_wait_lock);
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu()) {
-		ret = xen_mc_wait(session, timeout);
+	if (fe_ops) {
+		ret = fe_ops->mc_wait(session, timeout);
 		mutex_unlock(&session->notif_wait_lock);
 		return ret;
 	}
-#endif
 
 	if (l_ctx.mcp_dead) {
 		ret = -EHOSTUNREACH;
@@ -265,10 +260,8 @@ end:
 
 int mcp_get_err(struct mcp_session *session, s32 *err)
 {
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu())
-		return xen_mc_get_err(session, err);
-#endif
+	if (fe_ops)
+		return fe_ops->mc_get_err(session, err);
 
 	mutex_lock(&session->exit_code_lock);
 	*err = session->exit_code;
@@ -453,10 +446,8 @@ static inline int __mcp_get_version(struct mc_version_info *version_info)
 	u32 version;
 	int ret;
 
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu())
-		return xen_mc_get_version(version_info);
-#endif
+	if (fe_ops)
+		return fe_ops->mc_get_version(version_info);
 
 	version = MC_VERSION(MCDRVMODULEAPI_VERSION_MAJOR,
 			     MCDRVMODULEAPI_VERSION_MINOR);
@@ -508,25 +499,6 @@ int mcp_load_token(uintptr_t data, const struct mcp_buffer_map *map)
 	return mcp_cmd(&cmd, 0, NULL, NULL);
 }
 
-int mcp_load_check(const struct tee_object *obj,
-		   const struct mcp_buffer_map *map)
-{
-	const union mclf_header *header;
-	union mcp_message cmd;
-
-	memset(&cmd, 0, sizeof(cmd));
-	cmd.cmd_header.cmd_id = MC_MCP_CMD_CHECK_LOAD_TA;
-	/* Data */
-	cmd.cmd_check_load.wsm_data_type = map->type;
-	cmd.cmd_check_load.adr_load_data = map->addr;
-	cmd.cmd_check_load.ofs_load_data = map->offset;
-	cmd.cmd_check_load.len_load_data = map->length;
-	/* Header */
-	header = (union mclf_header *)(obj->data);
-	cmd.cmd_check_load.uuid = header->mclf_header_v2.uuid;
-	return mcp_cmd(&cmd, 0, NULL, &cmd.cmd_check_load.uuid);
-}
-
 int mcp_load_key_so(uintptr_t data, const struct mcp_buffer_map *map)
 {
 	union mcp_message cmd;
@@ -541,19 +513,15 @@ int mcp_load_key_so(uintptr_t data, const struct mcp_buffer_map *map)
 }
 
 int mcp_open_session(struct mcp_session *session, struct mcp_open_info *info,
-		     bool *tci_in_use)
+		     bool tci_in_use)
 {
 	static DEFINE_MUTEX(local_mutex);
-	struct tee_object *obj;
-	const union mclf_header *header;
-	struct tee_mmu *obj_mmu;
-	struct mcp_buffer_map obj_map;
+	struct mcp_buffer_map map;
 	union mcp_message cmd;
 	int ret;
 
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu()) {
-		ret = xen_mc_open_session(session, info);
+	if (fe_ops) {
+		ret = fe_ops->mc_open_session(session, info);
 		if (ret)
 			return ret;
 
@@ -563,66 +531,18 @@ int mcp_open_session(struct mcp_session *session, struct mcp_open_info *info,
 		mutex_unlock(&l_ctx.sessions_lock);
 		return 0;
 	}
-#endif
-
-	/* Create 'blob' */
-	if (info->type == TEE_MC_UUID) {
-		/* Get TA from registry */
-		obj = tee_object_get(info->uuid, false);
-		/* Tell SWd to load TA from SFS as not in registry */
-		if (IS_ERR(obj) && (PTR_ERR(obj) == -ENOENT))
-			obj = tee_object_select(info->uuid);
-	} else if (info->type == TEE_MC_DRIVER_UUID) {
-		/* Load driver using only uuid */
-		obj = tee_object_select(info->uuid);
-		*tci_in_use = false;
-	} else if (info->user) {
-		/* Create secure object from user-space trustlet binary */
-		obj = tee_object_read(info->spid, info->va, info->len);
-	} else {
-		/* Create secure object from kernel-space trustlet binary */
-		obj = tee_object_copy(info->va, info->len);
-	}
-
-	if (IS_ERR(obj))
-		return PTR_ERR(obj);
-
-	/* Header */
-	header = (const union mclf_header *)(&obj->data);
-	if (info->type == TEE_MC_DRIVER &&
-	    (header->mclf_header_v2.flags &
-			MC_SERVICE_HEADER_FLAGS_NO_CONTROL_INTERFACE))
-		*tci_in_use = false;
-
-	/* Create mapping for blob (allocated by driver, so task = NULL) */
-	{
-		struct mc_ioctl_buffer buf = {
-			.va = (uintptr_t)obj->data,
-			.len = obj->length,
-			.flags = MC_IO_MAP_INPUT,
-		};
-
-		obj_mmu = tee_mmu_create(NULL, &buf);
-		if (IS_ERR(obj_mmu)) {
-			ret = PTR_ERR(obj_mmu);
-			goto err_mmu;
-		}
-
-		tee_mmu_buffer(obj_mmu, &obj_map);
-	}
 
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.cmd_header.cmd_id = MC_MCP_CMD_OPEN_SESSION;
 	/* Data */
-	cmd.cmd_open.uuid = header->mclf_header_v2.uuid;
-	cmd.cmd_open.wsm_data_type = obj_map.type;
-	cmd.cmd_open.adr_load_data = obj_map.addr;
-	cmd.cmd_open.ofs_load_data = obj_map.offset;
-	cmd.cmd_open.len_load_data = obj_map.length;
+	cmd.cmd_open.uuid = *info->uuid;
+	tee_mmu_buffer(info->ta_mmu, &map);
+	cmd.cmd_open.wsm_data_type = map.type;
+	cmd.cmd_open.adr_load_data = map.addr;
+	cmd.cmd_open.ofs_load_data = map.offset;
+	cmd.cmd_open.len_load_data = map.length;
 	/* Buffer */
-	if (*tci_in_use) {
-		struct mcp_buffer_map map;
-
+	if (tci_in_use) {
 		tee_mmu_buffer(info->tci_mmu, &map);
 		cmd.cmd_open.wsmtype_tci = map.type;
 		cmd.cmd_open.adr_tci_buffer = map.addr;
@@ -664,14 +584,6 @@ int mcp_open_session(struct mcp_session *session, struct mcp_open_info *info,
 	}
 
 	mutex_unlock(&local_mutex);
-
-	/* Blob for UUID/TA not needed as re-mapped by the SWd */
-	tee_mmu_put(obj_mmu);
-
-err_mmu:
-	/* Delete secure object */
-	tee_object_free(obj);
-
 	return ret;
 }
 
@@ -689,10 +601,8 @@ int mcp_close_session(struct mcp_session *session)
 	/* ret's value is always set, but some compilers complain */
 	int ret = -ENXIO;
 
-	if (is_xen_domu()) {
-#ifdef TRUSTONIC_XEN_DOMU
-		ret = xen_mc_close_session(session);
-#endif
+	if (fe_ops) {
+		ret = fe_ops->mc_close_session(session);
 	} else {
 		/* Signal a potential waiter that SWd session is going away */
 		complete(&session->completion);
@@ -736,10 +646,8 @@ int mcp_map(u32 session_id, struct tee_mmu *mmu, u32 *sva)
 	union mcp_message cmd;
 	int ret;
 
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu())
-		return xen_mc_map(session_id, mmu, sva);
-#endif
+	if (fe_ops)
+		return fe_ops->mc_map(session_id, mmu, sva);
 
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.cmd_header.cmd_id = MC_MCP_CMD_MAP;
@@ -764,10 +672,8 @@ int mcp_unmap(u32 session_id, const struct mcp_buffer_map *map)
 	union mcp_message cmd;
 	int ret;
 
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu())
-		return xen_mc_unmap(session_id, map);
-#endif
+	if (fe_ops)
+		return fe_ops->mc_unmap(session_id, map);
 
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.cmd_header.cmd_id = MC_MCP_CMD_UNMAP;
@@ -801,10 +707,8 @@ int mcp_notify(struct mcp_session *session)
 	else
 		mc_dev_devel("notify session %x", session->sid);
 
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu())
-		return xen_mc_notify(session);
-#endif
+	if (fe_ops)
+		return fe_ops->mc_notify(session);
 
 	/* Put notif_count as payload for debug purpose */
 	return nq_session_notify(&session->nq_session, session->sid,

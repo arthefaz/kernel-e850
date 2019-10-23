@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2013-2018 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2019 TRUSTONIC LIMITED
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -40,7 +40,7 @@ int client_mc_open_session(struct tee_client *client,
 			   const struct mc_uuid_t *uuid,
 			   uintptr_t tci_va, size_t tci_len, u32 *session_id);
 int client_mc_open_trustlet(struct tee_client *client,
-			    u32 spid, uintptr_t ta_va, size_t ta_len,
+			    uintptr_t ta_va, size_t ta_len,
 			    uintptr_t tci_va, size_t tci_len, u32 *session_id);
 int client_mc_open_common(struct tee_client *client, struct mcp_open_info *info,
 			  u32 *session_id);

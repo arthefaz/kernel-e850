@@ -47,7 +47,7 @@
 #include "admin.h"              /* tee_object* for 'blob' */
 #include "mmu.h"                /* MMU for 'blob' */
 #include "nq.h"
-#include "xen_fe.h"
+#include "protocol_common.h"
 #include "iwp.h"
 
 #define IWP_RETRIES		5
@@ -149,7 +149,7 @@ static u64 iws_slot_get(void)
 	struct iws *iws;
 	u64 slot = INVALID_IWS_SLOT;
 
-	if (is_xen_domu())
+	if (fe_ops)
 		return (uintptr_t)kzalloc(sizeof(*iws), GFP_KERNEL);
 
 	mutex_lock(&l_ctx.iws_list_lock);
@@ -170,7 +170,7 @@ static void iws_slot_put(u64 slot)
 	struct iws *iws;
 	bool found = false;
 
-	if (is_xen_domu()) {
+	if (fe_ops) {
 		kfree((void *)(uintptr_t)slot);
 		return;
 	}
@@ -193,7 +193,7 @@ static void iws_slot_put(u64 slot)
 
 static inline struct interworld_session *slot_to_iws(u64 slot)
 {
-	if (is_xen_domu())
+	if (fe_ops)
 		return (struct interworld_session *)(uintptr_t)slot;
 
 	return (struct interworld_session *)((uintptr_t)l_ctx.iws + (u32)slot);
@@ -363,10 +363,8 @@ int iwp_register_shared_mem(struct tee_mmu *mmu, u32 *sva,
 {
 	int ret;
 
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu())
-		return xen_gp_register_shared_mem(mmu, sva, gp_ret);
-#endif
+	if (fe_ops)
+		return fe_ops->gp_register_shared_mem(mmu, sva, gp_ret);
 
 	ret = mcp_map(SID_MEMORY_REFERENCE, mmu, sva);
 	/* iwp_set_ret would override the origin if called after */
@@ -379,10 +377,8 @@ int iwp_register_shared_mem(struct tee_mmu *mmu, u32 *sva,
 
 int iwp_release_shared_mem(struct mcp_buffer_map *map)
 {
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu())
-		return xen_gp_release_shared_mem(map);
-#endif
+	if (fe_ops)
+		return fe_ops->gp_release_shared_mem(map);
 
 	return mcp_unmap(SID_MEMORY_REFERENCE, map);
 }
@@ -763,7 +759,7 @@ int iwp_open_session(
 	iws->command_id = (u32)iwp_session->op_slot;
 
 	/* TA blob handling */
-	if (!is_xen_domu()) {
+	if (!fe_ops) {
 		union mclf_header *header;
 
 		obj = tee_object_get(uuid, true);
@@ -811,12 +807,10 @@ int iwp_open_session(
 	mutex_unlock(&l_ctx.sessions_lock);
 
 	/* Send IWP open command */
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu())
-		ret = xen_gp_open_session(iwp_session, uuid, maps, iws, op_iws,
-					  gp_ret);
+	if (fe_ops)
+		ret = fe_ops->gp_open_session(iwp_session, uuid, maps, iws,
+					      op_iws, gp_ret);
 	else
-#endif
 		ret = iwp_cmd(iwp_session, SID_OPEN_TA, &op_iws->target_uuid,
 			      true);
 
@@ -887,10 +881,8 @@ int iwp_close_session(
 {
 	int ret = 0;
 
-	if (is_xen_domu()) {
-#ifdef TRUSTONIC_XEN_DOMU
-		ret = xen_gp_close_session(iwp_session);
-#endif
+	if (fe_ops) {
+		ret = fe_ops->gp_close_session(iwp_session);
 	} else {
 		mutex_lock(&iwp_session->iws_lock);
 		iwp_session->state = IWP_SESSION_CLOSE_REQUESTED;
@@ -971,11 +963,9 @@ int iwp_invoke_command(
 		}
 	}
 
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu())
-		ret = xen_gp_invoke_command(iwp_session, maps, iws, gp_ret);
+	if (fe_ops)
+		ret = fe_ops->gp_invoke_command(iwp_session, maps, iws, gp_ret);
 	else
-#endif
 		ret = iwp_cmd(iwp_session, SID_INVOKE_COMMAND, NULL, true);
 
 	/* Treat remote errors as errors, just use a specific errno */
@@ -1006,11 +996,9 @@ int iwp_request_cancellation(
 	struct iwp_session iwp_session;
 	int ret;
 
-#ifdef TRUSTONIC_XEN_DOMU
-	if (is_xen_domu())
-		return xen_gp_request_cancellation(
+	if (fe_ops)
+		return fe_ops->gp_request_cancellation(
 			(uintptr_t)slot_to_iws(slot));
-#endif
 
 	iwp_session_init(&iwp_session, NULL);
 	/* sid is local. Set is to SID_CANCEL_OPERATION to make things clear */

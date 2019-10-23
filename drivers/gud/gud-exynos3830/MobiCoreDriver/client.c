@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2013-2018 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2019 TRUSTONIC LIMITED
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -132,8 +132,10 @@ static void cbuf_release(struct kref *kref)
 	client_put(client);
 	/* Free */
 	free_pages(cbuf->addr, cbuf->order);
-	mc_dev_devel("freed cbuf %p: client %p addr %lx uaddr %lx len %u",
-		     cbuf, client, cbuf->addr, cbuf->uaddr, cbuf->len);
+	mc_dev_devel(
+	"freed cbuf %p: client %p addr %lx uaddr %lx len %u phys 0x%llx",
+		     cbuf, client, cbuf->addr, cbuf->uaddr, cbuf->len,
+		     (u64)cbuf->phys);
 	kfree(cbuf);
 	/* Decrement debug counter */
 	atomic_dec(&g_ctx.c_cbufs);
@@ -638,12 +640,11 @@ int client_mc_open_session(struct tee_client *client,
  * @return driver error code
  */
 int client_mc_open_trustlet(struct tee_client *client,
-			    u32 spid, uintptr_t ta_va, size_t ta_len,
+			    uintptr_t ta_va, size_t ta_len,
 			    uintptr_t tci_va, size_t tci_len, u32 *session_id)
 {
 	struct mcp_open_info info = {
 		.type = TEE_MC_TA,
-		.spid = spid,
 		.va = ta_va,
 		.len = ta_len,
 		.tci_va = tci_va,
@@ -1215,8 +1216,10 @@ int client_cbuf_create(struct tee_client *client, u32 len, uintptr_t *addr,
 	mutex_lock(&client->cbufs_lock);
 	list_add_tail(&cbuf->list, &client->cbufs);
 	mutex_unlock(&client->cbufs_lock);
-	mc_dev_devel("created cbuf %p: client %p addr %lx uaddr %lx len %u",
-		     cbuf, client, cbuf->addr, cbuf->uaddr, cbuf->len);
+	mc_dev_devel(
+	"created cbuf %p: client %p addr %lx uaddr %lx len %u phys 0x%llx",
+		     cbuf, client, cbuf->addr, cbuf->uaddr, cbuf->len,
+		     (u64)cbuf->phys);
 	return ret;
 }
 

@@ -84,6 +84,8 @@ static struct {
 	struct kasnprintf_buf	dump;
 	/* Time */
 	struct mcp_time		*time;
+	/* Protects above shared MCP time */
+	struct mutex		mcp_time_mutex;
 
 	/* Scheduler */
 	struct task_struct	*tee_worker[NQ_TEE_WORKER_THREADS];
@@ -227,14 +229,16 @@ static inline bool nq_notifications_flush(void)
 
 static inline void nq_update_time(void)
 {
-	struct timespec tm;
+	struct timespec tm1, tm2;
 
-	getnstimeofday(&tm);
-	l_ctx.time->wall_clock_seconds = tm.tv_sec;
-	l_ctx.time->wall_clock_nsec = tm.tv_nsec;
-	getrawmonotonic(&tm);
-	l_ctx.time->monotonic_seconds = tm.tv_sec;
-	l_ctx.time->monotonic_nsec = tm.tv_nsec;
+	getnstimeofday(&tm1);
+	getrawmonotonic(&tm2);
+	mutex_lock(&l_ctx.mcp_time_mutex);
+	l_ctx.time->wall_clock_seconds = tm1.tv_sec;
+	l_ctx.time->wall_clock_nsec    = tm1.tv_nsec;
+	l_ctx.time->monotonic_seconds  = tm2.tv_sec;
+	l_ctx.time->monotonic_nsec     = tm2.tv_nsec;
+	mutex_unlock(&l_ctx.mcp_time_mutex);
 }
 
 static inline void nq_notif_handler(u32 id, u32 payload)
@@ -293,27 +297,54 @@ static irqreturn_t irq_handler(int intr, void *arg)
 	return IRQ_HANDLED;
 }
 
-static void tee_set_affinity(void)
+static cpumask_t tee_set_affinity(void)
 {
-	unsigned long affinity;
+	cpumask_t old_affinity = current->cpus_allowed;
+	unsigned long affinity = get_tee_affinity();
+#if KERNEL_VERSION(4, 0, 0) > LINUX_VERSION_CODE
+	char buf_aff[64];
 
-	affinity = get_tee_affinity();
-	if (affinity != l_ctx.default_affinity_mask) {
-		mc_dev_devel("set affinity 0x%lx", affinity);
-		set_cpus_allowed_ptr(get_current(), to_cpumask(&affinity));
-	}
+	cpulist_scnprintf(buf_aff, sizeof(buf_aff), &old_affinity);
+	mc_dev_devel("aff = %lx mask = %lx curr_aff = %s (pid = %u)",
+		     affinity,
+		     l_ctx.default_affinity_mask,
+		     buf_aff,
+		     current->pid);
+#else
+	mc_dev_devel("aff = %lx mask = %lx curr_aff = %*pbl (pid = %u)",
+		     affinity,
+		     l_ctx.default_affinity_mask,
+		     cpumask_pr_args(&old_affinity),
+		     current->pid);
+#endif
+	sched_setaffinity(current->pid, to_cpumask(&affinity));
+
+	return old_affinity;
 }
 
-static void tee_clear_affinity(void)
+static void tee_restore_affinity(cpumask_t old_affinity)
 {
-	unsigned long affinity;
+#if KERNEL_VERSION(4, 0, 0) > LINUX_VERSION_CODE
+	char buf_aff[64];
+	char buf_cur_aff[64];
 
-	affinity = get_tee_affinity();
-	if (affinity != l_ctx.default_affinity_mask) {
-		mc_dev_devel("set affinity all");
-		set_cpus_allowed_ptr(get_current(),
-				     to_cpumask(&l_ctx.default_affinity_mask));
-	}
+	cpulist_scnprintf(buf_aff, sizeof(buf_aff), &old_affinity);
+	cpulist_scnprintf(buf_cur_aff,
+			  sizeof(buf_cur_aff),
+			  &current->cpus_allowed);
+	mc_dev_devel("aff = %s mask = %lx curr_aff = %s (pid = %u)",
+		     buf_aff,
+		     l_ctx.default_affinity_mask,
+		     buf_cur_aff,
+		     current->pid);
+#else
+	mc_dev_devel("aff = %*pbl mask = %lx curr_aff = %*pbl (pid = %u)",
+		     cpumask_pr_args(&old_affinity),
+		     l_ctx.default_affinity_mask,
+		     cpumask_pr_args(&current->cpus_allowed),
+		     current->pid);
+#endif
+	sched_setaffinity(current->pid, &old_affinity);
 }
 
 void nq_session_init(struct nq_session *session, bool is_gp)
@@ -373,15 +404,18 @@ int nq_session_notify(struct nq_session *session, u32 id, u32 payload)
 
 		nq_notifications_flush();
 	} else {
+		cpumask_t old_affinity;
+
 		mc_dev_devel("send %x payload %x", session->id, payload);
 		notif_queue_push(session->id, payload);
 		session_state_update_internal(session, NQ_NOTIF_SENT);
 
-		tee_set_affinity();
-		if (fc_nsiq(session->id, payload, NULL))
+		nq_update_time();
+		old_affinity = tee_set_affinity();
+		if (fc_nsiq(session->id, payload))
 			ret = -EPROTO;
+		tee_restore_affinity(old_affinity);
 		wake_up(&l_ctx.workers_wq);
-		tee_clear_affinity();
 	}
 
 	mutex_unlock(&l_ctx.notifications_mutex);
@@ -496,6 +530,7 @@ static void nq_dump_status(void)
 	char uuid_str[33];
 	int ret = 0;
 	size_t i;
+	cpumask_t old_affinity;
 
 	if (l_ctx.dump.off)
 		ret = -EBUSY;
@@ -509,12 +544,12 @@ static void nq_dump_status(void)
 	}
 
 	mc_dev_info("Status dump:");
-	tee_set_affinity();
+	old_affinity = tee_set_affinity();
 	for (i = 0; i < (size_t)ARRAY_SIZE(status_map); i++) {
 		u32 info;
 
 		if (fc_info(status_map[i].index, NULL, &info)) {
-			tee_clear_affinity();
+			tee_restore_affinity(old_affinity);
 			return;
 		}
 
@@ -530,7 +565,7 @@ static void nq_dump_status(void)
 		size_t j;
 
 		if (fc_info(MC_EXT_INFO_ID_MC_EXC_UUID + i, NULL, &info)) {
-			tee_clear_affinity();
+			tee_restore_affinity(old_affinity);
 			return;
 		}
 
@@ -539,7 +574,7 @@ static void nq_dump_status(void)
 				 "%02x", (info >> (j * 8)) & 0xff);
 		}
 	}
-	tee_clear_affinity();
+	tee_restore_affinity(old_affinity);
 
 	mc_dev_info("  %-22s= 0x%s", "mcExcep.uuid", uuid_str);
 	if (ret >= 0)
@@ -638,15 +673,14 @@ static int nq_boot_tee(void)
 	int ret;
 
 	/* Call the INIT fastcall to setup shared buffers */
-	tee_set_affinity();
+	cpumask_t old_affinity = tee_set_affinity();
+
 	ret = fc_init(virt_to_phys(l_ctx.mci),
 		      (uintptr_t)l_ctx.mcp_buffer - (uintptr_t)l_ctx.mci, q_len,
 		      sizeof(*l_ctx.mcp_buffer));
 	logging_run();
-	if (ret) {
-		tee_clear_affinity();
-		return ret;
-	}
+	if (ret)
+		goto out;
 
 	/* Set initialization values */
 #if defined(MC_INTR_SSIQ_SWD)
@@ -668,12 +702,10 @@ static int nq_boot_tee(void)
 		MAX_IW_SESSION * sizeof(struct interworld_session);
 
 	/* First empty N-SIQ to setup of the MCI structure */
-	ret = fc_nsiq(0, 0, NULL);
+	ret = fc_nsiq(0, 0);
 	logging_run();
-	if (ret) {
-		tee_clear_affinity();
-		return ret;
-	}
+	if (ret)
+		goto out;
 
 	/*
 	 * Wait until the TEE state switches to MC_STATUS_INITIALIZED
@@ -685,50 +717,46 @@ static int nq_boot_tee(void)
 
 		ret = fc_info(MC_EXT_INFO_ID_MCI_VERSION, &status, NULL);
 		logging_run();
-		if (ret) {
-			tee_clear_affinity();
-			return ret;
-		}
+		if (ret)
+			goto out;
 
 		switch (status) {
 		case MC_STATUS_NOT_INITIALIZED:
 			/* Switch to the TEE to give it more CPU time. */
-			ret = EAGAIN;
+			ret = -EAGAIN;
 			for (timeslice = 0; timeslice < 10; timeslice++) {
 				int tmp_ret = fc_yield(0, 0, NULL);
 
 				logging_run();
 				if (tmp_ret) {
-					tee_clear_affinity();
-					return tmp_ret;
+					ret = tmp_ret;
+					goto out;
 				}
 			}
 
 			/* No need to loop like mad */
-			if (ret == EAGAIN)
+			if (ret == -EAGAIN)
 				usleep_range(100, 500);
 
 			break;
 		case MC_STATUS_HALT:
-			tee_clear_affinity();
 			ret = -ENODEV;
 			nq_handle_tee_crash();
 			mc_dev_err(ret, "halt during init, state 0x%x", status);
-			return ret;
+			goto out;
 		case MC_STATUS_INITIALIZED:
 			mc_dev_devel("ready");
 			break;
 		default:
-			tee_clear_affinity();
 			/* MC_STATUS_BAD_INIT or anything else */
 			ret = -EIO;
 			mc_dev_err(ret, "MCI init failed, state 0x%x", status);
-			return ret;
+			goto out;
 		}
-	} while (ret == EAGAIN);
+	} while (ret == -EAGAIN);
 
-	tee_clear_affinity();
-
+out:
+	tee_restore_affinity(old_affinity);
 	return ret;
 }
 
@@ -739,11 +767,23 @@ static int tee_wait_infinite(void)
 					get_workers() < get_required_workers());
 }
 
-static int tee_worker_wait(void)
+static int tee_wait_timeout(unsigned int timeout_ms)
+{
+	return wait_event_interruptible_timeout(l_ctx.workers_wq,
+						!l_ctx.tee_scheduler_run ||
+						get_workers() <
+						get_required_workers(),
+						msecs_to_jiffies(timeout_ms));
+}
+
+static int tee_worker_wait(unsigned int timeout_ms)
 {
 	int ret, workers;
 
-	ret = tee_wait_infinite();
+	if (timeout_ms)
+		ret = tee_wait_timeout(timeout_ms);
+	else
+		ret = tee_wait_infinite();
 	if (ret < 0)
 		return ret; /* interrupted by signal */
 
@@ -782,7 +822,8 @@ static int tee_worker_counter_inc(int worker_id, enum counter_id cnt_id)
 	return 0;
 }
 
-unsigned long tee_worker_counter_get(int worker_id, enum counter_id cnt_id)
+static unsigned long tee_worker_counter_get(int worker_id,
+					    enum counter_id cnt_id)
 {
 	long ret = 0;
 
@@ -816,16 +857,16 @@ unsigned long tee_worker_counter_get(int worker_id, enum counter_id cnt_id)
 	return ret;
 }
 
-static s32 tee_schedule(uintptr_t arg)
+static s32 tee_schedule(uintptr_t arg, unsigned int *timeout_ms)
 {
-	u32 tee_aff, local_aff = 0, run;
+	u32 run;
 	struct fc_s_yield resp;
-	s32 timeout_ms;
 	bool tee_halted;
 	u32 req_workers;
 	int ret, id = (int)arg;
+	*timeout_ms = 0;
 
-	for (;;) {
+	while (true) {
 		/* If nq_stop or nq_signal_tee_hung called */
 		if (!l_ctx.tee_scheduler_run) {
 			ret = -EIO;
@@ -840,12 +881,10 @@ static s32 tee_schedule(uintptr_t arg)
 			goto exit;
 		}
 
-		/* Adjust worker CPU affinity based on global TEE affinity */
-		tee_aff = get_tee_affinity();
-		if (tee_aff != local_aff) {
-			tee_set_affinity();
-			local_aff = tee_aff;
-		}
+		/* Adjust worker CPU affinity based on global TEE affinity.
+		 * No need to save it, we are running in our own kthread
+		 */
+		tee_set_affinity();
 
 		/* Refresh MCI REE time */
 		nq_update_time();
@@ -866,11 +905,18 @@ static s32 tee_schedule(uintptr_t arg)
 			/* NOTE: resp.code returns -1 (infinite), -2, 0, or   */
 			/* positive min. timeout value of internal time queue.*/
 			tee_worker_counter_inc(id, TEE_WORKER_COUNTER_SYIELD);
-			timeout_ms = (s32)resp.code;
-			if (timeout_ms > 0) {
-				mc_dev_devel("[%d] IDLE timeout=%d",
-					     id, timeout_ms);
-				msleep(timeout_ms);
+			mc_dev_devel("[%d] MC_SMC_S_YIELD timeout=%d",
+				     id, resp.code);
+			mc_dev_devel("[%d] req workers=%d workers=%d",
+				     id,
+				     get_required_workers(),
+				     get_workers());
+
+			if ((s32)resp.code > 0) {
+				*timeout_ms = resp.code;
+			} else if (resp.code == 0) {
+				/* Reschedule the TEE immediately */
+				continue;
 			}
 			break;
 
@@ -920,7 +966,6 @@ static s32 tee_schedule(uintptr_t arg)
 	}
 
 exit:
-	tee_clear_affinity();
 	return ret;
 }
 
@@ -931,18 +976,19 @@ static int tee_worker(void *arg)
 {
 	uintptr_t id = (uintptr_t)arg;
 	int ret;
+	unsigned int timeout_ms = 0;
 
 	mc_dev_devel("[%ld] starts", id);
 	atomic_inc(&l_ctx.workers_started);
 
-	for (;;) {
-		ret = tee_worker_wait();
+	while (true) {
+		ret = tee_worker_wait(timeout_ms);
 		if (ret)
 			break; /* Worker received a signal, exit */
 
 		mc_dev_devel("[%ld] wake up run=%d required_workers=%d",
 			     id, get_workers(), get_required_workers());
-		ret = tee_schedule(id);
+		ret = tee_schedule(id, &timeout_ms);
 		if (ret)
 			break;
 	}
@@ -1061,9 +1107,10 @@ int nq_start(void)
 
 	/* Logging */
 	if (l_ctx.log_buffer_size) {
-		tee_set_affinity();
+		cpumask_t old_affinity = tee_set_affinity();
+
 		ret = fc_trace_init(l_ctx.log_buffer, l_ctx.log_buffer_size);
-		tee_clear_affinity();
+		tee_restore_affinity(old_affinity);
 		if (!ret) {
 			logging_run();
 			l_ctx.log_buffer_busy = true;
@@ -1146,8 +1193,17 @@ static ssize_t debug_tee_affinity_write(struct file *file,
 	if (!tee_affinity)
 		return -EINVAL;
 
+	mc_dev_devel("aff = 0x%lx, mask = 0x%lx",
+		     tee_affinity,
+		     l_ctx.default_affinity_mask);
 	tee_affinity &= l_ctx.default_affinity_mask;
-	mc_dev_devel("set tee_affinity 0x%lx", tee_affinity);
+	if (!tee_affinity) {
+		mc_dev_devel("Can't have an empty affinity.");
+		mc_dev_devel("Restoring the default mask");
+		tee_affinity = l_ctx.default_affinity_mask;
+	}
+
+	mc_dev_devel("tee_affinity 0x%lx", tee_affinity);
 	atomic_set(&l_ctx.tee_affinity, tee_affinity);
 
 	return buffer_len;
@@ -1195,6 +1251,7 @@ int nq_init(void)
 	/* Setup notification queue mutex */
 	mutex_init(&l_ctx.notifications_mutex);
 	INIT_LIST_HEAD(&l_ctx.notifications);
+	mutex_init(&l_ctx.mcp_time_mutex);
 
 	/* NQ_NUM_ELEMS must be power of 2 */
 	q_len = ALIGN(2 * (sizeof(struct notification_queue_header) +
@@ -1241,9 +1298,11 @@ int nq_init(void)
 	#else
 	l_ctx.default_affinity_mask = (1 << nr_cpu_ids) - 1;
 	#endif
+
+	mc_dev_devel("Default affinity : %lx", l_ctx.default_affinity_mask);
 	atomic_set(&l_ctx.tee_affinity, l_ctx.default_affinity_mask);
 	/* Create tee affinity debugfs entry */
-	debugfs_create_file("tee_affinity", 0600, g_ctx.debug_dir, NULL,
+	debugfs_create_file("tee_affinity_mask", 0600, g_ctx.debug_dir, NULL,
 			    &mc_debug_tee_affinity_ops);
 	return 0;
 

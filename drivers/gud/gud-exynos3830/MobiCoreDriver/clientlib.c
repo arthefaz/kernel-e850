@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2013-2018 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2019 TRUSTONIC LIMITED
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -26,6 +26,7 @@
 
 #include "main.h"
 #include "client.h"
+#include "protocol.h"
 
 static enum mc_result convert(int err)
 {
@@ -126,12 +127,8 @@ enum mc_result mc_open_device(u32 device_id)
 		goto end;
 	}
 
-	if (!open_count) {
-		char *vm_id = main_vm_id();
-
-		client = client_create(true, vm_id);
-		kfree(vm_id);
-	}
+	if (!open_count)
+		client = client_create(true, protocol_vm_id());
 
 	if (client) {
 		open_count++;
@@ -206,7 +203,7 @@ enum mc_result mc_open_session(struct mc_session_handle *session,
 }
 EXPORT_SYMBOL(mc_open_session);
 
-enum mc_result mc_open_trustlet(struct mc_session_handle *session, u32 spid,
+enum mc_result mc_open_trustlet(struct mc_session_handle *session,
 				u8 *ta_va, u32 ta_len, u8 *tci_va, u32 tci_len)
 {
 	enum mc_result ret;
@@ -223,7 +220,7 @@ enum mc_result mc_open_trustlet(struct mc_session_handle *session, u32 spid,
 
 	/* Call core api */
 	ret = convert(
-		client_mc_open_trustlet(client, spid, (uintptr_t)ta_va, ta_len,
+		client_mc_open_trustlet(client, (uintptr_t)ta_va, ta_len,
 					(uintptr_t)tci_va, tci_len,
 					&session->session_id));
 	clientlib_client_put();

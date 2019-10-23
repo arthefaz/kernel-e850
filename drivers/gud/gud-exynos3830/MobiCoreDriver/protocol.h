@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2017-2019 TRUSTONIC LIMITED
+ * Copyright (c) 2019 TRUSTONIC LIMITED
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -13,23 +13,17 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _MC_XEN_FE_H_
-#define _MC_XEN_FE_H_
+#ifndef _MC_PROTOCOL_H_
+#define _MC_PROTOCOL_H_
 
-#include <linux/version.h>
+/* Returns 1 to if probe and start are consumed and init should stop */
+int protocol_early_init(int (*probe)(void), int (*start)(void));
+int protocol_init(void);
+void protocol_exit(void);
+int protocol_start(void);
+void protocol_stop(void);
+const char *protocol_vm_id(void);
+bool protocol_is_be(void);
+bool protocol_fe_uses_pages_and_vas(void);
 
-#include "main.h"
-#include "client.h"
-#include "protocol_common.h"
-
-#ifdef CONFIG_XEN
-struct tee_protocol_ops *xen_fe_check(void);
-#else
-static inline
-struct tee_protocol_ops *xen_fe_check(void)
-{
-	return NULL;
-}
-#endif
-
-#endif /* _MC_XEN_FE_H_ */
+#endif /* _MC_PROTOCOL_H_ */

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
- * Copyright (c) 2013-2018 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2019 TRUSTONIC LIMITED
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
 #define _MC_USER_H_
 
 #define MCDRVMODULEAPI_VERSION_MAJOR 8
-#define MCDRVMODULEAPI_VERSION_MINOR 2
+#define MCDRVMODULEAPI_VERSION_MINOR 3
 
 #include <linux/types.h>
 
@@ -96,7 +96,6 @@ struct mc_ioctl_open_session {
  */
 struct mc_ioctl_open_trustlet {
 	__u32		sid;		/* session id (out) */
-	__u32		spid;		/* trustlet spid */
 	__u64		buffer;		/* trustlet binary pointer */
 	__u32		tlen;		/* binary length  */
 	__u64		tci;		/* tci buffer pointer */

@@ -35,8 +35,6 @@ enum mcp_result {
 	MC_MCP_RET_ERR_UNKNOWN_DRIVER_ID                =  3,
 	/** No more session are allowed */
 	MC_MCP_RET_ERR_NO_MORE_SESSIONS                 =  4,
-	/** The container is invalid */
-	MC_MCP_RET_ERR_CONTAINER_INVALID                =  5,
 	/** The Trustlet is invalid */
 	MC_MCP_RET_ERR_TRUSTLET_INVALID                 =  6,
 	/** The memory block has already been mapped before */
@@ -59,24 +57,6 @@ enum mcp_result {
 	MC_MCP_RET_ERR_SIGNATURE_VERIFICATION_FAILED    = 15,
 	/** System Trustlet public key is wrong */
 	MC_MCP_RET_ERR_WRONG_PUBLIC_KEY                 = 16,
-	/** Wrong containter type(s) */
-	MC_MCP_RET_ERR_CONTAINER_TYPE_MISMATCH          = 17,
-	/** Container is locked (or not activated) */
-	MC_MCP_RET_ERR_CONTAINER_LOCKED                 = 18,
-	/** SPID is not registered with root container */
-	MC_MCP_RET_ERR_SP_NO_CHILD                      = 19,
-	/** UUID is not registered with sp container */
-	MC_MCP_RET_ERR_TL_NO_CHILD                      = 20,
-	/** Unwrapping of root container failed */
-	MC_MCP_RET_ERR_UNWRAP_ROOT_FAILED               = 21,
-	/** Unwrapping of service provider container failed */
-	MC_MCP_RET_ERR_UNWRAP_SP_FAILED                 = 22,
-	/** Unwrapping of Trustlet container failed */
-	MC_MCP_RET_ERR_UNWRAP_TRUSTLET_FAILED           = 23,
-	/** Container version mismatch */
-	MC_MCP_RET_ERR_CONTAINER_VERSION_MISMATCH       = 24,
-	/** Decryption of service provider trustlet failed */
-	MC_MCP_RET_ERR_SP_TL_DECRYPTION_FAILED          = 25,
 	/** Hash check of service provider trustlet failed */
 	MC_MCP_RET_ERR_SP_TL_HASH_CHECK_FAILED          = 26,
 	/** Activation/starting of task failed */
@@ -117,8 +97,6 @@ enum cmd_id {
 	MC_MCP_CMD_CLOSE_MCP		= 0x0A,
 	/** Load token for device attestation */
 	MC_MCP_CMD_LOAD_TOKEN		= 0x0B,
-	/** Check that TA can be loaded */
-	MC_MCP_CMD_CHECK_LOAD_TA	= 0x0C,
 	/** Load a decryption key */
 	MC_MCP_CMD_LOAD_SYSENC_KEY_SO = 0x0D,
 };
@@ -245,23 +223,6 @@ struct cmd_open {
 struct rsp_open {
 	struct rsp_header	rsp_header;	/** Response header */
 	u32	session_id;	/** Session ID */
-};
-
-/** TA Load Check Command */
-struct cmd_check_load {
-	struct cmd_header cmd_header;	/** Command header */
-	struct mc_uuid_t uuid;	/** Service UUID */
-	u8		unused[4];	/** Padding to be 64-bit aligned */
-	u64		adr_load_data;	/** Physical address of the data */
-	u32		wsm_data_type;	/** Type of MMU */
-	u32		ofs_load_data;	/** Offset to the data */
-	u32		len_load_data;	/** Length of the data to load */
-	union mclf_header tl_header;	/** Service header */
-};
-
-/** TA Load Check Response */
-struct rsp_check_load {
-	struct rsp_header	rsp_header;	/** Response header */
 };
 
 /** @defgroup MCPCLOSE CLOSE
@@ -394,8 +355,6 @@ union mcp_message {
 	struct rsp_get_version	rsp_get_version;
 	struct cmd_load_token	cmd_load_token;	/** Load token */
 	struct rsp_load_token	rsp_load_token;
-	struct cmd_check_load	cmd_check_load;	/** TA load check */
-	struct rsp_check_load	rsp_check_load;
 	struct cmd_load_key_so	cmd_load_key_so;/** Load key SO */
 	struct rsp_load_key_so	rsp_load_key_so;
 };

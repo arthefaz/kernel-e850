@@ -24,6 +24,13 @@
 #include <linux/device.h>
 #include <linux/version.h>
 #include <linux/dma-buf.h>
+#ifdef CONFIG_DMA_SHARED_BUFFER
+#if KERNEL_VERSION(4, 11, 12) < LINUX_VERSION_CODE
+#include "../../drivers/staging/android/ion/ion.h"
+#elif KERNEL_VERSION(3, 14, 0) < LINUX_VERSION_CODE
+#include "../../drivers/staging/android/ion/ion_priv.h"
+#endif
+#endif
 
 #ifdef CONFIG_XEN
 /* To get the MFN */
@@ -37,6 +44,7 @@
 
 #include "main.h"
 #include "mcp.h"	/* mcp_buffer_map */
+#include "protocol.h"	/* protocol_fe_uses_pages_and_vas */
 #include "mmu.h"
 
 #define PHYS_48BIT_MASK (BIT(48) - 1)
@@ -306,7 +314,7 @@ static struct tee_mmu *tee_mmu_create_common(const struct mcp_buffer_map *b_map)
 	kref_init(&mmu->kref);
 
 	/* The Xen front-end does not use PTEs */
-	if (is_xen_domu())
+	if (protocol_fe_uses_pages_and_vas())
 		mmu->use_pages_and_vas = true;
 
 	/* Buffer info */
@@ -673,8 +681,22 @@ void tee_mmu_buffer(struct tee_mmu *mmu, struct mcp_buffer_map *map)
 	map->nr_pages = mmu->nr_pages;
 	map->flags = mmu->flags;
 	map->type = WSM_L1;
-	if (mmu->dma_buf)
+#ifdef CONFIG_DMA_SHARED_BUFFER
+	if (mmu->dma_buf) {
+		/* ION */
+#if KERNEL_VERSION(3, 14, 0) < LINUX_VERSION_CODE
+		if (!(((struct ion_buffer *)mmu->dma_buf->priv)->flags
+		   & ION_FLAG_CACHED)) {
+			map->type |= WSM_UNCACHED;
+			mc_dev_devel("ION buffer Non cacheable");
+		} else {
+			mc_dev_devel("ION buffer cacheable");
+		}
+#else
 		map->type |= WSM_UNCACHED;
+#endif
+	}
+#endif
 	map->mmu = mmu;
 }
 

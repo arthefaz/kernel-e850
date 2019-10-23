@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2013-2018 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2019 TRUSTONIC LIMITED
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -16,7 +16,6 @@
 #ifndef _MC_MCP_H_
 #define _MC_MCP_H_
 
-#include "mci/mcloadformat.h"		/* struct identity */
 #include "nq.h"
 
 struct tee_mmu;
@@ -31,9 +30,9 @@ struct mcp_open_info {
 	}	type;
 	/* TA/driver */
 	const struct mc_uuid_t	*uuid;
-	u32			spid;
 	uintptr_t		va;
 	size_t			len;
+	struct tee_mmu		*ta_mmu;
 	/* TCI */
 	uintptr_t		tci_va;
 	size_t			tci_len;
@@ -91,11 +90,9 @@ void mcp_session_init(struct mcp_session *session);
 /* Commands */
 int mcp_get_version(struct mc_version_info *version_info);
 int mcp_load_token(uintptr_t data, const struct mcp_buffer_map *buffer_map);
-int mcp_load_check(const struct tee_object *obj,
-		   const struct mcp_buffer_map *buffer_map);
 int mcp_load_key_so(uintptr_t data, const struct mcp_buffer_map *buffer_map);
 int mcp_open_session(struct mcp_session *session, struct mcp_open_info *info,
-		     bool *tci_in_use);
+		     bool tci_in_use);
 int mcp_close_session(struct mcp_session *session);
 void mcp_cleanup_session(struct mcp_session *session);
 int mcp_map(u32 session_id, struct tee_mmu *mmu, u32 *sva);

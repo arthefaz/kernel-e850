@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2013-2018 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2019 TRUSTONIC LIMITED
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -36,9 +36,11 @@
 #include "public/mc_admin.h"
 
 #include "main.h"
-#include "mmu.h"	/* For load_check and load_token */
+#include "mci/mcloadformat.h"		/* struct mc_blob_len_info */
+#include "mmu.h"			/* For load_check and load_token */
 #include "mcp.h"
 #include "nq.h"
+#include "protocol.h"
 #include "client.h"
 #include "admin.h"
 
@@ -49,6 +51,8 @@ static struct {
 	void (*tee_stop_cb)(void);
 	int last_tee_ret;
 	struct notifier_block tee_stop_notifier;
+	/* Interface not initialised means no local registry, front-end case */
+	bool is_initialised;
 } l_ctx;
 
 static struct mc_admin_driver_request {
@@ -216,8 +220,7 @@ static inline bool server_state_is(enum server_state state)
 
 static void request_cancel(void);
 
-static int request_send(u32 command, const struct mc_uuid_t *uuid, bool is_gp,
-			u32 spid)
+static int request_send(u32 command, const struct mc_uuid_t *uuid, bool is_gp)
 {
 	int counter = 0;
 	int wait_tens = 0;
@@ -271,7 +274,6 @@ static int request_send(u32 command, const struct mc_uuid_t *uuid, bool is_gp,
 		memset(&g_request.request.uuid, 0, sizeof(*uuid));
 
 	g_request.request.is_gp = is_gp;
-	g_request.request.spid = spid;
 	g_request.client_state = REQUEST_SENT;
 	mutex_unlock(&g_request.states_mutex);
 
@@ -404,11 +406,14 @@ struct tee_object *tee_object_get(const struct mc_uuid_t *uuid, bool is_gp)
 	struct tee_object *obj = NULL;
 	int ret = 0;
 
+	if (!l_ctx.is_initialised)
+		return ERR_PTR(-ENOPROTOOPT);
+
 	/* Lock communication channel */
 	channel_lock();
 
 	/* Send request and wait for header */
-	ret = request_send(MC_DRV_GET_TRUSTLET, uuid, is_gp, 0);
+	ret = request_send(MC_DRV_GET_TRUSTLET, uuid, is_gp);
 	if (ret)
 		goto end;
 
@@ -439,7 +444,7 @@ static void mc_admin_sendcrashdump(void)
 	channel_lock();
 
 	/* Send request and wait for header */
-	ret = request_send(MC_DRV_SIGNAL_CRASH, NULL, false, 0);
+	ret = request_send(MC_DRV_SIGNAL_CRASH, NULL, false);
 	if (ret)
 		goto end;
 
@@ -472,7 +477,7 @@ struct tee_object *tee_object_copy(uintptr_t address, size_t length)
 	return obj;
 }
 
-struct tee_object *tee_object_read(u32 spid, uintptr_t address, size_t length)
+struct tee_object *tee_object_read(uintptr_t address, size_t length)
 {
 	char __user *addr = (char __user *)address;
 	struct tee_object *obj;
@@ -540,7 +545,6 @@ static inline int load_driver(struct tee_client *client,
 			      struct mc_admin_load_info *load_info)
 {
 	struct mcp_open_info info = {
-		.spid = load_info->spid,
 		.va = load_info->address,
 		.len = load_info->length,
 		.uuid = &load_info->uuid,
@@ -591,31 +595,6 @@ static inline int load_token(struct mc_admin_load_info *token)
 
 	tee_mmu_buffer(mmu, &map);
 	ret = mcp_load_token(token->address, &map);
-	tee_mmu_put(mmu);
-	return ret;
-}
-
-static inline int load_check(struct mc_admin_load_info *info)
-{
-	struct tee_object *obj;
-	struct tee_mmu *mmu;
-	struct mcp_buffer_map map;
-	struct mc_ioctl_buffer buf;
-	int ret;
-
-	obj = tee_object_read(info->spid, info->address, info->length);
-	if (IS_ERR(obj))
-		return PTR_ERR(obj);
-
-	buf.va = (uintptr_t)obj->data;
-	buf.len = obj->length;
-	buf.flags = MC_IO_MAP_INPUT;
-	mmu = tee_mmu_create(NULL, &buf);
-	if (IS_ERR(mmu))
-		return PTR_ERR(mmu);
-
-	tee_mmu_buffer(mmu, &map);
-	ret = mcp_load_check(obj, &map);
 	tee_mmu_put(mmu);
 	return ret;
 }
@@ -826,10 +805,7 @@ static long admin_ioctl(struct file *file, unsigned int cmd,
 
 		/* Make sure we have a local client */
 		if (!client) {
-			char *vm_id = main_vm_id();
-
-			client = client_create(true, vm_id);
-			kfree(vm_id);
+			client = client_create(true, protocol_vm_id());
 			/* Store client for future use/close */
 			file->private_data = client;
 		}
@@ -851,17 +827,6 @@ static long admin_ioctl(struct file *file, unsigned int cmd,
 		}
 
 		ret = load_token(&info);
-		break;
-	}
-	case MC_ADMIN_IO_LOAD_CHECK: {
-		struct mc_admin_load_info info;
-
-		if (copy_from_user(&info, uarg, sizeof(info))) {
-			ret = -EFAULT;
-			break;
-		}
-
-		ret = load_check(&info);
 		break;
 	}
 	case MC_ADMIN_IO_LOAD_KEY_SO: {
@@ -991,6 +956,7 @@ int mc_admin_init(struct cdev *cdev, int (*tee_start_cb)(void),
 	l_ctx.tee_start_cb = tee_start_cb;
 	l_ctx.tee_stop_cb = tee_stop_cb;
 	l_ctx.last_tee_ret = TEE_START_NOT_TRIGGERED;
+	l_ctx.is_initialised = true;
 	return 0;
 }
 
