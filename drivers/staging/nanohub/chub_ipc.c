@@ -831,6 +831,16 @@ void ipc_print_evt(enum ipc_evt_list evtq)
 				__func__, i, ipc_evt->data[i].evt,
 				ipc_evt->data[i].irq, ipc_evt->data[i].status);
 	}
+#else
+	if (IRQ_MAX != 16)
+		CSP_PRINTF_ERROR("%s: modify hard coded logout: %d\n", __func__, IRQ_MAX);
+
+	CSP_PRINTF_INFO("pend#1:%d %d %d %d %d %d %d %d\n",
+		ipc_evt->ctrl.pending[0], ipc_evt->ctrl.pending[1], ipc_evt->ctrl.pending[2], ipc_evt->ctrl.pending[3],
+		ipc_evt->ctrl.pending[4], ipc_evt->ctrl.pending[5], ipc_evt->ctrl.pending[6], ipc_evt->ctrl.pending[7]);
+	CSP_PRINTF_INFO("pend#2:%d %d %d %d %d %d %d %d\n",
+		ipc_evt->ctrl.pending[8], ipc_evt->ctrl.pending[9], ipc_evt->ctrl.pending[10], ipc_evt->ctrl.pending[11],
+		ipc_evt->ctrl.pending[12], ipc_evt->ctrl.pending[13], ipc_evt->ctrl.pending[14], ipc_evt->ctrl.pending[15]);
 #endif
 }
 

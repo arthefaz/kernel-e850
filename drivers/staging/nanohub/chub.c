@@ -546,15 +546,25 @@ int contexthub_ipc_read(struct contexthub_ipc_info *ipc, uint8_t *rx, int max_le
 			atomic_dec(&ipc->read_lock.cnt);
 		}
 	} else {
-		dev_dbg(ipc->dev, "%s: read timeout(%d): c2aq_cnt:%d, recv_cnt:%d during %lld ns\n",
+		dev_info(ipc->dev, "%s: read timeout(%d): c2aq_cnt:%d, recv_cnt:%d during %lld ns\n",
 			__func__, ipc->err_cnt[CHUB_ERR_READ_FAIL],
 			ipc_get_data_cnt(IPC_DATA_C2A), atomic_read(&ipc->read_lock.cnt),
 			sched_clock() - time);
 		if (ipc_get_data_cnt(IPC_DATA_C2A)) {
-			ipc->err_cnt[CHUB_ERR_READ_FAIL]++;
+			rxbuf = ipc_read_data(IPC_DATA_C2A, &size);
+			if (size > 0)
+				ret = contexthub_read_process(rx, rxbuf, size);
+		} else {
 			ipc_dump();
+			ret = -EINVAL;
 		}
-		ret = -EINVAL;
+	}
+	if (ret < 0) {
+		pr_err("%s: fails to read data: ret:%d, len:%d errcnt:%d\n",
+			__func__, ret, ipc->err_cnt[CHUB_ERR_READ_FAIL]);
+		contexthub_handle_debug(ipc, CHUB_ERR_READ_FAIL, 0);
+	} else {
+		clear_err_cnt(ipc, CHUB_ERR_READ_FAIL);
 	}
 	contexthub_put_token(ipc);
 	return ret;
