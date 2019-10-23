@@ -181,7 +181,14 @@ int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd
 	int ret = 0;
 	struct dpu_fence_info in_fence;
 
-	err = dma_fence_wait_timeout(fence, false, 900);
+	dpu_save_fence_info(fd, fence, &in_fence);
+
+	DPU_F_EVT_LOG(DPU_F_EVT_WAIT_ACQUIRE_FENCE, &decon->sd, &in_fence);
+	DPU_DEBUG_FENCE("[%s] %s: ctx(%llu), seqno(%d), fd(%d), flags(0x%lx)\n",
+			fence_evt[DPU_F_EVT_WAIT_ACQUIRE_FENCE], in_fence.name,
+			in_fence.context, in_fence.seqno, in_fence.fd, in_fence.flags);
+
+	err = dma_fence_wait_timeout(fence, false, msecs_to_jiffies(600));
 	if (err < 0) {
 		decon_err("%s: waiting on in-fence timeout\n", __func__);
 		ret = err;
@@ -204,17 +211,11 @@ int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd
 		}
 	}
 
-	dpu_save_fence_info(fd, fence, &in_fence);
 	if ((err < 0) || (fence_err < 0)) {
 		decon_err("\t%s: ctx(%llu), seqno(%d), fd(%d), flags(0x%lx), err(%d:%d)\n",
 				in_fence.name, in_fence.context, in_fence.seqno,
 				in_fence.fd, in_fence.flags, err, fence_err);
 	}
-
-	DPU_F_EVT_LOG(DPU_F_EVT_WAIT_ACQUIRE_FENCE, &decon->sd, &in_fence);
-	DPU_DEBUG_FENCE("[%s] %s: ctx(%llu), seqno(%d), fd(%d), flags(0x%lx)\n",
-			fence_evt[DPU_F_EVT_WAIT_ACQUIRE_FENCE], in_fence.name,
-			in_fence.context, in_fence.seqno, in_fence.fd, in_fence.flags);
 
 	return ret;
 }
