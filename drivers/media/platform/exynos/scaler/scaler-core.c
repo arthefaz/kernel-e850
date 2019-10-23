@@ -2471,6 +2471,7 @@ static const struct v4l2_ctrl_config sc_custom_ctrl[] = {
 		.id = SC_CID_FRAMERATE,
 		.name = "Frame rate setting",
 		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
 		.step = 1,
 		.min = 0,
 		.max = SC_FRAMERATE_MAX,
