@@ -15,7 +15,7 @@
 
 #ifdef CONFIG_EXYNOS_BCM_DBG_GNR
 #define BCM_BIN_SIZE				(SZ_128K)
-#define BCM_BIN_NAME				"/system/vendor/firmware/fimc_is_lib.bin"
+#define BCM_BIN_NAME				"/system/vendor/firmware/is_lib.bin"
 #endif
 
 #define ERRCODE_ITMON_TIMEOUT			(6)
