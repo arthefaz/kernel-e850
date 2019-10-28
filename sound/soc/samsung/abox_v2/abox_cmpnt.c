@@ -2280,8 +2280,10 @@ static int set_sif_params(struct abox_data *data, enum abox_dai id,
 	int ret = 0;
 
 	ret = get_configmsg(id, &msg_rate, &msg_format);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_err(adev, "can't set sif params: %d\n", ret);
 		return ret;
+	}
 
 	rate = params_rate(params);
 	format = params_format(params);
@@ -2298,9 +2300,6 @@ static int set_sif_params(struct abox_data *data, enum abox_dai id,
 		set_sif_channels(data, msg_format, channels);
 		format_put_ipc(adev, format, channels, msg_format);
 	}
-
-	if (ret < 0)
-		dev_err(adev, "can't set sif params: %d\n", ret);
 
 	return ret;
 }
@@ -3351,6 +3350,11 @@ static int asrc_update_tick(struct abox_data *data, int stream, int id)
 	int i, res, ret = 0;
 
 	dev_dbg(dev, "%s(%d, %d, %luHz)\n", __func__, stream, id, aclk);
+
+	if (idx < 0) {
+		dev_err(dev, "%s(%d, %d): invalid idx: %d\n", __func__, stream, id, idx);
+		return -EINVAL;
+	}
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		reg = ABOX_SPUS_ASRC_CTRL(id);

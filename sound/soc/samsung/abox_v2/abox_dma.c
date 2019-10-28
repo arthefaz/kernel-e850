@@ -134,7 +134,7 @@ int abox_dma_mixer_control_get(struct snd_kcontrol *kcontrol,
 	int ret;
 
 	if (sign_bit)
-		mask = BIT(sign_bit + 1) - 1;
+		mask = (unsigned int)(BIT(sign_bit + 1) - 1);
 
 	ret = snd_soc_component_read(cmpnt, reg, &val);
 	if (ret < 0)
@@ -169,9 +169,9 @@ int abox_dma_mixer_control_put(struct snd_kcontrol *kcontrol,
 	unsigned int val, val_mask;
 
 	if (sign_bit)
-		mask = BIT(sign_bit + 1) - 1;
+		mask = (unsigned int)(BIT(sign_bit + 1) - 1);
 
-	val = ucontrol->value.integer.value[0] << shift;
+	val = (unsigned int)(ucontrol->value.integer.value[0] << shift);
 	val_mask = mask << shift;
 	err = snd_soc_component_update_bits(cmpnt, reg, val_mask, val);
 	if (err < 0)
