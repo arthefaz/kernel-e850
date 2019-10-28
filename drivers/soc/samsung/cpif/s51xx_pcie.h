@@ -69,6 +69,7 @@ void __iomem *s51xx_pcie_get_doorbell_address(void);
 int s51xx_pcie_send_doorbell_int(struct pci_dev *pdev, int int_num);
 void s51xx_pcie_save_state(struct pci_dev *pdev);
 void s51xx_pcie_restore_state(struct pci_dev *pdev);
+void s51xx_pcie_l1ss_ctrl(int enable);
 void disable_msi_int(struct pci_dev *pdev);
 void print_msi_register(struct pci_dev *pdev);
 int s5100_force_crash_exit_ext(void);

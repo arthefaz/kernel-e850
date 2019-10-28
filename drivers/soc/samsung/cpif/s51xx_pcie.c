@@ -199,11 +199,7 @@ void s51xx_pcie_save_state(struct pci_dev *pdev)
 	/* pci_pme_active(s51xx_pcie.s51xx_pdev, 0); */
 
 	/* Disable L1.2 before PCIe power off */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-	exynos_pcie_rc_l1ss_ctrl(0, PCIE_L1SS_CTRL_MODEM_IF);
-#else
-	exynos_pcie_host_v1_l1ss_ctrl(0, PCIE_L1SS_CTRL_MODEM_IF);
-#endif
+	s51xx_pcie_l1ss_ctrl(0);
 
 	pci_clear_master(pdev);
 
@@ -261,22 +257,23 @@ void s51xx_pcie_restore_state(struct pci_dev *pdev)
 
 #ifdef CONFIG_DISABLE_PCIE_CP_L1_2
 	/* Disable L1.2 after PCIe power on */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-	exynos_pcie_rc_l1ss_ctrl(0, PCIE_L1SS_CTRL_MODEM_IF);
-#else
-	exynos_pcie_host_v1_l1ss_ctrl(0, PCIE_L1SS_CTRL_MODEM_IF);
-#endif
+	s51xx_pcie_l1ss_ctrl(0);
 #else
 	/* Enable L1.2 after PCIe power on */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-	exynos_pcie_rc_l1ss_ctrl(1, PCIE_L1SS_CTRL_MODEM_IF);
-#else
-	exynos_pcie_host_v1_l1ss_ctrl(1, PCIE_L1SS_CTRL_MODEM_IF);
-#endif
+	s51xx_pcie_l1ss_ctrl(1);
 #endif
 
 	s51xx_pcie->link_status = 1;
 	/* pci_pme_active(s51xx_pcie.s51xx_pdev, 1); */
+}
+
+void s51xx_pcie_l1ss_ctrl(int enable)
+{
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+	exynos_pcie_rc_l1ss_ctrl(enable, PCIE_L1SS_CTRL_MODEM_IF);
+#else
+	exynos_pcie_host_v1_l1ss_ctrl(enable, PCIE_L1SS_CTRL_MODEM_IF);
+#endif
 }
 
 void disable_msi_int(struct pci_dev *pdev)

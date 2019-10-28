@@ -724,6 +724,9 @@ static int complete_normal_boot(struct modem_ctl *mc)
 		goto exit;
 	}
 
+	/* Enable L1.2 after CP boot */
+	s51xx_pcie_l1ss_ctrl(1);
+
 	/* Read cp_active before enabling irq */
 	mif_gpio_get_value(mc->s5100_gpio_phone_active, true);
 

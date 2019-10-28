@@ -214,11 +214,7 @@ static void tpmon_set_pci_low_power(struct tpmon_data *data)
 
 	mif_info("Change PCI low power at %ldMbps. enable:%u\\n",
 			data->tpmon->rx_mega_bps, data->values[data->curr_value]);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-	exynos_pcie_rc_l1ss_ctrl((int)data->values[data->curr_value], PCIE_L1SS_CTRL_MODEM_IF);
-#else
-	exynos_pcie_host_v1_l1ss_ctrl((int)data->values[data->curr_value], PCIE_L1SS_CTRL_MODEM_IF);
-#endif
+	s51xx_pcie_l1ss_ctrl((int)data->values[data->curr_value]);
 }
 #endif
 
