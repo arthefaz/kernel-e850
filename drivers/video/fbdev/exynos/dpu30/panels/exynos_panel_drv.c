@@ -51,7 +51,7 @@ static int exynos_backlight_update_status(struct backlight_device *bl)
 		brightness = 0;
 #endif
 
-	if (brightness >= 0) {
+	if (brightness <= bl->props.max_brightness) {
 		/* brightness bit-depth and para order can be different */
 		dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_SET_LIGHT, &brightness);
 	} else {
