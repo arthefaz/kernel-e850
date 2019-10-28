@@ -2044,12 +2044,13 @@ static int bts_parse_data(struct device_node *np, struct bts_device *data)
 	int ret = 0;
 
 	if (of_have_populated_dt()) {
-		data->num_scen = (unsigned int)of_property_count_strings(np, "list-scen");
-		if (!data->num_scen) {
-			BTSDBG_LOG(data->dev, "There should be at least one scenario\n");
+		ret = of_property_count_strings(np, "list-scen");
+		if (ret <= 0) {
+			BTSDBG_LOG(data->dev, "There should be at least one scenario (err=%d)\n", ret);
 			ret = -EINVAL;
 			goto err;
 		}
+		data->num_scen = (unsigned int)ret;
 
 		scen = devm_kcalloc(data->dev, data->num_scen, sizeof(struct bts_scen), GFP_KERNEL);
 		if (scen == NULL) {
