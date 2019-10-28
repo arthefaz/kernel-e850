@@ -2947,7 +2947,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 
-		if (get_user(pwr, (int __user *)arg)) {
+		if (get_user(pwr, (enum disp_pwr_mode __user *)arg)) {
 			ret = -EFAULT;
 			break;
 		}
