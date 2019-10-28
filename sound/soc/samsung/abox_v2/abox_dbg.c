@@ -518,7 +518,8 @@ static int samsung_abox_debug_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct device *abox_dev = dev->parent;
 	struct abox_data *data = dev_get_drvdata(abox_dev);
-	int i, ret;
+	int ret;
+	size_t i;
 
 	dev_dbg(dev, "%s\n", __func__);
 

@@ -128,7 +128,7 @@ u64 width_range_to_bits(unsigned int width_min, unsigned int width_max)
 		{ 32, SNDRV_PCM_FMTBIT_S32 },
 	};
 
-	int i;
+	size_t i;
 	u64 fmt = 0;
 
 	for (i = 0; i < ARRAY_SIZE(map); i++) {
