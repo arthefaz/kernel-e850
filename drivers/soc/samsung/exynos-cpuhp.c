@@ -521,9 +521,6 @@ static int exynos_cpuhp_pm_qos_callback(struct notifier_block *nb,
 	struct cpumask mask;
 	int cpu = 0, max;
 
-	if (val < 0)
-		return NOTIFY_BAD;
-
 	cpumask_clear(&mask);
 
 	switch (pm_qos_class) {
