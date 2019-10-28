@@ -794,17 +794,13 @@ void __dpp_dump(u32 id, void __iomem *regs, void __iomem *dma_regs,
 	}
 }
 
-static const struct dpu_fmt dpu_cal_formats_list[] = {};
-
 const struct dpu_fmt *dpu_find_cal_fmt_info(enum decon_pixel_format fmt)
 {
-	size_t i;
-
-	if (ARRAY_SIZE(dpu_cal_formats_list) > 0) {
-		for (i = 0; i < ARRAY_SIZE(dpu_cal_formats_list); i++)
-			if (dpu_cal_formats_list[i].fmt == fmt)
-				return &dpu_cal_formats_list[i];
-	}
-
+/*
+ * This product doesn't support any other format except basic fotmat.
+ * If this function is removed, should modify dpp_drv.c file.
+ * dpp_drv.c file is common code for exynos. so we leave this function
+ * to preserve dpp_drv.c file.
+ */
 	return NULL;
 }
