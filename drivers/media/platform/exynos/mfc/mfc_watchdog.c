@@ -264,11 +264,11 @@ static void __mfc_save_logging_sfr(struct mfc_dev *dev)
 	/* last information */
 	dev->logging_data->curr_ctx = dev->curr_ctx;
 	dev->logging_data->last_cmd = dev->last_cmd;
-	dev->logging_data->last_cmd_sec = dev->last_cmd_time.tv_sec;
-	dev->logging_data->last_cmd_usec = dev->last_cmd_time.tv_usec;
+	dev->logging_data->last_cmd_sec = (u32)(dev->last_cmd_time.tv_sec);
+	dev->logging_data->last_cmd_usec = (u32)(dev->last_cmd_time.tv_usec);
 	dev->logging_data->last_int = dev->last_int;
-	dev->logging_data->last_int_sec = dev->last_int_time.tv_sec;
-	dev->logging_data->last_int_usec = dev->last_int_time.tv_usec;
+	dev->logging_data->last_int_sec = (u32)(dev->last_int_time.tv_sec);
+	dev->logging_data->last_int_usec = (u32)(dev->last_int_time.tv_usec);
 	dev->logging_data->hwlock_dev = dev->hwlock.dev;
 	dev->logging_data->hwlock_ctx = (u32)(dev->hwlock.bits);
 	dev->logging_data->num_inst = dev->num_inst;
@@ -496,7 +496,7 @@ void __mfc_dump_nal_q_buffer_info(struct mfc_dev *dev, int curr_ctx)
 void __mfc_dump_buffer_info(struct mfc_dev *dev)
 {
 	int curr_ctx = __mfc_get_curr_ctx(dev);
-	struct mfc_ctx *ctx = dev->ctx[curr_ctx];
+	struct mfc_ctx *ctx;
 
 	dev_err(dev->device, "-----------dumping MFC buffer info (fault at: %#x)\n",
 			dev->logging_data->fault_addr);
@@ -513,6 +513,7 @@ void __mfc_dump_buffer_info(struct mfc_dev *dev)
 
 	if (curr_ctx < 0)
 		return;
+	ctx = dev->ctx[curr_ctx];
 
 	dev_err(dev->device, "instance buf:%#llx~%#llx, codec buf:%#llx~%#llx\n",
 			ctx->instance_ctx_buf.daddr,

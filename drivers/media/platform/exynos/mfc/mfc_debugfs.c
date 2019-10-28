@@ -250,7 +250,7 @@ static int __mfc_meminfo_show(struct seq_file *s, void *unused)
 	struct mfc_dev *dev = s->private;
 	struct mfc_ctx *ctx = NULL;
 	char *codec_name = NULL, *fmt_name = NULL;
-	unsigned int total = 0, total_max = 0;
+	size_t total = 0, total_max = 0;
 	int i, num;
 
 	if (!meminfo_enable) {
@@ -307,7 +307,8 @@ static int __mfc_meminfo_show(struct seq_file *s, void *unused)
 		}
 	}
 	seq_puts(s, "\n=========================================\n");
-	seq_printf(s, "MFC MEMORY SIZE: %d kB (MAX: %d kB)\n", total / 1024, total_max / 1024);
+	seq_printf(s, "MFC MEMORY SIZE: %zu kB (MAX: %zu kB)\n",
+			total / 1024, total_max / 1024);
 	seq_puts(s, "=========================================\n");
 
 	return 0;
