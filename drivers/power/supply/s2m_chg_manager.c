@@ -782,7 +782,8 @@ static int s2m_ifconn_handle_cc_notification(struct notifier_block *nb,
 		__func__, cmd,  attached_dev, cable_type,
 		battery->cable_type, battery->battery_valid);
 
-	battery->cable_type = cable_type;
+	if (battery->cable_type >= 0)
+		battery->cable_type = cable_type;
 	set_bat_status_by_cable(battery);
 
 	pr_info("%s: Status(%s), Health(%s), Cable(%d), Recharging(%d)\n",
@@ -912,7 +913,8 @@ static int s2m_ifconn_handle_notification(struct notifier_block *nb,
 		__func__, cmd,  attached_dev, cable_type,
 		battery->cable_type, battery->battery_valid);
 
-	battery->cable_type = cable_type;
+	if (battery->cable_type >= 0)
+		battery->cable_type = cable_type;
 	set_bat_status_by_cable(battery);
 
 	pr_info("%s: Status(%s), Health(%s), Cable(%d), Recharging(%d)\n",
@@ -938,9 +940,18 @@ static void get_battery_capacity(struct s2m_chg_manager_info *battery)
 	int new_capacity = 0, ret;
 
 	psy = power_supply_get_by_name(battery->pdata->fuelgauge_name);
+	if (!psy) {
+		pr_err("%s: Fail to get power supply name\n", __func__);
+
+		return;
+	}
+
 	ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_CAPACITY, &value);
-	if (ret < 0)
+	if (ret < 0) {
 		pr_err("%s: Fail to execute property\n", __func__);
+
+		return;
+	}
 	raw_soc = value.intval;
 
 	if (battery->status == POWER_SUPPLY_STATUS_FULL) {
@@ -1268,6 +1279,12 @@ static void check_health(struct s2m_chg_manager_info *battery)
 {
 	int battery_health = get_battery_health(battery);
 	int temperature_health = get_temperature_health(battery);
+
+	if (battery_health < 0) {
+		pr_err("%s: fail to get battery_health\n", __func__);
+
+		return;
+	}
 
 	pr_info("%s: T = %d, bat_health(%s), T_health(%s), Charging(%s)\n",
 		__func__, battery->temperature, health_str[battery_health],

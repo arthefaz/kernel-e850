@@ -428,7 +428,7 @@ static int s2mpu12_pmic_dt_parse_pdata(struct s2mpu12_dev *iodev,
 {
 	struct device_node *pmic_np, *regulators_np, *reg_np;
 	struct s2mpu12_regulator_data *rdata;
-	unsigned int i;
+	size_t i;
 
 	pmic_np = iodev->dev->of_node;
 	if (!pmic_np) {

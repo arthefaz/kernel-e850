@@ -1475,6 +1475,8 @@ static int s2mu106_fuelgauge_parse_dt(struct s2mu106_fuelgauge_data *fuelgauge)
 			ret = of_property_read_string(np,
 					"battery,fuelgauge_name",
 					(char const **)&fuelgauge->pdata->fuelgauge_name);
+			if (ret < 0)
+				pr_err("%s error reading battery,fuelgauge_name\n", __func__);
 		}
 
 		/* get battery node */
