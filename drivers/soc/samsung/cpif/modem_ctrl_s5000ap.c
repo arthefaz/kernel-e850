@@ -610,8 +610,35 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 	struct link_device *ld = get_current_link(mc->bootd);
 	struct mem_link_device *mld = to_mem_link_device(ld);
 	u32 crash_type = ld->crash_reason.type;
-
+#if defined(CONFIG_SOC_EXYNOS9630)
+	unsigned int val = 0; /* value used for PMU registers */
+#endif
 	mif_info("+++\n");
+
+#if defined(CONFIG_SOC_EXYNOS9630)
+	exynos_pmu_read(0x3200, &val); /* CP_CONFIGURATION */
+	mif_info("CP_CONFIGURATION: 0x%08X\n", val);
+	exynos_pmu_read(0x3204, &val); /* CP_STATUS */
+	mif_info("CP_STATUS: 0x%08X\n", val);
+	exynos_pmu_read(0x3208, &val); /* CP_STATES */
+	mif_info("CP_STATES: 0x%08X\n", val);
+	exynos_pmu_read(0x320C, &val); /* CP_OPTION */
+	mif_info("CP_OPTION: 0x%08X\n", val);
+	exynos_pmu_read(0x3210, &val); /* CP_CTRL_NS */
+	mif_info("CP_CTRL_NS: 0x%08X\n", val);
+	exynos_pmu_read(0x3220, &val); /* CP_OUT */
+	mif_info("CP_OUT: 0x%08X\n", val);
+	exynos_pmu_read(0x3224, &val); /* CP_IN */
+	mif_info("CP_IN: 0x%08X\n", val);
+	exynos_pmu_read(0x3240, &val); /* CP_INT_IN */
+	mif_info("CP_INT_IN: 0x%08X\n", val);
+	exynos_pmu_read(0x3244, &val); /* CP_INT_EN */
+	mif_info("CP_INT_EN: 0x%08X\n", val);
+	exynos_pmu_read(0x3248, &val); /* CP_INT_TYPE */
+	mif_info("CP_INT_TYPE: 0x%08X\n", val);
+	exynos_pmu_read(0x324c, &val); /* CP_INT_DIR */
+	mif_info("CP_INT_DIR: 0x%08X\n", val);
+#endif
 
 	if (ld->protocol == PROTOCOL_SIT &&
 			crash_type == CRASH_REASON_RIL_TRIGGER_CP_CRASH)
