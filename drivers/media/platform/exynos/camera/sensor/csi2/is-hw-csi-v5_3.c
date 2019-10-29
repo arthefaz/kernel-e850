@@ -469,11 +469,6 @@ void csi_hw_s_frameptr(u32 __iomem *base_reg, u32 vc, u32 number, bool clear)
 	u32 frame_ptr = 0;
 	u32 val = is_hw_get_reg(base_reg, &csi_vcdma_regs[CSIS_R_DMA0_CTRL]);
 
-	frame_ptr = is_hw_get_field_value(val, &csi_vcdma_fields[CSIS_F_DMA_N_UPDT_FRAMEPTR]);
-	if (clear)
-		frame_ptr |= (1 << number);
-	else
-		frame_ptr &= ~(1 << number);
 	val = is_hw_set_field_value(val, &csi_vcdma_fields[CSIS_F_DMA_N_UPDT_FRAMEPTR], frame_ptr);
 	is_hw_set_reg(base_reg, &csi_vcdma_regs[CSIS_R_DMA0_CTRL], val);
 }
