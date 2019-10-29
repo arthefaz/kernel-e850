@@ -63,8 +63,14 @@ static void chub_dbg_dump_gpr(struct contexthub_ipc_info *ipc)
 		p_dump->gpr[GPR_PC_INDEX] =
 		    readl(ipc->chub_dumpgpr + REG_CHUB_DUMPGPR_PCR);
 
-		for (i = 0; i <= GPR_PC_INDEX; i++)
-			dev_info(ipc->dev, "%s: %d: 0x%x\n", __func__, i, p_dump->gpr[i]);
+		dev_info(ipc->dev, "%s: r0:0x%x, r1:0x%x, r2:0x%x, r3:0x%x, r4:0x%x, r5:0x%x, r6:0x%x, r7:0x%x\n",
+				__func__, p_dump->gpr[0], p_dump->gpr[1], p_dump->gpr[2], p_dump->gpr[3],
+				p_dump->gpr[4], p_dump->gpr[5], p_dump->gpr[6], p_dump->gpr[7]);
+
+		dev_info(ipc->dev, "%s: r8:0x%x, r9:0x%x, r10:0x%x, r11:0x%x, r12:0x%x, sp:0x%x, lr:0x%x, r15:0x%x, pc:0x%x\n",
+				__func__, p_dump->gpr[8], p_dump->gpr[9], p_dump->gpr[10], p_dump->gpr[11],
+				p_dump->gpr[12], p_dump->gpr[13], p_dump->gpr[14], p_dump->gpr[15], p_dump->gpr[16]);
+
 	}
 }
 

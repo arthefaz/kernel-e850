@@ -224,14 +224,19 @@ u32 *ipc_get_chub_msp(void)
 
 static void ipc_dump_mailbox_sfr(void)
 {
-	int i = 0;
-	u32 val;
-
-	for (i = 0; i <= REG_MAILBOX_INTMSR1; i += 4) {
-		val = __raw_readl(ipc_own[AP].base + i);
-		if (val)
-			CSP_PRINTF_ERROR("%s: sfr:+0x%x:0x%x\n", __func__, i, val);
-	}
+	CSP_PRINTF_ERROR("%s: 0x%x/0x%x 0x%x 0x%x 0x%x 0x%x/0x%x 0x%x 0x%x 0x%x 0x%x\n",
+		__func__,
+		__raw_readl(ipc_own[AP].base + REG_MAILBOX_MCUCTL),
+		__raw_readl(ipc_own[AP].base + REG_MAILBOX_INTGR0),
+		__raw_readl(ipc_own[AP].base + REG_MAILBOX_INTCR0),
+		__raw_readl(ipc_own[AP].base + REG_MAILBOX_INTMR0),
+		__raw_readl(ipc_own[AP].base + REG_MAILBOX_INTSR0),
+		__raw_readl(ipc_own[AP].base + REG_MAILBOX_INTMSR0),
+		__raw_readl(ipc_own[AP].base + REG_MAILBOX_INTGR1),
+		__raw_readl(ipc_own[AP].base + REG_MAILBOX_INTCR1),
+		__raw_readl(ipc_own[AP].base + REG_MAILBOX_INTMR1),
+		__raw_readl(ipc_own[AP].base + REG_MAILBOX_INTSR1),
+		__raw_readl(ipc_own[AP].base + REG_MAILBOX_INTMSR1));
 }
 
 void *ipc_get_chub_map(void)
@@ -681,7 +686,7 @@ retry:
 add_evt_try:
 		ret = ipc_add_evt(evtq, IRQ_EVT_CH0);
 		if (ret) {
-			CSP_PRINTF_ERROR("%s:%s:fails by add_evt. try:%d\n", NAME_PREFIX, __func__, trycnt); /*bboot : add fails*/
+			CSP_PRINTF_ERROR("%s:%s:fails by add_evt. try:%d\n", NAME_PREFIX, __func__, trycnt);
 			if (!trycnt) {
 				trycnt++;
 				goto add_evt_try;
@@ -750,23 +755,26 @@ int ipc_get_data_cnt(enum ipc_data_list dataq)
 
 static void ipc_print_databuf(void)
 {
-	struct ipc_buf *ipc_data;
-	int j;
 #ifdef IPC_DEBUG
+	struct ipc_buf *ipc_data;
 	int i;
-#endif
+	int j;
 
 	for (j = 0; j < IPC_DATA_MAX; j++) {
 		ipc_data = (j == IPC_DATA_C2A) ? ipc_get_base(IPC_REG_IPC_C2A) : ipc_get_base(IPC_REG_IPC_A2C);
-		CSP_PRINTF_INFO("%s: %s: eq:%d dq:%d\n",
-			__func__, (j == IPC_DATA_C2A) ? "c2a" : "a2c", ipc_data->eq, ipc_data->dq);
-#ifdef IPC_DEBUG
+
 		if (ipc_get_data_cnt(j))
 			for (i = 0; i < IPC_CH_BUF_NUM; i++)
-				CSP_PRINTF_INFO("%s: ch%d(size:0x%x)\n",
-						__func__, i, ipc_data->ch[i].size);
-#endif
+				CSP_PRINTF_INFO("%s: %s: ch%d(size:0x%x)\n",
+					__func__, (j == IPC_DATA_C2A) ? "c2a" : "a2c",
+					i, ipc_data->ch[i].size);
 	}
+#endif
+
+	CSP_PRINTF_INFO("%s: c2a:eq:%d dq:%d/a2c:eq:%d dq:%d\n",
+		__func__,
+		ipc_map->data[IPC_DATA_C2A].eq, ipc_map->data[IPC_DATA_C2A].dq,
+		ipc_map->data[IPC_DATA_A2C].eq, ipc_map->data[IPC_DATA_A2C].dq);
 }
 
 static void ipc_print_logbuf(void)
@@ -835,10 +843,9 @@ void ipc_print_evt(enum ipc_evt_list evtq)
 	if (IRQ_MAX != 16)
 		CSP_PRINTF_ERROR("%s: modify hard coded logout: %d\n", __func__, IRQ_MAX);
 
-	CSP_PRINTF_INFO("pend#1:%d %d %d %d %d %d %d %d\n",
+	CSP_PRINTF_INFO("pend-irq:%d %d %d %d %d %d %d %d / %d %d %d %d %d %d %d\n",
 		ipc_evt->ctrl.pending[0], ipc_evt->ctrl.pending[1], ipc_evt->ctrl.pending[2], ipc_evt->ctrl.pending[3],
-		ipc_evt->ctrl.pending[4], ipc_evt->ctrl.pending[5], ipc_evt->ctrl.pending[6], ipc_evt->ctrl.pending[7]);
-	CSP_PRINTF_INFO("pend#2:%d %d %d %d %d %d %d %d\n",
+		ipc_evt->ctrl.pending[4], ipc_evt->ctrl.pending[5], ipc_evt->ctrl.pending[6], ipc_evt->ctrl.pending[7],
 		ipc_evt->ctrl.pending[8], ipc_evt->ctrl.pending[9], ipc_evt->ctrl.pending[10], ipc_evt->ctrl.pending[11],
 		ipc_evt->ctrl.pending[12], ipc_evt->ctrl.pending[13], ipc_evt->ctrl.pending[14], ipc_evt->ctrl.pending[15]);
 #endif

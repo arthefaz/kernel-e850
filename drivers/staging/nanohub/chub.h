@@ -72,7 +72,6 @@
 	__ret;								\
 })
 
-#define CHUB_RESET_ENABLE
 enum mailbox_event {
 	MAILBOX_EVT_UTC_MAX = IPC_DEBUG_UTC_MAX,
 	MAILBOX_EVT_DUMP_STATUS = IPC_DEBUG_DUMP_STATUS,
@@ -125,18 +124,22 @@ struct chub_alive {
 
 enum chub_err_type {
 	CHUB_ERR_NONE,
-	CHUB_ERR_EVTQ_ADD, /* ap error */
-	CHUB_ERR_EVTQ_EMTPY,
+	CHUB_ERR_ITMON, /* ITMON by CHUB */
+	CHUB_ERR_FW_FAULT, /* CSP_FAULT by CHUB */
+	CHUB_ERR_FW_WDT, /* watchdog by CHUB */
+	CHUB_ERR_EVTQ_NO_HW_TRIGGER,
+	CHUB_ERR_CHUB_NO_RESPONSE, /* 5 */
+	CHUB_ERR_CRITICAL, /* critical errors */
+	CHUB_ERR_EVTQ_ADD, /* write event error */
+	CHUB_ERR_EVTQ_EMTPY, /* isr empty event */
+	CHUB_ERR_EVTQ_WAKEUP,
+	CHUB_ERR_EVTQ_WAKEUP_CLR, /* 10 */
 	CHUB_ERR_READ_FAIL,
 	CHUB_ERR_WRITE_FAIL,
-	CHUB_ERR_EVTQ_NO_HW_TRIGGER, /* 5 */
-	CHUB_ERR_CHUB_NO_RESPONSE,
-	CHUB_ERR_ITMON,
-	CHUB_ERR_FW_FAULT, /* chub error */
-	CHUB_ERR_FW_WDT,
-	CHUB_ERR_NEED_RESET, /* 10 */
-	CHUB_ERR_FW_ERROR = CHUB_ERR_NEED_RESET,
-	CHUB_ERR_COMMS_NACK, /* ap comms error */
+	CHUB_ERR_NANOHUB,
+	CHUB_ERR_NEED_RESET, /* reset errors */
+	CHUB_ERR_FW_ERROR,
+	CHUB_ERR_COMMS_NACK, /* 16: ap comms error */
 	CHUB_ERR_COMMS_BUSY,
 	CHUB_ERR_COMMS_UNKNOWN,
 	CHUB_ERR_COMMS,
@@ -202,6 +205,7 @@ struct contexthub_ipc_info {
 	struct notifier_block itmon_nb;
 	u32 irq_pin_len;
 	u32 irq_pins[CHUB_IRQ_PIN_MAX];
+	struct wakeup_source ws_reset;
 #ifdef CONFIG_CONTEXTHUB_DEBUG
 	struct work_struct utc_work;
 #endif

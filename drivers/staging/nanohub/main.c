@@ -390,6 +390,11 @@ int request_wakeup_ex(struct nanohub_data *data, long timeout_ms,
 
 	if (timeout <= 0) {
 		if (!timeout && !priority_lock) {
+#ifdef CONFIG_NANOHUB_MAILBOX
+			dev_info(sensor_dev,
+				"wakeup: timeout:%d/%d, err_cnt:%d, priority:%d\n",
+				timeout, timeout_ms, data->wakeup_err_cnt, priority_lock);
+#endif
 			if (!data->wakeup_err_cnt)
 				data->wakeup_err_ktime = wakeup_ktime;
 			ktime_delta = ktime_sub(ktime_get_boottime(),
@@ -404,7 +409,8 @@ int request_wakeup_ex(struct nanohub_data *data, long timeout_ms,
 				spin_unlock(&data->wakeup_wait.lock);
 #endif
 				dev_info(sensor_dev,
-					"wakeup: hard reset due to consistent error\n");
+					"wakeup: hard reset due to consistent error:timeout:%d/%d, err_cnt:%d\n",
+					timeout, timeout_ms, data->wakeup_err_cnt);
 				ret = nanohub_hw_reset(data);
 				if (ret) {
 					dev_info(sensor_dev,
@@ -769,11 +775,7 @@ static int nanohub_hw_reset(struct nanohub_data *data)
 		nanohub_wakeup_unlock(data);
 	}
 #elif defined(CONFIG_NANOHUB_MAILBOX)
-#ifdef CHUB_RESET_ENABLE
 	ret = contexthub_reset(data->pdata->mailbox_client, 1, CHUB_ERR_COMMS);
-#else
-	ret = -EINVAL;
-#endif
 #endif
 	return ret;
 }
@@ -1397,6 +1399,35 @@ static ssize_t nanohub_read(struct file *file, char *buffer, size_t length,
 	return ret;
 }
 
+#ifdef CONFIG_NANOHUB_MAILBOX
+#define CHUB_RESET_THOLD (2)
+static DEFINE_MUTEX(chub_err_mutex);
+static void chub_error_check(struct nanohub_data *data)
+{
+	struct contexthub_ipc_info *ipc = data->pdata->mailbox_client;
+	int i;
+	int thold;
+
+	for (i = 0; i < CHUB_ERR_NEED_RESET; i++) {
+		if (ipc->err_cnt[i]) {
+			thold = (i < CHUB_ERR_CRITICAL) ? 1 : CHUB_RESET_THOLD;
+			mutex_lock(&chub_err_mutex);
+			if (ipc->err_cnt[i] >= thold) {
+				dev_info(ipc->dev, "%s: err:%d, cnt:%d / %d\n",
+					__func__, i, ipc->err_cnt[i], thold);
+				contexthub_reset(ipc, 1, i);
+				msleep_interruptible(WAKEUP_TIMEOUT_MS);
+				nanohub_set_state(data, ST_RUNNING);
+				nanohub_clear_err_cnt(data);
+				mutex_unlock(&chub_err_mutex);
+				return;
+			}
+			mutex_unlock(&chub_err_mutex);
+		}
+	}
+}
+#endif
+
 static ssize_t nanohub_write(struct file *file, const char *buffer,
 			     size_t length, loff_t *offset)
 {
@@ -1414,6 +1445,11 @@ static ssize_t nanohub_write(struct file *file, const char *buffer,
 
 	/* wakeup timeout should be bigger than timeout_write (544) to support both usecase */
 	ret = request_wakeup_timeout(data, 644);
+	if (ret) {
+		dev_warn(data->io[ID_NANOHUB_SENSOR].dev,
+			"%s fails to wakeup. ret:%d\n", __func__, ret);
+		chub_error_check(data);
+	}
 #else
 
 	ret = request_wakeup_timeout(data, 500);
@@ -1640,6 +1676,9 @@ static int nanohub_kthread(void *arg)
 	nanohub_set_state(data, ST_IDLE);
 
 	while (!kthread_should_stop()) {
+#ifdef CONFIG_NANOHUB_MAILBOX
+		chub_error_check(data);
+#endif
 		switch (nanohub_get_state(data)) {
 		case ST_IDLE:
 			wait_event_interruptible(data->kthread_wait,
@@ -1663,15 +1702,6 @@ static int nanohub_kthread(void *arg)
 			}
 			msleep_interruptible(WAKEUP_TIMEOUT_MS);
 			nanohub_set_state(data, ST_RUNNING);
-#ifdef CONFIG_NANOHUB_MAILBOX
-#ifndef CHUB_RESET_ENABLE
-			if (ret) {
-				dev_warn(data->io[ID_NANOHUB_SENSOR].dev,
-					"%s fails. nanohub isn't running\n", __func__);
-				return 0;
-			}
-#endif
-#endif
 			break;
 		case ST_RUNNING:
 			break;
@@ -1686,16 +1716,6 @@ static int nanohub_kthread(void *arg)
 				dev_info(sensor_dev,
 					 "%s: request_wakeup_timeout: ret=%d, err_cnt:%d\n",
 					 __func__, ret, data->kthread_err_cnt);
-#ifdef CONFIG_NANOHUB_MAILBOX
-				data->kthread_err_cnt++;
-				if (data->kthread_err_cnt >= KTHREAD_WARN_CNT) {
-					dev_err(sensor_dev,
-						"%s: kthread_err_cnt=%d\n",
-						__func__,
-						data->kthread_err_cnt);
-					nanohub_set_state(data, ST_ERROR);
-				}
-#endif
 				continue;
 			}
 
