@@ -3746,10 +3746,10 @@ static int __init exynos_bcm_dbg_probe(struct platform_device *pdev)
 
 #ifndef CONFIG_EXYNOS_BCM_DBG_GNR
 err_init:
-#endif
 	kfree(data);
 	data = NULL;
 	bcm_dbg_data = NULL;
+#endif
 err_data:
 	return ret;
 }
