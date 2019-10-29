@@ -198,7 +198,7 @@ static int parsing_dt_wakeup_mask(struct device_node *np)
 			return ret;
 
 		of_property_for_each_u32(child, "usbl2_wakeup_int_en", prop, cur, val) {
-			pm_info->usbl2_wakeup_int_en[mask_index] |= BIT(val);
+			pm_info->usbl2_wakeup_int_en[mask_index] |= (unsigned int)BIT(val);
 		}
 
 		mask_index++;
