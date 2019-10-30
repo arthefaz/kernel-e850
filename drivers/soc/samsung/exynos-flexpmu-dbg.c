@@ -540,6 +540,125 @@ void exynos_flexpmu_dbg_log_stop(void)
 	return ;
 }
 
+void exynos_flexpmu_dbg_suspend_mif_req(void)
+{
+	unsigned long long int curr_tick = 0;
+	int i = 0;
+	bool print_info = false;
+
+	if (!rtc_base)
+		return;
+
+	curr_tick = __raw_readl(rtc_base + CURTICCNT_0);
+
+	for (i = 0; i < (MIF_MASTER_MAX - 1); i++) {	/* except MIF_AP */
+		apm_req[i].active_req_tick = __raw_readl(flexpmu_dbg_base
+				+ (DATA_LINE * (DID_MIFCP0 + i * 2)) + DATA_IDX);
+		apm_req[i].last_rel_tick = __raw_readl(flexpmu_dbg_base
+				+ (DATA_LINE * (DID_MIFCP0 + i * 2)) + DATA_IDX  + 4);
+		apm_req[i].total_count = __raw_readl(flexpmu_dbg_base
+				+ (DATA_LINE * (DID_MIFCP1 + i * 2)) + DATA_IDX);
+		apm_req[i].total_time_tick = __raw_readl(flexpmu_dbg_base
+				+ (DATA_LINE * (DID_MIFCP1 + i * 2)) + DATA_IDX  + 4);
+
+		if (apm_req[i].last_rel_tick > 0) {
+			apm_req[i].last_rel_us =
+				(curr_tick - apm_req[i].last_rel_tick) * RTC_TICK_TO_US;
+		}
+
+		apm_req[i].total_time_us =
+			apm_req[i].total_time_tick * RTC_TICK_TO_US;
+
+		if (apm_req[i].active_req_tick == 0) {
+			apm_req[i].active_flag = false;
+			apm_req[i].active_since_us = 0;
+		} else {
+			apm_req[i].active_flag = true;
+			apm_req[i].active_since_us =
+				(curr_tick - apm_req[i].active_req_tick) * RTC_TICK_TO_US;
+			apm_req[i].total_time_us += apm_req[i].active_since_us;
+
+			if (!print_info) {
+				pr_info("%s %8s   %24s %24s %24s %24s\n",
+					EXYNOS_FLEXPMU_DBG_PREFIX, "Master", "active_since(us ago)",
+					"last_rel_time(us ago)", "total_req_time(us)", "req_count");
+				print_info = true;
+
+			}
+
+			pr_info("%s %8s : %24lld %24lld %24lld %24d\n",
+				EXYNOS_FLEXPMU_DBG_PREFIX,
+				flexpmu_master_name[i],
+				apm_req[i].active_since_us,
+				apm_req[i].last_rel_us,
+				apm_req[i].total_time_us,
+				apm_req[i].total_count);
+		}
+	}
+}
+
+void exynos_flexpmu_dbg_resume_mif_req(void)
+{
+	unsigned long long int curr_tick = 0;
+	struct flexpmu_apm_req_info apm_req_resume[MIF_MASTER_MAX];
+	int i = 0;
+	bool print_info = false;
+
+	if (!rtc_base)
+		return;
+
+	curr_tick = __raw_readl(rtc_base + CURTICCNT_0);
+
+	for (i = 0; i < (MIF_MASTER_MAX - 1); i++) {	/* except MIF_AP */
+		apm_req_resume[i].total_count = __raw_readl(flexpmu_dbg_base
+				+ (DATA_LINE * (DID_MIFCP1 + i * 2)) + DATA_IDX);
+
+		if (apm_req_resume[i].total_count - apm_req[i].total_count > 0 || apm_req[i].active_flag) {
+			apm_req_resume[i].active_req_tick = __raw_readl(flexpmu_dbg_base
+					+ (DATA_LINE * (DID_MIFCP0 + i * 2)) + DATA_IDX);
+			apm_req_resume[i].last_rel_tick = __raw_readl(flexpmu_dbg_base
+					+ (DATA_LINE * (DID_MIFCP0 + i * 2)) + DATA_IDX  + 4);
+			apm_req_resume[i].total_time_tick = __raw_readl(flexpmu_dbg_base
+					+ (DATA_LINE * (DID_MIFCP1 + i * 2)) + DATA_IDX  + 4);
+
+			if (apm_req_resume[i].last_rel_tick > 0) {
+				apm_req_resume[i].last_rel_us =
+					(curr_tick - apm_req_resume[i].last_rel_tick) * RTC_TICK_TO_US;
+			}
+
+			apm_req_resume[i].total_time_us =
+				apm_req_resume[i].total_time_tick * RTC_TICK_TO_US;
+
+			if (apm_req_resume[i].active_req_tick == 0) {
+				apm_req_resume[i].active_flag = false;
+				apm_req_resume[i].active_since_us = 0;
+			} else {
+				apm_req_resume[i].active_flag = true;
+				apm_req_resume[i].active_since_us =
+					(curr_tick - apm_req_resume[i].active_req_tick) * RTC_TICK_TO_US;
+				apm_req_resume[i].total_time_us += apm_req_resume[i].active_since_us;
+			}
+
+			if (!print_info) {
+				pr_info("%s %8s   %24s %24s %24s %24s\n",
+					EXYNOS_FLEXPMU_DBG_PREFIX, "Master", "active_since(us ago)",
+					"last_rel_time(us ago)", "req_time_in_sleep(us)", "req_count");
+				print_info = true;
+
+			}
+
+			pr_info("%s %8s : %24lld %24lld %24lld %24d(%d)\n",
+					EXYNOS_FLEXPMU_DBG_PREFIX,
+					flexpmu_master_name[i],
+					apm_req_resume[i].active_since_us,
+					apm_req_resume[i].last_rel_us,
+					(apm_req_resume[i].total_time_us - apm_req[i].total_time_us),
+					apm_req_resume[i].total_count,
+					(apm_req_resume[i].total_count - apm_req[i].total_count));
+		}
+	}
+}
+
 static int exynos_flexpmu_dbg_probe(struct platform_device *pdev)
 {
 	int ret = 0;

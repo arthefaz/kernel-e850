@@ -18,8 +18,12 @@
 
 #ifdef CONFIG_EXYNOS_FLEXPMU_DBG
 extern void exynos_flexpmu_dbg_log_stop(void);
+extern void exynos_flexpmu_dbg_suspend_mif_req(void);
+extern void exynos_flexpmu_dbg_resume_mif_req(void);
 #else
-#define exynos_flexpmu_dbg_log_stop()		do { } while(0)
+#define exynos_flexpmu_dbg_log_stop()		do { } while (0)
+#define exynos_flexpmu_dbg_suspend_mif_req()	do { } while (0)
+#define exynos_flexpmu_dbg_resume_mif_req()	do { } while (0)
 #endif
 
 #endif

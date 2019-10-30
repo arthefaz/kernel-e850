@@ -26,6 +26,7 @@
 #include <soc/samsung/exynos-pm.h>
 #include <soc/samsung/exynos-pmu.h>
 #include <soc/samsung/exynos-powermode.h>
+#include <soc/samsung/exynos-flexpmu-dbg.h>
 
 #define WAKEUP_STAT_EINT                (1 << 12)
 #define WAKEUP_STAT_RTC_ALARM           (1 << 0)
@@ -314,6 +315,8 @@ static int exynos_pm_syscore_suspend(void)
 			EXYNOS_PM_PREFIX, pm_dbg->mifdn_cnt_prev,
 			pm_info->apdn_cnt_prev, pm_dbg->mifdn_early_wakeup_prev);
 
+	exynos_flexpmu_dbg_suspend_mif_req();
+
 	return 0;
 }
 
@@ -345,6 +348,8 @@ static void exynos_pm_syscore_resume(void)
 	else
 		pr_info("%s: MIF down. cur_count: %d, acc_count: %d\n",
 				EXYNOS_PM_PREFIX, pm_dbg->mifdn_cnt - pm_dbg->mifdn_cnt_prev, pm_dbg->mifdn_cnt);
+
+	exynos_flexpmu_dbg_resume_mif_req();
 
 	if (pm_info->is_usbl2_suspend || pm_dbg->test_usbl2_suspend)
 		exynos_wakeup_sys_powerdown(pm_info->usbl2_suspend_mode_idx, pm_info->is_early_wakeup);
