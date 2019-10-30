@@ -2460,8 +2460,11 @@ int is_hardware_frame_ndone(struct is_hw_ip *ldr_hw_ip,
 				mserr_hw("frame_ndone fail (%d)", instance, hw_ip, hw_slot);
 				return -EINVAL;
 			}
-
+#if defined(HW_TIMEOUT_PANIC_ENABLE)
+			if ((group->id != GROUP_ID_ISP0) && (done_type == IS_SHOT_TIMEOUT))
+#else
 			if (done_type == IS_SHOT_TIMEOUT)
+#endif
 				is_hardware_sfr_dump(hardware, hw_id, false);
 		}
 		head = head->child;
