@@ -12,3 +12,5 @@ config VIDEO_EXYNOS_CAMERA_POSTPROCESS
 			This is a representative exynos Camera PostProcessing device.
 
 source "drivers/media/platform/exynos/camera-pp/gdc/Kconfig"
+source "drivers/media/platform/exynos/camera-pp/str/Kconfig"
+source "drivers/media/platform/exynos/camera-pp/votf/Kconfig"

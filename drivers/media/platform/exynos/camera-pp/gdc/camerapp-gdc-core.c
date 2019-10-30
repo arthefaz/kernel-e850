@@ -20,7 +20,6 @@
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
 #include <linux/exynos_iovmm.h>
-#include <linux/smc.h>
 #include <media/v4l2-ioctl.h>
 
 #include <video/videonode.h>
@@ -202,14 +201,14 @@ static const struct gdc_fmt gdc_formats[] = {
 static const struct gdc_variant gdc_variant[] = {
 	{
 		.limit_input = {
-			.min_w		= 32,
-			.min_h		= 32,
+			.min_w		= 96,
+			.min_h		= 64,
 			.max_w		= 8192,
 			.max_h		= 6144,
 		},
 		.limit_output = {
-			.min_w		= 32,
-			.min_h		= 32,
+			.min_w		= 96,
+			.min_h		= 64,
 			.max_w		= 8192,
 			.max_h		= 6144,
 		},
@@ -342,7 +341,7 @@ static int gdc_v4l2_try_fmt_mplane(struct file *file, void *fh,
 	else
 		limit = &ctx->gdc_dev->variant->limit_output;
 
-/* ley : need to check */
+/* TODO: check */
 	w_align = gdc_fmt->h_shift;
 	h_align = gdc_fmt->v_shift;
 
@@ -387,9 +386,22 @@ static int gdc_v4l2_try_fmt_mplane(struct file *file, void *fh,
 					pixm->plane_fmt[i].sizeimage =
 						NV16M_CBCR_SIZE(pixm->width, pixm->height)
 						+ NV16M_CBCR_2B_SIZE(pixm->width, pixm->height);
-			} else
+			} else if ((gdc_fmt->pixelformat == V4L2_PIX_FMT_NV12M_P010)
+				|| (gdc_fmt->pixelformat == V4L2_PIX_FMT_NV21M_P010)) {
+				if ((i % 2) == 0)
+					pixm->plane_fmt[i].sizeimage =
+						ALIGN(pixm->plane_fmt[i].bytesperline, 16) * pixm->height;
+				else if ((i % 2) == 1)
+					pixm->plane_fmt[i].sizeimage =
+						(ALIGN(pixm->plane_fmt[i].bytesperline, 16) * pixm->height) >> 1;
+			} else if ((gdc_fmt->pixelformat == V4L2_PIX_FMT_NV16M_P210)
+				|| (gdc_fmt->pixelformat == V4L2_PIX_FMT_NV61M_P210)) {
+				pixm->plane_fmt[i].sizeimage =
+					ALIGN(pixm->plane_fmt[i].bytesperline, 16) * pixm->height;
+			} else {
 				pixm->plane_fmt[i].sizeimage =
 					pixm->plane_fmt[i].bytesperline * pixm->height;
+			}
 		}
 
 		v4l2_dbg(1, gdc_log_level, &ctx->gdc_dev->m2m.v4l2_dev,
@@ -480,7 +492,37 @@ static int gdc_v4l2_s_fmt_mplane(struct file *file, void *fh,
 	frame->width = pixm->width;
 	frame->height = pixm->height;
 	frame->pixelformat = pixm->pixelformat;
-	frame->pixel_size = pixm->reserved[1];
+
+	/* Set the SBWC flag */
+	frame->pixel_size = (pixm->flags & CAMERAPP_PIXEL_SIZE_MASK) >> CAMERAPP_PIXEL_SIZE_SHIFT;
+	frame->extra = (pixm->flags & CAMERAPP_EXTRA_MASK) >> CAMERAPP_EXTRA_SHIFT;
+
+	/* Check constraints for SBWC */
+	if (frame->extra == COMP) {
+		/* Support WDMA only */
+		if (V4L2_TYPE_IS_OUTPUT(f->type)) {
+			v4l2_err(&ctx->gdc_dev->m2m.v4l2_dev,
+				"Compressor decorder is not supported\n");
+			return -EINVAL;
+		}
+		/* Support NV12 format only */
+		if ((frame->gdc_fmt->pixelformat != V4L2_PIX_FMT_NV12M) &&
+		(frame->gdc_fmt->pixelformat != V4L2_PIX_FMT_NV12)) {
+			v4l2_err(&ctx->gdc_dev->m2m.v4l2_dev,
+				"Can't encode the format, check if it is supported format for SBWC. (%d)\n",
+				frame->gdc_fmt->pixelformat);
+			return -EINVAL;
+		}
+		/* Size align */
+		if (!IS_ALIGNED(frame->width, CAMERAPP_COMP_BLOCK_WIDTH) ||
+		    !IS_ALIGNED(frame->height, CAMERAPP_COMP_BLOCK_HEIGHT)) {
+			v4l2_err(&ctx->gdc_dev->m2m.v4l2_dev,
+				"%dx%d of target image is not aligned by %d*%d\n",
+				frame->width, frame->height,
+				CAMERAPP_COMP_BLOCK_WIDTH, CAMERAPP_COMP_BLOCK_HEIGHT);
+			return -EINVAL;
+		}
+	}
 
 	return 0;
 }
@@ -706,7 +748,7 @@ static int gdc_vb2_queue_setup(struct vb2_queue *vq,
 		alloc_devs[i] = ctx->gdc_dev->dev;
 	}
 
-	return vb2_queue_init(vq);
+	return 0;
 }
 
 static int gdc_vb2_buf_prepare(struct vb2_buffer *vb)
@@ -1020,9 +1062,10 @@ static void gdc_job_finish(struct gdc_dev *gdc, struct gdc_ctx *ctx)
 	spin_unlock_irqrestore(&gdc->slock, flags);
 }
 
-static void gdc_watchdog(unsigned long arg)
+static void gdc_watchdog(struct timer_list *t)
 {
-	struct gdc_dev *gdc = (struct gdc_dev *)arg;
+	struct gdc_wdt *wdt = from_timer(wdt, t, timer);
+	struct gdc_dev *gdc = container_of(wdt, typeof(*gdc), wdt);
 	struct gdc_ctx *ctx;
 	unsigned long flags;
 
@@ -1151,7 +1194,7 @@ static int gdc_run_next_job(struct gdc_dev *gdc)
 	set_bit(DEV_RUN, &gdc->state);
 	set_bit(CTX_RUN, &ctx->flags);
 
-/* ley : need to check : smmu_prefetch buffer setting */
+/* TODO: check smmu_prefetch buffer setting */
 	gdc_set_prefetch_buffers(gdc->dev, ctx);
 	mod_timer(&gdc->wdt.timer, jiffies + GDC_TIMEOUT);
 
@@ -1239,20 +1282,19 @@ static irqreturn_t gdc_irq_handler(int irq, void *priv)
 				GDC_INT_OK(irq_status) ?
 				VB2_BUF_STATE_DONE : VB2_BUF_STATE_ERROR);
 
-		if (test_bit(DEV_SUSPEND, &gdc->state)) {
-			gdc_dbg("wake up blocked process by suspend\n");
-			wake_up(&gdc->wait);
-		} else {
-			v4l2_m2m_job_finish(gdc->m2m.m2m_dev, ctx->m2m_ctx);
-		}
-
 		/* Wake up from CTX_ABORT state */
-		if (test_and_clear_bit(CTX_ABORT, &ctx->flags))
-			wake_up(&gdc->wait);
+		clear_bit(CTX_ABORT, &ctx->flags);
 
 		spin_lock(&gdc->ctxlist_lock);
 		gdc->current_ctx = NULL;
 		spin_unlock(&gdc->ctxlist_lock);
+
+		if (test_bit(DEV_SUSPEND, &gdc->state))
+			gdc_dbg("wake up blocked process by suspend\n");
+		else
+			v4l2_m2m_job_finish(gdc->m2m.m2m_dev, ctx->m2m_ctx);
+
+		wake_up(&gdc->wait);
 	}
 
 	spin_unlock(&gdc->slock);
@@ -1301,7 +1343,22 @@ static int gdc_get_bufaddr(struct gdc_dev *gdc, struct gdc_ctx *ctx,
 			frame->addr.cb = gdc_get_dma_address(vb2buf, 1);
 			if (!frame->addr.cb)
 				return -EINVAL;
-
+			/* SBWC format */
+			if (frame->extra == COMP) {
+				/*
+				 * When SBWC is on, Buffer is consist of payload(before) + header(after).
+				 * Header base address is payload base address + payload memory size.
+				 */
+				if (frame->pixel_size == CAMERAPP_PIXEL_SIZE_8BIT) {
+					frame->addr.y_2bit = frame->addr.y + SBWC_8B_Y_SIZE(w, h);
+					frame->addr.cbcr_2bit = frame->addr.cb + SBWC_8B_CBCR_SIZE(w, h);
+				} else if (frame->pixel_size == CAMERAPP_PIXEL_SIZE_10BIT) {
+					frame->addr.y_2bit = frame->addr.y + SBWC_10B_Y_SIZE(w, h);
+					frame->addr.cbcr_2bit = frame->addr.cb + SBWC_10B_CBCR_SIZE(w, h);
+				} else {
+					dev_err(gdc->dev, "Please check frame->pixel_size for SBWC\n");
+				}
+			}
 			/* 8+2 format */
 			if ((frame->gdc_fmt->pixelformat == V4L2_PIX_FMT_NV16M_S10B)
 					|| (frame->gdc_fmt->pixelformat == V4L2_PIX_FMT_NV61M_S10B)) {
@@ -1668,7 +1725,7 @@ static int gdc_probe(struct platform_device *pdev)
 	}
 
 	atomic_set(&gdc->wdt.cnt, 0);
-	setup_timer(&gdc->wdt.timer, gdc_watchdog, (unsigned long)gdc);
+	timer_setup(&gdc->wdt.timer, gdc_watchdog, 0);
 
 	ret = gdc_clk_get(gdc);
 	if (ret)
@@ -1807,7 +1864,7 @@ static void gdc_shutdown(struct platform_device *pdev)
 }
 static const struct of_device_id exynos_gdc_match[] = {
 	{
-		.compatible = "samsung,exynos5-camerapp-gdc",
+		.compatible = "samsung,exynos-is-gdc",
 	},
 	{},
 };

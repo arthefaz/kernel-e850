@@ -10,7 +10,6 @@
 
 #include "camerapp-gdc.h"
 #include "camerapp-hw-api-gdc.h"
-#include <exynos-fimc-is-sensor.h>
 
 void camerapp_gdc_grid_setting(struct gdc_dev *gdc)
 {

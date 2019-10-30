@@ -25,3 +25,25 @@ config CAMERA_PP_GDC_V2_1_0_OBJ
 	default n
 	help
 		Use to build GDC v2.1 driver
+
+config CAMERA_PP_GDC_V3_0_0_OBJ
+	bool "use GDC v3.0"
+	depends on VIDEO_EXYNOS_CAMERA_POSTPROCESS_GDC
+	default n
+	help
+		Use to build GDC v3.0 driver
+
+
+config CAMERA_PP_GDC_V3_1_0_OBJ
+	bool "use GDC v3.1"
+	depends on VIDEO_EXYNOS_CAMERA_POSTPROCESS_GDC
+	default n
+	help
+		Use to build GDC v3.1 driver
+
+config CAMERA_PP_GDC_V3_10_0_OBJ
+	bool "use GDC v3.10"
+	depends on VIDEO_EXYNOS_CAMERA_POSTPROCESS_GDC
+	default n
+	help
+		Use to build GDC v3.10 driver

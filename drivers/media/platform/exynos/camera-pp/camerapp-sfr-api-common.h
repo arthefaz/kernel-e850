@@ -46,14 +46,18 @@ enum  regdata_type {
 	RWI			= 5,
 	/* only scaler */
 	R_W			= 6,
-	/* read & write for clear */
+	/* Read/Write Corex(SRAM) buffered register */
 	RWC			= 7,
-	/* read & write as dual setting */
+	/* Read/Write shadowed/double buffered register */
 	RWS			= 8,
 	/* write only*/
 	RIW			= 9,
 	/* read only latched implementation register */
 	ROL			= 10,
+	/* Write-to-Clear - pulse generation on Write */
+	WTC			= 11,
+	/* Data Write-to-Clear - pulse generation on Write only if the Write data equals the default SFR value */
+	XWTC			= 12,
 };
 
 struct camerapp_sfr_reg {
