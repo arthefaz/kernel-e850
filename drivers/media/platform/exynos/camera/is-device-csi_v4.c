@@ -1370,6 +1370,8 @@ int is_csi_open(struct v4l2_subdev *subdev,
 		csi->error_id[vc] = 0;
 
 	memset(&csi->image, 0, sizeof(struct is_image));
+	memset(csi->pre_dma_enable, -1, sizeof(csi->pre_dma_enable));
+	memset(csi->cur_dma_enable, 0, sizeof(csi->cur_dma_enable));
 
 	device = container_of(csi->subdev, struct is_device_sensor, subdev_csi);
 
@@ -1893,7 +1895,6 @@ static int csi_stream_on(struct v4l2_subdev *subdev,
 		csi->overflow_cnt = 0;
 		csi_s_config_dma(csi, sensor_cfg->output);
 		memset(csi->pre_dma_enable, -1, sizeof(csi->pre_dma_enable));
-		memset(csi->cur_dma_enable, -1, sizeof(csi->cur_dma_enable));
 
 		/* for multi frame buffer setting for internal vc */
 		csis_s_vc_dma_multibuf(csi);
@@ -2061,6 +2062,7 @@ static int csi_stream_off(struct v4l2_subdev *subdev,
 	}
 
 	atomic_set(&csi->vvalid, 0);
+	memset(csi->cur_dma_enable, 0, sizeof(csi->cur_dma_enable));
 
 	csi_free_irq(csi);
 
