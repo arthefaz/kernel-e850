@@ -2470,9 +2470,10 @@ int is_hardware_frame_ndone(struct is_hw_ip *ldr_hw_ip,
 		head = head->child;
 	}
 
-	if (done_type == IS_SHOT_TIMEOUT)
+#if defined(HW_TIMEOUT_PANIC_ENABLE)
+	if ((group->id == GROUP_ID_ISP0) && (done_type == IS_SHOT_TIMEOUT))
 		is_debug_s2d(true, "IS_SHOT_TIMEOUT");
-
+#endif
 	return ret;
 }
 
