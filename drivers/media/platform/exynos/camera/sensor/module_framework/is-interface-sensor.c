@@ -2523,7 +2523,8 @@ int request_flash(struct is_sensor_interface *itf,
 			/* main-flash on off*/
 			sensor_peri->flash->flash_ae.main_fls_ae_reset = true;
 			sensor_peri->flash->flash_ae.frm_num_main_fls[0] = vsync_cnt + 1;
-			sensor_peri->flash->flash_ae.frm_num_main_fls[1] = vsync_cnt + 2;
+			sensor_peri->flash->flash_ae.frm_num_main_fls[1] =
+				(vsync_cnt + 1) + sensor_peri->flash->flash_ae.flash_capture_cnt;
 		} else {
 			/* pre-flash on & flash off */
 			ret = set_flash(itf, vsync_cnt + i, mode, intensity, time);
@@ -2550,6 +2551,10 @@ int request_flash_expo_gain(struct is_sensor_interface *itf,
 
 	sensor_peri = container_of(itf, struct is_device_sensor_peri, sensor_interface);
 	FIMC_BUG(!sensor_peri);
+
+	sensor_peri->flash->flash_ae.flash_capture_cnt = flash_ae->flash_capture_cnt;
+
+	dbg_flash("[%s] capture cnt(%d)\n", __func__, flash_ae->flash_capture_cnt);
 
 	for (i = 0; i < 2; i++) {
 		sensor_peri->flash->flash_ae.expo[i] = flash_ae->expo[i];

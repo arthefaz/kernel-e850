@@ -1059,6 +1059,7 @@ struct is_flash_expo_gain {
 	   After the Main-flash, ambient exposure and gains are set to the sensor at 201-th frame. */
 	u32 frm_num_main_fls[2];
 	u32 main_fls_strm_on_off_step; /* 0: main/pre-flash exposure and gains, 1: ambient exposure and gains */
+	u32 flash_capture_cnt;
 };
 
 struct is_flash_interface_ops {
