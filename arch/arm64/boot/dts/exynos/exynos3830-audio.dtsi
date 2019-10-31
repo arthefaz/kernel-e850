@@ -35,7 +35,7 @@
 		samsung,quirks = "try to asrc off";
 		samsung,ipc-tx-area = <0x1 0x850000 0x18000>;
 		samsung,ipc-rx-area = <0x1 0x868000 0x18000>;
-		samsung,handshake-area = <0x0 0x10fc0 0x20>;
+		samsung,handshake-area = <0x0 0x29800 0x20>;
 		samsung,abox-gic = <&abox_gic>;
 		samsung,uaif-max-div = <512>;
 		samsung,pm-qos-int = <0 0 0 0 0>;
