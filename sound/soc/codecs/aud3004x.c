@@ -545,7 +545,7 @@ static int dmic_bias_get(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
-	bool bias_flag;
+	int bias_flag;
 
 	bias_flag = gpio_get_value(aud3004x->dmic_bias_gpio);
 	dev_err(aud3004x->dev, "%s, dmic bias gpio: %d\n", __func__, bias_flag);
