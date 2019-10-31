@@ -76,7 +76,8 @@ void abox_set_bclk_ratio(unsigned int rate)
 	int clk_width = 96; /* LCM of 24 and 32 */
 	int clk_channels = 2;
 	unsigned long audif_rate = 384000 * clk_width * clk_channels;
-	int i, j, ret;
+	int j, ret;
+	unsigned long i;
 
 	abox_request_cpu_gear(dev, abox_data, ABOX_CPU_GEAR_DAI + 0xFF,
 			1, "set_bclk_ratio");
@@ -117,7 +118,8 @@ void abox_set_bclk_ratio(unsigned int rate)
 
 	for (i = 0; i < ARRAY_SIZE(abox_uaif0_rdma0_48KHz_16bit_stereo); i++) {
 		writel(abox_uaif0_rdma0_48KHz_16bit_stereo[i][1],
-			abox_data->sfr_base + abox_uaif0_rdma0_48KHz_16bit_stereo[i][0]);
+			abox_data->sfr_base +
+			abox_uaif0_rdma0_48KHz_16bit_stereo[i][0]);
 		dev_info(abox_data->dev, "offset: %x, value = %x\n",
 			abox_uaif0_rdma0_48KHz_16bit_stereo[i][0],
 			abox_uaif0_rdma0_48KHz_16bit_stereo[i][1]);
@@ -129,10 +131,11 @@ void abox_reset_bclk_ratio(void)
 	struct abox_data *abox_data = abox_get_abox_data();
 	struct device *dev = abox_data->dev_if[1];
 	struct abox_if_data *data = dev_get_drvdata(dev);
-	int i;
+	unsigned long i;
 
 	for (i = 0; i < ARRAY_SIZE(abox_uaif0_rdma0_48KHz_16bit_stereo); i++) {
-		writel(0, abox_data->sfr_base + abox_uaif0_rdma0_48KHz_16bit_stereo[i][0]);
+		writel(0, abox_data->sfr_base +
+				abox_uaif0_rdma0_48KHz_16bit_stereo[i][0]);
 	}
 
 	clk_disable(data->clk_bclk);

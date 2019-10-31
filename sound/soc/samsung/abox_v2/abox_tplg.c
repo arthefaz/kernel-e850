@@ -447,11 +447,11 @@ static int abox_tplg_put_mixer(struct snd_kcontrol *kcontrol,
 	struct device *dev = cmpnt->dev;
 	long *value = ucontrol->value.integer.value;
 	int i, ret;
-	
+
 	dev_dbg(dev, "%s(%s, %ld)\n", __func__, kcontrol->id.name, value[0]);
 
 	for (i = 0; i < kdata->count; i++)
-		kdata->value[i] = value[i];
+		kdata->value[i] = (unsigned int)value[i];
 	if (pm_runtime_active(dev_abox)) {
 		ret = abox_tplg_kcontrol_put(dev, kdata);
 		if (ret < 0)

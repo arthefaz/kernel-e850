@@ -280,7 +280,7 @@ static int tplc_chan_get_shift(struct soc_tplg *tplg,
 
 static int get_widget_id(int tplg_type)
 {
-	int i;
+	unsigned long i;
 
 	for (i = 0; i < ARRAY_SIZE(dapm_map); i++) {
 		if (tplg_type == dapm_map[i].uid)

@@ -1734,7 +1734,8 @@ static int exynos3830_audio_probe(struct platform_device *pdev)
 	struct device_node *dai;
 	struct snd_soc_dai_link *link;
 	int nlink = 0;
-	int i, ret;
+	int ret;
+	unsigned long i;
 	const char *cur = NULL;
 	struct property *p;
 
