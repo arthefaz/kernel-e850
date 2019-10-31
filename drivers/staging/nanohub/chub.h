@@ -122,24 +122,31 @@ struct chub_alive {
 #define CHUB_DBG_DIR "/data"
 #endif
 
+#define CHUB_RESET_THOLD (3)
+#define CHUB_RESET_THOLD_MINOR (5)
+
 enum chub_err_type {
 	CHUB_ERR_NONE,
 	CHUB_ERR_ITMON, /* ITMON by CHUB */
 	CHUB_ERR_FW_FAULT, /* CSP_FAULT by CHUB */
 	CHUB_ERR_FW_WDT, /* watchdog by CHUB */
-	CHUB_ERR_EVTQ_NO_HW_TRIGGER,
-	CHUB_ERR_CHUB_NO_RESPONSE, /* 5 */
+	CHUB_ERR_FW_REBOOT,
+	CHUB_ERR_EVTQ_NO_HW_TRIGGER, /* 5 */
+	CHUB_ERR_CHUB_NO_RESPONSE,
 	CHUB_ERR_CRITICAL, /* critical errors */
 	CHUB_ERR_EVTQ_ADD, /* write event error */
 	CHUB_ERR_EVTQ_EMTPY, /* isr empty event */
-	CHUB_ERR_EVTQ_WAKEUP,
-	CHUB_ERR_EVTQ_WAKEUP_CLR, /* 10 */
+	CHUB_ERR_EVTQ_WAKEUP, /* 10 */
+	CHUB_ERR_EVTQ_WAKEUP_CLR,
 	CHUB_ERR_READ_FAIL,
 	CHUB_ERR_WRITE_FAIL,
-	CHUB_ERR_NANOHUB,
-	CHUB_ERR_NEED_RESET, /* reset errors */
+	CHUB_ERR_MAJER,	/* majer errors */
+	CHUB_ERR_CHUB_ST_ERR,	/* 15: chub_status ST_ERR */
+	CHUB_ERR_COMMS_WAKE_ERR,
 	CHUB_ERR_FW_ERROR,
-	CHUB_ERR_COMMS_NACK, /* 16: ap comms error */
+	CHUB_ERR_NEED_RESET, /* reset errors */
+	CHUB_ERR_NANOHUB_LOG,
+	CHUB_ERR_COMMS_NACK, /* 20: ap comms error */
 	CHUB_ERR_COMMS_BUSY,
 	CHUB_ERR_COMMS_UNKNOWN,
 	CHUB_ERR_COMMS,
@@ -323,4 +330,5 @@ void contexthub_release(struct contexthub_ipc_info *ipc);
 void chub_wake_event(struct chub_alive *event);
 int contexthub_get_sensortype(struct contexthub_ipc_info *ipc, char *buf);
 void contexthub_print_rtlog(struct contexthub_ipc_info *ipc, bool loop);
+void contexthub_handle_debug(struct contexthub_ipc_info *ipc, enum chub_err_type err);
 #endif

@@ -59,7 +59,11 @@
 #define WAKEUP_TIMEOUT_MS	1000
 #define SUSPEND_TIMEOUT_MS	100
 #define KTHREAD_ERR_TIME_NS	(60LL * NSEC_PER_SEC)
+#ifdef CONFIG_NANOHUB_MAILBOX
+#define KTHREAD_ERR_CNT		20
+#else
 #define KTHREAD_ERR_CNT		70
+#endif
 #define KTHREAD_WARN_CNT	10
 #define WAKEUP_ERR_TIME_NS	(60LL * NSEC_PER_SEC)
 #define WAKEUP_ERR_CNT		4
@@ -1400,8 +1404,19 @@ static ssize_t nanohub_read(struct file *file, char *buffer, size_t length,
 }
 
 #ifdef CONFIG_NANOHUB_MAILBOX
-#define CHUB_RESET_THOLD (2)
-static DEFINE_MUTEX(chub_err_mutex);
+#define CHUB_RESET_THOLD (3)
+#define CHUB_RESET_THOLD_MINOR (5)
+
+void nanohub_reset_status(struct nanohub_data *data)
+{
+	struct contexthub_ipc_info *ipc = data->pdata->mailbox_client;
+
+	dev_info(ipc->dev, "%s\n", __func__);
+	msleep_interruptible(WAKEUP_TIMEOUT_MS);
+	nanohub_set_state(data, ST_RUNNING);
+	nanohub_clear_err_cnt(data);
+}
+
 static void chub_error_check(struct nanohub_data *data)
 {
 	struct contexthub_ipc_info *ipc = data->pdata->mailbox_client;
@@ -1410,19 +1425,11 @@ static void chub_error_check(struct nanohub_data *data)
 
 	for (i = 0; i < CHUB_ERR_NEED_RESET; i++) {
 		if (ipc->err_cnt[i]) {
-			thold = (i < CHUB_ERR_CRITICAL) ? 1 : CHUB_RESET_THOLD;
-			mutex_lock(&chub_err_mutex);
-			if (ipc->err_cnt[i] >= thold) {
-				dev_info(ipc->dev, "%s: err:%d, cnt:%d / %d\n",
-					__func__, i, ipc->err_cnt[i], thold);
-				contexthub_reset(ipc, 1, i);
-				msleep_interruptible(WAKEUP_TIMEOUT_MS);
-				nanohub_set_state(data, ST_RUNNING);
-				nanohub_clear_err_cnt(data);
-				mutex_unlock(&chub_err_mutex);
-				return;
-			}
-			mutex_unlock(&chub_err_mutex);
+			thold = (i < CHUB_ERR_CRITICAL) ? 1 :
+				((i < CHUB_ERR_MAJER) ? CHUB_RESET_THOLD : CHUB_RESET_THOLD_MINOR);
+
+			if (ipc->err_cnt[i] >= thold)
+				contexthub_handle_debug(data->pdata->mailbox_client, i);
 		}
 	}
 }
@@ -1448,10 +1455,12 @@ static ssize_t nanohub_write(struct file *file, const char *buffer,
 	if (ret) {
 		dev_warn(data->io[ID_NANOHUB_SENSOR].dev,
 			"%s fails to wakeup. ret:%d\n", __func__, ret);
-		chub_error_check(data);
+		contexthub_handle_debug(ipc, CHUB_ERR_COMMS_WAKE_ERR);
+	} else {
+		if (ipc->err_cnt[CHUB_ERR_COMMS_WAKE_ERR])
+			ipc->err_cnt[CHUB_ERR_COMMS_WAKE_ERR] = 0;
 	}
 #else
-
 	ret = request_wakeup_timeout(data, 500);
 #endif
 

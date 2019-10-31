@@ -205,6 +205,7 @@ static inline int nanohub_irq2_fired(struct nanohub_data *data)
 #endif
 
 #ifdef CONFIG_NANOHUB_MAILBOX
+void nanohub_reset_status(struct nanohub_data *data);
 void nanohub_add_dump_request(struct nanohub_data *data);
 #endif
 

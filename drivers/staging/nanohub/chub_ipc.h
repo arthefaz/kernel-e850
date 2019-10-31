@@ -81,8 +81,10 @@
 #define BOOTMODE_COLD       (0x7733)
 #define BOOTMODE_PWRGATING  (0x1188)
 
+/* ap/chub status with alive check */
 #define AP_WAKE             (0x1)
 #define AP_SLEEP            (0x2)
+#define CHUB_REBOOT_REQ			(0xff)
 
 #define READY_TO_GO 99
 
@@ -127,11 +129,6 @@ enum sr_num {
 	SR_3 = 3,
 };
 
-#define SR_A2C_ADDR SR_0
-#define SR_A2C_SIZE SR_1
-#define SR_C2A_ADDR SR_2
-#define SR_C2A_SIZE SR_3
-#define SR_DEBUG_ACTION SR_0
 #define SR_DEBUG_VAL_LOW SR_1
 #define SR_DEBUG_VAL_HIGH SR_2
 #define SR_CHUB_ALIVE SR_3
@@ -185,6 +182,18 @@ enum ipc_debug_event {
 	IPC_DEBUG_UTC_HEAP_DEBUG,
 	IPC_DEBUG_UTC_HANG,
 	IPC_DEBUG_UTC_HANG_ITMON,
+	IPC_DEBUG_UTC_HANG_IPC_C2A_FULL,
+	IPC_DEBUG_UTC_HANG_IPC_C2A_CRASH,
+	IPC_DEBUG_UTC_HANG_IPC_C2A_DATA_FULL,
+	IPC_DEBUG_UTC_HANG_IPC_C2A_DATA_CRASH,
+	IPC_DEBUG_UTC_HANG_IPC_A2C_FULL,
+	IPC_DEBUG_UTC_HANG_IPC_A2C_CRASH,
+	IPC_DEBUG_UTC_HANG_IPC_A2C_DATA_FULL,
+	IPC_DEBUG_UTC_HANG_IPC_A2C_DATA_CRASH,
+	IPC_DEBUG_UTC_HANG_IPC_LOGBUF_EQ_CRASH,
+	IPC_DEBUG_UTC_HANG_IPC_LOGBUF_DQ_CRASH,
+	IPC_DEBUG_UTC_HANG_INVAL_INT,
+	IPC_DEBUG_UTC_REBOOT,
 	IPC_DEBUG_UTC_SENSOR_CHIPID, /* ap request */
 	IPC_DEBUG_UTC_IPC_TEST_START,
 	IPC_DEBUG_UTC_IPC_TEST_END,
@@ -559,6 +568,7 @@ unsigned int ipc_hw_read_int_gen_reg(enum ipc_owner owner);
 void ipc_hw_clear_int_pend_reg(enum ipc_owner owner, int irq);
 void ipc_hw_clear_all_int_pend_reg(enum ipc_owner owner);
 void ipc_hw_gen_interrupt(enum ipc_owner owner, int irq);
+void ipc_hw_gen_interrupt_all(enum ipc_owner owner);
 void ipc_hw_set_mcuctrl(enum ipc_owner owner, unsigned int val);
 void ipc_hw_mask_irq(enum ipc_owner owner, int irq);
 void ipc_hw_unmask_irq(enum ipc_owner owner, int irq);

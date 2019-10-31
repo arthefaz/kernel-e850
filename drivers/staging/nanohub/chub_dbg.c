@@ -131,11 +131,6 @@ void chub_dbg_dump_ram(enum chub_err_type reason)
 static void chub_dbg_dump_status(struct contexthub_ipc_info *ipc)
 {
 	int i;
-	char *dbg_name[CHUB_ERR_MAX] = {"none", "evtq_empty",
-		"read_fail", "write_fail", "evtq_no_hw_trigger",
-		"chub_no_resp", "itmon", "fw_fault", "fw_wdt",
-		"fw_err", "comms_nack", "comms_busy",
-		"comms_unknown", "comms", "reset_cnt", "fw_dbg"};
 
 #ifdef CONFIG_CHRE_SENSORHUB_HAL
 	struct nanohub_data *data = ipc->data;
@@ -152,8 +147,8 @@ static void chub_dbg_dump_status(struct contexthub_ipc_info *ipc)
 	/* print error status */
 	for (i = 0; i < CHUB_ERR_MAX; i++) {
 		if (ipc->err_cnt[i])
-			dev_info(ipc->dev, "%s: err(%d:%s) %d times\n",
-				__func__, i, dbg_name[i], ipc->err_cnt[i]);
+			dev_info(ipc->dev, "%s: err(%d) : err_cnt:%d times\n",
+				__func__, i, ipc->err_cnt[i]);
 	}
 
 #ifdef USE_FW_DUMP
@@ -284,7 +279,7 @@ static struct bin_attribute *chub_bin_attrs[] = {
 	&bin_attr_chub_bin_logbuf_dram,
 };
 
-#define SIZE_UTC_NAME (16)
+#define SIZE_UTC_NAME (32)
 
 char chub_utc_name[][SIZE_UTC_NAME] = {
 	[IPC_DEBUG_UTC_STOP] = "stop",
@@ -305,6 +300,18 @@ char chub_utc_name[][SIZE_UTC_NAME] = {
 	[IPC_DEBUG_UTC_HEAP_DEBUG] = "heap",
 	[IPC_DEBUG_UTC_HANG] = "hang",
 	[IPC_DEBUG_UTC_HANG_ITMON] = "itmon",
+	[IPC_DEBUG_UTC_HANG_IPC_C2A_FULL] = "ipc_c2a_evt_full",
+	[IPC_DEBUG_UTC_HANG_IPC_C2A_CRASH] = "ipc_c2a_evt_crash",
+	[IPC_DEBUG_UTC_HANG_IPC_C2A_DATA_FULL] = "ipc_c2a_data_full",
+	[IPC_DEBUG_UTC_HANG_IPC_C2A_DATA_CRASH] = "ipc_c2a_data_crash",
+	[IPC_DEBUG_UTC_HANG_IPC_A2C_FULL] = "ipc_a2c_evt_full",
+	[IPC_DEBUG_UTC_HANG_IPC_A2C_CRASH] = "ipc_a2c_evt_crash",
+	[IPC_DEBUG_UTC_HANG_IPC_A2C_DATA_FULL] = "ipc_a2c_data_full",
+	[IPC_DEBUG_UTC_HANG_IPC_A2C_DATA_CRASH] = "ipc_a2c_data_crash",
+	[IPC_DEBUG_UTC_HANG_IPC_LOGBUF_EQ_CRASH] = "ipc_logbuf_eq_crash",
+	[IPC_DEBUG_UTC_HANG_IPC_LOGBUF_DQ_CRASH] = "ipc_logbuf_dq_crash",
+	[IPC_DEBUG_UTC_HANG_INVAL_INT] = "ipc_inval_int",
+	[IPC_DEBUG_UTC_REBOOT] = "reboot(CSP_REBOOT)",
 };
 
 static ssize_t chub_alive_show(struct device *dev,
@@ -350,6 +357,9 @@ static ssize_t chub_utc_store(struct device *dev,
 
 	if (!err) {
 		contexthub_ipc_write_event(ipc, event);
+
+		if (event >= IPC_DEBUG_UTC_HANG_IPC_C2A_FULL)
+			ipc_dump();
 		return count;
 	} else {
 		return 0;

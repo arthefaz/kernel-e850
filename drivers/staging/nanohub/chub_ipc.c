@@ -454,7 +454,6 @@ struct ipc_evt_buf *ipc_get_evt(enum ipc_evt_list evtq)
 	bool retried = 0;
 #endif
 
-
 retry:
 	if (__ipc_evt_queue_index_check(&ipc_evt->ctrl)) {
 		CSP_PRINTF_ERROR("%s:%s: failed by ipc index corrupt\n", NAME_PREFIX, __func__);
@@ -922,7 +921,7 @@ void *ipc_logbuf_inbase(bool force)
 	return NULL;
 }
 
-#ifndef UES_ONE_NEWLINE
+#ifndef USE_ONE_NEWLINE
 struct logbuf_content *ipc_logbuf_get_curlogbuf(struct logbuf_content *log)
 {
 	int i;
@@ -945,14 +944,17 @@ void ipc_logbuf_set_req_num(struct logbuf_content *log)
 	log->size = logbuf->fw_num++;
 }
 
-#undef UES_LOG_FLUSH_TRSHOLD
+#undef USE_LOG_FLUSH_TRSHOLD
 void ipc_logbuf_req_flush(struct logbuf_content *log)
 {
 	if (log) {
 		struct ipc_logbuf *logbuf = &ipc_map->logbuf;
 
+		if (logbuf->eq >= LOGBUF_NUM || logbuf->dq >= LOGBUF_NUM)
+			return;
+
 		/* debug check overwrite */
-#ifdef UES_ONE_NEWLINE
+#ifdef USE_ONE_NEWLINE
 		if (log->nextaddr) {
 			struct logbuf_content *nextlog = log->nextaddr;
 
@@ -972,7 +974,7 @@ void ipc_logbuf_req_flush(struct logbuf_content *log)
 
 		if (ipc_map) {
 			if (!logbuf->flush_req && !logbuf->flush_active) {
-#ifdef UES_LOG_FLUSH_TRSHOLD
+#ifdef USE_LOG_FLUSH_TRSHOLD
 				u32 eq = logbuf->eq;
 				u32 dq = logbuf->dq;
 				u32 logcnt = (eq >= dq) ? (eq - dq) : (eq + (logbuf->size - dq));
@@ -1038,8 +1040,15 @@ int ipc_logbuf_outprint(struct runtimelog_buf *rt_buf, u32 loop)
 retry:
 		eq = logbuf->eq;
 		if (eq >= LOGBUF_NUM || logbuf->dq >= LOGBUF_NUM) {
-			pr_err("%s: index err:%d, eq:%d, dq:%d\n", __func__, eq, logbuf->dq);
+			pr_err("%s: index  eq:%d, dq:%d\n", __func__, eq, logbuf->dq);
 			logbuf->eq = logbuf->dq = 0;
+
+			if (logbuf->eq != 0 || logbuf->dq != 0) {
+				__raw_writel(0, &logbuf->eq);
+				__raw_writel(0, &logbuf->dq);
+				pr_err("%s: index after: eq:%d, dq:%d\n",
+					__func__, __raw_readl(&logbuf->eq), __raw_readl(&logbuf->dq));
+			}
 			return -1;
 		}
 
@@ -1190,6 +1199,16 @@ void ipc_hw_gen_interrupt(enum ipc_owner owner, int irq)
 			     (char *)ipc_own[owner].base + REG_MAILBOX_INTGR1);
 	else
 		__raw_writel(1 << (irq + IRQ_EVT_CHUB_MAX),
+			     (char *)ipc_own[owner].base + REG_MAILBOX_INTGR0);
+}
+
+void ipc_hw_gen_interrupt_all(enum ipc_owner owner)
+{
+	if (ipc_own[owner].src)
+		__raw_writel(0xffff,
+			     (char *)ipc_own[owner].base + REG_MAILBOX_INTGR1);
+	else
+		__raw_writel(0xffff << IRQ_EVT_CHUB_MAX,
 			     (char *)ipc_own[owner].base + REG_MAILBOX_INTGR0);
 }
 
