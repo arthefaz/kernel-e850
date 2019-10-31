@@ -45,7 +45,7 @@ struct esmc_log {
 struct esmc_log smc_log[NR_CPUS][EXYNOS_SMC_LOG_SIZE];
 static uint32_t smc_log_idx[NR_CPUS];
 
-static unsigned int esmc_log_threshold =
+static unsigned long esmc_log_threshold =
 		CONFIG_EXYNOS_SMC_LOG_THRESHOLD;
 
 static ssize_t esmc_log_threshold_show(struct kobject *kobj,
