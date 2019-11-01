@@ -10360,13 +10360,13 @@ const struct is_pdp_reg pdp_sdc_setfile_hd[] =  {
 	{0x000000ff, 0x2cec},
 	{0x00120028, 0x2cf0},
 	{0x0000003c, 0x2cf4},
-	{0x00000000, 0x2cf8},
-	{0x00000000, 0x2cfc},
-	{0x00000000, 0x2d00},
-	{0x00000000, 0x2d04},
+	{0x00030000, 0x2cf8}, /* timeout value for HW hang detecting */
+	{0x00030000, 0x2cfc}, /* timeout value for HW hang detecting */
+	{0x00030000, 0x2d00}, /* timeout value for HW hang detecting */
+	{0x00030000, 0x2d04}, /* timeout value for HW hang detecting */
 	{0x00000000, 0x2d08},
 	{0x00000000, 0x2d0c},
-	{0x00000000, 0x2d10},
+	{0x000000ff, 0x2d10}, /* PAD(dummy data) generating in HW hang case */
 	{0x00000000, 0x2d14},
 	{0x00000000, 0x2d18},
 };
@@ -10442,13 +10442,13 @@ const struct is_pdp_reg pdp_sdc_setfile_fhd[] =  {
 	{0x000000ff, 0x2cec},
 	{0x00120040, 0x2cf0},
 	{0x0000005f, 0x2cf4},
-	{0x00000000, 0x2cf8},
-	{0x00000000, 0x2cfc},
-	{0x00000000, 0x2d00},
-	{0x00000000, 0x2d04},
+	{0x00030000, 0x2cf8}, /* timeout value for HW hang detecting */
+	{0x00030000, 0x2cfc}, /* timeout value for HW hang detecting */
+	{0x00030000, 0x2d00}, /* timeout value for HW hang detecting */
+	{0x00030000, 0x2d04}, /* timeout value for HW hang detecting */
 	{0x00000000, 0x2d08},
 	{0x00000000, 0x2d0c},
-	{0x00000000, 0x2d10},
+	{0x000000ff, 0x2d10}, /* PAD(dummy data) generating in HW hang case */
 	{0x00000000, 0x2d14},
 	{0x00000000, 0x2d18},
 };
