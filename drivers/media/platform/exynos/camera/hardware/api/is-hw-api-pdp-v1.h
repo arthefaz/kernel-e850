@@ -38,7 +38,7 @@ unsigned int pdp_hw_g_idle_state(void __iomem *base);
 
 /* config */
 void pdp_hw_s_global_enable(void __iomem *base, bool enable);
-void pdp_hw_s_one_shot_enable(void __iomem *base);
+int pdp_hw_s_one_shot_enable(void __iomem *base);
 void pdp_hw_s_corex_enable(void __iomem *base, bool enable);
 void pdp_hw_s_core(void __iomem *base, bool pd_enable,
 	u32 img_width, u32 img_height, u32 img_hwformat, u32 img_pixelsize,

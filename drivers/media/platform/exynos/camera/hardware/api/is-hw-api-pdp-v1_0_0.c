@@ -722,8 +722,9 @@ void pdp_hw_s_global_enable(void __iomem *base, bool enable)
  * Context: O
  * CR type: No Corex
  */
-void pdp_hw_s_one_shot_enable(void __iomem *base)
+int pdp_hw_s_one_shot_enable(void __iomem *base)
 {
+	int ret = 0;
 	u32 idle;
 	u32 try_cnt = 0;
 	u32 total_line;
@@ -742,6 +743,8 @@ void pdp_hw_s_one_shot_enable(void __iomem *base)
 		if (try_cnt >= PDP_TRY_COUNT) {
 			err_hw("[PDP] fail to wait idleness status(total:%d, curr:%d, idle:%d)",
 				total_line, curr_line, idle);
+
+			ret = -EBUSY;
 			break;
 		}
 
@@ -757,6 +760,8 @@ void pdp_hw_s_one_shot_enable(void __iomem *base)
 
 	PDP_SET_F(base, PDP_R_ONE_SHOT_ENABLE, PDP_F_ONE_SHOT_ENABLE, 0);
 	PDP_SET_F(base, PDP_R_ONE_SHOT_ENABLE, PDP_F_ONE_SHOT_ENABLE, 1);
+
+	return ret;
 }
 
 void pdp_hw_s_corex_enable(void __iomem *base, bool enable)

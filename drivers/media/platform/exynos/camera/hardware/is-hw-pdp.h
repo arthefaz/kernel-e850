@@ -85,6 +85,7 @@ struct is_pdp {
 	bool				stat_enable;
 
 	int				vc_ext_sensor_mode;
+	u32				err_cnt_oneshot;
 };
 
 

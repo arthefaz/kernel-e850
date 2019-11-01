@@ -56,6 +56,7 @@ static void pdp_s_af_rdma_addr(void *data, unsigned long id, struct is_frame *fr
 #if defined(VOTF_ONESHOT)
 static void pdp_s_one_shot_enable(void *data, unsigned long id)
 {
+	int ret = 0;
 	struct is_pdp *pdp;
 
 	pdp = (struct is_pdp *)data;
@@ -67,11 +68,19 @@ static void pdp_s_one_shot_enable(void *data, unsigned long id)
 	if (test_and_clear_bit(IS_PDP_VOTF_ONESHOT_FIRST_FRAME, &pdp->state)) {
 		pdp_hw_s_path(pdp->base, DMA);
 		pdp_hw_s_corex_enable(pdp->base, true);
+		pdp->err_cnt_oneshot = 0;
 
 		if (pdp_hw_g_idle_state(pdp->base))
-			pdp_hw_s_one_shot_enable(pdp->base);
+			ret = pdp_hw_s_one_shot_enable(pdp->base);
 	} else {
-		pdp_hw_s_one_shot_enable(pdp->base);
+		ret = pdp_hw_s_one_shot_enable(pdp->base);
+	}
+
+	if (ret) {
+		if (pdp->err_cnt_oneshot == 0)
+			pdp_hw_dump(pdp->base);
+
+		pdp->err_cnt_oneshot++;
 	}
 }
 #endif
