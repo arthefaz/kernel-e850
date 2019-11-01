@@ -229,10 +229,7 @@ u16 rssi_device_to_host(u16 digi_rssi, u16 agc_gain, u16 rssi_adj)
 void fm_set_audio_gain(struct s610_radio *radio, u16 gain)
 {
 	if (gain >= radio->vol_num)
-		gain = radio->vol_num - 1;
-
-	if (gain < 0)
-		gain = 0;
+		gain = (radio->vol_num <= 1) ? 0 : radio->vol_num - 1;
 
 	fmspeedy_set_reg_field(0xFFF251, 0, (0x07FF << 0),
 		radio->vol_level_mod[gain]);
@@ -1430,7 +1427,7 @@ void fm_lo_prepare_setup(struct s610_radio *radio)
 		flodiv_prev = flodiv_cur;
 	}
 
-	fdco_t = freq_hz * n_lodiv * 2;
+	fdco_t = freq_hz * (u64) n_lodiv * 2;
 	ndiv_t = fdco_t / (u64) fref;
 	fdco_r = fdco_t % (u64) fref;
 

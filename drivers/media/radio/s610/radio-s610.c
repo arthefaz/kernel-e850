@@ -1246,10 +1246,7 @@ static int s610_radio_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 				__func__, ctrl->val,  ret);
 		break;
 	case V4L2_CID_S610_RDS_ON:
-		if (radio->low->fm_state.fm_pwr_on & S610_POWER_ON_RDS)
-			ctrl->val = FM_RDS_ENABLE;
-		else
-			ctrl->val = FM_RDS_DISABLE;
+		ctrl->val = radio->rds_flag
 		FDEBUG(radio, "%s(), RDS_ON:%d, ret: %d\n", __func__,
 				ctrl->val, ret);
 		break;
@@ -2069,7 +2066,7 @@ static struct device_node *exynos_audio_parse_dt(struct s610_radio *radio)
 
 static int s610_radio_probe(struct platform_device *pdev)
 {
-	unsigned long ret;
+	int ret;
 	struct s610_radio *radio;
 	struct v4l2_ctrl *ctrl;
 	const struct of_device_id *match;
@@ -2111,11 +2108,11 @@ static int s610_radio_probe(struct platform_device *pdev)
 	if (ret)
 		goto alloc_err2;
 
-	fm_clk_prepare(radio);
+	ret = fm_clk_prepare(radio);
 	if (ret)
 		goto alloc_err2;
 
-	fm_clk_enable(radio);
+	ret = fm_clk_enable(radio);
 	if (ret) {
 		fm_clk_unprepare(radio);
 		goto alloc_err2;
