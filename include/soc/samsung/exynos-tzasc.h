@@ -99,8 +99,7 @@ struct tzasc_info_data {
 static inline unsigned int mif_addr_to_pa(unsigned int mif_addr,
 					  unsigned int ch)
 {
-	unsigned long ta, sa;
-	unsigned int ba, bit_8th;
+	unsigned long ta, ba, sa, bit_8th;
 
 	ta = (mif_addr & 0x7FFFFF00) << 1;
 	ba = (mif_addr & 0xFF);
