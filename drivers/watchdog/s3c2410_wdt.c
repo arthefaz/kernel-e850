@@ -138,7 +138,7 @@ struct s3c2410_wdt {
 	unsigned int mask_reset_reg_val;
 	unsigned int noncpu_int_reg_val;
 	unsigned int noncpu_out_reg_val;
-	int skip_gettime;
+	int in_suspend;
 
 	struct task_struct	*tsk;
 	struct thread_info	*thr;
@@ -611,7 +611,7 @@ static int s3c2410wdt_keepalive(struct watchdog_device *wdd)
 
 	wtcnt = readl(wdt->reg_base + S3C2410_WTCNT);
 	dev_info(wdt->dev, "Watchdog cluster %u keepalive!, wtcnt = %lx\n", wdt->cluster, wtcnt);
-	if (!wdt->skip_gettime)
+	if (!(in_panic || in_interrupt() ||  wdt->in_suspend))
 		s3c2410wdt_gettime(wdt->cluster);
 
 	return 0;
@@ -1080,7 +1080,7 @@ static void s3c2410wdt_multistage_wdt_keepalive(void)
 	wtcnt = readl(s3c_wdt[index]->reg_base + S3C2410_WTCNT);
 	dev_info(s3c_wdt[index]->dev, "Watchdog cluster %u keepalive!, wtcnt = %lx\n",
 		s3c_wdt[index]->cluster, wtcnt);
-	if (!s3c_wdt[index]->skip_gettime)
+	if (!(in_panic || in_interrupt() || s3c_wdt[index]->in_suspend))
 		s3c2410wdt_gettime(index);
 
 }
@@ -1148,13 +1148,9 @@ static int s3c2410wdt_panic_handler(struct notifier_block *nb,
 	struct wdt_panic_block *wdt_panic =
 		(struct wdt_panic_block *)nb;
 	struct s3c2410_wdt *wdt = wdt_panic->wdt;
-	int i;
 
 	if (!wdt)
 		return -ENODEV;
-
-	for (i = 0; i < ARRAY_SIZE(s3c_wdt); i++)
-		s3c_wdt[i]->skip_gettime = 1;
 
 	/* We assumed that num_online_cpus() > 1 status is abnormal */
 	if (dbg_snapshot_get_hardlockup() || num_online_cpus() > 1) {
@@ -1291,7 +1287,7 @@ static int s3c2410wdt_dev_suspend(struct device *dev)
 	if (wdt->cluster == LITTLE_CLUSTER)
 		return 0;
 
-	wdt->skip_gettime = 1;
+	wdt->in_suspend = 1;
 	s3c2410wdt_keepalive(&wdt->wdt_device);
 	/* Save watchdog state, and turn it off. */
 	wdt->wtcon_save = readl(wdt->reg_base + S3C2410_WTCON);
@@ -1303,7 +1299,8 @@ static int s3c2410wdt_dev_suspend(struct device *dev)
 static int s3c2410wdt_dev_resume(struct device *dev)
 {
 	int ret = 0;
-	unsigned int val, wtmincnt;
+	unsigned int val;
+	unsigned long wtmincnt;
 	struct s3c2410_wdt *wdt = dev_get_drvdata(dev);
 
 	if (!wdt)
@@ -1313,7 +1310,7 @@ static int s3c2410wdt_dev_resume(struct device *dev)
 	if (wdt->cluster == LITTLE_CLUSTER)
 		return ret;
 
-	wdt->skip_gettime = 0;
+	wdt->in_suspend = 0;
 	if (wdt->drv_data->auto_disable_func) {
 		ret = wdt->drv_data->auto_disable_func(wdt, false);
 		if (ret < 0) {
@@ -1375,7 +1372,7 @@ static int s3c2410wdt_syscore_suspend(void)
 	if (!wdt)
 		return 0;
 
-	wdt->skip_gettime = 1;
+	wdt->in_suspend = 1;
 	s3c2410wdt_keepalive(&wdt->wdt_device);
 	/* Save watchdog state, and turn it off. */
 	wdt->wtcon_save = readl(wdt->reg_base + S3C2410_WTCON);
@@ -1393,7 +1390,7 @@ static void s3c2410wdt_syscore_resume(void)
 	if (!wdt)
 		return;
 
-	wdt->skip_gettime = 0;
+	wdt->in_suspend = 0;
 	if (wdt->drv_data->auto_disable_func) {
 		ret = wdt->drv_data->auto_disable_func(wdt, false);
 		if (ret < 0) {
