@@ -2881,6 +2881,11 @@ int get_vc_dma_buf_info(struct is_sensor_interface *itf,
 	buf_info->height = sensor->cfg->input[CSI_VIRTUAL_CH_1].height;
 	buf_info->element_size = module->vc_extra_info[request_data_type].max_element;
 
+	if (!buf_info->width || !buf_info->height) {
+		mwarn("[M%d] Unsupported mode for vc dma buf", module, module->sensor_id);
+		return -ENODEV;
+	}
+
 #if defined(CONFIG_CAMERA_PAFSTAT)
 	switch (buf_info->stat_type) {
 	case VC_STAT_TYPE_PAFSTAT_FLOATING:
