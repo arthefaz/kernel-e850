@@ -85,9 +85,17 @@ static inline void csi_s_buf_addr(struct is_device_csi *csi, struct is_frame *fr
 {
 	int i = 0;
 	u32 dvaddr;
+	u32 number;
+	unsigned long flag;
 
 	FIMC_BUG_VOID(!frame);
 
+	if (csi->f_id_dec)
+		number = csi->batch_num * (atomic_read(&csi->bufring_cnt) % BUF_SWAP_CNT);
+	else
+		number = 0;
+
+	spin_lock_irqsave(&csi->dma_seq_slock, flag);
 	do {
 		dvaddr = (u32)frame->dvaddr_buffer[i];
 		if (!dvaddr) {
@@ -119,9 +127,13 @@ static inline void csi_s_buf_addr(struct is_device_csi *csi, struct is_frame *fr
 		}
 #endif
 
-		csi_hw_s_dma_addr(csi->vc_reg[csi->scm][vc], vc, i,
+		csi_hw_s_dma_addr(csi->vc_reg[csi->scm][vc], vc, i + number,
 				dvaddr);
+
+		mdbg_common(debug_csi, "[%d][CSI%d]", " dva(%d:0x%x)\n",
+			csi->instance, csi->ch, i+number, dvaddr);
 	} while (++i < frame->num_buffers);
+	spin_unlock_irqrestore(&csi->dma_seq_slock, flag);
 }
 
 static inline void csi_s_output_dma(struct is_device_csi *csi, u32 vc, bool enable)
@@ -1280,8 +1292,12 @@ static irqreturn_t is_isr_csi_dma(int irq, void *data)
 
 	for (vc = CSI_VIRTUAL_CH_0; vc < CSI_VIRTUAL_CH_MAX; vc++) {
 		if (dma_frame_end & (1 << vc)) {
-			if (csi->f_id_dec && (vc == CSI_VIRTUAL_CH_0))
+			if (csi->f_id_dec && (vc == CSI_VIRTUAL_CH_0)) {
+				csi_hw_clear_fro_count(csi->csi_dma->base_reg,
+					csi->vc_reg[csi->scm][vc]);
+
 				csi_frame_end_inline(csi);
+			}
 
 			/*
 			 * The embedded data is done at fraem end.
@@ -1301,8 +1317,13 @@ static irqreturn_t is_isr_csi_dma(int irq, void *data)
 		}
 
 		if (dma_frame_str & (1 << vc)) {
-			if (csi->f_id_dec && (vc == CSI_VIRTUAL_CH_0))
+			if (csi->f_id_dec && (vc == CSI_VIRTUAL_CH_0)) {
+				int bufring_cnt = atomic_inc_return(&csi->bufring_cnt);
+				u32 number = csi->batch_num * (bufring_cnt % BUF_SWAP_CNT);
+
+				csi_s_frameptr(csi, vc, number, false);
 				csi_frame_start_inline(csi);
+			}
 
 			dma_subdev = csi->dma_subdev[vc];
 
@@ -1672,6 +1693,36 @@ static const struct v4l2_subdev_core_ops core_ops = {
 	.g_ctrl = csi_g_ctrl
 };
 
+static int csi_s_fro(struct is_device_csi *csi, struct is_sensor_cfg *sensor_cfg)
+{
+	struct is_device_csi_dma *csi_dma = csi->csi_dma;
+
+	FIMC_BUG(!csi_dma);
+
+	/*
+	 * If frame id decoder or FRO mode are enabled, start & end of CSIS link is not used.
+	 * Instead of CSIS link interrupt, CSIS WDMA interrupt is used.
+	 * So, only error interrupt is enable.
+	 */
+	if (sensor_cfg->ex_mode == EX_DUALFPS_960) {
+		csi->f_id_dec = true;
+		csi->batch_num = 960 / 60;
+	} else if (sensor_cfg->ex_mode == EX_DUALFPS_480) {
+		csi->f_id_dec = true;
+		csi->batch_num = 480 / 60;
+	} else {
+		csi->f_id_dec = false;
+		csi->batch_num = 1;
+	}
+
+	atomic_set(&csi->bufring_cnt, 0);
+
+	csi_hw_s_dma_common_frame_id_decoder(csi_dma->base_reg,
+				csi->cmn_reg[csi->scm][CSI_VIRTUAL_CH_0],
+				csi->f_id_dec, csi->batch_num);
+	return 0;
+}
+
 static void csi_free_irq(struct is_device_csi *csi)
 {
 	int vc;
@@ -1781,17 +1832,11 @@ static int csi_stream_on(struct v4l2_subdev *subdev,
 
 	base_reg = csi->base_reg;
 
-	/*
-	 * If FRO mode is enable, start & end of CSIS link is not used.
-	 * Instead of CSIS link interrupt, CSIS WDMA interrupt is used.
-	 * So, only error interrupt is enable.
-	 */
-	if (sensor_cfg->output[CSI_VIRTUAL_CH_0].extformat == HW_FORMAT_RAW10_SDC)
-		csi->f_id_dec = true;
-	else
-		csi->f_id_dec = false;
-
-	csi_hw_s_dma_common_frame_id_decoder(csi_dma->base_reg, csi->f_id_dec);
+	ret = csi_s_fro(csi, sensor_cfg);
+	if (ret) {
+		merr("[CSI%d] csi_s_fro is fail", csi, csi->ch);
+		goto err_csi_s_fro;
+	}
 
 	ret = csi_request_irq(csi);
 	if (ret) {
@@ -1997,6 +2042,7 @@ err_invalid_device_cfg:
 	csi_free_irq(csi);
 
 err_csi_request_irq:
+err_csi_s_fro:
 err_invalid_sensor_cfg:
 err_start_already:
 	return ret;
@@ -2535,6 +2581,8 @@ int is_csi_probe(void *parent, u32 device_id, u32 ch)
 	}
 
 	__putname(irq_name);
+
+	spin_lock_init(&csi->dma_seq_slock);
 
 	minfo("[CSI%d] %s(%d)\n", csi, csi->ch, __func__, ret);
 	return 0;

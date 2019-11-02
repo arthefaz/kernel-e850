@@ -15,8 +15,6 @@
 #define CSI_LINE_RATIO		14	/* 70% */
 #define CSI_ERR_COUNT		10  	/* 10frame */
 
-#define F_ID_SIZE		4	/* for frame id decoder: 4 bit */
-
 #define CSI_VALID_ENTRY_TO_CH(id) ((id) >= ENTRY_SSVC0 && (id) <= ENTRY_SSVC3)
 #define CSI_ENTRY_TO_CH(id) ({BUG_ON(!CSI_VALID_ENTRY_TO_CH(id));id - ENTRY_SSVC0;}) /* range : vc0(0) ~ vc3(3) */
 #define CSI_CH_TO_ENTRY(id) (id + ENTRY_SSVC0) /* range : ENTRY_SSVC0 ~ ENTRY_SSVC3 */
@@ -26,6 +24,18 @@
 	((frameptr) == 0 ? (num_frames) - offset : (frameptr) - offset)
 #define CSI_GET_NEXT_FRAMEPTR(frameptr, num_frames) \
 	(((frameptr) + 1) % num_frames)
+
+/* For frame id decoder */
+#define F_ID_SIZE		4	/* for frame id decoder: 4 bit */
+#define BUF_SWAP_CNT		2	/* for frame_id decoder & FRO mode: double buffering */
+#define CHECK_ID_60FPS(id)		((((id) >> 0) & 0xF) == 1 ||	\
+				(((id) >>  4) & 0xF) == 1 ||	\
+				(((id) >>  8) & 0xF) == 1 ||	\
+				(((id) >> 12) & 0xF) == 1 ||	\
+				(((id) >> 16) & 0xF) == 1 ||	\
+				(((id) >> 20) & 0xF) == 1 ||	\
+				(((id) >> 24) & 0xF) == 1 ||	\
+				(((id) >> 28) & 0xF) == 1)
 
 extern int debug_csi;
 extern struct is_sysfs_debug sysfs_debug;
@@ -123,7 +133,10 @@ struct is_device_csi {
 	char				name[IS_STR_LEN];
 	u32				use_cphy;
 	bool				potf;
-	bool				f_id_dec; /* multiple buffer feature */
+	bool				f_id_dec; /* For frame id decoder in FRO mode */
+	atomic_t			bufring_cnt; /* For double buffering in FRO mode */
+	u32				batch_num;
+	spinlock_t			dma_seq_slock;
 };
 
 struct is_device_csi_dma {

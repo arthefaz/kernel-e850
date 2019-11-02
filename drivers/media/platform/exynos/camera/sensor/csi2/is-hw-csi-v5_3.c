@@ -466,9 +466,10 @@ void csi_hw_dma_reset(u32 __iomem *base_reg)
 
 void csi_hw_s_frameptr(u32 __iomem *base_reg, u32 vc, u32 number, bool clear)
 {
-	u32 frame_ptr = 0;
+	u32 frame_ptr = number;
 	u32 val = is_hw_get_reg(base_reg, &csi_vcdma_regs[CSIS_R_DMA0_CTRL]);
 
+	val = is_hw_set_field_value(val, &csi_vcdma_fields[CSIS_F_DMA_N_UPDT_PTR_EN], 1);
 	val = is_hw_set_field_value(val, &csi_vcdma_fields[CSIS_F_DMA_N_UPDT_FRAMEPTR], frame_ptr);
 	is_hw_set_reg(base_reg, &csi_vcdma_regs[CSIS_R_DMA0_CTRL], val);
 }
@@ -486,8 +487,6 @@ u32 csi_hw_g_frameptr(u32 __iomem *base_reg, u32 vc)
 void csi_hw_s_dma_addr(u32 __iomem *base_reg, u32 vc, u32 number, u32 addr)
 {
 	u32 val = is_hw_get_reg(base_reg, &csi_vcdma_regs[CSIS_R_DMA0_FCNTSEQ]);
-
-	csi_hw_s_frameptr(base_reg, vc, number, false);
 
 	is_hw_set_reg(base_reg, &csi_vcdma_regs[CSIS_R_DMA0_ADDR1 + number], addr);
 
@@ -510,7 +509,6 @@ void csi_hw_s_output_dma(u32 __iomem *base_reg, u32 vc, bool enable)
 	u32 val = is_hw_get_reg(base_reg, &csi_vcdma_regs[CSIS_R_DMA0_CTRL]);
 
 	val = is_hw_set_field_value(val, &csi_vcdma_fields[CSIS_F_DMA_N_ENABLE], enable);
-	val = is_hw_set_field_value(val, &csi_vcdma_fields[CSIS_F_DMA_N_UPDT_PTR_EN], enable);
 	is_hw_set_reg(base_reg, &csi_vcdma_regs[CSIS_R_DMA0_CTRL], val);
 }
 
@@ -684,7 +682,8 @@ int csi_hw_s_dma_common_votf_enable(u32 __iomem *base_reg, u32 width, u32 dma_ch
 	return 0;
 }
 
-int csi_hw_s_dma_common_frame_id_decoder(u32 __iomem *base_reg, u32 enable)
+int csi_hw_s_dma_common_frame_id_decoder(u32 __iomem *base_reg, u32 __iomem *vc_cmn_reg,
+	u32 enable, u32 batch_num)
 {
 	void __iomem *sysreg_frame_id_en;
 
@@ -697,6 +696,13 @@ int csi_hw_s_dma_common_frame_id_decoder(u32 __iomem *base_reg, u32 enable)
 		writel(enable, sysreg_frame_id_en);
 		iounmap(sysreg_frame_id_en);
 	}
+
+	if (enable)
+		is_hw_set_field(vc_cmn_reg, &csi_vcdma_cmn_regs[FRO_INT_FRAME_NUM],
+			&csi_vcdma_cmn_fields[CH0_FRAME_NUM], batch_num - 1);
+	else
+		is_hw_set_field(vc_cmn_reg, &csi_vcdma_cmn_regs[FRO_INT_FRAME_NUM],
+			&csi_vcdma_cmn_fields[CH0_FRAME_NUM], 0);
 
 	return 0;
 }
@@ -715,8 +721,36 @@ int csi_hw_g_dma_common_frame_id(u32 __iomem *base_reg, u32 *frame_id)
 	frame_id[0] = prev_f_id_0;
 	frame_id[1] = prev_f_id_1;
 
-	dbg_common(debug_csi, "CSI", "f_id_dec: prev(%x, %x), cur(%x, %x)\n",
+	dbg_common(debug_csi, "[CSI]", " f_id_dec: prev(%x, %x), cur(%x, %x)\n",
 		prev_f_id_0, prev_f_id_1, cur_f_id_0, cur_f_id_1);
+
+	return 0;
+}
+
+int csi_hw_clear_fro_count(u32 __iomem *dma_top_reg, u32 __iomem *vc_reg)
+{
+	u32 seq, seq_stat;
+	u32 prev_f_id_0, prev_f_id_1;
+
+	seq = is_hw_get_reg(vc_reg, &csi_vcdma_regs[CSIS_R_DMA0_FCNTSEQ]);
+	seq_stat = is_hw_get_reg(vc_reg, &csi_vcdma_regs[CSIS_R_DMA0_FCNTSEQ_STAT]);
+
+	dbg_common(debug_csi, "[CSI]", " FCNTSEQ_STAT(%x, %x)\n", seq, seq_stat);
+
+	prev_f_id_0 = is_hw_get_reg(dma_top_reg, &csi_dma_regs[CSIS_DMA_R_FRO_PREV_FRAME_ID0]);
+	prev_f_id_1 = is_hw_get_reg(dma_top_reg, &csi_dma_regs[CSIS_DMA_R_FRO_PREV_FRAME_ID1]);
+
+	/*
+	 * HACK:
+	 * The shadowing is not applied at start interrupt
+	 * of only prevew frame id but at every start interrupt.
+	 * So, for applying shadowning at only preview frame,
+	 * both legacy FRO and frame id decoder must be used.
+	 * And current FRO count must be also reset at 60 fps mode
+	 * for stating width "0" for FRO count at next frame.
+	 */
+	if (CHECK_ID_60FPS(prev_f_id_0) || CHECK_ID_60FPS(prev_f_id_1))
+		is_hw_set_reg(vc_reg, &csi_vcdma_regs[CSIS_R_DMA0_FRO_FRM], 0);
 
 	return 0;
 }
