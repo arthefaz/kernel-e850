@@ -130,6 +130,7 @@ struct is_subdev {
 
 	/* for internal use */
 	struct is_framemgr			internal_framemgr;
+	u32					batch_num;
 	u32					buffer_num;
 	u32					bytes_per_pixel;
 	struct is_priv_buf			*pb_subdev[SUBDEV_INTERNAL_BUF_MAX];

@@ -1512,7 +1512,7 @@ int is_groupmgr_start(struct is_groupmgr *groupmgr,
 			if (test_bit(IS_GROUP_VOTF_INPUT, &group->state)) {
 				set_bit(IS_SUBDEV_INTERNAL_USE, &group->leader.state);
 
-				ret = is_subdev_internal_s_format(device, 0, leader,
+				ret = is_subdev_internal_s_format(device, IS_DEVICE_ISCHAIN, leader,
 							width, height, 2, NUM_OF_VOTF_BUF, "VOTF");
 				if (ret) {
 					merr("is_subdev_internal_s_format is fail(%d)", device, ret);

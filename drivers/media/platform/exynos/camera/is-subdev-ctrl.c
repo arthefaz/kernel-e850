@@ -1039,10 +1039,12 @@ static int is_subdev_internal_alloc_buffer(struct is_subdev *subdev,
 	struct is_mem *mem)
 {
 	int ret;
-	int i;
-	int buffer_size;
+	int i, j;
+	u32 buffer_size; /* single buffer */
+	u32 total_size; /* multi-buffer for FRO */
 	struct is_frame *frame;
 	struct is_device_ischain *device;
+	u32 batch_num;
 
 	FIMC_BUG(!subdev);
 
@@ -1053,17 +1055,20 @@ static int is_subdev_internal_alloc_buffer(struct is_subdev *subdev,
 		return -EINVAL;
 	}
 
+	buffer_size = subdev->output.width * subdev->output.height
+				* subdev->bytes_per_pixel;
+
+	if (buffer_size <= 0) {
+		merr("wrong internal subdev buffer size(%d)",
+					device, buffer_size);
+		return -EINVAL;
+	}
+
+	batch_num = subdev->batch_num;
+	total_size = buffer_size * batch_num;
+
 	for (i = 0; i < subdev->buffer_num; i++) {
-		buffer_size = subdev->output.width * subdev->output.height
-					* subdev->bytes_per_pixel;
-
-		if (buffer_size <= 0) {
-			merr("wrong internal subdev buffer size(%d)",
-						device, buffer_size);
-			return -EINVAL;
-		}
-
-		subdev->pb_subdev[i] = CALL_PTR_MEMOP(mem, alloc, mem->default_ctx, buffer_size, NULL, 0);
+		subdev->pb_subdev[i] = CALL_PTR_MEMOP(mem, alloc, mem->default_ctx, total_size, NULL, 0);
 		if (IS_ERR_OR_NULL(subdev->pb_subdev[i])) {
 			merr("failed to allocate buffer for internal subdev",
 							device);
@@ -1085,10 +1090,16 @@ static int is_subdev_internal_alloc_buffer(struct is_subdev *subdev,
 
 		/* TODO : support multi-plane */
 		frame->planes = 1;
+		frame->num_buffers = batch_num;
 		frame->dvaddr_buffer[0] = CALL_BUFOP(subdev->pb_subdev[i], dvaddr, subdev->pb_subdev[i]);
 		frame->kvaddr_buffer[0] = CALL_BUFOP(subdev->pb_subdev[i], kvaddr, subdev->pb_subdev[i]);
 
 		set_bit(FRAME_MEM_INIT, &frame->mem_state);
+
+		for (j = 1; j < batch_num; j++) {
+			frame->dvaddr_buffer[j] = frame->dvaddr_buffer[j - 1] + buffer_size;
+			frame->kvaddr_buffer[j] = frame->kvaddr_buffer[j - 1] + buffer_size;
+		}
 
 #if defined(SDC_HEADER_GEN)
 		if (subdev->id == ENTRY_PAF) {
@@ -1118,8 +1129,8 @@ static int is_subdev_internal_alloc_buffer(struct is_subdev *subdev,
 #endif
 	}
 
-	msinfo(" %s (size: %d, buffernum: %d)",
-		subdev, subdev, __func__, buffer_size, subdev->buffer_num);
+	msinfo(" %s (size: %d, buffernum: %d, batch_num: %d)",
+		subdev, subdev, __func__, buffer_size, subdev->buffer_num, batch_num);
 
 	return 0;
 
@@ -1347,6 +1358,10 @@ int is_subdev_internal_s_format(void *device, enum is_device_type type, struct i
 	u32 width, u32 height, u32 bytes_per_pixel, u32 buffer_num, const char *type_name)
 {
 	int ret = 0;
+	struct is_device_ischain *ischain;
+	struct is_device_sensor *sensor;
+	struct is_sensor_cfg *sensor_cfg;
+	u32 batch_num = 1;
 
 	if (!test_bit(IS_SUBDEV_INTERNAL_USE, &subdev->state)) {
 		mserr("subdev is not in INTERNAL_USE state.", subdev, subdev);
@@ -1363,6 +1378,40 @@ int is_subdev_internal_s_format(void *device, enum is_device_type type, struct i
 		return -EINVAL;
 	}
 
+	switch (type) {
+	case IS_DEVICE_SENSOR:
+		break;
+	case IS_DEVICE_ISCHAIN:
+		FIMC_BUG(!device);
+		ischain = (struct is_device_ischain *)device;
+
+		if (subdev->id == ENTRY_PAF) {
+			if (test_bit(IS_ISCHAIN_REPROCESSING, &ischain->state))
+				break;
+
+			sensor = ischain->sensor;
+			if (!sensor) {
+				mserr("failed to get sensor", subdev, subdev);
+				return -EINVAL;
+			}
+
+			sensor_cfg = sensor->cfg;
+			if (!sensor_cfg) {
+				mserr("failed to get senso_cfgr", subdev, subdev);
+				return -EINVAL;
+			}
+
+			if (sensor_cfg->ex_mode == EX_DUALFPS_960)
+				batch_num = 16;
+		}
+
+		break;
+	default:
+		err("invalid device_type(%d)", type);
+		ret = -EINVAL;
+		break;
+	}
+
 	subdev->output.width = width;
 	subdev->output.height = height;
 	subdev->output.crop.x = 0;
@@ -1371,6 +1420,8 @@ int is_subdev_internal_s_format(void *device, enum is_device_type type, struct i
 	subdev->output.crop.h = subdev->output.height;
 	subdev->bytes_per_pixel = bytes_per_pixel;
 	subdev->buffer_num = buffer_num;
+	subdev->batch_num = batch_num;
+
 	snprintf(subdev->data_type, sizeof(subdev->data_type), "%s", type_name);
 
 	set_bit(IS_SUBDEV_INTERNAL_S_FMT, &subdev->state);
