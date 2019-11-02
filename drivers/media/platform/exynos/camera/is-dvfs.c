@@ -569,7 +569,8 @@ int is_set_dvfs(struct is_core *core, struct is_device_ischain *device, u32 scen
 
 #if defined(ENABLE_HMP_BOOST)
 	/* hpg_qos : number of minimum online CPU */
-	if (hpg_qos && dvfs_ctrl->cur_hpg_qos != hpg_qos) {
+	if (hpg_qos && dvfs_ctrl->cur_hpg_qos != hpg_qos
+		&& !test_bit(IS_ISCHAIN_REPROCESSING, &device->state)) {
 		pm_qos_update_request(&exynos_isp_qos_hpg, hpg_qos);
 		dvfs_ctrl->cur_hpg_qos = hpg_qos;
 
