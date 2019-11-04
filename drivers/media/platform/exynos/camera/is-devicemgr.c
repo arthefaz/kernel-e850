@@ -77,7 +77,7 @@ static void do_sensor_tag(unsigned long data)
 	subdev = sensor->subdev_csi;
 	gtask = &sensor->groupmgr->gtask[group->id];
 
-	mgrdbgs(5, "start sensor tag(%s)\n", group->device, group, frame,
+	mgrdbgs(5, "start sensor tag(%s)\n", group->device, group, tag_data,
 			in_softirq() ? "S" : "H");
 
 	if (unlikely(test_bit(IS_GROUP_FORCE_STOP, &group->state))) {
@@ -129,7 +129,7 @@ static void do_sensor_tag(unsigned long data)
 		mginfo("[F%d] End CANCEL Other subdev frame\n", group->device, group, frame->fcount);
 	}
 
-	mgrdbgs(5, "finish sensor tag(%s)\n", group->device, group, frame,
+	mgrdbgs(5, "finish sensor tag(%s)\n", group->device, group, tag_data,
 			in_softirq() ? "S" : "H");
 
 p_err:
