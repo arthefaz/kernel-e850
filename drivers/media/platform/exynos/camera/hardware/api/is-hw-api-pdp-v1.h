@@ -57,6 +57,7 @@ void pdp_hw_s_rdma_init(void __iomem *base, u32 width, u32 height, u32 hwformat,
 	u32 rmo, u32 en_sdc, u32 en_votf, u32 en_dma, ulong freq);
 void pdp_hw_s_af_rdma_init(void __iomem *base, u32 width, u32 height, u32 hwformat, u32 rmo,
 	u32 en_votf, u32 en_dma);
+void pdp_hw_s_af_rdma_tail_count_reset(void __iomem *base);
 void pdp_hw_s_rdma_addr(void __iomem *base, dma_addr_t *address, u32 num_buffers);
 void pdp_hw_s_af_rdma_addr(void __iomem *base, dma_addr_t *address, u32 num_buffers);
 void pdp_hw_s_post_frame_gap(void __iomem *base, u32 interval);

@@ -241,6 +241,8 @@ static irqreturn_t is_isr_pdp_int1(int irq, void *data)
 	}
 
 	if (pdp_hw_is_occured(state, PE_END)) {
+		pdp_hw_s_af_rdma_tail_count_reset(pdp->base);
+
 		index = hw_ip->debug_index[1];
 		hw_ip->debug_info[index].cpuid[DEBUG_POINT_FRAME_END] = raw_smp_processor_id();
 		hw_ip->debug_info[index].time[DEBUG_POINT_FRAME_END] = local_clock();

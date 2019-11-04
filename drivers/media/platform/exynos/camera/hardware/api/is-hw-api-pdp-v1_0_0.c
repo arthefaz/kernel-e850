@@ -19,8 +19,12 @@
 
 #define PDP_SET_F(base, R, F, val) \
 	is_hw_set_field(base, &pdp_regs_corex[R], &pdp_fields[F], val)
+#define PDP_SET_F_DIRECT(base, R, F, val) \
+	is_hw_set_field(base, &pdp_regs[R], &pdp_fields[F], val)
 #define PDP_SET_R(base, R, val) \
 	is_hw_set_reg(base, &pdp_regs_corex[R], val)
+#define PDP_SET_R_DIRECT(base, R, val) \
+	is_hw_set_reg(base, &pdp_regs[R], val)
 #define PDP_SET_V(reg_val, F, val) \
 	is_hw_set_field_value(reg_val, &pdp_fields[F], val)
 
@@ -1070,6 +1074,27 @@ void pdp_hw_s_af_rdma_init(void __iomem *base, u32 width, u32 height, u32 hwform
 	PDP_SET_R(base, PDP_R_RDMA_AF_CTRL, val);
 }
 
+/*
+ * When using AF RDMA, line ratio between bayer DMA and af DMA must be 4:1.
+ * 4 If the raio is not 4:1, tail count must be reset at frame end time.
+ */
+void pdp_hw_s_af_rdma_tail_count_reset(void __iomem *base)
+{
+	u32 val;
+	u32 enable;
+
+	/* AF */
+	val = PDP_GET_R(base, PDP_R_RDMA_AF_CTRL);
+
+	enable = PDP_GET_V(val, PDP_F_RDMA_AF_CTRL_ENABLE);
+	if (enable) {
+		val = PDP_SET_V(val, PDP_F_RDMA_AF_CTRL_ENABLE, 0);
+		PDP_SET_R_DIRECT(base, PDP_R_RDMA_AF_CTRL, val);
+
+		val = PDP_SET_V(val, PDP_F_RDMA_AF_CTRL_ENABLE, 1);
+		PDP_SET_R_DIRECT(base, PDP_R_RDMA_AF_CTRL, val);
+	}
+}
 /*
  * Context: O
  * CR type: Corex
