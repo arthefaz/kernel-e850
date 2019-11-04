@@ -491,12 +491,14 @@ int teei_verify_m_prime(uint8_t *m_prime, uint8_t *input, size_t input_len)
 {
 	int ret = 0;
 	struct hci_message *hci = hctx.msg;
+	uint32_t input_len_t;
 
+	input_len_t = (uint32_t)input_len;
 	hci->cmd_id = HDCP_TEEI_VERIFY_M_PRIME;
 	memcpy(hci->verifymprime.m_prime, m_prime, HDCP_RP_HMAC_M_LEN);
-	if (input && input_len < sizeof(hci->verifymprime.strmsg)) {
-		memcpy(hci->verifymprime.strmsg, input, input_len);
-		hci->verifymprime.str_len = input_len;
+	if (input && input_len_t < sizeof(hci->verifymprime.strmsg)) {
+		memcpy(hci->verifymprime.strmsg, input, input_len_t);
+		hci->verifymprime.str_len = input_len_t;
 	}
 
 	ret = hdcp_tee_comm(hci);
