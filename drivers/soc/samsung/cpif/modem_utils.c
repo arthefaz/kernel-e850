@@ -66,7 +66,8 @@ enum bit_debug_flags {
 	DEBUG_FLAG_BOOT,
 	DEBUG_FLAG_DUMP,
 	DEBUG_FLAG_CSVT,
-	DEBUG_FLAG_LOG
+	DEBUG_FLAG_LOG,
+	DEBUG_FLAG_BT_DUN /* for rx/tx of umts_router */
 };
 
 #ifdef DEBUG_MODEM_IF_PS_DATA
@@ -307,6 +308,8 @@ static inline bool log_enabled(u8 ch, struct link_device *ld)
 		return test_bit(DEBUG_FLAG_LOG, &flags);
 	else if (ld->is_ps_ch(ch))
 		return test_bit(DEBUG_FLAG_PS, &flags);
+	else if (ld->is_router_ch(ch))
+		return test_bit(DEBUG_FLAG_BT_DUN, &flags);
 	else
 		return false;
 }

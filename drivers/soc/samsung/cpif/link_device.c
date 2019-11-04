@@ -3715,6 +3715,7 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 		ld->is_ipc_ch = sipc5_ipc_ch;
 		ld->is_csd_ch = sipc_csd_ch;
 		ld->is_log_ch = sipc_log_ch;
+		ld->is_router_ch = sipc_router_ch;
 		break;
 	case PROTOCOL_SIT:
 		ld->chid_fmt_0 = EXYNOS_CH_ID_FMT_0;
@@ -3743,6 +3744,7 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 		ld->is_ipc_ch = exynos_ipc_ch;
 		ld->is_csd_ch = exynos_rcs_ch;
 		ld->is_log_ch = exynos_log_ch;
+		ld->is_router_ch = exynos_router_ch;
 		break;
 	default:
 		mif_err("protocol error %d\n", ld->protocol);
