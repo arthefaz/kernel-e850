@@ -775,7 +775,7 @@ void sc_request_devfreq(struct sc_qos_request *qos_req,
 			PM_QOS_DEVICE_THROUGHPUT, qos_table[lv].freq_int);
 }
 
-static bool sc_get_pm_qos_level_by_data_size(struct sc_ctx *ctx, int framerate)
+static int sc_get_pm_qos_level_by_data_size(struct sc_ctx *ctx, int framerate)
 {
 	struct sc_dev *sc = ctx->sc_dev;
 	struct sc_frame *frame = &ctx->d_frame;
@@ -802,13 +802,7 @@ static bool sc_get_pm_qos_level_by_data_size(struct sc_ctx *ctx, int framerate)
 	if (i == sc->qos_table_cnt)
 		i--;
 
-	/* No request is required if level is same. */
-	if (ctx->pm_qos_lv == i)
-		return false;
-
-	ctx->pm_qos_lv = i;
-
-	return true;
+	return i;
 }
 
 /*
@@ -850,7 +844,7 @@ static int sc_get_clock_khz(struct sc_ctx *ctx,
 	return (int)clk;
 }
 
-static bool sc_get_pm_qos_level_by_ppc(struct sc_ctx *ctx, int framerate)
+static int sc_get_pm_qos_level_by_ppc(struct sc_ctx *ctx, int framerate)
 {
 	struct sc_dev *sc = ctx->sc_dev;
 	struct sc_qos_table *qos_table = sc->qos_table;
@@ -868,22 +862,16 @@ static bool sc_get_pm_qos_level_by_ppc(struct sc_ctx *ctx, int framerate)
 			break;
 	}
 
-	/* No request is required if level is same. */
-	if (ctx->pm_qos_lv == i)
-		return false;
-
-	ctx->pm_qos_lv = i;
-
-	return true;
+	return i;
 }
 
-static bool sc_get_pm_qos_level(struct sc_ctx *ctx, int framerate)
+static int sc_get_pm_qos_level(struct sc_ctx *ctx, int framerate)
 {
 	struct sc_dev *sc = ctx->sc_dev;
 
 	/* No need to calculate if no qos_table exists. */
 	if (!sc->qos_table)
-		return false;
+		return -1;
 
 	if (!sc->ppc_table)
 		return sc_get_pm_qos_level_by_data_size(ctx, framerate);
@@ -2294,6 +2282,8 @@ static bool sc_configure_rotation_degree(struct sc_ctx *ctx, int degree)
 
 static void sc_set_framerate(struct sc_ctx *ctx, int framerate)
 {
+	int ret_qos_lv;
+
 	if (!ctx->sc_dev->qos_table)
 		return;
 
@@ -2306,12 +2296,17 @@ static void sc_set_framerate(struct sc_ctx *ctx, int framerate)
 	} else {
 		if (framerate != ctx->framerate) {
 			ctx->framerate = framerate;
-			if (!sc_get_pm_qos_level(ctx, ctx->framerate)) {
+			ret_qos_lv = sc_get_pm_qos_level(ctx, ctx->framerate);
+			if (ret_qos_lv < 0) {
 				mutex_unlock(&ctx->pm_qos_lock);
 				return;
 			}
-			sc_request_devfreq(&ctx->pm_qos,
+			/* No request is required if level is same. */
+			if (ret_qos_lv != ctx->pm_qos_lv) {
+				ctx->pm_qos_lv = ret_qos_lv;
+				sc_request_devfreq(&ctx->pm_qos,
 					ctx->sc_dev->qos_table, ctx->pm_qos_lv);
+			}
 		}
 		mod_delayed_work(system_wq,
 				&ctx->qos_work, msecs_to_jiffies(50));
