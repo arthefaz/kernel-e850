@@ -2325,7 +2325,7 @@ static int shmem_security_request(struct link_device *ld, struct io_device *iod,
 	}
 	exynos_smc(SMC_ID_CLK, SSS_CLK_ENABLE, 0, 0);
 	if ((msr.mode == 0) && cp_shmem_get_mem_map_on_cp_flag(cp_num))
-		msr.mode |= cp_shmem_get_base(cp_num, SHMEM_CP);
+		msr.mode |= (unsigned int)cp_shmem_get_base(cp_num, SHMEM_CP);
 
 	mif_err("mode=0x%08x, param2=0x%lx, param3=0x%lx, cp_base_addr=0x%lx\n",
 			msr.mode, param2, param3, cp_shmem_get_base(cp_num, SHMEM_CP));

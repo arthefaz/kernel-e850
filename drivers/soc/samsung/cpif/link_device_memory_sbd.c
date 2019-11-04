@@ -253,7 +253,7 @@ int init_sbd_link(struct sbd_link_device *sl)
 
 int create_sbd_mem_map(struct sbd_link_device *sl)
 {
-	int i, dir, idx;
+	int i, dir;
 	struct sbd_ring_buffer *rb;
 	struct sbd_ipc_device *ipc_dev;
 	struct sbd_link_attr *link_attr;
@@ -266,6 +266,7 @@ int create_sbd_mem_map(struct sbd_link_device *sl)
 	u8 *desc_addr = sl->shmem + DESC_RGN_OFFSET;
 	u8 *buff_addr = sl->shmem + BUFF_RGN_OFFSET;
 
+	unsigned int idx;
 	unsigned int rb_len;
 	unsigned int rb_buff_size;
 

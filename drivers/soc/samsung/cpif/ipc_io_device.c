@@ -176,7 +176,7 @@ static long ipc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		switch (ld->protocol) {
 		case PROTOCOL_SIPC:
 			if (arg)
-				ld->crash_reason.type = arg;
+				ld->crash_reason.type = (u32)arg;
 			mif_err("%s: IOCTL_TRIGGER_CP_CRASH (%lu)\n",
 					iod->name, arg);
 			break;
