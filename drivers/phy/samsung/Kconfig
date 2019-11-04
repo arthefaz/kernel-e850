@@ -122,6 +122,14 @@ config PHY_SAMSUNG_USB_CAL
 	  Enable this to support CAL (Chip Abstraction Layer)
 	  for Samsung USB PHY controller.
 
+config PHY_SAMSUNG_USB_GEN1
+	tristate "Exynos SoC series USB DRD PHY DebugFS"
+	depends on PHY_SAMSUNG_USB_CAL
+	depends on PHY_EXYNOS_USBDRD
+	default n
+	help
+	  Support SAMSUNG USB3.0 GEN1 PHY.
+
 config PHY_SAMSUNG_USB_GEN2
 	tristate "Exynos SoC series USB DRD PHY DebugFS"
 	depends on PHY_SAMSUNG_USB_CAL

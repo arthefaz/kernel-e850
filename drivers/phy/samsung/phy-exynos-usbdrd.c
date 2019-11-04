@@ -1152,9 +1152,8 @@ static int exynos_usbdrd_phy_exit(struct phy *phy)
 
 static void exynos_usbdrd_pipe3_init(struct exynos_usbdrd_phy *phy_drd)
 {
+#ifdef PHY_SAMSUNG_USB_GEN1
 	int value, ret;
-	return;
-
 	if (gpio_is_valid(phy_drd->phy_port)) {
 		if (phy_drd->reverse_phy_port)
 			value = !gpio_get_value(phy_drd->phy_port);
@@ -1233,7 +1232,8 @@ static void exynos_usbdrd_pipe3_init(struct exynos_usbdrd_phy *phy_drd)
 
 	/* [step7] link_pclk_sel change */
 	phy_exynos_usb_v3p1_g2_link_pclk_sel(&phy_drd->usbphy_info);
-
+#endif
+	return;
 }
 
 static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
@@ -1382,9 +1382,10 @@ static int exynos_usbdrd_utmi_vendor_set(struct exynos_usbdrd_phy *phy_drd,
 static void exynos_usbdrd_pipe3_tune(struct exynos_usbdrd_phy *phy_drd,
 							int phy_state)
 {
+#ifdef PHY_SAMSUNG_USB_GEN1
 	struct exynos_usb_tune_param *ss_tune_param = phy_drd->usbphy_sub_info.tune_param;
 	int i;
-	return;
+
 	dev_info(phy_drd->dev, "%s\n", __func__);
 
 	if (phy_state >= OTG_STATE_A_IDLE) {
@@ -1403,17 +1404,19 @@ static void exynos_usbdrd_pipe3_tune(struct exynos_usbdrd_phy *phy_drd,
 		}
 	}
 	phy_exynos_g2_usbdp_tune(&phy_drd->usbphy_sub_info);
+#endif
+	return;
 }
 
 static void exynos_usbdrd_utmi_tune(struct exynos_usbdrd_phy *phy_drd,
 							int phy_state)
 {
+#ifdef PHY_SAMSUNG_USB_GEN1
 	struct exynos_usb_tune_param *hs_tune_param = phy_drd->usbphy_info.tune_param;
 	int i;
 
 	dev_info(phy_drd->dev, "%s\n", __func__);
 
-	return;
 	if (phy_state >= OTG_STATE_A_IDLE) {
 		/* for host mode */
 		for (i = 0; hs_tune_param[i].value != EXYNOS_USB_TUNE_LAST; i++) {
@@ -1430,6 +1433,8 @@ static void exynos_usbdrd_utmi_tune(struct exynos_usbdrd_phy *phy_drd,
 		}
 	}
 	phy_exynos_usb_v3p1_tune(&phy_drd->usbphy_info);
+#endif
+	return;
 }
 
 static int exynos_usbdrd_phy_tune(struct phy *phy, int phy_state)
@@ -1444,9 +1449,9 @@ static int exynos_usbdrd_phy_tune(struct phy *phy, int phy_state)
 
 void exynos_usbdrd_ldo_control(struct exynos_usbdrd_phy *phy_drd, int on)
 {
+#ifdef PHY_SAMSUNG_USB_GEN1
 	int ret1, ret2, ret3;
 
-	return;
 	dev_info(phy_drd->dev, "Turn %s LDO\n", on ? "on" : "off");
 
 	if (on) {
@@ -1466,6 +1471,8 @@ void exynos_usbdrd_ldo_control(struct exynos_usbdrd_phy *phy_drd, int on)
 				ret1, ret2, ret3);
 		}
 	}
+#endif
+	return;
 }
 
 /*
