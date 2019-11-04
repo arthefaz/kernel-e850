@@ -490,7 +490,7 @@ int votfitf_set_flush(struct votf_info *vinfo)
 	ip = vinfo->ip;
 	id = vinfo->id;
 
-	if (!vinfo || !votfdev->votf_table[service][ip][id].use) {
+	if (!votfdev->votf_table[service][ip][id].use) {
 		pr_err("%s: invalid input\n", __func__);
 		return ret;
 	}
