@@ -866,7 +866,7 @@ static const struct attribute_group shmem_group = {		\
 static void __iomem *get_nc_region(phys_addr_t base, size_t size)
 {
 	int i;
-	unsigned int num_pages = (size >> PAGE_SHIFT);
+	unsigned int num_pages = (unsigned int)(size >> PAGE_SHIFT);
 	pgprot_t prot = pgprot_writecombine(PAGE_KERNEL);
 	struct page **pages;
 	void *v_addr;
