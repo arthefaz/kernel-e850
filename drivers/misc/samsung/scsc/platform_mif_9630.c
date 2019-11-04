@@ -814,7 +814,7 @@ irqreturn_t platform_cfg_req_isr(int irq, void *data)
 
 	while (ka_patch_addr < (ka_patch + ARRAY_SIZE(ka_patch))) {
 		CHECK(regmap_write(platform->boot_cfg, ka_addr, *ka_patch_addr));
-		ka_addr += sizeof(ka_patch[0]);
+		ka_addr += (unsigned int)sizeof(ka_patch[0]);
 		ka_patch_addr++;
 	}
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "KA patch done\n");
