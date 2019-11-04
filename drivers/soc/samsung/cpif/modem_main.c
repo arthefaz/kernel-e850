@@ -649,155 +649,156 @@ static struct attribute *modem_attrs[] = {
 ATTRIBUTE_GROUPS(modem);
 
 static ssize_t xlat_plat_show(struct kobject *kobj,
-                struct kobj_attribute *attr, char *buf)
+		struct kobj_attribute *attr, char *buf)
 {
-        struct in6_addr addr = IN6ADDR_ANY_INIT;
-        ssize_t count = 0;
+	struct in6_addr addr = IN6ADDR_ANY_INIT;
+	ssize_t count = 0;
 
 	cpif_get_plat_prefix(0, &addr);
-        count += sprintf(buf, "plat prefix: %pI6\n", &addr);
+	count += sprintf(buf, "plat prefix: %pI6\n", &addr);
 
-        cpif_get_plat_prefix(1, &addr);
-        count += sprintf(buf + count, "plat prefix: %pI6\n", &addr);
+	cpif_get_plat_prefix(1, &addr);
+	count += sprintf(buf + count, "plat prefix: %pI6\n", &addr);
 
-        return count;
+	return count;
 }
 
 static ssize_t xlat_plat_store(struct kobject *kobj,
-                struct kobj_attribute *attr,
-                const char *buf, size_t count)
+		struct kobj_attribute *attr,
+		const char *buf, size_t count)
 {
-        struct in6_addr val;
-        char *ptr = NULL;
+	struct in6_addr val;
+	char *ptr = NULL;
 
-        mif_info("-- plat prefix: %s\n", buf);
+	mif_info("-- plat prefix: %s\n", buf);
 
-        ptr = strstr(buf, "@");
-        if (!ptr)
-                return -EINVAL;
-        *ptr++ = '\0';
+	ptr = strstr(buf, "@");
+	if (!ptr)
+		return -EINVAL;
+	*ptr++ = '\0';
 
-        if (in6_pton(buf, strlen(buf), val.s6_addr, '\0', NULL) == 0)
-                return -EINVAL;
+	if (in6_pton(buf, strlen(buf), val.s6_addr, '\0', NULL) == 0)
+		return -EINVAL;
 
-        if (strstr(ptr, "rmnet0"))
-                cpif_set_plat_prefix(0, val);
-        else if (strstr(ptr, "rmnet1"))
-                cpif_set_plat_prefix(1, val);
-        else
-                mif_err("-- unhandled plat prefix for %s\n", ptr);
+	if (strstr(ptr, "rmnet0"))
+		cpif_set_plat_prefix(0, val);
+	else if (strstr(ptr, "rmnet1"))
+		cpif_set_plat_prefix(1, val);
+	else
+		mif_err("-- unhandled plat prefix for %s\n", ptr);
 
-        return count;
+	return count;
 }
 static ssize_t xlat_addr_show(struct kobject *kobj,
-                struct kobj_attribute *attr, char *buf)
+		struct kobj_attribute *attr, char *buf)
 {
-        struct in6_addr addr = IN6ADDR_ANY_INIT;
-        ssize_t count = 0;
+	struct in6_addr addr = IN6ADDR_ANY_INIT;
+	ssize_t count = 0;
 
-        cpif_get_clat_addr(0, &addr);
-        count += sprintf(buf, "clat addr: %pI6\n", &addr);
+	cpif_get_clat_addr(0, &addr);
+	count += sprintf(buf, "clat addr: %pI6\n", &addr);
 
-        cpif_get_clat_addr(1, &addr);
-        count += sprintf(buf + count, "clat addr: %pI6\n", &addr);
+	cpif_get_clat_addr(1, &addr);
+	count += sprintf(buf + count, "clat addr: %pI6\n", &addr);
 
-        return count;
+	return count;
 }
 
 static ssize_t xlat_addr_store(struct kobject *kobj,
-                struct kobj_attribute *attr,
-                const char *buf, size_t count)
+		struct kobj_attribute *attr,
+		const char *buf, size_t count)
 {
-        struct in6_addr val;
-        char *ptr = NULL;
+	struct in6_addr val;
+	char *ptr = NULL;
 
-        mif_info("-- v6 addr: %s\n", buf);
+	mif_info("-- v6 addr: %s\n", buf);
 
-        ptr = strstr(buf, "@");
-        if (!ptr)
-                return -EINVAL;
-        *ptr++ = '\0';
+	ptr = strstr(buf, "@");
+	if (!ptr)
+		return -EINVAL;
+	*ptr++ = '\0';
 
-        if (in6_pton(buf, strlen(buf), val.s6_addr, '\0', NULL) == 0)
-                return -EINVAL;
+	if (in6_pton(buf, strlen(buf), val.s6_addr, '\0', NULL) == 0)
+		return -EINVAL;
 
-        if (strstr(ptr, "rmnet0"))
-                cpif_set_clat_addr(0, val);
-        else if (strstr(ptr, "rmnet1"))
-                cpif_set_clat_addr(1, val);
-        else
-                mif_err("-- unhandled clat addr for %s\n", ptr);
+	if (strstr(ptr, "rmnet0"))
+		cpif_set_clat_addr(0, val);
+	else if (strstr(ptr, "rmnet1"))
+		cpif_set_clat_addr(1, val);
+	else
+		mif_err("-- unhandled clat addr for %s\n", ptr);
 
-        return count;
+	return count;
 }
 static ssize_t xlat_v4addr_show(struct kobject *kobj,
-                struct kobj_attribute *attr, char *buf)
+		struct kobj_attribute *attr, char *buf)
 {
-        u32 addr = INADDR_ANY;
-        ssize_t count = 0;
+	u32 addr = INADDR_ANY;
+	ssize_t count = 0;
 
-        cpif_get_v4_filter(0, &addr);
-        count += sprintf(buf, "v4addr: %pI4\n", &addr);
+	cpif_get_v4_filter(0, &addr);
+	count += sprintf(buf, "v4addr: %pI4\n", &addr);
 
-        cpif_get_v4_filter(1, &addr);
-        count += sprintf(buf + count, "v4addr: %pI4\n", &addr);
+	cpif_get_v4_filter(1, &addr);
+	count += sprintf(buf + count, "v4addr: %pI4\n", &addr);
 
-        return count;
+	return count;
 }
 
 static ssize_t xlat_v4addr_store(struct kobject *kobj,
-                struct kobj_attribute *attr,
-                const char *buf, size_t count)
+		struct kobj_attribute *attr,
+		const char *buf, size_t count)
 {
-        struct in_addr val;
-        char *ptr = NULL;
+	struct in_addr val;
+	char *ptr = NULL;
 
-        mif_info("-- v4 addr: %s\n", buf);
+	mif_info("-- v4 addr: %s\n", buf);
 
-        ptr = strstr(buf, "@");
-        if (!ptr)
-                return -EINVAL;
-        *ptr++ = '\0';
+	ptr = strstr(buf, "@");
+	if (!ptr)
+		return -EINVAL;
+	*ptr++ = '\0';
 
-        if (in4_pton(buf, strlen(buf), (u8 *)&val.s_addr, '\0', NULL) == 0)
-                return -EINVAL;
+	if (in4_pton(buf, strlen(buf), (u8 *)&val.s_addr, '\0', NULL) == 0)
+		return -EINVAL;
 
-        if (strstr(ptr, "rmnet0"))
-                cpif_set_v4_filter(0, val.s_addr);
-        else if (strstr(ptr, "rmnet1"))
-                cpif_set_v4_filter(1, val.s_addr);
-        else
-                mif_err("-- unhandled clat v4 addr for %s\n", ptr);
+	if (strstr(ptr, "rmnet0"))
+		cpif_set_v4_filter(0, val.s_addr);
+	else if (strstr(ptr, "rmnet1"))
+		cpif_set_v4_filter(1, val.s_addr);
+	else
+		mif_err("-- unhandled clat v4 addr for %s\n", ptr);
 
-        return count;
+	return count;
 }
 
 static struct kobject *clat_kobject;
 static struct kobj_attribute xlat_plat_attribute = {
-        .attr = {.name = "xlat_plat", .mode = 0660},
-        .show = xlat_plat_show,
-        .store = xlat_plat_store,
+	.attr = {.name = "xlat_plat", .mode = 0660},
+	.show = xlat_plat_show,
+	.store = xlat_plat_store,
 };
 static struct kobj_attribute xlat_addr_attribute = {
-        .attr = {.name = "xlat_addrs", .mode = 0660},
-        .show = xlat_addr_show,
-        .store = xlat_addr_store,
+	.attr = {.name = "xlat_addrs", .mode = 0660},
+	.show = xlat_addr_show,
+	.store = xlat_addr_store,
 };
 static struct kobj_attribute xlat_v4addr_attribute = {
-        .attr = {.name = "xlat_v4_addrs", .mode = 0660},
-        .show = xlat_v4addr_show,
-        .store = xlat_v4addr_store,
+	.attr = {.name = "xlat_v4_addrs", .mode = 0660},
+	.show = xlat_v4addr_show,
+	.store = xlat_v4addr_store,
 };
 static struct attribute *clat_attrs[] = {
-        &xlat_plat_attribute.attr,
-        &xlat_addr_attribute.attr,
-        &xlat_v4addr_attribute.attr,
-        NULL,
+	&xlat_plat_attribute.attr,
+	&xlat_addr_attribute.attr,
+	&xlat_v4addr_attribute.attr,
+	NULL,
 };
 ATTRIBUTE_GROUPS(clat);
 
 #ifdef CONFIG_MODEM_IF_LEGACY_QOS
-static ssize_t hiprio_uid_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+static ssize_t hiprio_uid_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
 {
 	struct hiprio_uid_list *hiprio_list;
 	struct hiprio_uid *node;
@@ -824,7 +825,8 @@ static ssize_t hiprio_uid_show(struct kobject *kobj, struct kobj_attribute *attr
 	return count;
 }
 
-static ssize_t hiprio_uid_store(struct kobject *kobj, struct kobj_attribute *attr,
+static ssize_t hiprio_uid_store(struct kobject *kobj,
+		struct kobj_attribute *attr,
 		const char *buf, size_t count)
 {
 	long uid = 0;
@@ -966,12 +968,12 @@ static int cpif_probe(struct platform_device *pdev)
 	if (sysfs_create_groups(&dev->kobj, modem_groups))
 		mif_err("failed to create modem groups node\n");
 
-        clat_kobject = kobject_create_and_add("clat", kernel_kobj);
-        if (!clat_kobject)
+	clat_kobject = kobject_create_and_add("clat", kernel_kobj);
+	if (!clat_kobject)
 		mif_err("clat: kobject_create failed ---\n");
 
-        if (sysfs_create_groups(clat_kobject, clat_groups))
-                mif_err("failed to create clat groups node\n");
+	if (sysfs_create_groups(clat_kobject, clat_groups))
+		mif_err("failed to create clat groups node\n");
 
 	err = cpif_init_clat_info();
 	if (err < 0)

@@ -19,7 +19,7 @@
 
 static struct clat_info g_clat_info;
 
-int cpif_init_clat_info()
+int cpif_init_clat_info(void)
 {
 	spin_lock_init(&g_clat_info.lock);
 	return 0;
@@ -144,12 +144,12 @@ bool is_heading_toward_clat(struct sk_buff *skb)
 	unsigned long flags;
 	int i = 0;
 
-	if (ip_header->version ==4)
+	if (ip_header->version == 4)
 		return false;
 
 	spin_lock_irqsave(&g_clat_info.lock, flags);
 
-	for (i=0; i < NUM_CLAT_ADDR; i++) {
+	for (i = 0; i < NUM_CLAT_ADDR; i++) {
 		if (memcmp(&g_clat_info.clat_addr[i], &ip_header->daddr, 16) == 0) {
 			spin_unlock_irqrestore(&g_clat_info.lock, flags);
 			return true;
