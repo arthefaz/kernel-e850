@@ -27,7 +27,7 @@ void is_ischain_ixc_stripe_cfg(struct is_subdev *subdev,
 	struct is_frame *frame;
 	struct is_fmt *fmt = framecfg->format;
 	unsigned long flags;
-	u32 stripe_x, stripe_w;
+	u32 stripe_x = 0, stripe_w = 0;
 	u32 dma_offset = 0;
 
 	framemgr = GET_SUBDEV_FRAMEMGR(subdev);
