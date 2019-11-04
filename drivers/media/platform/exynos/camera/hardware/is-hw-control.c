@@ -1292,11 +1292,32 @@ void is_hardware_size_dump(struct is_hw_ip *hw_ip)
 	return;
 }
 
+struct is_hw_ip *is_get_hw_ip(u32 id, struct is_hardware *hardware)
+{
+	struct is_hw_ip *hw_ip = NULL;
+	enum is_hardware_id hw_id = DEV_HW_END;
+	int hw_list[GROUP_HW_MAX], hw_slot;
+	int hw_maxnum = 0;
+
+	hw_maxnum = is_get_hw_list(id, hw_list);
+	hw_id = hw_list[0];
+	hw_slot = is_hw_slot_id(hw_id);
+	if (!valid_hw_slot_id(hw_slot)) {
+		err_hw("invalid slot (%d,%d)", hw_id, hw_slot);
+		return NULL;
+	}
+
+	hw_ip = &hardware->hw_ip[hw_slot];
+
+	return hw_ip;
+}
+
 void is_hardware_frame_start(struct is_hw_ip *hw_ip, u32 instance)
 {
-	struct is_frame *frame;
+	struct is_frame *frame, *check_frame;
 	struct is_framemgr *framemgr;
 	struct is_group *head;
+	struct is_hw_ip *hw_ip_ldr;
 	u32 shot_timeout = 0;
 
 	FIMC_BUG_VOID(!hw_ip);
@@ -1313,49 +1334,59 @@ void is_hardware_frame_start(struct is_hw_ip *hw_ip, u32 instance)
 	 *      (* : called is_hardware_frame_start)
 	 * Only leader group in OTF groups can control frame.
 	 */
-	if (hw_ip->group[instance]->id == head->id) {
-		framemgr = hw_ip->framemgr;
+	framemgr = hw_ip->framemgr;
 
-		framemgr_e_barrier(framemgr, 0);
-		frame = get_frame(framemgr, FS_HW_CONFIGURE);
-		if (IS_ERR_OR_NULL(frame)) {
+	framemgr_e_barrier(framemgr, 0);
+	frame = get_frame(framemgr, FS_HW_CONFIGURE);
+	if (IS_ERR_OR_NULL(frame)) {
+		check_frame = find_frame(framemgr, FS_HW_WAIT_DONE,
+			frame_fcount, (void *)(ulong)atomic_read(&hw_ip->fcount));
+		if (check_frame) {
+			msdbgs_hw(2, "[F:%d] already processed to HW_WAIT_DONE state",
+					instance, hw_ip, check_frame->fcount);
+
+			framemgr_x_barrier(framemgr, 0);
+			clear_bit(HW_CONFIG, &hw_ip->state);
+			atomic_set(&hw_ip->status.Vvalid, V_VALID);
+		} else {
 			/* error happened..print the frame info */
 			frame_manager_print_info_queues(framemgr);
 			print_all_hw_frame_count(hw_ip->hardware);
 			framemgr_x_barrier(framemgr, 0);
 			mserr_hw("FSTART frame null (%d) (%d != %d)", instance, hw_ip,
-				hw_ip->internal_fcount[instance], hw_ip->group[instance]->id, head->id);
-			return;
+					hw_ip->internal_fcount[instance], hw_ip->group[instance]->id, head->id);
 		}
+		return;
+	}
 
 
 #if defined(ENABLE_EARLY_SHOT)
-		if (frame->type == SHOT_TYPE_MULTI)
-			mshot_schedule(hw_ip);
+	if (frame->type == SHOT_TYPE_MULTI)
+		mshot_schedule(hw_ip);
 #endif
-		if (atomic_read(&hw_ip->status.otf_start)
-				&& frame->fcount != atomic_read(&hw_ip->count.fs)) {
-			/* error handling */
-			info_hw("frame_start_isr (%d, %d)\n", frame->fcount,
-					atomic_read(&hw_ip->count.fs));
-			atomic_set(&hw_ip->count.fs, frame->fcount);
-		}
-
-		/* TODO: multi-instance */
-		frame->frame_info[INFO_FRAME_START].cpu = raw_smp_processor_id();
-		frame->frame_info[INFO_FRAME_START].pid = current->pid;
-		frame->frame_info[INFO_FRAME_START].when = local_clock();
-
-		put_frame(framemgr, frame, FS_HW_WAIT_DONE);
-		framemgr_x_barrier(framemgr, 0);
-
-		if (test_bit(IS_GROUP_OTF_INPUT, &head->state))
-			check_late_shot(hw_ip, frame->fcount);
-
-		/* shot timer set */
-		shot_timeout = head->device->resourcemgr->shot_timeout;
-		mod_timer(&hw_ip->shot_timer, jiffies + msecs_to_jiffies(shot_timeout));
+	if (atomic_read(&hw_ip->status.otf_start)
+			&& frame->fcount != atomic_read(&hw_ip->count.fs)) {
+		/* error handling */
+		info_hw("frame_start_isr (%d, %d)\n", frame->fcount,
+				atomic_read(&hw_ip->count.fs));
+		atomic_set(&hw_ip->count.fs, frame->fcount);
 	}
+
+	/* TODO: multi-instance */
+	frame->frame_info[INFO_FRAME_START].cpu = raw_smp_processor_id();
+	frame->frame_info[INFO_FRAME_START].pid = current->pid;
+	frame->frame_info[INFO_FRAME_START].when = local_clock();
+
+	put_frame(framemgr, frame, FS_HW_WAIT_DONE);
+	framemgr_x_barrier(framemgr, 0);
+
+	if (test_bit(IS_GROUP_OTF_INPUT, &head->state))
+		check_late_shot(hw_ip, frame->fcount);
+
+	/* leader shot timer set */
+	hw_ip_ldr = is_get_hw_ip(head->id, hw_ip->hardware);
+	shot_timeout = head->device->resourcemgr->shot_timeout;
+	mod_timer(&hw_ip_ldr->shot_timer, jiffies + msecs_to_jiffies(shot_timeout));
 
 	clear_bit(HW_CONFIG, &hw_ip->state);
 	atomic_set(&hw_ip->status.Vvalid, V_VALID);
@@ -2075,26 +2106,6 @@ static int check_frame_end(struct is_hw_ip *hw_ip, u32 hw_fcount,
 	}
 
 	return ret;
-}
-
-struct is_hw_ip *is_get_hw_ip(u32 id, struct is_hardware *hardware)
-{
-	struct is_hw_ip *hw_ip = NULL;
-	enum is_hardware_id hw_id = DEV_HW_END;
-	int hw_list[GROUP_HW_MAX], hw_slot;
-	int hw_maxnum = 0;
-
-	hw_maxnum = is_get_hw_list(id, hw_list);
-	hw_id = hw_list[0];
-	hw_slot = is_hw_slot_id(hw_id);
-	if (!valid_hw_slot_id(hw_slot)) {
-		err_hw("invalid slot (%d,%d)", hw_id, hw_slot);
-		return NULL;
-	}
-
-	hw_ip = &hardware->hw_ip[hw_slot];
-
-	return hw_ip;
 }
 
 int is_hardware_shot_done(struct is_hw_ip *hw_ip, struct is_frame *frame,
