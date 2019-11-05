@@ -587,7 +587,7 @@ static int samsung_abox_debug_remove(struct platform_device *pdev)
 			vm_unmap_ram(p_abox_dbg_dump_min[i]->dram,
 			    DRAM_FIRMWARE_SIZE);
 		if (tmp) {
-			int j;
+			unsigned long j;
 
 			for (j = 0; j < DRAM_FIRMWARE_SIZE / PAGE_SIZE;
 					j++, tmp++)

@@ -604,7 +604,7 @@ int abox_register_bclk_usage(struct device *dev, struct abox_data *data,
 	unsigned long target_pll, audif_rate;
 	int id = dai_id - ABOX_UAIF0;
 	int ret = 0;
-	int i;
+	unsigned long i;
 
 	dev_dbg(dev, "%s(%d, %d)\n", __func__, id, rate);
 
