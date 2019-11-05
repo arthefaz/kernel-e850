@@ -188,7 +188,7 @@ TRACE_EVENT(ems_compute_eff,
 TRACE_EVENT(ems_best_eff,
 
 	TP_PROTO(struct task_struct *p, unsigned int candidates, int idle,
-			int best_cpu, unsigned long best_eff),
+			int best_cpu, unsigned int best_eff),
 
 	TP_ARGS(p, candidates, idle, best_cpu, best_eff),
 
@@ -198,7 +198,7 @@ TRACE_EVENT(ems_best_eff,
 		__field(	unsigned int,	candidates		)
 		__field(	int,		idle			)
 		__field(	int,		best_cpu		)
-		__field(	unsigned long,	best_eff		)
+		__field(	unsigned int,	best_eff		)
 	),
 
 	TP_fast_assign(
@@ -210,7 +210,7 @@ TRACE_EVENT(ems_best_eff,
 		__entry->best_eff	= best_eff;
 	),
 
-	TP_printk("comm=%s pid=%d candidates=%#x idle=%d best_cpu=%d best_eff=%lu",
+	TP_printk("comm=%s pid=%d candidates=%#x idle=%d best_cpu=%d best_eff=%u",
 		__entry->comm, __entry->pid, __entry->candidates, __entry->idle,
 		__entry->best_cpu, __entry->best_eff)
 );

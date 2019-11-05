@@ -160,7 +160,7 @@ compute_efficiency(struct task_struct *p, int target_cpu, unsigned int eff_weigh
 
 static int find_best_eff(struct tp_env *env, unsigned int *eff, int idle)
 {
-	unsigned long best_eff = 0;
+	unsigned int best_eff = 0;
 	int best_cpu = -1;
 	int cpu;
 	struct cpumask candidates;

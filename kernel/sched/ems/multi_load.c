@@ -721,7 +721,7 @@ update_tg_cfs_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se,
 	if (delta_s) {
 		/* Set new sched_entity's utilization */
 		ml->util_avg_s = gcfs_rq->ml.util_avg_s;
-		ml->util_sum_s = ml->util_avg_s * LOAD_AVG_MAX;
+		ml->util_sum_s = (u32)(ml->util_avg_s * LOAD_AVG_MAX);
 
 		/* Update parent cfs_rq utilization */
 		add_positive(&cfs_rq->ml.util_avg_s, delta_s);
@@ -731,7 +731,7 @@ update_tg_cfs_multi_load(struct cfs_rq *cfs_rq, struct sched_entity *se,
 	if (delta) {
 		/* Set new sched_entity's utilization */
 		ml->util_avg = gcfs_rq->ml.util_avg;
-		ml->util_sum = ml->util_avg * LOAD_AVG_MAX;
+		ml->util_sum = (u32)(ml->util_avg * LOAD_AVG_MAX);
 
 		/* Update parent cfs_rq utilization */
 		add_positive(&cfs_rq->ml.util_avg, delta);
@@ -1019,7 +1019,7 @@ void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 	 * Skip update of task's estimated utilization when its EWMA is
 	 * already ~1% close to its last activation value.
 	 */
-	ue.enqueued = (ml_task_util(p) | UTIL_AVG_UNCHANGED);
+	ue.enqueued = (unsigned int)(ml_task_util(p) | UTIL_AVG_UNCHANGED);
 	last_ewma_diff = ue.enqueued - ue.ewma;
 	if (within_margin(last_ewma_diff, SCHED_CAPACITY_SCALE / 100))
 		return;
