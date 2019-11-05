@@ -362,9 +362,6 @@ static void dw_mci_exynos_config_hs400(struct dw_mci *host, u32 timing)
 
 	if (timing == MMC_TIMING_MMC_HS400 || timing == MMC_TIMING_MMC_HS400_ES) {
 		dqs &= ~(DWMCI_TXDT_CRC_TIMER_SET(0xFF, 0xFF));
-		dqs |= (DWMCI_TXDT_CRC_TIMER_SET(priv->hs400_tx_t_fastlimit,
-						 priv->hs400_tx_t_initval) | DWMCI_RDDQS_EN |
-			DWMCI_AXI_NON_BLOCKING_WRITE);
 		if (host->pdata->quirks & DW_MCI_QUIRK_ENABLE_ULP) {
 			if (priv->delay_line || priv->tx_delay_line)
 				strobe = DWMCI_WD_DQS_DELAY_CTRL(priv->tx_delay_line) |
@@ -373,6 +370,10 @@ static void dw_mci_exynos_config_hs400(struct dw_mci *host, u32 timing)
 			else
 				strobe = DWMCI_FIFO_CLK_DELAY_CTRL(0x2) |
 				    DWMCI_RD_DQS_DELAY_CTRL(90);
+			dqs |= (DWMCI_TXDT_CRC_TIMER_SET(0x32,
+							 0x38) | DWMCI_RDDQS_EN |
+				DWMCI_AXI_NON_BLOCKING_WRITE);
+			strobe |= DWMCI_WD_DQS_DELAY_CTRL(0x40);
 		} else {
 			if (priv->delay_line)
 				strobe = DWMCI_FIFO_CLK_DELAY_CTRL(0x2) |
@@ -380,6 +381,9 @@ static void dw_mci_exynos_config_hs400(struct dw_mci *host, u32 timing)
 			else
 				strobe = DWMCI_FIFO_CLK_DELAY_CTRL(0x2) |
 				    DWMCI_RD_DQS_DELAY_CTRL(90);
+			dqs |= (DWMCI_TXDT_CRC_TIMER_SET(priv->hs400_tx_t_fastlimit,
+							 priv->hs400_tx_t_initval) | DWMCI_RDDQS_EN |
+				DWMCI_AXI_NON_BLOCKING_WRITE);
 		}
 		dqs |= (DATA_STROBE_EN | DWMCI_AXI_NON_BLOCKING_WRITE);
 		if (timing == MMC_TIMING_MMC_HS400_ES)
@@ -445,7 +449,10 @@ static void dw_mci_exynos_set_ios(struct dw_mci *host, struct mmc_ios *ios)
 	case MMC_TIMING_MMC_HS400:
 	case MMC_TIMING_MMC_HS400_ES:
 		if (host->pdata->quirks & DW_MCI_QUIRK_ENABLE_ULP) {
-			clksel = SDMMC_CLKSEL_UP_SAMPLE(priv->hs400_ulp_timing, priv->tuned_sample);
+			if (timing == MMC_TIMING_MMC_HS400_ES)
+				clksel = priv->hs400_ulp_timing;
+			else
+				clksel = SDMMC_CLKSEL_UP_SAMPLE(priv->hs400_ulp_timing, priv->tuned_sample);
 			clksel |= (BIT(30) | BIT(19));	/* ultra low powermode on */
 		} else {
 			clksel = SDMMC_CLKSEL_UP_SAMPLE(priv->hs400_timing, priv->tuned_sample);
@@ -643,9 +650,11 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 		    SDMMC_CLKSEL_TIMING(timing[0], timing[1], timing[2], timing[3]);
 
 		ret = of_property_read_u32_array(np, "samsung,dw-mshc-hs400-ulp-timing", timing, 4);
-		if (!ret)
+		if (!ret) {
 			priv->hs400_ulp_timing =
 			    SDMMC_CLKSEL_TIMING(timing[0], timing[1], timing[2], timing[3]);
+			pr_info("LSHulp : %08x\n",priv->hs400_ulp_timing);
+		}
 		else
 			ret = 0;
 
