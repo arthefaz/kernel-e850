@@ -13,9 +13,6 @@
 #include "exynos_panel_drv.h"
 #include "../dsim.h"
 
-
-//#define S6E3HA8_BRIGHTNESS_CONTROL
-
 static unsigned char SEQ_PPS_SLICE2[] = {
 	// QHD :2960x1440
 	0x11, 0x00, 0x00, 0x89, 0x30, 0x80, 0x0B, 0x90,
@@ -36,7 +33,6 @@ static unsigned char SEQ_PPS_SLICE2[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-#if defined(S6E3HA8_BRIGHTNESS_CONTROL)
 static unsigned char GAMCTL1[] = {
 	0xC7,
 	0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -83,7 +79,6 @@ static unsigned char BCCTL[] = {
 	0xB9, 0x64, 0x20, 0x00, 0x00, 0x73, 0x36, 0xF9, 0xBC, 0x7F,
 	0x0C, 0x0C, 0x0C, 0x0C, 0x0C, 0x11	//0x41
 };
-#endif /* #if defined(S6E3HA8_BRIGHTNESS_CONTROL) */
 
 static unsigned char SEQ_FFC[] = {
 	0xCE,
@@ -207,21 +202,20 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 	dsim_write_data_seq(dsim, false, 0xB9, 0x00, 0xB0, 0x8F, 0x09, 0x00, 0x00,
 			0x00, 0x11, 0x01);
 	dsim_write_data_seq(dsim, false, 0x1A, 0x1F, 0x00, 0x00, 0x00, 0x00);
-
-#if defined(S6E3HA8_BRIGHTNESS_CONTROL)
-	/* setting for brightness control by gamma mode 2 method */
-	dsim_write_data_table(dsim, GAMCTL1);
-	dsim_write_data_table(dsim, GAMCTL2);
-	dsim_write_data_table(dsim, GAMCTL3);
-	dsim_write_data_table(dsim, BCCTL);
-	dsim_write_data_seq(dsim, false, 0xF7, 0x03);
-	dsim_write_data_seq(dsim, false, 0x53, 0x20);
-#endif /* #if defined(S6E3HA8_BRIGHTNESS_CONTROL) */
-
+	if (panel->id_index == 0) {
+		dsim_write_data_seq(dsim, false, 0xC7, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00);
+		dsim_write_data_table(dsim, GAMCTL1);
+		dsim_write_data_table(dsim, GAMCTL2);
+		dsim_write_data_table(dsim, GAMCTL3);
+		dsim_write_data_table(dsim, BCCTL);
+		dsim_write_data_seq(dsim, false, 0xF7, 0x03);
+		dsim_write_data_seq(dsim, false, 0x53, 0x20);
+	}
 	dsim_write_data_seq(dsim, false, 0x35); /* TE on */
-	/* ESD flag: [2]=VLIN3, [6]=VLIN1 error check*/
 	dsim_write_data_seq(dsim, false, 0xED, 0x44);
 
+#if !defined(CONFIG_EXYNOS_EWR)
 #if defined(CONFIG_EXYNOS_PLL_SLEEP)
 	/* TE start timing is advanced due to latency for the PLL_SLEEP
 	 *      default value : 2959(active line) + 25(vbp) - 2 = 0xB9C
@@ -232,14 +226,13 @@ static int s6e3ha8_displayon(struct exynos_panel_device *panel)
 #else
 	dsim_write_data_seq(dsim, false, 0xB9, 0x00, 0xB0, 0x9C, 0x09);
 #endif
+#endif
 	dsim_write_data_table(dsim, SEQ_FFC);
 
 	if (panel->id_index == 1) {
 		dsim_write_data_seq(dsim, false, 0x53, 0x20);
 		dsim_write_data_seq(dsim, false, 0x51, 0x01, 0xff);
 	}
-	/* set brightness to MAX */
-	dsim_write_data_seq(dsim, false, 0x51, MAX_BRIGHTNESS);
 	dsim_write_data_seq(dsim, false, 0x29); /* display on */
 
 	mutex_unlock(&panel->ops_lock);
@@ -287,16 +280,11 @@ static int s6e3ha8_mres(struct exynos_panel_device *panel, int mres_idx)
 
 static int s6e3ha8_doze(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-	s6e3ha8_displayon(panel);
-
 	return 0;
 }
 
 static int s6e3ha8_doze_suspend(struct exynos_panel_device *panel)
 {
-	DPU_INFO_PANEL("%s +\n", __func__);
-
 	return 0;
 }
 
@@ -307,55 +295,8 @@ static int s6e3ha8_dump(struct exynos_panel_device *panel)
 
 static int s6e3ha8_read_state(struct exynos_panel_device *panel)
 {
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-	int ret = 0;
-	u8 buf[2] = {0x0};
-	int i = 0;
-	int RETRY = 2; /* several retries are allowed */
-	bool esd_detect = false;
-	struct dsim_device *dsim = get_dsim_drvdata(0);
-
-	dsim_dbg("%s, read DDI for checking ESD\n", __func__);
-
-	for (i = 0; i < RETRY; i++) {
-		ret = dsim_read_data(dsim, MIPI_DSI_DCS_READ,
-					MIPI_DCS_GET_POWER_MODE, 0x1, buf);
-		if (ret == -ETIMEDOUT) {
-			dsim_info("recovery is already operated\n");
-			return DSIM_ESD_OK;
-		} else if ((ret < 0) && (ret != -ETIMEDOUT)) {
-			dsim_err("Failed to read panel REG 0x%02X!: 0x%02x, i(%d)\n",
-					MIPI_DCS_GET_POWER_MODE,
-					*(unsigned int *)buf & 0xFF, i);
-			if (dsim->state != DSIM_STATE_ON)
-				return DSIM_ESD_OK;
-			usleep_range(1000, 1100);
-			continue;
-		}
-
-		if ((buf[0] & 0x7c) == 0x1c) {
-			dsim_dbg("s6e3ha8 panel REG 0x%02X=0x%02x\n",
-					MIPI_DCS_GET_POWER_MODE, buf[0]);
-			break;
-		}
-
-		dsim_err("s6e3ha8 panel REG 0x%02X Not match: 0x%02x, i(%d)\n",
-					MIPI_DCS_GET_POWER_MODE,
-					*(unsigned int *)buf & 0xFF, i);
-		esd_detect = true;
-	}
-
-	if (i < RETRY)
-		return DSIM_ESD_OK;
-	else if (esd_detect)
-		return DSIM_ESD_ERROR;
-	else
-		return DSIM_ESD_CHECK_ERROR;
-#else
 	return 0;
-#endif /* #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION) */
 }
-
 
 struct exynos_panel_ops panel_s6e3ha8_ops = {
 	.id		= {0x460091, 0x430491, 0xffffff},

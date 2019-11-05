@@ -45,21 +45,16 @@ extern int dpu_panel_log_level;
 #define MAX_REGULATORS		3
 #define MAX_PANEL_SUPPORT	10
 #define MAX_PANEL_ID_NUM	3
-#define MIN_BRIGHTNESS 		0
-#define MAX_BRIGHTNESS		255
-#define DEFAULT_BRIGHTNESS	127
 
 extern struct exynos_panel_device *panel_drvdata;
-extern struct exynos_panel_ops panel_s6e3ha8_fhdp_ops;
-extern struct exynos_panel_ops panel_s6e3ha8_ops;
 extern struct exynos_panel_ops panel_s6e3ha9_ops;
+extern struct exynos_panel_ops panel_s6e3ha8_ops;
 extern struct exynos_panel_ops panel_s6e3fa0_ops;
-extern struct exynos_panel_ops panel_ana6705_ops;
+extern struct exynos_panel_ops panel_ea8076_ops;
 
 struct exynos_panel_resources {
 	int lcd_reset;
 	int lcd_power[2];
-	int lcd_detect;
 	struct regulator *regulator[MAX_REGULATORS];
 };
 
@@ -107,16 +102,12 @@ struct exynos_panel_device {
 	struct device *dev;
 	struct v4l2_subdev sd;
 	struct mutex ops_lock;
-	struct mutex bl_lock;
 	struct exynos_panel_resources res;
 	struct backlight_device *bl;
 	struct exynos_panel_info lcd_info;
 	struct exynos_panel_ops *ops;
 	bool cabc_enabled;
 	enum power_mode power_mode;
-	int brightness;
-	int max_brightness;
-	int user_brightness;
 };
 
 static inline struct exynos_panel_device *get_panel_drvdata(void)
@@ -138,6 +129,5 @@ static inline struct exynos_panel_device *get_panel_drvdata(void)
 #define EXYNOS_PANEL_IOC_DOZE_SUSPEND	_IOW('P', 8, u32)
 #define EXYNOS_PANEL_IOC_DUMP		_IOW('P', 9, u32)
 #define EXYNOS_PANEL_IOC_READ_STATE	_IOR('P', 10, u32)
-#define EXYNOS_PANEL_IOC_CHECK_CONNECT	_IOR('P', 11, u32)
 
 #endif /* __EXYNOS_PANEL_DRV_H__ */

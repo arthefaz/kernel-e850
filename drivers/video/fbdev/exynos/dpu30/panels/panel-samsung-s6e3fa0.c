@@ -19,6 +19,7 @@ int s6e3fa0_suspend(struct exynos_panel_device *panel)
 
 	mutex_lock(&panel->ops_lock);
 	dsim_write_data_seq_delay(dsim, 20, 0x28, 0x00, 0x00);
+	dsim_write_data_seq_delay(dsim, 120, 0x10, 0x00, 0x00);
 	mutex_unlock(&panel->ops_lock);
 
 	return 0;
@@ -122,6 +123,13 @@ int s6e3fa0_displayon(struct exynos_panel_device *panel)
 	/* enable brightness control */
 	dsim_write_data_seq_delay(dsim, 12, 0x53, 0x20, 0x00);
 
+#ifdef CONFIG_SOC_EXYNOS3830
+	/* parameter index jump */
+	dsim_write_data_seq_delay(dsim, 12, 0xB0, 0x05);
+	/* IG_EOT_ERR=1 */
+	dsim_write_data_seq_delay(dsim, 12, 0xE7, 0x47);
+#endif
+
 	if (lcd->mode == DECON_MIPI_COMMAND_MODE)
 		dsim_write_data_seq_delay(dsim, 12, 0x35); /* TE on */
 
@@ -141,11 +149,14 @@ int s6e3fa0_mres(struct exynos_panel_device *panel, int mres_idx)
 
 int s6e3fa0_doze(struct exynos_panel_device *panel)
 {
+	DPU_INFO_PANEL("%s +\n", __func__);
+	s6e3fa0_displayon(panel);
 	return 0;
 }
 
 int s6e3fa0_doze_suspend(struct exynos_panel_device *panel)
 {
+	DPU_INFO_PANEL("%s +\n", __func__);
 	return 0;
 }
 

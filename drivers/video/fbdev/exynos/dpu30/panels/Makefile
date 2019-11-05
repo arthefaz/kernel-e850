@@ -1,1 +1,1 @@
-obj-$(CONFIG_EXYNOS_COMMON_PANEL) += exynos_panel_drv.o panel-samsung-s6e3ha9.o panel-samsung-s6e3ha8.o panel-samsung-s6e3fa0.o panel-anapass-ana6705.o panel-samsung-s6e3ha8-fhdp.o
+obj-$(CONFIG_EXYNOS_COMMON_PANEL) += exynos_panel_drv.o panel-samsung-s6e3ha9.o panel-samsung-s6e3ha8.o panel-samsung-s6e3fa0.o panel-samsung-ea8076.o
