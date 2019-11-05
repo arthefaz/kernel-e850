@@ -457,11 +457,13 @@ static int abox_ipc_queue_get(struct abox_data *data, struct abox_ipc *ipc)
 static bool abox_can_calliope_ipc(struct device *dev,
 		struct abox_data *data)
 {
+	static int retry;
 	bool ret = true;
 
 	switch (data->calliope_state) {
 	case CALLIOPE_DISABLING:
 	case CALLIOPE_ENABLED:
+		retry = 0;
 		break;
 	case CALLIOPE_ENABLING:
 		wait_event_timeout(data->ipc_wait_queue,
@@ -469,11 +471,21 @@ static bool abox_can_calliope_ipc(struct device *dev,
 				msecs_to_jiffies(CALLIOPE_ENABLE_TIMEOUT_MS));
 		if (data->calliope_state == CALLIOPE_ENABLED)
 			break;
+		retry++;
 		/* Fallthrough */
 	case CALLIOPE_DISABLED:
 	default:
 		dev_warn(dev, "Invalid calliope state: %d\n",
 				data->calliope_state);
+		if (retry >= 10) {
+			abox_dbg_print_gpr(dev,	data);
+			abox_dbg_dump_gpr(dev, data, ABOX_DBG_DUMP_KERNEL,
+					"Invalid State");
+			abox_dbg_dump_mem(dev, data, ABOX_DBG_DUMP_KERNEL,
+					"Invalid State");
+			abox_failsafe_report(dev);
+			retry = 0;
+		}
 		ret = false;
 	}
 
