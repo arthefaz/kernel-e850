@@ -370,6 +370,7 @@ static struct factor *__init init_factor_data(struct device_node *factor_node, i
 	struct bias_cpuidle *bias_first;
 	struct factor *factor, *first;
 	const char *buf;
+	int val;
 
 	/* alloc factor */
 	factor = kzalloc(sizeof(struct factor), GFP_KERNEL);
@@ -389,9 +390,10 @@ static struct factor *__init init_factor_data(struct device_node *factor_node, i
 		goto moce_fail;
 
 	/* factor ratio-table */
-	factor->size = of_property_count_u32_elems(factor_node, "ratio-table");
-	if (factor->size < 0)
+	val = of_property_count_u32_elems(factor_node, "ratio-table");
+	if (val < 0)
 		goto moce_fail;
+	factor->size = val;
 
 	/* If there is a same ratio table previously created, just points to it. */
 	if (cpu == cpumask_first(&factor->cpus)) {
