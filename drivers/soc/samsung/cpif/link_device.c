@@ -1462,7 +1462,7 @@ static int xmit_to_cp(struct mem_link_device *mld, struct io_device *iod,
 		else
 			return -ENODEV;
 	} else {
-		if (ld->is_fmt_ch(ch))
+		if (ld->is_fmt_ch(ch) || (ld->is_wfs0_ch != NULL && ld->is_wfs0_ch(ch)))
 			return xmit_ipc_to_dev(mld, ch, skb, IPC_MAP_FMT);
 		else {
 #ifdef CONFIG_MODEM_IF_LEGACY_QOS
@@ -3702,6 +3702,10 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 		ld->is_csd_ch = sipc_csd_ch;
 		ld->is_log_ch = sipc_log_ch;
 		ld->is_router_ch = sipc_router_ch;
+		ld->is_embms_ch = NULL;
+		ld->is_uts_ch = NULL;
+		ld->is_wfs0_ch = NULL;
+		ld->is_wfs1_ch = NULL;
 		break;
 	case PROTOCOL_SIT:
 		ld->chid_fmt_0 = EXYNOS_CH_ID_FMT_0;
@@ -3731,6 +3735,10 @@ struct link_device *create_link_device(struct platform_device *pdev, enum modem_
 		ld->is_csd_ch = exynos_rcs_ch;
 		ld->is_log_ch = exynos_log_ch;
 		ld->is_router_ch = exynos_router_ch;
+		ld->is_embms_ch = exynos_embms_ch;
+		ld->is_uts_ch = exynos_uts_ch;
+		ld->is_wfs0_ch = exynos_wfs0_ch;
+		ld->is_wfs1_ch = exynos_wfs1_ch;
 		break;
 	default:
 		mif_err("protocol error %d\n", ld->protocol);

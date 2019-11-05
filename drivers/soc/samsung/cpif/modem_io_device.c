@@ -452,6 +452,7 @@ static int rx_demux(struct link_device *ld, struct sk_buff *skb)
 {
 	struct io_device *iod;
 	u8 ch = skbpriv(skb)->sipc_ch;
+	struct link_device *skb_ld = skbpriv(skb)->ld;
 
 	if (unlikely(ch == 0)) {
 		mif_err("%s: ERR! invalid ch# %d\n", ld->name, ch);
@@ -474,12 +475,27 @@ static int rx_demux(struct link_device *ld, struct sk_buff *skb)
 		return -ENODEV;
 	}
 
-	if (skbpriv(skb)->ld->is_fmt_ch(ch))
-		return rx_fmt_ipc(skb);
-	else if (skbpriv(skb)->ld->is_ps_ch(ch))
-		return rx_multi_pdp(skb);
-	else
-		return rx_raw_misc(skb);
+	switch (skb_ld->protocol) {
+	case PROTOCOL_SIPC:
+		if (skb_ld->is_fmt_ch(ch))
+			return rx_fmt_ipc(skb);
+		else if (skb_ld->is_ps_ch(ch))
+			return rx_multi_pdp(skb);
+		else
+			return rx_raw_misc(skb);
+		break;
+	case PROTOCOL_SIT:
+		if (skb_ld->is_fmt_ch(ch) || skb_ld->is_wfs0_ch(ch))
+			return rx_fmt_ipc(skb);
+		else if (skb_ld->is_ps_ch(ch) || skb_ld->is_embms_ch(ch))
+			return rx_multi_pdp(skb);
+		else
+			return rx_raw_misc(skb);
+		break;
+	default:
+		mif_err("protocol error %d\n", skb_ld->protocol);
+		return -EINVAL;
+	}
 }
 
 static int io_dev_recv_skb_single_from_link_dev(struct io_device *iod,

@@ -65,9 +65,16 @@ enum exynos_ch_id {
 	EXYNOS_CH_ID_PDP_7,
 	EXYNOS_CH_ID_PDP_8,
 	EXYNOS_CH_ID_PDP_9,
+	EXYNOS_CH_ID_PDP_10,
+	EXYNOS_CH_ID_PDP_11,
+	EXYNOS_CH_ID_PDP_12,
+	EXYNOS_CH_ID_PDP_13,
+	EXYNOS_CH_ID_PDP_14,
+	EXYNOS_CH_ID_PDP_15,
 
 	EXYNOS_CH_ID_BT_DUN = 21,  /*umts_router*/
 
+	EXYNOS_CH_ID_UTS = 23,		/* umts_atc0 */
 	EXYNOS_CH_ID_EMBMS_0 = 30,	/* Evolved Multimedia Broadcast Multicast Service */
 	EXYNOS_CH_ID_EMBMS_1,
 
@@ -88,8 +95,8 @@ enum exynos_ch_id {
 	EXYNOS_CH_ID_RCS_0 = 91,    /*CH_RAW_CS_VT_DATA*/
 	EXYNOS_CH_ID_RCS_1 = 92,    /*CH_RAW_CIQ_BRIDGE*/
 
-	EXYNOS_CH_ID_PPT_0 = 93,    /*Mission-Critical Push to Talk*/
-	EXYNOS_CH_ID_PPT_1 = 94,    /*Mission-Critical Push to Talk*/
+	EXYNOS_CH_ID_WFS_0 = 93,    /* umts_wfc0 */
+	EXYNOS_CH_ID_WFS_1 = 94,    /* umts_wfc1 */
 
 	EXYNOS_CH_ID_BOOT = 241,
 	EXYNOS_CH_ID_DUMP = 242,
@@ -184,11 +191,6 @@ static inline bool exynos_rcs_ch(u8 ch)
 	return (ch == EXYNOS_CH_ID_RCS_0 || ch == EXYNOS_CH_ID_RCS_1) ? true : false;
 }
 
-static inline bool exynos_ppt_ch(u8 ch)
-{
-	return (ch == EXYNOS_CH_ID_PPT_0 || ch == EXYNOS_CH_ID_PPT_1) ? true : false;
-}
-
 static inline u8 exynos_get_ch(u8 *frm)
 {
 	return frm[EXYNOS_CH_ID_OFFSET];
@@ -268,6 +270,21 @@ static inline bool exynos_router_ch(u8 ch)
 static inline bool exynos_embms_ch(u8 ch)
 {
 	return (ch == EXYNOS_CH_ID_EMBMS_0 || ch == EXYNOS_CH_ID_EMBMS_1) ? true : false;
+}
+
+static inline bool exynos_uts_ch(u8 ch)
+{
+	return (ch == EXYNOS_CH_ID_UTS) ? true : false;
+}
+
+static inline bool exynos_wfs0_ch(u8 ch)
+{
+	return (ch == EXYNOS_CH_ID_WFS_0) ? true : false;
+}
+
+static inline bool exynos_wfs1_ch(u8 ch)
+{
+	return (ch == EXYNOS_CH_ID_WFS_1) ? true : false;
 }
 
 static inline unsigned int exynos_get_total_len(u8 *frm)

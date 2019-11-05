@@ -193,9 +193,6 @@ static struct io_device *create_io_device(struct platform_device *pdev,
 		return NULL;
 	}
 
-	if (iod->format == IPC_FMT && iod->ch == SIPC5_CH_ID_FMT_0)
-		modemctl->iod = iod;
-
 	if (iod->format == IPC_BOOT) {
 		modemctl->bootd = iod;
 		mif_err("BOOT device = %s\n", iod->name);
