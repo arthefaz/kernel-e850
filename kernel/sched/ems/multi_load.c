@@ -1139,7 +1139,7 @@ static inline int inc_hist_idx(int idx)
 
 static inline void calc_active_ratio_hist(struct part *pa)
 {
-	int idx;
+	u64 idx;
 	int sum = 0, max = 0;
 	int p_avg = 0, p_stdev = 0, p_count = 0;
 	int patten, diff;
@@ -1431,9 +1431,9 @@ static ssize_t store_part_policy(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf,
 		size_t count)
 {
-	long input;
+	unsigned int input;
 
-	if (!sscanf(buf, "%ld", &input))
+	if (!sscanf(buf, "%d", &input))
 		return -EINVAL;
 
 	if (input >= PART_POLICY_INVALID)
