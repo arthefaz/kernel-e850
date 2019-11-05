@@ -2714,6 +2714,7 @@ static int abox_modem_notifier(struct notifier_block *nb,
 	case MODEM_EVENT_EXIT:
 		system_msg->msgtype = ABOX_STOP_VSS;
 		abox_dbg_print_gpr(dev, data);
+		abox_failsafe_report(dev);
 		break;
 	case MODEM_EVENT_ONLINE:
 		system_msg->msgtype = ABOX_START_VSS;
