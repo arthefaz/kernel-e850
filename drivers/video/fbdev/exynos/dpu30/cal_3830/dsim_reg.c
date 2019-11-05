@@ -32,16 +32,15 @@
  */
 #define DSIM_CMD_ALLOW_VALUE		4
 #define DSIM_STABLE_VFP_VALUE		2
-#define TE_PROTECT_ON_TIME		158 /* 15.8ms*/
-#define TE_TIMEOUT_TIME			180 /* 18ms */
+#define TE_MARGIN					5 /* 5% */
 
 #define PLL_LOCK_CNT_MULT		500
 #define PLL_LOCK_CNT_MARGIN_RATIO	0	/* 10% ~ 20% */
 #define PLL_LOCK_CNT_MARGIN	(PLL_LOCK_CNT_MULT * PLL_LOCK_CNT_MARGIN_RATIO / 100)
 
 u32 DSIM_PHY_PLL_CTRL_VAL[] = {
-	0x00000088,
-	0x00000088,
+	0x00000000,
+	0x00000000,
 	0x000000A1,
 	0x00000027,
 	0x00000062,
@@ -52,7 +51,7 @@ u32 DSIM_PHY_PLL_CTRL_VAL[] = {
 	0x00000000,
 	0x00000000,
 	0x00000000,
-	0x000000e0,
+	0x00000000,
 	0x00000000,
 	0x00000000,
 	0x00000000,
@@ -84,7 +83,7 @@ u32 DSIM_PHY_ACTRL_MC_VAL[] = {
 };
 
 u32 DSIM_PHY_ACTRL_MD0_VAL[] = {
-	0x000000BC,
+	0x00000088,
 	0x00000000,
 	0x00000020,
 	0x00000000,
@@ -93,19 +92,19 @@ u32 DSIM_PHY_ACTRL_MD0_VAL[] = {
 };
 
 u32 DSIM_PHY_ACTRL_MD1_VAL[] = {
-	0x000000BC,
+	0x00000088,
 	0x00000000,
 	0x00000020,
 };
 
 u32 DSIM_PHY_ACTRL_MD2_VAL[] = {
-	0x000000BC,
+	0x00000088,
 	0x00000000,
 	0x00000020,
 };
 
 u32 DSIM_PHY_ACTRL_MD3_VAL[] = {
-	0x000000BC,
+	0x00000088,
 	0x00000000,
 	0x00000020,
 };
@@ -350,28 +349,19 @@ static void dsim_reg_set_pll_freq(u32 id, u32 p, u32 m, u32 s, u32 k)
 
 	/* K value */
 	val = DSIM_PHY_PMS_K_15_8(k);
-	mask = DSIM_PHY_PMS_K_15_8_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_04, val, mask);
+	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_04, val);
 
 	/* K value */
 	val = DSIM_PHY_PMS_K_7_0(k);
-	mask = DSIM_PHY_PMS_K_7_0_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_05, val, mask);
+	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_05, val);
 
-	/* P value */
-	val = DSIM_PHY_PMS_P_5_0(p);
-	mask = DSIM_PHY_PMS_P_5_0_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_06, val, mask);
-
-	/* M value */
-	val = DSIM_PHY_PMS_M_9_8(m);
-	mask = DSIM_PHY_PMS_M_9_8_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_06, val, mask);
+	/* P & M value */
+	val = DSIM_PHY_PMS_P_5_0(p) | DSIM_PHY_PMS_M_9_8(m);
+	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_06, val);
 
 	/* M value */
 	val = DSIM_PHY_PMS_M_7_0(m);
-	mask = DSIM_PHY_PMS_M_7_0_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_07, val, mask);
+	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_07, val);
 
 	/* S value */
 	val = DSIM_PHY_PMS_S_2_0(s);
@@ -409,8 +399,7 @@ static void dsim_reg_set_dphy_timing_values(u32 id,
 
 	/* clock lane setting */
 	val = DSIM_PHY_ULPS_EXIT_CNT_7_0(t->b_dphyctl);
-	mask = DSIM_PHY_ULPS_EXIT_CNT_7_0_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MC_04, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MC_04, val);
 
 	val = DSIM_PHY_ULPS_EXIT_CNT_9_8(t->b_dphyctl) | hs_en;
 	mask = DSIM_PHY_ULPS_EXIT_CNT_9_8_MASK | DSIM_PHY_HS_MODE_SEL;
@@ -422,36 +411,29 @@ static void dsim_reg_set_dphy_timing_values(u32 id,
 	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MC_06, val, mask);
 
 	val = DSIM_PHY_TLPXCTRL(t->lpx);
-	mask = DSIM_PHY_TLPXCTRL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MC_08, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MC_08, val);
 
 	val = DSIM_PHY_THSEXITCTL(t->hs_exit);
-	mask = DSIM_PHY_THSEXITCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MC_09, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MC_09, val);
 
 	val = DSIM_PHY_TCLKPRPRCTL(t->clk_prepare);
-	mask = DSIM_PHY_TCLKPRPRCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MC_0B, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MC_0B, val);
 
 	val = DSIM_PHY_TCLKZEROCTL(t->clk_zero);
-	mask = DSIM_PHY_TCLKZEROCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MC_0C, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MC_0C, val);
 
 	val = DSIM_PHY_TCLKPOSTCTL(t->clk_post);
-	mask = DSIM_PHY_TCLKPOSTCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MC_0D, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MC_0D, val);
 
 	val = DSIM_PHY_TCLKTRAILCTL(t->clk_trail);
-	mask = DSIM_PHY_TCLKTRAILCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MC_0E, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MC_0E, val);
 	/* set other clock lane setting */
 	/* DCTRL_MC_X */
 
 	/* data lane setting */
 	/* D0 */
 	val = DSIM_PHY_ULPS_EXIT_CNT_7_0(t->b_dphyctl);
-	mask = DSIM_PHY_ULPS_EXIT_CNT_7_0_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD0_04, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD0_04, val);
 
 	val = DSIM_PHY_ULPS_EXIT_CNT_9_8(t->b_dphyctl) | hs_en;
 	mask = DSIM_PHY_ULPS_EXIT_CNT_9_8_MASK | DSIM_PHY_HS_MODE_SEL;
@@ -460,31 +442,25 @@ static void dsim_reg_set_dphy_timing_values(u32 id,
 	/* skew cal implementation later */
 
 	val = DSIM_PHY_THSPRPRCTL(t->hs_prepare);
-	mask = DSIM_PHY_THSPRPRCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD0_07, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD0_07, val);
 
 	val = DSIM_PHY_TLPXCTRL(t->lpx);
-	mask = DSIM_PHY_TLPXCTRL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD0_08, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD0_08, val);
 
 	val = DSIM_PHY_THSEXITCTL(t->hs_exit);
-	mask = DSIM_PHY_THSEXITCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD0_09, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD0_09, val);
 
 	val = DSIM_PHY_THSZEROCTL(t->hs_zero);
-	mask = DSIM_PHY_THSZEROCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD0_0B, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD0_0B, val);
 
 	val = DSIM_PHY_TTRAILCTL(t->hs_trail);
-	mask = DSIM_PHY_TTRAILCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD0_0C, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD0_0C, val);
 	/* set other data lane setting */
 	/* DCTRL_MC_X */
 
 	/* D1 */
 	val = DSIM_PHY_ULPS_EXIT_CNT_7_0(t->b_dphyctl);
-	mask = DSIM_PHY_ULPS_EXIT_CNT_7_0_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD1_04, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD1_04, val);
 
 	val = DSIM_PHY_ULPS_EXIT_CNT_9_8(t->b_dphyctl) | hs_en;
 	mask = DSIM_PHY_ULPS_EXIT_CNT_9_8_MASK | DSIM_PHY_HS_MODE_SEL;
@@ -494,31 +470,25 @@ static void dsim_reg_set_dphy_timing_values(u32 id,
 	/* skew cal implementation later */
 
 	val = DSIM_PHY_THSPRPRCTL(t->hs_prepare);
-	mask = DSIM_PHY_THSPRPRCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD1_07, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD1_07, val);
 
 	val = DSIM_PHY_TLPXCTRL(t->lpx);
-	mask = DSIM_PHY_TLPXCTRL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD1_08, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD1_08, val);
 
 	val = DSIM_PHY_THSEXITCTL(t->hs_exit);
-	mask = DSIM_PHY_THSEXITCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD1_09, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD1_09, val);
 
 	val = DSIM_PHY_THSZEROCTL(t->hs_zero);
-	mask = DSIM_PHY_THSZEROCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD1_0B, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD1_0B, val);
 
 	val = DSIM_PHY_TTRAILCTL(t->hs_trail);
-	mask = DSIM_PHY_TTRAILCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD1_0C, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD1_0C, val);
 	/* set other data lane setting */
 	/* DCTRL_MC_X */
 
 	/* D2 */
 	val = DSIM_PHY_ULPS_EXIT_CNT_7_0(t->b_dphyctl);
-	mask = DSIM_PHY_ULPS_EXIT_CNT_7_0_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD2_04, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD2_04, val);
 
 	val = DSIM_PHY_ULPS_EXIT_CNT_9_8(t->b_dphyctl) | hs_en;
 	mask = DSIM_PHY_ULPS_EXIT_CNT_9_8_MASK | DSIM_PHY_HS_MODE_SEL;
@@ -527,30 +497,25 @@ static void dsim_reg_set_dphy_timing_values(u32 id,
 	/* skew cal implementation later */
 
 	val = DSIM_PHY_THSPRPRCTL(t->hs_prepare);
-	mask = DSIM_PHY_THSPRPRCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD2_07, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD2_07, val);
 
 	val = DSIM_PHY_TLPXCTRL(t->lpx);
-	mask = DSIM_PHY_TLPXCTRL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD2_08, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD2_08, val);
 
 	val = DSIM_PHY_THSEXITCTL(t->hs_exit);
-	mask = DSIM_PHY_THSEXITCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD2_09, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD2_09, val);
 
 	val = DSIM_PHY_THSZEROCTL(t->hs_zero);
-	mask = DSIM_PHY_THSZEROCTL_MASK;
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD2_0B, val);
 
 	val = DSIM_PHY_TTRAILCTL(t->hs_trail);
-	mask = DSIM_PHY_TTRAILCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD2_0C, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD2_0C, val);
 	/* set other data lane setting */
 	/* DCTRL_MC_X */
 
 	/* D3 */
 	val = DSIM_PHY_ULPS_EXIT_CNT_7_0(t->b_dphyctl);
-	mask = DSIM_PHY_ULPS_EXIT_CNT_7_0_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD3_04, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD3_04, val);
 
 	val = DSIM_PHY_ULPS_EXIT_CNT_9_8(t->b_dphyctl) | hs_en;
 	mask = DSIM_PHY_ULPS_EXIT_CNT_9_8_MASK | DSIM_PHY_HS_MODE_SEL;
@@ -559,24 +524,19 @@ static void dsim_reg_set_dphy_timing_values(u32 id,
 	/* skew cal implementation later */
 
 	val = DSIM_PHY_THSPRPRCTL(t->hs_prepare);
-	mask = DSIM_PHY_THSPRPRCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD3_07, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD3_07, val);
 
 	val = DSIM_PHY_TLPXCTRL(t->lpx);
-	mask = DSIM_PHY_TLPXCTRL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD3_08, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD3_08, val);
 
 	val = DSIM_PHY_THSEXITCTL(t->hs_exit);
-	mask = DSIM_PHY_THSEXITCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD3_09, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD3_09, val);
 
 	val = DSIM_PHY_THSZEROCTL(t->hs_zero);
-	mask = DSIM_PHY_THSZEROCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD3_0B, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD3_0B, val);
 
 	val = DSIM_PHY_TTRAILCTL(t->hs_trail);
-	mask = DSIM_PHY_TTRAILCTL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_DCTRL_MD3_0C, val, mask);
+	dsim_phy_write(id, DSIM_PHY_DCTRL_MD3_0C, val);
 	/* set other data lane setting */
 	/* DCTRL_MC_X */
 }
@@ -588,53 +548,34 @@ static void dsim_reg_set_dphy_param_dither(u32 id, struct stdphy_pms *dphy_pms)
 
 	/* MFR */
 	val = DSIM_PHY_DITHER_MFR(dphy_pms->mfr);
-	mask = DSIM_PHY_DITHER_MFR_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0B, val, mask);
+	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_0B, val);
 
-	/* MRR */
-	val = DSIM_PHY_DITHER_MRR(dphy_pms->mrr);
-	mask = DSIM_PHY_DITHER_MRR_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0C, val, mask);
+	/* MRR & SEL_PF */
+	val = DSIM_PHY_DITHER_MRR(dphy_pms->mrr) | DSIM_PHY_DITHER_SEL_PF(dphy_pms->sel_pf);
+	dsim_phy_write(id, DSIM_PHY_PLL_CTRL_0C, val);
 
-	/* SEL_PF */
-	val = DSIM_PHY_DITHER_SEL_PF(dphy_pms->sel_pf);
-	mask = DSIM_PHY_DITHER_SEL_PF_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0C, val, mask);
-
-	/* ICP */
-	val = DSIM_PHY_DITHER_ICP(dphy_pms->icp);
-	mask = DSIM_PHY_DITHER_ICP_MASK;
+	/* ICP & FSEL & RSEL */
+	val = DSIM_PHY_DITHER_ICP(dphy_pms->icp) |
+		DSIM_PHY_DITHER_FSEL(dphy_pms->fsel) |
+		DSIM_PHY_DITHER_RSEL(dphy_pms->rsel);
+	mask = DSIM_PHY_DITHER_ICP_MASK |
+		DSIM_PHY_DITHER_FSEL_MASK |
+		DSIM_PHY_DITHER_RSEL_MASK;
 	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_09, val, mask);
-
-	/* AFC_ENB */
-	val = (dphy_pms->afc_enb) ? ~0 : 0;
-	mask = DSIM_PHY_DITHER_AFC_ENB;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0A, val, mask);
 
 	/* EXTAFC */
 	val = DSIM_PHY_DITHER_EXTAFC(dphy_pms->extafc);
 	mask = DSIM_PHY_DITHER_EXTAFC_MASK;
 	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_08, val, mask);
 
-	/* FEED_EN */
-	val = (dphy_pms->feed_en) ? ~0 : 0;
-	mask = DSIM_PHY_DITHER_FEED_EN;
+	/* AFC_ENB & FEED_EN & FOUT_MASK */
+	val = DSIM_PHY_DITHER_AFC_ENB(dphy_pms->afc_enb) |
+		DSIM_PHY_DITHER_FEED_EN(dphy_pms->feed_en) |
+		DSIM_PHY_DITHER_FOUT(dphy_pms->fout_mask);
+	mask = DSIM_PHY_DITHER_AFC_ENB_MASK |
+		DSIM_PHY_DITHER_FEED_EN_MASK |
+		DSIM_PHY_DITHER_FOUT_MASK;
 	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0A, val, mask);
-
-	/* FSEL */
-	val = (dphy_pms->fsel) ? ~0 : 0;
-	mask = DSIM_PHY_DITHER_FSEL;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_09, val, mask);
-
-	/* FOUT_MASK */
-	val = (dphy_pms->fout_mask) ? ~0 : 0;
-	mask = DSIM_PHY_DITHER_FOUT_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_0A, val, mask);
-
-	/* RSEL */
-	val = DSIM_PHY_DITHER_RSEL(dphy_pms->rsel);
-	mask = DSIM_PHY_DITHER_RSEL_MASK;
-	dsim_phy_write_mask(id, DSIM_PHY_PLL_CTRL_09, val, mask);
 }
 #endif
 
@@ -735,12 +676,22 @@ static void dsim_reg_dphy_resetn(u32 id, u32 en)
 }
 #endif
 
-static void dsim_reg_set_num_of_lane(u32 id, u32 lane)
+static void dsim_reg_set_config_options(u32 id, u32 lane,
+		u32 eotp_en, u32 per_frame_read, u32 pix_format, u32 vc_id)
 {
-	u32 val = DSIM_CONFIG_NUM_OF_DATA_LANE(lane);
+	u32 val, mask;
 
-	dsim_write_mask(id, DSIM_CONFIG, val,
-				DSIM_CONFIG_NUM_OF_DATA_LANE_MASK);
+	val = DSIM_CONFIG_NUM_OF_DATA_LANE(lane) | DSIM_CONFIG_EOTP_EN(eotp_en)
+		| DSIM_CONFIG_PER_FRAME_READ_EN(per_frame_read)
+		| DSIM_CONFIG_PIXEL_FORMAT(pix_format)
+		| DSIM_CONFIG_VC_ID(vc_id);
+
+	mask = DSIM_CONFIG_NUM_OF_DATA_LANE_MASK | DSIM_CONFIG_EOTP_EN_MASK
+		| DSIM_CONFIG_PER_FRAME_READ_EN_MASK
+		| DSIM_CONFIG_PIXEL_FORMAT_MASK
+		| DSIM_CONFIG_VC_ID_MASK;
+
+	dsim_write_mask(id, DSIM_CONFIG, val, mask);
 }
 
 static void dsim_reg_enable_lane(u32 id, u32 lane, u32 en)
@@ -840,18 +791,12 @@ static void dsim_reg_set_stop_state_cnt(u32 id)
 				DSIM_ESCMODE_STOP_STATE_CNT_MASK);
 }
 
-static void dsim_reg_set_bta_timeout(u32 id)
+static void dsim_reg_set_timeout(u32 id)
 {
-	u32 val = DSIM_TIMEOUT_BTA_TOUT(DSIM_BTA_TIMEOUT);
+	u32 val = DSIM_TIMEOUT_BTA_TOUT(DSIM_BTA_TIMEOUT)
+		| DSIM_TIMEOUT_LPDR_TOUT(DSIM_LP_RX_TIMEOUT);
 
-	dsim_write_mask(id, DSIM_TIMEOUT, val, DSIM_TIMEOUT_BTA_TOUT_MASK);
-}
-
-static void dsim_reg_set_lpdr_timeout(u32 id)
-{
-	u32 val = DSIM_TIMEOUT_LPDR_TOUT(DSIM_LP_RX_TIMEOUT);
-
-	dsim_write_mask(id, DSIM_TIMEOUT, val, DSIM_TIMEOUT_LPDR_TOUT_MASK);
+	dsim_write(id, DSIM_TIMEOUT, val);
 }
 
 static void dsim_reg_disable_hsa(u32 id, u32 en)
@@ -938,34 +883,32 @@ static void dsim_reg_set_vfp_detail(u32 id, u32 cmd_allow, u32 stable_vfp)
 	dsim_write(id, DSIM_VFP_DETAIL, val);
 }
 
-static void dsim_reg_set_hfp(u32 id, u32 hfp)
+static void dsim_reg_set_hporch(u32 id, u32 hbp, u32 hfp)
 {
-	u32 val = DSIM_HPORCH_HFP(hfp);
-
-	dsim_write_mask(id, DSIM_HPORCH, val, DSIM_HPORCH_HFP_MASK);
+	u32 val = DSIM_HPORCH_HFP(hfp) | DSIM_HPORCH_HBP(hbp);
+	dsim_write(id, DSIM_HPORCH, val);
 }
 
-static void dsim_reg_set_hbp(u32 id, u32 hbp)
+static void dsim_reg_set_sync_area(u32 id, u32 vsa, u32 hsa)
 {
-	u32 val = DSIM_HPORCH_HBP(hbp);
+	u32 val = DSIM_SYNC_VSA(vsa) | DSIM_SYNC_HSA(hsa);
 
-	dsim_write_mask(id, DSIM_HPORCH, val, DSIM_HPORCH_HBP_MASK);
+	dsim_write(id, DSIM_SYNC, val);
 }
 
-static void dsim_reg_set_vsa(u32 id, u32 vsa)
+static void dsim_reg_set_resol(u32 id, struct exynos_panel_info *lcd_info)
 {
-	u32 val = DSIM_SYNC_VSA(vsa);
+	u32 height, width, val;
 
-	dsim_write_mask(id, DSIM_SYNC, val, DSIM_SYNC_VSA_MASK);
+	width = lcd_info->xres;
+	height = lcd_info->yres;
+
+	val = DSIM_RESOL_VRESOL(height) | DSIM_RESOL_HRESOL(width);
+
+	dsim_write(id, DSIM_RESOL, val);
 }
 
-static void dsim_reg_set_hsa(u32 id, u32 hsa)
-{
-	u32 val = DSIM_SYNC_HSA(hsa);
-
-	dsim_write_mask(id, DSIM_SYNC, val, DSIM_SYNC_HSA_MASK);
-}
-
+#if 0 // unused function
 static void dsim_reg_set_vresol(u32 id, u32 vresol)
 {
 	u32 val = DSIM_RESOL_VRESOL(vresol);
@@ -986,6 +929,7 @@ static void dsim_reg_set_hresol(u32 id, u32 hresol, struct exynos_panel_info *lc
 
 	dsim_write_mask(id, DSIM_RESOL, val, DSIM_RESOL_HRESOL_MASK);
 }
+#endif
 
 static void dsim_reg_set_porch(u32 id, struct exynos_panel_info *lcd)
 {
@@ -994,25 +938,74 @@ static void dsim_reg_set_porch(u32 id, struct exynos_panel_info *lcd)
 		dsim_reg_set_vfp_detail(id,
 				DSIM_CMD_ALLOW_VALUE,
 				DSIM_STABLE_VFP_VALUE);
-		dsim_reg_set_hbp(id, lcd->hbp);
-		dsim_reg_set_hfp(id, lcd->hfp);
-		dsim_reg_set_vsa(id, lcd->vsa);
-		dsim_reg_set_hsa(id, lcd->hsa);
+		dsim_reg_set_hporch(id, lcd->hfp, lcd->hbp);
+		dsim_reg_set_sync_area(id, lcd->vsa, lcd->hsa);
 	}
 }
 
-static void dsim_reg_set_pixel_format(u32 id, u32 pixformat)
+static void dsim_reg_set_hact_period(u32 id, u32 hact_period)
 {
-	u32 val = DSIM_CONFIG_PIXEL_FORMAT(pixformat);
+	u32 val = DSIM_VT_HTIMING0_HACT_PERIOD(hact_period);
 
-	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_PIXEL_FORMAT_MASK);
+	dsim_write_mask(id, DSIM_VT_HTIMING0, val,
+			DSIM_VT_HTIMING0_HACT_PERIOD_MASK);
 }
 
-static void dsim_reg_set_vc_id(u32 id, u32 vcid)
+static void dsim_reg_set_hsa_period(u32 id, u32 hsa_period)
 {
-	u32 val = DSIM_CONFIG_VC_ID(vcid);
+	u32 val = DSIM_VT_HTIMING0_HSA_PERIOD(hsa_period);
 
-	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_VC_ID_MASK);
+	dsim_write_mask(id, DSIM_VT_HTIMING0, val,
+			DSIM_VT_HTIMING0_HSA_PERIOD_MASK);
+}
+
+static void dsim_reg_set_hbp_period(u32 id, u32 hbp_period)
+{
+	u32 val = DSIM_VT_HTIMING1_HBP_PERIOD(hbp_period);
+
+	dsim_write_mask(id, DSIM_VT_HTIMING1, val,
+			DSIM_VT_HTIMING1_HBP_PERIOD_MASK);
+}
+
+static void dsim_reg_set_hfp_period(u32 id, u32 hfp_period)
+{
+	u32 val = DSIM_VT_HTIMING1_HFP_PERIOD(hfp_period);
+
+	dsim_write_mask(id, DSIM_VT_HTIMING1, val,
+			DSIM_VT_HTIMING1_HFP_PERIOD_MASK);
+}
+
+static void dsim_reg_set_hperiod(u32 id, struct exynos_panel_info *lcd)
+{
+	u32 vclk,  wclk;
+	u32 hblank, vblank;
+	u32 width, height;
+	u32 hact_period, hsa_period, hbp_period, hfp_period;
+
+	if (lcd->dsc.en)
+		width = lcd->xres / 3;
+	else
+		width = lcd->xres;
+
+	height = lcd->yres;
+
+	if (lcd->mode == DECON_VIDEO_MODE) {
+		hblank = lcd->hsa + lcd->hbp + lcd->hfp;
+		vblank = lcd->vsa + lcd->vbp + lcd->vfp;
+		vclk = DIV_ROUND_CLOSEST((width + hblank) * (height + vblank) * lcd->fps, 1000); /* khz */
+		wclk = DIV_ROUND_CLOSEST(lcd->hs_clk * 1000, 16); /* khz */
+
+		/* round calculation to reduce fps error */
+		hact_period = DIV_ROUND_CLOSEST(width * wclk, vclk);
+		hsa_period = DIV_ROUND_CLOSEST(lcd->hsa * wclk, vclk);
+		hbp_period = DIV_ROUND_CLOSEST(lcd->hbp * wclk, vclk);
+		hfp_period = DIV_ROUND_CLOSEST(lcd->hfp * wclk, vclk);
+
+		dsim_reg_set_hact_period(id, hact_period);
+		dsim_reg_set_hsa_period(id, hsa_period);
+		dsim_reg_set_hbp_period(id, hbp_period);
+		dsim_reg_set_hfp_period(id, hfp_period);
+	}
 }
 
 static void dsim_reg_set_video_mode(u32 id, u32 mode)
@@ -1165,28 +1158,26 @@ static void dsim_reg_set_multi_packet_count(u32 id, u32 multipacketcnt)
 				DSIM_CMD_CONFIG_MULTI_PKT_CNT_MASK);
 }
 
-static void dsim_reg_set_time_stable_vfp(u32 id, u32 stablevfp)
+static void dsim_reg_set_cmd_te_ctrl0(u32 id, u32 stablevfp)
 {
 	u32 val = DSIM_CMD_TE_CTRL0_TIME_STABLE_VFP(stablevfp);
 
-	dsim_write_mask(id, DSIM_CMD_TE_CTRL0, val,
-				DSIM_CMD_TE_CTRL0_TIME_STABLE_VFP_MASK);
+	dsim_write(id, DSIM_CMD_TE_CTRL0, val);
 }
 
-static void dsim_reg_set_time_te_protect_on(u32 id, u32 teprotecton)
+static void dsim_reg_set_cmd_te_ctrl1(u32 id, u32 teprotecton, u32 tetout)
 {
-	u32 val = DSIM_CMD_TE_CTRL1_TIME_TE_PROTECT_ON(teprotecton);
+	u32 val = DSIM_CMD_TE_CTRL1_TIME_TE_PROTECT_ON(teprotecton)
+		| DSIM_CMD_TE_CTRL1_TIME_TE_TOUT(tetout);
 
-	dsim_write_mask(id, DSIM_CMD_TE_CTRL1, val,
-			DSIM_CMD_TE_CTRL1_TIME_TE_PROTECT_ON_MASK);
+	dsim_write(id, DSIM_CMD_TE_CTRL1, val);
 }
 
-static void dsim_reg_set_time_te_timeout(u32 id, u32 tetout)
+static void dsim_reg_get_cmd_timer(unsigned int fps, unsigned int *te_protect,
+		unsigned int *te_timeout, u32 hs_clk)
 {
-	u32 val = DSIM_CMD_TE_CTRL1_TIME_TE_TOUT(tetout);
-
-	dsim_write_mask(id, DSIM_CMD_TE_CTRL1, val,
-				DSIM_CMD_TE_CTRL1_TIME_TE_TOUT_MASK);
+	*te_protect = hs_clk * (100 - TE_MARGIN) * 100 / fps / 16;
+	*te_timeout = hs_clk * (100 + TE_MARGIN * 2) * 100 / fps / 16;
 }
 
 static void dsim_reg_set_cmd_ctrl(u32 id, struct exynos_panel_info *lcd_info,
@@ -1197,11 +1188,10 @@ static void dsim_reg_set_cmd_ctrl(u32 id, struct exynos_panel_info *lcd_info,
 	unsigned int time_te_tout;
 
 	time_stable_vfp = lcd_info->xres * DSIM_STABLE_VFP_VALUE * 3 / 100;
-	time_te_protect_on = (clks->hs_clk * TE_PROTECT_ON_TIME) / 16;
-	time_te_tout = (clks->hs_clk * TE_TIMEOUT_TIME) / 16;
-	dsim_reg_set_time_stable_vfp(id, time_stable_vfp);
-	dsim_reg_set_time_te_protect_on(id, time_te_protect_on);
-	dsim_reg_set_time_te_timeout(id, time_te_tout);
+	dsim_reg_get_cmd_timer(lcd_info->fps, &time_te_protect_on,
+			&time_te_tout, clks->hs_clk);
+	dsim_reg_set_cmd_te_ctrl0(id, time_stable_vfp);
+	dsim_reg_set_cmd_te_ctrl1(id, time_te_protect_on, time_te_tout);
 }
 
 static void dsim_reg_enable_noncont_clock(u32 id, u32 en)
@@ -1290,13 +1280,6 @@ u32 dsim_reg_is_clk_stop(u32 id)
 	return 0;
 }
 
-void dsim_reg_enable_per_frame_read(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_PER_FRAME_READ_EN);
-}
-
 int dsim_reg_wait_hs_clk_ready(u32 id)
 {
 	u32 state;
@@ -1363,8 +1346,7 @@ void dsim_reg_set_num_of_transfer(u32 id, u32 num_of_transfer)
 {
 	u32 val = DSIM_NUM_OF_TRANSFER_PER_FRAME(num_of_transfer);
 
-	dsim_write_mask(id, DSIM_NUM_OF_TRANSFER, val,
-				DSIM_NUM_OF_TRANSFER_PER_FRAME_MASK);
+	dsim_write(id, DSIM_NUM_OF_TRANSFER, val);
 
 	dsim_dbg("%s, write value : 0x%x, read value : 0x%x\n", __func__,
 			val, dsim_read(id, DSIM_NUM_OF_TRANSFER));
@@ -1382,20 +1364,14 @@ static u32 dsim_reg_is_ulps_state(u32 id, u32 lanes)
 	return 0;
 }
 
-static void dsim_reg_set_deskew_hw_interval(u32 id, u32 interval)
+static void dsim_reg_set_deskew_hw(u32 id, u32 interval, u32 position)
 {
-	u32 val = DSIM_DESKEW_CTRL_HW_INTERVAL(interval);
+	u32 val = DSIM_DESKEW_CTRL_HW_INTERVAL(interval)
+		| DSIM_DESKEW_CTRL_HW_POSITION(position);
+	u32 mask = DSIM_DESKEW_CTRL_HW_INTERVAL_MASK
+		| DSIM_DESKEW_CTRL_HW_POSITION_MASK;
 
-	dsim_write_mask(id, DSIM_DESKEW_CTRL, val,
-			DSIM_DESKEW_CTRL_HW_INTERVAL_MASK);
-}
-
-static void dsim_reg_set_deskew_hw_position(u32 id, u32 position)
-{
-	u32 val = position ? ~0 : 0;
-
-	dsim_write_mask(id, DSIM_DESKEW_CTRL, val,
-				DSIM_DESKEW_CTRL_HW_POSITION);
+	dsim_write_mask(id, DSIM_DESKEW_CTRL, val, mask);
 }
 
 static void dsim_reg_enable_deskew_hw_enable(u32 id, u32 en)
@@ -1409,31 +1385,14 @@ static void dsim_reg_set_cm_underrun_lp_ref(u32 id, u32 lp_ref)
 {
 	u32 val = DSIM_UNDERRUN_CTRL_CM_UNDERRUN_LP_REF(lp_ref);
 
-	dsim_write_mask(id, DSIM_UNDERRUN_CTRL, val,
-			DSIM_UNDERRUN_CTRL_CM_UNDERRUN_LP_REF_MASK);
+	dsim_write(id, DSIM_UNDERRUN_CTRL, val);
 }
 
 static void dsim_reg_set_threshold(u32 id, u32 threshold)
 {
 	u32 val = DSIM_THRESHOLD_LEVEL(threshold);
 
-	dsim_write_mask(id, DSIM_THRESHOLD, val, DSIM_THRESHOLD_LEVEL_MASK);
-
-}
-
-static void dsim_reg_enable_eotp(u32 id, u32 en)
-{
-	u32 val = en ? ~0 : 0;
-
-	dsim_write_mask(id, DSIM_CONFIG, val, DSIM_CONFIG_EOTP_EN);
-}
-
-static void dsim_reg_set_vt_compensate(u32 id, u32 compensate)
-{
-	u32 val = DSIM_VIDEO_TIMER_COMPENSATE(compensate);
-
-	dsim_write_mask(id, DSIM_VIDEO_TIMER, val,
-			DSIM_VIDEO_TIMER_COMPENSATE_MASK);
+	dsim_write(id, DSIM_THRESHOLD, val);
 }
 
 static void dsim_reg_set_vstatus_int(u32 id, u32 vstatus)
@@ -1480,9 +1439,8 @@ static void dsim_set_hw_deskew(u32 id, u32 en)
 	u32 hw_interval = 1;
 
 	if (en) {
-		dsim_reg_set_deskew_hw_interval(id, hw_interval);
 		/* 0 : VBP first line, 1 : VFP last line*/
-		dsim_reg_set_deskew_hw_position(id, 0);
+		dsim_reg_set_deskew_hw(id, hw_interval, 0);
 		dsim_reg_enable_deskew_hw_enable(id, en);
 	} else {
 		dsim_reg_enable_deskew_hw_enable(id, en);
@@ -1610,8 +1568,8 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 
 	dsim_set_hw_deskew(id, 0); /* second param is to control enable bit */
 
-	dsim_reg_set_bta_timeout(id);
-	dsim_reg_set_lpdr_timeout(id);
+	/* set bta & lpdr timeout vlaues */
+	dsim_reg_set_timeout(id);
 
 	dsim_reg_set_cmd_transfer_mode(id, 0);
 	dsim_reg_set_stop_state_cnt(id);
@@ -1628,8 +1586,7 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 
 	dsim_reg_set_threshold(id, threshold);
 
-	dsim_reg_set_vresol(id, lcd_info->yres);
-	dsim_reg_set_hresol(id, lcd_info->xres, lcd_info);
+	dsim_reg_set_resol(id, lcd_info);
 	dsim_reg_set_porch(id, lcd_info);
 
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
@@ -1646,13 +1603,11 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 		dsim_reg_set_num_of_transfer(id, num_of_transfer);
 	}
 
-	dsim_reg_set_num_of_lane(id, lcd_info->data_lane - 1);
-	dsim_reg_enable_eotp(id, 1);
-	dsim_reg_enable_per_frame_read(id, 0);
-	dsim_reg_set_pixel_format(id, DSIM_PIXEL_FORMAT_RGB24);
-	dsim_reg_set_vc_id(id, 0);
+	/* set number of lanes, eotp enable, per_frame_read, pixformat, vc_id */
+	dsim_reg_set_config_options(id, lcd_info->data_lane -1, 1, 0,
+			DSIM_PIXEL_FORMAT_RGB24, 0);
 
-	/* CPSR & VIDEO MODE can be set when shadow enable on */
+	/* CPSR & VIDEO MODE & HPERIOD can be set only when shadow enable on */
 	/* shadow enable */
 	dsim_reg_enable_shadow(id, 1);
 	if (lcd_info->mode == DECON_VIDEO_MODE) {
@@ -1666,7 +1621,8 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	dsim_reg_enable_dsc(id, lcd_info->dsc.en);
 
 	/* shadow disable */
-	dsim_reg_enable_shadow(id, 0);
+	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE)
+		dsim_reg_enable_shadow(id, 0);
 
 	if (lcd_info->mode == DECON_VIDEO_MODE) {
 		dsim_reg_disable_hsa(id, 0);
@@ -1698,7 +1654,7 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	if (lcd_info->mode == DECON_MIPI_COMMAND_MODE) {
 		dsim_reg_set_cmd_ctrl(id, lcd_info, clks);
 	} else if (lcd_info->mode == DECON_VIDEO_MODE) {
-		dsim_reg_set_vt_compensate(id, lcd_info->vt_compensation);
+		dsim_reg_set_hperiod(id, lcd_info);
 		dsim_reg_set_vstatus_int(id, DSIM_VSYNC);
 	}
 
@@ -1840,14 +1796,6 @@ static int dsim_reg_set_lanes(u32 id, u32 lanes, u32 en)
 	/* LINK lanes */
 	dsim_reg_enable_lane(id, lanes, en);
 	udelay(400);
-
-	return 0;
-}
-
-static int dsim_reg_set_lanes_dphy(u32 id, u32 lanes, u32 en)
-{
-	/* PHY lanes */
-	/* This is not supported in exynos3830 */
 
 	return 0;
 }
@@ -2035,7 +1983,7 @@ void dpu_sysreg_dphy_reset(void __iomem *sysreg, u32 dsim_id, u32 rst)
 	u32 old = readl(sysreg + DISP_DPU_MIPI_PHY_CON);
 	u32 val = rst ? ~0 : 0;
 	u32 mask;
-	
+
 	/* exynos3830 only can support dsim id 0 */
 	BUG_ON(dsim_id);
 
@@ -2067,18 +2015,26 @@ void dsim_reg_preinit(u32 id)
 
 	/* default configuration just for reading panel id */
 	memset(&clks, 0, sizeof(struct dsim_clks));
-	clks.hs_clk = 898;
-	clks.esc_clk = 20;
+	clks.hs_clk = 1200;
+	clks.esc_clk = 16;
 	memset(&lcd_info, 0, sizeof(struct exynos_panel_info));
+	lcd_info.vfp = 20;
+	lcd_info.vbp = 2;
+	lcd_info.vsa = 2;
+	lcd_info.hfp = 20;
+	lcd_info.hbp = 20;
+	lcd_info.hsa = 20;
+	lcd_info.fps = 60;
+	lcd_info.hs_clk = 898;
 	lcd_info.mode = DECON_MIPI_COMMAND_MODE;
 	lcd_info.xres = 1080;
-	lcd_info.yres = 1920;
+	lcd_info.yres = 2340;
 	lcd_info.dphy_pms.p = 2;
-	lcd_info.dphy_pms.m = 276;
-	lcd_info.dphy_pms.s = 2;
-	lcd_info.dphy_pms.k = 20165; //0x4ec5
+	lcd_info.dphy_pms.m = 185;
+	lcd_info.dphy_pms.s = 1;
+	lcd_info.dphy_pms.k = 0x9D8A; //0x4ec5
 	lcd_info.data_lane = 4;
-	lcd_info.cmd_underrun_cnt[0] = 583;
+	lcd_info.cmd_underrun_cnt[0] = 1695;
 
 	/* DPHY reset control from SYSREG(0) */
 	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 0);
@@ -2100,7 +2056,6 @@ void dsim_reg_preinit(u32 id)
 	dsim_set_panel_power(dsim, 1);
 
 	dsim_reg_set_clocks(id, &clks, &lcd_info.dphy_pms, 1);
-	dsim_reg_set_lanes_dphy(id, lanes, 1);
 	dpu_sysreg_dphy_reset(dsim->res.ss_regs, id, 1); /* Release DPHY reset */
 
 	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
@@ -2156,7 +2111,6 @@ void dsim_reg_init(u32 id, struct exynos_panel_info *lcd_info, struct dsim_clks 
 
 	dsim_reg_set_clocks(id, clks, &lcd_info->dphy_pms, 1);
 
-	dsim_reg_set_lanes_dphy(id, lanes, 1);
 	dpu_sysreg_dphy_reset(dsim->res.ss_regs, id, 1); /* Release DPHY reset */
 
 	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
@@ -2212,7 +2166,6 @@ int dsim_reg_stop(u32 id, u32 lanes)
 	dpu_sysreg_dphy_reset(dsim->res.ss_regs, id, 0);
 	/* 3. disable lane */
 	dsim_reg_set_lanes(id, lanes, 0);
-	dsim_reg_set_lanes_dphy(id, lanes, 0);
 	/* 4. turn off WORDCLK and ESCCLK */
 	dsim_reg_set_esc_clk_on_lane(id, 0, lanes);
 	dsim_reg_set_esc_clk_en(id, 0);
@@ -2275,7 +2228,6 @@ int dsim_reg_stop_and_enter_ulps(u32 id, u32 ddi_type, u32 lanes)
 	dsim_reg_set_link_clock(id, 0);
 	/* 3.3 off DPHY */
 	dsim_reg_set_lanes(id, lanes, 0);
-	dsim_reg_set_lanes_dphy(id, lanes, 0);
 	dsim_reg_set_esc_clk_on_lane(id, 0, lanes);
 	dsim_reg_set_clocks(id, NULL, NULL, 0);
 
@@ -2438,8 +2390,8 @@ void dsim_reg_function_reset(u32 id)
 /* Set porch and resolution to support Partial update */
 void dsim_reg_set_partial_update(u32 id, struct exynos_panel_info *lcd_info)
 {
-	dsim_reg_set_vresol(id, lcd_info->yres);
-	dsim_reg_set_hresol(id, lcd_info->xres, lcd_info);
+	dsim_reg_set_resol(id, lcd_info);
+	dsim_reg_set_threshold(id, lcd_info->xres);
 	dsim_reg_set_porch(id, lcd_info);
 	dsim_reg_set_num_of_transfer(id, lcd_info->yres);
 }
@@ -2470,8 +2422,7 @@ void dsim_reg_set_mres(u32 id, struct exynos_panel_info *lcd_info)
 	}
 
 	dsim_reg_set_threshold(id, threshold);
-	dsim_reg_set_vresol(id, lcd_info->yres);
-	dsim_reg_set_hresol(id, lcd_info->xres, lcd_info);
+	dsim_reg_set_resol(id, lcd_info);
 	dsim_reg_set_porch(id, lcd_info);
 	dsim_reg_set_num_of_transfer(id, num_of_transfer);
 

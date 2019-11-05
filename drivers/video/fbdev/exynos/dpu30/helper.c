@@ -195,18 +195,27 @@ static int decon_get_protect_id(int dma_id)
 	int prot_id = 0;
 
 	switch (dma_id) {
-#if defined(CONFIG_SOC_EXYNOS9630)
-	case 0:
+#if defined(CONFIG_SOC_EXYNOS9830)
+	case 0: /* GF0 */
 		prot_id = PROT_L0;
 		break;
-	case 1:
+	case 1: /* GF1 */
 		prot_id = PROT_L1;
 		break;
-	case 2:
+	case 2: /* VG */
 		prot_id = PROT_L2;
 		break;
-	case 3:
+	case 3: /* VGS */
 		prot_id = PROT_L3;
+		break;
+	case 4: /* VGF */
+		prot_id = PROT_L4;
+		break;
+	case 5: /* VGRFS */
+		prot_id = PROT_L5;
+		break;
+	case 6: /* WB */
+		prot_id = PROT_WB1;
 		break;
 #endif
 	default:
@@ -375,30 +384,6 @@ static int dpu_dump_buffer_data(struct dpp_device *dpp)
 	return 0;
 }
 #endif
-
-int register_lcd_status_notifier(struct notifier_block *nb)
-{
-	struct decon_device *decon = get_decon_drvdata(0);
-	return atomic_notifier_chain_register(&decon->lcd_status_notifier_list, nb);
-}
-EXPORT_SYMBOL(register_lcd_status_notifier);
-
-int unregister_lcd_status_notifier(struct notifier_block *nb)
-{
-	struct decon_device *decon = get_decon_drvdata(0);
-	return atomic_notifier_chain_unregister(&decon->lcd_status_notifier_list, nb);
-}
-EXPORT_SYMBOL(unregister_lcd_status_notifier);
-
-/* If lcd status is
- * 	0 : LCD ON
- * 	1 : LCD OFF
- */
-void lcd_status_notifier(u32 lcd_status)
-{
-	struct decon_device *decon = get_decon_drvdata(0);
-	atomic_notifier_call_chain(&decon->lcd_status_notifier_list, lcd_status , NULL);
-}
 
 int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 	struct device *dev, unsigned long iova, int flags, void *token)

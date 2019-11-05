@@ -10,7 +10,6 @@
 */
 
 #include <linux/module.h>
-#include <linux/version.h>
 #include <linux/clk-provider.h>
 #include <linux/clk.h>
 #include <linux/of.h>
@@ -43,30 +42,11 @@ void dpp_dump(struct dpp_device *dpp)
 		console_unlock();
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
-void dpp_op_timer_handler(unsigned long arg)
-{
-	struct dpp_device *dpp = from_timer(dpp, (struct timer_list *)arg, op_timer);
-	struct decon_device *decon = get_decon_drvdata(0);
-
-	if (!decon_is_bypass(decon))
-		dpp_dump(dpp);
-
-	if (dpp->dpp_config->config.compression)
-		dpp_info("Compression Source is %s of DPP[%d]\n",
-			dpp->dpp_config->config.dpp_parm.comp_src == DPP_COMP_SRC_G2D ?
-			"G2D" : "GPU", dpp->id);
-
-	dpp_info("DPP[%d] irq hasn't been occured", dpp->id);
-}
-#else
 void dpp_op_timer_handler(struct timer_list *arg)
 {
 	struct dpp_device *dpp = from_timer(dpp, arg, op_timer);
-	struct decon_device *decon = get_decon_drvdata(0);
 
-	if (!decon_is_bypass(decon))
-		dpp_dump(dpp);
+	dpp_dump(dpp);
 
 	if (dpp->dpp_config->config.compression)
 		dpp_info("Compression Source is %s of DPP[%d]\n",
@@ -75,7 +55,6 @@ void dpp_op_timer_handler(struct timer_list *arg)
 
 	dpp_info("DPP[%d] irq hasn't been occured", dpp->id);
 }
-#endif
 
 static int dpp_wb_wait_for_framedone(struct dpp_device *dpp)
 {
@@ -188,75 +167,6 @@ static void dpp_get_base_addr_params(struct dpp_params_info *p)
 		break;
 
 	/* for lossy SBWC */
-	case DECON_PIXEL_FORMAT_NV12N_SBWC_8B_L50: /* single fd : [0]-Y_PL */
-		/* calc CbCr Payload base */
-		p->addr[1] = SBWCL_8B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h, 50);
-	case DECON_PIXEL_FORMAT_NV12M_SBWC_8B_L50:
-		/* payload */
-		p->addr[3] = p->addr[1];
-		p->addr[1] = p->addr[0];
-		p->ypl_c2_strd = SBWCL_8B_STRIDE(p->src.f_w, 50);
-		p->cpl_strd = p->ypl_c2_strd;
-		/* meaningless header */
-		p->addr[0] = p->addr[1];
-		p->addr[2] = p->addr[3];
-		break;
-
-	case DECON_PIXEL_FORMAT_NV12N_SBWC_8B_L75: /* single fd : [0]-Y_PL */
-		/* calc CbCr Payload base */
-		p->addr[1] = SBWCL_8B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h, 75);
-	case DECON_PIXEL_FORMAT_NV12M_SBWC_8B_L75:
-		/* payload */
-		p->addr[3] = p->addr[1];
-		p->addr[1] = p->addr[0];
-		p->ypl_c2_strd = SBWCL_8B_STRIDE(p->src.f_w, 75);
-		p->cpl_strd = p->ypl_c2_strd;
-		/* meaningless header */
-		p->addr[0] = p->addr[1];
-		p->addr[2] = p->addr[3];
-		break;
-
-	case DECON_PIXEL_FORMAT_NV12N_SBWC_10B_L40: /* single fd : [0]-Y_PL */
-		/* calc CbCr Payload base */
-		p->addr[1] = SBWCL_10B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h, 40);
-	case DECON_PIXEL_FORMAT_NV12M_SBWC_10B_L40:
-		/* payload */
-		p->addr[3] = p->addr[1];
-		p->addr[1] = p->addr[0];
-		p->ypl_c2_strd = SBWCL_10B_STRIDE(p->src.f_w, 40);
-		p->cpl_strd = p->ypl_c2_strd;
-		/* meaningless header */
-		p->addr[0] = p->addr[1];
-		p->addr[2] = p->addr[3];
-		break;
-
-	case DECON_PIXEL_FORMAT_NV12N_SBWC_10B_L60: /* single fd : [0]-Y_PL */
-		/* calc CbCr Payload base */
-		p->addr[1] = SBWCL_10B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h, 60);
-	case DECON_PIXEL_FORMAT_NV12M_SBWC_10B_L60:
-		/* payload */
-		p->addr[3] = p->addr[1];
-		p->addr[1] = p->addr[0];
-		p->ypl_c2_strd = SBWCL_10B_STRIDE(p->src.f_w, 60);
-		p->cpl_strd = p->ypl_c2_strd;
-		/* meaningless header */
-		p->addr[0] = p->addr[1];
-		p->addr[2] = p->addr[3];
-		break;
-
-	case DECON_PIXEL_FORMAT_NV12N_SBWC_10B_L80: /* single fd : [0]-Y_PL */
-		/* calc CbCr Payload base */
-		p->addr[1] = SBWCL_10B_CBCR_BASE(p->addr[0], p->src.f_w, p->src.f_h, 80);
-	case DECON_PIXEL_FORMAT_NV12M_SBWC_10B_L80:
-		/* payload */
-		p->addr[3] = p->addr[1];
-		p->addr[1] = p->addr[0];
-		p->ypl_c2_strd = SBWCL_10B_STRIDE(p->src.f_w, 80);
-		p->cpl_strd = p->ypl_c2_strd;
-		/* meaningless header */
-		p->addr[0] = p->addr[1];
-		p->addr[2] = p->addr[3];
-		break;
 
 	default:
 		dpp_dbg("%s: YUV format(%d) doesn't require BASE ADDR Calc.\n",
@@ -461,7 +371,13 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 	}
 
 
-#if defined(CONFIG_SOC_EXYNOS9630)
+#if defined(CONFIG_SOC_EXYNOS9830)
+	if (!test_bit(DPP_ATTR_HDR, &dpp->attr) && (p->hdr > DPP_HDR_OFF)) {
+		dpp_err("Not support HDR in DPP%d - No H/W!\n",
+				dpp->id);
+		return -EINVAL;
+	}
+#elif defined(CONFIG_SOC_EXYNOS9630)
 	if (!test_bit(DPP_ATTR_HDR10P, &dpp->attr) && (p->hdr > DPP_HDR_OFF)) {
 		dpp_err("Not support HDR in DPP%d - No H/W!\n",
 				dpp->id);
@@ -493,8 +409,7 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 		return -EINVAL;
 	}
 
-	if (!test_bit(DPP_ATTR_SBWC, &dpp->attr)
-		&& ((p->comp_type == COMP_TYPE_SBWC) || (p->comp_type == COMP_TYPE_SBWCL))) {
+	if (!test_bit(DPP_ATTR_SBWC, &dpp->attr) && (p->comp_type == COMP_TYPE_SBWC)) {
 		dpp_err("Not support SBWC in DPP%d - SBWC Ch only!\n", dpp->id);
 		return -EINVAL;
 	}
@@ -639,12 +554,12 @@ static int dpp_stop(struct dpp_device *dpp, bool reset)
 
 	DPU_EVENT_LOG(DPU_EVT_DPP_STOP, &dpp->sd, ktime_set(0, 0));
 
-	del_timer(&dpp->op_timer);
-	dpp_reg_deinit(dpp->id, reset, dpp->attr);
-
 	disable_irq(dpp->res.dma_irq);
 	if (test_bit(DPP_ATTR_DPP, &dpp->attr))
 		disable_irq(dpp->res.irq);
+
+	del_timer(&dpp->op_timer);
+	dpp_reg_deinit(dpp->id, reset, dpp->attr);
 
 	dpp_dbg("dpp%d is stopped\n", dpp->id);
 
@@ -899,7 +814,7 @@ static void dpp_parse_dt(struct dpp_device *dpp, struct device *dev)
 	struct dpp_device *dpp0 = get_dpp_drvdata(0);
 	struct dpp_restriction *res = &dpp->restriction;
 	int i;
-	char format_list[256] = {0, };
+	char format_list[128] = {0, };
 	int len = 0, ret;
 
 	dpp->id = of_alias_get_id(dev->of_node, "dpp");
@@ -967,9 +882,25 @@ static irqreturn_t dma_irq_handler(int irq, void *priv)
 	if (dpp->state == DPP_STATE_OFF)
 		goto irq_end;
 
-	//if (test_bit(DPP_ATTR_ODMA, &dpp->attr)) { /* ODMA case */
-	//} else { /* IDMA case */
-	if (!test_bit(DPP_ATTR_ODMA, &dpp->attr)) { /* IDMA case */
+	if (test_bit(DPP_ATTR_ODMA, &dpp->attr)) { /* ODMA case */
+#if defined(CONFIG_SOC_EXYNOS9830)
+		irqs = odma_reg_get_irq_and_clear(dpp->id);
+		if ((irqs & ODMA_WRITE_SLAVE_ERROR) ||
+			       (irqs & ODMA_STATUS_DEADLOCK_IRQ)) {
+			dpp_err("odma%d error irq occur(0x%x)\n", dpp->id, irqs);
+			dpp_dump(dpp);
+			goto irq_end;
+		}
+		if (irqs & ODMA_STATUS_FRAMEDONE_IRQ) {
+			dpp_dbg("dpp%d framedone irq occurs\n", dpp->id);
+			dpp->d.done_count++;
+			wake_up_interruptible_all(&dpp->framedone_wq);
+			DPU_EVENT_LOG(DPU_EVT_DPP_FRAMEDONE, &dpp->sd,
+					ktime_set(0, 0));
+			goto irq_end;
+		}
+#endif
+	} else { /* IDMA case */
 		irqs = idma_reg_get_irq_and_clear(dpp->id);
 
 		if (irqs & IDMA_RECOVERY_TRG_IRQ) {
@@ -1201,11 +1132,7 @@ static int dpp_probe(struct platform_device *pdev)
 
 	dpp_init_subdev(dpp);
 	platform_set_drvdata(pdev, dpp);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
-	timer_setup(&dpp->op_timer, (void (*)(struct timer_list *))dpp_op_timer_handler, 0);
-#else
 	timer_setup(&dpp->op_timer, dpp_op_timer_handler, 0);
-#endif
 
 	/* dpp becomes output device of connected DECON in case of writeback */
 	ret = dpp_set_output_device(dpp);

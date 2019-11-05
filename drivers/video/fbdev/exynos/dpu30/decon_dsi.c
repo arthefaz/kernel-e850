@@ -33,10 +33,6 @@
 #ifdef CONFIG_EXYNOS_ALT_DVFS
 struct task_struct *devfreq_change_task;
 #endif
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-#include "dqe.h"
-#endif
-#include "./panels/exynos_panel_drv.h"
 
 /* DECON irq handler for DSI interface */
 static irqreturn_t decon_irq_handler(int irq, void *dev_data)
@@ -44,6 +40,11 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 	struct decon_device *decon = dev_data;
 	u32 irq_sts_reg;
 	u32 ext_irq = 0;
+
+	if (IS_ERR_OR_NULL(decon)) {
+		decon_err("%s decon has null pointer\n", __func__);
+		BUG();
+	}
 
 	spin_lock(&decon->slock);
 	if (IS_DECON_OFF_STATE(decon))
@@ -69,9 +70,6 @@ static irqreturn_t decon_irq_handler(int irq, void *dev_data)
 		decon_hiber_trig_reset(decon);
 		if (decon->state == DECON_STATE_TUI)
 			decon_info("%s:%d TUI Frame Done\n", __func__, __LINE__);
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-		decon_dqe_lpd_data_read(decon);
-#endif
 	}
 
 	if (ext_irq & DPU_RESOURCE_CONFLICT_INT_PEND)
@@ -270,9 +268,6 @@ static irqreturn_t decon_ext_irq_handler(int irq, void *dev_id)
 
 	decon_systrace(decon, 'C', "decon_te_signal", 0);
 	decon->vsync.timestamp = timestamp;
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-	decon_set_esd_timestamp(decon, timestamp);
-#endif
 	wake_up_interruptible_all(&decon->vsync.wait);
 
 	spin_unlock(&decon->slock);
@@ -395,7 +390,7 @@ void decon_destroy_vsync_thread(struct decon_device *decon)
 
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 #define ESD_RECOVERY_RETRY_CNT	5
-int decon_handle_recovery(struct decon_device *decon)
+static int decon_handle_esd(struct decon_device *decon)
 {
 	struct dsim_device *dsim;
 	int ret = 0;
@@ -433,7 +428,7 @@ int decon_handle_recovery(struct decon_device *decon)
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION_TEST)
 		status = DSIM_ESD_OK;
 #else
-		status = dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_READ_STATE, NULL);
+		status = dsim_call_panel_ops(dsim, EXYNOS_PANEL_READ_STATE, NULL);
 #endif
 		if (status != DSIM_ESD_OK) {
 			decon_err("%s failed to recover subdev(status %d)\n",
@@ -457,18 +452,15 @@ int decon_handle_recovery(struct decon_device *decon)
 	if (retry > ESD_RECOVERY_RETRY_CNT) {
 		decon_err("DECON:ERR:%s:failed to recover(retry %d times)\n",
 				__func__, ESD_RECOVERY_RETRY_CNT);
-		if (dsim_check_panel_connect(dsim) == -ENODEV)
-			decon_err("%s:%d, panel is not connected...\n",
-					__func__, __LINE__);
-		else {
-			decon_dump(decon);
-			BUG();
-		}
+		decon_dump(decon);
+		if (decon->dt.out_type == DECON_OUT_DSI)
+			v4l2_subdev_call(decon->out_sd[0], core, ioctl,
+					DSIM_IOC_DUMP, NULL);
+		BUG();
 	}
 
 	dsim->esd_recovering = false;
-	decon_set_bypass(decon, false);
-
+	decon_bypass_off(decon);
 	decon_info("%s -\n", __func__);
 
 	return ret;
@@ -477,26 +469,20 @@ int decon_handle_recovery(struct decon_device *decon)
 static void decon_esd_process(int esd, struct decon_device *decon)
 {
 	int ret;
-	struct dsim_device *dsim;
 
 	switch (esd) {
 	case DSIM_ESD_CHECK_ERROR:
-		decon_info("%s, fail to read power mode of DDI(%d)\n", __func__, esd);
+		decon_err("%s, It is not ESD, \
+			but DDI is abnormal state(%d)\n", __func__, esd);
 		break;
 	case DSIM_ESD_OK:
-		decon_dbg("%s, DDI has normal state(%d)\n", __func__, esd);
+		decon_info("%s, DDI has normal state(%d)\n", __func__, esd);
 		break;
 	case DSIM_ESD_ERROR:
-		dsim = v4l2_get_subdevdata(decon->out_sd[0]);
-		if (dsim_check_panel_connect(dsim) == -ENODEV)
-			decon_err("%s:%d, panel is not connected...\n",
-					__func__, __LINE__);
-		else {
-			decon_err("%s, ESD is detected(%d)\n", __func__, esd);
-			ret = decon_handle_recovery(decon);
-			if (ret)
-				decon_err("%s, failed to recover ESD\n", __func__);
-		}
+		decon_err("%s, ESD is detected(%d)\n", __func__, esd);
+		ret = decon_handle_esd(decon);
+		if (ret)
+			decon_err("%s, failed to recover ESD\n", __func__);
 		break;
 	default:
 		decon_err("%s, Not supported value(%d)\n", __func__, esd);
@@ -504,47 +490,17 @@ static void decon_esd_process(int esd, struct decon_device *decon)
 	}
 }
 
-#define ESD_VSYNC_CHECK_TIME	200	/* unit : ms */
-static int decon_esd_check(struct decon_device *decon, bool time_check)
-{
-	ktime_t time = ktime_get();
-	struct dsim_device *dsim = NULL;
-	int esd_status = DSIM_ESD_OK;
-
-	if (time_check) {
-		/* ktime_t is nanosecond scalar representation for kernel time values */
-		if (time > (decon_get_esd_timestamp(decon) + ESD_VSYNC_CHECK_TIME * 1000000)) {
-			esd_status = DSIM_ESD_ERROR;
-			if (decon->dt.psr_mode == DECON_MIPI_COMMAND_MODE)
-				decon_err(" %s, no TE signal for over %d ms!!! ",
-						__func__, ESD_VSYNC_CHECK_TIME);
-			else if (decon->dt.psr_mode == DECON_VIDEO_MODE)
-				decon_err(" %s, no Vsync for over %d ms!!! ",
-						__func__, ESD_VSYNC_CHECK_TIME);
-			return esd_status;
-		}
-	}
-
-	dsim = container_of(decon->out_sd[0], struct dsim_device, sd);
-	decon_dbg("%s, Try to check a power state of ddi\n", __func__);
-	esd_status = dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_READ_STATE, NULL);
-
-	return esd_status;
-}
-
 static int decon_esd_thread(void *data)
 {
 	struct decon_device *decon = data;
-	int esd_status = DSIM_ESD_OK;
-	bool time_check = false;
+	struct dsim_device *dsim = NULL;
+	int esd = 0;
 
 	while (!kthread_should_stop()) {
 		/* Loop for ESD detection */
-		if ((decon->state == DECON_STATE_OFF)
-			|| (decon->state == DECON_STATE_DOZE_SUSPEND)
-			|| (decon->state == DECON_STATE_TUI)) {
+		if (decon->state == DECON_STATE_OFF) {
 			/* go to sleep when decon is not ready */
-			decon_dbg("%s, Sleep \n", __func__);
+			decon_info("%s, Sleep \n", __func__);
 			set_current_state(TASK_INTERRUPTIBLE);
 			schedule();
 			set_current_state(TASK_RUNNING);
@@ -552,33 +508,30 @@ static int decon_esd_thread(void *data)
 		}
 
 		decon_hiber_block_exit(decon);
-		if (IS_DECON_ON_STATE(decon)) {
+		if (decon->state == DECON_STATE_ON) {
 			mutex_lock(&decon->esd.lock);
-			if (decon->esd.need_check) {
-				if (decon_get_esd_recovery(decon))
-					esd_status = DSIM_ESD_ERROR;
-				else {
-					esd_status = decon_esd_check(decon, time_check);
-					if (decon_get_esd_recovery(decon))
-						esd_status = DSIM_ESD_ERROR;
-				}
-				decon_esd_process(esd_status, decon);
-				decon_set_esd_recovery(decon, false);
-			}
+
+			dsim = container_of(decon->out_sd[0],
+					struct dsim_device, sd);
+
+			decon_info("%s, Try to check ESD\n", __func__);
+
+			esd = dsim_call_panel_ops(dsim, EXYNOS_PANEL_READ_STATE, NULL);
+			decon_esd_process(esd, decon);
+
 			mutex_unlock(&decon->esd.lock);
 		}
 		decon_hiber_unblock(decon);
 		/* sleep ESD_SLEEP_TIME second when decon is not state on
 		 * and after read DDI state
 		 */
-		decon_dbg("%s, Sleep %d second\n", __func__, ESD_SLEEP_TIME);
+		decon_info("%s, Sleep %d second\n", __func__, ESD_SLEEP_TIME);
 		set_current_state(TASK_INTERRUPTIBLE);
 		schedule_timeout(ESD_SLEEP_TIME * HZ);
 	}
 	/* when if kthread_should_stop() return true */
 	return 0;
 }
-
 
 int decon_create_esd_thread(struct decon_device *decon)
 {
@@ -668,6 +621,26 @@ void decon_destroy_psr_info(struct decon_device *decon)
 	device_remove_file(decon->dev, &dev_attr_psr_info);
 }
 
+static ssize_t decon_show_hiber_exit(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct decon_device *decon = dev_get_drvdata(dev);
+	char *p = buf;
+	int len = 0;
+
+	decon_dbg("%s +\n", __func__);
+
+	if (!decon->hiber.early_wakeup_enable)
+		return len;
+
+	decon->hiber.early_wakeup_cnt++;
+	kthread_queue_work(&decon->hiber.exit_worker, &decon->hiber.exit_work);
+	len = sprintf(p, "%d\n", decon->hiber.early_wakeup_cnt);
+
+	decon_dbg("%s -\n", __func__);
+	return len;
+}
+static DEVICE_ATTR(hiber_exit, S_IRUGO, decon_show_hiber_exit, NULL);
 
 /* Framebuffer interface related callback functions */
 static u32 fb_visual(u32 bits_per_pixel, unsigned short palette_sz)
@@ -1027,11 +1000,7 @@ int decon_exit_hiber(struct decon_device *decon)
 
 	decon_to_init_param(decon, &p);
 	decon_reg_init(decon->id, decon->dt.out_idx[0], &p);
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-	decon_dqe_restore_context(decon);
-	decon_dqe_lpd_data_write(decon);
-	decon_dqe_start(decon, decon->lcd_info);
-#endif
+
 	/*
 	 * After hibernation exit, If panel is partial size, DECON and DSIM
 	 * are also set as same partial size.
@@ -1178,9 +1147,25 @@ static void decon_hiber_handler(struct kthread_work *work)
 	atomic_dec(&decon->hiber.remaining_hiber);
 }
 
+static void decon_exit_hiber_handler(struct kthread_work *work)
+{
+	struct decon_hiber *hiber =
+		container_of(work, struct decon_hiber, exit_work);
+	struct decon_device *decon =
+		container_of(hiber, struct decon_device, hiber);
+
+	if (!decon || !decon->hiber.enabled)
+		return;
+
+	decon_dbg("%s +\n", __func__);
+	decon_exit_hiber(decon);
+	decon_dbg("%s -\n", __func__);
+}
+
 int decon_register_hiber_work(struct decon_device *decon)
 {
 	struct sched_param param;
+	int ret = 0;
 
 	decon->hiber.enabled = false;
 	if (!IS_ENABLED(CONFIG_EXYNOS_HIBERNATION)) {
@@ -1209,6 +1194,35 @@ int decon_register_hiber_work(struct decon_device *decon)
 	decon->hiber.enabled = true;
 	decon_info("display supports hibernation mode\n");
 
+	/* register asynchronous hibernation early wakeup feature */
+	decon->hiber.early_wakeup_enable = false;
+	if (!IS_ENABLED(CONFIG_EXYNOS_HIBERNATION_EARLY_WAKEUP) || (decon->id)) {
+		decon_info("hibernation early wakeup is disabled\n");
+		return 0;
+	}
+
+	/* initialize exit hibernation thread */
+	kthread_init_worker(&decon->hiber.exit_worker);
+	decon->hiber.exit_thread = kthread_run(kthread_worker_fn,
+			&decon->hiber.exit_worker, "decon_exit_hiber");
+	if (IS_ERR(decon->hiber.exit_thread)) {
+		decon->hiber.exit_thread = NULL;
+		decon_err("failed to run exit hibernation thread\n");
+		return PTR_ERR(decon->hiber.exit_thread);
+	}
+	param.sched_priority = 20;
+	sched_setscheduler_nocheck(decon->hiber.exit_thread, SCHED_FIFO, &param);
+	kthread_init_work(&decon->hiber.exit_work, decon_exit_hiber_handler);
+	decon->hiber.early_wakeup_cnt = 0;
+
+	ret = device_create_file(decon->dev, &dev_attr_hiber_exit);
+	if (ret) {
+		decon_err("failed to create hiber exit file\n");
+		return ret;
+	}
+	decon->hiber.early_wakeup_enable = true;
+	decon_info("hibernation early wakeup is enabled\n");
+
 	return 0;
 }
 
@@ -1227,6 +1241,7 @@ void decon_init_low_persistence_mode(struct decon_device *decon)
 
 void dpu_init_freq_hop(struct decon_device *decon)
 {
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 	if (IS_ENABLED(CONFIG_EXYNOS_FREQ_HOP)) {
 		decon->freq_hop.enabled = true;
 		decon->freq_hop.target_m = decon->lcd_info->dphy_pms.m;
@@ -1236,19 +1251,23 @@ void dpu_init_freq_hop(struct decon_device *decon)
 	} else {
 		decon->freq_hop.enabled = false;
 	}
+#endif
 }
 
 void dpu_update_freq_hop(struct decon_device *decon)
 {
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 	if (!decon->freq_hop.enabled)
 		return;
 
 	decon->freq_hop.target_m = decon->freq_hop.request_m;
 	decon->freq_hop.target_k = decon->freq_hop.request_k;
+#endif
 }
 
 void dpu_set_freq_hop(struct decon_device *decon, bool en)
 {
+#if !defined(CONFIG_SOC_EXYNOS9820_EVT0)
 	struct stdphy_pms *pms;
 	struct decon_freq_hop freq_hop;
 	u32 target_m = decon->freq_hop.target_m;
@@ -1282,4 +1301,5 @@ void dpu_set_freq_hop(struct decon_device *decon, bool en)
 #endif
 		}
 	}
+#endif
 }

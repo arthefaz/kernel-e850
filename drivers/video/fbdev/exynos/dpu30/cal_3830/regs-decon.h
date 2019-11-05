@@ -171,6 +171,8 @@
 #define BLENDER_BG_WIDTH_MASK			(0x3fff << 0)
 #define BLENDER_BG_WIDTH_GET(_v)		(((_v) >> 0) & 0x3fff)
 
+#define BLENDER_BG_IMAGE_SIZE_1         0x0204
+
 #define BLENDER_BG_IMAGE_COLOR_0		0x0208
 #define BLENDER_BG_A_F(_v)			((_v) << 16)
 #define BLENDER_BG_A_MASK			(0xff << 16)

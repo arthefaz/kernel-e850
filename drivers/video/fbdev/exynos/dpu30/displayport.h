@@ -29,8 +29,12 @@
 #include <linux/ccic/ccic_notifier.h>
 #endif
 
-#if defined(CONFIG_SOC_EXYNOS9630)
-#include "./cal_9630/regs-displayport.h"
+#if defined(CONFIG_SOC_EXYNOS9810)
+#include "./cal_9810/regs-displayport.h"
+#elif defined(CONFIG_SOC_EXYNOS9820)
+#include "./cal_9820/regs-displayport.h"
+#elif defined(CONFIG_SOC_EXYNOS9830)
+#include "./cal_9830/regs-displayport.h"
 #endif
 
 #include "./panels/exynos_panel.h"
@@ -619,12 +623,6 @@ struct displayport_sst {
 	int audio_buf_empty_check;
 
 	struct displayport_vc_config *vc_config;
-};
-
-enum dp_state {
-	DP_DISCONNECT,
-	DP_CONNECT,
-	DP_HDCP_READY,
 };
 
 struct displayport_device {

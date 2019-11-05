@@ -10,7 +10,6 @@
 */
 
 #include <linux/kernel.h>
-#include <linux/version.h>
 #include <linux/errno.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
@@ -32,7 +31,9 @@
 #include <soc/samsung/cal-if.h>
 #endif
 
-#if defined(CONFIG_SOC_EXYNOS9630) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
+#if defined(CONFIG_SOC_EXYNOS9830)
+#include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
+#elif defined(CONFIG_SOC_EXYNOS9630) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
 #include <dt-bindings/soc/samsung/exynos9630-devfreq.h>
 #include <dt-bindings/clock/exynos9630.h>
 #elif defined(CONFIG_SOC_EXYNOS3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
@@ -393,9 +394,6 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 	u32 rx_fifo_depth = DSIM_RX_FIFO_MAX_DEPTH;
 	struct decon_device *decon = get_decon_drvdata(0);
 	struct dsim_regs regs;
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-	int ret2;
-#endif
 
 	decon_hiber_block_exit(decon);
 
@@ -421,15 +419,6 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 
 	if (!wait_for_completion_timeout(&dsim->rd_comp, MIPI_RD_TIMEOUT)) {
 		dsim_err("MIPI DSIM read Timeout!\n");
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-		decon_set_esd_recovery(decon, true);
-		decon_bypass_on(decon);
-		if (decon->esd.thread) {
-			ret2 = wake_up_process(decon->esd.thread);
-			dsim_info("%s:%d, wakeup esd thread(%d)\n", __func__,
-				__LINE__, ret2);
-		}
-#endif
 		return -ETIMEDOUT;
 	}
 
@@ -443,8 +432,11 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 		switch (rx_fifo & 0xff) {
 		case MIPI_DSI_RX_ACKNOWLEDGE_AND_ERROR_REPORT:
 			ret = dsim_reg_rx_err_handler(dsim->id, rx_fifo);
-			if (ret < 0)
+			if (ret < 0) {
+				dsim_to_regs_param(dsim, &regs);
+				__dsim_dump(dsim->id, &regs);
 				goto exit;
+			}
 			break;
 		case MIPI_DSI_RX_END_OF_TRANSMISSION:
 			dsim_dbg("EoTp was received from LCD module.\n");
@@ -457,39 +449,28 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 			break;
 		case MIPI_DSI_RX_DCS_SHORT_READ_RESPONSE_2BYTE:
 		case MIPI_DSI_RX_GENERIC_SHORT_READ_RESPONSE_2BYTE:
-			if (cnt < 2) {
-				dsim_err("2bytes Short Packet was received from LCD\n");
-				dsim_err("But requested max return packet size : %d", cnt);
-			} else
-				dsim_dbg("2bytes Short Packet was received from LCD\n");
+			dsim_dbg("2bytes Short Packet was received from LCD\n");
 			for (i = 0; i < 2; i++)
-				if (i < cnt)
-					buf[i] = (rx_fifo >> (8 + i * 8)) & 0xff;
+				buf[i] = (rx_fifo >> (8 + i * 8)) & 0xff;
 			rx_size = 2;
 			break;
 		case MIPI_DSI_RX_DCS_LONG_READ_RESPONSE:
 		case MIPI_DSI_RX_GENERIC_LONG_READ_RESPONSE:
 			dsim_dbg("Long Packet was received from LCD module.\n");
 			rx_size = (rx_fifo & 0x00ffff00) >> 8;
-			if (cnt < rx_size) {
-				dsim_err("rx fifo : %8x, response : %x, rx_size : %d\n",
-						rx_fifo, rx_fifo & 0xff, rx_size);
-				dsim_err("But requested max return packet size : %d", cnt);
-			} else
-				dsim_dbg("rx fifo : %8x, response : %x, rx_size : %d\n",
-						rx_fifo, rx_fifo & 0xff, rx_size);
+			dsim_dbg("rx fifo : %8x, response : %x, rx_size : %d\n",
+					rx_fifo, rx_fifo & 0xff, rx_size);
 			/* Read data from RX packet payload */
 			for (i = 0; i < rx_size >> 2; i++) {
 				rx_fifo = dsim_reg_get_rx_fifo(dsim->id);
 				for (j = 0; j < 4; j++)
-					if ((4 * i + j) < cnt)
-						buf[4 * i + j] = (u8)(rx_fifo >> (j * 8)) & 0xff;
+					buf[(i*4)+j] = (u8)(rx_fifo >> (j * 8)) & 0xff;
 			}
 			if (rx_size % 4) {
 				rx_fifo = dsim_reg_get_rx_fifo(dsim->id);
 				for (j = 0; j < rx_size % 4; j++)
-					if ((4 * i + j) < cnt)
-						buf[4 * i + j] = (u8)(rx_fifo >> (j * 8)) & 0xff;
+					buf[4 * i + j] =
+						(u8)(rx_fifo >> (j * 8)) & 0xff;
 			}
 			break;
 		default:
@@ -515,39 +496,6 @@ exit:
 	return ret;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
-static void dsim_cmd_fail_detector(unsigned long arg)
-{
-	struct dsim_device *dsim = from_timer(dsim, (struct timer_list *)arg, cmd_timer);
-	struct decon_device *decon = get_decon_drvdata(0);
-	struct dsim_regs regs;
-
-	decon_hiber_block(decon);
-
-	dsim_dbg("%s +\n", __func__);
-	if (IS_DSIM_OFF_STATE(dsim)) {
-		dsim_err("%s: DSIM is not ready. state(%d)\n", __func__,
-				dsim->state);
-		goto exit;
-	}
-
-	/* If already FIFO empty even though the timer is no pending */
-	if (!timer_pending(&dsim->cmd_timer)
-			&& dsim_reg_header_fifo_is_empty(dsim->id)) {
-		reinit_completion(&dsim->ph_wr_comp);
-		dsim_reg_clear_int(dsim->id, DSIM_INTSRC_SFR_PH_FIFO_EMPTY);
-		goto exit;
-	}
-
-	dsim_to_regs_param(dsim, &regs);
-	__dsim_dump(dsim->id, &regs);
-
-exit:
-	decon_hiber_unblock(decon);
-	dsim_dbg("%s -\n", __func__);
-	return;
-}
-#else
 static void dsim_cmd_fail_detector(struct timer_list *arg)
 {
 	struct dsim_device *dsim = from_timer(dsim, arg, cmd_timer);
@@ -579,7 +527,6 @@ exit:
 	dsim_dbg("%s -\n", __func__);
 	return;
 }
-#endif
 
 #if defined(CONFIG_EXYNOS_BTS)
 #if 0
@@ -683,9 +630,6 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 		dsim_dbg("dsim%d vt_status(vsync) irq occurs\n", dsim->id);
 		if (decon) {
 			decon->vsync.timestamp = ktime_get();
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-			decon_set_esd_timestamp(decon, decon->vsync.timestamp);
-#endif
 			wake_up_interruptible_all(&decon->vsync.wait);
 		}
 	}
@@ -736,19 +680,6 @@ int dsim_set_panel_power(struct dsim_device *dsim, bool on)
 		ret = v4l2_subdev_call(sd, core, ioctl, EXYNOS_PANEL_IOC_POWEROFF, NULL);
 
 	return ret;
-}
-
-int dsim_check_panel_connect(struct dsim_device *dsim)
-{
-	struct v4l2_subdev *sd;
-
-	if (IS_ERR_OR_NULL(dsim->panel)) {
-		dsim_err("%s: panel ptr is NULL\n", __func__);
-		return -ENOMEM;
-	}
-
-	sd = &dsim->panel->sd;
-	return v4l2_subdev_call(sd, core, ioctl, EXYNOS_PANEL_IOC_CHECK_CONNECT, NULL);
 }
 
 static char *rpm_status_name[] = {
@@ -839,7 +770,7 @@ static int _dsim_enable(struct dsim_device *dsim, enum dsim_state state)
 	/* DPHY power on : iso release */
 	dsim_phy_power_on(dsim);
 
-	panel_ctrl = (state == DSIM_STATE_ON) ? true : false;
+	panel_ctrl = (dsim->state == DSIM_STATE_OFF) ? true : false;
 	dsim_reg_init(dsim->id, &dsim->panel->lcd_info, &dsim->clks, panel_ctrl);
 	dsim_reg_start(dsim->id);
 
@@ -869,7 +800,7 @@ static int dsim_enable(struct dsim_device *dsim)
 		goto out;
 	}
 
-	if (prev_state != DSIM_STATE_INIT)
+	if (prev_state == DSIM_STATE_OFF)
 		dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DISPLAYON, NULL);
 
 	dsim_info("dsim-%d %s - (state:%s -> %s)\n", dsim->id, __func__,
@@ -899,7 +830,7 @@ static int dsim_doze(struct dsim_device *dsim)
 				dsim->id, dsim_state_names[next_state], ret);
 		goto out;
 	}
-	if (prev_state == DSIM_STATE_OFF)
+	if (prev_state != DSIM_STATE_INIT)
 		dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DOZE, NULL);
 
 	dsim_info("dsim-%d %s - (state:%s -> %s)\n", dsim->id, __func__,
@@ -1701,10 +1632,12 @@ static int dsim_register_panel(struct dsim_device *dsim)
 	dsim_read_panel_id(dsim, &panel_id);
 	dsim_info("panel_id = 0x%x\n", panel_id);
 
-	ret = dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_REGISTER, &panel_id);
-	if (ret) {
-		dsim_err("%s: cannot find proper panel\n", __func__);
-		BUG();
+	if (!IS_ENABLED(CONFIG_EXYNOS_VIRTUAL_DISPLAY)) {
+		ret = dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_REGISTER, &panel_id);
+		if (ret) {
+			dsim_err("%s: cannot find proper panel\n", __func__);
+			BUG();
+		}
 	}
 
 	dsim->clks.hs_clk = dsim->panel->lcd_info.hs_clk;
@@ -1767,11 +1700,7 @@ static int dsim_probe(struct platform_device *pdev)
 
 	dsim_init_subdev(dsim);
 	platform_set_drvdata(pdev, dsim);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
-	timer_setup(&dsim->cmd_timer, (void (*)(struct timer_list *))dsim_cmd_fail_detector, 0);
-#else
 	timer_setup(&dsim->cmd_timer, dsim_cmd_fail_detector, 0);
-#endif
 
 #if defined(CONFIG_CPU_IDLE)
 	dsim->idle_ip_index = exynos_get_idle_ip_index(dev_name(&pdev->dev));

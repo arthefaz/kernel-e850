@@ -25,19 +25,19 @@
 #include <linux/sched/types.h>
 #include <linux/highmem.h>
 #include <linux/memblock.h>
-#include <linux/notifier.h>
 #include <linux/bug.h>
 #include <linux/of_address.h>
 #include <linux/debugfs.h>
 #include <linux/pinctrl/consumer.h>
 #include <video/mipi_display.h>
-#include <linux/version.h>
 #include <media/v4l2-subdev.h>
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
 
-#if defined(CONFIG_SOC_EXYNOS9630) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
+#if defined(CONFIG_SOC_EXYNOS9830)
+#include <dt-bindings/soc/samsung/exynos9830-devfreq.h>
+#elif defined(CONFIG_SOC_EXYNOS9630) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
 #include <dt-bindings/soc/samsung/exynos9630-devfreq.h>
 #include <dt-bindings/clock/exynos9630.h>
 #elif defined(CONFIG_SOC_EXYNOS3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
@@ -54,9 +54,6 @@
 #include "dpp.h"
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
 #include "displayport.h"
-#endif
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-#include "dqe.h"
 #endif
 
 int decon_log_level = 6;
@@ -161,7 +158,6 @@ void decon_dump(struct decon_device *decon)
 {
 	int acquired = console_trylock();
 	void __iomem *base_regs = get_decon_drvdata(0)->res.regs;
-	u32 dsc_en = get_decon_drvdata(0)->lcd_info->dsc.en;
 
 	if (IS_DECON_OFF_STATE(decon)) {
 		decon_info("%s: DECON%d is disabled, state(%d)\n",
@@ -169,12 +165,7 @@ void decon_dump(struct decon_device *decon)
 		return;
 	}
 
-	/* decon2 needs decon0 setting info */
-	if (decon->id)
-		__decon_dump(0, base_regs, base_regs, dsc_en);
-
-	__decon_dump(decon->id, decon->res.regs, base_regs,
-			decon->lcd_info->dsc.en);
+	__decon_dump(decon->id, decon->res.regs, base_regs, 0);
 
 	if (decon->dt.out_type == DECON_OUT_DSI)
 		v4l2_subdev_call(decon->out_sd[0], core, ioctl,
@@ -572,14 +563,6 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 	decon->state = state;
 	decon_reg_set_int(decon->id, &psr, 1);
 
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-	decon_dqe_enable(decon);
-#endif
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-	if (decon->dt.out_type == DECON_OUT_DSI)
-		decon->esd.need_check = true;
-#endif
-
 err:
 	return ret;
 }
@@ -732,11 +715,6 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 	if (atomic_read(&decon->up.remaining_frame))
 		kthread_flush_worker(&decon->up.worker);
 
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-	if (decon->dt.out_type == DECON_OUT_DSI)
-		decon->esd.need_check = false;
-#endif
-
 	decon_to_psr_info(decon, &psr);
 	decon_reg_set_int(decon->id, &psr, 0);
 
@@ -752,9 +730,6 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 		decon_displayport_under_flow_int_mask(decon->id);
 #endif
 
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-	decon_dqe_disable(decon);
-#endif
 	ret = decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, true,
 			decon->lcd_info->fps);
 	if (ret < 0)
@@ -1026,11 +1001,9 @@ static int decon_blank(int blank_mode, struct fb_info *info)
 			decon_err("failed to disable decon\n");
 			goto blank_exit;
 		}
-		lcd_status_notifier(LCD_OFF);
 		break;
 	case FB_BLANK_UNBLANK:
 		DPU_EVENT_LOG(DPU_EVT_UNBLANK, &decon->sd, ktime_set(0, 0));
-		lcd_status_notifier(LCD_ON);
 		ret = decon_update_pwr_state(decon, DISP_PWR_NORMAL);
 		if (ret) {
 			decon_err("failed to enable decon\n");
@@ -1088,16 +1061,14 @@ int decon_wait_for_vsync(struct decon_device *decon, u32 timeout)
 {
 	ktime_t timestamp;
 	struct decon_mode_info psr;
-	struct dsim_device *dsim;
-	int ret = 0;
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-	int ret2;
-#endif
+	int ret;
 
 	decon_to_psr_info(decon, &psr);
 
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 	if (decon_is_bypass(decon))
 		return 0;
+#endif
 
 	if (psr.trig_mode != DECON_HW_TRIG)
 		return 0;
@@ -1124,32 +1095,10 @@ int decon_wait_for_vsync(struct decon_device *decon, u32 timeout)
 			decon_err("decon%d wait for vsync timeout\n", decon->id);
 		}
 
-		if (psr.out_type == DECON_OUT_DSI) {
-			dsim = v4l2_get_subdevdata(decon->out_sd[0]);
-			if (dsim_check_panel_connect(dsim) == -ENODEV) {
-				decon_err("%s:%d, panel is not connected...\n",
-						__func__, __LINE__);
-				decon_bypass_on(decon);
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-			} else {
-				decon_set_esd_recovery(decon, true);
-				decon_bypass_on(decon);
-				if (decon->esd.thread) {
-					ret2 = wake_up_process(decon->esd.thread);
-					decon_info("%s:%d, wakeup esd thread(%d)\n",
-							__func__, __LINE__, ret2);
-				}
-				ret = 0;
-			}
-#else
-			} else
-				ret = -ETIMEDOUT;
-#endif /* #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION) */
-		} else
-			ret = -ETIMEDOUT;
+		return -ETIMEDOUT;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int decon_find_biggest_block_rect(struct decon_device *decon,
@@ -2201,8 +2150,10 @@ static void decon_update_regs(struct decon_device *decon,
 
 		decon_wait_for_vstatus(decon, 50);
 		if (decon_reg_wait_update_done_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 			if (decon_is_bypass(decon))
 				goto end;
+#endif
 			decon_up_list_saved();
 #if defined(CONFIG_EXYNOS_AFBC_DEBUG)
 			decon_dump_afbc_handle(decon, old_dma_bufs);
@@ -2505,12 +2456,19 @@ static int decon_set_win_config(struct decon_device *decon,
 	mutex_lock(&decon->lock);
 
 	if (IS_DECON_OFF_STATE(decon) ||
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 		decon_is_bypass(decon) ||
+#endif
 		decon->state == DECON_STATE_TUI ||
 		IS_ENABLED(CONFIG_EXYNOS_VIRTUAL_DISPLAY)) {
+#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 		decon_warn("decon-%d skip win_config(state:%s, bypass:%s)\n",
 				decon->id, decon_state_names[decon->state],
 				decon_is_bypass(decon) ? "on" : "off");
+#else
+		decon_warn("decon-%d skip win_config(state:%s)\n",
+				decon->id, decon_state_names[decon->state]);
+#endif
 		win_data->retire_fence = decon_create_fence(decon, &sync_file);
 		if (win_data->retire_fence < 0)
 			goto err;
@@ -2655,6 +2613,7 @@ static int decon_get_color_mode(struct decon_device *decon,
 {
 	int ret = 0;
 
+	decon_dbg("%s +\n", __func__);
 	mutex_lock(&decon->lock);
 
 	switch (color_mode->index) {
@@ -2662,17 +2621,7 @@ static int decon_get_color_mode(struct decon_device *decon,
 		color_mode->color_mode = HAL_COLOR_MODE_NATIVE;
 		break;
 
-	case 1:
-		color_mode->color_mode = HAL_COLOR_MODE_SRGB;
-		break;
-
-	case 2:
-		color_mode->color_mode = HAL_COLOR_MODE_DCI_P3;
-		break;
-
-	case 3:
-		color_mode->color_mode = HAL_COLOR_MODE_DISPLAY_P3;
-		break;
+	/* TODO: add supporting color mode if necessary */
 
 	default:
 		decon_err("%s: queried color mode index is wrong!(%d)\n",
@@ -2681,10 +2630,8 @@ static int decon_get_color_mode(struct decon_device *decon,
 		break;
 	}
 
-	decon_dbg("%s +- : %d, %d\n", __func__,
-		color_mode->index, color_mode->color_mode);
-
 	mutex_unlock(&decon->lock);
+	decon_dbg("%s -\n", __func__);
 
 	return ret;
 }
@@ -2694,9 +2641,9 @@ static int decon_set_color_mode(struct decon_device *decon,
 {
 	int ret = 0;
 
-	decon_dbg("%s +-: %d\n", __func__, color_mode->index);
+	decon_dbg("%s +\n", __func__);
 	mutex_lock(&decon->lock);
-#if 0
+
 	switch (color_mode->index) {
 	case 0:
 		color_mode->color_mode = HAL_COLOR_MODE_NATIVE;
@@ -2710,39 +2657,9 @@ static int decon_set_color_mode(struct decon_device *decon,
 		ret = -EINVAL;
 		break;
 	}
-#endif
-	mutex_unlock(&decon->lock);
-
-	return ret;
-}
-
-static int decon_get_render_intent_info(struct decon_device *decon,
-		struct decon_render_intent_info *intent_info)
-{
-	int ret = 0;
-
-	mutex_lock(&decon->lock);
-
-	switch (intent_info->index) {
-	case 0:
-		intent_info->render_intent = HAL_RENDER_INTENT_COLORIMETRIC;
-		break;
-
-	case 1:
-		intent_info->render_intent = HAL_RENDER_INTENT_ENHANCE;
-		break;
-
-	default:
-		decon_err("%s: queried intent info index is wrong!(%d)\n",
-			__func__, intent_info->index);
-		ret = -EINVAL;
-		break;
-	}
-
-	decon_dbg("%s +- : %d, %d\n", __func__,
-		intent_info->index, intent_info->render_intent);
 
 	mutex_unlock(&decon->lock);
+	decon_dbg("%s -\n", __func__);
 
 	return ret;
 }
@@ -2791,18 +2708,15 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	struct decon_win_config_data __user *argp;
 	struct decon_disp_info __user *argp_info;
 	struct dpp_restrictions_info __user *argp_res;
+	struct decon_color_mode_info cm_info;
+	struct dpp_ch_restriction dpp_ch_restriction;
 	int ret = 0;
 	u32 crtc;
 	bool active;
 	u32 crc_bit, crc_start;
 	u32 crc_data[2];
 	int i;
-	struct decon_color_mode_info cm_info;
 	u32 cm_num;
-	struct decon_render_intents_num_info intents_num_info;
-	struct decon_render_intent_info intent_info;
-	struct decon_color_transform_info transform_info;
-	struct decon_color_mode_with_render_intent_info cm_intent_info;
 	enum disp_pwr_mode pwr;
 
 	decon_hiber_block_exit(decon);
@@ -3071,15 +2985,45 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		}
 		break;
 
+	case EXYNOS_GET_DPP_CNT:
+		if (copy_to_user((u32 __user *)arg, &decon->dt.dpp_cnt,
+					sizeof(u32))) {
+			ret = -EFAULT;
+			break;
+		}
+		break;
+
+	case EXYNOS_GET_DPP_RESTRICTION:
+		if (copy_from_user(&dpp_ch_restriction,
+					(struct dpp_ch_restriction __user *)arg,
+					sizeof(struct dpp_ch_restriction))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		if (dpp_ch_restriction.id >= decon->dt.dpp_cnt) {
+			ret = -EINVAL;
+			decon_err("invalid DPP(%d) channel number\n", dpp_ch_restriction.id);
+			break;
+		}
+
+		v4l2_subdev_call(decon->dpp_sd[dpp_ch_restriction.id], core,
+				ioctl, DPP_GET_RESTRICTION, &dpp_ch_restriction);
+		if (copy_to_user((struct dpp_ch_restriction __user *)arg,
+					&dpp_ch_restriction,
+					sizeof(struct dpp_ch_restriction))) {
+			ret = -EFAULT;
+			break;
+		}
+		break;
+
 	case EXYNOS_GET_COLOR_MODE_NUM:
-		decon_dbg("DQE: EXYNOS_GET_COLOR_MODE_NUM\n");
-		cm_num = DECON_COLOR_MODE_NUM_MAX;
+		cm_num = HAL_COLOR_MODE_NUM_MAX;
 		if (copy_to_user((u32 __user *)arg, &cm_num, sizeof(u32)))
 			ret = -EFAULT;
 		break;
 
 	case EXYNOS_GET_COLOR_MODE:
-		decon_dbg("DQE: EXYNOS_GET_COLOR_MODE\n");
 		if (copy_from_user(&cm_info,
 				   (struct decon_color_mode_info __user *)arg,
 				   sizeof(struct decon_color_mode_info))) {
@@ -3100,7 +3044,6 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		break;
 
 	case EXYNOS_SET_COLOR_MODE:
-		decon_dbg("DQE: EXYNOS_SET_COLOR_MODE\n");
 		if (get_user(cm_info.index, (int __user *)arg)) {
 			ret = -EFAULT;
 			break;
@@ -3109,62 +3052,9 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		ret = decon_set_color_mode(decon, &cm_info);
 		if (ret)
 			break;
-		break;
 
-	case EXYNOS_GET_RENDER_INTENTS_NUM:
-		decon_dbg("DQE: EXYNOS_GET_RENDER_INTENTS_NUM\n");
-		intents_num_info.render_intent_num = DECON_INTENT_NUM_MAX;
-		if (copy_to_user((struct decon_render_intents_num_info __user *)arg, &intents_num_info,
-				sizeof(struct decon_render_intents_num_info))) {
-			ret = -EFAULT;
-			break;
-		}
-		break;
+		/* ADD additional action if necessary */
 
-	case EXYNOS_GET_RENDER_INTENT:
-		decon_dbg("DQE: EXYNOS_GET_RENDER_INTENT\n");
-		if (copy_from_user(&intent_info, (struct decon_render_intent_info __user *)arg,
-				   sizeof(struct decon_render_intent_info))) {
-			ret = -EFAULT;
-			break;
-		}
-
-		ret = decon_get_render_intent_info(decon, &intent_info);
-		if (ret)
-			break;
-
-		if (copy_to_user((struct decon_render_intent_info __user *)arg, &intent_info,
-				sizeof(struct decon_render_intent_info))) {
-			ret = -EFAULT;
-			break;
-		}
-		break;
-
-	case EXYNOS_SET_COLOR_MODE_WITH_RENDER_INTENT:
-		if (copy_from_user(&cm_intent_info, (struct decon_color_mode_with_render_intent_info __user *)arg,
-				   sizeof(struct decon_color_mode_with_render_intent_info))) {
-			ret = -EFAULT;
-			break;
-		}
-
-		decon_dbg("DQE: EXYNOS_SET_COLOR_MOE_WITH_RENDER_INTENT: %d %d\n",
-			cm_intent_info.color_mode, cm_intent_info.render_intent);
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-		ret = decon_dqe_set_color_mode(&cm_intent_info);
-#endif
-		break;
-
-	case EXYNOS_SET_COLOR_TRANSFORM:
-		if (copy_from_user(&transform_info, (struct decon_color_transform_info __user *)arg,
-				   sizeof(struct decon_color_transform_info))) {
-			ret = -EFAULT;
-			break;
-		}
-
-		decon_dbg("DQE: EXYNOS_SET_COLOR_TRANSFORM: %d\n", transform_info.hint);
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-		ret = decon_dqe_set_color_transform(&transform_info);
-#endif
 		break;
 
 	default:
@@ -3458,7 +3348,7 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 
 	vaddr = dma_buf_vmap(buf);
 
-	memset(vaddr, 0x00, size);
+	memset(vaddr, 0xff, size);
 
 	fbi->screen_base = vaddr;
 
@@ -3664,6 +3554,11 @@ static int decon_acquire_window(struct decon_device *decon, int idx)
 static int decon_acquire_windows(struct decon_device *decon)
 {
 	int i, ret;
+
+	if (IS_ENABLED(CONFIG_EXYNOS_VIRTUAL_DISPLAY)) {
+		decon_info("virtual display is enabled\n");
+		return 0;
+	}
 
 	for (i = 0; i < decon->dt.max_win; i++) {
 		ret = decon_acquire_window(decon, i);
@@ -4032,13 +3927,7 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 decon_init_done:
 
 	decon->state = DECON_STATE_INIT;
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-	decon_dqe_enable(decon);
-#endif
-#if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
-	if (decon->dt.out_type == DECON_OUT_DSI)
-		decon->esd.need_check = true;
-#endif
+
 	return 0;
 }
 
@@ -4138,7 +4027,6 @@ static int decon_probe(struct platform_device *pdev)
 	decon->bts.ops->bts_init(decon);
 #endif
 
-	ATOMIC_INIT_NOTIFIER_HEAD(&decon->lcd_status_notifier_list);
 	platform_set_drvdata(pdev, decon);
 	pm_runtime_enable(dev);
 
@@ -4158,10 +4046,6 @@ static int decon_probe(struct platform_device *pdev)
 
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION)
 	decon_set_bypass(decon, false);
-#endif
-
-#if defined(CONFIG_EXYNOS_DECON_DQE)
-	decon_dqe_create_interface(decon);
 #endif
 
 	ret = decon_initial_display(decon, false);

@@ -68,7 +68,8 @@
 
 #define DSIM_DESKEW_CTRL				(0x24)
 #define DSIM_DESKEW_CTRL_HW_EN				(1 << 15)
-#define DSIM_DESKEW_CTRL_HW_POSITION			(1 << 14)
+#define DSIM_DESKEW_CTRL_HW_POSITION(_x)		((_x) << 14)
+#define DSIM_DESKEW_CTRL_HW_POSITION_MASK		(1 << 14)
 #define DSIM_DESKEW_CTRL_HW_INTERVAL(_x)		((_x) << 2)
 #define DSIM_DESKEW_CTRL_HW_INTERVAL_MASK		(0xfff << 2)
 #define DSIM_DESKEW_CTRL_HW_INIT			(1 << 1)
@@ -161,8 +162,10 @@
 #define DSIM_CONFIG_VC_ID_MASK				(0x3 << 15)
 #define DSIM_CONFIG_PIXEL_FORMAT(_x)			((_x) << 9)
 #define DSIM_CONFIG_PIXEL_FORMAT_MASK			(0x3f << 9)
-#define DSIM_CONFIG_PER_FRAME_READ_EN			(1 << 8)
-#define DSIM_CONFIG_EOTP_EN				(1 << 7)
+#define DSIM_CONFIG_PER_FRAME_READ_EN(_x)		((_x) << 8)
+#define DSIM_CONFIG_PER_FRAME_READ_EN_MASK		(1 << 8)
+#define DSIM_CONFIG_EOTP_EN(_x)				((_x) << 7)
+#define DSIM_CONFIG_EOTP_EN_MASK			(1 << 7)
 #define DSIM_CONFIG_NUM_OF_DATA_LANE(_x)		((_x) << 5)
 #define DSIM_CONFIG_NUM_OF_DATA_LANE_MASK		(0x3 << 5)
 #define DSIM_CONFIG_LANES_EN(_x)			(((_x) & 0x1f) << 0)
@@ -404,6 +407,18 @@
 #define DSIM_OPTION_SUITE				(0x010C)
 #define	DSIM_OPTION_SUITE_UPDT_EN_MASK			(0x1 << 0)
 
+#define DSIM_VT_HTIMING0				(0x0110)
+#define DSIM_VT_HTIMING0_HSA_PERIOD(_x)			((_x) << 16)
+#define DSIM_VT_HTIMING0_HSA_PERIOD_MASK		(0xffff << 16)
+#define DSIM_VT_HTIMING0_HACT_PERIOD(_x)		((_x) << 0)
+#define DSIM_VT_HTIMING0_HACT_PERIOD_MASK		(0X1fff << 0)
+
+#define DSIM_VT_HTIMING1				(0X0114)
+#define DSIM_VT_HTIMING1_HFP_PERIOD(_x)			((_x) << 16)
+#define DSIM_VT_HTIMING1_HFP_PERIOD_MASK		(0xffff << 16)
+#define DSIM_VT_HTIMING1_HBP_PERIOD(_x)			((_x) << 0)
+#define DSIM_VT_HTIMING1_HBP_PERIOD_MASK		(0xffff << 0)
+
 /*
  * DPHY  registers
  */
@@ -462,15 +477,19 @@
 #define DSIM_PHY_DITHER_ICP(_x)     (((_x) & 0x3) << 6)
 #define DSIM_PHY_DITHER_ICP_MASK    (0x3 << 6)
 
-#define DSIM_PHY_DITHER_AFC_ENB     (0x1 << 3)
+#define DSIM_PHY_DITHER_AFC_ENB(_x) (((_x) & 0x1) << 3)
+#define DSIM_PHY_DITHER_AFC_ENB_MASK     (0x1 << 3)
 
 #define DSIM_PHY_DITHER_EXTAFC(_x)  (((_x) & 0x1f) << 0)
 #define DSIM_PHY_DITHER_EXTAFC_MASK (0x1f << 0)
 
-#define DSIM_PHY_DITHER_FEED_EN     (0x1 << 4)
+#define DSIM_PHY_DITHER_FEED_EN(_x) (((_x) & 0x1) << 4)
+#define DSIM_PHY_DITHER_FEED_EN_MASK     (0x1 << 4)
 
-#define DSIM_PHY_DITHER_FSEL        (0x1 << 4)
+#define DSIM_PHY_DITHER_FSEL(_x)    (((_x) & 0x1) << 4)
+#define DSIM_PHY_DITHER_FSEL_MASK   (0x1 << 4)
 
+#define DSIM_PHY_DITHER_FOUT(_x)	(((_x) & 0x1) << 5)
 #define DSIM_PHY_DITHER_FOUT_MASK   (0x1 << 5)
 
 #define DSIM_PHY_DITHER_RSEL(_x)    (((_x) & 0xf) << 0)

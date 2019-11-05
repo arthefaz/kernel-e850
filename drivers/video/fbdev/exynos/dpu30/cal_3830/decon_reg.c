@@ -139,42 +139,27 @@ static void decon_reg_set_clkgate_mode(u32 id, u32 en)
 
 /*
  * API is considering real possible Display Scenario
- * such as following examples
- *  < Single display >
- *  < Dual/Triple display >
- *  < Dual display + DP >
- *
- * Current API does not configure various 8K case fully!
- * Therefore, modify/add configuration cases if necessary
- * "Resource Confliction" will happen if enabled simultaneously
  */
-static void decon_reg_set_sram_share(u32 id, enum decon_fifo_mode fifo_mode)
+static void decon_reg_set_sram_share(u32 id)
 {
 	u32 val = FF0_SRAM_SHARE_ENABLE_F;
 
 	decon_write(id, SRAM_SHARE_ENABLE_MAIN, val);
 }
 
-static void decon_reg_set_scaled_image_size(u32 id,
-		enum decon_dsi_mode dsi_mode, struct exynos_panel_info *lcd_info)
-{
-	/* This is not support in exynos3830 */
-}
-
 static void decon_reg_set_frame_fifo_size(u32 id, u32 width, u32 height)
 {
 	u32 val, cnt;
-	u32 th, mask;
+	u32 th;
 
 	val = FRAME_FIFO_HEIGHT_F(height) | FRAME_FIFO_WIDTH_F(width);
 	cnt = height * width;
 
 	decon_write(id, FRAME_FIFO_0_SIZE_CONTROL_0, val);
 	decon_write(id, FRAME_FIFO_0_SIZE_CONTROL_1, cnt);
-	th = FRAME_FIFO_0_TH_F(width);
-	mask = FRAME_FIFO_0_TH_MASK;
 
-	decon_write_mask(id, FRAME_FIFO_TH_CONTROL_0, th, mask);
+	th = FRAME_FIFO_0_TH_F(width);
+	decon_write(id, FRAME_FIFO_TH_CONTROL_0, th);
 }
 
 static void decon_reg_set_rgb_order(u32 id, enum decon_rgb_order order)
@@ -186,54 +171,25 @@ static void decon_reg_set_rgb_order(u32 id, enum decon_rgb_order order)
 	decon_write_mask(id, FORMATTER_CONTROL, val, mask);
 }
 
-static void decon_reg_set_blender_bg_image_size(u32 id,
-		enum decon_dsi_mode dsi_mode, struct exynos_panel_info *lcd_info)
+static void decon_reg_set_blender_bg_image_size(u32 id, struct exynos_panel_info *lcd_info)
 {
-	u32 width, val, mask;
+	u32 val;
 
-	width = lcd_info->xres;
+	val = BLENDER_BG_HEIGHT_F(lcd_info->yres) | BLENDER_BG_WIDTH_F(lcd_info->xres);
+	decon_write(id, BLENDER_BG_IMAGE_SIZE_0, val);
 
-	if (dsi_mode == DSI_MODE_DUAL_DSI)
-		width = width * 2;
-
-	val = BLENDER_BG_HEIGHT_F(lcd_info->yres) | BLENDER_BG_WIDTH_F(width);
-	mask = BLENDER_BG_HEIGHT_MASK | BLENDER_BG_WIDTH_MASK;
-	decon_write_mask(id, BLENDER_BG_IMAGE_SIZE_0, val, mask);
+    val = (lcd_info->yres) * (lcd_info->xres);
+    decon_write(id, BLENDER_BG_IMAGE_SIZE_1, val);
 
 }
 
 static void decon_reg_set_data_path(u32 id, enum decon_data_path d_path,
 		enum decon_enhance_path e_path)
 {
-	u32 val, mask;
+	u32 val;
 
 	val = ENHANCE_LOGIC_PATH_F(e_path) | COMP_LINKIF_WB_PATH_F(d_path);
-	mask = ENHANCE_LOGIC_PATH_MASK | COMP_LINKIF_WB_PATH_MASK;
-	decon_write_mask(id, DATA_PATH_CONTROL_2, val, mask);
-}
-
-/*
- * width : width of updated LCD region
- * height : height of updated LCD region
- * is_dsc : 1: DSC is enabled 0: DSC is disabled
- */
-static void decon_reg_set_data_path_size(u32 id, u32 width, u32 height, bool is_dsc,
-		u32 dsc_cnt, u32 slice_w, u32 slice_h, u32 ds_en[2])
-{
-	decon_reg_set_frame_fifo_size(id, width, height);
-}
-
-/*
- * 'DATA_PATH_CONTROL_2' SFR must be set before calling this function!!
- * [width]
- * - no compression  : x-resolution
- * - dsc compression : width_per_enc
- */
-static void decon_reg_config_data_path_size(u32 id,
-	u32 width, u32 height, u32 overlap_w,
-	struct decon_dsc *p, struct decon_param *param)
-{
-	decon_reg_set_frame_fifo_size(id, width, height);
+	decon_write(id, DATA_PATH_CONTROL_2, val);
 }
 
 static void decon_reg_config_win_channel(u32 id, u32 win_idx, int ch)
@@ -244,40 +200,6 @@ static void decon_reg_config_win_channel(u32 id, u32 win_idx, int ch)
 	mask = WIN_CHMAP_MASK(win_idx);
 	decon_write_mask(id, DATA_PATH_CONTROL_1, val, mask);
 }
-
-static void decon_reg_configure_trigger(u32 id, enum decon_trig_mode mode)
-{
-	u32 val, mask;
-
-	mask = HW_TRIG_EN;
-	val = (mode == DECON_SW_TRIG) ? 0 : ~0;
-	decon_write_mask(id, HW_SW_TRIG_CONTROL, val, mask);
-}
-
-#if 0 //defined(CONFIG_EXYNOS_EWR)
-static void decon_reg_set_ewr_enable(u32 id, u32 en)
-{
-	u32 val, mask;
-
-	mask = EWR_EN_F;
-	val = en ? ~0 : 0;
-	decon_write_mask(id, EWR_CONTROL, val, mask);
-}
-
-static void decon_reg_set_ewr_timer(u32 id, u32 cnt)
-{
-	u32 val;
-
-	val = TIMER_VALUE(cnt);
-	decon_write_mask(id, EWR_TIMER, val, TIMER_VALUE_MASK);
-}
-
-static void decon_reg_set_ewr_control(u32 id, u32 cnt, u32 en)
-{
-	decon_reg_set_ewr_timer(id, cnt);
-	decon_reg_set_ewr_enable(id, en);
-}
-#endif
 
 static void decon_reg_clear_int_all(u32 id)
 {
@@ -294,7 +216,6 @@ static void decon_reg_clear_int_all(u32 id)
 
 static void decon_reg_configure_lcd(u32 id, struct decon_param *p)
 {
-	u32 overlap_w = 0;
 	enum decon_data_path d_path = DPATH_NOCOMP_FF0_FORMATTER0_DSIMIF0;
 	enum decon_enhance_path e_path = ENHANCEPATH_ENHANCE_ALL_OFF;
 
@@ -304,8 +225,7 @@ static void decon_reg_configure_lcd(u32 id, struct decon_param *p)
 
 	decon_reg_set_data_path(id, d_path, e_path);
 
-	decon_reg_config_data_path_size(id,
-			lcd_info->xres, lcd_info->yres, overlap_w, NULL, p);
+	decon_reg_set_frame_fifo_size(id, lcd_info->xres, lcd_info->yres);
 
 	decon_reg_per_frame_off(id);
 }
@@ -316,60 +236,43 @@ static void decon_reg_init_probe(u32 id, u32 dsi_idx, struct decon_param *p)
 	struct decon_mode_info *psr = &p->psr;
 	enum decon_data_path d_path = DPATH_NOCOMP_FF0_FORMATTER0_DSIMIF0;
 	enum decon_enhance_path e_path = ENHANCEPATH_ENHANCE_ALL_OFF;
-	enum decon_rgb_order rgb_order = DECON_RGB;
-	u32 overlap_w = 0; /* default=0 : range=[0, 32] & (multiples of 2) */
 
 	decon_reg_set_clkgate_mode(id, 0);
 
-	decon_reg_set_sram_share(id, DECON_FIFO_04K);
+	decon_reg_set_sram_share(id);
 
 	decon_reg_set_operation_mode(id, psr->psr_mode);
 
-	decon_reg_set_blender_bg_image_size(id, psr->dsi_mode, lcd_info);
-
-	decon_reg_set_scaled_image_size(id, psr->dsi_mode, lcd_info);
+	decon_reg_set_blender_bg_image_size(id, lcd_info);
 
 	/*
 	 * same as decon_reg_configure_lcd(...) function
 	 * except using decon_reg_update_req_global(id)
 	 * instead of decon_reg_direct_on_off(id, 0)
 	 */
-	if (lcd_info->dsc.en)
-		rgb_order = DECON_RGB;
-	else
-		rgb_order = DECON_BGR;
-	decon_reg_set_rgb_order(id, rgb_order);
+	decon_reg_set_rgb_order(id, DECON_BGR);
 
 	decon_reg_set_data_path(id, d_path, e_path);
 
-	decon_reg_config_data_path_size(id,
-			lcd_info->xres, lcd_info->yres, overlap_w, NULL, p);
+	decon_reg_set_frame_fifo_size(id, lcd_info->xres, lcd_info->yres);
 }
 
 
-static void decon_reg_set_blender_bg_size(u32 id, enum decon_dsi_mode dsi_mode,
-		u32 bg_w, u32 bg_h)
+static void decon_reg_set_blender_bg_size(u32 id, u32 bg_w, u32 bg_h)
 {
-	u32 width, val, mask;
+	u32 val;
 
-	width = bg_w;
+	val = BLENDER_BG_HEIGHT_F(bg_h) | BLENDER_BG_WIDTH_F(bg_w);
+	decon_write(id, BLENDER_BG_IMAGE_SIZE_0, val);
 
-	if (dsi_mode == DSI_MODE_DUAL_DSI)
-		width = width * 2;
-
-	val = BLENDER_BG_HEIGHT_F(bg_h) | BLENDER_BG_WIDTH_F(width);
-	mask = BLENDER_BG_HEIGHT_MASK | BLENDER_BG_WIDTH_MASK;
-	decon_write_mask(id, BLENDER_BG_IMAGE_SIZE_0, val, mask);
+	val = bg_w * bg_h;
+	decon_write(id, BLENDER_BG_IMAGE_SIZE_1, val);
 }
 
-static int decon_reg_stop_perframe(u32 id, u32 dsi_idx,
-		struct decon_mode_info *psr, u32 fps)
+static int decon_reg_stop_perframe(u32 id, struct decon_mode_info *psr, u32 fps)
 {
 	int ret = 0;
 	int timeout_value = 0;
-#if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	u32 sst_id = SST1;
-#endif
 
 	decon_dbg("%s +\n", __func__);
 
@@ -387,26 +290,15 @@ static int decon_reg_stop_perframe(u32 id, u32 dsi_idx,
 	timeout_value = 1000 / fps * 12 / 10 + 5;
 	ret = decon_reg_wait_run_is_off_timeout(id, timeout_value * MSEC);
 
-#if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	if (psr->out_type == DECON_OUT_DP) {
-		sst_id = displayport_get_sst_id_with_decon_id(id);
-
-		displayport_reg_lh_p_ch_power(sst_id, 0);
-	}
-#endif
-
 	decon_dbg("%s -\n", __func__);
 	return ret;
 }
 
-static int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr,
+static int decon_reg_stop_inst(u32 id, struct decon_mode_info *psr,
 		u32 fps)
 {
 	int ret = 0;
 	int timeout_value = 0;
-#if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	u32 sst_id = SST1;
-#endif
 
 	decon_dbg("%s +\n", __func__);
 
@@ -419,14 +311,6 @@ static int decon_reg_stop_inst(u32 id, u32 dsi_idx, struct decon_mode_info *psr,
 	decon_reg_direct_on_off(id, 0);
 
 	decon_reg_update_req_global(id);
-
-#if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	if (psr->out_type == DECON_OUT_DP) {
-		sst_id = displayport_get_sst_id_with_decon_id(id);
-
-		displayport_reg_lh_p_ch_power(sst_id, 0);
-	}
-#endif
 
 	/* timeout : 1 / fps + 20% margin */
 	timeout_value = 1000 / fps * 12 / 10 + 5;
@@ -596,20 +480,7 @@ static void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 				win_idx, af_d, ab_d, af_a, ab_a);
 }
 
-#if defined(CONFIG_EXYNOS_PLL_SLEEP)
-void decon_reg_set_pll_sleep(u32 id, u32 en)
-{
-	/* This is not supported in exynos3830 */
-}
-
-void decon_reg_set_pll_wakeup(u32 id, u32 en)
-{
-	/* This is not supported in exynos3830 */
-}
-#endif
-
 /******************** EXPORTED DECON CAL APIs ********************/
-/* TODO: maybe this function will be moved to internal DECON CAL function */
 void decon_reg_update_req_global(u32 id)
 {
 	decon_write_mask(id, SHADOW_REG_UPDATE_REQ, ~0,
@@ -635,36 +506,20 @@ int decon_reg_init(u32 id, u32 dsi_idx, struct decon_param *p)
 
 	decon_reg_set_clkgate_mode(id, 0);
 
-	decon_reg_set_sram_share(id, DECON_FIFO_08K); /* DP default decon */
+	decon_reg_set_sram_share(id);
 
 	decon_reg_set_operation_mode(id, psr->psr_mode);
 
-	decon_reg_set_blender_bg_image_size(id, psr->dsi_mode, lcd_info);
-
-#if 1 // TODO: This is not necessary in predecesor project, check it in exynos3830
-	/* Set a TRIG mode */
-	decon_reg_configure_trigger(id, psr->trig_mode);
-#endif
+	decon_reg_set_blender_bg_image_size(id, lcd_info);
 
 	decon_reg_configure_lcd(id, p);
 
 	if (psr->psr_mode == DECON_MIPI_COMMAND_MODE) {
-#if 0 // TODO: defined(CONFIG_EXYNOS_EWR)
-		/* Request wake up befor 100us of TE */
-		decon_reg_set_ewr_control(id, 430733, 1);
-#endif
 		decon_reg_set_trigger(id, psr, DECON_TRIG_DISABLE);
 	}
 
 	/* asserted interrupt should be cleared before initializing decon hw */
 	decon_reg_clear_int_all(id);
-
-#if 0 // TODO: defined(CONFIG_EXYNOS_PLL_SLEEP)
-	/* TODO : register for outfifo2 doesn't exist, needs a confirm */
-	if (psr->psr_mode == DECON_MIPI_COMMAND_MODE &&
-			psr->dsi_mode != DSI_MODE_DUAL_DSI)
-		decon_reg_set_pll_sleep(id, 1);
-#endif
 
 	return 0;
 }
@@ -699,19 +554,12 @@ int decon_reg_stop(u32 id, u32 dsi_idx, struct decon_mode_info *psr, bool rst,
 {
 	int ret = 0;
 
-#if 0 // TODO: defined(CONFIG_EXYNOS_PLL_SLEEP)
-	/* when pll is asleep, need to wake it up before stopping */
-	if (psr->psr_mode == DECON_MIPI_COMMAND_MODE &&
-			psr->dsi_mode != DSI_MODE_DUAL_DSI)
-		decon_reg_set_pll_wakeup(id, 1);
-#endif
-
 	/* call perframe stop */
-	ret = decon_reg_stop_perframe(id, dsi_idx, psr, fps);
+	ret = decon_reg_stop_perframe(id, psr, fps);
 	if (ret < 0) {
 		decon_err("%s, failed to perframe_stop\n", __func__);
 		/* if fails, call decon instant off */
-		ret = decon_reg_stop_inst(id, dsi_idx, psr, fps);
+		ret = decon_reg_stop_inst(id, psr, fps);
 		if (ret < 0)
 			decon_err("%s, failed to instant_stop\n", __func__);
 	}
@@ -860,22 +708,14 @@ void decon_reg_set_partial_update(u32 id, enum decon_dsi_mode dsi_mode,
 		struct exynos_panel_info *lcd_info, bool in_slice[],
 		u32 partial_w, u32 partial_h)
 {
-	u32 dual_slice_en[2] = {1, 1};
-
 	/* Here, lcd_info contains the size to be updated */
-	decon_reg_set_blender_bg_size(id, dsi_mode, partial_w, partial_h);
-
-	decon_reg_set_data_path_size(id, partial_w, partial_h,
-		lcd_info->dsc.en, lcd_info->dsc.cnt,
-		lcd_info->dsc.enc_sw, lcd_info->dsc.slice_h, dual_slice_en);
-
+	decon_reg_set_blender_bg_size(id, partial_w, partial_h);
+	decon_reg_set_frame_fifo_size(id, partial_w, partial_h);
 }
 
 void decon_reg_set_mres(u32 id, struct decon_param *p)
 {
 	struct exynos_panel_info *lcd_info = p->lcd_info;
-	struct decon_mode_info *psr = &p->psr;
-	u32 overlap_w = 0;
 
 	if (lcd_info->mode != DECON_MIPI_COMMAND_MODE) {
 		dsim_info("%s: mode[%d] doesn't support multi resolution\n",
@@ -883,11 +723,9 @@ void decon_reg_set_mres(u32 id, struct decon_param *p)
 		return;
 	}
 
-	decon_reg_set_blender_bg_image_size(id, psr->dsi_mode, lcd_info);
-	decon_reg_set_scaled_image_size(id, psr->dsi_mode, lcd_info);
+	decon_reg_set_blender_bg_image_size(id, lcd_info);
 
-	decon_reg_config_data_path_size(id, lcd_info->xres,
-			lcd_info->yres, overlap_w, NULL, p);
+	decon_reg_set_frame_fifo_size(id, lcd_info->xres, lcd_info->yres);
 }
 
 void decon_reg_release_resource(u32 id, struct decon_mode_info *psr)
@@ -900,10 +738,11 @@ void decon_reg_release_resource(u32 id, struct decon_mode_info *psr)
 void decon_reg_config_wb_size(u32 id, struct exynos_panel_info *lcd_info,
 		struct decon_param *param)
 {
-	decon_reg_set_blender_bg_image_size(id, DSI_MODE_SINGLE,
-			lcd_info);
-	decon_reg_config_data_path_size(id, lcd_info->xres,
-			lcd_info->yres, 0, NULL, param);
+	/*
+	 * Exynos3830 can not support WB feature
+	 * This function is called from common decon drvier
+	 * so It can not be removed.
+	 */
 }
 
 void decon_reg_set_int(u32 id, struct decon_mode_info *psr, u32 en)
@@ -982,7 +821,7 @@ void decon_reg_get_crc_data(u32 id, u32 *w0_data, u32 *w1_data)
 }
 
 u32 DPU_DMA2CH(u32 dma)
-{	
+{
 	u32 ch_id;
 
 	switch (dma) {
@@ -1008,7 +847,7 @@ u32 DPU_DMA2CH(u32 dma)
 }
 
 u32 DPU_CH2DMA(u32 ch)
-{	
+{
 	u32 dma;
 
 	switch (ch) {
@@ -1113,18 +952,16 @@ static void decon_print_hex_dump(void __iomem *regs, const void *buf, size_t len
 void __decon_dump(u32 id, void __iomem *regs, void __iomem *base_regs, bool dsc_en)
 {
 	decon_info("\n=== DECON%d SFR DUMP ===\n", id);
-	decon_print_hex_dump(regs, regs + 0x0000, 0x520);
+	decon_print_hex_dump(regs, regs + 0x0000, 0x480);
 
 	decon_info("\n=== DECON%d SHADOW SFR DUMP ===\n", id);
-	decon_print_hex_dump(regs, regs + SHADOW_OFFSET, 0x2B0);
+	decon_print_hex_dump(regs, regs + SHADOW_OFFSET + 0x0000, 0x304);
 
 	decon_info("\n=== DECON0 WINDOW SFR DUMP ===\n");
-	decon_print_hex_dump(base_regs, base_regs + 0x1000, 0x564);
+	decon_print_hex_dump(base_regs, base_regs + 0x1000, 0x310);
 
 	decon_info("\n=== DECON0 WINDOW SHADOW SFR DUMP ===\n");
-	decon_print_hex_dump(base_regs,
-		base_regs + SHADOW_OFFSET + 0x1000, 0x120);
-
+	decon_print_hex_dump(base_regs, base_regs + SHADOW_OFFSET + 0x1000, 0x220);
 }
 
 /* 3830 chip dependent HW limitation
@@ -1137,19 +974,6 @@ int decon_check_global_limitation(struct decon_device *decon,
 	int ret = 0;
 	int i;
 
-#if 0
-	int j;
-	/*
-	 * AXI Port0 : CH0(GF0), CH5(VGRFS)
-	 * AXI Port1 : CH1(GF1), CH4(VGF)
-	 * AXI Port2 : CH2(VG), CH3(VGS)
-	 */
-	int axi_port[MAX_DECON_WIN] = {5, 4, 3, 2, 1, 0};
-#if defined(CONFIG_EXYNOS_LIMIT_ROTATION)
-	const struct dpu_fmt *fmt_info;
-#endif
-#endif
-
 	for (i = 0; i < MAX_DECON_WIN; i++) {
 		if (config[i].state != DECON_WIN_STATE_BUFFER)
 			continue;
@@ -1161,68 +985,6 @@ int decon_check_global_limitation(struct decon_device *decon,
 					config[i].channel);
 			goto err;
 		}
-
-#if 0
-		/* case 1 : In one axi domain, a channel has
-		 *	compression & src.w over 2048
-		 *	the one on the other should never have compression.
-		 */
-		if (config[i].compression && (config[i].src.w > 2048)) {
-			for (j = 0; j < MAX_DECON_WIN; j++) {
-				if (i == j)
-					continue;
-				/* channel means DPP channel number */
-				if ((config[j].state == DECON_WIN_STATE_BUFFER) &&
-						(config[j].channel ==
-						 axi_port[config[i].channel])) {
-					if (config[j].compression) {
-						ret = -EPERM;
-						decon_err("When using both channel\
-							as an AFBC width should\
-							always be set\
-							equal or under 2048\n");
-						goto err;
-					}
-				}
-			}
-		/* case 2 : In an axi domain, a channel has rotation
-		 *	one on the other should never have compression.
-		 */
-		} else if (config[i].dpp_parm.rot > DPP_ROT_180) {
-#if defined(CONFIG_EXYNOS_LIMIT_ROTATION)
-			fmt_info = dpu_find_fmt_info(config[i].format);
-			if (IS_YUV10(fmt_info)) {
-				decon_err("Limited 10-bit ROT!\n");
-				ret = -EPERM;
-				goto err;
-			}
-			/* 8-bit YUV */
-			/* TODO: config -> config[i] ? */
-			if ((config->src.w > ROT_MAX_W) &&
-				(config->src.w * config->src.h > ROT_MAX_SZ)) {
-				decon_err("Exceeded supporting ROT size!\n");
-				ret = -EPERM;
-				goto err;
-			}
-#endif
-
-			for (j = 0; j < MAX_DECON_WIN; j++) {
-				if (i == j)
-					continue;
-				if ((config[j].state == DECON_WIN_STATE_BUFFER) &&
-						(config[j].channel ==
-						 axi_port[config[i].channel])) {
-					if (config[j].compression) {
-						ret = -EPERM;
-						decon_err("AFBC & Roation/Flip not\
-							allowed in the same AXI port\
-							at the same time\n");
-						goto err;
-					}
-				}
-			}
-		}
-#endif
 	}
 
 err:

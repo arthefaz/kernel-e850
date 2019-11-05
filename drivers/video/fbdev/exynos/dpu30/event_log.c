@@ -480,15 +480,16 @@ void DPU_EVENT_LOG_MEMMAP(dpu_event_t type, struct v4l2_subdev *sd,
 		dma_addr_t dma_addr, int dpp_ch)
 {
 	struct decon_device *decon = container_of(sd, struct decon_device, sd);
-	int idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
+	int idx = 0;
 	struct dpu_log *log;
 	struct v4l2_subdev *dpp_sd;
-	u32 shd_addr[MAX_PLANE_ADDR_CNT];
+	u32 shd_addr[MAX_PLANE_ADDR_CNT] = {0, };
 
 	if (!decon || IS_ERR_OR_NULL(decon->d.debug_event) ||
 			IS_ERR_OR_NULL(decon->d.event_log))
 		return;
 
+	idx = atomic_inc_return(&decon->d.event_log_idx) % DPU_EVENT_LOG_MAX;
 	log = &decon->d.event_log[idx];
 
 	log->time = ktime_get();
@@ -1049,7 +1050,7 @@ static int decon_debug_cmd_lp_ref_show(struct seq_file *s, void *unused)
 	struct dsim_device *dsim = get_dsim_drvdata(0);
 	int i;
 
-	/* DSU_MODE_1 is used in stead of 1 */
+	/* DSU_MODE_1 is used in stead of 1 in MCD */
 	seq_printf(s, "%u\n", dsim->panel->lcd_info.mres_mode);
 
 	for (i = 0; i < dsim->panel->lcd_info.mres.number; i++)

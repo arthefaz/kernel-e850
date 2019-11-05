@@ -22,7 +22,10 @@
 
 #include "./panels/exynos_panel.h"
 
-#if defined(CONFIG_SOC_EXYNOS9630)
+#if defined(CONFIG_SOC_EXYNOS9830)
+#include "./cal_9830/regs-dsim.h"
+#include "./cal_9830/dsim_cal.h"
+#elif defined(CONFIG_SOC_EXYNOS9630)
 #include "./cal_9630/regs-dsim.h"
 #include "./cal_9630/dsim_cal.h"
 #elif defined(CONFIG_SOC_EXYNOS3830)
@@ -233,7 +236,6 @@ struct dsim_device {
 #endif
 	unsigned int ddi_seq_size;
 	unsigned char ddi_seq[512];
-	int brightness;
 };
 
 int dsim_call_panel_ops(struct dsim_device *dsim, u32 cmd, void *arg);
@@ -243,7 +245,6 @@ int dsim_wait_for_cmd_done(struct dsim_device *dsim);
 
 int dsim_reset_panel(struct dsim_device *dsim);
 int dsim_set_panel_power(struct dsim_device *dsim, bool on);
-int dsim_check_panel_connect(struct dsim_device *dsim);
 
 void dsim_to_regs_param(struct dsim_device *dsim, struct dsim_regs *regs);
 
