@@ -11,6 +11,10 @@
 #ifndef CAMERAPP_SFR_GDC_V100_H
 #define CAMERAPP_SFR_GDC_V100_H
 
+#define GDC_WIDTH_ALIGN		4
+#define GDC_HEIGHT_ALIGN	2
+#define GDC_OFFSET_ALIGN	2
+
 enum camerapp_gdc_reg_name {
 	GDC_R_GDC_DMA_ADDRESS,
 	GDC_R_GDC_DMA_ADDRESS_2,
