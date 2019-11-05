@@ -1206,20 +1206,6 @@ static enum hrtimer_restart sbd_tx_timer_func(struct hrtimer *timer)
 			need_schedule = true;
 	}
 
-#ifdef CONFIG_LINK_DEVICE_PCIE
-	if ((ld->link_type == LINKDEV_PCIE) && !need_schedule) {
-		for (i = 0; i < sl->num_channels; i++) {
-			struct sbd_ring_buffer *rb;
-
-			rb = sbd_id2rb(sl, i, TX);
-			if (!rb_empty(rb)) {
-				need_schedule = true;
-				break;
-			}
-		}
-	}
-#endif
-
 	if (mask) {
 		spin_lock_irqsave(&mc->lock, flags);
 		if (unlikely(!ipc_active(mld))) {
@@ -2717,14 +2703,14 @@ static void pcie_send_ap2cp_irq(struct mem_link_device *mld, u16 mask)
 	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
 
 	if (mutex_is_locked(&mc->pcie_onoff_lock)) {
-		mif_err("Reserve doorbell interrupt: PCI on/off working\n");
+		mif_err_limited("Reserve doorbell interrupt: PCI on/off working\n");
 		set_ctrl_msg(&mld->ap2cp_msg, mask);
 		mc->reserve_doorbell_int = true;
 		goto exit;
 	}
 
 	if (!mc->pcie_powered_on) {
-		mif_err("Reserve doorbell interrupt: PCI not powered on\n");
+		mif_err_limited("Reserve doorbell interrupt: PCI not powered on\n");
 		set_ctrl_msg(&mld->ap2cp_msg, mask);
 		mc->reserve_doorbell_int = true;
 		s5100_try_gpio_cp_wakeup(mc);
