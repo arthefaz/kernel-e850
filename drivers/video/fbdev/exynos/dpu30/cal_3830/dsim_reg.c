@@ -2025,14 +2025,14 @@ void dsim_reg_preinit(u32 id)
 	lcd_info.hbp = 20;
 	lcd_info.hsa = 20;
 	lcd_info.fps = 60;
-	lcd_info.hs_clk = 898;
+	lcd_info.hs_clk = 1200;
 	lcd_info.mode = DECON_MIPI_COMMAND_MODE;
 	lcd_info.xres = 1080;
 	lcd_info.yres = 2340;
 	lcd_info.dphy_pms.p = 2;
 	lcd_info.dphy_pms.m = 185;
 	lcd_info.dphy_pms.s = 1;
-	lcd_info.dphy_pms.k = 0x9D8A; //0x4ec5
+	lcd_info.dphy_pms.k = 0x9D8A;
 	lcd_info.data_lane = 4;
 	lcd_info.cmd_underrun_cnt[0] = 1695;
 

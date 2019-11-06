@@ -106,6 +106,14 @@ int ea8076_displayon(struct exynos_panel_device *panel)
 	dsim_write_data_seq(dsim, false, 0xF0, 0x5A, 0x5A);
 	dsim_write_data_seq(dsim, false, 0xFC, 0x5A, 0x5A);
 
+	/* Ignoring dealing with ERR in DDI IC
+	 *  This is setting for ignoring dealing with error in DDI IC
+	 * Without this setting, Displaying is not normal.
+	 * so DDI vendor recommended us to use this setting temporally.
+	 * After launching official project, DDI vendor need to check this again.
+	 */
+	dsim_write_data_seq_delay(dsim, 12, 0xDD, 0x4A, 0x00);
+
 	/* FFC SET */
 	dsim_write_data_seq_delay(dsim, 12, 0xE9, 0x11, 0x55, 0x98, 0x96, 0x80,
 			0xB2, 0x41, 0xC3, 0x00, 0x1A,
