@@ -1078,7 +1078,7 @@ void pdp_hw_s_af_rdma_init(void __iomem *base, u32 width, u32 height, u32 hwform
 	 */
 	switch (hwformat) {
 	case HW_FORMAT_RAW10:
-		format = PDP_DMA_FMT_U10BIT_PACK;
+		format = PDP_DMA_FMT_U10BIT_UNPACK_MSB_ZERO;
 		byte_per_line = ALIGN(width * 10 / BITS_PER_BYTE, 16);
 		break;
 	default:
