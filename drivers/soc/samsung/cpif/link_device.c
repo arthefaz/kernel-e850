@@ -608,7 +608,6 @@ static void cmd_phone_start_handler(struct mem_link_device *mld)
 		if (phone_start_count < 100) {
 			if (phone_start_count++ > 3) {
 				phone_start_count = 101;
-				set_dflags(127);
 #ifdef CONFIG_MCU_IPC
 				if (mld->ap2cp_msg.type == MAILBOX_SR)
 					mcu_ipc_reg_dump(0);
