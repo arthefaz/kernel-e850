@@ -457,6 +457,8 @@ void pdp_hw_s_line_row(void __iomem *base, bool pd_enable, int sensor_mode)
 	u32 val = 0;
 	u32 num_of_turn_on_sroi = 0;
 	u32 density = 0, tail_density = 0;
+	u32 mpd_on;
+	u32 mpd_vbin;
 
 	/*
 	 * stat end interrupt can't use hw limitation
@@ -466,6 +468,8 @@ void pdp_hw_s_line_row(void __iomem *base, bool pd_enable, int sensor_mode)
 		max_pos_end_y = PDP_GET_R_COREX(base, PDP_R_PDSTAT_ROI_MAIN_MWM_EY);
 
 		num_of_turn_on_sroi = PDP_GET_R_COREX(base, PDP_R_PDSTAT_ROI_MAIN_SROI);
+		mpd_on = PDP_GET_R_COREX(base, PDP_R_I_MPD_ON);
+		mpd_vbin = PDP_GET_R_COREX(base, PDP_R_I_MPD_VBIN);
 
 		for (i = 0; i < num_of_turn_on_sroi; i++) {
 			tmp = PDP_GET_R_COREX(base, PDP_R_PDSTAT_ROI_MAIN_S0EY + 4 * i);
@@ -488,6 +492,8 @@ void pdp_hw_s_line_row(void __iomem *base, bool pd_enable, int sensor_mode)
 			break;
 		case VC_SENSOR_MODE_2PD_MODE3:
 			density = tail_density = 4;
+			if (mpd_on)
+				max_pos_end_y = max_pos_end_y << mpd_vbin;
 			break;
 		case VC_SENSOR_MODE_ULTRA_PD_TAIL:
 		case VC_SENSOR_MODE_ULTRA_PD_2_TAIL:
