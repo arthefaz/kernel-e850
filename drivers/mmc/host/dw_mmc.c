@@ -3714,13 +3714,13 @@ static int dw_mci_cmdq_init(struct dw_mci *host, struct mmc_host *mmc,
 
 static int dw_mci_cmdq_crypto_engine_cfg(struct mmc_host *mmc, void *desc,
 					struct mmc_data *data, struct page *page,
-					int sector_offset, bool cmdq_enabled)
+					int sector_offset, int page_index, bool cmdq_enabled)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
 	struct dw_mci *host = slot->host;
 	const struct dw_mci_drv_data *drv_data = host->drv_data;
 
-	return drv_data->crypto_engine_cfg(host, desc, data, page, sector_offset, cmdq_enabled);
+	return drv_data->crypto_engine_cfg(host, desc, data, page, sector_offset, page_index, cmdq_enabled);
 }
 
 static int dw_mci_cmdq_crypto_engine_clear(struct mmc_host *mmc, void *desc,

@@ -707,6 +707,7 @@ static int cmdq_prep_tran_desc(struct mmc_host *mmc, struct mmc_request *mrq,
 	struct scatterlist *sg;
 	int ret;
 	int sector_offset = 0;
+	int page_index = 0;
 
 	sg_count = cmdq_dma_map(mrq->host, mrq);
 	if (sg_count < 0) {
@@ -728,7 +729,7 @@ static int cmdq_prep_tran_desc(struct mmc_host *mmc, struct mmc_request *mrq,
 		cmdq_set_tran_desc(desc, addr, len, end, cq_host->dma64);
 		if (cq_host->ops->crypto_engine_cfg) {
 			ret = cq_host->ops->crypto_engine_cfg(mmc, desc, data,
-					sg_page(sg), sector_offset, true);
+					sg_page(sg), sector_offset, page_index++, true);
 			if (ret) {
 				pr_err("%s: %s: failed to configure crypto engine. ret(%d)\n",
 						mmc_hostname(mmc), __func__, ret);

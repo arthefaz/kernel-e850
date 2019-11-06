@@ -1322,6 +1322,44 @@ static int dw_mci_exynos_misc_control(struct dw_mci *host,
 	return ret;
 }
 
+static int dw_mci_exynos_crypto_engine_cfg(struct dw_mci *host,
+                                        void *desc,
+                                        struct mmc_data *data,
+                                        struct page *page,
+                                        int sector_offset,
+                                        int page_index,
+                                        bool cmdq_enabled)
+{
+        return exynos_mmc_fmp_cfg(host, desc, data, page, sector_offset, page_index, cmdq_enabled);
+}
+
+static int dw_mci_exynos_crypto_engine_clear(struct dw_mci *host, void *desc,
+                                        bool cmdq_enabled)
+{
+        return exynos_mmc_fmp_clear(host, desc, cmdq_enabled);
+}
+
+static int dw_mci_exynos_access_control_sec_cfg(struct dw_mci *host)
+{
+        return exynos_mmc_fmp_sec_cfg(host);
+}
+
+static int dw_mci_exynos_access_control_init(struct dw_mci *host)
+{
+        return exynos_mmc_smu_init(host);
+}
+
+static int dw_mci_exynos_access_control_abort(struct dw_mci *host)
+{
+        return exynos_mmc_smu_abort(host);
+}
+
+static int dw_mci_exynos_access_control_resume(struct dw_mci *host)
+{
+        return exynos_mmc_smu_resume(host);
+}
+
+
 static const struct dw_mci_drv_data exynos_drv_data = {
 	.caps = exynos_dwmmc_caps,
 	.num_caps		= ARRAY_SIZE(exynos_dwmmc_caps),
@@ -1332,12 +1370,12 @@ static const struct dw_mci_drv_data exynos_drv_data = {
 	.hwacg_control = dw_mci_card_int_hwacg_ctrl,
 	.pins_control = dw_mci_set_pins_state,
 	.misc_control = dw_mci_exynos_misc_control,
-	.crypto_engine_cfg = exynos_mmc_fmp_cfg,
-	.crypto_engine_clear = exynos_mmc_fmp_clear,
-	.crypto_engine_sec_cfg = exynos_mmc_fmp_sec_cfg,
-	.access_control_init = exynos_mmc_smu_init,
-	.access_control_abort = exynos_mmc_smu_abort,
-	.access_control_resume = exynos_mmc_smu_resume,
+	.crypto_engine_cfg      = dw_mci_exynos_crypto_engine_cfg,
+	.crypto_engine_clear    = dw_mci_exynos_crypto_engine_clear,
+	.crypto_engine_sec_cfg  = dw_mci_exynos_access_control_sec_cfg,
+	.access_control_init    = dw_mci_exynos_access_control_init,
+	.access_control_abort   = dw_mci_exynos_access_control_abort,
+	.access_control_resume  = dw_mci_exynos_access_control_resume,
 	.ssclk_control = dw_mci_exynos_ssclk_control,
 	.runtime_pm_control = dw_mci_exynos_runtime_pm_control,
 };

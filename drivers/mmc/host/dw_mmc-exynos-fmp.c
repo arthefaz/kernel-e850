@@ -109,7 +109,6 @@ static struct bio *get_bio(struct dw_mci *host,
 		return NULL;
 
 	if (cmdq_enabled) {
-#if 0
 		struct mmc_cmdq_req *cmdq_req;
 		struct mmc_request *mrq;
 
@@ -120,7 +119,6 @@ static struct bio *get_bio(struct dw_mci *host,
 			return NULL;
 
 		bio = mrq->req->bio;
-#endif
 	} else {
 		struct mmc_queue_req *mq_rq;
 		struct mmc_blk_request *brq;

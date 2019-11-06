@@ -300,7 +300,7 @@ struct cmdq_host_ops {
 	int (*reset)(struct mmc_host *mmc);
 	int (*crypto_engine_cfg)(struct mmc_host *mmc, void *desc,
 				struct mmc_data *data, struct page *page,
-				int sector_offset, bool cmdq_enabled);
+				int sector_offset, int page_index, bool cmdq_enabled);
 	int (*crypto_engine_clear)(struct mmc_host *mmc, void *desc,
 				bool cmdq_enabled);
 	void (*cmdq_log)(struct mmc_host *mmc, bool new_cmd,
