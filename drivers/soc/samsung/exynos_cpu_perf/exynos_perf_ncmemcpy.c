@@ -135,7 +135,7 @@ static u64 nano_time(void)
 static void memset_ptrn(ulong *p, uint count)
 {
 	uint j, idx;
-	for (j = 0; j < count; j += sizeof(p)) {
+	for (j = 0; j < count; j += (uint)sizeof(p)) {
 		idx = j % ARRAY_SIZE(patterns);
 		*p++ = patterns[idx];
 	}
