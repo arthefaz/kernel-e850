@@ -830,6 +830,7 @@ void pdp_hw_s_core(void __iomem *base, bool pd_enable,
 			en_afdma = 0;
 	} else {
 		en_dma = 0;
+		en_afdma = 0;
 	}
 
 	pdp_hw_s_af_rdma_init(base, pd_width, pd_height, pd_hwformat, rmo,
