@@ -436,10 +436,8 @@ retry:
 
 static inline void clear_err_cnt(struct contexthub_ipc_info *ipc, enum chub_err_type err)
 {
-	if (ipc->err_cnt[err]) {
-		dev_info(ipc->dev, "%s: err:%d\n", __func__, err);
+	if (ipc->err_cnt[err])
 		ipc->err_cnt[err] = 0;
-	}
 }
 
 int contexthub_ipc_read(struct contexthub_ipc_info *ipc, uint8_t *rx, int max_length,
@@ -450,6 +448,15 @@ int contexthub_ipc_read(struct contexthub_ipc_info *ipc, uint8_t *rx, int max_le
 	int ret = 0;
 	void *rxbuf;
 	u64 time = 0; /* for debug */
+
+	if (__raw_readl(&ipc->chub_status) != CHUB_ST_RUN) {
+		dev_warn(ipc->dev, "%s: chub isn't run:%d\n",
+				__func__, __raw_readl(&ipc->chub_status));
+		contexthub_handle_debug(ipc, CHUB_ERR_CHUB_ST_ERR);
+		return 0;
+	} else {
+		clear_err_cnt(ipc, CHUB_ERR_CHUB_ST_ERR);
+	}
 
 	if (!atomic_read(&ipc->read_lock.cnt)) {
 		time = sched_clock();
@@ -467,13 +474,6 @@ int contexthub_ipc_read(struct contexthub_ipc_info *ipc, uint8_t *rx, int max_le
 				 "fails to get read ret:%d timeout:%d\n", ret, timeout);
 	}
 
-	if (__raw_readl(&ipc->chub_status) != CHUB_ST_RUN) {
-		dev_warn(ipc->dev, "%s: chub isn't run:%d\n",
-				__func__, __raw_readl(&ipc->chub_status));
-		contexthub_handle_debug(ipc, CHUB_ERR_CHUB_ST_ERR);
-		return 0;
-	}
-
 	if (contexthub_get_token(ipc)) {
 		dev_warn(ipc->dev, "no-active: read fails\n");
 		return 0;
@@ -485,23 +485,27 @@ int contexthub_ipc_read(struct contexthub_ipc_info *ipc, uint8_t *rx, int max_le
 			ret = contexthub_read_process(rx, rxbuf, size);
 		atomic_dec(&ipc->read_lock.cnt);
 	} else {
-		dev_info(ipc->dev, "%s: read timeout(%d): c2aq_cnt:%d, recv_cnt:%d during %lld ns\n",
-			__func__, ipc->err_cnt[CHUB_ERR_READ_FAIL],
-			ipc_get_data_cnt(IPC_DATA_C2A), atomic_read(&ipc->read_lock.cnt),
-			sched_clock() - time);
+		if (ipc->err_cnt[CHUB_ERR_READ_FAIL])
+			dev_info(ipc->dev, "%s: read timeout(%d): c2aq_cnt:%d, recv_cnt:%d during %lld ns\n",
+				__func__, ipc->err_cnt[CHUB_ERR_READ_FAIL],
+				ipc_get_data_cnt(IPC_DATA_C2A), atomic_read(&ipc->read_lock.cnt),
+				sched_clock() - time);
 		if (ipc_get_data_cnt(IPC_DATA_C2A)) {
 			rxbuf = ipc_read_data(IPC_DATA_C2A, &size);
 			if (size > 0)
 				ret = contexthub_read_process(rx, rxbuf, size);
 		} else {
-			ipc_dump();
 			ret = -EINVAL;
 		}
 	}
 	if (ret < 0) {
-		contexthub_handle_debug(ipc, CHUB_ERR_CHUB_ST_ERR);
-		pr_err("%s: fails to read data: ret:%d, len:%d errcnt:%d\n",
-			__func__, ret, ipc->err_cnt[CHUB_ERR_READ_FAIL]);
+		if (ipc->err_cnt[CHUB_ERR_READ_FAIL]) {
+			pr_err("%s: fails to read data: ret:%d, len:%d errcnt:%d\n",
+				__func__, ret, ipc->err_cnt[CHUB_ERR_READ_FAIL]);
+			ipc_dump();
+			contexthub_handle_debug(ipc, CHUB_ERR_READ_FAIL);
+		} else
+			ipc->err_cnt[CHUB_ERR_READ_FAIL]++;
 	} else {
 		clear_err_cnt(ipc, CHUB_ERR_READ_FAIL);
 	}
@@ -519,6 +523,8 @@ int contexthub_ipc_write(struct contexthub_ipc_info *ipc,
 				__func__, __raw_readl(&ipc->chub_status));
 		contexthub_handle_debug(ipc, CHUB_ERR_CHUB_ST_ERR);
 		return 0;
+	}  else {
+		clear_err_cnt(ipc, CHUB_ERR_CHUB_ST_ERR);
 	}
 
 	if (contexthub_get_token(ipc)) {
@@ -710,6 +716,8 @@ int contexthub_get_sensortype(struct contexthub_ipc_info *ipc, char *buf)
 			__func__, atomic_read(&ipc->chub_status), atomic_read(&ipc->in_reset));
 		contexthub_handle_debug(ipc, CHUB_ERR_CHUB_ST_ERR);
 		return -EINVAL;
+	}  else {
+		clear_err_cnt(ipc, CHUB_ERR_CHUB_ST_ERR);
 	}
 
 	ret = contexthub_get_token(ipc);
@@ -869,6 +877,8 @@ int contexthub_ipc_write_event(struct contexthub_ipc_info *ipc,
 				__func__, event, MAILBOX_EVT_MAX, atomic_read(&ipc->chub_status), atomic_read(&ipc->in_reset));
 			contexthub_handle_debug(ipc, CHUB_ERR_CHUB_ST_ERR);
 			return -EINVAL;
+		}  else {
+			clear_err_cnt(ipc, CHUB_ERR_CHUB_ST_ERR);
 		}
 
 		if (contexthub_get_token(ipc))
@@ -1059,7 +1069,7 @@ int contexthub_reset_prepare(struct contexthub_ipc_info *ipc) {
 
 int contexthub_reset(struct contexthub_ipc_info *ipc, bool force_load, enum chub_err_type err)
 {
-	int ret;
+	int ret = 0;
 	int trycnt = 0;
 
 	dev_info(ipc->dev, "%s: force:%d, status:%d, in-reset:%d, err:%d, user:%d\n",
@@ -1154,11 +1164,13 @@ int contexthub_reset(struct contexthub_ipc_info *ipc, bool force_load, enum chub
 	        atomic_set(&ipc->in_use_ipc, 0);
 	}
 out:
+	__pm_relax(&ipc->ws_reset);
 	msleep(100); /* wakeup delay */
 	chub_wake_event(&ipc->reset_lock);
-	__pm_relax(&ipc->ws_reset);
 	atomic_dec(&ipc->in_reset);
 	mutex_unlock(&reset_mutex);
+	if (ret)
+		atomic_set(&ipc->chub_status, CHUB_ST_RESET_FAIL);
 
 	return ret;
 }
