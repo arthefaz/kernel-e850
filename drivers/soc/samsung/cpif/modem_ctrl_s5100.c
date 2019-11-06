@@ -431,6 +431,7 @@ static int init_control_messages(struct modem_ctl *mc)
 	int ds_det;
 
 	set_ctrl_msg(&mld->ap2cp_united_status, 0);
+	set_ctrl_msg(&mld->cp2ap_united_status, 0);
 
 	ds_det = get_ds_detect();
 	if (ds_det < 0) {

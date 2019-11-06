@@ -2821,7 +2821,6 @@ static int shmem_ioctl(struct link_device *ld, struct io_device *iod,
 	return 0;
 }
 
-#ifdef CONFIG_MCU_IPC
 static irqreturn_t shmem_tx_state_handler(int irq, void *data)
 {
 	struct mem_link_device *mld = (struct mem_link_device *)data;
@@ -2856,7 +2855,6 @@ static irqreturn_t shmem_tx_state_handler(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
-#endif
 
 static int shmem_enqueue_snapshot(struct mem_link_device *mld)
 {
@@ -3076,12 +3074,13 @@ int request_pcie_msi_int(struct link_device *ld,
 	struct mem_link_device *mld = to_mem_link_device(ld);
 	struct device *dev = &pdev->dev;
 	struct modem_ctl *mc = ld->mc;
+	int irq_offset = 0;
 #ifdef CONFIG_CP_PKTPROC_V2
 	struct pktproc_adaptor *ppa = &mld->pktproc;
 	int i;
 #endif
 
-	pr_err("Request MSI interrups.\n");
+	mif_info("Request MSI interrups.\n");
 
 #ifdef CONFIG_CP_PKTPROC_V2
 	if (ppa->use_exclusive_irq)
@@ -3090,32 +3089,42 @@ int request_pcie_msi_int(struct link_device *ld,
 #endif
 		base_irq = s51xx_pcie_request_msi_int(mc->s51xx_pdev, 4);
 
-	pr_err("Request MSI interrups. : BASE_IRQ(%d)\n", base_irq);
+	mif_info("Request MSI interrups. : BASE_IRQ(%d)\n", base_irq);
 	mld->msi_irq_base = base_irq;
 
 	if (base_irq <= 0) {
-		pr_err("Can't get MSI IRQ!!!\n");
+		mif_err("Can't get MSI IRQ!!!\n");
 		return -EFAULT;
 	}
 
-	ret = devm_request_irq(dev, base_irq,
+	ret = devm_request_irq(dev, base_irq + irq_offset,
 			shmem_irq_handler, IRQF_SHARED, "mif_cp2ap_msg", mld);
 	if (ret) {
-		pr_err("Can't request cp2ap_msg interrupt!!!\n");
+		mif_err("Can't request cp2ap_msg interrupt!!!\n");
 		return -EIO;
 	}
+	irq_offset++;
+
+	ret = devm_request_irq(dev, base_irq + irq_offset,
+			shmem_tx_state_handler, IRQF_SHARED, "mif_cp2ap_status", mld);
+	if (ret) {
+		mif_err("Can't request cp2ap_status interrupt!!!\n");
+		return -EIO;
+	}
+	irq_offset++;
 
 #ifdef CONFIG_CP_PKTPROC_V2
 	if (ppa->use_exclusive_irq) {
 		for (i = 0; i < ppa->num_queue; i++) {
 			struct pktproc_queue *q = ppa->q[i];
 
-			q->irq = mld->msi_irq_base + 1 + i;
+			q->irq = mld->msi_irq_base + irq_offset;
 			ret = devm_request_irq(dev, q->irq, q->irq_handler, IRQF_SHARED, "pktproc", q);
 			if (ret) {
 				mif_err("devm_request_irq() for pktproc%d error %d\n", i, ret);
 				return -EIO;
 			}
+			irq_offset++;
 		}
 	}
 #endif
