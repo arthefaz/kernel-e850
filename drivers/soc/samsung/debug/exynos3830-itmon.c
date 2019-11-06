@@ -1344,8 +1344,8 @@ static ssize_t itmon_timeout_fix_val_store(struct kobject *kobj,
 
 	ret = kstrtoul(buf, 16, &val);
 	if (!ret) {
-	if (val > 0 && val <= 0xFFFFF)
-		pdata->sysfs_tmout_val = val;
+		if (val > 0UL && val <= 0xFFFFFUL)
+			pdata->sysfs_tmout_val = (unsigned int)val;
 	} else {
 		dev_err(g_itmon->dev, "%s: kstrtoul return value is %d\n", __func__, ret);
 	}
