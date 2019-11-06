@@ -141,16 +141,6 @@ inline u32 ipc_get_offset(enum ipc_region area)
 	return ipc_addr[area].offset;
 }
 
-inline void *ipc_get_addr(enum ipc_region area, int buf_num)
-{
-#ifdef CHUB_IPC
-	return (void *)((unsigned int)ipc_addr[area].base +
-			ipc_addr[area].offset * buf_num);
-#else
-	return ipc_addr[area].base + ipc_addr[area].offset * buf_num;
-#endif
-}
-
 u32 ipc_get_chub_mem_size(void)
 {
 	return ipc_addr[IPC_REG_DUMP].offset;

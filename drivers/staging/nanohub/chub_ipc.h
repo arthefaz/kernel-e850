@@ -537,7 +537,6 @@ char *ipc_get_cs_name(enum channel_status cs);
 void ipc_set_base(void *addr);
 void *ipc_get_base(enum ipc_region area);
 u32 ipc_get_offset(enum ipc_region area);
-void *ipc_get_addr(enum ipc_region area, int buf_num);
 void ipc_init(void);
 int ipc_hw_read_int_start_index(enum ipc_owner owner);
 /* logbuf functions */
