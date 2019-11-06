@@ -178,7 +178,7 @@ void __init dbg_snapshot_early_init_log_enabled(const char *name, int en)
 	if (!item->entry.enabled || !name)
 		return;
 
-	for (i = 0; i < ARRAY_SIZE(dss_log_items); i++) {
+	for (i = 0; i < (int)ARRAY_SIZE(dss_log_items); i++) {
 		if (!strncmp(dss_log_items[i].name, name, strlen(name))) {
 			log_item = &dss_log_items[i];
 			log_item->entry.enabled = en;
@@ -874,7 +874,7 @@ void dbg_snapshot_print_notifier_call(void **nl, unsigned long func, int en)
 	char notifier_func_name[KSYM_NAME_LEN];
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(dss_should_check_nl); i++) {
+	for (i = 0; i < (int)ARRAY_SIZE(dss_should_check_nl); i++) {
 		if (nl_org == dss_should_check_nl[i]) {
 			lookup_symbol_name((unsigned long)nl_org, notifier_name);
 			lookup_symbol_name((unsigned long)func, notifier_func_name);

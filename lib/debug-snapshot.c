@@ -602,8 +602,8 @@ static void __init dbg_snapshot_fixmap_header(void)
 	memcpy(dss_bl->item[DSS_ITEM_HEADER_ID].name,
 			dss_items[DSS_ITEM_HEADER_ID].name,
 			strlen(dss_items[DSS_ITEM_HEADER_ID].name) + 1);
-	dss_bl->item[DSS_ITEM_HEADER_ID].paddr = paddr;
-	dss_bl->item[DSS_ITEM_HEADER_ID].size = size;
+	dss_bl->item[DSS_ITEM_HEADER_ID].paddr = (unsigned int)paddr;
+	dss_bl->item[DSS_ITEM_HEADER_ID].size = (unsigned int)size;
 	dss_bl->item[DSS_ITEM_HEADER_ID].enabled =
 		dss_items[DSS_ITEM_HEADER_ID].entry.enabled;
 }
@@ -667,8 +667,8 @@ static void __init dbg_snapshot_fixmap(void)
 		dss_info.info_log[i - 1].entry.size = size;
 
 		memcpy(dss_bl->item[i].name,  dss_items[i].name, strlen(dss_items[i].name) + 1);
-		dss_bl->item[i].paddr = paddr;
-		dss_bl->item[i].size = size;
+		dss_bl->item[i].paddr = (unsigned int)paddr;
+		dss_bl->item[i].size = (unsigned int)size;
 	}
 
 	dss_log = (struct dbg_snapshot_log *)(dss_items[DSS_ITEM_KEVENTS_ID].entry.vaddr);
