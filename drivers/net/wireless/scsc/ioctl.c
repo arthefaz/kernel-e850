@@ -2607,10 +2607,11 @@ int slsi_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 	} else if (strncasecmp(command, CMD_GETWESMODE, strlen(CMD_GETWESMODE)) == 0) {
 		ret = slsi_wes_mode_read(dev, command, priv_cmd.total_len);
 	} else if (strncasecmp(command, CMD_SETROAMSCANCHANNELS, strlen(CMD_SETROAMSCANCHANNELS)) == 0) {
-		int skip = strlen(CMD_SETROAMSCANCHANNELS) + 1;
-
-		ret = slsi_roam_scan_channels_write(dev, command + skip,
+		u8 skip = strlen(CMD_SETROAMSCANCHANNELS) + 1;
+		if (skip <= priv_cmd.total_len) {
+			ret = slsi_roam_scan_channels_write(dev, command + skip,
 						    priv_cmd.total_len - skip);
+		}
 	} else if (strncasecmp(command, CMD_GETROAMSCANCHANNELS, strlen(CMD_GETROAMSCANCHANNELS)) == 0) {
 		ret = slsi_roam_scan_channels_read(dev, command, priv_cmd.total_len);
 #endif
@@ -2619,9 +2620,10 @@ int slsi_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 	} else if (strncasecmp(command, CMD_HAPD_GET_CHANNEL, strlen(CMD_HAPD_GET_CHANNEL)) == 0) {
 		ret = slsi_auto_chan_read(dev, command, priv_cmd.total_len);
 	} else if (strncasecmp(command, CMD_SET_SAP_CHANNEL_LIST, strlen(CMD_SET_SAP_CHANNEL_LIST)) == 0) {
-		int skip = strlen(CMD_SET_SAP_CHANNEL_LIST) + 1;
-
-		ret = slsi_auto_chan_write(dev, command + skip);
+		u8 skip = strlen(CMD_SET_SAP_CHANNEL_LIST) + 1;
+		if (skip <= priv_cmd.total_len) {
+			ret = slsi_auto_chan_write(dev, command + skip);
+		}
 	} else if (strncasecmp(command, CMD_REASSOC, strlen(CMD_REASSOC)) == 0) {
 		int skip = strlen(CMD_REASSOC) + 1;
 
