@@ -3494,6 +3494,9 @@ static int is_sensor_back_stop(void *qdevice,
 	struct is_device_sensor *device = qdevice;
 	struct is_groupmgr *groupmgr;
 	struct is_group *group;
+#if defined(SECURE_CAMERA_FACE)
+	struct is_core *core;
+#endif
 
 	FIMC_BUG(!device);
 
@@ -3504,6 +3507,17 @@ static int is_sensor_back_stop(void *qdevice,
 		mwarn("already back stop", device);
 		goto p_err;
 	}
+
+#if defined(SECURE_CAMERA_FACE)
+	core = device->private_data;
+	if (!core) {
+		merr("core is NULL", device);
+		return -EINVAL;
+	}
+
+	ret = is_secure_func(core, NULL, IS_SECURE_CAMERA_FACE,
+			device->ex_scenario, SMC_SECCAM_UNPREPARE);
+#endif
 
 	ret = is_group_stop(groupmgr, group);
 	if (ret)
