@@ -755,7 +755,13 @@ int csi_hw_g_dma_common_frame_id(u32 __iomem *base_reg, u32 *frame_id)
 	return 0;
 }
 
-int csi_hw_s_dma_common_frame_id_decoder(u32 __iomem *base_reg, u32 enable)
+int csi_hw_s_dma_common_frame_id_decoder(u32 __iomem *base_reg, u32 __iomem *vc_cmn_reg,
+	u32 enable, u32 batch_num)
+{
+	return 0;
+}
+
+int csi_hw_clear_fro_count(u32 __iomem *dma_top_reg, u32 __iomem *vc_reg)
 {
 	return 0;
 }
