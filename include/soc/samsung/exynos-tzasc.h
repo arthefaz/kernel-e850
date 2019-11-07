@@ -100,10 +100,11 @@ static inline unsigned int mif_addr_to_pa(unsigned int mif_addr,
 					  unsigned int ch)
 {
 	unsigned long ta, ba, sa, bit_8th;
+	unsigned long maddr = (unsigned long)mif_addr;
 
-	ta = (mif_addr & 0x7FFFFF00) << 1;
-	ba = (mif_addr & 0xFF);
-	sa = mif_addr << 1;
+	ta = (maddr & 0x7FFFFF00) << 1;
+	ba = (maddr & 0xFF);
+	sa = maddr << 1;
 
 	bit_8th = (((sa & (1 << 12)) >> 12) ^
 		  ((sa & (1 << 14)) >> 14) ^
