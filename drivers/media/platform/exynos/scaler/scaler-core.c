@@ -423,19 +423,6 @@ static const struct sc_fmt sc_formats[] = {
 		.is_alphablend_fmt = 1,
 		.alphablend_plane_num = 2,
 	}, {
-		/* Src Blending : NV12MT + RGB32 */
-		.name		= "NV12MT-RGB32",
-		.pixelformat	= V4L2_PIX_FMT_NV12MT_16X16_RGB32,
-		.cfg_val	= SCALER_CFG_FMT_YCBCR420_2P |
-					SCALER_CFG_TILE_EN,
-		.bitperpixel	= { 8, 4, 32 },
-		.num_planes	= 3,
-		.num_comp	= 3,
-		.h_shift	= 1,
-		.v_shift	= 1,
-		.is_alphablend_fmt = 1,
-		.alphablend_plane_num = 2,
-	}, {
 		/* Src Blending : NV12 + RGB32 */
 		.name		= "NV12-RGB32",
 		.pixelformat	= V4L2_PIX_FMT_NV12_RGB32,
