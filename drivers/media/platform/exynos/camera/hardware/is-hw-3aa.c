@@ -340,7 +340,7 @@ static int is_hw_3aa_disable(struct is_hw_ip *hw_ip, u32 instance, ulong hw_map)
 	return ret;
 }
 
-#if defined(ENABLE_3AA_LIC_OFFSET)
+#if IS_ENABLED(ENABLE_3AA_LIC_OFFSET)
 static int __is_hw_3aa_get_change_state(struct is_hw_ip *hw_ip, int instance, int hint)
 {
 	struct is_hardware *hw = NULL;
@@ -456,7 +456,7 @@ static int is_hw_3aa_shot(struct is_hw_ip *hw_ip, struct is_frame *frame,
 	ulong hw_map)
 {
 	int ret = 0;
-	int mode, i, cur_idx;
+	int i, cur_idx;
 	struct is_hw_3aa *hw_3aa;
 	struct taa_param_set *param_set;
 	struct is_region *region;
@@ -465,6 +465,9 @@ static int is_hw_3aa_shot(struct is_hw_ip *hw_ip, struct is_frame *frame,
 	u32 input_w, input_h, crop_x, crop_y, output_w = 0, output_h = 0;
 	bool frame_done = false;
 	struct is_param_region *param_region;
+#if IS_ENABLED(ENABLE_3AA_LIC_OFFSET)
+	int mode;
+#endif
 
 	FIMC_BUG(!hw_ip);
 	FIMC_BUG(!frame);
@@ -685,7 +688,7 @@ config:
 			instance, hw_ip);
 	}
 
-#if defined(ENABLE_3AA_LIC_OFFSET)
+#if IS_ENABLED(ENABLE_3AA_LIC_OFFSET)
 	if (frame->type != SHOT_TYPE_INTERNAL) {
 		mode = __is_hw_3aa_get_change_state(hw_ip, instance,
 			CHK_MODECHANGE_SCN(frame->shot->ctl.aa.captureIntent));
