@@ -48,6 +48,9 @@ static const inline char *dir_str(enum direction dir)
 /* print IPC message packet */
 void gnss_log_ipc_pkt(struct sk_buff *skb, enum direction dir);
 
+/* get gnssif version */
+const char *get_gnssif_driver_version(void);
+
 /* gnss irq */
 void gif_init_irq(struct gnss_irq *irq, unsigned int num, const char *name,
 			unsigned long flags);

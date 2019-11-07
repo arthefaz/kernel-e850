@@ -40,6 +40,7 @@
 
 #include "gnss_prj.h"
 #include "gnss_utils.h"
+#include "gnssif_version.h"
 
 static const char *hex = "0123456789abcdef";
 
@@ -124,6 +125,11 @@ void gnss_log_ipc_pkt(struct sk_buff *skb, enum direction dir)
 	msg_len = (skb->len - hdr_len);
 
 	pr_ipc_msg(log_info.fmt_msg, ch, prefix, msg, msg_len);
+}
+
+const char *get_gnssif_driver_version(void)
+{
+	return &(gnssif_driver_version[0]);
 }
 
 void gif_init_irq(struct gnss_irq *irq, unsigned int num, const char *name,

@@ -42,6 +42,7 @@
 
 #include "gnss_mbox.h"
 #include "gnss_prj.h"
+#include "gnss_utils.h"
 
 static struct gnss_ctl *create_ctl_device(struct platform_device *pdev)
 {
@@ -394,6 +395,8 @@ static int gnss_probe(struct platform_device *pdev)
 	struct io_device *iod;
 	struct link_device *ld;
 	unsigned size;
+
+	gif_info("Exynos GNSS interface driver %s\n", get_gnssif_driver_version());
 
 	gif_info("%s: +++\n", pdev->name);
 
