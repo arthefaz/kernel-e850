@@ -163,6 +163,7 @@
 #define SECURE_CAMERA_FACE	/* For face Detection and face authentication */
 #define SECURE_CAMERA_CH		((1 << CSI_ID_C) | (1 << CSI_ID_E))
 #define SECURE_CAMERA_HEAP_ID		(11)
+#define SECURE_CAMERA_MEM_SHARE
 #define SECURE_CAMERA_MEM_ADDR		(0xA1000000)	/* secure_camera_heap */
 #define SECURE_CAMERA_MEM_SIZE		(0x02B00000)
 #define NON_SECURE_CAMERA_MEM_ADDR	(0xA3B00000)	/* camera_heap */
