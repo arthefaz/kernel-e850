@@ -2820,7 +2820,7 @@ int is_load_bin(void)
 
 	lib->binary_load_flg = true;
 
-#if defined(SECURE_CAMERA_FACE)
+#if defined(SECURE_CAMERA_MEM_SHARE)
 	if (core && core->scenario == IS_SCENARIO_SECURE) {
 		mblk_init(&lib->mb_dma_taaisp, lib->minfo->pb_taaisp_s,
 				MT_TYPE_MB_DMA_TAAISP, "DMA_TAAISP_S");

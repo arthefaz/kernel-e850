@@ -637,7 +637,7 @@ static int is_resourcemgr_deinit_dynamic_mem(struct is_resourcemgr *resourcemgr)
 }
 #endif /* #ifdef ENABLE_DYNAMIC_MEM */
 
-#if defined(SECURE_CAMERA_FACE)
+#if defined(SECURE_CAMERA_MEM_SHARE)
 static int is_resourcemgr_alloc_secure_mem(struct is_resourcemgr *resourcemgr)
 {
 	struct is_mem *mem = &resourcemgr->mem;
@@ -1908,7 +1908,7 @@ int is_resource_get(struct is_resourcemgr *resourcemgr, u32 rsc_type)
 				goto p_err;
 			}
 
-#if defined(SECURE_CAMERA_FACE)
+#if defined(SECURE_CAMERA_MEM_SHARE)
 			ret = is_resourcemgr_init_secure_mem(resourcemgr);
 			if (ret) {
 				err("is_resourcemgr_init_secure_mem is fail(%d)\n", ret);
@@ -2091,7 +2091,7 @@ int is_resource_put(struct is_resourcemgr *resourcemgr, u32 rsc_type)
 			if (ret)
 				err("is_interface_close is fail(%d)", ret);
 
-#if defined(SECURE_CAMERA_FACE)
+#if defined(SECURE_CAMERA_MEM_SHARE)
 			ret = is_resourcemgr_deinit_secure_mem(resourcemgr);
 			if (ret)
 				err("is_resourcemgr_deinit_secure_mem is fail(%d)", ret);
