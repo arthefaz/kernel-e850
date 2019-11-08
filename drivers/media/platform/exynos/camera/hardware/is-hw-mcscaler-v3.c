@@ -2511,7 +2511,7 @@ int is_hw_mcsc_check_format(enum mcsc_io_type type, u32 format, u32 bit_width,
 			err_hw("Invalid MCSC OTF Input width(%d)", width);
 		}
 
-		if (height < 16 || height > 8192) {
+		if (height < 16 || height > 9072) {
 			ret = -EINVAL;
 			err_hw("Invalid MCSC OTF Input height(%d)", height);
 		}
@@ -2534,7 +2534,7 @@ int is_hw_mcsc_check_format(enum mcsc_io_type type, u32 format, u32 bit_width,
 			err_hw("Invalid MCSC OTF Output width(%d)", width);
 		}
 
-		if (height < 16 || height > 8192) {
+		if (height < 16 || height > 9072) {
 			ret = -EINVAL;
 			err_hw("Invalid MCSC OTF Output height(%d)", height);
 		}
@@ -2556,7 +2556,7 @@ int is_hw_mcsc_check_format(enum mcsc_io_type type, u32 format, u32 bit_width,
 			err_hw("Invalid MCSC DMA Input width(%d)", width);
 		}
 
-		if (height < 16 || height > 8192) {
+		if (height < 16 || height > 9072) {
 			ret = -EINVAL;
 			err_hw("Invalid MCSC DMA Input height(%d)", height);
 		}
