@@ -708,17 +708,27 @@ static void csi_dma_tag(struct v4l2_subdev *subdev,
 	v4l2_subdev_notify(subdev, data_type, frame);
 }
 
-static void csi_err_check(struct is_device_csi *csi, u32 *err_id)
+static void csi_err_check(struct is_device_csi *csi, u32 *err_id, enum csis_hw_type type)
 {
-	int vc, err, err_flag = 0;
+	int vc, err, err_flag = 0, votf_ch = 0;
+	struct is_subdev *dma_subdev;
 
 	/* 1. Check error */
-	for (vc = CSI_VIRTUAL_CH_0; vc < CSI_VIRTUAL_CH_MAX; vc++)
+	for (vc = CSI_VIRTUAL_CH_0; vc < CSI_VIRTUAL_CH_MAX; vc++) {
 		err_flag |= csi->error_id[vc];
 
+		dma_subdev = csi->dma_subdev[vc];
+		votf_ch |= test_bit(IS_SUBDEV_VOTF_USE, &dma_subdev->state) << vc;
+	}
+
 	/* 2. If err occurs first in 1 frame, request DMA abort */
-	if (!err_flag)
-		csi_hw_s_control(csi->cmn_reg[csi->scm][0], CSIS_CTRL_DMA_ABORT_REQ, true);
+	if (!err_flag) {
+
+		if (votf_ch && type == CSIS_LINK)
+			minfo("[CSI%d] No abort request. VOTF CH(0x%x)\n",csi, csi->ch, votf_ch);
+		else
+			csi_hw_s_control(csi->cmn_reg[csi->scm][0], CSIS_CTRL_DMA_ABORT_REQ, true);
+	}
 
 	/* 3. Cumulative error */
 	for (vc = CSI_VIRTUAL_CH_0; vc < CSI_VIRTUAL_CH_MAX; vc++)
@@ -1231,7 +1241,7 @@ static irqreturn_t is_isr_csi(int irq, void *data)
 
 	/* Check error */
 	if (irq_src.err_flag)
-		csi_err_check(csi, (u32 *)irq_src.err_id);
+		csi_err_check(csi, (u32 *)irq_src.err_id, CSIS_LINK);
 
 clear_status:
 	return IRQ_HANDLED;
@@ -1359,7 +1369,7 @@ static irqreturn_t is_isr_csi_dma(int irq, void *data)
 
 	/* Check error */
 	if (dma_err_flag)
-		csi_err_check(csi, dma_err_id);
+		csi_err_check(csi, dma_err_id, CSIS_WDMA);
 
 	return IRQ_HANDLED;
 }
