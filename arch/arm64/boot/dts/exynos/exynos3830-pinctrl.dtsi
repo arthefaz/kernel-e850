@@ -636,21 +636,21 @@
 
 		/* usi_spi_0 */
 		spi0_bus: spi0-bus {
-				samsung,pins = "gpp2-0", "gpp2-1", "gpp2-2";
+				samsung,pins = "gpp2-0", "gpp2-2", "gpp2-3";
 				samsung,pin-function = <2>;
 				samsung,pin-pud = <0>;
 				samsung,pin-drv = <0>;
 		};
 
 		spi0_cs: spi0-cs {
-				samsung,pins = "gpp2-3";
+				samsung,pins = "gpp2-1";
 				samsung,pin-function = <1>;
 				samsung,pin-pud = <0>;
 				samsung,pin-drv = <0>;
 		};
 
 		spi0_cs_func: spi0-cs-func {
-				samsung,pins = "gpp2-3";
+				samsung,pins = "gpp2-1";
 				samsung,pin-function = <2>;
 				samsung,pin-pud = <0>;
 				samsung,pin-drv = <0>;
