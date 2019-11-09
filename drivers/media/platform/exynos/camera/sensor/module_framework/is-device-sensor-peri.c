@@ -1260,6 +1260,15 @@ int is_sensor_peri_notify_flash_fire(struct v4l2_subdev *subdev, void *arg)
 		flash->flash_ae.frm_num_pre_fls,
 		flash->flash_ae.frm_num_main_fls[flash->flash_ae.main_fls_strm_on_off_step]);
 
+	/* update flash expecting dm in current mode */
+	flash->expecting_flash_dm[vsync_count % EXPECT_DM_NUM].flashMode =
+							flash->flash_data.mode;
+	flash->expecting_flash_dm[vsync_count % EXPECT_DM_NUM].firingPower =
+							flash->flash_data.intensity;
+	flash->expecting_flash_dm[vsync_count % EXPECT_DM_NUM].firingTime =
+							flash->flash_data.firing_time_us;
+	flash->expecting_flash_dm[vsync_count % EXPECT_DM_NUM].flashState =
+		sensor_peri->flash->flash_data.flash_fired ? FLASH_STATE_FIRED : FLASH_STATE_READY;
 
 	if (flash->flash_ae.frm_num_pre_fls != 0) {
 		dbg_flash("[%s](%d), pre-flash schedule\n", __func__, vsync_count);
@@ -1349,6 +1358,16 @@ int is_sensor_peri_pre_flash_fire(struct v4l2_subdev *subdev, void *arg)
 			flash->flash_data.intensity, flash->flash_data.firing_time_us);
 		ret = is_sensor_flash_fire(sensor_peri, flash->flash_data.intensity);
 	}
+
+	/* update flash expecting dm in current mode */
+	flash->expecting_flash_dm[vsync_count % EXPECT_DM_NUM].flashMode =
+							flash->flash_data.mode;
+	flash->expecting_flash_dm[vsync_count % EXPECT_DM_NUM].firingPower =
+							flash->flash_data.intensity;
+	flash->expecting_flash_dm[vsync_count % EXPECT_DM_NUM].firingTime =
+							flash->flash_data.firing_time_us;
+	flash->expecting_flash_dm[vsync_count % EXPECT_DM_NUM].flashState =
+		sensor_peri->flash->flash_data.flash_fired ? FLASH_STATE_FIRED : FLASH_STATE_READY;
 
 	/* HACK: reset uctl */
 	flash_uctl->flashMode = 0;
@@ -1978,14 +1997,17 @@ int is_sensor_peri_s_stream(struct is_device_sensor *device,
 		if (sensor_peri->laser_af && test_bit(IS_SENSOR_LASER_AF_AVAILABLE, &sensor_peri->peri_state))
 			CALL_LASEROPS(sensor_peri->laser_af, suspend, sensor_peri->subdev_laser_af);
 
-		if (sensor_peri->flash != NULL && dual_info->mode == IS_DUAL_MODE_NOTHING) {
-			sensor_peri->flash->flash_data.mode = CAM2_FLASH_MODE_OFF;
-			if (sensor_peri->flash->flash_data.flash_fired == true) {
-				ret = is_sensor_flash_fire(sensor_peri, 0);
-				if (ret) {
-					err("failed to turn off flash at flash expired handler\n");
+		if (sensor_peri->flash != NULL) {
+			if (dual_info->mode == IS_DUAL_MODE_NOTHING) {
+				sensor_peri->flash->flash_data.mode = CAM2_FLASH_MODE_OFF;
+				if (sensor_peri->flash->flash_data.flash_fired == true) {
+					ret = is_sensor_flash_fire(sensor_peri, 0);
+					if (ret) {
+						err("failed to turn off flash at flash expired handler\n");
+					}
 				}
 			}
+			memset(&sensor_peri->flash->expecting_flash_dm[0], 0, sizeof(camera2_flash_dm_t) * EXPECT_DM_NUM);
 		}
 
 		memset(&sensor_peri->cis.cur_sensor_uctrl, 0, sizeof(camera2_sensor_uctl_t));

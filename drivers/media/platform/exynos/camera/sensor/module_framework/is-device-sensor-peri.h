@@ -70,7 +70,6 @@ struct is_cis {
 	/* expected dms */
 	camera2_lens_dm_t		expecting_lens_dm[EXPECT_DM_NUM];
 	camera2_sensor_dm_t		expecting_sensor_dm[EXPECT_DM_NUM];
-	camera2_flash_dm_t		expecting_flash_dm[EXPECT_DM_NUM];
 
 	/* expected udm */
 	camera2_lens_udm_t		expecting_lens_udm[EXPECT_DM_NUM];
@@ -267,6 +266,9 @@ struct is_flash {
 	int				attach_sdp;
 #endif
 	struct is_device_sensor_peri	*sensor_peri;
+
+	/* expecting dm */
+	camera2_flash_dm_t		expecting_flash_dm[EXPECT_DM_NUM];
 };
 
 struct is_ois {

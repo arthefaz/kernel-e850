@@ -2603,16 +2603,17 @@ int update_flash_dynamic_meta(struct is_sensor_interface *itf,
 	sensor_peri = container_of(itf, struct is_device_sensor_peri, sensor_interface);
 
 	if (sensor_peri->flash) {
-		dm->flash.flashMode = sensor_peri->flash->flash_data.mode;
-		dm->flash.firingPower = sensor_peri->flash->flash_data.intensity;
-		dm->flash.firingTime = sensor_peri->flash->flash_data.firing_time_us;
-		if (sensor_peri->flash->flash_data.flash_fired)
-			dm->flash.flashState = FLASH_STATE_FIRED;
-		else
-			dm->flash.flashState = FLASH_STATE_READY;
+		dm->flash.flashMode =
+			sensor_peri->flash->expecting_flash_dm[frame_count % EXPECT_DM_NUM].flashMode;
+		dm->flash.firingPower =
+			sensor_peri->flash->expecting_flash_dm[frame_count % EXPECT_DM_NUM].firingPower;
+		dm->flash.firingTime =
+			sensor_peri->flash->expecting_flash_dm[frame_count % EXPECT_DM_NUM].firingTime;
+		dm->flash.flashState =
+			sensor_peri->flash->expecting_flash_dm[frame_count % EXPECT_DM_NUM].flashState;
 
-		dbg_flash("[%s]: mode(%d), power(%d), time(%lld), state(%d)\n",
-				__func__, dm->flash.flashMode,
+		dbg_flash("[%s][F:%d]: mode(%d), power(%d), time(%lld), state(%d)\n",
+				__func__, frame_count, dm->flash.flashMode,
 				dm->flash.firingPower,
 				dm->flash.firingTime,
 				dm->flash.flashState);
