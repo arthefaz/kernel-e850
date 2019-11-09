@@ -1397,7 +1397,7 @@ static void cmdq_post_req(struct mmc_host *host, struct mmc_request *mrq,
 	if (data) {
 		if (cq_host->ops->crypto_engine_clear) {
 			desc = get_trans_desc(cq_host, tag);
-			ret = cq_host->ops->crypto_engine_clear(host, desc, true);
+			ret = cq_host->ops->crypto_engine_clear(host, desc, data, true);
 			if (ret) {
 				pr_err("%s: %s: failed to clear crypto engine(%d)\n",
 					mmc_hostname(host), __func__, ret);

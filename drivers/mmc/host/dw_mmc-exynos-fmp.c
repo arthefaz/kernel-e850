@@ -190,10 +190,10 @@ no_crypto:
 	return 0;
 }
 
-int exynos_mmc_fmp_clear(struct dw_mci *host, void *desc, bool cmdq_enabled)
+int exynos_mmc_fmp_clear(struct dw_mci *host, void *desc, struct mmc_data *mmc_data, bool cmdq_enabled)
 {
 	int ret = 0;
-	struct bio *bio = get_bio(host, host->data, cmdq_enabled);
+	struct bio *bio = get_bio(host, mmc_data, cmdq_enabled);
 	struct fmp_request req;
 	struct crypto_diskcipher *dtfm;
 	struct fmp_crypto_info *ci;

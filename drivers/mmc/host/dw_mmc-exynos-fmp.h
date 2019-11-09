@@ -19,7 +19,7 @@ int exynos_mmc_fmp_cfg(struct dw_mci *host,
 				int page_index,
 				bool cmdq_enabled);
 int exynos_mmc_fmp_clear(struct dw_mci *host, void *desc,
-				bool cmdq_enabled);
+				struct mmc_data *mmc_data, bool cmdq_enabled);
 
 int exynos_mmc_fmp_sec_cfg(struct dw_mci *host);
 #else
@@ -32,7 +32,7 @@ inline int exynos_mmc_fmp_cfg(struct dw_mci *host,
 	return 0;
 }
 
-inline int exynos_mmc_fmp_clear(struct dw_mci *host, void *desc, bool cmdq_enabled)
+inline int exynos_mmc_fmp_clear(struct dw_mci *host, void *desc, struct mmc_data *mmc_data, bool cmdq_enabled)
 {
 	return 0;
 }

@@ -1334,9 +1334,9 @@ static int dw_mci_exynos_crypto_engine_cfg(struct dw_mci *host,
 }
 
 static int dw_mci_exynos_crypto_engine_clear(struct dw_mci *host, void *desc,
-                                        bool cmdq_enabled)
+                                        struct mmc_data *data, bool cmdq_enabled)
 {
-        return exynos_mmc_fmp_clear(host, desc, cmdq_enabled);
+        return exynos_mmc_fmp_clear(host, desc, data, cmdq_enabled);
 }
 
 static int dw_mci_exynos_access_control_sec_cfg(struct dw_mci *host)

@@ -902,7 +902,7 @@ static void dw_mci_dmac_complete_dma(void *arg)
 				    data->sg, data->sg_len, DMA_FROM_DEVICE);
 
 	if (drv_data && drv_data->crypto_engine_clear) {
-		ret = drv_data->crypto_engine_clear(host, host->sg_cpu, false);
+		ret = drv_data->crypto_engine_clear(host, host->sg_cpu, data, false);
 		if (ret) {
 			dev_err(host->dev,
 					"%s: failed to clear crypto engine(%d)\n",
@@ -3724,13 +3724,13 @@ static int dw_mci_cmdq_crypto_engine_cfg(struct mmc_host *mmc, void *desc,
 }
 
 static int dw_mci_cmdq_crypto_engine_clear(struct mmc_host *mmc, void *desc,
-					bool cmdq_enabled)
+					struct mmc_data *data, bool cmdq_enabled)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
 	struct dw_mci *host = slot->host;
 	const struct dw_mci_drv_data *drv_data = host->drv_data;
 
-	return drv_data->crypto_engine_clear(host, desc, cmdq_enabled);
+	return drv_data->crypto_engine_clear(host, desc, data, cmdq_enabled);
 }
 
 #if defined(CONFIG_MMC_DW_DEBUG)
@@ -3909,7 +3909,7 @@ static int dw_mci_cmdq_crypto_engine_cfg(struct mmc_host *mmc, void *desc,
 }
 
 static int dw_mci_cmdq_crypto_engine_clear(struct mmc_host *mmc, void *desc,
-					bool cmdq_enabled)
+					struct mmc_data *data, bool cmdq_enabled)
 {
 	return 0;
 }

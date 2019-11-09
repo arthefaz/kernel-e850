@@ -1013,7 +1013,7 @@ struct dw_mci_drv_data {
 				  struct page *page, int sector_offset,
 				  int page_index, bool cmdq_enabled);
 	int (*crypto_engine_clear)(struct dw_mci *host, void *desc,
-					bool cmdq_enabled);
+					struct mmc_data *data, bool cmdq_enabled);
 	int (*crypto_engine_sec_cfg)(struct dw_mci *host);
 	int (*access_control_init)(struct dw_mci *host);
 	int (*access_control_abort)(struct dw_mci *host);
