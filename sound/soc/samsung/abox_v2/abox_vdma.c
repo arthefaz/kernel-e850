@@ -783,8 +783,6 @@ static int samsung_abox_vdma_probe(struct platform_device *pdev)
 			dev_err(dev, "register component failed: %d\n", ret);
 #else
 		devm_snd_soc_register_platform(dev, &abox_vdma_platform);
-		if (ret < 0)
-			dev_err(dev, "register vdma platform_drv failed: %d\n", ret);
 #endif
 	}
 

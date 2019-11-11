@@ -1340,7 +1340,7 @@ static const char * const asrc_source_enum_texts[] = {
 	"UAIF6",
 	"USB",
 	"BCLK_CP",
-	"BCLK_SPDY"
+	"BCLK_SPDY",
 	"ABOX",
 };
 

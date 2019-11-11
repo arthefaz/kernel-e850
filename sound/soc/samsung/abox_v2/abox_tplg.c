@@ -1087,7 +1087,7 @@ static irqreturn_t abox_tplg_ipc_handler(int ipc_id, void *dev_id,
 int abox_tplg_restore(struct device *dev)
 {
 	struct abox_tplg_kcontrol_data *kdata;
-	int i;
+	int i, ret;
 
 	dev_dbg(dev, "%s\n", __func__);
 
@@ -1106,7 +1106,9 @@ int abox_tplg_restore(struct device *dev)
 			 */
 			for (i = 0; i < kdata->count; i++) {
 				if (kdata->value[i]) {
-					abox_tplg_kcontrol_put(dev, kdata);
+					ret = abox_tplg_kcontrol_put(dev, kdata);
+					if (ret < 0)
+						return ret;
 					break;
 				}
 			}
