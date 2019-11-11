@@ -745,7 +745,7 @@ static int s2m_ifconn_handle_cc_notification(struct notifier_block *nb,
 							    ifconn_cc_nb);
 	struct ifconn_notifier_template *ifconn_info = (struct ifconn_notifier_template *)data;
 	muic_attached_dev_t attached_dev = (muic_attached_dev_t)ifconn_info->event;
-	int cable_type;
+	int cable_type = 0;
 	const char *cmd;
 
 	dev_info(battery->dev,
@@ -782,8 +782,11 @@ static int s2m_ifconn_handle_cc_notification(struct notifier_block *nb,
 		__func__, cmd,  attached_dev, cable_type,
 		battery->cable_type, battery->battery_valid);
 
-	if (battery->cable_type >= 0)
+	if (cable_type < 0)
+		battery->cable_type = POWER_SUPPLY_TYPE_UNKNOWN;
+	else
 		battery->cable_type = cable_type;
+
 	set_bat_status_by_cable(battery);
 
 	pr_info("%s: Status(%s), Health(%s), Cable(%d), Recharging(%d)\n",
@@ -808,7 +811,7 @@ static int s2m_ifconn_handle_notification(struct notifier_block *nb,
 							    ifconn_nb);
 	struct ifconn_notifier_template *ifconn_info = (struct ifconn_notifier_template *)data;
 	muic_attached_dev_t attached_dev = (muic_attached_dev_t)ifconn_info->event;
-	int cable_type;
+	int cable_type = 0;
 	const char *cmd;
 #if defined(CONFIG_USE_CCIC)
 	struct pdic_notifier_data *pdic_info = (struct pdic_notifier_data *)ifconn_info->data;
@@ -913,8 +916,11 @@ static int s2m_ifconn_handle_notification(struct notifier_block *nb,
 		__func__, cmd,  attached_dev, cable_type,
 		battery->cable_type, battery->battery_valid);
 
-	if (battery->cable_type >= 0)
+	if (cable_type < 0)
+		battery->cable_type = POWER_SUPPLY_TYPE_UNKNOWN;
+	else
 		battery->cable_type = cable_type;
+
 	set_bat_status_by_cable(battery);
 
 	pr_info("%s: Status(%s), Health(%s), Cable(%d), Recharging(%d)\n",
