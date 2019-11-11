@@ -100,6 +100,10 @@ enum is_subscenario_id {
 	|| ((setfile) == ISS_SUB_SCENARIO_FRONT_C2_OFF_VIDEO)	\
 	|| ((setfile) == ISS_SUB_SCENARIO_FHD_240FPS))
 
+#define IS_VIDEO_HDR_SCENARIO(setfile)				\
+	(((setfile) == ISS_SUB_SCENARIO_VIDEO_WDR_AUTO)		\
+	|| ((setfile) == ISS_SUB_SCENARIO_VIDEO_WDR_ON))
+
 enum is_scenario_is {
 	IS_SCENARIO_SWVDIS = 1,
 	IS_SCENARIO_COLOR_IRIS = 2,
