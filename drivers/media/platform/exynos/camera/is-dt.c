@@ -725,7 +725,7 @@ static int parse_vc_extra_data(struct exynos_platform_is_module *pdata, struct d
 static int parse_modes_data(struct exynos_platform_is_module *pdata, struct device_node *dnode)
 {
 	int ret = 0;
-	struct device_node *next;
+	struct device_node *next, *opt_np;
 	int idx_mode;
 	int idx_vc;
 	int idx_dt;
@@ -766,6 +766,12 @@ static int parse_modes_data(struct exynos_platform_is_module *pdata, struct devi
 		of_property_read_u32_index(next, "common", idx_dt++, &cfg->lrte);
 		of_property_read_u32_index(next, "common", idx_dt++, &cfg->pd_mode);
 		of_property_read_u32_index(next, "common", idx_dt++, (u32 *)&cfg->ex_mode);
+
+		opt_np = of_get_child_by_name(next, "option");
+		if (opt_np) {
+			if (of_find_property(opt_np, "votf", NULL))
+				of_property_read_u32(opt_np, "votf", &cfg->votf);
+		}
 
 		for (idx_vc = 0; idx_vc < CSI_VIRTUAL_CH_MAX; idx_vc++) {
 			idx_dt = 0;

@@ -1334,9 +1334,18 @@ int is_groupmgr_init(struct is_groupmgr *groupmgr,
 			goto p_err;
 		}
 
+
 		if (next) {
 			if (test_bit(IS_GROUP_OTF_INPUT, &next->state)) {
 				set_bit(IS_GROUP_OTF_OUTPUT, &group->state);
+
+				/* In only sensor group, VOTF path is determined by sensor mode. */
+				if (group->slot == GROUP_SLOT_SENSOR) {
+					if (test_bit(IS_GROUP_VOTF_OUTPUT, &group->state))
+						set_bit(IS_GROUP_VOTF_INPUT, &next->state);
+					else
+						clear_bit(IS_GROUP_VOTF_INPUT, &next->state);
+				}
 
 				if (test_bit(IS_GROUP_VOTF_INPUT, &next->state)) {
 					set_bit(IS_GROUP_VOTF_OUTPUT, &group->state);

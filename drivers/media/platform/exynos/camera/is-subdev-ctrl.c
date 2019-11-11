@@ -211,6 +211,7 @@ int is_subdev_probe(struct is_subdev *subdev,
 	clear_bit(IS_SUBDEV_OPEN, &subdev->state);
 	clear_bit(IS_SUBDEV_RUN, &subdev->state);
 	clear_bit(IS_SUBDEV_START, &subdev->state);
+	clear_bit(IS_SUBDEV_VOTF_USE, &subdev->state);
 
 	/* for internal use */
 	clear_bit(IS_SUBDEV_INTERNAL_S_FMT, &subdev->state);
@@ -447,6 +448,7 @@ int is_subdev_close(struct is_subdev *subdev)
 	clear_bit(IS_SUBDEV_RUN, &subdev->state);
 	clear_bit(IS_SUBDEV_START, &subdev->state);
 	clear_bit(IS_SUBDEV_FORCE_SET, &subdev->state);
+	clear_bit(IS_SUBDEV_VOTF_USE, &subdev->state);
 
 	/* for internal use */
 	clear_bit(IS_SUBDEV_INTERNAL_S_FMT, &subdev->state);
@@ -668,6 +670,7 @@ static int is_subdev_stop(struct is_subdev *subdev)
 
 	clear_bit(IS_SUBDEV_RUN, &subdev->state);
 	clear_bit(IS_SUBDEV_START, &subdev->state);
+	clear_bit(IS_SUBDEV_VOTF_USE, &subdev->state);
 
 p_err:
 	return ret;
@@ -726,6 +729,7 @@ static int is_sensor_subdev_stop(void *qdevice,
 
 	clear_bit(IS_SUBDEV_RUN, &subdev->state);
 	clear_bit(IS_SUBDEV_START, &subdev->state);
+	clear_bit(IS_SUBDEV_VOTF_USE, &subdev->state);
 
 p_err:
 	return ret;
@@ -1259,6 +1263,7 @@ static int _is_subdev_internal_stop(struct is_subdev *subdev)
 	framemgr_x_barrier_irqr(framemgr, FMGR_IDX_16, flags);
 
 	clear_bit(IS_SUBDEV_START, &subdev->state);
+	clear_bit(IS_SUBDEV_VOTF_USE, &subdev->state);
 
 p_err:
 

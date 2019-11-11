@@ -212,6 +212,7 @@ struct is_sensor_cfg {
 	u32 lrte;
 	u32 pd_mode;
 	u32 ex_mode;
+	u32 votf;
 	struct is_vci_config input[CSI_VIRTUAL_CH_MAX];
 	struct is_vci_config output[CSI_VIRTUAL_CH_MAX];
 };

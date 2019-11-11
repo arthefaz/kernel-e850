@@ -2625,6 +2625,7 @@ static int is_sensor_s_format(void *qdevice,
 	struct is_fmt *format;
 	u32 width;
 	u32 height;
+	struct is_group *group;
 
 	FIMC_BUG(!device);
 	FIMC_BUG(!device->subdev_module);
@@ -2666,6 +2667,30 @@ static int is_sensor_s_format(void *qdevice,
 	if (ret) {
 		merr("v4l2_csi_call(s_format) is fail(%d)", device, ret);
 		goto p_err;
+	}
+
+	/* In only sensor group, VOTF path is determined by sensor mode. */
+	group = &device->group_sensor;
+	if (device->cfg->votf) {
+		set_bit(IS_GROUP_VOTF_OUTPUT, &group->state);
+		mginfo("VOTF master path is set\n", group, group);
+
+		if (group->next) {
+			if (test_bit(IS_GROUP_OTF_INPUT, &group->next->state)) {
+				set_bit(IS_GROUP_VOTF_INPUT, &group->next->state);
+				mginfo("VOTF slave path is set\n", group->next, group->next);
+			}
+		}
+	} else {
+		clear_bit(IS_GROUP_VOTF_OUTPUT, &group->state);
+		mginfo("VOTF master path is clear\n", group, group);
+
+		if (group->next) {
+			if (test_bit(IS_GROUP_OTF_INPUT, &group->next->state)) {
+				clear_bit(IS_GROUP_VOTF_INPUT, &group->next->state);
+				mginfo("VOTF slave path is clear\n", group->next, group->next);
+			}
+		}
 	}
 
 p_err:
