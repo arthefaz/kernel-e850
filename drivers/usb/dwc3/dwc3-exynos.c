@@ -500,26 +500,29 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	        dev_dbg(dev, "couldn't get regulator vdd33\n");
 		exynos->vdd33 = NULL;
 	}
+#ifndef CONFIG_SOC_EXYNOS3830
 	if (exynos->vdd33) {
-	//	ret = regulator_enable(exynos->vdd33);
+		ret = regulator_enable(exynos->vdd33);
 		if (ret) {
 			dev_err(dev, "Failed to enable VDD33 supply\n");
 			goto vdd33_err;
 		}
 	}
-
+#endif
 	exynos->vdd10 = devm_regulator_get(dev, "vdd10");
 	if (IS_ERR(exynos->vdd10)) {
 		dev_dbg(dev, "couldn't get regulator vdd10\n");
 		exynos->vdd10 = NULL;
 	}
+#ifndef CONFIG_SOC_EXYNOS3830
 	if (exynos->vdd10) {
-	//	ret = regulator_enable(exynos->vdd10);
+		ret = regulator_enable(exynos->vdd10);
 		if (ret) {
 			dev_err(dev, "Failed to enable VDD10 supply\n");
 			goto vdd10_err;
 		}
         }
+#endif
 	ret = dwc3_exynos_register_phys(exynos);
 	if (ret) {
 		dev_err(dev, "couldn't register PHYs\n");
@@ -545,12 +548,14 @@ populate_err:
 	platform_device_unregister(exynos->usb2_phy);
 	platform_device_unregister(exynos->usb3_phy);
 phys_err:
-//	if (exynos->vdd10)
-//		regulator_disable(exynos->vdd10);
+#ifndef CONFIG_SOC_EXYNOS3830
+	if (exynos->vdd10)
+		regulator_disable(exynos->vdd10);
 vdd10_err:
-//	if (exynos->vdd33)
-//		regulator_disable(exynos->vdd33);
+	if (exynos->vdd33)
+		regulator_disable(exynos->vdd33);
 vdd33_err:
+#endif
 	pm_runtime_disable(&pdev->dev);
 	dwc3_exynos_clk_disable(exynos);
 	dwc3_exynos_clk_unprepare(exynos);
