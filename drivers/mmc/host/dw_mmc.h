@@ -411,6 +411,8 @@ struct idmac_desc_64addr {
 #define IDMAC_DES0_ER	BIT(5)
 #define IDMAC_DES0_CES	BIT(30)
 #define IDMAC_DES0_OWN	BIT(31)
+#define IDMAC_OWN_CLR64(x) \
+        !((x) & cpu_to_le32(IDMAC_DES0_OWN))
 	u32 des1;		/* Reserved */
 #define IDMAC_64ADDR_SET_BUFFER1_SIZE(d, s) \
 	((d)->des2 = ((d)->des2 & cpu_to_le32(0x03ffe000)) | \

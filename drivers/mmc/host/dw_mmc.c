@@ -1105,8 +1105,8 @@ static inline int dw_mci_prepare_desc32(struct dw_mci *host,
 			 * isn't still owned by IDMAC as IDMAC's write
 			 * ops and CPU's read ops are asynchronous.
 			 */
-			if (readl_poll_timeout_atomic(&desc->des0, val, val,
-						      //IDMAC_OWN_CLR64(val),
+			if (readl_poll_timeout_atomic(&desc->des0, val,
+						      IDMAC_OWN_CLR64(val),
 						      10, 100 * USEC_PER_MSEC))
 				goto err_own_bit;
 
