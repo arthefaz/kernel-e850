@@ -86,10 +86,11 @@
 				ap2cp_kerneltime = <MAILBOX_SR 9>;
 
 				/* srinfo settings */
-				srinfo_offset = <0>;
-				srinfo_size = <0>;
+				srinfo_offset = <0x800>;
+				srinfo_size = <SRINFO_SIZE>;
+
 				/* clk_table offset */
-				clk_table_offset = <40>;
+				clk_table_offset = <0x28>;
 
 				/* Status bit info for mbx_ap2cp_united_status */
 				sbi_lcd_status_mask = <0x1>;
