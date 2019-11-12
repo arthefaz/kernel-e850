@@ -790,6 +790,8 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 		goto exit;
 	}
 
+	print_mc_state(mc);
+
 	if (mif_gpio_get_value(mc->s5100_gpio_phone_active, true) == 1) {
 		mif_gpio_set_value(mc->s5100_gpio_cp_dump_noti, 1, 0);
 	} else {
