@@ -114,10 +114,8 @@ static struct bio *get_bio(struct dw_mci *host,
 		struct mmc_request *mrq;
 
 		cmdq_req = container_of(data, struct mmc_cmdq_req, data);
-		if (!cmdq_req)
-			return NULL;
-
 		mrq = &cmdq_req->mrq;
+
 		if (!mrq || !mrq->req || !mrq->req->bio)
 			return NULL;
 
@@ -129,8 +127,6 @@ static struct bio *get_bio(struct dw_mci *host,
 		struct request *req;
 
 		brq = container_of(data, struct mmc_blk_request, data);
-		if (!brq)
-			return NULL;
 
 		mq_rq = container_of(brq, struct mmc_queue_req, brq);
 		req = mmc_queue_req_to_req(mq_rq);
