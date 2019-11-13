@@ -30,7 +30,7 @@
 					<&s318ap_lna_on1 &s318ap_lna_on2 &s318ap_lna_on3 &s318ap_lna_on4 &s318ap_lna_on5>,
 					<&s318ap_lna_on9 &s318ap_lna_on10 &s318ap_lna_on11>;
 
-				interrupts = <GIC_SPI INTREQ_RESET_REQ IRQ_TYPE_NONE>;
+				interrupts = <GIC_SPI INTREQ_RESET_REQ IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "RESET_REQ";
 
 				ap2cp_cfg_addr = <0x14020000>;
@@ -295,7 +295,7 @@
 				compatible = "samsung,exynos-cp-mailbox";
 
 				reg = <0x0 0x11920000 0x180>;
-				interrupts = <GIC_SPI INTREQ__MAILBOX_CP2AP IRQ_TYPE_NONE>;
+				interrupts = <GIC_SPI INTREQ__MAILBOX_CP2AP IRQ_TYPE_LEVEL_HIGH>;
 
 				mcu,name = "cp_mailbox";
 				mcu,id = <0>;
