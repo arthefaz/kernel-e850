@@ -127,7 +127,7 @@
 				sbi_ap2cp_kerneltime_usec_pos = <0>;
 
 				/* IO devices */
-				mif,num_iodevs = <20>;
+				mif,num_iodevs = <23>;
 				iodevs {
 					io_device_0 {
 						iod,name = "umts_ipc0";
@@ -284,6 +284,30 @@
 					io_device_19 {
 						iod,name = "umts_wfc1";
 						iod,ch = <94>;
+						iod,format = <1>;		/* IPC_RAW */
+						iod,io_type = <IODEV_IPC>;
+						iod,link_type = <LINKDEV_SHMEM>;
+						iod,attrs = <0x0>;
+					};
+					io_device_20 {
+						iod,name = "umts_embms0";
+						iod,ch = <30>;
+						iod,format = <1>;		/* IPC_RAW */
+						iod,io_type = <IODEV_NET>;
+						iod,link_type = <LINKDEV_SHMEM>;
+						iod,attrs = <0x0>;
+					};
+					io_device_21 {
+						iod,name = "umts_embms1";
+						iod,ch = <31>;
+						iod,format = <1>;		/* IPC_RAW */
+						iod,io_type = <IODEV_NET>;
+						iod,link_type = <LINKDEV_SHMEM>;
+						iod,attrs = <0x0>;
+					};
+					io_device_22 {
+						iod,name = "umts_atc0";
+						iod,ch = <23>;
 						iod,format = <1>;		/* IPC_RAW */
 						iod,io_type = <IODEV_IPC>;
 						iod,link_type = <LINKDEV_SHMEM>;
