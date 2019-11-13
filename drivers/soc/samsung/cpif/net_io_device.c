@@ -279,7 +279,7 @@ static u16 vnet_select_queue(struct net_device *dev, struct sk_buff *skb,
 #if defined(CONFIG_MODEM_IF_QOS)
 	return (skb && skb->priomark == RAW_HPRIO) ? 1 : 0;
 #elif defined(CONFIG_MODEM_IF_LEGACY_QOS)
-	return (skb && skb->sk && cpif_qos_get_node(skb->sk->sk_uid.val)) ? 1 : 0;
+	return ((skb && skb->truesize == 2) || (skb && skb->sk && cpif_qos_get_node(skb->sk->sk_uid.val))) ? 1 : 0;
 #endif
 }
 #endif
