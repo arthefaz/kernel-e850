@@ -162,5 +162,11 @@ config CP_PKTPROC_PERF_TEST
 	---help---
 	  Test pktproc on AP side
 
+config CP_GRO_EXCEPTION
+	bool "Disable GRO for clat tethering case"
+	default n
+	---help---
+	  Disable GRO for clat packets when usb tethering is enabled
+
 endmenu
 endif

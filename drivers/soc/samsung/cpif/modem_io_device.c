@@ -37,6 +37,7 @@
 #include "modem_utils.h"
 #include "modem_dump.h"
 #include "cpif_clat_info.h"
+#include "cpif_tethering_info.h"
 
 static ssize_t show_waketime(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -384,7 +385,7 @@ static int rx_multi_pdp(struct sk_buff *skb)
 	struct net_device *ndev;
 	struct iphdr *iphdr;
 	int len = skb->len;
-	int ret, l2forward = 0;
+	int ret = 0;
 
 	ndev = iod->ndev;
 	if (!ndev) {
@@ -422,16 +423,12 @@ static int rx_multi_pdp(struct sk_buff *skb)
 	skb_reset_network_header(skb);
 	skb_reset_mac_header(skb);
 
-	if (!l2forward && check_gro_support(skb) && !is_heading_toward_clat(skb)) {
-		ret = napi_gro_receive(napi_get_current(), skb);
-		if (ret == GRO_DROP) {
-			mif_err_limited("%s: %s<-%s: ERR! napi_gro_receive\n",
-					ld->name, iod->name, iod->mc->name);
-		}
+#if defined(CONFIG_CP_GRO_EXCEPTION)
+	if (!check_gro_support(skb) || (is_tethering_upstream_device(skb->dev->name) && is_heading_toward_clat(skb))) {
+#else
+	if (!check_gro_support(skb)) {
+#endif
 
-		if (ld->gro_flush)
-			ld->gro_flush(ld);
-	} else {
 #ifdef CONFIG_LINK_DEVICE_NAPI
 		ret = netif_receive_skb(skb);
 #else /* !CONFIG_LINK_DEVICE_NAPI */
@@ -441,10 +438,18 @@ static int rx_multi_pdp(struct sk_buff *skb)
 			ret = netif_rx_ni(skb);
 #endif /* CONFIG_LINK_DEVICE_NAPI */
 
-		if (ret != NET_RX_SUCCESS) {
+		if (ret != NET_RX_SUCCESS)
 			mif_err_limited("%s: %s<-%s: ERR! netif_rx\n",
 					ld->name, iod->name, iod->mc->name);
+	} else {
+		ret = napi_gro_receive(napi_get_current(), skb);
+		if (ret == GRO_DROP) {
+			mif_err_limited("%s: %s<-%s: ERR! napi_gro_receive\n",
+					ld->name, iod->name, iod->mc->name);
 		}
+
+		if (ld->gro_flush)
+			ld->gro_flush(ld);
 	}
 	return len;
 }

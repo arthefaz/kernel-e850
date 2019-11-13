@@ -56,6 +56,7 @@
 #include "modem_variation.h"
 #include "modem_utils.h"
 #include "cpif_clat_info.h"
+#include "cpif_tethering_info.h"
 
 #ifdef CONFIG_MODEM_IF_LEGACY_QOS
 #include "cpif_qos_info.h"
@@ -797,6 +798,60 @@ static struct attribute *clat_attrs[] = {
 };
 ATTRIBUTE_GROUPS(clat);
 
+
+static ssize_t upstream_dev_show(struct kobject *kobj,
+                struct kobj_attribute *attr, char *buf)
+{
+        char *upstream_dev_name = kmalloc(sizeof(char) * NETDEV_INTERFACE_NAME_LENGTH,
+					GFP_ATOMIC);
+        ssize_t count = 0;
+
+        cpif_tethering_upstream_dev_get(upstream_dev_name);
+        count += sprintf(buf, "tethering upstream dev: %s\n", upstream_dev_name);
+	mif_info("-- tethering upstream dev: %s\n", upstream_dev_name);
+
+	kfree(upstream_dev_name);
+
+        return count;
+}
+
+static ssize_t upstream_dev_store(struct kobject *kobj,
+                struct kobj_attribute *attr,
+                const char *buf, size_t count)
+{
+        char *upstream_dev_name_orig = kmalloc(sizeof(char) * NETDEV_INTERFACE_NAME_LENGTH,
+						GFP_ATOMIC);
+	char *upstream_dev_name_new = kmalloc(sizeof(char) * NETDEV_INTERFACE_NAME_LENGTH,
+						GFP_ATOMIC);
+	char *input = kmalloc(sizeof(char) * NETDEV_INTERFACE_NAME_LENGTH, GFP_ATOMIC);
+
+	cpif_tethering_upstream_dev_get(upstream_dev_name_orig);
+        mif_info("-- original tethering upstream dev: %s\n", upstream_dev_name_orig);
+
+	strcpy(input, buf);
+	cpif_tethering_upstream_dev_set(input);
+
+	cpif_tethering_upstream_dev_get(upstream_dev_name_new);
+	mif_info("-- new tethering upstream dev: %s\n", upstream_dev_name_new);
+
+	kfree(upstream_dev_name_orig);
+	kfree(upstream_dev_name_new);
+	kfree(input);
+
+        return count;
+}
+static struct kobject *cpif_tethering_kobject;
+static struct kobj_attribute upstream_dev_attribute = {
+	.attr = {.name = "upstream_dev", .mode =0660},
+	.show = upstream_dev_show,
+	.store = upstream_dev_store,
+};
+static struct attribute *cpif_tethering_attrs[] = {
+	&upstream_dev_attribute.attr,
+	NULL,
+};
+ATTRIBUTE_GROUPS(cpif_tethering);
+
 #ifdef CONFIG_MODEM_IF_LEGACY_QOS
 static ssize_t hiprio_uid_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -979,6 +1034,17 @@ static int cpif_probe(struct platform_device *pdev)
 	err = cpif_init_clat_info();
 	if (err < 0)
 		mif_err("failed to initialize clat_info(%d)\n", err);
+
+	cpif_tethering_kobject = kobject_create_and_add("cpif_tethering", kernel_kobj);
+        if (!cpif_tethering_kobject)
+		mif_err("cpif_tethering: kobject_create failed ---\n");
+
+        if (sysfs_create_groups(cpif_tethering_kobject, cpif_tethering_groups))
+                mif_err("failed to create tethering groups node\n");
+
+	err = cpif_tethering_init();
+	if (err < 0)
+		mif_err("failed to initialize tethering_info(%d)\n", err);
 
 #ifdef CONFIG_MODEM_IF_LEGACY_QOS
 	cpif_qos_kobject = kobject_create_and_add("cpif_qos", kernel_kobj);
