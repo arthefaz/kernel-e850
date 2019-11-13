@@ -405,6 +405,12 @@
 			sound-name-prefix = "ABOX";
 		};
 
+		abox_vss: abox-vss@0 {
+			compatible = "samsung,abox-vss";
+			samsung,magic-offset = <0x600000>;
+			reg = <0x0 0x0 0x0>;
+		};
+
 		ext_bin_0: ext-bin@0 {
 			compatible = "samsung,abox-ext-bin";
 			samsung,name = "calliope2.dt";
