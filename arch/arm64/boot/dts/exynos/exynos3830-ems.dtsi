@@ -15,6 +15,24 @@
 
 / {
 	ems {
+		/* Ontime Migration */
+		ontime {
+			/* little cores-1 */
+			coregroup0 {
+				lower-boundary = <0>;
+				upper-boundary = <42>;
+				lower-boundary-s = <0>;
+				upper-boundary-s = <30>;
+			};
+			/* little cores-2 */
+			coregroup1 {
+				lower-boundary = <13>;
+				upper-boundary = <100>;
+				lower-boundary-s = <10>;
+				upper-boundary-s = <100>;
+			};
+		};
+
 		/* Load Balance Trigger */
 		#define DEFAULT_RATIO	80
 		lbt {
@@ -62,20 +80,20 @@
 
                                 /* weight (%) applied to active core's efficiency */
                                 weight {                /* CL0 CL1 */
-                                        root            = <100 100>;
-                                        foreground      = <100 100>;
-                                        background      = <100 100>;
-                                        top-app         = <100 100>;
-                                        rt              = <100 100>;
+                                        root            = <100 50>;
+                                        foreground      = <100 50>;
+                                        background      = <100 50>;
+                                        top-app         = <100 50>;
+                                        rt              = <100 50>;
                                 };
 
                                 /* weight (%) applied to idle core's efficiency */
                                 idle-weight {           /* CL0 CL1 */
-                                        root            = <125 125>;
-                                        foreground      = <125 125>;
-                                        background      = <125 125>;
-                                        top-app         = <125 125>;
-                                        rt              = <125 125>;
+                                        root            = <125 63>;
+                                        foreground      = <125 63>;
+                                        background      = <125 63>;
+                                        top-app         = <125 63>;
+                                        rt              = <125 63>;
                                 };
 
                                 /* Boosting margin applied to frequency selection */
