@@ -49,8 +49,6 @@
 				mif,link_name = "shmem";
 				mif,link_attrs = <(LINK_ATTR_MASK_XMIT_BTDLR | LINK_ATTR_MASK_DUMP_ALIGNED | LINK_ATTR_MASK_BOOT_ALIGNED | LINK_ATTR_MASK_MEM_DUMP | LINK_ATTR_MASK_MEM_BOOT | LINK_ATTR_MASK_DPRAM_MAGIC)>;
 				mif,interrupt_types = <INTERRUPT_MAILBOX>;
-				mif,sim_socket_num = <2>;		/* sim socket num */
-				shmem,dump_offset = <0x1000>;
 
 				/* Mailbox interrupt number from AP to CP */
 				mif,int_ap2cp_msg = <0>;
