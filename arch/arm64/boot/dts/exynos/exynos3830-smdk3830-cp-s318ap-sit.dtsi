@@ -117,9 +117,9 @@
 				sbi_lte_active_pos = <5>;
 				sbi_cp_status_mask = <0xf>;
 				sbi_cp_status_pos = <1>;
-				sbi_ap2cp_kerneltime_sec_mask = <0xffff>;
+				sbi_ap2cp_kerneltime_sec_mask = <0xfff>;
 				sbi_ap2cp_kerneltime_sec_pos = <20>;
-				sbi_ap2cp_kerneltime_usec_mask = <0xffff>;
+				sbi_ap2cp_kerneltime_usec_mask = <0xfffff>;
 				sbi_ap2cp_kerneltime_usec_pos = <0>;
 
 				/* IO devices */
