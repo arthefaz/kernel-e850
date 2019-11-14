@@ -643,9 +643,7 @@ static int contexthub_hw_reset(struct contexthub_ipc_info *ipc,
 		}
 		break;
 	case MAILBOX_EVT_RESET:
-		#if defined(CHUB_RESET_ENABLE)
 		ret = pmucal_shub_reset_release();
-		#endif
 		break;
 	default:
 		break;
@@ -798,7 +796,6 @@ int contexthub_ipc_write_event(struct contexthub_ipc_info *ipc,
 		}
 		break;
 	case MAILBOX_EVT_SHUTDOWN:
-#if defined(CHUB_RESET_ENABLE)
 		/* assert */
 		atomic_set(&ipc->chub_status, CHUB_ST_SHUTDOWN);
 		if (ipc->block_reset) {
@@ -829,7 +826,6 @@ int contexthub_ipc_write_event(struct contexthub_ipc_info *ipc,
 			return -EINVAL;
 #endif
 		}
-#endif
 		break;
 	case MAILBOX_EVT_CHUB_ALIVE:
 		ipc_hw_write_shared_reg(AP, AP_WAKE, SR_3);
