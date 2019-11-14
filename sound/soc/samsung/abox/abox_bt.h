@@ -1,4 +1,4 @@
-/* sound/soc/samsung/abox/abox_bt.h
+/* sound/soc/samsung/abox_v2/abox_bt.h
  *
  * ALSA SoC Audio Layer - Samsung Abox SCSC B/T driver
  *

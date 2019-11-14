@@ -1,4 +1,4 @@
-/* sound/soc/samsung/abox/abox_effect.c
+/* sound/soc/samsung/abox_v2/abox_effect.c
  *
  * ALSA SoC Audio Layer - Samsung Abox Effect driver
  *
@@ -128,11 +128,12 @@ static const struct snd_kcontrol_new abox_effect_controls[] = {
 	DECLARE_ABOX_CTL_EQ_SWITCH("MSP data", MYSPACE),
 	DECLARE_ABOX_CTL_EQ_SWITCH("ESA BBoost data", BB),
 	DECLARE_ABOX_CTL_EQ_SWITCH("ESA EQ data", EQ),
-	DECLARE_ABOX_CTL_EQ_SWITCH("NXP BDL data", NXPBDL),
-	DECLARE_ABOX_CTL_EQ_SWITCH("NXP RVB ctx data", NXPRVB_CTX),
-	DECLARE_ABOX_CTL_EQ_SWITCH("NXP RVB param data", NXPRVB_PARAM),
+	DECLARE_ABOX_CTL_EQ_SWITCH("Offload BDL data", NXPBDL),
+	DECLARE_ABOX_CTL_EQ_SWITCH("Offload RVB ctx data", NXPRVB_CTX),
+	DECLARE_ABOX_CTL_EQ_SWITCH("Offload RVB param data", NXPRVB_PARAM),
 	DECLARE_ABOX_CTL_EQ_SWITCH("SB rotation", SB),
 	DECLARE_ABOX_CTL_EQ_SWITCH("UPSCALER", UPSCALER),
+	DECLARE_ABOX_CTL_EQ_SWITCH("DA data", DA_DATA),
 };
 
 #define ABOX_EFFECT_ACCESSIABLE_REG(name, reg) \
@@ -153,7 +154,8 @@ static bool abox_effect_accessible_reg(struct device *dev, unsigned int reg)
 			ABOX_EFFECT_ACCESSIABLE_REG(NXPRVB_CTX, reg)	||
 			ABOX_EFFECT_ACCESSIABLE_REG(NXPRVB_PARAM, reg)	||
 			ABOX_EFFECT_ACCESSIABLE_REG(SB, reg)		||
-			ABOX_EFFECT_ACCESSIABLE_REG(UPSCALER, reg);
+			ABOX_EFFECT_ACCESSIABLE_REG(UPSCALER, reg)	||
+			ABOX_EFFECT_ACCESSIABLE_REG(DA_DATA, reg);
 }
 
 #define ABOX_EFFECT_VOLATILE_REG(name, reg) (reg == name##_BASE)
@@ -172,7 +174,8 @@ static bool abox_effect_volatile_reg(struct device *dev, unsigned int reg)
 			ABOX_EFFECT_VOLATILE_REG(NXPRVB_CTX, reg)	||
 			ABOX_EFFECT_VOLATILE_REG(NXPRVB_PARAM, reg)	||
 			ABOX_EFFECT_VOLATILE_REG(SB, reg)		||
-			ABOX_EFFECT_VOLATILE_REG(UPSCALER, reg);
+			ABOX_EFFECT_VOLATILE_REG(UPSCALER, reg)		||
+			ABOX_EFFECT_VOLATILE_REG(DA_DATA, reg);
 }
 
 static const struct regmap_config abox_effect_regmap_config = {
@@ -198,8 +201,8 @@ void abox_effect_restore(void)
 	if (p_abox_effect_data && p_abox_effect_data->pdev) {
 		struct device *dev = &p_abox_effect_data->pdev->dev;
 
-		pm_runtime_get(dev);
-		pm_runtime_put_autosuspend(dev);
+		pm_runtime_get_sync(dev);
+		pm_runtime_put(dev);
 	}
 }
 
@@ -235,8 +238,6 @@ const struct dev_pm_ops samsung_abox_effect_pm = {
 static int samsung_abox_effect_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
-	struct device_node *np_tmp;
 	struct abox_effect_data *data;
 
 	dev_dbg(dev, "%s\n", __func__);
@@ -246,21 +247,9 @@ static int samsung_abox_effect_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	platform_set_drvdata(pdev, data);
 	p_abox_effect_data = data;
-
-	np_tmp = of_parse_phandle(np, "abox", 0);
-	if (!np_tmp) {
-		dev_err(dev, "Failed to get abox device node\n");
-		return -EPROBE_DEFER;
-	}
-	data->pdev_abox = of_find_device_by_node(np_tmp);
-	if (!data->pdev_abox) {
-		dev_err(dev, "Failed to get abox platform device\n");
-		return -EPROBE_DEFER;
-	}
-
 	data->pdev = pdev;
 
-	data->base = devm_not_request_and_map(pdev, "reg", 0, NULL, NULL);
+	data->base = devm_get_ioremap(pdev, "reg", NULL, NULL);
 	if (IS_ERR(data->base)) {
 		dev_err(dev, "base address request failed: %ld\n",
 				PTR_ERR(data->base));

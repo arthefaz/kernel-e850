@@ -1,4 +1,4 @@
-/* sound/soc/samsung/abox/abox_util.h
+/* sound/soc/samsung/abox_v2/abox_util.h
  *
  * ALSA SoC - Samsung Abox utility
  *
@@ -13,32 +13,18 @@
 #define __SND_SOC_ABOX_UTIL_H
 
 #include <sound/pcm.h>
+#include <linux/firmware.h>
 
 /**
  * ioremap to virtual address but not request
  * @param[in]	pdev		pointer to platform device structure
  * @param[in]	name		name of resource
- * @param[in]	num		index of resource
  * @param[out]	phys_addr	physical address of the resource
  * @param[out]	size		size of the resource
  * @return	virtual address
  */
-extern void __iomem *devm_not_request_and_map(struct platform_device *pdev,
-		const char *name, unsigned int num, phys_addr_t *phys_addr,
-		size_t *size);
-
-/**
- * Request memory resource and map to virtual address
- * @param[in]	pdev		pointer to platform device structure
- * @param[in]	name		name of resource
- * @param[in]	num		index of resource
- * @param[out]	phys_addr	physical address of the resource
- * @param[out]	size		size of the resource
- * @return	virtual address
- */
-extern void __iomem *devm_request_and_map(struct platform_device *pdev,
-		const char *name, unsigned int num, phys_addr_t *phys_addr,
-		size_t *size);
+extern void __iomem *devm_get_ioremap(struct platform_device *pdev,
+		const char *name, phys_addr_t *phys_addr, size_t *size);
 
 /**
  * Request memory resource and map to virtual address
@@ -48,7 +34,7 @@ extern void __iomem *devm_request_and_map(struct platform_device *pdev,
  * @param[out]	size		size of the resource
  * @return	virtual address
  */
-extern void __iomem *devm_request_and_map_byname(struct platform_device *pdev,
+extern void __iomem *devm_get_request_ioremap(struct platform_device *pdev,
 		const char *name, phys_addr_t *phys_addr, size_t *size);
 
 /**
@@ -84,7 +70,7 @@ static inline int atomic_inc_unless_in_range(atomic_t *v, int r)
 {
 	int ret;
 
-	while ((ret = __atomic_add_unless(v, 1, r)) == r) {
+	while ((ret = atomic_add_unless(v, 1, r)) == r) {
 		ret = atomic_cmpxchg(v, r, 0);
 		if (ret == r)
 			break;
@@ -103,7 +89,7 @@ static inline int atomic_dec_unless_in_range(atomic_t *v, int r)
 {
 	int ret;
 
-	while ((ret = __atomic_add_unless(v, -1, 0)) == 0) {
+	while ((ret = atomic_add_unless(v, -1, 0)) == 0) {
 		ret = atomic_cmpxchg(v, 0, r);
 		if (ret == 0)
 			break;
@@ -133,5 +119,70 @@ extern u64 width_range_to_bits(unsigned int width_min,
  * @return	'p' if direction is playback. 'c' if not.
  */
 extern char substream_to_char(struct snd_pcm_substream *substream);
+
+/**
+ * Find property with samsung, prefix
+ * @param[in]	dev		pointer to device invoking this API
+ * @param[in]	np		device node
+ * @param[in]	propname	name of the property
+ * @param[out]	lenp		length of the property
+ * @return	property or NULL
+ */
+extern struct property *of_samsung_find_property(struct device *dev,
+		const struct device_node *np,
+		const char *propname, int *lenp);
+
+/**
+ * Get whether the property is exist or not with samsung, prefix
+ * @param[in]	dev		pointer to device invoking this API
+ * @param[in]	np		device node
+ * @param[in]	propname	name of the property
+ * @return	true or false
+ */
+extern bool of_samsung_property_read_bool(struct device *dev,
+		const struct device_node *np, const char *propname);
+
+/**
+ * Get property value with samsung, prefix
+ * @param[in]	dev		pointer to device invoking this API
+ * @param[in]	np		device node
+ * @param[in]	propname	name of the property
+ * @param[out]	out_value	pointer to return value
+ * @return	error code
+ */
+extern int of_samsung_property_read_u32(struct device *dev,
+		const struct device_node *np,
+		const char *propname, u32 *out_value);
+
+/**
+ * Get property value with samsung, prefix
+ * @param[in]	dev		pointer to device invoking this API
+ * @param[in]	np		device node
+ * @param[in]	propname	name of the property
+ * @param[out]	out_values	pointer to return value
+ * @param[in]	sz		number of array elements to read
+ * @return	error code
+ */
+extern int of_samsung_property_read_u32_array(struct device *dev,
+		const struct device_node *np,
+		const char *propname, u32 *out_values, size_t sz);
+
+/**
+ * Get property value with samsung, prefix
+ * @param[in]	dev		pointer to device invoking this API
+ * @param[in]	np		device node
+ * @param[in]	propname	name of the property
+ * @param[out]	out_string	pointer to return value
+ * @return	error code
+ */
+extern int of_samsung_property_read_string(struct device *dev,
+		const struct device_node *np,
+		const char *propname, const char **out_string);
+/**
+ * simple callback for request_firmware_nowait
+ * @param[in]	fw		requested firmware
+ * @param[in]	context		it should be const struct firmware **p_firmware
+ */
+extern void cache_firmware_simple(const struct firmware *fw, void *context);
 
 #endif /* __SND_SOC_ABOX_UTIL_H */

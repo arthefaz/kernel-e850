@@ -1,18 +1,19 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/io.h>
+#include <linux/of.h>
+#include <linux/slab.h>
 #include <sound/pcm.h>
 
 #include "abox_util.h"
 
-void __iomem *devm_not_request_and_map(struct platform_device *pdev,
-		const char *name, unsigned int num, phys_addr_t *phys_addr,
-		size_t *size)
+void __iomem *devm_get_ioremap(struct platform_device *pdev,
+		const char *name, phys_addr_t *phys_addr, size_t *size)
 {
 	struct resource *res;
 	void __iomem *ret;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, num);
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, name);
 	if (IS_ERR_OR_NULL(res)) {
 		dev_err(&pdev->dev, "Failed to get %s\n", name);
 		return ERR_PTR(-EINVAL);
@@ -28,51 +29,10 @@ void __iomem *devm_not_request_and_map(struct platform_device *pdev,
 		return ERR_PTR(-EFAULT);
 	}
 
-	dev_dbg(&pdev->dev, "%s: %s(%p) is mapped on %p with size of %zu",
-			__func__, name, (void *)res->start, ret,
-			(size_t)resource_size(res));
-
 	return ret;
 }
 
-void __iomem *devm_request_and_map(struct platform_device *pdev,
-		const char *name, unsigned int num, phys_addr_t *phys_addr,
-		size_t *size)
-{
-	struct resource *res;
-	void __iomem *ret;
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, num);
-	if (IS_ERR_OR_NULL(res)) {
-		dev_err(&pdev->dev, "Failed to get %s\n", name);
-		return ERR_PTR(-EINVAL);
-	}
-	if (phys_addr)
-		*phys_addr = res->start;
-	if (size)
-		*size = resource_size(res);
-
-	res = devm_request_mem_region(&pdev->dev, res->start,
-			resource_size(res), name);
-	if (IS_ERR_OR_NULL(res)) {
-		dev_err(&pdev->dev, "Failed to request %s\n", name);
-		return ERR_PTR(-EFAULT);
-	}
-
-	ret = devm_ioremap(&pdev->dev, res->start, resource_size(res));
-	if (IS_ERR_OR_NULL(ret)) {
-		dev_err(&pdev->dev, "Failed to map %s\n", name);
-		return ERR_PTR(-EFAULT);
-	}
-
-	dev_dbg(&pdev->dev, "%s: %s(%p) is mapped on %p with size of %zu",
-			__func__, name, (void *)res->start, ret,
-			(size_t)resource_size(res));
-
-	return ret;
-}
-
-void __iomem *devm_request_and_map_byname(struct platform_device *pdev,
+void __iomem *devm_get_request_ioremap(struct platform_device *pdev,
 		const char *name, phys_addr_t *phys_addr, size_t *size)
 {
 	struct resource *res;
@@ -100,10 +60,6 @@ void __iomem *devm_request_and_map_byname(struct platform_device *pdev,
 		dev_err(&pdev->dev, "Failed to map %s\n", name);
 		return ERR_PTR(-EFAULT);
 	}
-
-	dev_dbg(&pdev->dev, "%s: %s(%p) is mapped on %p with size of %zu",
-			__func__, name, (void *)res->start, ret,
-			(size_t)resource_size(res));
 
 	return ret;
 }
@@ -172,7 +128,7 @@ u64 width_range_to_bits(unsigned int width_min, unsigned int width_max)
 		{ 32, SNDRV_PCM_FMTBIT_S32 },
 	};
 
-	int i;
+	size_t i;
 	u64 fmt = 0;
 
 	for (i = 0; i < ARRAY_SIZE(map); i++) {
@@ -186,4 +142,88 @@ u64 width_range_to_bits(unsigned int width_min, unsigned int width_max)
 char substream_to_char(struct snd_pcm_substream *substream)
 {
 	return (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? 'p' : 'c';
+}
+
+struct property *of_samsung_find_property(struct device *dev,
+		const struct device_node *np,
+		const char *propname, int *lenp)
+{
+	char *name;
+	struct property *ret;
+
+	name = kasprintf(GFP_KERNEL, "samsung,%s", propname);
+	ret = of_find_property(np, name, lenp);
+	if (IS_ERR_OR_NULL(ret))
+		dev_dbg(dev, "Failed to find %s: %ld\n", name, PTR_ERR(ret));
+	kfree(name);
+
+	return ret;
+}
+
+bool of_samsung_property_read_bool(struct device *dev,
+		const struct device_node *np, const char *propname)
+{
+	char *name;
+	bool ret;
+
+	name = kasprintf(GFP_KERNEL, "samsung,%s", propname);
+	ret = of_property_read_bool(np, name);
+	kfree(name);
+
+	return ret;
+}
+
+int of_samsung_property_read_u32(struct device *dev,
+		const struct device_node *np,
+		const char *propname, u32 *out_value)
+{
+	char name[SZ_64];
+	int ret;
+
+	snprintf(name, sizeof(name), "samsung,%s", propname);
+	ret = of_property_read_u32(np, name, out_value);
+	if (ret < 0)
+		dev_dbg(dev, "Failed to read %s: %d\n", name, ret);
+
+	return ret;
+}
+
+int of_samsung_property_read_u32_array(struct device *dev,
+		const struct device_node *np,
+		const char *propname, u32 *out_values, size_t sz)
+{
+	char name[SZ_64];
+	int ret;
+
+	snprintf(name, sizeof(name), "samsung,%s", propname);
+	ret = of_property_read_u32_array(np, name, out_values, sz);
+	if (ret < 0)
+		dev_dbg(dev, "Failed to read %s: %d\n", name, ret);
+
+	return ret;
+}
+
+int of_samsung_property_read_string(struct device *dev,
+		const struct device_node *np,
+		const char *propname, const char **out_string)
+{
+	char name[SZ_64];
+	int ret;
+
+	snprintf(name, sizeof(name), "samsung,%s", propname);
+	ret = of_property_read_string(np, name, out_string);
+	if (ret < 0)
+		dev_warn(dev, "Failed to read %s: %d\n", name, ret);
+
+	return ret;
+}
+
+void cache_firmware_simple(const struct firmware *fw, void *context)
+{
+	const struct firmware **p_firmware = context;
+
+	if (*p_firmware)
+		release_firmware(*p_firmware);
+
+	*p_firmware = fw;
 }

@@ -1,4 +1,4 @@
-/* sound/soc/samsung/abox/abox_dbg.h
+/* sound/soc/samsung/abox_v2/abox_dbg.h
  *
  * ALSA SoC - Samsung Abox Debug driver
  *
@@ -17,7 +17,6 @@
 enum abox_dbg_dump_src {
 	ABOX_DBG_DUMP_KERNEL,
 	ABOX_DBG_DUMP_FIRMWARE,
-	ABOX_DBG_DUMP_VSS,
 	ABOX_DBG_DUMP_COUNT,
 };
 
@@ -91,6 +90,13 @@ extern void abox_dbg_dump_gpr_mem(struct device *dev, struct abox_data *data,
  */
 extern void abox_dbg_dump_simple(struct device *dev, struct abox_data *data,
 		const char *reason);
+
+/**
+ * dump gpr and memory except DRAM just before abox suspend
+ * @param[in]	dev		pointer to device which invokes this API
+ * @param[in]	data		pointer to abox_data structure
+ */
+extern void abox_dbg_dump_suspend(struct device *dev, struct abox_data *data);
 
 /**
  * Push status of the abox

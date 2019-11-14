@@ -1,4 +1,4 @@
-/* sound/soc/samsung/abox/abox_log.h
+/* sound/soc/samsung/abox_v2/abox_log.h
  *
  * ALSA SoC - Samsung Abox Log driver
  *

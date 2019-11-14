@@ -1,4 +1,4 @@
-/* sound/soc/samsung/abox/abox_if.h
+/* sound/soc/samsung/abox_v2/abox_if.h
  *
  * ALSA SoC - Samsung Abox UAIF/DSIF driver
  *
@@ -30,9 +30,12 @@ struct abox_if_of_data {
 
 struct abox_if_data {
 	int id;
+	bool slave;
 	void __iomem *sfr_base;
 	struct clk *clk_bclk;
 	struct clk *clk_bclk_gate;
+	struct clk *clk_mux;
+	struct clk *clk_mclk;
 	struct snd_soc_component *cmpnt;
 	struct snd_soc_dai_driver *dai_drv;
 	struct abox_data *abox_data;
@@ -41,13 +44,23 @@ struct abox_if_data {
 };
 
 /**
+ * UAIF/DSIF hw params fixup helper by dai
+ * @param[in]	dai	snd_soc_dai
+ * @param[out]	params	snd_pcm_hw_params
+ * @param[in]	stream	SNDRV_PCM_STREAM_PLAYBACK or SNDRV_PCM_STREAM_CAPTURE
+ * @return		error code if any
+ */
+extern int abox_if_hw_params_fixup(struct snd_soc_dai *dai,
+		struct snd_pcm_hw_params *params, int stream);
+
+/**
  * UAIF/DSIF hw params fixup helper
  * @param[in]	rtd	snd_soc_pcm_runtime
  * @param[out]	params	snd_pcm_hw_params
  * @param[in]	stream	SNDRV_PCM_STREAM_PLAYBACK or SNDRV_PCM_STREAM_CAPTURE
  * @return		error code if any
  */
-extern int abox_if_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+extern int abox_if_hw_params_fixup_helper(struct snd_soc_pcm_runtime *rtd,
 		struct snd_pcm_hw_params *params, int stream);
 
 #endif /* __SND_SOC_ABOX_IF_H */

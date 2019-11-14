@@ -1,4 +1,4 @@
-/* sound/soc/samsung/abox/abox_vss.c
+/* sound/soc/samsung/abox_v2/abox_vss.c
  *
  * ALSA SoC Audio Layer - Samsung Abox VSS driver
  *
@@ -16,8 +16,38 @@
 #include <linux/io.h>
 
 #include "abox.h"
+#include "abox_util.h"
+#include "abox_qos.h"
 
-static unsigned int VSS_MAGIC_OFFSET = 0x500000;
+static unsigned int MAGIC_OFFSET = 0x500000;
+static const int E9810_INT_FREQ = 178000;
+static const int E9810_INT_FREQ_SPK = 400000;
+static const unsigned int E9810_INT_ID = ABOX_CPU_GEAR_CALL_KERNEL;
+
+int abox_vss_notify_call(struct device *dev, struct abox_data *data, int en)
+{
+	static const char cookie[] = "vss_notify_call";
+	int ret = 0;
+
+	dev_info(dev, "%s(%d)\n", __func__, en);
+
+	if (en) {
+		if (IS_ENABLED(CONFIG_SOC_EXYNOS9810)) {
+			if (data->sound_type == SOUND_TYPE_SPEAKER)
+				ret = abox_qos_request_int(dev, E9810_INT_ID,
+						E9810_INT_FREQ_SPK, cookie);
+			else
+				ret = abox_qos_request_int(dev, E9810_INT_ID,
+						E9810_INT_FREQ, cookie);
+		}
+	} else {
+		if (IS_ENABLED(CONFIG_SOC_EXYNOS9810))
+			ret = abox_qos_request_int(dev, E9810_INT_ID, 0,
+					cookie);
+	}
+
+	return ret;
+}
 
 static int samsung_abox_vss_probe(struct platform_device *pdev)
 {
@@ -27,10 +57,12 @@ static int samsung_abox_vss_probe(struct platform_device *pdev)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-	of_property_read_u32(np, "magic_offset", &VSS_MAGIC_OFFSET);
-	dev_info(dev, "magic_offset = 0x%08X\n", VSS_MAGIC_OFFSET);
-	magic_addr = phys_to_virt(shm_get_vss_base() + VSS_MAGIC_OFFSET);
-	writel(0, magic_addr);
+	of_samsung_property_read_u32(dev, np, "magic-offset", &MAGIC_OFFSET);
+	dev_info(dev, "magic-offset = 0x%08X\n", MAGIC_OFFSET);
+	if (!IS_ERR_OR_NULL(shm_get_vss_region())) {
+		magic_addr = shm_get_vss_region() + MAGIC_OFFSET;
+		writel(0, magic_addr);
+	}
 	return 0;
 }
 

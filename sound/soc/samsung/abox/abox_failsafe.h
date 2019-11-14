@@ -1,4 +1,4 @@
-/* sound/soc/samsung/abox/abox_failsafe.h
+/* sound/soc/samsung/abox_v2/abox_failsafe.h
  *
  * ALSA SoC - Samsung Abox Fail-safe driver
  *
