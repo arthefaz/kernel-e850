@@ -65,8 +65,6 @@ static int s5100_lcd_notifier(struct notifier_block *notifier,
 		unsigned long event, void *v);
 #endif /* CONFIG_CP_LCD_NOTIFIER */
 
-#define MIF_INIT_TIMEOUT	(300 * HZ)
-
 #define msecs_to_loops(t) (loops_per_jiffy / 1000 * HZ * t)
 
 #define RUNTIME_PM_AFFINITY_CORE 2

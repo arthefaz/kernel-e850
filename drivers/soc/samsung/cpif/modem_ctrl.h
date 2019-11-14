@@ -15,6 +15,8 @@
 #ifndef __MODEM_CTRL_H__
 #define __MODEM_CTRL_H__
 
+#define MIF_INIT_TIMEOUT	(15 * HZ)
+
 void modem_ctrl_set_kerneltime(struct modem_ctl *mc);
 
 #endif /* __MODEM_CTRL_H__ */

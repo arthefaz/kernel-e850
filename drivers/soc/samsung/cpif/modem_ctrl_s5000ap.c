@@ -43,8 +43,6 @@ static int s5000ap_lcd_notifier(struct notifier_block *notifier,
 		unsigned long event, void *v);
 #endif /* CONFIG_CP_LCD_NOTIFIER */
 
-#define MIF_INIT_TIMEOUT	(15 * HZ)
-
 /*
  * CP_WDT interrupt handler
  */
