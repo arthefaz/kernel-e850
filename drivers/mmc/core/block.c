@@ -1463,7 +1463,11 @@ clear_dcmd:
 						&ctx_info->curr_state);
 			BUG_ON(!test_and_clear_bit(cmdq_req->tag,
 						&ctx_info->active_reqs));
-			mmc_put_card(card);
+			spin_lock_irq(mq->queue->queue_lock);
+			mq->qcnt--;
+			if(!mq->qcnt)
+				mmc_put_card(card);
+			spin_unlock_irq(mq->queue->queue_lock);
 			return 0;
 		}
 		BUG_ON(!test_and_clear_bit(cmdq_req->tag,
@@ -1473,7 +1477,11 @@ clear_dcmd:
 out:
 	blk_end_request(req, err, blk_rq_bytes(req));
 	wake_up(&ctx_info->wait);
-	mmc_put_card(card);
+	spin_lock_irq(mq->queue->queue_lock);
+	mq->qcnt--;
+	if(!mq->qcnt)
+		mmc_put_card(card);
+	spin_unlock_irq(mq->queue->queue_lock);
 
 	if (blk_queue_stopped(mq->queue) && !ctx_info->active_reqs)
 		complete(&mq->cmdq_shutdown_complete);
@@ -1556,8 +1564,23 @@ static void mmc_blk_cmdq_issue_drv_op(struct mmc_queue *mq, struct request *req)
 	int i;
 
 	mq_rq = req->special;
-	ret = mmc_blk_cmdq_switch(card, md, false);
-	if (mmc_card_cmdq(card)) {
+	if (md->area_type & MMC_BLK_DATA_AREA_RPMB) {
+		pr_err("%s: CMDQ : try halt for access rpmb [drv_op : %d]\n", mmc_hostname(card->host), mq_rq->drv_op);
+		ret = mmc_cmdq_halt_on_empty_queue(card->host);
+		if (ret) {
+			pr_err("%s: halt failed while doing %s err (%d)\n",
+					mmc_hostname(card->host), __func__,
+					ret);
+			goto out;
+		}
+		ret = mmc_blk_cmdq_switch(card, md, false);
+		if (ret) {
+			pr_err("%s: cmdq switch failed while doing %s err (%d)\n",
+					mmc_hostname(card->host), __func__,
+					ret);
+			goto out;
+		}
+	} else if (mmc_card_cmdq(card)) {
 		pr_err("%s: CMDQ : try halt for legacy cmd [drv_op : %d]\n", mmc_hostname(card->host), mq_rq->drv_op);
 		ret = mmc_cmdq_halt_on_empty_queue(card->host);
 		if (ret) {
@@ -1614,8 +1637,18 @@ static void mmc_blk_cmdq_issue_drv_op(struct mmc_queue *mq, struct request *req)
 	}
 
 out:
-	ret = mmc_blk_cmdq_switch(card, md, true);
-	if (mmc_card_cmdq(card)) {		
+	if (md->area_type & MMC_BLK_DATA_AREA_RPMB) {
+		pr_err("%s: CMDQ : try unhalt for access rpmb [drv_op : %d]\n", mmc_hostname(card->host), mq_rq->drv_op);
+		ret = mmc_blk_cmdq_switch(card, md, true);
+		if (ret) {
+			pr_err("%s: cmdq switch failed while doing %s err (%d)\n",
+					mmc_hostname(card->host), __func__,
+					ret);
+		}
+		if (mmc_cmdq_halt(card->host, false))
+			pr_err("%s: %s: cmdq unhalt failed\n",
+				mmc_hostname(card->host), __func__);
+	} else if (mmc_card_cmdq(card)) {
 		host->cmdq_ops->enable(host);
 		pr_err("%s: CMDQ : try unhalt after legacy cmd\n", mmc_hostname(card->host));
 		if (mmc_cmdq_halt(card->host, false))
@@ -1742,7 +1775,11 @@ clear_dcmd:
 out:
 	blk_end_request(req, err, blk_rq_bytes(req));
 	wake_up(&ctx_info->wait);
-	mmc_put_card(card);
+	spin_lock_irq(mq->queue->queue_lock);
+	mq->qcnt--;
+	if(!mq->qcnt)
+		mmc_put_card(card);
+	spin_unlock_irq(mq->queue->queue_lock);
 	return err ? 1 : 0;
 }
 
@@ -2737,7 +2774,11 @@ out:
 	if (!test_bit(CMDQ_STATE_ERR, &ctx_info->curr_state))
 		wake_up(&ctx_info->wait);
 
-	mmc_put_card(host->card);
+	spin_lock_irq(mq->queue->queue_lock);
+	mq->qcnt--;
+	if(!mq->qcnt)
+		mmc_put_card(host->card);
+	spin_unlock_irq(mq->queue->queue_lock);
 	if (!ctx_info->active_reqs)
 		wake_up_interruptible(&host->cmdq_ctx.queue_empty_wq);
 
@@ -2746,7 +2787,11 @@ out:
 
 	return;
 err:
-	mmc_put_card(host->card);
+	spin_lock_irq(mq->queue->queue_lock);
+	mq->qcnt--;
+	if(!mq->qcnt)
+		mmc_put_card(host->card);
+	spin_unlock_irq(mq->queue->queue_lock);
 
 	return;
 }
@@ -2998,7 +3043,14 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 	struct mmc_host *host = card->host;
 	struct mmc_cmdq_context_info *ctx = &host->cmdq_ctx;
 
-	mmc_get_card(card);
+	spin_lock_irq(mq->queue->queue_lock);
+	if (!mq->qcnt) {	
+		spin_unlock_irq(mq->queue->queue_lock);
+		mmc_get_card(card);
+		spin_lock_irq(mq->queue->queue_lock);
+	}
+	mq->qcnt++;
+	spin_unlock_irq(mq->queue->queue_lock);
 
 	/* Orphan requests doesn't exist anymore */
 	clear_bit(CMDQ_STATE_ERR_RCV_DONE, &ctx->curr_state);
@@ -3060,7 +3112,11 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 			 */
 			mmc_blk_cmdq_issue_drv_op(mq, req);
 			ret = 0;
-			mmc_put_card(card);
+			spin_lock_irq(mq->queue->queue_lock);
+			mq->qcnt--;
+			if(!mq->qcnt)
+				mmc_put_card(card);
+			spin_unlock_irq(mq->queue->queue_lock);
 			break;
 		case REQ_OP_DISCARD:
 			/*
@@ -3097,7 +3153,11 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 out:
 	if (req)
 		blk_end_request_all(req, ret);
-	mmc_put_card(card);
+	spin_lock_irq(mq->queue->queue_lock);
+	mq->qcnt--;
+	if(!mq->qcnt)
+		mmc_put_card(card);
+	spin_unlock_irq(mq->queue->queue_lock);
 
 	return ret;
 }
@@ -3109,7 +3169,7 @@ void mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	struct mmc_card *card = md->queue.card;
 
 	
-	if ((req && !mq->qcnt) || mmc_card_cmdq(card)) {
+	if (req && !mq->qcnt) {
 		/* claim host only for the first request */
 		mmc_get_card(card);
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
@@ -3183,7 +3243,7 @@ void mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	}
 
 out:
-	if ((!mq->qcnt) || mmc_card_cmdq(card))
+	if (!mq->qcnt)
 		mmc_put_card(card);
 }
 
