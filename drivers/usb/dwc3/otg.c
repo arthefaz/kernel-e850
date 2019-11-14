@@ -265,7 +265,7 @@ int dwc3_otg_phy_enable(struct otg_fsm *fsm, int owner, bool on)
 		} else {
 			phy_conn(dwc->usb2_generic_phy, 1);
 
-			if (!dotg->pm_qos_int_val)
+			if (dotg->pm_qos_int_val)
 				pm_qos_update_request(&dotg->pm_qos_int_req,
 						dotg->pm_qos_int_val);
 			pm_runtime_get_sync(dev);
@@ -284,7 +284,7 @@ int dwc3_otg_phy_enable(struct otg_fsm *fsm, int owner, bool on)
 			dwc3_core_exit(dwc);
 err:
 			pm_runtime_put_sync_suspend(dev);
-			if (!dotg->pm_qos_int_val)
+			if (dotg->pm_qos_int_val)
 				pm_qos_update_request(&dotg->pm_qos_int_req, 0);
 			phy_conn(dwc->usb2_generic_phy, 0);
 		}
