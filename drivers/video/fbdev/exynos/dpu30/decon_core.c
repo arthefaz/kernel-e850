@@ -4042,7 +4042,6 @@ static int decon_probe(struct platform_device *pdev)
 	decon->bts.ops->bts_init(decon);
 #endif
 
-	ATOMIC_INIT_NOTIFIER_HEAD(&decon->lcd_status_notifier_list);
 	platform_set_drvdata(pdev, decon);
 	pm_runtime_enable(dev);
 
