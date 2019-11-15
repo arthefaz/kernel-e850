@@ -419,7 +419,7 @@ int tpmon_create(struct platform_device *pdev, struct link_device *ld)
 #if defined(CONFIG_MODEM_IF_NET_GRO)
 	/* GRO flush time */
 	ret = tpmon_fill_data(np, tpmon, &tpmon->gro_data, tpmon_set_gro,
-				"enable_gro_boost", "tp_gro_threshold", "tp_gro_flush_usec");
+				"enable_gro_boost", "tp_gro_threshold", "tp_gro_flush_nsec");
 	if (ret)
 		goto create_error;
 #endif
