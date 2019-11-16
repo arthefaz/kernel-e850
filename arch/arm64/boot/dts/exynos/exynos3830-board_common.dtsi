@@ -651,7 +651,7 @@
 
 	/* Swapping clock drive strength */
 	clk-drive-number = <4>;
-	pinctrl-names = "init",
+	pinctrl-names = "default",
 		"fast-slew-rate-1x",
 		"fast-slew-rate-2x",
 		"fast-slew-rate-3x",
