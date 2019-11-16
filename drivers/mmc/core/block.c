@@ -3044,7 +3044,7 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 	struct mmc_cmdq_context_info *ctx = &host->cmdq_ctx;
 
 	spin_lock_irq(mq->queue->queue_lock);
-	if (!mq->qcnt) {	
+	if (!mq->qcnt) {
 		spin_unlock_irq(mq->queue->queue_lock);
 		mmc_get_card(card);
 		spin_lock_irq(mq->queue->queue_lock);
@@ -3168,7 +3168,6 @@ void mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	struct mmc_blk_data *md = mq->blkdata;
 	struct mmc_card *card = md->queue.card;
 
-	
 	if (req && !mq->qcnt) {
 		/* claim host only for the first request */
 		mmc_get_card(card);

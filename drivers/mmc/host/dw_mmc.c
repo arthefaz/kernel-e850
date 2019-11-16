@@ -4823,6 +4823,8 @@ int dw_mci_probe(struct dw_mci *host, struct platform_device *pdev)
 	ret = devm_request_irq(host->dev, host->irq, dw_mci_interrupt,
 			       host->irq_flags, "dw-mci", host);
 
+	irq_set_affinity(host->irq, cpumask_of(1));
+
 	setup_timer(&host->timer, dw_mci_timeout_timer, (unsigned long)host);
 	host->sw_timeout_chk = false;
 
@@ -4998,6 +5000,7 @@ int dw_mci_runtime_resume(struct device *dev)
 		if (ret)
 			goto err;
 	}
+	irq_set_affinity(host->irq, cpumask_of(1));
 
 	if (!dw_mci_ctrl_reset(host, SDMMC_CTRL_ALL_RESET_FLAGS)) {
 		if (!IS_ERR(host->ciu_clk))
