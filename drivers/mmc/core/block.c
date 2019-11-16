@@ -1548,6 +1548,7 @@ static void mmc_blk_cmdq_issue_drv_op(struct mmc_queue *mq, struct request *req)
 	struct mmc_card *card = md->queue.card;
 	struct mmc_host *host = card->host;
 	struct mmc_queue_req *mq_rq;
+	struct mmc_blk_data *main_md = dev_get_drvdata(&card->dev);
 	struct mmc_blk_ioc_data **idata;
 	u8 **ext_csd;
 	u32 status;
@@ -1555,6 +1556,7 @@ static void mmc_blk_cmdq_issue_drv_op(struct mmc_queue *mq, struct request *req)
 	int i;
 
 	mq_rq = req->special;
+	ret = mmc_blk_cmdq_switch(card, md, false);
 	if (mmc_card_cmdq(card)) {
 		pr_err("%s: CMDQ : try halt for legacy cmd [drv_op : %d]\n", mmc_hostname(card->host), mq_rq->drv_op);
 		ret = mmc_cmdq_halt_on_empty_queue(card->host);
@@ -1579,6 +1581,9 @@ static void mmc_blk_cmdq_issue_drv_op(struct mmc_queue *mq, struct request *req)
 			if (ret)
 				break;
 		}
+		/* Always switch back to main area after RPMB access */
+		if (md->area_type & MMC_BLK_DATA_AREA_RPMB)
+			mmc_blk_part_switch(card, main_md->part_type);
 		break;
 	case MMC_DRV_OP_BOOT_WP:
 		ret = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_BOOT_WP,
@@ -1609,6 +1614,7 @@ static void mmc_blk_cmdq_issue_drv_op(struct mmc_queue *mq, struct request *req)
 	}
 
 out:
+	ret = mmc_blk_cmdq_switch(card, md, true);
 	if (mmc_card_cmdq(card)) {		
 		host->cmdq_ops->enable(host);
 		pr_err("%s: CMDQ : try unhalt after legacy cmd\n", mmc_hostname(card->host));
@@ -2936,10 +2942,20 @@ static inline int mmc_blk_cmdq_part_switch(struct mmc_card *card,
 	struct mmc_host *host = card->host;
 	struct mmc_cmdq_context_info *ctx = &host->cmdq_ctx;
 	u8 part_config = card->ext_csd.part_config;
+	int ret;
 
 	if ((main_md->part_curr == md->part_type) &&
 	    (card->part_curr == md->part_type))
 		return 0;
+
+	ret = wait_event_interruptible(ctx->queue_empty_wq,
+				      !ctx->active_reqs);
+	if (ret) {
+		pr_err("%s: failed while waiting for the CMDQ to be empty %s err (%d)\n",
+			mmc_hostname(host),
+			__func__, ret);
+		BUG_ON(1);
+	}
 
 	WARN_ON(!((card->host->caps2 & MMC_CAP2_CMD_QUEUE) &&
 		 card->ext_csd.cmdq_support &&
@@ -3092,7 +3108,8 @@ void mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	struct mmc_blk_data *md = mq->blkdata;
 	struct mmc_card *card = md->queue.card;
 
-	if (req && !mq->qcnt) {
+	
+	if ((req && !mq->qcnt) || mmc_card_cmdq(card)) {
 		/* claim host only for the first request */
 		mmc_get_card(card);
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
@@ -3101,12 +3118,14 @@ void mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 #endif
 	}
 
-	ret = mmc_blk_part_switch(card, md->part_type);
-	if (ret) {
-		if (req) {
-			blk_end_request_all(req, BLK_STS_IOERR);
+	if (!mmc_card_cmdq(card)) {
+		ret = mmc_blk_part_switch(card, md->part_type);
+		if (ret) {
+			if (req) {
+				blk_end_request_all(req, BLK_STS_IOERR);
+			}
+			goto out;
 		}
-		goto out;
 	}
 
 	if (req) {
@@ -3119,7 +3138,10 @@ void mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 			 */
 			if (mq->qcnt)
 				mmc_blk_issue_rw_rq(mq, NULL);
-			mmc_blk_issue_drv_op(mq, req);
+			if (mmc_card_cmdq(card))
+				mmc_blk_cmdq_issue_drv_op(mq, req);
+			else
+				mmc_blk_issue_drv_op(mq, req);
 			break;
 		case REQ_OP_DISCARD:
 			/*
@@ -3161,7 +3183,7 @@ void mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	}
 
 out:
-	if (!mq->qcnt)
+	if ((!mq->qcnt) || mmc_card_cmdq(card))
 		mmc_put_card(card);
 }
 
