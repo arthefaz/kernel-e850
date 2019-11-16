@@ -31,6 +31,19 @@
 extern int cal_pll_mmc_set_ssc(unsigned int mfr, unsigned int mrr, unsigned int ssc_on);
 extern int cal_pll_mmc_check(void);
 
+static struct workqueue_struct *hwacg_workqueue;
+
+static void dw_mci_hwacg_work(struct work_struct *work)
+{
+	struct dw_mci *host = container_of(work, struct dw_mci, hwacg_work.work);
+	u32 reg;
+
+	reg = mci_readl(host, FORCE_CLK_STOP);
+	reg |= MMC_HWACG_CONTROL;
+	host->qactive_check = HWACG_Q_ACTIVE_EN;
+	mci_writel(host, FORCE_CLK_STOP, reg);
+}
+
 static void dw_mci_exynos_register_dump(struct dw_mci *host)
 {
 	dev_err(host->dev, ": EMMCP_BASE:	0x%08x\n",
@@ -56,6 +69,13 @@ static void dw_mci_exynos_register_dump(struct dw_mci *host)
 void dw_mci_reg_dump(struct dw_mci *host)
 {
 	u32 reg;
+
+	dev_err(host->dev, ": ============== FIRST STATUS DUMP ===========\n");
+	dev_err(host->dev, ": cmd_status:      0x%08x\n", host->cmd_status);
+	dev_err(host->dev, ": data_status:     0x%08x\n", host->data_status);
+	dev_err(host->dev, ": pending_events:  0x%08lx\n", host->pending_events);
+	dev_err(host->dev, ": completed_events:0x%08lx\n", host->completed_events);
+	dev_err(host->dev, ": state:           %d\n", host->state);
 
 	dev_err(host->dev, ": ============== REGISTER DUMP ==============\n");
 	dev_err(host->dev, ": CTRL:	 0x%08x\n", host->sfr_dump->contrl = mci_readl(host, CTRL));
@@ -188,7 +208,30 @@ static struct dw_mci_exynos_compatible {
 	enum dw_mci_exynos_type ctrl_type;
 } exynos_compat[] = {
 	{
-.compatible = "samsung,exynos-dw-mshc", .ctrl_type = DW_MCI_TYPE_EXYNOS,},};
+		.compatible = "samsung,exynos-dw-mshc",
+		.ctrl_type = DW_MCI_TYPE_EXYNOS,
+	},
+};
+
+/*
+ * This is a last resort for recovery.
+ */
+#ifdef CONFIG_MMC_CQ_HCI
+void exynos_cqe_sw_reset(struct mmc_host *mmc)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	u32 reg;
+
+	reg = mci_readl(host, AXI_BURST_LEN);
+	reg |= (1 << 22);
+	mci_writel(host, AXI_BURST_LEN, reg);
+}
+#else
+void exynos_cqe_sw_reset(struct mmc_host *mmc)
+{
+}
+#endif
 
 static inline u8 dw_mci_exynos_get_ciu_div(struct dw_mci *host)
 {
@@ -332,19 +375,42 @@ static int dw_mci_exynos_resume_noirq(struct device *dev)
 #define dw_mci_exynos_resume_noirq	NULL
 #endif				/* CONFIG_PM */
 
-static void dw_mci_card_int_hwacg_ctrl(struct dw_mci *host, u32 flag)
+static void dw_mci_card_int_hwacg_ctrl(struct dw_mci *host, u32 flag, int mode)
 {
 	u32 reg;
 
 	reg = mci_readl(host, FORCE_CLK_STOP);
-	if (flag == HWACG_Q_ACTIVE_EN) {
-		reg |= MMC_HWACG_CONTROL;
-		host->qactive_check = HWACG_Q_ACTIVE_EN;
-	} else {
+	if (mode == HWACG_WORK_INIT) {
+		if (flag == W_INIT) {
+			hwacg_workqueue = alloc_ordered_workqueue("kmmcd", 0);
+			if (!hwacg_workqueue)
+				dev_err(host->dev, "hwacg workqueue alloc fail!\n");
+
+			INIT_DELAYED_WORK(&host->hwacg_work, dw_mci_hwacg_work);
+		} else if (flag == W_FREE)
+			destroy_workqueue(hwacg_workqueue);
+	} else if (flag == HWACG_Q_ACTIVE_EN) {
+		if (mode == CMDQ_MODE) {
+			queue_delayed_work(hwacg_workqueue, &host->hwacg_work,
+					msecs_to_jiffies(10));
+		} else {
+			if (host->prv_hwacg_state != true) {
+				reg |= MMC_HWACG_CONTROL;
+				host->qactive_check = HWACG_Q_ACTIVE_EN;
+				mci_writel(host, FORCE_CLK_STOP, reg);
+			}
+		}
+	} else if (flag == HWACG_Q_ACTIVE_DIS) {
+		if (mode == CMDQ_MODE) {
+			if (delayed_work_pending(&host->hwacg_work))
+				cancel_delayed_work_sync(&host->hwacg_work);
+			else
+				flush_delayed_work(&host->hwacg_work);
+		}
 		reg &= ~(MMC_HWACG_CONTROL);
 		host->qactive_check = HWACG_Q_ACTIVE_DIS;
+		mci_writel(host, FORCE_CLK_STOP, reg);
 	}
-	mci_writel(host, FORCE_CLK_STOP, reg);
 }
 
 static void dw_mci_exynos_config_hs400(struct dw_mci *host, u32 timing)
@@ -492,6 +558,13 @@ static void dw_mci_exynos_set_ios(struct dw_mci *host, struct mmc_ios *ios)
 		break;
 	default:
 		clksel = priv->sdr_timing;
+	}
+
+	if (host->pdata->quirks & DW_MCI_QUIRK_HWACG_CTRL) {
+		if (host->current_speed > 400*1000)
+			dw_mci_card_int_hwacg_ctrl(host, HWACG_Q_ACTIVE_EN, LEGACY_MODE);
+		else
+			dw_mci_card_int_hwacg_ctrl(host, HWACG_Q_ACTIVE_DIS, LEGACY_MODE);
 	}
 
 	host->cclk_in = wanted;

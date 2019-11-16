@@ -162,6 +162,7 @@ struct dw_mci {
 	spinlock_t lock;
 	spinlock_t irq_lock;
 	void __iomem *regs;
+	void __iomem		*cq_regs;
 	void __iomem *fifo_reg;
 	u32 data_addr_override;
 	bool wm_aligned;
@@ -169,6 +170,7 @@ struct dw_mci {
 	struct scatterlist *sg;
 	struct sg_mapping_iter sg_miter;
 
+	struct dw_mci_slot	*cur_slot;
 	struct mmc_request *mrq;
 	struct mmc_command *cmd;
 	struct mmc_data *data;
@@ -197,6 +199,7 @@ struct dw_mci {
 	unsigned int desc_sz;
 	struct pm_qos_request pm_qos_lock;
 	struct delayed_work qos_work;
+	struct delayed_work     hwacg_work;
 	bool qos_cntrl;
 	u32 cmd_status;
 	u32 data_status;
@@ -224,6 +227,7 @@ struct dw_mci {
 	void *priv;
 	struct clk *biu_clk;
 	struct clk *ciu_clk;
+	struct clk *ciu_gate;
 	atomic_t biu_clk_cnt;
 	atomic_t ciu_clk_cnt;
 	atomic_t biu_en_win;
@@ -281,6 +285,10 @@ struct dw_mci {
 	struct timer_list cmd11_timer;
 	struct timer_list cto_timer;
 	struct timer_list dto_timer;
+
+	/* CMD Queuing Host interface */
+	struct cmdq_host *cq_host;
+	int                     prv_hwacg_state;
 
 	/* channel id */
 	u32 ch_id;
@@ -823,7 +831,7 @@ enum dw_mci_misc_control {
 #define SDMMC_HTO_TMOUT_SHIFT		8
 
 extern u32 dw_mci_calc_timeout(struct dw_mci *host);
-extern int dw_mci_probe(struct dw_mci *host);
+extern int dw_mci_probe(struct dw_mci *host, struct platform_device *pdev);
 extern void dw_mci_remove(struct dw_mci *host);
 #ifdef CONFIG_PM
 extern int dw_mci_runtime_suspend(struct device *device);
@@ -905,6 +913,20 @@ struct dw_mci_cmd_log {
 	u8 status_count;	/* TBD : It can be changed */
 };
 
+#define	NUM_OF_CQ_LOG_CTX	5
+struct dw_mci_cq_cmd_log {
+	u64	send_time;
+	u64	done_time;
+/*
+ *	context to be stored
+ *
+ *	idx 0 - tag
+ *	idx 1 - doorbell
+ */
+	u32	data1[NUM_OF_CQ_LOG_CTX];
+	u32	data2[NUM_OF_CQ_LOG_CTX];
+};
+
 enum dw_mci_req_log_state {
 	STATE_REQ_START = 0,
 	STATE_REQ_CMD_PROCESS,
@@ -931,6 +953,8 @@ struct dw_mci_req_log {
 struct dw_mci_debug_info {
 	struct dw_mci_cmd_log cmd_log[DWMCI_LOG_MAX];
 	atomic_t cmd_log_count;
+	struct dw_mci_cq_cmd_log	cq_cmd_log[DWMCI_LOG_MAX];
+	atomic_t			cq_cmd_log_count;
 	struct dw_mci_req_log req_log[DWMCI_REQ_LOG_MAX];
 	atomic_t req_log_count;
 	unsigned char en_logging;
@@ -980,7 +1004,7 @@ struct dw_mci_drv_data {
 			       struct dw_mci_tuning_data *tuning_data);
 	int (*prepare_hs400_tuning)(struct dw_mci *host, struct mmc_ios *ios);
 	int (*switch_voltage)(struct mmc_host *mmc, struct mmc_ios *ios);
-	void (*hwacg_control)(struct dw_mci *host, u32 flag);
+	void (*hwacg_control)(struct dw_mci *host, u32 flag, int mode);
 	void (*pins_control) (struct dw_mci * host, int config);
 	int (*misc_control)(struct dw_mci *host, enum dw_mci_misc_control control, void *priv);
 	int (*crypto_engine_cfg)(struct dw_mci *host,
