@@ -237,6 +237,7 @@ static ssize_t power_ro_lock_store(struct device *dev,
 		count = PTR_ERR(req);
 		goto out_put;
 	}
+	req->special = req_to_mmc_queue_req(req);
 	req_to_mmc_queue_req(req)->drv_op = MMC_DRV_OP_BOOT_WP;
 	blk_execute_rq(mq->queue, NULL, req, 0);
 	ret = req_to_mmc_queue_req(req)->drv_op_result;
@@ -699,6 +700,7 @@ static int mmc_blk_ioctl_cmd(struct mmc_blk_data *md,
 		err = PTR_ERR(req);
 		goto cmd_done;
 	}
+	req->special = req_to_mmc_queue_req(req);
 	idatas[0] = idata;
 	req_to_mmc_queue_req(req)->drv_op = MMC_DRV_OP_IOCTL;
 	req_to_mmc_queue_req(req)->drv_op_data = idatas;
@@ -769,6 +771,7 @@ static int mmc_blk_ioctl_multi_cmd(struct mmc_blk_data *md,
 		err = PTR_ERR(req);
 		goto cmd_err;
 	}
+	req->special = req_to_mmc_queue_req(req);
 	req_to_mmc_queue_req(req)->drv_op = MMC_DRV_OP_IOCTL;
 	req_to_mmc_queue_req(req)->drv_op_data = idata;
 	req_to_mmc_queue_req(req)->ioc_count = num_of_cmds;
@@ -1545,14 +1548,13 @@ static void mmc_blk_cmdq_issue_drv_op(struct mmc_queue *mq, struct request *req)
 	struct mmc_card *card = md->queue.card;
 	struct mmc_host *host = card->host;
 	struct mmc_queue_req *mq_rq;
-	struct mmc_blk_data *main_md = dev_get_drvdata(&card->dev);
 	struct mmc_blk_ioc_data **idata;
 	u8 **ext_csd;
 	u32 status;
 	int ret = 0;
 	int i;
 
-	mq_rq = &mq->mqrq_cmdq[req->tag];
+	mq_rq = req->special;
 	if (mmc_card_cmdq(card)) {
 		pr_err("%s: CMDQ : try halt for legacy cmd [drv_op : %d]\n", mmc_hostname(card->host), mq_rq->drv_op);
 		ret = mmc_cmdq_halt_on_empty_queue(card->host);
@@ -1619,9 +1621,6 @@ out:
 			pr_err("%s: %s: cmdq unhalt failed\n",
 					mmc_hostname(card->host), __func__);
 	}
-	/* Always switch back to main area after RPMB access */
-	if (md->area_type & MMC_BLK_DATA_AREA_RPMB)
-		mmc_blk_part_switch(card, main_md->part_type);
 	mq_rq->drv_op_result = ret;
 	blk_end_request_all(req, ret ? BLK_STS_IOERR : BLK_STS_OK);
 }
@@ -3016,7 +3015,6 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 	}
 
 	if (req) {
-
 		if ((req_op(req) == REQ_OP_DISCARD
 			|| req_op(req) == REQ_OP_SECURE_ERASE
 			|| req_op(req) == REQ_OP_FLUSH) &&
@@ -3041,6 +3039,7 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 			 */
 			udelay(MMC_QUIRK_CMDQ_DELAY_BEFORE_DCMD);
 		}
+
 		switch (req_op(req)) {
 		case REQ_OP_DRV_IN:
 		case REQ_OP_DRV_OUT:
@@ -3485,6 +3484,7 @@ static int mmc_dbg_card_status_get(void *data, u64 *val)
 	req = blk_get_request(mq->queue, REQ_OP_DRV_IN, __GFP_RECLAIM);
 	if (IS_ERR(req))
 		return PTR_ERR(req);
+	req->special = req_to_mmc_queue_req(req);
 	req_to_mmc_queue_req(req)->drv_op = MMC_DRV_OP_GET_CARD_STATUS;
 	blk_execute_rq(mq->queue, NULL, req, 0);
 	ret = req_to_mmc_queue_req(req)->drv_op_result;
@@ -3523,6 +3523,7 @@ static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
 		err = PTR_ERR(req);
 		goto out_free;
 	}
+	req->special = req_to_mmc_queue_req(req);
 	req_to_mmc_queue_req(req)->drv_op = MMC_DRV_OP_GET_EXT_CSD;
 	req_to_mmc_queue_req(req)->drv_op_data = &ext_csd;
 	blk_execute_rq(mq->queue, NULL, req, 0);
