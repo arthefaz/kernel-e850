@@ -314,19 +314,19 @@ static int cmdq_host_alloc_tdl(struct cmdq_host *cq_host)
 	 * or 128th bit
 	 */
 	if (cq_host->dma64) {
-//		if (cq_host->quirks & CMDQ_QUIRK_SHORT_TXFR_DESC_SZ)
-//			cq_host->trans_desc_len = 12;
-//		else
-//			cq_host->trans_desc_len = 32 * TRANS_DESC_LEN_MULTIPLIER;
-//		cq_host->link_desc_len = 32 * TRANS_DESC_LEN_MULTIPLIER;
-		cq_host->trans_desc_len = 128;
+		if (cq_host->quirks & CMDQ_QUIRK_SHORT_TXFR_DESC_SZ)
+			cq_host->trans_desc_len = 12;
+		else
+			cq_host->trans_desc_len = 128;
 		cq_host->link_desc_len = 128;
 	} else {
 		cq_host->trans_desc_len = 8;
 		cq_host->link_desc_len = 8;
 	}
 #else
-	cq_host->task_desc_len = 8;
+	cmdq_writel(cq_host, cmdq_readl(cq_host, CQCFG) |
+		       CQ_TASK_DESC_SZ, CQCFG);
+	cq_host->task_desc_len = 16;
 	cq_host->trans_desc_len = 32;
 	cq_host->link_desc_len = 32;
 #endif

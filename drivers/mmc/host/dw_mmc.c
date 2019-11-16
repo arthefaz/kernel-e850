@@ -4080,7 +4080,7 @@ static int dw_mci_init_slot(struct dw_mci *host, struct platform_device *pdev)
 		}
 		else {
 			host->cq_host->ops = &dw_mci_cmdq_ops;
-//			host->cq_host->caps |= CMDQ_TASK_DESC_SZ_128;
+			host->cq_host->caps |= CMDQ_TASK_DESC_SZ_128;
 			dev_info(host->dev, "CMDQ host enabled!!!\n");
 		}
 	}

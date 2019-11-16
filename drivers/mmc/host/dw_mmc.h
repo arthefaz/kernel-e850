@@ -629,7 +629,7 @@ do {	\
 #define SDMMC_CTRL_FIFO_RESET		BIT(1)
 #define SDMMC_CTRL_RESET		BIT(0)
 /* Clock Enable register defines */
-#define SDMMC_CLKEN_LOW_PWR		BIT(16)
+#define SDMMC_CLKEN_LOW_PWR		0
 #define SDMMC_CLKEN_ENABLE		BIT(0)
 /* time-out register defines */
 #define SDMMC_TMOUT_DATA(n)		_SBF(8, (n))
