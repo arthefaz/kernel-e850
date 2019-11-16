@@ -629,7 +629,7 @@
 	supports-erase;
 	mmc-hs400-enhanced-strobe;
 	card-init-hwacg-ctrl;
-	qos-dvfs-level = <667000>;
+	qos-dvfs-level = <334000>;
 	enable-ulp-mode;
 	support-cmdq;
 	fifo-depth = <0x40>;
@@ -637,8 +637,9 @@
 	desc-size = <4>;
 	card-detect-delay = <200>;
 	samsung,dw-mshc-ciu-div = <3>;
-	samsung,dw-mshc-txdt-crc-timer-fastlimit = <0x13>;
-	samsung,dw-mshc-txdt-crc-timer-initval = <0x15>;
+	samsung,dw-mshc-txdt-crc-timer-fastlimit = <0x34>;
+	samsung,dw-mshc-txdt-crc-timer-initval = <0x38>;
+	samsung,dw-mshc-hs400-tx-delay-line = <0x40>;
 	samsung,dw-mshc-hs400-delay-line = <0x60>;
 	samsung,dw-mshc-sdr-timing = <3 0 4 0>;
 	samsung,dw-mshc-ddr-timing = <3 0 4 2>;
@@ -656,7 +657,7 @@
 		"fast-slew-rate-2x",
 		"fast-slew-rate-3x",
 		"fast-slew-rate-4x";
-	pinctrl-0 = <&sd0_clk &sd0_cmd &sd0_rdqs &sd0_bus1 &sd0_bus4 &sd0_bus8>;
+	pinctrl-0 = <&sd0_clk &sd0_cmd &sd0_rdqs &sd0_nreset &sd0_bus1 &sd0_bus4 &sd0_bus8>;
 	pinctrl-1 = <&sd0_clk_fast_slew_rate_1x>;
 	pinctrl-2 = <&sd0_clk_fast_slew_rate_2x>;
 	pinctrl-3 = <&sd0_clk_fast_slew_rate_3x>;
