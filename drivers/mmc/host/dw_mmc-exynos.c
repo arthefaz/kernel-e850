@@ -604,6 +604,8 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 		return -ENOMEM;
 	}
 
+	id = of_alias_get_id(host->dev->of_node, "mshc");
+
 	for (idx = 0; idx < ARRAY_SIZE(exynos_compat); idx++) {
 		if (of_device_is_compatible(np, exynos_compat[idx].compatible))
 			priv->ctrl_type = exynos_compat[idx].ctrl_type;
@@ -660,13 +662,23 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 	if (IS_ERR(priv->pinctrl)) {
 		priv->pinctrl = NULL;
 	} else {
-		priv->clk_drive_base = pinctrl_lookup_state(priv->pinctrl, "init");
-		priv->clk_drive_str[0] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-1x");
-		priv->clk_drive_str[1] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-2x");
-		priv->clk_drive_str[2] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-3x");
-		priv->clk_drive_str[3] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-4x");
-		priv->clk_drive_str[4] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-5x");
-		priv->clk_drive_str[5] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-6x");
+		if (id == 0) {
+			priv->clk_drive_base = pinctrl_lookup_state(priv->pinctrl, "default");
+			priv->clk_drive_str[0] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-1x");
+			priv->clk_drive_str[1] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-2x");
+			priv->clk_drive_str[2] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-3x");
+			priv->clk_drive_str[3] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-4x");
+			priv->clk_drive_str[4] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-5x");
+			priv->clk_drive_str[5] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-6x");
+		} else {
+			priv->clk_drive_base = pinctrl_lookup_state(priv->pinctrl, "init");
+			priv->clk_drive_str[0] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-1x");
+			priv->clk_drive_str[1] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-2x");
+			priv->clk_drive_str[2] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-3x");
+			priv->clk_drive_str[3] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-4x");
+			priv->clk_drive_str[4] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-5x");
+			priv->clk_drive_str[5] = pinctrl_lookup_state(priv->pinctrl, "fast-slew-rate-6x");
+		}
 
 		for (i = 0; i < 6; i++) {
 			if (IS_ERR(priv->clk_drive_str[i]))
@@ -705,7 +717,6 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 	if (of_find_property(np, "use-enable-shift", NULL))
 		priv->ctrl_flag |= DW_MMC_EXYNOS_ENABLE_SHIFT;
 
-	id = of_alias_get_id(host->dev->of_node, "mshc");
 	switch (id) {
 		/* dwmmc0 : eMMC    */
 	case 0:

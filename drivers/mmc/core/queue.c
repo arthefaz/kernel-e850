@@ -605,6 +605,9 @@ void mmc_queue_suspend(struct mmc_queue *mq, int wait)
 		if (test_and_set_bit(MMC_QUEUE_SUSPENDED, &mq->flags))
 			goto out;
 
+		if (mq->suspended)
+			goto out;
+
 		if (wait) {
 
 			/*
@@ -637,6 +640,7 @@ void mmc_queue_suspend(struct mmc_queue *mq, int wait)
 			spin_unlock_irqrestore(q->queue_lock, flags);
 		}
 
+		mq->suspended |= true;
 		goto out;
 	}
 
@@ -663,6 +667,9 @@ void mmc_queue_resume(struct mmc_queue *mq)
 	struct request_queue *q = mq->queue;
 	struct mmc_card *card = mq->card;
 	unsigned long flags;
+
+	if (card->cmdq_init && blk_queue_tagged(q))
+		test_and_clear_bit(MMC_QUEUE_SUSPENDED, &mq->flags);
 
 	if (mq->suspended) {
 		mq->suspended = false;
