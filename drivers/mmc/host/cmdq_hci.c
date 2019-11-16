@@ -1056,10 +1056,10 @@ static void cmdq_finish_data(struct mmc_host *mmc, unsigned int tag)
 		set_bit(CMDQ_STATE_PREV_DCMD, &ctx_info->curr_state);
 	}
 
-	spin_lock_irqsave(&cq_host->list_lock, flags);
+	spin_lock(&cq_host->list_lock);
 	if (!list_empty(&cq_host->active_mrq))
 		list_del(&mrq->cmdq_entry);
-	spin_unlock_irqrestore(&cq_host->list_lock, flags);
+	spin_unlock(&cq_host->list_lock);
 
 	clear_bit(tag, &ctx_info->curr_dbr);
 #if defined(CONFIG_MMC_DW_DEBUG)
@@ -1085,7 +1085,7 @@ static void cmdq_finish_data(struct mmc_host *mmc, unsigned int tag)
 #endif
 	cmdq_runtime_pm_put(cq_host);
 	mrq->done(mrq);
-	spin_lock_irqsave(&cq_host->lock, flags);
+	spin_lock(&cq_host->lock);
 	if (!(ctx_info->curr_dbr) &&
 		!(ctx_info->active_reqs & ~(1<<mrq->req->tag))) {
 		spin_unlock_irqrestore(&cq_host->lock, flags);
@@ -1097,7 +1097,7 @@ static void cmdq_finish_data(struct mmc_host *mmc, unsigned int tag)
 		if (cq_host->ops->sicd_control)
 			cq_host->ops->sicd_control(mmc, false);
 	} else {
-		spin_unlock_irqrestore(&cq_host->lock, flags);
+		spin_unlock(&cq_host->lock);
 	}
 }
 
