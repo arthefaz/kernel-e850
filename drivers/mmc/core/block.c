@@ -1607,19 +1607,14 @@ static void mmc_blk_cmdq_issue_drv_op(struct mmc_queue *mq, struct request *req)
 		ret = -EINVAL;
 		break;
 	}
+
+out:
 	if (mmc_card_cmdq(card)) {		
+		host->cmdq_ops->enable(host);
 		pr_err("%s: CMDQ : try unhalt after legacy cmd\n", mmc_hostname(card->host));
 		if (mmc_cmdq_halt(card->host, false))
 			pr_err("%s: %s: cmdq unhalt failed\n",
 				mmc_hostname(card->host), __func__);
-		host->cmdq_ops->enable(host);
-	}
-
-out:
-	if (mmc_card_cmdq(card)) {
-		if (mmc_cmdq_halt(card->host, false))
-			pr_err("%s: %s: cmdq unhalt failed\n",
-					mmc_hostname(card->host), __func__);
 	}
 	mq_rq->drv_op_result = ret;
 	blk_end_request_all(req, ret ? BLK_STS_IOERR : BLK_STS_OK);
@@ -3049,6 +3044,7 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 			 */
 			mmc_blk_cmdq_issue_drv_op(mq, req);
 			ret = 0;
+			mmc_put_card(card);
 			break;
 		case REQ_OP_DISCARD:
 			/*
