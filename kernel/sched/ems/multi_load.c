@@ -954,7 +954,7 @@ static inline bool within_margin(int value, int margin)
 void util_est_dequeue_multi_load(struct cfs_rq *cfs_rq,
 				struct task_struct *p, bool task_sleep)
 {
-	long last_ewma_diff;
+	int last_ewma_diff;
 	struct util_est ue, *cfs_rq_ue;
 	bool updated = false;
 

@@ -175,11 +175,11 @@ static int find_best_eff(struct tp_env *env, unsigned int *eff, int idle)
 
 	/* find best efficiency cpu */
 	for_each_cpu(cpu, &candidates) {
-		unsigned long eff;
+		unsigned int temp;
 
-		eff = compute_efficiency(env->p, cpu, env->eff_weight[cpu]);
-		if (eff > best_eff) {
-			best_eff = eff;
+		temp = compute_efficiency(env->p, cpu, env->eff_weight[cpu]);
+		if (temp > best_eff) {
+			best_eff = temp;
 			best_cpu = cpu;
 		}
 	}
