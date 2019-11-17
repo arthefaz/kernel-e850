@@ -136,7 +136,7 @@ static void memset_ptrn(ulong *p, uint count)
 {
 	uint j, idx;
 	for (j = 0; j < count; j += (uint)sizeof(p)) {
-		idx = j % ARRAY_SIZE(patterns);
+		idx = (uint)(j % ARRAY_SIZE(patterns));
 		*p++ = patterns[idx];
 	}
 }
