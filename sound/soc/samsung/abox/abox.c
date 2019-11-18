@@ -2548,7 +2548,11 @@ static int abox_enable(struct device *dev)
 	abox_restore_register(data);
 	has_reset = !abox_is_timer_set(data);
 	if (!has_reset) {
+		int val;
 		dev_info(dev, "wakeup from WFI\n");
+		regmap_read(data->timer_regmap, ABOX_TIMER_PRESET_LSB(1),
+				&val);
+		dev_info(dev, "[1] ABOX Timer1 Preset LSB = %x\n", val);
 		abox_update_suspend_wait_flag(data, false);
 		abox_start_timer(data);
 	} else {
@@ -2589,6 +2593,7 @@ static int abox_disable(struct device *dev)
 {
 	struct abox_data *data = dev_get_drvdata(dev);
 	enum calliope_state state = data->calliope_state;
+	int val;
 
 	dev_info(dev, "%s\n", __func__);
 
@@ -2596,6 +2601,8 @@ static int abox_disable(struct device *dev)
 	data->calliope_state = CALLIOPE_DISABLING;
 	abox_cache_components(dev, data);
 	flush_work(&data->boot_done_work);
+	regmap_read(data->timer_regmap, ABOX_TIMER_PRESET_LSB(1), &val);
+	dev_info(dev, "[2] ABOX Timer1 Preset LSB = %x\n", val);
 	if (state != CALLIOPE_DISABLED)
 		abox_cpu_pm_ipc(data, false);
 	data->calliope_state = CALLIOPE_DISABLED;
@@ -2610,6 +2617,8 @@ static int abox_disable(struct device *dev)
 	abox_gic_disable_irq(data->dev_gic);
 	abox_failsafe_report_reset(dev);
 	abox_dbg_dump_suspend(dev, data);
+	regmap_read(data->timer_regmap, ABOX_TIMER_PRESET_LSB(1), &val);
+	dev_info(dev, "[3] ABOX Timer1 Preset LSB = %x\n", val);
 	return 0;
 }
 
