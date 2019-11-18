@@ -148,7 +148,7 @@ static int exynos_panel_parse_regulators(struct exynos_panel_device *panel)
 
 	if(!of_property_read_string(dev->of_node, "regulator_3p3v",
 				(const char **)&str_regulator[1])) {
-		res->regulator[1] = regulator_get(dev, str_regulator[1]);
+		res->regulator[1] = regulator_get_exclusive(dev, str_regulator[1]);
 		if (IS_ERR(res->regulator[1])) {
 			DPU_ERR_PANEL("panel regulator 3.3V get failed\n");
 			res->regulator[1] = NULL;
