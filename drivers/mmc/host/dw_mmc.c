@@ -3293,9 +3293,6 @@ static irqreturn_t dw_mci_interrupt(int irq, void *dev_id)
 	status = mci_readl(host, RINTSTS);
 	pending = mci_readl(host, MINTSTS);	/* read-only mask reg */
 
-	if (pending)
-		dev_info(host->dev, "MINTSTS: 0x %08x\n", pending);
-
 	/* Incase of CMD Queuing */
 	if (host->slot->mmc->card && mmc_card_cmdq(host->slot->mmc->card) &&
 			!mmc_host_halt(host->slot->mmc)) {
