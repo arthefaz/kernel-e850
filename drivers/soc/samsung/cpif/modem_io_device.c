@@ -428,25 +428,15 @@ static int rx_multi_pdp(struct sk_buff *skb)
 #else
 	if (!check_gro_support(skb)) {
 #endif
-
-#ifdef CONFIG_LINK_DEVICE_NAPI
 		ret = netif_receive_skb(skb);
-#else /* !CONFIG_LINK_DEVICE_NAPI */
-		if (in_interrupt())
-			ret = netif_rx(skb);
-		else
-			ret = netif_rx_ni(skb);
-#endif /* CONFIG_LINK_DEVICE_NAPI */
-
 		if (ret != NET_RX_SUCCESS)
-			mif_err_limited("%s: %s<-%s: ERR! netif_rx\n",
+			mif_err_limited("%s: %s<-%s: ERR! netif_receive_skb\n",
 					ld->name, iod->name, iod->mc->name);
 	} else {
 		ret = napi_gro_receive(napi_get_current(), skb);
-		if (ret == GRO_DROP) {
+		if (ret == GRO_DROP)
 			mif_err_limited("%s: %s<-%s: ERR! napi_gro_receive\n",
 					ld->name, iod->name, iod->mc->name);
-		}
 
 		if (ld->gro_flush)
 			ld->gro_flush(ld);
