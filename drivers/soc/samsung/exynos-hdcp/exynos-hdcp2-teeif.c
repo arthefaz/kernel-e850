@@ -498,7 +498,7 @@ int teei_verify_m_prime(uint8_t *m_prime, uint8_t *input, size_t input_len)
 	memcpy(hci->verifymprime.m_prime, m_prime, HDCP_RP_HMAC_M_LEN);
 	if (input && input_len_t < sizeof(hci->verifymprime.strmsg)) {
 		memcpy(hci->verifymprime.strmsg, input, input_len_t);
-		hci->verifymprime.str_len = input_len_t;
+		hci->verifymprime.str_len = (uint32_t)input_len_t;
 	}
 
 	ret = hdcp_tee_comm(hci);
