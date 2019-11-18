@@ -9,6 +9,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/version.h>
 #include "decon.h"
 #include "dpp.h"
 #include "format.h"
