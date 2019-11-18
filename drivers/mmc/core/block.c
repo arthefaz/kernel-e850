@@ -1406,7 +1406,6 @@ static int mmc_blk_cmdq_issue_discard_rq(struct mmc_queue *mq,
 	struct mmc_cmdq_context_info *ctx_info = &host->cmdq_ctx;
 	unsigned int from, nr, arg;
 	int err = 0;
-	unsigned long flags;
 
 	if (!mmc_can_erase(card)) {
 		err = -EOPNOTSUPP;
@@ -1450,9 +1449,9 @@ clear_dcmd:
 			if (host->err_mrq == NULL)
 				host->err_mrq = &cmdq_req->mrq;
 
-			spin_lock_irqsave(&mq->eh_lock, flags);
+			spin_lock_bh(&mq->eh_lock);
 			list_add_tail(&cmdq_req->mrq.eh_entry, &mq->eh_mrq);
-			spin_unlock_irqrestore(&mq->eh_lock, flags);
+			spin_unlock_bh(&mq->eh_lock);
 
 			if (!test_bit(CMDQ_STATE_ERR, &ctx_info->curr_state)) {
 				set_bit(CMDQ_STATE_ERR, &ctx_info->curr_state);
@@ -2602,7 +2601,6 @@ static void mmc_blk_cmdq_err(struct mmc_queue *mq)
 	struct mmc_request *mrq = host->err_mrq;
 	struct mmc_card *card = mq->card;
 	struct mmc_cmdq_context_info *ctx_info = &host->cmdq_ctx;
-	unsigned long flags;
 
 	mmc_get_card(card);
 	pr_err("\n\n=============== CQ RECOVERY START ======================\n\n");
@@ -2668,9 +2666,10 @@ reset:
 			break;
 	}
 
-	spin_lock_irqsave(&mq->eh_lock, flags);
+	spin_lock_bh(&mq->eh_lock);
 	list_for_each_entry_safe_reverse(mrq_t, mrq_n, &mq->eh_mrq, eh_entry) {
 		list_del(&mrq_t->eh_entry);
+		spin_unlock_bh(&mq->eh_lock);
 		BUG_ON(!mrq_t->req);
 		mqrq_t = mrq_t->req->special;
 		/* Increase retry count */
@@ -2692,8 +2691,9 @@ reset:
 					mqrq_t->retries);
 			blk_end_request_all(mrq_t->req, err);
 		}
+		spin_lock_bh(&mq->eh_lock);
 	}
-	spin_unlock_irqrestore(&mq->eh_lock, flags);
+	spin_unlock_bh(&mq->eh_lock);
 	mmc_blk_cmdq_reset(host, true);
 
 	host->err_mrq = NULL;
@@ -2719,7 +2719,6 @@ void mmc_blk_cmdq_complete_rq(struct request *rq)
 	struct mmc_cmdq_req *cmdq_req = &mq_rq->cmdq_req;
 	struct mmc_queue *mq = (struct mmc_queue *)rq->q->queuedata;
 	int err = 0;
-	unsigned long flags;
 
 	if (mrq->cmd && mrq->cmd->error)
 		err = mrq->cmd->error;
@@ -2748,9 +2747,9 @@ void mmc_blk_cmdq_complete_rq(struct request *rq)
 
 		pr_err("%s: %s: txfr error: %d\n", mmc_hostname(mrq->host),
 		       __func__, err);
-		spin_lock_irqsave(&mq->eh_lock, flags);
+		spin_lock(&mq->eh_lock);
 		list_add_tail(&mrq->eh_entry, &mq->eh_mrq);
-		spin_unlock_irqrestore(&mq->eh_lock, flags);
+		spin_unlock(&mq->eh_lock);
 		if (test_bit(CMDQ_STATE_ERR, &ctx_info->curr_state)) {
 			pr_err("%s: CQ in error state, ending current req: %d\n",
 				__func__, err);
