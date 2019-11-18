@@ -112,12 +112,12 @@ static void esg_update_step(struct esgov_policy *esg_policy, int step)
 	esg_policy->step_power = find_step_power(cpu, esg_policy->step);
 }
 
-static void esg_update_freq_range(int cpu, int min, int max, int flag)
+static void esg_update_freq_range(struct cpufreq_policy *policy, int min, int max, int flag)
 {
 	unsigned long flags;
 	int prev_min, prev_max, new_min, new_max;
 	int new_min_idx, new_max_idx;
-	struct esgov_policy *esg_policy = per_cpu(esgov_policy, cpu);
+	struct esgov_policy *esg_policy = per_cpu(esgov_policy, policy->cpu);
 
 	if (unlikely((!esg_policy) || !esg_policy->enabled))
 		return;
@@ -143,18 +143,18 @@ static void esg_update_freq_range(int cpu, int min, int max, int flag)
 	}
 
 	new_min_idx = cpufreq_frequency_table_target(
-		esg_policy->policy, new_min, CPUFREQ_RELATION_L);
+				policy, new_min, CPUFREQ_RELATION_L);
 	new_max_idx = cpufreq_frequency_table_target(
-		esg_policy->policy, new_max, CPUFREQ_RELATION_H);
+				policy, new_max, CPUFREQ_RELATION_H);
 
 	new_min = esg_policy->policy->freq_table[new_min_idx].frequency;
 	new_max = esg_policy->policy->freq_table[new_max_idx].frequency;
 
-	esg_policy->min_cap = find_allowed_capacity(cpu, new_min, 0);
-	esg_policy->max_cap = find_allowed_capacity(cpu, new_max, 0);
+	esg_policy->min_cap = find_allowed_capacity(policy->cpu, new_min, 0);
+	esg_policy->max_cap = find_allowed_capacity(policy->cpu, new_max, 0);
 	esg_policy->min_cap = min(esg_policy->max_cap, esg_policy->min_cap);
 
-	trace_esg_update_limit(cpu, esg_policy->min_cap, esg_policy->max_cap);
+	trace_esg_update_limit(policy->cpu, esg_policy->min_cap, esg_policy->max_cap);
 
 	raw_spin_unlock_irqrestore(&esg_policy->update_lock, flags);
 }
@@ -165,7 +165,7 @@ static int esg_cpufreq_policy_callback(struct notifier_block *nb,
 	struct cpufreq_policy *policy = data;
 
 	if (event == CPUFREQ_NOTIFY)
-		esg_update_freq_range(policy->cpu, policy->min, policy->max, 1);
+		esg_update_freq_range(policy, policy->min, policy->max, 1);
 
 	return NOTIFY_OK;
 }
@@ -185,9 +185,9 @@ static int esg_cpufreq_pm_qos_callback(struct notifier_block *nb,
 		return NOTIFY_OK;
 
 	if (pm_qos_class == esg_pol->qos_max_class)
-		esg_update_freq_range(esg_pol->policy->cpu, esg_pol->qos.min, val, 0);
+		esg_update_freq_range(esg_pol->policy, esg_pol->qos.min, val, 0);
 	else
-		esg_update_freq_range(esg_pol->policy->cpu, val, esg_pol->qos.max, 0);
+		esg_update_freq_range(esg_pol->policy, val, esg_pol->qos.max, 0);
 
 	return NOTIFY_OK;
 }
