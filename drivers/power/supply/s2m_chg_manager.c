@@ -1384,6 +1384,12 @@ static void bat_monitor_work(struct work_struct *work)
 							    struct s2m_chg_manager_info,
 							    monitor_work.work);
 
+	if (battery->monitor_trigger == false) {
+		pr_info("%s: monitor_trigger is false", __func__);
+
+		goto fault_trigger;
+	}
+
 	pr_info("%s: start monitoring\n", __func__);
 
 	battery->battery_valid = false;
@@ -1403,6 +1409,7 @@ static void bat_monitor_work(struct work_struct *work)
 		battery->cable_type,
 		battery->is_recharging);
 
+fault_trigger:
 	alarm_cancel(&battery->monitor_alarm);
 	alarm_start_relative(&battery->monitor_alarm,
 			     ktime_set(battery->monitor_alarm_interval, 0));
@@ -1417,6 +1424,12 @@ static void bat_monitor_work(struct work_struct *work)
 	union power_supply_propval value;
 	struct power_supply *psy;
 	int ret;
+
+	if (battery->monitor_trigger == false) {
+		pr_info("%s: monitor_trigger is false", __func__);
+
+		goto fault_trigger;
+	}
 
 	pr_info("%s: start monitoring\n", __func__);
 
@@ -1450,6 +1463,7 @@ continue_monitor:
 		battery->cable_type,
 		battery->is_recharging);
 
+fault_trigger:
 	alarm_cancel(&battery->monitor_alarm);
 	alarm_start_relative(&battery->monitor_alarm,
 			     ktime_set(battery->monitor_alarm_interval, 0));
@@ -1881,6 +1895,7 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&battery->monitor_work, bat_monitor_work);
 	alarm_init(&battery->monitor_alarm, ALARM_BOOTTIME, bat_monitor_alarm);
 	battery->monitor_alarm_interval = DEFAULT_ALARM_INTERVAL;
+	battery->monitor_trigger = true;
 
 #if defined(CONFIG_USE_CCIC)
 	INIT_DELAYED_WORK(&battery->select_pdo_work, usbpd_select_pdo_work);
@@ -1989,6 +2004,8 @@ static int s2m_chg_manager_prepare(struct device *dev)
 {
 	struct s2m_chg_manager_info *battery = dev_get_drvdata(dev);
 
+	battery->monitor_trigger = false;
+
 	alarm_cancel(&battery->monitor_alarm);
 	cancel_delayed_work_sync(&battery->monitor_work);
 	wake_unlock(&battery->monitor_wake_lock);
@@ -2000,6 +2017,7 @@ static int s2m_chg_manager_prepare(struct device *dev)
 		alarm_start_relative(&battery->monitor_alarm,
 				ktime_set(battery->monitor_alarm_interval, 0));
 	}
+
 	return 0;
 }
 
@@ -2025,6 +2043,8 @@ static void s2m_chg_manager_complete(struct device *dev)
 	alarm_cancel(&battery->monitor_alarm);
 	wake_lock(&battery->monitor_wake_lock);
 	queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work, 0);
+
+	battery->monitor_trigger = true;
 }
 
 #else

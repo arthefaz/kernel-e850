@@ -278,5 +278,6 @@ struct s2m_chg_manager_info {
 	int rp_input_current;
 	int rp_charging_current;
 #endif
+	bool monitor_trigger;
 };
 #endif /* __S2M_BATTERY_H */
