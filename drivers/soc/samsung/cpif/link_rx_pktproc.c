@@ -19,12 +19,42 @@
 #include "link_device_memory.h"
 
 #ifdef CONFIG_CP_PKTPROC_PERF_TEST
-/* port: 5000 -> 5001 */
-unsigned char pktproc_udpRx[28] = {
-	0x45, 0x00, 0x05, 0xB8, 0x00, 0x00, 0x40, 0x00,
-	0x80, 0x11, 0x71, 0xDF, 0xC0, 0xA8, 0x01, 0x03,
-	0xC0, 0xA8, 0x01, 0x02, 0x13, 0x88, 0x13, 0x89,
-	0x05, 0xA4, 0x00, 0x00,
+struct pktproc_perftest_data perftest_data[PERFTEST_MODE_MAX] = {
+	{
+		/* empty */
+	},
+	{
+		/* PERFTEST_MODE_IPV4
+		 * port: 5000 -> 5001
+		 * payload: 1464 (0x5b8)
+		 */
+		.header = {
+			0x45, 0x00, 0x05, 0xB8, 0x00, 0x00, 0x40, 0x00,
+			0x80, 0x11, 0x71, 0xDF, 0xC0, 0xA8, 0x01, 0x03,
+			0xC0, 0xA8, 0x01, 0x02, 0x13, 0x88, 0x13, 0x89,
+			0x05, 0xA4, 0x00, 0x00
+		},
+		.header_len = 28,
+		.dst_port_offset = 22,
+		.packet_len = 1464
+	},
+	{
+		/* PERFTEST_MODE_CLAT
+		 * port: 5000 -> 5001
+		 * payload: 1444 (0x5a4)
+		 */
+		.header = {
+			0x60, 0x0a, 0xf8, 0x0c, 0x05, 0xa4, 0x11, 0x40,
+			0x00, 0x64, 0xff, 0x9b, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x02,
+			0x20, 0x01, 0x02, 0xd8, 0xe1, 0x43, 0x7b, 0xfb,
+			0x1d, 0xda, 0x90, 0x9d, 0x8b, 0x8d, 0x05, 0xe7,
+			0x13, 0x88, 0x13, 0x89, 0x05, 0xa4, 0x00, 0x00,
+		},
+		.header_len = 48,
+		.dst_port_offset = 42,
+		.packet_len = 1484
+	}
 };
 #endif
 
@@ -405,42 +435,47 @@ static void pktproc_perftest_napi_schedule(struct mem_link_device *mld)
 }
 
 static void pktproc_perftest_gen_rx_packet_sktbuf_mode(
-		struct pktproc_queue *q, int packet_num, u16 port_num, u32 *seq_counter)
+		struct pktproc_queue *q, int packet_num, int session)
 {
 	struct pktproc_desc_sktbuf *desc = q->desc_sktbuf;
+	struct pktproc_perftest *perf = &q->ppa->perftest;
 	u32 header_len;
 	u32 rear_ptr;
 	u8 *src;
 	u32 *seq;
 	u16 *dst_port;
-	int i;
-	u32 counter;
+	u16 *dst_addr;
+	int i, j;
 
-	header_len = sizeof(pktproc_udpRx);
+	header_len = perftest_data[perf->mode].header_len;
 	rear_ptr = *q->rear_ptr;
-	counter = *seq_counter;
 
 	for (i = 0 ; i < packet_num ; i++) {
 		/* set desc */
 		desc[rear_ptr].status = 0x11;
-		desc[rear_ptr].length = 0x5B8;	/* 1464 */
+		desc[rear_ptr].length = perftest_data[perf->mode].packet_len;
 		desc[rear_ptr].filter_result = 0x9;
-		desc[rear_ptr].channel_id = 0xB;
+		desc[rear_ptr].channel_id = perf->ch;
 
 		/* set data */
 		src = desc[rear_ptr].data_addr - q->q_info->data_base + q->data;
 		memset(src, 0x0, desc[rear_ptr].length);
-		memcpy(src, pktproc_udpRx, header_len);
+		memcpy(src, perftest_data[perf->mode].header, header_len);
 		seq = (u32 *)(src + header_len);
-		*seq = htonl(counter++);
-		dst_port = (u16 *)(src + 22);
-		*dst_port = htons(port_num);
+		*seq = htonl(perf->seq_counter[session]++);
+		dst_port = (u16 *)(src + perftest_data[perf->mode].dst_port_offset);
+		*dst_port = htons(5001 + session);
+		if (perf->mode == PERFTEST_MODE_CLAT) {
+			for (j = 0 ; j < 8 ; j++) {
+				dst_addr = (u16 *)(src + 24 + (j * 2));
+				*dst_addr = htons(perf->clat_ipv6[j]);
+			}
+		}
 
 		rear_ptr = circ_new_ptr(q->q_info->num_desc, rear_ptr, 1);
 	}
 
 	*q->rear_ptr = rear_ptr;
-	*seq_counter = counter;
 }
 
 static int pktproc_perftest_thread(void *arg)
@@ -458,7 +493,7 @@ static int pktproc_perftest_thread(void *arg)
 	pkts = (perf->session > 0 ? (1023 / perf->session) : 0);
 	do {
 		for (i = 0 ; i < perf->session ; i++) {
-			pktproc_perftest_gen_rx_packet_sktbuf_mode(q, pkts, 5001 + i, &perf->seq_counter[i]);
+			pktproc_perftest_gen_rx_packet_sktbuf_mode(q, pkts, i);
 		}
 		pktproc_perftest_napi_schedule(mld);
 		udelay(perf->udelay);
@@ -482,15 +517,18 @@ static ssize_t perftest_store(struct device *dev,
 
 	static struct task_struct *worker_task;
 	int ret;
-	int start;
 	int cpu = 5;
 
-	ret = sscanf(buf, "%d %d %d %d", &start, &perf->session, &cpu, &perf->udelay);
+	ret = sscanf(buf, "%d %d %d %d %d %x:%x:%x:%x:%x:%x:%x:%x",
+		&perf->mode, &perf->session, &perf->ch, &cpu, &perf->udelay,
+		&perf->clat_ipv6[0], &perf->clat_ipv6[1], &perf->clat_ipv6[2], &perf->clat_ipv6[3],
+		&perf->clat_ipv6[4], &perf->clat_ipv6[5], &perf->clat_ipv6[6], &perf->clat_ipv6[7]);
+
 	if (ret < 1)
 		return -EINVAL;
 
-	switch (start) {
-	case 0:
+	switch (perf->mode) {
+	case PERFTEST_MODE_STOP:
 		if (perf->test_run)
 			kthread_stop(worker_task);
 
@@ -498,7 +536,8 @@ static ssize_t perftest_store(struct device *dev,
 		perf->seq_counter[1] = 0;
 		perf->test_run = false;
 		break;
-	case 1:
+	case PERFTEST_MODE_IPV4:
+	case PERFTEST_MODE_CLAT:
 		if (perf->test_run)
 			kthread_stop(worker_task);
 
@@ -506,6 +545,8 @@ static ssize_t perftest_store(struct device *dev,
 		worker_task = kthread_create_on_cpu(pktproc_perftest_thread,
 			mld, cpu, "perftest");
 		wake_up_process(worker_task);
+		break;
+	default:
 		break;
 	}
 

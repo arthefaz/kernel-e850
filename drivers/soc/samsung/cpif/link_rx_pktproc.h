@@ -178,11 +178,28 @@ enum pktproc_version {
 };
 
 #ifdef CONFIG_CP_PKTPROC_PERF_TEST
+enum pktproc_perftest_mode {
+	PERFTEST_MODE_STOP,
+	PERFTEST_MODE_IPV4,
+	PERFTEST_MODE_CLAT,
+	PERFTEST_MODE_MAX
+};
+
 struct pktproc_perftest {
 	bool test_run;
+	enum pktproc_perftest_mode mode;
 	int session;
+	u16 ch;
 	int udelay;
 	u32 seq_counter[2];
+	u16 clat_ipv6[8];
+};
+
+struct pktproc_perftest_data {
+	u8 header[48];
+	u32 header_len;
+	u16 dst_port_offset;
+	u16 packet_len;
 };
 #endif
 
