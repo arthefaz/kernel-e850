@@ -302,12 +302,12 @@ int cp_shmem_get_mem_map_on_cp_flag(u32 cp_num)
 }
 EXPORT_SYMBOL(cp_shmem_get_mem_map_on_cp_flag);
 
+static struct page *nc_region_pages[SZ_64K];
 void __iomem *cp_shmem_get_nc_region(unsigned long base, u32 size)
 {
 	int i;
 	unsigned int num_pages = (size >> PAGE_SHIFT);
 	pgprot_t prot = pgprot_writecombine(PAGE_KERNEL);
-	struct page **pages;
 	void *v_addr;
 
 	if (!base)
@@ -316,22 +316,14 @@ void __iomem *cp_shmem_get_nc_region(unsigned long base, u32 size)
 	if (size > (num_pages << PAGE_SHIFT))
 		num_pages++;
 
-	pages = kmalloc(sizeof(struct page *) * num_pages, GFP_ATOMIC);
-	if (!pages) {
-		mif_err("%s: pages allocation fail!\n", __func__);
-		return NULL;
-	}
-
 	for (i = 0; i < num_pages; i++) {
-		pages[i] = phys_to_page(base);
+		nc_region_pages[i] = phys_to_page(base);
 		base += PAGE_SIZE;
 	}
 
-	v_addr = vmap(pages, num_pages, VM_MAP, prot);
+	v_addr = vmap(nc_region_pages, num_pages, VM_MAP, prot);
 	if (v_addr == NULL)
 		mif_err("%s: Failed to vmap pages\n", __func__);
-
-	kfree(pages);
 
 	return (void __iomem *)v_addr;
 }
