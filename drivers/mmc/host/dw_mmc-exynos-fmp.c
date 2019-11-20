@@ -167,7 +167,7 @@ int exynos_mmc_fmp_cfg(struct dw_mci *host,
 		iv = bio->bi_iter.bi_sector + (sector_t) sector_offset;
 #endif
 		req.table = desc;
-		req.cmdq_enabled = 0;
+		req.cmdq_enabled = cmdq_enabled;
 		req.iv = &iv;
 		req.ivsize = sizeof(iv);
 

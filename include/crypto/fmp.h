@@ -97,7 +97,7 @@ struct fmp_table_setting {
 	/* CMDQ Operation */
 #define FKL_CMDQ BIT(0)
 #define DKL_CMDQ BIT(1)
-#define SET_CMDQ_KEYLEN(d, v) ((d)->des2 |= (uint32_t)v)
+#define SET_CMDQ_KEYLEN(d, v) ((d)->des3 |= (uint32_t)v)
 #define SET_CMDQ_FAS(d, v) \
 			((d)->des3 = ((d)->des3 & 0xfffffff3) | v << 2)
 #define SET_CMDQ_DAS(d, v) \
