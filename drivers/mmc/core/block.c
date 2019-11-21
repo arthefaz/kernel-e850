@@ -1406,6 +1406,7 @@ static int mmc_blk_cmdq_issue_discard_rq(struct mmc_queue *mq,
 	struct mmc_cmdq_context_info *ctx_info = &host->cmdq_ctx;
 	unsigned int from, nr, arg;
 	int err = 0;
+	blk_status_t status = BLK_STS_OK;
 
 	if (!mmc_can_erase(card)) {
 		err = -EOPNOTSUPP;
@@ -1474,7 +1475,10 @@ clear_dcmd:
 		clear_bit(CMDQ_STATE_DCMD_ACTIVE, &ctx_info->curr_state);
 	}
 out:
-	blk_end_request(req, err, blk_rq_bytes(req));
+	if (err)
+		status = BLK_STS_IOERR;
+
+	blk_end_request(req, status, blk_rq_bytes(req));
 	wake_up(&ctx_info->wait);
 	spin_lock_irq(mq->queue->queue_lock);
 	mq->qcnt--;
@@ -1711,9 +1715,11 @@ static int mmc_blk_cmdq_issue_secdiscard_rq(struct mmc_queue *mq,
 	struct mmc_host *host = card->host;
 	struct mmc_cmdq_context_info *ctx_info = &host->cmdq_ctx;
 	int err = 0;
+	blk_status_t status = BLK_STS_OK;
 
 	if (!(mmc_can_secure_erase_trim(card))) {
 		err = -EOPNOTSUPP;
+		status = BLK_STS_NOTSUPP;
 		goto out;
 	}
 
@@ -1771,8 +1777,10 @@ clear_dcmd:
 					   &ctx_info->active_reqs));
 		clear_bit(CMDQ_STATE_DCMD_ACTIVE, &ctx_info->curr_state);
 	}
+	if (err)
+		status = BLK_STS_IOERR;
 out:
-	blk_end_request(req, err, blk_rq_bytes(req));
+	blk_end_request(req, status, blk_rq_bytes(req));
 	wake_up(&ctx_info->wait);
 	spin_lock_irq(mq->queue->queue_lock);
 	mq->qcnt--;
@@ -2689,7 +2697,7 @@ reset:
 					blk_rq_pos(mrq_t->req),
 					blk_rq_sectors(mrq_t->req),
 					mqrq_t->retries);
-			blk_end_request_all(mrq_t->req, err);
+			blk_end_request_all(mrq_t->req, BLK_STS_IOERR);
 		}
 		spin_lock_bh(&mq->eh_lock);
 	}
@@ -2719,6 +2727,7 @@ void mmc_blk_cmdq_complete_rq(struct request *rq)
 	struct mmc_cmdq_req *cmdq_req = &mq_rq->cmdq_req;
 	struct mmc_queue *mq = (struct mmc_queue *)rq->q->queuedata;
 	int err = 0;
+	blk_status_t status = BLK_STS_OK;
 
 	if (mrq->cmd && mrq->cmd->error)
 		err = mrq->cmd->error;
@@ -2763,11 +2772,11 @@ void mmc_blk_cmdq_complete_rq(struct request *rq)
 
 	if (cmdq_req->cmdq_req_flags & DCMD) {
 		clear_bit(CMDQ_STATE_DCMD_ACTIVE, &ctx_info->curr_state);
-		blk_end_request_all(rq, err);
+		blk_end_request_all(rq, status);
 		goto out;
 	}
 
-	blk_end_request(rq, err, cmdq_req->data.bytes_xfered);
+	blk_end_request(rq, status, cmdq_req->data.bytes_xfered);
 
 out:
 	if (!test_bit(CMDQ_STATE_ERR, &ctx_info->curr_state))
@@ -3041,6 +3050,7 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 	struct mmc_card *card = md->queue.card;
 	struct mmc_host *host = card->host;
 	struct mmc_cmdq_context_info *ctx = &host->cmdq_ctx;
+	blk_status_t status = BLK_STS_OK;
 
 	spin_lock_irq(mq->queue->queue_lock);
 	if (!mq->qcnt) {
@@ -3150,8 +3160,11 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 	return ret;
 
 out:
-	if (req)
-		blk_end_request_all(req, ret);
+	if (req) {
+		if (ret)
+			status = BLK_STS_IOERR;
+		blk_end_request_all(req, status);
+	}
 	spin_lock_irq(mq->queue->queue_lock);
 	mq->qcnt--;
 	if(!mq->qcnt)

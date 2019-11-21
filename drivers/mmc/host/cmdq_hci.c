@@ -1044,7 +1044,6 @@ static void cmdq_finish_data(struct mmc_host *mmc, unsigned int tag)
 	struct cmdq_host *cq_host = (struct cmdq_host *)mmc_cmdq_private(mmc);
 	struct mmc_cmdq_context_info *ctx_info = &mmc->cmdq_ctx;
 	u32 dbr = cmdq_readl(cq_host, CQTDBR);
-	unsigned long flags;
 
 	if (test_bit(CMDQ_STATE_ERR, &ctx_info->curr_state)) {
 		pr_err("[CQ] %s: err state is request ignored!\n", mmc_hostname(mmc));
@@ -1089,7 +1088,7 @@ static void cmdq_finish_data(struct mmc_host *mmc, unsigned int tag)
 	spin_lock(&cq_host->lock);
 	if (!(ctx_info->curr_dbr) &&
 		!(ctx_info->active_reqs & ~(1<<mrq->req->tag))) {
-		spin_unlock_irqrestore(&cq_host->lock, flags);
+		spin_unlock(&cq_host->lock);
 
 		if (cq_host->ops->hwacg_control_direct)
 			cq_host->ops->hwacg_control_direct(mmc, false);
@@ -1148,6 +1147,7 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 			if (rmeci == (u8)MMC_SEND_STATUS &&
 					!test_bit(tag, &ctx_info->curr_dbr)) {
 				ctx_info->dump_state = CMDQ_DUMP_CMD13P_ERR;
+				spin_unlock(&cq_host->lock);
 				cmdq_dumpregs(cq_host);
 				return IRQ_NONE;
 			}
