@@ -176,9 +176,10 @@ int decon_create_fence(struct decon_device *decon, struct sync_file **sync_file)
 
 int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd)
 {
-	int err = 0;
-	int fence_err = 0;
-	int ret = 0;
+	/* Positive values(ret, fence_err, err) mean normal or success */
+	int err = 1;
+	int fence_err = 1;
+	int ret = 1;
 	struct dpu_fence_info in_fence;
 
 	dpu_save_fence_info(fd, fence, &in_fence);
@@ -189,7 +190,7 @@ int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd
 			in_fence.context, in_fence.seqno, in_fence.fd, in_fence.flags);
 
 	err = dma_fence_wait_timeout(fence, false, msecs_to_jiffies(600));
-	if (err < 0) {
+	if (err <= 0) {
 		decon_err("%s: waiting on in-fence timeout\n", __func__);
 		ret = err;
 	}
@@ -204,14 +205,14 @@ int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd
 	 */
 	if (decon->dt.psr_mode == DECON_MIPI_COMMAND_MODE) {
 		fence_err = dma_fence_get_status(fence);
-		if (fence_err < 0) {
+		if (fence_err <= 0) {
 			decon_err("%s: get in-fence error status\n",
 					__func__);
 			ret = fence_err;
 		}
 	}
 
-	if ((err < 0) || (fence_err < 0)) {
+	if ((err <= 0) || (fence_err <= 0)) {
 		decon_err("\t%s: ctx(%llu), seqno(%d), fd(%d), flags(0x%lx), err(%d:%d)\n",
 				in_fence.name, in_fence.context, in_fence.seqno,
 				in_fence.fd, in_fence.flags, err, fence_err);

@@ -2084,7 +2084,7 @@ static void decon_update_regs(struct decon_device *decon,
 			err = decon_wait_fence(decon,
 					regs->dma_buf_data[i][0].fence,
 					regs->dpp_config[i].acq_fence);
-			if (err < 0) {
+			if (err <= 0) {
 				decon_save_cur_buf_info(decon, regs);
 				decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 				goto fence_err;
