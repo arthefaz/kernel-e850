@@ -168,7 +168,11 @@ static int kepler_release_reset(struct gnss_ctl *gc)
 
 	reinit_completion(&gc->sw_init_cmpl);
 
-	gc->pmu_ops->release_reset();
+	ret = gc->pmu_ops->release_reset();
+	if (ret) {
+		gif_err("failure due to apm pending\n");
+		return -EIO;
+	}
 
 	if (gc->ccore_qch_lh_gnss) {
 		ret = clk_prepare_enable(gc->ccore_qch_lh_gnss);
@@ -311,12 +315,15 @@ static int kepler_req_bcmd(struct gnss_ctl *gc, u16 cmd_id, u16 flags,
 
 	if (gc->gnss_state == STATE_OFFLINE) {
 		gif_debug("Set POWER ON on kepler_req_bcmd!!!!\n");
-		kepler_power_on(gc);
+		ret = kepler_power_on(gc);
 	} else if (gc->gnss_state == STATE_HOLD_RESET) {
 		ld->reset_buffers(ld);
 		gif_debug("Set RELEASE RESET on kepler_req_bcmd!!!!\n");
-		kepler_release_reset(gc);
+		ret = kepler_release_reset(gc);
 	}
+
+	if (ret)
+		return ret; /* failure due to apm interrupt pending */
 
 	/* Parse arguments */
 	/* Flags: Command flags */

@@ -113,12 +113,48 @@ static int gnss_pmu_clear_interrupt(enum gnss_int_clear gnss_int)
 	return 0;
 }
 
+
+static void __iomem *intr_bid_pend; /* check APM pending before release reset */
+static bool check_apm_int_pending()
+{
+	bool ret = false;
+#if defined(CONFIG_SOC_EXYNOS9630)
+	int reg_val = 0;
+	int count = 20; /* 50ms * 20 times = 1 sec */
+	if (intr_bid_pend == NULL) {
+		intr_bid_pend = ioremap(0x10E71A04, SZ_4);
+		if (intr_bid_pend == NULL) {
+			gif_err("Err: failed to ioremap GRP26_INTR_BID_PEND!\n");
+			return ret;
+		}
+	}
+	while (count > 0) {
+		reg_val = __raw_readl(intr_bid_pend);
+		gif_info("APM PENDING CHECK REGISTER VAL: 0x%08x\n", reg_val);
+		if ((reg_val >> 17) & 0x3F) {/* check if one or more of bits [22:17] are 1 */
+			count--;
+			mdelay(50);
+			continue;
+		} else {
+			ret = true;
+			break;
+		}
+	}
+#else
+	ret = true;
+#endif
+	return ret;
+}
+
 static int gnss_pmu_release_reset(void)
 {
-	u32 __maybe_unused gnss_ctrl = 0;
 	int ret = 0;
 
-	cal_gnss_reset_release();
+	if (check_apm_int_pending())
+		cal_gnss_reset_release();
+	else
+		ret = -1;
+
 	return ret;
 }
 
@@ -191,7 +227,6 @@ static void gnss_request_gnss2ap_baaw(void)
 
 static int gnss_pmu_power_on(enum gnss_mode mode)
 {
-	u32 __maybe_unused gnss_ctrl;
 	int ret = 0;
 
 	gif_info("mode[%d]\n", mode);
@@ -205,7 +240,10 @@ static int gnss_pmu_power_on(enum gnss_mode mode)
 			cal_gnss_init();
 		}
 	} else {
-		cal_gnss_reset_release();
+		if (check_apm_int_pending())
+			cal_gnss_reset_release();
+		else
+			ret = -1;
 	}
 
 	return ret;
