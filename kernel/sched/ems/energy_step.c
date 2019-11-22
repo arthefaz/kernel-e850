@@ -42,15 +42,8 @@ struct esgov_policy {
 	int			min_cap;	/* allowed max capacity */
 	int			max_cap;	/* allowed min capacity */
 
-	struct {
-		int	min;
-		int	max;
-	} qos;
-
-	struct {
-		int	min;
-		int	max;
-	} pol;
+	int                     min;            /* min freq */
+	int                     max;            /* max freq */
 
 	unsigned int		qos_min_class;
 	unsigned int		qos_max_class;
@@ -112,11 +105,10 @@ static void esg_update_step(struct esgov_policy *esg_policy, int step)
 	esg_policy->step_power = find_step_power(cpu, esg_policy->step);
 }
 
-static void esg_update_freq_range(struct cpufreq_policy *policy, int min, int max, int flag)
+static void esg_update_freq_range(struct cpufreq_policy *policy)
 {
 	unsigned long flags;
-	int prev_min, prev_max, new_min, new_max;
-	int new_min_idx, new_max_idx;
+	unsigned int qos_min, qos_max, new_min, new_max, new_min_idx, new_max_idx;
 	struct esgov_policy *esg_policy = per_cpu(esgov_policy, policy->cpu);
 
 	if (unlikely((!esg_policy) || !esg_policy->enabled))
@@ -124,23 +116,19 @@ static void esg_update_freq_range(struct cpufreq_policy *policy, int min, int ma
 
 	raw_spin_lock_irqsave(&esg_policy->update_lock, flags);
 
-	prev_min = max(esg_policy->pol.min, esg_policy->qos.min);
-	prev_max = min(esg_policy->pol.max, esg_policy->qos.max);
+	qos_min = pm_qos_request(esg_policy->qos_min_class);
+	qos_max = pm_qos_request(esg_policy->qos_max_class);
 
-	if (flag) {	/* POLICY MIN/MAX */
-		esg_policy->pol.min = min;
-		esg_policy->pol.max = max;
-	} else {	/* QoS MIN/MAX */
-		esg_policy->qos.min = min;
-		esg_policy->qos.max = max;
-	}
-	new_min = max(esg_policy->pol.min, esg_policy->qos.min);
-	new_max = min(esg_policy->pol.max, esg_policy->qos.max);
+	new_min = max(policy->min, qos_min);
+	new_max = min(policy->max, qos_max);
 
-	if (prev_min == new_min && prev_max == new_max)	{
+	if (esg_policy->min == new_min && esg_policy->max == new_max)	{
 		raw_spin_unlock_irqrestore(&esg_policy->update_lock, flags);
 		return;
 	}
+
+	esg_policy->min = new_min;
+	esg_policy->max = new_max;
 
 	new_min_idx = cpufreq_frequency_table_target(
 				policy, new_min, CPUFREQ_RELATION_L);
@@ -165,7 +153,7 @@ static int esg_cpufreq_policy_callback(struct notifier_block *nb,
 	struct cpufreq_policy *policy = data;
 
 	if (event == CPUFREQ_NOTIFY)
-		esg_update_freq_range(policy, policy->min, policy->max, 1);
+		esg_update_freq_range(policy);
 
 	return NOTIFY_OK;
 }
@@ -185,9 +173,9 @@ static int esg_cpufreq_pm_qos_callback(struct notifier_block *nb,
 		return NOTIFY_OK;
 
 	if (pm_qos_class == esg_pol->qos_max_class)
-		esg_update_freq_range(esg_pol->policy, esg_pol->qos.min, val, 0);
+		esg_update_freq_range(esg_pol->policy);
 	else
-		esg_update_freq_range(esg_pol->policy, val, esg_pol->qos.max, 0);
+		esg_update_freq_range(esg_pol->policy);
 
 	return NOTIFY_OK;
 }
@@ -423,6 +411,10 @@ static int esgov_init(struct cpufreq_policy *policy)
 
 complete_esg_init:
 	policy->governor_data = esg_policy;
+	esg_policy->min = policy->min;
+	esg_policy->max = policy->max;
+	esg_policy->min_cap = find_allowed_capacity(policy->cpu, policy->min, 0);
+	esg_policy->max_cap = find_allowed_capacity(policy->cpu, policy->max, 0);
 	esg_policy->enabled = true;;
 
 	return 0;
@@ -477,7 +469,7 @@ static unsigned long esgov_get_eutil(struct esgov_cpu *esg_cpu, unsigned long ma
 	active_ratio = (pa->hist[esg_cpu->last_idx] + pa->hist[prev_idx]) >> 1;
 
 	/* update the capacity */
-	freq = (esg_cpu->eutil * esg_policy->pol.max) / max;
+	freq = (esg_cpu->eutil * esg_policy->policy->max) / max;
 	esg_cpu->capacity = find_allowed_capacity(esg_cpu->cpu, freq, esg_policy->step_power);
 
 	/* calculate eutil */
@@ -586,12 +578,6 @@ static int esgov_start(struct cpufreq_policy *policy)
 	esg_policy->last_freq_update_time = 0;
 	esg_policy->target_freq = 0;
 	esg_policy->work_in_progress = false;
-	esg_policy->qos.min = policy->min;
-	esg_policy->qos.max = policy->max;
-	esg_policy->pol.min = policy->min;
-	esg_policy->pol.max = policy->max;
-	esg_policy->min_cap = find_allowed_capacity(policy->cpu, policy->min, 0);
-	esg_policy->max_cap = find_allowed_capacity(policy->cpu, policy->max, 0);
 
 	for_each_cpu(cpu, policy->cpus) {
 		struct esgov_cpu *esg_cpu = &per_cpu(esgov_cpu, cpu);
