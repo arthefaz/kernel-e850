@@ -553,13 +553,13 @@ void exynos_flexpmu_dbg_suspend_mif_req(void)
 
 	for (i = 0; i < (MIF_MASTER_MAX - 1); i++) {	/* except MIF_AP */
 		apm_req[i].active_req_tick = __raw_readl(flexpmu_dbg_base
-				+ (DATA_LINE * (DID_MIFCP0 + i * 2)) + DATA_IDX);
+				+ (DATA_LINE * (DID_MIFAUD0 + i * 2)) + DATA_IDX);
 		apm_req[i].last_rel_tick = __raw_readl(flexpmu_dbg_base
-				+ (DATA_LINE * (DID_MIFCP0 + i * 2)) + DATA_IDX  + 4);
+				+ (DATA_LINE * (DID_MIFAUD0 + i * 2)) + DATA_IDX  + 4);
 		apm_req[i].total_count = __raw_readl(flexpmu_dbg_base
-				+ (DATA_LINE * (DID_MIFCP1 + i * 2)) + DATA_IDX);
+				+ (DATA_LINE * (DID_MIFAUD1 + i * 2)) + DATA_IDX);
 		apm_req[i].total_time_tick = __raw_readl(flexpmu_dbg_base
-				+ (DATA_LINE * (DID_MIFCP1 + i * 2)) + DATA_IDX  + 4);
+				+ (DATA_LINE * (DID_MIFAUD1 + i * 2)) + DATA_IDX  + 4);
 
 		if (apm_req[i].last_rel_tick > 0) {
 			apm_req[i].last_rel_us =
@@ -611,15 +611,15 @@ void exynos_flexpmu_dbg_resume_mif_req(void)
 
 	for (i = 0; i < (MIF_MASTER_MAX - 1); i++) {	/* except MIF_AP */
 		apm_req_resume[i].total_count = __raw_readl(flexpmu_dbg_base
-				+ (DATA_LINE * (DID_MIFCP1 + i * 2)) + DATA_IDX);
+				+ (DATA_LINE * (DID_MIFAUD1 + i * 2)) + DATA_IDX);
 
 		if (apm_req_resume[i].total_count - apm_req[i].total_count > 0 || apm_req[i].active_flag) {
 			apm_req_resume[i].active_req_tick = __raw_readl(flexpmu_dbg_base
-					+ (DATA_LINE * (DID_MIFCP0 + i * 2)) + DATA_IDX);
+					+ (DATA_LINE * (DID_MIFAUD0 + i * 2)) + DATA_IDX);
 			apm_req_resume[i].last_rel_tick = __raw_readl(flexpmu_dbg_base
-					+ (DATA_LINE * (DID_MIFCP0 + i * 2)) + DATA_IDX  + 4);
+					+ (DATA_LINE * (DID_MIFAUD0 + i * 2)) + DATA_IDX  + 4);
 			apm_req_resume[i].total_time_tick = __raw_readl(flexpmu_dbg_base
-					+ (DATA_LINE * (DID_MIFCP1 + i * 2)) + DATA_IDX  + 4);
+					+ (DATA_LINE * (DID_MIFAUD1 + i * 2)) + DATA_IDX  + 4);
 
 			if (apm_req_resume[i].last_rel_tick > 0) {
 				apm_req_resume[i].last_rel_us =
