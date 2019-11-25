@@ -139,6 +139,7 @@ config CPIF_TP_MONITOR
 
 config LINK_DEVICE_PCIE_S2MPU
 	bool "Use PCIE S2MPU"
+	depends on LINK_DEVICE_PCIE
 	default n
 	---help---
 	  Gate some addresses AP and CP shared
@@ -161,6 +162,13 @@ config CP_PKTPROC_PERF_TEST
 	default n
 	---help---
 	  Test pktproc on AP side
+
+config LINK_DEVICE_PCIE_GPIO_WA
+	bool "Workaround for discarded GPIOs"
+	depends on LINK_DEVICE_PCIE
+	default n
+	---help---
+	  Use a GPIO for the other purpose instead
 
 config CP_GRO_EXCEPTION
 	bool "Disable GRO for clat tethering case"

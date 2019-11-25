@@ -1107,25 +1107,31 @@ exit:
 	spin_unlock_irqrestore(&irq->lock, flags);
 }
 
-void mif_gpio_set_value(unsigned int gpio, int value, unsigned int delay_ms)
+bool mif_gpio_set_value(unsigned int gpio, int value, unsigned int delay_ms)
 {
+	int dup = 0;
 	char *name = NULL;
 	struct gpio_desc *desc = NULL;
 
 	if (!gpio_is_valid(gpio)) {
 		mif_err("SET GPIO %d is failed\n", gpio);
-		return;
+		return false;
 	}
 
+	if (gpio_get_value(gpio) == value) {
+		dup = 1;
+	}
+
+	/* set gpio even if it is set already */
 	gpio_set_value(gpio, value);
 
 	desc = gpio_to_desc(gpio);
 	if (desc != NULL && gpiod_get_consumer_name(desc, &name) == 0)
-		mif_info("SET GPIO %s = %d (wait %dms)\n", name, value, delay_ms);
+		mif_info("SET GPIO %s = %d (wait %dms, dup %d)\n", name, value, delay_ms, dup);
 	else
-		mif_info("SET GPIO %d = %d (wait %dms)\n", gpio, value, delay_ms);
+		mif_info("SET GPIO %d = %d (wait %dms, dup %d)\n", gpio, value, delay_ms, dup);
 
-	if (delay_ms > 0) {
+	if (delay_ms > 0 && !dup) {
 		if (in_interrupt())
 			mdelay(delay_ms);
 		else if (delay_ms < 20)
@@ -1133,6 +1139,8 @@ void mif_gpio_set_value(unsigned int gpio, int value, unsigned int delay_ms)
 		else
 			msleep(delay_ms);
 	}
+
+	return (!dup);
 }
 
 int mif_gpio_get_value(unsigned int gpio, bool log_print)
@@ -1155,6 +1163,17 @@ int mif_gpio_get_value(unsigned int gpio, bool log_print)
 		else
 			mif_info("GET GPIO %d = %d\n", gpio, value);
 	}
+
+	return value;
+}
+
+int mif_gpio_toggle_value(unsigned int gpio, int delay_ms)
+{
+	int value;
+
+	value = mif_gpio_get_value(gpio, false);
+	mif_gpio_set_value(gpio, !value, delay_ms);
+	mif_gpio_set_value(gpio, value, 0);
 
 	return value;
 }

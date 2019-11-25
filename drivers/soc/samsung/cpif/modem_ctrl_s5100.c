@@ -554,7 +554,12 @@ static int power_reset_dump_cp(struct modem_ctl *mc)
 		pcie_clean_dislink(mc);
 	}
 
+#ifdef CONFIG_LINK_DEVICE_PCIE_GPIO_WA
+	if (mif_gpio_set_value(mc->s5100_gpio_cp_dump_noti, 1, 10))
+		mif_gpio_toggle_value(mc->s5100_gpio_ap_status, 50);
+#else
 	mif_gpio_set_value(mc->s5100_gpio_cp_dump_noti, 1, 0);
+#endif
 
 	mif_info("s5100_cp_reset_required:%d\n", mc->s5100_cp_reset_required);
 	if (mc->s5100_cp_reset_required == true) {
@@ -779,7 +784,12 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 	print_mc_state(mc);
 
 	if (mif_gpio_get_value(mc->s5100_gpio_phone_active, true) == 1) {
+#ifdef CONFIG_LINK_DEVICE_PCIE_GPIO_WA
+		if (mif_gpio_set_value(mc->s5100_gpio_cp_dump_noti, 1, 10))
+			mif_gpio_toggle_value(mc->s5100_gpio_ap_status, 50);
+#else
 		mif_gpio_set_value(mc->s5100_gpio_cp_dump_noti, 1, 0);
+#endif
 	} else {
 		mif_err("do not need to set dump_noti\n");
 	}
