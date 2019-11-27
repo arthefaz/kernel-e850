@@ -689,8 +689,9 @@ void mmc_queue_resume(struct mmc_queue *mq)
 unsigned int mmc_queue_map_sg(struct mmc_queue *mq, struct mmc_queue_req *mqrq)
 {
 	struct request *req = mmc_queue_req_to_req(mqrq);
+	struct mmc_card *card = mq->card;
 
-	if (mqrq->req)
+	if (mqrq->req && card->cmdq_init)
 		req = mqrq->req;
 
 	return blk_rq_map_sg(mq->queue, req, mqrq->sg);
