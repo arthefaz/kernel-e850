@@ -938,7 +938,7 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 		mif_info("ignore save_s5100_status - phone_state:%d\n",
 				mc->phone_state);
 
-	mif_gpio_set_value(mc->s5100_gpio_cp_wakeup, 0, 20);
+	mif_gpio_set_value(mc->s5100_gpio_cp_wakeup, 0, 5);
 	print_mc_state(mc);
 
 	exynos_pcie_host_v1_poweroff(mc->pcie_ch_num);
@@ -1009,7 +1009,7 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 	if (!wake_lock_active(&mc->mc_wake_lock))
 		wake_lock(&mc->mc_wake_lock);
 
-	mif_gpio_set_value(mc->s5100_gpio_cp_wakeup, 1, 20);
+	mif_gpio_set_value(mc->s5100_gpio_cp_wakeup, 1, 5);
 	print_mc_state(mc);
 
 	if (exynos_pcie_host_v1_poweron(mc->pcie_ch_num) != 0)

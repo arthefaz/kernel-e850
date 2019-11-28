@@ -1107,7 +1107,7 @@ exit:
 	spin_unlock_irqrestore(&irq->lock, flags);
 }
 
-void mif_gpio_set_value(unsigned int gpio, int value, int delay_ms)
+void mif_gpio_set_value(unsigned int gpio, int value, unsigned int delay_ms)
 {
 	char *name = NULL;
 	struct gpio_desc *desc = NULL;
@@ -1128,6 +1128,8 @@ void mif_gpio_set_value(unsigned int gpio, int value, int delay_ms)
 	if (delay_ms > 0) {
 		if (in_interrupt())
 			mdelay(delay_ms);
+		else if (delay_ms < 20)
+			usleep_range(delay_ms * 1000, (delay_ms * 1000) + 5000);
 		else
 			msleep(delay_ms);
 	}
