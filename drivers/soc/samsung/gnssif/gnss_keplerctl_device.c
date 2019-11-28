@@ -130,6 +130,7 @@ static DEFINE_MUTEX(reset_lock);
 
 static int kepler_hold_reset(struct gnss_ctl *gc)
 {
+	int ret = 0;
 	gif_info("%s+++\n", __func__);
 
 	if (gc->gnss_state == STATE_OFFLINE) {
@@ -146,14 +147,18 @@ static int kepler_hold_reset(struct gnss_ctl *gc)
 		gif_err("Disabled GNSS Qch\n");
 	}
 
-	gc->pmu_ops->hold_reset();
+	ret = gc->pmu_ops->hold_reset();
+	if (ret) {
+		gif_err("hold reset fails: apm pending\n");
+		return -EIO;
+	}
 	gnss_mbox_sw_reset(gc->pdata->mbx->id);
 
 	mutex_unlock(&reset_lock);
 
 	gif_info("%s---\n", __func__);
 
-	return 0;
+	return ret;
 }
 
 static int kepler_release_reset(struct gnss_ctl *gc)
@@ -212,7 +217,11 @@ static int kepler_power_on(struct gnss_ctl *gc)
 
 	reinit_completion(&gc->sw_init_cmpl);
 
-	gc->pmu_ops->power_on(GNSS_POWER_ON);
+	ret = gc->pmu_ops->power_on(GNSS_POWER_ON);
+	if (ret) {
+		gif_err("GNSS power on fails due to apm pending\n");
+		return -EIO;
+	}
 
 	if (gc->ccore_qch_lh_gnss) {
 		ret = clk_prepare_enable(gc->ccore_qch_lh_gnss);

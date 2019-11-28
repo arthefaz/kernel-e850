@@ -515,6 +515,7 @@ static long misc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	struct gnss_ctl *gc = iod->gc;
 	int err = 0;
 	int size;
+	int ret = 0;
 
 	if (!valid_cmd_arg(cmd, arg))
 		return -ENOTTY;
@@ -527,7 +528,9 @@ static long misc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			gif_err("%s: !gc->ops.gnss_reset\n", iod->name);
 			return -EINVAL;
 		}
-		gc->ops.gnss_hold_reset(gc);
+		ret = gc->ops.gnss_hold_reset(gc);
+		if (ret)/* fails to hold reset. APM pending */
+			return -EFAULT;
 		skb_queue_purge(&iod->sk_rx_q);
 		return 0;
 

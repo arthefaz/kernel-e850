@@ -162,8 +162,11 @@ static int gnss_pmu_hold_reset(void)
 {
 	int ret = 0;
 
-	cal_gnss_reset_assert();
-	mdelay(50);
+	if (check_apm_int_pending()) {
+		cal_gnss_reset_assert();
+		mdelay(50);
+	} else
+		ret = 1;
 
 	return ret;
 }
@@ -233,12 +236,15 @@ static int gnss_pmu_power_on(enum gnss_mode mode)
 
 	if (mode == GNSS_POWER_ON) {
 		if (cal_gnss_status() > 0) {
-			gif_info("GNSS is already Power on, try reset\n");
-			cal_gnss_reset_assert();
+			if (check_apm_int_pending()) {
+				gif_info("GNSS is already Power on, try reset\n");
+				cal_gnss_reset_assert();
+			} else
+				ret = -1;
 		} else {
 			gif_info("GNSS Power On\n");
 			cal_gnss_init();
-		}
+	 }
 	} else {
 		if (check_apm_int_pending())
 			cal_gnss_reset_release();
