@@ -172,10 +172,7 @@ static int esg_cpufreq_pm_qos_callback(struct notifier_block *nb,
 	if (unlikely(!esg_pol))
 		return NOTIFY_OK;
 
-	if (pm_qos_class == esg_pol->qos_max_class)
-		esg_update_freq_range(esg_pol->policy);
-	else
-		esg_update_freq_range(esg_pol->policy);
+	esg_update_freq_range(esg_pol->policy);
 
 	return NOTIFY_OK;
 }
