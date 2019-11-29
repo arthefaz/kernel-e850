@@ -1061,6 +1061,8 @@ static int platform_mif_pmu_reset_release(struct scsc_mif_abs *interface)
 		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
 			"updated successfully WLBT_OPTION[WLBT_OPTION_DATA]: 0x%x\n", val);
 
+		udelay(3); /* Delay for HW to settle */
+
 		/* TOP_OUT[PWRRGTON_CP] = 1 Power On */
 		ret = regmap_update_bits(platform->pmureg, TOP_OUT,
 				BIT(1), BIT(1)); /* PWRRGTON_CP */
@@ -1089,6 +1091,8 @@ static int platform_mif_pmu_reset_release(struct scsc_mif_abs *interface)
 			SCSC_TAG_INFO(PLAT_MIF, "timeout waiting for VGPIO_TX_MONITOR time-out: "
 						"VGPIO_TX_MONITOR 0x%x\n", val);
 		}
+
+		udelay(1000); /* Delay for HW to settle */
 
 		/* WLBT_CONFIGURATION[LOCAL_PWR_CFG] = 1 Power On */
 		ret = regmap_update_bits(platform->pmureg, WLBT_CONFIGURATION,
@@ -1182,27 +1186,7 @@ static int platform_mif_pmu_reset_release(struct scsc_mif_abs *interface)
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
 		"updated successfully WLBT_OPTION[WLBT_OPTION_DATA]: 0x%x\n", val);
 
-	ret = regmap_update_bits(platform->pmureg, MIF_CTRL,
-			BIT(0), BIT(0)); /* TCXO_EN */
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update MIF_CTRL[TCXO_EN]: %d\n", ret);
-		return ret;
-	}
-	regmap_read(platform->pmureg, MIF_CTRL, &val);
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
-		"updated successfully MIF_CTRL[TCXO_EN]: 0x%x\n", val & TCXO_EN);
-
-	ret = regmap_update_bits(platform->pmureg, TCXO_BUF_CTRL,
-			BIT(0), BIT(0)); /* TCXO_BUF_BIAS_EN_WLBT */
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update TCXO_BUF_CTRL[TCXO_BUF_BIAS_EN_WLBT]: %d\n", ret);
-		return ret;
-	}
-	regmap_read(platform->pmureg, TCXO_BUF_CTRL, &val);
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
-		"updated successfully TCXO_BUF_CTRL[TCXO_BUF_BIAS_EN_WLBT]: 0x%x\n", val & TCXO_BUF_BIAS_EN_WLBT);
+	udelay(3); /* Delay for HW to settle */
 
 	ret = regmap_update_bits(platform->pmureg, TOP_OUT,
 			BIT(1), BIT(1)); /* PWRRGTON_CP */
@@ -1228,6 +1212,8 @@ static int platform_mif_pmu_reset_release(struct scsc_mif_abs *interface)
 		SCSC_TAG_INFO(PLAT_MIF, "timeout waiting for VGPIO_TX_MONITOR time-out: "
 				"VGPIO_TX_MONITOR 0x%x\n", val);
 	}
+
+	udelay(1000); /* Delay for HW to settle */
 
 	/* Power Up */
 	ret = regmap_update_bits(platform->pmureg, WLBT_CONFIGURATION,
@@ -1258,29 +1244,6 @@ static int platform_mif_pmu_reset_release(struct scsc_mif_abs *interface)
 		SCSC_TAG_INFO(PLAT_MIF, "Timeout waiting for Power up complete: "
 			"WLBT_STATUS 0x%x\n", val);
 	}
-
-	/* enable PWR_REQ_F and TCXO_REQ_F interrupts */
-	ret = regmap_update_bits(platform->pmureg, WLBT_INT_EN,
-			BIT(3), BIT(3)); /* PWR_REQ_F */
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WLBT_INT_EN[PWR_REQ_F]: %d\n", ret);
-		return ret;
-	}
-	regmap_read(platform->pmureg, WLBT_INT_EN, &val);
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
-		"updated successfully WLBT_INT_EN[PWR_REQ_F]: 0x%x\n", val);
-
-	ret = regmap_update_bits(platform->pmureg, WLBT_INT_EN,
-			BIT(5), BIT(5)); /* TCXO_REQ_F */
-	if (ret < 0) {
-		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
-			"Failed to update WLBT_INT_EN[TCXO_REQ_F]: %d\n", ret);
-		return ret;
-	}
-	regmap_read(platform->pmureg, WLBT_INT_EN, &val);
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
-		"updated successfully WLBT_INT_EN[TCXO_REQ_F]: 0x%x\n", val);
 
 	/* WLBT_CTRL_NS[WLBT_ACTIVE_CLR] = 0 Active interrupt clear */
 	ret = regmap_update_bits(platform->pmureg, WLBT_CTRL_NS,
