@@ -812,7 +812,8 @@ struct pmucal_seq exit_sleep[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER0_QCH_SCLK", 0x10900000, 0x3044, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER1_QCH_SCLK", 0x10800000, 0x3038, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_APM_BUS_COMPONENT_DRCG_EN", 0x11820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_BUS_COMPONENT_DRCG_EN", 0x12020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_CORE_BUS_RCG_EN_0", 0x12020000, 0x0100, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_CORE_BUS_RCG_EN_1", 0x12020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL0_BUS_COMPONENT_DRCG_EN", 0x10920000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL1_BUS_COMPONENT_DRCG_EN", 0x10820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_COND_WRITE, "SYSREG_HSI_BUS_COMPONENT_DRCG_EN", 0x13420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0x11860000, 0x1c84, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
@@ -1599,7 +1600,8 @@ struct pmucal_seq exit_sleep_usbl2[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER0_QCH_SCLK", 0x10900000, 0x3044, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "QCH_CON_CLUSTER1_QCH_SCLK", 0x10800000, 0x3038, (0x7 << 0), (0x6 << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_APM_BUS_COMPONENT_DRCG_EN", 0x11820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_BUS_COMPONENT_DRCG_EN", 0x12020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_CORE_BUS_RCG_EN_0", 0x12020000, 0x0100, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_CORE_BUS_RCG_EN_1", 0x12020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL0_BUS_COMPONENT_DRCG_EN", 0x10920000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL1_BUS_COMPONENT_DRCG_EN", 0x10820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_COND_WRITE, "SYSREG_HSI_BUS_COMPONENT_DRCG_EN", 0x13420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0x11860000, 0x1c84, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
@@ -1653,7 +1655,8 @@ struct pmucal_seq exit_stop[] = {
 	PMUCAL_SEQ_DESC(PMUCAL_CLEAR_PEND, "GRP2_INTR_BID_CLEAR", 0x11870000, 0x020c, (0x1 << 0), (0x1 << 0), 0x11870000, 0x0208, (0x1 << 0), 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "CLUSTER0_CPU0_INT_EN", 0x11860000, 0x1044, (0x1 << 3), (0x0 << 3), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_APM_BUS_COMPONENT_DRCG_EN", 0x11820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
-	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_BUS_COMPONENT_DRCG_EN", 0x12020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_CORE_BUS_RCG_EN_0", 0x12020000, 0x0100, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CORE_CORE_BUS_RCG_EN_1", 0x12020000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL0_BUS_COMPONENT_DRCG_EN", 0x10920000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_WRITE, "SYSREG_CPUCL1_BUS_COMPONENT_DRCG_EN", 0x10820000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_COND_WRITE, "SYSREG_HSI_BUS_COMPONENT_DRCG_EN", 0x13420000, 0x0104, (0xffffffff << 0), (0xffffffff << 0), 0x11860000, 0x1c84, (0x1 << 0), (0x1 << 0) | (0x1 << 0)),
@@ -1859,6 +1862,5 @@ struct pmucal_system_sequencer pmucal_system_mif_list[NUM_SYS_POWERMODE] = {
 		.num_down = ARRAY_SIZE(mif_sequencer_stop_down),
 	},
 };
-
 unsigned int pmucal_system_sequencer_list_size = NUM_SYS_POWERMODE;
 #endif
