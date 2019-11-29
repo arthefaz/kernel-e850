@@ -148,11 +148,40 @@ static bool check_apm_int_pending()
 }
 #endif
 
+#define POWER_ON	1
+#define POWER_OFF	0
+static bool notify_acpm(int power_state) {
+	bool ret = false;
+
+#if defined(CONFIG_SOC_EXYNOS9630) && defined(NOTI_SUBSYSTEM_PWR)
+	switch (power_state) {
+	case POWER_ON:
+		if (exynos_acpm_noti_subsystem_pwr(2, 1) == 1)
+			ret = true;
+		else
+			gif_err("Failed to notify GNSS on to acpm\n");
+		break;
+	case POWER_OFF:
+		if (exynos_acpm_noti_subsystem_pwr(2, 3) == 3)
+			ret = true;
+		else
+			gif_err("Failed to notify GNSS off to acpm\n");
+		break;
+	default:
+		gif_err("invalid power state\n");
+		break;
+	}
+#else
+	ret = true;
+#endif
+	return ret;
+}
+
 static int gnss_pmu_release_reset(void)
 {
 	int ret = 0;
 
-	if (check_apm_int_pending())
+	if (notify_acpm(POWER_ON))
 		cal_gnss_reset_release();
 	else
 		ret = -1;
@@ -167,6 +196,8 @@ static int gnss_pmu_hold_reset(void)
 	if (check_apm_int_pending()) {
 		cal_gnss_reset_assert();
 		mdelay(50);
+		if (!notify_acpm(POWER_OFF))
+			gif_info("reset assert done. but voltage is not down!\n");
 	} else
 		ret = 1;
 
@@ -241,17 +272,29 @@ static int gnss_pmu_power_on(enum gnss_mode mode)
 			if (check_apm_int_pending()) {
 				gif_info("GNSS is already Power on, try reset\n");
 				cal_gnss_reset_assert();
-			} else
+				mdelay(50);
+				if (!notify_acpm(POWER_OFF))
+					gif_info("reset assert is done, but voltage is not down!\n");
+			} else {
+				gif_err("failed to power on due to apm pending interrupt\n");
 				ret = -1;
+			}
 		} else {
 			gif_info("GNSS Power On\n");
-			cal_gnss_init();
+			if (notify_acpm(POWER_ON))
+				cal_gnss_init();
+			else {
+				gif_err("acpm failed to voltage up GNSS\n");
+				ret = -1;
+			}
 	 }
 	} else {
-		if (check_apm_int_pending())
+		if (notify_acpm(POWER_ON)) {
 			cal_gnss_reset_release();
-		else
+		} else {
+			gif_err("acpm failed to voltage up GNSS\n");
 			ret = -1;
+		}
 	}
 
 	return ret;

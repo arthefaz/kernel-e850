@@ -175,7 +175,7 @@ static int kepler_release_reset(struct gnss_ctl *gc)
 
 	ret = gc->pmu_ops->release_reset();
 	if (ret) {
-		gif_err("failure due to apm pending\n");
+		gif_err("GNSS release reset fails\n");
 		return -EIO;
 	}
 
@@ -219,7 +219,7 @@ static int kepler_power_on(struct gnss_ctl *gc)
 
 	ret = gc->pmu_ops->power_on(GNSS_POWER_ON);
 	if (ret) {
-		gif_err("GNSS power on fails due to apm pending\n");
+		gif_err("GNSS power on fails\n");
 		return -EIO;
 	}
 
