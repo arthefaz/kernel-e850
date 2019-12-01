@@ -316,7 +316,7 @@ static int kepler_req_bcmd(struct gnss_ctl *gc, u16 cmd_id, u16 flags,
 {
 	u32 ctrl[BCMD_CTRL_COUNT], ret_val;
 	unsigned long timeout = msecs_to_jiffies(REQ_BCMD_TIMEOUT);
-	int ret;
+	int ret = 0;
 	struct gnss_mbox *mbx = gc->pdata->mbx;
 	struct link_device *ld = gc->iod->ld;
 
