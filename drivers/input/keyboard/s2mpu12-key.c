@@ -85,8 +85,6 @@ struct power_keys_drvdata {
 	u32 press_cnt;
 	bool resume_state;
 #endif
-	bool irq_pwronr_disabled;
-	bool irq_pwronf_disabled;
 	struct power_button_data button_data[0];
 };
 
@@ -602,47 +600,11 @@ static void power_keys_report_state(struct power_keys_drvdata *ddata)
 	input_sync(input);
 }
 
-static void power_keys_check_enable_irq(struct power_keys_drvdata *ddata)
-{
-	if (ddata->irq_pwronf_disabled) {
-		mutex_lock(&ddata->disable_lock);
-		enable_irq(ddata->irq_pwronf);
-		mutex_unlock(&ddata->disable_lock);
-		ddata->irq_pwronf_disabled = false;
-	}
-
-	if (ddata->irq_pwronr_disabled) {
-		mutex_lock(&ddata->disable_lock);
-		enable_irq(ddata->irq_pwronr);
-		mutex_unlock(&ddata->disable_lock);
-		ddata->irq_pwronr_disabled = false;
-	}
-}
-
-static void power_keys_check_disable_irq(struct power_keys_drvdata *ddata)
-{
-	if (!ddata->irq_pwronf_disabled) {
-		mutex_lock(&ddata->disable_lock);
-		disable_irq(ddata->irq_pwronf);
-		mutex_unlock(&ddata->disable_lock);
-		ddata->irq_pwronf_disabled = true;
-	}
-
-	if (!ddata->irq_pwronr_disabled) {
-		mutex_lock(&ddata->disable_lock);
-		disable_irq(ddata->irq_pwronr);
-		mutex_unlock(&ddata->disable_lock);
-		ddata->irq_pwronr_disabled = true;
-	}
-}
-
 static int power_keys_open(struct input_dev *input)
 {
 	struct power_keys_drvdata *ddata = input_get_drvdata(input);
 
 	dev_info(ddata->dev, "%s()\n", __func__);
-
-	power_keys_check_enable_irq(ddata);
 
 	power_keys_report_state(ddata);
 
@@ -654,8 +616,6 @@ static void power_keys_close(struct input_dev *input)
 	struct power_keys_drvdata *ddata = input_get_drvdata(input);
 
 	dev_info(ddata->dev, "%s()\n", __func__);
-
-	power_keys_check_disable_irq(ddata);
 }
 
 int exynos_power_key_pressed_chk(void)
@@ -866,8 +826,7 @@ static int power_keys_probe(struct platform_device *pdev)
 		dev_err(dev, "%s() fail to request pwron-r in IRQ: %d: %d\n",
 				__func__, ddata->irq_pwronr, ret);
 		goto fail1;
-	} else
-		ddata->irq_pwronr_disabled = false;
+	}
 
 	ret = devm_request_threaded_irq(&pdev->dev, ddata->irq_pwronf, NULL,
 			power_keys_falling_irq_handler, 0, "pwronf-irq", ddata);
@@ -875,8 +834,7 @@ static int power_keys_probe(struct platform_device *pdev)
 		dev_err(dev, "%s() fail to request pwron-f in IRQ: %d: %d\n",
 				__func__, ddata->irq_pwronf, ret);
 		goto fail1;
-	} else
-		ddata->irq_pwronf_disabled = false;
+	}
 
 	ret = sysfs_create_group(&dev->kobj, &power_keys_attr_group);
 	if (ret) {
