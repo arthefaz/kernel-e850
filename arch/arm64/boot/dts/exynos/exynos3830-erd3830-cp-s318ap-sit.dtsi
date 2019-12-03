@@ -34,6 +34,7 @@
 					<&prx_tr_b28_29_71_sw &prx_tr_b21_34_sw>,
 					<&drx_mlb3_lna_en1 &drx_mlb3_lna_en2 &drx_mlb3_lna_en3>;
 
+				interrupt-parent = <&gic>;
 				interrupts = <GIC_SPI INTREQ_RESET_REQ IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "RESET_REQ";
 
@@ -321,6 +322,8 @@
 				compatible = "samsung,exynos-cp-mailbox";
 
 				reg = <0x0 0x11920000 0x180>;
+
+				interrupt-parent = <&gic>;
 				interrupts = <GIC_SPI INTREQ__MAILBOX_CP2AP IRQ_TYPE_LEVEL_HIGH>;
 
 				mcu,name = "cp_mailbox";

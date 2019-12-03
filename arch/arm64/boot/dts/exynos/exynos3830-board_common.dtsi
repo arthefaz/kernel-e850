@@ -67,6 +67,8 @@
 				compatible = "samsung,exynos-gnss-mailbox";
 
 				reg = <0x0 0x11980000 0x180>; /* MAILBOX AP2GNSS */
+
+				interrupt-parent = <&gic>;
 				interrupts = <GIC_SPI INTREQ__MAILBOX_GNSS2AP IRQ_TYPE_LEVEL_HIGH>;
 
 				mbox,name = "gnss_mailbox";
@@ -77,6 +79,7 @@
 				status = "okay";
 				compatible = "samsung,exynos-gnss";
 
+				interrupt-parent = <&gic>;
 				interrupts = <GIC_SPI INTREQ__ALIVE_GNSS_ACTIVE IRQ_TYPE_LEVEL_HIGH>,
 						<GIC_SPI INTREQ__GNSS_WDOG_RESET IRQ_TYPE_EDGE_RISING>,
 						<GIC_SPI INTREQ__GNSS_WAKEUP_INT IRQ_TYPE_LEVEL_HIGH>,
