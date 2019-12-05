@@ -53,7 +53,6 @@ struct cpif_tpmon {
 	struct delayed_work qos_dwork;
 
 	unsigned long rx_bytes;
-	unsigned long rx_bytes_prev;
 	unsigned long rx_mega_bps;
 
 #if defined(CONFIG_RPS)

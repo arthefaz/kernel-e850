@@ -25,24 +25,24 @@
 static struct cpif_tpmon _tpmon;
 
 /* RX speed */
-static unsigned long tpmon_calc_rx_speed_mega_bps(struct cpif_tpmon *tpmon)
+static void tpmon_calc_rx_speed_mega_bps(struct cpif_tpmon *tpmon)
 {
 	unsigned long divider, rx_bytes;
+	unsigned long flags;
 
 	divider = 131072 * tpmon->interval_sec;	/* 131072 = 1024 * 1024 / 8 */
 
-	if (tpmon->rx_bytes <= tpmon->rx_bytes_prev) {
-		tpmon->rx_bytes = 0;
-		tpmon->rx_bytes_prev = 0;
-	}
-	rx_bytes = tpmon->rx_bytes - tpmon->rx_bytes_prev;
-	tpmon->rx_bytes_prev = tpmon->rx_bytes;
+	spin_lock_irqsave(&tpmon->lock, flags);
+
+	rx_bytes = tpmon->rx_bytes;
+	tpmon->rx_bytes = 0;
+
+	spin_unlock_irqrestore(&tpmon->lock, flags);
+
 	if (rx_bytes < divider)
 		tpmon->rx_mega_bps = 0;
 	else
 		tpmon->rx_mega_bps = rx_bytes / divider;
-
-	return tpmon->rx_mega_bps;
 }
 
 /* Check speed changing */
@@ -289,7 +289,6 @@ int tpmon_start(u32 interval_sec)
 	spin_lock_irqsave(&tpmon->lock, flags);
 
 	tpmon->rx_bytes = 0;
-	tpmon->rx_bytes_prev = 0;
 	tpmon->rx_mega_bps = 0;
 
 	list_for_each_entry(data, &tpmon->data_list, data_node)
