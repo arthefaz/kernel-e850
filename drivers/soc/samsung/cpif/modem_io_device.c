@@ -28,7 +28,10 @@
 #include <linux/ip.h>
 #include <linux/tcp.h>
 #include <linux/netdevice.h>
+
+#ifdef CONFIG_LINK_FORWARD
 #include <linux/linkforward.h>
+#endif
 
 #if defined(CONFIG_SEC_MODEM_S5000AP) && defined(CONFIG_SEC_MODEM_S5100)
 #include <linux/modem_notifier.h>
