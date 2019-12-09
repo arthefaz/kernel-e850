@@ -136,6 +136,17 @@ static void mute_mic(struct aud3004x_priv *aud3004x, bool on)
 	regcache_cache_switch(aud3004x, true);
 }
 
+static void mute_mic_jackout(struct aud3004x_priv *aud3004x, bool on)
+{
+	struct snd_soc_codec *codec = aud3004x->codec;
+
+	dev_dbg(aud3004x->dev, "%s called, %s\n", __func__, on ? "Mute" : "Unmute");
+
+	if (on)
+		aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
+	else
+		aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, false);
+}
 /*
  * button_adc_cal() - Calculate button adc value
  *
@@ -398,7 +409,7 @@ static bool aud3004x_jackstate_register(struct aud3004x_jack *jackdet)
 	struct aud3004x_priv *aud3004x = jackdet->p_aud3004x;
 	struct earjack_state *jackstate = &jackdet->jack_state;
 	struct device *dev = jackdet->p_aud3004x->dev;
-	unsigned int cur_jack, prv_jack;
+	unsigned int cur_jack, prv_jack, mic3_on;
 
 	cur_jack = jackstate->cur_jack_state;
 	prv_jack = jackstate->prv_jack_state;
@@ -407,6 +418,11 @@ static bool aud3004x_jackstate_register(struct aud3004x_jack *jackdet)
 
 	switch (cur_jack) {
 	case JACK_OUT:
+		mic3_on = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2) & MIC3_ON_MASK;
+
+		if (mic3_on)
+			mute_mic_jackout(aud3004x, true);
+
 		if (prv_jack & (JACK_IN | JACK_POLE_DEC)) {
 			if (prv_jack & JACK_3POLE)
 				dev_dbg(dev, "Priv: JACK_3POLE -> Cur: JACK_OUT\n");
