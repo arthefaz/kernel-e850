@@ -113,12 +113,11 @@ static int gnss_pmu_clear_interrupt(enum gnss_int_clear gnss_int)
 	return 0;
 }
 
-
+#if defined(CONFIG_SOC_EXYNOS9630)
 static void __iomem *intr_bid_pend; /* check APM pending before release reset */
 static bool check_apm_int_pending()
 {
 	bool ret = false;
-#if defined(CONFIG_SOC_EXYNOS9630)
 	int reg_val = 0;
 	int count = 20; /* 50ms * 20 times = 1 sec */
 	if (intr_bid_pend == NULL) {
@@ -140,11 +139,14 @@ static bool check_apm_int_pending()
 			break;
 		}
 	}
-#else
-	ret = true;
-#endif
 	return ret;
 }
+#else
+static bool check_apm_int_pending()
+{
+	return true;
+}
+#endif
 
 static int gnss_pmu_release_reset(void)
 {
