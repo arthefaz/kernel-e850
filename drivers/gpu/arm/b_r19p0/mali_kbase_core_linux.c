@@ -51,6 +51,7 @@
 #include <mali_kbase_reset_gpu.h>
 #include <backend/gpu/mali_kbase_device_internal.h>
 #include "mali_kbase_ioctl.h"
+#include "mali_kbase_kinstr_jm.h"
 #include "mali_kbase_hwcnt_context.h"
 #include "mali_kbase_hwcnt_virtualizer.h"
 #include "mali_kbase_hwcnt_legacy.h"
@@ -853,6 +854,11 @@ static int kbase_api_mem_free(struct kbase_context *kctx,
 	return kbase_mem_free(kctx, free->gpu_addr);
 }
 
+static int kbase_api_kinstr_jm_fd(struct kbase_context *kctx)
+{
+	return kbase_kinstr_jm_fd(kctx->kinstr_jm);
+}
+
 static int kbase_api_hwcnt_reader_setup(struct kbase_context *kctx,
 		struct kbase_ioctl_hwcnt_reader_setup *setup)
 {
@@ -1555,6 +1561,11 @@ static long kbase_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	/* Instrumentation. */
+	case KBASE_IOCTL_KINSTR_JM_FD:
+		KBASE_HANDLE_IOCTL(KBASE_IOCTL_KINSTR_JM_FD,
+				kbase_api_kinstr_jm_fd,
+				kctx);
+		break;
 	case KBASE_IOCTL_HWCNT_READER_SETUP:
 		KBASE_HANDLE_IOCTL_IN(KBASE_IOCTL_HWCNT_READER_SETUP,
 				kbase_api_hwcnt_reader_setup,
@@ -3245,7 +3256,7 @@ static const struct file_operations kbasep_serialize_jobs_debugfs_fops = {
 
 #endif /* CONFIG_DEBUG_FS */
 #endif /* MALI_KBASE_BUILD */
-
+#if !defined(CONFIG_MALI_EXYNOS_SECURE_RENDERING)
 static void kbasep_protected_mode_hwcnt_disable_worker(struct work_struct *data)
 {
 	struct kbase_device *kbdev = container_of(data, struct kbase_device,
@@ -3360,6 +3371,27 @@ static void kbasep_protected_mode_term(struct kbase_device *kbdev)
 		kfree(kbdev->protected_dev);
 	}
 }
+#else /* if defined(CONFIG_MALI_EXYNOS_SECURE_RENDERING) */
+static int kbasep_protected_mode_init(struct kbase_device *kbdev)
+{
+    dev_info(kbdev->dev, "Support Secure Rendering with Exynos SoC\n");
+    /* Use native protected ops */
+    kbdev->protected_dev = kzalloc(sizeof(*kbdev->protected_dev),
+            GFP_KERNEL);
+    if (!kbdev->protected_dev)
+        return -ENOMEM;
+    kbdev->protected_dev->data = kbdev;
+    kbdev->protected_ops = &exynos_protected_ops;
+    kbdev->protected_mode_support = true;
+    return 0;
+}
+
+static void kbasep_protected_mode_term(struct kbase_device *kbdev)
+{
+    kfree(kbdev->protected_dev);
+    kbdev->protected_mode_support = false;
+}
+#endif
 
 #ifdef CONFIG_MALI_NO_MALI
 static int kbase_common_reg_map(struct kbase_device *kbdev)
