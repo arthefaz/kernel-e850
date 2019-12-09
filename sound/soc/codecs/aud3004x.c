@@ -926,9 +926,13 @@ void aud3004x_adc_digital_mute(struct snd_soc_codec *codec,
 	dev_dbg(codec->dev, "%s called, %s\n", __func__, on ? "Mute" : "Unmute");
 
 	if (on) {
+		aud3004x_write(aud3004x, AUD3004X_23_IF_FORM4, 0xFF);
+		msleep(10);
 		aud3004x_update_bits(aud3004x, AUD3004X_30_ADC1, channel, channel);
 	} else {
 		aud3004x_update_bits(aud3004x, AUD3004X_30_ADC1, channel, 0);
+		msleep(10);
+		aud3004x_write(aud3004x, AUD3004X_23_IF_FORM4, 0xE4);
 	}
 
 	mutex_unlock(&aud3004x->adc_mute_lock);
@@ -2755,7 +2759,7 @@ static void aud3004x_i2c_parse_dt(struct aud3004x_priv *aud3004x)
  * need not update these values as per bit-fields.
  */
 #define AMIC_MUTE_DEFAULT			320
-#define DMIC_MUTE_DEFAULT			120
+#define DMIC_MUTE_DEFAULT			200
 static void aud3004x_register_initialize(void *context)
 {
 	struct snd_soc_codec *codec = (struct snd_soc_codec *)context;
