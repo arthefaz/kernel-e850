@@ -2829,6 +2829,10 @@ static void aud3004x_register_initialize(void *context)
 	/* MDET Comp */
 	aud3004x_acpm_write_reg(AUD3004X_CLOSE_ADDR, 0x97, 0x66);
 
+	/* ADC Hard Mute */
+	aud3004x_update_bits(aud3004x, AUD3004X_30_ADC1,
+			MU_TYPE_MASK, MU_TYPE_MASK);
+
 	/* ADC/DAC Mute */
 	aud3004x_write(aud3004x, AUD3004X_1A_DRIVER_MUTE, 0x0F);
 	aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
