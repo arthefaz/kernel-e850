@@ -2154,6 +2154,9 @@ static void power_supplies_on(struct platform_mif *platform)
 
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "WLBT LDOs on (PMIC i2c_addr = 0x%x)\n", i2c.addr);
 	/* SLAVE PMIC
+	 *
+	 * adb shell "echo 0x38 > /sys/class/pmic/s2mpu12/s2mpu12_read"
+	 * adb shell "echo 0x38 0xEC  > /sys/class/pmic/s2mpu12/s2mpu12_write"
 	 * adb shell "echo 0x3C > sys/class/pmic/s2mpu12/s2mpu12_read"
 	 * adb shell "echo 0x3C 0xE0  > sys/class/pmic/s2mpu12/s2mpu12_write"
 	 * adb shell "echo 0x3D > /sys/class/pmic/s2mpu12/s2mpu12_read"
@@ -2164,6 +2167,7 @@ static void power_supplies_on(struct platform_mif *platform)
 	 * adb shell "echo 0x40 0xFC  > /sys/class/pmic/s2mpu12/s2mpu12_write"
 	 */
 
+	s2mpu12_write_reg(&i2c, 0x38, 0xEC); /* LDO 14 */
 	s2mpu12_write_reg(&i2c, 0x3C, 0xE0); /* LDO 18 */
 	s2mpu12_write_reg(&i2c, 0x3D, 0xE0); /* LDO 19 */
 	s2mpu12_write_reg(&i2c, 0x3E, 0xEC); /* LDO 20 */
