@@ -769,7 +769,10 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define ADC_MUTER_SHIFT				1
 #define ADC_MUTER_MASK				BIT(ADC_MUTER_SHIFT)
 
-#define ADC_MUTE_ALL				6
+#define ADC_MUTEC_SHIFT				0
+#define ADC_MUTEC_MASK				BIT(ADC_MUTEC_SHIFT)
+
+#define ADC_MUTE_ALL				7
 
 /* AUD3004X_31_ADC2 */
 #define DMIC_POL_SHIFT				7

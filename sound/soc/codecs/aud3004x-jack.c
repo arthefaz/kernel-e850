@@ -1317,6 +1317,9 @@ int aud3004x_jack_probe(struct snd_soc_codec *codec)
 	aud3004x_acpm_update_reg(AUD3004X_COMMON_ADDR,
 			AUD3004X_007_IRQM, 0, CDC_IRQM_MASK);
 
+	aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+			SYSTEM_RESET_MASK, SYSTEM_RESET_MASK);
+
 	dev_dbg(codec->dev, "Jack probe done. Jack Ver: %d\n",
 			jackdet->jack_ver);
 
