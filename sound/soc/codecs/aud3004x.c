@@ -577,6 +577,54 @@ static int dmic_bias_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int amic_mute_get(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	int amic_mute;
+
+	amic_mute = aud3004x->amic_mute;
+
+	ucontrol->value.integer.value[0] = amic_mute;
+	return 0;
+}
+
+static int amic_mute_put(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	int amic_mute = ucontrol->value.integer.value[0];
+
+	aud3004x->amic_mute = amic_mute;
+	return 0;
+}
+
+static int dmic_mute_get(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	int dmic_mute;
+
+	dmic_mute = aud3004x->dmic_mute;
+
+	ucontrol->value.integer.value[0] = dmic_mute;
+	return 0;
+}
+
+static int dmic_mute_put(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
+	int dmic_mute = ucontrol->value.integer.value[0];
+
+	aud3004x->dmic_mute = dmic_mute;
+	return 0;
+}
+
 static int ovp1_value_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
@@ -805,6 +853,12 @@ static const struct snd_kcontrol_new aud3004x_snd_controls[] = {
 	SOC_SINGLE_EXT("DMIC Bias", SND_SOC_NOPM, 0, 1, 0,
 			dmic_bias_get, dmic_bias_put),
 
+	SOC_SINGLE_EXT("DMIC Mute", SND_SOC_NOPM, 0, 1000, 0,
+			dmic_mute_get, dmic_mute_put),
+
+	SOC_SINGLE_EXT("AMIC Mute", SND_SOC_NOPM, 0, 1000, 0,
+			amic_mute_get, amic_mute_put),
+
 	SOC_SINGLE_EXT("OVP Surge", SND_SOC_NOPM, 0, 100, 0,
 			ovp1_value_get, ovp1_value_put),
 
@@ -868,16 +922,45 @@ void aud3004x_adc_digital_mute(struct snd_soc_codec *codec,
 {
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
 
+	mutex_lock(&aud3004x->adc_mute_lock);
 	dev_dbg(codec->dev, "%s called, %s\n", __func__, on ? "Mute" : "Unmute");
 
 	if (on) {
 		aud3004x_update_bits(aud3004x, AUD3004X_30_ADC1, channel, channel);
 	} else {
-		msleep(200);
 		aud3004x_update_bits(aud3004x, AUD3004X_30_ADC1, channel, 0);
 	}
 
+	mutex_unlock(&aud3004x->adc_mute_lock);
 	dev_dbg(codec->dev, "%s: channel: %d work done.\n", __func__, channel);
+}
+
+static void aud3004x_adc_mute_work(struct work_struct *work)
+{
+	struct aud3004x_priv *aud3004x =
+		container_of(work, struct aud3004x_priv, adc_mute_work);
+	struct snd_soc_codec *codec = aud3004x->codec;
+	unsigned int chop_val1, chop_val2, dmic_on, amic_on;
+
+	chop_val1 = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
+	chop_val2 = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
+
+	dmic_on = chop_val1 & DMIC_ON_MASK;
+	amic_on = chop_val2 & AMIC_ON_MASK;
+
+	dev_dbg(codec->dev, "%s called, dmic_on = 0x%02x, amic_on = 0x%02x\n",
+			__func__, dmic_on, amic_on);
+
+	/* AMIC have to calibration, so it need to more delay time */
+	if (amic_on)
+		msleep(aud3004x->amic_mute);
+	else if (dmic_on)
+		msleep(aud3004x->dmic_mute);
+	else
+		msleep(220);
+
+	if (aud3004x->capture_on)
+		aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, false);
 }
 
 static int vmid_ev(struct snd_soc_dapm_widget *w,
@@ -1278,7 +1361,7 @@ static int adc_ev(struct snd_soc_dapm_widget *w,
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* Disable ADC digital mute after configuring ADC */
-		aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, false);
+		queue_work(aud3004x->adc_mute_wq, &aud3004x->adc_mute_work);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		/* Enable ADC digital mute before configuring ADC */
@@ -2601,6 +2684,8 @@ static void aud3004x_i2c_parse_dt(struct aud3004x_priv *aud3004x)
  * The values provided in this function are hard-coded register values, and we
  * need not update these values as per bit-fields.
  */
+#define AMIC_MUTE_DEFAULT			320
+#define DMIC_MUTE_DEFAULT			120
 static void aud3004x_register_initialize(void *context)
 {
 	struct snd_soc_codec *codec = (struct snd_soc_codec *)context;
@@ -2721,17 +2806,17 @@ static int aud3004x_codec_probe(struct snd_soc_codec *codec)
 	aud3004x->mic_status = 0;
 	aud3004x->playback_on = false;
 	aud3004x->capture_on = false;
+	aud3004x->amic_mute = AMIC_MUTE_DEFAULT;
+	aud3004x->dmic_mute = DMIC_MUTE_DEFAULT;
 
 	/* initialize workqueue */
 	/* initialize workqueue for adc mute handling */
-#if 0
 	INIT_WORK(&aud3004x->adc_mute_work, aud3004x_adc_mute_work);
 	aud3004x->adc_mute_wq = create_singlethread_workqueue("adc_mute_wq");
 	if (aud3004x->adc_mute_wq == NULL) {
 		dev_err(codec->dev, "Failed to create adc_mute_wq\n");
 		return -ENOMEM;
 	}
-#endif
 
 	/* initialize mutex lock */
 	mutex_init(&aud3004x->regcache_lock);
@@ -2787,7 +2872,7 @@ static int aud3004x_codec_remove(struct snd_soc_codec *codec)
 	pr_err("[%s] mutex_lock %d\n", __func__,
 			aud3004x->regmap_lock.owner.counter);
 
-//	destroy_workqueue(aud3004x->adc_mute_wq);
+	destroy_workqueue(aud3004x->adc_mute_wq);
 	if (aud3004x->is_probe_done) {
 		if (aud3004x->regmap_lock.owner.counter != (long long)0) {
 			i2c_client_change(aud3004x, CODEC_CLOSE);

@@ -57,16 +57,17 @@ struct aud3004x_priv {
 	struct regulator *vdd2;
 	int regulator_count;
 	/* codec mutex */
-	struct mutex adcl_mute_lock;
-	struct mutex adcr_mute_lock;
-	struct mutex adcc_mute_lock;
+	struct mutex adc_mute_lock;
 	struct mutex dacl_mute_lock;
 	struct mutex dacr_mute_lock;
 	struct mutex regcache_lock;
 	struct mutex regmap_lock;
 	/* codec workqueue */
+	struct work_struct adc_mute_work;
+	struct workqueue_struct *adc_mute_wq;
 	/* codec parse dt */
 	u16 model_feature_flag;
+	unsigned int amic_mute, dmic_mute;
 	/* saved information */
 	int codec_ver;
 	bool is_suspend;
@@ -617,6 +618,10 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 #define DMIC1_ON_SHIFT				0
 #define DMIC1_ON_MASK				BIT(DMIC1_ON_SHIFT)
 
+#define DMIC_ON_SHIFT				0
+#define DMIC_ON_WIDTH				2
+#define DMIC_ON_MASK				MASK(DMIC_ON_WIDTH, DMIC_ON_SHIFT)
+
 /* AUD3004X_1F_CHOP2 */
 #define LINEOUT_ON_SHIFT			6
 #define LINEOUT_ON_MASK				BIT(LINEOUT_ON_SHIFT)
@@ -638,6 +643,14 @@ int aud3004x_jack_remove(struct snd_soc_codec *codec);
 
 #define MIC1_ON_SHIFT				0
 #define MIC1_ON_MASK				BIT(MIC1_ON_SHIFT) 
+
+#define AMIC_ON_SHIFT				0
+#define AMIC_ON_WIDTH				3
+#define AMIC_ON_MASK				MASK(AMIC_ON_WIDTH, AMIC_ON_SHIFT)
+
+#define DAC_ON_SHIFT				3
+#define DAC_ON_WIDTH				4
+#define DAC_ON_MASK					MASK(DAC_ON_WIDTH, DAC_ON_SHIFT)
 
 /* AUD3004X_20_IF_FORM1 */
 #define I2S_DF_SHIFT				4
