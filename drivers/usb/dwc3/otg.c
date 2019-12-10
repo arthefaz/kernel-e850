@@ -26,7 +26,7 @@
 #include <linux/usb/samsung_usb.h>
 #include <linux/mfd/samsung/s2mps18-private.h>
 //#include <soc/samsung/exynos-pm.h>
-#if defined(CONFIG_TYPEC)
+#if defined(CONFIG_TYPEC_DEFAULT)
 #include <linux/usb/typec.h>
 #endif
 
@@ -48,7 +48,7 @@
 #define BUS_ACTIVITY_CHECK	(0x3F << 16)
 #define READ_TRANS_OFFSET	10
 /* -------------------------------------------------------------------------- */
-#if defined(CONFIG_TYPEC)
+#if defined(CONFIG_TYPEC_DEFAULT)
 struct intf_typec {
 	/* struct mutex lock; */ /* device lock */
 	struct device *dev;
@@ -736,7 +736,7 @@ int dwc3_otg_init(struct dwc3 *dwc)
 	struct dwc3_otg *dotg;
 	struct dwc3_ext_otg_ops *ops = NULL;
 	int ret = 0;
-#if defined(CONFIG_TYPEC)
+#if defined(CONFIG_TYPEC_DEFAULT)
 	struct intf_typec	*typec;
 	struct typec_partner_desc partner;
 #endif
@@ -799,7 +799,7 @@ int dwc3_otg_init(struct dwc3 *dwc)
 		}
 	}
 
-#if defined(CONFIG_TYPEC)
+#if defined(CONFIG_TYPEC_DEFAULT)
 	typec = devm_kzalloc(dwc->dev, sizeof(*typec), GFP_KERNEL);
 	if (!typec)
 		return -ENOMEM;
@@ -853,7 +853,7 @@ void dwc3_otg_exit(struct dwc3 *dwc)
 	if (!dotg->ext_otg_ops)
 		return;
 
-#if defined(CONFIG_TYPEC)
+#if defined(CONFIG_TYPEC_DEFAULT)
 	typec_unregister_partner(dotg->typec->partner);
 	typec_unregister_port(dotg->typec->port);
 #endif

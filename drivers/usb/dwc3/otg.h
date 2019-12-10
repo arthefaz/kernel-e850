@@ -68,7 +68,7 @@ struct dwc3_otg {
 	int			pm_qos_int_val;
 
 	struct dwc3_ext_otg_ops *ext_otg_ops;
-#if defined(CONFIG_TYPEC)
+#if defined(CONFIG_TYPEC_DEFAULT)
 	struct intf_typec	*typec;
 #endif
 	struct completion	resume_cmpl;
