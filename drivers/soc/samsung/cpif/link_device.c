@@ -481,48 +481,6 @@ static bool rild_ready(struct link_device *ld)
 	}
 }
 
-static void cmd_init_start_handler(struct mem_link_device *mld)
-{
-	struct link_device *ld = &mld->link_dev;
-	struct modem_ctl *mc = ld->mc;
-	int err;
-
-	mif_err("%s: INIT_START <- %s (%s.state:%s cp_boot_done:%d)\n",
-		ld->name, mc->name, mc->name, mc_state(mc),
-		atomic_read(&mld->cp_boot_done));
-
-#if defined(CONFIG_CP_PKTPROC) || defined(CONFIG_CP_PKTPROC_V2)
-	err = pktproc_init(&mld->pktproc);
-	if (err < 0) {
-		mif_err("pktproc_init() error %d\n", err);
-		return;
-	}
-#endif
-
-	if (!ld->sbd_ipc) {
-		mif_err("%s: LINK_ATTR_SBD_IPC is NOT set\n", ld->name);
-		goto init_exit;
-	}
-
-	err = init_sbd_link(&mld->sbd_link_dev);
-	if (err < 0) {
-		mif_err("%s: init_sbd_link fail(%d)\n", ld->name, err);
-		return;
-	}
-
-	if (mld->attrs & LINK_ATTR(LINK_ATTR_IPC_ALIGNED))
-		ld->aligned = true;
-	else
-		ld->aligned = false;
-
-	sbd_activate(&mld->sbd_link_dev);
-
-init_exit:
-	send_ipc_irq(mld, cmd2int(CMD_PIF_INIT_DONE));
-
-	mif_err("%s: PIF_INIT_DONE -> %s\n", ld->name, mc->name);
-}
-
 static void write_clk_table_to_shmem(struct mem_link_device *mld)
 {
 	struct clock_table *clk_tb;
@@ -585,6 +543,51 @@ static void write_clk_table_to_shmem(struct mem_link_device *mld)
 			mif_info("CLOCK_TABLE[%d][%d] : %d\n",
 				i+1, j+1, *clk_data++);
 	}
+}
+
+static void cmd_init_start_handler(struct mem_link_device *mld)
+{
+	struct link_device *ld = &mld->link_dev;
+	struct modem_ctl *mc = ld->mc;
+	int err;
+
+	mif_err("%s: INIT_START <- %s (%s.state:%s cp_boot_done:%d)\n",
+		ld->name, mc->name, mc->name, mc_state(mc),
+		atomic_read(&mld->cp_boot_done));
+
+	if ((ld->protocol == PROTOCOL_SIT) && (ld->link_type == LINKDEV_SHMEM))
+		write_clk_table_to_shmem(mld);
+
+#if defined(CONFIG_CP_PKTPROC) || defined(CONFIG_CP_PKTPROC_V2)
+	err = pktproc_init(&mld->pktproc);
+	if (err < 0) {
+		mif_err("pktproc_init() error %d\n", err);
+		return;
+	}
+#endif
+
+	if (!ld->sbd_ipc) {
+		mif_err("%s: LINK_ATTR_SBD_IPC is NOT set\n", ld->name);
+		goto init_exit;
+	}
+
+	err = init_sbd_link(&mld->sbd_link_dev);
+	if (err < 0) {
+		mif_err("%s: init_sbd_link fail(%d)\n", ld->name, err);
+		return;
+	}
+
+	if (mld->attrs & LINK_ATTR(LINK_ATTR_IPC_ALIGNED))
+		ld->aligned = true;
+	else
+		ld->aligned = false;
+
+	sbd_activate(&mld->sbd_link_dev);
+
+init_exit:
+	send_ipc_irq(mld, cmd2int(CMD_PIF_INIT_DONE));
+
+	mif_err("%s: PIF_INIT_DONE -> %s\n", ld->name, mc->name);
 }
 
 static void cmd_phone_start_handler(struct mem_link_device *mld)
@@ -2001,6 +2004,9 @@ static int shmem_init_comm(struct link_device *ld, struct io_device *iod)
 		return 0;
 	}
 #endif
+
+	if (ld->protocol == PROTOCOL_SIT)
+		return 0;
 
 	if (ld->is_fmt_ch(id)) {
 		check_iod = link_get_iod_with_channel(ld, (id + fmt2rfs));
