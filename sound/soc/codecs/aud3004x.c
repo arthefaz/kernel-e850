@@ -926,15 +926,12 @@ void aud3004x_adc_digital_mute(struct snd_soc_codec *codec,
 	dev_dbg(codec->dev, "%s called, %s\n", __func__, on ? "Mute" : "Unmute");
 
 	if (on) {
-		aud3004x_write(aud3004x, AUD3004X_23_IF_FORM4, 0xFF);
-		msleep(10);
 		aud3004x_update_bits(aud3004x, AUD3004X_30_ADC1, channel, channel);
 	} else {
 		aud3004x_update_bits(aud3004x, AUD3004X_30_ADC1, channel, 0);
-		msleep(10);
-		aud3004x_write(aud3004x, AUD3004X_23_IF_FORM4, 0xE4);
 	}
 
+	aud3004x_usleep(1000);
 	mutex_unlock(&aud3004x->adc_mute_lock);
 	dev_dbg(codec->dev, "%s: channel: %d work done.\n", __func__, channel);
 }
@@ -2443,45 +2440,87 @@ static int aud3004x_dai_hw_free(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = dai->codec;
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
 	unsigned int chop_val1, chop_val2;
-	bool hp_on, spk_on, ep_on, lineout_on, mic_on;
+	bool dac_on, amic_on, dmic_on;
 
-	chop_val1 = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
-	chop_val2 = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
-	spk_on = chop_val1 & SPK_ON_MASK;
-	ep_on = chop_val1 & EP_ON_MASK;
-	lineout_on = chop_val1 & LINEOUT_ON_MASK;
-	hp_on = chop_val1 & HP_ON_MASK;
-	mic_on = (chop_val1 & (MIC1_ON_MASK | MIC2_ON_MASK | MIC3_ON_MASK)) |
-		(chop_val2 & (DMIC1_ON_MASK | DMIC2_ON_MASK));
+	chop_val1 = aud3004x_read(aud3004x, AUD3004X_1E_CHOP1);
+	chop_val2 = aud3004x_read(aud3004x, AUD3004X_1F_CHOP2);
+	dmic_on = chop_val1 & (DMIC1_ON_MASK | DMIC2_ON_MASK);
+	amic_on = chop_val2 & (MIC1_ON_MASK | MIC2_ON_MASK | MIC3_ON_MASK);
+	dac_on = chop_val2 & (SPK_ON_MASK | EP_ON_MASK | HP_ON_MASK | LINEOUT_ON_MASK);
 
 	dev_dbg(codec->dev, "(%s) %s completed\n",
 			substream->stream ? "C" : "P", __func__);
 
-	if (substream->stream) {
-		/* Capture Stream */
-#if 0
-		if (mic_on) {
+	dev_dbg(codec->dev, "%s called, dac = 0x%02x, adc = 0x%02x\n", __func__,
+			dac_on, amic_on | dmic_on);
 
+	if (substream->stream) {
+		aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
+		/* Reset ADC Data */
+		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+				ADC_RESETB_MASK, 0);
+		aud3004x_usleep(50);
+		/* Reset ADC Clock */
+		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+				RSTB_ADC_MASK, 0);
+		aud3004x_usleep(50);
+
+		if (!dac_on) {
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+				CORE_RESETB_MASK, 0);
 		}
-#endif
+		/* Capture Stream */
+		if (amic_on) {
+			if (amic_on & MIC1_ON_MASK) {
+				/* MIC1 Auto Power OFF */
+				aud3004x_update_bits(aud3004x, AUD3004X_18_PWAUTO_AD,
+						APW_MIC1L_MASK, 0 << APW_MIC1L_SHIFT);
+			}
+
+			if (amic_on & MIC2_ON_MASK) {
+				/* MIC2 Auto Power OFF */
+				aud3004x_update_bits(aud3004x, AUD3004X_18_PWAUTO_AD,
+						APW_MIC2R_MASK, 0 << APW_MIC2R_SHIFT);
+			}
+
+			if (amic_on & MIC3_ON_MASK) {
+				/* MIC3 Auto Power OFF */
+				aud3004x_update_bits(aud3004x, AUD3004X_18_PWAUTO_AD,
+						APW_MIC3L_MASK, 0 << APW_MIC3L_SHIFT);
+			}
+		}
+
+		if (dmic_on) {
+			if (dmic_on & DMIC1_ON_MASK) {
+				/* DMIC1 Disable */
+				aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
+						DMIC_EN1_MASK, 0);
+			}
+
+			if (dmic_on & DMIC2_ON_MASK) {
+				/* DMIC2 Disable */
+				aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
+						DMIC_EN2_MASK, 0);
+			}
+		}
 	} else {
 		/* Playback Stream */
 		/* DAC mute enable */
 		aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
 
-		if (hp_on) {
+		if (dac_on & HP_ON_MASK) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_HP_MASK, 0);
 		}
-		if (ep_on) {
+		if (dac_on & EP_ON_MASK) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_EP_MASK, 0);
 		}
-		if (spk_on) {
+		if (dac_on & SPK_ON_MASK) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_SPK_MASK, 0);
 		}
-		if (lineout_on) {
+		if (dac_on & LINEOUT_ON_MASK) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_LINE_MASK, 0);
 		}
