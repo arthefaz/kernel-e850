@@ -1164,27 +1164,22 @@ static int mic1_pga_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_PRE_PMU:
 		/* MIC1 BST Volume Control */
 		aud3004x_write(aud3004x, AUD3004X_134_VOL_AD1, 0x40);
-		/* Reset ADC Path */
+		/* Reset ADC */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				CORE_RESETB_MASK, CORE_RESETB_MASK);
-		aud3004x_usleep(50);
-		/* Reset ADC Path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK, RSTB_ADC_MASK);
-		aud3004x_usleep(50);
-		/* Reset ADC Path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				ADC_RESETB_MASK, ADC_RESETB_MASK);
+				RSTB_ADC_MASK | ADC_RESETB_MASK,
+				RSTB_ADC_MASK | ADC_RESETB_MASK);
+		aud3004x_usleep(1000);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* MIC1 Auto Power ON */
 		aud3004x_update_bits(aud3004x, AUD3004X_18_PWAUTO_AD,
 				APW_MIC1L_MASK, APW_MIC1L_MASK);
+		msleep(20);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		/* MIC1 Auto Power OFF */
 		aud3004x_update_bits(aud3004x, AUD3004X_18_PWAUTO_AD,
-				APW_MIC1L_MASK, 0 << APW_MIC1L_SHIFT);
+				APW_MIC1L_MASK, 0);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		/* MIC1 BST Volume Control */
@@ -1214,22 +1209,17 @@ static int mic2_pga_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_PRE_PMU:
 		/* MIC2 BST Volume Control */
 		aud3004x_write(aud3004x, AUD3004X_135_VOL_AD2, 0x40);
-		/* Reset ADC Path */
+		/* Reset ADC */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				CORE_RESETB_MASK, CORE_RESETB_MASK);
-		aud3004x_usleep(50);
-		/* Reset ADC Path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK, RSTB_ADC_MASK);
-		aud3004x_usleep(50);
-		/* Reset ADC Path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				ADC_RESETB_MASK, ADC_RESETB_MASK);
+				RSTB_ADC_MASK | ADC_RESETB_MASK,
+				RSTB_ADC_MASK | ADC_RESETB_MASK);
+		aud3004x_usleep(1000);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* MIC2 Auto Power ON */
 		aud3004x_update_bits(aud3004x, AUD3004X_18_PWAUTO_AD,
 				APW_MIC2R_MASK, APW_MIC2R_MASK);
+		msleep(20);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		/* MIC2 Auto Power OFF */
@@ -1264,22 +1254,17 @@ static int mic3_pga_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_PRE_PMU:
 		/* MIC3 BST Volume Control */
 		aud3004x_write(aud3004x, AUD3004X_136_VOL_AD3, 0x40);
-		/* Reset ADC Path */
+		/* Reset ADC */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				CORE_RESETB_MASK, CORE_RESETB_MASK);
-		aud3004x_usleep(50);
-		/* Reset ADC Path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK, RSTB_ADC_MASK);
-		aud3004x_usleep(50);
-		/* Reset ADC Path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				ADC_RESETB_MASK, ADC_RESETB_MASK);
+				RSTB_ADC_MASK | ADC_RESETB_MASK,
+				RSTB_ADC_MASK | ADC_RESETB_MASK);
+		aud3004x_usleep(1000);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* MIC3 Auto Power ON */
 		aud3004x_update_bits(aud3004x, AUD3004X_18_PWAUTO_AD,
 				APW_MIC3L_MASK, APW_MIC3L_MASK);
+		msleep(20);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		/* MIC3 Auto Power OFF */
@@ -1313,17 +1298,11 @@ static int dmic1_pga_ev(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		/* Reset ADC Path */
+		/* Reset ADC */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				CORE_RESETB_MASK, CORE_RESETB_MASK);
-		aud3004x_usleep(50);
-		/* Reset ADC Path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK, RSTB_ADC_MASK);
-		aud3004x_usleep(50);
-		/* Reset ADC Path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				ADC_RESETB_MASK, ADC_RESETB_MASK);
+				RSTB_ADC_MASK | ADC_RESETB_MASK,
+				RSTB_ADC_MASK | ADC_RESETB_MASK);
+		aud3004x_usleep(1000);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* DMIC1 Enable */
@@ -1359,17 +1338,11 @@ static int dmic2_pga_ev(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		/* Reset ADC Path */
+		/* Reset ADC */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				CORE_RESETB_MASK, CORE_RESETB_MASK);
-		aud3004x_usleep(50);
-		/* Reset ADC Path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK, RSTB_ADC_MASK);
-		aud3004x_usleep(50);
-		/* Reset ADC Path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				ADC_RESETB_MASK, ADC_RESETB_MASK);
+				RSTB_ADC_MASK | ADC_RESETB_MASK,
+				RSTB_ADC_MASK | ADC_RESETB_MASK);
+		aud3004x_usleep(1000);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* DMIC2 Enable */
@@ -1418,18 +1391,9 @@ static int adc_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
-		/* Reset ADC Path */
+		/* Reset ADC Data */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				ADC_RESETB_MASK, 0);
-		aud3004x_usleep(50);
-		/* Reset ADC Path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK, 0);
-		aud3004x_usleep(50);
-		if (!dac_on) {
-			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				CORE_RESETB_MASK, 0);
-		}
+				RSTB_ADC_MASK | ADC_RESETB_MASK, 0);
 		break;
 	}
 	return 0;
@@ -1505,18 +1469,9 @@ static int dac_ev(struct snd_soc_dapm_widget *w,
 				2 << OFFSET_RNGC_SHIFT);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
-		/* Reset off DAC path */
+		/* Reset off DAC Data */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | DAC_RESETB_MASK, 0);
-		aud3004x_usleep(50);
-		/* Reset off DAC path */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_DAC_DSM_MASK, 0);
-		aud3004x_usleep(50);
-		if (!mic_on) {
-			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-						CORE_RESETB_MASK, 0);
-		}
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK, 0);
 
 		/* Offset Range control clear */
 		aud3004x_update_bits(aud3004x, AUD3004X_4E_OFFSET_OPT,
@@ -1612,14 +1567,8 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | CORE_RESETB_MASK,
-				AVC_RESETB_MASK | CORE_RESETB_MASK);
-		aud3004x_usleep(50);
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
-		aud3004x_usleep(50);
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				DAC_RESETB_MASK, DAC_RESETB_MASK);
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK,
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -1735,14 +1684,8 @@ static int epdrv_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | CORE_RESETB_MASK,
-				AVC_RESETB_MASK | CORE_RESETB_MASK);
-		aud3004x_usleep(50);
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
-		aud3004x_usleep(50);
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				DAC_RESETB_MASK, DAC_RESETB_MASK);
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK,
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -1907,14 +1850,8 @@ static int hpdrv_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | CORE_RESETB_MASK,
-				AVC_RESETB_MASK | CORE_RESETB_MASK);
-		aud3004x_usleep(50);
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
-		aud3004x_usleep(50);
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				DAC_RESETB_MASK, DAC_RESETB_MASK);
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK,
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -1990,14 +1927,8 @@ static int linedrv_ev(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		/* Reset DAC path */
 		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				AVC_RESETB_MASK | CORE_RESETB_MASK,
-				AVC_RESETB_MASK | CORE_RESETB_MASK);
-		aud3004x_usleep(50);
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_DAC_DSM_MASK, RSTB_DAC_DSM_MASK);
-		aud3004x_usleep(50);
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				DAC_RESETB_MASK, DAC_RESETB_MASK);
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK,
+				AVC_RESETB_MASK | RSTB_DAC_DSM_MASK | DAC_RESETB_MASK);
 
 		/* Analog PGA Unmute */
 		aud3004x_update_bits(aud3004x, AUD3004X_1A_DRIVER_MUTE,
@@ -2304,6 +2235,13 @@ static void capture_hw_params(struct snd_soc_codec *codec,
 	if (aud3004x->capture_aifrate != cur_aifrate) {
 		switch (cur_aifrate) {
 		case AUD3004X_SAMPLE_RATE_48KHZ:
+			/* RESET Core */
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					CORE_RESETB_MASK, 0);
+			aud3004x_usleep(1000);
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					CORE_RESETB_MASK, CORE_RESETB_MASK);
+
 			/* 48K output format selection */
 			aud3004x_update_bits(aud3004x, AUD3004X_29_IF_FORM6,
 					ADC_OUT_FORMAT_SEL_MASK, ADC_FM_48K_AT_48K);
@@ -2313,6 +2251,13 @@ static void capture_hw_params(struct snd_soc_codec *codec,
 					DMIC_ST_MASK, DMIC_IO_ST_4);
 			break;
 		case AUD3004X_SAMPLE_RATE_192KHZ:
+			/* RESET Core */
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					CORE_RESETB_MASK, 0);
+			aud3004x_usleep(1000);
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					CORE_RESETB_MASK, CORE_RESETB_MASK);
+
 			/* 192K output format selection */
 			aud3004x_update_bits(aud3004x, AUD3004X_29_IF_FORM6,
 					ADC_OUT_FORMAT_SEL_MASK, ADC_FM_192K_AT_192K);
@@ -2348,6 +2293,13 @@ static void playback_hw_params(struct snd_soc_codec *codec,
 	if (aud3004x->playback_aifrate != cur_aifrate) {
 		switch (cur_aifrate) {
 		case AUD3004X_SAMPLE_RATE_48KHZ:
+			/* RESET Core */
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					CORE_RESETB_MASK, 0);
+			aud3004x_usleep(1000);
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					CORE_RESETB_MASK, CORE_RESETB_MASK);
+
 			/* AVC delay default setting */
 			aud3004x_write(aud3004x, AUD3004X_71_AVC34, 0x18);
 			aud3004x_write(aud3004x, AUD3004X_72_AVC35, 0xDD);
@@ -2358,6 +2310,13 @@ static void playback_hw_params(struct snd_soc_codec *codec,
 			aud3004x_write(aud3004x, AUD3004X_2A6_CTRL_IREF5, 0x59);
 			break;
 		case AUD3004X_SAMPLE_RATE_192KHZ:
+			/* RESET Core */
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					CORE_RESETB_MASK, 0);
+			aud3004x_usleep(1000);
+			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+					CORE_RESETB_MASK, CORE_RESETB_MASK);
+
 			/* AVC delay default setting */
 			aud3004x_write(aud3004x, AUD3004X_71_AVC34, 0x18);
 			aud3004x_write(aud3004x, AUD3004X_72_AVC35, 0xDD);
@@ -2456,19 +2415,7 @@ static int aud3004x_dai_hw_free(struct snd_pcm_substream *substream,
 
 	if (substream->stream) {
 		aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
-		/* Reset ADC Data */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				ADC_RESETB_MASK, 0);
-		aud3004x_usleep(50);
-		/* Reset ADC Clock */
-		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				RSTB_ADC_MASK, 0);
-		aud3004x_usleep(50);
 
-		if (!dac_on) {
-			aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
-				CORE_RESETB_MASK, 0);
-		}
 		/* Capture Stream */
 		if (amic_on) {
 			if (amic_on & MIC1_ON_MASK) {
@@ -2503,6 +2450,10 @@ static int aud3004x_dai_hw_free(struct snd_pcm_substream *substream,
 						DMIC_EN2_MASK, 0);
 			}
 		}
+
+		/* Reset ADC Data */
+		aud3004x_update_bits(aud3004x, AUD3004X_14_RESETB0,
+				RSTB_ADC_MASK | ADC_RESETB_MASK, 0);
 	} else {
 		/* Playback Stream */
 		/* DAC mute enable */
