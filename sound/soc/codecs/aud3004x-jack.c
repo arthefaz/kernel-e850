@@ -614,6 +614,7 @@ static void aud3004x_jack_det_work(struct work_struct *work)
 		input_report_switch(jackdet->input, SW_HEADPHONE_INSERT, 0);
 		input_report_switch(jackdet->input, SW_MICROPHONE_INSERT, 0);
 		input_sync(jackdet->input);
+		jackstate->mdet_adc = -EINVAL;
 	}
 
 	dev_dbg(dev, "%s called, Jack %s, Mic %s\n", __func__,
