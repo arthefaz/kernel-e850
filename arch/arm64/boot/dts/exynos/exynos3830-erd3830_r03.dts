@@ -16,7 +16,7 @@
 #include "exynos3830-erd3830-camera.dtsi"
 
 #define BOARD_ID	0x0
-#define BOARD_REV	0x2
+#define BOARD_REV	0x3
 
 / {
 	compatible = "samsung,exynos3830", "samsung,ERD3830";
