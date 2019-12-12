@@ -1565,17 +1565,14 @@ static const struct snd_soc_dapm_widget exynos3830_widgets[] = {
 	SND_SOC_DAPM_HP("HEADPHONE", NULL),
 	SND_SOC_DAPM_SPK("SPEAKER", NULL),
 	SND_SOC_DAPM_MIC("SPEAKER FB", NULL),
-	SND_SOC_DAPM_MIC("BLUETOOTH1 MIC", NULL),
-	SND_SOC_DAPM_SPK("BLUETOOTH1 SPK", NULL),
-	SND_SOC_DAPM_MIC("BLUETOOTH2 MIC", NULL),
-	SND_SOC_DAPM_SPK("BLUETOOTH2 SPK", NULL),
+	SND_SOC_DAPM_MIC("BLUETOOTH MIC", NULL),
+	SND_SOC_DAPM_SPK("BLUETOOTH SPK", NULL),
 	SND_SOC_DAPM_MIC("USB MIC", NULL),
 	SND_SOC_DAPM_SPK("USB SPK", NULL),
 	SND_SOC_DAPM_INPUT("VINPUT_FM"),
 };
 
 static const struct snd_soc_dapm_route exynos3830_routes[] = {
-
 };
 
 static struct snd_soc_codec_conf codec_conf[MADERA_CODEC_MAX];
