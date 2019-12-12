@@ -74,6 +74,8 @@ struct pmucal_seq enter_sleep[] = {
 };
 
 struct pmucal_seq save_sleep[] = {
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CLK_CON_MUX_MUX_CLKCMU_HSI_MMC_CARD", 0x120e0000, 0x1040, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CLK_CON_DIV_CLKCMU_HSI_MMC_CARD", 0x120e0000, 0x184c, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_COND_SAVE_RESTORE, "PLL_LOCKTIME_PLL_G3D", 0x11400000, 0x0, 0xffffffff, 0, 0x11860000, 0x1d04, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_LOCKTIME_PLL_CPUCL1", 0x10800000, 0x0, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_LOCKTIME_PLL_CPUCL0", 0x10900000, 0x0, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
@@ -854,6 +856,8 @@ struct pmucal_seq enter_sleep_usbl2[] = {
 };
 
 struct pmucal_seq save_sleep_usbl2[] = {
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CLK_CON_MUX_MUX_CLKCMU_HSI_MMC_CARD", 0x120e0000, 0x1040, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
+	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "CLK_CON_DIV_CLKCMU_HSI_MMC_CARD", 0x120e0000, 0x184c, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_COND_SAVE_RESTORE, "PLL_LOCKTIME_PLL_G3D", 0x11400000, 0x0, 0xffffffff, 0, 0x11860000, 0x1d04, (0x1 << 0), (0x1 << 0)),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_LOCKTIME_PLL_CPUCL1", 0x10800000, 0x0, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
 	PMUCAL_SEQ_DESC(PMUCAL_SAVE_RESTORE, "PLL_LOCKTIME_PLL_CPUCL0", 0x10900000, 0x0, 0xffffffff, 0, 0, 0, 0xffffffff, 0),
