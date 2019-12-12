@@ -3372,9 +3372,47 @@ static irqreturn_t dw_mci_interrupt(int irq, void *dev_id)
 	u32 status, pending;
 	struct dw_mci_slot *slot = host->slot;
 	unsigned long irqflags;
+	int cmd_error = 0, data_error = 0;
 
 	status = mci_readl(host, RINTSTS);
 	pending = mci_readl(host, MINTSTS); /* read-only mask reg */
+
+	/* Incase of CMD Queuing */
+	if (host->slot->mmc->card &&
+			host->has_cqe &&
+			host->cqe_on) {
+		u32 reg = mci_readl(host, MINTSTS) &
+			(DW_MCI_CMD_ERROR_FLAGS | DW_MCI_DATA_ERROR_FLAGS);
+
+		pr_debug("*** %s: cmdq intr: 0x%08x\n",
+				mmc_hostname(host->slot->mmc),
+				pending);
+		if (reg) {
+			if (reg & (SDMMC_INT_RCRC | SDMMC_INT_RESP_ERR | SDMMC_INT_HLE))
+				cmd_error = -EILSEQ;
+			else if (reg & SDMMC_INT_RTO)
+				cmd_error = -ETIMEDOUT;
+			else
+				cmd_error = 0;
+			if (reg & (SDMMC_INT_EBE | SDMMC_INT_DCRC | SDMMC_INT_SBE))
+				data_error = -EILSEQ;
+			else if (reg & (SDMMC_INT_DRTO | SDMMC_INT_HTO))
+				data_error = -ETIMEDOUT;
+			else
+				data_error = 0;
+		} else {
+			cmd_error = 0;
+			data_error = 0;
+		}
+
+		cqhci_irq(slot->mmc, reg, cmd_error, data_error);
+
+		if (reg) {
+			mci_writel(host, RINTSTS, DW_MCI_CMD_ERROR_FLAGS);
+			mci_writel(host, RINTSTS, DW_MCI_DATA_ERROR_FLAGS);
+		}
+		return IRQ_HANDLED;
+	}
 
 	if (pending) {
 		if (pending & SDMMC_INT_HLE) {
@@ -3675,7 +3713,92 @@ static int dw_mci_init_slot_caps(struct dw_mci_slot *slot)
 	return 0;
 }
 
-static int dw_mci_init_slot(struct dw_mci *host)
+#ifdef CONFIG_MMC_CQHCI
+static void dw_mci_cmdq_interrupt_mask(struct mmc_host *mmc, bool enable)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	u32 int_mask, dma_mask;
+
+	int_mask = mci_readl(host, INTMASK);
+	dma_mask = mci_readl(host, IDINTEN64);
+
+	if (enable) {
+		int_mask |= SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER;
+		dma_mask |= SDMMC_IDMAC_INT_NI | SDMMC_IDMAC_INT_RI |
+			SDMMC_IDMAC_INT_TI;
+	} else {
+		int_mask &= ~(SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER);
+		dma_mask &= ~(SDMMC_IDMAC_INT_NI | SDMMC_IDMAC_INT_RI |
+			SDMMC_IDMAC_INT_TI);
+	}
+
+	mci_writel(host, INTMASK, int_mask);
+	mci_writel(host, IDINTEN64, dma_mask);
+}
+
+static void dw_mci_cmdq_set_block_size(struct mmc_host *mmc)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+
+	mci_writel(host, BLKSIZ, 512);
+}
+
+static void dw_mci_cmdq_enable(struct mmc_host *mmc)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+
+	dw_mci_cmdq_interrupt_mask(mmc, false);
+	dw_mci_cmdq_set_block_size(mmc);
+	host->cqe_on = true;
+}
+
+static void dw_mci_cmdq_disable(struct mmc_host *mmc, bool recovery)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+
+	host->cqe_on = false;
+	dw_mci_cmdq_interrupt_mask(mmc, true);
+}
+
+static void dw_mci_cmdq_dump_vendor_regs(struct mmc_host *mmc)
+{
+	//struct dw_mci_slot *slot = mmc_priv(mmc);
+	//struct dw_mci *host = slot->host;
+
+	//dw_mci_reg_dump(host);
+}
+
+#else
+
+static void dw_mci_cmdq_enable(struct mmc_host *mmc)
+{
+
+}
+
+static void dw_mci_cmdq_disable(struct mmc_host *mmc, bool recovery)
+{
+
+}
+
+static void dw_mci_cmdq_dump_vendor_regs(struct mmc_host *mmc)
+{
+
+}
+#endif
+
+static const struct cqhci_host_ops dw_mci_cmdq_ops = {
+	.enable = dw_mci_cmdq_enable,
+	.disable = dw_mci_cmdq_disable,
+	.dumpregs = dw_mci_cmdq_dump_vendor_regs,
+};
+
+
+
+static int dw_mci_init_slot(struct dw_mci *host, struct platform_device *pdev)
 {
 	struct mmc_host *mmc;
 	struct dw_mci_slot *slot;
@@ -3742,10 +3865,27 @@ static int dw_mci_init_slot(struct dw_mci *host)
 	}
 
 	dw_mci_get_cd(mmc);
+	host->cqe_on = false;
 
 	ret = mmc_add_host(mmc);
 	if (ret)
 		goto err_host_allocated;
+#ifdef CONFIG_MMC_CQHCI
+	if (mmc->caps2 & MMC_CAP2_CQE) {
+		bool dma64 = true;
+		struct cqhci_host *cq_host;
+
+		cq_host = cqhci_pltfm_init(pdev);
+		cq_host->ops = &dw_mci_cmdq_ops;
+		cq_host->caps |= CQHCI_TASK_DESC_SZ_128;
+		ret = cqhci_init(cq_host, mmc, dma64);
+		if (ret)
+			pr_err("%s: CMDQ init: failed (%d)\n",
+					mmc_hostname(host->slot->mmc), ret);
+		else
+			dev_info(host->dev, "CMDQ host enabled!!!\n");
+	}
+#endif
 
 #ifdef CONFIG_MMC_DW_EXYNOS_FMP
 	if (mmc->caps2 & MMC_CAP2_CRYPTO)
@@ -4184,6 +4324,12 @@ static struct dw_mci_board *dw_mci_parse_dt(struct dw_mci *host)
 
 	if (!device_property_read_u32(dev, "clock-frequency", &clock_frequency))
 		pdata->bus_hz = clock_frequency;
+	if (of_find_property(np, "support-cmdq", NULL)) {
+		pdata->caps2 |= MMC_CAP2_CQE;
+		host->has_cqe = true;
+		if (!of_property_read_bool(np, "disable-cqe-dcmd"))
+			pdata->caps2 |= MMC_CAP2_CQE_DCMD;
+	}
 
 	if (of_find_property(np, "only_once_tune", NULL))
 		pdata->only_once_tune = true;
@@ -4258,7 +4404,7 @@ static void dw_mci_enable_cd(struct dw_mci *host)
 	}
 }
 
-int dw_mci_probe(struct dw_mci *host)
+int dw_mci_probe(struct dw_mci *host, struct platform_device *pdev)
 {
 	const struct dw_mci_drv_data *drv_data = host->drv_data;
 	int width, i, ret = 0;
@@ -4538,7 +4684,7 @@ int dw_mci_probe(struct dw_mci *host)
 		 host->irq, width, fifo_size);
 
 	/* We need at least one slot to succeed */
-	ret = dw_mci_init_slot(host);
+	ret = dw_mci_init_slot(host, pdev);
 	if (ret) {
 		dev_dbg(host->dev, "slot %d init failed\n", i);
 		goto err_dmaunmap;
@@ -4639,6 +4785,10 @@ int dw_mci_runtime_suspend(struct device *dev)
 	struct dw_mci *host = dev_get_drvdata(dev);
 	int ret = 0;
 
+	if (host->has_cqe)
+		return cqhci_suspend(host->slot->mmc);
+
+
 	if (host->use_dma && host->dma_ops->exit)
 		host->dma_ops->exit(host);
 
@@ -4725,6 +4875,9 @@ int dw_mci_runtime_resume(struct device *dev)
 		/* Now that slots are all setup, we can enable card detect */
 		dw_mci_enable_cd(host);
 	}
+	if (host->has_cqe)
+		return cqhci_resume(host->slot->mmc);
+
 
 	return 0;
 

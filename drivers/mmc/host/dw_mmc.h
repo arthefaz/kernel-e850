@@ -297,6 +297,9 @@ struct dw_mci {
 
 	struct regmap *sysreg;
 	struct exynos_access_cxt cxt_coherency; /* io coherency */
+
+	bool has_cqe;
+	bool cqe_on;
 };
 
 /* DMA ops for Internal/External DMAC interface */
@@ -790,7 +793,7 @@ enum dw_mci_misc_control {
 #define SDMMC_HTO_TMOUT_SHIFT		8
 
 extern u32 dw_mci_calc_timeout(struct dw_mci *host);
-extern int dw_mci_probe(struct dw_mci *host);
+extern int dw_mci_probe(struct dw_mci *host, struct platform_device *pdev);
 extern void dw_mci_remove(struct dw_mci *host);
 #ifdef CONFIG_PM
 extern int dw_mci_runtime_suspend(struct device *device);
