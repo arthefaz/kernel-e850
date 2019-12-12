@@ -741,6 +741,7 @@ struct modem_ctl {
 	bool s5100_s2mpu_enabled;
 #endif
 
+	struct notifier_block reboot_nb;
 	struct notifier_block pm_notifier;
 #endif
 

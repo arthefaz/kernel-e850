@@ -74,19 +74,19 @@ static struct modem_ctl *g_mc;
 static int register_phone_active_interrupt(struct modem_ctl *mc);
 static int register_cp2ap_wakeup_interrupt(struct modem_ctl *mc);
 
-static int exynos_s5100_reboot_handler(struct notifier_block *nb,
+static int s5100_reboot_handler(struct notifier_block *nb,
 				    unsigned long l, void *p)
 {
+	struct modem_ctl *mc = container_of(nb, struct modem_ctl, reboot_nb);
+
 	mif_info("Now is device rebooting..\n");
-	g_mc->device_reboot = true;
+
+	mutex_lock(&mc->pcie_onoff_lock);
+	mc->device_reboot = true;
+	mutex_unlock(&mc->pcie_onoff_lock);
 
 	return 0;
 }
-
-static struct notifier_block nb_reboot_block = {
-	.notifier_call = exynos_s5100_reboot_handler
-};
-
 
 static void print_mc_state(struct modem_ctl *mc)
 {
@@ -922,7 +922,7 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 		mld->msi_irq_base_enabled = 0;
 	}
 
-	if (mc->device_reboot == true) {
+	if (mc->device_reboot) {
 		mif_err("skip pci power off : device is rebooting..!!!\n");
 		goto exit;
 	}
@@ -1003,6 +1003,11 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 
 	if (mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, true) == 0) {
 		mif_err("skip pci power on : condition not met\n");
+		goto exit;
+	}
+
+	if (mc->device_reboot) {
+		mif_err("skip pci power on : device is rebooting..!!!\n");
 		goto exit;
 	}
 
@@ -1456,7 +1461,8 @@ int s5100_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 	INIT_WORK(&mc->wakeup_work, cp2ap_wakeup_work);
 	INIT_WORK(&mc->suspend_work, cp2ap_suspend_work);
 
-	register_reboot_notifier(&nb_reboot_block);
+	mc->reboot_nb.notifier_call = s5100_reboot_handler;
+	register_reboot_notifier(&mc->reboot_nb);
 
 	/* Register PM notifier_call */
 	mc->pm_notifier.notifier_call = s5100_pm_notifier;
