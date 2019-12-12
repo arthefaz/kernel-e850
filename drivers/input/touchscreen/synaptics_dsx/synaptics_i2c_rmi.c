@@ -436,7 +436,7 @@ static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 	mutex_lock(&(rmi4_data->rmi4_io_ctrl_mutex));
 
 	if (rmi4_data->touch_stopped) {
-		tsp_debug_err(true, &rmi4_data->i2c_client->dev, "%s: Sensor stopped\n",
+		tsp_debug_err(false, &rmi4_data->i2c_client->dev, "%s: Sensor stopped\n",
 				__func__);
 		retval = 0;
 		goto exit;
@@ -531,7 +531,7 @@ static int synaptics_rmi4_i2c_write(struct synaptics_rmi4_data *rmi4_data,
 	mutex_lock(&(rmi4_data->rmi4_io_ctrl_mutex));
 
 	if (rmi4_data->touch_stopped) {
-		tsp_debug_err(true, &rmi4_data->i2c_client->dev, "%s: Sensor stopped\n",
+		tsp_debug_err(false, &rmi4_data->i2c_client->dev, "%s: Sensor stopped\n",
 				__func__);
 		retval = 0;
 		goto exit;
@@ -1584,7 +1584,7 @@ static int synaptics_rmi4_sensor_report(struct synaptics_rmi4_data *rmi4_data)
 			return 0;
 		}
 
-		tsp_debug_info(true, &rmi4_data->i2c_client->dev,
+		tsp_debug_info(false, &rmi4_data->i2c_client->dev,
 			"Spontaneous reset detected\n");
 		retval = synaptics_rmi4_reinit_device(rmi4_data);
 		if (retval < 0) {
@@ -1857,7 +1857,7 @@ static int synaptics_rmi4_f12_set_feature(struct synaptics_rmi4_data *rmi4_data)
 		goto out;
 	}
 
-	tsp_debug_info(true, &rmi4_data->i2c_client->dev, "%s: [0x%02X], Set %s\n",
+	tsp_debug_info(false, &rmi4_data->i2c_client->dev, "%s: [0x%02X], Set %s\n",
 		 __func__, rmi4_data->f12.feature_enable,
 		(rmi4_data->f12.feature_enable == (CLEAR_COVER_MODE_EN | FAST_GLOVE_DECTION_EN)) ? "Clear cover & Fast glove mode" :
 		(rmi4_data->f12.feature_enable == (FLIP_COVER_MODE_EN | FAST_GLOVE_DECTION_EN)) ? "Flip cover & Fast glove mode" :
@@ -2533,7 +2533,7 @@ static int synaptics_rmi4_f51_set_proximity_enables(struct synaptics_rmi4_data *
 	struct synaptics_rmi4_f51_handle *f51 = rmi4_data->f51;
 	int retval;
 
-	tsp_debug_info(true, &rmi4_data->i2c_client->dev, "%s: [0x%02X], Hover is %s\n", __func__,
+	tsp_debug_info(false, &rmi4_data->i2c_client->dev, "%s: [0x%02X], Hover is %s\n", __func__,
 		f51->proximity_enables, (f51->proximity_enables & FINGER_HOVER_EN) ? "enabled" : "disabled");
 
 	retval = synaptics_rmi4_i2c_write(rmi4_data,
@@ -2633,7 +2633,7 @@ static int synaptics_rmi4_f51_set_init(struct synaptics_rmi4_data *rmi4_data)
 	synaptics_rmi4_i2c_read(rmi4_data, f51->general_control_2_addr,
 			&f51->general_control_2, sizeof(f51->general_control_2));
 
-	tsp_debug_info(true, &rmi4_data->i2c_client->dev, "%s: General control[0x%02X],2[0x%02X] Hsync is %s\n",
+	tsp_debug_info(false, &rmi4_data->i2c_client->dev, "%s: General control[0x%02X],2[0x%02X] Hsync is %s\n",
 			__func__, f51->general_control, f51->general_control_2,
 			(f51->general_control & HSYNC_STATUS) ? "GD" : "NG");
 
@@ -3541,7 +3541,7 @@ static int synaptics_rmi4_reinit_device(struct synaptics_rmi4_data *rmi4_data)
 
 	for (ii = 0; ii < rmi4_data->num_of_intr_regs; ii++) {
 		if (rmi4_data->intr_mask[ii] != 0x00) {
-			tsp_debug_info(true, &rmi4_data->i2c_client->dev,
+			tsp_debug_info(false, &rmi4_data->i2c_client->dev,
 					"%s: Interrupt enable mask register[%d] = 0x%02x\n",
 					__func__, ii, rmi4_data->intr_mask[ii]);
 			intr_addr = rmi4_data->f01_ctrl_base_addr + 1 + ii;
