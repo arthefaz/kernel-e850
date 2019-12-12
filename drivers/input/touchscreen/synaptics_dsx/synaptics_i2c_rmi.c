@@ -472,6 +472,34 @@ exit:
 	return retval;
 }
 
+static void _enable_irq(struct synaptics_rmi4_data *data)
+{
+	int retval;
+
+	dev_info(&data->i2c_client->dev, "%s: irq_enable called\n", __func__);
+	if (unlikely((data == NULL)))
+		return;
+
+	if (data->touch_stopped) {
+		retval = synaptics_rmi4_start_device(data);
+		if (retval < 0) {
+			tsp_debug_err(true, &data->i2c_client->dev,
+					"%s: Failed to start device\n", __func__);
+			return;
+		}
+	}
+
+	retval = synaptics_rmi4_irq_enable(data, true);
+	if (retval < 0) {
+		tsp_debug_err(true, &data->i2c_client->dev, "%s: Failed to enable attention interrupt\n",
+				__func__);
+
+		synaptics_rmi4_remove_exp_fn(data);
+		return;
+	}
+
+}
+
 static void late_enable_irq(struct work_struct *work)
 {
 	struct delayed_work *delayed_work = to_delayed_work(work);
@@ -4179,7 +4207,7 @@ err_tsp_reboot:
 	}
 
 	pr_info("%s schdule delayed work for irq at probe\n",__func__);
-	schedule_delayed_work(&rmi4_data->work_init_irq, 1500);
+//	schedule_delayed_work(&rmi4_data->work_init_irq, 1500);
 #if 0
 	/* Enable attn pin */
 	retval = synaptics_rmi4_irq_enable(rmi4_data, true);
@@ -4556,10 +4584,12 @@ static int synaptics_rmi4_input_open(struct input_dev *dev)
 	} else
 #endif
 	{
-		retval = synaptics_rmi4_start_device(rmi4_data);
+		_enable_irq(rmi4_data);
+/*		retval = synaptics_rmi4_start_device(rmi4_data);
 		if (retval < 0)
 			tsp_debug_err(true, &rmi4_data->i2c_client->dev,
 					"%s: Failed to start device\n", __func__);
+*/
 	}
 
 	return 0;
