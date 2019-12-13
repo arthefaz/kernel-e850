@@ -16,7 +16,7 @@
 
 static struct tethering_dev g_upstream_dev;
 
-int cpif_tethering_init()
+int cpif_tethering_init(void)
 {
 	spin_lock_init(&g_upstream_dev.lock);
 	return 0;
