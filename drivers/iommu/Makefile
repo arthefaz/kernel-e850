@@ -29,3 +29,4 @@ obj-$(CONFIG_HYPERV_IOMMU) += hyperv-iommu.o
 obj-$(CONFIG_VIRTIO_IOMMU) += virtio-iommu.o
 obj-$(CONFIG_SAMSUNG_SECURE_IOVA) += samsung-secure-iova.o
 obj-$(CONFIG_SAMSUNG_IOMMU) += samsung-iommu.o
+obj-$(CONFIG_SAMSUNG_IOMMU_GROUP) += samsung-iommu-group.o
