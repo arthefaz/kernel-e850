@@ -41,6 +41,10 @@
 #undef CONFIG_SCSC_FM
 #ifdef CONFIG_SCSC_FM
 #include <scsc/scsc_mx.h>
+#else
+#ifdef CONFIG_SOC_EXYNOS3830
+#include <linux/mfd/samsung/s2mpu12-regulator.h>
+#endif
 #endif
 
 #include "fm_low_struc.h"
@@ -1596,6 +1600,21 @@ static int s610_radio_fops_open(struct file *file)
 				"mx250_fm_request() failed with err %d\n", ret);
 			return ret;
 		}
+#else
+#ifdef CONFIG_SOC_EXYNOS3830
+		/* Temporary workaround to power up slave PMIC LDOs before FW APM/WLBT
+		 * signalling is complete
+		 */
+		{
+			struct i2c_client i2c;
+
+			i2c.addr = 0x1;
+			s2mpu12_write_reg(&i2c, 0x38, 0xEC); /* LDO 14 */
+			s2mpu12_write_reg(&i2c, 0x3C, 0xE0); /* LDO 18 */
+			s2mpu12_write_reg(&i2c, 0x3D, 0xE0); /* LDO 19 */
+			s2mpu12_write_reg(&i2c, 0x3E, 0xEC); /* LDO 20 */
+		}
+#endif /* CONFIG_SOC_EXYNOS3830 */
 #endif /* CONFIG_SCSC_FM */
 
 #ifdef USE_FM_LNA_ENABLE
