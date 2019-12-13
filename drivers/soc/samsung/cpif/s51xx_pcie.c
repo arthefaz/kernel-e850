@@ -48,6 +48,14 @@
 #include "modem_utils.h"
 #include "s51xx_pcie.h"
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+extern int exynos_pcie_rc_chk_link_status(int ch_num);
+extern int exynos_pcie_rc_l1ss_ctrl(int enable, int id);
+#else
+extern int exynos_check_pcie_link_status(int ch_num);
+extern int exynos_pcie_host_v1_l1ss_ctrl(int enable, int id);
+#endif
+
 static int s51xx_pcie_read_procmem(struct seq_file *m, void *v)
 {
 	pr_err("Procmem READ!\n");
@@ -94,11 +102,7 @@ inline int s51xx_pcie_send_doorbell_int(struct pci_dev *pdev, int int_num)
 		return -EAGAIN;
 	}
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-	if (exynos_pcie_rc_chk_link_status(s51xx_pcie->pcie_channel_num) == 0) {
-#else
-	if (exynos_check_pcie_link_status(s51xx_pcie->pcie_channel_num) == 0) {
-#endif
+	if (s51xx_check_pcie_link_status(s51xx_pcie->pcie_channel_num) == 0) {
 		mif_err_limited("Can't send Interrupt(not linked)!!!\n");
 		return -EAGAIN;
 	}
@@ -163,11 +167,7 @@ void first_save_s51xx_status(struct pci_dev *pdev)
 {
 	struct s51xx_pcie *s51xx_pcie = pci_get_drvdata(pdev);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-	if (exynos_pcie_rc_chk_link_status(s51xx_pcie->pcie_channel_num) == 0) {
-#else
-	if (exynos_check_pcie_link_status(s51xx_pcie->pcie_channel_num) == 0) {
-#endif
+	if (s51xx_check_pcie_link_status(s51xx_pcie->pcie_channel_num) == 0) {
 		mif_err("It's not Linked - Ignore saving the s5100\n");
 		return;
 	}
@@ -187,11 +187,7 @@ void s51xx_pcie_save_state(struct pci_dev *pdev)
 
 	dev_info(&pdev->dev, "[%s]\n", __func__);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-	if (exynos_pcie_rc_chk_link_status(s51xx_pcie->pcie_channel_num) == 0) {
-#else
-	if (exynos_check_pcie_link_status(s51xx_pcie->pcie_channel_num) == 0) {
-#endif
+	if (s51xx_check_pcie_link_status(s51xx_pcie->pcie_channel_num) == 0) {
 		mif_err("It's not Linked - Ignore restore state!!!\n");
 		return;
 	}
@@ -226,11 +222,7 @@ void s51xx_pcie_restore_state(struct pci_dev *pdev)
 
 	dev_info(&pdev->dev, "[%s]\n", __func__);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-	if (exynos_pcie_rc_chk_link_status(s51xx_pcie->pcie_channel_num) == 0) {
-#else
-	if (exynos_check_pcie_link_status(s51xx_pcie->pcie_channel_num) == 0) {
-#endif
+	if (s51xx_check_pcie_link_status(s51xx_pcie->pcie_channel_num) == 0) {
 		mif_err("It's not Linked - Ignore restore state!!!\n");
 		return;
 	}
@@ -265,6 +257,15 @@ void s51xx_pcie_restore_state(struct pci_dev *pdev)
 
 	s51xx_pcie->link_status = 1;
 	/* pci_pme_active(s51xx_pcie.s51xx_pdev, 1); */
+}
+
+int s51xx_check_pcie_link_status(int ch_num)
+{
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+	return exynos_pcie_rc_chk_link_status(ch_num);
+#else
+	return exynos_check_pcie_link_status(ch_num);
+#endif
 }
 
 void s51xx_pcie_l1ss_ctrl(int enable)

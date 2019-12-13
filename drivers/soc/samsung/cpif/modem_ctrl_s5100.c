@@ -109,11 +109,7 @@ static void print_mc_state(struct modem_ctl *mc)
 static void pcie_clean_dislink(struct modem_ctl *mc)
 {
 	if (mc->pcie_powered_on) {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-		if (exynos_pcie_rc_chk_link_status(mc->pcie_ch_num) == 0)
-#else
-		if (exynos_check_pcie_link_status(mc->pcie_ch_num) == 0)
-#endif
+		if (s51xx_check_pcie_link_status(mc->pcie_ch_num) == 0)
 			mif_err("dislinked unexpectedly, force dislink!!\n");
 		s5100_poweroff_pcie(mc, true);
 	}
@@ -150,11 +146,7 @@ static void voice_call_on_work(struct work_struct *ws)
 		goto exit;
 
 	if (mc->pcie_powered_on &&
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-			(exynos_pcie_rc_chk_link_status(mc->pcie_ch_num) != 0)) {
-#else
-			(exynos_check_pcie_link_status(mc->pcie_ch_num) != 0)) {
-#endif
+			(s51xx_check_pcie_link_status(mc->pcie_ch_num) != 0)) {
 		if (wake_lock_active(&mc->mc_wake_lock))
 			wake_unlock(&mc->mc_wake_lock);
 	}
@@ -174,11 +166,7 @@ static void voice_call_off_work(struct work_struct *ws)
 		goto exit;
 
 	if (mc->pcie_powered_on &&
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-			(exynos_pcie_rc_chk_link_status(mc->pcie_ch_num) != 0)) {
-#else
-			(exynos_check_pcie_link_status(mc->pcie_ch_num) != 0)) {
-#endif
+			(s51xx_check_pcie_link_status(mc->pcie_ch_num) != 0)) {
 		if (!wake_lock_active(&mc->mc_wake_lock))
 			wake_lock(&mc->mc_wake_lock);
 	}
@@ -893,11 +881,7 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 	mif_info("+++\n");
 
 	if (!mc->pcie_powered_on &&
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-			(exynos_pcie_rc_chk_link_status(mc->pcie_ch_num) == 0)) {
-#else
-			(exynos_check_pcie_link_status(mc->pcie_ch_num) == 0)) {
-#endif
+			(s51xx_check_pcie_link_status(mc->pcie_ch_num) == 0)) {
 		mif_err("skip pci power off : already powered off\n");
 		goto exit;
 	}
@@ -992,11 +976,7 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 	mutex_lock(&mc->pcie_onoff_lock);
 	mif_info("+++\n");
 	if (mc->pcie_powered_on &&
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-			(exynos_pcie_rc_chk_link_status(mc->pcie_ch_num) != 0)) {
-#else
-			(exynos_check_pcie_link_status(mc->pcie_ch_num) != 0)) {
-#endif
+			(s51xx_check_pcie_link_status(mc->pcie_ch_num) != 0)) {
 		mif_err("skip pci power on : already powered on\n");
 		goto exit;
 	}
@@ -1183,11 +1163,7 @@ int s5100_try_gpio_cp_wakeup(struct modem_ctl *mc)
 {
 	if ((mif_gpio_get_value(mc->s5100_gpio_cp_wakeup, false) == 0) &&
 			(mif_gpio_get_value(mc->s5100_gpio_ap_wakeup, false) == 0) &&
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
-			(exynos_pcie_rc_chk_link_status(mc->pcie_ch_num) == 0)) {
-#else
-			(exynos_check_pcie_link_status(mc->pcie_ch_num) == 0)) {
-#endif
+			(s51xx_check_pcie_link_status(mc->pcie_ch_num) == 0)) {
 		mif_gpio_set_value(mc->s5100_gpio_cp_wakeup, 1, 0);
 		return 0;
 	}
