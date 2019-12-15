@@ -724,6 +724,46 @@ static int cqhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	cq_host->slot[tag].mrq = mrq;
 	cq_host->slot[tag].flags = 0;
 
+#ifdef CONFIG_MMC_DW_DEBUG
+	if (cq_host->ops->cmdq_log) {
+		struct cmdq_log_ctx log_ctx;
+
+		log_ctx.x0 = tag;
+		log_ctx.x1 = cqhci_readl(cq_host, CQHCI_TDBR);
+
+		if (tag == 31) {
+			if (mrq->cmd->opcode >= MMC_ERASE_GROUP_START &&
+					mrq->cmd->opcode <= MMC_ERASE) {
+				/* erase case */
+				log_ctx.x2 = CQ_LOG_CMD_DISCARD;
+				log_ctx.x3 = mrq->cmd->arg;
+			} else if (mrq->cmd->opcode == MMC_SWITCH &&
+					((mrq->cmd->arg & 0xFFFF00) >> 16) ==
+					EXT_CSD_FLUSH_CACHE) {
+				/* flush case */
+				log_ctx.x2 = CQ_LOG_CMD_FLUSH;
+				log_ctx.x3 = mrq->cmd->arg;
+			} else {
+				/*
+				 * unexpected case
+				 *
+				 * I'm wondering there is a case of CMD13..
+				 */
+				log_ctx.x2 = mrq->cmd->opcode;
+				log_ctx.x3 = mrq->cmd->arg;
+			}
+			log_ctx.x4 = 0;
+		} else {
+			log_ctx.x2 = (mrq->data->flags & MMC_DATA_READ) ?
+						CQ_LOG_CMD_READ	:
+						CQ_LOG_CMD_WRITE;
+			log_ctx.x3 = mrq->data->blk_addr;
+			log_ctx.x4 = mrq->data->blocks;
+		}
+		cq_host->ops->cmdq_log(cq_host->mmc, true, &log_ctx);
+		cq_host->cmd_log_idx[tag] = log_ctx.idx;
+	}
+#endif
 	cq_host->qcnt += 1;
 
 	/* Make sure descriptors are ready before ringing the doorbell */
@@ -855,6 +895,24 @@ static void cqhci_finish_mrq(struct mmc_host *mmc, unsigned int tag)
 		slot->flags |= CQHCI_COMPLETED;
 		return;
 	}
+
+#if defined(CONFIG_MMC_DW_DEBUG)
+	if (cq_host->ops->cmdq_log) {
+		struct cmdq_log_ctx log_ctx;
+
+		log_ctx.x0 = tag;
+		log_ctx.x1 = cqhci_readl(cq_host, CQHCI_TDBR);
+
+		if (cq_host->cmd_log_idx[tag] != 0xDEADBEAF) {
+			log_ctx.idx = cq_host->cmd_log_idx[tag];
+			cq_host->ops->cmdq_log(cq_host->mmc, false, &log_ctx);
+		} else {
+			WARN_ON(1);
+		}
+		cq_host->cmd_log_idx[tag] = 0xDEADBEAF;
+
+	}
+#endif
 
 	slot->mrq = NULL;
 
