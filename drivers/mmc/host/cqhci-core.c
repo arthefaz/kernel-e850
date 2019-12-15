@@ -481,7 +481,7 @@ static int cqhci_prep_tran_desc(struct mmc_request *mrq,
 	}
 
 	desc = get_trans_desc(cq_host, tag);
-
+	memset(desc, 0, cq_host->trans_desc_len * cq_host->mmc->max_segs);
 	for_each_sg(data->sg, sg, sg_count, i) {
 		addr = sg_dma_address(sg);
 		len = sg_dma_len(sg);
