@@ -562,6 +562,7 @@ int mmc_cqe_recovery(struct mmc_host *host)
 	cmd.busy_timeout = MMC_CQE_RECOVERY_TIMEOUT,
 	err = mmc_wait_for_cmd(host, &cmd, 0);
 
+	mmc_hw_reset(host);
 	host->cqe_ops->cqe_recovery_finish(host);
 
 	mmc_retune_release(host);

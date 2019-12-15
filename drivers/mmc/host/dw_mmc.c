@@ -3788,12 +3788,113 @@ static void dw_mci_cmdq_dump_vendor_regs(struct mmc_host *mmc)
 {
 
 }
+
+#if defined(CONFIG_MMC_DW_DEBUG)
+static void dw_mci_cmdq_cmd_log(struct mmc_host *mmc, bool new_cmd,
+						struct cmdq_log_ctx *log_ctx)
+{
+
+}
+
+static int dw_mci_cmdq_core_reset(struct mmc_host *mmc)
+{
+	return 0;
+}
 #endif
+#endif
+
+#if defined(CONFIG_MMC_DW_DEBUG)
+static void dw_mci_cmdq_cmd_log(struct mmc_host *mmc, bool new_cmd,
+						struct cmdq_log_ctx *log_ctx)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	int cpu = raw_smp_processor_id();
+	u32 count;
+	struct dw_mci_cq_cmd_log *cmd_log;
+
+	u32 tag = log_ctx->x0;
+	u32 dbr = log_ctx->x1;
+
+	if (!host->debug_info || !(host->debug_info->en_logging & DW_MCI_DEBUG_ON_CMD))
+		return;
+
+	cmd_log = host->debug_info->cq_cmd_log;
+
+	if (!new_cmd) {
+		count = log_ctx->idx;
+
+		if (count < DWMCI_LOG_MAX) {
+			cmd_log[count].done_time = cpu_clock(cpu);
+			cmd_log[count].data2[0] = tag;
+			cmd_log[count].data2[1] = dbr;
+		} else {
+			WARN_ON(1);
+		}
+	} else {
+		count = atomic_inc_return(&host->debug_info->cq_cmd_log_count) &
+							(DWMCI_LOG_MAX - 1);
+
+		cmd_log[count].send_time = cpu_clock(cpu);
+		cmd_log[count].done_time = 0x0;
+		cmd_log[count].data1[0] = tag;
+		cmd_log[count].data1[1] = dbr;
+		cmd_log[count].data1[2] = log_ctx->x2;
+		cmd_log[count].data1[3] = log_ctx->x3;
+		cmd_log[count].data1[4] = log_ctx->x4;
+
+		log_ctx->idx = count;
+	}
+}
+#endif
+
+static int dw_mci_cmdq_core_reset(struct mmc_host *mmc)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	u32 temp;
+	bool ret;
+
+	/*
+	 * in case of cq reset right after
+	 * synopsis core reset
+	 */
+	if (host->using_dma) {
+		host->dma_ops->stop(host);
+		host->dma_ops->reset(host);
+	}
+	ret = dw_mci_ctrl_reset(host, SDMMC_CTRL_ALL_RESET_FLAGS);
+	if (!ret)
+		return -1;
+	dw_mci_update_clock(slot);
+
+	/* Select IDMAC interface */
+	temp = mci_readl(host, CTRL);
+	temp |= SDMMC_CTRL_USE_IDMAC;
+	mci_writel(host, CTRL, temp);
+
+	/* drain writebuffer */
+	wmb();
+
+	/* Enable the IDMAC */
+	temp = mci_readl(host, BMOD);
+	temp |= SDMMC_IDMAC_ENABLE | SDMMC_IDMAC_FB;
+	mci_writel(host, BMOD, temp);
+
+	/* Start it running */
+	mci_writel(host, PLDMND, 1);
+
+	return 0;
+}
 
 static const struct cqhci_host_ops dw_mci_cmdq_ops = {
 	.enable = dw_mci_cmdq_enable,
 	.disable = dw_mci_cmdq_disable,
 	.dumpregs = dw_mci_cmdq_dump_vendor_regs,
+#if defined(CONFIG_MMC_DW_DEBUG)
+	.cmdq_log = dw_mci_cmdq_cmd_log,
+#endif
+	.reset = dw_mci_cmdq_core_reset,
 };
 
 

@@ -215,6 +215,23 @@ struct mmc_host;
 struct mmc_request;
 struct cqhci_slot;
 
+enum dw_mci_cq_log_cmd {
+	CQ_LOG_CMD_READ = 1,
+	CQ_LOG_CMD_WRITE,
+	CQ_LOG_CMD_DISCARD,
+	CQ_LOG_CMD_FLUSH,
+};
+
+struct cmdq_log_ctx {
+	u32	idx;
+
+	u32	x0;	/* data0: tag, data1: tag */
+	u32	x1;	/* data0: dbr, data1: dbr */
+	u32	x2;	/* data0: cmd, data1:  */
+	u32	x3;	/* data0: lba, data1:  */
+	u32	x4;	/* data0: sct, data1:  */
+};
+
 struct cqhci_host {
 	const struct cqhci_host_ops *ops;
 	void __iomem *mmio;
@@ -268,6 +285,7 @@ struct cqhci_host {
 	struct completion halt_comp;
 	wait_queue_head_t wait_queue;
 	struct cqhci_slot *slot;
+	u32 cmd_log_idx[32];
 
 #ifdef CONFIG_MMC_CRYPTO
 	union cqhci_crypto_capabilities crypto_capabilities;
@@ -286,6 +304,8 @@ struct cqhci_host_ops {
 				 u64 *data);
 	void (*pre_enable)(struct mmc_host *mmc);
 	void (*post_disable)(struct mmc_host *mmc);
+	void (*cmdq_log)(struct mmc_host *mmc, bool new_cmd,
+				struct cmdq_log_ctx *log_ctx);
 #ifdef CONFIG_MMC_CRYPTO
 	int (*program_key)(struct cqhci_host *cq_host,
 			   const union cqhci_crypto_cfg_entry *cfg, int slot);
