@@ -2525,6 +2525,11 @@ static int abox_enable(struct device *dev)
 	dev_info(dev, "%s\n", __func__);
 
 	abox_gic_enable_irq(data->dev_gic);
+
+	/* enable abox core0 ipc intr */
+	abox_gic_target_core0(data->dev_gic, SGI_ABOX_MSG);
+	abox_gic_enable(data->dev_gic, SGI_ABOX_MSG, true);
+
 	abox_enable_wdt(data);
 
 	abox_request_cpu_gear(dev, data, DEFAULT_CPU_GEAR_ID,
