@@ -203,6 +203,8 @@ void s51xx_pcie_save_state(struct pci_dev *pdev)
 
 	s51xx_pcie->pci_saved_configs = pci_store_saved_state(pdev);
 
+	s51xx_pcie_chk_ep_conf(pdev);
+
 	disable_msi_int(pdev);
 
 	/* pci_enable_wake(s51xx_pcie.s51xx_pdev, PCI_D0, 0); */
