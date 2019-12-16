@@ -260,7 +260,6 @@ struct kbase_device;
 struct kbase_as;
 struct kbase_mmu_setup;
 struct kbase_ipa_model_vinstr_data;
-struct kbase_kinstr_jm;
 
 #ifdef CONFIG_DEBUG_FS
 /**
@@ -2156,7 +2155,6 @@ struct kbase_sub_alloc {
  * @priority:             Indicates the context priority. Used along with @atoms_count
  *                        for context scheduling, protected by hwaccess_lock.
  * @atoms_count:          Number of gpu atoms currently in use, per priority
- * @kinstr_jm:            Kernel job manager instrumentation context handle
  *
  * A kernel base context is an entity among which the GPU is scheduled.
  * Each context has its own GPU address space.
@@ -2311,7 +2309,6 @@ struct kbase_context {
 	int priority;
 	s16 atoms_count[KBASE_JS_ATOM_SCHED_PRIO_COUNT];
 
-	struct kbase_kinstr_jm *kinstr_jm;
 	/* MALI_SEC_INTEGRATION */
 #ifdef CONFIG_MALI_SEC_VK_BOOST
 	bool ctx_vk_need_qos;

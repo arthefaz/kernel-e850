@@ -57,7 +57,7 @@ static int gpu_tmu_notifier(struct notifier_block *notifier,
 {
 	int frequency;
 	struct exynos_context *platform = (struct exynos_context *)pkbdev->platform_context;
-#if defined(CONFIG_DEBUG_SNAPSHOT_THERMAL) || defined(CONFIG_EXYNOS_SNAPSHOT_THERMAL)
+#if defined(CONFIG_DEBUG_SNAPSHOT) || defined(CONFIG_EXYNOS_SNAPSHOT_THERMAL)
 	char *cooling_device_name = "GPU";
 #endif
 
@@ -80,7 +80,7 @@ static int gpu_tmu_notifier(struct notifier_block *notifier,
 #endif
 #if defined(CONFIG_EXYNOS_SNAPSHOT_THERMAL)
 		exynos_ss_thermal(NULL, 0, cooling_device_name, frequency);
-#elif defined(CONFIG_DEBUG_SNAPSHOT_THERMAL)
+#elif defined(CONFIG_DEBUG_SNAPSHOT)
 		dbg_snapshot_thermal(NULL, 0, cooling_device_name, frequency);
 #endif
 	}
@@ -173,9 +173,10 @@ static void gpu_power_suspend(struct kbase_device *kbdev)
 		return;
 
 	GPU_LOG(DVFS_INFO, DUMMY, 0u, 0u, "power suspend\n");
+#ifdef CONFIG_REGULATOR
 	if (platform->dvs_status)
 		gpu_control_enable_customization(kbdev);
-
+#endif
 	ret = pm_runtime_suspend(kbdev->dev);
 
 #ifdef CONFIG_MALI_DVFS

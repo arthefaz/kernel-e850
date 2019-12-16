@@ -34,7 +34,6 @@
 #include <linux/dma-mapping.h>
 #include <mali_base_kernel.h>
 #include <mali_kbase_hwaccess_time.h>
-#include <mali_kbase_kinstr_jm.h>
 #include <mali_kbase_mem_linux.h>
 #include <mali_kbase_tracepoints.h>
 #include <linux/version.h>
@@ -1478,7 +1477,6 @@ int kbase_process_soft_job(struct kbase_jd_atom *katom)
 	struct kbase_device *kbdev = kctx->kbdev;
 
 	KBASE_TLSTREAM_TL_EVENT_ATOM_SOFTJOB_START(kbdev, katom);
-	kbase_kinstr_jm_atom_sw_start(katom);
 
 	switch (katom->core_req & BASE_JD_REQ_SOFT_JOB_TYPE) {
 	case BASE_JD_REQ_SOFT_DUMP_CPU_GPU_TIME:
@@ -1538,7 +1536,6 @@ int kbase_process_soft_job(struct kbase_jd_atom *katom)
 
 	/* Atom is complete */
 	KBASE_TLSTREAM_TL_EVENT_ATOM_SOFTJOB_END(kbdev, katom);
-	kbase_kinstr_jm_atom_sw_stop(katom);
 	return ret;
 }
 

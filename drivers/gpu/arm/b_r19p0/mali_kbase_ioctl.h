@@ -79,13 +79,9 @@ extern "C" {
  *   dma-buf. Now, buffers are mapped on GPU when first imported, no longer
  *   requiring external resource or sticky resource tracking. UNLESS,
  *   CONFIG_MALI_DMA_BUF_MAP_ON_DEMAND is enabled.
- * 11.17:
- * - Skipped
- * 11.18:
- * - New ioctl: KBASE_IOCTL_KINSTR_JM_FD
  */
 #define BASE_UK_VERSION_MAJOR 11
-#define BASE_UK_VERSION_MINOR 18
+#define BASE_UK_VERSION_MINOR 16
 
 /**
  * struct kbase_ioctl_version_check - Check version compatibility with kernel
@@ -693,8 +689,6 @@ union kbase_ioctl_cinstr_gwt_dump {
 #define KBASE_IOCTL_CINSTR_GWT_DUMP \
 	_IOWR(KBASE_IOCTL_TYPE, 35, union kbase_ioctl_cinstr_gwt_dump)
 
-#define KBASE_IOCTL_KINSTR_JM_FD \
-	_IO(KBASE_IOCTL_TYPE, 52)
 
 /**
  * struct kbase_ioctl_mem_exec_init - Initialise the EXEC_VA memory zone

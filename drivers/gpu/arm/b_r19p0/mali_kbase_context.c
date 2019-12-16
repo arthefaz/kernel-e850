@@ -31,7 +31,6 @@
 #include <mali_kbase_mem_linux.h>
 #include <mali_kbase_dma_fence.h>
 #include <mali_kbase_ctx_sched.h>
-#include <mali_kbase_kinstr_jm.h>
 #include <mali_kbase_mem_pool_group.h>
 #include <mali_kbase_tracepoints.h>
 
@@ -144,9 +143,6 @@ kbase_create_context(struct kbase_device *kbdev, bool is_compat,
 	if (err)
 		goto no_jit;
 
-	err = kbase_kinstr_jm_init(&kctx->kinstr_jm);
-	if (err)
-		goto no_kinstr_jm;
 
 #ifdef CONFIG_GPU_TRACEPOINTS
 	atomic_set(&kctx->jctx.work_id, 0);
@@ -189,8 +185,6 @@ kbase_create_context(struct kbase_device *kbdev, bool is_compat,
 
 	return kctx;
 
-no_kinstr_jm:
-	kbase_kinstr_jm_term(kctx->kinstr_jm);
 no_jit:
 	kbase_gpu_vm_lock(kctx);
 	kbase_sticky_resource_term(kctx);

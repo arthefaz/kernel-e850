@@ -35,7 +35,6 @@
 
 #include <mali_kbase_jm.h>
 #include <mali_kbase_hwaccess_jm.h>
-#include <mali_kbase_kinstr_jm.h>
 #include <mali_kbase_tracepoints.h>
 
 #include "mali_kbase_dma_fence.h"
@@ -92,20 +91,17 @@ static int jd_run_atom(struct kbase_jd_atom *katom)
 	if ((katom->core_req & BASE_JD_REQ_ATOM_TYPE) == BASE_JD_REQ_DEP) {
 		/* Dependency only atom */
 		katom->status = KBASE_JD_ATOM_STATE_COMPLETED;
-		kbase_kinstr_jm_atom_complete(katom);
 		return 0;
 	} else if (katom->core_req & BASE_JD_REQ_SOFT_JOB) {
 		/* Soft-job */
 		if (katom->will_fail_event_code) {
 			kbase_finish_soft_job(katom);
 			katom->status = KBASE_JD_ATOM_STATE_COMPLETED;
-			kbase_kinstr_jm_atom_complete(katom);
 			return 0;
 		}
 		if (kbase_process_soft_job(katom) == 0) {
 			kbase_finish_soft_job(katom);
 			katom->status = KBASE_JD_ATOM_STATE_COMPLETED;
-			kbase_kinstr_jm_atom_complete(katom);
 		}
 		return 0;
 	}
@@ -593,7 +589,6 @@ bool jd_done_nolock(struct kbase_jd_atom *katom,
 	}
 
 	katom->status = KBASE_JD_ATOM_STATE_COMPLETED;
-	kbase_kinstr_jm_atom_complete(katom);
 	list_add_tail(&katom->jd_item, &completed_jobs);
 
 	while (!list_empty(&completed_jobs)) {
@@ -796,7 +791,6 @@ bool jd_submit_atom(struct kbase_context *kctx, const struct base_jd_atom_v2 *us
 						kbdev,
 						katom,
 						TL_ATOM_STATE_IDLE);
-				kbase_kinstr_jm_atom_queue(katom);
 
 				ret = jd_done_nolock(katom, NULL);
 				goto out;
@@ -844,7 +838,6 @@ bool jd_submit_atom(struct kbase_context *kctx, const struct base_jd_atom_v2 *us
 			KBASE_TLSTREAM_TL_RET_ATOM_CTX(kbdev, katom, kctx);
 			KBASE_TLSTREAM_TL_ATTRIB_ATOM_STATE(kbdev, katom,
 					TL_ATOM_STATE_IDLE);
-			kbase_kinstr_jm_atom_queue(katom);
 
 			will_fail = true;
 
@@ -914,7 +907,6 @@ bool jd_submit_atom(struct kbase_context *kctx, const struct base_jd_atom_v2 *us
 	KBASE_TLSTREAM_TL_ATTRIB_ATOM_STATE(kbdev, katom, TL_ATOM_STATE_IDLE);
 	KBASE_TLSTREAM_TL_ATTRIB_ATOM_PRIORITY(kbdev, katom, katom->sched_priority);
 	KBASE_TLSTREAM_TL_RET_ATOM_CTX(kbdev, katom, kctx);
-	kbase_kinstr_jm_atom_queue(katom);
 
 	/* Reject atoms with job chain = NULL, as these cause issues with soft-stop */
 	if (!katom->jc && (katom->core_req & BASE_JD_REQ_ATOM_TYPE) != BASE_JD_REQ_DEP) {
