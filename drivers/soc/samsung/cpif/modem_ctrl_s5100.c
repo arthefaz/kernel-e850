@@ -116,6 +116,10 @@ static void pcie_clean_dislink(struct modem_ctl *mc)
 
 	if (!mc->pcie_powered_on)
 		mif_err("Link is disconnected!!!\n");
+
+#if defined(CONFIG_SUSPEND_DURING_VOICE_CALL)
+	mc->pcie_voice_call_on = false;
+#endif
 }
 
 static void cp2ap_wakeup_work(struct work_struct *ws)
