@@ -1468,6 +1468,21 @@ static int dw_mci_exynos_crypto_sec_cfg(bool init)
 }
 #endif
 
+static void dw_mci_exynos_cqe_swreset(struct dw_mci *host)
+{
+	u32 reg;
+
+	reg = mci_readl(host, AXI_BURST_LEN);
+	reg |= (1 << 22);
+	mci_writel(host, AXI_BURST_LEN, reg);
+
+	udelay(1);
+
+	reg = mci_readl(host, AXI_BURST_LEN);
+	reg |= (1 << 22);
+	mci_writel(host, AXI_BURST_LEN, reg);
+}
+
 static const struct dw_mci_drv_data exynos_drv_data = {
 	.caps = exynos_dwmmc_caps,
 	.init = dw_mci_exynos_priv_init,
@@ -1485,6 +1500,7 @@ static const struct dw_mci_drv_data exynos_drv_data = {
 	.ssclk_control = dw_mci_exynos_ssclk_control,
 	.dump_reg = dw_mci_reg_dump,
 	.runtime_pm_control = dw_mci_exynos_runtime_pm_control,
+	.cqe_swreset = dw_mci_exynos_cqe_swreset,
 };
 
 static const struct of_device_id dw_mci_exynos_match[] = {

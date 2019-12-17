@@ -546,6 +546,7 @@ int mmc_cqe_recovery(struct mmc_host *host)
 	pr_warn("%s: running CQE recovery\n", mmc_hostname(host));
 
 	host->cqe_ops->cqe_recovery_start(host);
+	host->cqe_ops->cqe_off(host, true);
 
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.opcode       = MMC_STOP_TRANSMISSION,

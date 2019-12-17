@@ -3848,12 +3848,15 @@ static void dw_mci_cmdq_cmd_log(struct mmc_host *mmc, bool new_cmd,
 }
 #endif
 
-static int dw_mci_cmdq_core_reset(struct mmc_host *mmc)
+static int dw_mci_cmdq_core_reset(struct mmc_host *mmc, bool cqe_reset)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
 	struct dw_mci *host = slot->host;
 	u32 temp;
 	bool ret;
+
+	if (cqe_reset && host->drv_data->cqe_swreset)
+		host->drv_data->cqe_swreset(host);
 
 	/*
 	 * in case of cq reset right after

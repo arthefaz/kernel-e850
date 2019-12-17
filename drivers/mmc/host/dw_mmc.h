@@ -959,6 +959,7 @@ struct dw_mci_drv_data {
 	void (*ssclk_control) (struct dw_mci * host, int enable);
 	void (*dump_reg) (struct dw_mci * host);
 	void (*runtime_pm_control)(struct dw_mci *host, int enable);
+	void (*cqe_swreset)(struct dw_mci *host);
 };
 
 struct dw_mci_sfr_ram_dump {

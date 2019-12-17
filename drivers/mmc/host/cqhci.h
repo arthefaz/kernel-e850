@@ -100,6 +100,8 @@
 /* response mode error mask */
 #define CQHCI_RMEM			0x50
 
+#define CQHCI_DEBUG1_ALL_SET 0xFFFFFFFF
+
 /* task error info */
 #define CQHCI_TERRI			0x54
 
@@ -304,6 +306,7 @@ struct cqhci_host_ops {
 				 u64 *data);
 	void (*pre_enable)(struct mmc_host *mmc);
 	void (*post_disable)(struct mmc_host *mmc);
+	int (*reset)(struct mmc_host *mmc, bool cqe_reset);
 	void (*cmdq_log)(struct mmc_host *mmc, bool new_cmd,
 				struct cmdq_log_ctx *log_ctx);
 #ifdef CONFIG_MMC_CRYPTO
