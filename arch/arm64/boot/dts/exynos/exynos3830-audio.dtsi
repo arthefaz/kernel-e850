@@ -118,6 +118,7 @@
 			reg = <0x0 0x14a51300 0x100>;
 			reg-names = "sfr";
 			samsung,id = <3>;
+			samsung,asrc-id = <7>;
 			samsung,type = "sync";
 			samsung,buffer_type = "dma";
 			#sound-dai-cells = <1>;
