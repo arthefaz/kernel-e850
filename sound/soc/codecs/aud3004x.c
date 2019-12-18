@@ -1543,13 +1543,14 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 		aud3004x_write(aud3004x, AUD3004X_41_PLAY_VOLL, 0x54);
 		aud3004x_write(aud3004x, AUD3004X_42_PLAY_VOLR, 0x54);
 
+#if 0
 		/* Testmode Enable */
 		aud3004x_update_bits(aud3004x, AUD3004X_B5_ODSEL0,
 				T_PDB_IGEN_MASK, T_PDB_IGEN_MASK);
 
 		/* PDB VMID/IGEN */
 		aud3004x_write(aud3004x, AUD3004X_110_PD_REF, 0x10);
-
+#endif
 		/* Speaker Boost enable */
 		aud3004x_update_bits(aud3004x, AUD3004X_92_BOOST_CTRL0,
 				DBFS_ADJ_MASK | BOOST_CTRL_EN_MASK,
@@ -1600,13 +1601,14 @@ static int spkdrv_ev(struct snd_soc_dapm_widget *w,
 		/* Speaker Boost disable */
 		aud3004x_update_bits(aud3004x, AUD3004X_92_BOOST_CTRL0,
 				DBFS_ADJ_MASK | BOOST_CTRL_EN_MASK, 0);
-
+#if 0
 		/* PDB VMID/IGEN disable */
 		aud3004x_write(aud3004x, AUD3004X_110_PD_REF, 0x00);
 
 		/* Testmode Disable */
 		aud3004x_update_bits(aud3004x, AUD3004X_B5_ODSEL0,
 				T_PDB_IGEN_MASK, 0);
+#endif
 		break;
 	}
 	return 0;
@@ -2794,9 +2796,6 @@ static void aud3004x_register_initialize(void *context)
 	aud3004x_update_bits(aud3004x, AUD3004X_CC_ACTR_DLDO,
 			CTRV_DIG_LDO_MASK, DLDO_1_5V << CTRV_DIG_LDO_SHIFT);
  
-	/* Speaker VTH */
-	aud3004x_write(aud3004x, AUD3004X_156_CTRL_SPK4, 0x36);
-
 	/* Speaker Skip */
 	aud3004x_write(aud3004x, AUD3004X_B1_AUTO_SPK1, 0x62);
 
