@@ -287,6 +287,7 @@
 			psci-index = <128>;
 			type = <POWERMODE_TYPE_CLUSTER>;
 			siblings = "4-7";
+		        entry-allowed = "4-7";
 		};
 
                sicd {
@@ -389,6 +390,8 @@
 			pm_qos-max-class = <6>;
 
 			#cooling-cells = <2>; /* min followed by max */
+
+			need-awake;
 
 			dm-constraints {
 				mif-perf {
