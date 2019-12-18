@@ -765,7 +765,7 @@ static int asrc_factor_put(struct snd_kcontrol *kcontrol,
 }
 
 static bool spus_asrc_force_enable[] = {
-	false, false, false, false,
+	false, false, false, true,
 	false, false, false, false,
 	false, false, false, false
 };
