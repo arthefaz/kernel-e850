@@ -552,7 +552,6 @@ void dpu_set_win_update_config(struct decon_device *decon,
 		 * hw configuration related to partial update must be set
 		 * without DMA operation
 		 */
-		decon_reg_wait_idle_status_timeout(decon->id, IDLE_WAIT_TIMEOUT);
 		win_update_send_partial_command(dsim, &regs->up_region);
 		win_update_set_partial_size(decon, &regs->up_region);
 		DPU_EVENT_LOG_APPLY_REGION(&decon->sd, &regs->up_region);
