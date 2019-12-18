@@ -2384,13 +2384,13 @@ static void aud3004x_dai_shutdown(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = dai->codec;
 	struct aud3004x_priv *aud3004x = snd_soc_codec_get_drvdata(codec);
 
-	dev_dbg(codec->dev, "(%s) %s completed\n",
-			substream->stream ? "C" : "P", __func__);
-
 	if (substream->stream)
 		aud3004x->capture_on = false;
 	else
 		aud3004x->playback_on = false;
+
+	dev_dbg(codec->dev, "(%s) %s completed\n",
+			substream->stream ? "C" : "P", __func__);
 }
 
 static int aud3004x_dai_hw_free(struct snd_pcm_substream *substream,
@@ -2407,44 +2407,41 @@ static int aud3004x_dai_hw_free(struct snd_pcm_substream *substream,
 	amic_on = chop_val2 & (MIC1_ON_MASK | MIC2_ON_MASK | MIC3_ON_MASK);
 	dac_on = chop_val2 & (SPK_ON_MASK | EP_ON_MASK | HP_ON_MASK | LINEOUT_ON_MASK);
 
-	dev_dbg(codec->dev, "(%s) %s completed\n",
-			substream->stream ? "C" : "P", __func__);
-
-	dev_dbg(codec->dev, "%s called, dac = 0x%02x, adc = 0x%02x\n", __func__,
-			dac_on, amic_on | dmic_on);
+	dev_dbg(codec->dev, "(%s) %s called, dac=0x%02x, adc=0x%02x\n",
+			substream->stream ? "C" : "P", __func__, dac_on, amic_on | dmic_on);
 
 	if (substream->stream) {
 		aud3004x_adc_digital_mute(codec, ADC_MUTE_ALL, true);
 
 		/* Capture Stream */
 		if (amic_on) {
-			if (amic_on & MIC1_ON_MASK) {
+			if (chop_val2 & MIC1_ON_MASK) {
 				/* MIC1 Auto Power OFF */
 				aud3004x_update_bits(aud3004x, AUD3004X_18_PWAUTO_AD,
-						APW_MIC1L_MASK, 0 << APW_MIC1L_SHIFT);
+						APW_MIC1L_MASK, 0);
 			}
 
-			if (amic_on & MIC2_ON_MASK) {
+			if (chop_val2 & MIC2_ON_MASK) {
 				/* MIC2 Auto Power OFF */
 				aud3004x_update_bits(aud3004x, AUD3004X_18_PWAUTO_AD,
-						APW_MIC2R_MASK, 0 << APW_MIC2R_SHIFT);
+						APW_MIC2R_MASK, 0);
 			}
 
-			if (amic_on & MIC3_ON_MASK) {
+			if (chop_val2 & MIC3_ON_MASK) {
 				/* MIC3 Auto Power OFF */
 				aud3004x_update_bits(aud3004x, AUD3004X_18_PWAUTO_AD,
-						APW_MIC3L_MASK, 0 << APW_MIC3L_SHIFT);
+						APW_MIC3L_MASK, 0);
 			}
 		}
 
 		if (dmic_on) {
-			if (dmic_on & DMIC1_ON_MASK) {
+			if (chop_val1 & DMIC1_ON_MASK) {
 				/* DMIC1 Disable */
 				aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
 						DMIC_EN1_MASK, 0);
 			}
 
-			if (dmic_on & DMIC2_ON_MASK) {
+			if (chop_val1 & DMIC2_ON_MASK) {
 				/* DMIC2 Disable */
 				aud3004x_update_bits(aud3004x, AUD3004X_33_ADC4,
 						DMIC_EN2_MASK, 0);
@@ -2459,24 +2456,27 @@ static int aud3004x_dai_hw_free(struct snd_pcm_substream *substream,
 		/* DAC mute enable */
 		aud3004x_dac_soft_mute(codec, DAC_MUTE_ALL, true);
 
-		if (dac_on & HP_ON_MASK) {
+		if (chop_val2 & HP_ON_MASK) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_HP_MASK, 0);
 		}
-		if (dac_on & EP_ON_MASK) {
+		if (chop_val2 & EP_ON_MASK) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_EP_MASK, 0);
 		}
-		if (dac_on & SPK_ON_MASK) {
+		if (chop_val2 & SPK_ON_MASK) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_SPK_MASK, 0);
 		}
-		if (dac_on & LINEOUT_ON_MASK) {
+		if (chop_val2 & LINEOUT_ON_MASK) {
 			/* Auto Power Off */
 			aud3004x_update_bits(aud3004x, AUD3004X_19_PWAUTO_DA, APW_LINE_MASK, 0);
 		}
-		aud3004x_usleep(500);
 	}
+
+	aud3004x_usleep(10000);
+	dev_dbg(codec->dev, "(%s) %s completed\n",
+			substream->stream ? "C" : "P", __func__);
 	return 0;
 }
 
@@ -2888,6 +2888,7 @@ static int aud3004x_codec_probe(struct snd_soc_codec *codec)
 
 	/* initialize mutex lock */
 	mutex_init(&aud3004x->regcache_lock);
+	mutex_init(&aud3004x->adc_mute_lock);
 	mutex_init(&aud3004x->regmap_lock);
 
 	msleep(20);
