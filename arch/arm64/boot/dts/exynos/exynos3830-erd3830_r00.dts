@@ -40,8 +40,8 @@
 				compatible = "samsung,exynos3830-madera";
 
 				samsung,routing = "ABOX SPDY Capture", "VINPUT_FM",
-					"BLUETOOTH SPK", "ABOX UAIF1 Playback",
-					"ABOX UAIF1 Capture", "BLUETOOTH MIC";
+					"BLUETOOTH SPK", "ABOX UAIF2 Playback",
+					"ABOX UAIF2 Capture", "BLUETOOTH MIC";
 
 				samsung,codec = <&abox &abox_uaif_0 &abox_uaif_1 &abox_uaif_2
 					&abox_spdy &abox_tplg
