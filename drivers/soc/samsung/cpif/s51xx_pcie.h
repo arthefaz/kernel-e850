@@ -24,6 +24,7 @@ extern int s51xx_pcie_init(struct modem_ctl *mc);
 extern int exynos_pcie_host_v1_register_event(struct exynos_pcie_register_event *reg);
 /* not used: extern int exynos_pcie_host_v1_deregister_event(struct exynos_pcie_register_event *reg); */
 extern void exynos_pcie_host_v1_register_dump(int ch_num);
+extern int exynos_pcie_rc_set_outbound_atu(int ch_num, u32 target_addr, u32 offset, u32 size);
 
 struct s51xx_pcie {
 	unsigned int busdev_num;
@@ -70,5 +71,6 @@ int s5100_poweron_pcie(struct modem_ctl *mc);
 int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off);
 int s5100_try_gpio_cp_wakeup(struct modem_ctl *mc);
 int s5100_send_panic_noti_ext(void);
+int s5100_set_outbound_atu(struct modem_ctl *mc, struct cp_btl *btl, loff_t *pos, u32 map_size);
 
 #endif /* __S51xx_PCIE_H__ */

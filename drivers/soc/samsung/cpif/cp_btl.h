@@ -24,6 +24,7 @@ enum cp_btl_id {
 struct cp_btl_mem_region {
 	unsigned long p_base;
 	void __iomem *v_base;
+	unsigned long cp_p_base;
 	u32 size;
 };
 
@@ -36,7 +37,11 @@ struct cp_btl {
 
 	u32 link_type; /* enum modem_link */
 	struct cp_btl_mem_region mem;
+#ifdef CONFIG_LINK_DEVICE_PCIE
+	int last_pcie_atu_grp;
+#endif
 
+	struct mem_link_device *mld;
 	struct miscdevice miscdev;
 };
 

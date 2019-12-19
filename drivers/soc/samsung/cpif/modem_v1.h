@@ -19,10 +19,7 @@
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
 #include <linux/types.h>
-
-#ifdef CONFIG_LINK_DEVICE_SHMEM
 #include <linux/shm_ipc.h>
-#endif
 
 #include "cp_btl.h"
 

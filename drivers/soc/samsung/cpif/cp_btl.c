@@ -28,8 +28,16 @@
 
 #include <linux/smc.h>
 
-#include "modem_prj.h"
+#include "modem_utils.h"
 #include "cp_btl.h"
+#ifdef CONFIG_LINK_DEVICE_PCIE
+#include "s51xx_pcie.h"
+#endif
+
+#define BTL_READ_SIZE_MAX	SZ_1M
+#ifdef CONFIG_LINK_DEVICE_PCIE
+#define BTL_MAP_SIZE		SZ_1M	/* per PCI BAR2 limit */
+#endif
 
 /* fops */
 static int btl_open(struct inode *inode, struct file *filep)
@@ -37,17 +45,21 @@ static int btl_open(struct inode *inode, struct file *filep)
 	struct cp_btl *btl = container_of(filep->private_data, struct cp_btl, miscdev);
 
 	filep->private_data = (void *)btl;
-
 	if (!btl) {
 		mif_err("btl is null\n");
 		return -ENODEV;
 	}
 
-	if (!btl->mem.v_base) {
+	if ((btl->link_type == LINKDEV_SHMEM) && !btl->mem.v_base) {
 		mif_err("%s: v_base is null\n", btl->name);
 		return -ENOMEM;
 	}
 
+#ifdef CONFIG_LINK_DEVICE_PCIE
+	btl->last_pcie_atu_grp = -1;
+#endif
+
+	mif_info("%s opened by %s\n", btl->name, current->comm);
 	return 0;
 }
 
@@ -61,11 +73,7 @@ static int btl_release(struct inode *inode, struct file *filep)
 		return -ENODEV;
 	}
 
-	if (!btl->mem.v_base) {
-		mif_err("%s: v_base is null\n", btl->name);
-		return -ENOMEM;
-	}
-
+	mif_info("%s closed by %s\n", btl->name, current->comm);
 	return 0;
 }
 
@@ -75,6 +83,13 @@ static ssize_t btl_read(struct file *filep, char __user *buf, size_t count, loff
 	unsigned long remainder = 0;
 	int len = 0;
 	int ret = 0;
+
+#ifdef CONFIG_LINK_DEVICE_PCIE
+	struct link_device *ld;
+	struct modem_ctl *mc;
+	void *btl_buf;
+	u32 atu_pos;
+#endif
 
 	btl = (struct cp_btl *)filep->private_data;
 	if (!btl) {
@@ -90,35 +105,94 @@ static ssize_t btl_read(struct file *filep, char __user *buf, size_t count, loff
 		return 0;
 	}
 
-	if (!btl->mem.v_base) {
-		mif_err("%s: v_base is null\n", btl->name);
-		ret = -ENOMEM;
-		goto read_exit;
-	}
-
 	remainder = btl->mem.size - *pos;
 	if (remainder == 0) { /* EOF */
 		mif_info("%s: %lld bytes read\n", btl->name, *pos);
-		ret = 0;
-		goto read_exit;
+		*pos = 0;
+		return 0;
 	}
 
-	len = min_t(size_t, count, SZ_1M);
+	len = min_t(size_t, count, BTL_READ_SIZE_MAX);
 	len = min_t(unsigned long, len, remainder);
-	ret = copy_to_user(buf, btl->mem.v_base + *pos, len);
+
+	switch (btl->link_type) {
+	case LINKDEV_SHMEM:
+		if (!btl->mem.v_base) {
+			mif_err("%s: v_base is null\n", btl->name);
+			ret = -ENOMEM;
+			break;
+		}
+
+		ret = copy_to_user(buf, btl->mem.v_base + *pos, len);
+		if (ret)
+			mif_err("%s: copy_to_user() error:%d", btl->name, ret);
+		break;
+	case LINKDEV_PCIE:
+#ifdef CONFIG_LINK_DEVICE_PCIE
+		ld = &btl->mld->link_dev;
+		mc = ld->mc;
+
+		btl_buf = NULL;
+		btl->mem.v_base = NULL;
+
+		atu_pos = (*pos) % BTL_MAP_SIZE;
+		len = min_t(unsigned long, len, BTL_MAP_SIZE - atu_pos);
+
+		mutex_lock(&mc->pcie_check_lock);
+		/* assume that pci link is up after CP BTL trigger */
+		if (!mc->pcie_powered_on ||
+				(s51xx_check_pcie_link_status(mc->pcie_ch_num) == 0)) {
+			mif_err("pci link is not ready\n");
+			ret = -EWOULDBLOCK;
+			goto link_exit;
+		}
+
+		ret = s5100_set_outbound_atu(ld->mc, btl, pos, BTL_MAP_SIZE);
+		if (ret != 0) {
+			mif_err("%s: failed to set ATU error:%d\n", btl->name, ret);
+			goto link_exit;
+		}
+
+		btl->mem.v_base = devm_ioremap(ld->dev, btl->mem.p_base, BTL_MAP_SIZE);
+		if (IS_ERR_OR_NULL(btl->mem.v_base)) {
+			mif_err("%s: failed to map\n", btl->name);
+			ret = -EFAULT;
+			goto link_exit;
+		}
+
+		btl_buf = vzalloc(len);
+		if (!btl_buf) {
+			mif_err("%s: failed to alloc\n", btl->name);
+			ret = -ENOMEM;
+			goto link_exit;
+		}
+
+		memcpy_fromio(btl_buf, btl->mem.v_base + atu_pos, len);
+		ret = copy_to_user(buf, btl_buf, len);
+		if (ret)
+			mif_err("%s: copy_to_user() error:%d", btl->name, ret);
+
+link_exit:
+		if (btl_buf)
+			vfree(btl_buf);
+		if (!IS_ERR_OR_NULL(btl->mem.v_base)) {
+			devm_iounmap(ld->dev, btl->mem.v_base);
+			btl->mem.v_base = NULL;
+		}
+		mutex_unlock(&mc->pcie_check_lock);
+#endif
+		break;
+	default:
+		break;
+	}
+
 	if (ret) {
-		mif_err("%s: copy_to_user() error:%d", btl->name, ret);
-		goto read_exit;
+		*pos = 0;
+		return ret;
 	}
 
 	*pos += len;
-
 	return len;
-
-read_exit:
-	*pos = 0;
-
-	return ret;
 }
 
 #define IOCTL_GET_BTL_SIZE	_IO('o', 0x59)
@@ -253,6 +327,11 @@ int cp_btl_create(struct cp_btl *btl, struct device *dev)
 		break;
 
 	case LINKDEV_PCIE:
+		btl->mem.v_base = NULL;
+		btl->mem.p_base = 0x14200000;
+		/* actual cp address is 0x47200000, but needs additional 0x40000000 */
+		btl->mem.cp_p_base = 0x87200000;
+		btl->mem.size = (SZ_32M - SZ_2M);
 		break;
 
 	default:
@@ -260,6 +339,8 @@ int cp_btl_create(struct cp_btl *btl, struct device *dev)
 		ret = -EINVAL;
 		goto create_exit;
 	}
+
+	btl->mld = pdata->mld;
 
 	btl->miscdev.minor = MISC_DYNAMIC_MINOR;
 	btl->miscdev.name = btl->name;
@@ -270,7 +351,8 @@ int cp_btl_create(struct cp_btl *btl, struct device *dev)
 		goto create_exit;
 	}
 
-	memset(btl->mem.v_base, 0, btl->mem.size);
+	if (btl->mem.v_base)
+		memset(btl->mem.v_base, 0, btl->mem.size);
 	atomic_set(&btl->active, 1);
 
 	return 0;

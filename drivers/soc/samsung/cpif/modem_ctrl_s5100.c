@@ -1092,6 +1092,20 @@ exit:
 	return 0;
 }
 
+int s5100_set_outbound_atu(struct modem_ctl *mc, struct cp_btl *btl, loff_t *pos, u32 map_size)
+{
+	int ret = 0;
+	u32 atu_grp = (*pos) / map_size;
+
+	if (atu_grp != btl->last_pcie_atu_grp) {
+		ret = exynos_pcie_rc_set_outbound_atu(
+			mc->pcie_ch_num, btl->mem.cp_p_base, (atu_grp * map_size), map_size);
+		btl->last_pcie_atu_grp = atu_grp;
+	}
+
+	return ret;
+}
+
 static int suspend_cp(struct modem_ctl *mc)
 {
 	if (!mc)
