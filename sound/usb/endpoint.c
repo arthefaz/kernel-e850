@@ -423,6 +423,10 @@ static void snd_complete_urb(struct urb *urb)
 	}
 
 exit_clear:
+	if (urb->status == -ECONNRESET) {
+		pr_info("SKIP: cleare_bit...\n");
+		return;
+	}
 	clear_bit(ctx->index, &ep->active_mask);
 }
 
