@@ -699,6 +699,7 @@ struct modem_ctl {
 
 	struct wake_lock mc_wake_lock;
 	struct mutex pcie_onoff_lock;
+	struct mutex pcie_check_lock;
 	spinlock_t pcie_tx_lock;
 	spinlock_t pcie_pm_lock;
 	struct pci_driver pci_driver;

@@ -81,9 +81,9 @@ static int s5100_reboot_handler(struct notifier_block *nb,
 
 	mif_info("Now is device rebooting..\n");
 
-	mutex_lock(&mc->pcie_onoff_lock);
+	mutex_lock(&mc->pcie_check_lock);
 	mc->device_reboot = true;
-	mutex_unlock(&mc->pcie_onoff_lock);
+	mutex_unlock(&mc->pcie_check_lock);
 
 	return 0;
 }
@@ -145,7 +145,7 @@ static void voice_call_on_work(struct work_struct *ws)
 {
 	struct modem_ctl *mc = container_of(ws, struct modem_ctl, call_on_work);
 
-	mutex_lock(&mc->pcie_onoff_lock);
+	mutex_lock(&mc->pcie_check_lock);
 	if (!mc->pcie_voice_call_on)
 		goto exit;
 
@@ -158,14 +158,14 @@ static void voice_call_on_work(struct work_struct *ws)
 exit:
 	mif_info("wakelock active = %d, voice status = %d\n",
 		wake_lock_active(&mc->mc_wake_lock), mc->pcie_voice_call_on);
-	mutex_unlock(&mc->pcie_onoff_lock);
+	mutex_unlock(&mc->pcie_check_lock);
 }
 
 static void voice_call_off_work(struct work_struct *ws)
 {
 	struct modem_ctl *mc = container_of(ws, struct modem_ctl, call_off_work);
 
-	mutex_lock(&mc->pcie_onoff_lock);
+	mutex_lock(&mc->pcie_check_lock);
 	if (mc->pcie_voice_call_on)
 		goto exit;
 
@@ -178,7 +178,7 @@ static void voice_call_off_work(struct work_struct *ws)
 exit:
 	mif_info("wakelock active = %d, voice status = %d\n",
 		wake_lock_active(&mc->mc_wake_lock), mc->pcie_voice_call_on);
-	mutex_unlock(&mc->pcie_onoff_lock);
+	mutex_unlock(&mc->pcie_check_lock);
 }
 #endif
 
@@ -892,6 +892,7 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 	unsigned long flags;
 
 	mutex_lock(&mc->pcie_onoff_lock);
+	mutex_lock(&mc->pcie_check_lock);
 	mif_info("+++\n");
 
 	if (!mc->pcie_powered_on &&
@@ -946,6 +947,7 @@ int s5100_poweroff_pcie(struct modem_ctl *mc, bool force_off)
 
 exit:
 	mif_info("---\n");
+	mutex_unlock(&mc->pcie_check_lock);
 	mutex_unlock(&mc->pcie_onoff_lock);
 
 	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
@@ -988,6 +990,7 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 	}
 
 	mutex_lock(&mc->pcie_onoff_lock);
+	mutex_lock(&mc->pcie_check_lock);
 	mif_info("+++\n");
 	if (mc->pcie_powered_on &&
 			(s51xx_check_pcie_link_status(mc->pcie_ch_num) != 0)) {
@@ -1074,6 +1077,7 @@ int s5100_poweron_pcie(struct modem_ctl *mc)
 
 exit:
 	mif_info("---\n");
+	mutex_unlock(&mc->pcie_check_lock);
 	mutex_unlock(&mc->pcie_onoff_lock);
 
 	spin_lock_irqsave(&mc->pcie_tx_lock, flags);
@@ -1430,6 +1434,7 @@ int s5100_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 
 	wake_lock_init(&mc->mc_wake_lock, WAKE_LOCK_SUSPEND, "s5100_wake_lock");
 	mutex_init(&mc->pcie_onoff_lock);
+	mutex_init(&mc->pcie_check_lock);
 	spin_lock_init(&mc->pcie_tx_lock);
 	spin_lock_init(&mc->pcie_pm_lock);
 
