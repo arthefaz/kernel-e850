@@ -167,9 +167,6 @@ int exynos_cpuhp_request(char *name, struct cpumask mask, int type)
 {
 	int ret;
 
-	/* HACK : block cpuhp request cause of H/W problem */
-	return 0;
-
 	mutex_lock(&cpuhp.lock);
 
 	if (cpuhp_update_user(name, mask, type)) {
