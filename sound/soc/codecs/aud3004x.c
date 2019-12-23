@@ -121,9 +121,9 @@ static void i2c_client_change(struct aud3004x_priv *aud3004x, int client)
 		i2c = aud3004x->i2c_priv[client];
 		codec->component.regmap = aud3004x->regmap[client];
 	} else {
-		mutex_unlock(&aud3004x->regmap_lock);
 		i2c = aud3004x->i2c_priv[AUD3004D];
 		codec->component.regmap = aud3004x->regmap[AUD3004D];
+		mutex_unlock(&aud3004x->regmap_lock);
 	}
 }
 
