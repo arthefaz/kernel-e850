@@ -1224,6 +1224,12 @@ void dsim_reg_enable_packetgo(u32 id, u32 en)
 				DSIM_CMD_CONFIG_PKT_GO_EN);
 }
 
+void dsim_reg_set_packetgo_ready(u32 id)
+{
+	dsim_write_mask(id, DSIM_CMD_CONFIG, DSIM_CMD_CONFIG_PKT_GO_RDY,
+			DSIM_CMD_CONFIG_PKT_GO_RDY);
+}
+
 static void dsim_reg_enable_multi_cmd_packet(u32 id, u32 en)
 {
 	u32 val = en ? ~0 : 0;
@@ -2340,11 +2346,13 @@ u32 dsim_reg_payload_fifo_is_empty(u32 id)
 	return dsim_read_mask(id, DSIM_FIFOCTRL, DSIM_FIFOCTRL_EMPTY_PL_SFR);
 }
 
-bool dsim_reg_is_writable_ph_fifo_state(u32 id)
+bool dsim_reg_is_writable_ph_fifo_state(u32 id, u32 cmd_cnt)
 {
 	u32 val = dsim_read(id, DSIM_FIFOCTRL);
 
 	val = DSIM_FIFOCTRL_NUMBER_OF_PH_SFR_GET(val);
+	val += cmd_cnt;
+
 	if (val < DSIM_PH_FIFOCTRL_THRESHOLD)
 		return true;
 	else
