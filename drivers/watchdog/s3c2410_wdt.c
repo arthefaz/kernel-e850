@@ -608,7 +608,8 @@ static int s3c2410wdt_keepalive(struct watchdog_device *wdd)
 	dev_info(wdt->dev,
 		"Watchdog cluster %u keepalive!, old_wtcnt = %lx, wtcnt = %lx\n",
 		wdt->cluster, old_wtcnt, wtcnt);
-	if (!(wdt->in_panic || in_interrupt() || wdt->in_suspend))
+	if (!(wdt->in_panic || in_interrupt() || wdt->in_suspend
+				|| system_state == SYSTEM_POWER_OFF))
 		s3c2410wdt_gettime(wdt->cluster);
 
 	return 0;
@@ -1039,7 +1040,8 @@ static void s3c2410wdt_multistage_wdt_keepalive(void)
 	dev_info(s3c_wdt[index]->dev,
 		"Watchdog cluster %u keepalive!, old_wtcnt = %lx, wtcnt = %lx\n",
 		s3c_wdt[index]->cluster, old_wtcnt, wtcnt);
-	if (!(s3c_wdt[index]->in_panic || in_interrupt() || s3c_wdt[index]->in_suspend))
+	if (!(s3c_wdt[index]->in_panic || in_interrupt() || s3c_wdt[index]->in_suspend
+				|| system_state == SYSTEM_POWER_OFF))
 		s3c2410wdt_gettime(index);
 
 }
