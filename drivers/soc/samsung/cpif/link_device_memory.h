@@ -267,6 +267,8 @@ struct mem_link_device {
 	unsigned int sbi_cp_status_mask;
 	unsigned int sbi_cp_status_pos;
 
+	unsigned int total_freq_table_count;
+
 	struct freq_table mif_table;
 	struct freq_table cp_table;
 	struct freq_table modem_table;

@@ -495,7 +495,7 @@ static void write_clk_table_to_shmem(struct mem_link_device *mld)
 	clk_tb = (struct clock_table *)mld->clk_table;
 
 	strcpy(clk_tb->parser_version, "CT0");
-	clk_tb->total_table_count = 3;
+	clk_tb->total_table_count = mld->total_freq_table_count;
 
 	strcpy(clk_tb->table_info[0].table_name, "MIF");
 	clk_tb->table_info[0].table_count = mld->mif_table.num_of_table;
@@ -2997,6 +2997,7 @@ static int parse_ect(struct mem_link_device *mld, char *dvfs_domain_name)
 
 	if (!strcmp(dvfs_domain_name, "MIF")) {
 		mld->mif_table.num_of_table = dvfs_domain->num_of_level;
+		mld->total_freq_table_count++;
 		for (i = dvfs_domain->num_of_level - 1; i >= 0; i--) {
 			mld->mif_table.freq[i] =
 				dvfs_domain->list_level[counter++].level;
@@ -3005,6 +3006,7 @@ static int parse_ect(struct mem_link_device *mld, char *dvfs_domain_name)
 		}
 	} else if (!strcmp(dvfs_domain_name, "CP")) {
 		mld->cp_table.num_of_table = dvfs_domain->num_of_level;
+		mld->total_freq_table_count++;
 		for (i = dvfs_domain->num_of_level - 1; i >= 0; i--) {
 			mld->cp_table.freq[i] =
 				dvfs_domain->list_level[counter++].level;
@@ -3013,6 +3015,7 @@ static int parse_ect(struct mem_link_device *mld, char *dvfs_domain_name)
 		}
 	} else if (!strcmp(dvfs_domain_name, "MODEM")) {
 		mld->modem_table.num_of_table = dvfs_domain->num_of_level;
+		mld->total_freq_table_count++;
 		for (i = dvfs_domain->num_of_level - 1; i >= 0; i--) {
 			mld->modem_table.freq[i] =
 				dvfs_domain->list_level[counter++].level;
