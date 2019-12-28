@@ -1122,13 +1122,14 @@ static int dpp_probe(struct platform_device *pdev)
 	mutex_init(&dpp->lock);
 	init_waitqueue_head(&dpp->framedone_wq);
 
+	timer_setup(&dpp->op_timer, dpp_op_timer_handler, 0);
+
 	ret = dpp_init_resources(dpp, pdev);
 	if (ret)
 		goto err_clk;
 
 	dpp_init_subdev(dpp);
 	platform_set_drvdata(pdev, dpp);
-	timer_setup(&dpp->op_timer, dpp_op_timer_handler, 0);
 
 	/* dpp becomes output device of connected DECON in case of writeback */
 	ret = dpp_set_output_device(dpp);
