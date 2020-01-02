@@ -1326,6 +1326,9 @@ static void s5100_get_pdata(struct modem_ctl *mc, struct modem_data *pdata)
 	}
 	mif_info("S5100 PCIe Channel Number : %d\n", mc->pcie_ch_num);
 
+	mc->sbi_crash_type_mask = pdata->sbi_crash_type_mask;
+	mc->sbi_crash_type_pos = pdata->sbi_crash_type_pos;
+
 	mc->sbi_ds_det_mask = pdata->sbi_ds_det_mask;
 	mc->sbi_ds_det_pos = pdata->sbi_ds_det_pos;
 }

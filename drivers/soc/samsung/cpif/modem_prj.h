@@ -677,15 +677,15 @@ struct modem_ctl {
 	unsigned int sbi_uart_noti_mask;
 	unsigned int sbi_uart_noti_pos;
 
-	unsigned int sbi_crash_type_mask;
-	unsigned int sbi_crash_type_pos;
-
 	unsigned int sbi_lcd_status_mask;
 	unsigned int sbi_lcd_status_pos;
 
 	unsigned int ap2cp_cfg_addr;
 	void __iomem *ap2cp_cfg_ioaddr;
 #endif
+
+	unsigned int sbi_crash_type_mask;
+	unsigned int sbi_crash_type_pos;
 
 	unsigned int sbi_ds_det_mask;
 	unsigned int sbi_ds_det_pos;
