@@ -249,15 +249,15 @@ void dwc3_core_config(struct dwc3 *dwc)
 	 */
 	reg = dwc3_readl(dwc->regs, DWC3_GUCTL);
 	reg |= (DWC3_GUCTL_USBHSTINAUTORETRYEN);
-	if (dwc->adj_sof_accuracy) {
-		reg &= ~DWC3_GUCTL_REFCLKPER_MASK;
-		/* fix ITP interval time to 125us */
-		reg |= DWC3_GUCTL_REFCLKPER(0xF);
-	}
+
+	reg &= ~DWC3_GUCTL_REFCLKPER_MASK;
+	/* fix ITP interval time to 125us */
+	reg |= DWC3_GUCTL_REFCLKPER(0x14);
+
 	if (dwc->dis_u2_freeclk_exists_quirk) {
 		reg &= ~DWC3_GUCTL_REFCLKPER_MASK;
 		/* fix ITP interval time to 125us */
-		reg |= DWC3_GUCTL_REFCLKPER(0xF);
+		reg |= DWC3_GUCTL_REFCLKPER(0x14);
 	}
 	if (dwc->sparse_transfer_control)
 		reg |= DWC3_GUCTL_SPRSCTRLTRANSEN;
