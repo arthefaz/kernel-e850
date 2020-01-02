@@ -684,7 +684,7 @@
 
 			usb_hs_tune:hs_tune {
 				status = "disabled";
-				hs_tune_cnt = <4>;
+				hs_tune_cnt = <10>;
 				/* value = <device host> */
 				hs_tune1 {
 					tune_name = "tx_pre_emp";
@@ -692,16 +692,46 @@
 				};
 
 				hs_tune2 {
-					tune_name = "tx_vref";
-					tune_value = <0xc 0xc>;
+					tune_name = "tx_pre_emp_plus";
+					tune_value = <0x0 0x0>;
 				};
 
 				hs_tune3 {
-					tune_name = "rx_sqrx";
-					tune_value = <0x5 0x5>;
+					tune_name = "tx_vref";
+					tune_value = <0xf 0xf>;
 				};
 
 				hs_tune4 {
+					tune_name = "rx_sqrx";
+					tune_value = <0x7 0x7>;
+				};
+
+				hs_tune5 {
+					tune_name = "tx_rise";
+					tune_value = <0x3 0x3>;
+				};
+
+				hs_tune6 {
+					tune_name = "compdis";
+					tune_value = <0x7 0x7>;
+				};
+
+				hs_tune7 {
+					tune_name = "tx_hsxv";
+					tune_value = <0x3 0x3>;
+				};
+
+				hs_tune8 {
+					tune_name = "tx_fsls";
+					tune_value = <0x3 0x3>;
+				};
+
+				hs_tune9 {
+					tune_name = "tx_res";
+					tune_value = <0x3 0x3>;
+				};
+
+				hs_tune10 {
 					tune_name = "utmi_clk";
 					tune_value = <0x1 0x1>;
 				};
@@ -753,7 +783,7 @@
 	pinctrl-names = "default";
 //	pinctrl-0 = <&phy_port>;
 //	phy,gpio_phy_port = <&gpg0 4 0x0>;
-//	hs_tune_param = <&usb_hs_tune>;
+	hs_tune_param = <&usb_hs_tune>;
 //	ss_tune_param = <&usb_ss_tune>;
 };
 
