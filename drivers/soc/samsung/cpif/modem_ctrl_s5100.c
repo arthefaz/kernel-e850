@@ -108,11 +108,8 @@ static void print_mc_state(struct modem_ctl *mc)
 
 static void pcie_clean_dislink(struct modem_ctl *mc)
 {
-	if (mc->pcie_powered_on) {
-		if (s51xx_check_pcie_link_status(mc->pcie_ch_num) == 0)
-			mif_err("dislinked unexpectedly, force dislink!!\n");
+	if (mc->pcie_powered_on)
 		s5100_poweroff_pcie(mc, true);
-	}
 
 	if (!mc->pcie_powered_on)
 		mif_err("Link is disconnected!!!\n");
