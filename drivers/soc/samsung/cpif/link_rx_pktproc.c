@@ -58,6 +58,18 @@ struct pktproc_perftest_data perftest_data[PERFTEST_MODE_MAX] = {
 };
 #endif
 
+static bool pktproc_check_hw_checksum(u8 status)
+{
+	if (unlikely(status & PKTPROC_STATUS_IGNR))
+		return false;
+	if (unlikely(!(status & PKTPROC_STATUS_IPCS) || !(status & PKTPROC_STATUS_TCPC)))
+		return false;
+	if (unlikely((status & PKTPROC_STATUS_IPCSF) || (status & PKTPROC_STATUS_TCPCF)))
+		return false;
+
+	return true;
+}
+
 /*
  * Get a packet: ringbuf mode
  */
@@ -127,10 +139,10 @@ static int pktproc_get_pkt_from_ringbuf_mode(struct pktproc_queue *q, struct sk_
 	skbpriv(skb)->ld = ld;
 	switch (q->ppa->version) {
 	case PKTPROC_V2:
-		if (desc[*q->rear_ptr].status & 0x0C)	/* [3]IPCSF, [2] TCPCF */
-			q->stat.err_csum++;
-		else
+		if (pktproc_check_hw_checksum(desc[*q->rear_ptr].status))
 			skb->ip_summed = CHECKSUM_UNNECESSARY;
+		else
+			q->stat.err_csum++;
 		break;
 	default:
 		break;
@@ -301,10 +313,11 @@ static int pktproc_get_pkt_from_sktbuf_mode(struct pktproc_queue *q, struct sk_b
 		skb_put(skb, len);
 	}
 
-	if (desc[q->done_ptr].status & 0x0C)	/* [3]IPCSF, [2] TCPCF */
-		q->stat.err_csum++;
-	else
+	if (pktproc_check_hw_checksum(desc[q->done_ptr].status))
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
+	else
+		q->stat.err_csum++;
+
 
 #ifdef PKTPROC_DEBUG_PKT
 	pr_buffer("pktproc", (char *)skb->data, (size_t)len, (size_t)40);

@@ -28,6 +28,15 @@
 #define PKTPROC_MAX_QUEUE	4
 #define PKTPROC_MAX_PACKET_SIZE	2048
 
+/* Status bit field */
+#define PKTPROC_STATUS_DONE	0x01
+#define PKTPROC_STATUS_TCPCF	0x04
+#define PKTPROC_STATUS_IPCSF	0x08
+#define PKTPROC_STATUS_IGNR	0x10
+#define PKTPROC_STATUS_TCPC	0x20
+#define PKTPROC_STATUS_IPCS	0x40
+#define PKTPROC_STATUS_PFD	0x80
+
 /*
  * PktProc info region
  */
