@@ -722,6 +722,10 @@ struct modem_ctl {
 	struct notifier_block abox_call_state_nb;
 #endif
 
+#if defined(CONFIG_LINK_DEVICE_PCIE_GPIO_WA)
+	spinlock_t gpio_toggle_lock;
+#endif
+
 	int s5100_gpio_cp_pwr;
 	int s5100_gpio_cp_reset;
 	int s5100_gpio_cp_ps_hold;

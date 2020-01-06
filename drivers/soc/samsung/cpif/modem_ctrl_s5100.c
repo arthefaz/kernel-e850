@@ -540,6 +540,9 @@ exit:
 static int power_reset_dump_cp(struct modem_ctl *mc)
 {
 	struct s51xx_pcie *s51xx_pcie = pci_get_drvdata(mc->s51xx_pdev);
+#ifdef CONFIG_LINK_DEVICE_PCIE_GPIO_WA
+	unsigned long flags;
+#endif
 
 	mif_info("%s: +++\n", mc->name);
 
@@ -556,8 +559,10 @@ static int power_reset_dump_cp(struct modem_ctl *mc)
 	}
 
 #ifdef CONFIG_LINK_DEVICE_PCIE_GPIO_WA
+	spin_lock_irqsave(&mc->gpio_toggle_lock, flags);
 	if (mif_gpio_set_value(mc->s5100_gpio_cp_dump_noti, 1, 10))
 		mif_gpio_toggle_value(mc->s5100_gpio_ap_status, 50);
+	spin_unlock_irqrestore(&mc->gpio_toggle_lock, flags);
 #else
 	mif_gpio_set_value(mc->s5100_gpio_cp_dump_noti, 1, 0);
 #endif
@@ -770,6 +775,9 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 	struct link_device *ld = get_current_link(mc->bootd);
 	struct mem_link_device *mld = to_mem_link_device(ld);
 	u32 crash_type;
+#ifdef CONFIG_LINK_DEVICE_PCIE_GPIO_WA
+	unsigned long flags;
+#endif
 
 	if (ld->crash_reason.type == CRASH_REASON_NONE)
 		ld->crash_reason.type = CRASH_REASON_MIF_FORCED;
@@ -786,8 +794,10 @@ static int trigger_cp_crash(struct modem_ctl *mc)
 
 	if (mif_gpio_get_value(mc->s5100_gpio_phone_active, true) == 1) {
 #ifdef CONFIG_LINK_DEVICE_PCIE_GPIO_WA
+		spin_lock_irqsave(&mc->gpio_toggle_lock, flags);
 		if (mif_gpio_set_value(mc->s5100_gpio_cp_dump_noti, 1, 10))
 			mif_gpio_toggle_value(mc->s5100_gpio_ap_status, 50);
+		spin_unlock_irqrestore(&mc->gpio_toggle_lock, flags);
 #else
 		mif_gpio_set_value(mc->s5100_gpio_cp_dump_noti, 1, 0);
 #endif
@@ -1451,6 +1461,9 @@ int s5100_init_modemctl_device(struct modem_ctl *mc, struct modem_data *pdata)
 	mutex_init(&mc->pcie_check_lock);
 	spin_lock_init(&mc->pcie_tx_lock);
 	spin_lock_init(&mc->pcie_pm_lock);
+#if defined(CONFIG_LINK_DEVICE_PCIE_GPIO_WA)
+	spin_lock_init(&mc->gpio_toggle_lock);
+#endif
 
 	mif_gpio_set_value(mc->s5100_gpio_cp_reset, 0, 0);
 

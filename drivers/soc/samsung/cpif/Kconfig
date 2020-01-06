@@ -123,6 +123,7 @@ config MODEM_IF_NET_GRO
 
 config SUSPEND_DURING_VOICE_CALL
 	bool "control wake_lock by voice call start/end notification"
+	depends on LINK_DEVICE_PCIE
 	default n
 	---help---
 	  This enables AP suspend during PCM over PCIE
