@@ -361,8 +361,6 @@ static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_type, c
 		case CRASH_REASON_MIF_TX_ERR:
 		case CRASH_REASON_MIF_RIL_BAD_CH:
 		case CRASH_REASON_MIF_RX_BAD_DATA:
-		case CRASH_REASON_MIF_ZMC:
-		case CRASH_REASON_MIF_MDM_CTRL:
 		case CRASH_REASON_MIF_FORCED:
 			if (strlen(string))
 				strlcat(ld->crash_reason.string, string,
@@ -379,8 +377,6 @@ static void link_trigger_cp_crash(struct mem_link_device *mld, u32 crash_type, c
 		case CRASH_REASON_MIF_TX_ERR:
 		case CRASH_REASON_MIF_RIL_BAD_CH:
 		case CRASH_REASON_MIF_RX_BAD_DATA:
-		case CRASH_REASON_MIF_ZMC:
-		case CRASH_REASON_MIF_MDM_CTRL:
 		case CRASH_REASON_MIF_FORCED:
 		case CRASH_REASON_RIL_TRIGGER_CP_CRASH:
 			if (strlen(string))
