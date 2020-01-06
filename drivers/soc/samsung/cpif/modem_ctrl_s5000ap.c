@@ -127,7 +127,7 @@ static int __init console_setup(char *str)
 
 	return 0;
 }
-__setup("androidboot.hw_rev=", console_setup);
+__setup("androidboot.revision=", console_setup);
 
 static int __init set_hw_revision(char *str)
 {
