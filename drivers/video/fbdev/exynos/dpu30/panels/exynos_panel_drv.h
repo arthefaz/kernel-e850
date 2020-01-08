@@ -54,6 +54,7 @@ extern struct exynos_panel_ops panel_s6e3ha9_ops;
 extern struct exynos_panel_ops panel_s6e3ha8_ops;
 extern struct exynos_panel_ops panel_s6e3fa0_ops;
 extern struct exynos_panel_ops panel_ea8076_ops;
+extern struct exynos_panel_ops panel_td4150_ops;
 
 struct exynos_panel_resources {
 	int lcd_reset;
