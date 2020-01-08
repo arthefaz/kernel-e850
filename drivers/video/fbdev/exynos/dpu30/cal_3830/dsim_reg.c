@@ -2044,24 +2044,24 @@ void dsim_reg_preinit(u32 id)
 
 	/* default configuration just for reading panel id */
 	memset(&clks, 0, sizeof(struct dsim_clks));
-	clks.hs_clk = 1200;
+	clks.hs_clk = 830;
 	clks.esc_clk = 16;
 	memset(&lcd_info, 0, sizeof(struct exynos_panel_info));
-	lcd_info.vfp = 20;
-	lcd_info.vbp = 2;
+	lcd_info.vfp = 24;
+	lcd_info.vbp = 4;
 	lcd_info.vsa = 2;
-	lcd_info.hfp = 20;
-	lcd_info.hbp = 20;
-	lcd_info.hsa = 20;
+	lcd_info.hfp = 508;
+	lcd_info.hbp = 80;
+	lcd_info.hsa = 2;
 	lcd_info.fps = 60;
-	lcd_info.hs_clk = 1200;
-	lcd_info.mode = DECON_MIPI_COMMAND_MODE;
-	lcd_info.xres = 1080;
-	lcd_info.yres = 2340;
+	lcd_info.hs_clk = 830;
+	lcd_info.mode = DECON_VIDEO_MODE;
+	lcd_info.xres = 720;
+	lcd_info.yres = 1600;
 	lcd_info.dphy_pms.p = 2;
-	lcd_info.dphy_pms.m = 185;
-	lcd_info.dphy_pms.s = 1;
-	lcd_info.dphy_pms.k = 0x9D8A;
+	lcd_info.dphy_pms.m = 255;
+	lcd_info.dphy_pms.s = 2;
+	lcd_info.dphy_pms.k = 25206;
 	lcd_info.data_lane = 4;
 	lcd_info.cmd_underrun_cnt[0] = 1695;
 
