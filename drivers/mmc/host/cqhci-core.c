@@ -754,11 +754,17 @@ static int cqhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 			}
 			log_ctx.x4 = 0;
 		} else {
-			log_ctx.x2 = (mrq->data->flags & MMC_DATA_READ) ?
-						CQ_LOG_CMD_READ	:
-						CQ_LOG_CMD_WRITE;
-			log_ctx.x3 = mrq->data->blk_addr;
-			log_ctx.x4 = mrq->data->blocks;
+			if (mrq->data) {
+				log_ctx.x2 = (mrq->data->flags & MMC_DATA_READ) ?
+							CQ_LOG_CMD_READ	:
+							CQ_LOG_CMD_WRITE;
+				log_ctx.x3 = mrq->data->blk_addr;
+				log_ctx.x4 = mrq->data->blocks;
+			} else {
+				log_ctx.x2 = 0;
+				log_ctx.x3 = 0;
+				log_ctx.x4 = 0;
+			}
 		}
 		cq_host->ops->cmdq_log(cq_host->mmc, true, &log_ctx);
 		cq_host->cmd_log_idx[tag] = log_ctx.idx;
