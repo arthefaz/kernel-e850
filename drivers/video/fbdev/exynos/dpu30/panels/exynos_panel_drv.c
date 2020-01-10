@@ -17,6 +17,7 @@
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
 
+#include "panel_i2c.h"
 #include "exynos_panel_drv.h"
 
 int dpu_panel_log_level = 7;
@@ -203,7 +204,22 @@ static int exynos_panel_set_power(struct exynos_panel_device *panel, bool on)
 				return ret;
 			}
 		}
+
+		panel_i2c_write(0x0c, 0x28);
+		panel_i2c_write(0x0d, 0x26);
+		panel_i2c_write(0x0e, 0x26);
+		panel_i2c_write(0x09, 0xbe);
+		panel_i2c_write(0x02, 0x69);
+		panel_i2c_write(0x03, 0x0d);
+		panel_i2c_write(0x11, 0x75);
+		panel_i2c_write(0x04, 0x04);
+		panel_i2c_write(0x05, 0xee);
+		panel_i2c_write(0x10, 0x07);
+		panel_i2c_write(0x08, 0x13);
+
 	} else {
+		panel_i2c_write(0x09, 0x98);
+
 		ret = gpio_request_one(res->lcd_reset, GPIOF_OUT_INIT_LOW,
 				"lcd_reset");
 		if (ret < 0) {
