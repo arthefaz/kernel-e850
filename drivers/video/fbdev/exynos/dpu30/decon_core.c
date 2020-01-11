@@ -4040,6 +4040,7 @@ static int decon_probe(struct platform_device *pdev)
 #if defined(CONFIG_EXYNOS_BTS)
 	decon->bts.ops = &decon_bts_control;
 	decon->bts.ops->bts_init(decon);
+	decon->bts.ops->bts_acquire_bw(decon);
 #endif
 
 	platform_set_drvdata(pdev, decon);
