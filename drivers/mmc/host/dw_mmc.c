@@ -2460,6 +2460,7 @@ static void dw_mci_restore_host(struct mmc_host *mmc)
 	mci_writel(host, CTRL, SDMMC_CTRL_INT_ENABLE);
 }
 
+#endif
 static void dw_mci_runtime_pm_control(struct mmc_host *mmc, int enable)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
@@ -2469,7 +2470,6 @@ static void dw_mci_runtime_pm_control(struct mmc_host *mmc, int enable)
 	if (drv_data && drv_data->runtime_pm_control)
 		drv_data->runtime_pm_control(host, enable);
 }
-#endif
 
 static const struct mmc_host_ops dw_mci_ops = {
 	.request		= dw_mci_request,

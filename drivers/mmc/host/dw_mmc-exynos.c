@@ -286,15 +286,6 @@ static int dw_mci_exynos_priv_init(struct dw_mci *host)
 			exynos_pmu_update(priv->pmu.offset, priv->pmu.mask, priv->pmu.val);
 	}
 
-	if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM) {
-		pm_runtime_enable(host->dev);
-		pm_runtime_get_sync(host->dev);
-		if (priv->pinctrl && priv->clk_drive_base)
-			pinctrl_select_state(priv->pinctrl, priv->clk_drive_base);
-		if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD)
-			exynos_pmu_update(priv->pmu.offset, priv->pmu.mask, priv->pmu.val);
-	}
-
 	priv->saved_strobe_ctrl = mci_readl(host, HS400_DLINE_CTRL);
 	priv->saved_dqs_en = mci_readl(host, HS400_DQS_EN);
 	priv->saved_dqs_en |= AXI_NON_BLOCKING_WR;
