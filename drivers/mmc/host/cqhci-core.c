@@ -696,6 +696,14 @@ static int cqhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		cqhci_prep_dcmd_desc(mmc, mrq);
 	}
 
+	wmb();
+	if (cqhci_readl(cq_host, CQHCI_TDBR) & (1 << tag)) {
+		pr_err("%s: cqhci: doorbell duplicated for tag %d\n",
+			 mmc_hostname(mmc), tag);
+		cqhci_dumpregs(cq_host);
+		BUG_ON(1);
+	}
+
 	spin_lock_irqsave(&cq_host->lock, flags);
 
 	if ((cq_host->recovery_halt) || (cq_host->slot[DCMD_SLOT].mrq) != NULL) {
@@ -710,14 +718,18 @@ static int cqhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	cq_host->qcnt += 1;
 
 	cqhci_writel(cq_host, 1 << tag, CQHCI_TDBR);
-	if (!(cqhci_readl(cq_host, CQHCI_TDBR) & (1 << tag)))
-		pr_err("%s: cqhci: doorbell not set for tag %d\n",
-			 mmc_hostname(mmc), tag);
 out_unlock:
 	spin_unlock_irqrestore(&cq_host->lock, flags);
 
 	if (err)
 		cqhci_post_req(mmc, mrq);
+
+	else {
+		wmb();
+		if (!(cqhci_readl(cq_host, CQHCI_TDBR) & (1 << tag)))
+			pr_err("%s: cqhci: doorbell not set for tag %d\n",
+				 mmc_hostname(mmc), tag);
+	}
 
 	return err;
 }
