@@ -75,6 +75,7 @@ EXPORT_SYMBOL(decon_drvdata);
  * because stack frame of decon_ioctl is over.
  */
 static struct dpp_restrictions_info disp_res;
+static void decon_wait_for_vstatus(struct decon_device *decon, u32 timeout);
 
 static char *decon_state_names[] = {
 	"INIT",
@@ -329,6 +330,7 @@ static void decon_set_black_window(struct decon_device *decon)
 int decon_tui_protection(bool tui_en)
 {
 	int ret = 0;
+	int i;
 	int win_idx;
 	struct decon_mode_info psr;
 	struct decon_device *decon = decon_drvdata[0];
@@ -337,27 +339,82 @@ int decon_tui_protection(bool tui_en)
 	decon_info("%s:state %d: out_type %d:+\n", __func__,
 				tui_en, decon->dt.out_type);
 	if (tui_en) {
+		/* 1.Blocking LPD */
 		mutex_lock(&decon->lock);
 		decon_hiber_block_exit(decon);
-
+		/* 2.Finish frmame update of normal OS */
 		kthread_flush_worker(&decon->up.worker);
 
-		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
-		dpu_set_win_update_config(decon, NULL);
-		decon_to_psr_info(decon, &psr);
-		decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, false,
-				decon->lcd_info->fps);
+		if(decon->dt.psr_mode == DECON_VIDEO_MODE) {
+			struct decon_window_regs win_regs = {0, };
+			struct exynos_panel_info *lcd = decon->lcd_info;
+			/* 3.Disable all the windows except max window */
+			for (i = 0; i < decon->dt.max_win; i++) {
+				/* Make the decon registers a reset value for each window
+				 * win_regs.wincon = 0;
+				 * win_regs->type = IDMA_VG0;
+				 * global data and winamp are not set,
+				 * if win_en is 0 (wincon = 0)
+				*/
+				win_regs.ch = IDMA_VG0;
+				decon_reg_set_window_control(decon->id, i, &win_regs, 0);
+			}
+			/* CH MAP TEST
+			 * decon->dt.dft_win = 3;
+			 * decon->dt.dft_idma = IDMA_G0;
+			 */
+			/* 4.Set the window white */
+			win_regs.wincon = wincon(decon->dt.dft_win);
+			win_regs.start_pos = win_start_pos(0, 0);
+			win_regs.end_pos = win_end_pos(0, 0, lcd->xres, lcd->yres);
+			decon_info("xres %d yres %d win_start_pos %x win_end_pos %x\n",
+					lcd->xres, lcd->yres, win_regs.start_pos,
+					win_regs.end_pos);
 
-		decon->cur_using_dpp = 0;
-		decon_dpp_stop(decon, false);
+			win_regs.colormap = 0xffffff;/* 0xffffff is white color */
+			win_regs.pixel_count = lcd->xres * lcd->yres;
+			win_regs.whole_w = lcd->xres;
+			win_regs.whole_h = lcd->yres;
+			win_regs.offset_x = 0;
+			win_regs.offset_y = 0;
+			decon_info("pixel_count(%d), whole_w(%d), whole_h(%d), x(%d), y(%d)\n",
+					win_regs.pixel_count, win_regs.whole_w,
+					win_regs.whole_h, win_regs.offset_x,
+					win_regs.offset_y);
+			decon_reg_set_window_control(decon->id, decon->dt.dft_win,
+					&win_regs, true);
+			decon_reg_all_win_shadow_update_req(decon->id);
 
-		/* after stopping decon, we can now update registers
-		 * without considering per frame condition (8895) */
-		for (win_idx = 0; win_idx < decon->dt.max_win; win_idx++)
-			decon_reg_set_win_enable(decon->id, win_idx, false);
-		decon_reg_all_win_shadow_update_req(decon->id);
-		decon_reg_update_req_global(decon->id);
-		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+			/* 5.decon start */
+			decon_to_psr_info(decon, &psr);
+			decon_reg_start(decon->id, &psr);
+
+			/* 6.wait vstatus and shadow update */
+			decon_wait_for_vstatus(decon, 50);
+			if (decon_reg_wait_update_done_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
+				decon_dump(decon);
+				BUG();
+			}
+			decon->cur_using_dpp = 0;
+			decon_dpp_stop(decon, false);
+		} else {
+			decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+			dpu_set_win_update_config(decon, NULL);
+			decon_to_psr_info(decon, &psr);
+			decon_reg_stop(decon->id, decon->dt.out_idx[0], &psr, false,
+					decon->lcd_info->fps);
+
+			decon->cur_using_dpp = 0;
+			decon_dpp_stop(decon, false);
+
+			/* after stopping decon, we can now update registers
+			 * without considering per frame condition (8895) */
+			for (win_idx = 0; win_idx < decon->dt.max_win; win_idx++)
+				decon_reg_set_win_enable(decon->id, win_idx, false);
+			decon_reg_all_win_shadow_update_req(decon->id);
+			decon_reg_update_req_global(decon->id);
+			decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+		}
 
 		decon->state = DECON_STATE_TUI;
 		aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
