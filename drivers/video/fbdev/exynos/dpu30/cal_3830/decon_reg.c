@@ -954,6 +954,9 @@ static void decon_print_hex_dump(void __iomem *regs, const void *buf, size_t len
 /* base_regs means DECON0's SFR base address */
 void __decon_dump(u32 id, void __iomem *regs, void __iomem *base_regs, bool dsc_en)
 {
+	/* decon debug enable */
+	decon_write_mask(id, 0x400, (1 << 31), (1 << 31));
+
 	decon_info("\n=== DECON%d SFR DUMP ===\n", id);
 	decon_print_hex_dump(regs, regs + 0x0000, 0x480);
 

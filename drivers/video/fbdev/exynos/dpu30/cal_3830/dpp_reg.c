@@ -624,17 +624,6 @@ void dma_reg_get_shd_addr(u32 id, u32 shd_addr[], const unsigned long attr)
 			id, shd_addr[0], shd_addr[1], shd_addr[2], shd_addr[3]);
 }
 
-static void dma_reg_dump_com_debug_regs(int id)
-{
-	struct dpp_device *dpp = get_dpp_drvdata(id);
-	struct dpp_device *dpp0 = get_dpp_drvdata(0);
-
-	dma_write(dpp->id, 0x0060, 0x1);
-	dpp_info("=== DPU_DMA GLB SFR DUMP ===\n");
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-	                dpp0->res.dma_com_regs, 0x108, false);
-}
-
 static bool checked;
 
 static void dpp_check_data_glb_dma(void)
@@ -742,20 +731,51 @@ static void dpp_reg_dump_debug_regs(int id)
 	}
 }
 
+#define PREFIX_LEN      40
+#define ROW_LEN         32
+static void dpp_print_hex_dump(void __iomem *regs, const void *buf, size_t len)
+{
+	char prefix_buf[PREFIX_LEN];
+	unsigned long p;
+	int i, row;
+
+	for (i = 0; i < len; i += ROW_LEN) {
+		p = buf - regs + i;
+
+		if (len - i < ROW_LEN)
+			row = len - i;
+		else
+			row = ROW_LEN;
+
+		snprintf(prefix_buf, sizeof(prefix_buf), "[%08lX] ", p);
+		print_hex_dump(KERN_NOTICE, prefix_buf, DUMP_PREFIX_NONE,
+				32, 4, buf + i, row, false);
+	}
+}
+
+static void dma_reg_dump_com_debug_regs(int id)
+{
+	struct dpp_device *dpp = get_dpp_drvdata(id);
+	struct dpp_device *dpp0 = get_dpp_drvdata(0);
+
+	dma_write(dpp->id, 0x0060, 0x1);
+	dpp_info("=== DPU_DMA GLB SFR DUMP ===\n");
+	dpp_print_hex_dump(dpp0->res.dma_com_regs, dpp0->res.dma_com_regs + 0x0000,
+			0x108);
+}
+
 static void dma_dump_regs(u32 id, void __iomem *dma_regs)
 {
 	struct dpp_device *dpp = get_dpp_drvdata(id);
 
 	dpp_info("=== DPU_DMA%d SFR DUMP ===\n", dpp->id);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-	                dpp->res.dma_regs + 0x0000, 0x68, false);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0000, 0x68);
 
 	dpp_info("=== DPU_DMA%d SHADOW SFR DUMP ===\n", dpp->id);
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-	                dpp->res.dma_regs + 0x0800, 0x68, false);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0800, 0x68);
+
 	/* config_err_status */
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-	                dpp->res.dma_regs + 0x0870, 0x4, false);
+	dpp_print_hex_dump(dma_regs, dma_regs + 0x0870, 0x4);
 }
 
 static void dpp_dump_regs(u32 id, void __iomem *regs, unsigned long attr)
@@ -767,17 +787,13 @@ static void dpp_dump_regs(u32 id, void __iomem *regs, unsigned long attr)
 	dpp_info("=== DPP%d SFR DUMP ===\n", dpp->id);
 
 	/* Normal */
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-			dpp->res.regs, 0x4C, false);
+	dpp_print_hex_dump(regs, regs + 0x0000, 0x4C);
 	/* Dynamic gating */
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-	                dpp->res.regs + 0xA54, 0x4, false);
+	dpp_print_hex_dump(regs, regs + 0x0A54, 0x4);
 	/* Shadow */
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-	                dpp->res.regs + 0xB00, 0x44, false);
+	dpp_print_hex_dump(regs, regs + 0x0B00, 0x44);
 	/* Line cnt, Err state */
-	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_ADDRESS, 32, 4,
-	                dpp->res.regs + 0xD00, 0xC, false);
+	dpp_print_hex_dump(regs, regs + 0x0D00, 0xC);
 }
 
 void __dpp_dump(u32 id, void __iomem *regs, void __iomem *dma_regs,
