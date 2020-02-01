@@ -494,7 +494,7 @@ static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 {
 	u32 res[2];
 	struct exynos_panel_info *lcd_info = &panel->lcd_info;
-	u32 max_br, dft_br;
+	u32 max_br, dft_br, eotp_disabled;
 
 	of_property_read_u32(np, "mode", &lcd_info->mode);
 	of_property_read_u32_array(np, "resolution", res, 2);
@@ -511,6 +511,12 @@ static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 	of_property_read_u32(np, "type_of_ddi", &lcd_info->ddi_type);
 	DPU_DEBUG_PANEL("LCD size(%dx%d), DDI type(%d)\n", res[0], res[1],
 			lcd_info->ddi_type);
+
+	if (!of_property_read_u32(np, "eotp_disabled", &eotp_disabled))
+		lcd_info->eotp_disabled = eotp_disabled;
+	else
+		lcd_info->eotp_disabled = 0;
+	DPU_INFO_PANEL("eotp %s\n", lcd_info->eotp_disabled ? "disabled" : "enabled");
 
 
 	panel->bl->props.max_brightness = DEFAULT_MAX_BRIGHTNESS;

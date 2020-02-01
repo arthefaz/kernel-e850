@@ -1610,8 +1610,9 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	}
 
 	/* set number of lanes, eotp enable, per_frame_read, pixformat, vc_id */
-	dsim_reg_set_config_options(id, lcd_info->data_lane -1, 1, 0,
-			DSIM_PIXEL_FORMAT_RGB24, 0);
+	dsim_reg_set_config_options(id, lcd_info->data_lane -1,
+			(lcd_info->eotp_disabled ? 0 : 1),
+			0, DSIM_PIXEL_FORMAT_RGB24, 0);
 
 	/* CPSR & VIDEO MODE & HPERIOD can be set only when shadow enable on */
 	/* shadow enable */
