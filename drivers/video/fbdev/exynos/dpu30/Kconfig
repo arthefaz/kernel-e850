@@ -138,4 +138,9 @@ config EXYNOS_LIMIT_ROTATION
         default n
 endif
 
+config EXYNOS_DPU_SYSTRACE
+	bool "Support Systrace for DPU"
+		depends on EXYNOS_DPU30
+		default y
+
 source "drivers/video/fbdev/exynos/dpu30/panels/Kconfig"

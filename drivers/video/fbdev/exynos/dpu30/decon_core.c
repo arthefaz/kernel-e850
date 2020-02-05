@@ -36,9 +36,11 @@
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
+#if defined(CONFIG_EXYNOS_DPU_SYSTRACE)
 #define CREATE_TRACE_POINTS
 /* decon systrace */
 #include <trace/events/systrace.h>
+#endif
 
 #if defined(CONFIG_SOC_EXYNOS3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
 #include <dt-bindings/soc/samsung/exynos3830-devfreq.h>
@@ -92,6 +94,7 @@ static char *decon_state_names[] = {
 
 void decon_tracing_mark_write(struct decon_device *decon, char id, char *str1, int value)
 {
+#if defined(CONFIG_EXYNOS_DPU_SYSTRACE)
 	char buf[DECON_TRACE_BUF_SIZE] = {0,};
 
 	if (!decon->systrace.pid)
@@ -116,6 +119,7 @@ void decon_tracing_mark_write(struct decon_device *decon, char id, char *str1, i
 		decon_err("%s:argument fail\n", __func__);
 		return;
 	}
+#endif
 }
 
 static void decon_dump_using_dpp(struct decon_device *decon)
