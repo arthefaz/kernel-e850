@@ -791,8 +791,10 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 	if (int_src & DSIM_INTSRC_VT_STATUS) {
 		dsim_dbg("dsim%d vt_status(vsync) irq occurs\n", dsim->id);
 		if (decon) {
-			decon->vsync.timestamp = ktime_get();
-			wake_up_interruptible_all(&decon->vsync.wait);
+			if (decon->vsync.wait.head.prev) {
+				decon->vsync.timestamp = ktime_get();
+				wake_up_interruptible_all(&decon->vsync.wait);
+			}
 		}
 	}
 
