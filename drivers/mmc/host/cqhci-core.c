@@ -775,18 +775,15 @@ static int cqhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	/* Make sure descriptors are ready before ringing the doorbell */
 	wmb();
 	cqhci_writel(cq_host, 1 << tag, CQHCI_TDBR);
+	wmb();
+	if (!(cqhci_readl(cq_host, CQHCI_TDBR) & (1 << tag)))
+		pr_err("%s: cqhci: doorbell not set for tag %d\n",
+			 mmc_hostname(mmc), tag);
 out_unlock:
 	spin_unlock_irqrestore(&cq_host->lock, flags);
 
 	if (err)
 		cqhci_post_req(mmc, mrq);
-
-	else {
-		wmb();
-		if (!(cqhci_readl(cq_host, CQHCI_TDBR) & (1 << tag)))
-			pr_err("%s: cqhci: doorbell not set for tag %d\n",
-				 mmc_hostname(mmc), tag);
-	}
 
 	return err;
 }
