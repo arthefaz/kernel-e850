@@ -72,6 +72,7 @@ extern int dpu_fence_log_level;
 extern int dpu_dma_buf_log_level;
 extern int decon_systrace_enable;
 extern struct decon_bts_ops decon_bts_control;
+extern unsigned int decon_trivial;
 
 #define DECON_MODULE_NAME	"exynos-decon"
 #define MAX_NAME_SIZE		32
@@ -873,6 +874,7 @@ struct decon_debug {
 	struct dpu_fence_log *f_evt_log;
 	u32 f_evt_log_cnt;
 	atomic_t f_evt_log_idx;
+	struct dentry *debug_trivial;
 };
 
 struct decon_update_regs {

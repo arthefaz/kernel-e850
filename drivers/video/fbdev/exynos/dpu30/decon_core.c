@@ -71,6 +71,7 @@ module_param(dpu_fence_log_level, int, 0644);
 int dpu_dma_buf_log_level = 6;
 module_param(dpu_dma_buf_log_level, int, 0644);
 int decon_systrace_enable;
+unsigned int decon_trivial;
 
 struct decon_device *decon_drvdata[MAX_DECON_CNT];
 EXPORT_SYMBOL(decon_drvdata);
@@ -2122,6 +2123,26 @@ static void decon_save_cur_buf_info(struct decon_device *decon,
 	}
 }
 
+/*
+ * When fence timeout occurs, decon skips to update current frame.
+ * Release current buffer instead of previous buffer in order to display normal image.
+ * Because current buffer is not ready.
+ */
+static void decon_acquire_cur_bufs(struct decon_device *decon,
+		struct decon_reg_data *regs,
+		struct decon_dma_buf_data (*dma_bufs)[MAX_PLANE_CNT],
+		int *plane_cnt)
+{
+	int i, j;
+	for (i = 0; i < decon->dt.max_win; i++) {
+		if (decon->dt.out_type != DECON_OUT_WB) {
+			for (j = 0; j < regs->plane_cnt[i]; ++j)
+				dma_bufs[i][j] = regs->dma_buf_data[i][j];
+			plane_cnt[i] = regs->plane_cnt[i];
+		}
+	}
+}
+
 static void decon_update_regs(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
@@ -2146,7 +2167,10 @@ static void decon_update_regs(struct decon_device *decon,
 					regs->dma_buf_data[i][0].fence,
 					regs->dpp_config[i].acq_fence);
 			if (err <= 0) {
-				decon_save_cur_buf_info(decon, regs);
+				if (decon_trivial & 0x1)
+					decon_acquire_cur_bufs(decon, regs, old_dma_bufs, old_plane_cnt);
+				else
+					decon_save_cur_buf_info(decon, regs);
 				decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 				goto fence_err;
 			}
@@ -4053,6 +4077,9 @@ static int decon_probe(struct platform_device *pdev)
 	/* systrace */
 	decon_systrace_enable = 0;
 	decon->systrace.pid = 0;
+
+	/* debug trivial */
+	decon_trivial = 0;
 
 	ret = decon_init_resources(decon, pdev, device_name);
 	if (ret)

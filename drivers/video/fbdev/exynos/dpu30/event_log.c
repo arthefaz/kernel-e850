@@ -1552,6 +1552,48 @@ static const struct file_operations decon_freq_hop_fops = {
 	.release = seq_release,
 };
 
+static int decon_trivial_show(struct seq_file *s, void *unused)
+{
+	seq_printf(s, "%u\n", decon_trivial);
+	return 0;
+}
+
+static int decon_trivial_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, decon_trivial_show, inode->i_private);
+}
+
+static ssize_t decon_trivial_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *f_ops)
+{
+	char *buf_data;
+	int ret;
+
+	buf_data = kmalloc(count, GFP_KERNEL);
+	if (buf_data == NULL)
+		return count;
+
+	ret = copy_from_user(buf_data, buf, count);
+	if (ret < 0)
+		goto out;
+
+	ret = sscanf(buf_data, "%u", &decon_trivial);
+	if (ret < 0)
+		goto out;
+
+out:
+	kfree(buf_data);
+	return count;
+}
+
+static const struct file_operations decon_trivial_fops = {
+       .open = decon_trivial_open,
+       .write = decon_trivial_write,
+       .read = seq_read,
+       .llseek = seq_lseek,
+       .release = seq_release,
+};
+
 int decon_create_debugfs(struct decon_device *decon)
 {
 	char name[MAX_NAME_SIZE];
@@ -1726,6 +1768,14 @@ int decon_create_debugfs(struct decon_device *decon)
 				decon->d.debug_root, NULL, &decon_dma_buf_fops);
 		if (!decon->d.debug_dma_buf) {
 			decon_err("failed to create dma_buf log level file\n");
+			ret = -ENOENT;
+			goto err_debugfs;
+		}
+
+		decon->d.debug_trivial = debugfs_create_file("debug_trivial", 0444,
+				decon->d.debug_root, NULL, &decon_trivial_fops);
+		if (!decon->d.debug_trivial) {
+			decon_err("failed to create trivial val file\n");
 			ret = -ENOENT;
 			goto err_debugfs;
 		}
