@@ -114,6 +114,8 @@
 		use-runtime-pm;
 		skip-init-no-tray;
 		fifo-depth = <0x40>;
+		data-timeout = <200>;
+		hto-timeout = <80>;
 		desc-size = <4>;
 		card-detect-delay = <400>;
 		samsung,dw-mshc-ciu-div = <3>;
