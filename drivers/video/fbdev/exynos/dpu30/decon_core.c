@@ -41,6 +41,11 @@
 /* decon systrace */
 #include <trace/events/systrace.h>
 #endif
+#if defined(CONFIG_SAMSUNG_TUI)
+#include <linux/smc.h>
+#include "../../../../misc/tui/stui_hal.h"
+#include "../../../../misc/tui/stui_core.h"
+#endif
 
 #if defined(CONFIG_SOC_EXYNOS3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
 #include <dt-bindings/soc/samsung/exynos3830-devfreq.h>
@@ -339,7 +344,6 @@ static void decon_set_black_window(struct decon_device *decon)
 int decon_tui_protection(bool tui_en)
 {
 	int ret = 0;
-	int i;
 	int win_idx;
 	struct decon_mode_info psr;
 	struct decon_device *decon = decon_drvdata[0];
@@ -355,55 +359,17 @@ int decon_tui_protection(bool tui_en)
 		kthread_flush_worker(&decon->up.worker);
 
 		if(decon->dt.psr_mode == DECON_VIDEO_MODE) {
-			struct decon_window_regs win_regs = {0, };
-			struct exynos_panel_info *lcd = decon->lcd_info;
-			/* 3.Disable all the windows except max window */
-			for (i = 0; i < decon->dt.max_win; i++) {
-				/* Make the decon registers a reset value for each window
-				 * win_regs.wincon = 0;
-				 * win_regs->type = IDMA_VG0;
-				 * global data and winamp are not set,
-				 * if win_en is 0 (wincon = 0)
-				*/
-				win_regs.ch = IDMA_VG0;
-				decon_reg_set_window_control(decon->id, i, &win_regs, 0);
-			}
-			/* CH MAP TEST
-			 * decon->dt.dft_win = 3;
-			 * decon->dt.dft_idma = IDMA_G0;
+			/*
+			 * Only for Video mode TUI for EXYNOS3830
+			 *
+			 * DECON & DPP(DPU_DMA) should be running continuously,
+			 * because image data should be displayed until switching
+			 * to SWd is finished. Only decon_dpp_stop() is called
+			 * to disable interrupts of DPP.
 			 */
-			/* 4.Set the window white */
-			win_regs.wincon = wincon(decon->dt.dft_win);
-			win_regs.start_pos = win_start_pos(0, 0);
-			win_regs.end_pos = win_end_pos(0, 0, lcd->xres, lcd->yres);
-			decon_info("xres %d yres %d win_start_pos %x win_end_pos %x\n",
-					lcd->xres, lcd->yres, win_regs.start_pos,
-					win_regs.end_pos);
-
-			win_regs.colormap = 0xffffff;/* 0xffffff is white color */
-			win_regs.pixel_count = lcd->xres * lcd->yres;
-			win_regs.whole_w = lcd->xres;
-			win_regs.whole_h = lcd->yres;
-			win_regs.offset_x = 0;
-			win_regs.offset_y = 0;
-			decon_info("pixel_count(%d), whole_w(%d), whole_h(%d), x(%d), y(%d)\n",
-					win_regs.pixel_count, win_regs.whole_w,
-					win_regs.whole_h, win_regs.offset_x,
-					win_regs.offset_y);
-			decon_reg_set_window_control(decon->id, decon->dt.dft_win,
-					&win_regs, true);
-			decon_reg_all_win_shadow_update_req(decon->id);
-
-			/* 5.decon start */
-			decon_to_psr_info(decon, &psr);
-			decon_reg_start(decon->id, &psr);
-
-			/* 6.wait vstatus and shadow update */
-			decon_wait_for_vstatus(decon, 50);
-			if (decon_reg_wait_update_done_timeout(decon->id, SHADOW_UPDATE_TIMEOUT) < 0) {
-				decon_dump(decon);
-				BUG();
-			}
+#if defined(CONFIG_SAMSUNG_TUI)
+			decon->tui_buf_protected = tui_en;
+#endif
 			decon->cur_using_dpp = 0;
 			decon_dpp_stop(decon, false);
 		} else {
@@ -1919,6 +1885,35 @@ static void decon_release_old_bufs(struct decon_device *decon,
 	}
 }
 
+#if defined(CONFIG_SAMSUNG_TUI)
+/*
+ * Only for Video mode TUI for EXYNOS3830
+ *
+ * This function is used to unprotect secured-buffer using smc call
+ * and release buffer to call stui_free_video_space() function in tui drvier.
+ */
+#define SMC_DRM_TUI_UNPROT	((unsigned int)0x82002121)
+
+static void decon_release_sec_buf(struct decon_device *decon)
+{
+	int ret;
+	struct stui_buf_info *tui_buf_info;
+
+	if (decon->dt.psr_mode == DECON_VIDEO_MODE && decon->tui_buf_protected) {
+		tui_buf_info = stui_get_buf_info();
+
+		ret = exynos_smc(SMC_DRM_TUI_UNPROT, tui_buf_info->pa[0],
+				tui_buf_info->size[0] + tui_buf_info->size[1], 0);
+		if (ret) {
+			decon_err("%s, %d smc_call error\n", __func__, __LINE__);
+		}
+
+		stui_free_video_space();
+
+		decon->tui_buf_protected = false;
+	}
+}
+#endif
 static int decon_set_hdr_info(struct decon_device *decon,
 		struct decon_reg_data *regs, int win_num, bool on)
 {
@@ -2262,7 +2257,6 @@ static void decon_update_regs(struct decon_device *decon,
 			DPU_EVENT_LOG(DPU_EVT_TRIG_MASK, &decon->sd, ktime_set(0, 0));
 		}
 	}
-
 end:
 #if defined(CONFIG_EXYNOS_BTS)
 	/* add update bw : cur < prev */
@@ -2278,6 +2272,9 @@ end:
 	decon_dpp_stop(decon, false);
 
 fence_err:
+#if defined(CONFIG_SAMSUNG_TUI)
+	decon_release_sec_buf(decon);
+#endif
 	decon_release_old_bufs(decon, regs, old_dma_bufs, old_plane_cnt);
 	decon_signal_fence(decon, regs->retire_fence);
 	dma_fence_put(regs->retire_fence);

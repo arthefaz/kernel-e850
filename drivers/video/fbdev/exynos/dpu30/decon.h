@@ -1125,6 +1125,9 @@ struct decon_device {
 
 	bool mres_enabled;
 	bool low_persistence;
+#if defined(CONFIG_SAMSUNG_TUI)
+	bool tui_buf_protected;
+#endif
 };
 
 static inline struct decon_device *get_decon_drvdata(u32 id)
