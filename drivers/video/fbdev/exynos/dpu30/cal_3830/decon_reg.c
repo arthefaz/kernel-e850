@@ -12,6 +12,10 @@
 #include "../decon.h"
 #include "../format.h"
 
+#if defined(CONFIG_SAMSUNG_TUI)
+#include <linux/smc.h>
+#endif
+
 /******************* DECON CAL functions *************************/
 static int decon_reg_reset(u32 id)
 {
@@ -581,12 +585,37 @@ void decon_reg_win_enable_and_update(u32 id, u32 win_idx, u32 en)
 	decon_reg_update_req_window(id, win_idx);
 }
 
+#if defined(CONFIG_SAMSUNG_TUI)
+/*
+ * Only for Video mode TUI for EXYNOS3830
+ *
+ * This function is set SHADOW_UPDATE_REQ of secure window in SECURE SFR.
+ */
+#define SMC_DPU_SEC_SHADOW_UPDATE_REQ	((unsigned int)0x82002122)
+
+void decon_reg_sec_win_shadow_update_req(void)
+{
+	int ret;
+	struct decon_device *decon;
+
+	decon = get_decon_drvdata(0);
+
+	if (decon->dt.psr_mode == DECON_VIDEO_MODE && decon->tui_buf_protected) {
+		ret = exynos_smc(SMC_DPU_SEC_SHADOW_UPDATE_REQ, 0, 0, 0);
+		if (ret) {
+			decon_err("%s, %d smc_call error\n", __func__, __LINE__);
+		}
+	}
+}
+#endif
 void decon_reg_all_win_shadow_update_req(u32 id)
 {
 	u32 mask;
 
 	mask = SHADOW_REG_UPDATE_REQ_FOR_DECON;
-
+#if defined(CONFIG_SAMSUNG_TUI)
+	decon_reg_sec_win_shadow_update_req();
+#endif
 	decon_write_mask(id, SHADOW_REG_UPDATE_REQ, ~0, mask);
 }
 
