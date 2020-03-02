@@ -66,7 +66,20 @@ static void dw_mci_exynos_register_dump(struct dw_mci *host)
 
 static void dw_mci_reg_dump(struct dw_mci *host)
 {
+	struct dw_mci_exynos_priv_data *priv = host->priv;
 	u32 reg;
+	u32 i;
+
+	if ((priv->ctrl_flag & DW_MMC_EXYNOS_ENABLE_CMD_LOGGING) &&
+		(mci_readl(host, BLOCK_DMA_FOR_CI) & DWMCI_BLOCKDMA_CMD_LOGGING)) {
+		dev_err(host->dev, ": ============== LATEST CMD LOGGING ==============\n");
+		for (i = SDMMC_CMD_LOGGING_BASE; i < (SDMMC_CMD_LOGGING_BASE + 0x40) ; i += 0x4) {
+			reg = readl_relaxed(host->regs + i);
+			dev_err(host->dev, "CMD%2d : %4d, ARG : %08x\n", ((i - SDMMC_CMD_LOGGING_BASE) / 4),
+					DWMCI_CMD_LOGGING_CMD_MASK(reg),
+					DWMCI_CMD_LOGGING_ARG_MASK(reg));
+		}
+	}
 
 	dev_err(host->dev, ": ============== REGISTER DUMP ==============\n");
 	dev_err(host->dev, ": CTRL:	 0x%08x\n", host->sfr_dump->contrl = mci_readl(host, CTRL));
@@ -304,6 +317,9 @@ static int dw_mci_exynos_priv_init(struct dw_mci *host)
 
 	if (!host->extended_tmout)
 		temp |= (0x1 << 29);
+	if (priv->ctrl_flag & DW_MMC_EXYNOS_ENABLE_CMD_LOGGING)
+		temp |= DWMCI_BLOCKDMA_CMD_LOGGING;
+
 	mci_writel(host, BLOCK_DMA_FOR_CI, temp);
 
 	if (exynos_mmc_iocc_parse_dt(host)) {
@@ -745,6 +761,8 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 		priv->ctrl_flag |= DW_MMC_EXYNOS_BYPASS_FOR_ALL_PASS;
 	if (of_find_property(np, "use-enable-shift", NULL))
 		priv->ctrl_flag |= DW_MMC_EXYNOS_ENABLE_SHIFT;
+	if (of_find_property(np, "support-cmd-logging", NULL))
+		priv->ctrl_flag |= DW_MMC_EXYNOS_ENABLE_CMD_LOGGING;
 
 	if (of_find_property(np, "extended-tmout", NULL))
 		host->extended_tmout = true;

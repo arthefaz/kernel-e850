@@ -104,6 +104,7 @@ struct dw_mci_exynos_priv_data {
 
 #define DW_MMC_EXYNOS_BYPASS_FOR_ALL_PASS	BIT(0)
 #define DW_MMC_EXYNOS_ENABLE_SHIFT		BIT(1)
+#define DW_MMC_EXYNOS_ENABLE_CMD_LOGGING	BIT(2)
 #define DW_MMC_EXYNOS_ENABLE_RUNTIME_PM		BIT(0)
 #define DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD	BIT(1)
 };
@@ -144,6 +145,7 @@ extern int dw_mci_exynos_request_status(void);
 #define SDMMC_HS400_ASYNC_FIFO_CTRL	0x184
 #define SDMMC_HS400_DLINE_CTRL		0x188
 #define SDMMC_BLOCK_DMA_FOR_CI		0x1F8
+#define SDMMC_CMD_LOGGING_BASE		0x1B0
 
 /* Protector Register */
 #define SDMMC_EMMCP_BASE	0x1000
@@ -269,6 +271,13 @@ extern int dw_mci_exynos_request_status(void);
 /* PINS STATE Control */
 #define PINS_FUNC			1
 #define PINS_PDN			0
+
+/* BLOCK_DMA_FOR_CI register defines */
+#define DWMCI_BLOCKDMA_CMD_LOGGING		(0x3 << 27)
+
+/* CMD_LOGGING register defines */
+#define DWMCI_CMD_LOGGING_CMD_MASK(x)		((x & 0xFC000000) >> 26)
+#define DWMCI_CMD_LOGGING_ARG_MASK(x)		(x & 0x3FFFFFF)
 
 /* Phase 7 Mux Control */
 #define sample_path_sel_en(dev, reg) ({\

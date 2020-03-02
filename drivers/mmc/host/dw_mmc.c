@@ -3846,10 +3846,12 @@ static void dw_mci_cmdq_disable(struct mmc_host *mmc, bool recovery)
 
 static void dw_mci_cmdq_dump_vendor_regs(struct mmc_host *mmc)
 {
-	//struct dw_mci_slot *slot = mmc_priv(mmc);
-	//struct dw_mci *host = slot->host;
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	const struct dw_mci_drv_data *drv_data = host->drv_data;
 
-	//dw_mci_reg_dump(host);
+	if (drv_data && drv_data->dump_reg)
+		drv_data->dump_reg(host);
 }
 
 #ifdef CONFIG_MMC_DW_EXYNOS_FMP
