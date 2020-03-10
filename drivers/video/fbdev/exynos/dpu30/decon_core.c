@@ -1886,14 +1886,21 @@ static void decon_release_old_bufs(struct decon_device *decon,
 }
 
 #if defined(CONFIG_SAMSUNG_TUI)
+/* Only for Video mode TUI for EXYNOS3830 */
+#define SMC_DRM_TUI_UNPROT	((unsigned int)0x82002121)
+
 /*
- * Only for Video mode TUI for EXYNOS3830
- *
+ * These variables are used for parameter of smc call to nofify
+ * which type of panels is used. COMMAND_MODE means 0 to make
+ * compatiblity with previous smc call(normally it was filled with 0)
+ */
+#define DEV_COMMAND_MODE	0
+#define DEV_VIDEO_MODE 		1
+
+/*
  * This function is used to unprotect secured-buffer using smc call
  * and release buffer to call stui_free_video_space() function in tui drvier.
  */
-#define SMC_DRM_TUI_UNPROT	((unsigned int)0x82002121)
-
 static void decon_release_sec_buf(struct decon_device *decon)
 {
 	int ret;
@@ -1903,7 +1910,7 @@ static void decon_release_sec_buf(struct decon_device *decon)
 		tui_buf_info = stui_get_buf_info();
 
 		ret = exynos_smc(SMC_DRM_TUI_UNPROT, tui_buf_info->pa[0],
-				tui_buf_info->size[0] + tui_buf_info->size[1], 0);
+				tui_buf_info->size[0] + tui_buf_info->size[1], DEV_VIDEO_MODE);
 		if (ret) {
 			decon_err("%s, %d smc_call error\n", __func__, __LINE__);
 		}
