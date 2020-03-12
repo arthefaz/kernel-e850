@@ -44,6 +44,7 @@
 		supports-cmd23;
 		supports-erase;
 		extended-tmout;
+		support-cmd-logging;
 		mmc-hs400-enhanced-strobe;
 		card-init-hwacg-ctrl;
 		qos-dvfs-level = <334000>;
