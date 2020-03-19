@@ -143,13 +143,6 @@ static void cqhci_dumpregs(struct cqhci_host *cq_host)
 
 	u32 i;
 
-	pr_err("============ CQHCI RAW RAMDUMP ============\n");
-	for (i = 0; i < 0x200; i += 0x10) {
-		pr_err("%08x %08x %08x %08x\n", cqhci_readl(cq_host, i),
-				cqhci_readl(cq_host, i+4),
-				cqhci_readl(cq_host, i+8),
-				cqhci_readl(cq_host, i+12));
-	}
 	CQHCI_DUMP("============ CQHCI REGISTER DUMP ===========\n");
 
 	CQHCI_DUMP("Caps:      0x%08x | Version:  0x%08x\n",
@@ -185,6 +178,13 @@ static void cqhci_dumpregs(struct cqhci_host *cq_host)
 	CQHCI_DUMP("Resp idx:  0x%08x | Resp arg: 0x%08x\n",
 		   cqhci_readl(cq_host, CQHCI_CRI),
 		   cqhci_readl(cq_host, CQHCI_CRA));
+	CQHCI_DUMP("========== CQHCI REGISTER RAW DUMP =========\n");
+	for (i = 0; i < 0x200; i += 0x10) {
+		CQHCI_DUMP("%08x %08x %08x %08x\n", cqhci_readl(cq_host, i),
+				cqhci_readl(cq_host, i+4),
+				cqhci_readl(cq_host, i+8),
+				cqhci_readl(cq_host, i+12));
+	}
 
 	if (cq_host->ops->dumpregs)
 		cq_host->ops->dumpregs(mmc);

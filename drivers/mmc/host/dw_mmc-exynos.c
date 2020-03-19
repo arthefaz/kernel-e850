@@ -70,17 +70,6 @@ static void dw_mci_reg_dump(struct dw_mci *host)
 	u32 reg;
 	u32 i;
 
-	if ((priv->ctrl_flag & DW_MMC_EXYNOS_ENABLE_CMD_LOGGING) &&
-		(mci_readl(host, BLOCK_DMA_FOR_CI) & DWMCI_BLOCKDMA_CMD_LOGGING)) {
-		dev_err(host->dev, ": ============== LATEST CMD LOGGING ==============\n");
-		for (i = SDMMC_CMD_LOGGING_BASE; i < (SDMMC_CMD_LOGGING_BASE + 0x40) ; i += 0x4) {
-			reg = readl_relaxed(host->regs + i);
-			dev_err(host->dev, "CMD%2d : %4d, ARG : %08x\n", ((i - SDMMC_CMD_LOGGING_BASE) / 4),
-					DWMCI_CMD_LOGGING_CMD_MASK(reg),
-					DWMCI_CMD_LOGGING_ARG_MASK(reg));
-		}
-	}
-
 	dev_err(host->dev, ": ============== REGISTER DUMP ==============\n");
 	dev_err(host->dev, ": CTRL:	 0x%08x\n", host->sfr_dump->contrl = mci_readl(host, CTRL));
 	dev_err(host->dev, ": PWREN:	 0x%08x\n", host->sfr_dump->pwren = mci_readl(host, PWREN));
@@ -199,6 +188,27 @@ static void dw_mci_reg_dump(struct dw_mci *host)
 		host->sfr_dump->fifo_tx_watermark = ((reg >> 1) & 0x1));
 	dev_err(host->dev, ": fifo rx watermark : %d\n",
 		host->sfr_dump->fifo_rx_watermark = ((reg >> 0) & 0x1));
+	dev_err(host->dev, ": ===========================================\n");
+
+	if ((priv->ctrl_flag & DW_MMC_EXYNOS_ENABLE_CMD_LOGGING) &&
+		(mci_readl(host, BLOCK_DMA_FOR_CI) & DWMCI_BLOCKDMA_CMD_LOGGING)) {
+		dev_err(host->dev, ": ============== LATEST CMD LOGGING ==============\n");
+		for (i = SDMMC_CMD_LOGGING_BASE; i < (SDMMC_CMD_LOGGING_BASE + 0x40) ; i += 0x4) {
+			reg = readl_relaxed(host->regs + i);
+			dev_err(host->dev, "CMD%2d : %4d, ARG : %08x\n", ((i - SDMMC_CMD_LOGGING_BASE) / 4),
+					DWMCI_CMD_LOGGING_CMD_MASK(reg),
+					DWMCI_CMD_LOGGING_ARG_MASK(reg));
+		}
+	}
+
+	dev_err(host->dev, ": ============ REGISTER RAW DUMP ============\n");
+	for (i = 0; i < 0x200; i += 0x10) {
+		pr_err("%08x %08x %08x %08x\n",
+				readl_relaxed(host->regs + i),
+				readl_relaxed(host->regs + i + 4),
+				readl_relaxed(host->regs + i + 8),
+				readl_relaxed(host->regs + i + 12));
+	}
 	dev_err(host->dev, ": ===========================================\n");
 }
 
