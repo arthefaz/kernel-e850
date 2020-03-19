@@ -1110,7 +1110,9 @@ static void cqhci_recovery_finish(struct mmc_host *mmc)
 	mmc_hw_reset(mmc);
 	WARN_ON(!cq_host->recovery_halt);
 
+	 __cqhci_enable(cq_host);
 	ok = cqhci_halt(mmc, CQHCI_FINISH_HALT_TIMEOUT);
+	__cqhci_disable(cq_host);
 	if (cq_host->ops->reset) {
 		ret = cq_host->ops->reset(mmc, false);
 		if (ret) {
@@ -1153,6 +1155,8 @@ static void cqhci_recovery_finish(struct mmc_host *mmc)
 
 	WARN_ON(cq_host->qcnt);
 
+	cqhci_off(mmc);
+
 	spin_lock_irqsave(&cq_host->lock, flags);
 	cq_host->qcnt = 0;
 	cq_host->recovery_halt = false;
@@ -1163,8 +1167,6 @@ static void cqhci_recovery_finish(struct mmc_host *mmc)
 	wmb();
 
 	cqhci_writel(cq_host, CQHCI_IS_HAC | CQHCI_IS_TCL, CQHCI_IS);
-
-	cqhci_set_irqs(cq_host, CQHCI_IS_MASK);
 
 	pr_debug("%s: cqhci: recovery done\n", mmc_hostname(mmc));
 }
