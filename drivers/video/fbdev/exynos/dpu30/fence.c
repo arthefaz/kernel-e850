@@ -189,7 +189,7 @@ int decon_wait_fence(struct decon_device *decon, struct dma_fence *fence, int fd
 			fence_evt[DPU_F_EVT_WAIT_ACQUIRE_FENCE], in_fence.name,
 			in_fence.context, in_fence.seqno, in_fence.fd, in_fence.flags);
 
-	err = dma_fence_wait_timeout(fence, false, msecs_to_jiffies(600));
+	err = dma_fence_wait_timeout(fence, false, msecs_to_jiffies(900));
 	if (err <= 0) {
 		decon_err("%s: waiting on in-fence timeout\n", __func__);
 		ret = err;
