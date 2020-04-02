@@ -933,6 +933,7 @@ static void cqhci_recovery_start(struct mmc_host *mmc)
 		cq_host->ops->disable(mmc, true);
 
 	mmc->cqe_on = false;
+	__cqhci_disable(cq_host);
 }
 
 static int cqhci_error_from_flags(unsigned int flags)
@@ -1028,6 +1029,13 @@ static void cqhci_recovery_finish(struct mmc_host *mmc)
 		WARN_ON(!ok);
 	}
 
+	cqhci_interrupt_mask_set(cq_host, false);
+	cqhci_set_irqs(cq_host, 0);
+	if (cq_host->ops->disable)
+		cq_host->ops->disable(mmc, true);
+	__cqhci_disable(cq_host);
+
+ 	cqhci_recover_mrqs(cq_host);
 	cqhci_recover_mrqs(cq_host);
 
 	WARN_ON(cq_host->qcnt);
