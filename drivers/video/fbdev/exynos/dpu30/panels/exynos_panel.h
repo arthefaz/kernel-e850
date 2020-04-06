@@ -123,5 +123,6 @@ struct exynos_panel_info {
 	struct dsc_slice dsc_slice;
 	unsigned int bpc;
 	unsigned int eotp_disabled;
+	unsigned int continuous_underrun_max;
 };
 #endif /* __EXYNOS_PANEL_H__ */
