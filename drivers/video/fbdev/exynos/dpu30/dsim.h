@@ -251,6 +251,9 @@ struct dsim_device {
 #endif
 	unsigned int ddi_seq_size;
 	unsigned char ddi_seq[512];
+
+	int continuous_underrun_max;
+	int continuous_underrun_cnt;
 };
 
 int dsim_call_panel_ops(struct dsim_device *dsim, u32 cmd, void *arg);

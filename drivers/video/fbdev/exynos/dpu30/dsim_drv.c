@@ -691,7 +691,6 @@ exit:
 }
 
 #if defined(CONFIG_EXYNOS_BTS)
-#if 0
 static void dsim_bts_print_info(struct bts_decon_info *info)
 {
 	int i;
@@ -709,13 +708,12 @@ static void dsim_bts_print_info(struct bts_decon_info *info)
 	}
 }
 #endif
-#endif
 
 static void dsim_underrun_info(struct dsim_device *dsim)
 {
 #if defined(CONFIG_EXYNOS_BTS)
-//	struct decon_device *decon;
-//	int i, decon_cnt;
+	struct decon_device *decon;
+	int i, decon_cnt;
 
 #if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 	dsim_info("\tMIF(%lu), INT(%lu), DISP(%lu)\n",
@@ -729,7 +727,6 @@ static void dsim_underrun_info(struct dsim_device *dsim)
 			exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
 #endif
 
-#if 0
 	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
 	for (i = 0; i < decon_cnt; ++i) {
 		decon = get_decon_drvdata(i);
@@ -746,7 +743,6 @@ static void dsim_underrun_info(struct dsim_device *dsim)
 		}
 	}
 #endif
-#endif
 }
 
 static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
@@ -757,6 +753,7 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 #ifdef CONFIG_EXYNOS_PD
 	int active;
 #endif
+	u32 line_cnt;
 
 	spin_lock(&dsim->slock);
 
@@ -777,16 +774,30 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 	}
 	if (int_src & DSIM_INTSRC_RX_DATA_DONE)
 		complete(&dsim->rd_comp);
-	if (int_src & DSIM_INTSRC_FRAME_DONE)
+	if (int_src & DSIM_INTSRC_FRAME_DONE) {
+		dsim->continuous_underrun_cnt = 0;
 		dsim_dbg("dsim%d framedone irq occurs\n", dsim->id);
+	}
 	if (int_src & DSIM_INTSRC_ERR_RX_ECC)
 		dsim_err("RX ECC Multibit error was detected!\n");
 
 	if (int_src & DSIM_INTSRC_UNDER_RUN) {
 		dsim->total_underrun_cnt++;
-		dsim_info("dsim%d underrun irq occurs(%d)\n", dsim->id,
-				dsim->total_underrun_cnt);
+		dsim->continuous_underrun_cnt++;
+		dsim_info("dsim%d underrun irq occurs total(%d) cont(%d)\n", dsim->id,
+				dsim->total_underrun_cnt, dsim->continuous_underrun_cnt);
 		dsim_underrun_info(dsim);
+
+		if (dsim->panel->lcd_info.mode == DECON_VIDEO_MODE) {
+			line_cnt = dsim_reg_get_linecount(dsim->id, dsim->panel->lcd_info.mode);
+			dsim_info("dsim%d line_count: (%08x)\n", dsim->id, line_cnt);
+			if (decon && dsim->continuous_underrun_max > 0 &&
+					(dsim->continuous_underrun_cnt >= dsim->continuous_underrun_max)) {
+				decon_dump(decon);
+				dsim_dump(dsim);
+				BUG();
+			}
+		}
 	}
 	if (int_src & DSIM_INTSRC_VT_STATUS) {
 		dsim_dbg("dsim%d vt_status(vsync) irq occurs\n", dsim->id);
@@ -1614,6 +1625,34 @@ end_func:
 }
 static DEVICE_ATTR(ddi_write, 0200, NULL, dsim_ddi_write_sysfs_store);
 
+static ssize_t dsim_underrun_max_sysfs_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct dsim_device *dsim = dev_get_drvdata(dev);
+	int size = 0;
+
+	size = (ssize_t)sprintf(buf, "%d\n", dsim->continuous_underrun_max);
+
+	return size;
+}
+
+static ssize_t dsim_underrun_max_sysfs_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct dsim_device *dsim = dev_get_drvdata(dev);
+	unsigned int cont_underrun_max;
+	int ret;
+
+	ret = kstrtouint(buf, 0, &cont_underrun_max);
+	if (ret)
+		return ret;
+
+	dsim->continuous_underrun_max = cont_underrun_max;
+
+	return count;
+}
+
+static DEVICE_ATTR(cont_underrun_max, 0600, dsim_underrun_max_sysfs_show, dsim_underrun_max_sysfs_store);
 
 int dsim_create_cmd_rw_sysfs(struct dsim_device *dsim)
 {
@@ -1640,6 +1679,12 @@ int dsim_create_cmd_rw_sysfs(struct dsim_device *dsim)
 	ret = device_create_file(dsim->dev, &dev_attr_ddi_write);
 	if (ret) {
 		dsim_err("failed to create ddi_write sysfs\n");
+		goto error;
+	}
+
+	ret = device_create_file(dsim->dev, &dev_attr_cont_underrun_max);
+	if (ret) {
+		dsim_err("failed to create cont_underrun_max sysfs\n");
 		goto error;
 	}
 
@@ -1780,6 +1825,7 @@ static int dsim_register_panel(struct dsim_device *dsim)
 		dsim->clks.hs_clk = dsim->panel->lcd_info.hs_clk;
 		dsim->clks.esc_clk = dsim->panel->lcd_info.esc_clk;
 		dsim->data_lane_cnt = dsim->panel->lcd_info.data_lane;
+		dsim->continuous_underrun_max = dsim->panel->lcd_info.continuous_underrun_max;
 		dsim_info("panel is already found in panel driver\n");
 		return 0;
 	}
@@ -1812,6 +1858,7 @@ static int dsim_register_panel(struct dsim_device *dsim)
 	dsim->clks.esc_clk = dsim->panel->lcd_info.esc_clk;
 	dsim->data_lane_cnt = dsim->panel->lcd_info.data_lane;
 	dsim->data_lane = 0x1F; /* 4 data lane + 1 clock lane */
+	dsim->continuous_underrun_max = dsim->panel->lcd_info.continuous_underrun_max;
 
 	dsim->state = DSIM_STATE_OFF;
 
