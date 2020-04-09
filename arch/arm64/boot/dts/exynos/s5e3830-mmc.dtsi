@@ -43,10 +43,11 @@
 		supports-8bit;
 		supports-cmd23;
 		supports-erase;
+		extended-tmout;
 		mmc-hs400-enhanced-strobe;
 		card-init-hwacg-ctrl;
 		qos-dvfs-level = <334000>;
-		data-timeout = <200>;
+		data-timeout = <500>;
 		hto-timeout = <80>;
 		enable-ulp-mode;
 		support-cmdq;
