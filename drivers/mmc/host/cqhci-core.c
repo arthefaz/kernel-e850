@@ -830,11 +830,11 @@ static void cqhci_error_irq(struct mmc_host *mmc, u32 status, int cmd_error,
 	spin_lock(&cq_host->lock);
 
 	terri = cqhci_readl(cq_host, CQHCI_TERRI);
-	cqhci_dumpregs(cq_host);
 
 	pr_err("%s: cqhci: error IRQ status: 0x%08x cmd error %d data error %d TERRI: 0x%08x\n",
 		 mmc_hostname(mmc), status, cmd_error, data_error, terri);
 
+	cqhci_dumpregs(cq_host);
 	/* Forget about errors when recovery has already been triggered */
 	if (cq_host->recovery_halt)
 		goto out_unlock;
