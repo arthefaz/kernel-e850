@@ -2152,6 +2152,7 @@ static void decon_update_regs(struct decon_device *decon,
 	int old_plane_cnt[MAX_DECON_WIN];
 	struct decon_mode_info psr;
 	int i, j, err;
+	bool winup_rollback = false;
 
 	if (!decon->systrace.pid)
 		decon->systrace.pid = current->pid;
@@ -2174,6 +2175,7 @@ static void decon_update_regs(struct decon_device *decon,
 				else
 					decon_save_cur_buf_info(decon, regs);
 				decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
+				winup_rollback = true;
 				goto fence_err;
 			}
 		}
@@ -2279,6 +2281,13 @@ end:
 	decon_dpp_stop(decon, false);
 
 fence_err:
+	/* rollback partial update region */
+	if (decon->win_up.enabled && winup_rollback) {
+		memcpy(&decon->win_up.prev_up_region,
+				&decon->win_up.back_up_region,
+				sizeof(struct decon_rect));
+	}
+
 #if defined(CONFIG_SAMSUNG_TUI)
 	decon_release_sec_buf(decon);
 #endif
@@ -2593,7 +2602,12 @@ static int decon_set_win_config(struct decon_device *decon,
 	 * If dpu_prepare_win_update_config returns error, prev_up_region is
 	 * updated but that partial size is not applied to HW in previous code.
 	 * So, updating prev_up_region is moved here.
+	 *
+	 * back_up_region is used for rollback in situations where
+	 * dpu_set_win_update_config(real HW change) cannot be performed.
 	 */
+	memcpy(&decon->win_up.back_up_region, &decon->win_up.prev_up_region,
+			sizeof(struct decon_rect));
 	memcpy(&decon->win_up.prev_up_region, &regs->up_region,
 			sizeof(struct decon_rect));
 

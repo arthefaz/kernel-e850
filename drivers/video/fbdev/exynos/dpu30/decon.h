@@ -958,6 +958,7 @@ struct decon_win_update {
 	u32 verti_cnt;
 	/* previous update region */
 	struct decon_rect prev_up_region;
+	struct decon_rect back_up_region;
 };
 
 struct decon_bts_ops {
