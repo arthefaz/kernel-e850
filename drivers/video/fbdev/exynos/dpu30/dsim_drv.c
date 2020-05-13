@@ -420,6 +420,7 @@ int dsim_write_cmd_set(struct dsim_device *dsim, struct exynos_dsim_cmd cmd_list
 			goto err_exit;
 		}
 	}
+	dsim_reg_enable_packetgo(dsim->id, 0);
 
 err_exit:
 	mutex_unlock(&dsim->cmd_lock);
