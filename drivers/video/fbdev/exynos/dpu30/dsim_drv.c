@@ -359,6 +359,8 @@ int dsim_write_cmd_set(struct dsim_device *dsim, struct exynos_dsim_cmd cmd_list
 
 		for (; j < cmd_cnt; j++) {
 			cmd = &cmd_list[j];
+			if (!cmd->data_len)
+				break;
 
 			switch (cmd->type) {
 			/* short packet types of packet types for command. */
@@ -372,7 +374,13 @@ int dsim_write_cmd_set(struct dsim_device *dsim, struct exynos_dsim_cmd cmd_list
 			case MIPI_DSI_COLOR_MODE_ON:
 			case MIPI_DSI_SHUTDOWN_PERIPHERAL:
 			case MIPI_DSI_TURN_ON_PERIPHERAL:
-				dsim_reg_wr_tx_header(dsim->id, cmd->type, cmd->data_buf[0],
+				if (cmd->data_len == 1)
+					dsim_reg_wr_tx_header(dsim->id,
+						cmd->type, cmd->data_buf[0],
+						0, false);
+				else
+					dsim_reg_wr_tx_header(dsim->id,
+						cmd->type, cmd->data_buf[0],
 						cmd->data_buf[1], false);
 				break;
 
