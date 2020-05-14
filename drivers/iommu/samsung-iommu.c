@@ -1991,7 +1991,7 @@ err_slot_prop:
 	return ret;
 }
 
-static int __init __sysmmu_secure_irq_init(struct device *sysmmu,
+static int __sysmmu_secure_irq_init(struct device *sysmmu,
 					   struct sysmmu_drvdata *data)
 {
 	struct platform_device *pdev = to_platform_device(sysmmu);
