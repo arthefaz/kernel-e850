@@ -721,7 +721,7 @@ static void dsim_bts_print_info(struct bts_decon_info *info)
 static void dsim_underrun_info(struct dsim_device *dsim)
 {
 #if defined(CONFIG_EXYNOS_BTS)
-	struct decon_device *decon;
+	struct decon_device *decon = get_decon_drvdata(0);
 	int i, decon_cnt;
 
 #if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
@@ -735,6 +735,9 @@ static void dsim_underrun_info(struct dsim_device *dsim)
 			exynos_devfreq_get_domain_freq(DEVFREQ_INT),
 			exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
 #endif
+
+	if (!decon)
+		return;
 
 	decon_cnt = get_decon_drvdata(0)->dt.decon_cnt;
 	for (i = 0; i < decon_cnt; ++i) {
