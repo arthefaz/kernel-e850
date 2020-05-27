@@ -440,7 +440,7 @@ static void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 	u32 af_d = BND_COEF_ONE, ab_d = BND_COEF_ZERO,
 		af_a = BND_COEF_ONE, ab_a = BND_COEF_ZERO;
 
-	if ((plane_a >= 0) && (plane_a <= 0xff)) {
+	if ((plane_a > 0) && (plane_a <= 0xff)) {
 		alpha0 = plane_a;
 		alpha1 = 0;
 		is_plane_a = true;
@@ -448,9 +448,9 @@ static void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 
 	if ((blend == DECON_BLENDING_NONE) && !is_plane_a) {
 		af_d = BND_COEF_ONE;
-		ab_d = BND_COEF_ZERO;
+		ab_d = BND_COEF_ONE;
 		af_a = BND_COEF_ONE;
-		ab_a = BND_COEF_ZERO;
+		ab_a = BND_COEF_ONE;
 	} else if ((blend == DECON_BLENDING_NONE) && is_plane_a) {
 		af_d = BND_COEF_PLNAE_ALPHA0;
 		ab_d = BND_COEF_ZERO;
