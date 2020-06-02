@@ -440,23 +440,16 @@ static void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 	u32 af_d = BND_COEF_ONE, ab_d = BND_COEF_ZERO,
 		af_a = BND_COEF_ONE, ab_a = BND_COEF_ZERO;
 
+	if (blend == DECON_BLENDING_NONE)
+		pd_func = PD_FUNC_COPY;
+
 	if ((plane_a >= 0) && (plane_a <= 0xff)) {
 		alpha0 = plane_a;
 		alpha1 = 0;
 		is_plane_a = true;
 	}
 
-	if ((blend == DECON_BLENDING_NONE) && !is_plane_a) {
-		af_d = BND_COEF_ONE;
-		ab_d = BND_COEF_ZERO;
-		af_a = BND_COEF_ONE;
-		ab_a = BND_COEF_ZERO;
-	} else if ((blend == DECON_BLENDING_NONE) && is_plane_a) {
-		af_d = BND_COEF_PLNAE_ALPHA0;
-		ab_d = BND_COEF_ZERO;
-		af_a = BND_COEF_PLNAE_ALPHA0;
-		ab_a = BND_COEF_ZERO;
-	} else if ((blend == DECON_BLENDING_COVERAGE) && !is_plane_a) {
+	if ((blend == DECON_BLENDING_COVERAGE) && !is_plane_a) {
 		af_d = BND_COEF_AF;
 		ab_d = BND_COEF_1_M_AF;
 		af_a = BND_COEF_AF;
@@ -476,6 +469,8 @@ static void decon_reg_set_win_bnd_function(u32 id, u32 win_idx,
 		ab_d = BND_COEF_1_M_ALPHA_MULT;
 		af_a = BND_COEF_PLNAE_ALPHA0;
 		ab_a = BND_COEF_1_M_ALPHA_MULT;
+	} else if (blend == DECON_BLENDING_NONE) {
+		decon_dbg("%s:%d none blending mode\n", __func__, __LINE__);
 	} else {
 		decon_warn("%s:%d undefined blending mode\n",
 				__func__, __LINE__);
