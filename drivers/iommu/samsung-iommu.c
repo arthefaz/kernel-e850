@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * linux/drivers/iommu/samsung-iommu.c
- *
  * Copyright (c) 2020 Samsung Electronics Co., Ltd.
  */
 
@@ -18,9 +16,10 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
+#include <linux/smc.h>
+#include <linux/arm-smccc.h>
 
 #include <dt-bindings/sysmmu/sysmmu.h>
-#include <soc/samsung/exynos-smc.h>
 
 typedef u32 sysmmu_iova_t;
 typedef u32 sysmmu_pte_t;
@@ -29,9 +28,9 @@ typedef u32 sysmmu_pte_t;
 #define LPAGE_ORDER 16
 #define SPAGE_ORDER 12
 
-#define SECT_SIZE (1 << SECT_ORDER)
-#define LPAGE_SIZE (1 << LPAGE_ORDER)
-#define SPAGE_SIZE (1 << SPAGE_ORDER)
+#define SECT_SIZE  (1UL << SECT_ORDER)
+#define LPAGE_SIZE (1UL << LPAGE_ORDER)
+#define SPAGE_SIZE (1UL << SPAGE_ORDER)
 
 #define SECT_MASK (~(SECT_SIZE - 1))
 #define LPAGE_MASK (~(LPAGE_SIZE - 1))
@@ -49,7 +48,7 @@ typedef u32 sysmmu_pte_t;
 #define LV2TABLE_SIZE (NUM_LV2ENTRIES * sizeof(sysmmu_pte_t))
 
 #define lv1ent_offset(iova) ((iova) >> SECT_ORDER)
-#define lv2ent_offset(iova) ((iova & ~SECT_MASK) >> SPAGE_ORDER)
+#define lv2ent_offset(iova) (((iova) & ~SECT_MASK) >> SPAGE_ORDER)
 
 #define FLPD_FLAG_MASK	7
 #define SLPD_FLAG_MASK	3
@@ -70,8 +69,8 @@ typedef u32 sysmmu_pte_t;
 #define lv2ent_small(pent)	((*(pent) & SLPD_FLAG_MASK) == SPAGE_FLAG)
 #define lv2ent_large(pent)	((*(pent) & SLPD_FLAG_MASK) == LPAGE_FLAG)
 
-#define FLPD_SHAREABLE_FLAG	(1 << 6)
-#define SLPD_SHAREABLE_FLAG	(1 << 4)
+#define FLPD_SHAREABLE_FLAG	BIT(6)
+#define SLPD_SHAREABLE_FLAG	BIT(4)
 
 #define PGBASE_TO_PHYS(pgent)	((phys_addr_t)(pgent) << PG_ENT_SHIFT)
 #define ENT_TO_PHYS(ent) (phys_addr_t)(*(ent))
@@ -83,7 +82,7 @@ typedef u32 sysmmu_pte_t;
 #define spage_offs(iova) ((iova) & (SPAGE_SIZE - 1))
 
 #define MMU_MAJ_VER(val)	((val) >> 11)
-#define MMU_MIN_VER(val)	((val >> 4) & 0x7F)
+#define MMU_MIN_VER(val)	(((val) >> 4) & 0x7F)
 #define MMU_REV_VER(val)	((val) & 0xF)
 #define MMU_RAW_VER(reg)	(((reg) >> 17) & 0x7FFF)
 
@@ -98,7 +97,7 @@ typedef u32 sysmmu_pte_t;
 #define CFG_MASK_GLOBAL			0x00000F80	/* Bit 11, 10-7 */
 					/* Bit 31, 29, 28, 19-16, 12, 2 */
 #define CFG_MASK_VM			0xB00F1004
-#define CFG_QOS_OVRRIDE			(1 << 11)
+#define CFG_QOS_OVRRIDE			BIT(11)
 #define CFG_QOS(n)			(((n) & 0xF) << 7)
 #define REG_MMU_STATUS			0x008
 #define REG_MMU_FLPT_BASE		0x00C
@@ -113,7 +112,7 @@ typedef u32 sysmmu_pte_t;
 #define REG_MMU_INT_STATUS		0x060
 #define REG_MMU_FAULT_VA		0x070
 #define REG_MMU_FAULT_TRANS_INFO	0x078
-#define REG_MMU_FAULT_RW_MASK		(0x1 << 20)
+#define REG_MMU_FAULT_RW_MASK		GENMASK(20, 20)
 #define IS_READ_FAULT(x)		(((x) & REG_MMU_FAULT_RW_MASK) == 0)
 
 #define SYSMMU_FAULT_PTW_ACCESS   0
@@ -133,11 +132,11 @@ typedef u32 sysmmu_pte_t;
 #define REG_PRIVATE_ADDR_END(n)		(0x208 + ((n) * 0x10))
 #define REG_PRIVATE_ID(n)		(0x20C + ((n) * 0x10))
 
-#define MMU_WAY_CFG_MASK_PREFETCH	(1 << 1)
-#define MMU_WAY_CFG_MASK_PREFETCH_DIR	(3 << 2)
-#define MMU_WAY_CFG_MASK_MATCH_METHOD	(1 << 4)
-#define MMU_WAY_CFG_MASK_FETCH_SIZE	(7 << 5)
-#define MMU_WAY_CFG_MASK_TARGET_CH	(3 << 8)
+#define MMU_WAY_CFG_MASK_PREFETCH	GENMASK(1, 1)
+#define MMU_WAY_CFG_MASK_PREFETCH_DIR	GENMASK(3, 2)
+#define MMU_WAY_CFG_MASK_MATCH_METHOD	GENMASK(4, 4)
+#define MMU_WAY_CFG_MASK_FETCH_SIZE	GENMASK(7, 5)
+#define MMU_WAY_CFG_MASK_TARGET_CH	GENMASK(9, 8)
 
 #define MMU_WAY_CFG_ID_MATCHING		(1 << 4)
 #define MMU_WAY_CFG_ADDR_MATCHING	(0 << 4)
@@ -151,17 +150,17 @@ typedef u32 sysmmu_pte_t;
 #define REG_MMU_CTRL_VM			0x8000
 #define REG_MMU_CFG_VM			0x8004
 
-#define MMU_TLB_CFG_MASK(reg)		((reg) &		\
-					((0x7 << 5) | (0x3 << 2) | (0x1 << 1)))
-#define MMU_TLB_MATCH_CFG_MASK(reg)	((reg) & ((0xFFFF << 16) | (0x3 << 8)))
+#define MMU_TLB_CFG_MASK(reg)		((reg) & (GENMASK(7, 5) | GENMASK(3, 2) | GENMASK(1, 1)))
+#define MMU_TLB_MATCH_CFG_MASK(reg)	((reg) & (GENMASK(31, 16) | GENMASK(9, 8)))
 
-#define MMU_CAPA1_EXIST(reg)		((reg >> 11) & 0x1)
-#define MMU_CAPA1_TYPE(reg)		((reg >> 28) & 0xF)
-#define MMU_CAPA1_NO_BLOCK_MODE(reg)	((reg >> 15) & 0x1)
-#define MMU_CAPA1_VCR_ENABLED(reg)	((reg >> 14) & 0x1)
+#define MMU_CAPA1_EXIST(reg)		(((reg) >> 11) & 0x1)
+#define MMU_CAPA1_TYPE(reg)		(((reg) >> 28) & 0xF)
+#define MMU_CAPA1_NO_BLOCK_MODE(reg)	(((reg) >> 15) & 0x1)
+#define MMU_CAPA1_VCR_ENABLED(reg)	(((reg) >> 14) & 0x1)
 
 #define MMU_CAPA_NUM_TLB_WAY(reg)	((reg) & 0xFF)
-#define MMU_CAPA1_NUM_TLB(reg)		((reg >> 4) & 0xFF)
+#define MMU_CAPA_NUM_SBB_ENTRY(reg)	(((reg) >> 12) & 0xF)
+#define MMU_CAPA1_NUM_TLB(reg)		(((reg) >> 4) & 0xFF)
 #define MMU_CAPA1_NUM_PORT(reg)		((reg) & 0xF)
 #define REG_MMU_TLB_CFG(n)		(0x2000 + ((n) * 0x20) + 0x4)
 #define REG_MMU_TLB_MATCH_CFG(n)	(0x2000 + ((n) * 0x20) + 0x8)
@@ -170,20 +169,12 @@ typedef u32 sysmmu_pte_t;
 #define REG_MMU_TLB_MATCH_ID(n)		(0x2000 + ((n) * 0x20) + 0x14)
 
 #define MMU_TLB_INFO(n)			(0x2000 + ((n) * 0x20))
-#define MMU_CAPA1_NUM_TLB_SET(reg)	((reg >> 16) & 0xFF)
+#define MMU_CAPA1_NUM_TLB_SET(reg)	(((reg) >> 16) & 0xFF)
 #define MMU_CAPA1_NUM_TLB_WAY(reg)	((reg) & 0xFF)
 #define MMU_CAPA1_SET_TLB_READ_ENTRY(tid, set, way, line)		\
 					((set) | ((way) << 8) |		\
 					 ((line) << 16) | ((tid) << 20))
-#define MMU_TLB_CFG_MASK(reg)		((reg) & ((0x7 << 5) | (0x3 << 2) \
-					 | (0x1 << 1)))
-#define MMU_TLB_MATCH_CFG_MASK(reg)	((reg) & ((0xFFFF << 16) | (0x3 << 8)))
 
-#define MMU_CAPA_NUM_SBB_ENTRY(reg)	((reg >> 12) & 0xF)
-#define MMU_CAPA_NUM_TLB_SET(reg)	((reg >> 8) & 0xF)
-#define MMU_CAPA_NUM_TLB_WAY(reg)	((reg) & 0xFF)
-#define MMU_SET_TLB_READ_ENTRY(set, way, line)		\
-					((set) | ((way) << 8) | ((line) << 16))
 #define MMU_TLB_ENTRY_VALID(reg)	((reg) >> 28)
 #define MMU_SBB_ENTRY_VALID(reg)	((reg) >> 28)
 
@@ -194,14 +185,14 @@ typedef u32 sysmmu_pte_t;
 
 #define REG_SLOT_RSV(n)			(0x4000 + ((n) * 0x20))
 
-#define MMU_REG(data, idx)			\
-				((data)->sfrbase + (data)->reg_set[idx])
-#define MMU_VM_REG(data, idx, vmid)		\
-		((data)->sfrbase + (data)->reg_set[idx] + (vmid) * 0x10)
-#define MMU_SEC_REG(data, offset_idx)		\
-		((data)->secure_base + (data)->reg_set[offset_idx])
-#define MMU_SEC_VM_REG(data, offset_idx, vmid)	\
-	((data)->secure_base + (data)->reg_set[offset_idx] + (vmid) * 0x10)
+#define MMU_REG(data, idx)		((data)->sfrbase + (data)->reg_set[idx])
+#define MMU_VM_REG(data, idx, vmid)	((data)->sfrbase + \
+					 (data)->reg_set[idx] + (vmid) * 0x10)
+#define MMU_SEC_REG(data, offset_idx)	((data)->secure_base + \
+					 (data)->reg_set[offset_idx])
+#define MMU_SEC_VM_REG(data, offset_idx, vmid) ((data)->secure_base + \
+						(data)->reg_set[offset_idx] + \
+						(vmid) * 0x10)
 
 #define DEFAULT_QOS_VALUE	-1
 
@@ -306,9 +297,9 @@ struct tlb_port_cfg {
 #define IS_TLB_PORT_TYPE(data)	(TLB_TYPE_MASK((data)->tlb_props.flags)	\
 				== TLB_TYPE_PORT)
 
-#define TLB_WAY_PRIVATE_ID	(1 << 0)
-#define TLB_WAY_PRIVATE_ADDR	(1 << 1)
-#define TLB_WAY_PUBLIC		(1 << 2)
+#define TLB_WAY_PRIVATE_ID	BIT(0)
+#define TLB_WAY_PRIVATE_ADDR	BIT(1)
+#define TLB_WAY_PUBLIC		BIT(2)
 
 struct tlb_way_props {
 	int priv_id_cnt;
@@ -341,7 +332,7 @@ struct sysmmu_drvdata {
 	void __iomem *sfrbase;
 	struct clk *clk;
 	phys_addr_t pgtable;
-	spinlock_t lock;
+	spinlock_t lock; /* protect atomic update to H/W status */
 	u32 version;
 	int qos;
 	int attached_count;
@@ -368,7 +359,7 @@ struct samsung_sysmmu_domain {
 	struct iommu_group *group;
 	sysmmu_pte_t *page_table;
 	atomic_t *lv2entcnt;
-	spinlock_t pgtablelock;
+	spinlock_t pgtablelock; /* serialize races to page table updates */
 };
 
 struct samsung_sysmmu_fault_info {
@@ -381,17 +372,25 @@ static struct device sync_dev;
 static struct kmem_cache *flpt_cache, *slpt_cache;
 
 #if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+#define SMC_DRM_SEC_SMMU_INFO          (0x820020D0)
+/* secure SysMMU SFR access */
+enum sec_sysmmu_sfr_access_t {
+	SEC_SMMU_SFR_READ,
+	SEC_SMMU_SFR_WRITE,
+};
+
 #define is_secure_info_fail(x)		((((x) >> 16) & 0xffff) == 0xdead)
 static inline u32 read_sec_info(unsigned int addr)
 {
-	u32 ret;
+	struct arm_smccc_res res;
 
-	ret = exynos_smc(SMC_DRM_SEC_SMMU_INFO, (unsigned long)addr, 0,
-			 SEC_SMMU_SFR_READ);
-	if (is_secure_info_fail(ret))
-		pr_err("Invalid value returned, %#x\n", ret);
+	arm_smccc_smc(SMC_DRM_SEC_SMMU_INFO,
+		      (unsigned long)addr, 0, SEC_SMMU_SFR_READ, 0, 0, 0, 0,
+		      &res);
+	if (is_secure_info_fail(res.a0))
+		pr_err("Invalid value returned, %#lx\n", res.a0);
 
-	return ret;
+	return (u32)res.a0;
 }
 #else
 static inline u32 read_sec_info(unsigned int addr)
@@ -415,24 +414,25 @@ static inline u32 __sysmmu_get_capa_type(struct sysmmu_drvdata *data)
 	return MMU_CAPA1_TYPE(readl_relaxed(data->sfrbase + REG_MMU_CAPA1_V7));
 }
 
-static inline bool __sysmmu_get_capa_no_block_mode(
-					struct sysmmu_drvdata *data)
+static inline bool __sysmmu_get_capa_no_block_mode(struct sysmmu_drvdata *data)
 {
-	return MMU_CAPA1_NO_BLOCK_MODE(readl_relaxed(
-				       data->sfrbase + REG_MMU_CAPA1_V7));
+	return MMU_CAPA1_NO_BLOCK_MODE(readl_relaxed(data->sfrbase +
+						     REG_MMU_CAPA1_V7));
 }
+
 static inline bool __sysmmu_get_capa_vcr_enabled(struct sysmmu_drvdata *data)
 {
-	return MMU_CAPA1_VCR_ENABLED(readl_relaxed(
-				     data->sfrbase + REG_MMU_CAPA1_V7));
+	return MMU_CAPA1_VCR_ENABLED(readl_relaxed(data->sfrbase +
+						   REG_MMU_CAPA1_V7));
 }
+
 static inline void __sysmmu_tlb_invalidate_all(struct sysmmu_drvdata *data)
 {
 	writel(0x1, MMU_REG(data, IDX_ALL_INV));
 }
 
 static inline void __sysmmu_tlb_invalidate(struct sysmmu_drvdata *data,
-				dma_addr_t start, dma_addr_t end)
+					   dma_addr_t start, dma_addr_t end)
 {
 	writel_relaxed(start, MMU_REG(data, IDX_RANGE_INV_START));
 	writel_relaxed(end - 1, MMU_REG(data, IDX_RANGE_INV_END));
@@ -457,7 +457,7 @@ static inline void __sysmmu_disable(struct sysmmu_drvdata *data)
 }
 
 static inline void __sysmmu_set_public_way(struct sysmmu_drvdata *data,
-						unsigned int public_cfg)
+					   unsigned int public_cfg)
 {
 	u32 cfg = readl_relaxed(data->sfrbase + REG_PUBLIC_WAY_CFG);
 
@@ -470,37 +470,33 @@ static inline void __sysmmu_set_public_way(struct sysmmu_drvdata *data,
 }
 
 static inline void __sysmmu_set_private_way_id(struct sysmmu_drvdata *data,
-						unsigned int way_idx)
+					       unsigned int way_idx)
 {
 	struct tlb_priv_id *priv_cfg = data->tlb_props.way_props.priv_id_cfg;
-	u32 cfg = readl_relaxed(
-			data->sfrbase + REG_PRIVATE_WAY_CFG(way_idx));
+	u32 cfg = readl_relaxed(data->sfrbase + REG_PRIVATE_WAY_CFG(way_idx));
 
 	cfg &= ~MMU_PRIVATE_WAY_MASK;
-	cfg |= MMU_WAY_CFG_ID_MATCHING | MMU_WAY_CFG_PRIVATE_ENABLE |
-						priv_cfg[way_idx].cfg;
+	cfg |= MMU_WAY_CFG_ID_MATCHING | MMU_WAY_CFG_PRIVATE_ENABLE;
+	cfg |= priv_cfg[way_idx].cfg;
 
 	writel_relaxed(cfg, data->sfrbase + REG_PRIVATE_WAY_CFG(way_idx));
 	writel_relaxed(priv_cfg[way_idx].id,
-			data->sfrbase + REG_PRIVATE_ID(way_idx));
+		       data->sfrbase + REG_PRIVATE_ID(way_idx));
 
 	dev_dbg(data->dev, "priv ID way[%d] cfg : %#x, id : %#x\n",
-					way_idx, cfg, priv_cfg[way_idx].id);
+		way_idx, cfg, priv_cfg[way_idx].id);
 }
 
 static inline void __sysmmu_set_private_way_addr(struct sysmmu_drvdata *data,
-						unsigned int priv_addr_idx)
+						 unsigned int idx)
 {
-	struct tlb_priv_addr *priv_cfg =
-		data->tlb_props.way_props.priv_addr_cfg;
-	unsigned int way_idx =
-		data->tlb_props.way_props.priv_id_cnt + priv_addr_idx;
-	u32 cfg =
-		readl_relaxed(data->sfrbase + REG_PRIVATE_WAY_CFG(way_idx));
+	struct tlb_priv_addr *privcfg = data->tlb_props.way_props.priv_addr_cfg;
+	unsigned int way_idx = data->tlb_props.way_props.priv_id_cnt + idx;
+	u32 cfg = readl_relaxed(data->sfrbase + REG_PRIVATE_WAY_CFG(way_idx));
 
 	cfg &= ~MMU_PRIVATE_WAY_MASK;
-	cfg |= MMU_WAY_CFG_ADDR_MATCHING | MMU_WAY_CFG_PRIVATE_ENABLE |
-						priv_cfg[priv_addr_idx].cfg;
+	cfg |= MMU_WAY_CFG_ADDR_MATCHING | MMU_WAY_CFG_PRIVATE_ENABLE;
+	cfg |= privcfg[idx].cfg;
 
 	writel_relaxed(cfg, data->sfrbase + REG_PRIVATE_WAY_CFG(way_idx));
 
@@ -510,65 +506,57 @@ static inline void __sysmmu_set_private_way_addr(struct sysmmu_drvdata *data,
 static inline void __sysmmu_set_tlb_way_type(struct sysmmu_drvdata *data)
 {
 	u32 cfg = readl_relaxed(data->sfrbase + REG_MMU_CAPA0_V7);
-	u32 tlb_way_num = MMU_CAPA_NUM_TLB_WAY(cfg);
-	u32 set_cnt = 0;
+	u32 waycnt = MMU_CAPA_NUM_TLB_WAY(cfg);
 	struct tlb_props *tlb_props = &data->tlb_props;
-	unsigned int i;
 	int priv_id_cnt = tlb_props->way_props.priv_id_cnt;
 	int priv_addr_cnt = tlb_props->way_props.priv_addr_cnt;
+	u32 setcnt = 0;
+	unsigned int i;
 
 	if (tlb_props->flags & TLB_WAY_PUBLIC)
-		__sysmmu_set_public_way(data,
-				tlb_props->way_props.public_cfg);
+		__sysmmu_set_public_way(data, tlb_props->way_props.public_cfg);
 
-	if (tlb_props->flags & TLB_WAY_PRIVATE_ID) {
-		for (i = 0; i < priv_id_cnt &&
-				set_cnt < tlb_way_num; i++, set_cnt++)
+	if (tlb_props->flags & TLB_WAY_PRIVATE_ID)
+		for (i = 0; i < priv_id_cnt && setcnt < waycnt; i++, setcnt++)
 			__sysmmu_set_private_way_id(data, i);
-	}
 
-	if (tlb_props->flags & TLB_WAY_PRIVATE_ADDR) {
-		for (i = 0; i < priv_addr_cnt &&
-				set_cnt < tlb_way_num; i++, set_cnt++)
+	if (tlb_props->flags & TLB_WAY_PRIVATE_ADDR)
+		for (i = 0; i < priv_addr_cnt && setcnt < waycnt; i++, setcnt++)
 			__sysmmu_set_private_way_addr(data, i);
-	}
 
-	if (priv_id_cnt + priv_addr_cnt > tlb_way_num) {
+	if (priv_id_cnt + priv_addr_cnt > waycnt) {
 		dev_warn(data->dev,
-			 "Too many values than TLB way count %d, so ignored!\n",
-			 tlb_way_num);
-		dev_warn(data->dev,
-			 "Number of private way id/addr = %d/%d\n",
+			 "Ignoring larger TLB way count than %d!\n", waycnt);
+		dev_warn(data->dev, "Number of private way id/addr = %d/%d\n",
 			 priv_id_cnt, priv_addr_cnt);
 	}
 }
 
 static inline void __sysmmu_set_tlb_port(struct sysmmu_drvdata *data,
-						unsigned int port_idx)
+					 unsigned int port_idx)
 {
 	struct tlb_port_cfg *port_cfg = data->tlb_props.port_props.port_cfg;
 
 	writel_relaxed(MMU_TLB_CFG_MASK(port_cfg[port_idx].cfg),
-			data->sfrbase + REG_MMU_TLB_CFG(port_idx));
+		       data->sfrbase + REG_MMU_TLB_CFG(port_idx));
 
 	/* port_idx 0 is default port. */
 	if (port_idx == 0) {
-		dev_dbg(data->dev, "port[%d] cfg : %#x for common\n",
-				port_idx,
-				MMU_TLB_CFG_MASK(port_cfg[port_idx].cfg));
+		dev_dbg(data->dev, "port[%d] cfg : %#x for common\n", port_idx,
+			MMU_TLB_CFG_MASK(port_cfg[port_idx].cfg));
 		return;
 	}
 
 	writel_relaxed(MMU_TLB_MATCH_CFG_MASK(port_cfg[port_idx].cfg),
-			data->sfrbase + REG_MMU_TLB_MATCH_CFG(port_idx));
+		       data->sfrbase + REG_MMU_TLB_MATCH_CFG(port_idx));
 	writel_relaxed(port_cfg[port_idx].id,
-			data->sfrbase + REG_MMU_TLB_MATCH_ID(port_idx));
+		       data->sfrbase + REG_MMU_TLB_MATCH_ID(port_idx));
 
 	dev_dbg(data->dev, "port[%d] cfg : %#x, match : %#x, id : %#x\n",
-				port_idx,
-				MMU_TLB_CFG_MASK(port_cfg[port_idx].cfg),
-				MMU_TLB_MATCH_CFG_MASK(port_cfg[port_idx].cfg),
-				port_cfg[port_idx].id);
+		port_idx,
+		MMU_TLB_CFG_MASK(port_cfg[port_idx].cfg),
+		MMU_TLB_MATCH_CFG_MASK(port_cfg[port_idx].cfg),
+		port_cfg[port_idx].id);
 }
 
 static inline void __sysmmu_set_tlb_port_type(struct sysmmu_drvdata *data)
@@ -576,13 +564,12 @@ static inline void __sysmmu_set_tlb_port_type(struct sysmmu_drvdata *data)
 	u32 cfg = readl_relaxed(data->sfrbase + REG_MMU_CAPA1_V7);
 	u32 tlb_num = MMU_CAPA1_NUM_TLB(cfg);
 	struct tlb_props *tlb_props = &data->tlb_props;
-	unsigned int i;
 	int port_id_cnt = tlb_props->port_props.port_id_cnt;
 	int slot_cnt = tlb_props->port_props.slot_cnt;
+	unsigned int i;
 
 	if (port_id_cnt > tlb_num) {
-		dev_warn(data->dev,
-			 "Too many values %d than TLB count %d, so ignored!\n",
+		dev_warn(data->dev, "Ignoring %d larger than TLB count %d\n",
 			 port_id_cnt, tlb_num);
 		port_id_cnt = tlb_num;
 	}
@@ -592,7 +579,7 @@ static inline void __sysmmu_set_tlb_port_type(struct sysmmu_drvdata *data)
 
 	for (i = 0; i < slot_cnt; i++)
 		writel_relaxed(tlb_props->port_props.slot_cfg[i],
-				data->sfrbase + REG_SLOT_RSV(i));
+			       data->sfrbase + REG_SLOT_RSV(i));
 }
 
 static inline void __sysmmu_init_config(struct sysmmu_drvdata *data)
@@ -688,7 +675,7 @@ static struct iommu_domain *samsung_sysmmu_domain_alloc(unsigned int type)
 	if (type != IOMMU_DOMAIN_UNMANAGED &&
 	    type != IOMMU_DOMAIN_DMA &&
 	    type != IOMMU_DOMAIN_IDENTITY) {
-		pr_err("invalid domain type %d\n", type);
+		pr_err("invalid domain type %u\n", type);
 		return NULL;
 	}
 
@@ -702,7 +689,8 @@ static struct iommu_domain *samsung_sysmmu_domain_alloc(unsigned int type)
 	if (!domain->page_table)
 		goto err_pgtable;
 
-	domain->lv2entcnt = kzalloc(LV1TABLE_SIZE, GFP_KERNEL);
+	domain->lv2entcnt = kcalloc(NUM_LV1ENTRIES, sizeof(*domain->lv2entcnt),
+				    GFP_KERNEL);
 	if (!domain->lv2entcnt)
 		goto err_counter;
 
@@ -790,6 +778,15 @@ static int samsung_sysmmu_set_domain_range(struct iommu_domain *dom,
 	} else {
 		geom->aperture_start = start;
 		geom->aperture_end = end;
+		/*
+		 * All CPUs should observe the change of force_aperture after
+		 * updating aperture_start and aperture_end because dma-iommu
+		 * restricts dma virtual memory by this aperture when
+		 * force_aperture is set.
+		 * We allow allocating dma virtual memory during changing the
+		 * aperture range because the current allocation is free from
+		 * the new restricted range.
+		 */
 		smp_wmb();
 		geom->force_aperture = true;
 	}
@@ -869,7 +866,7 @@ err_drvdata_add:
 }
 
 static void samsung_sysmmu_detach_dev(struct iommu_domain *dom,
-						struct device *dev)
+				      struct device *dev)
 {
 	struct iommu_fwspec *fwspec = dev_iommu_fwspec_get(dev);
 	struct sysmmu_clientdata *client;
@@ -895,12 +892,12 @@ static void samsung_sysmmu_detach_dev(struct iommu_domain *dom,
 static inline sysmmu_pte_t make_sysmmu_pte(phys_addr_t paddr,
 					   int pgsize, int attr)
 {
-	return ((sysmmu_pte_t) ((paddr) >> PG_ENT_SHIFT)) | pgsize | attr;
+	return ((sysmmu_pte_t)((paddr) >> PG_ENT_SHIFT)) | pgsize | attr;
 }
 
 static sysmmu_pte_t *alloc_lv2entry(struct samsung_sysmmu_domain *domain,
-				sysmmu_pte_t *sent, sysmmu_iova_t iova,
-				atomic_t *pgcounter)
+				    sysmmu_pte_t *sent, sysmmu_iova_t iova,
+				    atomic_t *pgcounter)
 {
 	if (lv1ent_section(sent)) {
 		WARN(1, "trying mapping on %#08x mapped with 1MiB page", iova);
@@ -946,14 +943,13 @@ static int lv1set_section(struct samsung_sysmmu_domain *domain,
 	bool need_sync = false;
 
 	if (lv1ent_section(sent)) {
-		WARN(1, "Trying mapping on 1MiB@%#08x that is mapped", iova);
+		WARN(1, "Trying mapping 1MB@%#08x on valid FLPD", iova);
 		return -EADDRINUSE;
 	}
 
 	if (lv1ent_page(sent)) {
 		if (WARN_ON(atomic_read(pgcnt) != 0)) {
-			WARN(1, "Trying mapping on 1MiB@%#08x that is mapped",
-				iova);
+			WARN(1, "Trying mapping 1MB@%#08x on valid SLPD", iova);
 			return -EADDRINUSE;
 		}
 
@@ -1012,6 +1008,7 @@ static int samsung_sysmmu_map(struct iommu_domain *dom, unsigned long l_iova,
 {
 	struct samsung_sysmmu_domain *domain = to_sysmmu_domain(dom);
 	sysmmu_iova_t iova = (sysmmu_iova_t)l_iova;
+	atomic_t *lv2entcnt = &domain->lv2entcnt[lv1ent_offset(iova)];
 	sysmmu_pte_t *entry;
 	int ret = -ENOMEM;
 
@@ -1023,18 +1020,16 @@ static int samsung_sysmmu_map(struct iommu_domain *dom, unsigned long l_iova,
 
 	if (size == SECT_SIZE) {
 		ret = lv1set_section(domain, entry, iova, paddr, prot,
-				     &domain->lv2entcnt[lv1ent_offset(iova)]);
+				     lv2entcnt);
 	} else {
 		sysmmu_pte_t *pent;
 
-		pent = alloc_lv2entry(domain, entry, iova,
-			      &domain->lv2entcnt[lv1ent_offset(iova)]);
+		pent = alloc_lv2entry(domain, entry, iova, lv2entcnt);
 
 		if (IS_ERR(pent))
 			ret = PTR_ERR(pent);
 		else
-			ret = lv2set_page(pent, paddr, size, prot,
-				       &domain->lv2entcnt[lv1ent_offset(iova)]);
+			ret = lv2set_page(pent, paddr, size, prot, lv2entcnt);
 	}
 
 	if (ret)
@@ -1108,7 +1103,7 @@ done:
 
 err:
 	pr_err("failed: size(%#zx) @ %#x is smaller than page size %#zx\n",
-		size, iova, err_pgsize);
+	       size, iova, err_pgsize);
 
 	return 0;
 }
@@ -1195,7 +1190,6 @@ static phys_addr_t samsung_sysmmu_iova_to_phys(struct iommu_domain *dom,
 
 void samsung_sysmmu_dump_pagetable(struct device *dev, dma_addr_t iova)
 {
-
 }
 
 static int samsung_sysmmu_add_device(struct device *dev)
@@ -1217,7 +1211,7 @@ static int samsung_sysmmu_add_device(struct device *dev)
 
 	group = iommu_group_get_for_dev(dev);
 	if (IS_ERR(group)) {
-		dev_err(dev, "has no suitable IOMMU group. (err:%d)\n",
+		dev_err(dev, "has no suitable IOMMU group. (err:%ld)\n",
 			PTR_ERR(group));
 		return PTR_ERR(group);
 	}
@@ -1231,12 +1225,12 @@ static int samsung_sysmmu_add_device(struct device *dev)
 		return -ENOMEM;
 
 	for (i = 0; i < client->sysmmu_count; i++) {
-		client->dev_link[i] = device_link_add(dev,
-				client->sysmmus[i]->dev,
-				DL_FLAG_STATELESS | DL_FLAG_PM_RUNTIME);
+		client->dev_link[i] =
+			device_link_add(dev, client->sysmmus[i]->dev,
+					DL_FLAG_STATELESS | DL_FLAG_PM_RUNTIME);
 		if (!client->dev_link[i]) {
 			dev_err(dev, "failed to add device link of %s\n",
-				client->sysmmus[i]->dev);
+				dev_name(client->sysmmus[i]->dev));
 			while (i-- > 0)
 				device_link_del(client->dev_link[i]);
 			return -EINVAL;
@@ -1487,9 +1481,10 @@ static inline void sysmmu_sbb_compare(u32 sbb_vpn, u32 sbb_link,
 	}
 }
 
-static inline unsigned int dump_tlb_entry_port_type(
-			struct sysmmu_drvdata *drvdata,	phys_addr_t pgtable,
-			int idx_way, int idx_set, int idx_sub)
+static inline
+unsigned int dump_tlb_entry_port_type(struct sysmmu_drvdata *drvdata,
+				      phys_addr_t pgtable,
+				      int idx_way, int idx_set, int idx_sub)
 {
 	u32 attr = readl_relaxed(MMU_REG(drvdata, IDX_TLB_ATTR));
 
@@ -1515,15 +1510,14 @@ static unsigned int dump_tlb_entry_port(struct sysmmu_drvdata *drvdata,
 					int tlb, int way, int num_set)
 {
 	int cnt = 0;
-	int set, sline;
+	int set, line, val;
 
 	for (set = 0; set < num_set; set++) {
-		for (sline = 0; sline < MMU_NUM_TLB_SUBLINE; sline++) {
-			writel_relaxed(MMU_CAPA1_SET_TLB_READ_ENTRY(
-				       tlb, set, way, sline),
-				       MMU_REG(drvdata, IDX_TLB_READ));
+		for (line = 0; line < MMU_NUM_TLB_SUBLINE; line++) {
+			val = MMU_CAPA1_SET_TLB_READ_ENTRY(tlb, set, way, line);
+			writel_relaxed(val, MMU_REG(drvdata, IDX_TLB_READ));
 			cnt += dump_tlb_entry_port_type(drvdata, pgtable,
-							way, set, sline);
+							way, set, line);
 		}
 	}
 
@@ -1535,7 +1529,6 @@ static inline void dump_sysmmu_tlb_port(struct sysmmu_drvdata *drvdata,
 {
 	int t, i;
 	u32 capa0, capa1, info;
-	u32 sbb_vpn, sbb_link;
 	unsigned int cnt;
 	int num_tlb, num_port, num_sbb;
 	void __iomem *sfrbase = drvdata->sfrbase;
@@ -1568,17 +1561,18 @@ static inline void dump_sysmmu_tlb_port(struct sysmmu_drvdata *drvdata,
 
 	pr_crit("--- SBB(Second-Level Page Table Base Address Buffer) ---\n");
 	for (i = 0, cnt = 0; i < num_sbb; i++) {
+		u32 sbb_vpn, sbblink;
+
 		writel_relaxed(i, MMU_REG(drvdata, IDX_SBB_READ));
 		sbb_vpn = readl_relaxed(MMU_REG(drvdata, IDX_SBB_VPN));
 
 		if (MMU_SBB_ENTRY_VALID(sbb_vpn)) {
-			sbb_link = readl_relaxed(MMU_REG(
-						 drvdata, IDX_SBB_LINK));
+			sbblink = readl_relaxed(MMU_REG(drvdata, IDX_SBB_LINK));
 
 			pr_crit("[%02d] VPN: %#010x, PPN: %#010x, ATTR: %#010x",
-				i, sbb_vpn, sbb_link,
+				i, sbb_vpn, sbblink,
 				readl_relaxed(MMU_REG(drvdata, IDX_SBB_ATTR)));
-			sysmmu_sbb_compare(sbb_vpn, sbb_link, pgtable);
+			sysmmu_sbb_compare(sbb_vpn, sbblink, pgtable);
 			cnt++;
 		}
 	}
@@ -1613,7 +1607,8 @@ static inline void dump_sysmmu_status(struct sysmmu_drvdata *drvdata,
 }
 
 static inline void sysmmu_show_fault_information(struct sysmmu_drvdata *drvdata,
-				int intr_type, unsigned long fault_addr)
+						 int intr_type,
+						 unsigned long fault_addr)
 {
 	unsigned int info;
 	phys_addr_t pgtable;
@@ -1796,22 +1791,22 @@ static int sysmmu_get_hw_info(struct sysmmu_drvdata *data)
 }
 
 static int sysmmu_parse_tlb_way_dt(struct device *dev,
-				struct sysmmu_drvdata *drvdata)
+				   struct sysmmu_drvdata *drvdata)
 {
 	const char *props_name = "sysmmu,tlb_property";
 	struct tlb_props *tlb_props = &drvdata->tlb_props;
-	struct tlb_priv_id *priv_id_cfg = NULL;
-	struct tlb_priv_addr *priv_addr_cfg = NULL;
-	int i, cnt, priv_id_cnt = 0, priv_addr_cnt = 0;
-	unsigned int priv_id_idx = 0, priv_addr_idx = 0;
+	struct tlb_priv_id *id_cfg = NULL;
+	struct tlb_priv_addr *addr_cfg = NULL;
+	int i, cnt, id_cnt = 0, addr_cnt = 0;
+	unsigned int id_idx = 0, addr_idx = 0;
 	unsigned int prop;
 	int ret;
 
 	/* Parsing TLB way properties */
 	cnt = of_property_count_u32_elems(dev->of_node, props_name);
 	for (i = 0; i < cnt; i += 2) {
-		ret = of_property_read_u32_index(dev->of_node,
-			props_name, i, &prop);
+		ret = of_property_read_u32_index(dev->of_node, props_name, i,
+						 &prop);
 		if (ret) {
 			dev_err(dev,
 				"failed to get property. cnt = %d, ret = %d\n",
@@ -1821,11 +1816,11 @@ static int sysmmu_parse_tlb_way_dt(struct device *dev,
 
 		switch (prop & WAY_TYPE_MASK) {
 		case _PRIVATE_WAY_ID:
-			priv_id_cnt++;
+			id_cnt++;
 			tlb_props->flags |= TLB_WAY_PRIVATE_ID;
 			break;
 		case _PRIVATE_WAY_ADDR:
-			priv_addr_cnt++;
+			addr_cnt++;
 			tlb_props->flags |= TLB_WAY_PRIVATE_ADDR;
 			break;
 		case _PUBLIC_WAY:
@@ -1838,79 +1833,71 @@ static int sysmmu_parse_tlb_way_dt(struct device *dev,
 		}
 	}
 
-	if (priv_id_cnt) {
-		priv_id_cfg = kcalloc(priv_id_cnt,
-				      sizeof(*priv_id_cfg), GFP_KERNEL);
-		if (!priv_id_cfg)
+	if (id_cnt) {
+		id_cfg = kcalloc(id_cnt, sizeof(*id_cfg), GFP_KERNEL);
+		if (!id_cfg)
 			return -ENOMEM;
 	}
 
-	if (priv_addr_cnt) {
-		priv_addr_cfg = kcalloc(priv_addr_cnt,
-					sizeof(*priv_addr_cfg), GFP_KERNEL);
-		if (!priv_addr_cfg) {
+	if (addr_cnt) {
+		addr_cfg = kcalloc(addr_cnt, sizeof(*addr_cfg), GFP_KERNEL);
+		if (!addr_cfg) {
 			ret = -ENOMEM;
 			goto err_priv_id;
 		}
 	}
 
 	for (i = 0; i < cnt; i += 2) {
-		ret = of_property_read_u32_index(dev->of_node,
-			props_name, i, &prop);
+		ret = of_property_read_u32_index(dev->of_node, props_name, i,
+						 &prop);
 		if (ret) {
-			dev_err(dev,
-				"failed to get property (again?) cnt = %d, ret = %d\n",
-				i, ret);
+			dev_err(dev, "failed to get TLB property of %d/%d\n",
+				i, cnt);
 			ret = -EINVAL;
 			goto err_priv_addr;
 		}
 
 		switch (prop & WAY_TYPE_MASK) {
 		case _PRIVATE_WAY_ID:
-			BUG_ON(!priv_id_cfg || priv_id_idx >= priv_id_cnt);
-
-			priv_id_cfg[priv_id_idx].cfg = prop & ~WAY_TYPE_MASK;
+			id_cfg[id_idx].cfg = prop & ~WAY_TYPE_MASK;
 			ret = of_property_read_u32_index(dev->of_node,
-				props_name, i+1, &priv_id_cfg[priv_id_idx].id);
+							 props_name, i + 1,
+							 &id_cfg[id_idx].id);
 			if (ret) {
 				dev_err(dev,
-					"failed to get id property cnt = %d, ret = %d\n",
-					i, ret);
+					"failed to get ID property of %d/%d\n",
+					i + 1, cnt);
 				goto err_priv_addr;
 			}
-			priv_id_idx++;
+			id_idx++;
 			break;
 		case _PRIVATE_WAY_ADDR:
-			BUG_ON(!priv_addr_cfg ||
-			       priv_addr_idx >= priv_addr_cnt);
-
-			priv_addr_cfg[priv_addr_idx].cfg =
-					prop & ~WAY_TYPE_MASK;
-			priv_addr_idx++;
+			addr_cfg[addr_idx].cfg = prop & ~WAY_TYPE_MASK;
+			addr_idx++;
 			break;
 		case _PUBLIC_WAY:
 			break;
 		}
 	}
 
-	tlb_props->way_props.priv_id_cfg = priv_id_cfg;
-	tlb_props->way_props.priv_id_cnt = priv_id_cnt;
+	tlb_props->way_props.priv_id_cfg = id_cfg;
+	tlb_props->way_props.priv_id_cnt = id_cnt;
 
-	tlb_props->way_props.priv_addr_cfg = priv_addr_cfg;
-	tlb_props->way_props.priv_addr_cnt = priv_addr_cnt;
+	tlb_props->way_props.priv_addr_cfg = addr_cfg;
+	tlb_props->way_props.priv_addr_cnt = addr_cnt;
 
 	return 0;
 
 err_priv_addr:
-	kfree(priv_addr_cfg);
+	kfree(addr_cfg);
 err_priv_id:
-	kfree(priv_id_cfg);
+	kfree(id_cfg);
 
 	return ret;
 }
 
 static int sysmmu_parse_tlb_port_dt(struct device *dev,
-				struct sysmmu_drvdata *drvdata)
+				    struct sysmmu_drvdata *drvdata)
 {
 	const char *props_name = "sysmmu,tlb_property";
 	const char *slot_props_name = "sysmmu,slot_property";
@@ -1928,11 +1915,12 @@ static int sysmmu_parse_tlb_port_dt(struct device *dev,
 
 		for (i = 0; i < cnt; i++) {
 			ret = of_property_read_u32_index(dev->of_node,
-					slot_props_name, i, &slot_cfg[i]);
+							 slot_props_name,
+							 i, &slot_cfg[i]);
 			if (ret) {
 				dev_err(dev,
-					"failed to get slot property.cnt = %d, ret = %d\n",
-					i, ret);
+					"failed to read slot_property %d/%d\n",
+					i, cnt);
 				ret = -EINVAL;
 				goto err_slot_prop;
 			}
@@ -1943,7 +1931,7 @@ static int sysmmu_parse_tlb_port_dt(struct device *dev,
 	}
 
 	cnt = of_property_count_u32_elems(dev->of_node, props_name);
-	if (!cnt || cnt < 0) {
+	if (cnt <= 0) {
 		dev_info(dev, "No TLB port propeties found.\n");
 		return 0;
 	}
@@ -1956,21 +1944,21 @@ static int sysmmu_parse_tlb_port_dt(struct device *dev,
 
 	for (i = 0; i < cnt; i += 2) {
 		ret = of_property_read_u32_index(dev->of_node,
-			props_name, i, &port_cfg[port_id_cnt].cfg);
+						 props_name, i,
+						 &port_cfg[port_id_cnt].cfg);
 		if (ret) {
-			dev_err(dev,
-				"failed to get cfg property. cnt = %d, ret = %d\n",
-				i, ret);
+			dev_err(dev, "failed to read tlb_property of %d/%d\n",
+				i, cnt);
 			ret = -EINVAL;
 			goto err_port_prop;
 		}
 
 		ret = of_property_read_u32_index(dev->of_node,
-			props_name, i+1, &port_cfg[port_id_cnt].id);
+						 props_name, i + 1,
+						 &port_cfg[port_id_cnt].id);
 		if (ret) {
-			dev_err(dev,
-				"failed to get id property. cnt = %d, ret = %d\n",
-				i, ret);
+			dev_err(dev, "failed to read tlb_property of %d/%d\n",
+				i + 1, cnt);
 			ret = -EINVAL;
 			goto err_port_prop;
 		}
@@ -1992,7 +1980,7 @@ err_slot_prop:
 }
 
 static int __sysmmu_secure_irq_init(struct device *sysmmu,
-					   struct sysmmu_drvdata *data)
+				    struct sysmmu_drvdata *data)
 {
 	struct platform_device *pdev = to_platform_device(sysmmu);
 	int ret;
@@ -2025,18 +2013,18 @@ static int __sysmmu_secure_irq_init(struct device *sysmmu,
 	return ret;
 }
 
-static int sysmmu_parse_dt(struct device *sysmmu,
-			   struct sysmmu_drvdata *data)
+static int sysmmu_parse_dt(struct device *sysmmu, struct sysmmu_drvdata *data)
 {
 	unsigned int qos = DEFAULT_QOS_VALUE;
 	int ret;
 
 	/* Parsing QoS */
 	ret = of_property_read_u32_index(sysmmu->of_node, "qos", 0, &qos);
-	if (!ret && (qos > 15)) {
+	if (!ret && qos > 15) {
 		dev_err(sysmmu, "Invalid QoS value %d, use default.\n", qos);
 		qos = DEFAULT_QOS_VALUE;
 	}
+
 	data->qos = qos;
 
 	/* Secure IRQ */
@@ -2125,10 +2113,8 @@ static int samsung_sysmmu_device_probe(struct platform_device *pdev)
 		return PTR_ERR(data->sfrbase);
 
 	irq = platform_get_irq(pdev, 0);
-	if (irq <= 0) {
-		dev_err(dev, "unable to find IRQ resource\n");
+	if (irq < 0)
 		return irq;
-	}
 
 	ret = devm_request_threaded_irq(dev, irq, samsung_sysmmu_irq,
 					samsung_sysmmu_irq_thread,
@@ -2189,9 +2175,9 @@ static int samsung_sysmmu_device_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, data);
 
 	dev_info(dev, "initialized IOMMU. Ver %d.%d.%d\n",
-			MMU_MAJ_VER(data->version),
-			MMU_MIN_VER(data->version),
-			MMU_REV_VER(data->version));
+		 MMU_MAJ_VER(data->version),
+		 MMU_MIN_VER(data->version),
+		 MMU_REV_VER(data->version));
 	return 0;
 
 err_sysfs_add:
@@ -2251,9 +2237,9 @@ static int __maybe_unused samsung_sysmmu_resume(struct device *dev)
 
 static const struct dev_pm_ops samsung_sysmmu_pm_ops = {
 	SET_RUNTIME_PM_OPS(samsung_sysmmu_runtime_suspend,
-					samsung_sysmmu_runtime_resume, NULL)
+			   samsung_sysmmu_runtime_resume, NULL)
 	SET_LATE_SYSTEM_SLEEP_PM_OPS(samsung_sysmmu_suspend,
-					samsung_sysmmu_resume)
+				     samsung_sysmmu_resume)
 };
 
 static const struct of_device_id sysmmu_of_match[] = {
