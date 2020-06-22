@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * linux/drivers/iommu/samsung-iommu-group.c
- *
  * Copyright (c) 2020 Samsung Electronics Co., Ltd.
  */
 
