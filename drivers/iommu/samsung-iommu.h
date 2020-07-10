@@ -46,6 +46,7 @@ struct sysmmu_drvdata {
 	struct tlb_props tlb_props;
 	bool no_block_mode;
 	bool has_vcr;
+	bool no_s2pf;		/* Disable stage 2 prefetch */
 };
 
 struct sysmmu_clientdata {
