@@ -189,9 +189,13 @@ static inline void __sysmmu_enable(struct sysmmu_drvdata *data)
 
 	writel(ctrl_val | CTRL_MMU_ENABLE, data->sfrbase + REG_MMU_CTRL);
 
-	if (data->has_vcr)
-		writel(CTRL_VID_ENABLE | CTRL_FAULT_STALL_MODE,
-		       data->sfrbase + REG_MMU_CTRL_VM);
+	if (data->has_vcr) {
+		ctrl_val = readl_relaxed(data->sfrbase + REG_MMU_CTRL_VM);
+
+		if (!data->async_fault_mode)
+			ctrl_val |= CTRL_FAULT_STALL_MODE;
+		writel(ctrl_val | CTRL_MMU_ENABLE, data->sfrbase + REG_MMU_CTRL_VM);
+	}
 }
 
 static struct samsung_sysmmu_domain *to_sysmmu_domain(struct iommu_domain *dom)
@@ -1051,6 +1055,10 @@ static int sysmmu_parse_dt(struct device *sysmmu, struct sysmmu_drvdata *data)
 			return ret;
 		}
 	}
+
+	/* use async fault mode */
+	data->async_fault_mode = of_property_read_bool(sysmmu->of_node,
+						       "sysmmu,async-fault");
 
 	ret = sysmmu_parse_tlb_property(sysmmu, data);
 	if (ret)
