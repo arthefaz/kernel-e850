@@ -39,6 +39,7 @@ struct sysmmu_drvdata {
 	int num_tlb;
 	int qos;
 	int attached_count;
+	int rpm_count;
 	int secure_irq;
 	unsigned int secure_base;
 	const unsigned int *reg_set;
