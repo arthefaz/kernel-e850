@@ -87,7 +87,7 @@ static void __ecs_update_system_status(struct ecs_domain *domain)
 			cpumask_set_cpu(cpu, &ecs_gov.busy_cpus);
 }
 
-static bool ecs_update_system_status()
+static bool ecs_update_system_status(void)
 {
 	struct ecs_domain *domain;
 	struct cpumask prev_heavy_cpus, prev_busy_cpus;
