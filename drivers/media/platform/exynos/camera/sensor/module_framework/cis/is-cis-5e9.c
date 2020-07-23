@@ -1790,7 +1790,7 @@ static struct is_cis_ops cis_ops = {
 	.cis_active_test = sensor_cis_active_test,
 };
 
-static int __init cis_5e9_probe(struct i2c_client *client,
+static int cis_5e9_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
 	int ret = 0;
