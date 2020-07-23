@@ -299,6 +299,8 @@ static int s2mpu12_check_ibi_source(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 	u8 state = ibi_src[0];
 
 	if (state & S2MPU12_IBI0_CODEC || state & S2MPU12_IBI0_PMIC_M) {
+		int i;
+
 		ret = s2mpu12_bulk_read(s2mpu12->pmic, S2MPU12_PMIC_INT1,
 					S2MPU12_NUM_IRQ_PMIC_REGS,
 					&irq_reg[PMIC_INT1]);
@@ -307,7 +309,7 @@ static int s2mpu12_check_ibi_source(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 		check = exynos_acpm_bulk_read(0, 0x07, 0x01, 6, &irq_codec[0]);
 		check = exynos_acpm_bulk_read(0, 0x07, 0xF0, 2, &irq_codec[6]);
 
-		for (int i = 0; i < 6; i++) {
+		for (i = 0; i < 6; i++) {
 			irq_codec[i] = irq_codec[i] & (~irq_codec_m[i]);
 		}
 
