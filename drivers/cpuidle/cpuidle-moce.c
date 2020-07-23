@@ -386,7 +386,7 @@ static struct factor *__init init_factor_data(struct device_node *factor_node, i
 		goto moce_fail;
 
 	/* factor type */
-	if (of_property_read_u32(factor_node, "type", &factor->type))
+	if (of_property_read_u32(factor_node, "type", (u32 *)&factor->type))
 		goto moce_fail;
 
 	/* factor ratio-table */
