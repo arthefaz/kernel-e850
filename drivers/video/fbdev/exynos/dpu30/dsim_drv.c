@@ -1063,6 +1063,12 @@ static int _dsim_disable(struct dsim_device *dsim, enum dsim_state state)
 
 	pm_runtime_put_sync(dsim->dev);
 
+	if(true == dsim->hold_rpm_on_boot) {
+		pm_runtime_put_sync(dsim->dev);
+		dsim->hold_rpm_on_boot = false;
+		dsim_info("released dsim,hold-rpm-on-boot\n");
+	}
+
 	dsim_dbg("%s %s -\n", __func__, dsim_state_names[dsim->state]);
 #if defined(CONFIG_CPU_IDLE)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
@@ -1151,6 +1157,13 @@ static int dsim_enter_ulps(struct dsim_device *dsim)
 	dsim_phy_power_off(dsim);
 
 	pm_runtime_put_sync(dsim->dev);
+
+	if(true == dsim->hold_rpm_on_boot) {
+		pm_runtime_put_sync(dsim->dev);
+		dsim->hold_rpm_on_boot = false;
+		dsim_info("released dsim,hold-rpm-on-boot\n");
+	}
+
 #if defined(CONFIG_CPU_IDLE)
 	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
 #endif
@@ -1727,6 +1740,13 @@ static int dsim_parse_dt(struct dsim_device *dsim, struct device *dev)
 		dsim->phy_ex = NULL;
 	}
 
+	if (of_property_read_bool(dev->of_node, "dsim,hold-rpm-on-boot")) {
+		dsim->hold_rpm_on_boot = true;
+		dsim_info("dsim,hold-rpm-on-boot\n");
+	}else {
+		dsim->hold_rpm_on_boot = false;
+	}
+
 	dsim->dev = dev;
 
 	return 0;
@@ -1938,6 +1958,9 @@ static int dsim_probe(struct platform_device *pdev)
 #endif
 
 	pm_runtime_enable(dev);
+
+	if(true == dsim->hold_rpm_on_boot)
+		pm_runtime_get_sync(dsim->dev);
 
 	dsim_acquire_fb_resource(dsim);
 
