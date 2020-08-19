@@ -98,6 +98,13 @@ config EXYNOS_FLEXPMU_DBG
 	help
 	Support FLEXPMU for Exynos SoC.
 
+config EXYNOS_PM
+	bool "Exynos Power Management support"
+	depends on ARCH_EXYNOS
+	default y
+	help
+	  Support Exynos Power Management.
+
 config CP_PMUCAL
 	bool "Exynos PMU(for CP) Chip Abstraction Layer"
 	depends on CAL_IF

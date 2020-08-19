@@ -3,7 +3,10 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <soc/samsung/ect_parser.h>
+
+#ifdef CONFIG_EXYNOS_PMU
 #include <soc/samsung/exynos-pmu.h>
+#endif
 
 #include "cmucal.h"
 #include "ra.h"
@@ -580,6 +583,10 @@ int ra_enable_clkout(struct cmucal_clk *clk, bool enable)
 {
 	struct cmucal_clkout *clkout = to_clkout(clk);
 
+#ifndef CONFIG_EXYNOS_PMU
+	(void)clkout; /* might be unused */
+	return 0;
+#else
 	if (enable) {
 		exynos_pmu_update(clk->offset_idx, get_mask(clk->width, clk->shift),
 				clkout->sel << clk->shift);
@@ -589,6 +596,7 @@ int ra_enable_clkout(struct cmucal_clk *clk, bool enable)
 		exynos_pmu_update(clk->offset_idx, get_mask(clk->e_width, clk->e_shift),
 				(!clkout->en) << clk->e_shift);
 	}
+#endif
 
 	return 0;
 }

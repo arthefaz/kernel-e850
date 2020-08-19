@@ -3,6 +3,15 @@
 
 #include <linux/types.h>
 #include <linux/kernel.h>
+
+#define EVCLKPERM	 1
+#define EVCLKNOENT	 2
+#define EVCLKAGAIN	11
+#define EVCLKNOMEM	12
+#define EVCLKFAULT	14	/* Bad address */
+#define EVCLKBUSY	16
+#define EVCLKINVAL	22
+#define EVCLKTIMEOUT	110
 #include "vclk.h"
 
 struct dentry;
@@ -21,18 +30,10 @@ struct dentry;
 	})
 #endif
 
+#include <asm/div64.h>
 #ifndef do_div
 #define do_div(a, b)	(a /= b)
 #endif
-
-#define EVCLKPERM	 1
-#define EVCLKNOENT	 2
-#define EVCLKAGAIN	11
-#define EVCLKNOMEM	12
-#define EVCLKFAULT	14	/* Bad address */
-#define EVCLKBUSY	16
-#define EVCLKINVAL	22
-#define EVCLKTIMEOUT	110
 
 #define	MASK_OF_TYPE		0x0F000000
 #define	MASK_OF_SUBTYPE		0x00FF0000

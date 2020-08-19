@@ -1,3 +1,6 @@
+#include <linux/delay.h>
+
+#ifdef CONFIG_PMUCAL
 #include "../pmucal_common.h"
 #include "../pmucal_cpu.h"
 #include "../pmucal_local.h"
@@ -13,6 +16,7 @@
 #include "flexpmu_cal_powermode_exynos3830.h"
 #include "flexpmu_cal_define_exynos3830.h"
 #include "pmucal_gnss_exynos3830.h"
+#endif
 
 #ifdef CONFIG_CP_PMUCAL
 #include "../pmucal_cp.h"
@@ -201,12 +205,14 @@ void exynos3830_cal_data_init(void)
 {
 	pr_info("%s: cal data init\n", __func__);
 
+#ifdef CONFIG_PMUCAL
 	/* cpu inform sfr initialize */
 	pmucal_sys_powermode[SYS_SICD] = CPU_INFORM_SICD;
 	pmucal_sys_powermode[SYS_SLEEP] = CPU_INFORM_SLEEP;
 
 	cpu_inform_c2 = CPU_INFORM_C2;
 	cpu_inform_cpd = CPU_INFORM_CPD;
+#endif
 
 	/* will be added
 	cmu_mmc = ioremap(EXYNOS3830_CMU_MMC_BASE, SZ_4K);

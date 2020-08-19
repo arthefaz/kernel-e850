@@ -1,16 +1,21 @@
 #include <linux/module.h>
+#include <linux/of_address.h>
 #include <linux/debug-snapshot.h>
+
 #include <soc/samsung/ect_parser.h>
 #include <soc/samsung/cal-if.h>
 
+#ifdef CONFIG_PMUCAL
 #include "pwrcal-env.h"
 #include "pwrcal-rae.h"
+#endif
 #include "cmucal.h"
 #include "ra.h"
 #include "acpm_dvfs.h"
 #include "fvmap.h"
 #include "asv.h"
 
+#ifdef CONFIG_PMUCAL
 #include "pmucal_system.h"
 #include "pmucal_local.h"
 #include "pmucal_cpu.h"
@@ -18,6 +23,8 @@
 #include "pmucal_gnss.h"
 #include "pmucal_shub.h"
 #include "pmucal_rae.h"
+#endif
+
 #ifdef CONFIG_EXYNOS_BCM_DBG
 #include <soc/samsung/exynos-bcm_dbg.h>
 #endif
@@ -171,6 +178,7 @@ unsigned int cal_dfs_get_resume_freq(unsigned int id)
 	return vclk_get_resume_freq(id);
 }
 
+#ifdef CONFIG_EXYNOS_PD
 int cal_pd_control(unsigned int id, int on)
 {
 	unsigned int index;
@@ -223,7 +231,9 @@ int cal_pd_set_smc_id(unsigned int id, int need_smc)
 
 	return 0;
 }
+#endif /* CONFIG_EXYNOS_PD */
 
+#ifdef CONFIG_EXYNOS_PM
 int cal_pm_enter(int mode)
 {
 	return pmucal_system_enter(mode);
@@ -337,6 +347,8 @@ extern int cal_is_lastcore_detecting(unsigned int cpu)
 	return 0;
 #endif
 }
+
+#endif /* CONFIG_EXYNOS_PM */
 
 int cal_dfs_get_asv_table(unsigned int id, unsigned int *table)
 {
@@ -467,6 +479,8 @@ int __init cal_if_init(void *dev)
 	struct resource res;
 	int ret;
 
+	(void)ret; /* might be unused */
+
 	if (cal_initialized == 1)
 		return 0;
 
@@ -477,6 +491,7 @@ int __init cal_if_init(void *dev)
 	if (cal_data_init)
 		cal_data_init();
 
+#ifdef CONFIG_PMUCAL
 	ret = pmucal_rae_init();
 	if (ret < 0)
 		return ret;
@@ -492,6 +507,7 @@ int __init cal_if_init(void *dev)
 	ret = pmucal_cpu_init();
 	if (ret < 0)
 		return ret;
+#endif
 
 #ifdef CONFIG_FLEXPMU
 	ret = pmucal_cpuinform_init();

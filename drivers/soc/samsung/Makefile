@@ -50,11 +50,11 @@ obj-$(CONFIG_EXYNOS_MODEM_IF) += pmu-cp.o
 endif
 
 #CPU Power Management
-obj-$(CONFIG_ARCH_EXYNOS)      += exynos-cpupm.o
+obj-$(CONFIG_EXYNOS_PM)		+= exynos-cpupm.o
 
 #PM
-obj-$(CONFIG_ARCH_EXYNOS)	+= exynos-powermode.o
-obj-$(CONFIG_ARCH_EXYNOS)	+= exynos-pm.o
+obj-$(CONFIG_EXYNOS_PM)		+= exynos-powermode.o
+obj-$(CONFIG_EXYNOS_PM)		+= exynos-pm.o
 
 # Exynos Secure Log
 obj-$(CONFIG_EXYNOS_SECURE_LOG)	+= exynos-seclog.o
