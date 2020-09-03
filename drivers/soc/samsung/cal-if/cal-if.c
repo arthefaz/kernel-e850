@@ -331,7 +331,11 @@ int cal_cluster_status(unsigned int cluster)
 
 extern int cal_is_lastcore_detecting(unsigned int cpu)
 {
+#ifdef CONFIG_FLEXPMU
 	return pmucal_is_lastcore_detecting(cpu);
+#else
+	return 0;
+#endif
 }
 
 int cal_dfs_get_asv_table(unsigned int id, unsigned int *table)
