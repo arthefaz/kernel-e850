@@ -9,14 +9,6 @@
 #
 #
 
-ifeq ($(CONFIG_MALI_DDK_VERSION),y)
-	ifeq ($(CONFIG_MALI_THEX_R10P0),y)
-		obj-y += tHEx/r10p0/
-	endif
-	ifeq ($(CONFIG_MALI_BIFROST_R16P0),y)
-		obj-y += b_r16p0/
-	endif
-	ifeq ($(CONFIG_MALI_BIFROST_R19P0),y)
-		obj-y += b_r19p0/
-	endif
-endif
+obj-$(CONFIG_MALI_THEX_R10P0) += tHEx/r10p0/
+obj-$(CONFIG_MALI_BIFROST_R16P0) += b_r16p0/
+obj-$(CONFIG_MALI_BIFROST_R19P0) += b_r19p0/
