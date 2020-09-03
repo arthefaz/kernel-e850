@@ -412,7 +412,7 @@ static int set_state_shutdown(struct clock_event_device *evt)
 
 	mevt = container_of(evt, struct mct_clock_event_device, evt);
 	exynos4_mct_tick_stop(mevt, 1);
-	pr_info("%s: mct_tick_stop (cpu%d)\n", __func__, cpu);
+	pr_debug("%s: mct_tick_stop (cpu%d)\n", __func__, cpu);
 	return 0;
 }
 
