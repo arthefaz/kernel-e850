@@ -233,8 +233,8 @@ static inline int ecs_is_sparing_cpu(int cpu) { return 0; }
 /*
  * EMStune
  */
-static void __emst_update_request(struct emst_mode_request *req, s32 new_value, char *func, unsigned int line) { }
-static bool emst_can_migrate_task(struct task_struct *p, int dst_cpu) { return true; }
+static void __maybe_unused __emst_update_request(struct emst_mode_request *req, s32 new_value, char *func, unsigned int line) { }
+static bool __maybe_unused emst_can_migrate_task(struct task_struct *p, int dst_cpu) { return true; }
 #endif /* CONFIG_SCHED_EMS */
 
 extern unsigned int frt_disable_cpufreq;
