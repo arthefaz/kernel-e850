@@ -175,7 +175,6 @@ static inline int dbg_snapshot_reserved_mem_check(unsigned long node, unsigned l
 #define dbg_snapshot_post_panic()		do { } while (0)
 #define dbg_snapshot_post_reboot(a)		do { } while (0)
 #define dbg_snapshot_set_hardlockup(a)		do { } while (0)
-#define dbg_snapshot_get_hardlockup()		do { } while (0)
 #define dbg_snapshot_check_crash_key(a, b)	do { } while (0)
 #define dbg_snapshot_dm(a, b, c, d, e)		do { } while (0)
 #define dbg_snapshot_panic_handler_safe()	do { } while (0)
@@ -194,10 +193,6 @@ static inline int dbg_snapshot_get_dpm_item_policy(char *first, char *second, ch
 static inline int dbg_snapshot_get_dpm_item_value(char *first, char *second, char *node)
 {
 	return -1;
-}
-static inline int dbg_snapshot_get_hardlockup(void)
-{
-	return 0;
 }
 static inline int dbg_snapshot_get_debug_level(void)
 {
