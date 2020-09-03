@@ -26,6 +26,8 @@ static int cpupm_initialized;
 /* Length of power mode name */
 #define NAME_LEN	32
 
+#define IS_NULL(object)		(object == NULL)
+
 /*
  * Power modes
  * In CPUPM, power mode controls the power domain consisting of cpu and enters
@@ -125,6 +127,8 @@ static void cluster_disable(unsigned int cpu_id)
 
 	cal_cluster_disable(cluster_id);
 }
+
+#define IS_NULL(object)		(object == NULL)
 
 #ifdef CONFIG_ARM64_EXYNOS_CPUIDLE
 /******************************************************************************
@@ -279,8 +283,6 @@ static void __init fix_idle_ip_init(void)
 /******************************************************************************
  *                            CPU idle management                             *
  ******************************************************************************/
-#define IS_NULL(object)		(object == NULL)
-
 /*
  * State of CPUPM objects
  * All CPUPM objects have 2 states, RUN and POWERDOWN.
