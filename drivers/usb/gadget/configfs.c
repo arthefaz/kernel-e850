@@ -165,6 +165,7 @@ static int usb_string_copy(const char *s, char **s_copy)
 	return 0;
 }
 
+#ifdef CONFIG_EXYNOS_CHIPID
 static int set_alt_serialnumber(struct gadget_strings *gs)
 {
 	char *str;
@@ -187,6 +188,7 @@ static int set_alt_serialnumber(struct gadget_strings *gs)
 	kfree(str);
 	return ret;
 }
+#endif
 
 #define GI_DEVICE_DESC_SIMPLE_R_u8(__name)	\
 static ssize_t gadget_dev_desc_##__name##_show(struct config_item *item, \
@@ -1349,11 +1351,12 @@ static int configfs_composite_bind(struct usb_gadget *gadget,
 				gs->manufacturer;
 			gs->strings[USB_GADGET_PRODUCT_IDX].s = gs->product;
 
+#ifdef CONFIG_EXYNOS_CHIPID
 			if (!gs->serialnumber)
 				set_alt_serialnumber(gs);
 
 			pr_info("usb: serial number: %s\n", gs->serialnumber);
-
+#endif
 			gs->strings[USB_GADGET_SERIAL_IDX].s = gs->serialnumber;
 			i++;
 		}
