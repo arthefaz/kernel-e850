@@ -102,13 +102,13 @@ static int __migrate_cma_pinpage(struct page *page, struct vm_area_struct *vma)
 	return 0;
 }
 #else
-static bool __need_migrate_cma_page(struct page *page,
+static bool __maybe_unused __need_migrate_cma_page(struct page *page,
 				struct vm_area_struct *vma,
 				unsigned long start, unsigned int flags)
 {
 	return false;
 }
-static int __migrate_cma_pinpage(struct page *page, struct vm_area_struct *vma)
+static int __maybe_unused __migrate_cma_pinpage(struct page *page, struct vm_area_struct *vma)
 {
 	return 0;
 }
@@ -233,6 +233,7 @@ retry:
 		}
 	}
 
+#ifdef CONFIG_CMA
 	if (__need_migrate_cma_page(page, vma, address, flags)) {
 		if (__isolate_cma_pinpage(page)) {
 			pr_warn("%s: Failed to migrate a cma page\n", __func__);
@@ -261,6 +262,7 @@ retry:
 					page, page_to_pfn(page));
 		}
 	}
+#endif
 
 	if (flags & FOLL_SPLIT && PageTransCompound(page)) {
 		int ret;
