@@ -3734,6 +3734,7 @@ static int dw_mci_cmdq_crypto_engine_clear(struct mmc_host *mmc, void *desc,
 static void dw_mci_cmdq_cmd_log(struct mmc_host *mmc, bool new_cmd,
 						struct cmdq_log_ctx *log_ctx)
 {
+#if 0
 	struct dw_mci_slot *slot = mmc_priv(mmc);
 	struct dw_mci *host = slot->host;
 	int cpu = raw_smp_processor_id();
@@ -3772,6 +3773,7 @@ static void dw_mci_cmdq_cmd_log(struct mmc_host *mmc, bool new_cmd,
 
 		log_ctx->idx = count;
 	}
+#endif
 }
 #endif
 
@@ -3899,7 +3901,7 @@ static void dw_mci_cmdq_set_block_size(struct mmc_host *mmc)
 
 static int dw_mci_cmdq_crypto_engine_cfg(struct mmc_host *mmc, void *desc,
 					struct mmc_data *data, struct page *page,
-					int sector_offset, bool cmdq_enabled)
+					int sector_offset, int page_index, bool cmdq_enabled)
 {
 	return 0;
 
@@ -3911,13 +3913,11 @@ static int dw_mci_cmdq_crypto_engine_clear(struct mmc_host *mmc, void *desc,
 	return 0;
 }
 
-#if defined(CONFIG_MMC_DW_DEBUG)
 static void dw_mci_cmdq_cmd_log(struct mmc_host *mmc, bool new_cmd,
 						struct cmdq_log_ctx *log_ctx)
 {
 
 }
-#endif
 
 static void dw_mci_cmdq_post_cqe_halt(struct mmc_host *mmc)
 {
