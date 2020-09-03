@@ -83,7 +83,9 @@ static void __iomem *reg_base;
 static unsigned long clk_rate;
 static unsigned int mct_int_type;
 static int mct_irqs[MCT_NR_IRQS];
+#ifdef CONFIG_HARDLOCKUP_DETECTOR_OTHER_CPU
 extern struct atomic_notifier_head hardlockup_notifier_list;
+#endif
 
 struct mct_clock_event_device {
 	struct clock_event_device evt;
@@ -454,6 +456,7 @@ static irqreturn_t exynos4_mct_tick_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_HARDLOCKUP_DETECTOR_OTHER_CPU
 static void exynos4_mct_tick_dump(unsigned int cpu)
 {
 	unsigned int icntb, icnto, tcon, intenb, intcstat;
@@ -483,6 +486,7 @@ static int exynos4_mct_hardlockup_handler(struct notifier_block *nb,
 	exynos4_mct_tick_dump(*cpu);
 	return 0;
 }
+#endif
 
 static int exynos4_mct_starting_cpu(unsigned int cpu)
 {
@@ -539,9 +543,11 @@ static int exynos4_mct_dying_cpu(unsigned int cpu)
 	return 0;
 }
 
+#ifdef CONFIG_HARDLOCKUP_DETECTOR_OTHER_CPU
 static struct notifier_block nb_hardlockup_block = {
 	.notifier_call = exynos4_mct_hardlockup_handler,
 };
+#endif
 
 static int __init exynos4_timer_resources(struct device_node *np, void __iomem *base)
 {
@@ -614,7 +620,9 @@ static int __init mct_init_dt(struct device_node *np, unsigned int int_type)
 
 	mct_int_type = int_type;
 
+#ifdef CONFIG_HARDLOCKUP_DETECTOR_OTHER_CPU
 	atomic_notifier_chain_register(&hardlockup_notifier_list, &nb_hardlockup_block);
+#endif
 
 	/* This driver uses only one global timer interrupt */
 	mct_irqs[MCT_G0_IRQ] = irq_of_parse_and_map(np, MCT_G0_IRQ);
