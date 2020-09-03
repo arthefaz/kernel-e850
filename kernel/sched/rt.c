@@ -2064,6 +2064,7 @@ static void remove_rt_entity_load_avg(struct sched_rt_entity *rt_se)
 	atomic_long_add(rt_se->avg.util_avg, &rt_rq->removed_util_avg);
 }
 
+#ifdef CONFIG_RT_GROUP_SCHED
 static void attach_task_rt_rq(struct task_struct *p)
 {
 	struct sched_rt_entity *rt_se = &p->rt;
@@ -2073,6 +2074,7 @@ static void attach_task_rt_rq(struct task_struct *p)
 	update_rt_load_avg(now, rt_se);
 	attach_rt_entity_load_avg(rt_rq, rt_se);
 }
+#endif
 
 static void detach_task_rt_rq(struct task_struct *p)
 {
@@ -2367,8 +2369,10 @@ static void put_prev_task_rt(struct rq *rq, struct task_struct *p)
 
 void rt_rq_util_change(struct rt_rq *rt_rq)
 {
+#ifdef CONFIG_RT_GROUP_SCHED
 	if (&this_rq()->rt == rt_rq)
 		cpufreq_update_util(rt_rq->rq, SCHED_CPUFREQ_RT);
+#endif
 }
 
 #ifdef CONFIG_RT_GROUP_SCHED
@@ -2455,7 +2459,10 @@ static inline int propagate_entity_rt_load_avg(struct sched_rt_entity *rt_se)
 	return 1;
 }
 #else
-static inline int propagate_entity_rt_load_avg(struct sched_rt_entity *rt_se) { };
+static inline int propagate_entity_rt_load_avg(struct sched_rt_entity *rt_se)
+{
+	return 0;
+}
 #endif
 
 void update_rt_load_avg(u64 now, struct sched_rt_entity *rt_se)
@@ -2473,8 +2480,10 @@ void update_rt_load_avg(u64 now, struct sched_rt_entity *rt_se)
 	update_rt_rq_load_avg(now, cpu, rt_rq, rt_rq->curr == rt_se);
 	propagate_entity_rt_load_avg(rt_se);
 
+#ifdef CONFIG_RT_GROUP_SCHED
 	if (entity_is_task(rt_se))
 		trace_sched_rt_load_avg_task(rt_task_of(rt_se), &rt_se->avg);
+#endif
 }
 
 /* Only try algorithms three times */
