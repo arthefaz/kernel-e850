@@ -76,7 +76,9 @@ static int dma_buf_release(struct inode *inode, struct file *file)
 	list_del(&dmabuf->list_node);
 	mutex_unlock(&db_list.lock);
 
+#ifdef CONFIG_DMABUF_TRACE
 	dmabuf_trace_free(dmabuf);
+#endif
 
 	if (dmabuf->resv == (struct reservation_object *)&dmabuf[1])
 		reservation_object_fini(dmabuf->resv);
@@ -329,10 +331,12 @@ static long dma_buf_ioctl(struct file *file,
 		return dmabuf_container_set_mask_user(dmabuf, arg);
 	case DMA_BUF_IOCTL_CONTAINER_GET_MASK:
 		return dmabuf_container_get_mask_user(dmabuf, arg);
+#ifdef CONFIG_DMABUF_TRACE
 	case DMA_BUF_IOCTL_TRACK:
 		return dmabuf_trace_track_buffer(dmabuf);
 	case DMA_BUF_IOCTL_UNTRACK:
 		return dmabuf_trace_untrack_buffer(dmabuf);
+#endif
 	default:
 		return -ENOTTY;
 	}
@@ -481,7 +485,9 @@ struct dma_buf *dma_buf_export(const struct dma_buf_export_info *exp_info)
 	list_add(&dmabuf->list_node, &db_list.head);
 	mutex_unlock(&db_list.lock);
 
+#ifdef CONFIG_DMABUF_TRACE
 	dmabuf_trace_alloc(dmabuf);
+#endif
 
 	return dmabuf;
 
