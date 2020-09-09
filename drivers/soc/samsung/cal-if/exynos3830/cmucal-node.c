@@ -501,6 +501,9 @@ enum clk_id cmucal_mux_clkcmu_peri_spi_user_parents[] = {
 	CLKCMU_PERI_IP,
 };
 unsigned int cmucal_mux_size = 113;
+
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wsizeof-pointer-div\"")
 struct cmucal_mux cmucal_mux_list[] = {
 	CLK_MUX(MUX_CLK_APM_BUS, cmucal_mux_clk_apm_bus_parents, CLK_CON_MUX_MUX_CLK_APM_BUS_SELECT, CLK_CON_MUX_MUX_CLK_APM_BUS_BUSY, CLK_CON_MUX_MUX_CLK_APM_BUS_ENABLE_AUTOMATIC_CLKGATING),
 	CLK_MUX(MUX_CLKCMU_CHUB_BUS, cmucal_mux_clkcmu_chub_bus_parents, CLK_CON_MUX_MUX_CLKCMU_CHUB_BUS_SELECT, CLK_CON_MUX_MUX_CLKCMU_CHUB_BUS_BUSY, CLK_CON_MUX_MUX_CLKCMU_CHUB_BUS_ENABLE_AUTOMATIC_CLKGATING),
@@ -616,6 +619,7 @@ struct cmucal_mux cmucal_mux_list[] = {
 	CLK_MUX(MUX_CLKCMU_PERI_UART_USER, cmucal_mux_clkcmu_peri_uart_user_parents, PLL_CON0_MUX_CLKCMU_PERI_UART_USER_MUX_SEL, PLL_CON0_MUX_CLKCMU_PERI_UART_USER_BUSY, PLL_CON1_MUX_CLKCMU_PERI_UART_USER_ENABLE_AUTOMATIC_CLKGATING),
 	CLK_MUX(MUX_CLKCMU_PERI_SPI_USER, cmucal_mux_clkcmu_peri_spi_user_parents, PLL_CON0_MUX_CLKCMU_PERI_SPI_USER_MUX_SEL, PLL_CON0_MUX_CLKCMU_PERI_SPI_USER_BUSY, PLL_CON1_MUX_CLKCMU_PERI_SPI_USER_ENABLE_AUTOMATIC_CLKGATING),
 };
+_Pragma("GCC diagnostic pop")
 
 unsigned int cmucal_div_size = 90;
 struct cmucal_div cmucal_div_list[] = {
