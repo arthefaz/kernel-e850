@@ -945,7 +945,7 @@ static int samsung_sysmmu_of_xlate(struct device *dev,
 		if (!client)
 			return -ENOMEM;
 		dev_iommu_priv_set(dev, client);
-		devres_add(dev, client);
+		devres_add(&sysmmu->dev, client);
 	}
 
 	client = (struct sysmmu_clientdata *) dev_iommu_priv_get(dev);
