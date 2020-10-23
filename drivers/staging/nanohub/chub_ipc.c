@@ -83,8 +83,11 @@ void content_disassemble(struct ipc_content *content, enum ipc_region act)
 
 bool ipc_have_sensor_info(struct sensor_map *sensor_map)
 {
+	/* To avoid memory abort in strcmp() */
+	const char *sensormap_magic = SENSORMAP_MAGIC;
+
 	if (sensor_map)
-		if(!strncmp(SENSORMAP_MAGIC, sensor_map->magic, sizeof(SENSORMAP_MAGIC)))
+		if(!strncmp(sensormap_magic, sensor_map->magic, sizeof(sensormap_magic)))
 			return true;
 	return false;
 }
@@ -231,10 +234,12 @@ static void ipc_dump_mailbox_sfr(void)
 
 void *ipc_get_chub_map(void)
 {
+	/* To avoid memory abort in strcmp() */
+	const char *os_updt_magic = OS_UPDT_MAGIC;
 	char *sram_base = ipc_get_base(IPC_REG_BL);
 	struct chub_bootargs *map = (struct chub_bootargs *)(sram_base + MAP_INFO_OFFSET);
 
-	if (strncmp(OS_UPDT_MAGIC, map->magic, sizeof(OS_UPDT_MAGIC))) {
+	if (strncmp(os_updt_magic, map->magic, sizeof(os_updt_magic))) {
 #ifdef AP_IPC
 		CSP_PRINTF_ERROR("%s: %s: %p has wrong magic key: %s -> %s\n",
 			NAME_PREFIX, __func__, map, OS_UPDT_MAGIC, map->magic);
