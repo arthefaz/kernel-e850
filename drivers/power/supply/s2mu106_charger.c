@@ -64,7 +64,7 @@ static void s2mu106_test_read(struct i2c_client *i2c)
 	sprintf(str+strlen(str), "0x7A:0x%02x, ", data);
 
 	s2mu106_read_reg(i2c, 0x8B, &data);
-	pr_err("%s: %s0x8B:0x%02x\n", __func__, str, data);
+	pr_debug("%s: %s0x8B:0x%02x\n", __func__, str, data);
 
 }
 

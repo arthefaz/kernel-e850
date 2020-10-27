@@ -753,7 +753,7 @@ static int s2mu106_get_rawsoc(struct s2mu106_fuelgauge_data *fuelgauge)
 	s2mu106_read_reg_byte(fuelgauge->i2c, 0x53, &reg_OTP_53);
 	s2mu106_read_reg_byte(fuelgauge->i2c, 0x52, &reg_OTP_52);
 	s2mu106_read_reg_byte(fuelgauge->i2c, 0x1E, &reg_1E);
-	dev_err(&fuelgauge->i2c->dev, "%s: OTP 52(%02x) 53(%02x), current 52(%02x) 53(%02x), "
+	dev_dbg(&fuelgauge->i2c->dev, "%s: OTP 52(%02x) 53(%02x), current 52(%02x) 53(%02x), "
 			"0x1F(%02x), 0x1E(%02x)\n", __func__, fuelgauge->reg_OTP_52, fuelgauge->reg_OTP_53,
 			reg_OTP_52, reg_OTP_53, por_state, reg_1E);
 
