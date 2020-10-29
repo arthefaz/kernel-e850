@@ -103,12 +103,12 @@ static inline u32 __sysmmu_get_intr_status(struct sysmmu_drvdata *data,
 }
 
 static inline u32 __sysmmu_get_fault_address(struct sysmmu_drvdata *data,
-					     bool is_secure)
+					     bool is_secure, int vmid)
 {
 	if (is_secure)
-		return read_sec_info(MMU_SEC_VM_REG(data, IDX_FAULT_VA, 0));
+		return read_sec_info(MMU_SEC_VM_REG(data, IDX_FAULT_VA, vmid));
 	else
-		return readl_relaxed(MMU_VM_REG(data, IDX_FAULT_VA, 0));
+		return readl_relaxed(MMU_VM_REG(data, IDX_FAULT_VA, vmid));
 }
 
 static inline void sysmmu_tlb_compare(phys_addr_t pgtable,
@@ -281,17 +281,17 @@ static inline void dump_sysmmu_tlb_status(struct sysmmu_drvdata *drvdata,
 }
 
 static inline void dump_sysmmu_status(struct sysmmu_drvdata *drvdata,
-				      phys_addr_t pgtable)
+				      phys_addr_t pgtable, int vmid)
 {
 	int info;
 	void __iomem *sfrbase = drvdata->sfrbase;
 
 	info = MMU_RAW_VER(readl_relaxed(sfrbase + REG_MMU_VERSION));
 
-	pr_crit("ADDR: (VA: %p), MMU_CTRL: %#010x, PT_BASE: %#010x\n",
+	pr_crit("ADDR: (VA: %p), MMU_CTRL: %#010x, PT_BASE: %#010x, VMID:%d\n",
 		sfrbase,
 		readl_relaxed(sfrbase + REG_MMU_CTRL),
-		readl_relaxed(MMU_REG(drvdata, IDX_FLPT_BASE)));
+		readl_relaxed(MMU_REG(drvdata, IDX_FLPT_BASE)), vmid);
 	pr_crit("VERSION %d.%d.%d, MMU_CFG: %#010x, MMU_STATUS: %#010x\n",
 		MMU_MAJ_VER(info), MMU_MIN_VER(info), MMU_REV_VER(info),
 		readl_relaxed(sfrbase + REG_MMU_CFG),
@@ -299,8 +299,8 @@ static inline void dump_sysmmu_status(struct sysmmu_drvdata *drvdata,
 
 	if (drvdata->has_vcr)
 		pr_crit("MMU_CTRL_VM: %#010x, MMU_CFG_VM: %#010x\n",
-			readl_relaxed(sfrbase + REG_MMU_CTRL_VM),
-			readl_relaxed(sfrbase + REG_MMU_CFG_VM));
+			readl_relaxed(sfrbase + REG_MMU_CTRL_VM(vmid)),
+			readl_relaxed(sfrbase + REG_MMU_CFG_VM(vmid)));
 
 	dump_sysmmu_tlb_status(drvdata, pgtable);
 }
@@ -384,7 +384,7 @@ static void sysmmu_show_fault_info_simple(struct sysmmu_drvdata *drvdata,
 }
 
 static void sysmmu_show_fault_information(struct sysmmu_drvdata *drvdata,
-					  int intr_type, unsigned long fault_addr)
+					  int intr_type, unsigned long fault_addr, int vmid)
 {
 	phys_addr_t pgtable;
 
@@ -421,18 +421,19 @@ static void sysmmu_show_fault_information(struct sysmmu_drvdata *drvdata,
 		pgtable = 0;
 	}
 
-	dump_sysmmu_status(drvdata, pgtable);
+	dump_sysmmu_status(drvdata, pgtable, vmid);
 finish:
 	pr_crit("----------------------------------------------------------\n");
 }
 
 static void sysmmu_get_interrupt_info(struct sysmmu_drvdata *data,
 				      int *intr_type, unsigned long *addr,
-				      bool is_secure)
+				      int *vmid, bool is_secure)
 {
 	*intr_type =  __ffs(__sysmmu_get_intr_status(data, is_secure));
+	*vmid = *intr_type / 4;
 	*intr_type %= 4;
-	*addr = __sysmmu_get_fault_address(data, is_secure);
+	*addr = __sysmmu_get_fault_address(data, is_secure, *vmid);
 }
 
 static void sysmmu_clear_interrupt(struct sysmmu_drvdata *data)
@@ -444,7 +445,7 @@ static void sysmmu_clear_interrupt(struct sysmmu_drvdata *data)
 
 irqreturn_t samsung_sysmmu_irq(int irq, void *dev_id)
 {
-	int itype;
+	int itype, vmid;
 	unsigned long addr;
 	struct sysmmu_drvdata *drvdata = dev_id;
 	bool is_secure = (irq == drvdata->secure_irq);
@@ -455,11 +456,11 @@ irqreturn_t samsung_sysmmu_irq(int irq, void *dev_id)
 	if (drvdata->async_fault_mode)
 		return IRQ_WAKE_THREAD;
 
-	sysmmu_get_interrupt_info(drvdata, &itype, &addr, is_secure);
+	sysmmu_get_interrupt_info(drvdata, &itype, &addr, &vmid, is_secure);
 	if (is_secure)
 		sysmmu_show_secure_fault_information(drvdata, itype, addr);
 	else
-		sysmmu_show_fault_information(drvdata, itype, addr);
+		sysmmu_show_fault_information(drvdata, itype, addr, vmid);
 
 	return IRQ_WAKE_THREAD;
 }
@@ -490,7 +491,7 @@ static int samsung_sysmmu_fault_notifier(struct device *dev, void *data)
 
 irqreturn_t samsung_sysmmu_irq_thread(int irq, void *dev_id)
 {
-	int itype, ret;
+	int itype, vmid, ret;
 	unsigned long addr;
 	struct sysmmu_drvdata *drvdata = dev_id;
 	bool is_secure = (irq == drvdata->secure_irq);
@@ -501,7 +502,7 @@ irqreturn_t samsung_sysmmu_irq_thread(int irq, void *dev_id)
 		.event.fault.type = IOMMU_FAULT_DMA_UNRECOV,
 	};
 
-	sysmmu_get_interrupt_info(drvdata, &itype, &addr, is_secure);
+	sysmmu_get_interrupt_info(drvdata, &itype, &addr, &vmid, is_secure);
 	reason = sysmmu_fault_type[itype];
 
 	fi.event.fault.event.addr = addr;
@@ -522,7 +523,7 @@ irqreturn_t samsung_sysmmu_irq_thread(int irq, void *dev_id)
 		if (is_secure)
 			sysmmu_show_secure_fault_information(drvdata, itype, addr);
 		else
-			sysmmu_show_fault_information(drvdata, itype, addr);
+			sysmmu_show_fault_information(drvdata, itype, addr, vmid);
 	}
 	panic("Unrecoverable System MMU Fault!!");
 

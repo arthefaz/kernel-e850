@@ -41,6 +41,8 @@ struct sysmmu_drvdata {
 	int attached_count;
 	int rpm_count;
 	int secure_irq;
+	int max_vm;
+	int vmid_mask;
 	unsigned int secure_base;
 	const unsigned int *reg_set;
 	struct tlb_props tlb_props;
@@ -167,11 +169,15 @@ static inline sysmmu_pte_t *section_entry(sysmmu_pte_t *pgtable,
 #define REG_MMU_VERSION			0x034
 #define REG_MMU_CAPA0_V7		0x870
 #define REG_MMU_CAPA1_V7		0x874
-#define REG_MMU_CTRL_VM			0x8000
-#define REG_MMU_CFG_VM			0x8004
+
+#define SYSMMU_VM_OFFSET		0x1000
+#define REG_VMID_OFFSET(offset, vmid)	((offset) + (vmid) * SYSMMU_VM_OFFSET)
+#define REG_MMU_CTRL_VM(vmid)		REG_VMID_OFFSET(0x8000, vmid)
+#define REG_MMU_CFG_VM(vmid)		REG_VMID_OFFSET(0x8004, vmid)
 
 #define MMU_CAPA_NUM_TLB_WAY(reg)	((reg) & 0xFF)
 #define MMU_CAPA_NUM_SBB_ENTRY(reg)	(((reg) >> 12) & 0xF)
+#define MMU_CAPA_NUM_PAGE_TABLE(reg)	(((reg) >> 16) & 0xF)
 #define MMU_CAPA1_EXIST(reg)		(((reg) >> 11) & 0x1)
 #define MMU_CAPA1_TYPE(reg)		(((reg) >> 28) & 0xF)
 #define MMU_CAPA1_NO_BLOCK_MODE(reg)	(((reg) >> 15) & 0x1)

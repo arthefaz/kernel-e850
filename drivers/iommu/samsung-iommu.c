@@ -32,6 +32,7 @@
 #define REG_MMU_TLB_MATCH_ID(n)		(0x2000 + ((n) * 0x20) + 0x14)
 
 #define DEFAULT_QOS_VALUE	-1
+#define DEFAULT_VMID_MASK	0x1
 #define DEFAULT_TLB_NONE	~0U
 #define UNUSED_TLB_INDEX	~0U
 
@@ -94,6 +95,11 @@ static inline bool __sysmmu_has_capa1(struct sysmmu_drvdata *data)
 	return MMU_CAPA1_EXIST(readl_relaxed(data->sfrbase + REG_MMU_CAPA0_V7));
 }
 
+static inline int __sysmmu_get_capa_max_page_table(struct sysmmu_drvdata *data)
+{
+	return MMU_CAPA_NUM_PAGE_TABLE(readl_relaxed(data->sfrbase + REG_MMU_CAPA0_V7));
+}
+
 static inline u32 __sysmmu_get_capa_type(struct sysmmu_drvdata *data)
 {
 	return MMU_CAPA1_TYPE(readl_relaxed(data->sfrbase + REG_MMU_CAPA1_V7));
@@ -111,17 +117,30 @@ static inline bool __sysmmu_get_capa_vcr_enabled(struct sysmmu_drvdata *data)
 						   REG_MMU_CAPA1_V7));
 }
 
+static inline void __sysmmu_write_all_vm(struct sysmmu_drvdata *data,
+					 u32 value, void __iomem *addr)
+{
+	int i;
+
+	for (i = 0; i < data->max_vm; i++) {
+		if (data->vmid_mask & (1 << i))
+			writel(value, addr + (i * SYSMMU_VM_OFFSET));
+	}
+}
+
 static inline void __sysmmu_tlb_invalidate_all(struct sysmmu_drvdata *data)
 {
-	writel(0x1, MMU_REG(data, IDX_ALL_INV));
+	__sysmmu_write_all_vm(data, 0x1, MMU_REG(data, IDX_ALL_INV));
 }
 
 static inline void __sysmmu_tlb_invalidate(struct sysmmu_drvdata *data,
 					   dma_addr_t start, dma_addr_t end)
 {
-	writel_relaxed(ALIGN_DOWN(start, SPAGE_SIZE), MMU_REG(data, IDX_RANGE_INV_START));
-	writel_relaxed(ALIGN_DOWN(end - 1, SPAGE_SIZE), MMU_REG(data, IDX_RANGE_INV_END));
-	writel(0x1, MMU_REG(data, IDX_RANGE_INV));
+	__sysmmu_write_all_vm(data, ALIGN_DOWN(start, SPAGE_SIZE),
+			      MMU_REG(data, IDX_RANGE_INV_START));
+	__sysmmu_write_all_vm(data, ALIGN_DOWN(end - 1, SPAGE_SIZE),
+			      MMU_REG(data, IDX_RANGE_INV_END));
+	__sysmmu_write_all_vm(data, 0x1, MMU_REG(data, IDX_RANGE_INV));
 }
 
 static inline void __sysmmu_disable(struct sysmmu_drvdata *data)
@@ -184,18 +203,19 @@ static inline void __sysmmu_enable(struct sysmmu_drvdata *data)
 
 	__sysmmu_init_config(data);
 
-	writel_relaxed(data->pgtable / SPAGE_SIZE,
-		       MMU_REG(data, IDX_FLPT_BASE));
+	__sysmmu_write_all_vm(data, data->pgtable / SPAGE_SIZE,
+			      MMU_REG(data, IDX_FLPT_BASE));
 	__sysmmu_tlb_invalidate_all(data);
 
 	writel(ctrl_val | CTRL_MMU_ENABLE, data->sfrbase + REG_MMU_CTRL);
 
 	if (data->has_vcr) {
-		ctrl_val = readl_relaxed(data->sfrbase + REG_MMU_CTRL_VM);
+		ctrl_val = readl_relaxed(data->sfrbase + REG_MMU_CTRL_VM(0));
 
 		if (!data->async_fault_mode)
 			ctrl_val |= CTRL_FAULT_STALL_MODE;
-		writel(ctrl_val | CTRL_MMU_ENABLE, data->sfrbase + REG_MMU_CTRL_VM);
+		__sysmmu_write_all_vm(data, ctrl_val | CTRL_MMU_ENABLE,
+				      data->sfrbase + REG_MMU_CTRL_VM(0));
 	}
 }
 
@@ -1008,6 +1028,7 @@ static int sysmmu_get_hw_info(struct sysmmu_drvdata *data)
 
 	data->version = __sysmmu_get_hw_version(data);
 	data->num_tlb = __sysmmu_get_tlb_num(data);
+	data->max_vm = __sysmmu_get_capa_max_page_table(data);
 
 	/* Default value */
 	data->reg_set = sysmmu_reg_set[REG_IDX_DEFAULT];
@@ -1105,7 +1126,7 @@ static int __sysmmu_secure_irq_init(struct device *sysmmu,
 
 static int sysmmu_parse_dt(struct device *sysmmu, struct sysmmu_drvdata *data)
 {
-	unsigned int qos = DEFAULT_QOS_VALUE;
+	unsigned int qos = DEFAULT_QOS_VALUE, mask = 0;
 	int ret;
 
 	/* Parsing QoS */
@@ -1129,6 +1150,11 @@ static int sysmmu_parse_dt(struct device *sysmmu, struct sysmmu_drvdata *data)
 	/* use async fault mode */
 	data->async_fault_mode = of_property_read_bool(sysmmu->of_node,
 						       "sysmmu,async-fault");
+
+	data->vmid_mask = DEFAULT_VMID_MASK;
+	ret = of_property_read_u32_index(sysmmu->of_node, "vmid_mask", 0, &mask);
+	if (!ret && (mask & ((1 << data->max_vm) - 1)))
+		data->vmid_mask = mask;
 
 	ret = sysmmu_parse_tlb_property(sysmmu, data);
 	if (ret)
