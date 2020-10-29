@@ -406,7 +406,7 @@ static int cqhci_enable(struct mmc_host *mmc, struct mmc_card *card)
 }
 
 /* CQHCI is idle and should halt immediately, so set a small timeout */
-#define CQHCI_OFF_TIMEOUT 100
+#define CQHCI_OFF_TIMEOUT 100000
 
 static void cqhci_off(struct mmc_host *mmc)
 {
