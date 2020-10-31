@@ -88,6 +88,7 @@ static inline struct task_struct *task_of(struct sched_entity *se)
 	return container_of(se, struct task_struct, se);
 }
 
+#ifdef CONFIG_FAIR_GROUP_SCHED
 static inline int get_sse(struct sched_entity *se)
 {
 	if (!se || se->my_q)
@@ -95,3 +96,4 @@ static inline int get_sse(struct sched_entity *se)
 
 	return task_of(se)->sse;
 }
+#endif

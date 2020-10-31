@@ -99,6 +99,7 @@ SCHED_FEAT(ENERGY_AWARE, true)
 SCHED_FEAT(UTIL_EST, true)
 #else
 SCHED_FEAT(ENERGY_AWARE, false)
+SCHED_FEAT(UTIL_EST, false)
 #endif
 
 /*
