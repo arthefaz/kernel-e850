@@ -764,7 +764,7 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 		dev->tx_skb_hold_count = 0;
 		spin_unlock_irqrestore(&dev->lock, flags);
 	} else {
-		length = skb->len;
+		req->length = skb->len;
 		req->buf = skb->data;
 		req->context = skb;
 	}
