@@ -277,11 +277,13 @@ static int s2mpu12_ibi_notifier(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 			}
 		}
 
+#ifdef CONFIG_SND_SOC_AUD3004X
 		if (codec_irq_flag & codec_notifier_flag) {
 			aud3004x_call_notifier(irq_codec, CODEC_IRQ_CNT);
 			codec_irq_flag = false;
-		}
-		else {
+		} else
+#endif
+		{
 			if (codec_irq_flag)
 				pr_err("%s: codec handler not registered!\n", __func__);
 		}
