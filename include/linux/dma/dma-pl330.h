@@ -175,7 +175,7 @@ static inline void *__samsung_dma_get_ops(void)
  * samsung_dma_get_ops
  * get the set of samsung dma operations
  */
-#ifdef CONFIG_SAMSUNG_DMADEV
+#if defined(CONFIG_SAMSUNG_DMADEV) && defined(CONFIG_PL330_DMA)
 #define samsung_dma_get_ops() __samsung_dma_get_ops()
 #else
 #define samsung_dma_get_ops() NULL
