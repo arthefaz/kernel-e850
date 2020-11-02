@@ -532,7 +532,7 @@ static int lv2set_page(sysmmu_pte_t *pent, phys_addr_t paddr,
 		pgtable_flush(pent, pent + 1);
 		atomic_inc(pgcnt);
 	} else {	/* size == LPAGE_SIZE */
-		int i;
+		unsigned long i;
 
 		for (i = 0; i < SPAGES_PER_LPAGE; i++, pent++) {
 			if (WARN_ON(!lv2ent_unmapped(pent))) {
@@ -759,7 +759,7 @@ static int samsung_sysmmu_add_device(struct device *dev)
 
 	client = (struct sysmmu_clientdata *)fwspec->iommu_priv;
 	client->dev_link = kcalloc(client->sysmmu_count,
-				   sizeof(**client->dev_link), GFP_KERNEL);
+				   sizeof(*client->dev_link), GFP_KERNEL);
 	if (!client->dev_link)
 		return -ENOMEM;
 
@@ -904,7 +904,7 @@ static int samsung_sysmmu_of_xlate(struct device *dev,
 
 	client = (struct sysmmu_clientdata *)fwspec->iommu_priv;
 	new_link = krealloc(client->sysmmus,
-			    sizeof(*data) * (client->sysmmu_count + 1),
+			    sizeof(data) * (client->sysmmu_count + 1),
 			    GFP_KERNEL);
 	if (!new_link)
 		return -ENOMEM;
