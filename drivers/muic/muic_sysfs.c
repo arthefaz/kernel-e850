@@ -621,7 +621,7 @@ int muic_sysfs_init(struct muic_platform_data *muic_pdata)
 	if (muic_pdata->switch_device == NULL)
 		muic_pdata->switch_device = sec_device_create(NULL, "switch");
 
-	if (IS_ERR(muic_pdata->switch_device)) {
+	if (IS_ERR_OR_NULL(muic_pdata->switch_device)) {
 		pr_err("%s Failed to create device(switch)!\n", __func__);
 		ret = -ENODEV;
 		return ret;
