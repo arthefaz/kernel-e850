@@ -44,7 +44,9 @@
 #define I2C_ADDR_RTC	0x02
 #define S2MPU12_CHANNEL	(0)
 
+#if defined(CONFIG_EXYNOS_ACPM)
 extern struct device_node *acpm_mfd_node;
+#endif
 
 static struct mfd_cell s2mpu12_devs[] = {
 	{ .name = "s2mpu12-regulator", },
@@ -247,7 +249,9 @@ static int of_s2mpu12_dt(struct device *dev,
 	if (!np)
 		return -EINVAL;
 
+#if defined(CONFIG_EXYNOS_ACPM)
 	acpm_mfd_node = np;
+#endif
 
 	status = of_get_property(np, "s2mpu12,wakeup", &strlen);
 	if (status == NULL)
