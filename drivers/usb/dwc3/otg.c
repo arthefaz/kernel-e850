@@ -216,6 +216,7 @@ static void dwc3_otg_drv_vbus(struct otg_fsm *fsm, int on)
 						on ? "on" : "off");
 }
 
+#ifdef CONFIG_USB_XHCI_HCD
 int exynos_usbdrd_inform_dp_use(int use, int lane_cnt)
 {
 	int ret = 0;
@@ -230,6 +231,7 @@ int exynos_usbdrd_inform_dp_use(int use, int lane_cnt)
 
 	return ret;
 }
+#endif
 
 void exynos_usbdrd_request_phy_isol(void)
 {
