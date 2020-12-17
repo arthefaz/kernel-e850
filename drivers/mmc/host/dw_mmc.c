@@ -3775,6 +3775,11 @@ static void dw_mci_cmdq_cmd_log(struct mmc_host *mmc, bool new_cmd,
 	}
 #endif
 }
+#else
+static void dw_mci_cmdq_cmd_log(struct mmc_host *mmc, bool new_cmd,
+						struct cmdq_log_ctx *log_ctx)
+{
+}
 #endif
 
 static void dw_mci_cmdq_post_cqe_halt(struct mmc_host *mmc)
