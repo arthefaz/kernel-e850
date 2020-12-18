@@ -1696,6 +1696,23 @@ s3c24xx_serial_ports[CONFIG_SERIAL_SAMSUNG_UARTS] = {
 };
 #undef __PORT_LOCK_UNLOCKED
 
+static void exynos_usi_init(struct uart_port *port)
+{
+	/* USI_RESET is active High signal.
+	 * Reset value of USI_RESET is 'h1 to drive stable value to PAD.
+	 * Due to this feature, the USI_RESET must be cleared (set as '0')
+	 * before transaction starts.
+	 */
+
+	wr_regl(port, USI_CON, USI_RESET);
+	udelay(1);
+
+	/* set the HWACG option bit in case of UART Rx mode.
+	 * CLKREQ_ON = 1, CLKSTOP_ON = 0 (set USI_OPTION[2:1] = 2'h1)
+	 */
+	wr_regl(port, USI_OPTION, USI_HWACG_CLKREQ_ON);
+}
+
 /* s3c24xx_serial_resetport
  *
  * reset the fifos and other the settings.
@@ -1945,6 +1962,8 @@ static int s3c24xx_serial_init_port(struct s3c24xx_uart_port *ourport,
 	ret = s3c24xx_serial_enable_baudclk(ourport);
 	if (ret)
 		pr_warn("uart: failed to enable baudclk\n");
+
+	exynos_usi_init(port);
 
 	/* Keep all interrupts masked and cleared */
 	if (s3c24xx_serial_has_interrupt_mask(port)) {
