@@ -1925,6 +1925,7 @@ static int s3c24xx_serial_init_port(struct s3c24xx_uart_port *ourport,
 		}
 	}
 
+#if 0
 	ourport->clk	= clk_get(&platdev->dev, "uart");
 	if (IS_ERR(ourport->clk)) {
 		pr_err("%s: Controller clock not found\n",
@@ -1939,6 +1940,7 @@ static int s3c24xx_serial_init_port(struct s3c24xx_uart_port *ourport,
 		clk_put(ourport->clk);
 		goto err;
 	}
+#endif
 
 	ret = s3c24xx_serial_enable_baudclk(ourport);
 	if (ret)
