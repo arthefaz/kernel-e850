@@ -61,6 +61,7 @@ static int samsung_heap_attach(struct dma_buf *dmabuf, struct dma_buf_attachment
 
 	a->table = table;
 	a->dev = attachment->dev;
+	a->flags = buffer->flags;
 
 	attachment->priv = a;
 
@@ -90,9 +91,13 @@ static struct sg_table *samsung_heap_map_dma_buf(struct dma_buf_attachment *atta
 {
 	struct samsung_map_attachment *a = attachment->priv;
 	struct sg_table *table = a->table;
+	unsigned int attr = 0;
 	int ret;
 
-	ret = dma_map_sgtable(attachment->dev, table, direction, 0);
+	if (dma_heap_flags_uncached(a->flags))
+		attr |= DMA_ATTR_SKIP_CPU_SYNC;
+
+	ret = dma_map_sgtable(attachment->dev, table, direction, attr);
 	if (ret)
 		return ERR_PTR(ret);
 	a->mapped = true;
@@ -104,9 +109,13 @@ static void samsung_heap_unmap_dma_buf(struct dma_buf_attachment *attachment,
 				       enum dma_data_direction direction)
 {
 	struct samsung_map_attachment *a = attachment->priv;
+	unsigned int attr = 0;
+
+	if (dma_heap_flags_uncached(a->flags))
+		attr |= DMA_ATTR_SKIP_CPU_SYNC;
 
 	a->mapped = false;
-	dma_unmap_sgtable(attachment->dev, table, direction, 0);
+	dma_unmap_sgtable(attachment->dev, table, direction, attr);
 }
 
 static int samsung_heap_dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
@@ -114,6 +123,9 @@ static int samsung_heap_dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
 {
 	struct samsung_dma_buffer *buffer = dmabuf->priv;
 	struct samsung_map_attachment *a;
+
+	if (dma_heap_flags_uncached(buffer->flags))
+		return 0;
 
 	mutex_lock(&buffer->lock);
 	list_for_each_entry(a, &buffer->attachments, list) {
@@ -131,6 +143,9 @@ static int samsung_heap_dma_buf_end_cpu_access(struct dma_buf *dmabuf,
 {
 	struct samsung_dma_buffer *buffer = dmabuf->priv;
 	struct samsung_map_attachment *a;
+
+	if (dma_heap_flags_uncached(buffer->flags))
+		return 0;
 
 	mutex_lock(&buffer->lock);
 	list_for_each_entry(a, &buffer->attachments, list) {
@@ -150,6 +165,9 @@ static int samsung_heap_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 	unsigned long addr = vma->vm_start;
 	struct sg_page_iter piter;
 	int ret;
+
+	if (dma_heap_flags_uncached(buffer->flags))
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 	for_each_sgtable_page(table, &piter, vma->vm_pgoff) {
 		struct page *page = sg_page_iter_page(&piter);
@@ -172,17 +190,21 @@ static void *samsung_heap_do_vmap(struct samsung_dma_buffer *buffer)
 	struct page **pages = vmalloc(sizeof(struct page *) * npages);
 	struct page **tmp = pages;
 	struct sg_page_iter piter;
+	pgprot_t pgprot;
 	void *vaddr;
 
 	if (!pages)
 		return ERR_PTR(-ENOMEM);
+
+	pgprot = dma_heap_flags_uncached(buffer->flags) ?
+		pgprot_writecombine(PAGE_KERNEL) : PAGE_KERNEL;
 
 	for_each_sgtable_page(table, &piter, 0) {
 		WARN_ON(tmp - pages >= npages);
 		*tmp++ = sg_page_iter_page(&piter);
 	}
 
-	vaddr = vmap(pages, npages, VM_MAP, PAGE_KERNEL);
+	vaddr = vmap(pages, npages, VM_MAP, pgprot);
 	vfree(pages);
 
 	if (!vaddr)

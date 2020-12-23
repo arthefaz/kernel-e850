@@ -100,6 +100,8 @@ static struct dma_buf *system_heap_allocate(struct dma_heap *heap, unsigned long
 		list_del(&page->lru);
 	}
 
+	heap_cache_flush(buffer);
+
 	dmabuf = samsung_export_dmabuf(buffer, fd_flags);
 	if (IS_ERR(dmabuf)) {
 		ret = PTR_ERR(dmabuf);
