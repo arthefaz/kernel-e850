@@ -14,11 +14,12 @@
 #ifndef DEBUG_SNAPSHOT_H
 #define DEBUG_SNAPSHOT_H
 
-#ifdef CONFIG_DEBUG_SNAPSHOT
 #include <asm/ptrace.h>
 #include <linux/bug.h>
 #include "debug-snapshot-binder.h"
 #include <dt-bindings/soc/samsung/debug-snapshot-def.h>
+
+#ifdef CONFIG_DEBUG_SNAPSHOT
 
 /* mandatory */
 extern void dbg_snapshot_task(int cpu, void *v_task);
@@ -163,7 +164,6 @@ static inline int dbg_snapshot_reserved_mem_check(unsigned long node, unsigned l
 #define dbg_snapshot_try_enable(a, b)		do { } while (0)
 #define dbg_snapshot_set_enable_item(a, b)	do { } while (0)
 #define dbg_snapshot_set_enable(a)		do { } while (0)
-#define dbg_snapshot_get_enable_item(a)		do { } while (0)
 #define dbg_snapshot_get_enable()		do { } while (0)
 #define dbg_snapshot_set_dpm_item(a, b, c, d, e)	do { } while (0)
 #define dbg_snapshot_save_reg(a)		do { } while (0)
@@ -185,6 +185,12 @@ static inline int dbg_snapshot_reserved_mem_check(unsigned long node, unsigned l
 #define dbg_snapshot_binder(a, b, c)		do { } while (0)
 #define dbg_snapshot_print_notifier_call(a, b, c) do { } while (0)
 #define dbg_snapshot_save_log(a, b)		do { } while (0)
+#define dbg_snapshot_soc_do_dpm_policy(a)	do { } while (0)
+
+static inline int dbg_snapshot_get_enable_item(const char *name)
+{
+	return 0;
+}
 
 static inline int dbg_snapshot_get_dpm_item_policy(char *first, char *second, char *node)
 {
