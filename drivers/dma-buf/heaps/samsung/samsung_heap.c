@@ -42,7 +42,7 @@ void heap_page_clean(struct page *pages, unsigned long size)
 }
 
 struct samsung_dma_buffer *samsung_dma_buffer_init(struct samsung_dma_heap *samsung_dma_heap,
-						   unsigned long size)
+						   unsigned long size, unsigned int nents)
 {
 	struct samsung_dma_buffer *buffer;
 
@@ -54,7 +54,7 @@ struct samsung_dma_buffer *samsung_dma_buffer_init(struct samsung_dma_heap *sams
 	if (!buffer->sg_table)
 		goto free_table;
 
-	if (sg_alloc_table(buffer->sg_table, 1, GFP_KERNEL))
+	if (sg_alloc_table(buffer->sg_table, nents, GFP_KERNEL))
 		goto free_sg;
 
 	INIT_LIST_HEAD(&buffer->attachments);
@@ -150,17 +150,25 @@ static int __init samsung_dma_heap_init(void)
 		return ret;
 
 	ret = carveout_dma_heap_init();
-	if (ret) {
-		cma_dma_heap_exit();
+	if (ret)
+		goto err_carveout;
 
-		return ret;
-	}
+	ret = system_dma_heap_init();
+	if (ret)
+		goto err_system;
 
 	return 0;
+err_system:
+	carveout_dma_heap_exit();
+err_carveout:
+	cma_dma_heap_exit();
+
+	return ret;
 }
 
 static void __exit samsung_dma_heap_exit(void)
 {
+	system_dma_heap_exit();
 	carveout_dma_heap_exit();
 	cma_dma_heap_exit();
 }

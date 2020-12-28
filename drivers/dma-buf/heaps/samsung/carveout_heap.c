@@ -42,7 +42,7 @@ static struct dma_buf *carveout_heap_allocate(struct dma_heap *heap, unsigned lo
 	phys_addr_t paddr;
 	int ret = -ENOMEM;
 
-	buffer = samsung_dma_buffer_init(samsung_dma_heap, size);
+	buffer = samsung_dma_buffer_init(samsung_dma_heap, size, 1);
 	if (IS_ERR(buffer))
 		return ERR_PTR(-ENOMEM);
 
