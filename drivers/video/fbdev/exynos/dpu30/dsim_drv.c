@@ -562,7 +562,7 @@ static void dsim_bts_print_info(struct bts_decon_info *info)
 }
 #endif
 #endif
-
+/*
 static void dsim_underrun_info(struct dsim_device *dsim)
 {
 #if defined(CONFIG_EXYNOS_BTS)
@@ -600,7 +600,7 @@ static void dsim_underrun_info(struct dsim_device *dsim)
 #endif
 #endif
 }
-
+*/
 static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 {
 	unsigned int int_src;
@@ -636,9 +636,9 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 
 	if (int_src & DSIM_INTSRC_UNDER_RUN) {
 		dsim->total_underrun_cnt++;
-		dsim_info("dsim%d underrun irq occurs(%d)\n", dsim->id,
-				dsim->total_underrun_cnt);
-		dsim_underrun_info(dsim);
+		//dsim_info("dsim%d underrun irq occurs(%d)\n", dsim->id,
+				//dsim->total_underrun_cnt);
+		//dsim_underrun_info(dsim);
 	}
 	if (int_src & DSIM_INTSRC_VT_STATUS) {
 		dsim_dbg("dsim%d vt_status(vsync) irq occurs\n", dsim->id);
@@ -815,10 +815,11 @@ static int dsim_enable(struct dsim_device *dsim)
 				dsim->id, dsim_state_names[next_state], ret);
 		goto out;
 	}
-
-	if (prev_state == DSIM_STATE_OFF)
+/*
+	if (prev_state == DSIM_STATE_OFF) {
 		dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DISPLAYON, NULL);
-
+	}
+*/
 	dsim_info("dsim-%d %s - (state:%s -> %s)\n", dsim->id, __func__,
 			dsim_state_names[prev_state],
 			dsim_state_names[dsim->state]);
@@ -1242,12 +1243,14 @@ static int dsim_read_panel_id(struct dsim_device *dsim, u32 *id)
 	memset(buf, 0, sizeof(buf));
 
 	/* dsim sends the request for the lcd id and gets it buffer */
-	ret = dsim_read_data(dsim, MIPI_DSI_DCS_READ,
+/*	ret = dsim_read_data(dsim, MIPI_DSI_DCS_READ,
 			MIPI_DCS_GET_DISPLAY_ID, DSIM_DDI_ID_LEN, buf);
 	if (ret < 0) {
 		dsim_err("failed to read panel id(%d)\n", ret);
 		return ret;
 	}
+*/
+	*((unsigned int *)buf) = 0xff;
 
 	memcpy(id, (unsigned int *)buf, sizeof(u32));
 	dsim_info("suceeded to read panel id : 0x%08x\n", *id);

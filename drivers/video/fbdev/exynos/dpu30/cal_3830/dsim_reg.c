@@ -1610,7 +1610,8 @@ static void dsim_reg_set_config(u32 id, struct exynos_panel_info *lcd_info,
 	}
 
 	/* set number of lanes, eotp enable, per_frame_read, pixformat, vc_id */
-	dsim_reg_set_config_options(id, lcd_info->data_lane -1, 1, 0,
+	/* E850-96 requires eotp to be NOT SET */
+	dsim_reg_set_config_options(id, lcd_info->data_lane -1, 0, 0,
 			DSIM_PIXEL_FORMAT_RGB24, 0);
 
 	/* CPSR & VIDEO MODE & HPERIOD can be set only when shadow enable on */
@@ -2021,26 +2022,26 @@ void dsim_reg_preinit(u32 id)
 
 	/* default configuration just for reading panel id */
 	memset(&clks, 0, sizeof(struct dsim_clks));
-	clks.hs_clk = 898;
+	clks.hs_clk = 400;
 	clks.esc_clk = 20;
 	memset(&lcd_info, 0, sizeof(struct exynos_panel_info));
-	lcd_info.vfp = 20;
-	lcd_info.vbp = 2;
-	lcd_info.vsa = 2;
-	lcd_info.hfp = 20;
-	lcd_info.hbp = 20;
-	lcd_info.hsa = 20;
+	lcd_info.vfp = 35;
+	lcd_info.vbp = 25;
+	lcd_info.vsa = 80;
+	lcd_info.hfp = 80;
+	lcd_info.hbp = 60;
+	lcd_info.hsa = 10;
 	lcd_info.fps = 60;
-	lcd_info.hs_clk = 898;
-	lcd_info.mode = DECON_MIPI_COMMAND_MODE;
+	lcd_info.hs_clk = 1100;
+	lcd_info.mode = DECON_VIDEO_MODE;
 	lcd_info.xres = 1080;
 	lcd_info.yres = 1920;
 	lcd_info.dphy_pms.p = 2;
-	lcd_info.dphy_pms.m = 276;
+	lcd_info.dphy_pms.m = 338;
 	lcd_info.dphy_pms.s = 2;
-	lcd_info.dphy_pms.k = 20165; //0x4ec5
+	lcd_info.dphy_pms.k = 0x7627; //0x4ec5
 	lcd_info.data_lane = 4;
-	lcd_info.cmd_underrun_cnt[0] = 583;
+	//lcd_info.cmd_underrun_cnt[0] = 583;
 
 	/* DPHY reset control from SYSREG(0) */
 	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 0);
@@ -2478,7 +2479,7 @@ void dsim_reg_set_bist(u32 id, u32 en)
 {
 	if (en) {
 		dsim_reg_set_bist_te_interval(id, 4505);
-		dsim_reg_set_bist_mode(id, DSIM_GRAY_GRADATION);
+		dsim_reg_set_bist_mode(id, DSIM_COLOR_BAR);
 		dsim_reg_enable_bist_pattern_move(id, true);
 		dsim_reg_enable_bist(id, en);
 	}

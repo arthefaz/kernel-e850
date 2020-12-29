@@ -105,6 +105,8 @@ static void win_update_check_limitation(struct decon_device *decon,
 	int sz_align = 1;
 	int adj_src_x = 0, adj_src_y = 0;
 
+ 	goto change_full;
+
 	for (i = 0; i < decon->dt.max_win; i++) {
 		config = &win_config[i];
 		if (config->state == DECON_WIN_STATE_DISABLED)

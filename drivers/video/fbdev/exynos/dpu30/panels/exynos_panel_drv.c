@@ -44,12 +44,11 @@ static int exynos_backlight_update_status(struct backlight_device *bl)
 	struct dsim_device *dsim = get_dsim_drvdata(0);
 
 	DPU_INFO_PANEL("%s: brightness = %d\n", __func__, brightness);
-#if 0
-	if (bl->props.power != FB_BLANK_UNBLANK ||
-			bl->props.fb_blank != FB_BLANK_UNBLANK ||
-			bl->props.state & BL_CORE_FBBLANK)
-		brightness = 0;
-#endif
+
+        if (bl->props.power != FB_BLANK_UNBLANK ||
+                        bl->props.fb_blank != FB_BLANK_UNBLANK ||
+                        bl->props.state & BL_CORE_FBBLANK)
+                brightness = 0;
 
 	if (brightness <= bl->props.max_brightness) {
 		/* brightness bit-depth and para order can be different */
@@ -59,9 +58,7 @@ static int exynos_backlight_update_status(struct backlight_device *bl)
 		/* backlight_off ??? */
 		return -EINVAL;
 	}
-
 	return 0;
-
 }
 
 static const struct backlight_ops exynos_backlight_ops = {
@@ -88,11 +85,8 @@ static int exynos_panel_parse_gpios(struct exynos_panel_device *panel)
 			res->lcd_power[0] = -1;
 			DPU_INFO_PANEL("not support LCD power GPIO");
 		}
-		res->lcd_power[1] = of_get_gpio(n, 2);
-		if (res->lcd_power[1] < 0) {
-			res->lcd_power[1] = -1;
-			DPU_INFO_PANEL("not support 2nd LCD power GPIO");
-		}
+		res->lcd_power[1] = 0;
+
 	}
 
 	DPU_INFO_PANEL("%s -\n", __func__);
@@ -128,8 +122,7 @@ static int exynos_panel_parse_regulators(struct exynos_panel_device *panel)
 			res->regulator[1] = NULL;
 		}
 	}
-
-	return 0;
+        return 0;
 }
 
 static int exynos_panel_reset(struct exynos_panel_device *panel)
@@ -156,7 +149,7 @@ static int exynos_panel_reset(struct exynos_panel_device *panel)
 
 	DPU_DEBUG_PANEL("%s -\n", __func__);
 	return 0;
-}
+ }
 
 static int exynos_panel_set_power(struct exynos_panel_device *panel, bool on)
 {
@@ -518,6 +511,7 @@ static void exynos_panel_list_up(void)
 	panel_list[0] = &panel_s6e3ha8_ops;
 	panel_list[1] = &panel_s6e3ha9_ops;
 	panel_list[2] = &panel_s6e3fa0_ops;
+	panel_list[3] = &panel_lt8912b_dummy_ops;
 }
 
 static int exynos_panel_register_ops(struct exynos_panel_device *panel)

@@ -491,6 +491,7 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 	struct decon_mode_info psr;
 	struct decon_param p;
 	int ret = 0;
+	struct dsim_device *dsim;
 
 	if (IS_DECON_ON_STATE(decon)) {
 		decon_warn("%s decon-%d already on(%s) state\n", __func__,
@@ -561,6 +562,8 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 	decon->state = state;
 	decon_reg_set_int(decon->id, &psr, 1);
 
+	dsim = container_of(decon->out_sd[0], struct dsim_device, sd);
+	dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DISPLAYON, NULL);
 err:
 	return ret;
 }
@@ -2152,12 +2155,7 @@ static void decon_update_regs(struct decon_device *decon,
 			if (decon_is_bypass(decon))
 				goto end;
 #endif
-			decon_up_list_saved();
-#if defined(CONFIG_EXYNOS_AFBC_DEBUG)
-			decon_dump_afbc_handle(decon, old_dma_bufs);
-#endif
-			decon_dump(decon);
-			BUG();
+			goto end;
 		}
 		DPU_DEBUG_DMA_BUF("frame_start\n");
 		for (i = 0; i < decon->dt.max_win; i++) {
@@ -3932,6 +3930,7 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 	dsim = container_of(decon->out_sd[0], struct dsim_device, sd);
 	decon_reg_start(decon->id, &psr);
 	decon_reg_set_int(decon->id, &psr, 1);
+
 	dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_DISPLAYON, NULL);
 	decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 	if (decon_reg_wait_update_done_and_mask(decon->id, &psr,

@@ -46,7 +46,7 @@ void dpp_op_timer_handler(unsigned long arg)
 {
 	struct dpp_device *dpp = (struct dpp_device *)arg;
 
-	dpp_dump(dpp);
+	//dpp_dump(dpp);
 
 	if (dpp->dpp_config->config.compression)
 		dpp_info("Compression Source is %s of DPP[%d]\n",
