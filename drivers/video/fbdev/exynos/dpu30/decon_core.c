@@ -3992,7 +3992,7 @@ static int decon_probe(struct platform_device *pdev)
 
 	ret = decon_init_resources(decon, pdev, device_name);
 	if (ret)
-		goto err_res;
+		goto err;
 
 	ret = decon_create_vsync_thread(decon);
 	if (ret)
@@ -4093,8 +4093,6 @@ err_psr:
 	decon_destroy_vsync_thread(decon);
 err_vsync:
 	iounmap(decon->res.ss_regs);
-err_res:
-	kfree(decon);
 err:
 	decon_err("decon probe fail");
 	return ret;

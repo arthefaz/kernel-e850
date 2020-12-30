@@ -340,8 +340,8 @@ static int decon_vsync_thread(void *data)
 	while (!kthread_should_stop()) {
 		ktime_t timestamp = decon->vsync.timestamp;
 		int ret = wait_event_interruptible(decon->vsync.wait,
-			(timestamp != decon->vsync.timestamp) &&
-			decon->vsync.active);
+			((timestamp != decon->vsync.timestamp) &&
+			decon->vsync.active) || kthread_should_stop());
 		if (!ret)
 			sysfs_notify(&decon->dev->kobj, NULL, "vsync");
 	}
