@@ -363,7 +363,7 @@ static int samsung_sysmmu_attach_dev(struct iommu_domain *dom,
 		return -ENXIO;
 	}
 
-	if (!fwspec->iommu_priv) {
+	if (!dev_iommu_priv_get(dev)) {
 		dev_err(dev, "has no IOMMU\n");
 		return -ENODEV;
 	}
@@ -373,7 +373,7 @@ static int samsung_sysmmu_attach_dev(struct iommu_domain *dom,
 	group_list = iommu_group_get_iommudata(group);
 	page_table = virt_to_phys(domain->page_table);
 
-	client = fwspec->iommu_priv;
+	client = dev_iommu_priv_get(dev);
 	for (i = 0; i < client->sysmmu_count; i++) {
 		drvdata = client->sysmmus[i];
 
@@ -415,7 +415,6 @@ err_drvdata_add:
 static void samsung_sysmmu_detach_dev(struct iommu_domain *dom,
 				      struct device *dev)
 {
-	struct iommu_fwspec *fwspec = dev_iommu_fwspec_get(dev);
 	struct sysmmu_clientdata *client;
 	struct samsung_sysmmu_domain *domain;
 	struct list_head *group_list;
@@ -426,7 +425,7 @@ static void samsung_sysmmu_detach_dev(struct iommu_domain *dom,
 	domain = to_sysmmu_domain(dom);
 	group_list = iommu_group_get_iommudata(group);
 
-	client = fwspec->iommu_priv;
+	client = dev_iommu_priv_get(dev);
 	for (i = 0; i < client->sysmmu_count; i++) {
 		drvdata = client->sysmmus[i];
 
@@ -514,7 +513,7 @@ static int lv1set_section(struct samsung_sysmmu_domain *domain,
 			.end = iova + SECT_SIZE,
 		};
 
-		iommu_tlb_sync(&domain->domain, &gather);
+		iommu_iotlb_sync(&domain->domain, &gather);
 	}
 
 	return 0;
@@ -551,7 +550,8 @@ static int lv2set_page(sysmmu_pte_t *pent, phys_addr_t paddr,
 }
 
 static int samsung_sysmmu_map(struct iommu_domain *dom, unsigned long l_iova,
-			      phys_addr_t paddr, size_t size, int prot)
+			      phys_addr_t paddr, size_t size, int prot,
+			      gfp_t unused)
 {
 	struct samsung_sysmmu_domain *domain = to_sysmmu_domain(dom);
 	sysmmu_iova_t iova = (sysmmu_iova_t)l_iova;
@@ -732,33 +732,23 @@ void samsung_sysmmu_dump_pagetable(struct device *dev, dma_addr_t iova)
 {
 }
 
-static int samsung_sysmmu_add_device(struct device *dev)
+static struct iommu_device *samsung_sysmmu_probe_device(struct device *dev)
 {
 	struct iommu_fwspec *fwspec = dev_iommu_fwspec_get(dev);
-	struct iommu_group *group;
 	struct sysmmu_clientdata *client;
 	int i;
 
 	if (!fwspec) {
 		dev_dbg(dev, "IOMMU instance data is not initialized\n");
-		return -ENODEV;
+		return ERR_PTR(-ENODEV);
 	}
 
 	if (fwspec->ops != &samsung_sysmmu_ops) {
 		dev_err(dev, "has different IOMMU ops\n");
-		return -ENODEV;
+		return ERR_PTR(-ENODEV);
 	}
 
-	group = iommu_group_get_for_dev(dev);
-	if (IS_ERR(group)) {
-		dev_err(dev, "has no suitable IOMMU group. (err:%ld)\n",
-			PTR_ERR(group));
-		return PTR_ERR(group);
-	}
-
-	iommu_group_put(group);
-
-	client = (struct sysmmu_clientdata *)fwspec->iommu_priv;
+	client = (struct sysmmu_clientdata *) dev_iommu_priv_get(dev);
 	if (client->dev_link) {
 		dev_info(dev, "is already added. It's okay.\n");
 		return 0;
@@ -766,7 +756,7 @@ static int samsung_sysmmu_add_device(struct device *dev)
 	client->dev_link = kcalloc(client->sysmmu_count,
 				   sizeof(*client->dev_link), GFP_KERNEL);
 	if (!client->dev_link)
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 
 	for (i = 0; i < client->sysmmu_count; i++) {
 		client->dev_link[i] =
@@ -777,16 +767,16 @@ static int samsung_sysmmu_add_device(struct device *dev)
 				dev_name(client->sysmmus[i]->dev));
 			while (i-- > 0)
 				device_link_del(client->dev_link[i]);
-			return -EINVAL;
+			return ERR_PTR(-EINVAL);
 		}
 		dev_info(dev, "device link to %s\n",
 			 dev_name(client->sysmmus[i]->dev));
 	}
 
-	return 0;
+	return &client->sysmmus[0]->iommu;
 }
 
-static void samsung_sysmmu_remove_device(struct device *dev)
+static void samsung_sysmmu_release_device(struct device *dev)
 {
 	struct iommu_fwspec *fwspec = dev_iommu_fwspec_get(dev);
 	struct sysmmu_clientdata *client;
@@ -795,12 +785,11 @@ static void samsung_sysmmu_remove_device(struct device *dev)
 	if (!fwspec || fwspec->ops != &samsung_sysmmu_ops)
 		return;
 
-	client = (struct sysmmu_clientdata *)fwspec->iommu_priv;
+	client = (struct sysmmu_clientdata *) dev_iommu_priv_get(dev);
 	for (i = 0; i < client->sysmmu_count; i++)
 		device_link_del(client->dev_link[i]);
 	kfree(client->dev_link);
 
-	iommu_group_remove_device(dev);
 	iommu_fwspec_free(dev);
 }
 
@@ -888,7 +877,6 @@ static int samsung_sysmmu_of_xlate(struct device *dev,
 	unsigned int fwid = 0;
 	int ret;
 
-	iommu_device_link(&data->iommu, dev);
 	ret = iommu_fwspec_add_ids(dev, &fwid, 1);
 	if (ret) {
 		dev_err(dev, "failed to add fwspec. (err:%d)\n", ret);
@@ -897,17 +885,17 @@ static int samsung_sysmmu_of_xlate(struct device *dev,
 	}
 
 	fwspec = dev_iommu_fwspec_get(dev);
-	if (!fwspec->iommu_priv) {
+	if (!dev_iommu_priv_get(dev)) {
 		client = devres_alloc(samsung_sysmmu_clientdata_release,
 				      sizeof(*client), GFP_KERNEL);
 		if (!client)
 			return -ENOMEM;
 		client->dev = dev;
-		fwspec->iommu_priv = client;
+		dev_iommu_priv_set(dev, client);
 		devres_add(dev, client);
 	}
 
-	client = (struct sysmmu_clientdata *)fwspec->iommu_priv;
+	client = (struct sysmmu_clientdata *) dev_iommu_priv_get(dev);
 	new_link = krealloc(client->sysmmus,
 			    sizeof(data) * (client->sysmmu_count + 1),
 			    GFP_KERNEL);
@@ -934,8 +922,8 @@ static struct iommu_ops samsung_sysmmu_ops = {
 	.flush_iotlb_all	= samsung_sysmmu_flush_iotlb_all,
 	.iotlb_sync		= samsung_sysmmu_iotlb_sync,
 	.iova_to_phys		= samsung_sysmmu_iova_to_phys,
-	.add_device		= samsung_sysmmu_add_device,
-	.remove_device		= samsung_sysmmu_remove_device,
+	.probe_device		= samsung_sysmmu_probe_device,
+	.release_device		= samsung_sysmmu_release_device,
 	.device_group		= samsung_sysmmu_device_group,
 	.of_xlate		= samsung_sysmmu_of_xlate,
 	.pgsize_bitmap		= SECT_SIZE | LPAGE_SIZE | SPAGE_SIZE,
