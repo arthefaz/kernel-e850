@@ -94,7 +94,19 @@ static struct sg_table *samsung_heap_map_dma_buf(struct dma_buf_attachment *atta
 	unsigned int attr = 0;
 	int ret;
 
-	if (dma_heap_flags_uncached(a->flags))
+	if (dma_heap_tzmp_buffer(a)) {
+		struct samsung_dma_buffer *buffer = attachment->dmabuf->priv;
+		struct buffer_prot_info *info = buffer->priv;
+
+		BUG_ON(!info);
+
+		sg_dma_address(table->sgl) = info->dma_addr;
+		sg_dma_len(table->sgl) = info->chunk_count * info->chunk_size;
+		table->nents = 1;
+
+		return table;
+	}
+	if (dma_heap_skip_cached(a->flags))
 		attr |= DMA_ATTR_SKIP_CPU_SYNC;
 
 	ret = dma_map_sgtable(attachment->dev, table, direction, attr);
@@ -111,7 +123,10 @@ static void samsung_heap_unmap_dma_buf(struct dma_buf_attachment *attachment,
 	struct samsung_map_attachment *a = attachment->priv;
 	unsigned int attr = 0;
 
-	if (dma_heap_flags_uncached(a->flags))
+	if (dma_heap_tzmp_buffer(a))
+		return;
+
+	if (dma_heap_skip_cached(a->flags))
 		attr |= DMA_ATTR_SKIP_CPU_SYNC;
 
 	a->mapped = false;
@@ -124,7 +139,7 @@ static int samsung_heap_dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
 	struct samsung_dma_buffer *buffer = dmabuf->priv;
 	struct samsung_map_attachment *a;
 
-	if (dma_heap_flags_uncached(buffer->flags))
+	if (dma_heap_skip_cached(buffer->flags))
 		return 0;
 
 	mutex_lock(&buffer->lock);
@@ -144,7 +159,7 @@ static int samsung_heap_dma_buf_end_cpu_access(struct dma_buf *dmabuf,
 	struct samsung_dma_buffer *buffer = dmabuf->priv;
 	struct samsung_map_attachment *a;
 
-	if (dma_heap_flags_uncached(buffer->flags))
+	if (dma_heap_skip_cached(buffer->flags))
 		return 0;
 
 	mutex_lock(&buffer->lock);
@@ -165,6 +180,11 @@ static int samsung_heap_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 	unsigned long addr = vma->vm_start;
 	struct sg_page_iter piter;
 	int ret;
+
+	if (dma_heap_flags_protected(buffer->flags)) {
+		perr("mmap() to protected buffer is not allowed");
+		return -EACCES;
+	}
 
 	if (dma_heap_flags_uncached(buffer->flags))
 		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
@@ -195,6 +215,11 @@ static void *samsung_heap_do_vmap(struct samsung_dma_buffer *buffer)
 
 	if (!pages)
 		return ERR_PTR(-ENOMEM);
+
+	if (dma_heap_flags_protected(buffer->flags)) {
+		perr("vmap() to protected buffer is not allowed");
+		return ERR_PTR(-EACCES);
+	}
 
 	pgprot = dma_heap_flags_uncached(buffer->flags) ?
 		pgprot_writecombine(PAGE_KERNEL) : PAGE_KERNEL;

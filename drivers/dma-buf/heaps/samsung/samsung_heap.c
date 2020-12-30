@@ -23,9 +23,17 @@ void heap_cache_flush(struct samsung_dma_buffer *buffer)
 {
 	struct device *dev = dma_heap_get_dev(buffer->heap->dma_heap);
 
-	if (!dma_heap_flags_uncached(buffer->flags))
+	if (!dma_heap_skip_cached(buffer->flags))
 		return;
 
+	/*
+	 * Flushing caches on buffer allocation is intended for preventing
+	 * corruption from writing back to DRAM from the dirty cache lines
+	 * while updating the buffer from DMA. However, cache flush should be
+	 * performed on the entire allocated area if the buffer is to be
+	 * protected from non-secure access to prevent the dirty write-back
+	 * to the protected area.
+	 */
 	dma_map_sgtable(dev, buffer->sg_table, DMA_TO_DEVICE, 0);
 	dma_unmap_sgtable(dev, buffer->sg_table, DMA_FROM_DEVICE, 0);
 }
@@ -92,8 +100,11 @@ void samsung_dma_buffer_remove(struct samsung_dma_buffer *buffer)
 
 const char *samsung_add_heap_name(unsigned long flags)
 {
-	if (flags & DMA_HEAP_FLAG_UNCACHED)
+	if (dma_heap_flags_uncached(flags))
 		return "-uncached";
+
+	if (dma_heap_flags_protected(flags))
+		return "-secure";
 
 	return "";
 }
@@ -144,31 +155,67 @@ struct samsung_dma_heap *samsung_heap_init(struct device *dev, void *priv,
 	return samsung_dma_heap;
 }
 
-/*
- * registers cachable heap and uncachable heap both.
- */
-static const unsigned int samsung_heap_type[] = {
+static const unsigned int cachable_heap_type[] = {
 	0,
 	DMA_HEAP_FLAG_UNCACHED,
 };
-#define NUM_HEAP_TYPE ARRAY_SIZE(samsung_heap_type)
+#define num_cachable_heaps ARRAY_SIZE(cachable_heap_type)
 
+static const unsigned int prot_heap_type[] = {
+	DMA_HEAP_FLAG_PROTECTED,
+};
+#define num_prot_heaps ARRAY_SIZE(prot_heap_type)
+
+/*
+ * Maximum heap types is defined by cachable heap types
+ * because prot heap type is always only 1.
+ */
+#define num_max_heaps (num_cachable_heaps)
+
+/*
+ * NOTE: samsung_heap_create returns error when heap creation fails.
+ * In case of -ENODEV, it means that the secure heap doesn't need to be added
+ * if system doesn't support content protection.
+ */
 int samsung_heap_create(struct device *dev, void *priv,
 			void (*release)(struct samsung_dma_buffer *buffer), const char *name,
 			const struct dma_heap_ops *ops)
 
 {
-	struct samsung_dma_heap *heap[NUM_HEAP_TYPE];
-	int i, ret;
+	struct samsung_dma_heap *heap[num_max_heaps];
+	const unsigned int *types;
+	int i, ret, count, protid = 0;
 
-	for (i = 0; i < NUM_HEAP_TYPE; i++) {
+	/*
+	 * Secure heap should allocate only secure buffer.
+	 * Normal cachable heap and uncachable heaps are not registered.
+	 */
+	if (of_property_read_bool(dev->of_node, "dma_heap,secure")) {
+		of_property_read_u32(dev->of_node, "dma_heap,protection_id", &protid);
+		if (!protid) {
+			perrfn("Secure heap should be set with protection id");
+			return -EINVAL;
+		}
+
+		if (!IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION))
+			return -ENODEV;
+
+		count = num_prot_heaps;
+		types = prot_heap_type;
+	} else {
+		count = num_cachable_heaps;
+		types = cachable_heap_type;
+	}
+
+	for (i = 0; i < count; i++) {
 		heap[i] = samsung_heap_init(dev, priv, release);
 		if (IS_ERR(heap[i])) {
 			ret = PTR_ERR(heap[i]);
 			goto heap_put;
 		}
 
-		heap[i]->flags = samsung_heap_type[i];
+		heap[i]->flags = types[i];
+		heap[i]->protection_id = protid;
 
 		ret = samsung_heap_add(dev, heap[i], name, ops);
 		if (ret)
@@ -199,9 +246,13 @@ static int __init samsung_dma_heap_init(void)
 {
 	int ret;
 
-	ret = cma_dma_heap_init();
+	ret = secure_iova_pool_create();
 	if (ret)
 		return ret;
+
+	ret = cma_dma_heap_init();
+	if (ret)
+		goto err_cma;
 
 	ret = carveout_dma_heap_init();
 	if (ret)
@@ -216,6 +267,8 @@ err_system:
 	carveout_dma_heap_exit();
 err_carveout:
 	cma_dma_heap_exit();
+err_cma:
+	secure_iova_pool_destroy();
 
 	return ret;
 }
@@ -225,6 +278,8 @@ static void __exit samsung_dma_heap_exit(void)
 	system_dma_heap_exit();
 	carveout_dma_heap_exit();
 	cma_dma_heap_exit();
+
+	secure_iova_pool_destroy();
 }
 
 module_init(samsung_dma_heap_init);

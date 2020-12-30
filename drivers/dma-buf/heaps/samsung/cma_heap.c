@@ -56,6 +56,15 @@ static struct dma_buf *cma_heap_allocate(struct dma_heap *heap, unsigned long le
 	heap_page_clean(pages, size);
 	heap_cache_flush(buffer);
 
+	if (dma_heap_flags_protected(samsung_dma_heap->flags)) {
+		buffer->priv = dma_buffer_protect(dma_heap_get_dev(heap), samsung_dma_heap, size,
+						  page_to_phys(pages));
+		if (IS_ERR(buffer->priv)) {
+			ret = PTR_ERR(buffer->priv);
+			goto free_prot;
+		}
+	}
+
 	dmabuf = samsung_export_dmabuf(buffer, fd_flags);
 	if (IS_ERR(dmabuf)) {
 		ret = PTR_ERR(dmabuf);
@@ -65,6 +74,8 @@ static struct dma_buf *cma_heap_allocate(struct dma_heap *heap, unsigned long le
 	return dmabuf;
 
 free_export:
+	dma_buffer_unprotect(buffer->priv);
+free_prot:
 	cma_release(cma_heap->cma, pages, nr_pages);
 free_cma:
 	samsung_dma_buffer_remove(buffer);
@@ -77,8 +88,14 @@ static void cma_heap_release(struct samsung_dma_buffer *buffer)
 	struct samsung_dma_heap *dma_heap = buffer->heap;
 	struct cma_heap *cma_heap = dma_heap->priv;
 	unsigned long nr_pages = buffer->len >> PAGE_SHIFT;
+	int ret = 0;
 
-	cma_release(cma_heap->cma, sg_page(buffer->sg_table->sgl), nr_pages);
+	if (dma_heap_flags_protected(dma_heap->flags))
+		ret = dma_buffer_unprotect(buffer->priv);
+
+	if (!ret)
+		cma_release(cma_heap->cma, sg_page(buffer->sg_table->sgl), nr_pages);
+
 	samsung_dma_buffer_remove(buffer);
 }
 
@@ -117,6 +134,10 @@ static int cma_heap_probe(struct platform_device *pdev)
 
 	ret = samsung_heap_create(&pdev->dev, cma_heap, cma_heap_release,
 				  cma_name, &cma_heap_ops);
+
+	if (ret == -ENODEV)
+		return 0;
+
 	if (ret)
 		return ret;
 
