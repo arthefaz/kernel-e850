@@ -1959,7 +1959,6 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	}
 
 	regs = mci_readl(slot->host, UHS_REG);
-
 	/* DDR mode set */
 	if (ios->timing == MMC_TIMING_MMC_DDR52 ||
 	    ios->timing == MMC_TIMING_UHS_DDR50 ||
@@ -2450,6 +2449,66 @@ static const struct mmc_host_ops dw_mci_ops = {
 	.init_card 		= dw_mci_init_card,
 	.prepare_hs400_tuning 	= dw_mci_prepare_hs400_tuning,
 };
+
+
+static int dw_mci_emmc_pwr_control(struct dw_mci *host, unsigned int power_mode)
+{
+       struct dw_mci_exynos_priv_data *pdata = host->priv;
+       int ret = 0;
+
+       dev_info(host->dev, "emmc regulator : %s\n",
+                      power_mode ? "enable" : "disable");
+
+       if (IS_ERR(pdata->emmc_pwr.vemmc)) {
+               dev_err(host->dev, "vemmc not found\n");
+               return -EINVAL;
+       }
+
+       if (IS_ERR(pdata->emmc_pwr.vqemmc)) {
+               dev_err(host->dev, "vqemmc not found\n");
+              return -EINVAL;
+       }
+
+       switch (power_mode) {
+       case MMC_POWER_ON:
+               if (!(regulator_is_enabled(pdata->emmc_pwr.vemmc))) {
+                       ret = regulator_enable(pdata->emmc_pwr.vemmc);
+                       if (ret) {
+                               dev_err(host->dev, "vemmc regulators enable failed\n");
+                               return -EPERM;
+                       }
+               }
+
+               if (!(regulator_is_enabled(pdata->emmc_pwr.vqemmc))) {
+                       ret = regulator_enable(pdata->emmc_pwr.vqemmc);
+                       if (ret) {
+                               dev_err(host->dev, "vqemmc regulators enable failed\n");
+                               return -EPERM;
+                       }
+               }
+              break;
+       case MMC_POWER_OFF:
+               if (regulator_is_enabled(pdata->emmc_pwr.vqemmc)) {
+                       ret = regulator_disable(pdata->emmc_pwr.vqemmc);
+                      if (ret) {
+                               dev_err(host->dev, "vqemmc regulators disable failed\n");
+                               return -EPERM;
+                       }
+               }
+
+               if (regulator_is_enabled(pdata->emmc_pwr.vemmc)) {
+                       ret = regulator_disable(pdata->emmc_pwr.vemmc);
+                       if (ret) {
+                               dev_err(host->dev, "vemmc regulators disable failed\n");
+                               return -EPERM;
+                       }
+               }
+               mdelay(pdata->emmc_pwr.dis_charge);     /* Discharging Time */
+               break;
+       }
+
+       return ret;
+}
 
 static void dw_mci_request_end(struct dw_mci *host, struct mmc_request *mrq)
 __releases(&host->lock) __acquires(&host->lock)
@@ -4558,6 +4617,7 @@ EXPORT_SYMBOL(dw_mci_remove);
 int dw_mci_runtime_suspend(struct device *dev)
 {
 	struct dw_mci *host = dev_get_drvdata(dev);
+	int ret = 0;
 
 	if (host->use_dma && host->dma_ops->exit)
 		host->dma_ops->exit(host);
@@ -4570,7 +4630,9 @@ int dw_mci_runtime_suspend(struct device *dev)
 			clk_disable_unprepare(host->biu_clk);
 	}
 
-	return 0;
+       if (host->priv->emmc_pwr.mmc_pwr_ctrl)
+		ret = dw_mci_emmc_pwr_control(host, MMC_POWER_OFF);
+	return ret;
 }
 EXPORT_SYMBOL(dw_mci_runtime_suspend);
 
@@ -4588,6 +4650,11 @@ int dw_mci_runtime_resume(struct device *dev)
 				return ret;
 		}
 	}
+	if (host->priv->emmc_pwr.mmc_pwr_ctrl)
+		ret = dw_mci_emmc_pwr_control(host, MMC_POWER_ON);
+	if (ret)
+		goto err;
+
 
 	ret = dw_mci_ciu_clk_en(host);
 	if (ret)

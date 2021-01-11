@@ -226,7 +226,7 @@ struct dw_mci {
 	struct device		*dev;
 	struct dw_mci_board	*pdata;
 	const struct dw_mci_drv_data	*drv_data;
-	void			*priv;
+	struct dw_mci_exynos_priv_data	*priv;
 	struct clk		*biu_clk;
 	struct clk		*ciu_clk;
 	struct clk		*ciu_gate;
