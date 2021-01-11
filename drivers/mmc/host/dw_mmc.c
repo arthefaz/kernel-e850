@@ -1938,6 +1938,7 @@ static void dw_mci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	spin_unlock_bh(&host->lock);
 }
 
+static int dw_mci_emmc_pwr_control(struct dw_mci *host, unsigned int power_mode);
 static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
@@ -1986,6 +1987,11 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	switch (ios->power_mode) {
 	case MMC_POWER_UP:
+		if (host->ch_id == 0) {
+			if (host->priv->emmc_pwr.mmc_pwr_ctrl)
+				dw_mci_emmc_pwr_control(host, MMC_POWER_ON);
+		}
+
 		if (!IS_ERR(host->ciu_clk)) {
 			ret = dw_mci_ciu_clk_en(host);
 			if (ret)
@@ -2010,6 +2016,11 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		mci_writel(slot->host, PWREN, regs);
 		break;
 	case MMC_POWER_ON:
+		if (host->ch_id == 0) {
+			if (host->priv->emmc_pwr.mmc_pwr_ctrl)
+				dw_mci_emmc_pwr_control(host, MMC_POWER_OFF);
+		}
+
 		if (!(slot->host->quirks & DW_MMC_QUIRK_FIXED_VOLTAGE)) {
 			if (!slot->host->vqmmc_enabled) {
 				if (drv_data && drv_data->pins_control)

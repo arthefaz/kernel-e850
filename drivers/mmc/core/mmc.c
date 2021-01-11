@@ -2190,8 +2190,11 @@ static int _mmc_hw_reset(struct mmc_host *host)
 	/*
 	 * In the case of recovery, we can't expect flushing the cache to work
 	 * always, but we have a go and ignore errors.
+	 * Trying olny responsed at send status.
 	 */
-	mmc_flush_cache(host->card);
+
+	if (mmc_send_status(host->card, NULL) == 0)
+		mmc_flush_cache(host->card);
 
 	if ((host->caps & MMC_CAP_HW_RESET) && host->ops->hw_reset &&
 	     mmc_can_reset(card)) {

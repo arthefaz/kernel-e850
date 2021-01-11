@@ -54,6 +54,13 @@ struct exynos_mmc_pmu {
 	u32 val;
 };
 
+struct emmc_supply {
+       u32 mmc_pwr_ctrl;
+       u32 dis_charge;
+       struct regulator        *vemmc;
+       struct regulator        *vqemmc;
+};
+
 /* Exynos implementation specific driver private data */
 struct dw_mci_exynos_priv_data {
 	u8 ctrl_type;
@@ -91,6 +98,8 @@ struct dw_mci_exynos_priv_data {
 	u32 ignore_phase;
 	u32 selclk_drv;
 	u32 voltage_int_extra;
+        /* eMMC Power Control */
+        struct emmc_supply      emmc_pwr;
 
 #define DW_MMC_EXYNOS_BYPASS_FOR_ALL_PASS	BIT(0)
 #define DW_MMC_EXYNOS_ENABLE_SHIFT		BIT(1)
