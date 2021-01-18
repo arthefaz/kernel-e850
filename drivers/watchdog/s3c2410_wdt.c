@@ -1431,8 +1431,8 @@ static void s3c2410wdt_syscore_resume(void)
 }
 
 #else
-#define s3c2410_wdt_syscore_suspend		NULL
-#define s3c2410_wdt_syscore_resume		NULL
+#define s3c2410wdt_syscore_suspend		NULL
+#define s3c2410wdt_syscore_resume		NULL
 #endif
 
 static struct syscore_ops s3c2410wdt_syscore_ops = {

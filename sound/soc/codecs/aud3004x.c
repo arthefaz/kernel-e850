@@ -2651,9 +2651,9 @@ int aud3004x_disable(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
 static int aud3004x_sys_resume(struct device *dev)
 {
-#ifndef CONFIG_PM
 	struct aud3004x_priv *aud3004x = dev_get_drvdata(dev);
 
 	if (!aud3004x->is_suspend) {
@@ -2663,14 +2663,12 @@ static int aud3004x_sys_resume(struct device *dev)
 	dev_dbg(dev, "(*) %s\n", __func__);
 	aud3004x->pm_suspend = false;
 	aud3004x_enable(dev);
-#endif
 
 	return 0;
 }
 
 static int aud3004x_sys_suspend(struct device *dev)
 {
-#ifndef CONFIG_PM
 	struct aud3004x_priv *aud3004x = dev_get_drvdata(dev);
 
 	if (abox_is_on()) {
@@ -2680,12 +2678,10 @@ static int aud3004x_sys_suspend(struct device *dev)
 	dev_dbg(dev, "(*) %s\n", __func__);
 	aud3004x->pm_suspend = true;
 	aud3004x_disable(dev);
-#endif
 
 	return 0;
 }
 
-#ifdef CONFIG_PM
 static int aud3004x_runtime_resume(struct device *dev)
 {
 	dev_dbg(dev, "(*) %s\n", __func__);

@@ -586,6 +586,7 @@ static void __init cpuhp_user_init(void)
 	cpuhp_pm_qos_init();
 }
 
+#ifdef CONFIG_PM
 static void __init cpuhp_sysfs_init(void)
 {
 	cpuhp.kobj = kobject_create_and_add("cpuhp", power_kobj);
@@ -604,6 +605,9 @@ static void __init cpuhp_sysfs_init(void)
 	if (sysfs_create_link(&cpu_subsys.dev_root->kobj, cpuhp.kobj, "cpuhp"))
 		pr_err("Fail to link cpuctrl directory");
 }
+#else
+static inline void cpuhp_sysfs_init(void) { }
+#endif
 
 static int __init cpuhp_init(void)
 {

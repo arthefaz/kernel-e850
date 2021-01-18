@@ -1733,9 +1733,9 @@ static int itmon_resume(struct device *dev)
 }
 
 static SIMPLE_DEV_PM_OPS(itmon_pm_ops, itmon_suspend, itmon_resume);
-#define ITMON_PM	(itmon_pm_ops)
+#define ITMON_PM	(&itmon_pm_ops)
 #else
-#define ITM_ONPM	NULL
+#define ITMON_PM	NULL
 #endif
 
 static struct platform_driver exynos_itmon_driver = {
@@ -1744,7 +1744,7 @@ static struct platform_driver exynos_itmon_driver = {
 	.driver = {
 		   .name = "exynos-itmon",
 		   .of_match_table = itmon_dt_match,
-		   .pm = &itmon_pm_ops,
+		   .pm = ITMON_PM,
 		   },
 };
 

@@ -2125,7 +2125,11 @@ static int bts_parse_data(struct device_node *np, struct bts_device *data)
 				info[i].pd_id = 0;
 				info[i].pd_on = true;
 			} else {
+#ifdef CONFIG_EXYNOS_PD
 				info[i].pd_on = cal_pd_status(info[i].pd_id) ? true : false;
+#else
+				info[i].pd_on = true;
+#endif
 			}
 
 			if (!of_get_child_count(child_np)) {

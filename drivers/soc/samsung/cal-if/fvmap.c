@@ -512,7 +512,9 @@ static void fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base
 int fvmap_init(void __iomem *sram_base)
 {
 	void __iomem *map_base;
+#ifdef CONFIG_PM
 	struct kobject *kobj;
+#endif
 
 	map_base = kzalloc(FVMAP_SIZE, GFP_KERNEL);
 
@@ -521,6 +523,7 @@ int fvmap_init(void __iomem *sram_base)
 	pr_info("%s:fvmap initialize %p\n", __func__, sram_base);
 	fvmap_copy_from_sram(map_base, sram_base);
 
+#ifdef CONFIG_PM
 	/* percent margin for each doamin at runtime */
 	kobj = kobject_create_and_add("percent_margin", power_kobj);
 	if (!kobj)
@@ -528,6 +531,7 @@ int fvmap_init(void __iomem *sram_base)
 
 	if (sysfs_create_group(kobj, &percent_margin_group))
 		pr_err("Fail to create percent_margin group\n");
+#endif
 
 	return 0;
 }

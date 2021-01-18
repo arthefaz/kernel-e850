@@ -687,6 +687,8 @@ static ssize_t show_idle_ip_list(struct kobject *kobj,
 static struct attribute *attr_pool[10];
 
 static struct kobj_attribute idle_ip_attr;
+
+#ifdef CONFIG_PM
 static struct kobject *cpupm_kobj;
 static struct attribute_group attr_group;
 
@@ -712,6 +714,9 @@ static void cpupm_sysfs_node_init(int attr_count)
 out:
 	kfree(attr_group.attrs);
 }
+#else
+static inline void cpupm_sysfs_node_init(int attr_count) { }
+#endif
 
 #define cpupm_attr_init(_attr, _name, _mode, _show, _store)	\
 	sysfs_attr_init(&_attr.attr);				\

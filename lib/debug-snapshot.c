@@ -46,9 +46,12 @@ struct dbg_snapshot_ops {
         int (*pd_status)(unsigned int id);
 };
 
+
+#ifdef CONFIG_EXYNOS_PD
 struct dbg_snapshot_ops dss_ops = {
 	.pd_status = cal_pd_status,
 };
+#endif
 
 struct dbg_snapshot_bl *dss_bl;
 struct dbg_snapshot_item dss_items[] = {
@@ -279,11 +282,14 @@ static bool dbg_snapshot_check_pmu(struct dbg_snapshot_sfrdump *sfrdump,
 			dev_err(dss_desc.dev, "failed to get pd-id - %s\n", sfrdump->name);
 			return false;
 		}
+
+#ifdef CONFIG_EXYNOS_PD
 		ret = dss_ops.pd_status(val);
 		if (ret < 0) {
 			dev_err(dss_desc.dev, "not powered - %s (pd-id: %d)\n", sfrdump->name, i);
 			return false;
 		}
+#endif
 	}
 	return true;
 }

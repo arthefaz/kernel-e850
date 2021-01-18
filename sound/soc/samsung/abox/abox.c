@@ -1560,6 +1560,7 @@ static void abox_restore_components(struct device *dev, struct abox_data *data)
 	}
 }
 
+#ifdef CONFIG_PM
 static void abox_cache_components(struct device *dev, struct abox_data *data)
 {
 	struct abox_component *com;
@@ -1576,6 +1577,7 @@ static void abox_cache_components(struct device *dev, struct abox_data *data)
 		}
 	}
 }
+#endif
 
 static bool abox_is_calliope_incompatible(struct device *dev)
 {
@@ -2079,11 +2081,13 @@ static int abox_cpu_enable(bool enable)
 	return 0;
 }
 
+#ifdef CONFIG_PM
 static void abox_save_register(struct abox_data *data)
 {
 	regcache_cache_only(data->regmap, true);
 	regcache_mark_dirty(data->regmap);
 }
+#endif
 
 static void abox_restore_register(struct abox_data *data)
 {
@@ -2513,6 +2517,7 @@ static void abox_update_suspend_wait_flag(struct abox_data *data, bool suspend)
 	WRITE_ONCE(data->hndshk_tag->suspend_wait_flag, flag);
 }
 
+#ifdef CONFIG_PM
 static int abox_enable(struct device *dev)
 {
 	struct abox_data *data = dev_get_drvdata(dev);
@@ -2654,6 +2659,7 @@ static int abox_resume(struct device *dev)
 	/* nothing to do */
 	return 0;
 }
+#endif
 
 static int abox_qos_notifier(struct notifier_block *nb,
 		unsigned long action, void *nb_data)
@@ -2673,6 +2679,7 @@ static int abox_qos_notifier(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
+#ifdef CONFIG_PM
 static int __maybe_unused abox_print_power_usage(struct device *dev, void *data)
 {
 	dev_dbg(dev, "%s\n", __func__);
@@ -2718,6 +2725,18 @@ static int abox_pm_notifier(struct notifier_block *nb,
 	}
 	return NOTIFY_DONE;
 }
+#else
+static int __maybe_unused abox_print_power_usage(struct device *dev, void *data)
+{
+	return 0;
+}
+
+static int abox_pm_notifier(struct notifier_block *nb,
+		unsigned long action, void *nb_data)
+{
+	return NOTIFY_DONE;
+}
+#endif
 
 static int abox_modem_notifier(struct notifier_block *nb,
 		unsigned long action, void *nb_data)
@@ -3113,7 +3132,7 @@ static int samsung_abox_remove(struct platform_device *pdev)
 	dev_info(dev, "%s\n", __func__);
 
 	pm_runtime_disable(dev);
-#ifndef CONFIG_PM
+#ifdef CONFIG_PM
 	abox_runtime_suspend(dev);
 #endif
 	device_init_wakeup(dev, false);

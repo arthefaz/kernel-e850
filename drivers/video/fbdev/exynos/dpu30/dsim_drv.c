@@ -705,6 +705,7 @@ static char *rpm_status_name[] = {
 
 static void dsim_print_phy_info(struct dsim_device *dsim)
 {
+#ifdef CONFIG_PM
 	dsim_info("[PHY] power_count(%d), disable_depth(%d), runtime_status(%s)\n",
 			dsim->phy->power_count, dsim->phy->dev.power.disable_depth,
 			rpm_status_name[dsim->phy->dev.power.runtime_status]);
@@ -712,6 +713,7 @@ static void dsim_print_phy_info(struct dsim_device *dsim)
 	dsim_info("[PHY_EX] power_count(%d), disable_depth(%d), runtime_status(%s)\n",
 			dsim->phy_ex->power_count, dsim->phy_ex->dev.power.disable_depth,
 			rpm_status_name[dsim->phy_ex->dev.power.runtime_status]);
+#endif
 }
 
 static int dsim_phy_power_on(struct dsim_device *dsim)

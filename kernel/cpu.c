@@ -1727,11 +1727,6 @@ cpu_hotplug_pm_callback(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
-
-struct cpumask cpu_fastoff_mask;
-EXPORT_SYMBOL(cpu_fastoff_mask);
-struct cpumask cpu_faston_mask;
-EXPORT_SYMBOL(cpu_faston_mask);
 static int __init cpu_hotplug_pm_sync_init(void)
 {
 	/*
@@ -1748,6 +1743,11 @@ static int __init cpu_hotplug_pm_sync_init(void)
 core_initcall(cpu_hotplug_pm_sync_init);
 
 #endif /* CONFIG_PM_SLEEP_SMP */
+
+struct cpumask cpu_fastoff_mask;
+EXPORT_SYMBOL(cpu_fastoff_mask);
+struct cpumask cpu_faston_mask;
+EXPORT_SYMBOL(cpu_faston_mask);
 
 int __boot_cpu_id;
 

@@ -377,7 +377,12 @@ static int exyswd_rng_resume(struct device *dev)
 }
 #endif
 
+#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM_RUNTIME)
 static UNIVERSAL_DEV_PM_OPS(exyswd_rng_pm_ops, exyswd_rng_suspend, exyswd_rng_resume, NULL);
+#define EXYSWD_RNG_PM_OPS	(&exyswd_rng_pm_ops)
+#else
+#define EXYSWD_RNG_PM_OPS	NULL
+#endif
 
 static struct platform_driver exyswd_rng_driver = {
 	.probe		= exyswd_rng_probe,
@@ -385,7 +390,7 @@ static struct platform_driver exyswd_rng_driver = {
 	.driver		= {
 		.name	= "exyswd_rng",
 		.owner	= THIS_MODULE,
-		.pm     = &exyswd_rng_pm_ops,
+		.pm     = EXYSWD_RNG_PM_OPS,
 	},
 };
 

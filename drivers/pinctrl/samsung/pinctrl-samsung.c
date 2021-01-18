@@ -1373,6 +1373,11 @@ static void samsung_pinctrl_resume(void)
 	}
 }
 
+#else
+#define samsung_pinctrl_suspend		NULL
+#define samsung_pinctrl_resume		NULL
+#endif
+
 u32 exynos_eint_to_pin_num(int eint)
 {
 	struct samsung_pinctrl_drv_data *drvdata;
@@ -1392,11 +1397,6 @@ u32 exynos_eint_to_pin_num(int eint)
 
 	return drvdata->pin_base + eint + offset;
 }
-
-#else
-#define samsung_pinctrl_suspend		NULL
-#define samsung_pinctrl_resume		NULL
-#endif
 
 static struct syscore_ops samsung_pinctrl_syscore_ops = {
 	.suspend	= samsung_pinctrl_suspend,
