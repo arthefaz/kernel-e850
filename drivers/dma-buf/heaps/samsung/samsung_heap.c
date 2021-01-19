@@ -186,6 +186,7 @@ int samsung_heap_create(struct device *dev, void *priv,
 	const unsigned int *types;
 	int i, ret, count, protid = 0;
 	const char *name;
+	bool video_aligned_heap;
 
 	if (of_property_read_string(dev->of_node, "dma_heap,name", &name)) {
 		perrfn("The heap should define name on device node");
@@ -212,6 +213,8 @@ int samsung_heap_create(struct device *dev, void *priv,
 		types = cachable_heap_type;
 	}
 
+	video_aligned_heap = of_property_read_bool(dev->of_node, "dma_heap,video_aligned");
+
 	for (i = 0; i < count; i++) {
 		heap[i] = samsung_heap_init(dev, priv, release);
 		if (IS_ERR(heap[i])) {
@@ -221,6 +224,9 @@ int samsung_heap_create(struct device *dev, void *priv,
 
 		heap[i]->flags = types[i];
 		heap[i]->protection_id = protid;
+
+		if (video_aligned_heap)
+			heap[i]->flags |= DMA_HEAP_FLAG_VIDEO_ALIGNED;
 
 		ret = samsung_heap_add(dev, heap[i], name, ops);
 		if (ret)
