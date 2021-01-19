@@ -63,8 +63,7 @@ struct samsung_dma_buffer *samsung_dma_buffer_init(struct samsung_dma_heap *sams
 						   unsigned long size, unsigned int nents);
 void samsung_dma_buffer_remove(struct samsung_dma_buffer *buffer);
 int samsung_heap_create(struct device *dev, void *priv,
-			void (*release)(struct samsung_dma_buffer *buffer),
-			const char *name, const struct dma_heap_ops *ops);
+			void (*release)(struct samsung_dma_buffer *buffer), const struct dma_heap_ops *ops);
 struct dma_buf *samsung_export_dmabuf(struct samsung_dma_buffer *buffer, unsigned long fd_flags);
 
 #define DMA_HEAP_FLAG_UNCACHED  BIT(0)

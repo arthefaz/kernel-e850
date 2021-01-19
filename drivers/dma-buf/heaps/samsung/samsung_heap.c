@@ -178,14 +178,19 @@ static const unsigned int prot_heap_type[] = {
  * if system doesn't support content protection.
  */
 int samsung_heap_create(struct device *dev, void *priv,
-			void (*release)(struct samsung_dma_buffer *buffer), const char *name,
+			void (*release)(struct samsung_dma_buffer *buffer),
 			const struct dma_heap_ops *ops)
 
 {
 	struct samsung_dma_heap *heap[num_max_heaps];
 	const unsigned int *types;
 	int i, ret, count, protid = 0;
+	const char *name;
 
+	if (of_property_read_string(dev->of_node, "dma_heap,name", &name)) {
+		perrfn("The heap should define name on device node");
+		return -EINVAL;
+	}
 	/*
 	 * Secure heap should allocate only secure buffer.
 	 * Normal cachable heap and uncachable heaps are not registered.

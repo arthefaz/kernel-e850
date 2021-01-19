@@ -141,23 +141,40 @@ static void system_heap_release(struct samsung_dma_buffer *buffer)
 	samsung_dma_buffer_remove(buffer);
 }
 
-struct device sysdev;
-
-int __init system_dma_heap_init(void)
+static int system_heap_probe(struct platform_device *pdev)
 {
 	int ret;
 
-	device_initialize(&sysdev);
-
-	ret = samsung_heap_create(&sysdev, NULL, system_heap_release, "system", &system_heap_ops);
+	ret = samsung_heap_create(&pdev->dev, NULL, system_heap_release, &system_heap_ops);
 	if (ret)
 		return ret;
 
 	pr_info("Register system dma-heap successfully\n");
 
 	return 0;
+
+}
+
+static const struct of_device_id system_heap_of_match[] = {
+	{ .compatible = "samsung,dma_heap,system", },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, system_heap_of_match);
+
+static struct platform_driver system_heap_driver = {
+	.driver		= {
+		.name	= "samsung,dma_heap,system",
+		.of_match_table = system_heap_of_match,
+	},
+	.probe		= system_heap_probe,
+};
+
+int __init system_dma_heap_init(void)
+{
+	return platform_driver_register(&system_heap_driver);
 }
 
 void system_dma_heap_exit(void)
 {
+	platform_driver_unregister(&system_heap_driver);
 }

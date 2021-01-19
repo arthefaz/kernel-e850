@@ -132,7 +132,7 @@ static int carveout_heap_probe(struct platform_device *pdev)
 		return ret;
 
 	ret = samsung_heap_create(&pdev->dev, carveout_heap, carveout_heap_release,
-				  rmem->name, &carveout_heap_ops);
+				  &carveout_heap_ops);
 	if (ret == -ENODEV)
 		return 0;
 

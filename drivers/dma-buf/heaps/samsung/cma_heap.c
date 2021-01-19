@@ -111,7 +111,6 @@ static const struct dma_heap_ops cma_heap_ops = {
 static int cma_heap_probe(struct platform_device *pdev)
 {
 	struct cma_heap *cma_heap;
-	const char *cma_name;
 	int ret;
 
 	ret = of_reserved_mem_device_init(&pdev->dev);
@@ -130,10 +129,8 @@ static int cma_heap_probe(struct platform_device *pdev)
 	if (!cma_heap)
 		return -ENOMEM;
 	cma_heap->cma = pdev->dev.cma_area;
-	cma_name = cma_get_name(cma_heap->cma);
 
-	ret = samsung_heap_create(&pdev->dev, cma_heap, cma_heap_release,
-				  cma_name, &cma_heap_ops);
+	ret = samsung_heap_create(&pdev->dev, cma_heap, cma_heap_release, &cma_heap_ops);
 
 	if (ret == -ENODEV)
 		return 0;
@@ -141,7 +138,7 @@ static int cma_heap_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	dev_info(&pdev->dev, "Register %s dma-heap successfully", cma_name);
+	dev_info(&pdev->dev, "Register %s dma-heap successfully", cma_get_name(cma_heap->cma));
 
 	return 0;
 }
