@@ -61,6 +61,7 @@
 
 #ifdef CONFIG_CPU_IDLE
 #include <soc/samsung/exynos-pm.h>
+#include <soc/samsung/exynos-cpupm.h>
 #endif
 
 #ifdef CONFIG_PM_DEVFREQ
@@ -2527,6 +2528,28 @@ static struct notifier_block s3c24xx_serial_notifier_block = {
 };
 #endif
 
+#ifdef CONFIG_CPU_IDLE
+static int s3c24xx_serial_disable_sicd(struct device *dev)
+{
+	int idle_ip_index;
+
+	idle_ip_index = exynos_get_idle_ip_index(dev_name(dev));
+	if (idle_ip_index < 0) {
+		pr_err("### %s: can't get idle ip index for %s\n", __func__,
+		       dev_name(dev));
+		return -1;
+	}
+
+	exynos_update_ip_idle_status(idle_ip_index, 0);
+	return 0;
+}
+#else
+static inline int s3c24xx_serial_disable_sicd(struct device *dev)
+{
+	return 0;
+}
+#endif
+
 static int s3c24xx_serial_probe(struct platform_device *pdev)
 {
 	struct s3c24xx_uart_port *ourport;
@@ -2693,6 +2716,7 @@ static int s3c24xx_serial_probe(struct platform_device *pdev)
 	else
 		ourport->use_default_irq =0;
 
+	s3c24xx_serial_disable_sicd(&pdev->dev);
 
 	ret = s3c24xx_serial_init_port(ourport, pdev);
 	if (ret < 0)
