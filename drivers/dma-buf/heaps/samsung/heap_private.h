@@ -122,18 +122,10 @@ struct buffer_prot_info {
 };
 
 #if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
-int secure_iova_pool_create(void);
-void secure_iova_pool_destroy(void);
 void *dma_buffer_protect(struct device *dev, struct samsung_dma_heap *heap,
 			 unsigned int size, unsigned long phys);
 int dma_buffer_unprotect(void *priv);
 #else
-static inline int secure_iova_pool_create(void)
-{
-	return 0;
-}
-
-#define secure_iova_pool_destroy() do { } while (0)
 static inline void *dma_buffer_protect(struct device *dev, struct samsung_dma_heap *heap,
 				       unsigned int size, unsigned long phys)
 {
