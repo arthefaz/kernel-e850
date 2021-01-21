@@ -1355,11 +1355,9 @@ static inline u32 _emit_store(unsigned int dry_run, u8 buf[],
 		if (cond == ALWAYS) {
 			off += _emit_STP(dry_run, &buf[off], SINGLE,
 				peri);
-			off += _emit_STP(dry_run, &buf[off], BURST,
-				peri);
+			off += _emit_ST(dry_run, &buf[off], BURST);
 		} else {
-			off += _emit_STP(dry_run, &buf[off], cond,
-				peri);
+			off += _emit_ST(dry_run, &buf[off], cond);
 		}
 		break;
 
