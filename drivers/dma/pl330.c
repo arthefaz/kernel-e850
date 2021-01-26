@@ -337,8 +337,8 @@ struct pl330_reqcfg {
  * There may be more than one xfer in a request.
  */
 struct pl330_xfer {
-	u32 src_addr;
-	u32 dst_addr;
+	dma_addr_t src_addr;
+	dma_addr_t dst_addr;
 	/* Size to xfer */
 	u32 bytes;
 };
@@ -538,10 +538,6 @@ static struct pl330_of_quirks {
 	{
 		.quirk = "arm,pl330-broken-no-flushp",
 		.id = PL330_QUIRK_BROKEN_NO_FLUSHP,
-	},
-	{
-		.quirk = "arm,pl330-periph-burst",
-		.id = PL330_QUIRK_PERIPH_BURST,
 	}
 };
 
@@ -577,6 +573,11 @@ struct _xfer_spec {
 	u32 ccr;
 	struct dma_pl330_desc *desc;
 };
+
+static inline u32 get_unaligned_le32(u8 *p)
+{
+	return p[0] | p[1] << 8 | p[2] << 16 | p[3] << 24;
+}
 
 static inline bool _queue_full(struct pl330_thread *thrd)
 {
@@ -1063,26 +1064,21 @@ static inline u32 _emit_GO(unsigned dry_run, u8 buf[],
 	return SZ_DMAGO;
 }
 
-#define msecs_to_loops(t) (loops_per_jiffy / 1000 * HZ * t)
-
 /* Returns Time-Out */
 static bool _until_dmac_idle(struct pl330_thread *thrd)
 {
 	void __iomem *regs = thrd->dmac->base;
-	unsigned long loops = msecs_to_loops(5);
+	unsigned long timeout = jiffies + msecs_to_jiffies(5);
 
 	do {
 		/* Until Manager is Idle */
 		if (!(readl(regs + DBGSTATUS) & DBG_BUSY))
-			break;
+			return false;
 
 		cpu_relax();
-	} while (--loops);
+	} while (time_before(jiffies, timeout));
 
-	if (!loops)
-		return true;
-
-	return false;
+	return true;
 }
 
 static inline void _execute_DBGINSN(struct pl330_thread *thrd,
@@ -1091,12 +1087,6 @@ static inline void _execute_DBGINSN(struct pl330_thread *thrd,
 	void __iomem *regs = thrd->dmac->base;
 	u32 val;
 
-	/* If timed out due to halted state-machine */
-	if (_until_dmac_idle(thrd)) {
-		dev_err(thrd->dmac->ddma.dev, "DMAC halted!\n");
-		return;
-	}
-
 	val = (insn[0] << 16) | (insn[1] << 24);
 	if (!as_manager) {
 		val |= (1 << 0);
@@ -1104,8 +1094,14 @@ static inline void _execute_DBGINSN(struct pl330_thread *thrd,
 	}
 	writel(val, regs + DBGINST0);
 
-	val = le32_to_cpu(*((__le32 *)&insn[2]));
+	val = get_unaligned_le32(&insn[2]);
 	writel(val, regs + DBGINST1);
+
+	/* If timed out due to halted state-machine */
+	if (_until_dmac_idle(thrd)) {
+		dev_err(thrd->dmac->ddma.dev, "DMAC halted!\n");
+		return;
+	}
 
 	/* Get going */
 	writel(0, regs + DBGCMD);
@@ -1223,10 +1219,6 @@ static bool _trigger(struct pl330_thread *thrd)
 
 	/* Return if no request */
 	if (!req)
-		return true;
-
-	/* Return if req is running */
-	if (idx == thrd->req_running)
 		return true;
 
 	desc = req->desc;
@@ -1387,18 +1379,20 @@ static inline int _ldst_peripheral(struct pl330_dmac *pl330,
 {
 	int off = 0;
 
-	/*
-	 * do FLUSHP at beginning to clear any stale dma requests before the
-	 * first WFP.
-	 */
-	if (!(pl330->quirks & PL330_QUIRK_BROKEN_NO_FLUSHP))
-		off += _emit_FLUSHP(dry_run, &buf[off], pxs->desc->peri);
+	if (pl330->quirks & PL330_QUIRK_BROKEN_NO_FLUSHP)
+		cond = BURST;
+
 	while (cyc--) {
 		off += _emit_WFP(dry_run, &buf[off], cond, pxs->desc->peri);
 		off += _emit_load(dry_run, &buf[off], cond, pxs->desc->rqtype,
 			pxs->desc->peri);
 		off += _emit_store(dry_run, &buf[off], cond, pxs->desc->rqtype,
 			pxs->desc->peri);
+
+		if (pxs->desc->rqtype == DMA_MEM_TO_DEV) {
+			if (!(pl330->quirks & PL330_QUIRK_BROKEN_NO_FLUSHP))
+				off += _emit_FLUSHP(dry_run, &buf[off], pxs->desc->peri);
+		}
 	}
 
 	return off;
@@ -1409,9 +1403,6 @@ static int _bursts(struct pl330_dmac *pl330, unsigned dry_run, u8 buf[],
 {
 	int off = 0;
 	enum pl330_cond cond = BRST_LEN(pxs->ccr) > 1 ? BURST : SINGLE;
-
-	if (pl330->quirks & PL330_QUIRK_PERIPH_BURST)
-		cond = BURST;
 
 	switch (pxs->desc->rqtype) {
 	case DMA_MEM_TO_DEV:
@@ -1447,30 +1438,21 @@ static int _dregs(struct pl330_dmac *pl330, unsigned int dry_run, u8 buf[],
 	if (transfer_length == 0)
 		return off;
 
-	/*
-	 * dregs_len = (total bytes - BURST_TO_BYTE(bursts, ccr)) /
-	 *             BRST_SIZE(ccr)
-	 * the dregs len must be smaller than burst len,
-	 * so, for higher efficiency, we can modify CCR
-	 * to use a reduced size burst len for the dregs.
-	 */
-	dregs_ccr = pxs->ccr;
-	dregs_ccr &= ~((0xf << CC_SRCBRSTLEN_SHFT) |
-		(0xf << CC_DSTBRSTLEN_SHFT));
-	dregs_ccr |= (((transfer_length - 1) & 0xf) <<
-		CC_SRCBRSTLEN_SHFT);
-	dregs_ccr |= (((transfer_length - 1) & 0xf) <<
-		CC_DSTBRSTLEN_SHFT);
-
 	switch (pxs->desc->rqtype) {
 	case DMA_MEM_TO_DEV:
 	case DMA_DEV_TO_MEM:
-		off += _emit_MOV(dry_run, &buf[off], CCR, dregs_ccr);
-		off += _ldst_peripheral(pl330, dry_run, &buf[off], pxs, 1,
-					BURST);
+		off += _ldst_peripheral(pl330, dry_run, &buf[off], pxs,
+			transfer_length, SINGLE);
 		break;
 
 	case DMA_MEM_TO_MEM:
+		dregs_ccr = pxs->ccr;
+		dregs_ccr &= ~((0xf << CC_SRCBRSTLEN_SHFT) |
+			(0xf << CC_DSTBRSTLEN_SHFT));
+		dregs_ccr |= (((transfer_length - 1) & 0xf) <<
+			CC_SRCBRSTLEN_SHFT);
+		dregs_ccr |= (((transfer_length - 1) & 0xf) <<
+			CC_DSTBRSTLEN_SHFT);
 		off += _emit_MOV(dry_run, &buf[off], CCR, dregs_ccr);
 		off += _ldst_memtomem(dry_run, &buf[off], pxs, 1);
 		break;
@@ -1574,10 +1556,10 @@ static inline int _loop(struct pl330_dmac *pl330, unsigned dry_run, u8 buf[],
 		cyc = *bursts / lcnt1 / lcnt0;
 	} else if (*bursts > 256) {
 		lcnt1 = 256;
-		lcnt0 = *bursts / lcnt1;
+		lcnt0 = (unsigned int)((unsigned int)(*bursts) / lcnt1);
 		cyc = 1;
 	} else {
-		lcnt1 = *bursts;
+		lcnt1 = (unsigned int)(*bursts);
 		lcnt0 = 0;
 		cyc = 1;
 	}
@@ -1631,7 +1613,7 @@ static inline int _loop(struct pl330_dmac *pl330, unsigned dry_run, u8 buf[],
 		off += _emit_LPEND(dry_run, &buf[off], &lpend);
 	}
 
-	*bursts = lcnt1 * cyc;
+	*bursts = (unsigned long)lcnt1 * cyc;
 	if (lcnt0)
 		*bursts *= lcnt0;
 
@@ -1852,7 +1834,7 @@ xfer_exit:
 	return ret;
 }
 
-static void pl330_tasklet(struct tasklet_struct *t);
+static void pl330_tasklet(unsigned long data);
 
 static void dma_pl330_rqcb(struct dma_pl330_desc *desc, enum pl330_op_err err)
 {
@@ -1875,14 +1857,14 @@ static void dma_pl330_rqcb(struct dma_pl330_desc *desc, enum pl330_op_err err)
 	spin_unlock_irqrestore(&pch->lock, flags);
 
 	if (desc->infiniteloop)
-		pl330_tasklet(&pch->task);
+		pl330_tasklet((unsigned long)pch);
 	else
 		tasklet_schedule(&pch->task);
 }
 
-static void pl330_dotask(struct tasklet_struct *t)
+static void pl330_dotask(unsigned long data)
 {
-	struct pl330_dmac *pl330 = from_tasklet(pl330, t, tasks);
+	struct pl330_dmac *pl330 = (struct pl330_dmac *) data;
 	unsigned long flags;
 	int i;
 
@@ -2327,7 +2309,7 @@ static int pl330_add(struct pl330_dmac *pl330)
 		return ret;
 	}
 
-	tasklet_setup(&pl330->tasks, pl330_dotask);
+	tasklet_init(&pl330->tasks, pl330_dotask, (unsigned long) pl330);
 
 	pl330->state = INIT;
 	pl330->usage_count = 0;
@@ -2411,9 +2393,9 @@ static inline void fill_queue(struct dma_pl330_chan *pch)
 	}
 }
 
-static void pl330_tasklet(struct tasklet_struct *t)
+static void pl330_tasklet(unsigned long data)
 {
-	struct dma_pl330_chan *pch = from_tasklet(pch, t, task);
+	struct dma_pl330_chan *pch = (struct dma_pl330_chan *)data;
 	struct dma_pl330_desc *desc, *_dt;
 	unsigned long flags;
 	bool power_down = false;
@@ -2525,7 +2507,7 @@ static int pl330_alloc_chan_resources(struct dma_chan *chan)
 		return -ENOMEM;
 	}
 
-	tasklet_setup(&pch->task, pl330_tasklet);
+	tasklet_init(&pch->task, pl330_tasklet, (unsigned long) pch);
 
 	spin_unlock_irqrestore(&pl330->lock, flags);
 
@@ -2582,7 +2564,9 @@ static bool pl330_prep_slave_fifo(struct dma_pl330_chan *pch,
 
 static int fixup_burst_len(int max_burst_len, int quirks)
 {
-	if (max_burst_len > PL330_MAX_BURST)
+	if (quirks & PL330_QUIRK_BROKEN_NO_FLUSHP)
+		return 1;
+	else if (max_burst_len > PL330_MAX_BURST)
 		return PL330_MAX_BURST;
 	else if (max_burst_len < 1)
 		return 1;
@@ -2827,7 +2811,7 @@ static void pl330_issue_pending(struct dma_chan *chan)
 	list_splice_tail_init(&pch->submitted_list, &pch->work_list);
 	spin_unlock_irqrestore(&pch->lock, flags);
 
-	pl330_tasklet(&pch->task);
+	pl330_tasklet((unsigned long)pch);
 }
 
 /*
@@ -3011,7 +2995,7 @@ static inline int get_burst_len(struct dma_pl330_desc *desc, size_t len)
 	return burst_len;
 }
 
-static struct dma_async_tx_descriptor *pl330_prep_dma_cyclic(
+struct dma_async_tx_descriptor *__pl330_prep_dma_cyclic(
 		struct dma_chan *chan, dma_addr_t dma_addr, size_t len,
 		size_t period_len, enum dma_transfer_direction direction,
 		unsigned long flags, void *context)
@@ -3102,6 +3086,16 @@ static struct dma_async_tx_descriptor *pl330_prep_dma_cyclic(
 
 	return &desc->txd;
 }
+EXPORT_SYMBOL(__pl330_prep_dma_cyclic);
+
+static struct dma_async_tx_descriptor *pl330_prep_dma_cyclic(
+		struct dma_chan *chan, dma_addr_t dma_addr, size_t len,
+		size_t period_len, enum dma_transfer_direction direction,
+		unsigned long flags)
+{
+	return __pl330_prep_dma_cyclic(chan, dma_addr, len, period_len,
+			direction, flags, NULL);
+}
 
 static struct dma_async_tx_descriptor *
 pl330_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dst,
@@ -3140,14 +3134,14 @@ pl330_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dst,
 	while (burst != (1 << desc->rqcfg.brst_size))
 		desc->rqcfg.brst_size++;
 
-	desc->rqcfg.brst_len = get_burst_len(desc, len);
 	/*
 	 * If burst size is smaller than bus width then make sure we only
 	 * transfer one at a time to avoid a burst stradling an MFIFO entry.
 	 */
-	if (burst * 8 < pl330->pcfg.data_bus_width)
+	if (desc->rqcfg.brst_size * 8 < pl330->pcfg.data_bus_width)
 		desc->rqcfg.brst_len = 1;
 
+	desc->rqcfg.brst_len = get_burst_len(desc, len);
 	desc->bytes_requested = len;
 
 	desc->txd.flags = flags;
@@ -3233,7 +3227,10 @@ pl330_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
 	}
 
 	/* Return the last desc in the chain */
-	desc->txd.flags = flg;
+	if (desc)
+		desc->txd.flags = flg;
+	else
+		return NULL;
 	return &desc->txd;
 }
 
@@ -3390,29 +3387,58 @@ static int __maybe_unused pl330_suspend(struct device *dev)
 {
 	struct amba_device *pcdev = to_amba_device(dev);
 
-	pm_runtime_force_suspend(dev);
+	pm_runtime_disable(dev);
+
+	if (!pm_runtime_status_suspended(dev)) {
+		/* amba did not disable the clock */
+		amba_pclk_disable(pcdev);
+	}
 	amba_pclk_unprepare(pcdev);
 
 	return 0;
 }
 
-static int __maybe_unused pl330_resume(struct device *dev)
+#ifdef CONFIG_PM
+static int pl330_resume(struct device *dev)
 {
-	struct amba_device *pcdev = to_amba_device(dev);
-	int ret;
+	struct pl330_dmac *pl330;
+	int i;
 
-	ret = amba_pclk_prepare(pcdev);
-	if (ret)
-		return ret;
+	pl330 = (struct pl330_dmac *)dev_get_drvdata(dev);
 
-	pm_runtime_force_resume(dev);
+	if (pl330->inst_wrapper)
+		__raw_writel((pl330->mcode_bus >> 32) & 0xf, pl330->inst_wrapper);
 
-	return ret;
+	if(pl330->multi_irq) {
+		for (i = 0; i < AMBA_NR_IRQS; i++) {
+			int irq = pl330->irqnum_having_multi[i];
+			if (irq)
+#if defined(CONFIG_SCHED_HMP)
+				irq_set_affinity_hint(irq, &hmp_slow_cpu_mask);
+#else
+				irq_set_affinity_hint(irq, cpu_all_mask);
+#endif
+			else
+				break;
+		}
+	}
+
+	return 0;
 }
 
-static const struct dev_pm_ops pl330_pm = {
-	SET_LATE_SYSTEM_SLEEP_PM_OPS(pl330_suspend, pl330_resume)
+static const struct dev_pm_ops pl330_pm_ops = {
+	.resume		= pl330_resume,
 };
+
+static SIMPLE_DEV_PM_OPS(pl330_pm, pl330_suspend, pl330_resume);
+
+#define PL330_PM (&pl330_pm_ops)
+
+#else /* CONFIG_PM */
+
+#define PL330_PM NULL
+
+#endif /* !CONFIG_PM */
 
 static int pl330_probe(struct amba_device *adev, const struct amba_id *id)
 {
@@ -3582,7 +3608,8 @@ static int pl330_probe(struct amba_device *adev, const struct amba_id *id)
 	pd->dst_addr_widths = PL330_DMA_BUSWIDTHS;
 	pd->directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);
 	pd->residue_granularity = DMA_RESIDUE_GRANULARITY_BURST;
-	pd->max_burst = PL330_MAX_BURST;
+	pd->max_burst = ((pl330->quirks & PL330_QUIRK_BROKEN_NO_FLUSHP) ?
+			 1 : PL330_MAX_BURST);
 
 	ret = dma_async_device_register(pd);
 	if (ret) {
@@ -3598,6 +3625,8 @@ static int pl330_probe(struct amba_device *adev, const struct amba_id *id)
 			"unable to register DMA to the generic DT DMA helpers\n");
 		}
 	}
+
+	adev->dev.dma_parms = &pl330->dma_parms;
 
 	/*
 	 * This is the limit for transfers with a buswidth of 1, larger

@@ -98,7 +98,7 @@ static int samsung_dmadev_prepare(unsigned long ch,
 			&sg, 1, param->direction, DMA_PREP_INTERRUPT);
 		break;
 	case DMA_CYCLIC:
-		desc = chan->device->device_prep_dma_cyclic(chan,
+		desc = __pl330_prep_dma_cyclic(chan,
 				param->buf, param->len, param->period,
 				param->direction, true, &param->infiniteloop);
 		break;
