@@ -32,14 +32,9 @@ static void dwc3_drd_update(struct dwc3 *dwc)
 	if (id < 0)
 		id = 0;
 
-	/* Force set OTG mode, modify this after device bring-up */
-	dwc3_set_mode(dwc, DWC3_GCTL_PRTCAP_OTG);
-
-	/* Force set OTG mode, modify this after device bring-up
-	*dwc3_set_mode(dwc, id ?
-	*	      DWC3_GCTL_PRTCAP_HOST :
-	*	      DWC3_GCTL_PRTCAP_DEVICE);
-	*/
+	dwc3_set_mode(dwc, id ?
+		      DWC3_GCTL_PRTCAP_HOST :
+		      DWC3_GCTL_PRTCAP_DEVICE);
 }
 
 static int dwc3_drd_notifier(struct notifier_block *nb,
@@ -84,8 +79,7 @@ void dwc3_drd_exit(struct dwc3 *dwc)
 	extcon_unregister_notifier(dwc->edev, EXTCON_USB_HOST,
 				   &dwc->edev_nb);
 
-	/*dwc3_set_mode(dwc, DWC3_GCTL_PRTCAP_DEVICE);*/
-	dwc3_set_mode(dwc, DWC3_GCTL_PRTCAP_OTG);
+	dwc3_set_mode(dwc, DWC3_GCTL_PRTCAP_DEVICE);
 	flush_work(&dwc->drd_work);
 	dwc3_gadget_exit(dwc);
 }
