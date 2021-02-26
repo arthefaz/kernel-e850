@@ -12,6 +12,7 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/sched/clock.h>
 #include <linux/slab.h>
 
 #include "samsung-iommu.h"
@@ -68,11 +69,30 @@ static struct platform_driver samsung_sysmmu_driver;
 
 struct samsung_sysmmu_domain {
 	struct iommu_domain domain;
+	struct samsung_iommu_log log;
 	struct iommu_group *group;
 	sysmmu_pte_t *page_table;
 	atomic_t *lv2entcnt;
 	spinlock_t pgtablelock; /* serialize races to page table updates */
 };
+
+static inline void samsung_iommu_write_event(struct samsung_iommu_log *iommu_log,
+					     enum sysmmu_event_type type,
+					     u32 start, u32 end)
+{
+	struct sysmmu_log *log;
+	unsigned int index = (unsigned int)atomic_inc_return(&iommu_log->index) - 1;
+
+	log = &iommu_log->log[index % iommu_log->len];
+	log->time = sched_clock();
+	log->type = type;
+	log->start = start;
+	log->end = end;
+}
+
+#define SYSMMU_EVENT_LOG(data, type)	samsung_iommu_write_event(&(data)->log, type, 0, 0)
+#define SYSMMU_EVENT_LOG_RANGE(data, type, s, e)	\
+					samsung_iommu_write_event(&(data)->log, type, s, e)
 
 static bool sysmmu_global_init_done;
 DEFINE_MUTEX(sysmmu_global_mutex);
@@ -131,6 +151,8 @@ static inline void __sysmmu_write_all_vm(struct sysmmu_drvdata *data,
 static inline void __sysmmu_tlb_invalidate_all(struct sysmmu_drvdata *data)
 {
 	__sysmmu_write_all_vm(data, 0x1, MMU_REG(data, IDX_ALL_INV));
+
+	SYSMMU_EVENT_LOG(data, SYSMMU_EVENT_TLB_ALL);
 }
 
 static inline void __sysmmu_tlb_invalidate(struct sysmmu_drvdata *data,
@@ -141,6 +163,8 @@ static inline void __sysmmu_tlb_invalidate(struct sysmmu_drvdata *data,
 	__sysmmu_write_all_vm(data, ALIGN_DOWN(end - 1, SPAGE_SIZE),
 			      MMU_REG(data, IDX_RANGE_INV_END));
 	__sysmmu_write_all_vm(data, 0x1, MMU_REG(data, IDX_RANGE_INV));
+
+	SYSMMU_EVENT_LOG_RANGE(data, SYSMMU_EVENT_TLB_RANGE, start, end);
 }
 
 static inline void __sysmmu_disable(struct sysmmu_drvdata *data)
@@ -153,6 +177,8 @@ static inline void __sysmmu_disable(struct sysmmu_drvdata *data)
 		ctrl_val &= ~CTRL_MMU_ENABLE;
 		writel(ctrl_val | CTRL_MMU_BLOCK, data->sfrbase + REG_MMU_CTRL);
 	}
+
+	SYSMMU_EVENT_LOG(data, SYSMMU_EVENT_DISABLE);
 }
 
 static inline void __sysmmu_set_tlb(struct sysmmu_drvdata *data)
@@ -217,6 +243,8 @@ static inline void __sysmmu_enable(struct sysmmu_drvdata *data)
 		__sysmmu_write_all_vm(data, ctrl_val | CTRL_MMU_ENABLE,
 				      data->sfrbase + REG_MMU_CTRL_VM(0));
 	}
+
+	SYSMMU_EVENT_LOG(data, SYSMMU_EVENT_ENABLE);
 }
 
 static struct samsung_sysmmu_domain *to_sysmmu_domain(struct iommu_domain *dom)
@@ -233,6 +261,48 @@ static inline void pgtable_flush(void *vastart, void *vaend)
 static bool samsung_sysmmu_capable(enum iommu_cap cap)
 {
 	return cap == IOMMU_CAP_CACHE_COHERENCY;
+}
+
+static inline size_t get_log_fit_pages(struct samsung_iommu_log *log, int len)
+{
+	return DIV_ROUND_UP(sizeof(*(log->log)) * len, PAGE_SIZE);
+}
+
+static void samsung_iommu_deinit_log(struct samsung_iommu_log *log)
+{
+	struct page *page;
+	int i, fit_pages = get_log_fit_pages(log, log->len);
+
+	page = virt_to_page(log->log);
+	for (i = 0; i < fit_pages; i++)
+		__free_page(page + i);
+}
+
+static int samsung_iommu_init_log(struct samsung_iommu_log *log, int len)
+{
+	struct page *page;
+	int order, order_pages, fit_pages = get_log_fit_pages(log, len);
+
+	atomic_set(&log->index, 0);
+	order = get_order(fit_pages * PAGE_SIZE);
+	page = alloc_pages(GFP_KERNEL | __GFP_ZERO, order);
+	if (!page)
+		return -ENOMEM;
+
+	split_page(page, order);
+
+	order_pages = 1 << order;
+	if (order_pages > fit_pages) {
+		int i;
+
+		for (i = fit_pages; i < order_pages; i++)
+			__free_page(page + i);
+	}
+
+	log->log = page_address(page);
+	log->len = len;
+
+	return 0;
 }
 
 static struct iommu_domain *samsung_sysmmu_domain_alloc(unsigned int type)
@@ -270,12 +340,19 @@ static struct iommu_domain *samsung_sysmmu_domain_alloc(unsigned int type)
 		}
 	}
 
+	if (samsung_iommu_init_log(&domain->log, SYSMMU_EVENT_MAX)) {
+		pr_err("failed to init domain logging\n");
+		goto err_init_log;
+	}
+
 	pgtable_flush(domain->page_table, domain->page_table + NUM_LV1ENTRIES);
 
 	spin_lock_init(&domain->pgtablelock);
 
 	return &domain->domain;
 
+err_init_log:
+	iommu_put_dma_cookie(&domain->domain);
 err_get_dma_cookie:
 	kfree(domain->lv2entcnt);
 err_counter:
@@ -289,6 +366,7 @@ static void samsung_sysmmu_domain_free(struct iommu_domain *dom)
 {
 	struct samsung_sysmmu_domain *domain = to_sysmmu_domain(dom);
 
+	samsung_iommu_deinit_log(&domain->log);
 	iommu_put_dma_cookie(dom);
 	kmem_cache_free(flpt_cache, domain->page_table);
 	kfree(domain->lv2entcnt);
@@ -601,6 +679,8 @@ static int samsung_sysmmu_map(struct iommu_domain *dom, unsigned long l_iova,
 
 	if (ret)
 		pr_err("failed to map %#zx @ %#x, ret:%d\n", size, iova, ret);
+	else
+		SYSMMU_EVENT_LOG_RANGE(domain, SYSMMU_EVENT_MAP, iova, iova + size);
 
 	return ret;
 }
@@ -665,6 +745,7 @@ static size_t samsung_sysmmu_unmap(struct iommu_domain *dom,
 
 done:
 	iommu_iotlb_gather_add_page(dom, gather, iova, size);
+	SYSMMU_EVENT_LOG_RANGE(domain, SYSMMU_EVENT_UNMAP, iova, iova + size);
 
 	return size;
 
@@ -720,6 +801,9 @@ static void samsung_sysmmu_iotlb_sync(struct iommu_domain *dom,
 		spin_lock_irqsave(&drvdata->lock, flags);
 		if (drvdata->attached_count && drvdata->rpm_count > 0)
 			__sysmmu_tlb_invalidate(drvdata, gather->start, gather->end);
+
+		SYSMMU_EVENT_LOG_RANGE(drvdata, SYSMMU_EVENT_IOTLB_SYNC,
+				       gather->start, gather->end);
 		spin_unlock_irqrestore(&drvdata->lock, flags);
 	}
 }
@@ -1286,6 +1370,12 @@ static int samsung_sysmmu_device_probe(struct platform_device *pdev)
 	data->dev = dev;
 	platform_set_drvdata(pdev, data);
 
+	err = samsung_iommu_init_log(&data->log, SYSMMU_EVENT_MAX);
+	if (err) {
+		dev_err(dev, "failed to initialize log\n");
+		return err;
+	}
+
 	pm_runtime_enable(dev);
 	ret = sysmmu_get_hw_info(data);
 	if (ret) {
@@ -1336,6 +1426,8 @@ err_iommu_register:
 	iommu_device_sysfs_remove(&data->iommu);
 err_get_hw_info:
 	pm_runtime_disable(dev);
+	samsung_iommu_deinit_log(&data->log);
+
 	return err;
 }
 
@@ -1354,6 +1446,9 @@ static int __maybe_unused samsung_sysmmu_runtime_suspend(struct device *sysmmu)
 		__sysmmu_disable(drvdata);
 	spin_unlock_irqrestore(&drvdata->lock, flags);
 
+	SYSMMU_EVENT_LOG_RANGE(drvdata, SYSMMU_EVENT_POWEROFF,
+			       drvdata->rpm_count, drvdata->attached_count);
+
 	return 0;
 }
 
@@ -1367,6 +1462,9 @@ static int __maybe_unused samsung_sysmmu_runtime_resume(struct device *sysmmu)
 	if (drvdata->attached_count > 0)
 		__sysmmu_enable(drvdata);
 	spin_unlock_irqrestore(&drvdata->lock, flags);
+
+	SYSMMU_EVENT_LOG_RANGE(drvdata, SYSMMU_EVENT_POWERON,
+			       drvdata->rpm_count, drvdata->attached_count);
 
 	return 0;
 }

@@ -13,6 +13,36 @@
 #include <linux/interrupt.h>
 #include <linux/iommu.h>
 
+#define SYSMMU_EVENT_MAX	2048
+enum sysmmu_event_type {
+	/* init value */
+	SYSMMU_EVENT_NONE,
+	/* event for sysmmu drvdata */
+	SYSMMU_EVENT_ENABLE,
+	SYSMMU_EVENT_DISABLE,
+	SYSMMU_EVENT_POWERON,
+	SYSMMU_EVENT_POWEROFF,
+	SYSMMU_EVENT_TLB_RANGE,
+	SYSMMU_EVENT_TLB_ALL,
+	SYSMMU_EVENT_IOTLB_SYNC,
+	/* event for iommu domain */
+	SYSMMU_EVENT_MAP,
+	SYSMMU_EVENT_UNMAP,
+};
+
+struct sysmmu_log {
+	unsigned long long time;
+	enum sysmmu_event_type type;
+	u32 start;
+	u32 end;
+};
+
+struct samsung_iommu_log {
+	atomic_t index;
+	int len;
+	struct sysmmu_log *log;
+};
+
 struct tlb_config {
 	unsigned int index;
 	u32 cfg;
@@ -46,6 +76,7 @@ struct sysmmu_drvdata {
 	unsigned int secure_base;
 	const unsigned int *reg_set;
 	struct tlb_props tlb_props;
+	struct samsung_iommu_log log;
 	bool no_block_mode;
 	bool has_vcr;
 	bool async_fault_mode;
