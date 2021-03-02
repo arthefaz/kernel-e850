@@ -527,6 +527,13 @@ config MEMORY_STATE_TIME
 	help
 	  Memory time statistics exported to /sys/kernel/memory_state_time
 
+config SPR5801
+	tristate "Gyrfalcon SPR5801"
+	depends on I2C && OF && GPIOLIB
+	help
+	  AI chip that offers some NPU (Neural Processing Unit) capabilities.
+	  Firmware is uploaded via I2C. Data offloading happens via USB.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
