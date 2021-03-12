@@ -2,7 +2,7 @@
 /*
  * DMABUF Heap Allocator - Common implementation
  *
- * Copyright (c) 2021 Samsung Electronics Co., Ltd.
+ * Copyright (C) 2021 Samsung Electronics Co., Ltd.
  * Author: <hyesoo.yu@samsung.com> for Samsung
  */
 
@@ -10,12 +10,11 @@
 #include <linux/dma-heap.h>
 #include <linux/err.h>
 #include <linux/highmem.h>
-#include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
-#include <linux/of.h>
 
 #include "heap_private.h"
 
@@ -23,9 +22,8 @@ void heap_cache_flush(struct samsung_dma_buffer *buffer)
 {
 	struct device *dev = dma_heap_get_dev(buffer->heap->dma_heap);
 
-	if (!dma_heap_skip_cached(buffer->flags))
+	if (!dma_heap_skip_cache_ops(buffer->flags))
 		return;
-
 	/*
 	 * Flushing caches on buffer allocation is intended for preventing
 	 * corruption from writing back to DRAM from the dirty cache lines
@@ -34,8 +32,8 @@ void heap_cache_flush(struct samsung_dma_buffer *buffer)
 	 * protected from non-secure access to prevent the dirty write-back
 	 * to the protected area.
 	 */
-	dma_map_sgtable(dev, buffer->sg_table, DMA_TO_DEVICE, 0);
-	dma_unmap_sgtable(dev, buffer->sg_table, DMA_FROM_DEVICE, 0);
+	dma_map_sgtable(dev, &buffer->sg_table, DMA_TO_DEVICE, 0);
+	dma_unmap_sgtable(dev, &buffer->sg_table, DMA_FROM_DEVICE, 0);
 }
 
 /*
@@ -60,8 +58,8 @@ void heap_page_clean(struct page *pages, unsigned long size)
 	}
 }
 
-struct samsung_dma_buffer *samsung_dma_buffer_init(struct samsung_dma_heap *samsung_dma_heap,
-						   unsigned long size, unsigned int nents)
+struct samsung_dma_buffer *samsung_dma_buffer_alloc(struct samsung_dma_heap *samsung_dma_heap,
+						    unsigned long size, unsigned int nents)
 {
 	struct samsung_dma_buffer *buffer;
 
@@ -69,12 +67,10 @@ struct samsung_dma_buffer *samsung_dma_buffer_init(struct samsung_dma_heap *sams
 	if (!buffer)
 		return ERR_PTR(-ENOMEM);
 
-	buffer->sg_table = kzalloc(sizeof(*buffer->sg_table), GFP_KERNEL);
-	if (!buffer->sg_table)
-		goto free_table;
-
-	if (sg_alloc_table(buffer->sg_table, nents, GFP_KERNEL))
-		goto free_sg;
+	if (sg_alloc_table(&buffer->sg_table, nents, GFP_KERNEL)) {
+		kfree(buffer);
+		return ERR_PTR(-ENOMEM);
+	}
 
 	INIT_LIST_HEAD(&buffer->attachments);
 	mutex_init(&buffer->lock);
@@ -83,22 +79,17 @@ struct samsung_dma_buffer *samsung_dma_buffer_init(struct samsung_dma_heap *sams
 	buffer->flags = samsung_dma_heap->flags;
 
 	return buffer;
-free_sg:
-	kfree(buffer->sg_table);
-free_table:
-	kfree(buffer);
-
-	return ERR_PTR(-ENOMEM);
 }
+EXPORT_SYMBOL_GPL(samsung_dma_buffer_alloc);
 
-void samsung_dma_buffer_remove(struct samsung_dma_buffer *buffer)
+void samsung_dma_buffer_free(struct samsung_dma_buffer *buffer)
 {
-	sg_free_table(buffer->sg_table);
-	kfree(buffer->sg_table);
+	sg_free_table(&buffer->sg_table);
 	kfree(buffer);
 }
+EXPORT_SYMBOL_GPL(samsung_dma_buffer_free);
 
-const char *samsung_add_heap_name(unsigned long flags)
+static const char *samsung_add_heap_name(unsigned long flags)
 {
 	if (dma_heap_flags_uncached(flags))
 		return "-uncached";
@@ -109,128 +100,119 @@ const char *samsung_add_heap_name(unsigned long flags)
 	return "";
 }
 
-int samsung_heap_add(struct device *dev, struct samsung_dma_heap *samsung_dma_heap,
-		     const char *name, const struct dma_heap_ops *ops)
+static struct samsung_dma_heap *__samsung_heap_add(struct device *dev, void *priv,
+						   void (*release)(struct samsung_dma_buffer *),
+						   const struct dma_heap_ops *ops,
+						   unsigned int flags)
 {
+	struct samsung_dma_heap *heap;
+	unsigned int alignment = PAGE_SIZE, order, protid = 0;
 	struct dma_heap_export_info exp_info;
+	const char *name;
 	char *heap_name;
 
-	heap_name = devm_kasprintf(dev, GFP_KERNEL, "%s%s", name,
-				   samsung_add_heap_name(samsung_dma_heap->flags));
+	if (dma_heap_flags_protected(flags)) {
+		of_property_read_u32(dev->of_node, "dma-heap,protection_id", &protid);
+		if (!protid) {
+			perrfn("Secure heap should be set with protection id");
+			return ERR_PTR(-EINVAL);
+		}
+
+		if (!IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION))
+			return ERR_PTR(-ENODEV);
+	}
+
+	if (of_property_read_bool(dev->of_node, "dma-heap,video_aligned"))
+		flags |= DMA_HEAP_FLAG_VIDEO_ALIGNED;
+
+	if (of_property_read_string(dev->of_node, "dma-heap,name", &name)) {
+		perrfn("The heap should define name on device node");
+		return ERR_PTR(-EINVAL);
+	}
+
+	of_property_read_u32(dev->of_node, "dma-heap,alignment", &alignment);
+	order = min_t(unsigned int, get_order(alignment), MAX_ORDER);
+
+	heap = devm_kzalloc(dev, sizeof(*heap), GFP_KERNEL);
+	if (!heap)
+		return ERR_PTR(-ENOMEM);
+	heap->flags = flags;
+
+	heap_name = devm_kasprintf(dev, GFP_KERNEL, "%s%s", name, samsung_add_heap_name(flags));
 	if (!heap_name)
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
+
+	heap->protection_id = protid;
+	heap->alignment = 1 << (order + PAGE_SHIFT);
+	heap->release = release;
+	heap->priv = priv;
+	heap->name = heap_name;
 
 	exp_info.name = heap_name;
 	exp_info.ops = ops;
-	exp_info.priv = samsung_dma_heap;
+	exp_info.priv = heap;
 
-	samsung_dma_heap->name = heap_name;
-	samsung_dma_heap->dma_heap = dma_heap_add(&exp_info);
-	if (IS_ERR(samsung_dma_heap->dma_heap))
-		return PTR_ERR(samsung_dma_heap->dma_heap);
+	heap->dma_heap = dma_heap_add(&exp_info);
+	if (IS_ERR(heap->dma_heap))
+		return heap;
 
-	dma_coerce_mask_and_coherent(dma_heap_get_dev(samsung_dma_heap->dma_heap),
-				     DMA_BIT_MASK(36));
+	pr_info("Registered %s dma-heap successfully\n", heap_name);
 
-	return 0;
+	dma_coerce_mask_and_coherent(dma_heap_get_dev(heap->dma_heap), DMA_BIT_MASK(36));
+
+	return heap;
 }
 
-struct samsung_dma_heap *samsung_heap_init(struct device *dev, void *priv,
-					   void (*release)(struct samsung_dma_buffer *buffer))
-{
-	struct samsung_dma_heap *samsung_dma_heap;
-	unsigned int alignment = PAGE_SIZE, order;
-
-	samsung_dma_heap = devm_kzalloc(dev, sizeof(*samsung_dma_heap), GFP_KERNEL);
-	if (!samsung_dma_heap)
-		return ERR_PTR(-ENOMEM);
-
-	of_property_read_u32(dev->of_node, "dma_heap,alignment", &alignment);
-	order = min_t(unsigned int, get_order(alignment), MAX_ORDER);
-
-	samsung_dma_heap->alignment = 1 << (order + PAGE_SHIFT);
-	samsung_dma_heap->release = release;
-	samsung_dma_heap->priv = priv;
-
-	return samsung_dma_heap;
-}
-
-static const unsigned int cachable_heap_type[] = {
+static const unsigned int nonsecure_heap_type[] = {
 	0,
 	DMA_HEAP_FLAG_UNCACHED,
 };
-#define num_cachable_heaps ARRAY_SIZE(cachable_heap_type)
 
-static const unsigned int prot_heap_type[] = {
+#define num_nonsecure_heaps ARRAY_SIZE(nonsecure_heap_type)
+
+static const unsigned int secure_heap_type[] = {
 	DMA_HEAP_FLAG_PROTECTED,
 };
-#define num_prot_heaps ARRAY_SIZE(prot_heap_type)
+
+#define num_secure_heaps ARRAY_SIZE(secure_heap_type)
 
 /*
  * Maximum heap types is defined by cachable heap types
  * because prot heap type is always only 1.
  */
-#define num_max_heaps (num_cachable_heaps)
+#define num_max_heaps (num_nonsecure_heaps)
 
 /*
  * NOTE: samsung_heap_create returns error when heap creation fails.
  * In case of -ENODEV, it means that the secure heap doesn't need to be added
  * if system doesn't support content protection.
  */
-int samsung_heap_create(struct device *dev, void *priv,
-			void (*release)(struct samsung_dma_buffer *buffer),
-			const struct dma_heap_ops *ops)
-
+int samsung_heap_add(struct device *dev, void *priv,
+		     void (*release)(struct samsung_dma_buffer *buffer),
+		     const struct dma_heap_ops *ops)
 {
 	struct samsung_dma_heap *heap[num_max_heaps];
 	const unsigned int *types;
-	int i, ret, count, protid = 0;
-	const char *name;
-	bool video_aligned_heap;
+	int i, ret, count;
 
-	if (of_property_read_string(dev->of_node, "dma_heap,name", &name)) {
-		perrfn("The heap should define name on device node");
-		return -EINVAL;
-	}
 	/*
 	 * Secure heap should allocate only secure buffer.
 	 * Normal cachable heap and uncachable heaps are not registered.
 	 */
-	if (of_property_read_bool(dev->of_node, "dma_heap,secure")) {
-		of_property_read_u32(dev->of_node, "dma_heap,protection_id", &protid);
-		if (!protid) {
-			perrfn("Secure heap should be set with protection id");
-			return -EINVAL;
-		}
-
-		if (!IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION))
-			return -ENODEV;
-
-		count = num_prot_heaps;
-		types = prot_heap_type;
+	if (of_property_read_bool(dev->of_node, "dma-heap,secure")) {
+		count = num_secure_heaps;
+		types = secure_heap_type;
 	} else {
-		count = num_cachable_heaps;
-		types = cachable_heap_type;
+		count = num_nonsecure_heaps;
+		types = nonsecure_heap_type;
 	}
 
-	video_aligned_heap = of_property_read_bool(dev->of_node, "dma_heap,video_aligned");
-
 	for (i = 0; i < count; i++) {
-		heap[i] = samsung_heap_init(dev, priv, release);
+		heap[i] = __samsung_heap_add(dev, priv, release, ops, types[i]);
 		if (IS_ERR(heap[i])) {
 			ret = PTR_ERR(heap[i]);
 			goto heap_put;
 		}
-
-		heap[i]->flags = types[i];
-		heap[i]->protection_id = protid;
-
-		if (video_aligned_heap)
-			heap[i]->flags |= DMA_HEAP_FLAG_VIDEO_ALIGNED;
-
-		ret = samsung_heap_add(dev, heap[i], name, ops);
-		if (ret)
-			goto heap_put;
 	}
 
 	return 0;
@@ -252,6 +234,7 @@ struct dma_buf *samsung_export_dmabuf(struct samsung_dma_buffer *buffer, unsigne
 
 	return dma_buf_export(&exp_info);
 }
+EXPORT_SYMBOL_GPL(samsung_export_dmabuf);
 
 static int __init samsung_dma_heap_init(void)
 {

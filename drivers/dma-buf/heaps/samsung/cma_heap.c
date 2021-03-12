@@ -7,20 +7,18 @@
  */
 
 #include <linux/cma.h>
+#include <linux/device.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-heap.h>
 #include <linux/err.h>
 #include <linux/highmem.h>
-#include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/module.h>
-#include <linux/scatterlist.h>
-#include <linux/slab.h>
+#include <linux/of.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
-#include <linux/device.h>
-#include <linux/dma-heap.h>
-#include <linux/of.h>
+#include <linux/scatterlist.h>
+#include <linux/slab.h>
 
 #include "heap_private.h"
 
@@ -36,9 +34,9 @@ static struct dma_buf *cma_heap_allocate(struct dma_heap *heap, unsigned long le
 	struct samsung_dma_buffer *buffer;
 	struct dma_buf *dmabuf;
 	struct page *pages;
-	unsigned long alignment = samsung_dma_heap->alignment;
+	unsigned int alignment = samsung_dma_heap->alignment;
 	unsigned long size, nr_pages;
-	int ret = -ENOMEM;
+	int protret = 0, ret = -ENOMEM;
 
 	if (dma_heap_flags_video_aligned(samsung_dma_heap->flags))
 		len = dma_heap_add_video_padding(len);
@@ -46,24 +44,23 @@ static struct dma_buf *cma_heap_allocate(struct dma_heap *heap, unsigned long le
 	size = ALIGN(len, alignment);
 	nr_pages = size >> PAGE_SHIFT;
 
-	buffer = samsung_dma_buffer_init(samsung_dma_heap, size, 1);
+	buffer = samsung_dma_buffer_alloc(samsung_dma_heap, size, 1);
 	if (IS_ERR(buffer))
 		return ERR_PTR(-ENOMEM);
 
-	pages = cma_alloc(cma_heap->cma, nr_pages, get_order(alignment), false);
+	pages = cma_alloc(cma_heap->cma, nr_pages, get_order(alignment), GFP_KERNEL);
 	if (!pages) {
-		perrfn("failed to allocate from %s, size %lu", cma_get_name(cma_heap->cma), size);
+		perrfn("failed to allocate from %s, size %lu", dma_heap_get_name(heap), size);
 		goto free_cma;
 	}
 
-	sg_set_page(buffer->sg_table->sgl, pages, size, 0);
-
+	sg_set_page(buffer->sg_table.sgl, pages, size, 0);
 	heap_page_clean(pages, size);
 	heap_cache_flush(buffer);
 
 	if (dma_heap_flags_protected(samsung_dma_heap->flags)) {
-		buffer->priv = dma_buffer_protect(dma_heap_get_dev(heap), samsung_dma_heap, size,
-						  page_to_phys(pages));
+		buffer->priv = samsung_dma_buffer_protect(samsung_dma_heap,
+							  size, page_to_phys(pages));
 		if (IS_ERR(buffer->priv)) {
 			ret = PTR_ERR(buffer->priv);
 			goto free_prot;
@@ -79,11 +76,12 @@ static struct dma_buf *cma_heap_allocate(struct dma_heap *heap, unsigned long le
 	return dmabuf;
 
 free_export:
-	dma_buffer_unprotect(buffer->priv);
+	protret = samsung_dma_buffer_unprotect(buffer->priv, dma_heap_get_dev(heap));
 free_prot:
-	cma_release(cma_heap->cma, pages, nr_pages);
+	if (!protret)
+		cma_release(cma_heap->cma, pages, nr_pages);
 free_cma:
-	samsung_dma_buffer_remove(buffer);
+	samsung_dma_buffer_free(buffer);
 
 	return ERR_PTR(ret);
 }
@@ -96,12 +94,12 @@ static void cma_heap_release(struct samsung_dma_buffer *buffer)
 	int ret = 0;
 
 	if (dma_heap_flags_protected(dma_heap->flags))
-		ret = dma_buffer_unprotect(buffer->priv);
+		ret = samsung_dma_buffer_unprotect(buffer->priv,
+						   dma_heap_get_dev(dma_heap->dma_heap));
 
 	if (!ret)
-		cma_release(cma_heap->cma, sg_page(buffer->sg_table->sgl), nr_pages);
-
-	samsung_dma_buffer_remove(buffer);
+		cma_release(cma_heap->cma, sg_page(buffer->sg_table.sgl), nr_pages);
+	samsung_dma_buffer_free(buffer);
 }
 
 static void rmem_remove_callback(void *p)
@@ -120,7 +118,7 @@ static int cma_heap_probe(struct platform_device *pdev)
 
 	ret = of_reserved_mem_device_init(&pdev->dev);
 	if (ret || !pdev->dev.cma_area) {
-		dev_err(&pdev->dev, "The CMA reserved area is not assigned (ret %d)", ret);
+		dev_err(&pdev->dev, "The CMA reserved area is not assigned (ret %d)\n", ret);
 		return -EINVAL;
 	}
 
@@ -135,28 +133,23 @@ static int cma_heap_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	cma_heap->cma = pdev->dev.cma_area;
 
-	ret = samsung_heap_create(&pdev->dev, cma_heap, cma_heap_release, &cma_heap_ops);
+	ret = samsung_heap_add(&pdev->dev, cma_heap, cma_heap_release, &cma_heap_ops);
 
 	if (ret == -ENODEV)
 		return 0;
 
-	if (ret)
-		return ret;
-
-	dev_info(&pdev->dev, "Register %s dma-heap successfully", cma_get_name(cma_heap->cma));
-
-	return 0;
+	return ret;
 }
 
 static const struct of_device_id cma_heap_of_match[] = {
-	{ .compatible = "samsung,dma_heap,cma", },
+	{ .compatible = "samsung,dma-heap-cma", },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, cma_heap_of_match);
 
 static struct platform_driver cma_heap_driver = {
 	.driver		= {
-		.name	= "samsung,dma_heap,cma",
+		.name	= "samsung,dma-heap-cma",
 		.of_match_table = cma_heap_of_match,
 	},
 	.probe		= cma_heap_probe,

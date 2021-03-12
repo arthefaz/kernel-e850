@@ -4,7 +4,7 @@ config DMABUF_SAMSUNG_HEAPS
 	select SAMSUNG_SECURE_IOVA if EXYNOS_CONTENT_PATH_PROTECTION
 	depends on DMABUF_HEAPS
 	help
-	  Choose this option to enable the DMA-BUF userland memory heaps fo samsung.
+	  Choose this option to enable the DMA-BUF userland memory heaps for samsung.
 	  This options creates per heap chardevs in /dev/dma_heap/* which allows
 	  userspace to allocate dma-bufs that can be shared between drivers.
 

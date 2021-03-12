@@ -2,31 +2,32 @@
 /*
  * DMABUF Heap Allocator - Internal header
  *
- * Copyright (c) 2021 Samsung Electronics Co., Ltd.
+ * Copyright (C) 2021 Samsung Electronics Co., Ltd.
  * Author: <hyesoo.yu@samsung.com> for Samsung
  */
 
 #ifndef _HEAP_PRIVATE_H
 #define _HEAP_PRIVATE_H
 
+#include <linux/device.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-heap.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
 #include <linux/highmem.h>
+#include <linux/iommu.h>
 #include <linux/module.h>
+#include <linux/platform_device.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
-#include <linux/platform_device.h>
-#include <linux/iommu.h>
-#include <linux/device.h>
 
 struct samsung_dma_buffer {
 	struct samsung_dma_heap *heap;
 	struct list_head attachments;
+	/* Manage buffer resource of attachments and vaddr, vmap_cnt */
 	struct mutex lock;
 	unsigned long len;
-	struct sg_table *sg_table;
+	struct sg_table sg_table;
 	void *vaddr;
 	void *priv;
 	unsigned long flags;
@@ -38,8 +39,8 @@ struct samsung_dma_heap {
 	void (*release)(struct samsung_dma_buffer *buffer);
 	void *priv;
 	const char *name;
-	unsigned long alignment;
 	unsigned long flags;
+	unsigned int alignment;
 	unsigned int protection_id;
 };
 
@@ -59,15 +60,16 @@ extern const struct dma_buf_ops samsung_dma_buf_ops;
 
 void heap_cache_flush(struct samsung_dma_buffer *buffer);
 void heap_page_clean(struct page *pages, unsigned long size);
-struct samsung_dma_buffer *samsung_dma_buffer_init(struct samsung_dma_heap *samsung_dma_heap,
-						   unsigned long size, unsigned int nents);
-void samsung_dma_buffer_remove(struct samsung_dma_buffer *buffer);
-int samsung_heap_create(struct device *dev, void *priv,
-			void (*release)(struct samsung_dma_buffer *buffer), const struct dma_heap_ops *ops);
+struct samsung_dma_buffer *samsung_dma_buffer_alloc(struct samsung_dma_heap *samsung_dma_heap,
+						    unsigned long size, unsigned int nents);
+void samsung_dma_buffer_free(struct samsung_dma_buffer *buffer);
+int samsung_heap_add(struct device *dev, void *priv,
+		     void (*release)(struct samsung_dma_buffer *buffer),
+		     const struct dma_heap_ops *ops);
 struct dma_buf *samsung_export_dmabuf(struct samsung_dma_buffer *buffer, unsigned long fd_flags);
 
 #define DMA_HEAP_VIDEO_PADDING (512)
-#define dma_heap_add_video_padding(len) (PAGE_ALIGN(len + DMA_HEAP_VIDEO_PADDING))
+#define dma_heap_add_video_padding(len) (PAGE_ALIGN((len) + DMA_HEAP_VIDEO_PADDING))
 
 #define DMA_HEAP_FLAG_UNCACHED  BIT(0)
 #define DMA_HEAP_FLAG_PROTECTED BIT(1)
@@ -83,14 +85,14 @@ static inline bool dma_heap_flags_protected(unsigned long flags)
 	return !!(flags & DMA_HEAP_FLAG_PROTECTED);
 }
 
+static inline bool dma_heap_skip_cache_ops(unsigned long flags)
+{
+	return dma_heap_flags_protected(flags) || dma_heap_flags_uncached(flags);
+}
+
 static inline bool dma_heap_flags_video_aligned(unsigned long flags)
 {
 	return !!(flags & DMA_HEAP_FLAG_VIDEO_ALIGNED);
-}
-
-static inline bool dma_heap_skip_cached(unsigned long flags)
-{
-	return dma_heap_flags_protected(flags) || dma_heap_flags_uncached(flags);
 }
 
 /*
@@ -122,16 +124,17 @@ struct buffer_prot_info {
 };
 
 #if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
-void *dma_buffer_protect(struct device *dev, struct samsung_dma_heap *heap,
-			 unsigned int size, unsigned long phys);
-int dma_buffer_unprotect(void *priv);
+void *samsung_dma_buffer_protect(struct samsung_dma_heap *heap,
+				 unsigned int size, unsigned long phys);
+int samsung_dma_buffer_unprotect(void *priv, struct device *dev);
 #else
-static inline void *dma_buffer_protect(struct device *dev, struct samsung_dma_heap *heap,
-				       unsigned int size, unsigned long phys)
+static inline void *samsung_dma_buffer_protect(struct samsung_dma_heap *heap,
+					       unsigned int size, unsigned long phys)
 {
 	return NULL;
 }
-static inline int dma_buffer_unprotect(void *priv)
+
+static inline int samsung_dma_buffer_unprotect(void *priv, struct device *dev)
 {
 	return 0;
 }
@@ -145,6 +148,7 @@ static inline int __init system_dma_heap_init(void)
 {
 	return 0;
 }
+
 #define system_dma_heap_exit() do { } while (0)
 #endif
 
@@ -156,6 +160,7 @@ static inline int __init cma_dma_heap_init(void)
 {
 	return 0;
 }
+
 #define cma_dma_heap_exit() do { } while (0)
 #endif
 
@@ -167,6 +172,7 @@ static inline int __init carveout_dma_heap_init(void)
 {
 	return 0;
 }
+
 #define carveout_dma_heap_exit() do { } while (0)
 #endif
 

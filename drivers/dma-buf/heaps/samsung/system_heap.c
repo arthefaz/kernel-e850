@@ -3,7 +3,12 @@
  * DMABUF System heap exporter for Samsung
  *
  * Copyright (c) 2021 Samsung Electronics Co., Ltd.
- * Author: <hyesoo.yu@samsung.com> for Samsung
+ * Copyright (C) 2011 Google, Inc.
+ * Copyright (C) 2019, 2020 Linaro Ltd.
+ *
+ * Portions based off of Andrew Davis' SRAM heap:
+ * Copyright (C) 2019 Texas Instruments Incorporated - http://www.ti.com/
+ *	Andrew F. Davis <afd@ti.com>
  */
 
 #include <linux/dma-buf.h>
@@ -13,6 +18,7 @@
 #include <linux/highmem.h>
 #include <linux/mm.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
@@ -93,11 +99,13 @@ static struct dma_buf *system_heap_allocate(struct dma_heap *heap, unsigned long
 		i++;
 	}
 
-	buffer = samsung_dma_buffer_init(samsung_dma_heap, len, i);
-	if (IS_ERR(buffer))
+	buffer = samsung_dma_buffer_alloc(samsung_dma_heap, len, i);
+	if (IS_ERR(buffer)) {
+		ret = PTR_ERR(buffer);
 		goto free_buffer;
+	}
 
-	sg = buffer->sg_table->sgl;
+	sg = buffer->sg_table.sgl;
 	list_for_each_entry_safe(page, tmp_page, &pages, lru) {
 		sg_set_page(sg, page, page_size(page), 0);
 		sg = sg_next(sg);
@@ -115,12 +123,12 @@ static struct dma_buf *system_heap_allocate(struct dma_heap *heap, unsigned long
 	return dmabuf;
 
 free_export:
-	for_each_sgtable_sg(buffer->sg_table, sg, i) {
+	for_each_sgtable_sg(&buffer->sg_table, sg, i) {
 		struct page *p = sg_page(sg);
 
 		__free_pages(p, compound_order(p));
 	}
-	samsung_dma_buffer_remove(buffer);
+	samsung_dma_buffer_free(buffer);
 free_buffer:
 	list_for_each_entry_safe(page, tmp_page, &pages, lru)
 		__free_pages(page, compound_order(page));
@@ -137,37 +145,28 @@ static void system_heap_release(struct samsung_dma_buffer *buffer)
 	struct scatterlist *sg;
 	int i;
 
-	for_each_sgtable_sg(buffer->sg_table, sg, i) {
+	for_each_sgtable_sg(&buffer->sg_table, sg, i) {
 		struct page *page = sg_page(sg);
 
 		__free_pages(page, compound_order(page));
 	}
-	samsung_dma_buffer_remove(buffer);
+	samsung_dma_buffer_free(buffer);
 }
 
 static int system_heap_probe(struct platform_device *pdev)
 {
-	int ret;
-
-	ret = samsung_heap_create(&pdev->dev, NULL, system_heap_release, &system_heap_ops);
-	if (ret)
-		return ret;
-
-	pr_info("Register system dma-heap successfully\n");
-
-	return 0;
-
+	return samsung_heap_add(&pdev->dev, NULL, system_heap_release, &system_heap_ops);
 }
 
 static const struct of_device_id system_heap_of_match[] = {
-	{ .compatible = "samsung,dma_heap,system", },
+	{ .compatible = "samsung,dma-heap-system", },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, system_heap_of_match);
 
 static struct platform_driver system_heap_driver = {
 	.driver		= {
-		.name	= "samsung,dma_heap,system",
+		.name	= "samsung,dma-heap-system",
 		.of_match_table = system_heap_of_match,
 	},
 	.probe		= system_heap_probe,

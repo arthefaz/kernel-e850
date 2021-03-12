@@ -33,9 +33,7 @@ static int buffer_protect_smc(struct device *dev, struct buffer_prot_info *protd
 			      unsigned int protalign)
 {
 	unsigned long size = protdesc->chunk_count * protdesc->chunk_size;
-	unsigned long drmret = 0, dma_addr = 0;
-	phys_addr_t protdesc_phys = virt_to_phys(protdesc);
-	int ret;
+	unsigned long ret, dma_addr = 0;
 
 	dma_addr = secure_iova_alloc(size, max_t(u32, protalign, PAGE_SIZE));
 	if (!dma_addr)
@@ -43,34 +41,35 @@ static int buffer_protect_smc(struct device *dev, struct buffer_prot_info *protd
 
 	protdesc->dma_addr = (unsigned int)dma_addr;
 
-	dma_sync_single_for_device(dev, phys_to_dma(dev, protdesc_phys),
-				   sizeof(*protdesc), DMA_TO_DEVICE);
+	dma_map_single(dev, protdesc, sizeof(*protdesc), DMA_TO_DEVICE);
 
-	drmret = ppmp_smc(SMC_DRM_PPMP_PROT, protdesc_phys, 0, 0);
-	if (drmret) {
-		ret = -EACCES;
-		goto err_smc;
+	ret = ppmp_smc(SMC_DRM_PPMP_PROT, virt_to_phys(protdesc), 0, 0);
+	if (ret) {
+		secure_iova_free(dma_addr, size);
+		dma_unmap_single(dev, phys_to_dma(dev, virt_to_phys(protdesc)), sizeof(*protdesc),
+				 DMA_TO_DEVICE);
+
+		perr("CMD %#x (err=%#lx,va=%#x,len=%#lx,cnt=%u,flg=%u)",
+		     SMC_DRM_PPMP_PROT, ret, protdesc->dma_addr, size,
+		     protdesc->chunk_count, protdesc->flags);
+		return -EACCES;
 	}
 
 	return 0;
-err_smc:
-	secure_iova_free(dma_addr, size);
-	perr("CMD %#x (err=%#lx,va=%#lx,len=%#lx,cnt=%u,flg=%u)",
-	     SMC_DRM_PPMP_PROT, drmret, dma_addr, size,
-	     protdesc->chunk_count, protdesc->flags);
-
-	return ret;
 }
 
-static int buffer_unprotect_smc(struct buffer_prot_info *protdesc)
+static int buffer_unprotect_smc(struct device *dev,
+				struct buffer_prot_info *protdesc)
 {
 	unsigned long size = protdesc->chunk_count * protdesc->chunk_size;
 	unsigned long ret;
 
-	ret = ppmp_smc(SMC_DRM_PPMP_UNPROT, virt_to_phys(protdesc), 0, 0);
+	dma_unmap_single(dev, phys_to_dma(dev, virt_to_phys(protdesc)), sizeof(*protdesc),
+			 DMA_TO_DEVICE);
 
+	ret = ppmp_smc(SMC_DRM_PPMP_UNPROT, virt_to_phys(protdesc), 0, 0);
 	if (ret) {
-		perr("CMD %#x (err=%#lx,va=%#lx,len=%#lx,cnt=%u,flg=%u)",
+		perr("CMD %#x (err=%#lx,va=%#x,len=%#lx,cnt=%u,flg=%u)",
 		     SMC_DRM_PPMP_UNPROT, ret, protdesc->dma_addr,
 		     size, protdesc->chunk_count, protdesc->flags);
 		return -EACCES;
@@ -85,8 +84,8 @@ static int buffer_unprotect_smc(struct buffer_prot_info *protdesc)
 	return 0;
 }
 
-void *dma_buffer_protect(struct device *dev, struct samsung_dma_heap *heap,
-			 unsigned int size, unsigned long phys)
+void *samsung_dma_buffer_protect(struct samsung_dma_heap *heap, unsigned int size,
+				 unsigned long phys)
 {
 	struct buffer_prot_info *protdesc;
 	unsigned int protalign = heap->alignment;
@@ -96,14 +95,14 @@ void *dma_buffer_protect(struct device *dev, struct samsung_dma_heap *heap,
 	if (!protdesc)
 		return ERR_PTR(-ENOMEM);
 
-	protdesc->chunk_count = 1,
+	protdesc->chunk_count = 1;
 	protdesc->flags = heap->protection_id;
 	protdesc->chunk_size = ALIGN(size, protalign);
 	protdesc->bus_address = phys;
 
-	ret = buffer_protect_smc(dev, protdesc, protalign);
+	ret = buffer_protect_smc(dma_heap_get_dev(heap->dma_heap), protdesc, protalign);
 	if (ret) {
-		perr("protection failure (id%u,len%u,base%#lx,align%#x",
+		perr("protection failure (id%u,len%u,base%#lx,align%#x)",
 		     heap->protection_id, size, phys, protalign);
 		kfree(protdesc);
 		return ERR_PTR(ret);
@@ -112,13 +111,13 @@ void *dma_buffer_protect(struct device *dev, struct samsung_dma_heap *heap,
 	return protdesc;
 }
 
-int dma_buffer_unprotect(void *priv)
+int samsung_dma_buffer_unprotect(void *priv, struct device *dev)
 {
 	struct buffer_prot_info *protdesc = priv;
 	int ret = 0;
 
 	if (priv) {
-		ret = buffer_unprotect_smc(protdesc);
+		ret = buffer_unprotect_smc(dev, protdesc);
 		kfree(protdesc);
 	}
 

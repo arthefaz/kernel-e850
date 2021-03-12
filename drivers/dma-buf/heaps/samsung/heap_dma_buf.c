@@ -2,15 +2,19 @@
 /*
  * DMABUF Heap Allocator - dmabuf interface
  *
- * Copyright (c) 2021 Samsung Electronics Co., Ltd.
- * Author: <hyesoo.yu@samsung.com> for Samsung
+ * Copyright (C) 2011 Google, Inc.
+ * Copyright (C) 2019, 2020 Linaro Ltd.
+ * Copyright (C) 2021 Samsung Electronics Co., Ltd.
+ *
+ * Portions based off of Andrew Davis' SRAM heap:
+ * Copyright (C) 2019 Texas Instruments Incorporated - http://www.ti.com/
+ *	Andrew F. Davis <afd@ti.com>
  */
 
 #include <linux/dma-buf.h>
 #include <linux/dma-heap.h>
 #include <linux/err.h>
 #include <linux/highmem.h>
-#include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/scatterlist.h>
@@ -53,7 +57,7 @@ static int samsung_heap_attach(struct dma_buf *dmabuf, struct dma_buf_attachment
 	if (!a)
 		return -ENOMEM;
 
-	table = dup_sg_table(buffer->sg_table);
+	table = dup_sg_table(&buffer->sg_table);
 	if (IS_ERR(table)) {
 		kfree(a);
 		return -ENOMEM;
@@ -98,15 +102,13 @@ static struct sg_table *samsung_heap_map_dma_buf(struct dma_buf_attachment *atta
 		struct samsung_dma_buffer *buffer = attachment->dmabuf->priv;
 		struct buffer_prot_info *info = buffer->priv;
 
-		BUG_ON(!info);
-
 		sg_dma_address(table->sgl) = info->dma_addr;
 		sg_dma_len(table->sgl) = info->chunk_count * info->chunk_size;
 		table->nents = 1;
 
 		return table;
 	}
-	if (dma_heap_skip_cached(a->flags))
+	if (dma_heap_skip_cache_ops(a->flags))
 		attr |= DMA_ATTR_SKIP_CPU_SYNC;
 
 	ret = dma_map_sgtable(attachment->dev, table, direction, attr);
@@ -126,7 +128,7 @@ static void samsung_heap_unmap_dma_buf(struct dma_buf_attachment *attachment,
 	if (dma_heap_tzmp_buffer(a))
 		return;
 
-	if (dma_heap_skip_cached(a->flags))
+	if (dma_heap_skip_cache_ops(a->flags))
 		attr |= DMA_ATTR_SKIP_CPU_SYNC;
 
 	a->mapped = false;
@@ -139,7 +141,7 @@ static int samsung_heap_dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
 	struct samsung_dma_buffer *buffer = dmabuf->priv;
 	struct samsung_map_attachment *a;
 
-	if (dma_heap_skip_cached(buffer->flags))
+	if (dma_heap_skip_cache_ops(buffer->flags))
 		return 0;
 
 	mutex_lock(&buffer->lock);
@@ -154,12 +156,12 @@ static int samsung_heap_dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
 }
 
 static int samsung_heap_dma_buf_end_cpu_access(struct dma_buf *dmabuf,
-					      enum dma_data_direction direction)
+					       enum dma_data_direction direction)
 {
 	struct samsung_dma_buffer *buffer = dmabuf->priv;
 	struct samsung_map_attachment *a;
 
-	if (dma_heap_skip_cached(buffer->flags))
+	if (dma_heap_skip_cache_ops(buffer->flags))
 		return 0;
 
 	mutex_lock(&buffer->lock);
@@ -176,7 +178,7 @@ static int samsung_heap_dma_buf_end_cpu_access(struct dma_buf *dmabuf,
 static int samsung_heap_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 {
 	struct samsung_dma_buffer *buffer = dmabuf->priv;
-	struct sg_table *table = buffer->sg_table;
+	struct sg_table *table = &buffer->sg_table;
 	unsigned long addr = vma->vm_start;
 	struct sg_page_iter piter;
 	int ret;
@@ -205,8 +207,8 @@ static int samsung_heap_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 
 static void *samsung_heap_do_vmap(struct samsung_dma_buffer *buffer)
 {
-	struct sg_table *table = buffer->sg_table;
-	int npages = PAGE_ALIGN(buffer->len) / PAGE_SIZE;
+	struct sg_table *table = &buffer->sg_table;
+	unsigned int npages = PAGE_ALIGN(buffer->len) / PAGE_SIZE;
 	struct page **pages = vmalloc(sizeof(struct page *) * npages);
 	struct page **tmp = pages;
 	struct sg_page_iter piter;
@@ -277,8 +279,6 @@ static void samsung_heap_vunmap(struct dma_buf *dmabuf, void *vaddr)
 static void samsung_heap_dma_buf_release(struct dma_buf *dmabuf)
 {
 	struct samsung_dma_buffer *buffer = dmabuf->priv;
-
-	BUG_ON(!buffer->heap->release);
 
 	buffer->heap->release(buffer);
 }

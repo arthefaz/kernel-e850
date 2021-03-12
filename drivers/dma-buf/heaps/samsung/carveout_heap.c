@@ -6,21 +6,19 @@
  * Author: <hyesoo.yu@samsung.com> for Samsung
  */
 
-#include <linux/genalloc.h>
+#include <linux/device.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-heap.h>
 #include <linux/err.h>
+#include <linux/genalloc.h>
 #include <linux/highmem.h>
-#include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/module.h>
-#include <linux/scatterlist.h>
-#include <linux/slab.h>
+#include <linux/of.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
-#include <linux/device.h>
-#include <linux/of.h>
-#include <linux/dma-heap.h>
+#include <linux/scatterlist.h>
+#include <linux/slab.h>
 
 #include "heap_private.h"
 
@@ -37,17 +35,17 @@ static struct dma_buf *carveout_heap_allocate(struct dma_heap *heap, unsigned lo
 	struct samsung_dma_buffer *buffer;
 	struct dma_buf *dmabuf;
 	struct page *pages;
-	unsigned long alignment = samsung_dma_heap->alignment;
+	unsigned int alignment = samsung_dma_heap->alignment;
 	unsigned long size;
 	phys_addr_t paddr;
-	int ret = -ENOMEM;
+	int protret = 0, ret = -ENOMEM;
 
 	if (dma_heap_flags_video_aligned(samsung_dma_heap->flags))
 		len = dma_heap_add_video_padding(len);
 
 	size = ALIGN(len, alignment);
 
-	buffer = samsung_dma_buffer_init(samsung_dma_heap, size, 1);
+	buffer = samsung_dma_buffer_alloc(samsung_dma_heap, size, 1);
 	if (IS_ERR(buffer))
 		return ERR_PTR(-ENOMEM);
 
@@ -58,14 +56,13 @@ static struct dma_buf *carveout_heap_allocate(struct dma_heap *heap, unsigned lo
 	}
 
 	pages = phys_to_page(paddr);
-	sg_set_page(buffer->sg_table->sgl, pages, size, 0);
+	sg_set_page(buffer->sg_table.sgl, pages, size, 0);
 
 	heap_page_clean(pages, size);
 	heap_cache_flush(buffer);
 
 	if (dma_heap_flags_protected(samsung_dma_heap->flags)) {
-		buffer->priv = dma_buffer_protect(dma_heap_get_dev(heap), samsung_dma_heap,
-						  size, paddr);
+		buffer->priv = samsung_dma_buffer_protect(samsung_dma_heap, size, paddr);
 		if (IS_ERR(buffer->priv)) {
 			ret = PTR_ERR(buffer->priv);
 			goto free_prot;
@@ -81,11 +78,12 @@ static struct dma_buf *carveout_heap_allocate(struct dma_heap *heap, unsigned lo
 	return dmabuf;
 
 free_export:
-	dma_buffer_unprotect(buffer->priv);
+	protret = samsung_dma_buffer_unprotect(buffer->priv, dma_heap_get_dev(heap));
 free_prot:
-	gen_pool_free(carveout_heap->pool, paddr, size);
+	if (!protret)
+		gen_pool_free(carveout_heap->pool, paddr, size);
 free_gen:
-	samsung_dma_buffer_remove(buffer);
+	samsung_dma_buffer_free(buffer);
 
 	return ERR_PTR(ret);
 }
@@ -97,12 +95,12 @@ static void carveout_heap_release(struct samsung_dma_buffer *buffer)
 	int ret = 0;
 
 	if (dma_heap_flags_protected(buffer->flags))
-		ret = dma_buffer_unprotect(buffer->priv);
+		ret = samsung_dma_buffer_unprotect(buffer->priv,
+						   dma_heap_get_dev(samsung_dma_heap->dma_heap));
 
 	if (!ret)
-		gen_pool_free(carveout_heap->pool, sg_phys(buffer->sg_table->sgl), buffer->len);
-
-	samsung_dma_buffer_remove(buffer);
+		gen_pool_free(carveout_heap->pool, sg_phys(buffer->sg_table.sgl), buffer->len);
+	samsung_dma_buffer_free(buffer);
 }
 
 static const struct dma_heap_ops carveout_heap_ops = {
@@ -136,28 +134,23 @@ static int carveout_heap_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	ret = samsung_heap_create(&pdev->dev, carveout_heap, carveout_heap_release,
-				  &carveout_heap_ops);
+	ret = samsung_heap_add(&pdev->dev, carveout_heap, carveout_heap_release,
+			       &carveout_heap_ops);
 	if (ret == -ENODEV)
 		return 0;
 
-	if (ret)
-		return ret;
-
-	dev_info(&pdev->dev, "Register %s dma-heap successfully\n", rmem->name);
-
-	return 0;
+	return ret;
 }
 
 static const struct of_device_id carveout_heap_of_match[] = {
-	{ .compatible = "samsung,dma_heap,carveout", },
+	{ .compatible = "samsung,dma-heap-carveout", },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, carveout_heap_of_match);
 
 static struct platform_driver carveout_heap_driver = {
 	.driver		= {
-		.name	= "samsung,dma_heap,carveout",
+		.name	= "samsung,dma-heap-carveout",
 		.of_match_table = carveout_heap_of_match,
 	},
 	.probe		= carveout_heap_probe,
