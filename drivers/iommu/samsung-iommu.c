@@ -998,6 +998,14 @@ static struct iommu_ops samsung_sysmmu_ops = {
 
 static int sysmmu_get_hw_info(struct sysmmu_drvdata *data)
 {
+	int ret;
+
+	ret = pm_runtime_get_sync(data->dev);
+	if (ret < 0) {
+		pm_runtime_put_noidle(data->dev);
+		return ret;
+	}
+
 	data->version = __sysmmu_get_hw_version(data);
 	data->num_tlb = __sysmmu_get_tlb_num(data);
 
@@ -1010,6 +1018,8 @@ static int sysmmu_get_hw_info(struct sysmmu_drvdata *data)
 	}
 	if (__sysmmu_get_capa_no_block_mode(data))
 		data->no_block_mode = true;
+
+	pm_runtime_put(data->dev);
 
 	return 0;
 }
@@ -1200,25 +1210,27 @@ static int samsung_sysmmu_device_probe(struct platform_device *pdev)
 		return PTR_ERR(data->clk);
 	}
 
-	ret = sysmmu_get_hw_info(data);
-	if (ret) {
-		dev_err(dev, "failed to get h/w info\n");
-		return ret;
-	}
-
 	INIT_LIST_HEAD(&data->list);
 	spin_lock_init(&data->lock);
 	data->dev = dev;
+	platform_set_drvdata(pdev, data);
+
+	pm_runtime_enable(dev);
+	ret = sysmmu_get_hw_info(data);
+	if (ret) {
+		dev_err(dev, "failed to get h/w info\n");
+		goto err_get_hw_info;
+	}
 
 	ret = sysmmu_parse_dt(data->dev, data);
 	if (ret)
-		return ret;
+		goto err_get_hw_info;
 
 	ret = iommu_device_sysfs_add(&data->iommu, data->dev,
 				     NULL, dev_name(dev));
 	if (ret) {
 		dev_err(dev, "failed to register iommu in sysfs\n");
-		return ret;
+		goto err_get_hw_info;
 	}
 
 	iommu_device_set_ops(&data->iommu, &samsung_sysmmu_ops);
@@ -1240,9 +1252,6 @@ static int samsung_sysmmu_device_probe(struct platform_device *pdev)
 		}
 	}
 	mutex_unlock(&sysmmu_global_mutex);
-	pm_runtime_enable(dev);
-
-	platform_set_drvdata(pdev, data);
 
 	dev_info(dev, "initialized IOMMU. Ver %d.%d.%d\n",
 		 MMU_MAJ_VER(data->version),
@@ -1254,6 +1263,8 @@ err_global_init:
 	iommu_device_unregister(&data->iommu);
 err_iommu_register:
 	iommu_device_sysfs_remove(&data->iommu);
+err_get_hw_info:
+	pm_runtime_disable(dev);
 	return err;
 }
 
