@@ -36,11 +36,11 @@ static struct dma_buf *carveout_heap_allocate(struct dma_heap *heap, unsigned lo
 	struct dma_buf *dmabuf;
 	struct page *pages;
 	unsigned int alignment = samsung_dma_heap->alignment;
-	unsigned long size;
+	unsigned long size, flags = samsung_dma_heap->flags;
 	phys_addr_t paddr;
 	int protret = 0, ret = -ENOMEM;
 
-	if (dma_heap_flags_video_aligned(samsung_dma_heap->flags))
+	if (dma_heap_flags_video_aligned(flags))
 		len = dma_heap_add_video_padding(len);
 
 	size = ALIGN(len, alignment);
@@ -58,10 +58,12 @@ static struct dma_buf *carveout_heap_allocate(struct dma_heap *heap, unsigned lo
 	pages = phys_to_page(paddr);
 	sg_set_page(buffer->sg_table.sgl, pages, size, 0);
 
-	heap_page_clean(pages, size);
-	heap_cache_flush(buffer);
+	if (!dma_heap_flags_untouchable(flags)) {
+		heap_page_clean(pages, size);
+		heap_cache_flush(buffer);
+	}
 
-	if (dma_heap_flags_protected(samsung_dma_heap->flags)) {
+	if (dma_heap_flags_protected(flags)) {
 		buffer->priv = samsung_dma_buffer_protect(samsung_dma_heap, size, 1, paddr);
 		if (IS_ERR(buffer->priv)) {
 			ret = PTR_ERR(buffer->priv);

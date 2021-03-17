@@ -70,6 +70,7 @@ struct dma_buf *samsung_export_dmabuf(struct samsung_dma_buffer *buffer, unsigne
 #define DMA_HEAP_FLAG_UNCACHED  BIT(0)
 #define DMA_HEAP_FLAG_PROTECTED BIT(1)
 #define DMA_HEAP_FLAG_VIDEO_ALIGNED BIT(2)
+#define DMA_HEAP_FLAG_UNTOUCHABLE BIT(3)
 
 static inline bool dma_heap_flags_uncached(unsigned long flags)
 {
@@ -79,6 +80,11 @@ static inline bool dma_heap_flags_uncached(unsigned long flags)
 static inline bool dma_heap_flags_protected(unsigned long flags)
 {
 	return !!(flags & DMA_HEAP_FLAG_PROTECTED);
+}
+
+static inline bool dma_heap_flags_untouchable(unsigned long flags)
+{
+	return !!(flags & DMA_HEAP_FLAG_UNTOUCHABLE);
 }
 
 static inline bool dma_heap_skip_cache_ops(unsigned long flags)
