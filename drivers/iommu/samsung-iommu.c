@@ -824,7 +824,6 @@ static struct iommu_group *samsung_sysmmu_device_group(struct device *dev)
 	struct device_node *np;
 	struct platform_device *pdev;
 	struct list_head *list;
-	bool need_unmanaged_domain = false;
 
 	if (device_iommu_mapped(dev))
 		return iommu_group_get(dev);
@@ -841,9 +840,6 @@ static struct iommu_group *samsung_sysmmu_device_group(struct device *dev)
 		of_node_put(np);
 		return ERR_PTR(-ENODEV);
 	}
-
-	if (of_property_read_bool(np, "samsung,unmanaged-domain"))
-		need_unmanaged_domain = true;
 
 	of_node_put(np);
 
@@ -863,18 +859,6 @@ static struct iommu_group *samsung_sysmmu_device_group(struct device *dev)
 	INIT_LIST_HEAD(list);
 	iommu_group_set_iommudata(group, list,
 				  samsung_sysmmu_group_data_release);
-
-	if (need_unmanaged_domain) {
-		int ret;
-		struct iommu_domain *domain =
-				iommu_domain_alloc(&platform_bus_type);
-
-		ret = iommu_attach_group(domain, group);
-		if (ret) {
-			dev_err(dev, "failed to attach group, ret:%d\n", ret);
-			return ERR_PTR(ret);
-		}
-	}
 
 	return group;
 }
@@ -996,6 +980,25 @@ err:
 	INIT_LIST_HEAD(head);
 }
 
+static int samsung_sysmmu_def_domain_type(struct device *dev)
+{
+	struct device_node *np;
+	int ret = 0;
+
+	np = of_parse_phandle(dev->of_node, "samsung,iommu-group", 0);
+	if (!np) {
+		dev_err(dev, "group is not registered\n");
+		return 0;
+	}
+
+	if (of_property_read_bool(np, "samsung,unmanaged-domain"))
+		ret = IOMMU_DOMAIN_UNMANAGED;
+
+	of_node_put(np);
+
+	return ret;
+}
+
 static struct iommu_ops samsung_sysmmu_ops = {
 	.capable		= samsung_sysmmu_capable,
 	.domain_alloc		= samsung_sysmmu_domain_alloc,
@@ -1013,6 +1016,7 @@ static struct iommu_ops samsung_sysmmu_ops = {
 	.of_xlate		= samsung_sysmmu_of_xlate,
 	.get_resv_regions	= samsung_sysmmu_get_resv_regions,
 	.put_resv_regions	= samsung_sysmmu_put_resv_regions,
+	.def_domain_type	= samsung_sysmmu_def_domain_type,
 	.pgsize_bitmap		= SECT_SIZE | LPAGE_SIZE | SPAGE_SIZE,
 };
 
