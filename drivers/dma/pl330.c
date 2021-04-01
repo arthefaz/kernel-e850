@@ -3399,8 +3399,18 @@ static int __maybe_unused pl330_suspend(struct device *dev)
 #ifdef CONFIG_PM
 static int pl330_resume(struct device *dev)
 {
+	struct amba_device *pcdev = to_amba_device(dev);
 	struct pl330_dmac *pl330;
-	int i;
+	int i, ret = 0;
+
+	ret = amba_pclk_prepare(pcdev);
+	if (ret)
+	       return ret;
+
+	if (!pm_runtime_status_suspended(dev))
+		ret = amba_pclk_enable(pcdev);
+
+	pm_runtime_enable(dev);
 
 	pl330 = (struct pl330_dmac *)dev_get_drvdata(dev);
 
@@ -3420,8 +3430,7 @@ static int pl330_resume(struct device *dev)
 				break;
 		}
 	}
-
-	return 0;
+	return ret;
 }
 
 static const struct dev_pm_ops pl330_pm_ops = {
