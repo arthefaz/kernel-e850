@@ -23,6 +23,14 @@
 
 #include "../deferred-free-helper.h"
 
+struct dma_iovm_map {
+	struct list_head list;
+	struct device *dev;
+	struct sg_table table;
+	unsigned long attrs;
+	unsigned int mapcnt;
+};
+
 struct samsung_dma_buffer {
 	struct samsung_dma_heap *heap;
 	struct list_head attachments;
@@ -45,6 +53,7 @@ struct samsung_dma_heap {
 	unsigned long flags;
 	unsigned int alignment;
 	unsigned int protection_id;
+	atomic_long_t total_bytes;
 };
 
 extern const struct dma_buf_ops samsung_dma_buf_ops;
@@ -142,6 +151,13 @@ static inline int samsung_dma_buffer_unprotect(void *priv, struct device *dev)
 	return 0;
 }
 #endif
+
+void __init dmabuf_trace_create(void);
+
+int dmabuf_trace_alloc(struct dma_buf *dmabuf);
+void dmabuf_trace_free(struct dma_buf *dmabuf);
+int dmabuf_trace_track_buffer(struct dma_buf *dmabuf);
+int dmabuf_trace_untrack_buffer(struct dma_buf *dmabuf);
 
 #if defined(CONFIG_DMABUF_HEAPS_SAMSUNG_SYSTEM)
 int __init system_dma_heap_init(void);

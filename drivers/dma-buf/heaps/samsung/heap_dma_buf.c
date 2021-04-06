@@ -26,14 +26,6 @@
 
 #include "heap_private.h"
 
-struct dma_iovm_map {
-	struct list_head list;
-	struct device *dev;
-	struct sg_table table;
-	unsigned long attrs;
-	unsigned int mapcnt;
-};
-
 static struct dma_iovm_map *dma_iova_create(struct dma_buf_attachment *a)
 {
 	struct samsung_dma_buffer *buffer = a->dmabuf->priv;
@@ -337,6 +329,25 @@ static int samsung_heap_dma_buf_end_cpu_access_partial(struct dma_buf *dmabuf,
 	return 0;
 }
 
+static void samsung_dma_buf_vma_open(struct vm_area_struct *vma)
+{
+	struct dma_buf *dmabuf = vma->vm_file->private_data;
+
+	dmabuf_trace_track_buffer(dmabuf);
+}
+
+static void samsung_dma_buf_vma_close(struct vm_area_struct *vma)
+{
+	struct dma_buf *dmabuf = vma->vm_file->private_data;
+
+	dmabuf_trace_untrack_buffer(dmabuf);
+}
+
+const struct vm_operations_struct samsung_vm_ops = {
+	.open = samsung_dma_buf_vma_open,
+	.close = samsung_dma_buf_vma_close,
+};
+
 static int samsung_heap_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 {
 	struct samsung_dma_buffer *buffer = dmabuf->priv;
@@ -362,8 +373,10 @@ static int samsung_heap_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 			return ret;
 		addr += PAGE_SIZE;
 		if (addr >= vma->vm_end)
-			return 0;
+			break;
 	}
+	dmabuf_trace_track_buffer(dmabuf);
+	vma->vm_ops = &samsung_vm_ops;
 	return 0;
 }
 
@@ -443,7 +456,9 @@ static void samsung_heap_dma_buf_release(struct dma_buf *dmabuf)
 	struct samsung_dma_buffer *buffer = dmabuf->priv;
 
 	dma_iova_release(dmabuf);
+	dmabuf_trace_free(dmabuf);
 
+	atomic_long_sub(dmabuf->size, &buffer->heap->total_bytes);
 	buffer->heap->release(buffer);
 }
 

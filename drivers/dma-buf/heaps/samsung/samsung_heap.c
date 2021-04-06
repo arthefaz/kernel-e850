@@ -15,6 +15,7 @@
 #include <linux/of.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
+#include <trace/hooks/mm.h>
 
 #include "heap_private.h"
 
@@ -114,6 +115,16 @@ static const char *samsung_add_heap_name(unsigned long flags)
 	return "";
 }
 
+static void show_dmaheap_total_handler(void *data, unsigned int filter, nodemask_t *nodemask)
+{
+	struct samsung_dma_heap *heap = data;
+	u64 total_size_kb =  div_u64(atomic_long_read(&heap->total_bytes), 1024);
+
+	/* skip if the size is zero in order not to show meaningless log. */
+	if (total_size_kb)
+		pr_info("%s: %lukb ", heap->name, total_size_kb);
+}
+
 static struct samsung_dma_heap *__samsung_heap_add(struct device *dev, void *priv,
 						   void (*release)(struct samsung_dma_buffer *),
 						   const struct dma_heap_ops *ops,
@@ -173,9 +184,10 @@ static struct samsung_dma_heap *__samsung_heap_add(struct device *dev, void *pri
 	if (IS_ERR(heap->dma_heap))
 		return heap;
 
-	pr_info("Registered %s dma-heap successfully\n", heap_name);
-
+	register_trace_android_vh_show_mem(show_dmaheap_total_handler, heap);
 	dma_coerce_mask_and_coherent(dma_heap_get_dev(heap->dma_heap), DMA_BIT_MASK(36));
+
+	pr_info("Registered %s dma-heap successfully\n", heap_name);
 
 	return heap;
 }
@@ -242,6 +254,8 @@ heap_put:
 
 struct dma_buf *samsung_export_dmabuf(struct samsung_dma_buffer *buffer, unsigned long fd_flags)
 {
+	struct dma_buf *dmabuf;
+
 	DEFINE_SAMSUNG_DMA_BUF_EXPORT_INFO(exp_info, buffer->heap->name);
 
 	exp_info.ops = &samsung_dma_buf_ops;
@@ -249,7 +263,12 @@ struct dma_buf *samsung_export_dmabuf(struct samsung_dma_buffer *buffer, unsigne
 	exp_info.flags = fd_flags;
 	exp_info.priv = buffer;
 
-	return dma_buf_export(&exp_info);
+	dmabuf = dma_buf_export(&exp_info);
+	if (!IS_ERR(dmabuf)) {
+		atomic_long_add(dmabuf->size, &buffer->heap->total_bytes);
+		dmabuf_trace_alloc(dmabuf);
+	}
+	return dmabuf;
 }
 EXPORT_SYMBOL_GPL(samsung_export_dmabuf);
 
@@ -272,6 +291,8 @@ static int __init samsung_dma_heap_init(void)
 	ret = system_dma_heap_init();
 	if (ret)
 		goto err_system;
+
+	dmabuf_trace_create();
 
 	return 0;
 err_system:
