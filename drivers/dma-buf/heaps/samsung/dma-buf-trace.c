@@ -158,6 +158,43 @@ void show_dmabuf_trace_info(void)
 	mutex_unlock(&trace_lock);
 }
 
+void show_dmabuf_dva(struct device *dev)
+{
+	struct dmabuf_trace_buffer *buffer;
+	struct iommu_domain *domain = iommu_get_domain_for_dev(dev);
+	size_t mapped_size = 0;
+	int cnt = 0;
+
+	if (!dev_iommu_fwspec_get(dev))
+		return;
+
+	mutex_lock(&trace_lock);
+	pr_info("The %s domain device virtual address list: (kbsize@base)\n", dev_name(dev));
+
+	list_for_each_entry(buffer, &buffer_list, node) {
+		struct dma_buf *dmabuf = buffer->dmabuf;
+		struct samsung_dma_buffer *samsung_dma_buffer = dmabuf->priv;
+		struct dma_iovm_map *iovm_map;
+
+		mutex_lock(&samsung_dma_buffer->lock);
+		list_for_each_entry(iovm_map, &samsung_dma_buffer->attachments, list) {
+			if (domain != iommu_get_domain_for_dev(iovm_map->dev))
+				continue;
+			mapped_size += dmabuf->size;
+
+			pr_cont("%8zu@%#5lx ", dmabuf->size >> 10,
+				sg_dma_address(iovm_map->table.sgl) >> 12);
+			if (cnt++ & 16) {
+				pr_cont("\n");
+				cnt = 0;
+			}
+		}
+		mutex_unlock(&samsung_dma_buffer->lock);
+	}
+	pr_info("Total dva allocated size %zukb\n", mapped_size >> 10);
+	mutex_unlock(&trace_lock);
+}
+
 static void show_dmabuf_trace_handler(void *data, unsigned int filter, nodemask_t *nodemask)
 {
 	static DEFINE_RATELIMIT_STATE(dmabuf_trace_ratelimit, HZ * 10, 1);

@@ -72,6 +72,8 @@ int samsung_heap_add(struct device *dev, void *priv,
 		     void (*release)(struct samsung_dma_buffer *buffer),
 		     const struct dma_heap_ops *ops);
 struct dma_buf *samsung_export_dmabuf(struct samsung_dma_buffer *buffer, unsigned long fd_flags);
+void show_dmabuf_trace_info(void);
+void show_dmabuf_dva(struct device *dev);
 
 #define DMA_HEAP_VIDEO_PADDING (512)
 #define dma_heap_add_video_padding(len) (PAGE_ALIGN((len) + DMA_HEAP_VIDEO_PADDING))
