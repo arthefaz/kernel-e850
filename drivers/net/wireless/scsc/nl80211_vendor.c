@@ -479,7 +479,11 @@ struct slsi_gscan_result *slsi_prepare_scan_result(struct sk_buff *skb, u16 anqp
 {
 	struct ieee80211_mgmt    *mgmt = fapi_get_mgmt(skb);
 	struct slsi_gscan_result *scan_res;
-        struct timespec		 ts;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+	struct timespec64		 ts;
+#else
+	struct timespec		     ts;
+#endif
 	const u8                 *ssid_ie;
 	int                      mem_reqd;
 	int                      ie_len;
@@ -501,7 +505,9 @@ struct slsi_gscan_result *slsi_prepare_scan_result(struct sk_buff *skb, u16 anqp
 	/* Exclude 1 byte for ie_data[1] */
 	scan_res->scan_res_len = (sizeof(struct slsi_nl_scan_result_param) - 1) + ie_len;
 	scan_res->anqp_length = 0;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+	ts = ktime_to_timespec64(ktime_get_boottime());
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 	ts = ktime_to_timespec(ktime_get_boottime());
 #else
 	get_monotonic_boottime(&ts);
@@ -3365,7 +3371,11 @@ void slsi_rx_range_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_
 	struct sk_buff *nl_skb;
 	int res = 0;
 	struct nlattr *nlattr_nested;
-	struct timespec		ts;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+	struct timespec64 ts;
+#else
+	struct timespec ts;
+#endif
 	u64 tkernel;
 	u8 rep_cnt = 0;
 	__le16 *le16_ptr = NULL;
@@ -3457,7 +3467,9 @@ void slsi_rx_range_ind(struct slsi_dev *sdev, struct net_device *dev, struct sk_
 		res |= nla_put_u16(nl_skb, SLSI_RTT_EVENT_ATTR_RTT_SPREAD, value);
 		ip_ptr += 2;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+		ts = ktime_to_timespec64(ktime_get_boottime());
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 		ts = ktime_to_timespec(ktime_get_boottime());
 #else
 		get_monotonic_boottime(&ts);

@@ -120,9 +120,15 @@ struct ieee80211_channel *slsi_rx_scan_pass_to_cfg80211(struct slsi_dev *sdev, s
 	s32                      signal = fapi_get_s16(skb, u.mlme_scan_ind.rssi) * 100;
 	u16                      freq = SLSI_FREQ_FW_TO_HOST(fapi_get_u16(skb, u.mlme_scan_ind.channel_frequency));
 	struct ieee80211_channel *channel = slsi_find_scan_channel(sdev, mgmt, mgmt_len, freq);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+	struct timespec64 uptime;
+#else
 	struct timespec uptime;
+#endif
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+	uptime = ktime_to_timespec64(ktime_get_boottime());
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 	uptime = ktime_to_timespec(ktime_get_boottime());
 #else
 	get_monotonic_boottime(&uptime);
@@ -886,12 +892,18 @@ void slsi_handle_wips_beacon(struct slsi_dev *sdev, struct net_device *dev, stru
 	u16 beacon_int = 0;
 	u64 timestamp = 0;
 	int ssid_len = 0;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+	struct timespec64 sys_time;
+#else
 	struct timespec sys_time;
+#endif
 	int ret = 0;
 
 	u8 channel = (u8)(ndev_vif->chan->hw_value);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+	sys_time = ktime_to_timespec64(ktime_get_boottime());
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 	sys_time = ktime_to_timespec(ktime_get_boottime());
 #else
 	get_monotonic_boottime(&sys_time);

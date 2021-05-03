@@ -3637,7 +3637,11 @@ void slsi_rx_nan_range_ind(struct slsi_dev *sdev, struct net_device *dev, struct
 	struct sk_buff *nl_skb;
 	int res = 0;
 	struct nlattr *nlattr_nested;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+	struct timespec64 ts;
+#else
 	struct timespec ts;
+#endif
 	u64 tkernel;
 	u16 value;
 	u32 temp_value;
@@ -3739,7 +3743,9 @@ void slsi_rx_nan_range_ind(struct slsi_dev *sdev, struct net_device *dev, struct
 		res |= nla_put_u16(nl_skb, SLSI_RTT_EVENT_ATTR_RTT_SPREAD, value);
 		ip_ptr += 2;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+		ts = ktime_to_timespec64(ktime_get_boottime());
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 		ts = ktime_to_timespec(ktime_get_boottime());
 #else
 		get_monotonic_boottime(&ts);
