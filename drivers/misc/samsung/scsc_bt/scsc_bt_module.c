@@ -2036,6 +2036,15 @@ static int slsi_bt_service_proc_open(struct inode *inode, struct file *file)
 	return single_open(file, slsi_bt_service_proc_show, NULL);
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+static const struct proc_ops scsc_bt_procfs_fops = {
+	//.proc_owner   = THIS_MODULE,
+	.proc_open    = slsi_bt_service_proc_open,
+	.proc_read    = seq_read,
+	.proc_lseek   = seq_lseek,
+	.proc_release = single_release,
+};
+#else
 static const struct file_operations scsc_bt_procfs_fops = {
 	.owner   = THIS_MODULE,
 	.open    = slsi_bt_service_proc_open,
@@ -2043,6 +2052,7 @@ static const struct file_operations scsc_bt_procfs_fops = {
 	.llseek  = seq_lseek,
 	.release = single_release,
 };
+#endif
 
 static void scsc_update_btlog_params(void)
 {
