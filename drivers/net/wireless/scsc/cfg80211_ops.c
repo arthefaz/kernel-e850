@@ -3628,7 +3628,9 @@ static struct cfg80211_ops slsi_ops = {
 	.sched_scan_start = slsi_sched_scan_start,
 	.sched_scan_stop = slsi_sched_scan_stop,
 
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 7, 0))
 	.mgmt_frame_register = slsi_mgmt_frame_register,
+#endif
 	.mgmt_tx = slsi_mgmt_tx,
 	.mgmt_tx_cancel_wait = slsi_mgmt_tx_cancel_wait,
 	.set_txq_params = slsi_set_txq_params,
