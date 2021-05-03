@@ -1406,8 +1406,11 @@ static int mxman_start(struct mxman *mxman)
 
 	mif = scsc_mx_get_mif_abs(mxman->mx);
 	if (mxman_check_reset_failed(mif)) {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0))
+		struct  __kernel_old_timeval tval = ns_to_kernel_old_timeval(reset_failed_time);
+#else
 		struct timeval tval = ns_to_timeval(reset_failed_time);
-
+#endif
 		SCSC_TAG_ERR(MXMAN, "previous reset failed at [%6lu.%06ld], ignoring\n", tval.tv_sec, tval.tv_usec);
 		return -EIO;
 	}
@@ -2606,8 +2609,11 @@ static void mxman_stop(struct mxman *mxman)
 	mif = scsc_mx_get_mif_abs(mxman->mx);
 	/* If reset is failed, prevent new resets */
 	if (mxman_check_reset_failed(mif)) {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0))
+		struct  __kernel_old_timeval tval = ns_to_kernel_old_timeval(reset_failed_time);
+#else
 		struct timeval tval = ns_to_timeval(reset_failed_time);
-
+#endif
 		SCSC_TAG_ERR(MXMAN, "previous reset failed at [%6lu.%06ld], ignoring\n", tval.tv_sec, tval.tv_usec);
 		return;
 	}
