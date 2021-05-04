@@ -183,6 +183,7 @@ static inline sysmmu_pte_t *section_entry(sysmmu_pte_t *pgtable,
 #define MMU_MIN_VER(val)	(((val) >> 4) & 0x7F)
 #define MMU_REV_VER(val)	((val) & 0xF)
 #define MMU_RAW_VER(reg)	(((reg) >> 17) & 0x7FFF)
+#define MMU_VERSION(x, y, z)	((z) | ((y) << 4) | ((x) << 11))
 
 #define CTRL_VID_ENABLE			0x1
 #define CTRL_MMU_ENABLE			BIT(0)

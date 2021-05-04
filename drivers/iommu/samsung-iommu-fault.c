@@ -16,6 +16,9 @@
 #define MMU_CAPA1_SET_TLB_READ_ENTRY(tid, set, way, line)		\
 					((set) | ((way) << 8) |		\
 					 ((line) << 16) | ((tid) << 20))
+#define MMU_CAPA1_V82_SET_TLB_READ_ENTRY(tid, set, way, line)			\
+					((set) | ((way) << 10) |		\
+					 ((line) << 18) | ((tid) << 20))
 
 #define MMU_TLB_ENTRY_VALID(reg)	((reg) >> 28)
 #define MMU_SBB_ENTRY_VALID(reg)	((reg) >> 28)
@@ -192,6 +195,15 @@ unsigned int dump_tlb_entry_port_type(struct sysmmu_drvdata *drvdata,
 	return 0;
 }
 
+static inline int get_sysmmu_tlb_read_val(struct sysmmu_drvdata *drvdata,
+					  int tlb, int set, int way, int line)
+{
+	if (drvdata->version >= MMU_VERSION(8, 2, 0))
+		return MMU_CAPA1_V82_SET_TLB_READ_ENTRY(tlb, set, way, line);
+
+	return MMU_CAPA1_SET_TLB_READ_ENTRY(tlb, set, way, line);
+}
+
 #define MMU_NUM_TLB_SUBLINE		4
 static unsigned int dump_tlb_entry_port(struct sysmmu_drvdata *drvdata,
 					phys_addr_t pgtable,
@@ -202,7 +214,7 @@ static unsigned int dump_tlb_entry_port(struct sysmmu_drvdata *drvdata,
 
 	for (set = 0; set < num_set; set++) {
 		for (line = 0; line < MMU_NUM_TLB_SUBLINE; line++) {
-			val = MMU_CAPA1_SET_TLB_READ_ENTRY(tlb, set, way, line);
+			val = get_sysmmu_tlb_read_val(drvdata, tlb, set, way, line);
 			writel_relaxed(val, MMU_REG(drvdata, IDX_TLB_READ));
 			cnt += dump_tlb_entry_port_type(drvdata, pgtable,
 							way, set, line);
