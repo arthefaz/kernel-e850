@@ -5791,7 +5791,11 @@ slsi_wlan_vendor_rtt_policy[SLSI_RTT_ATTRIBUTE_MAX + 1] = {
 	[SLSI_RTT_ATTRIBUTE_TARGET_ID] = {.type = NLA_U16},
 	[SLSI_RTT_ATTRIBUTE_TARGET_INFO] = {.type = NLA_NESTED_ARRAY,
 					    .len = SLSI_RTT_ATTRIBUTE_MAX,
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
 					    .validation_data = slsi_wlan_vendor_rtt_policy},
+#else
+						},
+#endif
 	[SLSI_RTT_ATTRIBUTE_TARGET_MAC] = {.type = NLA_BINARY},
 	[SLSI_RTT_ATTRIBUTE_TARGET_TYPE] = {.type = NLA_U8},
 	[SLSI_RTT_ATTRIBUTE_TARGET_PEER] = {.type = NLA_U8},
@@ -5833,28 +5837,60 @@ slsi_wlan_vendor_gscan_policy[GSCAN_ATTRIBUTE_MAX] = {
 	[GSCAN_ATTRIBUTE_BUCKET_MAX_PERIOD] = {.type = NLA_U32},
 	[GSCAN_ATTRIBUTE_CH_BUCKET_1] = {.type = NLA_NESTED,
 					 .len = GSCAN_ATTRIBUTE_MAX,
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
 					 .validation_data = slsi_wlan_vendor_gscan_policy},
+#else
+					 },
+#endif
 	[GSCAN_ATTRIBUTE_CH_BUCKET_2] = {.type = NLA_NESTED,
 					 .len = GSCAN_ATTRIBUTE_MAX,
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
 					 .validation_data = slsi_wlan_vendor_gscan_policy},
+#else
+					 },
+#endif
 	[GSCAN_ATTRIBUTE_CH_BUCKET_3] = {.type = NLA_NESTED,
 					 .len = GSCAN_ATTRIBUTE_MAX,
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
 					 .validation_data = slsi_wlan_vendor_gscan_policy},
+#else
+					 },
+#endif
 	[GSCAN_ATTRIBUTE_CH_BUCKET_4] = {.type = NLA_NESTED,
 					 .len = GSCAN_ATTRIBUTE_MAX,
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
 					 .validation_data = slsi_wlan_vendor_gscan_policy},
+#else
+					 },
+#endif
 	[GSCAN_ATTRIBUTE_CH_BUCKET_5] = {.type = NLA_NESTED,
 					 .len = GSCAN_ATTRIBUTE_MAX,
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
 					 .validation_data = slsi_wlan_vendor_gscan_policy},
+#else
+					 },
+#endif
 	[GSCAN_ATTRIBUTE_CH_BUCKET_6] = {.type = NLA_NESTED,
 					 .len = GSCAN_ATTRIBUTE_MAX,
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
 					 .validation_data = slsi_wlan_vendor_gscan_policy},
+#else
+					 },
+#endif
 	[GSCAN_ATTRIBUTE_CH_BUCKET_7] = {.type = NLA_NESTED,
 					 .len = GSCAN_ATTRIBUTE_MAX,
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
 					 .validation_data = slsi_wlan_vendor_gscan_policy},
+#else
+					 },
+#endif
 	[GSCAN_ATTRIBUTE_CH_BUCKET_8] = {.type = NLA_NESTED,
 					 .len = GSCAN_ATTRIBUTE_MAX,
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
 					 .validation_data = slsi_wlan_vendor_gscan_policy},
+#else
+					 },
+#endif
 	[GSCAN_ATTRIBUTE_NUM_OF_RESULTS] = {.type = NLA_U32},
 	[GSCAN_ATTRIBUTE_NUM_BSSID] = {.type = NLA_U32},
 	[GSCAN_ATTRIBUTE_BLACKLIST_BSSID] = {.type = NLA_BINARY},
@@ -5884,7 +5920,11 @@ static const struct nla_policy
 slsi_wlan_vendor_epno_hs_policy[SLSI_ATTRIBUTE_EPNO_HS_MAX] = {
 	[SLSI_ATTRIBUTE_EPNO_HS_PARAM_LIST] = {.type = NLA_NESTED_ARRAY,
 					       .len = SLSI_ATTRIBUTE_EPNO_HS_MAX,
-					       .validation_data = slsi_wlan_vendor_epno_hs_policy},
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
+						   .validation_data = slsi_wlan_vendor_epno_hs_policy},
+#else
+						   },
+#endif
 	[SLSI_ATTRIBUTE_EPNO_HS_NUM] = {.type = NLA_U8},
 	[SLSI_ATTRIBUTE_EPNO_HS_ID] = {.type = NLA_U32},
 	[SLSI_ATTRIBUTE_EPNO_HS_REALM] = {.type = NLA_BINARY},
@@ -5962,7 +6002,11 @@ slsi_wlan_vendor_nan_policy[NAN_REQ_ATTR_MAX + 1] = {
 	[NAN_REQ_ATTR_DISCOVERY_ATTR_NUM_ENTRIES] = {.type = NLA_U8},
 	[NAN_REQ_ATTR_DISCOVERY_ATTR_VAL] = {.type = NLA_NESTED,
 					     .len = NAN_REQ_ATTR_MAX,
-					     .validation_data = slsi_wlan_vendor_nan_policy},
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
+						 .validation_data = slsi_wlan_vendor_nan_policy},
+#else
+						 },
+#endif
 	[NAN_REQ_ATTR_CONN_TYPE] = {.type = NLA_U8},
 	[NAN_REQ_ATTR_NAN_ROLE] = {.type = NLA_U8},
 	[NAN_REQ_ATTR_TRANSMIT_FREQ] = {.type = NLA_U8},
@@ -5975,7 +6019,11 @@ slsi_wlan_vendor_nan_policy[NAN_REQ_ATTR_MAX + 1] = {
 	[NAN_REQ_ATTR_FURTHER_AVAIL_NUM_ENTRIES] = {.type = NLA_U8},
 	[NAN_REQ_ATTR_FURTHER_AVAIL_VAL] = {.type = NLA_NESTED,
 					    .len = NAN_REQ_ATTR_MAX,
-					    .validation_data = slsi_wlan_vendor_nan_policy},
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0))
+						.validation_data = slsi_wlan_vendor_nan_policy},
+#else
+						},
+#endif
 	[NAN_REQ_ATTR_FURTHER_AVAIL_ENTRY_CTRL] = {.type = NLA_U8},
 	[NAN_REQ_ATTR_FURTHER_AVAIL_CHAN_CLASS] = {.type = NLA_U8},
 	[NAN_REQ_ATTR_FURTHER_AVAIL_CHAN] = {.type = NLA_U8},
