@@ -3106,6 +3106,7 @@ void mxman_resume(struct mxman *mxman)
 	mutex_unlock(&mxman->mxman_mutex);
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 static void _mx_exec_cleanup(struct subprocess_info *sp_info)
 {
 	if (!sp_info) {
@@ -3121,7 +3122,6 @@ static void _mx_exec_cleanup(struct subprocess_info *sp_info)
 	argv_free(sp_info->argv);
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 /* prog - full path to programme
  * wait_exec - one of UMH_WAIT_EXEC, UMH_WAIT_PROC, UMH_KILLABLE, UMH_NO_WAIT
  */
