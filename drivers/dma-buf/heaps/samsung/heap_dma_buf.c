@@ -399,6 +399,7 @@ static void *samsung_heap_do_vmap(struct samsung_dma_buffer *buffer)
 
 	if (dma_heap_flags_protected(buffer->flags)) {
 		perr("vmap() to protected buffer is not allowed");
+		vfree(pages);
 		return ERR_PTR(-EACCES);
 	}
 
