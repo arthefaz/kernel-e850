@@ -73,7 +73,7 @@ static struct dma_buf *system_heap_allocate(struct dma_heap *heap, unsigned long
 	struct page *page, *tmp_page;
 	unsigned long size_remaining;
 	unsigned int max_order = orders[0];
-	int i, ret = -ENOMEM;
+	int i, ret;
 
 	if (dma_heap_flags_video_aligned(samsung_dma_heap->flags))
 		len = dma_heap_add_video_padding(len);
@@ -93,8 +93,11 @@ static struct dma_buf *system_heap_allocate(struct dma_heap *heap, unsigned long
 		}
 
 		page = alloc_largest_available(size_remaining, max_order);
-		if (!page)
+		if (!page) {
+			ret = fatal_signal_pending(current) ? -EINTR : -ENOMEM;
+			perrfn("Failed to allocate page (ret %d)", ret);
 			goto free_buffer;
+		}
 
 		list_add_tail(&page->lru, &pages);
 		size_remaining -= page_size(page);
@@ -135,6 +138,8 @@ free_export:
 free_buffer:
 	list_for_each_entry_safe(page, tmp_page, &pages, lru)
 		__free_pages(page, compound_order(page));
+
+	samsung_allocate_error_report(samsung_dma_heap, len, fd_flags, heap_flags);
 
 	return ERR_PTR(ret);
 }

@@ -161,6 +161,11 @@ void dmabuf_trace_free(struct dma_buf *dmabuf);
 int dmabuf_trace_track_buffer(struct dma_buf *dmabuf);
 int dmabuf_trace_untrack_buffer(struct dma_buf *dmabuf);
 
+static inline u64 samsung_heap_total_kbsize(struct samsung_dma_heap *heap)
+{
+	return div_u64(atomic_long_read(&heap->total_bytes), 1024);
+}
+
 #if defined(CONFIG_DMABUF_HEAPS_SAMSUNG_SYSTEM)
 int __init system_dma_heap_init(void);
 void system_dma_heap_exit(void);
@@ -221,5 +226,12 @@ static inline int __init chunk_dma_heap_init(void)
 
 #define perrfndev(dev, format, arg...) \
 	dev_err(dev, DMAHEAP_PREFIX "%s: " format "\n", __func__, ##arg)
+
+static inline void samsung_allocate_error_report(struct samsung_dma_heap *heap, unsigned long len,
+						 unsigned long fd_flags, unsigned long heap_flags)
+{
+	perrfn("failed to alloc (len %zu, %#lx %#lx) from %s heap (total allocated %lu kb)",
+	       len, fd_flags, heap_flags, heap->name, samsung_heap_total_kbsize(heap));
+}
 
 #endif /* _HEAP_PRIVATE_H */

@@ -83,6 +83,7 @@ struct samsung_dma_buffer *samsung_dma_buffer_alloc(struct samsung_dma_heap *sam
 		return ERR_PTR(-ENOMEM);
 
 	if (sg_alloc_table(&buffer->sg_table, nents, GFP_KERNEL)) {
+		perrfn("failed to allocate sgtable with %u entry", nents);
 		kfree(buffer);
 		return ERR_PTR(-ENOMEM);
 	}
@@ -118,7 +119,7 @@ static const char *samsung_add_heap_name(unsigned long flags)
 static void show_dmaheap_total_handler(void *data, unsigned int filter, nodemask_t *nodemask)
 {
 	struct samsung_dma_heap *heap = data;
-	u64 total_size_kb =  div_u64(atomic_long_read(&heap->total_bytes), 1024);
+	u64 total_size_kb = samsung_heap_total_kbsize(heap);
 
 	/* skip if the size is zero in order not to show meaningless log. */
 	if (total_size_kb)
@@ -264,10 +265,13 @@ struct dma_buf *samsung_export_dmabuf(struct samsung_dma_buffer *buffer, unsigne
 	exp_info.priv = buffer;
 
 	dmabuf = dma_buf_export(&exp_info);
-	if (!IS_ERR(dmabuf)) {
-		atomic_long_add(dmabuf->size, &buffer->heap->total_bytes);
-		dmabuf_trace_alloc(dmabuf);
+	if (IS_ERR(dmabuf)) {
+		perrfn("failed to export buffer (ret: %d)", PTR_ERR(dmabuf));
+		return dmabuf;
 	}
+	atomic_long_add(dmabuf->size, &buffer->heap->total_bytes);
+	dmabuf_trace_alloc(dmabuf);
+
 	return dmabuf;
 }
 EXPORT_SYMBOL_GPL(samsung_export_dmabuf);

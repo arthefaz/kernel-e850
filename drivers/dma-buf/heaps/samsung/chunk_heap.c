@@ -78,6 +78,7 @@ static int chunk_heap_buffer_allocate(struct cma *cma, unsigned int need_count,
 	if (alloc_count < need_count) {
 		for (i = 0; i < alloc_count; i++)
 			cma_release(cma, pages[i], 1 << chunk_order);
+		perrfn("Grapped only %d/%d %d-order pages", alloc_count, need_count, chunk_order);
 		return -ENOMEM;
 	}
 
@@ -197,6 +198,9 @@ err_buffer:
 		cma_release(chunk_heap->cma, pages[pg], 1 << chunk_order);
 err_alloc:
 	kvfree(pages);
+
+	samsung_allocate_error_report(samsung_dma_heap, len, fd_flags, heap_flags);
+
 	return ERR_PTR(ret);
 }
 

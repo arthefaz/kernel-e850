@@ -83,6 +83,8 @@ free_prot:
 free_cma:
 	samsung_dma_buffer_free(buffer);
 
+	samsung_allocate_error_report(samsung_dma_heap, len, fd_flags, heap_flags);
+
 	return ERR_PTR(ret);
 }
 
