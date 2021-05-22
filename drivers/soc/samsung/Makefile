@@ -80,6 +80,8 @@ obj-$(CONFIG_EXYNOS_PSTATE_HAFM_TB)	+= exynos-hafm-tb.o
 
 obj-$(CONFIG_EXYNOS_MODEM_IF) += cpif/
 
+obj-$(CONFIG_SAM_ABOX_CP_SHMEM_RESERVE) += sam-abox-cp-shmem-reserve.o
+
 # GNSS interface driver
 obj-$(CONFIG_EXYNOS_GNSS_IF) += gnssif/
 

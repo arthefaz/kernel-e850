@@ -29,7 +29,7 @@
 #define SHMEM_C2C		8
 #define SHMEM_MSI		9
 
-#if defined(CONFIG_SHM_IPC)
+#if defined(CONFIG_SHM_IPC) || defined(CONFIG_SAM_ABOX_CP_SHMEM_RESERVE)
 extern int cp_shmem_get_mem_map_on_cp_flag(u32 cp_num);
 extern void __iomem *cp_shmem_get_region(u32 cp, u32 idx);
 extern void __iomem *cp_shmem_get_nc_region(unsigned long base, u32 size);
