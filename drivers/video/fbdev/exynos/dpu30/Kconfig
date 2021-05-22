@@ -19,6 +19,13 @@ config EXYNOS_MIPI_DSIM
 	help
 	  Enable MIPI-DSI driver.
 
+config EXYNOS_LT8912B
+	bool "Lontium lt8912B HDMI-DSI bridge driver"
+	depends on EXYNOS_DPU30
+	default y
+	help
+          Enable LT8912B HDMI-DSI bridge driver
+
 config EXYNOS_DISPLAYPORT
 	bool "Samsung Exynos DISPLAYPORT driver"
 	depends on EXYNOS_DPU30
@@ -100,7 +107,7 @@ config EXYNOS_CURSOR
 config EXYNOS_DSIM_DITHER
 	bool "DSIM SSCG feature"
         depends on EXYNOS_MIPI_DSIM
-        default y
+        default n
 
 config DECON_BTS_LEGACY
 	bool "Legacy BTS scheme of display"
