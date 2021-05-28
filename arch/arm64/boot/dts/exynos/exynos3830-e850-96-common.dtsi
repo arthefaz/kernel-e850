@@ -1,0 +1,244 @@
+#include "exynos3830-board_common.dtsi"
+#include "exynos3830-e850-96-sound.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+	compatible = "samsung,exynos3830", "samsung,E850-96";
+	board_id = <BOARD_ID>;
+	board_rev = <BOARD_REV>;
+
+	fragment@model {
+		target-path = "/";
+		__overlay__ {
+			#address-cells = <2>;
+			#size-cells = <1>;
+			model = "Samsung E850-96 board based on EXYNOS3830";
+
+			leds {
+				compatible = "gpio-leds";
+
+				/* HEART_BEAT_LED */
+				user_led1 {
+					label = "user_led1";
+					gpios = <&gpg2 2 GPIO_ACTIVE_HIGH>;
+					linux,default-trigger = "heartbeat";
+				};
+
+				/* eMMC_LED */
+				user_led2 {
+					label = "user_led2";
+					gpios = <&gpg2 3 GPIO_ACTIVE_HIGH>;
+					linux,default-trigger = "mmc0";
+				};
+
+				/* SD_LED */
+				user_led3 {
+					label = "user_led3";
+					gpios = <&gpg2 4 GPIO_ACTIVE_HIGH>;
+					linux,default-trigger = "mmc1";
+				};
+
+				/* WIFI_LED */
+				user_led4 {
+					label = "user_led4";
+					gpios = <&gpg2 6 GPIO_ACTIVE_HIGH>;
+					linux,default-trigger = "phy0tx";
+					default-state = "off";
+				};
+
+				/* BLUETOOTH_LED */
+				user_led5 {
+					label = "user_led5";
+					gpios = <&gpg2 7 GPIO_ACTIVE_HIGH>;
+					linux,default-trigger = "hci0rx";
+					default-state = "off";
+				};
+			};
+
+			/*
+			 * Always keep host USB power enabled, as k4.14 lacks
+			 * the 'usb-conn-gpio' driver. See also dr_mode in
+			 * usbdrd_dwc3 node for the actual USB mode.
+			 */
+			reg_usb_host_vbus: regulator-usb-host-vbus {
+				compatible = "regulator-fixed";
+				regulator-name = "usb_host_vbus";
+				regulator-min-microvolt = <5000000>;
+				regulator-max-microvolt = <5000000>;
+				gpio = <&gpa3 5 GPIO_ACTIVE_LOW>;
+
+				regulator-always-on;
+
+				pinctrl-names = "default";
+				pinctrl-0 = <&usb_pwr_ctl>;
+			};
+		};
+	};
+};
+
+/* ---- USB nodes ----------------------------------------------------------- */
+
+&pinctrl_0 {
+	usb_pwr_ctl: usb-pwr-ctl {
+		samsung,pins = "gpa3-5";
+		samsung,pin-function = <0x1>;	/* output */
+		samsung,pin-pud = <0>;
+	};
+};
+
+&udc {
+	status = "okay";
+};
+
+&usbdrd_dwc3 {
+	dr_mode = "host";
+	maximum-speed = "high-speed";
+	snps,quirk-frame-length-adjustment = <0x20>;
+	snps,u1u2_exitfail_quirk;
+	/* ux_exit_in_px should be defined in MK, LT */
+	snps,ux_exit_in_px_quirk;
+	/* elastic_buf_mode_quirk should be defined in MK */
+	snps,elastic_buf_mode_quirk;
+	/* usb3-lpm-capable;
+	snps,usb3_lpm_capable;
+	adj-sof-accuracy = <1>; */
+	/*
+	 * dis-u2-freeclk-exists-quirk, dis_u2_susphy_quirk are alternative.
+	 * One of them should be selected
+	 */
+	snps,dis-u2-freeclk-exists-quirk;
+	/*snps,dis_u2_susphy_quirk;*/
+
+	usb_audio_offloading = <0>;
+//	abox = <&abox>; /* Temporary block */
+};
+
+&usbdrd_phy0 {
+	status = "okay";
+	usb3phy-isolation= <1>;
+	pinctrl-names = "default";
+//	pinctrl-0 = <&phy_port>;
+//	phy,gpio_phy_port = <&gpg0 4 0x0>;
+//	hs_tune_param = <&usb_hs_tune>;
+//	ss_tune_param = <&usb_ss_tune>;
+};
+
+/* ---- HDMI nodes ---------------------------------------------------------- */
+
+&pinctrl_0 {
+	/* Reset line for LT8912; GPA2[2] = XEINT18 */
+	lt8912b_rst: lt8912b_rst {
+		samsung,pins = "gpa2-2";
+		samsung,pin-function = <0x1>;
+		samsung,pin-pud = <0>;
+	};
+
+	/* Interrupt from LT8912B chip; GPA2[0] = XEINT16 */
+	lt8912b_int: lt8912b_int {
+		samsung,pins = "gpa2-0";
+		samsung,pin-function = <0xf>;
+		samsung,pin-pud = <0>;
+	};
+
+	/* Interrupt from HPD line of HDMI socket; GPA2[4] = XEINT20 */
+	hdmi_hpd_int: lt8912b_hpd_int {
+		samsung,pins = "gpa2-4";
+		samsung,pin-function = <0xf>;
+		samsung,pin-pud = <0>;
+	};
+};
+
+&pinctrl_5 {
+	/* GPIO line to control DSI lines route (0 - HS connector, 1 - HDMI) */
+	mipi_switch: mipi_switch {
+		samsung,pins = "gpg1-2";
+		samsung,pin-function = <0x1>;
+		samsung,pin-pud = <0>;
+	};
+};
+
+&i2c_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	lt8912b: lt8912b {
+		compatible = "lontium,lt8912b";
+		reg = <0x48>;
+
+		reset-gpios = <&gpa2 2 GPIO_ACTIVE_LOW>;
+		mipi_switch-gpios = <&gpg1 2 GPIO_ACTIVE_HIGH>;
+		lt8912_irq-gpios = <&gpa2 0 GPIO_ACTIVE_HIGH>;
+		hpd_irq-gpios = <&gpa2 4 GPIO_ACTIVE_HIGH>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&lt8912b_rst &lt8912b_int &hdmi_hpd_int
+			     &mipi_switch>;
+	};
+};
+
+/* HDMI DDC I2C (for getting the EDID, etc) */
+&i2c_3 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+};
+
+&panel_0 {
+	/* reset, power */
+	gpios = <&gpg2 5 GPIO_ACTIVE_LOW>, <&gpg1 1 GPIO_ACTIVE_LOW>;
+	regulator_1p8v = "vdd_ldo28";
+};
+
+/*
+ * NOTE: See also changes in:
+ *       - exynos3830-dpu.dtsi
+ *       - exynos3830-display-lcd.dtsi
+ */
+
+/* ---- Camera nodes -------------------------------------------------------- */
+
+/* Camera module power: configure LDO32 line for 3.3V and enable it */
+&l32_reg {
+	regulator-name = "vdd_ldo32";
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-always-on;
+	regulator-ramp-delay = <12000>;
+	regulator-initial-mode = <3>;
+};
+
+&pinctrl_5 {
+	/* CAM_GPIO: control camera module power (enable/disable) */
+	cam_en_pins: cam-en-pins {
+		samsung,pins = "gpg1-5";
+		samsung,pin-function = <0x1>;	/* output */
+		samsung,pin-pud = <0>;
+	};
+};
+
+/* TODO: Remove it once a proper camera driver is enabled */
+&gpg1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&cam_en_pins>;
+
+	/* Always keep CAM_GPIO line at "1" level */
+	cam-en {
+		gpio-hog;
+		gpios = <5 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "cam-en";
+	};
+};
+
+/* Camera I2C; taken from exynos3830-erd3830-camera.dtsi */
+&hsi2c_2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	gpios = <&gpc1 4 0 &gpc1 5 0>;
+	status = "okay";
+	clock-frequency = <400000>;
+//	samsung,reset-before-trans;
+//	samsung,fast-plus-mode;
+};

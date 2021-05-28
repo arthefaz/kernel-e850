@@ -18,6 +18,9 @@ dtb-$(CONFIG_SOC_EXYNOS3830) += exynos3830.dtb \
 				exynos3830-erd3830_r02.dtbo \
 				exynos3830-erd3830_r03.dtbo \
 				exynos3830-erd3830_r04.dtbo \
+				exynos3830-e850-96-reva.dtbo \
+				exynos3830-e850-96-revb.dtbo \
+				exynos3830-e850-96-revc.dtbo \
 
 dtb-$(CONFIG_SOC_EXYNOS3830) += exynos3830-cramfs-smdk3830.dtb
 

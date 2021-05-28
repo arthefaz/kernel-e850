@@ -149,8 +149,8 @@
 
 	panel_0: panel_0 {
 		compatible = "samsung,exynos-panel";
-		ddi_id = <0x244040>;
-		lcd_info = <&s6e3fa0>;
+		ddi_id = <0xff>;
+		lcd_info = <&ota7290b_vid>;
 	};
 
 	decon_f: decon_f@0x13060000 {
@@ -173,7 +173,7 @@
 		max_win = <4>;
 		default_win = <3>;
 		default_ch = <3>;
-		psr_mode = <2>;         /* 0: video mode, 1: DP command mode, 2: MIPI command mode */
+		psr_mode = <0>;         /* 0: video mode, 1: DP command mode, 2: MIPI command mode */
 		trig_mode = <0>;        /* 0: hw trigger, 1: sw trigger */
 		dsi_mode = <0>;         /* 0: single dsi, 1: dual dsi */
 

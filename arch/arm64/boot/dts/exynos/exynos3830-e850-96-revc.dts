@@ -1,0 +1,64 @@
+/*
+ * SAMSUNG EXYNOS3830 board device tree source
+ *
+ * Copyright (c) 2018 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#define BOARD_ID	0x0
+#define BOARD_REV	0x2
+
+#include "exynos3830-e850-96-common.dtsi"
+
+/* ---- AI chip nodes ------------------------------------------------------- */
+
+&pinctrl_5 {
+	spr5801_rst: spr5801_rst {
+		samsung,pins = "gpg1-6";
+		samsung,pin-function = <0x1>;	/* output */
+		samsung,pin-pud = <0x3>;	/* pull-up */
+	};
+};
+
+&i2c_4 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	spr5801: spr5801@60 {
+		compatible = "gyrfalcon,spr5801s12";
+		reg = <0x60>;
+		reset-gpios = <&gpg1 6 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&spr5801_rst>;
+	};
+};
+
+/* AI chip power: 1.8V, always keep power on */
+&l30_reg {
+	regulator-name = "vdd_ldo30";
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+	regulator-always-on;
+	regulator-ramp-delay = <12000>;
+	regulator-initial-mode = <3>;
+};
+
+/* ---- USB nodes ----------------------------------------------------------- */
+
+/* Enable PMIC LDO regulator for LAN9514 chip (only needed on RevC and later) */
+&l24_reg {
+	regulator-name = "vdd_ldo24";
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-always-on;
+	regulator-ramp-delay = <12000>;
+	regulator-initial-mode = <3>;
+};
