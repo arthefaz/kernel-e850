@@ -146,6 +146,11 @@ struct dma_buf *chunk_heap_allocate(struct dma_heap *heap, unsigned long len,
 	int ret = -ENOMEM, protret = 0;
 	pgoff_t pg;
 
+	if (chunk_size < PAGE_SIZE) {
+		perrfn("invalid chunck order: %d", chunk_order);
+		return ERR_PTR(-EINVAL);
+	}
+
 	size = ALIGN(len, chunk_size);
 	nr_pages = size / chunk_size;
 
