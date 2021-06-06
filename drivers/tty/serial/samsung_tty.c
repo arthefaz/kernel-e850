@@ -1402,6 +1402,12 @@ static void s3c24xx_serial_set_termios(struct uart_port *port,
 	 */
 
 	baud = uart_get_baud_rate(port, termios, old, 0, 3000000);
+
+	if (!baud) {
+		dev_err(port->dev, "Invalid baudrate:[%d]\n", baud);
+		return;
+	}
+
 	quot = s3c24xx_serial_getclk(ourport, baud, &clk, &clk_sel);
 	if (baud == 38400 && (port->flags & UPF_SPD_MASK) == UPF_SPD_CUST)
 		quot = port->custom_divisor;
@@ -1426,6 +1432,11 @@ static void s3c24xx_serial_set_termios(struct uart_port *port,
 
 	if (ourport->info->has_divslot) {
 		unsigned int div = ourport->baudclk_rate / baud;
+
+		if (!div) {
+			dev_err(port->dev, "Invalid div:[%d]\n", div);
+			return;
+		}
 
 		if (cfg->has_fracval) {
 			udivslot = (div & 15);
