@@ -1461,6 +1461,7 @@ static int __maybe_unused samsung_sysmmu_suspend(struct device *dev)
 	if (pm_runtime_status_suspended(dev))
 		return 0;
 
+	dev->power.must_resume = true;
 	return samsung_sysmmu_runtime_suspend(dev);
 }
 
