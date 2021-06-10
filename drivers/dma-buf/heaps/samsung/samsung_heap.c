@@ -296,9 +296,13 @@ static int __init samsung_dma_heap_init(void)
 	if (ret)
 		goto err_system;
 
-	dmabuf_trace_create();
+	ret = dmabuf_trace_create();
+	if (ret)
+		goto err_trace;
 
 	return 0;
+err_trace:
+	system_dma_heap_exit();
 err_system:
 	carveout_dma_heap_exit();
 err_carveout:
@@ -311,6 +315,7 @@ err_cma:
 
 static void __exit samsung_dma_heap_exit(void)
 {
+	dmabuf_trace_remove();
 	system_dma_heap_exit();
 	carveout_dma_heap_exit();
 	cma_dma_heap_exit();

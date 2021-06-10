@@ -51,7 +51,8 @@ struct dmabuf_trace_buffer {
 };
 
 static struct list_head buffer_list = LIST_HEAD_INIT(buffer_list);
-static unsigned long buffer_size;
+static unsigned long dmabuf_trace_buffer_size;
+static unsigned long dmabuf_trace_buffer_num;
 
 /*
  * head_task.node is the head node of all other dmabuf_trace_task.node.
@@ -60,6 +61,67 @@ static unsigned long buffer_size;
  */
 static struct dmabuf_trace_task head_task;
 static DEFINE_MUTEX(trace_lock);
+
+#define INIT_NUM_SORTED_ARRAY 1024
+
+static size_t *sorted_array;
+static unsigned long num_sorted_array = INIT_NUM_SORTED_ARRAY;
+
+#define MAX_ATTACHED_DEVICE 64
+static struct dmabuf_trace_device {
+	struct device *dev;
+	size_t size; /* the total size of referenced buffer */
+	unsigned long refcnt; /* the number of referenced buffer */
+	unsigned long mapcnt; /* the number of total dma_buf_map_attachment count */
+} attach_lists[MAX_ATTACHED_DEVICE];
+static unsigned int num_devices;
+
+static struct dmabuf_trace_device *dmabuf_trace_get_device(struct device *dev)
+{
+	unsigned int i;
+
+	for (i = 0; i < num_devices; i++) {
+		if (attach_lists[i].dev == dev)
+			return &attach_lists[i];
+	}
+
+	BUG_ON(num_devices == MAX_ATTACHED_DEVICE);
+	attach_lists[num_devices].dev = dev;
+
+	return &attach_lists[num_devices++];
+}
+
+void dmabuf_trace_map(struct dma_buf *dmabuf, struct dma_iovm_map *iovm_map)
+{
+	struct dmabuf_trace_device *trace_device;
+
+	mutex_lock(&trace_lock);
+	trace_device = dmabuf_trace_get_device(iovm_map->dev);
+
+	if (iovm_map->mapcnt == 1) {
+		trace_device->size += dmabuf->size;
+		trace_device->refcnt++;
+	}
+
+	trace_device->mapcnt++;
+	mutex_unlock(&trace_lock);
+}
+
+void dmabuf_trace_unmap(struct dma_buf *dmabuf, struct dma_iovm_map *iovm_map, struct device *dev)
+{
+	struct dmabuf_trace_device *trace_device;
+
+	mutex_lock(&trace_lock);
+	trace_device = dmabuf_trace_get_device(dev);
+
+	if (!iovm_map || iovm_map->mapcnt == 0) {
+		trace_device->size -= dmabuf->size;
+		trace_device->refcnt--;
+	}
+
+	trace_device->mapcnt--;
+	mutex_unlock(&trace_lock);
+}
 
 struct dmabuf_fd_iterdata {
 	int fd_ref_size;
@@ -82,10 +144,21 @@ int dmabuf_traverse_filetable(const void *t, struct file *file, unsigned fd)
 	return 0;
 }
 
+static int dmabuf_trace_buffer_size_compare(const void *p1, const void *p2)
+{
+	if (*((size_t *)p1) > (*((size_t *)p2)))
+		return 1;
+	else if (*((size_t *)p1) < (*((size_t *)p2)))
+		return -1;
+	return 0;
+}
+
 void show_dmabuf_trace_info(void)
 {
 	struct dmabuf_trace_task *task = &head_task;
 	struct dmabuf_trace_buffer *buffer;
+	int i, count, num_skipped_buffer = 0, num_buffer = 0;
+	size_t size;
 
 	pr_info("\nDma-buf Info:\n");
 	/*
@@ -113,49 +186,45 @@ void show_dmabuf_trace_info(void)
 			task->task->comm, task->task->pid, iterdata.fd_ref_cnt, task->mmap_count,
 			iterdata.fd_ref_size, task->mmap_size / 1024);
 		task = list_next_entry(task, node);
-
 	} while (&task->node != &head_task.node);
 
-	/*
-	 * Show buffer list only if there is a possibility of dma-heap leakage.
-	 * If 1/4 of total RAM size is filled with dma-heap buffer, we suspect
-	 * a dma-heap leakage.
-	 */
-	if (buffer_size >> PAGE_SHIFT < totalram_pages() / 4) {
-		mutex_unlock(&trace_lock);
-		return;
-	}
+	pr_info("Attached device list:\n");
+	pr_info("%20s %20s %10s %10s\n", "attached device", "devsize(kb)", "devrefcnt", "mapcount");
 
-	/*
-	 *  node                  exp       size   refcount mmaprefcnt devrefcnt attached device..
-	 * 36561      system-uncached     638976          3          1         1 18500000.mali(1)
-	 * 36562               system      40960          2          1         0
-	 */
-	pr_info("\n%8s %20s %10s %10s %10s %10s %s\n",
-		"inode", "exp", "size", "refcount", "mmaprefcnt", "devrefcnt", "attached device..");
+	for (i = 0; i < num_devices; i++)
+		pr_info("%20s %20zu %10lu %10lu\n",
+			dev_name(attach_lists[i].dev), attach_lists[i].size,
+			attach_lists[i].refcnt, attach_lists[i].mapcnt);
 
 	list_for_each_entry(buffer, &buffer_list, node) {
-		struct dma_buf *dmabuf = buffer->dmabuf;
-		struct samsung_dma_buffer *samsung_dma_buffer = dmabuf->priv;
-		struct dma_iovm_map *iovm_map;
-		int mapcnt = 0;
-
-		pr_cont("%8lu %20s %10zu %10d %10d ", file_inode(dmabuf->file)->i_ino,
-			dmabuf->exp_name, dmabuf->size, file_count(dmabuf->file),
-			buffer->shared_count);
-
-		mutex_lock(&samsung_dma_buffer->lock);
-		list_for_each_entry(iovm_map, &samsung_dma_buffer->attachments, list)
-			mapcnt += iovm_map->mapcnt;
-
-		pr_cont("%10d ", mapcnt);
-		list_for_each_entry(iovm_map, &samsung_dma_buffer->attachments, list)
-			pr_cont("%s(%d) ", dev_name(iovm_map->dev), iovm_map->mapcnt);
-
-		pr_cont("\n");
-		mutex_unlock(&samsung_dma_buffer->lock);
+		sorted_array[num_buffer++] = buffer->dmabuf->size;
+		if (num_buffer == num_sorted_array) {
+			num_skipped_buffer = dmabuf_trace_buffer_num - num_sorted_array;
+			break;
+		}
 	}
 	mutex_unlock(&trace_lock);
+
+	if (!num_buffer)
+		return;
+
+	sort(sorted_array, num_buffer, sizeof(*sorted_array), dmabuf_trace_buffer_size_compare, NULL);
+
+	pr_info("Dma-buf size statistics: (skipped bufcnt %d)\n", num_skipped_buffer);
+	pr_info("%10s : %8s\n", "size(kb)", "count");
+
+	size = sorted_array[0];
+	count = 1;
+	for (i = 1; i < num_buffer; i++) {
+		if (size == sorted_array[i]) {
+			count++;
+			continue;
+		}
+		pr_info("%10zu : %8d\n", size / 1024, count);
+		size = sorted_array[i];
+		count = 1;
+	}
+	pr_info("%10zu : %8d\n", size / 1024, count);
 }
 
 void show_dmabuf_dva(struct device *dev)
@@ -411,7 +480,22 @@ int dmabuf_trace_alloc(struct dma_buf *dmabuf)
 
 	mutex_lock(&trace_lock);
 	list_add_tail(&buffer->node, &buffer_list);
-	buffer_size += buffer->dmabuf->size;
+	dmabuf_trace_buffer_size += buffer->dmabuf->size;
+	dmabuf_trace_buffer_num++;
+
+	if (dmabuf_trace_buffer_num >= num_sorted_array) {
+		size_t *realloced_array = kvmalloc_array(num_sorted_array * 2,
+							 sizeof(*sorted_array), GFP_KERNEL);
+		/*
+		 * If reallocation is failed, it is not considered an error.
+		 * This failure causes just some information to be missing from debug logs.
+		 */
+		if (realloced_array) {
+			kvfree(sorted_array);
+			sorted_array = realloced_array;
+			num_sorted_array *= 2;
+		}
+	}
 
 	task = dmabuf_trace_get_task();
 	if (IS_ERR(task)) {
@@ -445,7 +529,8 @@ void dmabuf_trace_free(struct dma_buf *dmabuf)
 		dmabuf_trace_free_ref_force(ref);
 
 	list_del(&buffer->node);
-	buffer_size -= buffer->dmabuf->size;
+	dmabuf_trace_buffer_size -= buffer->dmabuf->size;
+	dmabuf_trace_buffer_num--;
 	mutex_unlock(&trace_lock);
 	kfree(buffer);
 }
@@ -523,12 +608,26 @@ int dmabuf_trace_untrack_buffer(struct dma_buf *dmabuf)
 	return 0;
 }
 
-void __init dmabuf_trace_create(void)
+int __init dmabuf_trace_create(void)
 {
 	INIT_LIST_HEAD(&head_task.node);
 	INIT_LIST_HEAD(&head_task.ref_list);
 
 	register_trace_android_vh_show_mem(show_dmabuf_trace_handler, NULL);
 
+	sorted_array = kvmalloc_array(INIT_NUM_SORTED_ARRAY, sizeof(*sorted_array), GFP_KERNEL);
+	if (!sorted_array) {
+		num_sorted_array = 0;
+		return -ENOMEM;
+	}
+
 	pr_info("Initialized dma-buf trace successfully.\n");
+
+	return 0;
+}
+
+void dmabuf_trace_remove(void)
+{
+	kvfree(sorted_array);
+	num_sorted_array = 0;
 }
