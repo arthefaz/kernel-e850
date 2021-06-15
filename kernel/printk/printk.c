@@ -408,7 +408,11 @@ static unsigned long console_dropped;
 /* the next printk record to read after the last 'clear' command */
 static u64 clear_seq;
 
-#ifdef CONFIG_PRINTK_CALLER
+#if defined(CONFIG_PRINTK_CALLER) && defined(CONFIG_PRINTK_PROCESS)
+#define PREFIX_MAX		72
+#elif defined(CONFIG_PRINTK_PROCESS)
+#define PREFIX_MAX		58
+#elif defined(CONFIG_PRINTK_CALLER)
 #define PREFIX_MAX		48
 #else
 #define PREFIX_MAX		32
@@ -530,6 +534,13 @@ static int log_store(u32 caller_id, int facility, int level,
 	else
 		r.info->ts_nsec = local_clock();
 	r.info->caller_id = caller_id;
+#ifdef CONFIG_PRINTK_PROCESS
+	strncpy(r.info->process, current->comm, sizeof(r.info->process) - 1);
+	r.info->process[sizeof(r.info->process) - 1] = '\0';
+	r.info->pid = task_pid_nr(current);
+	r.info->cpu = smp_processor_id();
+	r.info->in_interrupt = in_interrupt() ? 1 : 0;
+#endif
 	if (dev_info)
 		memcpy(&r.info->dev_info, dev_info, sizeof(r.info->dev_info));
 
@@ -1318,6 +1329,15 @@ static size_t print_caller(u32 id, char *buf)
 #else
 #define print_caller(id, buf) 0
 #endif
+#ifdef CONFIG_PRINTK_PROCESS
+static size_t print_process(const struct printk_info *info, char *buf)
+{
+	return sprintf(buf, "%c[%1d:%15s:%5d]", info->in_interrupt ? 'I' : ' ',
+			info->cpu, info->process, info->pid);
+}
+#else
+#define print_process(info, buf) 0
+#endif
 
 static size_t info_print_prefix(const struct printk_info  *info, bool syslog,
 				bool time, char *buf)
@@ -1331,8 +1351,9 @@ static size_t info_print_prefix(const struct printk_info  *info, bool syslog,
 		len += print_time(info->ts_nsec, buf + len);
 
 	len += print_caller(info->caller_id, buf + len);
+	len += print_process(info, buf + len);
 
-	if (IS_ENABLED(CONFIG_PRINTK_CALLER) || time) {
+	if (IS_ENABLED(CONFIG_PRINTK_CALLER) || IS_ENABLED(CONFIG_PRINTK_PROCESS) || time) {
 		buf[len++] = ' ';
 		buf[len] = '\0';
 	}
