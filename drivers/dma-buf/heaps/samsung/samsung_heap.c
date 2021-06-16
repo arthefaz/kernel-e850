@@ -136,6 +136,7 @@ static struct samsung_dma_heap *__samsung_heap_add(struct device *dev, void *pri
 	struct dma_heap_export_info exp_info;
 	const char *name;
 	char *heap_name;
+	struct dma_heap *dma_heap;
 
 	if (dma_heap_flags_protected(flags)) {
 		of_property_read_u32(dev->of_node, "dma-heap,protection_id", &protid);
@@ -170,6 +171,13 @@ static struct samsung_dma_heap *__samsung_heap_add(struct device *dev, void *pri
 	heap_name = devm_kasprintf(dev, GFP_KERNEL, "%s%s", name, samsung_add_heap_name(flags));
 	if (!heap_name)
 		return ERR_PTR(-ENOMEM);
+
+	dma_heap = dma_heap_find(heap_name);
+	if (dma_heap) {
+		pr_err("Already registered heap named %s\n", heap_name);
+		dma_heap_put(dma_heap);
+		return ERR_PTR(-ENODEV);
+	}
 
 	heap->protection_id = protid;
 	heap->alignment = 1 << (order + PAGE_SHIFT);
@@ -215,7 +223,8 @@ static const unsigned int secure_heap_type[] = {
 /*
  * NOTE: samsung_heap_create returns error when heap creation fails.
  * In case of -ENODEV, it means that the secure heap doesn't need to be added
- * if system doesn't support content protection.
+ * if system doesn't support content protection. Or, the same name heap is
+ * already added.
  */
 int samsung_heap_add(struct device *dev, void *priv,
 		     void (*release)(struct samsung_dma_buffer *buffer),

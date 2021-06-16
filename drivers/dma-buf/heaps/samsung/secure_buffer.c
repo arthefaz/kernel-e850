@@ -11,23 +11,11 @@
 #include <linux/smc.h>
 #include <linux/kmemleak.h>
 #include <linux/dma-mapping.h>
-#include <linux/arm-smccc.h>
 #include <linux/dma-direct.h>
 #include <linux/samsung-secure-iova.h>
 
+#include "secure_buffer.h"
 #include "heap_private.h"
-
-#define SMC_DRM_PPMP_PROT		(0x82002110)
-#define SMC_DRM_PPMP_UNPROT		(0x82002111)
-
-static inline unsigned long ppmp_smc(unsigned long cmd, unsigned long arg0,
-				     unsigned long arg1, unsigned long arg2)
-{
-	struct arm_smccc_res res;
-
-	arm_smccc_smc(cmd, arg0, arg1, arg2, 0, 0, 0, 0, &res);
-	return (unsigned long)res.a0;
-}
 
 static int buffer_protect_smc(struct device *dev, struct buffer_prot_info *protdesc,
 			      unsigned int protalign)

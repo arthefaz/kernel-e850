@@ -107,6 +107,16 @@ static void carveout_heap_release(struct samsung_dma_buffer *buffer)
 	samsung_dma_buffer_free(buffer);
 }
 
+static void carveout_reserved_free(struct reserved_mem *rmem)
+{
+	struct page *first = phys_to_page(rmem->base & PAGE_MASK);
+	struct page *last = phys_to_page(PAGE_ALIGN(rmem->base + rmem->size));
+	struct page *page;
+
+	for (page = first; page != last; page++)
+		free_reserved_page(page);
+}
+
 static const struct dma_heap_ops carveout_heap_ops = {
 	.allocate = carveout_heap_allocate,
 };
@@ -140,8 +150,10 @@ static int carveout_heap_probe(struct platform_device *pdev)
 
 	ret = samsung_heap_add(&pdev->dev, carveout_heap, carveout_heap_release,
 			       &carveout_heap_ops);
-	if (ret == -ENODEV)
+	if (ret == -ENODEV) {
+		carveout_reserved_free(rmem);
 		return 0;
+	}
 
 	return ret;
 }

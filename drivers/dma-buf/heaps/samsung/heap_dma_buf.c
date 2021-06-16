@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <uapi/linux/dma-buf.h>
 
+#include "secure_buffer.h"
 #include "heap_private.h"
 
 static struct dma_iovm_map *dma_iova_create(struct dma_buf_attachment *a)

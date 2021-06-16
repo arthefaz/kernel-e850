@@ -21,6 +21,7 @@
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 
+#include "secure_buffer.h"
 #include "../deferred-free-helper.h"
 
 struct dma_iovm_map {
@@ -115,26 +116,6 @@ static inline bool dma_heap_tzmp_buffer(struct device *dev, unsigned long flags)
 {
 	return dma_heap_flags_protected(flags) && !!dev_iommu_fwspec_get(dev);
 }
-
-/*
- * struct buffer_prot_info - buffer protection information
- * @chunk_count: number of physically contiguous memory chunks to protect
- *               each chunk should has the same size.
- * @dma_addr:    device virtual address for protected memory access
- * @flags:       protection flags but actually, protectid
- * @chunk_size:  length in bytes of each chunk.
- * @bus_address: if @chunk_count is 1, this is the physical address the chunk.
- *               if @chunk_count > 1, this is the physical address of unsigned
- *               long array of @chunk_count elements that contains the physical
- *               address of each chunk.
- */
-struct buffer_prot_info {
-	unsigned int chunk_count;
-	unsigned int dma_addr;
-	unsigned int flags;
-	unsigned int chunk_size;
-	unsigned long bus_address;
-};
 
 #if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 void *samsung_dma_buffer_protect(struct samsung_dma_heap *heap, unsigned int chunk_size,

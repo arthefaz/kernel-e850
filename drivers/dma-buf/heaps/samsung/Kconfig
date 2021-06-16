@@ -33,6 +33,14 @@ config DMABUF_HEAPS_SAMSUNG_CARVEOUT
 	  Choose this option to enable dma-buf Carveout heap for samsung.
 	  This heap has own reserved region by dt binding.
 
+config DMABUF_HEAPS_SAMSUNG_HPA
+	bool "DMA-BUF HPA Samsung Heap"
+	depends on DMABUF_HEAPS && HPA
+	help
+	  Choose this option to enable dma-buf HPA heap for samsung.
+	  This heap is backed by the High-order Pages Allocator (HPA).
+	  If your system needs HPA for some reason, you should say Y here.
+
 config DMABUF_HEAPS_SAMSUNG_SYSTEM
 	bool "DMA-BUF System Samsung Heap"
 	depends on DMABUF_SAMSUNG_HEAPS

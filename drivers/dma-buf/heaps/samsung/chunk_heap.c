@@ -21,6 +21,7 @@
 #include <linux/slab.h>
 #include <linux/sort.h>
 
+#include "secure_buffer.h"
 #include "heap_private.h"
 
 struct chunk_heap {

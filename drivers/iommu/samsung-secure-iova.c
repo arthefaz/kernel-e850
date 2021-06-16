@@ -16,7 +16,7 @@
  * offset from base, so secure device virtual address manager
  * uses the size as 0xC000_0000.
  */
-#define SECURE_DMA_SIZE 0xC0000000
+#define SECURE_DMA_SIZE 0x40000000
 
 static struct gen_pool *secure_iova_pool;
 
@@ -68,7 +68,7 @@ static int __init samsung_secure_iova_init(void)
 
 	ret = gen_pool_add(secure_iova_pool, SECURE_DMA_BASE, SECURE_DMA_SIZE, -1);
 	if (ret) {
-		pr_err("failed to set address range of Secure IOVA pool");
+		pr_err("failed to set address range of Secure IOVA pool\n");
 		gen_pool_destroy(secure_iova_pool);
 		return ret;
 	}
