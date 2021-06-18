@@ -307,6 +307,56 @@ static struct sg_table *hpa_dup_sg_table(struct sg_table *table)
 	return new_table;
 }
 
+#define MAX_HPA_MAP_DEVICE 64
+static struct hpa_map_device {
+	struct device *dev;
+	size_t size;
+	unsigned long mapcnt;
+} hpa_map_lists[MAX_HPA_MAP_DEVICE];
+static unsigned int hpa_map_devices;
+static DEFINE_MUTEX(hpa_map_lock);
+
+static struct hpa_map_device *hpa_trace_get_device(struct device *dev)
+{
+	unsigned int i;
+
+	for (i = 0; i < hpa_map_devices; i++) {
+		if (hpa_map_lists[i].dev == dev)
+			return &hpa_map_lists[i];
+	}
+
+	BUG_ON(hpa_map_devices == MAX_HPA_MAP_DEVICE);
+	hpa_map_lists[hpa_map_devices].dev = dev;
+
+	return &hpa_map_lists[hpa_map_devices++];
+}
+
+void hpa_trace_map(struct dma_buf *dmabuf, struct device *dev)
+{
+	struct hpa_map_device *trace_device;
+
+	mutex_lock(&hpa_map_lock);
+	trace_device = hpa_trace_get_device(dev);
+
+	trace_device->size += dmabuf->size;
+	trace_device->mapcnt++;
+
+	mutex_unlock(&hpa_map_lock);
+}
+
+void hpa_trace_unmap(struct dma_buf *dmabuf, struct device *dev)
+{
+	struct hpa_map_device *trace_device;
+
+	mutex_lock(&hpa_map_lock);
+	trace_device = hpa_trace_get_device(dev);
+
+	trace_device->size -= dmabuf->size;
+	trace_device->mapcnt--;
+
+	mutex_unlock(&hpa_map_lock);
+}
+
 static struct sg_table *hpa_heap_map_dma_buf(struct dma_buf_attachment *a,
 					     enum dma_data_direction direction)
 {
@@ -334,6 +384,8 @@ static struct sg_table *hpa_heap_map_dma_buf(struct dma_buf_attachment *a,
 		}
 	}
 
+	hpa_trace_map(a->dmabuf, a->dev);
+
 	return table;
 }
 
@@ -341,6 +393,8 @@ static void hpa_heap_unmap_dma_buf(struct dma_buf_attachment *a,
 				   struct sg_table *table,
 				   enum dma_data_direction direction)
 {
+	hpa_trace_unmap(a->dmabuf, a->dev);
+
 	if (!dev_iommu_fwspec_get(a->dev))
 		dma_unmap_sgtable(a->dev, table, direction, a->dma_map_attrs);
 
@@ -562,6 +616,42 @@ static void show_hpa_heap_handler(void *data, unsigned int filter, nodemask_t *n
 		pr_info("%s: %lukb ", heap->name, total_size_kb);
 }
 
+/*
+ * The HPA buffers are referenced by attached device, and file descriptor of process.
+ * These buffers don't need to consider mmap count because secure buffer can not be mmaped.
+ * The file descriptor might be tracked on dma-buf-trace because that interates dma-buf
+ * file descriptor when show_mem() calls, so we only show devices to attach the hpa buffers.
+ */
+static void show_hpa_map_device_handler(void *data, unsigned int filter, nodemask_t *nodemask)
+{
+	static DEFINE_RATELIMIT_STATE(hpa_map_ratelimit, HZ * 10, 1);
+	int i;
+	bool show_header = false;
+
+	if (!__ratelimit(&hpa_map_ratelimit))
+		return;
+
+	if (!mutex_trylock(&hpa_map_lock))
+		return;
+
+	for (i = 0; i < hpa_map_devices; i++) {
+		if (!hpa_map_lists[i].size && !hpa_map_lists[i].mapcnt)
+			continue;
+
+		if (!show_header) {
+			pr_info("HPA attached device list:\n");
+			pr_info("%20s %20s %10s\n", "attached device", "size(kb)", "mapcount");
+
+			show_header = true;
+		}
+
+		pr_info("%20s %20zu %10lu\n", dev_name(hpa_map_lists[i].dev),
+			hpa_map_lists[i].size, hpa_map_lists[i].mapcnt);
+	}
+
+	mutex_unlock(&hpa_map_lock);
+}
+
 static int __init hpa_dma_heap_init(void)
 {
 	struct dma_heap_export_info exp_info;
@@ -587,6 +677,7 @@ static int __init hpa_dma_heap_init(void)
 
 		pr_info("Registered %s dma-heap successfully\n", hpa_heaps[i].name);
 	}
+	register_trace_android_vh_show_mem(show_hpa_map_device_handler, NULL);
 
 	hpa_add_exception_area();
 
