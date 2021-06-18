@@ -19,6 +19,23 @@
 
 #include "heap_private.h"
 
+#define MAX_EXCEPTION_AREAS 4
+static phys_addr_t dma_heap_exception_areas[MAX_EXCEPTION_AREAS][2];
+static int nr_dma_heap_exception;
+
+bool is_dma_heap_exception_page(struct page *page)
+{
+	phys_addr_t phys = page_to_phys(page);
+	int i;
+
+	for (i = 0; i < nr_dma_heap_exception; i++)
+		if ((dma_heap_exception_areas[i][0] <= phys) &&
+		    (phys <= dma_heap_exception_areas[i][1]))
+			return true;
+
+	return false;
+}
+
 void heap_cache_flush(struct samsung_dma_buffer *buffer)
 {
 	struct device *dev = dma_heap_get_dev(buffer->heap->dma_heap);
@@ -285,6 +302,47 @@ struct dma_buf *samsung_export_dmabuf(struct samsung_dma_buffer *buffer, unsigne
 }
 EXPORT_SYMBOL_GPL(samsung_export_dmabuf);
 
+static void dma_heap_add_exception_area(void)
+{
+	struct device_node *np;
+
+	for_each_node_by_name(np, "dma_heap_exception_area") {
+		int naddr = of_n_addr_cells(np);
+		int nsize = of_n_size_cells(np);
+		phys_addr_t base, size;
+		const __be32 *prop;
+		int len;
+		int i;
+
+		prop = of_get_property(np, "#address-cells", NULL);
+		if (prop)
+			naddr = be32_to_cpup(prop);
+
+		prop = of_get_property(np, "#size-cells", NULL);
+		if (prop)
+			nsize = be32_to_cpup(prop);
+
+		prop = of_get_property(np, "exception-range", &len);
+		if (prop && len > 0) {
+			int n_area = len / (sizeof(*prop) * (nsize + naddr));
+
+			n_area = min_t(int, n_area, MAX_EXCEPTION_AREAS);
+
+			for (i = 0; i < n_area ; i++) {
+				base = (phys_addr_t)of_read_number(prop, naddr);
+				prop += naddr;
+				size = (phys_addr_t)of_read_number(prop, nsize);
+				prop += nsize;
+
+				dma_heap_exception_areas[i][0] = base;
+				dma_heap_exception_areas[i][1] = base + size - 1;
+			}
+
+			nr_dma_heap_exception = n_area;
+		}
+	}
+}
+
 static int __init samsung_dma_heap_init(void)
 {
 	int ret;
@@ -308,6 +366,8 @@ static int __init samsung_dma_heap_init(void)
 	ret = dmabuf_trace_create();
 	if (ret)
 		goto err_trace;
+
+	dma_heap_add_exception_area();
 
 	return 0;
 err_trace:

@@ -69,7 +69,7 @@ static struct dma_buf *system_heap_allocate(struct dma_heap *heap, unsigned long
 	struct samsung_dma_buffer *buffer;
 	struct scatterlist *sg;
 	struct dma_buf *dmabuf;
-	struct list_head pages;
+	struct list_head pages, exception_pages;
 	struct page *page, *tmp_page;
 	unsigned long size_remaining;
 	unsigned int max_order = orders[0];
@@ -80,6 +80,7 @@ static struct dma_buf *system_heap_allocate(struct dma_heap *heap, unsigned long
 	size_remaining = len;
 
 	INIT_LIST_HEAD(&pages);
+	INIT_LIST_HEAD(&exception_pages);
 	i = 0;
 	while (size_remaining > 0) {
 		/*
@@ -99,11 +100,17 @@ static struct dma_buf *system_heap_allocate(struct dma_heap *heap, unsigned long
 			goto free_buffer;
 		}
 
-		list_add_tail(&page->lru, &pages);
-		size_remaining -= page_size(page);
+		if (is_dma_heap_exception_page(page)) {
+			list_add_tail(&page->lru, &exception_pages);
+		} else {
+			list_add_tail(&page->lru, &pages);
+			size_remaining -= page_size(page);
+			i++;
+		}
 		max_order = compound_order(page);
-		i++;
 	}
+	list_for_each_entry_safe(page, tmp_page, &exception_pages, lru)
+		__free_pages(page, compound_order(page));
 
 	buffer = samsung_dma_buffer_alloc(samsung_dma_heap, len, i);
 	if (IS_ERR(buffer)) {
@@ -136,6 +143,9 @@ free_export:
 	}
 	samsung_dma_buffer_free(buffer);
 free_buffer:
+	list_for_each_entry_safe(page, tmp_page, &exception_pages, lru)
+		__free_pages(page, compound_order(page));
+
 	list_for_each_entry_safe(page, tmp_page, &pages, lru)
 		__free_pages(page, compound_order(page));
 

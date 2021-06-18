@@ -63,6 +63,7 @@ extern const struct dma_buf_ops samsung_dma_buf_ops;
 	struct dma_buf_export_info name = { .exp_name = heap_name, \
 					 .owner = THIS_MODULE }
 
+bool is_dma_heap_exception_page(struct page *page);
 void heap_sgtable_pages_clean(struct sg_table *sgt);
 void heap_cache_flush(struct samsung_dma_buffer *buffer);
 void heap_page_clean(struct page *pages, unsigned long size);
