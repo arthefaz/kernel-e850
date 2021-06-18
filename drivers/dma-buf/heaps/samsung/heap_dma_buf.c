@@ -104,12 +104,24 @@ static struct dma_iovm_map *dma_find_iovm_map(struct dma_buf_attachment *a)
 	attrs = DMA_MAP_ATTRS(a->dma_map_attrs);
 
 	list_for_each_entry(iovm_map, &buffer->attachments, list) {
-		// device virtual mapping doesn't consider direction currently.
-		if ((iommu_get_domain_for_dev(iovm_map->dev) ==
-		    iommu_get_domain_for_dev(a->dev)) &&
-		    (DMA_MAP_ATTRS(iovm_map->attrs) == attrs)) {
-			return iovm_map;
-		}
+		/*
+		 * Condition to re-use iovm_map:
+		 *
+		 * The same iommu domain.
+		 * The same attribute, which is related to dma buffer.
+		 * The same device coherency if cached buffer
+		 */
+		if (iommu_get_domain_for_dev(iovm_map->dev) != iommu_get_domain_for_dev(a->dev))
+			continue;
+
+		if (DMA_MAP_ATTRS(iovm_map->attrs) != attrs)
+			continue;
+
+		if (!dma_heap_flags_uncached(buffer->flags) &&
+		    (dev_is_dma_coherent(iovm_map->dev) != dev_is_dma_coherent(a->dev)))
+			continue;
+
+		return iovm_map;
 	}
 	return NULL;
 }
