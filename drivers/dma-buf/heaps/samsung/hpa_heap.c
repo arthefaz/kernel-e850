@@ -25,6 +25,7 @@
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <linux/sort.h>
+#include <trace/hooks/mm.h>
 
 #include "secure_buffer.h"
 
@@ -32,6 +33,7 @@ struct hpa_dma_heap {
 	struct dma_heap *dma_heap;
 	const char *name;
 	unsigned int protection_id;
+	atomic_long_t total_bytes;
 };
 
 struct hpa_dma_buffer {
@@ -369,9 +371,12 @@ static void hpa_heap_dma_buf_release(struct dma_buf *dmabuf)
 
 	unprot_err = hpa_heap_unprotect(buffer->priv, dev);
 
-	if (!unprot_err)
+	if (!unprot_err) {
 		for_each_sgtable_sg(sgt, sg, i)
 			__free_pages(sg_page(sg), HPA_DEFAULT_ORDER);
+
+		atomic_long_sub(dmabuf->size, &buffer->heap->total_bytes);
+	}
 
 	hpa_dma_buffer_free(buffer);
 }
@@ -480,6 +485,9 @@ static struct dma_buf *hpa_heap_allocate(struct dma_heap *heap, unsigned long le
 		ret = PTR_ERR(dmabuf);
 		goto err_export;
 	}
+
+	atomic_long_add(dmabuf->size, &hpa_heap->total_bytes);
+
 	kvfree(pages);
 
 	return dmabuf;
@@ -545,6 +553,15 @@ static void hpa_add_exception_area(void)
 	}
 }
 
+static void show_hpa_heap_handler(void *data, unsigned int filter, nodemask_t *nodemask)
+{
+	struct hpa_dma_heap *heap = data;
+	u64 total_size_kb = div_u64(atomic_long_read(&heap->total_bytes), 1024);
+
+	if (total_size_kb)
+		pr_info("%s: %lukb ", heap->name, total_size_kb);
+}
+
 static int __init hpa_dma_heap_init(void)
 {
 	struct dma_heap_export_info exp_info;
@@ -566,6 +583,7 @@ static int __init hpa_dma_heap_init(void)
 
 		hpa_heaps[i].dma_heap = dma_heap;
 		dma_coerce_mask_and_coherent(dma_heap_get_dev(dma_heap), DMA_BIT_MASK(36));
+		register_trace_android_vh_show_mem(show_hpa_heap_handler, &hpa_heaps[i]);
 
 		pr_info("Registered %s dma-heap successfully\n", hpa_heaps[i].name);
 	}
