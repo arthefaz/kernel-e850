@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 config DMABUF_SAMSUNG_HEAPS
 	tristate "DMA-BUF Userland Memory Heaps for Samsung"
-	select SAMSUNG_SECURE_IOVA if EXYNOS_CONTENT_PATH_PROTECTION
+	select SAMSUNG_SECURE_IOVA
 	select DMABUF_CONTAINER
 	select DMABUF_HEAPS_PAGE_POOL
 	select DMABUF_HEAPS_DEFERRED_FREE

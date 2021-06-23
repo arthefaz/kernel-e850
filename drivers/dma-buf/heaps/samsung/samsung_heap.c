@@ -161,9 +161,6 @@ static struct samsung_dma_heap *__samsung_heap_add(struct device *dev, void *pri
 			perrfn("Secure heap should be set with protection id");
 			return ERR_PTR(-EINVAL);
 		}
-
-		if (!IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION))
-			return ERR_PTR(-ENODEV);
 	}
 
 	if (of_property_read_bool(dev->of_node, "dma-heap,video_aligned"))

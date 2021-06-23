@@ -118,23 +118,9 @@ static inline bool dma_heap_tzmp_buffer(struct device *dev, unsigned long flags)
 	return dma_heap_flags_protected(flags) && !!dev_iommu_fwspec_get(dev);
 }
 
-#if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 void *samsung_dma_buffer_protect(struct samsung_dma_heap *heap, unsigned int chunk_size,
 				 unsigned int nr_pages, unsigned long paddr);
 int samsung_dma_buffer_unprotect(void *priv, struct device *dev);
-#else
-static inline void *samsung_dma_buffer_protect(struct samsung_dma_heap *heap,
-					       unsigned int chunk_size, unsigned int nr_pages,
-					       unsigned long paddr)
-{
-	return NULL;
-}
-
-static inline int samsung_dma_buffer_unprotect(void *priv, struct device *dev)
-{
-	return 0;
-}
-#endif
 
 int __init dmabuf_trace_create(void);
 void dmabuf_trace_remove(void);
