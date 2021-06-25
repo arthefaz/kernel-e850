@@ -6,12 +6,14 @@
  * Author: <hyesoo.yu@samsung.com> for Samsung
  */
 
+#include <linux/anon_inodes.h>
 #include <linux/cma.h>
 #include <linux/device.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-direct.h>
 #include <linux/dma-heap.h>
 #include <linux/err.h>
+#include <linux/fdtable.h>
 #include <linux/genalloc.h>
 #include <linux/gfp.h>
 #include <linux/highmem.h>
@@ -307,6 +309,15 @@ static struct sg_table *hpa_dup_sg_table(struct sg_table *table)
 	return new_table;
 }
 
+static DEFINE_MUTEX(hpa_trace_lock);
+
+struct hpa_trace_task {
+	struct list_head node;
+	struct task_struct *task;
+	struct file *file;
+};
+static struct list_head hpa_task_list = LIST_HEAD_INIT(hpa_task_list);
+
 #define MAX_HPA_MAP_DEVICE 64
 static struct hpa_map_device {
 	struct device *dev;
@@ -314,7 +325,6 @@ static struct hpa_map_device {
 	unsigned long mapcnt;
 } hpa_map_lists[MAX_HPA_MAP_DEVICE];
 static unsigned int hpa_map_devices;
-static DEFINE_MUTEX(hpa_map_lock);
 
 static struct hpa_map_device *hpa_trace_get_device(struct device *dev)
 {
@@ -335,26 +345,104 @@ void hpa_trace_map(struct dma_buf *dmabuf, struct device *dev)
 {
 	struct hpa_map_device *trace_device;
 
-	mutex_lock(&hpa_map_lock);
+	mutex_lock(&hpa_trace_lock);
 	trace_device = hpa_trace_get_device(dev);
 
 	trace_device->size += dmabuf->size;
 	trace_device->mapcnt++;
 
-	mutex_unlock(&hpa_map_lock);
+	mutex_unlock(&hpa_trace_lock);
 }
 
 void hpa_trace_unmap(struct dma_buf *dmabuf, struct device *dev)
 {
 	struct hpa_map_device *trace_device;
 
-	mutex_lock(&hpa_map_lock);
+	mutex_lock(&hpa_trace_lock);
 	trace_device = hpa_trace_get_device(dev);
 
 	trace_device->size -= dmabuf->size;
 	trace_device->mapcnt--;
 
-	mutex_unlock(&hpa_map_lock);
+	mutex_unlock(&hpa_trace_lock);
+}
+
+static int hpa_trace_task_release(struct inode *inode, struct file *file)
+{
+	struct hpa_trace_task *task = file->private_data;
+
+	if (!(task->task->flags & PF_EXITING)) {
+		pr_err("%s: Invalid to close '%d' on process '%s'(%x, %lx)\n",
+		       __func__, task->task->pid, task->task->comm,
+		       task->task->flags, task->task->state);
+		dump_stack();
+	}
+	put_task_struct(task->task);
+
+	mutex_lock(&hpa_trace_lock);
+	list_del(&task->node);
+	mutex_unlock(&hpa_trace_lock);
+
+	kfree(task);
+
+	return 0;
+}
+
+static const struct file_operations hpa_trace_task_fops = {
+	.release = hpa_trace_task_release,
+};
+
+void hpa_trace_add_task(void)
+{
+	struct hpa_trace_task *task;
+	unsigned char name[10];
+	int fd;
+
+	if (!current->mm && (current->flags & PF_KTHREAD))
+		return;
+
+	if (current->group_leader->pid == 1)
+		return;
+
+	mutex_lock(&hpa_trace_lock);
+
+	list_for_each_entry(task, &hpa_task_list, node) {
+		if (task->task == current->group_leader) {
+			mutex_unlock(&hpa_trace_lock);
+			return;
+		}
+	}
+
+	task = kzalloc(sizeof(*task), GFP_KERNEL);
+	if (!task)
+		goto err;
+
+	get_task_struct(current->group_leader);
+	task->task = current->group_leader;
+
+	fd = get_unused_fd_flags(O_RDONLY | O_CLOEXEC);
+	if (fd < 0)
+		goto err_fd;
+
+	scnprintf(name, 10, "%d", current->group_leader->pid);
+	task->file = anon_inode_getfile(name, &hpa_trace_task_fops, task, O_RDWR);
+	if (IS_ERR(task->file))
+		goto err_inode;
+
+	fd_install(fd, task->file);
+	list_add_tail(&task->node, &hpa_task_list);
+
+	mutex_unlock(&hpa_trace_lock);
+
+	return;
+
+err_inode:
+	put_unused_fd(fd);
+err_fd:
+	put_task_struct(current->group_leader);
+	kfree(task);
+err:
+	mutex_unlock(&hpa_trace_lock);
 }
 
 static struct sg_table *hpa_heap_map_dma_buf(struct dma_buf_attachment *a,
@@ -544,6 +632,8 @@ static struct dma_buf *hpa_heap_allocate(struct dma_heap *heap, unsigned long le
 
 	kvfree(pages);
 
+	hpa_trace_add_task();
+
 	return dmabuf;
 
 err_export:
@@ -616,23 +706,61 @@ static void show_hpa_heap_handler(void *data, unsigned int filter, nodemask_t *n
 		pr_info("%s: %lukb ", heap->name, total_size_kb);
 }
 
+struct hpa_fd_iterdata {
+	int fd_ref_size;
+	int fd_ref_cnt;
+};
+
+int hpa_traverse_filetable(const void *t, struct file *file, unsigned fd)
+{
+	struct hpa_fd_iterdata *iterdata = (struct hpa_fd_iterdata*)t;
+	struct dma_buf *dmabuf;
+
+	if (!is_dma_buf_file(file))
+		return 0;
+
+	dmabuf = file->private_data;
+
+	iterdata->fd_ref_cnt++;
+	iterdata->fd_ref_size += dmabuf->size >> 10;
+
+	return 0;
+}
+
 /*
  * The HPA buffers are referenced by attached device, and file descriptor of process.
  * These buffers don't need to consider mmap count because secure buffer can not be mmaped.
  * The file descriptor might be tracked on dma-buf-trace because that interates dma-buf
  * file descriptor when show_mem() calls, so we only show devices to attach the hpa buffers.
  */
-static void show_hpa_map_device_handler(void *data, unsigned int filter, nodemask_t *nodemask)
+static void show_hpa_trace_handler(void *data, unsigned int filter, nodemask_t *nodemask)
 {
 	static DEFINE_RATELIMIT_STATE(hpa_map_ratelimit, HZ * 10, 1);
+	struct hpa_fd_iterdata iterdata;
+	struct hpa_trace_task *task;
 	int i;
 	bool show_header = false;
 
 	if (!__ratelimit(&hpa_map_ratelimit))
 		return;
 
-	if (!mutex_trylock(&hpa_map_lock))
+	if (!mutex_trylock(&hpa_trace_lock))
 		return;
+
+	if (!list_empty(&hpa_task_list))
+		pr_info("%20s %5s %10s %10s (HPA allocation tasks)\n",
+			"comm", "pid", "fdrefcnt", "fdsize(kb)");
+
+	list_for_each_entry(task, &hpa_task_list, node) {
+		iterdata.fd_ref_cnt = iterdata.fd_ref_size = 0;
+
+		task_lock(task->task);
+		iterate_fd(task->task->files, 0, hpa_traverse_filetable, &iterdata);
+		task_unlock(task->task);
+
+		pr_info("%20s %5d %10d %10zu\n", task->task->comm, task->task->pid,
+			iterdata.fd_ref_cnt, iterdata.fd_ref_size);
+	}
 
 	for (i = 0; i < hpa_map_devices; i++) {
 		if (!hpa_map_lists[i].size && !hpa_map_lists[i].mapcnt)
@@ -648,8 +776,7 @@ static void show_hpa_map_device_handler(void *data, unsigned int filter, nodemas
 		pr_info("%20s %20zu %10lu\n", dev_name(hpa_map_lists[i].dev),
 			hpa_map_lists[i].size, hpa_map_lists[i].mapcnt);
 	}
-
-	mutex_unlock(&hpa_map_lock);
+	mutex_unlock(&hpa_trace_lock);
 }
 
 static int __init hpa_dma_heap_init(void)
@@ -677,7 +804,7 @@ static int __init hpa_dma_heap_init(void)
 
 		pr_info("Registered %s dma-heap successfully\n", hpa_heaps[i].name);
 	}
-	register_trace_android_vh_show_mem(show_hpa_map_device_handler, NULL);
+	register_trace_android_vh_show_mem(show_hpa_trace_handler, NULL);
 
 	hpa_add_exception_area();
 
