@@ -175,16 +175,22 @@ void show_dmabuf_trace_info(void)
 	task = list_next_entry(task, node);
 	do {
 		struct dmabuf_fd_iterdata iterdata;
+		bool skip = false;
 
 		iterdata.fd_ref_cnt = iterdata.fd_ref_size = 0;
 
-		task_lock(task->task);
-		iterate_fd(task->task->files, 0, dmabuf_traverse_filetable, &iterdata);
-		task_unlock(task->task);
+		if (spin_trylock(&task->task->alloc_lock)) {
+			iterate_fd(task->task->files, 0, dmabuf_traverse_filetable, &iterdata);
+			task_unlock(task->task);
+		} else {
+			iterdata.fd_ref_cnt = iterdata.fd_ref_size = 0;
+			skip = true;
+		}
 
-		pr_info("%20s %5d %10d %10d %10zu %10zu\n",
+		pr_info("%20s %5d %10d %10d %10zu %10zu %s\n",
 			task->task->comm, task->task->pid, iterdata.fd_ref_cnt, task->mmap_count,
-			iterdata.fd_ref_size, task->mmap_size / 1024);
+			iterdata.fd_ref_size, task->mmap_size / 1024,
+			skip ? "-> skip by lock contention" : "");
 		task = list_next_entry(task, node);
 	} while (&task->node != &head_task.node);
 
@@ -193,7 +199,7 @@ void show_dmabuf_trace_info(void)
 
 	for (i = 0; i < num_devices; i++)
 		pr_info("%20s %20zu %10lu %10lu\n",
-			dev_name(attach_lists[i].dev), attach_lists[i].size,
+			dev_name(attach_lists[i].dev), attach_lists[i].size / 1024,
 			attach_lists[i].refcnt, attach_lists[i].mapcnt);
 
 	list_for_each_entry(buffer, &buffer_list, node) {
