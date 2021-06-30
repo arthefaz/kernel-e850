@@ -19,6 +19,7 @@
 #include <linux/highmem.h>
 #include <linux/mm.h>
 #include <linux/module.h>
+#include <linux/ratelimit.h>
 #include <linux/samsung-dma-mapping.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
@@ -150,6 +151,17 @@ static struct dma_iovm_map *dma_put_iovm_map(struct dma_buf_attachment *a)
 	return iovm_map;
 }
 
+static void show_dmabuf_status(struct device *dev)
+{
+	static DEFINE_RATELIMIT_STATE(show_dmabuf_ratelimit, HZ * 10, 1);
+
+	if (!__ratelimit(&show_dmabuf_ratelimit))
+		return;
+
+	show_dmabuf_trace_info();
+	show_dmabuf_dva(dev);
+}
+
 static struct dma_iovm_map *dma_get_iovm_map(struct dma_buf_attachment *a,
 					     enum dma_data_direction direction)
 {
@@ -181,9 +193,7 @@ static struct dma_iovm_map *dma_get_iovm_map(struct dma_buf_attachment *a,
 		ret = dma_map_sgtable(iovm_map->dev, &iovm_map->table, direction,
 				      iovm_map->attrs | DMA_ATTR_SKIP_CPU_SYNC);
 		if (ret) {
-			show_dmabuf_trace_info();
-			show_dmabuf_dva(iovm_map->dev);
-
+			show_dmabuf_status(iovm_map->dev);
 			dma_iova_remove(iovm_map);
 
 			return NULL;
