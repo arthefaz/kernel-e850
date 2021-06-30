@@ -736,7 +736,6 @@ int hpa_traverse_filetable(const void *t, struct file *file, unsigned fd)
 static void show_hpa_trace_handler(void *data, unsigned int filter, nodemask_t *nodemask)
 {
 	static DEFINE_RATELIMIT_STATE(hpa_map_ratelimit, HZ * 10, 1);
-	struct hpa_fd_iterdata iterdata;
 	struct hpa_trace_task *task;
 	int i;
 	bool show_header = false;
@@ -752,14 +751,20 @@ static void show_hpa_trace_handler(void *data, unsigned int filter, nodemask_t *
 			"comm", "pid", "fdrefcnt", "fdsize(kb)");
 
 	list_for_each_entry(task, &hpa_task_list, node) {
+		struct hpa_fd_iterdata iterdata;
+		bool locked;
+
 		iterdata.fd_ref_cnt = iterdata.fd_ref_size = 0;
 
-		task_lock(task->task);
-		iterate_fd(task->task->files, 0, hpa_traverse_filetable, &iterdata);
-		task_unlock(task->task);
+		locked = spin_trylock(&task->task->alloc_lock);
+		if (locked) {
+			iterate_fd(task->task->files, 0, hpa_traverse_filetable, &iterdata);
+			spin_unlock(&task->task->alloc_lock);
+		}
 
-		pr_info("%20s %5d %10d %10zu\n", task->task->comm, task->task->pid,
-			iterdata.fd_ref_cnt, iterdata.fd_ref_size);
+		pr_info("%20s %5d %10d %10zu %s\n", task->task->comm, task->task->pid,
+			iterdata.fd_ref_cnt, iterdata.fd_ref_size,
+			locked ? "" : "-> skip by lock contention");
 	}
 
 	for (i = 0; i < hpa_map_devices; i++) {

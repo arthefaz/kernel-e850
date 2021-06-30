@@ -175,22 +175,27 @@ void show_dmabuf_trace_info(void)
 	task = list_next_entry(task, node);
 	do {
 		struct dmabuf_fd_iterdata iterdata;
-		bool skip = false;
+		bool locked;
 
 		iterdata.fd_ref_cnt = iterdata.fd_ref_size = 0;
 
-		if (spin_trylock(&task->task->alloc_lock)) {
+		/*
+		 * That handler is called when page allocation is failed. The caller
+		 * could already lock the task->alloc_lock by task_lock() before allocation.
+		 * We use spin_trylock() directly instead of task_lock() to avoid dead lock
+		 * because spin_trylock() could be failed if locked before.
+		 * spin_unlock() is used instead of task_unlock() to match the pair.
+		 */
+		locked = spin_trylock(&task->task->alloc_lock);
+		if (locked) {
 			iterate_fd(task->task->files, 0, dmabuf_traverse_filetable, &iterdata);
-			task_unlock(task->task);
-		} else {
-			iterdata.fd_ref_cnt = iterdata.fd_ref_size = 0;
-			skip = true;
+			spin_unlock(&task->task->alloc_lock);
 		}
 
 		pr_info("%20s %5d %10d %10d %10zu %10zu %s\n",
 			task->task->comm, task->task->pid, iterdata.fd_ref_cnt, task->mmap_count,
 			iterdata.fd_ref_size, task->mmap_size / 1024,
-			skip ? "-> skip by lock contention" : "");
+			locked ? "" : "-> skip by lock contention");
 		task = list_next_entry(task, node);
 	} while (&task->node != &head_task.node);
 
