@@ -1727,7 +1727,7 @@ void slsi_rx_channel_switched_ind(struct slsi_dev *sdev, struct net_device *dev,
 	int width;
 	int primary_chan_pos;
 	u16 temp_chan_info;
-	struct cfg80211_chan_def chandef;
+	struct cfg80211_chan_def chandef = {};
 	u16 cf1 = 0;
 	struct netdev_vif *ndev_vif = netdev_priv(dev);
 

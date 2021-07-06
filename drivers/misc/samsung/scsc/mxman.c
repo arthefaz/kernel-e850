@@ -2976,7 +2976,14 @@ int mxman_suspend(struct mxman *mxman)
 	}
 
 	/* Call Service suspend callbacks */
-	ret = srvman_suspend_services(srvman);
+	if (srvman) {
+		ret = srvman_suspend_services(srvman);
+	} else {
+		mutex_unlock(&mxman->mxman_mutex);
+		SCSC_TAG_INFO(MXMAN, "srvman not found - ignore\n");
+		return 0;
+	}
+
 	if (ret) {
 		mutex_unlock(&mxman->mxman_mutex);
 		SCSC_TAG_INFO(MXMAN, "Service Suspend canceled - ignore %d\n", ret);
@@ -3099,7 +3106,14 @@ void mxman_resume(struct mxman *mxman)
 	}
 
 	/* Call Service Resume callbacks */
-	ret = srvman_resume_services(srvman);
+	if (srvman) {
+		ret = srvman_resume_services(srvman);
+	} else {
+		SCSC_TAG_INFO(MXMAN, "srvman not found - ignore\n");
+		mutex_unlock(&mxman->mxman_mutex);
+		return;
+	}
+
 	if (ret)
 		SCSC_TAG_INFO(MXMAN, "Service Resume error %d\n", ret);
 

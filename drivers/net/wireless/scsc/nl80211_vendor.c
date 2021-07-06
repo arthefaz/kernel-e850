@@ -4185,7 +4185,7 @@ void slsi_rx_event_log_indication(struct slsi_dev *sdev, struct net_device *dev,
 	u32 operating_class = 0, measure_mode = 0, measure_duration = 0, ap_count = 0, candidate_count = 0;
 	u32 message_type = 0, expired_timer_value = 0;
 	short roam_rssi_val = 0;
-	u8 mac_addr[6];
+	u8 mac_addr[6] = {0};
 	int tlv_buffer__len = fapi_get_datalen(skb), i = 0, channel_val = 0, iter = 0, channel_count = 0, lim = 0;
 	int channel_list[MAX_CHANNEL_COUNT] = {0};
 	char ssid[MAX_SSID_LEN];

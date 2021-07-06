@@ -2025,6 +2025,13 @@ void slsi_netif_remove_locked(struct slsi_dev *sdev, struct net_device *dev)
 			kfree(ssid_info);
 		}
 #endif
+
+		kfree(ndev_vif->acl_data_supplicant);
+		ndev_vif->acl_data_supplicant = NULL;
+
+		kfree(ndev_vif->acl_data_hal);
+		ndev_vif->acl_data_hal = NULL;
+
 		list_for_each_safe(blacklist_pos, blacklist_q, &ndev_vif->acl_data_fw_list) {
 			struct slsi_bssid_blacklist_info *blacklist_info = list_entry(blacklist_pos,
 				struct slsi_bssid_blacklist_info, list);
