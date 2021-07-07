@@ -2555,10 +2555,13 @@ int slsi_nan_ndp_respond(struct wiphy *wiphy, struct wireless_dev *wdev, const v
 		goto exit_with_lock;
 	}
 
-	if (hal_req->ndp_instance_id > 0 && hal_req->ndp_instance_id <= SLSI_NAN_MAX_NDP_INSTANCES)
+	if (hal_req->ndp_instance_id > 0 && hal_req->ndp_instance_id <= SLSI_NAN_MAX_NDP_INSTANCES) {
 		local_ndp_instance_id = ndev_vif->nan.ndp_local_ndp_instance_id[hal_req->ndp_instance_id - 1];
-	else
-		local_ndp_instance_id = 0;
+	} else {
+		reply_status = SLSI_HAL_NAN_STATUS_INTERNAL_FAILURE;
+		ret = WIFI_HAL_ERROR_UNKNOWN;
+		goto exit_with_lock;
+	}
 	ret = slsi_mlme_ndp_response(sdev, dev, hal_req, local_ndp_instance_id);
 	if (ret) {
 		reply_status = SLSI_HAL_NAN_STATUS_INTERNAL_FAILURE;

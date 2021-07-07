@@ -4330,6 +4330,10 @@ void slsi_rx_event_log_indication(struct slsi_dev *sdev, struct net_device *dev,
 			lim = iter + tlv_data[iter + 1] + 2;
 			iter += 7; /* 1byte (id) + 1byte(length) + 3byte (oui) + 2byte */
 			while (iter < lim && lim <= i + tag_len) {
+				if (channel_count >= MAX_CHANNEL_COUNT) {
+					SLSI_ERR(sdev, "ERR: Channel list received >= %d\n", MAX_CHANNEL_COUNT);
+					break;
+				}
 				channel_val = le16_to_cpu(*((__le16 *)&tlv_data[iter]));
 				channel_list[channel_count] = ieee80211_frequency_to_channel(channel_val / 2);
 				if (channel_list[channel_count] < 1 || channel_list[channel_count] > 196) {
@@ -4340,10 +4344,6 @@ void slsi_rx_event_log_indication(struct slsi_dev *sdev, struct net_device *dev,
 				}
 				iter += 3;
 				channel_count += 1;
-				if (channel_count == MAX_CHANNEL_COUNT) {
-					SLSI_ERR(sdev, "ERR: Channel list received >= %d\n", MAX_CHANNEL_COUNT);
-					break;
-				}
 			}
 			break;
 		case SLSI_WIFI_TAG_SSID:
