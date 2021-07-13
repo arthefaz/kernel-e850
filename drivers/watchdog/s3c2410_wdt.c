@@ -1168,7 +1168,6 @@ int s3c2410wdt_set_emergency_reset(unsigned int timeout_cnt, int index)
 
 	return 0;
 }
-EXPORT_SYMBOL(s3c2410wdt_set_emergency_reset);
 
 inline int s3c2410wdt_multistage_emergency_reset(unsigned int timeout_cnt)
 {
