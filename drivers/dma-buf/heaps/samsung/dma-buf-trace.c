@@ -155,7 +155,7 @@ static int dmabuf_trace_buffer_size_compare(const void *p1, const void *p2)
 
 void show_dmabuf_trace_info(void)
 {
-	struct dmabuf_trace_task *task = &head_task;
+	struct dmabuf_trace_task *task;
 	struct dmabuf_trace_buffer *buffer;
 	int i, count, num_skipped_buffer = 0, num_buffer = 0;
 	size_t size;
@@ -172,8 +172,7 @@ void show_dmabuf_trace_info(void)
 	if (!mutex_trylock(&trace_lock))
 		return;
 
-	task = list_next_entry(task, node);
-	do {
+	list_for_each_entry(task, &head_task.node, node) {
 		struct dmabuf_fd_iterdata iterdata;
 		bool locked;
 
@@ -196,8 +195,7 @@ void show_dmabuf_trace_info(void)
 			task->task->comm, task->task->pid, iterdata.fd_ref_cnt, task->mmap_count,
 			iterdata.fd_ref_size, task->mmap_size / 1024,
 			locked ? "" : "-> skip by lock contention");
-		task = list_next_entry(task, node);
-	} while (&task->node != &head_task.node);
+	}
 
 	pr_info("Attached device list:\n");
 	pr_info("%20s %20s %10s %10s\n", "attached device", "devsize(kb)", "devrefcnt", "mapcount");
