@@ -1785,7 +1785,8 @@ static int dwc3_suspend(struct device *dev)
 
 	pinctrl_pm_select_sleep_state(dev);
 
-	dotg->dwc3_suspended = 1;
+	if (dotg)
+		dotg->dwc3_suspended = 1;
 
 	return 0;
 }
@@ -1810,8 +1811,10 @@ static int dwc3_resume(struct device *dev)
 	/* Compensate usage count incremented during prepare */
 	pm_runtime_put_sync(dev);
 
-	dotg->dwc3_suspended = 0;
-	complete(&dotg->resume_cmpl);
+	if (dotg) {
+		dotg->dwc3_suspended = 0;
+		complete(&dotg->resume_cmpl);
+	}
 
 	return 0;
 }
