@@ -129,8 +129,8 @@ int dmabuf_trace_alloc(struct dma_buf *dmabuf);
 void dmabuf_trace_free(struct dma_buf *dmabuf);
 int dmabuf_trace_track_buffer(struct dma_buf *dmabuf);
 int dmabuf_trace_untrack_buffer(struct dma_buf *dmabuf);
-void dmabuf_trace_map(struct dma_buf *dmabuf, struct dma_iovm_map *iovm_map);
-void dmabuf_trace_unmap(struct dma_buf *dmabuf, struct dma_iovm_map *iovm_map, struct device *dev);
+void dmabuf_trace_map(struct dma_buf_attachment *a);
+void dmabuf_trace_unmap(struct dma_buf_attachment *a);
 
 static inline u64 samsung_heap_total_kbsize(struct samsung_dma_heap *heap)
 {

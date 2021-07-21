@@ -71,7 +71,6 @@ static unsigned long num_sorted_array = INIT_NUM_SORTED_ARRAY;
 static struct dmabuf_trace_device {
 	struct device *dev;
 	size_t size; /* the total size of referenced buffer */
-	unsigned long refcnt; /* the number of referenced buffer */
 	unsigned long mapcnt; /* the number of total dma_buf_map_attachment count */
 } attach_lists[MAX_ATTACHED_DEVICE];
 static unsigned int num_devices;
@@ -91,34 +90,26 @@ static struct dmabuf_trace_device *dmabuf_trace_get_device(struct device *dev)
 	return &attach_lists[num_devices++];
 }
 
-void dmabuf_trace_map(struct dma_buf *dmabuf, struct dma_iovm_map *iovm_map)
+void dmabuf_trace_map(struct dma_buf_attachment *a)
 {
 	struct dmabuf_trace_device *trace_device;
+	struct dma_buf *dmabuf = a->dmabuf;
 
 	mutex_lock(&trace_lock);
-	trace_device = dmabuf_trace_get_device(iovm_map->dev);
-
-	if (iovm_map->mapcnt == 1) {
-		trace_device->size += dmabuf->size;
-		trace_device->refcnt++;
-	}
-
+	trace_device = dmabuf_trace_get_device(a->dev);
+	trace_device->size += dmabuf->size;
 	trace_device->mapcnt++;
 	mutex_unlock(&trace_lock);
 }
 
-void dmabuf_trace_unmap(struct dma_buf *dmabuf, struct dma_iovm_map *iovm_map, struct device *dev)
+void dmabuf_trace_unmap(struct dma_buf_attachment *a)
 {
 	struct dmabuf_trace_device *trace_device;
+	struct dma_buf *dmabuf = a->dmabuf;
 
 	mutex_lock(&trace_lock);
-	trace_device = dmabuf_trace_get_device(dev);
-
-	if (!iovm_map || iovm_map->mapcnt == 0) {
-		trace_device->size -= dmabuf->size;
-		trace_device->refcnt--;
-	}
-
+	trace_device = dmabuf_trace_get_device(a->dev);
+	trace_device->size -= dmabuf->size;
 	trace_device->mapcnt--;
 	mutex_unlock(&trace_lock);
 }
@@ -198,12 +189,12 @@ void show_dmabuf_trace_info(void)
 	}
 
 	pr_info("Attached device list:\n");
-	pr_info("%20s %20s %10s %10s\n", "attached device", "devsize(kb)", "devrefcnt", "mapcount");
+	pr_info("%20s %20s %10s\n", "attached device", "size(kb)", "mapcount");
 
 	for (i = 0; i < num_devices; i++)
-		pr_info("%20s %20zu %10lu %10lu\n",
+		pr_info("%20s %20zu %10lu\n",
 			dev_name(attach_lists[i].dev), attach_lists[i].size / 1024,
-			attach_lists[i].refcnt, attach_lists[i].mapcnt);
+			attach_lists[i].mapcnt);
 
 	list_for_each_entry(buffer, &buffer_list, node) {
 		sorted_array[num_buffer++] = buffer->dmabuf->size;
