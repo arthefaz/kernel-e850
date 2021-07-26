@@ -727,8 +727,8 @@ static long slsi_cdev_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 		mxman_get_fw_version(build_info, 200);
 		len = strlen(build_info);
 		sprintf(build_info + len, " ");
-		if (len >= 200) {
-			len = 199;
+		if (len >= 197) {
+			len = 197;
 			build_info[len - 1] = '.';
 			build_info[len - 2] = '.';
 			build_info[len - 3] = '.';

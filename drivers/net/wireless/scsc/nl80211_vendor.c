@@ -1561,10 +1561,12 @@ static int slsi_set_bssid_blacklist(struct wiphy *wiphy, struct wireless_dev *wd
 			ndev_vif->acl_data_hal = acl_data;
 		}
 		ret = slsi_set_acl(sdev, net_dev);
+		acl_data = NULL;
 	}
 
 exit:
 	SLSI_MUTEX_UNLOCK(ndev_vif->vif_mutex);
+	kfree(acl_data);
 	return ret;
 }
 
