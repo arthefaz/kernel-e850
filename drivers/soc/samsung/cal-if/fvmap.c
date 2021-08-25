@@ -422,7 +422,7 @@ static const struct attribute_group percent_margin_group = {
 	.attrs = percent_margin_attrs,
 };
 
-static void fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base)
+static int fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base)
 {
 	struct fvmap_header *fvmap_header, *header;
 	struct rate_volt_header *old, *new;
@@ -462,6 +462,16 @@ static void fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base
 		vclk = cmucal_get_node(ACPM_VCLK_TYPE | i);
 		if (vclk == NULL)
 			continue;
+		/*
+		 * In case when ECT parser is disabled, vclk->list
+		 * isn't assigned in vclk_get_dfs_info().
+		 */
+		if (vclk->list == NULL) {
+			pr_err("%s: Error: vclk->list is NULL\n", __func__);
+			pr_err("  Is ECT parser disabled?\n");
+			return -ENOENT;
+		}
+
 		pr_info("dvfs_type : %s - id : %x\n",
 			vclk->name, fvmap_header[i].dvfs_type);
 		pr_info("  num_of_lv      : %d\n", fvmap_header[i].num_of_lv);
@@ -490,7 +500,6 @@ static void fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base
 				member_addr |= ((fvmap_header[i].block_addr[blk_idx]) << 16) - 0x90000000;
 			}
 
-
 			vclk->list[j] = cmucal_get_id_by_addr(member_addr);
 
 			if (vclk->list[j] == INVALID_CLK_ID)
@@ -507,6 +516,8 @@ static void fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base
 				volt_offset_percent);
 		}
 	}
+
+	return 0;
 }
 
 int fvmap_init(void __iomem *sram_base)
@@ -515,13 +526,18 @@ int fvmap_init(void __iomem *sram_base)
 #ifdef CONFIG_PM
 	struct kobject *kobj;
 #endif
+	int ret = 0;
 
 	map_base = kzalloc(FVMAP_SIZE, GFP_KERNEL);
 
 	fvmap_base = map_base;
 	sram_fvmap_base = sram_base;
 	pr_info("%s:fvmap initialize %p\n", __func__, sram_base);
-	fvmap_copy_from_sram(map_base, sram_base);
+	ret = fvmap_copy_from_sram(map_base, sram_base);
+	if (ret) {
+		pr_err("%s failed; err = %d\n", __func__, ret);
+		goto err_copy_from_sram;
+	}
 
 #ifdef CONFIG_PM
 	/* percent margin for each doamin at runtime */
@@ -534,4 +550,10 @@ int fvmap_init(void __iomem *sram_base)
 #endif
 
 	return 0;
+
+err_copy_from_sram:
+	kfree(map_base);
+	fvmap_base = NULL;
+	sram_fvmap_base = NULL;
+	return ret;
 }

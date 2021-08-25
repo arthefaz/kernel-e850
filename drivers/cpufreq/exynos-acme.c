@@ -994,6 +994,12 @@ static __init int init_table(struct exynos_cpufreq_domain *domain)
 	struct device *dev;
 	int ret = 0;
 
+	if (domain->table_size == 0) {
+		pr_err("### %s: Error: domain->table_size = 0\n", __func__);
+		pr_err("    Is ECT parser disabled?\n");
+		return -EINVAL;
+	}
+
 	/*
 	 * Initialize frequency and voltage table of domain.
 	 * Allocate temporary table to get DVFS table from CAL.
