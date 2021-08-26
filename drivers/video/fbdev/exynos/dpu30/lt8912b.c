@@ -24,9 +24,9 @@ static struct video_timing video_1280x720_60Hz	= {110,40, 220,1280,  1650,  5,  
 static struct video_timing video_1920x1080_60Hz	= { 88, 44, 148, 1920, 2200, 4, 5, 36, 1080, 1125, 148500 };
 static struct video_timing video_1366x768_60Hz	= {14, 56,  64,1366,  1500,  1,  3,  28, 768,   800};
 static struct video_timing video_1280x800_60Hz	= {48,32,80,1280,1440,3,6,14,800,823,71100};
+static struct video_timing video_1920x1080_30Hz	= { 88, 44, 148, 1920, 2200, 5, 5, 36, 1080, 1125, 148500 };
 
 /* handling only the above resolutions for now
-static struct video_timing video_1920x1080_30Hz	= { 88, 44, 148, 1920, 2200, 5, 5, 36, 1080, 1125, 148500 };
 static struct video_timing video_640x480_60Hz	= { 8, 96,  40, 640,   800, 33,  2,  10, 480,   525};
 static struct video_timing video_720x480_60Hz	= {16, 62,  60, 720,   858,  9,  6,  30, 480,   525};
 static struct video_timing video_1920x1080_60Hz	= {88, 44, 148,1920,  2200,  4,  5,  36, 1080, 1125};
@@ -173,6 +173,29 @@ static int lt8912b_lvds_config_init(struct lt8912b *lt)
 
 	reg_read_and_print("LVDS Config", lt->regmap[LT8912B_I2C_MAIN_IDX], seq, ARRAY_SIZE(seq));
 
+	return ret;
+};
+
+static int lt8912b_avi_info_frame(struct lt8912b *lt)
+{
+	const struct reg_sequence seq[] = {
+		{0x3c, 0x41}, 	//enable null package
+		{0x43, 0x27}, 	//PB0:check sum
+		{0x44, 0x10},	//PB1
+		{0x45, 0x28},	//PB2
+		{0x46, 0x00},	//PB3
+		{0x47, 0x10},	//PB4
+	};
+
+	int ret = 0;
+
+	ret = regmap_multi_reg_write(lt->regmap[LT8912B_I2C_TX_IDX], seq, ARRAY_SIZE(seq));
+
+	reg_read_and_print("AVI Info", lt->regmap[LT8912B_I2C_TX_IDX], seq, ARRAY_SIZE(seq));
+
+	ret = regmap_write(lt->regmap[LT8912B_I2C_MAIN_IDX], 0xab, 0x03); // sync polarity +
+
+	reg_single_read_and_print("sync polarity: ", lt->regmap[LT8912B_I2C_MAIN_IDX], 0xab);
 	return ret;
 };
 
@@ -449,8 +472,8 @@ static int lt8912b_parse_video_mode(struct lt8912b *lt)
 		}
 		else if(vsync_h == 0x04 && vsync_l <= 0x67 && vsync_l >= 0x63)//0x465
 		{
-			ret = lt8912b_set_video_mode(lt, &video_1920x1080_60Hz);
-			dev_err(lt->dev, "\r\nvideoformat = VESA_1920x1080_60");
+			ret = lt8912b_set_video_mode(lt, &video_1920x1080_30Hz); // &video_1920x1080_60Hz);
+			dev_err(lt->dev, "\r\nvideoformat = VESA_1920x1080_30");
 		}
 		else if(vsync_h == 0x03 && vsync_l <= 0x23 && vsync_l >= 0x1d)//0x320
 		{
@@ -565,6 +588,15 @@ void lt8912b_init(void)
 		dev_err(lt->dev, "lt8912 Audio disable Done\n");
 	else {
 		dev_err(lt->dev, "lt8912b Audio disable failed\n");
+		goto init_err;
+	}
+
+	/* set default avi info frame */
+	ret = lt8912b_avi_info_frame(lt);
+	if (!ret)
+		dev_err(lt->dev, "lt8912b_avi_info_frame Done\n");
+	else {
+		dev_err(lt->dev, "lt8912b_avi_info_frame failed\n");
 		goto init_err;
 	}
 
