@@ -161,6 +161,7 @@ static int exynos_constraint_parse(struct exynos_devfreq_data *data,
 	return 0;
 }
 
+#ifdef CONFIG_EXYNOS_ACPM
 static int exynos_devfreq_update_fvp(struct exynos_devfreq_data *data, u32 min_freq, u32 max_freq)
 {
 	int ret, ch_num, size, i, use_level = 0;
@@ -238,6 +239,13 @@ static int exynos_devfreq_update_fvp(struct exynos_devfreq_data *data, u32 min_f
 
 	return 0;
 }
+#else
+static inline int exynos_devfreq_update_fvp(struct exynos_devfreq_data *data,
+					    u32 min_freq, u32 max_freq)
+{
+	return 0;
+}
+#endif /* CONFIG_EXYNOS_ACPM */
 
 static int exynos_devfreq_reboot(struct exynos_devfreq_data *data)
 {
