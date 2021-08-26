@@ -72,7 +72,7 @@ source "drivers/soc/samsung/acpm/Kconfig"
 
 config ACPM_DVFS
 	bool "Exynos ACPM DVFS manager"
-	depends on CAL_IF && CMUCAL
+	depends on EXYNOS_ACPM && CAL_IF && CMUCAL
 	default y
 	help
 	Support ACPM DVFS for Exynos SoC.

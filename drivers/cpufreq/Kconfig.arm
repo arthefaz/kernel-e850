@@ -295,7 +295,7 @@ config ACPI_CPPC_CPUFREQ
 
 config ARM_EXYNOS_ACME
 	bool "SAMSUNG EXYNOS ACME(A Cpufreq that Meets Every chipset) driver"
-	depends on ARCH_EXYNOS
+	depends on ARCH_EXYNOS && ECT
 	  help
 	  This adds the CPUFreq driver for every exynos chipset. Exynos
 	  ACME supported SoC must use the exynos CAL framework.

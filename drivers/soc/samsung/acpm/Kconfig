@@ -5,6 +5,7 @@
 menuconfig EXYNOS_ACPM
 	bool "ACPM driver support"
 	default n
+	depends on ECT
 	help
 	  Enable ACPM support
 

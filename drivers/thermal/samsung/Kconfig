@@ -13,6 +13,7 @@ config EXYNOS_ACPM_THERMAL
 	bool
 	prompt "Exynos ACPM TMU plug-in support"
 	depends on EXYNOS_THERMAL
+	depends on EXYNOS_ACPM
 	help
 	  This feature supports ACPM TMU plug-in for Exynos thermal driver.
 
