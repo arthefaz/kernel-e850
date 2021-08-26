@@ -835,6 +835,7 @@ static bool cpufreq_limited;
 static struct pm_qos_request thermal_cpu_limit_request;
 #endif
 
+#if defined(CONFIG_EXYNOS_ACPM_THERMAL) || defined(CONFIG_SOC_EXYNOS9810)
 static int exynos98X0_tmu_read(struct exynos_tmu_data *data)
 {
 	int temp = 0, stat = 0;
@@ -858,6 +859,12 @@ static int exynos98X0_tmu_read(struct exynos_tmu_data *data)
 #endif
 	return temp;
 }
+#else
+static inline int exynos98X0_tmu_read(struct exynos_tmu_data *data)
+{
+	return 0;
+}
+#endif
 
 static void exynos_tmu_work(struct work_struct *work)
 {
@@ -1593,7 +1600,9 @@ static int exynos_tmu_probe(struct platform_device *pdev)
 
 	mutex_lock(&data->lock);
 	list_add_tail(&data->node, &dtm_dev_list);
+#ifdef CONFIG_EXYNOS_ACPM_THERMAL
 	num_of_devices++;
+#endif
 	mutex_unlock(&data->lock);
 
 	if (list_is_singular(&dtm_dev_list)) {
@@ -1640,7 +1649,9 @@ static int exynos_tmu_remove(struct platform_device *pdev)
 	list_for_each_entry(devnode, &dtm_dev_list, node) {
 		if (devnode->id == data->id) {
 			list_del(&devnode->node);
+#ifdef EXYNOS_ACPM_THERMAL
 			num_of_devices--;
+#endif
 			break;
 		}
 	}
