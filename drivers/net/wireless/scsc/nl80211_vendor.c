@@ -1406,6 +1406,7 @@ static int slsi_set_vendor_ie(struct wiphy *wiphy,
 		{
 			if (!nla_len(attr))
 				break;
+			kfree(ie_list);
 			ie_list =  kmalloc(nla_len(attr), GFP_KERNEL);
 			if (!ie_list) {
 				SLSI_ERR(sdev, "No memory for ie_list!");
