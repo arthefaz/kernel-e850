@@ -2012,6 +2012,18 @@ static u32 dsim_reg_translate_lanecnt_to_lanes(int lanecnt)
 	return lanes;
 }
 
+/*
+ * Only for exynos3830: HACK: to try and keep alive
+ */
+void dsim_reg_set_keep_alive(u32 id)
+{
+#define	DSIM_OPTION_SUITE_UPDT_KEEP_ALIVE_MASK			(0x1 << 4)
+
+	dsim_write_mask(id, DSIM_OPTION_SUITE, 1,
+			DSIM_OPTION_SUITE_UPDT_KEEP_ALIVE_MASK);
+
+}
+
 /* This function is just for dsim basic initialization for reading panel id */
 void dsim_reg_preinit(u32 id)
 {
@@ -2125,6 +2137,8 @@ void dsim_reg_init(u32 id, struct exynos_panel_info *lcd_info, struct dsim_clks 
 	dsim_reg_set_link_clock(id, 1);	/* Selection to word clock */
 
 	dsim_reg_set_config(id, lcd_info, clks);
+
+	dsim_reg_set_keep_alive(id); /* HACK for exynos3830: keep alive */
 
 //	dsim_reg_set_pll_clk_gate_enable(id, DPHY_PLL_CLK_GATE_EN); /* PHY pll clock gate disable */
 #if defined(CONFIG_EXYNOS_PLL_SLEEP)
