@@ -3598,8 +3598,14 @@ static void dwc3_resume_gadget(struct dwc3 *dwc)
 
 static void dwc3_reset_gadget(struct dwc3 *dwc)
 {
+
 	if (!dwc->gadget_driver)
 		return;
+
+	if (dwc->gadget->deactivated) {
+		pr_info("%s: gadget deactivated. return!", __func__);
+		return;
+	}
 
 	if (dwc->async_callbacks && dwc->gadget->speed != USB_SPEED_UNKNOWN) {
 		spin_unlock(&dwc->lock);
@@ -4428,8 +4434,14 @@ void dwc3_gadget_exit(struct dwc3 *dwc)
 
 int dwc3_gadget_suspend(struct dwc3 *dwc)
 {
+
 	if (!dwc->gadget_driver)
 		return 0;
+
+	if (dwc->gadget->deactivated) {
+		pr_info("%s: gadget deactivated. return!", __func__);
+		return 0;
+	}
 
 	dwc3_gadget_run_stop(dwc, false, false);
 	dwc3_disconnect_gadget(dwc);
@@ -4444,6 +4456,11 @@ int dwc3_gadget_resume(struct dwc3 *dwc)
 
 	if (!dwc->gadget_driver)
 		return 0;
+
+	if (dwc->gadget->deactivated) {
+		pr_info("%s: gadget deactivated. return!", __func__);
+		return 0;
+	}
 
 	ret = __dwc3_gadget_start(dwc);
 	if (ret < 0)
