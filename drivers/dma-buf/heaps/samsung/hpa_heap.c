@@ -676,13 +676,24 @@ static void hpa_add_exception_area(void)
 		if (prop)
 			nsize = be32_to_cpup(prop);
 
+		prop = of_get_property(np, "ppmpu-limit", &len);
+		if (prop && len > 0) {
+			base = (phys_addr_t)of_read_number(prop, naddr);
+
+			hpa_exception_areas[0][0] = base;
+			hpa_exception_areas[0][1] = -1;
+
+			nr_hpa_exception++;
+		}
+
 		prop = of_get_property(np, "exception-range", &len);
 		if (prop && len > 0) {
 			int n_area = len / (sizeof(*prop) * (nsize + naddr));
 
+			n_area += nr_hpa_exception;
 			n_area = min_t(int, n_area, MAX_EXCEPTION_AREAS);
 
-			for (i = 0; i < n_area ; i++) {
+			for (i = nr_hpa_exception; i < n_area ; i++) {
 				base = (phys_addr_t)of_read_number(prop, naddr);
 				prop += naddr;
 				size = (phys_addr_t)of_read_number(prop, nsize);
