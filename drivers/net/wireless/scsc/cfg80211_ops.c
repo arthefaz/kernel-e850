@@ -994,7 +994,14 @@ int slsi_set_roam_reassoc(struct net_device *dev, struct slsi_dev *sdev, struct 
 				SLSI_NET_ERR(dev, "Roaming has been rejected, as sme->channel is null\n");
 				return -EINVAL;
 			}
-			r = slsi_mlme_roam(sdev, dev, sme->bssid, sme->channel->center_freq);
+			if (sme->bssid) {
+				r = slsi_mlme_roam(sdev, dev, sme->bssid, sme->channel->center_freq);
+			} else if (sme->bssid_hint) {
+				r = slsi_mlme_roam(sdev, dev, sme->bssid_hint, sme->channel->center_freq);
+			} else  {
+				SLSI_NET_ERR(dev, "Roaming has been rejected, as bssid and bssid_hint are null\n");
+				return -EINVAL;
+			}
 			if (r) {
 				SLSI_NET_ERR(dev, "Failed to roam : %d\n", r);
 				return -EINVAL;
