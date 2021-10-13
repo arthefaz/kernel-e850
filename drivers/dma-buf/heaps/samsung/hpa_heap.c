@@ -188,6 +188,8 @@ static struct gen_pool *hpa_iova_pool;
 
 static int hpa_secure_iova_pool_init(void)
 {
+	struct device_node *np;
+	phys_addr_t base = HPA_SECURE_DMA_BASE, size = HPA_SECURE_DMA_SIZE;
 	int ret;
 
 	hpa_iova_pool = gen_pool_create(PAGE_SHIFT, -1);
@@ -196,12 +198,48 @@ static int hpa_secure_iova_pool_init(void)
 		return -ENOMEM;
 	}
 
-	ret = gen_pool_add(hpa_iova_pool, HPA_SECURE_DMA_BASE, HPA_SECURE_DMA_SIZE, -1);
+	for_each_node_by_name(np, "secure-iova-domain") {
+		phys_addr_t domain_end;
+		int naddr = of_n_addr_cells(np);
+		int nsize = of_n_size_cells(np);
+		const __be32 *prop;
+		int len;
+
+		prop = of_get_property(np, "#address-cells", NULL);
+		if (prop)
+			naddr = be32_to_cpup(prop);
+
+		prop = of_get_property(np, "#size-cells", NULL);
+		if (prop)
+			nsize = be32_to_cpup(prop);
+
+		prop = of_get_property(np, "domain-ranges", &len);
+		if (prop && len > 0) {
+			domain_end = (phys_addr_t)of_read_number(prop, naddr);
+			prop += naddr;
+			domain_end += (phys_addr_t)of_read_number(prop, nsize);
+		} else {
+			pr_err("%s: failed to get domain-ranges attributes\n", __func__);
+			break;
+		}
+
+		prop = of_get_property(np, "hpa,reserved", &len);
+		if (prop && len > 0) {
+			size = (phys_addr_t)of_read_number(prop, nsize);
+			base = domain_end - size;
+		} else {
+			pr_err("%s: failed to get hpa,reserved attributes\n", __func__);
+			break;
+		}
+	}
+
+	ret = gen_pool_add(hpa_iova_pool, base, size, -1);
 	if (ret) {
 		pr_err("failed to set address range of HPA IOVA pool\n");
 		gen_pool_destroy(hpa_iova_pool);
 		return ret;
 	}
+	pr_info("Add hpa iova ranges %#lx-%#lx\n", base, size);
 
 	return 0;
 }
