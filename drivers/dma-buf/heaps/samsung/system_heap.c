@@ -75,6 +75,8 @@ static struct dma_buf *system_heap_allocate(struct dma_heap *heap, unsigned long
 	unsigned int max_order = orders[0];
 	int i, ret;
 
+	dma_heap_event_begin();
+
 	if (dma_heap_flags_video_aligned(samsung_dma_heap->flags))
 		len = dma_heap_add_video_padding(len);
 	size_remaining = len;
@@ -132,6 +134,8 @@ static struct dma_buf *system_heap_allocate(struct dma_heap *heap, unsigned long
 		ret = PTR_ERR(dmabuf);
 		goto free_export;
 	}
+
+	dma_heap_event_record(DMA_HEAP_EVENT_ALLOC, dmabuf, begin);
 
 	return dmabuf;
 

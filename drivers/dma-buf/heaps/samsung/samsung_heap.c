@@ -6,18 +6,123 @@
  * Author: <hyesoo.yu@samsung.com> for Samsung
  */
 
+#include <linux/debugfs.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-heap.h>
 #include <linux/err.h>
 #include <linux/highmem.h>
+#include <linux/ktime.h>
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/scatterlist.h>
+#include <linux/seq_file.h>
 #include <linux/slab.h>
+
 #include <trace/hooks/mm.h>
 
 #include "heap_private.h"
+
+#define MAX_EVENT_LOG	2048
+#define EVENT_CLAMP_ID(id) ((id) & (MAX_EVENT_LOG - 1))
+
+static atomic_t dma_heap_eventid;
+
+static char * const dma_heap_event_name[] = {
+	"alloc",
+	"free",
+	"mmap",
+	"vmap",
+	"vunmap",
+	"map_dma_buf",
+	"unmap_dma_buf",
+	"begin_cpu_access",
+	"end_cpu_access",
+	"begin_cpu_partial",
+	"end_cpu_partial",
+};
+
+static struct dma_heap_event {
+	ktime_t begin;
+	ktime_t done;
+	unsigned char heapname[16];
+	unsigned long ino;
+	size_t size;
+	enum dma_heap_event_type type;
+} dma_heap_events[MAX_EVENT_LOG];
+
+void dma_heap_event_record(enum dma_heap_event_type type, struct dma_buf *dmabuf, ktime_t begin)
+{
+	int idx = EVENT_CLAMP_ID(atomic_inc_return(&dma_heap_eventid));
+	struct dma_heap_event *event = &dma_heap_events[idx];
+
+	event->begin = begin;
+	event->done = ktime_get();
+	strlcpy(event->heapname, dmabuf->exp_name, sizeof(event->heapname));
+	event->ino = file_inode(dmabuf->file)->i_ino;
+	event->size = dmabuf->size;
+	event->type = type;
+}
+
+#ifdef CONFIG_DEBUG_FS
+static int dma_heap_event_show(struct seq_file *s, void *unused)
+{
+	int index = EVENT_CLAMP_ID(atomic_read(&dma_heap_eventid) + 1);
+	int i = index;
+
+	seq_printf(s, "%14s %18s %16s %16s %10s %10s\n",
+		   "timestamp", "event", "name", "size(kb)", "ino",  "elapsed(us)");
+
+	do {
+		struct dma_heap_event *event = &dma_heap_events[EVENT_CLAMP_ID(i)];
+		long elapsed = ktime_us_delta(event->done, event->begin);
+		struct timespec64 ts = ktime_to_timespec64(event->begin);
+
+		if (elapsed == 0)
+			continue;
+
+		seq_printf(s, "[%06ld.%06ld]", ts.tv_sec, ts.tv_nsec / NSEC_PER_USEC);
+		seq_printf(s, "%18s %16s %16zd %10lu %10ld", dma_heap_event_name[event->type],
+			   event->heapname, event->size >> 10, event->ino, elapsed);
+
+		if (elapsed > 100 * USEC_PER_MSEC)
+			seq_puts(s, " *");
+
+		seq_puts(s, "\n");
+	} while (EVENT_CLAMP_ID(++i) != index);
+
+	return 0;
+}
+
+static int dma_heap_event_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dma_heap_event_show, inode->i_private);
+}
+
+static const struct file_operations dma_heap_event_fops = {
+	.open = dma_heap_event_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+void dma_heap_debug_init(void)
+{
+	struct dentry *root = debugfs_create_dir("dma_heap", NULL);
+
+	if (IS_ERR(root)) {
+		pr_err("Failed to create debug directory for dma_heap");
+		return;
+	}
+
+	if (IS_ERR(debugfs_create_file("event", 0444, root, NULL, &dma_heap_event_fops)))
+		pr_err("Failed to create event file for dma_heap\n");
+}
+#else
+void dma_heap_debug_init(void)
+{
+}
+#endif
 
 #define MAX_EXCEPTION_AREAS 4
 static phys_addr_t dma_heap_exception_areas[MAX_EXCEPTION_AREAS][2];
@@ -365,6 +470,7 @@ static int __init samsung_dma_heap_init(void)
 		goto err_trace;
 
 	dma_heap_add_exception_area();
+	dma_heap_debug_init();
 
 	return 0;
 err_trace:

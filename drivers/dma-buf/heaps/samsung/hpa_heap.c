@@ -8,6 +8,7 @@
 
 #include <linux/anon_inodes.h>
 #include <linux/cma.h>
+#include <linux/debugfs.h>
 #include <linux/device.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-direct.h>
@@ -19,12 +20,14 @@
 #include <linux/highmem.h>
 #include <linux/iommu.h>
 #include <linux/kmemleak.h>
+#include <linux/ktime.h>
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
 #include <linux/scatterlist.h>
+#include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/sort.h>
 #include <trace/hooks/mm.h>
@@ -59,6 +62,108 @@ static struct hpa_dma_heap hpa_heaps[] = {
 	},
 };
 
+#define HPA_EVENT_LOG	256
+#define HPA_EVENT_CLAMP_ID(id) ((id) & (HPA_EVENT_LOG - 1))
+
+static atomic_t hpa_eventid;
+
+enum hpa_event_type {
+	HPA_EVENT_ALLOC = 0,
+	HPA_EVENT_FREE,
+	HPA_EVENT_DMA_MAP,
+	HPA_EVENT_DMA_UNMAP,
+};
+
+static char * const hpa_event_name[] = {
+	"alloc",
+	"free",
+	"map_dma_buf",
+	"unmap_dma_buf",
+};
+
+static struct hpa_event {
+	ktime_t begin;
+	ktime_t done;
+	unsigned char heapname[16];
+	unsigned long ino;
+	size_t size;
+	enum hpa_event_type type;
+} hpa_events[HPA_EVENT_LOG];
+
+#define hpa_event_begin() ktime_t begin  = ktime_get()
+
+void hpa_event_record(enum hpa_event_type type, struct dma_buf *dmabuf, ktime_t begin)
+{
+	int idx = HPA_EVENT_CLAMP_ID(atomic_inc_return(&hpa_eventid));
+	struct hpa_event *event = &hpa_events[idx];
+
+	event->begin = begin;
+	event->done = ktime_get();
+	strlcpy(event->heapname, dmabuf->exp_name, sizeof(event->heapname));
+	event->ino = file_inode(dmabuf->file)->i_ino;
+	event->size = dmabuf->size;
+	event->type = type;
+}
+
+#ifdef CONFIG_DEBUG_FS
+static int hpa_event_show(struct seq_file *s, void *unused)
+{
+	int index = HPA_EVENT_CLAMP_ID(atomic_read(&hpa_eventid) + 1);
+	int i = index;
+
+	seq_printf(s, "%14s %18s %16s %16s %10s %10s\n",
+		   "timestamp", "event", "name", "size(kb)", "ino",  "elapsed(us)");
+
+	do {
+		struct hpa_event *event = &hpa_events[HPA_EVENT_CLAMP_ID(i)];
+		long elapsed = ktime_us_delta(event->done, event->begin);
+		struct timespec64 ts = ktime_to_timespec64(event->begin);
+
+		if (elapsed == 0)
+			continue;
+
+		seq_printf(s, "[%06ld.%06ld]", ts.tv_sec, ts.tv_nsec / NSEC_PER_USEC);
+		seq_printf(s, "%18s %16s %16zd %10lu %10ld", hpa_event_name[event->type],
+			   event->heapname, event->size >> 10, event->ino, elapsed);
+
+		if (elapsed > 100 * USEC_PER_MSEC)
+			seq_puts(s, " *");
+
+		seq_puts(s, "\n");
+	} while (HPA_EVENT_CLAMP_ID(++i) != index);
+
+	return 0;
+}
+
+static int hpa_event_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, hpa_event_show, inode->i_private);
+}
+
+static const struct file_operations hpa_event_fops = {
+	.open = hpa_event_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+void hpa_debug_init(void)
+{
+	struct dentry *root = debugfs_create_dir("hpa", NULL);
+
+	if (IS_ERR(root)) {
+		pr_err("Failed to create debug directory for dma_heap");
+		return;
+	}
+
+	if (IS_ERR(debugfs_create_file("event", 0444, root, NULL, &hpa_event_fops)))
+		pr_err("Failed to create event file for dma_heap\n");
+}
+#else
+void hpa_debug_init(void)
+{
+}
+#endif
 #define MAX_EXCEPTION_AREAS 4
 static phys_addr_t hpa_exception_areas[MAX_EXCEPTION_AREAS][2];
 static int nr_hpa_exception;
@@ -452,6 +557,8 @@ static struct sg_table *hpa_heap_map_dma_buf(struct dma_buf_attachment *a,
 	struct sg_table *table;
 	int ret = 0;
 
+	hpa_event_begin();
+
 	table = hpa_dup_sg_table(&buffer->sg_table);
 	if (IS_ERR(table))
 		return table;
@@ -474,6 +581,8 @@ static struct sg_table *hpa_heap_map_dma_buf(struct dma_buf_attachment *a,
 
 	hpa_trace_map(a->dmabuf, a->dev);
 
+	hpa_event_record(HPA_EVENT_DMA_MAP, a->dmabuf, begin);
+
 	return table;
 }
 
@@ -481,6 +590,8 @@ static void hpa_heap_unmap_dma_buf(struct dma_buf_attachment *a,
 				   struct sg_table *table,
 				   enum dma_data_direction direction)
 {
+	hpa_event_begin();
+
 	hpa_trace_unmap(a->dmabuf, a->dev);
 
 	if (!dev_iommu_fwspec_get(a->dev))
@@ -488,6 +599,8 @@ static void hpa_heap_unmap_dma_buf(struct dma_buf_attachment *a,
 
 	sg_free_table(table);
 	kfree(table);
+
+	hpa_event_record(HPA_EVENT_DMA_UNMAP, a->dmabuf, begin);
 }
 
 static int hpa_heap_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
@@ -511,6 +624,8 @@ static void hpa_heap_dma_buf_release(struct dma_buf *dmabuf)
 	int i;
 	int unprot_err;
 
+	hpa_event_begin();
+
 	unprot_err = hpa_heap_unprotect(buffer->priv, dev);
 
 	if (!unprot_err) {
@@ -521,6 +636,8 @@ static void hpa_heap_dma_buf_release(struct dma_buf *dmabuf)
 	}
 
 	hpa_dma_buffer_free(buffer);
+
+	hpa_event_record(HPA_EVENT_FREE, dmabuf, begin);
 }
 
 #define HPA_HEAP_FLAG_PROTECTED BIT(1)
@@ -574,6 +691,8 @@ static struct dma_buf *hpa_heap_allocate(struct dma_heap *heap, unsigned long le
 	unsigned long size, nr_pages;
 	int ret, protret = 0;
 	pgoff_t pg;
+
+	hpa_event_begin();
 
 	size = ALIGN(len, HPA_CHUNK_SIZE);
 	nr_pages = size / HPA_CHUNK_SIZE;
@@ -633,6 +752,8 @@ static struct dma_buf *hpa_heap_allocate(struct dma_heap *heap, unsigned long le
 	kvfree(pages);
 
 	hpa_trace_add_task();
+
+	hpa_event_record(HPA_EVENT_ALLOC, dmabuf, begin);
 
 	return dmabuf;
 
@@ -823,6 +944,7 @@ static int __init hpa_dma_heap_init(void)
 	register_trace_android_vh_show_mem(show_hpa_trace_handler, NULL);
 
 	hpa_add_exception_area();
+	hpa_debug_init();
 
 	return 0;
 }

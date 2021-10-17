@@ -40,6 +40,8 @@ static struct dma_buf *carveout_heap_allocate(struct dma_heap *heap, unsigned lo
 	phys_addr_t paddr;
 	int protret = 0, ret = -ENOMEM;
 
+	dma_heap_event_begin();
+
 	if (dma_heap_flags_video_aligned(flags))
 		len = dma_heap_add_video_padding(len);
 
@@ -76,6 +78,8 @@ static struct dma_buf *carveout_heap_allocate(struct dma_heap *heap, unsigned lo
 		ret = PTR_ERR(dmabuf);
 		goto free_export;
 	}
+
+	dma_heap_event_record(DMA_HEAP_EVENT_ALLOC, dmabuf, begin);
 
 	return dmabuf;
 

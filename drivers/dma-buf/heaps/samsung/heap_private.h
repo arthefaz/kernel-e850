@@ -63,6 +63,23 @@ extern const struct dma_buf_ops samsung_dma_buf_ops;
 	struct dma_buf_export_info name = { .exp_name = heap_name, \
 					 .owner = THIS_MODULE }
 
+enum dma_heap_event_type {
+	DMA_HEAP_EVENT_ALLOC = 0,
+	DMA_HEAP_EVENT_FREE,
+	DMA_HEAP_EVENT_MMAP,
+	DMA_HEAP_EVENT_VMAP,
+	DMA_HEAP_EVENT_VUNMAP,
+	DMA_HEAP_EVENT_DMA_MAP,
+	DMA_HEAP_EVENT_DMA_UNMAP,
+	DMA_HEAP_EVENT_CPU_BEGIN,
+	DMA_HEAP_EVENT_CPU_END,
+	DMA_HEAP_EVENT_CPU_BEGIN_PARTIAL,
+	DMA_HEAP_EVENT_CPU_END_PARTIAL,
+};
+
+#define dma_heap_event_begin() ktime_t begin  = ktime_get()
+void dma_heap_event_record(enum dma_heap_event_type type, struct dma_buf *dmabuf, ktime_t begin);
+
 bool is_dma_heap_exception_page(struct page *page);
 void heap_sgtable_pages_clean(struct sg_table *sgt);
 void heap_cache_flush(struct samsung_dma_buffer *buffer);
