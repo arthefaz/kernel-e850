@@ -73,7 +73,8 @@ struct samsung_dma_ops {
 				struct device *dev, char *ch_name);
 	int (*release)(unsigned long ch, void *param);
 	int (*config)(unsigned long ch, struct samsung_dma_config *param);
-	int (*prepare)(unsigned long ch, struct samsung_dma_prep *param);
+	int (*prepare)(unsigned long ch, struct samsung_dma_prep *param, dma_cookie_t *cookie);
+	int (*tx_status)(unsigned long ch, dma_cookie_t cookie, struct dma_tx_state *txstate);
 	int (*trigger)(unsigned long ch);
 	int (*started)(unsigned long ch);
 	int (*getposition)(unsigned long ch, dma_addr_t *src, dma_addr_t *dst);
