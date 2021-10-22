@@ -32,8 +32,11 @@ struct dma_iovm_map {
 	unsigned int mapcnt;
 };
 
+struct dmabuf_trace_buffer;
+
 struct samsung_dma_buffer {
 	struct samsung_dma_heap *heap;
+	struct dmabuf_trace_buffer *trace_buffer;
 	struct list_head attachments;
 	/* Manage buffer resource of attachments and vaddr, vmap_cnt */
 	struct mutex lock;

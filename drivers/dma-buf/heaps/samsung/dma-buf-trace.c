@@ -328,16 +328,18 @@ static const struct file_operations dmabuf_trace_task_fops = {
 	.release = dmabuf_trace_task_release,
 };
 
-static struct dmabuf_trace_buffer *dmabuf_trace_get_buffer(
-		struct dma_buf *dmabuf)
+static struct dmabuf_trace_buffer *dmabuf_trace_get_buffer(struct dma_buf *dmabuf)
 {
-	struct dmabuf_trace_buffer *buffer;
+	struct samsung_dma_buffer *dma_buffer = dmabuf->priv;
 
-	list_for_each_entry(buffer, &buffer_list, node)
-		if (buffer->dmabuf == dmabuf)
-			return buffer;
+	return dma_buffer->trace_buffer;
+}
 
-	return NULL;
+static void dmabuf_trace_set_buffer(struct dma_buf *dmabuf, struct dmabuf_trace_buffer *buffer)
+{
+	struct samsung_dma_buffer *dma_buffer = dmabuf->priv;
+
+	dma_buffer->trace_buffer = buffer;
 }
 
 static struct dmabuf_trace_task *dmabuf_trace_get_task_noalloc(void)
@@ -418,9 +420,10 @@ static struct dmabuf_trace_ref *dmabuf_trace_get_ref_noalloc(struct dmabuf_trace
 {
 	struct dmabuf_trace_ref *ref;
 
-	list_for_each_entry(ref, &task->ref_list, task_node)
-		if (ref->buffer == buffer)
+	list_for_each_entry(ref, &buffer->ref_list, buffer_node) {
+		if (ref->task == task)
 			return ref;
+	}
 
 	return NULL;
 }
@@ -502,6 +505,7 @@ int dmabuf_trace_alloc(struct dma_buf *dmabuf)
 		mutex_unlock(&trace_lock);
 		return PTR_ERR(task);
 	}
+	dmabuf_trace_set_buffer(dmabuf, buffer);
 	mutex_unlock(&trace_lock);
 
 	return 0;
