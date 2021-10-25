@@ -632,16 +632,8 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 			LCD_REFRESH_RATE * 11 / 10 / 1000 + 1;
 		aclk_freq = dpu_bts_calc_aclk_disp(decon, &config, resol_clock);
 		DPU_DEBUG_BTS("Initial calculated disp freq(%lu)\n", aclk_freq);
-		/*
-		 * If current disp freq is higher than calculated freq,
-		 * it must not be set. if not, underrun can occur.
-		 */
-#if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
-		if (cal_dfs_get_rate(ACPM_DVFS_DISP) < aclk_freq)
-#elif defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
-		if (exynos_devfreq_get_domain_freq(DEVFREQ_DISP) < aclk_freq)
-#endif
-			pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
+
+		pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
 
 #if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 		DPU_DEBUG_BTS("Get initial disp freq(%lu)\n",
