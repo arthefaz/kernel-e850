@@ -1968,6 +1968,9 @@ static void dwc3_gadget_ep_cleanup_cancelled_requests(struct dwc3_ep *dep)
 		case DWC3_REQUEST_STATUS_STALLED:
 			dwc3_gadget_giveback(dep, req, -EPIPE);
 			break;
+		case DWC3_REQUEST_STATUS_COMPLETED:
+			dev_info(dwc->dev, "request already completed\n");
+			break;
 		default:
 			dev_err(dwc->dev, "request cancelled with wrong reason:%d\n", req->status);
 			dwc3_gadget_giveback(dep, req, -ECONNRESET);
