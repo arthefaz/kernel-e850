@@ -2024,8 +2024,11 @@ static int dwc3_gadget_ep_dequeue(struct usb_ep *ep,
 
 			/* If ep cmd fails, then force to giveback cancelled requests here */
 			if (!(dep->flags & DWC3_EP_END_TRANSFER_PENDING)) {
+				dev_info(dwc->dev, "END_TRANSFER cmd timeout! cleanup cancelled requests.\n");
+				dep->flags |= BIT(20);
 				dep->flags &= ~DWC3_EP_TRANSFER_STARTED;
 				dwc3_gadget_ep_cleanup_cancelled_requests(dep);
+				dep->flags &= ~BIT(20);
 			}
 
 			dep->flags &= ~DWC3_EP_WAIT_TRANSFER_COMPLETE;
@@ -3397,6 +3400,8 @@ static void dwc3_gadget_endpoint_command_complete(struct dwc3_ep *dep,
 		const struct dwc3_event_depevt *event)
 {
 	u8 cmd = DEPEVT_PARAMETER_CMD(event->parameters);
+	struct dwc3 *dwc = dep->dwc;
+	int i;
 
 	if (cmd != DWC3_DEPCMD_ENDTRANSFER)
 		return;
@@ -3411,6 +3416,23 @@ static void dwc3_gadget_endpoint_command_complete(struct dwc3_ep *dep,
 
 	dep->flags &= ~DWC3_EP_END_TRANSFER_PENDING;
 	dep->flags &= ~DWC3_EP_TRANSFER_STARTED;
+
+	if (dep->flags & BIT(20)) {
+		pr_info("%s: cleanup-ing cancelled requests in dequeue. need wait.\n", __func__);
+		dwc = dep->dwc;
+		spin_unlock(&dwc->lock);
+		for (i = 0; i < 1000; i++) {
+			udelay(5);
+			if (!(dep->flags & BIT(20))) {
+				pr_info("%s: cleanup complete cancelled requests in dequeue.\n", __func__);
+				break;
+			}
+		}
+		spin_lock(&dwc->lock);
+		if (i == 1000)
+			pr_info("%s: cleanup complete timeout in dequeue.\n", __func__);
+	}
+
 	dwc3_gadget_ep_cleanup_cancelled_requests(dep);
 
 	if (dep->flags & DWC3_EP_PENDING_CLEAR_STALL) {
