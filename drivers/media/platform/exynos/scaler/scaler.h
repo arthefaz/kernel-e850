@@ -369,6 +369,7 @@ struct sc_frame {
 	unsigned short		height;
 	__u32			pixelformat;
 	struct v4l2_rect	crop;
+	__u32			stride[SC_MAX_PLANES];
 
 	struct sc_addr			addr;
 	__u32			bytesused[SC_MAX_PLANES];

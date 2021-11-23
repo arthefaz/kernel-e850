@@ -853,51 +853,10 @@ void sc_hwset_polyphase_vcoef(struct sc_dev *sc,
 	}
 }
 
-static inline int sc_get_sbwc_span_bytes(const struct sc_fmt *fmt,
-					int width, unsigned short ratio)
-{
-	/* Lossy case */
-	if (fmt->cfg_val & SCALER_CFG_SBWC_LOSSY)
-		return SBWCL_STRIDE(width, ratio);
-
-	/* Lossless case */
-	if ((fmt->cfg_val & SCALER_CFG_10BIT_MASK) == SCALER_CFG_10BIT_SBWC)
-		return SBWC_10B_STRIDE(width);
-
-	return SBWC_8B_STRIDE(width);
-}
-
-void sc_get_span(struct sc_frame *frame, u32 *yspan, u32 *cspan)
-{
-	if (sc_fmt_is_sbwc(frame->sc_fmt->pixelformat)) {
-		*yspan = *cspan  = sc_get_sbwc_span_bytes(frame->sc_fmt,
-							  frame->width,
-							  frame->byte32num);
-	} else {
-		*yspan = frame->width;
-
-		if (frame->sc_fmt->num_comp == 2) {
-			*cspan = frame->width << frame->sc_fmt->cspan;
-		} else if (frame->sc_fmt->num_comp == 3) {
-			if (frame->sc_fmt->is_alphablend_fmt)
-				*cspan = frame->width << frame->sc_fmt->cspan;
-			if (sc_fmt_is_ayv12(frame->sc_fmt->pixelformat))
-				*cspan = ALIGN(frame->width >> 1, 16);
-			else if (frame->sc_fmt->cspan) /* YUV444 */
-				*cspan = frame->width;
-			else
-				*cspan = frame->width >> 1;
-		} else {
-			*cspan = 0;
-		}
-	}
-}
-
 void sc_hwset_src_imgsize(struct sc_dev *sc, struct sc_frame *frame)
 {
-	u32 yspan, cspan;
-
-	sc_get_span(frame, &yspan, &cspan);
+	u32 yspan = frame->stride[SC_PLANE_Y];
+	u32 cspan = frame->stride[SC_PLANE_CB];
 
 	if (sc->version < SCALER_VERSION(6, 0, 1)) {
 		writel(yspan | (cspan << 16), sc->regs + SCALER_SRC_SPAN);
@@ -935,9 +894,8 @@ void sc_hwset_intsrc_imgsize(struct sc_dev *sc, int num_comp, __u32 width)
 
 void sc_hwset_dst_imgsize(struct sc_dev *sc, struct sc_frame *frame)
 {
-	u32 yspan, cspan;
-
-	sc_get_span(frame, &yspan, &cspan);
+	u32 yspan = frame->stride[SC_PLANE_Y];
+	u32 cspan = frame->stride[SC_PLANE_CB];
 
 	if (sc->version < SCALER_VERSION(6, 0, 1)) {
 		writel(yspan | (cspan << 16), sc->regs + SCALER_DST_SPAN);

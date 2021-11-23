@@ -1365,25 +1365,23 @@ static int sc_calc_fmt_s10b_size(const struct sc_fmt *sc_fmt,
 	return ret;
 }
 
-static void sc_calc_ayv12_planesize(const __u32 width, const __u32 height,
+static void sc_calc_ayv12_planesize(const __u32 y_stride, const __u32 c_stride,
+				    const __u32 height,
 				    u32 *y_plane, u32 *cb_plane, u32 *cr_plane)
 {
-	unsigned int c_span;
-
-	c_span = ALIGN(width >> 1, 16);
-
-	*y_plane = width * height;
-	*cb_plane = *cr_plane = c_span * height / 2;
+	*y_plane = y_stride * height;
+	*cb_plane = *cr_plane = c_stride * height / 2;
 }
 
-static int sc_calc_fmt_ayv12_planesize(const u32 fmt,
-				       const __u32 width, const __u32 height,
+static int sc_calc_fmt_ayv12_planesize(const u32 fmt, const __u32 y_stride,
+				       const __u32 c_stride, const __u32 height,
 				       u32 *y_plane, u32 *cb_plane,
 				       u32 *cr_plane)
 {
 	unsigned int y_size, cb_size, cr_size;
 
-	sc_calc_ayv12_planesize(width, height, &y_size, &cb_size, &cr_size);
+	sc_calc_ayv12_planesize(y_stride, c_stride, height,
+				&y_size, &cb_size, &cr_size);
 
 	if (fmt == V4L2_PIX_FMT_YVU420) {
 		*y_plane = y_size + cb_size + cr_size;
@@ -1394,6 +1392,43 @@ static int sc_calc_fmt_ayv12_planesize(const u32 fmt,
 	}
 
 	return 0;
+}
+
+static inline int sc_get_sbwc_span_bytes(const struct sc_fmt *fmt,
+					int width, unsigned short ratio)
+{
+	/* Lossy case */
+	if (fmt->cfg_val & SCALER_CFG_SBWC_LOSSY)
+		return SBWCL_STRIDE(width, ratio);
+
+	/* Lossless case */
+	if ((fmt->cfg_val & SCALER_CFG_10BIT_MASK) == SCALER_CFG_10BIT_SBWC)
+		return SBWC_10B_STRIDE(width);
+
+	return SBWC_8B_STRIDE(width);
+}
+
+void sc_get_span(const struct sc_fmt *fmt, const __u32 width,
+		 u32 *yspan, u32 *cspan, __u8 byte32num)
+{
+	if (sc_fmt_is_sbwc(fmt->pixelformat)) {
+		*yspan = *cspan  = sc_get_sbwc_span_bytes(fmt, width, byte32num);
+	} else {
+		*yspan = width;
+
+		if (fmt->num_comp == 2) {
+			*cspan = width << fmt->cspan;
+		} else if (fmt->num_comp == 3) {
+			if (sc_fmt_is_ayv12(fmt->pixelformat))
+				*cspan = ALIGN(width >> 1, 16);
+			else if (fmt->cspan) /* YUV444 */
+				*cspan = width;
+			else
+				*cspan = width >> 1;
+		} else {
+			*cspan = 0;
+		}
+	}
 }
 
 static int sc_v4l2_try_fmt_mplane(struct file *file, void *fh,
@@ -1446,13 +1481,22 @@ static int sc_v4l2_try_fmt_mplane(struct file *file, void *fh,
 	if (sc_fmt_is_s10bit_yuv(sc_fmt->pixelformat) ||
 			sc_fmt_is_sbwc(sc_fmt->pixelformat))
 		return sc_calc_fmt_s10b_size(sc_fmt, pixm, ext_size);
-	else if (sc_fmt_is_ayv12(sc_fmt->pixelformat))
+	else if (sc_fmt_is_ayv12(sc_fmt->pixelformat)) {
+		if (pixm->plane_fmt[0].bytesperline == 0) {
+			sc_get_span(sc_fmt, pixm->width,
+				    &pixm->plane_fmt[SC_PLANE_Y].bytesperline,
+				    &pixm->plane_fmt[SC_PLANE_CB].bytesperline,
+				    0);
+		}
+
 		sc_calc_fmt_ayv12_planesize(sc_fmt->pixelformat,
-					    pixm->width, pixm->height,
+					    pixm->plane_fmt[0].bytesperline,
+					    pixm->plane_fmt[1].bytesperline,
+					    pixm->height,
 					    &pixm->plane_fmt[0].sizeimage,
 					    &pixm->plane_fmt[1].sizeimage,
 					    &pixm->plane_fmt[2].sizeimage);
-	else {
+	} else {
 		for (i = 0; i < pixm->num_planes; ++i) {
 			/* The pixm->plane_fmt[i].sizeimage for the plane which
 			 * contains the src blend data has to be calculated as per the
@@ -1473,11 +1517,21 @@ static int sc_v4l2_try_fmt_mplane(struct file *file, void *fh,
 					pixm->plane_fmt[i].bytesperline *
 					ctx->src_blend_cfg.blend_src_height;
 			} else {
-				pixm->plane_fmt[i].bytesperline = (pixm->width *
-					sc_fmt->bitperpixel[i]) >> 3;
+				/*
+				 * If user sets this value,
+				 * it is meaning that there is some restriction about stride.
+				 * If not, the driver will use the width in calculation of bytesperline.
+				 * The value user sets will be the stride as pixel.
+				 * So, the driver should calculate the bytesperline also.
+				 */
+				if (pixm->plane_fmt[i].bytesperline == 0)
+					pixm->plane_fmt[i].bytesperline = pixm->width;
+
+				pixm->plane_fmt[i].bytesperline *= sc_fmt->bitperpixel[i];
+				pixm->plane_fmt[i].bytesperline >>= 3;
+
 				pixm->plane_fmt[i].sizeimage =
-					pixm->plane_fmt[i].bytesperline *
-					pixm->height;
+					pixm->plane_fmt[i].bytesperline * pixm->height;
 			}
 		}
 
@@ -1501,11 +1555,22 @@ static int sc_v4l2_s_fmt_mplane(struct file *file, void *fh,
 	struct vb2_queue *vq = v4l2_m2m_get_vq(ctx->m2m_ctx, f->type);
 	struct sc_frame *frame;
 	struct v4l2_pix_format_mplane *pixm = &f->fmt.pix_mp;
+	__u32 stride[SC_MAX_PLANES] = {0};
+	bool is_need_calc_stride = true;
 	int i, ret = 0;
 
 	if (vb2_is_streaming(vq)) {
 		v4l2_err(&ctx->sc_dev->m2m.v4l2_dev, "device is busy\n");
 		return -EBUSY;
+	}
+
+	for (i = 0; i < SC_MAX_PLANES; i++) {
+		if (pixm->plane_fmt[i].bytesperline != 0)
+			stride[i] = pixm->plane_fmt[i].bytesperline;
+		else
+			break;
+
+		is_need_calc_stride = false;
 	}
 
 	ret = sc_v4l2_try_fmt_mplane(file, fh, f);
@@ -1563,6 +1628,15 @@ static int sc_v4l2_s_fmt_mplane(struct file *file, void *fh,
 			ctx->src_blend_cfg.blend_src_color_format =
 				SCALER_CFG_FMT_RGBA8888;
 		}
+	}
+
+	if (is_need_calc_stride) {
+		sc_get_span(frame->sc_fmt, frame->width,
+			    &frame->stride[SC_PLANE_Y],
+			    &frame->stride[SC_PLANE_CB], frame->byte32num);
+	} else {
+		for (i = 0; i < frame->sc_fmt->num_comp; i++)
+			frame->stride[i] = stride[i];
 	}
 
 	return 0;
@@ -2175,7 +2249,8 @@ static void sc_calc_intbufsize(struct sc_dev *sc, struct sc_int_frame *int_frame
 	case 3:
 		if (sc_fmt_is_ayv12(frame->sc_fmt->pixelformat)) {
 			sc_calc_fmt_ayv12_planesize(frame->sc_fmt->pixelformat,
-						frame->width, frame->height,
+						frame->stride[0], frame->stride[1],
+						frame->height,
 						&frame->addr.size[SC_PLANE_Y],
 						&frame->addr.size[SC_PLANE_CB],
 						&frame->addr.size[SC_PLANE_CR]);
@@ -2313,6 +2388,9 @@ static bool initialize_initermediate_frame(struct sc_ctx *ctx)
 	if (!frame->height)
 		frame->height = frame->crop.height;
 
+	sc_get_span(frame->sc_fmt, frame->width,
+		    &frame->stride[SC_PLANE_Y], &frame->stride[SC_PLANE_CB],
+		    frame->byte32num);
 	/*
 	 * Check if intermeidate frame is already initialized by a previous
 	 * frame. If it is already initialized, intermediate buffer is no longer
@@ -4330,13 +4408,16 @@ static int sc_get_bufaddr(struct sc_dev *sc, struct vb2_buffer *vb2buf,
 	case 3:
 		if (frame->sc_fmt->num_planes == 1) {
 			if (sc_fmt_is_ayv12(frame->sc_fmt->pixelformat)) {
-				sc_calc_ayv12_planesize(frame->width,
+				sc_calc_ayv12_planesize(frame->stride[0],
+							frame->stride[1],
 							frame->height,
 						&frame->addr.size[SC_PLANE_Y],
 						&frame->addr.size[SC_PLANE_CB],
 						&frame->addr.size[SC_PLANE_CR]);
-				frame->addr.ioaddr[SC_PLANE_CB] = frame->addr.ioaddr[SC_PLANE_Y] + pixsize;
-				frame->addr.ioaddr[SC_PLANE_CR] = frame->addr.ioaddr[SC_PLANE_CB] + frame->addr.size[SC_PLANE_CB];
+				frame->addr.ioaddr[SC_PLANE_CB] = frame->addr.ioaddr[SC_PLANE_Y] +
+								  frame->addr.size[SC_PLANE_Y];
+				frame->addr.ioaddr[SC_PLANE_CR] = frame->addr.ioaddr[SC_PLANE_CB] +
+								  frame->addr.size[SC_PLANE_CB];
 			} else if (frame->sc_fmt->pixelformat ==
 					V4L2_PIX_FMT_YUV420N) {
 				unsigned int w = frame->width;
@@ -4378,7 +4459,8 @@ static int sc_get_bufaddr(struct sc_dev *sc, struct vb2_buffer *vb2buf,
 			}
 
 			if (sc_fmt_is_ayv12(frame->sc_fmt->pixelformat)) {
-				sc_calc_ayv12_planesize(frame->width,
+				sc_calc_ayv12_planesize(frame->stride[0],
+							frame->stride[1],
 							frame->height,
 						&frame->addr.size[SC_PLANE_Y],
 						&frame->addr.size[SC_PLANE_CB],
