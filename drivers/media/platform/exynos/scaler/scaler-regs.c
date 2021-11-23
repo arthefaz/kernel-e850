@@ -867,31 +867,6 @@ void sc_hwset_src_imgsize(struct sc_dev *sc, struct sc_frame *frame)
 	}
 }
 
-void sc_hwset_intsrc_imgsize(struct sc_dev *sc, int num_comp, __u32 width)
-{
-	u32 yspan, cspan = 0;
-
-	yspan = width;
-
-	/*
-	 * TODO: C width should be half of Y width
-	 * but, how to get the diffferent c width from user
-	 * like AYV12 format
-	 */
-	if (num_comp == 2)
-		cspan = width;
-	if (num_comp == 3)
-		cspan = width >> 1;
-
-	if (sc->version < SCALER_VERSION(6, 0, 1)) {
-		writel(yspan | (cspan << 16), sc->regs + SCALER_SRC_SPAN);
-	} else {
-		writel(yspan, sc->regs + SCALER_SRC_YSPAN);
-		if (num_comp > 1)
-			writel(cspan, sc->regs + SCALER_SRC_CSPAN);
-	}
-}
-
 void sc_hwset_dst_imgsize(struct sc_dev *sc, struct sc_frame *frame)
 {
 	u32 yspan = frame->stride[SC_PLANE_Y];
