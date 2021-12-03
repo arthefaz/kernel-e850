@@ -1641,7 +1641,7 @@ static int slsi_mib_open_file(struct slsi_dev *sdev, struct slsi_dev_mib_info *m
 #if IS_ENABLED(CONFIG_SCSC_LOG_COLLECTION)
 	spin_lock(&sdev->collect_mib.in_collection);
 	memset(&sdev->collect_mib.file[index].file_name, 0, 32);
-	memcpy(&sdev->collect_mib.file[index].file_name, mib_file_name, 32);
+	snprintf(&sdev->collect_mib.file[index].file_name[0], 32, "%s", mib_file_name);
 	sdev->collect_mib.file[index].len = mib_info->mib_len;
 	data = kmalloc(mib_info->mib_len, GFP_ATOMIC);
 	if (!data) {
