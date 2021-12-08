@@ -164,6 +164,7 @@ static int exynos_cs_get_pc(int cpu, int iter)
 	case ARM_CPU_PART_CORTEX_A75:
 	case ARM_CPU_PART_CORTEX_A76:
 	case ARM_CPU_PART_CORTEX_A77:
+#if 0
 		DBG_UNLOCK(base);
 		dbg_os_unlock(base);
 		DBG_UNLOCK(base + PMU_OFFSET);
@@ -175,6 +176,7 @@ static int exynos_cs_get_pc(int cpu, int iter)
 			val |= MSB_PADDING;
 
 		DBG_LOCK(base + PMU_OFFSET);
+#endif
 		break;
 	default:
 		break;
