@@ -3816,6 +3816,13 @@ static void decon_parse_dt(struct decon_device *decon)
 		decon->pm_domain = exynos_pd_lookup_name(decon->dt.pd_name);
 	}
 #endif
+
+	if(!of_property_read_u32(dev->of_node, "mif_freq", &decon->dt.mif_freq))
+		decon_info("mif_freq(Khz): %u\n", decon->dt.mif_freq);
+	else {
+		decon->dt.mif_freq = 0;
+		decon_info("mif_freq is not found in dt\n");
+	}
 }
 
 static int decon_init_resources(struct decon_device *decon,

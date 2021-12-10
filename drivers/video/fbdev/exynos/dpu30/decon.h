@@ -812,6 +812,7 @@ struct decon_dt_info {
 	int dsim_cnt;
 	int decon_cnt;
 	int chip_ver;
+	u32 mif_freq;
 };
 
 struct decon_win {

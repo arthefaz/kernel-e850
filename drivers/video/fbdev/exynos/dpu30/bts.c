@@ -575,9 +575,12 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 			return;
 #endif
 
-		if (decon->bts.max_disp_freq <= decon->bts.prev_max_disp_freq)
+		if (decon->bts.max_disp_freq <= decon->bts.prev_max_disp_freq) {
 			pm_qos_update_request(&decon->bts.disp_qos,
 					decon->bts.max_disp_freq);
+			if (decon->bts.total_bw <= 1373145) // if smaller than FHD+ * 2
+				pm_qos_update_request(&decon->bts.mif_qos, 0);
+		}
 
 		decon->bts.prev_total_bw = decon->bts.total_bw;
 		decon->bts.prev_max_disp_freq = decon->bts.max_disp_freq;
@@ -591,9 +594,14 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 			return;
 #endif
 
-		if (decon->bts.max_disp_freq > decon->bts.prev_max_disp_freq)
+		if (decon->bts.max_disp_freq > decon->bts.prev_max_disp_freq) {
 			pm_qos_update_request(&decon->bts.disp_qos,
 					decon->bts.max_disp_freq);
+			if ((decon->lcd_info->mode == DECON_VIDEO_MODE) &&
+				((decon->lcd_info->xres * decon->lcd_info->yres) > (1080 * 1920)) &&
+				(decon->bts.total_bw > 1373145)) // if bigger than FHD+ * 2
+				pm_qos_update_request(&decon->bts.mif_qos, decon->dt.mif_freq);
+		}
 	}
 
 	DPU_DEBUG_BTS("%s -\n", __func__);
@@ -696,6 +704,7 @@ void dpu_bts_release_bw(struct decon_device *decon)
 		decon->bts.prev_total_bw = 0;
 		pm_qos_update_request(&decon->bts.disp_qos, 0);
 		decon->bts.prev_max_disp_freq = 0;
+		pm_qos_update_request(&decon->bts.mif_qos, 0);
 	} else if (decon->dt.out_type == DECON_OUT_DP) {
 #if defined(CONFIG_DECON_BTS_LEGACY) && defined(CONFIG_EXYNOS_DISPLAYPORT)
 		if (pm_qos_request_active(&decon->bts.mif_qos))
