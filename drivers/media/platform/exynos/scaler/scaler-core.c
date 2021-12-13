@@ -2648,6 +2648,7 @@ static int sc_prepare_denoise_filter(struct sc_ctx *ctx)
 		goto err_ft;
 	}
 
+#if IS_ENABLED(CONFIG_VIDEO_EXYNOS_SCALER_PRESCALE)
 	if (ctx->sc_dev->variant->prescale) {
 		BUG_ON(sc_down_min != SCALE_RATIO_CONST(16, 1));
 
@@ -2686,6 +2687,7 @@ static int sc_prepare_denoise_filter(struct sc_ctx *ctx)
 			}
 		}
 	}
+#endif
 
 	return 0;
 
@@ -2741,6 +2743,7 @@ static int sc_find_scaling_ratio(struct sc_ctx *ctx)
 		return -EINVAL;
 	}
 
+#if IS_ENABLED(CONFIG_VIDEO_EXYNOS_SCALER_PRESCALE)
 	if (sc->variant->prescale) {
 		BUG_ON(sc_down_min != SCALE_RATIO_CONST(16, 1));
 
@@ -2786,6 +2789,7 @@ static int sc_find_scaling_ratio(struct sc_ctx *ctx)
 			ctx->d_frame.crop.width, ctx->d_frame.crop.height);
 		}
 	}
+#endif
 
 	if ((h_ratio > sc_down_min) || (v_ratio > sc_down_min)
 			|| (h_ratio < sc_up_max) || (v_ratio < sc_up_max)) {

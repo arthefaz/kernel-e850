@@ -318,6 +318,7 @@ static inline void sc_hwset_src_wh(struct sc_dev *sc, __s32 width, __s32 height,
 	__s32 pre_height = round_down(height >> pre_v_ratio, 1 << cvshift);
 	sc_dbg("width %d, height %d\n", pre_width, pre_height);
 
+#if IS_ENABLED(CONFIG_VIDEO_EXYNOS_SCALER_PRESCALE)
 	if (sc->variant->prescale) {
 		/*
 		 * crops the width and height if the pre-scaling result violates
@@ -331,6 +332,7 @@ static inline void sc_hwset_src_wh(struct sc_dev *sc, __s32 width, __s32 height,
 		__raw_writel(SCALER_VAL_WH(width, height),
 				sc->regs + SCALER_SRC_PRESC_WH);
 	}
+#endif
 
 	__raw_writel(SCALER_VAL_WH(pre_width, pre_height),
 				sc->regs + SCALER_SRC_WH);
