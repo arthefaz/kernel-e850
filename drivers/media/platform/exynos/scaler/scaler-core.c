@@ -4610,6 +4610,7 @@ int sc_ext_device_run(struct sc_ctx *ctx)
 
 static void sc_unregister_m2m_device(struct sc_dev *sc)
 {
+	video_unregister_device(sc->m2m.vfd);
 	v4l2_m2m_release(sc->m2m.m2m_dev);
 	video_device_release(sc->m2m.vfd);
 	v4l2_device_unregister(&sc->m2m.v4l2_dev);
@@ -4743,21 +4744,6 @@ static int sc_clk_get(struct sc_dev *sc)
 	}
 
 	return 0;
-}
-
-static void sc_clk_put(struct sc_dev *sc)
-{
-	if (!IS_ERR(sc->clk_parn))
-		clk_put(sc->clk_parn);
-
-	if (!IS_ERR(sc->clk_chld))
-		clk_put(sc->clk_chld);
-
-	if (!IS_ERR(sc->pclk))
-		clk_put(sc->pclk);
-
-	if (!IS_ERR(sc->aclk))
-		clk_put(sc->aclk);
 }
 
 #ifdef CONFIG_PM_SLEEP
@@ -5384,12 +5370,13 @@ static int sc_remove(struct platform_device *pdev)
 {
 	struct sc_dev *sc = platform_get_drvdata(pdev);
 
-	iommu_unregister_device_fault_handler(&pdev->dev);
-
-	sc_clk_put(sc);
-
 	if (timer_pending(&sc->wdt.timer))
 		del_timer(&sc->wdt.timer);
+
+	destroy_scaler_ext_device(sc->xdev);
+	sc_unregister_m2m_device(sc);
+
+	iommu_unregister_device_fault_handler(&pdev->dev);
 
 	return 0;
 }
