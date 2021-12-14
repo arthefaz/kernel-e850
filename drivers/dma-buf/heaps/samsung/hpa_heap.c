@@ -53,6 +53,10 @@ static struct hpa_dma_heap hpa_heaps[] = {
 		.protection_id = 5,
 	},
 	{
+		.name = "system-secure-vframe-secure",
+		.protection_id = 5,
+	},
+	{
 		.name = "vscaler-secure",
 		.protection_id = 6,
 	},
