@@ -583,7 +583,9 @@ static int mfc_core_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to create workqueue for QoS control\n");
 		goto err_qos_ctrl_wq;
 	}
+#ifdef CONFIG_MFC_USE_BUS_DEVFREQ
 	INIT_WORK(&core->qos_ctrl_work, mfc_core_qos_ctrl_worker);
+#endif
 
 	/* dump information call-back function */
 	core->dump_ops = &mfc_core_dump_ops;

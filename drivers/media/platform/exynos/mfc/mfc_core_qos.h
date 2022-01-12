@@ -36,6 +36,8 @@ void mfc_core_qos_off(struct mfc_core *core, struct mfc_ctx *ctx);
 void mfc_core_qos_update(struct mfc_core *core, int on);
 void mfc_core_qos_ctrl_worker(struct work_struct *work);
 void mfc_core_qos_int_operate(struct mfc_core *core, int enable);
+void mfc_core_qos_set_portion(struct mfc_core *core, struct mfc_ctx *ctx);
+void mfc_core_qos_get_portion(struct mfc_core *core, struct mfc_ctx *ctx);
 #else
 #define mfc_core_perf_boost_enable(core)	do {} while (0)
 #define mfc_core_perf_boost_disable(core)	do {} while (0)
@@ -44,10 +46,10 @@ void mfc_core_qos_int_operate(struct mfc_core *core, int enable);
 #define mfc_core_qos_update(core, on)		do {} while (0)
 #define mfc_core_qos_ctrl_worker(work)		do {} while (0)
 #define mfc_core_qos_int_operate(core, enable)	do {} while (0)
+#define mfc_core_qos_set_portion(core, ctx)	do {} while (0)
+#define mfc_core_qos_get_portion(core, ctx)	do {} while (0)
 #endif
 
-void mfc_core_qos_set_portion(struct mfc_core *core, struct mfc_ctx *ctx);
-void mfc_core_qos_get_portion(struct mfc_core *core, struct mfc_ctx *ctx);
 bool mfc_core_qos_mb_calculate(struct mfc_core *core, struct mfc_core_ctx *core_ctx,
 		unsigned int processing_cycle, unsigned int frame_type);
 void mfc_core_qos_idle_worker(struct work_struct *work);

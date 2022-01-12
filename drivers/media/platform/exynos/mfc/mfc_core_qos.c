@@ -1202,6 +1202,12 @@ void __mfc_core_qos_off_all(struct mfc_core *core)
 	__mfc_qos_operate(core, MFC_QOS_REMOVE, MFC_QOS_TABLE_TYPE_DEFAULT, 0);
 	mutex_unlock(&core->qos_mutex);
 }
+#else
+bool mfc_core_qos_mb_calculate(struct mfc_core *core, struct mfc_core_ctx *core_ctx,
+		unsigned int processing_cycle, unsigned int frame_type)
+{
+	return false;
+}
 #endif
 
 void mfc_core_qos_idle_worker(struct work_struct *work)

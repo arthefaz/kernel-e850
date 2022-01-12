@@ -24,6 +24,7 @@
 #include "mfc_core_nal_q.h"
 #include "mfc_core_otf.h"
 #include "mfc_core_qos.h"
+#include "mfc_core_ops.h"
 
 #include "mfc_perf_measure.h"
 #include "base/mfc_meminfo.h"
@@ -1303,11 +1304,8 @@ struct imgloader_ops mfc_imgloader_ops = {
 #if IS_ENABLED(CONFIG_EXYNOS_S2MPU)
 int mfc_release_verify_fw(struct mfc_core *core)
 {
-	struct imgloader_desc *desc;
-
 	/* release the permission for fw region */
-	desc = &core->mfc_imgloader_desc;
-	exynos_release_subsystem_fw_stage2_ap(core->name, desc->fw_id);
+	exynos_s2mpu_release_fw_stage2_ap(core->name, 0);
 
 	mfc_core_debug(2, "[F/W] release verify fw\n");
 
