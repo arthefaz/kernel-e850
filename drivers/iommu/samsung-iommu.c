@@ -807,7 +807,7 @@ static struct iommu_device *samsung_sysmmu_probe_device(struct device *dev)
 
 	client = (struct sysmmu_clientdata *) dev_iommu_priv_get(dev);
 	client->dev_link = kcalloc(client->sysmmu_count,
-				   sizeof(**client->dev_link), GFP_KERNEL);
+				   sizeof(*client->dev_link), GFP_KERNEL);
 	if (!client->dev_link)
 		return ERR_PTR(-ENOMEM);
 
@@ -949,7 +949,7 @@ static int samsung_sysmmu_of_xlate(struct device *dev,
 
 	client = (struct sysmmu_clientdata *) dev_iommu_priv_get(dev);
 	new_link = krealloc(client->sysmmus,
-			    sizeof(*data) * (client->sysmmu_count + 1),
+			    sizeof(data) * (client->sysmmu_count + 1),
 			    GFP_KERNEL);
 	if (!new_link)
 		return -ENOMEM;
