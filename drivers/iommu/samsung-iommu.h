@@ -39,7 +39,6 @@ struct sysmmu_drvdata {
 	int num_tlb;
 	int qos;
 	int attached_count;
-	int rpm_count;
 	int secure_irq;
 	unsigned int secure_base;
 	const unsigned int *reg_set;
@@ -47,6 +46,7 @@ struct sysmmu_drvdata {
 	bool no_block_mode;
 	bool has_vcr;
 	bool no_s2pf;		/* Disable stage 2 prefetch */
+	bool rpm_resume;	/* true if .runtime_resume() is called */
 };
 
 struct sysmmu_clientdata {
