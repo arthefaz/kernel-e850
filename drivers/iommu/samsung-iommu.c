@@ -1389,6 +1389,10 @@ static int samsung_sysmmu_device_probe(struct platform_device *pdev)
 		return PTR_ERR(data->clk);
 	}
 
+	// XXX: HACK: keep the gate clock enabled to fix registers access freeze
+	// TODO: Implement proper clock handling later
+	clk_prepare_enable(data->clk);
+
 	ret = sysmmu_get_hw_info(data);
 	if (ret) {
 		dev_err(dev, "failed to get h/w info\n");
