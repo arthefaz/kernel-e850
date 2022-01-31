@@ -484,13 +484,11 @@ static void samsung_sysmmu_detach_dev(struct iommu_domain *dom,
 {
 	struct sysmmu_clientdata *client;
 	struct samsung_sysmmu_domain *domain;
-	struct list_head *group_list;
 	struct sysmmu_drvdata *drvdata;
 	struct iommu_group *group = dev->iommu_group;
 	unsigned int i;
 
 	domain = to_sysmmu_domain(dom);
-	group_list = iommu_group_get_iommudata(group);
 
 	client = dev_iommu_priv_get(dev);
 	for (i = 0; i < client->sysmmu_count; i++) {
