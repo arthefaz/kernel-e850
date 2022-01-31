@@ -44,6 +44,7 @@
 
 #define SYSMMU_FAULTS_NUM         (SYSMMU_FAULT_UNKNOWN + 1)
 
+// TODO: Check if this config is needed in our case and should it be upstreamed
 #if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 #define SMC_DRM_SEC_SMMU_INFO		(0x820020D0)
 #define SMC_DRM_SEC_SYSMMU_INT_CLEAR	(0x820020D7)
