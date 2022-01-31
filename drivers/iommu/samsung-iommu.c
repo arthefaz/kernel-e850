@@ -942,7 +942,6 @@ static int samsung_sysmmu_of_xlate(struct device *dev,
 	struct sysmmu_drvdata *data = platform_get_drvdata(sysmmu);
 	struct sysmmu_drvdata **new_link;
 	struct sysmmu_clientdata *client;
-	struct iommu_fwspec *fwspec;
 	unsigned int fwid = 0;
 	int ret;
 
@@ -953,7 +952,6 @@ static int samsung_sysmmu_of_xlate(struct device *dev,
 		return ret;
 	}
 
-	fwspec = dev_iommu_fwspec_get(dev);
 	if (!dev_iommu_priv_get(dev)) {
 		client = devres_alloc(samsung_sysmmu_clientdata_release,
 				      sizeof(*client), GFP_KERNEL);
