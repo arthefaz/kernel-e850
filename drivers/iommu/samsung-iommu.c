@@ -1478,7 +1478,10 @@ static int __maybe_unused samsung_sysmmu_suspend(struct device *dev)
 	if (pm_runtime_status_suspended(dev))
 		return 0;
 
+	// TODO: Don't use .must_resume directly!
+#ifdef CONFIG_PM_SLEEP
 	dev->power.must_resume = true;
+#endif
 	return samsung_sysmmu_runtime_suspend(dev);
 }
 
