@@ -12,7 +12,7 @@
 #include "scaler.h"
 
 #define CREATE_TRACE_POINTS
-#include <trace/events/systrace.h>
+#include "mscl_trace.h"
 
 static void show_crop(struct v4l2_rect *rect)
 {
@@ -61,31 +61,17 @@ void sc_ctx_dump(struct sc_ctx *ctx)
 	}
 }
 
-#define SC_TRACE_BUF_SIZE	(40)
 void sc_tracing_mark_write(struct sc_ctx *ctx, char trace_id, const char *str,
 			   int en)
 {
-	char buf[SC_TRACE_BUF_SIZE] = {0,};
-
 	if (!ctx->pid)
 		return;
 
-	switch (trace_id) {
-	case 'B': /* B : Begin */
-		snprintf(buf, SC_TRACE_BUF_SIZE, "B|%d|%s", ctx->pid, str);
-		break;
-	case 'E': /* E : End */
-		strcpy(buf, "E");
-		break;
-	case 'C': /* C : Category */
-		snprintf(buf, SC_TRACE_BUF_SIZE,
-			 "C|%d|%s|%d", ctx->pid, str, en);
-		break;
-	default:
+	if (trace_id != 'B' && trace_id != 'E' && trace_id != 'C') {
 		dev_err(ctx->sc_dev->dev,
 			"%c is invalid arg for systrace\n", trace_id);
 		return;
 	}
 
-	trace_tracing_mark_write(buf);
+	trace_tracing_mark_write(trace_id, ctx->pid, str, en);
 }
