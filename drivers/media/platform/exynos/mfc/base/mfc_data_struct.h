@@ -2367,12 +2367,12 @@ struct mfc_ctx {
 	int mb_width;
 	int mb_height;
 	int dpb_count;
-	unsigned int buf_stride;
 	int rgb_bpp;
 
 	int min_dpb_size[3];
 	int min_dpb_size_2bits[3];
 
+	int bytesperline[3];
 	struct mfc_raw_info raw_buf;
 
 	enum mfc_queue_state capture_state;
