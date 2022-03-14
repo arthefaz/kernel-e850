@@ -124,5 +124,6 @@ struct exynos_panel_info {
 	unsigned int bpc;
 	unsigned int eotp_disabled;
 	unsigned int continuous_underrun_max;
+	unsigned int wait_lp11;
 };
 #endif /* __EXYNOS_PANEL_H__ */

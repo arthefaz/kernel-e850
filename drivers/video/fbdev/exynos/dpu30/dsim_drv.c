@@ -430,6 +430,24 @@ err_exit:
 
 }
 
+static bool __wait_send_cmds(struct dsim_device *dsim)
+{
+	bool empty;
+
+	empty = dsim_is_fifo_empty_status(dsim);
+
+	if (!empty)
+		return false;
+
+	if (dsim->wait_lp11) {
+		if (dsim_reg_get_datalane_status(dsim->id) !=
+				DSIM_DATALANE_STATUS_STOPDATA)
+			return true;
+	}
+
+	return false;
+}
+
 int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1, bool wait_empty)
 {
 	int ret = 0;
@@ -524,7 +542,7 @@ int dsim_write_data(struct dsim_device *dsim, u32 id, unsigned long d0, u32 d1, 
 
 	if (wait_empty) {
 		do {
-			if (dsim_is_fifo_empty_status(dsim))
+			if (!__wait_send_cmds(dsim))
 				break;
 			udelay(10);
 		} while (cnt--);
@@ -700,6 +718,16 @@ exit:
 	decon_hiber_unblock(decon);
 	dsim_dbg("%s -\n", __func__);
 	return;
+}
+
+int dsim_set_wait_lp11_after_cmds(struct dsim_device *dsim, bool en)
+{
+	if (!dsim)
+		return -EINVAL;
+
+	dsim_info("DSIM wait LP11 after sending cmds(%d)\n", en);
+	dsim->wait_lp11 = en;
+	return 0;
 }
 
 #if defined(CONFIG_EXYNOS_BTS)
