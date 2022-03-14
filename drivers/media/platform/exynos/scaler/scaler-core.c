@@ -4891,54 +4891,6 @@ static void sc_put_device_wrapper(void *arg)
 	put_device((struct device *)arg);
 }
 
-struct sc_data_for_iommu_unmap {
-	struct iommu_domain	*domain;
-	dma_addr_t		iova;
-	size_t			size;
-};
-
-static void sc_iommu_unmap_wrapper(void *arg)
-{
-	struct sc_data_for_iommu_unmap *data = arg;
-
-	iommu_unmap(data->domain, data->iova, data->size);
-
-	kfree(data);
-}
-
-static int sc_devm_iommu_direct_map(struct device *dev, u32 pa, size_t size)
-{
-	struct iommu_domain	*domain;
-	struct sc_data_for_iommu_unmap *data;
-	int ret;
-
-	domain = iommu_get_domain_for_dev(dev);
-
-	ret = iommu_map(domain, pa, pa, size, 0);
-	if (ret)
-		return ret;
-
-	data = kzalloc(sizeof(*data), GFP_KERNEL);
-	if (!data) {
-		iommu_unmap(domain, pa, size);
-		return -ENOMEM;
-	}
-
-	data->domain = domain;
-	data->iova = pa;
-	data->size = size;
-
-	ret = devm_add_action_or_reset(dev, sc_iommu_unmap_wrapper, data);
-	if (ret)
-		return ret;
-
-	ret = iommu_dma_reserve_iova(dev, pa, size);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
 #define SC_VOTF_NOT_SUPPORTED	1
 static int sc_get_mscl_votf_of_dt(struct sc_dev *sc)
 {
@@ -4948,7 +4900,6 @@ static int sc_get_mscl_votf_of_dt(struct sc_dev *sc)
 	u32 cells;
 	phys_addr_t votf_base;
 	size_t votf_size;
-	int ret;
 
 	votf_reg = of_get_property(sc->dev->of_node, "mscl_votf_reg", &bytes);
 	if (!votf_reg)
@@ -4984,11 +4935,6 @@ static int sc_get_mscl_votf_of_dt(struct sc_dev *sc)
 	if (!sc->votf_regs)
 		return -ENOMEM;
 
-	ret = sc_devm_iommu_direct_map(sc->dev, votf_base, votf_size);
-	if (ret) {
-		dev_err(sc->dev, "fail to map mscl_vOTF SFR(%d)\n", ret);
-		return ret;
-	}
 	sc->votf_base_pa = votf_base;
 
 	return 0;
@@ -5057,11 +5003,6 @@ static int sc_get_sink_votf_of_dt(struct sc_dev *sc)
 			return -ENOMEM;
 		}
 
-		ret = sc_devm_iommu_direct_map(sc->dev, pa.args[2], pa.args[3]);
-		if (ret) {
-			dev_err(sc->dev, "fail to map vOTF_target(%d)\n", ret);
-			return ret;
-		}
 		votf_target->votf_base_pa = pa.args[2];
 	}
 
