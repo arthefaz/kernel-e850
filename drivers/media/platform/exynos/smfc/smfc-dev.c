@@ -1111,7 +1111,7 @@ static int smfc_resume(struct device *dev)
 
 static int smfc_runtime_resume(struct device *dev)
 {
-	struct smfc_dev *smfc = dev_get_drvdata(dev);
+	__maybe_unused struct smfc_dev *smfc = dev_get_drvdata(dev);
 
 	smfc_pm_qos_update_request(smfc);
 
@@ -1120,7 +1120,7 @@ static int smfc_runtime_resume(struct device *dev)
 
 static int smfc_runtime_suspend(struct device *dev)
 {
-	struct smfc_dev *smfc = dev_get_drvdata(dev);
+	__maybe_unused struct smfc_dev *smfc = dev_get_drvdata(dev);
 
 	smfc_pm_qos_remove_request(smfc);
 
