@@ -174,7 +174,6 @@ struct exynos_cpupm {
 static struct exynos_cpupm __percpu *cpupm;
 static int cpuidle_state_max;
 
-static unsigned int cpu_state_spare_addr;
 static struct delayed_work deferred_work;
 
 static void do_nothing(void *unused) { }
@@ -1732,28 +1731,16 @@ static int extern_idle_ip_init(struct device_node *dn)
 }
 
 /*
- * The power off sequence is executed after CPU_STATE_SPARE is filled.
- * Before writing to value to CPU_STATE_SPARE, interrupt is asserted to
+ * The power off sequence is executed after CPUPM_ENABLE.
+ * Before SMC is done, interrupt is asserted to
  * all CPUs to cancel power off sequence in progress. Because there may
  * be a CPU that tries to power off without setting PMUCAL handled in
  * CPU_PM_ENTER event.
  */
-static int notify_cpupm_init_to_el3(struct platform_device *pdev)
+static void notify_cpupm_init_to_el3(struct platform_device *pdev)
 {
-	struct device_node *dn = pdev->dev.of_node;
-	int ret = 0;
-	static void __iomem *target_addr;
-
-	ret = of_property_read_u32(dn, "cpu-state-spare-addr", &cpu_state_spare_addr);
-	if (ret)
-		return ret;
-
-	target_addr = ioremap(cpu_state_spare_addr, SZ_8);
-	writel_relaxed(0xBABECAFE, target_addr);
-
-	iounmap(target_addr);
-
-	return ret;
+	/* 0 : Disable 1 : Enable for the second argument*/
+	exynos_smc(SMC_CMD_CPUPM_ENABLE, 1, 0, 0);
 }
 
 static int exynos_cpupm_probe(struct platform_device *pdev)
