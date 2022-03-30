@@ -585,7 +585,10 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 				dpu_hw_recovery_process(decon);
 			} else {
 				dsim_reset_panel(dsim);
-				dsim_reg_recovery_process(dsim);
+				if (ktime_to_ms(decon->vsync.timestamp) != 0)
+					dsim_reg_recovery_process(dsim);
+				else
+					pr_warn("skip recovery, timestamp is 0\n");
 			}
 		} else
 			dsim_err("datalane status is %d\n", dsim_reg_get_datalane_status(dsim->id));
