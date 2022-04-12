@@ -116,12 +116,14 @@ static ssize_t sysfs_show_macaddr(struct kobject *kobj, struct kobj_attribute *a
 				  char *buf);
 static ssize_t sysfs_store_macaddr(struct kobject *kobj, struct kobj_attribute *attr,
 				   const char *buf, size_t count);
+static ssize_t sysfs_show_version_info(struct kobject *kobj, struct kobj_attribute *attr,
+				       char *buf);
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 12
 /* dump_in_progress stored in sysfs global */
 static ssize_t sysfs_show_debugdump(struct kobject *kobj, struct kobj_attribute *attr,
-				  char *buf);
+				    char *buf);
 static ssize_t sysfs_store_debugdump(struct kobject *kobj, struct kobj_attribute *attr,
-				   const char *buf, size_t count);
+				     const char *buf, size_t count);
 #endif
 
 static ssize_t sysfs_show_pm(struct kobject *kobj, struct kobj_attribute *attr, char *buf);
@@ -137,6 +139,7 @@ static u16 sysfs_antenna;
 static struct kobj_attribute mac_attr = __ATTR(mac_addr, 0660, sysfs_show_macaddr, sysfs_store_macaddr);
 static struct kobj_attribute pm_attr = __ATTR(pm, 0660, sysfs_show_pm, sysfs_store_pm);
 static struct kobj_attribute ant_attr = __ATTR(ant, 0660, sysfs_show_ant, sysfs_store_ant);
+static struct kobj_attribute ver_attr = __ATTR(wifiver, 0660, sysfs_show_version_info, NULL);
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 12
 static int dump_in_progress = 0;
 static struct kobj_attribute dump_attr = __ATTR(dump_in_progress, 0660, sysfs_show_debugdump, sysfs_store_debugdump);
@@ -196,6 +199,70 @@ void slsi_destroy_sysfs_macaddr(void)
 
 	/* Destroy /sys/wifi/mac_addr file */
 	sysfs_remove_file(wifi_kobj_ref, &mac_attr.attr);
+
+	/* Destroy /sys/wifi virtual dir */
+	mxman_wifi_kobject_ref_put();
+}
+
+/* Retrieve version information in sysfs global */
+static ssize_t sysfs_show_version_info(struct kobject *kobj,
+				       struct kobj_attribute *attr,
+				       char *buf)
+{
+	struct slsi_dev *sdev = slsi_get_sdev();
+	char build_id_fw[128] = {0};
+	char build_id_drv[64] = {0};
+	int buf_size = 256;
+
+#ifndef SLSI_TEST_DEV
+	mxman_get_fw_version(build_id_fw, 128);
+	mxman_get_driver_version(build_id_drv, 64);
+#endif
+
+	return snprintf(buf, buf_size,
+			"%s\n"	/* drv_ver: already appended by mxman_get_driver_version() */
+			"f/w_ver: %s\n"
+			"hcf_ver_hw: %s\n"
+			"hcf_ver_sw: %s\n"
+			"regDom_ver: %d.%d\n",
+			build_id_drv,
+			build_id_fw,
+			sdev->mib[0].platform,
+			sdev->mib[1].platform,
+			((sdev->reg_dom_version >> 8) & 0xFF), (sdev->reg_dom_version & 0xFF));
+}
+
+/* Register sysfs version information */
+void slsi_create_sysfs_version_info(void)
+{
+#ifndef SLSI_TEST_DEV
+	int r;
+
+	wifi_kobj_ref = mxman_wifi_kobject_ref_get();
+	pr_info("wifi_kobj_ref: 0x%p\n", wifi_kobj_ref);
+
+	if (wifi_kobj_ref) {
+		/* Create sysfs file /sys/wifi/wifiver */
+		r = sysfs_create_file(wifi_kobj_ref, &ver_attr.attr);
+		if (r) {
+			/* Failed, so clean up dir */
+			pr_err("Can't create /sys/wifi/wifiver\n");
+			return;
+		}
+	} else {
+		pr_err("failed to create /sys/wifi/wifiver\n");
+	}
+#endif
+}
+
+/* Unregister sysfs version information */
+void slsi_destroy_sysfs_version_info(void)
+{
+	if (!wifi_kobj_ref)
+		return;
+
+	/* Destroy /sys/wifi/wifiver file */
+	sysfs_remove_file(wifi_kobj_ref, &ver_attr.attr);
 
 	/* Destroy /sys/wifi virtual dir */
 	mxman_wifi_kobject_ref_put();

@@ -662,6 +662,9 @@ int slsi_configure_tx_power_sar_scenario(struct net_device *dev, int mode);
 /* Sysfs based mac address override */
 void slsi_create_sysfs_macaddr(void);
 void slsi_destroy_sysfs_macaddr(void);
+/* Sysfs based version information */
+void slsi_create_sysfs_version_info(void);
+void slsi_destroy_sysfs_version_info(void);
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 12
 void slsi_create_sysfs_debug_dump(void);
 void slsi_destroy_sysfs_debug_dump(void);

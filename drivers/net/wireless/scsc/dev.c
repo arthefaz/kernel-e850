@@ -671,6 +671,7 @@ int __init slsi_dev_load(void)
 /* Always create devnode if TW Android P on */
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 9
 	slsi_create_sysfs_macaddr();
+	slsi_create_sysfs_version_info();
 #endif
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 12
 	slsi_create_sysfs_debug_dump();
@@ -688,6 +689,7 @@ void __exit slsi_dev_unload(void)
 
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 9
 	slsi_destroy_sysfs_macaddr();
+	slsi_destroy_sysfs_version_info();
 #endif
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 12
 	scsc_wlan_mmap_destroy();
