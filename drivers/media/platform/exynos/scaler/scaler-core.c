@@ -1564,13 +1564,15 @@ static int sc_v4l2_s_fmt_mplane(struct file *file, void *fh,
 		return -EBUSY;
 	}
 
-	for (i = 0; i < SC_MAX_PLANES; i++) {
-		if (pixm->plane_fmt[i].bytesperline != 0)
-			stride[i] = pixm->plane_fmt[i].bytesperline;
-		else
-			break;
+	if (!sc_fmt_is_sbwc(pixm->pixelformat)) {
+		for (i = 0; i < SC_MAX_PLANES; i++) {
+			if (pixm->plane_fmt[i].bytesperline != 0)
+				stride[i] = pixm->plane_fmt[i].bytesperline;
+			else
+				break;
 
-		is_need_calc_stride = false;
+			is_need_calc_stride = false;
+		}
 	}
 
 	ret = sc_v4l2_try_fmt_mplane(file, fh, f);
