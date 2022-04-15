@@ -3652,7 +3652,10 @@ void dwc3_stop_active_transfer(struct dwc3_ep *dep, bool force,
 	cmd |= DWC3_DEPCMD_PARAM(dep->resource_index);
 	memset(&params, 0, sizeof(params));
 	ret = dwc3_send_gadget_ep_cmd(dep, cmd, &params);
-	WARN_ON_ONCE(ret);
+	if (ret) {
+		pr_info("%s ret: %d\n", __func__, ret);
+		dump_stack();
+	}
 	dep->resource_index = 0;
 
 	if (!interrupt)
