@@ -3246,6 +3246,11 @@ int slsi_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 			      "offchannel = %d, mgmt->frame_control = %d, vif_type = %d\n", ndev_vif->ifnum, chan->hw_value,
 			      wait, dont_wait_for_ack, offchan, mgmt->frame_control, ndev_vif->vif_type);
 	} else {
+		if (!ndev_vif->activated) {
+			SLSI_NET_ERR(dev, "Drop Auth Frame: VIF not activated\n");
+			r = -EINVAL;
+			goto exit;
+		}
 		SLSI_INFO(sdev, "Send Auth Frame\n");
 	}
 
