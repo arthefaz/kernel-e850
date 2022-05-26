@@ -844,7 +844,8 @@ static void sc_pm_qos_update_devfreq(struct sc_qos_request *qos_req,
 
 	if (pm_qos_class == PM_QOS_BUS_THROUGHPUT)
 		req = &qos_req->mif_req;
-	else if (pm_qos_class == PM_QOS_DEVICE_THROUGHPUT)
+	else if (pm_qos_class == PM_QOS_DEVICE_THROUGHPUT ||
+		 pm_qos_class == PM_QOS_M2M_THROUGHPUT)
 		req = &qos_req->int_req;
 	else
 		return;
@@ -862,7 +863,8 @@ static void sc_pm_qos_remove_devfreq(struct sc_qos_request *qos_req,
 
 	if (pm_qos_class == PM_QOS_BUS_THROUGHPUT)
 		req = &qos_req->mif_req;
-	else if (pm_qos_class == PM_QOS_DEVICE_THROUGHPUT)
+	else if (pm_qos_class == PM_QOS_DEVICE_THROUGHPUT ||
+		 pm_qos_class == PM_QOS_M2M_THROUGHPUT)
 		req = &qos_req->int_req;
 	else
 		return;
@@ -887,7 +889,7 @@ void sc_remove_devfreq(struct sc_ctx *ctx)
 	}
 
 	sc_pm_qos_remove_devfreq(qos_req, PM_QOS_BUS_THROUGHPUT);
-	sc_pm_qos_remove_devfreq(qos_req, PM_QOS_DEVICE_THROUGHPUT);
+	sc_pm_qos_remove_devfreq(qos_req, ctx->sc_dev->dvfs_class);
 }
 
 #define BIT_SZ_OF_HEADER_UNIT	(4)
@@ -1070,7 +1072,7 @@ void sc_request_devfreq(struct sc_ctx *ctx, int lv)
 	}
 	if (lv != ctx->pm_qos_lv) {
 		ctx->pm_qos_lv = lv;
-		sc_pm_qos_update_devfreq(qos_req, PM_QOS_DEVICE_THROUGHPUT,
+		sc_pm_qos_update_devfreq(qos_req, sc->dvfs_class,
 					 qos_table[lv].freq_int);
 	}
 }
@@ -4942,6 +4944,12 @@ static int sc_get_pm_qos_from_dt(struct sc_dev *sc)
 		dev_err(dev, "mscl_bw_ref is not found\n");
 		return -ENOENT;
 	}
+
+	if (of_property_read_u32(dev->of_node, "mscl_dvfs_class", &sc->dvfs_class)) {
+		dev_info(dev, "mscl_dvfs_class is not found, so use INT as default\n");
+		sc->dvfs_class = PM_QOS_DEVICE_THROUGHPUT;
+	}
+	dev_info(dev, "sc->dvfs_class is %d\n", sc->dvfs_class);
 
 	return 0;
 }

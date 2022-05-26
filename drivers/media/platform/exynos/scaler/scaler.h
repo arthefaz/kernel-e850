@@ -540,6 +540,8 @@ struct sc_dev {
 	int				mif_ref;
 	int				bw_ref;
 	int				bts_id;
+	int				dvfs_class;
+
 	u64				fence_context;
 	atomic_t			fence_timeline;
 	spinlock_t			fence_lock;
