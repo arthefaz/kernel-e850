@@ -496,7 +496,7 @@ config SAMSUNG_IOMMU_GROUP
 config SAMSUNG_IOMMU_TEST
 	tristate "Samsung IOMMU test driver"
 	default m
-	depends on SAMSUNG_IOMMU
+	depends on SAMSUNG_IOMMU && DMABUF_HEAPS_SYSTEM
 	help
 	  Driver for testing the Samsung IOMMU driver via DebugFS. User reads
 	  /sys/kernel/debug/iommu_test/test file to start the testing procedure,

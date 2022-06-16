@@ -2,7 +2,7 @@
 
 #include <linux/debugfs.h>
 #include <linux/dma-buf.h>
-#include <linux/ion.h>
+#include <linux/dma-heap.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
@@ -47,6 +47,7 @@ struct iommu_test {
 	struct dentry *dir;			/* DebugFS dir */
 
 	/* Objects needed for allocation and mapping the memory */
+	struct dma_heap *dma_heap;
 	struct dma_buf *dma_buf;
 	struct dma_buf_attachment *dma_att;
 	struct sg_table *sg_table;
@@ -143,10 +144,17 @@ static int iommu_test_create_mapping(struct iommu_test *obj)
 	const size_t size = PAGE_ALIGN(MAPPING_SIZE);
 	int ret;
 
-	obj->dma_buf = ion_alloc(size, ION_HEAP_SYSTEM, 0);
+	obj->dma_heap = dma_heap_find("system");
+	if (!obj->dma_heap) {
+		dev_warn(obj->dev, "can't find system heap, deferring probe\n");
+		return -EPROBE_DEFER;
+	}
+
+	obj->dma_buf = dma_heap_buffer_alloc(obj->dma_heap, size, O_RDWR, 0);
 	if (IS_ERR(obj->dma_buf)) {
-		dev_err(obj->dev, "ion_alloc() failed\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		dev_err(obj->dev, "dma_heap_buffer_alloc() failed\n");
+		goto err_buf_alloc;
 	}
 
 	obj->dma_att = dma_buf_attach(obj->dma_buf, obj->dev);
@@ -185,6 +193,8 @@ err_buf_map:
 	dma_buf_detach(obj->dma_buf, obj->dma_att);
 err_buf_attach:
 	dma_buf_put(obj->dma_buf);
+err_buf_alloc:
+	dma_heap_put(obj->dma_heap);
 	return ret;
 }
 
@@ -193,6 +203,7 @@ static void iommu_test_free_mapping(struct iommu_test *obj)
 	dma_buf_unmap_attachment(obj->dma_att, obj->sg_table, DMA_TO_DEVICE);
 	dma_buf_detach(obj->dma_buf, obj->dma_att);
 	dma_buf_put(obj->dma_buf);
+	dma_heap_put(obj->dma_heap);
 }
 
 /* ---- DebugFS ------------------------------------------------------------- */
@@ -232,6 +243,16 @@ static int iommu_test_probe(struct platform_device *pdev)
 	struct iommu_test *drv;
 	struct dentry *file;
 	int ret;
+
+	/*
+	 * Don't try to init this module before system heap is ready (fail
+	 * fast). That prevents unnecessary SysMMU init/deinit sequence and
+	 * simplifies tracing of SysMMU driver IO operations if needed.
+	 */
+	if (!dma_heap_find("system")) {
+		dev_warn(&pdev->dev, "can't find system heap, deferring\n");
+		return -EPROBE_DEFER;
+	}
 
 	drv = kzalloc(sizeof(*drv), GFP_KERNEL);
 	if (ZERO_OR_NULL_PTR(drv))
@@ -318,3 +339,4 @@ MODULE_AUTHOR("Sam Protsenko <semen.protsenko@linaro.org>");
 MODULE_DESCRIPTION("Samsung IOMMU test driver");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:samsung-iommu-test");
+MODULE_IMPORT_NS(DMA_BUF);
