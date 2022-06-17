@@ -250,6 +250,7 @@
 #define IS_BLACKBAR_OFF(ctx)	((ctx)->crop_height > 2160)
 #define IS_SUPER64_BFRAME(ctx, size, type)	((ctx->is_10bit) && (size >= 2) && (type == 3))
 
+#define IS_SINGLE_FD(ctx, fmt)	((!(ctx)->rgb_bpp) && ((fmt)->mem_planes == 1))
 #define IS_SBWC_8B(fmt)		((((fmt)->fourcc) == V4L2_PIX_FMT_NV12M_SBWC_8B) ||	\
 				(((fmt)->fourcc) == V4L2_PIX_FMT_NV21M_SBWC_8B) || \
 				(((fmt)->fourcc) == V4L2_PIX_FMT_NV12N_SBWC_8B))

@@ -564,7 +564,7 @@ static int mfc_enc_s_fmt_vid_out_mplane(struct file *file, void *priv,
 	struct mfc_fmt *prev_src_fmt = NULL;
 	struct mfc_fmt *fmt = NULL;
 	unsigned int fps;
-	int i;
+	int i, shift;
 
 	mfc_debug_enter();
 
@@ -594,6 +594,7 @@ static int mfc_enc_s_fmt_vid_out_mplane(struct file *file, void *priv,
 	}
 
 	ctx->raw_buf.num_planes = ctx->src_fmt->num_planes;
+	shift = ctx->src_fmt->num_planes - 2;
 	ctx->img_width = pix_fmt_mp->width;
 	ctx->img_height = pix_fmt_mp->height;
 	for (i = 0; i < ctx->src_fmt->mem_planes; i++)
@@ -621,6 +622,11 @@ static int mfc_enc_s_fmt_vid_out_mplane(struct file *file, void *priv,
 		else
 			mfc_ctx_info("[DRC] Enc Dynamic Resolution Changed\n");
 	}
+
+	/* When single fd format, use luma stride for chroma stride */
+	if (IS_SINGLE_FD(ctx, ctx->src_fmt))
+		for (i = 1; i < ctx->src_fmt->num_planes; i++)
+			ctx->bytesperline[i] = ctx->bytesperline[0] >> shift;
 
 	mfc_ctx_info("[FRAME] enc src pixelformat : %s\n", ctx->src_fmt->name);
 	mfc_ctx_info("[FRAME] resolution w: %d, h: %d, Y stride: %d, C stride: %d (mb: %lld)\n",
