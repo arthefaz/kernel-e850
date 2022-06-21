@@ -837,44 +837,23 @@ static const struct sc_variant sc_variant[] = {
 };
 
 #if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
-static void sc_pm_qos_update_devfreq(struct sc_qos_request *qos_req,
+static void sc_pm_qos_update_devfreq(struct exynos_pm_qos_request *qos_req,
 				int pm_qos_class, u32 freq)
 {
-	struct exynos_pm_qos_request *req;
+	if (!exynos_pm_qos_request_active(qos_req))
+		exynos_pm_qos_add_request(qos_req, pm_qos_class, 0);
 
-	if (pm_qos_class == PM_QOS_BUS_THROUGHPUT)
-		req = &qos_req->mif_req;
-	else if (pm_qos_class == PM_QOS_DEVICE_THROUGHPUT ||
-		 pm_qos_class == PM_QOS_M2M_THROUGHPUT)
-		req = &qos_req->int_req;
-	else
-		return;
-
-	if (!exynos_pm_qos_request_active(req))
-		exynos_pm_qos_add_request(req, pm_qos_class, 0);
-
-	exynos_pm_qos_update_request(req, freq);
+	exynos_pm_qos_update_request(qos_req, freq);
 }
 
-static void sc_pm_qos_remove_devfreq(struct sc_qos_request *qos_req,
-				int pm_qos_class)
+static void sc_pm_qos_remove_devfreq(struct exynos_pm_qos_request *qos_req)
 {
-	struct exynos_pm_qos_request *req;
-
-	if (pm_qos_class == PM_QOS_BUS_THROUGHPUT)
-		req = &qos_req->mif_req;
-	else if (pm_qos_class == PM_QOS_DEVICE_THROUGHPUT ||
-		 pm_qos_class == PM_QOS_M2M_THROUGHPUT)
-		req = &qos_req->int_req;
-	else
-		return;
-
-	if (exynos_pm_qos_request_active(req))
-		exynos_pm_qos_remove_request(req);
+	if (exynos_pm_qos_request_active(qos_req))
+		exynos_pm_qos_remove_request(qos_req);
 }
 #else
 #define sc_pm_qos_update_devfreq(qos_req, pm_qos_class, freq) do { } while (0)
-#define sc_pm_qos_remove_devfreq(qos_req, pm_qos_class) do { } while (0)
+#define sc_pm_qos_remove_devfreq(qos_req) do { } while (0)
 #endif
 
 void sc_remove_devfreq(struct sc_ctx *ctx)
@@ -888,8 +867,10 @@ void sc_remove_devfreq(struct sc_ctx *ctx)
 		bts_update_bw(bts_id, bw);
 	}
 
-	sc_pm_qos_remove_devfreq(qos_req, PM_QOS_BUS_THROUGHPUT);
-	sc_pm_qos_remove_devfreq(qos_req, ctx->sc_dev->dvfs_class);
+	sc_pm_qos_remove_devfreq(&qos_req->mif_req);
+	if (ctx->sc_dev->min_bus_int != 0)
+		sc_pm_qos_remove_devfreq(&qos_req->bus_int_req);
+	sc_pm_qos_remove_devfreq(&qos_req->dev_req);
 }
 
 #define BIT_SZ_OF_HEADER_UNIT	(4)
@@ -1067,12 +1048,16 @@ void sc_request_devfreq(struct sc_ctx *ctx, int lv)
 			bts_update_bw(bts_id, bw);
 
 		ctx->mif_freq_req = req_mif;
-		sc_pm_qos_update_devfreq(qos_req, PM_QOS_BUS_THROUGHPUT,
+		sc_pm_qos_update_devfreq(&qos_req->mif_req, PM_QOS_BUS_THROUGHPUT,
 					 req_mif);
+		if (sc->min_bus_int != 0)
+			sc_pm_qos_update_devfreq(&qos_req->bus_int_req,
+						 PM_QOS_DEVICE_THROUGHPUT,
+						 sc->min_bus_int);
 	}
 	if (lv != ctx->pm_qos_lv) {
 		ctx->pm_qos_lv = lv;
-		sc_pm_qos_update_devfreq(qos_req, sc->dvfs_class,
+		sc_pm_qos_update_devfreq(&qos_req->dev_req, sc->dvfs_class,
 					 qos_table[lv].freq_int);
 	}
 }
@@ -4950,6 +4935,10 @@ static int sc_get_pm_qos_from_dt(struct sc_dev *sc)
 		sc->dvfs_class = PM_QOS_DEVICE_THROUGHPUT;
 	}
 	dev_info(dev, "sc->dvfs_class is %d\n", sc->dvfs_class);
+
+	if (!of_property_read_u32(dev->of_node, "mscl_min_bus_int", &sc->min_bus_int)) {
+		dev_info(dev, "mscl_min_bus_int is set as %d\n", sc->min_bus_int);
+	}
 
 	return 0;
 }

@@ -541,6 +541,7 @@ struct sc_dev {
 	int				bw_ref;
 	int				bts_id;
 	int				dvfs_class;
+	int				min_bus_int;
 
 	u64				fence_context;
 	atomic_t			fence_timeline;
@@ -567,7 +568,12 @@ enum SC_CONTEXT_TYPE {
 
 struct sc_qos_request {
 	struct exynos_pm_qos_request mif_req;
-	struct exynos_pm_qos_request int_req;
+	/*
+	 * This is for performance of device.
+	 * The pm_qos_class of this can be changed by project
+	 */
+	struct exynos_pm_qos_request dev_req;
+	struct exynos_pm_qos_request bus_int_req;
 };
 
 /*
