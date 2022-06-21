@@ -73,7 +73,10 @@ unsigned int mfc_get_uncomp_format(struct mfc_ctx *ctx, u32 org_fmt)
 		uncomp_pixfmt = V4L2_PIX_FMT_NV21M;
 		break;
 	case V4L2_PIX_FMT_NV12N_SBWC_8B:
-		uncomp_pixfmt = V4L2_PIX_FMT_NV12N;
+		if (ctx->type == MFCINST_DECODER)
+			uncomp_pixfmt = V4L2_PIX_FMT_NV12N;
+		else
+			uncomp_pixfmt = V4L2_PIX_FMT_NV12M;
 		break;
 	case V4L2_PIX_FMT_NV12M_SBWC_10B:
 		uncomp_pixfmt = V4L2_PIX_FMT_NV12M_P010;
@@ -82,7 +85,10 @@ unsigned int mfc_get_uncomp_format(struct mfc_ctx *ctx, u32 org_fmt)
 		uncomp_pixfmt = V4L2_PIX_FMT_NV21M_P010;
 		break;
 	case V4L2_PIX_FMT_NV12N_SBWC_10B:
-		uncomp_pixfmt = V4L2_PIX_FMT_NV12N_P010;
+		if (ctx->type == MFCINST_DECODER)
+			uncomp_pixfmt = V4L2_PIX_FMT_NV12N_P010;
+		else
+			uncomp_pixfmt = V4L2_PIX_FMT_NV12M_P010;
 		break;
 	default:
 		mfc_ctx_err("[SBWC] Cannot find uncomp format: %d\n", org_fmt);
