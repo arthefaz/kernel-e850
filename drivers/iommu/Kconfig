@@ -480,6 +480,29 @@ config QCOM_IOMMU
 	help
 	  Support for IOMMU on certain Qualcomm SoCs.
 
+config SAMSUNG_IOMMU_TEST
+	tristate "Samsung IOMMU test driver"
+	default m
+	depends on EXYNOS_IOMMU && DMABUF_HEAPS_SYSTEM
+	help
+	  Driver for testing the Samsung IOMMU driver via DebugFS. User reads
+	  /sys/kernel/debug/iommu_test/test file to start the testing procedure,
+	  which involves next steps:
+
+	  1. Create some memory mapping for IOMMU
+	  2. Write some magic value to the mapped memory in RAM
+	  3. Initiate the emulated IOMMU translation from software (so called
+	     "traffic emulation"), which doesn't require any user IP-cores (like
+	     DPU) to initiate translation on hardware level. Use IOVA (virtual
+	     address) of mapped memory start for that translation, as we know it
+	     and its PA (Physical Address) counterpart too.
+	  4. Check the result of translation in IOMMU TLB registers to make sure
+	     it matches IOVA and PA we know.
+	  5. Read the magic from translated PA (via kernel's VA) and check if it
+	     matches the value written before.
+
+	  This is one way to prove that IOMMU driver is functional.
+
 config HYPERV_IOMMU
 	bool "Hyper-V IRQ Handling"
 	depends on HYPERV && X86
