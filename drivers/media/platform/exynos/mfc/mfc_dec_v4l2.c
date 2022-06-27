@@ -737,8 +737,15 @@ static int mfc_dec_s_fmt_vid_cap_mplane(struct file *file, void *priv,
 	}
 	ctx->dst_fmt = fmt;
 
+	if ((!ctx->img_width && !ctx->img_height) &&
+			(pix_fmt_mp->width > 0) && (pix_fmt_mp->height > 0)) {
+		ctx->img_width = pix_fmt_mp->width;
+		ctx->img_height = pix_fmt_mp->height;
+	}
+
 	ctx->raw_buf.num_planes = ctx->dst_fmt->num_planes;
-	mfc_ctx_info("[FRAME] dec dst pixelformat : %s\n", ctx->dst_fmt->name);
+	mfc_ctx_info("[FRAME] dec dst pixelformat : %s (%d x %d)\n",
+			ctx->dst_fmt->name, ctx->img_width, ctx->img_height);
 
 	mfc_debug_leave();
 

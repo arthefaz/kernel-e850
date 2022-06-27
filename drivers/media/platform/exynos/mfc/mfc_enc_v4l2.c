@@ -462,9 +462,18 @@ static int mfc_enc_s_fmt_vid_cap_mplane(struct file *file, void *priv,
 	}
 	ctx->dst_fmt = fmt;
 
+	if ((!ctx->img_width && !ctx->img_height) &&
+			(pix_fmt_mp->width > 0) && (pix_fmt_mp->height > 0)) {
+		ctx->img_width = pix_fmt_mp->width;
+		ctx->img_height = pix_fmt_mp->height;
+		ctx->crop_width = ctx->img_width;
+		ctx->crop_height = ctx->img_height;
+	}
+
 	ctx->codec_mode = ctx->dst_fmt->codec_mode;
-	mfc_ctx_info("[STREAM] Enc dst codec(%d) : %s\n",
-			ctx->codec_mode, ctx->dst_fmt->name);
+	mfc_ctx_info("[STREAM] Enc dst codec(%d) : %s (%d x %d)\n",
+			ctx->codec_mode, ctx->dst_fmt->name,
+			ctx->img_width, ctx->img_height);
 
 	if (ctx->is_10bit && !CODEC_10BIT_ENC(ctx)) {
 		mfc_ctx_err("[STREAM] %s couldn't support 10bit\n", ctx->dst_fmt->name);
