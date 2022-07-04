@@ -484,6 +484,11 @@ struct sc_votf_target {
 	phys_addr_t	votf_base_pa;
 };
 
+struct sc_min_bus_int_table {
+	int bpp;
+	int min_bus_int;
+};
+
 struct sc_ctx;
 
 /*
@@ -541,7 +546,8 @@ struct sc_dev {
 	int				bw_ref;
 	int				bts_id;
 	int				dvfs_class;
-	int				min_bus_int;
+	int				min_bus_int_table_cnt;
+	struct sc_min_bus_int_table	*min_bus_int_table;
 
 	u64				fence_context;
 	atomic_t			fence_timeline;

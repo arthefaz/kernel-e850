@@ -868,7 +868,7 @@ void sc_remove_devfreq(struct sc_ctx *ctx)
 	}
 
 	sc_pm_qos_remove_devfreq(&qos_req->mif_req);
-	if (ctx->sc_dev->min_bus_int != 0)
+	if (ctx->sc_dev->min_bus_int_table_cnt != 0)
 		sc_pm_qos_remove_devfreq(&qos_req->bus_int_req);
 	sc_pm_qos_remove_devfreq(&qos_req->dev_req);
 }
@@ -1023,6 +1023,8 @@ unsigned int sc_get_mif_freq_by_bw(struct sc_ctx *ctx,
 	return (unsigned int)(total_bw * mif_ref / bw_ref);
 }
 
+static int sc_get_min_bus_int(struct sc_dev *sc, struct sc_frame *frame);
+
 void sc_request_devfreq(struct sc_ctx *ctx, int lv)
 {
 	struct sc_dev *sc = ctx->sc_dev;
@@ -1050,10 +1052,20 @@ void sc_request_devfreq(struct sc_ctx *ctx, int lv)
 		ctx->mif_freq_req = req_mif;
 		sc_pm_qos_update_devfreq(&qos_req->mif_req, PM_QOS_BUS_THROUGHPUT,
 					 req_mif);
-		if (sc->min_bus_int != 0)
+		if (sc->min_bus_int_table_cnt != 0) {
+			int min_bus_int;
+			int src_min_bus_int, dst_min_bus_int;
+
+			src_min_bus_int = sc_get_min_bus_int(sc, &ctx->s_frame);
+			dst_min_bus_int = sc_get_min_bus_int(sc, &ctx->d_frame);
+
+			min_bus_int = (src_min_bus_int > dst_min_bus_int) ?
+				src_min_bus_int : dst_min_bus_int;
+
 			sc_pm_qos_update_devfreq(&qos_req->bus_int_req,
 						 PM_QOS_DEVICE_THROUGHPUT,
-						 sc->min_bus_int);
+						 min_bus_int);
+		}
 	}
 	if (lv != ctx->pm_qos_lv) {
 		ctx->pm_qos_lv = lv;
@@ -1142,6 +1154,25 @@ static int sc_get_pm_qos_level(struct sc_ctx *ctx, int framerate)
 		return -1;
 
 	return sc_get_pm_qos_level_by_ppc(ctx, framerate);
+}
+
+static int sc_get_min_bus_int(struct sc_dev *sc, struct sc_frame *frame)
+{
+	int bpp = 0;
+	int i;
+
+	if (sc_fmt_is_sbwc(frame->sc_fmt->pixelformat))
+		bpp = SC_BPP_OF_SBWC;
+	else
+		for (i = 0; i < frame->sc_fmt->num_planes; i++)
+			bpp += frame->sc_fmt->bitperpixel[i];
+
+	for (i = 0 ; i < sc->min_bus_int_table_cnt; i++) {
+		if (sc->min_bus_int_table[i].bpp == bpp)
+			return sc->min_bus_int_table[i].min_bus_int;
+	}
+
+	return 0;
 }
 
 /* Find the matches format */
@@ -4936,8 +4967,31 @@ static int sc_get_pm_qos_from_dt(struct sc_dev *sc)
 	}
 	dev_info(dev, "sc->dvfs_class is %d\n", sc->dvfs_class);
 
-	if (!of_property_read_u32(dev->of_node, "mscl_min_bus_int", &sc->min_bus_int)) {
-		dev_info(dev, "mscl_min_bus_int is set as %d\n", sc->min_bus_int);
+	len = of_property_count_u32_elems(dev->of_node, "mscl_min_bus_int_table");
+	if (len <= 0) {
+		dev_info(dev, "No min_bus_int_table for scaler\n");
+	} else {
+		struct sc_min_bus_int_table *min_bus_int_table;
+
+		sc->min_bus_int_table_cnt = len / 2;
+
+		min_bus_int_table = devm_kcalloc(dev, sc->min_bus_int_table_cnt,
+						 sizeof(*min_bus_int_table),
+						 GFP_KERNEL);
+		if (!min_bus_int_table)
+			return -ENOMEM;
+
+		of_property_read_u32_array(dev->of_node,
+					"mscl_min_bus_int_table",
+					(unsigned int *)min_bus_int_table, len);
+
+		sc->min_bus_int_table = min_bus_int_table;
+
+		for (i = 0; i < sc->min_bus_int_table_cnt; i++)
+			dev_info(dev,
+				 "Min-bus-int Table[%d] bpp : %u int : %u/%u\n",
+				 i, min_bus_int_table[i].bpp,
+				 min_bus_int_table[i].min_bus_int);
 	}
 
 	return 0;
