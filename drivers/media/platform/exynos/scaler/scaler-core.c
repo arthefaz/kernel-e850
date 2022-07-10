@@ -3206,7 +3206,7 @@ static bool sc_configure_rotation_degree(struct sc_ctx *ctx, int degree)
 	return true;
 }
 
-static void sc_set_framerate(struct sc_ctx *ctx, int framerate)
+static void sc_set_framerate(struct sc_ctx *ctx, int framerate, bool max_lv_en)
 {
 	if (!ctx->sc_dev->qos_table)
 		return;
@@ -3215,8 +3215,11 @@ static void sc_set_framerate(struct sc_ctx *ctx, int framerate)
 	if (framerate != 0) {
 		int ret_qos_lv;
 
-		/* No need to check return because of previous check */
-		ret_qos_lv = sc_get_pm_qos_level(ctx, framerate);
+		if (max_lv_en == true)
+			ret_qos_lv = 0;
+		else
+			/* No need to check return because of previous check */
+			ret_qos_lv = sc_get_pm_qos_level(ctx, framerate);
 
 		ctx->framerate = framerate;
 
@@ -3320,7 +3323,11 @@ static int sc_s_ctrl(struct v4l2_ctrl *ctrl)
 		ctx->dnoise_ft.strength = ctrl->val;
 		break;
 	case SC_CID_FRAMERATE:
-		sc_set_framerate(ctx, ctrl->val);
+		sc_set_framerate(ctx, ctrl->val, false);
+		break;
+	case SC_CID_MAX_PERF:
+		if (ctrl->val)
+			sc_set_framerate(ctx, SC_FRAMERATE_MAX, true);
 		break;
 	}
 
@@ -3470,6 +3477,16 @@ static const struct v4l2_ctrl_config sc_custom_ctrl[] = {
 		.step = 1,
 		.min = 0,
 		.max = SC_FRAMERATE_MAX,
+		.def = 0,
+	}, {
+		.ops = &sc_ctrl_ops,
+		.id = SC_CID_MAX_PERF,
+		.name = "Set QoS level as Max",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.step = 1,
+		.min = 0,
+		.max = 1,
 		.def = 0,
 	}
 };

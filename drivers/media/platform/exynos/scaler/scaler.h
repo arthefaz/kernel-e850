@@ -175,6 +175,7 @@ extern int sc_log_level;
 
 /* for performance */
 #define SC_CID_FRAMERATE		(V4L2_CID_EXYNOS_BASE + 110)
+#define SC_CID_MAX_PERF			(V4L2_CID_EXYNOS_BASE + 111)
 #define SC_FRAMERATE_MAX		(2000)
 
 /* for denoising filter */
