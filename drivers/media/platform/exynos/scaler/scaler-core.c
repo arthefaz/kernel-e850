@@ -5006,7 +5006,7 @@ static int sc_get_pm_qos_from_dt(struct sc_dev *sc)
 
 		for (i = 0; i < sc->min_bus_int_table_cnt; i++)
 			dev_info(dev,
-				 "Min-bus-int Table[%d] bpp : %u int : %u/%u\n",
+				 "Min-bus-int Table[%d] bpp : %u int : %u\n",
 				 i, min_bus_int_table[i].bpp,
 				 min_bus_int_table[i].min_bus_int);
 	}
