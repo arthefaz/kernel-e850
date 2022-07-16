@@ -82,6 +82,7 @@ static void iommu_test_do_translation(const struct iommu_test *obj)
 	iowrite32(sid | (pid << SHOT_PID_OFFSET), obj->reg_base + MMU_EMU_SHOT);
 }
 
+#if 0
 static void iommu_test_check_result(const struct iommu_test *obj)
 {
 	const u32 pg_off = obj->iova & 0xfff; /* "page offset" part of addr */
@@ -138,6 +139,7 @@ static void iommu_test_check_result(const struct iommu_test *obj)
 	pr_info("Verifying the magic by reading: %s\n",
 		*va == MAGIC_NUMBER ? "OK" : "FAIL");
 }
+#endif
 
 static int iommu_test_create_mapping(struct iommu_test *obj)
 {
@@ -223,8 +225,13 @@ static ssize_t iommu_test_read(struct file *file, char __user *buf,
 	struct iommu_test *obj = to_iommu_test(file);
 
 	*obj->va = MAGIC_NUMBER; /* write magic number to tested RAM addr */
+
+	pr_info("### Changing iova from %pad to some garbage value\n",
+		&obj->iova);
+	obj->iova = 0x12341234;
+
 	iommu_test_do_translation(obj);
-	iommu_test_check_result(obj);
+	//iommu_test_check_result(obj);
 
 	return 0;
 }
