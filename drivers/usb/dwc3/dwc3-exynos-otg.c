@@ -649,7 +649,7 @@ static void retry_configuration(struct timer_list *t)
 	}
 
 	if (!exynos->dwc->gadget_driver) {
-		pr_info("%s: Postpone retry configuration(gadget_driver is NULL)");
+		pr_info("%s: Postpone retry configuration(gadget_driver is NULL) !!\n", __func__);
 		mod_timer(&exynos->usb_connect_timer,
 				jiffies + CHG_CONNECTED_DELAY_TIME);
 		return;
