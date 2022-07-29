@@ -10,8 +10,8 @@
 #include <linux/slab.h>
 #include <asm/io.h>
 
-/* Base address of DPU IOMMU (non-secure block) */
-#define SYSMMU_BASE		0x130c0000
+/* Base address of AUD IOMMU (non-secure block) */
+#define SYSMMU_BASE		0x14850000
 #define SYSMMU_SIZE		0x10000
 
 /* Offsets for registers for initiating the "traffic emulation" */
