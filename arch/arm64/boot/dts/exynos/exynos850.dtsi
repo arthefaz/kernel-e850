@@ -548,6 +548,11 @@
 			#iommu-cells = <0>;
 		};
 
+		iommu-test {
+			compatible = "samsung,iommu-test";
+			iommus = <&sysmmu_aud>;
+		};
+
 		sysreg_peri: syscon@10020000 {
 			compatible = "samsung,exynos850-peri-sysreg",
 				     "samsung,exynos850-sysreg", "syscon";
