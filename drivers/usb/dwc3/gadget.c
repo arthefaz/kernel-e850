@@ -2478,8 +2478,12 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 	 */
 	if (!is_on) {
 		pm_runtime_barrier(dwc->dev);
-		if (pm_runtime_suspended(dwc->dev))
+		if (pm_runtime_suspended(dwc->dev) ||
+				(dwc->current_dr_role != DWC3_GCTL_PRTCAP_DEVICE)) {
+			pr_info("%s: current_dr_role = %d\n", __func__, dwc->current_dr_role);
+
 			return 0;
+		}
 	}
 
 	/*
