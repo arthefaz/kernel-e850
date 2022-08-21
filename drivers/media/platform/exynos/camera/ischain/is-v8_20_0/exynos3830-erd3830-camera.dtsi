@@ -12,11 +12,101 @@
 #include <dt-bindings/interrupt-controller/exynos3830.h>
 #include <dt-bindings/clock/exynos3830.h>
 
+#include "camera/module_3l6.dtsi"
 
 / {
 	fragment@camera {
 		target-path = "/";
 		__overlay__ {
+
+			/* FRONT CAMERA */
+			is_sensor_3l6: is_sensor_3l6@59 {
+				pinctrl-names = "pin0", "pin1", "pin2", "release";
+				pinctrl-0 = <>;
+				pinctrl-1 = <&sensor_mclk0_out>;
+				pinctrl-2 = <&sensor_mclk0_fn>;
+				pinctrl-3 = <>;
+
+				position = <1>; /* Rear:0. Front:1 */
+				id = <1>; /* sensor node id */
+				mclk_ch = <0>;
+				sensor_i2c_ch = <2>;
+
+				status = "okay";
+
+				af {
+					product_name = <26>; /* ACTUATOR_NAME_DW9763 */
+					i2c_ch = <2>; /* SENSOR_CONTROL_I2C0 */
+				};
+
+				power_seq {
+					gpio_mclk = <&gpc0 0 0x1>;
+
+					scenario_normal_on {
+						/* A start node number should be over the 10 for reserved number 0~9. */
+						/* pname = "name"; pin = <act value dealy voltage>; gpio = <gpx# # 0x1>; */
+						10 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 100>; gpio = <&gpg1 5 0x1>; };
+						20 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpa3 6 0x1>; };
+						30 { pname = "vdd_ldo30"; pin = <PIN_REGULATOR 1 0>; share = <SRT_ACQUIRE SHARED_PIN0 1>; };
+						40 { pname = "vdd_ldo29"; pin = <PIN_REGULATOR 1 500>; };
+						50 { pname = "on_i2c"; pin = <PIN_I2C 1 0>; };
+						60 { pname = "sen_rst high"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpg1 5 0x1>; };
+						70 { pname = "pin"; pin = <PIN_FUNCTION 2 0>; };
+						80 { pname = "MCLK"; pin = <PIN_MCLK 1 15000>; };
+						/* need eeprom pin control */
+					};
+
+					scenario_normal_off {
+						/* A start node number should be over the 10 for reserved number 0~9. */
+						/* pname = "name"; pin = <act value dealy voltage>; gpio = <gpx# # 0x1>; */
+						10 { pname = "none"; pin = <PIN_NONE 0 1000>; };
+						20 { pname = "MCLK"; pin = <PIN_MCLK 0 0>; };
+						30 { pname = "pin"; pin = <PIN_FUNCTION 0 0>; };
+						40 { pname = "pin"; pin = <PIN_FUNCTION 1 0>; };
+						50 { pname = "pin"; pin = <PIN_FUNCTION 0 0>; };
+						60 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpg1 5 0x1>; };
+						70 { pname = "off_i2c"; pin = <PIN_I2C 0 100>; };
+						80 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 6 0x1>; };
+						90 { pname = "vdd_ldo30"; pin = <PIN_REGULATOR 0 0>; share = <SRT_RELEASE SHARED_PIN0 0>; };
+						100 { pname = "vdd_ldo29"; pin = <PIN_REGULATOR 0 0>; };
+						/* need eeprom pin control */
+					};
+
+					scenario_g_active_camera_on {
+						sensor_scenario = <SENSOR_SCENARIO_G_ACTIVE_CAMERA>;
+						gpio_scenario = <GPIO_SCENARIO_ON>;
+						/* A start node number should be over the 10 for reserved number 0~9. */
+						/* pname = "name"; pin = <act value dealy voltage>; gpio = <gpx# # 0x1>; */
+						10 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 100>; gpio = <&gpg1 5 0x1>; };
+						20 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpa3 6 0x1>; };
+						30 { pname = "vdd_ldo30"; pin = <PIN_REGULATOR 1 0>; share = <SRT_ACQUIRE SHARED_PIN0 1>; };
+						40 { pname = "vdd_ldo29"; pin = <PIN_REGULATOR 1 500>; };
+						50 { pname = "on_i2c"; pin = <PIN_I2C 1 0>; };
+						60 { pname = "sen_rst high"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpg1 5 0x1>; };
+						70 { pname = "pin"; pin = <PIN_FUNCTION 2 0>; };
+						80 { pname = "MCLK"; pin = <PIN_MCLK 1 15000>; };
+						/* need eeprom pin control */
+					};
+
+					scenario_g_active_camera_off {
+						sensor_scenario = <SENSOR_SCENARIO_G_ACTIVE_CAMERA>;
+						gpio_scenario = <GPIO_SCENARIO_OFF>;
+						/* A start node number should be over the 10 for reserved number 0~9. */
+						/* pname = "name"; pin = <act value dealy voltage>; gpio = <gpx# # 0x1>; */
+						10 { pname = "none"; pin = <PIN_NONE 0 1000>; };
+						20 { pname = "MCLK"; pin = <PIN_MCLK 0 0>; };
+						30 { pname = "pin"; pin = <PIN_FUNCTION 0 0>; };
+						40 { pname = "pin"; pin = <PIN_FUNCTION 1 0>; };
+						50 { pname = "pin"; pin = <PIN_FUNCTION 0 0>; };
+						60 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpg1 5 0x1>; };
+						70 { pname = "off_i2c"; pin = <PIN_I2C 0 100>; };
+						80 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 6 0x1>; };
+						90 { pname = "vdd_ldo30"; pin = <PIN_REGULATOR 0 0>; share = <SRT_RELEASE SHARED_PIN0 0>; };
+						100 { pname = "vdd_ldo29"; pin = <PIN_REGULATOR 0 0>; };
+						/* need eeprom pin control */
+					};
+				};
+			};
 		}; /* end of __overlay__ */
 	}; /* end of fragment */
 }; /* end of root */
@@ -25,6 +115,7 @@
 
 &exynos_is {
 	vender {
+		front_sensor_id = <59>; /* S5K3L6 */
 	};
 
 	lic_offsets {
@@ -389,6 +480,14 @@
 	pinctrl-0 = <&hsi2c_2_bus_in>;
 	pinctrl-1 = <&hsi2c_2_bus>;
 	pinctrl-2 = <&hsi2c_2_bus_in>;
+
+	is-3l6@2D {
+		compatible = "samsung,exynos-is-cis-3l6";
+		reg = <0x2D>;
+		id = <1>; /* matching sensor id */
+		setfile = "setB";
+		use_initial_ae;
+	};
 };
 
 &is_sensor0 {
@@ -404,7 +503,7 @@
 	status = "disabled";
 };
 
-&is_sensor1 {
+&is_sensor1 { // 3l6
 	#address-cells = <1>;
 	#size-cells = <1>;
 	scenario = <SENSOR_SCENARIO_NORMAL>;    /* Normal, Vision, OIS etc */
