@@ -81,6 +81,13 @@ config CAMERA_CIS_3L2_OBJ
 		help
 		  Use to build 3L2 camera sensor.
 
+config CAMERA_CIS_3L6_OBJ
+		bool "Use 3L6 camera cis"
+	depends on CAMERA_CIS_SELECT
+		default n
+		help
+		  Use to build 3L6 camera sensor.
+
 config CAMERA_CIS_3H1_OBJ
 		bool "Use 3H1 camera cis"
 	depends on CAMERA_CIS_SELECT
