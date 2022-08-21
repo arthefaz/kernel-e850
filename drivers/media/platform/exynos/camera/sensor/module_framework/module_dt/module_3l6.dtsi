@@ -72,12 +72,12 @@
 						gpio_scenario = <GPIO_SCENARIO_ON>;
 						/* A start node number should be over the 10 for reserved number 0~9. */
 						/* pname = "name"; pin = <act value dealy voltage>; gpio = <gpx# # 0x1>; */
-						10 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 100>; gpio = <&gpg1 5 0x1>; };
-						20 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpa3 6 0x1>; };
+						10 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 100>; gpio = <&gpa3 2 0x1>; };
+						20 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpa1 1 0x1>; };
 						30 { pname = "vdd_ldo30"; pin = <PIN_REGULATOR 1 0>; share = <SRT_ACQUIRE SHARED_PIN0 1>; };
 						40 { pname = "vdd_ldo29"; pin = <PIN_REGULATOR 1 500>; };
 						50 { pname = "on_i2c"; pin = <PIN_I2C 1 0>; };
-						60 { pname = "sen_rst high"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpg1 5 0x1>; };
+						60 { pname = "sen_rst high"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpa3 2 0x1>; };
 						70 { pname = "pin"; pin = <PIN_FUNCTION 2 0>; };
 						80 { pname = "MCLK"; pin = <PIN_MCLK 1 15000>; };
 						/* need eeprom pin control */
@@ -93,9 +93,9 @@
 						30 { pname = "pin"; pin = <PIN_FUNCTION 0 0>; };
 						40 { pname = "pin"; pin = <PIN_FUNCTION 1 0>; };
 						50 { pname = "pin"; pin = <PIN_FUNCTION 0 0>; };
-						60 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpg1 5 0x1>; };
+						60 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 2 0x1>; };
 						70 { pname = "off_i2c"; pin = <PIN_I2C 0 100>; };
-						80 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 6 0x1>; };
+						80 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa1 1 0x1>; };
 						90 { pname = "vdd_ldo30"; pin = <PIN_REGULATOR 0 0>; share = <SRT_RELEASE SHARED_PIN0 0>; };
 						100 { pname = "vdd_ldo29"; pin = <PIN_REGULATOR 0 0>; };
 						/* need eeprom pin control */
