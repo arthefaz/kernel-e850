@@ -1019,9 +1019,9 @@ struct decon_bts {
 	struct bts_decon_info bts_info;
 #endif
 	struct decon_bts_ops *ops;
-	struct pm_qos_request mif_qos;
-	struct pm_qos_request int_qos;
-	struct pm_qos_request disp_qos;
+	struct exynos_pm_qos_request mif_qos;
+	struct exynos_pm_qos_request int_qos;
+	struct exynos_pm_qos_request disp_qos;
 	u32 scen_updated;
 };
 
