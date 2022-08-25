@@ -3455,7 +3455,7 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	size = PAGE_ALIGN(size);
 
 	dev_info(decon->dev, "want %u bytes for window[%d]\n", size, win->idx);
-	buf = ion_alloc_dmabuf("ion_system_heap", (size_t)size, 0);
+	buf = ion_alloc((size_t)size, ION_HEAP_SYSTEM, 0);
 	if (IS_ERR(buf)) {
 		dev_err(decon->dev, "ion_share_dma_buf() failed\n");
 		goto err_share_dma_buf;
@@ -3537,7 +3537,7 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 
 	dev_info(decon->dev, "want %u bytes for window[%d]\n", size, win->idx);
 
-	buf = ion_alloc_dmabuf("ion_system_heap", (size_t)size, 0);
+	buf = ion_alloc((size_t)size, ION_HEAP_SYSTEM, 0);
 	if (IS_ERR(buf)) {
 		dev_err(decon->dev, "ion_share_dma_buf() failed\n");
 		goto err_share_dma_buf;
