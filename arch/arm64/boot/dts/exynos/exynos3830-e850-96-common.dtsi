@@ -1,5 +1,6 @@
 #include "exynos3830-board_common.dtsi"
 #include "exynos3830-e850-96-sound.dtsi"
+#include "exynos3830-erd3830-camera.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 
