@@ -1497,8 +1497,7 @@ void dpu_cursor_win_update_config(struct decon_device *decon,
 		struct decon_reg_data *regs);
 int decon_set_cursor_win_config(struct decon_device *decon, int x, int y);
 void dpu_init_cursor_mode(struct decon_device *decon);
-int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
-	struct device *dev, unsigned long iova, int flags, void *token);
+int dpu_sysmmu_fault_handler_dsim(struct iommu_fault *fault, void *data);
 #if IS_ENABLED(CONFIG_EXYNOS_PD)
 int dpu_pm_domain_check_status(struct exynos_pm_domain *pm_domain);
 #endif

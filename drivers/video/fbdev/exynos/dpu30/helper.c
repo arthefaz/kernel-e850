@@ -382,6 +382,28 @@ static int dpu_dump_buffer_data(struct dpp_device *dpp)
 }
 #endif
 
+int dpu_sysmmu_fault_handler_dsim(struct iommu_fault *fault, void *data)
+{
+	struct decon_device *decon = NULL;
+	struct dpp_device *dpp = NULL;
+	int i;
+
+	decon = get_decon_drvdata(0);
+
+	for (i = 0; i < decon->dt.dpp_cnt; i++) {
+		if (test_bit(i, &decon->prev_used_dpp)) {
+			dpp = get_dpp_drvdata(i);
+#if defined(DPU_DUMP_BUFFER_IRQ)
+			dpu_dump_buffer_data(dpp);
+#endif
+		}
+	}
+
+	decon_dump(decon);
+
+	return 0;
+}
+
 int register_lcd_status_notifier(struct notifier_block *nb)
 {
 	return atomic_notifier_chain_register(&lcd_status_notifier_list, nb);
@@ -401,39 +423,6 @@ EXPORT_SYMBOL(unregister_lcd_status_notifier);
 void lcd_status_notifier(u32 lcd_status)
 {
 	atomic_notifier_call_chain(&lcd_status_notifier_list, lcd_status, NULL);
-}
-
-int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
-	struct device *dev, unsigned long iova, int flags, void *token)
-{
-	struct decon_device *decon = NULL;
-	struct dpp_device *dpp = NULL;
-	int i;
-
-	if (!strcmp(DSIM_MODULE_NAME, dev->driver->name)) {
-		decon = get_decon_drvdata(0);
-#if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	} else if (!strcmp(DISPLAYPORT_MODULE_NAME, dev->driver->name)) {
-		decon = get_decon_drvdata(2);
-#endif
-	} else {
-		decon_err("unknown driver for dpu sysmmu falut handler(%s)\n",
-				dev->driver->name);
-		return -EINVAL;
-	}
-
-	for (i = 0; i < decon->dt.dpp_cnt; i++) {
-		if (test_bit(i, &decon->prev_used_dpp)) {
-			dpp = get_dpp_drvdata(i);
-#if defined(DPU_DUMP_BUFFER_IRQ)
-			dpu_dump_buffer_data(dpp);
-#endif
-		}
-	}
-
-	decon_dump(decon);
-
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_EXYNOS_PD)
