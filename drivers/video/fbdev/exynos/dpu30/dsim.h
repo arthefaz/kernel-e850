@@ -72,6 +72,15 @@ extern int dsim_log_level;
 
 extern struct dsim_device *dsim_drvdata[MAX_DSIM_CNT];
 
+/*
+ * for GKI
+ * This is for building for kernel module
+ */
+enum {
+	MIPI_DSI_DSC_PRA    = 0x07,
+	MIPI_DSI_DSC_PPS    = 0x0a,
+};
+
 /* define video timer interrupt */
 enum {
 	DSIM_VBP = 0,
