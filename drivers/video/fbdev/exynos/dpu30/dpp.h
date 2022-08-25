@@ -19,10 +19,11 @@
 #include <linux/videodev2.h>
 #include <linux/io.h>
 #include <linux/pm_runtime.h>
-#include <linux/pm_qos.h>
+#include <soc/samsung/exynos_pm_qos.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
-#include <linux/ion_exynos.h>
+#include <linux/ion.h>
+#include <linux/dma-buf.h>
 #if defined(CONFIG_EXYNOS_BTS)
 #include <soc/samsung/bts.h>
 #endif

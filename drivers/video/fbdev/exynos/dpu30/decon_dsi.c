@@ -13,8 +13,8 @@
 #include <linux/of.h>
 #include <linux/clk-provider.h>
 #include <linux/pm_runtime.h>
-#include <linux/exynos_iovmm.h>
-#include <linux/sched/types.h>
+#include <linux/iommu.h>
+#include <uapi/linux/sched/types.h>
 #include <linux/of_address.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/irq.h>

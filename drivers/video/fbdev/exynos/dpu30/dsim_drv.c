@@ -42,7 +42,7 @@
 #if defined(CONFIG_CPU_IDLE)
 #include <soc/samsung/exynos-cpupm.h>
 #endif
-#include <soc/samsung/exynos-pmu.h>
+#include <soc/samsung/exynos-pmu-if.h>
 
 #include <linux/string.h>
 #include <linux/of_reserved_mem.h>

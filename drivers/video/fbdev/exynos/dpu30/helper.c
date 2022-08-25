@@ -14,8 +14,8 @@
 #include <linux/pm_runtime.h>
 #include <asm/cacheflush.h>
 #include <asm/page.h>
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
-#include <linux/smc.h>
+#if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+#include <soc/samsung/exynos-smc.h>
 #endif
 
 #include "decon.h"
@@ -189,7 +189,7 @@ void __iomem *dpu_get_sysreg_addr(void)
 	return regs;
 }
 
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+#if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 static int decon_get_protect_id(int dma_id)
 {
 	int prot_id = 0;
@@ -436,7 +436,7 @@ int dpu_sysmmu_fault_handler(struct iommu_domain *domain,
 	return 0;
 }
 
-#if defined(CONFIG_EXYNOS_PD)
+#if IS_ENABLED(CONFIG_EXYNOS_PD)
 int dpu_pm_domain_check_status(struct exynos_pm_domain *pm_domain)
 {
 	if (!pm_domain || !pm_domain->check_status)

@@ -16,7 +16,7 @@
 
 #include <soc/samsung/bts.h>
 #include <media/v4l2-subdev.h>
-#if defined(CONFIG_CAL_IF)
+#if IS_ENABLED(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
 #if defined(CONFIG_SOC_EXYNOS3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)

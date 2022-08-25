@@ -22,8 +22,8 @@
 #include <linux/clk-provider.h>
 #include <linux/console.h>
 #include <linux/dma-buf.h>
-#include <linux/ion_exynos.h>
-#include <linux/sched/types.h>
+#include <linux/ion.h>
+#include <uapi/linux/sched/types.h>
 #include <linux/highmem.h>
 #include <linux/memblock.h>
 #include <linux/notifier.h>
@@ -3907,7 +3907,7 @@ static int decon_create_update_thread(struct decon_device *decon, char *name)
 	return 0;
 }
 
-#if defined(CONFIG_EXYNOS_ITMON)
+#if IS_ENABLED(CONFIG_EXYNOS_ITMON)
 static int decon_itmon_notifier(struct notifier_block *nb,
 		unsigned long action, void *nb_data)
 {
@@ -4167,7 +4167,7 @@ static int decon_probe(struct platform_device *pdev)
 	decon_init_low_persistence_mode(decon);
 	dpu_init_cursor_mode(decon);
 
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS) || IS_ENABLED(CONFIG_EXYNOS_BTS_MODULE)
 	decon->bts.ops = &decon_bts_control;
 	decon->bts.ops->bts_init(decon);
 	decon->bts.ops->bts_acquire_bw(decon);
@@ -4183,7 +4183,7 @@ static int decon_probe(struct platform_device *pdev)
 		goto err_display;
 	}
 
-#if defined(CONFIG_EXYNOS_ITMON)
+#if IS_ENABLED(CONFIG_EXYNOS_ITMON)
 	decon->itmon_nb.notifier_call = decon_itmon_notifier;
 	itmon_notifier_chain_register(&decon->itmon_nb);
 #endif
