@@ -1982,11 +1982,11 @@ static int dsim_probe(struct platform_device *pdev)
 	timer_setup(&dsim->cmd_timer, dsim_cmd_fail_detector, 0);
 
 #if defined(CONFIG_CPU_IDLE)
-	dsim->idle_ip_index = exynos_get_idle_ip_index(dev_name(&pdev->dev));
+	dsim->idle_ip_index = exynos_get_idle_ip_index(dev_name(&pdev->dev), 1);
 	dsim_info("dsim idle_ip_index[%d]\n", dsim->idle_ip_index);
 	if (dsim->idle_ip_index < 0)
 		dsim_warn("idle ip index is not provided for dsim\n");
-	exynos_update_ip_idle_status(dsim->idle_ip_index, 0);
+	exynos_update_ip_idle_status(dsim->idle_ip_index, 1);
 #endif
 
 	pm_runtime_enable(dev);
