@@ -1179,7 +1179,7 @@ static const struct dev_pm_ops dpp_pm_ops = {
 	.runtime_resume		= dpp_runtime_resume,
 };
 
-static struct platform_driver dpp_driver __refdata = {
+struct platform_driver dpp_driver __refdata = {
 	.probe		= dpp_probe,
 	.remove		= dpp_remove,
 	.driver = {
@@ -1190,13 +1190,6 @@ static struct platform_driver dpp_driver __refdata = {
 		.suppress_bind_attrs = true,
 	}
 };
-
-static int dpp_register(void)
-{
-	return platform_driver_register(&dpp_driver);
-}
-
-device_initcall_sync(dpp_register);
 
 MODULE_AUTHOR("Jaehoe Yang <jaehoe.yang@samsung.com>");
 MODULE_AUTHOR("Minho Kim <m8891.kim@samsung.com>");

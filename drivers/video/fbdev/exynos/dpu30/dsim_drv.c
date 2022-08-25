@@ -2103,7 +2103,7 @@ static const struct dev_pm_ops dsim_pm_ops = {
 	.runtime_resume		= dsim_runtime_resume,
 };
 
-static struct platform_driver dsim_driver __refdata = {
+struct platform_driver dsim_driver __refdata = {
 	.probe			= dsim_probe,
 	.remove			= dsim_remove,
 	.shutdown		= dsim_shutdown,
@@ -2115,23 +2115,6 @@ static struct platform_driver dsim_driver __refdata = {
 		.suppress_bind_attrs = true,
 	}
 };
-
-static int __init dsim_init(void)
-{
-	int ret = platform_driver_register(&dsim_driver);
-	if (ret)
-		pr_err("dsim driver register failed\n");
-
-	return ret;
-}
-late_initcall(dsim_init);
-
-static void __exit dsim_exit(void)
-{
-	platform_driver_unregister(&dsim_driver);
-}
-
-module_exit(dsim_exit);
 
 /*
  * rmem_device_init is called in of_reserved_mem_device_init_by_idx function

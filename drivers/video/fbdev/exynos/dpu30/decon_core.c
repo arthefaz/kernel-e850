@@ -4290,8 +4290,26 @@ static struct platform_driver decon_driver __refdata = {
 	}
 };
 
+extern struct platform_driver exynos_panel_driver;
+extern struct platform_driver dpp_driver;
+#if defined(CONFIG_SOC_EXYNOS3830)
+extern struct i2c_driver panel_i2c_driver;
+#endif
+extern struct platform_driver dsim_driver;
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+extern struct platform_driver displayport_driver;
+#endif
 static int exynos_decon_register(void)
 {
+#if defined(CONFIG_SOC_EXYNOS3830)
+	i2c_add_driver(&panel_i2c_driver);
+#endif
+	platform_driver_register(&exynos_panel_driver);
+	platform_driver_register(&dpp_driver);
+	platform_driver_register(&dsim_driver);
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	platform_driver_register(&displayport_driver);
+#endif
 	platform_driver_register(&decon_driver);
 
 	return 0;
@@ -4300,9 +4318,19 @@ static int exynos_decon_register(void)
 static void exynos_decon_unregister(void)
 {
 	platform_driver_unregister(&decon_driver);
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	platform_driver_unregister(&displayport_driver);
+#endif
+	platform_driver_unregister(&dsim_driver);
+	platform_driver_unregister(&dpp_driver);
+	platform_driver_unregister(&exynos_panel_driver);
+#if defined(CONFIG_SOC_EXYNOS3830)
+	i2c_del_driver(&panel_i2c_driver);
+#endif
 }
 late_initcall(exynos_decon_register);
 module_exit(exynos_decon_unregister);
+MODULE_SOFTDEP("pre: cmupmucal clk_exynos exynos-pmu-if pinctrl-samsung-core fb phy-exynos-mipi exynos-pd exynos-pd-dbg samsung-iommu");
 
 MODULE_AUTHOR("Jaehoe Yang <jaehoe.yang@samsung.com>");
 MODULE_AUTHOR("Yeongran Shin <yr613.shin@samsung.com>");

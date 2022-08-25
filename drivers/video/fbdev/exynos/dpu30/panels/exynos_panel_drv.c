@@ -860,7 +860,7 @@ static void exynos_panel_shutdown(struct platform_device *pdev)
 	backlight_device_unregister(panel->bl);
 }
 
-static struct platform_driver exynos_panel_driver = {
+struct platform_driver exynos_panel_driver = {
 	.probe		= exynos_panel_probe,
 	.shutdown	= exynos_panel_shutdown,
 	.driver		= {
@@ -869,22 +869,6 @@ static struct platform_driver exynos_panel_driver = {
 		.suppress_bind_attrs = true,
 	},
 };
-
-static int __init exynos_panel_init(void)
-{
-	int ret = platform_driver_register(&exynos_panel_driver);
-	if (ret)
-		pr_err("exynos_panel_driver register failed\n");
-
-	return ret;
-}
-device_initcall(exynos_panel_init);
-
-static void __exit exynos_panel_exit(void)
-{
-	platform_driver_unregister(&exynos_panel_driver);
-}
-module_exit(exynos_panel_exit);
 
 MODULE_DESCRIPTION("Exynos Common Panel Driver");
 MODULE_LICENSE("GPL");
