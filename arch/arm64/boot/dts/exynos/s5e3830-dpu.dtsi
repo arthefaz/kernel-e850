@@ -140,6 +140,13 @@
 		reg = <0x0 0x13070000 0x200>, <0x0 0x13080000 0x3000>;
 		interrupts = <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>;
 		iommus = <&sysmmu_dpu>;
+		samsung,iommu-group = <&iommu_group_dpu>;
+		#dma-address-cells = <1>;
+		#dma-size-cells = <1>;
+		ranges;
+		/*start address, size */
+		dma-window = <0x10000000 0xEFFF0000>;
+
 		dsim,hold-rpm-on-boot;
 
 		/* clock */
@@ -152,10 +159,19 @@
 		memory-region = <&fb_handover>;
 	};
 
+	/* 3830 Universal device panel */
+	/*
 	panel_0: panel_0 {
 		compatible = "samsung,exynos-panel";
 		ddi_id = <0x8A6220>;
 		lcd_info = <&td4150>;
+	};
+	*/
+	/* 3830 ERD device panel */
+	panel_0: panel_0 {
+		compatible = "samsung,exynos-panel";
+		ddi_id = <0x244040>;
+		lcd_info = <&s6e3fa0>;
 	};
 
 	decon_f: decon_f@0x13060000 {
@@ -178,7 +194,8 @@
 		max_win = <4>;
 		default_win = <3>;
 		default_ch = <3>;
-		psr_mode = <0>;         /* 0: video mode, 1: DP command mode, 2: MIPI command mode */
+		/* psr_mode = <0>;*/      /* 0: video mode, 1: DP command mode, 2: MIPI command mode */
+		psr_mode = <2>;           /* 0: video mode, 1: DP command mode, 2: MIPI command mode */
 		trig_mode = <0>;        /* 0: hw trigger, 1: sw trigger */
 		dsi_mode = <0>;         /* 0: single dsi, 1: dual dsi */
 
