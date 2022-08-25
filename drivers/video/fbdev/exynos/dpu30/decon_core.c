@@ -2140,7 +2140,7 @@ static void decon_acquire_cur_bufs(struct decon_device *decon,
 static void decon_update_regs(struct decon_device *decon,
 		struct decon_reg_data *regs)
 {
-	struct decon_dma_buf_data old_dma_bufs[decon->dt.max_win][MAX_PLANE_CNT];
+	struct decon_dma_buf_data old_dma_bufs[MAX_DECON_WIN][MAX_PLANE_CNT];
 	int old_plane_cnt[MAX_DECON_WIN];
 	struct decon_mode_info psr;
 	int i, j, err;
@@ -3240,7 +3240,6 @@ static struct fb_ops decon_fb_ops = {
 	.fb_set_par	= decon_set_par,
 	.fb_blank	= decon_blank,
 	.fb_setcolreg	= decon_setcolreg,
-	.fb_fillrect    = cfb_fillrect,
 #ifdef CONFIG_COMPAT
 	.fb_compat_ioctl = decon_compat_ioctl,
 #endif
@@ -4253,10 +4252,7 @@ static void decon_shutdown(struct platform_device *pdev)
 #endif
 	decon_enter_shutdown(decon);
 
-	if (!lock_fb_info(fbinfo)) {
-		decon_warn("%s: fblock is failed\n", __func__);
-		return;
-	}
+	lock_fb_info(fbinfo);
 
 	decon_info("%s + state:%d\n", __func__, decon->state);
 	DPU_EVENT_LOG(DPU_EVT_DECON_SHUTDOWN, &decon->sd, ktime_set(0, 0));

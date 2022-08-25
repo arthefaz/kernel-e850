@@ -554,11 +554,8 @@ static void exynos_panel_parse_lcd_info(struct exynos_panel_device *panel,
 
 static void exynos_panel_list_up(void)
 {
-	panel_list[0] = &panel_s6e3ha8_ops;
-	panel_list[1] = &panel_s6e3ha9_ops;
-	panel_list[2] = &panel_s6e3fa0_ops;
-	panel_list[3] = &panel_ea8076_ops;
-	panel_list[4] = &panel_td4150_ops;
+	panel_list[0] = &panel_s6e3fa0_ops;
+	panel_list[1] = &panel_td4150_ops;
 }
 
 static int exynos_panel_register_ops(struct exynos_panel_device *panel)

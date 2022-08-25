@@ -1075,8 +1075,6 @@ static int dpp_init_resources(struct dpp_device *dpp, struct platform_device *pd
  */
 static int dpp_set_output_device(struct dpp_device *dpp)
 {
-	int ret;
-
 	if (!IS_WB(dpp->attr))
 		return 0;
 

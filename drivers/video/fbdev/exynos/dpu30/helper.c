@@ -26,7 +26,7 @@
 #endif
 #include <video/mipi_display.h>
 
-static int __dpu_match_dev(struct device *dev, void *data)
+static int __dpu_match_dev(struct device *dev, const void *data)
 {
 	struct dpp_device *dpp;
 	struct dsim_device *dsim;
