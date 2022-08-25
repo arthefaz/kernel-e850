@@ -1090,11 +1090,6 @@ static int dpp_set_output_device(struct dpp_device *dpp)
 	}
 
 	pm_runtime_enable(dpp->dev);
-	ret = iovmm_activate(dpp->dev);
-	if (ret) {
-		dpp_err("failed to activate iovmm\n");
-		return ret;
-	}
 
 	dpp->wb_state = WBMUX_STATE_OFF;
 	dpp_dbg("%s -\n", __func__);

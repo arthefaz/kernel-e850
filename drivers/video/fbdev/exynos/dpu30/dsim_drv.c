@@ -1272,9 +1272,10 @@ static int dsim_set_freq_hop(struct dsim_device *dsim, struct decon_freq_hop *fr
 
 static int dsim_free_fb_resource(struct dsim_device *dsim)
 {
+#if 0 /* Need fix in GKI */
 	/* unmap */
 	iovmm_unmap_oto(dsim->dev, dsim->fb_handover.phys_addr);
-
+#endif
 	/* unreserve memory */
 	of_reserved_mem_device_release(dsim->dev);
 
@@ -1308,7 +1309,7 @@ static int dsim_acquire_fb_resource(struct dsim_device *dsim)
 	} else {
 		dsim->fb_handover.reserved = true;
 	}
-
+#if 0 /* Need fix in GKI */
 	/* phys_addr and phys_size must be aligned to page size */
 	ret = iovmm_map_oto(dsim->dev, dsim->fb_handover.phys_addr,
 			dsim->fb_handover.phys_size);
@@ -1316,7 +1317,7 @@ static int dsim_acquire_fb_resource(struct dsim_device *dsim)
 		dsim_err("failed one to one mapping: %d\n", ret);
 		BUG();
 	}
-
+#endif
 	return ret;
 }
 
@@ -1995,12 +1996,7 @@ static int dsim_probe(struct platform_device *pdev)
 
 	dsim_acquire_fb_resource(dsim);
 
-	ret = iovmm_activate(dev);
-	if (ret) {
-		dsim_err("failed to activate iovmm\n");
-		goto err_dt;
-	}
-	iovmm_set_fault_handler(dev, dpu_sysmmu_fault_handler, NULL);
+	iommu_register_device_fault_handler(dev, dpu_sysmmu_fault_handler_dsim, NULL);
 
 	phy_init(dsim->phy);
 	if (dsim->phy_ex)

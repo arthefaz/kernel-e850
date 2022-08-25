@@ -272,11 +272,6 @@ static void decon_free_unused_buf(struct decon_device *decon,
 
 	decon_info("%s, win[%d]plane[%d]\n", __func__, win, plane);
 
-	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_VALUE(dma->dma_addr)) {
-		ion_iovmm_unmap(dma->attachment, dma->dma_addr);
-		DPU_EVENT_LOG_MEMMAP(DPU_EVT_MEM_UNMAP, &decon->sd,
-				dma->dma_addr, dma->dpp_ch);
-	}
 	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_OR_NULL(dma->sg_table))
 		dma_buf_unmap_attachment(dma->attachment,
 				dma->sg_table, DMA_TO_DEVICE);
@@ -298,12 +293,6 @@ static void decon_free_dma_buf(struct decon_device *decon,
 		dma_fence_put(dma->fence);
 		dma->fence = NULL;
 	}
-	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_VALUE(dma->dma_addr)) {
-		ion_iovmm_unmap(dma->attachment, dma->dma_addr);
-		DPU_EVENT_LOG_MEMMAP(DPU_EVT_MEM_UNMAP, &decon->sd, dma->dma_addr,
-				dma->dpp_ch);
-	}
-
 	if (!IS_ERR_OR_NULL(dma->attachment) && !IS_ERR_OR_NULL(dma->sg_table))
 		dma_buf_unmap_attachment(dma->attachment, dma->sg_table,
 				DMA_TO_DEVICE);
@@ -1317,10 +1306,9 @@ static unsigned int decon_map_ion_handle(struct decon_device *decon,
 	}
 
 	/* This is DVA(Device Virtual Address) for setting base address SFR */
-	dma->dma_addr = ion_iovmm_map(dma->attachment, 0, dma->dma_buf->size,
-				      DMA_TO_DEVICE, 0);
+	dma->dma_addr = sg_dma_address(dma->sg_table->sgl);
 	if (IS_ERR_VALUE(dma->dma_addr)) {
-		decon_err("ion_iovmm_map() failed: %pa\n", &dma->dma_addr);
+		decon_err("sg_dma_address() failed: %pa\n", &dma->dma_addr);
 		goto err_iovmm_map;
 	}
 
@@ -1372,7 +1360,7 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 		buf = dma_buf_get(config->fd_idma[i]);
 		if (IS_ERR_OR_NULL(buf)) {
 			decon_err("failed to get dma_buf:%ld\n", PTR_ERR(buf));
-			return PTR_ERR(buf);
+			return -ENOMEM;
 		}
 		if (decon->dt.out_type == DECON_OUT_DP) {
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
@@ -3446,7 +3434,7 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	struct device *dev = NULL;
 	unsigned int real_size, virt_size, size;
 	dma_addr_t map_dma;
-	struct dma_buf *buf;
+	struct dma_buf *buf = NULL;
 	void *vaddr;
 	unsigned int ret;
 
