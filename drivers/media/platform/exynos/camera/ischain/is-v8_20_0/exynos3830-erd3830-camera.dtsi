@@ -456,13 +456,6 @@
 		samsung,pin-pud = <0>;
 		samsung,pin-drv = <0>;
 	};
-
-	hsi2c_0_bus_in: hsi2c_0-bus-in {
-		samsung,pins = "gpc1-0", "gpc1-1";
-		samsung,pin-function = <3>;
-		samsung,pin-pud = <0>;
-		samsung,pin-drv = <0>;
-	};
 };
 
 &hsi2c_0 {
@@ -475,9 +468,9 @@
 	samsung,fast-plus-mode;
 
 	pinctrl-names = "default","on_i2c","off_i2c";
-	pinctrl-0 = <&hsi2c_0_bus_in>;
+	pinctrl-0 = <&hsi2c_0_bus>;
 	pinctrl-1 = <&hsi2c_0_bus>;
-	pinctrl-2 = <&hsi2c_0_bus_in>;
+	pinctrl-2 = <&hsi2c_0_bus>;
 
 	is-3l6@2D {
 		compatible = "samsung,exynos-is-cis-3l6";
