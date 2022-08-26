@@ -29,6 +29,77 @@ config EXYNOS_CHIPID
 	select MFD_SYSCON
 	select SOC_BUS
 
+config CAL_IF
+       tristate "Exynos Chip Abstraction Layer Interface"
+       help
+         Support CMU CAL for Exynos SoC.
+
+config CMUCAL
+       tristate "Exynos CMU Chip Abstraction Layer"
+       depends on CAL_IF
+       default m
+       help
+	 Support CMUCAL for Exynos SoC.
+
+config EXYNOS_REBOOT
+       bool "Exynos Chip Reboot Driver Support"
+       depends on ARCH_EXYNOS
+
+config CMUCAL_DEBUG
+       tristate "CMUCAL Debug Interface"
+       depends on CMUCAL
+
+config CMUCAL_QCH_IGNORE_SUPPORT
+       tristate "CMUCAL QCH IGNORE Support"
+       depends on CMUCAL
+
+source "drivers/soc/samsung/acpm/Kconfig"
+
+config ACPM_DVFS
+       tristate "Exynos ACPM DVFS manager"
+       depends on CAL_IF && CMUCAL
+       default n
+       help
+       Support ACPM DVFS for Exynos SoC.
+
+config PMUCAL
+       bool "Exynos PMU Chip Abstraction Layer"
+       depends on CAL_IF
+       default y
+       help
+       Support PMUCAL for Exynos SoC.
+
+config FLEXPMU
+       bool "Exynos FLEXPMU"
+       depends on PMUCAL
+       default n
+       help
+       Support PMUCAL for Exynos SoC.
+
+config EXYNOS_FLEXPMU_DBG
+       tristate "Exynos FLEXPMU DBG"
+       depends on SOC_S5E3830
+       help
+       Support FLEXPMU for Exynos SoC.
+
+config CP_PMUCAL
+       tristate "Exynos PMU(for CP) Chip Abstraction Layer"
+       depends on CAL_IF
+       help
+         Support CP_PMUCAL for Exynos SoC.
+
+config GNSS_PMUCAL
+       tristate "Exynos PMU(for GNSS) Chip Abstraction Layer"
+       depends on CAL_IF
+       help
+         Support GNSS_PMUCAL for Exynos SoC.
+
+config SHUB_PMUCAL
+       bool "Exynos PMU(for SHUB) Chip Abstraction Layer"
+       depends on CAL_IF
+       help
+         Support SHUB_PMUCAL for Exynos SoC.
+
 config EXYNOS_PMU
 	bool "Exynos PMU controller driver" if COMPILE_TEST
 	depends on ARCH_EXYNOS || ((ARM || ARM64) && COMPILE_TEST)
