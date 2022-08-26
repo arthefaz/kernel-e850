@@ -15,3 +15,5 @@ obj-$(CONFIG_CMUCAL)			+= cmucal.o ra.o vclk.o pll_spec.o
 obj-$(CONFIG_CMUCAL_DEBUG)		+= cmucal-debug.o
 obj-$(CONFIG_ACPM_DVFS)			+= acpm_dvfs.o fvmap.o
 #obj-$(CONFIG_CMU_EWF)			+= cmu_ewf.o
+
+obj-$(CONFIG_SOC_S5E3830)                    += exynos3830/cal_data.o
