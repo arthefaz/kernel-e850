@@ -243,3 +243,71 @@
 //	samsung,reset-before-trans;
 //	samsung,fast-plus-mode;
 };
+
+/* ---- 3L6 camera nodes ---------------------------------------------------- */
+
+&pinctrl_0 {
+	/* GPIO-A: 2.8V enable */
+	cam2v8_en_pins: cam2v8-en-pins {
+		samsung,pins = "gpa1-1";
+		samsung,pin-function = <0x1>;	/* output */
+		samsung,pin-pud = <0>;
+	};
+
+	/* GPIO-B: 1.05V enable */
+	cam1v05_en_pins: cam1v05-en-pins {
+		samsung,pins = "gpa2-1";
+		samsung,pin-function = <0x1>;	/* output */
+		samsung,pin-pud = <0>;
+	};
+
+	/* GPIO-K: 3L6 PWDN/reset */
+	cam_pwdn_pins: cam-pwdn-pins {
+		samsung,pins = "gpa3-2";
+		samsung,pin-function = <0x1>;	/* output */
+		samsung,pin-pud = <0>;
+	};
+
+	/* GPIO-L: SYNC */
+	cam_sync_pins: cam-sync-pins {
+		samsung,pins = "gpa3-3";
+		samsung,pin-function = <0x0>;	/* input */
+		samsung,pin-pud = <0>;
+	};
+};
+
+&gpa1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&cam2v8_en_pins>;
+
+	cam2v8-en {
+		gpio-hog;
+		gpios = <1 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "cam2v8-en";
+	};
+};
+
+&gpa2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&cam1v05_en_pins>;
+
+	cam1v05-en {
+		gpio-hog;
+		gpios = <1 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "cam1v05-en";
+	};
+};
+
+&gpa3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&cam_pwdn_pins &cam_sync_pins>;
+
+	cam-pwdn {
+		gpio-hog;
+		gpios = <2 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "cam-pwdn";
+	};
+};
