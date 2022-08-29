@@ -35,14 +35,16 @@
 #if defined(CONFIG_SOC_S5E3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
 #include <dt-bindings/soc/samsung/exynos3830-devfreq.h>
 #include <dt-bindings/clock/exynos3830.h>
-#endif
-
 #include <soc/samsung/exynos-devfreq.h>
+#endif
 
 #if defined(CONFIG_CPU_IDLE)
 #include <soc/samsung/exynos-cpupm.h>
 #endif
+
+#if IS_ENABLED(CONFIG_EXYNOS_PMU_IF)
 #include <soc/samsung/exynos-pmu-if.h>
+#endif
 
 #include <linux/string.h>
 #include <linux/of_reserved_mem.h>

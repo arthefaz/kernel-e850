@@ -50,8 +50,8 @@
 #if defined(CONFIG_SOC_S5E3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
 #include <dt-bindings/soc/samsung/exynos3830-devfreq.h>
 #include <dt-bindings/clock/exynos3830.h>
-#endif
 #include <soc/samsung/exynos-devfreq.h>
+#endif
 
 #include "format.h"
 #include "decon.h"
