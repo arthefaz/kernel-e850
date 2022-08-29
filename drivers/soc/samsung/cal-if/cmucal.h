@@ -513,7 +513,9 @@ struct cmucal_clkout {
 	.clk.status_idx	= _so,				\
 	.clk.enable_idx	= _eo,				\
 }
-#ifdef CONFIG_CMUCAL_QCH_IGNORE_SUPPORT
+//#ifdef CONFIG_CMUCAL_QCH_IGNORE_SUPPORT
+#if defined(CONFIG_CMUCAL_QCH_IGNORE_SUPPORT) || defined(CONFIG_CMUCAL_QCH_IGNORE_SUPPORT_MODULE)
+#if defined(CONFIG_SOC_S5E3830)
 #define CLK_QCH(_id, _o, _so, _eo, _ig)			\
 [_id & MASK_OF_ID] = {	\
 	.clk.id		= _id,				\
@@ -534,6 +536,7 @@ struct cmucal_clkout {
 	.clk.status_idx	= _so,				\
 	.clk.enable_idx	= _eo,				\
 }
+#endif
 #endif
 #define CLK_OPTION(_id, _o, _eo)			\
 [_id & MASK_OF_ID] = {	\
@@ -610,7 +613,7 @@ extern unsigned int cmucal_get_id_by_addr(unsigned int addr);
 extern void (*cal_data_init)(void);
 extern int (*cal_check_hiu_dvfs_id)(u32 id);
 extern void (*cal_set_cmu_smpl_warn)(void);
-#ifdef CONFIG_CMUCAL_DEBUG
+#if defined(CONFIG_CMUCAL_DEBUG) || defined(CONFIG_CMUCAL_DEBUG_MODULE)
 extern void cmucal_dbg_set_cmu_top_base(u32 base_addr);
 #else
 static inline void cmucal_dbg_set_cmu_top_base(u32 base_addr)

@@ -764,3 +764,4 @@ static int __init exynos_flexpmu_dbg_init(void)
 	return platform_driver_register(&exynos_flexpmu_dbg_drv);
 }
 late_initcall(exynos_flexpmu_dbg_init);
+MODULE_LICENSE("GPL");

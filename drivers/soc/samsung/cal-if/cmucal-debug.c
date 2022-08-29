@@ -1,6 +1,7 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/io.h>
+#include <linux/module.h>
 #include <soc/samsung/cal-if.h>
 
 #include "cmucal.h"
@@ -372,7 +373,7 @@ static int vclk_debug_create_one(struct vclk *vclk, struct dentry *pdentry)
 		goto out;
 
 	vclk->dentry = d;
-
+#if 0
 	d = debugfs_create_x32("vclk_id", S_IRUSR, vclk->dentry,
 			(u32 *)&vclk->id);
 	if (!d)
@@ -404,6 +405,24 @@ static int vclk_debug_create_one(struct vclk *vclk, struct dentry *pdentry)
 err_out:
 	debugfs_remove_recursive(vclk->dentry);
 	vclk->dentry = NULL;
+#endif
+
+        debugfs_create_x32("vclk_id", 0400, vclk->dentry, (u32 *)&vclk->id);
+
+        debugfs_create_u32("vclk_rate", 0400, vclk->dentry, (u32 *)&vclk->vrate);
+
+        debugfs_create_u32("vclk_num_rates", 0400, vclk->dentry, (u32 *)&vclk->num_rates);
+
+        debugfs_create_u32("vclk_num_list", 0400, vclk->dentry, (u32 *)&vclk->num_list);
+
+        d = debugfs_create_file("vclk_table", 0400, vclk->dentry, vclk,
+                                &vclk_table_fops);
+        if (!d)
+                return -ENOMEM;
+
+        ret = 0;
+        goto out;
+
 out:
 	return ret;
 }
@@ -495,4 +514,5 @@ static int __init vclk_debug_init(void)
 	return 0;
 }
 late_initcall(vclk_debug_init);
+MODULE_LICENSE("GPL");
 #endif
