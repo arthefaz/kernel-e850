@@ -20,7 +20,11 @@
 #include <linux/interrupt.h>
 #include <linux/wait.h>
 #include <linux/kthread.h>
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 #include <soc/samsung/exynos_pm_qos.h>
+#else
+#include <linux/pm_qos.h>
+#endif
 #include <linux/delay.h>
 #include <linux/seq_file.h>
 #include <linux/platform_device.h>
@@ -1019,9 +1023,15 @@ struct decon_bts {
 	struct bts_decon_info bts_info;
 #endif
 	struct decon_bts_ops *ops;
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 	struct exynos_pm_qos_request mif_qos;
 	struct exynos_pm_qos_request int_qos;
 	struct exynos_pm_qos_request disp_qos;
+#else
+	struct pm_qos_request mif_qos;
+	struct pm_qos_request int_qos;
+	struct pm_qos_request disp_qos;
+#endif
 	u32 scen_updated;
 };
 

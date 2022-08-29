@@ -578,10 +578,19 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 		if (decon->bts.max_disp_freq <= decon->bts.prev_max_disp_freq)
 			exynos_pm_qos_update_request(&decon->bts.disp_qos,
 					decon->bts.max_disp_freq);
+#else
+		if (decon->bts.max_disp_freq <= decon->bts.prev_max_disp_freq)
+			pm_qos_update_request(&decon->bts.disp_qos,
+				decon->bts.max_disp_freq);
 #endif
 		if (decon->bts.total_bw <= 1373145) { // if smaller than FHD+ * 2
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 			exynos_pm_qos_update_request(&decon->bts.mif_qos, 0);
 			exynos_pm_qos_update_request(&decon->bts.int_qos, 0);
+#else
+			pm_qos_update_request(&decon->bts.mif_qos, 0);
+			pm_qos_update_request(&decon->bts.int_qos, 0);
+#endif
 		}
 
 		decon->bts.prev_total_bw = decon->bts.total_bw;
@@ -596,16 +605,24 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 			return;
 #endif
 
-#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 		if (decon->bts.max_disp_freq > decon->bts.prev_max_disp_freq)
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 			exynos_pm_qos_update_request(&decon->bts.disp_qos,
+					decon->bts.max_disp_freq);
+#else
+			pm_qos_update_request(&decon->bts.disp_qos,
 					decon->bts.max_disp_freq);
 #endif
 		if ((decon->lcd_info->mode == DECON_VIDEO_MODE) &&
 				((decon->lcd_info->xres * decon->lcd_info->yres) > (1080 * 1920)) &&
 				(decon->bts.total_bw > 1373145)) { // if bigger than FHD+ * 2
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 			exynos_pm_qos_update_request(&decon->bts.mif_qos, decon->dt.mif_freq);
 			exynos_pm_qos_update_request(&decon->bts.int_qos, 334 * 1000);
+#else
+			pm_qos_update_request(&decon->bts.mif_qos, decon->dt.mif_freq);
+			pm_qos_update_request(&decon->bts.int_qos, 334 * 1000);
+#endif
 		}
 	}
 
@@ -646,7 +663,11 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 		aclk_freq = dpu_bts_calc_aclk_disp(decon, &config, resol_clock);
 		DPU_DEBUG_BTS("Initial calculated disp freq(%lu)\n", aclk_freq);
 
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 		exynos_pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
+#else
+		pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
+#endif
 
 #if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 		DPU_DEBUG_BTS("Get initial disp freq(%lu)\n",
@@ -694,6 +715,38 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 
 	DPU_DEBUG_BTS("%s: decon%d, pixelclock(%u)\n",
 			__func__, decon->id, pixelclock);
+#else
+	if (pixelclock >= 533000000) {
+		if (pm_qos_request_active(&decon->bts.mif_qos))
+			pm_qos_update_request(&decon->bts.mif_qos, 1794 * 1000);
+		else
+			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
+
+		if (pm_qos_request_active(&decon->bts.int_qos))
+			pm_qos_update_request(&decon->bts.int_qos, 534 * 1000);
+		else
+			DPU_ERR_BTS("%s int qos setting error\n", __func__);
+
+		if (pm_qos_request_active(&decon->bts.disp_qos))
+			pm_qos_update_request(&decon->bts.disp_qos, 400 * 1000);
+		else
+			DPU_ERR_BTS("%s int qos setting error\n", __func__);
+
+		bts_add_scenario(decon->bts.scen_idx[DPU_BS_DP_DEFAULT]);
+	} else if (pixelclock > 148500000) { /* pixelclock < 533000000 ? */
+		if (pm_qos_request_active(&decon->bts.mif_qos))
+			pm_qos_update_request(&decon->bts.mif_qos, 1352 * 1000);
+		else
+			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
+	} else { /* pixelclock <= 148500000 ? */
+		if (pm_qos_request_active(&decon->bts.mif_qos))
+			pm_qos_update_request(&decon->bts.mif_qos, 845 * 1000);
+		else
+			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
+	}
+
+	DPU_DEBUG_BTS("%s: decon%d, pixelclock(%u)\n",
+			__func__, decon->id, pixelclock);
 #endif
 #endif
 }
@@ -711,10 +764,15 @@ void dpu_bts_release_bw(struct decon_device *decon)
 		decon->bts.prev_total_bw = 0;
 #if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 		exynos_pm_qos_update_request(&decon->bts.disp_qos, 0);
+#else
+		pm_qos_update_request(&decon->bts.disp_qos, 0);
 #endif
 		decon->bts.prev_max_disp_freq = 0;
 #if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 		exynos_pm_qos_update_request(&decon->bts.int_qos, 0);
+#else
+		pm_qos_update_request(&decon->bts.mif_qos, 0);
+		pm_qos_update_request(&decon->bts.int_qos, 0);
 #endif
 	} else if (decon->dt.out_type == DECON_OUT_DP) {
 #if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
@@ -731,6 +789,25 @@ void dpu_bts_release_bw(struct decon_device *decon)
 
 		if (exynos_pm_qos_request_active(&decon->bts.disp_qos))
 			exynos_pm_qos_update_request(&decon->bts.disp_qos, 0);
+		else
+			DPU_ERR_BTS("%s int qos setting error\n", __func__);
+
+		bts_del_scenario(decon->bts.scen_idx[DPU_BS_DP_DEFAULT]);
+#endif
+#else
+#if defined(CONFIG_DECON_BTS_LEGACY) && defined(CONFIG_EXYNOS_DISPLAYPORT)
+		if (pm_qos_request_active(&decon->bts.mif_qos))
+			pm_qos_update_request(&decon->bts.mif_qos, 0);
+		else
+			DPU_ERR_BTS("%s mif qos setting error\n", __func__);
+
+		if (pm_qos_request_active(&decon->bts.int_qos))
+			pm_qos_update_request(&decon->bts.int_qos, 0);
+		else
+			DPU_ERR_BTS("%s int qos setting error\n", __func__);
+
+		if (pm_qos_request_active(&decon->bts.disp_qos))
+			pm_qos_update_request(&decon->bts.disp_qos, 0);
 		else
 			DPU_ERR_BTS("%s int qos setting error\n", __func__);
 
@@ -816,6 +893,10 @@ void dpu_bts_init(struct decon_device *decon)
 	exynos_pm_qos_add_request(&decon->bts.mif_qos, PM_QOS_BUS_THROUGHPUT, 0);
 	exynos_pm_qos_add_request(&decon->bts.int_qos, PM_QOS_DEVICE_THROUGHPUT, 0);
 	exynos_pm_qos_add_request(&decon->bts.disp_qos, PM_QOS_DISPLAY_THROUGHPUT, 0);
+#else
+	pm_qos_add_request(&decon->bts.mif_qos, PM_QOS_BUS_THROUGHPUT, 0);
+	pm_qos_add_request(&decon->bts.int_qos, PM_QOS_DEVICE_THROUGHPUT, 0);
+	pm_qos_add_request(&decon->bts.disp_qos, PM_QOS_DISPLAY_THROUGHPUT, 0);
 #endif
 	decon->bts.scen_updated = 0;
 
@@ -842,6 +923,10 @@ void dpu_bts_deinit(struct decon_device *decon)
 	exynos_pm_qos_remove_request(&decon->bts.disp_qos);
 	exynos_pm_qos_remove_request(&decon->bts.int_qos);
 	exynos_pm_qos_remove_request(&decon->bts.mif_qos);
+#else
+	pm_qos_remove_request(&decon->bts.disp_qos);
+	pm_qos_remove_request(&decon->bts.int_qos);
+	pm_qos_remove_request(&decon->bts.mif_qos);
 #endif
 	DPU_DEBUG_BTS("%s -\n", __func__);
 }

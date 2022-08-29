@@ -19,7 +19,11 @@
 #include <linux/videodev2.h>
 #include <linux/io.h>
 #include <linux/pm_runtime.h>
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 #include <soc/samsung/exynos_pm_qos.h>
+#else
+#include <linux/pm_qos.h>
+#endif
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/ion.h>
