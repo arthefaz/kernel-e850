@@ -272,7 +272,6 @@
 
 #include <linux/serial_core.h>
 struct uart_port;
-unsigned int uart_xmit_size;
 
 /* configuration structure for per-machine configurations for the
  * serial port

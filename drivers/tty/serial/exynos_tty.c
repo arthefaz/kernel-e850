@@ -116,6 +116,7 @@ unsigned char uart_log_buf[256] = {0, };
 #define USI_UART_SW_CONF	(1<<0)
 
 struct exynos_uart_port *panic_port;
+unsigned int uart_xmit_size;
 
 static u32 rd_reg(struct uart_port *port, u32 reg)
 {
