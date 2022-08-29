@@ -1,0 +1,36 @@
+/*
+ * SAMSUNG EXYNOS3830 board device tree source
+ *
+ * Copyright (c) 2018 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+/dts-v1/;
+/plugin/;
+
+#include "s5e3830-board_common.dtsi"
+
+#define BOARD_ID	0x0
+#define BOARD_REV	0x0
+
+/ {
+        compatible = "samsung,exynos3830", "samsung,ERD3830";
+        board_id = <BOARD_ID>;
+        board_rev = <BOARD_REV>;
+
+        fragment@model {
+                target-path = "/";
+                __overlay__ {
+                        #address-cells = <2>;
+                        #size-cells = <1>;
+
+                        model = "Samsung ERD3830 board based on EXYNOS3830";
+
+              }; /* end of __overlay__ */
+      }; /* end of fragment */
+
+}; /* end of root */
