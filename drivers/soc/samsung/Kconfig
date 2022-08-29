@@ -5,6 +5,12 @@
 menuconfig SOC_SAMSUNG
 	bool "Samsung SoC driver support" if COMPILE_TEST
 
+config SOC_S5E3830
+	bool "Samsung S5E3830"
+	select ARCH_EXYNOS
+	help
+	Support Samsung SOC S5E3830.
+
 if SOC_SAMSUNG
 
 config EXYNOS_ASV
@@ -87,4 +93,5 @@ config SAMSUNG_PM_CHECK_CHUNKSIZE
 config EXYNOS_REGULATOR_COUPLER
 	bool "Exynos SoC Regulator Coupler" if COMPILE_TEST
 	depends on ARCH_EXYNOS || COMPILE_TEST
+
 endif
