@@ -39,7 +39,7 @@
 #include <linux/sync_file.h>
 
 /* TODO: SoC dependency will be removed */
-#if defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_S5E3830)
 #include "./cal_3830/regs-decon.h"
 #include "./cal_3830/decon_cal.h"
 #endif
@@ -57,7 +57,7 @@
 
 #define MAX_DECON_CNT		3
 
-#if defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_S5E3830)
 #define MAX_DECON_WIN		4
 #define MAX_DPP_SUBDEV		5
 #endif

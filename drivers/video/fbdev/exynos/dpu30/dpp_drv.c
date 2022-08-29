@@ -373,7 +373,7 @@ static int dpp_check_format(struct dpp_device *dpp, struct dpp_params_info *p)
 	}
 
 
-#if defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_S5E3830)
 	if (!test_bit(DPP_ATTR_HDR10P, &dpp->attr) && (p->hdr > DPP_HDR_OFF)) {
 		dpp_err("Not support HDR in DPP%d - No H/W!\n",
 				dpp->id);

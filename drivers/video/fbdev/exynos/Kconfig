@@ -1,5 +1,5 @@
-if SOC_EXYNOS3830
+if SOC_S5E3830
 
 source "drivers/video/fbdev/exynos/dpu30/Kconfig"
 
-endif # SOC_EXYNOS3830
+endif # SOC_S5E3830

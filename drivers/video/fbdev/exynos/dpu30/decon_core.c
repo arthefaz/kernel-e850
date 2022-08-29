@@ -47,7 +47,7 @@
 #include "../../../../misc/tui/stui_core.h"
 #endif
 
-#if defined(CONFIG_SOC_EXYNOS3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
+#if defined(CONFIG_SOC_S5E3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
 #include <dt-bindings/soc/samsung/exynos3830-devfreq.h>
 #include <dt-bindings/clock/exynos3830.h>
 #endif
@@ -4292,7 +4292,7 @@ static struct platform_driver decon_driver __refdata = {
 
 extern struct platform_driver exynos_panel_driver;
 extern struct platform_driver dpp_driver;
-#if defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_S5E3830)
 extern struct i2c_driver panel_i2c_driver;
 #endif
 extern struct platform_driver dsim_driver;
@@ -4301,7 +4301,7 @@ extern struct platform_driver displayport_driver;
 #endif
 static int exynos_decon_register(void)
 {
-#if defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_S5E3830)
 	i2c_add_driver(&panel_i2c_driver);
 #endif
 	platform_driver_register(&exynos_panel_driver);
@@ -4324,7 +4324,7 @@ static void exynos_decon_unregister(void)
 	platform_driver_unregister(&dsim_driver);
 	platform_driver_unregister(&dpp_driver);
 	platform_driver_unregister(&exynos_panel_driver);
-#if defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_S5E3830)
 	i2c_del_driver(&panel_i2c_driver);
 #endif
 }
