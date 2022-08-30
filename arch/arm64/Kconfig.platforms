@@ -320,4 +320,9 @@ config ARCH_ZYNQMP
 	help
 	  This enables support for Xilinx ZynqMP Family
 
+config SOC_EXYNOS3830_ANDROID_VERSION_T
+        bool "Samsung EXYNOS3830 Android version T"
+        help
+          This enables support for Android version T of EXYNOS3830
+
 endmenu
