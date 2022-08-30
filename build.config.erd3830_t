@@ -12,7 +12,7 @@ dtbs
 DEFCONFIG=erd3830_gki_defconfig
 FRAGMENT_CONFIG=erd3830_t_defconfig
 GKI_DEFCONFIG=gki_defconfig
-#MALI_CONFIG=erd3830_t_mali.cfg
+MALI_CONFIG=erd3830_t_mali.cfg
 POST_CHECK_DEFCONFIG=true
 TARGET_SOC=s5e3830
 SEPERATE_KERNEL_OBJ=true
