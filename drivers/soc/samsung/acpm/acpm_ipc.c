@@ -19,7 +19,7 @@
 #include <linux/list.h>
 #include <linux/wait.h>
 #include <linux/slab.h>
-#include <linux/debug-snapshot.h>
+//#include <linux/debug-snapshot.h>
 #include <linux/sched/clock.h>
 
 #include "acpm.h"
@@ -149,7 +149,7 @@ void acpm_log_print(void)
 		if (id == REGULATOR_INFO_ID)
 			exynos_rgt_dbg_snapshot_regulator(val, time);
 
-		dbg_snapshot_acpm(time, str, val);
+		//dbg_snapshot_acpm(time, str, val);
 
 		if (acpm_debug->debug_log_level == 1 || !log_level)
 			pr_info("[ACPM_FW] : %llu id:%u, %s, %x\n", time, id, str, val);
