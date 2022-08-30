@@ -23,6 +23,8 @@
 #include "s5e3830-rmem.dtsi"
 #include "s5e3830-dma-heap.dtsi"
 #include "s5e3830-sysmmu.dtsi"
+#include "s5e3830-mali.dtsi"
+
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
