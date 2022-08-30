@@ -5,20 +5,20 @@
  * Copyright (c) 2012 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  */
-#include <dt-bindings/clock/s5e8825.h>
-#include <dt-bindings/interrupt-controller/s5e8825.h>
+#include <dt-bindings/clock/s5e3830.h>
+#include <dt-bindings/interrupt-controller/s5e3830.h>
 
 / {
 	aliases {
 		smfc0 = &smfc_0;
 	};
 
-	smfc_0: smfc@12C60000 {
+	smfc_0: smfc@12C90000 {
 		compatible = "samsung,exynos8890-jpeg";
-		reg = <0x0 0x12C60000 0x1000>;
-		interrupts = <0 INTREQ__JPEG0 IRQ_TYPE_LEVEL_HIGH>;
-		iommus = <&sysmmu_d0_m2m>;
-		samsung,iommu-group=<&iommu_group_mscl_smfc>;
-		smfc,int_qos_minlock = <800000>;
+		reg = <0x0 0x12C90000 0x1000>;
+		interrupts = <0 INTREQ__JPEG IRQ_TYPE_LEVEL_HIGH>;
+		iommus = <&sysmmu_mfcmscl>;
+		samsung,iommu-group=<&iommu_group_mfcmscl>;
+		smfc,int_qos_minlock = <534000>;
 	};
 };
