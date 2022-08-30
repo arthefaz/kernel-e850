@@ -14,11 +14,14 @@
  */
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-#include <dt-bindings/interrupt-controller/exynos3830.h>
+/* #include <dt-bindings/interrupt-controller/exynos3830.h>*/
+#include <dt-bindings/interrupt-controller/s5e3830.h>
 #include <dt-bindings/display/exynos-display.h>
+/* #include <dt-bindings/clock/exynos3830.h> */
 #include <dt-bindings/clock/s5e3830.h>
-#include "exynos3830-pinctrl.dtsi"
-#include "exynos3830-display-lcd.dtsi"
+/* #include "exynos3830-pinctrl.dtsi" */
+#include "s5e3830-pinctrl.dtsi"
+#include "s5e3830-display-lcd.dtsi"
 
 / {
 	aliases {
@@ -139,8 +142,11 @@
 		/* DSIM0, DPHY_M4M0 */
 		reg = <0x0 0x13070000 0x200>, <0x0 0x13080000 0x3000>;
 		interrupts = <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>;
+
+		/* TODO: Modify
 		iommus = <&sysmmu_dpu>;
 		samsung,iommu-group = <&iommu_group_dpu>;
+		*/
 		#dma-address-cells = <1>;
 		#dma-size-cells = <1>;
 		ranges;
@@ -155,8 +161,9 @@
 
 		phys = <&mipi_phy_dsim0_m4s0 0>;
 		phy-names = "dsim_dphy";
-
+		/* TODO
 		memory-region = <&fb_handover>;
+		*/
 	};
 
 	/* 3830 Universal device panel */

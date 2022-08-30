@@ -25,6 +25,7 @@
 #include "s5e3830-sysmmu.dtsi"
 #include "s5e3830-mali.dtsi"
 #include "s5e3830-cpu.dtsi"
+#include "s5e3830-dpu.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
@@ -315,5 +316,9 @@
 		 fmp-id = <0>;
 		 smu-id = <0>;
 	 };
-
+	/* TODO */
+	pmu_system_controller: system-controller@11860000 {
+	       compatible = "samsung,exynos3830-pmu", "syscon";
+	       reg = <0x0 0x11860000 0x10000>;
+	};
 };
