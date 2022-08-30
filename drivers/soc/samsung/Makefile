@@ -47,3 +47,9 @@ obj-$(CONFIG_EXYNOS_TZASC_FAIL_DETECTOR) += exynos-tzasc.o
 
 # SDM
 obj-$(CONFIG_EXYNOS_SDM)	+= exynos-sdm.o
+
+# DVFS MANAGER
+obj-$(CONFIG_EXYNOS_DVFS_MANAGER)       += dm/
+
+# EXYNOS_PM_QOS
+obj-$(CONFIG_EXYNOS_PM_QOS)	+= pm_qos/
