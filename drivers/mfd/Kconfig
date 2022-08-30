@@ -1162,6 +1162,17 @@ config MFD_SEC_CORE
 	  on this driver so building this as a module might require proper
 	  initial ramdisk or might not boot up as well in certain scenarios.
 
+config MFD_S2MPU12
+	tristate "SAMSUNG Electronics S2MPU12 PMIC Series Support"
+	depends on I2C=y
+	select MFD_CORE
+	select REGULATOR
+	help
+	 Support for the Samsung Electronics MFD series.
+	 This driver provides common support for accessing the device,
+	 additional drivers must be enabled in order to use the functionality
+	 of the device
+
 config MFD_SI476X_CORE
 	tristate "Silicon Laboratories 4761/64/68 AM/FM radio."
 	depends on I2C
