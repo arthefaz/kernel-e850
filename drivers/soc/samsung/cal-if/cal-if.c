@@ -1,5 +1,5 @@
 #include <linux/module.h>
-#include <linux/debug-snapshot.h>
+//#include <linux/debug-snapshot.h>
 #include <soc/samsung/ect_parser.h>
 #include <soc/samsung/cal-if.h>
 
@@ -313,12 +313,12 @@ int cal_cluster_req_emulation(unsigned int cluster, bool en)
 
 	return ret;
 }
-
+/*
 extern int cal_is_lastcore_detecting(unsigned int cpu)
 {
 	return pmucal_is_lastcore_detecting(cpu);
 }
-
+*/
 int cal_dfs_get_asv_table(unsigned int id, unsigned int *table)
 {
 	return fvmap_get_voltage_table(id, table);

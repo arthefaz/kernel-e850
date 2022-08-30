@@ -148,7 +148,7 @@ int asv_table_init(void)
 	p_table = (unsigned int *)&asv_tbl;
 
 	for (i = 0; i < ASV_INFO_ADDR_CNT; i++) {
-		exynos_smc_readsfr((unsigned long)(ASV_TABLE_BASE + 0x4 * i), &tmp);
+		//exynos_smc_readsfr((unsigned long)(ASV_TABLE_BASE + 0x4 * i), &tmp);
 		*(p_table + i) = (unsigned int)tmp;
 	}
 
