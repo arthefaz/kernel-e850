@@ -13,6 +13,11 @@
 #ifndef __EXYNOS_DM_H
 #define __EXYNOS_DM_H
 
+#include <linux/irq_work.h>
+#include <linux/kthread.h>
+#include <linux/sched.h>
+#include <linux/sched/types.h>
+
 #define EXYNOS_DM_MODULE_NAME		"exynos-dm"
 #define EXYNOS_DM_TYPE_NAME_LEN		16
 #define EXYNOS_DM_ATTR_NAME_LEN		(EXYNOS_DM_TYPE_NAME_LEN + 12)
@@ -50,11 +55,14 @@ struct exynos_dm_constraint {
 	struct list_head	slave_domain;
 
 	bool				guidance;		/* check constraint table by hw guide */
+	bool				support_dynamic_disable;
 	u32				table_length;
 
 	enum exynos_constraint_type	constraint_type;
 	char				dm_type_name[EXYNOS_DM_TYPE_NAME_LEN];
 	struct exynos_dm_freq		*freq_table;
+	struct exynos_dm_freq		*variable_freq_table[2];
+	bool				support_variable_freq_table;
 
 	u32					const_freq;
 	u32					gov_freq;
@@ -82,6 +90,13 @@ struct exynos_dm_data {
 	u32			const_min;		// Constraint by min frequency of min master domains
 	u32			const_max;		// Constraint1 by max frequency of max master domains
 
+	/* For Fast Switch */
+	bool				fast_switch;		// Use Fast Switch
+	bool				fast_switch_post_in_progress;
+	struct irq_work			fast_switch_post_irq_work;
+	struct task_struct		*fast_switch_post_worker;
+	struct mutex			fast_switch_lock;
+
 	int				(*freq_scaler)(int dm_type, void *devdata, u32 target_freq, unsigned int relation);
 
 	struct list_head		min_slaves;
@@ -106,60 +121,84 @@ struct exynos_dm_device {
 	int 			constraint_domain_count;
 	int				*domain_order;
 	struct exynos_dm_data		*dm_data;
+	int				dynamic_disable;
+	unsigned int			fast_switch_ch;
+};
+
+struct exynos_dm_fast_switch_notify_data {
+	u32 domain;
+	u32 freq;
+	ktime_t time;
 };
 
 /* External Function call */
-#if defined(CONFIG_EXYNOS_DVFS_MANAGER)
-int exynos_dm_data_init(int dm_type, void *data,
+#if defined(CONFIG_EXYNOS_DVFS_MANAGER) || defined(CONFIG_EXYNOS_DVFS_MANAGER_MODULE)
+extern int exynos_dm_data_init(int dm_type, void *data,
 			u32 min_freq, u32 max_freq, u32 cur_freq);
-int register_exynos_dm_constraint_table(int dm_type,
+extern int register_exynos_dm_constraint_table(int dm_type,
 				struct exynos_dm_constraint *constraint);
-int unregister_exynos_dm_constraint_table(int dm_type,
+extern int unregister_exynos_dm_constraint_table(int dm_type,
 				struct exynos_dm_constraint *constraint);
-int register_exynos_dm_freq_scaler(int dm_type,
+extern int register_exynos_dm_freq_scaler(int dm_type,
 			int (*scaler_func)(int dm_type, void *devdata, u32 target_freq, unsigned int relation));
-int unregister_exynos_dm_freq_scaler(int dm_type);
-int policy_update_call_to_DM(int dm_type, u32 min_freq, u32 max_freq);
-int DM_CALL(int dm_type, unsigned long *target_freq);
+extern int unregister_exynos_dm_freq_scaler(int dm_type);
+extern int policy_update_call_to_DM(int dm_type, u32 min_freq, u32 max_freq);
+extern int DM_CALL(int dm_type, unsigned long *target_freq);
+extern void exynos_dm_dynamic_disable(int flag);
+extern int exynos_dm_fast_switch_notifier_register(struct notifier_block *n);
+extern int exynos_dm_change_freq_table(struct exynos_dm_constraint *constraint, int idx);
 #else
 static inline
 int exynos_dm_data_init(int dm_type, void *data,
 			u32 min_freq, u32 max_freq, u32 cur_freq)
 {
-	return 0;
+	return -ENODEV;
 }
 static inline
 int register_exynos_dm_constraint_table(int dm_type,
 				struct exynos_dm_constraint *constraint)
 {
-	return 0;
+	return -ENODEV;
 }
 static inline
 int unregister_exynos_dm_constraint_table(int dm_type,
 				struct exynos_dm_constraint *constraint)
 {
-	return 0;
+	return -ENODEV;
 }
 static inline
 int register_exynos_dm_freq_scaler(int dm_type,
 			int (*scaler_func)(int dm_type, void *devdata, u32 target_freq, unsigned int relation))
 {
-	return 0;
+	return -ENODEV;
 }
 static inline
 int unregister_exynos_dm_freq_scaler(int dm_type)
 {
-	return 0;
+	return -ENODEV;
 }
 static inline
 int policy_update_call_to_DM(int dm_type, u32 min_freq, u32 max_freq)
 {
-	return 0;
+	return -ENODEV;
 }
 static inline
 int DM_CALL(int dm_type, unsigned long *target_freq)
 {
+	return -ENODEV;
+}
+static inline
+void exynos_dm_dynamic_disable(int flag)
+{
+	return;
+}
+static inline int exynos_dm_fast_switch_notifier_register(struct notifier_block *n)
+{
 	return 0;
+}
+static inline int exynos_dm_change_freq_table(struct exynos_dm_constraint *constraint, int idx)
+{
+	return -ENODEV;
 }
 #endif
 
