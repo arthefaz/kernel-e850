@@ -28,12 +28,8 @@
 
 #define DM_EMPTY	0xFF
 static struct exynos_dm_device *exynos_dm;
-static ATOMIC_NOTIFIER_HEAD(exynos_dm_fast_switch_notifier);
 
 static int dm_idle_ip_index;
-static int dm_fast_switch_idle_ip_index;
-static spinlock_t fast_switch_glb_lock;
-
 void exynos_dm_dynamic_disable(int flag);
 
 /*
@@ -285,63 +281,12 @@ static ssize_t store_dynamic_disable(struct device *dev,
 	return count;
 }
 
-static ssize_t show_fast_switch(struct device *dev,
-				struct device_attribute *attr, char *buf)
-{
-	struct platform_device *pdev = container_of(dev, struct platform_device, dev);
-	struct exynos_dm_device *dm = platform_get_drvdata(pdev);
-	struct exynos_dm_data *data;
-	ssize_t count = 0;
-	int i;
-
-	count += snprintf(buf + count, PAGE_SIZE,
-			"DomainName(ID):     Mode\n");
-	for (i = 0; i < dm->domain_count; i++) {
-		data = &dm->dm_data[i];
-
-		if (!data->available)
-			continue;
-		count += snprintf(buf + count, PAGE_SIZE,
-				"%10s(%2d): %8s\n", data->dm_type_name, data->dm_type, data->fast_switch ? "enabled" : "disabled");
-	}
-
-	count += snprintf(buf + count, PAGE_SIZE,
-			"Usage: echo [id] [mode] > fast_switch (mode = 0/1)\n");
-
-	return count;
-}
-
-static ssize_t store_fast_switch(struct device *dev,
-					struct device_attribute *attr,
-					const char *buf, size_t count)
-{
-	int domain, flag, ret = 0;
-	struct exynos_dm_data *data;
-
-	ret = sscanf(buf, "%u %u", &domain, &flag);
-	if (ret != 2)
-		return -EINVAL;
-
-	if (domain < 0 || domain >= exynos_dm->domain_count)
-		return count;
-
-	data = &exynos_dm->dm_data[domain];
-
-	mutex_lock(&data->fast_switch_lock);
-	data->fast_switch = !!flag;
-	mutex_unlock(&data->fast_switch_lock);
-
-	return count;
-}
-
 static DEVICE_ATTR(available, 0440, show_available, NULL);
 static DEVICE_ATTR(dynamic_disable, 0640, show_dynamic_disable, store_dynamic_disable);
-static DEVICE_ATTR(fast_switch, 0640, show_fast_switch, store_fast_switch);
 
 static struct attribute *exynos_dm_sysfs_entries[] = {
 	&dev_attr_available.attr,
 	&dev_attr_dynamic_disable.attr,
-	&dev_attr_fast_switch.attr,
 	NULL,
 };
 
@@ -386,36 +331,6 @@ static int exynos_dm_index_validate(int index)
 	}
 
 	return 0;
-}
-
-int exynos_dm_fast_switch_notifier_register(struct notifier_block *n)
-{
-	return atomic_notifier_chain_register(&exynos_dm_fast_switch_notifier, n);
-}
-EXPORT_SYMBOL_GPL(exynos_dm_fast_switch_notifier_register);
-
-static void exynos_dm_fast_switch_callback(unsigned int *cmd, unsigned int size)
-{
-	struct exynos_dm_fast_switch_notify_data data;
-	u32 start_time, end_time;
-	unsigned long flags;
-
-	data.domain = cmd[1];
-	data.freq = cmd[2];
-
-	start_time = cmd[3] & 0xFFFF;
-	end_time = (cmd[3] >> 16) & 0xFFFF;
-
-	data.time = acpm_time_calc(start_time, end_time);
-
-	atomic_notifier_call_chain(&exynos_dm_fast_switch_notifier, data.domain, &data);
-
-	spin_lock_irqsave(&fast_switch_glb_lock, flags);
-	if (!is_acpm_ipc_busy(exynos_dm->fast_switch_ch)) {
-		// enable sicd
-		exynos_update_ip_idle_status(dm_fast_switch_idle_ip_index, 1);
-	}
-	spin_unlock_irqrestore(&fast_switch_glb_lock, flags);
 }
 
 #ifdef CONFIG_OF
@@ -470,8 +385,6 @@ static int exynos_dm_parse_dt(struct device_node *np, struct exynos_dm_device *d
 			if (!of_property_read_string(child_np, "dm_type_name", &name))
 				strncpy(dm->dm_data[index].dm_type_name, name, EXYNOS_DM_TYPE_NAME_LEN);
 
-			dm->dm_data[index].fast_switch = of_property_read_bool(child_np, "fast_switch");
-
 			INIT_LIST_HEAD(&dm->dm_data[index].min_slaves);
 			INIT_LIST_HEAD(&dm->dm_data[index].max_slaves);
 			INIT_LIST_HEAD(&dm->dm_data[index].min_masters);
@@ -490,20 +403,6 @@ static int exynos_dm_parse_dt(struct device_node *np, struct exynos_dm_device *d
 		if (of_property_read_u32(child_np, "cal_id", &dm->dm_data[index].cal_id))
 			return -ENODEV;
 #endif
-	}
-
-	// For Fast Switch Notifier
-	child_np = of_get_child_by_name(np, "dm-fast-switch");
-	if (child_np) {
-		int size;
-
-		ret = acpm_ipc_request_channel(child_np,
-				exynos_dm_fast_switch_callback,
-				&dm->fast_switch_ch,
-				&size);
-		exynos_acpm_set_fast_switch(dm->fast_switch_ch);
-	} else {
-		pr_err("%s : Failed to get cpu-noti\n", __func__);
 	}
 
 	return ret;
@@ -1122,7 +1021,7 @@ int __DM_CALL(int dm_type, unsigned long *target_freq)
 		}
 	}
 
-	if (target_dm->cur_freq == *target_freq && !target_dm->fast_switch)
+	if (target_dm->cur_freq == *target_freq)
 		goto out;
 
 	if (list_empty(&target_dm->max_slaves) && list_empty(&target_dm->min_slaves) && target_dm->freq_scaler) {
@@ -1146,7 +1045,7 @@ int __DM_CALL(int dm_type, unsigned long *target_freq)
 		}
 
 		// Perform frequency down scaling
-		if (dm->cur_freq > dm->next_target_freq && dm->freq_scaler && !dm->fast_switch) {
+		if (dm->cur_freq > dm->next_target_freq && dm->freq_scaler) {
 			ret = dm->freq_scaler(dm->dm_type, dm->devdata, dm->next_target_freq, relation);
 			if (!ret)
 				dm->cur_freq = dm->next_target_freq;
@@ -1156,7 +1055,7 @@ int __DM_CALL(int dm_type, unsigned long *target_freq)
 	// Perform frequency up scaling
 	for (i = exynos_dm->constraint_domain_count - 1; i >= 0; i--) {
 		dm = &exynos_dm->dm_data[exynos_dm->domain_order[i]];
-		if (dm->cur_freq < dm->next_target_freq && dm->freq_scaler && !dm->fast_switch) {
+		if (dm->cur_freq < dm->next_target_freq && dm->freq_scaler) {
 			ret = dm->freq_scaler(dm->dm_type, dm->devdata, dm->next_target_freq, relation);
 			if (!ret)
 				dm->cur_freq = dm->next_target_freq;
@@ -1194,155 +1093,15 @@ static int exynos_dm_resume(struct device *dev)
 	return 0;
 }
 
-static void exynos_dm_fast_switch_post_irq_work(struct irq_work *irq_work)
-{
-	struct exynos_dm_data *data;
-
-	data = container_of(irq_work,
-			      struct exynos_dm_data,
-			      fast_switch_post_irq_work);
-	if (unlikely(!data))
-		return;
-
-	/* Run fast switch work */
-	wake_up_process(data->fast_switch_post_worker);
-}
-
-static int exynos_dm_fast_switch_post_func(void *__data)
-{
-	struct exynos_dm_data *data = __data;
-	u32 cur_freq, old_cur_freq = 0;
-	unsigned long target_freq = 0;
-
-	while (true) {
-		data->fast_switch_post_in_progress = false;
-
-		set_current_state(TASK_INTERRUPTIBLE);	/* mb paired w/ kthread_stop */
-
-		if (kthread_should_stop()) {
-			__set_current_state(TASK_RUNNING);
-			return 0;
-		}
-
-		cur_freq = data->cur_freq;
-
-		if (cur_freq != old_cur_freq) {	// if governor freq is changed after scale, retry it
-			__set_current_state(TASK_RUNNING);
-			target_freq = 0;
-			__DM_CALL(data->dm_type, &target_freq);
-			old_cur_freq = cur_freq;
-		} else if (!freezing(current))
-			schedule();
-
-		try_to_freeze();
-		cond_resched();
-	}
-}
-
-int exynos_dm_fast_switch(int dm_type, unsigned long *target_freq)
-{
-	int ret = 0;
-	struct exynos_dm_data *data = &exynos_dm->dm_data[dm_type];
-	u32 max_freq, min_freq, relation = EXYNOS_DM_RELATION_L;
-	unsigned long flags;
-
-	max_freq = min(data->const_max, data->policy_max);
-	min_freq = max(data->const_min, data->policy_min);
-	data->governor_freq = *target_freq;
-
-	if (*target_freq < min_freq)
-		*target_freq = min_freq;
-
-	if (*target_freq >= max_freq) {
-		*target_freq = max_freq;
-		relation = EXYNOS_DM_RELATION_H;
-	}
-
-	update_new_target(dm_type);
-
-	if (data->next_target_freq == data->cur_freq)
-		return -EINVAL;
-
-	spin_lock_irqsave(&fast_switch_glb_lock, flags);
-	if (!is_acpm_ipc_busy(exynos_dm->fast_switch_ch)) {
-		// disable sicd
-		exynos_update_ip_idle_status(dm_fast_switch_idle_ip_index, 0);
-	}
-
-	// Call scale callback
-	ret = data->freq_scaler(data->dm_type, data->devdata, data->next_target_freq, relation);
-	if (ret) {
-		if (!is_acpm_ipc_busy(exynos_dm->fast_switch_ch))
-			exynos_update_ip_idle_status(dm_fast_switch_idle_ip_index, 1);
-		pr_err("[%s] freq request fail: %d\n", __func__, ret);
-		spin_unlock_irqrestore(&fast_switch_glb_lock, flags);
-		return ret;
-	}
-	spin_unlock_irqrestore(&fast_switch_glb_lock, flags);
-
-	data->cur_freq = data->next_target_freq;
-
-	if (!data->fast_switch_post_in_progress) {
-		data->fast_switch_post_in_progress = true;
-		irq_work_queue(&data->fast_switch_post_irq_work);
-	}
-
-	return ret;
-}
-
 int DM_CALL(int dm_type, unsigned long *target_freq)
 {
 	int ret = 0;
-	struct exynos_dm_data *data = &exynos_dm->dm_data[dm_type];
 
-	if (!data->fast_switch)
-		__DM_CALL(dm_type, target_freq);
-	else
-		ret = exynos_dm_fast_switch(dm_type, target_freq);
+	ret = __DM_CALL(dm_type, target_freq);
 
 	return ret;
 }
 EXPORT_SYMBOL_GPL(DM_CALL);
-
-static int exynos_dm_fast_switch_init(struct exynos_dm_data *data)
-{
-	struct cpumask mask;
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO / 4 - 1 };
-	struct task_struct *thread;
-	int ret = 0;
-
-	init_irq_work(&data->fast_switch_post_irq_work, exynos_dm_fast_switch_post_irq_work);
-
-	cpulist_parse("0-3", &mask);
-	cpumask_and(&mask, cpu_possible_mask, &mask);
-	thread = kthread_create(exynos_dm_fast_switch_post_func, data,
-			"fast_switch_post_worker_%s", data->dm_type_name);
-	if (IS_ERR(thread)) {
-		pr_err("%s: failed to create fast_switch_post_worker thread: %ld\n", __func__,
-				PTR_ERR(thread));
-		ret = PTR_ERR(thread);
-
-		goto out;
-	}
-	set_cpus_allowed_ptr(thread, &mask);
-
-	ret = sched_setscheduler_nocheck(thread, SCHED_FIFO, &param);
-	if (ret) {
-		kthread_stop(thread);
-		pr_warn("%s: dm failed to set SCHED_FIFO\n", __func__);
-		goto out;
-	}
-
-	data->fast_switch_post_worker = thread;
-
-	mutex_init(&data->fast_switch_lock);
-
-out:
-	if (ret)
-		data->fast_switch = false;
-
-	return ret;
-}
 
 static int exynos_dm_probe(struct platform_device *pdev)
 {
@@ -1402,20 +1161,12 @@ static int exynos_dm_probe(struct platform_device *pdev)
 		ret = sysfs_add_file_to_group(&dm->dev->kobj, &dm->dm_data[i].constraint_table_attr.attr.attr, exynos_dm_attr_group.name);
 		if (ret)
 			dev_warn(dm->dev, "failed create sysfs for constraint_table %s\n", dm->dm_data[i].dm_type_name);
-
-		if (dm->dm_data[i].fast_switch)
-			exynos_dm_fast_switch_init(&dm->dm_data[i]);
 	}
 
 	exynos_dm = dm;
 
 	dm_idle_ip_index = exynos_get_idle_ip_index(EXYNOS_DM_MODULE_NAME, 1);
 	exynos_update_ip_idle_status(dm_idle_ip_index, 1);
-
-	dm_fast_switch_idle_ip_index = exynos_get_idle_ip_index("EXYNOS_DM_FAST_SWITCH", 1);
-	exynos_update_ip_idle_status(dm_fast_switch_idle_ip_index, 1);
-
-	spin_lock_init(&fast_switch_glb_lock);
 
 	platform_set_drvdata(pdev, dm);
 

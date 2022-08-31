@@ -90,13 +90,6 @@ struct exynos_dm_data {
 	u32			const_min;		// Constraint by min frequency of min master domains
 	u32			const_max;		// Constraint1 by max frequency of max master domains
 
-	/* For Fast Switch */
-	bool				fast_switch;		// Use Fast Switch
-	bool				fast_switch_post_in_progress;
-	struct irq_work			fast_switch_post_irq_work;
-	struct task_struct		*fast_switch_post_worker;
-	struct mutex			fast_switch_lock;
-
 	int				(*freq_scaler)(int dm_type, void *devdata, u32 target_freq, unsigned int relation);
 
 	struct list_head		min_slaves;
@@ -122,13 +115,6 @@ struct exynos_dm_device {
 	int				*domain_order;
 	struct exynos_dm_data		*dm_data;
 	int				dynamic_disable;
-	unsigned int			fast_switch_ch;
-};
-
-struct exynos_dm_fast_switch_notify_data {
-	u32 domain;
-	u32 freq;
-	ktime_t time;
 };
 
 /* External Function call */
@@ -145,7 +131,6 @@ extern int unregister_exynos_dm_freq_scaler(int dm_type);
 extern int policy_update_call_to_DM(int dm_type, u32 min_freq, u32 max_freq);
 extern int DM_CALL(int dm_type, unsigned long *target_freq);
 extern void exynos_dm_dynamic_disable(int flag);
-extern int exynos_dm_fast_switch_notifier_register(struct notifier_block *n);
 extern int exynos_dm_change_freq_table(struct exynos_dm_constraint *constraint, int idx);
 #else
 static inline
@@ -191,10 +176,6 @@ static inline
 void exynos_dm_dynamic_disable(int flag)
 {
 	return;
-}
-static inline int exynos_dm_fast_switch_notifier_register(struct notifier_block *n)
-{
-	return 0;
 }
 static inline int exynos_dm_change_freq_table(struct exynos_dm_constraint *constraint, int idx)
 {
