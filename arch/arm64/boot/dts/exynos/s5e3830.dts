@@ -55,7 +55,7 @@
 
                         fixed-rate-clocks {
                                 oscclk {
-                                        compatible = "samsung,emulator-oscclk";
+                                        compatible = "samsung,exynos3830-oscclk";
                                         clock-frequency = <26000000>;
                                 };
                         };
@@ -120,9 +120,10 @@
 	};
 
 	clock: clock-controller@0x120e0000 {
-		compatible = "samsung,emulator-clock";
+		compatible = "samsung,exynos3830-clock";
 		reg = <0x0 0x120e0000 0x8000>;
 		#clock-cells = <1>;
+		acpm-ipc-channel = <0>;
 	};
 
 	mct@10040000 {
