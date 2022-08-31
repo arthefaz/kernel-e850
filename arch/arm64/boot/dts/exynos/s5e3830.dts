@@ -19,6 +19,7 @@
 #include <dt-bindings/interrupt-controller/s5e3830.h>
 #include <dt-bindings/clock/s5e3830.h>
 #include "s5e3830-pinctrl.dtsi"
+#include "s5e3830-usi.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
