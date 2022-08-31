@@ -1503,7 +1503,7 @@ static struct platform_driver exynos5_i2c_driver = {
 static int __init i2c_adap_exynos5_init(void)
 {
 #if defined(CONFIG_CPU_IDLE)
-	exynos_pm_register_notifier(&exynos5_i2c_notifier_block);
+//	exynos_pm_register_notifier(&exynos5_i2c_notifier_block);
 #endif
 	return platform_driver_register(&exynos5_i2c_driver);
 }

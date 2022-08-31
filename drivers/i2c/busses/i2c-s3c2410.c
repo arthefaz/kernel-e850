@@ -1543,7 +1543,7 @@ static struct platform_driver s3c24xx_i2c_driver = {
 static int __init i2c_adap_s3c_init(void)
 {
 #ifdef CONFIG_CPU_IDLE
-	exynos_pm_register_notifier(&s3c24xx_i2c_notifier_block);
+//	exynos_pm_register_notifier(&s3c24xx_i2c_notifier_block);
 #endif
 	return platform_driver_register(&s3c24xx_i2c_driver);
 }
