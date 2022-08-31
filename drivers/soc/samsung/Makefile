@@ -23,3 +23,5 @@ obj-$(CONFIG_EXYNOS_REBOOT)	+= exynos-reboot.o
 
 # USI_V2
 obj-$(CONFIG_USI_V2)		+= usi_v2.o
+
+obj-$(CONFIG_EXYNOS_CHIPID_V2)  += exynos-chipid_v2.o
