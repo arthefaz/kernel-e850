@@ -18,6 +18,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/s5e3830.h>
 #include <dt-bindings/clock/s5e3830.h>
+#include <dt-bindings/soc/samsung/s5e3830-dm.h>
 #include "s5e3830-pinctrl.dtsi"
 #include "s5e3830-usi.dtsi"
 #include "s5e3830-rmem.dtsi"
@@ -362,7 +363,64 @@
                 timeout-sec = <30>;
                 samsung,syscon-phandle = <&pmu_system_controller>;
                 index = <1>; /* if little cluster then index is 0*/
-                use_multistage_wdt; /* Use FIQ debug watchdog */
-      };
-
+		use_multistage_wdt; /* Use FIQ debug watchdog */
+       };
+	
+	exynos_dm: exynos-dm@17000000 {
+		compatible = "samsung,exynos-dvfs-manager";
+		reg = <0x0 0x17000000 0x0>;
+		acpm-ipc-channel = <1>;
+		dm_domains {
+			cpufreq_cl0 {
+				dm-index = <DM_CPU_CL0>;
+				available = "true";
+				cal_id = <ACPM_DVFS_CPUCL0>;
+				dm_type_name = "dm_cpu_cl0";
+			};
+			cpufreq_cl1 {
+				dm-index = <DM_CPU_CL1>;
+				available = "true";
+				cal_id = <ACPM_DVFS_CPUCL1>;
+				dm_type_name = "dm_cpu_cl1";
+			};
+			devfreq_mif {
+				dm-index = <DM_MIF>;
+				available = "true";
+				policy_use = "true";
+				cal_id = <ACPM_DVFS_MIF>;
+				dm_type_name = "dm_mif";
+			};
+			devfreq_int {
+				dm-index = <DM_INT>;
+				available = "true";
+				policy_use = "true";
+				cal_id = <ACPM_DVFS_INT>;
+				dm_type_name = "dm_int";
+			};
+			devfreq_cam {
+				dm-index = <DM_CAM>;
+				available = "true";
+				cal_id = <ACPM_DVFS_CAM>;
+				dm_type_name = "dm_cam";
+			};
+			devfreq_disp {
+				dm-index = <DM_DISP>;
+				available = "true";
+				cal_id = <ACPM_DVFS_DISP>;
+				dm_type_name = "dm_disp";
+			};
+			devfreq_aud {
+				dm-index = <DM_AUD>;
+				available = "true";
+				cal_id = <ACPM_DVFS_AUD>;
+				dm_type_name = "dm_aud";
+			};
+			dvfs_gpu {
+				dm-index = <DM_GPU>;
+				available = "false";
+				cal_id = <ACPM_DVFS_G3D>;
+				dm_type_name = "dm_gpu";
+			};
+		};
+	};
 };
