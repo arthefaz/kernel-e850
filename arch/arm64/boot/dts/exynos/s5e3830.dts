@@ -72,7 +72,7 @@
 
 
 	chipid@10000000 {
-		compatible = "samsung,exynos3830-chipid";
+		compatible = "samsung,s5e3830-chipid";
 		reg = <0x0 0x10000000 0x100>;
 	};
 
