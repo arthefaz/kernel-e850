@@ -20,3 +20,6 @@ obj-$(CONFIG_ECT)               += ect_parser.o
 
 # reboot
 obj-$(CONFIG_EXYNOS_REBOOT)	+= exynos-reboot.o
+
+# USI_V2
+obj-$(CONFIG_USI_V2)		+= usi_v2.o
