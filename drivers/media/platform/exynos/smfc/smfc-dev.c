@@ -928,7 +928,7 @@ static const struct of_device_id exynos_smfc_match[] = {
 };
 MODULE_DEVICE_TABLE(of, exynos_smfc_match);
 
-#if defined(CONFIG_EXYNOS_PM_QOS) || defined(CONFIG_EXYNOS_PM_QOS_MODULE)
+#ifdef CONFIG_SMFC_USE_BUS_DEVFREQ
 static void smfc_pm_qos_update_request(
         struct exynos_pm_qos_request *qos_req,
         int pm_qos_class, u32 freq)
@@ -945,10 +945,6 @@ static void smfc_pm_qos_remove_request(
 	if (exynos_pm_qos_request_active(qos_req))
 		exynos_pm_qos_remove_request(qos_req);
 }
-#else
-#define smfc_pm_qos_update_request(qos_req, pm_qos_class, freq) do { } while (0)
-#define smfc_pm_qos_remove_request(qos_req) do { } while (0)
-#endif
 
 void smfc_get_bandwidth(struct smfc_dev *smfc, struct bts_bw *bw)
 {
@@ -992,6 +988,10 @@ static void smfc_remove_devfreq(struct smfc_dev *smfc)
 	}
 	smfc_pm_qos_remove_request(&smfc->qosreq_int);
 }
+#else
+#define smfc_request_devfreq(smfc) do { } while (0)
+#define smfc_remove_devfreq(smfc) do { } while (0)
+#endif
 
 static int exynos_smfc_probe(struct platform_device *pdev)
 {
@@ -1055,6 +1055,7 @@ static int exynos_smfc_probe(struct platform_device *pdev)
 #endif
 	dev_info(&pdev->dev, "bts_id = %d\n", smfc->bts_id);
 
+#ifdef CONFIG_SMFC_USE_BUS_DEVFREQ
 	if (of_property_read_u32(pdev->dev.of_node, "core_dvfs_class",
 				&smfc->core_dvfs_class)) {
 		dev_info(&pdev->dev,
@@ -1086,6 +1087,7 @@ static int exynos_smfc_probe(struct platform_device *pdev)
 	dev_info(&pdev->dev, "Minlock(INT=%d, M2M=%d, MIF=%d), Core(%d), BPC(%d) \n",
 		smfc->qosreq_int_level, smfc->qosreq_m2m_level,
 		smfc->qosreq_mif_level, smfc->core_clk, smfc->bpc);
+#endif
 
 	platform_set_drvdata(pdev, smfc);
 
