@@ -5,6 +5,10 @@
 extern struct device *pmic_device_create(void *drvdata, const char *fmt);
 extern void pmic_device_destroy(dev_t devt);
 
+struct pmic_device_attribute {
+	struct device_attribute dev_attr;
+};
+
 #define PMIC_ATTR(_name, _mode, _show, _store)	\
 	{ .dev_attr = __ATTR(_name, _mode, _show, _store) }
 #else

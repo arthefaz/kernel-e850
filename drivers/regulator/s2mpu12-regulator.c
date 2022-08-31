@@ -30,6 +30,15 @@
 #include <linux/mutex.h>
 #include <linux/interrupt.h>
 #include <linux/regulator/pmic_class.h>
+#if IS_ENABLED(CONFIG_EXYNOS_ACPM)
+#include <soc/samsung/acpm_mfd.h>
+#endif
+
+#define I2C_ADDR_TOP	0x00
+#define I2C_ADDR_PMIC	0x01
+#define I2C_ADDR_RTC	0x02
+#define I2C_ADDR_CLOSE	0x0F
+#define S2MPU12_CHANNEL	(0)
 
 static struct s2mpu12_info *static_info;
 static struct regulator_desc regulators[S2MPU12_REGULATOR_MAX];
@@ -37,6 +46,16 @@ static struct regulator_desc regulators[S2MPU12_REGULATOR_MAX];
 int s2mpu12_buck_ocp_cnt[S2MPU12_BUCK_MAX]; /* BUCK 1~5 OCP count */
 int s2mpu12_temp_cnt[S2MPU12_TEMP_MAX]; /* 0 : 120 degree , 1 : 140 degree */
 #endif
+
+#if IS_ENABLED(CONFIG_DRV_SAMSUNG_PMIC)
+struct pmic_sysfs_dev {
+	uint8_t base_addr;
+	uint8_t read_addr;
+	uint8_t read_val;
+	struct device *dev;
+};
+#endif
+
 struct s2mpu12_info {
 	struct regulator_dev *rdev[S2MPU12_REGULATOR_MAX];
 	struct s2mpu12_dev *iodev;
@@ -47,9 +66,7 @@ struct s2mpu12_info {
 	int temp_irq[2]; /* 0 : 120 degree, 1 : 140 degree */
 	int num_regulators;
 #if IS_ENABLED(CONFIG_DRV_SAMSUNG_PMIC)
-	u8 read_addr;
-	u8 read_val;
-	struct device *dev;
+	struct pmic_sysfs_dev *pmic_sysfs;
 #endif
 };
 
@@ -489,30 +506,59 @@ static int s2mpu12_pmic_dt_parse_pdata(struct s2mpu12_pmic_dev *iodev,
 #endif /* CONFIG_OF */
 
 #if IS_ENABLED(CONFIG_DRV_SAMSUNG_PMIC)
+static int check_base_address(uint8_t base_addr)
+{
+	switch (base_addr) {
+	case I2C_ADDR_TOP:
+	case I2C_ADDR_PMIC:
+	case I2C_ADDR_RTC:
+	case I2C_ADDR_CLOSE:
+		break;
+	default:
+		pr_err("%s: base address error(0x%02hhx)\n", __func__, base_addr);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static ssize_t s2mpu12_read_store(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t size)
 {
 	struct s2mpu12_info *s2mpu12 = dev_get_drvdata(dev);
-	int ret;
-	u8 val, reg_addr;
+	struct pmic_sysfs_dev *pmic_sysfs = s2mpu12->pmic_sysfs;
+	uint8_t base_addr = 0, reg_addr = 0, val = 0;
+	int ret = 0;
 
 	if (buf == NULL) {
 		pr_info("%s: empty buffer\n", __func__);
-		return -1;
+		return -EINVAL;
 	}
 
-	ret = kstrtou8(buf, 0, &reg_addr);
-	if (ret < 0)
-		pr_info("%s: fail to transform i2c address\n", __func__);
+	ret = sscanf(buf, "0x%02hhx%02hhx", &base_addr, &reg_addr);
+	if (ret != 2) {
+		pr_err("%s: input error\n", __func__);
+		return size;
+	}
 
-	ret = s2mpu12_read_reg(s2mpu12->i2c, reg_addr, &val);
+	ret = check_base_address(base_addr);
 	if (ret < 0)
-		pr_info("%s: fail to read i2c address\n", __func__);
+		return ret;
 
-	pr_info("%s: reg(0x%02x) data(0x%02x)\n", __func__, reg_addr, val);
-	s2mpu12->read_addr = reg_addr;
-	s2mpu12->read_val = val;
+#if IS_ENABLED(CONFIG_EXYNOS_ACPM)
+	mutex_lock(&s2mpu12->iodev->i2c_lock);
+	ret = exynos_acpm_read_reg(S2MPU12_CHANNEL, base_addr, reg_addr, &val);
+	mutex_unlock(&s2mpu12->iodev->i2c_lock);
+	if (ret)
+		pr_info("%s: Failed to read PMIC address & data\n", __func__);
+#endif
+	pmic_sysfs->base_addr = base_addr;
+	pmic_sysfs->read_addr = reg_addr;
+	pmic_sysfs->read_val = val;
+
+	dev_info(s2mpu12->iodev->dev, "%s: reg(0x%02hhx%02hhx) data(0x%02hhx)\n",
+					__func__, base_addr, reg_addr, val);
 
 	return size;
 }
@@ -522,9 +568,10 @@ static ssize_t s2mpu12_read_show(struct device *dev,
 				 char *buf)
 {
 	struct s2mpu12_info *s2mpu12 = dev_get_drvdata(dev);
+	struct pmic_sysfs_dev *pmic_sysfs = s2mpu12->pmic_sysfs;
 
-	return sprintf(buf, "0x%02x: 0x%02x\n", s2mpu12->read_addr,
-		       s2mpu12->read_val);
+	return sprintf(buf, "0x%02hhx%02hhx: 0x%02hhx\n",
+			pmic_sysfs->base_addr, pmic_sysfs->read_addr, pmic_sysfs->read_val);
 }
 
 static ssize_t s2mpu12_write_store(struct device *dev,
@@ -532,25 +579,38 @@ static ssize_t s2mpu12_write_store(struct device *dev,
 				   const char *buf, size_t size)
 {
 	struct s2mpu12_info *s2mpu12 = dev_get_drvdata(dev);
+	struct pmic_sysfs_dev *pmic_sysfs = s2mpu12->pmic_sysfs;
+	uint8_t base_addr = 0, reg_addr = 0, val = 0;
 	int ret;
-	unsigned int reg, data;
 
 	if (buf == NULL) {
 		pr_info("%s: empty buffer\n", __func__);
+		return -EINVAL;
+	}
+
+	ret = sscanf(buf, "0x%02hhx%02hhx 0x%02hhx", &base_addr, &reg_addr, &val);
+	if (ret != 3) {
+		pr_err("%s: input error\n", __func__);
 		return size;
 	}
 
-	ret = sscanf(buf, "%x %x", &reg, &data);
-	if (ret != 2) {
-		pr_info("%s: input error\n", __func__);
-		return size;
-	}
-
-	pr_info("%s: reg(0x%02x) data(0x%02x)\n", __func__, reg, data);
-
-	ret = s2mpu12_write_reg(s2mpu12->i2c, reg, data);
+	ret = check_base_address(base_addr);
 	if (ret < 0)
+		return ret;
+
+#if IS_ENABLED(CONFIG_EXYNOS_ACPM)
+	mutex_lock(&s2mpu12->iodev->i2c_lock);
+	ret = exynos_acpm_write_reg(S2MPU12_CHANNEL, base_addr, reg_addr, val);
+	mutex_unlock(&s2mpu12->iodev->i2c_lock);
+	if (ret)
 		pr_info("%s: fail to write i2c addr/data\n", __func__);
+#endif
+	pmic_sysfs->base_addr = base_addr;
+	pmic_sysfs->read_addr = reg_addr;
+	pmic_sysfs->read_val = val;
+
+	dev_info(s2mpu12->iodev->dev, "%s: reg(0x%02hhx%02hhx) data(0x%02hhx)\n",
+					__func__, base_addr, reg_addr, val);
 
 	return size;
 }
@@ -559,36 +619,50 @@ static ssize_t s2mpu12_write_show(struct device *dev,
 				  struct device_attribute *attr,
 				  char *buf)
 {
-	return sprintf(buf, "echo (register addr.) (data) > s2mpu12_write\n");
+	struct s2mpu12_info *s2mpu12 = dev_get_drvdata(dev);
+	struct pmic_sysfs_dev *pmic_sysfs = s2mpu12->pmic_sysfs;
+
+	return sprintf(buf, "0x%02hhx%02hhx: 0x%02hhx\n",
+			pmic_sysfs->base_addr, pmic_sysfs->read_addr, pmic_sysfs->read_val);
 }
 
-static DEVICE_ATTR(s2mpu12_write,
-		   0644, s2mpu12_write_show, s2mpu12_write_store);
-static DEVICE_ATTR(s2mpu12_read,
-		   0644, s2mpu12_read_show, s2mpu12_read_store);
+static struct pmic_device_attribute regulator_attr[] = {
+	PMIC_ATTR(write, S_IRUGO | S_IWUSR, s2mpu12_write_show, s2mpu12_write_store),
+	PMIC_ATTR(read, S_IRUGO | S_IWUSR, s2mpu12_read_show, s2mpu12_read_store),
+};
 
 int create_s2mpu12_sysfs(struct s2mpu12_info *s2mpu12)
 {
-	struct device *s2mpu12_pmic = s2mpu12->dev;
-	int err = -ENODEV;
+	struct device *dev = s2mpu12->iodev->dev;
+	struct device *sysfs_dev = NULL;
+	char device_name[32] = {0, };
+	int err = -ENODEV, i = 0;
 
-	pr_info("%s: master pmic sysfs start\n", __func__);
-	s2mpu12->read_addr = 0;
-	s2mpu12->read_val = 0;
+	pr_info("%s()\n", __func__);
 
-	s2mpu12_pmic = pmic_device_create(s2mpu12, "s2mpu12");
+	/* Dynamic allocation for device name */
+	snprintf(device_name, sizeof(device_name) - 1, "%s@%s",
+		 dev_driver_string(dev), dev_name(dev));
 
-	err = device_create_file(s2mpu12_pmic, &dev_attr_s2mpu12_write);
-	if (err)
-		pr_err("s2mpu12_sysfs: failed to create device file, %s\n",
-			dev_attr_s2mpu12_write.attr.name);
+	s2mpu12->pmic_sysfs = devm_kzalloc(dev, sizeof(struct pmic_sysfs_dev), GFP_KERNEL);
+	s2mpu12->pmic_sysfs->dev = pmic_device_create(s2mpu12, device_name);
+	sysfs_dev = s2mpu12->pmic_sysfs->dev;
 
-	err = device_create_file(s2mpu12_pmic, &dev_attr_s2mpu12_read);
-	if (err)
-		pr_err("s2mpu12_sysfs: failed to create device file, %s\n",
-			dev_attr_s2mpu12_read.attr.name);
+	/* Create sysfs entries */
+	for (i = 0; i < ARRAY_SIZE(regulator_attr); i++) {
+		err = device_create_file(sysfs_dev, &regulator_attr[i].dev_attr);
+		if (err)
+			goto remove_pmic_device;
+	}
 
 	return 0;
+
+remove_pmic_device:
+	for (i--; i >= 0; i--)
+		device_remove_file(sysfs_dev, &regulator_attr[i].dev_attr);
+	pmic_device_destroy(sysfs_dev->devt);
+
+	return -EINVAL;
 }
 #endif
 int s2mpu12_read_pwron_status(void)
@@ -827,6 +901,17 @@ err:
 	return ret;
 }
 
+#if IS_ENABLED(CONFIG_DRV_SAMSUNG_PMIC)
+static void s2mpu12_remove_sysfs_entries(struct device *sysfs_dev)
+{
+	uint32_t i = 0;
+
+	for (i = 0; i < ARRAY_SIZE(regulator_attr); i++)
+		device_remove_file(sysfs_dev, &regulator_attr[i].dev_attr);
+	pmic_device_destroy(sysfs_dev->devt);
+}
+#endif
+
 static int s2mpu12_pmic_remove(struct platform_device *pdev)
 {
 	struct s2mpu12_info *s2mpu12 = platform_get_drvdata(pdev);
@@ -836,7 +921,7 @@ static int s2mpu12_pmic_remove(struct platform_device *pdev)
 		regulator_unregister(s2mpu12->rdev[i]);
 
 #if IS_ENABLED(CONFIG_DRV_SAMSUNG_PMIC)
-	pmic_device_destroy(s2mpu12->dev->devt);
+	s2mpu12_remove_sysfs_entries(s2mpu12->pmic_sysfs->dev);
 #endif
 	return 0;
 }
