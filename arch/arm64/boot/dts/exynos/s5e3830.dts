@@ -30,8 +30,7 @@
 		pinctrl0 = &pinctrl_0;
 		pinctrl1 = &pinctrl_1;
 		pinctrl2 = &pinctrl_2;
-		/* TODO: HCI block off state, cannot access gpio */
-		//pinctrl3 = &pinctrl_3;
+		pinctrl3 = &pinctrl_3;
 		pinctrl4 = &pinctrl_4;
 		pinctrl5 = &pinctrl_5;
 		uart0 = &serial_0;
@@ -257,11 +256,11 @@
 	};
 
 	/* HSI */
-/*	pinctrl_3: pinctrl@13430000 {
+	pinctrl_3: pinctrl@13430000 {
 		compatible = "samsung,s5e3830-pinctrl";
 		reg = <0x0 0x13430000 0x1000>;
 		interrupts = <GIC_SPI INTREQ__GPIO_HSI IRQ_TYPE_LEVEL_HIGH>;
-	}; */
+	};
 
 	/* CORE */
 	pinctrl_4: pinctrl@12070000 {
