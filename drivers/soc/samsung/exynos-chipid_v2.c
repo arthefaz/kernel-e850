@@ -91,6 +91,9 @@ static const char * product_id_to_name(unsigned int product_id)
 	case S5E8825_SOC_ID:
 		soc_name = "S5E8825";
 		break;
+	case S5E3830_SOC_ID:
+		soc_name = "S5E3830";
+		break;
 	default:
 		soc_name = "UNKNOWN";
 	}
@@ -160,6 +163,14 @@ static const struct exynos_chipid_variant drv_data_s5e8825 = {
         .sub_rev_bit    = 16,
 };
 
+static const struct exynos_chipid_variant drv_data_s5e3830 = {
+	.product_ver    = 1,
+	.unique_id_reg  = 0x04,
+	.rev_reg        = 0x10,
+	.main_rev_bit   = 20,
+	.sub_rev_bit    = 16,
+};
+
 static const struct of_device_id of_exynos_chipid_ids[] = {
 	{
 		.compatible	= "samsung,exynos8890-chipid",
@@ -192,6 +203,10 @@ static const struct of_device_id of_exynos_chipid_ids[] = {
 	{
 		.compatible     = "samsung,s5e8825-chipid",
 		.data           = &drv_data_s5e8825,
+	},
+	{
+		.compatible     = "samsung,s5e3830-chipid",
+		.data           = &drv_data_s5e3830,
 	},
 	{},
 };
