@@ -52,3 +52,19 @@
 &serial_0 {
         status = "okay";
 };
+
+&pinctrl_0 {
+       key_voldown: key-voldown {
+               samsung,pins = "gpa1-0";
+               samsung,pin-function = <0xf>;
+               samsung,pin-pud = <0>;
+               samsung,pin-drv = <0>;
+       };
+
+       key_volup: key-volup {
+               samsung,pins = "gpa0-7";
+               samsung,pin-function = <0xf>;
+               samsung,pin-pud = <0>;
+               samsung,pin-drv = <0>;
+       };
+};

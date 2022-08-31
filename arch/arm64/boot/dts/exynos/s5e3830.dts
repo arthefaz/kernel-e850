@@ -192,7 +192,7 @@
 */
 	/* ALIVE */
 	pinctrl_0: pinctrl@11850000 {
-		compatible = "samsung,exynos3830-pinctrl";
+		compatible = "samsung,s5e3830-pinctrl";
 		reg = <0x0 0x11850000 0x1000>;
 		interrupts = <GIC_SPI INTREQ__ALIVE_EINT0 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI INTREQ__ALIVE_EINT1 IRQ_TYPE_LEVEL_HIGH>,
@@ -234,7 +234,7 @@
 
 	/* CMGP */
 	pinctrl_1: pinctrl@11c30000 {
-		compatible = "samsung,exynos3830-pinctrl";
+		compatible = "samsung,s5e3830-pinctrl";
 		reg = <0x0 0x11c30000 0x1000>;
 		interrupts = <GIC_SPI INTREQ__CMGP_EXT_INTM00 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI INTREQ__CMGP_EXT_INTM01 IRQ_TYPE_LEVEL_HIGH>,
@@ -252,27 +252,27 @@
 
 	/* AUD */
 	pinctrl_2: pinctrl@14a60000 {
-		compatible = "samsung,exynos3830-pinctrl";
+		compatible = "samsung,s5e3830-pinctrl";
 		reg = <0x0 0x14a60000 0x1000>;
 	};
 
 	/* HSI */
 /*	pinctrl_3: pinctrl@13430000 {
-		compatible = "samsung,exynos3830-pinctrl";
+		compatible = "samsung,s5e3830-pinctrl";
 		reg = <0x0 0x13430000 0x1000>;
 		interrupts = <GIC_SPI INTREQ__GPIO_HSI IRQ_TYPE_LEVEL_HIGH>;
 	}; */
 
 	/* CORE */
 	pinctrl_4: pinctrl@12070000 {
-		compatible = "samsung,exynos3830-pinctrl";
+		compatible = "samsung,s5e3830-pinctrl";
 		reg = <0x0 0x12070000 0x1000>;
 		interrupts = <GIC_SPI INTREQ__GPIO_CORE IRQ_TYPE_LEVEL_HIGH>;
 	};
 
 	/* PERI */
 	pinctrl_5: pinctrl@139b0000 {
-		compatible = "samsung,exynos3830-pinctrl";
+		compatible = "samsung,s5e3830-pinctrl";
 		reg = <0x0 0x139b0000 0x1000>;
 		interrupts = <GIC_SPI INTREQ__GPIO_PERI IRQ_TYPE_LEVEL_HIGH>;
 	};
