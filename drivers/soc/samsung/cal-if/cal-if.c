@@ -445,6 +445,7 @@ void cal_gnss_active_clear(void)
 int __init cal_if_init(void *dev)
 {
 	static int cal_initialized;
+
 #ifdef CONFIG_DEBUG_FS
 	struct resource res;
 #endif
@@ -509,3 +510,6 @@ int __init cal_if_init(void *dev)
 
 	return 0;
 }
+arch_initcall(cal_if_init);
+
+MODULE_LICENSE("GPL");
