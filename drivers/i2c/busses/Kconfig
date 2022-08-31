@@ -956,6 +956,7 @@ config I2C_RK3X
 
 config HAVE_S3C2410_I2C
 	bool
+	default y
 	help
 	  This will include I2C support for Samsung SoCs. If you want to
 	  include I2C support for any machine, kindly select this in the
