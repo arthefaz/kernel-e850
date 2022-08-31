@@ -29,10 +29,12 @@
 #include <linux/sizes.h>
 #include <linux/io.h>
 #include <linux/workqueue.h>
-
+#if IS_ENABLED(CONFIG_EXYNOS_ACPM)
 #include <soc/samsung/acpm_mfd.h>
+#endif
+#if IS_ENABLED(CONFIG_SND_SOC_AUD3004X_5PIN) || IS_ENABLED(CONFIG_SND_SOC_AUD3004X_6PIN)
 #include <sound/aud3004x.h>
-
+#endif
 #define S2MPU12_IBI_CNT		4
 #define CODEC_IRQ_CNT	8
 
@@ -276,7 +278,7 @@ static int s2mpu12_ibi_notifier(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 				break;
 			}
 		}
-
+#if IS_ENABLED(CONFIG_SND_SOC_AUD3004X_5PIN) || IS_ENABLED(CONFIG_SND_SOC_AUD3004X_6PIN)
 		if (codec_irq_flag & codec_notifier_flag) {
 			aud3004x_call_notifier(irq_codec, CODEC_IRQ_CNT);
 			codec_irq_flag = false;
@@ -285,7 +287,7 @@ static int s2mpu12_ibi_notifier(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 			if (codec_irq_flag)
 				pr_err("%s: codec handler not registered!\n", __func__);
 		}
-
+#endif
 		if (ret)
 			return 1;
 	}
@@ -294,20 +296,20 @@ static int s2mpu12_ibi_notifier(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 
 static int s2mpu12_check_ibi_source(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 {
-	int ret;
-	int check;
+	int ret, i = 0;
+	int check = 0;
 	u8 state = ibi_src[0];
 
 	if (state & S2MPU12_IBI0_CODEC || state & S2MPU12_IBI0_PMIC_M) {
 		ret = s2mpu12_bulk_read(s2mpu12->pmic, S2MPU12_PMIC_INT1,
 					S2MPU12_NUM_IRQ_PMIC_REGS,
 					&irq_reg[PMIC_INT1]);
-
+#if IS_ENABLED(CONFIG_EXYNOS_ACPM) && \
+(IS_ENABLED(CONFIG_SND_SOC_AUD3004X_5PIN) || IS_ENABLED(CONFIG_SND_SOC_AUD3004X_6PIN))
 		check = exynos_acpm_bulk_read(0, 0x07, 0x08, 6, &irq_codec_m[0]);
 		check = exynos_acpm_bulk_read(0, 0x07, 0x01, 6, &irq_codec[0]);
 		check = exynos_acpm_bulk_read(0, 0x07, 0xF0, 2, &irq_codec[6]);
-
-		for (int i = 0; i < 6; i++) {
+		for (i = 0; i < 6; i++) {
 			irq_codec[i] = irq_codec[i] & (~irq_codec_m[i]);
 		}
 
@@ -315,13 +317,14 @@ static int s2mpu12_check_ibi_source(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 				irq_codec[3] | irq_codec[4] | irq_codec[5]) {
 			codec_irq_flag = true;
 		}
-
+#endif
 		if (ret) {
 			pr_err("%s:%s Failed to read pmic interrupt: %d\n",
 				MFD_DEV_NAME, __func__, ret);
 			return 1;
 		}
 	}
+
 	return 0;
 }
 

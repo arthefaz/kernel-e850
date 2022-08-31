@@ -205,6 +205,7 @@ out:
  * cuase is that clear signal of RUDR & WUDR is 1 clock delay while it should be
  * 2 clock delay.
  */
+#if 0
 static int s2m_rtc_check_rtc_time(struct s2m_rtc_info *info)
 {
 	u8 data[NR_RTC_CNT_REGS];
@@ -266,7 +267,7 @@ static int s2m_rtc_check_rtc_time(struct s2m_rtc_info *info)
 out:
 	return ret;
 }
-
+#endif
 static int s2m_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
 	struct s2m_rtc_info *info = dev_get_drvdata(dev);
@@ -385,11 +386,11 @@ static int s2m_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	if (ret < 0)
 		goto out;
 
-	if (info->use_alarm_workaround) {
-		ret = s2m_rtc_check_rtc_time(info);
-		if (ret < 0)
-			goto out;
-	}
+	//if (info->use_alarm_workaround) {
+	//	ret = s2m_rtc_check_rtc_time(info);
+	//	if (ret < 0)
+	//		goto out;
+	//}
 
 	ret = s2m_rtc_set_alarm_enable(info, alrm->enabled);
 out:
@@ -881,7 +882,7 @@ static int s2m_rtc_probe(struct platform_device *pdev)
 	s2m_rtc_optimize_osc(info, pdata);
 
 	device_init_wakeup(&pdev->dev, true);
-	rtc_ws = wakeup_source_register("rtc-s2mp");
+	rtc_ws = wakeup_source_register(&pdev->dev, "rtc-s2mp");
 
 	ret = devm_request_threaded_irq(&pdev->dev, info->irq, NULL,
 			s2m_rtc_alarm_irq, 0, "rtc-alarm0", info);

@@ -32,8 +32,8 @@
 #include <linux/sysfs.h>
 #include <linux/mfd/samsung/s2mpu12.h>
 #include <linux/mfd/samsung/s2mpu12-regulator.h>
-#include <linux/sec_sysfs.h>
-#include <linux/debug-snapshot.h>
+//#include <linux/sec_sysfs.h>
+//#include <linux/debug-snapshot.h>
 
 #if IS_ENABLED(CONFIG_SLEEP_MONITOR)
 #include <linux/power/sleep_monitor.h>
@@ -529,7 +529,7 @@ static void power_keys_power_report_event(struct power_button_data *bdata)
 	if (button->code == KEY_POWER)
 		bdata->isr_status = false;
 
-	dbg_snapshot_check_crash_key(button->code, state);
+	//dbg_snapshot_check_crash_key(button->code, state);
 
 	if (type == EV_ABS) {
 		if (state)

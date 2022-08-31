@@ -1,6 +1,7 @@
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/regulator/pmic_class.h>
+#include <linux/module.h>
 
 /* CAUTION : Do not be declared as external pmic_class  */
 static struct class *pmic_class;
@@ -21,7 +22,7 @@ struct device *pmic_device_create(void *drvdata, const char *fmt)
 	}
 
 	dev = device_create(pmic_class, NULL, atomic_inc_return(&pmic_dev),
-			drvdata, fmt);
+			drvdata, "%s", fmt);
 	if (IS_ERR(dev))
 		pr_err("Failed to create device %s %ld\n", fmt, PTR_ERR(dev));
 	else
@@ -49,4 +50,8 @@ static int __init pmic_class_create(void)
 
 	return 0;
 }
-arch_initcall_sync(pmic_class_create);
+arch_initcall(pmic_class_create);
+
+MODULE_DESCRIPTION("pmic sysfs");
+MODULE_AUTHOR("Samsung Electronics");
+MODULE_LICENSE("GPL");

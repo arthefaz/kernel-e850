@@ -32,7 +32,9 @@
 #include <linux/mfd/samsung/s2mpu12-regulator.h>
 #include <linux/regulator/machine.h>
 #include <linux/rtc.h>
+#if IS_ENABLED(CONFIG_EXYNOS_ACPM)
 #include <soc/samsung/acpm_mfd.h>
+#endif
 
 #if IS_ENABLED(CONFIG_OF)
 #include <linux/of_device.h>
@@ -42,9 +44,12 @@
 #define I2C_ADDR_TOP	0x00
 #define I2C_ADDR_PMIC	0x01
 #define I2C_ADDR_RTC	0x02
+#define I2C_ADDR_CLOSE	0x0F
 #define S2MPU12_CHANNEL	(0)
 
+#if IS_ENABLED(CONFIG_EXYNOS_ACPM)
 extern struct device_node *acpm_mfd_node;
+#endif
 
 static struct mfd_cell s2mpu12_devs[] = {
 	{ .name = "s2mpu12-regulator", },
@@ -247,8 +252,9 @@ static int of_s2mpu12_dt(struct device *dev,
 	if (!np)
 		return -EINVAL;
 
+#if IS_ENABLED(CONFIG_EXYNOS_ACPM)
 	acpm_mfd_node = np;
-
+#endif
 	status = of_get_property(np, "s2mpu12,wakeup", &strlen);
 	if (status == NULL)
 		return -EINVAL;
@@ -415,7 +421,6 @@ static int s2mpu12_i2c_probe(struct i2c_client *i2c,
 
 
 	s2mpu12->dev = &i2c->dev;
-	i2c->addr = I2C_ADDR_TOP;	/* forced COMMON address */
 	s2mpu12->i2c = i2c;
 	s2mpu12->irq = i2c->irq;
 	s2mpu12->device_type = S2MPU12X;
@@ -441,6 +446,21 @@ static int s2mpu12_i2c_probe(struct i2c_client *i2c,
 
 	i2c_set_clientdata(i2c, s2mpu12);
 
+	s2mpu12->pmic = i2c_new_dummy_device(i2c->adapter, I2C_ADDR_PMIC);
+	s2mpu12->rtc = i2c_new_dummy_device(i2c->adapter, I2C_ADDR_RTC);
+	s2mpu12->close = i2c_new_dummy_device(i2c->adapter, I2C_ADDR_CLOSE);
+	i2c->addr = I2C_ADDR_TOP;	/* forced COMMON address */
+
+	//if (pdata->use_i2c_speedy) {
+	//	dev_err(s2mpu12->dev, "use_i2c_speedy was true\n");
+	//	s2mpu12->pmic->flags |= I2C_CLIENT_SPEEDY;
+	//	s2mpu12->rtc->flags |= I2C_CLIENT_SPEEDY;
+	//}
+
+	i2c_set_clientdata(s2mpu12->pmic, s2mpu12);
+	i2c_set_clientdata(s2mpu12->rtc, s2mpu12);
+	i2c_set_clientdata(s2mpu12->close, s2mpu12);
+
 	if (s2mpu12_read_reg(i2c, S2MPU12_PMIC_CHIPID, &reg_data) < 0) {
 		dev_err(s2mpu12->dev,
 			"device not found on this channel"
@@ -450,18 +470,6 @@ static int s2mpu12_i2c_probe(struct i2c_client *i2c,
 	} else
 		/* print rev */
 		s2mpu12->pmic_rev = reg_data;
-
-	s2mpu12->pmic = i2c_new_dummy(i2c->adapter, I2C_ADDR_PMIC);
-	s2mpu12->rtc = i2c_new_dummy(i2c->adapter, I2C_ADDR_RTC);
-
-	if (pdata->use_i2c_speedy) {
-		dev_err(s2mpu12->dev, "use_i2c_speedy was true\n");
-		s2mpu12->pmic->flags |= I2C_CLIENT_SPEEDY;
-		s2mpu12->rtc->flags |= I2C_CLIENT_SPEEDY;
-	}
-
-	i2c_set_clientdata(s2mpu12->pmic, s2mpu12);
-	i2c_set_clientdata(s2mpu12->rtc, s2mpu12);
 
 	pr_info("%s device found: rev.0x%2x\n", __func__, s2mpu12->pmic_rev);
 
