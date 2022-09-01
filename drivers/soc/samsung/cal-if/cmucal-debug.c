@@ -466,7 +466,7 @@ EXPORT_SYMBOL_GPL(cmucal_dbg_set_cmu_top_base);
 /**
  * vclk_debug_init - lazily create the debugfs clk tree visualization
  */
-static int __init vclk_debug_init(void)
+int vclk_debug_init(void)
 {
 	struct vclk *vclk;
 	struct dentry *d;
@@ -513,6 +513,6 @@ static int __init vclk_debug_init(void)
 
 	return 0;
 }
-late_initcall(vclk_debug_init);
-MODULE_LICENSE("GPL");
+EXPORT_SYMBOL_GPL(vclk_debug_init);
 #endif
+MODULE_LICENSE("GPL");

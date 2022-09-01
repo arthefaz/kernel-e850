@@ -127,8 +127,13 @@
 		compatible = "samsung,exynos3830-clock";
 		reg = <0x0 0x120e0000 0x8000>;
 		#clock-cells = <1>;
-		acpm-ipc-channel = <0>;
 	};
+
+	 cal_if {
+                compatible = "samsung,exynos_cal_if";
+                reg = <0x0 0x120e0000 0x8000>;
+                acpm-ipc-channel = <0>;
+        };
 
 	mct@10040000 {
 		compatible = "samsung,exynos4210-mct";

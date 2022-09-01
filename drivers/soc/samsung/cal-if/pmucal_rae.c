@@ -518,7 +518,7 @@ int pmucal_rae_handle_gnss_seq(struct pmucal_seq *seq, unsigned int seq_size)
  *
  *  Returns 0 on success. Otherwise, negative error code.
  */
-int __init pmucal_rae_init(void)
+int pmucal_rae_init(void)
 {
 	int i;
 

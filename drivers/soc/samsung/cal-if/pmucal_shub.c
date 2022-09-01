@@ -155,7 +155,7 @@ out:
  *
  *  Returns 0 on success. Otherwise, negative error code.
  */
-int __init pmucal_shub_initialize(void)
+int pmucal_shub_initialize(void)
 {
 	int ret = 0;
 
