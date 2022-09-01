@@ -396,7 +396,7 @@ int pmucal_cp_reset_req_clear(void)
  *
  *  Returns 0 on success. Otherwise, negative error code.
  */
-int __init pmucal_cp_initialize(void)
+int pmucal_cp_initialize(void)
 {
 	int ret = 0;
 	pr_info("%s%s()\n", PMUCAL_PREFIX, __func__);
