@@ -202,7 +202,7 @@ void pmucal_local_set_smc_id(unsigned int pd_id, unsigned int need_smc)
  *
  *  Returns 0 on success. Otherwise, negative error code.
  */
-int pmucal_local_init(void)
+int __init pmucal_local_init(void)
 {
 	int ret = 0, i;
 

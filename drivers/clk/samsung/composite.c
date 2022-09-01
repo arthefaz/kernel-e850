@@ -67,7 +67,7 @@ struct samsung_clk_reg_dump *samsung_clk_alloc_reg_dump(
 #endif /* CONFIG_PM_SLEEP */
 
 /* setup the essentials required to support clock lookup using ccf */
-struct samsung_clk_provider * samsung_clk_init(struct device_node *np,
+struct samsung_clk_provider *__init samsung_clk_init(struct device_node *np,
 			void __iomem *base, unsigned long nr_clks)
 {
 	struct samsung_clk_provider *ctx = NULL;
@@ -96,7 +96,7 @@ struct samsung_clk_provider * samsung_clk_init(struct device_node *np,
 	return ctx;
 }
 
-void samsung_clk_of_add_provider(struct device_node *np,
+void __init samsung_clk_of_add_provider(struct device_node *np,
 				struct samsung_clk_provider *ctx)
 {
 	if (np) {
@@ -115,7 +115,7 @@ static void samsung_clk_add_lookup(struct samsung_clk_provider *ctx, struct clk 
 }
 
 /* register a list of fixed clocks */
-void samsung_register_fixed_rate(struct samsung_clk_provider *ctx,
+void __init samsung_register_fixed_rate(struct samsung_clk_provider *ctx,
 		struct samsung_fixed_rate *list, unsigned int nr_clk)
 {
 	struct clk *clk;
@@ -172,7 +172,7 @@ void __init samsung_register_fixed_factor(struct samsung_clk_provider *ctx,
  * obtain the clock speed of all external fixed clock sources from device
  * tree and register it
  */
-void samsung_register_of_fixed_ext(struct samsung_clk_provider *ctx,
+void __init samsung_register_of_fixed_ext(struct samsung_clk_provider *ctx,
 			struct samsung_fixed_rate *fixed_rate_clk,
 			unsigned int nr_fixed_rate_clk,
 			struct of_device_id *clk_matches)
@@ -1679,7 +1679,7 @@ static const struct clk_ops samsung_vclk_qactive_ops = {
 	.disable = cal_vclk_qactive_disable,
 };
 
-static struct clk * _samsung_register_vclk(struct init_vclk *list)
+static struct clk * __init _samsung_register_vclk(struct init_vclk *list)
 {
 	struct samsung_vclk *vclk;
 	struct clk *clk;
@@ -1721,7 +1721,7 @@ static struct clk * _samsung_register_vclk(struct init_vclk *list)
 	return clk;
 }
 
-void samsung_register_vclk(struct samsung_clk_provider *ctx,
+void __init samsung_register_vclk(struct samsung_clk_provider *ctx,
 			struct init_vclk *list, unsigned int nr_vclk)
 {
 	struct clk *clk;

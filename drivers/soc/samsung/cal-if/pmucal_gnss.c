@@ -220,7 +220,7 @@ out:
  *
  *  Returns 0 on success. Otherwise, negative error code.
  */
-int pmucal_gnss_initialize(void)
+int __init pmucal_gnss_initialize(void)
 {
 	int ret = 0;
 	pr_info("%s%s()\n", PMUCAL_PREFIX, __func__);

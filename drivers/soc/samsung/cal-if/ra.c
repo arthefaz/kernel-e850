@@ -735,7 +735,7 @@ unsigned long ra_get_value(unsigned int id)
 	return val;
 }
 
-static unsigned int ra_get_sfr_address(unsigned short idx,
+static unsigned int __init ra_get_sfr_address(unsigned short idx,
 			       void __iomem **addr,
 			       unsigned char *shift,
 			       unsigned char *width)
@@ -1168,7 +1168,7 @@ unsigned long ra_recalc_rate(unsigned int id)
 }
 EXPORT_SYMBOL_GPL(ra_recalc_rate);
 
-int ra_init(void)
+int __init ra_init(void)
 {
 	struct cmucal_clk *clk;
 	struct sfr_block *block;

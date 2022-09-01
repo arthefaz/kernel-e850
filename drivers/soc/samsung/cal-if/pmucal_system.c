@@ -184,7 +184,7 @@ err_out:
  *
  *  Returns 0 on success. Otherwise, negative error code.
  */
-int pmucal_system_init(void)
+int __init pmucal_system_init(void)
 {
 	int ret = 0, i;
 
