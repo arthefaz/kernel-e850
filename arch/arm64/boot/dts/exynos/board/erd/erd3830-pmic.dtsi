@@ -20,11 +20,11 @@
 	};
 };
 
-&acpm_mfd_bus0 {
+&acpm_mfd_bus {
 	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
-
+/*
 	codec_aud3004x: aud3004x@07 {
 		compatible = "codec,aud3004x";
 		#sound-dai-cells = <0>;
@@ -42,7 +42,7 @@
 			<&but_zones 114 601 1161>;
 		btn-release-value = <1404>;
 	};
-
+*/
 	s2mpu12mfd@1f {
 		compatible = "samsung,s2mpu12mfd";
 		acpm-ipc-channel = <2>;
@@ -50,6 +50,7 @@
 		s2mpu12,wakeup = "enabled";
 		reg = <0x1f>;
 		interrupts = <GIC_SPI INTREQ__PMIC IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-parent = <&gic>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pm_wrstbi>;
 		/* RTC: wtsr/smpl */
@@ -440,4 +441,4 @@
 			};
 		}; /* end of regulators */
 	}; /* end of s2mpu12mfd@1f */
-}; /* end of acpm_mfd_bus0 */
+}; /* end of acpm_mfd_bus */
