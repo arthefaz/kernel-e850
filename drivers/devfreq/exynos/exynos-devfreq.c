@@ -25,7 +25,6 @@
 #include <linux/io.h>
 #include <linux/sched/clock.h>
 #include <linux/clk.h>
-//#include <linux/ems.h>
 #include <soc/samsung/cal-if.h>
 #include <soc/samsung/bts.h>
 #include <linux/of_platform.h>
@@ -1664,8 +1663,6 @@ static int exynos_devfreq_parse_dt(struct device_node *np, struct exynos_devfreq
 	const char *pd_name;
 	const char *update_fvp;
 	const char *use_dtm;
-	const char *use_migov;
-	const char *sysbusy;
 	int ntokens;
 	int not_using_ect = true;
 
@@ -1918,17 +1915,6 @@ static int exynos_devfreq_parse_dt(struct device_node *np, struct exynos_devfreq
 	}
 
 
-	if (!of_property_read_string(np, "sysbusy", &sysbusy)) {
-		if (!strcmp(sysbusy, "true")) {
-			data->sysbusy = true;
-			dev_info(data->dev, "This domain controlled by sysbusy\n");
-		} else {
-			data->sysbusy = false;
-		}
-	} else {
-		data->sysbusy = false;
-	}
-
 #if defined(CONFIG_EXYNOS_DVFS_MANAGER) || defined(CONFIG_EXYNOS_DVFS_MANAGER_MODULE)
 	if (of_property_read_u32(np, "dm-index", &data->dm_type)) {
 		dev_err(data->dev, "not support dvfs manager\n");
@@ -2020,28 +2006,6 @@ static int exynos_devfreq_notifier(struct notifier_block *nb, unsigned long val,
 }
 #endif
 
-static int devfreq_sysbusy_notifier_call(struct notifier_block *nb,
-					unsigned long val, void *v)
-{
-	int mode;
-	enum sysbusy_state state = *(enum sysbusy_state *)v;
-	struct exynos_devfreq_data *data = container_of(nb, struct exynos_devfreq_data, sysbusy_notifier);
-
-	if (val != SYSBUSY_STATE_CHANGE)
-		return NOTIFY_OK;
-
-	mode = !!(state > SYSBUSY_STATE0);
-#if defined(CONFIG_EXYNOS_ALT_DVFS) || defined(CONFIG_EXYNOS_ALT_DVFS_MODULE)
-	exynos_devfreq_alt_mode_change(data->devfreq_type, mode);
-#else
-	if (mode)
-		exynos_pm_qos_update_request(&data->sysbusy_pm_qos, data->max_freq);
-	else
-		exynos_pm_qos_update_request(&data->sysbusy_pm_qos, 0);
-#endif
-
-	return NOTIFY_OK;
-}
 static int exynos_devfreq_target(struct device *dev,
 		unsigned long *target_freq, u32 flags)
 {
@@ -2089,8 +2053,8 @@ static int exynos_devfreq_target(struct device *dev,
 		data->old_idx, data->old_freq, data->old_volt,
 		data->new_idx, data->new_freq, data->new_volt);
 
-	trace_exynos_devfreq(data->devfreq_type, data->old_freq, data->new_freq, DSS_FLAG_IN);
 #if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
+	trace_exynos_devfreq(data->devfreq_type, data->old_freq, data->new_freq, DSS_FLAG_IN);
 	dbg_snapshot_freq(data->ess_flag, data->old_freq, data->new_freq, DSS_FLAG_IN);
 #endif
 	before_setfreq = sched_clock();
@@ -2105,8 +2069,8 @@ static int exynos_devfreq_target(struct device *dev,
 	after_setfreq = sched_clock();
 #if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
 	dbg_snapshot_freq(data->ess_flag, data->old_freq, data->new_freq, DSS_FLAG_OUT);
-#endif
 	trace_exynos_devfreq(data->devfreq_type, data->old_freq, data->new_freq, DSS_FLAG_OUT);
+#endif
 
 	data->old_freq = data->new_freq;
 	data->old_idx = data->new_idx;
@@ -2353,23 +2317,6 @@ static int exynos_devfreq_probe(struct platform_device *pdev)
 
 	data->old_volt = data->new_volt;
 
-	if (data->profile) {
-		int i;
-		data->profile->num_stats = 4;
-		
-		data->profile->time_in_state = kzalloc(sizeof(ktime_t) * data->max_state, GFP_KERNEL);
-		data->profile->active_time_in_state = kzalloc(sizeof(ktime_t) * data->max_state, GFP_KERNEL);
-		data->profile->freq_stats = kzalloc(sizeof(u64 *) * data->profile->num_stats, GFP_KERNEL);
-		data->profile->last_freq_stats = kzalloc(sizeof(u64) * data->profile->num_stats, GFP_KERNEL);
-
-		for (i = 0; i < data->profile->num_stats; i++) {
-			data->profile->freq_stats[i] = kzalloc(sizeof(u64) * data->max_state, GFP_KERNEL);
-			data->profile->last_freq_stats[i] = 0;
-		}
-		data->profile->profile_in_state = kzalloc(sizeof(struct exynos_wow_profile) * data->max_state, GFP_KERNEL);
-		data->profile->last_time_in_state = 0;
-		data->profile->last_active_time_in_state = 0;
-	}
 #if defined(CONFIG_EXYNOS_DVFS_MANAGER) || defined(CONFIG_EXYNOS_DVFS_MANAGER_MODULE)
 	ret = exynos_dm_data_init(data->dm_type, data, data->min_freq, data->max_freq, data->old_freq);
 	if (ret) {
@@ -2441,13 +2388,6 @@ static int exynos_devfreq_probe(struct platform_device *pdev)
 	exynos_pm_qos_add_request(&data->boot_pm_qos, (int)data->pm_qos_class,
 			   0);
 
-
-	if (data->sysbusy) {
-		data->sysbusy_notifier.notifier_call = devfreq_sysbusy_notifier_call;
-		sysbusy_register_notifier(&data->sysbusy_notifier);
-		exynos_pm_qos_add_request(&data->sysbusy_pm_qos, (int)data->pm_qos_class, 0);
-	}
-
 	/* Initialize ALT-DVFS */
 #if defined(CONFIG_EXYNOS_ALT_DVFS) || defined(CONFIG_EXYNOS_ALT_DVFS_MODULE)
 	if (data->use_get_dev) {
@@ -2507,12 +2447,8 @@ static int exynos_devfreq_probe(struct platform_device *pdev)
 	data->devfreq_disabled = false;
 
 	if (!data->pm_domain) {
-		if (data->devfreq_type != 0 || num_online_cpus() > 4)
-		/* set booting frequency during booting time */
-			exynos_pm_qos_update_request_timeout(&data->boot_pm_qos, data->boot_freq,
-						data->boot_qos_timeout * USEC_PER_SEC);
-		else
-			dev_info(data->dev, "skip boot freq setup\n");
+		exynos_pm_qos_update_request_timeout(&data->boot_pm_qos, data->boot_freq,
+				data->boot_qos_timeout * USEC_PER_SEC);
 	} else {
 		pm_runtime_enable(&pdev->dev);
 		pm_runtime_get_sync(&pdev->dev);
