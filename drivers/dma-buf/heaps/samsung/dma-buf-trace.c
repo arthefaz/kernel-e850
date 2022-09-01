@@ -22,15 +22,6 @@
 
 #include "heap_private.h"
 
-#if IS_ENABLED(CONFIG_EXYNOS_MEMORY_LOGGER)
-#include <soc/samsung/memlogger.h>
-
-#define dmabuf_memlog_write_printf(memlog_obj, fmt, ...) \
-	memlog_write_printf(memlog_obj, MEMLOG_LEVEL_NOTICE, fmt, ##__VA_ARGS__)
-#else
-#define dmabuf_memlog_write_printf(memlog_obj, fmt, ...) do { } while (0)
-#endif
-
 struct dmabuf_trace_ref {
 	struct list_head task_node;
 	struct list_head buffer_node;
@@ -153,25 +144,21 @@ static int dmabuf_trace_buffer_size_compare(const void *p1, const void *p2)
 	return 0;
 }
 
-#define prlogger(memlog_obj, fmt, ...) ((memlog_obj) ? \
-		 dmabuf_memlog_write_printf(memlog_obj, fmt, ##__VA_ARGS__) : \
-		 pr_info(fmt, ##__VA_ARGS__))
-
-void __show_dmabuf_trace_info(struct memlog_obj *obj)
+void show_dmabuf_trace_info(void)
 {
 	struct dmabuf_trace_task *task;
 	struct dmabuf_trace_buffer *buffer;
 	int i, count, num_skipped_buffer = 0, num_buffer = 0;
 	size_t size;
 
-	prlogger(obj, "\nDma-buf Info: total allocated size %lu\n", dmabuf_trace_buffer_size);
+	pr_info("\nDma-buf Info:\n");
 	/*
 	 *            comm   pid   fdrefcnt mmaprefcnt fdsize(kb) mmapsize(kb)
 	 * composer@2.4-se   552         26         26     104736     104736
 	 *  surfaceflinger   636         40         40     110296     110296
 	 */
-	prlogger(obj, "%20s %5s %10s %10s %10s %10s\n",
-		 "comm", "pid", "fdrefcnt", "mmaprefcnt", "fdsize(kb)", "mmapsize(kb)");
+	pr_info("%20s %5s %10s %10s %10s %10s\n",
+		"comm", "pid", "fdrefcnt", "mmaprefcnt", "fdsize(kb)", "mmapsize(kb)");
 
 	if (!mutex_trylock(&trace_lock))
 		return;
@@ -195,19 +182,19 @@ void __show_dmabuf_trace_info(struct memlog_obj *obj)
 			spin_unlock(&task->task->alloc_lock);
 		}
 
-		prlogger(obj, "%20s %5d %10d %10d %10zu %10zu %s\n",
-			 task->task->comm, task->task->pid, iterdata.fd_ref_cnt, task->mmap_count,
-			 iterdata.fd_ref_size, task->mmap_size / 1024,
-			 locked ? "" : "-> skip by lock contention");
+		pr_info("%20s %5d %10d %10d %10zu %10zu %s\n",
+			task->task->comm, task->task->pid, iterdata.fd_ref_cnt, task->mmap_count,
+			iterdata.fd_ref_size, task->mmap_size / 1024,
+			locked ? "" : "-> skip by lock contention");
 	}
 
-	prlogger(obj, "Attached device list:\n");
-	prlogger(obj, "%20s %20s %10s\n", "attached device", "size(kb)", "mapcount");
+	pr_info("Attached device list:\n");
+	pr_info("%20s %20s %10s\n", "attached device", "size(kb)", "mapcount");
 
 	for (i = 0; i < num_devices; i++)
-		prlogger(obj, "%20s %20zu %10lu\n",
-			 dev_name(attach_lists[i].dev), attach_lists[i].size / 1024,
-			 attach_lists[i].mapcnt);
+		pr_info("%20s %20zu %10lu\n",
+			dev_name(attach_lists[i].dev), attach_lists[i].size / 1024,
+			attach_lists[i].mapcnt);
 
 	list_for_each_entry(buffer, &buffer_list, node) {
 		sorted_array[num_buffer++] = buffer->dmabuf->size;
@@ -221,11 +208,10 @@ void __show_dmabuf_trace_info(struct memlog_obj *obj)
 	if (!num_buffer)
 		return;
 
-	sort(sorted_array, num_buffer, sizeof(*sorted_array),
-	     dmabuf_trace_buffer_size_compare, NULL);
+	sort(sorted_array, num_buffer, sizeof(*sorted_array), dmabuf_trace_buffer_size_compare, NULL);
 
-	prlogger(obj, "Dma-buf size statistics: (skipped bufcnt %d)\n", num_skipped_buffer);
-	prlogger(obj, "%10s : %8s\n", "size(kb)", "count");
+	pr_info("Dma-buf size statistics: (skipped bufcnt %d)\n", num_skipped_buffer);
+	pr_info("%10s : %8s\n", "size(kb)", "count");
 
 	size = sorted_array[0];
 	count = 1;
@@ -234,11 +220,11 @@ void __show_dmabuf_trace_info(struct memlog_obj *obj)
 			count++;
 			continue;
 		}
-		prlogger(obj, "%10zu : %8d\n", size / 1024, count);
+		pr_info("%10zu : %8d\n", size / 1024, count);
 		size = sorted_array[i];
 		count = 1;
 	}
-	prlogger(obj, "%10zu : %8d\n", size / 1024, count);
+	pr_info("%10zu : %8d\n", size / 1024, count);
 }
 
 void show_dmabuf_dva(struct device *dev)
@@ -278,11 +264,6 @@ void show_dmabuf_dva(struct device *dev)
 	mutex_unlock(&trace_lock);
 }
 
-void show_dmabuf_trace_info(void)
-{
-	__show_dmabuf_trace_info(NULL);
-}
-
 static void show_dmabuf_trace_handler(void *data, unsigned int filter, nodemask_t *nodemask)
 {
 	static DEFINE_RATELIMIT_STATE(dmabuf_trace_ratelimit, HZ * 10, 1);
@@ -292,64 +273,6 @@ static void show_dmabuf_trace_handler(void *data, unsigned int filter, nodemask_
 
 	show_dmabuf_trace_info();
 }
-
-#if IS_ENABLED(CONFIG_EXYNOS_MEMORY_LOGGER)
-#define DMABUF_MEMLOG_INTERVAL SZ_256M
-#define DMABUF_MEMLOG_INIT SZ_2G
-
-static DEFINE_SPINLOCK(dmabuf_memlog_lock);
-static struct memlog *dmabuf_memlog_desc;
-static struct memlog_obj *dmabuf_memlog_obj;
-static struct device dmabuf_memlog_dev;
-
-static void dmabuf_trace_memlog_highpressure(void)
-{
-	static unsigned long threshold = DMABUF_MEMLOG_INIT;
-	unsigned long flags;
-	bool highpressure = false;
-
-	if (!dmabuf_memlog_obj)
-		return;
-
-	spin_lock_irqsave(&dmabuf_memlog_lock, flags);
-	if (dmabuf_trace_buffer_size > threshold) {
-		threshold += DMABUF_MEMLOG_INTERVAL;
-		highpressure = true;
-	}
-	spin_unlock_irqrestore(&dmabuf_memlog_lock, flags);
-
-	if (!highpressure)
-		return;
-
-	__show_dmabuf_trace_info(dmabuf_memlog_obj);
-}
-
-static void dmabuf_trace_memlog_register(void)
-{
-	int ret;
-
-	device_initialize(&dmabuf_memlog_dev);
-	ret = memlog_register("dma-buf", &dmabuf_memlog_dev, &dmabuf_memlog_desc);
-	if (ret) {
-		pr_info("dma-buf-trace failed to register memlog %d\n", ret);
-		return;
-	}
-	dmabuf_memlog_obj = memlog_alloc_printf(dmabuf_memlog_desc, SZ_256K, NULL, "dma-buf", 0);
-	if (!dmabuf_memlog_obj)
-		pr_info("dma-buf-trace can't allocate buffer for logging\n");
-}
-
-static void dmabuf_trace_memlog_unregister(void)
-{
-	memlog_free(dmabuf_memlog_obj);
-	memlog_unregister(dmabuf_memlog_desc);
-}
-
-#else
-static void dmabuf_trace_memlog_highpressure(void) { };
-static void dmabuf_trace_memlog_register(void) { };
-static void dmabuf_trace_memlog_unregister(void) { };
-#endif
 
 static void dmabuf_trace_free_ref_force(struct dmabuf_trace_ref *ref)
 {
@@ -584,8 +507,6 @@ int dmabuf_trace_alloc(struct dma_buf *dmabuf)
 	}
 	dmabuf_trace_set_buffer(dmabuf, buffer);
 	mutex_unlock(&trace_lock);
-
-	dmabuf_trace_memlog_highpressure();
 
 	return 0;
 }
@@ -978,7 +899,6 @@ int __init dmabuf_trace_create(void)
 	INIT_LIST_HEAD(&head_task.ref_list);
 
 	register_trace_android_vh_show_mem(show_dmabuf_trace_handler, NULL);
-	dmabuf_trace_memlog_register();
 
 	pr_info("Initialized dma-buf trace successfully.\n");
 
@@ -987,7 +907,6 @@ int __init dmabuf_trace_create(void)
 
 void dmabuf_trace_remove(void)
 {
-	dmabuf_trace_memlog_unregister();
 	misc_deregister(&dmabuf_trace_dev);
 
 	kvfree(sorted_array);
