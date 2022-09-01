@@ -205,6 +205,7 @@ static int exynos_panel_set_power(struct exynos_panel_device *panel, bool on)
 			}
 		}
 
+#if 0 // NOT REQUIRED FOR ERD3830
 		panel_i2c_write(0x0c, 0x28);
 		panel_i2c_write(0x0d, 0x26);
 		panel_i2c_write(0x0e, 0x26);
@@ -216,9 +217,11 @@ static int exynos_panel_set_power(struct exynos_panel_device *panel, bool on)
 		panel_i2c_write(0x05, 0xee);
 		panel_i2c_write(0x10, 0x07);
 		panel_i2c_write(0x08, 0x13);
-
+#endif
 	} else {
+#if 0 // NOT REQUIRED FOR ERD3830
 		panel_i2c_write(0x09, 0x98);
+#endif
 
 		ret = gpio_request_one(res->lcd_reset, GPIOF_OUT_INIT_LOW,
 				"lcd_reset");

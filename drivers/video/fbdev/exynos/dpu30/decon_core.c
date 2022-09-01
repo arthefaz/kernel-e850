@@ -4302,7 +4302,9 @@ extern struct platform_driver displayport_driver;
 static int exynos_decon_register(void)
 {
 #if defined(CONFIG_SOC_S5E3830)
+	/* NOT REQUIRED FOR ERD3830
 	i2c_add_driver(&panel_i2c_driver);
+	*/
 #endif
 	platform_driver_register(&exynos_panel_driver);
 	platform_driver_register(&dpp_driver);
@@ -4325,7 +4327,9 @@ static void exynos_decon_unregister(void)
 	platform_driver_unregister(&dpp_driver);
 	platform_driver_unregister(&exynos_panel_driver);
 #if defined(CONFIG_SOC_S5E3830)
+	/* NOT REQUIRED FOR ERD3830
 	i2c_del_driver(&panel_i2c_driver);
+	*/
 #endif
 }
 late_initcall(exynos_decon_register);
