@@ -43,6 +43,12 @@
                                 };
                         };
 
+						ifconn {
+							status = "okay";
+							compatible = "samsung,ifconn";
+							ifconn,usbpd = "s2mu106";
+							ifconn,muic = "s2mu106-muic";
+						};
 
                 };
 
@@ -201,6 +207,35 @@
 			 100 0 100 100 100 100 100 100 100 100
 			 100 100 100 100 100 100 0>;
 	 };
+
+	usbpd-s2mu106@3C {
+		compatible = "sec-usbpd,i2c";
+		reg = <0x3C>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&usbpd_irq>;
+		usbpd,usbpd_int = <&gpa0 2 0>;
+
+		pdic-manager {
+			/* sink */
+			pdic,max_power = <5000>;
+			pdic_op_power = <2500>;
+			pdic_max_voltage = <6000>;
+			pdic_max_current = <2000>;
+			pdic,min_current = <500>;
+
+			pdic,giveback = <0>;
+			pdic,usb_com_capable = <1>;
+			pdic,no_usb_suspend = <1>;
+
+			/* source */
+			source,max_voltage = <5000>;
+			source,min_voltage = <4000>;
+			source,max_power = <2500>;
+
+			/* sink cap */
+			sink,capable_max_voltage = <5000>;
+		};
+	};
 };
 
 &dwmmc_0 {
