@@ -3,7 +3,6 @@
 obj-$(CONFIG_CAL_IF)		+= cal-if/
 obj-$(CONFIG_EXYNOS_PD)        += exynos-pd.o exynos-pd-dbg.o
 
-obj-$(CONFIG_ECT)		+= ect_parser.o
 obj-$(CONFIG_EXYNOS_PMU)	+= exynos-pmu.o
 
 obj-$(CONFIG_EXYNOS_PMU_ARM_DRIVERS)	+= exynos3250-pmu.o exynos4-pmu.o \
@@ -28,7 +27,7 @@ obj-$(CONFIG_EXYNOS_IMGLOADER)       += imgloader.o
 obj-$(CONFIG_EXYNOS_DEBUG)      += debug/
 
 # ECT
-obj-$(CONFIG_ECT)               += ect_parser.o
+obj-$(CONFIG_ECT)               += ect_parser/
 
 # reboot
 obj-$(CONFIG_EXYNOS_REBOOT)	+= exynos-reboot.o

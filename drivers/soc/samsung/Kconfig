@@ -214,6 +214,12 @@ config EXYNOS_TZASC_ILLEGAL_ACCESS_PANIC
 	Kernel panic will occur in case that TZASC illegal
 	access is detected.
 
+config ECT
+	tristate "Enable Exynos Characteristic Table File"
+	default n
+	help
+	Support ECT for Exynos SoC.
+
 config EXYNOS_DVFS_MANAGER
 	tristate "Exynos DVFS Manager"
 	default m

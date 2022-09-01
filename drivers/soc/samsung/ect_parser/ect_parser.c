@@ -1,8 +1,8 @@
 #include <soc/samsung/ect_parser.h>
 
 #include <asm/uaccess.h>
-#include <asm/map.h>
 #include <asm/memory.h>
+#include <asm/io.h>
 
 #include <linux/device.h>
 #include <linux/errno.h>
@@ -10,10 +10,11 @@
 #include <linux/file.h>
 #include <linux/module.h>
 #include <linux/vmalloc.h>
+#include <linux/platform_device.h>
+#include <linux/of_platform.h>
+#include <linux/of_reserved_mem.h>
 
 #define ALIGNMENT_SIZE	 4
-
-#define S5P_VA_ECT (VMALLOC_START + 0xF6000000 + 0x02D00000)
 
 #define ARRAY_SIZE32(array)		((u32)ARRAY_SIZE(array))
 
@@ -22,10 +23,6 @@
 static struct ect_info ect_list[];
 
 static char ect_signature[] = "PARA";
-
-#ifdef CONFIG_DEBUG_FS
-static struct class *ect_class;
-#endif
 
 static phys_addr_t ect_address;
 static phys_addr_t ect_size;
@@ -292,9 +289,6 @@ static int ect_parse_voltage_table(int parser_version, void **address, struct ec
 
 		table->voltages_step = *address;
 		*address += sizeof(unsigned char) * num_of_data;
-		if ((sizeof(unsigned char) * num_of_data) % ALIGNMENT_SIZE) {
-			*address += ALIGNMENT_SIZE - (sizeof(unsigned char) * num_of_data % ALIGNMENT_SIZE);
-		}
 		table->volt_step = PMIC_VOLTAGE_STEP;
 
 	} else {
@@ -1181,14 +1175,12 @@ static void ect_present_test_data(char *version)
 
 	pr_info("========================================\n");
 	pr_info("=\n");
-	pr_info("= [ECT] current version is TEST VERSION!!\n");
-	pr_info("= Please be aware that error can be happen.\n");
-	pr_info("= [VERSION] : %c%c%c%c\n", version[0], version[1], version[2], version[3]);
+	pr_info("= [ECT VERSION] : %c%c%c%c\n", version[0], version[1], version[2], version[3]);
 	pr_info("=\n");
 	pr_info("========================================\n");
 }
 
-#if defined(CONFIG_ECT_DUMP)
+static struct class *ect_class;
 
 static int ect_dump_header(struct seq_file *s, void *data);
 static int ect_dump_dvfs(struct seq_file *s, void *data);
@@ -1206,27 +1198,6 @@ static int ect_dump_new_timing_parameter(struct seq_file *s, void *data);
 static int ect_dump_pidtm(struct seq_file *s, void *data);
 
 static int dump_open(struct inode *inode, struct file *file);
-
-#else
-
-#define ect_dump_header			NULL
-#define ect_dump_ap_thermal		NULL
-#define ect_dump_voltage		NULL
-#define ect_dump_dvfs			NULL
-#define ect_dump_margin			NULL
-#define ect_dump_mif_thermal		NULL
-#define ect_dump_pll			NULL
-#define ect_dump_rcc			NULL
-#define ect_dump_timing_parameter	NULL
-#define ect_dump_minlock		NULL
-#define ect_dump_gen_parameter		NULL
-#define ect_dump_binary			NULL
-#define ect_dump_new_timing_parameter	NULL
-#define ect_dump_pidtm			NULL
-
-#define dump_open			NULL
-
-#endif
 
 static struct ect_info ect_header_info = {
 	.block_name = BLOCK_HEADER,
@@ -1428,8 +1399,6 @@ static struct ect_info ect_list[] = {
 	}
 };
 
-#if defined(CONFIG_ECT_DUMP)
-
 static struct ect_info* ect_get_info(char *block_name)
 {
 	int i;
@@ -1453,7 +1422,7 @@ static int ect_dump_header(struct seq_file *s, void *data)
 	}
 
 	seq_printf(s, "[ECT] : ECT Information\n");
-	seq_printf(s, "\t[VA] : %p\n", (void *)S5P_VA_ECT);
+	seq_printf(s, "\t[VA] : %p\n", ect_early_vm.addr);
 	seq_printf(s, "\t[SIGN] : %c%c%c%c\n",
 			header->sign[0],
 			header->sign[1],
@@ -2076,7 +2045,6 @@ static int dump_open(struct inode *inode, struct file *file)
 	return single_open(file, info->dump, inode->i_private);
 }
 
-#ifdef CONFIG_DEBUG_FS
 static int ect_dump_all(struct seq_file *s, void *data)
 {
 	int i, j, ret;
@@ -2111,53 +2079,8 @@ static struct file_operations ops_all_dump = {
 	.release = single_release,
 };
 
-static ssize_t create_binary_store(struct class *class,
-		struct class_attribute *attr, const char *buf, size_t size)
-{
-	char filename_buffer[512];
-	long pattern_fd;
-	mm_segment_t old_fs;
-	struct file *fp;
-	loff_t pos = 0;
-	int ret;
-
-	ret = sscanf(buf, "%511s", filename_buffer);
-	if (ret != 1)
-		return -EINVAL;
-
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
-
-	pattern_fd = do_sys_open(AT_FDCWD, filename_buffer, O_WRONLY | O_CREAT | O_TRUNC | O_SYNC | O_NOFOLLOW, 0664);
-	if (pattern_fd < 0) {
-		pr_err("[ECT] : error to open file\n");
-		set_fs(old_fs);
-		return -EINVAL;
-	}
-
-	fp = fget(pattern_fd);
-	if (fp) {
-		vfs_write(fp, (const char *)ect_address, ect_size, &pos);
-		vfs_fsync(fp, 0);
-		fput(fp);
-	} else {
-		pr_err("[ECT] : error to convert file\n");
-	}
-
-	get_close_on_exec(pattern_fd);
-	set_fs(old_fs);
-
-	return size;
-}
-
-
-static CLASS_ATTR_WO(create_binary);
-
-#endif
-
 static int ect_dump_init(void)
 {
-#ifdef CONFIG_DEBUG_FS
 	int i;
 	struct dentry *root, *d;
 
@@ -2193,31 +2116,10 @@ static int ect_dump_init(void)
 		return PTR_ERR(ect_class);
 	}
 
-	if (class_create_file(ect_class, &class_attr_create_binary)) {
-		pr_err("%s: couldn't create generate_data node\n", __FILE__);
-		return -EINVAL;
-	}
-
-#endif
 	return 0;
 }
-late_initcall_sync(ect_dump_init);
-#endif
 
 /* API for external */
-
-void __init ect_init(phys_addr_t address, phys_addr_t size)
-{
-	ect_early_vm.phys_addr = address;
-	ect_early_vm.addr = (void *)S5P_VA_ECT;
-	ect_early_vm.size = size;
-
-	vm_area_add_early(&ect_early_vm);
-
-	ect_address = (phys_addr_t)S5P_VA_ECT;
-	ect_size = size;
-}
-
 unsigned long long ect_read_value64(unsigned int *address, int index)
 {
 	unsigned int top, half;
@@ -2241,6 +2143,7 @@ void *ect_get_block(char *block_name)
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_get_block);
 
 struct ect_dvfs_domain *ect_dvfs_get_domain(void *block, char *domain_name)
 {
@@ -2263,6 +2166,7 @@ struct ect_dvfs_domain *ect_dvfs_get_domain(void *block, char *domain_name)
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_dvfs_get_domain);
 
 struct ect_pll *ect_pll_get_pll(void *block, char *pll_name)
 {
@@ -2285,6 +2189,7 @@ struct ect_pll *ect_pll_get_pll(void *block, char *pll_name)
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_pll_get_pll);
 
 struct ect_voltage_domain *ect_asv_get_domain(void *block, char *domain_name)
 {
@@ -2307,6 +2212,7 @@ struct ect_voltage_domain *ect_asv_get_domain(void *block, char *domain_name)
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_asv_get_domain);
 
 struct ect_rcc_domain *ect_rcc_get_domain(void *block, char *domain_name)
 {
@@ -2329,6 +2235,7 @@ struct ect_rcc_domain *ect_rcc_get_domain(void *block, char *domain_name)
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_rcc_get_domain);
 
 struct ect_mif_thermal_level *ect_mif_thermal_get_level(void *block, int mr4_level)
 {
@@ -2350,6 +2257,7 @@ struct ect_mif_thermal_level *ect_mif_thermal_get_level(void *block, int mr4_lev
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_mif_thermal_get_level);
 
 struct ect_ap_thermal_function *ect_ap_thermal_get_function(void *block, char *function_name)
 {
@@ -2372,6 +2280,7 @@ struct ect_ap_thermal_function *ect_ap_thermal_get_function(void *block, char *f
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_ap_thermal_get_function);
 
 struct ect_pidtm_block *ect_pidtm_get_block(void *block, char *block_name)
 {
@@ -2394,6 +2303,7 @@ struct ect_pidtm_block *ect_pidtm_get_block(void *block, char *block_name)
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_pidtm_get_block);
 
 struct ect_margin_domain *ect_margin_get_domain(void *block, char *domain_name)
 {
@@ -2416,6 +2326,7 @@ struct ect_margin_domain *ect_margin_get_domain(void *block, char *domain_name)
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_margin_get_domain);
 
 struct ect_timing_param_size *ect_timing_param_get_size(void *block, int dram_size)
 {
@@ -2437,6 +2348,7 @@ struct ect_timing_param_size *ect_timing_param_get_size(void *block, int dram_si
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_timing_param_get_size);
 
 struct ect_timing_param_size *ect_timing_param_get_key(void *block, unsigned long long key)
 {
@@ -2458,6 +2370,7 @@ struct ect_timing_param_size *ect_timing_param_get_key(void *block, unsigned lon
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_timing_param_get_key);
 
 struct ect_minlock_domain *ect_minlock_get_domain(void *block, char *domain_name)
 {
@@ -2480,6 +2393,7 @@ struct ect_minlock_domain *ect_minlock_get_domain(void *block, char *domain_name
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_minlock_get_domain);
 
 struct ect_gen_param_table *ect_gen_param_get_table(void *block, char *table_name)
 {
@@ -2501,6 +2415,7 @@ struct ect_gen_param_table *ect_gen_param_get_table(void *block, char *table_nam
 
 	 return NULL;
 }
+EXPORT_SYMBOL_GPL(ect_gen_param_get_table);
 
 struct ect_bin *ect_binary_get_bin(void *block, char *binary_name)
 {
@@ -2553,8 +2468,6 @@ int ect_parse_binary_header(void)
 	unsigned int length, offset;
 	struct ect_header *ect_header;
 
-	ect_init_map_io();
-
 	address = (void *)ect_address;
 	if (address == NULL)
 		return -EINVAL;
@@ -2606,6 +2519,7 @@ err_memcmp:
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(ect_parse_binary_header);
 
 int ect_strcmp(char *src1, char *src2)
 {
@@ -2630,25 +2544,94 @@ int ect_strncmp(char *src1, char *src2, int length)
 	return 0;
 }
 
-void ect_init_map_io(void)
+static void *exynos_ect_request_region(unsigned long addr,
+					unsigned int size)
 {
-	int page_size, i;
-	struct page *page;
-	struct page **pages;
-	int ret;
+	int i;
+	unsigned int num_pages = (size >> PAGE_SHIFT);
+	pgprot_t prot = pgprot_writecombine(PAGE_KERNEL);
+	struct page **pages = NULL;
+	void *v_addr = NULL;
 
-	page_size = ect_early_vm.size / PAGE_SIZE;
-	if (ect_early_vm.size % PAGE_SIZE)
-		page_size++;
-	pages = kzalloc((sizeof(struct page *) * page_size), GFP_KERNEL);
-	page = phys_to_page(ect_early_vm.phys_addr);
+	if (!addr)
+		return NULL;
 
-	for (i = 0; i < page_size; ++i)
-		pages[i] = page++;
+	pages = kmalloc_array(num_pages, sizeof(struct page *), GFP_ATOMIC);
+	if (!pages)
+		return NULL;
 
-	ret = map_vm_area(&ect_early_vm, PAGE_KERNEL, pages);
-	if (ret) {
-		pr_err("[ECT] : failed to mapping va and pa(%d)\n", ret);
+	for (i = 0; i < num_pages; i++) {
+		pages[i] = phys_to_page(addr);
+		addr += PAGE_SIZE;
 	}
+
+	v_addr = vmap(pages, num_pages, VM_MAP, prot);
 	kfree(pages);
+
+	return v_addr;
 }
+
+static int exynos_ect_probe(struct platform_device *pdev)
+{
+	struct reserved_mem *rmem;
+	struct device_node *rmem_np;
+
+	rmem_np = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
+	rmem = of_reserved_mem_lookup(rmem_np);
+	if (!rmem) {
+		dev_err(&pdev->dev, "failed to acquire memory region\n");
+			return 0;
+	}
+
+	ect_early_vm.phys_addr = rmem->base;
+	ect_early_vm.size = rmem->size;
+
+	pr_info("%s: Reserved memory for ect: addr=%lx, size=%lx\n",
+			__func__, ect_early_vm.phys_addr, ect_early_vm.size);
+
+	/* Translate PA to VA of message buffer */
+	ect_early_vm.addr = exynos_ect_request_region(ect_early_vm.phys_addr, ect_early_vm.size);
+	if (!ect_early_vm.addr) {
+		dev_err(&pdev->dev, "Fail to translate message buffer\n");
+		return -EFAULT;
+	}
+
+	ect_address = (phys_addr_t)ect_early_vm.addr;
+	ect_size = ect_early_vm.size;
+
+	dev_info(&pdev->dev, "Exynos ect driver probe done!\n");
+
+	ect_dump_init();
+
+	return 0;
+}
+
+static const struct of_device_id exynos_ect_of_match_table[] = {
+	{ .compatible = "samsung,exynos-ect", },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, exynos_ect_of_match_table);
+
+static struct platform_driver exynos_ect_driver = {
+	.driver = {
+		.name = "exynos-ect",
+		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(exynos_ect_of_match_table),
+	},
+	.probe = exynos_ect_probe,
+};
+
+static int exynos_ect_init(void)
+{
+	return platform_driver_register(&exynos_ect_driver);
+}
+
+static void __exit exynos_ect_exit(void)
+{
+	platform_driver_unregister(&exynos_ect_driver);
+}
+
+postcore_initcall(exynos_ect_init);
+module_exit(exynos_ect_exit);
+
+MODULE_LICENSE("GPL");
