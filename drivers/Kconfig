@@ -235,4 +235,11 @@ source "drivers/interconnect/Kconfig"
 source "drivers/counter/Kconfig"
 
 source "drivers/most/Kconfig"
+
+source "drivers/usb/typec/samsung/Kconfig"
+
+source "drivers/misc/samsung/muic/Kconfig"
+
+source "drivers/misc/samsung/ifconn/Kconfig"
+
 endmenu
