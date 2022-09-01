@@ -24,7 +24,7 @@
 #include "s5e3830-dma-heap.dtsi"
 #include "s5e3830-sysmmu.dtsi"
 #include "s5e3830-mali.dtsi"
-
+#include "s5e3830-cpu.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
@@ -72,31 +72,6 @@
 	chipid@10000000 {
 		compatible = "samsung,exynos3830-chipid";
 		reg = <0x0 0x10000000 0x100>;
-	};
-
-	cpus {
-		#address-cells = <2>;
-		#size-cells = <0>;
-
-		cpu-map {
-			cluster0 {
-				coregroup0 {
-					core0 {
-						cpu = <&cpu0>;
-					};
-				};
-			};
-		};
-
-		cpu0: cpu@0000 {
-			device_type = "cpu";
-			compatible = "arm,ananke", "arm,armv8";
-			reg = <0x0 0x0000>;
-			enable-method = "psci";
-		//	sched-energy-data = <&ANANKE_ENERGY>;
-		//	cpu-idle-states = <&ANANKE_CPU_SLEEP>;
-		};
-
 	};
 
 	gic:interrupt-controller@12a00000 {
