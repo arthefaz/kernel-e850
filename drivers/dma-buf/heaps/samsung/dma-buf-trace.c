@@ -173,11 +173,6 @@ void __show_dmabuf_trace_info(struct memlog_obj *obj)
 	prlogger(obj, "%20s %5s %10s %10s %10s %10s\n",
 		 "comm", "pid", "fdrefcnt", "mmaprefcnt", "fdsize(kb)", "mmapsize(kb)");
 
-	if (in_interrupt()) {
-		prlogger(obj, "log is skipped in interrupt context\n");
-		return;
-	}
-
 	if (!mutex_trylock(&trace_lock))
 		return;
 

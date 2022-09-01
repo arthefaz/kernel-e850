@@ -917,11 +917,6 @@ static void show_hpa_trace_handler(void *data, unsigned int filter, nodemask_t *
 	if (!__ratelimit(&hpa_map_ratelimit))
 		return;
 
-	if (in_interrupt()) {
-		pr_info("log is skipped in interrupt context\n");
-		return;
-	}
-
 	if (!mutex_trylock(&hpa_trace_lock))
 		return;
 
