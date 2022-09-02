@@ -4184,7 +4184,11 @@ static int decon_probe(struct platform_device *pdev)
 	decon_set_bypass(decon, false);
 #endif
 
+#if 0
 	ret = decon_initial_display(decon, false);
+#else // for decon colormap
+	ret = decon_initial_display(decon, true);
+#endif
 	if (ret)
 		goto err_display;
 
