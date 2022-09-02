@@ -48,7 +48,7 @@
 #define S2MPU12_CHANNEL	(0)
 
 #if IS_ENABLED(CONFIG_EXYNOS_ACPM)
-extern struct device_node *acpm_mfd_node;
+static struct device_node *acpm_mfd_node;
 #endif
 
 static struct mfd_cell s2mpu12_devs[] = {
@@ -64,7 +64,7 @@ int s2mpu12_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest)
 {
 	int ret;
 
-	ret = exynos_acpm_read_reg(S2MPU12_CHANNEL, i2c->addr, reg, dest);
+	ret = exynos_acpm_read_reg(acpm_mfd_node, S2MPU12_CHANNEL, i2c->addr, reg, dest);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;
@@ -77,7 +77,7 @@ int s2mpu12_bulk_read(struct i2c_client *i2c, u8 reg, int count, u8 *buf)
 {
 	int ret;
 
-	ret = exynos_acpm_bulk_read(S2MPU12_CHANNEL, i2c->addr, reg, count, buf);
+	ret = exynos_acpm_bulk_read(acpm_mfd_node, S2MPU12_CHANNEL, i2c->addr, reg, count, buf);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;
@@ -90,7 +90,7 @@ int s2mpu12_write_reg(struct i2c_client *i2c, u8 reg, u8 value)
 {
 	int ret;
 
-	ret = exynos_acpm_write_reg(S2MPU12_CHANNEL, i2c->addr, reg, value);
+	ret = exynos_acpm_write_reg(acpm_mfd_node, S2MPU12_CHANNEL, i2c->addr, reg, value);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;
@@ -103,7 +103,7 @@ int s2mpu12_bulk_write(struct i2c_client *i2c, u8 reg, int count, u8 *buf)
 {
 	int ret;
 
-	ret = exynos_acpm_bulk_write(S2MPU12_CHANNEL, i2c->addr, reg, count, buf);
+	ret = exynos_acpm_bulk_write(acpm_mfd_node, S2MPU12_CHANNEL, i2c->addr, reg, count, buf);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;
@@ -116,7 +116,7 @@ int s2mpu12_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask)
 {
 	int ret;
 
-	ret = exynos_acpm_update_reg(S2MPU12_CHANNEL, i2c->addr, reg, val, mask);
+	ret = exynos_acpm_update_reg(acpm_mfd_node, S2MPU12_CHANNEL, i2c->addr, reg, val, mask);
 	if (ret) {
 		pr_err("[%s] acpm ipc fail!\n", __func__);
 		return ret;

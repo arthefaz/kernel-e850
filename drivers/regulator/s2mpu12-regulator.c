@@ -40,6 +40,10 @@
 #define I2C_ADDR_CLOSE	0x0F
 #define S2MPU12_CHANNEL	(0)
 
+#if IS_ENABLED(CONFIG_EXYNOS_ACPM)
+static struct device_node *acpm_mfd_node;
+#endif
+
 static struct s2mpu12_info *static_info;
 static struct regulator_desc regulators[S2MPU12_REGULATOR_MAX];
 #if 0
@@ -453,7 +457,9 @@ static int s2mpu12_pmic_dt_parse_pdata(struct s2mpu12_dev *iodev,
 		dev_err(iodev->dev, "could not find pmic sub-node\n");
 		return -ENODEV;
 	}
-
+#if IS_ENABLED(CONFIG_EXYNOS_ACPM)
+	acpm_mfd_node = pmic_np;
+#endif
 	regulators_np = of_find_node_by_name(pmic_np, "regulators");
 	if (!regulators_np) {
 		dev_err(iodev->dev, "could not find regulators sub-node\n");
@@ -548,7 +554,7 @@ static ssize_t s2mpu12_read_store(struct device *dev,
 
 #if IS_ENABLED(CONFIG_EXYNOS_ACPM)
 	mutex_lock(&s2mpu12->iodev->i2c_lock);
-	ret = exynos_acpm_read_reg(S2MPU12_CHANNEL, base_addr, reg_addr, &val);
+	ret = exynos_acpm_read_reg(acpm_mfd_node, S2MPU12_CHANNEL, base_addr, reg_addr, &val);
 	mutex_unlock(&s2mpu12->iodev->i2c_lock);
 	if (ret)
 		pr_info("%s: Failed to read PMIC address & data\n", __func__);
@@ -600,7 +606,7 @@ static ssize_t s2mpu12_write_store(struct device *dev,
 
 #if IS_ENABLED(CONFIG_EXYNOS_ACPM)
 	mutex_lock(&s2mpu12->iodev->i2c_lock);
-	ret = exynos_acpm_write_reg(S2MPU12_CHANNEL, base_addr, reg_addr, val);
+	ret = exynos_acpm_write_reg(acpm_mfd_node, S2MPU12_CHANNEL, base_addr, reg_addr, val);
 	mutex_unlock(&s2mpu12->iodev->i2c_lock);
 	if (ret)
 		pr_info("%s: fail to write i2c addr/data\n", __func__);
