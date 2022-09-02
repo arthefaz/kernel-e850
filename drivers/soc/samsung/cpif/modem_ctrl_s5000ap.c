@@ -812,6 +812,32 @@ void change_to_ap_uart(void)
 	__raw_writel(0x1, uart_ap_rxd_addr);
 	mif_info("SEL_RXD_AP_UART val: %08X\n", __raw_readl(uart_ap_rxd_addr));
 }
+#elif defined(CONFIG_SOC_S5E3830)
+void change_to_cp_uart(void)
+{
+        int ret = 0;
+
+        ret = exynos_pmu_write(0x0760, 0x11002000);
+        if (ret < 0) {
+                mif_err("ERR(%d) set CP UART_IO_SHARE_CTRL\n", ret);
+                return;
+        }
+
+        mif_info("CHANGE TO CP UART\n");
+}
+
+void change_to_ap_uart(void)
+{
+        int ret = 0;
+
+        ret = exynos_pmu_write(0x0760, 0x00120000);
+        if (ret < 0) {
+                mif_err("ERR(%d) set AP UART_IO_SHARE_CTRL\n", ret);
+                return;
+        }
+
+        mif_info("CHANGE TO AP UART\n");
+}
 #endif /* CONFIG_SOC_EXYNOSxxxx */
 
 void send_uart_noti_to_modem(int val)
