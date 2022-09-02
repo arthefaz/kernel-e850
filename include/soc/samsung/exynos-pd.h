@@ -29,7 +29,7 @@
 #include <linux/debugfs.h>
 
 #include <linux/mfd/samsung/core.h>
-#include <soc/samsung/exynos-bcm_dbg.h>
+//#include <soc/samsung/exynos-bcm_dbg.h>
 
 #include <soc/samsung/exynos-cpupm.h>
 #include <dt-bindings/power/exynos-power.h>
@@ -80,7 +80,7 @@ struct exynos_pd_dbg_info {
 #endif
 };
 
-#ifdef CONFIG_EXYNOS_PD
+#if defined(CONFIG_EXYNOS_PD) || defined(CONFIG_EXYNOS_PD_MODULE)
 struct exynos_pm_domain *exynos_pd_lookup_name(const char *domain_name);
 int exynos_pd_status(struct exynos_pm_domain *pd);
 #else

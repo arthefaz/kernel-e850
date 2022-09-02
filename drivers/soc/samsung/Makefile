@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-2.0
+obj-$(CONFIG_ARCH_EXYNOS)       += exynos-el3_mon.o
+
 # CAL
 obj-$(CONFIG_CAL_IF)		+= cal-if/
-obj-$(CONFIG_EXYNOS_PD)        += exynos-pd.o exynos-pd-dbg.o
+obj-$(CONFIG_EXYNOS_PD)         += exynos-pd.o
+obj-$(CONFIG_EXYNOS_PD_DBG)	+= exynos-pd-dbg.o
 
 obj-$(CONFIG_EXYNOS_PMU)	+= exynos-pmu.o
 
