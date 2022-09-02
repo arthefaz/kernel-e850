@@ -19,6 +19,8 @@
 #include <dt-bindings/interrupt-controller/s5e3830.h>
 #include <dt-bindings/clock/s5e3830.h>
 #include <dt-bindings/soc/samsung/s5e3830-dm.h>
+#include <dt-bindings/soc/samsung/s5e3830-devfreq.h>
+#include <dt-bindings/soc/samsung/exynos_pm_qos.h>
 #include "s5e3830-pinctrl.dtsi"
 #include "s5e3830-usi.dtsi"
 #include "s5e3830-rmem.dtsi"
@@ -423,4 +425,155 @@
 			};
 		};
 	};
+
+	exynos_devfreq {
+		compatible = "samsung,exynos-devfreq-root";
+		#address-cells = <2>;
+		#size-cells = <1>;
+		ranges;
+		devfreq_0: devfreq_mif@17000010 {
+			compatible = "samsung,exynos-devfreq";
+			reg = <0x0 0x17000010 0x0>;
+			devfreq_type = <DEVFREQ_MIF>;
+			devfreq_domain_name = "MIF";
+			pm_qos_class = <PM_QOS_BUS_THROUGHPUT>; /* PM_QOS_BUS_THROUGHPUT */
+			pm_qos_class_max = <PM_QOS_BUS_THROUGHPUT_MAX>; /* PM_QOS_BUS_THROUGHPUT_MAX */
+			ess_flag = <ESS_FLAG_MIF>;
+			dm-index = <DM_MIF>;
+
+			/* Delay time */
+			use_delay_time = "false";
+
+			freq_info = <1539000 421000 421000 421000 1539000 421000>;
+			/* initial_freq, default_qos, suspend_freq, min_freq, max_freq reboot_freq */
+
+			/* Booting value */
+			boot_info = <40 1539000>;
+			/* boot_qos_timeout, boot_freq */
+
+			/* governor data */
+			governor = <SIMPLE_INTERACTIVE>;
+
+			bts_update = "false";
+			dfs_id = <ACPM_DVFS_MIF>;
+			acpm-ipc-channel = <1>;
+			use_acpm = "true";
+			update_fvp = "true";
+		};
+
+		devfreq_1: devfreq_int@17000020 {
+			compatible = "samsung,exynos-devfreq";
+			reg = <0x0 0x17000020 0x0>;
+			devfreq_type = <DEVFREQ_INT>;
+			devfreq_domain_name = "INT";
+			pm_qos_class = <PM_QOS_DEVICE_THROUGHPUT>; /* PM_QOS_DEVICE_THROUGHPUT */
+			pm_qos_class_max = <PM_QOS_DEVICE_THROUGHPUT_MAX>; /* PM_QOS_DEVICE_THROUGHPUT_MAX */
+			ess_flag = <ESS_FLAG_INT>;
+			dm-index = <DM_INT>;
+
+			/* Delay time */
+			use_delay_time = "false";
+
+			freq_info = <667000 50000 50000 50000 667000 667000>;
+			/* <initial_freq, default_qos, suspend_freq, min, max, reboot_freq> */
+
+			/* Booting value */
+			boot_info = <40 667000>;
+			/* boot_qos_timeout, boot_freq */
+
+			/* governor data */
+			governor = <SIMPLE_INTERACTIVE>;
+
+			bts_update = "false";
+			dfs_id = <ACPM_DVFS_INT>;
+			acpm-ipc-channel = <1>;
+			use_acpm = "true";
+		};
+
+		devfreq_2: devfreq_disp@17000030 {
+			compatible = "samsung,exynos-devfreq";
+			reg = <0x0 0x17000030 0x0>;
+			devfreq_type = <DEVFREQ_DISP>;
+			devfreq_domain_name = "DISP";
+			pm_qos_class = <PM_QOS_DISPLAY_THROUGHPUT>; /* PM_QOS_DISPLAY_THROUGHPUT */
+			pm_qos_class_max = <PM_QOS_DISPLAY_THROUGHPUT_MAX>; /* PM_QOS_DISPLAY_THROUGHPUT_MAX */
+			ess_flag = <ESS_FLAG_DISP>;
+			dm-index = <DM_DISP>;
+
+			/* Delay time */
+			use_delay_time = "false";
+
+			freq_info = <400000 50000 50000 50000 400000 400000>;
+			/* <initial_freq, default_qos, suspend_freq, min, max, reboot_freq> */
+
+			/* Booting value */
+			boot_info = <40 400000>;
+			/* boot_qos_timeout, boot_freq */
+
+			/* governor data */
+			governor = <SIMPLE_INTERACTIVE>;
+
+			bts_update = "false";
+			dfs_id = <ACPM_DVFS_DISP>;
+		};
+
+		devfreq_3: devfreq_cam@17000040 {
+			compatible = "samsung,exynos-devfreq";
+			reg = <0x0 0x17000040 0x0>;
+			devfreq_type = <DEVFREQ_CAM>;
+			devfreq_domain_name = "CAM";
+			pm_qos_class = <PM_QOS_CAM_THROUGHPUT>; /* PM_QOS_CAM_THROUGHPUT */
+			pm_qos_class_max = <PM_QOS_CAM_THROUGHPUT_MAX>; /* PM_QOS_CAM_THROUGHPUT_MAX */
+			ess_flag = <ESS_FLAG_CAM>;
+			dm-index = <DM_CAM>;
+
+			/* Delay time */
+			use_delay_time = "false";
+
+			freq_info = <690000 650000 65000 650000 690000 650000>;
+			/* <initial, default_qos, suspend_freq, min, max, reboot_freq> */
+
+			/* Booting value */
+			boot_info = <40 650000>;
+			/* boot_qos_timeout, boot_freq */
+
+			/* governor data */
+			governor = <SIMPLE_INTERACTIVE>;
+
+			bts_update = "false";
+
+			dfs_id = <ACPM_DVFS_CAM>;
+		};
+
+		devfreq_4: devfreq_aud@17000050 {
+			compatible = "samsung,exynos-devfreq";
+			reg = <0x0 0x17000050 0x0>;
+			devfreq_type = <DEVFREQ_AUD>;
+			devfreq_domain_name = "AUD";
+			pm_qos_class = <PM_QOS_AUD_THROUGHPUT>; /* PM_QOS_AUD_THROUGHPUT */
+			pm_qos_class_max = <PM_QOS_AUD_THROUGHPUT_MAX>; /* PM_QOS_AUD_THROUGHPUT_MAX */
+			ess_flag = <ESS_FLAG_AUD>;
+			dm-index = <DM_AUD>;
+
+			/* Delay time */
+			use_delay_time = "false";
+
+			freq_info = <1033000 259000 259000 259000 1033000 259000>;
+			/* <initial, default_qos, suspend_freq, min, max, reboot_freq> */
+
+			/* Booting value */
+			boot_info = <40 259000>;
+			/* boot_qos_timeout, boot_freq */
+
+			/* governor data */
+			governor = <SIMPLE_INTERACTIVE>;
+
+			bts_update = "false";
+			dfs_id = <ACPM_DVFS_AUD>;
+
+			power-domains = <&pd_aud>;
+			pd_name = "pd-aud";
+		};
+	};
+
 };
