@@ -1,6 +1,19 @@
 #ifndef __FVMAP_H__
 #define __FVMAP_H__
 
+enum margin_id {
+	MARGIN_MIF,
+	MARGIN_INT,
+	MARGIN_CPUCL0,
+	MARGIN_CPUCL1,
+	MARGIN_G3D,
+	MARGIN_CAM,
+	MARGIN_DISP,
+	MARGIN_AUD,
+	MARGIN_CP,
+	MAX_MARGIN_ID,
+};
+
 /* FV(Frequency Voltage MAP) */
 struct fvmap_header {
 	unsigned char dvfs_type;
@@ -43,9 +56,16 @@ struct dvfs_table {
 	unsigned char val[0];
 };
 
-#ifdef CONFIG_ACPM_DVFS
+struct freq_volt {
+	unsigned int rate;
+	unsigned int volt;
+};
+
+#if defined(CONFIG_ACPM_DVFS) || defined(CONFIG_ACPM_DVFS_MODULE)
 extern int fvmap_init(void __iomem *sram_base);
 extern int fvmap_get_voltage_table(unsigned int id, unsigned int *table);
+extern int fvmap_get_freq_volt_table(unsigned int id, void *freq_volt_table,
+		unsigned int table_size);
 #else
 static inline int fvmap_init(void __iomem *sram_base)
 {
@@ -53,6 +73,11 @@ static inline int fvmap_init(void __iomem *sram_base)
 }
 
 static inline int fvmap_get_voltage_table(unsigned int id, unsigned int *table)
+{
+	return 0;
+}
+static inline int fvmap_get_freq_volt_table(unsigned int id, void *freq_volt_table,
+		unsigned int table_size)
 {
 	return 0;
 }

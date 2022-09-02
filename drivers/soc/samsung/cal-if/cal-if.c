@@ -2,13 +2,13 @@
 //#include <linux/debug-snapshot.h>
 #include <soc/samsung/ect_parser.h>
 #include <soc/samsung/cal-if.h>
+#include <soc/samsung/fvmap.h>
 
 #include "pwrcal-env.h"
 #include "pwrcal-rae.h"
 #include "cmucal.h"
 #include "ra.h"
 #include "acpm_dvfs.h"
-#include "fvmap.h"
 #include "asv.h"
 
 #include "pmucal_system.h"
@@ -22,6 +22,8 @@
 #include <soc/samsung/exynos-bcm_dbg.h>
 #endif
 #include "pmucal_powermode.h"
+
+#include "../acpm/acpm.h"
 
 static DEFINE_SPINLOCK(pmucal_cpu_lock);
 
@@ -352,6 +354,7 @@ extern int cal_is_lastcore_detecting(unsigned int cpu)
 }
 EXPORT_SYMBOL_GPL(cal_is_lastcore_detecting);
 */
+
 int cal_dfs_get_asv_table(unsigned int id, unsigned int *table)
 {
 	return fvmap_get_voltage_table(id, table);

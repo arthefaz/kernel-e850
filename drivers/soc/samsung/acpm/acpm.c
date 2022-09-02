@@ -24,7 +24,7 @@
 
 #include "acpm.h"
 #include "acpm_ipc.h"
-#include "../cal-if/fvmap.h"
+#include <soc/samsung/fvmap.h>
 #include "fw_header/framework.h"
 
 static int ipc_done;
@@ -32,6 +32,7 @@ static unsigned long long ipc_time_start;
 #ifdef CONFIG_DEBUG_FS
 static unsigned long long ipc_time_end;
 #endif
+static void __iomem *fvmap_base_address;
 
 static struct acpm_info *exynos_acpm;
 
@@ -96,6 +97,12 @@ static int firmware_update(struct device *dev, void *fw_base, const char *fw_nam
 	return 0;
 }
 
+void *get_fvmap_base(void)
+{
+	return fvmap_base_address;
+}
+EXPORT_SYMBOL_GPL(get_fvmap_base);
+
 static int plugins_init(void)
 {
 	struct plugin *plugins;
@@ -103,7 +110,7 @@ static int plugins_init(void)
 	unsigned int plugin_id;
 	char name[50];
 	const char *fw_name = NULL;
-	void __iomem *fw_base_addr;
+	void __iomem *fw_base_addr = NULL;
 	struct device_node *node, *child;
 	const __be32 *prop;
 	unsigned int offset;
@@ -156,7 +163,7 @@ static int plugins_init(void)
 						plugins[i].stay_attached, plugins[i].id, ret);
 
 			if (fw_name && strstr(fw_name, "dvfs"))
-				fvmap_init(fw_base_addr + plugins[i].size);
+				fvmap_base_address = fw_base_addr + plugins[i].size;
 
 		} else if (plugins[i].is_attached == 1 && plugins[i].stay_attached == 1) {
 			fw_name = (const char *)(acpm_srambase + plugins[i].fw_name);
@@ -164,11 +171,18 @@ static int plugins_init(void)
 			if (plugins[i].fw_name && fw_name &&
 					(strstr(fw_name, "DVFS") || strstr(fw_name, "dvfs"))) {
 
-				fw_base_addr = acpm_srambase + (plugins[i].base_addr & ~0x1);
+				fvmap_base_address = acpm_srambase + (plugins[i].base_addr & ~0x1);
 				prop = of_get_property(exynos_acpm->dev->of_node, "fvmap_offset", &len);
 				if (prop) {
 					offset = be32_to_cpup(prop);
-					fvmap_init(fw_base_addr + offset);
+					fvmap_base_address += offset;
+
+					if (of_property_read_bool(exynos_acpm->dev->of_node, "use-plugin-library"))
+						fvmap_base_address = acpm_srambase + offset;
+
+					pr_err("acpm_sram_base: 0x%x\n", acpm_srambase);
+					pr_err("plugins[i].base_addr & ~0x1: 0x%x\n", (plugins[i].base_addr & ~0x1));
+					pr_err("fvmap_base_address: 0x%x\n", fvmap_base_address);
 				}
 			}
 		}
