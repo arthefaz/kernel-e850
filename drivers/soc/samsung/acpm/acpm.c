@@ -20,6 +20,7 @@
 //#include <linux/debug-snapshot.h>
 #include <linux/soc/samsung/exynos-soc.h>
 #include <linux/sched/clock.h>
+#include <linux/module.h>
 
 #include "acpm.h"
 #include "acpm_ipc.h"
@@ -302,6 +303,7 @@ void exynos_acpm_reboot(void)
 
 	acpm_enter_wfi();
 }
+EXPORT_SYMBOL_GPL(exynos_acpm_reboot);
 
 void exynos_acpm_ps_hold_down(void)
 {
@@ -320,6 +322,7 @@ void exynos_acpm_ps_hold_down(void)
 
 	pr_err("PS HOLD down fail. (ret: %d)\n", ret);
 }
+EXPORT_SYMBOL_GPL(exynos_acpm_ps_hold_down);
 
 static int acpm_send_data(struct device_node *node, unsigned int check_id,
 		struct ipc_config *config)
@@ -400,6 +403,8 @@ static int acpm_probe(struct platform_device *pdev)
 		if (of_property_read_u32(node, "peritimer-cnt", &acpm->timer_cnt))
 		pr_warn("No matching property: peritiemr_cnt\n");
 
+//	exynos_reboot_register_acpm_ops(exynos_acpm_reboot);
+
 	exynos_acpm = acpm;
 
 #ifdef CONFIG_DEBUG_FS
@@ -407,6 +412,10 @@ static int acpm_probe(struct platform_device *pdev)
 #endif
 
 	exynos_acpm_timer_clear();
+
+	acpm_ipc_set_waiting_mode(BUSY_WAIT);
+	plugins_init();
+	dev_info(&pdev->dev, "acpm probe done.\n");
 	return ret;
 }
 
@@ -415,10 +424,27 @@ static int acpm_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id acpm_ipc_match[] = {
+	{ .compatible = "samsung,exynos-acpm-ipc" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, acpm_ipc_match);
+
+static struct platform_driver samsung_acpm_ipc_driver = {
+	.probe	= acpm_ipc_probe,
+	.remove	= acpm_ipc_remove,
+	.driver	= {
+		.name = "exynos-acpm-ipc",
+		.owner	= THIS_MODULE,
+		.of_match_table	= acpm_ipc_match,
+	},
+};
+
 static const struct of_device_id acpm_match[] = {
 	{ .compatible = "samsung,exynos-acpm" },
 	{},
 };
+MODULE_DEVICE_TABLE(of, acpm_match);
 
 static struct platform_driver samsung_acpm_driver = {
 	.probe	= acpm_probe,
@@ -430,20 +456,19 @@ static struct platform_driver samsung_acpm_driver = {
 	},
 };
 
-static int __init exynos_acpm_init(void)
+static int exynos_acpm_init(void)
 {
-	return platform_driver_register(&samsung_acpm_driver);
+	platform_driver_register(&samsung_acpm_ipc_driver);
+	platform_driver_register(&samsung_acpm_driver);
+	return 0;
 }
-arch_initcall_sync(exynos_acpm_init);
+postcore_initcall_sync(exynos_acpm_init);
 
-static int __init exynos_acpm_binary_update(void)
+static void exynos_acpm_exit(void)
 {
-	int ret;
-
-	acpm_ipc_set_waiting_mode(BUSY_WAIT);
-
-	ret = plugins_init();
-
-	return ret;
+	platform_driver_unregister(&samsung_acpm_ipc_driver);
+	platform_driver_unregister(&samsung_acpm_driver);
 }
-fs_initcall_sync(exynos_acpm_binary_update);
+module_exit(exynos_acpm_exit);
+
+MODULE_LICENSE("GPL");

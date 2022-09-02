@@ -55,7 +55,7 @@ enum mfd_func {
         FUNC_BULK_WRITE,
 };
 
-#ifdef CONFIG_EXYNOS_ACPM
+#if defined(CONFIG_EXYNOS_ACPM) || defined(CONFIG_EXYNOS_ACPM_MODULE)
 extern int exynos_acpm_read_reg(u8 channel, u16 type, u8 reg, u8 *dest);
 extern int exynos_acpm_bulk_read(u8 channel, u16 type, u8 reg, int count, u8 *buf);
 extern int exynos_acpm_write_reg(u8 channel, u16 type, u8 reg, u8 value);
