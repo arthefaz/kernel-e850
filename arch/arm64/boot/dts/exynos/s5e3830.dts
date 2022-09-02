@@ -39,6 +39,7 @@
 		pinctrl5 = &pinctrl_5;
 		uart0 = &serial_0;
 
+		mshc0 = &dwmmc_0;
 	};
 
                         memory@80000000 {
@@ -321,5 +322,21 @@
 		compatible = "samsung,exynos-acpm-mfd-bus";
 		status = "disabled";
 	};
+
+	 dwmmc_0: dwmmc0@12100000 {
+		 compatible = "samsung,exynos-dw-mshc";
+		 reg = <0x0 0x12100000 0x2000>,
+			 <0x0 0x12108000 0x200>;
+		 reg-names = "dw_mmc",
+			 "cmdq_mem";
+		 interrupts = <0 INTREQ__MMC_EMBD_CORE 0>;
+		 #address-cells = <1>;
+		 #size-cells = <0>;
+		 clocks = <&clock DOUT_CORE_MMC_EMBD>, <&clock GATE_MMC_EMBD_QCH>;
+		 clock-names = "ciu", "ciu_gate";
+		 status = "disabled";
+		 fmp-id = <0>;
+		 smu-id = <0>;
+	 };
 
 };
