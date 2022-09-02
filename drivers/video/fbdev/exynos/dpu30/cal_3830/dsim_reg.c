@@ -2050,6 +2050,7 @@ void dsim_reg_preinit(u32 id)
 	struct exynos_panel_info lcd_info;
 
 	/* default configuration just for reading panel id */
+#if 0 // for univarsal 3830 device
 	memset(&clks, 0, sizeof(struct dsim_clks));
 	clks.hs_clk = 830;
 	clks.esc_clk = 16;
@@ -2071,6 +2072,29 @@ void dsim_reg_preinit(u32 id)
 	lcd_info.dphy_pms.k = 25206;
 	lcd_info.data_lane = 4;
 	lcd_info.cmd_underrun_cnt[0] = 1695;
+#else // configuration for erd3830 device
+	memset(&clks, 0, sizeof(struct dsim_clks));
+	clks.hs_clk = 898;
+	clks.esc_clk = 20;
+	memset(&lcd_info, 0, sizeof(struct exynos_panel_info));
+	lcd_info.vfp = 20;
+	lcd_info.vbp = 2;
+	lcd_info.vsa = 2;
+	lcd_info.hfp = 20;
+	lcd_info.hbp = 20;
+	lcd_info.hsa = 20;
+	lcd_info.fps = 60;
+	lcd_info.hs_clk = 898;
+	lcd_info.mode = DECON_MIPI_COMMAND_MODE;
+	lcd_info.xres = 1080;
+	lcd_info.yres = 1920;
+	lcd_info.dphy_pms.p = 2;
+	lcd_info.dphy_pms.m = 276;
+	lcd_info.dphy_pms.s = 2;
+	lcd_info.dphy_pms.k = 20165; //0x4ec5
+	lcd_info.data_lane = 4;
+	lcd_info.cmd_underrun_cnt[0] = 583;
+#endif
 
 	/* DPHY reset control from SYSREG(0) */
 	dpu_sysreg_select_dphy_rst_control(dsim->res.ss_regs, dsim->id, 0);
