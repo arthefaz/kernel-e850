@@ -576,7 +576,7 @@ static int cal_if_probe(struct platform_device *pdev)
         cp_set_device(&pdev->dev);
 #endif
 
-//        ret = fvmap_init(get_fvmap_base());
+        ret = fvmap_init(get_fvmap_base());
 
 out:
         return ret;
@@ -606,13 +606,13 @@ static int exynos_cal_if_init(void)
                 pr_err("samsung_cal_if_driver probe file\n");
                 goto err_out;
         }
-/*
+
         ret = exynos_acpm_dvfs_init();
         if (ret) {
                 pr_err("samsung_cal_if_driver probe file\n");
                 goto err_out;
         }
-*/
+
 #if defined(CONFIG_CMU_EWF) || defined(CONFIG_CMU_EWF_MODULE)
         ret = early_wakeup_forced_enable_init();
         if (ret) {
