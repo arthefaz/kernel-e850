@@ -14,12 +14,5 @@
 		#address-cells = <2>;
 		#size-cells = <1>;
 		ranges;
-
-		mfc_fw_rmem: mfc_fw_rmem {
-			compatible = "shared-dma-pool";
-			reg = <0x8 0xA2400000 0x400000>;
-			alignment = <0x0 0x00010000>;
-			reusable;
-		};
 	};
 };
