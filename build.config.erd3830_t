@@ -34,7 +34,7 @@ VENDOR_BOOT_MODULE_ORDER=vendor_boot_module_order_s5e3830.cfg
 GKI_RAMDISK_PREBUILT_BINARY=prebuilts/boot-artifacts/arm64/exynos/eng/ramdisk_for_console.cpio.lz4
 
 EXPORT_PLATFORM_BOARD_CONFIG="
-BOARD_RAMDISK_USE_LZ4=true
+BOARD_RAMDISK_USE_LZ4=false
 BOARD_AVB_ENABLE=true
 BOARD_AVB_ALGORITHM=SHA256_RSA4096
 BOARD_AVB_RECOVERY_ALGORITHM=SHA256_RSA4096
@@ -77,9 +77,9 @@ BUILD_CONFIG=kernel/build.config.erd3830_t
 TARGET_DTBO_CFG=board/erd/s5e3830_dtboimg.cfg
 BUILD_INITRAMFS=1
 LZ4_RAMDISK=1
-#VENDOR_FSTAB=prebuilts/platform/erd8825/conf_s/non_ab/fstab.s5e8825.ufs.dp
-#VENDOR_INIT_RECOVERY_RC=prebuilts/platform/erd8825/conf/init.recovery.s5e8825.rc
-#VENDOR_INIT_USB_RC=prebuilts/platform/erd8825/conf_s/init.s5e8825.usb.rc
+VENDOR_FSTAB=prebuilts/platform/erd3830/conf/fstab.exynos3830.emmc.dp
+VENDOR_INIT_RECOVERY_RC=prebuilts/platform/erd3830/conf/init.recovery.exynos3830.rc
+VENDOR_INIT_USB_RC=prebuilts/platform/erd3830/conf/init.exynos3830.usb.rc
 #VENDOR_BOARD_BOOTCONFIG=prebuilts/platform/erd8825/BootConfig.mk
 
 BOOT_IMAGE_HEADER_VERSION=4
