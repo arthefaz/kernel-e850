@@ -192,3 +192,4 @@ obj-$(CONFIG_MOST)		+= most/
 obj-$(CONFIG_USE_S2M_PDIC)		+= usb/typec/samsung/
 obj-$(CONFIG_USE_S2M_MUIC)		+= misc/samsung/muic/
 obj-$(CONFIG_IFCONN_NOTIFIER_MODULE)		+= misc/samsung/ifconn/
+obj-$(CONFIG_TRUSTONIC_TEE)     += gud/
