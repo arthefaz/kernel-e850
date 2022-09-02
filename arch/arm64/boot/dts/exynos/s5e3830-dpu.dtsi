@@ -16,7 +16,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/exynos3830.h>
 #include <dt-bindings/display/exynos-display.h>
-#include <dt-bindings/clock/exynos3830.h>
+#include <dt-bindings/clock/s5e3830.h>
 #include "exynos3830-pinctrl.dtsi"
 #include "exynos3830-display-lcd.dtsi"
 

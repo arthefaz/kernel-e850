@@ -25,6 +25,6 @@ obj-$(CONFIG_ARCH_S3C64XX)	+= clk-s3c64xx.o
 obj-$(CONFIG_ARCH_S5PV210)	+= clk-s5pv210.o clk-s5pv210-audss.o
 obj-$(CONFIG_COMPOSITE_CLK_SAMSUNG)     += clk_exynos.o
 ifdef CONFIG_SOC_S5E3830
-clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)	+= clk-exynos3830.o
+clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)	+= clk-s5e3830.o
 endif 
 clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)      += composite.o

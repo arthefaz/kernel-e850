@@ -17,4 +17,4 @@ obj-$(CONFIG_SHUB_PMUCAL)              += pmucal_shub.o
 obj-$(CONFIG_ACPM_DVFS)			+= acpm_dvfs.o fvmap.o
 #obj-$(CONFIG_CMU_EWF)			+= cmu_ewf.o
 
-cmupmucal-$(CONFIG_SOC_S5E3830)                    += exynos3830/cal_data.o
+cmupmucal-$(CONFIG_SOC_S5E3830)                    += s5e3830/cal_data.o

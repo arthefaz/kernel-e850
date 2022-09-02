@@ -6,22 +6,22 @@
 #include "../pmucal_powermode.h"
 #include "../pmucal_gnss.h"
 
-#include "flexpmu_cal_cpu_exynos3830.h"
-#include "flexpmu_cal_local_exynos3830.h"
-#include "flexpmu_cal_p2vmap_exynos3830.h"
-#include "flexpmu_cal_system_exynos3830.h"
-#include "flexpmu_cal_powermode_exynos3830.h"
-#include "flexpmu_cal_define_exynos3830.h"
-#include "pmucal_gnss_exynos3830.h"
+#include "flexpmu_cal_cpu_s5e3830.h"
+#include "flexpmu_cal_local_s5e3830.h"
+#include "flexpmu_cal_p2vmap_s5e3830.h"
+#include "flexpmu_cal_system_s5e3830.h"
+#include "flexpmu_cal_powermode_s5e3830.h"
+#include "flexpmu_cal_define_s5e3830.h"
+#include "pmucal_gnss_s5e3830.h"
 
 #ifdef CONFIG_CP_PMUCAL
 #include "../pmucal_cp.h"
-#include "pmucal_cp_exynos3830.h"
+#include "pmucal_cp_s5e3830.h"
 #endif
 
 #ifdef CONFIG_SHUB_PMUCAL
 #include "../pmucal_shub.h"
-#include "pmucal_chub_exynos3830.h"
+#include "pmucal_chub_s5e3830.h"
 #endif
 
 #include "cmucal-node.c"
@@ -30,11 +30,11 @@
 #include "cmucal-vclk.c"
 #include "cmucal-vclklut.c"
 
-#include "clkout_exynos3830.c"
+#include "clkout_s5e3830.c"
 
-#include "acpm_dvfs_exynos3830.h"
+#include "acpm_dvfs_s5e3830.h"
 
-#include "asv_exynos3830.h"
+#include "asv_s5e3830.h"
 
 #include "../ra.h"
 
@@ -208,7 +208,7 @@ int cal_pll_mmc_set_ssc(unsigned int mfr, unsigned int mrr, unsigned int ssc_on)
 #define QCH_CON_TREX_D0_BUSC_QCH_OFFSET	(0x31a8)
 #define IGNORE_FORCE_PM_EN		(2)
 
-void exynos3830_cal_data_init(void)
+void s5e3830_cal_data_init(void)
 {
 	pr_info("%s: cal data init\n", __func__);
 
@@ -246,4 +246,4 @@ void exynos3830_cal_data_init(void)
 	*/
 }
 
-void (*cal_data_init)(void) = exynos3830_cal_data_init;
+void (*cal_data_init)(void) = s5e3830_cal_data_init;

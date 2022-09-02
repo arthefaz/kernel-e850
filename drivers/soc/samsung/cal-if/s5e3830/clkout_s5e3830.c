@@ -1,4 +1,4 @@
-#include "clkout_exynos3830.h"
+#include "clkout_s5e3830.h"
 
 #define CLKOUT0_OFFSET		(0xA00)
 #define CLKOUT0_SEL_SHIFT	(8)

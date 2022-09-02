@@ -5,7 +5,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  *
- * Common Clock Framework support for Exynos3830 SoC.
+ * Common Clock Framework support for s5e3830 SoC.
  */
 
 #include <linux/clk.h>
@@ -16,26 +16,26 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <soc/samsung/cal-if.h>
-#include <dt-bindings/clock/exynos3830.h>
+#include <dt-bindings/clock/s5e3830.h>
 
-#include "../../soc/samsung/cal-if/exynos3830/cmucal-vclk.h"
-#include "../../soc/samsung/cal-if/exynos3830/cmucal-node.h"
-#include "../../soc/samsung/cal-if/exynos3830/cmucal-qch.h"
-#include "../../soc/samsung/cal-if/exynos3830/clkout_exynos3830.h"
+#include "../../soc/samsung/cal-if/s5e3830/cmucal-vclk.h"
+#include "../../soc/samsung/cal-if/s5e3830/cmucal-node.h"
+#include "../../soc/samsung/cal-if/s5e3830/cmucal-qch.h"
+#include "../../soc/samsung/cal-if/s5e3830/clkout_s5e3830.h"
 #include "composite.h"
 
-static struct samsung_clk_provider *exynos3830_clk_provider;
+static struct samsung_clk_provider *s5e3830_clk_provider;
 /*
  * list of controller registers to be saved and restored during a
  * suspend/resume cycle.
  */
 /* fixed rate clocks generated outside the soc */
-struct samsung_fixed_rate exynos3830_fixed_rate_ext_clks[] = {
+struct samsung_fixed_rate s5e3830_fixed_rate_ext_clks[] = {
 	FRATE(OSCCLK, "fin_pll", NULL, 0, 26000000),
 };
 
 /* HWACG VCLK */
-struct init_vclk exynos3830_apm_hwacg_vclks[] = {
+struct init_vclk s5e3830_apm_hwacg_vclks[] = {
 	HWACG_VCLK(UMUX_DLL_USER, MUX_DLL_USER, "UMUX_DLL_USER", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(UMUX_CLK_APM_BUS, MUX_CLK_APM_BUS, "UMUX_CLK_APM_BUS", NULL, 0, VCLK_GATE, NULL),
 
@@ -68,7 +68,7 @@ struct init_vclk exynos3830_apm_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_WDT_APM_QCH, WDT_APM_QCH, "GATE_WDT_APM_QCH", NULL, 0, VCLK_GATE, NULL),
 };
 
-struct init_vclk exynos3830_aud_hwacg_vclks[] = {
+struct init_vclk s5e3830_aud_hwacg_vclks[] = {
 	HWACG_VCLK(UMUX_CLK_AUD_CPU_HCH, MUX_CLK_AUD_CPU_HCH, "UMUX_CLK_AUD_CPU_HCH", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(UMUX_CLK_AUD_FM, MUX_CLK_AUD_FM, "UMUX_CLK_AUD_FM", NULL, 0, VCLK_GATE, NULL),
 
@@ -90,7 +90,7 @@ struct init_vclk exynos3830_aud_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_WDT_AUD_QCH, WDT_AUD_QCH, "GATE_WDT_AUD_QCH", NULL, 0, VCLK_GATE, NULL),
 };
 
-struct init_vclk exynos3830_chub_hwacg_vclks[] = {
+struct init_vclk s5e3830_chub_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_BAAW_C_CHUB_QCH, BAAW_C_CHUB_QCH, "GATE_BAAW_C_CHUB_QCH", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(GATE_BAAW_D_CHUB_QCH, BAAW_D_CHUB_QCH, "GATE_BAAW_D_CHUB_QCH", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(GATE_CHUB_CMU_CHUB_QCH, CHUB_CMU_CHUB_QCH, "GATE_CHUB_CMU_CHUB_QCH", NULL, 0, VCLK_GATE, NULL),
@@ -107,7 +107,7 @@ struct init_vclk exynos3830_chub_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_U_DMIC_CLK_SCAN_MUX_QCH, U_DMIC_CLK_SCAN_MUX_QCH, "GATE_U_DMIC_CLK_SCAN_MUX_QCH", NULL, 0, VCLK_GATE, NULL),
 };
 
-struct init_vclk exynos3830_cmgp_hwacg_vclks[] = {
+struct init_vclk s5e3830_cmgp_hwacg_vclks[] = {
 	HWACG_VCLK(UMUX_CLK_CMGP_USI_CMGP0, MUX_CLK_CMGP_USI_CMGP0, "UMUX_CLK_CMGP_USI_CMGP0", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(UMUX_CLK_CMGP_USI_CMGP1, MUX_CLK_CMGP_USI_CMGP1, "UMUX_CLK_CMGP_USI_CMGP1", NULL, 0, VCLK_GATE, NULL),
 
@@ -120,7 +120,7 @@ struct init_vclk exynos3830_cmgp_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_USI_CMGP1_QCH, USI_CMGP1_QCH, "GATE_USI_CMGP1_QCH", NULL, 0, VCLK_GATE, NULL),
 };
 
-struct init_vclk exynos3830_top_hwacg_vclks[] = {
+struct init_vclk s5e3830_top_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_CMU_TOP_CMUREF_QCH, CMU_TOP_CMUREF_QCH, "GATE_CMU_TOP_CMUREF_QCH", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(GATE_DFTMUX_CMU_QCH_CLK_CIS0, DFTMUX_CMU_QCH_CLK_CIS0, "GATE_DFTMUX_CMU_QCH_CLK_CIS0", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(GATE_DFTMUX_CMU_QCH_CLK_CIS1, DFTMUX_CMU_QCH_CLK_CIS1, "GATE_DFTMUX_CMU_QCH_CLK_CIS1", NULL, 0, VCLK_GATE, NULL),
@@ -133,7 +133,7 @@ struct init_vclk exynos3830_top_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_BAAW_P_WLBT_QCH, BAAW_P_WLBT_QCH, "GATE_BAAW_P_WLBT_QCH", NULL, 0, VCLK_GATE, NULL),
 };
 
-struct init_vclk exynos3830_core_hwacg_vclks[] = {
+struct init_vclk s5e3830_core_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_CCI_550_QCH, CCI_550_QCH, "GATE_CCI_550_QCH", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(GATE_CORE_CMU_CORE_QCH, CORE_CMU_CORE_QCH, "GATE_CORE_CMU_CORE_QCH", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(GATE_GIC_QCH, GIC_QCH, "GATE_GIC_QCH", NULL, 0, VCLK_GATE, NULL),
@@ -149,7 +149,7 @@ struct init_vclk exynos3830_core_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_SECJTAG_QCH, SECJTAG_QCH, "GATE_SECJTAG_QCH", NULL, 0, VCLK_GATE, NULL),
 };
 
-struct init_vclk exynos3830_dpu_hwacg_vclks[] = {
+struct init_vclk s5e3830_dpu_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_DPU_QCH_S_DPP, DPU_QCH_S_DPP, "GATE_DPU_QCH_S_DPP", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(GATE_DPU_QCH_S_DMA, DPU_QCH_S_DMA, "GATE_DPU_QCH_S_DMA", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(GATE_DPU_QCH_S_DECON, DPU_QCH_S_DECON, "GATE_DPU_QCH_S_DECON", NULL, 0, VCLK_GATE, NULL),
@@ -157,12 +157,12 @@ struct init_vclk exynos3830_dpu_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_SMMU_DPU_QCH, SMMU_DPU_QCH, "GATE_SMMU_DPU_QCH", NULL, 0, VCLK_GATE, NULL),
 };
 
-struct init_vclk exynos3830_g3d_hwacg_vclks[] = {
+struct init_vclk s5e3830_g3d_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_G3D_CMU_G3D_QCH, G3D_CMU_G3D_QCH, "GATE_G3D_CMU_G3D_QCH", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(GATE_GPU_QCH, GPU_QCH, "GATE_GPU_QCH", NULL, 0, VCLK_GATE, NULL),
 };
 
-struct init_vclk exynos3830_hsi_hwacg_vclks[] = {
+struct init_vclk s5e3830_hsi_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_GPIO_HSI_QCH, GPIO_HSI_QCH, "GATE_GPIO_HSI_QCH", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(GATE_HSI_CMU_HSI_QCH, HSI_CMU_HSI_QCH, "GATE_HSI_CMU_HSI_QCH", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(GATE_MMC_CARD_QCH, MMC_CARD_QCH, "GATE_MMC_CARD_QCH", NULL, 0, VCLK_GATE, NULL),
@@ -172,7 +172,7 @@ struct init_vclk exynos3830_hsi_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_USB20DRD_TOP_QCH_RTC, USB20DRD_TOP_QCH_RTC, "GATE_USB20DRD_TOP_QCH_RTC", NULL, 0, VCLK_GATE, NULL),
 };
 
-struct init_vclk exynos3830_is_hwacg_vclks[] = {
+struct init_vclk s5e3830_is_hwacg_vclks[] = {
 	HWACG_VCLK(UMUX_CLK_IS_BUS, MUX_CLKCMU_IS_BUS_USER, "UMUX_CLK_IS_BUS", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(UMUX_CLK_IS_ITP, MUX_CLKCMU_IS_ITP_USER, "UMUX_CLK_IS_ITP", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(UMUX_CLK_IS_VRA, MUX_CLKCMU_IS_VRA_USER, "UMUX_CLK_IS_VRA", NULL, 0, VCLK_GATE, NULL),
@@ -196,7 +196,7 @@ struct init_vclk exynos3830_is_hwacg_vclks[] = {
 
 };
 
-struct init_vclk exynos3830_mfcmscl_hwacg_vclks[] = {
+struct init_vclk s5e3830_mfcmscl_hwacg_vclks[] = {
 	HWACG_VCLK(UMUX_CLKCMU_MFCMSCL_MFC, MUX_CLKCMU_MFCMSCL_MFC,"UMUX_CLKCMU_MFCMSCL_MFC", NULL, 0, 0, NULL),
 	HWACG_VCLK(UMUX_CLKCMU_MFCMSCL_M2M, MUX_CLKCMU_MFCMSCL_M2M,"UMUX_CLKCMU_MFCMSCL_M2M", "UMUX_CLKCMU_MFCMSCL_MFC", 0, 0, NULL),
 	HWACG_VCLK(UMUX_CLKCMU_MFCMSCL_MCSC, MUX_CLKCMU_MFCMSCL_MCSC,"UMUX_CLKCMU_MFCMSCL_MCSC", "UMUX_CLKCMU_MFCMSCL_MFC", 0, 0, NULL),
@@ -217,7 +217,7 @@ struct init_vclk exynos3830_mfcmscl_hwacg_vclks[] = {
 	HWACG_VCLK(GATE_MODEM_CMU_MODEM_QCH, MODEM_CMU_MODEM_QCH, "GATE_MODEM_CMU_MODEM_QCH", NULL, 0, VCLK_GATE, NULL),
 };
 
-struct init_vclk exynos3830_peri_hwacg_vclks[] = {
+struct init_vclk s5e3830_peri_hwacg_vclks[] = {
 	HWACG_VCLK(UMUX_CLKCMU_PERI_BUS_USER, MUX_CLKCMU_PERI_BUS_USER, "UMUX_CLKCMU_PERI_BUS_USER", NULL, 0, VCLK_GATE, NULL),
 	HWACG_VCLK(UMUX_CLKCMU_PERI_UART_USER, MUX_CLKCMU_PERI_UART_USER, "UMUX_CLKCMU_PERI_UART_USER", NULL, 0, VCLK_GATE, NULL),
 
@@ -247,7 +247,7 @@ struct init_vclk exynos3830_peri_hwacg_vclks[] = {
 
 
 /* Special VCLK */
-struct init_vclk exynos3830_aud_vclks[] = {
+struct init_vclk s5e3830_aud_vclks[] = {
 	VCLK(PLL_AUD_OUT, PLL_AUD, "PLL_AUD_OUT", 0, 0, NULL),
 	VCLK(DOUT_CLK_AUD_CPU, DIV_CLK_AUD_CPU, "DOUT_CLK_AUD_CPU", 0, 0, NULL),
 	VCLK(DOUT_CLK_AUD_CPU_ACLK, DIV_CLK_AUD_CPU_ACLK, "DOUT_CLK_AUD_CPU_ACLK", 0, 0, NULL),
@@ -268,14 +268,14 @@ struct init_vclk exynos3830_aud_vclks[] = {
 	VCLK(DOUT_CLK_AUD_MCLK, CLK_AUD_MCLK, "DOUT_CLK_AUD_MCLK", 0, 0, NULL),
 };
 
-struct init_vclk exynos3830_chub_vclks[] = {
+struct init_vclk s5e3830_chub_vclks[] = {
 	VCLK(DOUT_CLK_CHUB_BUS, DIV_CLK_CHUB_BUS, "DOUT_CLK_CHUB_BUS", 0, 0, NULL),
 	VCLK(DOUT_CLK_CHUB_DMIC_IF, DIV_CLK_CHUB_DMIC_IF, "DOUT_CLK_CHUB_DMIC_IF", 0, 0, NULL),
 	VCLK(DOUT_CLK_CHUB_DMIC_IF_DIV2, DIV_CLK_CHUB_DMIC_IF_DIV2, "DOUT_CLK_CHUB_DMIC_IF_DIV2", 0, 0, NULL),
 	VCLK(DOUT_CLK_CHUB_DMIC, DIV_CLK_CHUB_DMIC, "DOUT_CLK_CHUB_DMIC", 0, 0, NULL),
 };
 
-struct init_vclk exynos3830_cmgp_vclks[] = {
+struct init_vclk s5e3830_cmgp_vclks[] = {
 	VCLK(DOUT_CLK_CMGP_ADC, DIV_CLK_CMGP_ADC, "DOUT_CLK_CMGP_ADC", 0, 0, NULL),
 	VCLK(DOUT_CLK_CMGP_USI_CMGP0, DIV_CLK_CMGP_USI_CMGP0, "DOUT_CLK_CMGP_USI_CMGP0", 0, 0, NULL),
 	VCLK(DOUT_CLK_CMGP_USI_CMGP1, DIV_CLK_CMGP_USI_CMGP1, "DOUT_CLK_CMGP_USI_CMGP1", 0, 0, NULL),
@@ -283,26 +283,26 @@ struct init_vclk exynos3830_cmgp_vclks[] = {
         VCLK(DOUT_VCLK_CMGP_USI_CMGP1, VCLK_DIV_CLK_CMGP_USI_CMGP1, "DOUT_VCLK_CMGP_USI_CMGP1", 0, 0, NULL),
 };
 
-struct init_vclk exynos3830_core_vclks[] = {
+struct init_vclk s5e3830_core_vclks[] = {
 	VCLK(DOUT_CORE_MMC_EMBD, CLKCMU_CORE_MMC_EMBD, "DOUT_CORE_MMC_EMBD", 0, 0, NULL),
 };
 
-struct init_vclk exynos3830_dpu_vclks[] = {
+struct init_vclk s5e3830_dpu_vclks[] = {
 	VCLK(DOUT_CLK_DPU_BUSP, DIV_CLK_DPU_BUSP, "DOUT_CLK_DPU_BUSP", 0, 0, NULL),
 };
 
-struct init_vclk exynos3830_g3d_vclks[] = {
+struct init_vclk s5e3830_g3d_vclks[] = {
 	VCLK(DOUT_CLK_G3D_BUSP, DIV_CLK_G3D_BUSP, "DOUT_CLK_G3D_BUSP", 0, 0, NULL),
 };
 
-struct init_vclk exynos3830_hsi_vclks[] = {
+struct init_vclk s5e3830_hsi_vclks[] = {
 	VCLK(PLL_MMC_OUT, PLL_MMC, "PLL_MMC_OUT", 0, 0, NULL),
 	VCLK(HSI_BUS, CLKCMU_HSI_BUS, "HSI_BUS", 0, 0, NULL),
 	VCLK(HSI_MMC_CARD, CLKCMU_HSI_MMC_CARD, "HSI_MMC_CARD", 0, 0, NULL),
 	VCLK(HSI_USB20DRD, CLKCMU_HSI_USB20DRD, "HSI_USB20DRD", 0, 0, NULL),
 };
 
-struct init_vclk exynos3830_is_vclks[] = {
+struct init_vclk s5e3830_is_vclks[] = {
 	VCLK(IS_BUS, CLKCMU_IS_BUS, "IS_BUS", 0, 0, NULL),
 	VCLK(IS_VRA, CLKCMU_IS_VRA, "IS_VRA", 0, 0, NULL),
 	VCLK(IS_ITP, CLKCMU_IS_ITP, "IS_ITP", 0, 0, NULL),
@@ -312,7 +312,7 @@ struct init_vclk exynos3830_is_vclks[] = {
 	VCLK(CIS_CLK2, CLKCMU_CIS_CLK2, "CIS_CLK2", 0, 0, NULL),
 };
 
-struct init_vclk exynos3830_mfcmscl_vclks[] = {
+struct init_vclk s5e3830_mfcmscl_vclks[] = {
 	VCLK(DOUT_CLK_MFCMSCL_BUSP, DIV_CLK_MFCMSCL_BUSP, "DOUT_CLK_MFCMSCL_BUSP", 0, 0, NULL),
 	VCLK(MFCMSCL_MFC, CLKCMU_MFCMSCL_MFC, "MFCMSCL_MFC", 0, 0, NULL),
 	VCLK(MFCMSCL_M2M, CLKCMU_MFCMSCL_M2M, "MFCMSCL_M2M", 0, 0, NULL),
@@ -320,7 +320,7 @@ struct init_vclk exynos3830_mfcmscl_vclks[] = {
 	VCLK(MFCMSCL_JPEG, CLKCMU_MFCMSCL_JPEG, "MFCMSCL_JPEG", 0, 0, NULL),
 };
 
-struct init_vclk exynos3830_peri_vclks[] = {
+struct init_vclk s5e3830_peri_vclks[] = {
 	VCLK(DOUT_CLK_PERI_SPI_0, DIV_CLK_PERI_SPI_0, "DOUT_CLK_PERI_SPI_0", 0, 0, NULL),
 	VCLK(DOUT_CLK_PERI_HSI2C_0, DIV_CLK_PERI_HSI2C_0, "DOUT_CLK_PERI_HSI2C_0", 0, 0, NULL),
 	VCLK(DOUT_CLK_PERI_HSI2C_1, DIV_CLK_PERI_HSI2C_1, "DOUT_CLK_PERI_HSI2C_1", 0, 0, NULL),
@@ -335,23 +335,23 @@ struct init_vclk exynos3830_peri_vclks[] = {
 	VCLK(DOUT_UART, CLKCMU_PERI_UART, "DOUT_UART", 0, 0, "console-sclk0"),
 };
 
-static struct init_vclk exynos3830_clkout_vclks[] = {
+static struct init_vclk s5e3830_clkout_vclks[] = {
 	VCLK(OSC_NFC, VCLK_CLKOUT1, "OSC_NFC", 0, 0, NULL),
 	VCLK(OSC_AUD, VCLK_CLKOUT0, "OSC_AUD", 0, 0, NULL),
 };
 
 static struct of_device_id ext_clk_match[] = {
-	{.compatible = "samsung,exynos3830-oscclk", .data = (void *)0},
+	{.compatible = "samsung,s5e3830-oscclk", .data = (void *)0},
 	{},
 };
 
-void exynos3830_vclk_init(void)
+void s5e3830_vclk_init(void)
 {
 	/* Common clock init */
 }
 
-/* register exynos3830 clocks */
-static int exynos3830_clock_probe(struct platform_device *pdev)
+/* register s5e3830 clocks */
+static int s5e3830_clock_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	void __iomem *reg_base;
@@ -369,81 +369,81 @@ static int exynos3830_clock_probe(struct platform_device *pdev)
 	if (ret)
 		panic("%s: unable to initialize cal-if\n", __func__);
 #endif
-	exynos3830_clk_provider = samsung_clk_init(np, reg_base, CLK_NR_CLKS);
-	if (!exynos3830_clk_provider)
+	s5e3830_clk_provider = samsung_clk_init(np, reg_base, CLK_NR_CLKS);
+	if (!s5e3830_clk_provider)
 		panic("%s: unable to allocate context.\n", __func__);
 
-	samsung_register_of_fixed_ext(exynos3830_clk_provider, exynos3830_fixed_rate_ext_clks,
-					  ARRAY_SIZE(exynos3830_fixed_rate_ext_clks),
+	samsung_register_of_fixed_ext(s5e3830_clk_provider, s5e3830_fixed_rate_ext_clks,
+					  ARRAY_SIZE(s5e3830_fixed_rate_ext_clks),
 					  ext_clk_match);
 
 	/* register HWACG vclk */
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_apm_hwacg_vclks, ARRAY_SIZE(exynos3830_apm_hwacg_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_aud_hwacg_vclks, ARRAY_SIZE(exynos3830_aud_hwacg_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_chub_hwacg_vclks, ARRAY_SIZE(exynos3830_chub_hwacg_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_cmgp_hwacg_vclks, ARRAY_SIZE(exynos3830_cmgp_hwacg_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_core_hwacg_vclks, ARRAY_SIZE(exynos3830_core_hwacg_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_top_hwacg_vclks, ARRAY_SIZE(exynos3830_top_hwacg_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_dpu_hwacg_vclks, ARRAY_SIZE(exynos3830_dpu_hwacg_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_g3d_hwacg_vclks, ARRAY_SIZE(exynos3830_g3d_hwacg_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_hsi_hwacg_vclks, ARRAY_SIZE(exynos3830_hsi_hwacg_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_is_hwacg_vclks, ARRAY_SIZE(exynos3830_is_hwacg_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_mfcmscl_hwacg_vclks, ARRAY_SIZE(exynos3830_mfcmscl_hwacg_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_peri_hwacg_vclks, ARRAY_SIZE(exynos3830_peri_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_apm_hwacg_vclks, ARRAY_SIZE(s5e3830_apm_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_aud_hwacg_vclks, ARRAY_SIZE(s5e3830_aud_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_chub_hwacg_vclks, ARRAY_SIZE(s5e3830_chub_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_cmgp_hwacg_vclks, ARRAY_SIZE(s5e3830_cmgp_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_core_hwacg_vclks, ARRAY_SIZE(s5e3830_core_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_top_hwacg_vclks, ARRAY_SIZE(s5e3830_top_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_dpu_hwacg_vclks, ARRAY_SIZE(s5e3830_dpu_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_g3d_hwacg_vclks, ARRAY_SIZE(s5e3830_g3d_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_hsi_hwacg_vclks, ARRAY_SIZE(s5e3830_hsi_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_is_hwacg_vclks, ARRAY_SIZE(s5e3830_is_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_mfcmscl_hwacg_vclks, ARRAY_SIZE(s5e3830_mfcmscl_hwacg_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_peri_hwacg_vclks, ARRAY_SIZE(s5e3830_peri_hwacg_vclks));
 	/* register special vclk */
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_aud_vclks, ARRAY_SIZE(exynos3830_aud_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_chub_vclks, ARRAY_SIZE(exynos3830_chub_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_cmgp_vclks, ARRAY_SIZE(exynos3830_cmgp_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_core_vclks, ARRAY_SIZE(exynos3830_core_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_dpu_vclks, ARRAY_SIZE(exynos3830_dpu_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_g3d_vclks, ARRAY_SIZE(exynos3830_g3d_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_hsi_vclks, ARRAY_SIZE(exynos3830_hsi_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_is_vclks, ARRAY_SIZE(exynos3830_is_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_mfcmscl_vclks, ARRAY_SIZE(exynos3830_mfcmscl_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_peri_vclks, ARRAY_SIZE(exynos3830_peri_vclks));
-	samsung_register_vclk(exynos3830_clk_provider, exynos3830_clkout_vclks, ARRAY_SIZE(exynos3830_clkout_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_aud_vclks, ARRAY_SIZE(s5e3830_aud_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_chub_vclks, ARRAY_SIZE(s5e3830_chub_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_cmgp_vclks, ARRAY_SIZE(s5e3830_cmgp_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_core_vclks, ARRAY_SIZE(s5e3830_core_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_dpu_vclks, ARRAY_SIZE(s5e3830_dpu_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_g3d_vclks, ARRAY_SIZE(s5e3830_g3d_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_hsi_vclks, ARRAY_SIZE(s5e3830_hsi_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_is_vclks, ARRAY_SIZE(s5e3830_is_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_mfcmscl_vclks, ARRAY_SIZE(s5e3830_mfcmscl_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_peri_vclks, ARRAY_SIZE(s5e3830_peri_vclks));
+	samsung_register_vclk(s5e3830_clk_provider, s5e3830_clkout_vclks, ARRAY_SIZE(s5e3830_clkout_vclks));
 	clk_register_fixed_factor(NULL, "pwm-clock", "fin_pll", CLK_SET_RATE_PARENT, 1, 1);
 
-	samsung_clk_of_add_provider(np, exynos3830_clk_provider);
+	samsung_clk_of_add_provider(np, s5e3830_clk_provider);
 
-	exynos3830_vclk_init();
+	s5e3830_vclk_init();
 
-	pr_info("EXYNOS3830: Clock setup completed\n");
+	pr_info("s5e3830: Clock setup completed\n");
 	return 0;
 }
 
 static const struct of_device_id of_exynos_clock_match[] = {
-        { .compatible = "samsung,exynos3830-clock", },
+        { .compatible = "samsung,s5e3830-clock", },
         { },
 };
 MODULE_DEVICE_TABLE(of, of_exynos_clock_match);
 
 static const struct platform_device_id exynos_clock_ids[] = {
-        { "exynos3830-clock", },
+        { "s5e3830-clock", },
         { }
 };
 
-static struct platform_driver exynos3830_clock_driver = {
+static struct platform_driver s5e3830_clock_driver = {
         .driver = {
-                .name = "exynos3830-clock",
+                .name = "s5e3830-clock",
                 .of_match_table = of_exynos_clock_match,
         },
-        .probe          = exynos3830_clock_probe,
+        .probe          = s5e3830_clock_probe,
         .id_table       = exynos_clock_ids,
 };
 
-static int exynos3830_clock_init(void)
+static int s5e3830_clock_init(void)
 {
-        return platform_driver_register(&exynos3830_clock_driver);
+        return platform_driver_register(&s5e3830_clock_driver);
 }
-arch_initcall(exynos3830_clock_init);
+arch_initcall(s5e3830_clock_init);
 
-static void exynos3830_clock_exit(void)
+static void s5e3830_clock_exit(void)
 {
-        return platform_driver_unregister(&exynos3830_clock_driver);
+        return platform_driver_unregister(&s5e3830_clock_driver);
 }
-module_exit(exynos3830_clock_exit);
+module_exit(s5e3830_clock_exit);
 
 MODULE_LICENSE("GPL");
 
-//CLK_OF_DECLARE(exynos3830_clk, "samsung,exynos3830-clock", exynos3830_clk_init);
+//CLK_OF_DECLARE(s5e3830_clk, "samsung,s5e3830-clock", s5e3830_clk_init);
