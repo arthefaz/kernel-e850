@@ -11,6 +11,7 @@
 / {
 	aliases {
 		smfc0 = &smfc_0;
+		scaler0 = &scaler_0;
 	};
 
 	smfc_0: smfc@12C90000 {
@@ -20,5 +21,28 @@
 		iommus = <&sysmmu_mfcmscl>;
 		samsung,iommu-group=<&iommu_group_mfcmscl>;
 		smfc,int_qos_minlock = <534000>;
+	};
+
+	scaler_0: scaler@12CB0000 {
+		compatible = "samsung,exynos5-scaler";
+		reg = <0x0 0x12CB0000 0x3000>;
+		interrupts = <0 INTREQ__M2M IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clock GATE_M2M_QCH>;
+		clock-names = "gate";
+		iommus = <&sysmmu_mfcmscl>;
+		samsung,iommu-group=<&iommu_group_mfcmscl>;
+
+		/* MIF (not used) | INT | MSCL clock */
+		mscl_qos_table = < 0 534000 667000
+				   0 334000 400000
+				   0 200000 334000
+				   0 100000 100000 >;
+		/* bpp means, YUV420(12), YUV422(16), RGB(32) */
+		/* bpp | ppc * 100 | ppc * 100 with rotation */
+		mscl_ppc_table = <  12  79 79
+				    16  66 66
+				    32  82 79 >;
+		mscl_mif_ref = < 845000 >;
+		mscl_bw_ref = < 2025000 >;
 	};
 };
