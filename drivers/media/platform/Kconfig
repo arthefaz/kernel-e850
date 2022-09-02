@@ -542,6 +542,17 @@ config VIDEO_SUN8I_ROTATE
 
 endif # V4L_MEM2MEM_DRIVERS
 
+config VIDEO_EXYNOS_SCALER
+	tristate "EXYNOS Scaler Driver"
+	depends on VIDEO_DEV && VIDEO_V4L2 && HAS_DMA
+	depends on ARCH_EXYNOS
+	select V4L2_MEM2MEM_DEV
+	select MEDIA_M2M1SHOT
+	select VIDEOBUF2_DMA_SG
+	default n
+	help
+	  This is a v4l2 driver for EXYNOS Scaler (MSCL) device.
+
 config VIDEO_EXYNOS_SMFC
 	tristate "Exynos Still MFC(H/W JPEG CODEC) Driver"
 	depends on VIDEO_DEV && VIDEO_V4L2 && HAS_DMA
