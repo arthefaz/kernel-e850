@@ -3630,11 +3630,13 @@ static int decon_acquire_window(struct decon_device *decon, int idx)
 
 	if (((decon->dt.out_type == DECON_OUT_DSI) || (decon->dt.out_type == DECON_OUT_DP))
 			&& (idx == decon->dt.dft_win)) {
+#if 0 //HACK1 - ION APIs needs to be replaced with DMA BUF HEAP
 		ret = decon_fb_alloc_memory(decon, win);
 		if (ret) {
 			dev_err(decon->dev, "failed to alloc display memory\n");
 			return ret;
 		}
+#endif
 #if defined(CONFIG_FB_TEST)
 		ret = decon_fb_test_alloc_memory(decon,
 				win->fbinfo->fix.smem_len);
@@ -4146,10 +4148,11 @@ static int decon_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_win;
 
+#if 0 // HACK2 To avoid thread creation failure
 	ret = decon_create_update_thread(decon, device_name);
 	if (ret)
 		goto err_win;
-
+#endif
 	dpu_init_win_update(decon);
 	decon_init_low_persistence_mode(decon);
 	dpu_init_cursor_mode(decon);
@@ -4208,7 +4211,9 @@ err_subdev:
 err_pinctrl:
 	decon_destroy_psr_info(decon);
 err_psr:
+#if 0 //HACK2
 	decon_destroy_vsync_thread(decon);
+#endif
 err_vsync:
 	iounmap(decon->res.ss_regs);
 err_res:
