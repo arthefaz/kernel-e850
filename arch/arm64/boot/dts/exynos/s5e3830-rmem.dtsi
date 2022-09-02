@@ -70,5 +70,10 @@
 			alloc-ranges = <0x0 0x80000000 0x68000000>;
 			size = <0x2000>;
 		};
+
+		ect_binary: ect_binary {
+			compatible = "exynos,ect_rmem";
+			reg = <0x0 0x90000000 0x0004B000>;
+		};
 	};
 };

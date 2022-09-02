@@ -368,6 +368,11 @@
 		use_multistage_wdt; /* Use FIQ debug watchdog */
        };
 	
+	exynos-ect {
+		compatible = "samsung,exynos-ect";
+		memory-region = <&ect_binary>;
+	};
+
 	exynos_dm: exynos-dm@17000000 {
 		compatible = "samsung,exynos-dvfs-manager";
 		reg = <0x0 0x17000000 0x0>;
