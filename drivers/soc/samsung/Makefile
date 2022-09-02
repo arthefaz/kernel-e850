@@ -68,3 +68,6 @@ obj-$(CONFIG_EXYNOS_UFCC)       += exynos-ufcc.o
 
 #GNSS Interface Driver
 obj-$(CONFIG_EXYNOS_GNSS_IF) += gnssif/
+
+# CPIF
+obj-$(CONFIG_EXYNOS_MODEM_IF) += cpif/
