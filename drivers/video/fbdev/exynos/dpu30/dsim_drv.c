@@ -28,6 +28,9 @@
 #include <linux/device.h>
 #include <linux/module.h>
 #include <video/mipi_display.h>
+
+#define BRINGUP_DSIM_BIST
+
 #if defined(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
