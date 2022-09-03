@@ -53,7 +53,7 @@
                         };
 
                         chosen {
-				bootargs = "earlycon=exynos4210,0x13820000 console=ttySAC0,115200n8 androidboot.console=ttySAC0 clocksource=arch_sys_counter clk_ignore_unused androidboot.hardware=s5e3830 androidboot.first_stage_console=1 clocksource=arch_sys_counter printk.devkmsg=on";
+				bootargs = "earlycon=exynos4210,0x13820000 console=ttySAC0,115200n8 androidboot.console=ttySAC0 androidboot.boot_devices=12100000.dwmmc0 clocksource=arch_sys_counter clk_ignore_unused androidboot.hardware=s5e3830 androidboot.first_stage_console=1 clocksource=arch_sys_counter printk.devkmsg=on";
                                 linux,initrd-start = <0x84000000>;
                                 linux,initrd-end = <0x847FFFFF>;
                         };
