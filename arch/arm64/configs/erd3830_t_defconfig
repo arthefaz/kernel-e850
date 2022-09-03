@@ -1,2 +1,1 @@
-CONFIG_CMDLINE="androidboot.first_stage_console=1 printk.devkmsg=on androidboot.force_normal_boot=1"
-CONFIG_CMDLINE_EXTEND=y
+# CONFIG_CMDLINE_EXTEN is not set
