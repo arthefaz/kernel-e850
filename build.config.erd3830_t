@@ -31,8 +31,6 @@ VENDOR_BOOT_MODULE_ORDER=vendor_boot_module_order_s5e3830.cfg
 #DPM_USERDEBUG_IMG=dpm-userdebug.img
 #DPM_USER_IMG=dpm-user.img
 
-GKI_RAMDISK_PREBUILT_BINARY=prebuilts/boot-artifacts/arm64/exynos/eng/ramdisk_for_console.cpio.lz4
-
 EXPORT_PLATFORM_BOARD_CONFIG="
 BOARD_RAMDISK_USE_LZ4=false
 BOARD_AVB_ENABLE=true
