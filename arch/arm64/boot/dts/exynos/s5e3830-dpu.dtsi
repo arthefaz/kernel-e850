@@ -143,10 +143,10 @@
 		reg = <0x0 0x13070000 0x200>, <0x0 0x13080000 0x3000>;
 		interrupts = <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>;
 
-		/* TODO: Modify
+		// TODO: Modify
 		iommus = <&sysmmu_dpu>;
 		samsung,iommu-group = <&iommu_group_dpu>;
-		*/
+
 		#dma-address-cells = <1>;
 		#dma-size-cells = <1>;
 		ranges;
