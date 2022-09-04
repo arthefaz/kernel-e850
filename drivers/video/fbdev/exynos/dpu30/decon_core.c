@@ -22,7 +22,8 @@
 #include <linux/clk-provider.h>
 #include <linux/console.h>
 #include <linux/dma-buf.h>
-#include <linux/ion.h>
+//#include <linux/ion.h>
+#include <linux/dma-heap.h>
 #include <uapi/linux/sched/types.h>
 #include <linux/highmem.h>
 #include <linux/memblock.h>
@@ -3436,6 +3437,7 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	struct dma_buf *buf = NULL;
 	void *vaddr;
 	unsigned int ret;
+	struct dma_heap *dma_heap;
 
 	decon_dbg("%s +\n", __func__);
 	dev_info(decon->dev, "allocating memory for display\n");
@@ -3453,13 +3455,29 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	fbi->fix.smem_len = size;
 	size = PAGE_ALIGN(size);
 
-	dev_info(decon->dev, "want %u bytes for window[%d]\n", size, win->idx);
+	dev_info(decon->dev, "wanti %u bytes for window[%d]\n", size, win->idx);
+#if 0 // ION APIs
 	buf = ion_alloc((size_t)size, ION_HEAP_SYSTEM, 0);
 	if (IS_ERR(buf)) {
 		dev_err(decon->dev, "ion_share_dma_buf() failed\n");
 		goto err_share_dma_buf;
 	}
+#else // DMA Buf APIs
+	decon_info("%s calling dma_heap_find() \n", __func__);
+        dma_heap = dma_heap_find("system-uncached");
+        if (!dma_heap) {
+                pr_err("dma_heap_find() failed\n");
+                return -ENODEV;
+        }
 
+	decon_info("%s calling dma_heap_buffer_alloc() \n", __func__);
+        buf = dma_heap_buffer_alloc(dma_heap, (size_t)size, 0, 0);
+        dma_heap_put(dma_heap);
+        if (IS_ERR(buf)) {
+                pr_err("failed to allocate test buffer memory\n");
+                return PTR_ERR(buf);
+        }
+#endif
 	vaddr = dma_buf_vmap(buf);
 	if (IS_ERR_OR_NULL(vaddr)) {
 		dev_err(decon->dev, "dma_buf_vmap() failed\n");
@@ -3527,6 +3545,7 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 	struct dma_buf *buf;
 	void *vaddr;
 	unsigned int ret;
+	struct dma_heap *dma_heap;
 
 	decon_dbg("%s +\n", __func__);
 	dev_info(decon->dev, "allocating memory for fb test\n");
@@ -3536,12 +3555,28 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 
 	dev_info(decon->dev, "want %u bytes for window[%d]\n", size, win->idx);
 
+#if 0 // ION APIs
 	buf = ion_alloc((size_t)size, ION_HEAP_SYSTEM, 0);
 	if (IS_ERR(buf)) {
 		dev_err(decon->dev, "ion_share_dma_buf() failed\n");
 		goto err_share_dma_buf;
 	}
+#else
+	decon_info("%s calling dma_heap_find() \n", __func__);
+        dma_heap = dma_heap_find("system-uncached");
+        if (!dma_heap) {
+                pr_err("dma_heap_find() failed\n");
+                return -ENODEV;
+        }
 
+	decon_info("%s calling dma_heap_buffer_alloc() \n", __func__);
+        buf = dma_heap_buffer_alloc(dma_heap, (size_t)size, 0, 0);
+        dma_heap_put(dma_heap);
+        if (IS_ERR(buf)) {
+                pr_err("failed to allocate test buffer memory\n");
+                return PTR_ERR(buf);
+	}
+#endif
 	vaddr = dma_buf_vmap(buf);
 	if (IS_ERR_OR_NULL(vaddr)) {
 		dev_err(decon->dev, "dma_buf_vmap() failed\n");
