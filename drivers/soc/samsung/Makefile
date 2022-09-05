@@ -25,3 +25,10 @@ obj-$(CONFIG_EXYNOS_REBOOT)	+= exynos-reboot.o
 obj-$(CONFIG_USI_V2)		+= usi_v2.o
 
 obj-$(CONFIG_EXYNOS_CHIPID_V2)  += exynos-chipid_v2.o
+
+obj-$(CONFIG_EXYNOS_SEH)        += exynos-seh.o
+
+obj-$(CONFIG_EXYNOS_PD_EL3)     += exynos-pd_el3.o
+obj-$(CONFIG_EXYNOS_SECURE_LOG) += exynos-seclog.o
+
+obj-$(CONFIG_EXYNOS_TZASC_FAIL_DETECTOR) += exynos-tzasc.o
