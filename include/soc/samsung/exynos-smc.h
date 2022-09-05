@@ -19,6 +19,7 @@
 #define SMC_CMD_CPU0AFTR		(-5)
 #define SMC_CMD_SAVE			(-6)
 #define SMC_CMD_SHUTDOWN		(-7)
+#define SMC_CMD_CPUPM_ENABLE		(0x82000008)
 
 #define SMC_CMD_CPUMAP			(-10)
 
@@ -59,6 +60,7 @@
 #define SMC_CMD_FMP_SECRET		(0x820018C0)
 #define SMC_CMD_FMP_KW_SYSREG_DUMMY	(0x820018D0)
 #define SMC_CMD_FMP_GET_KW_MODE		(0x820018E0)
+#define SMC_CMD_FMP_RESUME		(0x820018F0)
 
 /* Command ID for smc */
 #define SMC_PROTECTION_SET		(0x82002010)
