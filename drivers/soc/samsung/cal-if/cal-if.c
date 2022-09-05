@@ -416,7 +416,7 @@ int cal_asv_get_tablever(void)
 }
 EXPORT_SYMBOL_GPL(cal_asv_get_tablever);
 
-#ifdef CONFIG_CP_PMUCAL
+#if IS_ENABLED(CONFIG_CP_PMUCAL)
 int cal_cp_init(void)
 {
 	return pmucal_cp_init();
@@ -543,7 +543,7 @@ int cal_if_init(void *dev)
 	if (ret < 0)
 		return ret;
 
-#ifdef CONFIG_CP_PMUCAL
+#if IS_ENABLED(CONFIG_CP_PMUCAL)
 	ret = pmucal_cp_initialize();
 	if (ret < 0)
 		return ret;

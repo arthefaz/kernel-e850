@@ -14,7 +14,7 @@
 #include "flexpmu_cal_define_s5e3830.h"
 #include "pmucal_gnss_s5e3830.h"
 
-#ifdef CONFIG_CP_PMUCAL
+#if IS_ENABLED(CONFIG_CP_PMUCAL)
 #include "../pmucal_cp.h"
 #include "pmucal_cp_s5e3830.h"
 #endif
