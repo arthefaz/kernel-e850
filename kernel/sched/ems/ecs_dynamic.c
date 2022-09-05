@@ -168,7 +168,7 @@ static void dynamic_enqueue_release_cpus(int prev_cpu, struct task_struct *p)
 		min_cpu = cpu;
 	}
 
-	util_with = ml_cpu_util_with(p, min_cpu);
+	util_with = min(ml_cpu_util_with(p, min_cpu), capacity_cpu_orig(min_cpu));
 	util_with = util_with + (util_with >> 2);
 	if (et_cur_cap(prev_cpu) >= util_with)
 		return;

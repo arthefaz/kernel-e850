@@ -91,33 +91,64 @@ unsigned long ml_cpu_util(int cpu)
  */
 unsigned long ml_cpu_util_without(int cpu, struct task_struct *p)
 {
-	unsigned long util = ml_cpu_util(cpu);
+	struct cfs_rq *cfs_rq;
+	unsigned long util, util_est;
 
 	/* Task has no contribution or is new */
 	if (cpu != task_cpu(p) || !READ_ONCE(p->se.avg.last_update_time))
-		return util;
+		return ml_cpu_util(cpu);
 
-	/* Discount task's util from CPU's util */
+	cfs_rq = &cpu_rq(cpu)->cfs;
+
+	/* Calculate util avg */
+	util = READ_ONCE(cfs_rq->avg.util_avg);
 	lsub_positive(&util, ml_task_util(p));
+
+	/* Calcuate util est */
+	util_est = READ_ONCE(cfs_rq->avg.util_est.enqueued);
+	if (task_on_rq_queued(p) || current == p)
+		lsub_positive(&util_est, _ml_task_util_est(p));
+
+	util = max(util, util_est);
 
 	return min_t(unsigned long, util, capacity_cpu_orig(cpu));
 }
 
 /*
  * ml_cpu_util_with - cpu utilization with waking task
+ *
+ * When task is queued,
+ * 1) task_cpu(p) == cpu
+ *    => The contribution is already present on target cpu
+ * 2) task_cpu(p) != cpu
+ *    => The contribution is not present on target cpu
+ *
+ * When task is not queued,
+ * 3) task_cpu(p) == cpu
+ *    => The contribution is already applied to util_avg,
+ *       but is not applied to util_est
+ * 4) task_cpu(p) != cpu
+ *    => The contribution is not present on target cpu
  */
 unsigned long ml_cpu_util_with(struct task_struct *p, int cpu)
 {
 	struct cfs_rq *cfs_rq = &cpu_rq(cpu)->cfs;
-	unsigned long util = READ_ONCE(cfs_rq->avg.util_avg);
+	unsigned long util, util_est;
 
-	/* Discount task's util from prev CPU's util */
-	if (cpu == task_cpu(p))
-		lsub_positive(&util, ml_task_util(p));
+	/* Calculate util avg */
+	util = READ_ONCE(cfs_rq->avg.util_avg);
+	if (task_cpu(p) != cpu)
+		util += ml_task_util(p);
 
-	util += max(ml_task_util_est(p), (unsigned long)1);
+	/* Calcuate util est */
+	util_est = READ_ONCE(cfs_rq->avg.util_est.enqueued);
+	if (!task_on_rq_queued(p) || task_cpu(p) != cpu)
+		util_est += _ml_task_util_est(p);
 
-	return min(util, capacity_cpu_orig(cpu));
+	util = max(util, util_est);
+	util = max(util, (unsigned long)1);
+
+	return util;
 }
 
 /*
