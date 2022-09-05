@@ -4114,7 +4114,7 @@ static int decon_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	dma_set_mask(dev, DMA_BIT_MASK(36));
+	dma_set_mask(dev, DMA_BIT_MASK(32));
 
 	decon->dev = dev;
 	decon_parse_dt(decon);
