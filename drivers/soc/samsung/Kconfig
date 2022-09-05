@@ -61,6 +61,13 @@ config EXYNOS_CHIPID_V2
 	tristate "Exynos Chipid controller driver v2"
 	depends on ARCH_EXYNOS
 
+config EXYNOS_SDM
+	tristate "Exynos Security Dump Manager Support"
+	depends on DEBUG_SNAPSHOT
+	default m
+	help
+	  Exynos Security Dump Manager
+
 source "drivers/soc/samsung/acpm/Kconfig"
 
 config ACPM_DVFS

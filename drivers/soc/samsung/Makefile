@@ -32,3 +32,6 @@ obj-$(CONFIG_EXYNOS_PD_EL3)     += exynos-pd_el3.o
 obj-$(CONFIG_EXYNOS_SECURE_LOG) += exynos-seclog.o
 
 obj-$(CONFIG_EXYNOS_TZASC_FAIL_DETECTOR) += exynos-tzasc.o
+
+# SDM
+obj-$(CONFIG_EXYNOS_SDM)	+= exynos-sdm.o
