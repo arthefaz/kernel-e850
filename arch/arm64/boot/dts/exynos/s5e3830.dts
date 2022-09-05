@@ -35,6 +35,7 @@
 #include "s5e3830-pm-domains.dtsi"
 #include "s5e3830-bts.dtsi"
 #include "s5e3830-wlbt.dtsi"
+#include "s5e3830-m2m.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
