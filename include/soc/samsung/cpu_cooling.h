@@ -73,7 +73,6 @@ struct exynos_cpufreq_cooling_device {
 	unsigned int var_temp_size;
 	struct freq_qos_request qos_req;
 	struct thermal_zone_device *tz;
-	bool is_power_actor;
 };
 
 #if defined(CONFIG_EXYNOS_CPU_THERMAL) || defined(CONFIG_EXYNOS_CPU_THERMAL_MODULE)
