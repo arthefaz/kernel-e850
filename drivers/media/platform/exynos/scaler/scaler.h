@@ -701,6 +701,8 @@ int sc_ext_run_job(struct sc_ctx *ctx);
 void sc_ext_current_task_finish(struct sc_ext_dev *ext_dev, bool success);
 bool sc_ext_job_finished(struct sc_ctx *ctx);
 
+#ifdef CONFIG_USE_DPU_ON_VOTF
 extern int exynos_dpuf_set_votf(u32 dpuf_idx, bool en);
+#endif
 
 #endif /* SCALER__H_ */

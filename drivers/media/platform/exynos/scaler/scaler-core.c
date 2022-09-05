@@ -3031,6 +3031,7 @@ static void sc_vb2_buf_queue(struct vb2_buffer *vb)
 	int ret;
 
 	if (sc_buf->tws) {
+#ifdef CONFIG_USE_DPU_ON_VOTF
 		ret = exynos_dpuf_set_votf(sc_buf->tws->sink.dpu_dma_idx, true);
 		if (ret < 0) {
 			dev_err(ctx->sc_dev->dev,
@@ -3038,6 +3039,7 @@ static void sc_vb2_buf_queue(struct vb2_buffer *vb)
 
 			sc_buf->state = ret;
 		}
+#endif
 	}
 
 	if (sc_buf->in_fence) {
@@ -3765,7 +3767,9 @@ static bool sc_clear_votf(struct sc_tws *tws)
 	if (!ret)
 		return ret;
 
+#ifdef CONFIG_USE_DPU_ON_VOTF
 	exynos_dpuf_set_votf(tws->sink.dpu_dma_idx, false);
+#endif
 
 	return true;
 }
@@ -4653,7 +4657,9 @@ static void sc_m2m_device_run(void *priv)
 			list_add_tail(&dst_sc_buf->tws->node, &sc->tws_avail_list);
 			spin_unlock_irqrestore(&sc->tws_lock, flags);
 
+#ifdef CONFIG_USE_DPU_ON_VOTF
 			exynos_dpuf_set_votf(dst_sc_buf->tws->sink.dpu_dma_idx, false);
+#endif
 
 			dst_sc_buf->tws = NULL;
 		}
