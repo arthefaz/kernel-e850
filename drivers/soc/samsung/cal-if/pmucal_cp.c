@@ -1,5 +1,9 @@
+#include <soc/samsung/exynos-smc.h>
+
 #include "pmucal_cp.h"
 #include "pmucal_rae.h"
+
+static struct device *pmucal_cp_dev;
 
 /**
  *  pmucal_cp_init - init cp.
@@ -473,4 +477,9 @@ int pmucal_cp_initialize(void)
 	}
 out:
 	return ret;
+}
+
+void cp_set_device(struct device *dev)
+{
+        pmucal_cp_dev = dev;
 }
