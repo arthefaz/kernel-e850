@@ -56,3 +56,6 @@ obj-$(CONFIG_EXYNOS_PM_QOS)	+= pm_qos/
 
 # CPU Power Management
 obj-$(CONFIG_EXYNOS_CPUPM)     += exynos-cpupm.o
+
+# CPU Hotplug
+obj-$(CONFIG_EXYNOS_CPUHP)      += exynos-cpuhp.o
