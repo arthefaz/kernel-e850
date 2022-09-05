@@ -1,0 +1,64 @@
+/*
+ * SAMSUNG EXYNOS2100 SoC security device tree source
+ *
+ * Copyright (c) 2020 Samsung Electronics Co., Ltd.
+ *              http://www.samsung.com
+ *
+ * SAMSUNG EXYNOS2100 SoC security device nodes are listed in this file.
+ * EXYNOS based board files can include this file and provide
+ * values for board specfic bindings.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include <dt-bindings/interrupt-controller/s5e3830.h>
+
+/ {
+	/* tbase */
+	tee {
+		compatible = "samsung,exynos-tee";
+		interrupts = <GIC_SPI INTREQ__TBASE IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+//	tee-tui {
+//		compatible = "samsung,exynos-tui";
+//		samsung,tzmp;
+//	};
+//
+	/* Secure Log */
+	seclog {
+		compatible = "samsung,exynos-seclog";
+		interrupts = <GIC_SPI INTREQ__SECURE_LOG IRQ_TYPE_LEVEL_HIGH>;
+		memory-region = <&seclog_mem>;
+	};
+
+	tzasc {
+		compatible = "samsung,exynos-tzasc";
+		channel = <2>;
+		interleaving_shift = <0>;
+		has_privileged = <0>;
+		irqcnt = <2>;
+		interrupts = <GIC_SPI INTREQ__DMC_INTR_MIF0 IRQ_TYPE_LEVEL_HIGH>,
+			   <GIC_SPI INTREQ__DMC_INTR_MIF1 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+//	hdcp {
+//		compatible = "samsung,exynos-hdcp";
+//		interrupts = <GIC_SPI INTREQ__HDCP IRQ_TYPE_LEVEL_HIGH>;
+//	};
+//
+//	secmem {
+//		compatible = "samsung,exynos-secmem";
+//		power-domains = <&pd_hsi0>;
+//		memory-region = <&crypto_heap>, <&vstream_heap>;
+//		dma-coherent;
+//	};
+//
+//	/* Secure RPMB */
+//	ufs-srpmb {
+//		compatible = "samsung,ufs-srpmb";
+//		interrupts = <GIC_SPI INTREQ__RPMB IRQ_TYPE_LEVEL_HIGH>;
+//	};
+};
