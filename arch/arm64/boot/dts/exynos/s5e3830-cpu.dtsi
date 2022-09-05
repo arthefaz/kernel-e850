@@ -303,4 +303,9 @@
 		};
 	};
 
+	exynos-cpuhp {
+		compatible = "samsung,exynos-cpuhp";
+		status = "okay";
+	};
+
 };
