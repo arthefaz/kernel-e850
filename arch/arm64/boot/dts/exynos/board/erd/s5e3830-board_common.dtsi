@@ -43,13 +43,51 @@
                                 };
                         };
 
-						ifconn {
-							status = "okay";
-							compatible = "samsung,ifconn";
-							ifconn,usbpd = "s2mu106";
-							ifconn,muic = "s2mu106-muic";
-						};
+			ifconn {
+				status = "okay";
+				compatible = "samsung,ifconn";
+				ifconn,usbpd = "s2mu106";
+				ifconn,muic = "s2mu106-muic";
+			};
 
+			usb_hs_tune:hs_tune {
+				hs_tune_cnt = <7>;
+				/* value = <device host> */
+				hs_tune1 {
+					tune_name = "tx_pre_emp";
+					tune_value = <0x3 0x3>;
+				};
+
+				hs_tune2 {
+					tune_name = "tx_vref";
+					tune_value = <0xd 0xd>;
+				};
+
+				hs_tune3 {
+					tune_name = "rx_sqrx";
+					tune_value = <0x7 0x7>;
+				};
+
+				hs_tune4 {
+					tune_name = "utmi_clk";
+					tune_value = <0x1 0x1>;
+				};
+
+				hs_tune5 {
+					tune_name = "compdis";
+					tune_value = <0x7 0x7>;
+				};
+
+				hs_tune6 {
+					tune_name = "tx_res";
+					tune_value = <0x1 0x1>;
+				};
+
+				hs_tune7 {
+					tune_name = "tx_rise";
+					tune_value = <0x1 0x1>;
+				};
+			};
                 };
 
 
@@ -300,3 +338,29 @@
 	/* ldo28, buck5 */
 	regulator_1p8v = "vdd_ldo28";
 };
+
+&udc {
+	status = "okay";
+	lazy-vbus-up;
+	dwc3 {
+		dr_mode = "peripheral";
+		maximum-speed = "high-speed";
+	};
+};
+
+&usbdrd_dwc3 {
+	status = "okay";
+	maximum-speed = "high-speed";
+	usb_audio_offloading = <0>;
+	xhci_l2_support = <0>;
+	xhci_use_uram_for_audio = <0>;
+//	vdd33_usb-supply = <&s_l8_reg>;
+};
+
+&usbdrd_phy0 {
+	status = "okay";
+	use_default_tune_val = <0x1>;
+	hs_tune_param = <&usb_hs_tune>;
+//	vdd33_usb-supply = <&s_l8_reg>;
+};
+
