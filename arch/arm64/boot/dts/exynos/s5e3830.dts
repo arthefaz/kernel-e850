@@ -26,6 +26,7 @@
 #include "s5e3830-mali.dtsi"
 #include "s5e3830-cpu.dtsi"
 #include "s5e3830-dpu.dtsi"
+#include "s5e3830-usb.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";

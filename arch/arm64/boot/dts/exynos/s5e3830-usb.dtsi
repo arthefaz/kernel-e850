@@ -24,15 +24,27 @@
 		#address-cells = <2>;
 		#size-cells = <1>;
 		ranges;
-		power-domains = <&pd_hsi>;
+		//power-domains = <&pd_hsi>;
 		status = "okay";
+		phys = <&usbdrd_phy0 0>, <&usbdrd_phy0 1>;
+		phy-names = "usb2-phy", "usb3-phy";
+		interrupts = <0 INTREQ__USB20DRD_0 IRQ_TYPE_LEVEL_HIGH>;
+		tx-fifo-resize = <0>;
+		exynos,adj-sof-accuracy = <0>;
+		exynos,usb_host_device_timeout = <200>;
+		exynos,enable_sprs_transfer = <1>;
+
+		usb3-lpm-capable;
+		samsung,no-extra-delay;
+		usb_host_device_timeout = <0x7ff>; /* Max value */
+
+		exynos,xhci_l2_support = <0>;
 
 		usbdrd_dwc3: dwc3 {
 			compatible = "synopsys,dwc3";
 			reg = <0x0 0x13600000 0x10000>;
 			interrupts = <0 INTREQ__USB20DRD_0 IRQ_TYPE_LEVEL_HIGH>;
 			tx-fifo-resize = <0>;
-			adj-sof-accuracy = <0>;
 			is_not_vbus_pad = <1>;
 			enable_sprs_transfer = <1>;
 			phys = <&usbdrd_phy0 0>, <&usbdrd_phy0 1>;
@@ -43,10 +55,11 @@
 			usb_audio_offloading = <0>;
 			//abox = <&abox>; /* Temporary block */
 			/* support USB L2 sleep */
-			 ldos = <3>;
+			ldos = <3>;
 			ldo_number = <1 2 11>;
 			/* INT min lock support */
 			usb-pm-qos-int = <400000>;
+			status = "okay";
 		};
 	};
 

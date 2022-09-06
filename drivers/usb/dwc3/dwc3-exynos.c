@@ -1345,6 +1345,8 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 
 	otg_set_peripheral(&exynos->dotg->otg, exynos->dwc->gadget);
 
+	dwc3_exynos_vbus_event(exynos->dev, 1);
+
 	return 0;
 
 populate_err:
