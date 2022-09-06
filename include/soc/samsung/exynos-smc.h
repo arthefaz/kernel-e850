@@ -146,7 +146,10 @@
 #define SMC_SRPMB_WSM			(0x82003811)
 
 /* For DTRNG Access */
-#define HWRNG_GET_DATA			(0x0)
+#define HWRNG_INIT			(0x0)
+#define HWRNG_EXIT			(0x1)
+#define HWRNG_GET_DATA			(0x2)
+#define HWRNG_RESUME			(0x3)
 
 /* For CFW group */
 #define CFW_DISP_RW			(3)
