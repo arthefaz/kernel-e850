@@ -28,9 +28,13 @@
 #include <soc/samsung/exynos_pm_qos.h>
 #include <soc/samsung/exynos-cpuhp.h>
 #include <linux/kthread.h>
+#include <dt-bindings/thermal/thermal_exynos.h>
 
 #define MCELSIUS        1000
 
+enum soc_type {
+	SOC_ARCH_EXYNOS3830 = 1,
+};
 struct exynos_pi_param {
 	s64 err_integral;
 	int trip_switch_on;
@@ -47,6 +51,44 @@ struct exynos_pi_param {
 	int polling_delay_off;
 
 	bool switched_on;
+};
+
+/**
+ * struct exynos_tmu_platform_data
+ * @gain: gain of amplifier in the positive-TC generator block
+ *	0 < gain <= 15
+ * @reference_voltage: reference voltage of amplifier
+ *	in the positive-TC generator block
+ *	0 < reference_voltage <= 31
+ * @noise_cancel_mode: noise cancellation mode
+ *	000, 100, 101, 110 and 111 can be different modes
+ * @type: determines the type of SOC
+ * @default_temp_offset: default temperature offset in case of no trimming
+ * @cal_type: calibration type for temperature
+ *
+ * This structure is required for configuration of exynos_tmu driver.
+ */
+struct exynos_tmu_platform_data {
+	u8 gain;
+	u8 reference_voltage;
+	u8 noise_cancel_mode;
+
+	u8 first_point_trim;
+	u8 second_point_trim;
+	u8 default_temp_offset;
+	u32 trip_temp;
+
+	enum soc_type type;
+	u32 sensor_type;
+	u32 cal_type;
+};
+
+
+struct sensor_info {
+	u16 sensor_num;
+	u16 cal_type;
+	u16 temp_error1;
+	u16 temp_error2;
 };
 
 /**
@@ -74,24 +116,24 @@ struct exynos_tmu_data {
 	int hotplug_in_threshold;
 	int hotplug_out_threshold;
 	int limited_frequency;
-	int limited_threshold;
-	int limited_threshold_release;
-	int limited_frequency_2;
-	int limited_threshold_2;
-	int limited_threshold_release_2;
-	struct exynos_pm_qos_request thermal_limit_request;
-	unsigned int limited;
+	struct exynos_tmu_platform_data *pdata;
 	void __iomem *base;
 	int irq;
+	enum soc_type soc;
 	struct kthread_worker thermal_worker;
 	struct kthread_work irq_work;
 	struct kthread_work hotplug_work;
 	struct mutex lock;
+	u16 temp_error1, temp_error2;
 	struct thermal_zone_device *tzd;
 	unsigned int ntrip;
 	bool enabled;
 	struct thermal_cooling_device *cool_dev;
 	struct list_head node;
+	u32 sensors;
+	int num_probe;
+	int num_of_sensors;
+	struct sensor_info *sensor_info;
 	char tmu_name[THERMAL_NAME_LENGTH + 1];
 	struct device_node *np;
 	struct cpumask cpu_domain;
@@ -103,8 +145,20 @@ struct exynos_tmu_data {
 	struct exynos_pi_param *pi_param;
 	struct notifier_block nb;
 	atomic_t in_suspend;
+
+	bool first_boot;
+	unsigned int buf_vref;
+	unsigned int buf_slope;
+	unsigned int avg_mode;
+
 	ktime_t last_thermal_status_updated;
 	ktime_t thermal_status[3];
+
+	int (*tmu_initialize)(struct platform_device *pdev);
+	void (*tmu_control)(struct platform_device *pdev, bool on);
+	int (*tmu_read)(struct exynos_tmu_data *data);
+	void (*tmu_set_emulation)(struct exynos_tmu_data *data, int temp);
+	void (*tmu_clear_irqs)(struct exynos_tmu_data *data);
 };
 
 extern int exynos_build_static_power_table(struct device_node *np, int **var_table,
@@ -133,15 +187,6 @@ static inline int exynos_isp_cooling_init(void)
 {
 	return 0;
 }
-#endif
-
-
-#if IS_ENABLED(CONFIG_EXYNOS_ADV_TRACER)
-int adv_tracer_s2d_get_enable(void);
-int adv_tracer_s2d_set_enable(int en);
-#else
-#define adv_tracer_s2d_get_enable()	do { } while (0)
-#define adv_tracer_s2d_set_enable(a)	do { } while (0)
 #endif
 
 #endif /* _EXYNOS_TMU_H */
