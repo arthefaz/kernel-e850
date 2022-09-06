@@ -15,6 +15,18 @@ obj-$(CONFIG_EXYNOS_FLEXPMU_DBG)        += exynos-flexpmu-dbg.o
 obj-$(CONFIG_EXYNOS_PM_DOMAINS) += pm_domains.o
 obj-$(CONFIG_EXYNOS_CHIPID)	+= exynos-chipid.o
 
+# Exynos Memlogger
+obj-$(CONFIG_EXYNOS_MEMORY_LOGGER)      += memlogger.o
+
+# Exynos Subsystem
+obj-$(CONFIG_EXYNOS_SYSTEM_EVENT)       += sysevent.o sysevent_notif.o
+
+# Exynos Image Loader
+obj-$(CONFIG_EXYNOS_IMGLOADER)       += imgloader.o
+
+# DEBUG
+obj-$(CONFIG_EXYNOS_DEBUG)      += debug/
+
 # ECT
 obj-$(CONFIG_ECT)               += ect_parser.o
 

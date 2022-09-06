@@ -25,5 +25,54 @@
 		    compatible = "exynos,seclog";
 		    reg = <0 SECLOG_LOG_BUF_BASE SECLOG_LOG_BUF_TOTAL_SIZE>;
 		};
+                dss_rmem: debug_snapshot {
+                        #address-cells = <2>;
+                        #size-cells = <1>;
+                        header: header {
+				compatible = "header";
+                                reg = <0 0xFD000000 0x10000>;
+				no-map;
+                        };
+                        log_kernel: log_kernel {
+				compatible = "log_kernel";
+                                reg = <0 0xFD010000 0x200000>;
+                        };
+			log_platform: log_platform {
+				compatible = "log_platform";
+				reg = <0 0xFD210000 0x400000>;
+			};
+                        log_s2d: log_s2d {
+				compatible = "log_s2d";
+                                reg = <0 0xFD610000 0x1500000>;
+                        };
+                        log_first: log_first {
+				compatible = "log_first";
+				reg = <0 0xFEB10000 0x200000>;
+                        };
+			log_kevents: log_kevents {
+				compatible = "log_kevents";
+				reg = <0 0xFED10000 0x500000>;
+			};
+			log_kevents_small: log_kevents_small {
+				compatible = "log_kevents";
+				reg = <0 0xFED10000 0xA6000>;
+				status = "no";
+			};
+			log_arrdumpreset: log_arrdumpreset {
+				compatible = "log_arrdumpreset";
+				reg = <0 0xFF210000 0xC30000>;
+			};
+                };
+
+		debug_kinfo_reserved: debug_kinfo_reserved@effff000 {
+			reg = <0 0xFCFFF000 0x00001000>;
+			no-map;
+		};
+
+                log_backtrace: log_backtrace {
+			compatible = "log_backtrace";
+			alloc-ranges = <0x0 0x80000000 0x68000000>;
+			size = <0x2000>;
+		};
 	};
 };

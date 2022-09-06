@@ -21,6 +21,7 @@
 #include "s5e3830-pinctrl.dtsi"
 #include "s5e3830-usi.dtsi"
 #include "s5e3830-rmem.dtsi"
+#include "s5e3830-debug.dtsi"
 #include "s5e3830-dma-heap.dtsi"
 #include "s5e3830-sysmmu.dtsi"
 #include "s5e3830-mali.dtsi"
