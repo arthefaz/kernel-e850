@@ -174,4 +174,5 @@ source "drivers/usb/typec/Kconfig"
 
 source "drivers/usb/roles/Kconfig"
 
+source "drivers/usb/notify_lsi/Kconfig"
 endif # USB_SUPPORT
