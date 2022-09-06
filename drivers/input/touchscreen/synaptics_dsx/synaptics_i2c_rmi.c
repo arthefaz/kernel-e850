@@ -4209,7 +4209,7 @@ err_tsp_reboot:
 	}
 
 	pr_info("%s schdule delayed work for irq at probe\n",__func__);
-	schedule_delayed_work(&rmi4_data->work_init_irq, 1500);
+	//schedule_delayed_work(&rmi4_data->work_init_irq, 1500);
 #if 0
 	/* Enable attn pin */
 	retval = synaptics_rmi4_irq_enable(rmi4_data, true);
