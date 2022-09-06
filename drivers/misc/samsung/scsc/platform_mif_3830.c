@@ -34,7 +34,7 @@
 #if defined(CONFIG_ARCH_EXYNOS) || defined(CONFIG_ARCH_EXYNOS9)
 #include <linux/soc/samsung/exynos-soc.h>
 #endif
-#ifdef CONFIG_SOC_EXYNOS3830
+#if defined (CONFIG_SOC_EXYNOS3830) || defined(CONFIG_SOC_S5E3830)
 #include <linux/mfd/samsung/s2mpu12-regulator.h>
 #endif
 
@@ -46,7 +46,7 @@
 #include <linux/pm_qos.h>
 #endif
 
-#if !defined(CONFIG_SOC_EXYNOS3830)
+#if !defined(CONFIG_SOC_EXYNOS3830) && !defined(CONFIG_SOC_S5E3830)
 #error Target processor CONFIG_SOC_EXYNOS3830 not selected
 #endif
 
@@ -115,7 +115,7 @@ struct platform_mif {
 
 	/* pmu syscon regmap */
 	struct regmap *pmureg;
-#if defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_EXYNOS3830) || defined(CONFIG_SOC_S5E3830)
 	struct regmap *i3c_apm_pmic;
 	struct regmap *dbus_baaw;
 	struct regmap *pbus_baaw;

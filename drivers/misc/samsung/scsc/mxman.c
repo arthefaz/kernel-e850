@@ -85,7 +85,7 @@ static struct work_struct	wlbtd_work;
 #define MX_DRAM_SIZE (4 * 1024 * 1024)
 #define MX_DRAM_SIZE_SECTION_1 (8 * 1024 * 1024)
 
-#if defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_EXYNOS3830) || defined(CONFIG_SOC_S5E3830)
 #define MX_DRAM_SIZE_SECTION_2 (4 * 1024 * 1024)
 #else
 #define MX_DRAM_SIZE_SECTION_2 (8 * 1024 * 1024)

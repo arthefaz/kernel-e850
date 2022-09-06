@@ -1351,7 +1351,7 @@ static void slsi_if_setup(struct net_device *dev)
 }
 
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
-#if defined(CONFIG_SOC_EXYNOS9610) || defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_EXYNOS9610) || defined(CONFIG_SOC_EXYNOS3830) || defined(CONFIG_SOC_S5E3830)
 #define SCSC_NETIF_NAPI_CPU_BIG                   7
 #define SCSC_NETIF_RPS_CPUS_MASK                  "fe"
 #define SCSC_NETIF_RPS_CPUS_BIG_MASK              "70"
@@ -1373,7 +1373,7 @@ static void slsi_if_setup(struct net_device *dev)
 #define SCSC_NETIF_RPS_CPUS_BIG_MASK              "0"
 #endif
 #else
-#if defined(CONFIG_SOC_EXYNOS3830)
+#if defined(CONFIG_SOC_EXYNOS3830) || defined(CONFIG_SOC_S5E3830)
 #define SCSC_NETIF_RPS_CPUS_MASK                  "fe"
 #else
 #define SCSC_NETIF_RPS_CPUS_MASK                  "0"
