@@ -16,7 +16,7 @@
 #include <linux/of_gpio.h>
 #endif
 #if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
-#include <linux/ifconn/ifconn_notifier.h>
+#include <linux/misc/samsung/ifconn/ifconn_notifier.h>
 #include <linux/power/s2m_chg_manager.h>
 #endif
 #if IS_ENABLED(CONFIG_CCIC_NOTIFIER)
