@@ -17,6 +17,7 @@
 #include <dt-bindings/interrupt-controller/s5e3830.h>
 #include "erd3830-pmic.dtsi"
 #include "battery_data_erd3830_common_s2mu106.dtsi"
+#include "s5e3830-erd3830-cp-s318ap-sit.dtsi"
 
 / {
         fragment@model {
