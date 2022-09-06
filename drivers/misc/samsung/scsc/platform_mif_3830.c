@@ -1951,8 +1951,13 @@ struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 	platform->reg_start = reg_res->start;
 	platform->reg_size = resource_size(reg_res);
 
-	platform->base =
-		devm_ioremap_nocache(platform->dev, reg_res->start, resource_size(reg_res));
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
+       platform->base =
+               devm_ioremap(platform->dev, reg_res->start, resource_size(reg_res));
+#else
+       platform->base =
+                devm_ioremap_nocache(platform->dev, reg_res->start, resource_size(reg_res));
+#endif
 
 	if (!platform->base) {
 		SCSC_TAG_ERR_DEV(PLAT_MIF, platform->dev,
