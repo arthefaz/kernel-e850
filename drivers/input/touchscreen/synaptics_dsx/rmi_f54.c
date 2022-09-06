@@ -2930,7 +2930,8 @@ static int synaptics_load_fw_from_ums(struct synaptics_rmi4_data *rmi4_data)
 	if (0 < fw_size) {
 		unsigned char *fw_data;
 		fw_data = kzalloc(fw_size, GFP_KERNEL);
-		nread = vfs_read(fp, (char __user *)fw_data,
+		MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+		nread = kernel_read(fp, (char __user *)fw_data,
 			fw_size, &fp->f_pos);
 
 		tsp_debug_info(true, &rmi4_data->i2c_client->dev,
