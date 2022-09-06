@@ -20,7 +20,7 @@
                 ifconn,muic = "s2mu106-muic";
             };
 
-			battery_r01: battery {
+			battery {
 				status = "okay";
 				compatible = "samsung,s2m-battery";
 

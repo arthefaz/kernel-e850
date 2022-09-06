@@ -116,25 +116,24 @@ static void s2mu106_enable_charger_switch(struct s2mu106_charger_data *charger, 
 		goto out;
 	}
 
-	if(!(charger->pdata->erd)) {
-		pr_info("[DEBUG][SMDK]%s: turn off charger\n", __func__);
+#if IS_ENABLED(CONFIG_BLOCK_CHG_SMDK_S2MU106)
+	pr_info("[DEBUG][SMDK]%s: turn off charger\n", __func__);
+	s2mu106_update_reg(charger->i2c, S2MU106_CHG_CTRL0, BUCK_MODE, REG_MODE_MASK);
+#else
+	if (onoff > 0) {
+		pr_info("[DEBUG]%s: turn on charger\n", __func__);
+		s2mu106_update_reg(charger->i2c, S2MU106_CHG_CTRL0, CHG_MODE, REG_MODE_MASK);
+
+		/* timer fault set 16hr(max) */
+		s2mu106_update_reg(charger->i2c, S2MU106_CHG_CTRL13,
+				S2MU106_FC_CHG_TIMER_16hr << SET_TIME_FC_CHG_SHIFT, SET_TIME_FC_CHG_MASK);
+
+	} else {
+		pr_info("[DEBUG]%s: turn off charger\n", __func__);
+
 		s2mu106_update_reg(charger->i2c, S2MU106_CHG_CTRL0, BUCK_MODE, REG_MODE_MASK);
 	}
-	else{
-		if (onoff > 0) {
-			pr_info("[DEBUG]%s: turn on charger\n", __func__);
-			s2mu106_update_reg(charger->i2c, S2MU106_CHG_CTRL0, CHG_MODE, REG_MODE_MASK);
-
-			/* timer fault set 16hr(max) */
-			s2mu106_update_reg(charger->i2c, S2MU106_CHG_CTRL13,
-					S2MU106_FC_CHG_TIMER_16hr << SET_TIME_FC_CHG_SHIFT, SET_TIME_FC_CHG_MASK);
-
-		} else {
-			pr_info("[DEBUG]%s: turn off charger\n", __func__);
-
-			s2mu106_update_reg(charger->i2c, S2MU106_CHG_CTRL0, BUCK_MODE, REG_MODE_MASK);
-		}
-	}
+#endif
 out:
 	mutex_unlock(&charger->charger_mutex);
 }
@@ -312,13 +311,13 @@ static bool s2mu106_chg_init(struct s2mu106_charger_data *charger)
 	/* MRSTB 1s set */
 	s2mu106_write_reg(charger->i2c, 0xE5, 0x08);
 
-	if(!(charger->pdata->erd)) {
-		/* QBAT_Diode_Fix_Mode=0 setting */
-		s2mu106_update_reg(charger->i2c, S2MU106_CHG_SC_OTP34, 0x00, 0x08);
+#if IS_ENABLED(CONFIG_BLOCK_CHG_SMDK_S2MU106)
+	/* QBAT_Diode_Fix_Mode=0 setting */
+	s2mu106_update_reg(charger->i2c, S2MU106_CHG_SC_OTP34, 0x00, 0x08);
 
-		s2mu106_enable_charger_switch(charger, 0);
-		pr_info("[DEBUG][SMDK]%s\n", __func__);
-	}
+	s2mu106_enable_charger_switch(charger, 0);
+	pr_info("[DEBUG][SMDK]%s\n", __func__);
+#endif
 
 	return true;
 }
@@ -898,12 +897,6 @@ static int s2mu106_charger_parse_dt(struct device *dev, struct s2mu106_charger_p
 		ret = of_property_read_u32(np, "battery,chg_switching_freq", &pdata->chg_switching_freq);
 		if (ret < 0)
 			pr_info("%s: Charger switching FRQ is Empty\n", __func__);
-
-		ret = of_property_read_u32(np, "ERD_board", &len);
-		if (ret == 0)
-			pdata->erd = 1;
-		else
-			pdata->erd = 0;
 	}
 
 	np = of_find_node_by_name(NULL, "battery");

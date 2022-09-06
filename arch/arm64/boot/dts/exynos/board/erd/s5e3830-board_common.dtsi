@@ -182,7 +182,7 @@
 		fuelgauge,model_type = <1>;
 	};
 
-	s2mu106_charger: s2mu106-charger {
+	s2mu106-charger {
 		 status = "okay";
 		 battery,charger_name = "s2mu106-charger";
 		 battery,chg_gpio_en = <0>;

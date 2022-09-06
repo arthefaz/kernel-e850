@@ -342,7 +342,6 @@ struct s2mu106_charger_platform_data {
 	int recharge_vcell;
 	uint32_t is_1MHz_switching:1;
 	int chg_switching_freq;
-	int erd;
 };
 
 

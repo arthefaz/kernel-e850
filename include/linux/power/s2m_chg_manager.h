@@ -300,9 +300,6 @@ struct s2m_chg_manager_platform_data {
 	char *vendor;
 	int technology;
 
-	/* board */
-	int erd;
-
 #if IS_ENABLED(CONFIG_SMALL_CHARGER)
 	char *smallcharger_name;
 	int small_input_current;

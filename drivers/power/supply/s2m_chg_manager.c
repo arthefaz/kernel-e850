@@ -478,10 +478,11 @@ static int s2m_chg_manager_get_property(struct power_supply *psy,
 		val->intval = battery->cable_type;
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
-		if(!(battery->pdata->erd))
-			val->intval = true;
-		else
-			val->intval = battery->battery_valid;
+#if IS_ENABLED(CONFIG_FAKE_BATT)
+		val->intval = true;
+#else
+		val->intval = battery->battery_valid;
+#endif
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		if (!battery->battery_valid)
@@ -1277,11 +1278,11 @@ static void get_battery_capacity(struct s2m_chg_manager_info *battery)
 	else if (new_capacity < 0)
 		new_capacity = 0;
 
-	if(!(battery->pdata->erd))
-		battery->capacity = FAKE_BAT_LEVEL;
-	else
-		battery->capacity = new_capacity;
-
+#if IS_ENABLED(CONFIG_FAKE_BATT)
+	battery->capacity = FAKE_BAT_LEVEL;
+#else
+	battery->capacity = new_capacity;
+#endif
 	dev_info(battery->dev, "%s: SOC(%u), rawsoc(%d), max_rawsoc(%u).\n",
 		__func__, battery->capacity, raw_soc, battery->max_rawsoc);
 }
@@ -1670,6 +1671,39 @@ static void check_charging_full(struct s2m_chg_manager_info *battery)
 	}
 }
 
+#if IS_ENABLED(CONFIG_FAKE_BATT)
+static void bat_monitor_work(struct work_struct *work)
+{
+	struct s2m_chg_manager_info *battery = container_of(work, struct s2m_chg_manager_info, monitor_work.work);
+
+	if (battery->monitor_trigger == false) {
+		pr_info("%s: monitor_trigger is false", __func__);
+
+		goto fault_trigger;
+	}
+
+	pr_info("[FAKE]%s: start monitoring\n", __func__);
+
+	battery->battery_valid = false;
+
+	get_battery_info(battery);
+
+	check_health(battery);
+
+	check_charging_full(battery);
+
+	power_supply_changed(battery->psy_battery);
+
+	pr_err("%s: Status(%s), Health(%s), Cable(%d), Recharging(%d))\n", __func__,
+			bat_status_str[battery->status], health_str[battery->health],
+			battery->cable_type, battery->is_recharging);
+
+fault_trigger:
+	alarm_cancel(&battery->monitor_alarm);
+	alarm_start_relative(&battery->monitor_alarm, ktime_set(battery->monitor_alarm_interval, 0));
+	s2m_wake_unlock(battery->monitor_ws);
+}
+#else
 static void bat_monitor_work(struct work_struct *work)
 {
 	struct s2m_chg_manager_info *battery = container_of(work, struct s2m_chg_manager_info, monitor_work.work);
@@ -1683,27 +1717,21 @@ static void bat_monitor_work(struct work_struct *work)
 		goto fault_trigger;
 	}
 
-	if (!(battery->pdata->erd)) {
-		pr_info("[FAKE] %s: start monitoring\n", __func__);
+	pr_info("%s: start monitoring\n", __func__);
+
+	psy = power_supply_get_by_name(battery->pdata->charger_name);
+	if (!psy)
+		return;
+	ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_PRESENT, &value);
+	if (ret < 0)
+		pr_err("%s: Fail to execute property\n", __func__);
+
+	if (!value.intval) {
 		battery->battery_valid = false;
-	} else {
-		pr_info("%s: start monitoring\n", __func__);
-
-		psy = power_supply_get_by_name(battery->pdata->charger_name);
-		if (!psy)
-			return;
-
-		ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_PRESENT, &value);
-		if (ret < 0)
-			pr_err("%s: Fail to execute property\n", __func__);
-
-		if (!value.intval) {
-			battery->battery_valid = false;
-			pr_info("%s: There is no battery, skip monitoring.\n", __func__);
-			goto continue_monitor;
-		} else
-			battery->battery_valid = true;
-	}
+		pr_info("%s: There is no battery, skip monitoring.\n", __func__);
+		goto continue_monitor;
+	} else
+		battery->battery_valid = true;
 
 	get_battery_info(battery);
 
@@ -1723,6 +1751,7 @@ fault_trigger:
 	alarm_start_relative(&battery->monitor_alarm, ktime_set(battery->monitor_alarm_interval, 0));
 	s2m_wake_unlock(battery->monitor_ws);
 }
+#endif
 
 #if IS_ENABLED(CONFIG_OF)
 static int s2m_chg_manager_parse_dt(struct device *dev, struct s2m_chg_manager_info *battery)
@@ -1735,7 +1764,6 @@ static int s2m_chg_manager_parse_dt(struct device *dev, struct s2m_chg_manager_i
 	u32 temp;
 	u32 default_input_current, default_charging_current, default_full_check_current;
 	size_t size;
-	uint32_t val;
 
 	if (!np) {
 		pr_info("%s np NULL(battery)\n", __func__);
@@ -1744,12 +1772,6 @@ static int s2m_chg_manager_parse_dt(struct device *dev, struct s2m_chg_manager_i
 	ret = of_property_read_string(np, "battery,vendor", (char const **)&pdata->vendor);
 	if (ret == 0)
 		pr_info("%s: Vendor is empty\n", __func__);
-
-	ret = of_property_read_u32(np, "ERD_board", &val);
-	if (ret == 0)
-		pdata->erd = 1;
-	else
-		pdata->erd = 0;
 
 	ret = of_property_read_string(np, "battery,charger_name", (char const **)&pdata->charger_name);
 	if (ret)
@@ -2396,18 +2418,18 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 	if (!psy)
 		pr_info("%s: there's no charger driver\n", __func__);
 	else {
-		if(!(battery->pdata->erd))
-			battery->battery_valid = false;
-		else{
-			ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_PRESENT, &value);
-			if (ret < 0)
-				pr_err("%s: Fail to execute property\n", __func__);
+#if IS_ENABLED(CONFIG_FAKE_BATT)
+		battery->battery_valid = false;
+#else
+		ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_PRESENT, &value);
+		if (ret < 0)
+			pr_err("%s: Fail to execute property\n", __func__);
 
-			if (!value.intval)
-				battery->battery_valid = false;
-			else
-				battery->battery_valid = true;
-		}
+		if (!value.intval)
+			battery->battery_valid = false;
+		else
+			battery->battery_valid = true;
+#endif
 	}
 
 #if IS_ENABLED(CONFIG_BAT_TEMP)
