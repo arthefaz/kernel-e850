@@ -29,7 +29,7 @@ enum dw_mci_exynos_type {
 	DW_MCI_TYPE_EXYNOS7,
 	DW_MCI_TYPE_EXYNOS7_SMU,
 };
-#if 0
+
 /* Exynos implementation specific driver private data */
 struct dw_mci_exynos_priv_data {
 	enum dw_mci_exynos_type		ctrl_type;
@@ -43,7 +43,6 @@ struct dw_mci_exynos_priv_data {
 	u32				saved_dqs_en;
 	u32				saved_strobe_ctrl;
 };
-#endif
 
 static struct dw_mci_exynos_compatible {
 	char				*compatible;
