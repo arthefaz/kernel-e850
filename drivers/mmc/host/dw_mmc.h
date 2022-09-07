@@ -16,9 +16,6 @@
 #include <linux/reset.h>
 #include <linux/interrupt.h>
 
-/* Enables ultra low power mode */
-#define DW_MCI_QUIRK_ENABLE_ULP                 BIT(6)
-
 enum dw_mci_state {
 	STATE_IDLE = 0,
 	STATE_SENDING_CMD,
@@ -252,7 +249,6 @@ struct dma_pdata;
 struct dw_mci_board {
 	unsigned int bus_hz; /* Clock speed at the cclk_in pad */
 
-	u32 quirks;             /* Workaround / Quirk flags */
 	u32 caps;	/* Capabilities */
 	u32 caps2;	/* More capabilities */
 	u32 pm_caps;	/* PM capabilities */
