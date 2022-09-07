@@ -129,6 +129,11 @@ config EXYNOS_PM_DOMAINS
 	bool "Exynos PM domains" if COMPILE_TEST
 	depends on (ARCH_EXYNOS && PM_GENERIC_DOMAINS) || COMPILE_TEST
 
+config EXYNOS_PM
+	tristate "Enable Exynos PM"
+	help
+	Support EXYNOS_PM for Exynos SoC.
+
 config SAMSUNG_PM_DEBUG
 	bool "Samsung PM Suspend debug"
 	depends on PM && DEBUG_KERNEL
