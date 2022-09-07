@@ -2628,7 +2628,7 @@ static const struct file_operations proc_fops_serial_log = {
 };
 #endif
 
-#if IS_ENABLED(CONFIG_EXYNOS_CPUPM)
+#if 0
 static int exynos_serial_notifier(struct notifier_block *self,
 				unsigned long cmd, void *v)
 {
@@ -3521,7 +3521,7 @@ static int __init exynos_serial_modinit(void)
 		return ret;
 	}
 
-#if IS_ENABLED(CONFIG_EXYNOS_CPUPM)
+#if 0
 	exynos_cpupm_notifier_register(&exynos_serial_notifier_block);
 #endif
 	register_reboot_notifier(&exynos_serial_reboot_notifier_block);

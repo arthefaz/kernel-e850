@@ -19,7 +19,8 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 
-#include <linux/ems.h>
+//#include <linux/ems.h>
+#include <linux/sched/clock.h>
 
 #include <trace/hooks/cpuidle.h>
 #include <trace/events/ipi.h>
@@ -181,6 +182,7 @@ static void do_nothing(void *unused) { }
 /******************************************************************************
  *                                  CPUPM Debug                               *
  ******************************************************************************/
+
 #define DEBUG_INFO_BUF_SIZE 1000
 struct cpupm_debug_info {
 	int cpu;
@@ -753,9 +755,10 @@ static int cpus_last_core_detecting(int request_cpu, const struct cpumask *cpus)
 	for_each_cpu_and(cpu, cpu_online_mask, cpus) {
 		if (cpu == request_cpu)
 			continue;
-
+/*
 		if (cal_is_lastcore_detecting(cpu))
 			return -EBUSY;
+*/
 	}
 
 	return 0;
@@ -881,10 +884,12 @@ static void cluster_enable(struct power_mode *mode)
 static bool system_disabled;
 static int system_disable(struct power_mode *mode)
 {
+/*
 	if (mode->type == POWERMODE_TYPE_DSU)
 		acpm_noti_dsu_cpd(true);
 	else
 		acpm_noti_dsu_cpd(false);
+*/
 
 	if (system_disabled)
 		return 0;
@@ -936,7 +941,7 @@ static void enter_power_mode(int cpu, struct power_mode *mode, ktime_t now)
 	}
 
 	cpupm_debug(cpu, -1, mode->type, 1);
-	dbg_snapshot_cpuidle(mode->name, 0, 0, DSS_FLAG_IN);
+	//dbg_snapshot_cpuidle(mode->name, 0, 0, DSS_FLAG_IN);
 	set_state_idle(mode);
 
 	cpupm_profile_begin(&mode->stat, now);
@@ -952,7 +957,7 @@ exit_power_mode(int cpu, struct power_mode *mode, int cancel, ktime_t now)
 	 * first cpu exiting from power mode.
 	 */
 	set_state_busy(mode);
-	dbg_snapshot_cpuidle(mode->name, 0, 0, DSS_FLAG_OUT);
+	//dbg_snapshot_cpuidle(mode->name, 0, 0, DSS_FLAG_OUT);
 	cpupm_debug(cpu, -1, mode->type, 0);
 
 	switch (mode->type) {
@@ -1090,7 +1095,7 @@ static void idle_latency_measure_start(int target_cpu)
 	idle_lmg.measurer_cpu = cpumask_first(&mask);
 
 	/* keep target cpu dle */
-	ecs_request("idle_latency", &mask);
+	//ecs_request("idle_latency", &mask);
 
 	cpumask_clear(&idle_lmg.target);
 	cpumask_set_cpu(target_cpu, &idle_lmg.target);
@@ -1125,14 +1130,14 @@ static void idle_latency_work_fn(struct work_struct *work)
 		return;
 	}
 
-	ecs_request("idle_latency", cpu_possible_mask);
+	//ecs_request("idle_latency", cpu_possible_mask);
 	idle_lmg.measuring = 0;
 }
 
 static void idle_latency_init(void)
 {
 	INIT_DELAYED_WORK(&idle_lmg.work, idle_latency_work_fn);
-	ecs_request_register("idle_latency", cpu_possible_mask);
+	//ecs_request_register("idle_latency", cpu_possible_mask);
 }
 
 /******************************************************************************
@@ -1361,7 +1366,7 @@ static void android_vh_cpu_idle_enter(void *data, int *state,
 	cpupm_profile_begin(&pm->stat[pm->entered_state], now);
 
 	target_state = &drv->states[pm->entered_state];
-	dbg_snapshot_cpuidle(target_state->desc, 0, 0, DSS_FLAG_IN);
+	//dbg_snapshot_cpuidle(target_state->desc, 0, 0, DSS_FLAG_IN);
 	pm->entered_time = ns_to_ktime(local_clock());
 
 	/* Only handle requests except C1 */
@@ -1397,7 +1402,7 @@ static void android_vh_cpu_idle_exit(void *data, int state,
 	target_state = &drv->states[pm->entered_state];
 	time_end = ns_to_ktime(local_clock());
 	residency = (int)ktime_to_us(ktime_sub(time_end, time_start));
-	dbg_snapshot_cpuidle(target_state->desc, 0, residency, cancel ? state : DSS_FLAG_OUT);
+	//dbg_snapshot_cpuidle(target_state->desc, 0, residency, cancel ? state : DSS_FLAG_OUT);
 }
 
 static void ipi_raise(void *data, const struct cpumask *target,

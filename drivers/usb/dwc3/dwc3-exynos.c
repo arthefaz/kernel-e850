@@ -1217,7 +1217,7 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	exynos->dev = dev;
 
 	if (fixed_usb_idle_ip_index == 0) {
-		exynos->idle_ip_index = exynos_get_idle_ip_index(dev_name(dev));
+		exynos->idle_ip_index = exynos_get_idle_ip_index(dev_name(dev), 0);
 		pr_info("%s, usb idle ip = %d\n", __func__, exynos->idle_ip_index);
 		fixed_usb_idle_ip_index = exynos->idle_ip_index;
 		/* Dose it need?? */
