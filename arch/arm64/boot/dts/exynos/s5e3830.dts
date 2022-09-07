@@ -273,6 +273,18 @@
 		interrupts = <GIC_SPI INTREQ__GPIO_PERI IRQ_TYPE_LEVEL_HIGH>;
 	};
 
+	exynos-pmu {
+                compatible = "samsung,exynos-pmu";
+                samsung,syscon-phandle = <&pmu_system_controller>;
+                reg = <0x0 0x11860000 0x10000>;
+                reg-names = "pmu_alive";
+        };
+
+        pmu_system_controller: system-controller@11860000 {
+                compatible = "samsung,exynos3830-pmu", "syscon";
+                reg = <0x0 0x11860000 0x10000>;
+        };
+
 	acpm {
 		compatible = "samsung,exynos-acpm";
 		#address-cells = <2>;
