@@ -13,6 +13,8 @@
  * published by the Free Software Foundation.
  */
 
+#include <dt-bindings/soc/samsung/cpupm.h>
+
 / {
 
 	#define CPU_CL0 "0-3"
@@ -60,49 +62,71 @@
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0000>;
 			enable-method = "psci";
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu1: cpu@0001 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0001>;
 			enable-method = "psci";
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu2: cpu@0002 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0002>;
 			enable-method = "psci";
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu3: cpu@0003 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0003>;
 			enable-method = "psci";
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu4: cpu@0004 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0100>;
 			enable-method = "psci";
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu5: cpu@0005 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0101>;
 			enable-method = "psci";
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu6: cpu@0006 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0102>;
 			enable-method = "psci";
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu7: cpu@0007 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
 			reg = <0x0 0x0103>;
 			enable-method = "psci";
+			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
+	};
+
+	idle-states {
+		entry-method = "arm,psci";
+
+		ANANKE_CPU_SLEEP: ananke-cpu-sleep {
+			  idle-state-name = "c2";
+			  compatible = "arm,idle-state";
+			  arm,psci-suspend-param = <0x0010000>;
+			  entry-latency-us = <70>;
+			  exit-latency-us = <160>;
+			  min-residency-us = <2000>;
+			  status = "okay";
+		  };
 	};
 
 	psci {
@@ -256,6 +280,36 @@
 				dm-type = <DM_MIF>;
 				ect-name = "dvfs_cpucl1";
 			};
+		};
+	};
+
+	exynos-cpupm {
+		compatible = "samsung,exynos-cpupm";
+		status = "okay";
+
+		cpd_cl0 {
+			device_type ="cpupm";
+			target-residency = <10000>;
+			type = <POWERMODE_TYPE_CLUSTER>;
+			cal-id = <0>;
+			siblings = CPU_CL0;
+		};
+
+		cpd_cl1 {
+			device_type = "cpupm";
+			target-residency = <10000>;
+			type = <POWERMODE_TYPE_CLUSTER>;
+			cal-id = <1>;
+			siblings = CPU_CL1;
+			entry-allowed = CPU_CL1;
+		};
+
+		sicd {
+			device_type = "cpupm";
+			target-residency = <10000>;
+			type = <POWERMODE_TYPE_SYSTEM>;
+			siblings = CPU_ALL;
+			entry-allowed = CPU_ALL;
 		};
 	};
 
