@@ -41,26 +41,22 @@
 				compatible = "log_platform";
 				reg = <0 0xF0210000 0x400000>;
 			};
-                        log_s2d: log_s2d {
-				compatible = "log_s2d";
-                                reg = <0 0xF0610000 0x1500000>;
-                        };
                         log_first: log_first {
 				compatible = "log_first";
-				reg = <0 0xF0B10000 0x200000>;
+				reg = <0 0xF0610000 0x200000>;
                         };
 			log_kevents: log_kevents {
 				compatible = "log_kevents";
-				reg = <0 0xF0D10000 0x500000>;
+				reg = <0 0xF0810000 0x500000>;
 			};
 			log_kevents_small: log_kevents_small {
 				compatible = "log_kevents";
-				reg = <0 0xF0D10000 0xA6000>;
+				reg = <0 0xF0810000 0xA6000>;
 				status = "no";
 			};
 			log_arrdumpreset: log_arrdumpreset {
 				compatible = "log_arrdumpreset";
-				reg = <0 0xF0210000 0xC30000>;
+				reg = <0 0xF0D10000 0xC30000>;
 			};
                 };
 
