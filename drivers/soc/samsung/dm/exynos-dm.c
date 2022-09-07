@@ -466,7 +466,17 @@ static void exynos_dm_topological_sort(void)
 	struct exynos_dm_constraint *t = NULL;
 
 	indegree = kmalloc(sizeof(int) * exynos_dm->domain_count, GFP_KERNEL);
+	if (!indegree) {
+		pr_err("%s: Failed to allocate memory\n", __func__);
+		return;
+	}
+
 	searchQ = kmalloc(sizeof(int) * exynos_dm->domain_count, GFP_KERNEL);
+	if (!searchQ) {
+		pr_err("%s: Failed to allocate memory\n", __func__);
+		kfree(indegree);
+		return;
+	}
 
 	for (i = 0; i < exynos_dm->domain_count; i++) {
 		// calculate Indegree of each domain
@@ -503,6 +513,9 @@ static void exynos_dm_topological_sort(void)
 
 	// Size of result queue means the number of domains which has constraint
 	exynos_dm->constraint_domain_count = r_head;
+
+	kfree(indegree);
+	kfree(searchQ);
 }
 
 int exynos_dm_change_freq_table(struct exynos_dm_constraint *constraint, int idx)
