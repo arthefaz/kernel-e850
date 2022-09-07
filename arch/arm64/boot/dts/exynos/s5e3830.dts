@@ -78,6 +78,11 @@
 		reg = <0x0 0x10000000 0x100>;
 	};
 
+	reboot {
+		compatible = "exynos,reboot-v1";
+		reg = <0x0 0x11860000 0x4000>;
+	};
+
 	gic:interrupt-controller@12a00000 {
 		compatible = "arm,cortex-a15-gic", "arm,cortex-a9-gic";
 		#interrupt-cells = <3>;
