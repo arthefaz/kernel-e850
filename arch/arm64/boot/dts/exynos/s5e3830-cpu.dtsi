@@ -308,4 +308,91 @@
 		status = "okay";
 	};
 
+	exynos-ufcc {
+		compatible = "samsung,exynos-ufcc";
+		status = "okay";
+
+		ucc {
+			ucc-config0 {
+				index = <0>;
+				cstate = "4-7";
+			};
+			ucc-config1 {
+				index = <1>;
+				cstate = "7";
+			};
+			ucc-config2 {
+				index = <2>;
+			};
+		};
+
+		ufc {
+			/* Ctrl Type */
+			#define MIN_LIMIT               0
+			#define MIN_LIMIT_WO_BOOST      1
+			#define MAX_LIMIT               2
+
+			table-col = <5>;
+			boot-domain-auto-table;
+
+			domain@0 {
+				device_type = "ufc-domain";
+				shared-cpus = CPU_CL0;
+				table-col-idx = <2>;
+			};
+			domain@1 {
+				device_type = "ufc-domain";
+				shared-cpus = CPU_CL1;
+				table-col-idx = <1>;
+				allow-disable-cpus;
+			};
+
+			table-info {
+				table-order = "vfreq",
+					"lit1",
+					"lit0",
+					"emstune",
+					"strict";
+			};
+
+			max-limit {
+				device_type = "ufc-table";
+				ctrl-type = <MAX_LIMIT>;
+				/* VFREQ    LIT1   LIT0   EMS STRICT */
+				table = < 2002000 2002000 2002000 0 0
+					  1846000 1846000 1846000 0 0
+					  1742000 1742000 1742000 0 0
+					  1586000 1586000 1586000 0 0
+					  1456000 1456000 1456000 0 0
+					  1300000 1300000 1300000 0 0
+					  1157000 1157000 1157000 0 0
+					  1053000 1053000 1053000 0 0
+					   949000  949000  949000 0 0
+					   806000  806000  806000 0 0
+					   650000  650000  650000 0 0
+					   546000  546000  546000 0 0 >;
+				/* filled little freq automatically */
+			};
+			min-limit {
+				device_type = "ufc-table";
+				ctrl-type = <MIN_LIMIT>;
+
+				/* VFREQ   LIT1     LIT0   EMS STRICT */
+				table = < 2002000 2002000 2002000 2 1
+					  1846000 1846000 1846000 1 1
+					  1742000 1742000 1742000 1 1
+					  1586000 1586000 1586000 1 1
+					  1456000 1456000 1456000 1 1
+					  1300000 1300000 1300000 1 1
+					  1157000 1157000 1157000 1 1
+					  1053000 1053000 1053000 1 1
+					   949000  949000  949000 1 1
+					   806000  806000  806000 1 1
+					   650000  650000  650000 0 1
+					   546000  546000  546000 0 1 >;
+				/* filled little freq automatically */
+			};
+		};
+	};
+
 };
