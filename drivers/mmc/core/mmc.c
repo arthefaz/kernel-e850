@@ -1413,7 +1413,7 @@ static int mmc_select_hs400es(struct mmc_card *card)
 	}
 
 	/* Set host controller to HS400 timing and frequency */
-	mmc_set_timing(host, MMC_TIMING_MMC_HS400_ES);
+	mmc_set_timing(host, MMC_TIMING_MMC_HS400);
 
 	/* Controller enable enhanced strobe function */
 	host->ios.enhanced_strobe = true;
