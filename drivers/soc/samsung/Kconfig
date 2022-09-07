@@ -68,6 +68,12 @@ config EXYNOS_SDM
 	help
 	  Exynos Security Dump Manager
 
+config EXYNOS_CPUPM
+	tristate "Exynos CPU Power Management driver"
+	depends on ARCH_EXYNOS && PMUCAL
+	help
+	Support Exynos CPU Power Control for EXYNOS SoC.
+
 source "drivers/soc/samsung/acpm/Kconfig"
 
 config ACPM_DVFS

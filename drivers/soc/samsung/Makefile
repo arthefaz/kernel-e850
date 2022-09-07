@@ -53,3 +53,6 @@ obj-$(CONFIG_EXYNOS_DVFS_MANAGER)       += dm/
 
 # EXYNOS_PM_QOS
 obj-$(CONFIG_EXYNOS_PM_QOS)	+= pm_qos/
+
+# CPU Power Management
+obj-$(CONFIG_EXYNOS_CPUPM)     += exynos-cpupm.o
