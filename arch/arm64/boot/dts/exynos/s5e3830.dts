@@ -59,7 +59,7 @@
                         };
 
                         chosen {
-				bootargs = "earlycon=exynos4210,0x13820000 console=ttySAC0,115200n8 androidboot.console=ttySAC0 androidboot.boot_devices=12100000.dwmmc0 clocksource=arch_sys_counter clk_ignore_unused androidboot.hardware=s5e3830 printk.devkmsg=on";
+				bootargs = "earlycon=exynos4210,0x13820000 console=ttySAC0,115200n8 androidboot.console=ttySAC0 s3c2410_wdt.tmr_atboot=1  androidboot.boot_devices=12100000.dwmmc0 clocksource=arch_sys_counter clk_ignore_unused androidboot.hardware=s5e3830 printk.devkmsg=on";
                                 linux,initrd-start = <0x84000000>;
                                 linux,initrd-end = <0x847FFFFF>;
                         };
@@ -324,4 +324,28 @@
 	       compatible = "samsung,exynos3830-pmu", "syscon";
 	       reg = <0x0 0x11860000 0x10000>;
 	};
+
+        watchdog_cl0@10050000 {
+                compatible = "samsung,exynos3-v1-wdt";
+                reg = <0x0 0x10050000 0x100>;
+                interrupts = <GIC_SPI INTREQ__WDT_0 IRQ_TYPE_LEVEL_HIGH>;
+                clocks = <&clock OSCCLK>, <&clock GATE_WDT_0_QCH>;
+                clock-names = "rate_watchdog", "gate_watchdog";
+                timeout-sec = <30>;
+                samsung,syscon-phandle = <&pmu_system_controller>;
+                index = <0>; /* if little cluster then index is 0*/
+       };
+
+       watchdog_cl1@10060000 {
+                compatible = "samsung,exynos3-v2-wdt";
+                reg = <0x0 0x10060000 0x100>;
+                interrupts = <GIC_SPI INTREQ__WDT_1 IRQ_TYPE_LEVEL_HIGH>;
+                clocks = <&clock OSCCLK>, <&clock GATE_WDT_1_QCH>;
+                clock-names = "rate_watchdog", "gate_watchdog";
+                timeout-sec = <30>;
+                samsung,syscon-phandle = <&pmu_system_controller>;
+                index = <1>; /* if little cluster then index is 0*/
+                use_multistage_wdt; /* Use FIQ debug watchdog */
+      };
+
 };
