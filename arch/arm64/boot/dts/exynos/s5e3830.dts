@@ -581,4 +581,116 @@
 		};
 	};
 
+	exynos-pm {
+		compatible = "samsung,exynos-pm";
+		reg = <0x0 0x11850000 0x1000>,
+		    <0x0 0x12a01200 0x100>,
+		    <0x0 0x11a50000 0x2000>;
+		reg-names = "gpio_alive_base",
+			"gicd_ispendrn_base",
+			"i3c_base";
+		num-eint = <16>;
+		num-gic = <16>;
+		suspend_mode_idx = <8>;         /* SYS_SLEEP */
+		suspend_psci_idx = <1024>;      /* PSCI_SYSTEM_SLEEP */
+
+		usbl2_suspend_available = <0>;  /* SYS_SLEEP_USBL2 */
+		usbl2_suspend_mode_idx = <12>;  /* PSCI_SYSTEM_SLEEP */
+
+		/* WAKEUP_STAT,      WAKEUP2_STAT*/
+		wakeup_stat = <0x3950>,         <0x3954>;
+
+		wake_lock = <0>;		/* 1: held wake_lock */
+
+		vgpio_tx_monitor = <0x1700>;
+		wakeup_stats {
+			wakeup_stat {
+				ws-name =
+					"RTC_ALARM",		/* [ 0] */
+					"RTC_TICK",		/* [ 1] */
+					"TRTC_ALARM",		/* [ 2] */
+					"TRTC_TICK",		/* [ 3] */
+					"RESERVED",		/* [ 4] */
+					"CMGP2PMU_AP_EINT0",	/* [ 5] */
+					"CMGP2PMU_AP_EINT1",	/* [ 6] */
+					"AUD_ABOX_GIC400",	/* [ 7] */
+					"MAILBOX_CHUB2AP",	/* [ 8] */
+					"MAILBOX_GNSS2AP",	/* [ 9] */
+					"MAILBOX_WLBT2AP",	/* [10] */
+					"MAILBOX_APM2AP",	/* [11] */
+					"MAILBOX_CP2AP",	/* [12] */
+					"S_MAILBOX_CP2AP",	/* [13] */
+					"CHUB_WDT",		/* [14] */
+					"EINT",			/* [15] */
+					"USB_REWA",		/* [16] */
+					"USB20",		/* [17] */
+					"MMC_EMBD",		/* [18] */
+					"MMC_CARD",		/* [19] */
+					"TIMER",		/* [20] */
+					"CP_RESET_REQ",		/* [21] */
+					"GNSS_RESET_REQ",	/* [22] */
+					"GNSS_ACTIVE",		/* [23] */
+					"GNSS_WAKEUP_REQ",	/* [24] */
+					"WLBT_RESET_REQ",	/* [25] */
+					"WLBT_ACTIVE",		/* [26] */
+					"CLUSTER0_CPU0_nIRQ",	/* [27] */
+					"CLUSTER0_CPU1_nIRQ",	/* [28] */
+					"CLUSTER0_CPU2_nIRQ",	/* [29] */
+					"CLUSTER0_CPU3_nIRQ",	/* [30] */
+					"RESERVED";		/* [31] */
+			};
+			wakeup_stat2 {
+				ws-name =
+					"PMIC_CODEC_IRQ",	/* [ 0] */
+					"PMIC_IRQ",		/* [ 1] */
+					"CLUSTER1_CPU0_nIRQ",	/* [ 2] */
+					"CLUSTER1_CPU1_nIRQ",	/* [ 3] */
+					"CLUSTER1_CPU2_nIRQ",	/* [ 4] */
+					"CLUSTER1_CPU3_nIRQ";	/* [ 5] */
+			};
+		};
+		debug_subsystem {
+			sfr-name =
+				"CP_OUT",
+				"GNSS_OUT",
+				"WLBT_OUT",
+				"MIF_OUT",
+				"CHUB_STATES";
+			sfr-offset =
+				<0x3020>,
+				<0x30a0>,
+				<0x3120>,
+				<0x3820>,
+				<0x1f88>;
+		};
+	};
+
+	exynos-powermode {
+		wakeup-masks {
+			/*
+			 * wakeup_mask configuration
+			 *	        SICD		SICD_CPD	AFTR		STOP
+			 *              LPD		LPA		ALPA		DSTOP
+			 *              SLEEP		SLEEP_VTS_ON	SLEEP_AUD_ON	FAPO
+			 *		USB_L2		HSI2ON
+			 */
+			wakeup-mask {
+				mask = <0xffffffff>,	<0x0>,		<0x0>,		<0x0>,
+				       <0x0>,		<0x0>,		<0x0>,		<0x0>,
+				       <0x0360ffef>,	<0x8007ff6f>,	<0x8007ff6f>,	<0x0>,
+				       <0x8007ff6f>,	<0x8007ff6f>;
+				mask-offset = <0x3944>;
+				stat-offset = <0x3950>;
+			};
+			wakeup-mask2 {
+				mask = <0x3e1e>,	<0x0>,		<0x0>,		<0x0>,
+				       <0x0>,		<0x0>,		<0x0>,		<0x0>,
+				       <0x0>,	<0x3e1e>,	<0x3e1e>,	<0x0>,
+				       <0x3e1e>,	<0x3e1e>;
+				mask-offset = <0x3964>;
+				stat-offset = <0x3954>;
+			};
+		};
+	};
+
 };
