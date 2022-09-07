@@ -24,7 +24,7 @@
 #include <linux/ems.h>
 
 #include <soc/samsung/cpu_cooling.h>
-#include <soc/samsung/exynos/debug-snapshot.h>
+#include <soc/samsung/debug-snapshot.h>
 #include <soc/samsung/cal-if.h>
 #include <soc/samsung/ect_parser.h>
 #include <soc/samsung/freq-qos-tracer.h>
@@ -154,7 +154,7 @@ static int scale_fastpath(struct exynos_cpufreq_domain *domain,
 
 	debug_pre_scale(domain, target_freq);
 
-	ret = cal_dfs_set_rate_fast(domain->cal_id, target_freq);
+	ret = cal_dfs_set_rate(domain->cal_id, target_freq);
 
 	/*
 	 * In fastpath, frequench change done event is delivered by
@@ -810,10 +810,10 @@ static int init_dm_constraint(struct exynos_cpufreq_domain *domain,
 		} else
 			c->freq_table = dm_table;
 
-		if (c->dm_slave == DM_DSU) {
+		/*if (c->dm_slave == DM_DSU) {
 			et_register_dsu_constraint(cpumask_any(&domain->cpus),
 					dm_table, domain->table_size);
-		}
+		}*/
 	}
 
 	return 0;
@@ -967,7 +967,7 @@ static int exynos_cpufreq_cpu_down_callback(unsigned int cpu)
 /******************************************************************************
  *                               NOTIFIER HANDLER                             *
  ******************************************************************************/
-#if IS_ENABLED(CONFIG_EXYNOS_DVFS_MANAGER)
+/*#if IS_ENABLED(CONFIG_EXYNOS_DVFS_MANAGER)
 static int exynos_cpufreq_fast_switch_notifier(struct notifier_block *notifier,
 				       unsigned long domain_id, void *data)
 {
@@ -993,7 +993,7 @@ static int exynos_cpufreq_fast_switch_notifier(struct notifier_block *notifier,
 static struct notifier_block exynos_cpufreq_fast_switch_nb = {
 	.notifier_call = exynos_cpufreq_fast_switch_notifier,
 };
-#endif
+#endif*/
 
 static int exynos_cpufreq_pm_notifier(struct notifier_block *notifier,
 				       unsigned long pm_event, void *v)
@@ -1523,9 +1523,9 @@ static int exynos_cpufreq_probe(struct platform_device *pdev)
 				exynos_cpufreq_cpu_up_callback,
 				exynos_cpufreq_cpu_down_callback);
 
-#if IS_ENABLED(CONFIG_EXYNOS_DVFS_MANAGER)
+/*#if IS_ENABLED(CONFIG_EXYNOS_DVFS_MANAGER)
 	exynos_dm_fast_switch_notifier_register(&exynos_cpufreq_fast_switch_nb);
-#endif
+#endif*/
 
 	register_pm_notifier(&exynos_cpufreq_pm);
 

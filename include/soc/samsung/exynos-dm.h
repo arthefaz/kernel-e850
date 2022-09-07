@@ -61,9 +61,9 @@ struct exynos_dm_constraint {
 	enum exynos_constraint_type	constraint_type;
 	char				dm_type_name[EXYNOS_DM_TYPE_NAME_LEN];
 	struct exynos_dm_freq		*freq_table;
-	struct exynos_dm_freq		*variable_freq_table[2];
+	struct exynos_dm_freq		**variable_freq_table;
 	bool				support_variable_freq_table;
-
+	u32				num_table_index;
 	u32					const_freq;
 	u32					gov_freq;
 

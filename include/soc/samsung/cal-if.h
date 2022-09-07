@@ -53,6 +53,7 @@ extern unsigned long cal_dfs_cached_get_rate(unsigned int id);
 extern unsigned long cal_dfs_get_rate(unsigned int id);
 extern int cal_dfs_get_rate_table(unsigned int id, unsigned long *table);
 extern int cal_dfs_get_asv_table(unsigned int id, unsigned int *table);
+extern int cal_dfs_get_freq_volt_table(unsigned int id, void *table, int size);
 extern int cal_dfs_get_bigturbo_max_freq(unsigned int *table);
 extern unsigned int cal_dfs_get_boot_freq(unsigned int id);
 extern unsigned int cal_dfs_get_resume_freq(unsigned int id);

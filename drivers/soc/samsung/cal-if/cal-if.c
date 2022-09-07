@@ -361,6 +361,12 @@ int cal_dfs_get_asv_table(unsigned int id, unsigned int *table)
 }
 EXPORT_SYMBOL_GPL(cal_dfs_get_asv_table);
 
+int cal_dfs_get_freq_volt_table(unsigned int id, void *table, int size)
+{
+        return fvmap_get_freq_volt_table(id, table, size);
+}
+EXPORT_SYMBOL_GPL(cal_dfs_get_freq_volt_table);
+
 void cal_dfs_set_volt_margin(unsigned int id, int volt)
 {
 	if (IS_ACPM_VCLK(id))

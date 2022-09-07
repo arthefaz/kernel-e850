@@ -153,7 +153,6 @@ static const struct attribute_group percent_margin_group = {
 	.attrs = percent_margin_attrs,
 };
 
-#if 0
 unsigned int dvfs_calibrate_voltage(unsigned int rate_target, unsigned int rate_up,
 		unsigned int rate_down, unsigned int volt_up, unsigned int volt_down)
 {
@@ -178,7 +177,6 @@ unsigned int dvfs_calibrate_voltage(unsigned int rate_target, unsigned int rate_
 
 	return ret;
 }
-
 int fvmap_get_freq_volt_table(unsigned int id, void *freq_volt_table, unsigned int table_size)
 {
 	struct fvmap_header *fvmap_header = fvmap_base;
@@ -226,6 +224,7 @@ int fvmap_get_freq_volt_table(unsigned int id, void *freq_volt_table, unsigned i
 }
 EXPORT_SYMBOL_GPL(fvmap_get_freq_volt_table);
 
+#if 0
 int fvmap_get_raw_voltage_table(unsigned int id)
 {
 	struct fvmap_header *fvmap_header;
