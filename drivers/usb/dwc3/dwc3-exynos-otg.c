@@ -1415,8 +1415,8 @@ int dwc3_exynos_otg_init(struct dwc3 *dwc, struct dwc3_exynos *exynos)
 		dotg->pm_qos_hsi0_val = 0;
 	} else {
 #if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
-		exynos_pm_qos_add_request(&dotg->pm_qos_hsi0_req,
-					PM_QOS_HSI0_THROUGHPUT, 0);
+//		exynos_pm_qos_add_request(&dotg->pm_qos_hsi0_req,
+//					PM_QOS_HSI0_THROUGHPUT, 0);
 #endif
 	}
 
