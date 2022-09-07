@@ -663,9 +663,6 @@
 				<0x3820>,
 				<0x1f88>;
 		};
-	};
-
-	exynos-powermode {
 		wakeup-masks {
 			/*
 			 * wakeup_mask configuration
@@ -692,5 +689,4 @@
 			};
 		};
 	};
-
 };
