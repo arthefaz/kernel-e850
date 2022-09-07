@@ -18,9 +18,12 @@
 
 #include <linux/types.h>
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <dt-bindings/soc/samsung/exynos-bts.h>
+#if IS_ENABLED(CONFIG_EXYNOS_PD)
 #include <soc/samsung/exynos-pd.h>
+#endif
 #include <soc/samsung/bts.h>
 
 #define NUM_CHANNEL     2

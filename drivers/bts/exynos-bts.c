@@ -19,7 +19,9 @@
 #include <linux/debugfs.h>
 #include <linux/syscore_ops.h>
 #include <linux/suspend.h>
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 #include <soc/samsung/exynos_pm_qos.h>
+#endif
 #include <soc/samsung/cal-if.h>
 #include <dt-bindings/soc/samsung/exynos-bts.h>
 
