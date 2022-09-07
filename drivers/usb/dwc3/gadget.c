@@ -817,7 +817,7 @@ static int dwc3_gadget_resize_tx_fifos(struct dwc3_ep *dep)
 			fifo_size = DWC31_GTXFIFOSIZ_TXFDEP(fifo_size);
 
 		dwc->last_fifo_depth -= fifo_size;
-		//return -ENOMEM;
+		return -ENOMEM;
 	}
 
 	dwc3_writel(dwc->regs, DWC3_GTXFIFOSIZ(dep->number >> 1), fifo_size);
