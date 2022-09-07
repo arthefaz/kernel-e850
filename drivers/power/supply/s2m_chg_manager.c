@@ -2577,4 +2577,4 @@ module_exit(s2m_chg_manager_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Samsung Electronics");
 MODULE_DESCRIPTION("Battery manager driver for S2M");
-MODULE_SOFTDEP("pre: i2c-exynos5 s2mc501_dc_module");
+MODULE_SOFTDEP("pre: i2c-exynos5 ifconn_notifier ifconn_manager s2mu106_fuelgauge");

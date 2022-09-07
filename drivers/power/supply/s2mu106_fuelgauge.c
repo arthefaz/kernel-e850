@@ -1790,5 +1790,5 @@ module_init(s2mu106_fuelgauge_init);
 module_exit(s2mu106_fuelgauge_exit);
 MODULE_DESCRIPTION("Samsung S2MU106 Fuel Gauge Driver");
 MODULE_AUTHOR("Samsung Electronics");
-MODULE_SOFTDEP("post: s2mu106_charger");
+MODULE_SOFTDEP("post: s2mu106_charger s2m_chg_manager");
 MODULE_LICENSE("GPL");
