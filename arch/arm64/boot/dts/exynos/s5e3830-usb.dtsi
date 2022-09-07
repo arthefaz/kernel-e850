@@ -26,8 +26,8 @@
 		ranges;
 		//power-domains = <&pd_hsi>;
 		status = "okay";
-		phys = <&usbdrd_phy0 0>, <&usbdrd_phy0 1>;
-		phy-names = "usb2-phy", "usb3-phy";
+		phys = <&usbdrd_phy0 0>;
+		phy-names = "usb2-phy";
 		interrupts = <0 INTREQ__USB20DRD_0 IRQ_TYPE_LEVEL_HIGH>;
 		tx-fifo-resize = <0>;
 		exynos,adj-sof-accuracy = <0>;
@@ -47,8 +47,8 @@
 			tx-fifo-resize = <0>;
 			is_not_vbus_pad = <1>;
 			enable_sprs_transfer = <1>;
-			phys = <&usbdrd_phy0 0>, <&usbdrd_phy0 1>;
-			phy-names = "usb2-phy", "usb3-phy";
+			phys = <&usbdrd_phy0 0>;
+			phy-names = "usb2-phy";
 			/* check susphy support */
 			xhci_l2_support = <0>;
 			/* support usb audio offloading: 1, if not: 0 */
