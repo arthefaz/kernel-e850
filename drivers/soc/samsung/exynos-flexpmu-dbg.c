@@ -595,6 +595,7 @@ void exynos_flexpmu_dbg_suspend_mif_req(void)
 		}
 	}
 }
+EXPORT_SYMBOL_GPL(exynos_flexpmu_dbg_suspend_mif_req);
 
 void exynos_flexpmu_dbg_resume_mif_req(void)
 {
@@ -657,6 +658,7 @@ void exynos_flexpmu_dbg_resume_mif_req(void)
 		}
 	}
 }
+EXPORT_SYMBOL_GPL(exynos_flexpmu_dbg_resume_mif_req);
 
 static int exynos_flexpmu_dbg_probe(struct platform_device *pdev)
 {

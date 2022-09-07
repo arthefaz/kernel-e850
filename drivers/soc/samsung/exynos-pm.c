@@ -79,6 +79,8 @@ struct exynos_pm_info {
 	u32 *dbg_subsystem_offset;
 	void __iomem *i3c_base;
 	u32 vgpio_tx_monitor;
+	struct wakeup_source *ws;
+	bool is_stay_awake;
 };
 static struct exynos_pm_info *pm_info;
 
@@ -93,6 +95,25 @@ struct exynos_pm_dbg {
 	unsigned int mif_req;
 };
 static struct exynos_pm_dbg *pm_dbg;
+
+static void exynos_print_wakeup_sources(int irq, const char *name)
+{
+	struct irq_desc *desc;
+
+	if (irq < 0) {
+		if (name)
+			pr_info("PM: Resume caused by SYSINT: %s\n", name);
+
+		return;
+	}
+
+	desc = irq_to_desc(irq);
+	if (desc && desc->action && desc->action->name)
+		pr_info("PM: Resume caused by IRQ %d, %s\n", irq,
+				desc->action->name);
+	else
+		pr_info("PM: Resume caused by IRQ %d\n", irq);
+}
 
 static void exynos_show_wakeup_reason_eint(void)
 {
@@ -122,10 +143,7 @@ static void exynos_show_wakeup_reason_eint(void)
 			gpio = exynos_eint_to_pin_num(i + bit);
 			irq = gpio_to_irq(gpio);
 
-#ifdef CONFIG_SUSPEND
-			log_wakeup_reason(irq);
-		//	update_wakeup_reason_stats(irq, i + bit);
-#endif
+			exynos_print_wakeup_sources(irq, NULL);
 			found = 1;
 		}
 	}
@@ -161,9 +179,8 @@ static void exynos_show_wakeup_reason_sysint(unsigned int stat,
 
 		if (!name)
 			continue;
-#ifdef CONFIG_SUSPEND
-		log_wakeup_reason_name(name);
-#endif
+
+		exynos_print_wakeup_sources(-1, name);
 	}
 }
 
@@ -264,8 +281,7 @@ static int __exynos_pm_notify(enum exynos_pm_event event, int nr_to_call, int *n
 {
 	int ret;
 
-	ret = __raw_notifier_call_chain(&exynos_pm_notifier_chain, event, NULL,
-		nr_to_call, nr_calls);
+	ret = raw_notifier_call_chain(&exynos_pm_notifier_chain, event, NULL);
 
 	return notifier_to_errno(ret);
 }
@@ -340,8 +356,8 @@ static int exynos_pm_syscore_suspend(void)
 	}
 
 	/* Send an IPI if test_early_wakeup flag is set */
-	if (pm_dbg->test_early_wakeup)
-		arch_send_call_function_single_ipi(0);
+//	if (pm_dbg->test_early_wakeup)
+//		arch_send_call_function_single_ipi(0);
 
 	pm_dbg->mifdn_cnt_prev = acpm_get_mifdn_count();
 	pm_info->apdn_cnt_prev = acpm_get_apsocdn_count();
@@ -433,9 +449,12 @@ bool is_test_usbl2_suspend_set(void)
 EXPORT_SYMBOL_GPL(is_test_usbl2_suspend_set);
 
 #ifdef CONFIG_DEBUG_FS
-static void __init exynos_pm_debugfs_init(void)
+static void exynos_pm_debugfs_init(void)
 {
-	struct dentry *root, *d;
+	struct dentry *root;
+#if 0
+	struct dentry *d;
+#endif
 
 	root = debugfs_create_dir("exynos-pm", NULL);
 	if (!root) {
@@ -443,6 +462,7 @@ static void __init exynos_pm_debugfs_init(void)
 		return;
 	}
 
+#if 0
 	d = debugfs_create_u32("test_early_wakeup", 0644, root, &pm_dbg->test_early_wakeup);
 	if (!d) {
 		pr_err("%s %s: could't create debugfs test_early_wakeup\n",
@@ -456,6 +476,7 @@ static void __init exynos_pm_debugfs_init(void)
 					EXYNOS_PM_PREFIX, __func__);
 		return;
 	}
+#endif
 }
 #endif
 
@@ -555,7 +576,7 @@ free_name:
 	return;
 }
 
-static __init int exynos_pm_drvinit(void)
+static int exynos_pm_drvinit(void)
 {
 	int ret;
 
@@ -650,12 +671,20 @@ static __init int exynos_pm_drvinit(void)
 		}
 
 		ret = of_property_read_u32(np, "wake_lock", &wake_lock);
-		if (ret)
+		if (ret) {
 			pr_info("%s %s: unabled to get wake_lock from DT\n",
 					EXYNOS_PM_PREFIX, __func__);
+		} else {
+			pm_info->ws = wakeup_source_register(NULL, "exynos-pm");
+			if (!pm_info->ws)
+				BUG();
 
-		if (wake_lock)
-			pm_wake_lock("exynos-pm_wake_lock");
+			pm_info->is_stay_awake = (bool)wake_lock;
+
+			if (pm_info->is_stay_awake)
+				__pm_stay_awake(pm_info->ws);
+		}
+
 		parse_dt_wakeup_stat_names(np);
 
 		parse_dt_debug_subsystem(np);
@@ -691,3 +720,5 @@ err_vgpio_tx_monitor:
 	return 0;
 }
 arch_initcall(exynos_pm_drvinit);
+
+MODULE_LICENSE("GPL");
