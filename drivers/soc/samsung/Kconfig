@@ -42,7 +42,7 @@ config CMUCAL
 	 Support CMUCAL for Exynos SoC.
 
 config EXYNOS_REBOOT
-       bool "Exynos Chip Reboot Driver Support"
+       tristate "Exynos Chip Reboot Driver Support"
        depends on ARCH_EXYNOS
 
 config CMUCAL_DEBUG

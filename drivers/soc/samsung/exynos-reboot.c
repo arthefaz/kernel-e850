@@ -9,33 +9,39 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-
+#include <linux/module.h>
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/input.h>
 #include <linux/delay.h>
+#include <linux/device.h>
+#include <linux/notifier.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/reboot.h>
 #include <linux/soc/samsung/exynos-soc.h>
-#include <linux/debug-snapshot.h>
+#include <soc/samsung/debug-snapshot.h>
 #ifdef CONFIG_EXYNOS_ACPM
 #include <soc/samsung/acpm_ipc_ctrl.h>
 #endif
+#include <soc/samsung/exynos-pmu.h>
+#include <soc/samsung/exynos-debug.h>
 #include <linux/mfd/samsung/s2mpu12-regulator.h>
 
 #define SWRESET				(0x2)
 #define SYSTEM_CONFIGURATION		(0x3a00)
 #define PS_HOLD_CONTROL			(0x030C)
 #define EXYNOS_PMU_SYSIP_DAT0		(0x0810)
+#define EXYNOS_PMU_DREXCAL7		(0x09BC)
 
 #define REBOOT_MODE_NORMAL		0x00
 #define REBOOT_MODE_CHARGE		0x0A
 #define REBOOT_MODE_FASTBOOT		0xFC
 #define REBOOT_MODE_RECOVERY		0xFF
 #define REBOOT_MODE_FACTORY		0xFD
+#define REBOOT_MODE_USBRECOVERY		0xFE
 
-extern void (*arm_pm_restart)(enum reboot_mode reboot_mode, const char *cmd);
+void (*__arm_pm_restart)(enum reboot_mode reboot_mode, const char *cmd);
 
 struct exynos_reboot_variant {
 	int ps_hold_reg;
@@ -46,6 +52,7 @@ struct exynos_reboot_variant {
 	void (*reboot)(enum reboot_mode mode, const char *cmd);
 	void (*power_off)(void);
 	void (*reset_control)(void);
+	int (*power_key_chk)(void);
 };
 
 static struct exynos_exynos_reboot {
@@ -100,7 +107,7 @@ static void exynos_power_off_v1(void)
 	}
 }
 
-static void exynos_restart_v1(enum reboot_mode mode, const char *cmd)
+int  exynos_restart_v1(struct notifier_block *this, unsigned long mode, void *cmd)
 {
 	const struct exynos_reboot_variant *variant = exynos_reboot.variant;
 	u32 reboot_mode = REBOOT_MODE_NORMAL;
@@ -121,6 +128,9 @@ static void exynos_restart_v1(enum reboot_mode mode, const char *cmd)
 		else if (!strcmp(cmd, "sfactory"))
 			reboot_mode = REBOOT_MODE_FACTORY;
 	}
+	if (!cmd)
+		reboot_mode = REBOOT_MODE_FASTBOOT;
+
 	writel(reboot_mode, (void *)((long)exynos_reboot.reg_base + variant->reboot_mode_reg));
 
 	if (variant->reset_control)
@@ -136,6 +146,7 @@ static void exynos_restart_v1(enum reboot_mode mode, const char *cmd)
 
 	/* Wait for S/W reset */
 	dbg_snapshot_spin_func();
+	return NOTIFY_DONE;
 }
 
 static ssize_t reset_reason_show(struct device *dev,
@@ -150,13 +161,20 @@ static struct attribute *exynos_reboot_attrs[] = {
 	NULL,
 };
 
+static struct notifier_block exynos_restart_nb = {
+        .notifier_call = exynos_restart_v1,
+        .priority = 128,
+};
+
 ATTRIBUTE_GROUPS(exynos_reboot);
 
 static int exynos_reboot_probe(struct platform_device *pdev)
 {
 	struct resource *res;
+	int err;
 
-	dev_set_socdata(&pdev->dev, "Exynos", "Reboot");
+
+	//dev_set_socdata(&pdev->dev, "Exynos", "Reboot");
 
 	exynos_reboot.dev = &pdev->dev;
 	exynos_reboot.variant = exynos_reboot_get_variant(pdev);
@@ -174,7 +192,7 @@ static int exynos_reboot_probe(struct platform_device *pdev)
 	}
 
 	if (exynos_reboot.variant->reboot) {
-		arm_pm_restart = exynos_reboot.variant->reboot;
+		__arm_pm_restart = exynos_reboot.variant->reboot;
 		dev_info(&pdev->dev, "Success to register arm_pm_restart\n");
 	}
 
@@ -190,6 +208,12 @@ static int exynos_reboot_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev, "Success to register sysfs\n");
 	}
 
+	err = register_restart_handler(&exynos_restart_nb);
+	if (err) {
+		dev_err(&pdev->dev, "cannot register restart handler (err=%d)\n",
+				err);
+	}
+
 	return 0;
 }
 
@@ -199,7 +223,7 @@ static const struct exynos_reboot_variant drv_data_v1 = {
 	.swreset_reg = SYSTEM_CONFIGURATION,
 	.swreset_bit = 1,
 	.reboot_mode_reg = EXYNOS_PMU_SYSIP_DAT0,
-	.reboot = exynos_restart_v1,
+	//.reboot = exynos_restart_v1,
 	.power_off = exynos_power_off_v1,
 };
 
@@ -210,6 +234,7 @@ static const struct of_device_id exynos_reboot_match[] = {
 	},
 	{},
 };
+MODULE_DEVICE_TABLE(of, exynos_reboot_match);
 
 static const struct platform_device_id exynos_reboot_ids[] = {
 	{
@@ -220,26 +245,23 @@ static const struct platform_device_id exynos_reboot_ids[] = {
 };
 
 static struct platform_driver exynos_reboot_driver = {
+	.probe		= exynos_reboot_probe,
 	.driver = {
 		.name = "exynos-reboot",
 		.owner = THIS_MODULE,
 		.of_match_table	= of_match_ptr(exynos_reboot_match),
 		.groups = exynos_reboot_groups,
 	},
-	.probe		= exynos_reboot_probe,
 	.id_table	= exynos_reboot_ids,
 };
 
-static int __init reset_reason_setup(char *str)
+static int reset_reason_setup(char *str)
 {
 	strncpy(exynos_reboot.reset_reason, str, strlen(str));
 
 	return 1;
 }
 __setup("androidboot.bootreason=", reset_reason_setup);
-
-static int __init exynos_reboot_init(void)
-{
-	return platform_driver_register(&exynos_reboot_driver);
-}
-subsys_initcall(exynos_reboot_init);
+module_platform_driver(exynos_reboot_driver);
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Khalid Shaik <khalid.s@samsung.com>");
