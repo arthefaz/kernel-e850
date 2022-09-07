@@ -49,13 +49,13 @@ struct dbg_snapshot_interface {
 static struct dbg_snapshot_bl *dss_bl;
 static struct dbg_snapshot_item dss_items[] = {
 	[DSS_ITEM_HEADER_ID]	= {DSS_ITEM_HEADER,	{0, 0, 0, true}, true, NULL ,NULL},
-	[DSS_ITEM_KERNEL_ID]	= {DSS_ITEM_KERNEL,	{0, 0, 0, false}, true, NULL ,NULL},
-	[DSS_ITEM_PLATFORM_ID]	= {DSS_ITEM_PLATFORM,	{0, 0, 0, false}, true, NULL ,NULL},
-	[DSS_ITEM_KEVENTS_ID]	= {DSS_ITEM_KEVENTS,	{0, 0, 0, false}, false, NULL ,NULL},
+	[DSS_ITEM_KERNEL_ID]	= {DSS_ITEM_KERNEL,	{0, 0, 0, true}, true, NULL ,NULL},
+	[DSS_ITEM_PLATFORM_ID]	= {DSS_ITEM_PLATFORM,	{0, 0, 0, true}, true, NULL ,NULL},
+	[DSS_ITEM_KEVENTS_ID]	= {DSS_ITEM_KEVENTS,	{0, 0, 0, true}, false, NULL ,NULL},
 	[DSS_ITEM_S2D_ID]	= {DSS_ITEM_S2D,	{0, 0, 0, false}, false, NULL, NULL},
-	[DSS_ITEM_ARRDUMP_RESET_ID] = {DSS_ITEM_ARRDUMP_RESET, {0, 0, 0, false}, false, NULL, NULL},
+	[DSS_ITEM_ARRDUMP_RESET_ID] = {DSS_ITEM_ARRDUMP_RESET, {0, 0, 0, true}, false, NULL, NULL},
 	[DSS_ITEM_ARRDUMP_PANIC_ID] = {DSS_ITEM_ARRDUMP_PANIC, {0, 0, 0, false}, false, NULL, NULL},
-	[DSS_ITEM_FIRST_ID]	= {DSS_ITEM_FIRST,	{0, 0, 0, false}, false, NULL, NULL},
+	[DSS_ITEM_FIRST_ID]	= {DSS_ITEM_FIRST,	{0, 0, 0, true}, false, NULL, NULL},
 	[DSS_ITEM_BACKTRACE_ID]	= {DSS_ITEM_BACKTRACE,	{0, 0, 0, false}, false, NULL, NULL},
 };
 
