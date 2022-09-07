@@ -760,6 +760,28 @@ static ssize_t multi_load_read(struct file *file, struct kobject *kobj,
 }
 BIN_ATTR_RO(multi_load, 0);
 
+static int mlt_uarch_data_free(struct uarch_data *ud, int state_count)
+{
+	int i;
+
+	if (ud->ipc_periods)
+		for (i = 0; i < state_count; i++)
+			kfree(ud->ipc_periods[i]);
+	if (ud->mspc_periods)
+		for (i = 0; i < state_count; i++)
+			kfree(ud->mspc_periods[i]);
+	kfree(ud->ipc_periods);
+	kfree(ud->mspc_periods);
+	kfree(ud->ipc_recent);
+	kfree(ud->mspc_recent);
+	kfree(ud->cycle_sum);
+	kfree(ud->inst_ret_sum);
+	kfree(ud->mem_stall_sum);
+	kfree(ud);
+
+	return -ENOMEM;
+}
+
 static int mlt_uarch_data_init(struct mlt *mlt)
 {
 	struct uarch_data *ud;
@@ -771,63 +793,45 @@ static int mlt_uarch_data_init(struct mlt *mlt)
 
 	ud->ipc_periods = kcalloc(state_count, sizeof(int *), GFP_KERNEL);
 	if (!ud->ipc_periods)
-		goto fail_uarch_data_alloc;
+		return mlt_uarch_data_free(ud, state_count);
 
 	ud->mspc_periods = kcalloc(state_count, sizeof(int *), GFP_KERNEL);
 	if (!ud->mspc_periods)
-		goto fail_uarch_data_alloc;
+		return mlt_uarch_data_free(ud, state_count);
 
 	for (i = 0; i < state_count; i++) {
-		ud->ipc_periods[i] = kcalloc(MLT_PERIOD_COUNT,
-					sizeof(int), GFP_KERNEL);
+		ud->ipc_periods[i] = kcalloc(MLT_PERIOD_COUNT, sizeof(int), GFP_KERNEL);
 		if (!ud->ipc_periods[i])
-			goto fail_uarch_data_alloc;
+			return mlt_uarch_data_free(ud, state_count);
 
-		ud->mspc_periods[i] = kcalloc(MLT_PERIOD_COUNT,
-					sizeof(int), GFP_KERNEL);
+		ud->mspc_periods[i] = kcalloc(MLT_PERIOD_COUNT, sizeof(int), GFP_KERNEL);
 		if (!ud->mspc_periods[i])
-			goto fail_uarch_data_alloc;
+			return mlt_uarch_data_free(ud, state_count);
 	}
 
 	ud->ipc_recent = kcalloc(state_count, sizeof(u64), GFP_KERNEL);
 	if (!ud->ipc_recent)
-		goto fail_uarch_data_alloc;
+		return mlt_uarch_data_free(ud, state_count);
 
 	ud->mspc_recent = kcalloc(state_count, sizeof(u64), GFP_KERNEL);
 	if (!ud->mspc_recent)
-		goto fail_uarch_data_alloc;
+		return mlt_uarch_data_free(ud, state_count);
 
 	ud->cycle_sum = kcalloc(state_count, sizeof(u64), GFP_KERNEL);
 	if (!ud->cycle_sum)
-		goto fail_uarch_data_alloc;
+		return mlt_uarch_data_free(ud, state_count);
 
 	ud->inst_ret_sum = kcalloc(state_count, sizeof(u64), GFP_KERNEL);
 	if (!ud->inst_ret_sum)
-		goto fail_uarch_data_alloc;
+		return mlt_uarch_data_free(ud, state_count);
 
 	ud->mem_stall_sum = kcalloc(state_count, sizeof(u64), GFP_KERNEL);
 	if (!ud->mem_stall_sum)
-		goto fail_uarch_data_alloc;
+		return mlt_uarch_data_free(ud, state_count);
 
 	mlt->uarch = ud;
 
 	return 0;
-
-fail_uarch_data_alloc:
-	for (i = 0; i < state_count; i++) {
-		kfree(ud->ipc_periods[i]);
-		kfree(ud->mspc_periods[i]);
-	}
-	kfree(ud->ipc_periods);
-	kfree(ud->mspc_periods);
-	kfree(ud->ipc_recent);
-	kfree(ud->mspc_recent);
-	kfree(ud->cycle_sum);
-	kfree(ud->inst_ret_sum);
-	kfree(ud->mem_stall_sum);
-	kfree(ud);
-
-	return -ENOMEM;
 }
 
 static int mlt_alloc_and_init(struct mlt *mlt, int cpu,
