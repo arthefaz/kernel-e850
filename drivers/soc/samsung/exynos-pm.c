@@ -249,59 +249,6 @@ static void exynos_show_wakeup_reason(bool sleep_abort)
 	}
 }
 
-#ifdef CONFIG_CPU_IDLE
-static DEFINE_RWLOCK(exynos_pm_notifier_lock);
-static RAW_NOTIFIER_HEAD(exynos_pm_notifier_chain);
-
-int exynos_pm_register_notifier(struct notifier_block *nb)
-{
-	unsigned long flags;
-	int ret;
-
-	write_lock_irqsave(&exynos_pm_notifier_lock, flags);
-	ret = raw_notifier_chain_register(&exynos_pm_notifier_chain, nb);
-	write_unlock_irqrestore(&exynos_pm_notifier_lock, flags);
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(exynos_pm_register_notifier);
-
-int exynos_pm_unregister_notifier(struct notifier_block *nb)
-{
-	unsigned long flags;
-	int ret;
-
-	write_lock_irqsave(&exynos_pm_notifier_lock, flags);
-	ret = raw_notifier_chain_unregister(&exynos_pm_notifier_chain, nb);
-	write_unlock_irqrestore(&exynos_pm_notifier_lock, flags);
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(exynos_pm_unregister_notifier);
-
-static int __exynos_pm_notify(enum exynos_pm_event event, int nr_to_call, int *nr_calls)
-{
-	int ret;
-
-	ret = raw_notifier_call_chain(&exynos_pm_notifier_chain, event, NULL);
-
-	return notifier_to_errno(ret);
-}
-
-int exynos_pm_notify(enum exynos_pm_event event)
-{
-	int nr_calls;
-	int ret = 0;
-
-	read_lock(&exynos_pm_notifier_lock);
-	ret = __exynos_pm_notify(event, -1, &nr_calls);
-	read_unlock(&exynos_pm_notifier_lock);
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(exynos_pm_notify);
-#endif /* CONFIG_CPU_IDLE */
-
 #define PMU_EINT_WAKEUP_MASK	0x60C
 #define PMU_EINT_WAKEUP_MASK2	0x61C
 static void exynos_set_wakeupmask(enum sys_powerdown mode)
