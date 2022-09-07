@@ -109,4 +109,156 @@
 		compatible = "arm,psci-1.0";
 		method = "smc";
 	};
+
+	freq-qos-tracer {
+		compatible = "samsung,freq-qos-tracer";
+		status = "okay";
+	};
+
+	exynos-acme {
+		compatible = "samsung,exynos-acme";
+		status = "okay";
+
+		cpufreq_domain0: domain@0 {
+			sibling-cpus = CPU_CL0;
+			cal-id = <ACPM_DVFS_CPUCL0>;
+			dm-type = <DM_CPU_CL0>;
+			//dss-type = <ESS_FLAG_CPU_CL0>;
+
+			//max-freq = <1508000>;
+			min-freq = <546000>;
+
+			fast-switch;
+			thread-run-on = "0-3";
+
+			#cooling-cells = <2>; /* min followed by max */
+			ect-coeff-index = <1>;
+			tz-cooling-name = "LITTLE";
+
+			freq-table = <  442000
+					546000
+					650000
+					806000
+					949000
+					1053000
+					1157000
+					1300000
+					1456000
+					1586000
+					1742000
+					1846000
+					2002000 >;
+
+			dm-constraints {
+				list = <&mif_perf1>;
+
+			};
+
+			slack_timer {
+				device_type = "slack-timer-domain";
+			};
+		};
+
+		cpufreq_domain1: domain@1 {
+			sibling-cpus = CPU_CL1;
+			cal-id = <ACPM_DVFS_CPUCL1>;
+			dm-type = <DM_CPU_CL1>;
+			//dss-type = <ESS_FLAG_CPU_CL1>;
+
+			//max-freq = <1872000>;
+			min-freq = <546000>;
+
+			fast-switch;
+			thread-run-on = "0-3";
+
+			#cooling-cells = <2>; /* min followed by max */
+			ect-coeff-index = <0>;
+			tz-cooling-name = "LITTLE";
+
+			freq-table = <  442000
+					546000
+					650000
+					806000
+					949000
+					1053000
+					1157000
+					1300000
+					1456000
+					1586000
+					1742000
+					1846000
+					2002000 >;
+
+			 dm-constraints {
+				 list = <&mif_perf2>;
+			};
+
+			slack_timer {
+				device_type = "slack-timer-domain";
+				expired_time = <80>;    /* 80ms */ 
+			};
+		 };
+	};
+
+	dm-tables {
+		mif_perf1: dm-table@0000 {
+			const-type = <CONSTRAINT_MIN>;
+			dm-slave = <DM_MIF>;
+			master-cal-id = <ACPM_DVFS_CPUCL0>;
+			slave-cal-id = <ACPM_DVFS_MIF>;
+			dynamic-disable;
+
+			normal {	/* CPU    MIF */
+				table = < 2002000  1539000
+					  1846000  1539000
+					  1742000  1352000
+					  1586000  1352000
+					  1456000  1014000
+					  1300000  1014000
+					  1157000   845000
+					  1053000   845000
+					   949000   676000
+					   806000   676000
+					   650000   676000
+					   546000   676000
+					   442000   676000 >;
+			};
+			mif-skew {
+				guidance;
+				const-type = <CONSTRAINT_MIN>;
+				dm-type = <DM_MIF>;
+				ect-name = "dvfs_cpucl0";
+			};
+		};
+		mif_perf2: dm-table@0001 {
+			const-type = <CONSTRAINT_MIN>;
+			dm-slave = <DM_MIF>;
+			master-cal-id = <ACPM_DVFS_CPUCL1>;
+			slave-cal-id = <ACPM_DVFS_MIF>;
+			dynamic-disable;
+
+			normal {        /* CPU    MIF */
+				table = < 2002000  1539000
+					  1846000  1539000
+					  1742000  1352000
+					  1586000  1352000
+					  1456000  1014000
+					  1300000  1014000
+					  1157000   845000
+					  1053000   845000
+					   949000   676000
+					   806000   676000
+					   650000   676000
+					   546000   676000
+					   442000   676000 >;
+			};
+			mif-skew {
+				guidance;
+				const-type = <CONSTRAINT_MIN>;
+				dm-type = <DM_MIF>;
+				ect-name = "dvfs_cpucl1";
+			};
+		};
+	};
+
 };
