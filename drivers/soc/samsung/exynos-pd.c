@@ -380,7 +380,7 @@ static int exynos_pd_probe(struct platform_device *pdev)
 	if (of_property_read_bool(np, "skip-idle-ip"))
 		pd->skip_idle_ip = true;
 	else
-		pd->idle_ip_index = exynos_get_idle_ip_index(pd->name);
+		pd->idle_ip_index = exynos_get_idle_ip_index(pd->name, 1);
 
 	mutex_init(&pd->access_lock);
 	platform_set_drvdata(pdev, pd);
