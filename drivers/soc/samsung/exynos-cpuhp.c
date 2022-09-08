@@ -21,7 +21,7 @@
 #include <linux/moduleparam.h>
 #include <linux/platform_device.h>
 
-#include <soc/samsung/exynos/debug-snapshot.h>
+#include <soc/samsung/debug-snapshot.h>
 #include <soc/samsung/exynos-cpuhp.h>
 
 static struct {
