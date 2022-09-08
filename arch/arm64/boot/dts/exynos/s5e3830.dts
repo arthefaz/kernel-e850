@@ -34,6 +34,7 @@
 #include "s5e3830-security.dtsi"
 #include "s5e3830-pm-domains.dtsi"
 #include "s5e3830-bts.dtsi"
+#include "s5e3830-wlbt.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
@@ -64,7 +65,7 @@
                         };
 
                         chosen {
-				bootargs = "earlycon=exynos4210,0x13820000 console=ttySAC0,115200n8 androidboot.console=ttySAC0 s3c2410_wdt.tmr_atboot=1  androidboot.boot_devices=12100000.dwmmc0 clocksource=arch_sys_counter clk_ignore_unused androidboot.hardware=s5e3830 printk.devkmsg=on";
+				bootargs = "earlycon=exynos4210,0x13820000 console=ttySAC0,115200n8 androidboot.console=ttySAC0 s3c2410_wdt.tmr_atboot=1  androidboot.boot_devices=12100000.dwmmc0 clocksource=arch_sys_counter clk_ignore_unused androidboot.hardware=s5e3830 printk.devkmsg=on firmware_class.path=/vendor/firmware";
                                 linux,initrd-start = <0x84000000>;
                                 linux,initrd-end = <0x847FFFFF>;
                         };

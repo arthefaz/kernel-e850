@@ -75,5 +75,10 @@
 			compatible = "exynos,ect_rmem";
 			reg = <0x0 0x90000000 0x0004B000>;
 		};
+
+		wifibt_if {
+			compatible = "exynos,wifibt_if";
+			size = <0xC00000>; /* 12MB */
+		};
 	};
 };
