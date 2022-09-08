@@ -51,7 +51,7 @@
 			<4 TLB_CFG(BL1, PREFETCH_PREDICTION) DIR_READ SYSMMU_ID_MASK(0x8, 0xF)>;
 		port-name = "DPU";
 		#iommu-cells = <0>;
-		//power-domains = <&pd_dpu>;
+		power-domains = <&pd_dpu>;
 	};
 
 	sysmmu_aud: sysmmu@14850000 {
@@ -71,7 +71,7 @@
 			<3 TLB_CFG(BL1, PREFETCH_NONE) DIR_READ SYSMMU_ID_MASK(0x3, 0x3)>;
 		port-name = "ABOX";
 		#iommu-cells = <0>;
-		//power-domains = <&pd_aud>;
+		power-domains = <&pd_aud>;
 	};
 
 	sysmmu_is0: sysmmu@14550000 {
@@ -106,7 +106,7 @@
 			<19 TLB_CFG(BL1, PREFETCH_PREDICTION) DIR_WRITE SYSMMU_ID_MASK(0x19, 0x1F)>;
 		port-name = "CSISX2, IPP";
 		#iommu-cells = <0>;
-		//power-domains = <&pd_csis>;
+		power-domains = <&pd_csis>;
 	};
 
 	sysmmu_is1: sysmmu@14570000 {
@@ -130,7 +130,7 @@
 			<8 TLB_CFG(BL1, PREFETCH_PREDICTION) DIR_WRITE SYSMMU_ID_MASK(0x2, 0x3)>;
 		port-name = "ITP, MCSC, VRA, GDC";
 		#iommu-cells = <0>;
-		//power-domains = <&pd_csis>;
+		power-domains = <&pd_csis>;
 	};
 
 	sysmmu_mfcmscl: sysmmu@12C50000 {
@@ -160,6 +160,6 @@
 			<14 TLB_CFG(BL4, PREFETCH_PREDICTION) DIR_WRITE SYSMMU_ID_MASK(0x2B, 0x3F)>;
 		port-name = "MFC, JPEG, MCSC, MSCL";
 		#iommu-cells = <0>;
-		//power-domains = <&pd_mfcmscl>;
+		power-domains = <&pd_mfcmscl>;
 	};
 };
