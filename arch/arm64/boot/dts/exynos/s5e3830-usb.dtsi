@@ -24,7 +24,7 @@
 		#address-cells = <2>;
 		#size-cells = <1>;
 		ranges;
-		//power-domains = <&pd_hsi>;
+		power-domains = <&pd_hsi>;
 		status = "okay";
 		phys = <&usbdrd_phy0 0>;
 		phy-names = "usb2-phy";
