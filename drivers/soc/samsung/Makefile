@@ -62,3 +62,6 @@ obj-$(CONFIG_EXYNOS_CPUPM)     += exynos-cpupm.o
 
 # CPU Hotplug
 obj-$(CONFIG_EXYNOS_CPUHP)      += exynos-cpuhp.o
+
+# Exynos User Frequency & Cstate Control
+obj-$(CONFIG_EXYNOS_UFCC)       += exynos-ufcc.o
