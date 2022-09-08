@@ -285,10 +285,12 @@ static void fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base
 	unsigned int blk_idx;
 	int size, margin;
 	int i, j;
+	void __iomem *header_base;
 
 	fvmap_header = map_base;
 	header = vmalloc(FVMAP_SIZE);
 	memcpy(header, sram_base, FVMAP_SIZE);
+	header_base = (void __iomem *)header;
 
 	size = cmucal_get_list_size(ACPM_VCLK_TYPE);
 
@@ -320,7 +322,7 @@ static void fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base
 		pr_info("  num_of_lv      : %d\n", fvmap_header[i].num_of_lv);
 		pr_info("  num_of_members : %d\n", fvmap_header[i].num_of_members);
 
-		old = sram_base + fvmap_header[i].o_ratevolt;
+		old = header_base + fvmap_header[i].o_ratevolt;
 		new = map_base + fvmap_header[i].o_ratevolt;
 
 		margin = init_margin_table[vclk->margin_id];
@@ -335,15 +337,17 @@ static void fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base
 		}
 
 		for (j = 0; j < fvmap_header[i].num_of_members; j++) {
-			clks = sram_base + fvmap_header[i].o_members;
+			if (i == 8)	break;
+			clks = header_base + fvmap_header[i].o_members;
 
 			if (j < fvmap_header[i].num_of_pll) {
-				plls = sram_base + clks->addr[j];
+				plls = header_base + clks->addr[j];
 				member_addr = plls->addr - 0x90000000;
 			} else {
 
 				member_addr = (clks->addr[j] & ~0x3) & 0xffff;
 				blk_idx = clks->addr[j] & 0x3;
+
 
 				member_addr |= ((fvmap_header[i].block_addr[blk_idx]) << 16) - 0x90000000;
 			}
