@@ -118,14 +118,8 @@ static void slsi_append_log_to_system_buffer(struct slsi_dev *sdev)
 	int    pos = 0;
 	int    buf_size = 128;
 	int    i = 0;
-	char   *log_to_sys_error_buffer = NULL;
+	char   log_to_sys_error_buffer[128] = { 0 };
 	struct netdev_vif   *ndev_vif;
-
-	log_to_sys_error_buffer = kzalloc(128, GFP_KERNEL);
-	if (!log_to_sys_error_buffer) {
-		SLSI_ERR_NODEV("Failed to allocate memory\n");
-		return;
-	}
 
 	scnprintf(log_to_sys_error_buffer + pos, buf_size - pos, "netdev_up_count=%d ", sdev->netdev_up_count);
 
