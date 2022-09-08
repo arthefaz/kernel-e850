@@ -16,10 +16,10 @@ unsigned int pmucal_sys_powermode[NUM_SYS_POWERDOWN] = {0xffffffff, };
 int pmucal_system_enter(int mode)
 {
 	int ret;
-/*
+
 	if (mode != SYS_SICD)
 		dbg_snapshot_pmu(mode, __func__, DSS_FLAG_IN);
-*/
+
 	if (mode >= NUM_SYS_POWERDOWN) {
 		pr_err("%s %s: mode index(%d) is out of supported range (0~%d).\n",
 				PMUCAL_PREFIX, __func__, mode, NUM_SYS_POWERDOWN);
@@ -45,10 +45,10 @@ int pmucal_system_enter(int mode)
 				PMUCAL_PREFIX, __func__, mode);
 		goto err_out;
 	}
-/*
+
 	if (mode != SYS_SICD)
 		dbg_snapshot_pmu(mode, __func__, DSS_FLAG_OUT);
-*/
+
 	pmucal_dbg_set_emulation(pmucal_lpm_list[mode].dbg);
 	pmucal_dbg_do_profile(pmucal_lpm_list[mode].dbg, false);
 
@@ -72,10 +72,10 @@ err_out:
 int pmucal_system_exit(int mode)
 {
 	int ret;
-/*
+
 	if (mode != SYS_SICD)
 		dbg_snapshot_pmu(mode, __func__, DSS_FLAG_IN);
-*/
+
 	if (mode >= NUM_SYS_POWERDOWN) {
 		pr_err("%s %s: mode index(%d) is out of supported range (0~%d).\n",
 				PMUCAL_PREFIX, __func__, mode, NUM_SYS_POWERDOWN);
@@ -105,10 +105,10 @@ int pmucal_system_exit(int mode)
 				PMUCAL_PREFIX, __func__, mode);
 		goto err_out;
 	}
-/*
+
 	if (mode != SYS_SICD)
 		dbg_snapshot_pmu(mode, __func__, DSS_FLAG_OUT);
-*/
+
 	pmucal_dbg_do_profile(pmucal_lpm_list[mode].dbg, true);
 
 	return 0;
@@ -131,10 +131,10 @@ err_out:
 int pmucal_system_earlywakeup(int mode)
 {
 	int ret;
-/*
+
 	if (mode != SYS_SICD)
 		dbg_snapshot_pmu(mode, __func__, DSS_FLAG_IN);
-*/
+
 	if (mode >= NUM_SYS_POWERDOWN) {
 		pr_err("%s %s: mode index(%d) is out of supported range (0~%d).\n",
 				PMUCAL_PREFIX, __func__, mode, NUM_SYS_POWERDOWN);
@@ -165,10 +165,10 @@ int pmucal_system_earlywakeup(int mode)
 		goto err_out;
 	}
 	pmucal_powermode_hint_clear();
-/*
+
 	if (mode != SYS_SICD)
 		dbg_snapshot_pmu(mode, __func__, DSS_FLAG_OUT);
-*/
+
 	return 0;
 
 err_out:

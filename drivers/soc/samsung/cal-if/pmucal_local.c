@@ -18,7 +18,7 @@ int pmucal_local_enable(unsigned int pd_id)
 {
 	int ret = 0;
 
-	//dbg_snapshot_pmu(pd_id, __func__, DSS_FLAG_IN);
+	dbg_snapshot_pmu(pd_id, __func__, DSS_FLAG_IN);
 
 	if (pd_id >= pmucal_pd_list_size) {
 		pr_err("%s pd index(%d) is out of supported range (0~%d).\n",
@@ -41,7 +41,7 @@ int pmucal_local_enable(unsigned int pd_id)
 				PMUCAL_PREFIX, __func__, pd_id);
 		goto err_out;
 	}
-/*
+
 	if (pmucal_pd_list[pd_id].need_smc) {
 		ret = exynos_pd_tz_restore(pmucal_pd_list[pd_id].need_smc);
 		if (ret) {
@@ -50,7 +50,7 @@ int pmucal_local_enable(unsigned int pd_id)
 			goto err_out;
 		}
 	}
-*/
+
 	ret = pmucal_rae_restore_seq(pmucal_pd_list[pd_id].save,
 				pmucal_pd_list[pd_id].num_save);
 	if (ret) {
@@ -60,7 +60,7 @@ int pmucal_local_enable(unsigned int pd_id)
 		goto err_out;
 	}
 
-	//dbg_snapshot_pmu(pd_id, __func__, DSS_FLAG_OUT);
+	dbg_snapshot_pmu(pd_id, __func__, DSS_FLAG_OUT);
 
 	pmucal_dbg_do_profile(pmucal_pd_list[pd_id].dbg, true);
 
@@ -85,7 +85,7 @@ int pmucal_local_disable(unsigned int pd_id)
 {
 	int ret = 0, i;
 
-	//dbg_snapshot_pmu(pd_id, __func__, DSS_FLAG_IN);
+	dbg_snapshot_pmu(pd_id, __func__, DSS_FLAG_IN);
 
 	if (pd_id >= pmucal_pd_list_size) {
 		pr_err("%s pd index(%d) is out of supported range (0~%d).\n",
@@ -103,7 +103,7 @@ int pmucal_local_disable(unsigned int pd_id)
 
 	pmucal_rae_save_seq(pmucal_pd_list[pd_id].save,
 				pmucal_pd_list[pd_id].num_save);
-/*
+
 	if (pmucal_pd_list[pd_id].need_smc) {
 		ret = exynos_pd_tz_save(pmucal_pd_list[pd_id].need_smc);
 		if (ret) {
@@ -112,7 +112,7 @@ int pmucal_local_disable(unsigned int pd_id)
 			goto err_out;
 		}
 	}
-*/
+
 	pmucal_dbg_set_emulation(pmucal_pd_list[pd_id].dbg);
 
 	ret = pmucal_rae_handle_seq(pmucal_pd_list[pd_id].off,
@@ -130,7 +130,7 @@ int pmucal_local_disable(unsigned int pd_id)
 		goto err_out;
 	}
 
-	//dbg_snapshot_pmu(pd_id, __func__, DSS_FLAG_OUT);
+	dbg_snapshot_pmu(pd_id, __func__, DSS_FLAG_OUT);
 
 	pmucal_dbg_do_profile(pmucal_pd_list[pd_id].dbg, false);
 

@@ -2,6 +2,7 @@
 #define __ASV_EXYNOS3830_H__
 
 #include <linux/io.h>
+#include <soc/samsung/exynos-smc.h>
 
 #define ASV_TABLE_BASE	(0x10009000)
 #define ID_TABLE_BASE	(0x10000000)
@@ -148,7 +149,7 @@ int asv_table_init(void)
 	p_table = (unsigned int *)&asv_tbl;
 
 	for (i = 0; i < ASV_INFO_ADDR_CNT; i++) {
-		//exynos_smc_readsfr((unsigned long)(ASV_TABLE_BASE + 0x4 * i), &tmp);
+		exynos_smc_readsfr((unsigned long)(ASV_TABLE_BASE + 0x4 * i), &tmp);
 		*(p_table + i) = (unsigned int)tmp;
 	}
 
