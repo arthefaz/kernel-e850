@@ -1165,7 +1165,7 @@ static int exynos_dm_probe(struct platform_device *pdev)
 
 	exynos_dm = dm;
 
-	dm_idle_ip_index = exynos_get_idle_ip_index(EXYNOS_DM_MODULE_NAME);
+	dm_idle_ip_index = exynos_get_idle_ip_index(EXYNOS_DM_MODULE_NAME,1);
 	exynos_update_ip_idle_status(dm_idle_ip_index, 1);
 
 	platform_set_drvdata(pdev, dm);
