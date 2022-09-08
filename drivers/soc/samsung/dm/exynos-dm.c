@@ -543,7 +543,7 @@ int register_exynos_dm_constraint_table(int dm_type,
 {
 	struct exynos_dm_constraint *sub_constraint;
 	struct exynos_dm_data *master = &exynos_dm->dm_data[dm_type];
-	struct exynos_dm_data *slave = &exynos_dm->dm_data[constraint->dm_slave];
+	struct exynos_dm_data *slave;
 	int i, ret = 0;
 
 	ret = exynos_dm_index_validate(dm_type);
@@ -584,6 +584,7 @@ int register_exynos_dm_constraint_table(int dm_type,
 	constraint->gov_freq = 0;
 	constraint->dm_master = dm_type;
 
+	slave = &exynos_dm->dm_data[constraint->dm_slave];
 	if (constraint->constraint_type == CONSTRAINT_MIN) {
 		/*
 		 * In domain, min/max slaves are list of slave constraint conditions
