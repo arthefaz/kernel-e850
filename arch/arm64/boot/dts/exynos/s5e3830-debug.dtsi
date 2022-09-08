@@ -63,20 +63,18 @@
 		compatible = "samsung,hardlockup-watchdog";
 	};
 
-//	exynos-debug-test {
-//		compatible = "samsung,exynos-debug-test";
-//		ps_hold_control_offset = <0x030C>;
-//		scratch-offset = <0x0810>; /* SYSIP_DAT0 */
-//		dram-init-bit = <0x4>;
-//		nr_cpu = <0x8>;
-//		nr_little_cpu = <0x4>;
-//		nr_mid_cpu = <0x3>;
-//		nr_big_cpu = <0x1>;
-//		little_cpu_start = <0x0>;
-//		mid_cpu_start = <0x4>;
-//		big_cpu_start = <0x7>;
-//	};
-//
+	exynos-debug-test {
+		compatible = "samsung,exynos-debug-test";
+		ps_hold_control_offset = <0x030C>;
+		scratch-offset = <0x0810>; /* SYSIP_DAT0 */
+		dram-init-bit = <0x4>;
+		nr_cpu = <0x8>;
+		nr_little_cpu = <0x4>;
+		nr_big_cpu = <0x4>;
+		little_cpu_start = <0x0>;
+		big_cpu_start = <0x4>;
+	};
+
 //	exynos-ecc-handler {
 //		compatible = "samsung,exynos-ecc-handler";
 //		interrupts = <GIC_SPI INTREQ__CPUCL0_CLUSTERERRIRQ IRQ_TYPE_LEVEL_HIGH 0>,
@@ -120,27 +118,7 @@
 //		halt = <0>;
 //		retention = <0>;
 //	};
-//
-//	exynos-adv_tracer {
-//		compatible = "samsung,exynos-adv-tracer";
-//		reg = <0x0 0x158d0000 0x1000>;
-//		reg-names = "mailbox";
-//		interrupts = <GIC_SPI INTREQ__MAILBOX_DBGCORE2AP IRQ_TYPE_LEVEL_HIGH 0>;
-//		status = "ok";
-//	};
-//
-//	s2d: exynos_adv_tracer_s2d {
-//		compatible = "samsung,exynos-adv-tracer-s2d";
-//		plugin-len = <3>;
-//		plugin-name = "S2D";
-//		pmu-burnin-ctrl = <0xa08>;
-//		sel-scanmode-bit = <25>;
-//		dbgsel-sw-bit = <4>;
-//		pmu-rst-seq = <0x0500>;
-//		pmu-rst-seq-safe-mode-bit = <31>;
-//		status = "ok";
-//	};
-//
+
 //	itmon: exynos-itmon {
 //		compatible = "samsung,exynos-itmon";
 //		memory-region = <&log_itmon>;

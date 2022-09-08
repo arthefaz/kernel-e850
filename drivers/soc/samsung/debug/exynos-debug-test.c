@@ -608,7 +608,7 @@ static void simulate_CACHE_FLUSH(char *arg)
 
 static void simulate_APM_WDT(char *arg)
 {
-	exynos_acpm_force_apm_wdt_reset();
+//	exynos_acpm_force_apm_wdt_reset();
 	asm volatile("b .");
 }
 
