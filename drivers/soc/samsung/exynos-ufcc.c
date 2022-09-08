@@ -205,6 +205,29 @@ void ucc_remove_request(struct ucc_req *req)
 }
 EXPORT_SYMBOL_GPL(ucc_remove_request);
 
+static struct ucc_req ucc_req =
+{
+	.name = "ufcc",
+};
+
+static int ucc_requested;
+static int ucc_requested_val;
+static int cstate_control_level;
+
+static void ucc_control(int value)
+{
+	ucc_update_request(&ucc_req, value);
+	ucc_requested_val = value;
+}
+
+enum {
+	CPD_BLOCK,
+	C2_BLOCK
+};
+
+/*********************************************************************/
+/*  Sysfs funcions - User C-state Control                            */
+/*********************************************************************/
 static ssize_t ucc_requests_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -217,28 +240,13 @@ static ssize_t ucc_requests_show(struct device *dev,
 
 	return ret;
 }
-DEVICE_ATTR_RO(ucc_requests);
-
-static struct ucc_req ucc_req =
-{
-	.name = "ufcc",
-};
-
-static int ucc_requested;
-static int ucc_requested_val;
-
-static void ucc_control(int value)
-{
-	ucc_update_request(&ucc_req, value);
-	ucc_requested_val = value;
-}
+static DEVICE_ATTR_RO(ucc_requests);
 
 static ssize_t cstate_control_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	return snprintf(buf, 10, "%d\n", ucc_requested);
 }
-
 static ssize_t cstate_control_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -263,15 +271,13 @@ static ssize_t cstate_control_store(struct device *dev,
 
 	return count;
 }
-DEVICE_ATTR_RW(cstate_control);
+static DEVICE_ATTR_RW(cstate_control);
 
-static int cstate_control_level;
 static ssize_t cstate_control_level_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	return snprintf(buf, 20, "%d (0=CPD, 1=C2)\n", cstate_control_level);
 }
-
 static ssize_t cstate_control_level_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -287,25 +293,23 @@ static ssize_t cstate_control_level_store(struct device *dev,
 
 	return count;
 }
-DEVICE_ATTR_RW(cstate_control_level);
+static DEVICE_ATTR_RW(cstate_control_level);
 
-static struct attribute *exynos_ucc_attrs[] = {
+static struct attribute *ucc_attrs[] = {
 	&dev_attr_ucc_requests.attr,
 	&dev_attr_cstate_control.attr,
 	&dev_attr_cstate_control_level.attr,
 	NULL,
 };
 
-static struct attribute_group exynos_ucc_group = {
+static struct attribute_group ucc_attr_group = {
 	.name = "ucc",
-	.attrs = exynos_ucc_attrs,
+	.attrs = ucc_attrs,
 };
 
-enum {
-	CPD_BLOCK,
-	C2_BLOCK
-};
-
+/*********************************************************************/
+/*  Initialization - User C-state Control                            */
+/*********************************************************************/
 static int ucc_cpupm_notifier(struct notifier_block *nb,
 				unsigned long event, void *val)
 {
@@ -369,7 +373,7 @@ static int exynos_ucc_init(struct platform_device *pdev)
 		i++;
 	}
 
-	ret = sysfs_create_group(&pdev->dev.kobj, &exynos_ucc_group);
+	ret = sysfs_create_group(&pdev->dev.kobj, &ucc_attr_group);
 	if (ret) {
 		pr_err("Failed to create cstate_control node\n");
 		kfree(ucc_configs);
@@ -1025,67 +1029,130 @@ static void ufc_update_min_limit_wo_boost(void)
 	}
 }
 
-/*
- * sysfs function
- */
-static ssize_t cpufreq_table_show(struct kobject *kobj, char *buf)
+/*********************************************************************/
+/*  Sysfs funcions - User Frequency Control                          */
+/*********************************************************************/
+static ssize_t cpufreq_table_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
 	struct ufc_table_info *table_info;
 	ssize_t count = 0;
-	int r_idx;
+	int row;
 
 	if (list_empty(&ufc.ufc_table_list))
 		return count;
 
 	table_info = list_first_entry(&ufc.ufc_table_list,
-				struct ufc_table_info, list);
+			struct ufc_table_info, list);
 
-	for (r_idx = 0; r_idx < (ufc.table_row + ufc.lit_table_row); r_idx++)
+	for (row = 0; row < (ufc.table_row + ufc.lit_table_row); row++)
 		count += snprintf(&buf[count], 10, "%d ",
-				table_info->ufc_table[0][r_idx]);
+				table_info->ufc_table[0][row]);
 	count += snprintf(&buf[count], 10, "\n");
 
 	return count;
 }
+static DEVICE_ATTR_RO(cpufreq_table);
 
-static ssize_t cpufreq_max_limit_show(struct kobject *kobj, char *buf)
+static ssize_t cpufreq_max_limit_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
 	return snprintf(buf, 10, "%d\n", ufc.prio_vfreq[PM_QOS_MAX_LIMIT]);
 }
-
-static ssize_t cpufreq_max_limit_store(struct kobject *kobj,
-					const char *buf, size_t count)
+static ssize_t cpufreq_max_limit_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
 {
 	int input;
 
 	if (!sscanf(buf, "%8d", &input))
 		return -EINVAL;
+
 	ufc_update_request(USERSPACE, PM_QOS_MAX_LIMIT, input);
 
 	return count;
 }
+static DEVICE_ATTR_RW(cpufreq_max_limit);
 
-static ssize_t cpufreq_min_limit_show(struct kobject *kobj, char *buf)
+static ssize_t cpufreq_min_limit_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
 	return snprintf(buf, 10, "%d\n", ufc.prio_vfreq[PM_QOS_MIN_LIMIT]);
 }
-
-static ssize_t limit_stat_store(struct kobject *kobj,
-					const char *buf, size_t count)
+static ssize_t cpufreq_min_limit_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
 {
 	int input;
 
 	if (!sscanf(buf, "%8d", &input))
 		return -EINVAL;
 
-	mutex_lock(&ufc.lock);
-	reset_limit_stat();
-	mutex_unlock(&ufc.lock);
+	ufc_update_request(USERSPACE, PM_QOS_MIN_LIMIT, input);
+
 	return count;
 }
+static DEVICE_ATTR_RW(cpufreq_min_limit);
 
+static ssize_t cpufreq_min_limit_wo_boost_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, 10, "%d\n", ufc.last_min_wo_boost_input);
+}
+static ssize_t cpufreq_min_limit_wo_boost_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int input;
 
-static ssize_t limit_stat_show(struct kobject *kobj, char *buf)
+	if (!sscanf(buf, "%8d", &input))
+		return -EINVAL;
+
+	ufc.last_min_wo_boost_input = input;
+	ufc_update_min_limit_wo_boost();
+
+	return count;
+}
+static DEVICE_ATTR_RW(cpufreq_min_limit_wo_boost);
+
+static ssize_t over_limit_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, 10, "%d\n", ufc.prio_vfreq[PM_QOS_OVER_LIMIT]);
+}
+
+static ssize_t over_limit_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int input;
+
+	if (!sscanf(buf, "%8d", &input))
+		return -EINVAL;
+
+	ufc_update_request(USERSPACE, PM_QOS_OVER_LIMIT, input);
+
+	return count;
+}
+static DEVICE_ATTR_RW(over_limit);
+
+static ssize_t little_max_limit_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, 10, "%d\n", ufc.prio_vfreq[PM_QOS_LITTLE_MAX_LIMIT]);
+}
+static ssize_t little_max_limit_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int input;
+
+	if (!sscanf(buf, "%8d", &input))
+		return -EINVAL;
+
+	ufc_update_request(USERSPACE, PM_QOS_LITTLE_MAX_LIMIT, input);
+
+	return count;
+}
+static DEVICE_ATTR_RW(little_max_limit);
+
+static ssize_t limit_stat_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
 	ssize_t count = 0;
 	int user, type;
@@ -1107,215 +1174,135 @@ static ssize_t limit_stat_show(struct kobject *kobj, char *buf)
 
 	return count;
 }
-
-static ssize_t cpufreq_min_limit_store(struct kobject *kobj,
-				const char *buf, size_t count)
+static ssize_t limit_stat_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
 {
 	int input;
 
 	if (!sscanf(buf, "%8d", &input))
 		return -EINVAL;
 
-	ufc_update_request(USERSPACE, PM_QOS_MIN_LIMIT, input);
+	mutex_lock(&ufc.lock);
+	reset_limit_stat();
+	mutex_unlock(&ufc.lock);
 
 	return count;
 }
-
-static ssize_t cpufreq_min_limit_wo_boost_show(struct kobject *kobj, char *buf)
-{
-	return snprintf(buf, 10, "%d\n", ufc.last_min_wo_boost_input);
-}
-
-static ssize_t cpufreq_min_limit_wo_boost_store(struct kobject *kobj,
-		                                        const char *buf, size_t count)
-{
-	int input;
-
-	if (!sscanf(buf, "%8d", &input))
-		return -EINVAL;
-
-	ufc.last_min_wo_boost_input = input;
-	ufc_update_min_limit_wo_boost();
-
-	return count;
-}
-
-static ssize_t little_max_limit_show(struct kobject *kobj, char *buf)
-{
-	return snprintf(buf, 10, "%d\n", ufc.prio_vfreq[PM_QOS_LITTLE_MAX_LIMIT]);
-}
-
-static ssize_t little_max_limit_store(struct kobject *kobj, const char *buf,
-								size_t count)
-{
-	int input;
-
-	if (!sscanf(buf, "%8d", &input))
-		return -EINVAL;
-
-	ufc_update_request(USERSPACE, PM_QOS_LITTLE_MAX_LIMIT, input);
-
-	return count;
-}
-
-static ssize_t over_limit_show(struct kobject *kobj, char *buf)
-{
-	return snprintf(buf, 10, "%d\n", ufc.prio_vfreq[PM_QOS_OVER_LIMIT]);
-}
-
-static ssize_t over_limit_store(struct kobject *kobj, const char *buf,
-								size_t count)
-{
-	int input;
-
-	if (!sscanf(buf, "%8d", &input))
-		return -EINVAL;
-
-	ufc_update_request(USERSPACE, PM_QOS_OVER_LIMIT, input);
-
-	return count;
-}
+static DEVICE_ATTR_RW(limit_stat);
 
 static int __debug_table_show(int ctrl_type, char *buf)
 {
 	struct ufc_table_info *table_info;
 	int count = 0;
-	int c_idx, r_idx;
+	int col, row;
 
 	if (list_empty(&ufc.ufc_table_list))
 		return 0;
 
 	table_info = get_table_info(ctrl_type);
 	if (!table_info)
-		return -ENODEV;
+		return 0;
 
 	count += snprintf(buf + count, PAGE_SIZE - count, "It's only for debug\n");
 	count += snprintf(buf + count, PAGE_SIZE - count, "Table Ctrl Type: %s(%d)\n",
-					get_ctrl_type_string(table_info->ctrl_type),
-					table_info->ctrl_type);
+			get_ctrl_type_string(table_info->ctrl_type), table_info->ctrl_type);
 
-	for (r_idx = 0; r_idx < (ufc.table_row + ufc.lit_table_row); r_idx++) {
-		for (c_idx = 0; c_idx < ufc.table_col; c_idx++) {
+	for (row = 0; row < (ufc.table_row + ufc.lit_table_row); row++) {
+		for (col = 0; col < ufc.table_col; col++) {
 			count += snprintf(buf + count, PAGE_SIZE - count, "%9d",
-					table_info->ufc_table[c_idx][r_idx]);
+					table_info->ufc_table[col][row]);
 		}
 		count += snprintf(buf + count, PAGE_SIZE - count,"\n");
 	}
 
 	return count;
 }
-
-static ssize_t debug_max_table_show(struct kobject *kobj, char *buf)
+static ssize_t debug_max_table_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
 	return __debug_table_show(PM_QOS_MAX_LIMIT, buf);
 }
+static DEVICE_ATTR_RO(debug_max_table);
 
-static ssize_t debug_min_table_show(struct kobject *kobj, char *buf)
+static ssize_t debug_min_table_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
 	return __debug_table_show(PM_QOS_MIN_LIMIT, buf);
 }
+static DEVICE_ATTR_RO(debug_min_table);
 
-static ssize_t info_show(struct kobject *kobj, char *buf)
+static ssize_t debug_table_col_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int count = 0;
+
+	count += sprintf(buf + count, "tatal_col:%d vfreq:%d ",
+			ufc.table_col, ufc.col_vfreq);
+	if (ufc.col_big > 0)
+		count += sprintf(buf + count, "big:%d ", ufc.col_big);
+	if (ufc.col_mid > 0)
+		count += sprintf(buf + count, "mid:%d ", ufc.col_mid);
+	if (ufc.col_lit > 0)
+		count += sprintf(buf + count, "lit:%d ", ufc.col_lit);
+	count += sprintf(buf + count, "emstune:%d over_limit:%d\n",
+			ufc.col_emstune, ufc.col_over_limit);
+
+	return count;
+}
+static DEVICE_ATTR_RO(debug_table_col);
+
+static ssize_t info_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
 	ssize_t count = 0;
 	int user;
 
 	for (user = 0; user < USER_END; user++)
-		count += snprintf(&buf[count], 10, "%d\n",
-					ufc_req[user].freq[PM_QOS_MIN_LIMIT]);
+		count += snprintf(&buf[count], 10, "%d\n", ufc_req[user].freq[PM_QOS_MIN_LIMIT]);
 
 	return count;
 }
+static DEVICE_ATTR_RO(info);
 
-static ssize_t debug_table_col_show(struct kobject *kobj, char *buf)
-{
-	int ret = 0;
-
-	ret += sprintf(buf + ret, "tatal_col:%d vfreq:%d lit:%d mid:%d big:%d emstune:%d over_limit:%d ",
-			ufc.table_col, ufc.col_vfreq, ufc.col_big, ufc.col_mid, ufc.col_lit,
-			ufc.col_emstune, ufc.col_over_limit);
-
-	return ret;
-}
-
-struct ufc_attr {
-	struct attribute attr;
-	ssize_t (*show)(struct kobject *, char *);
-	ssize_t (*store)(struct kobject *, const char *, size_t);
-};
-
-#define UFC_ATTR_RO(name) \
-static struct ufc_attr attr_##name \
-= __ATTR(name, 0444, name##_show, NULL)
-
-#define UFC_ATTR_RW(name) \
-static struct ufc_attr attr_##name \
-= __ATTR(name, 0644, name##_show, name##_store)
-
-UFC_ATTR_RO(cpufreq_table);
-UFC_ATTR_RW(limit_stat);
-UFC_ATTR_RW(cpufreq_min_limit);
-UFC_ATTR_RW(cpufreq_min_limit_wo_boost);
-UFC_ATTR_RW(cpufreq_max_limit);
-UFC_ATTR_RW(over_limit);
-UFC_ATTR_RW(little_max_limit);
-UFC_ATTR_RO(debug_max_table);
-UFC_ATTR_RO(debug_min_table);
-UFC_ATTR_RO(info);
-UFC_ATTR_RO(debug_table_col);
-
-static struct attribute *exynos_ufc_attrs[] = {
-	&attr_cpufreq_table.attr,
-	&attr_cpufreq_min_limit.attr,
-	&attr_cpufreq_min_limit_wo_boost.attr,
-	&attr_cpufreq_max_limit.attr,
-	&attr_over_limit.attr,
-	&attr_little_max_limit.attr,
-	&attr_limit_stat.attr,
-	&attr_debug_max_table.attr,
-	&attr_debug_min_table.attr,
-	&attr_info.attr,
-	&attr_debug_table_col.attr,
+static struct attribute *ufc_attrs[] = {
+	&dev_attr_cpufreq_table.attr,
+	&dev_attr_cpufreq_min_limit.attr,
+	&dev_attr_cpufreq_min_limit_wo_boost.attr,
+	&dev_attr_cpufreq_max_limit.attr,
+	&dev_attr_over_limit.attr,
+	&dev_attr_little_max_limit.attr,
+	&dev_attr_limit_stat.attr,
+	&dev_attr_debug_max_table.attr,
+	&dev_attr_debug_min_table.attr,
+	&dev_attr_debug_table_col.attr,
+	&dev_attr_info.attr,
 	NULL,
 };
 
-#define attr_to_ufcattr(a) container_of(a, struct ufc_attr, attr)
-
-static ssize_t ufc_sysfs_show(struct kobject *kobj, struct attribute *at, char *buf)
-{
-	struct ufc_attr *ufcattr = attr_to_ufcattr(at);
-	int ret = 0;
-
-	if (ufcattr->show)
-		ret =  ufcattr->show(kobj, buf);
-
-	return ret;
-}
-
-static ssize_t ufc_sysfs_store(struct kobject *kobj, struct attribute *at,
-					const char *buf, size_t count)
-{
-	struct ufc_attr *ufcattr = attr_to_ufcattr(at);
-	int ret = 0;
-
-	if (ufcattr->show)
-		ret = ufcattr->store(kobj, buf, count);
-
-	return ret;
-}
-
-static const struct sysfs_ops ufc_sysfs_ops = {
-	.show	= ufc_sysfs_show,
-	.store	= ufc_sysfs_store,
+static struct attribute_group ufc_attr_group = {
+	.name = "ufc",
+	.attrs = ufc_attrs,
 };
 
-static struct kobj_type ktype_ufc = {
-	.sysfs_ops	= &ufc_sysfs_ops,
-	.default_attrs	= exynos_ufc_attrs,
-};
+static int init_ufc_sysfs(struct kobject *kobj)
+{
+	int ret;
 
-struct kobject ufc_kobj;
+	ret = sysfs_create_group(kobj, &ufc_attr_group);
+	if (ret) {
+		pr_err("Failed to init exynos ufc\n");
+		return ret;
+	}
 
+	ret = compat_only_sysfs_link_entry_to_kobj(&cpu_subsys.dev_root->kobj, kobj,
+			ufc_attr_group.name, "cpufreq_limit");
+	if (ret) {
+		pr_err("Failed to link UFC sysfs to cpuctrl \n");
+		return ret;
+	}
+
+	return 0;
+}
 /*********************************************************************
  *                           INIT FUNCTION                           *
  *********************************************************************/
@@ -1379,21 +1366,6 @@ static int ufc_init_freq_qos(void)
 
 	/* Success */
 	return 0;
-}
-
-static int ufc_init_sysfs(struct kobject *kobj)
-{
-	int ret = 0;
-	/* /sys/devices/platform/exynos-ufcc/ufc/  */
-	if (kobject_init_and_add(&ufc_kobj, &ktype_ufc,
-				 kobj, "ufc"))
-		pr_err("Failed to init exynos ufc\n");
-
-	/* /sys/devices/system/cpu/cpufreq_limit */
-	if (sysfs_create_link(&cpu_subsys.dev_root->kobj, &ufc_kobj, "cpufreq_limit"))
-		pr_err("Failed to link UFC sysfs to cpuctrl \n");
-
-	return ret;
 }
 
 static int ufc_parse_init_table(struct ufc_table_info *ufc_info,
@@ -1660,7 +1632,7 @@ static int exynos_ufc_init(struct platform_device *pdev)
 		}
 	}
 
-	if (ufc_init_sysfs(&pdev->dev.kobj)){
+	if (init_ufc_sysfs(&pdev->dev.kobj)){
 		pr_err("exynos-ufc: Failed to init sysfs\n");
 		ufc_free_all();
 		return 0;
