@@ -449,7 +449,7 @@
 			/* Delay time */
 			use_delay_time = "false";
 
-			freq_info = <1539000 421000 421000 421000 1539000 421000>;
+			freq_info = <1539000 1539000 421000 421000 1539000 421000>;
 			/* initial_freq, default_qos, suspend_freq, min_freq, max_freq reboot_freq */
 
 			/* Booting value */
@@ -508,7 +508,7 @@
 			/* Delay time */
 			use_delay_time = "false";
 
-			freq_info = <400000 50000 50000 50000 400000 400000>;
+			freq_info = <400000 400000 50000 50000 400000 400000>;
 			/* <initial_freq, default_qos, suspend_freq, min, max, reboot_freq> */
 
 			/* Booting value */
