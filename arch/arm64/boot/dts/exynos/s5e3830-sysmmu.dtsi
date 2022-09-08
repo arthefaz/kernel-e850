@@ -106,7 +106,7 @@
 			<19 TLB_CFG(BL1, PREFETCH_PREDICTION) DIR_WRITE SYSMMU_ID_MASK(0x19, 0x1F)>;
 		port-name = "CSISX2, IPP";
 		#iommu-cells = <0>;
-		power-domains = <&pd_csis>;
+		power-domains = <&pd_is>;
 	};
 
 	sysmmu_is1: sysmmu@14570000 {
@@ -130,7 +130,7 @@
 			<8 TLB_CFG(BL1, PREFETCH_PREDICTION) DIR_WRITE SYSMMU_ID_MASK(0x2, 0x3)>;
 		port-name = "ITP, MCSC, VRA, GDC";
 		#iommu-cells = <0>;
-		power-domains = <&pd_csis>;
+		power-domains = <&pd_is>;
 	};
 
 	sysmmu_mfcmscl: sysmmu@12C50000 {
