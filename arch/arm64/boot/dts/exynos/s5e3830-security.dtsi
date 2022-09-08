@@ -56,9 +56,9 @@
 //		dma-coherent;
 //	};
 //
-//	/* Secure RPMB */
-//	ufs-srpmb {
-//		compatible = "samsung,ufs-srpmb";
-//		interrupts = <GIC_SPI INTREQ__RPMB IRQ_TYPE_LEVEL_HIGH>;
-//	};
+	/* Secure RPMB */
+	mmc-srpmb {
+		compatible = "samsung,mmc-srpmb";
+		interrupts = <GIC_SPI INTREQ__RPMB IRQ_TYPE_LEVEL_HIGH>;
+	};
 };
