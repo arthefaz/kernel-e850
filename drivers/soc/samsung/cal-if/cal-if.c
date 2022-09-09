@@ -466,7 +466,7 @@ void cal_cp_disable_dump_pc_no_pg(void)
 EXPORT_SYMBOL_GPL(cal_cp_disable_dump_pc_no_pg);
 #endif
 
-#ifdef CONFIG_GNSS_PMUCAL
+#if IS_ENABLED(CONFIG_GNSS_PMUCAL)
 void cal_gnss_init(void)
 {
 	pmucal_gnss_init();
