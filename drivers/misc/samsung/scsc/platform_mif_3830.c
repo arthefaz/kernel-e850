@@ -173,6 +173,11 @@ struct platform_mif {
 	int (*suspend_handler)(struct scsc_mif_abs *abs, void *data);
 	void (*resume_handler)(struct scsc_mif_abs *abs, void *data);
 	void *suspendresume_data;
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+	/* Callback function to check recovery status */
+	bool (*recovery_disabled)(void);
+#endif
 };
 
 static void power_supplies_on(struct platform_mif *platform);
@@ -581,6 +586,30 @@ static int platform_mif_pm_qos_remove_request(struct scsc_mif_abs *interface, st
 }
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+static void platform_recovery_disabled_reg(struct scsc_mif_abs *interface, bool (*handler)(void))
+{
+	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
+	unsigned long       flags;
+
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Registering mif recovery %pS\n", handler);
+	spin_lock_irqsave(&platform->mif_spinlock, flags);
+	platform->recovery_disabled = handler;
+	spin_unlock_irqrestore(&platform->mif_spinlock, flags);
+}
+
+static void platform_recovery_disabled_unreg(struct scsc_mif_abs *interface)
+{
+	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
+	unsigned long       flags;
+
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Unregistering mif recovery\n");
+	spin_lock_irqsave(&platform->mif_spinlock, flags);
+	platform->recovery_disabled = NULL;
+	spin_unlock_irqrestore(&platform->mif_spinlock, flags);
+}
+#endif
+
 static void platform_mif_irq_default_handler(int irq, void *data)
 {
 	/* Avoid unused parameter error */
@@ -650,7 +679,11 @@ irqreturn_t platform_wdog_isr(int irq, void *data)
 	}
 
 	/* The wakeup source isn't cleared until WLBT is reset, so change the interrupt type to suppress this */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+	if (platform->recovery_disabled && platform->recovery_disabled()) {
+#else
 	if (mxman_recovery_disabled()) {
+#endif
 		ret = regmap_update_bits(platform->pmureg, WAKEUP_INT_TYPE,
 				RESETREQ_WLBT, 0);
 		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Set RESETREQ_WLBT wakeup interrput type to EDGE.\n");
@@ -1927,6 +1960,10 @@ struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 	platform_if->mif_pm_qos_add_request = platform_mif_pm_qos_add_request;
 	platform_if->mif_pm_qos_update_request = platform_mif_pm_qos_update_request;
 	platform_if->mif_pm_qos_remove_request = platform_mif_pm_qos_remove_request;
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+	platform_if->recovery_disabled_reg = platform_recovery_disabled_reg;
+	platform_if->recovery_disabled_unreg = platform_recovery_disabled_unreg;
 #endif
 	/* Update state */
 	platform->pdev = pdev;
