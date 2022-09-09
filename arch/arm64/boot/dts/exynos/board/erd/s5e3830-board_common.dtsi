@@ -99,6 +99,11 @@
 
 				mbox,name = "gnss_mailbox";
 				mbox,id = <0>;
+
+				num_shared_reg = <0>;
+				shared_reg_offset = <0x000>;
+				use_sw_reset_reg = <0>;
+
 			};
 
 			gnssif {
@@ -144,11 +149,21 @@
 				reg_tx_tail = <1 0>;
 				fault_info = <1 0x200000 0x180000>;
 
-				shmem,gnss_code_offset = <0x00000000>;
-				shmem,gnss_code_size = <0x00000000>;
+				shmem,code_offset = <0x00000000>;
+				shmem,code_allowed_size = <0x00380000>;
 				shmem,ipc_offset = <0x00380000>;
 				shmem,ipc_size = <0x00080000>;
-				shmem,ipc_reg_cnt = <32>;
+
+				shmem,ipc_rx_offset = <0x00000000>;
+				shmem,ipc_rx_size = <0x00040000>;
+				shmem,ipc_tx_offset = <0x00040000>;
+				shmem,ipc_tx_size = <0x0003FF80>;
+				shmem,ipc_reg_offset = <0x0007FF80>;
+				shmem,ipc_reg_size = <0x00000080>; /* can afford 32 regs */
+
+				shmem,base_addr = <0x60000000>;
+				shmem,base_addr_2nd = <0xA0000000>;
+
                         };
                 };
 
