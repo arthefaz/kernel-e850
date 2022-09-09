@@ -768,14 +768,14 @@ static int setup_bhcs(struct scsc_service *service,
 		firm = NULL;
 	}
 
-#if defined(CONFIG_ARCH_EXYNOS) || defined(CONFIG_ARCH_EXYNOS9)
+/*#if defined(CONFIG_ARCH_EXYNOS) || defined(CONFIG_ARCH_EXYNOS9)
 	bhcs->bluetooth_address_nap =
 		(exynos_soc_info.unique_id & 0x000000FFFF00) >> 8;
 	bhcs->bluetooth_address_uap =
 		(exynos_soc_info.unique_id & 0x0000000000FF);
 	bhcs->bluetooth_address_lap =
 		(exynos_soc_info.unique_id & 0xFFFFFF000000) >> 24;
-#endif
+#endif*/
 
 	if (bluetooth_address) {
 		SCSC_TAG_INFO(BT_COMMON,
@@ -2570,7 +2570,7 @@ static int __init scsc_bt_module_init(void)
 	spin_lock_init(&bt_service.avdtp_detect.lock);
 	spin_lock_init(&bt_service.avdtp_detect.fw_write_lock);
 
-#if defined(CONFIG_ARCH_EXYNOS) || defined(CONFIG_ARCH_EXYNOS9)
+/*#if defined(CONFIG_ARCH_EXYNOS) || defined(CONFIG_ARCH_EXYNOS9)
 	sprintf(bluetooth_address_fallback, "%02X:%02X:%02X:%02X:%02X:%02X",
 	       (exynos_soc_info.unique_id & 0x000000FF0000) >> 16,
 	       (exynos_soc_info.unique_id & 0x00000000FF00) >> 8,
@@ -2578,7 +2578,7 @@ static int __init scsc_bt_module_init(void)
 	       (exynos_soc_info.unique_id & 0xFF0000000000) >> 40,
 	       (exynos_soc_info.unique_id & 0x00FF00000000) >> 32,
 	       (exynos_soc_info.unique_id & 0x0000FF000000) >> 24);
-#endif
+#endif*/
 
 #ifdef CONFIG_SCSC_ANT
 	SCSC_TAG_DEBUG(BT_COMMON, "dev=%u class=%p\n",

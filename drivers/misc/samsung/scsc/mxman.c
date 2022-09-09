@@ -2153,7 +2153,7 @@ static void mxman_failure_work(struct work_struct *work)
 			if (scandump_trigger_fw_panic == mxman->scsc_panic_code) {
 				SCSC_TAG_WARNING(MXMAN, "WLBT FW failure - halt Exynos kernel for scandump on code 0x%x!\n",
 						 scandump_trigger_fw_panic);
-				dbg_snapshot_do_dpm_policy(GO_S2D_ID);
+				//dbg_snapshot_do_dpm_policy(GO_S2D_ID);
 			}
 		}
 #endif
@@ -2773,7 +2773,7 @@ void mxman_fail(struct mxman *mxman, u16 failure_source, const char *reason)
 #if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT) && defined(GO_S2D_ID)
 		if (scandump_trigger_fw_panic == 0) {
 			SCSC_TAG_WARNING(MXMAN, "WLBT FW failure - halt Exynos kernel for scandump on code 0x%x!\n", scandump_trigger_fw_panic);
-			dbg_snapshot_do_dpm_policy(GO_S2D_ID);
+			//dbg_snapshot_do_dpm_policy(GO_S2D_ID);
 		}
 #else
 		/* Support not present, fallback to vanilla moredump and stop WLBT */

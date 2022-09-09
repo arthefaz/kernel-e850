@@ -188,7 +188,7 @@ static ssize_t mx_procfs_mx_panic_write(struct file *file, const char __user *us
 		return -EFAULT;
 	if (value == '3') {
 		SCSC_TAG_INFO(MX_PROC, "Manual Scandump");
-		dbg_snapshot_do_dpm_policy(GO_S2D_ID);
+		//dbg_snapshot_do_dpm_policy(GO_S2D_ID);
 	} else if (mxproc) {
 		SCSC_TAG_INFO(MX_PROC, "Manual FW Panic");
 		mxman_force_panic(mxproc->mxman);

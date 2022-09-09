@@ -451,9 +451,9 @@ mac_default:
 	SLSI_ETHER_COPY(addr, SLSI_DEFAULT_HW_MAC_ADDR);
 #if defined(CONFIG_ARCH_EXYNOS) || defined(CONFIG_ARCH_EXYNOS9)
 	/* Randomise MAC address from the soc uid */
-	addr[3] = (exynos_soc_info.unique_id & 0xFF0000000000) >> 40;
+	/*addr[3] = (exynos_soc_info.unique_id & 0xFF0000000000) >> 40;
 	addr[4] = (exynos_soc_info.unique_id & 0x00FF00000000) >> 32;
-	addr[5] = (exynos_soc_info.unique_id & 0x0000FF000000) >> 24;
+	addr[5] = (exynos_soc_info.unique_id & 0x0000FF000000) >> 24;*/
 #endif
 	SLSI_DBG1(sdev, SLSI_INIT_DEINIT,
 		  "MAC addr file NOT found, using default MAC ADDR: %pM\n", addr);

@@ -509,12 +509,12 @@ static int platform_mif_pm_qos_add_request(struct scsc_mif_abs *interface, struc
 		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PM QoS add request error. CPU policy not loaded");
 		return -ENOENT;
 	}
-	exynos_pm_qos_add_request(&qos_req->pm_qos_req_mif, PM_QOS_BUS_THROUGHPUT, table.freq_mif);
-	exynos_pm_qos_add_request(&qos_req->pm_qos_req_int, PM_QOS_DEVICE_THROUGHPUT, table.freq_int);
+	//exynos_pm_qos_add_request(&qos_req->pm_qos_req_mif, PM_QOS_BUS_THROUGHPUT, table.freq_mif);
+	//exynos_pm_qos_add_request(&qos_req->pm_qos_req_int, PM_QOS_DEVICE_THROUGHPUT, table.freq_int);
 
-	ret = freq_qos_tracer_add_request(&qos_req->cpu_cluster0_policy->constraints, &qos_req->pm_qos_req_cl0, FREQ_QOS_MIN, 0);
+	//ret = freq_qos_tracer_add_request(&qos_req->cpu_cluster0_policy->constraints, &qos_req->pm_qos_req_cl0, FREQ_QOS_MIN, 0);
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PM QoS add request cl0. Setting freq_qos_add_request %d", ret);
-	ret = freq_qos_tracer_add_request(&qos_req->cpu_cluster1_policy->constraints, &qos_req->pm_qos_req_cl1, FREQ_QOS_MIN, 0);
+	//ret = freq_qos_tracer_add_request(&qos_req->cpu_cluster1_policy->constraints, &qos_req->pm_qos_req_cl1, FREQ_QOS_MIN, 0);
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PM QoS add request cl1. Setting freq_qos_add_request %d", ret);
 #else
 	pm_qos_add_request(&qos_req->pm_qos_req_mif, PM_QOS_BUS_THROUGHPUT, table.freq_mif);
@@ -545,10 +545,10 @@ static int platform_mif_pm_qos_update_request(struct scsc_mif_abs *interface, st
 		"PM QoS update request: %u. MIF %u INT %u CL0 %u CL1 %u\n", config, table.freq_mif, table.freq_int, table.freq_cl0, table.freq_cl1);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
-	exynos_pm_qos_update_request(&qos_req->pm_qos_req_mif, table.freq_mif);
-	exynos_pm_qos_update_request(&qos_req->pm_qos_req_int, table.freq_int);
-	freq_qos_update_request(&qos_req->pm_qos_req_cl0, table.freq_cl0);
-	freq_qos_update_request(&qos_req->pm_qos_req_cl1, table.freq_cl1);
+	//exynos_pm_qos_update_request(&qos_req->pm_qos_req_mif, table.freq_mif);
+	//exynos_pm_qos_update_request(&qos_req->pm_qos_req_int, table.freq_int);
+	//freq_qos_update_request(&qos_req->pm_qos_req_cl0, table.freq_cl0);
+	//freq_qos_update_request(&qos_req->pm_qos_req_cl1, table.freq_cl1);
 #else
 	pm_qos_update_request(&qos_req->pm_qos_req_mif, table.freq_mif);
 	pm_qos_update_request(&qos_req->pm_qos_req_int, table.freq_int);
@@ -575,10 +575,10 @@ static int platform_mif_pm_qos_remove_request(struct scsc_mif_abs *interface, st
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PM QoS remove request\n");
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
-	exynos_pm_qos_remove_request(&qos_req->pm_qos_req_mif);
-	exynos_pm_qos_remove_request(&qos_req->pm_qos_req_int);
-	freq_qos_tracer_remove_request(&qos_req->pm_qos_req_cl0);
-	freq_qos_tracer_remove_request(&qos_req->pm_qos_req_cl1);
+	//exynos_pm_qos_remove_request(&qos_req->pm_qos_req_mif);
+	//exynos_pm_qos_remove_request(&qos_req->pm_qos_req_int);
+	//freq_qos_tracer_remove_request(&qos_req->pm_qos_req_cl0);
+	//freq_qos_tracer_remove_request(&qos_req->pm_qos_req_cl1);
 #else
 	pm_qos_remove_request(&qos_req->pm_qos_req_mif);
 	pm_qos_remove_request(&qos_req->pm_qos_req_int);
@@ -830,7 +830,7 @@ irqreturn_t platform_cfg_req_isr(int irq, void *data)
 	regmap_read(platform->wlbt_remap, CHIP_VERSION_ID_OFFSET, &id);
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Read CHIP_VERSION_ID 0x%x\n", id);
 	id &= ~(CHIP_VERSION_ID_IP_MAJOR | CHIP_VERSION_ID_IP_MINOR);
-	id |= ((exynos_soc_info.revision << CHIP_VERSION_ID_IP_MINOR_SHIFT) & (CHIP_VERSION_ID_IP_MAJOR | CHIP_VERSION_ID_IP_MINOR));
+	id |= 0; //((exynos_soc_info.revision << CHIP_VERSION_ID_IP_MINOR_SHIFT) & (CHIP_VERSION_ID_IP_MAJOR | CHIP_VERSION_ID_IP_MINOR));
 	CHECK(regmap_write(platform->wlbt_remap, CHIP_VERSION_ID_OFFSET, id));
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Updated CHIP_VERSION_ID 0x%x\n", id);
 
@@ -1438,7 +1438,7 @@ static int platform_mif_reset(struct scsc_mif_abs *interface, bool reset)
 #if defined(CONFIG_ARCH_EXYNOS) || defined(CONFIG_ARCH_EXYNOS9)
 			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
 				"SOC_VERSION: product_id 0x%x, rev 0x%x\n",
-				exynos_soc_info.product_id, exynos_soc_info.revision);
+				0,0); //exynos_soc_info.product_id, exynos_soc_info.revision);
 #endif
 			power_supplies_on(platform);
 
@@ -2283,8 +2283,8 @@ static void power_supplies_on(struct platform_mif *platform)
 	 * adb shell "echo 0x40 0xFC  > /sys/class/pmic/s2mpu12/s2mpu12_write"
 	 */
 
-	s2mpu12_write_reg(&i2c, 0x3C, 0xE0); /* LDO 18 */
-	s2mpu12_write_reg(&i2c, 0x3D, 0xE0); /* LDO 19 */
-	s2mpu12_write_reg(&i2c, 0x3E, 0xEC); /* LDO 20 */
-	s2mpu12_write_reg(&i2c, 0x40, 0xFC); /* LDO 22 */
+	//s2mpu12_write_reg(&i2c, 0x3C, 0xE0); /* LDO 18 */
+	//s2mpu12_write_reg(&i2c, 0x3D, 0xE0); /* LDO 19 */
+	//s2mpu12_write_reg(&i2c, 0x3E, 0xEC); /* LDO 20 */
+	//s2mpu12_write_reg(&i2c, 0x40, 0xFC); /* LDO 22 */
 }
