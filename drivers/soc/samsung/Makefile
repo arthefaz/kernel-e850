@@ -65,3 +65,6 @@ obj-$(CONFIG_EXYNOS_CPUHP)      += exynos-cpuhp.o
 
 # Exynos User Frequency & Cstate Control
 obj-$(CONFIG_EXYNOS_UFCC)       += exynos-ufcc.o
+
+#GNSS Interface Driver
+obj-$(CONFIG_EXYNOS_GNSS_IF) += gnssif/
