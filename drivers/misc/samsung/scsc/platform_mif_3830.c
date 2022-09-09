@@ -43,7 +43,12 @@
 #include "mif_reg_smapper.h"
 #endif
 #ifdef CONFIG_SCSC_QOS
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#include <soc/samsung/exynos_pm_qos.h>
+#include <soc/samsung/freq-qos-tracer.h>
+#else
 #include <linux/pm_qos.h>
+#endif
 #endif
 
 #if !defined(CONFIG_SOC_EXYNOS3830) && !defined(CONFIG_SOC_S5E3830)
@@ -472,6 +477,7 @@ static int platform_mif_pm_qos_add_request(struct scsc_mif_abs *interface, struc
 {
 	struct platform_mif *platform = platform_mif_from_mif_abs(interface);
 	struct qos_table table;
+	int ret = 0;
 
 	if (!platform)
 		return -ENODEV;
@@ -486,10 +492,27 @@ static int platform_mif_pm_qos_add_request(struct scsc_mif_abs *interface, struc
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
 		"PM QoS add request: %u. MIF %u INT %u CL0 %u CL1 %u\n", config, table.freq_mif, table.freq_int, table.freq_cl0, table.freq_cl1);
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+	qos_req->cpu_cluster0_policy = cpufreq_cpu_get(0);
+	qos_req->cpu_cluster1_policy = cpufreq_cpu_get(4);
+
+	if ((!qos_req->cpu_cluster0_policy) || (!qos_req->cpu_cluster1_policy)) {
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PM QoS add request error. CPU policy not loaded");
+		return -ENOENT;
+	}
+	exynos_pm_qos_add_request(&qos_req->pm_qos_req_mif, PM_QOS_BUS_THROUGHPUT, table.freq_mif);
+	exynos_pm_qos_add_request(&qos_req->pm_qos_req_int, PM_QOS_DEVICE_THROUGHPUT, table.freq_int);
+
+	ret = freq_qos_tracer_add_request(&qos_req->cpu_cluster0_policy->constraints, &qos_req->pm_qos_req_cl0, FREQ_QOS_MIN, 0);
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PM QoS add request cl0. Setting freq_qos_add_request %d", ret);
+	ret = freq_qos_tracer_add_request(&qos_req->cpu_cluster1_policy->constraints, &qos_req->pm_qos_req_cl1, FREQ_QOS_MIN, 0);
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PM QoS add request cl1. Setting freq_qos_add_request %d", ret);
+#else
 	pm_qos_add_request(&qos_req->pm_qos_req_mif, PM_QOS_BUS_THROUGHPUT, table.freq_mif);
 	pm_qos_add_request(&qos_req->pm_qos_req_int, PM_QOS_DEVICE_THROUGHPUT, table.freq_int);
 	pm_qos_add_request(&qos_req->pm_qos_req_cl0, PM_QOS_CLUSTER0_FREQ_MIN, table.freq_cl0);
 	pm_qos_add_request(&qos_req->pm_qos_req_cl1, PM_QOS_CLUSTER1_FREQ_MIN, table.freq_cl1);
+#endif
 
 	return 0;
 }
@@ -512,10 +535,17 @@ static int platform_mif_pm_qos_update_request(struct scsc_mif_abs *interface, st
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
 		"PM QoS update request: %u. MIF %u INT %u CL0 %u CL1 %u\n", config, table.freq_mif, table.freq_int, table.freq_cl0, table.freq_cl1);
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+	exynos_pm_qos_update_request(&qos_req->pm_qos_req_mif, table.freq_mif);
+	exynos_pm_qos_update_request(&qos_req->pm_qos_req_int, table.freq_int);
+	freq_qos_update_request(&qos_req->pm_qos_req_cl0, table.freq_cl0);
+	freq_qos_update_request(&qos_req->pm_qos_req_cl1, table.freq_cl1);
+#else
 	pm_qos_update_request(&qos_req->pm_qos_req_mif, table.freq_mif);
 	pm_qos_update_request(&qos_req->pm_qos_req_int, table.freq_int);
 	pm_qos_update_request(&qos_req->pm_qos_req_cl0, table.freq_cl0);
 	pm_qos_update_request(&qos_req->pm_qos_req_cl1, table.freq_cl1);
+#endif
 
 	return 0;
 }
@@ -534,10 +564,18 @@ static int platform_mif_pm_qos_remove_request(struct scsc_mif_abs *interface, st
 	}
 
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "PM QoS remove request\n");
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+	exynos_pm_qos_remove_request(&qos_req->pm_qos_req_mif);
+	exynos_pm_qos_remove_request(&qos_req->pm_qos_req_int);
+	freq_qos_tracer_remove_request(&qos_req->pm_qos_req_cl0);
+	freq_qos_tracer_remove_request(&qos_req->pm_qos_req_cl1);
+#else
 	pm_qos_remove_request(&qos_req->pm_qos_req_mif);
 	pm_qos_remove_request(&qos_req->pm_qos_req_int);
 	pm_qos_remove_request(&qos_req->pm_qos_req_cl0);
 	pm_qos_remove_request(&qos_req->pm_qos_req_cl1);
+#endif
 
 	return 0;
 }
