@@ -19,7 +19,11 @@
 #include <linux/iommu.h>
 #include <linux/slab.h>
 #include <linux/io.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
 #include <linux/smc.h>
+#else
+#include <soc/samsung/exynos-smc.h>
+#endif
 #ifdef CONFIG_OF
 #include <linux/of.h>
 #include <linux/of_address.h>
