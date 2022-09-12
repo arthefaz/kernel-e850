@@ -19,7 +19,7 @@
                    <GIC_SPI INTREQ__G3D_IRQGPU IRQ_TYPE_LEVEL_HIGH>;
         interrupt-names = "JOB", "MMU", "GPU";
         g3d_cmu_cal_id = <ACPM_DVFS_G3D>;
-        //power-domains = <&pd_g3d>;
+        power-domains = <&pd_g3d>;
         g3d_genpd_name = "pd-g3d";
         #cooling-cells = <2>; /* min followed by max */
         governor = "interactive";
