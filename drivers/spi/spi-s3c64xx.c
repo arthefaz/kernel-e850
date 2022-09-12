@@ -388,10 +388,10 @@ static void prepare_dma(struct s3c64xx_spi_dma_data *dma,
 	info.buf = buf;
 
 #ifdef CONFIG_ARM64
-	sdd->ops->prepare((unsigned long)dma->ch, &info);
+	sdd->ops->prepare((unsigned long)dma->ch, &info,&dma->cookie);
 	sdd->ops->trigger((unsigned long)dma->ch);
 #else
-	sdd->ops->prepare((enum dma_ch)dma->ch, &info);
+	sdd->ops->prepare((enum dma_ch)dma->ch, &info,&dma->cookie);
 	sdd->ops->trigger((enum dma_ch)dma->ch);
 #endif
 
@@ -1524,7 +1524,7 @@ static inline struct s3c64xx_spi_port_config *s3c64xx_spi_get_port_config(
 			 platform_get_device_id(pdev)->driver_data;
 }
 
-#if defined(CONFIG_CPU_IDLE)
+/*#if defined(CONFIG_CPU_IDLE)
 static int s3c64xx_spi_notifier(struct notifier_block *self,
 				unsigned long cmd, void *v)
 {
@@ -1543,7 +1543,7 @@ static int s3c64xx_spi_notifier(struct notifier_block *self,
 static struct notifier_block s3c64xx_spi_notifier_block = {
 	.notifier_call = s3c64xx_spi_notifier,
 };
-#endif /* CONFIG_CPU_IDLE */
+#endif *//* CONFIG_CPU_IDLE */
 
 static int s3c64xx_spi_probe(struct platform_device *pdev)
 {
@@ -1900,9 +1900,9 @@ static int s3c64xx_spi_runtime_suspend(struct device *dev)
 	struct s3c64xx_spi_driver_data *sdd = spi_master_get_devdata(master);
 	struct s3c64xx_spi_info *sci = sdd->cntrlr_info;
 
-	if (__clk_get_enable_count(sdd->clk))
+	//if (__clk_get_enable_count(sdd->clk))
 		clk_disable_unprepare(sdd->clk);
-	if (__clk_get_enable_count(sdd->src_clk))
+	//if (__clk_get_enable_count(sdd->src_clk))
 		clk_disable_unprepare(sdd->src_clk);
 
 #ifdef CONFIG_EXYNOS_CPUPM
@@ -2267,9 +2267,9 @@ MODULE_ALIAS("platform:s3c64xx-spi");
 
 static int __init s3c64xx_spi_init(void)
 {
-#if defined(CONFIG_CPU_IDLE)
+/*#if defined(CONFIG_CPU_IDLE)
 	exynos_pm_register_notifier(&s3c64xx_spi_notifier_block);
-#endif
+#endif*/
 	return platform_driver_probe(&s3c64xx_spi_driver, s3c64xx_spi_probe);
 }
 subsys_initcall(s3c64xx_spi_init);
