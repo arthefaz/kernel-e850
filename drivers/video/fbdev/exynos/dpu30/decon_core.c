@@ -3456,28 +3456,19 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	size = PAGE_ALIGN(size);
 
 	dev_info(decon->dev, "wanti %u bytes for window[%d]\n", size, win->idx);
-#if 0 // ION APIs
-	buf = ion_alloc((size_t)size, ION_HEAP_SYSTEM, 0);
-	if (IS_ERR(buf)) {
-		dev_err(decon->dev, "ion_share_dma_buf() failed\n");
-		goto err_share_dma_buf;
-	}
-#else // DMA Buf APIs
-	decon_info("%s calling dma_heap_find() \n", __func__);
+
         dma_heap = dma_heap_find("system-uncached");
         if (!dma_heap) {
                 pr_err("dma_heap_find() failed\n");
                 return -ENODEV;
         }
 
-	decon_info("%s calling dma_heap_buffer_alloc() \n", __func__);
         buf = dma_heap_buffer_alloc(dma_heap, (size_t)size, 0, 0);
         dma_heap_put(dma_heap);
         if (IS_ERR(buf)) {
                 pr_err("failed to allocate test buffer memory\n");
                 return PTR_ERR(buf);
         }
-#endif
 	vaddr = dma_buf_vmap(buf);
 	if (IS_ERR_OR_NULL(vaddr)) {
 		dev_err(decon->dev, "dma_buf_vmap() failed\n");
@@ -3528,7 +3519,6 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 
 err_map:
 	dma_buf_put(buf);
-err_share_dma_buf:
 	return -ENOMEM;
 }
 
@@ -3555,28 +3545,19 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 
 	dev_info(decon->dev, "want %u bytes for window[%d]\n", size, win->idx);
 
-#if 0 // ION APIs
-	buf = ion_alloc((size_t)size, ION_HEAP_SYSTEM, 0);
-	if (IS_ERR(buf)) {
-		dev_err(decon->dev, "ion_share_dma_buf() failed\n");
-		goto err_share_dma_buf;
-	}
-#else
-	decon_info("%s calling dma_heap_find() \n", __func__);
         dma_heap = dma_heap_find("system-uncached");
         if (!dma_heap) {
                 pr_err("dma_heap_find() failed\n");
                 return -ENODEV;
         }
 
-	decon_info("%s calling dma_heap_buffer_alloc() \n", __func__);
         buf = dma_heap_buffer_alloc(dma_heap, (size_t)size, 0, 0);
         dma_heap_put(dma_heap);
         if (IS_ERR(buf)) {
                 pr_err("failed to allocate test buffer memory\n");
                 return PTR_ERR(buf);
 	}
-#endif
+
 	vaddr = dma_buf_vmap(buf);
 	if (IS_ERR_OR_NULL(vaddr)) {
 		dev_err(decon->dev, "dma_buf_vmap() failed\n");
@@ -3619,7 +3600,6 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 
 err_map:
 	dma_buf_put(buf);
-err_share_dma_buf:
 	return -ENOMEM;
 }
 #endif
@@ -3665,13 +3645,11 @@ static int decon_acquire_window(struct decon_device *decon, int idx)
 
 	if (((decon->dt.out_type == DECON_OUT_DSI) || (decon->dt.out_type == DECON_OUT_DP))
 			&& (idx == decon->dt.dft_win)) {
-#if 1 //HACK1 - ION APIs needs to be replaced with DMA BUF HEAP
 		ret = decon_fb_alloc_memory(decon, win);
 		if (ret) {
 			dev_err(decon->dev, "failed to alloc display memory\n");
 			return ret;
 		}
-#endif
 #if defined(CONFIG_FB_TEST)
 		ret = decon_fb_test_alloc_memory(decon,
 				win->fbinfo->fix.smem_len);
@@ -4183,11 +4161,9 @@ static int decon_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_win;
 
-#if 1 // HACK2 To avoid thread creation failure
 	ret = decon_create_update_thread(decon, device_name);
 	if (ret)
 		goto err_win;
-#endif
 	dpu_init_win_update(decon);
 	decon_init_low_persistence_mode(decon);
 	dpu_init_cursor_mode(decon);
@@ -4219,11 +4195,7 @@ static int decon_probe(struct platform_device *pdev)
 	decon_set_bypass(decon, false);
 #endif
 
-#if 1
 	ret = decon_initial_display(decon, false);
-#else // for decon colormap
-	ret = decon_initial_display(decon, true);
-#endif
 	if (ret)
 		goto err_display;
 
@@ -4250,9 +4222,7 @@ err_subdev:
 err_pinctrl:
 	decon_destroy_psr_info(decon);
 err_psr:
-#if 1 //HACK2
 	decon_destroy_vsync_thread(decon);
-#endif
 err_vsync:
 	iounmap(decon->res.ss_regs);
 err_res:
