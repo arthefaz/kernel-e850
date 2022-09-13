@@ -69,7 +69,7 @@
 		reg = <0x0 0x11861d00 0x20>;
 		cal_id = <0xB1380005>;
 		need_smc = <0x11410204>;
-		status = "disabled";
+		status = "okay";
 		#power-domain-cells = <0>;
 	};
 
