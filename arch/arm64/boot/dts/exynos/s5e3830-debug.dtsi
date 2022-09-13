@@ -119,24 +119,14 @@
 //		retention = <0>;
 //	};
 
-//	itmon: exynos-itmon {
-//		compatible = "samsung,exynos-itmon";
-//		memory-region = <&log_itmon>;
-//		interrupts = <GIC_SPI INTREQ__TREX_DEBUG IRQ_TYPE_LEVEL_HIGH 0>,
-//			     <GIC_SPI INTREQ__TREX_D0_ACP_debugInterrupt IRQ_TYPE_LEVEL_HIGH 0>,
-//			     <GIC_SPI INTREQ__TREX_D1_ACP_debugInterrupt IRQ_TYPE_LEVEL_HIGH 0>;
-//		interrupt-affinity = <0xff>, <0x1>, <0x1>;
-//		support-irq-oring;
-//		no-support-cpu-parsing;
-//		big-bus-supporting;
-//		status = "ok";
-//		itmon_dbgc: dbgc {
-//			/* IPC */
-//			plugin-len = <3>;
-//			plugin-name = "ITM";
-//		};
-//	};
-//
+	ITMON@0 {
+		compatible = "samsung,exynos-itmon";
+		memory-region = <&log_itmon>;
+		interrupts = <0 INTREQ__TREX_D_CORE_DEBUG_INT IRQ_TYPE_LEVEL_HIGH>,
+			     <0 INTREQ__TREX_P_CORE_DEBUG_INT IRQ_TYPE_LEVEL_HIGH>;
+		status = "ok";
+	};
+
 //	exynos-ehld {
 //		compatible = "samsung,exynos-ehld";
 //		reg = <0 0x1D0D0000 0x1000>,

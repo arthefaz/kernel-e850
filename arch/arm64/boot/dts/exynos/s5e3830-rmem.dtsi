@@ -25,6 +25,12 @@
 		    compatible = "exynos,seclog";
 		    reg = <0 SECLOG_LOG_BUF_BASE SECLOG_LOG_BUF_TOTAL_SIZE>;
 		};
+
+		log_itmon: log_itmon {
+			reg = <0 0xEFFEF000 0x10000>;
+			no-map;
+		};
+
                 dss_rmem: debug_snapshot {
                         #address-cells = <2>;
                         #size-cells = <1>;
