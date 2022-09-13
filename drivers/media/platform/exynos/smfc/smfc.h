@@ -12,17 +12,12 @@
 #ifndef _MEDIA_EXYNOS_SMFC_H_
 #define _MEDIA_EXYNOS_SMFC_H_
 
-#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
-#define CONFIG_SMFC_USE_BUS_DEVFREQ
-#endif
 #include <linux/ktime.h>
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-mem2mem.h>
 #include <media/v4l2-ctrls.h>
-#ifdef CONFIG_SMFC_USE_BUS_DEVFREQ
 #include <soc/samsung/exynos_pm_qos.h>
-#endif
 
 #include "smfc-regs.h"
 
@@ -116,7 +111,6 @@ struct smfc_dev {
 	struct clk *clk_gate;
 	struct clk *clk_gate2; /* available if clk_gate is valid */
 	int bts_id;
-#ifdef CONFIG_SMFC_USE_BUS_DEVFREQ
 	struct exynos_pm_qos_request qosreq_int;
 	struct exynos_pm_qos_request qosreq_m2m;
 	struct exynos_pm_qos_request qosreq_mif;
@@ -126,7 +120,6 @@ struct smfc_dev {
 	int core_dvfs_class;
 	int core_clk;
 	int bpc;
-#endif
 };
 
 #define SMFC_CTX_COMPRESS	(1 << 0)
