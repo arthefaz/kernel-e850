@@ -273,4 +273,5 @@ config EXYNOS_PM_QOS
 endif
 
 source "drivers/soc/samsung/debug/Kconfig"
+source "drivers/soc/samsung/xperf/Kconfig"
 source "drivers/soc/samsung/gnssif/Kconfig"
