@@ -214,6 +214,13 @@
                samsung,pin-drv = <0>;
 	};
 
+	dwmmc2_cd_ext_irq: dwmmc2_cd_ext_irq {
+		samsung,pins = "gpa0-3";
+		samsung,pin-function = <0xf>;
+		samsung,pin-pud = <0>;
+		samsung,pin-drv = <4>;
+	};
+
 	key_volup: key-volup {
                samsung,pins = "gpa0-7";
                samsung,pin-function = <0xf>;
@@ -354,59 +361,125 @@
 };
 
 &dwmmc_0 {
-        #address-cells = <1>;
-        #size-cells = <0>;
-        status = "okay";
-        num-slots = <1>;
-        broken-cd;
-        fixed_voltage;
-        //supports-highspeed;
-        //mmc-ddr-1_8v;
-        //mmc-hs200-1_8v;
-        //mmc-hs400-1_8v;
-        supports-8bit;
-        supports-cmd23;
-        supports-erase;
-        //mmc-hs400-enhanced-strobe;
-        card-init-hwacg-ctrl;
-        qos-dvfs-level = <334000>;
-        enable-ulp-mode;
-        support-cmdq;
-        fifo-depth = <0x40>;
-        non-removable;
-        desc-size = <4>;
-        card-detect-delay = <200>;
-        samsung,dw-mshc-ciu-div = <3>;
-        samsung,dw-mshc-txdt-crc-timer-fastlimit = <0x34>;
-        samsung,dw-mshc-txdt-crc-timer-initval = <0x38>;
-        samsung,dw-mshc-hs400-tx-delay-line = <0x40>;
-        samsung,dw-mshc-hs400-delay-line = <0x60>;
-        samsung,dw-mshc-sdr-timing = <3 0 4 0>;
-        samsung,dw-mshc-ddr-timing = <3 0 4 2>;
-        samsung,dw-mshc-hs200-timing = <3 0 3 0>;
-        samsung,dw-mshc-hs400-timing = <1 0 2 0>;
-        samsung,dw-mshc-hs400-ulp-timing = <3 0 4 2>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	num-slots = <1>;
+	broken-cd;
+	fixed_voltage;
+	//supports-highspeed;
+	//mmc-ddr-1_8v;
+	//mmc-hs200-1_8v;
+	//mmc-hs400-1_8v;
+	supports-8bit;
+	supports-cmd23;
+	supports-erase;
+	//mmc-hs400-enhanced-strobe;
+	card-init-hwacg-ctrl;
+	qos-dvfs-level = <334000>;
+	enable-ulp-mode;
+	support-cmdq;
+	fifo-depth = <0x40>;
+	non-removable;
+	desc-size = <4>;
+	card-detect-delay = <200>;
+	samsung,dw-mshc-ciu-div = <3>;
+	samsung,dw-mshc-txdt-crc-timer-fastlimit = <0x34>;
+	samsung,dw-mshc-txdt-crc-timer-initval = <0x38>;
+	samsung,dw-mshc-hs400-tx-delay-line = <0x40>;
+	samsung,dw-mshc-hs400-delay-line = <0x60>;
+	samsung,dw-mshc-sdr-timing = <3 0 4 0>;
+	samsung,dw-mshc-ddr-timing = <3 0 4 2>;
+	samsung,dw-mshc-hs200-timing = <3 0 3 0>;
+	samsung,dw-mshc-hs400-timing = <1 0 2 0>;
+	samsung,dw-mshc-hs400-ulp-timing = <3 0 4 2>;
 
-        num-ref-clks = <12>;
-        ciu_clkin = <25 50 50 25 50 100 200 50 50 200 200 200>;
+	num-ref-clks = <12>;
+	ciu_clkin = <25 50 50 25 50 100 200 50 50 200 200 200>;
 
-        /* Swapping clock drive strength */
-        clk-drive-number = <4>;
-        pinctrl-names = "default",
-                "fast-slew-rate-1x",
-                "fast-slew-rate-2x",
-                "fast-slew-rate-3x",
-                "fast-slew-rate-4x";
-        pinctrl-0 = <&sd0_clk &sd0_cmd &sd0_rdqs &sd0_nreset &sd0_bus1 &sd0_bus4 &sd0_bus8>;
-        pinctrl-1 = <&sd0_clk_fast_slew_rate_1x>;
-        pinctrl-2 = <&sd0_clk_fast_slew_rate_2x>;
-        pinctrl-3 = <&sd0_clk_fast_slew_rate_3x>;
-        pinctrl-4 = <&sd0_clk_fast_slew_rate_4x>;
+	/* Swapping clock drive strength */
+	clk-drive-number = <4>;
+	pinctrl-names = "default",
+		"fast-slew-rate-1x",
+		"fast-slew-rate-2x",
+		"fast-slew-rate-3x",
+		"fast-slew-rate-4x";
+	pinctrl-0 = <&sd0_clk &sd0_cmd &sd0_rdqs &sd0_nreset &sd0_bus1 &sd0_bus4 &sd0_bus8>;
+	pinctrl-1 = <&sd0_clk_fast_slew_rate_1x>;
+	pinctrl-2 = <&sd0_clk_fast_slew_rate_2x>;
+	pinctrl-3 = <&sd0_clk_fast_slew_rate_3x>;
+	pinctrl-4 = <&sd0_clk_fast_slew_rate_4x>;
 
-        slot@0 {
-                reg = <0>;
-                bus-width = <8>;
-        };
+	slot@0 {
+		reg = <0>;
+		bus-width = <8>;
+	};
+};
+
+&dwmmc_2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	num-slots = <1>;
+	supports-4bit;
+	supports-cmd23;
+	supports-erase;
+	supports-highspeed;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
+	card-detect-gpio;
+	bypass-for-allpass;
+	use-fine-tuning;
+	card-init-hwacg-ctrl;
+	skip-init-mmc-scan;
+	use-runtime-pm;
+	skip-init-no-tray;
+	fifo-depth = <0x40>;
+	desc-size = <4>;
+	card-detect-delay = <400>;
+	samsung,dw-mshc-ciu-div = <3>;
+	clock-frequency = <800000000>;
+	samsung,dw-mshc-sdr-timing = <3 0 2 0>;
+	samsung,dw-mshc-ddr-timing = <3 0 2 1>;
+	samsung,dw-mshc-sdr50-timing = <3 0 4 2>;
+	samsung,dw-mshc-sdr104-timing = <3 0 3 0>;
+
+	num-ref-clks = <9>;
+	ciu_clkin = <25 50 50 25 50 100 200 50 50>;
+
+	/* Swapping clock drive strength */
+	clk-drive-number = <6>;
+	pinctrl-names = "init",
+		"fast-slew-rate-1x",
+		"fast-slew-rate-1_5x",
+		"fast-slew-rate-2x",
+		"fast-slew-rate-2_5x",
+		"fast-slew-rate-3x",
+		"fast-slew-rate-4x",
+		"pins-as-pdn",
+		"pins-as-func";
+	pinctrl-0 = <&sd2_clk &sd2_cmd &sd2_bus1 &sd2_bus4 &dwmmc2_cd_ext_irq>;
+	pinctrl-1 = <&sd2_clk_fast_slew_rate_1x>;
+	pinctrl-2 = <&sd2_clk_fast_slew_rate_1_5x>;
+	pinctrl-3 = <&sd2_clk_fast_slew_rate_2x>;
+	pinctrl-4 = <&sd2_clk_fast_slew_rate_2_5x>;
+	pinctrl-5 = <&sd2_clk_fast_slew_rate_3x>;
+	pinctrl-6 = <&sd2_clk_fast_slew_rate_4x>;
+	pinctrl-7 = <&sd2_pins_as_pdn>;
+	pinctrl-8 = <&sd2_clk &sd2_cmd &sd2_bus1 &sd2_bus4>;
+
+	card-detect = <&gpa0 3 0xf>;
+	slot@0 {
+		reg = <0>;
+		bus-width = <4>;
+		disable-wp;
+	};
+
+	mmc-pmu-pad {
+		offset = <0x1CA0>;
+		mask = <0x800>;
+		val = <0x800>;
+	};
 };
 
 &panel_0 {
