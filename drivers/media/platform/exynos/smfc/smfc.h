@@ -110,16 +110,9 @@ struct smfc_dev {
 
 	struct clk *clk_gate;
 	struct clk *clk_gate2; /* available if clk_gate is valid */
-	int bts_id;
 	struct exynos_pm_qos_request qosreq_int;
-	struct exynos_pm_qos_request qosreq_m2m;
-	struct exynos_pm_qos_request qosreq_mif;
-	u32 qosreq_int_level;
-	u32 qosreq_m2m_level;
-	u32 qosreq_mif_level;
-	int core_dvfs_class;
-	int core_clk;
-	int bpc;
+	s32 qosreq_int_level;
+
 };
 
 #define SMFC_CTX_COMPRESS	(1 << 0)

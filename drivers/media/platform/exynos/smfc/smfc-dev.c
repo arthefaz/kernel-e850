@@ -25,7 +25,6 @@
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-dma-sg.h>
 
-#include <soc/samsung/bts.h>
 #include "smfc.h"
 #include "smfc-sync.h"
 
@@ -929,69 +928,30 @@ static const struct of_device_id exynos_smfc_match[] = {
 MODULE_DEVICE_TABLE(of, exynos_smfc_match);
 
 #if defined(CONFIG_EXYNOS_PM_QOS) || defined(CONFIG_EXYNOS_PM_QOS_MODULE)
-static void smfc_pm_qos_update_request(
-        struct exynos_pm_qos_request *qos_req,
-        int pm_qos_class, u32 freq)
+static void smfc_pm_qos_update_request(struct smfc_dev *smfc)
 {
-	if (!exynos_pm_qos_request_active(qos_req))
-		exynos_pm_qos_add_request(qos_req, pm_qos_class, 0);
-
-	exynos_pm_qos_update_request(qos_req, freq);
+	if (smfc->qosreq_int_level > 0) {
+		if (!exynos_pm_qos_request_active(&smfc->qosreq_int)) {
+			exynos_pm_qos_add_request(&smfc->qosreq_int,
+					PM_QOS_DEVICE_THROUGHPUT, 0);
+		}
+		exynos_pm_qos_update_request(&smfc->qosreq_int,
+				smfc->qosreq_int_level);
+	}
 }
 
-static void smfc_pm_qos_remove_request(
-        struct exynos_pm_qos_request *qos_req)
+static void smfc_pm_qos_remove_request(struct smfc_dev *smfc)
 {
-	if (exynos_pm_qos_request_active(qos_req))
-		exynos_pm_qos_remove_request(qos_req);
+	if (smfc->qosreq_int_level > 0) {
+		if (exynos_pm_qos_request_active(&smfc->qosreq_int)) {
+			exynos_pm_qos_remove_request(&smfc->qosreq_int);
+		}
+	}
 }
 #else
-#define smfc_pm_qos_update_request(qos_req, pm_qos_class, freq) do { } while (0)
-#define smfc_pm_qos_remove_request(qos_req) do { } while (0)
+#define smfc_pm_qos_update_request(smfc) do { } while (0)
+#define smfc_pm_qos_remove_request(smfc) do { } while (0)
 #endif
-
-void smfc_get_bandwidth(struct smfc_dev *smfc, struct bts_bw *bw)
-{
-	unsigned int bpc = smfc->bpc;
-	unsigned int core_clk = smfc->core_clk;
-	unsigned int bw_khz = bpc * core_clk / SZ_1K / BITS_PER_BYTE;
-
-	bw->read = bw_khz * 1000;
-	bw->write = bw->read;
-	bw->peak = (bw->read + bw->write) / 2;
-}
-
-static void smfc_request_devfreq(struct smfc_dev *smfc)
-{
-	struct bts_bw bw;
-
-	if (smfc->core_dvfs_class == PM_QOS_M2M_THROUGHPUT) {
-		smfc_get_bandwidth(smfc, &bw);
-
-		if (smfc->bts_id >= 0)
-			bts_update_bw(smfc->bts_id, bw);
-
-		smfc_pm_qos_update_request(&smfc->qosreq_mif,
-				PM_QOS_BUS_THROUGHPUT, smfc->qosreq_mif_level);
-		smfc_pm_qos_update_request(&smfc->qosreq_m2m,
-				PM_QOS_M2M_THROUGHPUT,smfc->qosreq_m2m_level);
-	}
-	smfc_pm_qos_update_request(&smfc->qosreq_int,
-			PM_QOS_DEVICE_THROUGHPUT,smfc->qosreq_int_level);
-}
-
-static void smfc_remove_devfreq(struct smfc_dev *smfc)
-{
-	if (smfc->core_dvfs_class == PM_QOS_M2M_THROUGHPUT) {
-		if (smfc->bts_id >= 0) {
-			__maybe_unused struct bts_bw bw = { 0 };
-			bts_update_bw(smfc->bts_id, bw);
-		}
-		smfc_pm_qos_remove_request(&smfc->qosreq_mif);
-		smfc_pm_qos_remove_request(&smfc->qosreq_m2m);
-	}
-	smfc_pm_qos_remove_request(&smfc->qosreq_int);
-}
 
 static int exynos_smfc_probe(struct platform_device *pdev)
 {
@@ -1048,44 +1008,19 @@ static int exynos_smfc_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(&pdev->dev);
 
-#if defined(CONFIG_EXYNOS_BTS) || defined(CONFIG_EXYNOS_BTS_MODULE)
-	smfc->bts_id = bts_get_bwindex("JPEG");
-#else
-	smfc->bts_id = -1;
-#endif
-	dev_info(&pdev->dev, "bts_id = %d\n", smfc->bts_id);
-
-	if (of_property_read_u32(pdev->dev.of_node, "core_dvfs_class",
-				&smfc->core_dvfs_class)) {
-		dev_info(&pdev->dev,
-			"core_dvfs_class is not found, so use INT as default\n");
-		smfc->core_dvfs_class = PM_QOS_DEVICE_THROUGHPUT;
+#if defined(CONFIG_EXYNOS_PM_QOS) || defined(CONFIG_EXYNOS_PM_QOS_MODULE)
+	if (!of_property_read_u32(pdev->dev.of_node, "smfc,int_qos_minlock",
+				(u32 *)&smfc->qosreq_int_level)) {
+		if (smfc->qosreq_int_level > 0) {
+			exynos_pm_qos_add_request(&smfc->qosreq_int,
+					PM_QOS_DEVICE_THROUGHPUT, 0);
+			dev_info(&pdev->dev, "INT Min.Lock Freq. = %d\n",
+					smfc->qosreq_int_level);
+		} else {
+			smfc->qosreq_int_level = 0;
+		}
 	}
-	dev_info(&pdev->dev, "smfc->core_dvfs_class is %d\n", smfc->core_dvfs_class);
-
-	if (of_property_read_u32(pdev->dev.of_node, "smfc,int_qos_minlock",
-				(u32 *)&smfc->qosreq_int_level))
-		smfc->qosreq_int_level = 0;
-
-	if (of_property_read_u32(pdev->dev.of_node, "smfc,m2m_qos_minlock",
-				(u32 *)&smfc->qosreq_m2m_level))
-		smfc->qosreq_m2m_level = 0;
-
-	if (of_property_read_u32(pdev->dev.of_node, "smfc,mif_qos_minlock",
-				(u32 *)&smfc->qosreq_mif_level))
-		smfc->qosreq_mif_level = 0;
-
-	if (of_property_read_u32(pdev->dev.of_node, "smfc_core_clk",
-				&smfc->core_clk))
-		smfc->core_clk = -1;
-
-	if (of_property_read_u32(pdev->dev.of_node, "smfc_bpc",
-				&smfc->bpc))
-		smfc->bpc = -1;
-
-	dev_info(&pdev->dev, "Minlock(INT=%d, M2M=%d, MIF=%d), Core(%d), BPC(%d) \n",
-		smfc->qosreq_int_level, smfc->qosreq_m2m_level,
-		smfc->qosreq_mif_level, smfc->core_clk, smfc->bpc);
+#endif
 
 	platform_set_drvdata(pdev, smfc);
 
@@ -1111,6 +1046,7 @@ static int exynos_smfc_probe(struct platform_device *pdev)
 err_hwver:
 	smfc_deinit_v4l2(&pdev->dev, smfc);
 err_v4l2:
+	smfc_pm_qos_remove_request(smfc);
 
 	return ret;
 }
@@ -1127,7 +1063,7 @@ static int exynos_smfc_remove(struct platform_device *pdev)
 {
 	struct smfc_dev *smfc = platform_get_drvdata(pdev);
 
-	smfc_remove_devfreq(smfc);
+	smfc_pm_qos_remove_request(smfc);
 
 	smfc_deinit_clock(smfc);
 
@@ -1177,7 +1113,7 @@ static int smfc_runtime_resume(struct device *dev)
 {
 	__maybe_unused struct smfc_dev *smfc = dev_get_drvdata(dev);
 
-	smfc_request_devfreq(smfc);
+	smfc_pm_qos_update_request(smfc);
 
 	return 0;
 }
@@ -1186,7 +1122,7 @@ static int smfc_runtime_suspend(struct device *dev)
 {
 	__maybe_unused struct smfc_dev *smfc = dev_get_drvdata(dev);
 
-	smfc_remove_devfreq(smfc);
+	smfc_pm_qos_remove_request(smfc);
 
 	return 0;
 }
