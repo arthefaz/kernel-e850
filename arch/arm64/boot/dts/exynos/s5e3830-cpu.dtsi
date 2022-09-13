@@ -165,8 +165,8 @@
 					2002000 >;
 
 			dm-constraints {
-				list = <&mif_perf1>;
-
+				list = <&mif_perf1>,
+					<&mif_skew1>;
 			};
 
 			slack_timer {
@@ -204,7 +204,8 @@
 					2002000 >;
 
 			 dm-constraints {
-				 list = <&mif_perf2>;
+				 list = <&mif_perf2>,
+					<&mif_skew2>;
 			};
 
 			slack_timer {
@@ -223,25 +224,19 @@
 			dynamic-disable;
 
 			normal {	/* CPU    MIF */
-				table = < 2002000  1539000
-					  1846000  1539000
-					  1742000  1352000
-					  1586000  1352000
-					  1456000  1014000
-					  1300000  1014000
-					  1157000   845000
-					  1053000   845000
-					   949000   676000
-					   806000   676000
-					   650000   676000
-					   546000   676000
-					   442000   676000 >;
-			};
-			mif-skew {
-				guidance;
-				const-type = <CONSTRAINT_MIN>;
-				dm-type = <DM_MIF>;
-				ect-name = "dvfs_cpucl0";
+				table = < 442000   676000
+					  546000   676000
+					  650000   676000
+					  806000   676000
+					  949000   676000
+					 1053000   845000
+					 1157000   845000
+					 1300000  1014000
+					 1456000  1014000
+					 1586000  1352000
+					 1742000  1352000
+					 1846000  1539000
+					 2002000  1539000 >;
 			};
 		};
 		mif_perf2: dm-table@0001 {
@@ -252,24 +247,38 @@
 			dynamic-disable;
 
 			normal {        /* CPU    MIF */
-				table = < 2002000  1539000
-					  1846000  1539000
-					  1742000  1352000
-					  1586000  1352000
-					  1456000  1014000
-					  1300000  1014000
-					  1157000   845000
-					  1053000   845000
-					   949000   676000
-					   806000   676000
-					   650000   676000
-					   546000   676000
-					   442000   676000 >;
+				table = < 442000   676000
+					  546000   676000
+					  650000   676000
+					  806000   676000
+					  949000   676000
+					 1053000   845000
+					 1157000   845000
+					 1300000  1014000
+					 1456000  1014000
+					 1586000  1352000
+					 1742000  1352000
+					 1846000  1539000
+					 2002000  1539000 >;
 			};
-			mif-skew {
-				guidance;
-				const-type = <CONSTRAINT_MIN>;
-				dm-type = <DM_MIF>;
+		};
+		mif_skew1: dm-table@0002 {
+			guidance;
+			const-type = <CONSTRAINT_MIN>;
+			dm-slave = <DM_MIF>;
+			master-cal-id = <ACPM_DVFS_CPUCL0>;
+			slave-cal-id = <ACPM_DVFS_MIF>;
+			skew {
+				ect-name = "dvfs_cpucl0";
+			};
+		};
+		mif_skew2: dm-table@0003 {
+			guidance;
+			const-type = <CONSTRAINT_MIN>;
+			dm-slave = <DM_MIF>;
+			master-cal-id = <ACPM_DVFS_CPUCL1>;
+			slave-cal-id = <ACPM_DVFS_MIF>;
+			skew {
 				ect-name = "dvfs_cpucl1";
 			};
 		};

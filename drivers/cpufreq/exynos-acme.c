@@ -780,12 +780,12 @@ static int init_dm_constraint(struct exynos_cpufreq_domain *domain,
 
 	num_freq_table = of_get_child_count(dn);
 
-	if (num_freq_table > 1) {
+	/*if (num_freq_table > 1) {
 		c->support_variable_freq_table = true;
 		c->num_table_index = num_freq_table;
 		c->variable_freq_table = kcalloc(num_freq_table,
 				sizeof(struct exynos_dm_freq *), GFP_KERNEL);
-	}
+	}*/
 
 	c->table_length = domain->table_size;
 
