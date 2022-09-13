@@ -15,7 +15,7 @@
 
 struct ucc_req {
 	char			name[20];
-	int			active;
+	bool			active;
 	int			value;
 	struct list_head	list;
 };

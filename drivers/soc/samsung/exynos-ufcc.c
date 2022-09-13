@@ -26,64 +26,47 @@
 #include <soc/samsung/exynos-ufcc.h>
 #include <soc/samsung/freq-qos-tracer.h>
 
-/*********************************************************************
- *                         USER CSTATE CONTROL                       *
- *********************************************************************/
-static int ucc_initialized = false;
+/*********************************************************************/
+/*  UCC feature - User C-state Control                               */
+/*********************************************************************/
+static struct _ucc {
+	bool enable;
 
-/*
- * struct ucc_config
- *
- * - index : index of cstate config
- * - cstate : mask indicating whether each cpu supports cstate
- *    - mask bit set : cstate enable
- *    - mask bit unset : cstate disable
- */
-struct ucc_config {
-	int		index;
-	struct cpumask	cstate;
+	int cur_level;
+
+	int num_of_config;
+	/*
+	 * config : indicate whether each cpu supports c-state
+	 *   - mask bit set : c-state allowed
+	 *   - mask bit unset : c-state disallowed
+	 */
+	struct cpumask *config;
+	/*
+	 * cur_allowed has c-state allowed mask corresponding to maximum index among ucc request.
+	 * Whenever maximum requested index is changed, cur_allowed is updated.
+	 */
+	struct cpumask cur_allowed;
+
+	struct list_head req_list;
+
+	spinlock_t lock;
+} ucc = {
+	.lock = __SPIN_LOCK_INITIALIZER(ucc.lock),
 };
 
-static struct ucc_config *ucc_configs;
-static int ucc_config_count;
-
-/*
- * cur_cstate has cpu cstate config corresponding to maximum index among ucc
- * request. Whenever maximum requested index is changed, cur_state is updated.
- */
-static struct cpumask cur_cstate;
-
-static LIST_HEAD(ucc_req_list);
-
-static DEFINE_SPINLOCK(ucc_lock);
-
-static int ucc_get_value(void)
-{
-	struct ucc_req *req;
-
-	req = list_first_entry_or_null(&ucc_req_list, struct ucc_req, list);
-
-	return req ? req->value : -1;
-}
-
-static void update_cur_cstate(void)
-{
-	int value = ucc_get_value();
-
-	if (value < 0) {
-		cpumask_copy(&cur_cstate, cpu_possible_mask);
-		return;
-	}
-
-	cpumask_copy(&cur_cstate, &ucc_configs[value].cstate);
-}
-
-enum {
+enum ucc_req_type {
 	UCC_REMOVE_REQ,
 	UCC_UPDATE_REQ,
 	UCC_ADD_REQ,
 };
 
+enum {
+	CPD_BLOCK,
+	C2_BLOCK,
+	END_OF_UCC_LEVEL
+};
+
+#define is_invalid_ucc_level(level)	(level < 0 || level >= END_OF_UCC_LEVEL)
 static void list_add_priority(struct ucc_req *new, struct list_head *head)
 {
 	struct list_head temp;
@@ -123,45 +106,76 @@ static void list_add_priority(struct ucc_req *new, struct list_head *head)
 	list_splice(&temp, head);
 }
 
-static void ucc_update(struct ucc_req *req, int value, int action)
+static inline int get_ucc_req_value(void)
 {
-	int prev_value = ucc_get_value();
+	struct ucc_req *req;
 
-	switch (action) {
+	req = list_first_entry_or_null(&ucc.req_list, struct ucc_req, list);
+
+	return req ? req->value : -1;
+}
+
+static inline void update_ucc_allowed_mask(int index)
+{
+	if (index < 0 || index >= ucc.num_of_config)
+		cpumask_copy(&ucc.cur_allowed, cpu_possible_mask);
+	else
+		cpumask_copy(&ucc.cur_allowed, &ucc.config[index]);
+}
+
+static void ucc_update(struct ucc_req *req, int value, enum ucc_req_type type)
+{
+	int prev, curr;
+
+	prev = get_ucc_req_value();
+
+	switch (type) {
 	case UCC_REMOVE_REQ:
 		list_del(&req->list);
-		req->active = 0;
+		req->active = false;
 		break;
 	case UCC_UPDATE_REQ:
 		list_del(&req->list);
 	case UCC_ADD_REQ:
 		req->value = value;
-		list_add_priority(req, &ucc_req_list);
-		req->active = 1;
+		list_add_priority(req, &ucc.req_list);
+		req->active = true;
 		break;
 	}
 
-	if (prev_value != ucc_get_value())
-		update_cur_cstate();
+	curr = get_ucc_req_value();
+
+	if (prev != curr)
+		update_ucc_allowed_mask(curr);
 }
 
+static struct ucc_req ufcc_req = { .name = "ufcc", };
+static void update_ufcc_request(int value)
+{
+	ufcc_req.value = value;
+	ucc_update_request(&ufcc_req, value);
+}
+
+/*********************************************************************/
+/*  External APIs - User C-state Control                             */
+/*********************************************************************/
 void ucc_add_request(struct ucc_req *req, int value)
 {
 	unsigned long flags;
 
-	if (!ucc_initialized)
+	if (!likely(ucc.enable))
 		return;
 
-	spin_lock_irqsave(&ucc_lock, flags);
+	spin_lock_irqsave(&ucc.lock, flags);
 
 	if (req->active) {
-		spin_unlock_irqrestore(&ucc_lock, flags);
+		spin_unlock_irqrestore(&ucc.lock, flags);
 		return;
 	}
 
 	ucc_update(req, value, UCC_ADD_REQ);
 
-	spin_unlock_irqrestore(&ucc_lock, flags);
+	spin_unlock_irqrestore(&ucc.lock, flags);
 }
 EXPORT_SYMBOL_GPL(ucc_add_request);
 
@@ -169,19 +183,19 @@ void ucc_update_request(struct ucc_req *req, int value)
 {
 	unsigned long flags;
 
-	if (!ucc_initialized)
+	if (!likely(ucc.enable))
 		return;
 
-	spin_lock_irqsave(&ucc_lock, flags);
+	spin_lock_irqsave(&ucc.lock, flags);
 
 	if (!req->active) {
-		spin_unlock_irqrestore(&ucc_lock, flags);
+		spin_unlock_irqrestore(&ucc.lock, flags);
 		return;
 	}
 
 	ucc_update(req, value, UCC_UPDATE_REQ);
 
-	spin_unlock_irqrestore(&ucc_lock, flags);
+	spin_unlock_irqrestore(&ucc.lock, flags);
 }
 EXPORT_SYMBOL_GPL(ucc_update_request);
 
@@ -189,41 +203,21 @@ void ucc_remove_request(struct ucc_req *req)
 {
 	unsigned long flags;
 
-	if (!ucc_initialized)
+	if (!likely(ucc.enable))
 		return;
 
-	spin_lock_irqsave(&ucc_lock, flags);
+	spin_lock_irqsave(&ucc.lock, flags);
 
 	if (!req->active) {
-		spin_unlock_irqrestore(&ucc_lock, flags);
+		spin_unlock_irqrestore(&ucc.lock, flags);
 		return;
 	}
 
 	ucc_update(req, 0, UCC_REMOVE_REQ);
 
-	spin_unlock_irqrestore(&ucc_lock, flags);
+	spin_unlock_irqrestore(&ucc.lock, flags);
 }
 EXPORT_SYMBOL_GPL(ucc_remove_request);
-
-static struct ucc_req ucc_req =
-{
-	.name = "ufcc",
-};
-
-static int ucc_requested;
-static int ucc_requested_val;
-static int cstate_control_level;
-
-static void ucc_control(int value)
-{
-	ucc_update_request(&ucc_req, value);
-	ucc_requested_val = value;
-}
-
-enum {
-	CPD_BLOCK,
-	C2_BLOCK
-};
 
 /*********************************************************************/
 /*  Sysfs funcions - User C-state Control                            */
@@ -234,7 +228,7 @@ static ssize_t ucc_requests_show(struct device *dev,
 	struct ucc_req *req;
 	int ret = 0;
 
-	list_for_each_entry(req, &ucc_req_list, list)
+	list_for_each_entry(req, &ucc.req_list, list)
 		ret += snprintf(buf + ret, PAGE_SIZE - ret,
 				"request : %d (%s)\n", req->value, req->name);
 
@@ -242,6 +236,7 @@ static ssize_t ucc_requests_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(ucc_requests);
 
+static bool ucc_requested;
 static ssize_t cstate_control_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -252,22 +247,22 @@ static ssize_t cstate_control_store(struct device *dev,
 {
 	int input;
 
-	if (!sscanf(buf, "%8d", &input))
+	if (!sscanf(buf, "%d", &input))
 		return -EINVAL;
 
 	if (input < 0)
 		return -EINVAL;
 
 	input = !!input;
-	if (input == ucc_requested)
-		return count;
 
-	ucc_requested = input;
+	if (input != ucc_requested) {
+		ucc_requested = input;
 
-	if (ucc_requested)
-		ucc_add_request(&ucc_req, ucc_requested_val);
-	else
-		ucc_remove_request(&ucc_req);
+		if (ucc_requested)
+			ucc_add_request(&ufcc_req, ufcc_req.value);
+		else
+			ucc_remove_request(&ufcc_req);
+	}
 
 	return count;
 }
@@ -276,7 +271,7 @@ static DEVICE_ATTR_RW(cstate_control);
 static ssize_t cstate_control_level_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	return snprintf(buf, 20, "%d (0=CPD, 1=C2)\n", cstate_control_level);
+	return snprintf(buf, 20, "%d (0=CPD, 1=C2)\n", ucc.cur_level);
 }
 static ssize_t cstate_control_level_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
@@ -286,10 +281,10 @@ static ssize_t cstate_control_level_store(struct device *dev,
 	if (!sscanf(buf, "%8d", &input))
 		return -EINVAL;
 
-	if (input < 0)
+	if (is_invalid_ucc_level(input))
 		return -EINVAL;
 
-	cstate_control_level = input;
+	ucc.cur_level = input;
 
 	return count;
 }
@@ -311,27 +306,24 @@ static struct attribute_group ucc_attr_group = {
 /*  Initialization - User C-state Control                            */
 /*********************************************************************/
 static int ucc_cpupm_notifier(struct notifier_block *nb,
-				unsigned long event, void *val)
+		unsigned long event, void *val)
 {
-	int cpu = smp_processor_id();
+	int cpu;
 
-	if (!ucc_initialized)
+	if (!ucc.enable)
 		return NOTIFY_OK;
 
-	if (event == C2_ENTER)
-		if (cstate_control_level == C2_BLOCK)
-			goto check;
+	cpu = smp_processor_id();
 
-	if (event == CPD_ENTER)
-		if (cstate_control_level == CPD_BLOCK)
-			goto check;
-
-	return NOTIFY_OK;
-
-check:
-	if (!cpumask_test_cpu(cpu, &cur_cstate)) {
-		/* not allow enter C2 */
-		return NOTIFY_BAD;
+	switch (event) {
+	case CPD_ENTER:
+		if ((ucc.cur_level == CPD_BLOCK) && (!cpumask_test_cpu(cpu, &ucc.cur_allowed)))
+			return NOTIFY_BAD;
+		break;
+	case C2_ENTER:
+		if ((ucc.cur_level == C2_BLOCK) && (!cpumask_test_cpu(cpu, &ucc.cur_allowed)))
+			return NOTIFY_BAD;
+		break;
 	}
 
 	return NOTIFY_OK;
@@ -344,39 +336,41 @@ static struct notifier_block ucc_cpupm_nb = {
 static int exynos_ucc_init(struct platform_device *pdev)
 {
 	struct device_node *dn, *child;
-	int ret, i = 0;
+	int ret;
 
 	dn = of_find_node_by_name(pdev->dev.of_node, "ucc");
-	ucc_config_count = of_get_child_count(dn);
-	if (ucc_config_count == 0) {
-		pr_info("There is no ucc-config in DT\n");
+
+	ucc.num_of_config = of_get_child_count(dn);
+	if (!ucc.num_of_config) {
+		pr_info("Failed to find ucc device-tree\n");
 		return 0;
 	}
 
-	ucc_configs = kcalloc(ucc_config_count,
-			sizeof(struct ucc_config), GFP_KERNEL);
-	if (!ucc_configs) {
-		pr_err("Failed to alloc ucc_configs\n");
+	ucc.config = kcalloc(ucc.num_of_config, sizeof(struct cpumask), GFP_KERNEL);
+	if (!ucc.config) {
+		pr_err("Failed to alloc ucc.config\n");
 		return -ENOMEM;
 	}
 
 	for_each_child_of_node(dn, child) {
 		const char *mask;
+		int index;
 
-		of_property_read_u32(child, "index", &ucc_configs[i].index);
+		if (of_property_read_u32(child, "index", &index)) {
+			kfree(ucc.config);
+			return -EINVAL;
+		}
 
-		if (of_property_read_string(child, "cstate", &mask))
-			cpumask_clear(&ucc_configs[i].cstate);
+		if (of_property_read_string(child, "allowed", &mask))
+			cpumask_clear(&ucc.config[index]);
 		else
-			cpulist_parse(mask, &ucc_configs[i].cstate);
-
-		i++;
+			cpulist_parse(mask, &ucc.config[index]);
 	}
 
 	ret = sysfs_create_group(&pdev->dev.kobj, &ucc_attr_group);
 	if (ret) {
-		pr_err("Failed to create cstate_control node\n");
-		kfree(ucc_configs);
+		pr_err("Failed to create ucc sysfs group\n");
+		kfree(ucc.config);
 		return ret;
 	}
 
@@ -384,8 +378,9 @@ static int exynos_ucc_init(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	cpumask_setall(&cur_cstate);
-	ucc_initialized = true;
+	cpumask_setall(&ucc.cur_allowed);
+	INIT_LIST_HEAD(&ucc.req_list);
+	ucc.enable = true;
 
 	return 0;
 }
@@ -872,7 +867,7 @@ static int ufc_update_min_limit(void)
 	}
 
 	ufc_emstune_control(level);
-	ucc_control(level);
+	update_ufcc_request(level);
 
 	return (prev_status != ufc.strict_enabled);
 }
