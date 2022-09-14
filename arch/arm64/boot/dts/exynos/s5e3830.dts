@@ -989,7 +989,6 @@
 					type = "hot";
 				};
 			};
-			/*
 			cooling-maps {
 				map0 {
 					trip = <&gpu_alert0>;
@@ -1024,7 +1023,6 @@
 					cooling-device = <&mali 0 0>;
 				};
 			};
-			*/
 		};
 	};
 };
