@@ -45,7 +45,8 @@ int gpexbe_notifier_internal_add(gpex_notifier_type type, struct notifier_block 
 	int external_pmqos_type;
 
 	if (type == GPU_NOTIFIER_THERMAL)
-		return exynos_gpu_add_notifier(nb);
+		return 0;
+	  //return exynos_gpu_add_notifier(nb);
 
 	external_pmqos_type = translate_notifier_type(type);
 	//if (external_pmqos_type >= 0)
