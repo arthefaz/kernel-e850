@@ -6,7 +6,7 @@
 
 obj-$(CONFIG_CAL_IF)			+= cmupmucal.o
 cmupmucal-y					+= cal-if.o cmucal.o ra.o vclk.o pll_spec.o cmucal-debug.o
-cmupmucal-$(CONFIG_PMUCAL)			+= pmucal_system.o pmucal_local.o pmucal_cpu.o pmucal_rae.o
+cmupmucal-$(CONFIG_PMUCAL)			+= pmucal_system.o pmucal_local.o pmucal_cpu.o pmucal_rae.o pmucal_powermode.o
 #obj-$(CONFIG_PMUCAL_DBG)		+= pmucal_dbg.o
 #obj-$(CONFIG_FLEXPMU)			+= pmucal_powermode.o
 obj-$(CONFIG_CP_PMUCAL)			+= pmucal_cp.o
