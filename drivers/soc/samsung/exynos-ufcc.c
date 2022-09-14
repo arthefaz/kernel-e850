@@ -30,27 +30,24 @@
 /*  UCC feature - User C-state Control                               */
 /*********************************************************************/
 static struct _ucc {
-	bool enable;
+	bool			enable;
 
-	int cur_level;
+	int			cur_level;
+	int			cur_value;
 
-	int num_of_config;
+	int			num_of_config;
 	/*
 	 * config : indicate whether each cpu supports c-state
 	 *   - mask bit set : c-state allowed
 	 *   - mask bit unset : c-state disallowed
 	 */
-	struct cpumask *config;
-	/*
-	 * cur_allowed has c-state allowed mask corresponding to maximum index among ucc request.
-	 * Whenever maximum requested index is changed, cur_allowed is updated.
-	 */
-	struct cpumask cur_allowed;
+	struct cpumask		*config;
 
-	struct list_head req_list;
+	struct list_head	req_list;
 
-	spinlock_t lock;
+	spinlock_t		lock;
 } ucc = {
+	.cur_value = -1,
 	.lock = __SPIN_LOCK_INITIALIZER(ucc.lock),
 };
 
@@ -115,19 +112,42 @@ static inline int get_ucc_req_value(void)
 	return req ? req->value : -1;
 }
 
-static inline void update_ucc_allowed_mask(int index)
+static inline void update_ucc_allowed_mask(void)
 {
-	if (index < 0 || index >= ucc.num_of_config)
-		cpumask_copy(&ucc.cur_allowed, cpu_possible_mask);
+	update_pm_allowed_mask(cpu_possible_mask);
+	update_idle_allowed_mask(cpu_possible_mask);
+
+	if (ucc.cur_value < 0)
+		return;
+
+	if (ucc.cur_level)
+		update_idle_allowed_mask(&ucc.config[ucc.cur_value]);
 	else
-		cpumask_copy(&ucc.cur_allowed, &ucc.config[index]);
+		update_pm_allowed_mask(&ucc.config[ucc.cur_value]);
+}
+
+static void update_ucc_level(int level)
+{
+	if (ucc.cur_level == level)
+		return;
+
+	ucc.cur_level = level;
+	update_ucc_allowed_mask();
+}
+
+static void update_ucc_req_value(int value)
+{
+	if (ucc.cur_value == value)
+		return;
+
+	ucc.cur_value = value;
+	update_ucc_allowed_mask();
 }
 
 static void ucc_update(struct ucc_req *req, int value, enum ucc_req_type type)
 {
-	int prev, curr;
-
-	prev = get_ucc_req_value();
+	if (value < 0 || value >= ucc.num_of_config)
+		return;
 
 	switch (type) {
 	case UCC_REMOVE_REQ:
@@ -143,10 +163,7 @@ static void ucc_update(struct ucc_req *req, int value, enum ucc_req_type type)
 		break;
 	}
 
-	curr = get_ucc_req_value();
-
-	if (prev != curr)
-		update_ucc_allowed_mask(curr);
+	update_ucc_req_value(get_ucc_req_value());
 }
 
 static struct ucc_req ufcc_req = { .name = "ufcc", };
@@ -284,7 +301,7 @@ static ssize_t cstate_control_level_store(struct device *dev,
 	if (is_invalid_ucc_level(input))
 		return -EINVAL;
 
-	ucc.cur_level = input;
+	update_ucc_level(input);
 
 	return count;
 }
@@ -305,34 +322,6 @@ static struct attribute_group ucc_attr_group = {
 /*********************************************************************/
 /*  Initialization - User C-state Control                            */
 /*********************************************************************/
-static int ucc_cpupm_notifier(struct notifier_block *nb,
-		unsigned long event, void *val)
-{
-	int cpu;
-
-	if (!ucc.enable)
-		return NOTIFY_OK;
-
-	cpu = smp_processor_id();
-
-	switch (event) {
-	case CPD_ENTER:
-		if ((ucc.cur_level == CPD_BLOCK) && (!cpumask_test_cpu(cpu, &ucc.cur_allowed)))
-			return NOTIFY_BAD;
-		break;
-	case C2_ENTER:
-		if ((ucc.cur_level == C2_BLOCK) && (!cpumask_test_cpu(cpu, &ucc.cur_allowed)))
-			return NOTIFY_BAD;
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block ucc_cpupm_nb = {
-	.notifier_call = ucc_cpupm_notifier,
-};
-
 static int exynos_ucc_init(struct platform_device *pdev)
 {
 	struct device_node *dn, *child;
@@ -374,11 +363,6 @@ static int exynos_ucc_init(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = exynos_cpupm_notifier_register(&ucc_cpupm_nb);
-	if (ret)
-		return ret;
-
-	cpumask_setall(&ucc.cur_allowed);
 	INIT_LIST_HEAD(&ucc.req_list);
 	ucc.enable = true;
 
