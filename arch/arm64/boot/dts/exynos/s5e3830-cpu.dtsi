@@ -21,6 +21,26 @@
 	#define CPU_CL1 "4-7"
 	#define CPU_ALL "0-7"
 
+	power-data {
+		#define CPUCL0_DMIPS_PER_MHZ 271
+		#define CPUCL0_DP_COEFF 125
+		#define CPUCL0_SP_COEFF 10
+
+		cpu {
+			ananke-power-data {
+				/* default power data */
+				cpus = CPU_ALL;
+				capacity-dmips-mhz = <CPUCL0_DMIPS_PER_MHZ>;
+				dynamic-power-coefficient = <CPUCL0_DP_COEFF>;
+				static-power-coefficient = <CPUCL0_SP_COEFF>;
+
+				/* dhrystone to clang conversion ratio */
+				dhry-to-clang-dp-ratio = <820>;
+				dhry-to-clang-cap-ratio = <372>;
+			};
+		};
+	};
+
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;

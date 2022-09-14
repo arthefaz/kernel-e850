@@ -1,0 +1,8 @@
+/ {
+	/* power-scenario mode - touch boost */
+	set1_1: set@0101 {
+		frt {	   			/* LIT BIG */
+			active-ratio 		= < 25   5>;
+		};
+	};
+};

@@ -29,6 +29,7 @@
 #include "s5e3830-sysmmu.dtsi"
 #include "s5e3830-mali.dtsi"
 #include "s5e3830-cpu.dtsi"
+#include "s5e3830-ems.dtsi"
 #include "s5e3830-dpu.dtsi"
 #include "s5e3830-usb.dtsi"
 #include "s5e3830-security.dtsi"

@@ -1,0 +1,43 @@
+/ {
+	/* normal mode - default */
+	set0: set@0000 {
+		/* Boosting margin applied to frequency selection */
+		freqboost {			/* LIT BIG */
+			top-app			= <  5   5>;
+		};
+
+		frt {	   	     		/* LIT BIG */
+			active-ratio		= < 25 100>;
+		};
+
+		/* Ontime Migration */
+		ontime {
+			top-app		= <1>;
+			foreground	= <1>;
+
+			domain0 {
+				cpus = "0-5";
+				lower-boundary = <0>;
+				upper-boundary = <36>;
+			};
+			domain1 {
+				cpus = "6-7";
+				lower-boundary = <6>;
+				upper-boundary = <100>;
+			};
+		};
+
+		ecs { };
+
+		fclamp {
+			monitor-group {
+				top-app         = <1>;
+			};
+		};
+
+		cpufreq_gov {
+				/* LIT BIG */
+			htask-boost = < 150 150 >;
+		};
+	};
+};
