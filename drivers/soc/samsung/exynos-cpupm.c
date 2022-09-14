@@ -677,36 +677,19 @@ static void __enable_power_mode(struct power_mode *mode)
 	awake_cpus(&mode->siblings);
 }
 
-static void control_power_mode(int cpu, int type, bool enable)
+struct cpumask pm_allowed_mask;
+void update_pm_allowed_mask(const struct cpumask *mask)
 {
-	struct exynos_cpupm *pm;
-	struct power_mode *mode;
-
-	if (!valid_powermode(type))
-		return;
-
-	pm = per_cpu_ptr(cpupm, cpu);
-	mode = pm->modes[type];
-	if (mode == NULL)
-		return;
-
-	if (enable)
-		__enable_power_mode(mode);
-	else
-		__disable_power_mode(mode);
+	cpumask_copy(&pm_allowed_mask, mask);
 }
+EXPORT_SYMBOL_GPL(update_pm_allowed_mask);
 
-void disable_power_mode(int cpu, int type)
+struct cpumask idle_allowed_mask;
+void update_idle_allowed_mask(const struct cpumask *mask)
 {
-	control_power_mode(cpu, type, false);
+	cpumask_copy(&idle_allowed_mask, mask);
 }
-EXPORT_SYMBOL_GPL(disable_power_mode);
-
-void enable_power_mode(int cpu, int type)
-{
-	control_power_mode(cpu, type, true);
-}
-EXPORT_SYMBOL_GPL(enable_power_mode);
+EXPORT_SYMBOL_GPL(update_idle_allowed_mask);
 
 static ktime_t __percpu *cpu_next_event;
 static s64 get_sleep_length(int cpu, ktime_t now)
@@ -811,6 +794,9 @@ static bool entry_allow(int cpu, struct power_mode *mode)
 	if (atomic_read(&mode->disable))
 		return false;
 
+	if (mode->type == POWERMODE_TYPE_CLUSTER && !cpumask_test_cpu(cpu, &pm_allowed_mask))
+		return false;
+
 	if (!cpumask_test_cpu(cpu, &mode->entry_allowed))
 		return false;
 
@@ -821,9 +807,6 @@ static bool entry_allow(int cpu, struct power_mode *mode)
 		return false;
 
 	if (system_busy(mode))
-		return false;
-
-	if (mode->type == POWERMODE_TYPE_CLUSTER && exynos_cpupm_notify(CPD_ENTER, 0))
 		return false;
 
 	return true;
@@ -938,8 +921,7 @@ static void enter_power_mode(int cpu, struct power_mode *mode, ktime_t now)
 	cpupm_profile_begin(&mode->stat, now);
 }
 
-static void
-exit_power_mode(int cpu, struct power_mode *mode, int cancel, ktime_t now)
+static void exit_power_mode(int cpu, struct power_mode *mode, int cancel, ktime_t now)
 {
 	cpupm_profile_end(&mode->stat, cancel, now);
 
@@ -1337,10 +1319,10 @@ static void android_vh_cpu_idle_enter(void *data, int *state,
 		struct cpuidle_device *dev)
 {
 	struct exynos_cpupm *pm = per_cpu_ptr(cpupm, dev->cpu);
-	int cpu = smp_processor_id();
 	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
 	struct cpuidle_state *target_state;
 	ktime_t now = ktime_get();
+	int cpu = smp_processor_id();
 
 	if (pm->hotplug) {
 		cpuhp_cluster_enable(cpu);
@@ -1348,10 +1330,15 @@ static void android_vh_cpu_idle_enter(void *data, int *state,
 		*state = 0;
 	}
 
-	/* check whether entering C2 or not */
-	if (*state > 0)
-		if (exynos_cpupm_notify(C2_ENTER, 0))
+	if (!cpumask_test_cpu(cpu, &idle_allowed_mask))
+		*state = 0;
+
+	if (*state > 0) {
+		if (unlikely(exynos_cpupm_notify(C2_ENTER, 0))) {
+			exynos_cpupm_notify(C2_EXIT, 0);
 			*state = 0;
+		}
+	}
 
 	pm->entered_state = *state;
 	cpupm_profile_begin(&pm->stat[pm->entered_state], now);
