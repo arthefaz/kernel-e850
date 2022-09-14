@@ -253,6 +253,26 @@ static ssize_t ucc_requests_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(ucc_requests);
 
+static ssize_t status_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct cpumask mask;
+	int ret = 0;
+
+	if (ucc.cur_value < 0)
+		cpumask_copy(&mask, cpu_possible_mask);
+	else
+		cpumask_copy(&mask, &ucc.config[ucc.cur_value]);
+
+	ret += snprintf(buf + ret, PAGE_SIZE - ret, "current level=%d (%s)\n",
+			ucc.cur_level, ucc.cur_level ? "c2" : "cpd");
+	ret += snprintf(buf + ret, PAGE_SIZE - ret, "current req value=%d (allowed=0x%x)\n",
+			ucc.cur_value, *(unsigned int *)cpumask_bits(&mask));
+
+	return ret;
+}
+static DEVICE_ATTR_RO(status);
+
 static bool ucc_requested;
 static ssize_t cstate_control_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -288,7 +308,7 @@ static DEVICE_ATTR_RW(cstate_control);
 static ssize_t cstate_control_level_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	return snprintf(buf, 20, "%d (0=CPD, 1=C2)\n", ucc.cur_level);
+	return snprintf(buf, 20, "%d\n", ucc.cur_level);
 }
 static ssize_t cstate_control_level_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
@@ -309,6 +329,7 @@ static DEVICE_ATTR_RW(cstate_control_level);
 
 static struct attribute *ucc_attrs[] = {
 	&dev_attr_ucc_requests.attr,
+	&dev_attr_status.attr,
 	&dev_attr_cstate_control.attr,
 	&dev_attr_cstate_control_level.attr,
 	NULL,
