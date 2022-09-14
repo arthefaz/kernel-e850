@@ -3475,7 +3475,7 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 		goto err_map;
 	}
 
-	memset(vaddr, 0xff, size);
+	memset(vaddr, 0x00, size);
 
 	fbi->screen_base = vaddr;
 
