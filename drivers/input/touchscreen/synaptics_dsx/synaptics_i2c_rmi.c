@@ -3465,7 +3465,7 @@ static int synaptics_rmi4_set_input_device(struct synaptics_rmi4_data *rmi4_data
 #endif
 	timer_setup(&rmi4_data->f51_finger_timer,
 			synaptics_rmi4_f51_finger_timer,
-		(unsigned long)rmi4_data);
+		(unsigned long)0);
 #endif
 
 	retval = input_mt_init_slots(rmi4_data->input_dev,
@@ -4563,7 +4563,7 @@ static int synaptics_rmi4_input_open(struct input_dev *dev)
 	int retval;
 
 	retval = wait_for_completion_interruptible_timeout(&rmi4_data->init_done,
-			msecs_to_jiffies(90 * MSEC_PER_SEC));
+			msecs_to_jiffies(3 * MSEC_PER_SEC));
 
 	if (retval < 0) {
 		tsp_debug_err(true, &rmi4_data->i2c_client->dev,
