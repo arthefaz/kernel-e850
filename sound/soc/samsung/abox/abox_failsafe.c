@@ -42,8 +42,6 @@ static int abox_failsafe_start(struct device *dev, struct abox_data *data)
 	BUG_ON(data->error && (data->debug_mode == DEBUG_MODE_FILE));
 
 	if (atomic_read(&abox_failsafe_reported)) {
-		/* Set AUD_OPTION[2] for abox silent reset in PMU */
-		abox_silent_reset(data, true);
 		if (abox_failsafe_service)
 			pm_runtime_put(dev);
 		abox_info(dev, "%s\n", __func__);

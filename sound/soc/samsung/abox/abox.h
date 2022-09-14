@@ -136,11 +136,7 @@ enum abox_dai {
 	ABOX_WDMA5,
 	ABOX_WDMA6,
 	ABOX_WDMA7,
-	ABOX_WDMA8,
-	ABOX_WDMA9,
-	ABOX_WDMA10,
-	ABOX_WDMA11,
-	ABOX_WDMA0_DUAL = 0x30,
+	ABOX_WDMA0_DUAL,
 	ABOX_WDMA1_DUAL,
 	ABOX_WDMA2_DUAL,
 	ABOX_WDMA3_DUAL,
@@ -148,17 +144,13 @@ enum abox_dai {
 	ABOX_WDMA5_DUAL,
 	ABOX_WDMA6_DUAL,
 	ABOX_WDMA7_DUAL,
-	ABOX_WDMA8_DUAL,
-	ABOX_WDMA9_DUAL,
-	ABOX_WDMA10_DUAL,
-	ABOX_WDMA11_DUAL,
-	ABOX_DDMA0 = 0x40,
+	ABOX_DDMA0 = 0x30,
 	ABOX_DDMA1,
 	ABOX_DDMA2,
 	ABOX_DDMA3,
 	ABOX_DDMA4,
 	ABOX_DDMA5,
-	ABOX_UAIF0 = 0x50,
+	ABOX_UAIF0 = 0x40,
 	ABOX_UAIF1,
 	ABOX_UAIF2,
 	ABOX_UAIF3,
@@ -167,7 +159,7 @@ enum abox_dai {
 	ABOX_UAIF6,
 	ABOX_DSIF,
 	ABOX_SPDY,
-	ABOX_RDMA0_BE = 0x60,
+	ABOX_RDMA0_BE = 0x50,
 	ABOX_RDMA1_BE,
 	ABOX_RDMA2_BE,
 	ABOX_RDMA3_BE,
@@ -179,7 +171,7 @@ enum abox_dai {
 	ABOX_RDMA9_BE,
 	ABOX_RDMA10_BE,
 	ABOX_RDMA11_BE,
-	ABOX_WDMA0_BE = 0x70,
+	ABOX_WDMA0_BE = 0x60,
 	ABOX_WDMA1_BE,
 	ABOX_WDMA2_BE,
 	ABOX_WDMA3_BE,
@@ -187,18 +179,15 @@ enum abox_dai {
 	ABOX_WDMA5_BE,
 	ABOX_WDMA6_BE,
 	ABOX_WDMA7_BE,
-	ABOX_WDMA8_BE,
-	ABOX_WDMA9_BE,
-	ABOX_WDMA10_BE,
-	ABOX_WDMA11_BE,
-	ABOX_SIFS0 = 0x80, /* Virtual DAI */
+	ABOX_SIFS0 = 0x70, /* Virtual DAI */
 	ABOX_SIFS1, /* Virtual DAI */
 	ABOX_SIFS2, /* Virtual DAI */
 	ABOX_SIFS3, /* Virtual DAI */
 	ABOX_SIFS4, /* Virtual DAI */
 	ABOX_SIFS5, /* Virtual DAI */
-	ABOX_SIFS6, /* Virtual DAI */
-	ABOX_NSRC0 = 0x90, /* Virtual DAI */
+	ABOX_RSRC0 = 0x80, /* Virtual DAI */
+	ABOX_RSRC1, /* Virtual DAI */
+	ABOX_NSRC0, /* Virtual DAI */
 	ABOX_NSRC1, /* Virtual DAI */
 	ABOX_NSRC2, /* Virtual DAI */
 	ABOX_NSRC3, /* Virtual DAI */
@@ -206,19 +195,22 @@ enum abox_dai {
 	ABOX_NSRC5, /* Virtual DAI */
 	ABOX_NSRC6, /* Virtual DAI */
 	ABOX_NSRC7, /* Virtual DAI */
-	ABOX_NSRC8, /* Virtual DAI */
-	ABOX_NSRC9, /* Virtual DAI */
-	ABOX_NSRC10, /* Virtual DAI */
-	ABOX_NSRC11, /* Virtual DAI */
-	ABOX_USB = 0xA0, /* Virtual DAI */
+	ABOX_USB = 0x90, /* Virtual DAI */
+	ABOX_ECHO, /* Virtual DAI */
 	ABOX_FWD, /* Virtual DAI */
-	ABOX_UDMA_RD0 = 0xC0,
-	ABOX_UDMA_RD1,
-	ABOX_UDMA_WR0,
-	ABOX_UDMA_WR1,
-	ABOX_UDMA_WR0_DUAL,
-	ABOX_UDMA_WR1_DUAL,
-	ABOX_UDMA_WR_DBG0,
+	ABOX_BI_PDI0 = 0x100,
+	ABOX_BI_PDI1,
+	ABOX_BI_PDI2,
+	ABOX_BI_PDI3,
+	ABOX_BI_PDI4,
+	ABOX_BI_PDI5,
+	ABOX_BI_PDI6,
+	ABOX_BI_PDI7,
+	ABOX_TX_PDI0 = 0x110,
+	ABOX_TX_PDI1,
+	ABOX_TX_PDI2,
+	ABOX_RX_PDI0 = 0x120,
+	ABOX_RX_PDI1
 };
 
 /* SIFS should be treated as DAI to manage bclk usage and count value */
@@ -486,7 +478,6 @@ struct abox_data {
 	unsigned int wdma_count;
 	unsigned int udma_rd_count;
 	unsigned int udma_wr_count;
-	unsigned int atune_count;
 	unsigned int calliope_version;
 	struct list_head firmware_extra;
 	const char *bootargs;
@@ -826,21 +817,6 @@ static inline int abox_request_cl1_freq_dai(struct device *dev,
 	unsigned int id = ABOX_CPU_GEAR_DAI | dai->id;
 
 	return abox_qos_request_cl1(dev, id, freq, dai->name);
-}
-
-/**
- * Request cluster 2 clock level with DAI
- * @param[in]	dev		pointer to struct dev which invokes this API
- * @param[in]	dai		DAI which is used as unique handle
- * @param[in]	freq		frequency in kHz
- * @return	error code if any
- */
-static inline int abox_request_cl2_freq_dai(struct device *dev,
-		struct snd_soc_dai *dai, unsigned int freq)
-{
-	unsigned int id = ABOX_CPU_GEAR_DAI | dai->id;
-
-	return abox_qos_request_cl2(dev, id, freq, dai->name);
 }
 
 /**

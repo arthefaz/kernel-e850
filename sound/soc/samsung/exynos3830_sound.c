@@ -49,10 +49,10 @@
 #define MADERA_DAI_ID			0x4793
 #define CS35L41_DAI_ID			0x3541
 #define ABOX_BE_DAI_ID(c, i)		(0xbe00 | (c) << 4 | (i))
-#define MADERA_CODEC_MAX		32
+#define MADERA_CODEC_MAX		40
 #define MADERA_AUX_MAX			2
 #define RDMA_COUNT			12
-#define WDMA_COUNT			12
+#define WDMA_COUNT			5
 #if IS_ENABLED(CONFIG_SND_SOC_SAMSUNG_VTS)
 #define VTS_COUNT			2
 #else
@@ -67,7 +67,7 @@
 #define DUAL_COUNT			WDMA_COUNT
 #define UAIF_START			(RDMA_COUNT + WDMA_COUNT + VTS_COUNT\
 					+ DP_COUNT + DDMA_COUNT + DUAL_COUNT)
-#define UAIF_COUNT			7
+#define UAIF_COUNT			3
 
 #define for_each_link_cpus(link, i, cpu)	\
 	for ((i) = 0;				\
@@ -436,9 +436,6 @@ static int dsif_hw_params(struct snd_pcm_substream *substream,
 
 static const struct snd_soc_ops dsif_ops = {
 	.hw_params = dsif_hw_params,
-};
-
-static const struct snd_soc_ops udma_ops = {
 };
 
 static int madera_set_bias_level(struct snd_soc_card *card,
@@ -1045,90 +1042,6 @@ static struct snd_soc_dai_link exynos_dai[100] = {
 		.ops = &wdma_ops,
 		.dpcm_capture = 1,
 	},
-	{
-		.name = "WDMA5",
-		.stream_name = "WDMA5",
-		.dynamic = 1,
-		.ignore_suspend = 1,
-		.trigger = {
-			SND_SOC_DPCM_TRIGGER_POST,
-			SND_SOC_DPCM_TRIGGER_PRE
-		},
-		.ops = &wdma_ops,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA6",
-		.stream_name = "WDMA6",
-		.dynamic = 1,
-		.ignore_suspend = 1,
-		.trigger = {
-			SND_SOC_DPCM_TRIGGER_POST,
-			SND_SOC_DPCM_TRIGGER_PRE
-		},
-		.ops = &wdma_ops,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA7",
-		.stream_name = "WDMA7",
-		.dynamic = 1,
-		.ignore_suspend = 1,
-		.trigger = {
-			SND_SOC_DPCM_TRIGGER_POST,
-			SND_SOC_DPCM_TRIGGER_PRE
-		},
-		.ops = &wdma_ops,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA8",
-		.stream_name = "WDMA8",
-		.dynamic = 1,
-		.ignore_suspend = 1,
-		.trigger = {
-			SND_SOC_DPCM_TRIGGER_POST,
-			SND_SOC_DPCM_TRIGGER_PRE
-		},
-		.ops = &wdma_ops,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA9",
-		.stream_name = "WDMA9",
-		.dynamic = 1,
-		.ignore_suspend = 1,
-		.trigger = {
-			SND_SOC_DPCM_TRIGGER_POST,
-			SND_SOC_DPCM_TRIGGER_PRE
-		},
-		.ops = &wdma_ops,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA10",
-		.stream_name = "WDMA10",
-		.dynamic = 1,
-		.ignore_suspend = 1,
-		.trigger = {
-			SND_SOC_DPCM_TRIGGER_POST,
-			SND_SOC_DPCM_TRIGGER_PRE
-		},
-		.ops = &wdma_ops,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA11",
-		.stream_name = "WDMA11",
-		.dynamic = 1,
-		.ignore_suspend = 1,
-		.trigger = {
-			SND_SOC_DPCM_TRIGGER_POST,
-			SND_SOC_DPCM_TRIGGER_PRE
-		},
-		.ops = &wdma_ops,
-		.dpcm_capture = 1,
-	},
 #if IS_ENABLED(CONFIG_SND_SOC_SAMSUNG_VTS)
 	{
 		.name = "VTS-Trigger",
@@ -1184,48 +1097,6 @@ static struct snd_soc_dai_link exynos_dai[100] = {
 	{
 		.name = "WDMA4 DUAL",
 		.stream_name = "WDMA4 DUAL",
-		.capture_only = 1,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = "WDMA5 DUAL",
-		.stream_name = "WDMA5 DUAL",
-		.capture_only = 1,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = "WDMA6 DUAL",
-		.stream_name = "WDMA6 DUAL",
-		.capture_only = 1,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = "WDMA7 DUAL",
-		.stream_name = "WDMA7 DUAL",
-		.capture_only = 1,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = "WDMA8 DUAL",
-		.stream_name = "WDMA8 DUAL",
-		.capture_only = 1,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = "WDMA9 DUAL",
-		.stream_name = "WDMA9 DUAL",
-		.capture_only = 1,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = "WDMA10 DUAL",
-		.stream_name = "WDMA10 DUAL",
-		.capture_only = 1,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = "WDMA11 DUAL",
-		.stream_name = "WDMA11 DUAL",
 		.capture_only = 1,
 		.ignore_suspend = 1,
 	},
@@ -1300,50 +1171,6 @@ static struct snd_soc_dai_link exynos_dai[100] = {
 		.dpcm_capture = 1,
 	},
 	{
-		.name = "UAIF3",
-		.stream_name = "UAIF3",
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.ops = &uaif_ops,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "UAIF4",
-		.stream_name = "UAIF4",
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.ops = &uaif_ops,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "UAIF5",
-		.stream_name = "UAIF5",
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.ops = &uaif_ops,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "UAIF6",
-		.stream_name = "UAIF6",
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.ops = &uaif_ops,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
 		.name = "DSIF",
 		.stream_name = "DSIF",
 		.no_pcm = 1,
@@ -1361,64 +1188,6 @@ static struct snd_soc_dai_link exynos_dai[100] = {
 		.ignore_pmdown_time = 1,
 		.be_hw_params_fixup = abox_hw_params_fixup_helper,
 		.dpcm_capture = 1,
-	},
-	{
-		.name = "UDMA RD0",
-		.stream_name = "UDMA RD0",
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.ops = &udma_ops,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "UDMA RD1",
-		.stream_name = "UDMA RD1",
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.ops = &udma_ops,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "UDMA WR0",
-		.stream_name = "UDMA WR0",
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.ops = &udma_ops,
-		.dpcm_playback = 1,
-	},
-	{
-		.name = "UDMA WR1",
-		.stream_name = "UDMA WR1",
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.ops = &udma_ops,
-		.dpcm_playback = 1,
-	},
-	{
-		.name = "UDMA WR0 DUAL",
-		.stream_name = "UDMA WR0 DUAL",
-		.capture_only = 1,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = "UDMA WR1 DUAL",
-		.stream_name = "UDMA WR1 DUAL",
-		.capture_only = 1,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = "UDMA DEBUG0",
-		.stream_name = "UDMA DEBUG0",
-		.capture_only = 1,
-		.ignore_suspend = 1,
 	},
 	{
 		.name = "RDMA0 BE",
@@ -1600,83 +1369,6 @@ static struct snd_soc_dai_link exynos_dai[100] = {
 		.name = "WDMA4 BE",
 		.stream_name = "WDMA4 BE",
 		.id = ABOX_BE_DAI_ID(1, 4),
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA5 BE",
-		.stream_name = "WDMA5 BE",
-		.id = ABOX_BE_DAI_ID(1, 5),
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA6 BE",
-		.stream_name = "WDMA6 BE",
-		.id = ABOX_BE_DAI_ID(1, 6),
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA7 BE",
-		.stream_name = "WDMA7_BE",
-		.id = ABOX_BE_DAI_ID(1, 7),
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA8 BE",
-		.stream_name = "WDMA8_BE",
-		.id = ABOX_BE_DAI_ID(1, 8),
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA9 BE",
-		.stream_name = "WDMA9_BE",
-		.id = ABOX_BE_DAI_ID(1, 9),
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA10 BE",
-		.stream_name = "WDMA10_BE",
-		.id = ABOX_BE_DAI_ID(1, 10),
-		.no_pcm = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.be_hw_params_fixup = abox_hw_params_fixup_helper,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
-	},
-	{
-		.name = "WDMA11 BE",
-		.stream_name = "WDMA11_BE",
-		.id = ABOX_BE_DAI_ID(1, 11),
 		.no_pcm = 1,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,

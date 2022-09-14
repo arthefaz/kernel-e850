@@ -181,7 +181,7 @@ static int abox_wdma_hw_params(struct snd_soc_component *component,
 	int id = data->id;
 	size_t buffer_bytes = params_buffer_bytes(params);
 	unsigned int iova;
-	int burst_len, ret;
+	int ret = 0;
 	ABOX_IPC_MSG msg;
 	struct IPC_PCMTASK_MSG *pcmtask_msg = &msg.msg.pcmtask;
 
@@ -244,13 +244,6 @@ static int abox_wdma_hw_params(struct snd_soc_component *component,
 	}
 	data->backend = abox_wdma_backend(substream);
 
-	if (abox_dma_is_sync_mode(data))
-		burst_len = 0x1;
-	else
-		burst_len = 0x4;
-	ret = snd_soc_component_update_bits(data->cmpnt,
-			DMA_REG_CTRL0, ABOX_DMA_BURST_LEN_MASK,
-			burst_len << ABOX_DMA_BURST_LEN_L);
 	if (ret < 0)
 		abox_err(dev, "burst length write error: %d\n", ret);
 
@@ -435,17 +428,17 @@ static snd_pcm_uframes_t abox_wdma_pointer(struct snd_soc_component *component,
 		buffer_bytes = snd_pcm_lib_buffer_bytes(substream);
 		period_bytes = snd_pcm_lib_period_bytes(substream);
 
-		if (hweight_long(ABOX_WDMA_WBUF_OFFSET_MASK) > 8)
-			offset = ((status & ABOX_WDMA_WBUF_OFFSET_MASK) >>
-					ABOX_WDMA_WBUF_OFFSET_L) << 4;
+		if (hweight_long(ABOX_WDMA_RBUF_OFFSET_MASK) > 8)
+			offset = ((status & ABOX_WDMA_RBUF_OFFSET_MASK) >>
+					ABOX_WDMA_RBUF_OFFSET_L) << 4;
 		else
-			offset = ((status & ABOX_WDMA_WBUF_OFFSET_MASK) >>
-					ABOX_WDMA_WBUF_OFFSET_L) * period_bytes;
+			offset = ((status & ABOX_WDMA_RBUF_OFFSET_MASK) >>
+					ABOX_WDMA_RBUF_OFFSET_L) * period_bytes;
 
-		if (period_bytes > ABOX_WDMA_WBUF_CNT_MASK + 1)
+		if (period_bytes > ABOX_WDMA_RBUF_CNT_MASK + 1)
 			count = 0;
 		else
-			count = (status & ABOX_WDMA_WBUF_CNT_MASK);
+			count = (status & ABOX_WDMA_RBUF_CNT_MASK);
 
 		while ((offset % period_bytes) && (buffer_bytes >= 0)) {
 			buffer_bytes -= period_bytes;
@@ -714,15 +707,6 @@ static void abox_wdma_pcm_free(struct snd_soc_component *component,
 	}
 }
 
-static const char * const dither_type_texts[] = {
-	"OFF", "RPDF", "TPDF",
-};
-static SOC_ENUM_SINGLE_DECL(dither_type_enum, DMA_REG_BIT_CTRL,
-		ABOX_DMA_DITHER_TYPE_L, dither_type_texts);
-static const struct snd_kcontrol_new abox_wdma_bit_controls[] = {
-	SOC_ENUM("Dither Type", dither_type_enum),
-};
-
 static int abox_wdma_probe(struct snd_soc_component *cmpnt)
 {
 	struct device *dev = cmpnt->dev;
@@ -732,8 +716,6 @@ static int abox_wdma_probe(struct snd_soc_component *cmpnt)
 
 	abox_dbg(dev, "%s\n", __func__);
 
-	snd_soc_add_component_controls(cmpnt, abox_wdma_bit_controls,
-			ARRAY_SIZE(abox_wdma_bit_controls));
 	data->cmpnt = cmpnt;
 	abox_cmpnt_register_wdma(data->abox_data->dev, dev, data->id,
 			data->dai_drv[DMA_DAI_PCM].name);
@@ -772,17 +754,7 @@ static unsigned int abox_wdma_read(struct snd_soc_component *cmpnt,
 		dump_stack();
 	}
 
-	/* CTRL register is shared with firmware */
-	if (reg == DMA_REG_CTRL) {
-		if (pm_runtime_get_if_in_use(cmpnt->dev) > 0) {
-			regmap_read(abox_data->regmap, base + reg, &val);
-			pm_runtime_put(cmpnt->dev);
-		} else {
-			val = data->c_reg_ctrl;
-		}
-	} else {
-		regmap_read(abox_data->regmap, base + reg, &val);
-	}
+	val = snd_soc_component_read(abox_data->cmpnt, base + reg);
 
 	return val;
 }
@@ -801,21 +773,18 @@ static int abox_wdma_write(struct snd_soc_component *cmpnt,
 		dump_stack();
 	}
 
-	/* CTRL register is shared with firmware */
-	if (reg == DMA_REG_CTRL) {
-		data->c_reg_ctrl &= ~REG_CTRL_KERNEL_MASK;
-		data->c_reg_ctrl |= val & REG_CTRL_KERNEL_MASK;
-		if (pm_runtime_get_if_in_use(cmpnt->dev) > 0) {
-			ret = regmap_update_bits(abox_data->regmap, base + reg,
-					REG_CTRL_KERNEL_MASK, val);
-			pm_runtime_put(cmpnt->dev);
-		}
-	} else {
-		ret = regmap_write(abox_data->regmap, base + reg, val);
-	}
+	ret = snd_soc_component_write(abox_data->cmpnt, base + reg, val);
+	if (ret < 0)
+		return ret;
 
-	return ret;
+	return 0;
 }
+
+static const char * const dither_width_texts[] = {
+	"32bit", "64bit", "128bit", "256bit",
+};
+static SOC_ENUM_SINGLE_DECL(dither_width_enum, DMA_REG_BIT_CTRL0,
+		ABOX_DMA_DITHER_WIDTH_L, dither_width_texts);
 
 static const struct snd_kcontrol_new abox_wdma_controls[] = {
 	SOC_SINGLE_EXT("Rate", DMA_RATE, 0, 384000, 0,
@@ -830,17 +799,19 @@ static const struct snd_kcontrol_new abox_wdma_controls[] = {
 			abox_dma_hw_params_get, abox_dma_hw_params_put),
 	SOC_SINGLE_EXT("Packed", DMA_PACKED, 0, 1, 0,
 			abox_dma_hw_params_get, abox_dma_hw_params_put),
-	SOC_ENUM_EXT("Func", abox_dma_func_enum,
-			snd_soc_get_enum_double, abox_dma_func_put),
-	SOC_SINGLE_EXT("Auto Fade In", DMA_REG_CTRL,
-			ABOX_DMA_AUTO_FADE_IN_L, 1, 0,
-			abox_dma_auto_fade_in_get, abox_dma_auto_fade_in_put),
+	SOC_SINGLE("Auto Fade In", DMA_REG_CTRL,
+			ABOX_DMA_AUTO_FADE_IN_L, 1, 0),
 	SOC_SINGLE("Vol Factor", DMA_REG_VOL_FACTOR,
 			ABOX_DMA_VOL_FACTOR_L, 0xffffff, 0),
 	SOC_SINGLE("Vol Change", DMA_REG_VOL_CHANGE,
 			ABOX_DMA_VOL_FACTOR_L, 0xffffff, 0),
-	ABOX_DMA_SINGLE_S("Dither Seed", DMA_REG_DITHER_SEED,
-			ABOX_DMA_DITHER_SEED_L, INT_MAX, 31, 0),
+	SOC_SINGLE("Dither On", DMA_REG_BIT_CTRL0,
+			ABOX_DMA_DITHER_ON_L, 1, 0),
+	ABOX_DMA_SINGLE_S("Dither Strength", DMA_REG_BIT_CTRL0,
+			ABOX_DMA_DITHER_STRENGTH_L, 16, 6, 0),
+	SOC_ENUM("Dither Width", dither_width_enum),
+	ABOX_DMA_SINGLE_S("Dither Seed", DMA_REG_BIT_CTRL1,
+			ABOX_DMA_DITHER_IN_SEED_L, INT_MAX, 31, 0),
 };
 
 static const struct snd_soc_component_driver abox_wdma = {
@@ -1019,25 +990,6 @@ static const struct of_device_id samsung_abox_wdma_match[] = {
 };
 MODULE_DEVICE_TABLE(of, samsung_abox_wdma_match);
 
-static int abox_wdma_runtime_suspend(struct device *dev)
-{
-	abox_dbg(dev, "%s\n", __func__);
-
-	return 0;
-}
-
-static int abox_wdma_runtime_resume(struct device *dev)
-{
-	struct abox_dma_data *data = dev_get_drvdata(dev);
-
-	abox_dbg(dev, "%s\n", __func__);
-
-	regmap_update_bits(data->abox_data->regmap, ABOX_WDMA_CTRL0(data->id),
-			REG_CTRL_KERNEL_MASK, data->c_reg_ctrl);
-
-	return 0;
-}
-
 static int samsung_abox_wdma_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1151,11 +1103,6 @@ static void samsung_abox_wdma_shutdown(struct platform_device *pdev)
 	pm_runtime_disable(dev);
 }
 
-static const struct dev_pm_ops samsung_abox_wdma_pm = {
-	SET_RUNTIME_PM_OPS(abox_wdma_runtime_suspend,
-			abox_wdma_runtime_resume, NULL)
-};
-
 struct platform_driver samsung_abox_wdma_driver = {
 	.probe  = samsung_abox_wdma_probe,
 	.remove = samsung_abox_wdma_remove,
@@ -1164,6 +1111,5 @@ struct platform_driver samsung_abox_wdma_driver = {
 		.name = "abox-wdma",
 		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(samsung_abox_wdma_match),
-		.pm = &samsung_abox_wdma_pm,
 	},
 };

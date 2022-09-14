@@ -18,21 +18,21 @@
 #include "abox_soc.h"
 #include "abox.h"
 
-#define DMA_REG_CTRL0		0x00
-#define DMA_REG_CTRL		DMA_REG_CTRL0
-#define DMA_REG_CTRL1		0x04
-#define DMA_REG_BUF_STR		0x08
-#define DMA_REG_BUF_END		0x0c
-#define DMA_REG_BUF_OFFSET	0x10
-#define DMA_REG_STR_POINT	0x14
-#define DMA_REG_VOL_FACTOR	0x18
-#define DMA_REG_VOL_CHANGE	0x1c
-#define DMA_REG_SBANK_LIMIT	0x20
-#define DMA_REG_BIT_CTRL	0x24
-#define DMA_REG_DITHER_SEED	0x28
+#define DMA_REG_CTRL0           0x00
+#define DMA_REG_CTRL            DMA_REG_CTRL0
+#define DMA_REG_CTRL1           0x04
+#define DMA_REG_BUF_STR         0x08
+#define DMA_REG_BUF_END         0x0c
+#define DMA_REG_BUF_OFFSET      0x10
+#define DMA_REG_STR_POINT       0x14
+#define DMA_REG_VOL_FACTOR      0x18
+#define DMA_REG_VOL_CHANGE      0x1c
+#define DMA_REG_SBANK_LIMIT     0x20
+#define DMA_REG_BIT_CTRL0       0x24
+#define DMA_REG_BIT_CTRL1       0x28
+#define DMA_REG_STATUS          0x30
 #define DMA_REG_STATUS		0x30
-#define DMA_REG_STATUS_ADD	0x38
-#define DMA_REG_MAX		DMA_REG_STATUS_ADD
+#define DMA_REG_MAX		DMA_REG_STATUS
 
 /* mask for field which are controlled by kernel in shared sfr */
 #define REG_CTRL_KERNEL_MASK (ABOX_DMA_SYNC_MODE_MASK | \
@@ -152,7 +152,6 @@ struct abox_dma_data {
 	unsigned int pointer;
 	int pm_qos_cl0[RATE_COUNT];
 	int pm_qos_cl1[RATE_COUNT];
-	int pm_qos_cl2[RATE_COUNT];
 	unsigned int sbank_size;
 	struct device *dev_abox;
 	struct abox_data *abox_data;

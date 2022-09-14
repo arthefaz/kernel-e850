@@ -33,7 +33,6 @@
 #define ABOX_DBG_DUMP_MAGIC_DRAM	0x3231303038504D44ull /* DMP80012 */
 #define ABOX_DBG_DUMP_MAGIC_LOG		0x3142303038504D44ull /* DMP800B1 */
 #define ABOX_DBG_DUMP_MAGIC_SFR		0x5246533030504D44ull /* DMP00SFR */
-#define ABOX_DBG_DUMP_MAGIC_ATUNE	0x5554413030504D44ull /* DMP00ATU */
 #define ABOX_DBG_DUMP_LIMIT_NS		(5 * NSEC_PER_SEC)
 
 static struct mutex lock;
@@ -75,7 +74,6 @@ struct abox_dbg_dump {
 	struct abox_dbg_dump_sfr sfr;
 	u32 sfr_gic_gicd[SZ_4K / sizeof(u32)];
 	unsigned int gpr[SZ_128];
-	struct abox_dbg_dump_sfr atune;
 	long long time;
 	char reason[SZ_32];
 	unsigned int previous_gpr;
@@ -90,7 +88,6 @@ struct abox_dbg_dump_min {
 	struct abox_dbg_dump_sfr sfr;
 	u32 sfr_gic_gicd[SZ_4K / sizeof(u32)];
 	unsigned int gpr[SZ_128];
-	struct abox_dbg_dump_sfr atune;
 	long long time;
 	char reason[SZ_32];
 	unsigned int previous_gpr;
@@ -369,9 +366,6 @@ static void dump_mem_full(struct device *dev, struct abox_data *data,
 	memcpy_fromio(p_dump->sfr.dump, data->sfr_base,
 			sizeof(p_dump->sfr.dump));
 	p_dump->sfr.magic = ABOX_DBG_DUMP_MAGIC_SFR;
-	memcpy_fromio(p_dump->atune.dump, data->sfr_base + ATUNE_OFFSET,
-			sizeof(p_dump->atune.dump));
-	p_dump->atune.magic = ABOX_DBG_DUMP_MAGIC_ATUNE;
 	abox_gicd_dump(data->dev_gic, (char *)p_dump->sfr_gic_gicd, 0,
 			sizeof(p_dump->sfr_gic_gicd));
 }
@@ -400,9 +394,6 @@ static void dump_mem_half(struct device *dev, struct abox_data *data,
 	memcpy_fromio(p_dump->sfr.dump, data->sfr_base,
 			sizeof(p_dump->sfr.dump));
 	p_dump->sfr.magic = ABOX_DBG_DUMP_MAGIC_SFR;
-	memcpy_fromio(p_dump->atune.dump, data->sfr_base + ATUNE_OFFSET,
-			sizeof(p_dump->atune.dump));
-	p_dump->atune.magic = ABOX_DBG_DUMP_MAGIC_ATUNE;
 	abox_gicd_dump(data->dev_gic, (char *)p_dump->sfr_gic_gicd, 0,
 			sizeof(p_dump->sfr_gic_gicd));
 }
@@ -430,9 +421,6 @@ static void dump_mem_min(struct device *dev, struct abox_data *data,
 	memcpy_fromio(p_dump->sfr.dump, data->sfr_base,
 			sizeof(p_dump->sfr.dump));
 	p_dump->sfr.magic = ABOX_DBG_DUMP_MAGIC_SFR;
-	memcpy_fromio(p_dump->atune.dump, data->sfr_base + ATUNE_OFFSET,
-			sizeof(p_dump->atune.dump));
-	p_dump->atune.magic = ABOX_DBG_DUMP_MAGIC_ATUNE;
 	abox_gicd_dump(data->dev_gic, (char *)p_dump->sfr_gic_gicd, 0,
 			sizeof(p_dump->sfr_gic_gicd));
 
@@ -789,7 +777,6 @@ struct abox_dbg_dump_simple {
 	struct abox_dbg_dump_sfr sfr;
 	u32 sfr_gic_gicd[SZ_4K / sizeof(u32)];
 	unsigned int gpr[SZ_128];
-	struct abox_dbg_dump_sfr atune;
 	long long time;
 	char reason[SZ_32];
 } __packed;
@@ -829,10 +816,6 @@ void abox_dbg_dump_simple(struct device *dev, struct abox_data *data,
 	memcpy_fromio(abox_dump_simple.sfr.dump, data->sfr_base,
 			sizeof(abox_dump_simple.sfr.dump));
 	abox_dump_simple.sfr.magic = ABOX_DBG_DUMP_MAGIC_SFR;
-	memcpy_fromio(abox_dump_simple.atune.dump,
-			data->sfr_base + ATUNE_OFFSET,
-			sizeof(abox_dump_simple.atune.dump));
-	abox_dump_simple.atune.magic = ABOX_DBG_DUMP_MAGIC_ATUNE;
 	abox_gicd_dump(data->dev_gic, (char *)abox_dump_simple.sfr_gic_gicd, 0,
 			sizeof(abox_dump_simple.sfr_gic_gicd));
 }
@@ -856,10 +839,6 @@ void abox_dbg_dump_suspend(struct device *dev, struct abox_data *data)
 	memcpy_fromio(abox_dump_suspend.sfr.dump, data->sfr_base,
 			sizeof(abox_dump_suspend.sfr.dump));
 	abox_dump_suspend.sfr.magic = ABOX_DBG_DUMP_MAGIC_SFR;
-	memcpy_fromio(abox_dump_suspend.atune.dump,
-			data->sfr_base + ATUNE_OFFSET,
-			sizeof(abox_dump_suspend.atune.dump));
-	abox_dump_suspend.atune.magic = ABOX_DBG_DUMP_MAGIC_ATUNE;
 	abox_gicd_dump(data->dev_gic, (char *)abox_dump_suspend.sfr_gic_gicd, 0,
 			sizeof(abox_dump_suspend.sfr_gic_gicd));
 }
@@ -1444,10 +1423,6 @@ static int samsung_abox_debug_probe(struct platform_device *pdev)
 	}
 
 	if (abox_dbg_rmem) {
-		new_size = abox_oem_resize_reserved_memory(ABOX_OEM_RESERVED_MEMORY_DBG);
-		if (new_size >= 0)
-			abox_dbg_resize_rmem(dev, abox_dbg_rmem, new_size, "abox_dbg");
-
 		abox_dbg_rmem_init(data);
 	}
 
@@ -1460,10 +1435,6 @@ static int samsung_abox_debug_probe(struct platform_device *pdev)
 	}
 
 	if (abox_dbg_slog) {
-		new_size = abox_oem_resize_reserved_memory(ABOX_OEM_RESERVED_MEMORY_SLOG);
-		if (new_size >= 0)
-			abox_dbg_resize_rmem(dev, abox_dbg_slog, new_size, "abox_slog");
-
 		abox_dbg_slog_init(data);
 	}
 

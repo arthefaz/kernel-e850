@@ -56,12 +56,6 @@ static struct abox_qos abox_qos_cl1 = {
 	.name = "CL1",
 	.requests = LIST_HEAD_INIT(abox_qos_cl1.requests),
 };
-static struct abox_qos abox_qos_cl2 = {
-	.qos_class = ABOX_QOS_CL2,
-	.type = ABOX_PM_QOS_MAX,
-	.name = "CL2",
-	.requests = LIST_HEAD_INIT(abox_qos_cl2.requests),
-};
 
 static struct abox_qos *abox_qos_array[] = {
 	&abox_qos_aud,
@@ -70,7 +64,6 @@ static struct abox_qos *abox_qos_array[] = {
 	&abox_qos_int,
 	&abox_qos_cl0,
 	&abox_qos_cl1,
-	&abox_qos_cl2,
 };
 
 static struct abox_qos *abox_qos_get_qos(enum abox_qos_class qos_class)
@@ -84,8 +77,6 @@ static struct abox_qos *abox_qos_get_qos(enum abox_qos_class qos_class)
 		return &abox_qos_cl0;
 	case ABOX_QOS_CL1:
 		return &abox_qos_cl1;
-	case ABOX_QOS_CL2:
-		return &abox_qos_cl2;
 	case ABOX_QOS_INT:
 		return &abox_qos_int;
 	case ABOX_QOS_MIF:
@@ -427,7 +418,7 @@ void abox_qos_print(struct device *dev, enum abox_qos_class qos_class)
 	}
 	spin_unlock_irqrestore(&abox_qos_lock, flags);
 }
-
+/*
 int abox_qos_add_notifier(enum abox_qos_class qos_class,
 		struct notifier_block *notifier)
 {
@@ -438,7 +429,7 @@ int abox_qos_add_notifier(enum abox_qos_class qos_class,
 #endif
 	return ret;
 }
-
+*/
 static ssize_t abox_qos_read_qos(char *buf, size_t size, struct abox_qos *qos)
 {
 	struct abox_qos_req *req;

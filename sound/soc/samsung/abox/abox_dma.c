@@ -30,7 +30,6 @@
 #include "abox_cmpnt.h"
 #include "abox.h"
 #include "abox_dump.h"
-#include "abox_udma.h"
 #include "abox_dma.h"
 #include "abox_memlog.h"
 
@@ -62,33 +61,10 @@ unsigned int abox_dma_iova(struct abox_dma_data *data)
 		ret = IOVA_DUAL_BUFFER(id - ABOX_WDMA0_DUAL);
 	else if (id >= ABOX_DDMA0 && id < ABOX_UAIF0)
 		ret = IOVA_DDMA_BUFFER(id - ABOX_DDMA0);
-	else if (id >= ABOX_UDMA_RD0 && id < ABOX_UDMA_WR0)
-		ret = IOVA_UDMA_RD_BUFFER(id - ABOX_UDMA_RD0);
-	else if (id >= ABOX_UDMA_WR0 && id < ABOX_UDMA_WR0_DUAL)
-		ret = IOVA_UDMA_WR_BUFFER(id - ABOX_UDMA_WR0);
-	else if (id >= ABOX_UDMA_WR0_DUAL && id < ABOX_UDMA_WR_DBG0)
-		ret = IOVA_UDMA_WR_DUAL_BUFFER(id - ABOX_UDMA_WR0_DUAL);
-	else if (id >= ABOX_UDMA_WR_DBG0)
-		ret = IOVA_UDMA_WR_DBG_BUFFER(id - ABOX_UDMA_WR_DBG0);
 	else
 		ret = 0;
 
 	return ret;
-}
-
-bool abox_dma_is_sync_mode(struct abox_dma_data *data)
-{
-	struct abox_data *abox_data = data->abox_data;
-	int id = data->id;
-	unsigned int val;
-
-	if (id >= ARRAY_SIZE(abox_data->dev_rdma) || !abox_data->dev_rdma[id])
-		return false;
-
-	data = dev_get_drvdata(abox_data->dev_rdma[id]);
-	val = snd_soc_component_read(data->cmpnt, DMA_REG_CTRL0);
-
-	return ((val & ABOX_DMA_SYNC_MODE_MASK) >> ABOX_DMA_SYNC_MODE_L);
 }
 
 bool abox_dma_is_opened(struct device *dev)
@@ -541,17 +517,17 @@ static size_t abox_dma_read_pointer(struct abox_dma_data *data)
 	buffer_bytes = buf_end - buf_str;
 	period_bytes = buf_offset;
 
-	if (hweight_long(ABOX_DMA_BUF_OFFSET_CNT_MASK) > 8)
-		offset = ((status & ABOX_DMA_BUF_OFFSET_CNT_MASK) >>
-				ABOX_DMA_BUF_OFFSET_CNT_L) << 4;
+	if (hweight_long(ABOX_DMA_RBUF_OFFSET_MASK) > 8)
+		offset = ((status & ABOX_DMA_RBUF_OFFSET_MASK) >>
+				ABOX_DMA_RBUF_OFFSET_L) << 4;
 	else
-		offset = ((status & ABOX_DMA_BUF_OFFSET_CNT_MASK) >>
-				ABOX_DMA_BUF_OFFSET_CNT_L) * period_bytes;
+		offset = ((status & ABOX_DMA_RBUF_OFFSET_MASK) >>
+				ABOX_DMA_RBUF_OFFSET_L) * period_bytes;
 
-	if (period_bytes > ABOX_DMA_BUF_CNT_MASK + 1)
+	if (period_bytes > ABOX_DMA_RBUF_CNT_MASK + 1)
 		count = 0;
 	else
-		count = (status & ABOX_DMA_BUF_CNT_MASK);
+		count = (status & ABOX_DMA_RBUF_CNT_MASK);
 
 	while ((offset % period_bytes) && (buffer_bytes >= 0)) {
 		buffer_bytes -= period_bytes;
@@ -757,7 +733,7 @@ int abox_dma_set_dst_bit_width(struct device *dev, int width)
 
 	abox_dbg(dev, "%s(%d)\n", __func__, width);
 
-	reg = DMA_REG_BIT_CTRL;
+	reg = DMA_REG_BIT_CTRL0;
 	mask = ABOX_DMA_DST_BIT_WIDTH_MASK;
 	val = ((width / 8) - 1) << ABOX_DMA_DST_BIT_WIDTH_L;
 	ret = snd_soc_component_update_bits(cmpnt, reg, mask, val);
@@ -774,7 +750,7 @@ int abox_dma_get_dst_bit_width(struct device *dev)
 
 	abox_dbg(dev, "%s\n", __func__);
 
-	reg = DMA_REG_BIT_CTRL;
+	reg = DMA_REG_BIT_CTRL0;
 	val = snd_soc_component_read(cmpnt, reg);
 	val &= ABOX_DMA_DST_BIT_WIDTH_MASK;
 	val >>= ABOX_DMA_DST_BIT_WIDTH_L;
@@ -1196,16 +1172,6 @@ static unsigned int abox_dma_get_dst_format(struct abox_dma_data *data)
 	return abox_get_format(width, channels);
 }
 
-static unsigned int abox_dma_get_format(struct abox_dma_data *data)
-{
-	unsigned int width, channels;
-
-	width = params_width(&data->hw_params);
-	channels = params_channels(&data->hw_params);
-
-	return abox_get_format(width, channels);
-}
-
 static int abox_dma_dump_set_format(struct abox_dma_data *data)
 {
 	struct abox_data *abox_data = data->abox_data;
@@ -1246,16 +1212,6 @@ static int abox_dma_dump_set_format(struct abox_dma_data *data)
 		idx = w - ABOX_WIDGET_SPUM_ASRC0;
 		format = abox_cmpnt_asrc_get_dst_format(abox_data,
 				SNDRV_PCM_STREAM_CAPTURE, idx);
-		break;
-	case ABOX_WIDGET_UDMA_RD0 ... ABOX_WIDGET_UDMA_RD1:
-		idx = w - ABOX_WIDGET_UDMA_RD0;
-		format = abox_dma_get_format(dev_get_drvdata(
-				abox_data->dev_udma_rd[idx]));
-		break;
-	case ABOX_WIDGET_UDMA_WR0 ... ABOX_WIDGET_UDMA_WR1:
-		idx = w - ABOX_WIDGET_UDMA_WR0;
-		format = abox_dma_get_format(dev_get_drvdata(
-				abox_data->dev_udma_wr[idx]));
 		break;
 	default:
 		return -EINVAL;
@@ -1779,127 +1735,6 @@ const static struct snd_soc_component_driver abox_ddma = {
 	.mmap			= abox_dma_mmap,
 };
 
-static enum abox_irq abox_udma_wr_dbg_get_irq(struct abox_dma_data *data,
-		enum abox_dma_irq irq)
-{
-	unsigned int id = data->id;
-	enum abox_irq ret;
-
-	switch (irq) {
-	case DMA_IRQ_BUF_EMPTY:
-		ret = IRQ_UDMA_WR_DBG0_BUF_FULL + id;
-		break;
-	case DMA_IRQ_ERR:
-		ret = IRQ_UDMA_WR_DBG0_ERR + id;
-		break;
-	case DMA_IRQ_FADE_DONE:
-		ret = IRQ_UDMA_WR_DBG0_FADE_DONE + id;
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
-
-	return ret;
-}
-
-static enum abox_dai abox_udma_wr_dbg_get_dai_id(enum abox_dma_dai dai, int id)
-{
-	return ABOX_UDMA_WR_DBG0 + id;
-}
-
-static char *abox_udma_wr_dbg_get_dai_name(struct device *dev,
-		enum abox_dma_dai dai, int id)
-{
-	return devm_kasprintf(dev, GFP_KERNEL, "UDMA DBG%d", id);
-}
-
-static enum abox_widget abox_udma_wr_dbg_get_src_widget(
-		struct abox_dma_data *data)
-{
-	enum abox_widget w;
-	unsigned int val;
-
-	val = snd_soc_component_read(data->cmpnt, DMA_REG_CTRL);
-	val = (val & ABOX_DMA_DEBUG_SRC_MASK) >> ABOX_DMA_DEBUG_SRC_L;
-	switch (val) {
-	case 0x20 ... 0x21:
-		w = ABOX_WIDGET_UDMA_RD0 + val - 0x20;
-		break;
-	default:
-		w = -EINVAL;
-		break;
-	}
-
-	return w;
-}
-
-static const char * const abox_udma_wr_dbg_src_enum_texts[] = {
-	"UDMA_RD0", "UDMA_RD1",
-};
-
-static const unsigned int abox_udma_wr_dbg_src_enum_values[] = {
-	0x20, 0x21,
-};
-
-static const struct soc_enum abox_udma_wr_dbg_src_enum[] = {
-	SOC_VALUE_ENUM_SINGLE(DMA_REG_CTRL, ABOX_DMA_DEBUG_SRC_L,
-			ABOX_DMA_DEBUG_SRC_MASK >> ABOX_DMA_DEBUG_SRC_L,
-			ARRAY_SIZE(abox_udma_wr_dbg_src_enum_texts),
-			abox_udma_wr_dbg_src_enum_texts,
-			abox_udma_wr_dbg_src_enum_values),
-};
-
-static const struct snd_kcontrol_new abox_udma_wr_dbg_controls[] = {
-	SOC_ENUM("SRC", abox_udma_wr_dbg_src_enum),
-	SOC_ENUM_EXT("Func", abox_dma_func_enum,
-			snd_soc_get_enum_double, abox_dma_func_put),
-	SOC_SINGLE_EXT("Auto Fade In", DMA_REG_CTRL,
-			ABOX_DMA_AUTO_FADE_IN_L, 1, 0,
-			abox_dma_auto_fade_in_get, abox_dma_auto_fade_in_put),
-	SOC_SINGLE("Vol Factor", DMA_REG_VOL_FACTOR,
-			ABOX_DMA_VOL_FACTOR_L, 0xffffff, 0),
-	SOC_SINGLE("Vol Change", DMA_REG_VOL_CHANGE,
-			ABOX_DMA_VOL_FACTOR_L, 0xffffff, 0),
-};
-
-static unsigned int abox_udma_wr_dbg_read(struct snd_soc_component *cmpnt,
-		unsigned int reg)
-{
-	struct abox_dma_data *data = snd_soc_component_get_drvdata(cmpnt);
-	unsigned int base = ABOX_UDMA_WR_DEBUG_CTRL(data->id);
-
-	return abox_dma_read(cmpnt, base, reg);
-}
-
-static int abox_udma_wr_dbg_write(struct snd_soc_component *cmpnt,
-		unsigned int reg, unsigned int val)
-{
-	struct abox_dma_data *data = snd_soc_component_get_drvdata(cmpnt);
-	unsigned int base = ABOX_UDMA_WR_DEBUG_CTRL(data->id);
-
-	return abox_dma_write(cmpnt, base, reg, val);
-}
-
-const static struct snd_soc_component_driver abox_udma_wr_dbg = {
-	.controls		= abox_udma_wr_dbg_controls,
-	.num_controls		= ARRAY_SIZE(abox_udma_wr_dbg_controls),
-	.probe			= abox_dma_probe,
-	.remove			= abox_dma_remove,
-	.read			= abox_udma_wr_dbg_read,
-	.write			= abox_udma_wr_dbg_write,
-	.pcm_construct		= abox_dma_dump_pcm_new,
-	.pcm_destruct		= abox_dma_dump_pcm_free,
-	.open			= abox_dma_open,
-	.close			= abox_dma_close,
-	.hw_params		= abox_dma_hw_params,
-	.hw_free		= abox_dma_hw_free,
-	.prepare		= abox_dma_prepare,
-	.trigger		= abox_dma_trigger,
-	.pointer		= abox_dma_pointer,
-	.mmap			= abox_dma_mmap,
-};
-
 static enum abox_irq abox_dual_get_irq(struct abox_dma_data *data,
 		enum abox_dma_irq irq)
 {
@@ -1979,79 +1814,6 @@ const static struct snd_soc_component_driver abox_dual = {
 	.mmap			= abox_dma_mmap,
 };
 
-static enum abox_irq abox_udma_wr_dual_get_irq(struct abox_dma_data *data,
-		enum abox_dma_irq irq)
-{
-	unsigned int id = data->id;
-	enum abox_irq ret;
-
-	switch (irq) {
-	case DMA_IRQ_BUF_EMPTY:
-		ret = IRQ_UDMA_WR0_DUAL_BUF_FULL + id;
-		break;
-	case DMA_IRQ_ERR:
-		ret = IRQ_UDMA_WR0_DUAL_ERR + id;
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
-
-	return ret;
-}
-
-static enum abox_dai abox_udma_wr_dual_get_dai_id(enum abox_dma_dai dai, int id)
-{
-	return ABOX_UDMA_WR0_DUAL + id;
-}
-
-static char *abox_udma_wr_dual_get_dai_name(struct device *dev,
-		enum abox_dma_dai dai, int id)
-{
-	return devm_kasprintf(dev, GFP_KERNEL, "UDMA WR%d DUAL", id);
-}
-
-static enum abox_widget abox_udma_wr_dual_get_src_widget(
-		struct abox_dma_data *data)
-{
-	return ABOX_WIDGET_UDMA_WR0 + data->id;
-}
-
-static unsigned int abox_udma_wr_dual_read(struct snd_soc_component *cmpnt,
-		unsigned int reg)
-{
-	struct abox_dma_data *data = snd_soc_component_get_drvdata(cmpnt);
-	unsigned int base = ABOX_UDMA_WR_DUAL_CTRL(data->id);
-
-	return abox_dma_read(cmpnt, base, reg);
-}
-
-static int abox_udma_wr_dual_write(struct snd_soc_component *cmpnt,
-		unsigned int reg, unsigned int val)
-{
-	struct abox_dma_data *data = snd_soc_component_get_drvdata(cmpnt);
-	unsigned int base = ABOX_UDMA_WR_DUAL_CTRL(data->id);
-
-	return abox_dma_write(cmpnt, base, reg, val);
-}
-
-const static struct snd_soc_component_driver abox_udma_wr_dual = {
-	.probe			= abox_dma_probe,
-	.remove			= abox_dma_remove,
-	.read			= abox_udma_wr_dual_read,
-	.write			= abox_udma_wr_dual_write,
-	.pcm_construct		= abox_dma_dump_pcm_new,
-	.pcm_destruct		= abox_dma_dump_pcm_free,
-	.open			= abox_dma_open,
-	.close			= abox_dma_close,
-	.hw_params		= abox_dma_hw_params,
-	.hw_free		= abox_dma_hw_free,
-	.prepare		= abox_dma_prepare,
-	.trigger		= abox_dma_trigger,
-	.pointer		= abox_dma_pointer,
-	.mmap			= abox_dma_mmap,
-};
-
 static const struct of_device_id samsung_abox_dma_match[] = {
 	{
 		.compatible = "samsung,abox-ddma",
@@ -2076,40 +1838,6 @@ static const struct of_device_id samsung_abox_dma_match[] = {
 			.cmpnt_drv = &abox_dual,
 		},
 	},
-#if IS_ENABLED(CONFIG_SND_SOC_SAMSUNG_ABOX_UDMA)
-	{
-		.compatible = "samsung,abox-udma-rd",
-		.data = &abox_udma_rd_of_data,
-	},
-	{
-		.compatible = "samsung,abox-udma-wr",
-		.data = &abox_udma_wr_of_data,
-	},
-	{
-		.compatible = "samsung,abox-udma-wr-dual",
-		.data = (void *)&(struct abox_dma_of_data){
-			.get_irq = abox_udma_wr_dual_get_irq,
-			.get_dai_id = abox_udma_wr_dual_get_dai_id,
-			.get_dai_name = abox_udma_wr_dual_get_dai_name,
-			.get_src_widget = abox_udma_wr_dual_get_src_widget,
-			.dai_drv = &abox_dual_dai_drv,
-			.num_dai = 1,
-			.cmpnt_drv = &abox_udma_wr_dual,
-		},
-	},
-	{
-		.compatible = "samsung,abox-udma-wr-debug",
-		.data = (void *)&(struct abox_dma_of_data){
-			.get_irq = abox_udma_wr_dbg_get_irq,
-			.get_dai_id = abox_udma_wr_dbg_get_dai_id,
-			.get_dai_name = abox_udma_wr_dbg_get_dai_name,
-			.get_src_widget = abox_udma_wr_dbg_get_src_widget,
-			.dai_drv = &abox_ddma_dai_drv,
-			.num_dai = 1,
-			.cmpnt_drv = &abox_udma_wr_dbg,
-		},
-	},
-#endif
 	{},
 };
 MODULE_DEVICE_TABLE(of, samsung_abox_dma_match);

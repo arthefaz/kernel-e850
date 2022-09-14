@@ -588,35 +588,6 @@ static int abox_uaif_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int abox_uaif_prepare(struct snd_pcm_substream *substream,
-		struct snd_soc_dai *dai)
-{
-	struct device *dev = dai->dev;
-	struct abox_if_data *data = snd_soc_dai_get_drvdata(dai);
-	unsigned int mask_auto_fade_in, val_auto_fade_in;
-	int ret;
-
-	abox_dbg(dev, "%s[%c]\n", __func__,
-			(substream->stream == SNDRV_PCM_STREAM_CAPTURE) ?
-			'C' : 'P');
-
-	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-		mask_auto_fade_in = ABOX_MIC_AUTO_FADE_IN_MASK;
-		val_auto_fade_in = data->mic_auto_fade_in << ABOX_MIC_AUTO_FADE_IN_L;
-	} else {
-		mask_auto_fade_in = ABOX_SPK_AUTO_FADE_IN_MASK;
-		val_auto_fade_in = data->spk_auto_fade_in << ABOX_SPK_AUTO_FADE_IN_L;
-	}
-
-	/* set auto fade in before enable */
-	ret = snd_soc_component_update_bits(data->cmpnt, UAIF_REG_CTRL0,
-			mask_auto_fade_in, val_auto_fade_in);
-	if (ret < 0)
-		return ret;
-
-	return 0;
-}
-
 static int abox_uaif_mute_stream(struct snd_soc_dai *dai, int mute, int stream)
 {
 	struct device *dev = dai->dev;
@@ -695,7 +666,6 @@ static const struct snd_soc_dai_ops abox_uaif_dai_ops = {
 	.shutdown	= abox_uaif_shutdown,
 	.hw_params	= abox_uaif_hw_params,
 	.hw_free	= abox_if_hw_free,
-	.prepare	= abox_uaif_prepare,
 	.mute_stream	= abox_uaif_mute_stream,
 };
 
@@ -733,132 +703,6 @@ static unsigned int abox_uaif_read_format(struct abox_if_data *data)
 	val = (val & ABOX_FORMAT_MASK) >> ABOX_FORMAT_L;
 
 	return val;
-}
-
-static bool abox_uaif_mic_enabled(struct abox_if_data *data)
-{
-	return snd_soc_component_read(data->cmpnt, UAIF_REG_CTRL0) & ABOX_MIC_ENABLE_MASK;
-}
-
-static bool abox_uaif_spk_enabled(struct abox_if_data *data)
-{
-	return snd_soc_component_read(data->cmpnt, UAIF_REG_CTRL0) & ABOX_SPK_ENABLE_MASK;
-}
-
-static int abox_uaif_func_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol,
-		bool enabled, unsigned int reg_vol_change,
-		struct completion *func_changed)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_if_data *data = dev_get_drvdata(dev);
-	unsigned int *item = ucontrol->value.enumerated.item;
-	int ret;
-
-	abox_info(dev, "%s(%d, %#x)\n", __func__, item[0], reg_vol_change);
-
-	if (enabled) {
-		static const unsigned int VOL_MAX = 0x800000;
-		unsigned int change = 1, rate, wait_ms;
-
-		change = snd_soc_component_read(cmpnt, reg_vol_change);
-		rate = data->config[ABOX_IF_RATE];
-		wait_ms = DIV_ROUND_UP(MSEC_PER_SEC * VOL_MAX, change);
-		wait_ms = DIV_ROUND_UP(wait_ms, rate);
-
-		reinit_completion(func_changed);
-		ret = snd_soc_put_enum_double(kcontrol, ucontrol);
-		if (ret > 0) {
-			abox_info(dev, "func %d, wait %u ms\n", item[0], wait_ms);
-			wait_for_completion_timeout(func_changed,
-					msecs_to_jiffies(wait_ms));
-		}
-	} else {
-		ret = snd_soc_put_enum_double(kcontrol, ucontrol);
-	}
-
-	return ret;
-}
-
-static int abox_uaif_mic_func_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_if_data *data = dev_get_drvdata(dev);
-
-	return abox_uaif_func_put(kcontrol, ucontrol, abox_uaif_mic_enabled(data),
-			UAIF_REG_MIC_VOL_CHANGE, &data->mic_func_changed);
-}
-
-static int abox_uaif_spk_func_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_if_data *data = dev_get_drvdata(dev);
-
-	return abox_uaif_func_put(kcontrol, ucontrol, abox_uaif_spk_enabled(data),
-			UAIF_REG_SPK_VOL_CHANGE, &data->spk_func_changed);
-}
-
-static int abox_uaif_mic_auto_fade_in_get(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_if_data *data = dev_get_drvdata(dev);
-
-	abox_dbg(dev, "%s\n", __func__);
-
-	ucontrol->value.integer.value[0] = data->mic_auto_fade_in;
-
-	return 0;
-}
-
-static int abox_uaif_mic_auto_fade_in_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_if_data *data = dev_get_drvdata(dev);
-	bool value = !!ucontrol->value.integer.value[0];
-
-	abox_dbg(dev, "%s(%d)\n", __func__, value);
-
-	data->mic_auto_fade_in = value;
-
-	return 0;
-}
-
-static int abox_uaif_spk_auto_fade_in_get(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_if_data *data = dev_get_drvdata(dev);
-
-	abox_dbg(dev, "%s\n", __func__);
-
-	ucontrol->value.integer.value[0] = data->spk_auto_fade_in;
-
-	return 0;
-}
-
-static int abox_uaif_spk_auto_fade_in_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_if_data *data = dev_get_drvdata(dev);
-	bool value = !!ucontrol->value.integer.value[0];
-
-	abox_dbg(dev, "%s(%d)\n", __func__, value);
-
-	data->spk_auto_fade_in = value;
-
-	return 0;
 }
 
 static unsigned int abox_if_read_width(struct abox_if_data *data)
@@ -1035,38 +879,8 @@ static SOC_VALUE_ENUM_SINGLE_DECL(uaif_start_fifo_size_mic_enum,
 static const struct snd_kcontrol_new abox_uaif_controls[] = {
 	SOC_ENUM("Start FIFO Size Spk", uaif_start_fifo_size_spk_enum),
 	SOC_ENUM("Start FIFO Size Mic", uaif_start_fifo_size_mic_enum),
-	SOC_SINGLE("Start FIFO Diff Spk", UAIF_REG_CTRL0,
-			ABOX_START_FIFO_DIFF_SPK_L, 0xf, 0),
-	SOC_SINGLE("Start FIFO Diff Mic", UAIF_REG_CTRL0,
-			ABOX_START_FIFO_DIFF_MIC_L, 0xf, 0),
 };
-static const char * const uaif_func_enum_texts[] = {
-	"Normal", "Pending", "Mute",
-};
-SOC_ENUM_SINGLE_DECL(abox_uaif_mic_func_enum, UAIF_REG_CTRL0,
-		ABOX_MIC_FUNC_L, uaif_func_enum_texts);
-SOC_ENUM_SINGLE_DECL(abox_uaif_spk_func_enum, UAIF_REG_CTRL0,
-		ABOX_SPK_FUNC_L, uaif_func_enum_texts);
-static const struct snd_kcontrol_new abox_uaif_vol_controls[] = {
-	SOC_ENUM_EXT("Mic Func", abox_uaif_mic_func_enum,
-			snd_soc_get_enum_double, abox_uaif_mic_func_put),
-	SOC_SINGLE_EXT("Mic Auto Fade In", UAIF_REG_CTRL0,
-			ABOX_MIC_AUTO_FADE_IN_L, 1, 0,
-			abox_uaif_mic_auto_fade_in_get, abox_uaif_mic_auto_fade_in_put),
-	SOC_SINGLE("Mic Vol Factor", UAIF_REG_MIC_VOL_FACTOR,
-			ABOX_VOL_FACTOR_MIC_L, 0xffffff, 0),
-	SOC_SINGLE("Mic Vol Change", UAIF_REG_MIC_VOL_CHANGE,
-			ABOX_VOL_CHANGE_MIC_L, 0xffffff, 0),
-	SOC_ENUM_EXT("Spk Func", abox_uaif_spk_func_enum,
-			snd_soc_get_enum_double, abox_uaif_spk_func_put),
-	SOC_SINGLE_EXT("Spk Auto Fade In", UAIF_REG_CTRL0,
-			ABOX_SPK_AUTO_FADE_IN_L, 1, 0,
-			abox_uaif_spk_auto_fade_in_get, abox_uaif_spk_auto_fade_in_put),
-	SOC_SINGLE("Spk Vol Factor", UAIF_REG_SPK_VOL_FACTOR,
-			ABOX_VOL_FACTOR_SPK_L, 0xffffff, 0),
-	SOC_SINGLE("Spk Vol Change", UAIF_REG_SPK_VOL_CHANGE,
-			ABOX_VOL_CHANGE_SPK_L, 0xffffff, 0),
-};
+
 static const struct snd_kcontrol_new abox_if_controls[] = {
 	SOC_SINGLE_EXT("Width", ABOX_IF_WIDTH, 0, 32, 0,
 			abox_if_config_get, abox_if_config_put),
@@ -1145,9 +959,6 @@ static int abox_if_cmpnt_probe(struct snd_soc_component *cmpnt)
 				ARRAY_SIZE(abox_uaif_controls));
 		snd_soc_dapm_add_routes(dapm, abox_if_routes,
 				ARRAY_SIZE(abox_if_routes));
-		if (ABOX_SOC_VERSION(4, 0, 0) < CONFIG_SND_SOC_SAMSUNG_ABOX_VERSION)
-			snd_soc_add_component_controls(cmpnt, abox_uaif_vol_controls,
-					ARRAY_SIZE(abox_uaif_vol_controls));
 		break;
 	case ABOX_DSIF:
 		/* nothing to add now */

@@ -34,21 +34,6 @@
 #define ABOX_L(name, o, x) (ABOX_SFR(name, o, x) % BITS_PER_SFR)
 #define ABOX_H(name, o, x) (ABOX_SFR(name, o, x) % BITS_PER_SFR)
 
-#define ATUNE_SFR(name, o, x) \
-	(ATUNE_##name##_BASE + ((x) * ATUNE_##name##_ITV) + (o))
-#define ATUNE_FLD(name) (GENMASK32(ATUNE_##name##_H, ATUNE_##name##_L))
-#define ATUNE_FLD_X(name, x) \
-	(GENMASK32(ATUNE_##name##_H(x), ATUNE_##name##_L(x)))
-#define ATUNE_FLD_PER_SFR(name) (BITS_PER_SFR / ATUNE_##name##_ITV)
-#define ATUNE_FLD_OFFSET(name, o, x) \
-	((((x) + (o)) / ATUNE_FLD_PER_SFR(name)) * SFR_STRIDE)
-#define ATUNE_SFR_FLD(name, fld, fo, fx) \
-	(ATUNE_##name + ATUNE_FLD_OFFSET(fld, fo, fx))
-#define ATUNE_SFR_FLD_X(name, x, fld, fo, fx) \
-	(ATUNE_##name(x) + ATUNE_FLD_OFFSET(fld, fo, fx))
-#define ATUNE_L(name, o, x) (ATUNE_SFR(name, o, x) % BITS_PER_SFR)
-#define ATUNE_H(name, o, x) (ATUNE_SFR(name, o, x) % BITS_PER_SFR)
-
 #if (ABOX_SOC_VERSION(4, 0x20, 0) <= CONFIG_SND_SOC_SAMSUNG_ABOX_VERSION)
 #include "abox_soc_42.h"
 #elif (ABOX_SOC_VERSION(4, 0, 0) <= CONFIG_SND_SOC_SAMSUNG_ABOX_VERSION)
@@ -57,6 +42,8 @@
 #include "abox_soc_31.h"
 #elif (ABOX_SOC_VERSION(3, 0, 0) <= CONFIG_SND_SOC_SAMSUNG_ABOX_VERSION)
 #include "abox_soc_3.h"
+#elif (ABOX_SOC_VERSION(2, 3, 0) <= CONFIG_SND_SOC_SAMSUNG_ABOX_VERSION)
+#include "abox_soc_23.h"
 #elif (ABOX_SOC_VERSION(2, 1, 0) <= CONFIG_SND_SOC_SAMSUNG_ABOX_VERSION)
 #include "abox_soc_21.h"
 #else

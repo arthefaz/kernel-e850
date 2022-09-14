@@ -20,17 +20,11 @@
 #include "abox.h"
 #include "abox_dump.h"
 #include "abox_vdma.h"
-#include "abox_udma.h"
 #include "abox_dma.h"
 #include "abox_if.h"
 #include "abox_vss.h"
-#include "abox_atune.h"
 #include "abox_cmpnt.h"
 #include "abox_memlog.h"
-
-#define ABOX_ASRC_TUNE_DEFAULT	1000
-#define ABOX_ASRC_TUNE_MIN	(ABOX_ASRC_TUNE_DEFAULT / 10 * 6) /* 60% */
-#define ABOX_ASRC_TUNE_MAX	(ABOX_ASRC_TUNE_DEFAULT / 10 * 14) /* 140% */
 
 #define SOC_DAPM_SINGLE_EXT(xname, reg, shift, max, invert, xget, xput) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
@@ -39,21 +33,18 @@
 	.private_value = SOC_SINGLE_VALUE(reg, shift, max, invert, 0) }
 
 enum asrc_tick {
-	TICK_UAIF0 = 0x0,
-	TICK_UAIF1 = 0x1,
-	TICK_UAIF2 = 0x2,
-	TICK_UAIF3 = 0x3,
-	TICK_UAIF4 = 0x4,
-	TICK_UAIF5 = 0x5,
-	TICK_UAIF6 = 0x6,
-	TICK_UAIF7 = 0x7,
+	TICK_CP = 0x0,
+	TICK_UAIF0 = 0x1,
+	TICK_UAIF1 = 0x2,
+	TICK_UAIF2 = 0x3,
+	TICK_UAIF3 = 0x4,
+	TICK_UAIF4 = 0x5,
+	TICK_UAIF5 = 0x6,
+	TICK_UAIF6 = 0x7,
 	TICK_USB = 0x8,
-	TICK_CP_EXT = 0x9,
-	TICK_BCLK_CP_EXT = 0xA,
-	TICK_CP = 0xB,
-	TICK_PCM_CNTR = 0xC,
-	TICK_BCLK_SPDY = 0xD,
-	TICK_SYNC = 0xF,
+	TICK_BCLK_CP = 0x9,
+	TICK_BCLK_SPDY = 0xA,
+	TICK_SYNC,
 };
 
 enum asrc_ratio {
@@ -209,50 +200,14 @@ static const struct asrc_ctrl asrc_table[ASRC_RATE_COUNT][ASRC_RATE_COUNT] = {
 };
 
 static enum abox_dai get_sink_dai_id(struct abox_data *data, enum abox_dai id);
-static int asrc_update(struct snd_soc_component *cmpnt, int idx, int stream);
 
-static int get_mixp_channels(struct abox_data *data)
+static unsigned int cal_ofactor(const struct asrc_ctrl *ctrl)
 {
-	int idx, dma_ch, ch = 0;
+	unsigned int isr, osr, ofactor;
 
-	for (idx = 0; idx <= data->rdma_count; idx++) {
-		if (get_sink_dai_id(data, ABOX_RDMA0 + idx) == ABOX_SIFS0) {
-			if (!abox_dma_is_opened(data->dev_rdma[idx]))
-				continue;
-			dma_ch = abox_dma_get_channels(data->dev_rdma[idx]);
-			if (ch < dma_ch)
-				ch = dma_ch;
-		}
-	}
-
-	return ch;
-}
-
-static bool sifs_channel_selected(struct abox_data *data, int idx)
-{
-	unsigned int reg, val = 0;
-
-	reg = ABOX_SIFS_CH_SEL(idx);
-	val = snd_soc_component_read(data->cmpnt, reg);
-	return !!(val & ABOX_SIFS_CH_SEL_MASK(idx));
-}
-
-static bool sifm_channel_selected(struct abox_data *data, int idx)
-{
-	unsigned int reg, val = 0;
-
-	reg = ABOX_SIFM_CH_SEL(idx);
-	val = snd_soc_component_read(data->cmpnt, reg);
-	return !!(val & ABOX_SIFM_CH_SEL_MASK(idx));
-}
-
-static unsigned int cal_ofactor(const struct asrc_ctrl *ctrl, int tune)
-{
-	unsigned long isr, osr, ofactor;
-
-	isr = ctrl->isr << ctrl->ovsf;
-	osr = (ctrl->osr * tune / ABOX_ASRC_TUNE_DEFAULT) << ctrl->dcmf;
-	ofactor = isr * ctrl->ifactor / osr;
+	isr = (ctrl->isr / 100) << ctrl->ovsf;
+	osr = (ctrl->osr / 100) << ctrl->dcmf;
+	ofactor = ctrl->ifactor * isr / osr;
 
 	return (unsigned int)ofactor;
 }
@@ -419,7 +374,7 @@ static int format_put_ipc(struct device *adev, snd_pcm_format_t format,
 	ABOX_IPC_MSG msg;
 	struct IPC_ABOX_CONFIG_MSG *abox_config_msg = &msg.msg.config;
 	int width = snd_pcm_format_width(format);
-	int mixp_channels, ret;
+	int ret;
 
 	abox_dbg(adev, "%s(%d, %u, %#x)\n", __func__, width, channels,
 			configmsg);
@@ -436,27 +391,26 @@ static int format_put_ipc(struct device *adev, snd_pcm_format_t format,
 
 	/* update manually for regmap cache sync */
 	switch (configmsg) {
+	case SET_SIFS0_RATE:
 	case SET_SIFS0_FORMAT:
-		mixp_channels = get_mixp_channels(data);
-		if (mixp_channels < channels)
-			mixp_channels = channels;
-
-		regmap_update_bits(regmap, ABOX_SPUS_CTRL_MIXP_FORMAT,
+		regmap_update_bits(regmap, ABOX_SPUS_CTRL1,
 				ABOX_MIXP_FORMAT_MASK,
-				abox_get_format(width, mixp_channels) <<
+				abox_get_format(width, channels) <<
 				ABOX_MIXP_FORMAT_L);
-
-		/* Set STMIX format */
-		regmap_update_bits(regmap, ABOX_SPUS_CTRL_MIXP_FORMAT,
-				ABOX_STMIX_FORMAT_MASK,
-				abox_get_format(width, mixp_channels) <<
-				ABOX_STMIX_FORMAT_L);
-
-		/* Set sidetone output bit width */
-		regmap_update_bits(regmap, ABOX_SIDETONE_CTRL,
-				ABOX_SDTN_OUT_BITWIDTH_MASK,
-				((width / 8) - 1) <<
-				ABOX_SDTN_OUT_BITWIDTH_L);
+		break;
+	case SET_PIFS1_RATE:
+	case SET_PIFS1_FORMAT:
+		regmap_update_bits(regmap, ABOX_SPUM_CTRL1,
+				ABOX_RECP_SRC_FORMAT_MASK(1),
+				abox_get_format(width, channels) <<
+				ABOX_RECP_SRC_FORMAT_L(1));
+		break;
+	case SET_PIFS0_RATE:
+	case SET_PIFS0_FORMAT:
+		regmap_update_bits(regmap, ABOX_SPUM_CTRL1,
+				ABOX_RECP_SRC_FORMAT_MASK(0),
+				abox_get_format(width, channels) <<
+				ABOX_RECP_SRC_FORMAT_L(0));
 		break;
 	default:
 		/* Nothing to do */
@@ -498,7 +452,9 @@ static int width_get(struct snd_kcontrol *kcontrol,
 static int width_put_ipc(struct device *dev, unsigned int val,
 		enum ABOX_CONFIGMSG configmsg)
 {
+	struct abox_data *data = dev_get_drvdata(dev);
 	snd_pcm_format_t format = SNDRV_PCM_FORMAT_S16;
+	unsigned int channels = data->sif_channels[sif_idx(configmsg)];
 
 	abox_dbg(dev, "%s(%u, %#x)\n", __func__, val, configmsg);
 
@@ -518,6 +474,8 @@ static int width_put_ipc(struct device *dev, unsigned int val,
 		break;
 	}
 
+	if (configmsg == SET_PIFS1_FORMAT)
+		format_put_ipc(dev, format, channels, SET_PIFS0_FORMAT);
 	return format_put_ipc(dev, format, 0, configmsg);
 }
 
@@ -583,44 +541,6 @@ static int channels_put(struct snd_kcontrol *kcontrol,
 		return -EINVAL;
 
 	return channels_put_ipc(dev, val, reg);
-}
-
-static void update_ch_num(struct device *adev, enum ABOX_CONFIGMSG configmsg)
-{
-	struct abox_data *data = dev_get_drvdata(adev);
-	struct regmap *regmap = data->regmap;
-	unsigned int channels = get_sif_channels(data, configmsg);
-	int idx;
-
-	abox_dbg(adev, "%s(%#x)\n", __func__, configmsg);
-
-	switch (configmsg) {
-	case SET_SIFS0_FORMAT ... SET_SIFS6_FORMAT:
-		/* update output channels */
-		idx = configmsg - SET_SIFS0_FORMAT;
-		regmap_update_bits_async(regmap, ABOX_SIFS_CH_NUM(idx),
-				ABOX_SIFS_CH_NUM_EN_MASK(idx),
-				sifs_channel_selected(data, idx) <<
-				ABOX_SIFS_CH_NUM_EN_L(idx));
-		regmap_update_bits(regmap, ABOX_SIFS_CH_NUM(idx),
-				ABOX_SIFS_CH_NUM_MASK(idx),
-				(channels - 1) << ABOX_SIFS_CH_NUM_L(idx));
-		break;
-	case SET_SIFM0_FORMAT ... SET_SIFM11_FORMAT:
-		/* update output channels */
-		idx = configmsg - SET_SIFM0_FORMAT;
-		regmap_update_bits_async(regmap, ABOX_SIFM_CH_NUM(idx),
-				ABOX_SIFM_CH_NUM_EN_MASK(idx),
-				sifm_channel_selected(data, idx) <<
-				ABOX_SIFM_CH_NUM_EN_L(idx));
-		regmap_update_bits(regmap, ABOX_SIFM_CH_NUM(idx),
-				ABOX_SIFM_CH_NUM_MASK(idx),
-				(channels - 1) << ABOX_SIFM_CH_NUM_L(idx));
-		break;
-	default:
-		/* Nothing to do */
-		break;
-	}
 }
 
 static int audio_mode_get(struct snd_kcontrol *kcontrol,
@@ -782,34 +702,6 @@ static const unsigned int sound_type_enum_values[] = {
 static SOC_VALUE_ENUM_SINGLE_DECL(sound_type_enum, SND_SOC_NOPM, 0, 0,
 		sound_type_enum_texts, sound_type_enum_values);
 
-static int display_get(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_data *data = dev_get_drvdata(dev);
-	bool val = !data->system_state[SYSTEM_IDLE];
-
-	abox_dbg(dev, "%s: %d\n", __func__, val);
-
-	ucontrol->value.integer.value[0] = val;
-
-	return 0;
-}
-
-static int display_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_data *data = dev_get_drvdata(dev);
-	bool val = !!ucontrol->value.integer.value[0];
-
-	abox_dbg(dev, "%s(%d)\n", __func__, val);
-
-	return abox_set_system_state(data, SYSTEM_IDLE, !val);
-}
-
 static int tickle_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
@@ -838,90 +730,6 @@ static int tickle_put(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
-
-static int cold_get(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_data *data = dev_get_drvdata(dev);
-
-	abox_dbg(dev, "%s\n", __func__);
-
-	ucontrol->value.integer.value[0] = pm_runtime_suspended(data->dev);
-
-	return 0;
-}
-
-static int cold_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	/* ignore */
-	return 0;
-}
-
-static int debug_get(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_data *data = dev_get_drvdata(dev);
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
-	unsigned int item;
-
-	abox_dbg(dev, "%s: %u\n", __func__, data->debug_mode);
-
-	item = snd_soc_enum_val_to_item(e, data->debug_mode);
-	ucontrol->value.enumerated.item[0] = item;
-
-	return 0;
-}
-
-static int debug_put_ipc(struct device *dev, enum debug_mode mode)
-{
-	struct abox_data *data = dev_get_drvdata(dev);
-	ABOX_IPC_MSG msg;
-	struct IPC_SYSTEM_MSG *system_msg = &msg.msg.system;
-
-	abox_dbg(dev, "%s(%d)\n", __func__, mode);
-
-	data->debug_mode = mode;
-
-	msg.ipcid = IPC_SYSTEM;
-	system_msg->msgtype = ABOX_RECOVERY_ACTIVE;
-	system_msg->param1 = (mode == DEBUG_MODE_NONE);
-	return abox_request_ipc(dev, msg.ipcid, &msg, sizeof(msg), 0, 0);
-}
-
-static int debug_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
-	unsigned int *item = ucontrol->value.enumerated.item;
-	enum debug_mode mode;
-
-	if (item[0] >= e->items)
-		return -EINVAL;
-
-	mode = snd_soc_enum_item_to_val(e, item[0]);
-	abox_info(dev, "%s(%d)\n", __func__, mode);
-
-	return debug_put_ipc(dev, mode);
-}
-static const char *const debug_enum_texts[] = {
-	"None",
-	"Dram",
-	"File",
-};
-static const unsigned int debug_enum_values[] = {
-	DEBUG_MODE_NONE,
-	DEBUG_MODE_DRAM,
-	DEBUG_MODE_FILE,
-};
-static SOC_VALUE_ENUM_SINGLE_DECL(debug_enum, SND_SOC_NOPM, 0, 0,
-		debug_enum_texts, debug_enum_values);
 
 static unsigned int s_default = 36864;
 
@@ -991,7 +799,6 @@ static bool spus_asrc_force_enable[] = {
 static bool spum_asrc_force_enable[] = {
 	false, false, false, false,
 	false, false, false, false,
-	false, false, false, false,
 };
 
 static int spus_asrc_enable_put(struct snd_kcontrol *kcontrol,
@@ -1014,9 +821,9 @@ static int spus_asrc_enable_put(struct snd_kcontrol *kcontrol,
 
 	abox_info(dev, "%s(%ld, %d)\n", __func__, val, idx);
 
-	spus_asrc_force_enable[idx] = !!val;
+	spus_asrc_force_enable[idx] = val;
 
-	return 0;
+	return snd_soc_put_volsw(kcontrol, ucontrol);
 }
 
 static int spum_asrc_enable_put(struct snd_kcontrol *kcontrol,
@@ -1039,23 +846,9 @@ static int spum_asrc_enable_put(struct snd_kcontrol *kcontrol,
 
 	abox_info(dev, "%s(%ld, %d)\n", __func__, val, idx);
 
-	spum_asrc_force_enable[idx] = !!val;
+	spum_asrc_force_enable[idx] = val;
 
-	return 0;
-}
-
-static int spus_asrc_id_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	/* ignore asrc id change */
-	return 0;
-}
-
-static int spum_asrc_id_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	/* ignore asrc id change */
-	return 0;
+	return snd_soc_put_volsw(kcontrol, ucontrol);
 }
 
 static int get_apf_coef(struct abox_data *data, int stream, int idx)
@@ -1181,42 +974,6 @@ static int reset_log_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static bool nsrc_bridge[16];
-
-static int nsrc_bridge_get(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct soc_mixer_control *mc = (struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int id = mc->shift - ABOX_NSRC_CONNECTION_TYPE_L(0);
-
-	abox_dbg(dev, "%s(%u)\n", __func__, id);
-
-	if (id >= COUNT_SIFM)
-		return -EINVAL;
-
-	ucontrol->value.integer.value[0] = nsrc_bridge[id];
-
-	return 0;
-}
-
-static int nsrc_bridge_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct soc_mixer_control *mc = (struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int id = mc->shift - ABOX_NSRC_CONNECTION_TYPE_L(0);
-	unsigned int val = (unsigned int)ucontrol->value.integer.value[0];
-
-	abox_dbg(dev, "%s(%u, %u)\n", __func__, id, val);
-
-	nsrc_bridge[id] = val;
-
-	return 0;
-}
-
 static enum asrc_tick spus_asrc_os[] = {
 	TICK_SYNC, TICK_SYNC, TICK_SYNC, TICK_SYNC,
 	TICK_SYNC, TICK_SYNC, TICK_SYNC, TICK_SYNC,
@@ -1231,10 +988,8 @@ static enum asrc_tick spus_asrc_is[] = {
 static enum asrc_tick spum_asrc_os[] = {
 	TICK_SYNC, TICK_SYNC, TICK_SYNC, TICK_SYNC,
 	TICK_SYNC, TICK_SYNC, TICK_SYNC, TICK_SYNC,
-	TICK_SYNC, TICK_SYNC, TICK_SYNC, TICK_SYNC,
 };
 static enum asrc_tick spum_asrc_is[] = {
-	TICK_SYNC, TICK_SYNC, TICK_SYNC, TICK_SYNC,
 	TICK_SYNC, TICK_SYNC, TICK_SYNC, TICK_SYNC,
 	TICK_SYNC, TICK_SYNC, TICK_SYNC, TICK_SYNC,
 };
@@ -1400,8 +1155,6 @@ static const struct snd_kcontrol_new cmpnt_controls[] = {
 			rate_get, rate_put),
 	SOC_SINGLE_EXT("SIFS5 Rate", SET_SIFS5_RATE, 8000, 384000, 0,
 			rate_get, rate_put),
-	SOC_SINGLE_EXT("SIFS6 Rate", SET_SIFS6_RATE, 8000, 384000, 0,
-			rate_get, rate_put),
 	SOC_SINGLE_EXT("SIFM0 Rate", SET_SIFM0_RATE, 8000, 384000, 0,
 			rate_get, rate_put),
 	SOC_SINGLE_EXT("SIFM1 Rate", SET_SIFM1_RATE, 8000, 384000, 0,
@@ -1411,20 +1164,6 @@ static const struct snd_kcontrol_new cmpnt_controls[] = {
 	SOC_SINGLE_EXT("SIFM3 Rate", SET_SIFM3_RATE, 8000, 384000, 0,
 			rate_get, rate_put),
 	SOC_SINGLE_EXT("SIFM4 Rate", SET_SIFM4_RATE, 8000, 384000, 0,
-			rate_get, rate_put),
-	SOC_SINGLE_EXT("SIFM5 Rate", SET_SIFM5_RATE, 8000, 384000, 0,
-			rate_get, rate_put),
-	SOC_SINGLE_EXT("SIFM6 Rate", SET_SIFM6_RATE, 8000, 384000, 0,
-			rate_get, rate_put),
-	SOC_SINGLE_EXT("SIFM7 Rate", SET_SIFM7_RATE, 8000, 384000, 0,
-			rate_get, rate_put),
-	SOC_SINGLE_EXT("SIFM8 Rate", SET_SIFM8_RATE, 8000, 384000, 0,
-			rate_get, rate_put),
-	SOC_SINGLE_EXT("SIFM9 Rate", SET_SIFM9_RATE, 8000, 384000, 0,
-			rate_get, rate_put),
-	SOC_SINGLE_EXT("SIFM10 Rate", SET_SIFM10_RATE, 8000, 384000, 0,
-			rate_get, rate_put),
-	SOC_SINGLE_EXT("SIFM11 Rate", SET_SIFM11_RATE, 8000, 384000, 0,
 			rate_get, rate_put),
 	SOC_SINGLE_EXT("SIFS0 Width", SET_SIFS0_FORMAT, 16, 32, 0,
 			width_get, width_put),
@@ -1438,8 +1177,6 @@ static const struct snd_kcontrol_new cmpnt_controls[] = {
 			width_get, width_put),
 	SOC_SINGLE_EXT("SIFS5 Width", SET_SIFS5_FORMAT, 16, 32, 0,
 			width_get, width_put),
-	SOC_SINGLE_EXT("SIFS6 Width", SET_SIFS6_FORMAT, 16, 32, 0,
-			width_get, width_put),
 	SOC_SINGLE_EXT("SIFM0 Width", SET_SIFM0_FORMAT, 16, 32, 0,
 			width_get, width_put),
 	SOC_SINGLE_EXT("SIFM1 Width", SET_SIFM1_FORMAT, 16, 32, 0,
@@ -1449,20 +1186,6 @@ static const struct snd_kcontrol_new cmpnt_controls[] = {
 	SOC_SINGLE_EXT("SIFM3 Width", SET_SIFM3_FORMAT, 16, 32, 0,
 			width_get, width_put),
 	SOC_SINGLE_EXT("SIFM4 Width", SET_SIFM4_FORMAT, 16, 32, 0,
-			width_get, width_put),
-	SOC_SINGLE_EXT("SIFM5 Width", SET_SIFM5_FORMAT, 16, 32, 0,
-			width_get, width_put),
-	SOC_SINGLE_EXT("SIFM6 Width", SET_SIFM6_FORMAT, 16, 32, 0,
-			width_get, width_put),
-	SOC_SINGLE_EXT("SIFM7 Width", SET_SIFM7_FORMAT, 16, 32, 0,
-			width_get, width_put),
-	SOC_SINGLE_EXT("SIFM8 Width", SET_SIFM8_FORMAT, 16, 32, 0,
-			width_get, width_put),
-	SOC_SINGLE_EXT("SIFM9 Width", SET_SIFM9_FORMAT, 16, 32, 0,
-			width_get, width_put),
-	SOC_SINGLE_EXT("SIFM10 Width", SET_SIFM10_FORMAT, 16, 32, 0,
-			width_get, width_put),
-	SOC_SINGLE_EXT("SIFM11 Width", SET_SIFM11_FORMAT, 16, 32, 0,
 			width_get, width_put),
 	SOC_SINGLE_EXT("SIFS0 Channel", SET_SIFS0_FORMAT, 1, 8, 0,
 			channels_get, channels_put),
@@ -1476,8 +1199,6 @@ static const struct snd_kcontrol_new cmpnt_controls[] = {
 			channels_get, channels_put),
 	SOC_SINGLE_EXT("SIFS5 Channel", SET_SIFS5_FORMAT, 1, 8, 0,
 			channels_get, channels_put),
-	SOC_SINGLE_EXT("SIFS6 Channel", SET_SIFS6_FORMAT, 1, 8, 0,
-			channels_get, channels_put),
 	SOC_SINGLE_EXT("SIFM0 Channel", SET_SIFM0_FORMAT, 1, 8, 0,
 			channels_get, channels_put),
 	SOC_SINGLE_EXT("SIFM1 Channel", SET_SIFM1_FORMAT, 1, 8, 0,
@@ -1488,606 +1209,172 @@ static const struct snd_kcontrol_new cmpnt_controls[] = {
 			channels_get, channels_put),
 	SOC_SINGLE_EXT("SIFM4 Channel", SET_SIFM4_FORMAT, 1, 8, 0,
 			channels_get, channels_put),
-	SOC_SINGLE_EXT("SIFM5 Channel", SET_SIFM5_FORMAT, 1, 8, 0,
-			channels_get, channels_put),
-	SOC_SINGLE_EXT("SIFM6 Channel", SET_SIFM6_FORMAT, 1, 8, 0,
-			channels_get, channels_put),
-	SOC_SINGLE_EXT("SIFM7 Channel", SET_SIFM7_FORMAT, 1, 8, 0,
-			channels_get, channels_put),
-	SOC_SINGLE_EXT("SIFM8 Channel", SET_SIFM8_FORMAT, 1, 8, 0,
-			channels_get, channels_put),
-	SOC_SINGLE_EXT("SIFM9 Channel", SET_SIFM9_FORMAT, 1, 8, 0,
-			channels_get, channels_put),
-	SOC_SINGLE_EXT("SIFM10 Channel", SET_SIFM10_FORMAT, 1, 8, 0,
-			channels_get, channels_put),
-	SOC_SINGLE_EXT("SIFM11 Channel", SET_SIFM11_FORMAT, 1, 8, 0,
-			channels_get, channels_put),
-	SOC_SINGLE("SIFS0 CH0 Switch", ABOX_SIFS_CH_SEL(0),
-			ABOX_SIFS_CH_SEL_L(0) + 0, 1, 0),
-	SOC_SINGLE("SIFS0 CH1 Switch", ABOX_SIFS_CH_SEL(0),
-			ABOX_SIFS_CH_SEL_L(0) + 1, 1, 0),
-	SOC_SINGLE("SIFS0 CH2 Switch", ABOX_SIFS_CH_SEL(0),
-			ABOX_SIFS_CH_SEL_L(0) + 2, 1, 0),
-	SOC_SINGLE("SIFS0 CH3 Switch", ABOX_SIFS_CH_SEL(0),
-			ABOX_SIFS_CH_SEL_L(0) + 3, 1, 0),
-	SOC_SINGLE("SIFS0 CH4 Switch", ABOX_SIFS_CH_SEL(0),
-			ABOX_SIFS_CH_SEL_L(0) + 4, 1, 0),
-	SOC_SINGLE("SIFS0 CH5 Switch", ABOX_SIFS_CH_SEL(0),
-			ABOX_SIFS_CH_SEL_L(0) + 5, 1, 0),
-	SOC_SINGLE("SIFS0 CH6 Switch", ABOX_SIFS_CH_SEL(0),
-			ABOX_SIFS_CH_SEL_L(0) + 6, 1, 0),
-	SOC_SINGLE("SIFS0 CH7 Switch", ABOX_SIFS_CH_SEL(0),
-			ABOX_SIFS_CH_SEL_L(0) + 7, 1, 0),
-	SOC_SINGLE("SIFS1 CH0 Switch", ABOX_SIFS_CH_SEL(1),
-			ABOX_SIFS_CH_SEL_L(1) + 0, 1, 0),
-	SOC_SINGLE("SIFS1 CH1 Switch", ABOX_SIFS_CH_SEL(1),
-			ABOX_SIFS_CH_SEL_L(1) + 1, 1, 0),
-	SOC_SINGLE("SIFS1 CH2 Switch", ABOX_SIFS_CH_SEL(1),
-			ABOX_SIFS_CH_SEL_L(1) + 2, 1, 0),
-	SOC_SINGLE("SIFS1 CH3 Switch", ABOX_SIFS_CH_SEL(1),
-			ABOX_SIFS_CH_SEL_L(1) + 3, 1, 0),
-	SOC_SINGLE("SIFS1 CH4 Switch", ABOX_SIFS_CH_SEL(1),
-			ABOX_SIFS_CH_SEL_L(1) + 4, 1, 0),
-	SOC_SINGLE("SIFS1 CH5 Switch", ABOX_SIFS_CH_SEL(1),
-			ABOX_SIFS_CH_SEL_L(1) + 5, 1, 0),
-	SOC_SINGLE("SIFS1 CH6 Switch", ABOX_SIFS_CH_SEL(1),
-			ABOX_SIFS_CH_SEL_L(1) + 6, 1, 0),
-	SOC_SINGLE("SIFS1 CH7 Switch", ABOX_SIFS_CH_SEL(1),
-			ABOX_SIFS_CH_SEL_L(1) + 7, 1, 0),
-	SOC_SINGLE("SIFS2 CH0 Switch", ABOX_SIFS_CH_SEL(2),
-			ABOX_SIFS_CH_SEL_L(2) + 0, 1, 0),
-	SOC_SINGLE("SIFS2 CH1 Switch", ABOX_SIFS_CH_SEL(2),
-			ABOX_SIFS_CH_SEL_L(2) + 1, 1, 0),
-	SOC_SINGLE("SIFS2 CH2 Switch", ABOX_SIFS_CH_SEL(2),
-			ABOX_SIFS_CH_SEL_L(2) + 2, 1, 0),
-	SOC_SINGLE("SIFS2 CH3 Switch", ABOX_SIFS_CH_SEL(2),
-			ABOX_SIFS_CH_SEL_L(2) + 3, 1, 0),
-	SOC_SINGLE("SIFS2 CH4 Switch", ABOX_SIFS_CH_SEL(2),
-			ABOX_SIFS_CH_SEL_L(2) + 4, 1, 0),
-	SOC_SINGLE("SIFS2 CH5 Switch", ABOX_SIFS_CH_SEL(2),
-			ABOX_SIFS_CH_SEL_L(2) + 5, 1, 0),
-	SOC_SINGLE("SIFS2 CH6 Switch", ABOX_SIFS_CH_SEL(2),
-			ABOX_SIFS_CH_SEL_L(2) + 6, 1, 0),
-	SOC_SINGLE("SIFS2 CH7 Switch", ABOX_SIFS_CH_SEL(2),
-			ABOX_SIFS_CH_SEL_L(2) + 7, 1, 0),
-	SOC_SINGLE("SIFS3 CH0 Switch", ABOX_SIFS_CH_SEL(3),
-			ABOX_SIFS_CH_SEL_L(3) + 0, 1, 0),
-	SOC_SINGLE("SIFS3 CH1 Switch", ABOX_SIFS_CH_SEL(3),
-			ABOX_SIFS_CH_SEL_L(3) + 1, 1, 0),
-	SOC_SINGLE("SIFS3 CH2 Switch", ABOX_SIFS_CH_SEL(3),
-			ABOX_SIFS_CH_SEL_L(3) + 2, 1, 0),
-	SOC_SINGLE("SIFS3 CH3 Switch", ABOX_SIFS_CH_SEL(3),
-			ABOX_SIFS_CH_SEL_L(3) + 3, 1, 0),
-	SOC_SINGLE("SIFS3 CH4 Switch", ABOX_SIFS_CH_SEL(3),
-			ABOX_SIFS_CH_SEL_L(3) + 4, 1, 0),
-	SOC_SINGLE("SIFS3 CH5 Switch", ABOX_SIFS_CH_SEL(3),
-			ABOX_SIFS_CH_SEL_L(3) + 5, 1, 0),
-	SOC_SINGLE("SIFS3 CH6 Switch", ABOX_SIFS_CH_SEL(3),
-			ABOX_SIFS_CH_SEL_L(3) + 6, 1, 0),
-	SOC_SINGLE("SIFS3 CH7 Switch", ABOX_SIFS_CH_SEL(3),
-			ABOX_SIFS_CH_SEL_L(3) + 7, 1, 0),
-	SOC_SINGLE("SIFS4 CH0 Switch", ABOX_SIFS_CH_SEL(4),
-			ABOX_SIFS_CH_SEL_L(4) + 0, 1, 0),
-	SOC_SINGLE("SIFS4 CH1 Switch", ABOX_SIFS_CH_SEL(4),
-			ABOX_SIFS_CH_SEL_L(4) + 1, 1, 0),
-	SOC_SINGLE("SIFS4 CH2 Switch", ABOX_SIFS_CH_SEL(4),
-			ABOX_SIFS_CH_SEL_L(4) + 2, 1, 0),
-	SOC_SINGLE("SIFS4 CH3 Switch", ABOX_SIFS_CH_SEL(4),
-			ABOX_SIFS_CH_SEL_L(4) + 3, 1, 0),
-	SOC_SINGLE("SIFS4 CH4 Switch", ABOX_SIFS_CH_SEL(4),
-			ABOX_SIFS_CH_SEL_L(4) + 4, 1, 0),
-	SOC_SINGLE("SIFS4 CH5 Switch", ABOX_SIFS_CH_SEL(4),
-			ABOX_SIFS_CH_SEL_L(4) + 5, 1, 0),
-	SOC_SINGLE("SIFS4 CH6 Switch", ABOX_SIFS_CH_SEL(4),
-			ABOX_SIFS_CH_SEL_L(4) + 6, 1, 0),
-	SOC_SINGLE("SIFS4 CH7 Switch", ABOX_SIFS_CH_SEL(4),
-			ABOX_SIFS_CH_SEL_L(4) + 7, 1, 0),
-	SOC_SINGLE("SIFS5 CH0 Switch", ABOX_SIFS_CH_SEL(5),
-			ABOX_SIFS_CH_SEL_L(5) + 0, 1, 0),
-	SOC_SINGLE("SIFS5 CH1 Switch", ABOX_SIFS_CH_SEL(5),
-			ABOX_SIFS_CH_SEL_L(5) + 1, 1, 0),
-	SOC_SINGLE("SIFS5 CH2 Switch", ABOX_SIFS_CH_SEL(5),
-			ABOX_SIFS_CH_SEL_L(5) + 2, 1, 0),
-	SOC_SINGLE("SIFS5 CH3 Switch", ABOX_SIFS_CH_SEL(5),
-			ABOX_SIFS_CH_SEL_L(5) + 3, 1, 0),
-	SOC_SINGLE("SIFS5 CH4 Switch", ABOX_SIFS_CH_SEL(5),
-			ABOX_SIFS_CH_SEL_L(5) + 4, 1, 0),
-	SOC_SINGLE("SIFS5 CH5 Switch", ABOX_SIFS_CH_SEL(5),
-			ABOX_SIFS_CH_SEL_L(5) + 5, 1, 0),
-	SOC_SINGLE("SIFS5 CH6 Switch", ABOX_SIFS_CH_SEL(5),
-			ABOX_SIFS_CH_SEL_L(5) + 6, 1, 0),
-	SOC_SINGLE("SIFS5 CH7 Switch", ABOX_SIFS_CH_SEL(5),
-			ABOX_SIFS_CH_SEL_L(5) + 7, 1, 0),
-	SOC_SINGLE("SIFS6 CH0 Switch", ABOX_SIFS_CH_SEL(6),
-			ABOX_SIFS_CH_SEL_L(6) + 0, 1, 0),
-	SOC_SINGLE("SIFS6 CH1 Switch", ABOX_SIFS_CH_SEL(6),
-			ABOX_SIFS_CH_SEL_L(6) + 1, 1, 0),
-	SOC_SINGLE("SIFS6 CH2 Switch", ABOX_SIFS_CH_SEL(6),
-			ABOX_SIFS_CH_SEL_L(6) + 2, 1, 0),
-	SOC_SINGLE("SIFS6 CH3 Switch", ABOX_SIFS_CH_SEL(6),
-			ABOX_SIFS_CH_SEL_L(6) + 3, 1, 0),
-	SOC_SINGLE("SIFS6 CH4 Switch", ABOX_SIFS_CH_SEL(6),
-			ABOX_SIFS_CH_SEL_L(6) + 4, 1, 0),
-	SOC_SINGLE("SIFS6 CH5 Switch", ABOX_SIFS_CH_SEL(6),
-			ABOX_SIFS_CH_SEL_L(6) + 5, 1, 0),
-	SOC_SINGLE("SIFS6 CH6 Switch", ABOX_SIFS_CH_SEL(6),
-			ABOX_SIFS_CH_SEL_L(6) + 6, 1, 0),
-	SOC_SINGLE("SIFS6 CH7 Switch", ABOX_SIFS_CH_SEL(6),
-			ABOX_SIFS_CH_SEL_L(6) + 7, 1, 0),
-	SOC_SINGLE("SIFM0 CH0 Switch", ABOX_SIFM_CH_SEL(0),
-			ABOX_SIFM_CH_SEL_L(0) + 0, 1, 0),
-	SOC_SINGLE("SIFM0 CH1 Switch", ABOX_SIFM_CH_SEL(0),
-			ABOX_SIFM_CH_SEL_L(0) + 1, 1, 0),
-	SOC_SINGLE("SIFM0 CH2 Switch", ABOX_SIFM_CH_SEL(0),
-			ABOX_SIFM_CH_SEL_L(0) + 2, 1, 0),
-	SOC_SINGLE("SIFM0 CH3 Switch", ABOX_SIFM_CH_SEL(0),
-			ABOX_SIFM_CH_SEL_L(0) + 3, 1, 0),
-	SOC_SINGLE("SIFM0 CH4 Switch", ABOX_SIFM_CH_SEL(0),
-			ABOX_SIFM_CH_SEL_L(0) + 4, 1, 0),
-	SOC_SINGLE("SIFM0 CH5 Switch", ABOX_SIFM_CH_SEL(0),
-			ABOX_SIFM_CH_SEL_L(0) + 5, 1, 0),
-	SOC_SINGLE("SIFM0 CH6 Switch", ABOX_SIFM_CH_SEL(0),
-			ABOX_SIFM_CH_SEL_L(0) + 6, 1, 0),
-	SOC_SINGLE("SIFM0 CH7 Switch", ABOX_SIFM_CH_SEL(0),
-			ABOX_SIFM_CH_SEL_L(0) + 7, 1, 0),
-	SOC_SINGLE("SIFM1 CH0 Switch", ABOX_SIFM_CH_SEL(1),
-			ABOX_SIFM_CH_SEL_L(1) + 0, 1, 0),
-	SOC_SINGLE("SIFM1 CH1 Switch", ABOX_SIFM_CH_SEL(1),
-			ABOX_SIFM_CH_SEL_L(1) + 1, 1, 0),
-	SOC_SINGLE("SIFM1 CH2 Switch", ABOX_SIFM_CH_SEL(1),
-			ABOX_SIFM_CH_SEL_L(1) + 2, 1, 0),
-	SOC_SINGLE("SIFM1 CH3 Switch", ABOX_SIFM_CH_SEL(1),
-			ABOX_SIFM_CH_SEL_L(1) + 3, 1, 0),
-	SOC_SINGLE("SIFM1 CH4 Switch", ABOX_SIFM_CH_SEL(1),
-			ABOX_SIFM_CH_SEL_L(1) + 4, 1, 0),
-	SOC_SINGLE("SIFM1 CH5 Switch", ABOX_SIFM_CH_SEL(1),
-			ABOX_SIFM_CH_SEL_L(1) + 5, 1, 0),
-	SOC_SINGLE("SIFM1 CH6 Switch", ABOX_SIFM_CH_SEL(1),
-			ABOX_SIFM_CH_SEL_L(1) + 6, 1, 0),
-	SOC_SINGLE("SIFM1 CH7 Switch", ABOX_SIFM_CH_SEL(1),
-			ABOX_SIFM_CH_SEL_L(1) + 7, 1, 0),
-	SOC_SINGLE("SIFM2 CH0 Switch", ABOX_SIFM_CH_SEL(2),
-			ABOX_SIFM_CH_SEL_L(2) + 0, 1, 0),
-	SOC_SINGLE("SIFM2 CH1 Switch", ABOX_SIFM_CH_SEL(2),
-			ABOX_SIFM_CH_SEL_L(2) + 1, 1, 0),
-	SOC_SINGLE("SIFM2 CH2 Switch", ABOX_SIFM_CH_SEL(2),
-			ABOX_SIFM_CH_SEL_L(2) + 2, 1, 0),
-	SOC_SINGLE("SIFM2 CH3 Switch", ABOX_SIFM_CH_SEL(2),
-			ABOX_SIFM_CH_SEL_L(2) + 3, 1, 0),
-	SOC_SINGLE("SIFM2 CH4 Switch", ABOX_SIFM_CH_SEL(2),
-			ABOX_SIFM_CH_SEL_L(2) + 4, 1, 0),
-	SOC_SINGLE("SIFM2 CH5 Switch", ABOX_SIFM_CH_SEL(2),
-			ABOX_SIFM_CH_SEL_L(2) + 5, 1, 0),
-	SOC_SINGLE("SIFM2 CH6 Switch", ABOX_SIFM_CH_SEL(2),
-			ABOX_SIFM_CH_SEL_L(2) + 6, 1, 0),
-	SOC_SINGLE("SIFM2 CH7 Switch", ABOX_SIFM_CH_SEL(2),
-			ABOX_SIFM_CH_SEL_L(2) + 7, 1, 0),
-	SOC_SINGLE("SIFM3 CH0 Switch", ABOX_SIFM_CH_SEL(3),
-			ABOX_SIFM_CH_SEL_L(3) + 0, 1, 0),
-	SOC_SINGLE("SIFM3 CH1 Switch", ABOX_SIFM_CH_SEL(3),
-			ABOX_SIFM_CH_SEL_L(3) + 1, 1, 0),
-	SOC_SINGLE("SIFM3 CH2 Switch", ABOX_SIFM_CH_SEL(3),
-			ABOX_SIFM_CH_SEL_L(3) + 2, 1, 0),
-	SOC_SINGLE("SIFM3 CH3 Switch", ABOX_SIFM_CH_SEL(3),
-			ABOX_SIFM_CH_SEL_L(3) + 3, 1, 0),
-	SOC_SINGLE("SIFM3 CH4 Switch", ABOX_SIFM_CH_SEL(3),
-			ABOX_SIFM_CH_SEL_L(3) + 4, 1, 0),
-	SOC_SINGLE("SIFM3 CH5 Switch", ABOX_SIFM_CH_SEL(3),
-			ABOX_SIFM_CH_SEL_L(3) + 5, 1, 0),
-	SOC_SINGLE("SIFM3 CH6 Switch", ABOX_SIFM_CH_SEL(3),
-			ABOX_SIFM_CH_SEL_L(3) + 6, 1, 0),
-	SOC_SINGLE("SIFM3 CH7 Switch", ABOX_SIFM_CH_SEL(3),
-			ABOX_SIFM_CH_SEL_L(3) + 7, 1, 0),
-	SOC_SINGLE("SIFM4 CH0 Switch", ABOX_SIFM_CH_SEL(4),
-			ABOX_SIFM_CH_SEL_L(4) + 0, 1, 0),
-	SOC_SINGLE("SIFM4 CH1 Switch", ABOX_SIFM_CH_SEL(4),
-			ABOX_SIFM_CH_SEL_L(4) + 1, 1, 0),
-	SOC_SINGLE("SIFM4 CH2 Switch", ABOX_SIFM_CH_SEL(4),
-			ABOX_SIFM_CH_SEL_L(4) + 2, 1, 0),
-	SOC_SINGLE("SIFM4 CH3 Switch", ABOX_SIFM_CH_SEL(4),
-			ABOX_SIFM_CH_SEL_L(4) + 3, 1, 0),
-	SOC_SINGLE("SIFM4 CH4 Switch", ABOX_SIFM_CH_SEL(4),
-			ABOX_SIFM_CH_SEL_L(4) + 4, 1, 0),
-	SOC_SINGLE("SIFM4 CH5 Switch", ABOX_SIFM_CH_SEL(4),
-			ABOX_SIFM_CH_SEL_L(4) + 5, 1, 0),
-	SOC_SINGLE("SIFM4 CH6 Switch", ABOX_SIFM_CH_SEL(4),
-			ABOX_SIFM_CH_SEL_L(4) + 6, 1, 0),
-	SOC_SINGLE("SIFM4 CH7 Switch", ABOX_SIFM_CH_SEL(4),
-			ABOX_SIFM_CH_SEL_L(4) + 7, 1, 0),
-	SOC_SINGLE("SIFM5 CH0 Switch", ABOX_SIFM_CH_SEL(5),
-			ABOX_SIFM_CH_SEL_L(5) + 0, 1, 0),
-	SOC_SINGLE("SIFM5 CH1 Switch", ABOX_SIFM_CH_SEL(5),
-			ABOX_SIFM_CH_SEL_L(5) + 1, 1, 0),
-	SOC_SINGLE("SIFM5 CH2 Switch", ABOX_SIFM_CH_SEL(5),
-			ABOX_SIFM_CH_SEL_L(5) + 2, 1, 0),
-	SOC_SINGLE("SIFM5 CH3 Switch", ABOX_SIFM_CH_SEL(5),
-			ABOX_SIFM_CH_SEL_L(5) + 3, 1, 0),
-	SOC_SINGLE("SIFM5 CH4 Switch", ABOX_SIFM_CH_SEL(5),
-			ABOX_SIFM_CH_SEL_L(5) + 4, 1, 0),
-	SOC_SINGLE("SIFM5 CH5 Switch", ABOX_SIFM_CH_SEL(5),
-			ABOX_SIFM_CH_SEL_L(5) + 5, 1, 0),
-	SOC_SINGLE("SIFM5 CH6 Switch", ABOX_SIFM_CH_SEL(5),
-			ABOX_SIFM_CH_SEL_L(5) + 6, 1, 0),
-	SOC_SINGLE("SIFM5 CH7 Switch", ABOX_SIFM_CH_SEL(5),
-			ABOX_SIFM_CH_SEL_L(5) + 7, 1, 0),
-	SOC_SINGLE("SIFM6 CH0 Switch", ABOX_SIFM_CH_SEL(6),
-			ABOX_SIFM_CH_SEL_L(6) + 0, 1, 0),
-	SOC_SINGLE("SIFM6 CH1 Switch", ABOX_SIFM_CH_SEL(6),
-			ABOX_SIFM_CH_SEL_L(6) + 1, 1, 0),
-	SOC_SINGLE("SIFM6 CH2 Switch", ABOX_SIFM_CH_SEL(6),
-			ABOX_SIFM_CH_SEL_L(6) + 2, 1, 0),
-	SOC_SINGLE("SIFM6 CH3 Switch", ABOX_SIFM_CH_SEL(6),
-			ABOX_SIFM_CH_SEL_L(6) + 3, 1, 0),
-	SOC_SINGLE("SIFM6 CH4 Switch", ABOX_SIFM_CH_SEL(6),
-			ABOX_SIFM_CH_SEL_L(6) + 4, 1, 0),
-	SOC_SINGLE("SIFM6 CH5 Switch", ABOX_SIFM_CH_SEL(6),
-			ABOX_SIFM_CH_SEL_L(6) + 5, 1, 0),
-	SOC_SINGLE("SIFM6 CH6 Switch", ABOX_SIFM_CH_SEL(6),
-			ABOX_SIFM_CH_SEL_L(6) + 6, 1, 0),
-	SOC_SINGLE("SIFM6 CH7 Switch", ABOX_SIFM_CH_SEL(6),
-			ABOX_SIFM_CH_SEL_L(6) + 7, 1, 0),
-	SOC_SINGLE("SIFM7 CH0 Switch", ABOX_SIFM_CH_SEL(7),
-			ABOX_SIFM_CH_SEL_L(7) + 0, 1, 0),
-	SOC_SINGLE("SIFM7 CH1 Switch", ABOX_SIFM_CH_SEL(7),
-			ABOX_SIFM_CH_SEL_L(7) + 1, 1, 0),
-	SOC_SINGLE("SIFM7 CH2 Switch", ABOX_SIFM_CH_SEL(7),
-			ABOX_SIFM_CH_SEL_L(7) + 2, 1, 0),
-	SOC_SINGLE("SIFM7 CH3 Switch", ABOX_SIFM_CH_SEL(7),
-			ABOX_SIFM_CH_SEL_L(7) + 3, 1, 0),
-	SOC_SINGLE("SIFM7 CH4 Switch", ABOX_SIFM_CH_SEL(7),
-			ABOX_SIFM_CH_SEL_L(7) + 4, 1, 0),
-	SOC_SINGLE("SIFM7 CH5 Switch", ABOX_SIFM_CH_SEL(7),
-			ABOX_SIFM_CH_SEL_L(7) + 5, 1, 0),
-	SOC_SINGLE("SIFM7 CH6 Switch", ABOX_SIFM_CH_SEL(7),
-			ABOX_SIFM_CH_SEL_L(7) + 6, 1, 0),
-	SOC_SINGLE("SIFM7 CH7 Switch", ABOX_SIFM_CH_SEL(7),
-			ABOX_SIFM_CH_SEL_L(7) + 7, 1, 0),
-	SOC_SINGLE("SIFM8 CH0 Switch", ABOX_SIFM_CH_SEL(8),
-			ABOX_SIFM_CH_SEL_L(8) + 0, 1, 0),
-	SOC_SINGLE("SIFM8 CH1 Switch", ABOX_SIFM_CH_SEL(8),
-			ABOX_SIFM_CH_SEL_L(8) + 1, 1, 0),
-	SOC_SINGLE("SIFM8 CH2 Switch", ABOX_SIFM_CH_SEL(8),
-			ABOX_SIFM_CH_SEL_L(8) + 2, 1, 0),
-	SOC_SINGLE("SIFM8 CH3 Switch", ABOX_SIFM_CH_SEL(8),
-			ABOX_SIFM_CH_SEL_L(8) + 3, 1, 0),
-	SOC_SINGLE("SIFM8 CH4 Switch", ABOX_SIFM_CH_SEL(8),
-			ABOX_SIFM_CH_SEL_L(8) + 4, 1, 0),
-	SOC_SINGLE("SIFM8 CH5 Switch", ABOX_SIFM_CH_SEL(8),
-			ABOX_SIFM_CH_SEL_L(8) + 5, 1, 0),
-	SOC_SINGLE("SIFM8 CH6 Switch", ABOX_SIFM_CH_SEL(8),
-			ABOX_SIFM_CH_SEL_L(8) + 6, 1, 0),
-	SOC_SINGLE("SIFM8 CH7 Switch", ABOX_SIFM_CH_SEL(8),
-			ABOX_SIFM_CH_SEL_L(8) + 7, 1, 0),
-	SOC_SINGLE("SIFM9 CH0 Switch", ABOX_SIFM_CH_SEL(9),
-			ABOX_SIFM_CH_SEL_L(9) + 0, 1, 0),
-	SOC_SINGLE("SIFM9 CH1 Switch", ABOX_SIFM_CH_SEL(9),
-			ABOX_SIFM_CH_SEL_L(9) + 1, 1, 0),
-	SOC_SINGLE("SIFM9 CH2 Switch", ABOX_SIFM_CH_SEL(9),
-			ABOX_SIFM_CH_SEL_L(9) + 2, 1, 0),
-	SOC_SINGLE("SIFM9 CH3 Switch", ABOX_SIFM_CH_SEL(9),
-			ABOX_SIFM_CH_SEL_L(9) + 3, 1, 0),
-	SOC_SINGLE("SIFM9 CH4 Switch", ABOX_SIFM_CH_SEL(9),
-			ABOX_SIFM_CH_SEL_L(9) + 4, 1, 0),
-	SOC_SINGLE("SIFM9 CH5 Switch", ABOX_SIFM_CH_SEL(9),
-			ABOX_SIFM_CH_SEL_L(9) + 5, 1, 0),
-	SOC_SINGLE("SIFM9 CH6 Switch", ABOX_SIFM_CH_SEL(9),
-			ABOX_SIFM_CH_SEL_L(9) + 6, 1, 0),
-	SOC_SINGLE("SIFM9 CH7 Switch", ABOX_SIFM_CH_SEL(9),
-			ABOX_SIFM_CH_SEL_L(9) + 7, 1, 0),
-	SOC_SINGLE("SIFM10 CH0 Switch", ABOX_SIFM_CH_SEL(10),
-			ABOX_SIFM_CH_SEL_L(10) + 0, 1, 0),
-	SOC_SINGLE("SIFM10 CH1 Switch", ABOX_SIFM_CH_SEL(10),
-			ABOX_SIFM_CH_SEL_L(10) + 1, 1, 0),
-	SOC_SINGLE("SIFM10 CH2 Switch", ABOX_SIFM_CH_SEL(10),
-			ABOX_SIFM_CH_SEL_L(10) + 2, 1, 0),
-	SOC_SINGLE("SIFM10 CH3 Switch", ABOX_SIFM_CH_SEL(10),
-			ABOX_SIFM_CH_SEL_L(10) + 3, 1, 0),
-	SOC_SINGLE("SIFM10 CH4 Switch", ABOX_SIFM_CH_SEL(10),
-			ABOX_SIFM_CH_SEL_L(10) + 4, 1, 0),
-	SOC_SINGLE("SIFM10 CH5 Switch", ABOX_SIFM_CH_SEL(10),
-			ABOX_SIFM_CH_SEL_L(10) + 5, 1, 0),
-	SOC_SINGLE("SIFM10 CH6 Switch", ABOX_SIFM_CH_SEL(10),
-			ABOX_SIFM_CH_SEL_L(10) + 6, 1, 0),
-	SOC_SINGLE("SIFM10 CH7 Switch", ABOX_SIFM_CH_SEL(10),
-			ABOX_SIFM_CH_SEL_L(10) + 7, 1, 0),
-	SOC_SINGLE("SIFM11 CH0 Switch", ABOX_SIFM_CH_SEL(11),
-			ABOX_SIFM_CH_SEL_L(11) + 0, 1, 0),
-	SOC_SINGLE("SIFM11 CH1 Switch", ABOX_SIFM_CH_SEL(11),
-			ABOX_SIFM_CH_SEL_L(11) + 1, 1, 0),
-	SOC_SINGLE("SIFM11 CH2 Switch", ABOX_SIFM_CH_SEL(11),
-			ABOX_SIFM_CH_SEL_L(11) + 2, 1, 0),
-	SOC_SINGLE("SIFM11 CH3 Switch", ABOX_SIFM_CH_SEL(11),
-			ABOX_SIFM_CH_SEL_L(11) + 3, 1, 0),
-	SOC_SINGLE("SIFM11 CH4 Switch", ABOX_SIFM_CH_SEL(11),
-			ABOX_SIFM_CH_SEL_L(11) + 4, 1, 0),
-	SOC_SINGLE("SIFM11 CH5 Switch", ABOX_SIFM_CH_SEL(11),
-			ABOX_SIFM_CH_SEL_L(11) + 5, 1, 0),
-	SOC_SINGLE("SIFM11 CH6 Switch", ABOX_SIFM_CH_SEL(11),
-			ABOX_SIFM_CH_SEL_L(11) + 6, 1, 0),
-	SOC_SINGLE("SIFM11 CH7 Switch", ABOX_SIFM_CH_SEL(11),
-			ABOX_SIFM_CH_SEL_L(11) + 7, 1, 0),
 	SOC_VALUE_ENUM_EXT("Audio Mode", audio_mode_enum,
 			audio_mode_get, audio_mode_put),
 	SOC_VALUE_ENUM_EXT("Sound Type", sound_type_enum,
 			sound_type_get, sound_type_put),
-	SOC_SINGLE_EXT("Display", 0, 0, 1, 0, display_get, display_put),
 	SOC_SINGLE_EXT("Tickle", 0, 0, 1, 0, tickle_get, tickle_put),
-	SOC_SINGLE_EXT("Cold", 0, 0, 1, 0, cold_get, cold_put),
-	SOC_ENUM_EXT("Debug", debug_enum, debug_get, debug_put),
 	SOC_SINGLE_EXT("Wakelock", 0, 0, 1, 0, wake_lock_get, wake_lock_put),
 	SOC_SINGLE_EXT("Reset Log", 0, 0, 1, 0, reset_log_get, reset_log_put),
-	SOC_SINGLE_EXT("NSRC0 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(0), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
-	SOC_SINGLE_EXT("NSRC1 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(1), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
-	SOC_SINGLE_EXT("NSRC2 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(2), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
-	SOC_SINGLE_EXT("NSRC3 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(3), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
-	SOC_SINGLE_EXT("NSRC4 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(4), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
-	SOC_SINGLE_EXT("NSRC5 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(5), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
-	SOC_SINGLE_EXT("NSRC6 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(6), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
-	SOC_SINGLE_EXT("NSRC7 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(7), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
-	SOC_SINGLE_EXT("NSRC8 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(8), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
-	SOC_SINGLE_EXT("NSRC9 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(9), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
-	SOC_SINGLE_EXT("NSRC10 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(10), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
-	SOC_SINGLE_EXT("NSRC11 Bridge", ABOX_ROUTE_CTRL_CONNECT,
-			ABOX_NSRC_CONNECTION_TYPE_L(11), 1, 0,
-			nsrc_bridge_get, nsrc_bridge_put),
+	SOC_SINGLE("NSRC0 Bridge", ABOX_ROUTE_CTRL2,
+			ABOX_NSRC_CONNECTION_TYPE_L(0), 1, 0),
+	SOC_SINGLE("NSRC1 Bridge", ABOX_ROUTE_CTRL2,
+			ABOX_NSRC_CONNECTION_TYPE_L(1), 1, 0),
+	SOC_SINGLE("NSRC2 Bridge", ABOX_ROUTE_CTRL2,
+			ABOX_NSRC_CONNECTION_TYPE_L(2), 1, 0),
+	SOC_SINGLE("NSRC3 Bridge", ABOX_ROUTE_CTRL2,
+			ABOX_NSRC_CONNECTION_TYPE_L(3), 1, 0),
+	SOC_SINGLE("NSRC4 Bridge", ABOX_ROUTE_CTRL2,
+			ABOX_NSRC_CONNECTION_TYPE_L(4), 1, 0),
 	SOC_SINGLE_EXT("ASRC Factor CP", SET_ASRC_FACTOR_CP, 0, 0x1ffff, 0,
 			asrc_factor_get, asrc_factor_put),
-	SOC_SINGLE("MIXP Dummy Start", ABOX_SPUS_CTRL_MIXP_DUMMY_START,
+	SOC_SINGLE("MIXP Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_MIXP_DUMMY_START_L, 1, 0),
-	SOC_SINGLE("SPUS TUNE0 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
-			ABOX_TUNE0_DUMMY_START_L, 1, 0),
-	SOC_SINGLE("SPUS TUNE1 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
-			ABOX_TUNE1_DUMMY_START_L, 1, 0),
-	SOC_SINGLE("SPUS ASRC0 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC0 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(0), 1, 0),
-	SOC_SINGLE("SPUS ASRC1 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC1 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(1), 1, 0),
-	SOC_SINGLE("SPUS ASRC2 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC2 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(2), 1, 0),
-	SOC_SINGLE("SPUS ASRC3 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC3 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(3), 1, 0),
-	SOC_SINGLE("SPUS ASRC4 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC4 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(4), 1, 0),
-	SOC_SINGLE("SPUS ASRC5 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC5 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(5), 1, 0),
-	SOC_SINGLE("SPUS ASRC6 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC6 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(6), 1, 0),
-	SOC_SINGLE("SPUS ASRC7 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC7 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(7), 1, 0),
-	SOC_SINGLE("SPUS ASRC8 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC8 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(8), 1, 0),
-	SOC_SINGLE("SPUS ASRC9 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC9 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(9), 1, 0),
-	SOC_SINGLE("SPUS ASRC10 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC10 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(10), 1, 0),
-	SOC_SINGLE("SPUS ASRC11 Dummy Start",
-			ABOX_SPUS_CTRL_RDMA_ASRC_DUMMY_START,
+	SOC_SINGLE("SPUS ASRC11 Dummy Start", ABOX_SPUS_LATENCY_CTRL0,
 			ABOX_RDMA_ASRC_DUMMY_START_L(11), 1, 0),
-	SOC_SINGLE("SPUS ASRC0 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(0),
+	SOC_SINGLE("SPUS ASRC0 Start Num", ABOX_SPUS_LATENCY_CTRL1,
 			ABOX_RDMA_START_ASRC_NUM_L(0), 32, 0),
-	SOC_SINGLE("SPUS ASRC1 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(0),
+	SOC_SINGLE("SPUS ASRC1 Start Num", ABOX_SPUS_LATENCY_CTRL1,
 			ABOX_RDMA_START_ASRC_NUM_L(1), 32, 0),
-	SOC_SINGLE("SPUS ASRC2 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(0),
+	SOC_SINGLE("SPUS ASRC2 Start Num", ABOX_SPUS_LATENCY_CTRL1,
 			ABOX_RDMA_START_ASRC_NUM_L(2), 32, 0),
-	SOC_SINGLE("SPUS ASRC3 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(3),
+	SOC_SINGLE("SPUS ASRC3 Start Num", ABOX_SPUS_LATENCY_CTRL1,
 			ABOX_RDMA_START_ASRC_NUM_L(3), 32, 0),
-	SOC_SINGLE("SPUS ASRC4 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(4),
+	SOC_SINGLE("SPUS ASRC4 Start Num", ABOX_SPUS_LATENCY_CTRL2,
 			ABOX_RDMA_START_ASRC_NUM_L(4), 32, 0),
-	SOC_SINGLE("SPUS ASRC5 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(5),
+	SOC_SINGLE("SPUS ASRC5 Start Num", ABOX_SPUS_LATENCY_CTRL2,
 			ABOX_RDMA_START_ASRC_NUM_L(5), 32, 0),
-	SOC_SINGLE("SPUS ASRC6 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(6),
+	SOC_SINGLE("SPUS ASRC6 Start Num", ABOX_SPUS_LATENCY_CTRL2,
 			ABOX_RDMA_START_ASRC_NUM_L(6), 32, 0),
-	SOC_SINGLE("SPUS ASRC7 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(7),
+	SOC_SINGLE("SPUS ASRC7 Start Num", ABOX_SPUS_LATENCY_CTRL2,
 			ABOX_RDMA_START_ASRC_NUM_L(7), 32, 0),
-	SOC_SINGLE("SPUS ASRC8 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(8),
+	SOC_SINGLE("SPUS ASRC8 Start Num", ABOX_SPUS_LATENCY_CTRL3,
 			ABOX_RDMA_START_ASRC_NUM_L(8), 32, 0),
-	SOC_SINGLE("SPUS ASRC9 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(9),
+	SOC_SINGLE("SPUS ASRC9 Start Num", ABOX_SPUS_LATENCY_CTRL3,
 			ABOX_RDMA_START_ASRC_NUM_L(9), 32, 0),
-	SOC_SINGLE("SPUS ASRC10 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(10),
+	SOC_SINGLE("SPUS ASRC10 Start Num", ABOX_SPUS_LATENCY_CTRL3,
 			ABOX_RDMA_START_ASRC_NUM_L(10), 32, 0),
-	SOC_SINGLE("SPUS ASRC11 Start Num",
-			ABOX_SPUS_CTRL_RDMA_START_ASRC_NUM(11),
+	SOC_SINGLE("SPUS ASRC11 Start Num", ABOX_SPUS_LATENCY_CTRL3,
 			ABOX_RDMA_START_ASRC_NUM_L(11), 32, 0),
 };
 
 static const struct snd_kcontrol_new spus_asrc_controls[] = {
-	SOC_SINGLE_EXT("SPUS ASRC0", ABOX_SPUS_CTRL_FC_SRC(0),
+	SOC_SINGLE_EXT("SPUS ASRC0", ABOX_SPUS_CTRL_FC0,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(0), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUS ASRC1", ABOX_SPUS_CTRL_FC_SRC(1),
+	SOC_SINGLE_EXT("SPUS ASRC1", ABOX_SPUS_CTRL_FC0,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(1), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUS ASRC2", ABOX_SPUS_CTRL_FC_SRC(2),
+	SOC_SINGLE_EXT("SPUS ASRC2", ABOX_SPUS_CTRL_FC0,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(2), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUS ASRC3", ABOX_SPUS_CTRL_FC_SRC(3),
+	SOC_SINGLE_EXT("SPUS ASRC3", ABOX_SPUS_CTRL_FC0,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(3), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUS ASRC4", ABOX_SPUS_CTRL_FC_SRC(4),
+	SOC_SINGLE_EXT("SPUS ASRC4", ABOX_SPUS_CTRL_FC1,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(4), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUS ASRC5", ABOX_SPUS_CTRL_FC_SRC(5),
+	SOC_SINGLE_EXT("SPUS ASRC5", ABOX_SPUS_CTRL_FC1,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(5), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUS ASRC6", ABOX_SPUS_CTRL_FC_SRC(6),
+	SOC_SINGLE_EXT("SPUS ASRC6", ABOX_SPUS_CTRL_FC1,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(6), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUS ASRC7", ABOX_SPUS_CTRL_FC_SRC(7),
+	SOC_SINGLE_EXT("SPUS ASRC7", ABOX_SPUS_CTRL_FC1,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(7), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUS ASRC8", ABOX_SPUS_CTRL_FC_SRC(8),
+	SOC_SINGLE_EXT("SPUS ASRC8", ABOX_SPUS_CTRL_FC2,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(8), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUS ASRC9", ABOX_SPUS_CTRL_FC_SRC(9),
+	SOC_SINGLE_EXT("SPUS ASRC9", ABOX_SPUS_CTRL_FC2,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(9), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUS ASRC10", ABOX_SPUS_CTRL_FC_SRC(10),
+	SOC_SINGLE_EXT("SPUS ASRC10", ABOX_SPUS_CTRL_FC2,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(10), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUS ASRC11", ABOX_SPUS_CTRL_FC_SRC(11),
+	SOC_SINGLE_EXT("SPUS ASRC11", ABOX_SPUS_CTRL_FC2,
 			ABOX_FUNC_CHAIN_SRC_ASRC_L(11), 1, 0,
 			snd_soc_get_volsw, spus_asrc_enable_put),
 };
 
 static const struct snd_kcontrol_new spum_asrc_controls[] = {
-	SOC_SINGLE_EXT("SPUM ASRC0", ABOX_SPUM_CTRL_FC_NSRC(0),
+	SOC_SINGLE_EXT("SPUM ASRC0", ABOX_SPUM_CTRL0,
 			ABOX_FUNC_CHAIN_NSRC_ASRC_L(0), 1, 0,
 			snd_soc_get_volsw, spum_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUM ASRC1", ABOX_SPUM_CTRL_FC_NSRC(1),
+	SOC_SINGLE_EXT("SPUM ASRC1", ABOX_SPUM_CTRL0,
 			ABOX_FUNC_CHAIN_NSRC_ASRC_L(1), 1, 0,
 			snd_soc_get_volsw, spum_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUM ASRC2", ABOX_SPUM_CTRL_FC_NSRC(2),
+	SOC_SINGLE_EXT("SPUM ASRC2", ABOX_SPUM_CTRL0,
 			ABOX_FUNC_CHAIN_NSRC_ASRC_L(2), 1, 0,
 			snd_soc_get_volsw, spum_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUM ASRC3", ABOX_SPUM_CTRL_FC_NSRC(3),
+	SOC_SINGLE_EXT("SPUM ASRC3", ABOX_SPUM_CTRL0,
 			ABOX_FUNC_CHAIN_NSRC_ASRC_L(3), 1, 0,
 			snd_soc_get_volsw, spum_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUM ASRC4", ABOX_SPUM_CTRL_FC_NSRC(4),
+	SOC_SINGLE_EXT("SPUM ASRC4", ABOX_SPUM_CTRL0,
 			ABOX_FUNC_CHAIN_NSRC_ASRC_L(4), 1, 0,
-			snd_soc_get_volsw, spum_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUM ASRC5", ABOX_SPUM_CTRL_FC_NSRC(5),
-			ABOX_FUNC_CHAIN_NSRC_ASRC_L(5), 1, 0,
-			snd_soc_get_volsw, spum_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUM ASRC6", ABOX_SPUM_CTRL_FC_NSRC(6),
-			ABOX_FUNC_CHAIN_NSRC_ASRC_L(6), 1, 0,
-			snd_soc_get_volsw, spum_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUM ASRC7", ABOX_SPUM_CTRL_FC_NSRC(7),
-			ABOX_FUNC_CHAIN_NSRC_ASRC_L(7), 1, 0,
-			snd_soc_get_volsw, spum_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUM ASRC8", ABOX_SPUM_CTRL_FC_NSRC(8),
-			ABOX_FUNC_CHAIN_NSRC_ASRC_L(8), 1, 0,
-			snd_soc_get_volsw, spum_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUM ASRC9", ABOX_SPUM_CTRL_FC_NSRC(9),
-			ABOX_FUNC_CHAIN_NSRC_ASRC_L(9), 1, 0,
-			snd_soc_get_volsw, spum_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUM ASRC10", ABOX_SPUM_CTRL_FC_NSRC(10),
-			ABOX_FUNC_CHAIN_NSRC_ASRC_L(10), 1, 0,
-			snd_soc_get_volsw, spum_asrc_enable_put),
-	SOC_SINGLE_EXT("SPUM ASRC11", ABOX_SPUM_CTRL_FC_NSRC(11),
-			ABOX_FUNC_CHAIN_NSRC_ASRC_L(11), 1, 0,
 			snd_soc_get_volsw, spum_asrc_enable_put),
 };
 
 static const struct snd_kcontrol_new spus_asrc_id_controls[] = {
-	SOC_SINGLE_EXT("SPUS ASRC0 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(0),
-			ABOX_SRC_ASRC_ID_L(0), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
-	SOC_SINGLE_EXT("SPUS ASRC1 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(1),
-			ABOX_SRC_ASRC_ID_L(1), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
-	SOC_SINGLE_EXT("SPUS ASRC2 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(2),
-			ABOX_SRC_ASRC_ID_L(2), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
-	SOC_SINGLE_EXT("SPUS ASRC3 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(3),
-			ABOX_SRC_ASRC_ID_L(3), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
-	SOC_SINGLE_EXT("SPUS ASRC4 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(4),
-			ABOX_SRC_ASRC_ID_L(4), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
-	SOC_SINGLE_EXT("SPUS ASRC5 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(5),
-			ABOX_SRC_ASRC_ID_L(5), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
-	SOC_SINGLE_EXT("SPUS ASRC6 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(6),
-			ABOX_SRC_ASRC_ID_L(6), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
-	SOC_SINGLE_EXT("SPUS ASRC7 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(7),
-			ABOX_SRC_ASRC_ID_L(7), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
-	SOC_SINGLE_EXT("SPUS ASRC8 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(8),
-			ABOX_SRC_ASRC_ID_L(8), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
-	SOC_SINGLE_EXT("SPUS ASRC9 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(9),
-			ABOX_SRC_ASRC_ID_L(9), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
-	SOC_SINGLE_EXT("SPUS ASRC10 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(10),
-			ABOX_SRC_ASRC_ID_L(10), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
-	SOC_SINGLE_EXT("SPUS ASRC11 ID", ABOX_SPUS_CTRL_SRC_ASRC_ID(11),
-			ABOX_SRC_ASRC_ID_L(11), 11, 0,
-			snd_soc_get_volsw, spus_asrc_id_put),
+	SOC_SINGLE("SPUS ASRC0 ID", ABOX_SPUS_CTRL4,
+			ABOX_SRC_ASRC_ID_L(0), 11, 0),
+	SOC_SINGLE("SPUS ASRC1 ID", ABOX_SPUS_CTRL4,
+			ABOX_SRC_ASRC_ID_L(1), 11, 0),
+	SOC_SINGLE("SPUS ASRC2 ID", ABOX_SPUS_CTRL4,
+			ABOX_SRC_ASRC_ID_L(2), 11, 0),
+	SOC_SINGLE("SPUS ASRC3 ID", ABOX_SPUS_CTRL4,
+			ABOX_SRC_ASRC_ID_L(3), 11, 0),
+	SOC_SINGLE("SPUS ASRC4 ID", ABOX_SPUS_CTRL5,
+			ABOX_SRC_ASRC_ID_L(4), 11, 0),
+	SOC_SINGLE("SPUS ASRC5 ID", ABOX_SPUS_CTRL5,
+			ABOX_SRC_ASRC_ID_L(5), 11, 0),
+	SOC_SINGLE("SPUS ASRC6 ID", ABOX_SPUS_CTRL5,
+			ABOX_SRC_ASRC_ID_L(6), 11, 0),
+	SOC_SINGLE("SPUS ASRC7 ID", ABOX_SPUS_CTRL5,
+			ABOX_SRC_ASRC_ID_L(7), 11, 0),
+	SOC_SINGLE("SPUS ASRC8 ID", ABOX_SPUS_CTRL5,
+			ABOX_SRC_ASRC_ID_L(8), 11, 0),
+	SOC_SINGLE("SPUS ASRC9 ID", ABOX_SPUS_CTRL5,
+			ABOX_SRC_ASRC_ID_L(9), 11, 0),
+	SOC_SINGLE("SPUS ASRC10 ID", ABOX_SPUS_CTRL5,
+			ABOX_SRC_ASRC_ID_L(10), 11, 0),
+	SOC_SINGLE("SPUS ASRC11 ID", ABOX_SPUS_CTRL5,
+			ABOX_SRC_ASRC_ID_L(11), 11, 0),
 };
 
 static const struct snd_kcontrol_new spum_asrc_id_controls[] = {
-	SOC_SINGLE_EXT("SPUM ASRC0 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(0),
-			ABOX_NSRC_ASRC_ID_L(0), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
-	SOC_SINGLE_EXT("SPUM ASRC1 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(1),
-			ABOX_NSRC_ASRC_ID_L(1), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
-	SOC_SINGLE_EXT("SPUM ASRC2 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(2),
-			ABOX_NSRC_ASRC_ID_L(2), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
-	SOC_SINGLE_EXT("SPUM ASRC3 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(3),
-			ABOX_NSRC_ASRC_ID_L(3), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
-	SOC_SINGLE_EXT("SPUM ASRC4 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(4),
-			ABOX_NSRC_ASRC_ID_L(4), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
-	SOC_SINGLE_EXT("SPUM ASRC5 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(5),
-			ABOX_NSRC_ASRC_ID_L(5), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
-	SOC_SINGLE_EXT("SPUM ASRC6 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(6),
-			ABOX_NSRC_ASRC_ID_L(6), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
-	SOC_SINGLE_EXT("SPUM ASRC7 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(7),
-			ABOX_NSRC_ASRC_ID_L(7), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
-	SOC_SINGLE_EXT("SPUM ASRC8 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(8),
-			ABOX_NSRC_ASRC_ID_L(8), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
-	SOC_SINGLE_EXT("SPUM ASRC9 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(9),
-			ABOX_NSRC_ASRC_ID_L(9), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
-	SOC_SINGLE_EXT("SPUM ASRC10 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(10),
-			ABOX_NSRC_ASRC_ID_L(10), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
-	SOC_SINGLE_EXT("SPUM ASRC11 ID", ABOX_SPUM_CTRL_NSRC_ASRC_ID(11),
-			ABOX_NSRC_ASRC_ID_L(11), 7, 0,
-			snd_soc_get_volsw, spum_asrc_id_put),
+	SOC_SINGLE("SPUM ASRC0 ID", ABOX_SPUM_CTRL4,
+			ABOX_NSRC_ASRC_ID_L(0), 7, 0),
+	SOC_SINGLE("SPUM ASRC1 ID", ABOX_SPUM_CTRL4,
+			ABOX_NSRC_ASRC_ID_L(1), 7, 0),
+	SOC_SINGLE("SPUM ASRC2 ID", ABOX_SPUM_CTRL4,
+			ABOX_NSRC_ASRC_ID_L(2), 7, 0),
+	SOC_SINGLE("SPUM ASRC3 ID", ABOX_SPUM_CTRL4,
+			ABOX_NSRC_ASRC_ID_L(3), 7, 0),
+	SOC_SINGLE("SPUM ASRC4 ID", ABOX_SPUM_CTRL4,
+			ABOX_NSRC_ASRC_ID_L(4), 7, 0),
 };
 
 static const struct snd_kcontrol_new spus_asrc_apf_coef_controls[] = {
@@ -2128,23 +1415,10 @@ static const struct snd_kcontrol_new spum_asrc_apf_coef_controls[] = {
 			asrc_apf_coef_get, asrc_apf_coef_put),
 	SOC_SINGLE_EXT("SPUM ASRC4 APF COEF", SNDRV_PCM_STREAM_CAPTURE, 4, 1, 0,
 			asrc_apf_coef_get, asrc_apf_coef_put),
-	SOC_SINGLE_EXT("SPUM ASRC5 APF COEF", SNDRV_PCM_STREAM_CAPTURE, 5, 1, 0,
-			asrc_apf_coef_get, asrc_apf_coef_put),
-	SOC_SINGLE_EXT("SPUM ASRC6 APF COEF", SNDRV_PCM_STREAM_CAPTURE, 6, 1, 0,
-			asrc_apf_coef_get, asrc_apf_coef_put),
-	SOC_SINGLE_EXT("SPUM ASRC7 APF COEF", SNDRV_PCM_STREAM_CAPTURE, 7, 1, 0,
-			asrc_apf_coef_get, asrc_apf_coef_put),
-	SOC_SINGLE_EXT("SPUM ASRC8 APF COEF", SNDRV_PCM_STREAM_CAPTURE, 8, 1, 0,
-			asrc_apf_coef_get, asrc_apf_coef_put),
-	SOC_SINGLE_EXT("SPUM ASRC9 APF COEF", SNDRV_PCM_STREAM_CAPTURE, 9, 1, 0,
-			asrc_apf_coef_get, asrc_apf_coef_put),
-	SOC_SINGLE_EXT("SPUM ASRC10 APF COEF", SNDRV_PCM_STREAM_CAPTURE, 10, 1, 0,
-			asrc_apf_coef_get, asrc_apf_coef_put),
-	SOC_SINGLE_EXT("SPUM ASRC11 APF COEF", SNDRV_PCM_STREAM_CAPTURE, 11, 1, 0,
-			asrc_apf_coef_get, asrc_apf_coef_put),
 };
 
-static const char *const asrc_source_enum_texts[] = {
+static const char * const asrc_source_enum_texts[] = {
+	"CP",
 	"UAIF0",
 	"UAIF1",
 	"UAIF2",
@@ -2152,17 +1426,14 @@ static const char *const asrc_source_enum_texts[] = {
 	"UAIF4",
 	"UAIF5",
 	"UAIF6",
-	"UAIF7",
 	"USB",
-	"Ext CP",
-	"Ext BCLK_CP",
-	"CP",
-	"PCM_CNTR",
+	"BCLK_CP",
 	"BCLK_SPDY",
 	"ABOX",
 };
 
 static const unsigned int asrc_source_enum_values[] = {
+	TICK_CP,
 	TICK_UAIF0,
 	TICK_UAIF1,
 	TICK_UAIF2,
@@ -2170,12 +1441,8 @@ static const unsigned int asrc_source_enum_values[] = {
 	TICK_UAIF4,
 	TICK_UAIF5,
 	TICK_UAIF6,
-	TICK_UAIF7,
 	TICK_USB,
-	TICK_CP_EXT,
-	TICK_BCLK_CP_EXT,
-	TICK_CP,
-	TICK_PCM_CNTR,
+	TICK_BCLK_CP,
 	TICK_BCLK_SPDY,
 	TICK_SYNC,
 };
@@ -2294,20 +1561,6 @@ static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc3_os_enum, 3, 0, 0,
 		asrc_source_enum_texts, asrc_source_enum_values);
 static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc4_os_enum, 4, 0, 0,
 		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc5_os_enum, 5, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc6_os_enum, 6, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc7_os_enum, 7, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc8_os_enum, 8, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc9_os_enum, 9, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc10_os_enum, 10, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc11_os_enum, 11, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
 
 static const struct snd_kcontrol_new spum_asrc_os_controls[] = {
 	SOC_VALUE_ENUM_EXT("SPUM ASRC0 OS", spum_asrc0_os_enum,
@@ -2319,20 +1572,6 @@ static const struct snd_kcontrol_new spum_asrc_os_controls[] = {
 	SOC_VALUE_ENUM_EXT("SPUM ASRC3 OS", spum_asrc3_os_enum,
 			spum_asrc_os_get, spum_asrc_os_put),
 	SOC_VALUE_ENUM_EXT("SPUM ASRC4 OS", spum_asrc4_os_enum,
-			spum_asrc_os_get, spum_asrc_os_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC5 OS", spum_asrc5_os_enum,
-			spum_asrc_os_get, spum_asrc_os_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC6 OS", spum_asrc6_os_enum,
-			spum_asrc_os_get, spum_asrc_os_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC7 OS", spum_asrc7_os_enum,
-			spum_asrc_os_get, spum_asrc_os_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC8 OS", spum_asrc8_os_enum,
-			spum_asrc_os_get, spum_asrc_os_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC9 OS", spum_asrc9_os_enum,
-			spum_asrc_os_get, spum_asrc_os_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC10 OS", spum_asrc10_os_enum,
-			spum_asrc_os_get, spum_asrc_os_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC11 OS", spum_asrc11_os_enum,
 			spum_asrc_os_get, spum_asrc_os_put),
 };
 
@@ -2346,20 +1585,6 @@ static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc3_is_enum, 3, 0, 0,
 		asrc_source_enum_texts, asrc_source_enum_values);
 static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc4_is_enum, 4, 0, 0,
 		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc5_is_enum, 5, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc6_is_enum, 6, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc7_is_enum, 7, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc8_is_enum, 8, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc9_is_enum, 9, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc10_is_enum, 10, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
-static SOC_VALUE_ENUM_SINGLE_DECL(spum_asrc11_is_enum, 11, 0, 0,
-		asrc_source_enum_texts, asrc_source_enum_values);
 
 static const struct snd_kcontrol_new spum_asrc_is_controls[] = {
 	SOC_VALUE_ENUM_EXT("SPUM ASRC0 IS", spum_asrc0_is_enum,
@@ -2371,20 +1596,6 @@ static const struct snd_kcontrol_new spum_asrc_is_controls[] = {
 	SOC_VALUE_ENUM_EXT("SPUM ASRC3 IS", spum_asrc3_is_enum,
 			spum_asrc_is_get, spum_asrc_is_put),
 	SOC_VALUE_ENUM_EXT("SPUM ASRC4 IS", spum_asrc4_is_enum,
-			spum_asrc_is_get, spum_asrc_is_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC5 IS", spum_asrc5_is_enum,
-			spum_asrc_is_get, spum_asrc_is_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC6 IS", spum_asrc6_is_enum,
-			spum_asrc_is_get, spum_asrc_is_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC7 IS", spum_asrc7_is_enum,
-			spum_asrc_is_get, spum_asrc_is_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC8 IS", spum_asrc8_is_enum,
-			spum_asrc_is_get, spum_asrc_is_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC9 IS", spum_asrc9_is_enum,
-			spum_asrc_is_get, spum_asrc_is_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC10 IS", spum_asrc10_is_enum,
-			spum_asrc_is_get, spum_asrc_is_put),
-	SOC_VALUE_ENUM_EXT("SPUM ASRC11 IS", spum_asrc11_is_enum,
 			spum_asrc_is_get, spum_asrc_is_put),
 };
 
@@ -2456,208 +1667,20 @@ static struct snd_soc_dapm_widget *asrc_get_widget(
 	return w;
 }
 
-static enum abox_dai spus_sink[COUNT_SPUS];
-static int write_spus_sink(unsigned int id, enum abox_dai dai)
-{
-	if (id >= ARRAY_SIZE(spus_sink))
-		return -EINVAL;
-
-	spus_sink[id] = dai;
-	return 0;
-}
-static int read_spus_sink(int id, enum abox_dai *dai)
-{
-	if (id >= ARRAY_SIZE(spus_sink))
-		return -EINVAL;
-
-	*dai = spus_sink[id];
-	return 0;
-}
-static int set_spus_sink(struct snd_soc_component *cmpnt, enum abox_dai spus,
-		enum abox_dai dai)
-{
-	struct device *dev = cmpnt->dev;
-	int ret;
-
-	abox_dbg(dev, "%s(%#x, %#x)\n", __func__, spus, dai);
-
-	switch (spus) {
-	case ABOX_RDMA0:
-	case ABOX_RDMA1:
-	case ABOX_RDMA2:
-	case ABOX_RDMA3:
-	case ABOX_RDMA4:
-	case ABOX_RDMA5:
-	case ABOX_RDMA6:
-	case ABOX_RDMA7:
-	case ABOX_RDMA8:
-	case ABOX_RDMA9:
-	case ABOX_RDMA10:
-	case ABOX_RDMA11:
-		ret = write_spus_sink(spus - ABOX_RDMA0, dai);
-		break;
-	case ABOX_RDMA0_BE:
-	case ABOX_RDMA1_BE:
-	case ABOX_RDMA2_BE:
-	case ABOX_RDMA3_BE:
-	case ABOX_RDMA4_BE:
-	case ABOX_RDMA5_BE:
-	case ABOX_RDMA6_BE:
-	case ABOX_RDMA7_BE:
-	case ABOX_RDMA8_BE:
-	case ABOX_RDMA9_BE:
-	case ABOX_RDMA10_BE:
-	case ABOX_RDMA11_BE:
-		ret = write_spus_sink(spus - ABOX_RDMA0_BE, dai);
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
-
-	if (ret < 0)
-		abox_err(dev, "%s: invalid dai %#x\n", __func__, spus);
-
-	return ret;
-}
-static enum abox_dai get_spus_sink(struct snd_soc_component *cmpnt,
-		enum abox_dai spus)
-{
-	struct device *dev = cmpnt->dev;
-	enum abox_dai dai = ABOX_NONE;
-	int ret;
-
-	switch (spus) {
-	case ABOX_RDMA0:
-	case ABOX_RDMA1:
-	case ABOX_RDMA2:
-	case ABOX_RDMA3:
-	case ABOX_RDMA4:
-	case ABOX_RDMA5:
-	case ABOX_RDMA6:
-	case ABOX_RDMA7:
-	case ABOX_RDMA8:
-	case ABOX_RDMA9:
-	case ABOX_RDMA10:
-	case ABOX_RDMA11:
-		ret = read_spus_sink(spus - ABOX_RDMA0, &dai);
-		break;
-	case ABOX_RDMA0_BE:
-	case ABOX_RDMA1_BE:
-	case ABOX_RDMA2_BE:
-	case ABOX_RDMA3_BE:
-	case ABOX_RDMA4_BE:
-	case ABOX_RDMA5_BE:
-	case ABOX_RDMA6_BE:
-	case ABOX_RDMA7_BE:
-	case ABOX_RDMA8_BE:
-	case ABOX_RDMA9_BE:
-	case ABOX_RDMA10_BE:
-	case ABOX_RDMA11_BE:
-		ret = read_spus_sink(spus - ABOX_RDMA0_BE, &dai);
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
-	abox_dbg(dev, "%s(%#x): %#x\n", __func__, spus, dai);
-
-	if (ret < 0)
-		abox_err(dev, "%s: invalid dai %#x\n", __func__, spus);
-
-	return dai;
-}
-
-static unsigned int nsrc_source[COUNT_SIFM];
-static int write_nsrc_source(unsigned int id, enum abox_dai dai)
-{
-	if (id >= ARRAY_SIZE(nsrc_source))
-		return -EINVAL;
-
-	nsrc_source[id] = dai;
-	return 0;
-}
-static int read_nsrc_source(int id, enum abox_dai *dai)
-{
-	if (id >= ARRAY_SIZE(nsrc_source))
-		return -EINVAL;
-
-	*dai = nsrc_source[id];
-	return 0;
-}
-static int set_nsrc_source(struct snd_soc_component *cmpnt, enum abox_dai nsrc,
-		enum abox_dai dai)
-{
-	struct device *dev = cmpnt->dev;
-	int ret;
-
-	abox_dbg(dev, "%s(%#x, %#x)\n", __func__, nsrc, dai);
-
-	switch (nsrc) {
-	case ABOX_NSRC0:
-	case ABOX_NSRC1:
-	case ABOX_NSRC2:
-	case ABOX_NSRC3:
-	case ABOX_NSRC4:
-	case ABOX_NSRC5:
-	case ABOX_NSRC6:
-	case ABOX_NSRC7:
-	case ABOX_NSRC8:
-	case ABOX_NSRC9:
-	case ABOX_NSRC10:
-	case ABOX_NSRC11:
-		ret = write_nsrc_source(nsrc - ABOX_NSRC0, dai);
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
-
-	if (ret < 0)
-		abox_err(dev, "%s: invalid dai %#x\n", __func__, nsrc);
-
-	return ret;
-}
-static enum abox_dai get_nsrc_source(struct snd_soc_component *cmpnt,
-		enum abox_dai nsrc)
-{
-	struct device *dev = cmpnt->dev;
-	enum abox_dai dai = ABOX_NONE;
-	int ret;
-
-	switch (nsrc) {
-	case ABOX_NSRC0:
-	case ABOX_NSRC1:
-	case ABOX_NSRC2:
-	case ABOX_NSRC3:
-	case ABOX_NSRC4:
-	case ABOX_NSRC5:
-	case ABOX_NSRC6:
-	case ABOX_NSRC7:
-	case ABOX_NSRC8:
-	case ABOX_NSRC9:
-	case ABOX_NSRC10:
-	case ABOX_NSRC11:
-		ret = read_nsrc_source(nsrc - ABOX_NSRC0, &dai);
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
-	abox_dbg(dev, "%s(%#x): %#x\n", __func__, nsrc, dai);
-
-	if (ret < 0)
-		abox_err(dev, "%s: invalid dai %#x\n", __func__, nsrc);
-
-	return dai;
-}
-
 static bool is_direct_connection(struct snd_soc_component *cmpnt,
 		enum abox_dai dai)
 {
+	unsigned int val = 0;
 	bool ret;
 
 	switch (dai) {
+	case ABOX_RSRC0:
+	case ABOX_RSRC1:
+		val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL2);
+		val &= ABOX_RSRC_CONNECTION_TYPE_MASK(dai - ABOX_RSRC0);
+		val >>= ABOX_RSRC_CONNECTION_TYPE_L(dai - ABOX_RSRC0);
+		ret = !val;
+		break;
 	case ABOX_NSRC0:
 	case ABOX_NSRC1:
 	case ABOX_NSRC2:
@@ -2666,11 +1689,10 @@ static bool is_direct_connection(struct snd_soc_component *cmpnt,
 	case ABOX_NSRC5:
 	case ABOX_NSRC6:
 	case ABOX_NSRC7:
-	case ABOX_NSRC8:
-	case ABOX_NSRC9:
-	case ABOX_NSRC10:
-	case ABOX_NSRC11:
-		ret = !nsrc_bridge[dai - ABOX_NSRC0];
+		val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL2);
+		val &= ABOX_NSRC_CONNECTION_TYPE_MASK(dai - ABOX_NSRC0);
+		val >>= ABOX_NSRC_CONNECTION_TYPE_L(dai - ABOX_NSRC0);
+		ret = !val;
 		break;
 	default:
 		ret = false;
@@ -2683,7 +1705,7 @@ static bool is_direct_connection(struct snd_soc_component *cmpnt,
 static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 {
 	struct snd_soc_component *cmpnt = data->cmpnt;
-	unsigned int val = 0, idx, reg;
+	unsigned int val = 0;
 	enum abox_dai _id, ret = ABOX_NONE;
 
 	switch (id) {
@@ -2719,22 +1741,6 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_WDMA7_BE:
 		ret = ABOX_NSRC7;
 		break;
-	case ABOX_WDMA8:
-	case ABOX_WDMA8_BE:
-		ret = ABOX_NSRC8;
-		break;
-	case ABOX_WDMA9:
-	case ABOX_WDMA9_BE:
-		ret = ABOX_NSRC9;
-		break;
-	case ABOX_WDMA10:
-	case ABOX_WDMA10_BE:
-		ret = ABOX_NSRC10;
-		break;
-	case ABOX_WDMA11:
-	case ABOX_WDMA11_BE:
-		ret = ABOX_NSRC11;
-		break;
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
 	case ABOX_UAIF2:
@@ -2742,11 +1748,9 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_UAIF4:
 	case ABOX_UAIF5:
 	case ABOX_UAIF6:
-		idx = id - ABOX_UAIF0;
-		reg = ABOX_ROUTE_CTRL_UAIF_SPK(idx);
-		val = snd_soc_component_read(cmpnt, reg);
-		val &= ABOX_ROUTE_UAIF_SPK_MASK(idx);
-		val >>= ABOX_ROUTE_UAIF_SPK_L(idx);
+		val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL0);
+		val &= ABOX_ROUTE_UAIF_SPK_MASK(id - ABOX_UAIF0);
+		val >>= ABOX_ROUTE_UAIF_SPK_L(id - ABOX_UAIF0);
 		switch (val) {
 		case 0x1:
 			ret = ABOX_SIFS0;
@@ -2766,16 +1770,13 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 		case 0x6:
 			ret = ABOX_SIFS5;
 			break;
-		case 0x7:
-			ret = ABOX_SIFS6;
-			break;
 		default:
 			ret = ABOX_NONE;
 			break;
 		}
 		break;
 	case ABOX_DSIF:
-		val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL_DSIF);
+		val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL0);
 		val &= ABOX_ROUTE_DSIF_MASK;
 		val >>= ABOX_ROUTE_DSIF_L;
 		switch (val) {
@@ -2794,9 +1795,6 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 		case 0x6:
 			ret = ABOX_SIFS5;
 			break;
-		case 0x7:
-			ret = ABOX_SIFS6;
-			break;
 		default:
 			ret = ABOX_NONE;
 			break;
@@ -2808,12 +1806,49 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_SIFS3:
 	case ABOX_SIFS4:
 	case ABOX_SIFS5:
-	case ABOX_SIFS6:
 		for (_id = ABOX_RDMA0; _id <= ABOX_RDMA11; _id++) {
 			if (get_sink_dai_id(data, _id) == id) {
 				ret = _id;
 				break;
 			}
+		}
+		break;
+	case ABOX_RSRC0:
+	case ABOX_RSRC1:
+		val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL2);
+		val &= ABOX_ROUTE_RSRC_MASK(id - ABOX_RSRC0);
+		val >>= ABOX_ROUTE_RSRC_L(id - ABOX_RSRC0);
+		switch (val) {
+		case 0x1:
+			ret = ABOX_SIFS0;
+			break;
+		case 0x2:
+			ret = ABOX_SIFS1;
+			break;
+		case 0x3:
+			ret = ABOX_SIFS2;
+			break;
+		case 0x4:
+			ret = ABOX_SIFS3;
+			break;
+		case 0x5:
+			ret = ABOX_SIFS4;
+			break;
+		case 0x8:
+			ret = ABOX_UAIF0;
+			break;
+		case 0x9:
+			ret = ABOX_UAIF1;
+			break;
+		case 0xa:
+			ret = ABOX_UAIF2;
+			break;
+		case 0xb:
+			ret = ABOX_UAIF3;
+			break;
+		default:
+			ret = ABOX_NONE;
+			break;
 		}
 		break;
 	case ABOX_NSRC0:
@@ -2824,20 +1859,9 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_NSRC5:
 	case ABOX_NSRC6:
 	case ABOX_NSRC7:
-	case ABOX_NSRC8:
-	case ABOX_NSRC9:
-	case ABOX_NSRC10:
-	case ABOX_NSRC11:
-		/* Autodisable widget set SFR after DAPM power up. */
-		ret = get_nsrc_source(cmpnt, id);
-		break;
-	case ABOX_UDMA_WR0:
-	case ABOX_UDMA_WR1:
-		idx = id - ABOX_UDMA_WR0;
-		reg = ABOX_ROUTE_UDMA_SIFM;
-		val = snd_soc_component_read(cmpnt, reg);
-		val &= ABOX_ROUTE_UDMA_SIFM_MASK(idx);
-		val >>= ABOX_ROUTE_UDMA_SIFM_L(idx);
+		val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL1);
+		val &= ABOX_ROUTE_NSRC_MASK(id - ABOX_NSRC0);
+		val >>= ABOX_ROUTE_NSRC_L(id - ABOX_NSRC0);
 		switch (val) {
 		case 0x1:
 			ret = ABOX_SIFS0;
@@ -2857,8 +1881,59 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 		case 0x6:
 			ret = ABOX_SIFS5;
 			break;
-		case 0x7:
-			ret = ABOX_SIFS6;
+		case 0x8:
+			ret = ABOX_UAIF0;
+			break;
+		case 0x9:
+			ret = ABOX_UAIF1;
+			break;
+		case 0xa:
+			ret = ABOX_UAIF2;
+			break;
+		case 0xb:
+			ret = ABOX_UAIF3;
+			break;
+		case 0xc:
+			ret = ABOX_UAIF4;
+			break;
+		case 0xd:
+			ret = ABOX_UAIF5;
+			break;
+		case 0xe:
+			ret = ABOX_UAIF6;
+			break;
+		case 0x10:
+			ret = ABOX_BI_PDI0;
+			break;
+		case 0x11:
+			ret = ABOX_BI_PDI1;
+			break;
+		case 0x12:
+			ret = ABOX_BI_PDI2;
+			break;
+		case 0x13:
+			ret = ABOX_BI_PDI3;
+			break;
+		case 0x14:
+			ret = ABOX_BI_PDI4;
+			break;
+		case 0x15:
+			ret = ABOX_BI_PDI5;
+			break;
+		case 0x16:
+			ret = ABOX_BI_PDI6;
+			break;
+		case 0x17:
+			ret = ABOX_BI_PDI7;
+			break;
+		case 0x18:
+			ret = ABOX_RX_PDI0;
+			break;
+		case 0x19:
+			ret = ABOX_RX_PDI1;
+			break;
+		case 0x1f:
+			ret = ABOX_SPDY;
 			break;
 		default:
 			ret = ABOX_NONE;
@@ -2869,31 +1944,59 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_RDMA1:
 	case ABOX_RDMA2:
 	case ABOX_RDMA3:
-	case ABOX_RDMA4:
-	case ABOX_RDMA5:
-	case ABOX_RDMA6:
-	case ABOX_RDMA7:
-	case ABOX_RDMA8:
-	case ABOX_RDMA9:
-	case ABOX_RDMA10:
-	case ABOX_RDMA11:
 	case ABOX_RDMA0_BE:
 	case ABOX_RDMA1_BE:
 	case ABOX_RDMA2_BE:
 	case ABOX_RDMA3_BE:
+		val = snd_soc_component_read(cmpnt, ABOX_SPUS_CTRL_FC0);
+		val &= ABOX_FUNC_CHAIN_SRC_IN_MASK(id - ABOX_RDMA0);
+		val >>= ABOX_FUNC_CHAIN_SRC_IN_L(id - ABOX_RDMA0);
+		switch (val) {
+		case 0x1:
+			ret = ABOX_SIFSM;
+			break;
+		case 0x3:
+			ret = ABOX_SIFST;
+			break;
+		default:
+			ret = ABOX_NONE;
+			break;
+		}
+		break;
+	case ABOX_RDMA4:
+	case ABOX_RDMA5:
+	case ABOX_RDMA6:
+	case ABOX_RDMA7:
 	case ABOX_RDMA4_BE:
 	case ABOX_RDMA5_BE:
 	case ABOX_RDMA6_BE:
 	case ABOX_RDMA7_BE:
+		val = snd_soc_component_read(cmpnt, ABOX_SPUS_CTRL_FC1);
+		val &= ABOX_FUNC_CHAIN_SRC_IN_MASK(id - ABOX_RDMA0);
+		val >>= ABOX_FUNC_CHAIN_SRC_IN_L(id - ABOX_RDMA0);
+		switch (val) {
+		case 0x1:
+			ret = ABOX_SIFSM;
+			break;
+		case 0x3:
+			ret = ABOX_SIFST;
+			break;
+		default:
+			ret = ABOX_NONE;
+			break;
+		}
+		break;
+	case ABOX_RDMA8:
+	case ABOX_RDMA9:
+	case ABOX_RDMA10:
+	case ABOX_RDMA11:
 	case ABOX_RDMA8_BE:
 	case ABOX_RDMA9_BE:
 	case ABOX_RDMA10_BE:
 	case ABOX_RDMA11_BE:
-		idx = id - ((id < ABOX_RDMA0_BE) ? ABOX_RDMA0 : ABOX_RDMA0_BE);
-		reg = ABOX_SPUS_CTRL_FC_SRC(idx);
-		val = snd_soc_component_read(cmpnt, reg);
-		val &= ABOX_FUNC_CHAIN_SRC_IN_MASK(idx);
-		val >>= ABOX_FUNC_CHAIN_SRC_IN_L(idx);
+		val = snd_soc_component_read(cmpnt, ABOX_SPUS_CTRL_FC2);
+		val &= ABOX_FUNC_CHAIN_SRC_IN_MASK(id - ABOX_RDMA0);
+		val >>= ABOX_FUNC_CHAIN_SRC_IN_L(id - ABOX_RDMA0);
 		switch (val) {
 		case 0x1:
 			ret = ABOX_SIFSM;
@@ -2907,7 +2010,7 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 		}
 		break;
 	case ABOX_SIFSM:
-		val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL_SIFM);
+		val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL0);
 		val &= ABOX_ROUTE_SPUSM_MASK;
 		val >>= ABOX_ROUTE_SPUSM_L;
 		switch (val) {
@@ -2920,13 +2023,27 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 		case 0xe:
 			ret = ABOX_UAIF0 + val - 0x8;
 			break;
+		case 0x10:
+		case 0x11:
+		case 0x12:
+		case 0x13:
+		case 0x14:
+		case 0x15:
+		case 0x16:
+		case 0x17:
+			ret = ABOX_BI_PDI0 + val - 0x10;
+			break;
+		case 0x18:
+		case 0x19:
+			ret = ABOX_RX_PDI0 + val - 0x18;
+			break;
 		default:
 			ret = ABOX_NONE;
 			break;
 		}
 		break;
 	case ABOX_SIFST:
-		val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL_SIFT);
+		val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL2);
 		val &= ABOX_ROUTE_SPUST_MASK;
 		val >>= ABOX_ROUTE_SPUST_L;
 		switch (val) {
@@ -2938,6 +2055,20 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 		case 0xd:
 		case 0xe:
 			ret = ABOX_UAIF0 + val - 0x8;
+			break;
+		case 0x10:
+		case 0x11:
+		case 0x12:
+		case 0x13:
+		case 0x14:
+		case 0x15:
+		case 0x16:
+		case 0x17:
+			ret = ABOX_BI_PDI0 + val - 0x10;
+			break;
+		case 0x18:
+		case 0x19:
+			ret = ABOX_RX_PDI0 + val - 0x18;
 			break;
 		default:
 			ret = ABOX_NONE;
@@ -2955,6 +2086,7 @@ static enum abox_dai get_source_dai_id(struct abox_data *data, enum abox_dai id)
 static enum abox_dai get_sink_dai_id(struct abox_data *data, enum abox_dai id)
 {
 	struct snd_soc_component *cmpnt = data->cmpnt;
+	unsigned int val = 0;
 	enum abox_dai _id, ret = ABOX_NONE;
 
 	switch (id) {
@@ -2962,28 +2094,106 @@ static enum abox_dai get_sink_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_RDMA1:
 	case ABOX_RDMA2:
 	case ABOX_RDMA3:
-	case ABOX_RDMA4:
-	case ABOX_RDMA5:
-	case ABOX_RDMA6:
-	case ABOX_RDMA7:
-	case ABOX_RDMA8:
-	case ABOX_RDMA9:
-	case ABOX_RDMA10:
-	case ABOX_RDMA11:
 	case ABOX_RDMA0_BE:
 	case ABOX_RDMA1_BE:
 	case ABOX_RDMA2_BE:
 	case ABOX_RDMA3_BE:
+		val = snd_soc_component_read(cmpnt, ABOX_SPUS_CTRL_FC0);
+		val &= ABOX_FUNC_CHAIN_SRC_OUT_MASK(id - ABOX_RDMA0);
+		val >>= ABOX_FUNC_CHAIN_SRC_OUT_L(id - ABOX_RDMA0);
+		switch (val) {
+		case 0x1:
+			ret = ABOX_SIFS0;
+			break;
+		case 0x2:
+			ret = ABOX_SIFS1;
+			break;
+		case 0x4:
+			ret = ABOX_SIFS2;
+			break;
+		case 0x6:
+			ret = ABOX_SIFS3;
+			break;
+		case 0x8:
+			ret = ABOX_SIFS4;
+			break;
+		case 0xa:
+			ret = ABOX_SIFS5;
+			break;
+		default:
+			ret = ABOX_NONE;
+			break;
+		}
+		break;
+	case ABOX_RDMA4:
+	case ABOX_RDMA5:
+	case ABOX_RDMA6:
+	case ABOX_RDMA7:
 	case ABOX_RDMA4_BE:
 	case ABOX_RDMA5_BE:
 	case ABOX_RDMA6_BE:
 	case ABOX_RDMA7_BE:
+		val = snd_soc_component_read(cmpnt, ABOX_SPUS_CTRL_FC1);
+		val &= ABOX_FUNC_CHAIN_SRC_OUT_MASK(id - ABOX_RDMA0);
+		val >>= ABOX_FUNC_CHAIN_SRC_OUT_L(id - ABOX_RDMA0);
+		switch (val) {
+		case 0x1:
+			ret = ABOX_SIFS0;
+			break;
+		case 0x2:
+			ret = ABOX_SIFS1;
+			break;
+		case 0x4:
+			ret = ABOX_SIFS2;
+			break;
+		case 0x6:
+			ret = ABOX_SIFS3;
+			break;
+		case 0x8:
+			ret = ABOX_SIFS4;
+			break;
+		case 0xa:
+			ret = ABOX_SIFS5;
+			break;
+		default:
+			ret = ABOX_NONE;
+			break;
+		}
+		break;
+	case ABOX_RDMA8:
+	case ABOX_RDMA9:
+	case ABOX_RDMA10:
+	case ABOX_RDMA11:
 	case ABOX_RDMA8_BE:
 	case ABOX_RDMA9_BE:
 	case ABOX_RDMA10_BE:
 	case ABOX_RDMA11_BE:
-		/* Autodisable widget set SFR after DAPM power up. */
-		ret = get_spus_sink(cmpnt, id);
+		val = snd_soc_component_read(cmpnt, ABOX_SPUS_CTRL_FC2);
+		val &= ABOX_FUNC_CHAIN_SRC_OUT_MASK(id - ABOX_RDMA0);
+		val >>= ABOX_FUNC_CHAIN_SRC_OUT_L(id - ABOX_RDMA0);
+		switch (val) {
+		case 0x1:
+			ret = ABOX_SIFS0;
+			break;
+		case 0x2:
+			ret = ABOX_SIFS1;
+			break;
+		case 0x4:
+			ret = ABOX_SIFS2;
+			break;
+		case 0x6:
+			ret = ABOX_SIFS3;
+			break;
+		case 0x8:
+			ret = ABOX_SIFS4;
+			break;
+		case 0xa:
+			ret = ABOX_SIFS5;
+			break;
+		default:
+			ret = ABOX_NONE;
+			break;
+		}
 		break;
 	case ABOX_UAIF0:
 	case ABOX_UAIF1:
@@ -2993,18 +2203,9 @@ static enum abox_dai get_sink_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_UAIF5:
 	case ABOX_UAIF6:
 	case ABOX_SPDY:
-		for (_id = ABOX_NSRC0; _id < ABOX_NSRC0 + COUNT_SPUM; _id++) {
+		for (_id = ABOX_RSRC0; _id <= ABOX_NSRC5; _id++) {
 			if (get_source_dai_id(data, _id) == id &&
 					is_direct_connection(cmpnt, _id)) {
-				ret = _id;
-				break;
-			}
-		}
-		break;
-	case ABOX_UDMA_RD0:
-	case ABOX_UDMA_RD1:
-		for (_id = ABOX_NSRC0; _id < ABOX_NSRC0 + COUNT_SPUM; _id++) {
-			if (get_source_dai_id(data, _id) == id) {
 				ret = _id;
 				break;
 			}
@@ -3016,7 +2217,6 @@ static enum abox_dai get_sink_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_SIFS3:
 	case ABOX_SIFS4:
 	case ABOX_SIFS5:
-	case ABOX_SIFS6:
 		for (_id = ABOX_UAIF0; _id <= ABOX_DSIF; _id++) {
 			if (get_source_dai_id(data, _id) == id) {
 				ret = _id;
@@ -3026,18 +2226,9 @@ static enum abox_dai get_sink_dai_id(struct abox_data *data, enum abox_dai id)
 		if (ret != ABOX_NONE)
 			break;
 
-		for (_id = ABOX_NSRC0; _id < ABOX_NSRC0 + COUNT_SPUM; _id++) {
+		for (_id = ABOX_RSRC0; _id <= ABOX_NSRC5; _id++) {
 			if (get_source_dai_id(data, _id) == id &&
 					is_direct_connection(cmpnt, _id)) {
-				ret = _id;
-				break;
-			}
-		}
-		if (ret != ABOX_NONE)
-			break;
-
-		for (_id = ABOX_UDMA_WR0; _id <= ABOX_UDMA_WR1; _id++) {
-			if (get_source_dai_id(data, _id) == id) {
 				ret = _id;
 				break;
 			}
@@ -3067,47 +2258,8 @@ static enum abox_dai get_sink_dai_id(struct abox_data *data, enum abox_dai id)
 	case ABOX_NSRC7:
 		ret = ABOX_WDMA7;
 		break;
-	case ABOX_NSRC8:
-		ret = ABOX_WDMA8;
-		break;
-	case ABOX_NSRC9:
-		ret = ABOX_WDMA9;
-		break;
-	case ABOX_NSRC10:
-		ret = ABOX_WDMA10;
-		break;
-	case ABOX_NSRC11:
-		ret = ABOX_WDMA11;
-		break;
 	default:
 		ret = ABOX_NONE;
-		break;
-	}
-
-	return ret;
-}
-
-static bool is_nsrc_connected(struct abox_data *data, enum abox_dai id)
-{
-	enum abox_dai _id;
-	bool ret = false;
-
-	switch (id) {
-	case ABOX_SIFS0:
-	case ABOX_SIFS1:
-	case ABOX_SIFS2:
-	case ABOX_SIFS3:
-	case ABOX_SIFS4:
-	case ABOX_SIFS5:
-	case ABOX_SIFS6:
-		for (_id = ABOX_NSRC0; _id < ABOX_NSRC0 + COUNT_SPUM; _id++) {
-			if (get_source_dai_id(data, _id) == id) {
-				ret = true;
-				break;
-			}
-		}
-		break;
-	default:
 		break;
 	}
 
@@ -3158,10 +2310,6 @@ static int get_configmsg(enum abox_dai id, enum ABOX_CONFIGMSG *rate,
 		*rate = SET_SIFS5_RATE;
 		*format = SET_SIFS5_FORMAT;
 		break;
-	case ABOX_SIFS6:
-		*rate = SET_SIFS6_RATE;
-		*format = SET_SIFS6_FORMAT;
-		break;
 	case ABOX_NSRC0:
 		*rate = SET_SIFM0_RATE;
 		*format = SET_SIFM0_FORMAT;
@@ -3193,22 +2341,6 @@ static int get_configmsg(enum abox_dai id, enum ABOX_CONFIGMSG *rate,
 	case ABOX_NSRC7:
 		*rate = SET_SIFM7_RATE;
 		*format = SET_SIFM7_FORMAT;
-		break;
-	case ABOX_NSRC8:
-		*rate = SET_SIFM8_RATE;
-		*format = SET_SIFM8_FORMAT;
-		break;
-	case ABOX_NSRC9:
-		*rate = SET_SIFM9_RATE;
-		*format = SET_SIFM9_FORMAT;
-		break;
-	case ABOX_NSRC10:
-		*rate = SET_SIFM10_RATE;
-		*format = SET_SIFM10_FORMAT;
-		break;
-	case ABOX_NSRC11:
-		*rate = SET_SIFM11_RATE;
-		*format = SET_SIFM11_FORMAT;
 		break;
 	default:
 		ret = -EINVAL;
@@ -3248,8 +2380,6 @@ static int set_sif_params(struct abox_data *data, enum abox_dai id,
 		set_sif_channels(data, msg_format, channels);
 		format_put_ipc(adev, format, channels, msg_format);
 	}
-
-	update_ch_num(adev, msg_format);
 
 	return ret;
 }
@@ -3292,23 +2422,11 @@ static int set_cnt_val(struct abox_data *data, enum abox_dai id,
 	abox_info(dev, "%s[%#x](%ubit %uchannel %uHz at %luHz): %u\n",
 			__func__, id, width, channels, rate, clk, cnt_val);
 
-	ret = regmap_update_bits(regmap, ABOX_SPUS_CTRL_SIFS_CNT_VAL(idx),
+	ret = regmap_update_bits(regmap, ABOX_SPUS_CTRL_SIFS_CNT(idx),
 			ABOX_SIFS_CNT_VAL_MASK(idx),
 			cnt_val << ABOX_SIFS_CNT_VAL_L(idx));
 
 	return ret;
-}
-
-static int get_width_for_spus_atune(struct abox_data *data, int idx)
-{
-	/* SPUS POST TUNE can process 32bit only */
-	return abox_atune_spus_posttune_connected(data, idx) ? 32 : 0;
-}
-
-static int get_width_for_spum_atune(struct abox_data *data, int idx)
-{
-	/* SPUM PRE TUNE can process 32bit only */
-	return abox_atune_spum_pretune_connected(data, idx) ? 32 : 0;
 }
 
 static int hw_params_fixup(struct abox_data *data, enum abox_dai id,
@@ -3353,10 +2471,65 @@ static int hw_params_fixup(struct abox_data *data, enum abox_dai id,
 	return ret;
 }
 
-static int udma_hw_params_fixup(struct snd_soc_dai *dai,
-		struct snd_pcm_hw_params *params)
+static int asrc_set(struct abox_data *data, int stream, int idx,
+		unsigned int channels, unsigned int rate, unsigned int tgt_rate,
+		unsigned int tgt_width);
+
+static int asrc_set_in_loop(struct abox_data *data, int spum_idx, int sifs_idx,
+		unsigned int tgt_rate, unsigned int tgt_width)
 {
-	return abox_dma_hw_params_fixup(dai->dev, params);
+	unsigned int channels, rate;
+	int stream, spus_idx, res, ret = 0;
+	struct device *dev_dma;
+	struct abox_dma_data *dma_data;
+	struct snd_pcm_hw_params params;
+
+	if (spum_idx < 0)
+		return -EINVAL;
+	if (sifs_idx < 0)
+		return -EINVAL;
+
+	stream = SNDRV_PCM_STREAM_CAPTURE;
+	dev_dma = data->dev_wdma[spum_idx];
+	res = abox_dma_hw_params_fixup(dev_dma, &params);
+	if (res < 0)
+		abox_err(dev_dma, "hw params get failed: %d\n", res);
+
+	rate = params_rate(&params);
+	channels = params_channels(&params);
+
+	abox_dbg(data->dev, "%s(%d, %d, %u, %u, %u, %u)\n", __func__, spum_idx,
+			sifs_idx, channels, rate, tgt_rate, tgt_width);
+
+	res = asrc_set(data, stream, spum_idx, channels, rate,
+			tgt_rate,tgt_width);
+	if (res < 0)
+		ret = res;
+
+	stream = SNDRV_PCM_STREAM_PLAYBACK;
+	for (spus_idx = 0; spus_idx < data->rdma_count; spus_idx++) {
+		if (get_sink_dai_id(data, ABOX_RDMA0 + spus_idx) !=
+				sifs_idx + ABOX_SIFS0)
+			continue;
+
+		dev_dma = data->dev_rdma[spus_idx];
+		dma_data = dev_get_drvdata(dev_dma);
+		if (PCM_RUNTIME_CHECK(dma_data->substream))
+			continue;
+
+		res = abox_dma_hw_params_fixup(dev_dma, &params);
+		if (res < 0)
+			abox_err(dev_dma, "hw params get failed: %d\n", res);
+
+		rate = params_rate(&params);
+		channels = params_channels(&params);
+		res = asrc_set(data, stream, spus_idx, channels, rate,
+			tgt_rate, tgt_width);
+		if (res < 0)
+			ret = res;
+	}
+
+	return ret;
 }
 
 static int sifs_hw_params_fixup(struct abox_data *data, enum abox_dai id,
@@ -3381,14 +2554,6 @@ static int sifs_hw_params_fixup(struct abox_data *data, enum abox_dai id,
 	case ABOX_DSIF:
 		_dai = find_dai(cmpnt->card, _id);
 		abox_if_hw_params_fixup(_dai, params);
-		if (is_nsrc_connected(data, id))
-			set_cnt_val(data, id, params);
-		break;
-	case ABOX_UDMA_WR0:
-	case ABOX_UDMA_WR1:
-		_dai = find_dai(cmpnt->card, _id);
-		udma_hw_params_fixup(_dai, params);
-		set_cnt_val(data, id, params);
 		break;
 	case ABOX_NSRC0:
 	case ABOX_NSRC1:
@@ -3398,10 +2563,6 @@ static int sifs_hw_params_fixup(struct abox_data *data, enum abox_dai id,
 	case ABOX_NSRC5:
 	case ABOX_NSRC6:
 	case ABOX_NSRC7:
-	case ABOX_NSRC8:
-	case ABOX_NSRC9:
-	case ABOX_NSRC10:
-	case ABOX_NSRC11:
 		hw_params_fixup(data, id, params);
 		set_cnt_val(data, id, params);
 		break;
@@ -3443,22 +2604,23 @@ static int sifm_hw_params_fixup(struct abox_data *data, enum abox_dai id,
 		if (ret < 0)
 			return ret;
 		break;
-	case ABOX_UDMA_RD0:
-	case ABOX_UDMA_RD1:
-		_dai = find_dai(cmpnt->card, _id);
-		udma_hw_params_fixup(_dai, params);
-		ret = abox_cmpnt_adjust_sbank(data, id, params, 0);
-		if (ret < 0)
-			return ret;
-		break;
 	case ABOX_SIFS0:
 	case ABOX_SIFS1:
 	case ABOX_SIFS2:
 	case ABOX_SIFS3:
 	case ABOX_SIFS4:
 	case ABOX_SIFS5:
-	case ABOX_SIFS6:
 		sifs_hw_params_fixup(data, _id, params);
+
+		/**
+		 * When NSRC is connected with SIFS,
+		 * SPUS/SPUM ASRC usually isn't configured before DMA start,
+		 * because DAPM power event is occurred on routing completion,
+		 * but DMA is triggered when it is connected with active stream.
+		 * To configre ASRC first, ASRC is configured in here, too.
+		 */
+		asrc_set_in_loop(data, id - ABOX_NSRC0, _id - ABOX_SIFS0,
+				params_rate(params), params_width(params));
 		break;
 	default:
 		abox_err(dev, "%#x: invalid source dai:%#x\n", id, _id);
@@ -3487,11 +2649,8 @@ static int rdma_hw_params_fixup(struct snd_soc_dai *dai,
 	case ABOX_SIFS3:
 	case ABOX_SIFS4:
 	case ABOX_SIFS5:
-	case ABOX_SIFS6:
 		ret = sifs_hw_params_fixup(data->abox_data, _id, params);
-		width = get_width_for_spus_atune(data->abox_data, data->id);
-		if (width == 0)
-			width = params_width(params);
+		width = params_width(params);
 		abox_dma_set_dst_bit_width(dev, width);
 		break;
 	default:
@@ -3524,14 +2683,8 @@ static int wdma_hw_params_fixup(struct snd_soc_dai *dai,
 	case ABOX_NSRC5:
 	case ABOX_NSRC6:
 	case ABOX_NSRC7:
-	case ABOX_NSRC8:
-	case ABOX_NSRC9:
-	case ABOX_NSRC10:
-	case ABOX_NSRC11:
 		ret = sifm_hw_params_fixup(data->abox_data, _id, params);
-		width = get_width_for_spum_atune(data->abox_data, data->id);
-		if (width == 0)
-			width = params_width(params);
+		width = params_width(params);
 		abox_dma_set_dst_bit_width(dev, width);
 		break;
 	default:
@@ -3565,32 +2718,16 @@ static int wdma_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	return abox_dma_hw_params_fixup(cpu_dai->dev, params);
 }
 
-int abox_cmpnt_spus_get_sifs(struct abox_data *data, int id)
-{
-	struct snd_soc_component *cmpnt = data->cmpnt;
-	enum abox_dai spus, sink;
-
-	spus = ABOX_RDMA0 + id;
-	sink = get_spus_sink(cmpnt, spus);
-	if (sink < ABOX_SIFS0 || sink >= ABOX_SIFS0 + COUNT_SIFS)
-		return -EINVAL;
-
-	return sink - ABOX_SIFS0;
-}
-
 unsigned int abox_cmpnt_sif_get_dst_format(struct abox_data *data,
 		int stream, int id)
 {
 	static const enum ABOX_CONFIGMSG configmsg_p[] = {
 		SET_SIFS0_FORMAT, SET_SIFS1_FORMAT, SET_SIFS2_FORMAT,
 		SET_SIFS3_FORMAT, SET_SIFS4_FORMAT, SET_SIFS5_FORMAT,
-		SET_SIFS6_FORMAT,
 	};
 	static const enum ABOX_CONFIGMSG configmsg_c[] = {
 		SET_SIFM0_FORMAT, SET_SIFM1_FORMAT, SET_SIFM2_FORMAT,
-		SET_SIFM3_FORMAT, SET_SIFM4_FORMAT, SET_SIFM5_FORMAT,
-		SET_SIFM6_FORMAT, SET_SIFM7_FORMAT, SET_SIFM8_FORMAT,
-		SET_SIFM9_FORMAT, SET_SIFM10_FORMAT, SET_SIFM11_FORMAT,
+		SET_SIFM3_FORMAT, SET_SIFM4_FORMAT,
 	};
 	const enum ABOX_CONFIGMSG *configmsg;
 	unsigned int width, channels, format;
@@ -3616,41 +2753,6 @@ unsigned int abox_cmpnt_sif_get_dst_format(struct abox_data *data,
 	format = abox_get_format(width, channels);
 
 	return format;
-}
-
-unsigned int abox_cmpnt_sif_get_dst_rate(struct abox_data *data,
-		int stream, int id)
-{
-	static const enum ABOX_CONFIGMSG configmsg_p[] = {
-		SET_SIFS0_RATE, SET_SIFS1_RATE, SET_SIFS2_RATE,
-		SET_SIFS3_RATE, SET_SIFS4_RATE, SET_SIFS5_RATE,
-		SET_SIFS6_RATE,
-	};
-	static const enum ABOX_CONFIGMSG configmsg_c[] = {
-		SET_SIFM0_RATE, SET_SIFM1_RATE, SET_SIFM2_RATE,
-		SET_SIFM3_RATE, SET_SIFM4_RATE, SET_SIFM5_RATE,
-		SET_SIFM6_RATE, SET_SIFM7_RATE, SET_SIFM8_RATE,
-		SET_SIFM9_RATE, SET_SIFM10_RATE, SET_SIFM11_RATE,
-	};
-	const enum ABOX_CONFIGMSG *configmsg;
-
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (id >= ARRAY_SIZE(configmsg_p)) {
-			abox_err(data->dev, "%s(%d, %d): invalid argument\n",
-					__func__, stream, id);
-			return -EINVAL;
-		}
-		configmsg = configmsg_p;
-	} else {
-		if (id >= ARRAY_SIZE(configmsg_c)) {
-			abox_err(data->dev, "%s(%d, %d): invalid argument\n",
-					__func__, stream, id);
-			return -EINVAL;
-		}
-		configmsg = configmsg_c;
-	}
-
-	return get_sif_rate(data, configmsg[id]);
 }
 
 void abox_cmpnt_register_event_notifier(struct abox_data *data,
@@ -3876,105 +2978,54 @@ static int sifs5_event(struct snd_soc_dapm_widget *w,
 	return notify_event(data, ABOX_WIDGET_SIFS5, e);
 }
 
-static int sifs6_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	struct snd_soc_dapm_context *dapm = w->dapm;
-	struct device *dev = dapm->dev;
-	struct abox_data *data = dev_get_drvdata(dev);
-
-	return notify_event(data, ABOX_WIDGET_SIFS6, e);
-}
-
-static int nsrc_event(struct snd_soc_dapm_widget *w, int id, int e)
-{
-	struct snd_soc_dapm_context *dapm = w->dapm;
-	struct device *dev = dapm->dev;
-	struct abox_data *data = dev_get_drvdata(dev);
-
-	abox_dbg(dev, "%s(%d, %d)\n", __func__, id, e);
-
-	if (SND_SOC_DAPM_EVENT_ON(e)) {
-		abox_info(dev, "nsrc%d connection type: %d\n", id, nsrc_bridge[id]);
-		snd_soc_component_update_bits(data->cmpnt,
-				ABOX_ROUTE_CTRL_CONNECT,
-				ABOX_NSRC_CONNECTION_TYPE_MASK(id),
-				nsrc_bridge[id] << ABOX_NSRC_CONNECTION_TYPE_L(id));
-	}
-
-	return notify_event(data, ABOX_WIDGET_NSRC0 + id, e);
-}
-
 static int nsrc0_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *k, int e)
 {
-	return nsrc_event(w, 0, e);
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_NSRC0, e);
 }
 
 static int nsrc1_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *k, int e)
 {
-	return nsrc_event(w, 1, e);
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_NSRC1, e);
 }
 
 static int nsrc2_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *k, int e)
 {
-	return nsrc_event(w, 2, e);
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_NSRC2, e);
 }
 
 static int nsrc3_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *k, int e)
 {
-	return nsrc_event(w, 3, e);
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+
+	return notify_event(data, ABOX_WIDGET_NSRC3, e);
 }
 
 static int nsrc4_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *k, int e)
 {
-	return nsrc_event(w, 4, e);
-}
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct device *dev = dapm->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
 
-static int nsrc5_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	return nsrc_event(w, 5, e);
-}
-
-static int nsrc6_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	return nsrc_event(w, 6, e);
-}
-
-static int nsrc7_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	return nsrc_event(w, 7, e);
-}
-
-static int nsrc8_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	return nsrc_event(w, 8, e);
-}
-
-static int nsrc9_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	return nsrc_event(w, 9, e);
-}
-
-static int nsrc10_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	return nsrc_event(w, 10, e);
-}
-
-static int nsrc11_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	return nsrc_event(w, 11, e);
+	return notify_event(data, ABOX_WIDGET_NSRC4, e);
 }
 
 static int asrc_get_idx(struct snd_soc_dapm_widget *w)
@@ -4394,149 +3445,6 @@ void abox_cmpnt_asrc_release(struct abox_data *data, int stream, int idx)
 	asrc_release_id(asrc_get_widget(cmpnt, idx, stream), stream);
 }
 
-void abox_cmpnt_asrc_enable(struct abox_data *data, int stream, int idx)
-{
-	struct snd_soc_component *cmpnt = data->cmpnt;
-
-	abox_dbg(cmpnt->dev, "%s(%d, %d)\n", __func__, stream, idx);
-
-	asrc_put_active(asrc_get_widget(cmpnt, idx, stream), stream, 1);
-}
-
-static int spus_asrc_tune[] = {
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT,
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT,
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT,
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT,
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT,
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT
-};
-
-static int spum_asrc_tune[] = {
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT,
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT,
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT,
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT,
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT,
-	ABOX_ASRC_TUNE_DEFAULT, ABOX_ASRC_TUNE_DEFAULT,
-};
-
-static int get_asrc_tune(int stream, int idx)
-{
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (idx < ARRAY_SIZE(spus_asrc_tune))
-			return spus_asrc_tune[idx];
-	} else {
-		if (idx < ARRAY_SIZE(spum_asrc_tune))
-			return spum_asrc_tune[idx];
-	}
-
-	return ABOX_ASRC_TUNE_DEFAULT;
-}
-
-static void set_asrc_tune(int stream, int idx, int tune)
-{
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (idx < ARRAY_SIZE(spus_asrc_tune))
-			spus_asrc_tune[idx] = tune;
-	} else {
-		if (idx < ARRAY_SIZE(spum_asrc_tune))
-			spum_asrc_tune[idx] = tune;
-	}
-}
-
-static int asrc_tune_get(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	int stream = mc->reg;
-	int idx = mc->shift;
-
-	dev_dbg(dev, "%s(%d, %d)\n", __func__, stream, idx);
-
-	ucontrol->value.integer.value[0] = get_asrc_tune(stream, idx);
-
-	return 0;
-}
-
-static int asrc_tune_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	int stream = mc->reg;
-	int idx = mc->shift;
-	int val = (int)ucontrol->value.integer.value[0];
-	int ret = 0;
-
-	dev_dbg(dev, "%s(%d, %d, %d)\n", __func__, stream, idx, val);
-
-	if (val < ABOX_ASRC_TUNE_MIN || val > mc->max)
-		return -EINVAL;
-
-	set_asrc_tune(stream, idx, val);
-	if (asrc_get_active(cmpnt, idx, stream))
-		ret = asrc_update(cmpnt, idx, stream);
-
-	return ret;
-}
-
-static const struct snd_kcontrol_new asrc_tune_controls[] = {
-	SOC_SINGLE_EXT("SPUS ASRC0 TUNE", 0, 0, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUS ASRC1 TUNE", 0, 1, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUS ASRC2 TUNE", 0, 2, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUS ASRC3 TUNE", 0, 3, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUS ASRC4 TUNE", 0, 4, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUS ASRC5 TUNE", 0, 5, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUS ASRC6 TUNE", 0, 6, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUS ASRC7 TUNE", 0, 7, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUS ASRC8 TUNE", 0, 8, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUS ASRC9 TUNE", 0, 9, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUS ASRC10 TUNE", 0, 10, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUS ASRC11 TUNE", 0, 11, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC0 TUNE", 1, 0, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC1 TUNE", 1, 1, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC2 TUNE", 1, 2, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC3 TUNE", 1, 3, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC4 TUNE", 1, 4, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC5 TUNE", 1, 5, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC6 TUNE", 1, 6, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC7 TUNE", 1, 7, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC8 TUNE", 1, 8, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC9 TUNE", 1, 9, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC10 TUNE", 1, 10, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-	SOC_SINGLE_EXT("SPUM ASRC11 TUNE", 1, 11, ABOX_ASRC_TUNE_MAX, 0,
-			asrc_tune_get, asrc_tune_put),
-};
-
 static int asrc_find_id(struct snd_soc_dapm_widget *w, int stream)
 {
 	struct snd_soc_dapm_context *dapm = w->dapm;
@@ -4660,7 +3568,7 @@ int abox_cmpnt_update_asrc_tick(struct device *adev)
 
 static int asrc_config_async(struct abox_data *data, int id, int stream,
 		enum asrc_tick itick, unsigned int isr,
-		enum asrc_tick otick, unsigned int osr, int tune,
+		enum asrc_tick otick, unsigned int osr,
 		unsigned int s_default, unsigned int width, int apf_coef)
 {
 	struct device *dev = data->dev;
@@ -4671,9 +3579,9 @@ static int asrc_config_async(struct abox_data *data, int id, int stream,
 	struct asrc_ctrl ctrl;
 	int res, ret = 0;
 
-	abox_dbg(dev, "%s(%d, %d, %d, %uHz, %d, %uHz, %d, %u, %ubit, %d)\n",
+	abox_dbg(dev, "%s(%d, %d, %d, %uHz, %d, %uHz, %u, %ubit, %d)\n",
 			__func__, id, stream, itick, isr,
-			otick, osr, tune, s_default, width, apf_coef);
+			otick, osr, s_default, width, apf_coef);
 
 	if ((itick == TICK_SYNC) == (otick == TICK_SYNC)) {
 		abox_err(dev, "%s: itick=%d otick=%d\n", __func__, itick, otick);
@@ -4691,10 +3599,10 @@ static int asrc_config_async(struct abox_data *data, int id, int stream,
 	ctrl.ovsf = RATIO_8;
 	ctrl.ifactor = s_default;
 	ctrl.dcmf = RATIO_8;
-	ofactor = cal_ofactor(&ctrl, tune);
+	ofactor = cal_ofactor(&ctrl);
 	while (ofactor > ABOX_ASRC_OS_DEFAULT_MASK) {
 		ctrl.ovsf--;
-		ofactor = cal_ofactor(&ctrl, tune);
+		ofactor = cal_ofactor(&ctrl);
 	}
 
 	if (itick == TICK_SYNC) {
@@ -4752,32 +3660,28 @@ static int asrc_config_async(struct abox_data *data, int id, int stream,
 	if (res < 0)
 		ret = res;
 
-	reg = spus ? ABOX_SPUS_ASRC_IS_DEFAULT(id) :
-			ABOX_SPUM_ASRC_IS_DEFAULT(id);
+	reg = spus ? ABOX_SPUS_ASRC_IS_PARA0(id) : ABOX_SPUM_ASRC_IS_PARA0(id);
 	mask = ABOX_ASRC_IS_DEFAULT_MASK;
 	val = ctrl.ifactor;
 	res = update_bits_async(dev, cmpnt, "is default", reg, mask, val);
 	if (res < 0)
 		ret = res;
 
-	reg = spus ? ABOX_SPUS_ASRC_IS_TPLIMIT(id) :
-			ABOX_SPUM_ASRC_IS_TPLIMIT(id);
+	reg = spus ? ABOX_SPUS_ASRC_IS_PARA1(id) : ABOX_SPUM_ASRC_IS_PARA1(id);
 	mask = ABOX_ASRC_IS_TPERIOD_LIMIT_MASK;
 	val = is_limit(val);
 	res = update_bits_async(dev, cmpnt, "is tperiod limit", reg, mask, val);
 	if (res < 0)
 		ret = res;
 
-	reg = spus ? ABOX_SPUS_ASRC_OS_DEFAULT(id) :
-			ABOX_SPUM_ASRC_OS_DEFAULT(id);
+	reg = spus ? ABOX_SPUS_ASRC_OS_PARA0(id) : ABOX_SPUM_ASRC_OS_PARA0(id);
 	mask = ABOX_ASRC_OS_DEFAULT_MASK;
 	val = ofactor;
 	res = update_bits_async(dev, cmpnt, "os default", reg, mask, val);
 	if (res < 0)
 		ret = res;
 
-	reg = spus ? ABOX_SPUS_ASRC_OS_TPLIMIT(id) :
-			ABOX_SPUM_ASRC_OS_TPLIMIT(id);
+	reg = spus ? ABOX_SPUS_ASRC_OS_PARA1(id) : ABOX_SPUM_ASRC_OS_PARA1(id);
 	mask = ABOX_ASRC_OS_TPERIOD_LIMIT_MASK;
 	val = os_limit(val);
 	res = update_bits_async(dev, cmpnt, "os tperiod limit", reg, mask, val);
@@ -4802,7 +3706,7 @@ static int asrc_config_async(struct abox_data *data, int id, int stream,
 }
 
 static int asrc_config_sync(struct abox_data *data, int id, int stream,
-		unsigned int isr, unsigned int osr, int tune,
+		unsigned int isr, unsigned int osr,
 		unsigned int width, int apf_coef)
 {
 	struct device *dev = data->dev;
@@ -4812,8 +3716,8 @@ static int asrc_config_sync(struct abox_data *data, int id, int stream,
 	unsigned int reg, mask, val;
 	int res, ret = 0;
 
-	abox_dbg(dev, "%s(%d, %d, %uHz, %uHz, %d, %ubit, %d)\n", __func__,
-			id, stream, isr, osr, tune, width, apf_coef);
+	abox_dbg(dev, "%s(%d, %d, %uHz, %uHz, %ubit, %d)\n", __func__,
+			id, stream, isr, osr, width, apf_coef);
 
 	ctrl = &asrc_table[to_asrc_rate(isr)][to_asrc_rate(osr)];
 
@@ -4860,32 +3764,28 @@ static int asrc_config_sync(struct abox_data *data, int id, int stream,
 	if (res < 0)
 		ret = res;
 
-	reg = spus ? ABOX_SPUS_ASRC_IS_DEFAULT(id) :
-			ABOX_SPUM_ASRC_IS_DEFAULT(id);
+	reg = spus ? ABOX_SPUS_ASRC_IS_PARA0(id) : ABOX_SPUM_ASRC_IS_PARA0(id);
 	mask = ABOX_ASRC_IS_DEFAULT_MASK;
 	val = ctrl->ifactor;
 	res = update_bits_async(dev, cmpnt, "is default", reg, mask, val);
 	if (res < 0)
 		ret = res;
 
-	reg = spus ? ABOX_SPUS_ASRC_IS_TPLIMIT(id) :
-			ABOX_SPUM_ASRC_IS_TPLIMIT(id);
+	reg = spus ? ABOX_SPUS_ASRC_IS_PARA1(id) : ABOX_SPUM_ASRC_IS_PARA1(id);
 	mask = ABOX_ASRC_IS_TPERIOD_LIMIT_MASK;
 	val = is_limit(val);
 	res = update_bits_async(dev, cmpnt, "is tperiod limit", reg, mask, val);
 	if (res < 0)
 		ret = res;
 
-	reg = spus ? ABOX_SPUS_ASRC_OS_DEFAULT(id) :
-			ABOX_SPUM_ASRC_OS_DEFAULT(id);
+	reg = spus ? ABOX_SPUS_ASRC_OS_PARA0(id) : ABOX_SPUM_ASRC_OS_PARA0(id);
 	mask = ABOX_ASRC_OS_DEFAULT_MASK;
-	val = cal_ofactor(ctrl, tune);
+	val = cal_ofactor(ctrl);
 	res = update_bits_async(dev, cmpnt, "os default", reg, mask, val);
 	if (res < 0)
 		ret = res;
 
-	reg = spus ? ABOX_SPUS_ASRC_OS_TPLIMIT(id) :
-			ABOX_SPUM_ASRC_OS_TPLIMIT(id);
+	reg = spus ? ABOX_SPUS_ASRC_OS_PARA1(id) : ABOX_SPUM_ASRC_OS_PARA1(id);
 	mask = ABOX_ASRC_OS_TPERIOD_LIMIT_MASK;
 	val = os_limit(val);
 	res = update_bits_async(dev, cmpnt, "os tperiod limit", reg, mask, val);
@@ -4900,6 +3800,10 @@ static int asrc_config_sync(struct abox_data *data, int id, int stream,
 	if (res < 0)
 		ret = res;
 
+	res = asrc_update_tick(data, stream, id);
+	if (res < 0)
+		ret = res;
+
 	snd_soc_component_async_complete(cmpnt);
 
 	return ret;
@@ -4907,27 +3811,27 @@ static int asrc_config_sync(struct abox_data *data, int id, int stream,
 
 static int asrc_config(struct abox_data *data, int id, int stream,
 		enum asrc_tick itick, unsigned int isr,
-		enum asrc_tick otick, unsigned int osr, int tune,
+		enum asrc_tick otick, unsigned int osr,
 		unsigned int width, int apf_coef)
 {
 	struct device *dev = data->dev;
 	int ret;
 
-	abox_info(dev, "%s(%d, %d, %d, %uHz, %d, %uHz, %d, %ubit, %d)\n",
-			__func__, id, stream, itick, isr, otick, osr, tune,
+	abox_info(dev, "%s(%d, %d, %d, %uHz, %d, %uHz, %ubit, %d)\n",
+			__func__, id, stream, itick, isr, otick, osr,
 			width, apf_coef);
 
 	if ((itick == TICK_SYNC) && (otick == TICK_SYNC)) {
-		ret = asrc_config_sync(data, id, stream, isr, osr, tune,
+		ret = asrc_config_sync(data, id, stream, isr, osr,
 				width, apf_coef);
 	} else {
 		if (itick == TICK_CP) {
 			ret = asrc_config_async(data, id, stream,
-					itick, isr, otick, osr, tune,
+					itick, isr, otick, osr,
 					s_default, width, apf_coef);
 		} else if (otick == TICK_CP) {
 			ret = asrc_config_async(data, id, stream,
-					itick, isr, otick, osr, tune,
+					itick, isr, otick, osr,
 					s_default, width, apf_coef);
 		} else {
 			abox_err(dev, "not supported\n");
@@ -4940,7 +3844,7 @@ static int asrc_config(struct abox_data *data, int id, int stream,
 
 static int asrc_set(struct abox_data *data, int stream, int idx,
 		unsigned int channels, unsigned int rate, unsigned int tgt_rate,
-		unsigned int tgt_width, int tune)
+		unsigned int tgt_width)
 {
 	struct device *dev = data->dev;
 	struct snd_soc_component *cmpnt = data->cmpnt;
@@ -4950,8 +3854,8 @@ static int asrc_set(struct abox_data *data, int stream, int idx,
 	bool force_enable;
 	int on, ret;
 
-	abox_dbg(dev, "%s(%d, %d, %d, %uHz, %uHz, %ubit, %d)\n", __func__,
-			stream, idx, channels, rate, tgt_rate, tgt_width, tune);
+	abox_dbg(dev, "%s(%d, %d, %d, %uHz, %uHz, %ubit)\n", __func__,
+			stream, idx, channels, rate, tgt_rate, tgt_width);
 
 	ret = asrc_assign_id(w, stream, channels);
 	if (ret < 0)
@@ -4962,22 +3866,21 @@ static int asrc_set(struct abox_data *data, int stream, int idx,
 		itick = spus_asrc_is[idx];
 		otick = spus_asrc_os[idx];
 		ret = asrc_config(data, asrc_find_id(w, stream), stream,
-				itick, rate, otick, tgt_rate, tune,
+				itick, rate, otick, tgt_rate,
 				tgt_width, apf_coef);
 	} else {
 		force_enable = spum_asrc_force_enable[idx];
 		itick = spum_asrc_is[idx];
 		otick = spum_asrc_os[idx];
 		ret = asrc_config(data, asrc_find_id(w, stream), stream,
-				itick, tgt_rate, otick, rate, tune,
+				itick, tgt_rate, otick, rate,
 				tgt_width, apf_coef);
 	}
 	if (ret < 0)
 		abox_err(dev, "%s: config failed: %d\n", __func__, ret);
 
 	on = force_enable || (rate != tgt_rate) ||
-			(itick != TICK_SYNC) || (otick != TICK_SYNC) ||
-			(tune != ABOX_ASRC_TUNE_DEFAULT);
+			(itick != TICK_SYNC) || (otick != TICK_SYNC);
 	ret = asrc_put_active(w, stream, on);
 
 	return ret;
@@ -4994,7 +3897,7 @@ static int asrc_event(struct snd_soc_dapm_widget *w, int e, int stream)
 	struct snd_pcm_hw_params params, tgt_params;
 	unsigned int tgt_rate = 0, tgt_width = 0;
 	unsigned int rate = 0, width = 0, channels = 0;
-	int id, tune, ret = 0;
+	int id, ret = 0;
 
 	abox_dbg(dev, "%s(%s, %d)\n", __func__, w->name, e);
 
@@ -5035,30 +3938,20 @@ static int asrc_event(struct snd_soc_dapm_widget *w, int e, int stream)
 		tgt_params = params;
 		if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			ret = rdma_hw_params_fixup(dai_dma, &tgt_params);
-			tgt_width = get_width_for_spus_atune(data, idx);
 		} else {
 			ret = wdma_hw_params_fixup(dai_dma, &tgt_params);
-			tgt_width = get_width_for_spum_atune(data, idx);
 		}
 		if (ret < 0)
 			abox_err(dev_dma, "hw params fixup failed: %d\n", ret);
 
 		tgt_rate = params_rate(&tgt_params);
-		tgt_width = tgt_width ? : params_width(&tgt_params);
-
-		tune = get_asrc_tune(stream, idx);
+		tgt_width = params_width(&tgt_params);
 
 		ret = asrc_set(data, stream, idx, channels, rate, tgt_rate,
-				tgt_width, tune);
+				tgt_width);
 		if (ret < 0)
 			abox_err(dev, "%s: set failed: %d\n", __func__, ret);
 
-		if (e) {
-			ret = abox_atune_dapm_event(data, e, stream, idx);
-			if (ret < 0)
-				abox_err(dev, "%s: atune set failed: %d\n",
-						__func__, ret);
-		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		/* ASRC will be released in DMA stop. */
@@ -5076,11 +3969,6 @@ static int asrc_event(struct snd_soc_dapm_widget *w, int e, int stream)
 	return ret;
 }
 
-static int asrc_update(struct snd_soc_component *cmpnt, int idx, int stream)
-{
-	return asrc_event(asrc_get_widget(cmpnt, idx, stream), 0x0, stream);
-}
-
 static int spus_asrc_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *k, int e)
 {
@@ -5096,271 +3984,150 @@ static int spum_asrc_event(struct snd_soc_dapm_widget *w,
 static const char *const spus_inx_texts[] = {
 	"RDMA", "SIFSM", "RESERVED", "SIFST",
 };
-static SOC_ENUM_SINGLE_DECL(spus_in0_enum, ABOX_SPUS_CTRL_FC_SRC(0),
+static SOC_ENUM_SINGLE_DECL(spus_in0_enum, ABOX_SPUS_CTRL_FC0,
 		ABOX_FUNC_CHAIN_SRC_IN_L(0), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in0_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in0_enum),
 };
-static SOC_ENUM_SINGLE_DECL(spus_in1_enum, ABOX_SPUS_CTRL_FC_SRC(1),
+static SOC_ENUM_SINGLE_DECL(spus_in1_enum, ABOX_SPUS_CTRL_FC0,
 		ABOX_FUNC_CHAIN_SRC_IN_L(1), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in1_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in1_enum),
 };
-static SOC_ENUM_SINGLE_DECL(spus_in2_enum, ABOX_SPUS_CTRL_FC_SRC(2),
+static SOC_ENUM_SINGLE_DECL(spus_in2_enum, ABOX_SPUS_CTRL_FC0,
 		ABOX_FUNC_CHAIN_SRC_IN_L(2), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in2_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in2_enum),
 };
-static SOC_ENUM_SINGLE_DECL(spus_in3_enum, ABOX_SPUS_CTRL_FC_SRC(3),
+static SOC_ENUM_SINGLE_DECL(spus_in3_enum, ABOX_SPUS_CTRL_FC0,
 		ABOX_FUNC_CHAIN_SRC_IN_L(3), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in3_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in3_enum),
 };
-static SOC_ENUM_SINGLE_DECL(spus_in4_enum, ABOX_SPUS_CTRL_FC_SRC(4),
+static SOC_ENUM_SINGLE_DECL(spus_in4_enum, ABOX_SPUS_CTRL_FC1,
 		ABOX_FUNC_CHAIN_SRC_IN_L(4), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in4_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in4_enum),
 };
-static SOC_ENUM_SINGLE_DECL(spus_in5_enum, ABOX_SPUS_CTRL_FC_SRC(5),
+static SOC_ENUM_SINGLE_DECL(spus_in5_enum, ABOX_SPUS_CTRL_FC1,
 		ABOX_FUNC_CHAIN_SRC_IN_L(5), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in5_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in5_enum),
 };
-static SOC_ENUM_SINGLE_DECL(spus_in6_enum, ABOX_SPUS_CTRL_FC_SRC(6),
+static SOC_ENUM_SINGLE_DECL(spus_in6_enum, ABOX_SPUS_CTRL_FC1,
 		ABOX_FUNC_CHAIN_SRC_IN_L(6), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in6_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in6_enum),
 };
-static SOC_ENUM_SINGLE_DECL(spus_in7_enum, ABOX_SPUS_CTRL_FC_SRC(7),
+static SOC_ENUM_SINGLE_DECL(spus_in7_enum, ABOX_SPUS_CTRL_FC1,
 		ABOX_FUNC_CHAIN_SRC_IN_L(7), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in7_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in7_enum),
 };
-static SOC_ENUM_SINGLE_DECL(spus_in8_enum, ABOX_SPUS_CTRL_FC_SRC(8),
+static SOC_ENUM_SINGLE_DECL(spus_in8_enum, ABOX_SPUS_CTRL_FC2,
 		ABOX_FUNC_CHAIN_SRC_IN_L(8), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in8_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in8_enum),
 };
-static SOC_ENUM_SINGLE_DECL(spus_in9_enum, ABOX_SPUS_CTRL_FC_SRC(9),
+static SOC_ENUM_SINGLE_DECL(spus_in9_enum, ABOX_SPUS_CTRL_FC2,
 		ABOX_FUNC_CHAIN_SRC_IN_L(9), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in9_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in9_enum),
 };
-static SOC_ENUM_SINGLE_DECL(spus_in10_enum, ABOX_SPUS_CTRL_FC_SRC(10),
+static SOC_ENUM_SINGLE_DECL(spus_in10_enum, ABOX_SPUS_CTRL_FC2,
 		ABOX_FUNC_CHAIN_SRC_IN_L(10), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in10_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in10_enum),
 };
-static SOC_ENUM_SINGLE_DECL(spus_in11_enum, ABOX_SPUS_CTRL_FC_SRC(11),
+static SOC_ENUM_SINGLE_DECL(spus_in11_enum, ABOX_SPUS_CTRL_FC2,
 		ABOX_FUNC_CHAIN_SRC_IN_L(11), spus_inx_texts);
 static const struct snd_kcontrol_new spus_in11_controls[] = {
 	SOC_DAPM_ENUM("MUX", spus_in11_enum),
 };
 
-static const char *const spus_outx_texts[] = {
-	"RESERVED", "SIFS0", "SIFS1", "SIFS2", "SIFS3",
-	"SIFS4", "SIFS5", "SIFS6",
+static const char * const spus_outx_texts[] = {
+	"RESERVED", "SIFS0", "SIFS1", "RESERVED", "SIFS2", "RESERVED",
+	"SIFS3", "RESERVED", "SIFS4", "SIDETONE-SIFS0", "SIFS5",
 };
-#define SPUS_OUT(x)	((x) ? ((x) << 1) : 0x1)
-static const unsigned int spus_outx_values[] = {
-	0x0, SPUS_OUT(0), SPUS_OUT(1), SPUS_OUT(2), SPUS_OUT(3),
-	SPUS_OUT(4), SPUS_OUT(5), SPUS_OUT(6),
-};
-static const unsigned int spus_outx_mask = ABOX_FUNC_CHAIN_SRC_OUT_MASK(0) >>
-		ABOX_FUNC_CHAIN_SRC_OUT_L(0);
-
-static int spus_outx_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol, enum abox_dai spus)
-{
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
-	unsigned int *item = ucontrol->value.enumerated.item;
-	struct snd_soc_component *cmpnt;
-	enum abox_dai dai;
-	int ret;
-
-	if (item[0] >= e->items)
-		return -EINVAL;
-
-	cmpnt = snd_soc_dapm_kcontrol_dapm(kcontrol)->component;
-	dai = ABOX_SIFS0 + (item[0] - 1);
-	ret = set_spus_sink(cmpnt, spus, dai);
-	if (ret < 0)
-		return ret;
-
-	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
-}
-
-static int spus_out0_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA0);
-}
-static int spus_out1_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA1);
-}
-static int spus_out2_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA2);
-}
-static int spus_out3_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA3);
-}
-static int spus_out4_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA4);
-}
-static int spus_out5_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA5);
-}
-static int spus_out6_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA6);
-}
-static int spus_out7_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA7);
-}
-static int spus_out8_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA8);
-}
-static int spus_out9_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA9);
-}
-static int spus_out10_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA10);
-}
-static int spus_out11_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return spus_outx_put(kcontrol, ucontrol, ABOX_RDMA11);
-}
-
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out0_enum,
-		ABOX_SPUS_CTRL_FC_SRC(0), ABOX_FUNC_CHAIN_SRC_OUT_L(0),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out0_enum, ABOX_SPUS_CTRL_FC0,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(0), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out0_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out0_enum, snd_soc_dapm_get_enum_double,
-			spus_out0_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out0_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out1_enum,
-		ABOX_SPUS_CTRL_FC_SRC(1), ABOX_FUNC_CHAIN_SRC_OUT_L(1),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out1_enum, ABOX_SPUS_CTRL_FC0,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(1), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out1_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out1_enum, snd_soc_dapm_get_enum_double,
-			spus_out1_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out1_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out2_enum,
-		ABOX_SPUS_CTRL_FC_SRC(2), ABOX_FUNC_CHAIN_SRC_OUT_L(2),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out2_enum, ABOX_SPUS_CTRL_FC0,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(2), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out2_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out2_enum, snd_soc_dapm_get_enum_double,
-			spus_out2_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out2_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out3_enum,
-		ABOX_SPUS_CTRL_FC_SRC(3), ABOX_FUNC_CHAIN_SRC_OUT_L(3),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out3_enum, ABOX_SPUS_CTRL_FC0,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(3), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out3_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out3_enum, snd_soc_dapm_get_enum_double,
-			spus_out3_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out3_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out4_enum,
-		ABOX_SPUS_CTRL_FC_SRC(4), ABOX_FUNC_CHAIN_SRC_OUT_L(4),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out4_enum, ABOX_SPUS_CTRL_FC1,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(4), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out4_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out4_enum, snd_soc_dapm_get_enum_double,
-			spus_out4_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out4_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out5_enum,
-		ABOX_SPUS_CTRL_FC_SRC(5), ABOX_FUNC_CHAIN_SRC_OUT_L(5),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out5_enum, ABOX_SPUS_CTRL_FC1,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(5), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out5_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out5_enum, snd_soc_dapm_get_enum_double,
-			spus_out5_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out5_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out6_enum,
-		ABOX_SPUS_CTRL_FC_SRC(6), ABOX_FUNC_CHAIN_SRC_OUT_L(6),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out6_enum, ABOX_SPUS_CTRL_FC1,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(6), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out6_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out6_enum, snd_soc_dapm_get_enum_double,
-			spus_out6_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out6_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out7_enum,
-		ABOX_SPUS_CTRL_FC_SRC(7), ABOX_FUNC_CHAIN_SRC_OUT_L(7),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out7_enum, ABOX_SPUS_CTRL_FC1,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(7), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out7_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out7_enum, snd_soc_dapm_get_enum_double,
-			spus_out7_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out7_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out8_enum,
-		ABOX_SPUS_CTRL_FC_SRC(8), ABOX_FUNC_CHAIN_SRC_OUT_L(8),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out8_enum, ABOX_SPUS_CTRL_FC2,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(8), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out8_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out8_enum, snd_soc_dapm_get_enum_double,
-			spus_out8_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out8_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out9_enum,
-		ABOX_SPUS_CTRL_FC_SRC(9), ABOX_FUNC_CHAIN_SRC_OUT_L(9),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out9_enum, ABOX_SPUS_CTRL_FC2,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(9), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out9_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out9_enum, snd_soc_dapm_get_enum_double,
-			spus_out9_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out9_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out10_enum,
-		ABOX_SPUS_CTRL_FC_SRC(10), ABOX_FUNC_CHAIN_SRC_OUT_L(10),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out10_enum, ABOX_SPUS_CTRL_FC2,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(10), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out10_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out10_enum,
-			snd_soc_dapm_get_enum_double, spus_out10_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out10_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(spus_out11_enum,
-		ABOX_SPUS_CTRL_FC_SRC(11), ABOX_FUNC_CHAIN_SRC_OUT_L(11),
-		spus_outx_mask, spus_outx_texts, spus_outx_values);
+static SOC_ENUM_SINGLE_DECL(spus_out11_enum, ABOX_SPUS_CTRL_FC2,
+		ABOX_FUNC_CHAIN_SRC_OUT_L(11), spus_outx_texts);
 static const struct snd_kcontrol_new spus_out11_controls[] = {
-	SOC_DAPM_ENUM_EXT("DEMUX", spus_out11_enum,
-			snd_soc_dapm_get_enum_double, spus_out11_put),
+	SOC_DAPM_ENUM("DEMUX", spus_out11_enum),
 };
 
-static const char *const spusm_texts[] = {
-	"RESERVED",
+static const char * const spusm_texts[] = {
+	"RESERVED", "RESERVED", "RESERVED", "RESERVED",
+	"RESERVED", "RESERVED", "RESERVED", "RESERVED",
 	"UAIF0", "UAIF1", "UAIF2", "UAIF3",
-	"UAIF4", "UAIF5", "UAIF6",
-	"SPDY",
+	"UAIF4", "UAIF5", "UAIF6", "RESERVED",
+	"BI_PDI0", "BI_PDI1", "BI_PDI2", "BI_PDI3",
+	"BI_PDI4", "BI_PDI5", "BI_PDI6", "BI_PDI7",
+	"RX_PDI0", "RX_PDI1", "RESERVED", "RESERVED",
+	"RESERVED", "RESERVED", "RESERVED", "SPDY",
 };
-static const unsigned int spusm_values[] = {
-	0x0,
-	0x8, 0x9, 0xa, 0xb,
-	0xc, 0xd, 0xe,
-	0x11
-};
-
-static const unsigned int spusm_mask =
-		ABOX_ROUTE_SPUSM_MASK >> ABOX_ROUTE_SPUSM_L;
-static SOC_VALUE_ENUM_SINGLE_DECL(spusm_enum, ABOX_ROUTE_CTRL_SIFM,
-		ABOX_ROUTE_SPUSM_L, spusm_mask, spusm_texts, spusm_values);
+static SOC_ENUM_SINGLE_DECL(spusm_enum, ABOX_ROUTE_CTRL0, ABOX_ROUTE_SPUSM_L,
+		spusm_texts);
 static const struct snd_kcontrol_new spusm_controls[] = {
 	SOC_DAPM_ENUM("MUX", spusm_enum),
 };
 
-static const unsigned int spust_mask =
-		ABOX_ROUTE_SPUSM_MASK >> ABOX_ROUTE_SPUSM_L;
-static SOC_VALUE_ENUM_SINGLE_DECL(spust_enum, ABOX_ROUTE_CTRL_SIFT,
-		ABOX_ROUTE_SPUST_L, spust_mask, spusm_texts, spusm_values);
+static SOC_ENUM_SINGLE_DECL(spust_enum, ABOX_ROUTE_CTRL2, ABOX_ROUTE_SPUST_L,
+		spusm_texts);
 static const struct snd_kcontrol_new spust_controls[] = {
 	SOC_DAPM_ENUM("MUX", spust_enum),
 };
@@ -5399,6 +4166,46 @@ int abox_cmpnt_sifsm_prepare(struct device *dev, struct abox_data *data,
 					ABOX_SDTN_FORMAT_MASK,
 					val << ABOX_SDTN_FORMAT_L);
 			break;
+		case ABOX_BI_PDI0 ... ABOX_BI_PDI3:
+			idx = src - ABOX_BI_PDI0;
+			reg_val = snd_soc_component_read(cmpnt, ABOX_SW_PDI_CTRL0);
+			val = (reg_val & ABOX_BI_PDI_FORMAT_MASK(idx)) >>
+					ABOX_BI_PDI_FORMAT_L(idx);
+			ret = snd_soc_component_update_bits(cmpnt,
+					ABOX_SIDETONE_CTRL,
+					ABOX_SDTN_FORMAT_MASK,
+					val << ABOX_SDTN_FORMAT_L);
+			break;
+		case ABOX_BI_PDI4 ... ABOX_BI_PDI7:
+			idx = src - ABOX_BI_PDI4;
+			reg_val = snd_soc_component_read(cmpnt, ABOX_SW_PDI_CTRL1);
+			val = (reg_val & ABOX_BI_PDI_FORMAT_MASK(idx)) >>
+					ABOX_BI_PDI_FORMAT_L(idx);
+			ret = snd_soc_component_update_bits(cmpnt,
+					ABOX_SIDETONE_CTRL,
+					ABOX_SDTN_FORMAT_MASK,
+					val << ABOX_SDTN_FORMAT_L);
+			break;
+		case ABOX_TX_PDI0 ... ABOX_TX_PDI2:
+			idx = src - ABOX_TX_PDI0;
+			reg_val = snd_soc_component_read(cmpnt, ABOX_SW_PDI_CTRL2);
+			val = (reg_val & ABOX_TX_PDI_FORMAT_MASK(idx)) >>
+					ABOX_TX_PDI_FORMAT_L(idx);
+			ret = snd_soc_component_update_bits(cmpnt,
+					ABOX_SIDETONE_CTRL,
+					ABOX_SDTN_FORMAT_MASK,
+					val << ABOX_SDTN_FORMAT_L);
+			break;
+		case ABOX_RX_PDI0 ... ABOX_RX_PDI1:
+			idx = src - ABOX_RX_PDI0;
+			reg_val = snd_soc_component_read(cmpnt, ABOX_SW_PDI_CTRL3);
+			val = (reg_val & ABOX_RX_PDI_FORMAT_MASK(idx)) >>
+					ABOX_RX_PDI_FORMAT_L(idx);
+			ret = snd_soc_component_update_bits(cmpnt,
+					ABOX_SIDETONE_CTRL,
+					ABOX_SDTN_FORMAT_MASK,
+					val << ABOX_SDTN_FORMAT_L);
+			break;
 		default:
 			ret = -EINVAL;
 			break;
@@ -5426,11 +4233,9 @@ static const char *const sidetone_headroom_hpf_texts[] = {
 static const unsigned int sidetone_headroom_hpf_values[] = {
 	2, 3, 4, 5,
 };
-static const unsigned int sidetone_headroom_hpf_mask =
-		ABOX_SDTN_HEADROOM_HPF_MASK >> ABOX_SDTN_HEADROOM_HPF_L;
 static SOC_VALUE_ENUM_SINGLE_DECL(sidetone_headroom_hpf,
 		ABOX_SIDETONE_FILTER_CTRL0, ABOX_SDTN_HEADROOM_HPF_L,
-		sidetone_headroom_hpf_mask, sidetone_headroom_hpf_texts,
+		ABOX_SDTN_HEADROOM_HPF_MASK, sidetone_headroom_hpf_texts,
 		sidetone_headroom_hpf_values);
 
 static const char *const sidetone_headroom_eq_texts[] = {
@@ -5439,27 +4244,25 @@ static const char *const sidetone_headroom_eq_texts[] = {
 static const unsigned int sidetone_headroom_eq_values[] = {
 	3, 4, 5,
 };
-static const unsigned int sidetone_headroom_eq_mask =
-		ABOX_SDTN_HEADROOM_PEAK0_MASK >> ABOX_SDTN_HEADROOM_PEAK0_L;
 static SOC_VALUE_ENUM_SINGLE_DECL(sidetone_headroom_peak0,
 		ABOX_SIDETONE_FILTER_CTRL0, ABOX_SDTN_HEADROOM_PEAK0_L,
-		sidetone_headroom_eq_mask, sidetone_headroom_eq_texts,
+		ABOX_SDTN_HEADROOM_PEAK0_MASK, sidetone_headroom_eq_texts,
 		sidetone_headroom_eq_values);
 static SOC_VALUE_ENUM_SINGLE_DECL(sidetone_headroom_peak1,
 		ABOX_SIDETONE_FILTER_CTRL0, ABOX_SDTN_HEADROOM_PEAK1_L,
-		sidetone_headroom_eq_mask, sidetone_headroom_eq_texts,
+		ABOX_SDTN_HEADROOM_PEAK0_MASK, sidetone_headroom_eq_texts,
 		sidetone_headroom_eq_values);
 static SOC_VALUE_ENUM_SINGLE_DECL(sidetone_headroom_peak2,
 		ABOX_SIDETONE_FILTER_CTRL0, ABOX_SDTN_HEADROOM_PEAK2_L,
-		sidetone_headroom_eq_mask, sidetone_headroom_eq_texts,
+		ABOX_SDTN_HEADROOM_PEAK0_MASK, sidetone_headroom_eq_texts,
 		sidetone_headroom_eq_values);
 static SOC_VALUE_ENUM_SINGLE_DECL(sidetone_headroom_lowsh,
 		ABOX_SIDETONE_FILTER_CTRL0, ABOX_SDTN_HEADROOM_LOWSH_L,
-		sidetone_headroom_eq_mask, sidetone_headroom_eq_texts,
+		ABOX_SDTN_HEADROOM_PEAK0_MASK, sidetone_headroom_eq_texts,
 		sidetone_headroom_eq_values);
 static SOC_VALUE_ENUM_SINGLE_DECL(sidetone_headroom_highsh,
 		ABOX_SIDETONE_FILTER_CTRL0, ABOX_SDTN_HEADROOM_HIGHSH_L,
-		sidetone_headroom_eq_mask, sidetone_headroom_eq_texts,
+		ABOX_SDTN_HEADROOM_PEAK0_MASK, sidetone_headroom_eq_texts,
 		sidetone_headroom_eq_values);
 
 static struct snd_kcontrol_new sidetone_controls[] = {
@@ -5575,35 +4378,30 @@ static const char *const sifsx_texts[] = {
 	"SPUS OUT8", "SPUS OUT9", "SPUS OUT10", "SPUS OUT11",
 	"RESERVED",
 };
-static SOC_ENUM_SINGLE_DECL(sifs1_enum, ABOX_SPUS_CTRL_SIFS_OUT_SEL(1),
-		ABOX_SIFS_OUT_SEL_L(1), sifsx_texts);
+static SOC_ENUM_SINGLE_DECL(sifs1_enum, ABOX_SPUS_CTRL1, ABOX_SIFS_OUT_SEL_L(1),
+		sifsx_texts);
 static const struct snd_kcontrol_new sifs1_controls[] = {
 	SOC_DAPM_ENUM("MUX", sifs1_enum),
 };
-static SOC_ENUM_SINGLE_DECL(sifs2_enum, ABOX_SPUS_CTRL_SIFS_OUT_SEL(2),
-		ABOX_SIFS_OUT_SEL_L(2), sifsx_texts);
+static SOC_ENUM_SINGLE_DECL(sifs2_enum, ABOX_SPUS_CTRL1, ABOX_SIFS_OUT_SEL_L(2),
+		sifsx_texts);
 static const struct snd_kcontrol_new sifs2_controls[] = {
 	SOC_DAPM_ENUM("MUX", sifs2_enum),
 };
-static SOC_ENUM_SINGLE_DECL(sifs3_enum, ABOX_SPUS_CTRL_SIFS_OUT_SEL(3),
-		ABOX_SIFS_OUT_SEL_L(3), sifsx_texts);
+static SOC_ENUM_SINGLE_DECL(sifs3_enum, ABOX_SPUS_CTRL1, ABOX_SIFS_OUT_SEL_L(3),
+		sifsx_texts);
 static const struct snd_kcontrol_new sifs3_controls[] = {
 	SOC_DAPM_ENUM("MUX", sifs3_enum),
 };
-static SOC_ENUM_SINGLE_DECL(sifs4_enum, ABOX_SPUS_CTRL_SIFS_OUT_SEL(4),
-		ABOX_SIFS_OUT_SEL_L(4), sifsx_texts);
+static SOC_ENUM_SINGLE_DECL(sifs4_enum, ABOX_SPUS_CTRL1, ABOX_SIFS_OUT_SEL_L(4),
+		sifsx_texts);
 static const struct snd_kcontrol_new sifs4_controls[] = {
 	SOC_DAPM_ENUM("MUX", sifs4_enum),
 };
-static SOC_ENUM_SINGLE_DECL(sifs5_enum, ABOX_SPUS_CTRL_SIFS_OUT_SEL(5),
-		ABOX_SIFS_OUT_SEL_L(5), sifsx_texts);
+static SOC_ENUM_SINGLE_DECL(sifs5_enum, ABOX_SPUS_CTRL1, ABOX_SIFS_OUT_SEL_L(5),
+		sifsx_texts);
 static const struct snd_kcontrol_new sifs5_controls[] = {
 	SOC_DAPM_ENUM("MUX", sifs5_enum),
-};
-static SOC_ENUM_SINGLE_DECL(sifs6_enum, ABOX_SPUS_CTRL_SIFS_OUT_SEL(6),
-		ABOX_SIFS_OUT_SEL_L(6), sifsx_texts);
-static const struct snd_kcontrol_new sifs6_controls[] = {
-	SOC_DAPM_ENUM("MUX", sifs6_enum),
 };
 
 static const struct snd_kcontrol_new sifs0_out_controls[] = {
@@ -5624,9 +4422,6 @@ static const struct snd_kcontrol_new sifs4_out_controls[] = {
 static const struct snd_kcontrol_new sifs5_out_controls[] = {
 	SOC_DAPM_SINGLE("Switch", SND_SOC_NOPM, 0, 1, 1),
 };
-static const struct snd_kcontrol_new sifs6_out_controls[] = {
-	SOC_DAPM_SINGLE("Switch", SND_SOC_NOPM, 0, 1, 1),
-};
 
 static const char *const sifsm_texts[] = {
 	"SPUS IN0", "SPUS IN1", "SPUS IN2", "SPUS IN3",
@@ -5634,56 +4429,55 @@ static const char *const sifsm_texts[] = {
 	"SPUS IN8", "SPUS IN9", "SPUS IN10", "SPUS IN11",
 	"RESERVED",
 };
-static SOC_ENUM_SINGLE_DECL(sifsm_enum, ABOX_SPUS_CTRL_SIFM_SEL,
-		ABOX_SIFSM_IN_SEL_L, sifsm_texts);
+static SOC_ENUM_SINGLE_DECL(sifsm_enum, ABOX_SPUS_CTRL1, ABOX_SIFSM_IN_SEL_L,
+		sifsm_texts);
 static const struct snd_kcontrol_new sifsm_controls[] = {
 	SOC_DAPM_ENUM("DEMUX", sifsm_enum),
 };
 
-static SOC_ENUM_SINGLE_DECL(sifst_enum, ABOX_SPUS_CTRL_SIFM_SEL,
-		ABOX_SIFST_IN_SEL_L, sifsm_texts);
+static SOC_ENUM_SINGLE_DECL(sifst_enum, ABOX_SPUS_CTRL2, ABOX_SIFST_IN_SEL_L,
+		sifsm_texts);
 static const struct snd_kcontrol_new sifst_controls[] = {
 	SOC_DAPM_ENUM("DEMUX", sifst_enum),
 };
 
 static const char *const uaif_spkx_texts[] = {
 	"RESERVED", "SIFS0", "SIFS1", "SIFS2",
-	"SIFS3", "SIFS4", "SIFS5", "SIFS6",
+	"SIFS3", "SIFS4", "SIFS5", "RESERVED",
 	"RESERVED", "RESERVED", "RESERVED", "RESERVED",
 	"SIFMS",
 };
-
-static SOC_ENUM_SINGLE_DECL(uaif0_spk_enum, ABOX_ROUTE_CTRL_UAIF_SPK(0),
+static SOC_ENUM_SINGLE_DECL(uaif0_spk_enum, ABOX_ROUTE_CTRL0,
 		ABOX_ROUTE_UAIF_SPK_L(0), uaif_spkx_texts);
 static const struct snd_kcontrol_new uaif0_spk_controls[] = {
 	SOC_DAPM_ENUM("MUX", uaif0_spk_enum),
 };
-static SOC_ENUM_SINGLE_DECL(uaif1_spk_enum, ABOX_ROUTE_CTRL_UAIF_SPK(1),
+static SOC_ENUM_SINGLE_DECL(uaif1_spk_enum, ABOX_ROUTE_CTRL0,
 		ABOX_ROUTE_UAIF_SPK_L(1), uaif_spkx_texts);
 static const struct snd_kcontrol_new uaif1_spk_controls[] = {
 	SOC_DAPM_ENUM("MUX", uaif1_spk_enum),
 };
-static SOC_ENUM_SINGLE_DECL(uaif2_spk_enum, ABOX_ROUTE_CTRL_UAIF_SPK(2),
+static SOC_ENUM_SINGLE_DECL(uaif2_spk_enum, ABOX_ROUTE_CTRL0,
 		ABOX_ROUTE_UAIF_SPK_L(2), uaif_spkx_texts);
 static const struct snd_kcontrol_new uaif2_spk_controls[] = {
 	SOC_DAPM_ENUM("MUX", uaif2_spk_enum),
 };
-static SOC_ENUM_SINGLE_DECL(uaif3_spk_enum, ABOX_ROUTE_CTRL_UAIF_SPK(3),
+static SOC_ENUM_SINGLE_DECL(uaif3_spk_enum, ABOX_ROUTE_CTRL0,
 		ABOX_ROUTE_UAIF_SPK_L(3), uaif_spkx_texts);
 static const struct snd_kcontrol_new uaif3_spk_controls[] = {
 	SOC_DAPM_ENUM("MUX", uaif3_spk_enum),
 };
-static SOC_ENUM_SINGLE_DECL(uaif4_spk_enum, ABOX_ROUTE_CTRL_UAIF_SPK(4),
+static SOC_ENUM_SINGLE_DECL(uaif4_spk_enum, ABOX_ROUTE_CTRL0,
 		ABOX_ROUTE_UAIF_SPK_L(4), uaif_spkx_texts);
 static const struct snd_kcontrol_new uaif4_spk_controls[] = {
 	SOC_DAPM_ENUM("MUX", uaif4_spk_enum),
 };
-static SOC_ENUM_SINGLE_DECL(uaif5_spk_enum, ABOX_ROUTE_CTRL_UAIF_SPK(5),
+static SOC_ENUM_SINGLE_DECL(uaif5_spk_enum, ABOX_ROUTE_CTRL0,
 		ABOX_ROUTE_UAIF_SPK_L(5), uaif_spkx_texts);
 static const struct snd_kcontrol_new uaif5_spk_controls[] = {
 	SOC_DAPM_ENUM("MUX", uaif5_spk_enum),
 };
-static SOC_ENUM_SINGLE_DECL(uaif6_spk_enum, ABOX_ROUTE_CTRL_UAIF_SPK(6),
+static SOC_ENUM_SINGLE_DECL(uaif6_spk_enum, ABOX_ROUTE_CTRL0,
 		ABOX_ROUTE_UAIF_SPK_L(6), uaif_spkx_texts);
 static const struct snd_kcontrol_new uaif6_spk_controls[] = {
 	SOC_DAPM_ENUM("MUX", uaif6_spk_enum),
@@ -5691,10 +4485,10 @@ static const struct snd_kcontrol_new uaif6_spk_controls[] = {
 
 static const char *const dsif_spk_texts[] = {
 	"RESERVED", "RESERVED", "SIFS1", "SIFS2",
-	"SIFS3", "SIFS4", "SIFS5", "SIFS6",
+	"SIFS3", "SIFS4", "SIFS5",
 };
-static SOC_ENUM_SINGLE_DECL(dsif_spk_enum, ABOX_ROUTE_CTRL_DSIF,
-		ABOX_ROUTE_DSIF_L, dsif_spk_texts);
+static SOC_ENUM_SINGLE_DECL(dsif_spk_enum, ABOX_ROUTE_CTRL0, ABOX_ROUTE_DSIF_L,
+		dsif_spk_texts);
 static const struct snd_kcontrol_new dsif_spk_controls[] = {
 	SOC_DAPM_ENUM("MUX", dsif_spk_enum),
 };
@@ -5727,451 +4521,86 @@ static const struct snd_kcontrol_new spdy_controls[] = {
 	SOC_DAPM_SINGLE("SPDY Switch", SND_SOC_NOPM, 0, 1, 1),
 };
 
-static const char *const nsrcx_texts[] = {
+static const char * const nsrcx_texts[] = {
 	"RESERVED", "SIFS0", "SIFS1", "SIFS2",
-	"SIFS3", "SIFS4", "SIFS5", "SIFS6",
+	"SIFS3", "SIFS4", "SIFS5", "RESERVED",
 	"UAIF0", "UAIF1", "UAIF2", "UAIF3",
-	"UAIF4", "UAIF5", "UAIF6", "UDMA_SIFS0",
-	"UDMA_SIFS1",
-	"SPDY",
+	"UAIF4", "UAIF5", "UAIF6", "RESERVED",
+	"BI_PDI0", "BI_PDI1", "BI_PDI2", "BI_PDI3",
+	"BI_PDI4", "BI_PDI5", "BI_PDI6", "BI_PDI7",
+	"RX_PDI0", "RX_PDI1", "RESERVED", "RESERVED",
+	"RESERVED", "RESERVED", "RESERVED", "SPDY",
 };
-static const unsigned int nsrcx_values[] = {
-	0x0, 0x1, 0x2, 0x3,
-	0x4, 0x5, 0x6, 0x7,
-	0x8, 0x9, 0xa, 0xb,
-	0xc, 0xd, 0xe, 0xf,
-	0x10,
-	0x11,
-};
-static const unsigned int nsrcx_mask = ABOX_ROUTE_NSRC_MASK(0) >>
-		ABOX_ROUTE_NSRC_L(0);
-
-static const enum abox_dai nsrcx_dai[] = {
-	ABOX_NONE, ABOX_SIFS0, ABOX_SIFS1, ABOX_SIFS2,
-	ABOX_SIFS3, ABOX_SIFS4, ABOX_SIFS5, ABOX_SIFS6,
-	ABOX_UAIF0, ABOX_UAIF1, ABOX_UAIF2, ABOX_UAIF3,
-	ABOX_UAIF4, ABOX_UAIF5, ABOX_UAIF6, ABOX_UDMA_RD0,
-	ABOX_UDMA_RD1,
-	ABOX_SPDY,
-};
-
-static int nsrcx_dai_to_val(enum abox_dai dai)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(nsrcx_values); i++)
-		if (dai == nsrcx_dai[i])
-			return nsrcx_values[i];
-
-	return -EINVAL;
-}
-
-static int nsrcx_put_ipc(struct device *dev, enum abox_dai nsrc, enum abox_dai dai)
-{
-	ABOX_IPC_MSG msg;
-	struct IPC_ABOX_CONFIG_MSG *abox_config_msg = &msg.msg.config;
-
-	abox_dbg(dev, "%s(%#x, %#x)\n", __func__, nsrc, dai);
-
-	if (nsrc < ABOX_NSRC0 || nsrc > ABOX_NSRC11)
-		return -EINVAL;
-
-	msg.ipcid = IPC_ABOX_CONFIG;
-	abox_config_msg->msgtype = SET_ROUTE_NSRC0 + (nsrc - ABOX_NSRC0);
-	abox_config_msg->param1 = nsrcx_dai_to_val(dai);
-	return abox_request_ipc(dev, msg.ipcid, &msg, sizeof(msg), 0, 0);
-}
-
-static int nsrcx_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol, enum abox_dai nsrc)
-{
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
-	unsigned int *item = ucontrol->value.enumerated.item;
-	struct snd_soc_component *cmpnt;
-	enum abox_dai dai;
-	int ret;
-
-	if (item[0] >= e->items)
-		return -EINVAL;
-
-	cmpnt = snd_soc_dapm_kcontrol_dapm(kcontrol)->component;
-	dai = nsrcx_dai[item[0]];
-	ret = set_nsrc_source(cmpnt, nsrc, dai);
-	if (ret < 0)
-		return ret;
-
-	nsrcx_put_ipc(cmpnt->dev, nsrc, dai);
-
-	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
-}
-
-static int nsrc0_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC0);
-}
-static int nsrc1_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC1);
-}
-static int nsrc2_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC2);
-}
-static int nsrc3_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC3);
-}
-static int nsrc4_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC4);
-}
-static int nsrc5_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC5);
-}
-static int nsrc6_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC6);
-}
-static int nsrc7_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC7);
-}
-static int nsrc8_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC8);
-}
-static int nsrc9_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC9);
-}
-static int nsrc10_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC10);
-}
-static int nsrc11_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return nsrcx_put(kcontrol, ucontrol, ABOX_NSRC11);
-}
-
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc0_enum,
-		ABOX_ROUTE_CTRL_NSRC(0), ABOX_ROUTE_NSRC_L(0),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
+static SOC_ENUM_SINGLE_DECL(nsrc0_enum, ABOX_ROUTE_CTRL1, ABOX_ROUTE_NSRC_L(0),
+		nsrcx_texts);
 static const struct snd_kcontrol_new nsrc0_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc0_enum, snd_soc_dapm_get_enum_double,
-			nsrc0_put),
+	SOC_DAPM_ENUM("DEMUX", nsrc0_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc1_enum,
-		ABOX_ROUTE_CTRL_NSRC(1), ABOX_ROUTE_NSRC_L(1),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
+static SOC_ENUM_SINGLE_DECL(nsrc1_enum, ABOX_ROUTE_CTRL1, ABOX_ROUTE_NSRC_L(1),
+		nsrcx_texts);
 static const struct snd_kcontrol_new nsrc1_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc1_enum, snd_soc_dapm_get_enum_double,
-			nsrc1_put),
+	SOC_DAPM_ENUM("DEMUX", nsrc1_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc2_enum,
-		ABOX_ROUTE_CTRL_NSRC(2), ABOX_ROUTE_NSRC_L(2),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
+static SOC_ENUM_SINGLE_DECL(nsrc2_enum, ABOX_ROUTE_CTRL1, ABOX_ROUTE_NSRC_L(2),
+		nsrcx_texts);
 static const struct snd_kcontrol_new nsrc2_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc2_enum, snd_soc_dapm_get_enum_double,
-			nsrc2_put),
+	SOC_DAPM_ENUM("DEMUX", nsrc2_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc3_enum,
-		ABOX_ROUTE_CTRL_NSRC(3), ABOX_ROUTE_NSRC_L(3),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
+static SOC_ENUM_SINGLE_DECL(nsrc3_enum, ABOX_ROUTE_CTRL1, ABOX_ROUTE_NSRC_L(3),
+		nsrcx_texts);
 static const struct snd_kcontrol_new nsrc3_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc3_enum, snd_soc_dapm_get_enum_double,
-			nsrc3_put),
+	SOC_DAPM_ENUM("DEMUX", nsrc3_enum),
 };
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc4_enum,
-		ABOX_ROUTE_CTRL_NSRC(4), ABOX_ROUTE_NSRC_L(4),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
+static SOC_ENUM_SINGLE_DECL(nsrc4_enum, ABOX_ROUTE_CTRL1, ABOX_ROUTE_NSRC_L(4),
+		nsrcx_texts);
 static const struct snd_kcontrol_new nsrc4_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc4_enum, snd_soc_dapm_get_enum_double,
-			nsrc4_put),
-};
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc5_enum,
-		ABOX_ROUTE_CTRL_NSRC(5), ABOX_ROUTE_NSRC_L(5),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
-static const struct snd_kcontrol_new nsrc5_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc5_enum, snd_soc_dapm_get_enum_double,
-			nsrc5_put),
-};
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc6_enum,
-		ABOX_ROUTE_CTRL_NSRC(6), ABOX_ROUTE_NSRC_L(6),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
-static const struct snd_kcontrol_new nsrc6_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc6_enum, snd_soc_dapm_get_enum_double,
-			nsrc6_put),
-};
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc7_enum,
-		ABOX_ROUTE_CTRL_NSRC(7), ABOX_ROUTE_NSRC_L(7),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
-static const struct snd_kcontrol_new nsrc7_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc7_enum, snd_soc_dapm_get_enum_double,
-			nsrc7_put),
-};
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc8_enum,
-		ABOX_ROUTE_CTRL_NSRC(8), ABOX_ROUTE_NSRC_L(8),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
-static const struct snd_kcontrol_new nsrc8_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc8_enum, snd_soc_dapm_get_enum_double,
-			nsrc8_put),
-};
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc9_enum,
-		ABOX_ROUTE_CTRL_NSRC(9), ABOX_ROUTE_NSRC_L(9),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
-static const struct snd_kcontrol_new nsrc9_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc9_enum, snd_soc_dapm_get_enum_double,
-			nsrc9_put),
-};
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc10_enum,
-		ABOX_ROUTE_CTRL_NSRC(10), ABOX_ROUTE_NSRC_L(10),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
-static const struct snd_kcontrol_new nsrc10_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc10_enum, snd_soc_dapm_get_enum_double,
-			nsrc10_put),
-};
-static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(nsrc11_enum,
-		ABOX_ROUTE_CTRL_NSRC(11), ABOX_ROUTE_NSRC_L(11),
-		nsrcx_mask, nsrcx_texts, nsrcx_values);
-static const struct snd_kcontrol_new nsrc11_controls[] = {
-	SOC_DAPM_ENUM_EXT("MUX", nsrc11_enum, snd_soc_dapm_get_enum_double,
-			nsrc11_put),
-};
-
-static int sifm_in_put(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
-	struct device *dev = dapm->dev;
-	unsigned int val = ucontrol->value.integer.value[0];
-	struct snd_ctl_elem_value ucontrol_reset;
-
-	abox_dbg(dev, "%s(%u)\n", __func__, val);
-
-	if (val == 1) {
-		abox_info(dev, "%s reset\n", kcontrol->id.name);
-		ucontrol_reset = *ucontrol;
-		ucontrol_reset.value.integer.value[0] = 0;
-		snd_soc_dapm_put_volsw(kcontrol, &ucontrol_reset);
-	}
-
-	return snd_soc_dapm_put_volsw(kcontrol, ucontrol);
-}
-
-static const struct snd_kcontrol_new sifm0_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
-};
-
-static const struct snd_kcontrol_new sifm1_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
-};
-
-static const struct snd_kcontrol_new sifm2_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
-};
-
-static const struct snd_kcontrol_new sifm3_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
-};
-
-static const struct snd_kcontrol_new sifm4_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
-};
-
-static const struct snd_kcontrol_new sifm5_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
-};
-
-static const struct snd_kcontrol_new sifm6_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
-};
-
-static const struct snd_kcontrol_new sifm7_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
-};
-
-static const struct snd_kcontrol_new sifm8_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
-};
-
-static const struct snd_kcontrol_new sifm9_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
-};
-
-static const struct snd_kcontrol_new sifm10_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
-};
-
-static const struct snd_kcontrol_new sifm11_in_controls[] = {
-	SOC_DAPM_SINGLE_EXT("Switch", SND_SOC_NOPM, 0, 1, 1,
-			snd_soc_dapm_get_volsw,
-			sifm_in_put),
+	SOC_DAPM_ENUM("DEMUX", nsrc4_enum),
 };
 
 static const char *const sifmx_texts[] = {
 	"WDMA", "SIFMS",
 };
-static SOC_ENUM_SINGLE_DECL(sifm0_enum, ABOX_SPUM_CTRL_FC_NSRC(0),
+static SOC_ENUM_SINGLE_DECL(sifm0_enum, ABOX_SPUM_CTRL0,
 		ABOX_FUNC_CHAIN_NSRC_OUT_L(0), sifmx_texts);
 static const struct snd_kcontrol_new sifm0_controls[] = {
 	SOC_DAPM_ENUM("DEMUX", sifm0_enum),
 };
-static SOC_ENUM_SINGLE_DECL(sifm1_enum, ABOX_SPUM_CTRL_FC_NSRC(1),
+static SOC_ENUM_SINGLE_DECL(sifm1_enum, ABOX_SPUM_CTRL0,
 		ABOX_FUNC_CHAIN_NSRC_OUT_L(1), sifmx_texts);
 static const struct snd_kcontrol_new sifm1_controls[] = {
 	SOC_DAPM_ENUM("DEMUX", sifm1_enum),
 };
-static SOC_ENUM_SINGLE_DECL(sifm2_enum, ABOX_SPUM_CTRL_FC_NSRC(2),
+static SOC_ENUM_SINGLE_DECL(sifm2_enum, ABOX_SPUM_CTRL0,
 		ABOX_FUNC_CHAIN_NSRC_OUT_L(2), sifmx_texts);
 static const struct snd_kcontrol_new sifm2_controls[] = {
 	SOC_DAPM_ENUM("DEMUX", sifm2_enum),
 };
-static SOC_ENUM_SINGLE_DECL(sifm3_enum, ABOX_SPUM_CTRL_FC_NSRC(3),
+static SOC_ENUM_SINGLE_DECL(sifm3_enum, ABOX_SPUM_CTRL0,
 		ABOX_FUNC_CHAIN_NSRC_OUT_L(3), sifmx_texts);
 static const struct snd_kcontrol_new sifm3_controls[] = {
 	SOC_DAPM_ENUM("DEMUX", sifm3_enum),
 };
-static SOC_ENUM_SINGLE_DECL(sifm4_enum, ABOX_SPUM_CTRL_FC_NSRC(4),
+static SOC_ENUM_SINGLE_DECL(sifm4_enum, ABOX_SPUM_CTRL0,
 		ABOX_FUNC_CHAIN_NSRC_OUT_L(4), sifmx_texts);
 static const struct snd_kcontrol_new sifm4_controls[] = {
 	SOC_DAPM_ENUM("DEMUX", sifm4_enum),
 };
-static SOC_ENUM_SINGLE_DECL(sifm5_enum, ABOX_SPUM_CTRL_FC_NSRC(5),
+static SOC_ENUM_SINGLE_DECL(sifm5_enum, ABOX_SPUM_CTRL0,
 		ABOX_FUNC_CHAIN_NSRC_OUT_L(5), sifmx_texts);
 static const struct snd_kcontrol_new sifm5_controls[] = {
 	SOC_DAPM_ENUM("DEMUX", sifm5_enum),
 };
-static SOC_ENUM_SINGLE_DECL(sifm6_enum, ABOX_SPUM_CTRL_FC_NSRC(6),
+static SOC_ENUM_SINGLE_DECL(sifm6_enum, ABOX_SPUM_CTRL0,
 		ABOX_FUNC_CHAIN_NSRC_OUT_L(6), sifmx_texts);
 static const struct snd_kcontrol_new sifm6_controls[] = {
 	SOC_DAPM_ENUM("DEMUX", sifm6_enum),
 };
-static SOC_ENUM_SINGLE_DECL(sifm7_enum, ABOX_SPUM_CTRL_FC_NSRC(7),
-		ABOX_FUNC_CHAIN_NSRC_OUT_L(7), sifmx_texts);
-static const struct snd_kcontrol_new sifm7_controls[] = {
-	SOC_DAPM_ENUM("DEMUX", sifm7_enum),
-};
-static SOC_ENUM_SINGLE_DECL(sifm8_enum, ABOX_SPUM_CTRL_FC_NSRC(8),
-		ABOX_FUNC_CHAIN_NSRC_OUT_L(8), sifmx_texts);
-static const struct snd_kcontrol_new sifm8_controls[] = {
-	SOC_DAPM_ENUM("DEMUX", sifm8_enum),
-};
-static SOC_ENUM_SINGLE_DECL(sifm9_enum, ABOX_SPUM_CTRL_FC_NSRC(9),
-		ABOX_FUNC_CHAIN_NSRC_OUT_L(9), sifmx_texts);
-static const struct snd_kcontrol_new sifm9_controls[] = {
-	SOC_DAPM_ENUM("DEMUX", sifm9_enum),
-};
-static SOC_ENUM_SINGLE_DECL(sifm10_enum, ABOX_SPUM_CTRL_FC_NSRC(10),
-		ABOX_FUNC_CHAIN_NSRC_OUT_L(10), sifmx_texts);
-static const struct snd_kcontrol_new sifm10_controls[] = {
-	SOC_DAPM_ENUM("DEMUX", sifm10_enum),
-};
-static SOC_ENUM_SINGLE_DECL(sifm11_enum, ABOX_SPUM_CTRL_FC_NSRC(11),
-		ABOX_FUNC_CHAIN_NSRC_OUT_L(11), sifmx_texts);
-static const struct snd_kcontrol_new sifm11_controls[] = {
-	SOC_DAPM_ENUM("DEMUX", sifm11_enum),
-};
-
-static int udma_sifs_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e, int id)
-{
-	struct snd_soc_dapm_context *dapm = w->dapm;
-	struct device *dev = dapm->dev;
-	struct abox_data *data = dev_get_drvdata(dev);
-
-	return notify_event(data, ABOX_WIDGET_UDMA_RD0 + id, e);
-}
-
-static int udma_sifs0_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	return udma_sifs_event(w, k, e, 0);
-}
-
-static int udma_sifs1_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	return udma_sifs_event(w, k, e, 1);
-}
-
-static int udma_sifm_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e, int id)
-{
-	struct snd_soc_dapm_context *dapm = w->dapm;
-	struct device *dev = dapm->dev;
-	struct abox_data *data = dev_get_drvdata(dev);
-
-	return notify_event(data, ABOX_WIDGET_UDMA_WR0 + id, e);
-}
-
-static int udma_sifm0_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	return udma_sifm_event(w, k, e, 0);
-}
-
-static int udma_sifm1_event(struct snd_soc_dapm_widget *w,
-		struct snd_kcontrol *k, int e)
-{
-	return udma_sifm_event(w, k, e, 1);
-}
-
-static const char *const udma_sifm_texts[] = {
-	"RESERVED", "SIFS0", "SIFS1", "SIFS2",
-	"SIFS3", "SIFS4", "SIFS5", "SIFS6",
-};
-static SOC_ENUM_SINGLE_DECL(udma_sifm0_enum, ABOX_ROUTE_UDMA_SIFM,
-		ABOX_ROUTE_UDMA_SIFM_L(0), udma_sifm_texts);
-static const struct snd_kcontrol_new udma_sifm0_controls[] = {
-	SOC_DAPM_ENUM("MUX", udma_sifm0_enum),
-};
-static SOC_ENUM_SINGLE_DECL(udma_sifm1_enum, ABOX_ROUTE_UDMA_SIFM,
-		ABOX_ROUTE_UDMA_SIFM_L(1), udma_sifm_texts);
-static const struct snd_kcontrol_new udma_sifm1_controls[] = {
-	SOC_DAPM_ENUM("MUX", udma_sifm1_enum),
-};
 
 static const char * const sifms_texts[] = {
-	"SIFM0", "SIFM1", "SIFM2", "SIFM3", "SIFM4", "SIFM5",
-	"SIFM6", "SIFM7", "SIFM8", "SIFM9", "SIFM10", "SIFM11",
+	"SIFM0", "SIFM1", "SIFM2", "SIFM3", "SIFM4",
 };
-static SOC_ENUM_SINGLE_DECL(sifms_enum, ABOX_SPUM_CTRL_SIFS_SEL,
-		ABOX_SIFMS_OUT_SEL_L, sifms_texts);
+static SOC_ENUM_SINGLE_DECL(sifms_enum, ABOX_SPUM_CTRL1, ABOX_SIFMS_OUT_SEL_L,
+		sifms_texts);
 static const struct snd_kcontrol_new sifms_controls[] = {
 	SOC_DAPM_ENUM("MUX", sifms_enum),
 };
@@ -6244,18 +4673,6 @@ static const struct snd_soc_dapm_widget cmpnt_widgets[] = {
 	SND_SOC_DAPM_MUX_E("SPUS IN11", SND_SOC_NOPM, 0, 0, spus_in11_controls,
 			spus_in11_event,
 			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_PGA("SPUS PGA0", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS PGA1", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS PGA2", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS PGA3", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS PGA4", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS PGA5", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS PGA6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS PGA7", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS PGA8", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS PGA9", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS PGA10", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS PGA11", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA_E("SPUS ASRC0", SND_SOC_NOPM, 0, 0, NULL, 0,
 			spus_asrc_event,
 			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
@@ -6379,18 +4796,6 @@ static const struct snd_soc_dapm_widget cmpnt_widgets[] = {
 	SND_SOC_DAPM_PGA("SPUS OUT9-SIFS5", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("SPUS OUT10-SIFS5", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("SPUS OUT11-SIFS5", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT0-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT1-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT2-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT3-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT4-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT5-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT6-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT7-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT8-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT9-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT10-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUS OUT11-SIFS6", SND_SOC_NOPM, 0, 0, NULL, 0),
 
 	SND_SOC_DAPM_MIXER_E("SIFS0", SND_SOC_NOPM, 0, 0, NULL, 0,
 			sifs0_event,
@@ -6410,9 +4815,6 @@ static const struct snd_soc_dapm_widget cmpnt_widgets[] = {
 	SND_SOC_DAPM_MUX_E("SIFS5", SND_SOC_NOPM, 0, 0, sifs5_controls,
 			sifs5_event,
 			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MUX_E("SIFS6", SND_SOC_NOPM, 0, 0, sifs6_controls,
-			sifs6_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_MIXER("STMIX", SND_SOC_NOPM, 0, 0, NULL, 0),
 
@@ -6422,7 +4824,6 @@ static const struct snd_soc_dapm_widget cmpnt_widgets[] = {
 	SND_SOC_DAPM_PGA("SIFS3 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("SIFS4 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("SIFS5 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SIFS6 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
 
 	SND_SOC_DAPM_SWITCH("SIFS0 OUT", SND_SOC_NOPM, 0, 0,
 			sifs0_out_controls),
@@ -6436,8 +4837,6 @@ static const struct snd_soc_dapm_widget cmpnt_widgets[] = {
 			sifs4_out_controls),
 	SND_SOC_DAPM_SWITCH("SIFS5 OUT", SND_SOC_NOPM, 0, 0,
 			sifs5_out_controls),
-	SND_SOC_DAPM_SWITCH("SIFS6 OUT", SND_SOC_NOPM, 0, 0,
-			sifs6_out_controls),
 
 	SND_SOC_DAPM_MUX("UAIF0 SPK", SND_SOC_NOPM, 0, 0, uaif0_spk_controls),
 	SND_SOC_DAPM_MUX("UAIF1 SPK", SND_SOC_NOPM, 0, 0, uaif1_spk_controls),
@@ -6481,40 +4880,6 @@ static const struct snd_soc_dapm_widget cmpnt_widgets[] = {
 	SND_SOC_DAPM_MUX_E("NSRC4", SND_SOC_NOPM, 0, 0, nsrc4_controls,
 			nsrc4_event,
 			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MUX_E("NSRC5", SND_SOC_NOPM, 0, 0, nsrc5_controls,
-			nsrc5_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MUX_E("NSRC6", SND_SOC_NOPM, 0, 0, nsrc6_controls,
-			nsrc6_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MUX_E("NSRC7", SND_SOC_NOPM, 0, 0, nsrc7_controls,
-			nsrc7_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MUX_E("NSRC8", SND_SOC_NOPM, 0, 0, nsrc8_controls,
-			nsrc8_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MUX_E("NSRC9", SND_SOC_NOPM, 0, 0, nsrc9_controls,
-			nsrc9_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MUX_E("NSRC10", SND_SOC_NOPM, 0, 0, nsrc10_controls,
-			nsrc10_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MUX_E("NSRC11", SND_SOC_NOPM, 0, 0, nsrc11_controls,
-			nsrc11_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-
-	SND_SOC_DAPM_PGA("NSRC0 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("NSRC1 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("NSRC2 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("NSRC3 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("NSRC4 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("NSRC5 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("NSRC6 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("NSRC7 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("NSRC8 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("NSRC9 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("NSRC10 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("NSRC11 PGA", SND_SOC_NOPM, 0, 0, NULL, 0),
 
 	SND_SOC_DAPM_PGA_E("SPUM ASRC0", SND_SOC_NOPM, 0, 0, NULL, 0,
 			spum_asrc_event,
@@ -6531,91 +4896,19 @@ static const struct snd_soc_dapm_widget cmpnt_widgets[] = {
 	SND_SOC_DAPM_PGA_E("SPUM ASRC4", SND_SOC_NOPM, 4, 0, NULL, 0,
 			spum_asrc_event,
 			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_PGA_E("SPUM ASRC5", SND_SOC_NOPM, 5, 0, NULL, 0,
-			spum_asrc_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_PGA_E("SPUM ASRC6", SND_SOC_NOPM, 6, 0, NULL, 0,
-			spum_asrc_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_PGA_E("SPUM ASRC7", SND_SOC_NOPM, 7, 0, NULL, 0,
-			spum_asrc_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_PGA_E("SPUM ASRC8", SND_SOC_NOPM, 8, 0, NULL, 0,
-			spum_asrc_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_PGA_E("SPUM ASRC9", SND_SOC_NOPM, 9, 0, NULL, 0,
-			spum_asrc_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_PGA_E("SPUM ASRC10", SND_SOC_NOPM, 10, 0, NULL, 0,
-			spum_asrc_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_PGA_E("SPUM ASRC11", SND_SOC_NOPM, 11, 0, NULL, 0,
-			spum_asrc_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-
-	SND_SOC_DAPM_PGA("SPUM PGA0", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUM PGA1", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUM PGA2", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUM PGA3", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUM PGA4", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUM PGA5", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUM PGA6", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUM PGA7", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUM PGA8", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUM PGA9", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUM PGA10", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SPUM PGA11", SND_SOC_NOPM, 0, 0, NULL, 0),
-
-	SND_SOC_DAPM_SWITCH("SIFM0 IN", SND_SOC_NOPM, 0, 0, sifm0_in_controls),
-	SND_SOC_DAPM_SWITCH("SIFM1 IN", SND_SOC_NOPM, 0, 0, sifm1_in_controls),
-	SND_SOC_DAPM_SWITCH("SIFM2 IN", SND_SOC_NOPM, 0, 0, sifm2_in_controls),
-	SND_SOC_DAPM_SWITCH("SIFM3 IN", SND_SOC_NOPM, 0, 0, sifm3_in_controls),
-	SND_SOC_DAPM_SWITCH("SIFM4 IN", SND_SOC_NOPM, 0, 0, sifm4_in_controls),
-	SND_SOC_DAPM_SWITCH("SIFM5 IN", SND_SOC_NOPM, 0, 0, sifm5_in_controls),
-	SND_SOC_DAPM_SWITCH("SIFM6 IN", SND_SOC_NOPM, 0, 0, sifm6_in_controls),
-	SND_SOC_DAPM_SWITCH("SIFM7 IN", SND_SOC_NOPM, 0, 0, sifm7_in_controls),
-	SND_SOC_DAPM_SWITCH("SIFM8 IN", SND_SOC_NOPM, 0, 0, sifm8_in_controls),
-	SND_SOC_DAPM_SWITCH("SIFM9 IN", SND_SOC_NOPM, 0, 0, sifm9_in_controls),
-	SND_SOC_DAPM_SWITCH("SIFM10 IN", SND_SOC_NOPM, 0, 0, sifm10_in_controls),
-	SND_SOC_DAPM_SWITCH("SIFM11 IN", SND_SOC_NOPM, 0, 0, sifm11_in_controls),
 
 	SND_SOC_DAPM_DEMUX("SIFM0", SND_SOC_NOPM, 0, 0, sifm0_controls),
 	SND_SOC_DAPM_DEMUX("SIFM1", SND_SOC_NOPM, 0, 0, sifm1_controls),
 	SND_SOC_DAPM_DEMUX("SIFM2", SND_SOC_NOPM, 0, 0, sifm2_controls),
 	SND_SOC_DAPM_DEMUX("SIFM3", SND_SOC_NOPM, 0, 0, sifm3_controls),
 	SND_SOC_DAPM_DEMUX("SIFM4", SND_SOC_NOPM, 0, 0, sifm4_controls),
-	SND_SOC_DAPM_DEMUX("SIFM5", SND_SOC_NOPM, 0, 0, sifm5_controls),
-	SND_SOC_DAPM_DEMUX("SIFM6", SND_SOC_NOPM, 0, 0, sifm6_controls),
-	SND_SOC_DAPM_DEMUX("SIFM7", SND_SOC_NOPM, 0, 0, sifm7_controls),
-	SND_SOC_DAPM_DEMUX("SIFM8", SND_SOC_NOPM, 0, 0, sifm8_controls),
-	SND_SOC_DAPM_DEMUX("SIFM9", SND_SOC_NOPM, 0, 0, sifm9_controls),
-	SND_SOC_DAPM_DEMUX("SIFM10", SND_SOC_NOPM, 0, 0, sifm10_controls),
-	SND_SOC_DAPM_DEMUX("SIFM11", SND_SOC_NOPM, 0, 0, sifm11_controls),
 
 	SND_SOC_DAPM_PGA("SIFM0-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("SIFM1-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("SIFM2-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("SIFM3-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("SIFM4-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SIFM5-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SIFM6-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SIFM7-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SIFM8-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SIFM9-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SIFM10-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
-	SND_SOC_DAPM_PGA("SIFM11-SIFMS", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_MUX("SIFMS", SND_SOC_NOPM, 0, 0, sifms_controls),
-
-	SND_SOC_DAPM_MIXER_E("UDMA SIFS0", SND_SOC_NOPM, 0, 0, NULL, 0,
-			udma_sifs0_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MIXER_E("UDMA SIFS1", SND_SOC_NOPM, 0, 0, NULL, 0,
-			udma_sifs1_event,
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MUX_E("UDMA SIFM0", SND_SOC_NOPM, 0, 0, udma_sifm0_controls,
-			udma_sifm0_event, SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MUX_E("UDMA SIFM1", SND_SOC_NOPM, 0, 0, udma_sifm1_controls,
-			udma_sifm1_event, SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 };
 
 static const struct snd_soc_dapm_route cmpnt_routes[] = {
@@ -6673,31 +4966,18 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"SPUS IN10", "SIFST", "SIFST-SPUS IN10"},
 	{"SPUS IN11", "SIFST", "SIFST-SPUS IN11"},
 
-	{"SPUS PGA0", NULL, "SPUS IN0"},
-	{"SPUS PGA1", NULL, "SPUS IN1"},
-	{"SPUS PGA2", NULL, "SPUS IN2"},
-	{"SPUS PGA3", NULL, "SPUS IN3"},
-	{"SPUS PGA4", NULL, "SPUS IN4"},
-	{"SPUS PGA5", NULL, "SPUS IN5"},
-	{"SPUS PGA6", NULL, "SPUS IN6"},
-	{"SPUS PGA7", NULL, "SPUS IN7"},
-	{"SPUS PGA8", NULL, "SPUS IN8"},
-	{"SPUS PGA9", NULL, "SPUS IN9"},
-	{"SPUS PGA10", NULL, "SPUS IN10"},
-	{"SPUS PGA11", NULL, "SPUS IN11"},
-
-	{"SPUS ASRC0", NULL, "SPUS PGA0"},
-	{"SPUS ASRC1", NULL, "SPUS PGA1"},
-	{"SPUS ASRC2", NULL, "SPUS PGA2"},
-	{"SPUS ASRC3", NULL, "SPUS PGA3"},
-	{"SPUS ASRC4", NULL, "SPUS PGA4"},
-	{"SPUS ASRC5", NULL, "SPUS PGA5"},
-	{"SPUS ASRC6", NULL, "SPUS PGA6"},
-	{"SPUS ASRC7", NULL, "SPUS PGA7"},
-	{"SPUS ASRC8", NULL, "SPUS PGA8"},
-	{"SPUS ASRC9", NULL, "SPUS PGA9"},
-	{"SPUS ASRC10", NULL, "SPUS PGA10"},
-	{"SPUS ASRC11", NULL, "SPUS PGA11"},
+	{"SPUS ASRC0", NULL, "SPUS IN0"},
+	{"SPUS ASRC1", NULL, "SPUS IN1"},
+	{"SPUS ASRC2", NULL, "SPUS IN2"},
+	{"SPUS ASRC3", NULL, "SPUS IN3"},
+	{"SPUS ASRC4", NULL, "SPUS IN4"},
+	{"SPUS ASRC5", NULL, "SPUS IN5"},
+	{"SPUS ASRC6", NULL, "SPUS IN6"},
+	{"SPUS ASRC7", NULL, "SPUS IN7"},
+	{"SPUS ASRC8", NULL, "SPUS IN8"},
+	{"SPUS ASRC9", NULL, "SPUS IN9"},
+	{"SPUS ASRC10", NULL, "SPUS IN10"},
+	{"SPUS ASRC11", NULL, "SPUS IN11"},
 
 	{"SPUS OUT0", NULL, "SPUS ASRC0"},
 	{"SPUS OUT1", NULL, "SPUS ASRC1"},
@@ -6784,18 +5064,19 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"SPUS OUT9-SIFS5", "SIFS5", "SPUS OUT9"},
 	{"SPUS OUT10-SIFS5", "SIFS5", "SPUS OUT10"},
 	{"SPUS OUT11-SIFS5", "SIFS5", "SPUS OUT11"},
-	{"SPUS OUT0-SIFS6", "SIFS6", "SPUS OUT0"},
-	{"SPUS OUT1-SIFS6", "SIFS6", "SPUS OUT1"},
-	{"SPUS OUT2-SIFS6", "SIFS6", "SPUS OUT2"},
-	{"SPUS OUT3-SIFS6", "SIFS6", "SPUS OUT3"},
-	{"SPUS OUT4-SIFS6", "SIFS6", "SPUS OUT4"},
-	{"SPUS OUT5-SIFS6", "SIFS6", "SPUS OUT5"},
-	{"SPUS OUT6-SIFS6", "SIFS6", "SPUS OUT6"},
-	{"SPUS OUT7-SIFS6", "SIFS6", "SPUS OUT7"},
-	{"SPUS OUT8-SIFS6", "SIFS6", "SPUS OUT8"},
-	{"SPUS OUT9-SIFS6", "SIFS6", "SPUS OUT9"},
-	{"SPUS OUT10-SIFS6", "SIFS6", "SPUS OUT10"},
-	{"SPUS OUT11-SIFS6", "SIFS6", "SPUS OUT11"},
+
+	{"SPUS OUT0-SIFS0", "SIDETONE-SIFS0", "SPUS OUT0"},
+	{"SPUS OUT1-SIFS0", "SIDETONE-SIFS0", "SPUS OUT1"},
+	{"SPUS OUT2-SIFS0", "SIDETONE-SIFS0", "SPUS OUT2"},
+	{"SPUS OUT3-SIFS0", "SIDETONE-SIFS0", "SPUS OUT3"},
+	{"SPUS OUT4-SIFS0", "SIDETONE-SIFS0", "SPUS OUT4"},
+	{"SPUS OUT5-SIFS0", "SIDETONE-SIFS0", "SPUS OUT5"},
+	{"SPUS OUT6-SIFS0", "SIDETONE-SIFS0", "SPUS OUT6"},
+	{"SPUS OUT7-SIFS0", "SIDETONE-SIFS0", "SPUS OUT7"},
+	{"SPUS OUT8-SIFS0", "SIDETONE-SIFS0", "SPUS OUT8"},
+	{"SPUS OUT9-SIFS0", "SIDETONE-SIFS0", "SPUS OUT9"},
+	{"SPUS OUT10-SIFS0", "SIDETONE-SIFS0", "SPUS OUT10"},
+	{"SPUS OUT11-SIFS0", "SIDETONE-SIFS0", "SPUS OUT11"},
 
 	{"SIFS0", NULL, "SPUS OUT0-SIFS0"},
 	{"SIFS0", NULL, "SPUS OUT1-SIFS0"},
@@ -6869,36 +5150,13 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"SIFS5", "SPUS OUT9", "SPUS OUT9-SIFS5"},
 	{"SIFS5", "SPUS OUT10", "SPUS OUT10-SIFS5"},
 	{"SIFS5", "SPUS OUT11", "SPUS OUT11-SIFS5"},
-	{"SIFS6", "SPUS OUT0", "SPUS OUT0-SIFS6"},
-	{"SIFS6", "SPUS OUT1", "SPUS OUT1-SIFS6"},
-	{"SIFS6", "SPUS OUT2", "SPUS OUT2-SIFS6"},
-	{"SIFS6", "SPUS OUT3", "SPUS OUT3-SIFS6"},
-	{"SIFS6", "SPUS OUT4", "SPUS OUT4-SIFS6"},
-	{"SIFS6", "SPUS OUT5", "SPUS OUT5-SIFS6"},
-	{"SIFS6", "SPUS OUT6", "SPUS OUT6-SIFS6"},
-	{"SIFS6", "SPUS OUT7", "SPUS OUT7-SIFS6"},
-	{"SIFS6", "SPUS OUT8", "SPUS OUT8-SIFS6"},
-	{"SIFS6", "SPUS OUT9", "SPUS OUT9-SIFS6"},
-	{"SIFS6", "SPUS OUT10", "SPUS OUT10-SIFS6"},
-	{"SIFS6", "SPUS OUT11", "SPUS OUT11-SIFS6"},
 
-	{"SIFS0 PGA", NULL, "SIFS0"},
-	{"SIFS1 PGA", NULL, "SIFS1"},
-	{"SIFS2 PGA", NULL, "SIFS2"},
-	{"SIFS3 PGA", NULL, "SIFS3"},
-	{"SIFS4 PGA", NULL, "SIFS4"},
-	{"SIFS5 PGA", NULL, "SIFS5"},
-	{"SIFS6 PGA", NULL, "SIFS6"},
-
-	{"STMIX", NULL, "SIFS0 PGA"},
-
-	{"SIFS0 OUT", "Switch", "STMIX"},
-	{"SIFS1 OUT", "Switch", "SIFS1 PGA"},
-	{"SIFS2 OUT", "Switch", "SIFS2 PGA"},
-	{"SIFS3 OUT", "Switch", "SIFS3 PGA"},
-	{"SIFS4 OUT", "Switch", "SIFS4 PGA"},
-	{"SIFS5 OUT", "Switch", "SIFS5 PGA"},
-	{"SIFS6 OUT", "Switch", "SIFS6 PGA"},
+	{"SIFS0 OUT", "Switch", "SIFS0"},
+	{"SIFS1 OUT", "Switch", "SIFS1"},
+	{"SIFS2 OUT", "Switch", "SIFS2"},
+	{"SIFS3 OUT", "Switch", "SIFS3"},
+	{"SIFS4 OUT", "Switch", "SIFS4"},
+	{"SIFS5 OUT", "Switch", "SIFS5"},
 
 	{"UAIF0 SPK", "SIFS0", "SIFS0 OUT"},
 	{"UAIF0 SPK", "SIFS1", "SIFS1 OUT"},
@@ -6906,7 +5164,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"UAIF0 SPK", "SIFS3", "SIFS3 OUT"},
 	{"UAIF0 SPK", "SIFS4", "SIFS4 OUT"},
 	{"UAIF0 SPK", "SIFS5", "SIFS5 OUT"},
-	{"UAIF0 SPK", "SIFS6", "SIFS6 OUT"},
 	{"UAIF0 SPK", "SIFMS", "SIFMS"},
 	{"UAIF1 SPK", "SIFS0", "SIFS0 OUT"},
 	{"UAIF1 SPK", "SIFS1", "SIFS1 OUT"},
@@ -6914,7 +5171,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"UAIF1 SPK", "SIFS3", "SIFS3 OUT"},
 	{"UAIF1 SPK", "SIFS4", "SIFS4 OUT"},
 	{"UAIF1 SPK", "SIFS5", "SIFS5 OUT"},
-	{"UAIF1 SPK", "SIFS6", "SIFS6 OUT"},
 	{"UAIF1 SPK", "SIFMS", "SIFMS"},
 	{"UAIF2 SPK", "SIFS0", "SIFS0 OUT"},
 	{"UAIF2 SPK", "SIFS1", "SIFS1 OUT"},
@@ -6922,7 +5178,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"UAIF2 SPK", "SIFS3", "SIFS3 OUT"},
 	{"UAIF2 SPK", "SIFS4", "SIFS4 OUT"},
 	{"UAIF2 SPK", "SIFS5", "SIFS5 OUT"},
-	{"UAIF2 SPK", "SIFS6", "SIFS6 OUT"},
 	{"UAIF2 SPK", "SIFMS", "SIFMS"},
 	{"UAIF3 SPK", "SIFS0", "SIFS0 OUT"},
 	{"UAIF3 SPK", "SIFS1", "SIFS1 OUT"},
@@ -6930,7 +5185,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"UAIF3 SPK", "SIFS3", "SIFS3 OUT"},
 	{"UAIF3 SPK", "SIFS4", "SIFS4 OUT"},
 	{"UAIF3 SPK", "SIFS5", "SIFS5 OUT"},
-	{"UAIF3 SPK", "SIFS6", "SIFS6 OUT"},
 	{"UAIF3 SPK", "SIFMS", "SIFMS"},
 	{"UAIF4 SPK", "SIFS0", "SIFS0 OUT"},
 	{"UAIF4 SPK", "SIFS1", "SIFS1 OUT"},
@@ -6938,7 +5192,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"UAIF4 SPK", "SIFS3", "SIFS3 OUT"},
 	{"UAIF4 SPK", "SIFS4", "SIFS4 OUT"},
 	{"UAIF4 SPK", "SIFS5", "SIFS5 OUT"},
-	{"UAIF4 SPK", "SIFS6", "SIFS6 OUT"},
 	{"UAIF4 SPK", "SIFMS", "SIFMS"},
 	{"UAIF5 SPK", "SIFS0", "SIFS0 OUT"},
 	{"UAIF5 SPK", "SIFS1", "SIFS1 OUT"},
@@ -6946,7 +5199,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"UAIF5 SPK", "SIFS3", "SIFS3 OUT"},
 	{"UAIF5 SPK", "SIFS4", "SIFS4 OUT"},
 	{"UAIF5 SPK", "SIFS5", "SIFS5 OUT"},
-	{"UAIF5 SPK", "SIFS6", "SIFS6 OUT"},
 	{"UAIF5 SPK", "SIFMS", "SIFMS"},
 	{"UAIF6 SPK", "SIFS0", "SIFS0 OUT"},
 	{"UAIF6 SPK", "SIFS1", "SIFS1 OUT"},
@@ -6954,14 +5206,12 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"UAIF6 SPK", "SIFS3", "SIFS3 OUT"},
 	{"UAIF6 SPK", "SIFS4", "SIFS4 OUT"},
 	{"UAIF6 SPK", "SIFS5", "SIFS5 OUT"},
-	{"UAIF6 SPK", "SIFS6", "SIFS6 OUT"},
 	{"UAIF6 SPK", "SIFMS", "SIFMS"},
 	{"DSIF SPK", "SIFS1", "SIFS1 OUT"},
 	{"DSIF SPK", "SIFS2", "SIFS2 OUT"},
 	{"DSIF SPK", "SIFS3", "SIFS3 OUT"},
 	{"DSIF SPK", "SIFS4", "SIFS4 OUT"},
 	{"DSIF SPK", "SIFS5", "SIFS5 OUT"},
-	{"DSIF SPK", "SIFS6", "SIFS6 OUT"},
 
 	{"UAIF0 PLA", "UAIF0 Switch", "UAIF0 SPK"},
 	{"UAIF1 PLA", "UAIF1 Switch", "UAIF1 SPK"},
@@ -6972,13 +5222,31 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"UAIF6 PLA", "UAIF6 Switch", "UAIF6 SPK"},
 	{"DSIF PLA", "DSIF Switch", "DSIF SPK"},
 
+	{"SIFS0", NULL, "SIFS0 Capture"},
+	{"SIFS1", NULL, "SIFS1 Capture"},
+	{"SIFS2", NULL, "SIFS2 Capture"},
+	{"SIFS3", NULL, "SIFS3 Capture"},
+	{"SIFS4", NULL, "SIFS4 Capture"},
+	{"SIFS5", NULL, "SIFS5 Capture"},
+
+	{"NSRC0 Playback", NULL, "NSRC0"},
+	{"NSRC1 Playback", NULL, "NSRC1"},
+	{"NSRC2 Playback", NULL, "NSRC2"},
+	{"NSRC3 Playback", NULL, "NSRC3"},
+	{"NSRC4 Playback", NULL, "NSRC4"},
+
+	{"NSRC0", NULL, "NSRC0 Capture"},
+	{"NSRC1", NULL, "NSRC1 Capture"},
+	{"NSRC2", NULL, "NSRC2 Capture"},
+	{"NSRC3", NULL, "NSRC3 Capture"},
+	{"NSRC4", NULL, "NSRC4 Capture"},
+
 	{"NSRC0", "SIFS0", "SIFS0 OUT"},
 	{"NSRC0", "SIFS1", "SIFS1 OUT"},
 	{"NSRC0", "SIFS2", "SIFS2 OUT"},
 	{"NSRC0", "SIFS3", "SIFS3 OUT"},
 	{"NSRC0", "SIFS4", "SIFS4 OUT"},
 	{"NSRC0", "SIFS5", "SIFS5 OUT"},
-	{"NSRC0", "SIFS6", "SIFS6 OUT"},
 	{"NSRC0", "UAIF0", "UAIF0 CAP"},
 	{"NSRC0", "UAIF1", "UAIF1 CAP"},
 	{"NSRC0", "UAIF2", "UAIF2 CAP"},
@@ -6986,8 +5254,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC0", "UAIF4", "UAIF4 CAP"},
 	{"NSRC0", "UAIF5", "UAIF5 CAP"},
 	{"NSRC0", "UAIF6", "UAIF6 CAP"},
-	{"NSRC0", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC0", "UDMA_SIFS1", "UDMA SIFS1"},
 	{"NSRC0", "SPDY", "SPDY CAP"},
 
 	{"NSRC1", "SIFS0", "SIFS0 OUT"},
@@ -6996,7 +5262,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC1", "SIFS3", "SIFS3 OUT"},
 	{"NSRC1", "SIFS4", "SIFS4 OUT"},
 	{"NSRC1", "SIFS5", "SIFS5 OUT"},
-	{"NSRC1", "SIFS6", "SIFS6 OUT"},
 	{"NSRC1", "UAIF0", "UAIF0 CAP"},
 	{"NSRC1", "UAIF1", "UAIF1 CAP"},
 	{"NSRC1", "UAIF2", "UAIF2 CAP"},
@@ -7004,8 +5269,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC1", "UAIF4", "UAIF4 CAP"},
 	{"NSRC1", "UAIF5", "UAIF5 CAP"},
 	{"NSRC1", "UAIF6", "UAIF6 CAP"},
-	{"NSRC1", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC1", "UDMA_SIFS1", "UDMA SIFS1"},
 	{"NSRC1", "SPDY", "SPDY CAP"},
 
 	{"NSRC2", "SIFS0", "SIFS0 OUT"},
@@ -7014,7 +5277,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC2", "SIFS3", "SIFS3 OUT"},
 	{"NSRC2", "SIFS4", "SIFS4 OUT"},
 	{"NSRC2", "SIFS5", "SIFS5 OUT"},
-	{"NSRC2", "SIFS6", "SIFS6 OUT"},
 	{"NSRC2", "UAIF0", "UAIF0 CAP"},
 	{"NSRC2", "UAIF1", "UAIF1 CAP"},
 	{"NSRC2", "UAIF2", "UAIF2 CAP"},
@@ -7022,8 +5284,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC2", "UAIF4", "UAIF4 CAP"},
 	{"NSRC2", "UAIF5", "UAIF5 CAP"},
 	{"NSRC2", "UAIF6", "UAIF6 CAP"},
-	{"NSRC2", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC2", "UDMA_SIFS1", "UDMA SIFS1"},
 	{"NSRC2", "SPDY", "SPDY CAP"},
 
 	{"NSRC3", "SIFS0", "SIFS0 OUT"},
@@ -7032,7 +5292,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC3", "SIFS3", "SIFS3 OUT"},
 	{"NSRC3", "SIFS4", "SIFS4 OUT"},
 	{"NSRC3", "SIFS5", "SIFS5 OUT"},
-	{"NSRC3", "SIFS6", "SIFS6 OUT"},
 	{"NSRC3", "UAIF0", "UAIF0 CAP"},
 	{"NSRC3", "UAIF1", "UAIF1 CAP"},
 	{"NSRC3", "UAIF2", "UAIF2 CAP"},
@@ -7040,8 +5299,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC3", "UAIF4", "UAIF4 CAP"},
 	{"NSRC3", "UAIF5", "UAIF5 CAP"},
 	{"NSRC3", "UAIF6", "UAIF6 CAP"},
-	{"NSRC3", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC3", "UDMA_SIFS1", "UDMA SIFS1"},
 	{"NSRC3", "SPDY", "SPDY CAP"},
 
 	{"NSRC4", "SIFS0", "SIFS0 OUT"},
@@ -7050,7 +5307,6 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC4", "SIFS3", "SIFS3 OUT"},
 	{"NSRC4", "SIFS4", "SIFS4 OUT"},
 	{"NSRC4", "SIFS5", "SIFS5 OUT"},
-	{"NSRC4", "SIFS6", "SIFS6 OUT"},
 	{"NSRC4", "UAIF0", "UAIF0 CAP"},
 	{"NSRC4", "UAIF1", "UAIF1 CAP"},
 	{"NSRC4", "UAIF2", "UAIF2 CAP"},
@@ -7058,242 +5314,31 @@ static const struct snd_soc_dapm_route cmpnt_routes[] = {
 	{"NSRC4", "UAIF4", "UAIF4 CAP"},
 	{"NSRC4", "UAIF5", "UAIF5 CAP"},
 	{"NSRC4", "UAIF6", "UAIF6 CAP"},
-	{"NSRC4", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC4", "UDMA_SIFS1", "UDMA SIFS1"},
 	{"NSRC4", "SPDY", "SPDY CAP"},
 
-	{"NSRC5", "SIFS0", "SIFS0 OUT"},
-	{"NSRC5", "SIFS1", "SIFS1 OUT"},
-	{"NSRC5", "SIFS2", "SIFS2 OUT"},
-	{"NSRC5", "SIFS3", "SIFS3 OUT"},
-	{"NSRC5", "SIFS4", "SIFS4 OUT"},
-	{"NSRC5", "SIFS5", "SIFS5 OUT"},
-	{"NSRC5", "SIFS6", "SIFS6 OUT"},
-	{"NSRC5", "UAIF0", "UAIF0 CAP"},
-	{"NSRC5", "UAIF1", "UAIF1 CAP"},
-	{"NSRC5", "UAIF2", "UAIF2 CAP"},
-	{"NSRC5", "UAIF3", "UAIF3 CAP"},
-	{"NSRC5", "UAIF4", "UAIF4 CAP"},
-	{"NSRC5", "UAIF5", "UAIF5 CAP"},
-	{"NSRC5", "UAIF6", "UAIF6 CAP"},
-	{"NSRC5", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC5", "UDMA_SIFS1", "UDMA SIFS1"},
-	{"NSRC5", "SPDY", "SPDY CAP"},
+	{"SPUM ASRC0", NULL, "NSRC0"},
+	{"SPUM ASRC1", NULL, "NSRC1"},
+	{"SPUM ASRC2", NULL, "NSRC2"},
+	{"SPUM ASRC3", NULL, "NSRC3"},
+	{"SPUM ASRC4", NULL, "NSRC4"},
 
-	{"NSRC6", "SIFS0", "SIFS0 OUT"},
-	{"NSRC6", "SIFS1", "SIFS1 OUT"},
-	{"NSRC6", "SIFS2", "SIFS2 OUT"},
-	{"NSRC6", "SIFS3", "SIFS3 OUT"},
-	{"NSRC6", "SIFS4", "SIFS4 OUT"},
-	{"NSRC6", "SIFS5", "SIFS5 OUT"},
-	{"NSRC6", "SIFS6", "SIFS6 OUT"},
-	{"NSRC6", "UAIF0", "UAIF0 CAP"},
-	{"NSRC6", "UAIF1", "UAIF1 CAP"},
-	{"NSRC6", "UAIF2", "UAIF2 CAP"},
-	{"NSRC6", "UAIF3", "UAIF3 CAP"},
-	{"NSRC6", "UAIF4", "UAIF4 CAP"},
-	{"NSRC6", "UAIF5", "UAIF5 CAP"},
-	{"NSRC6", "UAIF6", "UAIF6 CAP"},
-	{"NSRC6", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC6", "UDMA_SIFS1", "UDMA SIFS1"},
-	{"NSRC6", "SPDY", "SPDY CAP"},
-
-	{"NSRC7", "SIFS0", "SIFS0 OUT"},
-	{"NSRC7", "SIFS1", "SIFS1 OUT"},
-	{"NSRC7", "SIFS2", "SIFS2 OUT"},
-	{"NSRC7", "SIFS3", "SIFS3 OUT"},
-	{"NSRC7", "SIFS4", "SIFS4 OUT"},
-	{"NSRC7", "SIFS5", "SIFS5 OUT"},
-	{"NSRC7", "SIFS6", "SIFS6 OUT"},
-	{"NSRC7", "UAIF0", "UAIF0 CAP"},
-	{"NSRC7", "UAIF1", "UAIF1 CAP"},
-	{"NSRC7", "UAIF2", "UAIF2 CAP"},
-	{"NSRC7", "UAIF3", "UAIF3 CAP"},
-	{"NSRC7", "UAIF4", "UAIF4 CAP"},
-	{"NSRC7", "UAIF5", "UAIF5 CAP"},
-	{"NSRC7", "UAIF6", "UAIF6 CAP"},
-	{"NSRC7", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC7", "UDMA_SIFS1", "UDMA SIFS1"},
-	{"NSRC7", "SPDY", "SPDY CAP"},
-
-	{"NSRC8", "SIFS0", "SIFS0 OUT"},
-	{"NSRC8", "SIFS1", "SIFS1 OUT"},
-	{"NSRC8", "SIFS2", "SIFS2 OUT"},
-	{"NSRC8", "SIFS3", "SIFS3 OUT"},
-	{"NSRC8", "SIFS4", "SIFS4 OUT"},
-	{"NSRC8", "SIFS5", "SIFS5 OUT"},
-	{"NSRC8", "SIFS6", "SIFS6 OUT"},
-	{"NSRC8", "UAIF0", "UAIF0 CAP"},
-	{"NSRC8", "UAIF1", "UAIF1 CAP"},
-	{"NSRC8", "UAIF2", "UAIF2 CAP"},
-	{"NSRC8", "UAIF3", "UAIF3 CAP"},
-	{"NSRC8", "UAIF4", "UAIF4 CAP"},
-	{"NSRC8", "UAIF5", "UAIF5 CAP"},
-	{"NSRC8", "UAIF6", "UAIF6 CAP"},
-	{"NSRC8", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC8", "UDMA_SIFS1", "UDMA SIFS1"},
-	{"NSRC8", "SPDY", "SPDY CAP"},
-
-	{"NSRC9", "SIFS0", "SIFS0 OUT"},
-	{"NSRC9", "SIFS1", "SIFS1 OUT"},
-	{"NSRC9", "SIFS2", "SIFS2 OUT"},
-	{"NSRC9", "SIFS3", "SIFS3 OUT"},
-	{"NSRC9", "SIFS4", "SIFS4 OUT"},
-	{"NSRC9", "SIFS5", "SIFS5 OUT"},
-	{"NSRC9", "SIFS6", "SIFS6 OUT"},
-	{"NSRC9", "UAIF0", "UAIF0 CAP"},
-	{"NSRC9", "UAIF1", "UAIF1 CAP"},
-	{"NSRC9", "UAIF2", "UAIF2 CAP"},
-	{"NSRC9", "UAIF3", "UAIF3 CAP"},
-	{"NSRC9", "UAIF4", "UAIF4 CAP"},
-	{"NSRC9", "UAIF5", "UAIF5 CAP"},
-	{"NSRC9", "UAIF6", "UAIF6 CAP"},
-	{"NSRC9", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC9", "UDMA_SIFS1", "UDMA SIFS1"},
-	{"NSRC9", "SPDY", "SPDY CAP"},
-
-	{"NSRC10", "SIFS0", "SIFS0 OUT"},
-	{"NSRC10", "SIFS1", "SIFS1 OUT"},
-	{"NSRC10", "SIFS2", "SIFS2 OUT"},
-	{"NSRC10", "SIFS3", "SIFS3 OUT"},
-	{"NSRC10", "SIFS4", "SIFS4 OUT"},
-	{"NSRC10", "SIFS5", "SIFS5 OUT"},
-	{"NSRC10", "SIFS6", "SIFS6 OUT"},
-	{"NSRC10", "UAIF0", "UAIF0 CAP"},
-	{"NSRC10", "UAIF1", "UAIF1 CAP"},
-	{"NSRC10", "UAIF2", "UAIF2 CAP"},
-	{"NSRC10", "UAIF3", "UAIF3 CAP"},
-	{"NSRC10", "UAIF4", "UAIF4 CAP"},
-	{"NSRC10", "UAIF5", "UAIF5 CAP"},
-	{"NSRC10", "UAIF6", "UAIF6 CAP"},
-	{"NSRC10", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC10", "UDMA_SIFS1", "UDMA SIFS1"},
-	{"NSRC10", "SPDY", "SPDY CAP"},
-
-	{"NSRC11", "SIFS0", "SIFS0 OUT"},
-	{"NSRC11", "SIFS1", "SIFS1 OUT"},
-	{"NSRC11", "SIFS2", "SIFS2 OUT"},
-	{"NSRC11", "SIFS3", "SIFS3 OUT"},
-	{"NSRC11", "SIFS4", "SIFS4 OUT"},
-	{"NSRC11", "SIFS5", "SIFS5 OUT"},
-	{"NSRC11", "SIFS6", "SIFS6 OUT"},
-	{"NSRC11", "UAIF0", "UAIF0 CAP"},
-	{"NSRC11", "UAIF1", "UAIF1 CAP"},
-	{"NSRC11", "UAIF2", "UAIF2 CAP"},
-	{"NSRC11", "UAIF3", "UAIF3 CAP"},
-	{"NSRC11", "UAIF4", "UAIF4 CAP"},
-	{"NSRC11", "UAIF5", "UAIF5 CAP"},
-	{"NSRC11", "UAIF6", "UAIF6 CAP"},
-	{"NSRC11", "UDMA_SIFS0", "UDMA SIFS0"},
-	{"NSRC11", "UDMA_SIFS1", "UDMA SIFS1"},
-	{"NSRC11", "SPDY", "SPDY CAP"},
-
-	{"UDMA SIFM0", "SIFS0", "SIFS0 OUT"},
-	{"UDMA SIFM0", "SIFS1", "SIFS1 OUT"},
-	{"UDMA SIFM0", "SIFS2", "SIFS2 OUT"},
-	{"UDMA SIFM0", "SIFS3", "SIFS3 OUT"},
-	{"UDMA SIFM0", "SIFS4", "SIFS4 OUT"},
-	{"UDMA SIFM0", "SIFS5", "SIFS5 OUT"},
-	{"UDMA SIFM0", "SIFS6", "SIFS6 OUT"},
-
-	{"UDMA SIFM1", "SIFS0", "SIFS0 OUT"},
-	{"UDMA SIFM1", "SIFS1", "SIFS1 OUT"},
-	{"UDMA SIFM1", "SIFS2", "SIFS2 OUT"},
-	{"UDMA SIFM1", "SIFS3", "SIFS3 OUT"},
-	{"UDMA SIFM1", "SIFS4", "SIFS4 OUT"},
-	{"UDMA SIFM1", "SIFS5", "SIFS5 OUT"},
-	{"UDMA SIFM1", "SIFS6", "SIFS6 OUT"},
-
-	{"NSRC0 PGA", NULL, "NSRC0"},
-	{"NSRC1 PGA", NULL, "NSRC1"},
-	{"NSRC2 PGA", NULL, "NSRC2"},
-	{"NSRC3 PGA", NULL, "NSRC3"},
-	{"NSRC4 PGA", NULL, "NSRC4"},
-	{"NSRC5 PGA", NULL, "NSRC5"},
-	{"NSRC6 PGA", NULL, "NSRC6"},
-	{"NSRC7 PGA", NULL, "NSRC7"},
-	{"NSRC8 PGA", NULL, "NSRC8"},
-	{"NSRC9 PGA", NULL, "NSRC9"},
-	{"NSRC10 PGA", NULL, "NSRC10"},
-	{"NSRC11 PGA", NULL, "NSRC11"},
-
-	{"SPUM ASRC0", NULL, "NSRC0 PGA"},
-	{"SPUM ASRC1", NULL, "NSRC1 PGA"},
-	{"SPUM ASRC2", NULL, "NSRC2 PGA"},
-	{"SPUM ASRC3", NULL, "NSRC3 PGA"},
-	{"SPUM ASRC4", NULL, "NSRC4 PGA"},
-	{"SPUM ASRC5", NULL, "NSRC5 PGA"},
-	{"SPUM ASRC6", NULL, "NSRC6 PGA"},
-	{"SPUM ASRC7", NULL, "NSRC7 PGA"},
-	{"SPUM ASRC8", NULL, "NSRC8 PGA"},
-	{"SPUM ASRC9", NULL, "NSRC9 PGA"},
-	{"SPUM ASRC10", NULL, "NSRC10 PGA"},
-	{"SPUM ASRC11", NULL, "NSRC11 PGA"},
-
-	{"SPUM PGA0", NULL, "SPUM ASRC0"},
-	{"SPUM PGA1", NULL, "SPUM ASRC1"},
-	{"SPUM PGA2", NULL, "SPUM ASRC2"},
-	{"SPUM PGA3", NULL, "SPUM ASRC3"},
-	{"SPUM PGA4", NULL, "SPUM ASRC4"},
-	{"SPUM PGA5", NULL, "SPUM ASRC5"},
-	{"SPUM PGA6", NULL, "SPUM ASRC6"},
-	{"SPUM PGA7", NULL, "SPUM ASRC7"},
-	{"SPUM PGA8", NULL, "SPUM ASRC8"},
-	{"SPUM PGA9", NULL, "SPUM ASRC9"},
-	{"SPUM PGA10", NULL, "SPUM ASRC10"},
-	{"SPUM PGA11", NULL, "SPUM ASRC11"},
-
-	{"SIFM0 IN", "Switch", "SPUM PGA0"},
-	{"SIFM1 IN", "Switch", "SPUM PGA1"},
-	{"SIFM2 IN", "Switch", "SPUM PGA2"},
-	{"SIFM3 IN", "Switch", "SPUM PGA3"},
-	{"SIFM4 IN", "Switch", "SPUM PGA4"},
-	{"SIFM5 IN", "Switch", "SPUM PGA5"},
-	{"SIFM6 IN", "Switch", "SPUM PGA6"},
-	{"SIFM7 IN", "Switch", "SPUM PGA7"},
-	{"SIFM8 IN", "Switch", "SPUM PGA8"},
-	{"SIFM9 IN", "Switch", "SPUM PGA9"},
-	{"SIFM10 IN", "Switch", "SPUM PGA10"},
-	{"SIFM11 IN", "Switch", "SPUM PGA11"},
-
-	{"SIFM0", NULL, "SIFM0 IN"},
-	{"SIFM1", NULL, "SIFM1 IN"},
-	{"SIFM2", NULL, "SIFM2 IN"},
-	{"SIFM3", NULL, "SIFM3 IN"},
-	{"SIFM4", NULL, "SIFM4 IN"},
-	{"SIFM5", NULL, "SIFM5 IN"},
-	{"SIFM6", NULL, "SIFM6 IN"},
-	{"SIFM7", NULL, "SIFM7 IN"},
-	{"SIFM8", NULL, "SIFM8 IN"},
-	{"SIFM9", NULL, "SIFM9 IN"},
-	{"SIFM10", NULL, "SIFM10 IN"},
-	{"SIFM11", NULL, "SIFM11 IN"},
+	{"SIFM0", NULL, "SPUM ASRC0"},
+	{"SIFM1", NULL, "SPUM ASRC1"},
+	{"SIFM2", NULL, "SPUM ASRC2"},
+	{"SIFM3", NULL, "SPUM ASRC3"},
+	{"SIFM4", NULL, "SPUM ASRC4"},
 
 	{"SIFM0-SIFMS", "SIFMS", "SIFM0"},
 	{"SIFM1-SIFMS", "SIFMS", "SIFM1"},
 	{"SIFM2-SIFMS", "SIFMS", "SIFM2"},
 	{"SIFM3-SIFMS", "SIFMS", "SIFM3"},
 	{"SIFM4-SIFMS", "SIFMS", "SIFM4"},
-	{"SIFM5-SIFMS", "SIFMS", "SIFM5"},
-	{"SIFM6-SIFMS", "SIFMS", "SIFM6"},
-	{"SIFM7-SIFMS", "SIFMS", "SIFM7"},
-	{"SIFM8-SIFMS", "SIFMS", "SIFM8"},
-	{"SIFM9-SIFMS", "SIFMS", "SIFM9"},
-	{"SIFM10-SIFMS", "SIFMS", "SIFM10"},
-	{"SIFM11-SIFMS", "SIFMS", "SIFM11"},
 
 	{"SIFMS", "SIFM0", "SIFM0-SIFMS"},
 	{"SIFMS", "SIFM1", "SIFM1-SIFMS"},
 	{"SIFMS", "SIFM2", "SIFM2-SIFMS"},
 	{"SIFMS", "SIFM3", "SIFM3-SIFMS"},
 	{"SIFMS", "SIFM4", "SIFM4-SIFMS"},
-	{"SIFMS", "SIFM5", "SIFM5-SIFMS"},
-	{"SIFMS", "SIFM6", "SIFM6-SIFMS"},
-	{"SIFMS", "SIFM7", "SIFM7-SIFMS"},
-	{"SIFMS", "SIFM8", "SIFM8-SIFMS"},
-	{"SIFMS", "SIFM9", "SIFM9-SIFMS"},
-	{"SIFMS", "SIFM10", "SIFM10-SIFMS"},
-	{"SIFMS", "SIFM11", "SIFM11-SIFMS"},
 };
 
 static int cmpnt_probe(struct snd_soc_component *cmpnt)
@@ -7326,8 +5371,6 @@ static int cmpnt_probe(struct snd_soc_component *cmpnt)
 			ARRAY_SIZE(spum_asrc_os_controls));
 	snd_soc_add_component_controls(cmpnt, spum_asrc_is_controls,
 			ARRAY_SIZE(spum_asrc_is_controls));
-	snd_soc_add_component_controls(cmpnt, asrc_tune_controls,
-			ARRAY_SIZE(asrc_tune_controls));
 	snd_soc_add_component_controls(cmpnt, sidetone_controls,
 			ARRAY_SIZE(sidetone_controls));
 
@@ -7339,14 +5382,12 @@ static int cmpnt_probe(struct snd_soc_component *cmpnt)
 	data->cmpnt = cmpnt;
 
 	abox_add_extra_firmware_controls(data);
-	abox_atune_probe(data, data->atune_count);
 
 	/* vdma and dump are initialized in abox component probe
 	 * to set vdma to sound card 1 and dump to sound card 2.
 	 */
 	abox_vdma_register_card(dev);
 	abox_dump_init(dev);
-	abox_udma_init(data);
 
 	data->ws = wakeup_source_register(NULL, "abox");
 
@@ -7421,10 +5462,6 @@ int abox_cmpnt_adjust_sbank(struct abox_data *data,
 	case ABOX_NSRC5:
 	case ABOX_NSRC6:
 	case ABOX_NSRC7:
-	case ABOX_NSRC8:
-	case ABOX_NSRC9:
-	case ABOX_NSRC10:
-	case ABOX_NSRC11:
 		reg = ABOX_SPUM_SBANK_NSRC(id - ABOX_NSRC0);
 		break;
 	default:
@@ -7459,23 +5496,45 @@ int abox_cmpnt_reset_cnt_val(struct abox_data *data, enum abox_dai id)
 {
 	struct device *dev = data->dev;
 	struct snd_soc_component *cmpnt = data->cmpnt;
-	unsigned int src_id, sifs_id;
-	int ret;
+	unsigned int idx, val, sifs_id;
+	int ret = 0;
 
 	abox_dbg(dev, "%s(%#x)\n", __func__, id);
 
-	src_id = get_source_dai_id(data, id);
-	if (src_id < ABOX_SIFS0 || src_id > ABOX_SIFS6)
-		return -EINVAL;
-
-	sifs_id = src_id - ABOX_SIFS0;
-	ret = snd_soc_component_write(cmpnt,
-			ABOX_SPUS_CTRL_SIFS_CNT_VAL(sifs_id), 0);
+	val = snd_soc_component_read(cmpnt, ABOX_ROUTE_CTRL0);
 	if (ret < 0)
 		return ret;
-	abox_info(dev, "reset sifs%d_cnt_val\n", sifs_id);
+
+	switch (id) {
+	case ABOX_UAIF0:
+	case ABOX_UAIF1:
+	case ABOX_UAIF2:
+	case ABOX_UAIF3:
+	case ABOX_UAIF4:
+	case ABOX_UAIF5:
+	case ABOX_UAIF6:
+		idx = id - ABOX_UAIF0;
+		sifs_id = val & ABOX_ROUTE_UAIF_SPK_MASK(idx);
+		sifs_id = (sifs_id >> ABOX_ROUTE_UAIF_SPK_L(idx)) - 1;
+		break;
+	case ABOX_DSIF:
+		sifs_id = val & ABOX_ROUTE_DSIF_MASK;
+		sifs_id = (sifs_id >> ABOX_ROUTE_DSIF_L) - 1;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (sifs_id < 12) {
+		ret = snd_soc_component_write(cmpnt,
+				ABOX_SPUS_CTRL_SIFS_CNT(sifs_id), 0);
+		if (ret < 0)
+			return ret;
+		abox_info(dev, "reset sifs%d_cnt_val\n", sifs_id);
+	}
 
 	return ret;
+
 }
 
 static struct snd_soc_dai_driver abox_cmpnt_dai_drv[] = {
@@ -7566,19 +5625,12 @@ int abox_cmpnt_hw_params_fixup_helper(struct snd_soc_pcm_runtime *rtd,
 	case ABOX_SPDY:
 		ret = abox_if_hw_params_fixup(dai, params);
 		break;
-	case ABOX_UDMA_RD0:
-	case ABOX_UDMA_RD1:
-	case ABOX_UDMA_WR0:
-	case ABOX_UDMA_WR1:
-		ret = udma_hw_params_fixup(dai, params);
-		break;
 	case ABOX_SIFS0:
 	case ABOX_SIFS1:
 	case ABOX_SIFS2:
 	case ABOX_SIFS3:
 	case ABOX_SIFS4:
 	case ABOX_SIFS5:
-	case ABOX_SIFS6:
 		/* deprecated call-path */
 		data = dev_get_drvdata(dev);
 		ret = sifs_hw_params_fixup(data, dai->id, params);
@@ -7591,10 +5643,6 @@ int abox_cmpnt_hw_params_fixup_helper(struct snd_soc_pcm_runtime *rtd,
 	case ABOX_NSRC5:
 	case ABOX_NSRC6:
 	case ABOX_NSRC7:
-	case ABOX_NSRC8:
-	case ABOX_NSRC9:
-	case ABOX_NSRC10:
-	case ABOX_NSRC11:
 		/* deprecated call-path */
 		data = dev_get_drvdata(dev);
 		ret = sifm_hw_params_fixup(data, dai->id, params);
@@ -7621,10 +5669,6 @@ int abox_cmpnt_hw_params_fixup_helper(struct snd_soc_pcm_runtime *rtd,
 	case ABOX_WDMA5_BE:
 	case ABOX_WDMA6_BE:
 	case ABOX_WDMA7_BE:
-	case ABOX_WDMA8_BE:
-	case ABOX_WDMA9_BE:
-	case ABOX_WDMA10_BE:
-	case ABOX_WDMA11_BE:
 		ret = wdma_be_hw_params_fixup(rtd, params);
 		break;
 	default:
@@ -7822,86 +5866,24 @@ int abox_cmpnt_register_wdma(struct device *dev_abox,
 	return register_wdma_routes(dev, route_base_wdma, 1, dapm, name, id);
 }
 
-static const struct snd_soc_dapm_route route_base_udma_rd[] = {
-	/* sink, control, source */
-	{"UDMA SIFS%d", NULL, "%s Capture"},
-};
-
-int abox_cmpnt_register_udma_rd(struct device *dev_abox,
-		struct device *dev, unsigned int id, const char *name)
-{
-	struct abox_data *data = dev_get_drvdata(dev_abox);
-	struct snd_soc_component *cmpnt = data->cmpnt;
-	struct snd_soc_dapm_context *dapm = snd_soc_component_get_dapm(cmpnt);
-
-	if (id >= ARRAY_SIZE(data->dev_udma_rd)) {
-		abox_err(dev, "%s: invalid id(%u)\n", __func__, id);
-		return -EINVAL;
-	}
-
-	data->dev_udma_rd[id] = dev;
-	if (id > data->udma_rd_count)
-		data->udma_rd_count = id + 1;
-
-	/* reuse register_rdma_routes() */
-	return register_rdma_routes(dev, route_base_udma_rd,
-			ARRAY_SIZE(route_base_udma_rd), dapm, name, id);
-}
-
-static const struct snd_soc_dapm_route route_base_udma_wr[] = {
-	/* sink, control, source */
-	{"%s Playback", NULL, "UDMA SIFM%d"},
-};
-
-int abox_cmpnt_register_udma_wr(struct device *dev_abox,
-		struct device *dev, unsigned int id, const char *name)
-{
-	struct abox_data *data = dev_get_drvdata(dev_abox);
-	struct snd_soc_component *cmpnt = data->cmpnt;
-	struct snd_soc_dapm_context *dapm = snd_soc_component_get_dapm(cmpnt);
-
-	if (id >= ARRAY_SIZE(data->dev_udma_wr)) {
-		abox_err(dev, "%s: invalid id(%u)\n", __func__, id);
-		return -EINVAL;
-	}
-
-	data->dev_udma_wr[id] = dev;
-	if (id > data->udma_wr_count)
-		data->udma_wr_count = id + 1;
-
-	/* reuse register_wdma_routes() */
-	return register_wdma_routes(dev, route_base_udma_wr,
-			ARRAY_SIZE(route_base_udma_wr), dapm, name, id);
-}
-
 int abox_cmpnt_restore(struct device *adev)
 {
 	struct abox_data *data = dev_get_drvdata(adev);
-	enum abox_dai dai;
 	int i;
 
 	abox_dbg(adev, "%s\n", __func__);
 
-	if (!data->cmpnt)
-		return -EINVAL;
-
-	for (i = SET_SIFS0_RATE; i <= SET_SIFM11_RATE; i++)
-		if (get_sif_rate(data, i) != 48000)
-			rate_put_ipc(adev, 0, i);
-	for (i = SET_SIFS0_FORMAT; i <= SET_SIFM11_FORMAT; i++)
-		if (get_sif_width(data, i) != 16 || get_sif_channels(data, i) != 2)
-			format_put_ipc(adev, 0, 0, i);
-	for (dai = ABOX_NSRC0; dai < ABOX_NSRC0 + COUNT_SIFM; dai++)
-		if (get_nsrc_source(data->cmpnt, dai) != ABOX_NONE)
-			nsrcx_put_ipc(adev, dai, get_nsrc_source(data->cmpnt, dai));
+	for (i = SET_SIFS0_RATE; i <= SET_PIFS0_RATE; i++)
+		rate_put_ipc(adev, data->sif_rate[sif_idx(i)], i);
+	for (i = SET_SIFS0_FORMAT; i <= SET_PIFS0_FORMAT; i++)
+		format_put_ipc(adev, data->sif_format[sif_idx(i)],
+				data->sif_channels[sif_idx(i)], i);
 	if (s_default)
 		asrc_factor_put_ipc(adev, s_default, SET_ASRC_FACTOR_CP);
 	if (data->audio_mode)
 		audio_mode_put_ipc(adev, data->audio_mode);
 	if (data->sound_type)
 		sound_type_put_ipc(adev, data->sound_type);
-	if (data->debug_mode == DEBUG_MODE_NONE)
-		debug_put_ipc(adev, data->debug_mode);
 
 	return 0;
 }

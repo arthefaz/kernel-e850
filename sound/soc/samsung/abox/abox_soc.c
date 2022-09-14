@@ -28,7 +28,7 @@ int abox_soc_vercmp(struct device *adev, int m, int n, int r)
 
 static bool volatile_reg(struct device *dev, unsigned int reg)
 {
-	if (writeonly_reg(reg) || readonly_reg(reg) || shared_reg(reg))
+	if (shared_reg(reg))
 		return true;
 
 	return false;

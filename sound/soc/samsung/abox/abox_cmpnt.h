@@ -95,16 +95,6 @@ extern void abox_cmpnt_asrc_release(struct abox_data *data, int stream,
 		int idx);
 
 /**
- * force enable asrc from the atune
- * @param[in]	data	pointer to abox_data
- * @param[in]	stream	SNDRV_PCM_STREAM_PLAYBACK or SNDRV_PCM_STREAM_CAPTURE
- * @param[in]	idx	index of requesting DMA
- * @return		0 or error code
- */
-extern void abox_cmpnt_asrc_enable(struct abox_data *data, int stream,
-		int idx);
-
-/**
  * update asrc tick
  * @param[in]	adev	pointer to abox device
  * @return		0 or error code

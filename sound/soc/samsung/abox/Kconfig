@@ -81,6 +81,7 @@ config SND_SOC_SAMSUNG_ABOX_V4_2
 
 config SND_SOC_SAMSUNG_ABOX_SRAM_SIZE
 	hex "Size of SRAM for ABOX firmware"
+	default 0x2d000 if SND_SOC_SAMSUNG_ABOX_V3
 	default 0x40000 if SND_SOC_SAMSUNG_ABOX_V4
 	default 0x85000 if SND_SOC_SAMSUNG_ABOX_V4_2
 

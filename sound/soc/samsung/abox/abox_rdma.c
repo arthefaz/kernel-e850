@@ -217,26 +217,6 @@ static void abox_rdma_mailbox_update_bits(struct device *dev, u32 index,
 	pm_runtime_put_autosuspend(dev);
 }
 
-static void abox_mailbox_save(struct device *dev)
-{
-	struct regmap *regmap = dev_get_regmap(dev, NULL);
-
-	if (regmap) {
-		regcache_cache_only(regmap, true);
-		regcache_mark_dirty(regmap);
-	}
-}
-
-static void abox_mailbox_restore(struct device *dev)
-{
-	struct regmap *regmap = dev_get_regmap(dev, NULL);
-
-	if (regmap) {
-		regcache_cache_only(regmap, false);
-		regcache_sync(regmap);
-	}
-}
-
 static bool abox_mailbox_volatile_reg(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
@@ -424,15 +404,6 @@ static int abox_rdma_compr_isr_handler(void *priv)
 	abox_rdma_compr_clear_intr_ack(dev);
 
 	return IRQ_HANDLED;
-}
-
-static void abox_rdma_compr_recover(struct device *dev_abox)
-{
-	ABOX_IPC_MSG msg;
-
-	msg.ipcid = IPC_SYSTEM;
-	msg.msg.system.msgtype = ABOX_RECOVER_OFFLOAD;
-	abox_request_ipc(dev_abox, msg.ipcid, &msg, sizeof(msg), 0, 1);
 }
 
 static int abox_rdma_compr_set_param(struct device *dev,
@@ -708,7 +679,6 @@ static int abox_rdma_compr_open(struct snd_soc_component *component,
 
 	pm_runtime_get_sync(dev);
 	abox_request_cpu_gear_dai(dev, abox_data, cpu_dai, abox_data->cpu_gear_min);
-	abox_set_system_state(abox_data, SYSTEM_OFFLOAD, true);
 
 	abox_rdma_compr_set_hw_params(stream);
 
@@ -767,7 +737,6 @@ static int abox_rdma_compr_free(struct snd_soc_component *component,
 #endif
 }
 #endif
-	abox_set_system_state(abox_data, SYSTEM_OFFLOAD, false);
 	abox_request_cpu_gear_dai(dev, abox_data, cpu_dai, 0);
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put(dev);
@@ -827,7 +796,6 @@ static int abox_rdma_compr_set_params(struct snd_soc_component *component,
 	if (ret) {
 		abox_err(dev, "%s: esa_compr_set_param fail(%d)\n", __func__,
 				ret);
-		abox_rdma_compr_recover(dma_data->dev_abox);
 		return ret;
 	}
 
@@ -1504,11 +1472,6 @@ static int abox_rdma_hw_params(struct snd_soc_component *component,
 	else
 		burst_len = 0x4;
 
-	if (abox_dma_is_sync_mode(data)) {
-		burst_len = 0x1;
-		iova = IOVA_WDMA_BUFFER(id);
-	}
-
 	ret = snd_soc_component_update_bits(data->cmpnt,
 			DMA_REG_CTRL0, ABOX_DMA_BURST_LEN_MASK,
 			burst_len << ABOX_DMA_BURST_LEN_L);
@@ -1547,8 +1510,6 @@ static int abox_rdma_hw_params(struct snd_soc_component *component,
 	abox_request_cl0_freq_dai(dev, cpu_dai, freq);
 	freq = data->pm_qos_cl1[abox_get_rate_type(params_rate(params))];
 	abox_request_cl1_freq_dai(dev, cpu_dai, freq);
-	freq = data->pm_qos_cl2[abox_get_rate_type(params_rate(params))];
-	abox_request_cl2_freq_dai(dev, cpu_dai, freq);
 
 	abox_info(dev, "%s:Total=%u PrdSz=%u(%u) #Prds=%u rate=%u, width=%d, channels=%u\n",
 			snd_pcm_stream_str(substream),
@@ -1583,7 +1544,6 @@ static int abox_rdma_hw_free(struct snd_soc_component *component,
 	abox_rdma_request_ipc(data, &msg, 0, 0);
 	abox_request_cl0_freq_dai(dev, cpu_dai, 0);
 	abox_request_cl1_freq_dai(dev, cpu_dai, 0);
-	abox_request_cl2_freq_dai(dev, cpu_dai, 0);
 
 	if (!abox_rdma_backend(substream)) {
 		abox_dma_release_irq(data, DMA_IRQ_FADE_DONE);
@@ -2043,15 +2003,6 @@ static int abox_rdma_compr_remove(struct snd_soc_component *cmpnt)
 	return 0;
 }
 
-static const char * const dither_type_texts[] = {
-	"OFF", "RPDF", "TPDF",
-};
-static SOC_ENUM_SINGLE_DECL(dither_type_enum, DMA_REG_BIT_CTRL,
-		ABOX_DMA_DITHER_TYPE_L, dither_type_texts);
-static const struct snd_kcontrol_new abox_rdma_bit_controls[] = {
-	SOC_ENUM("Dither Type", dither_type_enum),
-};
-
 static int abox_rdma_probe(struct snd_soc_component *cmpnt)
 {
 	struct device *dev = cmpnt->dev;
@@ -2061,8 +2012,6 @@ static int abox_rdma_probe(struct snd_soc_component *cmpnt)
 
 	abox_dbg(dev, "%s\n", __func__);
 
-	snd_soc_add_component_controls(cmpnt, abox_rdma_bit_controls,
-			ARRAY_SIZE(abox_rdma_bit_controls));
 	data->cmpnt = cmpnt;
 	abox_cmpnt_register_rdma(data->abox_data->dev, dev, data->id,
 			data->dai_drv[DMA_DAI_PCM].name);
@@ -2108,17 +2057,7 @@ static unsigned int abox_rdma_read(struct snd_soc_component *cmpnt,
 		dump_stack();
 	}
 
-	/* CTRL register is shared with firmware */
-	if (reg == DMA_REG_CTRL) {
-		if (pm_runtime_get_if_in_use(cmpnt->dev) > 0) {
-			regmap_read(abox_data->regmap, base + reg, &val);
-			pm_runtime_put(cmpnt->dev);
-		} else {
-			val = data->c_reg_ctrl;
-		}
-	} else {
-		regmap_read(abox_data->regmap, base + reg, &val);
-	}
+	val = snd_soc_component_read(abox_data->cmpnt, base + reg);
 
 	return val;
 }
@@ -2130,62 +2069,25 @@ static int abox_rdma_write(struct snd_soc_component *cmpnt,
 	struct abox_data *abox_data = data->abox_data;
 	unsigned int id = data->id;
 	unsigned int base = ABOX_RDMA_CTRL0(id);
-	int ret = 0;
+	int ret;
 
 	if (reg > DMA_REG_STATUS) {
 		abox_warn(cmpnt->dev, "invalid dma register:%#x\n", reg);
 		dump_stack();
 	}
 
-	/* CTRL register is shared with firmware */
-	if (reg == DMA_REG_CTRL) {
-		data->c_reg_ctrl &= ~REG_CTRL_KERNEL_MASK;
-		data->c_reg_ctrl |= val & REG_CTRL_KERNEL_MASK;
-		if (pm_runtime_get_if_in_use(cmpnt->dev) > 0) {
-			ret = regmap_update_bits(abox_data->regmap, base + reg,
-					REG_CTRL_KERNEL_MASK, val);
-			pm_runtime_put(cmpnt->dev);
-		}
-	} else {
-		ret = regmap_write(abox_data->regmap, base + reg, val);
-	}
-
-	return ret;
-}
-
-static int abox_rdma_sbank_size_get(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_dma_data *data = dev_get_drvdata(dev);
-
-	abox_dbg(dev, "%s\n", __func__);
-
-	ucontrol->value.integer.value[0] = data->sbank_size;
+	ret = snd_soc_component_write(abox_data->cmpnt, base + reg, val);
+	if (ret < 0)
+		return ret;
 
 	return 0;
 }
 
-static int abox_rdma_sbank_size_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct device *dev = cmpnt->dev;
-	struct abox_dma_data *data = dev_get_drvdata(dev);
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	long value = ucontrol->value.integer.value[0];
-
-	abox_dbg(dev, "%s(%ld)\n", __func__, value);
-
-	if (value < mc->min || value > mc->max)
-		return -EINVAL;
-
-	data->sbank_size = (unsigned int)value;
-
-	return 0;
-}
+static const char * const dither_width_texts[] = {
+	"32bit", "64bit", "128bit", "256bit",
+};
+static SOC_ENUM_SINGLE_DECL(dither_width_enum, DMA_REG_BIT_CTRL0,
+		ABOX_DMA_DITHER_WIDTH_L, dither_width_texts);
 
 static const struct snd_kcontrol_new abox_rdma_controls[] = {
 	SOC_SINGLE_EXT("Rate", DMA_RATE, 0, 384000, 0,
@@ -2201,20 +2103,19 @@ static const struct snd_kcontrol_new abox_rdma_controls[] = {
 	SOC_SINGLE_EXT("Packed", DMA_PACKED, 0, 1, 0,
 			abox_dma_hw_params_get, abox_dma_hw_params_put),
 	SOC_SINGLE("Dummy Start", DMA_REG_CTRL0, ABOX_DMA_DUMMY_START_L, 1, 0),
-	SOC_ENUM_EXT("Func", abox_dma_func_enum,
-			snd_soc_get_enum_double, abox_dma_func_put),
-	SOC_SINGLE_EXT("Auto Fade In", DMA_REG_CTRL0,
-			ABOX_DMA_AUTO_FADE_IN_L, 1, 0,
-			abox_dma_auto_fade_in_get, abox_dma_auto_fade_in_put),
+	SOC_SINGLE("Auto Fade In", DMA_REG_CTRL0,
+			ABOX_DMA_AUTO_FADE_IN_L, 1, 0),
 	SOC_SINGLE("Vol Factor", DMA_REG_VOL_FACTOR,
 			ABOX_DMA_VOL_FACTOR_L, 0xffffff, 0),
 	SOC_SINGLE("Vol Change", DMA_REG_VOL_CHANGE,
 			ABOX_DMA_VOL_FACTOR_L, 0xffffff, 0),
-	ABOX_DMA_SINGLE_S("Dither Seed", DMA_REG_DITHER_SEED,
-			ABOX_DMA_DITHER_SEED_L, INT_MAX, 31, 0),
-	SOC_SINGLE("Sync Mode", DMA_REG_CTRL0, ABOX_DMA_SYNC_MODE_L, 1, 0),
-	SOC_SINGLE_EXT("Sbank Size", 0, 0, SZ_512, 0, abox_rdma_sbank_size_get,
-			abox_rdma_sbank_size_put),
+	SOC_SINGLE("Dither On", DMA_REG_BIT_CTRL0,
+			ABOX_DMA_DITHER_ON_L, 1, 0),
+	ABOX_DMA_SINGLE_S("Dither Strength", DMA_REG_BIT_CTRL0,
+			ABOX_DMA_DITHER_STRENGTH_L, 16, 6, 0),
+	SOC_ENUM("Dither Width", dither_width_enum),
+	ABOX_DMA_SINGLE_S("Dither Seed", DMA_REG_BIT_CTRL1,
+			ABOX_DMA_DITHER_IN_SEED_L, INT_MAX, 31, 0),
 };
 
 static const struct snd_soc_component_driver abox_rdma_compr = {
@@ -2433,33 +2334,6 @@ static const struct of_device_id samsung_abox_rdma_match[] = {
 };
 MODULE_DEVICE_TABLE(of, samsung_abox_rdma_match);
 
-static int abox_rdma_runtime_suspend(struct device *dev)
-{
-	struct abox_dma_data *data = dev_get_drvdata(dev);
-
-	abox_dbg(dev, "%s\n", __func__);
-
-	if (data->mailbox)
-		abox_mailbox_save(dev);
-
-	return 0;
-}
-
-static int abox_rdma_runtime_resume(struct device *dev)
-{
-	struct abox_dma_data *data = dev_get_drvdata(dev);
-
-	abox_dbg(dev, "%s\n", __func__);
-
-	regmap_update_bits(data->abox_data->regmap, ABOX_RDMA_CTRL0(data->id),
-			REG_CTRL_KERNEL_MASK, data->c_reg_ctrl);
-
-	if (data->mailbox)
-		abox_mailbox_restore(dev);
-
-	return 0;
-}
-
 static int samsung_abox_rdma_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -2545,9 +2419,6 @@ static int samsung_abox_rdma_probe(struct platform_device *pdev)
 	if (ret < 0)
 		of_samsung_property_read_u32_array(dev, np, "pm-qos-big",
 			data->pm_qos_cl1, ARRAY_SIZE(data->pm_qos_cl1));
-	else
-		of_samsung_property_read_u32_array(dev, np, "pm-qos-big",
-			data->pm_qos_cl2, ARRAY_SIZE(data->pm_qos_cl2));
 
 	of_data = data->of_data = of_device_get_match_data(dev);
 	data->num_dai = of_data->num_dai;
@@ -2606,11 +2477,6 @@ static void samsung_abox_rdma_shutdown(struct platform_device *pdev)
 	pm_runtime_disable(dev);
 }
 
-static const struct dev_pm_ops samsung_abox_rdma_pm = {
-	SET_RUNTIME_PM_OPS(abox_rdma_runtime_suspend,
-			abox_rdma_runtime_resume, NULL)
-};
-
 struct platform_driver samsung_abox_rdma_driver = {
 	.probe  = samsung_abox_rdma_probe,
 	.remove = samsung_abox_rdma_remove,
@@ -2619,6 +2485,5 @@ struct platform_driver samsung_abox_rdma_driver = {
 		.name = "abox-rdma",
 		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(samsung_abox_rdma_match),
-		.pm = &samsung_abox_rdma_pm,
 	},
 };

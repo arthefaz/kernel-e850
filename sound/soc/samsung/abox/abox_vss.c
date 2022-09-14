@@ -44,14 +44,6 @@ void abox_call_notify_event(enum abox_call_event evt, void *data)
 	pr_debug("abox event notify (%d) --\n", evt);
 }
 
-void abox_vss_notify_status(bool start)
-{
-	enum abox_call_event evt;
-
-	evt = start ? ABOX_CALL_EVENT_VSS_STARTED : ABOX_CALL_EVENT_VSS_STOPPED;
-	abox_call_notify_event(evt, NULL);
-}
-
 int abox_vss_notify_call(struct device *dev, struct abox_data *data, int en)
 {
 	static const char cookie[] = "vss_notify_call";

@@ -86,8 +86,6 @@ static size_t abox_ipc_fix_size(const ABOX_IPC_MSG *ipc, size_t size)
 		break;
 	case IPC_PCMPLAYBACK:
 	case IPC_PCMCAPTURE:
-	case IPC_USBPLAYBACK:
-	case IPC_USBCAPTURE:
 		size_msg = sizeof(ipc->msg.pcmtask);
 		break;
 	case IPC_OFFLOAD:

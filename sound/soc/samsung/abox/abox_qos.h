@@ -26,7 +26,6 @@ enum abox_qos_class {
 	ABOX_QOS_AUD_MAX = PM_QOS_AUD_THROUGHPUT_MAX,
 	ABOX_QOS_CL0 = PM_QOS_CLUSTER0_FREQ_MIN,
 	ABOX_QOS_CL1 = PM_QOS_CLUSTER1_FREQ_MIN,
-	ABOX_QOS_CL2 = PM_QOS_CLUSTER2_FREQ_MIN,
 	ABOX_QOS_INT = PM_QOS_DEVICE_THROUGHPUT,
 	ABOX_QOS_MIF = PM_QOS_BUS_THROUGHPUT,
 };
@@ -35,7 +34,6 @@ enum abox_qos_class {
 	ABOX_QOS_AUD,
 	ABOX_QOS_CL0,
 	ABOX_QOS_CL1,
-	ABOX_QOS_CL2,
 	ABOX_QOS_INT,
 	ABOX_QOS_MIF,
 };
@@ -202,21 +200,6 @@ static inline int abox_qos_request_cl1(struct device *dev, unsigned int id,
 {
 	dev_dbg(dev, "%s(%#x, %d)\n", __func__, id, val);
 	return abox_qos_request(dev, ABOX_QOS_CL1, id, val, name);
-}
-
-/**
- * Request minimum lock on PM QoS CLUSTER2
- * @param[in]	dev		pointer to struct dev which invokes this API
- * @param[in]	id		key which is used as unique handle
- * @param[in]	val		QoS value
- * @param[in]	name		cookie for logging
- * @return	error code or 0
- */
-static inline int abox_qos_request_cl2(struct device *dev, unsigned int id,
-		unsigned int val, const char *name)
-{
-	dev_dbg(dev, "%s(%#x, %d)\n", __func__, id, val);
-	return abox_qos_request(dev, ABOX_QOS_CL2, id, val, name);
 }
 
 /**
