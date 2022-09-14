@@ -1030,7 +1030,7 @@ int exynos_gpu_cooling_init(void)
 		pr_err("Fail to find device node\n");
 		return -EINVAL;
 	}
-
+#if 0
 	of_property_read_u32(np, "gpu_power_coeff", &capacitance);
 
 	if (of_property_read_bool(np, "use-em-coeff"))
@@ -1051,7 +1051,7 @@ int exynos_gpu_cooling_init(void)
 	} else {
 		pr_err("%s: could not find ect-coeff-index\n", __func__);
 	}
-
+#endif
 regist:
 	dev = __gpufreq_cooling_register(np, NULL, capacitance);
 
