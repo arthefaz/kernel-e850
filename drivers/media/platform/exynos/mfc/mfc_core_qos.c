@@ -18,7 +18,6 @@
 #include "base/mfc_utils.h"
 
 #ifdef CONFIG_MFC_USE_BUS_DEVFREQ
-#define MFC_THROUGHPUT_OFFSET	(PM_QOS_MFC1_THROUGHPUT - PM_QOS_MFC_THROUGHPUT)
 
 enum {
 	MFC_QOS_ADD = 0,
