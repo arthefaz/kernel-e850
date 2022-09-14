@@ -168,7 +168,7 @@
 
 			#cooling-cells = <2>; /* min followed by max */
 			ect-coeff-index = <1>;
-			tz-cooling-name = "LITTLE";
+			tz-cooling-name = "LITTLE0";
 
 			freq-table = <  442000
 					546000
@@ -207,7 +207,7 @@
 
 			#cooling-cells = <2>; /* min followed by max */
 			ect-coeff-index = <0>;
-			tz-cooling-name = "LITTLE";
+			tz-cooling-name = "LITTLE1";
 
 			freq-table = <  442000
 					546000
