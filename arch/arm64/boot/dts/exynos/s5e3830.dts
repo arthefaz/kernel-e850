@@ -661,7 +661,7 @@
 		/* WAKEUP_STAT,      WAKEUP2_STAT*/
 		wakeup_stat = <0x3950>,         <0x3954>;
 
-		wake_lock = <1>;		/* 1: held wake_lock */
+		wake_lock = <0>;		/* 1: held wake_lock */
 
 		vgpio_tx_monitor = <0x1700>;
 		wakeup_stats {
