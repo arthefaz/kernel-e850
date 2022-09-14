@@ -2060,18 +2060,18 @@ static int exynos_tmu_probe(struct platform_device *pdev)
 	if (list_is_singular(&dtm_dev_list)) {
 		exynos_thermal_create_debugfs();
 
-		if (data->hotplug_enable) {
-			kthread_init_worker(&hotplug_worker);
-			thread = kthread_create(kthread_worker_fn, &hotplug_worker,
-					"thermal_hotplug_kworker");
-			kthread_bind(thread, 0);
-			sched_setscheduler_nocheck(thread, SCHED_FIFO, &param);
-			wake_up_process(thread);
-		}
-
 		kobj = kobject_create_and_add("exynos-thermal", kernel_kobj);
 		sysfs_create_bin_file(kobj, &thermal_log_bin_attr);
 		sysfs_create_file(kobj, &thermal_status_attr.attr);
+	}
+
+	if (data->hotplug_enable) {
+		kthread_init_worker(&hotplug_worker);
+		thread = kthread_create(kthread_worker_fn, &hotplug_worker,
+				"thermal_hotplug_kworker");
+		kthread_bind(thread, 0);
+		sched_setscheduler_nocheck(thread, SCHED_FIFO, &param);
+		wake_up_process(thread);
 	}
 
 	if (data->use_pi_thermal) {
