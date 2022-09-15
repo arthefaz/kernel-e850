@@ -211,7 +211,7 @@
 /*
 		dma-mode;
 */
-		//dmas = <&pdma0 5 &pdma0 4>;
+		dmas = <&pdma0 5 &pdma0 4>;
 		dma-names = "tx", "rx";
 		swap-mode = <1>;
 		#address-cells = <1>;
@@ -232,7 +232,7 @@
 /*
 		dma-mode;
 */
-		//dmas = <&pdma0 12 &pdma0 13>;
+		dmas = <&pdma0 12 &pdma0 13>;
 		dma-names = "tx", "rx";
 		swap-mode = <1>;
 		#address-cells = <1>;
@@ -253,7 +253,7 @@
 /*
 		dma-mode;
 */
-		//dmas = <&pdma0 14 &pdma0 15>;
+		dmas = <&pdma0 14 &pdma0 15>;
 		dma-names = "tx", "rx";
 		swap-mode = <1>;
 		#address-cells = <1>;
