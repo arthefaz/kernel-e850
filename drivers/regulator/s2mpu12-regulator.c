@@ -459,6 +459,11 @@ static int s2mpu12_pmic_dt_parse_pdata(struct s2mpu12_dev *iodev,
 		dev_err(iodev->dev, "could not find pmic sub-node\n");
 		return -ENODEV;
 	}
+
+	pdata->loop_bw_en = false;
+	if (of_get_property(pmic_np, "pmic_loop_bw", NULL))
+		pdata->loop_bw_en = true;
+
 #if IS_ENABLED(CONFIG_EXYNOS_ACPM)
 	acpm_mfd_node = pmic_np;
 #endif
@@ -961,6 +966,16 @@ static int s2mpu12_set_on_sequence(struct s2mpu12_info *s2mpu12)
 err:
 	return -1;
 }
+
+static int s2mpu12_lower_loop_BW(struct s2mpu12_info *s2mpu12, bool loop_bw_en)
+{
+	if (!loop_bw_en)
+		return 0;
+
+	/* lower loop bw */
+	return s2mpu12_write_reg(s2mpu12->iodev->close, 0x0E, 0x42);
+}
+
 static int s2mpu12_pmic_probe(struct platform_device *pdev)
 {
 	struct s2mpu12_dev *iodev = dev_get_drvdata(pdev->dev.parent);
@@ -1068,6 +1083,10 @@ static int s2mpu12_pmic_probe(struct platform_device *pdev)
 	s2mpu12_write_reg(s2mpu12->i2c, S2MPU12_PMIC_B2OUT2, 0x20);
 
 #endif
+	ret = s2mpu12_lower_loop_BW(s2mpu12, pdata->loop_bw_en);
+	if (ret < 0)
+		goto err;
+
 	pr_info("%s s2mpu12 pmic driver Loading end\n", __func__);
 	return 0;
 err:
