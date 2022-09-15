@@ -381,6 +381,7 @@
 	support-cmdq;
 	fifo-depth = <0x40>;
 	non-removable;
+	use-runtime-pm;
 	desc-size = <4>;
 	card-detect-delay = <200>;
 	samsung,dw-mshc-ciu-div = <3>;
