@@ -28,6 +28,10 @@
 #include "dw_mmc.h"
 #include "dw_mmc-pltfm.h"
 #include "dw_mmc-exynos.h"
+#ifdef CONFIG_MMC_DW_EXYNOS_FMP
+#include "dw_mmc-exynos-fmp.h"
+#include "../core/queue.h"
+#endif
 
 /* Since MRR is a 6-bit value, it must have a value of 0~63. */
 #define SSC_MRR_LIMIT	63
@@ -1373,84 +1377,61 @@ static int dw_mci_exynos_misc_control(struct dw_mci *host,
 }
 
 #ifdef CONFIG_MMC_DW_EXYNOS_FMP
-static struct bio *get_bio(struct dw_mci *host,
-				struct mmc_data *data, bool cmdq_enabled)
+static struct bio *get_bio(struct dw_mci *host, struct mmc_data *data)
 {
 	struct bio *bio = NULL;
-	struct dw_mci_exynos_priv_data *priv;
+	struct mmc_queue_req *mq_rq;
+	struct request *req;
+	struct mmc_blk_request *brq;
 
 	if (!host || !data) {
 		pr_err("%s: Invalid MMC:%p data:%p\n", __func__, host, data);
 		return NULL;
 	}
 
-	priv = host->priv;
-	if (priv->fmp == SMU_ID_MAX)
-		return NULL;
+	brq = container_of(data, struct mmc_blk_request, data);
+	mq_rq = container_of(brq, struct mmc_queue_req, brq);
 
-	if (cmdq_enabled) {
-		pr_err("%s: no support cmdq yet:%p\n", __func__, host, data);
-		bio = NULL;
-	} else {
-		struct mmc_queue_req *mq_rq;
-		struct request *req;
-		struct mmc_blk_request *brq;
-
-		brq = container_of(data, struct mmc_blk_request, data);
-		if (!brq)
-			return NULL;
-
-		mq_rq = container_of(brq, struct mmc_queue_req, brq);
-		if (virt_addr_valid(mq_rq))
+	if ((&brq->mrq) == data->mrq) {
+		if (virt_addr_valid(mq_rq)) {
 			req = mmc_queue_req_to_req(mq_rq);
 			if (virt_addr_valid(req))
 				bio = req->bio;
+		}
 	}
-	return bio;
+
+        if (virt_addr_valid(bio))
+                return bio;
+        else
+                return NULL;
 }
 
 static int dw_mci_exynos_crypto_engine_cfg(struct dw_mci *host,
 					void *desc, struct mmc_data *data,
-					struct page *page, int page_index,
-					int sector_offset, bool cmdq_enabled)
+					int page_index, bool cmdq_enabled)
 {
-	struct bio *bio = get_bio(host, host->data, cmdq_enabled);
+	struct bio *bio = get_bio(host, data);
 
 	if (!bio)
 		return 0;
 
-	return exynos_fmp_crypt_cfg(bio, desc, page_index, sector_offset);
+	return fmp_mmc_crypt_cfg(bio, desc, data, page_index, cmdq_enabled);
 }
 
 static int dw_mci_exynos_crypto_engine_clear(struct dw_mci *host,
-					void *desc, bool cmdq_enabled)
+					void *desc, struct mmc_data *data,
+					bool cmdq_enabled)
 {
-	struct bio *bio = get_bio(host, host->data, cmdq_enabled);
+	struct bio *bio = get_bio(host, data);
 
 	if (!bio)
 		return 0;
-
-	return exynos_fmp_crypt_clear(bio, desc);
+	return fmp_mmc_crypt_clear(bio, desc, data, cmdq_enabled);
 }
 
-static int dw_mci_exynos_crypto_sec_cfg(struct dw_mci *host, bool init)
+static int dw_mci_exynos_crypto_sec_cfg(bool init)
 {
-	struct dw_mci_exynos_priv_data *priv = host->priv;
-
-	if (!priv)
-		return -EINVAL;
-
-	return exynos_fmp_sec_cfg(priv->fmp, priv->smu, init);
-}
-
-static int dw_mci_exynos_access_control_abort(struct dw_mci *host)
-{
-	struct dw_mci_exynos_priv_data *priv = host->priv;
-
-	if (!priv)
-		return -EINVAL;
-
-	return exynos_fmp_smu_abort(priv->smu);
+	return fmp_mmc_sec_cfg(init);
 }
 #endif
 
@@ -1464,10 +1445,9 @@ static const struct dw_mci_drv_data exynos_drv_data = {
 	.misc_control = dw_mci_exynos_misc_control,
 	.pins_control = dw_mci_set_pins_state,
 #ifdef CONFIG_MMC_DW_EXYNOS_FMP
-	.crypto_engine_cfg = dw_mci_exynos_crypto_engine_cfg,
-	.crypto_engine_clear = dw_mci_exynos_crypto_engine_clear,
+//	.crypto_engine_cfg = dw_mci_exynos_crypto_engine_cfg,
+//	.crypto_engine_clear = dw_mci_exynos_crypto_engine_clear,
 	.crypto_sec_cfg = dw_mci_exynos_crypto_sec_cfg,
-	.access_control_abort = dw_mci_exynos_access_control_abort,
 #endif
 	.ssclk_control = dw_mci_exynos_ssclk_control,
 	.dump_reg = dw_mci_reg_dump,

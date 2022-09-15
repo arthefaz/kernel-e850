@@ -379,6 +379,7 @@
 	qos-dvfs-level = <334000>;
 	enable-ulp-mode;
 	support-cmdq;
+	//mmc-inline-crypt;
 	fifo-depth = <0x40>;
 	non-removable;
 	use-runtime-pm;

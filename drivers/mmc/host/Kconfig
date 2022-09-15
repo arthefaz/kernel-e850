@@ -831,6 +831,14 @@ config MMC_DW_EXYNOS
 	  Synopsys DesignWare Memory Card Interface driver. Select this option
 	  for platforms based on Exynos4 and Exynos5 SoC's.
 
+config MMC_DW_EXYNOS_FMP
+	bool "EXYNOS Flash Memory Protector for MMC_DW"
+	depends on MMC_DW_EXYNOS && MMC_CRYPTO
+	help
+	  This selects the EXYNOS MMC_DW FMP Driver.
+	  If you have a controller with this interface, say Y or M here.
+	  If unsure, say N.
+
 config MMC_DW_HI3798CV200
 	tristate "Hi3798CV200 specific extensions for Synopsys DW Memory Card Interface"
 	depends on MMC_DW

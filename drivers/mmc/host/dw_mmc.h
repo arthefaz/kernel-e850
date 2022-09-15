@@ -415,6 +415,8 @@ struct idmac_desc_64addr {
 #define IDMAC_DES0_ER	BIT(5)
 #define IDMAC_DES0_CES	BIT(30)
 #define IDMAC_DES0_OWN	BIT(31)
+#define IDMAC_OWN_CLR64(x) \
+        !((x) & cpu_to_le32(IDMAC_DES0_OWN))
 	u32 des1;		/* Reserved */
 #define IDMAC_64ADDR_SET_BUFFER1_SIZE(d, s) \
 	((d)->des2 = ((d)->des2 & cpu_to_le32(0x03ffe000)) | \
@@ -449,40 +451,6 @@ struct idmac_desc_64addr {
 	u32 des29;		/* Disk IV 1 */
 	u32 des30;		/* Disk IV 2 */
 	u32 des31;		/* Disk IV 3 */
-#if defined(CONFIG_EXYNOS_FMP_DUAL_FILE_ENCRYPTION)
-	u32 des32;		/* File2 EncKey 0 */
-	u32 des33;		/* File2 EncKey 1 */
-	u32 des34;		/* File2 EncKey 2 */
-	u32 des35;		/* File2 EncKey 3 */
-	u32 des36;		/* File2 EncKey 4 */
-	u32 des37;		/* File2 EncKey 5 */
-	u32 des38;		/* File2 EncKey 6 */
-	u32 des39;		/* File2 EncKey 7 */
-	u32 des40;		/* File TwKey 0 */
-	u32 des41;		/* File TwKey 1 */
-	u32 des42;		/* File TwKey 2 */
-	u32 des43;		/* File TwKey 3 */
-	u32 des44;		/* File TwKey 4 */
-	u32 des45;		/* File TwKey 5 */
-	u32 des46;		/* File TwKey 6 */
-	u32 des47;		/* File TwKey 7 */
-	u32 des48;		/* Reserved */
-	u32 des49;		/* Reserved */
-	u32 des50;		/* Reserved */
-	u32 des51;		/* Reserved */
-	u32 des52;		/* Reserved */
-	u32 des53;		/* Reserved */
-	u32 des54;		/* Reserved */
-	u32 des55;		/* Reserved */
-	u32 des56;		/* Reserved */
-	u32 des57;		/* Reserved */
-	u32 des58;		/* Reserved */
-	u32 des59;		/* Reserved */
-	u32 des60;		/* Reserved */
-	u32 des61;		/* Reserved */
-	u32 des62;		/* Reserved */
-	u32 des63;		/* Reserved */
-#endif				/* CONFIG_EXYNOS_FMP_DUAL_FILE_ENCRYPTION */
 #define IDMAC_64ADDR_SET_DESC_CLEAR(d) \
 do {			\
 	(d)->des1 = 0;	\
@@ -978,14 +946,11 @@ struct dw_mci_drv_data {
 	void (*hwacg_control) (struct dw_mci * host, u32 flag);
 	void (*pins_control) (struct dw_mci * host, int config);
 	int (*misc_control) (struct dw_mci * host, enum dw_mci_misc_control control, void *priv);
-	int (*crypto_engine_cfg) (struct dw_mci * host,
-				  void *desc,
-				  struct mmc_data * data,
-				  struct page * page, int page_index,
-				  int sector_offset, bool cmdq_enabled);
-	int (*crypto_engine_clear) (struct dw_mci * host, void *desc, bool cmdq_enabled);
-	int (*crypto_sec_cfg) (struct dw_mci * host, bool init);
-	int (*access_control_abort) (struct dw_mci * host);
+	int (*crypto_engine_cfg) (struct dw_mci * host, void *desc,
+				  struct mmc_data * data, int page_index, bool cmdq_enabled);
+	int (*crypto_engine_clear)(struct dw_mci * host, void *desc,
+					struct mmc_data *data, bool cmdq_enabled);
+	int (*crypto_sec_cfg) (bool init);
 	void (*ssclk_control) (struct dw_mci * host, int enable);
 	void (*dump_reg) (struct dw_mci * host);
 };

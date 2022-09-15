@@ -49,6 +49,9 @@
 #include "dw_mmc.h"
 #include "dw_mmc-exynos.h"
 #include "../core/queue.h"
+#ifdef CONFIG_MMC_DW_EXYNOS_FMP
+#include "dw_mmc-exynos-fmp.h"
+#endif
 
 /* Common flag combinations */
 #define DW_MCI_DATA_ERROR_FLAGS	(SDMMC_INT_DRTO | SDMMC_INT_DCRC | \
@@ -888,8 +891,10 @@ static void dw_mci_idmac_stop_dma(struct dw_mci *host)
 
 static void dw_mci_dmac_complete_dma(void *arg)
 {
+	int ret;
 	struct dw_mci *host = arg;
 	struct mmc_data *data = host->data;
+	const struct dw_mci_drv_data *drv_data = host->drv_data;
 
 	dev_vdbg(host->dev, "DMA complete\n");
 
@@ -897,6 +902,15 @@ static void dw_mci_dmac_complete_dma(void *arg)
 		/* Invalidate cache after read */
 		dma_sync_sg_for_cpu(mmc_dev(host->slot->mmc),
 				    data->sg, data->sg_len, DMA_FROM_DEVICE);
+
+	if (drv_data && drv_data->crypto_engine_clear) {
+		ret = drv_data->crypto_engine_clear(host, host->sg_cpu, data, false);
+		if (ret) {
+			dev_err(host->dev,
+					"%s: failed to clear crypto engine(%d)\n",
+					__func__, ret);
+		}
+	}
 
 	host->dma_ops->cleanup(host);
 
@@ -986,7 +1000,9 @@ static inline int dw_mci_prepare_desc64(struct dw_mci *host,
 	unsigned int desc_len;
 	struct idmac_desc_64addr *desc_first, *desc_last, *desc;
 	u32 val;
-	int i;
+	int i, ret;
+	const struct dw_mci_drv_data *drv_data = host->drv_data;
+	int page_index = 0;
 
 	desc_first = desc_last = desc = host->sg_cpu;
 
@@ -1025,6 +1041,16 @@ static inline int dw_mci_prepare_desc64(struct dw_mci *host,
 			desc->des4 = mem_addr & 0xffffffff;
 			desc->des5 = mem_addr >> 32;
 
+			if (drv_data && drv_data->crypto_engine_cfg) {
+				ret = drv_data->crypto_engine_cfg(host, desc,
+					data, page_index++, false);
+				if (ret) {
+					dev_err(host->dev,
+						"%s: fail to set crypto (%d)\n",
+						__func__, ret);
+					return -EPERM;
+				}
+			}
 			/* Update physical address for the next desc */
 			mem_addr += desc_len;
 
@@ -3760,6 +3786,11 @@ static int dw_mci_init_slot(struct dw_mci *host)
 	if (ret)
 		goto err_host_allocated;
 
+#ifdef CONFIG_MMC_DW_EXYNOS_FMP
+	if (mmc->caps2 & MMC_CAP2_CRYPTO)
+		fmp_mmc_init_crypt(mmc);
+#endif
+
 #if defined(CONFIG_DEBUG_FS)
 	dw_mci_init_debugfs(slot);
 #endif
@@ -4232,6 +4263,8 @@ static struct dw_mci_board *dw_mci_parse_dt(struct dw_mci *host)
 		pdata->cd_type = DW_MCI_CD_GPIO;
 	if (of_find_property(np, "broken-drto", NULL))
 		pdata->sw_drto = true;
+	if (of_find_property(np, "mmc-inline-crypt", NULL))
+		pdata->caps2 |= MMC_CAP2_CRYPTO;
 
 	return pdata;
 }
@@ -4350,7 +4383,7 @@ int dw_mci_probe(struct dw_mci *host)
 	}
 
 	if (drv_data && drv_data->crypto_sec_cfg) {
-		ret = drv_data->crypto_sec_cfg(host, true);
+		ret = drv_data->crypto_sec_cfg(true);
 		if (ret)
 			dev_err(host->dev, "%s: Fail to initialize access control.(%d)\n",
 				__func__, ret);
@@ -4689,7 +4722,7 @@ int dw_mci_runtime_resume(struct device *dev)
 	}
 
 	if (drv_data && drv_data->crypto_sec_cfg) {
-		ret = drv_data->crypto_sec_cfg(host, false);
+		ret = drv_data->crypto_sec_cfg(false);
 		if (ret)
 			dev_err(host->dev, "%s: Fail to control security config.(%x)\n",
 				__func__, ret);
