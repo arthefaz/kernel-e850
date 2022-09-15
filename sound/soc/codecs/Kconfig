@@ -524,6 +524,23 @@ config SND_SOC_ALC5632
 	tristate
 	depends on I2C
 
+config SND_SOC_AUD3004X_5PIN
+	tristate "AUD3004X Codec Driver"
+	default n
+
+config SND_SOC_AUD3004X_6PIN
+	tristate "AUD3004X Codec Driver"
+	default n
+
+config SND_SOC_AUD3004X_DUMP
+	tristate "AUD3004X Codec Dump"
+	default n
+
+config SND_SOC_AUD3004X_EXT_ANT
+	tristate "AUD3004X Codec Driver - EXT ANT"
+	depends on SND_SOC_AUD3004X
+	default n
+
 config SND_SOC_BD28623
 	tristate "ROHM BD28623 CODEC"
 	help
