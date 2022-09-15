@@ -549,7 +549,7 @@ int cal_if_init(void *dev)
 		return ret;
 #endif
 
-#ifdef CONFIG_GNSS_PMUCAL
+#if IS_ENABLED(CONFIG_GNSS_PMUCAL)
 	ret = pmucal_gnss_initialize();
 	if (ret < 0)
 		return ret;
