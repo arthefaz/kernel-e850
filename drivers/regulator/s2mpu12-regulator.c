@@ -969,11 +969,21 @@ err:
 
 static int s2mpu12_lower_loop_BW(struct s2mpu12_info *s2mpu12, bool loop_bw_en)
 {
+	int ret = 0;
+
 	if (!loop_bw_en)
 		return 0;
 
 	/* lower loop bw */
-	return s2mpu12_write_reg(s2mpu12->iodev->close, 0x0E, 0x42);
+	ret = s2mpu12_write_reg(s2mpu12->iodev->close, 0x0E, 0x42);
+	if (ret < 0)
+		return ret;
+
+	ret = s2mpu12_write_reg(s2mpu12->iodev->close, 0x08, 0x42);
+	if (ret < 0)
+		return ret;
+
+	return 0;
 }
 
 static int s2mpu12_pmic_probe(struct platform_device *pdev)
