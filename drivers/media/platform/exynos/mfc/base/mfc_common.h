@@ -80,12 +80,12 @@
 #define MFC_BOOST_SPEED		(8)
 
 /*
- * This value guarantees 299.4msec ~ 2.25sec according to MFC clock (668MHz ~ 89MHz)
+ * This value guarantees 599.7msec ~ 4.49sec according to MFC clock (667MHz ~ 89MHz)
  * releated with MFC_REG_TIMEOUT_VALUE
  */
-#define MFC_TIMEOUT_VALUE	200000000
-/* 250ms is the mfc firmware timeout value*/
-#define MFC_TIMEOUT_VALUE_IN_MSEC 250
+#define MFC_TIMEOUT_VALUE	400000000
+/* 500ms is the mfc firmware timeout value*/
+#define MFC_TIMEOUT_VALUE_IN_MSEC 500
 
 #define NUM_MPEG4_LF_BUF	2
 
