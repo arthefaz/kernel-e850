@@ -2260,26 +2260,14 @@ static struct platform_driver s3c64xx_spi_driver = {
 		.pm = &s3c64xx_spi_pm,
 		.of_match_table = of_match_ptr(s3c64xx_spi_dt_match),
 	},
+	.probe = s3c64xx_spi_probe,
 	.remove = s3c64xx_spi_remove,
 	.id_table = s3c64xx_spi_driver_ids,
 };
+
+module_platform_driver(s3c64xx_spi_driver);
+
 MODULE_ALIAS("platform:s3c64xx-spi");
-
-static int __init s3c64xx_spi_init(void)
-{
-/*#if defined(CONFIG_CPU_IDLE)
-	exynos_pm_register_notifier(&s3c64xx_spi_notifier_block);
-#endif*/
-	return platform_driver_probe(&s3c64xx_spi_driver, s3c64xx_spi_probe);
-}
-subsys_initcall(s3c64xx_spi_init);
-
-static void __exit s3c64xx_spi_exit(void)
-{
-	platform_driver_unregister(&s3c64xx_spi_driver);
-}
-module_exit(s3c64xx_spi_exit);
-
 MODULE_AUTHOR("Jaswinder Singh <jassi.brar@samsung.com>");
 MODULE_DESCRIPTION("S3C64XX SPI Controller Driver");
 MODULE_LICENSE("GPL");
