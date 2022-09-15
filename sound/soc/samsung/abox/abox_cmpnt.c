@@ -3145,7 +3145,7 @@ static int asrc_put_id(struct snd_soc_component *cmpnt, int idx, int stream,
 	struct soc_mixer_control *mc;
 	unsigned int reg, mask, val;
 
-	abox_dbg(dev, "%s(%d, %d, %d)\n", __func__, idx, stream, id);
+	abox_info(dev, "%s(%d, %d, %d)\n", __func__, idx, stream, id);
 
 	kcontrol = asrc_get_id_kcontrol(idx, stream);
 	if (IS_ERR(kcontrol))
@@ -3167,7 +3167,7 @@ static int asrc_put_active(struct snd_soc_dapm_widget *w, int stream, int on)
 	struct soc_mixer_control *mc;
 	unsigned int reg, mask, val;
 
-	abox_dbg(dev, "%s(%s, %d, %d)\n", __func__, w->name, stream, on);
+	abox_info(dev, "%s(%s, %d, %d)\n", __func__, w->name, stream, on);
 
 	kcontrol = asrc_get_kcontrol(asrc_get_idx(w), stream);
 	if (IS_ERR(kcontrol))
@@ -3189,7 +3189,7 @@ static int asrc_exchange_id(struct snd_soc_component *cmpnt, int stream,
 	int id2 = asrc_get_id(cmpnt, idx2, stream);
 	int ret;
 
-	abox_dbg(dev, "%s(%d, %d, %d)\n", __func__, stream, idx1, idx2);
+	abox_info(dev, "%s(%d, %d, %d)\n", __func__, stream, idx1, idx2);
 
 	if (idx1 == idx2)
 		return 0;
@@ -3233,7 +3233,7 @@ static int spus_asrc_lock[] = {
 };
 
 static int spum_asrc_lock[] = {
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1,
 };
 
 int abox_cmpnt_asrc_lock(struct abox_data *data, int stream,
@@ -5568,7 +5568,7 @@ static int sifs_hw_params(struct snd_pcm_substream *substream,
 	if (substream->stream != SNDRV_PCM_STREAM_CAPTURE)
 		goto out;
 
-	ret = set_cnt_val(data, dai, params);
+	ret = set_cnt_val(data, dai->id, params);
 out:
 	return ret;
 }

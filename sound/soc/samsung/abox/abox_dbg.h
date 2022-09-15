@@ -100,9 +100,4 @@ extern void abox_dbg_dump_suspend(struct device *dev, struct abox_data *data);
  */
 extern void abox_dbg_report_status(struct device *dev, bool ok);
 
-/**
- * dump all abox debug information
- * @param[in]	data		pointer to abox_data structure
- */
-extern void abox_dbg_dump_memlog(struct abox_data *data);
 #endif /* __SND_SOC_ABOX_DEBUG_H */

@@ -22,7 +22,6 @@
 #include "abox_proc.h"
 #include "abox_log.h"
 #include "abox_dump.h"
-#include "abox_memlog.h"
 
 #define NAME_LENGTH (SZ_32)
 
@@ -46,14 +45,10 @@ struct abox_dump_info {
 	wait_queue_head_t file_waitqueue;
 
 	bool auto_started;
+	bool file_created;
+	struct file *filp;
 	ssize_t auto_pointer;
-	struct memlog_obj *auto_fobj;
 	struct work_struct auto_work;
-
-	bool memlog_started;
-	ssize_t memlog_pointer;
-	struct work_struct memlog_work;
-	int memlog_idx;
 };
 
 static struct proc_dir_entry *dir_dump;
@@ -92,7 +87,7 @@ static void abox_dump_request_dump(int id)
 	struct IPC_SYSTEM_MSG *system = &msg.msg.system;
 	struct abox_data *data = dev_get_drvdata(abox_dump_dev_abox);
 	bool start = info->started || info->file_started ||
-			info->auto_started || info->memlog_started;
+			info->auto_started;
 
 	if (!data->enabled) {
 		abox_info(info->dev, "%s(%d) skip to send ipc before abox enabled\n", __func__, id);
@@ -106,180 +101,6 @@ static void abox_dump_request_dump(int id)
 	system->param3 = info->c_gid;
 	abox_request_ipc(abox_dump_dev_abox, msg.ipcid, &msg, sizeof(msg),
 			1, 0);
-}
-
-struct abox_dump_memlog_entity {
-	const char *name;
-	struct memlog_obj *fobj;
-	size_t buf_size;
-};
-
-static struct abox_dump_memlog_entity abox_dump_memlogs[] = {
-	{ .name = "rd0", .buf_size = SZ_16M, },
-	{ .name = "rd1", .buf_size = SZ_16M, },
-	{ .name = "rd3", .buf_size = SZ_16M, },
-	{ .name = "rd4", .buf_size = SZ_16M, },
-	{ .name = "rd7", .buf_size = SZ_16M, },
-	{ .name = "rdb", .buf_size = SZ_16M, },
-	{ .name = "wr0", .buf_size = SZ_16M, },
-	{ .name = "wr1", .buf_size = SZ_16M, },
-	{ .name = "wr2", .buf_size = SZ_16M, },
-	{ .name = "wr3", .buf_size = SZ_16M, },
-	{ .name = "wr4", .buf_size = SZ_16M, },
-	{ .name = "wr6", .buf_size = SZ_16M, },
-	{ .name = "uou", .buf_size = SZ_16M, },
-	{ .name = "uin", .buf_size = SZ_16M, },
-};
-
-static int abox_dump_memlog_file_completed(struct memlog_obj *obj, u32 flags)
-{
-	/* NOP */
-	return 0;
-}
-
-static int abox_dump_memlog_status_notify(struct memlog_obj *obj, u32 flags)
-{
-	/* NOP */
-	return 0;
-}
-
-static int abox_dump_memlog_level_notify(struct memlog_obj *obj, u32 flags)
-{
-	/* NOP */
-	return 0;
-}
-
-static int abox_dump_memlog_enable_notify(struct memlog_obj *obj, u32 flags)
-{
-	struct abox_data *data = dev_get_drvdata(abox_dump_dev_abox);
-	struct memlog_obj *_memlog_obj;
-	struct abox_dump_info *info = NULL;
-	int idx;
-
-	for (idx = 0; idx < ARRAY_SIZE(abox_dump_memlogs); idx++) {
-		_memlog_obj = abox_dump_memlogs[idx].fobj;
-		if (_memlog_obj == obj) {
-			info = abox_dump_get_info_by_name(
-					abox_dump_memlogs[idx].name);
-			break;
-		}
-	}
-
-	if (!info) {
-		abox_info(data->dev, "dump info of %s is not found\n",
-				obj->file->file_name);
-		return 0;
-	}
-
-	abox_info(info->dev, "abox dump log(%s) %s is sent\n",
-			info->name, obj->enabled ? "ENABLE" : "DISABLE");
-
-	if (info->memlog_started != obj->enabled) {
-		if (obj->enabled)
-			pm_runtime_get_sync(info->dev);
-		else
-			pm_runtime_put(info->dev);
-	}
-
-	info->memlog_started = obj->enabled;
-	if (obj->enabled)
-		info->pointer = info->memlog_pointer = 0;
-	info->memlog_idx = idx;
-	abox_dump_request_dump(info->id);
-
-	return 0;
-}
-
-static const struct memlog_ops abox_dump_memlog_ops = {
-	.file_ops_completed = abox_dump_memlog_file_completed,
-	.log_status_notify = abox_dump_memlog_status_notify,
-	.log_level_notify = abox_dump_memlog_level_notify,
-	.log_enable_notify = abox_dump_memlog_enable_notify,
-};
-
-
-void abox_dump_memlog_register(struct device *dev_abox)
-{
-	struct abox_data *data = dev_get_drvdata(dev_abox);
-	char name[32] = {0,};
-	int i, ret;
-
-	ret = memlog_register("abox-dump", data->dev, &data->dump_desc);
-	if (ret) {
-		abox_err(data->dev, "failed to register dump memlog\n");
-		return;
-	}
-
-	data->dump_desc->ops = abox_dump_memlog_ops;
-
-	for (i = 0; i < ARRAY_SIZE(abox_dump_memlogs); i++) {
-		snprintf(name, sizeof(name), "%s.pcm",
-				abox_dump_memlogs[i].name);
-		abox_dump_memlogs[i].fobj = memlog_alloc_file(data->dump_desc,
-				name, SZ_128K,
-				abox_dump_memlogs[i].buf_size, 20, 10);
-	}
-}
-
-static void abox_dump_memlog_work_func(struct work_struct *work)
-{
-	struct abox_dump_info *info = container_of(work,
-			struct abox_dump_info, memlog_work);
-	struct memlog_obj *fobj;
-	struct device *dev;
-	const char *name;
-	void *area;
-	size_t bytes;
-	size_t pointer;
-	int ret;
-
-	if (!info) {
-		abox_info(abox_dump_dev_abox, "dump information is not found\n");
-		return;
-	}
-
-	fobj = abox_dump_memlogs[info->memlog_idx].fobj;
-	if (!fobj->enabled)
-		return;
-
-	dev = info->dev;
-	name = info->name;
-	area = info->buffer.area;
-	bytes = info->buffer.bytes;
-	pointer = info->pointer;
-
-	if (pointer < info->memlog_pointer) {
-		ret = memlog_write_file(fobj, area + info->memlog_pointer,
-				bytes - info->memlog_pointer);
-		if (ret < 0)
-			abox_err(dev, "Failed to write pcm dump (%d)\n", ret);
-		abox_dbg(dev, "memlog_write(%pK, %zx)\n",
-				area + info->memlog_pointer,
-				bytes - info->memlog_pointer);
-		info->memlog_pointer = 0;
-	}
-	ret = memlog_write_file(fobj, area + info->memlog_pointer,
-			pointer - info->memlog_pointer);
-	if (ret < 0)
-		abox_err(dev, "Failed to write pcm dump (%d)\n", ret);
-	abox_dbg(dev, "memlog_write(%pK, %zx)\n",
-			area + info->memlog_pointer,
-			pointer - info->memlog_pointer);
-	info->memlog_pointer = pointer;
-}
-
-static void abox_dump_memlog_wait_for_flush(struct abox_dump_info *info)
-{
-	/* memlog timeout + 1 */
-	u64 limit = local_clock() + (NSEC_PER_SEC * (5 + 1));
-
-	while (memlog_is_data_remaining(info->auto_fobj)) {
-		if (local_clock() > limit) {
-			abox_warn(abox_dump_dev_abox, "memlog flush timeout\n");
-			break;
-		}
-		msleep(100);
-	}
 }
 
 static ssize_t abox_dump_auto_read(struct file *file, char __user *data,
@@ -356,41 +177,12 @@ static ssize_t abox_dump_auto_write(struct file *file, const char __user *data,
 
 		info->auto_started = enable;
 		if (enable) {
-			char filename[SZ_64];
-			struct abox_data *data =
-				dev_get_drvdata(abox_dump_dev_abox);
-			if (!info->auto_fobj) {
-				snprintf(filename, sizeof(filename),
-						"%s-auto_pcm", info->name);
-				info->auto_fobj = memlog_alloc_file(
-						data->dump_desc,
-						filename, SZ_4M,
-						SZ_1G, 20, 1);
-				if (!info->auto_fobj) {
-					abox_err(abox_dump_dev_abox,
-						"auto file %s open error\n",
-						info->name);
-					goto err;
-				}
-				/* enable file write */
-				info->auto_fobj->enabled = true;
-			}
-
+			info->file_created = false;
 			info->pointer = info->auto_pointer = 0;
 		}
 
 		abox_dump_request_dump(info->id);
 	}
-
-	/* clear stopped dump */
-	list_for_each_entry(info, &abox_dump_list_head, list) {
-		if (!info->auto_started && info->auto_fobj) {
-			abox_dump_memlog_wait_for_flush(info);
-			memlog_free(info->auto_fobj);
-			info->auto_fobj = NULL;
-		}
-	}
-
 err:
 	kfree(buffer);
 	return ret;
@@ -432,34 +224,68 @@ static const struct proc_ops abox_dump_auto_stop_fops = {
 
 static void abox_dump_auto_dump_work_func(struct work_struct *work)
 {
+#if 0
 	struct abox_dump_info *info = container_of(work,
 			struct abox_dump_info, auto_work);
 	struct device *dev = info->dev;
-	void *area = info->buffer.area;
-	size_t bytes = info->buffer.bytes;
-	size_t pointer = info->pointer;
-	int ret;
+	const char *name = info->name;
 
-	if (pointer < info->auto_pointer) {
-		ret = memlog_write_file(info->auto_fobj,
-				area + info->auto_pointer,
-				bytes - info->auto_pointer);
-		if (ret < 0)
-			abox_err(dev, "Failed to write pcm dump (%d)\n", ret);
-		abox_dbg(dev, "auto_write(%pK, %zx)\n",
-				area + info->auto_pointer,
-				bytes - info->auto_pointer);
-		info->auto_pointer = 0;
+	if (info->auto_started) {
+		mm_segment_t old_fs;
+		char filename[SZ_64];
+		struct file *filp;
+
+		sprintf(filename, "/data/abox_dump-%s.raw", name);
+
+		old_fs = get_fs();
+		set_fs(KERNEL_DS);
+		if (likely(info->file_created)) {
+			filp = filp_open(filename, O_RDWR | O_APPEND | O_CREAT,
+					0660);
+			dev_dbg(dev, "appended\n");
+		} else {
+			filp = filp_open(filename, O_RDWR | O_TRUNC | O_CREAT,
+					0660);
+			info->file_created = true;
+			dev_dbg(dev, "created\n");
+		}
+		if (!IS_ERR_OR_NULL(filp)) {
+			void *area = info->buffer.area;
+			size_t bytes = info->buffer.bytes;
+			size_t pointer = info->pointer;
+
+			dev_dbg(dev, "%pad, %pK, %zx, %zx)\n",
+					&info->buffer.addr, area, bytes,
+					info->auto_pointer);
+
+			if (pointer < info->auto_pointer) {
+				vfs_write(filp, area + info->auto_pointer,
+						bytes - info->auto_pointer,
+						&filp->f_pos);
+				dev_dbg(dev, "vfs_write(%pK, %zx)\n",
+						area + info->auto_pointer,
+						bytes - info->auto_pointer);
+				info->auto_pointer = 0;
+			}
+			vfs_write(filp, area + info->auto_pointer,
+					pointer - info->auto_pointer,
+					&filp->f_pos);
+			dev_dbg(dev, "vfs_write(%pK, %zx)\n",
+					area + info->auto_pointer,
+					pointer - info->auto_pointer);
+			info->auto_pointer = pointer;
+
+			vfs_fsync(filp, 1);
+			filp_close(filp, NULL);
+		} else {
+			dev_err(dev, "dump file %s open error: %ld\n", name,
+					PTR_ERR(filp));
+		}
+
+		set_fs(old_fs);
 	}
-	ret = memlog_write_file(info->auto_fobj,
-			area + info->auto_pointer,
-			pointer - info->auto_pointer);
-	if (ret < 0)
-		abox_err(dev, "Failed to write pcm dump (%d)\n", ret);
-	abox_dbg(dev, "auto_write(%pK, %zx)\n",
-			area + info->auto_pointer,
-			pointer - info->auto_pointer);
-	info->auto_pointer = pointer;
+#endif
+	return;
 }
 
 static ssize_t abox_dump_file_read(struct file *file, char __user *data,
@@ -541,18 +367,6 @@ static unsigned int abox_dump_file_poll(struct file *file, poll_table *wait)
 	return POLLIN | POLLRDNORM;
 }
 
-void abox_dump_file_restore(void)
-{
-	struct abox_dump_info *info;
-
-	list_for_each_entry(info, &abox_dump_list_head, list) {
-		if (info->file_started) {
-			abox_dbg(info->dev, "%s restore dump for(%d)\n", __func__, info->id);
-			abox_dump_request_dump(info->id);
-		}
-	}
-}
-
 static const struct proc_ops abox_dump_fops = {
 	.proc_lseek = generic_file_llseek,
 	.proc_read = abox_dump_file_read,
@@ -586,8 +400,6 @@ void abox_dump_period_elapsed(int id, size_t pointer)
 	info->pointer = pointer;
 	if (info->auto_started)
 		schedule_work(&info->auto_work);
-	if (info->memlog_started)
-		schedule_work(&info->memlog_work);
 	if (info->file_started)
 		wake_up_interruptible(&info->file_waitqueue);
 	if (info->started)
@@ -863,7 +675,6 @@ static int abox_dump_register_work_single(void)
 	info->file = abox_dump_register_file(info->name, info, &abox_dump_fops);
 	init_waitqueue_head(&info->file_waitqueue);
 	INIT_WORK(&info->auto_work, abox_dump_auto_dump_work_func);
-	INIT_WORK(&info->memlog_work, abox_dump_memlog_work_func);
 	info->registered = true;
 
 	spin_lock_irqsave(&abox_dump_lock, flags);
@@ -1112,5 +923,4 @@ void abox_dump_init(struct device *dev_abox)
 		pdev = platform_device_register_data(dev_abox,
 				"abox-dump", -1, NULL, 0);
 
-	abox_dump_memlog_register(dev_abox);
 }

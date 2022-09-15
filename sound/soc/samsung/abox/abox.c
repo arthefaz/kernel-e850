@@ -1819,7 +1819,6 @@ static void abox_restore_data(struct device *dev)
 	abox_tplg_restore(dev);
 	abox_cmpnt_restore(dev);
 	abox_effect_restore();
-	abox_dump_file_restore();
 	data->restored = true;
 	wake_up_all(&data->wait_queue);
 }
@@ -3339,27 +3338,6 @@ static int __init abox_rmem_setup(struct reserved_mem *rmem)
 }
 RESERVEDMEM_OF_DECLARE(abox_rmem, "exynos,abox_rmem", abox_rmem_setup);
 
-static void abox_memlog_register(struct abox_data *data)
-{
-	int ret;
-
-	ret = memlog_register("@box", data->dev, &data->drvlog_desc);
-	if (ret)
-		dev_err(data->dev, "Failed to register abox memlog\n");
-
-	data->drv_log_file_obj = memlog_alloc_file(data->drvlog_desc,
-			"abox-file", SZ_512K, SZ_2M, 200, 10);
-	if (!data->drv_log_file_obj)
-		dev_err(data->dev, "%s : %d : Failed to allocate a file for driver log\n",
-				__func__, __LINE__);
-
-	data->drv_log_obj = memlog_alloc_printf(data->drvlog_desc, SZ_512K,
-			data->drv_log_file_obj, "abox-mem", 0);
-	if (!data->drv_log_obj)
-		dev_err(data->dev, "%s : %d : Failed to allocate memory for driver log\n",
-				__func__, __LINE__);
-}
-
 static int abox_sysevent_powerup(const struct sysevent_desc *sysevent)
 {
 	dev_info(sysevent->dev, "%s: powerup callback\n", __func__);
@@ -3437,7 +3415,6 @@ static int samsung_abox_probe(struct platform_device *pdev)
 	data->dev = dev;
 	p_abox_data = data;
 
-	abox_memlog_register(data);
 	abox_sysevent_register(data);
 	abox_probe_quirks(data, np);
 	init_waitqueue_head(&data->ipc_wait_queue);

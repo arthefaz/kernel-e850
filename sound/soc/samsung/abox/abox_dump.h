@@ -90,8 +90,4 @@ static inline int abox_dump_register_legacy(struct abox_data *data, int id,
  */
 extern void abox_dump_init(struct device *dev_abox);
 
-/**
- * Restore dump file node
- */
-extern void abox_dump_file_restore(void);
 #endif /* __SND_SOC_ABOX_DUMP_H */
