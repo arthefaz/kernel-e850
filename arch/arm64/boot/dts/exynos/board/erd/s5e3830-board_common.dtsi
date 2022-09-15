@@ -585,9 +585,9 @@
 				mbox,name = "gnss_mailbox";
 				mbox,id = <0>;
 
-				num_shared_reg = <0>;
-				shared_reg_offset = <0x000>;
-				use_sw_reset_reg = <0>;
+				num_shared_reg = <4>;
+				shared_reg_offset = <0x80>;
+				use_sw_reset_reg = <1>;
 
 			};
 
