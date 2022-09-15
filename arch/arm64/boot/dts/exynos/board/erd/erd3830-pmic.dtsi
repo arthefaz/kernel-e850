@@ -72,6 +72,8 @@
 		init_time,mon = <0>;
 		init_time,year = <122>;
 		init_time,wday = <6>;
+		/* Loop BW */
+		pmic_loop_bw;
 
 		s2mpu12-keys {
 			button@1 {
