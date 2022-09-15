@@ -683,7 +683,7 @@ static bool s2m_is_jigonb_low(struct s2m_rtc_info *info)
 		BUG();
 	}
 
-	ret = s2mpu12_read_reg(info->i2c, reg, &val);
+	ret = s2mpu12_read_reg(info->pmic_i2c, reg, &val);
 	if (ret < 0) {
 		dev_err(info->dev, "%s: fail to read status1 reg(%d)\n",
 			__func__, ret);

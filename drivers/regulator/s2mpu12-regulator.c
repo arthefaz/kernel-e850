@@ -46,10 +46,10 @@ static struct device_node *acpm_mfd_node;
 
 static struct s2mpu12_info *static_info;
 static struct regulator_desc regulators[S2MPU12_REGULATOR_MAX];
-#if 0
 int s2mpu12_buck_ocp_cnt[S2MPU12_BUCK_MAX]; /* BUCK 1~5 OCP count */
+int s2mpu12_bb_ocp_cnt; /* BUCK-BOOST OCP count */
+int s2mpu12_buck_oi_cnt[S2MPU12_BUCK_MAX]; /* BUCK 1~5 OI count */
 int s2mpu12_temp_cnt[S2MPU12_TEMP_MAX]; /* 0 : 120 degree , 1 : 140 degree */
-#endif
 
 #if IS_ENABLED(CONFIG_DRV_SAMSUNG_PMIC)
 struct pmic_sysfs_dev {
@@ -68,6 +68,8 @@ struct s2mpu12_info {
 	unsigned int opmode[S2MPU12_REGULATOR_MAX];
 	int buck_ocp_irq[S2MPU12_BUCK_MAX]; /* BUCK OCP IRQ */
 	int temp_irq[2]; /* 0 : 120 degree, 1 : 140 degree */
+	int bb_ocp_irq; /* BUCK-BOOST OCP IRQ */
+	int buck_oi_irq[S2MPU12_BUCK_MAX]; /* BUCK OI IRQ */
 	int num_regulators;
 #if IS_ENABLED(CONFIG_DRV_SAMSUNG_PMIC)
 	struct pmic_sysfs_dev *pmic_sysfs;
@@ -682,7 +684,7 @@ int s2mpu12_read_pwron_status(void)
 	return (val & 0x1);
 }
 EXPORT_SYMBOL_GPL(s2mpu12_read_pwron_status);
-#if 0
+
 static irqreturn_t s2mpu12_buck_ocp_irq(int irq, void *dev_id)
 {
 	struct s2mpu12_info *s2mpu12 = dev_id;
@@ -695,6 +697,42 @@ static irqreturn_t s2mpu12_buck_ocp_irq(int irq, void *dev_id)
 			s2mpu12_buck_ocp_cnt[i]++;
 			pr_info("%s: BUCK[%d] OCP IRQ: %d, %d\n",
 				__func__, i + 1, s2mpu12_buck_ocp_cnt[i], irq);
+			break;
+		}
+	}
+
+	mutex_unlock(&s2mpu12->lock);
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t s2mpu12_bb_ocp_irq(int irq, void *dev_id)
+{
+	struct s2mpu12_info *s2mpu12 = dev_id;
+
+	mutex_lock(&s2mpu12->lock);
+
+	s2mpu12_bb_ocp_cnt++;
+	pr_info("%s: BUCKBOOST OCP IRQ: %d, %d\n",
+		__func__, s2mpu12_bb_ocp_cnt, irq);
+
+	mutex_unlock(&s2mpu12->lock);
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t s2mpu12_buck_oi_irq(int irq, void *dev_id)
+{
+	struct s2mpu12_info *s2mpu12 = dev_id;
+	int i;
+
+	mutex_lock(&s2mpu12->lock);
+
+	for (i = 0; i < S2MPU12_BUCK_MAX; i++) {
+		if (s2mpu12->buck_oi_irq[i] == irq) {
+			s2mpu12_buck_oi_cnt[i]++;
+			pr_info("%s: S2MPU12 BUCK[%d] OI IRQ: %d, %d\n",
+				__func__, i + 1, s2mpu12_buck_oi_cnt[i], irq);
 			break;
 		}
 	}
@@ -725,40 +763,58 @@ static irqreturn_t s2mpu12_temp_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-void s2mpu12_oi_function(struct s2mpu12_info *s2mpu12)
+static int s2mpu12_oi_function(struct s2mpu12_info *s2mpu12)
 {
 	struct i2c_client *i2c = s2mpu12->i2c;
-	int i;
-	u8 val;
+	ssize_t i = 0;
+	u8 val = 0;
+	int ret = 0;
 
 	/* BUCK1~9 & BUCK-BOOST OI function enable */
-	s2mpu12_update_reg(i2c, S2MPU12_PMIC_BUCK_OI_EN, 0x1F, 0x1F);
+	ret = s2mpu12_update_reg(i2c, S2MPU12_PMIC_BUCK_OI_EN, 0x1F, 0x1F);
+	if (ret)
+		goto err;
 
 	/* BUCK1~9 & BUCK-BOOST OI power down disable */
-	s2mpu12_update_reg(i2c, S2MPU12_PMIC_BUCK_OI_PD_EN, 0x00, 0x1F);
+	ret = s2mpu12_update_reg(i2c, S2MPU12_PMIC_BUCK_OI_PD_EN, 0x00, 0x1F);
+	if (ret)
+		goto err;
 
 	/* OI detection time window : 300us, OI comp. output count : 50 times */
-	s2mpu12_write_reg(i2c, S2MPU12_PMIC_BUCK_OI_CTRL1, 0xCC);
-	s2mpu12_write_reg(i2c, S2MPU12_PMIC_BUCK_OI_CTRL2, 0xCC);
-	s2mpu12_write_reg(i2c, S2MPU12_PMIC_BUCK_OI_CTRL3, 0xCC);
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_BUCK_OI_CTRL1, 0xCC);
+	if (ret)
+		goto err;
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_BUCK_OI_CTRL2, 0xCC);
+	if (ret)
+		goto err;
+	ret = s2mpu12_update_reg(i2c, S2MPU12_PMIC_BUCK_OI_CTRL3, 0x0C, 0x0C);
+	if (ret)
+		goto err;
 
-	pr_info("%s\n", __func__);
 	for (i = S2MPU12_PMIC_BUCK_OI_EN; i <= S2MPU12_PMIC_BUCK_OI_PD_EN; i++) {
-		s2mpu12_read_reg(i2c, i, &val);
+		ret = s2mpu12_read_reg(i2c, i, &val);
+		if (ret)
+			goto err;
 		pr_info("0x%x[0x%x], ", i, val);
 	}
 	pr_info("\n");
+	pr_info("%s: Done\n", __func__);
+
+	return 0;
+err:
+	return -1;
 }
 
-static void s2mpu12_set_interrupt(struct platform_device *pdev,
-				  struct s2mpu12_info *s2mpu12, int irq_base)
+static int s2mpu12_set_interrupt(struct platform_device *pdev,
+				 struct s2mpu12_info *s2mpu12, int irq_base)
 {
-	int i, ret;
+	ssize_t i = 0;
+	int ret = 0;
 
 	/* BUCK1~5 OCP interrupt */
 	for (i = 0; i < S2MPU12_BUCK_MAX; i++) {
 		s2mpu12->buck_ocp_irq[i] = irq_base +
-					   S2MPU12_PMIC_IRQ_OCPB1_INT3 + i;
+					S2MPU12_PMIC_IRQ_OCPB1_INT3 + i;
 
 		ret = devm_request_threaded_irq(&pdev->dev,
 						s2mpu12->buck_ocp_irq[i], NULL,
@@ -768,13 +824,27 @@ static void s2mpu12_set_interrupt(struct platform_device *pdev,
 			dev_err(&pdev->dev,
 				"Failed to request BUCK[%d] OCP IRQ: %d: %d\n",
 				i + 1, s2mpu12->buck_ocp_irq[i], ret);
+			goto err;
 		}
+	}
+
+	/* BUCK-BOOST OCP interrupt */
+	s2mpu12->bb_ocp_irq = irq_base + S2MPU12_PMIC_IRQ_OCPBST_INT3;
+	ret = devm_request_threaded_irq(&pdev->dev,
+					s2mpu12->bb_ocp_irq, NULL,
+					s2mpu12_bb_ocp_irq, 0,
+					"BB_OCP_IRQ", s2mpu12);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"Failed to request BUCKBOOST OCP IRQ: %d: %d\n",
+			s2mpu12->bb_ocp_irq, ret);
+		goto err;
 	}
 
 	/* Thermal interrupt */
 	for (i = 0; i < S2MPU12_TEMP_MAX; i++) {
 		s2mpu12->temp_irq[i] = irq_base +
-				       S2MPU12_PMIC_IRQ_INT120C_INT6 + i;
+					S2MPU12_PMIC_IRQ_INT120C_INT6 + i;
 
 		ret = devm_request_threaded_irq(&pdev->dev,
 						s2mpu12->temp_irq[i], NULL,
@@ -785,12 +855,34 @@ static void s2mpu12_set_interrupt(struct platform_device *pdev,
 				"Failed to request over temperature[%d] "
 				"IRQ: %d: %d\n",
 				i, s2mpu12->temp_irq[i], ret);
+			goto err;
+		}
+	}
+
+	/* BUCK1~5 OI interrupt */
+	for (i = 0; i < S2MPU12_BUCK_MAX; i++) {
+		s2mpu12->buck_oi_irq[i] = irq_base +
+					S2MPU12_PMIC_IRQ_OI_B1_INT5 + i;
+
+		ret = devm_request_threaded_irq(&pdev->dev,
+						s2mpu12->buck_oi_irq[i], NULL,
+						s2mpu12_buck_oi_irq, 0,
+						"BUCK_OI_IRQ", s2mpu12);
+		if (ret < 0) {
+			dev_err(&pdev->dev,
+				"Failed to request BUCK[%d] OI IRQ: %d: %d\n",
+				i + 1, s2mpu12->buck_oi_irq[i], ret);
+			goto err;
 		}
 	}
 
 	pr_info("%s: Done\n", __func__);
-}
 
+	return 0;
+err:
+	return -1;
+}
+#if 0
 static int s2mpu12_set_stable_time(struct s2mpu12_info *s2mpu12)
 {
 	int ret;
@@ -932,13 +1024,21 @@ static int s2mpu12_pmic_probe(struct platform_device *pdev)
 	}
 
 	s2mpu12->num_regulators = pdata->num_regulators;
-#if 0
+
 	/* Interrupt setting */
-	s2mpu12_set_interrupt(pdev, s2mpu12, irq_base);
+	ret = s2mpu12_set_interrupt(pdev, s2mpu12, irq_base);
+	if (ret < 0) {
+		pr_err("%s: failed to set interrupt\n", __func__);
+		goto err;
+	}
 
 	/* OI setting */
-	s2mpu12_oi_function(s2mpu12);
-
+	ret = s2mpu12_oi_function(s2mpu12);
+	if (ret < 0) {
+		pr_err("%s: failed to set OI function\n", __func__);
+		goto err;
+	}
+#if 0
 	/* Regulator stable time setting */
 	ret = s2mpu12_set_stable_time(s2mpu12);
 	if (ret < 0)
