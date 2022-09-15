@@ -24,9 +24,14 @@
 	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
-/*
+
+	but_zones: but_zones {
+		#list-but-cells = <3>;
+	};
+
 	codec_aud3004x: aud3004x@07 {
 		compatible = "codec,aud3004x";
+		acpm-ipc-channel = <2>;
 		#sound-dai-cells = <0>;
 		reg = <0x07>;
 		i2c-speedy-address;
@@ -42,7 +47,7 @@
 			<&but_zones 114 601 1161>;
 		btn-release-value = <1404>;
 	};
-*/
+
 	s2mpu12mfd@1f {
 		compatible = "samsung,s2mpu12mfd";
 		acpm-ipc-channel = <2>;
