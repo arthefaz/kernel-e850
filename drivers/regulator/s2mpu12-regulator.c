@@ -804,6 +804,71 @@ static int s2mpu12_set_stable_time(struct s2mpu12_info *s2mpu12)
 	return 0;
 }
 #endif
+static int s2mpu12_set_on_sequence(struct s2mpu12_info *s2mpu12)
+{
+	struct i2c_client *i2c = s2mpu12->i2c;
+	int ret = 0;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL23, 0x04);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL24, 0x01);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL1, 0x00);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL2, 0x10);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL5, 0x32);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL6, 0x51);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL7, 0x14);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL8, 0x01);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL9, 0x13);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL10, 0x32);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL12, 0x58);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL13, 0x76);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL14, 0x94);
+	if (ret)
+		goto err;
+
+	ret = s2mpu12_write_reg(i2c, S2MPU12_PMIC_ON_SEQ_SEL21, 0x10);
+	if (ret)
+		goto err;
+
+	return 0;
+err:
+	return -1;
+}
 static int s2mpu12_pmic_probe(struct platform_device *pdev)
 {
 	struct s2mpu12_dev *iodev = dev_get_drvdata(pdev->dev.parent);
@@ -879,6 +944,11 @@ static int s2mpu12_pmic_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto err;
 #endif
+	/* Regulator on-seq. setting */
+	if (s2mpu12_set_on_sequence(s2mpu12) < 0) {
+		pr_err("%s: s2mpu12_set_on_sequence fail\n", __func__);
+		goto err;
+	}
 #if IS_ENABLED(CONFIG_DRV_SAMSUNG_PMIC)
 	create_s2mpu12_sysfs(s2mpu12);
 #endif
