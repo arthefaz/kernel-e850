@@ -58,11 +58,9 @@
 			sound {
 				compatible = "samsung,exynos-sound";
 
-				samsung,routing = "SPEAKER", "OUTL",
-					"AEC Loopback", "SPEAKER FB",
-					"ABOX SPDY Capture", "VINPUT_FM",
-					"BLUETOOTH2 SPK", "ABOX UAIF2 Playback",
-					"ABOX UAIF2 Capture", "BLUETOOTH2 MIC",
+				samsung,routing = "ABOX SPDY Capture", "VINPUT_FM",
+					"BLUETOOTH SPK", "ABOX UAIF2 Playback",
+					"ABOX UAIF2 Capture", "BLUETOOTH MIC",
 					"ECHO SPK", "ABOX ECHO Playback",
 					"ABOX ECHO Capture", "ECHO MIC",
 					"FWD SPK", "ABOX FWD Playback",
