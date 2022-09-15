@@ -4521,6 +4521,22 @@ static const struct snd_kcontrol_new spdy_controls[] = {
 	SOC_DAPM_SINGLE("SPDY Switch", SND_SOC_NOPM, 0, 1, 1),
 };
 
+static const char * const rsrcx_texts[] = {
+	"RESERVED", "SIFS0", "SIFS1", "SIFS2",
+	"SIFS3", "SIFS4", "RESERVED", "RESERVED",
+	"UAIF0", "UAIF1", "UAIF2", "UAIF3",
+};
+static SOC_ENUM_SINGLE_DECL(rsrc0_enum, ABOX_ROUTE_CTRL2, ABOX_ROUTE_RSRC_L(0),
+		rsrcx_texts);
+static const struct snd_kcontrol_new rsrc0_controls[] = {
+	SOC_DAPM_ENUM("DEMUX", rsrc0_enum),
+};
+static SOC_ENUM_SINGLE_DECL(rsrc1_enum, ABOX_ROUTE_CTRL2, ABOX_ROUTE_RSRC_L(1),
+		rsrcx_texts);
+static const struct snd_kcontrol_new rsrc1_controls[] = {
+	SOC_DAPM_ENUM("DEMUX", rsrc1_enum),
+};
+
 static const char * const nsrcx_texts[] = {
 	"RESERVED", "SIFS0", "SIFS1", "SIFS2",
 	"SIFS3", "SIFS4", "SIFS5", "RESERVED",
@@ -4555,6 +4571,11 @@ static SOC_ENUM_SINGLE_DECL(nsrc4_enum, ABOX_ROUTE_CTRL1, ABOX_ROUTE_NSRC_L(4),
 		nsrcx_texts);
 static const struct snd_kcontrol_new nsrc4_controls[] = {
 	SOC_DAPM_ENUM("DEMUX", nsrc4_enum),
+};
+
+static const struct snd_kcontrol_new recp_controls[] = {
+	SOC_DAPM_SINGLE("PIFS0", ABOX_SPUM_CTRL1, ABOX_RECP_SRC_VALID_L, 1, 0),
+	SOC_DAPM_SINGLE("PIFS1", ABOX_SPUM_CTRL1, ABOX_RECP_SRC_VALID_H, 1, 0),
 };
 
 static const char *const sifmx_texts[] = {
@@ -5537,7 +5558,364 @@ int abox_cmpnt_reset_cnt_val(struct abox_data *data, enum abox_dai id)
 
 }
 
+static int sifs_hw_params(struct snd_pcm_substream *substream,
+		struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
+{
+	struct device *dev = dai->dev;
+	struct abox_data *data = dev_get_drvdata(dev);
+	int ret = 0;
+
+	if (substream->stream != SNDRV_PCM_STREAM_CAPTURE)
+		goto out;
+
+	ret = set_cnt_val(data, dai, params);
+out:
+	return ret;
+}
+
+static const struct snd_soc_dai_ops sifs_dai_ops = {
+	.hw_params	= sifs_hw_params,
+};
+
+static int src_hw_params(struct snd_pcm_substream *substream,
+		struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
+{
+	struct device *dev = dai->dev;
+	enum abox_dai id = dai->id;
+	struct abox_data *data = snd_soc_component_get_drvdata(dai->component);
+	int ret = 0;
+
+	if (substream->stream != SNDRV_PCM_STREAM_CAPTURE)
+		return 0;
+
+	dev_dbg(dev, "%s[%#x]\n", __func__, id);
+
+	ret = abox_cmpnt_adjust_sbank(data, id, params, 0);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+static const struct snd_soc_dai_ops src_dai_ops = {
+	.hw_params	= src_hw_params,
+};
+
 static struct snd_soc_dai_driver abox_cmpnt_dai_drv[] = {
+	{
+		.name = "SIFS0",
+		.id = ABOX_SIFS0,
+		.capture = {
+			.stream_name = "SIFS0 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &sifs_dai_ops,
+	},
+	{
+		.name = "SIFS1",
+		.id = ABOX_SIFS1,
+		.capture = {
+			.stream_name = "SIFS1 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &sifs_dai_ops,
+	},
+	{
+		.name = "SIFS2",
+		.id = ABOX_SIFS2,
+		.capture = {
+			.stream_name = "SIFS2 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &sifs_dai_ops,
+	},
+	{
+		.name = "SIFS3",
+		.id = ABOX_SIFS3,
+		.capture = {
+			.stream_name = "SIFS3 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &sifs_dai_ops,
+	},
+	{
+		.name = "SIFS4",
+		.id = ABOX_SIFS4,
+		.capture = {
+			.stream_name = "SIFS4 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &sifs_dai_ops,
+	},
+	{
+		.name = "SIFS5",
+		.id = ABOX_SIFS5,
+		.capture = {
+			.stream_name = "SIFS5 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &sifs_dai_ops,
+	},
+	{
+		.name = "RSRC0",
+		.id = ABOX_RSRC0,
+		.playback = {
+			.stream_name = "RSRC0 Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.capture = {
+			.stream_name = "RSRC0 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &src_dai_ops,
+	},
+	{
+		.name = "RSRC1",
+		.id = ABOX_RSRC1,
+		.playback = {
+			.stream_name = "RSRC1 Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.capture = {
+			.stream_name = "RSRC1 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &src_dai_ops,
+	},
+	{
+		.name = "NSRC0",
+		.id = ABOX_NSRC0,
+		.playback = {
+			.stream_name = "NSRC0 Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.capture = {
+			.stream_name = "NSRC0 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &src_dai_ops,
+	},
+	{
+		.name = "NSRC1",
+		.id = ABOX_NSRC1,
+		.playback = {
+			.stream_name = "NSRC1 Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.capture = {
+			.stream_name = "NSRC1 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &src_dai_ops,
+	},
+	{
+		.name = "NSRC2",
+		.id = ABOX_NSRC2,
+		.playback = {
+			.stream_name = "NSRC2 Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.capture = {
+			.stream_name = "NSRC2 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &src_dai_ops,
+	},
+	{
+		.name = "NSRC3",
+		.id = ABOX_NSRC3,
+		.playback = {
+			.stream_name = "NSRC3 Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.capture = {
+			.stream_name = "NSRC3 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &src_dai_ops,
+	},
+	{
+		.name = "NSRC4",
+		.id = ABOX_NSRC4,
+		.playback = {
+			.stream_name = "NSRC4 Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.capture = {
+			.stream_name = "NSRC4 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &src_dai_ops,
+	},
+	{
+		.name = "NSRC5",
+		.id = ABOX_NSRC5,
+		.playback = {
+			.stream_name = "NSRC5 Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.capture = {
+			.stream_name = "NSRC5 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &src_dai_ops,
+	},
+	{
+		.name = "NSRC6",
+		.id = ABOX_NSRC6,
+		.playback = {
+			.stream_name = "NSRC6 Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.capture = {
+			.stream_name = "NSRC6 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &src_dai_ops,
+	},
+	{
+		.name = "NSRC7",
+		.id = ABOX_NSRC7,
+		.playback = {
+			.stream_name = "NSRC7 Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.capture = {
+			.stream_name = "NSRC7 Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.ops = &src_dai_ops,
+	},
 	{
 		.name = "USB",
 		.id = ABOX_USB,
@@ -5552,6 +5930,28 @@ static struct snd_soc_dai_driver abox_cmpnt_dai_drv[] = {
 		},
 		.capture = {
 			.stream_name = "USB Capture",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+	},
+	{
+		.name = "ECHO",
+		.id = ABOX_ECHO,
+		.playback = {
+			.stream_name = "ECHO Playback",
+			.channels_min = 1,
+			.channels_max = 8,
+			.rates = ABOX_SAMPLING_RATES,
+			.rate_min = 8000,
+			.rate_max = 384000,
+			.formats = ABOX_SAMPLE_FORMATS,
+		},
+		.capture = {
+			.stream_name = "ECHO Capture",
 			.channels_min = 1,
 			.channels_max = 8,
 			.rates = ABOX_SAMPLING_RATES,

@@ -60,6 +60,34 @@
 			};
                 };
 
+		memlog_mem: memlog_region {
+			compatible = "shared-dma-pool";
+			no-map;
+			alloc-ranges = <0x0 0x80000000 0x78000000>;
+			size = <0x1400000>;
+		};
+
+		abox_rmem: abox-rmem {
+			compatible = "exynos,abox_rmem";
+			/* Size should be same with
+			* CONFIG_SND_SOC_SAMSUNG_ABOX_DRAM_SIZE.
+			*/
+			size = <0x1200000>;
+			alloc-ranges = <0x0 0xc0000000 0x20000000>;
+		};
+
+		abox_dbg: abox-dbg {
+			compatible = "exynos,abox_dbg";
+			size = <0x400000>;
+			alloc-ranges = <0x0 0xc0000000 0x20000000>;
+		};
+
+		abox_slog: abox-slog {
+			compatible = "exynos,abox_slog";
+			size = <0x2800000>;
+			alloc-ranges = <0x0 0xc0000000 0x20000000>;
+		};
+
 		debug_kinfo_reserved: debug_kinfo_reserved@effff000 {
 			reg = <0 0xFCFFF000 0x00001000>;
 			no-map;

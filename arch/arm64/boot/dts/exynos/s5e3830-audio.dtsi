@@ -28,6 +28,9 @@
 		#size-cells = <1>;
 		ranges;
 		iommus = <&sysmmu_aud>;
+		memory-region = <&abox_rmem>;
+		power-domains = <&pd_aud>;
+		samsung,iommu-group = <&iommu_group_aud>;
 		clocks = <&clock PLL_AUD_OUT>, <&clock DOUT_CLK_AUD_AUDIF>,
 			<&clock DOUT_CLK_AUD_BUSD>, <&clock DOUT_CLK_AUD_CNT>;
 		clock-names = "pll", "audif", "bus", "cnt";
@@ -280,6 +283,7 @@
 			reg = <0x0 0x14a53080 0x80>;
 			reg-names = "sfr";
 			samsung,id = <0>;
+			samsung,buffer_type = "dma";
 			#sound-dai-cells = <0>;
 			sound-name-prefix = "ABOX WDMA0 DUAL";
 		};
@@ -289,6 +293,7 @@
 			reg = <0x0 0x14a53180 0x80>;
 			reg-names = "sfr";
 			samsung,id = <1>;
+			samsung,buffer_type = "dma";
 			#sound-dai-cells = <0>;
 			sound-name-prefix = "ABOX WDMA1 DUAL";
 		};
@@ -298,6 +303,7 @@
 			reg = <0x0 0x14a53280 0x80>;
 			reg-names = "sfr";
 			samsung,id = <2>;
+			samsung,buffer_type = "dma";
 			#sound-dai-cells = <0>;
 			sound-name-prefix = "ABOX WDMA2 DUAL";
 		};
@@ -307,6 +313,7 @@
 			reg = <0x0 0x14a53380 0x80>;
 			reg-names = "sfr";
 			samsung,id = <3>;
+			samsung,buffer_type = "dma";
 			#sound-dai-cells = <0>;
 			sound-name-prefix = "ABOX WDMA3 DUAL";
 		};
@@ -316,6 +323,7 @@
 			reg = <0x0 0x14a53480 0x80>;
 			reg-names = "sfr";
 			samsung,id = <4>;
+			samsung,buffer_type = "dma";
 			#sound-dai-cells = <0>;
 			sound-name-prefix = "ABOX WDMA4 DUAL";
 		};
@@ -325,6 +333,7 @@
 			reg = <0x0 0x14a53800 0x100>;
 			reg-names = "sfr";
 			samsung,id = <0>;
+			samsung,buffer_type = "dma";
 			#sound-dai-cells = <0>;
 			sound-name-prefix = "ABOX DBG0";
 		};
@@ -334,6 +343,7 @@
 			reg = <0x0 0x14a53900 0x100>;
 			reg-names = "sfr";
 			samsung,id = <1>;
+			samsung,buffer_type = "dma";
 			#sound-dai-cells = <0>;
 			sound-name-prefix = "ABOX DBG1";
 		};
@@ -343,6 +353,7 @@
 			reg = <0x0 0x14a53a00 0x100>;
 			reg-names = "sfr";
 			samsung,id = <2>;
+			samsung,buffer_type = "dma";
 			#sound-dai-cells = <0>;
 			sound-name-prefix = "ABOX DBG2";
 		};
@@ -352,6 +363,7 @@
 			reg = <0x0 0x14a53b00 0x100>;
 			reg-names = "sfr";
 			samsung,id = <3>;
+			samsung,buffer_type = "dma";
 			#sound-dai-cells = <0>;
 			sound-name-prefix = "ABOX DBG3";
 		};
@@ -361,6 +373,7 @@
 			reg = <0x0 0x14a53c00 0x100>;
 			reg-names = "sfr";
 			samsung,id = <4>;
+			samsung,buffer_type = "dma";
 			#sound-dai-cells = <0>;
 			sound-name-prefix = "ABOX DBG4";
 		};
@@ -370,6 +383,7 @@
 			reg = <0x0 0x14a53d00 0x100>;
 			reg-names = "sfr";
 			samsung,id = <5>;
+			samsung,buffer_type = "dma";
 			#sound-dai-cells = <0>;
 			sound-name-prefix = "ABOX DBG5";
 		};
@@ -430,7 +444,7 @@
 
 		abox_debug: abox-debug@0 {
 			compatible = "samsung,abox-debug";
-			memory-region = <&abox_dbg>;
+			memory-region = <&abox_dbg &abox_slog>;
 			reg = <0x0 0x0 0x0>;
 		};
 

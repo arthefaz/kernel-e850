@@ -3629,12 +3629,6 @@ static int samsung_abox_probe(struct platform_device *pdev)
 		}
 	}
 
-	of_samsung_property_read_u32(dev, np, "pm-qos-stable-min",
-			&data->pm_qos_stable_min);
-
-	of_samsung_property_read_u32_array(dev, np, "sys_acp_con",
-			data->sys_acp_con, ARRAY_SIZE(data->sys_acp_con));
-
 	np_tmp = of_parse_phandle(np, "samsung,abox-gic", 0);
 	if (!np_tmp) {
 		abox_err(dev, "Failed to get abox-gic device node\n");
@@ -3672,11 +3666,7 @@ static int samsung_abox_probe(struct platform_device *pdev)
 	abox_info(dev, "bootargs: %#x, %s\n", data->bootargs_offset,
 			data->bootargs ? data->bootargs : "");
 
-	of_property_read_u32(np, "samsung,abox-slogargs-offset",
-			&data->slogargs_offset);
-
 	abox_parse_extra_firmware(data);
-
 	abox_proc_probe();
 	abox_shm_init(data->shm_addr, data->shm_size);
 

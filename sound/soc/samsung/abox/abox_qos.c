@@ -418,7 +418,7 @@ void abox_qos_print(struct device *dev, enum abox_qos_class qos_class)
 	}
 	spin_unlock_irqrestore(&abox_qos_lock, flags);
 }
-/*
+
 int abox_qos_add_notifier(enum abox_qos_class qos_class,
 		struct notifier_block *notifier)
 {
@@ -429,7 +429,7 @@ int abox_qos_add_notifier(enum abox_qos_class qos_class,
 #endif
 	return ret;
 }
-*/
+
 static ssize_t abox_qos_read_qos(char *buf, size_t size, struct abox_qos *qos)
 {
 	struct abox_qos_req *req;

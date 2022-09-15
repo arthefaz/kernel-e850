@@ -44,7 +44,8 @@ enum abox_modem_event {
  */
 typedef abox_ipc_handler_t abox_irq_handler_t;
 
-#ifdef CONFIG_SND_SOC_SAMSUNG_ABOX
+//#ifdef CONFIG_SND_SOC_SAMSUNG_ABOX
+#if 1
 /**
  * Check ABOX is on
  * @return		true if A-Box is on, false on otherwise
