@@ -976,8 +976,9 @@ static void mmc_set_bus_speed(struct mmc_card *card)
 {
 	unsigned int max_dtr = (unsigned int)-1;
 
-	if ((mmc_card_hs200(card) || mmc_card_hs400(card)) &&
-	     max_dtr > card->ext_csd.hs200_max_dtr)
+	if ((mmc_card_hs200(card) || mmc_card_hs400(card) ||
+			mmc_card_hs400es(card)) &&
+		     max_dtr > card->ext_csd.hs200_max_dtr)
 		max_dtr = card->ext_csd.hs200_max_dtr;
 	else if (mmc_card_hs(card) && max_dtr > card->ext_csd.hs_max_dtr)
 		max_dtr = card->ext_csd.hs_max_dtr;
@@ -1413,12 +1414,14 @@ static int mmc_select_hs400es(struct mmc_card *card)
 	}
 
 	/* Set host controller to HS400 timing and frequency */
-	mmc_set_timing(host, MMC_TIMING_MMC_HS400);
+	mmc_set_timing(host, MMC_TIMING_MMC_HS400_ES);
 
 	/* Controller enable enhanced strobe function */
 	host->ios.enhanced_strobe = true;
 	if (host->ops->hs400_enhanced_strobe)
 		host->ops->hs400_enhanced_strobe(host, &host->ios);
+
+	mmc_set_bus_speed(card);
 
 	err = mmc_switch_status(card, true);
 	if (err)
@@ -2190,11 +2193,11 @@ static int _mmc_hw_reset(struct mmc_host *host)
 	/*
 	 * In the case of recovery, we can't expect flushing the cache to work
 	 * always, but we have a go and ignore errors.
-	 * Trying olny responsed at send status.
+	 * Trying only responsed at send status.
 	 */
 
-	if (mmc_send_status(host->card, NULL) == 0)
-		mmc_flush_cache(host->card);
+//	if (mmc_send_status(host->card, NULL) == 0)
+	mmc_flush_cache(host->card);
 
 	if ((host->caps & MMC_CAP_HW_RESET) && host->ops->hw_reset &&
 	     mmc_can_reset(card)) {

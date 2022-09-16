@@ -263,11 +263,11 @@ static int dw_mci_exynos_priv_init(struct dw_mci *host)
 	u32 temp;
 	int ret = 0;
 
+	if (priv->pinctrl && priv->clk_drive_base)
+		pinctrl_select_state(priv->pinctrl, priv->clk_drive_base);
 	if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM) {
 		pm_runtime_enable(host->dev);
 		pm_runtime_get_sync(host->dev);
-		if (priv->pinctrl && priv->clk_drive_base)
-			pinctrl_select_state(priv->pinctrl, priv->clk_drive_base);
 		if (priv->runtime_pm_flag & DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD)
 			exynos_pmu_update(priv->pmu.offset, priv->pmu.mask, priv->pmu.val);
 	}
@@ -302,7 +302,7 @@ static int dw_mci_exynos_priv_init(struct dw_mci *host)
 
 static void dw_mci_exynos_ssclk_control(struct dw_mci *host, int enable)
 {
-	u32 err;
+//	u32 err;
 
 	if (!(host->pdata->quirks & DW_MCI_QUIRK_USE_SSC))
 		return;
@@ -349,7 +349,8 @@ static void dw_mci_exynos_set_clksel_timing(struct dw_mci *host, u32 timing)
 	clksel = mci_readl(host, CLKSEL);
 	clksel = (clksel & ~SDMMC_CLKSEL_TIMING_MASK) | timing;
 
-	if (!(host->pdata->io_mode == MMC_TIMING_MMC_HS400))
+	if (!((host->pdata->io_mode == MMC_TIMING_MMC_HS400) ||
+		(host->pdata->io_mode == MMC_TIMING_MMC_HS400_ES)))
 		clksel &= ~(BIT(30) | BIT(19));
 
 	mci_writel(host, CLKSEL, clksel);
@@ -435,11 +436,8 @@ static void dw_mci_exynos_config_hs400(struct dw_mci *host, u32 timing)
 	dqs = priv->saved_dqs_en;
 	strobe = priv->saved_strobe_ctrl;
 
-	if (timing == MMC_TIMING_MMC_HS400) {
+	if (timing == MMC_TIMING_MMC_HS400 || timing == MMC_TIMING_MMC_HS400_ES) {
 		dqs &= ~(DWMCI_TXDT_CRC_TIMER_SET(0xFF, 0xFF));
-		dqs |= (DWMCI_TXDT_CRC_TIMER_SET(priv->hs400_tx_t_fastlimit,
-						 priv->hs400_tx_t_initval) | DWMCI_RDDQS_EN |
-			DWMCI_AXI_NON_BLOCKING_WRITE);
 		if (host->pdata->quirks & DW_MCI_QUIRK_ENABLE_ULP) {
 			if (priv->delay_line || priv->tx_delay_line)
 				strobe = DWMCI_WD_DQS_DELAY_CTRL(priv->tx_delay_line) |
@@ -448,6 +446,10 @@ static void dw_mci_exynos_config_hs400(struct dw_mci *host, u32 timing)
 			else
 				strobe = DWMCI_FIFO_CLK_DELAY_CTRL(0x2) |
 				    DWMCI_RD_DQS_DELAY_CTRL(90);
+			dqs |= (DWMCI_TXDT_CRC_TIMER_SET(0x32,
+						 0x38) | DWMCI_RDDQS_EN |
+				DWMCI_AXI_NON_BLOCKING_WRITE);
+			strobe |= DWMCI_WD_DQS_DELAY_CTRL(0x40);
 		} else {
 			if (priv->delay_line)
 				strobe = DWMCI_FIFO_CLK_DELAY_CTRL(0x2) |
@@ -455,8 +457,13 @@ static void dw_mci_exynos_config_hs400(struct dw_mci *host, u32 timing)
 			else
 				strobe = DWMCI_FIFO_CLK_DELAY_CTRL(0x2) |
 				    DWMCI_RD_DQS_DELAY_CTRL(90);
+			dqs |= (DWMCI_TXDT_CRC_TIMER_SET(priv->hs400_tx_t_fastlimit,
+						priv->hs400_tx_t_initval) | DWMCI_RDDQS_EN |
+						DWMCI_AXI_NON_BLOCKING_WRITE);
 		}
 		dqs |= (DATA_STROBE_EN | DWMCI_AXI_NON_BLOCKING_WRITE);
+		if (timing == MMC_TIMING_MMC_HS400_ES)
+			dqs |= DWMCI_RESP_RCLK_MODE;
 	} else {
 		dqs &= ~DATA_STROBE_EN;
 	}
@@ -504,6 +511,9 @@ static void dw_mci_exynos_adjust_clock(struct dw_mci *host, unsigned int wanted)
 #ifndef MHZ
 #define MHZ (1000 * 1000)
 #endif
+#ifndef KHZ
+#define KHZ (1000)
+#endif
 
 static void dw_mci_exynos_set_ios(struct dw_mci *host, struct mmc_ios *ios)
 {
@@ -520,8 +530,12 @@ static void dw_mci_exynos_set_ios(struct dw_mci *host, struct mmc_ios *ios)
 
 	switch (timing) {
 	case MMC_TIMING_MMC_HS400:
+	case MMC_TIMING_MMC_HS400_ES:
 		if (host->pdata->quirks & DW_MCI_QUIRK_ENABLE_ULP) {
-			clksel = SDMMC_CLKSEL_UP_SAMPLE(priv->hs400_ulp_timing, priv->tuned_sample);
+			if (timing == MMC_TIMING_MMC_HS400_ES)
+				clksel = priv->hs400_ulp_timing;
+			else
+				clksel = SDMMC_CLKSEL_UP_SAMPLE(priv->hs400_ulp_timing, priv->tuned_sample);
 			clksel |= (BIT(30) | BIT(19));	/* ultra low powermode on */
 		} else {
 			clksel = SDMMC_CLKSEL_UP_SAMPLE(priv->hs400_timing, priv->tuned_sample);
@@ -567,6 +581,9 @@ static void dw_mci_exynos_set_ios(struct dw_mci *host, struct mmc_ios *ios)
 		else if (ios->clock)
 			dw_mci_exynos_ssclk_control(host, 1);
 	}
+
+	if ((ios->clock > 0) && (ios->clock <= 400 * KHZ))
+		sample_path_sel_dis(host, AXI_BURST_LEN);
 
 	host->cclk_in = wanted;
 
@@ -652,8 +669,6 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 	/* Swapping clock drive strength */
 	of_property_read_u32(np, "clk-drive-number", &priv->clk_drive_number);
 
-
-
 	id = of_alias_get_id(host->dev->of_node, "mshc");
 	priv->pinctrl = devm_pinctrl_get(host->dev);
 
@@ -708,10 +723,8 @@ static int dw_mci_exynos_parse_dt(struct dw_mci *host)
 		priv->ctrl_flag |= DW_MMC_EXYNOS_BYPASS_FOR_ALL_PASS;
 	if (of_find_property(np, "use-enable-shift", NULL))
 		priv->ctrl_flag |= DW_MMC_EXYNOS_ENABLE_SHIFT;
-	if (of_find_property(np, "use-phase-detect", NULL))
-		priv->ctrl_flag |= DW_MMC_EXYNOS_USE_PHASE_DETECT;
 
-	if (of_find_property(np, "extended_tmout", NULL))
+	if (of_find_property(np, "extended-tmout", NULL))
 		host->extended_tmout = true;
 	else
 		host->extended_tmout = false;

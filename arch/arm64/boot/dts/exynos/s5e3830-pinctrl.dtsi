@@ -457,6 +457,7 @@
 			samsung,pin-function = <2>;
 			samsung,pin-pud = <0>;
 			samsung,pin-drv = <3>;
+			samsung,pin-pud-pdn = <0>;
 		};
 
 		sd0_cmd: sd0-cmd {
@@ -464,6 +465,7 @@
 			samsung,pin-function = <2>;
 			samsung,pin-pud = <3>;
 			samsung,pin-drv = <3>;
+			samsung,pin-pud-pdn = <3>;
 		};
 
 		sd0_rdqs: sd0-rdqs {
@@ -471,6 +473,7 @@
 			samsung,pin-function = <2>;
 			samsung,pin-pud = <1>;
 			samsung,pin-drv = <3>;
+			samsung,pin-pud-pdn = <1>;
 		};
 
 		sd0_nreset: sd0-nreset {
@@ -478,6 +481,7 @@
 			samsung,pin-function = <2>;
 			samsung,pin-pud = <3>;
 			samsung,pin-drv = <3>;
+			samsung,pin-pud-pdn = <3>;
 		};
 
 		sd0_clk_fast_slew_rate_1x: sd0-clk_fast_slew_rate_1x {
