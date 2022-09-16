@@ -28,11 +28,11 @@
 #include "exynos-itmon-local.h"
 
 static struct itmon_policy err_policy[] = {
-	[TMOUT]		= {"err_tmout",		0, 0, 0, false},
-	[PRTCHKER]	= {"err_prtchker",	0, 0, 0, false},
-	[DECERR]	= {"err_decerr",	0, 0, 0, false},
-	[SLVERR]	= {"err_slverr",	0, 0, 0, false},
-	[FATAL]		= {"err_fatal",		0, 0, 0, false},
+	[TMOUT]		= {"err_tmout",		1, 1, 0, false},
+	[PRTCHKER]	= {"err_prtchker",	1, 1, 0, false},
+	[DECERR]	= {"err_decerr",	1, 1, 0, false},
+	[SLVERR]	= {"err_slverr",	1, 1, 0, false},
+	[FATAL]		= {"err_fatal",		1, 1, 0, false},
 };
 
 static const char * const itmon_dpm_action[] = {
