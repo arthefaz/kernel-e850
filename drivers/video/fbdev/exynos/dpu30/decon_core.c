@@ -2817,7 +2817,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	struct decon_disp_info __user *argp_info;
 	struct dpp_restrictions_info __user *argp_res;
 	struct decon_color_mode_info cm_info;
-	struct dpp_ch_restriction dpp_ch_restriction;
+	struct dpp_ch_restriction *dpp_ch_restriction = NULL;
 	int ret = 0;
 	u32 crtc;
 	bool active;
@@ -3102,27 +3102,40 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 		break;
 
 	case EXYNOS_GET_DPP_RESTRICTION:
-		if (copy_from_user(&dpp_ch_restriction,
+		dpp_ch_restriction = (struct dpp_ch_restriction *)kzalloc(
+					sizeof(struct dpp_ch_restriction), GFP_KERNEL);
+		if(dpp_ch_restriction == NULL) {
+			ret = -ENOMEM;
+			break;
+		}
+
+		if (copy_from_user(dpp_ch_restriction,
 					(struct dpp_ch_restriction __user *)arg,
 					sizeof(struct dpp_ch_restriction))) {
 			ret = -EFAULT;
+			kfree(dpp_ch_restriction);
 			break;
 		}
 
-		if ((dpp_ch_restriction.id < 0) || (dpp_ch_restriction.id >= decon->dt.dpp_cnt)) {
+		if ((dpp_ch_restriction->id < 0) || (dpp_ch_restriction->id >= decon->dt.dpp_cnt)) {
 			ret = -EINVAL;
-			decon_err("invalid DPP(%d) channel number\n", dpp_ch_restriction.id);
+			decon_err("invalid DPP(%d) channel number\n", dpp_ch_restriction->id);
+			kfree(dpp_ch_restriction);
 			break;
 		}
 
-		v4l2_subdev_call(decon->dpp_sd[dpp_ch_restriction.id], core,
-				ioctl, DPP_GET_RESTRICTION, &dpp_ch_restriction);
+		v4l2_subdev_call(decon->dpp_sd[dpp_ch_restriction->id], core,
+				ioctl, DPP_GET_RESTRICTION, dpp_ch_restriction);
+
 		if (copy_to_user((struct dpp_ch_restriction __user *)arg,
-					&dpp_ch_restriction,
+					dpp_ch_restriction,
 					sizeof(struct dpp_ch_restriction))) {
 			ret = -EFAULT;
+			kfree(dpp_ch_restriction);
 			break;
 		}
+
+		kfree(dpp_ch_restriction);
 		break;
 
 	case EXYNOS_GET_COLOR_MODE_NUM:
