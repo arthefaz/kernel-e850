@@ -30,7 +30,7 @@
 #include <linux/rtc.h>
 #include <linux/reboot.h>
 #include <linux/syscore_ops.h>
-#include <soc/samsung/exynos-pmu-if.h>
+#include <soc/samsung/exynos-pmu.h>
 #include <soc/samsung/debug-snapshot.h>
 
 #define S3C2410_WTCON		0x00
