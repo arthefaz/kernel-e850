@@ -642,6 +642,15 @@
 		};
 	};
 
+	exynos_flexpmu_dbg {
+		compatible = "samsung,exynos-flexpmu-dbg";
+		#address-cells = <2>;
+		#size-cells = <1>;
+		data-base = <0x204D400>;
+		data-size = <0x400>;
+		reg = <0x0 0x11a30000 0x1000>;
+	};
+
 	exynos-pm {
 		compatible = "samsung,exynos-pm";
 		reg = <0x0 0x11850000 0x1000>,
