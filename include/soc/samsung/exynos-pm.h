@@ -21,7 +21,7 @@
 int register_usb_is_connect(u32 (*func)(void));
 int register_pcie_is_connect(u32 (*func)(void));
 
-#ifdef CONFIG_EXYNOS_FLEXPMU_DBG
+#if defined(CONFIG_EXYNOS_FLEXPMU_DBG) || defined(CONFIG_EXYNOS_FLEXPMU_DBG_MODULE)
 extern u32 acpm_get_mifdn_count(void);
 extern u32 acpm_get_apsocdn_count(void);
 extern u32 acpm_get_early_wakeup_count(void);
@@ -45,7 +45,7 @@ static inline u32 acpm_get_early_wakeup_count(void)
 }
 #endif
 
-#ifdef CONFIG_USB_DWC3_EXYNOS
+#if defined(CONFIG_USB_DWC3_EXYNOS) || defined(CONFIG_USB_DWC3_EXYNOS_MODULE)
 extern u32 otg_is_connect(void);
 #else
 static inline u32 otg_is_connect(void)
