@@ -101,6 +101,9 @@ void tex_enqueue_task(struct task_struct *p, int cpu)
 	struct rq *rq = cpu_rq(cpu);
 	int tex_level = get_tex_level(p);
 
+	if (get_sched_class(p) != EMS_SCHED_FAIR)
+		return;
+
 	ems_prio_tex(p) = is_prio_tex_task(p);
 	if (ems_prio_tex(p))
 		ems_rq_nr_prio_tex(rq) += 1;
@@ -119,6 +122,9 @@ void tex_dequeue_task(struct task_struct *p, int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
 	bool is_tex = !list_empty(ems_qjump_node(p)) && ems_qjump_node(p)->next;
+
+	if (get_sched_class(p) != EMS_SCHED_FAIR)
+		return;
 
 	if (ems_prio_tex(p))
 		ems_rq_nr_prio_tex(rq) -= 1;
@@ -334,6 +340,9 @@ void tex_update(struct rq *rq)
 	struct task_struct *curr = rq->curr;
 	bool is_tex;
 
+	if (get_sched_class(curr) != EMS_SCHED_FAIR)
+		return;
+
 	raw_spin_lock(&rq->lock);
 
 	is_tex = !list_empty(ems_qjump_node(curr)) && ems_qjump_node(curr)->next;
@@ -354,6 +363,9 @@ void tex_update(struct rq *rq)
 void tex_do_yield(struct task_struct *p)
 {
 	bool is_tex = !list_empty(ems_qjump_node(p)) && ems_qjump_node(p)->next;
+
+	if (get_sched_class(p) != EMS_SCHED_FAIR)
+		return;
 
 	if (!is_tex)
 		return;
