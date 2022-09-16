@@ -83,7 +83,6 @@ struct abox_dbg_dump_min {
 	struct abox_dbg_dump_sram sram;
 	struct abox_dbg_dump_dram *dram;
 	struct abox_dbg_dump_log log;
-	struct abox_dbg_dump_log log_01;
 	struct abox_dbg_dump_sfr sfr;
 	u32 sfr_gic_gicd[SZ_4K / sizeof(u32)];
 	unsigned int gpr[SZ_128];
@@ -97,7 +96,6 @@ struct abox_dbg_dump_info {
 	struct abox_proc_bin sram;
 	struct abox_proc_bin dram;
 	struct abox_proc_bin log;
-	struct abox_proc_bin log_01;
 	struct abox_proc_bin sfr;
 	struct abox_proc_bin gicd;
 	struct abox_proc_bin gpr;
@@ -380,9 +378,6 @@ static void dump_mem_min(struct device *dev, struct abox_data *data,
 	memcpy(p_dump->log.dump, data->dram_base + ABOX_LOG_OFFSET,
 			ABOX_LOG_SIZE);
 	p_dump->log.magic = ABOX_DBG_DUMP_MAGIC_LOG;
-	memcpy(p_dump->log_01.dump, data->dram_base + ABOX_LOG_MAJOR_OFFSET,
-			ABOX_LOG_SIZE);
-	p_dump->log_01.magic = ABOX_DBG_DUMP_MAGIC_LOG;
 
 	memcpy_fromio(p_dump->sfr.dump, data->sfr_base,
 			sizeof(p_dump->sfr.dump));
@@ -491,10 +486,6 @@ static int abox_dbg_dump_create_file(struct abox_data *data)
 			info->log.data = p_dump->log.dump;
 			info->log.size = ABOX_LOG_SIZE;
 			abox_proc_create_bin("log", 0444, dir, &info->log);
-
-			info->log_01.data = p_dump->log_01.dump;
-			info->log_01.size = ABOX_LOG_SIZE;
-			abox_proc_create_bin("log-01", 0444, dir, &info->log_01);
 
 			info->sfr.data = p_dump->sfr.dump;
 			info->sfr.size = sizeof(p_dump->sfr.dump);

@@ -107,18 +107,36 @@ void abox_core_power(int on)
 	struct abox_data *data = get_abox_data();
 	struct device *dev = data->dev;
 	struct abox_core *core;
+	unsigned int val = 0;
 
 	abox_info(dev, "%s(%d)\n", __func__, on);
 
+	val = readl_phys(0x11862d80);
+	abox_info(dev, "%s val1(%lx)\n", __func__, val);
+	writel_phys(0x1, 0x11862d80);
+	val = readl_phys(0x11862d80);
+	abox_info(dev, "%s val2(%lx)\n", __func__, val);
+
+	val = readl_phys(0x11862e00);
+	abox_info(dev, "%s val11(%lx)\n", __func__, val);
+	writel_phys(0x1, 0x11862e00);
+	val = readl_phys(0x11862e00);
+	abox_info(dev, "%s val22(%lx)\n", __func__, val);
+
+	/*
 	list_for_each_entry(core, &cores, list) {
 		unsigned int offset, mask;
 
-		abox_dbg(dev, "core: %d\n", core->id);
 		offset = core->pmu_power[OFFSET];
 		mask = core->pmu_power[MASK];
-		if (mask)
+		if (mask) {
+			mask = mask | value;
+			abox_info(dev, "core: %d / %x\n", core->id, mask);
 			exynos_pmu_update(offset, mask, on ? mask : 0);
+		}
+
 	}
+	*/
 }
 
 void abox_core_enable(int enable)
@@ -126,18 +144,34 @@ void abox_core_enable(int enable)
 	struct abox_data *data = get_abox_data();
 	struct device *dev = data->dev;
 	struct abox_core *core;
+	unsigned int val = 0;
 
 	abox_info(dev, "%s(%d)\n", __func__, enable);
 
+	val = readl_phys(0x11862da0);
+	abox_info(dev, "%s val1(%lx)\n", __func__, val);
+	writel_phys(0x1, 0x11862da0);
+	val = readl_phys(0x11862da0);
+	abox_info(dev, "%s val2(%lx)\n", __func__, val);
+
+	val = readl_phys(0x11862e20);
+	abox_info(dev, "%s val11(%lx)\n", __func__, val);
+	writel_phys(0x1, 0x11862e20);
+	val = readl_phys(0x11862e20);
+	abox_info(dev, "%s val22(%lx)\n", __func__, val);
+
+	/*
 	list_for_each_entry(core, &cores, list) {
 		unsigned int offset, mask;
 
-		abox_dbg(dev, "core: %d\n", core->id);
 		offset = core->pmu_enable[OFFSET];
 		mask = core->pmu_enable[MASK];
-		if (mask)
+		if (mask) {
+			abox_info(dev, "core: %d / %x\n", core->id, mask);
 			exynos_pmu_update(offset, mask, enable ? mask : 0);
+		}
 	}
+	*/
 }
 
 static int abox_core_read_standby(struct abox_core *core, unsigned int *value)
@@ -565,7 +599,7 @@ int abox_core_download_firmware(void)
 					continue;
 				}
 			}
-			abox_dbg(dev, "%s: download %s\n", __func__, fw->name);
+			abox_info(dev, "%s: download %s\n", __func__, fw->name);
 			left = fw->offset + fw->firmware->size;
 			switch (fw->area) {
 			default:

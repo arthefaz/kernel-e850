@@ -446,6 +446,8 @@ static int madera_set_bias_level(struct snd_soc_card *card,
 	struct madera_drvdata *drvdata = card->drvdata;
 	int ret;
 
+	return 0;
+
 	codec_dai = asoc_rtd_to_codec(get_rtd(card, MADERA_DAI_ID), 0);
 
 	if (dapm->dev != codec_dai->dev)
@@ -482,6 +484,8 @@ static int madera_set_bias_level_post(struct snd_soc_card *card,
 	struct snd_soc_dai *codec_dai;
 	struct madera_drvdata *drvdata = card->drvdata;
 	int ret;
+
+	return 0;
 
 	codec_dai = asoc_rtd_to_codec(get_rtd(card, MADERA_DAI_ID), 0);
 

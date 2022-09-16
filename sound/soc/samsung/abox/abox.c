@@ -2255,7 +2255,7 @@ static int abox_cpu_suspend_complete(struct device *dev)
 
 	return ret;
 }
-
+/*
 static void abox_control_acp(struct abox_data *data, bool enable)
 {
 	unsigned int sysreg_ca32_con1, mask_ainact, value;
@@ -2272,7 +2272,7 @@ static void abox_control_acp(struct abox_data *data, bool enable)
 	abox_dbg(data->dev, "%s(%d): %#x <= %#x\n", __func__,
 			enable, sysreg_ca32_con1, value);
 }
-
+*/
 static int abox_cpu_pm_ipc(struct abox_data *data, bool resume)
 {
 	struct device *dev = data->dev;
@@ -2872,7 +2872,7 @@ static bool abox_is_timer_set(struct abox_data *data)
 	unsigned int val;
 	int ret;
 
-	ret = regmap_read(data->timer_regmap, ABOX_TIMER_PRESET_LSB(1), &val);
+	ret = regmap_read(data->timer_regmap, ABOX_TIMER_CTRL1(0), &val);
 	if (ret < 0)
 		val = 0;
 
@@ -2918,12 +2918,16 @@ static int abox_enable(struct device *dev)
 	if (abox_test_quirk(data, ABOX_QUIRK_BIT_ARAM_MODE))
 		writel(0x0, data->sysreg_base + ABOX_ARAM_CTRL);
 
-	abox_control_acp(data, true);
+//	abox_control_acp(data, true);
 
 	abox_power_notifier_call_chain(data, true);
 	abox_gic_enable_irq(data->dev_gic);
-	abox_enable_wdt(data);
 
+	/* enable abox core0 ipc intr */
+	abox_gic_target_core0(data->dev_gic, SGI_ABOX_MSG);
+	abox_gic_enable(data->dev_gic, SGI_ABOX_MSG, true);
+
+	abox_enable_wdt(data);
 	abox_request_cpu_gear(dev, data, DEFAULT_CPU_GEAR_ID,
 			ABOX_CPU_GEAR_MAX, "enable");
 
@@ -2945,7 +2949,11 @@ static int abox_enable(struct device *dev)
 	abox_restore_register(data);
 	has_reset = !abox_is_timer_set(data);
 	if (!has_reset) {
+		int val;
 		abox_info(dev, "wakeup from WFI\n");
+		regmap_read(data->timer_regmap, ABOX_TIMER_PRESET_LSB(1),
+				&val);
+		abox_info(dev, "[1] ABOX Timer1 Preset LSB = %x\n", val);
 		abox_update_suspend_wait_flag(data, false);
 		abox_start_timer(data);
 	} else {
@@ -2995,7 +3003,7 @@ static int abox_disable(struct device *dev)
 	data->calliope_state = CALLIOPE_DISABLING;
 	abox_cache_components(dev, data);
 	flush_work(&data->boot_done_work);
-	abox_control_acp(data, false);
+//	abox_control_acp(data, false);
 	if (state != CALLIOPE_DISABLED)
 		abox_cpu_pm_ipc(data, false);
 	data->calliope_state = CALLIOPE_DISABLED;

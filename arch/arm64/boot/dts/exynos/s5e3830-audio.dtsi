@@ -47,6 +47,7 @@
 		samsung,uaif-max-div = <512>;
 		samsung,pm-qos-int = <0 0 0 0 0>;
 		samsung,pm-qos-aud = <1033000 800000 517000 345000 0>;
+		samsung,pm-qos-stable-min = <345000>;
 
 		abox_core0: abox-core@14a55000 {
 			compatible = "samsung,abox-core";
