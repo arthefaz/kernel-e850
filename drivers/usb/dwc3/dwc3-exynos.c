@@ -286,9 +286,8 @@ static void dwc3_core_config(struct dwc3 *dwc, struct dwc3_exynos *exynos)
 		if (sclk <= 20 * 1000 * 1000)
 			reg |= DWC3_GUCTL_REFCLKPER(0x34);
 		else
-			reg |= DWC3_GUCTL_REFCLKPER(0x14);
+			reg |= DWC3_GUCTL_REFCLKPER(0x26);
 	}
-
 	if (exynos->config.sparse_transfer_control)
 		reg |= DWC3_GUCTL_SPRSCTRLTRANSEN;
 
@@ -470,13 +469,13 @@ int dwc3_exynos_core_init(struct dwc3 *dwc, struct dwc3_exynos *exynos)
 			reg |= DWC3_GFLADJ_REFCLK_FLADJ(0xC8);
 			reg |= DWC3_GFLADJ_30MHZ_SDBND_SEL;
 		} else {
-			/* In case of ref_clk 50MHz */
+			/* In case of ref_clk 26MHz */
 			reg |= DWC3_GFLADJ_REFCLK_240MHZDECR_PLS1;
 			reg &= ~DWC3_GFLADJ_REFCLK_240MHZ_DECR_MASK;
-			reg |= DWC3_GFLADJ_REFCLK_240MHZ_DECR(0x4);
-			reg &= ~DWC3_GFLADJ_REFCLK_LPM_SEL;
+			reg |= DWC3_GFLADJ_REFCLK_240MHZ_DECR(0x9);
+			reg |= DWC3_GFLADJ_REFCLK_LPM_SEL;
 			reg &= ~DWC3_GFLADJ_REFCLK_FLADJ_MASK;
-			reg |= DWC3_GFLADJ_REFCLK_FLADJ(0x9F7);
+			reg |= DWC3_GFLADJ_REFCLK_FLADJ(0x5EE);
 			reg |= DWC3_GFLADJ_30MHZ_SDBND_SEL;
 			reg &= ~DWC3_GFLADJ_30MHZ_MASK;
 			reg |= dwc->fladj;
@@ -726,8 +725,8 @@ int dwc3_exynos_set_sclk_clock(struct device *dev)
 {
 	struct dwc3_exynos *exynos = dev_get_drvdata(dev);
 
-	dev_info(dev, "Set USB Source clock to 50Mhz\n");
-	clk_set_rate(exynos->sclk_clock, 50000000);
+	dev_info(dev, "Set USB Source clock to 26Mhz\n");
+	clk_set_rate(exynos->sclk_clock, 19500000);
 	dev_info(dev, "Changed USB Source clock %d\n",
 				clk_get_rate(exynos->sclk_clock));
 
@@ -1345,6 +1344,8 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	dwc3_otg_start(exynos->dwc, exynos);
 
 	otg_set_peripheral(&exynos->dotg->otg, exynos->dwc->gadget);
+
+	dwc3_exynos_vbus_event(exynos->dev, 1);
 
 	return 0;
 
