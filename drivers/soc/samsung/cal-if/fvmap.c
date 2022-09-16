@@ -153,37 +153,12 @@ static const struct attribute_group percent_margin_group = {
 	.attrs = percent_margin_attrs,
 };
 
-unsigned int dvfs_calibrate_voltage(unsigned int rate_target, unsigned int rate_up,
-		unsigned int rate_down, unsigned int volt_up, unsigned int volt_down)
-{
-	unsigned int volt_diff_step;
-	unsigned int rate_diff;
-	unsigned int rate_per_step;
-	unsigned int ret;
-
-	if (rate_up < 0x100)
-		return volt_down * STEP_UV;
-
-	if (rate_down == 0)
-		return volt_up * STEP_UV;
-
-	if ((rate_up == rate_down) || (volt_up == volt_down))
-		return volt_up * STEP_UV;
-
-	volt_diff_step = (volt_up - volt_down);
-	rate_diff = rate_up - rate_down;
-	rate_per_step = rate_diff / volt_diff_step;
-	ret = (unsigned int)((volt_up - ((rate_up - rate_target) / rate_per_step)) + 0) * STEP_UV;
-
-	return ret;
-}
 int fvmap_get_freq_volt_table(unsigned int id, void *freq_volt_table, unsigned int table_size)
 {
 	struct fvmap_header *fvmap_header = fvmap_base;
 	struct rate_volt_header *fv_table;
 	int idx, i, j;
 	int num_of_lv;
-	unsigned int target, rate_up, rate_down, volt_up, volt_down;
 	struct freq_volt *table = (struct freq_volt *)freq_volt_table;
 
 	if (!IS_ACPM_VCLK(id))
@@ -199,24 +174,16 @@ int fvmap_get_freq_volt_table(unsigned int id, void *freq_volt_table, unsigned i
 	num_of_lv = fvmap_header[idx].num_of_lv;
 
 	for (i = 0; i < table_size; i++) {
-		for (j = 1; j < num_of_lv; j++) {
-			rate_up = fv_table->table[j - 1].rate;
-			rate_down = fv_table->table[j].rate;
-			if ((table[i].rate <= rate_up) && (table[i].rate >= rate_down)) {
-				volt_up = fv_table->table[j - 1].volt;
-				volt_down = fv_table->table[j].volt;
-				target = table[i].rate;
-				table[i].volt = dvfs_calibrate_voltage(target,
-						rate_up, rate_down, volt_up, volt_down);
-				break;
-			}
+		for (j = 0; j < num_of_lv; j++) {
+			if (fv_table->table[j].rate == table[i].rate)
+				table[i].volt = fv_table->table[j].volt;
 		}
 
 		if (table[i].volt == 0) {
 			if (table[i].rate > fv_table->table[0].rate)
-				table[i].volt = fv_table->table[0].volt * STEP_UV;
+				table[i].volt = fv_table->table[0].volt;
 			else if (table[i].rate < fv_table->table[num_of_lv - 1].rate)
-				table[i].volt = fv_table->table[num_of_lv - 1].volt * STEP_UV;
+				table[i].volt = fv_table->table[num_of_lv - 1].volt;
 		}
 	}
 
