@@ -40,6 +40,7 @@
 #include "s5e3830-audio.dtsi"
 #include "s5e3830-wlbt.dtsi"
 #include "s5e3830-m2m.dtsi"
+#include "s5e3830-mfc.dtsi"
 
 / {
 	compatible = "samsung,armv8", "samsung,exynos3830";
