@@ -121,7 +121,7 @@ static void slsi_append_log_to_system_buffer(struct slsi_dev *sdev)
 	char   log_to_sys_error_buffer[128] = { 0 };
 	struct netdev_vif   *ndev_vif;
 
-	scnprintf(log_to_sys_error_buffer + pos, buf_size - pos, "netdev_up_count=%d ", sdev->netdev_up_count);
+	pos = scnprintf(log_to_sys_error_buffer, buf_size, "netdev_up_count=%d ", sdev->netdev_up_count);
 
 	for (i = 1; i <= CONFIG_SCSC_WLAN_MAX_INTERFACES; i++) {
 		if (sdev->netdev[i]) {
