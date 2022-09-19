@@ -20,15 +20,13 @@ struct ucc_req {
 	struct list_head	list;
 };
 
-#define RELEASE -1
-
 enum ufc_ctrl_type {
 	PM_QOS_MIN_LIMIT = 0,
-	PM_QOS_MIN_LIMIT_WO_BOOST,
 	PM_QOS_MAX_LIMIT,
 	PM_QOS_OVER_LIMIT,
 	PM_QOS_LITTLE_MAX_LIMIT,
-	TYPE_END,
+	PM_QOS_MIN_LIMIT_WO_BOOST,
+	CTRL_TYPE_END,
 };
 
 enum ufc_user_type {
@@ -36,50 +34,20 @@ enum ufc_user_type {
 	UFC_INPUT,
 	FINGER,
 	ARGOS,
-	USER_END,
+	USER_TYPE_END,
 };
 
 #if IS_ENABLED(CONFIG_EXYNOS_UFCC)
 extern void ucc_add_request(struct ucc_req *req, int value);
 extern void ucc_update_request(struct ucc_req *req, int value);
 extern void ucc_remove_request(struct ucc_req *req);
-
 extern int ufc_update_request(enum ufc_user_type user, enum ufc_ctrl_type type,
-		s32 new_freq);
+		int freq);
 
 #else
 static inline void ucc_add_request(struct ucc_req *req, int value) { }
 static inline void ucc_update_request(struct ucc_req *req, int value) { }
 static inline void ucc_remove_request(struct ucc_req *req) { }
-
 static inline int ufc_update_request(enum ufc_user_type user, enum ufc_ctrl_type type,
-		s32 new_freq) { return 0; }
+		int freq) { return 0; }
 #endif
-
-struct ufc_table_info {
-	int			ctrl_type;
-	int			mode;
-	u32			**ufc_table;
-	struct list_head	list;
-
-	struct kobject		kobj;
-};
-
-
-struct ufc_domain {
-	struct cpumask		cpus;
-
-	unsigned int		table_col_idx;
-	unsigned int		min_freq;
-	unsigned int		max_freq;
-	unsigned int		clear_freq;
-
-	struct freq_qos_request	user_min_qos_req;
-	struct freq_qos_request	user_max_qos_req;
-	struct freq_qos_request	user_min_qos_wo_boost_req;
-	struct freq_qos_request	user_lit_max_qos_req;
-
-	int			allow_disable_cpus;
-
-	struct list_head	list;
-};
