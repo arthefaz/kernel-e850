@@ -347,13 +347,11 @@ int cal_cluster_req_emulation(unsigned int cluster, bool en)
 }
 EXPORT_SYMBOL_GPL(cal_cluster_req_emulation);
 
-/*
 extern int cal_is_lastcore_detecting(unsigned int cpu)
 {
 	return pmucal_is_lastcore_detecting(cpu);
 }
 EXPORT_SYMBOL_GPL(cal_is_lastcore_detecting);
-*/
 
 int cal_dfs_get_asv_table(unsigned int id, unsigned int *table)
 {
