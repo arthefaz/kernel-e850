@@ -342,13 +342,6 @@ static irqreturn_t exynos4_mct_comp_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static struct irqaction mct_comp_event_irq = {
-	.name		= "mct_comp_irq",
-	.flags		= IRQF_TIMER | IRQF_IRQPOLL,
-	.handler	= exynos4_mct_comp_isr,
-	.dev_id		= &mct_comp_device,
-};
-
 static int exynos4_clockevent_init(void)
 {
 	mct_comp_device.cpumask = cpumask_of(0);
