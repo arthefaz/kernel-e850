@@ -479,14 +479,28 @@ static int kepler_req_bcmd(struct gnss_ctl *gc, u16 cmd_id, u16 flags,
 	unsigned long timeout = msecs_to_jiffies(REQ_BCMD_TIMEOUT);
 	int ret = 0;
 	struct gnss_mbox *mbx = gc->pdata->mbx;
+        struct link_device *ld = gc->iod->ld;
 
-	mutex_lock(&reset_lock);
 
-	if (gc->gnss_state != STATE_ONLINE) {
+	/*if (gc->gnss_state != STATE_ONLINE) {
 		gif_err("GNSS is not online, error return\n");
 		mutex_unlock(&reset_lock);
 		return -EPERM;
-	}
+	}*/
+
+        if (gc->gnss_state == STATE_OFFLINE) {
+                gif_debug("Set POWER ON on kepler_req_bcmd!!!!\n");
+                ret = kepler_power_on(gc);
+        } else if (gc->gnss_state == STATE_HOLD_RESET) {
+                ld->reset_buffers(ld);
+                gif_debug("Set RELEASE RESET on kepler_req_bcmd!!!!\n");
+                ret = kepler_release_reset(gc);
+        }
+
+        if (ret)
+                return ret; /* failure due to apm interrupt pending */
+
+	mutex_lock(&reset_lock);
 
 	/* Parse arguments */
 	/* Flags: Command flags */
