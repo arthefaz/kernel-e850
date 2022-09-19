@@ -49,7 +49,7 @@
 #include "phy-exynos-usbdrd.h"
 //#include "phy-exynos-debug.h"
 
-//#include <soc/samsung/exynos-cpupm.h>
+#include <soc/samsung/exynos-cpupm.h>
 
 static void __iomem *usbdp_combo_phy_reg;
 void __iomem *phycon_base_addr;
@@ -1601,7 +1601,7 @@ static int exynos_usbdrd_utmi_vendor_set(struct exynos_usbdrd_phy *phy_drd,
 			}
 
 			/* inform what USB state is idle to IDLE_IP */
-			//exynos_update_ip_idle_status(phy_drd->idle_ip_idx, 1);
+			exynos_update_ip_idle_status(phy_drd->idle_ip_idx, 1);
 
 			dev_info(phy_drd->dev, "REWA ENABLE Complete\n");
 
@@ -1616,7 +1616,7 @@ static int exynos_usbdrd_utmi_vendor_set(struct exynos_usbdrd_phy *phy_drd,
 			dev_info(phy_drd->dev, "REWA Disconn & Wakeup IRQ DISABLE\n");
 
 			/* inform what USB state is not idle to IDLE_IP */
-			//exynos_update_ip_idle_status(phy_drd->idle_ip_idx, 0);
+			exynos_update_ip_idle_status(phy_drd->idle_ip_idx, 0);
 
 			ret = phy_exynos_usb3p1_rewa_disable(&phy_drd->usbphy_info);
 			if (ret) {

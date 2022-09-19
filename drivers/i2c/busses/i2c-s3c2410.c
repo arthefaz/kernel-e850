@@ -990,7 +990,7 @@ static int s3c24xx_i2c_xfer(struct i2c_adapter *adap,
 	int retry;
 	int ret;
 
-#ifdef CONFIG_ARCH_EXYNOS_PM
+#ifdef CONFIG_EXYNOS_CPUPM
 	exynos_update_ip_idle_status(i2c->idle_ip_index, 0);
 #endif
 	ret = clk_enable(i2c->clk);
@@ -1007,7 +1007,7 @@ static int s3c24xx_i2c_xfer(struct i2c_adapter *adap,
 
 		if (ret != -EAGAIN) {
 			clk_disable(i2c->clk);
-#ifdef CONFIG_ARCH_EXYNOS_PM
+#ifdef CONFIG_EXYNOS_CPUPM
 			exynos_update_ip_idle_status(i2c->idle_ip_index, 1);
 #endif
 			return ret;
@@ -1019,7 +1019,7 @@ static int s3c24xx_i2c_xfer(struct i2c_adapter *adap,
 	}
 
 	clk_disable(i2c->clk);
-#ifdef CONFIG_ARCH_EXYNOS_PM
+#ifdef CONFIG_EXYNOS_CPUPM
 	exynos_update_ip_idle_status(i2c->idle_ip_index, 1);
 #endif
 	return -EREMOTEIO;
@@ -1330,7 +1330,7 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 	i2c->adap.class = I2C_CLASS_DEPRECATED;
 	i2c->tx_setup = 50;
 
-#ifdef CONFIG_ARCH_EXYNOS_PM
+#ifdef CONFIG_EXYNOS_CPUPM
 	i2c->idle_ip_index = exynos_get_idle_ip_index(dev_name(&pdev->dev));
 #endif
 
