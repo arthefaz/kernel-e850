@@ -227,17 +227,6 @@ power_key_err:
 	return 1;
 }
 
-int codec_notifier_flag = 0;
-
-void set_codec_notifier_flag(bool on)
-{
-	if (on)
-		codec_notifier_flag = true;
-	else
-		codec_notifier_flag = false;
-
-}
-
 static void s2mpu12_irq_work_func(struct work_struct *work)
 {
 	pr_info("%s: master pmic interrupt"
@@ -279,7 +268,7 @@ static int s2mpu12_ibi_notifier(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 			}
 		}
 #if IS_ENABLED(CONFIG_SND_SOC_AUD3004X_5PIN) || IS_ENABLED(CONFIG_SND_SOC_AUD3004X_6PIN)
-		if (codec_irq_flag & codec_notifier_flag) {
+		if (codec_irq_flag & aud3004x_notifier_flag()) {
 			aud3004x_call_notifier(irq_codec, CODEC_IRQ_CNT);
 			codec_irq_flag = false;
 		}
@@ -306,9 +295,12 @@ static int s2mpu12_check_ibi_source(struct s2mpu12_dev *s2mpu12, u8 *ibi_src)
 					&irq_reg[PMIC_INT1]);
 #if IS_ENABLED(CONFIG_EXYNOS_ACPM) && \
 (IS_ENABLED(CONFIG_SND_SOC_AUD3004X_5PIN) || IS_ENABLED(CONFIG_SND_SOC_AUD3004X_6PIN))
-		check = exynos_acpm_bulk_read(0, 0x07, 0x08, 6, &irq_codec_m[0]);
-		check = exynos_acpm_bulk_read(0, 0x07, 0x01, 6, &irq_codec[0]);
-		check = exynos_acpm_bulk_read(0, 0x07, 0xF0, 2, &irq_codec[6]);
+		check = exynos_acpm_bulk_read(s2mpu12->dev->of_node, 0, 0x07,
+					      0x08, 6, &irq_codec_m[0]);
+		check = exynos_acpm_bulk_read(s2mpu12->dev->of_node, 0, 0x07,
+					      0x01, 6, &irq_codec[0]);
+		check = exynos_acpm_bulk_read(s2mpu12->dev->of_node, 0, 0x07,
+					      0xF0, 2, &irq_codec[6]);
 		for (i = 0; i < 6; i++) {
 			irq_codec[i] = irq_codec[i] & (~irq_codec_m[i]);
 		}
