@@ -3940,8 +3940,10 @@ static int synaptics_power_ctrl(void *data, bool on)
 	} else {
 //		regulator_disable(pdata->regul_dvdd);
 
-		if (regulator_is_enabled(regulator_avdd))
+		if (regulator_is_enabled(regulator_avdd)) {
 			regulator_disable(regulator_avdd);
+			regulator_put(regulator_avdd);
+		}
 
 		pinctrl_irq = devm_pinctrl_get_select(dev, "off_state");
 		if (IS_ERR(pinctrl_irq))
@@ -3949,7 +3951,6 @@ static int synaptics_power_ctrl(void *data, bool on)
 	}
 
 	enabled = on;
-	regulator_put(regulator_avdd);
 
 	return retval;
 }
