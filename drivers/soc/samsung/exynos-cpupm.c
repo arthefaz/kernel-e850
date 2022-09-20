@@ -754,10 +754,9 @@ static int cpus_last_core_detecting(int request_cpu, const struct cpumask *cpus)
 	for_each_cpu_and(cpu, cpu_online_mask, cpus) {
 		if (cpu == request_cpu)
 			continue;
-/*
+
 		if (cal_is_lastcore_detecting(cpu))
 			return -EBUSY;
-*/
 	}
 
 	return 0;
@@ -883,13 +882,6 @@ static void cluster_enable(struct power_mode *mode)
 static bool system_disabled;
 static int system_disable(struct power_mode *mode)
 {
-/*
-	if (mode->type == POWERMODE_TYPE_DSU)
-		acpm_noti_dsu_cpd(true);
-	else
-		acpm_noti_dsu_cpd(false);
-*/
-
 	if (system_disabled)
 		return 0;
 
@@ -940,7 +932,7 @@ static void enter_power_mode(int cpu, struct power_mode *mode, ktime_t now)
 	}
 
 	cpupm_debug(cpu, -1, mode->type, 1);
-	//dbg_snapshot_cpuidle(mode->name, 0, 0, DSS_FLAG_IN);
+	dbg_snapshot_cpuidle(mode->name, 0, 0, DSS_FLAG_IN);
 	set_state_idle(mode);
 
 	cpupm_profile_begin(&mode->stat, now);
@@ -956,7 +948,7 @@ exit_power_mode(int cpu, struct power_mode *mode, int cancel, ktime_t now)
 	 * first cpu exiting from power mode.
 	 */
 	set_state_busy(mode);
-	//dbg_snapshot_cpuidle(mode->name, 0, 0, DSS_FLAG_OUT);
+	dbg_snapshot_cpuidle(mode->name, 0, 0, DSS_FLAG_OUT);
 	cpupm_debug(cpu, -1, mode->type, 0);
 
 	switch (mode->type) {
@@ -1365,7 +1357,7 @@ static void android_vh_cpu_idle_enter(void *data, int *state,
 	cpupm_profile_begin(&pm->stat[pm->entered_state], now);
 
 	target_state = &drv->states[pm->entered_state];
-	//dbg_snapshot_cpuidle(target_state->desc, 0, 0, DSS_FLAG_IN);
+	dbg_snapshot_cpuidle(target_state->desc, 0, 0, DSS_FLAG_IN);
 	pm->entered_time = ns_to_ktime(local_clock());
 
 	/* Only handle requests except C1 */
@@ -1401,7 +1393,7 @@ static void android_vh_cpu_idle_exit(void *data, int state,
 	target_state = &drv->states[pm->entered_state];
 	time_end = ns_to_ktime(local_clock());
 	residency = (int)ktime_to_us(ktime_sub(time_end, time_start));
-	//dbg_snapshot_cpuidle(target_state->desc, 0, residency, cancel ? state : DSS_FLAG_OUT);
+	dbg_snapshot_cpuidle(target_state->desc, 0, residency, cancel ? state : DSS_FLAG_OUT);
 }
 
 static void ipi_raise(void *data, const struct cpumask *target,
@@ -1517,24 +1509,24 @@ static void wakeup_mask_init(struct device_node *cpupm_dn)
 	/* initialize eint-wakeup-mask */
 	wm_dn = of_find_node_by_name(root_dn, "eint-wakeup-masks");
 	if (!wm_dn) {
-		pr_warn("eint-wakeup-masks is omitted in device tree\n");
-		goto fail;
-	}
+		pr_info("eint-wakeup-masks is omitted in device tree\n");
+		wm_config->num_eint_wakeup_mask = 0;
+	} else {
+		count = of_get_child_count(wm_dn);
+		wm_config->num_eint_wakeup_mask = count;
+		wm_config->eint_wakeup_mask_reg_offset = kcalloc(count,
+				sizeof(int), GFP_KERNEL);
+		if (!wm_config->eint_wakeup_mask_reg_offset) {
+			pr_warn("failed to allocate eint wakeup masks\n");
+			goto fail_to_alloc_eint_wm_reg_offset;
+		}
 
-	count = of_get_child_count(wm_dn);
-	wm_config->num_eint_wakeup_mask = count;
-	wm_config->eint_wakeup_mask_reg_offset = kcalloc(count,
-			sizeof(int), GFP_KERNEL);
-	if (!wm_config->eint_wakeup_mask_reg_offset) {
-		pr_warn("failed to allocate eint wakeup masks\n");
-		goto fail_to_alloc_eint_wm_reg_offset;
-	}
-
-	i = 0;
-	for_each_child_of_node(wm_dn, dn) {
-		of_property_read_u32(dn, "mask-reg-offset",
-			&wm_config->eint_wakeup_mask_reg_offset[i]);
-		i++;
+		i = 0;
+		for_each_child_of_node(wm_dn, dn) {
+			of_property_read_u32(dn, "mask-reg-offset",
+					&wm_config->eint_wakeup_mask_reg_offset[i]);
+			i++;
+		}
 	}
 
 	return;
@@ -1557,6 +1549,7 @@ fail_to_alloc_checklist:
 		}
 	}
 fail:
+	pr_warn("failed to initialize wakeup mask\n");
 	kfree(wm_config->wakeup_masks);
 	kfree(wm_config);
 }
