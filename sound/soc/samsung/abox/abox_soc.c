@@ -1000,8 +1000,8 @@ static const struct reg_default reg_defaults_3830[] = {
 };
 
 static struct regmap_config regmap_config = {
-	.reg_defaults = reg_defaults_3830,
-	.num_reg_defaults = ARRAY_SIZE(reg_defaults_3830),
+//	.reg_defaults = reg_defaults_3830,
+//	.num_reg_defaults = ARRAY_SIZE(reg_defaults_3830),
 	.reg_bits = 32,
 	.val_bits = 32,
 	.reg_stride = 4,

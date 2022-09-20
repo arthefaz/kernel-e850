@@ -791,7 +791,7 @@ static int asrc_factor_put(struct snd_kcontrol *kcontrol,
 }
 
 static bool spus_asrc_force_enable[] = {
-	false, false, false, false,
+	false, false, false, true,
 	false, false, false, false,
 	false, false, false, false
 };
@@ -821,7 +821,7 @@ static int spus_asrc_enable_put(struct snd_kcontrol *kcontrol,
 
 	abox_info(dev, "%s(%ld, %d)\n", __func__, val, idx);
 
-	spus_asrc_force_enable[idx] = val;
+	spus_asrc_force_enable[idx] = !!val;
 
 	return snd_soc_put_volsw(kcontrol, ucontrol);
 }
@@ -846,7 +846,7 @@ static int spum_asrc_enable_put(struct snd_kcontrol *kcontrol,
 
 	abox_info(dev, "%s(%ld, %d)\n", __func__, val, idx);
 
-	spum_asrc_force_enable[idx] = val;
+	spum_asrc_force_enable[idx] = !!val;
 
 	return snd_soc_put_volsw(kcontrol, ucontrol);
 }
@@ -2498,7 +2498,7 @@ static int asrc_set_in_loop(struct abox_data *data, int spum_idx, int sifs_idx,
 	rate = params_rate(&params);
 	channels = params_channels(&params);
 
-	abox_dbg(data->dev, "%s(%d, %d, %u, %u, %u, %u)\n", __func__, spum_idx,
+	abox_info(data->dev, "%s(%d, %d, %u, %u, %u, %u)\n", __func__, spum_idx,
 			sifs_idx, channels, rate, tgt_rate, tgt_width);
 
 	res = asrc_set(data, stream, spum_idx, channels, rate,
@@ -3854,7 +3854,7 @@ static int asrc_set(struct abox_data *data, int stream, int idx,
 	bool force_enable;
 	int on, ret;
 
-	abox_dbg(dev, "%s(%d, %d, %d, %uHz, %uHz, %ubit)\n", __func__,
+	abox_info(dev, "%s(%d, %d, %d, %uHz, %uHz, %ubit)\n", __func__,
 			stream, idx, channels, rate, tgt_rate, tgt_width);
 
 	ret = asrc_assign_id(w, stream, channels);
@@ -3899,7 +3899,7 @@ static int asrc_event(struct snd_soc_dapm_widget *w, int e, int stream)
 	unsigned int rate = 0, width = 0, channels = 0;
 	int id, ret = 0;
 
-	abox_dbg(dev, "%s(%s, %d)\n", __func__, w->name, e);
+	abox_info(dev, "%s(%s, %d)\n", __func__, w->name, e);
 
 	switch (e) {
 	case 0x0:

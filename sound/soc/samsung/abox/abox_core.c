@@ -179,9 +179,17 @@ static int abox_core_read_standby(struct abox_core *core, unsigned int *value)
 	struct abox_data *data = get_abox_data();
 	int ret = 0;
 
-	if (core->pmu_standby[MASK])
-		ret = exynos_pmu_read(core->pmu_standby[OFFSET], value);
-	else if (core->sys_standby[MASK])
+	if (core->pmu_standby[MASK]) {
+		if (core->id == 0) {
+			*value = readl_phys(0x11862da4);
+			abox_info(core->dev, "%s core0(%lx)\n", __func__, *value);
+		} else if (core->id == 1) {
+			*value = readl_phys(0x11862e24);
+			abox_info(core->dev, "%s core1(%lx)\n", __func__, *value);
+		} else
+			ret = -EINVAL;
+//		ret = exynos_pmu_read(core->pmu_standby[OFFSET], value);
+	} else if (core->sys_standby[MASK])
 		*value = readl(data->sysreg_base + core->sys_standby[OFFSET]);
 	else
 		abox_err(core->dev, "empty standby sfr\n");
