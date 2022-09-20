@@ -2909,6 +2909,7 @@ done:
 
 static int synaptics_load_fw_from_ums(struct synaptics_rmi4_data *rmi4_data)
 {
+#if 0
 	struct file *fp;
 	mm_segment_t old_fs;
 	int fw_size, nread;
@@ -2959,6 +2960,8 @@ static int synaptics_load_fw_from_ums(struct synaptics_rmi4_data *rmi4_data)
  open_err:
 	set_fs(old_fs);
 	return error;
+#endif
+	return 0;
 }
 
 static int synaptics_rmi4_fw_update_on_hidden_menu(struct synaptics_rmi4_data *rmi4_data,
