@@ -483,13 +483,13 @@
 			compatible = "samsung,abox-ext-bin";
 			samsung,name = "rxse.bin";
 			samsung,area = <1>;
-			samsung,offset = <0xD60000>;
+			samsung,offset = <0xF00000>;
 		};
 		ext_bin_4: ext-bin@4 {
 			compatible = "samsung,abox-ext-bin";
 			samsung,name = "txse.bin";
 			samsung,area = <1>;
-			samsung,offset = <0xA00000>;
+			samsung,offset = <0x1000000>;
 		};
 		ext_bin_5: ext-bin@5 {
 			compatible = "samsung,abox-ext-bin";

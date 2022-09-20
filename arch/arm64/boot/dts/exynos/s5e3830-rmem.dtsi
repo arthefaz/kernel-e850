@@ -72,7 +72,7 @@
 			/* Size should be same with
 			* CONFIG_SND_SOC_SAMSUNG_ABOX_DRAM_SIZE.
 			*/
-			size = <0x1200000>;
+			size = <0x1400000>;
 			alloc-ranges = <0x0 0xc0000000 0x20000000>;
 		};
 
