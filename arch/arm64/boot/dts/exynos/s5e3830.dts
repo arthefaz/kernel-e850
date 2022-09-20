@@ -783,6 +783,22 @@
                 status = "ok";
 	};
 
+        fm@14AC0000 {
+                compatible = "samsung,exynos3830-fm";
+                reg = <0x0 0x14AC0000 0x2000>;
+                elna_gpio = <&gpg2 3 0x1>; /* FM_LNA_EN */
+                pinctrl-names = "active", "sleep";
+                pinctrl-0 = <&aud_fm_bus>;
+                pinctrl-1 = <&aud_fm_idle>;
+                clocks = <&clock UMUX_CLK_AUD_FM>,
+                        <&clock GATE_ABOX_QCH_FM>,
+                        <&clock DOUT_CLK_AUD_FM>;  /* mux_aud_fm, qch_fm, clk_aud_fm */
+                clock-names = "mux_aud_fm", "qch_fm", "clk_aud_fm";
+                samsung,syscon-phandle = <&pmu_system_controller>;
+                samsung,power-domain = <&pd_aud>;
+                status = "okay";
+       };
+
 	tmuctrl_0: LITTLE0@10070000 {
 		compatible = "samsung,exynos3830-tmu";
 		reg = <0x0 0x10070000 0x800>;
