@@ -2255,24 +2255,7 @@ static int abox_cpu_suspend_complete(struct device *dev)
 
 	return ret;
 }
-/*
-static void abox_control_acp(struct abox_data *data, bool enable)
-{
-	unsigned int sysreg_ca32_con1, mask_ainact, value;
 
-	if (data->sys_acp_con[0] == 0 || data->sys_acp_con[1] == 0)
-		return;
-
-	sysreg_ca32_con1 = data->sys_acp_con[0];
-	mask_ainact = data->sys_acp_con[1];
-	value = readl(data->sysreg_base + sysreg_ca32_con1);
-	value &= ~mask_ainact;
-	value |= enable ? 0x0 : mask_ainact;
-	writel(value, data->sysreg_base + sysreg_ca32_con1);
-	abox_dbg(data->dev, "%s(%d): %#x <= %#x\n", __func__,
-			enable, sysreg_ca32_con1, value);
-}
-*/
 static int abox_cpu_pm_ipc(struct abox_data *data, bool resume)
 {
 	struct device *dev = data->dev;
@@ -2905,6 +2888,25 @@ static void abox_set_minimum_stable_qos(struct abox_data *data, bool en)
 	abox_qos_apply_aud_base(data->dev, en ? data->pm_qos_stable_min : 0);
 }
 
+void abox_enable_mclk(unsigned int on)
+{
+	struct abox_data *data = p_abox_data;
+
+	if (!abox_is_on()) {
+		dev_info(data->dev, "%s(abox_is_off)\n", __func__);
+		return;
+	}
+
+	if (on)
+		abox_disable_qchannel(data->dev, data, ABOX_BCLK_UAIF0, true);
+	else
+		abox_disable_qchannel(data->dev, data, ABOX_BCLK_UAIF0, false);
+
+	dev_info(data->dev, "%s:ABOX_QCHANNEL_DISABLE=%08x\n", __func__,
+			({regmap_read(data->regmap, ABOX_QCHANNEL_DISABLE, &on); on;}));
+}
+EXPORT_SYMBOL(abox_enable_mclk);
+
 static int abox_enable(struct device *dev)
 {
 	struct abox_data *data = dev_get_drvdata(dev);
@@ -2917,8 +2919,6 @@ static int abox_enable(struct device *dev)
 
 	if (abox_test_quirk(data, ABOX_QUIRK_BIT_ARAM_MODE))
 		writel(0x0, data->sysreg_base + ABOX_ARAM_CTRL);
-
-//	abox_control_acp(data, true);
 
 	abox_power_notifier_call_chain(data, true);
 	abox_gic_enable_irq(data->dev_gic);
@@ -3003,7 +3003,6 @@ static int abox_disable(struct device *dev)
 	data->calliope_state = CALLIOPE_DISABLING;
 	abox_cache_components(dev, data);
 	flush_work(&data->boot_done_work);
-//	abox_control_acp(data, false);
 	if (state != CALLIOPE_DISABLED)
 		abox_cpu_pm_ipc(data, false);
 	data->calliope_state = CALLIOPE_DISABLED;
@@ -3773,7 +3772,7 @@ static struct platform_driver samsung_abox_driver = {
 module_platform_driver(samsung_abox_driver);
 
 /* Module information */
-MODULE_AUTHOR("Gyeongtaek Lee, <gt82.lee@samsung.com>");
+MODULE_AUTHOR("Seungbie Lee, <seungbin.lee@samsung.com>");
 MODULE_DESCRIPTION("Samsung ASoC A-Box Driver");
 MODULE_ALIAS("platform:abox");
 MODULE_LICENSE("GPL");

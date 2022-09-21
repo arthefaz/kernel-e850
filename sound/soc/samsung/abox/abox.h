@@ -857,6 +857,12 @@ extern int abox_disable_qchannel(struct device *dev, struct abox_data *data,
 		enum qchannel clk, int disable);
 
 /**
+  * disable or enable qchannel of a clock
+  * @param[in] on		mclk on or off
+  */
+extern void abox_enable_mclk(unsigned int on);
+
+/**
  * wait for restoring abox from suspend
  * @param[in]	data		pointer to abox_data structure
  */
