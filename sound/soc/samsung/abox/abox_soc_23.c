@@ -605,7 +605,6 @@ bool shared_reg(unsigned int reg)
 	case ABOX_AUDEN_WDMA_STATUS(5):
 	case ABOX_AUDEN_WDMA_STATUS(6):
 	case ABOX_AUDEN_WDMA_STATUS(7):
-	case ABOX_SIDETONE_CTRL:
 		return true;
 	default:
 		return false;

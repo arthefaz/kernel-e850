@@ -106,7 +106,7 @@ void abox_core_power(int on)
 {
 	struct abox_data *data = get_abox_data();
 	struct device *dev = data->dev;
-	struct abox_core *core;
+	//struct abox_core *core;
 	unsigned int val = 0;
 
 	abox_info(dev, "%s(%d)\n", __func__, on);
@@ -143,7 +143,7 @@ void abox_core_enable(int enable)
 {
 	struct abox_data *data = get_abox_data();
 	struct device *dev = data->dev;
-	struct abox_core *core;
+	//struct abox_core *core;
 	unsigned int val = 0;
 
 	abox_info(dev, "%s(%d)\n", __func__, enable);
