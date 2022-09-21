@@ -359,6 +359,7 @@
 		logging-period = <500>;
 		dump-base = <0x203C000>;
 		dump-size = <0x2D000>;			/* 180KB */
+		dram-dump-base = <0x9000c800>;
 	};
 
 	acpm_dvfs {
