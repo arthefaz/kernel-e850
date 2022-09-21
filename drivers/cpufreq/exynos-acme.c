@@ -28,6 +28,7 @@
 #include <soc/samsung/cal-if.h>
 #include <soc/samsung/ect_parser.h>
 #include <soc/samsung/freq-qos-tracer.h>
+#include <soc/samsung/exynos-cpupm.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/acme.h>
@@ -119,7 +120,13 @@ static int scale_slowpath(struct exynos_cpufreq_domain *domain,
 	cpufreq_freq_transition_begin(policy, &freqs);
 	debug_pre_scale(domain, target_freq);
 
+	if (domain->need_awake)
+		disable_power_mode(cpumask_any(&domain->cpus), POWERMODE_TYPE_CLUSTER);
+
 	ret = cal_dfs_set_rate(domain->cal_id, target_freq);
+
+	if (domain->need_awake)
+		enable_power_mode(cpumask_any(&domain->cpus), POWERMODE_TYPE_CLUSTER);
 
 	debug_post_scale(domain, target_freq, ret);
 	cpufreq_freq_transition_end(policy, &freqs, ret);
@@ -336,19 +343,35 @@ static unsigned int exynos_cpufreq_get(unsigned int cpu)
 {
 	struct exynos_cpufreq_domain *domain = find_domain(cpu);
 	unsigned int freq;
+	int wakeup_flag = 0;
+	struct cpumask temp;
 
 	if (!domain)
 		return 0;
 
+	if (cpumask_empty(&temp))
+		return domain->old;
+
+	if (domain->need_awake) {
+		if (likely(domain->old))
+			return domain->old;
+
+		wakeup_flag = 1;
+		disable_power_mode(cpumask_any(&domain->cpus), POWERMODE_TYPE_CLUSTER);
+	}
+
 	/* DVFS has not occur yet. Return boot freq. */
-	if (unlikely(!domain->old))
-		return domain->boot_freq;
+/*	if (unlikely(!domain->old))
+		return domain->boot_freq;*/
 
 	freq = (unsigned int)cal_dfs_get_rate(domain->cal_id);
 
 	/* Abnormal condition. Return old freq. */
 	if (!freq)
 		return domain->old;
+
+	if (unlikely(wakeup_flag))
+		enable_power_mode(cpumask_any(&domain->cpus), POWERMODE_TYPE_CLUSTER);
 
 	return freq;
 }
@@ -1329,6 +1352,9 @@ static int init_domain(struct exynos_cpufreq_domain *domain,
 		domain->dss_type = domain->id;
 	}
 
+	if (of_property_read_bool(dn, "need-awake"))
+		domain->need_awake = true;
+
 	/*
 	 * Set min/max frequency.
 	 * If max-freq property exists in device tree, max frequency is
@@ -1447,6 +1473,8 @@ static int init_domain(struct exynos_cpufreq_domain *domain,
 
 	mutex_init(&domain->lock);
 
+	domain->old = exynos_cpufreq_get(domain);
+
 	/*
 	 * Initialize CPUFreq DVFS Manager
 	 * DVFS Manager is the optional function, it does not check return value
@@ -1458,7 +1486,7 @@ static int init_domain(struct exynos_cpufreq_domain *domain,
 	dev_pm_opp_of_register_em(get_cpu_device(cpu), &domain->cpus);
 
 	/* Initialize fields to test fast switch */
-	init_fast_switch(domain, dn);
+	//init_fast_switch(domain, dn);
 
 	pr_info("Complete to initialize cpufreq-domain%d\n", domain->id);
 

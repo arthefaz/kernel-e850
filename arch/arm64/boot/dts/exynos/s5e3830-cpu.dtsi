@@ -211,6 +211,7 @@
 			//max-freq = <1872000>;
 			min-freq = <546000>;
 
+			need-awake;
 			thread-run-on = "0-3";
 
 			#cooling-cells = <2>; /* min followed by max */

@@ -74,6 +74,7 @@ struct exynos_cpufreq_domain {
 	/* fast-switch */
 	bool				fast_switch;
 	raw_spinlock_t			fast_switch_lock;
+	bool                            need_awake;
 
 	/* list head of DVFS Manager constraints */
 	struct list_head		dm_list;
