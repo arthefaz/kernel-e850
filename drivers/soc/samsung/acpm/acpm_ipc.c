@@ -20,7 +20,7 @@
 #include <linux/list.h>
 #include <linux/wait.h>
 #include <linux/slab.h>
-//#include <linux/debug-snapshot.h>
+#include <soc/samsung/debug-snapshot.h>
 #include <linux/sched/clock.h>
 #include <linux/module.h>
 #include <linux/workqueue.h>
@@ -153,7 +153,7 @@ void acpm_log_print(void)
 		if (id == REGULATOR_INFO_ID)
 			exynos_rgt_dbg_snapshot_regulator(val, time);
 
-		//dbg_snapshot_acpm(time, str, val);
+		dbg_snapshot_acpm(time, str, val);
 
 		if (acpm_debug->debug_log_level == 1 || !log_level)
 			pr_info("[ACPM_FW] : %llu id:%u, %s, %x\n", time, id, str, val);
@@ -664,6 +664,7 @@ static void log_buffer_init(struct device *dev, struct device_node *node)
 	unsigned int num_timestamps = 0;
 	unsigned int len = 0;
 	unsigned int dump_base = 0;
+	unsigned int dram_dump_base = 0;
 	unsigned int dump_size = 0;
 
 	prop = of_get_property(node, "num-timestamps", &len);
@@ -705,11 +706,17 @@ static void log_buffer_init(struct device *dev, struct device_node *node)
 	if (prop)
 		acpm_debug->period = be32_to_cpup(prop);
 
-#ifdef CONFIG_DEBUG_SNAPSHOT
 	acpm_debug->dump_dram_base = kzalloc(acpm_debug->dump_size, GFP_KERNEL);
 	dbg_snapshot_printk("[ACPM] acpm framework SRAM dump to dram base: 0x%x\n",
 			virt_to_phys(acpm_debug->dump_dram_base));
-#endif
+
+	dbg_snapshot_add_bl_item_info("acpm_dram", virt_to_phys(acpm_debug->dump_dram_base),
+						acpm_debug->dump_size);
+	prop = of_get_property(node, "dram-dump-base", &len);
+	if (prop) {
+		dram_dump_base = be32_to_cpup(prop);
+		dbg_snapshot_add_bl_item_info("acpm_sram", dram_dump_base, acpm_debug->dump_size);
+	}
 	pr_info("[ACPM] acpm framework SRAM dump to dram base: 0x%llx\n",
 			virt_to_phys(acpm_debug->dump_dram_base));
 
