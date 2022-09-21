@@ -672,7 +672,7 @@ static int exynos4_mct_probe(struct platform_device *pdev)
 
 	if (of_machine_is_compatible("samsung,exynos4412-mct"))
 		return mct_init_ppi(np);
-	pr_info("###########HARSHIT MCT PROBE SUCCESS#########\n");
+
 	return mct_init_spi(np);
 }
 
