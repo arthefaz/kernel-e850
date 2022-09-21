@@ -299,11 +299,9 @@
 					cpu {
 						sound-dai = <&abox_uaif_0>;
 					};
-					/*
 					codec {
 						sound-dai = <&codec_aud3004x>;
 					};
-					*/
 				};
 				uaif1 {
 					format = "i2s";
