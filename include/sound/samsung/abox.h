@@ -236,6 +236,8 @@ enum abox_call_event {
 
 extern int register_abox_call_event_notifier(struct notifier_block *nb);
 
+extern int abox_notify_modem_event(enum abox_modem_event event);
+
 #else /* !CONFIG_SND_SOC_SAMSUNG_ABOX */
 
 static inline bool abox_is_on(void)
