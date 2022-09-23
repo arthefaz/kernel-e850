@@ -339,15 +339,13 @@ static unsigned int exynos_cpufreq_fast_switch(struct cpufreq_policy *policy,
 	return freq;
 }
 
-static unsigned int exynos_cpufreq_get(unsigned int cpu)
+static unsigned int get_freq(struct exynos_cpufreq_domain *domain)
 {
-	struct exynos_cpufreq_domain *domain = find_domain(cpu);
-	unsigned int freq;
 	int wakeup_flag = 0;
+	unsigned int freq;
 	struct cpumask temp;
 
-	if (!domain)
-		return 0;
+	cpumask_and(&temp, &domain->cpus, cpu_online_mask);
 
 	if (cpumask_empty(&temp))
 		return domain->old;
@@ -360,13 +358,7 @@ static unsigned int exynos_cpufreq_get(unsigned int cpu)
 		disable_power_mode(cpumask_any(&domain->cpus), POWERMODE_TYPE_CLUSTER);
 	}
 
-	/* DVFS has not occur yet. Return boot freq. */
-/*	if (unlikely(!domain->old))
-		return domain->boot_freq;*/
-
 	freq = (unsigned int)cal_dfs_get_rate(domain->cal_id);
-
-	/* Abnormal condition. Return old freq. */
 	if (!freq)
 		return domain->old;
 
@@ -374,6 +366,16 @@ static unsigned int exynos_cpufreq_get(unsigned int cpu)
 		enable_power_mode(cpumask_any(&domain->cpus), POWERMODE_TYPE_CLUSTER);
 
 	return freq;
+}
+
+static unsigned int exynos_cpufreq_get(unsigned int cpu)
+{
+	struct exynos_cpufreq_domain *domain = find_domain(cpu);
+
+	if (!domain)
+		return 0;
+
+	return get_freq(domain);
 }
 
 static int __exynos_cpufreq_suspend(struct cpufreq_policy *policy,
@@ -442,7 +444,7 @@ static struct cpufreq_driver exynos_driver = {
 	.verify		= exynos_cpufreq_verify,
 	.target		= exynos_cpufreq_target,
 	.get		= exynos_cpufreq_get,
-	//.fast_switch	= exynos_cpufreq_fast_switch,
+	.fast_switch	= exynos_cpufreq_fast_switch,
 	.suspend	= exynos_cpufreq_suspend,
 	.resume		= exynos_cpufreq_resume,
 	.online		= exynos_cpufreq_online,
@@ -1471,9 +1473,9 @@ static int init_domain(struct exynos_cpufreq_domain *domain,
 			domain->min_freq, domain->max_freq))
 		domain->resume_freq = domain->min_freq;
 
-	mutex_init(&domain->lock);
+	domain->old = get_freq(domain);
 
-	domain->old = exynos_cpufreq_get(domain);
+	mutex_init(&domain->lock);
 
 	/*
 	 * Initialize CPUFreq DVFS Manager
@@ -1486,7 +1488,7 @@ static int init_domain(struct exynos_cpufreq_domain *domain,
 	dev_pm_opp_of_register_em(get_cpu_device(cpu), &domain->cpus);
 
 	/* Initialize fields to test fast switch */
-	//init_fast_switch(domain, dn);
+	init_fast_switch(domain, dn);
 
 	pr_info("Complete to initialize cpufreq-domain%d\n", domain->id);
 
