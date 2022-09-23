@@ -3932,7 +3932,7 @@ int slsi_mlme_set_acl(struct slsi_dev *sdev, struct net_device *dev, u16 ifnum,
 	int               n_acl_entries       = 0;
 	u8                zero_addr[ETH_ALEN] = {0};
 
-	if (WARN_ON(!ndev_vif->activated))
+	if (ifnum > 0 && WARN_ON(!ndev_vif->activated))
 		return -EINVAL;
 
 	for (i = 0; i < max_acl_entries; i++) {
