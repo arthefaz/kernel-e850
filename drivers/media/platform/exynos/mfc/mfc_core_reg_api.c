@@ -22,7 +22,7 @@ void mfc_core_enc_save_regression_result(struct mfc_core *core)
 		dev->regression_val[dev->regression_cnt++] = MFC_CORE_READL(0xE004) & 0xFF;
 	if (dev->debugfs.regression_option & MFC_TEST_DEFAULT) {
 		dev->regression_val[dev->regression_cnt++] = mfc_core_get_enc_slice_type();
-		dev->regression_val[dev->regression_cnt++] = MFC_CORE_READL(0x609C);
+		dev->regression_val[dev->regression_cnt++] = MFC_CORE_READL(0x2150);
 		dev->regression_val[dev->regression_cnt++] = MFC_CORE_READL(0x2A54);
 		dev->regression_val[dev->regression_cnt++] = MFC_CORE_READL(0x5080);
 		dev->regression_val[dev->regression_cnt++] = (MFC_CORE_READL(0xE004) >> 8) & 0x3;
