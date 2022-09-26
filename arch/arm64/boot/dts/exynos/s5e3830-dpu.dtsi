@@ -153,6 +153,16 @@
 		/*start address, size */
 		dma-window = <0x10000000 0xEFFF0000>;
 
+		samsung,iommu-identity-map = <0x0 0xF9800000  0x01400000>,
+				<0x0 0xFAC00000 0x01400000>;
+
+		/* Required only for video mode
+		 * In command mode, "memory-region" can be removed
+		 * along with "fb_handover" in the file
+		 * s5e3830-rmem.dtsi
+		 */
+		//memory-region = <&fb_handover>;
+
 		dsim,hold-rpm-on-boot;
 
 		/* clock */
@@ -161,9 +171,6 @@
 
 		phys = <&mipi_phy_dsim0_m4s0 0>;
 		phy-names = "dsim_dphy";
-		/* TODO
-		memory-region = <&fb_handover>;
-		*/
 	};
 
 	/* 3830 Universal device panel */
