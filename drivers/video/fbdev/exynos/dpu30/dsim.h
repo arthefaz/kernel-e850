@@ -211,6 +211,7 @@ struct dsim_fb_handover {
 	bool reserved;
 	phys_addr_t phys_addr;
 	size_t phys_size;
+	struct reserved_mem *rmem;
 };
 
 struct exynos_dsim_cmd {

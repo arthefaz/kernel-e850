@@ -1949,11 +1949,55 @@ static int dsim_register_panel(struct dsim_device *dsim)
 	return 0;
 }
 
+/*
+ * rmem_device_init is called in of_reserved_mem_device_init_by_idx function
+ * when reserved memory is required.
+ */
+static int rmem_device_init(struct reserved_mem *rmem, struct device *dev)
+{
+        struct dsim_device *dsim = dev_get_drvdata(dev);
+
+        dsim_info("%s +\n", __func__);
+        dsim->fb_handover.phys_addr = rmem->base;
+        dsim->fb_handover.phys_size = rmem->size;
+        dsim_info("%s -\n", __func__);
+
+        return 0;
+}
+
+/*
+ * rmem_device_release is called in of_reserved_mem_device_release function
+ * when reserved memory is no longer required.
+ */
+static void rmem_device_release(struct reserved_mem *rmem, struct device *dev)
+{
+        struct page *first = phys_to_page(PAGE_ALIGN(rmem->base));
+        struct page *last = phys_to_page((rmem->base + rmem->size) & PAGE_MASK);
+        struct page *page;
+
+        pr_info("%s: base=%pa, size=%pa, first=%pa, last=%pa\n",
+                        __func__, &rmem->base, &rmem->size, first, last);
+
+        for (page = first; page != last; page++) {
+                __ClearPageReserved(page);
+                set_page_count(page, 1);
+                __free_pages(page, 0);
+                adjust_managed_page_count(page, 1);
+        }
+}
+
+static const struct reserved_mem_ops rmem_ops = {
+        .device_init    = rmem_device_init,
+        .device_release = rmem_device_release,
+};
+
 static int dsim_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct device *dev = &pdev->dev;
 	struct dsim_device *dsim = NULL;
+	struct reserved_mem *rmem = NULL;
+	struct device_node *rmem_np = NULL;
 
 	dsim = devm_kzalloc(dev, sizeof(struct dsim_device), GFP_KERNEL);
 	if (!dsim) {
@@ -1999,8 +2043,6 @@ static int dsim_probe(struct platform_device *pdev)
 	if(true == dsim->hold_rpm_on_boot)
 		pm_runtime_get_sync(dsim->dev);
 
-	dsim_acquire_fb_resource(dsim);
-
 	iommu_register_device_fault_handler(dev, dpu_sysmmu_fault_handler_dsim, NULL);
 
 	phy_init(dsim->phy);
@@ -2008,6 +2050,27 @@ static int dsim_probe(struct platform_device *pdev)
 		phy_init(dsim->phy_ex);
 
 	dsim_register_panel(dsim);
+
+	if (dsim->panel->lcd_info.mode == DECON_VIDEO_MODE) {
+		rmem_np = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
+		if (rmem_np) {
+			rmem = of_reserved_mem_lookup(rmem_np);
+			if (!rmem) {
+				dsim_err("failed to reserve memory lookup\n");
+				return 0;
+			}
+		} else {
+			dsim_err("failed to get reserve memory phandle\n");
+			return 0;
+		}
+
+		dsim_info("%s: base=%pa, size=%pa\n", __func__, &rmem->base, &rmem->size);
+		rmem->ops = &rmem_ops;
+		dsim->fb_handover.rmem = rmem;
+
+		dsim_acquire_fb_resource(dsim);
+	} else
+		dsim->fb_handover.reserved = false;
 
 	ret = dsim_get_data_lanes(dsim);
 	if (ret)
@@ -2120,57 +2183,6 @@ struct platform_driver dsim_driver __refdata = {
 		.suppress_bind_attrs = true,
 	}
 };
-
-/*
- * rmem_device_init is called in of_reserved_mem_device_init_by_idx function
- * when reserved memory is required.
- */
-static int rmem_device_init(struct reserved_mem *rmem, struct device *dev)
-{
-	struct dsim_device *dsim = dev_get_drvdata(dev);
-
-	dsim_info("%s +\n", __func__);
-	dsim->fb_handover.phys_addr = rmem->base;
-	dsim->fb_handover.phys_size = rmem->size;
-	dsim_info("%s -\n", __func__);
-
-	return 0;
-}
-
-/*
- * rmem_device_release is called in of_reserved_mem_device_release function
- * when reserved memory is no longer required.
- */
-static void rmem_device_release(struct reserved_mem *rmem, struct device *dev)
-{
-	struct page *first = phys_to_page(PAGE_ALIGN(rmem->base));
-	struct page *last = phys_to_page((rmem->base + rmem->size) & PAGE_MASK);
-	struct page *page;
-
-	pr_info("%s: base=%pa, size=%pa, first=%pa, last=%pa\n",
-			__func__, &rmem->base, &rmem->size, first, last);
-
-	for (page = first; page != last; page++) {
-		__ClearPageReserved(page);
-		set_page_count(page, 1);
-		__free_pages(page, 0);
-		adjust_managed_page_count(page, 1);
-	}
-}
-
-static const struct reserved_mem_ops rmem_ops = {
-	.device_init	= rmem_device_init,
-	.device_release = rmem_device_release,
-};
-
-static int __init fb_handover_setup(struct reserved_mem *rmem)
-{
-	pr_info("%s: base=%pa, size=%pa\n", __func__, &rmem->base, &rmem->size);
-
-	rmem->ops = &rmem_ops;
-	return 0;
-}
-RESERVEDMEM_OF_DECLARE(fb_handover, "exynos,fb_handover", fb_handover_setup);
 
 MODULE_AUTHOR("Yeongran Shin <yr613.shin@samsung.com>");
 MODULE_DESCRIPTION("Samusung EXYNOS DSIM driver");
