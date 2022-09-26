@@ -132,5 +132,15 @@
 			alignment = <0x0 0x00010000>;
 			reusable;
 		};
+
+		/* fb_handover shall be removed in DPU command mode
+		 * operation. Otherwise, It will end up in waste of memory
+		 */
+		/*
+		fb_handover: fb_handover {
+		compatible = "exynos,fb_handover";
+		reg = <0x0 0xF9800000 0x02800000>;
+		};
+		*/
 	};
 };
