@@ -33,6 +33,7 @@
 		need_smc = <0x13010204>;
 		status = "okay";
 		#power-domain-cells = <0>;
+		pd-boot-on;
 		skip-idle-ip;
 	};
 
