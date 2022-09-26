@@ -20,6 +20,8 @@ BUILD_KERNEL_MODULES=true
 DTBO_MERGE_OUTPUT=true
 VENDOR_KERNEL_MODULE_LIST=vendor_module_list_s5e3830.cfg
 VENDOR_BOOT_MODULE_ORDER=vendor_boot_module_order_s5e3830.cfg
+SYSTEM_DLKM_KERNEL_MODULE_LIST=android/gki_system_dlkm_modules
+SYSTEM_DLKM_PREBUILT_ARCHIEVE=system_dlkm_staging_archive.tar.gz
 
 EXPORT_PLATFORM_BOARD_CONFIG="
 BOARD_RAMDISK_USE_LZ4=false
