@@ -2285,6 +2285,12 @@ static int shmem_security_request(struct link_device *ld, struct io_device *iod,
 	struct pktproc_adaptor *ppa = &mld->pktproc;
 #endif
 
+#if IS_ENABLED(CONFIG_SOC_S5E3830)
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS)
+       exynos_pm_qos_update_request(&ld->pm_qos_mif, 1539000);
+#endif
+#endif
+
 	err = copy_from_user(&msr, (const void __user *)arg, sizeof(msr));
 	if (err) {
 		mif_err("%s: ERR! copy_from_user fail\n", ld->name);
@@ -2381,6 +2387,12 @@ static int shmem_security_request(struct link_device *ld, struct io_device *iod,
 #endif
 
 exit:
+#if IS_ENABLED(CONFIG_SOC_S5E3830)
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS)
+       exynos_pm_qos_update_request(&ld->pm_qos_mif, 421000);
+#endif
+#endif
+
 	return err;
 }
 
@@ -4345,6 +4357,12 @@ struct link_device *create_link_device(struct platform_device *pdev, u32 link_ty
 
 	if (shmem_rx_setup(ld) < 0)
 		goto error;
+
+#if IS_ENABLED(CONFIG_SOC_S5E3830)
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS)
+       exynos_pm_qos_add_request(&ld->pm_qos_mif, (int)PM_QOS_BUS_THROUGHPUT, 421000);
+#endif
+#endif
 
 	if (mld->attrs & LINK_ATTR_DPRAM_MAGIC) {
 		mif_info("%s<->%s: LINK_ATTR_DPRAM_MAGIC\n",

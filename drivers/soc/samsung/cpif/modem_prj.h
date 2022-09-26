@@ -23,6 +23,13 @@
 #include <linux/netdevice.h>
 #include <linux/pm_runtime.h>
 #include <linux/version.h>
+
+#if IS_ENABLED(CONFIG_SOC_S5E3830)
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS)
+#include <soc/samsung/exynos_pm_qos.h>
+#endif
+#endif
+
 #if IS_ENABLED(CONFIG_EXYNOS_ITMON)
 #include <soc/samsung/exynos-itmon.h>
 #endif
@@ -495,6 +502,12 @@ struct link_device {
 
 	/* Save reason of forced crash */
 	struct crash_reason crash_reason;
+
+#if IS_ENABLED(CONFIG_SOC_S5E3830)
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS)
+       struct exynos_pm_qos_request pm_qos_mif;
+#endif
+#endif
 
 	int (*init_comm)(struct link_device *ld, struct io_device *iod);
 	void (*terminate_comm)(struct link_device *ld, struct io_device *iod);
