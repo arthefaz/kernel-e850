@@ -68,6 +68,7 @@ struct abox_if_data {
 	struct clk *clk_bclk;
 	struct clk *clk_bclk_gate;
 	struct clk *clk_mux;
+	struct clk *clk_mclk;
 	struct snd_soc_component *cmpnt;
 	struct snd_soc_dai_driver *dai_drv;
 	struct abox_data *abox_data;

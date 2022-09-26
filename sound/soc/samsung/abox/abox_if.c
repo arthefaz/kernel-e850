@@ -185,6 +185,11 @@ static int abox_if_startup(struct snd_pcm_substream *substream,
 			'C' : 'P');
 
 	abox_request_cpu_gear_dai(dev, abox_data, dai, abox_data->cpu_gear_min);
+	ret = clk_enable(data->clk_mclk);
+	if (ret < 0) {
+		dev_err(dev, "Failed to enable mclk: %d\n", ret);
+		goto err;
+	}
 	ret = clk_enable(data->clk_bclk);
 	if (ret < 0) {
 		abox_err(dev, "Failed to enable bclk: %d\n", ret);
@@ -212,6 +217,7 @@ static void abox_if_shutdown(struct snd_pcm_substream *substream,
 
 	clk_disable(data->clk_bclk_gate);
 	clk_disable(data->clk_bclk);
+	clk_disable(data->clk_mclk);
 	abox_request_cpu_gear_dai(dev, abox_data, dai, 0);
 }
 
@@ -546,10 +552,12 @@ static int abox_uaif_hw_params(struct snd_pcm_substream *substream,
 			abox_err(dev, "bclk set error: %d\n", ret);
 			return ret;
 		}
+		clk_set_rate(data->clk_mclk, 24576000);
 	}
 
-	abox_info(dev, "rate=%u, width=%u, channel=%u, bclk=%lu\n",
-			rate, width, channels, clk_get_rate(data->clk_bclk));
+	abox_info(dev, "rate=%u, width=%u, channel=%u, bclk=%lu, mclk=%lu\n",
+			rate, width, channels, clk_get_rate(data->clk_bclk),
+			clk_get_rate(data->clk_mclk));
 
 	ctrl1 = snd_soc_component_read(cmpnt, UAIF_REG_CTRL1);
 
@@ -1176,6 +1184,10 @@ static int samsung_abox_if_probe(struct platform_device *pdev)
 	data->clk_mux = devm_clk_get_and_prepare(pdev, "mux");
 	if (IS_ERR(data->clk_mux))
 		data->clk_mux = NULL;
+
+	data->clk_mclk = devm_clk_get_and_prepare(pdev, "mclk");
+	if (IS_ERR(data->clk_mclk))
+		data->clk_mclk = NULL;
 
 	data->clk_bclk = devm_clk_get_and_prepare(pdev, "bclk");
 	if (IS_ERR(data->clk_bclk))
