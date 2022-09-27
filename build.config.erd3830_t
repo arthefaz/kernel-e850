@@ -21,16 +21,6 @@ DTBO_MERGE_OUTPUT=true
 VENDOR_KERNEL_MODULE_LIST=vendor_module_list_s5e3830.cfg
 VENDOR_BOOT_MODULE_ORDER=vendor_boot_module_order_s5e3830.cfg
 
-#BUILD_DPM_BINARY_FILES="
-#arch/arm64/boot/dts/exynos/board/erd/dpm/s5e8825/exynos-dpm-eng.dts:dpm-eng
-#arch/arm64/boot/dts/exynos/board/erd/dpm/s5e8825/exynos-dpm-userdebug.dts:dpm-userdebug
-#arch/arm64/boot/dts/exynos/board/erd/dpm/s5e8825/exynos-dpm-user.dts:dpm-user
-#arch/arm64/boot/dts/exynos/board/erd/dpm/s5e8825/exynos-dpm-eng-disable-dboot.dts:dpm-eng-without-dboot
-#"
-#DPM_ENG_IMG=dpm-eng.img
-#DPM_USERDEBUG_IMG=dpm-userdebug.img
-#DPM_USER_IMG=dpm-user.img
-
 EXPORT_PLATFORM_BOARD_CONFIG="
 BOARD_RAMDISK_USE_LZ4=false
 BOARD_AVB_ENABLE=true
@@ -78,7 +68,7 @@ LZ4_RAMDISK=1
 VENDOR_FSTAB=prebuilts/platform/erd3830/conf/fstab.exynos3830.emmc.dp
 VENDOR_INIT_RECOVERY_RC=prebuilts/platform/erd3830/conf/init.recovery.exynos3830.rc
 VENDOR_INIT_USB_RC=prebuilts/platform/erd3830/conf/init.exynos3830.usb.rc
-#VENDOR_BOARD_BOOTCONFIG=prebuilts/platform/erd8825/BootConfig.mk
+#VENDOR_BOARD_BOOTCONFIG=prebuilts/platform/erd3830/BootConfig.mk
 
 BOOT_IMAGE_HEADER_VERSION=4
 INITRAMFS_VENDOR_RAMDISK_FRAGMENT_NAME=dlkm
