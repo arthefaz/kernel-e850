@@ -21,6 +21,26 @@
 	#define CPU_CL1 "4-7"
 	#define CPU_ALL "0-7"
 
+	arm-pmu {
+		compatible = "arm,armv8-pmuv3";
+		interrupts =	<0 INTREQ__CPUCL0_PMUIRQ_0 IRQ_TYPE_LEVEL_HIGH>,
+				<0 INTREQ__CPUCL0_PMUIRQ_1 IRQ_TYPE_LEVEL_HIGH>,
+				<0 INTREQ__CPUCL0_PMUIRQ_2 IRQ_TYPE_LEVEL_HIGH>,
+				<0 INTREQ__CPUCL0_PMUIRQ_3 IRQ_TYPE_LEVEL_HIGH>,
+				<0 INTREQ__CPUCL1_PMUIRQ_0 IRQ_TYPE_LEVEL_HIGH>,
+				<0 INTREQ__CPUCL1_PMUIRQ_1 IRQ_TYPE_LEVEL_HIGH>,
+				<0 INTREQ__CPUCL1_PMUIRQ_2 IRQ_TYPE_LEVEL_HIGH>,
+				<0 INTREQ__CPUCL1_PMUIRQ_3 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-affinity =	<&cpu0>,
+					<&cpu1>,
+					<&cpu2>,
+					<&cpu3>,
+					<&cpu4>,
+					<&cpu5>,
+					<&cpu6>,
+					<&cpu7>;
+	};
+
 	power-data {
 		#define CPUCL0_DMIPS_PER_MHZ 271
 		#define CPUCL0_DP_COEFF 125
