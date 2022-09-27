@@ -588,6 +588,11 @@ err:
 	return ret;
 }
 
+static void decon_pd_booton_rel(const char *pd_name)
+{
+	exynos_pd_booton_rel(pd_name);
+}
+
 static int decon_enable(struct decon_device *decon)
 {
 	int ret = 0;
@@ -603,6 +608,7 @@ static int decon_enable(struct decon_device *decon)
 
 	DPU_EVENT_LOG(DPU_EVT_UNBLANK, &decon->sd, ktime_set(0, 0));
 	decon_info("decon-%d %s +\n", decon->id, __func__);
+	DO_ONCE(decon_pd_booton_rel, "pd-dpu");
 	ret = _decon_enable(decon, next_state);
 	if (ret < 0) {
 		decon_err("decon-%d failed to set %s (ret %d)\n",

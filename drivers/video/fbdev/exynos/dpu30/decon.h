@@ -1508,9 +1508,14 @@ void dpu_cursor_win_update_config(struct decon_device *decon,
 int decon_set_cursor_win_config(struct decon_device *decon, int x, int y);
 void dpu_init_cursor_mode(struct decon_device *decon);
 int dpu_sysmmu_fault_handler_dsim(struct iommu_fault *fault, void *data);
+
 #if IS_ENABLED(CONFIG_EXYNOS_PD)
 int dpu_pm_domain_check_status(struct exynos_pm_domain *pm_domain);
+extern int exynos_pd_booton_rel(const char *pd_name);
+#else
+static int exynos_pd_booton_rel(const char *pd_name) { return 0; }
 #endif
+
 int decon_set_out_sd_state(struct decon_device *decon, enum decon_state state);
 int decon_update_last_regs(struct decon_device *decon,
 		struct decon_reg_data *regs);
