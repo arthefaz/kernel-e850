@@ -27,8 +27,6 @@ obj-$(CONFIG_EXYNOS_ADV_TRACER) 	+= exynos-adv-tracer.o
 
 obj-$(CONFIG_EXYNOS_ADV_TRACER_S2D)	+= exynos-adv-tracer-s2d.o
 
-obj-$(CONFIG_EXYNOS_EHLD)		+= ehld.o
-ehld-y					:= exynos-ehld.o \
-					   exynos-ehld-ipc.o
+obj-$(CONFIG_EXYNOS_EHLD)		+= exynos-ehld.o
 
 obj-$(CONFIG_EXYNOS_SSLD)		+= exynos-ssld.o
