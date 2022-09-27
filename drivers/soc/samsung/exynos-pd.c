@@ -58,6 +58,26 @@ int exynos_pd_status(struct exynos_pm_domain *pd)
 	return status;
 }
 EXPORT_SYMBOL(exynos_pd_status);
+
+int exynos_pd_booton_rel(const char *pd_name)
+{
+        struct exynos_pm_domain *pd = NULL;
+        pd = exynos_pd_lookup_name(pd_name);
+
+        if (unlikely(!pd)) {
+                pr_info("%s     :%s not found\n",__func__, pd_name);
+                return -EINVAL;
+        }
+
+        if (of_property_read_bool(pd->of_node, "pd-boot-on")) {
+                pd->genpd.flags &= ~GENPD_FLAG_ALWAYS_ON;
+                pr_info(EXYNOS_PD_PREFIX "    %-9s flag set to %d\n",
+                                pd->genpd.name, pd->genpd.flags);
+        }
+        return 0;
+}
+EXPORT_SYMBOL(exynos_pd_booton_rel);
+
 /* Power domain on sequence.
  * on_pre, on_post functions are registered as notification handler at CAL code.
  */
