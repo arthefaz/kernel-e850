@@ -520,14 +520,13 @@ static int exynos_cpuhp_probe(struct platform_device *pdev)
 	/* Create CPUHP sysfs */
 	if (sysfs_create_group(&pdev->dev.kobj, &exynos_cpuhp_group))
 		pr_err("Failed to create sysfs for CPUHP\n");
-	printk(KERN_DEBUG "#########HARSHIT CPU HOTPLUG PROBE STARTED##########\n");
+
 	/* Link CPUHP sysfs to /sys/devices/system/cpu/cpuhp */
 	if (sysfs_create_link(&cpu_subsys.dev_root->kobj,
 				&pdev->dev.kobj, "cpuhp"))
 		pr_err("Failed to link CPUHP sysfs to cpuctrl\n");
 
 	cpuhp_init();
-	printk(KERN_DEBUG "#########HARSHIT CPU HOTPLUG INT SUCCESS##########\n");
 	pr_info("Exynos CPUHP driver probe done!\n");
 
 	return 0;
@@ -550,7 +549,6 @@ static struct platform_driver exynos_cpuhp_driver = {
 
 static int __init exynos_cpuhp_init(void)
 {
-	printk(KERN_DEBUG "#########HARSHIT CPU HOTPLUG MODULE INIT##########\n");
 	return platform_driver_register(&exynos_cpuhp_driver);
 }
 arch_initcall(exynos_cpuhp_init);
