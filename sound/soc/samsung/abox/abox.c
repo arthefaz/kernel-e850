@@ -34,7 +34,7 @@
 #include <sound/samsung/vts.h>
 
 #include <soc/samsung/debug-snapshot.h>
-#include <soc/samsung/exynos-pmu-if.h>
+#include <soc/samsung/exynos-pmu.h>
 #if IS_ENABLED(CONFIG_EXYNOS_ITMON)
 #include <soc/samsung/exynos-itmon.h>
 #endif
