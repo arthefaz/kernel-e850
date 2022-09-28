@@ -1268,15 +1268,19 @@ static void get_battery_capacity(struct s2m_chg_manager_info *battery)
 	if (new_capacity > 100)
 		new_capacity = 100;
 
-	if (new_capacity > battery->capacity)
-		new_capacity = battery->capacity + 1;
-	else if (new_capacity < battery->capacity)
-		new_capacity = battery->capacity - 1;
+	if (battery->is_soc_updated) {
+		if (new_capacity > battery->capacity)
+			new_capacity = battery->capacity + 1;
+		else if (new_capacity < battery->capacity)
+			new_capacity = battery->capacity - 1;
+	}
 
 	if (new_capacity > 100)
 		new_capacity = 100;
 	else if (new_capacity < 0)
 		new_capacity = 0;
+
+	battery->is_soc_updated = true;
 
 #if IS_ENABLED(CONFIG_FAKE_BATT)
 	battery->capacity = FAKE_BAT_LEVEL;
@@ -2398,6 +2402,7 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 	pr_info("%s: Registered dc-manager as power supply\n", __func__);
 #endif
 	/* Initialize battery level*/
+	battery->is_soc_updated = false;
 	value.intval = 0;
 
 	psy = power_supply_get_by_name(battery->pdata->fuelgauge_name);
@@ -2408,6 +2413,7 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 		if (ret < 0)
 			pr_err("%s: Fail to execute property\n", __func__);
 		battery->capacity = value.intval / 10;
+		battery->is_soc_updated = true;
 	}
 
 #if IS_ENABLED(CONFIG_DIRECT_CHARGER)

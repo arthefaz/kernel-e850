@@ -416,6 +416,8 @@ struct s2m_chg_manager_info {
 	int temp_low_limit;
 	int temp_low_limit_recovery;
 
+	bool is_soc_updated;
+
 #if IS_ENABLED(CONFIG_USE_S2M_PDIC)
 	struct delayed_work select_pdo_work;
 	int pdo_max_input_vol;

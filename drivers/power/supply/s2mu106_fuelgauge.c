@@ -481,25 +481,30 @@ static void s2mu106_temperature_compensation(struct s2mu106_fuelgauge_data *fuel
 
 	if (flag_mapping == true) {
 		if (fuelgauge->init_start) {
-			s2mu106_read_reg(fuelgauge->i2c, S2MU106_REG_RSOC_R, data);
+			if (fuelgauge->temperature < fuelgauge->low_temp_limit) {
+				s2mu106_read_reg(fuelgauge->i2c, S2MU106_REG_RSOC_R, data);
 
-			if (data[1] == 0) {
-				ui_soc = (data[1] << 8) | (data[0]);
+				if (data[1] == 0) {
+					ui_soc = (data[1] << 8) | (data[0]);
 
-				pr_info("%s: temperature is low. use saved UI SOC(%d)\n"
-						" for mapping, data[1] = 0x%02x, data[0] = 0x%02x\n",
-						__func__, ui_soc, data[1], data[0]);
+					pr_info("%s: temperature is low. use saved UI SOC(%d)\n"
+							" for mapping, data[1] = 0x%02x, data[0] = 0x%02x\n",
+							__func__, ui_soc, data[1], data[0]);
 
-				fuelgauge->ui_soc = ui_soc;
+					fuelgauge->ui_soc = ui_soc;
 
-				/* UI SOC unit is 1% */
-				ui_soc = ui_soc * 100;
+					/* UI SOC unit is 1% */
+					ui_soc = ui_soc * 100;
 
-				fuelgauge->socni = ui_soc;
-				fuelgauge->soc0i = fuelgauge->rsoc;
+					fuelgauge->socni = ui_soc;
+					fuelgauge->soc0i = fuelgauge->rsoc;
+				} else {
+					pr_info("%s: temperature is low. but UI SOC is not saved\n", __func__);
+
+					fuelgauge->socni = fuelgauge->rsoc;
+					fuelgauge->soc0i = fuelgauge->rsoc;
+				}
 			} else {
-				pr_info("%s: temperature is low. but UI SOC is not saved\n", __func__);
-
 				fuelgauge->socni = fuelgauge->rsoc;
 				fuelgauge->soc0i = fuelgauge->rsoc;
 			}
@@ -509,7 +514,7 @@ static void s2mu106_temperature_compensation(struct s2mu106_fuelgauge_data *fuel
 			 * So SOC_R need to be updated before mapping.
 			 */
 			fuelgauge->soc_r = s2mu106_get_soc_map(fuelgauge,
-								fuelgauge->pre_bat_charging, fuelgauge->pre_comp_socr);
+					fuelgauge->pre_bat_charging, fuelgauge->pre_comp_socr);
 
 			fuelgauge->socni = fuelgauge->soc_r;
 			fuelgauge->soc0i = fuelgauge->rsoc;
