@@ -53,7 +53,7 @@
 				battery,max_input_current = <3000>;
 				battery,max_charging_current = <3000>;
 
-				battery,pdo_max_input_vol = <5000>; /* mV */
+				battery,pdo_max_input_vol = <9000>; /* mV */
 				battery,pdo_max_chg_power = <15000>; /* mW */
 
 				/* Order of current setting must be same with
