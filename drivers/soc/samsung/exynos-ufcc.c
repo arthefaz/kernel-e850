@@ -696,7 +696,7 @@ static void update_max_limit(void)
 			enable_domain_cpus(dom);
 			freq_qos_update_request(req, row[dom->index]);
 		} else {
-			freq_qos_update_request(req, PM_QOS_DEFAULT_VALUE);
+			freq_qos_update_request(req, dom->min_freq);
 			disable_domain_cpus(dom);
 		}
 	}
