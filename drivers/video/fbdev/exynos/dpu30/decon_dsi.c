@@ -20,7 +20,7 @@
 #include <linux/irq.h>
 #include <drm/drm_edid.h>
 #include <media/v4l2-subdev.h>
-#if defined(CONFIG_EXYNOS_ALT_DVFS)
+#if IS_ENABLED(CONFIG_EXYNOS_ALT_DVFS)
 #include <soc/samsung/exynos-alt.h>
 #endif
 
@@ -32,8 +32,8 @@
 //#include "../../../../soc/samsung/pwrcal/S5E8890/S5E8890-vclk.h"
 #include "../../../../../kernel/irq/internals.h"
 #include "./panels/exynos_panel_drv.h"
-#ifdef CONFIG_EXYNOS_ALT_DVFS
-struct task_struct *devfreq_change_task;
+#if IS_ENABLED(CONFIG_EXYNOS_ALT_DVFS)
+struct task_struct *devfreq_change_task
 #endif
 
 /* DECON irq handler for DSI interface */
@@ -89,7 +89,7 @@ irq_end:
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_EXYNOS_ALT_DVFS
+#if IS_ENABLED(CONFIG_EXYNOS_ALT_DVFS)
 static int decon_devfreq_change_task(void *data)
 {
 	while (!kthread_should_stop()) {
@@ -272,7 +272,7 @@ static irqreturn_t decon_ext_irq_handler(int irq, void *dev_id)
 	wake_up_interruptible_all(&decon->vsync.wait);
 
 	spin_unlock(&decon->slock);
-#ifdef CONFIG_EXYNOS_ALT_DVFS
+#if IS_ENABLED(CONFIG_EXYNOS_ALT_DVFS)
 	if (devfreq_change_task)
 		wake_up_process(devfreq_change_task);
 #endif
@@ -313,7 +313,7 @@ int decon_register_ext_irq(struct decon_device *decon)
 
 	decon->eint_status = 1;
 
-#ifdef CONFIG_EXYNOS_ALT_DVFS
+#if IS_ENABLED(CONFIG_EXYNOS_ALT_DVFS)
 	devfreq_change_task =
 		kthread_create(decon_devfreq_change_task, NULL,
 				"devfreq_change");
@@ -1105,14 +1105,14 @@ int decon_enter_hiber(struct decon_device *decon)
 
 	/* DMA protection disable must be happen on dpp domain is alive */
 	if (decon->dt.out_type != DECON_OUT_WB) {
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+#if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 		decon_set_protected_content(decon, NULL);
 #endif
 		decon->cur_using_dpp = 0;
 		decon_dpp_stop(decon, false);
 	}
 
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 	decon->bts.ops->bts_release_bw(decon);
 #endif
 

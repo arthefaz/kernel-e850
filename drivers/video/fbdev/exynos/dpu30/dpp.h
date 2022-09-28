@@ -28,7 +28,7 @@
 #include <linux/of_address.h>
 #include <linux/ion.h>
 #include <linux/dma-buf.h>
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 #include <soc/samsung/bts.h>
 #endif
 

@@ -31,13 +31,13 @@
 
 //#define BRINGUP_DSIM_BIST
 
-#if defined(CONFIG_CAL_IF)
+#if IS_ENABLED(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
 
-#if defined(CONFIG_SOC_S5E3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
-#include <dt-bindings/soc/samsung/exynos3830-devfreq.h>
-#include <dt-bindings/clock/exynos3830.h>
+#if defined(CONFIG_SOC_S5E3830) && IS_ENABLED(CONFIG_ARM_EXYNOS_DEVFREQ)
+#include <dt-bindings/soc/samsung/s5e3830-devfreq.h>
+#include <dt-bindings/clock/s5e3830.h>
 #include <soc/samsung/exynos-devfreq.h>
 #endif
 
@@ -735,7 +735,7 @@ int dsim_set_wait_lp11_after_cmds(struct dsim_device *dsim, bool en)
 	return 0;
 }
 
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 static void dsim_bts_print_info(struct bts_decon_info *info)
 {
 	int i;
@@ -756,16 +756,16 @@ static void dsim_bts_print_info(struct bts_decon_info *info)
 
 static void dsim_underrun_info(struct dsim_device *dsim)
 {
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 	struct decon_device *decon = get_decon_drvdata(0);
 	int i, decon_cnt;
 
-#if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
+#if IS_ENABLED(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 	dsim_info("\tMIF(%lu), INT(%lu), DISP(%lu)\n",
 				cal_dfs_get_rate(ACPM_DVFS_MIF),
 				cal_dfs_get_rate(ACPM_DVFS_INT),
 				cal_dfs_get_rate(ACPM_DVFS_DISP));
-#elif defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
+#elif IS_ENABLED(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
 	dsim_info("\tMIF(%lu), INT(%lu), DISP(%lu)\n",
 			exynos_devfreq_get_domain_freq(DEVFREQ_MIF),
 			exynos_devfreq_get_domain_freq(DEVFREQ_INT),
@@ -798,14 +798,14 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 	unsigned int int_src;
 	struct dsim_device *dsim = dev_id;
 	struct decon_device *decon = get_decon_drvdata(0);
-#ifdef CONFIG_EXYNOS_PD
+#if IS_ENABLED(CONFIG_EXYNOS_PD)
 	int active;
 #endif
 	u32 line_cnt;
 
 	spin_lock(&dsim->slock);
 
-#ifdef CONFIG_EXYNOS_PD
+#if IS_ENABLED(CONFIG_EXYNOS_PD)
 	active = pm_runtime_active(dsim->dev);
 	if (!active) {
 		dsim_info("dsim power(%d), state(%d)\n", active, dsim->state);

@@ -34,7 +34,7 @@
 #include <linux/pinctrl/consumer.h>
 #include <video/mipi_display.h>
 #include <media/v4l2-subdev.h>
-#if defined(CONFIG_CAL_IF)
+#if IS_ENABLED(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
 #if defined(CONFIG_EXYNOS_DPU_SYSTRACE)
@@ -48,9 +48,9 @@
 #include "../../../../misc/tui/stui_core.h"
 #endif
 
-#if defined(CONFIG_SOC_S5E3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
-#include <dt-bindings/soc/samsung/exynos3830-devfreq.h>
-#include <dt-bindings/clock/exynos3830.h>
+#if defined(CONFIG_SOC_S5E3830) && IS_ENABLED(CONFIG_ARM_EXYNOS_DEVFREQ)
+#include <dt-bindings/soc/samsung/s5e3830-devfreq.h>
+#include <dt-bindings/clock/s5e3830.h>
 #include <soc/samsung/exynos-devfreq.h>
 #endif
 
@@ -386,16 +386,16 @@ int decon_tui_protection(bool tui_en)
 				EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
 
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 		decon->bts.ops->bts_acquire_bw(decon);
-#if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
+#if IS_ENABLED(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
 				cal_dfs_get_rate(ACPM_DVFS_MIF),
 				cal_dfs_get_rate(ACPM_DVFS_INT),
 				cal_dfs_get_rate(ACPM_DVFS_DISP),
 				decon->bts.prev_total_bw,
 				decon->bts.total_bw);
-#elif defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
+#elif IS_ENABLED(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
 				exynos_devfreq_get_domain_freq(DEVFREQ_MIF),
 				exynos_devfreq_get_domain_freq(DEVFREQ_INT),
@@ -410,15 +410,15 @@ int decon_tui_protection(bool tui_en)
 		aclk_khz = v4l2_subdev_call(decon->out_sd[0], core, ioctl,
 				EXYNOS_DPU_GET_ACLK, NULL) / 1000U;
 		decon_info("%s:DPU_ACLK(%ld khz)\n", __func__, aclk_khz);
-#if defined(CONFIG_EXYNOS_BTS)
-#if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
 				cal_dfs_get_rate(ACPM_DVFS_MIF),
 				cal_dfs_get_rate(ACPM_DVFS_INT),
 				cal_dfs_get_rate(ACPM_DVFS_DISP),
 				decon->bts.prev_total_bw,
 				decon->bts.total_bw);
-#elif defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
+#elif IS_ENABLED(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
 		decon_info("MIF(%lu), INT(%lu), DISP(%lu), total bw(%u, %u)\n",
 				exynos_devfreq_get_domain_freq(DEVFREQ_MIF),
 				exynos_devfreq_get_domain_freq(DEVFREQ_INT),
@@ -531,7 +531,7 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 	pm_stay_awake(decon->dev);
 	dev_warn(decon->dev, "pm_stay_awake");
 
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 	decon->bts.ops->bts_acquire_bw(decon);
 #endif
 
@@ -758,14 +758,14 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 
 	/* DMA protection disable must be happen on dpp domain is alive */
 	if (decon->dt.out_type != DECON_OUT_WB) {
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+#if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 		decon_set_protected_content(decon, NULL);
 #endif
 		decon->cur_using_dpp = 0;
 		decon_dpp_stop(decon, false);
 	}
 
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 	decon->bts.ops->bts_release_bw(decon);
 #endif
 
@@ -790,7 +790,7 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 
 	decon->state = state;
 
-#if defined(CONFIG_EXYNOS_PD)
+#if IS_ENABLED(CONFIG_EXYNOS_PD)
 	if (decon->pm_domain) {
 		if (dpu_pm_domain_check_status(decon->pm_domain)) {
 			decon_info("decon%d %s still on\n", decon->id,
@@ -976,14 +976,14 @@ static int decon_dp_disable(struct decon_device *decon)
 
 	/* DMA protection disable must be happen on dpp domain is alive */
 	if (decon->dt.out_type != DECON_OUT_WB) {
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+#if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 		decon_set_protected_content(decon, NULL);
 #endif
 		decon->cur_using_dpp = 0;
 		decon_dpp_stop(decon, false);
 	}
 
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 	decon->bts.ops->bts_release_bw(decon);
 #endif
 
@@ -1758,7 +1758,7 @@ static int __decon_update_regs(struct decon_device *decon, struct decon_reg_data
 		return 0;
 	}
 
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+#if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 	decon_set_protected_content(decon, regs);
 #endif
 
@@ -2183,7 +2183,7 @@ static void decon_update_regs(struct decon_device *decon,
 
 	decon_update_hdr_info(decon, regs);
 
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 	/* add calc and update bw : cur > prev */
 	decon->bts.ops->bts_calc_bw(decon, regs);
 	decon->bts.ops->bts_update_bw(decon, regs, 0);
@@ -2216,7 +2216,7 @@ static void decon_update_regs(struct decon_device *decon,
 		decon_dpp_wait_wb_framedone(decon);
 		/* Stop to prevent resource conflict */
 		decon->cur_using_dpp = 0;
-#if defined(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
+#if IS_ENABLED(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION)
 		decon_set_protected_content(decon, NULL);
 #endif
 	} else {
@@ -2260,7 +2260,7 @@ static void decon_update_regs(struct decon_device *decon,
 		}
 	}
 end:
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 	/* add update bw : cur < prev */
 	decon->bts.ops->bts_update_bw(decon, regs, 1);
 #endif
@@ -2316,7 +2316,7 @@ int decon_update_last_regs(struct decon_device *decon,
 
 	decon_update_hdr_info(decon, regs);
 
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 	/* add calc and update bw : cur > prev */
 	decon->bts.ops->bts_calc_bw(decon, regs);
 	decon->bts.ops->bts_update_bw(decon, regs, 0);
@@ -2361,7 +2361,7 @@ int decon_update_last_regs(struct decon_device *decon,
 end:
 	DPU_EVENT_LOG(DPU_EVT_FENCE_RELEASE, &decon->sd, ktime_set(0, 0));
 
-#if defined(CONFIG_EXYNOS_BTS)
+#if IS_ENABLED(CONFIG_EXYNOS_BTS)
 	/* add update bw : cur < prev */
 	decon->bts.ops->bts_update_bw(decon, regs, 1);
 #endif
@@ -3822,7 +3822,7 @@ static void decon_parse_dt(struct decon_device *decon)
 		}
 
 	}
-#if defined(CONFIG_EXYNOS_PD)
+#if IS_ENABLED(CONFIG_EXYNOS_PD)
 	if (of_property_read_string(dev->of_node, "pd_name", &decon->dt.pd_name)) {
 		decon_info("no power domain\n");
 		decon->pm_domain = NULL;

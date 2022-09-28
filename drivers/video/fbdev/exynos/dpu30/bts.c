@@ -19,9 +19,9 @@
 #if IS_ENABLED(CONFIG_CAL_IF)
 #include <soc/samsung/cal-if.h>
 #endif
-#if defined(CONFIG_SOC_S5E3830) && defined(CONFIG_ARM_EXYNOS_DEVFREQ)
-#include <dt-bindings/soc/samsung/exynos3830-devfreq.h>
-#include <dt-bindings/clock/exynos3830.h>
+#if defined(CONFIG_SOC_S5E3830) && IS_ENABLED(CONFIG_ARM_EXYNOS_DEVFREQ)
+#include <dt-bindings/soc/samsung/s5e3830-devfreq.h>
+#include <dt-bindings/clock/s5e3830.h>
 #endif
 #include <soc/samsung/exynos-devfreq.h>
 
@@ -669,10 +669,10 @@ void dpu_bts_acquire_bw(struct decon_device *decon)
 		pm_qos_update_request(&decon->bts.disp_qos, aclk_freq);
 #endif
 
-#if defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
+#if IS_ENABLED(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 		DPU_DEBUG_BTS("Get initial disp freq(%lu)\n",
 				cal_dfs_get_rate(ACPM_DVFS_DISP));
-#elif defined(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
+#elif IS_ENABLED(CONFIG_ARM_EXYNOS_DEVFREQ) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
 		DPU_DEBUG_BTS("Get initial disp freq(%lu)\n",
 				exynos_devfreq_get_domain_freq(DEVFREQ_DISP));
 #endif
