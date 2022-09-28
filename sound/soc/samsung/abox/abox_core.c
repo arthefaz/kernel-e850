@@ -15,7 +15,7 @@
 #include <linux/platform_device.h>
 #include <linux/sched/clock.h>
 #include <linux/pm_runtime.h>
-#include <soc/samsung/exynos-pmu-if.h>
+#include <soc/samsung/exynos-pmu.h>
 #include <soc/samsung/imgloader.h>
 #include <soc/samsung/exynos-s2mpu.h>
 #include "abox_util.h"
@@ -106,61 +106,29 @@ void abox_core_power(int on)
 {
 	struct abox_data *data = get_abox_data();
 	struct device *dev = data->dev;
-	//struct abox_core *core;
-	unsigned int val = 0;
+	struct abox_core *core;
 
 	abox_info(dev, "%s(%d)\n", __func__, on);
 
-	val = readl_phys(0x11862d80);
-	abox_info(dev, "%s val1(%lx)\n", __func__, val);
-	writel_phys(0x1, 0x11862d80);
-	val = readl_phys(0x11862d80);
-	abox_info(dev, "%s val2(%lx)\n", __func__, val);
-
-	val = readl_phys(0x11862e00);
-	abox_info(dev, "%s val11(%lx)\n", __func__, val);
-	writel_phys(0x1, 0x11862e00);
-	val = readl_phys(0x11862e00);
-	abox_info(dev, "%s val22(%lx)\n", __func__, val);
-
-	/*
 	list_for_each_entry(core, &cores, list) {
 		unsigned int offset, mask;
 
+		abox_dbg(dev, "core: %d\n", core->id);
 		offset = core->pmu_power[OFFSET];
 		mask = core->pmu_power[MASK];
-		if (mask) {
-			mask = mask | value;
-			abox_info(dev, "core: %d / %x\n", core->id, mask);
+		if (mask)
 			exynos_pmu_update(offset, mask, on ? mask : 0);
-		}
-
 	}
-	*/
 }
 
 void abox_core_enable(int enable)
 {
 	struct abox_data *data = get_abox_data();
 	struct device *dev = data->dev;
-	//struct abox_core *core;
-	unsigned int val = 0;
+	struct abox_core *core;
 
 	abox_info(dev, "%s(%d)\n", __func__, enable);
 
-	val = readl_phys(0x11862da0);
-	abox_info(dev, "%s val1(%lx)\n", __func__, val);
-	writel_phys(0x1, 0x11862da0);
-	val = readl_phys(0x11862da0);
-	abox_info(dev, "%s val2(%lx)\n", __func__, val);
-
-	val = readl_phys(0x11862e20);
-	abox_info(dev, "%s val11(%lx)\n", __func__, val);
-	writel_phys(0x1, 0x11862e20);
-	val = readl_phys(0x11862e20);
-	abox_info(dev, "%s val22(%lx)\n", __func__, val);
-
-	/*
 	list_for_each_entry(core, &cores, list) {
 		unsigned int offset, mask;
 
@@ -171,7 +139,6 @@ void abox_core_enable(int enable)
 			exynos_pmu_update(offset, mask, enable ? mask : 0);
 		}
 	}
-	*/
 }
 
 static int abox_core_read_standby(struct abox_core *core, unsigned int *value)
@@ -180,15 +147,7 @@ static int abox_core_read_standby(struct abox_core *core, unsigned int *value)
 	int ret = 0;
 
 	if (core->pmu_standby[MASK]) {
-		if (core->id == 0) {
-			*value = readl_phys(0x11862da4);
-			abox_info(core->dev, "%s core0(%lx)\n", __func__, *value);
-		} else if (core->id == 1) {
-			*value = readl_phys(0x11862e24);
-			abox_info(core->dev, "%s core1(%lx)\n", __func__, *value);
-		} else
-			ret = -EINVAL;
-//		ret = exynos_pmu_read(core->pmu_standby[OFFSET], value);
+		ret = exynos_pmu_read(core->pmu_standby[OFFSET], value);
 	} else if (core->sys_standby[MASK])
 		*value = readl(data->sysreg_base + core->sys_standby[OFFSET]);
 	else
