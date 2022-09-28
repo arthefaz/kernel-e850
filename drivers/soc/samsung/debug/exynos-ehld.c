@@ -544,28 +544,9 @@ static int exynos_ehld_init_dt_parse(struct device_node *np)
 }
 
 static const struct of_device_id ehld_of_match[] = {
-	{ .compatible	= "exynos-ehld",
-	  .data		= exynos_ehld_init_dt_parse},
+	{ .compatible	= "exynos-ehld" },
 	{},
 };
-
-typedef int (*ehld_initcall_t)(const struct device_node *);
-static int exynos_ehld_init_dt(void)
-{
-	struct device_node *np;
-	const struct of_device_id *matched_np;
-	ehld_initcall_t init_fn;
-
-	np = of_find_matching_node_and_match(NULL, ehld_of_match, &matched_np);
-
-	if (!np) {
-		ehld_printk(1, "exynos-ehld: couldn't find device tree file\n");
-		return -ENODEV;
-	}
-
-	init_fn = (ehld_initcall_t)matched_np->data;
-	return init_fn(np);
-}
 
 static int exynos_ehld_setup(void)
 {
@@ -599,7 +580,7 @@ static int ehld_probe(struct platform_device *pdev)
 {
 	int err = 0;
 
-	err = exynos_ehld_init_dt();
+	err = exynos_ehld_init_dt_parse(pdev->dev.of_node);
 	if (err) {
 		ehld_printk(1, "exynos-ehld: fail to process device tree for ehld:%d\n", err);
 		return err;
