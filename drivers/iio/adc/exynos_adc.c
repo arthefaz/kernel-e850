@@ -115,7 +115,7 @@
 /* Bit definitions for ADC_V3 */
 #define ADC_V3_DAT_FLAG		(1u << 31)
 
-#define MAX_ADC_V3_CHANNELS		9
+#define MAX_ADC_V3_CHANNELS		8
 #define MAX_ADC_V2_CHANNELS		10
 #define MAX_ADC_V1_CHANNELS		8
 #define MAX_EXYNOS3250_ADC_CHANNELS	2
