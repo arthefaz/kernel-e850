@@ -28,7 +28,7 @@
 #include <soc/samsung/debug-snapshot.h>
 #include "coresight_regs.h"
 
-#define DEBUG
+//#define DEBUG
 #define EHLD_TASK_SUPPORT
 
 #ifdef DEBUG
