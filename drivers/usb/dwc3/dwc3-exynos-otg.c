@@ -75,11 +75,6 @@ struct intf_typec {
 };
 #endif
 
-static int usb_reboot_noti(struct notifier_block *nb, unsigned long event, void *buf);
-static struct notifier_block usb_reboot_notifier = {
-	.notifier_call = usb_reboot_noti,
-};
-
 static int dwc3_otg_statemachine(struct otg_fsm *fsm)
 {
 	struct usb_otg *otg = fsm->otg;
@@ -1351,30 +1346,6 @@ static void typec_work_func(struct work_struct *work)
 }
 #endif
 
-static int usb_reboot_noti(struct notifier_block *nb, unsigned long event, void *buf)
-{
-	struct dwc3_otg *dotg = g_dwc3_exynos->dotg;
-	struct dwc3	*dwc = dotg->dwc;
-	struct otg_fsm  *fsm = &dotg->fsm;
-	int ret = 0;
-
-	dev_info(dwc->dev, "%s, event = %d\n", __func__, event);
-
-	switch (event) {
-	case SYS_RESTART:
-	case SYS_POWER_OFF:
-		exynos_usbdrd_shutdown_notice(1);
-		if (otg_connection == 1) {
-			dev_info(dwc->dev, "host enabled. Turn off host\n");
-			fsm->id = 1;
-			dwc3_otg_run_sm(fsm);
-		}
-		break;
-	}
-
-	return ret;
-}
-
 int dwc3_exynos_otg_init(struct dwc3 *dwc, struct dwc3_exynos *exynos)
 {
 	struct dwc3_otg *dotg;
@@ -1496,10 +1467,6 @@ int dwc3_exynos_otg_init(struct dwc3 *dwc, struct dwc3_exynos *exynos)
 #if IS_ENABLED(CONFIG_USB_EXYNOS_TPMON_MODULE)
 	usb_tpmon_init();
 #endif
-	ret = register_reboot_notifier(&usb_reboot_notifier);
-	if (ret)
-		dev_err(dwc->dev, "failed register reboot notifier\n");
-
 
 	return 0;
 }
