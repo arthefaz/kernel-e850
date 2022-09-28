@@ -75,35 +75,31 @@
 		big_cpu_start = <0x4>;
 	};
 
-//	exynos-ecc-handler {
-//		compatible = "samsung,exynos-ecc-handler";
-//		interrupts = <GIC_SPI INTREQ__CPUCL0_CLUSTERERRIRQ IRQ_TYPE_LEVEL_HIGH 0>,
-//			<GIC_SPI INTREQ__CPUCL0_COMPLEXERRIRQ_0 IRQ_TYPE_LEVEL_HIGH 0>,
-//			<GIC_SPI INTREQ__CPUCL0_COMPLEXERRIRQ_1 IRQ_TYPE_LEVEL_HIGH 0>,
-//			<GIC_SPI INTREQ__CPUCL0_COREERRIRQ_0 IRQ_TYPE_LEVEL_HIGH 0>,
-//			<GIC_SPI INTREQ__CPUCL0_COREERRIRQ_1 IRQ_TYPE_LEVEL_HIGH 0>,
-//			<GIC_SPI INTREQ__CPUCL0_COREERRIRQ_2 IRQ_TYPE_LEVEL_HIGH 0>,
-//			<GIC_SPI INTREQ__CPUCL0_COREERRIRQ_3 IRQ_TYPE_LEVEL_HIGH 0>,
-//			<GIC_SPI INTREQ__CPUCL0_COREERRIRQ_4 IRQ_TYPE_LEVEL_HIGH 0>,
-//			<GIC_SPI INTREQ__CPUCL0_COREERRIRQ_5 IRQ_TYPE_LEVEL_HIGH 0>,
-//			<GIC_SPI INTREQ__CPUCL0_COREERRIRQ_6 IRQ_TYPE_LEVEL_HIGH 0>,
-//			<GIC_SPI INTREQ__CPUCL0_COREERRIRQ_7 IRQ_TYPE_LEVEL_HIGH 0>;
-//		interrupt-names = "Uncorrectable errors on the L3 data, tag or snoop filter RAMs",
-//			"Core0-1 Complex, Uncorrectable errors on the L2 data or tag RAMs",
-//			"Core2-3 Complex, Uncorrectable errors on the L2 data or tag RAMs",
-//			"Core0, Uncorrectable errors on the L1 data or tag RAMs",
-//			"Core1, Uncorrectable errors on the L1 data or tag RAMs",
-//			"Core2, Uncorrectable errors on the L1 data or tag RAMs",
-//			"Core3, Uncorrectable errors on the L1 data or tag RAMs",
-//			"Core4, Uncorrectable errors on the L1 data, tag or L2 data, tag RAMs",
-//			"Core5, Uncorrectable errors on the L1 data, tag or L2 data, tag RAMs",
-//			"Core6, Uncorrectable errors on the L1 data, tag or L2 data, tag RAMs",
-//			"Core7, Uncorrectable errors on the L1 data, tag or L2 data, tag RAMs";
-//		interrupt-affinity = <0xff>, <0x3>, <0xc>,
-//				<0x1>, <0x2>, <0x4>, <0x8>,
-//				<0x10>, <0x20>, <0x40>, <0x80>;
-//
-//	};
+	exynos-ecc-handler {
+		compatible = "samsung,exynos-ecc-handler";
+		interrupts =	<GIC_SPI INTREQ__CPUCL0_ERRIRQ_0 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI INTREQ__CPUCL0_ERRIRQ_1 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI INTREQ__CPUCL0_ERRIRQ_2 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI INTREQ__CPUCL0_ERRIRQ_3 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI INTREQ__CPUCL0_ERRIRQ_4 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI INTREQ__CPUCL1_ERRIRQ_0 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI INTREQ__CPUCL1_ERRIRQ_1 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI INTREQ__CPUCL1_ERRIRQ_2 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI INTREQ__CPUCL1_ERRIRQ_3 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI INTREQ__CPUCL1_ERRIRQ_4 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names =	"DSU(CL0), L3 DATA or TAG or Snoop filter RAM (Uncorrected Error)",
+					"CORE0, L1 DATA or TAG RAM (Uncorrected Error)",
+					"CORE1, L1 DATA or TAG RAM (Uncorrected Error)",
+					"CORE2, L1 DATA or TAG RAM (Uncorrected Error)",
+					"CORE3, L1 DATA or TAG RAM (Uncorrected Error)",
+					"DSU(CL1), L3 DATA or TAG or Snoop filter RAM (Uncorrected Error)",
+					"CORE4, L1 DATA or TAG RAM (Uncorrected Error)",
+					"CORE5, L1 DATA or TAG RAM (Uncorrected Error)",
+					"CORE6, L1 DATA or TAG RAM (Uncorrected Error)",
+					"CORE7, L1 DATA or TAG RAM (Uncorrected Error)";
+		interrupt-affinity = <0xf>, <0x1>, <0x2>, <0x4>, <0x8>,
+				     <0xf0>, <0x10>, <0x20>, <0x40>, <0x80>;
+	};
 
 	coresight {
 		compatible = "samsung,exynos-coresight";
