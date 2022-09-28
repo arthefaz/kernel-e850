@@ -21,7 +21,7 @@
 #include <asm/smp_plat.h>
 
 #include <soc/samsung/debug-snapshot.h>
-#include <soc/samsung/exynos-pmu-if.h>
+#include <soc/samsung/exynos-pmu.h>
 #include "coresight_regs.h"
 
 #define SYS_READ(reg, val)	asm volatile("mrs %0, " #reg : "=r" (val))
@@ -189,7 +189,7 @@ static int exynos_cs_lockup_handler(struct notifier_block *nb,
 
 	dev_err(ecs_info->dev, "CPU[%d] saved pc value\n", *cpu);
 	for (iter = 0; iter < ITERATION; iter++) {
-#if IS_ENABLED(CONFIG_EXYNOS_PMU_IF)
+#if IS_ENABLED(CONFIG_EXYNOS_PMU)
 		if (!exynos_cpu.power_state(*cpu))
 			continue;
 #endif
@@ -230,7 +230,7 @@ static int exynos_cs_panic_handler(struct notifier_block *np,
 			exynos_cs_pc[cpu][iter].pc = 0;
 			if (cpu == curr_cpu)
 				continue;
-#if IS_ENABLED(CONFIG_EXYNOS_PMU_IF)
+#if IS_ENABLED(CONFIG_EXYNOS_PMU)
 			if (!exynos_cpu.power_state(cpu))
 				continue;
 #endif

@@ -30,7 +30,6 @@
 #include <asm/memory.h>
 
 #include <soc/samsung/debug-snapshot.h>
-#include <soc/samsung/exynos-pmu-if.h>
 #include <soc/samsung/exynos-smc.h>
 #include "debug-snapshot-local.h"
 #include "system-regs.h"

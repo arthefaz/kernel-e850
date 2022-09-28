@@ -27,7 +27,7 @@
 #include <asm-generic/io.h>
 
 #include <soc/samsung/debug-snapshot.h>
-#include <soc/samsung/exynos-pmu-if.h>
+#include <soc/samsung/exynos-pmu.h>
 #include <soc/samsung/acpm_ipc_ctrl.h>
 
 #include "system-regs.h"

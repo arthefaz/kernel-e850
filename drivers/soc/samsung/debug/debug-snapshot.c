@@ -22,7 +22,7 @@
 #include <linux/mutex.h>
 
 #include <soc/samsung/exynos-smc.h>
-#include <soc/samsung/exynos-pmu-if.h>
+#include <soc/samsung/exynos-pmu.h>
 #include "debug-snapshot-local.h"
 
 #define DSS_VERSION	2
