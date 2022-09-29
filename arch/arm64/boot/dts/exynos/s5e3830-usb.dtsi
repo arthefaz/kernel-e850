@@ -58,6 +58,14 @@
 			/* INT min lock support */
 			usb-pm-qos-int = <400000>;
 			status = "okay";
+			snps,quirk-frame-length-adjustment = <0x20>;
+
+			/*
+			 * dis-u2-freeclk-exists-quirk, dis_u2_susphy_quirk are alternative.
+			 * One of them should be selected
+			 */
+			snps,dis-u2-freeclk-exists-quirk;
+			/*snps,dis_u2_susphy_quirk;*/
 		};
 	};
 
