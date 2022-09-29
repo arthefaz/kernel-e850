@@ -128,8 +128,6 @@ int  exynos_restart_v1(struct notifier_block *this, unsigned long mode, void *cm
 		else if (!strcmp(cmd, "sfactory"))
 			reboot_mode = REBOOT_MODE_FACTORY;
 	}
-	if (!cmd)
-		reboot_mode = REBOOT_MODE_FASTBOOT;
 
 	writel(reboot_mode, (void *)((long)exynos_reboot.reg_base + variant->reboot_mode_reg));
 
