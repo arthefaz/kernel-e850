@@ -476,7 +476,7 @@ int dwc3_exynos_core_init(struct dwc3 *dwc, struct dwc3_exynos *exynos)
 			reg |= DWC3_GFLADJ_REFCLK_240MHZ_DECR(0x4);
 			reg &= ~DWC3_GFLADJ_REFCLK_LPM_SEL;
 			reg &= ~DWC3_GFLADJ_REFCLK_FLADJ_MASK;
-			reg |= DWC3_GFLADJ_REFCLK_FLADJ(0x9F7);
+			//reg |= DWC3_GFLADJ_REFCLK_FLADJ(0x4E);
 			reg |= DWC3_GFLADJ_30MHZ_SDBND_SEL;
 			reg &= ~DWC3_GFLADJ_30MHZ_MASK;
 			reg |= dwc->fladj;
@@ -505,6 +505,9 @@ int dwc3_exynos_core_init(struct dwc3 *dwc, struct dwc3_exynos *exynos)
 	dwc3_writel(dwc->regs, DWC3_GCTL, reg);
 
 	dwc3_exynos_set_sclk_clock(exynos->dev);
+
+	pr_info("%s GUCTL: 0x%08x\n", __func__, dwc3_readl(dwc->regs, DWC3_GUCTL));
+	pr_info("%s GFLADJ: 0x%08x\n", __func__, dwc3_readl(dwc->regs, DWC3_GFLADJ));
 
 	return 0;
 }
