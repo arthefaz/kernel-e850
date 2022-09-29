@@ -887,8 +887,7 @@ static int find_best_cpu(struct tp_env *env)
 static void find_overcap_cpus(struct tp_env *env)
 {
 	struct rq *rq;
-	unsigned long cpu_util_wo, extra_util, capacity;
-	unsigned long task_util_clamped = env->task_util_clamped;
+	unsigned long cpu_util_with, cpu_util_wo, extra_util, capacity;
 	unsigned long spare_cap, max_spare_cap = 0;
 	int cpu, max_spare_cap_cpu = -1;
 
@@ -912,7 +911,8 @@ static void find_overcap_cpus(struct tp_env *env)
 			max_spare_cap_cpu = cpu;
 		}
 
-		if (cpu_util_wo + task_util_clamped > capacity)
+		cpu_util_with = ml_cpu_util_with(env->p, cpu) + extra_util;
+		if (cpu_util_with > capacity)
 			cpumask_set_cpu(cpu, &env->overcap_cpus);
 	}
 
