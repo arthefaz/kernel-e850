@@ -744,7 +744,10 @@ static void update_min_limit(void)
 			struct ufc_domain *dom = ufc.domain_list[i];
 			struct freq_qos_request *req = get_freq_qos_req(dom, type);
 
-			freq_qos_update_request(req, row[dom->index]);
+			if (row[dom->index])
+				freq_qos_update_request(req, row[dom->index]);
+			else
+				freq_qos_update_request(req, dom->min_freq);
 		}
 		emstune_level = row[ufc.emstune_index];
 		ufc.strict_enabled = row[ufc.strict_index];
