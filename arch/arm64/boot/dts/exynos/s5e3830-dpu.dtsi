@@ -206,8 +206,8 @@
 		pinctrl-1 = <&decon_f_te_off>;
 
 		max_win = <4>;
-		default_win = <3>;
-		default_ch = <3>;
+		default_win = <0>;
+		default_ch = <0>;
 		/* psr_mode = <0>;*/      /* 0: video mode, 1: DP command mode, 2: MIPI command mode */
 		psr_mode = <2>;           /* 0: video mode, 1: DP command mode, 2: MIPI command mode */
 		trig_mode = <0>;        /* 0: hw trigger, 1: sw trigger */
