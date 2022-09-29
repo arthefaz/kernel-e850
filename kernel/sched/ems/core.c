@@ -945,7 +945,7 @@ enum task_class {
 
 static bool is_boosted_task(struct task_struct *p)
 {
-	if (emstune_sched_boost())
+	if (emstune_sched_boost() && is_perf_task(p))
 		return true;
 
 	if (is_gsc_task(p))
