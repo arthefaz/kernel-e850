@@ -428,8 +428,8 @@ static struct exynos_ufc {
 	struct ufc_request	req_list[CTRL_TYPE_END];
 
 	const char		*col_list[10];
-	unsigned int		col_size;
-	unsigned int		row_size;
+	int			col_size;
+	int			row_size;
 
 	unsigned int		**max_limit_table;
 	unsigned int		**min_limit_table;
@@ -1240,7 +1240,7 @@ static unsigned int **make_limit_table(unsigned int *raw_table, int size, int re
 	for (i = 0; i < ufc.row_size; i++) {
 		table[i] = kcalloc(ufc.col_size, sizeof(u32), GFP_KERNEL);
 		if (!table[i])
-			return NULL;
+			goto free;
 	}
 
 	for (i = 0; i < orig_size; i++) {
@@ -1266,6 +1266,14 @@ static unsigned int **make_limit_table(unsigned int *raw_table, int size, int re
 	}
 
 	return table;
+
+free:
+	for (i = 0; i < ufc.row_size; i++)
+		kfree(table[i]);
+
+	kfree(table);
+
+	return NULL;
 }
 
 static unsigned int **parse_ufc_limit_table(struct device_node *dn)
@@ -1277,7 +1285,7 @@ static unsigned int **parse_ufc_limit_table(struct device_node *dn)
 		return NULL;
 
 	size = of_property_count_u32_elems(dn, "table");
-	if (!size)
+	if (size <= 0)
 		return NULL;
 
 	raw_table = kcalloc(size, sizeof(u32), GFP_KERNEL);
