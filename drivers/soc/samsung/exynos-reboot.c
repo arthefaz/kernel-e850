@@ -27,19 +27,24 @@
 #include <soc/samsung/exynos-pmu.h>
 #include <soc/samsung/exynos-debug.h>
 #include <linux/mfd/samsung/s2mpu12-regulator.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
 
 #define SWRESET				(0x2)
 #define SYSTEM_CONFIGURATION		(0x3a00)
 #define PS_HOLD_CONTROL			(0x030C)
 #define EXYNOS_PMU_SYSIP_DAT0		(0x0810)
 #define EXYNOS_PMU_DREXCAL7		(0x09BC)
+#define EXYNOS_PMU_SYSIP_DAT0		(0x0810)
 
-#define REBOOT_MODE_NORMAL		0x00
-#define REBOOT_MODE_CHARGE		0x0A
-#define REBOOT_MODE_FASTBOOT		0xFC
-#define REBOOT_MODE_RECOVERY		0xFF
-#define REBOOT_MODE_FACTORY		0xFD
-#define REBOOT_MODE_USBRECOVERY		0xFE
+#define REBOOT_MODE_NORMAL		(0x00)
+#define REBOOT_MODE_USER_FASTBOOTD	(0x05)
+#define REBOOT_MODE_CHARGE		(0x04)
+#define REBOOT_MODE_FASTBOOT		(0x03)
+#define REBOOT_MODE_FACTORY             (0x02)
+#define REBOOT_MODE_RECOVERY		(0x01)
+#define REBOOT_MODE_MASK		((1 << 3) - 1)
+
 
 void (*__arm_pm_restart)(enum reboot_mode reboot_mode, const char *cmd);
 
@@ -58,7 +63,7 @@ struct exynos_reboot_variant {
 static struct exynos_exynos_reboot {
 	struct device *dev;
 	const struct exynos_reboot_variant *variant;
-	void __iomem *reg_base;
+	struct regmap *pmureg;
 	char reset_reason[SZ_32];
 } exynos_reboot;
 
@@ -79,7 +84,6 @@ static void exynos_power_off_v1(void)
 {
 	const struct exynos_reboot_variant *variant = exynos_reboot.variant;
 	int poweroff_try = 0;
-	unsigned int val = 0;
 
 	dev_info(exynos_reboot.dev, "Power off(%d)\n", s2mpu12_read_pwron_status());
 
@@ -93,10 +97,8 @@ static void exynos_power_off_v1(void)
 #endif
 			dbg_snapshot_scratch_clear();
 			dev_emerg(exynos_reboot.dev, "Set PS_HOLD Low.\n");
-			val = readl((void *)((long)exynos_reboot.reg_base + variant->ps_hold_reg));
-			writel(val & ~(1 << variant->ps_hold_data_bit),
-					(void *)((long)exynos_reboot.reg_base + variant->ps_hold_reg));
 
+			regmap_update_bits(exynos_reboot.pmureg, variant->ps_hold_reg, 1 << variant->ps_hold_data_bit, 0);
 			++poweroff_try;
 			dev_emerg(exynos_reboot.dev, "Should not reach here! (poweroff_try:%d)\n", poweroff_try);
 		} else {
@@ -107,29 +109,36 @@ static void exynos_power_off_v1(void)
 	}
 }
 
+static void exynos_reboot_parse(void *cmd)
+{
+	const struct exynos_reboot_variant *variant = exynos_reboot.variant;
+
+	if (cmd) {
+		pr_info("Reboot command: (%s)\n", (char *)cmd);
+		if (!strcmp((char *)cmd, "charge"))
+			regmap_update_bits(exynos_reboot.pmureg, variant->reboot_mode_reg, REBOOT_MODE_MASK, REBOOT_MODE_CHARGE);
+		else if (!strcmp((char *)cmd, "bootloader") || !strcmp((char *)cmd, "bl"))
+			regmap_update_bits(exynos_reboot.pmureg, variant->reboot_mode_reg, REBOOT_MODE_MASK, REBOOT_MODE_FASTBOOT);
+		else if (!strcmp((char *)cmd, "fastboot") || !strcmp((char *)cmd, "fb"))
+			regmap_update_bits(exynos_reboot.pmureg, variant->reboot_mode_reg, REBOOT_MODE_MASK, REBOOT_MODE_USER_FASTBOOTD);
+		else if (!strcmp((char *)cmd, "recovery"))
+			regmap_update_bits(exynos_reboot.pmureg, variant->reboot_mode_reg, REBOOT_MODE_MASK, REBOOT_MODE_RECOVERY);
+		else if (!strcmp((char *)cmd, "sfactory"))
+			regmap_update_bits(exynos_reboot.pmureg, variant->reboot_mode_reg, REBOOT_MODE_MASK, REBOOT_MODE_FACTORY);
+		else
+			regmap_update_bits(exynos_reboot.pmureg, variant->reboot_mode_reg, REBOOT_MODE_MASK, REBOOT_MODE_NORMAL);
+	}
+}
+
 int  exynos_restart_v1(struct notifier_block *this, unsigned long mode, void *cmd)
 {
 	const struct exynos_reboot_variant *variant = exynos_reboot.variant;
-	u32 reboot_mode = REBOOT_MODE_NORMAL;
 	u32 soc_id, revision;
 
 #ifdef CONFIG_EXYNOS_ACPM
 	exynos_acpm_reboot();
 #endif
-	dev_info(exynos_reboot.dev, "reboot command: %s\n", cmd);
-	if (cmd) {
-		if (!strcmp(cmd, "charge"))
-			reboot_mode = REBOOT_MODE_CHARGE;
-		else if (!strcmp(cmd, "bootloader") || !strcmp(cmd, "bl") ||
-				!strcmp(cmd, "fastboot") || !strcmp(cmd, "fb"))
-			reboot_mode = REBOOT_MODE_FASTBOOT;
-		else if (!strcmp(cmd, "recovery"))
-			reboot_mode = REBOOT_MODE_RECOVERY;
-		else if (!strcmp(cmd, "sfactory"))
-			reboot_mode = REBOOT_MODE_FACTORY;
-	}
-
-	writel(reboot_mode, (void *)((long)exynos_reboot.reg_base + variant->reboot_mode_reg));
+	exynos_reboot_parse(cmd);
 
 	if (variant->reset_control)
 		variant->reset_control();
@@ -140,8 +149,8 @@ int  exynos_restart_v1(struct notifier_block *this, unsigned long mode, void *cm
 
 	/* Do S/W Reset */
 	dev_emerg(exynos_reboot.dev, "Exynos SoC reset right now\n");
-	writel(1 << variant->swreset_bit, (void *)((long)exynos_reboot.reg_base + variant->swreset_reg));
 
+	regmap_write(exynos_reboot.pmureg, variant->swreset_reg, 1 << variant->swreset_bit);
 	/* Wait for S/W reset */
 	dbg_snapshot_spin_func();
 	return NOTIFY_DONE;
@@ -178,11 +187,10 @@ static int exynos_reboot_probe(struct platform_device *pdev)
 	exynos_reboot.variant = exynos_reboot_get_variant(pdev);
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	exynos_reboot.reg_base = devm_ioremap(&pdev->dev, res->start, resource_size(res));
-	if (IS_ERR(exynos_reboot.reg_base)) {
-		dev_err(&pdev->dev, "failed ioremap\n");
-		return -EINVAL;
-	}
+
+	exynos_reboot.pmureg = syscon_regmap_lookup_by_phandle((exynos_reboot.dev)->of_node, "samsung,syscon-phandle");
+	if (IS_ERR(exynos_reboot.pmureg))
+		pr_warn("Fail to get regmap of PMU\n");
 
 	if (!exynos_reboot.variant) {
 		dev_err(&pdev->dev, "variant is null\n");
