@@ -94,6 +94,7 @@
 	reboot {
 		compatible = "exynos,reboot-v1";
 		reg = <0x0 0x11860000 0x4000>;
+		samsung,syscon-phandle = <&pmu_system_controller>;
 	};
 
 	gic:interrupt-controller@12a00000 {
