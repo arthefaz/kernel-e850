@@ -3417,17 +3417,17 @@ int slsi_retry_connection(struct slsi_dev *sdev, struct net_device *dev)
 		memcpy(probe_req_ies, ndev_vif->probe_req_ies, ndev_vif->probe_req_ie_len);
 	if (slsi_mlme_del_vif(sdev, dev) != 0) {
 		SLSI_NET_ERR(dev, "slsi_mlme_del_vif failed\n");
-		return 0;
+		goto exit_with_probe_req_ies;
 	}
 	if (slsi_mlme_add_vif(sdev, dev, dev->dev_addr, device_address) != 0) {
 		SLSI_NET_ERR(dev, "slsi_mlme_add_vif failed\n");
-		return 0;
+		goto exit_with_probe_req_ies;
 	}
 	if (slsi_mlme_register_action_frame(sdev, dev, ndev_vif->sta.action_frame_bmap,
 					    ndev_vif->sta.action_frame_suspend_bmap) != 0) {
 		SLSI_NET_ERR(dev, "Action frame reg fail bitmap 0x%x 0x%x\n",
 			     ndev_vif->sta.action_frame_bmap, ndev_vif->sta.action_frame_bmap);
-		return 0;
+		goto exit_with_probe_req_ies;
 	}
 
 	r = slsi_set_boost(sdev, dev);
@@ -3443,18 +3443,23 @@ int slsi_retry_connection(struct slsi_dev *sdev, struct net_device *dev)
 	r = slsi_mlme_connect(sdev, dev, &ndev_vif->sta.sme, ndev_vif->sta.sme.channel, ndev_vif->sta.sme.bssid);
 	if (r != 0) {
 		SLSI_NET_ERR(dev, "Reconnect failed: %d\n", r);
-		return 0;
+		r = 0;
+		goto exit_with_probe_req_ies;
 	}
 	ndev_vif->sta.vif_status = SLSI_VIF_STATUS_CONNECTING;
 	peer = slsi_get_peer_from_qs(sdev, dev, SLSI_STA_PEER_QUEUESET);
 	if (!peer) {
 		SLSI_NET_ERR(dev, "peer not found!\n");
-		return 0;
+		r = 0;
+		goto exit_with_probe_req_ies;
 	}
 	ndev_vif->sta.vif_status = SLSI_VIF_STATUS_CONNECTING;
 	SLSI_ETHER_COPY(peer->address, ndev_vif->sta.sme.bssid);
 	ndev_vif->chan = ndev_vif->sta.sme.channel;
-	return 1;
+	r = 1;
+exit_with_probe_req_ies:
+	kfree(probe_req_ies);
+	return r;
 }
 
 void slsi_free_connection_params(struct slsi_dev *sdev, struct net_device *dev)

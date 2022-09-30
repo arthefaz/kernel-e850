@@ -777,7 +777,11 @@ int slsi_sched_scan_start(struct wiphy                       *wiphy,
 		goto exit;
 	}
 
-	if (request->ie) {
+	if (!request->ie) {
+		SLSI_NET_DBG2(dev, SLSI_CFG80211, "cfg80211_sched_scan_request ie is null\n");
+		r = -EINVAL;
+		goto exit;
+	} else {
 		const u8 *ie;
 		/* Supplicant adds wsc and p2p in Station scan at the end of scan request ie.
 		 * Remove both wps and p2p IEs.

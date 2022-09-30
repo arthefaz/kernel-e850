@@ -1502,8 +1502,10 @@ int slsi_mlme_add_sched_scan(struct slsi_dev                    *sdev,
 	}
 
 	req = fapi_alloc(mlme_add_scan_req, MLME_ADD_SCAN_REQ, 0, alloc_data_size);
-	if (!req)
+	if (!req) {
+		kfree(default_ies);
 		return -ENOMEM;
+	}
 
 	r =  slsi_set_scan_params(dev, (ndev_vif->ifnum << 8 | SLSI_SCAN_SCHED_ID),
 				  FAPI_SCANTYPE_SCHEDULED_SCAN,
@@ -1666,8 +1668,10 @@ int slsi_mlme_add_scan(
 			n_ssids,
 			ssids,
 			req);
-		if (r)
+		if (r) {
+			kfree(default_ies);
 			return r;
+		}
 
 		fapi_append_data(req, scan_timing_ie, sizeof(scan_timing_ie));
 		fapi_append_data(req, ies, ies_len);

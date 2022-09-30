@@ -3281,7 +3281,7 @@ void slsi_rx_disconnected_ind(struct slsi_dev *sdev, struct net_device *dev, str
 		SLSI_INFO(sdev, "Received DEAUTH, reason = Local Disconnect <%d>\n", reason);
 	}
 
-	if (fapi_get_datalen(skb)) {
+	if (fapi_get_datalen(skb) >= offsetof(struct ieee80211_mgmt, u.deauth.reason_code) + 2) {
 		struct ieee80211_mgmt *mgmt = fapi_get_mgmt(skb);
 
 		if (ieee80211_is_deauth(mgmt->frame_control)) {

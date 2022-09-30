@@ -5517,8 +5517,10 @@ static int slsi_acs_init(struct wiphy *wiphy,
 				SLSI_INFO(sdev, "Skip invalid channel:%d for ACS\n", channels[num_channels]->hw_value);
 			} else {
 				idx = slsi_find_chan_idx(channels[num_channels]->hw_value, request->hw_mode);
-				ch_info[idx].chan = channels[num_channels]->hw_value;
-				num_channels++;
+				if (idx >= 0 && idx < MAX_CHAN_VALUE_ACS) {
+					ch_info[idx].chan = channels[num_channels]->hw_value;
+					num_channels++;
+				}
 			}
 		}
 
