@@ -677,6 +677,37 @@ static void __enable_power_mode(struct power_mode *mode)
 	awake_cpus(&mode->siblings);
 }
 
+static void control_power_mode(int cpu, int type, bool enable)
+{
+	struct exynos_cpupm *pm;
+	struct power_mode *mode;
+
+	if (!valid_powermode(type))
+		return;
+
+	pm = per_cpu_ptr(cpupm, cpu);
+	mode = pm->modes[type];
+	if (mode == NULL)
+		return;
+
+	if (enable)
+		__enable_power_mode(mode);
+	else
+		__disable_power_mode(mode);
+}
+
+void disable_power_mode(int cpu, int type)
+{
+	control_power_mode(cpu, type, false);
+}
+EXPORT_SYMBOL_GPL(disable_power_mode);
+
+void enable_power_mode(int cpu, int type)
+{
+	control_power_mode(cpu, type, true);
+}
+EXPORT_SYMBOL_GPL(enable_power_mode);
+
 struct cpumask pm_allowed_mask;
 void update_pm_allowed_mask(const struct cpumask *mask)
 {
