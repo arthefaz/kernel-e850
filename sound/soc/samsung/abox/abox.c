@@ -1752,17 +1752,6 @@ static void abox_cache_components(struct device *dev, struct abox_data *data)
 	}
 }
 
-static bool abox_is_calliope_incompatible(struct device *dev)
-{
-	struct abox_data *data = dev_get_drvdata(dev);
-	ABOX_IPC_MSG msg;
-	struct IPC_SYSTEM_MSG *system_msg = &msg.msg.system;
-
-	memcpy(&msg, data->sram_base + 0x30040, 0x3C);
-
-	return ((system_msg->param3 >> 24) == 'A');
-}
-
 static int abox_set_profiling_ipc(struct abox_data *data)
 {
 	struct device *dev = data->dev;
@@ -1988,9 +1977,6 @@ static void abox_system_ipc_handler(struct device *dev,
 
 	switch (system_msg->msgtype) {
 	case ABOX_BOOT_DONE:
-		if (abox_is_calliope_incompatible(dev))
-			abox_err(dev, "Calliope is not compatible with the driver\n");
-
 		abox_boot_done(dev, system_msg->param3);
 		abox_registered_ipc_handler(dev, data, msg, true);
 		break;
