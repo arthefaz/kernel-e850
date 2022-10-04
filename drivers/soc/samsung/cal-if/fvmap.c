@@ -297,8 +297,10 @@ static void fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base
 
 		if (volt_offset_percent) {
 			if ((volt_offset_percent < 100) && (volt_offset_percent > -100)) {
-				percent_margin_table[i] = volt_offset_percent;
-				cal_dfs_set_volt_margin(i | ACPM_VCLK_TYPE, volt_offset_percent);
+				if (i < MAX_MARGIN_ID) {
+					percent_margin_table[i] = volt_offset_percent;
+					cal_dfs_set_volt_margin(i | ACPM_VCLK_TYPE, volt_offset_percent);
+				}
 			}
 		}
 
@@ -335,6 +337,8 @@ static void fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base
 				volt_offset_percent);
 		}
 	}
+
+	vfree((void *)header);
 }
 
 int fvmap_init(void __iomem *sram_base)
