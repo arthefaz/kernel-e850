@@ -600,7 +600,8 @@ EXPORT_SYMBOL_GPL(exynos_flexpmu_dbg_suspend_mif_req);
 void exynos_flexpmu_dbg_resume_mif_req(void)
 {
 	unsigned long long int curr_tick = 0;
-	struct flexpmu_apm_req_info apm_req_resume[MIF_MASTER_MAX];
+	struct flexpmu_apm_req_info apm_req_resume[MIF_MASTER_MAX] =
+						{{0, 0, 0, 0, 0, 0, 0, 0}, };
 	int i = 0;
 	bool print_info = false;
 
