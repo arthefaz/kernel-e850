@@ -20,7 +20,7 @@
 #include "dw_mmc-exynos-fmp.h"
 
 #define WORD_SIZE 4
-#define FMP_IV_SIZE_16		16
+#define FMP_IV_SIZE_16	16
 #define FMP_IV_MAX_IDX (FMP_IV_SIZE_16 / WORD_SIZE)
 
 #define byte2word(b0, b1, b2, b3)       \
@@ -43,7 +43,8 @@ int fmp_mmc_crypt_cfg(struct bio *bio, void *desc,
 	struct fmp_table_setting *table = desc;
 	char *key ;
 	int idx, max;
-	u64 iv = 0;
+	u8 iv[FMP_IV_SIZE_16];
+	u64 dun = 0;
 
 	if (!bio || !q)
 		return 0;
@@ -51,9 +52,7 @@ int fmp_mmc_crypt_cfg(struct bio *bio, void *desc,
 	if (!q->ksm || !bio_has_crypt_ctx(bio))
 		return 0;
 
-	key = (u8 *)bio->bi_crypt_context->bc_key->raw;
 	/* Configure FMP on each segment of the request. */
-
 	/* Set the algorithm and key length. */
 	if (cmdq_enabled) {
 		SET_CMDQ_FAS(table, EXYNOS_FMP_ALGO_MODE_AES_XTS);
@@ -65,19 +64,23 @@ int fmp_mmc_crypt_cfg(struct bio *bio, void *desc,
 	}
 
 	/* Set the key. */
+	key = (u8 *)bio->bi_crypt_context->bc_key->raw;
 	max = bio->bi_crypt_context->bc_key->size / WORD_SIZE;
 	for (idx = 0; idx < (max / 2); idx++)
 		*(&table->file_enckey0 + idx) =
-		    get_word(key, (max / 2) - (idx + 1));
+			get_word(key, (max / 2) - (idx + 1));
 	for (idx = 0; idx < (max / 2); idx++)
 		*(&table->file_twkey0 + idx) =
-		    get_word(key, max - (idx + 1));
+			get_word(key, max - (idx + 1));
 
 	/* Set the IV. */
-	iv = bio->bi_crypt_context->bc_dun[0] + page_index;
+	dun = bio->bi_crypt_context->bc_dun[0] + page_index;
+	memset(iv, 0, FMP_IV_SIZE_16);
+	memcpy(iv, &dun, sizeof(dun));
+
 	for (idx = 0; idx < FMP_IV_MAX_IDX; idx++)
 		*(&table->file_iv0 + idx) =
-		    get_word(&iv, FMP_IV_MAX_IDX - (idx + 1));
+			get_word(&iv, FMP_IV_MAX_IDX - (idx + 1));
 
 	return 0;
 }
