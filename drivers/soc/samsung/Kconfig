@@ -142,7 +142,8 @@ config GNSS_PMUCAL
          Support GNSS_PMUCAL for Exynos SoC.
 
 config SHUB_PMUCAL
-       bool "Exynos PMU(for SHUB) Chip Abstraction Layer"
+       tristate "Exynos PMU(for SHUB) Chip Abstraction Layer"
+	   default n
        depends on CAL_IF
        help
          Support SHUB_PMUCAL for Exynos SoC.

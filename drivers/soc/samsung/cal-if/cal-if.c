@@ -502,6 +502,26 @@ void cal_gnss_active_clear(void)
 EXPORT_SYMBOL_GPL(cal_gnss_active_clear);
 #endif
 
+#if IS_ENABLED(CONFIG_SHUB_PMUCAL)
+int cal_chub_reset_assert(void)
+{
+	return pmucal_shub_reset_assert();
+}
+EXPORT_SYMBOL(cal_chub_reset_assert);
+
+int cal_chub_reset_release_config(void)
+{
+	return pmucal_shub_reset_release_config();
+}
+EXPORT_SYMBOL(cal_chub_reset_release_config);
+
+int cal_chub_reset_release(void)
+{
+	return pmucal_shub_reset_release();
+}
+EXPORT_SYMBOL(cal_chub_reset_release);
+#endif
+
 int cal_if_init(void *dev)
 {
 	static int cal_initialized;
@@ -553,7 +573,7 @@ int cal_if_init(void *dev)
 		return ret;
 #endif
 
-#ifdef CONFIG_SHUB_PMUCAL
+#if IS_ENABLED(CONFIG_SHUB_PMUCAL)
 	ret = pmucal_shub_initialize();
 	if (ret < 0)
 		return ret;

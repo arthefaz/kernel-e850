@@ -112,6 +112,10 @@ extern void cal_gnss_reset_release(void);
 extern void cal_gnss_reset_req_clear(void);
 extern void cal_gnss_active_clear(void);
 
+extern int cal_chub_reset_assert(void);
+extern int cal_chub_reset_release(void);
+extern int cal_chub_reset_release_config(void);
+
 extern int cal_init(void);
 extern int cal_if_init(void *);
 

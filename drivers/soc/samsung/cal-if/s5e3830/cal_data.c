@@ -19,7 +19,7 @@
 #include "pmucal_cp_s5e3830.h"
 #endif
 
-#ifdef CONFIG_SHUB_PMUCAL
+#if IS_ENABLED(CONFIG_SHUB_PMUCAL)
 #include "../pmucal_shub.h"
 #include "pmucal_chub_s5e3830.h"
 #endif
