@@ -142,5 +142,10 @@
 		reg = <0x0 0xF9800000 0x02800000>;
 		};
 		*/
+
+		log_bcm: log_bcm {
+			compatible = "exynos,bcmdbg";
+			reg = <0 0xFBC00000 0x400000>;
+		};
 	};
 };
