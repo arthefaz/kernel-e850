@@ -29,7 +29,9 @@
 #include <linux/debugfs.h>
 
 #include <linux/mfd/samsung/core.h>
-//#include <soc/samsung/exynos-bcm_dbg.h>
+#if defined(CONFIG_EXYNOS_BCM_DBG) || defined(CONFIG_EXYNOS_BCM_DBG_MODULE)
+#include <soc/samsung/exynos-bcm_dbg.h>
+#endif
 
 #include <soc/samsung/exynos-cpupm.h>
 #include <dt-bindings/power/exynos-power.h>
@@ -64,7 +66,7 @@ struct exynos_pm_domain {
 	int devfreq_index;
 	struct mutex access_lock;
 	int idle_ip_index;
-#if defined(CONFIG_EXYNOS_BCM_DBG)
+#if defined(CONFIG_EXYNOS_BCM_DBG) || defined(CONFIG_EXYNOS_BCM_DBG_MODULE)
 	struct exynos_bcm_pd_info *bcm;
 #endif
 	bool power_down_skipped;
