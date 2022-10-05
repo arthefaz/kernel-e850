@@ -12,10 +12,29 @@
 #define __EXYNOS_BCM_DBG_H_
 
 #include <dt-bindings/soc/samsung/exynos-bcm_dbg.h>
+#include <linux/version.h>
 
-#ifdef CONFIG_EXYNOS_BCM_DBG_GNR
-#define BCM_BIN_SIZE				(SZ_128K)
+#if defined(CONFIG_EXYNOS_BCM_DBG_GNR) || defined(CONFIG_EXYNOS_BCM_DBG_GNR_MODULE)
+/* vmalloc offset depened on KASAN config */
+#if (KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE)
+#if defined(CONFIG_KASAN_GENERIC)
+#define VOFFSET     0                       /* KASAN: 64GB */
+#elif defined(CONFIG_KASAN_SW_TAGS)
+#define VOFFSET     0x0800000000ULL         /* KASAN: 32GB */
+#else
+#define VOFFSET     0x1000000000ULL
+#endif /* defined(CONFIG_KASAN_GENERIC) || defined(CONFIG_KASAN_SW_TAGS) */
+#else
+#ifdef CONFIG_KASAN
+#define VOFFSET     0                       /* KASAN: 64GB */
+#else
+#define VOFFSET     0x1000000000ULL
+#endif /* CONFIG_KASAN */
+#endif /* (KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE) */
+
+#define BCM_BIN_SIZE                           (SZ_128K)
 #define BCM_BIN_NAME				"/system/vendor/firmware/is_lib.bin"
+#define BCM_START             (VMALLOC_START + VOFFSET + 0xF2000000 - BCM_BIN_SIZE)
 #endif
 
 #define ERRCODE_ITMON_TIMEOUT			(6)
@@ -180,6 +199,7 @@ struct exynos_bcm_dbg_data {
 
 	struct exynos_bcm_dump_addr	dump_addr;
 	bool				dump_klog;
+	bool				rmem_acquired;
 
 	struct device_node		*ipc_node;
 	unsigned int			ipc_ch_num;
@@ -205,7 +225,7 @@ struct exynos_bcm_dbg_data {
 
 	unsigned int			bcm_run_state;
 	bool				available_stop_owner[STOP_OWNER_MAX];
-#ifdef CONFIG_EXYNOS_BCM_DBG_GNR
+#if defined(CONFIG_EXYNOS_BCM_DBG_GNR) || defined(CONFIG_EXYNOS_BCM_DBG_GNR_MODULE)
 	bool				bcm_load_bin;
 	struct hrtimer			bcm_hrtimer;
 	unsigned int			period;
@@ -215,7 +235,7 @@ struct exynos_bcm_dbg_data {
 	struct notifier_block		itmon_notifier;
 };
 
-#ifdef CONFIG_EXYNOS_BCM_DBG_GNR
+#if defined(CONFIG_EXYNOS_BCM_DBG_GNR) || defined(CONFIG_EXYNOS_BCM_DBG_GNR_MODULE)
 struct cmd_data {
 	unsigned int raw_cmd;
 	unsigned int cmd[CMD_DATA_MAX];
@@ -235,7 +255,7 @@ struct os_system_func {
 };
 #endif
 
-#ifdef CONFIG_EXYNOS_BCM_DBG
+#if defined (CONFIG_EXYNOS_BCM_DBG) || (CONFIG_EXYNOS_BCM_DBG_MODULE)
 int exynos_bcm_dbg_ipc_send_data(enum exynos_bcm_dbg_ipc_type ipc_type,
 				struct exynos_bcm_dbg_data *data,
 				unsigned int *cmd);
@@ -249,7 +269,7 @@ void exynos_bcm_dbg_stop(unsigned int bcm_stop_owner);
 #define exynos_bcm_dbg_stop(a) do {} while (0)
 #endif
 
-#ifdef CONFIG_EXYNOS_BCM_DBG_GNR
+#if defined(CONFIG_EXYNOS_BCM_DBG_GNR) || defined(CONFIG_EXYNOS_BCM_DBG_GNR_MODULE)
 int __nocfi exynos_bcm_dbg_load_bin(void);
 #else
 #define exynos_bcm_dbg_load_bin(a) do {} while (0)
