@@ -30,6 +30,9 @@ obj-$(CONFIG_EXYNOS_IMGLOADER)       += imgloader.o
 # DEBUG
 obj-$(CONFIG_EXYNOS_DEBUG)      += debug/
 
+obj-$(CONFIG_EXYNOS_BCM_DBG)    += exynos-bcm_dbg.o exynos-bcm_dbg-dt.o
+obj-$(CONFIG_EXYNOS_BCM_DBG_DUMP)       += exynos-bcm_dbg-dump.o
+
 # ECT
 obj-$(CONFIG_ECT)               += ect_parser/
 
