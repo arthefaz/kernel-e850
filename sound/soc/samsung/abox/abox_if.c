@@ -953,7 +953,9 @@ static int abox_if_cmpnt_probe(struct snd_soc_component *cmpnt)
 	struct pinctrl *p;
 	int ret;
 
-	abox_dbg(dev, "%s\n", __func__);
+	abox_info(dev, "%s\n", __func__);
+	pm_runtime_get_sync(dev);
+	abox_info(dev, "abox pm_runtime_get_sync\n");
 
 	data->cmpnt = cmpnt;
 	abox_cmpnt_register_if(data->abox_data->dev, dev, data->id,
@@ -992,6 +994,10 @@ static int abox_if_cmpnt_probe(struct snd_soc_component *cmpnt)
 				ARRAY_SIZE(abox_if_pinctrl_routes));
 		pinctrl_put(p);
 	}
+
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
+	abox_info(dev, "abox pm_runtime_put_autosuspend\n");
 
 	return 0;
 }
