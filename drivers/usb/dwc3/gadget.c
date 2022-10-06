@@ -2489,6 +2489,8 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 	 */
 	ret = pm_runtime_get_sync(dwc->dev);
 	if (!ret || ret < 0) {
+		pr_info("%s: dwc3->connected = %d\n", __func__, dwc->connected);
+		dwc->connected = false;
 		pm_runtime_put(dwc->dev);
 		return 0;
 	}
