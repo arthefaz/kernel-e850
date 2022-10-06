@@ -159,12 +159,19 @@ static int gnss_pmu_clear_interrupt(enum gnss_int_clear gnss_int)
 #if IS_ENABLED(CONFIG_SOC_EXYNOS9630) || IS_ENABLED(CONFIG_SOC_S5E3830)
 static void gnss_get_swreg(struct gnss_swreg *swreg)
 {
-	exynos_smc_readsfr(CMUPMU_ADDR, (unsigned long *)&swreg->swreg_0);
-	exynos_smc_readsfr(CMUPMU_ADDR + 0x4, (unsigned long *)&swreg->swreg_1);
-	exynos_smc_readsfr(CMUPMU_ADDR + 0x8, (unsigned long *)&swreg->swreg_2);
-	exynos_smc_readsfr(CMUPMU_ADDR + 0xC, (unsigned long *)&swreg->swreg_3);
-	exynos_smc_readsfr(CMUPMU_ADDR + 0x10, (unsigned long *)&swreg->swreg_4);
-	exynos_smc_readsfr(CMUPMU_ADDR + 0x14, (unsigned long *)&swreg->swreg_5);
+	unsigned long read_val;
+	exynos_smc_readsfr(CMUPMU_ADDR, (unsigned long *)&read_val);
+	swreg->swreg_0 = (u32)read_val;
+	exynos_smc_readsfr(CMUPMU_ADDR + 0x4, (unsigned long *)&read_val);
+	swreg->swreg_1 = (u32)read_val;
+	exynos_smc_readsfr(CMUPMU_ADDR + 0x8, (unsigned long *)&read_val);
+	swreg->swreg_2 = (u32)read_val;
+	exynos_smc_readsfr(CMUPMU_ADDR + 0xC, (unsigned long *)&read_val);
+	swreg->swreg_3 = (u32)read_val;
+	exynos_smc_readsfr(CMUPMU_ADDR + 0x10, (unsigned long *)&read_val);
+	swreg->swreg_4 = (u32)read_val;
+	exynos_smc_readsfr(CMUPMU_ADDR + 0x14, (unsigned long *)&read_val);
+	swreg->swreg_5 = (u32)read_val;
 
 	gif_info("SWREG 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\n",
 			swreg->swreg_0, swreg->swreg_1, swreg->swreg_2,
