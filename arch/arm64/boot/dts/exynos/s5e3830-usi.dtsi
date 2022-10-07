@@ -117,8 +117,8 @@
 		clock-names = "ipclk_hsi2c", "gate_hsi2c_clk";
 		samsung,scl-clk-stretching;
 		samsung,usi-i2c-v2;
-		gpio_scl= <&gpc1 0 0x1>;
-		gpio_sda= <&gpc1 1 0x1>;
+		gpio_scl= <&gpc1 1 0x1>;
+		gpio_sda= <&gpc1 0 0x1>;
 		status = "disabled";
 	};
 
@@ -137,8 +137,8 @@
 		clock-names = "ipclk_hsi2c", "gate_hsi2c_clk";
 		samsung,scl-clk-stretching;
 		samsung,usi-i2c-v2;
-		gpio_scl= <&gpc1 2 0x1>;
-		gpio_sda= <&gpc1 3 0x1>;
+		gpio_scl= <&gpc1 3 0x1>;
+		gpio_sda= <&gpc1 2 0x1>;
 		status = "disabled";
 	};
 
@@ -157,8 +157,8 @@
 		clock-names = "ipclk_hsi2c", "gate_hsi2c_clk";
 		samsung,scl-clk-stretching;
 		samsung,usi-i2c-v2;
-		gpio_scl= <&gpc1 4 0x1>;
-		gpio_sda= <&gpc1 5 0x1>;
+		gpio_scl= <&gpc1 5 0x1>;
+		gpio_sda= <&gpc1 4 0x1>;
 		status = "disabled";
 	};
 
