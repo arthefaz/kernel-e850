@@ -1110,6 +1110,7 @@ static int aud3004x_register_inputdev(struct aud3004x_jack *jackdet)
 	if (ret != 0) {
 		jackdet->input = NULL;
 		dev_err(dev, "Failed to register switch input device\n");
+		return ret;
 	}
 
 	/*
