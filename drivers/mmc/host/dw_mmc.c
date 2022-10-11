@@ -42,7 +42,6 @@
 #include <linux/mmc/slot-gpio.h>
 #include <linux/smc.h>
 
-#include <soc/samsung/exynos-pmu-if.h>
 //#include <soc/samsung/exynos-powermode.h>
 #include <soc/samsung/exynos-cpupm.h>
 
