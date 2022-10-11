@@ -49,12 +49,10 @@
 //		interrupts = <GIC_SPI INTREQ__HDCP IRQ_TYPE_LEVEL_HIGH>;
 //	};
 //
-//	secmem {
-//		compatible = "samsung,exynos-secmem";
-//		power-domains = <&pd_hsi0>;
-//		memory-region = <&crypto_heap>, <&vstream_heap>;
-//		dma-coherent;
-//	};
+	secmem {
+		compatible = "samsung,exynos-secmem";
+		memory-region = <&crypto>, <&vstream>;
+	};
 //
 	/* Secure RPMB */
 	mmc-srpmb {
