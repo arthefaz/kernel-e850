@@ -296,6 +296,12 @@ config EXYNOS_BCM_DBG_DUMP
 	help
 	  Enable exynos-bcm_dbg dump support
 
+config EXYNOS_CONTENT_PATH_PROTECTION
+        tristate "Exynos Content Path Protection"
+        default m
+        help
+          Enable content path protection of EXYNOS.
+
 endif
 
 source "drivers/soc/samsung/debug/Kconfig"

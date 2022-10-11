@@ -77,3 +77,6 @@ obj-$(CONFIG_EXYNOS_GNSS_IF) += gnssif/
 
 # CPIF
 obj-$(CONFIG_EXYNOS_MODEM_IF) += cpif/
+
+# secmem
+obj-$(CONFIG_EXYNOS_CONTENT_PATH_PROTECTION) += secmem.o
