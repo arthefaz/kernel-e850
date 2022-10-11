@@ -334,8 +334,7 @@ static void *ipc_set_map(char *sram_base)
 				map->logbuf_num, map->cipc_start_offset);
 		CSP_PRINTF_ERROR("Kernel LOGBUF_NUM %d, CIPC_START_OFFSET %d\n",
 				LOGBUF_NUM, CIPC_START_OFFSET);
-
-		return NULL;
+//		return NULL;
 	} else {
 		CSP_PRINTF_ERROR("%s : IPC argument matched between F/W and Kernel\n", __func__);
 	}

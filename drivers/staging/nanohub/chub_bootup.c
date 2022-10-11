@@ -449,16 +449,14 @@ static int contexthub_download_image(struct contexthub_ipc_info *chub, int idx)
 	int ret = 0;
 	void *chub_addr = NULL;
 
-	//if (!chub->multi_os) {
 	if (!chub->misc.multi_os) {
 		nanohub_dev_info(chub->dev, "%s: download %s\n", __func__, OS_IMAGE_DEFAULT);
 		ret = request_firmware(&entry, OS_IMAGE_DEFAULT, chub->dev);
-		//chub_addr = chub->sram;
 		chub_addr = chub->iomem.sram;
 	} else {
 		nanohub_dev_info(chub->dev, "%s: download %s\n", __func__, os_image[idx]);
 		ret = request_firmware(&entry, os_image[idx], chub->dev);
-		chub_addr = ipc_get_base(IPC_REG_OS);
+		chub_addr = chub->iomem.sram;
 	}
 
 	if (ret) {
@@ -468,8 +466,7 @@ static int contexthub_download_image(struct contexthub_ipc_info *chub, int idx)
 		return ret;
 	}
 	memcpy_toio(chub_addr, entry->data, entry->size);
-//	nanohub_dev_info(chub->dev, "%s: idx:%d, bin(size:%d) on %lx\n",
-//			 __func__, idx, (int)entry->size, (unsigned long)ipc_get_base(reg));
+
 	nanohub_dev_info(chub->dev, "%s: idx:%d, bin(size:%d)\n",
 			 __func__, idx, (int)entry->size);
 #if IS_ENABLED(CONFIG_EXYNOS_S2MPU)
