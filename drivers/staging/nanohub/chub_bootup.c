@@ -781,7 +781,7 @@ static void contexthub_select_os(struct contexthub_ipc_info *chub)
 	ret = contexthub_download_image(chub, chub->misc.num_os);
 	if (ret)
 		nanohub_warn("%s: os download fail! %d", __func__, ret);
-	chub->misc.multi_os = false;
+	//chub->misc.multi_os = false;
 	ipc_write_hw_value(IPC_VAL_HW_BOOTMODE, chub->misc.os_load);
 	ipc_set_chub_bootmode(BOOTMODE_COLD, chub->log.chub_rt_log.loglevel);
 	ipc_set_chub_boottime(chub->misc.alive_mct);
