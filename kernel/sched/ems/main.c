@@ -583,12 +583,12 @@ void attach_one_task(struct rq *dst_rq, struct task_struct *p)
  * main function for ems                                                      *
  ******************************************************************************/
 int ems_select_task_rq_rt(struct task_struct *p, int prev_cpu,
-			 int sd_flag, int wake_flag)
+			 int sd_flag, int wake_flags)
 {
 	if (!(sd_flag & SD_BALANCE_FORK))
 		mlt_update_task(p, MLT_STATE_NOCHANGE, sched_clock());
 
-	return frt_select_task_rq_rt(p, prev_cpu, sd_flag);
+	return frt_select_task_rq_rt(p, prev_cpu, sd_flag, wake_flags);
 }
 
 int ems_select_task_rq_fair(struct task_struct *p, int prev_cpu,

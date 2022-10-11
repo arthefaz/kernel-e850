@@ -429,7 +429,7 @@ extern unsigned long heavytask_cpu_boost(int cpu, unsigned long util, int ratio)
 extern int frt_init(struct kobject *ems_kobj);
 extern void frt_update_available_cpus(struct rq *rq);
 extern int frt_find_lowest_rq(struct task_struct *task, struct cpumask *lowest_mask);
-extern int frt_select_task_rq_rt(struct task_struct *p, int prev_cpu, int sd_flag);
+extern int frt_select_task_rq_rt(struct task_struct *p, int prev_cpu, int sd_flag, int wake_flags);
 
 /* fvr */
 extern void fv_init_table(struct cpufreq_policy *policy);
