@@ -23,7 +23,7 @@
 
 		/* for vb2 device */
 		iommus = <&sysmmu_mfcmscl>;
-		samsung,iommu-group = <&iommu_group_mfcmscl>;
+		samsung,iommu-group = <&iommu_group_is_mfcmscl>;
 		samsung,iommu-reserved-map = <0x0 0x0 0x10000000>,
 				<0x0 0x10000000 0x100000>;
 
@@ -227,7 +227,7 @@
 			clock-names = "aclk_mfc";
 			clocks = <&clock GATE_MFC_QCH>;
 			iommus = <&sysmmu_mfcmscl>;
-			samsung,iommu-group = <&iommu_group_mfcmscl>;
+			samsung,iommu-group = <&iommu_group_is_mfcmscl>;
 			samsung,iommu-reserved-map = <0x0 0x10000000 0x100000>;
 
 			samsung,tzmp;

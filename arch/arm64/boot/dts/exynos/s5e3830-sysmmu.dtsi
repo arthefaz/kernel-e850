@@ -25,11 +25,7 @@
 		compatible = "samsung,sysmmu-group";
 	};
 
-	iommu_group_is: iommu_group_is {
-		compatible = "samsung,sysmmu-group";
-	};
-
-	iommu_group_mfcmscl: iommu_group_mfcmscl {
+	iommu_group_is_mfcmscl: iommu_group_is_mfcmscl {
 		compatible = "samsung,sysmmu-group";
 	};
 

@@ -19,7 +19,7 @@
 		reg = <0x0 0x12C90000 0x1000>;
 		interrupts = <0 INTREQ__JPEG IRQ_TYPE_LEVEL_HIGH>;
 		iommus = <&sysmmu_mfcmscl>;
-		samsung,iommu-group=<&iommu_group_mfcmscl>;
+		samsung,iommu-group=<&iommu_group_is_mfcmscl>;
 		smfc,int_qos_minlock = <534000>;
 	};
 
@@ -30,7 +30,7 @@
 		clocks = <&clock GATE_M2M_QCH>;
 		clock-names = "gate";
 		iommus = <&sysmmu_mfcmscl>;
-		samsung,iommu-group=<&iommu_group_mfcmscl>;
+		samsung,iommu-group=<&iommu_group_is_mfcmscl>;
 
 		/* MIF (not used) | INT | MSCL clock */
 		mscl_qos_table = < 0 534000 667000
