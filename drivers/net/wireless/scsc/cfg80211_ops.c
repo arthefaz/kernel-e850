@@ -777,11 +777,7 @@ int slsi_sched_scan_start(struct wiphy                       *wiphy,
 		goto exit;
 	}
 
-	if (!request->ie) {
-		SLSI_NET_DBG2(dev, SLSI_CFG80211, "cfg80211_sched_scan_request ie is null\n");
-		r = -EINVAL;
-		goto exit;
-	} else {
+	if (request->ie) {
 		const u8 *ie;
 		/* Supplicant adds wsc and p2p in Station scan at the end of scan request ie.
 		 * Remove both wps and p2p IEs.
@@ -797,7 +793,7 @@ int slsi_sched_scan_start(struct wiphy                       *wiphy,
 			strip_p2p = true;
 	}
 
-	if (strip_wsc || strip_p2p) {
+	if ((strip_wsc || strip_p2p) && request->ie) {
 		scan_ie = kmalloc(request->ie_len, GFP_KERNEL);
 		if (!scan_ie) {
 			SLSI_NET_INFO(dev, "Out of memory for scan IEs\n");
