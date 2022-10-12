@@ -1,7 +1,7 @@
 #ifndef __USBPD_H__
 #define __USBPD_H__
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include <linux/misc/samsung/ifconn/ifconn_notifier.h>
 #include <linux/usb/typec/samsung/common/usbpd_msg.h>
 #include <linux/misc/samsung/muic/common/muic.h>
@@ -439,7 +439,7 @@ enum usbpd_policy_informed {
 	PLUG_DETACHED		= 5,
 };
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 typedef enum {
 	CLIENT_OFF = 0,
 	CLIENT_ON = 1,
@@ -536,7 +536,7 @@ typedef struct usbpd_phy_ops {
 	int			(*power_off_water_check)	(void *);
 #endif
 	int			(*get_water_detect)			(void *);
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	void		(*send_hard_reset_dc)		(void *);
 	void		(*force_pps_disable)		(void *);
 	void		(*send_psrdy)				(void *);
@@ -589,7 +589,7 @@ struct usbpd_counter {
 struct usbpd_manager_data {
 	usbpd_manager_command_type		cmd;  /* request to policy engine */
 	usbpd_manager_event_type		event;    /* policy engine infromed */
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct ifconn_notifier_template	template;
 #endif
 

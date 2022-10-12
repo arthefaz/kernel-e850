@@ -15,14 +15,14 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #endif
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include <linux/misc/samsung/ifconn/ifconn_notifier.h>
 #include <linux/power/s2m_chg_manager.h>
 #endif
 #if IS_ENABLED(CONFIG_CCIC_NOTIFIER)
 #include <linux/usb/typec/common/pdic_notifier.h>
 #endif
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER) || IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER) || IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include "muic.h"
 #include "muic_notifier.h"
 #endif
@@ -45,14 +45,14 @@
 #endif
 
 struct usb_notifier_platform_data {
-#if IS_ENABLED(CONFIG_CCIC_NOTIFIER) || IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_CCIC_NOTIFIER) || IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct	notifier_block ccic_usb_nb;
 	int is_host;
 #endif
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER) || IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER) || IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct	notifier_block muic_usb_nb;
 #endif
-#if IS_ENABLED(CONFIG_VBUS_NOTIFIER) || IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_VBUS_NOTIFIER) || IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct	notifier_block vbus_nb;
 #endif
 	int	gpio_redriver_en;
@@ -387,7 +387,7 @@ static void check_usb_id_state(int state)
 end:
 	return;
 }
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 static int ccic_usb_handle_notification(struct notifier_block *nb,
 		unsigned long action, void *data)
 {
@@ -448,7 +448,7 @@ static int muic_usb_handle_notification(struct notifier_block *nb,
 		__func__, action, attached_dev);
 
 	switch (attached_dev) {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	case ATTACHED_DEV_TA_MUIC:
 		if (action == IFCONN_NOTIFY_ID_DETACH)
 			send_otg_notify(o_notify, NOTIFY_EVENT_CHARGER, 0);
@@ -645,7 +645,7 @@ static int ccic_usb_handle_notification(struct notifier_block *nb,
 }
 #endif
 
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 static int muic_usb_handle_notification(struct notifier_block *nb,
 		unsigned long action, void *data)
 {
@@ -858,7 +858,7 @@ static int set_online(int event, int state)
 	}
 	/* for KNOX DT charging */
 	pr_info("Knox Desktop connection state = %s\n", state ? "Connected" : "Disconnected");
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	if (state)
 		val.intval = POWER_SUPPLY_TYPE_SMART_NOTG;
 	else
@@ -910,7 +910,7 @@ static int exynos_set_peripheral(bool enable)
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 static int exynos_set_charger(bool enable)
 {
 	if (enable) {
@@ -972,7 +972,7 @@ static struct otg_notify dwc_lsi_notify = {
 	.vbus_drive	= otg_accessory_power,
 	.set_host = exynos_set_host,
 	.set_peripheral	= exynos_set_peripheral,
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	.set_charger = exynos_set_charger,
 	.charger_detect = 0,
 	.usb_noti_done = 0,
@@ -1171,7 +1171,7 @@ static int usb_notifier_probe(struct platform_device *pdev)
 	ccic_notifier_register(&pdata->ccic_usb_nb, ccic_usb_handle_notification,
 				   CCIC_NOTIFY_DEV_USB);
 #endif
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 	muic_notifier_register(&pdata->muic_usb_nb, muic_usb_handle_notification,
 			       MUIC_NOTIFY_DEV_USB);
 #endif
@@ -1180,7 +1180,7 @@ static int usb_notifier_probe(struct platform_device *pdev)
 			       VBUS_NOTIFY_DEV_USB);
 #endif
 #else
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	ifconn_notifier_register(&pdata->muic_usb_nb,
 					muic_usb_handle_notification,
 					IFCONN_NOTIFY_USB,
@@ -1207,7 +1207,7 @@ static int usb_notifier_probe(struct platform_device *pdev)
 
 static int usb_notifier_remove(struct platform_device *pdev)
 {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	ifconn_notifier_unregister(IFCONN_NOTIFY_USB, IFCONN_NOTIFY_CCIC);
 	ifconn_notifier_unregister(IFCONN_NOTIFY_USB, IFCONN_NOTIFY_MUIC);
 	ifconn_notifier_unregister(IFCONN_NOTIFY_USB, IFCONN_NOTIFY_VBUS);
@@ -1218,7 +1218,7 @@ static int usb_notifier_remove(struct platform_device *pdev)
 #else
 	ccic_notifier_unregister(&pdata->ccic_usb_nb);
 #endif
-#elif IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#elif IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 	muic_notifier_unregister(&pdata->muic_usb_nb);
 #endif
 #if IS_ENABLED(CONFIG_VBUS_NOTIFIER)

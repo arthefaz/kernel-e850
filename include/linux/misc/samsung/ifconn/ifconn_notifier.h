@@ -47,7 +47,7 @@ extern int pd_get_apdo_max_power(unsigned int *pdo_pos, unsigned int *taMaxVol,
 extern int pd_pps_enable(int num, int ppsVol, int ppsCur, int enable);
 extern int pd_get_pps_voltage(void);
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 struct ifconn_state_work {
 	struct work_struct ifconn_work;
 	int dest;

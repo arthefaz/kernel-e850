@@ -13,7 +13,7 @@
  *
  */
 //#include <linux/wakelock.h>
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include <linux/usb/typec/samsung/common/usbpd_msg.h>
 #include <linux/misc/samsung/ifconn/ifconn_notifier.h>
 #else
@@ -625,7 +625,7 @@ struct s2mf301_usbpd_data {
 #if IS_ENABLED(CONFIG_CCIC_NOTIFIER)
 	struct workqueue_struct *ccic_wq;
 #endif
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct workqueue_struct *ifconn_wq;
 #endif
 	struct mutex _mutex;
@@ -693,7 +693,7 @@ struct s2mf301_usbpd_data {
 	struct notifier_block type3_nb;
 	struct workqueue_struct *pdic_queue;
 	struct delayed_work plug_work;
-#if defined(CONFIG_PDIC_SLSI_NON_MCU)
+#if defined(CONFIG_ERD_PDIC_SLSI_NON_MCU)
 	struct s2m_pdic_notifier_struct pdic_notifier;
 #endif
 	struct delayed_work vbus_dischg_off_work;

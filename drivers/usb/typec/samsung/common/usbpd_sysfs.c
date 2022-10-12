@@ -29,7 +29,7 @@
 #include <linux/ccic/s2mm005_usbpd_fw.h>
 #include <linux/ccic/s2mm005_usbpd_phy.h>
 #endif
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 #include <linux/usb/typec_s2m/slsi/common/usbpd.h>
 #endif
 

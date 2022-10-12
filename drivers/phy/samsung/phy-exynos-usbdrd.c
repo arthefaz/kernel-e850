@@ -1403,7 +1403,7 @@ static int exynos_usbdrd_phy_exit(struct phy *phy)
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_CHECK_CTYPE_SIDE)
+#if IS_ENABLED(CONFIG_ERD_CHECK_CTYPE_SIDE)
 extern int usbpd_manager_get_side_check(void);
 #endif
 
@@ -1411,7 +1411,7 @@ static void exynos_usbdrd_pipe3_init(struct exynos_usbdrd_phy *phy_drd)
 {
 	int value;
 
-#if IS_ENABLED(CONFIG_CHECK_CTYPE_SIDE)
+#if IS_ENABLED(CONFIG_ERD_CHECK_CTYPE_SIDE)
 	/* USE external function to check typec side */
 	value = usbpd_manager_get_side_check();
 	if (value == 1)

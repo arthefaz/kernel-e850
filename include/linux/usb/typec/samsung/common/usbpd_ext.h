@@ -1,4 +1,4 @@
-#if IS_ENABLED(CONFIG_PDIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_PDIC_NOTIFIER)
 #include <linux/usb/typec/common/pdic_notifier.h>
 #endif
 #if IS_ENABLED(CONFIG_DUAL_ROLE_USB_INTF)
@@ -6,7 +6,7 @@
 #elif IS_ENABLED(CONFIG_TYPEC)
 #include <linux/usb/typec.h>
 #endif
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include <linux/power/s2m_chg_manager.h>
 #endif
 #ifdef CONFIG_BATTERY_SAMSUNG
@@ -18,7 +18,7 @@
 #ifndef __USBPD_EXT_H__
 #define __USBPD_EXT_H__
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 extern struct pdic_notifier_data pd_noti;
 #endif
 #if defined(CONFIG_BATTERY_SAMSUNG) && defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
@@ -89,7 +89,7 @@ typedef enum {
     num_Cfg_Reserved            = 3
 } Num_DP_Sel_Configuration_Type;
 
-#if IS_ENABLED(CONFIG_CHECK_CTYPE_SIDE)
+#if IS_ENABLED(CONFIG_ERD_CHECK_CTYPE_SIDE)
 int usbpd_manager_get_side_check(void);
 #else
 int usbpd_manager_get_side_check(void)
@@ -98,7 +98,7 @@ int usbpd_manager_get_side_check(void)
 }
 #endif
 
-#if defined(CONFIG_PDIC_NOTIFIER)
+#if defined(CONFIG_ERD_PDIC_NOTIFIER)
 void pdic_event_work(void *data, int dest, int id, int attach, int event);
 extern void select_pdo(int num);
 extern int sec_pd_select_pps(int num, int ppsVol, int ppsCur);
@@ -109,7 +109,7 @@ extern int sec_get_pps_voltage(void);
 extern void pdo_ctrl_by_flash(bool mode);
 #endif
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 void ifconn_event_work(void *pd_data, int dest, int id, int event, void *data);
 #endif
 

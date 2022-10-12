@@ -37,9 +37,9 @@
 #if IS_ENABLED(CONFIG_USE_MUIC)
 #include <linux/misc/samsung/muic/common/muic.h>
 #endif
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 #include <linux/muic/common/muic_notifier.h>
-#endif /* CONFIG_MUIC_NOTIFIER */
+#endif /* CONFIG_ERD_MUIC_NOTIFIER */
 
 #if IS_ENABLED(CONFIG_BATTERY_SAMSUNG)
 #include <linux/sec_batt.h>
@@ -52,11 +52,11 @@
 #include <linux/usb_notify.h>
 #endif
 
-#if (IS_ENABLED(CONFIG_IFCONN_NOTIFIER) || IS_ENABLED(CONFIG_DUAL_ROLE_USB_INTF))
+#if (IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER) || IS_ENABLED(CONFIG_DUAL_ROLE_USB_INTF))
 #include <linux/usb/typec/samsung/common/usbpd_ext.h>
 #endif
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 struct pdic_notifier_data pd_noti;
 #endif
 /*
@@ -279,7 +279,7 @@ static int s2mu106_usbpd_check_accessory(struct s2mu106_usbpd_data *pdic_data)
 
 static void process_dr_swap(struct s2mu106_usbpd_data *pdic_data)
 {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct i2c_client *i2c = pdic_data->i2c;
 
 	dev_info(&i2c->dev, "%s : before - is_host : %d, is_client : %d\n",
@@ -1061,14 +1061,14 @@ static void s2mu106_send_pd_info(void *_data, int attach)
 	struct usbpd_data *data = (struct usbpd_data *) _data;
 	struct s2mu106_usbpd_data *pdic_data = data->phy_driver_data;
 
-#if defined(CONFIG_PDIC_NOTIFIER)
+#if defined(CONFIG_ERD_PDIC_NOTIFIER)
 	if (attach)
 		pdic_event_work(pdic_data, PDIC_NOTIFY_DEV_BATT,
 								PDIC_NOTIFY_ID_POWER_STATUS, 1, 0);
 	else
 		pdic_event_work(pdic_data, PDIC_NOTIFY_DEV_BATT,
 								PDIC_NOTIFY_ID_POWER_STATUS, 0, 0);
-#elif IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#elif IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	if (attach)
 		ifconn_event_work(pdic_data, IFCONN_NOTIFY_MANAGER,
 			IFCONN_NOTIFY_ID_POWER_STATUS, IFCONN_NOTIFY_EVENT_ATTACH, &pd_noti);
@@ -1098,7 +1098,7 @@ static void s2mu106_set_pwr_opmode(void *_data, int mode)
 	typec_set_pwr_opmode(pdic_data->port, mode);
 }
 
-#if IS_ENABLED(CONFIG_CHECK_CTYPE_SIDE) || IS_ENABLED(CONFIG_CCIC_SYSFS)
+#if IS_ENABLED(CONFIG_ERD_CHECK_CTYPE_SIDE) || IS_ENABLED(CONFIG_CCIC_SYSFS)
 static int s2mu106_get_side_check(void *_data)
 {
 	struct usbpd_data *data = (struct usbpd_data *) _data;
@@ -1258,7 +1258,7 @@ static int s2mu106_set_data_role(void *_data, int val)
 
 	pdic_data->data_role = val;
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	process_dr_swap(pdic_data);
 #endif
 	return 0;
@@ -1507,7 +1507,7 @@ static void s2mu106_snk(struct i2c_client *i2c)
 	s2mu106_usbpd_write_reg(i2c, S2MU106_REG_PLUG_CTRL_MSG, data);
 }
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 static void s2mu106_notify_pdic_rid(struct s2mu106_usbpd_data *pdic_data, int rid)
 {
 	pdic_data->is_factory_mode = false;
@@ -1713,7 +1713,7 @@ static void s2mu106_usbpd_otg_attach(struct s2mu106_usbpd_data *pdic_data)
 	pdic_data->typec_power_role = TYPEC_SOURCE;
 	typec_set_pwr_role(pdic_data->port, pdic_data->typec_power_role);
 #endif
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	/* USB */
 	ifconn_event_work(pdic_data, IFCONN_NOTIFY_USB, IFCONN_NOTIFY_ID_USB,
 								IFCONN_NOTIFY_EVENT_USB_ATTACH_DFP, NULL);
@@ -1727,7 +1727,7 @@ static void s2mu106_usbpd_otg_attach(struct s2mu106_usbpd_data *pdic_data)
 	usbpd_manager_acc_handler_cancel(dev);
 }
 
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 static int type3_handle_notification(struct notifier_block *nb,
 		unsigned long action, void *data)
 {
@@ -1993,7 +1993,7 @@ static void s2mu106_usbpd_detach_init(struct s2mu106_usbpd_data *pdic_data)
 	pd_noti.sink_status.selected_pdo_num = 0;
 	pd_noti.sink_status.rp_currentlvl = S2M_RP_CURRENT_LEVEL_NONE;
 #endif
-#elif IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#elif IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	pd_noti.sink_status.current_pdo_num = 0;
 	pd_noti.sink_status.selected_pdo_num = 0;
 	pd_noti.sink_status.rp_currentlvl = S2M_RP_CURRENT_LEVEL_NONE;
@@ -2005,14 +2005,14 @@ static void s2mu106_usbpd_detach_init(struct s2mu106_usbpd_data *pdic_data)
 static void s2mu106_usbpd_notify_detach(struct s2mu106_usbpd_data *pdic_data)
 {
 	struct device *dev = pdic_data->dev;
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct usbpd_data *pd_data = dev_get_drvdata(dev);
 #endif
 
 #if IS_ENABLED(CONFIG_CCIC_AUDIO_ACC)
 	pr_info("%s, Adaptor or 3.5 pi detached\n", __func__);
 #endif
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	/* MUIC */
 	ifconn_event_work(pdic_data, IFCONN_NOTIFY_MUIC, IFCONN_NOTIFY_ID_ATTACH,
 								IFCONN_NOTIFY_EVENT_DETACH, NULL);
@@ -2189,7 +2189,7 @@ static int s2mu106_check_port_detect(struct s2mu106_usbpd_data *pdic_data)
 		s2mu106_ufp(i2c);
 		s2mu106_usbpd_prevent_watchdog_reset(pdic_data);
 		usbpd_policy_reset(pd_data, PLUG_EVENT);
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 		dev_info(&i2c->dev, "%s %d: is_host = %d, is_client = %d\n", __func__,
 					__LINE__, pdic_data->is_host, pdic_data->is_client);
 		if (pdic_data->regulator_en) {
@@ -2234,7 +2234,7 @@ static int s2mu106_check_port_detect(struct s2mu106_usbpd_data *pdic_data)
 		s2mu106_dfp(i2c);
 		s2mu106_src(i2c);
 		usbpd_policy_reset(pd_data, PLUG_EVENT);
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 		dev_info(&i2c->dev, "%s %d: is_host = %d, is_client = %d\n", __func__,
 					__LINE__, pdic_data->is_host, pdic_data->is_client);
 		s2mu106_usbpd_check_client(pdic_data, CLIENT_ON);
@@ -2674,7 +2674,7 @@ static int s2mu106_usbpd_probe(struct i2c_client *i2c,
 		goto err_return;
 	}
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	/* Create a work queue for the ccic irq thread */
 	pdic_data->ifconn_wq
 		= create_singlethread_workqueue("ifconn_notify_event");
@@ -2713,7 +2713,7 @@ static int s2mu106_usbpd_probe(struct i2c_client *i2c,
 
 	s2mu106_irq_thread(-1, pdic_data);
 
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 	muic_notifier_register(&pdic_data->type3_nb,
 			       type3_handle_notification,
 			       MUIC_NOTIFY_DEV_PDIC);
@@ -2829,7 +2829,7 @@ static usbpd_phy_ops_type s2mu106_ops = {
 	.pd_vbus_short_check	= s2mu106_pd_vbus_short_check,
 	.set_chg_lv_mode        = s2mu106_set_chg_lv_mode,
 	.set_pd_control		= s2mu106_set_pd_control,
-#if IS_ENABLED(CONFIG_CHECK_CTYPE_SIDE) || IS_ENABLED(CONFIG_CCIC_SYSFS)
+#if IS_ENABLED(CONFIG_ERD_CHECK_CTYPE_SIDE) || IS_ENABLED(CONFIG_CCIC_SYSFS)
 	.get_side_check		= s2mu106_get_side_check,
 #endif
 	.pr_swap			= s2mu106_pr_swap,

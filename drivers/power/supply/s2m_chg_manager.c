@@ -72,7 +72,7 @@ static void get_charging_current(struct s2m_chg_manager_info *battery,
 
 	mutex_lock(&battery->iolock);
 
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 	/*Limit input & charging current according to the max current*/
 	if (battery->cable_type == POWER_SUPPLY_TYPE_PREPARE_TA ||
 	    battery->cable_type == POWER_SUPPLY_TYPE_USB_PD) {
@@ -292,7 +292,7 @@ static int set_charger_mode(struct s2m_chg_manager_info *battery, int charger_mo
 	if (ret < 0)
 		pr_err("%s: Fail to execute property\n", __func__);
 
-#if IS_ENABLED(CONFIG_SMALL_CHARGER) && IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_SMALL_CHARGER) && IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 	switch (charger_mode) {
 	case S2M_BAT_CHG_MODE_CHARGING:
 		if (battery->cable_type == POWER_SUPPLY_TYPE_PREPARE_TA ||
@@ -359,7 +359,7 @@ static int set_battery_status(struct s2m_chg_manager_info *battery, int status)
 		if (ret < 0)
 			pr_err("%s: Fail to execute property\n", __func__);
 
-#if IS_ENABLED(CONFIG_SMALL_CHARGER) && IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_SMALL_CHARGER) && IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 		if (battery->cable_type == POWER_SUPPLY_TYPE_PREPARE_TA ||
 		    battery->cable_type == POWER_SUPPLY_TYPE_USB_PD) {
 			psy = power_supply_get_by_name(battery->pdata->smallcharger_name);
@@ -381,7 +381,7 @@ static int set_battery_status(struct s2m_chg_manager_info *battery, int status)
 		/* notify charger cable type */
 		value.intval = battery->cable_type;
 
-#if IS_ENABLED(CONFIG_SMALL_CHARGER) && IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_SMALL_CHARGER) && IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 		if (battery->cable_type == POWER_SUPPLY_TYPE_PREPARE_TA ||
 		    battery->cable_type == POWER_SUPPLY_TYPE_USB_PD) {
 			psy = power_supply_get_by_name(battery->pdata->smallcharger_name);
@@ -440,7 +440,7 @@ static void set_bat_status_by_cable(struct s2m_chg_manager_info *battery)
 #if IS_ENABLED(CONFIG_BAT_TEMP)
 		battery->is_temp_control = false;
 #endif
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 		//battery->pdo_sel_num = 0;
 		//battery->pdo_sel_vol = 0;
 		//battery->pdo_sel_cur = 0;
@@ -822,7 +822,7 @@ static int s2m_dc_manager_set_property(struct power_supply *psy,
 }
 #endif
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 static int s2m_bat_cable_check(struct s2m_chg_manager_info *battery, muic_attached_dev_t attached_dev)
 {
 	int current_cable_type = -1;
@@ -855,7 +855,7 @@ static int s2m_bat_cable_check(struct s2m_chg_manager_info *battery, muic_attach
 	case ATTACHED_DEV_UNDEFINED_RANGE_MUIC:
 		current_cable_type = POWER_SUPPLY_TYPE_BATTERY;
 		break;
-#if IS_ENABLED(CONFIG_HV_MUIC_TURBO_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_TURBO_CHARGER)
 	case ATTACHED_DEV_TURBO_CHARGER:
 		current_cable_type = POWER_SUPPLY_TYPE_HV_MAINS;
 		pr_info("[%s]Turbo charger ATTACHED\n", __func__);
@@ -864,14 +864,14 @@ static int s2m_bat_cable_check(struct s2m_chg_manager_info *battery, muic_attach
 	/* TODO: add QC and pump express */
 	case ATTACHED_DEV_AFC_CHARGER_9V_MUIC:
 	case ATTACHED_DEV_QC_CHARGER_9V_MUIC:
-#if IS_ENABLED(CONFIG_HV_MUIC_PE)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_PE)
 	case ATTACHED_DEV_PE_CHARGER_9V_MUIC:
 #endif
 		current_cable_type = POWER_SUPPLY_TYPE_HV_MAINS;
 		break;
 	case ATTACHED_DEV_AFC_CHARGER_PREPARE_MUIC:
 	case ATTACHED_DEV_QC_CHARGER_PREPARE_MUIC:
-#if IS_ENABLED(CONFIG_HV_MUIC_PE)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_PE)
 	case ATTACHED_DEV_PE_CHARGER_PREPARE_MUIC:
 #endif
 		current_cable_type = POWER_SUPPLY_TYPE_PREPARE_TA;
@@ -885,8 +885,8 @@ static int s2m_bat_cable_check(struct s2m_chg_manager_info *battery, muic_attach
 }
 #endif
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 static void usbpd_select_pdo_work(struct work_struct *work)
 {
 	struct s2m_chg_manager_info *battery = container_of(work, struct s2m_chg_manager_info, select_pdo_work.work);
@@ -976,7 +976,7 @@ static int s2m_bat_pdo_check(struct s2m_chg_manager_info *battery, struct ifconn
 				"%s: pdo_num:%d, max_voltage:%d, max_current:%d\n",
 				__func__, i, pdo_data->power_list[i].max_voltage, pdo_data->power_list[i].max_current);
 
-#if !IS_ENABLED(CONFIG_PDIC_PD30) || !IS_ENABLED(CONFIG_DIRECT_CHARGER)
+#if !IS_ENABLED(CONFIG_ERD_PDIC_PD30) || !IS_ENABLED(CONFIG_DIRECT_CHARGER)
 		if (pdo_data->power_list[i].apdo) {
 			pr_info("%s, skip APDO\n", __func__);
 			continue;
@@ -1025,7 +1025,7 @@ end_pdo_check:
 }
 #endif
 
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 static int s2m_ifconn_handle_cc_notification(struct notifier_block *nb, unsigned long action, void *data)
 {
 	struct s2m_chg_manager_info *battery = container_of(nb, struct s2m_chg_manager_info, ifconn_cc_nb);
@@ -1092,7 +1092,7 @@ static int s2m_ifconn_handle_notification(struct notifier_block *nb, unsigned lo
 	muic_attached_dev_t attached_dev = (muic_attached_dev_t)ifconn_info->event;
 	int cable_type = 0;
 	const char *cmd;
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 	struct pdic_notifier_data *pdic_info = (struct pdic_notifier_data *)ifconn_info->data;
 #endif
 	pr_info("%s: action(%ld) dump(0x%01x, 0x%01x, 0x%02x, 0x%04x, 0x%04x, 0x%04x, 0x%04x)\n",
@@ -1101,7 +1101,7 @@ static int s2m_ifconn_handle_notification(struct notifier_block *nb, unsigned lo
 		 ifconn_info->cable_type, ifconn_info->event);
 
 	ifconn_info->cable_type = (muic_attached_dev_t)ifconn_info->event;
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 	dev_info(battery->dev, "%s: pd_attach(%d) rp_attach(%d)\n", __func__, battery->pd_attach, battery->rp_attach);
 #endif
 	action = ifconn_info->id;
@@ -1109,7 +1109,7 @@ static int s2m_ifconn_handle_notification(struct notifier_block *nb, unsigned lo
 
 	switch (action) {
 	case IFCONN_NOTIFY_ID_DETACH:
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 		if (battery->pd_attach) {
 			pr_info("%s, [IFCONN_NOTIFY_ID_DETACH] PD TA is attached. Skip cable check\n", __func__);
             goto exit;
@@ -1122,7 +1122,7 @@ static int s2m_ifconn_handle_notification(struct notifier_block *nb, unsigned lo
 		cable_type = POWER_SUPPLY_TYPE_BATTERY;
 		break;
 	case IFCONN_NOTIFY_ID_ATTACH:
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 		if (battery->pd_attach) {
 			pr_info("%s, [IFCONN_NOTIFY_ID_ATTACH] PD TA is attached. Skip cable check\n", __func__);
 #if IS_ENABLED(CONFIG_DIRECT_CHARGER)
@@ -1931,7 +1931,7 @@ static int s2m_chg_manager_parse_dt(struct device *dev, struct s2m_chg_manager_i
 	}
 #endif
 
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 #if IS_ENABLED(CONFIG_DIRECT_CHARGER)
 	ret = of_property_read_u32(np, "battery,pdo_max_chg_power", &pdata->pdo_max_chg_power);
 	if (ret)
@@ -2291,7 +2291,7 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 	battery->default_limit_current = battery->pdata->default_limit_current;
 	battery->max_input_current = battery->pdata->max_input_current;
 	battery->max_charging_current = battery->pdata->max_charging_current;
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 	battery->pdo_max_input_vol = battery->pdata->pdo_max_input_vol;
 	battery->pdo_max_chg_power = battery->pdata->pdo_max_chg_power;
 	battery->pd_input_current = 2000;
@@ -2358,8 +2358,8 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 	battery->monitor_alarm_interval = DEFAULT_ALARM_INTERVAL;
 	battery->monitor_trigger = true;
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 	INIT_DELAYED_WORK(&battery->select_pdo_work, usbpd_select_pdo_work);
 #endif
 #endif
@@ -2441,7 +2441,7 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 #if IS_ENABLED(CONFIG_BAT_TEMP)
 	battery->is_temp_control = false;
 #endif
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	ifconn_notifier_register(&battery->ifconn_nb,
 				 s2m_ifconn_handle_notification,
 				 IFCONN_NOTIFY_BATTERY,
@@ -2450,7 +2450,7 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 				 s2m_ifconn_handle_notification,
 				 IFCONN_NOTIFY_BATTERY,
 				 IFCONN_NOTIFY_MANAGER_MUIC);
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 	ifconn_notifier_register(&battery->ifconn_cc_nb,
 				 s2m_ifconn_handle_cc_notification,
 				 IFCONN_NOTIFY_BATTERY,

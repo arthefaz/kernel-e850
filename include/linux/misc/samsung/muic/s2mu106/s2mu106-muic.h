@@ -24,10 +24,10 @@
 
 #include <linux/misc/samsung/muic/common/muic.h>
 #include <linux/misc/samsung/muic/common/muic_interface.h>
-#if IS_ENABLED (CONFIG_HV_MUIC_S2MU106_AFC)
+#if IS_ENABLED (CONFIG_ERD_HV_MUIC_S2MU106_AFC)
 #include <linux/muic/s2mu106/s2mu106-muic-hv.h>
 #endif
-#if IS_ENABLED(CONFIG_S2MU106_TYPEC_WATER)
+#if IS_ENABLED(CONFIG_ERD_S2MU106_TYPEC_WATER)
 #include <linux/time.h>
 #endif
 
@@ -241,7 +241,7 @@ enum s2mu106_muic_registers {
 #define INT_MUIC_MASK1			(0xFC)
 #define INT_MUIC_MASK2			(0x7A)
 
-#if IS_ENABLED(CONFIG_S2MU106_TYPEC_WATER)
+#if IS_ENABLED(CONFIG_ERD_S2MU106_TYPEC_WATER)
 #define INT_WATER_MASK1			(0xFF)
 #define INT_WATER_MASK2			(0x7E)
 #endif
@@ -773,7 +773,7 @@ enum s2mu106_muic_registers {
 #define PM_REQ_BOX_CO1_VCHGINC_SHIFT 	(7)
 #define PM_REQ_BOX_CO1_VCHGINC_MASK 	(0x1 << PM_REQ_BOX_CO1_VCHGINC_SHIFT)
 
-#if IS_ENABLED(CONFIG_S2MU106_TYPEC_WATER)
+#if IS_ENABLED(CONFIG_ERD_S2MU106_TYPEC_WATER)
 #define WATER_DET_RETRY_CNT				10
 #define WATER_CCIC_WAIT_DURATION_MS		4000
 //#define WATER_DRY_RETRY_INTERVAL_SEC	600
@@ -926,7 +926,7 @@ struct s2mu106_muic_data {
 
 	struct mutex muic_mutex;
 	struct mutex switch_mutex;
-	#if IS_ENABLED(CONFIG_HV_MUIC_S2MU106_AFC)
+	#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU106_AFC)
 	struct mutex afc_mutex;
 #endif
 
@@ -953,7 +953,7 @@ struct s2mu106_muic_data {
 	int irq_adc_change;
 	int irq_av_charge;
 	int irq_vbus_off;
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU106_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU106_AFC)
 	int irq_vdnmon;
 	int irq_mpnack;
 	int irq_mrxtrf;
@@ -961,11 +961,11 @@ struct s2mu106_muic_data {
 	struct power_supply *psy_pm;
 #endif
 	bool afc_check;
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU106_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU106_AFC)
 	bool is_dp_drive;
 	bool is_hvcharger_detected;
 #endif
-#if IS_ENABLED(CONFIG_S2MU106_SPECOUT_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_S2MU106_SPECOUT_CHARGER)
 	bool is_specout_charger;
 #endif
 
@@ -975,7 +975,7 @@ struct s2mu106_muic_data {
 	int vbvolt;
 	int vmid;
 	int reg[MAX_NUM];
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU106_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU106_AFC)
 	int mrxrdy_cnt;
 	int mping_cnt;
 	int qc_retry_cnt;
@@ -992,13 +992,13 @@ struct s2mu106_muic_data {
 	/* W/A waiting for the charger ic */
 	struct delayed_work dcd_recheck;
 	struct delayed_work cable_timeout;
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU106_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU106_AFC)
 	struct delayed_work reset_work;
 	struct delayed_work mping_retry_work;
 	struct delayed_work qc_retry_work;
 #endif
 
-#if IS_ENABLED(CONFIG_S2MU106_TYPEC_WATER)
+#if IS_ENABLED(CONFIG_ERD_S2MU106_TYPEC_WATER)
 	struct delayed_work water_detect_handler;
 	struct delayed_work water_dry_handler;
 	struct delayed_work sleep_dry_checker;

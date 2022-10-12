@@ -24,7 +24,7 @@
 
 #include <linux/misc/samsung/muic/common/muic.h>
 #include <linux/misc/samsung/muic/common/muic_interface.h>
-#if IS_ENABLED (CONFIG_HV_MUIC_S2MF301_AFC)
+#if IS_ENABLED (CONFIG_ERD_HV_MUIC_S2MF301_AFC)
 #include <linux/muic/s2mf301/s2mf301-muic-hv.h>
 #endif
 
@@ -688,7 +688,7 @@ struct s2mf301_muic_data {
 
 	struct mutex muic_mutex;
 	struct mutex switch_mutex;
-	#if IS_ENABLED(CONFIG_HV_MUIC_S2MF301_AFC)
+	#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MF301_AFC)
 	struct mutex afc_mutex;
 #endif
 
@@ -715,7 +715,7 @@ struct s2mf301_muic_data {
 	int irq_adc_change;
 	int irq_av_charge;
 	int irq_vbus_off;
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MF301_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MF301_AFC)
 	int irq_vdnmon;
 	int irq_mpnack;
 	int irq_mrxtrf;
@@ -723,11 +723,11 @@ struct s2mf301_muic_data {
 	struct power_supply *psy_pm;
 #endif
 	bool afc_check;
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MF301_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MF301_AFC)
 	bool is_dp_drive;
 	bool is_hvcharger_detected;
 #endif
-#if IS_ENABLED(CONFIG_S2MF301_SPECOUT_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_S2MF301_SPECOUT_CHARGER)
 	bool is_specout_charger;
 #endif
 
@@ -737,7 +737,7 @@ struct s2mf301_muic_data {
 	int vbvolt;
 	int vmid;
 	int reg[MAX_NUM];
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MF301_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MF301_AFC)
 	int mrxrdy_cnt;
 	int mping_cnt;
 	int qc_retry_cnt;
@@ -757,7 +757,7 @@ struct s2mf301_muic_data {
 	struct delayed_work dcd_recheck;
 	struct delayed_work pcp_clk;
 	struct delayed_work cable_timeout;
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MF301_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MF301_AFC)
 	struct delayed_work reset_work;
 	struct delayed_work mping_retry_work;
 	struct delayed_work qc_retry_work;

@@ -14,7 +14,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/of.h>
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 #include <linux/usb/typec/samsung/common/usbpd.h>
 #endif
 #if IS_ENABLED(CONFIG_CCIC_NOTIFIER)
@@ -279,7 +279,7 @@ static int ifconn_manager_manage_pdic(struct ifconn_manager_data *ifconn_manager
 		_ifconn_manager_template_notify(template);
 		break;
 	case IFCONN_NOTIFY_ID_DP_HPD:
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 		template->sub1 = ((struct usbpd_manager_data *)template->data)->hpd;
 		template->sub2 = ((struct usbpd_manager_data *)template->data)->hpdirq;
 #endif
@@ -288,7 +288,7 @@ static int ifconn_manager_manage_pdic(struct ifconn_manager_data *ifconn_manager
 		_ifconn_manager_template_notify(template);
 		break;
 	case IFCONN_NOTIFY_ID_DP_LINK_CONF:
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 		template->sub1 = ((struct usbpd_manager_data *)template->data)->dp_selected_pin;
 #endif
 		template->src = IFCONN_NOTIFY_MANAGER;
@@ -361,7 +361,7 @@ static int ifconn_manager_manage_ccic(struct ifconn_manager_data *ifconn_manager
 
 	case IFCONN_NOTIFY_ID_WATER:
 		if (template->sub1) {	/* attach */
-#if IS_ENABLED(CONFIG_IFCONN_WATER_EVENT_ENABLE)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_WATER_EVENT_ENABLE)
 			if (!ifconn_manager->water_det) {
 				ifconn_manager->water_det = 1;
 				ifconn_manager->water_count++;
@@ -435,7 +435,7 @@ static int ifconn_manager_manage_vbus(struct ifconn_manager_data *ifconn_manager
 
 	ifconn_manager->vbus_state = vbus_type;
 
-#if IS_ENABLED(CONFIG_IFCONN_WATER_EVENT_ENABLE)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_WATER_EVENT_ENABLE)
 	init_completion(&ccic_attach_done);
 	if ((ifconn_manager->water_det == 1)
 	    && (template->vbus_type == IFCONN_NOTIFY_VBUS_HIGH))
@@ -501,7 +501,7 @@ err:
 	return ret;
 }
 
-#if IS_ENABLED(CONFIG_IFCONN_SUPPORT_THREAD)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_SUPPORT_THREAD)
 static struct ifconn_notifier_template *_ifconn_manager_dequeue_template
 	(struct ifconn_manager_data *ifconn_manager)
 {
@@ -586,7 +586,7 @@ static void ifconn_manager_work(struct work_struct *work)
 
 	template = ifconn_manager->template;
 
-#if IS_ENABLED(CONFIG_IFCONN_SUPPORT_THREAD)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_SUPPORT_THREAD)
 	if (ifconn_manager->template != NULL)
 		template = ifconn_manager->template;
 	else
@@ -633,14 +633,14 @@ static int ifconn_manager_isr(struct notifier_block *nb,
 	}
 
 	pr_info("%s: enter src : %d\n", __func__, template->src);
-#if IS_ENABLED(CONFIG_IFCONN_SUPPORT_THREAD)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_SUPPORT_THREAD)
 	mutex_lock(&ifconn_manager->enqueue_mutex);
 	ifconn_manager->template = NULL;
 	if (template->event	== IFCONN_NOTIFY_EVENT_IN_HURRY) {
 #endif
 		ifconn_manager->template = template;
 		ifconn_manager_work(&ifconn_manager->noti_work);
-#if IS_ENABLED(CONFIG_IFCONN_SUPPORT_THREAD)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_SUPPORT_THREAD)
 	} else {
 		pr_info("%s: enter src : %d, line : %d!!!!!\n", __func__, template->src, __LINE__);
 
@@ -697,7 +697,7 @@ static int ifconn_manager_probe(struct platform_device *pdev)
 
 	mutex_init(&ifconn_manager->noti_mutex);
 	mutex_init(&ifconn_manager->workqueue_mutex);
-#if IS_ENABLED(CONFIG_IFCONN_SUPPORT_THREAD)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_SUPPORT_THREAD)
 	mutex_init(&ifconn_manager->enqueue_mutex);
 	INIT_WORK(&ifconn_manager->noti_work, ifconn_manager_work);
 	ifconn_manager->hp = NULL;

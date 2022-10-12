@@ -22,10 +22,10 @@
 #define S2MU106_CHARGER_H
 #include <linux/mfd/samsung/s2mu106.h>
 
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 #include <linux/muic/muic.h>
 #include <linux/muic/muic_notifier.h>
-#endif /* CONFIG_MUIC_NOTIFIER */
+#endif /* CONFIG_ERD_MUIC_NOTIFIER */
 
 #include <linux/power/s2m_chg_manager.h>
 
@@ -390,7 +390,7 @@ struct s2mu106_charger_data {
 
 	int charge_mode;
 
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 	struct notifier_block cable_check;
 #endif
 };

@@ -35,19 +35,19 @@
 #endif
 #include <linux/usb/typec/samsung/common/usbpd.h>
 
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 #include <linux/usb/typec_s2m/s2mu004/usbpd-s2mu004.h>
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 #include <linux/usb/typec/samsung/s2mu106/usbpd-s2mu106.h>
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 #include <linux/usb/typec_s2m/s2mu205/usbpd-s2mu205.h>
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 #include <linux/usb/typec_s2m/s2mu107/usbpd-s2mu107.h>
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 #include <linux/usb/typec/samsung/s2mf301/usbpd-s2mf301.h>
 #endif
 
-#if IS_ENABLED(CONFIG_SUPPORT_USB_TYPEC_OPS)
+#if IS_ENABLED(CONFIG_ERD_SUPPORT_USB_TYPEC_OPS)
 static int typec_dr_set(struct typec_port *_port, enum typec_data_role role);
 static int typec_pr_set(struct typec_port *_port, enum typec_role role);
 int typec_port_type_set(struct typec_port *_port, enum typec_port_type port_type);
@@ -103,13 +103,13 @@ static void ccic_event_notifier(struct work_struct *data)
 
 extern void ccic_event_work(void *data, int dest, int id, int attach, int event)
 {
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 	struct s2mu004_usbpd_data *usbpd_data = data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *usbpd_data = data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 	struct s2mu205_usbpd_data *usbpd_data = data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *usbpd_data = data;
 #endif
 	struct ccic_state_work *event_work;
@@ -189,7 +189,7 @@ extern void ccic_event_work(void *data, int dest, int id, int attach, int event)
 }
 #endif
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 static void ifconn_event_notifier(struct work_struct *data)
 {
 	struct ifconn_state_work *event_work =
@@ -220,11 +220,11 @@ static void ifconn_event_notifier(struct work_struct *data)
 
 extern void ifconn_event_work(void *_data, int dest, int id, int event, void *data)
 {
-#if IS_ENABLED(CONFIG_PDIC_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *usbpd_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *usbpd_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *usbpd_data = _data;
 #endif
 	struct usbpd_data *pd_data = dev_get_drvdata(usbpd_data->dev);
@@ -331,19 +331,19 @@ void role_swap_check(struct work_struct *wk)
 {
 	struct delayed_work *delay_work =
 		container_of(wk, struct delayed_work, work);
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 	struct s2mu004_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mu004_usbpd_data, role_swap_work);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mu106_usbpd_data, role_swap_work);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 	struct s2mu205_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mu205_usbpd_data, role_swap_work);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mu107_usbpd_data, role_swap_work);
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mf301_usbpd_data, role_swap_work);
 #endif
@@ -357,15 +357,15 @@ void role_swap_check(struct work_struct *wk)
 		disable_irq(usbpd_data->irq);
 		/* exit from Disabled state and set mode to DRP */
 		mode =  TYPE_C_ATTACH_DRP;
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 		s2mu004_rprd_mode_change(usbpd_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 		s2mu106_rprd_mode_change(usbpd_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 		s2mu205_rprd_mode_change(usbpd_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 		s2mu107_rprd_mode_change(usbpd_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 		s2mf301_rprd_mode_change(usbpd_data, mode);
 #endif
 		enable_irq(usbpd_data->irq);
@@ -376,15 +376,15 @@ static int ccic_set_dual_role(struct dual_role_phy_instance *dual_role,
 				   enum dual_role_property prop,
 				   const unsigned int *val)
 {
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 	struct s2mu004_usbpd_data *pdic_data = dual_role_get_drvdata(dual_role);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = dual_role_get_drvdata(dual_role);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 	struct s2mu205_usbpd_data *pdic_data = dual_role_get_drvdata(dual_role);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *pdic_data = dual_role_get_drvdata(dual_role);
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *pdic_data = dual_role_get_drvdata(dual_role);
 #endif
 	struct i2c_client *i2c;
@@ -431,7 +431,7 @@ static int ccic_set_dual_role(struct dual_role_phy_instance *dual_role,
 		pr_info("%s: try reversing, from Source to Sink\n", __func__);
 		/* turns off VBUS first */
 		usbpd_manager_vbus_turn_on_ctrl(pdic_data, 0);
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_CCIC_OTG_CTRL)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_CCIC_OTG_CTRL)
 		muic_disable_otg_detect();
 #endif
 #if IS_ENABLED(CONFIG_CCIC_NOTIFIER)
@@ -442,15 +442,15 @@ static int ccic_set_dual_role(struct dual_role_phy_instance *dual_role,
 		/* exit from Disabled state and set mode to UFP */
 		mode =  TYPE_C_ATTACH_UFP;
 		pdic_data->try_state_change = TYPE_C_ATTACH_UFP;
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 		s2mu004_rprd_mode_change(pdic_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 		s2mu106_rprd_mode_change(pdic_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 		s2mu205_rprd_mode_change(pdic_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 		s2mu107_rprd_mode_change(pdic_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 		s2mf301_rprd_mode_change(pdic_data, mode);
 #endif
 	} else {
@@ -459,15 +459,15 @@ static int ccic_set_dual_role(struct dual_role_phy_instance *dual_role,
 		/* exit from Disabled state and set mode to UFP */
 		mode =  TYPE_C_ATTACH_DFP;
 		pdic_data->try_state_change = TYPE_C_ATTACH_DFP;
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 		s2mu004_rprd_mode_change(pdic_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 		s2mu106_rprd_mode_change(pdic_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 		s2mu205_rprd_mode_change(pdic_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 		s2mu107_rprd_mode_change(pdic_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 		s2mf301_rprd_mode_change(pdic_data, mode);
 #endif
 	}
@@ -484,13 +484,13 @@ static int ccic_set_dual_role(struct dual_role_phy_instance *dual_role,
 		disable_irq(pdic_data->irq);
 		/* exit from Disabled state and set mode to DRP */
 		mode =  TYPE_C_ATTACH_DRP;
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 		s2mu004_rprd_mode_change(pdic_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 		s2mu106_rprd_mode_change(pdic_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 		s2mu205_rprd_mode_change(pdic_data, mode);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 		s2mu107_rprd_mode_change(pdic_data, mode);
 #endif
 		enable_irq(pdic_data->irq);
@@ -519,15 +519,15 @@ int dual_role_get_local_prop(struct dual_role_phy_instance *dual_role,
 				    enum dual_role_property prop,
 				    unsigned int *val)
 {
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 	struct s2mu004_usbpd_data *usbpd_data = dual_role_get_drvdata(dual_role);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *usbpd_data = dual_role_get_drvdata(dual_role);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 	struct s2mu205_usbpd_data *usbpd_data = dual_role_get_drvdata(dual_role);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *usbpd_data = dual_role_get_drvdata(dual_role);
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *usbpd_data = dual_role_get_drvdata(dual_role);
 #endif
 
@@ -606,15 +606,15 @@ int dual_role_set_prop(struct dual_role_phy_instance *dual_role,
 
 int dual_role_init(void *_data)
 {
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 	struct s2mu004_usbpd_data *pdic_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 	struct s2mu205_usbpd_data *pdic_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *pdic_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *pdic_data = _data;
 #endif
 	struct dual_role_phy_desc *desc;
@@ -649,19 +649,19 @@ void typec_role_swap_check(struct work_struct *wk)
 {
 	struct delayed_work *delay_work =
 		container_of(wk, struct delayed_work, work);
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 	struct s2mu004_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mu004_usbpd_data, typec_role_swap_work);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mu106_usbpd_data, typec_role_swap_work);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 	struct s2mu205_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mu205_usbpd_data, typec_role_swap_work);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mu107_usbpd_data, typec_role_swap_work);
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *usbpd_data =
 		container_of(delay_work, struct s2mf301_usbpd_data, typec_role_swap_work);
 #endif
@@ -673,15 +673,15 @@ void typec_role_swap_check(struct work_struct *wk)
 		pr_err("%s: ccic_set_dual_role reverse failed, set mode to DRP\n", __func__);
 		disable_irq(usbpd_data->irq);
 		/* exit from Disabled state and set mode to DRP */
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 		s2mu004_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 		s2mu106_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 		s2mu205_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 		s2mu107_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 		s2mf301_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
 #endif
 		enable_irq(usbpd_data->irq);
@@ -691,15 +691,15 @@ void typec_role_swap_check(struct work_struct *wk)
 int typec_port_type_set(struct typec_port *_port, enum typec_port_type port_type)
 {
 	struct usbpd_data *pd_data = typec_get_drvdata(_port);
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 	struct s2mu004_usbpd_data *usbpd_data = (struct s2mu004_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *usbpd_data = (struct s2mu106_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 	struct s2mu205_usbpd_data *usbpd_data = (struct s2mu205_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *usbpd_data = (struct s2mu107_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *usbpd_data = (struct s2mf301_usbpd_data *)pd_data->phy_driver_data;
 #endif
 
@@ -717,15 +717,15 @@ int typec_port_type_set(struct typec_port *_port, enum typec_port_type port_type
 	case TYPEC_PORT_DFP:
 		pr_info("%s : try reversing, from UFP(Sink) to DFP(Source)\n", __func__);
 		usbpd_data->typec_try_state_change = TYPE_C_ATTACH_DFP;
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 		s2mu004_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DFP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 		s2mu106_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DFP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 		s2mu205_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DFP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 		s2mu107_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DFP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 		s2mf301_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DFP);
 #endif
 
@@ -740,15 +740,15 @@ int typec_port_type_set(struct typec_port *_port, enum typec_port_type port_type
 			0/*attach*/, 0/*rprd*/);
 #endif
 		usbpd_data->typec_try_state_change = TYPE_C_ATTACH_UFP;
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 		s2mu004_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_UFP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 		s2mu106_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_UFP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 		s2mu205_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_UFP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 		s2mu107_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_UFP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 		s2mf301_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_UFP);
 #endif
 
@@ -774,15 +774,15 @@ int typec_port_type_set(struct typec_port *_port, enum typec_port_type port_type
 			disable_irq(usbpd_data->irq);
 			/* exit from Disabled state and set mode to DRP */
 			usbpd_data->typec_try_state_change = 0;
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 			s2mu004_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 			s2mu106_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 			s2mu205_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 			s2mu107_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 			s2mf301_rprd_mode_change(usbpd_data, TYPE_C_ATTACH_DRP);
 #endif
 
@@ -798,15 +798,15 @@ int typec_port_type_set(struct typec_port *_port, enum typec_port_type port_type
 static int typec_pr_set(struct typec_port *_port, enum typec_role role)
 {
 	struct usbpd_data *pd_data = typec_get_drvdata(_port);
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 	struct s2mu004_usbpd_data *usbpd_data = (struct s2mu004_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *usbpd_data = (struct s2mu106_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 	struct s2mu205_usbpd_data *usbpd_data = (struct s2mu205_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *usbpd_data = (struct s2mu107_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *usbpd_data = (struct s2mf301_usbpd_data *)pd_data->phy_driver_data;
 #endif
 
@@ -857,15 +857,15 @@ static int typec_pr_set(struct typec_port *_port, enum typec_role role)
 static int typec_dr_set(struct typec_port *_port, enum typec_data_role role)
 {
 	struct usbpd_data *pd_data = typec_get_drvdata(_port);
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 	struct s2mu004_usbpd_data *usbpd_data = (struct s2mu004_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *usbpd_data = (struct s2mu106_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 	struct s2mu205_usbpd_data *usbpd_data = (struct s2mu205_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *usbpd_data = (struct s2mu107_usbpd_data *)pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *usbpd_data = (struct s2mf301_usbpd_data *)pd_data->phy_driver_data;
 #endif
 
@@ -915,11 +915,11 @@ static int typec_dr_set(struct typec_port *_port, enum typec_data_role role)
 
 int typec_get_pd_support(void *_data)
 {
-#if IS_ENABLED(CONFIG_PDIC_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *pdic_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *pdic_data = _data;
 #endif
 	struct usbpd_data *pd_data = dev_get_drvdata(pdic_data->dev);
@@ -932,15 +932,15 @@ int typec_get_pd_support(void *_data)
 
 int typec_init(void *_data)
 {
-#if IS_ENABLED(CONFIG_PDIC_S2MU004)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU004)
 	struct s2mu004_usbpd_data *pdic_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU106)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU205)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU205)
 	struct s2mu205_usbpd_data *pdic_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *pdic_data = _data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *pdic_data = _data;
 #endif
 	struct usbpd_data *pd_data = dev_get_drvdata(pdic_data->dev);
@@ -949,7 +949,7 @@ int typec_init(void *_data)
 	pdic_data->typec_cap.revision = USB_TYPEC_REV_1_2;
 	pdic_data->typec_cap.pd_revision = 0x300;
 	pdic_data->typec_cap.prefer_role = TYPEC_NO_PREFERRED_ROLE;
-#if IS_ENABLED(CONFIG_SUPPORT_USB_TYPEC_OPS)
+#if IS_ENABLED(CONFIG_ERD_SUPPORT_USB_TYPEC_OPS)
 	pdic_data->typec_cap.driver_data = pd_data;
 	pdic_data->typec_cap.ops = &typec_ops;
 #else

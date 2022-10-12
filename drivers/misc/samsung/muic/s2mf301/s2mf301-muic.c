@@ -33,15 +33,15 @@
 #include <linux/mfd/samsunglsi/s2mf301.h>
 #include <linux/misc/samsung/muic/s2mf301/s2mf301-muic.h>
 
-#if IS_ENABLED(CONFIG_MUIC_SYSFS)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SYSFS)
 #include <linux/misc/samsung/muic/common/muic_sysfs.h>
 #endif
 
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MF301_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MF301_AFC)
 #include <linux/muic/s2mf301-muic-hv.h>
 #endif
 
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 #include <linux/muic/muic_notifier.h>
 #endif
 
@@ -56,7 +56,7 @@
 #if IS_ENABLED(CONFIG_VBUS_NOTIFIER)
 #include <linux/vbus_notifier.h>
 #endif
-#if IS_ENABLED(CONFIG_MUIC_UART_SWITCH)
+#if IS_ENABLED(CONFIG_ERD_MUIC_UART_SWITCH)
 #include <mach/pinctrl-samsung.h>
 #endif
 #if IS_ENABLED(CONFIG_CP_UART_NOTI)
@@ -68,7 +68,7 @@
 #endif
 
 /* Prototypes of the Static symbols of s2mf301-muic */
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 static void s2mf301_muic_detect_dev_ccic(struct s2mf301_muic_data *muic_data,
 		muic_attached_dev_t new_dev);
 int s2mf301_muic_bcd_rescan(struct s2mf301_muic_data *muic_data);
@@ -191,7 +191,7 @@ err:
 	return -1;
 }
 
-#if IS_ENABLED(CONFIG_MUIC_DEBUG)
+#if IS_ENABLED(CONFIG_ERD_MUIC_DEBUG)
 #define MAX_LOG 25
 #define READ 0
 #define WRITE 1
@@ -603,7 +603,7 @@ int _s2mf301_muic_set_jig_on(struct s2mf301_muic_data *muic_data)
 #endif
 }
 
-#if IS_ENABLED(CONFIG_MUIC_S2MF301_RID)
+#if IS_ENABLED(CONFIG_ERD_MUIC_S2MF301_RID)
 int _s2mf301_muic_recheck_adc(struct s2mf301_muic_data *muic_data)
 {
 	_s2mf301_muic_control_rid_adc(muic_data, MUIC_DISABLE);
@@ -667,7 +667,7 @@ void s2mf301_muic_get_detect_info(struct s2mf301_muic_data *muic_data)
 		muic_data->adc, muic_data->vbvolt);
 }
 
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 int s2mf301_muic_bcd_rescan(struct s2mf301_muic_data *muic_data)
 {
 	int ret = 0;
@@ -717,7 +717,7 @@ static void s2mf301_muic_dcd_recheck(struct work_struct *work)
 	mutex_unlock(&muic_data->muic_mutex);
 }
 
-#if IS_ENABLED(CONFIG_S2MF301_SPECOUT_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_S2MF301_SPECOUT_CHARGER)
 static void s2mf301_muic_cable_timeout(struct work_struct *work)
 {
 	struct s2mf301_muic_data *muic_data =
@@ -739,7 +739,7 @@ static void s2mf301_muic_cable_timeout(struct work_struct *work)
 /*
  * Interface Functions
  */
-#if IS_ENABLED(CONFIG_MUIC_S2MF301_RID)
+#if IS_ENABLED(CONFIG_ERD_MUIC_S2MF301_RID)
 static int s2mf301_if_get_adc(void *mdata)
 {
 	struct s2mf301_muic_data *muic_data = (struct s2mf301_muic_data *)mdata;
@@ -833,7 +833,7 @@ static int s2mf301_if_get_vbus(void *mdata)
 	return _s2mf301_muic_get_vbus_state(muic_data);
 }
 
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 static void s2mf301_if_set_cable_state(void *mdata, muic_attached_dev_t new_dev)
 {
 	struct s2mf301_muic_data *muic_data = (struct s2mf301_muic_data *)mdata;
@@ -1020,10 +1020,10 @@ static int s2mf301_if_set_jig_ctrl_on(void *mdata)
 	return _s2mf301_muic_set_jig_on(muic_data);
 }
 
-#if IS_ENABLED(CONFIG_MUIC_SYSFS)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SYSFS)
 static int s2mf301_if_show_register(void *mdata, char *mesg)
 {
-#if IS_ENABLED(CONFIG_MUIC_DEBUG)
+#if IS_ENABLED(CONFIG_ERD_MUIC_DEBUG)
 	struct s2mf301_muic_data *muic_data =
 		(struct s2mf301_muic_data *)mdata;
 
@@ -1056,7 +1056,7 @@ int s2mf301_set_gpio_uart_sel(struct s2mf301_muic_data *muic_data, int uart_sel)
 {
 	const char *mode;
 	struct muic_platform_data *muic_pdata = muic_data->pdata;
-#if !IS_ENABLED(CONFIG_MUIC_UART_SWITCH)
+#if !IS_ENABLED(CONFIG_ERD_MUIC_UART_SWITCH)
 	int uart_sel_gpio = muic_pdata->gpio_uart_sel;
 	int uart_sel_val;
 	int ret;
@@ -1118,7 +1118,7 @@ int s2mf301_set_gpio_uart_sel(struct s2mf301_muic_data *muic_data, int uart_sel)
 	}
 
 	pr_info("%s %s\n", __func__, mode);
-#endif /* CONFIG_MUIC_UART_SWITCH */
+#endif /* CONFIG_ERD_MUIC_UART_SWITCH */
 	return 0;
 }
 
@@ -1158,7 +1158,7 @@ static int s2mf301_muic_reg_init(struct s2mf301_muic_data *muic_data)
     pr_info("%s, MUIC_CTRL2 : 0x%2x\n", __func__, reg_val);
 
 
-#if IS_ENABLED(CONFIG_MUIC_S2MF301_ENABLE_AUTOSW)
+#if IS_ENABLED(CONFIG_ERD_MUIC_S2MF301_ENABLE_AUTOSW)
     reg_val = S2MF301_MUIC_MUIC_CTRL1_SWITCH_OPENB_MASK | S2MF301_MUIC_MUIC_CTRL1_FAC_WAIT_MASK
 	    | S2MF301_MUIC_MUIC_CTRL1_MANUAL_SW_MASK;
 #else
@@ -1169,7 +1169,7 @@ static int s2mf301_muic_reg_init(struct s2mf301_muic_data *muic_data)
 		pr_err("failed to write ctrl(%d)\n", ret);
 
 	data = s2mf301_i2c_read_byte(i2c, S2MF301_REG_MANUAL_SW_CTRL);
-#if !IS_ENABLED(CONFIG_MUIC_S2MF301_ENABLE_AUTOSW)
+#if !IS_ENABLED(CONFIG_ERD_MUIC_S2MF301_ENABLE_AUTOSW)
 	data |= S2MF301_MUIC_MUIC_SW_CTRL_GATESW_ON_MASK;
     s2mf301_i2c_write_byte(i2c, S2MF301_REG_MANUAL_SW_CTRL, data);
 	data = s2mf301_i2c_read_byte(i2c, S2MF301_REG_MANUAL_SW_CTRL);
@@ -1185,7 +1185,7 @@ static int s2mf301_muic_reg_init(struct s2mf301_muic_data *muic_data)
 	return ret;
 }
 
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 static void s2mf301_muic_detect_dev_ccic(struct s2mf301_muic_data *muic_data,
 	muic_attached_dev_t new_dev)
 {
@@ -1207,7 +1207,7 @@ static void s2mf301_muic_detect_dev_ccic(struct s2mf301_muic_data *muic_data,
 		}
 		muic_pdata->attached_dev = ATTACHED_DEV_NONE_MUIC;
 		muic_data->killer_status = S2MF301_KILLER_NONE;
-#if defined(CONFIG_S2MF301_MUIC_SDP_OVP_OFF)
+#if defined(CONFIG_ERD_S2MF301_MUIC_SDP_OVP_OFF)
 		s2mf301_muic_ldo_sel(muic_data, S2MF301_DISABLE);
 #endif
 		_s2mf301_muic_set_chg_det(muic_data, MUIC_ENABLE);
@@ -1217,7 +1217,7 @@ static void s2mf301_muic_detect_dev_ccic(struct s2mf301_muic_data *muic_data,
 
 		switch (new_dev) {
 		case ATTACHED_DEV_OTG_MUIC:
-#if defined(CONFIG_S2MF301_MUIC_SDP_OVP_OFF)
+#if defined(CONFIG_ERD_S2MF301_MUIC_SDP_OVP_OFF)
 			s2mf301_muic_ldo_sel(muic_data, S2MF301_ENABLE);
 #endif
 			_s2mf301_muic_sel_path(muic_data, S2MF301_PATH_USB);
@@ -1253,7 +1253,7 @@ static int s2mf301_muic_detect_dev_bc1p2(struct s2mf301_muic_data *muic_data)
 		if (muic_data->vbvolt) {
 			muic_data->new_dev = ATTACHED_DEV_CDP_MUIC;
 			pr_info("USB_CDP DETECTED\n");
-#if defined(CONFIG_S2MF301_MUIC_SDP_OVP_OFF)
+#if defined(CONFIG_ERD_S2MF301_MUIC_SDP_OVP_OFF)
             s2mf301_muic_ldo_sel(muic_data, S2MF301_ENABLE);
 #endif
 		}
@@ -1262,10 +1262,10 @@ static int s2mf301_muic_detect_dev_bc1p2(struct s2mf301_muic_data *muic_data)
 		if (muic_data->vbvolt) {
 			pr_info("USB DETECTED\n");
             muic_data->new_dev = ATTACHED_DEV_USB_MUIC;
-#if defined(CONFIG_S2MF301_MUIC_SDP_OVP_OFF)
+#if defined(CONFIG_ERD_S2MF301_MUIC_SDP_OVP_OFF)
             s2mf301_muic_ldo_sel(muic_data, S2MF301_ENABLE);
 #endif
-#if defined(CONFIG_MUIC_SUPPORT_PRSWAP)
+#if defined(CONFIG_ERD_MUIC_SUPPORT_PRSWAP)
 			_s2mf301_muic_set_chg_det(muic_data, MUIC_DISABLE);
 #endif
 		}
@@ -1282,7 +1282,7 @@ static int s2mf301_muic_detect_dev_bc1p2(struct s2mf301_muic_data *muic_data)
 		break;
 	case S2MF301_MUIC_DEVICE_TYPE1_SDP1P8S_MASK:
 		if (muic_data->vbvolt) {
-#if defined(CONFIG_S2MF301_MUIC_SDP_OVP_OFF)
+#if defined(CONFIG_ERD_S2MF301_MUIC_SDP_OVP_OFF)
             s2mf301_muic_ldo_sel(muic_data, S2MF301_ENABLE);
 #endif
 #if !defined(CONFIG_DCD_RESCAN)
@@ -1293,7 +1293,7 @@ static int s2mf301_muic_detect_dev_bc1p2(struct s2mf301_muic_data *muic_data)
 			if (muic_data->rescan_cnt >= 1) {
 				pr_info("SDP_1P8S DETECTED\n");
 				muic_data->new_dev = ATTACHED_DEV_TIMEOUT_OPEN_MUIC;
-#if defined(CONFIG_MUIC_SUPPORT_PRSWAP)
+#if defined(CONFIG_ERD_MUIC_SUPPORT_PRSWAP)
 				_s2mf301_muic_set_chg_det(muic_data, MUIC_DISABLE);
 #endif
 				return S2MF301_DETECT_DONE;
@@ -1354,10 +1354,10 @@ static void s2mf301_muic_handle_attached_dev(struct s2mf301_muic_data *muic_data
 	struct muic_platform_data *muic_pdata = muic_data->pdata;
 	if (muic_data->new_dev != ATTACHED_DEV_UNKNOWN_MUIC &&
 				muic_data->new_dev != muic_pdata->attached_dev) {
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 		muic_manager_set_legacy_dev(muic_pdata->muic_if, muic_data->new_dev);
 #endif
-#if IS_ENABLED(CONFIG_MUIC_CORE)
+#if IS_ENABLED(CONFIG_ERD_MUIC_CORE)
 		muic_core_handle_attach(muic_pdata, muic_data->new_dev,
 				muic_pdata->adc, muic_pdata->vbvolt);
 #endif
@@ -1378,7 +1378,7 @@ static void _s2mf301_muic_resend_jig_type(struct s2mf301_muic_data *muic_data)
 		s2mf301_muic_handle_attached_dev(muic_data);
 	}
 }
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_CCIC) && IS_ENABLED(CONFIG_MUIC_CORE)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_CCIC) && IS_ENABLED(CONFIG_MUIC_CORE)
 static bool s2mf301_muic_is_opmode_typeC(struct s2mf301_muic_data *muic_data)
 {
 	struct muic_interface_t *muic_if;
@@ -1418,7 +1418,7 @@ static irqreturn_t s2mf301_muic_attach_isr(int irq, void *data)
 	mutex_lock(&muic_data->muic_mutex);
 	muic_wake_lock(muic_data->muic_ws);
 
-#if IS_ENABLED(CONFIG_S2MF301_SPECOUT_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_S2MF301_SPECOUT_CHARGER)
 	cancel_delayed_work(&muic_data->cable_timeout);
 #endif
 
@@ -1436,7 +1436,7 @@ static irqreturn_t s2mf301_muic_attach_isr(int irq, void *data)
 	else if (det_ret == S2MF301_DETECT_SKIP)
 		goto attach_skip;
 
-#if IS_ENABLED(CONFIG_MUIC_S2MF301_RID) && IS_ENABLED(CONFIG_MUIC_SUPPORT_TYPEB)
+#if IS_ENABLED(CONFIG_ERD_MUIC_S2MF301_RID) && IS_ENABLED(CONFIG_MUIC_SUPPORT_TYPEB)
 	det_ret = s2mf301_muic_detect_dev_mrid_adc(muic_data);
 #endif
 attach_done:
@@ -1480,13 +1480,13 @@ static irqreturn_t s2mf301_muic_detach_isr(int irq, void *data)
 	}
 
 	s2mf301_muic_get_detect_info(muic_data);
-#if IS_ENABLED(CONFIG_MUIC_CORE)
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_CCIC)
+#if IS_ENABLED(CONFIG_ERD_MUIC_CORE)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_CCIC)
 	if (s2mf301_muic_is_opmode_typeC(muic_data)) {
 		if (!muic_core_get_ccic_cable_state(muic_data->pdata)) {
 			muic_core_handle_detach(muic_data->pdata);
 			muic_data->bcd_rescanned = false;
-#if defined(CONFIG_S2MF301_MUIC_SDP_OVP_OFF)
+#if defined(CONFIG_ERD_S2MF301_MUIC_SDP_OVP_OFF)
 		    s2mf301_muic_ldo_sel(muic_data, S2MF301_DISABLE);
 #endif
 		}
@@ -1542,7 +1542,7 @@ static irqreturn_t s2mf301_muic_vbus_on_isr(int irq, void *data)
 #endif /* CONFIG_VBUS_NOTIFIER */
 	_s2mf301_muic_resend_jig_type(muic_data);
 
-#if IS_ENABLED(CONFIG_S2MF301_SPECOUT_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_S2MF301_SPECOUT_CHARGER)
 	cancel_delayed_work(&muic_data->cable_timeout);
 	schedule_delayed_work(&muic_data->cable_timeout, msecs_to_jiffies(800));
 #endif
@@ -1586,7 +1586,7 @@ static irqreturn_t s2mf301_muic_vbus_off_isr(int irq, void *data)
 	pr_info("%s start(%s)\n", __func__, dev_to_str(muic_pdata->attached_dev));
 	muic_pdata->vbvolt = muic_data->vbvolt = _s2mf301_muic_get_vbus_state(muic_data);
 
-#if IS_ENABLED(CONFIG_S2MF301_SPECOUT_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_S2MF301_SPECOUT_CHARGER)
 	cancel_delayed_work(&muic_data->cable_timeout);
 	if (muic_pdata->attached_dev == ATTACHED_DEV_TA_MUIC &&
 			muic_data->is_specout_charger == true) {
@@ -1604,7 +1604,7 @@ static irqreturn_t s2mf301_muic_vbus_off_isr(int irq, void *data)
 		if (muic_core_get_ccic_cable_state(muic_data->pdata)
 				&& muic_if->is_pdic_attached == false) {
 			muic_core_handle_detach(muic_data->pdata);
-#if defined(CONFIG_MUIC_SUPPORT_PRSWAP)
+#if defined(CONFIG_ERD_MUIC_SUPPORT_PRSWAP)
 			_s2mf301_muic_set_chg_det(muic_data, MUIC_ENABLE);
 #endif
 		}
@@ -1634,7 +1634,7 @@ static irqreturn_t s2mf301_muic_usb_killer_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-#if IS_ENABLED(CONFIG_MUIC_S2MF301_RID)
+#if IS_ENABLED(CONFIG_ERD_MUIC_S2MF301_RID)
 static irqreturn_t s2mf301_muic_rid_chg_isr(int irq, void *data)
 {
 	struct s2mf301_muic_data *muic_data = data;
@@ -1695,7 +1695,7 @@ static irqreturn_t s2mf301_muic_adc_change_isr(int irq, void *data)
 			muic_data->adc, dev_to_str(muic_pdata->attached_dev),
 			(muic_if->opmode ? "CCIC" : "MUIC"));
 
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 	if (muic_if->opmode & S2M_OPMODE_CCIC) {
 	} else {
 		s2mf301_muic_detect_dev_rid_array(muic_data);
@@ -1703,12 +1703,12 @@ static irqreturn_t s2mf301_muic_adc_change_isr(int irq, void *data)
 	}
 #endif
 
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_TYPEB)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_TYPEB)
 	if (!MUIC_IS_ATTACHED(muic_pdata->attached_dev)) {
 		muic_data->new_dev = s2mf301_muic_detect_dev_rid_device(muic_data);
 		if (MUIC_IS_ATTACHED(muic_data->new_dev) &&
 			muic_data->new_dev != muic_pdata->attached_dev) {
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 			muic_manager_set_legacy_dev(muic_pdata->muic_if, muic_data->new_dev);
 #endif
 			muic_core_handle_attach(muic_pdata, muic_data->new_dev,
@@ -1720,7 +1720,7 @@ static irqreturn_t s2mf301_muic_adc_change_isr(int irq, void *data)
 	}
 #endif
 
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 exit_adc_chg:
 #endif
 	muic_wake_unlock(muic_data->muic_ws);
@@ -1788,12 +1788,12 @@ static void s2mf301_muic_free_irqs(struct s2mf301_muic_data *muic_data)
 	/* free MUIC IRQ */
 	FREE_IRQ(muic_data->irq_attach, muic_data, "muic-attach");
 	FREE_IRQ(muic_data->irq_detach, muic_data, "muic-detach");
-#if IS_ENABLED(CONFIG_MUIC_S2MF301_RID)
+#if IS_ENABLED(CONFIG_ERD_MUIC_S2MF301_RID)
 	FREE_IRQ(muic_data->irq_rid_chg, muic_data, "muic-rid_chg");
 #endif
 	FREE_IRQ(muic_data->irq_vbus_on, muic_data, "muic-vbus_on");
 	FREE_IRQ(muic_data->irq_rsvd_attach, muic_data, "muic-rsvd_attach");
-#if IS_ENABLED(CONFIG_MUIC_S2MF301_RID)
+#if IS_ENABLED(CONFIG_ERD_MUIC_S2MF301_RID)
 	FREE_IRQ(muic_data->irq_adc_change, muic_data, "muic-adc_change");
 #endif
 	FREE_IRQ(muic_data->irq_av_charge, muic_data, "muic-av_charge");
@@ -1821,7 +1821,7 @@ static int of_s2mf301_muic_dt(struct device *dev,
 	}
 
 /* FIXME */
-#if !IS_ENABLED(CONFIG_MUIC_UART_SWITCH)
+#if !IS_ENABLED(CONFIG_ERD_MUIC_UART_SWITCH)
 	if (of_gpio_count(np_muic) < 1) {
 		pr_err("%s : could not find muic gpio\n", __func__);
 		muic_data->pdata->gpio_uart_sel = 0;
@@ -1853,7 +1853,7 @@ static void s2mf301_muic_init_drvdata(struct s2mf301_muic_data *muic_data,
 	muic_data->afc_check = false;
 	muic_data->bcd_rescanned = false;
 	muic_data->pcp_clk_delayed = 0;
-#if IS_ENABLED(CONFIG_S2MF301_SPECOUT_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_S2MF301_SPECOUT_CHARGER)
 	muic_data->is_specout_charger = false;
 #endif
 }
@@ -1875,18 +1875,18 @@ static void s2mf301_muic_init_interface(struct s2mf301_muic_data *muic_data,
 	muic_if->get_path_status = s2mf301_if_get_path_status;
 	muic_if->get_vbus = s2mf301_if_get_vbus;
 	muic_if->set_gpio_uart_sel = s2mf301_if_set_gpio_uart_sel;
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 	muic_if->set_cable_state = s2mf301_if_set_cable_state;
 	muic_if->set_dcd_rescan = s2mf301_if_cable_recheck;
 	muic_if->check_usb_killer = s2mf301_if_check_usb_killer;
 #endif
 	muic_if->bcd_rescan = s2mf301_if_set_bcd_rescan_reg;
 	muic_if->control_rid_adc = s2mf301_if_control_rid_adc;
-#if IS_ENABLED(CONFIG_MUIC_S2MF301_RID)
+#if IS_ENABLED(CONFIG_ERD_MUIC_S2MF301_RID)
 	muic_if->get_adc = s2mf301_if_get_adc;
 #endif
 	muic_if->set_jig_ctrl_on = s2mf301_if_set_jig_ctrl_on;
-#if IS_ENABLED(CONFIG_MUIC_SYSFS)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SYSFS)
 	muic_if->show_register = s2mf301_if_show_register;
 #endif
 #if IS_ENABLED(CONFIG_HICCUP_CHARGER)
@@ -1921,7 +1921,7 @@ static int s2mf301_muic_probe(struct platform_device *pdev)
 		goto err_kfree1;
 	}
 
-#if IS_ENABLED(CONFIG_MUIC_CORE)
+#if IS_ENABLED(CONFIG_ERD_MUIC_CORE)
 	muic_pdata = muic_core_init(muic_data);
 	if (unlikely(!muic_pdata))
 		goto err_kfree1;
@@ -1929,7 +1929,7 @@ static int s2mf301_muic_probe(struct platform_device *pdev)
 	muic_data->pdata = muic_pdata;
 #endif
 
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 	muic_if = muic_manager_init(muic_pdata, muic_data);
 #else
 	muic_if = kzalloc(sizeof(*muic_if), GFP_KERNEL);
@@ -1958,7 +1958,7 @@ static int s2mf301_muic_probe(struct platform_device *pdev)
 	s2mf301_muic_set_wake_lock(muic_data);
 	platform_set_drvdata(pdev, muic_data);
 
-#if IS_ENABLED(CONFIG_MUIC_CORE)
+#if IS_ENABLED(CONFIG_ERD_MUIC_CORE)
 	if (muic_data->pdata->init_gpio_cb)
 		ret = muic_data->pdata->init_gpio_cb(muic_data->pdata, get_switch_sel());
 	if (ret) {
@@ -1970,7 +1970,7 @@ static int s2mf301_muic_probe(struct platform_device *pdev)
 		muic_pdata->usb_path, muic_pdata->uart_path);
 #endif
 
-#if IS_ENABLED(CONFIG_MUIC_SYSFS)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SYSFS)
 	ret = muic_sysfs_init(muic_pdata);
 	if (ret) {
 		pr_err("failed to create sysfs\n");
@@ -1978,14 +1978,14 @@ static int s2mf301_muic_probe(struct platform_device *pdev)
 	}
 #endif
 
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MF301_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MF301_AFC)
 	ret = s2mf301_hv_muic_init(muic_data);
 	if (ret) {
 		pr_err("failed to init hv-muic(%d)\n", ret);
 		goto fail;
 
 	}
-#endif /* CONFIG_HV_MUIC_S2MF301_AFC */
+#endif /* CONFIG_ERD_HV_MUIC_S2MF301_AFC */
 
 	ret = s2mf301_muic_reg_init(muic_data);
 	if (ret) {
@@ -1997,7 +1997,7 @@ static int s2mf301_muic_probe(struct platform_device *pdev)
 		pr_err("%s rustproof is enabled\n", __func__);
 		ret = _s2mf301_muic_sel_path(muic_data, S2MF301_PATH_OPEN);
 	}
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MF301_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MF301_AFC)
 	if (get_afc_mode() == CH_MODE_AFC_DISABLE_VAL) {
 		pr_info("AFC mode disabled\n");
 		muic_data->pdata->afc_disable = true;
@@ -2005,14 +2005,14 @@ static int s2mf301_muic_probe(struct platform_device *pdev)
 		pr_info("AFC mode enabled\n");
 		muic_data->pdata->afc_disable = false;
 	}
-#endif /* CONFIG_HV_MUIC_S2MF301_AFC */
+#endif /* CONFIG_ERD_HV_MUIC_S2MF301_AFC */
 
 	muic_if->opmode = S2M_OPMODE_CCIC;
 	pr_info("%s muic_if->opmode(%d)\n", __func__, muic_if->opmode);
 
 	INIT_DELAYED_WORK(&muic_data->dcd_recheck, s2mf301_muic_dcd_recheck);
 	INIT_DELAYED_WORK(&muic_data->pcp_clk, s2mf301_muic_pcp_clk);
-#if IS_ENABLED(CONFIG_S2MF301_SPECOUT_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_S2MF301_SPECOUT_CHARGER)
 	INIT_DELAYED_WORK(&muic_data->cable_timeout, s2mf301_muic_cable_timeout);
 #endif
 
@@ -2021,7 +2021,7 @@ static int s2mf301_muic_probe(struct platform_device *pdev)
 		pr_err("%s failed to init psy(%d)\n", __func__, ret);
 	}
 
-#if defined(CONFIG_MUIC_SUPPORT_PRSWAP)
+#if defined(CONFIG_ERD_MUIC_SUPPORT_PRSWAP)
 	_s2mf301_muic_set_chg_det(muic_data, MUIC_ENABLE);
 #endif
 	_s2mf301_muic_control_rid_adc(muic_data, false);
@@ -2037,7 +2037,7 @@ static int s2mf301_muic_probe(struct platform_device *pdev)
 		goto fail_init_irq;
 	}
 
-#if IS_ENABLED(CONFIG_S2MF301_MUIC_STABLE_RESET)
+#if IS_ENABLED(CONFIG_ERD_S2MF301_MUIC_STABLE_RESET)
 	pr_info("%s, delay for rescan\n", __func__);
 	msleep(300);
 #endif
@@ -2050,7 +2050,7 @@ static int s2mf301_muic_probe(struct platform_device *pdev)
 			schedule_delayed_work(&muic_data->dcd_recheck, msecs_to_jiffies(100));
 		}
 	}
-#if IS_ENABLED(CONFIG_S2MF301_SPECOUT_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_S2MF301_SPECOUT_CHARGER)
 	if (_s2mf301_muic_get_vbus_state(muic_data)) {
 		if (muic_pdata->attached_dev == ATTACHED_DEV_NONE_MUIC ||
 				muic_pdata->attached_dev == ATTACHED_DEV_UNKNOWN_MUIC) {
@@ -2067,11 +2067,11 @@ static int s2mf301_muic_probe(struct platform_device *pdev)
 
 fail_init_irq:
 fail:
-#if IS_ENABLED(CONFIG_MUIC_SYSFS)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SYSFS)
 	//muic_sysfs_deinit(muic_pdata);
 fail_init_sysfs:
 #endif
-#if IS_ENABLED(CONFIG_MUIC_CORE)
+#if IS_ENABLED(CONFIG_ERD_MUIC_CORE)
 fail_init_gpio:
 #endif
 	mutex_destroy(&muic_data->muic_mutex);
@@ -2094,19 +2094,19 @@ static int s2mf301_muic_remove(struct platform_device *pdev)
 	if (muic_data) {
 		pr_info("%s\n", __func__);
 
-#if IS_ENABLED(CONFIG_MUIC_SYSFS)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SYSFS)
 		//if (muic_data->pdata != NULL)
 		//	muic_sysfs_deinit(muic_data->pdata);
 #endif
 
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 		if (muic_data->if_data != NULL)
 			muic_manager_exit(muic_data->if_data);
 #else
 		kfree(muic_data->if_data);
 #endif
 
-#if IS_ENABLED(CONFIG_MUIC_CORE)
+#if IS_ENABLED(CONFIG_ERD_MUIC_CORE)
 		muic_core_exit(muic_data->pdata);
 #endif
 
@@ -2134,9 +2134,9 @@ static void s2mf301_muic_shutdown(struct platform_device *pdev)
 
 	cancel_delayed_work(&muic_data->cable_timeout);
 
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MF301_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MF301_AFC)
 	s2mf301_hv_muic_remove(muic_data);
-#endif /* CONFIG_HV_MUIC_S2MF301_AFC */
+#endif /* CONFIG_ERD_HV_MUIC_S2MF301_AFC */
 
 	ret = _s2mf301_muic_sel_path(muic_data, S2MF301_PATH_OPEN);
 	if (ret < 0)

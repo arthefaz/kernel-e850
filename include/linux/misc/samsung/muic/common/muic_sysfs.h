@@ -24,7 +24,7 @@
 
 #include <linux/misc/samsung/muic/common/muic.h>
 
-#if IS_ENABLED(CONFIG_MUIC_SYSFS)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SYSFS)
 extern struct device *muic_device_create(void *drvdata, const char *fmt);
 extern void muic_device_destroy(dev_t devt);
 int muic_sysfs_init(struct muic_platform_data *muic_pdata);

@@ -8,28 +8,28 @@
 #include <linux/sched.h>
 #include <linux/of_gpio.h>
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include <linux/usb/typec/samsung/common/usbpd.h>
 #include <linux/misc/samsung/muic/common/muic.h>
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 #include <linux/misc/samsung/muic/common/muic_notifier.h>
-#endif /* CONFIG_MUIC_NOTIFIER */
+#endif /* CONFIG_ERD_MUIC_NOTIFIER */
 
 #include <linux/usb/typec/samsung/common/usbpd_ext.h>
-#if IS_ENABLED(CONFIG_PDIC_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 #include <linux/usb/typec/samsung/s2mu106/usbpd-s2mu106.h>
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 #include <linux/usb/typec_s2m/s2mu107/usbpd-s2mu107.h>
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 #include <linux/usb/typec/samsung/s2mf301/usbpd-s2mf301.h>
 #endif
-#elif IS_ENABLED(CONFIG_PDIC_NOITIFIER)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_NOITIFIER)
 #include <linux/usb/typec/slsi/common/usbpd.h>
 #include <linux/delay.h>
 #include <linux/muic/common/muic.h>
-#if defined(CONFIG_MUIC_NOTIFIER)
+#if defined(CONFIG_ERD_MUIC_NOTIFIER)
 #include <linux/muic/common/muic_notifier.h>
-#endif /* CONFIG_MUIC_NOTIFIER */
+#endif /* CONFIG_ERD_MUIC_NOTIFIER */
 #include <linux/usb/typec/common/pdic_notifier.h>
 #include <linux/usb/typec/slsi/common/s2m_pdic_notifier.h>
 #ifdef CONFIG_BATTERY_SAMSUNG
@@ -56,7 +56,7 @@
 extern void select_pdo(int num);
 void usbpd_manager_select_pdo(int num);
 extern void (*fp_select_pdo)(int num);
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 extern int (*fp_sec_pd_select_pps)(int num, int ppsVol, int ppsCur);
 extern int (*fp_sec_pd_get_apdo_max_power)(unsigned int *pdo_pos, unsigned int *taMaxVol, unsigned int *taMaxCur, unsigned int *taMaxPwr);
 extern int (*fp_pps_enable)(int num, int ppsVol, int ppsCur, int enable);
@@ -91,7 +91,7 @@ static char DP_Pin_Assignment_Print[7][40] = {
 
 void usbpd_manager_select_pdo_cancel(struct device *dev);
 
-#if IS_ENABLED(CONFIG_CHECK_CTYPE_SIDE)
+#if IS_ENABLED(CONFIG_ERD_CHECK_CTYPE_SIDE)
 int usbpd_manager_get_side_check(void)
 {
 	struct usbpd_data *pd_data = pd_noti.pd_data;
@@ -109,7 +109,7 @@ void usbpd_manager_select_pdo(int num)
 	struct usbpd_data *pd_data = pd_noti.pusbpd;
 	struct usbpd_manager_data *manager = &pd_data->manager;
 	bool vbus_short = 0;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	int pps_enable = 0;
 #endif
 	PDIC_OPS_PARAM_FUNC(get_vbus_short_check, pd_data, &vbus_short);
@@ -142,7 +142,7 @@ void usbpd_manager_select_pdo(int num)
 		goto exit;
 	}
 
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	PDIC_OPS_PARAM_FUNC(get_pps_enable, pd_data, &pps_enable);
 
 	if (pps_enable == PPS_ENABLE) {
@@ -166,7 +166,7 @@ exit:
 	mutex_unlock(&manager->pdo_mutex);
 }
 
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 int usbpd_manager_select_pps(int num, int ppsVol, int ppsCur)
 {
 	struct usbpd_data *pd_data = pd_noti.pusbpd;
@@ -408,7 +408,7 @@ void pdo_ctrl_by_flash(bool mode)
 {
 	struct usbpd_data *pd_data = pd_noti.pusbpd;
 	struct usbpd_manager_data *manager = &pd_data->manager;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	int pps_enable = 0;
 #endif
 
@@ -420,7 +420,7 @@ void pdo_ctrl_by_flash(bool mode)
 	else
 		manager->flash_mode = 0;
 
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	PDIC_OPS_PARAM_FUNC(get_pps_enable, pd_data, &pps_enable);
 
 	if (pps_enable == PPS_ENABLE) {
@@ -980,16 +980,16 @@ void usbpd_manager_plug_attach(struct device *dev, muic_attached_dev_t new_dev)
 	if (new_dev == ATTACHED_DEV_TYPE3_CHARGER_MUIC) {
 		if (policy->send_sink_cap || (manager->ps_rdy == 1 &&
 		manager->prev_available_pdo != pd_noti.sink_status.available_pdo_num)) {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 			pd_noti.event = IFCONN_NOTIFY_EVENT_PD_SINK_CAP;
-#elif defined(CONFIG_PDIC_NOTIFIER)
+#elif defined(CONFIG_ERD_PDIC_NOTIFIER)
 			pd_noti.event = PDIC_NOTIFY_EVENT_PD_SINK_CAP;
 #endif
 			policy->send_sink_cap = 0;
 		} else
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 			pd_noti.event = IFCONN_NOTIFY_EVENT_PD_SINK;
-#elif defined(CONFIG_PDIC_NOTIFIER)
+#elif defined(CONFIG_ERD_PDIC_NOTIFIER)
 			pd_noti.event = PDIC_NOTIFY_EVENT_PD_SINK;
 #endif
 		manager->ps_rdy = 1;
@@ -1012,14 +1012,14 @@ void usbpd_manager_plug_detach(struct device *dev, bool notify)
 #endif
 	manager->attached_dev = ATTACHED_DEV_NONE_MUIC;
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	if (pd_noti.event != IFCONN_NOTIFY_EVENT_DETACH) {
-#elif defined(CONFIG_PDIC_NOTIFIER)
+#elif defined(CONFIG_ERD_PDIC_NOTIFIER)
 	if (pd_noti.event != PDIC_NOTIFY_EVENT_DETACH) {
 #endif
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 		pd_noti.event = IFCONN_NOTIFY_EVENT_DETACH;
-#elif defined(CONFIG_PDIC_NOTIFIER)
+#elif defined(CONFIG_ERD_PDIC_NOTIFIER)
 		pd_noti.event = PDIC_NOTIFY_EVENT_DETACH;
 #endif
 		PDIC_OPS_PARAM_FUNC(send_pd_info, pd_data, 0);
@@ -1171,7 +1171,7 @@ void usbpd_manager_turn_off_vconn(struct usbpd_data *pd_data)
 
 void usbpd_manager_turn_on_source(struct usbpd_data *pd_data)
 {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	pr_info("%s: usbpd plug attached\n", __func__);
 #else
 	struct usbpd_manager_data *manager = &pd_data->manager;
@@ -1185,7 +1185,7 @@ void usbpd_manager_turn_on_source(struct usbpd_data *pd_data)
 
 void usbpd_manager_turn_off_power_supply(struct usbpd_data *pd_data)
 {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	pr_info("%s: usbpd plug detached\n", __func__);
 
 	/* TODO : Turn off power supply */
@@ -1202,12 +1202,12 @@ void usbpd_manager_turn_off_power_supply(struct usbpd_data *pd_data)
 
 void usbpd_manager_turn_off_power_sink(struct usbpd_data *pd_data)
 {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
-#if IS_ENABLED(CONFIG_PDIC_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *pdic_data = pd_data->phy_driver_data;
 #endif
 
@@ -1412,11 +1412,11 @@ int usbpd_manager_get_svids(struct usbpd_data *pd_data)
 {
 	struct policy_data *policy = &pd_data->policy;
 	struct usbpd_manager_data *manager = &pd_data->manager;
-#if IS_ENABLED(CONFIG_PDIC_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *pdic_data = pd_data->phy_driver_data;
 #endif
 
@@ -1427,7 +1427,7 @@ int usbpd_manager_get_svids(struct usbpd_data *pd_data)
 				manager->SVID_0, manager->SVID_1);
 
 	if (manager->SVID_0 == TypeC_DP_SUPPORT) {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 		if (pdic_data->is_client == CLIENT_ON) {
 			ifconn_event_work(pdic_data, IFCONN_NOTIFY_MUIC,
 				IFCONN_NOTIFY_ID_ATTACH, IFCONN_NOTIFY_EVENT_DETACH, NULL);
@@ -1541,11 +1541,11 @@ int usbpd_manager_exit_mode(struct usbpd_data *pd_data, unsigned mode)
 int usbpd_manager_get_status(struct usbpd_data *pd_data)
 {
 	struct policy_data *policy = &pd_data->policy;
-#if IS_ENABLED(CONFIG_PDIC_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *pdic_data = pd_data->phy_driver_data;
 #endif
 
@@ -1621,11 +1621,11 @@ int usbpd_manager_get_status(struct usbpd_data *pd_data)
 int usbpd_manager_get_configure(struct usbpd_data *pd_data)
 {
 	struct usbpd_manager_data *manager = &pd_data->manager;
-#if IS_ENABLED(CONFIG_PDIC_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *pdic_data = pd_data->phy_driver_data;
 #endif
 
@@ -1640,11 +1640,11 @@ int usbpd_manager_get_configure(struct usbpd_data *pd_data)
 int usbpd_manager_get_attention(struct usbpd_data *pd_data)
 {
 	struct policy_data *policy = &pd_data->policy;
-#if IS_ENABLED(CONFIG_PDIC_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *pdic_data = pd_data->phy_driver_data;
 #endif
 	struct usbpd_manager_data *manager = &pd_data->manager;
@@ -1718,11 +1718,11 @@ int usbpd_manager_get_attention(struct usbpd_data *pd_data)
 
 void usbpd_dp_detach(struct usbpd_data *pd_data)
 {
-#if IS_ENABLED(CONFIG_PDIC_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PDIC_S2MU106)
 	struct s2mu106_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MU107)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MU107)
 	struct s2mu107_usbpd_data *pdic_data = pd_data->phy_driver_data;
-#elif IS_ENABLED(CONFIG_PDIC_S2MF301)
+#elif IS_ENABLED(CONFIG_ERD_PDIC_S2MF301)
 	struct s2mf301_usbpd_data *pdic_data = pd_data->phy_driver_data;
 #endif
 	struct usbpd_manager_data *manager = &pd_data->manager;
@@ -1832,9 +1832,9 @@ data_obj_type usbpd_manager_select_capability(struct usbpd_data *pd_data)
 	/* TODO: Request from present capabilities
 		indicate if other capabilities would be required */
 	data_obj_type obj;
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER) || (defined(CONFIG_BATTERY_SAMSUNG) && defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER))
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER) || (defined(CONFIG_BATTERY_SAMSUNG) && defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER))
 	int pdo_num = pd_noti.sink_status.selected_pdo_num;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if (pd_noti.sink_status.power_list[pdo_num].apdo) {
 		pr_info("%s, pps\n", __func__);
 		obj.request_data_object_pps.output_voltage = pd_noti.sink_status.pps_voltage / USBPD_PPS_RQ_VOLT_UNIT;
@@ -1870,7 +1870,7 @@ int usbpd_manager_get_selected_voltage(struct usbpd_data *pd_data, int selected_
 {
 #if defined(CONFIG_BATTERY_SAMSUNG) && defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 	PDIC_SINK_STATUS * pdic_sink_status = &pd_noti.sink_status;
-#elif IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#elif IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	ifconn_pd_sink_status_t *pdic_sink_status = &pd_noti.sink_status;
 #endif
 	int available_pdo = pdic_sink_status->available_pdo_num;
@@ -1881,7 +1881,7 @@ int usbpd_manager_get_selected_voltage(struct usbpd_data *pd_data, int selected_
 		return 0;
 	}
 
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if (pdic_sink_status->power_list[selected_pdo].apdo) {
 		pr_info("%s, selected pdo is apdo(%d)\n", __func__, selected_pdo);
 		return 0;
@@ -1909,7 +1909,7 @@ int usbpd_manager_evaluate_capability(struct usbpd_data *pd_data)
 	int i = 0;
 	int power_type = 0;
 	int max_volt = 0, min_volt = 0, max_current;
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	int available_pdo_num = 0;
 	ifconn_pd_sink_status_t *pdic_sink_status = &pd_noti.sink_status;
 #endif
@@ -1939,7 +1939,7 @@ int usbpd_manager_evaluate_capability(struct usbpd_data *pd_data)
 					i+1, max_volt * USBPD_VOLT_UNIT);
 			break;
 		case POWER_TYPE_PPS:
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 			available_pdo_num = i + 1;
 #endif
 			max_volt = pd_obj->power_data_obj_pps.max_voltage;
@@ -1962,7 +1962,7 @@ int usbpd_manager_evaluate_capability(struct usbpd_data *pd_data)
 
 	if (manager->flash_mode == 1)
 		available_pdo_num = 1;
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	if ((available_pdo_num > 0) &&
 			(pdic_sink_status->available_pdo_num != available_pdo_num)) {
 		policy->send_sink_cap = 1;
@@ -2132,7 +2132,7 @@ int usbpd_init_manager(struct usbpd_data *pd_data)
 	INIT_DELAYED_WORK(&manager->start_discover_msg_handler, usbpd_manager_start_discover_msg_handler);
 
 	fp_select_pdo = usbpd_manager_select_pdo;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	fp_select_pps = usbpd_manager_select_pps;
 	fp_pd_get_apdo_max_power = usbpd_manager_get_apdo_max_power;
 	fp_pd_pps_enable = usbpd_manager_pps_enable;

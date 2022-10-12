@@ -9,25 +9,25 @@
 #include <linux/delay.h>
 #include <linux/completion.h>
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include <linux/usb/typec/samsung/common/usbpd_ext.h>
 #include <linux/misc/samsung/ifconn/ifconn_notifier.h>
 //#include "../../../notify_lsi/usb_notify.h"
 #include <linux/usb/typec/samsung/common/usbpd.h>
 
 #include <linux/misc/samsung/muic/common/muic.h>
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 #include <linux/muic/common/muic_notifier.h>
-#endif /* CONFIG_MUIC_NOTIFIER */
+#endif /* CONFIG_ERD_MUIC_NOTIFIER */
 #else
 #include <linux/usb/typec/slsi/common/usbpd_ext.h>
 #include <linux/usb/typec/slsi/common/usbpd.h>
 #include <linux/usb/typec/common/pdic_core.h>
 
 #include <linux/muic/common/muic.h>
-#if defined(CONFIG_MUIC_NOTIFIER)
+#if defined(CONFIG_ERD_MUIC_NOTIFIER)
 #include <linux/muic/common/muic_notifier.h>
-#endif /* CONFIG_MUIC_NOTIFIER */
+#endif /* CONFIG_ERD_MUIC_NOTIFIER */
 #endif
 
 #define CHECK_MSG(pd, msg, ret) do {\
@@ -286,7 +286,7 @@ policy_state usbpd_policy_src_negotiate_capability(struct policy_data *policy)
 	/* PD State Inform for AP */
 	dev_info(pd_data->dev, "%s\n", __func__);
 
-#if defined(CONFIG_PDIC_PD30) && !defined(CONFIG_PDIC_S2MU106)
+#if defined(CONFIG_ERD_PDIC_PD30) && !defined(CONFIG_ERD_PDIC_S2MU106)
 	/* Check Specification Revision */
 	if(pd_data->protocol_rx.msg_header.spec_revision >= USBPD_PD3_0)
 		pd_data->specification_revision = USBPD_PD3_0;
@@ -411,7 +411,7 @@ policy_state usbpd_policy_src_ready(struct policy_data *policy)
 	}
 #endif
 
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	/* when PD3.0, set sink Tx Ok(RP 330uA) */
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		PDIC_OPS_PARAM_FUNC(set_rp_control, pd_data, PLUG_CTRL_RP330);
@@ -433,7 +433,7 @@ policy_state usbpd_policy_src_ready(struct policy_data *policy)
 
 		ms = usbpd_check_time1(pd_data);
 
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 		/* Specification Revision */
 		if(pd_data->specification_revision == USBPD_PD3_0){
 			/* PD 3.0 : Control Message */
@@ -1146,7 +1146,7 @@ policy_state usbpd_policy_snk_evaluate_capability(struct policy_data *policy)
 	/* PD State Inform to AP */
 	dev_info(pd_data->dev, "%s\n", __func__);
 
-#if defined(CONFIG_PDIC_PD30) && !defined(CONFIG_PDIC_S2MU106)
+#if defined(CONFIG_ERD_PDIC_PD30) && !defined(CONFIG_ERD_PDIC_S2MU106)
 	/* Check Specification Revision */
 	if(pd_data->protocol_rx.msg_header.spec_revision >= USBPD_PD3_0)
 		pd_data->specification_revision = USBPD_PD3_0;
@@ -1155,7 +1155,7 @@ policy_state usbpd_policy_snk_evaluate_capability(struct policy_data *policy)
 #endif
 
 	/* Select PDO */
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER) || defined(CONFIG_PDIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER) || defined(CONFIG_ERD_PDIC_NOTIFIER)
 	if (pd_noti.sink_status.selected_pdo_num == 0) {
 		pd_noti.sink_status.selected_pdo_num = 1;
 		if (policy->sink_cap_received) {
@@ -1338,14 +1338,14 @@ policy_state usbpd_policy_snk_transition_sink(struct policy_data *policy)
  				pd_noti.sink_status.available_pdo_num = 1;
 				if (pd_noti.sink_status.power_list[1].max_current > 1800)
 					pd_noti.sink_status.power_list[1].max_current = 1800;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 				pd_noti.sink_status.has_apdo = false;
 #endif
 			}
 			pd_noti.sink_status.current_pdo_num = pd_noti.sink_status.selected_pdo_num;
 #endif
 #endif
-#ifdef CONFIG_PDIC_PD30
+#ifdef CONFIG_ERD_PDIC_PD30
 			PDIC_OPS_FUNC(send_psrdy, pd_data);
 #endif
 			/* Notify Plug Attach */
@@ -1420,7 +1420,7 @@ policy_state usbpd_policy_snk_ready(struct policy_data *policy)
 
 
 		ms = usbpd_check_time1(pd_data);
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 		/* Specification Revision */
 		if(pd_data->specification_revision == USBPD_PD3_0){
 			/* PD 3.0 : Control Message */
@@ -1547,7 +1547,7 @@ policy_state usbpd_policy_snk_hard_reset(struct policy_data *policy)
 policy_state usbpd_policy_snk_transition_to_default(struct policy_data *policy)
 {
 	struct usbpd_data *pd_data = policy_to_usbpd(policy);
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	struct usbpd_manager_data *manager = &pd_data->manager;
 #endif
 	int ret = PE_SNK_Startup;
@@ -1565,7 +1565,7 @@ policy_state usbpd_policy_snk_transition_to_default(struct policy_data *policy)
 	/* PD State Inform to AP */
 	dev_info(pd_data->dev, "%s\n", __func__);
 
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	PDIC_OPS_FUNC(send_hard_reset_dc, pd_data);
 #endif
 	/* Message ID Clear */
@@ -1577,7 +1577,7 @@ policy_state usbpd_policy_snk_transition_to_default(struct policy_data *policy)
 	/* Driver Reset */
 	PDIC_OPS_FUNC(driver_reset, pd_data);
 
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	mutex_lock(&manager->pdo_mutex);
 	PDIC_OPS_PARAM_FUNC(pps_enable, pd_data, PPS_DISABLE);
 	mutex_unlock(&manager->pdo_mutex);
@@ -2580,7 +2580,7 @@ policy_state usbpd_policy_prs_snk_src_accept_swap(struct policy_data *policy)
 
 	/* Send Accept Message */
 	PDIC_OPS_PARAM_FUNC(get_data_role, pd_data, &data_role);
-#if defined CONFIG_PDIC_S2MU004
+#if defined CONFIG_ERD_PDIC_S2MU004
 	PDIC_OPS_PARAM_FUNC(set_power_role, pd_data, USBPD_SINK);
 	usbpd_send_ctrl_msg(pd_data, &policy->tx_msg_header, USBPD_Accept,
 													data_role, USBPD_SINK);
@@ -3045,7 +3045,7 @@ policy_state usbpd_policy_ufp_vdm_send_identity(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = PD_SID;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3061,7 +3061,7 @@ policy_state usbpd_policy_ufp_vdm_send_identity(struct policy_data *policy)
 	policy->tx_data_obj[1].id_header_vdo.Data_Capable_USB_Device = 1;
 	policy->tx_data_obj[1].id_header_vdo.Product_Type = UFP_PDUSB_Peripheral;
 	policy->tx_data_obj[1].id_header_vdo.modal_op_supported = 0;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[1].id_header_vdo.product_type_dfp = DFP_PDUSB_Host;
 	else
@@ -3117,7 +3117,7 @@ policy_state usbpd_policy_ufp_vdm_get_identity_nak(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = rx_svid;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3174,7 +3174,7 @@ policy_state usbpd_policy_ufp_vdm_send_svids(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = PD_SID;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3225,7 +3225,7 @@ policy_state usbpd_policy_ufp_vdm_get_svids_nak(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = rx_svid;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3281,7 +3281,7 @@ policy_state usbpd_policy_ufp_vdm_send_modes(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = PD_SID;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3328,7 +3328,7 @@ policy_state usbpd_policy_ufp_vdm_get_modes_nak(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = rx_svid;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3400,7 +3400,7 @@ policy_state usbpd_policy_ufp_vdm_mode_entry_ack(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = PD_SID;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3445,7 +3445,7 @@ policy_state usbpd_policy_ufp_vdm_mode_entry_nak(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = rx_svid;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3511,7 +3511,7 @@ policy_state usbpd_policy_ufp_vdm_mode_exit_ack(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = PD_SID;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3555,7 +3555,7 @@ policy_state usbpd_policy_ufp_vdm_mode_exit_nak(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = rx_svid;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3596,7 +3596,7 @@ policy_state usbpd_policy_ufp_vdm_attention_request(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = PD_SID;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3666,7 +3666,7 @@ policy_state usbpd_policy_ufp_vdm_status_ack(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = PD_SID;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3709,7 +3709,7 @@ policy_state usbpd_policy_ufp_vdm_status_nak(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = rx_svid;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3778,7 +3778,7 @@ policy_state usbpd_policy_ufp_vdm_configure_ack(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = PD_SID;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -3821,7 +3821,7 @@ policy_state usbpd_policy_ufp_vdm_configure_nak(struct policy_data *policy)
 	policy->tx_data_obj[0].object = 0;
 	policy->tx_data_obj[0].structured_vdm.svid = rx_svid;
 	policy->tx_data_obj[0].structured_vdm.vdm_type = Structured_VDM;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	if(pd_data->specification_revision >= USBPD_PD3_0)
 		policy->tx_data_obj[0].structured_vdm.version = VDM_Version2;
 	else
@@ -6245,10 +6245,10 @@ void usbpd_init_policy(struct usbpd_data *pd_data)
 	policy->cap_mismatch = 0;
 	policy->pd_src_ready = 0;
 	policy->got_pps_apdo = 0;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	policy->pps_enable = 0;
 #endif
-#if defined(CONFIG_PDIC_PD30) && !defined(CONFIG_PDIC_S2MU106)
+#if defined(CONFIG_ERD_PDIC_PD30) && !defined(CONFIG_ERD_PDIC_S2MU106)
 	pd_data->specification_revision = USBPD_PD3_0;
 #else
 	pd_data->specification_revision = USBPD_PD2_0;

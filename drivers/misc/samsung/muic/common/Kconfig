@@ -4,16 +4,16 @@
 
 comment "MUIC configs"
 
-config MUIC_MANAGER
+config ERD_MUIC_MANAGER
 	bool "MUIC Manager supports PDIC chip interface"
-	depends on USE_S2M_MUIC
+	depends on ERD_USE_S2M_MUIC
 	default n
 	help
 	  If you say yes here you will get support manager for the PDIC chip.
 
-config MUIC_CORE
+config ERD_MUIC_CORE
 	bool "Supports MUIC Core"
-	depends on USE_S2M_MUIC
+	depends on ERD_USE_S2M_MUIC
 	default n
 	help
 	  If you say yes here you will get support for the MUIC Core functionalities

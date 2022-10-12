@@ -24,9 +24,9 @@
 #include <linux/misc/samsung/muic/common/muic.h>
 #include <linux/misc/samsung/muic/common/muic_interface.h>
 
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 #include <linux/muic/common/muic_notifier.h>
-#endif /* CONFIG_MUIC_NOTIFIER */
+#endif /* CONFIG_ERD_MUIC_NOTIFIER */
 
 #if IS_ENABLED(CONFIG_CCIC_NOTIFIER)
 #include <linux/usb/typec/common/pdic_notifier.h>
@@ -42,7 +42,7 @@ struct switch_dev switch_uart3 = {
 };
 #endif /* CONFIG_SWITCH */
 
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 static struct notifier_block dock_notifier_block;
 
 void muic_send_dock_intent(int type)
@@ -160,7 +160,7 @@ static int muic_handle_dock_notification(struct notifier_block *nb,
 	pr_info("%s: ignore(%d)\n", __func__, attached_dev);
 	return NOTIFY_DONE;
 }
-#endif /* CONFIG_MUIC_NOTIFIER */
+#endif /* CONFIG_ERD_MUIC_NOTIFIER */
 
 static void muic_init_switch_dev_cb(void)
 {
@@ -184,19 +184,19 @@ static void muic_init_switch_dev_cb(void)
 
 #endif /* CONFIG_SWITCH */
 
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 	muic_notifier_register(&dock_notifier_block,
 			muic_handle_dock_notification, MUIC_NOTIFY_DEV_DOCK);
-#endif /* CONFIG_MUIC_NOTIFIER */
+#endif /* CONFIG_ERD_MUIC_NOTIFIER */
 
 	pr_info("%s: done\n", __func__);
 }
 
 static void muic_cleanup_switch_dev_cb(void)
 {
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 	muic_notifier_unregister(&dock_notifier_block);
-#endif /* CONFIG_MUIC_NOTIFIER */
+#endif /* CONFIG_ERD_MUIC_NOTIFIER */
 
 	pr_info("%s: done\n", __func__);
 }
@@ -281,7 +281,7 @@ int muic_init_gpio_cb(void *data, int switch_sel)
 	/* These flags MUST be updated again from probe function */
 	muic_pdata->rustproof_on = false;
 
-#if !IS_ENABLED(CONFIG_SEC_FACTORY) && IS_ENABLED(CONFIG_MUIC_SUPPORT_TYPEB)
+#if !IS_ENABLED(CONFIG_SEC_FACTORY) && IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_TYPEB)
 	if (!(switch_sel & SWITCH_SEL_RUSTPROOF_MASK))
 		muic_pdata->rustproof_on = true;
 #endif /* !CONFIG_SEC_FACTORY */
@@ -333,7 +333,7 @@ static int muic_core_switch_to_usb(struct muic_platform_data *muic_pdata, int pa
 	struct muic_interface_t *muic_if = (struct muic_interface_t *)muic_pdata->muic_if;
 
 	pr_info("%s\n", __func__);
-#if !IS_ENABLED(CONFIG_MUIC_USB_SWITCH)
+#if !IS_ENABLED(CONFIG_ERD_MUIC_USB_SWITCH)
 	if (muic_pdata->gpio_usb_sel) {
 		MUIC_PDATA_FUNC_MULTI_PARAM(muic_if->set_gpio_usb_sel,
 			muic_pdata->drv_data, path, &ret);
@@ -359,7 +359,7 @@ static int muic_core_switch_to_uart(struct muic_platform_data *muic_pdata, int p
 	struct muic_interface_t *muic_if = (struct muic_interface_t *)muic_pdata->muic_if;
 
 	pr_info("%s\n", __func__);
-#if !IS_ENABLED(CONFIG_MUIC_UART_SWITCH)
+#if !IS_ENABLED(CONFIG_ERD_MUIC_UART_SWITCH)
 	if (muic_pdata->gpio_uart_sel) {
 		MUIC_PDATA_FUNC_MULTI_PARAM(muic_if->set_gpio_uart_sel,
 			muic_pdata->drv_data, path, &ret);
@@ -824,16 +824,16 @@ static int muic_core_handle_attached_new_dev(struct muic_platform_data *muic_pda
 	case ATTACHED_DEV_UNDEFINED_CHARGING_MUIC:
 	case ATTACHED_DEV_UNSUPPORTED_ID_VB_MUIC:
 		ret = muic_core_attach_charger(muic_pdata, new_dev);
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_HV)
 		MUIC_PDATA_FUNC(muic_if->check_afc_ready, muic_pdata->drv_data, &ret);
-#endif /* CONFIG_HV_MUIC_S2MU004_AFC */
+#endif /* CONFIG_ERD_HV_MUIC_S2MU004_AFC */
 		MUIC_PDATA_FUNC(muic_if->set_com_to_open, muic_pdata->drv_data, &ret);
 		break;
 	case ATTACHED_DEV_JIG_UART_OFF_VB_OTG_MUIC:
 	case ATTACHED_DEV_JIG_UART_OFF_VB_FG_MUIC:
 	case ATTACHED_DEV_JIG_UART_OFF_VB_MUIC:
 	case ATTACHED_DEV_JIG_UART_OFF_MUIC:
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_TYPEB)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_TYPEB)
 #if IS_ENABLED(CONFIG_SEC_FACTORY)
 		muic_pdata->is_jig_on = true;
 #endif
@@ -844,19 +844,19 @@ static int muic_core_handle_attached_new_dev(struct muic_platform_data *muic_pda
 		break;
 	case ATTACHED_DEV_JIG_UART_ON_MUIC:
 	case ATTACHED_DEV_JIG_UART_ON_VB_MUIC:
-#if !IS_ENABLED(CONFIG_MUIC_SUPPORT_TYPEB)
+#if !IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_TYPEB)
 		muic_pdata->is_jig_on = true;
 #endif
 		ret = muic_core_attach_jig_uart_boot_off(muic_pdata, new_dev);
 		break;
 	case ATTACHED_DEV_JIG_USB_OFF_MUIC:
-#if !IS_ENABLED(CONFIG_MUIC_SUPPORT_TYPEB)
+#if !IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_TYPEB)
 		muic_pdata->is_jig_on = true;
 #endif
 		ret = muic_core_attach_jig_usb_boot_off(muic_pdata, muic_pdata->vbvolt);
 		break;
 	case ATTACHED_DEV_JIG_USB_ON_MUIC:
-#if !IS_ENABLED(CONFIG_MUIC_SUPPORT_TYPEB)
+#if !IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_TYPEB)
 		muic_pdata->is_jig_on = true;
 #endif
 		ret = muic_core_attach_jig_usb_boot_on(muic_pdata, muic_pdata->vbvolt);
@@ -893,11 +893,11 @@ static int muic_core_handle_attached_new_dev(struct muic_platform_data *muic_pda
 
 	pr_info("%s:%s done\n", MUIC_CORE, __func__);
 
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_HV)
 	MUIC_PDATA_FUNC_MULTI_PARAM(muic_if->check_id_err, muic_pdata->drv_data,
 			new_dev, &ret);
 	new_dev = ret;
-#endif /* CONFIG_HV_MUIC_S2MU004_AFC */
+#endif /* CONFIG_ERD_HV_MUIC_S2MU004_AFC */
 
 	return ret;
 }
@@ -915,7 +915,7 @@ bool muic_core_get_ccic_cable_state(struct muic_platform_data *muic_pdata)
 	case ATTACHED_DEV_JIG_UART_ON_VB_MUIC:
 	case ATTACHED_DEV_OTG_MUIC:
 		return true;
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_PRSWAP)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_PRSWAP)
 	case ATTACHED_DEV_USB_MUIC:
 		return true;
 		break;
@@ -968,7 +968,7 @@ int muic_core_handle_detach(struct muic_platform_data *muic_pdata)
 		__func__, muic_pdata->attached_dev);
 
 	MUIC_PDATA_FUNC(muic_if->set_com_to_open, muic_pdata->drv_data, &ret);
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_TYPEB)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_TYPEB)
 	muic_pdata->is_jig_on = false;
 	MUIC_PDATA_FUNC(muic_if->set_jig_ctrl_on, muic_pdata->drv_data, &ret);
 #endif
@@ -990,7 +990,7 @@ int muic_core_handle_detach(struct muic_platform_data *muic_pdata)
 	case ATTACHED_DEV_TA_MUIC:
 	case ATTACHED_DEV_UNDEFINED_CHARGING_MUIC:
 		ret = muic_core_detach_charger(muic_pdata);
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_HV)
 		MUIC_PDATA_FUNC(muic_if->reset_hvcontrol_reg, muic_pdata->drv_data, &ret);
 #endif
 		break;
@@ -1021,7 +1021,7 @@ int muic_core_handle_detach(struct muic_platform_data *muic_pdata)
 		ret = muic_core_detach_charger(muic_pdata);
 		muic_pdata->attached_dev = ATTACHED_DEV_NONE_MUIC;
 		break;
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_HV)
 	case ATTACHED_DEV_AFC_CHARGER_PREPARE_MUIC:
 	case ATTACHED_DEV_AFC_CHARGER_PREPARE_DUPLI_MUIC:
 	case ATTACHED_DEV_AFC_CHARGER_5V_MUIC:
@@ -1032,7 +1032,7 @@ int muic_core_handle_detach(struct muic_platform_data *muic_pdata)
 	case ATTACHED_DEV_QC_CHARGER_PREPARE_MUIC:
 	case ATTACHED_DEV_AFC_CHARGER_ERR_V_MUIC:
 	case ATTACHED_DEV_AFC_CHARGER_ERR_V_DUPLI_MUIC:
-#if IS_ENABLED(CONFIG_HV_MUIC_TURBO_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_TURBO_CHARGER)
 	case ATTACHED_DEV_TURBO_CHARGER:
 #endif
 		ret = muic_core_detach_charger(muic_pdata);
@@ -1062,7 +1062,7 @@ int muic_core_handle_detach(struct muic_platform_data *muic_pdata)
 }
 EXPORT_SYMBOL_GPL(muic_core_handle_detach);
 
-#if IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV)
 static inline void muic_core_hv_set_new_state(struct muic_platform_data *muic_pdata,
 		muic_hv_state_t next_state)
 {
@@ -1325,10 +1325,10 @@ struct muic_platform_data *muic_core_init(void *drv_data)
 	muic_pdata->is_factory_start = false;
 	muic_pdata->is_rustproof = muic_pdata->rustproof_on;
 	muic_pdata->init_gpio_cb = muic_init_gpio_cb;
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 	muic_pdata->jig_uart_cb = muic_jig_uart_cb,
 #endif
-#if IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV)
 	muic_pdata->hv_state = HV_STATE_IDLE;
 #endif
 	muic_init_switch_dev_cb();

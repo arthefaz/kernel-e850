@@ -9,7 +9,7 @@
 #include <linux/workqueue.h>
 #include <linux/completion.h>
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include <linux/usb/typec/samsung/common/usbpd.h>
 #include <linux/misc/samsung/ifconn/ifconn_notifier.h>
 
@@ -423,7 +423,7 @@ void usbpd_set_ops(struct device *dev, usbpd_phy_ops_type *ops)
 	pd_data->phy_ops.power_off_water_check	= ops->power_off_water_check;
 #endif
 	pd_data->phy_ops.get_water_detect		= ops->get_water_detect;
-#if defined(CONFIG_PDIC_PD30)
+#if defined(CONFIG_ERD_PDIC_PD30)
 	pd_data->phy_ops.send_hard_reset_dc		= ops->send_hard_reset_dc;
 	pd_data->phy_ops.force_pps_disable		= ops->send_hard_reset_dc;
 	pd_data->phy_ops.send_psrdy				= ops->send_psrdy;
@@ -734,7 +734,7 @@ int usbpd_init(struct device *dev, void *phy_driver_data)
 	}
 #endif
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	pd_noti.pd_data = pd_data;
 	pd_noti.pusbpd = pd_data;
 	pd_noti.sink_status.current_pdo_num = 0;
@@ -753,7 +753,7 @@ int usbpd_init(struct device *dev, void *phy_driver_data)
 	pd_data->policy_wake = wakeup_source_register(NULL, "policy_wake"); // 5.4 R
 
 	pd_data->pd_support = 0;
-#if defined(CONFIG_PDIC_SUPPORT_DP)
+#if defined(CONFIG_ERD_PDIC_SUPPORT_DP)
     pd_data->dp_enabled = 0;
 #else
     pd_data->dp_enabled = 1;

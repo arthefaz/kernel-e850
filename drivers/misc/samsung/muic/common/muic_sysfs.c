@@ -27,7 +27,7 @@
 #include <linux/delay.h>
 #include <linux/misc/samsung/muic/common/muic_interface.h>
 #include <linux/misc/samsung/muic/common/muic_sysfs.h>
-#if defined(CONFIG_MUIC_SUPPORT_SEC_EXT)
+#if defined(CONFIG_ERD_MUIC_SUPPORT_SEC_EXT)
 #include <linux/sec_ext.h>
 #endif
 
@@ -160,9 +160,9 @@ static ssize_t muic_sysfs_show_adc(struct device *dev,
 
 	int ret;
 
-#if IS_ENABLED(CONFIG_MUIC_SYSFS_SHOW_REFRESH_ADC)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SYSFS_SHOW_REFRESH_ADC)
 	int is_afc_muic_ready;
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_CCIC)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_CCIC)
 	/* TODO: NOTE: There are abnormal operations of rising volatage AFC 9V
 	 * by RID enable/disable in the muic_sysfs_refresh_adc functions in the
 	 * factory bianary. This is to minimize unnecessary interrupt by RID
@@ -173,7 +173,7 @@ static ssize_t muic_sysfs_show_adc(struct device *dev,
 		/* No cable detection means RID open */
 		ret = ADC_OPEN;
 	} else {
-#if IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV)
 		if (muic_pdata->is_factory_start && is_afc_muic_ready)
 			/* No need to read adc in the middle of afc detection sequences */
 			ret = ADC_GND;
@@ -188,7 +188,7 @@ static ssize_t muic_sysfs_show_adc(struct device *dev,
 			MUIC_PDATA_FUNC(muic_if->get_adc, muic_pdata->drv_data, &ret);
 		}
 	}
-#if IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV)
 	pr_info("%s: factory: %d attached_dev: %d afc ready: %d", __func__,
 			muic_pdata->is_factory_start, muic_pdata->attached_dev,
 			is_afc_muic_ready);
@@ -230,7 +230,7 @@ static ssize_t muic_sysfs_show_usb_state(struct device *dev,
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_MUIC_DEBUG)
+#if IS_ENABLED(CONFIG_ERD_MUIC_DEBUG)
 static ssize_t muic_sysfs_show_mansw(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -430,7 +430,7 @@ static ssize_t muic_show_vbus_value(struct device *dev,
 	return sprintf(buf, "UNKNOWN\n");
 }
 
-#if IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV)
 static ssize_t muic_sysfs_show_afc_disable(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -459,7 +459,7 @@ static ssize_t muic_sysfs_set_afc_disable(struct device *dev,
 	else
 		pr_warn("%s invalid value\n", __func__);
 
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 	param_val = pdata->afc_disable ? '1' : '0';
 #endif
 
@@ -480,7 +480,7 @@ static ssize_t muic_sysfs_set_afc_disable(struct device *dev,
 	return count;
 }
 
-#if IS_ENABLED(CONFIG_HV_MUIC_VOLTAGE_CTRL)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_VOLTAGE_CTRL)
 static ssize_t muic_store_afc_set_voltage(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -498,8 +498,8 @@ static ssize_t muic_store_afc_set_voltage(struct device *dev,
 
 	return count;
 }
-#endif /* CONFIG_HV_MUIC_VOLTAGE_CTRL */
-#endif /* CONFIG_MUIC_HV */
+#endif /* CONFIG_ERD_HV_MUIC_VOLTAGE_CTRL */
+#endif /* CONFIG_ERD_MUIC_HV */
 
 #if IS_ENABLED(CONFIG_HICCUP_CHARGER)
 static ssize_t hiccup_show(struct device *dev,
@@ -565,14 +565,14 @@ static DEVICE_ATTR(usb_en, 0664,
 		muic_sysfs_show_usb_en,
 		muic_sysfs_set_usb_en);
 static DEVICE_ATTR(vbus_value, 0444, muic_show_vbus_value, NULL);
-#if IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV)
 static DEVICE_ATTR(afc_disable, 0664,
 		muic_sysfs_show_afc_disable, muic_sysfs_set_afc_disable);
-#if IS_ENABLED(CONFIG_HV_MUIC_VOLTAGE_CTRL)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_VOLTAGE_CTRL)
 static DEVICE_ATTR(afc_set_voltage, 0220,
 		NULL, muic_store_afc_set_voltage);
-#endif /* CONFIG_HV_MUIC_VOLTAGE_CTRL */
-#endif /* CONFIG_MUIC_HV */
+#endif /* CONFIG_ERD_HV_MUIC_VOLTAGE_CTRL */
+#endif /* CONFIG_ERD_MUIC_HV */
 #if IS_ENABLED(CONFIG_HICCUP_CHARGER)
 static DEVICE_ATTR_RW(hiccup);
 #endif /* CONFIG_HICCUP_CHARGER */
@@ -596,12 +596,12 @@ static struct attribute *muic_sysfs_attributes[] = {
 	&dev_attr_apo_factory.attr,
 	&dev_attr_usb_en.attr,
 	&dev_attr_vbus_value.attr,
-#if IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV)
 	&dev_attr_afc_disable.attr,
-#if IS_ENABLED(CONFIG_HV_MUIC_VOLTAGE_CTRL)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_VOLTAGE_CTRL)
 	&dev_attr_afc_set_voltage.attr,
-#endif /* CONFIG_HV_MUIC_VOLTAGE_CTRL */
-#endif /* CONFIG_MUIC_HV */
+#endif /* CONFIG_ERD_HV_MUIC_VOLTAGE_CTRL */
+#endif /* CONFIG_ERD_MUIC_HV */
 #if IS_ENABLED(CONFIG_HICCUP_CHARGER)
 	&dev_attr_hiccup.attr,
 #endif /* CONFIG_HICCUP_CHARGER */

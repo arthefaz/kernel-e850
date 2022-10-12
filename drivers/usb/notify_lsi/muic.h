@@ -24,7 +24,7 @@
 #ifndef __MUIC_H__
 #define __MUIC_H__
 
-#ifdef CONFIG_IFCONN_NOTIFIER
+#ifdef CONFIG_ERD_IFCONN_NOTIFIER
 #include <linux/ifconn/ifconn_notifier.h>
 #endif
 
@@ -41,7 +41,7 @@ enum {
 	MUIC_INTR_ATTACH
 };
 
-#ifndef CONFIG_MUIC_LSI_SOLUTION
+#ifndef CONFIG_ERD_MUIC_LSI_SOLUTION
  enum muic_op_mode {
      OPMODE_MUIC = 0<<0,
      OPMODE_CCIC = 1<<0,
@@ -71,7 +71,7 @@ enum {
 	MUIC_PATH_AUDIO,
 };
 
-#ifdef CONFIG_MUIC_HV_FORCE_LIMIT
+#ifdef CONFIG_ERD_MUIC_HV_FORCE_LIMIT
 enum {
 	HV_9V = 0,
 	HV_5V,
@@ -213,21 +213,21 @@ typedef enum {
 	ATTACHED_DEV_CHECK_OCP,
 	ATTACHED_DEV_RDU_TA_MUIC,
 	ATTACHED_DEV_FACTORY_UART_MUIC,
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU106_PE)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU106_PE)
 	ATTACHED_DEV_PE_CHARGER_PREPARE_MUIC,
 	ATTACHED_DEV_PE_CHARGER_9V_MUIC,
 #endif
-#if IS_ENABLED(CONFIG_HV_MUIC_TURBO_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_TURBO_CHARGER)
 	ATTACHED_DEV_TURBO_CHARGER,
 #endif
-#if IS_ENABLED(CONFIG_MUIC_S2MU106_SUPPORT_SPECOUT_CHARGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_S2MU106_SUPPORT_SPECOUT_CHARGER)
 	ATTACHED_DEV_SPECOUT_CHARGER_MUIC,
 #endif
 	ATTACHED_DEV_UNKNOWN_MUIC,
 	ATTACHED_DEV_NUM,
 } muic_attached_dev_t;
 
-#ifdef CONFIG_MUIC_HV_FORCE_LIMIT
+#ifdef CONFIG_ERD_MUIC_HV_FORCE_LIMIT
 /* MUIC attached device type */
 typedef enum {
 	SILENT_CHG_DONE = 0,
@@ -237,7 +237,7 @@ typedef enum {
 } muic_silent_change_state_t;
 #endif
 
-#if defined(CONFIG_MUIC_HV)
+#if defined(CONFIG_ERD_MUIC_HV)
 /* MUIC HV State type */
 typedef enum {
 	HV_STATE_INVALID = -1,
@@ -290,19 +290,19 @@ struct muic_platform_data {
 	bool is_new_factory;
 	bool dcd_timeout;
 
-#ifdef CONFIG_MUIC_HV_FORCE_LIMIT
+#ifdef CONFIG_ERD_MUIC_HV_FORCE_LIMIT
 	int hv_sel;
 	int silent_chg_change_state;
 #endif
-#ifndef CONFIG_MUIC_LSI_SOLUTION
+#ifndef CONFIG_ERD_MUIC_LSI_SOLUTION
 	enum muic_op_mode opmode;
 #endif
-#ifdef CONFIG_MUIC_SYSFS
+#ifdef CONFIG_ERD_MUIC_SYSFS
 	struct device *switch_device;
 	struct mutex sysfs_mutex;
 #endif
 
-#if defined(CONFIG_MUIC_HV)
+#if defined(CONFIG_ERD_MUIC_HV)
 	muic_hv_state_t hv_state;
 #endif
 
@@ -328,7 +328,7 @@ struct muic_platform_data {
 	void (*jig_uart_cb)(int jig_state);
 
 	/* muic GPIO control function */
-#if defined(CONFIG_MUIC_LSI_SOLUTION)
+#if defined(CONFIG_ERD_MUIC_LSI_SOLUTION)
 	int (*init_gpio_cb) (void *, int switch_sel);
 #else
 	int (*init_gpio_cb) (int switch_sel);
@@ -391,7 +391,7 @@ enum muic_param_en {
 	MUIC_ENABLE
 };
 
-#ifdef CONFIG_IFCONN_NOTIFIER
+#ifdef CONFIG_ERD_IFCONN_NOTIFIER
 #define MUIC_SEND_NOTI_ATTACH(dev) \
 {	\
 	int ret;	\
@@ -515,7 +515,7 @@ bool muic_core_get_ccic_cable_state(struct muic_platform_data *muic_pdata);
 struct muic_platform_data *muic_core_init(void *drv_data);
 void muic_core_exit(struct muic_platform_data *muic_pdata);
 extern void muic_disable_otg_detect(void);
-#if defined(CONFIG_MUIC_HV)
+#if defined(CONFIG_ERD_MUIC_HV)
 int muic_core_hv_state_manager(struct muic_platform_data *muic_pdata,
 		muic_hv_transaction_t trans);
 void muic_core_hv_init(struct muic_platform_data *muic_pdata);

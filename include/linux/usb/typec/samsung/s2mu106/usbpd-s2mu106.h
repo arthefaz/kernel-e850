@@ -13,7 +13,7 @@
  *
  */
 //#include <linux/wakelock.h>
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include <linux/usb/typec/samsung/common/usbpd_msg.h>
 #include <linux/misc/samsung/ifconn/ifconn_notifier.h>
 #else
@@ -663,11 +663,11 @@ typedef enum {
 struct s2mu106_usbpd_data {
 	struct device *dev;
 	struct i2c_client *i2c;
-#if defined(CONFIG_PDIC_NOTIFIER)
+#if defined(CONFIG_ERD_PDIC_NOTIFIER)
 	ppdic_data_t ppdic_data;
 	struct workqueue_struct *pdic_wq;
 #endif
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct workqueue_struct *ifconn_wq;
 #endif
 	struct mutex _mutex;
@@ -735,7 +735,7 @@ struct s2mu106_usbpd_data {
 	struct notifier_block type3_nb;
 	struct workqueue_struct *pdic_queue;
 	struct delayed_work plug_work;
-#if defined(CONFIG_PDIC_SLSI_NON_MCU)
+#if defined(CONFIG_ERD_PDIC_SLSI_NON_MCU)
 	struct s2m_pdic_notifier_struct pdic_notifier;
 #endif
 	struct delayed_work vbus_dischg_off_work;
@@ -752,7 +752,7 @@ struct s2mu106_usbpd_data {
 	int cc2_val;
 	int cc_instead_of_vbus;
 	bool checking_pm_water;
-#if defined(CONFIG_S2MU106_TYPEC_WATER)
+#if defined(CONFIG_ERD_S2MU106_TYPEC_WATER)
 	struct delayed_work check_facwater;
 	int water_status;
 	int water_cc;
@@ -779,7 +779,7 @@ struct s2mu106_usbpd_data {
 
 extern int s2mu106_usbpd_get_adc(void);
 extern void s2mu106_usbpd_set_muic_type(int type);
-#if defined(CONFIG_PDIC_NOTIFIER)
+#if defined(CONFIG_ERD_PDIC_NOTIFIER)
 extern void s2mu106_control_option_command(struct s2mu106_usbpd_data *usbpd_data, int cmd);
 #endif
 #if defined(CONFIG_SEC_FACTORY)

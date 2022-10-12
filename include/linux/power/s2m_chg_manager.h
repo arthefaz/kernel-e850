@@ -29,7 +29,7 @@
 #include <linux/power_supply.h>
 #include <linux/alarmtimer.h>
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include <linux/misc/samsung/ifconn/ifconn_notifier.h>
 #include <linux/misc/samsung/ifconn/ifconn_manager.h>
 #include <linux/misc/samsung/muic/common/muic.h>
@@ -317,7 +317,7 @@ struct s2m_chg_manager_platform_data {
 	int temp_low_limit_recovery;
 	int temp_limit_float_voltage;
 
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 	int pdo_max_input_vol;
 	int pdo_max_chg_power;
 #endif
@@ -390,7 +390,7 @@ struct s2m_chg_manager_info {
 	int current_max;	/* input current limit (mA) */
 	int current_chg;	/* charge current limit (mA) */
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct notifier_block ifconn_nb;
 	struct notifier_block ifconn_cc_nb;
 #endif
@@ -418,7 +418,7 @@ struct s2m_chg_manager_info {
 
 	bool is_soc_updated;
 
-#if IS_ENABLED(CONFIG_USE_S2M_PDIC)
+#if IS_ENABLED(CONFIG_ERD_USE_S2M_PDIC)
 	struct delayed_work select_pdo_work;
 	int pdo_max_input_vol;
 	int pdo_max_chg_power;

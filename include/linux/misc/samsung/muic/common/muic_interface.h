@@ -231,11 +231,11 @@ struct muic_interface_t {
 	struct notifier_block	usb_nb;
 #endif
 
-#if IS_ENABLED(CONFIG_MUIC_MANAGER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 	/* legacy TA or USB for CCIC */
 	muic_attached_dev_t	legacy_dev;
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct notifier_block	ifconn_nb_pdic;
 	struct notifier_block	ifconn_nb_ccic;
 #endif
@@ -270,17 +270,17 @@ struct muic_interface_t {
 	int (*control_rid_adc)(void *, bool enable);
 	int (*get_vbus_voltage)(void *);
 
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_HV)
 	int (*set_afc_reset)(void *);
 	muic_attached_dev_t (*check_id_err)(void *, muic_attached_dev_t new_dev);
 	int (*reset_hvcontrol_reg)(void *);
 	int (*check_afc_ready)(void *);
 	int (*get_afc_ready)(void *);
 	int (*reset_afc_register)(void *);
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_POWERMETER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_POWERMETER)
 	int (*pm_chgin_irq)(void *, int vol);
 #endif
-#if IS_ENABLED(CONFIG_HV_MUIC_VOLTAGE_CTRL)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_VOLTAGE_CTRL)
 	int (*set_afc_voltage)(void *, int vol);
 #endif
 	void (*hv_reset)(void *);
@@ -305,7 +305,7 @@ struct muic_interface_t {
 	int (*get_vbus)(void *);
 	int (*get_adc)(void *);
 	int (*check_usb_killer)(void *);
-#if IS_ENABLED(CONFIG_MUIC_SYSFS)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SYSFS)
 	int (*show_register)(void *, char *mesg);
 #if IS_ENABLED(CONFIG_SEC_FACTORY) && IS_ENABLED(CONFIG_USB_HOST_NOTIFY)
 	int (*set_otg_reg)(void *, bool enable);

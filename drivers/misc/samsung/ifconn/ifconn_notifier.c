@@ -4,7 +4,7 @@
 #include <linux/notifier.h>
 #include <linux/misc/samsung/ifconn/ifconn_notifier.h>
 #include <linux/misc/samsung/ifconn/ifconn_manager.h>
-#if defined(CONFIG_PDIC_SUPPORT_DP)
+#if defined(CONFIG_ERD_PDIC_SUPPORT_DP)
 #include <linux/power_supply.h>
 #include <linux/power/s2m_chg_manager.h>
 #endif
@@ -116,7 +116,7 @@ int ifconn_notifier_register(struct notifier_block *nb, notifier_fn_t notifier,
 {
 	int ret = 0;
 	struct ifconn_notifier_template *template = NULL;
-#if defined(CONFIG_PDIC_SUPPORT_DP)
+#if defined(CONFIG_ERD_PDIC_SUPPORT_DP)
 	union power_supply_propval value;
 	struct power_supply *psy;
 #endif
@@ -170,7 +170,7 @@ int ifconn_notifier_register(struct notifier_block *nb, notifier_fn_t notifier,
 		ret = nb->notifier_call(nb,	template->id, template);
 	}
 
-#if defined(CONFIG_PDIC_SUPPORT_DP)
+#if defined(CONFIG_ERD_PDIC_SUPPORT_DP)
 	if (listener == IFCONN_NOTIFY_DP) {
 		pr_info("%s, DP registered, set to pdic start VDM\n", __func__);
 		psy = power_supply_get_by_name("s2mu106-usbpd");

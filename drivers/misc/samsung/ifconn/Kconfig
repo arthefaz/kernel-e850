@@ -2,7 +2,7 @@
 # IF Conn Manager driver
 #
 
-config IFCONN_NOTIFIER_MODULE
+config ERD_IFCONN_NOTIFIER_MODULE
     tristate "IF Conn Manager driver support Module Compile"
 	depends on I2C
 	default n
@@ -10,7 +10,7 @@ config IFCONN_NOTIFIER_MODULE
 	  If you say yes here you will get support for
 	  IF Conn Manager function.
 
-config IFCONN_MANAGER
+config ERD_IFCONN_MANAGER
     bool "IF Conn Manager driver"
 	depends on I2C
 	default n
@@ -18,7 +18,7 @@ config IFCONN_MANAGER
 	  If you say yes here you will get support for
 	  IF Conn Manager function.
 
-config IFCONN_NOTIFIER
+config ERD_IFCONN_NOTIFIER
     bool "IF Conn Notifier driver"
 	depends on I2C
 	default n
@@ -26,7 +26,7 @@ config IFCONN_NOTIFIER
       If you say yes here you will get support for
       IF Conn Notifier function.
 
-config IFCONN_SUPPORT_THREAD
+config ERD_IFCONN_SUPPORT_THREAD
     bool "IF Conn driver supports thread"
 	depends on I2C
 	default n

@@ -25,7 +25,7 @@
 #ifndef __MUIC_CORE_H__
 #define __MUIC_CORE_H__
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include <linux/misc/samsung/ifconn/ifconn_notifier.h>
 #endif
 
@@ -65,7 +65,7 @@ enum {
 	MUIC_PATH_AUDIO,
 };
 
-#if IS_ENABLED(CONFIG_MUIC_HV_FORCE_LIMIT)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV_FORCE_LIMIT)
 enum {
 	HV_9V = 0,
 	HV_5V,
@@ -205,7 +205,7 @@ typedef enum {
 	ATTACHED_DEV_NUM,
 } muic_attached_dev_t;
 
-#if IS_ENABLED(CONFIG_MUIC_HV_FORCE_LIMIT)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV_FORCE_LIMIT)
 /* MUIC attached device type */
 typedef enum {
 	SILENT_CHG_DONE = 0,
@@ -237,7 +237,7 @@ struct muic_platform_data {
 	bool rustproof_on;
 	bool afc_disable;
 
-#if IS_ENABLED(CONFIG_MUIC_HV_FORCE_LIMIT)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV_FORCE_LIMIT)
 	int hv_sel;
 	int silent_chg_change_state;
 #endif
@@ -292,7 +292,7 @@ struct muic_platform_data {
 		pr_err("[muic_core] func not defined %s\n", __func__);	\
 }
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #define MUIC_SEND_NOTI_ATTACH(dev) \
 {	\
 	int ret;	\

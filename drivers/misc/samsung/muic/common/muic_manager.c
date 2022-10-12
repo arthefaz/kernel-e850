@@ -39,10 +39,10 @@
 #endif
 
 #include <linux/misc/samsung/muic/common/muic.h>
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 #include <linux/misc/samsung/ifconn/ifconn_notifier.h>
 #endif
-#if IS_ENABLED(CONFIG_MUIC_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_NOTIFIER)
 #include <linux/misc/samsung/muic/common/muic_notifier.h>
 #endif
 #include <linux/misc/samsung/muic/common/muic_interface.h>
@@ -197,7 +197,7 @@ void muic_manager_handle_ccic_detach_always(struct muic_interface_t *muic_if)
 {
 	pr_info("%s\n", __func__);
 
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_HV)
 	muic_if->is_afc_pdic_ready = false;
 #endif
 	muic_if->is_pdic_attached = false;
@@ -406,7 +406,7 @@ static bool muic_manager_is_valid_rid_open(struct muic_interface_t *muic_if, int
 static int muic_manager_handle_ccic_attach(struct muic_interface_t *muic_if, void *data)
 {
 	struct ccic_desc_t *ccic = muic_if->ccic;
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct ifconn_notifier_template *pnoti =
 		(struct ifconn_notifier_template *)data;
 #else
@@ -419,7 +419,7 @@ static int muic_manager_handle_ccic_attach(struct muic_interface_t *muic_if, voi
 			__func__, pnoti->src, pnoti->dest, pnoti->id, pnoti->attach,
 			pnoti->cable_type, pnoti->rprd);
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	if (pnoti->event == IFCONN_NOTIFY_EVENT_ATTACH) {
 		ccic->ccic_evt_attached = MUIC_CCIC_NOTI_ATTACH;
 	} else if (pnoti->event == IFCONN_NOTIFY_EVENT_DETACH) {
@@ -454,7 +454,7 @@ static int muic_manager_handle_ccic_attach(struct muic_interface_t *muic_if, voi
 			pr_info("%s: RPRD\n", __func__);
 			ccic->ccic_evt_rprd = 1;
 			ccic->attached_dev = ATTACHED_DEV_OTG_MUIC;
-#if IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV)
 			if (muic_if->hv_reset)
 				muic_if->hv_reset(muic_if->muic_data);
 #endif
@@ -464,7 +464,7 @@ static int muic_manager_handle_ccic_attach(struct muic_interface_t *muic_if, voi
 			return 0;
 		}
 
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU004_AFC)
 		if (muic_if->is_afc_reset) {
 			pr_info("%s: DCD RESCAN after afc reset\n", __func__);
 			muic_if->is_afc_reset = false;
@@ -506,7 +506,7 @@ static int muic_manager_handle_ccic_attach(struct muic_interface_t *muic_if, voi
 		} else if (vbus && !muic_core_get_ccic_cable_state(pdata)) {
 				if (muic_if->is_dcp_charger) {
 					pr_info("%s: reset afc\n", __func__);
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_HV)
 				if (muic_if->set_afc_reset)
 					muic_if->set_afc_reset(muic_if->muic_data);
 #endif
@@ -561,7 +561,7 @@ static int muic_manager_handle_ccic_factory_jig(struct muic_interface_t *muic_if
 		}
 
 		ccic->attached_dev = attached_dev;
-#if IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV)
 		if (muic_if->hv_reset)
 			muic_if->hv_reset(muic_if->muic_data);
 #endif
@@ -578,7 +578,7 @@ static int muic_manager_handle_ccic_rid(struct muic_interface_t *muic_if, void *
 	struct ccic_desc_t *ccic = muic_if->ccic;
 	struct muic_platform_data *pdata = muic_if->pdata;
 	int rid, vbus;
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct ifconn_notifier_template *pnoti =
 	    (struct ifconn_notifier_template *)data;
 #else
@@ -589,7 +589,7 @@ static int muic_manager_handle_ccic_rid(struct muic_interface_t *muic_if, void *
 		pnoti->src, pnoti->dest, pnoti->id, pnoti->rid, pnoti->sub2,
 		pnoti->sub3);
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	rid = pnoti->event;
 #else
 	rid = pnoti->rid;
@@ -659,7 +659,7 @@ static int muic_manager_handle_ccic_rid(struct muic_interface_t *muic_if, void *
 
 static int muic_manager_handle_ccic_water(struct muic_interface_t *muic_if, void *data)
 {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct ifconn_notifier_template *pnoti = (struct ifconn_notifier_template *)data;
 #else
 	CC_NOTI_ATTACH_TYPEDEF *pnoti = (CC_NOTI_ATTACH_TYPEDEF *) data;
@@ -680,7 +680,7 @@ static int muic_manager_handle_ccic_water(struct muic_interface_t *muic_if, void
 #if !IS_ENABLED(CONFIG_SEC_FACTORY)
 static int muic_manager_handle_ccic_water_from_boot(struct muic_interface_t *muic_if, void *data)
 {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct ifconn_notifier_template *pnoti = (struct ifconn_notifier_template *)data;
 #else
 	CC_NOTI_ATTACH_TYPEDEF *pnoti = (CC_NOTI_ATTACH_TYPEDEF *)data;
@@ -694,10 +694,10 @@ static int muic_manager_handle_ccic_water_from_boot(struct muic_interface_t *mui
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_HV)
 static int muic_manager_handle_ccic_TA(struct muic_interface_t *muic_if, void *data)
 {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct ifconn_notifier_template *pnoti = (struct ifconn_notifier_template *)data;
 #else
 	CC_NOTI_ATTACH_TYPEDEF *pnoti = (CC_NOTI_ATTACH_TYPEDEF *) data;
@@ -717,7 +717,7 @@ static int muic_manager_handle_ccic_TA(struct muic_interface_t *muic_if, void *d
 
 static int muic_manager_handle_ccic_role_swap(struct muic_interface_t *muic_if, void *data)
 {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct ifconn_notifier_template *pnoti = (struct ifconn_notifier_template *)data;
 
 	struct ccic_desc_t *ccic = muic_if->ccic;
@@ -743,7 +743,7 @@ static int muic_manager_handle_ccic_role_swap(struct muic_interface_t *muic_if, 
 static int muic_manager_handle_otg(struct muic_interface_t *muic_if, void *data)
 {
 	struct ccic_desc_t *ccic = muic_if->ccic;
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct ifconn_notifier_template *pnoti = (struct ifconn_notifier_template *)data;
 #else
 	CC_NOTI_TYPEDEF *pnoti = (CC_NOTI_TYPEDEF *) data;
@@ -753,7 +753,7 @@ static int muic_manager_handle_otg(struct muic_interface_t *muic_if, void *data)
 		pnoti->src, pnoti->dest, pnoti->id);
 
 	muic_if->is_pdic_attached = true;
-#if !IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if !IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	if (pnoti->sub1 == true) {
 #endif
 		MUIC_SEND_NOTI_TO_CCIC_ATTACH(ATTACHED_DEV_OTG_MUIC);
@@ -762,14 +762,14 @@ static int muic_manager_handle_otg(struct muic_interface_t *muic_if, void *data)
 		if (muic_if->set_cable_state)
 			muic_if->set_cable_state(muic_if->muic_data, ccic->attached_dev);
 		muic_manager_switch_path(muic_if, MUIC_PATH_USB_AP);
-#if !IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if !IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	}
 #endif
 
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 static int muic_manager_handle_notification(struct muic_interface_t *muic_if,
 					    unsigned long action, void *data)
 #else
@@ -782,7 +782,7 @@ static int muic_manager_handle_notification(struct notifier_block *nb,
 	    container_of(nb, struct muic_interface_t, ifconn_nb);
 #endif
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	struct ifconn_notifier_template *pnoti =
 	    (struct ifconn_notifier_template *)data;
 	int attach = IFCONN_NOTIFY_ID_ATTACH;
@@ -808,7 +808,7 @@ static int muic_manager_handle_notification(struct notifier_block *nb,
 	muic_manager_show_status(muic_if);
 
 	if (pnoti->id == attach) {
-#if !IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if !IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 		pr_info("%s: NOTIFY_ID_ATTACH: %s\n", __func__,
 			pnoti->attach ? "Attached" : "Detached");
 #endif
@@ -834,7 +834,7 @@ static int muic_manager_handle_notification(struct notifier_block *nb,
 	} else if (pnoti->id == ta) {
 		pr_info("%s: NOTIFY_ID_TA\n", __func__);
 #if !IS_ENABLED(CONFIG_SEC_FACTORY)
-#if IS_ENABLED(CONFIG_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU004_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_HV)
 		muic_manager_handle_ccic_TA(muic_if, data);
 #endif
 #endif
@@ -850,7 +850,7 @@ static int muic_manager_handle_notification(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 static int muic_manager_handle_ccic_notification(struct notifier_block *nb,
 		unsigned long action, void *data)
 {
@@ -868,7 +868,7 @@ static int muic_manager_handle_pdic_notification(struct notifier_block *nb,
 }
 #endif
 
-#if !IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if !IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 void _muic_delayed_notifier(struct work_struct *work)
 {
 	struct muic_interface_t *muic_if;
@@ -924,7 +924,7 @@ void muic_manager_register_notifier(struct muic_interface_t *muic_if)
 
 struct muic_interface_t *muic_manager_init(void *pdata, void *drv_data)
 {
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	int ret;
 #endif
 	struct muic_interface_t *muic_if;
@@ -953,10 +953,10 @@ struct muic_interface_t *muic_manager_init(void *pdata, void *drv_data)
 	muic_if->opmode = get_ccic_info() & 0xF;
 	muic_if->is_pdic_attached = false;
 	muic_if->is_dcdtmr_intr = false;
-#if IS_ENABLED(CONFIG_MUIC_HV)
+#if IS_ENABLED(CONFIG_ERD_MUIC_HV)
 	muic_if->is_afc_pdic_ready = false;
 #endif
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 	ret = ifconn_notifier_register(&muic_if->ifconn_nb_ccic,
 				       muic_manager_handle_ccic_notification,
 				       IFCONN_NOTIFY_MUIC, IFCONN_NOTIFY_CCIC);
@@ -974,7 +974,7 @@ struct muic_interface_t *muic_manager_init(void *pdata, void *drv_data)
 		pr_info("S2M_OPMODE_MUIC CCIC NOTIFIER is not used\n");
 #endif
 	return muic_if;
-#if IS_ENABLED(CONFIG_IFCONN_NOTIFIER)
+#if IS_ENABLED(CONFIG_ERD_IFCONN_NOTIFIER)
 err_reg_noti:
 	kfree(ccic);
 #endif
@@ -1022,12 +1022,12 @@ static int muic_manager_set_property(struct power_supply *psy,
 		enum power_supply_property psp,
 		const union power_supply_propval *val)
 {
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_POWERMETER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_POWERMETER)
 	struct muic_interface_t *muic_if =
 		power_supply_get_drvdata(psy);
 #endif
 	enum s2m_power_supply_property s2m_psp = (enum s2m_power_supply_property) psp;
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_POWERMETER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_POWERMETER)
 	int ret;
 #endif
 
@@ -1035,7 +1035,7 @@ static int muic_manager_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_S2M_PROP_MIN ... POWER_SUPPLY_S2M_PROP_MAX:
 		switch (s2m_psp) {
 		case POWER_SUPPLY_S2M_PROP_AFC_CHARGER_MODE:
-#if IS_ENABLED(CONFIG_MUIC_SUPPORT_POWERMETER)
+#if IS_ENABLED(CONFIG_ERD_MUIC_SUPPORT_POWERMETER)
 			MUIC_PDATA_FUNC_MULTI_PARAM(muic_if->pm_chgin_irq,
 				muic_if->muic_data, val->intval, &ret);
 			break;
