@@ -441,6 +441,7 @@ static ssize_t codec_sysfs_store(struct class *cls,
 	}
 
 	memcpy(input, buf, strlen(buf));
+	input[strlen(buf)] = '\0';
 	ret = command_parsing(input);
 
 	if (g_command == COMMAND_WRITE)
