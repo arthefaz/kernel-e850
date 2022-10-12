@@ -251,6 +251,9 @@ static void mlt_recent_elapsed(enum track_type type,
 
 static inline u64 mlt_contrib(u64 value, u64 contrib, u64 total)
 {
+	if (unlikely(!total))
+		return 0;
+
 	/* multiply by 1024 to minimize dropping decimal place */
 	return div64_u64(value * contrib << SCHED_CAPACITY_SHIFT, total);
 }
@@ -337,30 +340,29 @@ static void mlt_update_uarch(struct mlt *mlt, int period,
 {
 	struct uarch_data *ud = mlt->uarch;
 	u64 core_cycle, inst_ret, mem_stall;
-	u64 cc_delta, ir_delta, ms_delta, ipc, mspc;
+	u64 cc_delta, ir_delta, ms_delta, ipc = 0, mspc = 0;
 	u64 total_time;
 	int state = mlt->state;
+
+	if (state < 0)
+		return;
 
 	core_cycle = amu_core_cycles();
 	inst_ret = amu_inst_ret();
 	mem_stall = amu_mem_stall();
 
-	if (mlt->state >= 0) {
-		cc_delta = core_cycle - ud->last_cycle;
-		ir_delta = inst_ret - ud->last_inst_ret;
-		ms_delta = mem_stall - ud->last_mem_stall;
-	} else {
-		cc_delta = 0;
-		ir_delta = 0;
-		ms_delta = 0;
+	cc_delta = core_cycle - ud->last_cycle;
+	ir_delta = inst_ret - ud->last_inst_ret;
+	ms_delta = mem_stall - ud->last_mem_stall;
+
+	if (likely(cc_delta)) {
+		ipc = div64_u64(ir_delta << SCHED_CAPACITY_SHIFT, cc_delta);
+		mspc = div64_u64(ms_delta << SCHED_CAPACITY_SHIFT, cc_delta);
 	}
 
-	ipc = div64_u64(ir_delta << SCHED_CAPACITY_SHIFT, cc_delta);
-	mspc = div64_u64(ms_delta << SCHED_CAPACITY_SHIFT, cc_delta);
-
 	total_time = contrib + period_count * MLT_PERIOD_SIZE + remain;
-	if (state >= 0)
-		ud->cycle_sum[state] += mlt_contrib(cc_delta,
+
+	ud->cycle_sum[state] += mlt_contrib(cc_delta,
 						contrib, total_time);
 
 	__mlt_update(TRACK_IPC, mlt, period, period_count,
@@ -375,8 +377,7 @@ static void mlt_update_uarch(struct mlt *mlt, int period,
 
 	if (period_count) {
 		memset(ud->cycle_sum, 0, sizeof(u64) * mlt->state_count);
-		if (state >= 0)
-			ud->cycle_sum[state] = mlt_contrib(cc_delta,
+		ud->cycle_sum[state] = mlt_contrib(cc_delta,
 							remain, total_time);
 	}
 
