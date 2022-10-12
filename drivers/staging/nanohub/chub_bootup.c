@@ -771,7 +771,7 @@ static void contexthub_select_os(struct contexthub_ipc_info *chub)
 	u8 val = (u8)ipc_read_hw_value(IPC_VAL_HW_DEBUG);
 
 	if (!val) {
-		nanohub_dev_warn(chub->dev, "%s os number is invalid\n");
+		nanohub_dev_warn(chub->dev, "%s os number is invalid\n", __func__);
 		val = 1;
 	}
 
