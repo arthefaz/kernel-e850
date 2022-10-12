@@ -45,6 +45,7 @@
 			interrupts = <0 INTREQ__USB20DRD_0 IRQ_TYPE_LEVEL_HIGH>;
 			is_not_vbus_pad = <1>;
 			enable_sprs_transfer = <1>;
+			dr_mode = "peripheral";
 			phys = <&usbdrd_phy0 0>;
 			phy-names = "usb2-phy";
 			/* check susphy support */
