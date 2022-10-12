@@ -609,6 +609,11 @@ static long dpp_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg
 
 	switch (cmd) {
 	case DPP_WIN_CONFIG:
+                if (arg == NULL) {
+                        dpp_err("failed to get DPP win config info\n");
+                        ret = -EINVAL;
+                        break;
+                }
 		dpp->dpp_config = (struct dpp_config *)arg;
 		ret = dpp_set_config(dpp);
 		if (ret)
