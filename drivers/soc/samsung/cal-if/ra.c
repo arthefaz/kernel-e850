@@ -320,10 +320,15 @@ static int ra_set_pll(struct cmucal_clk *clk, unsigned int rate,
 			else
 				fin = FIN_HZ_26M;
 
-			ret = pll_find_table(pll, &table, fin, rate, rate_hz);
-			if (ret) {
-				pr_err("failed %s table %u\n", clk->name, rate);
-				return ret;
+                        if (fin != 0) {
+				ret = pll_find_table(pll, &table, fin, rate, rate_hz);
+				if (ret) {
+					pr_err("failed %s table %u\n", clk->name, rate);
+					return ret;
+				}
+			} else {
+				pr_err("ra_get_value failed %s table %u\n", clk->name, rate);
+				return -EVCLKINVAL;
 			}
 			rate_table = &table;
 		}
