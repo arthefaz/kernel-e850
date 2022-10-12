@@ -25,26 +25,26 @@
 #include <linux/mfd/samsung/s2mu106.h>
 #include <linux/err.h>
 
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 #include <linux/power/s2mu106_charger.h>
 #endif
-#if IS_ENABLED(CONFIG_LEDS_S2MU106_FLASH)
+#if IS_ENABLED(CONFIG_ERD_LEDS_S2MU106_FLASH)
 #include <linux/leds-s2mu106.h>
 #endif
 #if IS_ENABLED(CONFIG_ERD_MUIC_S2MU106)
 #include <linux/misc/samsung/muic/s2mu106/s2mu106-muic.h>
 #endif
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 #include <linux/power/s2mu106_pmeter.h>
 #endif
 
 static const u8 s2mu106_mask_reg[] = {
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 	[CHG_INT1] = S2MU106_CHG_INT1M,
 	[CHG_INT2] = S2MU106_CHG_INT2M,
 	[CHG_INT3] = S2MU106_CHG_INT3M,
 #endif
-#if IS_ENABLED(CONFIG_LEDS_S2MU106_FLASH)
+#if IS_ENABLED(CONFIG_ERD_LEDS_S2MU106_FLASH)
 	[FLED_INT1] = S2MU106_FLED_INT1,
 	[FLED_INT2] = S2MU106_FLED_INT2,
 #endif
@@ -55,7 +55,7 @@ static const u8 s2mu106_mask_reg[] = {
 	[MUIC_INT1] = S2MU106_REG_MUIC_INT1,
 	[MUIC_INT2] = S2MU106_REG_MUIC_INT2,
 #endif
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 	[PM_VALUP1] = S2MU106_PM_VALUP1,
 	[PM_VALUP2] = S2MU106_PM_VALUP2,
 	[PM_INT1] = S2MU106_PM_INT1,
@@ -71,11 +71,11 @@ struct s2mu106_irq_data {
 static struct i2c_client *get_i2c(struct s2mu106_dev *s2mu106, enum s2mu106_irq_source src)
 {
 	switch (src) {
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 	case CHG_INT1 ... CHG_INT3:
 		return s2mu106->i2c;
 #endif
-#if IS_ENABLED(CONFIG_LEDS_S2MU106_FLASH)
+#if IS_ENABLED(CONFIG_ERD_LEDS_S2MU106_FLASH)
 	case FLED_INT1 ... FLED_INT2:
 		return s2mu106->i2c;
 #endif
@@ -87,7 +87,7 @@ static struct i2c_client *get_i2c(struct s2mu106_dev *s2mu106, enum s2mu106_irq_
 	case MUIC_INT1 ... MUIC_INT2:
 		return s2mu106->muic;
 #endif
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 	case PM_VALUP1 ... PM_INT2:
 		return s2mu106->muic;
 #endif
@@ -111,7 +111,7 @@ static struct i2c_client *get_i2c(struct s2mu106_dev *s2mu106, enum s2mu106_irq_
 #define DECLARE_IRQ(idx, _group, _mask) \
 	[(idx)] = { .group = (_group), .mask = (_mask) }
 static const struct s2mu106_irq_data s2mu106_irqs[] = {
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 	DECLARE_IRQ(S2MU106_CHG1_IRQ_SYS,			CHG_INT1, 1 << 0),
 	DECLARE_IRQ(S2MU106_CHG1_IRQ_CV,			CHG_INT1, 1 << 1),
 	DECLARE_IRQ(S2MU106_CHG1_IRQ_CHG_Fault,			CHG_INT1, 1 << 2),
@@ -138,7 +138,7 @@ static const struct s2mu106_irq_data s2mu106_irqs[] = {
 	DECLARE_IRQ(S2MU106_CHG3_IRQ_PEdone,			CHG_INT3, 1 << 5),
 	DECLARE_IRQ(S2MU106_CHG3_IRQ_BAT_Contact_CK_Done,	CHG_INT3, 1 << 6),
 #endif
-#if IS_ENABLED(CONFIG_LEDS_S2MU106_FLASH)
+#if IS_ENABLED(CONFIG_ERD_LEDS_S2MU106_FLASH)
 	DECLARE_IRQ(S2MU106_FLED1_IRQ_C2F_Vbyp_ovp_prot,	FLED_INT1, 1 << 0),
 	DECLARE_IRQ(S2MU106_FLED1_IRQ_C2F_Vbyp_OK_Warning,	FLED_INT1, 1 << 1),
 	DECLARE_IRQ(S2MU106_FLED1_IRQ_OPEN_CH3,			FLED_INT1, 1 << 2),
@@ -181,7 +181,7 @@ static const struct s2mu106_irq_data s2mu106_irqs[] = {
 	DECLARE_IRQ(S2MU106_MUIC_IRQ2_AV_CHARGE,		MUIC_INT2, 1 << 6),
 	DECLARE_IRQ(S2MU106_MUIC_IRQ2_VBUS_OFF,			MUIC_INT2, 1 << 7),
 #endif
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 	DECLARE_IRQ(S2MU106_PM_VALUP1_VCC2UP,			PM_VALUP1, 1 << 0),
 	DECLARE_IRQ(S2MU106_PM_VALUP1_VGPADCUP,			PM_VALUP1, 1 << 1),
 	DECLARE_IRQ(S2MU106_PM_VALUP1_VCC1UP,			PM_VALUP1, 1 << 2),
@@ -297,9 +297,9 @@ static irqreturn_t s2mu106_irq_thread(int irq, void *data)
 {
 	struct s2mu106_dev *s2mu106 = data;
 	u8 irq_src;
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106) || IS_ENABLED(CONFIG_LEDS_S2MU106_FLASH) || \
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106) || IS_ENABLED(CONFIG_ERD_LEDS_S2MU106_FLASH) || \
 	IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU106_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_S2MU106) || \
-	IS_ENABLED(CONFIG_PM_S2MU106) || IS_ENABLED(CONFIG_MST_S2MU106) || \
+	IS_ENABLED(CONFIG_ERD_PM_S2MU106) || IS_ENABLED(CONFIG_MST_S2MU106) || \
 	IS_ENABLED(CONFIG_MOTOR_S2MU106) || IS_ENABLED(CONFIG_REGULATOR_S2MU106)
 	u8 irq_reg[S2MU106_IRQ_GROUP_NR] = {0, };
 	int i;
@@ -312,7 +312,7 @@ static irqreturn_t s2mu106_irq_thread(int irq, void *data)
 		return IRQ_NONE;
 	}
 
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 	if (irq_src & S2MU106_IRQSRC_CHG) {
 		ret = s2mu106_bulk_read(s2mu106->i2c, S2MU106_CHG_INT1, S2MU106_NUM_IRQ_CHG_REGS, &irq_reg[CHG_INT1]);
 		if (ret) {
@@ -338,7 +338,7 @@ static irqreturn_t s2mu106_irq_thread(int irq, void *data)
 			__func__, irq_reg[MUIC_INT1], irq_reg[MUIC_INT2]);
 	}
 #endif
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 	if (irq_src & S2MU106_IRQSRC_PM) {
 		s2mu106_read_reg(s2mu106->muic, S2MU106_PM_VALUP1, &irq_reg[PM_VALUP1]);
 		s2mu106_read_reg(s2mu106->muic, S2MU106_PM_VALUP2, &irq_reg[PM_VALUP2]);
@@ -362,9 +362,9 @@ static irqreturn_t s2mu106_irq_thread(int irq, void *data)
 		pr_info("%s: S2MU106_IRQSRC_HBST\n", __func__);
 #endif
 
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106) || IS_ENABLED(CONFIG_LEDS_S2MU106_FLASH) || \
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106) || IS_ENABLED(CONFIG_ERD_LEDS_S2MU106_FLASH) || \
 	IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU106_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_S2MU106) || \
-	IS_ENABLED(CONFIG_PM_S2MU106) || IS_ENABLED(CONFIG_MST_S2MU106) || \
+	IS_ENABLED(CONFIG_ERD_PM_S2MU106) || IS_ENABLED(CONFIG_MST_S2MU106) || \
 	IS_ENABLED(CONFIG_MOTOR_S2MU106) || IS_ENABLED(CONFIG_REGULATOR_S2MU106)
 	/* Apply masking */
 	for (i = 0; i < S2MU106_IRQ_GROUP_NR; i++)
@@ -442,10 +442,10 @@ int s2mu106_irq_init(struct s2mu106_dev *s2mu106)
 
 	/* Unmask S2MU106 interrupt */
 	i2c_data = 0xFF;
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 	i2c_data &= ~(S2MU106_IRQSRC_CHG);
 #endif
-#if IS_ENABLED(CONFIG_LEDS_S2MU106_FLASH)
+#if IS_ENABLED(CONFIG_ERD_LEDS_S2MU106_FLASH)
 	i2c_data &= ~(S2MU106_IRQSRC_FLED);
 #endif
 #if IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU106_AFC)
@@ -454,7 +454,7 @@ int s2mu106_irq_init(struct s2mu106_dev *s2mu106)
 #if IS_ENABLED(CONFIG_ERD_MUIC_S2MU106)
 	i2c_data &= ~(S2MU106_IRQSRC_MUIC);
 #endif
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 	i2c_data &= ~(S2MU106_IRQSRC_PM);
 #endif
 #if IS_ENABLED(CONFIG_MST_S2MU106)

@@ -322,7 +322,7 @@ struct s2m_chg_manager_platform_data {
 	int pdo_max_chg_power;
 #endif
 
-#if IS_ENABLED(CONFIG_S2M_THERMAL)
+#if IS_ENABLED(CONFIG_ERD_S2M_THERMAL)
 	int *thermal_limit_level;
 #endif
 };
@@ -438,7 +438,7 @@ struct s2m_chg_manager_info {
 #endif
 #endif
 
-#if IS_ENABLED(CONFIG_S2M_THERMAL)
+#if IS_ENABLED(CONFIG_ERD_S2M_THERMAL)
 	bool thermal_enable;
 	int thermal_limit;
 	int thermal_limit_max;

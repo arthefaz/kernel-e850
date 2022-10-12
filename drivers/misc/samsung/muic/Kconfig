@@ -45,7 +45,7 @@ config ERD_MUIC_SUPPORT_PRSWAP
 
 config ERD_MUIC_S2MU106
 	tristate "Using S2MU106 MUIC"
-	depends on ERD_USE_S2M_MUIC# && MFD_S2MU106
+	depends on ERD_USE_S2M_MUIC# && ERD_MFD_S2MU106
 	default n
 	help
 	  If you say yes here you will get support for the S2MU106 MUIC chip.

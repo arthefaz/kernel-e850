@@ -1173,7 +1173,7 @@ config MFD_S2MPU12
 	 additional drivers must be enabled in order to use the functionality
 	 of the device
 
-config MFD_S2MU106
+config ERD_MFD_S2MU106
 	tristate "Samsung Electronics S2MU106 IF PMIC Series Support"
 	depends on I2C=y
 	select MFD_CORE

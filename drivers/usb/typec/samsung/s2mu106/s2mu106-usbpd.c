@@ -30,7 +30,7 @@
 #include <linux/usb/typec/samsung/common/usbpd.h>
 #include <linux/usb/typec/samsung/s2mu106/usbpd-s2mu106.h>
 
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 #include <linux/power/s2mu106_pmeter.h>
 #endif
 
@@ -169,7 +169,7 @@ skip:
 	mutex_unlock(&usbpd_data->_mutex);
 }
 
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 static void s2mu106_usbpd_set_pmeter_mode(struct s2mu106_usbpd_data *pdic_data,
 																int mode)
 {
@@ -1080,7 +1080,7 @@ static void s2mu106_send_pd_info(void *_data, int attach)
 
 static int s2mu106_vbus_on_check(void *_data)
 {
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 	struct usbpd_data *data = (struct usbpd_data *) _data;
 	struct s2mu106_usbpd_data *pdic_data = data->phy_driver_data;
 
@@ -1718,7 +1718,7 @@ static void s2mu106_usbpd_otg_attach(struct s2mu106_usbpd_data *pdic_data)
 	ifconn_event_work(pdic_data, IFCONN_NOTIFY_USB, IFCONN_NOTIFY_ID_USB,
 								IFCONN_NOTIFY_EVENT_USB_ATTACH_DFP, NULL);
 #endif
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 		s2mu106_usbpd_check_vbus(pdic_data, 80, VBUS_OFF);
 #endif
 	/* add to turn on external 5V */
@@ -2466,7 +2466,7 @@ static int s2mu106_usbpd_reg_init(struct s2mu106_usbpd_data *_data)
 		data |= S2MU106_REG_PLUG_CTRL_VCONN_MANUAL_EN;
 		s2mu106_usbpd_write_reg(i2c, S2MU106_REG_PLUG_CTRL_RpRd, data);
 	}
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 	s2mu106_usbpd_set_pmeter_mode(_data, PM_TYPE_VCHGIN);
 #endif
 
@@ -2636,7 +2636,7 @@ static int s2mu106_usbpd_probe(struct i2c_client *i2c,
 	mutex_init(&pdic_data->lpm_mutex);
 	mutex_init(&pdic_data->cc_mutex);
 
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 	pdic_data->psy_pm = power_supply_get_by_name("s2mu106-pmeter");
 	if (!pdic_data->psy_pm)
 		pr_err("%s: Fail to get pmeter\n", __func__);

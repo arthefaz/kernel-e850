@@ -29,10 +29,10 @@
 #include <linux/of_gpio.h>
 
 static struct mfd_cell s2mu106_devs[] = {
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 	{ .name = "s2mu106-charger", },
 #endif
-#if IS_ENABLED(CONFIG_LEDS_S2MU106_FLASH)
+#if IS_ENABLED(CONFIG_ERD_LEDS_S2MU106_FLASH)
 	{ .name = "leds-s2mu106", },
 #endif
 #if IS_ENABLED(CONFIG_LEDS_S2MU106_RGB)
@@ -47,7 +47,7 @@ static struct mfd_cell s2mu106_devs[] = {
 #if IS_ENABLED(CONFIG_MST_S2MU106)
 	{ .name = "s2mu106-mst", },
 #endif
-#if IS_ENABLED(CONFIG_PM_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_PM_S2MU106)
 	{ .name = "s2mu106-powermeter", },
 #endif
 #if IS_ENABLED(CONFIG_INPUT_S2MU106_HAPTIC)
@@ -240,9 +240,9 @@ static int s2mu106_i2c_probe(struct i2c_client *i2c,
 	s2mu106->irq = i2c->irq;
 	if (pdata) {
 		s2mu106->pdata = pdata;
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106) || IS_ENABLED(CONFIG_LEDS_S2MU106_FLASH) || \
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106) || IS_ENABLED(CONFIG_ERD_LEDS_S2MU106_FLASH) || \
 	IS_ENABLED(CONFIG_ERD_HV_MUIC_S2MU106_AFC) || IS_ENABLED(CONFIG_ERD_MUIC_S2MU106) || \
-	IS_ENABLED(CONFIG_PM_S2MU106) || IS_ENABLED(CONFIG_MST_S2MU106) || \
+	IS_ENABLED(CONFIG_ERD_PM_S2MU106) || IS_ENABLED(CONFIG_MST_S2MU106) || \
 	IS_ENABLED(CONFIG_MOTOR_S2MU106) || IS_ENABLED(CONFIG_REGULATOR_S2MU106)
 		pdata->irq_base = irq_alloc_descs(-1, 0, S2MU106_IRQ_NR, -1);
 		if (pdata->irq_base < 0) {

@@ -116,7 +116,7 @@ static void get_charging_current(struct s2m_chg_manager_info *battery,
 
 }
 
-#if IS_ENABLED(CONFIG_S2M_THERMAL)
+#if IS_ENABLED(CONFIG_ERD_S2M_THERMAL)
 static void s2m_set_thermal_charging_current(struct s2m_chg_manager_info *battery, int *charging_current)
 {
 	int thermal_limit_level, thermal_limit;
@@ -170,7 +170,7 @@ static int set_charging_current(struct s2m_chg_manager_info *battery, int coeff)
 		__func__, battery->input_current, input_current, battery->charging_current, charging_current,
 		battery->topoff_current, topoff_current);
 
-#if IS_ENABLED(CONFIG_S2M_THERMAL)
+#if IS_ENABLED(CONFIG_ERD_S2M_THERMAL)
 	s2m_set_thermal_charging_current(battery, &charging_current);
 #endif
 
@@ -478,7 +478,7 @@ static int s2m_chg_manager_get_property(struct power_supply *psy,
 		val->intval = battery->cable_type;
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
-#if IS_ENABLED(CONFIG_FAKE_BATT)
+#if IS_ENABLED(CONFIG_ERD_FAKE_BATT)
 		val->intval = true;
 #else
 		val->intval = battery->battery_valid;
@@ -1282,7 +1282,7 @@ static void get_battery_capacity(struct s2m_chg_manager_info *battery)
 
 	battery->is_soc_updated = true;
 
-#if IS_ENABLED(CONFIG_FAKE_BATT)
+#if IS_ENABLED(CONFIG_ERD_FAKE_BATT)
 	battery->capacity = FAKE_BAT_LEVEL;
 #else
 	battery->capacity = new_capacity;
@@ -1675,7 +1675,7 @@ static void check_charging_full(struct s2m_chg_manager_info *battery)
 	}
 }
 
-#if IS_ENABLED(CONFIG_FAKE_BATT)
+#if IS_ENABLED(CONFIG_ERD_FAKE_BATT)
 static void bat_monitor_work(struct work_struct *work)
 {
 	struct s2m_chg_manager_info *battery = container_of(work, struct s2m_chg_manager_info, monitor_work.work);
@@ -2044,7 +2044,7 @@ static int s2m_chg_manager_parse_dt(struct device *dev, struct s2m_chg_manager_i
 	if (ret)
 		pr_info("%s: max_rawsoc_offset is empty\n", __func__);
 
-#if IS_ENABLED(CONFIG_S2M_THERMAL)
+#if IS_ENABLED(CONFIG_ERD_S2M_THERMAL)
 	p = of_get_property(np, "battery,thermal_limit_level", &len);
 	if (!p)
 		return 1;
@@ -2094,7 +2094,7 @@ static enum alarmtimer_restart bat_monitor_alarm(struct alarm *alarm, ktime_t no
 	return ALARMTIMER_NORESTART;
 }
 
-#if IS_ENABLED(CONFIG_S2M_THERMAL)
+#if IS_ENABLED(CONFIG_ERD_S2M_THERMAL)
 static ssize_t charger_set_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	pr_err("%s\n", __func__);
@@ -2424,7 +2424,7 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 	if (!psy)
 		pr_info("%s: there's no charger driver\n", __func__);
 	else {
-#if IS_ENABLED(CONFIG_FAKE_BATT)
+#if IS_ENABLED(CONFIG_ERD_FAKE_BATT)
 		battery->battery_valid = false;
 #else
 		ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_PRESENT, &value);
@@ -2458,7 +2458,7 @@ static int s2m_chg_manager_probe(struct platform_device *pdev)
 #endif
 #endif
 
-#if IS_ENABLED(CONFIG_S2M_THERMAL)
+#if IS_ENABLED(CONFIG_ERD_S2M_THERMAL)
 	if (s2m_chg_manager_create_attrs(&battery->psy_battery->dev))
 		pr_err("%s: Failed to create attrs\n", __func__);
 #endif

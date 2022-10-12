@@ -270,5 +270,5 @@ obj-$(CONFIG_MFD_INTEL_M10_BMC)   += intel-m10-bmc.o
 
 obj-$(CONFIG_MFD_S2MPU12)	+= s2mpu12_mfd.o
 s2mpu12_mfd-$(CONFIG_MFD_S2MPU12) += s2mpu12-core.o s2mpu12-irq.o
-obj-$(CONFIG_MFD_S2MU106)		+= s2mu106_mfd.o
-s2mu106_mfd-$(CONFIG_MFD_S2MU106)	+= s2mu106_core.o s2mu106_irq.o
+obj-$(CONFIG_ERD_MFD_S2MU106)		+= s2mu106_mfd.o
+s2mu106_mfd-$(CONFIG_ERD_MFD_S2MU106)	+= s2mu106_core.o s2mu106_irq.o

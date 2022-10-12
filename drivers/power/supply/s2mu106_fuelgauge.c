@@ -728,7 +728,7 @@ static int s2mu106_get_rawsoc(struct s2mu106_fuelgauge_data *fuelgauge)
 	u8 por_state = 0;
 	u8 reg_1E = 0;
 	u8 reg_OTP_52 = 0, reg_OTP_53 = 0;
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 	bool charging_enabled = false;
 #endif
 	int ret = 0;
@@ -764,7 +764,7 @@ static int s2mu106_get_rawsoc(struct s2mu106_fuelgauge_data *fuelgauge)
 	if (((por_state != 0x00) || (reg_1E != 0x03)) || (fuelgauge->probe_done == true &&
 		(fuelgauge->reg_OTP_52 != reg_OTP_52 || fuelgauge->reg_OTP_53 != reg_OTP_53))) {
 		/* check charging enable */
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 		psy = power_supply_get_by_name("s2mu106-charger");
 		if (!psy)
 			return -EINVAL;
@@ -789,7 +789,7 @@ static int s2mu106_get_rawsoc(struct s2mu106_fuelgauge_data *fuelgauge)
 #endif
 
 		if (fuelgauge->reg_OTP_52 != reg_OTP_52 || fuelgauge->reg_OTP_53 != reg_OTP_53) {
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 			psy = power_supply_get_by_name("s2mu106-charger");
 			if (!psy)
 				return -EINVAL;
@@ -811,7 +811,7 @@ static int s2mu106_get_rawsoc(struct s2mu106_fuelgauge_data *fuelgauge)
 				fuelgauge->reg_OTP_52, fuelgauge->reg_OTP_53, reg_OTP_52, reg_OTP_53);
 
 			if (fuelgauge->reg_OTP_52 != reg_OTP_52 || fuelgauge->reg_OTP_53 != reg_OTP_53) {
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 				psy = power_supply_get_by_name("s2mu106-charger");
 				if (!psy)
 					return -EINVAL;
@@ -837,7 +837,7 @@ static int s2mu106_get_rawsoc(struct s2mu106_fuelgauge_data *fuelgauge)
 		por_state = 0x00;
 		s2mu106_write_and_verify_reg_byte(fuelgauge->i2c, 0x1F, por_state);
 
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 		/* Recover charger status after f.g reset */
 		if (charging_enabled) {
 			value.intval = S2M_BAT_CHG_MODE_CHARGING;
@@ -918,7 +918,7 @@ static int s2mu106_get_rawsoc(struct s2mu106_fuelgauge_data *fuelgauge)
 	fuelgauge->info.soc = fuelgauge->rsoc;
 #endif
 
-#if IS_ENABLED(CONFIG_CHARGER_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_CHARGER_S2MU106)
 	psy = power_supply_get_by_name("s2mu106-charger");
 	if (!psy)
 		return -EINVAL;

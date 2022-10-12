@@ -116,7 +116,7 @@ static void s2mu106_enable_charger_switch(struct s2mu106_charger_data *charger, 
 		goto out;
 	}
 
-#if IS_ENABLED(CONFIG_BLOCK_CHG_SMDK_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_BLOCK_CHG_SMDK_S2MU106)
 	pr_info("[DEBUG][SMDK]%s: turn off charger\n", __func__);
 	s2mu106_update_reg(charger->i2c, S2MU106_CHG_CTRL0, BUCK_MODE, REG_MODE_MASK);
 #else
@@ -311,7 +311,7 @@ static bool s2mu106_chg_init(struct s2mu106_charger_data *charger)
 	/* MRSTB 1s set */
 	s2mu106_write_reg(charger->i2c, 0xE5, 0x08);
 
-#if IS_ENABLED(CONFIG_BLOCK_CHG_SMDK_S2MU106)
+#if IS_ENABLED(CONFIG_ERD_BLOCK_CHG_SMDK_S2MU106)
 	/* QBAT_Diode_Fix_Mode=0 setting */
 	s2mu106_update_reg(charger->i2c, S2MU106_CHG_SC_OTP34, 0x00, 0x08);
 
