@@ -76,11 +76,23 @@ static int __mfc_core_prot_firmware(struct mfc_core *core, struct mfc_ctx *ctx)
 		/* INT freq lock for FW verification */
 		mfc_core_qos_int_operate(core, 1);
 
-		/* Request buffer protection for DRM F/W */
-		ret = exynos_smc(SMC_DRM_PPMP_MFCFW_PROT, protdesc_phys, core->id * PROT_MFC1, 0);
+		ret = exynos_smc(SMC_DRM_PPMP_PROT, protdesc_phys, core->id * PROT_MFC1, 0);
 		if (ret != DRMDRV_OK) {
-			mfc_core_err("failed MFC DRM F/W prot(%#x)\n", ret);
+			mfc_core_err("failed MFC DRM F/W prot(%#x) stage1 \n", ret);
 			call_dop(core, dump_and_stop_debug_mode, core);
+			mfc_core_qos_int_operate(core, 0);
+			core->fw.drm_status = 0;
+			kfree(core->drm_fw_prot);
+			core->drm_fw_prot = NULL;
+			return -EACCES;
+		}
+
+		/* Request buffer protection for DRM F/W */
+		ret = exynos_smc(SMC_DRM_PPMP_MFCFW_PROT, core->drm_fw_buf.daddr, core->id * PROT_MFC1, 0);
+		if (ret != DRMDRV_OK) {
+			mfc_core_err("failed MFC DRM F/W prot(%#x) stage2 \n", ret);
+			call_dop(core, dump_and_stop_debug_mode, core);
+			exynos_smc(SMC_DRM_PPMP_UNPROT, protdesc_phys, core->id * PROT_MFC1, 0);
 			mfc_core_qos_int_operate(core, 0);
 			core->fw.drm_status = 0;
 			kfree(core->drm_fw_prot);
@@ -113,10 +125,16 @@ static void __mfc_core_unprot_firmware(struct mfc_core *core, struct mfc_ctx *ct
 
 	core->fw.drm_status = 0;
 	/* Request buffer unprotection for DRM F/W */
-	protdesc_phys = virt_to_phys(core->drm_fw_prot);
-	ret = exynos_smc(SMC_DRM_PPMP_MFCFW_UNPROT, protdesc_phys, core->id * PROT_MFC1, 0);
+	ret = exynos_smc(SMC_DRM_PPMP_MFCFW_UNPROT, core->drm_fw_buf.daddr, core->id * PROT_MFC1, 0);
 	if (ret != DRMDRV_OK) {
-		mfc_core_err("failed MFC DRM F/W unprot(%#x)\n", ret);
+		mfc_core_err("failed MFC DRM F/W unprot(%#x) stage1\n", ret);
+		call_dop(core, dump_and_stop_debug_mode, core);
+	}
+
+	protdesc_phys = virt_to_phys(core->drm_fw_prot);
+	ret = exynos_smc(SMC_DRM_PPMP_UNPROT, protdesc_phys, core->id * PROT_MFC1, 0);
+	if (ret != DRMDRV_OK) {
+		mfc_core_err("failed MFC DRM F/W unprot(%#x) stage2\n", ret);
 		call_dop(core, dump_and_stop_debug_mode, core);
 	}
 
