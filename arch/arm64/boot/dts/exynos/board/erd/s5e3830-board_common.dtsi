@@ -864,6 +864,7 @@
 	hto-timeout = <80>;
 	enable-ulp-mode;
 	support-cmdq;
+	mmc-inline-crypt;
 	fifo-depth = <0x40>;
 	non-removable;
 	desc-size = <4>;

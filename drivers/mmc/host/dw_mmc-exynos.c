@@ -1493,8 +1493,8 @@ static const struct dw_mci_drv_data exynos_drv_data = {
 	.misc_control = dw_mci_exynos_misc_control,
 	.pins_control = dw_mci_set_pins_state,
 #ifdef CONFIG_MMC_DW_EXYNOS_FMP
-//	.crypto_engine_cfg = dw_mci_exynos_crypto_engine_cfg,
-//	.crypto_engine_clear = dw_mci_exynos_crypto_engine_clear,
+	.crypto_engine_cfg = dw_mci_exynos_crypto_engine_cfg,
+	.crypto_engine_clear = dw_mci_exynos_crypto_engine_clear,
 	.crypto_sec_cfg = dw_mci_exynos_crypto_sec_cfg,
 #endif
 	.ssclk_control = dw_mci_exynos_ssclk_control,
