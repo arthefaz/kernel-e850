@@ -31,6 +31,7 @@
 		clock-names = "gate";
 		iommus = <&sysmmu_mfcmscl>;
 		samsung,iommu-group=<&iommu_group_is_mfcmscl>;
+		samsung,tzmp;
 
 		/* MIF (not used) | INT | MSCL clock */
 		mscl_qos_table = < 0 534000 667000
