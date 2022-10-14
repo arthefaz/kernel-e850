@@ -301,6 +301,7 @@ struct muic_platform_data {
 
 	/* muic current attached device */
 	muic_attached_dev_t	attached_dev;
+	muic_attached_dev_t	prev_dev;
 
 	bool is_usb_ready;
 	bool is_factory_start;

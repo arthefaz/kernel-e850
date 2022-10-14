@@ -2765,9 +2765,9 @@ static int s2mu106_muic_resume(struct device *dev)
 
 	if (muic_pdata->need_to_noti) {
 		if (muic_pdata->attached_dev) {
-			MUIC_SEND_NOTI_ATTACH(muic_pdata->attached_dev);
+			MUIC_SEND_NOTI_ATTACH_ALL(muic_pdata->prev_dev);
 		} else {
-			MUIC_SEND_NOTI_DETACH(muic_pdata->attached_dev);
+			MUIC_SEND_NOTI_DETACH_ALL(muic_pdata->prev_dev);
 		}
 
 		muic_pdata->need_to_noti = false;

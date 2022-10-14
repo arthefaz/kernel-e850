@@ -1053,8 +1053,10 @@ int muic_core_handle_detach(struct muic_platform_data *muic_pdata)
 	if (noti) {
 		if (!muic_pdata->suspended) {
 			MUIC_SEND_NOTI_DETACH_ALL(prev_dev);
-		} else
+		} else {
+			muic_pdata->prev_dev = prev_dev;
 			muic_pdata->need_to_noti = true;
+		}
 	}
 	return ret;
 }
