@@ -1434,7 +1434,7 @@ void sc_get_span(const struct sc_fmt *fmt, const __u32 width,
 	} else {
 		*yspan = width;
 
-		if (fmt->num_comp == 2) {
+		if (fmt->num_comp == 2 || fmt->is_alphablend_fmt) {
 			*cspan = width << fmt->cspan;
 		} else if (fmt->num_comp == 3) {
 			if (sc_fmt_is_ayv12(fmt->pixelformat))
