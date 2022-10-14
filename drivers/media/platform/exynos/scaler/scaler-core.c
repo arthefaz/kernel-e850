@@ -3956,8 +3956,8 @@ static bool sc_process_2nd_stage(struct sc_dev *sc, struct sc_ctx *ctx)
 	}
 
 	/* no rotation */
-	if (ctx->bl_op) {
-		if (sc->variant->blending) {
+	if (sc->variant->blending) {
+		if (ctx->bl_op) {
 			struct sc_frame *src_blend_frame =
 					&ctx->src_blend_frame;
 			sc_hwset_blend_src_addr(sc, src_blend_frame);
@@ -4209,8 +4209,8 @@ static int sc_run_next_job(struct sc_dev *sc)
 
 	sc_set_dithering(ctx);
 
-	if (ctx->bl_op && !test_bit(CTX_INT_FRAME, &ctx->flags)) {
-		if (sc->variant->blending) {
+	if (sc->variant->blending) {
+		if (ctx->bl_op && !test_bit(CTX_INT_FRAME, &ctx->flags)) {
 			struct sc_frame *src_blend_frame =
 					&ctx->src_blend_frame;
 			sc_hwset_blend_src_addr(sc, src_blend_frame);
