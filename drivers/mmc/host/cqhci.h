@@ -339,6 +339,10 @@ struct cqhci_host_ops {
 	u32 (*read_l)(struct cqhci_host *host, int reg);
 	void (*enable)(struct mmc_host *mmc);
 	void (*disable)(struct mmc_host *mmc, bool recovery);
+	int (*crypto_engine_cfg)(struct mmc_host *mmc, void *desc,
+					struct mmc_data *data, int page_index, bool cmdq_enabled);
+	int (*crypto_engine_clear)(struct mmc_host *mmc, void *desc,
+					struct mmc_data *data, bool cmdq_enabled);
 	void (*update_dcmd_desc)(struct mmc_host *mmc, struct mmc_request *mrq,
 				 u64 *data);
 	void (*pre_enable)(struct mmc_host *mmc);

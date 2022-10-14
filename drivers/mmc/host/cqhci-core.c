@@ -39,6 +39,8 @@ struct cqhci_slot {
 #define CQHCI_HOST_OTHER	BIT(4)
 };
 
+static inline int cqhci_tag(struct mmc_request *mrq);
+
 static inline u8 *get_desc(struct cqhci_host *cq_host, u8 tag)
 {
 	return cq_host->desc_base + (tag * cq_host->slot_sz);
@@ -545,6 +547,9 @@ static int cqhci_prep_tran_desc(struct mmc_request *mrq,
 	dma_addr_t addr;
 	u8 *desc;
 	struct scatterlist *sg;
+	struct mmc_host *mmc = cq_host->mmc;
+	int page_index = 0;
+	int ret;
 
 	sg_count = cqhci_dma_map(mrq->host, mrq);
 	if (sg_count < 0) {
@@ -562,6 +567,15 @@ static int cqhci_prep_tran_desc(struct mmc_request *mrq,
 		if ((i+1) == sg_count)
 			end = true;
 		cqhci_set_tran_desc(desc, addr, len, end, dma64);
+		if (cq_host->ops->crypto_engine_cfg) {
+			ret = cq_host->ops->crypto_engine_cfg(mmc, desc, data,
+					page_index++, true);
+			if (ret) {
+				pr_err("%s: %s: failed to configure crypto engine. ret(%d)\n",
+						mmc_hostname(mmc), __func__, ret);
+				return -1;
+			}
+		}
 		desc += cq_host->trans_desc_len;
 	}
 
@@ -613,8 +627,20 @@ static void cqhci_prep_dcmd_desc(struct mmc_host *mmc,
 static void cqhci_post_req(struct mmc_host *host, struct mmc_request *mrq)
 {
 	struct mmc_data *data = mrq->data;
+	struct cqhci_host *cq_host = host->cqe_private;
+	int tag = cqhci_tag(mrq);
+	int ret;
+	u8 *desc;
 
 	if (data) {
+		if (cq_host->ops->crypto_engine_clear) {
+			desc = get_trans_desc(cq_host, tag);
+			ret = cq_host->ops->crypto_engine_clear(host, desc, data, true);
+			if (ret) {
+				pr_err("%s: %s: failed to clear crypto engine(%d)\n",
+					mmc_hostname(host), __func__, ret);
+			}
+		}
 		dma_unmap_sg(mmc_dev(host), data->sg, data->sg_len,
 			     (data->flags & MMC_DATA_READ) ?
 			     DMA_FROM_DEVICE : DMA_TO_DEVICE);

@@ -3771,6 +3771,26 @@ static void dw_mci_cmdq_dump_vendor_regs(struct mmc_host *mmc)
 	//dw_mci_reg_dump(host);
 }
 
+#ifdef CONFIG_MMC_DW_EXYNOS_FMP
+static int dw_mci_cmdq_crypto_engine_cfg(struct mmc_host *mmc, void *desc,
+					struct mmc_data *data, int page_index, bool cmdq_enabled)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	const struct dw_mci_drv_data *drv_data = host->drv_data;
+	return drv_data->crypto_engine_cfg(host, desc, data, page_index, cmdq_enabled);
+}
+
+static int dw_mci_cmdq_crypto_engine_clear(struct mmc_host *mmc, void *desc,
+					struct mmc_data *data, bool cmdq_enabled)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	const struct dw_mci_drv_data *drv_data = host->drv_data;
+	return drv_data->crypto_engine_clear(host, desc, data, cmdq_enabled);
+}
+#endif
+
 #else
 
 static void dw_mci_cmdq_enable(struct mmc_host *mmc)
@@ -3796,6 +3816,20 @@ static void dw_mci_cmdq_cmd_log(struct mmc_host *mmc, bool new_cmd,
 }
 
 static int dw_mci_cmdq_core_reset(struct mmc_host *mmc)
+{
+	return 0;
+}
+#endif
+
+#ifdef CONFIG_MMC_DW_EXYNOS_FMP
+static int dw_mci_cmdq_crypto_engine_cfg(struct mmc_host *mmc, void *desc,
+					struct mmc_data *data, int page_index, bool cmdq_enabled)
+{
+	return 0;
+}
+
+static int dw_mci_cmdq_crypto_engine_clear(struct mmc_host *mmc, void *desc,
+					struct mmc_data *data, bool cmdq_enabled)
 {
 	return 0;
 }
@@ -3897,6 +3931,10 @@ static const struct cqhci_host_ops dw_mci_cmdq_ops = {
 	.cmdq_log = dw_mci_cmdq_cmd_log,
 #endif
 	.reset = dw_mci_cmdq_core_reset,
+#ifdef CONFIG_MMC_DW_EXYNOS_FMP
+	.crypto_engine_cfg = dw_mci_cmdq_crypto_engine_cfg,
+	.crypto_engine_clear = dw_mci_cmdq_crypto_engine_clear,
+#endif
 };
 
 
