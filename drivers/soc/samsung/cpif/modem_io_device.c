@@ -227,21 +227,21 @@ static int gather_multi_frame(struct sipc5_link_header *hdr,
 	if (skb_queue_empty(multi_q)) {
 		struct sipc_fmt_hdr *fh = (struct sipc_fmt_hdr *)skb->data;
 
-		mif_err("%s<-%s: start of multi-frame (ID:%d len:%d)\n",
+		mif_info("%s<-%s: start of multi-frame (ID:%d len:%d)\n",
 			iod->name, mc->name, ctrl.id, fh->len);
 	}
 	skb_queue_tail(multi_q, skb);
 
 	if (ctrl.more) {
 		/* The last frame has not arrived yet. */
-		mif_err("%s<-%s: recv multi-frame (ID:%d rcvd:%d)\n",
+		mif_info("%s<-%s: recv multi-frame (ID:%d rcvd:%d)\n",
 			iod->name, mc->name, ctrl.id, skb->len);
 	} else {
 		struct sk_buff_head *rxq = &iod->sk_rx_q;
 		unsigned long flags;
 
 		/* It is the last frame because the "more" bit is 0. */
-		mif_err("%s<-%s: end of multi-frame (ID:%d rcvd:%d)\n",
+		mif_info("%s<-%s: end of multi-frame (ID:%d rcvd:%d)\n",
 			iod->name, mc->name, ctrl.id, skb->len);
 
 		spin_lock_irqsave(&rxq->lock, flags);
@@ -268,7 +268,7 @@ static int gather_multi_frame_sit(struct exynos_link_header *hdr, struct sk_buff
 #ifdef DEBUG_MODEM_IF_LINK_RX
 	/* If there has been no multiple frame with this ID, ... */
 	if (skb_queue_empty(multi_q)) {
-		mif_err("%s<-%s: start of multi-frame (pkt_index:%d fr_index:%d len:%d)\n",
+		mif_info("%s<-%s: start of multi-frame (pkt_index:%d fr_index:%d len:%d)\n",
 			iod->name, mc->name, exynos_multi_packet_index(ctrl),
 			exynos_multi_frame_index(ctrl), hdr->len);
 	}
@@ -277,7 +277,7 @@ static int gather_multi_frame_sit(struct exynos_link_header *hdr, struct sk_buff
 
 	/* The last frame has not arrived yet. */
 	if (!exynos_multi_last(ctrl)) {
-		mif_err("%s<-%s: recv of multi-frame (CH_ID:0x%02x rcvd:%d)\n",
+		mif_info("%s<-%s: recv of multi-frame (CH_ID:0x%02x rcvd:%d)\n",
 			iod->name, mc->name, hdr->ch_id, skb->len);
 
 		return ret;
