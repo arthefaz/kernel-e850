@@ -607,6 +607,12 @@ void sc_hwset_blend(struct sc_dev *sc, enum sc_blend_op bl_op, bool pre_multi,
 	unsigned int cfg = readl(sc->regs + SCALER_CFG);
 	int idx = bl_op - 1;
 
+	if (!src_blend_cfg) {
+		cfg &= ~SCALER_CFG_BLEND_EN;
+		writel(cfg, sc->regs + SCALER_CFG);
+		return;
+	}
+
 	cfg |= SCALER_CFG_BLEND_EN;
 	writel(cfg, sc->regs + SCALER_CFG);
 
