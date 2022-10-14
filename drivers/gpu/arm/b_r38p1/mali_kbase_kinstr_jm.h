@@ -63,7 +63,7 @@
 #ifndef _KBASE_KINSTR_JM_H_
 #define _KBASE_KINSTR_JM_H_
 
-#include <uapi/gpu/arm/bv_r38p1/mali_kbase_kinstr_jm_reader.h>
+#include <uapi/gpu/arm/b_r38p1/mali_kbase_kinstr_jm_reader.h>
 
 #ifdef __KERNEL__
 #include <linux/version.h>

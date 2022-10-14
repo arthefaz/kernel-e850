@@ -26,7 +26,7 @@
 #ifndef _KBASE_MODEL_DUMMY_H_
 #define _KBASE_MODEL_DUMMY_H_
 
-#include <uapi/gpu/arm/bv_r38p1/backend/gpu/mali_kbase_model_dummy.h>
+#include <uapi/gpu/arm/b_r38p1/backend/gpu/mali_kbase_model_dummy.h>
 
 #define model_error_log(module, ...) pr_err(__VA_ARGS__)
 

@@ -22,9 +22,10 @@
 #ifndef _KBASE_MMU_H_
 #define _KBASE_MMU_H_
 
-#include <uapi/gpu/arm/bv_r38p1/mali_base_kernel.h>
+#include <uapi/gpu/arm/b_r38p1/mali_base_kernel.h>
 
 #define KBASE_MMU_PAGE_ENTRIES 512
+#define KBASE_MMU_INVALID_PGD_ADDRESS (~(phys_addr_t)0)
 
 struct kbase_context;
 struct kbase_mmu_table;

@@ -22,9 +22,9 @@
 #ifndef _KBASE_GPU_REGMAP_H_
 #define _KBASE_GPU_REGMAP_H_
 
-#include <uapi/gpu/arm/bv_r38p1/gpu/mali_kbase_gpu_regmap.h>
-#include <uapi/gpu/arm/bv_r38p1/gpu/mali_kbase_gpu_coherency.h>
-#include <uapi/gpu/arm/bv_r38p1/gpu/mali_kbase_gpu_id.h>
+#include <uapi/gpu/arm/b_r38p1/gpu/mali_kbase_gpu_regmap.h>
+#include <uapi/gpu/arm/b_r38p1/gpu/mali_kbase_gpu_coherency.h>
+#include <uapi/gpu/arm/b_r38p1/gpu/mali_kbase_gpu_id.h>
 #if MALI_USE_CSF
 #include "backend/mali_kbase_gpu_regmap_csf.h"
 #else

@@ -811,8 +811,8 @@ static void pending_submission_worker(struct work_struct *work)
 
 			if (!group || queue->bind_state != KBASE_CSF_QUEUE_BOUND)
 				dev_dbg(kbdev->dev, "queue is not bound to a group");
-			else
-				WARN_ON(kbase_csf_scheduler_queue_start(queue));
+			else if (kbase_csf_scheduler_queue_start(queue))
+				dev_dbg(kbdev->dev, "Failed to start queue");
 		}
 	}
 
@@ -1355,6 +1355,7 @@ static int create_queue_group(struct kbase_context *const kctx,
 			group->doorbell_nr = KBASEP_USER_DB_NR_INVALID;
 			group->faulted = false;
 			group->cs_unrecoverable = false;
+			group->reevaluate_idle_status = false;
 
 
 			group->group_uid = generate_group_uid();
@@ -1620,24 +1621,28 @@ void kbase_csf_queue_group_terminate(struct kbase_context *kctx,
 	group = find_queue_group(kctx, group_handle);
 
 	if (group) {
-		remove_pending_group_fatal_error(group);
+		/* Stop the running of the given group */
 		term_queue_group(group);
 		kctx->csf.queue_groups[group_handle] = NULL;
+		mutex_unlock(&kctx->csf.lock);
+
+		/* Cancel any pending event callbacks. If one is in progress
+		 * then this thread waits synchronously for it to complete (which
+		 * is why we must unlock the context first). We already ensured
+		 * that no more callbacks can be enqueued by terminating the group.
+		 */
+		cancel_queue_group_events(group);
+
+		mutex_lock(&kctx->csf.lock);
+
+		/* Clean up after the termination */
+		remove_pending_group_fatal_error(group);
 	}
 
 	mutex_unlock(&kctx->csf.lock);
 	if (reset_prevented)
 		kbase_reset_gpu_allow(kbdev);
 
-	if (!group)
-		return;
-
-	/* Cancel any pending event callbacks. If one is in progress
-	 * then this thread waits synchronously for it to complete (which
-	 * is why we must unlock the context first). We already ensured
-	 * that no more callbacks can be enqueued by terminating the group.
-	 */
-	cancel_queue_group_events(group);
 	kfree(group);
 }
 
@@ -1732,7 +1737,6 @@ void kbase_csf_active_queue_groups_reset(struct kbase_device *kbdev,
 
 int kbase_csf_ctx_init(struct kbase_context *kctx)
 {
-	struct kbase_device *kbdev = kctx->kbdev;
 	int err = -ENOMEM;
 
 	INIT_LIST_HEAD(&kctx->csf.queue_list);
@@ -1741,19 +1745,6 @@ int kbase_csf_ctx_init(struct kbase_context *kctx)
 	kbase_csf_event_init(kctx);
 
 	kctx->csf.user_reg_vma = NULL;
-	mutex_lock(&kbdev->pm.lock);
-	/* The inode information for /dev/malixx file is not available at the
-	 * time of device probe as the inode is created when the device node
-	 * is created by udevd (through mknod).
-	 */
-	if (kctx->filp) {
-		if (!kbdev->csf.mali_file_inode)
-			kbdev->csf.mali_file_inode = kctx->filp->f_inode;
-
-		/* inode is unique for a file */
-		WARN_ON(kbdev->csf.mali_file_inode != kctx->filp->f_inode);
-	}
-	mutex_unlock(&kbdev->pm.lock);
 
 	/* Mark all the cookies as 'free' */
 	bitmap_fill(kctx->csf.cookies, KBASE_CSF_NUM_USER_IO_PAGES_HANDLE);
@@ -2687,7 +2678,7 @@ static void process_csg_interrupts(struct kbase_device *const kbdev, int const c
 			/* If there are non-idle CSGs waiting for a slot, fire
 			 * a tock for a replacement.
 			 */
-			mod_delayed_work(scheduler->wq, &scheduler->tock_work, 0);
+			kbase_csf_scheduler_invoke_tock(kbdev);
 		}
 
 		if (group->scan_seq_num < track->idle_seq) {
@@ -2884,13 +2875,16 @@ static inline void process_tracked_info_for_protm(struct kbase_device *kbdev,
 
 	kbase_csf_scheduler_spin_lock_assert_held(kbdev);
 
+	if (likely(current_protm_pending_seq == KBASEP_TICK_PROTM_PEND_SCAN_SEQ_NR_INVALID))
+		return;
+
 	/* Handle protm from the tracked information */
 	if (track->idle_seq < current_protm_pending_seq) {
 		/* If the protm enter was prevented due to groups priority, then fire a tock
 		 * for the scheduler to re-examine the case.
 		 */
 		dev_dbg(kbdev->dev, "Attempt pending protm from idle slot %d\n", track->idle_slot);
-		mod_delayed_work(scheduler->wq, &scheduler->tock_work, 0);
+		kbase_csf_scheduler_invoke_tock(kbdev);
 	} else if (group) {
 		u32 i, num_groups = kbdev->csf.global_iface.group_num;
 		struct kbase_queue_group *grp;
@@ -2913,7 +2907,7 @@ static inline void process_tracked_info_for_protm(struct kbase_device *kbdev,
 				tock_triggered = true;
 				dev_dbg(kbdev->dev,
 					"Attempt new protm from tick/tock idle slot %d\n", i);
-				mod_delayed_work(scheduler->wq, &scheduler->tock_work, 0);
+				kbase_csf_scheduler_invoke_tock(kbdev);
 				break;
 			}
 		}

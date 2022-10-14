@@ -19,21 +19,38 @@
  *
  */
 
-#ifndef _KBASE_DEBUG_MEM_ZONES_H
-#define _KBASE_DEBUG_MEM_ZONES_H
+#ifndef _KBASE_CSF_FIRMWARE_LOG_H_
+#define _KBASE_CSF_FIRMWARE_LOG_H_
 
 #include <mali_kbase.h>
 
-/**
- * kbase_debug_mem_zones_init() - Initialize the mem_zones sysfs file
- * @kctx: Pointer to kernel base context
- *
- * This function creates a "mem_zones" file which can be used to determine the
- * address ranges of GPU memory zones, in the GPU Virtual-Address space.
- *
- * The file is cleaned up by a call to debugfs_remove_recursive() deleting the
- * parent directory.
+/*
+ * Firmware log dumping buffer size.
  */
-void kbase_debug_mem_zones_init(struct kbase_context *kctx);
+#define FIRMWARE_LOG_DUMP_BUF_SIZE PAGE_SIZE
 
-#endif
+/**
+ * kbase_csf_firmware_log_init - Initialize firmware log handling.
+ *
+ * @kbdev: Pointer to the Kbase device
+ *
+ * Return: The initialization error code.
+ */
+int kbase_csf_firmware_log_init(struct kbase_device *kbdev);
+
+/**
+ * kbase_csf_firmware_log_term - Terminate firmware log handling.
+ *
+ * @kbdev: Pointer to the Kbase device
+ */
+void kbase_csf_firmware_log_term(struct kbase_device *kbdev);
+
+/**
+ * kbase_csf_firmware_log_dump_buffer - Read remaining data in the firmware log
+ *                                  buffer and print it to dmesg.
+ *
+ * @kbdev: Pointer to the Kbase device
+ */
+void kbase_csf_firmware_log_dump_buffer(struct kbase_device *kbdev);
+
+#endif /* _KBASE_CSF_FIRMWARE_LOG_H_ */

@@ -23,7 +23,7 @@
 #include "mali_kbase_kinstr_prfcnt.h"
 #include "mali_kbase_hwcnt_virtualizer.h"
 #include "mali_kbase_hwcnt_gpu.h"
-#include <uapi/gpu/arm/bv_r38p1/mali_kbase_ioctl.h>
+#include <uapi/gpu/arm/b_r38p1/mali_kbase_ioctl.h>
 #include "mali_malisw.h"
 #include "mali_kbase_debug.h"
 

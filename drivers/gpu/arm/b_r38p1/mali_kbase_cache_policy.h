@@ -27,7 +27,7 @@
 #define _KBASE_CACHE_POLICY_H_
 
 #include "mali_kbase.h"
-#include <uapi/gpu/arm/bv_r38p1/mali_base_kernel.h>
+#include <uapi/gpu/arm/b_r38p1/mali_base_kernel.h>
 
 /**
  * kbase_cache_enabled - Choose the cache policy for a specific region
