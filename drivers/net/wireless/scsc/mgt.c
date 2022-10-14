@@ -127,11 +127,16 @@ static ssize_t sysfs_store_debugdump(struct kobject *kobj, struct kobj_attribute
 static ssize_t sysfs_show_pm(struct kobject *kobj, struct kobj_attribute *attr, char *buf);
 static ssize_t sysfs_store_pm(struct kobject *kobj, struct kobj_attribute *attr,
 			      const char *buf, size_t count);
+static ssize_t sysfs_show_ant(struct kobject *kobj, struct kobj_attribute *attr, char *buf);
+static ssize_t sysfs_store_ant(struct kobject *kobj, struct kobj_attribute *attr,
+			       const char *buf, size_t count);
 
 static struct kobject *wifi_kobj_ref;
 static char sysfs_mac_override[] = "ff:ff:ff:ff:ff:ff";
+static u16 sysfs_antenna;
 static struct kobj_attribute mac_attr = __ATTR(mac_addr, 0660, sysfs_show_macaddr, sysfs_store_macaddr);
 static struct kobj_attribute pm_attr = __ATTR(pm, 0660, sysfs_show_pm, sysfs_store_pm);
+static struct kobj_attribute ant_attr = __ATTR(ant, 0660, sysfs_show_ant, sysfs_store_ant);
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 12
 static int dump_in_progress = 0;
 static struct kobj_attribute dump_attr = __ATTR(dump_in_progress, 0660, sysfs_show_debugdump, sysfs_store_debugdump);
@@ -696,10 +701,6 @@ int slsi_start(struct slsi_dev *sdev, struct net_device *dev)
 #endif
 	char buf[512];
 #endif
-#ifdef CONFIG_SCSC_WLAN_SET_PREFERRED_ANTENNA
-	char *ant_file_path = "/data/vendor/conn/.ant.info";
-	char *antenna_file_path = "/data/vendor/wifi/antenna.info";
-#endif
 	char  log_to_sys_error_buffer[128] = { 0 };
 
 	SLSI_UNUSED_PARAMETER(dev);
@@ -909,13 +910,8 @@ int slsi_start(struct slsi_dev *sdev, struct net_device *dev)
 	}
 
 #ifdef CONFIG_SCSC_WLAN_SET_PREFERRED_ANTENNA
-	if (slsi_is_rf_test_mode_enabled()) {
-		/* reading antenna mode from configured file /data/vendor/conn/.ant.info */
-		if (!(slsi_read_preferred_antenna_from_file(sdev, ant_file_path))) {
-			/* reading antenna mode from configured file /data/vendor/wifi/antenna.info */
-			slsi_read_preferred_antenna_from_file(sdev, antenna_file_path);
-		}
-	}
+	if (slsi_is_rf_test_mode_enabled())
+		slsi_set_mib_preferred_antenna(sdev, sysfs_antenna);
 #endif
 
 #if IS_ENABLED(CONFIG_SCSC_LOG_COLLECTION)
@@ -958,41 +954,6 @@ done:
 
 	return err;
 }
-
-#ifdef CONFIG_SCSC_WLAN_SET_PREFERRED_ANTENNA
-bool slsi_read_preferred_antenna_from_file(struct slsi_dev *sdev, char *antenna_file_path)
-{
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
-	char ant_mode = '0';
-	u16 antenna = 0;
-	int ret = 0;
-	struct file *file_ptr = NULL;
-
-	file_ptr = filp_open(antenna_file_path, O_RDONLY, 0);
-	if (!file_ptr || IS_ERR(file_ptr)) {
-		SLSI_DBG1(sdev, SLSI_CFG80211, "%s open returned error %d\n", antenna_file_path, IS_ERR(file_ptr));
-		return false;
-	} else {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
-		ret = kernel_read(file_ptr, &ant_mode, 1, &file_ptr->f_pos);
-#else
-		ret = kernel_read(file_ptr, file_ptr->f_pos, &ant_mode, 1);
-#endif
-		if (ret < 0) {
-			SLSI_INFO_NODEV("Kernel read error found\n");
-			filp_close(file_ptr, NULL);
-			return false;
-		}
-		antenna = ant_mode - '0';
-		filp_close(file_ptr, NULL);
-		slsi_set_mib_preferred_antenna(sdev, antenna);
-		return true;
-	}
-#else
-	return false;
-#endif
-}
-#endif
 
 struct net_device *slsi_dynamic_interface_create(struct wiphy        *wiphy,
 					     const char          *name,
@@ -8154,6 +8115,68 @@ void slsi_destroy_sysfs_pm(void)
 
 	/* Destroy /sys/wifi/pm file */
 	sysfs_remove_file(wifi_kobj_ref, &pm_attr.attr);
+
+	/* Destroy /sys/wifi virtual dir */
+	mxman_wifi_kobject_ref_put();
+}
+
+/* Retrieve ant in sysfs global */
+static ssize_t sysfs_show_ant(struct kobject *kobj,
+			      struct kobj_attribute *attr,
+			      char *buf)
+{
+	return sprintf(buf, "%d\n", sysfs_antenna);
+}
+
+/* Update ant in sysfs global */
+static ssize_t sysfs_store_ant(struct kobject *kobj,
+			       struct kobj_attribute *attr,
+			       const char *buf,
+			       size_t count)
+{
+	int r;
+	int antenna;
+
+	r = kstrtoint(buf, 10, &antenna);
+	if (r < 0 || antenna < 0 || antenna > 3)
+		pr_err("Invalid ant value. Min:0 Max:3\n");
+	else
+		sysfs_antenna = (u16)antenna;
+
+	SLSI_INFO_NODEV("antenna: %d\n", sysfs_antenna);
+
+	return (r == 0) ? count : 0;
+}
+
+/* Register sysfs ant */
+void slsi_create_sysfs_ant(void)
+{
+	int r;
+
+	wifi_kobj_ref = mxman_wifi_kobject_ref_get();
+	pr_info("wifi_kobj_ref: 0x%p\n", wifi_kobj_ref);
+
+	if (wifi_kobj_ref) {
+		/* Create sysfs file /sys/wifi/ant */
+		r = sysfs_create_file(wifi_kobj_ref, &ant_attr.attr);
+		if (r) {
+			/* Failed, so clean up dir */
+			pr_err("Can't create /sys/wifi/ant\n");
+			return;
+		}
+	} else {
+		pr_err("failed to create /sys/wifi/ant\n");
+	}
+}
+
+/* Unregister sysfs ant */
+void slsi_destroy_sysfs_ant(void)
+{
+	if (!wifi_kobj_ref)
+		return;
+
+	/* Destroy /sys/wifi/ant file */
+	sysfs_remove_file(wifi_kobj_ref, &ant_attr.attr);
 
 	/* Destroy /sys/wifi virtual dir */
 	mxman_wifi_kobject_ref_put();
