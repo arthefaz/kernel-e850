@@ -35,7 +35,7 @@ config MALI_BIFROST_R38P1
 endchoice
 
 if MALI_BIFROST_R38P1
-source "drivers/gpu/arm/bv_r38p1/Kconfig"
+source "drivers/gpu/arm/b_r38p1/Kconfig"
 endif
 
 endmenu
