@@ -30,9 +30,9 @@ static int translate_notifier_type(gpex_notifier_type type)
 {
 	switch (type) {
 	case GPU_NOTIFIER_MIN_LOCK:
-		//return PM_QOS_GPU_THROUGHPUT_MIN;
+		return PM_QOS_GPU_THROUGHPUT_MIN;
 	case GPU_NOTIFIER_MAX_LOCK:
-		//return PM_QOS_GPU_THROUGHPUT_MAX;
+		return PM_QOS_GPU_THROUGHPUT_MAX;
 	default:
 		return -1;
 	}
@@ -45,12 +45,11 @@ int gpexbe_notifier_internal_add(gpex_notifier_type type, struct notifier_block 
 	int external_pmqos_type;
 
 	if (type == GPU_NOTIFIER_THERMAL)
-		return 0;
-	  //return exynos_gpu_add_notifier(nb);
+		return exynos_gpu_add_notifier(nb);
 
 	external_pmqos_type = translate_notifier_type(type);
-	//if (external_pmqos_type >= 0)
-	//	return pm_qos_add_notifier(external_pmqos_type, nb);
+	if (external_pmqos_type >= 0)
+		return pm_qos_add_notifier(external_pmqos_type, nb);
 
 	/* TODO: return some enum val stating NO_NOTIFIER or something */
 	return 0;
@@ -61,8 +60,8 @@ int gpexbe_notifier_internal_remove(gpex_notifier_type type, struct notifier_blo
 	int external_pmqos_type;
 
 	external_pmqos_type = translate_notifier_type(type);
-	//if (external_pmqos_type >= 0)
-	//	return pm_qos_remove_notifier(external_pmqos_type, nb);
+	if (external_pmqos_type >= 0)
+		return pm_qos_remove_notifier(external_pmqos_type, nb);
 
 	return 0;
 }

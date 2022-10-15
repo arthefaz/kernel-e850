@@ -223,6 +223,13 @@ config MALI_EXYNOS_INTERACTIVE_BOOST
     help
       Choose this option to for GPU interactive boost support.
 
+config MALI_EXYNOS_EHMP
+    bool "Enable Mali EHMP support"
+	depends on MALI_EXYNOS_QOS
+    default y
+    help
+      Choose this option to for Mali EHMP support.
+
 # This is a legacy config that's unfortunately used by the other drivers... Need to find a better
 # place to put this.
 config EXYNOS_SOC_NAME
