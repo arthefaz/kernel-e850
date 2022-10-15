@@ -69,6 +69,8 @@ static void swap_packet(u8 *p, u8 *d)
 
 static void mmc_cmd_init(struct mmc_ioc_cmd *icmd)
 {
+	memset(icmd, 0, sizeof(struct mmc_ioc_cmd));
+
 	icmd->is_acmd = false;
 	icmd->arg = 0;
 	icmd->flags = MMC_RSP_R1;
