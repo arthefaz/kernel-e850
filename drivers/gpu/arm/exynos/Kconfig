@@ -226,7 +226,8 @@ config MALI_EXYNOS_INTERACTIVE_BOOST
 config MALI_EXYNOS_EHMP
     bool "Enable Mali EHMP support"
 	depends on MALI_EXYNOS_QOS
-    default y
+	default y if SOC_EXYNOS9810
+	default n
     help
       Choose this option to for Mali EHMP support.
 
