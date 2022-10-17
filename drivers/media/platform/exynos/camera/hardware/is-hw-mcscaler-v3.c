@@ -1254,6 +1254,9 @@ void is_hw_mcsc_frame_done(struct is_hw_ip *hw_ip, struct is_frame *frame,
 	}
 
 	list_for_each_entry(subdev, &group->subdev_list, list) {
+		if(subdev->id == ENTRY_MCS)
+			continue;
+
 		if (test_bit(subdev->id, &hw_frame->out_flag))
 			clear_bit(subdev->id - ENTRY_M0P + MCSC_OUTPUT0, &mcsc_out_st);
 	}
