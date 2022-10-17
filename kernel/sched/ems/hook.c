@@ -15,6 +15,7 @@
 #include <trace/hooks/cpuidle.h>
 #include <trace/hooks/binder.h>
 #include <trace/hooks/cgroup.h>
+#include <trace/hooks/topology.h>
 
 #include "../../../drivers/android/binder_trace.h"
 
@@ -251,6 +252,12 @@ static void ems_hook_do_sched_yield(void *data, struct rq *rq)
 	ems_do_sched_yield(rq);
 }
 
+static void ems_hook_arch_set_freq_scale(void *data, const struct cpumask *cpus,
+			unsigned long freq,  unsigned long max, unsigned long *scale)
+{
+	ems_arch_set_freq_scale(cpus, freq, max, scale);
+}
+
 int hook_init(void)
 {
 	int ret;
@@ -366,6 +373,10 @@ int hook_init(void)
 		return ret;
 
 	ret = register_trace_android_rvh_do_sched_yield(ems_hook_do_sched_yield, NULL);
+	if (ret)
+		return ret;
+
+	ret = register_trace_android_vh_arch_set_freq_scale(ems_hook_arch_set_freq_scale, NULL);
 	if (ret)
 		return ret;
 

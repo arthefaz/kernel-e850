@@ -21,7 +21,6 @@ struct resi_state {
 };
 
 struct resi_table {
-	int cur_idx;	/* cur frequency idx */
 	int nr_state;
 	s64 exit_latency;
 	struct resi_state *states;
@@ -57,14 +56,16 @@ static inline struct fv_policy *fv_get_policy(int cpu)
 u64 fv_get_residency(int cpu, int state)
 {
 	struct fv_policy *pol = fv_get_policy(cpu);
+	int cur_idx = et_cur_freq_idx(cpu);
 
 	if (unlikely(!pol))
 		return TICK_NSEC;
 
+	/* WFI */
 	if (!state)
 		return 1;
 
-	return pol->tbl.states[pol->tbl.cur_idx].resi;
+	return pol->tbl.states[cur_idx].resi;
 }
 EXPORT_SYMBOL_GPL(fv_get_residency);
 
@@ -81,26 +82,6 @@ u64 fv_get_exit_latency(int cpu, int state)
 	return pol->tbl.exit_latency;
 }
 EXPORT_SYMBOL_GPL(fv_get_exit_latency);
-
-/********************************************************************************
- *				FV FREQCHANGE NOTI				*
- *******************************************************************************/
-static void fv_hook_freq_change(void *data, struct cpufreq_policy *policy)
-{
-	struct fv_policy *pol = fv_get_policy(policy->cpu);
-	struct resi_state *states;
-	int idx;
-
-	if (unlikely(!pol))
-		return;
-
-	states = pol->tbl.states;
-	for (idx = 0; idx < pol->tbl.nr_state; idx++) {
-		if (states[idx].freq == policy->cur)
-			break;
-	}
-	pol->tbl.cur_idx = idx;
-}
 
 /********************************************************************************
  *				FV SYSFS					*
@@ -316,6 +297,5 @@ int fv_init(struct kobject *ems_kobj)
 {
 	if (fv_dt_parse(ems_kobj))
 		return -1;
-	register_trace_android_rvh_cpufreq_transition(fv_hook_freq_change, NULL);
 	return 0;
 }

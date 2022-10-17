@@ -247,6 +247,8 @@ struct energy_backup {
 
 extern int et_init(struct kobject *ems_kobj);
 extern void et_init_table(struct cpufreq_policy *policy);
+extern unsigned int et_cur_freq_idx(int cpu);
+extern unsigned long et_cur_cap(int cpu);
 extern unsigned long et_max_cap(int cpu);
 extern unsigned long et_max_dpower(int cpu);
 extern unsigned long et_min_dpower(int cpu);
@@ -262,11 +264,14 @@ extern unsigned long et_compute_cpu_energy(const struct cpumask *cpus,
 		struct energy_state *states);
 extern unsigned long et_compute_system_energy(const struct list_head *csd_head,
 		struct energy_state *states, int target_cpu, struct energy_backup *backup);
+extern void et_arch_set_freq_scale(const struct cpumask *cpus, unsigned long freq,
+					unsigned long max, unsigned long *scale);
 
 /* multi load */
 extern struct mlt __percpu *pcpu_mlt;		/* active ratio tracking */
 
 #define NR_RUN_UNIT		100
+#define NR_RUN_ROUNDS_UNIT	50
 extern int mlt_avg_nr_run(struct rq *rq);
 extern void mlt_enqueue_task(struct rq *rq);
 extern void mlt_dequeue_task(struct rq *rq);
@@ -280,6 +285,7 @@ extern int mlt_cur_period(int cpu);
 extern int mlt_prev_period(int period);
 extern int mlt_period_with_delta(int idx, int delta);
 extern int mlt_art_value(int cpu, int idx);
+extern int mlt_art_recent(int cpu);
 extern int mlt_art_last_value(int cpu);
 extern int mlt_art_cgroup_value(int cpu, int idx, int cgroup);
 extern int mlt_cst_value(int cpu, int idx, int cstate);
@@ -305,6 +311,7 @@ extern unsigned long ml_cpu_load_avg(int cpu);
 #define MLT_PERIOD_SUM		(MLT_PERIOD_COUNT * SCHED_CAPACITY_SCALE)
 #define MLT_STATE_NOCHANGE	0xBABE
 #define MLT_TASK_SIZE		(sizeof(u64) * 39)
+#define MLT_IDLE_THR_TIME	(8 * NSEC_PER_MSEC)
 
 enum {
 	CLKOFF = 0,
@@ -429,7 +436,7 @@ extern int fv_init(struct kobject *ems_kobj);
 extern u64 fv_get_residency(int cpu, int state);
 extern u64 fv_get_exit_latency(int cpu, int state);
 
-/* core sparing */
+/* For ecs governor - stage */
 struct ecs_stage {
 	struct list_head	node;
 
@@ -451,11 +458,50 @@ struct ecs_domain {
 	struct list_head	stage_list;
 };
 
+/* For ecs governor - dynamic */
+struct dynamic_dom {
+	struct list_head	node;
+	unsigned int		id;
+	unsigned int		busy_ratio;
+	struct cpumask		cpus;
+	struct cpumask		default_cpus;
+	struct cpumask		governor_cpus;
+	bool			has_spared_cpu;
+
+	/* raw data */
+	int flag;
+	int nr_cpu;
+	int nr_busy_cpu;
+	int avg_nr_run;
+	int slower_misfit;
+	int active_ratio;
+	unsigned long util;
+	unsigned long cap;
+	int throttle_cnt;
+};
+
+#define ECS_USER_NAME_LEN 	(16)
+struct ecs_governor {
+	char name[ECS_USER_NAME_LEN];
+	struct list_head	list;
+	void (*update)(void);
+	void (*enqueue_update)(int prev_cpu, struct task_struct *p);
+	void (*start)(const struct cpumask *cpus);
+	void (*stop)(void);
+	const struct cpumask *(*get_target_cpus)(void);
+};
+
 extern int ecs_init(struct kobject *ems_kobj);
+extern int ecs_gov_stage_init(struct kobject *ems_kobj);
+extern int ecs_gov_dynamic_init(struct kobject *ems_kobj);
 extern const struct cpumask *ecs_cpus_allowed(struct task_struct *p);
 extern const struct cpumask *ecs_available_cpus(void);
 extern void ecs_update(void);
+extern void ecs_enqueue_update(int prev_cpu, struct task_struct *p);
 extern int ecs_cpu_available(int cpu, struct task_struct *p);
+extern void ecs_governor_register(struct ecs_governor *gov, bool default_gov);
+extern void update_ecs_cpus(void);
+extern struct kobject *ecs_get_governor_object(void);
 
 /*
  * Priority-pinning
@@ -595,6 +641,10 @@ struct emstune_ecs {
 	struct list_head domain_list;
 };
 
+struct emstune_ecs_dynamic {
+	int dynamic_busy_ratio[VENDOR_NR_CPUS];
+};
+
 /* emstune - new task util */
 struct emstune_ntu {
 	int ratio[CGROUP_COUNT];
@@ -630,6 +680,7 @@ struct emstune_set {
 	struct emstune_cpus_binding		cpus_binding;
 	struct emstune_frt			frt;
 	struct emstune_ecs			ecs;
+	struct emstune_ecs_dynamic		ecs_dynamic;
 	struct emstune_ntu			ntu;
 	struct emstune_fclamp			fclamp;
 	struct emstune_support_uclamp	support_uclamp;
@@ -1048,3 +1099,5 @@ extern void ems_newidle_balance(struct rq *this_rq, struct rq_flags *rf, int *pu
 extern void lb_newidle_balance(struct rq *this_rq, struct rq_flags *rf, int *pulled_task, int *done);
 extern void lb_tick(struct rq *rq);
 extern void lb_init(void);
+extern void ems_arch_set_freq_scale(const struct cpumask *cpus, unsigned long freq,
+		unsigned long max, unsigned long *scale);

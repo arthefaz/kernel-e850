@@ -588,7 +588,7 @@ static bool use_energy_freq(struct cpufreq_policy *policy)
 {
 	int cpu;
 
-	for_each_cpu(cpu, policy->cpus) {
+	for_each_cpu_and(cpu, policy->cpus, ecs_available_cpus()) {
 		if (profile_get_cpu_wratio_busy(cpu))
 			return true;
 	}
@@ -924,10 +924,13 @@ static unsigned int ego_next_freq_shared(struct ego_cpu *egc, u64 time)
 
 	for_each_cpu(cpu, policy->cpus) {
 		struct ego_cpu *egc = &per_cpu(ego_cpu, cpu);
-		unsigned long cpu_util, cpu_io_util, cpu_max;
+		unsigned long cpu_util = 0, cpu_io_util, cpu_max;
 		unsigned long cpu_boosted_util;
 
-		egc->util = cpu_util = ego_get_util(egc);
+		if (cpumask_test_cpu(cpu, ecs_available_cpus()))
+			cpu_util = ego_get_util(egc);
+
+		egc->util = cpu_util;
 		cpu_boosted_util = freqboost_cpu_boost(cpu, cpu_util);
 		cpu_boosted_util = max(cpu_boosted_util,
 					heavytask_cpu_boost(cpu, cpu_util, egp->htask_boost));

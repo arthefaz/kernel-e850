@@ -232,7 +232,6 @@ int profile_get_htask_ratio(int cpu)
 
 #define I2B_MONITOR_CNT			4
 #define B2I_MONITOR_CNT			(I2B_MONITOR_CNT << IDLE_HYSTERESIS_SHIFT)
-#define IDLE_THR_TIME                  (8 * NSEC_PER_MSEC)
 
 #define I2B_WSUM	4095
 #define B2I_WSUM	5695
@@ -246,7 +245,7 @@ static int profile_update_cpu_wratio(int cpu)
 	struct cpu_profile *cs = get_cpu_profile(cpu, CPU_WRATIO);
 
 	/* Update for tickless core */
-	if ((mlt_art_last_update_time(cpu) + IDLE_THR_TIME)< now ) {
+	if ((mlt_art_last_update_time(cpu) + MLT_IDLE_THR_TIME)< now ) {
 		cs->value = 0;
 		cs->data = PROFILE_CPU_IDLE;
 		return 0;

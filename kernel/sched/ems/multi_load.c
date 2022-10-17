@@ -598,6 +598,12 @@ int mlt_art_value(int cpu, int target_period)
 	return __mlt_get_value(mlt, target_period);
 }
 
+int mlt_art_recent(int cpu)
+{
+	struct mlt *mlt = per_cpu_ptr(pcpu_mlt, cpu);
+	return __mlt_get_recent(mlt);
+}
+
 int mlt_art_last_value(int cpu)
 {
 	return mlt_art_value(cpu, per_cpu_ptr(pcpu_mlt, cpu)->cur_period);
@@ -646,6 +652,11 @@ int mlt_avg_nr_run(struct rq *rq)
 {
 	int cpu = cpu_of(rq);
 	struct mlt_nr_run *mnr = per_cpu_ptr(mlt_nr_run, cpu);
+	u64 now = sched_clock();
+
+	if ((mnr->last_ctrb_updated + MLT_IDLE_THR_TIME) < now)
+		return 0;
+
 	return mnr->avg_nr_run;
 }
 

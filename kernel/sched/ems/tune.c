@@ -538,6 +538,11 @@ static void parse_ecs(struct device_node *dn, struct emstune_ecs *ecs)
 	init_ecs_domain_list(dn, &ecs->domain_list);
 }
 
+static void parse_ecs_dynamic(struct device_node *dn, struct emstune_ecs_dynamic *dynamic)
+{
+	parse_coregroup_field(dn, "dynamic-busy-ratio", dynamic->dynamic_busy_ratio, 0);
+}
+
 /* Margin applied to newly created task's utilization */
 static void parse_ntu(struct device_node *dn,
 				struct emstune_ntu *ntu)
@@ -844,6 +849,7 @@ enum aio_tuner_item_type {
 	I(tex_en,			TYPE2,	"")			\
 	I(tex_prio,			TYPE6,	"")			\
 	I(ecs_threshold_ratio,		TYPE5,	"option:stage_id")	\
+	I(ecs_dynamic_busy_ratio,	TYPE1,	"")			\
 	I(ntu_ratio,			TYPE2,	"")			\
 	I(frt_active_ratio,		TYPE1,	"")			\
 	I(cpuidle_gov_expired_ratio,	TYPE1,	"")	\
@@ -1241,6 +1247,10 @@ static ssize_t aio_tuner_store(struct device *dev,
 			return -EINVAL;
 		update_ecs_threshold_ratio(&set->ecs.domain_list, i, v);
 		break;
+	case ecs_dynamic_busy_ratio:
+		set_value_coregroup(set->ecs_dynamic.dynamic_busy_ratio, keys[3], arg1,
+				VAL_TYPE_RATIO, MAX_RATIO);
+		break;
 	case ntu_ratio:
 		set_value_cgroup(set->ntu.ratio, keys[3], arg1,
 					VAL_TYPE_RATIO_NEGATIVE, 100);
@@ -1553,6 +1563,11 @@ static ssize_t cur_set_read(struct file *file, struct kobject *kobj,
 			count += sprintf(msg + count, "-------------------------\n");
 		}
 	}
+	count += sprintf(msg + count, "     busy_ratio\n");
+	for_each_possible_cpu(cpu)
+		count += sprintf(msg + count, "cpu%d: %4d%%\n",
+				cpu,
+				cur_set->ecs_dynamic.dynamic_busy_ratio[cpu]);
 	count += sprintf(msg + count, "\n");
 
 	/* new task util ratio */
@@ -1820,6 +1835,7 @@ static int emstune_set_init(struct device_node *base_node,
 	parse(tex);
 	parse(frt);
 	parse(ecs);
+	parse(ecs_dynamic);
 	parse(ntu);
 	parse(fclamp);
 	parse(support_uclamp);

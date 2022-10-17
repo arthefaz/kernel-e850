@@ -1384,6 +1384,48 @@ TRACE_EVENT(ontime_can_migrate_task,
 );
 
 /*
+* Tracepoint for ecs
+*/
+struct dynamic_dom;
+TRACE_EVENT(dynamic_domain_info,
+
+	TP_PROTO(int cpu, struct dynamic_dom *domain),
+
+	TP_ARGS(cpu, domain),
+
+	TP_STRUCT__entry(
+		__field( int,		cpu			)
+		__field( unsigned int,  cpus			)
+		__field( int,		nr_busy_cpu		)
+		__field( int,		avg_nr_run		)
+		__field( int,		slower_misfit		)
+		__field( int,		active_ratio		)
+		__field( u64,		util			)
+		__field( u64,		cap			)
+		__field( int,		throttle_cnt		)
+		__field( int,		flag			)
+	),
+
+	TP_fast_assign(
+		__entry->cpu = cpu;
+		__entry->cpus = *(unsigned int *)cpumask_bits(&domain->governor_cpus);
+		__entry->avg_nr_run = domain->avg_nr_run;
+		__entry->nr_busy_cpu = domain->nr_busy_cpu;
+		__entry->slower_misfit = domain->slower_misfit;
+		__entry->active_ratio = domain->active_ratio;
+		__entry->util = domain->util;
+		__entry->cap = domain->cap;
+		__entry->throttle_cnt = domain->throttle_cnt;
+		__entry->flag = domain->flag;
+	),
+
+	TP_printk("cpu=%d cpus=%#x avg_nr_run=%d nr_busy_cpu=%d slower_misfit=%d ar=%d util=%llu cap=%llu tcnt=%d flag=%d",
+		__entry->cpu, __entry->cpus, __entry->avg_nr_run, __entry->nr_busy_cpu,
+		__entry->slower_misfit, __entry->active_ratio, __entry->util,
+		__entry->cap, __entry->throttle_cnt, __entry->flag)
+);
+
+/*
  * Tracepoint for updating spared cpus
  */
 TRACE_EVENT(ecs_update_domain,

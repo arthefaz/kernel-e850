@@ -597,6 +597,10 @@ int ems_select_task_rq_fair(struct task_struct *p, int prev_cpu,
 	if (!(sd_flag & SD_BALANCE_FORK))
 		mlt_update_task(p, MLT_STATE_NOCHANGE, sched_clock());
 
+	/* skip calling dynamic_fast_release_cpus from Ontime */
+	if (wake_flag)
+		ecs_enqueue_update(prev_cpu, p);
+
 	return __ems_select_task_rq_fair(p, prev_cpu, sd_flag, wake_flag);
 }
 
@@ -834,6 +838,12 @@ int ems_find_new_ilb(struct cpumask *nohz_idle_cpus_mask)
 	return nr_cpu_ids;
 }
 
+void ems_arch_set_freq_scale(const struct cpumask *cpus, unsigned long freq,
+				unsigned long max, unsigned long *scale)
+{
+	et_arch_set_freq_scale(cpus, freq, max, scale);
+}
+
 static ssize_t show_sched_topology(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -918,6 +928,8 @@ static int ems_probe(struct platform_device *pdev)
 	freqboost_init();
 	frt_init(ems_kobj);
 	ecs_init(ems_kobj);
+	ecs_gov_stage_init(ems_kobj);
+	ecs_gov_dynamic_init(ems_kobj);
 	sysbusy_init(ems_kobj);
 	gsc_init(ems_kobj);
 	emstune_init(ems_kobj, pdev->dev.of_node, &pdev->dev);

@@ -63,8 +63,9 @@ static struct energy_table {
 	struct cpumask sl_cpus[VENDOR_NR_CPUS];
 	struct cpumask pd_cpus;
 
-	unsigned long cur_freq;
-	unsigned long cur_volt;
+	unsigned long cur_freq;	/* requested by governor, NOT real frequency */
+	unsigned long cur_volt;	/* voltage matched with cur_freq */
+	unsigned int cur_index;	/* real current frequency index */
 
 	struct constraint **constraints;
 	int nr_constraint;
@@ -391,6 +392,32 @@ static void update_energy_state(const struct cpumask *cpus,
 /****************************************************************************************
  *					Extern APIs					*
  ****************************************************************************************/
+unsigned int et_cur_freq_idx(int cpu)
+{
+	struct energy_table *table = per_cpu_et(cpu);
+
+	if (unlikely(!table))
+		return 0;
+
+	if (unlikely(table->cur_index < 0))
+		return 0;
+
+	return table->cur_index;
+}
+
+unsigned long et_cur_cap(int cpu)
+{
+	struct energy_table *table = per_cpu_et(cpu);
+
+	if (unlikely(!table))
+		return 0;
+
+	if (unlikely(table->cur_index < 0))
+		return 0;
+
+	return table->states[table->cur_index].capacity;
+}
+
 unsigned long et_max_cap(int cpu)
 {
 	struct energy_table *table = per_cpu_et(cpu);
@@ -550,6 +577,19 @@ unsigned long et_compute_system_energy(const struct list_head *csd_head,
 		energy += compute_cpu_energy(&csd->cpus, states, target_cpu, backup);
 
 	return energy;
+}
+
+/****************************************************************************************
+ *					CPUFREQ Change VH				*
+ ****************************************************************************************/
+void et_arch_set_freq_scale(const struct cpumask *cpus,
+		unsigned long freq,  unsigned long max, unsigned long *scale)
+{
+	struct energy_table *table = per_cpu_et(cpumask_first(cpus));
+	int index = get_freq_index(table->states, table->nr_states, freq);
+
+	if (index > -1)
+		table->cur_index = index;
 }
 
 /****************************************************************************************
