@@ -1779,6 +1779,9 @@ static int exynos_cpupm_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	update_pm_allowed_mask(cpu_possible_mask);
+	update_idle_allowed_mask(cpu_possible_mask);
+
 	/* set PMU to power on */
 	for_each_online_cpu(cpu)
 		cal_cpu_enable(cpu);
