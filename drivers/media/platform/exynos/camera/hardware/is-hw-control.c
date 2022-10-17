@@ -2438,7 +2438,9 @@ int is_hardware_frame_done(struct is_hw_ip *hw_ip, struct is_frame *frame,
 		GROUP_ID(head->id), frame->bak_flag, frame->core_flag, frame->out_flag);
 
 	/* check core_done */
-	if (output_id == IS_HW_CORE_END) {
+	if ((output_id == IS_HW_CORE_END)
+	/* if there are any out_flag for subdev, it is need to enter do_frame_done_work_func() */
+	&& !OUT_FLAG(frame->out_flag, group->leader.id)) {
 		if (!test_bit_variables(hw_ip->id, &frame->core_flag)) {
 			msinfo_hw("invalid core_flag [F:%d][0x%x][C:0x%lx][O:0x%lx]",
 				frame->instance, hw_ip, frame->fcount,

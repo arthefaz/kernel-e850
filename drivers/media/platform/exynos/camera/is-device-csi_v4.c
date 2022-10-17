@@ -924,7 +924,7 @@ static void csi_err_print(struct is_device_csi *csi)
 				is_sec_copy_err_cnt_to_file();
 #endif
 #endif
-				exynos_bcm_dbg_stop(CAMERA_DRIVER);
+				//exynos_bcm_dbg_stop(CAMERA_DRIVER);
 
 				is_debug_s2d(false, "[DMA%d][VC P%d, L%d] CSIS error!! %s",
 					csi->dma_subdev[vc]->dma_ch[csi->scm],
