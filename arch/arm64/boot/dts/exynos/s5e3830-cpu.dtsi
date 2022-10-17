@@ -47,9 +47,20 @@
 		#define CPUCL0_SP_COEFF 10
 
 		cpu {
-			ananke-power-data {
+			ananke-power-data0 {
 				/* default power data */
-				cpus = CPU_ALL;
+				cpus = CPU_CL0;
+				capacity-dmips-mhz = <CPUCL0_DMIPS_PER_MHZ>;
+				dynamic-power-coefficient = <CPUCL0_DP_COEFF>;
+				static-power-coefficient = <CPUCL0_SP_COEFF>;
+
+				/* dhrystone to clang conversion ratio */
+				dhry-to-clang-dp-ratio = <820>;
+				dhry-to-clang-cap-ratio = <372>;
+			};
+			ananke-power-data1 {
+				/* default power data */
+				cpus = CPU_CL1;
 				capacity-dmips-mhz = <CPUCL0_DMIPS_PER_MHZ>;
 				dynamic-power-coefficient = <CPUCL0_DP_COEFF>;
 				static-power-coefficient = <CPUCL0_SP_COEFF>;

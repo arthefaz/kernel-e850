@@ -22,6 +22,11 @@
 			};
 		};
 
+		ecs_dynamic {
+			dynamic-busy-ratio		= <70 70>;
+		};
+
+
 		fclamp {
 			monitor-group {
 				top-app         = <1>;

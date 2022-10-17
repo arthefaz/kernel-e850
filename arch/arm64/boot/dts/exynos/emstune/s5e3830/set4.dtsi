@@ -29,6 +29,10 @@
 
 		ecs { };
 
+		ecs_dynamic {
+			dynamic-busy-ratio		= <70 70>;
+		};
+
 		fclamp {
 			max-freq          = < 1536000 2016000>;
 			max-target-period = <       4       4>;

@@ -24,6 +24,11 @@
 
 		ecs { };
 
+		ecs_dynamic {
+			dynamic-busy-ratio		= <70 70>;
+		};
+
+
 		/* cpus_binding applied to core selection */
 		cpus_binding {
 			target-sched-class = <0x8>;	/* fair */

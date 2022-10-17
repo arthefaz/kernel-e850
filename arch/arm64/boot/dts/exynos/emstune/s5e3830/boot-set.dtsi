@@ -29,6 +29,8 @@
 
 		ecs { };
 
+		ecs_dynamic { };
+
 		fclamp {
 			monitor-group {
 				top-app         = <1>;
