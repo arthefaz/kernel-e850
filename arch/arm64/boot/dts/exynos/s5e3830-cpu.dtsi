@@ -413,18 +413,18 @@
 
 		ufc {
 			table-info  = "vfreq",
-				"lit1",
-				"lit0",
+				"lit-2nd",
+				"lit",
 				"emstune",
 				"strict";
 
 			domains {
 				domain@0 {
-					domain-name = "lit0";
+					domain-name = "lit";
 					shared-cpus = CPU_CL0;
 				};
 				domain@1 {
-					domain-name = "lit1";
+					domain-name = "lit-2nd";
 					shared-cpus = CPU_CL1;
 					allow-disable-cpus;
 				};
