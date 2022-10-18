@@ -2484,7 +2484,6 @@ static const struct mmc_host_ops dw_mci_ops = {
 	.start_signal_voltage_switch = dw_mci_switch_voltage,
 	.init_card 		= dw_mci_init_card,
 	.prepare_hs400_tuning 	= dw_mci_prepare_hs400_tuning,
-	.runtime_pm_control 	= dw_mci_runtime_pm_control,
 };
 
 static void dw_mci_request_end(struct dw_mci *host, struct mmc_request *mrq)
@@ -4510,6 +4509,8 @@ static struct dw_mci_board *dw_mci_parse_dt(struct dw_mci *host)
 		pdata->sw_drto = true;
 	if (of_find_property(np, "mmc-inline-crypt", NULL))
 		pdata->caps2 |= MMC_CAP2_CRYPTO;
+	if (of_find_property(np, "use-runtime-pm", NULL))
+		pdata->caps |= MMC_CAP_SYNC_RUNTIME_PM;
 
 	return pdata;
 }
