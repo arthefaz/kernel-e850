@@ -1129,6 +1129,7 @@
 
 	exynos-bcmdbg {
 		compatible = "samsung,exynos-bcm_dbg";
+		memory-region = <&log_bcm>;
 
 		pd-name = "pd-trex", "pd-aud", "pd-dpu", "pd-mfcmscl", "pd-is",
 			  "pd-hsi";

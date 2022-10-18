@@ -3699,11 +3699,14 @@ MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 int __nocfi exynos_bcm_dbg_load_bin(void)
 {
 	int ret = 0;
+	long fsize;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 	struct file *fp = NULL;
-	long fsize, nread;
+	long nread;
 	u8 *buf = NULL;
-	char *lib_bcm = NULL;
 	mm_segment_t old_fs;
+#endif
+	char *lib_bcm = NULL;
 #ifdef KPROBE_LOOKUP
 	typedef unsigned long (*kallsyms_lookup_name_t)(const char *name);
 	kallsyms_lookup_name_t kallsyms_lookup_name;
@@ -3733,6 +3736,11 @@ int __nocfi exynos_bcm_dbg_load_bin(void)
 	os_func.iounmap = iounmap;
 	os_func.sched_clock = sched_clock;
 
+	fsize = BCM_BIN_SIZE;
+	BCM_INFO("%s: start, file path %s, size %ld Bytes\n",
+			__func__, BCM_BIN_NAME, fsize);
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
 	fp = filp_open(BCM_BIN_NAME, O_RDONLY, 0);
@@ -3742,9 +3750,6 @@ int __nocfi exynos_bcm_dbg_load_bin(void)
 		goto err_fopen;
 	}
 
-	fsize = BCM_BIN_SIZE;
-	BCM_INFO("%s: start, file path %s, size %ld Bytes\n",
-			__func__, BCM_BIN_NAME, fsize);
 	buf = vmalloc(fsize);
 	if (!buf) {
 		BCM_ERR("%s: failed to allocate memory\n", __func__);
@@ -3759,16 +3764,27 @@ int __nocfi exynos_bcm_dbg_load_bin(void)
 		ret = -EIO;
 		goto err_vfs_read;
 	}
+#else
+	ret = request_firmware(&bcm_dbg_data->bcm_bin.fw, BCM_BIN_NAME, bcm_dbg_data->dev);
+	if (!ret && bcm_dbg_data->bcm_bin.fw) {
+		bcm_dbg_data->bcm_bin.data = (void *)bcm_dbg_data->bcm_bin.fw->data;
+		bcm_dbg_data->bcm_bin.size = BCM_BIN_SIZE;
+		BCM_INFO("%s: bin_size: 0x%lx, bin_data: 0x%lx\n",
+			__func__, bcm_dbg_data->bcm_bin.size, &bcm_dbg_data->bcm_bin.data);
+	}
+#endif
 
 	lib_bcm = (char *)bcm_addr;
 	memset((char *)bcm_addr, 0x0, fsize);
 
 	flush_icache_range((unsigned long)lib_bcm,
 			   (unsigned long)lib_bcm + BCM_BIN_SIZE);
-	memcpy((void *)lib_bcm, (void *)buf, fsize);
+
+	memcpy((void *)lib_bcm, (void *)bcm_dbg_data->bcm_bin.data, bcm_dbg_data->bcm_bin.size);
 	flush_cache_all();
 
 	bin_func = ((start_up_func_t)lib_bcm)((void **)&os_func);
+	release_firmware(bcm_dbg_data->bcm_bin.fw);
 
 	bcm_dbg_data->bcm_load_bin = true;
 
@@ -3782,12 +3798,14 @@ int __nocfi exynos_bcm_dbg_load_bin(void)
 	}
 
 err_init:
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 err_vfs_read:
 	vfree((void *)buf);
 err_alloc:
 	filp_close(fp, NULL);
 err_fopen:
 	set_fs(old_fs);
+#endif
 err_out:
 	return ret;
 }
@@ -3844,6 +3862,9 @@ static struct dev_pm_ops exynos_bcm_dbg_pm_ops = {
 static int __init exynos_bcm_dbg_probe(struct platform_device *pdev)
 {
 	int ret = 0;
+	struct reserved_mem *rmem;
+	struct device_node *rmem_np;
+
 	struct exynos_bcm_dbg_data *data;
 
 	data = kzalloc(sizeof(struct exynos_bcm_dbg_data), GFP_KERNEL);
@@ -3857,6 +3878,19 @@ static int __init exynos_bcm_dbg_probe(struct platform_device *pdev)
 	data->dev = &pdev->dev;
 
 	spin_lock_init(&data->lock);
+
+	rmem_np = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
+	rmem = of_reserved_mem_lookup(rmem_np);
+	if (rmem != NULL) {
+		data->rmem_acquired = true;
+		bcm_reserved.p_addr = rmem->base;
+		bcm_reserved.p_size = rmem->size;
+	} else {
+		data->rmem_acquired = false;
+		bcm_reserved.p_addr = 0;
+		bcm_reserved.p_size = 0;
+		BCM_INFO("%s: failed to acquire memory region\n", __func__);
+	}
 
 #if !defined(CONFIG_EXYNOS_BCM_DBG_GNR)
 	ret = exynos_bcm_dbg_init(data);

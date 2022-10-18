@@ -13,28 +13,13 @@
 
 #include <dt-bindings/soc/samsung/exynos-bcm_dbg.h>
 #include <linux/version.h>
+#include <linux/firmware.h>
 
 #if defined(CONFIG_EXYNOS_BCM_DBG_GNR) || defined(CONFIG_EXYNOS_BCM_DBG_GNR_MODULE)
-/* vmalloc offset depened on KASAN config */
-#if (KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE)
-#if defined(CONFIG_KASAN_GENERIC)
-#define VOFFSET     0                       /* KASAN: 64GB */
-#elif defined(CONFIG_KASAN_SW_TAGS)
-#define VOFFSET     0x0800000000ULL         /* KASAN: 32GB */
-#else
-#define VOFFSET     0x1000000000ULL
-#endif /* defined(CONFIG_KASAN_GENERIC) || defined(CONFIG_KASAN_SW_TAGS) */
-#else
-#ifdef CONFIG_KASAN
-#define VOFFSET     0                       /* KASAN: 64GB */
-#else
-#define VOFFSET     0x1000000000ULL
-#endif /* CONFIG_KASAN */
-#endif /* (KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE) */
 
 #define BCM_BIN_SIZE                           (SZ_128K)
-#define BCM_BIN_NAME				"/system/vendor/firmware/is_lib.bin"
-#define BCM_START             (VMALLOC_START + VOFFSET + 0xF2000000 - BCM_BIN_SIZE)
+#define BCM_BIN_NAME				"is_lib.bin"
+#define BCM_START				0xFFFFFFC101FE0000
 #endif
 
 #define ERRCODE_ITMON_TIMEOUT			(6)
@@ -193,6 +178,12 @@ struct exynos_bcm_event {
 	unsigned int			event[BCM_EVT_EVENT_MAX];
 };
 
+struct bcm_bin {
+	void *data;
+	size_t size;
+	const struct firmware *fw;
+};
+
 struct exynos_bcm_dbg_data {
 	struct device			*dev;
 	spinlock_t			lock;
@@ -230,6 +221,7 @@ struct exynos_bcm_dbg_data {
 	struct hrtimer			bcm_hrtimer;
 	unsigned int			period;
 	unsigned int			bcm_mode;
+	struct bcm_bin			bcm_bin;
 #endif
 	unsigned int			bcm_cnt_nr;
 	struct notifier_block		itmon_notifier;
