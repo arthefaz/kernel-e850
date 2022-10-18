@@ -12,7 +12,7 @@
 #ifndef _MMC_EXYNOS_FMP_H_
 #define _MMC_EXYNOS_FMP_H_
 
-#define FMP_DRV_VERSION "4.0.0"
+#define FMP_DRV_VERSION "3.1.0"
 
 /* FMP IDs (second or third parameter to FMP/SMU Ctrls) */
 #define FMP_EMBEDDED			0
