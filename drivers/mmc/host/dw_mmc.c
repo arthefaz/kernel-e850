@@ -2469,6 +2469,23 @@ static void dw_mci_runtime_pm_control(struct mmc_host *mmc, int enable)
 		drv_data->runtime_pm_control(host, enable);
 }
 
+static void dw_mci_hs400_enhanced_strobe(struct mmc_host *mmc, struct mmc_ios *ios)
+{
+	static int flag = 0;
+	struct mmc_card *card = mmc->card;
+	unsigned int max_dtr = (unsigned int)-1;
+
+	if (mmc && mmc->ios.enhanced_strobe == false)
+		return;
+
+	max_dtr = MMC_HS200_MAX_DTR;
+	WARN_ON(max_dtr && max_dtr < mmc->f_min);
+	if (max_dtr > mmc->f_max)
+		max_dtr = mmc->f_max;
+	mmc->ios.clock = max_dtr;
+	mmc->ops->set_ios(mmc, ios);
+}
+
 static const struct mmc_host_ops dw_mci_ops = {
 	.request		= dw_mci_request,
 	.pre_req		= dw_mci_pre_req,
@@ -2484,6 +2501,7 @@ static const struct mmc_host_ops dw_mci_ops = {
 	.start_signal_voltage_switch = dw_mci_switch_voltage,
 	.init_card 		= dw_mci_init_card,
 	.prepare_hs400_tuning 	= dw_mci_prepare_hs400_tuning,
+	.hs400_enhanced_strobe  = dw_mci_hs400_enhanced_strobe,
 };
 
 static void dw_mci_request_end(struct dw_mci *host, struct mmc_request *mrq)
