@@ -81,8 +81,10 @@ static irqreturn_t kepler_active_isr(int irq, void *arg)
 	if (!gnssif_wake_lock_active(gc->gc_fault_ws))
 		gnssif_wake_lock_timeout(gc->gc_fault_ws, HZ);
 
-	gnss_state_changed(gc, STATE_FAULT);
-	wake_up(&iod->wq);
+	if (gc->gnss_state != STATE_OFFLINE) {
+		gnss_state_changed(gc, STATE_FAULT);
+		wake_up(&iod->wq);
+	}
 
 	gc->pmu_ops->clear_int(GNSS_INT_ACTIVE_CLEAR);
 
