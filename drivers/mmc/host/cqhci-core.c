@@ -408,7 +408,7 @@ static int cqhci_enable(struct mmc_host *mmc, struct mmc_card *card)
 /* CQHCI is idle and should halt immediately, so set a small timeout */
 #define CQHCI_OFF_TIMEOUT 100
 
-static void cqhci_off(struct mmc_host *mmc, bool add_disabled)
+static void cqhci_off(struct mmc_host *mmc)
 {
 	struct cqhci_host *cq_host = mmc->cqe_private;
 	ktime_t timeout;
@@ -444,8 +444,7 @@ static void cqhci_off(struct mmc_host *mmc, bool add_disabled)
 
 	mmc->cqe_on = false;
 
-	if (add_disabled)
-		__cqhci_disable(cq_host);
+	__cqhci_disable(cq_host);
 }
 
 static void cqhci_disable(struct mmc_host *mmc)
@@ -455,9 +454,7 @@ static void cqhci_disable(struct mmc_host *mmc)
 	if (!cq_host->enabled)
 		return;
 
-	cqhci_off(mmc, false);
-
-	__cqhci_disable(cq_host);
+	cqhci_off(mmc);
 
 	dmam_free_coherent(mmc_dev(mmc), cq_host->data_size,
 			   cq_host->trans_desc_base,

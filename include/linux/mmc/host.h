@@ -201,7 +201,7 @@ struct mmc_cqe_ops {
 	 * is no corresponding ->cqe_on(), instead ->cqe_request() is required
 	 * to deal with that.
 	 */
-	void	(*cqe_off)(struct mmc_host *host, bool add_disable);
+	void	(*cqe_off)(struct mmc_host *host);
 	/*
 	 * Wait for all CQE tasks to complete. Return an error if recovery
 	 * becomes necessary.
