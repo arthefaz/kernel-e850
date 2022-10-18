@@ -1102,7 +1102,8 @@
 	contexthub_0: contexthub {
 		compatible = "samsung,exynos-nanohub";
 		/* INTREQ_MAILBOX_CHUB2AP, INTREQ_WDT_CHUB */
-		interrupts = <0 50 0>,<0 73 0>;
+		interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>,
+                     <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clock DOUT_CLK_CHUB_BUS>;
 		clock-names = "chub_bus";
 		/* mailbox, sram, dumpgpr, chub reset &
