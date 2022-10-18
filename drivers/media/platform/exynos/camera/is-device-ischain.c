@@ -2214,16 +2214,16 @@ int is_ischain_buf_tag_input(struct is_device_ischain *device,
 		}
 
 		set_bit(subdev->id, &ldr_frame->out_flag);
+
+		/* for draw digit */
+		frame->width = width;
+		frame->height = height;
 	} else {
 		for (i = 0; i < IS_MAX_PLANES; i++)
 			target_addr[i] = 0;
 
 		ret = -EINVAL;
 	}
-
-	/* for draw digit */
-	frame->width = width;
-	frame->height = height;
 
 	framemgr_x_barrier_irqr(framemgr, FMGR_IDX_24, flags);
 
@@ -2390,16 +2390,16 @@ int is_ischain_buf_tag(struct is_device_ischain *device,
 
 		set_bit(subdev->id, &ldr_frame->out_flag);
 		trans_frame(framemgr, frame, next_state);
+
+		/* for draw digit */
+		frame->width = width;
+		frame->height = height;
 	} else {
 		for (i = 0; i < IS_MAX_PLANES; i++)
 			target_addr[i] = 0;
 
 		ret = -EINVAL;
 	}
-
-	/* for draw digit */
-	frame->width = width;
-	frame->height = height;
 
 	framemgr_x_barrier_irqr(framemgr, FMGR_IDX_24, flags);
 
@@ -2461,16 +2461,16 @@ int is_ischain_buf_tag_64bit(struct is_device_ischain *device,
 
 		set_bit(subdev->id, &ldr_frame->out_flag);
 		trans_frame(framemgr, frame, FS_PROCESS);
+
+		/* for draw digit */
+		frame->width = width;
+		frame->height = height;
 	} else {
 		for (i = 0; i < IS_MAX_PLANES; i++)
 			target_addr[i] = 0;
 
 		ret = -EINVAL;
 	}
-
-	/* for draw digit */
-	frame->width = width;
-	frame->height = height;
 
 	framemgr_x_barrier_irqr(framemgr, FMGR_IDX_24, flags);
 

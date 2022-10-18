@@ -144,7 +144,7 @@ int is_i2c_pin_control(struct is_module_enum *module, u32 scenario, u32 value)
 		}
 		break;
 	case SENSOR_SCENARIO_READ_ROM:
-		if (module->pdata->rom_id >= ROM_ID_REAR && module->pdata->rom_id < ROM_ID_MAX) {
+		if (module->pdata->rom_id < ROM_ID_MAX) {
 			info("%s[%d] eeprom i2c config(%d), rom_id(%d), scenario(%d)\n",
 				__func__, __LINE__, i2c_config_state, module->pdata->rom_id, scenario);
 			ret |= is_i2c_pin_config(specific->eeprom_client[module->pdata->rom_id], i2c_config_state);

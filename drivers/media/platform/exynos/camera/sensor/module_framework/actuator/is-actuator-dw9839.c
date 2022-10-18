@@ -624,7 +624,6 @@ static int sensor_dw9839_actuator_probe(struct i2c_client *client,
 	if (!subdev_actuator) {
 		err("subdev_actuator is NULL");
 		ret = -ENOMEM;
-		kfree(actuator);
 		goto p_err;
 	}
 

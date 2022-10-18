@@ -229,15 +229,14 @@ static int is_gframe_check(struct is_group *gprev,
 		goto check_gnext;
 
 	junction = gprev->tail->junction;
-
-	if (junction->id == ENTRY_LMEC)
-		goto check_gnext;
-
 	if (!junction) {
 		mgerr("junction is NULL", gprev, gprev);
 		ret = -EINVAL;
 		goto p_err;
 	}
+
+	if (junction->id == ENTRY_LMEC)
+		goto check_gnext;
 
 	if (junction->cid >= CAPTURE_NODE_MAX) {
 		mgerr("capture id(%d) is invalid", gprev, gprev, junction->cid);
@@ -273,15 +272,14 @@ check_gnext:
 		goto p_err;
 
 	junction = group->tail->junction;
-
-	if (junction->id == ENTRY_LMEC)
-		goto p_err;
-
 	if (!junction) {
 		mgerr("junction is NULL", group, group);
 		ret = -EINVAL;
 		goto p_err;
 	}
+
+	if (junction->id == ENTRY_LMEC)
+		goto p_err;
 
 	if (junction->cid >= CAPTURE_NODE_MAX) {
 		mgerr("capture id(%d) is invalid", group, group, junction->cid);

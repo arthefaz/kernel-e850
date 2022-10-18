@@ -428,7 +428,8 @@ static int is_hw_isp_shot(struct is_hw_ip *hw_ip, struct is_frame *frame,
 	struct isp_param_set *param_set;
 	struct is_region *region;
 	struct isp_param *param;
-	u32 lindex, hindex, fcount, instance;
+	u32 lindex = 0;
+	u32 hindex, fcount, instance;
 	bool frame_done = false;
 
 	FIMC_BUG(!hw_ip);

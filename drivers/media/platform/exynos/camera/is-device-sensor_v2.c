@@ -2061,6 +2061,7 @@ int is_sensor_runtime_module_sel(struct is_device_sensor *device,
 	}
 
 	sensor_peri = (struct is_device_sensor_peri *)module->private_data;
+	ctrl.value = -1;
 
 	/* set cis data */
 	if (device->pdata->use_module_sel == MODULE_SEL_CIS) {

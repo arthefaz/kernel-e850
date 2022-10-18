@@ -2916,7 +2916,7 @@ int is_hardware_load_setfile(struct is_hardware *hardware, ulong addr,
 		hw_ip = NULL;
 
 		hw_slot = find_first_bit(slots, HW_SLOT_MAX);
-		while (hw_slot != HW_SLOT_MAX) {
+		while (hw_slot < HW_SLOT_MAX) {
 			hw_ip = &hardware->hw_ip[hw_slot];
 
 			clear_bit(hw_slot, slots);

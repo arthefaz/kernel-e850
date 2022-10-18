@@ -410,7 +410,8 @@ static int is_ischain_mxp_start(struct is_device_ischain *device,
 			mdbg_pframe("CRange:N\n", device, subdev, frame);
 	}
 
-	if (frame->shot_ext->mcsc_flip[index - PARAM_MCS_OUTPUT0] != mcs_output->flip) {
+	if (index - PARAM_MCS_OUTPUT0 < MCSC_PORT_MAX &&
+		frame->shot_ext->mcsc_flip[index - PARAM_MCS_OUTPUT0] != mcs_output->flip) {
 		mdbg_pframe("flip is changed(%d->%d)\n",
 			device, subdev, frame,
 			mcs_output->flip,
@@ -674,7 +675,8 @@ static int is_ischain_mxp_tag(struct is_subdev *subdev,
 			pixelformat = node->pixelformat;
 		}
 
-		if (ldr_frame->shot_ext->mcsc_flip[index - PARAM_MCS_OUTPUT0] != mcs_output->flip)
+		if (index - PARAM_MCS_OUTPUT0 < MCSC_PORT_MAX &&
+			ldr_frame->shot_ext->mcsc_flip[index - PARAM_MCS_OUTPUT0] != mcs_output->flip)
 			change_flip = true;
 
 		inparm.x = mcs_output->crop_offset_x;

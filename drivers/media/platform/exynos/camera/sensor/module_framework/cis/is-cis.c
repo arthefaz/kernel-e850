@@ -467,6 +467,10 @@ int sensor_cis_dump_registers(struct v4l2_subdev *subdev, const u32 *regs, const
 	for (i = 0; i < size; i += I2C_NEXT) {
 		if (regs[i + I2C_BYTE] == 0x2 && regs[i + I2C_ADDR] == 0x6028) {
 			ret = is_sensor_write16(client, regs[i + I2C_ADDR], regs[i + I2C_DATA]);
+			if (ret < 0) {
+				err("is_sensor_write16 fail, ret(%d), addr(%#x)",
+						ret, regs[i + I2C_ADDR]);
+			}
 		}
 
 		if (regs[i + I2C_BYTE] == 0x1) {
