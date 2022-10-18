@@ -363,8 +363,7 @@ static void dw_mci_exynos_set_clksel_timing(struct dw_mci *host, u32 timing)
 	clksel = mci_readl(host, CLKSEL);
 	clksel = (clksel & ~SDMMC_CLKSEL_TIMING_MASK) | timing;
 
-	if (!((host->pdata->io_mode == MMC_TIMING_MMC_HS400) ||
-		(host->pdata->io_mode == MMC_TIMING_MMC_HS400_ES)))
+	if (!(host->pdata->io_mode == MMC_TIMING_MMC_HS400))
 		clksel &= ~(BIT(30) | BIT(19));
 
 	mci_writel(host, CLKSEL, clksel);
@@ -446,6 +445,7 @@ static void dw_mci_card_int_hwacg_ctrl(struct dw_mci *host, u32 flag)
 static void dw_mci_exynos_config_hs400(struct dw_mci *host, u32 timing)
 {
 	struct dw_mci_exynos_priv_data *priv = host->priv;
+	struct mmc_host *mmc = host->slot->mmc;
 	u32 dqs, strobe;
 
 	/*
@@ -456,7 +456,7 @@ static void dw_mci_exynos_config_hs400(struct dw_mci *host, u32 timing)
 	dqs = priv->saved_dqs_en;
 	strobe = priv->saved_strobe_ctrl;
 
-	if (timing == MMC_TIMING_MMC_HS400 || timing == MMC_TIMING_MMC_HS400_ES) {
+	if (timing == MMC_TIMING_MMC_HS400) {
 		dqs &= ~(DWMCI_TXDT_CRC_TIMER_SET(0xFF, 0xFF));
 		if (host->pdata->quirks & DW_MCI_QUIRK_ENABLE_ULP) {
 			if (priv->delay_line || priv->tx_delay_line)
@@ -482,7 +482,7 @@ static void dw_mci_exynos_config_hs400(struct dw_mci *host, u32 timing)
 						DWMCI_AXI_NON_BLOCKING_WRITE);
 		}
 		dqs |= (DATA_STROBE_EN | DWMCI_AXI_NON_BLOCKING_WRITE);
-		if (timing == MMC_TIMING_MMC_HS400_ES)
+		if (mmc->ios.enhanced_strobe)
 			dqs |= DWMCI_RESP_RCLK_MODE;
 	} else {
 		dqs &= ~DATA_STROBE_EN;
@@ -538,6 +538,7 @@ static void dw_mci_exynos_adjust_clock(struct dw_mci *host, unsigned int wanted)
 static void dw_mci_exynos_set_ios(struct dw_mci *host, struct mmc_ios *ios)
 {
 	struct dw_mci_exynos_priv_data *priv = host->priv;
+	struct mmc_host *mmc = host->slot->mmc;
 	unsigned int wanted = ios->clock;
 	u32 *clk_tbl = priv->ref_clk;
 	u32 timing = ios->timing, clksel;
@@ -550,9 +551,8 @@ static void dw_mci_exynos_set_ios(struct dw_mci *host, struct mmc_ios *ios)
 
 	switch (timing) {
 	case MMC_TIMING_MMC_HS400:
-	case MMC_TIMING_MMC_HS400_ES:
 		if (host->pdata->quirks & DW_MCI_QUIRK_ENABLE_ULP) {
-			if (timing == MMC_TIMING_MMC_HS400_ES)
+			if (mmc->ios.enhanced_strobe)
 				clksel = priv->hs400_ulp_timing;
 			else
 				clksel = SDMMC_CLKSEL_UP_SAMPLE(priv->hs400_ulp_timing, priv->tuned_sample);

@@ -1533,8 +1533,7 @@ inline u32 dw_mci_calc_hto_timeout(struct dw_mci * host)
 
 	target_timeout = host->pdata->data_timeout;
 
-	if (host->timing == MMC_TIMING_MMC_HS400 ||
-		host->timing == MMC_TIMING_MMC_HS400_ES) {
+	if (host->timing == MMC_TIMING_MMC_HS400) {
 		if (host->pdata->quirks & DW_MCI_QUIRK_ENABLE_ULP)
 			host_clock *= 2;
 	}
@@ -1552,7 +1551,7 @@ inline u32 dw_mci_calc_hto_timeout(struct dw_mci * host)
 	target_timeout = host->pdata->hto_timeout;
 
 	/* use clkout for sysnopsys divider */
-	if (host->timing == MMC_TIMING_MMC_HS400 || host->timing == MMC_TIMING_MMC_HS400_ES ||
+	if (host->timing == MMC_TIMING_MMC_HS400 ||
 	    (host->timing == MMC_TIMING_MMC_DDR52 && slot->ctype == SDMMC_CTYPE_8BIT))
 		host_clock /= 2;
 
@@ -1793,8 +1792,7 @@ inline u32 dw_mci_calc_timeout(struct dw_mci *host)
 
 	target_timeout = host->pdata->data_timeout;
 
-	if (host->timing == MMC_TIMING_MMC_HS400 ||
-		host->timing == MMC_TIMING_MMC_HS400_ES) { 
+	if (host->timing == MMC_TIMING_MMC_HS400) {
 		if (host->pdata->quirks & DW_MCI_QUIRK_ENABLE_ULP)
 			host_clock *= 2;
 	}
@@ -1991,8 +1989,7 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	/* DDR mode set */
 	if (ios->timing == MMC_TIMING_MMC_DDR52 ||
 	    ios->timing == MMC_TIMING_UHS_DDR50 ||
-	    ios->timing == MMC_TIMING_MMC_HS400 ||
-	    host->timing == MMC_TIMING_MMC_HS400_ES)
+	    ios->timing == MMC_TIMING_MMC_HS400)
 		regs |= ((0x1 << slot->id) << 16);
 	else
 		regs &= ~((0x1 << slot->id) << 16);
