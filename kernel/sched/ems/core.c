@@ -663,9 +663,13 @@ static int __find_energy_cpu(struct tp_env *env, const struct cpumask *candidate
 
 		if (energy > min_energy)
 			continue;
-		else if (cpu_util >= min_util)
+		else if (energy < min_energy)
+			goto found_min_util_cpu;
+
+		if (cpu_util >= min_util)
 			continue;
 
+found_min_util_cpu:
 		/*
 		 * energy_cpu has the lowest energy,
 		 * or the lowest util among the same energy.
