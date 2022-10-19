@@ -18,6 +18,7 @@ static inline int cal_if_init(void)
 
 #define BLKPWR_MAGIC	0xB1380000
 
+extern int (*exynos_cal_pd_bcm_sync)(unsigned int id, bool on);
 extern unsigned int cal_clk_get(char *name);
 extern unsigned int cal_clk_is_enabled(unsigned int vclkid);
 extern int cal_clk_setrate(unsigned int vclkid, unsigned long rate);

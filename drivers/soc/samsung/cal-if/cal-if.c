@@ -19,7 +19,7 @@
 #include "pmucal_gnss.h"
 #include "pmucal_shub.h"
 #include "pmucal_rae.h"
-#ifdef CONFIG_EXYNOS_BCM_DBG
+#if defined(CONFIG_EXYNOS_BCM_DBG) || defined(CONFIG_EXYNOS_BCM_DBG_MODULE)
 #include <soc/samsung/exynos-bcm_dbg.h>
 #endif
 #include "pmucal_powermode.h"
@@ -27,6 +27,9 @@
 #include "../acpm/acpm.h"
 
 static DEFINE_SPINLOCK(pmucal_cpu_lock);
+
+int (*exynos_cal_pd_bcm_sync)(unsigned int id, bool on);
+EXPORT_SYMBOL(exynos_cal_pd_bcm_sync);
 
 unsigned int cal_clk_is_enabled(unsigned int id)
 {
@@ -202,14 +205,14 @@ int cal_pd_control(unsigned int id, int on)
 
 	if (on) {
 		ret = pmucal_local_enable(index);
-#if defined(CONFIG_EXYNOS_BCM_DBG)
-		if (cal_pd_status(id))
-			exynos_bcm_dbg_pd_sync(id, true);
+#if defined(CONFIG_EXYNOS_BCM_DBG) || defined(CONFIG_EXYNOS_BCM_DBG_MODULE)
+		if (exynos_cal_pd_bcm_sync && cal_pd_status(id))
+			exynos_cal_pd_bcm_sync(id, true);
 #endif
 	} else {
-#if defined(CONFIG_EXYNOS_BCM_DBG)
-		if (cal_pd_status(id))
-			exynos_bcm_dbg_pd_sync(id, false);
+#if defined(CONFIG_EXYNOS_BCM_DBG) || defined(CONFIG_EXYNOS_BCM_DBG_MODULE)
+		if (exynos_cal_pd_bcm_sync && cal_pd_status(id))
+			exynos_cal_pd_bcm_sync(id, false);
 #endif
 		ret = pmucal_local_disable(index);
 	}
