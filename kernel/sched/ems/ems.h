@@ -272,6 +272,7 @@ extern struct mlt __percpu *pcpu_mlt;		/* active ratio tracking */
 
 #define NR_RUN_UNIT		100
 #define NR_RUN_ROUNDS_UNIT	50
+#define NR_RUN_UP_UNIT	99
 extern int mlt_avg_nr_run(struct rq *rq);
 extern void mlt_enqueue_task(struct rq *rq);
 extern void mlt_dequeue_task(struct rq *rq);

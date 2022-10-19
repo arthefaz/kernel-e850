@@ -304,7 +304,7 @@ static int update_domain_info(struct dynamic_dom *domain, int slower_misfit_cnt)
 
 	domain->nr_cpu = cpumask_weight(&domain->governor_cpus);
 	domain->active_ratio = active_ratio /= domain->nr_cpu;
-	avg_nr_run = (avg_nr_run + NR_RUN_ROUNDS_UNIT) / NR_RUN_UNIT;
+	avg_nr_run = (avg_nr_run + NR_RUN_UP_UNIT) / NR_RUN_UNIT;
 	domain->avg_nr_run = avg_nr_run;
 	domain->nr_busy_cpu = nr_busy_cpu;
 	domain->slower_misfit = slower_misfit_cnt;
