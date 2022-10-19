@@ -493,6 +493,8 @@ void lb_newidle_balance(struct rq *dst_rq, struct rq_flags *rf,
 
 	raw_spin_unlock(&dst_rq->lock);
 
+	cl_idx = min(cl_idx, get_pe_list_size() - 1);
+
 	range = compute_range(dst_cpu, cl_idx, short_idle);
 	for (i = 0; i < range; i++) {
 		struct pe_list *pl = get_pe_list(cl_idx);
