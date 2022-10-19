@@ -22,22 +22,18 @@
 		status = "okay";
 
 		pe-list {
-			#define CPU_CL0 "0-3"
-			#define CPU_CL1 "4-7"
+			#define CPU_ALL "0-7"
 
 			list@0 {
-				cpus = CPU_CL0, CPU_CL1;
-			};
-			list@1 {
-				cpus = CPU_CL1, CPU_CL0;
+				cpus = CPU_ALL;
 			};
 		};
 
 		cpu-selection-domain {
-			ananke {
+			ananke0 {
 				cpus = "0-3";
 			};
-			hercules {
+			ananke1 {
 				cpus = "4-7";
 			};
 		};
@@ -96,12 +92,8 @@
 			default-gov = < 1 >;
 
 			domain0 {
-				cpus = "0-3";
-				default-cpus = "0-1";
-			};
-			domain1 {
-				cpus = "4-7";
-				default-cpus = "4-5";
+				cpus = "0-7";
+				default-cpus = "0-3";
 			};
 		};
 
@@ -109,16 +101,14 @@
 			domain@0 {
 				cpus = "0-3";
 					/* Freq	  Resi */
-				table = < 806000  1500
-					  1300000 2000
-					  1742000 3000 >;
+				table = < 806000  2500
+					  1742000 2500 >;
 			};
 			domain@1 {
 				cpus = "4-7";
 					/* Freq	  Resi */
-				table = < 949000  2000
-					  1742000 2500
-					  2002000 4000 >;
+				table = < 806000  2500
+					  1742000 2500 >;
 			};
 		};
 

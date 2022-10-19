@@ -5,22 +5,9 @@
 			active-ratio 		= < 25   5>;
 		};
 
-		/* Ontime Migration */
-		ontime {
-			foreground 	= <1>;
-			top-app		= <1>;
+		ecs { };
 
-			domain0 {
-				cpus = "0-3";
-				lower-boundary = <0>;
-				upper-boundary = <21>;
-			};
-			domain1 {
-				cpus = "4-7";
-				lower-boundary = <8>;
-				upper-boundary = <66>;
-			};
-		};
+		ecs_dynamic { };
 
 		tex { };
 

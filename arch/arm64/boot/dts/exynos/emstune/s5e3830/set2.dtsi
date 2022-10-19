@@ -10,23 +10,6 @@
 			active-ratio		= < 25 100>;
 		};
 
-		/* Ontime Migration */
-		ontime {
-			foreground 	= <1>;
-			top-app		= <1>;
-
-			domain0 {
-				cpus = "0-3";
-				lower-boundary = <0>;
-				upper-boundary = <8>;
-			};
-			domain1 {
-				cpus = "4-7";
-				lower-boundary = <1>;
-				upper-boundary = <100>;
-			};
-		};
-
 		fclamp {
 			monitor-group {
 				top-app         = <1>;

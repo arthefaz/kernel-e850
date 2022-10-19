@@ -5,6 +5,10 @@
 			active-ratio 		= < 25   5>;
 		};
 
+		ecs { };
+
+		ecs_dynamic { };
+
 		tex { };
 
 		gsc {
