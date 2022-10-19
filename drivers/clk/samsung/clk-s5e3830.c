@@ -355,7 +355,6 @@ static int s5e3830_clock_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	void __iomem *reg_base;
-	int ret;
 
 	if (np) {
 		reg_base = of_iomap(np, 0);
