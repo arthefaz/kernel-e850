@@ -425,7 +425,7 @@ static u64 reset_failed_time;
 /* Status of FM driver request, which persists beyond the lifecyle
  * of the scsx_mx driver.
  */
-#ifdef CONFIG_SCSC_FM
+#if IS_ENABLED(CONFIG_SCSC_FM)
 static u32 is_fm_on;
 #endif
 
@@ -629,7 +629,7 @@ static bool send_syserr_cmd_to_active_mxman(u32 syserr_cmd)
 	return ret;
 }
 
-#ifdef CONFIG_SCSC_FM
+#if IS_ENABLED(CONFIG_SCSC_FM)
 static bool send_fm_params_to_active_mxman(struct wlbt_fm_params *params)
 {
 	bool ret = false;
@@ -762,7 +762,7 @@ static int coredump_helper(void)
 static int send_mm_msg_stop_blocking(struct mxman *mxman)
 {
 	int r;
-#ifdef CONFIG_SCSC_FM
+#if IS_ENABLED(CONFIG_SCSC_FM)
 	struct ma_msg_packet message = { .ma_msg = MM_HALT_REQ,
 			.arg = mxman->on_halt_ldos_on };
 #else
@@ -1094,7 +1094,7 @@ static int transports_init(struct mxman *mxman)
 	mxconf->version.minor = MXCONF_VERSION_MINOR;
 	/* Pass pre-existing FM status to FW */
 	mxconf->flags = 0;
-#ifdef CONFIG_SCSC_FM
+#if IS_ENABLED(CONFIG_SCSC_FM)
 	mxconf->flags |= is_fm_on ? MXCONF_FLAGS_FM_ON : 0;
 #endif
 	SCSC_TAG_INFO(MXMAN, "mxconf flags 0x%08x\n", mxconf->flags);
@@ -2588,7 +2588,7 @@ int mxman_open(struct mxman *mxman)
 			break; /* Running or given up */
 	}
 
-#ifdef CONFIG_SCSC_FM
+#if IS_ENABLED(CONFIG_SCSC_FM)
 	/* If we have stored FM radio parameters, deliver them to FW now */
 	if (r == 0 && mxman->fm_params_pending) {
 		SCSC_TAG_INFO(MXMAN, "Send pending FM params\n");
@@ -2848,7 +2848,7 @@ void mxman_init(struct mxman *mxman, struct scsc_mx *mx)
 {
 	mxman->mx = mx;
 	mxman->suspended = 0;
-#ifdef CONFIG_SCSC_FM
+#if IS_ENABLED(CONFIG_SCSC_FM)
 	mxman->on_halt_ldos_on = 0;
 	mxman->fm_params_pending = 0;
 #endif
@@ -3003,7 +3003,7 @@ int mxman_suspend(struct mxman *mxman)
 	return 0;
 }
 
-#ifdef CONFIG_SCSC_FM
+#if IS_ENABLED(CONFIG_SCSC_FM)
 void mxman_fm_on_halt_ldos_on(void)
 {
 	/* Should always be an active mxman unless module is unloaded */
@@ -3025,6 +3025,7 @@ void mxman_fm_on_halt_ldos_on(void)
 	 */
 	is_fm_on = 1;
 }
+EXPORT_SYMBOL(mxman_fm_on_halt_ldos_on);
 
 void mxman_fm_on_halt_ldos_off(void)
 {
@@ -3043,6 +3044,7 @@ void mxman_fm_on_halt_ldos_off(void)
 	active_mxman->on_halt_ldos_on = 0;
 	is_fm_on = 0;
 }
+EXPORT_SYMBOL(mxman_fm_on_halt_ldos_off);
 
 /* Update parameters passed to WLBT FM */
 int mxman_fm_set_params(struct wlbt_fm_params *params)
@@ -3074,6 +3076,7 @@ int mxman_fm_set_params(struct wlbt_fm_params *params)
 
 	return -EAGAIN;
 }
+EXPORT_SYMBOL(mxman_fm_set_params);
 #endif
 
 void mxman_resume(struct mxman *mxman)

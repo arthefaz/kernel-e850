@@ -173,6 +173,8 @@ extern u32 fmspeedy_get_reg(u32 addr);
 extern u32 fmspeedy_get_reg_work(u32 addr);
 extern u32 fmspeedy_get_reg_field(u32 addr, u32 shift, u32 mask);
 extern u32 fmspeedy_get_reg_field_work(u32 addr, u32 shift, u32 mask);
+extern void fm_audio_check(void);
+extern void fm_audio_check_work(void);
 extern void fm_audio_control(struct s610_radio *radio,
 	bool audio_out, bool lr_switch,
 	u32 req_time, u32 audio_addr);

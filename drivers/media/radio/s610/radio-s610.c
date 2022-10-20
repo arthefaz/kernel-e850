@@ -83,7 +83,7 @@ static void fm_clk_put(struct s610_radio *radio);
 
 #ifdef USE_PMIC_RW
 static struct device_node *exynos_pmic_parse_dt(struct s610_radio *radio);
-#ifndef CONFIG_SCSC_FM
+#if !IS_ENABLED(CONFIG_SCSC_FM)
 static int fm_ldo_enable(struct s610_radio *radio);
 static int fm_ldo_disable(struct s610_radio *radio);
 #endif /* CONFIG_SCSC_FM */
@@ -997,7 +997,7 @@ static int s610_radio_s_hw_freq_seek(struct file *file, void *priv,
 	ret = fm_rx_seek(radio, seek->seek_upward, seek->wrap_around,
 			seek_spacing, seek_low, seek_hi);
 	if (ret < 0)
-		dev_err(radio->v4l2dev.dev, "RX seek failed - %d\n", ret);
+		dev_err(radio->v4l2dev.dev, "RX seek end - %d\n", ret);
 
 	if (wake_lock_active(&radio->wakelock))
 		wake_unlock(&radio->wakelock);
@@ -2117,13 +2117,13 @@ void fm_ldo_read(struct s610_radio *radio)
 	dev_info(radio->dev, "%s: read S2MPU12_PM_LDO20_CTRL: %xh\n", __func__, reg20m);
 }
 
-#ifndef CONFIG_SCSC_FM
+#if !IS_ENABLED(CONFIG_SCSC_FM)
 int fm_ldo_enable(struct s610_radio *radio)
 {
 	u8 reg14m, reg18m, reg19m, reg20m;
 	int ret;
 
-	fm_ldo_read();
+	fm_ldo_read(radio);
 	/* LDO14M 0xEC */
 	ret = s2mpu12_write_reg(radio->i2c_main, S2MPU12_PMIC_L14CTRL, 0xEC);
 	if (ret < 0) {
@@ -2148,7 +2148,7 @@ int fm_ldo_enable(struct s610_radio *radio)
 		dev_err(radio->dev, "%s: failed to write PMIC main register\n", __func__);
 		return -1;
 	}
-	fm_ldo_read();
+	fm_ldo_read(radio);
 
 	return 0;
 }
@@ -2158,7 +2158,7 @@ int fm_ldo_disable(struct s610_radio *radio)
 	u8 reg14m, reg18m, reg19m, reg20m;
 	int ret;
 
-	fm_ldo_read();
+	fm_ldo_read(radio);
 	/* LDO14M 0x6C */
 	ret = s2mpu12_write_reg(radio->i2c_main, S2MPU12_PMIC_L14CTRL, 0x6C);
 	if (ret < 0) {
@@ -2183,7 +2183,7 @@ int fm_ldo_disable(struct s610_radio *radio)
 		dev_err(radio->dev, "%s: failed to write PMIC main register\n", __func__);
 		return -1;
 	}
-	fm_ldo_read();
+	fm_ldo_read(radio);
 
 	return ret;
 }
