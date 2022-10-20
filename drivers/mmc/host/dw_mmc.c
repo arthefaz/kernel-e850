@@ -3708,7 +3708,7 @@ static int dw_mci_init_slot_caps(struct dw_mci_slot *slot)
 	return 0;
 }
 
-#ifdef CONFIG_MMC_CQHCI
+#if IS_ENABLED(CONFIG_MMC_CQHCI)
 static void dw_mci_cmdq_interrupt_mask(struct mmc_host *mmc, bool enable)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
@@ -4007,7 +4007,7 @@ static int dw_mci_init_slot(struct dw_mci *host, struct platform_device *pdev)
 	ret = mmc_add_host(mmc);
 	if (ret)
 		goto err_host_allocated;
-#ifdef CONFIG_MMC_CQHCI
+#if IS_ENABLED(CONFIG_MMC_CQHCI)
 	if (mmc->caps2 & MMC_CAP2_CQE) {
 		bool dma64 = true;
 		struct cqhci_host *cq_host;
