@@ -651,9 +651,9 @@ static int is_hw_isp_shot(struct is_hw_ip *hw_ip, struct is_frame *frame,
 #else
 	if (param_set->dma_output_chunk.cmd != DMA_OUTPUT_COMMAND_DISABLE) {
 		for (i = 0; i < param_set->dma_output_chunk.plane; i++) {
-			param_set->output_dva_chunk[i] = frame->ixcTargetAddress[i + cur_idx];
+			param_set->output_dva_chunk[i] = frame->ixpTargetAddress[i + cur_idx];
 			if (param_set->output_dva_chunk[i] == 0) {
-				msinfo_hw("[F:%d]ixcTargetAddress[%d] is zero",
+				msinfo_hw("[F:%d]ixpTargetAddress[%d] is zero",
 					instance, hw_ip, frame->fcount, i);
 				param_set->dma_output_chunk.cmd = DMA_OUTPUT_COMMAND_DISABLE;
 			}
@@ -662,9 +662,9 @@ static int is_hw_isp_shot(struct is_hw_ip *hw_ip, struct is_frame *frame,
 
 	if (param_set->dma_output_yuv.cmd != DMA_OUTPUT_COMMAND_DISABLE) {
 		for (i = 0; i < param_set->dma_output_yuv.plane; i++) {
-			param_set->output_dva_yuv[i] = frame->ixpTargetAddress[i + cur_idx];
+			param_set->output_dva_yuv[i] = frame->ixcTargetAddress[i + cur_idx];
 			if (param_set->output_dva_yuv[i] == 0) {
-				msinfo_hw("[F:%d]ixpTargetAddress[%d] is zero",
+				msinfo_hw("[F:%d]ixcTargetAddress[%d] is zero",
 					instance, hw_ip, frame->fcount, i);
 				param_set->dma_output_yuv.cmd = DMA_OUTPUT_COMMAND_DISABLE;
 			}
