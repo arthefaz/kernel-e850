@@ -13,10 +13,7 @@
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 
-#ifdef CONFIG_S3C2410_WATCHDOG
-#include <soc/samsung/exynos-debug.h>
-#endif
-#if defined(CONFIG_DEBUG_SNAPSHOT_MODULE)
+#if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
 #include <soc/samsung/debug-snapshot.h>
 #endif
 
@@ -967,12 +964,10 @@ void is_debug_s2d(bool en_s2d, const char *fmt, ...)
 	if (en_s2d || debug_s2d) {
 		err("[DBG] S2D!!!", buf);
 		dump_stack();
-#if defined(CONFIG_S3C2410_WATCHDOG)
-		s3c2410wdt_set_emergency_reset(100, 0);
-#elif defined(CONFIG_DEBUG_SNAPSHOT_MODULE)
-		dbg_snapshot_expire_watchdog();
-#else
-		panic("S2D is not enabled.", buf);
+
+#if IS_ENABLED(CONFIG_DEBUG_SNAPSHOT)
+		if (dbg_snapshot_expire_watchdog() < 0)
+			panic("DSS doesn't support S2D", buf);
 #endif
 	} else {
 		panic(buf);

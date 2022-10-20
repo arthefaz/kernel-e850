@@ -25,7 +25,6 @@
 #include <soc/samsung/acpm_ipc_ctrl.h>
 #endif
 #include <soc/samsung/exynos-pmu.h>
-#include <soc/samsung/exynos-debug.h>
 #include <linux/mfd/samsung/s2mpu12-regulator.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
