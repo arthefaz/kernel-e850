@@ -27,6 +27,7 @@
 	/* MAILBOX_AP2WLBT */
 	scsc_wifibt: scsc_wifibt@119C0000 {
 		compatible = "samsung,scsc_wifibt";
+		memory-region = <&wifibt_if>;
 		/* Mailbox Registers */
 		reg = <0x0 0x119C0000 0x180>;
 		/* Exynos 3830 UM External GIC IRQ table */
