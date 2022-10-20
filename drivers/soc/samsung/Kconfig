@@ -53,6 +53,12 @@ config EXYNOS_PD_DBG
         depends on PM
         select PM_GENERIC_DOMAINS
 
+config EXYNOS_PD_EL3
+	tristate "Exynos PD Save/Restore"
+	default m
+	help
+	Support Exynos Power Domain Save/Restore
+
 config EXYNOS_REBOOT
        tristate "Exynos Chip Reboot Driver Support"
        depends on ARCH_EXYNOS
