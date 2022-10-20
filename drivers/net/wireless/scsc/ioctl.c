@@ -4851,7 +4851,7 @@ static int slsi_ioctl_driver_bug_dump(struct net_device *dev, char *command, int
 	int ret = 0;
 
 	slsi_dump_stats(dev);
-#ifdef CONFIG_SCSC_LOG_COLLECTION
+#if IS_ENABLED(CONFIG_SCSC_LOG_COLLECTION)
 	scsc_log_collector_schedule_collection(SCSC_LOG_DUMPSTATE, SCSC_LOG_DUMPSTATE_REASON_DRIVERDEBUGDUMP);
 #else
 #ifndef SLSI_TEST_DEV

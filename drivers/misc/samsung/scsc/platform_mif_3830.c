@@ -1982,8 +1982,22 @@ struct scsc_mif_abs *platform_mif_create(struct platform_device *pdev)
 	platform->suspendresume_data = NULL;
 
 #ifdef CONFIG_OF_RESERVED_MEM
-	platform->mem_start = sharedmem_base;
-	platform->mem_size = sharedmem_size;
+	if (!sharedmem_base) {
+		struct device_node *np;
+
+		np = of_parse_phandle(platform->dev->of_node, "memory-region", 0);
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+				  "module build register sharedmem np %x\n", np);
+		if (np) {
+			platform->mem_start = of_reserved_mem_lookup(np)->base;
+			platform->mem_size = of_reserved_mem_lookup(np)->size;
+		}
+	} else {
+		SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev,
+				  "built-in register sharedmem\n");
+		platform->mem_start = sharedmem_base;
+		platform->mem_size = sharedmem_size;
+	}
 #else
 	/* If CONFIG_OF_RESERVED_MEM is not defined, sharedmem values should be
 	 * parsed from the scsc_wifibt binding
