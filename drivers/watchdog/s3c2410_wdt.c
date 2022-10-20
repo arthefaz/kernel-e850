@@ -29,6 +29,7 @@
 #include <linux/delay.h>
 #include <linux/rtc.h>
 #include <linux/reboot.h>
+#include <linux/suspend.h>
 #include <linux/syscore_ops.h>
 #include <soc/samsung/exynos-pmu.h>
 #include <soc/samsung/debug-snapshot.h>
@@ -1409,6 +1410,25 @@ static struct syscore_ops s3c2410wdt_syscore_ops = {
 	.resume		= s3c2410wdt_syscore_resume,
 };
 
+static int s3c2410wdt_pm_notifier(struct notifier_block *notifier,
+				  unsigned long pm_event, void *v)
+{
+	struct s3c2410_wdt *wdt = s3c_wdt[LITTLE_CLUSTER];
+
+	switch (pm_event) {
+	case PM_SUSPEND_PREPARE:
+		s3c2410wdt_keepalive(&wdt->wdt_device);
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block s3c2410wdt_pm_nb = {
+	.notifier_call = s3c2410wdt_pm_notifier,
+	.priority = 0,
+};
+
 static int s3c2410wdt_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1641,6 +1661,7 @@ static int s3c2410wdt_probe(struct platform_device *pdev)
 				(void *)s3c2410wdt_set_emergency_stop);
 
 		register_reboot_notifier(&s3c2410wdt_nb_reboot_block);
+		register_pm_notifier(&s3c2410wdt_pm_nb);
 	}
 	dev_info(dev, "watchdog cluster %d, %sactive, reset %sabled, irq %sabled\n",
 		cluster_index,
@@ -1693,6 +1714,8 @@ static int s3c2410wdt_remove(struct platform_device *dev)
 	clk_disable_unprepare(wdt->rate_clock);
 	wdt->rate_clock = NULL;
 	wdt->gate_clock = NULL;
+
+	unregister_pm_notifier(&s3c2410wdt_pm_nb);
 
 	return ret;
 }
