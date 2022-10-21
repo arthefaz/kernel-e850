@@ -397,6 +397,17 @@ void arm64_notify_segfault(unsigned long addr)
 	force_signal_inject(SIGSEGV, code, addr, 0);
 }
 
+#ifdef CONFIG_S3C2410_BUILTIN_WATCHDOG
+extern int s3c2410wdt_builtin_expire_watchdog(void);
+static inline void do_s3c2410wdt_builtin_expire_watchdog(void)
+{
+	s3c2410wdt_builtin_expire_watchdog();
+}
+#else
+static inline void do_s3c2410wdt_builtin_expire_watchdog(void)
+{
+}
+#endif
 void do_undefinstr(struct pt_regs *regs)
 {
 	/* check for AArch32 breakpoint instructions */
@@ -407,6 +418,10 @@ void do_undefinstr(struct pt_regs *regs)
 		return;
 
 	trace_android_rvh_do_undefinstr(regs, user_mode(regs));
+
+	if (!user_mode(regs))
+		do_s3c2410wdt_builtin_expire_watchdog();
+
 	BUG_ON(!user_mode(regs));
 	force_signal_inject(SIGILL, ILL_ILLOPC, regs->pc, 0);
 }
