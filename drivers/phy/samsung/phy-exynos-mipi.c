@@ -159,7 +159,6 @@ static int __set_phy_init(struct exynos_mipi_phy *state,
 	}
 
 	/* Add INIT_DONE flag when ISO is already bypass(LCD_ON_UBOOT) */
-  /* ch1216 for build error */
 	if (cfg & EXYNOS_MIPI_PHY_ISO_BYPASS)
 		phy_desc->data->flags |= MIPI_PHY_MxSx_INIT_DONE;
 
