@@ -1326,6 +1326,7 @@
   sysrq_mask
   system_32bit_el0_cpumask
   system_freezing_cnt
+  system_state
   system_unbound_wq
   system_wq
   sys_tz
