@@ -75,7 +75,7 @@
                         };
 
                         chosen {
-				bootargs = "console=ram s3c2410_wdt.tmr_atboot=1 clocksource=arch_sys_counter clk_ignore_unused printk.devkmsg=on firmware_class.path=/vendor/firmware";
+				bootargs = "console=ram s3c2410_wdt.tmr_atboot=1 clocksource=arch_sys_counter clk_ignore_unused printk.devkmsg=on firmware_class.path=/vendor/firmware sec_debug.cp=3";
                                 linux,initrd-start = <0x84000000>;
                                 linux,initrd-end = <0x847FFFFF>;
                         };
