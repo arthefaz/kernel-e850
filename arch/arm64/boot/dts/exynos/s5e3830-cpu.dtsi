@@ -400,11 +400,11 @@
 		ucc {
 			ucc-config0 {
 				index = <0>;
-				cstate = "4-7";
+				allowed = "4-7";
 			};
 			ucc-config1 {
 				index = <1>;
-				cstate = "7";
+				allowed = "7";
 			};
 			ucc-config2 {
 				index = <2>;
