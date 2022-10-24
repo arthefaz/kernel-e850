@@ -86,7 +86,7 @@ extern int debug_irq;
 extern int debug_sensor;
 extern int debug_mem;
 
-#define DEBUG_LOG_MEMORY
+/* #define DEBUG_LOG_MEMORY */
 /* #define DEBUG_HW_SIZE */
 #define DBG_STREAM_ID ((1 << IS_STREAM_COUNT) - 1)
 /* #define DBG_JITTER */
