@@ -233,7 +233,7 @@ static void __mfc_merge_errorinfo_data(struct mfc_core *core, bool px_fault)
 	dev_err(core->device, "%s\n", errorinfo);
 
 #if IS_ENABLED(CONFIG_SEC_DEBUG_EXTRA_INFO)
-	sec_debug_set_extra_info_mfc_error(errorinfo);
+	secdbg_exin_set_mfc_error(errorinfo);
 #endif
 }
 
