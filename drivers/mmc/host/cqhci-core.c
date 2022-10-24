@@ -1101,12 +1101,21 @@ static void cqhci_recovery_finish(struct mmc_host *mmc)
 	unsigned long flags;
 	u32 cqcfg;
 	bool ok;
+	int ret;
 
 	pr_debug("%s: cqhci: %s\n", mmc_hostname(mmc), __func__);
 
 	WARN_ON(!cq_host->recovery_halt);
 
 	ok = cqhci_halt(mmc, CQHCI_FINISH_HALT_TIMEOUT);
+	if (cq_host->ops->reset) {
+		ret = cq_host->ops->reset(mmc, false);
+		if (ret) {
+			pr_crit("%s: reset CMDQ controller: failed\n",
+				mmc_hostname(mmc));
+			BUG();
+		}
+	}
 
 	if (!cqhci_clear_all_tasks(mmc, CQHCI_CLEAR_TIMEOUT))
 		ok = false;
@@ -1137,7 +1146,6 @@ static void cqhci_recovery_finish(struct mmc_host *mmc)
 		cq_host->ops->disable(mmc, true);
 	__cqhci_disable(cq_host);
 
- 	cqhci_recover_mrqs(cq_host);
 	cqhci_recover_mrqs(cq_host);
 
 	WARN_ON(cq_host->qcnt);
