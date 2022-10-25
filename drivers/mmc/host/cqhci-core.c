@@ -29,6 +29,7 @@
 #define DCMD_SLOT 31
 #define NUM_SLOTS 32
 
+extern int mmc_hw_reset(struct mmc_host *host);
 struct cqhci_slot {
 	struct mmc_request *mrq;
 	unsigned int flags;
@@ -1105,6 +1106,7 @@ static void cqhci_recovery_finish(struct mmc_host *mmc)
 
 	pr_debug("%s: cqhci: %s\n", mmc_hostname(mmc), __func__);
 
+	mmc_hw_reset(mmc);
 	WARN_ON(!cq_host->recovery_halt);
 
 	ok = cqhci_halt(mmc, CQHCI_FINISH_HALT_TIMEOUT);
