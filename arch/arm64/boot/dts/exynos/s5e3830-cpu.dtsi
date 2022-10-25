@@ -111,56 +111,56 @@
 		cpu0: cpu@0000 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
-			reg = <0x0 0x0000>;
+			reg = <0x0 0x000000>;
 			enable-method = "psci";
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu1: cpu@0001 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
-			reg = <0x0 0x0001>;
+			reg = <0x0 0x000100>;
 			enable-method = "psci";
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu2: cpu@0002 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
-			reg = <0x0 0x0002>;
+			reg = <0x0 0x000200>;
 			enable-method = "psci";
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu3: cpu@0003 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
-			reg = <0x0 0x0003>;
+			reg = <0x0 0x000300>;
 			enable-method = "psci";
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu4: cpu@0004 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
-			reg = <0x0 0x0100>;
+			reg = <0x0 0x010000>;
 			enable-method = "psci";
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu5: cpu@0005 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
-			reg = <0x0 0x0101>;
+			reg = <0x0 0x010100>;
 			enable-method = "psci";
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu6: cpu@0006 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
-			reg = <0x0 0x0102>;
+			reg = <0x0 0x010200>;
 			enable-method = "psci";
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
 		cpu7: cpu@0007 {
 			device_type = "cpu";
 			compatible = "arm,ananke", "arm,armv8";
-			reg = <0x0 0x0103>;
+			reg = <0x0 0x010300>;
 			enable-method = "psci";
 			cpu-idle-states = <&ANANKE_CPU_SLEEP>;
 		};
