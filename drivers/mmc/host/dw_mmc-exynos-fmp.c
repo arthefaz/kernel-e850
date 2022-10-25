@@ -80,7 +80,7 @@ int fmp_mmc_crypt_cfg(struct bio *bio, void *desc,
 
 	for (idx = 0; idx < FMP_IV_MAX_IDX; idx++)
 		*(&table->file_iv0 + idx) =
-			get_word(&iv, FMP_IV_MAX_IDX - (idx + 1));
+			get_word(iv, FMP_IV_MAX_IDX - (idx + 1));
 
 	return 0;
 }
