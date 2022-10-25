@@ -74,15 +74,6 @@ static void detach_all_tasks(struct rq *src_rq,
 	plist_for_each_entry_safe(p, n,
 			&src_rq->rt.pushable_tasks, pushable_tasks)
 		detach_any_task(src_rq, dst_rq, p, tasks);
-
-	/* detach dl tasks */
-	do {
-		next_node = src_rq->dl.pushable_dl_tasks_root.rb_leftmost;
-		if (!next_node)
-			break;
-		p = rb_entry(next_node, struct task_struct, pushable_dl_tasks);
-		detach_any_task(src_rq, dst_rq, p, tasks);
-	} while (1);
 }
 
 static void attach_all_tasks(struct rq *dst_rq, struct list_head *tasks)
