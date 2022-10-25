@@ -9,7 +9,10 @@
 
 		ecs_dynamic { };
 
-		tex { };
+		tex {
+			top-app = <1>;
+			prio = <110>;
+		};
 
 		gsc {
 			up_threshold = <0>;
