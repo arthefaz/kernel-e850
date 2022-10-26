@@ -51,6 +51,7 @@
 #include "is-dvfs.h"
 #include "is-device-sensor.h"
 #include "sensor/module_framework/is-device-sensor-peri.h"
+#include "pablo-obte.h"
 
 #ifdef ENABLE_FAULT_HANDLER
 #ifdef CONFIG_EXYNOS_IOVMM
@@ -1760,6 +1761,12 @@ static int is_driver_init(void)
 		return ret;
 	}
 
+	ret = pablo_obte_init();
+	if (ret) {
+		err("pablo_obte_init failed(%d)", ret);
+		return ret;
+	}
+
 	return ret;
 }
 
@@ -1770,6 +1777,7 @@ void is_driver_exit(void)
 	spi_unregister_driver(&is_spi_driver);
 	platform_driver_unregister(&is_sensor_driver);
 	platform_driver_unregister(&is_driver);
+	pablo_obte_exit();
 }
 module_init(is_driver_init);
 module_exit(is_driver_exit);
