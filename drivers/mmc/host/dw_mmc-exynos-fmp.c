@@ -111,6 +111,8 @@ int fmp_mmc_init_crypt(struct mmc_host *mmc)
 {
 	struct device *dev = mmc_dev(mmc);
 
+	pr_info("%s Exynos FMP Version: %s\n", __func__, FMP_DRV_VERSION);
+
 	/* Advertise crypto capabilities to the block layer. */
 	blk_ksm_init_passthrough(&mmc->ksm);
 	mmc->ksm.max_dun_bytes_supported = AES_BLOCK_SIZE;
@@ -125,7 +127,7 @@ EXPORT_SYMBOL(fmp_mmc_init_crypt);
 int fmp_mmc_sec_cfg(bool init)
 {
 	u64 ret = 0;
-	pr_info("%s Exynos FMP Version: %s init = %d\n", __func__, FMP_DRV_VERSION, init);
+	pr_info("%s init = %d\n", __func__, init);
 
 	/* configure fmp */
 	ret = exynos_smc(SMC_CMD_FMP_SECURITY, 0, FMP_EMBEDDED, CFG_DESCTYPE_3);
