@@ -15,6 +15,13 @@ config DISABLE_CAMERA_SIMD
 	depends on VIDEO_EXYNOS_PABLO_ISP
 	default n
 
+config PABLO_OBTE_SUPPORT
+	tristate "Enable obte driver for Pablo"
+	depends on VIDEO_EXYNOS_PABLO_ISP
+	default n
+	help
+	  Enable obte driver for Pablo.
+
 # Chain driver
 source "drivers/media/platform/exynos/camera/ischain/Kconfig"
 source "drivers/media/platform/exynos/camera/hardware/Kconfig"

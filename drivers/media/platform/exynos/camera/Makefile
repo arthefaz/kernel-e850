@@ -61,6 +61,7 @@ fimc-is-objs += is-dvfs.o
 endif
 
 obj-$(CONFIG_VIDEO_EXYNOS_PABLO_ISP) += fimc-is.o
+fimc-is-$(CONFIG_PABLO_OBTE_SUPPORT) += lib/pablo-obte.o
 obj-$(CONFIG_VIDEO_EXYNOS_PABLO_ISP) += sensor/
 obj-$(CONFIG_VIDEO_EXYNOS_PABLO_ISP) += ischain/
 
