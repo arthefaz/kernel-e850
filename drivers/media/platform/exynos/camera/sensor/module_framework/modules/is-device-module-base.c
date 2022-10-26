@@ -825,6 +825,10 @@ int sensor_module_s_ctrl(struct v4l2_subdev *subdev, struct v4l2_control *ctrl)
 		info("[MOD:%s] Dual sync mode set to %s", module->sensor_name,
 			sensor_peri->cis.dual_sync_mode == DUAL_SYNC_MASTER ? "Master" : "Slave");
 		break;
+	case V4L2_CID_IS_OBTE_CONFIG:
+		device->obte_config = ctrl->value;
+		info("[OBTE] obte_config is set by %d", ctrl->value);
+		break;
 	default:
 		err("err!!! Unknown CID(%#x)", ctrl->id);
 		ret = -EINVAL;

@@ -476,6 +476,8 @@ struct is_device_sensor {
 	bool					reboot;
 
 	bool					use_stripe_flag;
+
+	u32					obte_config;
 };
 
 int is_sensor_open(struct is_device_sensor *device,
