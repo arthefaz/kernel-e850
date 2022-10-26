@@ -396,6 +396,25 @@ static int _s2mu106_i2c_update_bit(struct i2c_client *i2c,
 	return ret;
 }
 
+static void _s2mu106_muic_set_chg_det(struct s2mu106_muic_data *muic_data,
+		bool enable)
+{
+	struct muic_interface_t *muic_if = muic_data->if_data;
+	struct i2c_client *i2c = muic_data->i2c;
+	u8 r_val = 0, w_val = 0;
+
+	r_val = s2mu106_i2c_read_byte(i2c, S2MU106_REG_RID_DISCHARGE);
+	if (enable) {
+		w_val = r_val & ~(RID_DISCHARGE_CHG_DET_OFF_MASK);
+	} else {
+		w_val = r_val | RID_DISCHARGE_CHG_DET_OFF_MASK;
+	}
+	if(w_val != r_val) {
+		pr_info("%s en(%d)\n", __func__, enable);
+		s2mu106_i2c_write_byte(i2c, S2MU106_REG_RID_DISCHARGE, w_val);
+	}
+}
+
 static int _s2mu106_muic_sel_path(struct s2mu106_muic_data *muic_data,
     t_path_data path_data)
 {
@@ -1157,6 +1176,7 @@ static void s2mu106_muic_detect_dev_ccic(struct s2mu106_muic_data *muic_data,
 			s2mu106_muic_set_rid_int_mask_en(muic_data, MUIC_DISABLE);
 		}
 #endif
+		_s2mu106_muic_set_chg_det(muic_data, MUIC_ENABLE);
 	} else {
 		/* Attach from CCIC */
 		muic_pdata->attached_dev = new_dev;
@@ -1206,6 +1226,7 @@ static int s2mu106_muic_detect_dev_bc1p2(struct s2mu106_muic_data *muic_data)
 			pr_info("USB DETECTED\n");
 #if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 			muic_data->new_dev = ATTACHED_DEV_USB_MUIC;
+			_s2mu106_muic_set_chg_det(muic_data, MUIC_DISABLE);
 #else
 			if (muic_data->bcd_rescanned) {
 				muic_data->new_dev = ATTACHED_DEV_USB_MUIC;
@@ -1259,6 +1280,7 @@ static int s2mu106_muic_detect_dev_bc1p2(struct s2mu106_muic_data *muic_data)
 		if (muic_data->vbvolt) {
 			pr_info("SDP_1P8S=>USB DETECTED\n");
 			muic_data->new_dev = ATTACHED_DEV_USB_MUIC;
+			_s2mu106_muic_set_chg_det(muic_data, MUIC_DISABLE);
 		}
 		break;
 	default:
@@ -1297,6 +1319,7 @@ static int s2mu106_muic_detect_dev_bc1p2(struct s2mu106_muic_data *muic_data)
 			pr_info("DP 3V USB DETECTED\n");
 #if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 			muic_data->new_dev = ATTACHED_DEV_USB_MUIC;
+			_s2mu106_muic_set_chg_det(muic_data, MUIC_DISABLE);
 #else
 			if (muic_data->bcd_rescanned) {
 				muic_data->new_dev = ATTACHED_DEV_USB_MUIC;
@@ -1965,6 +1988,7 @@ static irqreturn_t s2mu106_muic_detach_isr(int irq, void *data)
 		if (!muic_core_get_ccic_cable_state(muic_data->pdata)) {
 			muic_core_handle_detach(muic_data->pdata);
 			muic_data->bcd_rescanned = false;
+			_s2mu106_muic_set_chg_det(muic_data, MUIC_ENABLE);
 #if IS_ENABLED(CONFIG_ERD_S2MU106_TYPEC_WATER)
 			_s2mu106_muic_control_rid_adc(muic_data, MUIC_ENABLE);
 			if (muic_data->is_cable_inserted) {
@@ -2058,10 +2082,18 @@ static irqreturn_t s2mu106_muic_vbus_on_isr(int irq, void *data)
 static irqreturn_t s2mu106_muic_vbus_off_isr(int irq, void *data)
 {
 	struct s2mu106_muic_data *muic_data = data;
+	struct muic_interface_t *muic_if;
 	struct muic_platform_data *muic_pdata;
 
 	if (muic_data == NULL) {
 		pr_err("%s data NULL\n", __func__);
+		return IRQ_NONE;
+	}
+
+	muic_if = (struct muic_interface_t *)muic_data->if_data;
+
+	if (muic_if == NULL) {
+		pr_err("%s, data NULL\n", __func__);
 		return IRQ_NONE;
 	}
 
@@ -2091,6 +2123,15 @@ static irqreturn_t s2mu106_muic_vbus_off_isr(int irq, void *data)
 	vbus_notifier_handle(STATUS_VBUS_LOW);
 #endif /* CONFIG_VBUS_NOTIFIER */
 	_s2mu106_muic_resend_jig_type(muic_data);
+
+
+	if (s2mu106_muic_is_opmode_typeC(muic_data)) {
+		if (!muic_core_get_ccic_cable_state(muic_data->pdata)
+				&& muic_if->is_pdic_attached == false) {
+			muic_core_handle_detach(muic_data->pdata);
+			_s2mu106_muic_set_chg_det(muic_data, MUIC_ENABLE);
+		}
+	}
 
 	pr_info("%s done(%s)\n", __func__, dev_to_str(muic_pdata->attached_dev));
 
