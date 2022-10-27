@@ -25,6 +25,11 @@
 				compatible = "samsung,exynos-cp";
 				status = "okay";
 
+			       /* HW revision
+				* XEINT30-HW_REV0, XEINT31-HW_REV1, XENIT33-HW_REV2
+				*/
+				gpios = <&gpa3 6 0>, <&gpa3 7 0>, <&gpa4 1 0>;
+
 				pinctrl-names = "default";
 				pinctrl-0 = <&rffe1_clk &rffe1_data>, <&b12_13_sel>,
 					<&drx_mlb_sel &drx_lna_en_b7>, <&cable_det_lb_mb>;
@@ -511,5 +516,12 @@
 		samsung,pins = "gpa2-1";
 		samsung,pin-function = <3>;
 		samsung,pin-pud = <0>;
+	};
+
+	hw_rev: hw-rev {
+		samsung,pins = "gpa3-6", "gpa3-7", "gpa4-1";
+		samsung,pin-function = <0>;
+		samsung,pin-pud = <0>;
+		samsung,pin-drv = <0>;
 	};
 };
