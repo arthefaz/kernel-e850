@@ -128,7 +128,12 @@ static inline int vclk_get_bigturbo_table(unsigned int *table)
 extern unsigned int vclk_debug_clk_get_rate(unsigned int id);
 extern int vclk_debug_clk_set_value(unsigned int id, unsigned int params);
 extern unsigned long vclk_debug_clk_get_value(unsigned int id);
+extern int vclk_debug_init(void);
 #else
+static inline int vclk_debug_init(void)
+{
+        return 0;
+}
 static inline unsigned int vclk_debug_clk_get_rate(unsigned int id)
 {
 	return 0;

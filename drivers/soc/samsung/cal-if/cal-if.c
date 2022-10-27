@@ -7,6 +7,7 @@
 #include "pwrcal-env.h"
 #include "pwrcal-rae.h"
 #include "cmucal.h"
+#include "vclk.h"
 #include "ra.h"
 #include "acpm_dvfs.h"
 #include "asv.h"
@@ -587,6 +588,8 @@ int cal_if_init(void *dev)
 
 #endif
 	cal_initialized = 1;
+
+	vclk_debug_init();
 
 	return 0;
 }
