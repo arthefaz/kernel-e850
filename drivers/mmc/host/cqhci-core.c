@@ -698,7 +698,8 @@ static int cqhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	spin_lock_irqsave(&cq_host->lock, flags);
 
-	if (cq_host->recovery_halt) {
+	if ((cq_host->recovery_halt) || (cq_host->slot[DCMD_SLOT].mrq) != NULL) {
+
 		err = -EBUSY;
 		goto out_unlock;
 	}

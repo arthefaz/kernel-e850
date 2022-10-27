@@ -289,8 +289,7 @@ static blk_status_t mmc_mq_queue_rq(struct blk_mq_hw_ctx *hctx,
 		 * For MMC host software queue, we only allow 2 requests in
 		 * flight to avoid a long latency.
 		 */
-		if ((host->hsq_enabled && mq->in_flight[issue_type] > 2) ||
-			mmc_cqe_dcmd_busy(mq)) {
+		if ((host->hsq_enabled && mq->in_flight[issue_type] > 2)) {
 			spin_unlock_irq(&mq->lock);
 			return BLK_STS_RESOURCE;
 		}
