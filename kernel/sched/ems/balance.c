@@ -506,18 +506,15 @@ void lb_newidle_balance(struct rq *dst_rq, struct rq_flags *rf,
 			break;
 
 		__lb_find_busiest_queue(dst_cpu, &(pl->cpus[i]), &busiest);
-		if (busiest)
-			break;
+		if (busiest) {
+			src_cpu = cpu_of(busiest);
+			if (dst_cpu != src_cpu)
+				*pulled_task = lb_idle_pull_tasks(dst_cpu, src_cpu);
+			if (*pulled_task)
+				break;
+		}
 	}
 
-	if (!busiest)
-		goto unlock;
-
-	src_cpu = cpu_of(busiest);
-	if (dst_cpu != src_cpu)
-		*pulled_task = lb_idle_pull_tasks(dst_cpu, src_cpu);
-
-unlock:
 	raw_spin_lock(&dst_rq->lock);
 out:
 	/*
