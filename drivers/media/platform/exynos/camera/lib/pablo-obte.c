@@ -525,6 +525,12 @@ int __nocfi pablo_obte_get_ddk_tuning_interface(void)
 		lib_obte_interface = NULL;
 	}
 
+	if (!pablo_obte_buf_alloc_all()) {
+		err_obte("failed buffer allocation\n");
+		lib_obte_interface = NULL;
+		return -ENOMEM;
+	}
+
 	return 0;
 }
 
@@ -534,12 +540,6 @@ int __nocfi pablo_obte_init_3aa(u32 instance, bool flag)
 
 	if (pablo_obte_use_ddk() && !lib_obte_interface)
 		ret = pablo_obte_get_ddk_tuning_interface();
-
-	if (!pablo_obte_buf_alloc_all()) {
-		err_obte("failed buffer allocation\n");
-		lib_obte_interface = NULL;
-		return -ENOMEM;
-	}
 
 	/* reprocessing path */
 	if (flag) {
@@ -1262,11 +1262,6 @@ long __nocfi pablo_obte_ioctl(struct file *filp, unsigned int cmd, unsigned long
 				lib_obte_interface->set_tuning_config(&sharebase);
 			else
 				err_obte("PABLO_OBTE_INIT: invalid lib_obte_interface\n");
-		}
-
-		if (!pablo_obte_buf_alloc_all()) {
-			err_obte("failed buffer allocation\n");
-			lib_obte_interface = NULL;
 		}
 
 		dbg_obte("PABLO_OBTE_INIT %d\n", sharebase.emul_repro_flag);
