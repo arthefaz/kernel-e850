@@ -42,6 +42,12 @@ void dpp_dump(struct dpp_device *dpp)
 		console_unlock();
 }
 
+void *request_dpp_subdev(int id)
+{
+	struct dpp_device *dpp = dpp_drvdata[id];
+	return (void *)(&dpp->sd);
+}
+
 void dpp_op_timer_handler(struct timer_list *arg)
 {
 	struct dpp_device *dpp = from_timer(dpp, arg, op_timer);

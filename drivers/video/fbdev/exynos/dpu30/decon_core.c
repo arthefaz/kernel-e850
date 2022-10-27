@@ -78,6 +78,7 @@ int dpu_dma_buf_log_level = 6;
 module_param(dpu_dma_buf_log_level, int, 0644);
 int decon_systrace_enable;
 unsigned int decon_trivial;
+unsigned int subdev_status;
 
 struct decon_device *decon_drvdata[MAX_DECON_CNT];
 EXPORT_SYMBOL(decon_drvdata);
@@ -3322,6 +3323,26 @@ const struct dev_pm_ops decon_pm_ops = {
 	.runtime_resume	 = decon_runtime_resume,
 };
 
+static int initialize_subdevs(struct decon_device *decon)
+{
+	int id;
+
+	if (subdev_status)
+		return -ENODEV;
+
+	for (id = 0; id < SOC_DPP_CNT; ++id)
+		decon->dpp_sd[id] = (struct v4l2_subdev*)request_dpp_subdev(id);
+
+	for (id = 0; id < MAX_DSIM_CNT; ++id)
+		decon->dsim_sd[id] = (struct v4l2_subdev*)request_dsim_subdev(id);
+
+#if defined(CONFIG_EXYNOS_DISPLAYPORT)
+	decon->displayport_sd = (struct v4l2_subdev*)request_displayport_subdev();
+#endif
+
+	return 0;
+}
+
 static int decon_register_subdevs(struct decon_device *decon)
 {
 	struct v4l2_device *v4l2_dev = &decon->v4l2_dev;
@@ -3335,22 +3356,9 @@ static int decon_register_subdevs(struct decon_device *decon)
 		return ret;
 	}
 
-	for (i = 0;  i < SOC_DPP_CNT; ++i)
-		decon->dpp_sd[i] = NULL;
-	ret = dpu_get_sd_by_drvname(decon, DPP_MODULE_NAME);
+	ret = initialize_subdevs(decon);
 	if (ret)
 		return ret;
-
-	for (i = 0; i < MAX_DSIM_CNT; ++i)
-		decon->dsim_sd[i] = NULL;
-	ret = dpu_get_sd_by_drvname(decon, DSIM_MODULE_NAME);
-	if (ret)
-		return ret;
-#if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	ret = dpu_get_sd_by_drvname(decon, DISPLAYPORT_MODULE_NAME);
-	if (ret)
-		return ret;
-#endif
 
 	if (!decon->id) {
 		/*
@@ -4334,16 +4342,17 @@ extern struct platform_driver displayport_driver;
 #endif
 static int exynos_decon_register(void)
 {
+	subdev_status = 0;
 #if defined(CONFIG_SOC_S5E3830)
 	/* NOT REQUIRED FOR ERD3830
 	i2c_add_driver(&panel_i2c_driver);
 	*/
 #endif
 	platform_driver_register(&exynos_panel_driver);
-	platform_driver_register(&dpp_driver);
-	platform_driver_register(&dsim_driver);
+	subdev_status |= platform_driver_register(&dpp_driver);
+	subdev_status |= platform_driver_register(&dsim_driver);
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	platform_driver_register(&displayport_driver);
+	subdev_status |= platform_driver_register(&displayport_driver);
 #endif
 	platform_driver_register(&decon_driver);
 

@@ -26,55 +26,6 @@
 #endif
 #include <video/mipi_display.h>
 
-static int __dpu_match_dev(struct device *dev, const void *data)
-{
-	struct dpp_device *dpp;
-	struct dsim_device *dsim;
-#if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	struct displayport_device *displayport;
-#endif
-	struct decon_device *decon = (struct decon_device *)data;
-
-	decon_dbg("%s: drvname(%s)\n", __func__, dev->driver->name);
-
-	if (!strcmp(DPP_MODULE_NAME, dev->driver->name)) {
-		dpp = (struct dpp_device *)dev_get_drvdata(dev);
-		decon->dpp_sd[dpp->id] = &dpp->sd;
-		decon_dbg("dpp%d sd name(%s) attr(0x%lx)\n", dpp->id,
-				decon->dpp_sd[dpp->id]->name, dpp->attr);
-	} else if (!strcmp(DSIM_MODULE_NAME, dev->driver->name)) {
-		dsim = (struct dsim_device *)dev_get_drvdata(dev);
-		decon->dsim_sd[dsim->id] = &dsim->sd;
-		decon_dbg("dsim sd name(%s)\n", dsim->sd.name);
-#if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	} else if (!strcmp(DISPLAYPORT_MODULE_NAME, dev->driver->name)) {
-		displayport = (struct displayport_device *)dev_get_drvdata(dev);
-		decon->displayport_sd = &displayport->sd;
-		decon_dbg("displayport sd name(%s)\n", displayport->sd.name);
-#endif
-	} else {
-		decon_err("failed to get driver name\n");
-	}
-
-	return 0;
-}
-
-int dpu_get_sd_by_drvname(struct decon_device *decon, char *drvname)
-{
-	struct device_driver *drv;
-	struct device *dev;
-
-	drv = driver_find(drvname, &platform_bus_type);
-	if (IS_ERR_OR_NULL(drv)) {
-		decon_err("failed to find driver\n");
-		return -ENODEV;
-	}
-
-	dev = driver_find_device(drv, NULL, decon, __dpu_match_dev);
-
-	return 0;
-}
-
 bool decon_intersect(struct decon_rect *r1, struct decon_rect *r2)
 {
 	return !(r1->left > r2->right || r1->right < r2->left ||

@@ -74,6 +74,12 @@ static char *dsim_state_names[] = {
 static int dsim_runtime_suspend(struct device *dev);
 static int dsim_runtime_resume(struct device *dev);
 
+void *request_dsim_subdev(int id)
+{
+	struct dsim_device *dsim = dsim_drvdata[id];
+	return (void *)(&dsim->sd);
+}
+
 int dsim_call_panel_ops(struct dsim_device *dsim, u32 cmd, void *arg)
 {
 	struct v4l2_subdev *sd;

@@ -1464,7 +1464,9 @@ static inline bool IS_DECON_HIBER_STATE(struct decon_device *decon)
 int decon_tui_protection(bool tui_en);
 
 /* helper functions */
-int dpu_get_sd_by_drvname(struct decon_device *decon, char *drvname);
+void* request_dpp_subdev(int id);
+void* request_dsim_subdev(int id);
+void* request_displayport_subdev(void);
 void dpu_unify_rect(struct decon_rect *r1, struct decon_rect *r2,
 		struct decon_rect *dst);
 void dpu_save_fence_info(int fd, struct dma_fence *fence,
