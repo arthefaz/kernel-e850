@@ -140,6 +140,6 @@ endif
 config EXYNOS_DPU_SYSTRACE
 	bool "Support Systrace for DPU"
 		depends on EXYNOS_DPU30
-		default n
+		default y
 
 source "drivers/video/fbdev/exynos/dpu30/panels/Kconfig"
