@@ -72,6 +72,7 @@ static ssize_t chub_dev_write(struct file *, const char *, size_t, loff_t *);
 
 static struct class *sensor_class;
 static int major, chub_dev_major;
+static struct device *nanohub_dev;
 
 extern const char *os_image[SENSOR_VARIATION];
 extern struct memlog_obj *memlog_printf_file_chub;
@@ -153,6 +154,7 @@ static inline void nanohub_io_init(struct nanohub_io *io,
 	INIT_LIST_HEAD(&io->buf_list);
 	io->data = data;
 	io->dev = dev;
+	nanohub_dev = dev;
 }
 
 static inline bool nanohub_io_has_buf(struct nanohub_io *io)
@@ -811,21 +813,21 @@ fail_dev:
 done:
 	return ret;
 }
-
+/*
 static int nanohub_match_devt(struct device *dev, const void *data)
 {
 	const dev_t *devt = data;
 
 	return dev->devt == *devt;
 }
-
+*/
 static int nanohub_open(struct inode *inode, struct file *file)
 {
 	dev_t devt = inode->i_rdev;
 	struct device *dev;
 	struct nanohub_io *io;
 
-	dev = class_find_device(sensor_class, NULL, &devt, nanohub_match_devt);
+	dev = nanohub_dev;
 	if (dev) {
 		file->private_data = dev_get_drvdata(dev);
 		nonseekable_open(inode, file);
@@ -1038,7 +1040,7 @@ static int chub_dev_open(struct inode *inode, struct file *file)
 	struct contexthub_ipc_info *chub;
 
 	nanohub_info("%s\n", __func__);
-	dev_nanohub = class_find_device(sensor_class, NULL, "nanohub", nanohub_match_name);
+	dev_nanohub = nanohub_dev;
 	if (!dev_nanohub) {
 		nanohub_err("%s: dev_nanohub not available\n", __func__);
 		return -ENODEV;
