@@ -18,7 +18,6 @@
 #include "is-video.h"
 #include "is-type.h"
 
-#ifdef CHAIN_USE_STRIPE_PROCESSING
 void is_ischain_3ap_stripe_cfg(struct is_subdev *subdev,
 		struct is_frame *ldr_frame,
 		struct is_crop *incrop,
@@ -88,7 +87,6 @@ void is_ischain_3ap_stripe_cfg(struct is_subdev *subdev,
 
 	framemgr_x_barrier_irqr(framemgr, FMGR_IDX_24, flags);
 }
-#endif
 
 static int is_ischain_3ap_cfg(struct is_subdev *subdev,
 	void *device_data,
@@ -133,17 +131,12 @@ static int is_ischain_3ap_start(struct is_device_ischain *device,
 	mdbg_pframe("ot_crop[fmt: %d, hw_bw: %d, msb: %d]\n", device, subdev, frame,
 			hw_format, hw_bitwidth, hw_msb);
 
-#ifdef CHAIN_USE_STRIPE_PROCESSING
-	if (frame
-#ifdef CHAIN_USE_STRIPE_REGION_NUM_META
-		&& frame->stripe_info.region_num
-#endif
-			)
+	if (IS_ENABLED(CHAIN_USE_STRIPE_PROCESSING) && frame && frame->stripe_info.region_num)
 		is_ischain_3ap_stripe_cfg(subdev,
 				frame,
 				&incrop_cfg, &otcrop_cfg,
 				&queue->framecfg);
-#endif
+
 	if ((otcrop_cfg.w > taa_param->otf_input.bayer_crop_width) ||
 		(otcrop_cfg.h > taa_param->otf_input.bayer_crop_height)) {
 		mrerr("bds output size is invalid((%d, %d) > (%d, %d))", device, frame,

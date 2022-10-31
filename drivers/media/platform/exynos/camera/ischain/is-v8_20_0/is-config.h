@@ -58,9 +58,8 @@
  * CONFIG - SW configurations
  * =================================================================================================
  */
-/* For sync with DDK
 #define CHAIN_USE_STRIPE_PROCESSING		1
-#define CHAIN_USE_STRIPE_REGION_NUM_META	1  */
+#define CHAIN_USE_STRIPE_REGION_NUM_META	1
 #define STRIPE_MARGIN_WIDTH		(384)
 #define STRIPE_WIDTH_ALIGN		(128)
 #define STRIPE_RATIO_PRECISION		(1000)

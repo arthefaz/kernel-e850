@@ -619,13 +619,13 @@ static int is_hw_mcsc_calculate_wdma_offset(struct is_hw_ip *hw_ip, struct is_fr
 static void is_hw_mcsc_wdma_cfg(struct is_hw_ip *hw_ip, struct is_frame *frame)
 {
 	struct mcs_param *param;
-	struct param_mcs_output *output;
 	struct is_hw_mcsc_cap *cap = GET_MCSC_HW_CAP(hw_ip);
 	struct is_hw_mcsc *hw_mcsc;
 	u32 wdma_addr[MCSC_OUTPUT_MAX][4] = {{0} }, *wdma_base = NULL;
 	u32 plane, buf_idx, out_id, i, offset = 0;
 #ifdef USE_MCSC_STRIP_OUT_CROP
 	u32 stripe_dma_offset = 0;
+	bool x_flip = false;
 #endif
 	ulong flag;
 	int idx, p_cur_idx, p_buf_idx;
@@ -668,24 +668,8 @@ static void is_hw_mcsc_wdma_cfg(struct is_hw_ip *hw_ip, struct is_frame *frame)
 			is_scaler_set_wdma_frame_seq(hw_ip->regs[REG_SETA], out_id,
 				0x1 << USE_DMA_BUFFER_INDEX);
 
-			output = &param->output[out_id];
-			plane = output->plane;
+			plane = param->output[out_id].plane;
 			p_cur_idx = frame->cur_buf_index * plane;
-
-#ifdef USE_MCSC_STRIP_OUT_CROP
-			stripe_dma_offset = 0;
-			if (is_scaler_get_poly_out_crop_enable(hw_ip->regs[REG_SETA], out_id)
-			|| is_scaler_get_post_out_crop_enable(hw_ip->regs[REG_SETA], out_id)) {
-				u32 roi_x;
-
-				if (output->flip & 1) /* X flip */
-					roi_x = output->full_output_width - output->stripe_roi_end_pos_x;
-				else
-					roi_x = output->stripe_roi_start_pos_x;
-
-				stripe_dma_offset = roi_x * output->dma_bitwidth / BITS_PER_BYTE;
-			}
-#endif
 
 			for (buf_idx = 0; buf_idx < frame->num_buffers; buf_idx++) {
 				for (i = 0; i < plane; i++) {
@@ -693,9 +677,19 @@ static void is_hw_mcsc_wdma_cfg(struct is_hw_ip *hw_ip, struct is_frame *frame)
 					 * offset_x and offset_y are initialized to non-zero values
 					 * when supporting bypass offset for hifi solution.
 					 */
-					if (output->offset_x || output->offset_y)
+					if (param->output[out_id].offset_x || param->output[out_id].offset_y)
 						offset = is_hw_mcsc_calculate_wdma_offset(hw_ip, frame, i, out_id);
 
+#ifdef USE_MCSC_STRIP_OUT_CROP
+					if (is_scaler_get_poly_out_crop_enable(hw_ip->regs[REG_SETA], out_id)
+					|| is_scaler_get_post_out_crop_enable(hw_ip->regs[REG_SETA], out_id)) {
+						x_flip = param->output[out_id].flip & 1 ? true : false;
+						if (x_flip)
+							stripe_dma_offset = ((param->output[out_id].full_output_width - param->output[out_id].stripe_roi_end_pos_x) * param->output[out_id].dma_bitwidth) / BITS_PER_BYTE;
+						else
+							stripe_dma_offset = (param->output[out_id].stripe_roi_start_pos_x * param->output[out_id].dma_bitwidth) / BITS_PER_BYTE;
+					}
+#endif
 					/*
 					 * If the number of buffers is not same between leader and subdev,
 					 * wdma addresses are forcibly set as the same address of first buffer.

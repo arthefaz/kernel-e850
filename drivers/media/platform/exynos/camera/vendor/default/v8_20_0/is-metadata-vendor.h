@@ -2388,6 +2388,7 @@ struct camera2_node {
 	 *pixelsize   : per-frame pixel_size
 	 */
 	uint32_t			pixelformat;
+	uint32_t			pixelsize;
 };
 
 struct camera2_node_group {
@@ -2562,18 +2563,15 @@ struct camera2_stream {
 	uint32_t		input_crop_region[4];
 	uint32_t		output_crop_region[4];
 
+	uint32_t		pixelformat;
+	uint32_t		pixelsize;
 
-
-#ifdef CHAIN_USE_STRIPE_REGION_NUM_META
 	/**
 	  stripe region horizontal pixel nums
 	  this value indicates each width pixel size of stripe region
 	 */
 	uint32_t		stripe_region_num;
-#endif
-#ifdef CHAIN_USE_STRIPE_PROCESSING
 	uint32_t		stripe_h_pix_nums[CAMERA2_MAX_STRIPE_REGION_NUM];
-#endif
 };
 
 /** \brief

@@ -17,7 +17,6 @@
 #include "is-video.h"
 #include "is-type.h"
 
-#ifdef CHAIN_USE_STRIPE_PROCESSING
 void is_ischain_ixc_stripe_cfg(struct is_subdev *subdev,
 		struct is_frame *ldr_frame,
 		struct is_crop *incrop,
@@ -108,7 +107,6 @@ void is_ischain_ixc_stripe_cfg(struct is_subdev *subdev,
 
 	framemgr_x_barrier_irqr(framemgr, FMGR_IDX_24, flags);
 }
-#endif
 
 static int is_ischain_ixc_cfg(struct is_subdev *subdev,
 	void *device_data,
@@ -144,16 +142,11 @@ static int is_ischain_ixc_start(struct is_device_ischain *device,
 	incrop_cfg = *incrop;
 	otcrop_cfg = *otcrop;
 
-#ifdef CHAIN_USE_STRIPE_PROCESSING
-	if (frame)
+	if (IS_ENABLED(CHAIN_USE_STRIPE_PROCESSING) && frame)
 		is_ischain_ixc_stripe_cfg(subdev, frame,
 				&incrop_cfg, &otcrop_cfg,
-				&queue->framecfg
-#ifdef CHAIN_USE_STRIPE_REGION_NUM_META
-				,frame->stripe_info.region_num
-#endif
-				);
-#endif
+				&queue->framecfg,
+				frame->stripe_info.region_num);
 
 	dma_output = is_itf_g_param(device, frame, PARAM_ISP_VDMA5_OUTPUT);
 	dma_output->cmd = DMA_OUTPUT_COMMAND_ENABLE;

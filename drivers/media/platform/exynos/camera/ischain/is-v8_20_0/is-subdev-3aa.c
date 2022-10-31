@@ -18,7 +18,6 @@
 #include "is-video.h"
 #include "is-type.h"
 
-#ifdef CHAIN_USE_STRIPE_PROCESSING
 int is_ischain_3aa_stripe_cfg(struct is_group *group,
 		struct is_subdev *subdev,
 		struct is_frame *frame,
@@ -104,7 +103,6 @@ int is_ischain_3aa_stripe_cfg(struct is_group *group,
 			otcrop->x, otcrop->y, otcrop->w, otcrop->h);
 	return 0;
 }
-#endif
 
 static int is_ischain_3aa_cfg(struct is_subdev *leader,
 	void *device_data,
@@ -192,19 +190,15 @@ static int is_ischain_3aa_cfg(struct is_subdev *leader,
 		in_width = leader->input.width;
 		in_height = leader->input.height;
 	}
-#ifdef CHAIN_USE_STRIPE_PROCESSING
-	if (frame
-#ifdef  CHAIN_USE_STRIPE_REGION_NUM_META
-		&& frame->stripe_info.region_num
-#endif
-		) {
+
+	if (IS_ENABLED(CHAIN_USE_STRIPE_PROCESSING) && frame && frame->stripe_info.region_num) {
 		while (stripe_ret)
 			stripe_ret = is_ischain_3aa_stripe_cfg(group, leader, frame,
 					&in_width, &in_height,
 					&incrop_cfg, &otcrop_cfg,
 					hw_bitwidth);
 	}
-#endif
+
 	/*
 	 * bayer crop = bcrop1 + bcrop3
 	 * hal should set full size input including cac margin

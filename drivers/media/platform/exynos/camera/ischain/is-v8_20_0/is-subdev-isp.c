@@ -18,7 +18,6 @@
 #include "is-video.h"
 #include "is-type.h"
 
-#ifdef CHAIN_USE_STRIPE_PROCESSING
 int is_ischain_isp_stripe_cfg(struct is_group *group,
 		struct is_subdev *subdev,
 		struct is_frame *frame,
@@ -123,7 +122,6 @@ int is_ischain_isp_stripe_cfg(struct is_group *group,
 			otcrop->x, otcrop->y, otcrop->w, otcrop->h);
 	return 0;
 }
-#endif
 
 static int is_ischain_isp_cfg(struct is_subdev *leader,
 	void *device_data,
@@ -200,14 +198,13 @@ static int is_ischain_isp_cfg(struct is_subdev *leader,
 		*hindex |= HIGHBIT_OF(PARAM_ISP_CONTROL);
 		(*indexes)++;
 	}
-#ifdef CHAIN_USE_STRIPE_PROCESSING
-	if (frame && frame->stripe_info.region_num) {
+
+	if (IS_ENABLED(CHAIN_USE_STRIPE_PROCESSING) && frame && frame->stripe_info.region_num) {
 		groupmgr = (struct is_groupmgr *)frame->groupmgr;
 		stream_leader = groupmgr->leader[leader->instance];
 		is_leader = (stream_leader->id == group->id);
-#ifdef CHAIN_USE_STRIPE_REGION_NUM_META
 		prev_region_num = ((struct camera2_stream *)frame->shot_ext)->stripe_region_num;
-#endif
+
 		while (stripe_ret)
 			stripe_ret = is_ischain_isp_stripe_cfg(group, leader, frame,
 					&incrop_cfg, &otcrop_cfg,
@@ -219,7 +216,7 @@ static int is_ischain_isp_cfg(struct is_subdev *leader,
 		if (frame && device->sensor)
 			device->sensor->use_stripe_flag = false;
 	}
-#endif
+
 	/* ISP */
 	otf_input = is_itf_g_param(device, frame, PARAM_ISP_OTF_INPUT);
 	if (test_bit(IS_GROUP_OTF_INPUT, &group->state))
@@ -325,6 +322,7 @@ static int is_ischain_isp_tag(struct is_subdev *subdev,
 	struct is_device_ischain *device;
 	struct is_fmt *format, *tmp_format;
 	struct is_queue *queue;
+	u32 fmt_pixelsize;
 	bool chg_fmt_size = false;
 	u32 lindex, hindex, indexes;
 
@@ -397,6 +395,18 @@ static int is_ischain_isp_tag(struct is_subdev *subdev,
 				(char)((node->pixelformat >> 16) & 0xFF),
 				(char)((node->pixelformat >> 24) & 0xFF));
 		}
+		chg_fmt_size = true;
+	}
+
+	fmt_pixelsize = queue->framecfg.hw_pixeltype & PIXEL_TYPE_SIZE_MASK;
+	if (node->pixelsize && node->pixelsize != fmt_pixelsize) {
+		mdbg_pframe("pixelsize is changed(%d->%d)\n",
+			device, subdev, frame,
+			fmt_pixelsize, node->pixelsize);
+		queue->framecfg.hw_pixeltype =
+			(queue->framecfg.hw_pixeltype & PIXEL_TYPE_EXTRA_MASK)
+			| (node->pixelsize & PIXEL_TYPE_SIZE_MASK);
+
 		chg_fmt_size = true;
 	}
 

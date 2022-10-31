@@ -18,7 +18,6 @@
 #include "is-video.h"
 #include "is-type.h"
 
-#ifdef CHAIN_USE_STRIPE_PROCESSING
 int is_ischain_mcs_stripe_cfg(struct is_group* group,
 		struct is_subdev *subdev,
 		struct is_frame *frame,
@@ -142,7 +141,6 @@ int is_ischain_mcs_stripe_cfg(struct is_group* group,
 
 	return 0;
 }
-#endif
 
 static int is_ischain_mcs_cfg(struct is_subdev *leader,
 	void *device_data,
@@ -185,17 +183,14 @@ static int is_ischain_mcs_cfg(struct is_subdev *leader,
 	incrop_cfg = *incrop;
 	otcrop_cfg = *otcrop;
 
-#ifdef CHAIN_USE_STRIPE_PROCESSING
-	if (frame &&
-#ifdef CHAIN_USE_STRIPE_REGION_NUM_META
-		frame->stripe_info.region_num &&
-#endif
-		device->sensor->use_stripe_flag) {
+
+	if (IS_ENABLED(CHAIN_USE_STRIPE_PROCESSING)	&& frame
+			&& frame->stripe_info.region_num
+			&& device->sensor->use_stripe_flag) {
 		is_ischain_mcs_stripe_cfg(group, leader, frame,
 				&incrop_cfg, &otcrop_cfg, &queue->framecfg);
 		scn_check_remosaic = CHK_MODECHANGE_SCN(frame->shot->ctl.aa.captureIntent);
 	}
-#endif
 
 	input = is_itf_g_param(device, frame, PARAM_MCS_INPUT);
 	if (test_bit(IS_GROUP_OTF_INPUT, &group->state)) {
