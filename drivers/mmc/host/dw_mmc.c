@@ -2472,10 +2472,12 @@ static void dw_mci_runtime_pm_control(struct mmc_host *mmc, int enable)
 static void dw_mci_hs400_enhanced_strobe(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	static int flag = 0;
-	struct mmc_card *card = mmc->card;
 	unsigned int max_dtr = (unsigned int)-1;
 
-	if (mmc && mmc->ios.enhanced_strobe == false)
+	if (!mmc)
+		return;
+
+	if (mmc->ios.enhanced_strobe == false)
 		return;
 
 	max_dtr = MMC_HS200_MAX_DTR;
