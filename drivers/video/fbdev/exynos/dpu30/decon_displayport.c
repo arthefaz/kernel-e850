@@ -21,9 +21,8 @@
 void *request_displayport_subdev(void)
 {
 #if defined(CONFIG_EXYNOS_DISPLAYPORT)
-	struct displayport_device *displayport = get_displayport_drvdata();
-
-	return (void *)(&displayport->sd);
+	struct displayport_device *dp = get_displayport_drvdata();
+	return ((dp && dp->subdev_initialized) ? (void *)(&dp->sd) : NULL);
 #endif
 }
 

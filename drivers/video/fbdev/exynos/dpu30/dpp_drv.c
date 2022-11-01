@@ -45,7 +45,7 @@ void dpp_dump(struct dpp_device *dpp)
 void *request_dpp_subdev(int id)
 {
 	struct dpp_device *dpp = dpp_drvdata[id];
-	return (void *)(&dpp->sd);
+	return ((dpp && dpp->subdev_initialized) ? (void *)(&dpp->sd) : NULL);
 }
 
 void dpp_op_timer_handler(struct timer_list *arg)
@@ -712,6 +712,7 @@ static void dpp_init_subdev(struct dpp_device *dpp)
 	sd->grp_id = dpp->id;
 	snprintf(sd->name, sizeof(sd->name), "%s.%d", "dpp-sd", dpp->id);
 	v4l2_set_subdevdata(sd, dpp);
+	dpp->subdev_initialized = true;
 }
 
 static void dpp_parse_restriction(struct dpp_device *dpp, struct device_node *n)

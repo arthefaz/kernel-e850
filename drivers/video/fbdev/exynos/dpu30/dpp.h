@@ -239,6 +239,7 @@ struct dpp_device {
 	enum wbmux_state wb_state;	/* only for writeback */
 	struct device *dev;
 	struct v4l2_subdev sd;
+	bool subdev_initialized;
 	struct dpp_resources res;
 	struct dpp_debug d;
 	struct timer_list op_timer;

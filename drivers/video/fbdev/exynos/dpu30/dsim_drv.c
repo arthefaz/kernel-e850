@@ -77,7 +77,7 @@ static int dsim_runtime_resume(struct device *dev);
 void *request_dsim_subdev(int id)
 {
 	struct dsim_device *dsim = dsim_drvdata[id];
-	return (void *)(&dsim->sd);
+	return ((dsim && dsim->subdev_initialized) ? (void *)(&dsim->sd) : NULL);
 }
 
 int dsim_call_panel_ops(struct dsim_device *dsim, u32 cmd, void *arg)
@@ -1411,6 +1411,7 @@ static void dsim_init_subdev(struct dsim_device *dsim)
 	sd->grp_id = dsim->id;
 	snprintf(sd->name, sizeof(sd->name), "%s.%d", "dsim-sd", dsim->id);
 	v4l2_set_subdevdata(sd, dsim);
+	dsim->subdev_initialized = true;
 }
 
 #if defined(CONFIG_EXYNOS_READ_ESD_SOLUTION) && defined(CONFIG_EXYNOS_READ_ESD_SOLUTION_TEST)

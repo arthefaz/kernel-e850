@@ -240,6 +240,7 @@ struct dsim_device {
 	struct exynos_panel_device *panel;
 
 	struct v4l2_subdev sd;
+	bool subdev_initialized;
 	struct dsim_clks clks;
 	struct timer_list cmd_timer;
 
