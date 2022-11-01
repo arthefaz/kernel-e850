@@ -28,9 +28,7 @@ int abox_ion_get_mmap_fd(struct device *dev,
 
 	abox_dbg(dev, "%s\n", __func__);
 
-	if (buf->fd < 0)
-		buf->fd = dma_buf_fd(buf->dma_buf, O_CLOEXEC);
-
+	buf->fd = dma_buf_fd(buf->dma_buf, O_CLOEXEC);
 	if (buf->fd < 0) {
 		abox_err(dev, "%s dma_buf_fd is failed\n", __func__);
 		return -EFAULT;
