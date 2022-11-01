@@ -20,6 +20,8 @@
 #include <linux/mfd/syscon.h>
 #include <linux/regmap.h>
 
+#include <dt-bindings/power/samsung,exynos850-power.h>
+
 /* Register offsets inside Power Domain area in PMU */
 #define EXYNOS_PD_CONF		0x0
 #define EXYNOS_PD_STATUS	0x4
@@ -130,6 +132,21 @@ static const struct exynos_pm_domain_config exynos5433_cfg = {
 	.local_pwr_cfg		= 0xf,
 };
 
+static const unsigned int exynos850_pd_offsets[] = {
+	[EXYNOS850_PD_HSI]	= 0x1c80,
+	[EXYNOS850_PD_G3D]	= 0x1d00,
+	[EXYNOS850_PD_MFCMSCL]	= 0x1d80,
+	[EXYNOS850_PD_DPU]	= 0x2000,
+	[EXYNOS850_PD_AUD]	= 0x2080,
+	[EXYNOS850_PD_IS]	= 0x2100,
+};
+
+static const struct exynos_pm_domain_config exynos850_cfg = {
+	.local_pwr_cfg		= 0x1,
+	.pd_offsets		= exynos850_pd_offsets,
+	.pd_offsets_num		= ARRAY_SIZE(exynos850_pd_offsets),
+};
+
 static const struct of_device_id exynos_pm_domain_of_match[] = {
 	{
 		.compatible = "samsung,exynos4210-pd",
@@ -137,6 +154,9 @@ static const struct of_device_id exynos_pm_domain_of_match[] = {
 	}, {
 		.compatible = "samsung,exynos5433-pd",
 		.data = &exynos5433_cfg,
+	}, {
+		.compatible = "samsung,exynos850-pd",
+		.data = &exynos850_cfg,
 	},
 	{ },
 };
