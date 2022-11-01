@@ -12,6 +12,7 @@
 
 #include <dt-bindings/clock/exynos850.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/power/samsung,exynos850-power.h>
 #include <dt-bindings/soc/samsung,exynos-usi.h>
 
 / {
@@ -208,6 +209,48 @@
 				mask = <0x2>; /* SWRESET_SYSTEM */
 				value = <0x2>; /* reset value */
 			};
+
+			pd_hsi: power-domain@EXYNOS850_PD_HSI {
+				compatible = "samsung,exynos850-pd";
+				samsung,pd-index = <EXYNOS850_PD_HSI>;
+				#power-domain-cells = <0>;
+				label = "HSI";
+			};
+
+			pd_g3d: power-domain@EXYNOS850_PD_G3D {
+				compatible = "samsung,exynos850-pd";
+				samsung,pd-index = <EXYNOS850_PD_G3D>;
+				#power-domain-cells = <0>;
+				label = "G3D";
+			};
+
+			pd_mfcmscl: power-domain@EXYNOS850_PD_MFCMSCL {
+				compatible = "samsung,exynos850-pd";
+				samsung,pd-index = <EXYNOS850_PD_MFCMSCL>;
+				#power-domain-cells = <0>;
+				label = "MFCMSCL";
+			};
+
+			pd_dpu: power-domain@EXYNOS850_PD_DPU {
+				compatible = "samsung,exynos850-pd";
+				samsung,pd-index = <EXYNOS850_PD_DPU>;
+				#power-domain-cells = <0>;
+				label = "DPU";
+			};
+
+			pd_aud: power-domain@EXYNOS850_PD_AUD {
+				compatible = "samsung,exynos850-pd";
+				samsung,pd-index = <EXYNOS850_PD_AUD>;
+				#power-domain-cells = <0>;
+				label = "AUD";
+			};
+
+			pd_is: power-domain@EXYNOS850_PD_IS {
+				compatible = "samsung,exynos850-pd";
+				samsung,pd-index = <EXYNOS850_PD_IS>;
+				#power-domain-cells = <0>;
+				label = "IS";
+			};
 		};
 
 		watchdog_cl0: watchdog@10050000 {
@@ -251,6 +294,8 @@
 
 			clocks = <&oscclk>, <&cmu_top CLK_DOUT_G3D_SWITCH>;
 			clock-names = "oscclk", "dout_g3d_switch";
+			power-domains = <&pd_g3d>;
+			samsung,tzpc = <0x11410204>;
 		};
 
 		cmu_apm: clock-controller@11800000 {
@@ -307,6 +352,8 @@
 			clock-names = "oscclk", "dout_mfcmscl_mfc",
 				      "dout_mfcmscl_m2m", "dout_mfcmscl_mcsc",
 				      "dout_mfcmscl_jpeg";
+			power-domains = <&pd_mfcmscl>;
+			samsung,tzpc = <0x12c10204>;
 		};
 
 		cmu_dpu: clock-controller@13000000 {
@@ -316,6 +363,8 @@
 
 			clocks = <&oscclk>, <&cmu_top CLK_DOUT_DPU>;
 			clock-names = "oscclk", "dout_dpu";
+			power-domains = <&pd_dpu>;
+			samsung,tzpc = <0x13010204>;
 		};
 
 		cmu_hsi: clock-controller@13400000 {
@@ -329,6 +378,8 @@
 				 <&cmu_top CLK_DOUT_HSI_USB20DRD>;
 			clock-names = "oscclk", "dout_hsi_bus",
 				      "dout_hsi_mmc_card", "dout_hsi_usb20drd";
+			power-domains = <&pd_hsi>;
+			samsung,tzpc = <0x13410204>;
 		};
 
 		cmu_is: clock-controller@14500000 {
@@ -343,6 +394,8 @@
 				 <&cmu_top CLK_DOUT_IS_GDC>;
 			clock-names = "oscclk", "dout_is_bus", "dout_is_itp",
 				      "dout_is_vra", "dout_is_gdc";
+			power-domains = <&pd_is>;
+			samsung,tzpc = <0x14510204>;
 		};
 
 		cmu_aud: clock-controller@14a00000 {
@@ -352,6 +405,8 @@
 
 			clocks = <&oscclk>, <&cmu_top CLK_DOUT_AUD>;
 			clock-names = "oscclk", "dout_aud";
+			power-domains = <&pd_aud>;
+			samsung,tzpc = <0x14810204>;
 		};
 
 		pinctrl_alive: pinctrl@11850000 {
@@ -518,6 +573,7 @@
 			clock-names = "sysmmu";
 			clocks = <&cmu_mfcmscl CLK_GOUT_MFCMSCL_SYSMMU_CLK>;
 			#iommu-cells = <0>;
+			power-domains = <&pd_mfcmscl>;
 		};
 
 		sysmmu_dpu: sysmmu@130c0000 {
@@ -527,6 +583,7 @@
 			clock-names = "sysmmu";
 			clocks = <&cmu_dpu CLK_GOUT_DPU_SMMU_CLK>;
 			#iommu-cells = <0>;
+			power-domains = <&pd_dpu>;
 		};
 
 		sysmmu_is0: sysmmu@14550000 {
@@ -536,6 +593,7 @@
 			clock-names = "sysmmu";
 			clocks = <&cmu_is CLK_GOUT_IS_SYSMMU_IS0_CLK>;
 			#iommu-cells = <0>;
+			power-domains = <&pd_is>;
 		};
 
 		sysmmu_is1: sysmmu@14570000 {
@@ -545,6 +603,7 @@
 			clock-names = "sysmmu";
 			clocks = <&cmu_is CLK_GOUT_IS_SYSMMU_IS1_CLK>;
 			#iommu-cells = <0>;
+			power-domains = <&pd_is>;
 		};
 
 		sysmmu_aud: sysmmu@14850000 {
@@ -554,6 +613,7 @@
 			clock-names = "sysmmu";
 			clocks = <&cmu_aud CLK_GOUT_AUD_SYSMMU_CLK>;
 			#iommu-cells = <0>;
+			power-domains = <&pd_aud>;
 		};
 
 		sysreg_peri: syscon@10020000 {
