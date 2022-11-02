@@ -449,17 +449,29 @@ static int compute_range(int cpu, int cl_idx, bool short_idle)
 }
 
 #define NIB_AVG_IDLE_THRESHOLD	500000
+static bool determine_short_idle(u64 avg_idle)
+{
+	u64 idle_threshold = NIB_AVG_IDLE_THRESHOLD;
+
+	if (emstune_should_spread())
+		idle_threshold >>= 2;
+
+	return avg_idle < idle_threshold;
+}
+
 void lb_newidle_balance(struct rq *dst_rq, struct rq_flags *rf,
 				int *pulled_task, int *done)
 {
 	int dst_cpu = dst_rq->cpu;
 	int cl_idx = ems_rq_cluster_idx(dst_rq);
-	bool short_idle = dst_rq->avg_idle < NIB_AVG_IDLE_THRESHOLD;
+	bool short_idle;
 	struct rq *busiest = NULL;
 	int i, range = 0, src_cpu = -1;
 
 	dst_rq->misfit_task_load = 0;
 	*done = true;
+
+	short_idle = determine_short_idle(dst_rq->avg_idle);
 
 	/*
 	 * There is a task waiting to run. No need to search for one.
