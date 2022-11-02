@@ -779,11 +779,11 @@ static void contexthub_select_os(struct contexthub_ipc_info *chub)
 	chub->misc.num_os = val;
 	nanohub_dev_info(chub->dev, "%s selected name: %s\n", __func__, os_image[chub->misc.num_os]);
 	ipc_set_chub_bootmode(BOOTMODE_COLD, chub->log.chub_rt_log.loglevel);
-	chub->misc.multi_os = false;
 	contexthub_shutdown(chub);
 	ret = contexthub_download_image(chub, chub->misc.num_os);
 	if (ret)
 		nanohub_warn("%s: os download fail! %d", __func__, ret);
+	chub->misc.multi_os = false;
 	ipc_write_hw_value(IPC_VAL_HW_BOOTMODE, chub->misc.os_load);
 	ipc_set_chub_boottime(chub->misc.alive_mct);
 	cal_chub_reset_release();
