@@ -116,6 +116,7 @@ int scsc_log_in_dram_mmap_create(void)
 	void *virtual_address;
 
 	mutex_init(&scsc_log_in_dram_mutex);
+        reinit_completion(&scsc_log_in_dram_completion);
 	scsc_log_in_dram_ptr = vzalloc(MIFRAMMAN_LOG_DRAM_SZ);
 	if (IS_ERR_OR_NULL(scsc_log_in_dram_ptr)) {
 		pr_err("wlbt: in_dram. open allocating scsc_log_in_dram_ptr = %ld\n",
