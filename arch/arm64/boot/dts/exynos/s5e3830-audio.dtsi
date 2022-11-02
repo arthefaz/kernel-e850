@@ -496,28 +496,28 @@
 			samsung,name = "param_cprxse.bin";
 			samsung,area = <1>;
 			samsung,offset = <0x1300000>;
-			samsung,changable;
+			samsung,changeable;
 		};
 		ext_bin_6: ext-bin@6 {
 			compatible = "samsung,abox-ext-bin";
 			samsung,name = "param_cptxse.bin";
 			samsung,area = <1>;
 			samsung,offset = <0x1380000>;
-			samsung,changable;
+			samsung,changeable;
 		};
 		ext_bin_7: ext-bin@7 {
 			compatible = "samsung,abox-ext-bin";
 			samsung,name = "param_aprxse.bin";
 			samsung,area = <1>;
 			samsung,offset = <0x1400000>;
-			samsung,changable;
+			samsung,changeable;
 		};
 		ext_bin_8: ext-bin@8 {
 			compatible = "samsung,abox-ext-bin";
 			samsung,name = "param_aptxse.bin";
 			samsung,area = <1>;
 			samsung,offset = <0x1480000>;
-			samsung,changable;
+			samsung,changeable;
 		};
 	};
 };
