@@ -106,6 +106,39 @@ static struct abox_dbg_dump (*p_abox_dbg_dump)[ABOX_DBG_DUMP_COUNT];
 static struct abox_dbg_dump_min (*p_abox_dbg_dump_min)[ABOX_DBG_DUMP_COUNT];
 static struct abox_dbg_dump_info abox_dbg_dump_info[ABOX_DBG_DUMP_COUNT];
 
+/* revisited free_reserved_area() of /mm/page_alloc.c */
+static unsigned long __free_reserved_area(phys_addr_t start, phys_addr_t end, const char *s)
+{
+	phys_addr_t pos;
+	unsigned long pages = 0;
+
+	start = PAGE_ALIGN(start);
+	end &= PAGE_MASK;
+	for (pos = start; pos < end; pos += PAGE_SIZE, pages++)
+		free_reserved_page(phys_to_page(pos));
+
+	if (pages && s)
+		pr_info("Freeing %s memory: %ldK\n", s, pages << (PAGE_SHIFT - 10));
+
+	return pages;
+}
+
+static void abox_dbg_resize_rmem(struct device *dev, struct reserved_mem *rmem,
+		size_t new_size, const char *tag)
+{
+	size_t old_size = rmem->size;
+
+	if (old_size < new_size) {
+		abox_warn(dev, "%s: new size %#zx is bigger than reserved size %#zx\n",
+				tag, new_size, old_size);
+		return;
+	}
+
+	rmem->size = new_size;
+	__free_reserved_area(rmem->base + new_size, rmem->base + old_size, tag);
+	abox_info(dev, "%s: %s new size %#lx\n", __func__, tag, rmem->size);
+}
+
 static struct reserved_mem *abox_dbg_slog;
 
 static int __init abox_dbg_slog_setup(struct reserved_mem *rmem)
@@ -1222,6 +1255,7 @@ static int samsung_abox_debug_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct device *dev_abox = dev->parent;
 	struct abox_data *data = dev_get_drvdata(dev_abox);
+	ssize_t new_size;
 	int i, ret;
 
 	abox_dbg(dev, "%s\n", __func__);
@@ -1235,6 +1269,10 @@ static int samsung_abox_debug_probe(struct platform_device *pdev)
 	}
 
 	if (abox_dbg_rmem) {
+		new_size = abox_oem_resize_reserved_memory(ABOX_OEM_RESERVED_MEMORY_DBG);
+		if (new_size >= 0)
+			abox_dbg_resize_rmem(dev, abox_dbg_rmem, new_size, "abox_dbg");
+
 		abox_dbg_rmem_init(data);
 	}
 
@@ -1247,6 +1285,10 @@ static int samsung_abox_debug_probe(struct platform_device *pdev)
 	}
 
 	if (abox_dbg_slog) {
+		new_size = abox_oem_resize_reserved_memory(ABOX_OEM_RESERVED_MEMORY_SLOG);
+		if (new_size >= 0)
+			abox_dbg_resize_rmem(dev, abox_dbg_slog, new_size, "abox_slog");
+
 		abox_dbg_slog_init(data);
 	}
 
