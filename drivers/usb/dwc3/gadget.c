@@ -2456,6 +2456,8 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 	unsigned long		flags;
 	int			ret;
 
+	pr_info("%s +++\n", __func__);
+
 	is_on = !!is_on;
 
 	if (dwc->pullups_connected == is_on)
@@ -2555,6 +2557,7 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 
 	pm_runtime_put(dwc->dev);
 
+	pr_info("%s ---\n", __func__);
 	return ret;
 }
 
@@ -2637,6 +2640,7 @@ static int __dwc3_gadget_start(struct dwc3 *dwc)
 	int			ret = 0;
 	u32			reg;
 
+	pr_info("%s +++\n", __func__);
 	/*
 	 * Use IMOD if enabled via dwc->imod_interval. Otherwise, if
 	 * the core supports IMOD, disable it.
@@ -2701,6 +2705,8 @@ static int __dwc3_gadget_start(struct dwc3 *dwc)
 
 	dwc3_gadget_enable_irq(dwc);
 
+	pr_info("%s ---\n", __func__);
+
 	return 0;
 
 err1:
@@ -2751,9 +2757,11 @@ err0:
 
 static void __dwc3_gadget_stop(struct dwc3 *dwc)
 {
+	pr_info("%s +++\n", __func__);
 	dwc3_gadget_disable_irq(dwc);
 	__dwc3_gadget_ep_disable(dwc->eps[0]);
 	__dwc3_gadget_ep_disable(dwc->eps[1]);
+	pr_info("%s ---\n", __func__);
 }
 
 static int dwc3_gadget_stop(struct usb_gadget *g)
@@ -2816,9 +2824,11 @@ static void dwc3_gadget_set_speed(struct usb_gadget *g,
 	struct dwc3		*dwc = gadget_to_dwc(g);
 	unsigned long		flags;
 
+	pr_info("%s +++\n", __func__);
 	spin_lock_irqsave(&dwc->lock, flags);
 	dwc->gadget_max_speed = speed;
 	spin_unlock_irqrestore(&dwc->lock, flags);
+	pr_info("%s ---\n", __func__);
 }
 
 static void dwc3_gadget_set_ssp_rate(struct usb_gadget *g,
