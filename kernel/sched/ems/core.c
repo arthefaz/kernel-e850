@@ -568,9 +568,9 @@ static void take_util_snapshot(struct tp_env *env)
 		env->cpu_stat[cpu].dl_util = cpu_util_dl(rq);
 		extra_util = env->cpu_stat[cpu].rt_util + env->cpu_stat[cpu].dl_util;
 
-		env->cpu_stat[cpu].util_wo = min(ml_cpu_util_without(cpu, env->p) + extra_util,
+		env->cpu_stat[cpu].util_wo = min(ml_cpu_util_est_without(cpu, env->p) + extra_util,
 			    capacity);
-		env->cpu_stat[cpu].util_with = min(ml_cpu_util_with(env->p, cpu) + extra_util,
+		env->cpu_stat[cpu].util_with = min(ml_cpu_util_est_with(env->p, cpu) + extra_util,
 			    capacity);
 
 		env->cpu_stat[cpu].runnable = READ_ONCE(cfs_rq->avg.runnable_avg);

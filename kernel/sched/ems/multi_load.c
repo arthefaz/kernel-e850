@@ -76,6 +76,20 @@ unsigned long ml_cpu_util(int cpu)
 }
 
 /*
+ * ml_cpu_util_est - return cpu util_est
+ */
+unsigned long ml_cpu_util_est(int cpu)
+{
+	struct cfs_rq *cfs_rq;
+	unsigned int util_est;
+
+	cfs_rq = &cpu_rq(cpu)->cfs;
+	util_est = READ_ONCE(cfs_rq->avg.util_est.enqueued);
+
+	return min_t(unsigned long, util_est, capacity_cpu_orig(cpu));
+}
+
+/*
  * Remove and clamp on negative, from a local variable.
  *
  * A variant of sub_positive(), which does not use explicit load-store
@@ -111,7 +125,7 @@ unsigned long ml_cpu_util_without(int cpu, struct task_struct *p)
 
 	util = max(util, util_est);
 
-	return min_t(unsigned long, util, capacity_cpu_orig(cpu));
+	return util;
 }
 
 /*
@@ -157,6 +171,44 @@ unsigned long ml_cpu_util_with(struct task_struct *p, int cpu)
 unsigned long ml_cpu_load_avg(int cpu)
 {
 	return cpu_rq(cpu)->cfs.avg.load_avg;
+}
+
+/*
+ * ml_cpu_util_est_with - cpu util_est with waking task
+ */
+unsigned long ml_cpu_util_est_with(struct task_struct *p, int cpu)
+{
+	struct cfs_rq *cfs_rq = &cpu_rq(cpu)->cfs;
+	unsigned long util_est;
+
+	/* Calculate util est */
+	util_est = READ_ONCE(cfs_rq->avg.util_est.enqueued);
+	if (!task_on_rq_queued(p) || task_cpu(p) != cpu)
+		util_est += max(_ml_task_util_est(p), (unsigned long)1);
+
+	return util_est;
+}
+
+/*
+ * ml_cpu_util_est_without - cpu util_est without waking task
+ */
+unsigned long ml_cpu_util_est_without(int cpu, struct task_struct *p)
+{
+	struct cfs_rq *cfs_rq;
+	unsigned long util_est;
+
+	/* Task has no contribution or is new */
+	if (cpu != task_cpu(p) || !READ_ONCE(p->se.avg.last_update_time))
+		return ml_cpu_util_est(cpu);
+
+	cfs_rq = &cpu_rq(cpu)->cfs;
+
+	/* Calculate util est */
+	util_est = READ_ONCE(cfs_rq->avg.util_est.enqueued);
+	if (task_on_rq_queued(p) || current == p)
+		lsub_positive(&util_est, _ml_task_util_est(p));
+
+	return util_est;
 }
 
 /******************************************************************************
