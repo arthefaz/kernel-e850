@@ -7,7 +7,9 @@
 #ifndef S5P_MFC_IOMMU_H_
 #define S5P_MFC_IOMMU_H_
 
-#if defined(CONFIG_EXYNOS_IOMMU)
+#include <linux/kconfig.h>
+
+#if IS_ENABLED(CONFIG_EXYNOS_IOMMU)
 
 #include <linux/iommu.h>
 
