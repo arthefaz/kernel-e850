@@ -76,6 +76,8 @@
 #define FAPI_SCANMODE_LOW_LATENCY_2   0x0002
 #define FAPI_SCANMODE_LOW_LATENCY_3   0x0003
 
+#define SLSI_ANTENNA_NOT_SET (0xff)
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 #endif
@@ -135,7 +137,7 @@ static ssize_t sysfs_store_ant(struct kobject *kobj, struct kobj_attribute *attr
 
 static struct kobject *wifi_kobj_ref;
 static char sysfs_mac_override[] = "ff:ff:ff:ff:ff:ff";
-static u16 sysfs_antenna;
+static u16 sysfs_antenna = SLSI_ANTENNA_NOT_SET;
 static struct kobj_attribute mac_attr = __ATTR(mac_addr, 0660, sysfs_show_macaddr, sysfs_store_macaddr);
 static struct kobj_attribute pm_attr = __ATTR(pm, 0660, sysfs_show_pm, sysfs_store_pm);
 static struct kobj_attribute ant_attr = __ATTR(ant, 0660, sysfs_show_ant, sysfs_store_ant);
@@ -977,8 +979,12 @@ int slsi_start(struct slsi_dev *sdev, struct net_device *dev)
 	}
 
 #ifdef CONFIG_SCSC_WLAN_SET_PREFERRED_ANTENNA
-	if (slsi_is_rf_test_mode_enabled())
-		slsi_set_mib_preferred_antenna(sdev, sysfs_antenna);
+	if (slsi_is_rf_test_mode_enabled()) {
+		if (sysfs_antenna == SLSI_ANTENNA_NOT_SET)
+			SLSI_INFO(sdev, "antenna not set. Set /sys/wifi/ant to modify antenna\n");
+		else
+			slsi_set_mib_preferred_antenna(sdev, sysfs_antenna);
+	}
 #endif
 
 #if IS_ENABLED(CONFIG_SCSC_LOG_COLLECTION)
