@@ -1078,6 +1078,9 @@ static int sysbusy_fit_cpus(struct tp_env *env)
 
 static bool can_use_fast_track(struct tp_env *env)
 {
+	if (env->sched_policy == SCHED_POLICY_ENERGY)
+		return false;
+
 	if (!cpumask_test_cpu(env->prev_cpu, &env->cpus_allowed))
 		return false;
 
