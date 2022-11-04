@@ -1262,7 +1262,7 @@ static ssize_t aio_tuner_store(struct device *dev,
 					arg1, VAL_TYPE_LEVEL, 10000000);
 		else
 			set_value_coregroup(set->fclamp.min_freq, keys[3],
-					arg1, VAL_TYPE_LEVEL, 1024);
+					arg1, VAL_TYPE_LEVEL, 10000000);
 		break;
 	case fclamp_period:
 		type = !!keys[4];
