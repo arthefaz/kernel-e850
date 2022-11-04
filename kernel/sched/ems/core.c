@@ -1180,70 +1180,37 @@ int find_cpus_allowed(struct tp_env *env)
 
 	/*
 	 * take a snapshot of cpumask to get CPUs allowed
-	 * - mask0 : cpu_active_mask
-	 * - mask1 : ecs_cpus_allowed
-	 * - mask2 : p->cpus_ptr
+	 * - mask0 : p->cpus_ptr
+	 * - mask1 : cpu_active_mask
+	 * - mask2 : ecs_cpus_allowed
 	 * - mask3 : cpus_binding_mask
 	 */
-	cpumask_copy(&mask[0], cpu_active_mask);
-	cpumask_copy(&mask[1], ecs_cpus_allowed(env->p));
-	cpumask_copy(&mask[2], env->p->cpus_ptr);
+	cpumask_copy(&mask[0], env->p->cpus_ptr);
+	cpumask_copy(&mask[1], cpu_active_mask);
+	cpumask_copy(&mask[2], ecs_cpus_allowed(env->p));
 	cpumask_copy(&mask[3], cpus_binding_mask(env->p));
 
-	/*
-	 * Putting per-cpu kthread on other cpu is not allowed.
-	 * It does not have to find cpus allowed in this case.
-	 */
-	if (env->per_cpu_kthread) {
-		cpumask_copy(&env->cpus_allowed, &mask[2]);
+	cpumask_copy(&env->cpus_allowed, &mask[0]);
+	if (env->per_cpu_kthread)
 		goto out;
+
+	if (is_compat_thread(task_thread_info(env->p))) {
+		cpumask_and(&env->cpus_allowed, &env->cpus_allowed, system_32bit_el0_cpumask());
+		if (cpumask_empty(&env->cpus_allowed))
+			cpumask_copy(&env->cpus_allowed, system_32bit_el0_cpumask());
 	}
 
-	/*
-	 * Given task must run on the CPU combined as follows:
-	 *	cpu_active_mask & ecs_cpus_allowed
-	 */
-	cpumask_and(&env->cpus_allowed, &mask[0], &mask[1]);
-	if (cpumask_empty(&env->cpus_allowed))
+	if (!cpumask_intersects(&env->cpus_allowed, &mask[1]))
 		goto out;
+	cpumask_and(&env->cpus_allowed, &env->cpus_allowed, &mask[1]);
 
-	/*
-	 * Unless task is per-cpu kthread, p->cpus_ptr does not cause a problem
-	 * even if it is ignored. Consider p->cpus_ptr as possible, but if it
-	 * does not overlap with CPUs allowed made above, ignore it.
-	 */
 	if (cpumask_intersects(&env->cpus_allowed, &mask[2]))
 		cpumask_and(&env->cpus_allowed, &env->cpus_allowed, &mask[2]);
 
-	/*
-	 * cpus_binding is for performance/power optimization and can be
-	 * ignored. As above, ignore it if it does not overlap with CPUs
-	 * allowed made above.
-	 */
 	if (cpumask_intersects(&env->cpus_allowed, &mask[3]))
 		cpumask_and(&env->cpus_allowed, &env->cpus_allowed, &mask[3]);
 
 out:
-	if (is_compat_thread(task_thread_info(env->p))) {
-		/*
-		 * cpus_ptr of 32bits task contains only the cpu that supports
-		 * 32bits. If cpus_allowed does not intersect p->cpus_ptr, the
-		 * cpu allowed by cpu sparing among p->cpus_ptr is selected. If
-		 * all cpus of p->cpus_ptr are not allowed by cpu sparing,
-		 * select first cpu of 32bit el0 supported cpus.
-		 */
-		if (!cpumask_intersects(&env->cpus_allowed, &mask[2])) {
-			struct cpumask temp;
-
-			cpumask_and(&temp, &mask[1], &mask[2]);
-			if (cpumask_empty(&temp))
-				cpumask_set_cpu(cpumask_first(system_32bit_el0_cpumask()),
-						&temp);
-
-			cpumask_copy(&env->cpus_allowed, &temp);
-		}
-	}
-
 	trace_ems_find_cpus_allowed(env, mask);
 
 	return cpumask_weight(&env->cpus_allowed);
