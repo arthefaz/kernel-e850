@@ -56,6 +56,7 @@
 #include "abox_cmpnt.h"
 #include "abox_tplg.h"
 #include "abox_core.h"
+#include "abox_oem.h"
 #include "abox_ipc.h"
 #include "abox_memlog.h"
 #include "abox_vss.h"
@@ -2813,14 +2814,22 @@ static int abox_download_firmware(struct device *dev)
 
 static void abox_set_calliope_bootargs(struct abox_data *data)
 {
+	char *bootargs = NULL;
 	if (!data->bootargs_offset || !data->bootargs)
 		return;
 
-	abox_info(data->dev, "bootargs: %#x, %s\n", data->bootargs_offset,
-			data->bootargs);
-
-	memcpy_toio(data->sram_base + data->bootargs_offset, data->bootargs,
-			strnlen(data->bootargs, SZ_512) + 1);
+	bootargs = abox_oem_update_bootargs(data);
+	if (!bootargs) {
+		abox_info(data->dev, "bootargs: %#x, %s\n",
+				data->bootargs_offset, data->bootargs);
+		memcpy_toio(data->sram_base + data->bootargs_offset,
+				data->bootargs, strnlen(data->bootargs, SZ_512) + 1);
+	} else {
+		abox_info(data->dev, "bootargs: %#x, %s\n",
+				data->bootargs_offset, bootargs);
+		memcpy_toio(data->sram_base + data->bootargs_offset, bootargs,
+				strnlen(bootargs, SZ_512) + 1);
+	}
 }
 
 static void abox_set_calliope_slogargs(struct abox_data *data)

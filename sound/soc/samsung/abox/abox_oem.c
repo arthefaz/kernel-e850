@@ -12,6 +12,24 @@
 #include "abox_dbg.h"
 #include "abox_oem.h"
 
+char* abox_oem_update_bootargs(struct abox_data *data)
+{
+	char *bootargs = NULL;
+	/* SAMPLE CODE - START*/
+#if IS_ENABLED(CONFIG_SND_SOC_SAMSUNG_ABOX_CHANGE_RMEM_SIZE)
+	char *ptr = strstr(data->bootargs, "vss");
+
+	if (check_debug_level_low()) {
+		bootargs = kmalloc(strlen(data->bootargs) + 1, GFP_KERNEL);
+		memcpy(bootargs, "slog=0 ", 7);
+		memcpy(bootargs + 7, ptr, strlen(ptr) + 1);
+	}
+#endif
+	return bootargs;
+	/* SAMPLE CODE - END */
+	/* TO DO: Delete upper code and implement OEM specific code */
+}
+
 static ssize_t abox_oem_resize_reserved_memory_dbg(void)
 {
 	ssize_t size = -ENODEV;
