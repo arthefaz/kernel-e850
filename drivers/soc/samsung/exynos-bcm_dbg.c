@@ -37,14 +37,6 @@
 #include <soc/samsung/exynos-itmon.h>
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
-#define KPROBE_LOOKUP 1
-#include <linux/kprobes.h>
-static struct kprobe kp = {
-	    .symbol_name = "kallsyms_lookup_name"
-};
-#endif
-
 struct mm_struct *bcm_mm;
 static struct exynos_bcm_dump_addr bcm_reserved;
 static struct exynos_bcm_dbg_data *bcm_dbg_data = NULL;
@@ -3098,31 +3090,6 @@ static int exynos_bcm_dbg_set_dump_info(struct exynos_bcm_dbg_data *data)
 	}
 
 	return 0;
-#if 0
-	struct exynos_bcm_ipc_base_info ipc_base_info;
-	int ret;
-
-	if (data->dump_addr.buff_size == 0 ||
-		data->dump_addr.buff_size > data->dump_addr.p_size)
-		data->dump_addr.buff_size = data->dump_addr.p_size;
-
-	BCM_INFO("%s: virtual address for reserved memory: v_addr = 0x%p\n",
-			__func__, data->dump_addr.v_addr);
-	BCM_INFO("%s: buffer size for reserved memory: buff_size = 0x%x\n",
-			__func__, data->dump_addr.buff_size);
-
-	/* send physical address info to BCM plugin */
-	exynos_bcm_dbg_set_base_info(&ipc_base_info, BCM_EVT_DUMP_ADDR,
-					BCM_EVT_SET, 0);
-
-	ret = exynos_bcm_dbg_dump_addr_ctrl(&ipc_base_info, &data->dump_addr, data);
-	if (ret) {
-		BCM_ERR("%s: failed set dump address info\n", __func__);
-		return ret;
-	}
-
-	return 0;
-#endif
 }
 
 static ssize_t show_dump_addr_info(struct file *fp, struct kobject *kobj,
@@ -3493,30 +3460,6 @@ static int exynos_bcm_dbg_dump_config(struct exynos_bcm_dbg_data *data)
 
 	return 0;
 }
-#if 0
-static int exynos_bcm_dbg_dump_config(struct exynos_bcm_dbg_data *data)
-{
-	int ret;
-
-	data->dump_addr.p_addr = dbg_snapshot_get_item_paddr(BCM_DSS_NAME);
-	data->dump_addr.p_size = dbg_snapshot_get_item_size(BCM_DSS_NAME);
-	data->dump_addr.v_addr =
-		(void __iomem *)dbg_snapshot_get_item_vaddr(BCM_DSS_NAME);
-
-	if (!data->dump_addr.p_addr) {
-		BCM_ERR("%s: failed get dump address\n", __func__);
-		return -ENOMEM;
-	}
-
-	ret = exynos_bcm_dbg_set_dump_info(data);
-	if (ret) {
-		BCM_ERR("%s: failed set dump info\n", __func__);
-		return ret;
-	}
-
-	return 0;
-}
-#endif
 #endif
 
 #if defined (CONFIG_EXYNOS_ITMON) || defined(CONFIG_EXYNOS_ITMON_MODULE)
@@ -3651,51 +3594,6 @@ static void __iomem *bcm_ioremap(phys_addr_t phys_addr, size_t size)
 	return ret;
 }
 
-struct page_change_data {
-	pgprot_t set_mask;
-	pgprot_t clear_mask;
-};
-
-static int bcm_change_page_range(pte_t *ptep, unsigned long addr, void *data)
-{
-	struct page_change_data *cdata = data;
-	pte_t pte = *ptep;
-
-	pte = clear_pte_bit(pte, cdata->clear_mask);
-	pte = set_pte_bit(pte, cdata->set_mask);
-
-	set_pte(ptep, pte);
-	return 0;
-}
-
-static int bcm_change_memory_common(unsigned long addr, int numpages,
-				pgprot_t set_mask, pgprot_t clear_mask)
-{
-	unsigned long start = addr;
-	unsigned long size = PAGE_SIZE * numpages;
-	unsigned long end = start + size;
-	int ret;
-	struct page_change_data data;
-
-	if (!PAGE_ALIGNED(addr)) {
-		start &= PAGE_MASK;
-		end = start + size;
-		WARN_ON_ONCE(1);
-	}
-
-	if (!numpages)
-		return 0;
-
-	data.set_mask = set_mask;
-	data.clear_mask = clear_mask;
-
-	ret = apply_to_page_range(bcm_mm, start, size, bcm_change_page_range,
-					&data);
-
-	flush_tlb_kernel_range(start, end);
-	return ret;
-}
-
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 int __nocfi exynos_bcm_dbg_load_bin(void)
 {
@@ -3708,27 +3606,11 @@ int __nocfi exynos_bcm_dbg_load_bin(void)
 	mm_segment_t old_fs;
 #endif
 	char *lib_bcm = NULL;
-#ifdef KPROBE_LOOKUP
-	typedef unsigned long (*kallsyms_lookup_name_t)(const char *name);
-	kallsyms_lookup_name_t kallsyms_lookup_name;
-	register_kprobe(&kp);
-	kallsyms_lookup_name = (kallsyms_lookup_name_t)kp.addr;
-	unregister_kprobe(&kp);
-#endif
 
 	if (bcm_dbg_data->bcm_load_bin)
 		return 0;
 
 	bcm_addr = (void *)BCM_START;
-
-	bcm_mm = (void *)kallsyms_lookup_name("init_mm");
-	ret = bcm_change_memory_common((unsigned long)bcm_addr,
-				BCM_BIN_SIZE, __pgprot(0), __pgprot(PTE_PXN));
-	if (ret) {
-		BCM_ERR("%s(ret:0x%x): failed to change memory common\n",
-				__func__, ret);
-		goto err_out;
-	}
 	BCM_INFO("%s: addr: 0x%lx\n", __func__, bcm_addr);
 
 	os_func.print = printk;
@@ -3807,7 +3689,6 @@ err_alloc:
 err_fopen:
 	set_fs(old_fs);
 #endif
-err_out:
 	return ret;
 }
 EXPORT_SYMBOL(exynos_bcm_dbg_load_bin);
