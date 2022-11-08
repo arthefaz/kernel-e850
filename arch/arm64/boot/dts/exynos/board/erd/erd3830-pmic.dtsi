@@ -217,7 +217,7 @@
 			};
 
 			l11_reg: LDO11 {
-				regulator-name = "vdd_ldo11";
+				regulator-name = "vdd33_usb";
 				regulator-min-microvolt = <1800000>;
 				regulator-max-microvolt = <3375000>;
 				regulator-always-on;

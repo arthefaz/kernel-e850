@@ -990,13 +990,13 @@
 	usb_audio_offloading = <0>;
 	xhci_l2_support = <0>;
 	xhci_use_uram_for_audio = <0>;
-//	vdd33_usb-supply = <&s_l8_reg>;
+	vdd33_usb-supply = <&l11_reg>;
 };
 
 &usbdrd_phy0 {
 	status = "okay";
 	use_default_tune_val = <0x1>;
 	hs_tune_param = <&usb_hs_tune>;
-//	vdd33_usb-supply = <&s_l8_reg>;
+	vdd33_usb-supply = <&l11_reg>;
 };
 
