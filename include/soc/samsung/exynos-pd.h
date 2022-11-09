@@ -96,10 +96,10 @@ static inline int exynos_pd_status(struct exynos_pm_domain *pd)
 }
 #endif
 
-#ifdef CONFIG_SND_SOC_SAMSUNG_VTS
+#if IS_ENABLED(CONFIG_SND_SOC_SAMSUNG_VTS)
 extern bool vts_is_on(void);
 #endif
-#ifdef CONFIG_SND_SOC_SAMSUNG_ABOX
+#if IS_ENABLED(CONFIG_SND_SOC_SAMSUNG_ABOX)
 extern bool abox_is_on(void);
 #endif
 #if IS_ENABLED(CONFIG_USB_DWC3_EXYNOS)

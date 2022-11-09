@@ -249,12 +249,8 @@ static int of_get_devfreq_sync_volt_idx(const struct device_node *device)
 
 static bool exynos_pd_power_down_ok_aud(void)
 {
-#ifdef CONFIG_SND_SOC_SAMSUNG_ABOX
-#ifdef CONFIG_SOC_EMULATOR8895
-	return false;
-#else
+#if IS_ENABLED(CONFIG_SND_SOC_SAMSUNG_ABOX)
 	return !abox_is_on();
-#endif
 #else
 	return true;
 #endif
@@ -262,7 +258,7 @@ static bool exynos_pd_power_down_ok_aud(void)
 
 static bool exynos_pd_power_down_ok_vts(void)
 {
-#ifdef CONFIG_SND_SOC_SAMSUNG_VTS
+#if IS_ENABLED(CONFIG_SND_SOC_SAMSUNG_VTS)
 	return !vts_is_on();
 #else
 	return true;
