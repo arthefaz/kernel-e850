@@ -577,21 +577,7 @@ static int dwc3_otg_start_host(struct otg_fsm *fsm, int on)
 		platform_device_del(dwc->xhci);
 		dwc->xhci->dev.p->dead = 0;
 err2:
-		ret = pm_runtime_put_sync_suspend(dev);
-		pr_info("core RPM Usage Count: %d\n", dev->power.usage_count);
-		pr_info("core RPM runtime_status: %d\n", dev->power.runtime_status);
-		if (ret < 0) {
-			wait_counter = 10;
-			while (--wait_counter && dwc->connected)
-				msleep(20);
-			pr_info("%s: dwc->connected %d\n", __func__, dwc->connected);
-			if (dwc->connected) {
-				pr_info("%s: clear dwc->connected before runtime_suspend\n", __func__);
-				dwc->connected = false;
-			}
-			pm_runtime_suspend(dev);
-			ret = 0;
-		}
+		pm_runtime_put_sync_suspend(dev);
 err1:
 		pm_runtime_put_sync_suspend(exynos_dev);
 
@@ -866,21 +852,7 @@ static int dwc3_otg_start_gadget(struct otg_fsm *fsm, int on)
 		if (extra_delay)
 			mdelay(100);
 
-		ret = pm_runtime_put_sync_suspend(dev);
-		pr_info("core RPM Usage Count: %d\n", dev->power.usage_count);
-		pr_info("core RPM runtime_status: %d\n", dev->power.runtime_status);
-		if (ret < 0) {
-			wait_counter = 10;
-			while (--wait_counter && dwc->connected)
-				msleep(20);
-			pr_info("%s: dwc->connected %d\n", __func__, dwc->connected);
-			if (dwc->connected) {
-				pr_info("%s: clear dwc->connected before runtime_suspend\n", __func__);
-				dwc->connected = false;
-			}
-			pm_runtime_suspend(dev);
-			ret = 0;
-		}
+		pm_runtime_put_sync_suspend(dev);
 		pm_runtime_put_sync_suspend(exynos_dev);
 		if (dotg->pm_qos_hsi0_val) {
 			dev_info(dev, "pm_qos reset\n");
