@@ -39,8 +39,7 @@ struct scsc_log_in_dram_magic {
 
 static int scsc_log_in_dram_mmap_open(struct inode *inode, struct file *filp)
 {
-	pr_info("wlbt: in_dram. scsc_log_in_dram_mmap_open [open count :%d]\n", atomic_read(&scsc_log_in_dram_inuse));
-
+        reinit_completion(&scsc_log_in_dram_completion);
 	mutex_lock(&scsc_log_in_dram_mutex);
 	if (!scsc_log_in_dram_ptr) {
 		pr_info("wlbt: in_dram. scsc_log_in_dram_ptr is NULL\n");
@@ -50,15 +49,15 @@ static int scsc_log_in_dram_mmap_open(struct inode *inode, struct file *filp)
 
 	atomic_inc(&scsc_log_in_dram_inuse);
 	mutex_unlock(&scsc_log_in_dram_mutex);
+	pr_info("wlbt: in_dram. scsc_log_in_dram_mmap_open [open count :%d]\n", atomic_read(&scsc_log_in_dram_inuse));
 	return 0;
 }
 
 static int scsc_log_in_dram_release(struct inode *inode, struct file *filp)
 {
-	pr_info("wlbt: in_dram. scsc_log_in_dram_release [open count :%d]\n", atomic_read(&scsc_log_in_dram_inuse));
-
 	if (atomic_dec_return(&scsc_log_in_dram_inuse) == 0)
 		complete(&scsc_log_in_dram_completion);
+	pr_info("wlbt: in_dram. scsc_log_in_dram_release [open count :%d]\n", atomic_read(&scsc_log_in_dram_inuse));
 	return 0;
 }
 
