@@ -12,6 +12,9 @@
 #include <trace/events/ems.h>
 #include <trace/events/ems_debug.h>
 
+#define INVALID_CPU	-1
+#define cpu_selected(cpu)	(cpu > INVALID_CPU)
+
 /******************************************************************************
  * TEX (Task EXpress)                                                         *
  ******************************************************************************/
@@ -241,10 +244,12 @@ static int tex_boosted_fit_cpus(struct tp_env *env)
 
 	max_spare_cap_cpu = (shallowest_idle_cpu != -1) ? shallowest_idle_cpu : max_spare_cap_cpu;
 
-	cpumask_set_cpu(max_spare_cap_cpu, &env->fit_cpus);
+	if (cpu_selected(max_spare_cap_cpu)) {
+		cpumask_set_cpu(max_spare_cap_cpu, &env->fit_cpus);
+		env->reason_of_selection = FAIR_EXPRESS;
+	}
 
 out:
-	env->reason_of_selection = FAIR_EXPRESS;
 	trace_tex_boosted_fit_cpus(env->p, env->sync, &env->fit_cpus);
 
 	return cpumask_weight(&env->fit_cpus);
@@ -517,9 +522,6 @@ static LIST_HEAD(csd_head);
 
 struct cs_domain __percpu **__pcpu_csd;
 #define pcpu_csd(cpu)	(*per_cpu_ptr(__pcpu_csd, cpu))
-
-#define INVALID_CPU	-1
-#define cpu_selected(cpu)	(cpu > INVALID_CPU)
 
 static int get_idle_state(int cpu)
 {
