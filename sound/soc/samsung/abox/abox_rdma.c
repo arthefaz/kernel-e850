@@ -1617,10 +1617,6 @@ static int abox_rdma_trigger(struct snd_soc_component *component,
 	struct device *dev = data->dev;
 	int ret;
 
-	/* use mute_stream callback instead, if the stream is backend */
-	if (abox_rdma_backend(substream))
-		return 0;
-
 	abox_info(dev, "%s(%d)\n", __func__, cmd);
 
 	switch (cmd) {
@@ -2148,35 +2144,6 @@ static const struct snd_soc_component_driver abox_rdma = {
 	.mmap		= abox_rdma_mmap,
 };
 
-static int abox_rdma_mute_stream(struct snd_soc_dai *dai, int mute, int stream)
-{
-	struct abox_dma_data *data = snd_soc_dai_get_drvdata(dai);
-	struct snd_soc_pcm_runtime *rtd;
-	struct device *dev = dai->dev;
-
-	if (!data->substream) {
-		abox_warn(dev, "%s(%d): substream is null\n", __func__, mute);
-		return 0;
-	}
-
-	rtd = asoc_substream_to_rtd(data->substream);
-	if (mute) {
-		if (!abox_dma_can_stop(rtd, stream))
-			return 0;
-	} else {
-		if (!abox_dma_can_start(rtd, stream))
-			return 0;
-	}
-
-	abox_info(dev, "%s(%d)\n", __func__, mute);
-
-	return abox_rdma_trigger_ipc(data, false, !mute);
-}
-
-static const struct snd_soc_dai_ops abox_rdma_be_dai_ops = {
-	.mute_stream	= abox_rdma_mute_stream,
-};
-
 static const struct snd_soc_dai_driver abox_rdma_dai_drv[] = {
 	{
 		.playback = {
@@ -2190,7 +2157,6 @@ static const struct snd_soc_dai_driver abox_rdma_dai_drv[] = {
 		},
 	},
 	{
-		.ops = &abox_rdma_be_dai_ops,
 		.playback = {
 			.stream_name = "BE Playback",
 			.channels_min = 1,
