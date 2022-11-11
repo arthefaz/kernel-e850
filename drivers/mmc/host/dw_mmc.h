@@ -875,6 +875,20 @@ struct dw_mci_cmd_log {
 	u8 status_count;	/* TBD : It can be changed */
 };
 
+#define	NUM_OF_CQ_LOG_CTX	5
+struct dw_mci_cq_cmd_log {
+	u64	send_time;
+	u64	done_time;
+/*
+ *	context to be stored
+ *
+ *	idx 0 - tag
+ *	idx 1 - doorbell
+ */
+	u32	data1[NUM_OF_CQ_LOG_CTX];
+	u32	data2[NUM_OF_CQ_LOG_CTX];
+};
+
 enum dw_mci_req_log_state {
 	STATE_REQ_START = 0,
 	STATE_REQ_CMD_PROCESS,
@@ -901,6 +915,8 @@ struct dw_mci_req_log {
 struct dw_mci_debug_info {
 	struct dw_mci_cmd_log cmd_log[DWMCI_LOG_MAX];
 	atomic_t cmd_log_count;
+	struct dw_mci_cq_cmd_log	cq_cmd_log[DWMCI_LOG_MAX];
+	atomic_t			cq_cmd_log_count;
 	struct dw_mci_req_log req_log[DWMCI_REQ_LOG_MAX];
 	atomic_t req_log_count;
 	unsigned char en_logging;

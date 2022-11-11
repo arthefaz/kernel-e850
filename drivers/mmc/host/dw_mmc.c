@@ -82,7 +82,8 @@ void dw_mci_ciu_reset(struct device *dev, struct dw_mci *host);
 static bool dw_mci_ctrl_reset(struct dw_mci *host, u32 reset);
 static void dw_mci_request_end(struct dw_mci *host, struct mmc_request *mrq);
 static struct workqueue_struct *pm_workqueue;
-#if defined(CONFIG_MMC_DW_DEBUG)
+void dw_mci_runtime_pm_control(struct mmc_host *mmc, int enable);
+#if IS_ENABLED(CONFIG_MMC_DW_DEBUG)
 static struct dw_mci_debug_data dw_mci_debug __cacheline_aligned;
 
 /* Add sysfs for read cmd_logs */
@@ -2459,7 +2460,7 @@ static void dw_mci_restore_host(struct mmc_host *mmc)
 }
 
 #endif
-static void dw_mci_runtime_pm_control(struct mmc_host *mmc, int enable)
+void dw_mci_runtime_pm_control(struct mmc_host *mmc, int enable)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
 	struct dw_mci *host = slot->host;
@@ -2471,7 +2472,6 @@ static void dw_mci_runtime_pm_control(struct mmc_host *mmc, int enable)
 
 static void dw_mci_hs400_enhanced_strobe(struct mmc_host *mmc, struct mmc_ios *ios)
 {
-	static int flag = 0;
 	unsigned int max_dtr = (unsigned int)-1;
 
 	if (!mmc)
@@ -3824,7 +3824,7 @@ static void dw_mci_cmdq_dump_vendor_regs(struct mmc_host *mmc)
 
 }
 
-#if defined(CONFIG_MMC_DW_DEBUG)
+#if IS_ENABLED(CONFIG_MMC_DW_DEBUG)
 static void dw_mci_cmdq_cmd_log(struct mmc_host *mmc, bool new_cmd,
 						struct cmdq_log_ctx *log_ctx)
 {
@@ -3852,7 +3852,7 @@ static int dw_mci_cmdq_crypto_engine_clear(struct mmc_host *mmc, void *desc,
 #endif
 #endif
 
-#if defined(CONFIG_MMC_DW_DEBUG)
+#if IS_ENABLED(CONFIG_MMC_DW_DEBUG)
 static void dw_mci_cmdq_cmd_log(struct mmc_host *mmc, bool new_cmd,
 						struct cmdq_log_ctx *log_ctx)
 {
@@ -3943,7 +3943,7 @@ static const struct cqhci_host_ops dw_mci_cmdq_ops = {
 	.enable = dw_mci_cmdq_enable,
 	.disable = dw_mci_cmdq_disable,
 	.dumpregs = dw_mci_cmdq_dump_vendor_regs,
-#if defined(CONFIG_MMC_DW_DEBUG)
+#if IS_ENABLED(CONFIG_MMC_DW_DEBUG)
 	.cmdq_log = dw_mci_cmdq_cmd_log,
 #endif
 	.reset = dw_mci_cmdq_core_reset,
@@ -5018,7 +5018,8 @@ int dw_mci_runtime_resume(struct device *dev)
 
 	mci_writel(host, RINTSTS, 0xFFFFFFFF);
 	mci_writel(host, INTMASK, SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER |
-		   SDMMC_INT_TXDR | SDMMC_INT_RXDR | DW_MCI_ERROR_FLAGS);
+		   SDMMC_INT_TXDR | SDMMC_INT_RXDR | DW_MCI_ERROR_FLAGS |
+		   SDMMC_INT_VOLT_SWITCH);
 	mci_writel(host, CTRL, SDMMC_CTRL_INT_ENABLE);
 
 	if (host->slot &&
