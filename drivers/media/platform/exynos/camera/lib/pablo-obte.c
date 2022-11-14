@@ -151,6 +151,30 @@ typedef struct lib_tuning_config {
 	u32 reserved[4];
 } lib_tuning_config_t;
 
+#ifdef CONFIG_PABLO_V8_20_0
+/* for supporting nacho t-os */
+typedef int (*Wrap_replace_sensor_bayer_order)(u32, u32 *);
+
+typedef struct lib_interface_func_for_tuning {
+	/* v0 */
+	int (*json_readwrite_ctl)(void *ispObject, u32 instance_id,
+				  u32 json_type, u32 tuning_id, ulong addr, u32 *size_bytes);
+	int (*set_tuning_config)(lib_tuning_config_t *tuning_config);
+
+	/* v1 for 2020 / Neus TNR internal memory dump */
+	int (*get_stat_data)(u32 instance_id, u32 stat_type, ulong *buffers, u32 num_buffer, u32 size_buffer, u32 *size_weight_map);
+
+	/* v2 for emulation bayer oder control */
+	int magic_number;
+	int (*replace_sensor_bayer_order)(u32 moduleId, u32 *order_ptr);
+
+	/* for olympus :remove obte code in kernel code */
+	int (*is_simmian_init_3aa)(void *ispObject, u32 instance_id, bool flag);
+	int (*is_simmian_deinit_3aa)(u32 instance_id);
+	int (*cb_simmian_RegDump)(u32 instance_id, u32 hw_id, void *param_set); /*(u32 instance_id, u32 tuning_id);*/
+
+} lib_interface_func_for_tuning_t;
+#else
 typedef struct lib_interface_func_for_tuning {
 	int (*json_readwrite_ctl)(void *ispObject, u32 instance_id,
 				  u32 json_type, u32 tuning_id, ulong addr, u32 *size_bytes);
@@ -165,6 +189,7 @@ typedef struct lib_interface_func_for_tuning {
 	int (*reserved_cb_func_ptr_3)(void);
 	int (*reserved_cb_func_ptr_4)(void);
 } lib_interface_func_for_tuning_t;
+#endif
 
 typedef struct __module_info {
 	u32 id; /* module_id */
@@ -196,12 +221,6 @@ typedef struct __dump_ip_info {
 	u32 *register_value[MAX_STRIPE_NUM];
 	u32 register_address[ALL_REGISTER_MAX];
 } dump_register_ip_kernel;
-
-typedef struct __pablo_ssx_status {
-	bool enable;
-	s32 status;
-	u32 count_called;
-} pablo_ssx_status_t;
 
 typedef struct __pablo_debug_size_info {
 	u32 size_of_camera2_node;
@@ -495,6 +514,39 @@ void pablo_kunit_obte_set_interface(void *itf)
 KUNIT_EXPORT_SYMBOL(pablo_kunit_obte_set_interface);
 #endif
 
+unsigned int replace_sensor_bayer_order(unsigned int moduleId, unsigned int *order_ptr)
+{
+	unsigned int prev_order = (*order_ptr);
+	int loop = obte_init_param.module_count;
+	int i;
+
+	if (obte_init_param.version == 2) {
+		for (i = 0; i < loop; i++) {
+			if (obte_init_param.module_info[i].id == moduleId) {
+				(*order_ptr) = obte_init_param.module_info[i].order;
+
+				dbg_obte("moduleId: %u, order: %u -> %u\n", moduleId, prev_order, (*order_ptr));
+				break;
+			}
+		}
+	}
+	/*enable picasso select bayer order */
+	else if (obte_init_param.version == 3) {
+		if (obte_init_param.module_info[0].order < INVALID_ORDER_BAYER) {
+			(*order_ptr) = obte_init_param.module_info[0].order;
+			dbg_obte("moduleId: %u, order: %u -> %u\n", moduleId, prev_order, (*order_ptr));
+		} else {
+			dbg_obte("moduleId: %u, Bayer order has not changed : %u\n", moduleId, (*order_ptr));
+		}
+	}
+
+	else {
+		dbg_obte("moduleId: %u, order: %u\n", moduleId, (*order_ptr));
+	}
+
+	return prev_order;
+}
+
 int __nocfi pablo_obte_get_ddk_tuning_interface(void)
 {
 	if (pablo_obte_use_ddk()) {
@@ -516,10 +568,15 @@ int __nocfi pablo_obte_get_ddk_tuning_interface(void)
 
 		dbg_obte("register ddk tuning interface\n");
 		lib_obte_interface->magic_number = TUNING_DRV_MAGIC_NUMBER;
+#ifdef CONFIG_PABLO_V8_20_0
+		/* for supporting nacho-t os */
+		lib_obte_interface->replace_sensor_bayer_order = (Wrap_replace_sensor_bayer_order)replace_sensor_bayer_order;
+#else
 		lib_obte_interface->reserved_cb_func_ptr_1 = NULL;
 		lib_obte_interface->reserved_cb_func_ptr_2 = NULL;
 		lib_obte_interface->reserved_cb_func_ptr_3 = NULL;
 		lib_obte_interface->reserved_cb_func_ptr_4 = NULL;
+#endif
 	} else {
 		/* For IRTA used APs */
 		lib_obte_interface = NULL;

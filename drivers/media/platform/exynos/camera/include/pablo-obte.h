@@ -32,6 +32,11 @@ enum v4l2_cid_pablo_obte_config_bit {
 	OBTE_CONFIG_BIT_MAX		=	31,
 };
 
+typedef struct __pablo_ssx_status {
+	bool enable;
+	s32 status;
+	u32 count_called;
+} pablo_ssx_status_t;
 
 #if IS_ENABLED(CONFIG_PABLO_OBTE_SUPPORT)
 bool pablo_obte_is_running(void);
@@ -49,6 +54,7 @@ void pablo_obte_exit(void);
 
 #if IS_ENABLED(CONFIG_PABLO_KUNIT_TEST)
 void pablo_kunit_obte_set_interface(void *itf);
+bool pablo_obte_getstatus_ssx(u32 id, pablo_ssx_status_t *curr_status_ptr);
 #endif
 
 #else

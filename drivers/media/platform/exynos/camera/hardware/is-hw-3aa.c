@@ -10,6 +10,7 @@
 
 #include "is-hw-3aa.h"
 #include "is-err.h"
+#include "pablo-obte.h"
 
 extern struct is_lib_support gPtr_lib_support;
 
@@ -104,6 +105,9 @@ static int is_hw_3aa_init(struct is_hw_ip *hw_ip, u32 instance,
 		}
 	}
 
+	if (IS_RUNNING_TUNING_SYSTEM())
+		pablo_obte_init_3aa(instance, flag);
+
 	group->hw_ip = hw_ip;
 	msinfo_hw("[%s] Binding\n", instance, hw_ip, group_id_name[group->id]);
 
@@ -122,6 +126,10 @@ static int is_hw_3aa_deinit(struct is_hw_ip *hw_ip, u32 instance)
 	hw_3aa = (struct is_hw_3aa *)hw_ip->priv_info;
 
 	is_lib_isp_object_destroy(hw_ip, &hw_3aa->lib[instance], instance);
+
+	if (IS_RUNNING_TUNING_SYSTEM())
+		pablo_obte_deinit_3aa(instance);
+
 	hw_3aa->lib[instance].object = NULL;
 
 	return ret;

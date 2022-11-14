@@ -1810,7 +1810,7 @@ int is_resource_get(struct is_resourcemgr *resourcemgr, u32 rsc_type)
 		}
 #endif
 #if IS_ENABLED(CONFIG_EXYNOS_BCM_DBG_AUTO) || IS_ENABLED(CONFIG_EXYNOS_BCM_DBG_GNR)
-		//exynos_bcm_dbg_start();
+		exynos_bcm_dbg_start();
 #endif
 #ifdef DISABLE_BTS_CALC
 		bts_calc_disable(1);
@@ -2045,7 +2045,7 @@ int is_resource_put(struct is_resourcemgr *resourcemgr, u32 rsc_type)
 		u32 current_min, current_max;
 
 #if IS_ENABLED(CONFIG_EXYNOS_BCM_DBG_AUTO) || IS_ENABLED(CONFIG_EXYNOS_BCM_DBG_GNR)
-		//exynos_bcm_dbg_stop(CAMERA_DRIVER);
+		exynos_bcm_dbg_stop(CAMERA_DRIVER);
 #endif
 #ifdef DISABLE_BTS_CALC
 		bts_calc_disable(0);
