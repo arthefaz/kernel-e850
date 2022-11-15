@@ -434,7 +434,7 @@
 				regulator-max-microvolt = <1950000>;
 				regulator-always-on;
 				regulator-ramp-delay = <12000>;
-				regulator-initial-mode = <3>;
+				regulator-initial-mode = <1>;
 			};
 
 			l36_reg: LDO36 {
