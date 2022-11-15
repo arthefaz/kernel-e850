@@ -39,8 +39,8 @@
 /* Since MFR is a 8-bit value, it must have a value of 0~255. */
 #define SSC_MFR_LIMIT	255
 
-//extern int cal_pll_mmc_set_ssc(unsigned int mfr, unsigned int mrr, unsigned int ssc_on);
-//extern int cal_pll_mmc_check(void);
+extern int cal_pll_mmc_set_ssc(unsigned int mfr, unsigned int mrr, unsigned int ssc_on);
+extern int cal_pll_mmc_check(void);
 
 static void dw_mci_exynos_register_dump(struct dw_mci *host)
 {
@@ -316,16 +316,14 @@ static int dw_mci_exynos_priv_init(struct dw_mci *host)
 
 static void dw_mci_exynos_ssclk_control(struct dw_mci *host, int enable)
 {
-//	u32 err;
+	u32 err;
 
 	if (!(host->pdata->quirks & DW_MCI_QUIRK_USE_SSC))
 		return;
 
 	if (enable) {
-#if 0
 		if (cal_pll_mmc_check() == true)
 			goto out;
-#endif
 
 		if (host->pdata->ssc_rate_mrr > SSC_MRR_LIMIT ||
 			host->pdata->ssc_rate_mfr > SSC_MFR_LIMIT) {
@@ -333,15 +331,12 @@ static void dw_mci_exynos_ssclk_control(struct dw_mci *host, int enable)
 			goto out;
 		}
 
-#if 0
 		err = cal_pll_mmc_set_ssc(host->pdata->ssc_rate_mfr, host->pdata->ssc_rate_mrr, 1);
 		if (err)
 			dev_info(host->dev, "SSC set fail.\n");
 		else
 			dev_info(host->dev, "SSC set enable.\n");
-#endif
 	} else {
-#if 0
 		if (cal_pll_mmc_check() == false)
 			goto out;
 
@@ -350,7 +345,6 @@ static void dw_mci_exynos_ssclk_control(struct dw_mci *host, int enable)
 			dev_info(host->dev, "SSC set fail.\n");
 		else
 			dev_info(host->dev, "SSC set disable.\n");
-#endif
 	}
 out:
 	return;

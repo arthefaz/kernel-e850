@@ -922,6 +922,8 @@
 	skip-init-no-tray;
 	fifo-depth = <0x40>;
 	desc-size = <4>;
+	ssc-rate-mfr = <12>;
+	ssc-rate-mrr = <3>;
 	card-detect-delay = <400>;
 	samsung,dw-mshc-ciu-div = <3>;
 	clock-frequency = <800000000>;

@@ -146,7 +146,7 @@ int cal_pll_mmc_check(void)
                ret = true;
 
        return ret;
-}
+}EXPORT_SYMBOL(cal_pll_mmc_check);
 
 int cal_pll_mmc_set_ssc(unsigned int mfr, unsigned int mrr, unsigned int ssc_on)
 {
@@ -184,7 +184,7 @@ int cal_pll_mmc_set_ssc(unsigned int mfr, unsigned int mrr, unsigned int ssc_on)
 		pr_err("%s: pll_mmc_enable failed\n", __func__);
 
 	return ret;
-}
+}EXPORT_SYMBOL(cal_pll_mmc_set_ssc);
 
 #define EXYNOS3830_CMU_TOP_BASE		(0x120E0000)
 #define EXYNOS3830_CMU_MMC_BASE		(0x13C00000)
