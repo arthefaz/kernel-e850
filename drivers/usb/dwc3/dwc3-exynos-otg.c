@@ -520,6 +520,11 @@ static int dwc3_otg_start_host(struct otg_fsm *fsm, int on)
 			}
 		}
 		dotg->dwc3_suspended = USB_NORMAL;
+
+		ret = exynos_usbdrd_ldo_manual_control(1);
+		if (ret < 0)
+			pr_err("%s: Failed to control USB LDO\n", __func__);
+
 		ret = pm_runtime_get_sync(exynos_dev);
 		if (ret < 0) {
 			dev_err(dwc->dev, "%s: failed to initialize exynos: %d\n",
@@ -597,6 +602,11 @@ err1:
 			exynos_pm_qos_update_request(&dotg->pm_qos_hsi0_req, 0);
 #endif
 		}
+
+		ret = exynos_usbdrd_ldo_manual_control(0);
+		if (ret < 0)
+			pr_err("%s: Failed to control USB LDO\n", __func__);
+
 	}
 	__pm_relax(dotg->wakelock);
 	return ret;
@@ -782,6 +792,10 @@ static int dwc3_otg_start_gadget(struct otg_fsm *fsm, int on)
 		}
 		dotg->dwc3_suspended = USB_NORMAL;
 
+		ret = exynos_usbdrd_ldo_manual_control(1);
+		if (ret < 0)
+			pr_err("%s: Failed to control USB LDO\n", __func__);
+
 		pr_info("core RPM Usage Count: %d\n", dev->power.usage_count);
 		pr_info("core RPM runtime_status: %d\n", dev->power.runtime_status);
 		ret = pm_runtime_get_sync(exynos_dev);
@@ -861,6 +875,10 @@ static int dwc3_otg_start_gadget(struct otg_fsm *fsm, int on)
 #endif
 		}
 		__pm_relax(dotg->wakelock);
+
+		ret = exynos_usbdrd_ldo_manual_control(0);
+		if (ret < 0)
+			pr_err("%s: Failed to control USB LDO\n", __func__);
 	}
 
 	return 0;
