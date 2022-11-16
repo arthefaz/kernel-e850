@@ -89,12 +89,6 @@ static void exynos_pd_power_on_pre(struct exynos_pm_domain *pd)
 	if (pd->devfreq_index >= 0) {
 		exynos_bts_scitoken_setting(true);
 	}
-#if IS_ENABLED(CONFIG_USB_DWC3_EXYNOS)
-	if (!strcmp(pd->name, "pd_hsi0") || !strcmp(pd->name, "pd_usb")
-		|| !strcmp(pd->name, "pd-usb")) {
-		exynos_usbdrd_ldo_external_control(1);
-	}
-#endif
 }
 
 static void exynos_pd_power_on_post(struct exynos_pm_domain *pd)
@@ -130,12 +124,6 @@ static void exynos_pd_power_off_post(struct exynos_pm_domain *pd)
 	if (pd->devfreq_index >= 0) {
 		exynos_bts_scitoken_setting(false);
 	}
-#if IS_ENABLED(CONFIG_USB_DWC3_EXYNOS)
-	if (!strcmp(pd->name, "pd_hsi0") || !strcmp(pd->name, "pd_usb")
-		|| !strcmp(pd->name, "pd-usb")) {
-		exynos_usbdrd_ldo_external_control(0);
-	}
-#endif
 }
 
 static void exynos_pd_prepare_forced_off(struct exynos_pm_domain *pd)
@@ -267,7 +255,7 @@ static bool exynos_pd_power_down_ok_vts(void)
 
 static bool exynos_pd_power_down_ok_usb(void)
 {
-#if IS_ENABLED(CONFIG_USB_DWC3_EXYNOS)
+#ifdef CONFIG_USB_DWC3_EXYNOS
 	return !otg_is_connect();
 #else
 	return true;

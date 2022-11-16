@@ -102,15 +102,10 @@ extern bool vts_is_on(void);
 #if IS_ENABLED(CONFIG_SND_SOC_SAMSUNG_ABOX)
 extern bool abox_is_on(void);
 #endif
-#if IS_ENABLED(CONFIG_USB_DWC3_EXYNOS)
+#ifdef CONFIG_USB_DWC3_EXYNOS
 extern u32 otg_is_connect(void);
-extern int exynos_usbdrd_ldo_external_control(bool on);
 #else
 static inline u32 otg_is_connect(void)
-{
-	return 0;
-}
-static inline exynos_usbdrd_ldo_external_control(bool on)
 {
 	return 0;
 }
