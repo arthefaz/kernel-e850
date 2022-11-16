@@ -9,8 +9,8 @@
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/of.h>
-#include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 
 #include <dt-bindings/clock/exynos850.h>
 
@@ -1909,13 +1909,7 @@ static const struct samsung_cmu_info dpu_cmu_info __initconst = {
 
 static int __init exynos850_cmu_probe(struct platform_device *pdev)
 {
-	const struct samsung_cmu_info *info;
-	struct device *dev = &pdev->dev;
-
-	info = of_device_get_match_data(dev);
-	exynos_arm64_register_cmu(dev, dev->of_node, info);
-
-	return 0;
+	return exynos_arm64_register_cmu_pm(pdev, true);
 }
 
 static const struct of_device_id exynos850_cmu_of_match[] = {
@@ -1950,11 +1944,19 @@ static const struct of_device_id exynos850_cmu_of_match[] = {
 	},
 };
 
+static const struct dev_pm_ops exynos850_cmu_pm_ops = {
+	SET_RUNTIME_PM_OPS(exynos_arm64_cmu_suspend, exynos_arm64_cmu_resume,
+			   NULL)
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
+				      pm_runtime_force_resume)
+};
+
 static struct platform_driver exynos850_cmu_driver __refdata = {
 	.driver	= {
 		.name = "exynos850-cmu",
 		.of_match_table = exynos850_cmu_of_match,
 		.suppress_bind_attrs = true,
+		.pm = &exynos850_cmu_pm_ops,
 	},
 	.probe = exynos850_cmu_probe,
 };
