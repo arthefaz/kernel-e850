@@ -9,6 +9,7 @@
 #include <linux/notifier.h>
 #include <linux/device.h>
 #include <linux/workqueue.h>
+#include <linux/mutex.h>
 
 enum {
 	PM_QOS_NETWORK_LATENCY = 1,
@@ -168,6 +169,7 @@ struct exynos_pm_qos_constraints {
 	enum exynos_pm_qos_type type;
 	struct blocking_notifier_head *notifiers;
 	spinlock_t lock;
+	struct mutex mlock;
 
 	struct exynos_pm_qos_log log[EXYNOS_PM_QOS_LOG_LENGTH];
 	unsigned int log_index;
