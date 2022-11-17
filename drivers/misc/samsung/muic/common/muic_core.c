@@ -949,8 +949,10 @@ int muic_core_handle_attach(struct muic_platform_data *muic_pdata,
 	if (noti) {
 		if (!muic_pdata->suspended) {
 			MUIC_SEND_NOTI_ATTACH_ALL(new_dev);
-		} else
+		} else {
+			muic_pdata->prev_dev = new_dev;
 			muic_pdata->need_to_noti = true;
+		}
 	}
 
 	return ret;
