@@ -188,9 +188,6 @@ enum exynos_pm_qos_req_action {
 
 extern int exynos_pm_qos_update_target(struct exynos_pm_qos_constraints *c, struct plist_node *node,
 		enum exynos_pm_qos_req_action action, int value, bool nosync);
-extern bool exynos_pm_qos_update_flags(struct exynos_pm_qos_flags *pqf,
-		struct exynos_pm_qos_flags_request *req,
-		enum exynos_pm_qos_req_action action, s32 val);
 extern void exynos_pm_qos_add_request_trace(char *func, unsigned int line,
 		struct exynos_pm_qos_request *req, int exynos_pm_qos_class,
 		s32 value);
