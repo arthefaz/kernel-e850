@@ -33,7 +33,6 @@
 #include <soc/samsung/exynos_pm_qos.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
-#include <linux/rwlock.h>
 #include <linux/slab.h>
 #include <linux/time.h>
 #include <linux/fs.h>
@@ -66,8 +65,6 @@ struct exynos_pm_qos_object {
 	char *name;
 	char bin_attr_name[32];
 };
-
-static DEFINE_RWLOCK(exynos_pm_qos_lock);
 
 static struct exynos_pm_qos_object null_exynos_pm_qos;
 
@@ -602,19 +599,16 @@ int exynos_pm_qos_read_req_value(int pm_qos_class, struct exynos_pm_qos_request 
 	unsigned long flags;
 	struct exynos_pm_qos_constraints *c = exynos_pm_qos_array[pm_qos_class]->constraints;
 
-	read_lock_irqsave(&exynos_pm_qos_lock, flags);
-	spin_lock(&c->lock);
+	spin_lock_irqsave(&c->lock, flags);
 
 	plist_for_each(p, &c->list) {
 		if (req == container_of(p, struct exynos_pm_qos_request, node)) {
-			spin_unlock(&c->lock);
-			read_unlock_irqrestore(&exynos_pm_qos_lock, flags);
+			spin_unlock_irqrestore(&c->lock, flags);
 			return p->prio;
 		}
 	}
 
-	spin_unlock(&c->lock);
-	read_unlock_irqrestore(&exynos_pm_qos_lock, flags);
+	spin_unlock_irqrestore(&c->lock, flags);
 
 	return -ENODATA;
 }
@@ -648,7 +642,7 @@ void show_exynos_pm_qos_data(int index)
 	pr_info("exynos_pm_qos class name: %s\n", exynos_pm_qos_array[index]->name);
 
 	/* Lock to ensure we have a snapshot */
-	write_lock_irqsave(&exynos_pm_qos_lock, flags);
+	spin_lock_irqsave(&c->lock, flags);
 	if (plist_head_empty(&c->list)) {
 		pr_info("Empty!\n");
 		goto out;
@@ -688,7 +682,7 @@ void show_exynos_pm_qos_data(int index)
 	pr_info("Type=%s, Value=%d, Requests: active=%d / total=%d\n",
 			type, exynos_pm_qos_get_value(c), active_reqs, tot_reqs);
 out:
-	write_unlock_irqrestore(&exynos_pm_qos_lock, flags);
+	spin_unlock_irqrestore(&c->lock, flags);
 	return;
 }
 EXPORT_SYMBOL_GPL(show_exynos_pm_qos_data);
@@ -715,7 +709,7 @@ static int __exynos_pm_qos_show(struct exynos_pm_qos_object *qos, char *buf)
 	}
 
 	/* Lock to ensure we have a snapshot */
-	write_lock_irqsave(&exynos_pm_qos_lock, flags);
+	spin_lock_irqsave(&c->lock, flags);
 	if (plist_head_empty(&c->list)) {
 		size += snprintf(buf + size, PAGE_SIZE, "Empty!\n");
 		goto out;
@@ -755,7 +749,7 @@ static int __exynos_pm_qos_show(struct exynos_pm_qos_object *qos, char *buf)
 			   time / NSEC_PER_SEC, time % NSEC_PER_SEC);
 
 out:
-	write_unlock_irqrestore(&exynos_pm_qos_lock, flags);
+	spin_unlock_irqrestore(&c->lock, flags);
 
 	return size;
 }
@@ -794,7 +788,7 @@ static ssize_t exynos_pm_qos_log_show(struct file *file, struct kobject *kobj,
 	char str[128];
 	char *action_str[] = { "ADD", "UPDATE", "REMOVE" };
 
-	write_lock_irqsave(&exynos_pm_qos_lock, flags);
+	spin_lock_irqsave(&c->lock, flags);
 
 	if (offset == 0) {
 		index = c->log[c->log_index].time ? c->log_index : 0;
@@ -828,7 +822,7 @@ static ssize_t exynos_pm_qos_log_show(struct file *file, struct kobject *kobj,
 	} while (index != c->log_index);
 
 out:
-	write_unlock_irqrestore(&exynos_pm_qos_lock, flags);
+	spin_unlock_irqrestore(&c->lock, flags);
 
 	return printed;
 }
@@ -866,8 +860,7 @@ int exynos_pm_qos_update_target(struct exynos_pm_qos_constraints *c, struct plis
 	int ret;
 	struct exynos_pm_qos_request *req = container_of(node, struct exynos_pm_qos_request, node);
 
-	read_lock_irqsave(&exynos_pm_qos_lock, flags);
-	spin_lock(&c->lock);
+	spin_lock_irqsave(&c->lock, flags);
 	prev_value = exynos_pm_qos_get_value(c);
 	if (value == EXYNOS_PM_QOS_DEFAULT_VALUE)
 		new_value = c->default_value;
@@ -900,8 +893,7 @@ int exynos_pm_qos_update_target(struct exynos_pm_qos_constraints *c, struct plis
 	curr_value = exynos_pm_qos_get_value(c);
 	exynos_pm_qos_set_value(c, curr_value);
 
-	spin_unlock(&c->lock);
-	read_unlock_irqrestore(&exynos_pm_qos_lock, flags);
+	spin_unlock_irqrestore(&c->lock, flags);
 
 //	trace_pm_qos_update_target((enum pm_qos_req_action)action, prev_value, curr_value);
 	if (!nosync && (prev_value != curr_value)) {
@@ -1232,14 +1224,11 @@ static ssize_t exynos_pm_qos_power_read(struct file *filp, char __user *buf,
 	if (!exynos_pm_qos_request_active(req))
 		return -EINVAL;
 
-	read_lock_irqsave(&exynos_pm_qos_lock, flags);
 	c = exynos_pm_qos_array[req->exynos_pm_qos_class]->constraints;
 
-	spin_lock(&c->lock);
+	spin_lock_irqsave(&c->lock, flags);
 	value = exynos_pm_qos_get_value(c);
-	spin_unlock(&c->lock);
-
-	read_unlock_irqrestore(&exynos_pm_qos_lock, flags);
+	spin_unlock_irqrestore(&c->lock, flags);
 
 	return simple_read_from_buffer(buf, count, f_pos, &value, sizeof(s32));
 }
