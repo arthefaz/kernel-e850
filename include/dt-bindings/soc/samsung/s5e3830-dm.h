@@ -16,10 +16,10 @@
 #define DM_CPU_CL1	1
 #define DM_MIF		2
 #define DM_INT		3
-#define DM_CAM		5
-#define DM_DISP		6
-#define DM_AUD		7
-#define DM_GPU		8
+#define DM_CAM		4
+#define DM_DISP		5
+#define DM_AUD		6
+#define DM_GPU		7
 
 /* CONSTRAINT TYPE */
 #define CONSTRAINT_MIN	0
