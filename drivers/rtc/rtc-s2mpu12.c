@@ -960,6 +960,7 @@ static void s2m_rtc_shutdown(struct platform_device *pdev)
 
 static const struct platform_device_id s2m_rtc_id[] = {
 	{ "s2mpu12-rtc", 0 },
+	{},
 };
 
 static struct platform_driver s2m_rtc_driver = {
