@@ -377,12 +377,24 @@
 				wakeup-mask {
 					mask-reg-offset = <0x3944>;
 					stat-reg-offset = <0x3950>;
-					mask = <0xffffffff>;
+					mask = <0xff7fffff>;
+					checklist {
+						status-offset = <0x3084>;
+						active-mask = <0x80000>;
+					};
 				};
 				wakeup-mask2 {
 					mask-reg-offset = <0x3964>;
 					stat-reg-offset = <0x3954>;
 					mask = <0x3e1e>;
+				};
+			};
+			eint-wakeup-masks {
+				eint-wakeup-mask {
+					mask-reg-offset = <0x60c>;
+				};
+				eint-wakeup-mask2 {
+					mask-reg-offset = <0x61c>;
 				};
 			};
 		};
