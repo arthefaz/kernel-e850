@@ -1,0 +1,162 @@
+/*
+ * Samsung's Exynos SoC MMC device tree source
+ *
+ * Copyright (c) 2020 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * Samsung's Exynos2100 SoC MMC channels are listed as device
+ * tree nodes are listed in this file.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/ {
+	aliases {
+
+		mshc0 = &dwmmc_0;
+		mshc2 = &dwmmc_2;
+	};
+
+	dwmmc_0: dwmmc0@12100000 {
+		compatible = "samsung,exynos-dw-mshc";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x0 0x12100000 0x2000>,
+			 <0x0 0x12108000 0x200>;
+		reg-names = "dw_mmc",
+			 "cqhci_mem";
+		interrupts = <0 INTREQ__MMC_EMBD_CORE IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clock DOUT_CORE_MMC_EMBD>, <&clock GATE_MMC_EMBD_QCH>;
+		clock-names = "ciu", "ciu_gate";
+		fmp-id = <0>;
+		smu-id = <0>;
+		status = "okay";
+		num-slots = <1>;
+		broken-cd;
+		fixed_voltage;
+		supports-highspeed;
+		mmc-ddr-1_8v;
+		mmc-hs200-1_8v;
+		mmc-hs400-1_8v;
+		supports-8bit;
+		supports-cmd23;
+		supports-erase;
+		mmc-hs400-enhanced-strobe;
+		card-init-hwacg-ctrl;
+		qos-dvfs-level = <334000>;
+		data-timeout = <200>;
+		hto-timeout = <80>;
+		enable-ulp-mode;
+		support-cmdq;
+		mmc-inline-crypt;
+		fifo-depth = <0x40>;
+		non-removable;
+		desc-size = <4>;
+		card-detect-delay = <200>;
+		samsung,dw-mshc-ciu-div = <3>;
+		samsung,dw-mshc-txdt-crc-timer-fastlimit = <0x34>;
+		samsung,dw-mshc-txdt-crc-timer-initval = <0x38>;
+		samsung,dw-mshc-hs400-tx-delay-line = <0x40>;
+		samsung,dw-mshc-hs400-delay-line = <0x60>;
+		samsung,dw-mshc-sdr-timing = <3 0 4 0>;
+		samsung,dw-mshc-ddr-timing = <3 0 4 2>;
+		samsung,dw-mshc-hs200-timing = <3 0 3 0>;
+		samsung,dw-mshc-hs400-timing = <1 0 2 0>;
+		samsung,dw-mshc-hs400-ulp-timing = <3 0 4 2>;
+
+		num-ref-clks = <12>;
+		ciu_clkin = <25 50 50 25 50 100 200 50 50 200 200 200>;
+
+		/* Swapping clock drive strength */
+		clk-drive-number = <4>;
+		pinctrl-names = "default",
+			"fast-slew-rate-1x",
+			"fast-slew-rate-2x",
+			"fast-slew-rate-3x",
+			"fast-slew-rate-4x";
+		pinctrl-0 = <&sd0_clk &sd0_cmd &sd0_rdqs &sd0_nreset &sd0_bus1 &sd0_bus4 &sd0_bus8>;
+		pinctrl-1 = <&sd0_clk_fast_slew_rate_1x>;
+		pinctrl-2 = <&sd0_clk_fast_slew_rate_2x>;
+		pinctrl-3 = <&sd0_clk_fast_slew_rate_3x>;
+		pinctrl-4 = <&sd0_clk_fast_slew_rate_4x>;
+
+		slot@0 {
+			reg = <0>;
+			bus-width = <8>;
+		};
+	};
+
+       dwmmc_2: dwmmc2@13500000 {
+                compatible = "samsung,exynos-dw-mshc";
+                #address-cells = <1>;
+                #size-cells = <0>;
+                reg = <0x0 0x13500000 0x2000>;
+                reg-names = "dw_mmc";
+                interrupts = <0 INTREQ__MMC_CARD IRQ_TYPE_LEVEL_HIGH>;
+                clocks = <&clock HSI_MMC_CARD>, <&clock GATE_MMC_CARD_QCH>;
+                clock-names = "ciu", "ciu_gate";
+		power-domains = <&pd_hsi>;
+		status = "okay";
+		num-slots = <1>;
+		supports-4bit;
+		supports-cmd23;
+		supports-erase;
+		supports-highspeed;
+		sd-uhs-sdr50;
+		sd-uhs-sdr104;
+		card-detect-gpio;
+		bypass-for-allpass;
+		use-fine-tuning;
+		card-init-hwacg-ctrl;
+		skip-init-mmc-scan;
+		use-runtime-pm;
+		skip-init-no-tray;
+		fifo-depth = <0x40>;
+		desc-size = <4>;
+		card-detect-delay = <400>;
+		samsung,dw-mshc-ciu-div = <3>;
+		clock-frequency = <800000000>;
+		samsung,dw-mshc-sdr-timing = <3 0 2 0>;
+		samsung,dw-mshc-ddr-timing = <3 0 2 1>;
+		samsung,dw-mshc-sdr50-timing = <3 0 4 2>;
+		samsung,dw-mshc-sdr104-timing = <3 0 3 0>;
+
+		num-ref-clks = <9>;
+		ciu_clkin = <25 50 50 25 50 100 200 50 50>;
+
+		/* Swapping clock drive strength */
+		clk-drive-number = <6>;
+		pinctrl-names = "init",
+			"fast-slew-rate-1x",
+			"fast-slew-rate-1_5x",
+			"fast-slew-rate-2x",
+			"fast-slew-rate-2_5x",
+			"fast-slew-rate-3x",
+			"fast-slew-rate-4x",
+			"pins-as-pdn",
+			"pins-as-func";
+		pinctrl-1 = <&sd2_clk_fast_slew_rate_1x>;
+		pinctrl-2 = <&sd2_clk_fast_slew_rate_1_5x>;
+		pinctrl-3 = <&sd2_clk_fast_slew_rate_2x>;
+		pinctrl-4 = <&sd2_clk_fast_slew_rate_2_5x>;
+		pinctrl-5 = <&sd2_clk_fast_slew_rate_3x>;
+		pinctrl-6 = <&sd2_clk_fast_slew_rate_4x>;
+		pinctrl-7 = <&sd2_pins_as_pdn>;
+		pinctrl-8 = <&sd2_clk &sd2_cmd &sd2_bus1 &sd2_bus4>;
+
+		slot@0 {
+			reg = <0>;
+			bus-width = <4>;
+			disable-wp;
+		};
+
+		mmc-pmu-pad {
+			offset = <0x1CA0>;
+			mask = <0x800>;
+			val = <0x800>;
+		};
+	};
+
+};
