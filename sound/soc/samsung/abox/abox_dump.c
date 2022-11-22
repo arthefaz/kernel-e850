@@ -85,14 +85,10 @@ static void abox_dump_request_dump(int id)
 	struct abox_dump_info *info = abox_dump_get_info(id);
 	ABOX_IPC_MSG msg;
 	struct IPC_SYSTEM_MSG *system = &msg.msg.system;
-	struct abox_data *data = dev_get_drvdata(abox_dump_dev_abox);
 	bool start = info->started || info->file_started ||
 			info->auto_started;
 
-	if (!data->enabled) {
-		abox_info(info->dev, "%s(%d) skip to send ipc before abox enabled\n", __func__, id);
-		return;
-	}
+	abox_info(info->dev, "%s(%d)\n", __func__, id);
 
 	msg.ipcid = IPC_SYSTEM;
 	system->msgtype = ABOX_REQUEST_DUMP;
@@ -336,6 +332,8 @@ static int abox_dump_file_open(struct inode *i, struct file *f)
 	if (info->file_started)
 		return -EBUSY;
 
+	pm_runtime_get(dev);
+
 	f->private_data = info;
 	info->file_started = true;
 	info->pointer = info->file_pointer = 0;
@@ -353,6 +351,8 @@ static int abox_dump_file_release(struct inode *i, struct file *f)
 
 	info->file_started = false;
 	abox_dump_request_dump(info->id);
+
+	pm_runtime_put(dev);
 
 	return 0;
 }
