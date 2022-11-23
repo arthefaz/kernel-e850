@@ -980,7 +980,7 @@ static struct otg_notify dwc_lsi_notify = {
 	.vbus_detect_gpio = -1,
 	.is_host_wakelock = 0,
 	.is_wakelock = 0,
-	.booting_delay_sec = 12,
+	.booting_delay_sec = 30,
 #if !IS_ENABLED(CONFIG_CCIC_NOTIFIER)
 	.auto_drive_vbus = NOTIFY_OP_POST,
 #endif
