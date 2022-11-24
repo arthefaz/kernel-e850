@@ -16,7 +16,7 @@
 		scratch-offset = <0x810>; /* SYSIP_DAT0 */
 		scratch-bit = <6>;
 //		wa-pre-reading-ecc-sysreg = <0x82000530>, <0x10000>, <0>, <0>;
-		freq_names = "LIT", "MID", "BIG", "INT", "MIF", "CAM",
+		freq_names = "LIT", "BIG", "INT", "MIF", "CAM",
 				"DISP", "INTCAM", "AUD", "MFC0", "NPU", "DSU",
 				"DNC", "CSIS", "ISP", "MFC1", "DSP", "ALIVE",
 				"CHUB", "VTS", "HSI0", "G3D";
