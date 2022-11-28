@@ -119,8 +119,9 @@
 		samsung,dw-mshc-ciu-div = <3>;
 		clock-frequency = <800000000>;
 		samsung,dw-mshc-sdr-timing = <3 0 2 0>;
+		samsung,dw-mshc-hs-timing = <3 0 2 1>;
 		samsung,dw-mshc-ddr-timing = <3 0 2 1>;
-		samsung,dw-mshc-sdr50-timing = <3 0 4 2>;
+		samsung,dw-mshc-sdr50-timing = <3 0 3 2>;
 		samsung,dw-mshc-sdr104-timing = <3 0 3 0>;
 
 		num-ref-clks = <9>;
