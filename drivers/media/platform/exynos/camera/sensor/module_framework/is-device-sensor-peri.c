@@ -302,8 +302,8 @@ void is_sensor_set_cis_uctrl_list(struct is_device_sensor_peri *sensor_peri,
 	for (i = 0; i < CAM2P0_UCTL_LIST_SIZE; i++) {
 		sensor_uctl = &sensor_peri->cis.sensor_ctls[i].cur_cam20_sensor_udctrl;
 
-		is_sensor_ctl_update_exposure_to_uctl(sensor_uctl, num_data, exposure);
-		is_sensor_ctl_update_gain_to_uctl(sensor_uctl, num_data, analog_gain, digital_gain);
+		//is_sensor_ctl_update_exposure_to_uctl(sensor_uctl, num_data, exposure);
+		//is_sensor_ctl_update_gain_to_uctl(sensor_uctl, num_data, analog_gain, digital_gain);
 	}
 }
 
@@ -585,13 +585,14 @@ void is_sensor_setting_mode_change(struct is_device_sensor_peri *sensor_peri)
 
 	is_sensor_peri_s_wb_gains(device, sensor_peri->cis.mode_chg_wb_gains);
 	is_sensor_peri_s_sensor_stats(device, false, NULL, sensor_peri->cis.sensor_stats);
-
+/*
 	sensor_peri->sensor_interface.cis_itf_ops.request_reset_expo_gain(&sensor_peri->sensor_interface,
 			num_data,
 			&expo.long_val,
 			tgain,
 			&again.long_val,
 			&dgain.long_val);
+			*/
 }
 
 void is_sensor_flash_fire_work(struct work_struct *data)
@@ -2129,7 +2130,7 @@ int is_sensor_peri_s_exposure_time(struct is_device_sensor *device,
 		dbg_sensor(1, "exposure = %d %d\n", expo.long_val, expo.short_val);
 	}
 #endif
-
+/*
 	ret = CALL_CISOPS(&sensor_peri->cis, cis_set_exposure_time, sensor_peri->subdev_cis, &expo);
 	if (ret < 0) {
 		err("err!!! ret(%d)", ret);
@@ -2137,7 +2138,7 @@ int is_sensor_peri_s_exposure_time(struct is_device_sensor *device,
 	}
 
 	device->exposure_time = expo.long_val;
-
+*/
 p_err:
 	return ret;
 }

@@ -688,7 +688,7 @@ int request_exposure(struct is_sensor_interface *itf,
 
 	i = (itf->vsync_flag == false ? 0 : end_index);
 	for (; i <= end_index; i++) {
-		ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_EXPOSURE, i, num_data, exposure);
+		//ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_EXPOSURE, i, num_data, exposure);
 		if (ret < 0) {
 			pr_err("[%s] set_interface_param EXPOSURE fail(%d)\n", __func__, ret);
 			goto p_err;
@@ -828,7 +828,7 @@ int request_analog_gain(struct is_sensor_interface *itf,
 
 	i = (itf->vsync_flag == false ? 0 : end_index);
 	for (; i <= end_index; i++) {
-		ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_ANALOG_GAIN, i, num_data, analog_gain);
+		//ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_ANALOG_GAIN, i, num_data, analog_gain);
 		if (ret < 0) {
 			pr_err("[%s] set_interface_param EXPOSURE fail(%d)\n", __func__, ret);
 			goto p_err;
@@ -876,17 +876,17 @@ int request_gain(struct is_sensor_interface *itf,
 
 	i = (itf->vsync_flag == false ? 0 : end_index);
 	for (; i <= end_index; i++) {
-		ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_TOTAL_GAIN, i, num_data, total_gain);
+		//ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_TOTAL_GAIN, i, num_data, total_gain);
 		if (ret < 0) {
 			pr_err("[%s] set_interface_param total gain fail(%d)\n", __func__, ret);
 			goto p_err;
 		}
-		ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_ANALOG_GAIN, i, num_data, analog_gain);
+		//ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_ANALOG_GAIN, i, num_data, analog_gain);
 		if (ret < 0) {
 			pr_err("[%s] set_interface_param analog gain fail(%d)\n", __func__, ret);
 			goto p_err;
 		}
-		ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_DIGITAL_GAIN, i, num_data, digital_gain);
+		//ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_DIGITAL_GAIN, i, num_data, digital_gain);
 		if (ret < 0) {
 			pr_err("[%s] set_interface_param digital gain fail(%d)\n", __func__, ret);
 			goto p_err;
@@ -1729,16 +1729,16 @@ int request_reset_expo_gain(struct is_sensor_interface *itf,
 	end_index = itf->otf_flag_3aa == true ? NEXT_NEXT_FRAME_OTF : NEXT_NEXT_FRAME_DMA;
 
 	for (i = 0; i <= end_index; i++) {
-		ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_TOTAL_GAIN, i, num_data, tgain);
+		//ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_TOTAL_GAIN, i, num_data, tgain);
 		if (ret < 0)
 			err("[%s] set_interface_param TOTAL_GAIN fail(%d)\n", __func__, ret);
-		ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_ANALOG_GAIN, i, num_data, again);
+		//ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_ANALOG_GAIN, i, num_data, again);
 		if (ret < 0)
 			err("[%s] set_interface_param ANALOG_GAIN fail(%d)\n", __func__, ret);
-		ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_DIGITAL_GAIN, i, num_data, dgain);
+		//ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_DIGITAL_GAIN, i, num_data, dgain);
 		if (ret < 0)
 			err("[%s] set_interface_param DIGITAL_GAIN fail(%d)\n", __func__, ret);
-		ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_EXPOSURE, i, num_data, expo);
+		//ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_EXPOSURE, i, num_data, expo);
 		if (ret < 0)
 			err("[%s] set_interface_param EXPOSURE fail(%d)\n", __func__, ret);
 	}
@@ -2254,8 +2254,8 @@ int start_of_frame(struct is_sensor_interface *itf)
 	itf->flash_firing_duration[i] = 0;
 
 	/* Flash setting */
-	ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_FLASH_INTENSITY,
-			end_index, 1, &itf->flash_intensity[end_index]);
+	//ret =  set_interface_param(itf, itf->cis_mode, ITF_CIS_PARAM_FLASH_INTENSITY,
+	//		end_index, 1, &itf->flash_intensity[end_index]);
 	if (ret < 0)
 		pr_err("[%s] set_interface_param FLASH_INTENSITY fail(%d)\n", __func__, ret);
 	/* TODO */

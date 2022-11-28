@@ -546,9 +546,13 @@ int sensor_cis_wait_streamoff(struct v4l2_subdev *subdev)
 	struct is_cis *cis;
 	struct i2c_client *client;
 	cis_shared_data *cis_data;
-	u32 wait_cnt = 0, time_out_cnt = 250;
-	u8 sensor_fcount = 0;
-	u32 i2c_fail_cnt = 0;
+	//u32 wait_cnt = 0, time_out_cnt = 60;
+	//u16 sensor_fcount = 1;
+	//u32 i2c_fail_cnt = 0;
+	u32 poll_time_ms = 0;
+	u16 val = 0;
+	//unsigned int val2 = 0;
+	//unsigned int interval = 0;
 
 	FIMC_BUG(!subdev);
 
@@ -573,25 +577,64 @@ int sensor_cis_wait_streamoff(struct v4l2_subdev *subdev)
 		goto p_err;
 	}
 
-	I2C_MUTEX_LOCK(cis->i2c_lock);
-	ret = is_sensor_read8(client, 0x0005, &sensor_fcount);
-	I2C_MUTEX_UNLOCK(cis->i2c_lock);
-
-	if (ret < 0)
-		err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x0005, sensor_fcount, ret);
-
 	/*
 	 * Read sensor frame counter (sensor_fcount address = 0x0005)
 	 * stream on (0x00 ~ 0xFE), stream off (0xFF)
 	 */
-	while (sensor_fcount != 0xFF) {
+	I2C_MUTEX_LOCK(cis->i2c_lock);
+	/* Checking preveiw start (handshaking) */
+	/* Enter read mode */
+	is_sensor_write16(client, 0x002C, 0x7000);
+	do {
+		is_sensor_write16(client, 0x002E, 0x0240);
+		is_sensor_read16(client, 0x0F12, &val);
+		if (val == 0x00)
+			break;
+		msleep(POLL_TIME_MS);
+		poll_time_ms += POLL_TIME_MS;
+	} while (poll_time_ms < CAPTURE_POLL_TIME_MS);
+
+	/* restore write mode */
+	// is_sensor_write16(client, 0x0028, 0x7000);
+	// is_sensor_write16(client, 0xFCFC, 0xD000);
+	// is_sensor_write16(client, 0x002C, 0x7000);
+	// is_sensor_write16(client, 0x002E, 0x2C28);
+	
+	// is_sensor_read16(client, 0x0F12, &val);
+	// val2 = val;
+	// dbg_sensor(1, "[4EC] val = %d ms\n", val);
+    // interval  = val2;
+	// is_sensor_read16(client, 0x0F12, &val);
+	// dbg_sensor(1, "[4EC] val2 = %d ms\n", val);
+	// val2 = val;
+    // interval += val2 << 16 ;
+	// dbg_sensor(1, "[4EC] 1FrameTime = %d ms\n", interval);
+    // interval /= 400; //ms
+	// dbg_sensor(1, "[4EC] 2FrameTime = %d ms\n", interval);
+    // //interval = 40;
+    // if (interval < 30)
+    // {
+    //    interval = 30;
+    // }
+    // if (interval > 500)
+    // {
+    //    interval = 500;
+    // }
+    // dbg_sensor(1, "[4EC] 3FrameTime = %d ms\n", interval);
+	// msleep(interval);
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
+/*
+	while (sensor_fcount != 0x00) {
 		I2C_MUTEX_LOCK(cis->i2c_lock);
-		ret = is_sensor_read8(client, 0x0005, &sensor_fcount);
+		is_sensor_write16(client, 0x002C, 0x7000);
+		is_sensor_write16(client, 0x002E, 0x1F6C); //preview
+		//is_sensor_write16(client, 0x002E, 0x0530); //capture
+		ret = is_sensor_read16(client, 0x0F12, &sensor_fcount);
 		I2C_MUTEX_UNLOCK(cis->i2c_lock);
 		if (ret < 0) {
 			i2c_fail_cnt++;
 			err("i2c transfer fail addr(%x), val(%x), try(%d), ret = %d\n",
-				0x0005, sensor_fcount, i2c_fail_cnt, ret);
+				0x1F6C, sensor_fcount, i2c_fail_cnt, ret);
 		}
 #if defined(USE_RECOVER_I2C_TRANS)
 		if (i2c_fail_cnt >= USE_RECOVER_I2C_TRANS) {
@@ -608,14 +651,17 @@ int sensor_cis_wait_streamoff(struct v4l2_subdev *subdev)
 		if (wait_cnt >= time_out_cnt) {
 			err("[MOD:D:%d] %s, time out, wait_limit(%d) > time_out(%d), sensor_fcount(%d)",
 					cis->id, __func__, wait_cnt, time_out_cnt, sensor_fcount);
-			ret = -EINVAL;
+			//ret = -EINVAL;
 			goto p_err;
 		}
 
 		dbg_sensor(1, "[MOD:D:%d] %s, sensor_fcount(%d), (wait_limit(%d) < time_out(%d))\n",
 				cis->id, __func__, sensor_fcount, wait_cnt, time_out_cnt);
 	}
-
+	I2C_MUTEX_LOCK(cis->i2c_lock);
+	is_sensor_write16(client, 0x0028, 0x7000);
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
+*/
 #ifdef CONFIG_SENSOR_RETENTION_USE
 	/* retention mode CRC wait calculation */
 	usleep_range(5000, 5000);
@@ -678,9 +724,11 @@ int sensor_cis_wait_streamon(struct v4l2_subdev *subdev)
 	struct is_cis *cis;
 	struct i2c_client *client;
 	cis_shared_data *cis_data;
-	u32 wait_cnt = 0, time_out_cnt = 250;
-	u8 sensor_fcount = 0;
-	u32 i2c_fail_cnt = 0;
+	// u32 wait_cnt = 0, time_out_cnt = 250;
+	// u16 sensor_fcount = 0;
+	// u32 i2c_fail_cnt = 0;
+	u32 poll_time_ms = 0;
+	u16 val = 0;
 
 	FIMC_BUG(!subdev);
 
@@ -706,29 +754,41 @@ int sensor_cis_wait_streamon(struct v4l2_subdev *subdev)
 	}
 
 	I2C_MUTEX_LOCK(cis->i2c_lock);
-	ret = is_sensor_read8(client, 0x0005, &sensor_fcount);
-	I2C_MUTEX_UNLOCK(cis->i2c_lock);
-	if (ret < 0)
-	    err("i2c transfer fail addr(%x), val(%x), ret = %d\n", 0x0005, sensor_fcount, ret);
+	/* Checking preveiw start (handshaking) */
+	/* Enter read mode */
+	is_sensor_write16(client, 0x002C, 0x7000);
+	do {
+		is_sensor_write16(client, 0x002E, 0x0240);
+		is_sensor_read16(client, 0x0F12, &val);
+		if (val == 0x00)
+			break;
+		msleep(POLL_TIME_MS);
+		poll_time_ms += POLL_TIME_MS;
+	} while (poll_time_ms < CAPTURE_POLL_TIME_MS);
 
-	if (cis_data->dual_slave == true)
-		time_out_cnt = time_out_cnt * 2;
+	/* restore write mode */
+	is_sensor_write16(client, 0x0028, 0x7000);
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
 
 	/*
 	 * Read sensor frame counter (sensor_fcount address = 0x0005)
 	 * stream on (0x00 ~ 0xFE), stream off (0xFF)
 	 */
-	while (sensor_fcount == 0xff) {
+/*
+	while (sensor_fcount == 0x00) {
 		usleep_range(CIS_STREAM_ON_WAIT_TIME, CIS_STREAM_ON_WAIT_TIME);
 		wait_cnt++;
 
 		I2C_MUTEX_LOCK(cis->i2c_lock);
-		ret = is_sensor_read8(client, 0x0005, &sensor_fcount);
+		is_sensor_write16(client, 0x002C, 0x7000);
+		is_sensor_write16(client, 0x002E, 0x1F6C); //preview
+		//is_sensor_write16(client, 0x002E, 0x0530); //capture
+		ret = is_sensor_read16(client, 0x0F12, &sensor_fcount);
 		I2C_MUTEX_UNLOCK(cis->i2c_lock);
 		if (ret < 0) {
 			i2c_fail_cnt++;
 			err("i2c transfer fail addr(%x), val(%x), try(%d), ret = %d\n",
-				0x0005, sensor_fcount, i2c_fail_cnt, ret);
+				0x1F6C, sensor_fcount, i2c_fail_cnt, ret);
 		}
 #if defined(USE_RECOVER_I2C_TRANS)
 		if (i2c_fail_cnt >= USE_RECOVER_I2C_TRANS) {
@@ -742,7 +802,7 @@ int sensor_cis_wait_streamon(struct v4l2_subdev *subdev)
 		if (wait_cnt >= time_out_cnt) {
 			err("[MOD:D:%d] %s, Don't sensor stream on and time out, wait_limit(%d) > time_out(%d), sensor_fcount(%d)",
 				cis->id, __func__, wait_cnt, time_out_cnt, sensor_fcount);
-			ret = -EINVAL;
+			//ret = -EINVAL;
 			goto p_err;
 		}
 
@@ -750,6 +810,10 @@ int sensor_cis_wait_streamon(struct v4l2_subdev *subdev)
 				cis->id, __func__, sensor_fcount, wait_cnt, time_out_cnt);
 	}
 
+	I2C_MUTEX_LOCK(cis->i2c_lock);
+	is_sensor_write16(client, 0x0028, 0x7000);
+	I2C_MUTEX_UNLOCK(cis->i2c_lock);
+*/
 #ifdef CONFIG_SENSOR_RETENTION_USE
 	/* retention mode CRC wait calculation */
 	usleep_range(1000, 1000);
