@@ -12,96 +12,53 @@
 #include <dt-bindings/interrupt-controller/exynos3830.h>
 #include <dt-bindings/clock/exynos3830.h>
 
-#include "camera/module_3l6.dtsi"
+#include "camera/module_4ec.dtsi"
 
 / {
 	fragment@camera {
 		target-path = "/";
 		__overlay__ {
 
-			/* FRONT CAMERA */
-			is_sensor_3l6: is_sensor_3l6@59 {
+			/* BACK CAMERA */
+			is_sensor_4ec: is_sensor_4ec@57 {
 				pinctrl-names = "pin0", "pin1", "pin2", "release";
 				pinctrl-0 = <>;
-				pinctrl-1 = <&sensor_mclk0_out>;
-				pinctrl-2 = <&sensor_mclk0_fn>;
+				pinctrl-1 = <&sensor_mclk1_out>;
+				pinctrl-2 = <&sensor_mclk1_fn>;
 				pinctrl-3 = <>;
 
-				position = <1>; /* Rear:0. Front:1 */
+				position = <0>; /* Rear:0. Front:1 */
 				id = <1>; /* sensor node id */
-				mclk_ch = <0>;
-				sensor_i2c_ch = <0>; /* HSI2C_0 */
+				mclk_ch = <1>;
+				sensor_i2c_ch = <1>;
 
 				status = "okay";
 
-				af {
-					product_name = <100>; /* NOTHING */
-				};
-
 				power_seq {
-					gpio_mclk = <&gpc0 0 0x1>;
+					gpio_mclk = <&gpc0 1 0x1>;
 
 					scenario_normal_on {
 						/* A start node number should be over the 10 for reserved number 0~9. */
 						/* pname = "name"; pin = <act value dealy voltage>; gpio = <gpx# # 0x1>; */
-						10 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 100>; gpio = <&gpa3 2 0x1>; };
-						20 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpa1 1 0x1>; };
-						30 { pname = "vdd_ldo30"; pin = <PIN_REGULATOR 1 0>; share = <SRT_ACQUIRE SHARED_PIN0 1>; };
-						40 { pname = "vdd_ldo29"; pin = <PIN_REGULATOR 1 500>; };
-						50 { pname = "on_i2c"; pin = <PIN_I2C 1 0>; };
-						60 { pname = "sen_rst high"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpa3 2 0x1>; };
-						70 { pname = "pin"; pin = <PIN_FUNCTION 2 0>; };
-						80 { pname = "MCLK"; pin = <PIN_MCLK 1 15000>; };
-						/* need eeprom pin control */
+						10 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 3 0x1>; };
+						20 { pname = "standby low"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 2 0x1>; };
+						30 { pname = "pin"; pin = <PIN_FUNCTION 2 0>; };
+						40 { pname = "MCLK"; pin = <PIN_MCLK 1 0>; };
+						50 { pname = "standby high"; pin = <PIN_OUTPUT 1 20>; gpio = <&gpa3 2 0x1>; };
+						60 { pname = "sen_rst high"; pin = <PIN_OUTPUT 1 10>; gpio = <&gpa3 3 0x1>; };
+						70 { pname = "on_i2c"; pin = <PIN_I2C 1 0>; };
 					};
 
 					scenario_normal_off {
 						/* A start node number should be over the 10 for reserved number 0~9. */
 						/* pname = "name"; pin = <act value dealy voltage>; gpio = <gpx# # 0x1>; */
-						10 { pname = "none"; pin = <PIN_NONE 0 1000>; };
+						10 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 60>; gpio = <&gpa3 3 0x1>; };
 						20 { pname = "MCLK"; pin = <PIN_MCLK 0 0>; };
 						30 { pname = "pin"; pin = <PIN_FUNCTION 0 0>; };
 						40 { pname = "pin"; pin = <PIN_FUNCTION 1 0>; };
 						50 { pname = "pin"; pin = <PIN_FUNCTION 0 0>; };
-						60 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 2 0x1>; };
-						70 { pname = "off_i2c"; pin = <PIN_I2C 0 100>; };
-						80 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa1 1 0x1>; };
-						90 { pname = "vdd_ldo30"; pin = <PIN_REGULATOR 0 0>; share = <SRT_RELEASE SHARED_PIN0 0>; };
-						100 { pname = "vdd_ldo29"; pin = <PIN_REGULATOR 0 0>; };
-						/* need eeprom pin control */
-					};
-
-					scenario_g_active_camera_on {
-						sensor_scenario = <SENSOR_SCENARIO_G_ACTIVE_CAMERA>;
-						gpio_scenario = <GPIO_SCENARIO_ON>;
-						/* A start node number should be over the 10 for reserved number 0~9. */
-						/* pname = "name"; pin = <act value dealy voltage>; gpio = <gpx# # 0x1>; */
-						10 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 100>; gpio = <&gpa3 2 0x1>; };
-						20 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpa1 1 0x1>; };
-						30 { pname = "vdd_ldo30"; pin = <PIN_REGULATOR 1 0>; share = <SRT_ACQUIRE SHARED_PIN0 1>; };
-						40 { pname = "vdd_ldo29"; pin = <PIN_REGULATOR 1 500>; };
-						50 { pname = "on_i2c"; pin = <PIN_I2C 1 0>; };
-						60 { pname = "sen_rst high"; pin = <PIN_OUTPUT 1 0>; gpio = <&gpa3 2 0x1>; };
-						70 { pname = "pin"; pin = <PIN_FUNCTION 2 0>; };
-						80 { pname = "MCLK"; pin = <PIN_MCLK 1 15000>; };
-						/* need eeprom pin control */
-					};
-
-					scenario_g_active_camera_off {
-						sensor_scenario = <SENSOR_SCENARIO_G_ACTIVE_CAMERA>;
-						gpio_scenario = <GPIO_SCENARIO_OFF>;
-						/* A start node number should be over the 10 for reserved number 0~9. */
-						/* pname = "name"; pin = <act value dealy voltage>; gpio = <gpx# # 0x1>; */
-						10 { pname = "none"; pin = <PIN_NONE 0 1000>; };
-						20 { pname = "MCLK"; pin = <PIN_MCLK 0 0>; };
-						30 { pname = "pin"; pin = <PIN_FUNCTION 0 0>; };
-						40 { pname = "pin"; pin = <PIN_FUNCTION 1 0>; };
-						50 { pname = "pin"; pin = <PIN_FUNCTION 0 0>; };
-						60 { pname = "sen_rst low"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 2 0x1>; };
-						70 { pname = "off_i2c"; pin = <PIN_I2C 0 100>; };
-						80 { pname = "vt_cam_ldo_en"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa1 1 0x1>; };
-						90 { pname = "vdd_ldo30"; pin = <PIN_REGULATOR 0 0>; share = <SRT_RELEASE SHARED_PIN0 0>; };
-						100 { pname = "vdd_ldo29"; pin = <PIN_REGULATOR 0 0>; };
+						60 { pname = "standby low"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 2 0x1>; };
+						70 { pname = "off_i2c"; pin = <PIN_I2C 0 0>; };
 						/* need eeprom pin control */
 					};
 				};
@@ -114,7 +71,7 @@
 
 &exynos_is {
 	vender {
-		front_sensor_id = <59>; /* S5K3L6 */
+		rear_sensor_id = <57>; /* S5K4EC */
 	};
 
 	lic_offsets {
@@ -449,35 +406,42 @@
 };
 
 &pinctrl_5 {
-	/* FRONT */
-	hsi2c_0_bus: hsi2c_0-bus {
-		samsung,pins = "gpc1-0", "gpc1-1";
+	/* REAR */
+	/* No pull-up resistor, use internal one */
+	hsi2c_1_bus: hsi2c_1-bus {
+		samsung,pins = "gpc1-2", "gpc1-3";
 		samsung,pin-function = <2>;
-		samsung,pin-pud = <0>;
+		samsung,pin-pud = <3>;
+		samsung,pin-drv = <0>;
+	};
+	hsi2c_1_bus_in: hsi2c_1-bus-in {
+		samsung,pins = "gpc1-2", "gpc1-3";
+		samsung,pin-function = <3>;
+		samsung,pin-pud = <3>;
 		samsung,pin-drv = <0>;
 	};
 };
 
-&hsi2c_0 {
+&hsi2c_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	gpios = <&gpc1 0 0 &gpc1 1 0>;
+	gpios = <&gpc1 2 0 &gpc1 3 0>;
 	status = "okay";
 	clock-frequency = <400000>;
-	samsung,reset-before-trans;
-	samsung,fast-plus-mode;
 
 	pinctrl-names = "default","on_i2c","off_i2c";
-	pinctrl-0 = <&hsi2c_0_bus>;
-	pinctrl-1 = <&hsi2c_0_bus>;
-	pinctrl-2 = <&hsi2c_0_bus>;
+	pinctrl-0 = <&hsi2c_1_bus_in>;
+	pinctrl-1 = <&hsi2c_1_bus>;
+	pinctrl-2 = <&hsi2c_1_bus_in>;
 
-	is-3l6@2D {
-		compatible = "samsung,exynos-is-cis-3l6";
-		reg = <0x2D>;
+	is-4ec@56 {
+		compatible = "samsung,exynos-is-cis-4ec";
+		reg = <0x56>;
 		id = <1>; /* matching sensor id */
+		standby = <&gpa3 2 0x1>;
+		//sen_rst = <&gpa3 3 0x1>;
+		//sen_mclk = <&gpc0 1 0x1>;
 		setfile = "setB";
-		use_initial_ae;
 	};
 };
 
@@ -491,7 +455,7 @@
 	vc_ch = <0 1 2 3>;
 	flite_ch = <FLITE_ID_NOTHING>;
 	is_bns = <0>;
-	status = "okay";
+	status = "disabled";
 };
 
 &is_sensor1 {
@@ -507,15 +471,15 @@
 	status = "disabled";
 };
 
-&is_sensor2 {
+&is_sensor2 { //4EC
 	#address-cells = <1>;
 	#size-cells = <1>;
 	scenario = <SENSOR_SCENARIO_NORMAL>;    /* Normal, Vision, OIS etc */
-	id = <2>;
+	id = <1>;
 	csi_ch = <2>;
 	dma_ch = <1 1 1 1>;
 	vc_ch = <0 1 2 3>;
 	flite_ch = <FLITE_ID_NOTHING>;
 	is_bns = <0>;
-	status = "disabled";
+	status = "okay";
 };
