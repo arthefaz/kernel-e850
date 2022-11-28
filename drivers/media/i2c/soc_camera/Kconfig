@@ -76,3 +76,9 @@ config SOC_CAMERA_TW9910
 	depends on SOC_CAMERA && I2C
 	help
 	  This is a tw9910 video driver
+
+config SOC_CAMERA_S5K4EC
+	tristate "s5k4ec support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a s5k4ec camera driver

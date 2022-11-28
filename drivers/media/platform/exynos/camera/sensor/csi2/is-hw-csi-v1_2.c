@@ -1057,6 +1057,8 @@ int csi_hw_s_config_dma_cmn(u32 __iomem *base_reg, u32 vc, u32 actual_vc, u32 hw
 			dma_input_path = CSIS_REG_DMA_INPUT_OTF;
 			break;
 		case HW_FORMAT_RAW8:
+		case HW_FORMAT_YUV422_8BIT:
+		case HW_FORMAT_RGB888:
 		case HW_FORMAT_USER:
 			otf_format = 3;
 			dma_input_path = CSIS_REG_DMA_INPUT_PRL;

@@ -73,6 +73,16 @@ struct is_fmt is_formats[] = {
 		.hw_order	= DMA_OUTPUT_ORDER_YCbYCr,
 		.hw_bitwidth	= DMA_OUTPUT_BIT_WIDTH_8BIT,
 		.hw_plane	= DMA_OUTPUT_PLANE_1,
+	},{
+		.name		= "YUV 4:2:2 packed, YCrYCb",
+		.pixelformat	= V4L2_PIX_FMT_YVYU,
+		.num_planes	= 1 + NUM_OF_META_PLANE,
+		.mbus_code	= MEDIA_BUS_FMT_YVYU8_2X8,
+		.bitsperpixel	= { 16 },
+		.hw_format	= DMA_OUTPUT_FORMAT_YUV422,
+		.hw_order	= DMA_OUTPUT_ORDER_YCrYCb,
+		.hw_bitwidth	= DMA_OUTPUT_BIT_WIDTH_8BIT,
+		.hw_plane	= DMA_OUTPUT_PLANE_1,
 	}, {
 		.name		= "YUV 4:2:2 packed, YCbYCr",
 		.pixelformat	= V4L2_PIX_FMT_YUYV,
@@ -479,21 +489,22 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 
 	switch (frame->format->pixelformat) {
 	case V4L2_PIX_FMT_YUV444:
-		dbg("V4L2_PIX_FMT_YUV444(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_YUV444(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = width[0] * frame->height;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_YUYV:
+	case V4L2_PIX_FMT_YVYU:
 	case V4L2_PIX_FMT_UYVY:
-		dbg("V4L2_PIX_FMT_YUYV(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_YUYV(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = width[0] * frame->height;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_NV16:
 	case V4L2_PIX_FMT_NV61:
-		dbg("V4L2_PIX_FMT_NV16(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_NV16(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = width[0] * frame->height
 				+ width[1] * frame->height;
@@ -501,7 +512,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		break;
 	case V4L2_PIX_FMT_NV16M:
 	case V4L2_PIX_FMT_NV61M:
-		dbg("V4L2_PIX_FMT_NV16(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_NV16(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane += 2) {
 			sizes[plane] = width[0] * frame->height;
 			sizes[plane + 1] = width[1] * frame->height;
@@ -509,7 +520,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_YUV422P:
-		dbg("V4L2_PIX_FMT_YUV422P(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_YUV422P(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++) {
 			sizes[plane] = width[0] * frame->height
 				+ width[1] * frame->height / 2
@@ -519,7 +530,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		break;
 	case V4L2_PIX_FMT_NV12:
 	case V4L2_PIX_FMT_NV21:
-		dbg("V4L2_PIX_FMT_NV12(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_NV12(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++) {
 			sizes[plane] = width[0] * frame->height
 				+ width[1] * frame->height / 2;
@@ -528,7 +539,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		break;
 	case V4L2_PIX_FMT_NV12M:
 	case V4L2_PIX_FMT_NV21M:
-		dbg("V4L2_PIX_FMT_NV12M(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_NV12M(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane += 2) {
 			sizes[plane] = width[0] * frame->height;
 			sizes[plane + 1] = width[1] * frame->height / 2;
@@ -537,7 +548,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		break;
 	case V4L2_PIX_FMT_YUV420:
 	case V4L2_PIX_FMT_YVU420:
-		dbg("V4L2_PIX_FMT_YVU420(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_YVU420(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++) {
 			sizes[plane] = width[0] * frame->height
 				+ width[1] * frame->height / 2
@@ -547,7 +558,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		break;
 	case V4L2_PIX_FMT_YUV420M:
 	case V4L2_PIX_FMT_YVU420M:
-		dbg("V4L2_PIX_FMT_YVU420M(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_YVU420M(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane += 3) {
 			sizes[plane] = width[0] * frame->height;
 			sizes[plane + 1] = width[1] * frame->height / 2;
@@ -556,19 +567,19 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_SGRBG8:
-		dbg("V4L2_PIX_FMT_SGRBG8(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_SGRBG8(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = frame->width * frame->height;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_SBGGR8:
-		dbg("V4L2_PIX_FMT_SBGGR8(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_SBGGR8(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = frame->width * frame->height;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_SBGGR10:
-		dbg("V4L2_PIX_FMT_SBGGR10(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_SBGGR10(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++) {
 			sizes[plane] = ALIGN((frame->width * 5) >> 2, 16) * frame->height;
 			if (frame->bytesperline[0]) {
@@ -586,7 +597,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_SBGGR12:
-		dbg("V4L2_PIX_FMT_SBGGR12(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_SBGGR12(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++) {
 			sizes[plane] = ALIGN((frame->width * 3) >> 1, 16) * frame->height;
 			if (frame->bytesperline[0]) {
@@ -603,7 +614,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_SBGGR16:
-		dbg("V4L2_PIX_FMT_SBGGR16(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_SBGGR16(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++) {
 			sizes[plane] = frame->width * frame->height * 2;
 			if (frame->bytesperline[0]) {
@@ -620,7 +631,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_SBGGR10P: /* width * 10(bit) / 8(bit) */
-		dbg("V4L2_PIX_FMT_SBGGR10P(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_SBGGR10P(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++) {
 			sizes[plane] = ALIGN((frame->width * 5) >> 2, 16) * frame->height;
 			if (frame->bytesperline[0]) {
@@ -638,7 +649,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_SBGGR12P: /* width * 12(bit) / 8(bit) */
-		dbg("V4L2_PIX_FMT_SBGGR12P(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_SBGGR12P(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++) {
 			sizes[plane] = ALIGN((frame->width * 3) >> 1, 16) * frame->height;
 			if (frame->bytesperline[0]) {
@@ -656,56 +667,56 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		break;
 
 	case V4L2_PIX_FMT_RGB32:
-		dbg("V4L2_PIX_FMT_RGB32(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_RGB32(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = frame->width * frame->height * 4;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_RGB24:
-		dbg("V4L2_PIX_FMT_RGB24(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_RGB24(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = frame->width * frame->height * 3;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_BGR24:
-		dbg("V4L2_PIX_FMT_BGR24(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_BGR24(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = frame->width * frame->height * 3;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_GREY:
-		dbg("V4L2_PIX_FMT_GREY(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_GREY(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = frame->width * frame->height;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_Y10:
-		dbg("V4L2_PIX_FMT_Y10(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_Y10(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = width[0] * frame->height;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_Y12:
-		dbg("V4L2_PIX_FMT_Y12(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_Y12(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = width[0] * frame->height;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_Y10BPACK:
-		dbg("V4L2_PIX_FMT_Y10BPACK(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_Y10BPACK(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = ALIGN(width[0], 16) * frame->height;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_YUV32:
-		dbg("V4L2_PIX_FMT_YUV32(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_YUV32(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++) {
 			sizes[plane] = width[plane] * frame->height;
 		}
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_NV16M_P210:
-		dbg("V4L2_PIX_FMT_NV16M_P210(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_NV16M_P210(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane += 2) {
 			sizes[plane] =  ALIGN(width[0], 16) * frame->height;
 			sizes[plane + 1] = ALIGN(width[1], 16) * frame->height;
@@ -713,7 +724,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_NV12M_P010:
-		dbg("V4L2_PIX_FMT_NV12M_P010(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_NV12M_P010(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane += 2) {
 			sizes[plane] = ALIGN(width[0], 16) * frame->height;
 			sizes[plane + 1] = ALIGN(width[0], 16) * frame->height / 2;
@@ -721,7 +732,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_NV16M_S10B:
-		dbg("V4L2_PIX_FMT_NV16M_S10B(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_NV16M_S10B(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane += 2) {
 			sizes[plane] = NV16M_Y_SIZE(frame->width, frame->height)
 				+ NV16M_Y_2B_SIZE(frame->width, frame->height);
@@ -731,7 +742,7 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_NV12M_S10B:
-		dbg("V4L2_PIX_FMT_NV12M_S10B(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_NV12M_S10B(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane += 2) {
 			sizes[plane] = NV12M_Y_SIZE(frame->width, frame->height)
 				+ NV12M_Y_2B_SIZE(frame->width, frame->height);
@@ -741,13 +752,13 @@ static void is_set_plane_size(struct is_frame_cfg *frame,
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_JPEG:
-		dbg("V4L2_PIX_FMT_JPEG(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_JPEG(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = width[0] * frame->height;
 		sizes[plane] = SIZE_OF_META_PLANE;
 		break;
 	case V4L2_PIX_FMT_Z16:
-		dbg("V4L2_PIX_FMT_Z16(w:%d)(h:%d)\n", frame->width, frame->height);
+		mdbgv_vid("V4L2_PIX_FMT_Z16(w:%d)(h:%d)\n", frame->width, frame->height);
 		for (plane = 0; plane < image_planes; plane++)
 			sizes[plane] = width[0] * frame->height;
 		sizes[plane] = SIZE_OF_META_PLANE;

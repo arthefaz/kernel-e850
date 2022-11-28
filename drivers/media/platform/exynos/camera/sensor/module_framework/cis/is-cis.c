@@ -40,7 +40,8 @@
 #include "is-helper-i2c.h"
 
 #include "is-cis.h"
-
+#define POLL_TIME_MS		10
+#define CAPTURE_POLL_TIME_MS    1000
 extern int sensor_module_power_reset(struct v4l2_subdev *subdev, struct is_device_sensor *device);
 
 u32 sensor_cis_do_div64(u64 num, u32 den) {

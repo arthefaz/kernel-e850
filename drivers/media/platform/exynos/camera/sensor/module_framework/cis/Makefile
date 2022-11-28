@@ -17,6 +17,7 @@ obj-$(CONFIG_CAMERA_CIS_3H1_C3_OBJ) += is-cis-3h1.o
 obj-$(CONFIG_CAMERA_CIS_3J1_OBJ) += is-cis-3j1.o
 obj-$(CONFIG_CAMERA_CIS_4E6_OBJ) += is-cis-4e6.o
 obj-$(CONFIG_CAMERA_CIS_4E6_C2_OBJ) += is-cis-4e6.o
+obj-$(CONFIG_CAMERA_CIS_4EC_OBJ) += is-cis-4ec.o
 obj-$(CONFIG_CAMERA_CIS_3M2_OBJ) += is-cis-3m2.o
 obj-$(CONFIG_CAMERA_CIS_3M3_OBJ) += is-cis-3m3.o
 obj-$(CONFIG_CAMERA_CIS_3M5_OBJ) += is-cis-3m5.o

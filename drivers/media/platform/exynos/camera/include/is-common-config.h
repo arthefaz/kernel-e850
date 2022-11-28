@@ -452,6 +452,14 @@ extern int debug_sensor;
 #define probe_warn(fmt, args...)	\
 	pr_warning("[WRN]" fmt "\n", ##args)
 
+#ifdef DEBUG_IS_DT
+#define pr_isdt(fmt, ...) \
+	printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
+#else
+#define pr_isdt(fmt, ...) \
+	no_printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
+#endif
+
 #if defined(DEBUG_LOG_MEMORY)
 #define is_err(fmt, ...)	printk(KERN_DEBUG fmt, ##__VA_ARGS__)
 #define is_warn(fmt, ...)	printk(KERN_DEBUG fmt, ##__VA_ARGS__)

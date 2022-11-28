@@ -126,6 +126,8 @@ struct is_cis {
 	u32				dual_sync_mode;
 	u32				dual_sync_work_mode;
 	struct work_struct		dual_sync_mode_work;
+
+	int				stdby_gpio;
 };
 
 struct is_actuator_data {
