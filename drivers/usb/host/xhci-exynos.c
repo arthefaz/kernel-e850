@@ -1097,6 +1097,8 @@ static int xhci_exynos_check_port(struct usb_device *dev, bool on)
 	struct usb_device *udev = dev;
 	struct device *ddev = &udev->dev;
 	struct xhci_hcd_exynos	*xhci_exynos = g_xhci_exynos;
+	struct usb_hcd	*hcd = xhci_exynos->hcd;
+	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
 	enum usb_port_state pre_state;
 	int usb3_hub_detect = 0;
 	int usb2_detect = 0;
@@ -1132,18 +1134,20 @@ static int xhci_exynos_check_port(struct usb_device *dev, bool on)
 
 			bInterfaceClass	= udev->config->interface[0]
 					->cur_altsetting->desc.bInterfaceClass;
-			if (on) {
-				if (bInterfaceClass == USB_CLASS_HID ||
-				    bInterfaceClass == USB_CLASS_AUDIO) {
-					udev->do_remote_wakeup =
-						(udev->config->desc.bmAttributes &
-							USB_CONFIG_ATT_WAKEUP) ? 1 : 0;
-					if (udev->do_remote_wakeup == 1) {
-						device_init_wakeup(ddev, 1);
-						usb_enable_autosuspend(dev);
+			if (xhci->quirks & XHCI_L2_SUPPORT) {
+				if (on) {
+					if (bInterfaceClass == USB_CLASS_HID ||
+					    bInterfaceClass == USB_CLASS_AUDIO) {
+						udev->do_remote_wakeup =
+							(udev->config->desc.bmAttributes &
+								USB_CONFIG_ATT_WAKEUP) ? 1 : 0;
+						if (udev->do_remote_wakeup == 1) {
+							device_init_wakeup(ddev, 1);
+							usb_enable_autosuspend(dev);
+						}
+						dev_info(ddev, "%s, remote_wakeup = %d\n",
+							__func__, udev->do_remote_wakeup);
 					}
-					dev_dbg(ddev, "%s, remote_wakeup = %d\n",
-						__func__, udev->do_remote_wakeup);
 				}
 			}
 			if (bInterfaceClass == USB_CLASS_HUB) {
