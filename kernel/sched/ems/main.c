@@ -622,13 +622,11 @@ void ems_idle_enter(int cpu, int *state)
 	mlt_idle_enter(cpu, *state);
 }
 
-void ems_tick_entry(struct rq *rq)
-{
-	mlt_tick(rq);
-}
-
 void ems_tick(struct rq *rq)
 {
+	/* mlt_tick should be run at first */
+	mlt_tick(rq);
+
 	mhdvfs();
 
 	halo_tick(rq);

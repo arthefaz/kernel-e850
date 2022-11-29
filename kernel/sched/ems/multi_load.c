@@ -477,14 +477,19 @@ void mlt_idle_exit(int cpu)
 static void mlt_update_nr_run(struct rq *rq);
 void mlt_tick(struct rq *rq)
 {
-	u64 now = sched_clock();
+	struct rq_flags rf;
+	u64 now;
 
+	rq_lock(rq, &rf);
+
+	now = sched_clock();
 	mlt_update_nr_run(rq);
-
 	mlt_update_cpu(cpu_of(rq), MLT_STATE_NOCHANGE, now);
 
 	if (get_sched_class(rq->curr) != EMS_SCHED_IDLE)
 		mlt_update_task(rq->curr, MLT_STATE_NOCHANGE, now);
+
+	rq_unlock(rq, &rf);
 }
 
 void mlt_task_switch(int cpu, struct task_struct *prev,
