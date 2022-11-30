@@ -953,7 +953,7 @@ int slsi_start(struct slsi_dev *sdev, struct net_device *dev)
 	}
 
 #ifdef CONFIG_SCSC_WLAN_SET_PREFERRED_ANTENNA
-	if (slsi_is_rf_test_mode_enabled()) {
+	if (slsi_is_rf_test_mode_enabled() && !slsi_is_test_mode_enabled()) {
 		if (sysfs_antenna == SLSI_ANTENNA_NOT_SET)
 			SLSI_INFO(sdev, "antenna not set. Set /sys/wifi/ant to modify antenna\n");
 		else
