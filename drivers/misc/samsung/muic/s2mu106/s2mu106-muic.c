@@ -634,7 +634,6 @@ void s2mu106_muic_get_detect_info(struct s2mu106_muic_data *muic_data)
 	pr_info("chg_type:0x%02x\n", muic_data->reg[CHG_TYPE]);
 }
 
-#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
 int s2mu106_muic_bcd_rescan(struct s2mu106_muic_data *muic_data)
 {
 	int ret = 0;
@@ -653,40 +652,24 @@ int s2mu106_muic_bcd_rescan(struct s2mu106_muic_data *muic_data)
 
     return 0;
 }
-#endif
 
 static void s2mu106_muic_dcd_recheck(struct work_struct *work)
 {
 	struct s2mu106_muic_data *muic_data =
 	    container_of(work, struct s2mu106_muic_data, dcd_recheck.work);
 
-#if IS_ENABLED(CONFIG_ERD_MUIC_MANAGER)
-	struct muic_interface_t *muic_if = muic_data->if_data;
-
-	if (muic_core_get_ccic_cable_state(muic_data->pdata)) {
-		pr_err("%s It's CC type cable, skip rescan.\n", __func__);
-		return;
-	}
-
-	mutex_lock(&muic_data->bcd_rescan_mutex);
-	muic_manager_dcd_rescan(muic_if);
-#else
 	/* Driver re-detects the rescan type. */
-	int ret;
 	int det_ret = S2MU106_DETECT_NONE;
 
+	mutex_lock(&muic_data->muic_mutex);
 	mutex_lock(&muic_data->bcd_rescan_mutex);
 
-	/* MUIC PATH to Open */
-	ret = _s2mu106_muic_sel_path(muic_data, S2MU106_PATH_OPEN);
-	if (ret)
-		pr_err("%s set_com_open err\n", __func__);
+	/* Do BCD Rescan */
+	s2mu106_muic_bcd_rescan(muic_data);
 
 	/* Debounce after BC Rescan Precondition */
-	msleep(50);
-
-	/* Do BCD Rescan */
-	_s2mu106_muic_set_bcd_rescan_reg(muic_data);
+	msleep(650);
+	s2mu106_muic_get_detect_info(muic_data);
 
 	/* Detect Type & Handle the result */
 	det_ret = s2mu106_muic_detect_dev_bc1p2(muic_data);
@@ -697,8 +680,9 @@ static void s2mu106_muic_dcd_recheck(struct work_struct *work)
 	}
 
 	s2mu106_muic_handle_attached_dev(muic_data);
-#endif
+
 	mutex_unlock(&muic_data->bcd_rescan_mutex);
+	mutex_unlock(&muic_data->muic_mutex);
 }
 
 #if IS_ENABLED(CONFIG_ERD_S2MU106_SPECOUT_CHARGER)
@@ -1273,7 +1257,7 @@ static int s2mu106_muic_detect_dev_bc1p2(struct s2mu106_muic_data *muic_data)
 
 	if (muic_data->new_dev != ATTACHED_DEV_UNKNOWN_MUIC &&
 			muic_data->new_dev != ATTACHED_DEV_NONE_MUIC)
-		goto detect_done;
+			goto detect_done;
 
 	switch (muic_data->reg[DEVICE_TYPE2]) {
 	case DEVICE_TYP2_SDP_1P8S_MASK:
@@ -2625,7 +2609,9 @@ static int s2mu106_muic_probe(struct platform_device *pdev)
 		pr_err("%s failed to init psy(%d)\n", __func__, ret);
 	}
 #endif
-
+#if defined(CONFIG_ERD_MUIC_SUPPORT_PRSWAP)
+	_s2mu106_muic_set_chg_det(muic_data, MUIC_ENABLE);
+#endif
 	_s2mu106_muic_control_rid_adc(muic_data, false);
 	s2mu106_muic_bcd_rescan(muic_data);
 	muic_pdata->uart_path = MUIC_PATH_UART_AP;
@@ -2639,12 +2625,18 @@ static int s2mu106_muic_probe(struct platform_device *pdev)
 		goto fail_init_irq;
 	}
 
-#if IS_ENABLED(CONFIG_ERD_S2MU106_MUIC_STABLE_RESET)
 	pr_info("%s, delay for rescan\n", __func__);
 	msleep(300);
-#endif
+
 	s2mu106_muic_get_detect_info(muic_data);
 	s2mu106_muic_attach_isr(-1, muic_data);
+
+	if (_s2mu106_muic_get_vbus_state(muic_data)) {
+		if (muic_pdata->attached_dev == ATTACHED_DEV_NONE_MUIC ||
+				muic_pdata->attached_dev == ATTACHED_DEV_UNKNOWN_MUIC) {
+			schedule_delayed_work(&muic_data->dcd_recheck, msecs_to_jiffies(100));
+		}
+	}
 #if IS_ENABLED(CONFIG_ERD_S2MU106_SPECOUT_CHARGER)
 	if (_s2mu106_muic_get_vbus_state(muic_data)) {
 		if (muic_pdata->attached_dev == ATTACHED_DEV_NONE_MUIC ||
