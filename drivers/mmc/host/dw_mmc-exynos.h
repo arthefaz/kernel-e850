@@ -104,7 +104,6 @@ struct dw_mci_exynos_priv_data {
 
 #define DW_MMC_EXYNOS_BYPASS_FOR_ALL_PASS	BIT(0)
 #define DW_MMC_EXYNOS_ENABLE_SHIFT		BIT(1)
-#define DW_MMC_EXYNOS_USE_PHASE_DETECT		BIT(2)
 #define DW_MMC_EXYNOS_ENABLE_RUNTIME_PM		BIT(0)
 #define DW_MMC_EXYNOS_ENABLE_RUNTIME_PM_PAD	BIT(1)
 };
@@ -170,8 +169,6 @@ extern int dw_mci_exynos_request_status(void);
 #define SDMMC_CLKSEL_GET_DRV_WD3(x)	(((x) >> 16) & 0x7)
 #define SDMMC_CLKSEL_GET_DIV(x)		(((x) >> 24) & 0x7)
 #define SDMMC_CLKSEL_GET_DIVRATIO(x)	((((x) >> 24) & 0x7) + 1)
-#define SDMMC_CLKSEL_SAMPLE_MASK	0x7
-#define SDMMC_CLKSEL_GET_PHASE_DETECT_SAMPLE(x)	(((x) >> 3) & SDMMC_CLKSEL_SAMPLE_MASK)
 #define SDMMC_CLKSEL_UP_SAMPLE(x, y)	(((x) & ~SDMMC_CLKSEL_CCLK_SAMPLE(7)) |\
 					 SDMMC_CLKSEL_CCLK_SAMPLE(y))
 #define SDMMC_CLKSEL_TIMING(div, f_drv, drv, sample) \
@@ -181,8 +178,6 @@ extern int dw_mci_exynos_request_status(void);
 	 SDMMC_CLKSEL_CCLK_SAMPLE(sample))
 #define SDMMC_CLKSEL_TIMING_MASK	SDMMC_CLKSEL_TIMING(0x7, 0x7, 0x7, 0x7)
 #define SDMMC_CLKSEL_WAKEUP_INT		BIT(11)
-#define SDMMC_CLKSEL_CONTROL_SEL	BIT(27)
-#define SDMMC_CLKSEL_HW_PHASE_EN	BIT(28)
 
 /* RCLK_EN register defines */
 #define DATA_STROBE_EN			BIT(0)

@@ -2336,6 +2336,7 @@ static int dw_mci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		return -EINVAL;
 	}
 
+	dw_mci_set_timeout(host, dw_mci_calc_timeout(host));
 	if (drv_data && drv_data->execute_tuning)
 		err = drv_data->execute_tuning(slot, opcode, &tuning_data);
 	return err;
@@ -3767,6 +3768,7 @@ static void dw_mci_cmdq_enable(struct mmc_host *mmc)
 
 	dw_mci_cmdq_interrupt_mask(mmc, false);
 	dw_mci_cmdq_set_block_size(mmc);
+	dw_mci_set_timeout(host, dw_mci_calc_timeout(host));
 	host->cqe_on = true;
 }
 

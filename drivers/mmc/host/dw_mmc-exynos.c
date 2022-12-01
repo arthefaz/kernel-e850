@@ -979,6 +979,29 @@ static void dw_mci_exynos_set_sample(struct dw_mci *host, u32 sample, bool tunin
 		dw_mci_set_quirk_endbit(host, clksel);
 }
 
+static void dw_mci_set_fine_tuning_bit(struct dw_mci *host, bool is_fine_tuning)
+{
+	struct dw_mci_exynos_priv_data *priv = host->priv;
+	u32 clksel, sample;
+
+	clksel = mci_readl(host, CLKSEL);
+	clksel = (clksel & ~BIT(6));
+	sample = (clksel & 0x7);
+
+	if (is_fine_tuning) {
+		host->pdata->is_fine_tuned = true;
+		clksel |= BIT(6);
+	} else
+		host->pdata->is_fine_tuned = false;
+	mci_writel(host, CLKSEL, clksel);
+	if (priv->ctrl_flag & DW_MMC_EXYNOS_ENABLE_SHIFT) {
+		if (((sample % 2) == 1) && is_fine_tuning && sample != 0x7)
+			dw_mci_exynos_set_enable_shift(host, sample, true);
+		else
+			dw_mci_exynos_set_enable_shift(host, sample, false);
+	}
+}
+
 /* read current clock sample offset */
 static u32 dw_mci_exynos_get_sample(struct dw_mci *host)
 {
@@ -986,38 +1009,38 @@ static u32 dw_mci_exynos_get_sample(struct dw_mci *host)
 	return SDMMC_CLKSEL_CCLK_SAMPLE(clksel);
 }
 
-static int __find_median_of_8bits(u32 orig_bits, u16 mask, u8 startbit)
+static int __find_median_of_16bits(u32 orig_bits, u16 mask, u8 startbit)
 {
 	u32 i, testbits;
 
 	testbits = orig_bits;
-	for (i = startbit; i < (8 + startbit); i++, testbits >>= 1)
+	for (i = startbit; i < (16 + startbit); i++, testbits >>= 1)
 		if ((testbits & mask) == mask)
-			return SDMMC_CLKSEL_CCLK_SAMPLE(i);
+			return SDMMC_CLKSEL_CCLK_FINE_SAMPLE(i);
 	return -1;
 }
 
-#define NUM_OF_MASK	4
-static int find_median_of_8bits(struct dw_mci *host, unsigned int map, bool force)
+#define NUM_OF_MASK	7
+static int find_median_of_16bits(struct dw_mci *host, unsigned int map, bool force)
 {
 	struct dw_mci_exynos_priv_data *priv = host->priv;
 	u32 orig_bits;
 	u8 i, divratio;
 	int sel = -1;
-	u16 mask[NUM_OF_MASK] = { 0x7f, 0x3f, 0x1f, 0x7 };
-	/* Tuning during the center value is set to 1/2 */
-	int optimum[NUM_OF_MASK] = { 3, 3, 2, 1};
+	u16 mask[NUM_OF_MASK] = { 0x1fff, 0x7ff, 0x1ff, 0x7f, 0x1f, 0xf, 0x7 };
+	/* Tuning during the center value is set to 3/2 */
+	int optimum[NUM_OF_MASK] = { 9, 7, 6, 5, 3, 2, 1 };
 
 	/* replicate the map so "arithimetic shift right" shifts in
 	 * the same bits "again". e.g. portable "Rotate Right" bit operation.
 	 */
-	if (map == 0xFF && force == false)
+	if (map == 0xFFFF && force == false)
 		return sel;
 
 	divratio = (mci_readl(host, CLKSEL) >> 24) & 0x7;
 	dev_info(host->dev, "divratio: %d map: 0x %08x\n", divratio, map);
 
-	orig_bits = map | (map << 8);
+	orig_bits = map | (map << 16);
 
 	if (divratio == 1) {
 		if (!(priv->ctrl_flag & DW_MMC_EXYNOS_ENABLE_SHIFT))
@@ -1025,7 +1048,7 @@ static int find_median_of_8bits(struct dw_mci *host, unsigned int map, bool forc
 	}
 
 	for (i = 0; i < NUM_OF_MASK; i++) {
-		sel = __find_median_of_8bits(orig_bits, mask[i], optimum[i]);
+		sel = __find_median_of_16bits(orig_bits, mask[i], optimum[i]);
 		if (-1 != sel)
 			break;
 	}
@@ -1052,83 +1075,6 @@ static void dw_mci_set_pins_state(struct dw_mci *host, int config)
 		pinctrl_select_state(priv->pinctrl, priv->pins_config[config]);
 }
 
-static void dw_mci_exynos_phase_detect(struct dw_mci_slot *slot, struct dw_mci *host,
-		struct dw_mci_tuning_data *tuning_data)
-{
-	struct mmc_request mrq;
-	struct mmc_command cmd;
-	struct mmc_command stop;
-	struct mmc_data data;
-	struct scatterlist sg;
-	struct mmc_host *mmc = slot->mmc;
-	struct dw_mci_exynos_priv_data *priv = host->priv;
-	u32 clksel, sample;
-	u8 *tuning_blk;		/* data read from device */
-
-	if (!(priv->ctrl_flag & DW_MMC_EXYNOS_USE_PHASE_DETECT)) {
-		dev_err(host->dev, "Phase detect logic isn't supported.\n");
-		return;
-	}
-
-	/*
-	 * In order to use phase detect, the following sequence should be performed.
-	 * Tuning All pass => CLKSEL[28] set => send CMD13 => Read CLKSEL [5:3] for Phase value =>
-	 * Set the value read from CLKSEL[5:3] to CLKSEL[2:0] => CLKSEL[28] clear
-	 */
-	tuning_blk = kmalloc(2 * tuning_data->blksz, GFP_KERNEL);
-	if (!tuning_blk)
-		return;
-
-	clksel = mci_readl(host, CLKSEL);
-	clksel |= SDMMC_CLKSEL_HW_PHASE_EN;
-	mci_writel(host, CLKSEL, clksel);
-
-	memset(&cmd, 0, sizeof(cmd));
-	cmd.opcode = MMC_SEND_TUNING_BLOCK;
-	cmd.arg = 0;
-	cmd.flags = MMC_RSP_R1 | MMC_CMD_ADTC;
-	cmd.error = 0;
-	cmd.busy_timeout = 10;	/* 2x * (150ms/40 + setup overhead) */
-
-	memset(&stop, 0, sizeof(stop));
-	stop.opcode = MMC_STOP_TRANSMISSION;
-	stop.arg = 0;
-	stop.flags = MMC_RSP_R1B | MMC_CMD_AC;
-	stop.error = 0;
-
-	memset(&data, 0, sizeof(data));
-	data.blksz = tuning_data->blksz;
-	data.blocks = 1;
-	data.flags = MMC_DATA_READ;
-	data.sg = &sg;
-	data.sg_len = 1;
-	data.error = 0;
-
-	memset(tuning_blk, ~0U, tuning_data->blksz);
-	sg_init_one(&sg, tuning_blk, tuning_data->blksz);
-
-	memset(&mrq, 0, sizeof(mrq));
-	mrq.cmd = &cmd;
-	mrq.stop = &stop;
-	mrq.data = &data;
-	host->mrq = &mrq;
-
-	mmc_wait_for_req(mmc, &mrq);
-
-	clksel = mci_readl(host, CLKSEL);
-	clksel &= ~SDMMC_CLKSEL_SAMPLE_MASK;
-	sample = SDMMC_CLKSEL_GET_PHASE_DETECT_SAMPLE(clksel);
-	clksel |= sample;
-	clksel &= ~SDMMC_CLKSEL_HW_PHASE_EN;
-	dev_info(host->dev, "use phase detect CLKSEL:%08x\n", clksel);
-	mci_writel(host, CLKSEL, clksel);
-
-	if (sample == 6 || sample == 7)
-		sample_path_sel_en(host, AXI_BURST_LEN);
-	else
-		sample_path_sel_dis(host, AXI_BURST_LEN);
-}
-
 /*
  * Test all 8 possible "Clock in" Sample timings.
  * Create a bitmap of which CLock sample values work and find the "median"
@@ -1149,9 +1095,10 @@ static int dw_mci_exynos_execute_tuning(struct dw_mci_slot *slot, u32 opcode,
 	unsigned int sample_good = 0;	/* bit map of clock sample (0-7) */
 	u32 test_sample = -1;
 	u32 orig_sample;
-	int best_sample = 0;
+	int best_sample = 0, best_sample_ori = 0;
 	u8 pass_index;
-	unsigned int abnormal_result = 0xFF;
+	bool is_fine_tuning = false;
+	unsigned int abnormal_result = 0xFFFF;
 	unsigned int temp_ignore_phase = priv->ignore_phase;
 	int ffs_ignore_phase = 0;
 	u8 all_pass_count = 0;
@@ -1235,18 +1182,37 @@ static int dw_mci_exynos_execute_tuning(struct dw_mci_slot *slot, u32 opcode,
 		mrq.data = &data;
 		host->mrq = &mrq;
 
+		/*
+		 * DDR200 tuning Sequence with fine tuning setup
+		 *
+		 * 0. phase 0 (0 degree) + no fine tuning setup
+		 * - pass_index = 0
+		 * 1. phase 0 + fine tuning setup
+		 * - pass_index = 1
+		 * 2. phase 1 (90 degree) + no fine tuning setup
+		 * - pass_index = 2
+		 * ..
+		 * 15. phase 7 + fine tuning setup
+		 * - pass_index = 15
+		 *
+		 */
+		dw_mci_set_fine_tuning_bit(host, is_fine_tuning);
+
 		mmc_wait_for_req(mmc, &mrq);
 
-		pass_index = (u8) test_sample;
+		pass_index = (u8) test_sample *2;
+
+		if (is_fine_tuning)
+			pass_index++;
 
 		if (!cmd.error && !data.error) {
 			/*
 			 * Verify the "tuning block" arrived (to host) intact.
 			 * If yes, remember this sample value works.
 			 */
-			if (host->use_dma == 1)
+			if (host->use_dma == 1) {
 				sample_good |= (1 << pass_index);
-			else {
+			} else {
 				if (!memcmp
 				    (tuning_data->blk_pattern, tuning_blk, tuning_data->blksz))
 					sample_good |= (1 << pass_index);
@@ -1258,9 +1224,12 @@ static int dw_mci_exynos_execute_tuning(struct dw_mci_slot *slot, u32 opcode,
 				 mci_readl(host, CLKSEL), mci_readl(host, HS400_ENABLE_SHIFT));
 		}
 
-		test_sample = dw_mci_tuning_sampling(host);
+		if (is_fine_tuning)
+			test_sample = dw_mci_tuning_sampling(host);
 
-		if (orig_sample == test_sample) {
+		is_fine_tuning = !is_fine_tuning;
+
+		if (orig_sample == test_sample && !is_fine_tuning) {
 
 			/*
 			 * Get at middle clock sample values.
@@ -1274,18 +1243,18 @@ static int dw_mci_exynos_execute_tuning(struct dw_mci_slot *slot, u32 opcode,
 			if (bypass) {
 				dev_info(host->dev, "Bypassed for all pass at %d times\n",
 						priv->clk_drive_number);
-				sample_good = abnormal_result & 0xFF;
+				sample_good = abnormal_result & 0xFFFF;
 				/*
 				   previous tuning was all passed but retune triggered.
 				   selected phase, 0x9, was marginal. remove from pass window.
 				 */
 				if (mmc->doing_retune && host->pdata->prev_all_pass)
-					sample_good = sample_good & 0xFF;
+					sample_good = sample_good & 0xFDFF;
 				host->pdata->prev_all_pass = true;
 				tuned = true;
 			}
 
-			best_sample = find_median_of_8bits(host, sample_good, bypass);
+			best_sample = find_median_of_16bits(host, sample_good, bypass);
 
 			if (best_sample >= 0) {
 				dev_info(host->dev, "sample_good: 0x%02x best_sample: 0x%02x\n",
@@ -1314,29 +1283,34 @@ static int dw_mci_exynos_execute_tuning(struct dw_mci_slot *slot, u32 opcode,
 		tuning_loop--;
 	} while (!tuned);
 
+	/*
+	 * To set sample value with mid, the value should be divided by 2,
+	 * because mid represents index in pass map extended.(8 -> 16 bits)
+	 * And that mid is odd number, means the selected case includes
+	 * using fine tuning.
+	 */
+
+	best_sample_ori = best_sample;
+	best_sample /= 2;
+
 	if (host->pdata->io_mode == MMC_TIMING_MMC_HS400)
 		host->quirks &= ~DW_MCI_QUIRK_NO_DETECT_EBIT;
 
 	if (tuned) {
-		if (priv->ctrl_flag & DW_MMC_EXYNOS_USE_PHASE_DETECT &&
-			(bypass || sample_good == abnormal_result)) {
-			/* Rollback Clock drive strength */
-			if (priv->pinctrl && priv->clk_drive_base)
-				pinctrl_select_state(priv->pinctrl, priv->clk_drive_base);
-			dw_mci_exynos_phase_detect(slot, host, tuning_data);
-		} else {
-			host->pdata->clk_smpl = priv->tuned_sample = best_sample;
-			if (host->pdata->only_once_tune)
-				host->pdata->tuned = true;
+		host->pdata->clk_smpl = priv->tuned_sample = best_sample;
+		if (host->pdata->only_once_tune)
+			host->pdata->tuned = true;
 
-			dw_mci_exynos_set_sample(host, best_sample, false);
-		}
+		if (best_sample_ori % 2)
+			best_sample += 1;
+
+		dw_mci_exynos_set_sample(host, best_sample, false);
+		dw_mci_set_fine_tuning_bit(host, false);
 	} else {
-		/* Failed. Just restore */
-		mci_writel(host, CDTHRCTL, 0 << 16 | 0);
-		/* return error */
-		dw_mci_exynos_set_sample(host, orig_sample, false);
+		/* Failed. Just restore and return error */
 		dev_err(host->dev, "tuning err\n");
+		mci_writel(host, CDTHRCTL, 0 << 16 | 0);
+		dw_mci_exynos_set_sample(host, orig_sample, false);
 		ret = -EIO;
 	}
 
