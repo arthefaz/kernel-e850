@@ -1046,6 +1046,7 @@ static bool cqhci_halt(struct mmc_host *mmc, unsigned int timeout)
 static void cqhci_recovery_start(struct mmc_host *mmc)
 {
 	struct cqhci_host *cq_host = mmc->cqe_private;
+	int ret;
 
 	pr_debug("%s: cqhci: %s\n", mmc_hostname(mmc), __func__);
 
@@ -1056,6 +1057,14 @@ static void cqhci_recovery_start(struct mmc_host *mmc)
 	cqhci_interrupt_mask_set(cq_host, false);
 	cqhci_set_irqs(cq_host, 0);
 
+	if (cq_host->ops->reset) {
+		ret = cq_host->ops->reset(mmc, true);
+		if (ret) {
+			pr_crit("%s: reset CMDQ controller: failed\n",
+			mmc_hostname(mmc));
+			BUG();
+		}
+	}
 	if (cq_host->ops->disable)
 		cq_host->ops->disable(mmc, true);
 
@@ -1135,7 +1144,6 @@ static void cqhci_recovery_finish(struct mmc_host *mmc)
 
 	 __cqhci_enable(cq_host);
 	ok = cqhci_halt(mmc, CQHCI_FINISH_HALT_TIMEOUT);
-	__cqhci_disable(cq_host);
 	if (cq_host->ops->reset) {
 		ret = cq_host->ops->reset(mmc, false);
 		if (ret) {
@@ -1178,7 +1186,6 @@ static void cqhci_recovery_finish(struct mmc_host *mmc)
 
 	WARN_ON(cq_host->qcnt);
 
-	cqhci_off(mmc);
 
 	spin_lock_irqsave(&cq_host->lock, flags);
 	cq_host->qcnt = 0;
