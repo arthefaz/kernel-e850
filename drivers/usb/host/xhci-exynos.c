@@ -964,7 +964,8 @@ int xhci_exynos_bus_suspend(struct usb_hcd *hcd)
 	}
 #endif
 
-	xhci_exynos_wake_lock(xhci_exynos, main_hcd, 0);
+	if (xhci->quirks & XHCI_L2_SUPPORT)
+		xhci_exynos_wake_lock(xhci_exynos, main_hcd, 0);
 
 	return ret;
 }
@@ -995,7 +996,8 @@ int xhci_exynos_bus_resume(struct usb_hcd *hcd)
 
 	ret = xhci_bus_resume(hcd);
 
-	xhci_exynos_wake_lock(xhci_exynos, main_hcd, 1);
+	if (xhci->quirks & XHCI_L2_SUPPORT)
+		xhci_exynos_wake_lock(xhci_exynos, main_hcd, 1);
 
 	return ret;
 }

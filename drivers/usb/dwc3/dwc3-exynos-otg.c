@@ -485,9 +485,9 @@ static int dwc3_otg_start_host(struct otg_fsm *fsm, int on)
 		msleep(100);
 
 	dev_info(dev, "Turn %s host\n", on ? "on" : "off");
-	__pm_stay_awake(dotg->wakelock);
 
 	if (on) {
+		__pm_stay_awake(dotg->wakelock);
 		otg_connection = 1;
 		dwc->gadget->deactivated = true;
 		pr_info("%s: deactivate gadget!\n", __func__);
@@ -607,8 +607,9 @@ err1:
 		if (ret < 0)
 			pr_err("%s: Failed to control USB LDO\n", __func__);
 
+		__pm_relax(dotg->wakelock);
+
 	}
-	__pm_relax(dotg->wakelock);
 	return ret;
 }
 
