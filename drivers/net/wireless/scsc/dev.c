@@ -677,6 +677,7 @@ int __init slsi_dev_load(void)
 	slsi_create_sysfs_debug_dump();
 	scsc_wlan_mmap_create();
 #endif
+	slsi_create_sysfs_qsf();
 	slsi_create_sysfs_pm();
 	slsi_create_sysfs_ant();
 	SLSI_INFO_NODEV("--- Maxwell Wi-Fi driver loaded successfully ---\n");
