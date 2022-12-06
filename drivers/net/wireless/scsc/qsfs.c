@@ -423,6 +423,15 @@ static u32 slsi_qsf_encode_sw_feature_4(struct slsi_dev *sdev, u8 *misc_features
 	return bytes;
 }
 
+static inline void slsi_qsf_extract_bool_data(struct slsi_dev *sdev, struct slsi_mib_value *values,
+					      int index, bool *val)
+{
+	if (values[index].type == SLSI_MIB_TYPE_UINT || values[index].type == SLSI_MIB_TYPE_BOOL)
+		*val = values[index].u.boolValue;
+	else
+		SLSI_ERR(sdev, "Type mismatch for index: %d\n", index);
+}
+
 static int slsi_get_qsf_mib_data(struct slsi_dev *sdev, struct slsi_qsf_mib_data *qsf_data)
 {
 	struct slsi_mib_data mibrsp = { 0, NULL };
@@ -456,16 +465,12 @@ static int slsi_get_qsf_mib_data(struct slsi_dev *sdev, struct slsi_qsf_mib_data
 	}
 
 	qsf_data->max_tdls_cli = SLSI_MAX_TDLS_LINK;
-	SLSI_CHECK_TYPE(sdev, values[0].type, SLSI_MIB_TYPE_BOOL);
-	qsf_data->he_active = values[0].u.boolValue;
-	SLSI_CHECK_TYPE(sdev, values[1].type, SLSI_MIB_TYPE_BOOL);
-	qsf_data->twt_active = values[1].u.boolValue;
-	SLSI_CHECK_TYPE(sdev, values[2].type, SLSI_MIB_TYPE_BOOL);
-	qsf_data->wpa3_active = values[2].u.boolValue;
-	SLSI_CHECK_TYPE(sdev, values[3].type, SLSI_MIB_TYPE_BOOL);
-	qsf_data->tdls_active = values[3].u.boolValue;
-	SLSI_CHECK_TYPE(sdev, values[4].type, SLSI_MIB_TYPE_BOOL);
-	qsf_data->tdls_peer_uapsd_active = values[4].u.boolValue;
+	slsi_qsf_extract_bool_data(sdev, values, 0, &qsf_data->he_active);
+	slsi_qsf_extract_bool_data(sdev, values, 1, &qsf_data->twt_active);
+	slsi_qsf_extract_bool_data(sdev, values, 2, &qsf_data->wpa3_active);
+	slsi_qsf_extract_bool_data(sdev, values, 3, &qsf_data->tdls_active);
+	slsi_qsf_extract_bool_data(sdev, values, 4, &qsf_data->tdls_peer_uapsd_active);
+
 	if (values[5].type == SLSI_MIB_TYPE_OCTET && values[5].u.octetValue.dataLength >= 21)
 		memcpy(qsf_data->ht_caps, values[5].u.octetValue.data, 21);
 	else
@@ -476,8 +481,8 @@ static int slsi_get_qsf_mib_data(struct slsi_dev *sdev, struct slsi_qsf_mib_data
 	else
 		SLSI_ERR(sdev, "invalid type or len for index: %d len: %d\n", 6,
 			 values[6].u.octetValue.dataLength);
-	if (values[7].type == SLSI_MIB_TYPE_OCTET && values[7].u.octetValue.dataLength >= 32)
-		memcpy(qsf_data->he_caps, values[7].u.octetValue.data, 32);
+	if (values[7].type == SLSI_MIB_TYPE_OCTET && values[7].u.octetValue.dataLength >= 28)
+		memcpy(qsf_data->he_caps, values[7].u.octetValue.data, values[7].u.octetValue.dataLength);
 	else
 		SLSI_ERR(sdev, "invalid type or len for index: %d len: %d\n", 7,
 			 values[7].u.octetValue.dataLength);
