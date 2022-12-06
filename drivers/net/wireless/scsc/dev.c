@@ -15,6 +15,7 @@
 #include "procfs.h"
 #include "ba.h"
 #include "nl80211_vendor.h"
+#include "qsfs.h"
 
 #include "sap_mlme.h"
 #include "sap_ma.h"
@@ -696,6 +697,7 @@ void __exit slsi_dev_unload(void)
 	scsc_wlan_mmap_destroy();
 	slsi_destroy_sysfs_debug_dump();
 #endif
+	slsi_destroy_sysfs_qsf();
 	slsi_destroy_sysfs_pm();
 	slsi_destroy_sysfs_ant();
 	/* Unregister SAPs */
