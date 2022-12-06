@@ -1507,6 +1507,7 @@ struct slsi_dev {
 	int                        default_scan_ies_len;
 	u8                         *default_scan_ies;
 	struct sys_error_log       sys_error_log_buf;
+	u32                        fw_build_id;
 };
 
 /* Compact representation of channels a ESS has been seen on

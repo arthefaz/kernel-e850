@@ -280,7 +280,7 @@ static u32 slsi_qsf_encode_sw_feature_2(struct slsi_dev *sdev, u8 *misc_features
 	if (country_code_set_hal_api)
 		mhs |= SLSI_COUNTRY_CODE_SET_API_SUPPORTED;
 	if (get_valid_chan_hal_api)
-		mhs |= SLSI_GET_VALID_CHAN_API_SUPPORTED;
+		mhs |= SLSI_QSF_VALID_CHAN_API_SUPPORTED;
 	if (he_softap_active)
 		mhs |= SLSI_HE_ENABLED;
 	if (wpa3_active)
@@ -412,11 +412,11 @@ static u32 slsi_qsf_encode_sw_feature_4(struct slsi_dev *sdev, u8 *misc_features
 			   p2p[1], p2p[2], p2p[3], p2p[4], p2p[5]);
 
 	if (get_bssi_info_api_supp)
-		big_data |= SLSI_GET_BSSI_INFO_API_SUPP_ENABLED;
+		big_data |= SLSI_QSF_BSSI_INFO_API_SUPP_ENABLED;
 	if (get_assoc_reject_info_api_supp)
-		big_data |= SLSI_GET_ASSOC_REJECT_INFO_API_ENABLED;
+		big_data |= SLSI_QSF_ASSOC_REJECT_INFO_API_ENABLED;
 	if (get_sta_info_api_supp)
-		big_data |= SLSI_GET_STA_INFO_API_SUPP_ENABLED;
+		big_data |= SLSI_QSF_STA_INFO_API_SUPP_ENABLED;
 	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_BIG_DATA_ID,
 			   SLSI_QSF_SW_FEATURE_BIG_DATA_LEN, big_data);
 	return bytes;
@@ -497,10 +497,9 @@ static int slsi_get_qsf_mib_data(struct slsi_dev *sdev, struct slsi_qsf_mib_data
 			 values[9].u.octetValue.dataLength);
 
 	SLSI_CHECK_TYPE(sdev, values[10].type, SLSI_MIB_TYPE_UINT);
-	qsf_data->fw_build_id = values[10].u.uintValue;
+	sdev->fw_build_id = values[10].u.uintValue;
 	SLSI_CHECK_TYPE(sdev, values[11].type, SLSI_MIB_TYPE_UINT);
 	qsf_data->twt_control = values[11].u.uintValue;
-
 	kfree(mibrsp.data);
 	kfree(values);
 	return 0;
@@ -516,14 +515,18 @@ static ssize_t sysfs_show_qsf(struct kobject *kobj, struct kobj_attribute *attr,
 	u32 buf_size = PAGE_SIZE;
 	struct slsi_qsf_mib_data qsf_data = {0};
 
-	ret = slsi_get_qsf_mib_data(sdev, &qsf_data);
-	if (ret) {
-		SLSI_ERR(sdev, "Error in getting thr mib data Error:%d\n", ret);
-		return ret;
+	if (sdev->device_state == SLSI_DEVICE_STATE_STARTED) {
+		ret = slsi_get_qsf_mib_data(sdev, &qsf_data);
+		if (ret) {
+			SLSI_ERR(sdev, "Error in getting thr mib data Error:%d\n", ret);
+			return ret;
+		}
 	}
-
-	pos += scnprintf(buf, buf_size, "%04X", cpu_to_be16(qsf_data.fw_build_id));
+	pos += scnprintf(buf, buf_size, "%04X", cpu_to_be16(sdev->fw_build_id));
 	pos += scnprintf(buf + pos, buf_size - pos, "%.3s", sol_name);
+        /*Do not fill HW/SW feature set when chip is off*/
+	if (sdev->device_state != SLSI_DEVICE_STATE_STARTED)
+		return pos;
 	pos = slsi_qsf_encode_hw_feature(sdev, qsf_data.misc_features_activated, qsf_data.he_active,
 					 buf, pos, buf_size, qsf_data.he_caps,
 					 qsf_data.vht_caps, qsf_data.ht_caps);
