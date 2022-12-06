@@ -13,7 +13,7 @@
 #include "mib.h"
 #include "mlme.h"
 
-static char *sol_name = "sls";
+static char *sol_name = "SLS";
 module_param(sol_name, charp, 0444);
 MODULE_PARM_DESC(sol_name, "Solution Provider Name");
 
@@ -169,8 +169,7 @@ static u32 slsi_qsf_encode_hw_feature(struct slsi_dev *sdev, u8 *misc_features_a
 		return bytes;
 	}
 
-	SLSI_QSF_SET_HW_FEATURE_LEN(hw_feature, hw_feature_len);
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%06x", hw_feature);
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%04X", hw_feature_len, cpu_to_le16(hw_feature));
 	return bytes;
 }
 
@@ -199,7 +198,7 @@ static u32 slsi_qsf_encode_sw_feature_1(struct slsi_dev *sdev, u8 *misc_features
 		pno |= SLSI_PNO_UNASSOIATED_ENABED;
 	if (pno_in_associated)
 		pno |= SLSI_PNO_ASSOIATED_ENABED;
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%02x", SLSI_QSF_SW_FEATURE_PNO_ID,
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_PNO_ID,
 			   SLSI_QSF_SW_FEATURE_PNO_LEN, pno);
 
 	if (twt_active)
@@ -213,8 +212,8 @@ static u32 slsi_qsf_encode_sw_feature_1(struct slsi_dev *sdev, u8 *misc_features
 		twt |= SLSI_TWT_FLEXIBLE_SUPPORTED;
 	SLSI_SET_TWT_MIN_SERVICE_PERIOD(twt, min_service_period);
 	SLSI_SET_TWTMIN_SLEEP_PERIOD(twt, min_sleep_period);
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%04x", SLSI_QSF_SW_FEATURE_TWT_ID,
-			   SLSI_QSF_SW_FEATURE_TWT_LEN, twt);
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%04X", SLSI_QSF_SW_FEATURE_TWT_ID,
+			   SLSI_QSF_SW_FEATURE_TWT_LEN, cpu_to_le16(twt));
 
 	if (wifi_optimizer_support)
 		wifi_optimizer |= SLSI_WIFI_OPTIMIZER_SUPPORTED;
@@ -222,21 +221,21 @@ static u32 slsi_qsf_encode_sw_feature_1(struct slsi_dev *sdev, u8 *misc_features
 		wifi_optimizer |= SLSI_DYNAMIC_DWELL_CONTROL_SUPPORTED;
 	if (enhanced_passive_scan)
 		wifi_optimizer |= SLSI_ENHANCED_PASSIVE_SCAN_SUPPORDED;
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%02x", SLSI_QSF_SW_FEATURE_WIFI_OPTIMIZER_ID,
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_WIFI_OPTIMIZER_ID,
 			   SLSI_QSF_SW_FEATURE_WIFI_OPTIMIZER_LEN, wifi_optimizer);
 
 	if (sched_pm_support)
 		scheduled_pm = SLSI_SCHED_PM_ENABLED;
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%02x", SLSI_QSF_SW_FEATURE_SCHEDULED_PM_ID,
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_SCHEDULED_PM_ID,
 			   SLSI_QSF_SW_FEATURE_SCHEDULED_PM_LEN, scheduled_pm);
 	if (delayed_wakeup_supp)
 		delayed_wakeup = SLSI_DELAYED_WAKEUP_ENABLED;
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%02x", SLSI_QSF_SW_FEATURE_DELAYED_WAKEUP_ID,
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_DELAYED_WAKEUP_ID,
 			   SLSI_QSF_SW_FEATURE_DELAYED_WAKEUP_LEN, delayed_wakeup);
 #ifndef CONFIG_SCSC_USE_WMM_TOS
 	rfc_8325 |= 0x01;
 #endif
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%02x", SLSI_QSF_SW_FEATURE_RFC_8325_ID,
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_RFC_8325_ID,
 			   SLSI_QSF_SW_FEATURE_RFC_8325_LEN, rfc_8325);
 	return bytes;
 }
@@ -286,8 +285,8 @@ static u32 slsi_qsf_encode_sw_feature_2(struct slsi_dev *sdev, u8 *misc_features
 		mhs |= SLSI_HE_ENABLED;
 	if (wpa3_active)
 		mhs |= SLSI_WPA3_ENABLED;
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%04x", SLSI_QSF_SW_FEATURE_MHS_ID,
-			   SLSI_QSF_SW_FEATURE_MHS_LEN, mhs);
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%04X", SLSI_QSF_SW_FEATURE_MHS_ID,
+			   SLSI_QSF_SW_FEATURE_MHS_LEN, cpu_to_le16(mhs));
 
 	roaming |= roaming_major_number;
 	roaming |= roaming_minor_number << 8;
@@ -317,8 +316,8 @@ static u32 slsi_qsf_encode_sw_feature_2(struct slsi_dev *sdev, u8 *misc_features
 	if (roaming_ctrl_api_5)
 		roaming |= SLSI_ROAMING_CTRL_API_5;
 
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%08x", SLSI_QSF_SW_FEATURE_ROAMING_ID,
-			   SLSI_QSF_SW_FEATURE_ROAMING_LEN, roaming);
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%08X", SLSI_QSF_SW_FEATURE_ROAMING_ID,
+			   SLSI_QSF_SW_FEATURE_ROAMING_LEN, cpu_to_be32(roaming));
 	return bytes;
 }
 
@@ -343,9 +342,9 @@ static u32 slsi_qsf_encode_sw_feature_3(struct slsi_dev *sdev, u8 *misc_features
 	ncho |= ncho_major;
 	ncho |= ncho_minor << 8;
 
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%04x", SLSI_QSF_SW_FEATURE_NCHO_ID,
-			   SLSI_QSF_SW_FEATURE_NCHO_LEN, ncho);
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%02x", SLSI_QSF_SW_FEATURE_ASSURANCE_ID,
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%04X", SLSI_QSF_SW_FEATURE_NCHO_ID,
+			   SLSI_QSF_SW_FEATURE_NCHO_LEN, cpu_to_be16(ncho));
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_ASSURANCE_ID,
 			   SLSI_QSF_SW_FEATURE_ASSURANCELEN, assurance);
 	if (mgmt_frame)
 		pcap_frame_logging |= SLSI_MGMT_FRAME_ENABLED;
@@ -353,13 +352,13 @@ static u32 slsi_qsf_encode_sw_feature_3(struct slsi_dev *sdev, u8 *misc_features
 		pcap_frame_logging |= SLSI_CTRL_FRAME_ENABLED;
 	if (data_frame)
 		pcap_frame_logging |= SLSI_DATA_FRAME_ENABLED;
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%02x", SLSI_QSF_SW_FEATURE_PCAP_FRAME_LOGGING_ID,
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_PCAP_FRAME_LOGGING_ID,
 			   SLSI_QSF_SW_FEATURE_PCAP_FRAME_LOGGING_LEN, pcap_frame_logging);
 
 	security = (SLSI_BUFF_LE_TO_U16(misc_features_activated + 11) & SLSI_QSF_SECURITY_FEATURE_MASK);
 
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%04x", SLSI_QSF_SW_FEATURE_SECURITY_ID,
-			   SLSI_QSF_SW_FEATURE_SECURITY_LEN, security);
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%04X", SLSI_QSF_SW_FEATURE_SECURITY_ID,
+			   SLSI_QSF_SW_FEATURE_SECURITY_LEN, cpu_to_be16(security));
 	return bytes;
 }
 
@@ -408,7 +407,7 @@ static u32 slsi_qsf_encode_sw_feature_4(struct slsi_dev *sdev, u8 *misc_features
 	if (nan_version)
 		p2p[5] |= SLSI_QSF_NAN_VERSION_SET(nan_version);
 
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%02x%02x%02x%02x%02x%02x",
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X%02X%02X%02X%02X%02X",
 			   SLSI_QSF_SW_FEATURE_P2P_ID, SLSI_QSF_SW_FEATURE_P2P_LEN, p2p[0],
 			   p2p[1], p2p[2], p2p[3], p2p[4], p2p[5]);
 
@@ -418,7 +417,7 @@ static u32 slsi_qsf_encode_sw_feature_4(struct slsi_dev *sdev, u8 *misc_features
 		big_data |= SLSI_GET_ASSOC_REJECT_INFO_API_ENABLED;
 	if (get_sta_info_api_supp)
 		big_data |= SLSI_GET_STA_INFO_API_SUPP_ENABLED;
-	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02x%02x%02x", SLSI_QSF_SW_FEATURE_BIG_DATA_ID,
+	bytes += scnprintf(buf + bytes, buf_size - bytes, "%02X%02X%02X", SLSI_QSF_SW_FEATURE_BIG_DATA_ID,
 			   SLSI_QSF_SW_FEATURE_BIG_DATA_LEN, big_data);
 	return bytes;
 }
@@ -523,7 +522,7 @@ static ssize_t sysfs_show_qsf(struct kobject *kobj, struct kobj_attribute *attr,
 		return ret;
 	}
 
-	pos += scnprintf(buf, buf_size, "%04x", qsf_data.fw_build_id);
+	pos += scnprintf(buf, buf_size, "%04X", cpu_to_be16(qsf_data.fw_build_id));
 	pos += scnprintf(buf + pos, buf_size - pos, "%.3s", sol_name);
 	pos = slsi_qsf_encode_hw_feature(sdev, qsf_data.misc_features_activated, qsf_data.he_active,
 					 buf, pos, buf_size, qsf_data.he_caps,
@@ -541,6 +540,6 @@ static ssize_t sysfs_show_qsf(struct kobject *kobj, struct kobj_attribute *attr,
 					   qsf_data.max_tdls_cli, qsf_data.tdls_peer_uapsd_active,
 					   qsf_data.nan_fast_connect, buf, pos, buf_size);
 	sw_feature_len = pos - (sw_feature_len_offset + 5);
-	scnprintf(buf + sw_feature_len_offset, 5, "%04x", sw_feature_len);
+	scnprintf(buf + sw_feature_len_offset, 5, "%04X", sw_feature_len);
 	return pos;
 }

@@ -76,9 +76,6 @@
 
 #define SLSI_QSF_HW_FEATURE_LEN_POS  16
 #define SLSI_QSF_HW_FEATURE_LEN_MASK 0xFFFF0000
-#define SLSI_QSF_SET_HW_FEATURE_LEN(hw_feature, hw_feature_len) ((hw_feature) |= \
-								((hw_feature_len) << SLSI_QSF_HW_FEATURE_LEN_POS) & \
-								SLSI_QSF_HW_FEATURE_LEN_MASK)
 
 #define SLSI_SUPPORTED_TX_MCS_PRESENT_AND_TXRX_MCS_NOT_EQUAL(caps)   (caps[12] & (BIT(0) | BIT(1)))
 #define SLSI_GET_NSS_FROM_HT_CAPS(caps)     ((caps[12] & (BIT(2) | BIT(3))) >> 2)
