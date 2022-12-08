@@ -40,7 +40,7 @@
 		samsung,ipc-rx-area = <0x1 0x868000 0x18000>;
 		samsung,shm-area = <0x1 0x8bc000 0x4000>;
 		samsung,handshake-area = <0x0 0x23800 0x20>;
-		samsung,abox-bootargs = "slog=0 vss=1"; /*vss is enabled by default at firmware*/
+		samsung,abox-bootargs = "slog=1 vss=1"; /*vss is enabled by default at firmware*/
 		samsung,abox-bootargs-offset = <0x23E00>;
 		samsung,abox-gic = <&abox_gic>;
 		samsung,uaif-max-div = <512>;
