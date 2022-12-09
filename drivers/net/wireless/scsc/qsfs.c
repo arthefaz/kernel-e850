@@ -21,9 +21,37 @@ static ssize_t sysfs_show_qsf(struct kobject *kobj, struct kobj_attribute *attr,
 struct kobj_attribute qsf_attr = __ATTR(feature, 0400, sysfs_show_qsf, NULL);
 static struct kobject *wifi_kobj_ref;
 
-void slsi_create_sysfs_qsf(void)
+static int slsi_qsf_get_wifi_fw_feature_version(struct slsi_dev *sdev, u32 *fw_ver)
 {
-	int r;
+	struct slsi_mib_data mibrsp = { 0, NULL };
+	struct slsi_mib_value *values = NULL;
+	struct slsi_mib_get_entry get_values[] = { { SLSI_PSID_UNIFI_QSFS_VERION, { 0, 0 } },};
+	const struct firmware *e = NULL;
+	int r = 0;
+
+	r = mx140_file_request_conf(sdev->maxwell_core, &e, "wlan", SLSI_QSF_WIFI_HCF_FILE_NAME);
+	if (r || !e) {
+		SLSI_ERR(sdev, "HCF file read failed as file %s is NOT found\n", SLSI_QSF_WIFI_HCF_FILE_NAME);
+		return -1;
+	}
+	mibrsp.dataLength = e->size - SLSI_HCF_HEADER_LEN;
+	mibrsp.data = (u8 *)e->data + SLSI_HCF_HEADER_LEN;
+	values = slsi_mib_decode_get_list(&mibrsp, ARRAY_SIZE(get_values), get_values);
+	if (!values) {
+		SLSI_ERR(sdev, "QSFS mib decode failed returned values as NULL\n");
+		mx140_file_release_conf(sdev->maxwell_core, e);
+		return -1;
+	}
+
+	*fw_ver = values[0].u.uintValue;
+	kfree(values);
+	mx140_file_release_conf(sdev->maxwell_core, e);
+	return 0;
+}
+
+void slsi_qsf_init(struct slsi_dev *sdev)
+{
+	int r = 0;
 
 	wifi_kobj_ref = mxman_wifi_kobject_ref_get();
 	pr_info("wifi_kobj_ref: 0x%p\n", wifi_kobj_ref);
@@ -35,11 +63,10 @@ void slsi_create_sysfs_qsf(void)
 	if (r) {
 		pr_err("Can't create /sys/wifi/feature\n");
 		mxman_wifi_kobject_ref_put();
-		return;
 	}
 }
 
-void slsi_destroy_sysfs_qsf(void)
+void slsi_qsf_deinit(void)
 {
 	if (!wifi_kobj_ref)
 		return;
@@ -445,7 +472,6 @@ static int slsi_get_qsf_mib_data(struct slsi_dev *sdev, struct slsi_qsf_mib_data
 						   { SLSI_PSID_UNIFI_HE_CAPABILITIES, {0, 0} },
 						   { SLSI_PSID_UNIFI_MISC_FEATURES_ACTIVATED, {0, 0} },
 						   { SLSI_PSID_UNIFI_APPENDIX_VERSIONS, {0, 0} },
-						   { SLSI_PSID_UNIFI_FIRMWARE_BUILD_ID, {0, 0} },
 						   { SLSI_PSID_UNIFI_TWT_CONTROL_FLAGS, {0, 0} },
 						 };
 
@@ -497,41 +523,34 @@ static int slsi_get_qsf_mib_data(struct slsi_dev *sdev, struct slsi_qsf_mib_data
 			 values[9].u.octetValue.dataLength);
 
 	SLSI_CHECK_TYPE(sdev, values[10].type, SLSI_MIB_TYPE_UINT);
-	sdev->fw_build_id = values[10].u.uintValue;
-	SLSI_CHECK_TYPE(sdev, values[11].type, SLSI_MIB_TYPE_UINT);
-	qsf_data->twt_control = values[11].u.uintValue;
+	qsf_data->twt_control = values[10].u.uintValue;
 	kfree(mibrsp.data);
 	kfree(values);
 	return 0;
 }
 
-static ssize_t sysfs_show_qsf(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+void slsi_get_qsfs_feature_set(struct slsi_dev *sdev)
 {
-	struct slsi_dev *sdev = slsi_get_sdev();
-	u32 sw_feature_len = 0;
+	int sw_feature_len = 0;
 	int sw_feature_len_offset = 0;
-	u32 pos = 0;
+	u32 pos = sdev->qsf_feature_set_len;
 	int ret = 0;
-	u32 buf_size = PAGE_SIZE;
+	u32 buf_size = 128;
 	struct slsi_qsf_mib_data qsf_data = {0};
+	u8  *buf = sdev->qsfs_feature_set;
+	char tmp_buf[5] = {0};
 
-	if (sdev->device_state == SLSI_DEVICE_STATE_STARTED) {
-		ret = slsi_get_qsf_mib_data(sdev, &qsf_data);
-		if (ret) {
-			SLSI_ERR(sdev, "Error in getting thr mib data Error:%d\n", ret);
-			return ret;
-		}
+	ret = slsi_get_qsf_mib_data(sdev, &qsf_data);
+	if (ret) {
+		SLSI_ERR(sdev, "Error in getting thr mib data Error:%d\n", ret);
+		return;
 	}
-	pos += scnprintf(buf, buf_size, "%04X", cpu_to_be16(sdev->fw_build_id));
-	pos += scnprintf(buf + pos, buf_size - pos, "%.3s", sol_name);
-        /*Do not fill HW/SW feature set when chip is off*/
-	if (sdev->device_state != SLSI_DEVICE_STATE_STARTED)
-		return pos;
+
 	pos = slsi_qsf_encode_hw_feature(sdev, qsf_data.misc_features_activated, qsf_data.he_active,
 					 buf, pos, buf_size, qsf_data.he_caps,
 					 qsf_data.vht_caps, qsf_data.ht_caps);
 	sw_feature_len_offset = pos;
-	pos += 5;
+	pos += SLSI_QSF_SW_FEATURE_CHAR_LEN;
 	pos = slsi_qsf_encode_sw_feature_1(sdev, qsf_data.misc_features_activated, qsf_data.twt_control,
 					   qsf_data.twt_active, buf, pos, buf_size);
 	pos = slsi_qsf_encode_sw_feature_2(sdev, qsf_data.misc_features_activated, qsf_data.he_softap_active,
@@ -542,7 +561,34 @@ static ssize_t sysfs_show_qsf(struct kobject *kobj, struct kobj_attribute *attr,
 	pos = slsi_qsf_encode_sw_feature_4(sdev, qsf_data.misc_features_activated, qsf_data.tdls_active,
 					   qsf_data.max_tdls_cli, qsf_data.tdls_peer_uapsd_active,
 					   qsf_data.nan_fast_connect, buf, pos, buf_size);
-	sw_feature_len = pos - (sw_feature_len_offset + 5);
-	scnprintf(buf + sw_feature_len_offset, 5, "%04X", sw_feature_len);
-	return pos;
+	sw_feature_len = pos - (sw_feature_len_offset + SLSI_QSF_SW_FEATURE_CHAR_LEN);
+	scnprintf(tmp_buf, 5, "%04X", sw_feature_len);
+	memcpy(buf + sw_feature_len_offset, tmp_buf, SLSI_QSF_SW_FEATURE_CHAR_LEN);
+	sdev->qsf_feature_set_len = pos;
+}
+
+static ssize_t sysfs_show_qsf(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	struct slsi_dev *sdev = slsi_get_sdev();
+	int r = 0;
+	u32 fw_feature_ver = 0;
+	u32 wifi_feature_ver = 0;
+	u32 pos = 0;
+	u32 buf_size = sizeof(sdev->qsfs_feature_set);
+
+	if (!sdev->qsf_feature_set_len) {
+		r = slsi_qsf_get_wifi_fw_feature_version(sdev, &fw_feature_ver);
+		SLSI_INFO(sdev, "fw_feature_ver: %d\n", fw_feature_ver);
+		if (r < 0)
+			SLSI_ERR(sdev, "QSFS Wifi FW feature version couldn't be identified\n");
+		if (fw_feature_ver)
+			wifi_feature_ver = fw_feature_ver + SLSI_QSF_WIFI_FEATURE_VERSION;
+
+		pos += scnprintf(sdev->qsfs_feature_set, buf_size, "%04X", wifi_feature_ver);
+		pos += scnprintf(sdev->qsfs_feature_set + pos, buf_size - pos, "%.3s", sol_name);
+		sdev->qsf_feature_set_len = pos;
+	}
+	SLSI_INFO(sdev, "sysfs node for QSF is being read\n");
+	memcpy(buf, sdev->qsfs_feature_set, sdev->qsf_feature_set_len);
+	return sdev->qsf_feature_set_len;
 }

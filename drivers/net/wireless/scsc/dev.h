@@ -32,6 +32,7 @@
 #include <linux/ieee80211.h>
 #include <net/cfg80211.h>
 #include <linux/nl80211.h>
+#include <linux/firmware.h>
 
 #include <scsc/scsc_mx.h>
 
@@ -140,6 +141,7 @@
 
 /* system error buffer size */
 #define SYSTEM_ERROR_BUFFER_SZ    4096
+#define SLSI_QSF_BUFF_LEN         128
 
 /* indices: 3= BW20->idx_0, BW40->idx_1, BW80->idx_2.
  *             2= noSGI->idx_0, SGI->idx_1
@@ -1507,7 +1509,8 @@ struct slsi_dev {
 	int                        default_scan_ies_len;
 	u8                         *default_scan_ies;
 	struct sys_error_log       sys_error_log_buf;
-	u32                        fw_build_id;
+	u8                         qsfs_feature_set[SLSI_QSF_BUFF_LEN];
+	u32                        qsf_feature_set_len;
 };
 
 /* Compact representation of channels a ESS has been seen on

@@ -403,6 +403,7 @@ struct slsi_dev *slsi_dev_attach(struct device *dev, struct scsc_mx *core, struc
 	sdev->sig_wait_cfm_timeout   = &sig_wait_cfm_timeout;
 	slsi_sig_send_init(&sdev->sig_wait);
 	slsi_sys_error_log_init(sdev);
+	slsi_qsf_init(sdev);
 
 	for (i = 0; i < SLSI_LLS_AC_MAX; i++)
 		atomic_set(&sdev->tx_host_tag[i], ((1 << 2) | i));
@@ -587,6 +588,7 @@ void slsi_dev_detach(struct slsi_dev *sdev)
 	SLSI_DBG1(sdev, SLSI_INIT_DEINIT, "Remove Device\n");
 
 	slsi_stop(sdev);
+	slsi_qsf_deinit();
 
 #ifdef CONFIG_SCSC_WLAN_KIC_OPS
 	wifi_kic_unregister();
@@ -678,7 +680,6 @@ int __init slsi_dev_load(void)
 	slsi_create_sysfs_debug_dump();
 	scsc_wlan_mmap_create();
 #endif
-	slsi_create_sysfs_qsf();
 	slsi_create_sysfs_pm();
 	slsi_create_sysfs_ant();
 	SLSI_INFO_NODEV("--- Maxwell Wi-Fi driver loaded successfully ---\n");
@@ -697,7 +698,6 @@ void __exit slsi_dev_unload(void)
 	scsc_wlan_mmap_destroy();
 	slsi_destroy_sysfs_debug_dump();
 #endif
-	slsi_destroy_sysfs_qsf();
 	slsi_destroy_sysfs_pm();
 	slsi_destroy_sysfs_ant();
 	/* Unregister SAPs */

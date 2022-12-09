@@ -45,6 +45,7 @@
 #include "cfg80211_ops.h"
 #include "nl80211_vendor.h"
 
+
 #ifdef CONFIG_SCSC_WLBTD
 #include "../../../misc/samsung/scsc/scsc_wlbtd.h"
 #endif
@@ -55,6 +56,8 @@
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 12
 #include "scsc_wlan_mmap.h"
 #endif
+
+#include "qsfs.h"
 
 #define CSR_WIFI_SME_MIB2_HOST_PSID_MASK    0x8000
 #define MX_WLAN_FILE_PATH_LEN_MAX (128)
@@ -897,6 +900,9 @@ int slsi_start(struct slsi_dev *sdev, struct net_device *dev)
 	SLSI_INFO(sdev, "HW Version : 0x%.4X (%u)\n", sdev->chip_info_mib.chip_version, sdev->chip_info_mib.chip_version);
 	SLSI_INFO(sdev, "Platform : 0x%.4X (%u)\n", sdev->plat_info_mib.plat_build, sdev->plat_info_mib.plat_build);
 	slsi_cfg80211_update_wiphy(sdev);
+	/* Get feature set from FW if it is already not present */
+	if (sdev->qsf_feature_set_len <= (SLSI_QSF_FEATURE_VER_LEN + SLSI_QSF_SOLUTION_PROVIDER))
+		slsi_get_qsfs_feature_set(sdev);
 
 	SLSI_MUTEX_LOCK(sdev->device_config_mutex);
 
