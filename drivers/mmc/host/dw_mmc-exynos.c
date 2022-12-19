@@ -1226,6 +1226,7 @@ static int dw_mci_exynos_execute_tuning(struct dw_mci_slot *slot, u32 opcode,
 		 */
 		dw_mci_set_fine_tuning_bit(host, is_fine_tuning);
 
+		dw_mci_set_timeout(host, dw_mci_calc_timeout(host));
 		mmc_wait_for_req(mmc, &mrq);
 
 		pass_index = (u8) test_sample *2;

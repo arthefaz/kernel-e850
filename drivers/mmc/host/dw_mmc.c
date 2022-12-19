@@ -1875,6 +1875,7 @@ inline u32 dw_mci_calc_timeout(struct dw_mci *host)
 
 	return dw_mci_calc_common_timeout(host, host_clock);
 }
+EXPORT_SYMBOL(dw_mci_calc_timeout);
 
 static void __dw_mci_start_request(struct dw_mci *host,
 				   struct dw_mci_slot *slot, struct mmc_command *cmd)
@@ -2399,7 +2400,6 @@ static int dw_mci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		return -EINVAL;
 	}
 
-	dw_mci_set_timeout(host, dw_mci_calc_timeout(host));
 	if (drv_data && drv_data->execute_tuning)
 		err = drv_data->execute_tuning(slot, opcode, &tuning_data);
 	return err;
