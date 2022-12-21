@@ -424,20 +424,23 @@ static void cqhci_off(struct mmc_host *mmc)
 	ktime_t timeout;
 	bool timed_out;
 	u32 reg;
+	int retries = 3;
 
 	if (!cq_host->enabled || !mmc->cqe_on || cq_host->recovery_halt)
 		return;
 
-	if (cq_host->ops->disable)
-		cq_host->ops->disable(mmc, false);
+	while (retries--) {
+		cqhci_writel(cq_host, CQHCI_HALT, CQHCI_CTL);
 
-	cqhci_writel(cq_host, CQHCI_HALT, CQHCI_CTL);
+		timeout = ktime_add_us(ktime_get(), CQHCI_OFF_TIMEOUT);
+		while (1) {
+			timed_out = ktime_compare(ktime_get(), timeout) > 0;
+			reg = cqhci_readl(cq_host, CQHCI_CTL);
+			if ((reg & CQHCI_HALT) || timed_out)
+				break;
+		}
 
-	timeout = ktime_add_us(ktime_get(), CQHCI_OFF_TIMEOUT);
-	while (1) {
-		timed_out = ktime_compare(ktime_get(), timeout) > 0;
-		reg = cqhci_readl(cq_host, CQHCI_CTL);
-		if ((reg & CQHCI_HALT) || timed_out)
+		if (reg & CQHCI_HALT)
 			break;
 	}
 
@@ -681,7 +684,7 @@ static int cqhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		cqhci_writel(cq_host, 0, CQHCI_CTL);
 		mmc->cqe_on = true;
 		pr_debug("%s: cqhci: CQE on\n", mmc_hostname(mmc));
-		if (cqhci_readl(cq_host, CQHCI_CTL) && CQHCI_HALT) {
+		if (cqhci_readl(cq_host, CQHCI_CTL) & CQHCI_HALT) {
 			pr_err("%s: cqhci: CQE failed to exit halt state\n",
 			       mmc_hostname(mmc));
 		}
