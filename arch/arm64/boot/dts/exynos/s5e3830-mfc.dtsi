@@ -74,7 +74,7 @@
 		/* Encoder min quality mode */
 		min_quality_mode = <0 0x210705>;
 		/* Encoder time stamp delta */
-		enc_ts_delta = <1 0x211027>;
+		enc_ts_delta = <0 0x211027>;
 		/* Encoder I limit RC mode for WFD */
 		wfd_rc_mode = <0 0x0>;
 
