@@ -526,7 +526,6 @@ struct abox_data {
 	enum debug_mode debug_mode;
 	bool vss_disabled;
 	bool system_state[SYSTEM_STATE_COUNT];
-	bool sifs_cnt_dirty[SET_SIFM0_RATE - SET_SIFS0_RATE];
 	enum calliope_state calliope_state;
 	bool failsafe;
 	bool error;

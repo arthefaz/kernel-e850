@@ -2415,7 +2415,6 @@ static int set_cnt_val(struct abox_data *data, enum abox_dai id,
 	if (ret < 0)
 		abox_err(dev, "Unable to register bclk usage: %d\n", ret);
 
-	data->sifs_cnt_dirty[idx] = true;
 	clk = clk_get_rate(data->clk_cnt);
 	cnt_val = sifsx_cnt_val(clk, rate, pwidth, channels);
 
