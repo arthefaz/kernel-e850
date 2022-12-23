@@ -29,7 +29,7 @@
 #define LCD_REFRESH_RATE	63UL
 #define MULTI_FACTOR 		(1U << 10)
 /* bus utilization 70% : same value with INT_UTIL */
-#define BUS_UTIL		70
+#define BUS_UTIL		60
 
 #define DPP_SCALE_NONE		0
 #define DPP_SCALE_UP		1
@@ -618,7 +618,6 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 					decon->bts.max_disp_freq);
 #endif
 		if ((decon->lcd_info->mode == DECON_VIDEO_MODE) &&
-				((decon->lcd_info->xres * decon->lcd_info->yres) > (1080 * 1920)) &&
 				(decon->bts.total_bw > 1094865)) { // if bigger than FHD * 2
 #if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
 			exynos_pm_qos_update_request(&decon->bts.mif_qos, decon->dt.mif_freq);
