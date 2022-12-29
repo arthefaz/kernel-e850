@@ -3,7 +3,7 @@
 	set0: set@0000 {
 		/* Boosting margin applied to frequency selection */
 		freqboost {			/* LIT BIG */
-			top-app			= <  5   5>;
+			top-app			= <  3   3>;
 		};
 
 		frt {	   	     		/* LIT BIG */
@@ -25,6 +25,18 @@
 		cpufreq_gov {
 				/* LIT BIG */
 			htask-boost = < 150 150 >;
+		};
+
+		ntu {
+			root			= <  5 >;
+			foreground 		= < 25 >;
+			background		= <  5 >;
+			top-app			= < 25 >;
+			rt			= <  5 >;
+			system			= <  5 >;
+			system-background	= <  5 >;
+			nnapi-hal		= <  5 >;
+			camera-daemon		= <  5 >;
 		};
 	};
 };

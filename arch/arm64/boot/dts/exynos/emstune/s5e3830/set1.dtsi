@@ -2,7 +2,7 @@
 	/* power-scenario mode - default */
 	set1: set@0100 {
 		frt {	   			/* LIT BIG */
-			active-ratio		= < 90 100>;
+			active-ratio		= < 25 100>;
 		};
 
 		ecs_dynamic {
@@ -19,6 +19,18 @@
 		cpufreq_gov {
 				/* LIT BIG */
 			htask-boost = < 0 0 >;	/* disable heavy task boost */
+		};
+
+		ntu {
+			root			= <  5 >;
+			foreground 		= < 25 >;
+			background		= <  5 >;
+			top-app			= < 25 >;
+			rt			= <  5 >;
+			system			= <  5 >;
+			system-background	= <  5 >;
+			nnapi-hal		= <  5 >;
+			camera-daemon		= <  5 >;
 		};
 	};
 };

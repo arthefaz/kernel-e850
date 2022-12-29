@@ -3,11 +3,11 @@
 	set0_1: set@0001 {
 		/* Boosting margin applied to frequency selection */
 		freqboost {	   		/* LIT BIG */
-			top-app         	= < 30  30>;
+			top-app         	= < 10  10>;
 		};
 
 		frt {	   			/* LIT BIG */
-			active-ratio 		= < 25   5>;
+			active-ratio 		= < 25  25>;
 		};
 
 		ecs { };
