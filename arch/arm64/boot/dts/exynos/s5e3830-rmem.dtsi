@@ -73,6 +73,7 @@
 			no-map;
 			alloc-ranges = <0x0 0x80000000 0x78000000>;
 			size = <0x1400000>;
+			status = "no";
 		};
 
 		abox_dbg: abox-dbg {
