@@ -156,14 +156,14 @@ static void exynos_abox_panic_handler(void)
 		}
 		has_run = true;
 
-		abox_dbg_dump_gpr(dev, data, ABOX_DBG_DUMP_KERNEL, "panic");
+		abox_dbg_dump_gpr(dev, data, ABOX_DBG_DUMP_FIRMWARE, "panic");
 		abox_set_magic(data, 0x504E4943);
 		abox_cpu_enable(false);
 		abox_cpu_power(false);
 		abox_cpu_power(true);
 		abox_cpu_enable(true);
 		mdelay(100);
-		abox_dbg_dump_mem(dev, data, ABOX_DBG_DUMP_KERNEL, "panic");
+		abox_dbg_dump_mem(dev, data, ABOX_DBG_DUMP_FIRMWARE, "panic");
 	} else {
 		abox_info(dev, "%s: dump is skipped due to no power\n",
 				__func__);
@@ -191,7 +191,7 @@ static void abox_wdt_work_func(struct work_struct *work)
 	struct device *dev_abox = data->dev;
 
 	abox_dbg_print_gpr(dev_abox, data);
-	abox_dbg_dump_mem(dev_abox, data, ABOX_DBG_DUMP_KERNEL, "watchdog");
+	abox_dbg_dump_mem(dev_abox, data, ABOX_DBG_DUMP_FIRMWARE, "watchdog");
 	abox_failsafe_report(dev_abox, true);
 }
 
@@ -205,7 +205,7 @@ static irqreturn_t abox_wdt_handler(int irq, void *dev_id)
 	abox_err(dev, "abox watchdog timeout\n");
 
 	if (abox_is_on()) {
-		abox_dbg_dump_gpr(dev, data, ABOX_DBG_DUMP_KERNEL, "watchdog");
+		abox_dbg_dump_gpr(dev, data, ABOX_DBG_DUMP_FIRMWARE, "watchdog");
 		writel(0x504E4943, data->sram_base + SRAM_FIRMWARE_SIZE -
 				sizeof(u32));
 		abox_cpu_enable(false);
@@ -3178,8 +3178,8 @@ static int abox_itmon_notifier(struct notifier_block *nb,
 	if (itmon_data->port && strstr(itmon_data->port, keyword)) {
 		abox_info(dev, "%s(%lu)\n", __func__, action);
 		abox_dbg_print_gpr(dev, data);
-		abox_dbg_dump_gpr(dev, data, ABOX_DBG_DUMP_KERNEL, "itmon");
-		abox_dbg_dump_mem(dev, data, ABOX_DBG_DUMP_KERNEL, "itmon");
+		abox_dbg_dump_gpr(dev, data, ABOX_DBG_DUMP_FIRMWARE, "itmon");
+		abox_dbg_dump_mem(dev, data, ABOX_DBG_DUMP_FIRMWARE, "itmon");
 		data->enabled = false;
 		return NOTIFY_BAD;
 	}

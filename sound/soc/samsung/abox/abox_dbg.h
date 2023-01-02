@@ -15,7 +15,7 @@
 #include "abox.h"
 
 enum abox_dbg_dump_src {
-	ABOX_DBG_DUMP_KERNEL,
+	/* ABOX_DBG_DUMP_KERNEL, */
 	ABOX_DBG_DUMP_FIRMWARE,
 	ABOX_DBG_DUMP_COUNT,
 };

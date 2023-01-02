@@ -198,7 +198,7 @@ int abox_core_standby(void)
 						core->id);
 				abox_err(dev, "%s\n", reason);
 				abox_dbg_dump_gpr_mem(dev, data,
-						ABOX_DBG_DUMP_KERNEL, reason);
+						ABOX_DBG_DUMP_FIRMWARE, reason);
 				kfree(reason);
 
 				ret = -EBUSY;
@@ -560,7 +560,7 @@ int abox_core_download_firmware(void)
 				if (fw->code_signed && fw->fw_imgloader_desc) {
 					ret |= imgloader_boot(fw->fw_imgloader_desc);
 					if (ret < 0) {
-						abox_dbg_dump_mem(dev, data, ABOX_DBG_DUMP_KERNEL, "verification fail");
+						abox_dbg_dump_mem(dev, data, ABOX_DBG_DUMP_FIRMWARE, "verification fail");
 						abox_failsafe_report(dev, true);
 					}
 					continue;

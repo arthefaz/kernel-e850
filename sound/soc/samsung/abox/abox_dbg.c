@@ -278,13 +278,6 @@ static void dump_gpr_from_addr_half(struct device *dev, unsigned int *addr,
 {
 	struct abox_dbg_dump *p_dump = &(*p_abox_dbg_dump)[0];
 
-	if (src == ABOX_DBG_DUMP_KERNEL) {
-		if (abox_dbg_dump_valid(0) && p_dump->previous_gpr == 0) {
-			abox_info(dev, "%s(%d): skipped\n", __func__, src);
-			return;
-		}
-	}
-
 	p_dump->time = time;
 	p_dump->previous_gpr = 0;
 	strncpy(p_dump->reason, reason, sizeof(p_dump->reason) - 1);
@@ -320,13 +313,6 @@ static void dump_gpr_half(struct device *dev, struct abox_data *data,
 		unsigned long long time)
 {
 	struct abox_dbg_dump *p_dump = &(*p_abox_dbg_dump)[0];
-
-	if (src == ABOX_DBG_DUMP_KERNEL) {
-		if (abox_dbg_dump_valid(0) && p_dump->previous_gpr == 0) {
-			abox_info(dev, "%s(%d): skipped\n", __func__, src);
-			return;
-		}
-	}
 
 	p_dump->time = time;
 	p_dump->previous_gpr = 0;
@@ -372,13 +358,6 @@ static void dump_mem_half(struct device *dev, struct abox_data *data,
 		unsigned long long time)
 {
 	struct abox_dbg_dump *p_dump = &(*p_abox_dbg_dump)[0];
-
-	if (src == ABOX_DBG_DUMP_KERNEL) {
-		if (abox_dbg_dump_valid(0) && p_dump->previous_mem == 0) {
-			abox_info(dev, "%s(%d): skipped\n", __func__, src);
-			return;
-		}
-	}
 
 	p_dump->time = time;
 	p_dump->previous_mem = 0;
