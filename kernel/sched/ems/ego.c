@@ -586,12 +586,6 @@ ego_map_util_freq(struct ego_policy *egp, unsigned long util,
  */
 static bool use_energy_freq(struct cpufreq_policy *policy)
 {
-	int cpu;
-
-	for_each_cpu(cpu, policy->cpus) {
-		if (profile_get_cpu_wratio_busy(cpu))
-			return true;
-	}
 	return false;
 }
 

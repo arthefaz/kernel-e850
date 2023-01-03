@@ -614,17 +614,26 @@ int ems_select_fallback_rq(struct task_struct *p, int target_cpu)
 
 void ems_idle_exit(int cpu, int state)
 {
+	if (emstune_get_cur_level() == 2)
+		return;
+
 	mlt_idle_exit(cpu);
 }
 
 void ems_idle_enter(int cpu, int *state)
 {
+	if (emstune_get_cur_level() == 2)
+		return;
+
 	mlt_idle_enter(cpu, *state);
 }
 
 void ems_tick(struct rq *rq)
 {
 	/* mlt_tick should be run at first */
+	if (emstune_get_cur_level() == 2)
+		goto light_ems;
+
 	mlt_tick(rq);
 
 	mhdvfs();
@@ -643,18 +652,20 @@ void ems_tick(struct rq *rq)
 
 	somac_tasks();
 
+	ontime_migration();
+
+light_ems:
 	tex_update(rq);
 
 	lb_tick(rq);
-
-	ontime_migration();
 }
 
 void ems_enqueue_task(struct rq *rq, struct task_struct *p, int flags)
 {
-	mlt_enqueue_task(rq);
-
-	profile_enqueue_task(rq, p);
+	if (emstune_get_cur_level() != 2) {
+		mlt_enqueue_task(rq);
+		profile_enqueue_task(rq, p);
+	}
 
 	tex_enqueue_task(p, cpu_of(rq));
 
@@ -666,7 +677,9 @@ void ems_enqueue_task(struct rq *rq, struct task_struct *p, int flags)
 
 void ems_dequeue_task(struct rq *rq, struct task_struct *p, int flags)
 {
-	mlt_dequeue_task(rq);
+
+	if (emstune_get_cur_level() != 2)
+		mlt_dequeue_task(rq);
 
 	tex_dequeue_task(p, cpu_of(rq));
 
@@ -768,6 +781,9 @@ void ems_sched_fork_init(struct task_struct *p)
 void ems_schedule(struct task_struct *prev,
 		struct task_struct *next, struct rq *rq)
 {
+	if (emstune_get_cur_level() == 2)
+		return;
+
 	if (prev == next)
 		return;
 
