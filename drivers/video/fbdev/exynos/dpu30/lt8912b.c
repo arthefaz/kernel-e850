@@ -704,14 +704,6 @@ static int lt8912b_of_parse_gpios(struct device *dev)
 		return ret;
 	}
 
-	lt->mipi_switch_gpio = devm_gpiod_get(dev, "mipi_switch",
-					      GPIOD_OUT_LOW);
-	if (IS_ERR(lt->mipi_switch_gpio)) {
-		ret = PTR_ERR(lt->mipi_switch_gpio);
-		dev_err(dev, "### Failed to get switch gpio; err = %d\n", ret);
-		return ret;
-	}
-
 	lt->lt8912_irq_gpio = devm_gpiod_get(dev, "lt8912_irq", GPIOD_IN);
 	if (IS_ERR(lt->lt8912_irq_gpio)) {
 		ret = PTR_ERR(lt->lt8912_irq_gpio);
@@ -800,13 +792,6 @@ static int lt8912b_probe(struct i2c_client *client,
 		return ret;
 
 	lt8912b_reset(lt);
-
-	/*
-	 * TODO: Hard code DSI lines route to HDMI bridge for now.
-	 *       More clean solution is to do that HS connector/HDMI muxing in
-	 *       lt8912b_hpd_isr().
-	 */
-	gpiod_set_value(lt->mipi_switch_gpio, 1);
 
 	ret = lt8912b_i2c_init(lt);
 	if (ret)

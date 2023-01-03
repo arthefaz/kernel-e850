@@ -169,7 +169,6 @@
 		reg = <0x48>;
 
 		reset-gpios = <&gpa2 2 GPIO_ACTIVE_LOW>;
-		mipi_switch-gpios = <&gpg1 2 GPIO_ACTIVE_HIGH>;
 		lt8912_irq-gpios = <&gpa2 0 GPIO_ACTIVE_HIGH>;
 		hpd_irq-gpios = <&gpa2 4 GPIO_ACTIVE_HIGH>;
 
@@ -222,7 +221,7 @@
 /* TODO: Remove it once a proper camera driver is enabled */
 &gpg1 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&cam_en_pins>;
+	pinctrl-0 = <&cam_en_pins &mipi_switch>;
 
 	/* Always keep CAM_GPIO line at "1" level */
 	cam-en {
@@ -230,6 +229,14 @@
 		gpios = <5 GPIO_ACTIVE_HIGH>;
 		output-high;
 		line-name = "cam-en";
+	};
+
+	/* Always keep mipi switch to HDMI */
+	mipi_switch_hdmi {
+		gpio-hog;
+		gpios = <2 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "mipi_switch_hdmi";
 	};
 };
 
