@@ -28,6 +28,9 @@ static void ems_hook_select_task_rq_fair(void *data,
 {
 	int cpu;
 
+	if (emstune_get_cur_level() == 2)
+		return;
+
 	if ((sd_flag == SD_BALANCE_WAKE) || (sd_flag == SD_BALANCE_FORK))
 		ems_last_waked(p) = ktime_get_ns();
 
@@ -140,21 +143,6 @@ static void ems_hook_sched_fork_init(void *data, struct task_struct *p)
 	ems_sched_fork_init(p);
 }
 
-static void ems_wake_up_new_task(void *unused, struct task_struct *p)
-{
-	tex_task_init(p);
-}
-
-static void ems_hook_replace_next_task_fair(void *data, struct rq *rq,
-					    struct task_struct **p_ptr,
-					    struct sched_entity **se_ptr,
-					    bool *repick,
-					    bool simple,
-					    struct task_struct *prev)
-{
-	ems_replace_next_task_fair(rq, p_ptr, se_ptr, repick, simple, prev);
-}
-
 static void ems_hook_schedule(void *data, struct task_struct *prev,
 				struct task_struct *next, struct rq *rq)
 {
@@ -165,13 +153,6 @@ static void ems_hook_set_task_cpu(void *data, struct task_struct *p,
 				unsigned int new_cpu)
 {
 	ems_set_task_cpu(p, new_cpu);
-}
-
-void ems_hook_check_preempt_wakeup(void *data, struct rq *rq, struct task_struct *p,
-		bool *preempt, bool *ignore, int wake_flags, struct sched_entity *se,
-		struct sched_entity *pse, int next_buddy_marked, unsigned int granularity)
-{
-	ems_check_preempt_wakeup(rq, p, preempt, ignore);
 }
 
 static void ems_hook_update_misfit_status(void *data, struct task_struct *p,
@@ -217,33 +198,6 @@ static void ems_hook_sched_overutilized_tp(void *data,
 	trace_sched_overutilized(overutilized);
 }
 */
-static void ems_hook_binder_wake_up_ilocked(void *data, struct task_struct *p,
-		bool sync, struct binder_proc *proc)
-{
-	ems_set_binder_task(p, sync, proc);
-}
-
-static void ems_hook_binder_transaction_received(void *data, struct binder_transaction *t)
-{
-	ems_clear_binder_task(current);
-}
-
-static void ems_hook_binder_set_priority(void *data, struct binder_transaction *t,
-		struct task_struct *p)
-{
-	ems_set_binder_priority(t, p);
-}
-
-static void ems_hook_binder_restore_priority(void *data, struct binder_transaction *t,
-		struct task_struct *p)
-{
-	ems_restore_binder_priority(t, p);
-}
-
-static void ems_hook_do_sched_yield(void *data, struct rq *rq)
-{
-	ems_do_sched_yield(rq);
-}
 
 static void ems_hook_arch_set_freq_scale(void *data, const struct cpumask *cpus,
 			unsigned long freq,  unsigned long max, unsigned long *scale)
@@ -311,33 +265,11 @@ int hook_init(void)
 	if (ret)
 		return ret;
 
-	ret = register_trace_android_rvh_replace_next_task_fair(ems_hook_replace_next_task_fair, NULL);
-	if (ret)
-		return ret;
-
 	ret = register_trace_android_rvh_schedule(ems_hook_schedule, NULL);
 	if (ret)
 		return ret;
 
 	ret = register_trace_android_rvh_set_task_cpu(ems_hook_set_task_cpu, NULL);
-	if (ret)
-		return ret;
-
-	ret = register_trace_android_rvh_check_preempt_wakeup(ems_hook_check_preempt_wakeup, NULL);
-	if (ret)
-		return ret;
-
-	ret = register_trace_android_vh_binder_wakeup_ilocked(ems_hook_binder_wake_up_ilocked, NULL);
-	if (ret)
-		return ret;
-	ret = register_trace_binder_transaction_received(ems_hook_binder_transaction_received, NULL);
-	if (ret)
-		return ret;
-
-	ret = register_trace_android_vh_binder_set_priority(ems_hook_binder_set_priority, NULL);
-	if (ret)
-		return ret;
-	ret = register_trace_android_vh_binder_restore_priority(ems_hook_binder_restore_priority, NULL);
 	if (ret)
 		return ret;
 
@@ -357,10 +289,6 @@ int hook_init(void)
 	if (ret)
 		return ret;
 
-	ret = register_trace_android_rvh_do_sched_yield(ems_hook_do_sched_yield, NULL);
-	if (ret)
-		return ret;
-
 	ret = register_trace_android_vh_arch_set_freq_scale(ems_hook_arch_set_freq_scale, NULL);
 	if (ret)
 		return ret;
@@ -372,7 +300,6 @@ int hook_init(void)
 	WARN_ON(register_trace_pelt_se_tp(ems_hook_pelt_se_tp, NULL));
 	WARN_ON(register_trace_sched_overutilized_tp(ems_hook_sched_overutilized_tp, NULL));
 */
-	register_trace_android_rvh_wake_up_new_task(ems_wake_up_new_task, NULL);
 
 	return 0;
 }
