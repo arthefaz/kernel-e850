@@ -139,7 +139,7 @@
 
 		log_bcm: log_bcm {
 			compatible = "exynos,bcmdbg";
-			reg = <0 0xFC000000 0x400000>;
+			reg = <0 0xFC000000 0x100000>;
 		};
 	};
 };
