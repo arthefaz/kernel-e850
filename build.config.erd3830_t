@@ -68,10 +68,10 @@ BUILD_CONFIG=kernel/build.config.erd3830_t
 TARGET_DTBO_CFG=board/erd/s5e3830_dtboimg.cfg
 BUILD_INITRAMFS=1
 LZ4_RAMDISK=1
-VENDOR_FSTAB=prebuilts/platform/erd3830/conf/fstab.exynos3830.emmc.dp
+VENDOR_FSTAB=prebuilts/platform/erd3830/conf/fstab.exynos3830.emmc.ab
 VENDOR_INIT_RECOVERY_RC=prebuilts/platform/erd3830/conf/init.recovery.exynos3830.rc
 VENDOR_INIT_USB_RC=prebuilts/platform/erd3830/conf/init.exynos3830.usb.rc
-#VENDOR_BOARD_BOOTCONFIG=prebuilts/platform/erd3830/BootConfig.mk
+VENDOR_BOARD_BOOTCONFIG=prebuilts/platform/erd3830/BootConfig.mk
 
 BOOT_IMAGE_HEADER_VERSION=4
 INITRAMFS_VENDOR_RAMDISK_FRAGMENT_NAME=dlkm
