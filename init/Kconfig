@@ -1230,6 +1230,15 @@ config SCHED_EMS_TUNE
 
 	  If unsure, say N.
 
+config SCHED_EMS_DEBUG
+	bool "Exynos Mobile Scheduler Debug"
+	depends on SCHED_EMS
+	default n
+	help
+	  This option supports Exynos mobile scheduler debug.
+
+	  If unsure, say N.
+
 config CHECKPOINT_RESTORE
 	bool "Checkpoint/restore support"
 	select PROC_CHILDREN

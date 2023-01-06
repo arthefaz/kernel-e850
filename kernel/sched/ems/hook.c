@@ -164,7 +164,7 @@ static void ems_hook_update_misfit_status(void *data, struct task_struct *p,
 /******************************************************************************
  * built-in tracepoint                                                        *
  ******************************************************************************/
-/*
+#if defined (CONFIG_SCHED_EMS_DEBUG)
 static void ems_hook_pelt_cfs_tp(void *data, struct cfs_rq *cfs_rq)
 {
 	trace_sched_load_cfs_rq(cfs_rq);
@@ -197,7 +197,7 @@ static void ems_hook_sched_overutilized_tp(void *data,
 {
 	trace_sched_overutilized(overutilized);
 }
-*/
+#endif
 
 static void ems_hook_arch_set_freq_scale(void *data, const struct cpumask *cpus,
 			unsigned long freq,  unsigned long max, unsigned long *scale)
@@ -292,14 +292,15 @@ int hook_init(void)
 	ret = register_trace_android_vh_arch_set_freq_scale(ems_hook_arch_set_freq_scale, NULL);
 	if (ret)
 		return ret;
-/*
+
+#if defined (CONFIG_SCHED_EMS_DEBUG)
 	WARN_ON(register_trace_pelt_cfs_tp(ems_hook_pelt_cfs_tp, NULL));
 	WARN_ON(register_trace_pelt_rt_tp(ems_hook_pelt_rt_tp, NULL));
 	WARN_ON(register_trace_pelt_dl_tp(ems_hook_pelt_dl_tp, NULL));
 	WARN_ON(register_trace_pelt_irq_tp(ems_hook_pelt_irq_tp, NULL));
 	WARN_ON(register_trace_pelt_se_tp(ems_hook_pelt_se_tp, NULL));
 	WARN_ON(register_trace_sched_overutilized_tp(ems_hook_sched_overutilized_tp, NULL));
-*/
+#endif
 
 	return 0;
 }
