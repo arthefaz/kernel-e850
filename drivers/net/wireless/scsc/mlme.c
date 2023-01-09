@@ -2112,7 +2112,7 @@ int slsi_mlme_start(struct slsi_dev *sdev, struct net_device *dev, u8 *bssid, st
 	channel_encode = ndev_vif->acs == true ? 0 : 1;
 	fapi_set_u32(req, u.mlme_start_req.spare_1, 0);
 	fapi_set_low16_u32(req, u.mlme_start_req.spare_1, channel_encode);
-#ifdef CONFIG_SCSC_WLAN_SAE_PWE
+#if defined(CONFIG_SCSC_WLAN_SAE_PWE) || (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
 	if (settings->crypto.sae_pwe == NL80211_SAE_PWE_HASH_TO_ELEMENT)
 		fapi_set_high16_u32(req, u.mlme_start_req.spare_1, 1);
 #endif
