@@ -3487,13 +3487,26 @@ static int samsung_abox_probe(struct platform_device *pdev)
 		return -EPROBE_DEFER;
 	}
 
-	abox_info(dev, "%s dram size(%#x)\n", __func__, DRAM_FIRMWARE_SIZE);
-	data->dram_base = dmam_alloc_coherent(dev, DRAM_FIRMWARE_SIZE,
-			&data->dram_phys, GFP_KERNEL);
-	if (!data->dram_base) {
-		dev_err(dev, "%s: no memory\n", "dram firmware");
-		return -ENOMEM;
+	if (!abox_rmem) {
+		np_tmp = of_parse_phandle(np, "memory-region", 0);
+		if (np_tmp)
+			abox_rmem = of_reserved_mem_lookup(np_tmp);
 	}
+
+	if (abox_rmem) {
+		data->dram_phys = abox_rmem->base;
+		data->dram_base = rmem_vmap(abox_rmem);
+		abox_info(dev, "%s(%#x) alloc: rmem\n", "dram firmware", DRAM_FIRMWARE_SIZE);
+	} else {
+		data->dram_base = dmam_alloc_coherent(dev, DRAM_FIRMWARE_SIZE,
+				&data->dram_phys, GFP_KERNEL);
+		if (!data->dram_base) {
+			dev_err(dev, "%s: no memory\n", "dram firmware");
+			return -ENOMEM;
+		}
+		abox_info(dev, "%s(%#x) alloc: dmam_alloc_coherent\n", "dram firmware", DRAM_FIRMWARE_SIZE);
+	}
+
 	abox_info(dev, "%s(%#x) alloc\n", "dram firmware", DRAM_FIRMWARE_SIZE);
 	abox_iommu_map(dev, IOVA_DRAM_FIRMWARE, data->dram_phys,
 			DRAM_FIRMWARE_SIZE, data->dram_base);

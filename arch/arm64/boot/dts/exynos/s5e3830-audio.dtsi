@@ -28,6 +28,7 @@
 		#size-cells = <1>;
 		ranges;
 		iommus = <&sysmmu_aud>;
+		memory-region = <&abox_rmem>;
 		power-domains = <&pd_aud>;
 		samsung,iommu-group = <&iommu_group_aud>;
 		clocks = <&clock PLL_AUD_OUT>, <&clock DOUT_CLK_AUD_AUDIF>,

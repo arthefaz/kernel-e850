@@ -76,6 +76,15 @@
 			status = "no";
 		};
 
+		abox_rmem: abox-rmem {
+			compatible = "exynos,abox_rmem";
+			/* Size should be same with
+			* CONFIG_SND_SOC_SAMSUNG_ABOX_DRAM_SIZE.
+			*/
+			size = <0x1400000>;
+			alloc-ranges = <0x0 0xc0000000 0x20000000>;
+		};
+
 		abox_dbg: abox-dbg {
 			compatible = "exynos,abox_dbg";
 			size = <0x400000>;
