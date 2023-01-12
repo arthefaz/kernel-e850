@@ -2465,6 +2465,7 @@ void slsi_rx_synchronised_ind(struct slsi_dev *sdev, struct net_device *dev, str
 		return;
 	}
 
+	slsi_rx_scan_pass_to_cfg80211(sdev, dev, skb, false);
 	auth_request.action = NL80211_EXTERNAL_AUTH_START;
 	memcpy(auth_request.bssid, fapi_get_mgmt(skb)->bssid, ETH_ALEN);
 	memcpy(auth_request.ssid.ssid, ndev_vif->sta.ssid, ndev_vif->sta.ssid_len);
