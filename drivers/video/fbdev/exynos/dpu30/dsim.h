@@ -265,6 +265,7 @@ struct dsim_device {
 
 	int continuous_underrun_max;
 	int continuous_underrun_cnt;
+	int iommu_fault_retry_cnt;
 	bool hold_rpm_on_boot;
 
 	bool wait_lp11;

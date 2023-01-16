@@ -811,6 +811,9 @@ static irqreturn_t dsim_irq_handler(int irq, void *dev_id)
 
 	spin_lock(&dsim->slock);
 
+	/* reset the value once DSIM receives the data */
+	dsim->iommu_fault_retry_cnt = 0;
+
 #if IS_ENABLED(CONFIG_EXYNOS_PD)
 	active = pm_runtime_active(dsim->dev);
 	if (!active) {

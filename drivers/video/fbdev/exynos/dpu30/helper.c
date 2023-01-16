@@ -333,6 +333,8 @@ static int dpu_dump_buffer_data(struct dpp_device *dpp)
 }
 #endif
 
+#define MAX_IOMMU_FAULT_RETRY_CNT	3
+
 int dpu_sysmmu_fault_handler_dsim(struct iommu_fault *fault, void *data)
 {
 	struct decon_device *decon = NULL;
@@ -355,17 +357,26 @@ int dpu_sysmmu_fault_handler_dsim(struct iommu_fault *fault, void *data)
 
 	decon_dump(decon);
 
-	if (fault->type == IOMMU_FAULT_DMA_UNRECOV) {
-		if (((void *)iommu_iova_to_phys(domain, fault->event.addr)) != NULL) {
-			decon_info("%s: Retry since IOVA is valid \n", __func__);
-			return -EAGAIN;
-		}
-	} else if (fault->type == IOMMU_FAULT_PAGE_REQ) {
-		if (((void *)iommu_iova_to_phys(domain, fault->prm.addr)) != NULL) {
-			decon_info("%s: Retry since IOVA is valid \n", __func__);
-			return -EAGAIN;
+	if(dsim->iommu_fault_retry_cnt < MAX_IOMMU_FAULT_RETRY_CNT) {
+		if (fault->type == IOMMU_FAULT_DMA_UNRECOV) {
+			if (((void *)iommu_iova_to_phys(domain, fault->event.addr)) != NULL) {
+				decon_info("%s: Retry since IOVA is valid \n", __func__);
+				dsim->iommu_fault_retry_cnt++;
+				return -EAGAIN;
+			}
+		} else if (fault->type == IOMMU_FAULT_PAGE_REQ) {
+			if (((void *)iommu_iova_to_phys(domain, fault->prm.addr)) != NULL) {
+				decon_info("%s: Retry since IOVA is valid \n", __func__);
+				dsim->iommu_fault_retry_cnt++;
+				return -EAGAIN;
+			}
 		}
 	}
+
+	/* iommu_fault_retry_cnt will be reset, either on valid dsim interrupt
+	 * or when iommu_fault_retry_cnt reaches  MAX_IOMMU_FAULT_RETRY_CNT
+	 */
+	dsim->iommu_fault_retry_cnt = 0;
 
 	return 0;
 }
