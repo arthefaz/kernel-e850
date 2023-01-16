@@ -2050,7 +2050,7 @@ static int dsim_probe(struct platform_device *pdev)
 	if(true == dsim->hold_rpm_on_boot)
 		pm_runtime_get_sync(dsim->dev);
 
-	iommu_register_device_fault_handler(dev, dpu_sysmmu_fault_handler_dsim, NULL);
+	iommu_register_device_fault_handler(dev, dpu_sysmmu_fault_handler_dsim, dsim);
 
 	phy_init(dsim->phy);
 	if (dsim->phy_ex)

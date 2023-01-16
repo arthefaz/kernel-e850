@@ -338,6 +338,9 @@ int dpu_sysmmu_fault_handler_dsim(struct iommu_fault *fault, void *data)
 	struct decon_device *decon = NULL;
 	struct dpp_device *dpp = NULL;
 	int i;
+	struct dsim_device *dsim = (struct dsim_device *)data;
+	struct device *dev = dsim->dev;
+	struct iommu_domain *domain = iommu_get_domain_for_dev(dev);
 
 	decon = get_decon_drvdata(0);
 
@@ -351,6 +354,18 @@ int dpu_sysmmu_fault_handler_dsim(struct iommu_fault *fault, void *data)
 	}
 
 	decon_dump(decon);
+
+	if (fault->type == IOMMU_FAULT_DMA_UNRECOV) {
+		if (((void *)iommu_iova_to_phys(domain, fault->event.addr)) != NULL) {
+			decon_info("%s: Retry since IOVA is valid \n", __func__);
+			return -EAGAIN;
+		}
+	} else if (fault->type == IOMMU_FAULT_PAGE_REQ) {
+		if (((void *)iommu_iova_to_phys(domain, fault->prm.addr)) != NULL) {
+			decon_info("%s: Retry since IOVA is valid \n", __func__);
+			return -EAGAIN;
+		}
+	}
 
 	return 0;
 }
