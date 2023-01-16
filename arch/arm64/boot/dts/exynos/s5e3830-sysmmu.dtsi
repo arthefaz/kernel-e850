@@ -37,6 +37,7 @@
 		qos = <15>;
 
 		sysmmu,hold-rpm-on-boot;
+		sysmmu,async-fault;
 		sysmmu,secure-irq;
 		sysmmu,secure_base = <0x130D0000>;
 		sysmmu,default_tlb = <TLB_CFG(BL1, PREFETCH_PREDICTION)>;
