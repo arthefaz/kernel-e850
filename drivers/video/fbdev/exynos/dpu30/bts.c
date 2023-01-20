@@ -585,6 +585,16 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 #endif
 		if (decon->bts.total_bw <= 2746287) {
 			bts_change_drex_config(0);
+			if ((decon->lcd_info->mode == DECON_VIDEO_MODE) &&
+						(decon->bts.total_bw > 1094865)) {
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
+				exynos_pm_qos_update_request(&decon->bts.mif_qos,
+							decon->dt.mif_freq);
+#else
+				pm_qos_update_request(&decon->bts.mif_qos,
+							decon->dt.mif_freq);
+#endif
+			}
 		}
 
 		if (decon->bts.total_bw <= 1094865) { // if smaller than FHD * 2
@@ -626,8 +636,14 @@ void dpu_bts_update_bw(struct decon_device *decon, struct decon_reg_data *regs,
 			pm_qos_update_request(&decon->bts.mif_qos, decon->dt.mif_freq);
 			pm_qos_update_request(&decon->bts.int_qos, 334 * 1000);
 #endif
-			if (decon->bts.total_bw > 2746287)
+			if (decon->bts.total_bw > 2746287) {
 				bts_change_drex_config(1);
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS) || IS_ENABLED(CONFIG_EXYNOS_PM_QOS_MODULE)
+				exynos_pm_qos_update_request(&decon->bts.mif_qos, 1352 * 1000);
+#else
+				pm_qos_update_request(&decon->bts.mif_qos, 1352 * 1000);
+#endif
+			}
 		}
 	}
 
