@@ -58,19 +58,19 @@
 
 				power_seq {
 					use = <1>;
-					gpio_mclk = <&gpc0 1 0x1>;
+					gpio_mclk = <&gpc0 0 0x1>;
 					standby = <&gpa3 2 0x1>;
 					scenario_normal_on {
 						sensor_scenario = <SENSOR_SCENARIO_VISION>;
 						gpio_scenario = <GPIO_SCENARIO_ON>;
 						/* A start node number should be over the 10 for reserved number 0~9. */
 						/* pname = "name"; pin = <act value dealy voltage>; gpio = <gpx# # 0x1>; */
-						10 { pname = "sen_rst"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 3 0x1>; };
+						10 { pname = "sen_rst"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 1 0x1>; };
 						20 { pname = "standby"; pin = <PIN_OUTPUT 0 0>; gpio = <&gpa3 2 0x1>; };
 						30 { pname = "pin"; pin = <PIN_FUNCTION 2 0>; };
 						40 { pname = "MCLK"; pin = <PIN_MCLK 1 0>; };
 						50 { pname = "standby"; pin = <PIN_OUTPUT 1 20>; gpio = <&gpa3 2 0x1>; };
-						60 { pname = "sen_rst"; pin = <PIN_OUTPUT 1 10>; gpio = <&gpa3 3 0x1>; };
+						60 { pname = "sen_rst"; pin = <PIN_OUTPUT 1 10>; gpio = <&gpa3 1 0x1>; };
 						70 { pname = "on_i2c"; pin = <PIN_I2C 1 0>; };
 					};
 
@@ -79,7 +79,7 @@
 						gpio_scenario = <GPIO_SCENARIO_OFF>;
 						/* A start node number should be over the 10 for reserved number 0~9. */
 						/* pname = "name"; pin = <act value dealy voltage>; gpio = <gpx# # 0x1>; */
-						10 { pname = "sen_rst"; pin = <PIN_OUTPUT 0 60>; gpio = <&gpa3 3 0x1>; };
+						10 { pname = "sen_rst"; pin = <PIN_OUTPUT 0 60>; gpio = <&gpa3 1 0x1>; };
 						20 { pname = "MCLK"; pin = <PIN_MCLK 0 0>; };
 						30 { pname = "pin"; pin = <PIN_FUNCTION 0 0>; };
 						40 { pname = "pin"; pin = <PIN_FUNCTION 1 0>; };
