@@ -3273,8 +3273,8 @@ const u32 sensor_4ec_setfile_B_Global[] = {
 	0x0F12, 0x0535, 0x02, 	//REG_0TC_PCFG_usMaxFrTimeMsecMult10 //03E8h:10fps//014Ah:30fps //0294:15fps
 	0x0F12, 0x0294, 0x02, 	//REG_0TC_PCFG_usMinFrTimeMsecMult10 //03E8h:10fps//014Ah:30fps //0294:15fps
 	0x002A, 0x02D0, 0x02, 
-	0x0F12, 0x0001, 0x02, 	//REG_0TC_PCFG_uPrevMirror
-	0x0F12, 0x0001, 0x02, 	//REG_0TC_PCFG_uCaptureMirror
+	0x0F12, 0x0000, 0x02, 	//REG_0TC_PCFG_uPrevMirror
+	0x0F12, 0x0000, 0x02, 	//REG_0TC_PCFG_uCaptureMirror
 	//===================================================================                                 
 	// Capture                                                                                            
 	//===================================================================                         
