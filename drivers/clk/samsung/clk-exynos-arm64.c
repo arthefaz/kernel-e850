@@ -8,6 +8,8 @@
  * This file contains shared functions used by some arm64 Exynos SoCs,
  * such as Exynos7885 or Exynos850 to register and init CMUs.
  */
+
+#include <linux/arm-smccc.h>
 #include <linux/clk.h>
 #include <linux/of_address.h>
 #include <linux/of_device.h>
@@ -24,6 +26,12 @@
 #define GATE_OFF_START		0x2000
 #define GATE_OFF_END		0x2fff
 
+/* Power control SMC command and its parameters */
+#define SMC_CMD_PREPARE_PD_ONOFF		0x82000410
+#define EXYNOS_PD_RUNTIME_PM			2
+#define EXYNOS_GET_IN_PD_DOWN			0
+#define EXYNOS_WAKEUP_PD_DOWN			1
+
 struct exynos_arm64_cmu_data {
 	struct samsung_clk_reg_dump *clk_save;
 	unsigned int nr_clk_save;
@@ -34,6 +42,7 @@ struct exynos_arm64_cmu_data {
 	struct clk **pclks;
 	int nr_pclks;
 
+	unsigned int tzpc_addr;			/* address for PM SMC calls */
 	struct samsung_clk_provider *ctx;
 };
 
@@ -149,6 +158,22 @@ static int __init exynos_arm64_cmu_prepare_pm(struct device *dev,
 	return 0;
 }
 
+static int exynos_arm64_pm_smc(struct device *dev, bool on)
+{
+	struct exynos_arm64_cmu_data *data = dev_get_drvdata(dev);
+	struct arm_smccc_res res;
+	unsigned int pm_arg;
+
+	if (!data->tzpc_addr)
+		return 0;
+
+	pm_arg = on ? EXYNOS_WAKEUP_PD_DOWN : EXYNOS_GET_IN_PD_DOWN;
+	arm_smccc_smc(SMC_CMD_PREPARE_PD_ONOFF, pm_arg, data->tzpc_addr,
+		      EXYNOS_PD_RUNTIME_PM, 0, 0, 0, 0, &res);
+
+	return res.a0;
+}
+
 /**
  * exynos_arm64_register_cmu - Register specified Exynos CMU domain
  * @dev:	Device object; may be NULL if this function is not being
@@ -207,6 +232,8 @@ int __init exynos_arm64_register_cmu_pm(struct platform_device *pdev,
 	if (!data)
 		return -ENOMEM;
 
+	of_property_read_u32(np, "samsung,tzpc", (u32 *)&data->tzpc_addr);
+
 	platform_set_drvdata(pdev, data);
 
 	ret = exynos_arm64_cmu_prepare_pm(dev, cmu);
@@ -251,7 +278,7 @@ int __init exynos_arm64_register_cmu_pm(struct platform_device *pdev,
 int exynos_arm64_cmu_suspend(struct device *dev)
 {
 	struct exynos_arm64_cmu_data *data = dev_get_drvdata(dev);
-	int i;
+	int i, ret;
 
 	samsung_clk_save(data->ctx->reg_base, data->clk_save,
 			 data->nr_clk_save);
@@ -262,6 +289,10 @@ int exynos_arm64_cmu_suspend(struct device *dev)
 	/* For suspend some registers have to be set to certain values */
 	samsung_clk_restore(data->ctx->reg_base, data->clk_suspend,
 			    data->nr_clk_suspend);
+
+	ret = exynos_arm64_pm_smc(dev, false);
+	if (ret)
+		return ret;
 
 	for (i = 0; i < data->nr_pclks; i++)
 		clk_disable_unprepare(data->pclks[i]);
@@ -274,12 +305,16 @@ int exynos_arm64_cmu_suspend(struct device *dev)
 int exynos_arm64_cmu_resume(struct device *dev)
 {
 	struct exynos_arm64_cmu_data *data = dev_get_drvdata(dev);
-	int i;
+	int i, ret;
 
 	clk_prepare_enable(data->clk);
 
 	for (i = 0; i < data->nr_pclks; i++)
 		clk_prepare_enable(data->pclks[i]);
+
+	ret = exynos_arm64_pm_smc(dev, true);
+	if (ret)
+		return ret;
 
 	samsung_clk_restore(data->ctx->reg_base, data->clk_save,
 			    data->nr_clk_save);
