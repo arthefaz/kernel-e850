@@ -18,6 +18,10 @@
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
 
+/* Register offsets inside Power Domain area in PMU */
+#define EXYNOS_PD_CONF		0x0
+#define EXYNOS_PD_STATUS	0x4
+
 struct exynos_pm_domain_config {
 	/* Value for LOCAL_PWR_CFG and STATUS fields for each domain */
 	u32 local_pwr_cfg;
@@ -33,23 +37,52 @@ struct exynos_pm_domain {
 	u32 local_pwr_cfg;
 };
 
+static void exynos_pd_write(struct exynos_pm_domain *pd, unsigned int reg,
+			    unsigned int mask, unsigned int val)
+{
+	u32 v;
+
+	v = readl_relaxed(pd->base + reg);
+	v = (v & ~mask) | val;
+	writel_relaxed(v, pd->base + reg);
+}
+
+static void exynos_pd_read(struct exynos_pm_domain *pd, unsigned int reg,
+			   unsigned int *val)
+{
+	*val = readl_relaxed(pd->base + reg);
+}
+
+static unsigned int exynos_pd_read_status(struct exynos_pm_domain *pd)
+{
+	unsigned int val;
+
+	exynos_pd_read(pd, EXYNOS_PD_STATUS, &val);
+	val &= pd->local_pwr_cfg;
+
+	return val;
+}
+
+static void exynos_pd_write_conf(struct exynos_pm_domain *pd, u32 val)
+{
+	exynos_pd_write(pd, EXYNOS_PD_CONF, pd->local_pwr_cfg, val);
+}
+
 static int exynos_pd_power(struct generic_pm_domain *domain, bool power_on)
 {
 	struct exynos_pm_domain *pd;
-	void __iomem *base;
 	u32 timeout, pwr;
 	char *op;
 
 	pd = container_of(domain, struct exynos_pm_domain, pd);
-	base = pd->base;
 
 	pwr = power_on ? pd->local_pwr_cfg : 0;
-	writel_relaxed(pwr, base);
+	exynos_pd_write_conf(pd, pwr);
 
 	/* Wait max 1ms */
 	timeout = 10;
 
-	while ((readl_relaxed(base + 0x4) & pd->local_pwr_cfg) != pwr) {
+	while (exynos_pd_read_status(pd) != pwr) {
 		if (!timeout) {
 			op = (power_on) ? "enable" : "disable";
 			pr_err("Power domain %s %s failed\n", domain->name, op);
@@ -135,8 +168,7 @@ static int exynos_pd_probe(struct platform_device *pdev)
 	pd->pd.power_off = exynos_pd_power_off;
 	pd->pd.power_on = exynos_pd_power_on;
 
-	on = readl_relaxed(pd->base + 0x4) & pd->local_pwr_cfg;
-
+	on = exynos_pd_read_status(pd);
 	pm_genpd_init(&pd->pd, NULL, !on);
 	ret = of_genpd_add_provider_simple(np, &pd->pd);
 
