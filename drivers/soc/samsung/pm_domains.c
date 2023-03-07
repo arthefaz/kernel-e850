@@ -27,6 +27,7 @@ struct exynos_pm_domain_config {
  * Exynos specific wrapper around the generic power domain
  */
 struct exynos_pm_domain {
+	struct device *dev;
 	void __iomem *base;
 	struct generic_pm_domain pd;
 	u32 local_pwr_cfg;
@@ -91,42 +92,48 @@ static const struct of_device_id exynos_pm_domain_of_match[] = {
 	{ },
 };
 
-static const char *exynos_get_domain_name(struct device_node *node)
+static int exynos_pd_parse_dt(struct exynos_pm_domain *pd)
 {
+	const struct exynos_pm_domain_config *variant;
+	struct device *dev = pd->dev;
+	struct device_node *np = dev->of_node;
 	const char *name;
 
-	if (of_property_read_string(node, "label", &name) < 0)
-		name = kbasename(node->full_name);
-	return kstrdup_const(name, GFP_KERNEL);
+	variant = of_device_get_match_data(dev);
+	pd->local_pwr_cfg = variant->local_pwr_cfg;
+
+	if (of_property_read_string(np, "label", &name) < 0)
+		name = kbasename(np->full_name);
+	pd->pd.name = devm_kstrdup_const(dev, name, GFP_KERNEL);
+	if (!pd->pd.name)
+		return -ENOMEM;
+
+	pd->base = of_iomap(np, 0);
+	if (!pd->base)
+		return -ENODEV;
+
+	return 0;
 }
 
 static int exynos_pd_probe(struct platform_device *pdev)
 {
-	const struct exynos_pm_domain_config *pm_domain_cfg;
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
 	struct of_phandle_args child, parent;
 	struct exynos_pm_domain *pd;
 	int on, ret;
 
-	pm_domain_cfg = of_device_get_match_data(dev);
 	pd = devm_kzalloc(dev, sizeof(*pd), GFP_KERNEL);
 	if (!pd)
 		return -ENOMEM;
 
-	pd->pd.name = exynos_get_domain_name(np);
-	if (!pd->pd.name)
-		return -ENOMEM;
-
-	pd->base = of_iomap(np, 0);
-	if (!pd->base) {
-		kfree_const(pd->pd.name);
-		return -ENODEV;
-	}
+	pd->dev = dev;
+	ret = exynos_pd_parse_dt(pd);
+	if (ret)
+		return ret;
 
 	pd->pd.power_off = exynos_pd_power_off;
 	pd->pd.power_on = exynos_pd_power_on;
-	pd->local_pwr_cfg = pm_domain_cfg->local_pwr_cfg;
 
 	on = readl_relaxed(pd->base + 0x4) & pd->local_pwr_cfg;
 
