@@ -17,6 +17,8 @@
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
 
 /* Register offsets inside Power Domain area in PMU */
 #define EXYNOS_PD_CONF		0x0
@@ -25,6 +27,10 @@
 struct exynos_pm_domain_config {
 	/* Value for LOCAL_PWR_CFG and STATUS fields for each domain */
 	u32 local_pwr_cfg;
+
+	/* Power domain offsets in PMU area, for each power domain index */
+	const unsigned int *pd_offsets;
+	size_t pd_offsets_num;
 };
 
 /*
@@ -35,22 +41,32 @@ struct exynos_pm_domain {
 	void __iomem *base;
 	struct generic_pm_domain pd;
 	u32 local_pwr_cfg;
+
+	unsigned int offset;
+	struct regmap *pmureg;
 };
 
 static void exynos_pd_write(struct exynos_pm_domain *pd, unsigned int reg,
 			    unsigned int mask, unsigned int val)
 {
-	u32 v;
+	if (pd->pmureg) {
+		regmap_update_bits(pd->pmureg, pd->offset + reg, mask, val);
+	} else {
+		u32 v;
 
-	v = readl_relaxed(pd->base + reg);
-	v = (v & ~mask) | val;
-	writel_relaxed(v, pd->base + reg);
+		v = readl_relaxed(pd->base + reg);
+		v = (v & ~mask) | val;
+		writel_relaxed(v, pd->base + reg);
+	}
 }
 
 static void exynos_pd_read(struct exynos_pm_domain *pd, unsigned int reg,
 			   unsigned int *val)
 {
-	*val = readl_relaxed(pd->base + reg);
+	if (pd->pmureg)
+		regmap_read(pd->pmureg, pd->offset + reg, val);
+	else
+		*val = readl_relaxed(pd->base + reg);
 }
 
 static unsigned int exynos_pd_read_status(struct exynos_pm_domain *pd)
@@ -131,6 +147,8 @@ static int exynos_pd_parse_dt(struct exynos_pm_domain *pd)
 	struct device *dev = pd->dev;
 	struct device_node *np = dev->of_node;
 	const char *name;
+	u32 index;
+	int ret;
 
 	variant = of_device_get_match_data(dev);
 	pd->local_pwr_cfg = variant->local_pwr_cfg;
@@ -141,9 +159,22 @@ static int exynos_pd_parse_dt(struct exynos_pm_domain *pd)
 	if (!pd->pd.name)
 		return -ENOMEM;
 
-	pd->base = of_iomap(np, 0);
-	if (!pd->base)
-		return -ENODEV;
+	ret = of_property_read_u32(np, "samsung,pd-index", &index);
+	if (!ret) {
+		if (index >= variant->pd_offsets_num)
+			return -EINVAL;
+		if (!dev->parent)
+			return -ENODEV;
+
+		pd->offset = variant->pd_offsets[index];
+		pd->pmureg = syscon_node_to_regmap(dev->parent->of_node);
+		if (IS_ERR(pd->pmureg))
+			return PTR_ERR(pd->pmureg);
+	} else {
+		pd->base = of_iomap(np, 0);
+		if (!pd->base)
+			return -ENODEV;
+	}
 
 	return 0;
 }
