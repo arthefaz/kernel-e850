@@ -1838,6 +1838,7 @@ static const struct samsung_cmu_info core_cmu_info __initconst = {
 #define CLK_CON_GAT_GOUT_DPU_PPMU_PCLK		0x202c
 #define CLK_CON_GAT_GOUT_DPU_SMMU_CLK		0x2038
 #define CLK_CON_GAT_GOUT_DPU_SYSREG_PCLK	0x203c
+#define QCH_CON_PPMU_DPU_QCH			0x3030
 
 static const unsigned long dpu_clk_regs[] __initconst = {
 	PLL_CON0_MUX_CLKCMU_DPU_USER,
@@ -1850,10 +1851,12 @@ static const unsigned long dpu_clk_regs[] __initconst = {
 	CLK_CON_GAT_GOUT_DPU_PPMU_PCLK,
 	CLK_CON_GAT_GOUT_DPU_SMMU_CLK,
 	CLK_CON_GAT_GOUT_DPU_SYSREG_PCLK,
+	QCH_CON_PPMU_DPU_QCH,
 };
 
 static const struct samsung_clk_reg_dump dpu_suspend_regs[] = {
 	{ PLL_CON0_MUX_CLKCMU_DPU_USER, 0 },
+	{ QCH_CON_PPMU_DPU_QCH, 0x003f0002 },
 };
 
 /* List of parent clocks for Muxes in CMU_DPU */
