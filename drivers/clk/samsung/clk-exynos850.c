@@ -186,6 +186,12 @@ static const unsigned long top_clk_regs[] __initconst = {
 	CLK_CON_GAT_GATE_CLKCMU_PERI_UART,
 };
 
+static const struct samsung_clk_reg_dump top_suspend_regs[] = {
+	{ PLL_CON0_PLL_MMC, 0 },
+	{ PLL_CON0_PLL_SHARED0, 0 },
+	{ PLL_CON0_PLL_SHARED1, 0 },
+};
+
 /*
  * Do not provide PLL tables to core PLLs, as MANUAL_PLL_CTRL bit is not set
  * for those PLLs by default, so set_rate operation would fail.
@@ -489,6 +495,8 @@ static const struct samsung_cmu_info top_cmu_info __initconst = {
 	.nr_clk_ids		= TOP_NR_CLK,
 	.clk_regs		= top_clk_regs,
 	.nr_clk_regs		= ARRAY_SIZE(top_clk_regs),
+	.suspend_regs		= top_suspend_regs,
+	.nr_suspend_regs	= ARRAY_SIZE(top_suspend_regs),
 };
 
 static void __init exynos850_cmu_top_init(struct device_node *np)
@@ -545,6 +553,13 @@ static const unsigned long apm_clk_regs[] __initconst = {
 	CLK_CON_GAT_GOUT_APM_I3C_APM_PMIC_I_SCLK,
 	CLK_CON_GAT_GOUT_APM_SPEEDY_APM_PCLK,
 	CLK_CON_GAT_GOUT_APM_SYSREG_APM_PCLK,
+};
+
+static const struct samsung_clk_reg_dump apm_suspend_regs[] = {
+	{ PLL_CON0_MUX_CLKCMU_APM_BUS_USER, 0 },
+	{ PLL_CON0_MUX_CLK_RCO_APM_I3C_USER, 0 },
+	{ PLL_CON0_MUX_CLK_RCO_APM_USER, 0 },
+	{ PLL_CON0_MUX_DLL_USER, 0 },
 };
 
 /* List of parent clocks for Muxes in CMU_APM */
@@ -629,6 +644,8 @@ static const struct samsung_cmu_info apm_cmu_info __initconst = {
 	.nr_clk_ids		= APM_NR_CLK,
 	.clk_regs		= apm_clk_regs,
 	.nr_clk_regs		= ARRAY_SIZE(apm_clk_regs),
+	.suspend_regs		= apm_suspend_regs,
+	.nr_suspend_regs	= ARRAY_SIZE(apm_suspend_regs),
 	.clk_name		= "dout_clkcmu_apm_bus",
 };
 
@@ -744,6 +761,12 @@ static const unsigned long aud_clk_regs[] __initconst = {
 	CLK_CON_GAT_GOUT_AUD_SYSMMU_CLK_S1,
 	CLK_CON_GAT_GOUT_AUD_SYSREG_PCLK,
 	CLK_CON_GAT_GOUT_AUD_WDT_PCLK,
+};
+
+static const struct samsung_clk_reg_dump aud_suspend_regs[] = {
+	{ PLL_CON0_PLL_AUD, 0 },
+	{ PLL_CON0_MUX_CLKCMU_AUD_CPU_USER, 0 },
+	{ PLL_CON0_MUX_TICK_USB_USER, 0 },
 };
 
 /* List of parent clocks for Muxes in CMU_AUD */
@@ -912,6 +935,8 @@ static const struct samsung_cmu_info aud_cmu_info __initconst = {
 	.nr_clk_ids		= AUD_NR_CLK,
 	.clk_regs		= aud_clk_regs,
 	.nr_clk_regs		= ARRAY_SIZE(aud_clk_regs),
+	.suspend_regs		= aud_suspend_regs,
+	.nr_suspend_regs	= ARRAY_SIZE(aud_suspend_regs),
 	.clk_name		= "dout_aud",
 };
 
@@ -948,6 +973,12 @@ static const unsigned long cmgp_clk_regs[] __initconst = {
 	CLK_CON_GAT_GOUT_CMGP_USI_CMGP0_PCLK,
 	CLK_CON_GAT_GOUT_CMGP_USI_CMGP1_IPCLK,
 	CLK_CON_GAT_GOUT_CMGP_USI_CMGP1_PCLK,
+};
+
+static const struct samsung_clk_reg_dump cmgp_suspend_regs[] = {
+	{ CLK_CON_MUX_CLK_CMGP_ADC, 0 },
+	{ CLK_CON_MUX_MUX_CLK_CMGP_USI_CMGP0, 0 },
+	{ CLK_CON_MUX_MUX_CLK_CMGP_USI_CMGP1, 0 },
 };
 
 /* List of parent clocks for Muxes in CMU_CMGP */
@@ -1015,6 +1046,8 @@ static const struct samsung_cmu_info cmgp_cmu_info __initconst = {
 	.nr_clk_ids		= CMGP_NR_CLK,
 	.clk_regs		= cmgp_clk_regs,
 	.nr_clk_regs		= ARRAY_SIZE(cmgp_clk_regs),
+	.suspend_regs		= cmgp_suspend_regs,
+	.nr_suspend_regs	= ARRAY_SIZE(cmgp_suspend_regs),
 	.clk_name		= "gout_clkcmu_cmgp_bus",
 };
 
@@ -1049,6 +1082,11 @@ static const unsigned long g3d_clk_regs[] __initconst = {
 	CLK_CON_GAT_GOUT_G3D_BUSD_CLK,
 	CLK_CON_GAT_GOUT_G3D_BUSP_CLK,
 	CLK_CON_GAT_GOUT_G3D_SYSREG_PCLK,
+};
+
+static const struct samsung_clk_reg_dump g3d_suspend_regs[] = {
+	{ PLL_CON0_PLL_G3D, 0 },
+	{ PLL_CON0_MUX_CLKCMU_G3D_SWITCH_USER, 0 },
 };
 
 /* List of parent clocks for Muxes in CMU_G3D */
@@ -1111,6 +1149,8 @@ static const struct samsung_cmu_info g3d_cmu_info __initconst = {
 	.nr_clk_ids		= G3D_NR_CLK,
 	.clk_regs		= g3d_clk_regs,
 	.nr_clk_regs		= ARRAY_SIZE(g3d_clk_regs),
+	.suspend_regs		= g3d_suspend_regs,
+	.nr_suspend_regs	= ARRAY_SIZE(g3d_suspend_regs),
 	.clk_name		= "dout_g3d_switch",
 };
 
@@ -1151,6 +1191,13 @@ static const unsigned long hsi_clk_regs[] __initconst = {
 	CLK_CON_GAT_GOUT_HSI_SYSREG_HSI_PCLK,
 	CLK_CON_GAT_GOUT_HSI_USB20DRD_TOP_ACLK_PHYCTRL_20,
 	CLK_CON_GAT_GOUT_HSI_USB20DRD_TOP_BUS_CLK_EARLY,
+};
+
+static const struct samsung_clk_reg_dump hsi_suspend_regs[] = {
+	{ PLL_CON0_MUX_CLKCMU_HSI_BUS_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_HSI_MMC_CARD_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_HSI_USB20DRD_USER, 0 },
+	{ CLK_CON_MUX_MUX_CLK_HSI_RTC, 0 },
 };
 
 /* List of parent clocks for Muxes in CMU_HSI */
@@ -1213,6 +1260,8 @@ static const struct samsung_cmu_info hsi_cmu_info __initconst = {
 	.nr_clk_ids		= HSI_NR_CLK,
 	.clk_regs		= hsi_clk_regs,
 	.nr_clk_regs		= ARRAY_SIZE(hsi_clk_regs),
+	.suspend_regs		= hsi_suspend_regs,
+	.nr_suspend_regs	= ARRAY_SIZE(hsi_suspend_regs),
 	.clk_name		= "dout_hsi_bus",
 };
 
@@ -1266,6 +1315,13 @@ static const unsigned long is_clk_regs[] __initconst = {
 	CLK_CON_GAT_GOUT_IS_SYSMMU_IS0_CLK_S1,
 	CLK_CON_GAT_GOUT_IS_SYSMMU_IS1_CLK_S1,
 	CLK_CON_GAT_GOUT_IS_SYSREG_PCLK,
+};
+
+static const struct samsung_clk_reg_dump is_suspend_regs[] = {
+	{ PLL_CON0_MUX_CLKCMU_IS_BUS_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_IS_GDC_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_IS_ITP_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_IS_VRA_USER, 0 },
 };
 
 /* List of parent clocks for Muxes in CMU_IS */
@@ -1345,6 +1401,8 @@ static const struct samsung_cmu_info is_cmu_info __initconst = {
 	.nr_clk_ids		= IS_NR_CLK,
 	.clk_regs		= is_clk_regs,
 	.nr_clk_regs		= ARRAY_SIZE(is_clk_regs),
+	.suspend_regs		= is_suspend_regs,
+	.nr_suspend_regs	= ARRAY_SIZE(is_suspend_regs),
 	.clk_name		= "dout_is_bus",
 };
 
@@ -1382,6 +1440,13 @@ static const unsigned long mfcmscl_clk_regs[] __initconst = {
 	CLK_CON_GAT_GOUT_MFCMSCL_PPMU_PCLK,
 	CLK_CON_GAT_GOUT_MFCMSCL_SYSMMU_CLK_S1,
 	CLK_CON_GAT_GOUT_MFCMSCL_SYSREG_PCLK,
+};
+
+static const struct samsung_clk_reg_dump mfcmscl_suspend_regs[] = {
+	{ PLL_CON0_MUX_CLKCMU_MFCMSCL_JPEG_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_MFCMSCL_M2M_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_MFCMSCL_MCSC_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_MFCMSCL_MFC_USER, 0 },
 };
 
 /* List of parent clocks for Muxes in CMU_MFCMSCL */
@@ -1454,6 +1519,8 @@ static const struct samsung_cmu_info mfcmscl_cmu_info __initconst = {
 	.nr_clk_ids		= MFCMSCL_NR_CLK,
 	.clk_regs		= mfcmscl_clk_regs,
 	.nr_clk_regs		= ARRAY_SIZE(mfcmscl_clk_regs),
+	.suspend_regs		= mfcmscl_suspend_regs,
+	.nr_suspend_regs	= ARRAY_SIZE(mfcmscl_suspend_regs),
 	.clk_name		= "dout_mfcmscl_mfc",
 };
 
@@ -1530,6 +1597,13 @@ static const unsigned long peri_clk_regs[] __initconst = {
 	CLK_CON_GAT_GOUT_PERI_UART_PCLK,
 	CLK_CON_GAT_GOUT_PERI_WDT_0_PCLK,
 	CLK_CON_GAT_GOUT_PERI_WDT_1_PCLK,
+};
+
+static const struct samsung_clk_reg_dump peri_suspend_regs[] = {
+	{ PLL_CON0_MUX_CLKCMU_PERI_BUS_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_PERI_HSI2C_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_PERI_SPI_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_PERI_UART_USER, 0 },
 };
 
 /* List of parent clocks for Muxes in CMU_PERI */
@@ -1629,6 +1703,8 @@ static const struct samsung_cmu_info peri_cmu_info __initconst = {
 	.nr_clk_ids		= PERI_NR_CLK,
 	.clk_regs		= peri_clk_regs,
 	.nr_clk_regs		= ARRAY_SIZE(peri_clk_regs),
+	.suspend_regs		= peri_suspend_regs,
+	.nr_suspend_regs	= ARRAY_SIZE(peri_suspend_regs),
 	.clk_name		= "dout_peri_bus",
 };
 
@@ -1674,6 +1750,14 @@ static const unsigned long core_clk_regs[] __initconst = {
 	CLK_CON_GAT_GOUT_CORE_SSS_I_ACLK,
 	CLK_CON_GAT_GOUT_CORE_SSS_I_PCLK,
 	CLK_CON_GAT_GOUT_CORE_SYSREG_CORE_PCLK,
+};
+
+static const struct samsung_clk_reg_dump core_suspend_regs[] = {
+	{ PLL_CON0_MUX_CLKCMU_CORE_BUS_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_CORE_CCI_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_CORE_MMC_EMBD_USER, 0 },
+	{ PLL_CON0_MUX_CLKCMU_CORE_SSS_USER, 0 },
+	{ CLK_CON_MUX_MUX_CLK_CORE_GIC, 0x1 },
 };
 
 /* List of parent clocks for Muxes in CMU_CORE */
@@ -1736,6 +1820,8 @@ static const struct samsung_cmu_info core_cmu_info __initconst = {
 	.nr_clk_ids		= CORE_NR_CLK,
 	.clk_regs		= core_clk_regs,
 	.nr_clk_regs		= ARRAY_SIZE(core_clk_regs),
+	.suspend_regs		= core_suspend_regs,
+	.nr_suspend_regs	= ARRAY_SIZE(core_suspend_regs),
 	.clk_name		= "dout_core_bus",
 };
 
@@ -1764,6 +1850,10 @@ static const unsigned long dpu_clk_regs[] __initconst = {
 	CLK_CON_GAT_GOUT_DPU_PPMU_PCLK,
 	CLK_CON_GAT_GOUT_DPU_SMMU_CLK,
 	CLK_CON_GAT_GOUT_DPU_SYSREG_PCLK,
+};
+
+static const struct samsung_clk_reg_dump dpu_suspend_regs[] = {
+	{ PLL_CON0_MUX_CLKCMU_DPU_USER, 0 },
 };
 
 /* List of parent clocks for Muxes in CMU_DPU */
@@ -1810,6 +1900,8 @@ static const struct samsung_cmu_info dpu_cmu_info __initconst = {
 	.nr_clk_ids		= DPU_NR_CLK,
 	.clk_regs		= dpu_clk_regs,
 	.nr_clk_regs		= ARRAY_SIZE(dpu_clk_regs),
+	.suspend_regs		= dpu_suspend_regs,
+	.nr_suspend_regs	= ARRAY_SIZE(dpu_suspend_regs),
 	.clk_name		= "dout_dpu",
 };
 
