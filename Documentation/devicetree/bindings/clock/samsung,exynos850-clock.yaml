@@ -60,6 +60,16 @@ properties:
   reg:
     maxItems: 1
 
+  samsung,tzpc:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description:
+      The register address in corresponding Trust Zone Protection Control block
+      for setting the CMU registers access to non-secure. If provided, it'll be
+      used for issuing SMC calls to EL3 monitor during CMU's PM suspend and
+      resume operations, ensuring CMU registers are unprotected after waking up.
+
+      This property is optional.
+
 allOf:
   - if:
       properties:
