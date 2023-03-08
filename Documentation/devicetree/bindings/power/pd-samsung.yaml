@@ -25,6 +25,10 @@ properties:
 
   reg:
     maxItems: 1
+    deprecated: true
+    description:
+      Physical base address and length of Power Domains area (if not a child of
+      PMU).
 
   clocks:
     deprecated: true
@@ -45,10 +49,15 @@ properties:
   power-domains:
     maxItems: 1
 
+  samsung,pd-index:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Power domain index (if a child of PMU). Valid values are defined in::
+        "include/dt-bindings/power/samsung,exynos850-power.h" - for Exynos850
+
 required:
   - compatible
   - "#power-domain-cells"
-  - reg
 
 unevaluatedProperties: false
 
