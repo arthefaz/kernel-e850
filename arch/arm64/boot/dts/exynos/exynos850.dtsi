@@ -210,12 +210,12 @@
 				value = <0x2>; /* reset value */
 			};
 
-			pd_hsi: power-domain@EXYNOS850_PD_HSI {
-				compatible = "samsung,exynos850-pd";
-				samsung,pd-index = <EXYNOS850_PD_HSI>;
-				#power-domain-cells = <0>;
-				label = "HSI";
-			};
+//			pd_hsi: power-domain@EXYNOS850_PD_HSI {
+//				compatible = "samsung,exynos850-pd";
+//				samsung,pd-index = <EXYNOS850_PD_HSI>;
+//				#power-domain-cells = <0>;
+//				label = "HSI";
+//			};
 
 			pd_g3d: power-domain@EXYNOS850_PD_G3D {
 				compatible = "samsung,exynos850-pd";
@@ -378,7 +378,7 @@
 				 <&cmu_top CLK_DOUT_HSI_USB20DRD>;
 			clock-names = "oscclk", "dout_hsi_bus",
 				      "dout_hsi_mmc_card", "dout_hsi_usb20drd";
-			power-domains = <&pd_hsi>;
+//			power-domains = <&pd_hsi>;
 			samsung,tzpc = <0x13410204>;
 		};
 
