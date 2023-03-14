@@ -6,14 +6,9 @@
 
 #if !defined(_TRACE_HOOK_CPUFREQ_H) || defined(TRACE_HEADER_MULTI_READ)
 #define _TRACE_HOOK_CPUFREQ_H
-#include <trace/hooks/vendor_hooks.h>
 
-#ifdef __GENKSYMS__
 #include <linux/cpufreq.h>
-#endif
-
-struct cpufreq_policy;
-struct task_struct;
+#include <trace/hooks/vendor_hooks.h>
 
 DECLARE_HOOK(android_vh_show_max_freq,
 	TP_PROTO(struct cpufreq_policy *policy, unsigned int *max_freq),
