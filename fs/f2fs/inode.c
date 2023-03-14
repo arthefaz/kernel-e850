@@ -700,8 +700,7 @@ retry:
 			cond_resched();
 			goto retry;
 		} else if (err != -ENOENT) {
-			f2fs_stop_checkpoint(sbi, false,
-					STOP_CP_REASON_UPDATE_INODE);
+			f2fs_stop_checkpoint(sbi, false);
 		}
 		return;
 	}
