@@ -22,6 +22,7 @@
 
 struct hdmi_codec_channel_map_table {
 	unsigned char map;	/* ALSA API channel map position */
+	unsigned long spk_mask;		/* speaker position bit mask */
 };
 
 /*
