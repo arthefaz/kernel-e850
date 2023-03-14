@@ -1252,7 +1252,6 @@ bad:
 static struct target_type verity_target = {
 	.name		= "verity",
 	.version	= {1, 7, 0},
-	.features	= DM_TARGET_IMMUTABLE,
 	.module		= THIS_MODULE,
 	.ctr		= verity_ctr,
 	.dtr		= verity_dtr,
