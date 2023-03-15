@@ -539,28 +539,17 @@ static int exynos4_mct_dying_cpu(unsigned int cpu)
 	return 0;
 }
 
-<<<<<<< HEAD
 static struct notifier_block nb_hardlockup_block = {
 	.notifier_call = exynos4_mct_hardlockup_handler,
 };
 
 static int exynos4_timer_resources(struct device_node *np, void __iomem *base)
-=======
-static int __init exynos4_timer_resources(struct device_node *np)
->>>>>>> android13-5.10
 {
+	int err, cpu;
 	struct clk *mct_clk, *tick_clk;
 
-<<<<<<< HEAD
 	tick_clk = np ? of_clk_get_by_name(np, "fin_pll") :
 				clk_get(NULL, "fin_pll");
-=======
-	reg_base = of_iomap(np, 0);
-	if (!reg_base)
-		panic("%s: unable to ioremap mct address space\n", __func__);
-
-	tick_clk = of_clk_get_by_name(np, "fin_pll");
->>>>>>> android13-5.10
 	if (IS_ERR(tick_clk))
 		panic("%s: unable to determine tick clock rate\n", __func__);
 	clk_rate = clk_get_rate(tick_clk);
@@ -570,32 +559,9 @@ static int __init exynos4_timer_resources(struct device_node *np)
 		panic("%s: unable to retrieve mct clock instance\n", __func__);
 	clk_prepare_enable(mct_clk);
 
-	return 0;
-}
-
-static int __init exynos4_timer_interrupts(struct device_node *np,
-					   unsigned int int_type)
-{
-	int nr_irqs, i, err, cpu;
-
-	mct_int_type = int_type;
-
-	/* This driver uses only one global timer interrupt */
-	mct_irqs[MCT_G0_IRQ] = irq_of_parse_and_map(np, MCT_G0_IRQ);
-
-	/*
-	 * Find out the number of local irqs specified. The local
-	 * timer irqs are specified after the four global timer
-	 * irqs are specified.
-	 */
-	nr_irqs = of_irq_count(np);
-	if (nr_irqs > ARRAY_SIZE(mct_irqs)) {
-		pr_err("exynos-mct: too many (%d) interrupts configured in DT\n",
-			nr_irqs);
-		nr_irqs = ARRAY_SIZE(mct_irqs);
-	}
-	for (i = MCT_L0_IRQ; i < nr_irqs; i++)
-		mct_irqs[i] = irq_of_parse_and_map(np, i);
+	reg_base = base;
+	if (!reg_base)
+		panic("%s: unable to ioremap mct address space\n", __func__);
 
 	if (mct_int_type == MCT_INT_PPI) {
 
@@ -606,14 +572,11 @@ static int __init exynos4_timer_interrupts(struct device_node *np,
 		     mct_irqs[MCT_L0_IRQ], err);
 	} else {
 		for_each_possible_cpu(cpu) {
-			int mct_irq;
+			int mct_irq = mct_irqs[MCT_L0_IRQ + cpu];
 			struct mct_clock_event_device *pcpu_mevt =
 				per_cpu_ptr(&percpu_mct_tick, cpu);
 
 			pcpu_mevt->evt.irq = -1;
-			if (MCT_L0_IRQ + cpu >= ARRAY_SIZE(mct_irqs))
-				break;
-			mct_irq = mct_irqs[MCT_L0_IRQ + cpu];
 
 			irq_set_status_flags(mct_irq, IRQ_NOAUTOEN);
 			if (request_irq(mct_irq,
@@ -658,7 +621,6 @@ out_irq:
 
 static int mct_init_dt(struct device_node *np, unsigned int int_type)
 {
-<<<<<<< HEAD
 	u32 nr_irqs = 0, i;
 	struct of_phandle_args irq;
 	int ret;
@@ -680,15 +642,8 @@ static int mct_init_dt(struct device_node *np, unsigned int int_type)
 
 	for (i = MCT_L0_IRQ; i < nr_irqs; i++)
 		mct_irqs[i] = irq_of_parse_and_map(np, i);
-=======
-	int ret;
 
-	ret = exynos4_timer_resources(np);
-	if (ret)
-		return ret;
->>>>>>> android13-5.10
-
-	ret = exynos4_timer_interrupts(np, int_type);
+	ret = exynos4_timer_resources(np, of_iomap(np, 0));
 	if (ret)
 		return ret;
 
