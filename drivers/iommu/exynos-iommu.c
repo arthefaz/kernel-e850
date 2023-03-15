@@ -16,6 +16,7 @@
 #include <linux/interrupt.h>
 #include <linux/kmemleak.h>
 #include <linux/list.h>
+#include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
@@ -874,8 +875,9 @@ static const struct of_device_id sysmmu_of_match[] = {
 	{ .compatible	= "samsung,exynos-sysmmu", },
 	{ },
 };
+MODULE_DEVICE_TABLE(of, sysmmu_of_match);
 
-static struct platform_driver exynos_sysmmu_driver __refdata = {
+static struct platform_driver exynos_sysmmu_driver = {
 	.probe	= exynos_sysmmu_probe,
 	.driver	= {
 		.name		= "exynos-sysmmu",
@@ -1485,6 +1487,7 @@ static const struct iommu_ops exynos_iommu_ops = {
 	.release_device = exynos_iommu_release_device,
 	.pgsize_bitmap = SECT_SIZE | LPAGE_SIZE | SPAGE_SIZE,
 	.of_xlate = exynos_iommu_of_xlate,
+	.owner = THIS_MODULE,
 	.default_domain_ops = &(const struct iommu_domain_ops) {
 		.attach_dev	= exynos_iommu_attach_device,
 		.map		= exynos_iommu_map,
@@ -1534,3 +1537,7 @@ err_zero_lv2:
 	return ret;
 }
 core_initcall(exynos_iommu_init);
+
+MODULE_DESCRIPTION("IOMMU driver for Exynos SoCs");
+MODULE_ALIAS("platform:exynos-sysmmu");
+MODULE_LICENSE("GPL");
