@@ -28,8 +28,6 @@ enum dw_mci_exynos_type {
 	DW_MCI_TYPE_EXYNOS5420_SMU,
 	DW_MCI_TYPE_EXYNOS7,
 	DW_MCI_TYPE_EXYNOS7_SMU,
-	DW_MCI_TYPE_EXYNOS78XX,
-	DW_MCI_TYPE_EXYNOS78XX_SMU,
 	DW_MCI_TYPE_ARTPEC8,
 };
 
@@ -73,12 +71,6 @@ static struct dw_mci_exynos_compatible {
 		.compatible	= "samsung,exynos7-dw-mshc-smu",
 		.ctrl_type	= DW_MCI_TYPE_EXYNOS7_SMU,
 	}, {
-		.compatible	= "samsung,exynos7885-dw-mshc",
-		.ctrl_type	= DW_MCI_TYPE_EXYNOS78XX,
-	}, {
-		.compatible	= "samsung,exynos7885-dw-mshc-smu",
-		.ctrl_type	= DW_MCI_TYPE_EXYNOS78XX_SMU,
-	}, {
 		.compatible	= "axis,artpec8-dw-mshc",
 		.ctrl_type	= DW_MCI_TYPE_ARTPEC8,
 	},
@@ -94,8 +86,6 @@ static inline u8 dw_mci_exynos_get_ciu_div(struct dw_mci *host)
 		return EXYNOS4210_FIXED_CIU_CLK_DIV;
 	else if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS7 ||
 			priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU ||
-			priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX ||
-			priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU ||
 			priv->ctrl_type == DW_MCI_TYPE_ARTPEC8)
 		return SDMMC_CLKSEL_GET_DIV(mci_readl(host, CLKSEL64)) + 1;
 	else
@@ -111,8 +101,7 @@ static void dw_mci_exynos_config_smu(struct dw_mci *host)
 	 * set for non-ecryption mode at this time.
 	 */
 	if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS5420_SMU ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU) {
+		priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU) {
 		mci_writel(host, MPSBEGIN0, 0);
 		mci_writel(host, MPSEND0, SDMMC_ENDING_SEC_NR_MAX);
 		mci_writel(host, MPSCTRL0, SDMMC_MPSCTRL_SECURE_WRITE_BIT |
@@ -138,12 +127,6 @@ static int dw_mci_exynos_priv_init(struct dw_mci *host)
 				DQS_CTRL_GET_RD_DELAY(priv->saved_strobe_ctrl);
 	}
 
-	if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU) {
-		/* Quirk needed for certain Exynos SoCs */
-		host->quirks |= DW_MMC_QUIRK_FIFO64_32;
-	}
-
 	if (priv->ctrl_type == DW_MCI_TYPE_ARTPEC8) {
 		/* Quirk needed for the ARTPEC-8 SoC */
 		host->quirks |= DW_MMC_QUIRK_EXTENDED_TMOUT;
@@ -161,8 +144,6 @@ static void dw_mci_exynos_set_clksel_timing(struct dw_mci *host, u32 timing)
 
 	if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS7 ||
 		priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU ||
 		priv->ctrl_type == DW_MCI_TYPE_ARTPEC8)
 		clksel = mci_readl(host, CLKSEL64);
 	else
@@ -172,8 +153,6 @@ static void dw_mci_exynos_set_clksel_timing(struct dw_mci *host, u32 timing)
 
 	if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS7 ||
 		priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU ||
 		priv->ctrl_type == DW_MCI_TYPE_ARTPEC8)
 		mci_writel(host, CLKSEL64, clksel);
 	else
@@ -244,8 +223,6 @@ static int dw_mci_exynos_resume_noirq(struct device *dev)
 
 	if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS7 ||
 		priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU ||
 		priv->ctrl_type == DW_MCI_TYPE_ARTPEC8)
 		clksel = mci_readl(host, CLKSEL64);
 	else
@@ -254,8 +231,6 @@ static int dw_mci_exynos_resume_noirq(struct device *dev)
 	if (clksel & SDMMC_CLKSEL_WAKEUP_INT) {
 		if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS7 ||
 			priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU ||
-			priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX ||
-			priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU ||
 			priv->ctrl_type == DW_MCI_TYPE_ARTPEC8)
 			mci_writel(host, CLKSEL64, clksel);
 		else
@@ -435,8 +410,6 @@ static inline u8 dw_mci_exynos_get_clksmpl(struct dw_mci *host)
 
 	if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS7 ||
 		priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU ||
 		priv->ctrl_type == DW_MCI_TYPE_ARTPEC8)
 		return SDMMC_CLKSEL_CCLK_SAMPLE(mci_readl(host, CLKSEL64));
 	else
@@ -450,8 +423,6 @@ static inline void dw_mci_exynos_set_clksmpl(struct dw_mci *host, u8 sample)
 
 	if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS7 ||
 		priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU ||
 		priv->ctrl_type == DW_MCI_TYPE_ARTPEC8)
 		clksel = mci_readl(host, CLKSEL64);
 	else
@@ -459,8 +430,6 @@ static inline void dw_mci_exynos_set_clksmpl(struct dw_mci *host, u8 sample)
 	clksel = SDMMC_CLKSEL_UP_SAMPLE(clksel, sample);
 	if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS7 ||
 		priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU ||
 		priv->ctrl_type == DW_MCI_TYPE_ARTPEC8)
 		mci_writel(host, CLKSEL64, clksel);
 	else
@@ -475,8 +444,6 @@ static inline u8 dw_mci_exynos_move_next_clksmpl(struct dw_mci *host)
 
 	if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS7 ||
 		priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU ||
 		priv->ctrl_type == DW_MCI_TYPE_ARTPEC8)
 		clksel = mci_readl(host, CLKSEL64);
 	else
@@ -487,8 +454,6 @@ static inline u8 dw_mci_exynos_move_next_clksmpl(struct dw_mci *host)
 
 	if (priv->ctrl_type == DW_MCI_TYPE_EXYNOS7 ||
 		priv->ctrl_type == DW_MCI_TYPE_EXYNOS7_SMU ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX ||
-		priv->ctrl_type == DW_MCI_TYPE_EXYNOS78XX_SMU ||
 		priv->ctrl_type == DW_MCI_TYPE_ARTPEC8)
 		mci_writel(host, CLKSEL64, clksel);
 	else
@@ -667,12 +632,6 @@ static const struct of_device_id dw_mci_exynos_match[] = {
 	{ .compatible = "samsung,exynos7-dw-mshc",
 			.data = &exynos_drv_data, },
 	{ .compatible = "samsung,exynos7-dw-mshc-smu",
-			.data = &exynos_drv_data, },
-	/* XXX: more SoCs probably have the same quirk,
-		the compatible should be something more generic */
-	{ .compatible = "samsung,exynos7885-dw-mshc",
-			.data = &exynos_drv_data, },
-	{ .compatible = "samsung,exynos7885-dw-mshc-smu",
 			.data = &exynos_drv_data, },
 	{ .compatible = "axis,artpec8-dw-mshc",
 			.data = &artpec_drv_data, },
