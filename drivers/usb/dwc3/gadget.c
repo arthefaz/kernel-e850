@@ -2470,10 +2470,6 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 {
 	struct dwc3		*dwc = gadget_to_dwc(g);
 	struct dwc3_vendor	*vdwc = container_of(dwc, struct dwc3_vendor, dwc);
-<<<<<<< HEAD
-	unsigned long		flags;
-=======
->>>>>>> android13-5.10
 	int			ret;
 
 	pr_info("%s +++\n", __func__);
@@ -4506,14 +4502,9 @@ int dwc3_gadget_suspend(struct dwc3 *dwc)
 
 int dwc3_gadget_resume(struct dwc3 *dwc)
 {
-	struct dwc3_vendor	*vdwc = container_of(dwc, struct dwc3_vendor, dwc);
 	int			ret;
 
-<<<<<<< HEAD
 	if (!dwc->gadget_driver || !dwc->gadget->connected)
-=======
-	if (!dwc->gadget_driver || !vdwc->softconnect)
->>>>>>> android13-5.10
 		return 0;
 
 	if (dwc->gadget->deactivated) {

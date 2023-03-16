@@ -1007,7 +1007,6 @@ err1:
 	return ret;
 }
 
-<<<<<<< HEAD
 static int dwc3_exynos_remove_child(struct device *dev, void *unused)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -1188,8 +1187,7 @@ static int dwc3_exynos_get_properties(struct dwc3_exynos *exynos)
 				dev, "exynos,usb20_pkt_retry_disable");
 	return ret;
 }
-=======
->>>>>>> android13-5.10
+
 static int dwc3_exynos_probe(struct platform_device *pdev)
 {
 	struct dwc3_exynos	*exynos;
@@ -1379,13 +1377,9 @@ static int dwc3_exynos_remove(struct platform_device *pdev)
 	pm_runtime_allow(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
-<<<<<<< HEAD
 	device_for_each_child(&pdev->dev, NULL, dwc3_exynos_remove_child);
 	platform_device_unregister(exynos->usb2_phy);
 	platform_device_unregister(exynos->usb3_phy);
-=======
-	of_platform_depopulate(&pdev->dev);
->>>>>>> android13-5.10
 
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev)) {

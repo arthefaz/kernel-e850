@@ -120,7 +120,7 @@ int xhci_halt(struct xhci_hcd *xhci)
 		xhci_info(xhci, "Resetting HCD\n");
 		/* Reset the internal HC memory state and registers. */
 		for (i = 0; i < retry; i++) {
-			ret = xhci_reset(xhci);
+			ret = xhci_reset(xhci, XHCI_RESET_SHORT_USEC);
 			if (!ret) {
 				xhci_info(xhci, "Reset complete\n");
 				ret = xhci_handshake(&xhci->op_regs->status,
@@ -209,17 +209,9 @@ int xhci_reset(struct xhci_hcd *xhci, u64 timeout_us)
 	if (xhci->quirks & XHCI_INTEL_HOST)
 		udelay(1000);
 
-<<<<<<< HEAD
-	ret = xhci_handshake(&xhci->op_regs->command,
-			CMD_RESET, 0, 100 * 1000);
-	if (ret) {
-		xhci_warn(xhci, "%s CMD_RESET is fail!!\n", __func__);
-=======
 	ret = xhci_handshake(&xhci->op_regs->command, CMD_RESET, 0, timeout_us);
 	if (ret)
->>>>>>> android13-5.10
 		return ret;
-	}
 
 	if (xhci->quirks & XHCI_ASMEDIA_MODIFY_FLOWCONTROL)
 		usb_asmedia_modifyflowcontrol(to_pci_dev(xhci_to_hcd(xhci)->self.controller));
@@ -230,12 +222,7 @@ int xhci_reset(struct xhci_hcd *xhci, u64 timeout_us)
 	 * xHCI cannot write to any doorbells or operational registers other
 	 * than status until the "Controller Not Ready" flag is cleared.
 	 */
-<<<<<<< HEAD
-	ret = xhci_handshake(&xhci->op_regs->status,
-			STS_CNR, 0, 100 * 1000);
-=======
 	ret = xhci_handshake(&xhci->op_regs->status, STS_CNR, 0, timeout_us);
->>>>>>> android13-5.10
 
 	if (ret)
 		xhci_warn(xhci, "%s STS_CNR is fail!!\n", __func__);

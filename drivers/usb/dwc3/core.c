@@ -273,7 +273,6 @@ int dwc3_core_soft_reset(struct dwc3 *dwc)
 	for (i = 0; i < 3; i++) {
 		pr_info("%s +++\n", __func__);
 
-<<<<<<< HEAD
 		usb_phy_init(dwc->usb2_phy);
 		usb_phy_init(dwc->usb3_phy);
 		pr_info("%s: init_count:%d, power_count:%d\n", __func__,
@@ -281,12 +280,6 @@ int dwc3_core_soft_reset(struct dwc3 *dwc)
 		ret = phy_init(dwc->usb2_generic_phy);
 		if (ret < 0)
 			return ret;
-=======
-	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
-	reg |= DWC3_DCTL_CSFTRST;
-	reg &= ~DWC3_DCTL_RUN_STOP;
-	dwc3_gadget_dctl_write_safe(dwc, reg);
->>>>>>> android13-5.10
 
 		ret = phy_init(dwc->usb3_generic_phy);
 		if (ret < 0) {
@@ -304,7 +297,8 @@ int dwc3_core_soft_reset(struct dwc3 *dwc)
 
 		reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 		reg |= DWC3_DCTL_CSFTRST;
-		dwc3_writel(dwc->regs, DWC3_DCTL, reg);
+		reg &= ~DWC3_DCTL_RUN_STOP;
+		dwc3_gadget_dctl_write_safe(dwc, reg);
 
 		/*
 		 * For DWC_usb31 controller 1.90a and later, the DCTL.CSFRST bit
@@ -1558,11 +1552,8 @@ static int dwc3_probe(struct platform_device *pdev)
 
 	void __iomem		*regs;
 
-<<<<<<< HEAD
 	pr_info("%s +++\n", __func__);
 
-=======
->>>>>>> android13-5.10
 	vdwc = devm_kzalloc(dev, sizeof(*vdwc), GFP_KERNEL);
 	if (!vdwc)
 		return -ENOMEM;
