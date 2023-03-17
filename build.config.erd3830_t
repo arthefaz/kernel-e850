@@ -85,8 +85,10 @@ android/abi_gki_aarch64
 android/abi_gki_aarch64_core
 android/abi_gki_aarch64_db845c
 android/abi_gki_aarch64_fips140
+android/abi_gki_aarch64_galaxy
 android/abi_gki_aarch64_generic
 android/abi_gki_aarch64_hikey960
+android/abi_gki_aarch64_rockchip
 android/abi_gki_aarch64_type_visibility
 android/abi_gki_aarch64_virtual_device
 "
