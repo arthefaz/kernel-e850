@@ -409,9 +409,6 @@ static int cqhci_enable(struct mmc_host *mmc, struct mmc_card *card)
 
 	cq_host->enabled = true;
 
-#ifdef DEBUG
-	cqhci_dumpregs(cq_host);
-#endif
 	return 0;
 }
 
@@ -727,7 +724,7 @@ static int cqhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	cq_host->slot[tag].mrq = mrq;
 	cq_host->slot[tag].flags = 0;
 
-#ifdef CONFIG_MMC_DW_DEBUG
+#if IS_ENABLED(CONFIG_MMC_DW_DEBUG)
 	if (cq_host->ops->cmdq_log) {
 		struct cmdq_log_ctx log_ctx;
 
