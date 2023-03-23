@@ -1187,6 +1187,7 @@ static int dwc3_exynos_get_properties(struct dwc3_exynos *exynos)
 				dev, "exynos,usb20_pkt_retry_disable");
 	return ret;
 }
+
 static int dwc3_exynos_probe(struct platform_device *pdev)
 {
 	struct dwc3_exynos	*exynos;
