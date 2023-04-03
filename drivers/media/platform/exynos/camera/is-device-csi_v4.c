@@ -924,7 +924,7 @@ static void csi_err_print(struct is_device_csi *csi)
 				is_sec_copy_err_cnt_to_file();
 #endif
 #endif
-				exynos_bcm_dbg_stop(CAMERA_DRIVER);
+				//exynos_bcm_dbg_stop(CAMERA_DRIVER);
 
 				is_debug_s2d(false, "[DMA%d][VC P%d, L%d] CSIS error!! %s",
 					csi->dma_subdev[vc]->dma_ch[csi->scm],
@@ -2895,7 +2895,7 @@ int is_csi_dma_probe(struct is_device_csi_dma *csi_dma, struct platform_device *
 
 	csi_dma->regs_start = res->start;
 	csi_dma->regs_end = res->end;
-	
+
 	csi_dma->base_reg =  devm_ioremap(&pdev->dev, res->start, resource_size(res));
 	if (!csi_dma->base_reg) {
 		probe_err("Failed to remap CSIS_DMA io region(%p)", csi_dma->base_reg);
@@ -2913,7 +2913,7 @@ int is_csi_dma_probe(struct is_device_csi_dma *csi_dma, struct platform_device *
 
 	csi_dma->regs_start = res->start;
 	csi_dma->regs_end = res->end;
-	
+
 	csi_dma->base_reg_stat = devm_ioremap(&pdev->dev, res->start, resource_size(res));
 	if (!csi_dma->base_reg_stat) {
 		probe_err("Failed to remap STAT_DMA io region(%p)", csi_dma->base_reg_stat);

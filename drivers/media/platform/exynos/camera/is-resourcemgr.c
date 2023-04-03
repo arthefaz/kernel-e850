@@ -464,7 +464,7 @@ static int is_resourcemgr_alloc_mem(struct is_resourcemgr *resourcemgr)
 		return -ENOMEM;
 	}
 	minfo->total_size += minfo->pb_vra->size;
-	
+
 	info("[RSC] VRA_DMA memory size: %08lx\n", VRA_DMA_SIZE);
 #endif
 #if defined (ENABLE_VRA_NETARRAY)
@@ -586,7 +586,7 @@ static int is_resourcemgr_alloc_dynamic_mem(struct is_resourcemgr *resourcemgr)
 	} else {
 		minfo->pb_taaisp = NULL;
 	}
-	
+
 	/* ME/DRC buffer */
 	if (MEDRC_DMA_SIZE > 0) {
 		minfo->pb_medrc = CALL_PTR_MEMOP(mem, alloc, mem->priv,
@@ -665,7 +665,7 @@ static int is_resourcemgr_init_dynamic_mem(struct is_resourcemgr *resourcemgr)
 		dva = CALL_BUFOP(minfo->pb_taaisp, dvaddr, minfo->pb_taaisp);
 		info("[RSC] TAAISP_DMA memory kva:0x%pK, dva: %pad\n", kva, &dva);
 	}
-	
+
 	if (minfo->pb_medrc) {
 		kva = CALL_BUFOP(minfo->pb_medrc, kvaddr, minfo->pb_medrc);
 		dva = CALL_BUFOP(minfo->pb_medrc, dvaddr, minfo->pb_medrc);
@@ -710,7 +710,7 @@ static int is_resourcemgr_deinit_dynamic_mem(struct is_resourcemgr *resourcemgr)
 	minfo->pb_tnr = NULL;
 	minfo->pb_taaisp = NULL;
 	minfo->pb_medrc = NULL;
-	
+
 	return 0;
 }
 #endif /* #ifdef ENABLE_DYNAMIC_MEM */
@@ -1810,7 +1810,7 @@ int is_resource_get(struct is_resourcemgr *resourcemgr, u32 rsc_type)
 		}
 #endif
 #if IS_ENABLED(CONFIG_EXYNOS_BCM_DBG_AUTO) || IS_ENABLED(CONFIG_EXYNOS_BCM_DBG_GNR)
-		exynos_bcm_dbg_start();
+		//exynos_bcm_dbg_start();
 #endif
 #ifdef DISABLE_BTS_CALC
 		bts_calc_disable(1);
@@ -2045,7 +2045,7 @@ int is_resource_put(struct is_resourcemgr *resourcemgr, u32 rsc_type)
 		u32 current_min, current_max;
 
 #if IS_ENABLED(CONFIG_EXYNOS_BCM_DBG_AUTO) || IS_ENABLED(CONFIG_EXYNOS_BCM_DBG_GNR)
-		exynos_bcm_dbg_stop(CAMERA_DRIVER);
+		//exynos_bcm_dbg_stop(CAMERA_DRIVER);
 #endif
 #ifdef DISABLE_BTS_CALC
 		bts_calc_disable(0);

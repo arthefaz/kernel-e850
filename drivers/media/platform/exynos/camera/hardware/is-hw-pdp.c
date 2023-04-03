@@ -368,7 +368,7 @@ static irqreturn_t is_isr_pdp_int1(int irq, void *data)
 
 		if (pdp_hw_is_occured(state, PE_PAF_OVERFLOW)) {
 #if IS_ENABLED(CONFIG_EXYNOS_BCM_DBG_AUTO)
-			exynos_bcm_dbg_stop(CAMERA_DRIVER);
+			//exynos_bcm_dbg_stop(CAMERA_DRIVER);
 #endif
 			print_all_hw_frame_count(hw_ip->hardware);
 			is_hardware_sfr_dump(hw_ip->hardware, DEV_HW_END, false);
@@ -439,7 +439,7 @@ static irqreturn_t is_isr_pdp_int2(int irq, void *data)
 
 		if (pdp_hw_is_occured(state, PE_PAF_OVERFLOW)) {
 #if IS_ENABLED(CONFIG_EXYNOS_BCM_DBG_AUTO)
-			exynos_bcm_dbg_stop(CAMERA_DRIVER);
+			//exynos_bcm_dbg_stop(CAMERA_DRIVER);
 #endif
 			print_all_hw_frame_count(hw_ip->hardware);
 			is_hardware_sfr_dump(hw_ip->hardware, DEV_HW_END, false);
