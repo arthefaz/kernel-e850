@@ -303,7 +303,7 @@ config EXYNOS_BCM_DBG_DUMP
 
 config EXYNOS_CONTENT_PATH_PROTECTION
         tristate "Exynos Content Path Protection"
-        default m
+        default n
         help
           Enable content path protection of EXYNOS.
 
