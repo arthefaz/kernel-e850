@@ -609,6 +609,10 @@ int dsim_read_data(struct dsim_device *dsim, u32 id, u32 addr, u32 cnt, u8 *buf)
 	if (!wait_for_completion_timeout(&dsim->rd_comp, MIPI_RD_TIMEOUT)) {
 		dsim_err("MIPI DSIM read Timeout!\n");
 		if (dsim_reg_get_datalane_status(dsim->id) == DSIM_DATALANE_STATUS_BTA) {
+			if (!decon) {
+				dsim_err("decon is null, can't get status\n");
+				return -EINVAL;
+			}
 			if (decon_reg_get_run_status(dsim->id)) {
 				dsim_reset_panel(dsim);
 				dpu_hw_recovery_process(decon);
@@ -1930,7 +1934,7 @@ static int dsim_register_panel(struct dsim_device *dsim)
 		ret = dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_REGISTER, &panel_id);
 		if (ret) {
 			dsim_err("%s: cannot find proper panel\n", __func__);
-			BUG();
+			return -EINVAL;
 		}
 	}
 
@@ -2021,12 +2025,12 @@ static int dsim_probe(struct platform_device *pdev)
 
 	ret = dsim_parse_dt(dsim, dev);
 	if (ret)
-		goto err_dt;
+		goto err;
 
 	dsim_drvdata[dsim->id] = dsim;
 	ret = dsim_get_clocks(dsim);
 	if (ret)
-		goto err_dt;
+		goto err;
 
 	spin_lock_init(&dsim->slock);
 	mutex_init(&dsim->cmd_lock);
@@ -2035,7 +2039,7 @@ static int dsim_probe(struct platform_device *pdev)
 
 	ret = dsim_init_resources(dsim, pdev);
 	if (ret)
-		goto err_dt;
+		goto err;
 
 	dsim_init_subdev(dsim);
 	platform_set_drvdata(pdev, dsim);
@@ -2060,7 +2064,9 @@ static int dsim_probe(struct platform_device *pdev)
 	if (dsim->phy_ex)
 		phy_init(dsim->phy_ex);
 
-	dsim_register_panel(dsim);
+	ret = dsim_register_panel(dsim);
+	if (ret)
+		goto err;
 
 	if (dsim->panel->lcd_info.mode == DECON_VIDEO_MODE) {
 		rmem_np = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
@@ -2085,7 +2091,7 @@ static int dsim_probe(struct platform_device *pdev)
 
 	ret = dsim_get_data_lanes(dsim);
 	if (ret)
-		goto err_dt;
+		goto err;
 
 	dsim->state = DSIM_STATE_INIT;
 	dsim_enable(dsim);
@@ -2116,8 +2122,6 @@ static int dsim_probe(struct platform_device *pdev)
 		dsim->panel->lcd_info.mode == DECON_MIPI_COMMAND_MODE ? "cmd" : "video");
 	return 0;
 
-err_dt:
-	kfree(dsim);
 err:
 	return ret;
 }
