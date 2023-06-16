@@ -18,6 +18,7 @@
 #include "erd3830-pmic.dtsi"
 //#include "s5e3830-erd3830-cp-s318ap-sit.dtsi"
 #include "s5e3830-univ3830-cp-s318ap-sipc.dtsi"
+#include <dt-bindings/gpio/gpio.h>
 
 / {
         fragment@model {
@@ -25,6 +26,48 @@
                 __overlay__ {
                         #address-cells = <2>;
                         #size-cells = <1>;
+
+			// From k4.14 (e850-96 branch) */
+			leds {
+				compatible = "gpio-leds";
+
+				/* HEART_BEAT_LED */
+				user_led1 {
+					label = "user_led1";
+					gpios = <&gpg2 2 GPIO_ACTIVE_HIGH>;
+					linux,default-trigger = "heartbeat";
+				};
+
+				/* eMMC_LED */
+				user_led2 {
+					label = "user_led2";
+					gpios = <&gpg2 3 GPIO_ACTIVE_HIGH>;
+					linux,default-trigger = "mmc0";
+				};
+
+				/* SD_LED */
+				user_led3 {
+					label = "user_led3";
+					gpios = <&gpg2 4 GPIO_ACTIVE_HIGH>;
+					linux,default-trigger = "mmc1";
+				};
+
+				/* WIFI_LED */
+				user_led4 {
+					label = "user_led4";
+					gpios = <&gpg2 6 GPIO_ACTIVE_HIGH>;
+					linux,default-trigger = "phy0tx";
+					default-state = "off";
+				};
+
+				/* BLUETOOTH_LED */
+				user_led5 {
+					label = "user_led5";
+					gpios = <&gpg2 7 GPIO_ACTIVE_HIGH>;
+					linux,default-trigger = "hci0rx";
+					default-state = "off";
+				};
+			};
 
                         gpio_keys {
                                 status = "okay";
