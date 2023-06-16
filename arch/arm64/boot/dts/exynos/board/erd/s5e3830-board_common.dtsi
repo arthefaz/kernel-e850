@@ -16,7 +16,6 @@
 
 #include <dt-bindings/interrupt-controller/s5e3830.h>
 #include "erd3830-pmic.dtsi"
-#include "battery_data_erd3830_common_s2mu106.dtsi"
 //#include "s5e3830-erd3830-cp-s318ap-sit.dtsi"
 #include "s5e3830-univ3830-cp-s318ap-sipc.dtsi"
 
@@ -44,13 +43,6 @@
                                         gpios = <&gpa0 7 0xf>;
                                 };
                         };
-
-			ifconn {
-				status = "okay";
-				compatible = "samsung,ifconn";
-				ifconn,usbpd = "s2mu106";
-				ifconn,muic = "s2mu106-muic";
-			};
 
 			dummy_audio_codec: audio-codec-dummy {
 				compatible = "snd-soc-dummy";
@@ -748,99 +740,6 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "okay";
-	s2mu106@3D {
-		compatible = "samsung,s2mu106mfd";
-		reg = <0x3D>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&if_pmic_irq>;
-		s2mu106,irq-gpio = <&gpa1 1 0>;
-		s2mu106,wakeup;
-	};
-
-	flash_led {
-		status = "okay";
-		default_current = <50>;
-		max_current = <200>;
-		default_timer = <0>;
-
-		s2mu106-channel1 {
-			id = <0>;
-		};
-
-		s2mu106-channel2 {
-			id = <1>;
-		};
-
-		s2mu106-channel3 {
-			id = <2>;
-		};
-
-	};
-
-	s2mu106-fuelgauge@3B {
-		compatible = "samsung,s2mu106-fuelgauge";
-		reg = <0x3B>;
-		pinctrl-names = "default";
-		fuelgauge,fuel_alert_vol = <3400>;
-		fuelgauge,fuel_alert_soc = <1>;
-		fuelgauge,type_str = "SDI";
-		fuelgauge,model_type = <1>;
-	};
-
-	s2mu106-charger {
-		 status = "okay";
-		 battery,charger_name = "s2mu106-charger";
-		 battery,chg_gpio_en = <0>;
-		 battery,chg_polarity_en = <0>;
-		 battery,chg_gpio_status = <0>;
-		 battery,chg_polarity_status = <0>;
-		 battery,chg_float_voltage = <4350>;
-		 battery,chg_recharge_vcell = <4250>;
-		 battery,chg_full_vcell = <4300>;
-		 battery,full_check_type = <2>;
-		 battery,full_check_type_2nd = <2>;
-		 battery,input_current_limit = <
-			 500 450 500 1200 500 1200 1200 1000 1000 1000
-			 1000 500 500 1200 1000 500 450>;
-		 battery,fast_charging_current =	<
-			 500 450 500 1200 500 1200 1200 1000 1000 1000
-			 1000 500 500 1200 1000 500 450>;
-		 battery,full_check_current_1st = <
-			 300 0 300 300 300 300 300 300 300 300
-			 300 300 300 300 300 300 0>;
-		 battery,full_check_current_2nd = <
-			 100 0 100 100 100 100 100 100 100 100
-			 100 100 100 100 100 100 0>;
-	 };
-
-	usbpd-s2mu106@3C {
-		compatible = "sec-usbpd,i2c";
-		reg = <0x3C>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&usbpd_irq>;
-		usbpd,usbpd_int = <&gpa0 2 0>;
-
-		pdic-manager {
-			/* sink */
-			pdic,max_power = <5000>;
-			pdic_op_power = <2500>;
-			pdic_max_voltage = <6000>;
-			pdic_max_current = <2000>;
-			pdic,min_current = <500>;
-
-			pdic,giveback = <0>;
-			pdic,usb_com_capable = <1>;
-			pdic,no_usb_suspend = <1>;
-
-			/* source */
-			source,max_voltage = <5000>;
-			source,min_voltage = <4000>;
-			source,max_power = <2500>;
-
-			/* sink cap */
-			sink,capable_max_voltage = <5000>;
-		};
-	};
 };
 
 &panel_0 {

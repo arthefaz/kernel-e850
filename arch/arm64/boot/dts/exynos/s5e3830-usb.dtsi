@@ -129,11 +129,4 @@
 		udc = <&udc>;
 		status = "okay";
 	};
-
-	ifconn {
-		status = "okay";
-		compatible = "samsung,ifconn";
-		ifconn,usbpd = "s2mu106";
-		ifconn,muic = "s2mu106-muic";
-	};
 };
