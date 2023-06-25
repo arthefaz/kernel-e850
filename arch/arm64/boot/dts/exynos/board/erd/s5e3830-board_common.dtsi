@@ -698,18 +698,18 @@
 	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
-	touchscreen@20 {
-		compatible = "synaptics,rmi4";
-		reg = <0x20>;
-		pinctrl-names = "on_state", "off_state";
-		pinctrl-0 = <&attn_irq &vdd_on>;
-		pinctrl-1 = <&attn_input &vdd_off>;
-		synaptics,irq_gpio = <&gpa0 0 0>;
-		synaptics,irq_type = <8200>;
-		synaptics,max_coords = <1440 2560>;     /* x y */
-		synaptics,num_lines = <29 16>;          /* rx tx */
-		synaptics,regulator_avdd = "vdd_ldo27";
-	};
+//	touchscreen@20 {
+//		compatible = "synaptics,rmi4";
+//		reg = <0x20>;
+//		pinctrl-names = "on_state", "off_state";
+//		pinctrl-0 = <&attn_irq &vdd_on>;
+//		pinctrl-1 = <&attn_input &vdd_off>;
+//		synaptics,irq_gpio = <&gpa0 0 0>;
+//		synaptics,irq_type = <8200>;
+//		synaptics,max_coords = <1440 2560>;     /* x y */
+//		synaptics,num_lines = <29 16>;          /* rx tx */
+//		synaptics,regulator_avdd = "vdd_ldo27";
+//	};
 };
 
 &pinctrl_0 {
