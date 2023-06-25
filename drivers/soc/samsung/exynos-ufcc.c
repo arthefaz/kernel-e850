@@ -1510,7 +1510,7 @@ static int exynos_ufc_init(struct platform_device *pdev)
 
 	if (init_ufc_domain(dn)) {
 		pr_info("exynos-ufc: Failed to init init_ufc_domain\n");
-		ufc_free_all();
+		//ufc_free_all();
 		return 0;
 	}
 
