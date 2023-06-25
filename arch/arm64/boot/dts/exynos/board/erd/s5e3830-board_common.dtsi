@@ -785,12 +785,12 @@
 	status = "okay";
 };
 
-&panel_0 {
-	/* reset, power(ldo_en) */
-	gpios = <&gpg2 5 0x1>, <&gpg1 1 0x1>;
-	/* ldo28, buck5 */
-	regulator_1p8v = "vdd_ldo28";
-};
+//&panel_0 {
+//	/* reset, power(ldo_en) */
+//	gpios = <&gpg2 5 0x1>, <&gpg1 1 0x1>;
+//	/* ldo28, buck5 */
+//	regulator_1p8v = "vdd_ldo28";
+//};
 
 &udc {
 	status = "okay";
