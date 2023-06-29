@@ -27,6 +27,17 @@
                         #address-cells = <2>;
                         #size-cells = <1>;
 
+			reg_5v_hub: regulator@0 {
+				compatible = "regulator-fixed";
+				regulator-name = "5V_HUB";
+				regulator-min-microvolt = <5000000>;
+				regulator-max-microvolt = <5000000>;
+				gpio = <&gpa3 5 GPIO_ACTIVE_LOW>;
+
+				pinctrl-names = "default";
+				pinctrl-0 = <&usb_pwr_ctl2>;
+			};
+
 			// From k4.14 (e850-96 branch) */
 			leds {
 				compatible = "gpio-leds";
@@ -713,6 +724,18 @@
 };
 
 &pinctrl_0 {
+	vbus_det_2: vbus_det_2 {
+		samsung,pins = "gpa0-0";
+		samsung,pin-function = <0x0>;
+		samsung,pin-pud = <0>;
+	};
+
+	usb_pwr_ctl2: usb_pwr_ctl2 {
+		samsung,pins = "gpa3-5";
+		samsung,pin-function = <0x1>;	/* output */
+		samsung,pin-pud = <0>;
+	};
+
 	attn_irq: attn-irq {
 		samsung,pins = "gpa0-0";
 		samsung,pin-function = <0xf>;
@@ -785,6 +808,12 @@
 	status = "okay";
 };
 
+&dwmmc_2 {
+
+	pinctrl-0 = <&sd2_clk &sd2_cmd &sd2_bus1 &sd2_bus4 &dwmmc2_cd_ext_irq>;
+	card-detect = <&gpa0 3 0xf>;
+};
+
 //&panel_0 {
 //	/* reset, power(ldo_en) */
 //	gpios = <&gpg2 5 0x1>, <&gpg1 1 0x1>;
@@ -792,12 +821,49 @@
 //	regulator_1p8v = "vdd_ldo28";
 //};
 
+/* ---- USB ----------------------------------------------------------------- */
+
+/* Enable PMIC LDO regulator for LAN9514 chip */
+&l24_reg {
+	regulator-name = "vdd_ldo24";
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
+	regulator-always-on;
+	regulator-ramp-delay = <12000>;
+	regulator-initial-mode = <3>;
+};
+
 &udc {
 	status = "okay";
 	lazy-vbus-up;
-	dwc3 {
-		dr_mode = "peripheral";
-		maximum-speed = "high-speed";
+
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		label = "micro-USB";
+		type = "micro";
+
+		/*
+		 * Provide VBUS line in id-gpios property to trick usb-conn-gpio
+		 * driver to switch between DEVICE and HOST roles when cable is
+		 * connected or disconnected. But don't use actual ID pin here,
+		 * as it's floating (Hi-Z) in Type-B cable connector. The line
+		 * is specified as active low to invert the VBUS line logic.
+		 */
+		id-gpios = <&gpa0 0 GPIO_ACTIVE_LOW>;
+		vbus-supply = <&reg_5v_hub>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&vbus_det_2>;
+
+		port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			usb_b_connector: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&dwc3_role_switch>;
+			};
+		};
 	};
 };
 
@@ -808,17 +874,23 @@
 	xhci_l2_support = <0>;
 	xhci_use_uram_for_audio = <0>;
 	vdd33_usb-supply = <&l11_reg>;
+
+	dr_mode = "otg";
+	usb-role-switch;
+	role-switch-default-mode = "host";
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		dwc3_role_switch: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&usb_b_connector>;
+		};
+	};
 };
 
 &usbdrd_phy0 {
 	status = "okay";
-	use_default_tune_val = <0x1>;
-	hs_tune_param = <&usb_hs_tune>;
 	vdd33_usb-supply = <&l11_reg>;
-};
-
-&dwmmc_2 {
-
-	pinctrl-0 = <&sd2_clk &sd2_cmd &sd2_bus1 &sd2_bus4 &dwmmc2_cd_ext_irq>;
-	card-detect = <&gpa0 3 0xf>;
 };
