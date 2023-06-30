@@ -403,6 +403,8 @@ void dwc3_otg_update(struct dwc3 *dwc, bool ignore_idstatus)
 		if (dwc->usb2_generic_phy)
 			phy_set_mode(dwc->usb2_generic_phy,
 				     PHY_MODE_USB_DEVICE);
+		pr_err("### [%s] %s: DWC3_OTG_ROLE_DEVICE: dwc3_gadget_init()\n",
+		      "drd.c", __func__);
 		ret = dwc3_gadget_init(dwc);
 		if (ret)
 			dev_err(dwc->dev, "failed to initialize peripheral\n");

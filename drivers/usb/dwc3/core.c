@@ -213,6 +213,8 @@ static void __dwc3_set_mode(struct work_struct *work)
 		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_DEVICE);
 		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_DEVICE);
 
+		pr_err("### [%s] %s: DWC3_GCTL_PRTCAP_DEVICE: dwc3_gadget_init()\n",
+		       "core.c", __func__);
 		ret = dwc3_gadget_init(dwc);
 		if (ret)
 			dev_err(dwc->dev, "failed to initialize peripheral\n");
@@ -1230,6 +1232,8 @@ static int dwc3_core_init_mode(struct dwc3 *dwc)
 		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_DEVICE);
 		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_DEVICE);
 
+		pr_err("### [%s] %s: USB_DR_MODE_PERIPHERAL: dwc3_gadget_init()\n",
+		       "core.c", __func__);
 		ret = dwc3_gadget_init(dwc);
 		if (ret)
 			return dev_err_probe(dev, ret, "failed to initialize gadget\n");
@@ -1552,7 +1556,7 @@ static int dwc3_probe(struct platform_device *pdev)
 
 	void __iomem		*regs;
 
-	pr_info("%s +++\n", __func__);
+	pr_err("### [%s] %s ENTER\n", "core.c", __func__);
 
 	vdwc = devm_kzalloc(dev, sizeof(*vdwc), GFP_KERNEL);
 	if (!vdwc)
@@ -1678,7 +1682,10 @@ static int dwc3_probe(struct platform_device *pdev)
 
 	pm_runtime_put(dev);
 
-	pr_info("%s ---\n", __func__);
+	pr_err("### [%s] %s dwc = %px\n", "core.c", __func__, dwc);
+	pr_err("### [%s] %s dwc->gadget = %px\n", "core.c", __func__,
+	       dwc->gadget);
+	pr_err("### [%s] %s EXIT OK\n", "core.c", __func__);
 
 	return 0;
 

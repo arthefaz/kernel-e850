@@ -1201,16 +1201,20 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	struct phy		*temp_usb_phy;
 	int 			wait_counter;
 
+	pr_err("### %s: 1\n", __func__);
+
 	temp_usb_phy = devm_phy_get(dev, "usb2-phy");
 	if (IS_ERR(temp_usb_phy)) {
 		pr_info("USB phy is not probed - defered return!\n");
 		return  -EPROBE_DEFER;
 	}
 
+	pr_err("### %s: 2\n", __func__);
 	exynos = devm_kzalloc(dev, sizeof(*exynos), GFP_KERNEL);
 	if (!exynos)
 		return -ENOMEM;
 
+	pr_err("### %s: 3\n", __func__);
 	ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(36));
 	if (ret) {
 		pr_err("dma set mask ret = %d\n", ret);
@@ -1230,6 +1234,7 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	} else
 		exynos->idle_ip_index = fixed_usb_idle_ip_index;
 
+	pr_err("### %s: 4\n", __func__);
 	ret = dwc3_exynos_clk_get(exynos);
 	if (ret)
 		return ret;
@@ -1256,6 +1261,7 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 		goto vdd33_err;
 	}
 
+	pr_err("### %s: 5\n", __func__);
 	pm_runtime_enable(dev);
 	ret = pm_runtime_get_sync(dev);
 	if (ret < 0)
@@ -1264,6 +1270,7 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 
 	dwc3_exynos_set_sclk_clock(dev);
 
+	pr_err("### %s: 6\n", __func__);
 	dwc3_np = of_get_child_by_name(node, "dwc3");
 	if (!dwc3_np) {
 		dev_err(dev, "failed to find dwc3 core child!\n");
@@ -1274,6 +1281,7 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	exynos_usbdrd_ldo_manual_control(1);
 	exynos_usbdrd_phy_conn(temp_usb_phy, 1);
 
+	pr_err("### %s: 7\n", __func__);
 	if (node) {
 		ret = of_platform_populate(node, NULL, NULL, dev);
 		if (ret) {
@@ -1286,6 +1294,7 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 		goto populate_err;
 	}
 
+	pr_err("### %s: 8\n", __func__);
 	dwc3_pdev = of_find_device_by_node(dwc3_np);
 	exynos->dwc = platform_get_drvdata(dwc3_pdev);
 	if (exynos->dwc == NULL) {
@@ -1293,16 +1302,32 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 		goto populate_err;
 	}
 
+	pr_err("### %s: 9\n", __func__);
 	/* dwc3 core configurations */
 	pm_runtime_allow(exynos->dwc->dev);
+	pr_err("### %s: 9.1\n", __func__);
 	ret = dma_set_mask_and_coherent(exynos->dwc->dev, DMA_BIT_MASK(36));
 	if (ret) {
-		pr_err("dwc3 core dma_set_mask returned FAIL!(%d)\n", ret);
+		pr_err("### dwc3 core dma_set_mask returned FAIL!(%d)\n", ret);
 		goto populate_err;
 	}
+	pr_err("### %s: 9.2\n", __func__);
+
+	// XXX
+	pr_err("### %s: 9.2.1: exynos = %px\n", __func__, exynos);
+	pr_err("### %s: 9.2.2: exynos->dwc = %px\n", __func__,
+	       exynos->dwc);
+	pr_err("### %s: 9.2.2: exynos->dwc->gadget = %px\n", __func__,
+	       exynos->dwc->gadget);
+	if (exynos->dwc->gadget)
+		pr_err("### %s: 9.2.3: %px\n", __func__, exynos->dwc->gadget);
+	pr_err("### %s: 9.2.4: %d\n", __func__,
+	       exynos->dwc->gadget->sg_supported);
+
 	exynos->dwc->gadget->sg_supported = false;
 	//exynos->dwc->imod_interval = 100;
 
+	pr_err("### %s: 10\n", __func__);
 	pm_runtime_dont_use_autosuspend(exynos->dwc->dev);
 
 #ifdef USB_USE_IOCOHERENCY
@@ -1315,6 +1340,7 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	regmap_update_bits(reg_sysreg, 0x704, 0x6, 0x6);
 #endif
 
+	pr_err("### %s: 11\n", __func__);
 	ret = pm_runtime_put_sync(dev);
 	pr_info("%s, pm_runtime_put_sync = %d\n",__func__, ret);
 	pm_runtime_allow(dev);
@@ -1332,10 +1358,12 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 		}
 	}
 
+	pr_err("### %s: 12\n", __func__);
 	/* PHY disable */
 	exynos_usbdrd_phy_conn(temp_usb_phy, 0);
 	exynos_usbdrd_ldo_manual_control(0);
 
+	pr_err("### %s: 13\n", __func__);
 	/* USB host initialization. */
 	ret = dwc3_exynos_host_init(exynos);
 	if (ret) {
@@ -1343,25 +1371,32 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 		goto populate_err;
 	}
 
+	pr_err("### %s: 14\n", __func__);
 	dev_info(dev, "Configuration exynos OTG\n");
 	dwc3_exynos_otg_init(exynos->dwc, exynos);
 
+	pr_err("### %s: 15\n", __func__);
 	dwc3_otg_start(exynos->dwc, exynos);
 
+	pr_err("### %s: 16\n", __func__);
 	otg_set_peripheral(&exynos->dotg->otg, exynos->dwc->gadget);
 
+	pr_err("### %s: 17: OK!\n", __func__);
 	return 0;
 
 populate_err:
+	pr_err("### %s: 18: populate_err\n", __func__);
 	platform_device_unregister(exynos->usb2_phy);
 	platform_device_unregister(exynos->usb3_phy);
 vdd33_err:
+	pr_err("### %s: 19: vdd33_err\n", __func__);
 	dwc3_exynos_clk_disable(exynos);
 	dwc3_exynos_clk_unprepare(exynos);
 	exynos_update_ip_idle_status(exynos->idle_ip_index, 1);
 	pm_runtime_disable(&pdev->dev);
 	pr_info("%s err = %d\n", __func__, ret);
 
+	pr_err("### %s: 20: return ret\n", __func__);
 	return ret;
 }
 
