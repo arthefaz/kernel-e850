@@ -1300,7 +1300,9 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 		pr_err("dwc3 core dma_set_mask returned FAIL!(%d)\n", ret);
 		goto populate_err;
 	}
-	exynos->dwc->gadget->sg_supported = false;
+
+	if (exynos->dwc->gadget)
+		exynos->dwc->gadget->sg_supported = false;
 	//exynos->dwc->imod_interval = 100;
 
 	pm_runtime_dont_use_autosuspend(exynos->dwc->dev);
