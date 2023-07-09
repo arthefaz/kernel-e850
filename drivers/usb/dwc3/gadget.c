@@ -4351,8 +4351,6 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	int irq;
 	struct device *dev;
 
-	pr_err("### [%s] %s: ENTER\n", "gadget.c", __func__);
-
 	irq = dwc3_gadget_get_irq(dwc);
 	if (irq < 0) {
 		ret = irq;
@@ -4434,7 +4432,6 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	if (ret)
 		goto err4;
 
-	pr_err("### [%s] %s: adding gadget\n", "gadget.c", __func__);
 	ret = usb_add_gadget(dwc->gadget);
 	if (ret) {
 		dev_err(dwc->dev, "failed to add gadget\n");
@@ -4446,8 +4443,6 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	else
 		dwc3_gadget_set_speed(dwc->gadget, dwc->maximum_speed);
 
-
-	pr_err("### [%s] %s: correctly finished\n", "gadget.c", __func__);
 	return 0;
 
 err5:
@@ -4474,8 +4469,6 @@ err0:
 
 void dwc3_gadget_exit(struct dwc3 *dwc)
 {
-	pr_err("### [%s] %s: ENTER\n", "gadget.c", __func__);
-
 	if (!dwc->gadget)
 		return;
 
@@ -4487,8 +4480,6 @@ void dwc3_gadget_exit(struct dwc3 *dwc)
 	kfree(dwc->setup_buf);
 	dma_free_coherent(dwc->sysdev, sizeof(*dwc->ep0_trb) * 2,
 			  dwc->ep0_trb, dwc->ep0_trb_addr);
-
-	pr_err("### [%s] %s: correctly finished\n", "gadget.c", __func__);
 }
 
 int dwc3_gadget_suspend(struct dwc3 *dwc)

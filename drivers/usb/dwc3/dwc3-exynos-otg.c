@@ -938,8 +938,6 @@ static int dwc3_otg_set_peripheral(struct usb_otg *otg,
 	if (gadget) {
 		dev_info(dev, "Binding gadget %s\n", gadget->name);
 
-		pr_err("### [%s] %s: gadget set 1\n", "dwc3-exynos-otg.c",
-		       __func__);
 		otg->gadget = gadget;
 	} else {
 		dev_info(dev, "Unbinding gadget\n");
@@ -953,8 +951,6 @@ static int dwc3_otg_set_peripheral(struct usb_otg *otg,
 			dwc3_otg_statemachine(fsm);
 			dotg->fsm_reset = 0;
 		}
-		pr_err("### [%s] %s: gadget unset 2\n", "dwc3-exynos-otg.c",
-		       __func__);
 		otg->gadget = NULL;
 
 		mutex_unlock(&fsm->lock);
