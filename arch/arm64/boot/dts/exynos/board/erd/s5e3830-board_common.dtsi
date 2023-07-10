@@ -39,8 +39,6 @@
 				regulator-max-microvolt = <5000000>;
 				gpio = <&gpa3 5 GPIO_ACTIVE_LOW>;
 
-				regulator-always-on;
-
 				pinctrl-names = "default";
 				pinctrl-0 = <&usb_pwr_ctl2>;
 			};
@@ -844,7 +842,6 @@
 	status = "okay";
 //	lazy-vbus-up;
 
-
 	dwc3 {
 		status = "okay";
 		maximum-speed = "high-speed";
@@ -853,7 +850,48 @@
 		xhci_use_uram_for_audio = <0>;
 	//	vdd33_usb-supply = <&l11_reg>;
 
-		dr_mode = "peripheral";
+		dr_mode = "otg";
+		usb-role-switch;
+		role-switch-default-mode = "host";
+
+		port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			dwc3_role_switch: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&usb_b_connector>;
+			};
+		};
+	};
+
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		label = "micro-USB";
+		type = "micro";
+
+		/*
+		 * Provide VBUS line in id-gpios property to trick usb-conn-gpio
+		 * driver to switch between DEVICE and HOST roles when cable is
+		 * connected or disconnected. But don't use actual ID pin here,
+		 * as it's floating (Hi-Z) in Type-B cable connector. The line
+		 * is specified as active low to invert the VBUS line logic.
+		 */
+		id-gpios = <&gpa0 0 GPIO_ACTIVE_LOW>;
+		vbus-supply = <&reg_5v_hub>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&vbus_det_2>;
+
+		port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			usb_b_connector: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&dwc3_role_switch>;
+			};
+		};
 	};
 };
 

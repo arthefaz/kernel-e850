@@ -94,6 +94,7 @@ static void usb_conn_detect_cable(struct work_struct *work)
 	if (info->last_role == USB_ROLE_HOST && info->vbus)
 		regulator_disable(info->vbus);
 
+	pr_err("### %s: switch role = %d\n", __func__, role);
 	ret = usb_role_switch_set_role(info->role_sw, role);
 	if (ret)
 		dev_err(info->dev, "failed to set role: %d\n", ret);
