@@ -843,17 +843,18 @@
 &udc {
 	status = "okay";
 //	lazy-vbus-up;
-};
 
-&usbdrd_dwc3 {
-	status = "okay";
-	maximum-speed = "high-speed";
-	usb_audio_offloading = <0>;
-	xhci_l2_support = <0>;
-	xhci_use_uram_for_audio = <0>;
-//	vdd33_usb-supply = <&l11_reg>;
 
-	dr_mode = "host";
+	dwc3 {
+		status = "okay";
+		maximum-speed = "high-speed";
+		usb_audio_offloading = <0>;
+		xhci_l2_support = <0>;
+		xhci_use_uram_for_audio = <0>;
+	//	vdd33_usb-supply = <&l11_reg>;
+
+		dr_mode = "host";
+	};
 };
 
 &usbdrd_phy0 {
