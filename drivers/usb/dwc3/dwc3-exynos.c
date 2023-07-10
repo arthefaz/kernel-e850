@@ -1322,6 +1322,14 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	pm_runtime_allow(dev);
 
 	// XXX
+	/* USB host initialization. */
+	ret = dwc3_exynos_host_init(exynos);
+	if (ret) {
+		pr_err("USB host pre-initialization fail!\n");
+		goto populate_err;
+	}
+
+	// XXX
 	return 0;
 
 	/* Wait for end of dwc3 idle */
@@ -1340,13 +1348,6 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	/* PHY disable */
 	exynos_usbdrd_phy_conn(temp_usb_phy, 0);
 	exynos_usbdrd_ldo_manual_control(0);
-
-	/* USB host initialization. */
-	ret = dwc3_exynos_host_init(exynos);
-	if (ret) {
-		pr_err("USB host pre-initialization fail!\n");
-		goto populate_err;
-	}
 
 	dev_info(dev, "Configuration exynos OTG\n");
 	dwc3_exynos_otg_init(exynos->dwc, exynos);
