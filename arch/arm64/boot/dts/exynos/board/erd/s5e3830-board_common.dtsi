@@ -853,7 +853,7 @@
 		xhci_use_uram_for_audio = <0>;
 	//	vdd33_usb-supply = <&l11_reg>;
 
-		dr_mode = "host";
+		dr_mode = "peripheral";
 	};
 };
 

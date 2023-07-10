@@ -1301,8 +1301,10 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 		goto populate_err;
 	}
 
-	if (exynos->dwc->gadget)
+	if (exynos->dwc->gadget) {
+		pr_err("### %s: gadget is Ok; sg = false\n", __func__);
 		exynos->dwc->gadget->sg_supported = false;
+	}
 	//exynos->dwc->imod_interval = 100;
 
 	pm_runtime_dont_use_autosuspend(exynos->dwc->dev);
@@ -1321,17 +1323,6 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	pr_info("%s, pm_runtime_put_sync = %d\n",__func__, ret);
 	pm_runtime_allow(dev);
 
-	// XXX
-	/* USB host initialization. */
-	ret = dwc3_exynos_host_init(exynos);
-	if (ret) {
-		pr_err("USB host pre-initialization fail!\n");
-		goto populate_err;
-	}
-
-	// XXX
-	return 0;
-
 	/* Wait for end of dwc3 idle */
 	wait_counter = 0;
 	while (exynos->dwc->current_dr_role !=
@@ -1348,6 +1339,13 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	/* PHY disable */
 	exynos_usbdrd_phy_conn(temp_usb_phy, 0);
 	exynos_usbdrd_ldo_manual_control(0);
+
+	/* USB host initialization. */
+	ret = dwc3_exynos_host_init(exynos);
+	if (ret) {
+		pr_err("USB host pre-initialization fail!\n");
+		goto populate_err;
+	}
 
 	dev_info(dev, "Configuration exynos OTG\n");
 	dwc3_exynos_otg_init(exynos->dwc, exynos);
