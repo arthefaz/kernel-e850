@@ -360,12 +360,15 @@ void usb_dr_role_control(int on)
 	struct dwc3	*dwc;
 	dwc = g_dwc3_exynos->dwc;
 
-	pr_info("%s: on: %d\n", __func__, on);
+	pr_err("### %s: on: %d\n", __func__, on);
 
-	if (on)
+	if (on) {
+		pr_err("### %s: set PRTCAP\n", __func__);
 		dwc->current_dr_role = DWC3_GCTL_PRTCAP_DEVICE;
-	else
+	} else {
+		pr_err("### %s: set IGNORE_CORE_OPS\n", __func__);
 		dwc->current_dr_role = DWC3_EXYNOS_IGNORE_CORE_OPS;
+	}
 
 }
 EXPORT_SYMBOL(usb_dr_role_control);

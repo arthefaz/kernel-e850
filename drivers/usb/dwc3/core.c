@@ -111,6 +111,7 @@ void dwc3_set_prtcap(struct dwc3 *dwc, u32 mode)
 	reg |= DWC3_GCTL_PRTCAPDIR(mode);
 	dwc3_writel(dwc->regs, DWC3_GCTL, reg);
 
+	pr_err("### %s: set to %d\n", __func__, mode);
 	dwc->current_dr_role = mode;
 }
 

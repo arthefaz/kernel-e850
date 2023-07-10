@@ -1421,6 +1421,7 @@ static int dwc3_exynos_runtime_suspend(struct device *dev)
 	/* After disconnecting cable, it will ignore core operations like
 	 * dwc3_suspend/resume in core.c
 	 */
+	pr_err("### %s: set IGNORE_CORE_OPS\n", __func__);
 	exynos->dwc->current_dr_role = DWC3_EXYNOS_IGNORE_CORE_OPS;
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
@@ -1449,6 +1450,7 @@ static int dwc3_exynos_runtime_resume(struct device *dev)
 	if (dotg && dotg->ready) {
 		rsw = &exynos->rsw;
 		fsm = rsw->fsm;
+		pr_err("### %s: set PRTCAP_DEVICE\n", __func__);
 		exynos->dwc->current_dr_role = DWC3_GCTL_PRTCAP_DEVICE;
 	}
 

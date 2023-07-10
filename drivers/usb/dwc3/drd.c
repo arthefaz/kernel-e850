@@ -595,6 +595,7 @@ int dwc3_drd_init(struct dwc3 *dwc)
 		dwc3_drd_update(dwc);
 	} else {
 		dwc3_set_prtcap(dwc, DWC3_GCTL_PRTCAP_OTG);
+		pr_err("### %s: set to PRTCAP_OTG\n", __func__);
 		dwc->current_dr_role = DWC3_GCTL_PRTCAP_OTG;
 
 		/* use OTG block to get ID event */
