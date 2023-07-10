@@ -1321,6 +1321,9 @@ static int dwc3_exynos_probe(struct platform_device *pdev)
 	pr_info("%s, pm_runtime_put_sync = %d\n",__func__, ret);
 	pm_runtime_allow(dev);
 
+	// XXX
+	return 0;
+
 	/* Wait for end of dwc3 idle */
 	wait_counter = 0;
 	while (exynos->dwc->current_dr_role !=
