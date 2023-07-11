@@ -385,14 +385,6 @@ config USB_CONFIGFS_F_FS
 	  implemented in kernel space (for instance Ethernet, serial or
 	  mass storage) and other are implemented in user space.
 
-config USB_CONFIGFS_F_DM
-	tristate "DM gadget"
-	depends on USB_CONFIGFS
-	select USB_F_DM
-	select USB_U_SERIAL
-	help
-	  USB gadget DM(Diagnosis Monitor) support
-
 config USB_CONFIGFS_F_ACC
 	bool "Accessory gadget"
 	depends on USB_CONFIGFS
