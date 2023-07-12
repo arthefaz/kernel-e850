@@ -564,17 +564,18 @@
 
 		udc: usb@13600000 {
 			compatible = "samsung,exynos-dwusb";
-			clocks = <&clock GATE_USB20DRD_TOP_QCH_LINK>, <&clock HSI_USB20DRD>;
+			clocks = <&cmu_hsi CLK_GOUT_USB_BUS_EARLY_CLK>,
+				 <&cmu_hsi CLK_GOUT_USB_REF_CLK>;
 			clock-names = "aclk", "sclk";
-			reg = <0x0 0x13600000 0x10000>;
-			#address-cells = <2>;
+			reg = <0x13600000 0x10000>;
+			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges;
-			power-domains = <&pd_hsi>;
+			//power-domains = <&pd_hsi>;
 			status = "okay";
 			phys = <&usbdrd_phy0 0>;
 			phy-names = "usb2-phy";
-			interrupts = <0 INTREQ__USB20DRD_0 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 137 IRQ_TYPE_LEVEL_HIGH>;
 			exynos,adj-sof-accuracy = <1>;
 			exynos,usb_host_device_timeout = <200>;
 			exynos,enable_sprs_transfer = <0>;
@@ -587,8 +588,8 @@
 
 			usbdrd_dwc3: dwc3 {
 				compatible = "synopsys,dwc3";
-				reg = <0x0 0x13600000 0x10000>;
-				interrupts = <0 INTREQ__USB20DRD_0 IRQ_TYPE_LEVEL_HIGH>;
+				reg = <0x13600000 0x10000>;
+				interrupts = <GIC_SPI 137 IRQ_TYPE_LEVEL_HIGH>;
 				is_not_vbus_pad = <1>;
 				enable_sprs_transfer = <1>;
 				dr_mode = "peripheral";
@@ -618,10 +619,11 @@
 
 		usbdrd_phy0: phy@135d0000 {
 			compatible = "samsung,exynos-usbdrd-phy";
-			reg = <0x0 0x135d0000 0x200>;
-			interrupts = <0 INTREQ__USB2_REMOTE_WAKEUP IRQ_TYPE_LEVEL_HIGH>,
-				     <0 INTREQ__USB2_REMOTE_CONNECT IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&clock OSCCLK>, <&clock GATE_USB20DRD_TOP_QCH_LINK>;
+			reg = <0x135d0000 0x200>;
+			interrupts = <GIC_SPI 136 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 134 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cmu_hsi CLK_GOUT_USB_PHY_REF_CLK>,
+				 <&cmu_hsi CLK_GOUT_USB_PHY_ACLK>;
 			clock-names = "ext_xtal", "aclk";
 			samsung,pmu-syscon = <&pmu_system_controller>;
 			pmu_mask = <0x0>;
@@ -667,6 +669,7 @@
 			status = "okay";
 
 			#phy-cells = <1>;
+			#address-cells = <1>;
 			ranges;
 		};
 
