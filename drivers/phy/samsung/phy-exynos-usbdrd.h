@@ -18,8 +18,8 @@
 
 #include "phy-samsung-usb-cal.h"
 #include "phy-exynos-usb3p1.h"
-#include "phy-exynos-usbdp-gen2.h"
-#include "phy-exynos-usbdp-gen2-v4.h"
+//#include "phy-exynos-usbdp-gen2.h"
+//#include "phy-exynos-usbdp-gen2-v4.h"
 
 #define EXYNOS_USBPHY_VER_02_0_0	0x0200	/* Lhotse - USBDP Combo PHY */
 
