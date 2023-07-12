@@ -792,6 +792,11 @@
 //	regulator_1p8v = "vdd_ldo28";
 //};
 
+&dwmmc_2 {
+	pinctrl-0 = <&sd2_clk &sd2_cmd &sd2_bus1 &sd2_bus4 &dwmmc2_cd_ext_irq>;
+	card-detect = <&gpa0 3 0xf>;
+};
+
 &udc {
 	status = "okay";
 	lazy-vbus-up;
@@ -815,10 +820,4 @@
 	use_default_tune_val = <0x1>;
 	hs_tune_param = <&usb_hs_tune>;
 	vdd33_usb-supply = <&l11_reg>;
-};
-
-&dwmmc_2 {
-
-	pinctrl-0 = <&sd2_clk &sd2_cmd &sd2_bus1 &sd2_bus4 &dwmmc2_cd_ext_irq>;
-	card-detect = <&gpa0 3 0xf>;
 };
