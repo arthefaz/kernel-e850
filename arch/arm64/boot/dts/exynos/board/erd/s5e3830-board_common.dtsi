@@ -842,29 +842,6 @@
 	status = "okay";
 //	lazy-vbus-up;
 
-	dwc3 {
-		status = "okay";
-		maximum-speed = "high-speed";
-		usb_audio_offloading = <0>;
-		xhci_l2_support = <0>;
-		xhci_use_uram_for_audio = <0>;
-	//	vdd33_usb-supply = <&l11_reg>;
-
-		dr_mode = "otg";
-		usb-role-switch;
-		role-switch-default-mode = "host";
-
-		port {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			dwc3_role_switch: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&usb_b_connector>;
-			};
-		};
-	};
-
 	connector {
 		compatible = "gpio-usb-b-connector", "usb-b-connector";
 		label = "micro-USB";
@@ -891,6 +868,29 @@
 				reg = <0>;
 				remote-endpoint = <&dwc3_role_switch>;
 			};
+		};
+	};
+};
+
+&usbdrd_dwc3 {
+	status = "okay";
+	maximum-speed = "high-speed";
+	usb_audio_offloading = <0>;
+	xhci_l2_support = <0>;
+	xhci_use_uram_for_audio = <0>;
+//	vdd33_usb-supply = <&l11_reg>;
+
+	dr_mode = "otg";
+	usb-role-switch;
+	role-switch-default-mode = "host";
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		dwc3_role_switch: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&usb_b_connector>;
 		};
 	};
 };
