@@ -14,4 +14,9 @@ phy-exynos-usb2-$(CONFIG_PHY_EXYNOS4X12_USB2)	+= phy-exynos4x12-usb2.o
 phy-exynos-usb2-$(CONFIG_PHY_EXYNOS5250_USB2)	+= phy-exynos5250-usb2.o
 phy-exynos-usb2-$(CONFIG_PHY_S5PV210_USB2)	+= phy-s5pv210-usb2.o
 obj-$(CONFIG_PHY_EXYNOS5_USBDRD)	+= phy-exynos5-usbdrd.o
+ifneq ($(CONFIG_PHY_EXYNOS_USBDRD),)
+obj-$(CONFIG_PHY_EXYNOS_USBDRD)		+= phy-exynos-usbdrd-super.o
+phy-exynos-usbdrd-super-y		+= phy-exynos-usbdrd.o
+phy-exynos-usbdrd-super-y      		+= phy-exynos-usb3p1.o
+endif
 obj-$(CONFIG_PHY_EXYNOS5250_SATA)	+= phy-exynos5250-sata.o
