@@ -255,11 +255,7 @@ static bool exynos_pd_power_down_ok_vts(void)
 
 static bool exynos_pd_power_down_ok_usb(void)
 {
-#ifdef CONFIG_USB_DWC3_EXYNOS
-	return !otg_is_connect();
-#else
 	return true;
-#endif
 }
 
 static void of_get_power_down_ok(struct exynos_pm_domain *pd)

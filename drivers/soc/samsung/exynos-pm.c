@@ -264,8 +264,8 @@ static void exynos_set_wakeupmask(enum sys_powerdown mode)
 		exynos_pmu_write(pm_info->wakeup_stat_offset[i], 0);
 		wakeup_int_en = pm_info->wakeup_mask[mode][i];
 
-		if (otg_is_connect() == 2)
-			wakeup_int_en &= ~pm_info->usbl2_wakeup_int_en[i];
+//		if (otg_is_connect() == 2)
+//			wakeup_int_en &= ~pm_info->usbl2_wakeup_int_en[i];
 
 		exynos_pmu_write(pm_info->wakeup_mask_offset[i], wakeup_int_en);
 	}
