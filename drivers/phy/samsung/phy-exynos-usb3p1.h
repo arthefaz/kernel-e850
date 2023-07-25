@@ -85,4 +85,7 @@ extern enum exynos_usb_bc phy_exynos_usb3p1_bc_battery_charger_detection(struct 
 #if defined(CONFIG_OTG_CDP_SUPPORT)
 extern u8 phy_exynos_usb3p1_bc_operate_cdp(struct exynos_usbphy_info *usbphy_info);
 #endif
+
+void phy_exynos_usb3p1_set_sfrbase(unsigned long addr);
+
 #endif /* DRIVER_USB_USBPHY_CAL_PHY_EXYNOS_USB3P1_H_ */
