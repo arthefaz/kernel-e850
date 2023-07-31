@@ -218,7 +218,7 @@ static inline void pgtable_flush(void *vastart, void *vaend)
 				   (size_t)(vaend - vastart), DMA_TO_DEVICE);
 }
 
-static bool samsung_sysmmu_capable(enum iommu_cap cap)
+static bool samsung_sysmmu_capable(struct device *dev, enum iommu_cap cap)
 {
 	return cap == IOMMU_CAP_CACHE_COHERENCY;
 }
