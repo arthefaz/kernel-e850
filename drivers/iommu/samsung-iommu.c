@@ -438,27 +438,6 @@ err_drvdata_add:
 	return ret;
 }
 
-static void samsung_sysmmu_detach_dev(struct iommu_domain *dom,
-				      struct device *dev)
-{
-	struct sysmmu_clientdata *client;
-	struct samsung_sysmmu_domain *domain;
-	struct sysmmu_drvdata *drvdata;
-	struct iommu_group *group = dev->iommu_group;
-	unsigned int i;
-
-	domain = to_sysmmu_domain(dom);
-
-	client = dev_iommu_priv_get(dev);
-	for (i = 0; i < client->sysmmu_count; i++) {
-		drvdata = client->sysmmus[i];
-
-		samsung_sysmmu_detach_drvdata(drvdata);
-	}
-
-	dev_info(dev, "detached from pgtable %pa\n", &domain->page_table);
-}
-
 static inline sysmmu_pte_t make_sysmmu_pte(phys_addr_t paddr,
 					   unsigned int pgsize, unsigned int attr)
 {
@@ -980,14 +959,6 @@ static void samsung_sysmmu_get_resv_regions(struct device *dev, struct list_head
 static struct iommu_ops samsung_sysmmu_ops = {
 	.capable		= samsung_sysmmu_capable,
 	.domain_alloc		= samsung_sysmmu_domain_alloc,
-	.domain_free		= samsung_sysmmu_domain_free,
-	.attach_dev		= samsung_sysmmu_attach_dev,
-	.detach_dev		= samsung_sysmmu_detach_dev,
-	.map			= samsung_sysmmu_map,
-	.unmap			= samsung_sysmmu_unmap,
-	.flush_iotlb_all	= samsung_sysmmu_flush_iotlb_all,
-	.iotlb_sync		= samsung_sysmmu_iotlb_sync,
-	.iova_to_phys		= samsung_sysmmu_iova_to_phys,
 	.probe_device		= samsung_sysmmu_probe_device,
 	.release_device		= samsung_sysmmu_release_device,
 	.device_group		= samsung_sysmmu_device_group,
@@ -996,6 +967,15 @@ static struct iommu_ops samsung_sysmmu_ops = {
 	.put_resv_regions	= generic_iommu_put_resv_regions,
 	.pgsize_bitmap		= SECT_SIZE | LPAGE_SIZE | SPAGE_SIZE,
 	.owner						= THIS_MODULE,
+	.default_domain_ops	= &(const struct iommu_domain_ops) {
+		.attach_dev		= samsung_sysmmu_attach_dev,
+		.map			= samsung_sysmmu_map,
+		.unmap			= samsung_sysmmu_unmap,
+		.flush_iotlb_all	= samsung_sysmmu_flush_iotlb_all,
+		.iotlb_sync		= samsung_sysmmu_iotlb_sync,
+		.iova_to_phys		= samsung_sysmmu_iova_to_phys,
+		.free			= samsung_sysmmu_domain_free,
+	}
 };
 
 static int sysmmu_get_hw_info(struct sysmmu_drvdata *data)
