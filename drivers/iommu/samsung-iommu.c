@@ -5,7 +5,7 @@
 
 #define pr_fmt(fmt) "sysmmu: " fmt
 
-#include <linux/dma-iommu.h>
+#include <linux/dma-mapping.h>
 #include <linux/kmemleak.h>
 #include <linux/module.h>
 #include <linux/of_iommu.h>
