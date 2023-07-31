@@ -13,8 +13,6 @@
 #include <linux/interrupt.h>
 #include <linux/iommu.h>
 
-#define MAX_VIDS			8U
-
 struct tlb_config {
 	unsigned int index;
 	u32 cfg;
@@ -35,7 +33,7 @@ struct sysmmu_drvdata {
 	struct iommu_group *group;
 	void __iomem *sfrbase;
 	struct clk *clk;
-	phys_addr_t pgtable[MAX_VIDS];
+	phys_addr_t pgtable;
 	spinlock_t lock; /* protect atomic update to H/W status */
 	u32 version;
 	unsigned int num_tlb;
@@ -68,9 +66,7 @@ enum {
 };
 
 enum {
-	IDX_CTRL_VM = 0,
-	IDX_CFG_VM,
-	IDX_FLPT_BASE,
+	IDX_FLPT_BASE = 0,
 	IDX_ALL_INV,
 	IDX_VPN_INV,
 	IDX_RANGE_INV,
@@ -91,21 +87,10 @@ enum {
 	MAX_REG_IDX,
 };
 
-#define MMU_VM_REG_MULT(idx)		(((idx) == IDX_FAULT_VA || (idx) == IDX_FAULT_TRANS_INFO) \
-					 ? 0x10 : 0x1000)
-
 #define MMU_REG(data, idx)		((data)->sfrbase + (data)->reg_set[idx])
-#define MMU_VM_REG(data, idx, vmid)	(MMU_REG(data, idx) + (vmid) * MMU_VM_REG_MULT(idx))
+#define MMU_VM_REG(data, idx, vmid)	(MMU_REG(data, idx) + (vmid) * 0x10U)
 #define MMU_SEC_REG(data, offset_idx)	((data)->secure_base + (data)->reg_set[offset_idx])
-#define MMU_SEC_VM_REG(data, offset_idx, vmid) (MMU_SEC_REG(data, offset_idx) + \
-						(vmid) * MMU_VM_REG_MULT(offset_idx))
-
-static inline unsigned int __max_vids(struct sysmmu_drvdata *data)
-{
-	if (data->has_vcr)
-		return MAX_VIDS;
-	return 1;
-}
+#define MMU_SEC_VM_REG(data, offset_idx, vmid)	(MMU_SEC_REG(data, offset_idx) + (vmid) * 0x10U)
 
 typedef u32 sysmmu_iova_t;
 typedef u32 sysmmu_pte_t;
@@ -183,6 +168,8 @@ static inline sysmmu_pte_t *section_entry(sysmmu_pte_t *pgtable,
 #define REG_MMU_VERSION			0x034
 #define REG_MMU_CAPA0_V7		0x870
 #define REG_MMU_CAPA1_V7		0x874
+#define REG_MMU_CTRL_VM			0x8000
+#define REG_MMU_CFG_VM			0x8004
 
 #define MMU_CAPA_NUM_TLB_WAY(reg)	((reg) & 0xFF)
 #define MMU_CAPA_NUM_SBB_ENTRY(reg)	(((reg) >> 12) & 0xF)
