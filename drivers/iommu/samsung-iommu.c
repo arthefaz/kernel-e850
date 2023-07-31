@@ -1129,8 +1129,6 @@ static int samsung_sysmmu_init_global(void)
 		goto err_init_slpt_fail;
 	}
 
-	bus_set_iommu(&platform_bus_type, &samsung_sysmmu_ops);
-
 	device_initialize(&sync_dev);
 	sysmmu_global_init_done = true;
 
