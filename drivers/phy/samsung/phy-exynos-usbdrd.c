@@ -95,9 +95,6 @@ static ssize_t
 exynos_usbdrd_eom_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t n)
 {
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-	struct exynos_usbdrd_phy *phy_drd = dev_get_drvdata(dev);
-#endif
 	int speed_val;
 
 	kfree(eom_result);
@@ -127,11 +124,6 @@ exynos_usbdrd_eom_store(struct device *dev,
 		speed_val = 1; /* Gen2 */
 	else
 		speed_val = 0; /* Gen1 */
-
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-	/* Start eom test */
-	phy_exynos_usbdp_g2_v4_eom(&phy_drd->usbphy_sub_info, eom_result, speed_val);
-#endif
 
 	return n;
 }
@@ -1322,18 +1314,11 @@ static void exynos_usbdrd_utmi_exit(struct exynos_usbdrd_phy *phy_drd)
 		exynos_usbdrd_clk_disable(phy_drd, true);
 	}
 	phy_exynos_usb_v3p1_disable(&phy_drd->usbphy_info);
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-	phy_exynos_usbdp_g2_v4_disable(&phy_drd->usbphy_sub_info);
-#endif
 
 	exynos_usbdrd_clk_disable(phy_drd, false);
 
 	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 1,
 				    phy_drd->phys[0].pmu_mask);
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-	exynos_usbdrd_pipe3_phy_isol(&phy_drd->phys[1], 1,
-				     phy_drd->phys[1].pmu_mask);
-#endif
 }
 
 static int exynos_usbdrd_phy_exit(struct phy *phy)
@@ -1385,9 +1370,6 @@ static void exynos_usbdrd_pipe3_init(struct exynos_usbdrd_phy *phy_drd)
 
 	/* Fill USBDP Combo phy init */
 	phy_exynos_usb_v3p1_g2_pma_ready(&phy_drd->usbphy_info);
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-	phy_exynos_usbdp_g2_v4_enable(&phy_drd->usbphy_sub_info);
-#endif
 }
 
 static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
@@ -1398,10 +1380,6 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 
 	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 0,
 				    phy_drd->phys[0].pmu_mask);
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-	exynos_usbdrd_pipe3_phy_isol(&phy_drd->phys[1], 0,
-				     phy_drd->phys[1].pmu_mask);
-#endif
 
 	ret = exynos_usbdrd_clk_enable(phy_drd, false);
 	if (ret) {
@@ -1480,9 +1458,6 @@ static void exynos_usbdrd_pipe3_tune(struct exynos_usbdrd_phy *phy_drd,
 			ss_tune_param[i].value = phy_drd->ss_tune_param_value[i][USBPHY_MODE_DEV];
 		}
 	}
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-	phy_exynos_usbdp_g2_v4_tune(&phy_drd->usbphy_sub_info);
-#endif
 }
 
 static void exynos_usbdrd_utmi_tune(struct exynos_usbdrd_phy *phy_drd,
@@ -1578,9 +1553,6 @@ void exynos_usbdrd_phy_conn(struct phy *phy, int is_conn)
 		if (phy_drd->is_conn == 0) {
 			dev_info(phy_drd->dev, "USB PHY isolation clear(ON)\n");
 			exynos_usbdrd_utmi_phy_isol(inst, 0, inst->pmu_mask);
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-			exynos_usbdrd_pipe3_phy_isol(inst, 0, inst->pmu_mask);
-#endif
 
 			dev_info(phy_drd->dev, "USB PHY Conn Set\n");
 			//exynos_usbdrd_ldo_control(phy_drd, 1);
@@ -1599,10 +1571,6 @@ void exynos_usbdrd_phy_conn(struct phy *phy, int is_conn)
 
 			dev_info(phy_drd->dev, "USB PHY isolation set(OFF)\n");
 			exynos_usbdrd_utmi_phy_isol(inst, 1, inst->pmu_mask);
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-			exynos_usbdrd_pipe3_phy_isol(inst, 1, inst->pmu_mask);
-#endif
-
 		} else
 			dev_info(phy_drd->dev, "USB PHY Conn already cleared!!\n");
 	}
@@ -1845,46 +1813,10 @@ int exynos_usbdrd_pipe3_enable(struct phy *phy)
 	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
 
 	phy_exynos_usb_v3p1_g2_pma_ready(&phy_drd->usbphy_info);
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-	phy_exynos_usbdp_g2_v4_enable(&phy_drd->usbphy_sub_info);
-#endif
 
 	return 0;
 }
 EXPORT_SYMBOL_GPL(exynos_usbdrd_pipe3_enable);
-
-int exynos_usbdrd_pipe3_disable(struct phy *phy)
-{
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-	struct phy_usb_instance *inst = phy_get_drvdata(phy);
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-#endif
-
-	/* phy_exynos_usb_v3p1_pipe_ovrd(&phy_drd->usbphy_info); */
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-	phy_exynos_usbdp_g2_v4_disable(&phy_drd->usbphy_sub_info);
-#endif
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(exynos_usbdrd_pipe3_disable);
-
-void exynos_usbdrd_shutdown_notice(int shutdown)
-{
-#ifdef CONFIG_EXYNOS_USBDRD_PHY30
-	struct exynos_usbdrd_phy *phy_drd;
-
-	pr_info("%s\n", __func__);
-
-	phy_drd = exynos_usbdrd_get_struct();
-
-	if (!phy_drd)
-		pr_err("[%s] exynos_usbdrd_get_struct error\n", __func__);
-
-	phy_drd->in_shutdown = shutdown;
-#endif
-}
-EXPORT_SYMBOL_GPL(exynos_usbdrd_shutdown_notice);
 
 static struct phy *exynos_usbdrd_phy_xlate(struct device *dev,
 					struct of_phandle_args *args)
