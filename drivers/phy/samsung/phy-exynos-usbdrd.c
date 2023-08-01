@@ -2072,21 +2072,6 @@ skip_clock:
 		phy_drd->phys[i].phy_cfg = &drv_data->phy_cfg[i];
 		phy_set_drvdata(phy, &phy_drd->phys[i]);
 	}
-#if IS_ENABLED(CONFIG_PHY_EXYNOS_DEBUGFS)
-	ret = exynos_usbdrd_debugfs_init(phy_drd);
-	if (ret) {
-		dev_err(dev, "Failed to initialize debugfs\n");
-		goto err1;
-	}
-#endif
-
-#if IS_ENABLED(CONFIG_PHY_EXYNOS_DP_DEBUGFS)
-	ret = exynos_usbdrd_dp_debugfs_init(phy_drd);
-	if (ret) {
-		dev_err(dev, "Failed to initialize dp debugfs\n");
-		goto err1;
-	}
-#endif
 
 	/*
 	 *phy_drd->idle_ip_idx = exynos_usbdrd_get_idle_ip();
