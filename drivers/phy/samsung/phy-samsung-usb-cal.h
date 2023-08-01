@@ -109,16 +109,6 @@ enum exynos_usbphy_refclk {
 	USBPHY_REFCLK_EXT_12MHZ = 0x02,
 };
 
-enum exynos_usbphy_refsel {
-	USBPHY_REFSEL_CLKCORE = 0x2,
-	USBPHY_REFSEL_EXT_OSC = 0x1,
-	USBPHY_REFSEL_EXT_XTAL = 0x0,
-
-	USBPHY_REFSEL_DIFF_PAD = 0x6,
-	USBPHY_REFSEL_DIFF_INTERNAL = 0x4,
-	USBPHY_REFSEL_DIFF_SINGLE = 0x3,
-};
-
 enum exynos_usbphy_utmi {
 	USBPHY_UTMI_FREECLOCK,
 	USBPHY_UTMI_PHYCLOCK,
@@ -237,7 +227,6 @@ struct exynos_usbphy_info {
 
 	u32 version;
 	enum exynos_usbphy_refclk refclk;
-	enum exynos_usbphy_refsel refsel;
 
 	bool use_io_for_ovc;
 	bool common_block_disable;

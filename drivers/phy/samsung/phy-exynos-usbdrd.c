@@ -1062,87 +1062,6 @@ static int exynos_usbdrd_fill_sstune_param(struct exynos_usbdrd_phy *phy_drd,
 	return 0;
 }
 
-static int exynos_usbdrd_get_phy_refsel(struct exynos_usbdrd_phy *phy_drd)
-{
-	struct device *dev = phy_drd->dev;
-	struct device_node *node = dev->of_node;
-	int value, ret;
-	int check_flag = 0;
-
-	ret = of_property_read_u32(node, "phy_refsel_clockcore", &value);
-	if (ret == 0 && value == 1) {
-		phy_drd->usbphy_info.refsel = USBPHY_REFSEL_CLKCORE;
-		phy_drd->usbphy_sub_info.refsel = USBPHY_REFSEL_CLKCORE;
-	} else if (ret < 0) {
-		dev_err(dev, "can't get phy_refsel_clockcore, error = %d\n", ret);
-		return ret;
-	} else {
-		check_flag++;
-	}
-
-	ret = of_property_read_u32(node, "phy_refsel_ext_osc", &value);
-	if (ret == 0 && value == 1) {
-		phy_drd->usbphy_info.refsel = USBPHY_REFSEL_EXT_OSC;
-		phy_drd->usbphy_sub_info.refsel = USBPHY_REFSEL_EXT_OSC;
-	} else if (ret < 0) {
-		dev_err(dev, "can't get phy_refsel_ext_osc, error = %d\n", ret);
-		return ret;
-	} else {
-		check_flag++;
-	}
-
-	ret = of_property_read_u32(node, "phy_refsel_xtal", &value);
-	if (ret == 0 && value == 1) {
-		phy_drd->usbphy_info.refsel = USBPHY_REFSEL_EXT_XTAL;
-		phy_drd->usbphy_sub_info.refsel = USBPHY_REFSEL_EXT_XTAL;
-	} else if (ret < 0) {
-		dev_err(dev, "can't get phy_refsel_xtal, error = %d\n", ret);
-		return ret;
-	} else {
-		check_flag++;
-	}
-
-	ret = of_property_read_u32(node, "phy_refsel_diff_pad", &value);
-	if (ret == 0 && value == 1) {
-		phy_drd->usbphy_info.refsel = USBPHY_REFSEL_DIFF_PAD;
-		phy_drd->usbphy_sub_info.refsel = USBPHY_REFSEL_DIFF_PAD;
-	} else if (ret < 0) {
-		dev_err(dev, "can't get phy_refsel_diff_pad, error = %d\n", ret);
-		return ret;
-	} else {
-		check_flag++;
-	}
-
-	ret = of_property_read_u32(node, "phy_refsel_diff_internal", &value);
-	if (ret == 0 && value == 1) {
-		phy_drd->usbphy_info.refsel = USBPHY_REFSEL_DIFF_INTERNAL;
-		phy_drd->usbphy_sub_info.refsel = USBPHY_REFSEL_DIFF_INTERNAL;
-	} else if (ret < 0) {
-		dev_err(dev, "can't get phy_refsel_diff_internal, error = %d\n", ret);
-		return ret;
-	} else {
-		check_flag++;
-	}
-
-	ret = of_property_read_u32(node, "phy_refsel_diff_single", &value);
-	if (ret == 0 && value == 1) {
-		phy_drd->usbphy_info.refsel = USBPHY_REFSEL_DIFF_SINGLE;
-		phy_drd->usbphy_sub_info.refsel = USBPHY_REFSEL_DIFF_SINGLE;
-	} else if (ret < 0) {
-		dev_err(dev, "can't get phy_refsel_diff_single, error = %d\n", ret);
-		return ret;
-	} else {
-		check_flag++;
-	}
-
-	if (check_flag > 5) {
-		dev_err(dev, "USB refsel Must be choosed\n");
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
 static int exynos_usbdrd_get_sub_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 {
 	struct device *dev = phy_drd->dev;
@@ -1220,10 +1139,6 @@ static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 		dev_err(dev, "can't get used_phy_port\n");
 		return -EINVAL;
 	}
-
-	ret = exynos_usbdrd_get_phy_refsel(phy_drd);
-	if (ret < 0)
-		dev_err(dev, "can't get phy refsel\n");
 
 	tune_node = of_parse_phandle(dev->of_node, "ss_tune_info", 0);
 	if (tune_node == NULL)
