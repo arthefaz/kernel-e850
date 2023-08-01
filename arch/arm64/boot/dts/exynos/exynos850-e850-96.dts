@@ -209,42 +209,8 @@
 	pinctrl-0 = <&uart1_pins>;
 };
 
-// XXX: For now the LK bootloader enables it for us (and also LDO11)
-///* Enable PMIC LDO regulator for LAN9514 chip */
-//&l24_reg {
-//	regulator-name = "vdd_ldo24";
-//	regulator-min-microvolt = <3300000>;
-//	regulator-max-microvolt = <3300000>;
-//	regulator-always-on;
-//	regulator-ramp-delay = <12000>;
-//	regulator-initial-mode = <3>;
-//};
-
-&udc {
+&usbdrd {
 	status = "okay";
-
-	dwc3 {
-		status = "okay";
-		maximum-speed = "high-speed";
-		usb_audio_offloading = <0>;
-		xhci_l2_support = <0>;
-		xhci_use_uram_for_audio = <0>;
-	//	vdd33_usb-supply = <&l11_reg>;
-
-		dr_mode = "otg";
-		usb-role-switch;
-		role-switch-default-mode = "host";
-
-		port {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			dwc3_role_switch: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&usb_b_connector>;
-			};
-		};
-	};
 
 	connector {
 		compatible = "gpio-usb-b-connector", "usb-b-connector";
@@ -276,9 +242,24 @@
 	};
 };
 
-&usbdrd_phy0 {
+&usbdrd_dwc3 {
+	dr_mode = "otg";
+	usb-role-switch;
+	role-switch-default-mode = "host";
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		dwc3_role_switch: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&usb_b_connector>;
+		};
+	};
+};
+
+&usbdrd_phy {
 	status = "okay";
-//	vdd33_usb-supply = <&l11_reg>;
 };
 
 &usi_uart {
