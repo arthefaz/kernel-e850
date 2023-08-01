@@ -616,15 +616,6 @@
 			/*  USB2HOST = 3 */
 			ip_type = <0x0>;
 
-			/* for PHY CAL */
-			/* choice only one item */
-			phy_refsel_clockcore = <1>;
-			phy_refsel_ext_osc = <0>;
-			phy_refsel_xtal = <0>;
-			phy_refsel_diff_pad = <0>;
-			phy_refsel_diff_internal = <0>;
-			phy_refsel_diff_single = <0>;
-
 			/* true : 1 , false : 0 */
 			use_io_for_ovc = <0>;
 			common_block_disable = <1>;
