@@ -20,19 +20,6 @@
 #ifndef DRIVER_USB_USBPHY_CAL_PHY_EXYNOS_USB3P1_H_
 #define DRIVER_USB_USBPHY_CAL_PHY_EXYNOS_USB3P1_H_
 
-#define HS_REWA_INTR_SRC_RET_EN		(1 << 0)
-#define HS_REWA_INTR_SRC_RET_DIS	(1 << 1)
-#define HS_REWA_INTR_SRC_BYPASS_DIS	(1 << 2)
-#define HS_REWA_INTR_SRC_DISCON		(1 << 16)
-#define HS_REWA_INTR_SRC_ERR_DEV_K	(1 << 17)
-#define HS_REWA_INTR_SRC_ERR_SUS	(1 << 18)
-
-#define HS_REWA_EN_STS_ENALBED		0
-#define HS_REWA_EN_STS_DISABLED		1
-#define HS_REWA_EN_STS_DISCONNECT	2
-#define HS_REWA_EN_STS_NOT_SUSPEND	-1
-
-
 /* initialted */
 extern void phy_exynos_usb_v3p1_enable(struct exynos_usbphy_info *info);
 extern void phy_exynos_usb_v3p1_disable(struct exynos_usbphy_info *info);
@@ -59,14 +46,6 @@ extern void phy_exynos_usb_v3p1_tune_each(struct exynos_usbphy_info *info, char 
 extern void phy_exynos_usb_v3p1_rd_tune_each_from_reg(struct exynos_usbphy_info *info, u32, char *para_name, int *val);
 extern void phy_exynos_usb_v3p1_wr_tune_reg(struct exynos_usbphy_info *info, u32 val);
 extern void phy_exynos_usb_v3p1_rd_tune_reg(struct exynos_usbphy_info *info, u32 *val);
-/* High Speed Remote Wake-up Advisor(HS ReWA) */
-extern int phy_exynos_usb3p1_rewa_enable(struct exynos_usbphy_info *info);
-extern int phy_exynos_usb3p1_rewa_disable(struct exynos_usbphy_info *info);
-extern int phy_exynos_usb3p1_rewa_req_sys_valid(struct exynos_usbphy_info *info);
-extern int phy_exynos_usb3p1_rewa_cancel(struct exynos_usbphy_info *info);
-/* Super Speed Remote Wake-up Advisor(U3 ReWA) */
-void phy_exynos_usb3p1_u3_rewa_enable(struct exynos_usbphy_info *info, int lfps_overlap_mode);
-void phy_exynos_usb3p1_u3_rewa_disable(struct exynos_usbphy_info *info);
 /* 3.0 PHY CR Port Access */
 extern void phy_exynos_usb_v3p1_cal_cr_write(struct exynos_usbphy_info *info, u16 addr, u16 data);
 extern u16 phy_exynos_usb_v3p1_cal_cr_read(struct exynos_usbphy_info *info, u16 addr);

@@ -1245,8 +1245,6 @@ static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 	int ret;
 	int value;
 
-	phy_drd->usbphy_info.hs_rewa = 1;
-
 	if (!of_property_read_u32(dev->of_node, "phy_version", &value)) {
 		phy_drd->usbphy_info.version = value;
 	} else {
@@ -1559,81 +1557,6 @@ static void exynos_usbdrd_pipe3_ilbk(struct exynos_usbdrd_phy *phy_drd)
 	//phy_exynos_usbdp_ilbk(&phy_drd->usbphy_sub_info);
 }
 
-static int exynos_usbdrd_pipe3_vendor_set(struct exynos_usbdrd_phy *phy_drd,
-							int is_enable, int is_cancel)
-{
-	if (is_cancel == 0) {
-		dev_info(phy_drd->dev, "%s - SS ReWA Enable\n",__func__);
-		phy_exynos_usb3p1_u3_rewa_enable(&phy_drd->usbphy_info, 0);
-		enable_irq(phy_drd->usb3_irq_wakeup);
-	} else {
-		dev_info(phy_drd->dev, "%s - SS ReWA Disable\n",__func__);
-		disable_irq_nosync(phy_drd->usb3_irq_wakeup);
-		phy_exynos_usb3p1_u3_rewa_disable(&phy_drd->usbphy_info);
-	}
-
-	return 0;
-}
-
-static int exynos_usbdrd_utmi_vendor_set(struct exynos_usbdrd_phy *phy_drd,
-							int is_enable, int is_cancel)
-{
-	int ret = 0;
-
-	dev_info(phy_drd->dev, "rewa irq : %d, enable: %d, cancel: %d\n",
-			phy_drd->is_irq_enabled, is_enable, is_cancel);
-
-	if (is_cancel) {
-		if (is_enable) {
-			if (phy_drd->is_irq_enabled == 1) {
-				dev_info(phy_drd->dev, "[%s] REWA CANCEL\n", __func__);
-				phy_exynos_usb3p1_rewa_cancel(&phy_drd->usbphy_info);
-			} else {
-				dev_info(phy_drd->dev, "Vendor set by interrupt, Do not REWA cancel\n");
-			}
-		}
-	} else {
-		if (is_enable) {
-			ret = phy_exynos_usb3p1_rewa_enable(&phy_drd->usbphy_info);
-			if (ret) {
-				dev_err(phy_drd->dev, "REWA ENABLE FAIL, ret : %d \n", ret);
-				return ret;
-			}
-
-			/* inform what USB state is idle to IDLE_IP */
-			//exynos_update_ip_idle_status(phy_drd->idle_ip_idx, 1);
-
-			dev_info(phy_drd->dev, "REWA ENABLE Complete\n");
-
-			if (phy_drd->is_irq_enabled == 0) {
-				enable_irq(phy_drd->irq_wakeup);
-				enable_irq(phy_drd->irq_conn);
-				phy_drd->is_irq_enabled = 1;
-			} else {
-				dev_info(phy_drd->dev, "rewa irq already enabled\n");
-			}
-		} else {
-			dev_info(phy_drd->dev, "REWA Disconn & Wakeup IRQ DISABLE\n");
-
-			/* inform what USB state is not idle to IDLE_IP */
-			//exynos_update_ip_idle_status(phy_drd->idle_ip_idx, 0);
-
-			ret = phy_exynos_usb3p1_rewa_disable(&phy_drd->usbphy_info);
-			if (ret) {
-				dev_err(phy_drd->dev, "REWA DISABLE FAIL, ret : %d \n", ret);
-				return ret;
-			}
-
-			disable_irq_nosync(phy_drd->irq_wakeup);
-			disable_irq_nosync(phy_drd->irq_conn);
-			phy_drd->is_irq_enabled = 0;
-
-			dev_info(phy_drd->dev, "REWA DISABLE Complete\n");
-		}
-	}
-	return ret;
-}
-
 static void exynos_usbdrd_pipe3_tune(struct exynos_usbdrd_phy *phy_drd,
 							int phy_state)
 {
@@ -1810,19 +1733,6 @@ int exynos_usbdrd_dp_ilbk(struct phy *phy)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(exynos_usbdrd_dp_ilbk);
-
-int exynos_usbdrd_phy_vendor_set(struct phy *phy, int is_enable,
-						int is_cancel)
-{
-	struct phy_usb_instance *inst = phy_get_drvdata(phy);
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-	int ret;
-
-	ret = inst->phy_cfg->phy_vendor_set(phy_drd, is_enable, is_cancel);
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(exynos_usbdrd_phy_vendor_set);
 
 static void exynos_usbdrd_pipe3_set(struct exynos_usbdrd_phy *phy_drd,
 						int option, void *info)
@@ -2087,40 +1997,6 @@ static struct phy *exynos_usbdrd_phy_xlate(struct device *dev,
 	return phy_drd->phys[args->args[0]].phy;
 }
 
-static irqreturn_t exynos_usbdrd_usb3_phy_wakeup_interrupt(int irq, void *_phydrd)
-{
-	struct exynos_usbdrd_phy *phy_drd = (struct exynos_usbdrd_phy *)_phydrd;
-
-	phy_exynos_usb3p1_u3_rewa_disable(&phy_drd->usbphy_info);
-	dev_info(phy_drd->dev, "[%s] USB3 ReWA disabled...\n", __func__);
-
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t exynos_usbdrd_phy_wakeup_interrupt(int irq, void *_phydrd)
-{
-	struct exynos_usbdrd_phy *phy_drd = (struct exynos_usbdrd_phy *)_phydrd;
-	int ret;
-
-	ret = phy_exynos_usb3p1_rewa_req_sys_valid(&phy_drd->usbphy_info);
-	dev_info(phy_drd->dev, "[%s] rewa sys vaild set : %s \n",
-			__func__, (ret == 1) ? "Disable" : "Disconnect");
-
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t exynos_usbdrd_phy_conn_interrupt(int irq, void *_phydrd)
-{
-	struct exynos_usbdrd_phy *phy_drd = (struct exynos_usbdrd_phy *)_phydrd;
-	int ret;
-
-	ret = phy_exynos_usb3p1_rewa_req_sys_valid(&phy_drd->usbphy_info);
-	dev_info(phy_drd->dev, "[%s] rewa sys vaild set : %s \n",
-			__func__, (ret == 1) ? "Disable" : "Disconnect");
-
-	return IRQ_HANDLED;
-}
-
 static struct phy_ops exynos_usbdrd_phy_ops = {
 	.init		= exynos_usbdrd_phy_init,
 	.exit		= exynos_usbdrd_phy_exit,
@@ -2137,7 +2013,6 @@ static const struct exynos_usbdrd_phy_config phy_cfg_exynos[] = {
 		.phy_init	= exynos_usbdrd_utmi_init,
 		.phy_exit	= exynos_usbdrd_utmi_exit,
 		.phy_tune	= exynos_usbdrd_utmi_tune,
-		.phy_vendor_set	= exynos_usbdrd_utmi_vendor_set,
 		.phy_ilbk	= exynos_usbdrd_utmi_ilbk,
 		.phy_set	= exynos_usbdrd_utmi_set,
 		.set_refclk	= exynos_usbdrd_utmi_set_refclk,
@@ -2148,7 +2023,6 @@ static const struct exynos_usbdrd_phy_config phy_cfg_exynos[] = {
 		.phy_init	= exynos_usbdrd_pipe3_init,
 		.phy_exit	= exynos_usbdrd_pipe3_exit,
 		.phy_tune	= exynos_usbdrd_pipe3_tune,
-		.phy_vendor_set	= exynos_usbdrd_pipe3_vendor_set,
 		.phy_ilbk	= exynos_usbdrd_pipe3_ilbk,
 		.phy_set	= exynos_usbdrd_pipe3_set,
 		.set_refclk	= exynos_usbdrd_pipe3_set_refclk,
@@ -2217,42 +2091,6 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 
 	drv_data = match->data;
 	phy_drd->drv_data = drv_data;
-
-	phy_drd->irq_wakeup = platform_get_irq(pdev, 0);
-	irq_set_status_flags(phy_drd->irq_wakeup, IRQ_NOAUTOEN);
-	ret = devm_request_irq(dev, phy_drd->irq_wakeup, exynos_usbdrd_phy_wakeup_interrupt,
-			0, "phydrd-wakeup", phy_drd);
-	if (ret) {
-		dev_err(dev, "failed to request irq #%d --> %d\n",
-				phy_drd->irq_wakeup, ret);
-		return ret;
-	}
-	irq_set_irq_wake(phy_drd->irq_wakeup, 1);
-
-	phy_drd->irq_conn = platform_get_irq(pdev, 1);
-	irq_set_status_flags(phy_drd->irq_conn, IRQ_NOAUTOEN);
-	ret = devm_request_irq(dev, phy_drd->irq_conn, exynos_usbdrd_phy_conn_interrupt,
-					0, "usb2-phydrd-conn", phy_drd);
-	if (ret) {
-		dev_err(dev, "failed to request irq #%d --> %d\n",
-				phy_drd->irq_conn, ret);
-		return ret;
-	}
-	irq_set_irq_wake(phy_drd->irq_conn, 1);
-
-	phy_drd->usb3_irq_wakeup = platform_get_irq(pdev, 2);
-	irq_set_status_flags(phy_drd->usb3_irq_wakeup, IRQ_NOAUTOEN);
-	ret = devm_request_irq(dev, phy_drd->usb3_irq_wakeup,
-					exynos_usbdrd_usb3_phy_wakeup_interrupt,
-					0, "usb3-phydrd-wakeup", phy_drd);
-	if (ret) {
-		dev_err(dev, "failed to request irq #%d --> %d (For SS ReWA)\n",
-				phy_drd->usb3_irq_wakeup, ret);
-		/* Don't return probe failure for compatibility */
-		dev_err(dev, "Don't return probe failure for compatibility.\n");
-	} else {
-		irq_set_irq_wake(phy_drd->usb3_irq_wakeup, 1);
-	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	phy_drd->reg_phy = devm_ioremap_resource(dev, res);
@@ -2458,7 +2296,6 @@ skip_clock:
 	spin_lock_init(&phy_drd->lock);
 
 
-	phy_drd->is_irq_enabled = 0;
 	pm_runtime_enable(dev);
 
 	ret = sysfs_create_file(&dev->kobj, &dev_attr_phy_tune.attr);
@@ -2501,7 +2338,7 @@ static int exynos_usbdrd_phy_resume(struct device *dev)
 
 	dev_info(dev, "%s\n", __func__);
 
-	if ((!phy_drd->is_conn) && (phy_drd->is_irq_enabled == 0))
+	if (!phy_drd->is_conn)
 		dev_info(dev, "USB wasn't connected\n");
 	else
 		dev_info(dev, "USB was connected\n");

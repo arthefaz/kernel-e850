@@ -78,11 +78,6 @@
 #define EXYNOS_BLKCON_VER_HS_CAP 0x0010
 #define EXYNOS_BLKCON_VER_SS_CAP 0x0020
 
-#define HS_REWA_EN_STS_ENALBED      0
-#define HS_REWA_EN_STS_DISABLED     1
-#define HS_REWA_EN_STS_DISCONNECT   2
-#define HS_REWA_EN_STS_NOT_SUSPEND  -1
-
 enum exynos_usbphy_mode {
 	USBPHY_MODE_DEV = 0,
 	USBPHY_MODE_HOST = 1,
@@ -270,11 +265,6 @@ struct exynos_usbphy_info {
 
 	/* Alternative PHY REF_CLK source */
 	bool alt_ref_clk;
-
-	/* Remote Wake-up Advisor */
-	unsigned hs_rewa : 1;
-	unsigned hs_rewa_src;
-	unsigned u3_rewa;
 
 	/* Dual PHY */
 	bool dual_phy;

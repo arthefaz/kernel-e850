@@ -126,7 +126,6 @@ struct exynos_usbdrd_phy_config {
 	void (*phy_init)(struct exynos_usbdrd_phy *phy_drd);
 	void (*phy_exit)(struct exynos_usbdrd_phy *phy_drd);
 	void (*phy_tune)(struct exynos_usbdrd_phy *phy_drd, int);
-	int (*phy_vendor_set)(struct exynos_usbdrd_phy *phy_drd, int, int);
 	void (*phy_ilbk)(struct exynos_usbdrd_phy *phy_drd);
 	void (*phy_set)(struct exynos_usbdrd_phy *phy_drd, int, void *);
 	unsigned int (*set_refclk)(struct phy_usb_instance *inst);
@@ -200,11 +199,7 @@ struct exynos_usbdrd_phy {
 	u8 otp_index[OTP_SUPPORT_USBPHY_NUMBER];
 	struct tune_bits *otp_data[OTP_SUPPORT_USBPHY_NUMBER];
 #endif
-	int irq_wakeup;
-	int usb3_irq_wakeup;
-	int irq_conn;
 	int is_conn;
-	int is_irq_enabled;
 	int idle_ip_idx;
 	u32 phy_port;
 	u32 reverse_phy_port;
