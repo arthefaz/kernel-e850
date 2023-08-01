@@ -228,9 +228,4 @@ enum samsung_phy_set_option {
 	SET_DPDM_PULLDOWN,
 };
 
-#if IS_ENABLED(CONFIG_PHY_EXYNOS_EUSB_REPEATER)
-extern int tusb2e11_power_on(void);
-extern int tusb2e11_power_off(void);
-#endif
-
 #endif	/* __PHY_EXYNOS_USBDRD_H__ */
