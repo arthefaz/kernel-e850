@@ -191,14 +191,6 @@ struct exynos_usbdrd_phy {
 	int ss_tune_param_value[EXYNOS_DRD_MAX_TUNEPARAM_NUM][2];
 
 	u32 ip_type;
-#if IS_ENABLED(CONFIG_EXYNOS_OTP)
-#define OTP_SUPPORT_USBPHY_NUMBER	2
-#define OTP_USB3PHY_INDEX		0
-#define OTP_USB2PHY_INDEX		1
-	u8 otp_type[OTP_SUPPORT_USBPHY_NUMBER];
-	u8 otp_index[OTP_SUPPORT_USBPHY_NUMBER];
-	struct tune_bits *otp_data[OTP_SUPPORT_USBPHY_NUMBER];
-#endif
 	int is_conn;
 	int idle_ip_idx;
 	u32 phy_port;
