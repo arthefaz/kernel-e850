@@ -200,9 +200,6 @@ struct exynos_usbdrd_phy {
 	int in_shutdown;
 	int is_ldo_on;
 	int phy_port_test_en;
-#if defined(CONFIG_OTG_CDP_SUPPORT)
-	int cdp_check;
-#endif
 };
 
 void __iomem *phy_exynos_usbdp_get_address(void);

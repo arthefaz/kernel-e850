@@ -1388,14 +1388,6 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 	}
 
 	phy_exynos_usb_v3p1_enable(&phy_drd->usbphy_info);
-#if defined(CONFIG_OTG_CDP_SUPPORT)
-	if (phy_drd->cdp_check == 1) { /* We check CDP in only Host mode */
-		ret = phy_exynos_usb3p1_bc_operate_cdp(&phy_drd->usbphy_info);
-		if (ret)
-			pr_info("%s : This device supports bc1.2\n", __func__);
-
-	}
-#endif
 	phy_exynos_usb_v3p1_pipe_ovrd(&phy_drd->usbphy_info);
 
 	phy_exynos_usb3p1_set_fsv_out_en(&phy_drd->usbphy_info, 0);
@@ -1649,20 +1641,6 @@ int exynos_usbdrd_phy_set(struct phy *phy, int option, void *info)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(exynos_usbdrd_phy_set);
-
-#if defined(CONFIG_OTG_CDP_SUPPORT)
-int exynos_usbdrd_cdp_set(struct phy *phy, int val)
-{
-	struct phy_usb_instance *inst = phy_get_drvdata(phy);
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-
-	dev_dbg(phy_drd->dev, "Set CDP check flag to %d\n", val);
-	phy_drd->cdp_check = val;
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(exynos_usbdrd_cdp_set);
-#endif
 
 static int exynos_usbdrd_phy_power_on(struct phy *phy)
 {
