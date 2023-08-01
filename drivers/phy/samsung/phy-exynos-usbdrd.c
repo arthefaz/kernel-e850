@@ -51,34 +51,6 @@
 
 //#include <soc/samsung/exynos-cpupm.h>
 
-/* -------------------------------------------------------------------------- */
-
-/* Kernel memory is always mapped, and the mapping is linear (1:1) */
-static unsigned long sfrbase;
-
-#define writel2(v,a)							\
-	do {								\
-		const unsigned long _virt = (unsigned long)a;		\
-		const unsigned long _phys = _virt - sfrbase;		\
-		const unsigned int _v = v;				\
-									\
-		pr_info("### %s: 0x%lx = 0x%x\n", __func__, _phys, _v);	\
-		writel(v,a);						\
-	} while (0)
-
-#define readl2(a)							\
-({									\
-		const unsigned long _virt = (unsigned long)a;		\
-		const unsigned long _phys = _virt - sfrbase;		\
-		u32 _v;							\
-									\
-		_v = readl(a);						\
-		pr_info("### %s: 0x%lx -> 0x%x\n", __func__, _phys, _v); \
-		_v;							\
-})
-
-/* -------------------------------------------------------------------------- */
-
 static void __iomem *usbdp_combo_phy_reg;
 void __iomem *phycon_base_addr;
 EXPORT_SYMBOL_GPL(phycon_base_addr);
@@ -147,10 +119,7 @@ exynos_usbdrd_eom_store(struct device *dev,
 		/* Disable U1/U2 */
 		dctl_ctrl = ioremap(0x10E0c704, 0x4);
 		reg = readl(dctl_ctrl);
-		pr_info("### %s: 0x%x -> 0x%x\n", __func__, 0x10e0c704, reg);
-
 		reg &= ~(BIT(9) | BIT(10) | BIT(11) | BIT(12));
-		pr_info("### %s: 0x%x = 0x%x\n", __func__, 0x10e0c704, reg);
 		writel(reg, dctl_ctrl);
 		iounmap(dctl_ctrl);
 	}
@@ -667,9 +636,6 @@ static void exynos_usbdrd_pipe3_phy_isol(struct phy_usb_instance *inst,
 
 	val = on ? 0 : mask;
 
-	pr_err("### %s: regmap_update_bits("
-	       "reg=0x%x, mask=0x%x, val=0x%x)\n", __func__,
-	       inst->pmu_offset_dp, mask, val);
 	regmap_update_bits(inst->reg_pmu, inst->pmu_offset_dp,
 		mask, val);
 }
@@ -685,16 +651,10 @@ static void exynos_usbdrd_utmi_phy_isol(struct phy_usb_instance *inst,
 	val = on ? 0 : mask;
 	regmap_update_bits(inst->reg_pmu, inst->pmu_offset,
 		mask, val);
-	pr_err("### %s: regmap_update_bits("
-	       "reg=0x%x, mask=0x%x, val=0x%x)\n", __func__,
-	       inst->pmu_offset, mask, val);
 
 	/* Control TCXO_BUF */
 	if (inst->pmu_mask_tcxobuf != 0) {
 		val = on ? 0 : inst->pmu_mask_tcxobuf;
-		pr_err("### %s: regmap_update_bits("
-		       "reg=0x%x, mask=0x%x, val=0x%x)\n", __func__,
-		       inst->pmu_offset_tcxobuf, inst->pmu_mask_tcxobuf, val);
 		regmap_update_bits(inst->reg_pmu, inst->pmu_offset_tcxobuf,
 			inst->pmu_mask_tcxobuf, val);
 	}
@@ -716,7 +676,7 @@ exynos_usbdrd_pipe3_set_refclk(struct phy_usb_instance *inst)
 		return -EINVAL;
 
 	/* restore any previous reference clock settings */
-	reg = readl2(phy_drd->reg_phy + EXYNOS_DRD_PHYCLKRST);
+	reg = readl(phy_drd->reg_phy + EXYNOS_DRD_PHYCLKRST);
 
 	/* Use EXTREFCLK as ref clock */
 	reg &= ~PHYCLKRST_REFCLKSEL_MASK;
@@ -766,7 +726,7 @@ exynos_usbdrd_utmi_set_refclk(struct phy_usb_instance *inst)
 		return EINVAL;
 
 	/* restore any previous reference clock settings */
-	reg = readl2(phy_drd->reg_phy + EXYNOS_DRD_PHYCLKRST);
+	reg = readl(phy_drd->reg_phy + EXYNOS_DRD_PHYCLKRST);
 
 	reg &= ~PHYCLKRST_REFCLKSEL_MASK;
 	reg |=	PHYCLKRST_REFCLKSEL_EXT_REFCLK;
@@ -2131,8 +2091,6 @@ static irqreturn_t exynos_usbdrd_usb3_phy_wakeup_interrupt(int irq, void *_phydr
 {
 	struct exynos_usbdrd_phy *phy_drd = (struct exynos_usbdrd_phy *)_phydrd;
 
-	pr_err("### %s\n", __func__);
-
 	phy_exynos_usb3p1_u3_rewa_disable(&phy_drd->usbphy_info);
 	dev_info(phy_drd->dev, "[%s] USB3 ReWA disabled...\n", __func__);
 
@@ -2143,8 +2101,6 @@ static irqreturn_t exynos_usbdrd_phy_wakeup_interrupt(int irq, void *_phydrd)
 {
 	struct exynos_usbdrd_phy *phy_drd = (struct exynos_usbdrd_phy *)_phydrd;
 	int ret;
-
-	pr_err("### %s\n", __func__);
 
 	ret = phy_exynos_usb3p1_rewa_req_sys_valid(&phy_drd->usbphy_info);
 	dev_info(phy_drd->dev, "[%s] rewa sys vaild set : %s \n",
@@ -2157,8 +2113,6 @@ static irqreturn_t exynos_usbdrd_phy_conn_interrupt(int irq, void *_phydrd)
 {
 	struct exynos_usbdrd_phy *phy_drd = (struct exynos_usbdrd_phy *)_phydrd;
 	int ret;
-
-	pr_err("### %s\n", __func__);
 
 	ret = phy_exynos_usb3p1_rewa_req_sys_valid(&phy_drd->usbphy_info);
 	dev_info(phy_drd->dev, "[%s] rewa sys vaild set : %s \n",
@@ -2304,9 +2258,6 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 	phy_drd->reg_phy = devm_ioremap_resource(dev, res);
 	if (IS_ERR(phy_drd->reg_phy))
 		return PTR_ERR(phy_drd->reg_phy);
-
-	sfrbase = (unsigned long)phy_drd->reg_phy;
-	phy_exynos_usb3p1_set_sfrbase(sfrbase);
 
 	phycon_base_addr = phy_drd->reg_phy;
 
