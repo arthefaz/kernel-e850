@@ -562,62 +562,26 @@
 			clocks = <&cmu_cmgp CLK_GOUT_SYSREG_CMGP_PCLK>;
 		};
 
-		udc: usb@13600000 {
-			compatible = "samsung,exynos-dwusb";
+		usbdrd: usb@13600000 {
+			compatible = "samsung,exynos850-dwusb3";
 			clocks = <&cmu_hsi CLK_GOUT_USB_BUS_EARLY_CLK>,
 				 <&cmu_hsi CLK_GOUT_USB_REF_CLK>;
 			clock-names = "aclk", "sclk";
-			reg = <0x13600000 0x10000>;
 			#address-cells = <1>;
 			#size-cells = <1>;
-			ranges;
-			//power-domains = <&pd_hsi>;
-			status = "okay";
-			phys = <&usbdrd_phy0 0>;
-			phy-names = "usb2-phy";
-			interrupts = <GIC_SPI 137 IRQ_TYPE_LEVEL_HIGH>;
-			exynos,adj-sof-accuracy = <1>;
-			exynos,usb_host_device_timeout = <200>;
-			exynos,enable_sprs_transfer = <0>;
+			ranges = <0x0 0x13600000 0x10000>;
+			status = "disabled";
 
-			usb3-lpm-capable;
-			samsung,no-extra-delay;
-			usb_host_device_timeout = <0x7ff>; /* Max value */
-
-			exynos,xhci_l2_support = <0>;
-
-			usbdrd_dwc3: dwc3 {
-				compatible = "synopsys,dwc3";
-				reg = <0x13600000 0x10000>;
+			usbdrd_dwc3: usb@0 {
+				compatible = "snps,dwc3";
+				reg = <0x0 0x10000>;
 				interrupts = <GIC_SPI 137 IRQ_TYPE_LEVEL_HIGH>;
-				is_not_vbus_pad = <1>;
-				enable_sprs_transfer = <1>;
-				dr_mode = "peripheral";
-				phys = <&usbdrd_phy0 0>;
+				phys = <&usbdrd_phy 0>;
 				phy-names = "usb2-phy";
-				/* check susphy support */
-				xhci_l2_support = <0>;
-				/* support usb audio offloading: 1, if not: 0 */
-				usb_audio_offloading = <0>;
-				//abox = <&abox>; /* Temporary block */
-				/* support USB L2 sleep */
-				ldos = <3>;
-				ldo_number = <1 2 11>;
-				/* INT min lock support */
-				usb-pm-qos-int = <400000>;
-				status = "okay";
-				snps,quirk-frame-length-adjustment = <0x20>;
-
-				/*
-				 * dis-u2-freeclk-exists-quirk, dis_u2_susphy_quirk are alternative.
-				 * One of them should be selected
-				 */
-				snps,dis-u2-freeclk-exists-quirk;
-				/*snps,dis_u2_susphy_quirk;*/
 			};
 		};
 
-		usbdrd_phy0: phy@135d0000 {
+		usbdrd_phy: phy@135d0000 {
 			compatible = "samsung,exynos-usbdrd-phy";
 			reg = <0x135d0000 0x200>;
 			interrupts = <GIC_SPI 136 IRQ_TYPE_LEVEL_HIGH>,
@@ -626,6 +590,9 @@
 				 <&cmu_hsi CLK_GOUT_USB_PHY_ACLK>;
 			clock-names = "ext_xtal", "aclk";
 			samsung,pmu-syscon = <&pmu_system_controller>;
+			#phy-cells = <1>;
+			status = "disabled";
+
 			pmu_mask = <0x0>;
 			pmu_offset = <0x704>;
 			pmu_offset_dp = <0x704>;
@@ -665,12 +632,6 @@
 			common_block_disable = <1>;
 			is_not_vbus_pad = <1>;
 			used_phy_port = <0>;
-
-			status = "okay";
-
-			#phy-cells = <1>;
-			#address-cells = <1>;
-			ranges;
 		};
 
 		usi_uart: usi@138200c0 {
