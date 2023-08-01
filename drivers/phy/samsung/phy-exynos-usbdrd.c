@@ -1347,32 +1347,10 @@ static int exynos_usbdrd_phy_exit(struct phy *phy)
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_ERD_CHECK_CTYPE_SIDE)
-extern int usbpd_manager_get_side_check(void);
-#endif
-
 static void exynos_usbdrd_pipe3_init(struct exynos_usbdrd_phy *phy_drd)
 {
 	int value;
 
-#if IS_ENABLED(CONFIG_ERD_CHECK_CTYPE_SIDE)
-	/* USE external function to check typec side */
-	value = usbpd_manager_get_side_check();
-	if (value == 1)
-		phy_drd->usbphy_info.used_phy_port =
-			phy_drd->usbphy_sub_info.used_phy_port = 0;
-	else if (value == 2)
-		phy_drd->usbphy_info.used_phy_port =
-			phy_drd->usbphy_sub_info.used_phy_port = 1;
-	else {
-		dev_err(phy_drd->dev, "Unexpected USB Typec side\n");
-		phy_drd->usbphy_info.used_phy_port =
-			phy_drd->usbphy_sub_info.used_phy_port = 0;
-	}
-
-	dev_info(phy_drd->dev, "%s: phy port[%d]\n", __func__,
-					phy_drd->usbphy_info.used_phy_port);
-#else
 	if (gpio_is_valid(phy_drd->phy_port)) {
 		if (phy_drd->reverse_phy_port)
 			value = !gpio_get_value(phy_drd->phy_port);
@@ -1404,7 +1382,6 @@ static void exynos_usbdrd_pipe3_init(struct exynos_usbdrd_phy *phy_drd)
 			dev_err(phy_drd->dev, "non-DT: PHY CON Selection\n");
 		}
 	}
-#endif
 
 	/* Fill USBDP Combo phy init */
 	phy_exynos_usb_v3p1_g2_pma_ready(&phy_drd->usbphy_info);
