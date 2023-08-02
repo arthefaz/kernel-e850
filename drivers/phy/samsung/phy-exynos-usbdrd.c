@@ -2001,9 +2001,6 @@ skip_clock:
 
 	spin_lock_init(&phy_drd->lock);
 
-
-	pm_runtime_enable(dev);
-
 	ret = sysfs_create_file(&dev->kobj, &dev_attr_phy_tune.attr);
 	if (ret) {
 		dev_err(dev, "%s - Couldn't create sysfs for PHY tune\n", __func__);
@@ -2027,46 +2024,11 @@ err1:
 	return ret;
 }
 
-#ifdef CONFIG_PM
-static int exynos_usbdrd_phy_resume(struct device *dev)
-{
-	struct exynos_usbdrd_phy *phy_drd = dev_get_drvdata(dev);
-
-	/*
-	 * There is issue, when USB3.0 PHY is in active state
-	 * after resume. This leads to increased power consumption
-	 * if no USB drivers use the PHY.
-	 *
-	 * The following code shutdowns the PHY, so it is in defined
-	 * state (OFF) after resume. If any USB driver already got
-	 * the PHY at this time, we do nothing and just exit.
-	 */
-
-	dev_info(dev, "%s\n", __func__);
-
-	if (!phy_drd->is_conn)
-		dev_info(dev, "USB wasn't connected\n");
-	else
-		dev_info(dev, "USB was connected\n");
-
-	return 0;
-}
-
-static const struct dev_pm_ops exynos_usbdrd_phy_dev_pm_ops = {
-	.resume	= exynos_usbdrd_phy_resume,
-};
-
-#define EXYNOS_USBDRD_PHY_PM_OPS	&(exynos_usbdrd_phy_dev_pm_ops)
-#else
-#define EXYNOS_USBDRD_PHY_PM_OPS	NULL
-#endif
-
 static struct platform_driver phy_exynos_usbdrd = {
 	.probe	= exynos_usbdrd_phy_probe,
 	.driver = {
 		.of_match_table	= exynos_usbdrd_phy_of_match,
 		.name		= "phy_exynos_usbdrd",
-		.pm		= EXYNOS_USBDRD_PHY_PM_OPS,
 	}
 };
 
