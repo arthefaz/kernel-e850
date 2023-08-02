@@ -247,20 +247,6 @@ static unsigned int exynos_rate_to_clk(struct exynos_usbdrd_phy *phy_drd)
 	return 0;
 }
 
-static void exynos_usbdrd_pipe3_phy_isol(struct phy_usb_instance *inst,
-					unsigned int on, unsigned int mask)
-{
-	unsigned int val;
-
-	if (!inst->reg_pmu)
-		return;
-
-	val = on ? 0 : mask;
-
-	regmap_update_bits(inst->reg_pmu, inst->pmu_offset_dp,
-		mask, val);
-}
-
 static void exynos_usbdrd_utmi_phy_isol(struct phy_usb_instance *inst,
 					unsigned int on, unsigned int mask)
 {
@@ -279,57 +265,6 @@ static void exynos_usbdrd_utmi_phy_isol(struct phy_usb_instance *inst,
 		regmap_update_bits(inst->reg_pmu, inst->pmu_offset_tcxobuf,
 			inst->pmu_mask_tcxobuf, val);
 	}
-}
-
-/*
- * Sets the pipe3 phy's clk as EXTREFCLK (XXTI) which is internal clock
- * from clock core. Further sets multiplier values and spread spectrum
- * clock settings for SuperSpeed operations.
- */
-static unsigned int
-exynos_usbdrd_pipe3_set_refclk(struct phy_usb_instance *inst)
-{
-	static u32 reg;
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-
-	/* PHYCLKRST setting isn't required in Combo PHY */
-	if (phy_drd->usbphy_info.version >= EXYNOS_USBPHY_VER_02_0_0)
-		return -EINVAL;
-
-	/* restore any previous reference clock settings */
-	reg = readl(phy_drd->reg_phy + EXYNOS_DRD_PHYCLKRST);
-
-	/* Use EXTREFCLK as ref clock */
-	reg &= ~PHYCLKRST_REFCLKSEL_MASK;
-	reg |=	PHYCLKRST_REFCLKSEL_EXT_REFCLK;
-
-	/* FSEL settings corresponding to reference clock */
-	reg &= ~PHYCLKRST_FSEL_PIPE_MASK |
-		PHYCLKRST_MPLL_MULTIPLIER_MASK |
-		PHYCLKRST_SSC_REFCLKSEL_MASK;
-	switch (phy_drd->extrefclk) {
-	case EXYNOS_FSEL_50MHZ:
-		reg |= (PHYCLKRST_MPLL_MULTIPLIER_50M_REF |
-			PHYCLKRST_SSC_REFCLKSEL(0x00));
-		break;
-	case EXYNOS_FSEL_24MHZ:
-		reg |= (PHYCLKRST_MPLL_MULTIPLIER_24MHZ_REF |
-			PHYCLKRST_SSC_REFCLKSEL(0x88));
-		break;
-	case EXYNOS_FSEL_20MHZ:
-		reg |= (PHYCLKRST_MPLL_MULTIPLIER_20MHZ_REF |
-			PHYCLKRST_SSC_REFCLKSEL(0x00));
-		break;
-	case EXYNOS_FSEL_19MHZ2:
-		reg |= (PHYCLKRST_MPLL_MULTIPLIER_19200KHZ_REF |
-			PHYCLKRST_SSC_REFCLKSEL(0x88));
-		break;
-	default:
-		dev_dbg(phy_drd->dev, "unsupported ref clk\n");
-		break;
-	}
-
-	return reg;
 }
 
 /*
@@ -443,14 +378,6 @@ static int exynos_usbdrd_get_iptype(struct exynos_usbdrd_phy *phy_drd)
 	return 0;
 }
 
-static void exynos_usbdrd_pipe3_exit(struct exynos_usbdrd_phy *phy_drd)
-{
-	/* pipe3 phy diable is exucuted in utmi_exit.
-	 * Later divide the exit of main and sub phy if necessary
-	 */
-	return;
-}
-
 static void exynos_usbdrd_utmi_exit(struct exynos_usbdrd_phy *phy_drd)
 {
 	phy_exynos_usb_v3p1_disable(&phy_drd->usbphy_info);
@@ -470,44 +397,6 @@ static int exynos_usbdrd_phy_exit(struct phy *phy)
 	inst->phy_cfg->phy_exit(phy_drd);
 
 	return 0;
-}
-
-static void exynos_usbdrd_pipe3_init(struct exynos_usbdrd_phy *phy_drd)
-{
-	int value;
-
-	if (gpio_is_valid(phy_drd->phy_port)) {
-		if (phy_drd->reverse_phy_port)
-			value = !gpio_get_value(phy_drd->phy_port);
-		else
-			value = gpio_get_value(phy_drd->phy_port);
-		dev_info(phy_drd->dev, "%s: phy port[%d]\n", __func__,
-						phy_drd->usbphy_info.used_phy_port);
-	} else {
-		dev_info(phy_drd->dev, "%s: phy port fail retry\n", __func__);
-		phy_drd->phy_port =  of_get_named_gpio(phy_drd->dev->of_node,
-						"phy,gpio_phy_port", 0);
-		if (gpio_is_valid(phy_drd->phy_port)) {
-			dev_err(phy_drd->dev, "PHY CON Selection OK\n");
-
-			if (gpio_request(phy_drd->phy_port, "PHY_CON"))
-				dev_err(phy_drd->dev, "fail to request gpio %s\n", "PHY_CON");
-			else
-				gpio_direction_input(phy_drd->phy_port);
-
-			if (phy_drd->reverse_phy_port)
-				value = !gpio_get_value(phy_drd->phy_port);
-			else
-				value = gpio_get_value(phy_drd->phy_port);
-			dev_info(phy_drd->dev, "%s: phy port1[%d]\n", __func__,
-							phy_drd->usbphy_info.used_phy_port);
-		} else {
-			dev_err(phy_drd->dev, "non-DT: PHY CON Selection\n");
-		}
-	}
-
-	/* Fill USBDP Combo phy init */
-	phy_exynos_usb_v3p1_g2_pma_ready(&phy_drd->usbphy_info);
 }
 
 static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
@@ -634,13 +523,6 @@ static const struct exynos_usbdrd_phy_config phy_cfg_exynos[] = {
 		.phy_init	= exynos_usbdrd_utmi_init,
 		.phy_exit	= exynos_usbdrd_utmi_exit,
 		.set_refclk	= exynos_usbdrd_utmi_set_refclk,
-	},
-	{
-		.id		= EXYNOS_DRDPHY_PIPE3,
-		.phy_isol	= exynos_usbdrd_pipe3_phy_isol,
-		.phy_init	= exynos_usbdrd_pipe3_init,
-		.phy_exit	= exynos_usbdrd_pipe3_exit,
-		.set_refclk	= exynos_usbdrd_pipe3_set_refclk,
 	},
 };
 

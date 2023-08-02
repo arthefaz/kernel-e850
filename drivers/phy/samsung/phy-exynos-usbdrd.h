@@ -113,7 +113,6 @@
 
 enum exynos_usbdrd_phy_id {
 	EXYNOS_DRDPHY_UTMI,
-	EXYNOS_DRDPHY_PIPE3,
 	EXYNOS_DRDPHYS_NUM,
 };
 

@@ -81,7 +81,6 @@
 
 #define EXYNOS_USBCON_PWR		(0x24)
 
-#define PWR_PIPE3_POWERDONW			(0xf << 4)
 #define PWR_FORCE_POWERDOWN_EN			(0x1 << 3)
 #define RSVD1					(0x7 << 0)
 #define PWR_FORCE_POWERDONW			(0x1 << 2)
