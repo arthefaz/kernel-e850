@@ -602,20 +602,12 @@
 			/*  but refclk shouldn't be omitted */
 			phy_refclk = "ext_xtal";
 
-			sub_phy_version = <0x400>;
-
 			/* ip type */
 			/* USB3DRD = 0 */
 			/*  USB3HOST = 1 */
 			/*  USB2DRD = 2 */
 			/*  USB2HOST = 3 */
 			ip_type = <0x0>;
-
-			/* true : 1 , false : 0 */
-			use_io_for_ovc = <0>;
-			common_block_disable = <1>;
-			is_not_vbus_pad = <1>;
-			used_phy_port = <0>;
 		};
 
 		usi_uart: usi@138200c0 {
