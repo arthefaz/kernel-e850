@@ -849,26 +849,7 @@ EXPORT_SYMBOL_GPL(exynos_usbdrd_phy_set);
 
 static int exynos_usbdrd_phy_power_on(struct phy *phy)
 {
-	int ret = 0;
-#ifdef SKIP_DWC3_CORE_POWER_CONTROL
-	struct phy_usb_instance *inst = phy_get_drvdata(phy);
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-
-	dev_dbg(phy_drd->dev, "Request to power_on usbdrd_phy phy\n");
-
-	/* Enable VBUS supply */
-	if (phy_drd->vbus) {
-		ret = regulator_enable(phy_drd->vbus);
-		if (ret) {
-			dev_err(phy_drd->dev, "Failed to enable VBUS supply\n");
-			return ret;
-		}
-	}
-
-	inst->phy_cfg->phy_isol(inst, 0, inst->pmu_mask);
-#endif
-
-	return ret;
+	return 0;
 }
 
 static struct device_node *exynos_usbdrd_parse_dt(void)
@@ -938,21 +919,9 @@ static int exynos_usbdrd_get_idle_ip(void)
 	return -1;
 }
 */
+
 static int exynos_usbdrd_phy_power_off(struct phy *phy)
 {
-#ifdef SKIP_DWC3_CORE_POWER_CONTROL
-	struct phy_usb_instance *inst = phy_get_drvdata(phy);
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-
-	dev_info(phy_drd->dev, "Request to power_off usbdrd_phy phy\n");
-
-	inst->phy_cfg->phy_isol(inst, 1, inst->pmu_mask);
-
-	/* Disable VBUS supply */
-	if (phy_drd->vbus)
-		regulator_disable(phy_drd->vbus);
-#endif
-
 	return 0;
 }
 
