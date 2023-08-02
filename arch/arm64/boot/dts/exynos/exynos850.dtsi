@@ -602,10 +602,6 @@
 			/*  but refclk shouldn't be omitted */
 			phy_refclk = "ext_xtal";
 
-			/* if Main phy has the other phy, it must be set to 1. jusf for usbphy_info */
-			has_other_phy = <0>;
-			/* if combo phy is used, it must be set to 1. usbphy_sub_info is enabled */
-			has_combo_phy = <0>;
 			sub_phy_version = <0x400>;
 
 			/* ip type */
