@@ -130,7 +130,7 @@ struct exynos_usbdrd_phy_drvdata {
 struct exynos_usbdrd_phy {
 	struct device *dev;
 	void __iomem *reg_phy;
-	struct clk **clocks;
+	struct clk *clk;
 	const struct exynos_usbdrd_phy_drvdata *drv_data;
 	struct phy_usb_instance {
 		struct phy *phy;
@@ -371,136 +371,65 @@ static void phy_exynos_usb3p1_set_fsv_out_dis(void __iomem *regs_base)
 
 static int exynos_usbdrd_clk_prepare(struct exynos_usbdrd_phy *phy_drd)
 {
-	int i;
 	int ret;
 
-	for (i = 0; phy_drd->clocks[i] != NULL; i++) {
-		ret = clk_prepare(phy_drd->clocks[i]);
-		if (ret)
-			goto err;
+	ret = clk_prepare(phy_drd->ref_clk);
+	if (ret)
+		return ret;
+
+	ret = clk_prepare(phy_drd->clk);
+	if (ret) {
+		clk_unprepare(phy_drd->ref_clk);
+		return ret;
 	}
 
 	return 0;
-
-err:
-	for (i = i - 1; i >= 0; i--)
-		clk_unprepare(phy_drd->clocks[i]);
-	return ret;
 }
 
 static int exynos_usbdrd_clk_enable(struct exynos_usbdrd_phy *phy_drd)
 {
-	int i;
 	int ret;
 
-	for (i = 0; phy_drd->clocks[i] != NULL; i++) {
-		ret = clk_enable(phy_drd->clocks[i]);
-		if (ret)
-			goto err;
-	}
-	return 0;
+	ret = clk_enable(phy_drd->ref_clk);
+	if (ret)
+		return ret;
 
-err:
-	for (i = i - 1; i >= 0; i--)
-		clk_disable(phy_drd->clocks[i]);
-	return ret;
+	ret = clk_enable(phy_drd->clk);
+	if (ret) {
+		clk_disable(phy_drd->ref_clk);
+		return ret;
+	}
+
+	return 0;
 }
 
 static void exynos_usbdrd_clk_unprepare(struct exynos_usbdrd_phy *phy_drd)
 {
-	int i;
-
-	for (i = 0; phy_drd->clocks[i] != NULL; i++)
-		clk_unprepare(phy_drd->clocks[i]);
+	clk_unprepare(phy_drd->ref_clk);
+	clk_unprepare(phy_drd->clk);
 }
 
 static void exynos_usbdrd_clk_disable(struct exynos_usbdrd_phy *phy_drd)
 {
-	int i;
-
-	for (i = 0; phy_drd->clocks[i] != NULL; i++)
-		clk_disable(phy_drd->clocks[i]);
+	clk_disable(phy_drd->ref_clk);
+	clk_disable(phy_drd->clk);
 }
+
 static int exynos_usbdrd_phyclk_get(struct exynos_usbdrd_phy *phy_drd)
 {
-	struct device *dev = phy_drd->dev;
-	const char	**clk_ids;
-	const char	*refclk_name;
-	struct clk	*clk;
-	int		clk_count;
-	bool		is_phyclk = false;
-	int		clk_index = 0;
-	int		i, ret;
-
-	clk_count = of_property_count_strings(dev->of_node, "clock-names");
-	if (IS_ERR_VALUE((unsigned long)clk_count)) {
-		dev_err(dev, "invalid clk list in %s node", dev->of_node->name);
-		return -EINVAL;
-	}
-	clk_ids = (const char **)devm_kmalloc(dev,
-				(clk_count + 1) * sizeof(const char *),
-				GFP_KERNEL);
-	for (i = 0; i < clk_count; i++) {
-		ret = of_property_read_string_index(dev->of_node, "clock-names",
-								i, &clk_ids[i]);
-		if (ret) {
-			dev_err(dev, "failed to read clocks name %d from %s node\n",
-					i, dev->of_node->name);
-			return ret;
-		}
-	}
-	clk_ids[clk_count] = NULL;
-
-	phy_drd->clocks = (struct clk **) devm_kmalloc(dev,
-				(clk_count + 1) * sizeof(struct clk *), GFP_KERNEL);
-	if (!phy_drd->clocks) {
-		dev_err(dev, "failed to alloc for clocks\n");
-		return -ENOMEM;
+	phy_drd->clk = devm_clk_get(phy_drd->dev, "aclk");
+	if (IS_ERR(phy_drd->clk)) {
+		dev_err(phy_drd->dev, "couldn't get aclk clock\n");
+		return PTR_ERR(phy_drd->clk);
 	}
 
-	for (i = 0; clk_ids[i] != NULL; i++) {
-		if (!is_phyclk) {
-			clk = devm_clk_get(dev, clk_ids[i]);
-			if (IS_ERR_OR_NULL(clk)) {
-				dev_err(dev, "couldn't get %s clock\n", clk_ids[i]);
-				return -EINVAL;
-			}
-			phy_drd->clocks[clk_index] = clk;
-			clk_index++;
-		}
-		is_phyclk = false;
+	phy_drd->ref_clk = devm_clk_get(phy_drd->dev, "ext_xtal");
+	if (IS_ERR(phy_drd->ref_clk)) {
+		dev_err(phy_drd->dev, "couldn't get ref clock\n");
+		return PTR_ERR(phy_drd->ref_clk);
 	}
-	phy_drd->clocks[clk_index] = NULL;
-
-	ret = of_property_read_string_index(dev->of_node,
-						"phy_refclk", 0, &refclk_name);
-	if (ret) {
-		dev_err(dev, "failed to read ref_clocks name from %s node\n",
-				dev->of_node->name);
-		return ret;
-	}
-
-	if (!strcmp("none", refclk_name)) {
-		dev_err(dev, "phy reference clock shouldn't be omitted");
-		return -EINVAL;
-	}
-
-	for (i = 0; clk_ids[i] != NULL; i++) {
-		if (!strcmp(clk_ids[i], refclk_name)) {
-			phy_drd->ref_clk = devm_clk_get(dev, refclk_name);
-			break;
-		}
-	}
-
-	if (IS_ERR_OR_NULL(phy_drd->ref_clk)) {
-		dev_err(dev, "%s couldn't get ref_clk", __func__);
-		return -EINVAL;
-	}
-
-	devm_kfree(dev, clk_ids);
 
 	return 0;
-
 }
 
 static int exynos_usbdrd_clk_get(struct exynos_usbdrd_phy *phy_drd)
