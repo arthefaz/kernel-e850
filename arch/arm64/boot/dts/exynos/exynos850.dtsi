@@ -595,8 +595,6 @@
 			pmu_offset = <0x704>;
 			pmu_offset_dp = <0x704>;
 
-			/* USBDP combo phy version  - 0x200 */
-			phy_version = <0x301>;
 			/* if it doesn't need phy user mux, */
 			/*  you should write "none" */
 			/*  but refclk shouldn't be omitted */
