@@ -109,24 +109,6 @@ enum exynos_usbphy_refclk {
 	USBPHY_REFCLK_EXT_12MHZ = 0x02,
 };
 
-enum exynos_usbphy_utmi {
-	USBPHY_UTMI_FREECLOCK,
-	USBPHY_UTMI_PHYCLOCK,
-};
-
-enum exynos_usb_bc {
-	BC_NO_CHARGER,
-	BC_SDP,
-	BC_DCP,
-	BC_CDP,
-	BC_ACA_DOCK,
-	BC_ACA_A,
-	BC_ACA_B,
-	BC_ACA_C,
-};
-
-#define EXYNOS_USB_TUNE_LAST 0x4C415354
-
 /**
  * struct exynos_usbphy_info : USBPHY information to share USBPHY CAL code
  * @version: PHY controller version
@@ -138,7 +120,6 @@ enum exynos_usb_bc {
  *       0xF200 - for EXT         : EXYNOS7420_HSIC
  * @refclk: reference clock frequency for USBPHY
  * @refsrc: reference clock source path for USBPHY
- * @use_io_for_ovc: use over-current notification io for USBLINK
  * @regs_base: base address of PHY control register *
  */
 
@@ -149,10 +130,6 @@ struct exynos_usbphy_info {
 	u32 version;
 	enum exynos_usbphy_refclk refclk;
 
-	bool use_io_for_ovc;
-	bool common_block_disable;
-	bool not_used_vbus_pad;
-
 	void __iomem *regs_base;
 
 	/* multiple phy */
@@ -161,20 +138,6 @@ struct exynos_usbphy_info {
 	void __iomem *pcs_base;
 	void __iomem *ctrl_base;
 	void __iomem *link_base;
-	int used_phy_port;
-
-	/* Alternative PHY REF_CLK source */
-	bool alt_ref_clk;
 };
-
-struct usb_eom_result_s {
-	u32 phase;
-	u32 vref;
-	u64 err;
-};
-#define EOM_PH_SEL_MAX 72
-#define EOM_DEF_VREF_MAX 256
-
-void phy_usb_exynos_register_cal_infor(struct exynos_usbphy_info *cal_info);
 
 #endif /* __PHY_SAMSUNG_USB_FW_CAL_H__ */

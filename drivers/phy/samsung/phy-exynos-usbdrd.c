@@ -307,36 +307,8 @@ static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 		return -EINVAL;
 	}
 
-	if (!of_property_read_u32(dev->of_node, "use_io_for_ovc", &value)) {
-		phy_drd->usbphy_info.use_io_for_ovc = value ? true : false;
-		} else {
-		dev_err(dev, "can't get io_for_ovc\n");
-		return -EINVAL;
-		}
-
-	if (!of_property_read_u32(dev->of_node, "common_block_disable", &value)) {
-		phy_drd->usbphy_info.common_block_disable = value ? true : false;
-	} else {
-		dev_err(dev, "can't get common_block_disable\n");
-		return -EINVAL;
-	}
-
 	phy_drd->usbphy_info.refclk = phy_drd->extrefclk;
 	phy_drd->usbphy_info.regs_base = phy_drd->reg_phy;
-
-	if (!of_property_read_u32(dev->of_node, "is_not_vbus_pad", &value)) {
-		phy_drd->usbphy_info.not_used_vbus_pad = value ? true : false;
-	} else {
-		dev_err(dev, "can't get vbus_pad\n");
-		return -EINVAL;
-	}
-
-	if (!of_property_read_u32(dev->of_node, "used_phy_port", &value)) {
-		phy_drd->usbphy_info.used_phy_port = value ? true : false;
-	} else {
-		dev_err(dev, "can't get used_phy_port\n");
-		return -EINVAL;
-	}
 
 	dev_info(phy_drd->dev, "usbphy info: version:0x%x, refclk:0x%x\n",
 		phy_drd->usbphy_info.version, phy_drd->usbphy_info.refclk);

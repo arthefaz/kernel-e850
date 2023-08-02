@@ -227,13 +227,8 @@ void phy_exynos_usb_v3p1_enable(struct exynos_usbphy_info *info)
 
 	/* set phy clock & control HS phy */
 	reg = readl(regs_base + EXYNOS_USBCON_HSP);
-
-	if (info->common_block_disable) {
-		reg |= HSP_EN_UTMISUSPEND;
-		reg |= HSP_COMMONONN;
-	} else {
-		reg &= ~HSP_COMMONONN;
-	}
+	reg |= HSP_EN_UTMISUSPEND;
+	reg |= HSP_COMMONONN;
 	writel(reg, regs_base + EXYNOS_USBCON_HSP);
 
 	udelay(100);
@@ -267,13 +262,8 @@ void phy_exynos_usb_v3p1_enable(struct exynos_usbphy_info *info)
 
 	/* 2. OVC io usage */
 	reg = readl(regs_base + EXYNOS_USBCON_LINK_PORT);
-	if (info->use_io_for_ovc) {
-		reg &= ~LINKPORT_HUB_PORT_SEL_OCD_U3;
-		reg &= ~LINKPORT_HUB_PORT_SEL_OCD_U2;
-	} else {
-		reg |= LINKPORT_HUB_PORT_SEL_OCD_U3;
-		reg |= LINKPORT_HUB_PORT_SEL_OCD_U2;
-	}
+	reg |= LINKPORT_HUB_PORT_SEL_OCD_U3;
+	reg |= LINKPORT_HUB_PORT_SEL_OCD_U2;
 	writel(reg, regs_base + EXYNOS_USBCON_LINK_PORT);
 }
 
