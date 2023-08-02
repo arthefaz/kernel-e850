@@ -40,9 +40,6 @@ extern void phy_exynos_usb_v3p1_pipe_ready(struct exynos_usbphy_info *info);
 
 extern void phy_exynos_usb_v3p1_config_host_mode(struct exynos_usbphy_info *info);
 
-/* 3.0 PHY CR Port Access */
-extern void phy_exynos_usb_v3p1_cal_cr_write(struct exynos_usbphy_info *info, u16 addr, u16 data);
-extern u16 phy_exynos_usb_v3p1_cal_cr_read(struct exynos_usbphy_info *info, u16 addr);
 /* 2.0 PHY Test I/F Access */
 extern u8 phy_exynos_usb_v3p1_tif_ov_rd(struct exynos_usbphy_info *info, u8 addr);
 extern u8 phy_exynos_usb_v3p1_tif_ov_wr(struct exynos_usbphy_info *info, u8 addr, u8 data);

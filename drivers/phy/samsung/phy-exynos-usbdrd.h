@@ -143,7 +143,7 @@ struct exynos_usbdrd_phy_drvdata {
  * @phys[]: array for 'EXYNOS_DRDPHYS_NUM' number of PHY
  *	    instances each with its 'phy' and 'phy_cfg'.
  * @extrefclk: frequency select settings when using 'separate
- *	       reference clocks' for SS and HS operations
+ *	       reference clocks' for HS operations
  * @ref_clk: reference clock to PHY block from which PHY's
  *	     operational clocks are derived
  * @usbphy_info; Phy main control info
