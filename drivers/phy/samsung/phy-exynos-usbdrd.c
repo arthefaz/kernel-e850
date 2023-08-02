@@ -92,25 +92,6 @@
 #define EXYNOS_USBCON_HSP_TEST			0x5c
 #define HSP_TEST_SIDDQ				BIT(24)
 
-/**
- * struct exynos_usbphy_info : USBPHY information to share USBPHY CAL code
- * @version: PHY controller version
- *       0x0100 - for EXYNOS_USB3 : EXYNOS7420, EXYNOS7890
- *       0x0101 -           EXYNOS8890
- *       0x0111 -           EXYNOS8895
- *       0x0200 - for EXYNOS_USB2 : EXYNOS7580, EXYNOS3475
- *       0x0210 -           EXYNOS8890_EVT1
- *       0xF200 - for EXT         : EXYNOS7420_HSIC
- * @refsrc: reference clock source path for USBPHY
- * @regs_base: base address of PHY control register *
- */
-struct exynos_usbphy_info {
-	/* Device Information */
-	struct device *dev;
-	u32 version;
-	void __iomem *regs_base;
-};
-
 #define KHZ	1000
 #define MHZ	(KHZ * KHZ)
 
@@ -145,7 +126,6 @@ struct exynos_usbdrd_phy_drvdata {
  *	       reference clocks' for HS operations
  * @ref_clk: reference clock to PHY block from which PHY's
  *	     operational clocks are derived
- * @usbphy_info; Phy main control info
  */
 struct exynos_usbdrd_phy {
 	struct device *dev;
@@ -168,7 +148,6 @@ struct exynos_usbdrd_phy {
 	struct regulator	*vdd12_usb;
 	struct regulator	*vdd18_usb;
 	struct regulator	*vdd33_usb;
-	struct exynos_usbphy_info usbphy_info;
 
 	int is_ldo_on;
 };
@@ -205,36 +184,34 @@ static void exynos_cal_usbphy_q_ch(void *regs_base, u8 enable)
 	}
 }
 
-static void link_vbus_filter_en(struct exynos_usbphy_info *info,
-	u8 enable)
+static void link_vbus_filter_en(void __iomem *regs_base, u8 enable)
 {
 	u32 phy_resume;
 
-	phy_resume = readl(info->regs_base + EXYNOS_USBCON_LINK_CTRL);
+	phy_resume = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
 	if (enable)
 		phy_resume &= ~LINKCTRL_BUS_FILTER_BYPASS_MASK;
 	else
 		phy_resume |= LINKCTRL_BUS_FILTER_BYPASS(0xf);
-	writel(phy_resume, info->regs_base + EXYNOS_USBCON_LINK_CTRL);
+	writel(phy_resume, regs_base + EXYNOS_USBCON_LINK_CTRL);
 }
 
-static void phy_power_en(struct exynos_usbphy_info *info, u8 en)
+static void phy_power_en(void __iomem *regs_base, u8 en)
 {
 	u32 reg;
 
 
 	/* 2.0 PHY Power Down Control */
-	reg = readl(info->regs_base + EXYNOS_USBCON_HSP_TEST);
+	reg = readl(regs_base + EXYNOS_USBCON_HSP_TEST);
 	if (en)
 		reg &= ~HSP_TEST_SIDDQ;
 	else
 		reg |= HSP_TEST_SIDDQ;
-	writel(reg, info->regs_base + EXYNOS_USBCON_HSP_TEST);
+	writel(reg, regs_base + EXYNOS_USBCON_HSP_TEST);
 }
 
-static void phy_sw_rst_high(struct exynos_usbphy_info *info)
+static void phy_sw_rst_high(void __iomem *regs_base)
 {
-	void __iomem *regs_base = info->regs_base;
 	u32 clkrst;
 
 	clkrst = readl(regs_base + EXYNOS_USBCON_CLKRST);
@@ -245,9 +222,8 @@ static void phy_sw_rst_high(struct exynos_usbphy_info *info)
 	writel(clkrst, regs_base + EXYNOS_USBCON_CLKRST);
 }
 
-static void phy_sw_rst_low(struct exynos_usbphy_info *info)
+static void phy_sw_rst_low(void __iomem *regs_base)
 {
-	void __iomem *regs_base = info->regs_base;
 	u32 clkrst;
 
 	clkrst = readl(regs_base + EXYNOS_USBCON_CLKRST);
@@ -259,9 +235,8 @@ static void phy_sw_rst_low(struct exynos_usbphy_info *info)
 }
 
 /* USB/DP PHY control */
-static void phy_exynos_usb_v3p1_pipe_ovrd(struct exynos_usbphy_info *info)
+static void phy_exynos_usb_v3p1_pipe_ovrd(void __iomem *regs_base)
 {
-	void __iomem *regs_base = info->regs_base;
 	u32 reg;
 
 	/* force pipe3 signal for link */
@@ -277,9 +252,8 @@ static void phy_exynos_usb_v3p1_pipe_ovrd(struct exynos_usbphy_info *info)
 	writel(reg, regs_base + EXYNOS_USBCON_COMBO_PMA_CTRL);
 }
 
-static void phy_exynos_usb_v3p1_link_sw_reset(struct exynos_usbphy_info *info)
+static void phy_exynos_usb_v3p1_link_sw_reset(void __iomem *regs_base)
 {
-	void __iomem *regs_base = info->regs_base;
 	u32 reg;
 
 	/*
@@ -288,7 +262,7 @@ static void phy_exynos_usb_v3p1_link_sw_reset(struct exynos_usbphy_info *info)
 	 * by Foundry T. so that some of global register has cleard - 2018.11.12
 	 */
 	/* Link Reset */
-	reg = readl(info->regs_base + EXYNOS_USBCON_CLKRST);
+	reg = readl(regs_base + EXYNOS_USBCON_CLKRST);
 	reg |= CLKRST_LINK_SW_RST;
 	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
 
@@ -298,16 +272,15 @@ static void phy_exynos_usb_v3p1_link_sw_reset(struct exynos_usbphy_info *info)
 	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
 }
 
-static void phy_exynos_usb_v3p1_enable(struct exynos_usbphy_info *info)
+static void phy_exynos_usb_v3p1_enable(void __iomem *regs_base)
 {
-	void __iomem *regs_base = info->regs_base;
 	u32 reg;
 	u32 reg_hsp;
 
 	exynos_cal_usbphy_q_ch(regs_base, 1);
 
 	/* Set PHY POR High */
-	phy_sw_rst_high(info);
+	phy_sw_rst_high(regs_base);
 
 	reg = readl(regs_base + EXYNOS_USBCON_UTMI);
 	reg &= ~UTMI_FORCE_SUSPEND;
@@ -328,7 +301,7 @@ static void phy_exynos_usb_v3p1_enable(struct exynos_usbphy_info *info)
 	/* 1. Set VBUS Valid and DP-Pull up control
 	 * by VBUS pad usage
 	 */
-	link_vbus_filter_en(info, false);
+	link_vbus_filter_en(regs_base, false);
 	reg = readl(regs_base + EXYNOS_USBCON_UTMI);
 	reg_hsp = readl(regs_base + EXYNOS_USBCON_HSP);
 	reg |= UTMI_FORCE_BVALID;
@@ -340,13 +313,13 @@ static void phy_exynos_usb_v3p1_enable(struct exynos_usbphy_info *info)
 	writel(reg_hsp, regs_base + EXYNOS_USBCON_HSP);
 
 	/* Enable PHY Power Mode */
-	phy_power_en(info, 1);
+	phy_power_en(regs_base, 1);
 
 	/* before POR low, 10us delay is needed. */
 	udelay(10);
 
 	/* Set PHY POR Low */
-	phy_sw_rst_low(info);
+	phy_sw_rst_low(regs_base);
 
 	/* after POR low and delay 75us, PHYCLOCK is guaranteed. */
 	udelay(75);
@@ -358,10 +331,9 @@ static void phy_exynos_usb_v3p1_enable(struct exynos_usbphy_info *info)
 	writel(reg, regs_base + EXYNOS_USBCON_LINK_PORT);
 }
 
-static void phy_exynos_usb_v3p1_disable(struct exynos_usbphy_info *info)
+static void phy_exynos_usb_v3p1_disable(void __iomem *regs_base)
 {
 	u32 reg;
-	void __iomem *regs_base = info->regs_base;
 
 	/* set phy clock & control HS phy */
 	reg = readl(regs_base + EXYNOS_USBCON_UTMI);
@@ -372,7 +344,7 @@ static void phy_exynos_usb_v3p1_disable(struct exynos_usbphy_info *info)
 	writel(reg, regs_base + EXYNOS_USBCON_UTMI);
 
 	/* Disable PHY Power Mode */
-	phy_power_en(info, 0);
+	phy_power_en(regs_base, 0);
 
 	/* clear force q-channel */
 	exynos_cal_usbphy_q_ch(regs_base, 0);
@@ -381,13 +353,12 @@ static void phy_exynos_usb_v3p1_disable(struct exynos_usbphy_info *info)
 	 * Link sw reset is need for USB_DP/DM high-z in host mode: 2019.04.10
 	 * by daeman.ko.
 	 */
-	phy_exynos_usb_v3p1_link_sw_reset(info);
+	phy_exynos_usb_v3p1_link_sw_reset(regs_base);
 }
 
 /* UART/JTAG over USB */
-static void phy_exynos_usb3p1_set_fsv_out_dis(struct exynos_usbphy_info *info)
+static void phy_exynos_usb3p1_set_fsv_out_dis(void __iomem *regs_base)
 {
-	void __iomem *regs_base = info->regs_base;
 	u32 hsp_ctrl;
 
 	hsp_ctrl = readl(regs_base + EXYNOS_USBCON_HSP);
@@ -617,32 +588,10 @@ static void exynos_usbdrd_utmi_phy_isol(struct phy_usb_instance *inst,
 		mask, val);
 }
 
-static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
-{
-	struct device *dev = phy_drd->dev;
-	int value;
-
-	if (!of_property_read_u32(dev->of_node, "phy_version", &value)) {
-		phy_drd->usbphy_info.version = value;
-	} else {
-		dev_err(dev, "can't get phy_version\n");
-		return -EINVAL;
-	}
-
-	phy_drd->usbphy_info.regs_base = phy_drd->reg_phy;
-
-	dev_info(phy_drd->dev, "usbphy info: version:0x%x\n",
-		 phy_drd->usbphy_info.version);
-
-	return 0;
-}
-
 static void exynos_usbdrd_utmi_exit(struct exynos_usbdrd_phy *phy_drd)
 {
-	phy_exynos_usb_v3p1_disable(&phy_drd->usbphy_info);
-
+	phy_exynos_usb_v3p1_disable(phy_drd->reg_phy);
 	exynos_usbdrd_clk_disable(phy_drd);
-
 	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 1,
 				    phy_drd->phys[0].pmu_mask);
 }
@@ -673,10 +622,9 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 		return;
 	}
 
-	phy_exynos_usb_v3p1_enable(&phy_drd->usbphy_info);
-	phy_exynos_usb_v3p1_pipe_ovrd(&phy_drd->usbphy_info);
-
-	phy_exynos_usb3p1_set_fsv_out_dis(&phy_drd->usbphy_info);
+	phy_exynos_usb_v3p1_enable(phy_drd->reg_phy);
+	phy_exynos_usb_v3p1_pipe_ovrd(phy_drd->reg_phy);
+	phy_exynos_usb3p1_set_fsv_out_dis(phy_drd->reg_phy);
 
 	pr_info("%s: ---\n", __func__);
 }
@@ -741,7 +689,7 @@ int exynos_usbdrd_phy_link_rst(struct phy *phy)
 	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
 
 	pr_info("%s\n", __func__);
-	phy_exynos_usb_v3p1_link_sw_reset(&phy_drd->usbphy_info);
+	phy_exynos_usb_v3p1_link_sw_reset(phy_drd->reg_phy);
 	return 0;
 }
 
@@ -894,10 +842,6 @@ skip_clock:
 	}
 
 	pmu_mask = (u32)BIT(pmu_mask);
-
-	ret = exynos_usbdrd_get_phyinfo(phy_drd);
-	if (ret)
-		goto err1;
 
 	for (i = 0; i < EXYNOS_DRDPHYS_NUM; i++) {
 		struct phy *phy = devm_phy_create(dev, NULL,
