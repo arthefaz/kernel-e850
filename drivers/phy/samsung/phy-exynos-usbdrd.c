@@ -58,51 +58,29 @@ static int exynos_usbdrd_clk_prepare(struct exynos_usbdrd_phy *phy_drd)
 			goto err;
 	}
 
-	if (phy_drd->use_phy_umux) {
-		for (i = 0; phy_drd->phy_clocks[i] != NULL; i++) {
-			ret = clk_prepare(phy_drd->phy_clocks[i]);
-			if (ret)
-				goto err1;
-		}
-	}
 	return 0;
+
 err:
 	for (i = i - 1; i >= 0; i--)
 		clk_unprepare(phy_drd->clocks[i]);
 	return ret;
-err1:
-	for (i = i - 1; i >= 0; i--)
-		clk_unprepare(phy_drd->phy_clocks[i]);
-	return ret;
 }
 
-static int exynos_usbdrd_clk_enable(struct exynos_usbdrd_phy *phy_drd,
-					bool umux)
+static int exynos_usbdrd_clk_enable(struct exynos_usbdrd_phy *phy_drd)
 {
 	int i;
 	int ret;
 
-	if (!umux) {
-		for (i = 0; phy_drd->clocks[i] != NULL; i++) {
-			ret = clk_enable(phy_drd->clocks[i]);
-			if (ret)
-				goto err;
-		}
-	} else {
-		for (i = 0; phy_drd->phy_clocks[i] != NULL; i++) {
-				ret = clk_enable(phy_drd->phy_clocks[i]);
-				if (ret)
-					goto err1;
-		}
+	for (i = 0; phy_drd->clocks[i] != NULL; i++) {
+		ret = clk_enable(phy_drd->clocks[i]);
+		if (ret)
+			goto err;
 	}
 	return 0;
+
 err:
 	for (i = i - 1; i >= 0; i--)
 		clk_disable(phy_drd->clocks[i]);
-	return ret;
-err1:
-	for (i = i - 1; i >= 0; i--)
-		clk_disable(phy_drd->phy_clocks[i]);
 	return ret;
 }
 
@@ -112,83 +90,25 @@ static void exynos_usbdrd_clk_unprepare(struct exynos_usbdrd_phy *phy_drd)
 
 	for (i = 0; phy_drd->clocks[i] != NULL; i++)
 		clk_unprepare(phy_drd->clocks[i]);
-	for (i = 0; phy_drd->phy_clocks[i] != NULL; i++)
-		clk_unprepare(phy_drd->phy_clocks[i]);
 }
 
-static void exynos_usbdrd_clk_disable(struct exynos_usbdrd_phy *phy_drd, bool umux)
+static void exynos_usbdrd_clk_disable(struct exynos_usbdrd_phy *phy_drd)
 {
 	int i;
 
-	if (!umux) {
-		for (i = 0; phy_drd->clocks[i] != NULL; i++)
-			clk_disable(phy_drd->clocks[i]);
-	} else {
-		for (i = 0; phy_drd->phy_clocks[i] != NULL; i++)
-			clk_disable(phy_drd->phy_clocks[i]);
-	}
+	for (i = 0; phy_drd->clocks[i] != NULL; i++)
+		clk_disable(phy_drd->clocks[i]);
 }
 static int exynos_usbdrd_phyclk_get(struct exynos_usbdrd_phy *phy_drd)
 {
 	struct device *dev = phy_drd->dev;
-	const char	**phyclk_ids;
 	const char	**clk_ids;
 	const char	*refclk_name;
 	struct clk	*clk;
-	int		phyclk_count;
 	int		clk_count;
 	bool		is_phyclk = false;
 	int		clk_index = 0;
-	int		i, j, ret;
-
-	phyclk_count = of_property_count_strings(dev->of_node, "phyclk_mux");
-	if (IS_ERR_VALUE((unsigned long)phyclk_count)) {
-		dev_err(dev, "invalid phyclk list in %s node\n",
-							dev->of_node->name);
-		return -EINVAL;
-	}
-
-	phyclk_ids = (const char **)devm_kmalloc(dev,
-					(phyclk_count+1) * sizeof(const char *),
-					GFP_KERNEL);
-	for (i = 0; i < phyclk_count; i++) {
-		ret = of_property_read_string_index(dev->of_node,
-						"phyclk_mux", i, &phyclk_ids[i]);
-		if (ret) {
-			dev_err(dev, "failed to read phyclk_mux name %d from %s node\n",
-					i, dev->of_node->name);
-			return ret;
-		}
-	}
-	phyclk_ids[phyclk_count] = NULL;
-
-	if (!strcmp("none", phyclk_ids[0])) {
-		dev_info(dev, "don't need user Mux for phyclk\n");
-		phy_drd->use_phy_umux = false;
-		phyclk_count = 0;
-
-	} else {
-		phy_drd->use_phy_umux = true;
-
-		phy_drd->phy_clocks = (struct clk **) devm_kmalloc(dev,
-				(phyclk_count+1) * sizeof(struct clk *),
-				GFP_KERNEL);
-		if (!phy_drd->phy_clocks) {
-			dev_err(dev, "failed to alloc : phy clocks\n");
-			return -ENOMEM;
-		}
-
-		for (i = 0; phyclk_ids[i] != NULL; i++) {
-			clk = devm_clk_get(dev, phyclk_ids[i]);
-			if (IS_ERR_OR_NULL(clk)) {
-				dev_err(dev, "couldn't get %s clock\n", phyclk_ids[i]);
-				return -EINVAL;
-			}
-			phy_drd->phy_clocks[i] = clk;
-		}
-
-		phy_drd->phy_clocks[i] = NULL;
-	}
+	int		i, ret;
 
 	clk_count = of_property_count_strings(dev->of_node, "clock-names");
 	if (IS_ERR_VALUE((unsigned long)clk_count)) {
@@ -217,14 +137,6 @@ static int exynos_usbdrd_phyclk_get(struct exynos_usbdrd_phy *phy_drd)
 	}
 
 	for (i = 0; clk_ids[i] != NULL; i++) {
-		if (phyclk_count) {
-			for (j = 0; phyclk_ids[j] != NULL; j++) {
-				if (!strcmp(phyclk_ids[j], clk_ids[i])) {
-					is_phyclk = true;
-					phyclk_count--;
-				}
-			}
-		}
 		if (!is_phyclk) {
 			clk = devm_clk_get(dev, clk_ids[i]);
 			if (IS_ERR_OR_NULL(clk)) {
@@ -263,7 +175,6 @@ static int exynos_usbdrd_phyclk_get(struct exynos_usbdrd_phy *phy_drd)
 		return -EINVAL;
 	}
 
-	devm_kfree(dev, phyclk_ids);
 	devm_kfree(dev, clk_ids);
 
 	return 0;
@@ -569,13 +480,9 @@ static void exynos_usbdrd_pipe3_exit(struct exynos_usbdrd_phy *phy_drd)
 
 static void exynos_usbdrd_utmi_exit(struct exynos_usbdrd_phy *phy_drd)
 {
-	if (phy_drd->use_phy_umux) {
-		/*USB User MUX disable */
-		exynos_usbdrd_clk_disable(phy_drd, true);
-	}
 	phy_exynos_usb_v3p1_disable(&phy_drd->usbphy_info);
 
-	exynos_usbdrd_clk_disable(phy_drd, false);
+	exynos_usbdrd_clk_disable(phy_drd);
 
 	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 1,
 				    phy_drd->phys[0].pmu_mask);
@@ -641,7 +548,7 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 0,
 				    phy_drd->phys[0].pmu_mask);
 
-	ret = exynos_usbdrd_clk_enable(phy_drd, false);
+	ret = exynos_usbdrd_clk_enable(phy_drd);
 	if (ret) {
 		dev_err(phy_drd->dev, "%s: Failed to enable clk\n", __func__);
 		return;
@@ -651,15 +558,6 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 	phy_exynos_usb_v3p1_pipe_ovrd(&phy_drd->usbphy_info);
 
 	phy_exynos_usb3p1_set_fsv_out_en(&phy_drd->usbphy_info, 0);
-
-	if (phy_drd->use_phy_umux) {
-		/* USB User MUX enable */
-		ret = exynos_usbdrd_clk_enable(phy_drd, true);
-		if (ret) {
-			dev_err(phy_drd->dev, "%s: Failed to enable clk\n", __func__);
-			return;
-		}
-	}
 
 	pr_info("%s: ---\n", __func__);
 }

@@ -158,7 +158,6 @@ struct exynos_usbdrd_phy {
 	void __iomem *reg_dpphy_ctrl;
 	void __iomem *reg_dpphy_tca;
 	struct clk **clocks;
-	struct clk **phy_clocks;
 	const struct exynos_usbdrd_phy_drvdata *drv_data;
 	struct phy_usb_instance {
 		struct phy *phy;
@@ -172,7 +171,6 @@ struct exynos_usbdrd_phy {
 		const struct exynos_usbdrd_phy_config *phy_cfg;
 	} phys[EXYNOS_DRDPHYS_NUM];
 	u32 extrefclk;
-	bool use_phy_umux;
 	struct clk *ref_clk;
 	struct regulator *vbus;
 	struct regulator	*vdd075_usb;
