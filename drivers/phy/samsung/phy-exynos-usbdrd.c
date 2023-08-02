@@ -27,18 +27,23 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/of_device.h>
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/mutex.h>
 #include <linux/mfd/syscon.h>
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
-#include <linux/usb/otg.h>
-#ifdef CONFIG_OF
-#include <linux/of_device.h>
-#endif
 
-/* ---- Registers ----------------------------------------------------------- */
+/* Exynos USB PHY registers */
+#define EXYNOS_FSEL_9MHZ6		0x0
+#define EXYNOS_FSEL_10MHZ		0x1
+#define EXYNOS_FSEL_12MHZ		0x2
+#define EXYNOS_FSEL_19MHZ2		0x1
+#define EXYNOS_FSEL_20MHZ		0x4
+#define EXYNOS_FSEL_24MHZ		0x5
+#define EXYNOS_FSEL_26MHZ		0x82
+#define EXYNOS_FSEL_50MHZ		0x7
 
 #define EXYNOS_USBCON_LINK_CTRL		(0x04)
 #define LINKCTRL_PIPE3_FORCE_RX_ELEC_IDLE	(0x1 << 18)
@@ -56,14 +61,6 @@
 #define LINKPORT_HUB_PORT_SEL_OCD_U3		(0x1 << 3)
 #define LINKPORT_HUB_PORT_SEL_OCD_U2		(0x1 << 2)
 
-#define EXYNOS_DRD_PHYCLKRST		(0x10)
-#define PHYCLKRST_SSC_REFCLKSEL_MASK		(0xff << 23)
-#define PHYCLKRST_MPLL_MULTIPLIER_MASK		(0x7f << 11)
-#define PHYCLKRST_FSEL_UTMI_MASK		(0x7 << 5)
-#define PHYCLKRST_FSEL(_x)			((_x) << 5)
-#define PHYCLKRST_REFCLKSEL_MASK		(0x03 << 2)
-#define PHYCLKRST_REFCLKSEL_EXT_REFCLK		(0x3 << 2)
-
 #define EXYNOS_USBCON_CLKRST		(0x20)
 #define CLKRST_PHY20_SW_RST			(0x1 << 13)
 #define CLKRST_PHY20_RST_SEL			(0x1 << 12)
@@ -76,6 +73,7 @@
 #define CLKRST_PORT_RST				(0x1 << 1)
 #define CLKRST_LINK_SW_RST			(0x1 << 0)
 
+// XXX: Remove this?
 #define EXYNOS_USBCON_COMBO_PMA_CTRL	(0x48)
 #define PMA_LOW_PWR					(0x1 << 4)
 
@@ -98,14 +96,6 @@
 #define EXYNOS_USBCON_HSP_TEST		(0x5c)
 #define HSP_TEST_SIDDQ				(0x1 << 24)
 
-/* ---- CAL ----------------------------------------------------------------- */
-
-#define EXYNOS_USBPHY_VER_02_0_0	0x0200	/* Lhotse - USBDP Combo PHY */
-#define EXYNOS_USBCON_VER_03_0_0	0x0300	/* Lhotse, Lassen HS */
-
-#define EXYNOS_USBCON_VER_MAJOR_VER_MASK 0xFF00
-#define EXYNOS_USBCON_VER_MINOR(_x) ((_x) &0xf)
-
 /**
  * struct exynos_usbphy_info : USBPHY information to share USBPHY CAL code
  * @version: PHY controller version
@@ -118,7 +108,6 @@
  * @refsrc: reference clock source path for USBPHY
  * @regs_base: base address of PHY control register *
  */
-
 struct exynos_usbphy_info {
 	/* Device Information */
 	struct device *dev;
@@ -132,18 +121,6 @@ struct exynos_usbphy_info {
 	void __iomem *ctrl_base;
 	void __iomem *link_base;
 };
-
-/* -------------------------------------------------------------------------- */
-
-/* Exynos USB PHY registers */
-#define EXYNOS_FSEL_9MHZ6		0x0
-#define EXYNOS_FSEL_10MHZ		0x1
-#define EXYNOS_FSEL_12MHZ		0x2
-#define EXYNOS_FSEL_19MHZ2		0x1
-#define EXYNOS_FSEL_20MHZ		0x4
-#define EXYNOS_FSEL_24MHZ		0x5
-#define EXYNOS_FSEL_26MHZ		0x82
-#define EXYNOS_FSEL_50MHZ		0x7
 
 #define KHZ	1000
 #define MHZ	(KHZ * KHZ)
@@ -161,7 +138,6 @@ struct exynos_usbdrd_phy_config {
 	void (*phy_isol)(struct phy_usb_instance *inst, u32 on, unsigned int);
 	void (*phy_init)(struct exynos_usbdrd_phy *phy_drd);
 	void (*phy_exit)(struct exynos_usbdrd_phy *phy_drd);
-	unsigned int (*set_refclk)(struct phy_usb_instance *inst);
 };
 
 struct exynos_usbdrd_phy_drvdata {
@@ -268,19 +244,15 @@ static void link_vbus_filter_en(struct exynos_usbphy_info *info,
 static void phy_power_en(struct exynos_usbphy_info *info, u8 en)
 {
 	u32 reg;
-	int main_version;
 
-	main_version = info->version & EXYNOS_USBCON_VER_MAJOR_VER_MASK;
 
-	if (main_version == EXYNOS_USBCON_VER_03_0_0) {
-		/* 2.0 PHY Power Down Control */
-		reg = readl(info->regs_base + EXYNOS_USBCON_HSP_TEST);
-		if (en)
-			reg &= ~HSP_TEST_SIDDQ;
-		else
-			reg |= HSP_TEST_SIDDQ;
-		writel(reg, info->regs_base + EXYNOS_USBCON_HSP_TEST);
-	}
+	/* 2.0 PHY Power Down Control */
+	reg = readl(info->regs_base + EXYNOS_USBCON_HSP_TEST);
+	if (en)
+		reg &= ~HSP_TEST_SIDDQ;
+	else
+		reg |= HSP_TEST_SIDDQ;
+	writel(reg, info->regs_base + EXYNOS_USBCON_HSP_TEST);
 }
 
 static void phy_sw_rst_high(struct exynos_usbphy_info *info)
@@ -289,16 +261,10 @@ static void phy_sw_rst_high(struct exynos_usbphy_info *info)
 	u32 clkrst;
 
 	clkrst = readl(regs_base + EXYNOS_USBCON_CLKRST);
-	if (EXYNOS_USBCON_VER_MINOR(info->version) >= 0x1) {
-		clkrst |= CLKRST_PHY20_SW_RST;
-		clkrst |= CLKRST_PHY20_RST_SEL;
-		clkrst |= CLKRST_PHY30_SW_RST;
-		clkrst |= CLKRST_PHY30_RST_SEL;
-	} else {
-		clkrst |= CLKRST_PHY_SW_RST;
-		clkrst |= CLKRST_PHY_RST_SEL;
-		clkrst |= CLKRST_PORT_RST;
-	}
+	clkrst |= CLKRST_PHY20_SW_RST;
+	clkrst |= CLKRST_PHY20_RST_SEL;
+	clkrst |= CLKRST_PHY30_SW_RST;
+	clkrst |= CLKRST_PHY30_RST_SEL;
 	writel(clkrst, regs_base + EXYNOS_USBCON_CLKRST);
 }
 
@@ -308,16 +274,10 @@ static void phy_sw_rst_low(struct exynos_usbphy_info *info)
 	u32 clkrst;
 
 	clkrst = readl(regs_base + EXYNOS_USBCON_CLKRST);
-	if (EXYNOS_USBCON_VER_MINOR(info->version) >= 0x1) {
-		clkrst |= CLKRST_PHY20_RST_SEL;
-		clkrst &= ~CLKRST_PHY20_SW_RST;
-		clkrst &= ~CLKRST_PHY30_SW_RST;
-		clkrst &= ~CLKRST_PORT_RST;
-	} else {
-		clkrst |= CLKRST_PHY_RST_SEL;
-		clkrst &= ~CLKRST_PHY_SW_RST;
-		clkrst &= ~CLKRST_PORT_RST;
-	}
+	clkrst |= CLKRST_PHY20_RST_SEL;
+	clkrst &= ~CLKRST_PHY20_SW_RST;
+	clkrst &= ~CLKRST_PHY30_SW_RST;
+	clkrst &= ~CLKRST_PORT_RST;
 	writel(clkrst, regs_base + EXYNOS_USBCON_CLKRST);
 }
 
@@ -343,10 +303,7 @@ static void phy_exynos_usb_v3p1_pipe_ovrd(struct exynos_usbphy_info *info)
 static void phy_exynos_usb_v3p1_link_sw_reset(struct exynos_usbphy_info *info)
 {
 	void __iomem *regs_base = info->regs_base;
-	int main_version;
 	u32 reg;
-
-	main_version = info->version & EXYNOS_USBCON_VER_MAJOR_VER_MASK;
 
 	/*
 	 * Use link_sw_rst because it has functioning as Hreset_n
@@ -354,16 +311,14 @@ static void phy_exynos_usb_v3p1_link_sw_reset(struct exynos_usbphy_info *info)
 	 * by Foundry T. so that some of global register has cleard - 2018.11.12
 	 */
 	/* Link Reset */
-	if (main_version == EXYNOS_USBCON_VER_03_0_0) {
-		reg = readl(info->regs_base + EXYNOS_USBCON_CLKRST);
-		reg |= CLKRST_LINK_SW_RST;
-		writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
+	reg = readl(info->regs_base + EXYNOS_USBCON_CLKRST);
+	reg |= CLKRST_LINK_SW_RST;
+	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
 
-		udelay(10);
+	udelay(10);
 
-		reg &= ~CLKRST_LINK_SW_RST;
-		writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
-	}
+	reg &= ~CLKRST_LINK_SW_RST;
+	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
 }
 
 static void phy_exynos_usb_v3p1_enable(struct exynos_usbphy_info *info)
@@ -371,14 +326,8 @@ static void phy_exynos_usb_v3p1_enable(struct exynos_usbphy_info *info)
 	void __iomem *regs_base = info->regs_base;
 	u32 reg;
 	u32 reg_hsp;
-	int main_version;
 
-	main_version = info->version & EXYNOS_USBCON_VER_MAJOR_VER_MASK;
-
-	if (main_version == EXYNOS_USBCON_VER_03_0_0) {
-		/* Set force q-channel */
-		exynos_cal_usbphy_q_ch(regs_base, 1);
-	}
+	exynos_cal_usbphy_q_ch(regs_base, 1);
 
 	/* Set PHY POR High */
 	phy_sw_rst_high(info);
@@ -697,34 +646,6 @@ static void exynos_usbdrd_utmi_phy_isol(struct phy_usb_instance *inst,
 		mask, val);
 }
 
-/*
- * Sets the utmi phy's clk as EXTREFCLK (XXTI) which is internal clock
- * from clock core. Further sets the FSEL values for HighSpeed operations.
- */
-static unsigned int
-exynos_usbdrd_utmi_set_refclk(struct phy_usb_instance *inst)
-{
-	static u32 reg;
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-
-	/* PHYCLKRST setting isn't required in Combo PHY */
-	if(phy_drd->usbphy_info.version >= EXYNOS_USBPHY_VER_02_0_0)
-		return EINVAL;
-
-	/* restore any previous reference clock settings */
-	reg = readl(phy_drd->reg_phy + EXYNOS_DRD_PHYCLKRST);
-
-	reg &= ~PHYCLKRST_REFCLKSEL_MASK;
-	reg |=	PHYCLKRST_REFCLKSEL_EXT_REFCLK;
-
-	reg &= ~PHYCLKRST_FSEL_UTMI_MASK |
-		PHYCLKRST_MPLL_MULTIPLIER_MASK |
-		PHYCLKRST_SSC_REFCLKSEL_MASK;
-	reg |= PHYCLKRST_FSEL(phy_drd->extrefclk);
-
-	return reg;
-}
-
 static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 {
 	struct device *dev = phy_drd->dev;
@@ -889,7 +810,6 @@ static const struct exynos_usbdrd_phy_config phy_cfg_exynos[] = {
 		.phy_isol	= exynos_usbdrd_utmi_phy_isol,
 		.phy_init	= exynos_usbdrd_utmi_init,
 		.phy_exit	= exynos_usbdrd_utmi_exit,
-		.set_refclk	= exynos_usbdrd_utmi_set_refclk,
 	},
 };
 
