@@ -322,7 +322,6 @@ void phy_exynos_usb_v3p1_link_sw_reset(struct exynos_usbphy_info *info)
 	 * for asb host/device role change, originally not recommend link_sw_rst by Foundry T.
 	 * so that some of global register has cleard - 2018.11.12
 	 */
-	//#ifndef __BOOT__
 	/* Link Reset */
 	if (main_version == EXYNOS_USBCON_VER_03_0_0) {
 		reg = readl(info->regs_base + EXYNOS_USBCON_CLKRST);

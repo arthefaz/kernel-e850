@@ -31,12 +31,8 @@
 #include <linux/platform_device.h>
 #include <linux/mutex.h>
 #include <linux/mfd/syscon.h>
-//#include <linux/mfd/syscon/exynos5-pmu.h>
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
-#if 0
-#include <linux/usb/samsung_usb.h>
-#endif
 #include <linux/usb/otg.h>
 #ifdef CONFIG_OF
 #include <linux/of_device.h>
@@ -44,9 +40,6 @@
 #endif
 
 #include "phy-exynos-usbdrd.h"
-//#include "phy-exynos-debug.h"
-
-//#include <soc/samsung/exynos-cpupm.h>
 
 static void __iomem *usbdp_combo_phy_reg;
 void __iomem *phycon_base_addr;
@@ -690,8 +683,6 @@ static void exynos_usbdrd_utmi_ilbk(struct exynos_usbdrd_phy *phy_drd)
 static void exynos_usbdrd_pipe3_ilbk(struct exynos_usbdrd_phy *phy_drd)
 {
 	dev_info(phy_drd->dev, "%s\n", __func__);
-
-	//phy_exynos_usbdp_ilbk(&phy_drd->usbphy_sub_info);
 }
 
 void exynos_usbdrd_ldo_control(struct exynos_usbdrd_phy *phy_drd, int on)
@@ -752,8 +743,6 @@ void exynos_usbdrd_phy_conn(struct phy *phy, int is_conn)
 			exynos_usbdrd_utmi_phy_isol(inst, 0, inst->pmu_mask);
 
 			dev_info(phy_drd->dev, "USB PHY Conn Set\n");
-			//exynos_usbdrd_ldo_control(phy_drd, 1);
-
 			phy_drd->is_conn = 1;
 
 		} else
@@ -762,8 +751,6 @@ void exynos_usbdrd_phy_conn(struct phy *phy, int is_conn)
 	} else {
 		if (phy_drd->is_conn == 1) {
 			dev_info(phy_drd->dev, "USB PHY Conn Clear\n");
-
-			//exynos_usbdrd_ldo_control(phy_drd, 0);
 			phy_drd->is_conn = 0;
 
 			dev_info(phy_drd->dev, "USB PHY isolation set(OFF)\n");
@@ -891,34 +878,6 @@ static struct exynos_usbdrd_phy *exynos_usbdrd_get_struct(void)
 	pr_err("%s: failed to get the platform_device\n", __func__);
 	return NULL;
 }
-
-/*
-static int exynos_usbdrd_get_idle_ip(void)
-{
-	struct device_node *np = NULL;
-	struct platform_device *pdev = NULL;
-	struct device *dev;
-	int idle_ip_idx;
-
-	np = of_find_compatible_node(NULL, NULL, "samsung,exynos-dwusb");
-	if (np) {
-		pdev = of_find_device_by_node(np);
-		dev = &pdev->dev;
-		of_node_put(np);
-		if (pdev) {
-			pr_info("%s: get the %s platform_device\n",
-				__func__, pdev->name);
-
-			idle_ip_idx = 1;//idle_ip_idx = exynos_get_idle_ip_index(dev_name(dev), 0);
-			pr_info("%s, idle ip = %d\n", __func__, idle_ip_idx);
-			return idle_ip_idx;
-		}
-	}
-
-	pr_err("%s: failed to get the platform_device\n", __func__);
-	return -1;
-}
-*/
 
 static int exynos_usbdrd_phy_power_off(struct phy *phy)
 {
@@ -1236,11 +1195,6 @@ skip_clock:
 		phy_set_drvdata(phy, &phy_drd->phys[i]);
 	}
 
-	/*
-	 *phy_drd->idle_ip_idx = exynos_usbdrd_get_idle_ip();
-	 *if (phy_drd->idle_ip_idx < 0)
-	 *	dev_err(dev, "Failed to get idle ip index\n");
-	 */
 	phy_provider = devm_of_phy_provider_register(dev,
 						     exynos_usbdrd_phy_xlate);
 	if (IS_ERR(phy_provider)) {
