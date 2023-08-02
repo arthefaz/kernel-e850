@@ -258,13 +258,6 @@ static void exynos_usbdrd_utmi_phy_isol(struct phy_usb_instance *inst,
 	val = on ? 0 : mask;
 	regmap_update_bits(inst->reg_pmu, inst->pmu_offset,
 		mask, val);
-
-	/* Control TCXO_BUF */
-	if (inst->pmu_mask_tcxobuf != 0) {
-		val = on ? 0 : inst->pmu_mask_tcxobuf;
-		regmap_update_bits(inst->reg_pmu, inst->pmu_offset_tcxobuf,
-			inst->pmu_mask_tcxobuf, val);
-	}
 }
 
 /*
@@ -520,7 +513,7 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	const struct exynos_usbdrd_phy_drvdata *drv_data;
 	struct regmap *reg_pmu;
-	u32 pmu_offset, pmu_offset_dp, pmu_offset_tcxo, pmu_mask, pmu_mask_tcxo;
+	u32 pmu_offset, pmu_offset_dp, pmu_mask;
 	int i, ret;
 
 	pr_info("%s: +++ %s %s\n", __func__, dev->init_name, pdev->name);
@@ -612,20 +605,6 @@ skip_clock:
 						dev->of_node->name, ret);
 		goto err1;
 	}
-	ret = of_property_read_u32(dev->of_node,
-		"pmu_offset_tcxobuf", &pmu_offset_tcxo);
-	if (ret < 0) {
-		dev_err(dev, "couldn't read pmu_offset_tcxo on %s node, error = %d\n",
-						dev->of_node->name, ret);
-	}
-	ret = of_property_read_u32(dev->of_node,
-		"pmu_mask_tcxobuf", &pmu_mask_tcxo);
-	if (ret < 0) {
-		dev_err(dev, "couldn't read pmu_mask_tcxo on %s node, error = %d\n",
-						dev->of_node->name, ret);
-		pmu_mask_tcxo = 0;
-	} else
-		pmu_mask_tcxo = (u32)BIT(pmu_mask_tcxo);
 
 	pmu_mask = (u32)BIT(pmu_mask);
 
@@ -668,8 +647,6 @@ skip_clock:
 		phy_drd->phys[i].pmu_offset = pmu_offset;
 		phy_drd->phys[i].pmu_offset_dp = pmu_offset_dp;
 		phy_drd->phys[i].pmu_mask = pmu_mask;
-		phy_drd->phys[i].pmu_offset_tcxobuf = pmu_offset_tcxo;
-		phy_drd->phys[i].pmu_mask_tcxobuf = pmu_mask_tcxo;
 		phy_drd->phys[i].phy_cfg = &drv_data->phy_cfg[i];
 		phy_set_drvdata(phy, &phy_drd->phys[i]);
 	}

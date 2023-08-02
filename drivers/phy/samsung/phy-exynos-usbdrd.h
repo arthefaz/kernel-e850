@@ -164,8 +164,6 @@ struct exynos_usbdrd_phy {
 		u32 pmu_offset;
 		u32 pmu_offset_dp;
 		u32 pmu_mask;
-		u32 pmu_offset_tcxobuf;
-		u32 pmu_mask_tcxobuf;
 		const struct exynos_usbdrd_phy_config *phy_cfg;
 	} phys[EXYNOS_DRDPHYS_NUM];
 	u32 extrefclk;
