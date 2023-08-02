@@ -145,7 +145,6 @@ struct exynos_usbdrd_phy_drvdata {
  * @ref_clk: reference clock to PHY block from which PHY's
  *	     operational clocks are derived
  * @usbphy_info; Phy main control info
- * @usbphy_sub_info; USB3.0 phy control info
  */
 struct exynos_usbdrd_phy {
 	struct device *dev;
@@ -178,7 +177,6 @@ struct exynos_usbdrd_phy {
 	struct regulator	*vdd18_usb;
 	struct regulator	*vdd33_usb;
 	struct exynos_usbphy_info usbphy_info;
-	struct exynos_usbphy_info usbphy_sub_info;
 	struct exynos_usbphy_info usbphy_blkcon_info;
 
 	u32 ip_type;

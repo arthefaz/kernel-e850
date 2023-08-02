@@ -157,7 +157,6 @@ struct exynos_usbphy_info {
 
 	/* multiple phy */
 	int hw_version;
-	void __iomem *regs_base_2nd;
 	void __iomem *pma_base;
 	void __iomem *pcs_base;
 	void __iomem *ctrl_base;

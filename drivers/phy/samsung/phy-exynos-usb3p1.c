@@ -88,14 +88,7 @@ static void phy_power_en(struct exynos_usbphy_info *info, u8 en)
 static void phy_sw_rst_high(struct exynos_usbphy_info *info)
 {
 	void __iomem *regs_base = info->regs_base;
-	int main_version;
 	u32 clkrst;
-
-	main_version = info->version & EXYNOS_USBCON_VER_MAJOR_VER_MASK;
-	if ((main_version == EXYNOS_USBCON_VER_05_0_0) &&
-			(info->used_phy_port == 1)) {
-		regs_base = info->regs_base_2nd;
-	}
 
 	clkrst = readl(regs_base + EXYNOS_USBCON_CLKRST);
 	if (EXYNOS_USBCON_VER_MINOR(info->version) >= 0x1) {
@@ -114,13 +107,7 @@ static void phy_sw_rst_high(struct exynos_usbphy_info *info)
 static void phy_sw_rst_low(struct exynos_usbphy_info *info)
 {
 	void __iomem *regs_base = info->regs_base;
-	int main_version;
 	u32 clkrst;
-
-	main_version = info->version & EXYNOS_USBCON_VER_MAJOR_VER_MASK;
-	if ((main_version == EXYNOS_USBCON_VER_05_0_0) &&
-			(info->used_phy_port == 1))
-		regs_base = info->regs_base_2nd;
 
 	clkrst = readl(regs_base + EXYNOS_USBCON_CLKRST);
 	if (EXYNOS_USBCON_VER_MINOR(info->version) >= 0x1) {

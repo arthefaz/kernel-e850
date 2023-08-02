@@ -41,7 +41,6 @@
 
 #include "phy-exynos-usbdrd.h"
 
-static void __iomem *usbdp_combo_phy_reg;
 void __iomem *phycon_base_addr;
 EXPORT_SYMBOL_GPL(phycon_base_addr);
 
@@ -366,27 +365,6 @@ exynos_usbdrd_utmi_set_refclk(struct phy_usb_instance *inst)
 	return reg;
 }
 
-static int exynos_usbdrd_get_sub_phyinfo(struct exynos_usbdrd_phy *phy_drd)
-{
-	struct device *dev = phy_drd->dev;
-	int value;
-
-	if (!of_property_read_u32(dev->of_node, "sub_phy_version", &value)) {
-		phy_drd->usbphy_sub_info.version = value;
-	} else {
-		dev_err(dev, "can't get sub_phy_version\n");
-		return -EINVAL;
-	}
-	phy_drd->usbphy_sub_info.refclk = phy_drd->extrefclk;
-	phy_drd->usbphy_sub_info.regs_base = phy_drd->reg_phy2;
-	/* Temporary WA, CAL code modification is needed */
-	phy_drd->usbphy_info.regs_base_2nd = phy_drd->reg_phy2;
-	phy_drd->usbphy_sub_info.regs_base_2nd = phy_drd->reg_phy3;
-	usbdp_combo_phy_reg = phy_drd->usbphy_sub_info.regs_base;
-
-	return 0;
-}
-
 static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 {
 	struct device *dev = phy_drd->dev;
@@ -508,7 +486,6 @@ static void exynos_usbdrd_pipe3_init(struct exynos_usbdrd_phy *phy_drd)
 			value = !gpio_get_value(phy_drd->phy_port);
 		else
 			value = gpio_get_value(phy_drd->phy_port);
-		phy_drd->usbphy_info.used_phy_port = phy_drd->usbphy_sub_info.used_phy_port = value;
 		dev_info(phy_drd->dev, "%s: phy port[%d]\n", __func__,
 						phy_drd->usbphy_info.used_phy_port);
 	} else {
@@ -527,7 +504,6 @@ static void exynos_usbdrd_pipe3_init(struct exynos_usbdrd_phy *phy_drd)
 				value = !gpio_get_value(phy_drd->phy_port);
 			else
 				value = gpio_get_value(phy_drd->phy_port);
-			phy_drd->usbphy_info.used_phy_port = phy_drd->usbphy_sub_info.used_phy_port = value;
 			dev_info(phy_drd->dev, "%s: phy port1[%d]\n", __func__,
 							phy_drd->usbphy_info.used_phy_port);
 		} else {
@@ -818,11 +794,6 @@ static const struct of_device_id exynos_usbdrd_phy_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, exynos_usbdrd_phy_of_match);
 
-void __iomem *phy_exynos_usbdp_get_address(void)
-{
-	return usbdp_combo_phy_reg;
-}
-
 static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -874,18 +845,6 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 		return PTR_ERR(phy_drd->reg_phy);
 
 	phycon_base_addr = phy_drd->reg_phy;
-
-	/* Both has_other_phy and has_combo_phy can't be enabled at the same time. It's alternative. */
-	if (!of_property_read_u32(dev->of_node, "has_other_phy", &ret)) {
-		if (ret) {
-			res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-			phy_drd->reg_phy2 = devm_ioremap_resource(dev, res);
-			if (IS_ERR(phy_drd->reg_phy2))
-				return PTR_ERR(phy_drd->reg_phy2);
-		} else {
-			dev_err(dev, "It has not the other phy\n");
-		}
-	}
 
 	ret = exynos_usbdrd_get_iptype(phy_drd);
 	if (ret) {
@@ -979,36 +938,6 @@ skip_clock:
 	ret = exynos_usbdrd_get_phyinfo(phy_drd);
 	if (ret)
 		goto err1;
-
-	if (!of_property_read_u32(dev->of_node, "has_combo_phy", &ret)) {
-		if (ret) {
-			res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-			phy_drd->reg_phy2 = devm_ioremap_resource(dev, res);
-			if (IS_ERR(phy_drd->reg_phy2))
-				return PTR_ERR(phy_drd->reg_phy2);
-
-			res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
-			phy_drd->reg_phy3 = devm_ioremap_resource(dev, res);
-			if (IS_ERR(phy_drd->reg_phy3))
-				return PTR_ERR(phy_drd->reg_phy3);
-
-			res = platform_get_resource(pdev, IORESOURCE_MEM, 3);
-			/* In case of phy driver, we use ioremap() function
-			 * because same address will be used at USB driver.
-			 */
-			phy_drd->reg_link = ioremap(res->start, resource_size(res));
-			if (IS_ERR(phy_drd->reg_link))
-				return PTR_ERR(phy_drd->reg_link);
-
-			phy_drd->usbphy_sub_info.ctrl_base = phy_drd->reg_phy;
-			phy_drd->usbphy_sub_info.pma_base = phy_drd->reg_phy2;
-			phy_drd->usbphy_sub_info.pcs_base = phy_drd->reg_phy3;
-			phy_drd->usbphy_sub_info.link_base = phy_drd->reg_link;
-			exynos_usbdrd_get_sub_phyinfo(phy_drd);
-		} else {
-			dev_err(dev, "It has not combo phy\n");
-		}
-	}
 
 	for (i = 0; i < EXYNOS_DRDPHYS_NUM; i++) {
 		struct phy *phy = devm_phy_create(dev, NULL,
