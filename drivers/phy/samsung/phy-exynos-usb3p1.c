@@ -399,25 +399,6 @@ void phy_exynos_usb_v3p1_enable(struct exynos_usbphy_info *info)
 	/* after POR low and delay 75us, PHYCLOCK is guaranteed. */
 	udelay(75);
 
-	/* Select PHY MUX */
-	if (info->dual_phy) {
-		u32 physel;
-
-		physel = readl(regs_base + EXYNOS_USBCON_DUALPHYSEL);
-		if (info->used_phy_port == 0) {
-			physel &= ~DUALPHYSEL_PHYSEL_CTRL;
-			physel &= ~DUALPHYSEL_PHYSEL_SSPHY;
-			physel &= ~DUALPHYSEL_PHYSEL_PIPECLK;
-			physel &= ~DUALPHYSEL_PHYSEL_PIPERST;
-		} else {
-			physel |= DUALPHYSEL_PHYSEL_CTRL;
-			physel |= DUALPHYSEL_PHYSEL_SSPHY;
-			physel |= DUALPHYSEL_PHYSEL_PIPECLK;
-			physel |= DUALPHYSEL_PHYSEL_PIPERST;
-		}
-		writel(physel, regs_base + EXYNOS_USBCON_DUALPHYSEL);
-	}
-
 	/* 2. OVC io usage */
 	reg = readl(regs_base + EXYNOS_USBCON_LINK_PORT);
 	if (info->use_io_for_ovc) {

@@ -166,9 +166,6 @@ struct exynos_usbphy_info {
 
 	/* Alternative PHY REF_CLK source */
 	bool alt_ref_clk;
-
-	/* Dual PHY */
-	bool dual_phy;
 };
 
 struct usb_eom_result_s {
