@@ -56,6 +56,14 @@
 #define LINKPORT_HUB_PORT_SEL_OCD_U3		(0x1 << 3)
 #define LINKPORT_HUB_PORT_SEL_OCD_U2		(0x1 << 2)
 
+#define EXYNOS_DRD_PHYCLKRST		(0x10)
+#define PHYCLKRST_SSC_REFCLKSEL_MASK		(0xff << 23)
+#define PHYCLKRST_MPLL_MULTIPLIER_MASK		(0x7f << 11)
+#define PHYCLKRST_FSEL_UTMI_MASK		(0x7 << 5)
+#define PHYCLKRST_FSEL(_x)			((_x) << 5)
+#define PHYCLKRST_REFCLKSEL_MASK		(0x03 << 2)
+#define PHYCLKRST_REFCLKSEL_EXT_REFCLK		(0x3 << 2)
+
 #define EXYNOS_USBCON_CLKRST		(0x20)
 #define CLKRST_PHY20_SW_RST			(0x1 << 13)
 #define CLKRST_PHY20_RST_SEL			(0x1 << 12)
@@ -92,76 +100,11 @@
 
 /* ---- CAL ----------------------------------------------------------------- */
 
-#define EXYNOS_USBCON_VER_01_0_0 0x0100 /* Istor    */
-#define EXYNOS_USBCON_VER_01_0_1 0x0101 /* JF 3.0   */
-#define EXYNOS_USBCON_VER_01_1_1 0x0111 /* KC       */
-#define EXYNOS_USBCON_VER_01_MAX 0x01FF
-
-#define EXYNOS_USBCON_VER_02_0_0 0x0200 /* Insel-D, Island  */
-#define EXYNOS_USBCON_VER_02_0_1 0x0201 /* JF EVT0 2.0 Host */
-#define EXYNOS_USBCON_VER_02_1_0 0x0210
-#define EXYNOS_USBCON_VER_02_1_1 0x0211 /* JF EVT1 2.0 Host */
-#define EXYNOS_USBCON_VER_02_1_2 0x0212 /* Katmai EVT0 */
-#define EXYNOS_USBCON_VER_02_MAX 0x02FF
-
-#define EXYNOS_USBCON_VER_03_0_0 0x0300 /* Lhotse, Lassen HS */
-#define EXYNOS_USBCON_VER_03_0_1 0x0301 /* Super Speed          */
-#define EXYNOS_USBCON_VER_03_MAX 0x03FF
-
-/* Samsung phy */
-#define EXYNOS_USBCON_VER_04_0_0 0x0400 /* Exynos 9810  */
-#define EXYNOS_USBCON_VER_04_0_1 0x0401 /* Exynos 9820  */
-#define EXYNOS_USBCON_VER_04_0_2 0x0402 /* Exynos 9830 */
-#define EXYNOS_USBCON_VER_04_0_3 0x0403 /* Exynos 9630  */
-#define EXYNOS_USBCON_VER_04_0_4 0x0404 /* Exynos 9840  */
-#define EXYNOS_USBCON_VER_04_MAX 0x04FF
-
-/* Sub phy control - not include System/Link control */
-#define EXYNOS_USBCON_VER_05_0_0 0x0500 /* High Speed Only  */
-#define EXYNOS_USBCON_VER_05_1_0 0x0510 /* Super Speed      */
-#define EXYNOS_USBCON_VER_05_3_0 0x0530 /* Super Speed Dual PHY */
-#define EXYNOS_USBCON_VER_05_MAX 0x05FF
-
-/* block control version */
-#define EXYNOS_USBCON_VER_06_0_0 0x0600 /* link control only */
-#define EXYNOS_USBCON_VER_06_4_0 0x0610 /* link + usb2.0 phy */
-#define EXYNOS_USBCON_VER_06_2_0 0x0620 /* link + usb3.0 phy */
-#define EXYNOS_USBCON_VER_06_3_0 0x0630 /* link + usb2.0 + usb3.0 phy */
-#define EXYNOS_USBCON_VER_06_MAX 0x06FF
-
-/* eUSB phy contorller */
-#define EXYNOS_USBCON_VER_07_0_0 0x0700 /* eUSB PHY controller */
-#define EXYNOS_USBCON_VER_07_8_0 0x0780 /* dwc eUSB PHY register interface */
-
-/* synopsys usbdp phy contorller */
-#define EXYNOS_USBCON_VER_08_0_0 0x0800 /* dwc usb3p2/dp PHY controller */
-
-#define EXYNOS_USBCON_VER_F2_0_0 0xF200
-#define EXYNOS_USBCON_VER_F2_MAX 0xF2FF
+#define EXYNOS_USBPHY_VER_02_0_0	0x0200	/* Lhotse - USBDP Combo PHY */
+#define EXYNOS_USBCON_VER_03_0_0	0x0300	/* Lhotse, Lassen HS */
 
 #define EXYNOS_USBCON_VER_MAJOR_VER_MASK 0xFF00
-#define EXYNOS_USBCON_VER_SS_ONLY_CAP 0x0010
-#define EXYNOS_USBCON_VER_SS_CAP 0x0040
-#define EXYNOS_USBCON_VER_SS_HS_CAP 0x0080
 #define EXYNOS_USBCON_VER_MINOR(_x) ((_x) &0xf)
-#define EXYNOS_USBCON_VER_MID(_x) ((_x) &0xf0)
-#define EXYNOS_USBCON_VER_MAJOR(_x) ((_x) &0xff00)
-
-#define EXYNOS_BLKCON_VER_HS_CAP 0x0010
-#define EXYNOS_BLKCON_VER_SS_CAP 0x0020
-
-enum exynos_usbphy_mode {
-	USBPHY_MODE_DEV = 0,
-	USBPHY_MODE_HOST = 1,
-
-	/* usb phy for uart bypass mode */
-	USBPHY_MODE_BYPASS = 0x10,
-};
-
-// typedef unsigned char unsigned char;
-#ifndef __iomem
-#define __iomem
-#endif
 
 enum exynos_usbphy_refclk {
 	USBPHY_REFCLK_DIFF_100MHZ = 0x80 | 0x27,
@@ -214,16 +157,6 @@ struct exynos_usbphy_info {
 
 /* -------------------------------------------------------------------------- */
 
-#define EXYNOS_USBPHY_VER_02_0_0	0x0200	/* Lhotse - USBDP Combo PHY */
-
-/* 9810 PMU register offset */
-#define EXYNOS_USBDP_PHY_CONTROL	(0x704)
-#define EXYNOS_USB2_PHY_CONTROL	(0x72C)
-/* PMU register offset for USB */
-#define EXYNOS_USBDEV_PHY_CONTROL	(0x704)
-#define EXYNOS_USBDRD_ENABLE		BIT(0)
-#define EXYNOS_USBHOST_ENABLE		BIT(1)
-
 /* Exynos USB PHY registers */
 #define EXYNOS_FSEL_9MHZ6		0x0
 #define EXYNOS_FSEL_10MHZ		0x1
@@ -234,75 +167,8 @@ struct exynos_usbphy_info {
 #define EXYNOS_FSEL_26MHZ		0x82
 #define EXYNOS_FSEL_50MHZ		0x7
 
-/* EXYNOS: USB DRD PHY registers */
-#define EXYNOS_DRD_LINKSYSTEM			0x04
-
-#define LINKSYSTEM_FLADJ_MASK			(0x3f << 1)
-#define LINKSYSTEM_FLADJ(_x)			((_x) << 1)
-
-#define EXYNOS_DRD_PHYUTMI			0x08
-
-#define EXYNOS_DRD_PHYPIPE			0x0c
-
-#define PHYPIPE_PHY_CLOCK_SEL				(0x1 << 4)
-
-#define EXYNOS_DRD_PHYCLKRST			0x10
-
-#define PHYCLKRST_SSC_REFCLKSEL_MASK		(0xff << 23)
-#define PHYCLKRST_SSC_REFCLKSEL(_x)		((_x) << 23)
-
-#define PHYCLKRST_SSC_RANGE_MASK		(0x03 << 21)
-#define PHYCLKRST_SSC_RANGE(_x)			((_x) << 21)
-
-#define PHYCLKRST_MPLL_MULTIPLIER_MASK		(0x7f << 11)
-#define PHYCLKRST_MPLL_MULTIPLIER_100MHZ_REF	(0x19 << 11)
-#define PHYCLKRST_MPLL_MULTIPLIER_50M_REF	(0x32 << 11)
-#define PHYCLKRST_MPLL_MULTIPLIER_24MHZ_REF	(0x68 << 11)
-#define PHYCLKRST_MPLL_MULTIPLIER_20MHZ_REF	(0x7d << 11)
-#define PHYCLKRST_MPLL_MULTIPLIER_19200KHZ_REF	(0x02 << 11)
-
-#define PHYCLKRST_FSEL_UTMI_MASK		(0x7 << 5)
-#define PHYCLKRST_FSEL_PIPE_MASK		(0x7 << 8)
-#define PHYCLKRST_FSEL(_x)			((_x) << 5)
-#define PHYCLKRST_FSEL_PAD_100MHZ		(0x27 << 5)
-#define PHYCLKRST_FSEL_PAD_24MHZ		(0x2a << 5)
-#define PHYCLKRST_FSEL_PAD_20MHZ		(0x31 << 5)
-#define PHYCLKRST_FSEL_PAD_19_2MHZ		(0x38 << 5)
-
-#define PHYCLKRST_REFCLKSEL_MASK		(0x03 << 2)
-#define PHYCLKRST_REFCLKSEL_PAD_REFCLK		(0x2 << 2)
-#define PHYCLKRST_REFCLKSEL_EXT_REFCLK		(0x3 << 2)
-
-#define EXYNOS_DRD_PHYREG0			0x14
-#define EXYNOS_DRD_PHYREG1			0x18
-
-#define EXYNOS_DRD_PHYPARAM0			0x1c
-
-#define PHYPARAM0_REF_LOSLEVEL_MASK		(0x1f << 26)
-#define PHYPARAM0_REF_LOSLEVEL			(0x9 << 26)
-
-#define EXYNOS_DRD_PHYPARAM1			0x20
-
-#define PHYPARAM1_PCS_TXDEEMPH_MASK		(0x1f << 0)
-#define PHYPARAM1_PCS_TXDEEMPH			(0x1c)
-
-#define EXYNOS_DRD_PHYTERM			0x24
-
-#define EXYNOS_DRD_PHYTEST			0x28
-
-#define EXYNOS_DRD_PHYADP			0x2c
-
-#define EXYNOS_DRD_PHYUTMICLKSEL		0x30
-
-#define PHYUTMICLKSEL_UTMI_CLKSEL		BIT(2)
-
-#define EXYNOS_DRD_PHYRESUME			0x34
-#define EXYNOS_DRD_LINKPORT			0x44
-
 #define KHZ	1000
 #define MHZ	(KHZ * KHZ)
-
-#define EXYNOS_DRD_MAX_TUNEPARAM_NUM		32
 
 enum exynos_usbdrd_phy_id {
 	EXYNOS_DRDPHY_UTMI,
