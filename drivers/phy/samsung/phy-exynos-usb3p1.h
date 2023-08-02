@@ -49,8 +49,5 @@ extern void phy_exynos_usb3p1_set_fs_vplus_vminus(struct exynos_usbphy_info *usb
 extern u8 phy_exynos_usb3p1_get_fs_vplus_vminus(struct exynos_usbphy_info *info);
 /* UART/JTAG over USB */
 void phy_exynos_usb3p1_set_fsv_out_en(struct exynos_usbphy_info *usbphy_info, u32 fsv_out_en);
-/* BC 1.2 */
-extern u8 phy_exynos_usb3p1_bc_data_contact_detect(struct exynos_usbphy_info *usbphy_info);
-extern enum exynos_usb_bc phy_exynos_usb3p1_bc_battery_charger_detection(struct exynos_usbphy_info *usbphy_info);
 
 #endif /* DRIVER_USB_USBPHY_CAL_PHY_EXYNOS_USB3P1_H_ */
