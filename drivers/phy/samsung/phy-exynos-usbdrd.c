@@ -765,33 +765,6 @@ void exynos_usbdrd_phy_vol_set(struct phy *phy, int voltage)
 }
 EXPORT_SYMBOL_GPL(exynos_usbdrd_phy_vol_set);
 
-static void exynos_usbdrd_pipe3_set(struct exynos_usbdrd_phy *phy_drd,
-						int option, void *info)
-{
-	/* Fill USBDP Combo phy set */
-	return;
-}
-
-static void exynos_usbdrd_utmi_set(struct exynos_usbdrd_phy *phy_drd,
-						int option, void *info)
-{
-	switch (option) {
-	case SET_DPPULLUP_ENABLE:
-		phy_exynos_usb_v3p1_enable_dp_pullup(
-					&phy_drd->usbphy_info);
-		break;
-	case SET_DPPULLUP_DISABLE:
-		 phy_exynos_usb_v3p1_disable_dp_pullup(
-					&phy_drd->usbphy_info);
-		break;
-	case SET_DPDM_PULLDOWN:
-		phy_exynos_usb_v3p1_config_host_mode(
-					&phy_drd->usbphy_info);
-	default:
-		break;
-	}
-}
-
 int exynos_usbdrd_phy_link_rst(struct phy *phy)
 {
 	struct phy_usb_instance *inst = phy_get_drvdata(phy);
@@ -801,17 +774,6 @@ int exynos_usbdrd_phy_link_rst(struct phy *phy)
 	phy_exynos_usb_v3p1_link_sw_reset(&phy_drd->usbphy_info);
 	return 0;
 }
-
-int exynos_usbdrd_phy_set(struct phy *phy, int option, void *info)
-{
-	struct phy_usb_instance *inst = phy_get_drvdata(phy);
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-
-	inst->phy_cfg->phy_set(phy_drd, option, info);
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(exynos_usbdrd_phy_set);
 
 static int exynos_usbdrd_phy_power_on(struct phy *phy)
 {
@@ -934,7 +896,6 @@ static const struct exynos_usbdrd_phy_config phy_cfg_exynos[] = {
 		.phy_isol	= exynos_usbdrd_utmi_phy_isol,
 		.phy_init	= exynos_usbdrd_utmi_init,
 		.phy_exit	= exynos_usbdrd_utmi_exit,
-		.phy_set	= exynos_usbdrd_utmi_set,
 		.set_refclk	= exynos_usbdrd_utmi_set_refclk,
 	},
 	{
@@ -942,7 +903,6 @@ static const struct exynos_usbdrd_phy_config phy_cfg_exynos[] = {
 		.phy_isol	= exynos_usbdrd_pipe3_phy_isol,
 		.phy_init	= exynos_usbdrd_pipe3_init,
 		.phy_exit	= exynos_usbdrd_pipe3_exit,
-		.phy_set	= exynos_usbdrd_pipe3_set,
 		.set_refclk	= exynos_usbdrd_pipe3_set_refclk,
 	},
 };

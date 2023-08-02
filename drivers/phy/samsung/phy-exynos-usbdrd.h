@@ -125,7 +125,6 @@ struct exynos_usbdrd_phy_config {
 	void (*phy_isol)(struct phy_usb_instance *inst, u32 on, unsigned int);
 	void (*phy_init)(struct exynos_usbdrd_phy *phy_drd);
 	void (*phy_exit)(struct exynos_usbdrd_phy *phy_drd);
-	void (*phy_set)(struct exynos_usbdrd_phy *phy_drd, int, void *);
 	unsigned int (*set_refclk)(struct phy_usb_instance *inst);
 };
 
@@ -213,12 +212,6 @@ enum samsung_usb_ip_type {
 	TYPE_USB3HOST,
 	TYPE_USB2DRD,
 	TYPE_USB2HOST,
-};
-
-enum samsung_phy_set_option {
-	SET_DPPULLUP_ENABLE,
-	SET_DPPULLUP_DISABLE,
-	SET_DPDM_PULLDOWN,
 };
 
 #endif	/* __PHY_EXYNOS_USBDRD_H__ */
