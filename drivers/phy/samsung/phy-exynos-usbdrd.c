@@ -308,40 +308,6 @@ static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 	return 0;
 }
 
-static int exynos_usbdrd_get_iptype(struct exynos_usbdrd_phy *phy_drd)
-{
-	struct device *dev = phy_drd->dev;
-	int ret, value;
-
-	ret = of_property_read_u32(dev->of_node, "ip_type", &value);
-	if (ret) {
-		dev_err(dev, "can't get ip type");
-		return ret;
-	}
-
-	switch (value) {
-	case TYPE_USB3DRD:
-		phy_drd->ip_type = TYPE_USB3DRD;
-		dev_info(dev, "It is TYPE USB3DRD");
-		break;
-	case TYPE_USB3HOST:
-		phy_drd->ip_type = TYPE_USB3HOST;
-		dev_info(dev, "It is TYPE USB3HOST");
-		break;
-	case TYPE_USB2DRD:
-		phy_drd->ip_type = TYPE_USB2DRD;
-		dev_info(dev, "It is TYPE USB2DRD");
-		break;
-	case TYPE_USB2HOST:
-		phy_drd->ip_type = TYPE_USB2HOST;
-		dev_info(dev, "It is TYPE USB2HOST");
-	default:
-		break;
-	}
-
-	return 0;
-}
-
 static void exynos_usbdrd_utmi_exit(struct exynos_usbdrd_phy *phy_drd)
 {
 	phy_exynos_usb_v3p1_disable(&phy_drd->usbphy_info);
@@ -552,12 +518,6 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 	phy_drd->reg_phy = devm_ioremap_resource(dev, res);
 	if (IS_ERR(phy_drd->reg_phy))
 		return PTR_ERR(phy_drd->reg_phy);
-
-	ret = exynos_usbdrd_get_iptype(phy_drd);
-	if (ret) {
-		dev_err(dev, "%s: Failed to get ip_type\n", __func__);
-		return ret;
-	}
 
 	ret = exynos_usbdrd_clk_get(phy_drd);
 	if (ret) {

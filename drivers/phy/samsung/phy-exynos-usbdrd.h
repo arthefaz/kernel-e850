@@ -176,21 +176,11 @@ struct exynos_usbdrd_phy {
 	struct exynos_usbphy_info usbphy_info;
 	struct exynos_usbphy_info usbphy_blkcon_info;
 
-	u32 ip_type;
 	int is_conn;
 	int idle_ip_idx;
 	spinlock_t lock;
 	int in_shutdown;
 	int is_ldo_on;
-};
-
-void __iomem *phy_exynos_usbdp_get_address(void);
-
-enum samsung_usb_ip_type {
-	TYPE_USB3DRD = 0,
-	TYPE_USB3HOST,
-	TYPE_USB2DRD,
-	TYPE_USB2HOST,
 };
 
 #endif	/* __PHY_EXYNOS_USBDRD_H__ */
