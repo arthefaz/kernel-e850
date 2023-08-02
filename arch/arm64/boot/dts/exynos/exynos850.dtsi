@@ -601,13 +601,6 @@
 			/*  you should write "none" */
 			/*  but refclk shouldn't be omitted */
 			phy_refclk = "ext_xtal";
-
-			/* ip type */
-			/* USB3DRD = 0 */
-			/*  USB3HOST = 1 */
-			/*  USB2DRD = 2 */
-			/*  USB2HOST = 3 */
-			ip_type = <0x0>;
 		};
 
 		usi_uart: usi@138200c0 {
