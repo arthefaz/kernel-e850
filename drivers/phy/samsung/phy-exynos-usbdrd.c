@@ -45,56 +45,52 @@
 #define EXYNOS_FSEL_26MHZ		0x82
 #define EXYNOS_FSEL_50MHZ		0x7
 
-#define EXYNOS_USBCON_LINK_CTRL		(0x04)
-#define LINKCTRL_PIPE3_FORCE_RX_ELEC_IDLE	(0x1 << 18)
-#define LINKCTRL_PIPE3_FORCE_PHY_STATUS		(0x1 << 17)
-#define LINKCTRL_PIPE3_FORCE_EN			(0x1 << 16)
-#define LINKCTRL_DIS_QACT_LINKGATE		(0x1 << 12)
-#define LINKCTRL_DIS_QACT_ID0			(0x1 << 11)
-#define LINKCTRL_DIS_QACT_VBUS_VALID		(0x1 << 10)
-#define LINKCTRL_DIS_QACT_BVALID		(0x1 << 9)
-#define LINKCTRL_FORCE_QACT			(0x1 << 8)
+#define EXYNOS_USBCON_LINK_CTRL			0x04
+#define LINKCTRL_PIPE3_FORCE_RX_ELEC_IDLE	BIT(18)
+#define LINKCTRL_PIPE3_FORCE_PHY_STATUS		BIT(17)
+#define LINKCTRL_PIPE3_FORCE_EN			BIT(16)
+#define LINKCTRL_DIS_QACT_LINKGATE		BIT(12)
+#define LINKCTRL_DIS_QACT_ID0			BIT(11)
+#define LINKCTRL_DIS_QACT_VBUS_VALID		BIT(10)
+#define LINKCTRL_DIS_QACT_BVALID		BIT(9)
+#define LINKCTRL_FORCE_QACT			BIT(8)
 #define LINKCTRL_BUS_FILTER_BYPASS(_x)		((_x & 0xf) << 4)
 #define LINKCTRL_BUS_FILTER_BYPASS_MASK		(0xf << 4)
 
-#define EXYNOS_USBCON_LINK_PORT		(0x08)
-#define LINKPORT_HUB_PORT_SEL_OCD_U3		(0x1 << 3)
-#define LINKPORT_HUB_PORT_SEL_OCD_U2		(0x1 << 2)
+#define EXYNOS_USBCON_LINK_PORT			0x08
+#define LINKPORT_HUB_PORT_SEL_OCD_U3		BIT(3)
+#define LINKPORT_HUB_PORT_SEL_OCD_U2		BIT(2)
 
-#define EXYNOS_USBCON_CLKRST		(0x20)
-#define CLKRST_PHY20_SW_RST			(0x1 << 13)
-#define CLKRST_PHY20_RST_SEL			(0x1 << 12)
-/* MK Verion */
-#define CLKRST_PHY30_SW_RST			(0x1 << 3)
-#define CLKRST_PHY30_RST_SEL			(0x1 << 2)
-/* Lhotse Verion */
-#define CLKRST_PHY_SW_RST			(0x1 << 3)
-#define CLKRST_PHY_RST_SEL			(0x1 << 2)
-#define CLKRST_PORT_RST				(0x1 << 1)
-#define CLKRST_LINK_SW_RST			(0x1 << 0)
+#define EXYNOS_USBCON_CLKRST			0x20
+#define CLKRST_LINK_SW_RST			BIT(0)
+#define CLKRST_PORT_RST				BIT(1)
+#define CLKRST_PHY30_RST_SEL			BIT(2)
+#define CLKRST_PHY30_SW_RST			BIT(3)
+#define CLKRST_PHY20_SW_RST			BIT(13)
+#define CLKRST_PHY20_RST_SEL			BIT(12)
 
 // XXX: Remove this?
-#define EXYNOS_USBCON_COMBO_PMA_CTRL	(0x48)
-#define PMA_LOW_PWR					(0x1 << 4)
+#define EXYNOS_USBCON_COMBO_PMA_CTRL		0x48
+#define PMA_LOW_PWR				BIT(4)
 
-#define EXYNOS_USBCON_UTMI		(0x50)
-#define UTMI_FORCE_VBUSVALID			(0x1 << 5)
-#define UTMI_FORCE_BVALID			(0x1 << 4)
-#define UTMI_DP_PULLDOWN			(0x1 << 3)
-#define UTMI_DM_PULLDOWN			(0x1 << 2)
-#define UTMI_FORCE_SUSPEND			(0x1 << 1)
-#define UTMI_FORCE_SLEEP			(0x1 << 0)
+#define EXYNOS_USBCON_UTMI			0x50
+#define UTMI_FORCE_VBUSVALID			BIT(5)
+#define UTMI_FORCE_BVALID			BIT(4)
+#define UTMI_DP_PULLDOWN			BIT(3)
+#define UTMI_DM_PULLDOWN			BIT(2)
+#define UTMI_FORCE_SUSPEND			BIT(1)
+#define UTMI_FORCE_SLEEP			BIT(0)
 
-#define EXYNOS_USBCON_HSP		(0x54)
-#define HSP_FSVM_OUT_EN				(0x1 << 26)
-#define HSP_FSVP_OUT_EN				(0x1 << 24)
-#define HSP_VBUSVLDEXTSEL			(0x1 << 13)
-#define HSP_VBUSVLDEXT				(0x1 << 12)
-#define HSP_EN_UTMISUSPEND			(0x1 << 9)
-#define HSP_COMMONONN				(0x1 << 8)
+#define EXYNOS_USBCON_HSP			0x54
+#define HSP_FSVM_OUT_EN				BIT(26)
+#define HSP_FSVP_OUT_EN				BIT(24)
+#define HSP_VBUSVLDEXTSEL			BIT(13)
+#define HSP_VBUSVLDEXT				BIT(12)
+#define HSP_EN_UTMISUSPEND			BIT(9)
+#define HSP_COMMONONN				BIT(8)
 
-#define EXYNOS_USBCON_HSP_TEST		(0x5c)
-#define HSP_TEST_SIDDQ				(0x1 << 24)
+#define EXYNOS_USBCON_HSP_TEST			0x5c
+#define HSP_TEST_SIDDQ				BIT(24)
 
 /**
  * struct exynos_usbphy_info : USBPHY information to share USBPHY CAL code
@@ -113,13 +109,6 @@ struct exynos_usbphy_info {
 	struct device *dev;
 	u32 version;
 	void __iomem *regs_base;
-
-	/* multiple phy */
-	int hw_version;
-	void __iomem *pma_base;
-	void __iomem *pcs_base;
-	void __iomem *ctrl_base;
-	void __iomem *link_base;
 };
 
 #define KHZ	1000
@@ -161,13 +150,6 @@ struct exynos_usbdrd_phy_drvdata {
 struct exynos_usbdrd_phy {
 	struct device *dev;
 	void __iomem *reg_phy;
-	void __iomem *reg_phy2;
-	void __iomem *reg_phy3;
-	void __iomem *reg_link;
-	void __iomem *reg_eusb_ctrl;
-	void __iomem *reg_eusb_phy;
-	void __iomem *reg_dpphy_ctrl;
-	void __iomem *reg_dpphy_tca;
 	struct clk **clocks;
 	const struct exynos_usbdrd_phy_drvdata *drv_data;
 	struct phy_usb_instance {
@@ -187,12 +169,7 @@ struct exynos_usbdrd_phy {
 	struct regulator	*vdd18_usb;
 	struct regulator	*vdd33_usb;
 	struct exynos_usbphy_info usbphy_info;
-	struct exynos_usbphy_info usbphy_blkcon_info;
 
-	int is_conn;
-	int idle_ip_idx;
-	spinlock_t lock;
-	int in_shutdown;
 	int is_ldo_on;
 };
 
@@ -408,20 +385,14 @@ static void phy_exynos_usb_v3p1_disable(struct exynos_usbphy_info *info)
 }
 
 /* UART/JTAG over USB */
-static void phy_exynos_usb3p1_set_fsv_out_en(
-		struct exynos_usbphy_info *usbphy_info, u32 fsv_out_en)
+static void phy_exynos_usb3p1_set_fsv_out_dis(struct exynos_usbphy_info *info)
 {
-	void __iomem *regs_base = usbphy_info->regs_base;
+	void __iomem *regs_base = info->regs_base;
 	u32 hsp_ctrl;
 
 	hsp_ctrl = readl(regs_base + EXYNOS_USBCON_HSP);
-	if (fsv_out_en) {
-		hsp_ctrl |= HSP_FSVP_OUT_EN;
-		hsp_ctrl |= HSP_FSVM_OUT_EN;
-	} else {
-		hsp_ctrl &= ~HSP_FSVP_OUT_EN;
-		hsp_ctrl &= ~HSP_FSVM_OUT_EN;
-	}
+	hsp_ctrl &= ~HSP_FSVP_OUT_EN;
+	hsp_ctrl &= ~HSP_FSVM_OUT_EN;
 	writel(hsp_ctrl, regs_base + EXYNOS_USBCON_HSP);
 }
 
@@ -705,7 +676,7 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 	phy_exynos_usb_v3p1_enable(&phy_drd->usbphy_info);
 	phy_exynos_usb_v3p1_pipe_ovrd(&phy_drd->usbphy_info);
 
-	phy_exynos_usb3p1_set_fsv_out_en(&phy_drd->usbphy_info, 0);
+	phy_exynos_usb3p1_set_fsv_out_dis(&phy_drd->usbphy_info);
 
 	pr_info("%s: ---\n", __func__);
 }
@@ -951,8 +922,6 @@ skip_clock:
 	if (IS_ERR(phy_provider)) {
 		goto err1;
 	}
-
-	spin_lock_init(&phy_drd->lock);
 
 	pr_info("%s: ---\n", __func__);
 	return 0;
