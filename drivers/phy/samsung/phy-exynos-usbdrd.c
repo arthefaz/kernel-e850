@@ -106,24 +106,6 @@
 #define EXYNOS_USBCON_VER_MAJOR_VER_MASK 0xFF00
 #define EXYNOS_USBCON_VER_MINOR(_x) ((_x) &0xf)
 
-enum exynos_usbphy_refclk {
-	USBPHY_REFCLK_DIFF_100MHZ = 0x80 | 0x27,
-	USBPHY_REFCLK_DIFF_52MHZ = 0x80 | 0x02 | 0x40,
-	USBPHY_REFCLK_DIFF_48MHZ = 0x80 | 0x2a | 0x40,
-	USBPHY_REFCLK_DIFF_26MHZ = 0x80 | 0x02,
-	USBPHY_REFCLK_DIFF_24MHZ = 0x80 | 0x2a,
-	USBPHY_REFCLK_DIFF_20MHZ = 0x80 | 0x31,
-	USBPHY_REFCLK_DIFF_19_2MHZ = 0x80 | 0x38,
-
-	USBPHY_REFCLK_EXT_50MHZ = 0x07,
-	USBPHY_REFCLK_EXT_48MHZ = 0x08,
-	USBPHY_REFCLK_EXT_26MHZ = 0x06,
-	USBPHY_REFCLK_EXT_24MHZ = 0x05,
-	USBPHY_REFCLK_EXT_20MHZ = 0x04,
-	USBPHY_REFCLK_EXT_19P2MHZ = 0x01,
-	USBPHY_REFCLK_EXT_12MHZ = 0x02,
-};
-
 /**
  * struct exynos_usbphy_info : USBPHY information to share USBPHY CAL code
  * @version: PHY controller version
@@ -133,7 +115,6 @@ enum exynos_usbphy_refclk {
  *       0x0200 - for EXYNOS_USB2 : EXYNOS7580, EXYNOS3475
  *       0x0210 -           EXYNOS8890_EVT1
  *       0xF200 - for EXT         : EXYNOS7420_HSIC
- * @refclk: reference clock frequency for USBPHY
  * @refsrc: reference clock source path for USBPHY
  * @regs_base: base address of PHY control register *
  */
@@ -141,10 +122,7 @@ enum exynos_usbphy_refclk {
 struct exynos_usbphy_info {
 	/* Device Information */
 	struct device *dev;
-
 	u32 version;
-	enum exynos_usbphy_refclk refclk;
-
 	void __iomem *regs_base;
 
 	/* multiple phy */
@@ -759,11 +737,10 @@ static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 		return -EINVAL;
 	}
 
-	phy_drd->usbphy_info.refclk = phy_drd->extrefclk;
 	phy_drd->usbphy_info.regs_base = phy_drd->reg_phy;
 
-	dev_info(phy_drd->dev, "usbphy info: version:0x%x, refclk:0x%x\n",
-		phy_drd->usbphy_info.version, phy_drd->usbphy_info.refclk);
+	dev_info(phy_drd->dev, "usbphy info: version:0x%x\n",
+		 phy_drd->usbphy_info.version);
 
 	return 0;
 }
