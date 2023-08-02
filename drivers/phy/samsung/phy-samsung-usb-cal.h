@@ -114,33 +114,6 @@ enum exynos_usbphy_utmi {
 	USBPHY_UTMI_PHYCLOCK,
 };
 
-enum exynos_usbphy_tune_para {
-	USBPHY_TUNE_HS_COMPDIS = 0x0,
-	USBPHY_TUNE_HS_OTG = 0x1,
-	USBPHY_TUNE_HS_SQRX = 0x2,
-	USBPHY_TUNE_HS_TXFSLS = 0x3,
-	USBPHY_TUNE_HS_TXHSXV = 0x4,
-	USBPHY_TUNE_HS_TXPREEMP = 0x5,
-	USBPHY_TUNE_HS_TXPREEMP_PLUS = 0x6,
-	USBPHY_TUNE_HS_TXRES = 0x7,
-	USBPHY_TUNE_HS_TXRISE = 0x8,
-	USBPHY_TUNE_HS_TXVREF = 0x9,
-
-	USBPHY_TUNE_SS_TX_BOOST = 0x0 | 0x10000,
-	USBPHY_TUNE_SS_TX_SWING = 0x1 | 0x10000,
-	USBPHY_TUNE_SS_TX_DEEMPHASIS = 0x2 | 0x10000,
-	USBPHY_TUNE_SS_LOS_BIAS = 0x3 | 0x10000,
-	USBPHY_TUNE_SS_LOS_MASK_VAL = 0x4 | 0x10000,
-	USBPHY_TUNE_SS_FIX_EQ = 0x5 | 0x10000,
-	USBPHY_TUNE_SS_RX_EQ = 0x6 | 0x10000,
-
-	USBPHY_TUNE_COMBO = 0x20000,
-	USBPHY_TUNE_COMBO_TX_AMP = USBPHY_TUNE_COMBO | 0x0,
-	USBPHY_TUNE_COMBO_TX_EMPHASIS = USBPHY_TUNE_COMBO | 0x1,
-	USBPHY_TUNE_COMBO_TX_IDRV = USBPHY_TUNE_COMBO | 0x2,
-	USBPHY_TUNE_COMBO_TX_ACCDRV = USBPHY_TUNE_COMBO | 0x3,
-};
-
 enum exynos_usb_bc {
 	BC_NO_CHARGER,
 	BC_SDP,
@@ -152,59 +125,7 @@ enum exynos_usb_bc {
 	BC_ACA_C,
 };
 
-struct exynos_usb_tune_param {
-	char name[32];
-	unsigned int value;
-};
-
 #define EXYNOS_USB_TUNE_LAST 0x4C415354
-
-/* HS PHY tune parameter */
-struct exynos_usbphy_hs_tune {
-	unsigned char tx_vref;
-	unsigned char tx_pre_emp;
-	unsigned char tx_pre_emp_plus;
-	unsigned char tx_res;
-	unsigned char tx_rise;
-	unsigned char tx_hsxv;
-	unsigned char tx_fsls;
-	unsigned char rx_sqrx;
-	unsigned char compdis;
-	unsigned char otg;
-	unsigned char enable_user_imp;
-	unsigned char user_imp_value;
-	enum exynos_usbphy_utmi utmi_clk;
-};
-
-/* SS PHY tune parameter */
-struct exynos_usbphy_ss_tune {
-	/* TX Swing Level*/
-	unsigned char tx_boost_level;
-	unsigned char tx_swing_level;
-	unsigned char tx_swing_full;
-	unsigned char tx_swing_low;
-	/* TX De-Emphasis */
-	unsigned char tx_deemphasis_mode;
-	unsigned char tx_deemphasis_3p5db;
-	unsigned char tx_deemphasis_6db;
-	/* SSC Operation*/
-	unsigned char enable_ssc;
-	unsigned char ssc_range;
-	/* Loss-of-Signal detector threshold level */
-	unsigned char los_bias;
-	/* Loss-of-Signal mask width */
-	unsigned short los_mask_val;
-	/* RX equalizer mode */
-	unsigned char enable_fixed_rxeq_mode;
-	unsigned char fix_rxeq_value;
-	/* Decrease TX Impedance */
-	unsigned char decrease_ss_tx_imp;
-
-	unsigned char set_crport_level_en;
-	unsigned char set_crport_mpll_charge_pump;
-	/* RX LFPS(decode) mode */
-	unsigned char rx_decode_mode;
-};
 
 /**
  * struct exynos_usbphy_info : USBPHY information to share USBPHY CAL code
@@ -233,15 +154,6 @@ struct exynos_usbphy_info {
 	bool not_used_vbus_pad;
 
 	void __iomem *regs_base;
-
-	/* HS PHY tune parameter */
-	struct exynos_usbphy_hs_tune *hs_tune;
-
-	/* SS PHY tune parameter */
-	struct exynos_usbphy_ss_tune *ss_tune;
-
-	/* Tune Parma list */
-	struct exynos_usb_tune_param *tune_param;
 
 	/* multiple phy */
 	int hw_version;

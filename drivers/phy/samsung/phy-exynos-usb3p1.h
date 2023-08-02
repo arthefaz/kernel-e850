@@ -37,15 +37,9 @@ extern void phy_exynos_usb_v3p1_g2_link_pclk_sel(struct exynos_usbphy_info *info
 extern void phy_exynos_usb_v3p1_g2_pma_sw_rst_release(struct exynos_usbphy_info *info);
 extern void phy_exynos_usb_v3p1_pipe_ovrd(struct exynos_usbphy_info *info);
 extern void phy_exynos_usb_v3p1_pipe_ready(struct exynos_usbphy_info *info);
-/* Tune */
+
 extern void phy_exynos_usb_v3p1_config_host_mode(struct exynos_usbphy_info *info);
-extern void phy_exynos_usb_v3p1_tune_host(struct exynos_usbphy_info *info);
-extern void phy_exynos_usb_v3p1_tune_dev(struct exynos_usbphy_info *info);
-extern void phy_exynos_usb_v3p1_tune(struct exynos_usbphy_info *info);
-extern void phy_exynos_usb_v3p1_tune_each(struct exynos_usbphy_info *info, char *para_name, int val);
-extern void phy_exynos_usb_v3p1_rd_tune_each_from_reg(struct exynos_usbphy_info *info, u32, char *para_name, int *val);
-extern void phy_exynos_usb_v3p1_wr_tune_reg(struct exynos_usbphy_info *info, u32 val);
-extern void phy_exynos_usb_v3p1_rd_tune_reg(struct exynos_usbphy_info *info, u32 *val);
+
 /* 3.0 PHY CR Port Access */
 extern void phy_exynos_usb_v3p1_cal_cr_write(struct exynos_usbphy_info *info, u16 addr, u16 data);
 extern u16 phy_exynos_usb_v3p1_cal_cr_read(struct exynos_usbphy_info *info, u16 addr);
