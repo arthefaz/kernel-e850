@@ -125,7 +125,6 @@ struct exynos_usbdrd_phy_config {
 	void (*phy_isol)(struct phy_usb_instance *inst, u32 on, unsigned int);
 	void (*phy_init)(struct exynos_usbdrd_phy *phy_drd);
 	void (*phy_exit)(struct exynos_usbdrd_phy *phy_drd);
-	void (*phy_tune)(struct exynos_usbdrd_phy *phy_drd, int);
 	void (*phy_ilbk)(struct exynos_usbdrd_phy *phy_drd);
 	void (*phy_set)(struct exynos_usbdrd_phy *phy_drd, int, void *);
 	unsigned int (*set_refclk)(struct phy_usb_instance *inst);
@@ -185,10 +184,6 @@ struct exynos_usbdrd_phy {
 	struct exynos_usbphy_info usbphy_info;
 	struct exynos_usbphy_info usbphy_sub_info;
 	struct exynos_usbphy_info usbphy_blkcon_info;
-	struct exynos_usbphy_ss_tune ss_value[2];
-	struct exynos_usbphy_hs_tune hs_value[2];
-	int hs_tune_param_value[EXYNOS_DRD_MAX_TUNEPARAM_NUM][2];
-	int ss_tune_param_value[EXYNOS_DRD_MAX_TUNEPARAM_NUM][2];
 
 	u32 ip_type;
 	int is_conn;
@@ -196,7 +191,6 @@ struct exynos_usbdrd_phy {
 	u32 phy_port;
 	u32 reverse_phy_port;
 	spinlock_t lock;
-	u32 use_default_tune_val;
 	int in_shutdown;
 	int is_ldo_on;
 	int phy_port_test_en;
