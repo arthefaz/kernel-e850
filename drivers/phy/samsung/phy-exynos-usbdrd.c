@@ -41,11 +41,6 @@
 
 #include "phy-exynos-usbdrd.h"
 
-void __iomem *phycon_base_addr;
-EXPORT_SYMBOL_GPL(phycon_base_addr);
-
-struct usb_eom_result_s *eom_result;
-
 static int exynos_usbdrd_clk_prepare(struct exynos_usbdrd_phy *phy_drd)
 {
 	int i;
@@ -592,53 +587,6 @@ out:
 	return;
 }
 
-/*
- * USB LDO control was moved to phy_conn API from OTG
- * without adding one more phy interface
- */
-void exynos_usbdrd_phy_conn(struct phy *phy, int is_conn)
-{
-	struct phy_usb_instance *inst = phy_get_drvdata(phy);
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-
-	if (is_conn) {
-		if (phy_drd->is_conn == 0) {
-			dev_info(phy_drd->dev, "USB PHY isolation clear(ON)\n");
-			exynos_usbdrd_utmi_phy_isol(inst, 0, inst->pmu_mask);
-
-			dev_info(phy_drd->dev, "USB PHY Conn Set\n");
-			phy_drd->is_conn = 1;
-
-		} else
-			dev_info(phy_drd->dev, "USB PHY Conn already Setted!!\n");
-
-	} else {
-		if (phy_drd->is_conn == 1) {
-			dev_info(phy_drd->dev, "USB PHY Conn Clear\n");
-			phy_drd->is_conn = 0;
-
-			dev_info(phy_drd->dev, "USB PHY isolation set(OFF)\n");
-			exynos_usbdrd_utmi_phy_isol(inst, 1, inst->pmu_mask);
-		} else
-			dev_info(phy_drd->dev, "USB PHY Conn already cleared!!\n");
-	}
-
-	return;
-}
-EXPORT_SYMBOL_GPL(exynos_usbdrd_phy_conn);
-
-void exynos_usbdrd_phy_vol_set(struct phy *phy, int voltage)
-{
-	struct phy_usb_instance *inst = phy_get_drvdata(phy);
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-
-	regulator_set_voltage(phy_drd->vdd075_usb, voltage, voltage);
-	dev_info(phy_drd->dev, "USB 0.85 PHY: %dmV\n", voltage);
-
-	return;
-}
-EXPORT_SYMBOL_GPL(exynos_usbdrd_phy_vol_set);
-
 int exynos_usbdrd_phy_link_rst(struct phy *phy)
 {
 	struct phy_usb_instance *inst = phy_get_drvdata(phy);
@@ -654,95 +602,10 @@ static int exynos_usbdrd_phy_power_on(struct phy *phy)
 	return 0;
 }
 
-static struct device_node *exynos_usbdrd_parse_dt(void)
-{
-	struct device_node *np = NULL;
-
-	np = of_find_compatible_node(NULL, NULL, "samsung,exynos-usbdrd-phy");
-	if (!np) {
-		pr_err("%s: failed to get the usbdrd phy device node\n",
-			__func__);
-		goto err;
-	}
-	return np;
-err:
-	return NULL;
-}
-
-static struct exynos_usbdrd_phy *exynos_usbdrd_get_struct(void)
-{
-	struct device_node *np = NULL;
-	struct platform_device *pdev = NULL;
-	struct device *dev;
-	struct exynos_usbdrd_phy *phy_drd;
-
-	np = exynos_usbdrd_parse_dt();
-	if (np) {
-		pdev = of_find_device_by_node(np);
-		dev = &pdev->dev;
-		of_node_put(np);
-		if (pdev) {
-			pr_info("%s: get the %s platform_device\n",
-				__func__, pdev->name);
-
-			phy_drd = dev->driver_data;
-			return phy_drd;
-		}
-	}
-
-	pr_err("%s: failed to get the platform_device\n", __func__);
-	return NULL;
-}
-
 static int exynos_usbdrd_phy_power_off(struct phy *phy)
 {
 	return 0;
 }
-
-int exynos_usbdrd_ldo_manual_control(bool on)
-{
-	struct exynos_usbdrd_phy *phy_drd;
-
-	pr_info("%s ldo = %d\n", __func__, on);
-
-	phy_drd = exynos_usbdrd_get_struct();
-
-	if (!phy_drd) {
-		pr_err("[%s] exynos_usbdrd_get_struct error\n", __func__);
-		return -ENODEV;
-	}
-	exynos_usbdrd_ldo_control(phy_drd, on);
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(exynos_usbdrd_ldo_manual_control);
-
-int exynos_usbdrd_ldo_external_control(bool on)
-{
-	struct exynos_usbdrd_phy *phy_drd;
-
-	phy_drd = exynos_usbdrd_get_struct();
-
-	if (!phy_drd)
-		return -ENODEV;
-
-	pr_info("%s ldo = %d\n", __func__, on);
-	exynos_usbdrd_ldo_control(phy_drd, on);
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(exynos_usbdrd_ldo_external_control);
-
-int exynos_usbdrd_pipe3_enable(struct phy *phy)
-{
-	struct phy_usb_instance *inst = phy_get_drvdata(phy);
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-
-	phy_exynos_usb_v3p1_g2_pma_ready(&phy_drd->usbphy_info);
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(exynos_usbdrd_pipe3_enable);
 
 static struct phy *exynos_usbdrd_phy_xlate(struct device *dev,
 					struct of_phandle_args *args)
@@ -843,8 +706,6 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 	phy_drd->reg_phy = devm_ioremap_resource(dev, res);
 	if (IS_ERR(phy_drd->reg_phy))
 		return PTR_ERR(phy_drd->reg_phy);
-
-	phycon_base_addr = phy_drd->reg_phy;
 
 	ret = exynos_usbdrd_get_iptype(phy_drd);
 	if (ret) {
