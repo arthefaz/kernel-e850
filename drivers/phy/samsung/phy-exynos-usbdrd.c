@@ -675,16 +675,6 @@ static int exynos_usbdrd_phy_init(struct phy *phy)
 	return 0;
 }
 
-static void exynos_usbdrd_utmi_ilbk(struct exynos_usbdrd_phy *phy_drd)
-{
-	dev_info(phy_drd->dev, "%s\n", __func__);
-}
-
-static void exynos_usbdrd_pipe3_ilbk(struct exynos_usbdrd_phy *phy_drd)
-{
-	dev_info(phy_drd->dev, "%s\n", __func__);
-}
-
 void exynos_usbdrd_ldo_control(struct exynos_usbdrd_phy *phy_drd, int on)
 {
 	int ret1, ret2, ret3;
@@ -774,17 +764,6 @@ void exynos_usbdrd_phy_vol_set(struct phy *phy, int voltage)
 	return;
 }
 EXPORT_SYMBOL_GPL(exynos_usbdrd_phy_vol_set);
-
-int exynos_usbdrd_dp_ilbk(struct phy *phy)
-{
-	struct phy_usb_instance *inst = phy_get_drvdata(phy);
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-
-	inst->phy_cfg->phy_ilbk(phy_drd);
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(exynos_usbdrd_dp_ilbk);
 
 static void exynos_usbdrd_pipe3_set(struct exynos_usbdrd_phy *phy_drd,
 						int option, void *info)
@@ -955,7 +934,6 @@ static const struct exynos_usbdrd_phy_config phy_cfg_exynos[] = {
 		.phy_isol	= exynos_usbdrd_utmi_phy_isol,
 		.phy_init	= exynos_usbdrd_utmi_init,
 		.phy_exit	= exynos_usbdrd_utmi_exit,
-		.phy_ilbk	= exynos_usbdrd_utmi_ilbk,
 		.phy_set	= exynos_usbdrd_utmi_set,
 		.set_refclk	= exynos_usbdrd_utmi_set_refclk,
 	},
@@ -964,7 +942,6 @@ static const struct exynos_usbdrd_phy_config phy_cfg_exynos[] = {
 		.phy_isol	= exynos_usbdrd_pipe3_phy_isol,
 		.phy_init	= exynos_usbdrd_pipe3_init,
 		.phy_exit	= exynos_usbdrd_pipe3_exit,
-		.phy_ilbk	= exynos_usbdrd_pipe3_ilbk,
 		.phy_set	= exynos_usbdrd_pipe3_set,
 		.set_refclk	= exynos_usbdrd_pipe3_set_refclk,
 	},
