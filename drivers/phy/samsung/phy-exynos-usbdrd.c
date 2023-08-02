@@ -36,7 +36,6 @@
 #include <linux/usb/otg.h>
 #ifdef CONFIG_OF
 #include <linux/of_device.h>
-#include <linux/of_gpio.h>
 #endif
 
 #include "phy-exynos-usbdrd.h"
@@ -607,27 +606,6 @@ skip_clock:
 	}
 
 	pmu_mask = (u32)BIT(pmu_mask);
-
-	dev_vdbg(dev, "Creating usbdrd_phy phy\n");
-	phy_drd->phy_port =  of_get_named_gpio(dev->of_node,
-					"phy,gpio_phy_port", 0);
-	if (gpio_is_valid(phy_drd->phy_port)) {
-		dev_err(dev, "PHY CON Selection OK\n");
-
-		ret = gpio_request(phy_drd->phy_port, "PHY_CON");
-		if (ret)
-			dev_err(dev, "fail to request gpio %s:%d\n", "PHY_CON", ret);
-		else
-			gpio_direction_input(phy_drd->phy_port);
-	}
-	else
-		dev_err(dev, "non-DT: PHY CON Selection\n");
-
-	ret = of_property_read_u32(dev->of_node, "reverse_con_dir", &phy_drd->reverse_phy_port);
-	dev_info(dev, "reverse_con_dir = %d\n", phy_drd->reverse_phy_port);
-	if (ret < 0) {
-		phy_drd->reverse_phy_port = 0;
-	}
 
 	ret = exynos_usbdrd_get_phyinfo(phy_drd);
 	if (ret)

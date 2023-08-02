@@ -179,26 +179,12 @@ struct exynos_usbdrd_phy {
 	u32 ip_type;
 	int is_conn;
 	int idle_ip_idx;
-	u32 phy_port;
-	u32 reverse_phy_port;
 	spinlock_t lock;
 	int in_shutdown;
 	int is_ldo_on;
-	int phy_port_test_en;
 };
 
 void __iomem *phy_exynos_usbdp_get_address(void);
-
-enum samsung_cpu_type {
-	TYPE_S3C64XX,
-	TYPE_EXYNOS4210,
-	TYPE_EXYNOS5250,
-	TYPE_EXYNOS5430,
-	TYPE_EXYNOS7420,
-	TYPE_EXYNOS7580,
-	TYPE_EXYNOS8890,
-	TYPE_EXYNOS8895,
-};
 
 enum samsung_usb_ip_type {
 	TYPE_USB3DRD = 0,
