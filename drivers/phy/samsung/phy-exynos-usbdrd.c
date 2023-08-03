@@ -143,28 +143,6 @@ struct exynos_usbdrd_phy {
 
 /* -------------------------------------------------------------------------- */
 
-static void exynos_cal_usbphy_q_ch(void *regs_base, u8 enable)
-{
-	u32 reg;
-
-	reg = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
-	reg &= ~LINKCTRL_FORCE_QACT;
-	reg |= LINKCTRL_DIS_QACT_ID0;
-	reg |= LINKCTRL_DIS_QACT_VBUS_VALID;
-	reg |= LINKCTRL_DIS_QACT_BVALID;
-	reg |= LINKCTRL_DIS_QACT_LINKGATE;
-	writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
-	udelay(500);
-
-	if (enable) {
-		/* WA for Q-channel: disable all q-act from usb */
-		reg = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
-		reg |= LINKCTRL_FORCE_QACT;
-		udelay(500);
-		writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
-	}
-}
-
 /* 2.0 PHY Power Down Control */
 static void phy_power_en(void __iomem *regs_base, u8 en)
 {
@@ -183,7 +161,10 @@ static void phy_exynos_usb_v3p1_enable(void __iomem *regs_base)
 	u32 reg;
 	u32 reg_hsp;
 
-	exynos_cal_usbphy_q_ch(regs_base, 1);
+	/* Disable HWACG */
+	reg = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
+	reg |= LINKCTRL_FORCE_QACT;
+	writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
 
 	/* Set PHY POR High */
 	reg = readl(regs_base + EXYNOS_USBCON_CLKRST);
@@ -263,9 +244,6 @@ static void phy_exynos_usb_v3p1_disable(void __iomem *regs_base)
 
 	/* Disable PHY Power Mode */
 	phy_power_en(regs_base, 0);
-
-	/* Clear force q-channel */
-	exynos_cal_usbphy_q_ch(regs_base, 0);
 
 	/*
 	 * Link sw reset is need for USB_DP/DM high-z in host mode: 2019.04.10
