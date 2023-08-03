@@ -721,6 +721,7 @@ static struct platform_driver phy_exynos_usbdrd = {
 	.driver = {
 		.of_match_table	= exynos_usbdrd_phy_of_match,
 		.name		= "phy_exynos_usbdrd",
+		.suppress_bind_attrs = true,
 	}
 };
 
