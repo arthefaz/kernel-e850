@@ -136,7 +136,6 @@ struct exynos_usbdrd_phy {
 		u32 index;
 		struct regmap *reg_pmu;
 		u32 pmu_offset;
-		u32 pmu_offset_dp;
 		u32 pmu_mask;
 		const struct exynos_usbdrd_phy_config *phy_cfg;
 	} phys[EXYNOS_DRDPHYS_NUM];
@@ -146,8 +145,6 @@ struct exynos_usbdrd_phy {
 
 	int is_ldo_on;
 };
-
-/* -------------------------------------------------------------------------- */
 
 static void exynos_cal_usbphy_q_ch(void *regs_base, u8 enable)
 {
@@ -508,8 +505,7 @@ static void exynos_usbdrd_utmi_phy_isol(struct phy_usb_instance *inst,
 		return;
 
 	val = on ? 0 : mask;
-	regmap_update_bits(inst->reg_pmu, inst->pmu_offset,
-		mask, val);
+	regmap_update_bits(inst->reg_pmu, inst->pmu_offset, mask, val);
 }
 
 static int exynos_usbdrd_phy_exit(struct phy *phy)
@@ -664,7 +660,7 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	const struct exynos_usbdrd_phy_drvdata *drv_data;
 	struct regmap *reg_pmu;
-	u32 pmu_offset, pmu_offset_dp, pmu_mask;
+	u32 pmu_offset, pmu_mask;
 	int i, ret;
 
 	pr_info("%s: +++ %s %s\n", __func__, dev->init_name, pdev->name);
@@ -730,12 +726,7 @@ skip_clock:
 						dev->of_node->name, ret);
 		goto err1;
 	}
-	ret = of_property_read_u32(dev->of_node, "pmu_offset_dp", &pmu_offset_dp);
-	if (ret < 0) {
-		dev_err(dev, "couldn't read pmu_offset_dp on %s node, error = %d\n",
-						dev->of_node->name, ret);
-		goto err1;
-	}
+
 	ret = of_property_read_u32(dev->of_node, "pmu_mask", &pmu_mask);
 	if (ret < 0) {
 		dev_err(dev, "couldn't read pmu_mask on %s node, error = %d\n",
@@ -757,7 +748,6 @@ skip_clock:
 		phy_drd->phys[i].index = i;
 		phy_drd->phys[i].reg_pmu = reg_pmu;
 		phy_drd->phys[i].pmu_offset = pmu_offset;
-		phy_drd->phys[i].pmu_offset_dp = pmu_offset_dp;
 		phy_drd->phys[i].pmu_mask = pmu_mask;
 		phy_drd->phys[i].phy_cfg = &drv_data->phy_cfg[i];
 		phy_set_drvdata(phy, &phy_drd->phys[i]);
