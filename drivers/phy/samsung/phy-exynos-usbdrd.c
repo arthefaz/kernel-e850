@@ -49,21 +49,11 @@
 #define EXYNOS_USBCON_LINK_CTRL			0x04
 #define LINKCTRL_BUS_FILTER_BYPASS(_x)		((_x & 0xf) << 4)
 #define LINKCTRL_FORCE_QACT			BIT(8)
-#define LINKCTRL_PIPE3_FORCE_EN			BIT(16)
-#define LINKCTRL_PIPE3_FORCE_PHY_STATUS		BIT(17)
-#define LINKCTRL_PIPE3_FORCE_RX_ELEC_IDLE	BIT(18)
-
-#define EXYNOS_USBCON_LINK_PORT			0x08
-#define LINKPORT_HUB_PORT_SEL_OCD_U2		BIT(2)
-#define LINKPORT_HUB_PORT_SEL_OCD_U3		BIT(3)
 
 #define EXYNOS_USBCON_CLKRST			0x20
 #define CLKRST_LINK_SW_RST			BIT(0)
 #define CLKRST_PORT_RST				BIT(1)
-#define CLKRST_PHY30_RST_SEL			BIT(2)
 #define CLKRST_PHY30_SW_RST			BIT(3)
-#define CLKRST_PHY20_RST_SEL			BIT(12)
-#define CLKRST_PHY20_SW_RST			BIT(13)
 
 #define EXYNOS_USBCON_UTMI			0x50
 #define UTMI_FORCE_SLEEP			BIT(0)
@@ -78,8 +68,7 @@
 #define HSP_EN_UTMISUSPEND			BIT(9)
 #define HSP_VBUSVLDEXT				BIT(12)
 #define HSP_VBUSVLDEXTSEL			BIT(13)
-#define HSP_FSVP_OUT_EN				BIT(24)
-#define HSP_FSVM_OUT_EN				BIT(26)
+#define HSP_FSV_OUT_EN				BIT(24)
 
 #define EXYNOS_USBCON_HSP_TEST			0x5c
 #define HSP_TEST_SIDDQ				BIT(24)
@@ -209,10 +198,7 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 
 	/* Set PHY POR High */
 	reg = readl(regs_base + EXYNOS_USBCON_CLKRST);
-	reg |= CLKRST_PHY20_SW_RST;
-	reg |= CLKRST_PHY20_RST_SEL;
 	reg |= CLKRST_PHY30_SW_RST;
-	reg |= CLKRST_PHY30_RST_SEL;
 	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
 
 	reg = readl(regs_base + EXYNOS_USBCON_UTMI);
@@ -227,8 +213,6 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 	reg |= HSP_EN_UTMISUSPEND;
 	reg |= HSP_COMMONONN;
 	writel(reg, regs_base + EXYNOS_USBCON_HSP);
-
-	udelay(100);
 
 	/*
 	 * Follow setting sequence for USB Link
@@ -257,8 +241,6 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 
 	/* Set PHY POR Low */
 	reg = readl(regs_base + EXYNOS_USBCON_CLKRST);
-	reg |= CLKRST_PHY20_RST_SEL;
-	reg &= ~CLKRST_PHY20_SW_RST;
 	reg &= ~CLKRST_PHY30_SW_RST;
 	reg &= ~CLKRST_PORT_RST;
 	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
@@ -266,23 +248,9 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 	/* After POR low and delay 75us, PHYCLOCK is guaranteed. */
 	udelay(75);
 
-	/* 2. OVC io usage */
-	reg = readl(regs_base + EXYNOS_USBCON_LINK_PORT);
-	reg |= LINKPORT_HUB_PORT_SEL_OCD_U3;
-	reg |= LINKPORT_HUB_PORT_SEL_OCD_U2;
-	writel(reg, regs_base + EXYNOS_USBCON_LINK_PORT);
-
-	/* USD/DP PHY contrl: force pipe3 signal for link */
-	reg = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
-	reg |= LINKCTRL_PIPE3_FORCE_EN;
-	reg &= ~LINKCTRL_PIPE3_FORCE_PHY_STATUS;
-	reg |= LINKCTRL_PIPE3_FORCE_RX_ELEC_IDLE;
-	writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
-
 	/* Disable UART/JTAG over USB */
 	reg = readl(regs_base + EXYNOS_USBCON_HSP);
-	reg &= ~HSP_FSVP_OUT_EN;
-	reg &= ~HSP_FSVM_OUT_EN;
+	reg &= ~HSP_FSV_OUT_EN;
 	writel(reg, regs_base + EXYNOS_USBCON_HSP);
 }
 
@@ -324,7 +292,7 @@ static int exynos_usbdrd_phy_exit(struct phy *phy)
 	reg |= UTMI_FORCE_SLEEP;
 	writel(reg, regs_base + EXYNOS_USBCON_UTMI);
 
-	/* Disable PHY Power Mode */
+	/* Power down analog blocks */
 	reg = readl(regs_base + EXYNOS_USBCON_HSP_TEST);
 	reg |= HSP_TEST_SIDDQ;
 	writel(reg, regs_base + EXYNOS_USBCON_HSP_TEST);
