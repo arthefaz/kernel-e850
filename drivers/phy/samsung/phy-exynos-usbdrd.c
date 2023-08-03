@@ -34,6 +34,7 @@
 #include <linux/mfd/syscon.h>
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
+#include <linux/soc/samsung/exynos-regs-pmu.h>
 
 /* Exynos USB PHY registers */
 #define EXYNOS_FSEL_9MHZ6		0x0
@@ -105,12 +106,13 @@ struct exynos_usbdrd_phy;
 
 struct exynos_usbdrd_phy_config {
 	u32 id;
-	void (*phy_isol)(struct phy_usb_instance *inst, u32 on, unsigned int);
+	void (*phy_isol)(struct phy_usb_instance *inst, u32 on);
 	void (*phy_init)(struct exynos_usbdrd_phy *phy_drd);
 };
 
 struct exynos_usbdrd_phy_drvdata {
 	const struct exynos_usbdrd_phy_config *phy_cfg;
+	u32 pmu_offset_usbdrd0_phy;
 };
 
 /**
@@ -136,7 +138,6 @@ struct exynos_usbdrd_phy {
 		u32 index;
 		struct regmap *reg_pmu;
 		u32 pmu_offset;
-		u32 pmu_mask;
 		const struct exynos_usbdrd_phy_config *phy_cfg;
 	} phys[EXYNOS_DRDPHYS_NUM];
 	u32 extrefclk;
@@ -497,15 +498,17 @@ static unsigned int exynos_rate_to_clk(struct exynos_usbdrd_phy *phy_drd)
 }
 
 static void exynos_usbdrd_utmi_phy_isol(struct phy_usb_instance *inst,
-					unsigned int on, unsigned int mask)
+					unsigned int on)
 {
 	unsigned int val;
 
 	if (!inst->reg_pmu)
 		return;
 
-	val = on ? 0 : mask;
-	regmap_update_bits(inst->reg_pmu, inst->pmu_offset, mask, val);
+	val = on ? 0 : EXYNOS4_PHY_ENABLE;
+
+	regmap_update_bits(inst->reg_pmu, inst->pmu_offset, EXYNOS4_PHY_ENABLE,
+			   val);
 }
 
 static int exynos_usbdrd_phy_exit(struct phy *phy)
@@ -515,8 +518,7 @@ static int exynos_usbdrd_phy_exit(struct phy *phy)
 
 	phy_exynos_usb_v3p1_disable(phy_drd->reg_phy);
 	exynos_usbdrd_clk_disable(phy_drd);
-	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 1,
-				    phy_drd->phys[0].pmu_mask);
+	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 1);
 
 	return 0;
 }
@@ -527,8 +529,7 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 
 	pr_info("%s: +++\n", __func__);
 
-	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 0,
-				    phy_drd->phys[0].pmu_mask);
+	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 0);
 
 	ret = exynos_usbdrd_clk_enable(phy_drd);
 	if (ret) {
@@ -640,6 +641,7 @@ static const struct exynos_usbdrd_phy_config phy_cfg_exynos850[] = {
 
 static const struct exynos_usbdrd_phy_drvdata exynos850_usbdrd_phy = {
 	.phy_cfg		= phy_cfg_exynos850,
+	.pmu_offset_usbdrd0_phy	= EXYNOS5_USBDRD_PHY_CONTROL,
 };
 
 static const struct of_device_id exynos_usbdrd_phy_of_match[] = {
@@ -660,7 +662,7 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	const struct exynos_usbdrd_phy_drvdata *drv_data;
 	struct regmap *reg_pmu;
-	u32 pmu_offset, pmu_mask;
+	u32 pmu_offset;
 	int i, ret;
 
 	pr_info("%s: +++ %s %s\n", __func__, dev->init_name, pdev->name);
@@ -720,21 +722,7 @@ skip_clock:
 		goto err1;
 	}
 
-	ret = of_property_read_u32(dev->of_node, "pmu_offset", &pmu_offset);
-	if (ret < 0) {
-		dev_err(dev, "couldn't read pmu_offset on %s node, error = %d\n",
-						dev->of_node->name, ret);
-		goto err1;
-	}
-
-	ret = of_property_read_u32(dev->of_node, "pmu_mask", &pmu_mask);
-	if (ret < 0) {
-		dev_err(dev, "couldn't read pmu_mask on %s node, error = %d\n",
-						dev->of_node->name, ret);
-		goto err1;
-	}
-
-	pmu_mask = (u32)BIT(pmu_mask);
+	pmu_offset = phy_drd->drv_data->pmu_offset_usbdrd0_phy;
 
 	for (i = 0; i < EXYNOS_DRDPHYS_NUM; i++) {
 		struct phy *phy = devm_phy_create(dev, NULL,
@@ -748,7 +736,6 @@ skip_clock:
 		phy_drd->phys[i].index = i;
 		phy_drd->phys[i].reg_pmu = reg_pmu;
 		phy_drd->phys[i].pmu_offset = pmu_offset;
-		phy_drd->phys[i].pmu_mask = pmu_mask;
 		phy_drd->phys[i].phy_cfg = &drv_data->phy_cfg[i];
 		phy_set_drvdata(phy, &phy_drd->phys[i]);
 	}
