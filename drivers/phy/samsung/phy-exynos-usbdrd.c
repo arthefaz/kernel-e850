@@ -634,7 +634,7 @@ static struct phy_ops exynos_usbdrd_phy_ops = {
 	.owner		= THIS_MODULE,
 };
 
-static const struct exynos_usbdrd_phy_config phy_cfg_exynos[] = {
+static const struct exynos_usbdrd_phy_config phy_cfg_exynos850[] = {
 	{
 		.id		= EXYNOS_DRDPHY_UTMI,
 		.phy_isol	= exynos_usbdrd_utmi_phy_isol,
@@ -642,14 +642,14 @@ static const struct exynos_usbdrd_phy_config phy_cfg_exynos[] = {
 	},
 };
 
-static const struct exynos_usbdrd_phy_drvdata exynos_usbdrd_phy = {
-	.phy_cfg		= phy_cfg_exynos,
+static const struct exynos_usbdrd_phy_drvdata exynos850_usbdrd_phy = {
+	.phy_cfg		= phy_cfg_exynos850,
 };
 
 static const struct of_device_id exynos_usbdrd_phy_of_match[] = {
 	{
-		.compatible = "samsung,exynos-usbdrd-phy",
-		.data = &exynos_usbdrd_phy
+		.compatible = "samsung,exynos850-usbdrd-phy",
+		.data = &exynos850_usbdrd_phy
 	},
 	{ },
 };
