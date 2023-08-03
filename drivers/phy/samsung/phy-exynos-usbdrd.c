@@ -46,16 +46,17 @@
 #define EXYNOS_FSEL_26MHZ		0x82
 #define EXYNOS_FSEL_50MHZ		0x7
 
-#define EXYNOS_USBCON_LINK_CTRL			0x04
-#define LINKCTRL_BUS_FILTER_BYPASS(_x)		((_x & 0xf) << 4)
+/* Exynos850: USB DRD PHY registers */
+#define EXYNOS850_DRD_LINKCTRL			0x04
+#define LINKCTRL_BUS_FILTER_BYPASS(_x)		((_x) << 4)
 #define LINKCTRL_FORCE_QACT			BIT(8)
 
-#define EXYNOS_USBCON_CLKRST			0x20
+#define EXYNOS850_DRD_CLKRST			0x20
 #define CLKRST_LINK_SW_RST			BIT(0)
 #define CLKRST_PORT_RST				BIT(1)
-#define CLKRST_PHY30_SW_RST			BIT(3)
+#define CLKRST_PHY_SW_RST			BIT(3)
 
-#define EXYNOS_USBCON_UTMI			0x50
+#define EXYNOS850_DRD_UTMI			0x50
 #define UTMI_FORCE_SLEEP			BIT(0)
 #define UTMI_FORCE_SUSPEND			BIT(1)
 #define UTMI_DM_PULLDOWN			BIT(2)
@@ -63,14 +64,14 @@
 #define UTMI_FORCE_BVALID			BIT(4)
 #define UTMI_FORCE_VBUSVALID			BIT(5)
 
-#define EXYNOS_USBCON_HSP			0x54
+#define EXYNOS850_DRD_HSP			0x54
 #define HSP_COMMONONN				BIT(8)
 #define HSP_EN_UTMISUSPEND			BIT(9)
 #define HSP_VBUSVLDEXT				BIT(12)
 #define HSP_VBUSVLDEXTSEL			BIT(13)
 #define HSP_FSV_OUT_EN				BIT(24)
 
-#define EXYNOS_USBCON_HSP_TEST			0x5c
+#define EXYNOS850_DRD_HSP_TEST			0x5c
 #define HSP_TEST_SIDDQ				BIT(24)
 
 #define KHZ	1000
@@ -192,66 +193,66 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 	u32 reg, reg_hsp;
 
 	/* Disable HWACG */
-	reg = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
+	reg = readl(regs_base + EXYNOS850_DRD_LINKCTRL);
 	reg |= LINKCTRL_FORCE_QACT;
-	writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
+	writel(reg, regs_base + EXYNOS850_DRD_LINKCTRL);
 
 	/* Set PHY POR High */
-	reg = readl(regs_base + EXYNOS_USBCON_CLKRST);
-	reg |= CLKRST_PHY30_SW_RST;
-	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
+	reg = readl(regs_base + EXYNOS850_DRD_CLKRST);
+	reg |= CLKRST_PHY_SW_RST;
+	writel(reg, regs_base + EXYNOS850_DRD_CLKRST);
 
-	reg = readl(regs_base + EXYNOS_USBCON_UTMI);
+	reg = readl(regs_base + EXYNOS850_DRD_UTMI);
 	reg &= ~UTMI_FORCE_SUSPEND;
 	reg &= ~UTMI_FORCE_SLEEP;
 	reg &= ~UTMI_DP_PULLDOWN;
 	reg &= ~UTMI_DM_PULLDOWN;
-	writel(reg, regs_base + EXYNOS_USBCON_UTMI);
+	writel(reg, regs_base + EXYNOS850_DRD_UTMI);
 
 	/* Set phy clock & control HS phy */
-	reg = readl(regs_base + EXYNOS_USBCON_HSP);
+	reg = readl(regs_base + EXYNOS850_DRD_HSP);
 	reg |= HSP_EN_UTMISUSPEND;
 	reg |= HSP_COMMONONN;
-	writel(reg, regs_base + EXYNOS_USBCON_HSP);
+	writel(reg, regs_base + EXYNOS850_DRD_HSP);
 
 	/*
 	 * Follow setting sequence for USB Link
 	 * 1. Set VBUS Valid and DP-Pull up control by VBUS pad usage
 	 */
-	reg = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
+	reg = readl(regs_base + EXYNOS850_DRD_LINKCTRL);
 	reg |= LINKCTRL_BUS_FILTER_BYPASS(0xf);
-	writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
+	writel(reg, regs_base + EXYNOS850_DRD_LINKCTRL);
 
-	reg = readl(regs_base + EXYNOS_USBCON_UTMI);
-	reg_hsp = readl(regs_base + EXYNOS_USBCON_HSP);
+	reg = readl(regs_base + EXYNOS850_DRD_UTMI);
+	reg_hsp = readl(regs_base + EXYNOS850_DRD_HSP);
 	reg |= UTMI_FORCE_BVALID;
 	reg |= UTMI_FORCE_VBUSVALID;
 	reg_hsp |= HSP_VBUSVLDEXTSEL;
 	reg_hsp |= HSP_VBUSVLDEXT;
-	writel(reg, regs_base + EXYNOS_USBCON_UTMI);
-	writel(reg_hsp, regs_base + EXYNOS_USBCON_HSP);
+	writel(reg, regs_base + EXYNOS850_DRD_UTMI);
+	writel(reg_hsp, regs_base + EXYNOS850_DRD_HSP);
 
 	/* Enable PHY Power Mode */
-	reg = readl(regs_base + EXYNOS_USBCON_HSP_TEST);
+	reg = readl(regs_base + EXYNOS850_DRD_HSP_TEST);
 	reg &= ~HSP_TEST_SIDDQ;
-	writel(reg, regs_base + EXYNOS_USBCON_HSP_TEST);
+	writel(reg, regs_base + EXYNOS850_DRD_HSP_TEST);
 
 	/* Before POR low, 10us delay is needed. */
 	udelay(10);
 
 	/* Set PHY POR Low */
-	reg = readl(regs_base + EXYNOS_USBCON_CLKRST);
-	reg &= ~CLKRST_PHY30_SW_RST;
+	reg = readl(regs_base + EXYNOS850_DRD_CLKRST);
+	reg &= ~CLKRST_PHY_SW_RST;
 	reg &= ~CLKRST_PORT_RST;
-	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
+	writel(reg, regs_base + EXYNOS850_DRD_CLKRST);
 
 	/* After POR low and delay 75us, PHYCLOCK is guaranteed. */
 	udelay(75);
 
 	/* Disable UART/JTAG over USB */
-	reg = readl(regs_base + EXYNOS_USBCON_HSP);
+	reg = readl(regs_base + EXYNOS850_DRD_HSP);
 	reg &= ~HSP_FSV_OUT_EN;
-	writel(reg, regs_base + EXYNOS_USBCON_HSP);
+	writel(reg, regs_base + EXYNOS850_DRD_HSP);
 }
 
 static int exynos_usbdrd_phy_init(struct phy *phy)
@@ -285,25 +286,25 @@ static int exynos_usbdrd_phy_exit(struct phy *phy)
 		return ret;
 
 	/* Set phy clock & control HS phy */
-	reg = readl(regs_base + EXYNOS_USBCON_UTMI);
+	reg = readl(regs_base + EXYNOS850_DRD_UTMI);
 	reg &= ~UTMI_DP_PULLDOWN;
 	reg &= ~UTMI_DM_PULLDOWN;
 	reg |= UTMI_FORCE_SUSPEND;
 	reg |= UTMI_FORCE_SLEEP;
-	writel(reg, regs_base + EXYNOS_USBCON_UTMI);
+	writel(reg, regs_base + EXYNOS850_DRD_UTMI);
 
 	/* Power down analog blocks */
-	reg = readl(regs_base + EXYNOS_USBCON_HSP_TEST);
+	reg = readl(regs_base + EXYNOS850_DRD_HSP_TEST);
 	reg |= HSP_TEST_SIDDQ;
-	writel(reg, regs_base + EXYNOS_USBCON_HSP_TEST);
+	writel(reg, regs_base + EXYNOS850_DRD_HSP_TEST);
 
 	/* Link reset */
-	reg = readl(regs_base + EXYNOS_USBCON_CLKRST);
+	reg = readl(regs_base + EXYNOS850_DRD_CLKRST);
 	reg |= CLKRST_LINK_SW_RST;
-	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
+	writel(reg, regs_base + EXYNOS850_DRD_CLKRST);
 	udelay(10);
 	reg &= ~CLKRST_LINK_SW_RST;
-	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
+	writel(reg, regs_base + EXYNOS850_DRD_CLKRST);
 
 	clk_disable_unprepare(phy_drd->clk);
 
