@@ -447,49 +447,38 @@ struct exynos_usbdrd_phy *to_usbdrd_phy(struct phy_usb_instance *inst)
  * exynos_rate_to_clk() converts the supplied clock rate to the value that
  * can be written to the phy register.
  */
-static unsigned int exynos_rate_to_clk(struct exynos_usbdrd_phy *phy_drd)
+static unsigned int exynos_rate_to_clk(unsigned long rate, u32 *reg)
 {
-	int ret;
-
-	ret = clk_prepare_enable(phy_drd->ref_clk);
-	if (ret) {
-		dev_err(phy_drd->dev, "%s failed to enable ref_clk", __func__);
-		return 0;
-	}
-
 	/* EXYNOS_FSEL_MASK */
-	switch (clk_get_rate(phy_drd->ref_clk)) {
+
+	switch (rate) {
 	case 9600 * KHZ:
-		phy_drd->extrefclk = EXYNOS_FSEL_9MHZ6;
+		*reg = EXYNOS_FSEL_9MHZ6;
 		break;
 	case 10 * MHZ:
-		phy_drd->extrefclk = EXYNOS_FSEL_10MHZ;
+		*reg = EXYNOS_FSEL_10MHZ;
 		break;
 	case 12 * MHZ:
-		phy_drd->extrefclk = EXYNOS_FSEL_12MHZ;
+		*reg = EXYNOS_FSEL_12MHZ;
 		break;
 	case 19200 * KHZ:
-		phy_drd->extrefclk = EXYNOS_FSEL_19MHZ2;
+		*reg = EXYNOS_FSEL_19MHZ2;
 		break;
 	case 20 * MHZ:
-		phy_drd->extrefclk = EXYNOS_FSEL_20MHZ;
+		*reg = EXYNOS_FSEL_20MHZ;
 		break;
 	case 24 * MHZ:
-		phy_drd->extrefclk = EXYNOS_FSEL_24MHZ;
+		*reg = EXYNOS_FSEL_24MHZ;
 		break;
 	case 26 * MHZ:
-		phy_drd->extrefclk = EXYNOS_FSEL_26MHZ;
+		*reg = EXYNOS_FSEL_26MHZ;
 		break;
 	case 50 * MHZ:
-		phy_drd->extrefclk = EXYNOS_FSEL_50MHZ;
+		*reg = EXYNOS_FSEL_50MHZ;
 		break;
 	default:
-		phy_drd->extrefclk = 0;
-		clk_disable_unprepare(phy_drd->ref_clk);
 		return -EINVAL;
 	}
-
-	clk_disable_unprepare(phy_drd->ref_clk);
 
 	return 0;
 }
@@ -624,6 +613,7 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 	const struct exynos_usbdrd_phy_drvdata *drv_data;
 	struct regmap *reg_pmu;
 	u32 pmu_offset;
+	unsigned long ref_rate;
 	int i, ret;
 
 	phy_drd = devm_kzalloc(dev, sizeof(*phy_drd), GFP_KERNEL);
@@ -667,10 +657,11 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = exynos_rate_to_clk(phy_drd);
+	ref_rate = clk_get_rate(phy_drd->ref_clk);
+	ret = exynos_rate_to_clk(ref_rate, &phy_drd->extrefclk);
 	if (ret) {
-		dev_err(phy_drd->dev, "%s: Not supported ref clock\n",
-				__func__);
+		dev_err(phy_drd->dev, "Clock rate (%ld) not supported\n",
+			ref_rate);
 		goto err1;
 	}
 skip_clock:
