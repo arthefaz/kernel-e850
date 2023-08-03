@@ -142,9 +142,7 @@ struct exynos_usbdrd_phy {
 	} phys[EXYNOS_DRDPHYS_NUM];
 	u32 extrefclk;
 	struct clk *ref_clk;
-	struct regulator *vdd33_usb;
-
-	int is_ldo_on;
+	struct regulator *vbus;
 };
 
 static void exynos_cal_usbphy_q_ch(void *regs_base, u8 enable)
@@ -555,42 +553,6 @@ static int exynos_usbdrd_phy_init(struct phy *phy)
 	return 0;
 }
 
-void exynos_usbdrd_ldo_control(struct exynos_usbdrd_phy *phy_drd, int on)
-{
-	int ret;
-
-	if (!phy_drd->vdd33_usb) {
-		dev_err(phy_drd->dev, "%s: regulator not defined\n", __func__);
-		return;
-	}
-
-	dev_info(phy_drd->dev, "Turn %s LDO\n", on ? "on" : "off");
-
-	if (on) {
-		if (phy_drd->is_ldo_on) {
-			dev_info(phy_drd->dev, "LDO already on! return\n");
-			return;
-		}
-		ret = regulator_enable(phy_drd->vdd33_usb);
-		if (ret) {
-			dev_err(phy_drd->dev, "Failed to enable USB LDOs: %d\n",
-				ret);
-		}
-		phy_drd->is_ldo_on = 1;
-	} else {
-		if (!phy_drd->is_ldo_on) {
-			dev_info(phy_drd->dev, "LDO already off! return\n");
-			return;
-		}
-		ret = regulator_disable(phy_drd->vdd33_usb);
-		if (ret) {
-			dev_err(phy_drd->dev, "Failed to disable USB LDOs: %d\n",
-				ret);
-		}
-		phy_drd->is_ldo_on = 0;
-	}
-}
-
 int exynos_usbdrd_phy_link_rst(struct phy *phy)
 {
 	struct phy_usb_instance *inst = phy_get_drvdata(phy);
@@ -672,14 +634,14 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 
 	dev_info(dev, "Get USB LDO!\n");
 
-	phy_drd->vdd33_usb = regulator_get(dev, "vdd33_usb");
-	if (IS_ERR(phy_drd->vdd33_usb)) {
-		ret = PTR_ERR(phy_drd->vdd33_usb);
+	phy_drd->vbus = regulator_get(dev, "vbus");
+	if (IS_ERR(phy_drd->vbus)) {
+		ret = PTR_ERR(phy_drd->vbus);
 		if (ret == -EPROBE_DEFER)
 			return ret;
 
 		dev_warn(dev, "Failed to get VBUS supply regulator\n");
-		phy_drd->vdd33_usb = NULL;
+		phy_drd->vbus = NULL;
 	}
 
 	dev_set_drvdata(dev, phy_drd);
