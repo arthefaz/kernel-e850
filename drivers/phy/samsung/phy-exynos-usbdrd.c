@@ -428,8 +428,8 @@ static int exynos_usbdrd_phy_exit(struct phy *phy)
 	phy_exynos_usb_v3p1_disable(phy_drd->reg_phy);
 	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 1);
 
-	clk_disable(phy_drd->ref_clk);
-	clk_disable(phy_drd->clk);
+	clk_disable_unprepare(phy_drd->ref_clk);
+	clk_disable_unprepare(phy_drd->clk);
 
 	return 0;
 }
@@ -438,8 +438,8 @@ static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 {
 	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 0);
 
-	clk_enable(phy_drd->ref_clk);
-	clk_enable(phy_drd->clk);
+	clk_prepare_enable(phy_drd->ref_clk);
+	clk_prepare_enable(phy_drd->clk);
 
 	phy_exynos_usb_v3p1_enable(phy_drd->reg_phy);
 	phy_exynos_usb_v3p1_pipe_ovrd(phy_drd->reg_phy);
@@ -514,29 +514,15 @@ static int exynos5_usbdrd_phy_clk_handle(struct exynos_usbdrd_phy *phy_drd)
 		return PTR_ERR(phy_drd->ref_clk);
 	}
 
-	ret = clk_prepare(phy_drd->ref_clk);
-	if (ret)
-		return ret;
-
-	ret = clk_prepare(phy_drd->clk);
-	if (ret)
-		goto err1;
-
 	ref_rate = clk_get_rate(phy_drd->ref_clk);
 	ret = exynos_rate_to_clk(ref_rate, &phy_drd->extrefclk);
 	if (ret) {
 		dev_err(phy_drd->dev, "Clock rate (%ld) not supported\n",
 			ref_rate);
-		goto err2;
+		return ret;
 	}
 
 	return 0;
-
-err2:
-	clk_unprepare(phy_drd->clk);
-err1:
-	clk_unprepare(phy_drd->ref_clk);
-	return ret;
 }
 
 static const struct exynos_usbdrd_phy_config phy_cfg_exynos850[] = {
@@ -598,7 +584,7 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 						   "samsung,pmu-syscon");
 	if (IS_ERR(reg_pmu)) {
 		dev_err(dev, "Failed to lookup PMU regmap\n");
-		goto err1;
+		return PTR_ERR(reg_pmu);
 	}
 
 	pmu_offset = phy_drd->drv_data->pmu_offset_usbdrd0_phy;
@@ -618,7 +604,7 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 						  &exynos_usbdrd_phy_ops);
 		if (IS_ERR(phy)) {
 			dev_err(dev, "Failed to create usbdrd_phy phy\n");
-			goto err1;
+			return PTR_ERR(phy);
 		}
 
 		phy_drd->phys[i].phy = phy;
@@ -632,14 +618,9 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 	phy_provider = devm_of_phy_provider_register(dev,
 						     exynos_usbdrd_phy_xlate);
 	if (IS_ERR(phy_provider))
-		goto err1;
+		return PTR_ERR(phy_provider);
 
 	return 0;
-
-err1:
-	clk_unprepare(phy_drd->ref_clk);
-	clk_unprepare(phy_drd->clk);
-	return ret;
 }
 
 static struct platform_driver phy_exynos_usbdrd = {
