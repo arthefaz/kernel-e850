@@ -594,11 +594,6 @@
 			pmu_mask = <0x0>;
 			pmu_offset = <0x704>;
 			pmu_offset_dp = <0x704>;
-
-			/* if it doesn't need phy user mux, */
-			/*  you should write "none" */
-			/*  but refclk shouldn't be omitted */
-			phy_refclk = "ext_xtal";
 		};
 
 		usi_uart: usi@138200c0 {
