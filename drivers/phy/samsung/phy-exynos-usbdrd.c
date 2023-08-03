@@ -107,7 +107,6 @@ struct exynos_usbdrd_phy_config {
 	u32 id;
 	void (*phy_isol)(struct phy_usb_instance *inst, u32 on, unsigned int);
 	void (*phy_init)(struct exynos_usbdrd_phy *phy_drd);
-	void (*phy_exit)(struct exynos_usbdrd_phy *phy_drd);
 };
 
 struct exynos_usbdrd_phy_drvdata {
@@ -513,21 +512,15 @@ static void exynos_usbdrd_utmi_phy_isol(struct phy_usb_instance *inst,
 		mask, val);
 }
 
-static void exynos_usbdrd_utmi_exit(struct exynos_usbdrd_phy *phy_drd)
-{
-	phy_exynos_usb_v3p1_disable(phy_drd->reg_phy);
-	exynos_usbdrd_clk_disable(phy_drd);
-	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 1,
-				    phy_drd->phys[0].pmu_mask);
-}
-
 static int exynos_usbdrd_phy_exit(struct phy *phy)
 {
 	struct phy_usb_instance *inst = phy_get_drvdata(phy);
 	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
 
-	/* UTMI or PIPE3 specific exit */
-	inst->phy_cfg->phy_exit(phy_drd);
+	phy_exynos_usb_v3p1_disable(phy_drd->reg_phy);
+	exynos_usbdrd_clk_disable(phy_drd);
+	exynos_usbdrd_utmi_phy_isol(&phy_drd->phys[0], 1,
+				    phy_drd->phys[0].pmu_mask);
 
 	return 0;
 }
@@ -646,7 +639,6 @@ static const struct exynos_usbdrd_phy_config phy_cfg_exynos[] = {
 		.id		= EXYNOS_DRDPHY_UTMI,
 		.phy_isol	= exynos_usbdrd_utmi_phy_isol,
 		.phy_init	= exynos_usbdrd_utmi_init,
-		.phy_exit	= exynos_usbdrd_utmi_exit,
 	},
 };
 
