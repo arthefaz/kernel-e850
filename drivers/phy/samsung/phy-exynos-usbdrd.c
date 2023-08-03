@@ -725,8 +725,6 @@ static struct platform_driver phy_exynos_usbdrd = {
 };
 
 module_platform_driver(phy_exynos_usbdrd);
-
-MODULE_SOFTDEP("post:dwc3-exynos-usb");
 MODULE_DESCRIPTION("Samsung EXYNOS SoCs USB DRD controller PHY driver");
 MODULE_AUTHOR("Vivek Gautam <gautam.vivek@samsung.com>");
 MODULE_LICENSE("GPL v2");
