@@ -141,6 +141,8 @@ struct exynos_usbdrd_phy {
 	struct regulator *vbus;
 };
 
+/* -------------------------------------------------------------------------- */
+
 static void exynos_cal_usbphy_q_ch(void *regs_base, u8 enable)
 {
 	u32 phy_resume;
@@ -169,18 +171,6 @@ static void exynos_cal_usbphy_q_ch(void *regs_base, u8 enable)
 		phy_resume |= LINKCTRL_DIS_QACT_LINKGATE;
 		writel(phy_resume, regs_base + EXYNOS_USBCON_LINK_CTRL);
 	}
-}
-
-static void link_vbus_filter_en(void __iomem *regs_base, u8 enable)
-{
-	u32 phy_resume;
-
-	phy_resume = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
-	if (enable)
-		phy_resume &= ~LINKCTRL_BUS_FILTER_BYPASS_MASK;
-	else
-		phy_resume |= LINKCTRL_BUS_FILTER_BYPASS(0xf);
-	writel(phy_resume, regs_base + EXYNOS_USBCON_LINK_CTRL);
 }
 
 static void phy_power_en(void __iomem *regs_base, u8 en)
@@ -278,11 +268,14 @@ static void phy_exynos_usb_v3p1_enable(void __iomem *regs_base)
 
 	udelay(100);
 
-	/* Follow setting sequence for USB Link */
-	/* 1. Set VBUS Valid and DP-Pull up control
-	 * by VBUS pad usage
+	/*
+	 * Follow setting sequence for USB Link
+	 * 1. Set VBUS Valid and DP-Pull up control by VBUS pad usage
 	 */
-	link_vbus_filter_en(regs_base, false);
+	reg = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
+	reg |= LINKCTRL_BUS_FILTER_BYPASS(0xf);
+	writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
+
 	reg = readl(regs_base + EXYNOS_USBCON_UTMI);
 	reg_hsp = readl(regs_base + EXYNOS_USBCON_HSP);
 	reg |= UTMI_FORCE_BVALID;
@@ -335,17 +328,6 @@ static void phy_exynos_usb_v3p1_disable(void __iomem *regs_base)
 	 * by daeman.ko.
 	 */
 	phy_exynos_usb_v3p1_link_sw_reset(regs_base);
-}
-
-/* UART/JTAG over USB */
-static void phy_exynos_usb3p1_set_fsv_out_dis(void __iomem *regs_base)
-{
-	u32 hsp_ctrl;
-
-	hsp_ctrl = readl(regs_base + EXYNOS_USBCON_HSP);
-	hsp_ctrl &= ~HSP_FSVP_OUT_EN;
-	hsp_ctrl &= ~HSP_FSVM_OUT_EN;
-	writel(hsp_ctrl, regs_base + EXYNOS_USBCON_HSP);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -413,9 +395,17 @@ static void exynos_usbdrd_utmi_phy_isol(struct phy_usb_instance *inst,
 
 static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 {
-	phy_exynos_usb_v3p1_enable(phy_drd->reg_phy);
-	phy_exynos_usb_v3p1_pipe_ovrd(phy_drd->reg_phy);
-	phy_exynos_usb3p1_set_fsv_out_dis(phy_drd->reg_phy);
+	void __iomem *regs_base = phy_drd->reg_phy;
+	u32 val;
+
+	phy_exynos_usb_v3p1_enable(regs_base);
+	phy_exynos_usb_v3p1_pipe_ovrd(regs_base);
+
+	/* Disable UART/JTAG over USB */
+	val = readl(regs_base + EXYNOS_USBCON_HSP);
+	val &= ~HSP_FSVP_OUT_EN;
+	val &= ~HSP_FSVM_OUT_EN;
+	writel(val, regs_base + EXYNOS_USBCON_HSP);
 }
 
 static int exynos_usbdrd_phy_exit(struct phy *phy)
