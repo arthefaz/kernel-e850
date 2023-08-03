@@ -590,10 +590,6 @@
 			samsung,pmu-syscon = <&pmu_system_controller>;
 			#phy-cells = <1>;
 			status = "disabled";
-
-			pmu_mask = <0x0>;
-			pmu_offset = <0x704>;
-			pmu_offset_dp = <0x704>;
 		};
 
 		usi_uart: usi@138200c0 {
