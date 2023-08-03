@@ -608,8 +608,6 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct exynos_usbdrd_phy *phy_drd;
 	struct phy_provider *phy_provider;
-	struct resource *res;
-	const struct of_device_id *match;
 	const struct exynos_usbdrd_phy_drvdata *drv_data;
 	struct regmap *reg_pmu;
 	u32 pmu_offset;
@@ -620,30 +618,18 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 	if (!phy_drd)
 		return -ENOMEM;
 
-	dev_info(dev, "Get USB LDO!\n");
-
-	phy_drd->vbus = regulator_get(dev, "vbus");
-	if (IS_ERR(phy_drd->vbus)) {
-		ret = PTR_ERR(phy_drd->vbus);
-		if (ret == -EPROBE_DEFER)
-			return ret;
-
-		dev_warn(dev, "Failed to get VBUS supply regulator\n");
-		phy_drd->vbus = NULL;
-	}
-
 	dev_set_drvdata(dev, phy_drd);
 	phy_drd->dev = dev;
 
-	match = of_match_node(exynos_usbdrd_phy_of_match, pdev->dev.of_node);
-
-	drv_data = match->data;
-	phy_drd->drv_data = drv_data;
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	phy_drd->reg_phy = devm_ioremap_resource(dev, res);
+	phy_drd->reg_phy = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(phy_drd->reg_phy))
 		return PTR_ERR(phy_drd->reg_phy);
+
+	drv_data = of_device_get_match_data(dev);
+	if (!drv_data)
+		return -EINVAL;
+
+	phy_drd->drv_data = drv_data;
 
 	ret = exynos_usbdrd_clk_get(phy_drd);
 	if (ret) {
@@ -674,6 +660,16 @@ skip_clock:
 	}
 
 	pmu_offset = phy_drd->drv_data->pmu_offset_usbdrd0_phy;
+
+	phy_drd->vbus = devm_regulator_get(dev, "vbus");
+	if (IS_ERR(phy_drd->vbus)) {
+		ret = PTR_ERR(phy_drd->vbus);
+		if (ret == -EPROBE_DEFER)
+			return ret;
+
+		dev_warn(dev, "Failed to get VBUS supply regulator\n");
+		phy_drd->vbus = NULL;
+	}
 
 	for (i = 0; i < EXYNOS_DRDPHYS_NUM; i++) {
 		struct phy *phy = devm_phy_create(dev, NULL,
