@@ -462,23 +462,6 @@ static int exynos_usbdrd_phy_init(struct phy *phy)
 	return 0;
 }
 
-int exynos_usbdrd_phy_reset(struct phy *phy)
-{
-	struct phy_usb_instance *inst = phy_get_drvdata(phy);
-	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
-	int ret;
-
-	ret = clk_prepare_enable(phy_drd->clk);
-	if (ret)
-		return ret;
-
-	phy_exynos_usb_v3p1_link_sw_reset(phy_drd->reg_phy);
-
-	clk_disable_unprepare(phy_drd->clk);
-
-	return 0;
-}
-
 static int exynos_usbdrd_phy_power_on(struct phy *phy)
 {
 	struct phy_usb_instance *inst = phy_get_drvdata(phy);
@@ -521,7 +504,6 @@ static struct phy_ops exynos_usbdrd_phy_ops = {
 	.exit		= exynos_usbdrd_phy_exit,
 	.power_on	= exynos_usbdrd_phy_power_on,
 	.power_off	= exynos_usbdrd_phy_power_off,
-	.reset		= exynos_usbdrd_phy_reset,
 	.owner		= THIS_MODULE,
 };
 
