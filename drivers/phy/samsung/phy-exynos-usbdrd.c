@@ -70,10 +70,6 @@
 #define CLKRST_PHY20_SW_RST			BIT(13)
 #define CLKRST_PHY20_RST_SEL			BIT(12)
 
-// XXX: Remove this?
-#define EXYNOS_USBCON_COMBO_PMA_CTRL		0x48
-#define PMA_LOW_PWR				BIT(4)
-
 #define EXYNOS_USBCON_UTMI			0x50
 #define UTMI_FORCE_VBUSVALID			BIT(5)
 #define UTMI_FORCE_BVALID			BIT(4)
@@ -235,11 +231,6 @@ static void phy_exynos_usb_v3p1_pipe_ovrd(void __iomem *regs_base)
 	reg &= ~LINKCTRL_PIPE3_FORCE_PHY_STATUS;
 	reg |= LINKCTRL_PIPE3_FORCE_RX_ELEC_IDLE;
 	writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
-
-	/* PMA Disable */
-	reg = readl(regs_base + EXYNOS_USBCON_COMBO_PMA_CTRL);
-	reg |= PMA_LOW_PWR;
-	writel(reg, regs_base + EXYNOS_USBCON_COMBO_PMA_CTRL);
 }
 
 static void phy_exynos_usb_v3p1_link_sw_reset(void __iomem *regs_base)
