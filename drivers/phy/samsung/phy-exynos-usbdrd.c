@@ -191,7 +191,6 @@ static void phy_power_en(void __iomem *regs_base, u8 en)
 {
 	u32 reg;
 
-
 	/* 2.0 PHY Power Down Control */
 	reg = readl(regs_base + EXYNOS_USBCON_HSP_TEST);
 	if (en)
@@ -558,8 +557,8 @@ int exynos_usbdrd_phy_link_rst(struct phy *phy)
 	struct phy_usb_instance *inst = phy_get_drvdata(phy);
 	struct exynos_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
 
-	pr_info("%s\n", __func__);
 	phy_exynos_usb_v3p1_link_sw_reset(phy_drd->reg_phy);
+
 	return 0;
 }
 
@@ -627,7 +626,6 @@ static int exynos_usbdrd_phy_probe(struct platform_device *pdev)
 	u32 pmu_offset;
 	int i, ret;
 
-	pr_info("%s: +++ %s %s\n", __func__, dev->init_name, pdev->name);
 	phy_drd = devm_kzalloc(dev, sizeof(*phy_drd), GFP_KERNEL);
 	if (!phy_drd)
 		return -ENOMEM;
@@ -708,7 +706,6 @@ skip_clock:
 		goto err1;
 	}
 
-	pr_info("%s: ---\n", __func__);
 	return 0;
 err1:
 	exynos_usbdrd_clk_unprepare(phy_drd);
