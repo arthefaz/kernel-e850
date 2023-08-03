@@ -582,7 +582,7 @@
 		};
 
 		usbdrd_phy: phy@135d0000 {
-			compatible = "samsung,exynos-usbdrd-phy";
+			compatible = "samsung,exynos850-usbdrd-phy";
 			reg = <0x135d0000 0x200>;
 			clocks = <&cmu_hsi CLK_GOUT_USB_PHY_REF_CLK>,
 				 <&cmu_hsi CLK_GOUT_USB_PHY_ACLK>;
