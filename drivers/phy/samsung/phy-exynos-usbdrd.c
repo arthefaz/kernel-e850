@@ -145,102 +145,37 @@ struct exynos_usbdrd_phy {
 
 static void exynos_cal_usbphy_q_ch(void *regs_base, u8 enable)
 {
-	u32 phy_resume;
+	u32 reg;
+
+	reg = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
+	reg &= ~LINKCTRL_FORCE_QACT;
+	reg |= LINKCTRL_DIS_QACT_ID0;
+	reg |= LINKCTRL_DIS_QACT_VBUS_VALID;
+	reg |= LINKCTRL_DIS_QACT_BVALID;
+	reg |= LINKCTRL_DIS_QACT_LINKGATE;
+	writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
+	udelay(500);
 
 	if (enable) {
 		/* WA for Q-channel: disable all q-act from usb */
-		phy_resume = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
-		phy_resume |= LINKCTRL_DIS_QACT_ID0;
-		phy_resume |= LINKCTRL_DIS_QACT_VBUS_VALID;
-		phy_resume |= LINKCTRL_DIS_QACT_BVALID;
-		phy_resume |= LINKCTRL_DIS_QACT_LINKGATE;
-		phy_resume &= ~LINKCTRL_FORCE_QACT;
+		reg = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
+		reg |= LINKCTRL_FORCE_QACT;
 		udelay(500);
-		writel(phy_resume, regs_base + EXYNOS_USBCON_LINK_CTRL);
-		udelay(500);
-		phy_resume = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
-		phy_resume |= LINKCTRL_FORCE_QACT;
-		udelay(500);
-		writel(phy_resume, regs_base + EXYNOS_USBCON_LINK_CTRL);
-	} else {
-		phy_resume = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
-		phy_resume &= ~LINKCTRL_FORCE_QACT;
-		phy_resume |= LINKCTRL_DIS_QACT_ID0;
-		phy_resume |= LINKCTRL_DIS_QACT_VBUS_VALID;
-		phy_resume |= LINKCTRL_DIS_QACT_BVALID;
-		phy_resume |= LINKCTRL_DIS_QACT_LINKGATE;
-		writel(phy_resume, regs_base + EXYNOS_USBCON_LINK_CTRL);
+		writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
 	}
 }
 
+/* 2.0 PHY Power Down Control */
 static void phy_power_en(void __iomem *regs_base, u8 en)
 {
 	u32 reg;
 
-	/* 2.0 PHY Power Down Control */
 	reg = readl(regs_base + EXYNOS_USBCON_HSP_TEST);
 	if (en)
 		reg &= ~HSP_TEST_SIDDQ;
 	else
 		reg |= HSP_TEST_SIDDQ;
 	writel(reg, regs_base + EXYNOS_USBCON_HSP_TEST);
-}
-
-static void phy_sw_rst_high(void __iomem *regs_base)
-{
-	u32 clkrst;
-
-	clkrst = readl(regs_base + EXYNOS_USBCON_CLKRST);
-	clkrst |= CLKRST_PHY20_SW_RST;
-	clkrst |= CLKRST_PHY20_RST_SEL;
-	clkrst |= CLKRST_PHY30_SW_RST;
-	clkrst |= CLKRST_PHY30_RST_SEL;
-	writel(clkrst, regs_base + EXYNOS_USBCON_CLKRST);
-}
-
-static void phy_sw_rst_low(void __iomem *regs_base)
-{
-	u32 clkrst;
-
-	clkrst = readl(regs_base + EXYNOS_USBCON_CLKRST);
-	clkrst |= CLKRST_PHY20_RST_SEL;
-	clkrst &= ~CLKRST_PHY20_SW_RST;
-	clkrst &= ~CLKRST_PHY30_SW_RST;
-	clkrst &= ~CLKRST_PORT_RST;
-	writel(clkrst, regs_base + EXYNOS_USBCON_CLKRST);
-}
-
-/* USB/DP PHY control */
-static void phy_exynos_usb_v3p1_pipe_ovrd(void __iomem *regs_base)
-{
-	u32 reg;
-
-	/* force pipe3 signal for link */
-	reg = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
-	reg |= LINKCTRL_PIPE3_FORCE_EN;
-	reg &= ~LINKCTRL_PIPE3_FORCE_PHY_STATUS;
-	reg |= LINKCTRL_PIPE3_FORCE_RX_ELEC_IDLE;
-	writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
-}
-
-static void phy_exynos_usb_v3p1_link_sw_reset(void __iomem *regs_base)
-{
-	u32 reg;
-
-	/*
-	 * Use link_sw_rst because it has functioning as Hreset_n
-	 * for asb host/device role change, originally not recommend link_sw_rst
-	 * by Foundry T. so that some of global register has cleard - 2018.11.12
-	 */
-	/* Link Reset */
-	reg = readl(regs_base + EXYNOS_USBCON_CLKRST);
-	reg |= CLKRST_LINK_SW_RST;
-	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
-
-	udelay(10);
-
-	reg &= ~CLKRST_LINK_SW_RST;
-	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
 }
 
 static void phy_exynos_usb_v3p1_enable(void __iomem *regs_base)
@@ -251,7 +186,12 @@ static void phy_exynos_usb_v3p1_enable(void __iomem *regs_base)
 	exynos_cal_usbphy_q_ch(regs_base, 1);
 
 	/* Set PHY POR High */
-	phy_sw_rst_high(regs_base);
+	reg = readl(regs_base + EXYNOS_USBCON_CLKRST);
+	reg |= CLKRST_PHY20_SW_RST;
+	reg |= CLKRST_PHY20_RST_SEL;
+	reg |= CLKRST_PHY30_SW_RST;
+	reg |= CLKRST_PHY30_RST_SEL;
+	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
 
 	reg = readl(regs_base + EXYNOS_USBCON_UTMI);
 	reg &= ~UTMI_FORCE_SUSPEND;
@@ -260,7 +200,7 @@ static void phy_exynos_usb_v3p1_enable(void __iomem *regs_base)
 	reg &= ~UTMI_DM_PULLDOWN;
 	writel(reg, regs_base + EXYNOS_USBCON_UTMI);
 
-	/* set phy clock & control HS phy */
+	/* Set phy clock & control HS phy */
 	reg = readl(regs_base + EXYNOS_USBCON_HSP);
 	reg |= HSP_EN_UTMISUSPEND;
 	reg |= HSP_COMMONONN;
@@ -282,20 +222,24 @@ static void phy_exynos_usb_v3p1_enable(void __iomem *regs_base)
 	reg |= UTMI_FORCE_VBUSVALID;
 	reg_hsp |= HSP_VBUSVLDEXTSEL;
 	reg_hsp |= HSP_VBUSVLDEXT;
-
 	writel(reg, regs_base + EXYNOS_USBCON_UTMI);
 	writel(reg_hsp, regs_base + EXYNOS_USBCON_HSP);
 
 	/* Enable PHY Power Mode */
 	phy_power_en(regs_base, 1);
 
-	/* before POR low, 10us delay is needed. */
+	/* Before POR low, 10us delay is needed. */
 	udelay(10);
 
 	/* Set PHY POR Low */
-	phy_sw_rst_low(regs_base);
+	reg = readl(regs_base + EXYNOS_USBCON_CLKRST);
+	reg |= CLKRST_PHY20_RST_SEL;
+	reg &= ~CLKRST_PHY20_SW_RST;
+	reg &= ~CLKRST_PHY30_SW_RST;
+	reg &= ~CLKRST_PORT_RST;
+	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
 
-	/* after POR low and delay 75us, PHYCLOCK is guaranteed. */
+	/* After POR low and delay 75us, PHYCLOCK is guaranteed. */
 	udelay(75);
 
 	/* 2. OVC io usage */
@@ -309,7 +253,7 @@ static void phy_exynos_usb_v3p1_disable(void __iomem *regs_base)
 {
 	u32 reg;
 
-	/* set phy clock & control HS phy */
+	/* Set phy clock & control HS phy */
 	reg = readl(regs_base + EXYNOS_USBCON_UTMI);
 	reg &= ~UTMI_DP_PULLDOWN;
 	reg &= ~UTMI_DM_PULLDOWN;
@@ -320,14 +264,23 @@ static void phy_exynos_usb_v3p1_disable(void __iomem *regs_base)
 	/* Disable PHY Power Mode */
 	phy_power_en(regs_base, 0);
 
-	/* clear force q-channel */
+	/* Clear force q-channel */
 	exynos_cal_usbphy_q_ch(regs_base, 0);
 
 	/*
 	 * Link sw reset is need for USB_DP/DM high-z in host mode: 2019.04.10
 	 * by daeman.ko.
+	 *
+	 * Use link_sw_rst because it has functioning as Hreset_n
+	 * for asb host/device role change, originally not recommend link_sw_rst
+	 * by Foundry T. so that some of global register has cleard - 2018.11.12
 	 */
-	phy_exynos_usb_v3p1_link_sw_reset(regs_base);
+	reg = readl(regs_base + EXYNOS_USBCON_CLKRST);
+	reg |= CLKRST_LINK_SW_RST;
+	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
+	udelay(10);
+	reg &= ~CLKRST_LINK_SW_RST;
+	writel(reg, regs_base + EXYNOS_USBCON_CLKRST);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -396,16 +349,22 @@ static void exynos_usbdrd_utmi_phy_isol(struct phy_usb_instance *inst,
 static void exynos_usbdrd_utmi_init(struct exynos_usbdrd_phy *phy_drd)
 {
 	void __iomem *regs_base = phy_drd->reg_phy;
-	u32 val;
+	u32 reg;
 
 	phy_exynos_usb_v3p1_enable(regs_base);
-	phy_exynos_usb_v3p1_pipe_ovrd(regs_base);
+
+	/* USD/DP PHY contrl: force pipe3 signal for link */
+	reg = readl(regs_base + EXYNOS_USBCON_LINK_CTRL);
+	reg |= LINKCTRL_PIPE3_FORCE_EN;
+	reg &= ~LINKCTRL_PIPE3_FORCE_PHY_STATUS;
+	reg |= LINKCTRL_PIPE3_FORCE_RX_ELEC_IDLE;
+	writel(reg, regs_base + EXYNOS_USBCON_LINK_CTRL);
 
 	/* Disable UART/JTAG over USB */
-	val = readl(regs_base + EXYNOS_USBCON_HSP);
-	val &= ~HSP_FSVP_OUT_EN;
-	val &= ~HSP_FSVM_OUT_EN;
-	writel(val, regs_base + EXYNOS_USBCON_HSP);
+	reg = readl(regs_base + EXYNOS_USBCON_HSP);
+	reg &= ~HSP_FSVP_OUT_EN;
+	reg &= ~HSP_FSVM_OUT_EN;
+	writel(reg, regs_base + EXYNOS_USBCON_HSP);
 }
 
 static int exynos_usbdrd_phy_exit(struct phy *phy)
