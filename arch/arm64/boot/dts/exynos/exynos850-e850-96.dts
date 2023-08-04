@@ -211,6 +211,12 @@
 
 &usbdrd {
 	status = "okay";
+};
+
+&usbdrd_dwc3 {
+	dr_mode = "otg";
+	usb-role-switch;
+	role-switch-default-mode = "host";
 
 	connector {
 		compatible = "gpio-usb-b-connector", "usb-b-connector";
@@ -229,32 +235,6 @@
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&vbus_det_2>;
-
-		port {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			usb_b_connector: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&dwc3_role_switch>;
-			};
-		};
-	};
-};
-
-&usbdrd_dwc3 {
-	dr_mode = "otg";
-	usb-role-switch;
-	role-switch-default-mode = "host";
-
-	port {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		dwc3_role_switch: endpoint@0 {
-			reg = <0>;
-			remote-endpoint = <&usb_b_connector>;
-		};
 	};
 };
 
