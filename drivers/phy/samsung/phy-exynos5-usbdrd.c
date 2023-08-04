@@ -147,6 +147,34 @@
 #define LANE0_TX_DEBUG_RXDET_MEAS_TIME_62M5		(0x20 << 4)
 #define LANE0_TX_DEBUG_RXDET_MEAS_TIME_96M_100M		(0x40 << 4)
 
+/* Exynos850: USB DRD PHY registers */
+#define EXYNOS850_DRD_LINKCTRL			0x04
+#define LINKCTRL_BUS_FILTER_BYPASS(_x)		((_x) << 4)
+#define LINKCTRL_FORCE_QACT			BIT(8)
+
+#define EXYNOS850_DRD_CLKRST			0x20
+#define CLKRST_LINK_SW_RST			BIT(0)
+#define CLKRST_PORT_RST				BIT(1)
+#define CLKRST_PHY_SW_RST			BIT(3)
+
+#define EXYNOS850_DRD_UTMI			0x50
+#define UTMI_FORCE_SLEEP			BIT(0)
+#define UTMI_FORCE_SUSPEND			BIT(1)
+#define UTMI_DM_PULLDOWN			BIT(2)
+#define UTMI_DP_PULLDOWN			BIT(3)
+#define UTMI_FORCE_BVALID			BIT(4)
+#define UTMI_FORCE_VBUSVALID			BIT(5)
+
+#define EXYNOS850_DRD_HSP			0x54
+#define HSP_COMMONONN				BIT(8)
+#define HSP_EN_UTMISUSPEND			BIT(9)
+#define HSP_VBUSVLDEXT				BIT(12)
+#define HSP_VBUSVLDEXTSEL			BIT(13)
+#define HSP_FSV_OUT_EN				BIT(24)
+
+#define EXYNOS850_DRD_HSP_TEST			0x5c
+#define HSP_TEST_SIDDQ				BIT(24)
+
 #define KHZ	1000
 #define MHZ	(KHZ * KHZ)
 
@@ -718,6 +746,139 @@ static const struct phy_ops exynos5_usbdrd_phy_ops = {
 	.owner		= THIS_MODULE,
 };
 
+static void exynos850_usbdrd_utmi_init(struct exynos5_usbdrd_phy *phy_drd)
+{
+	void __iomem *regs_base = phy_drd->reg_phy;
+	u32 reg, reg_hsp;
+
+	/* Disable HWACG */
+	reg = readl(regs_base + EXYNOS850_DRD_LINKCTRL);
+	reg |= LINKCTRL_FORCE_QACT;
+	writel(reg, regs_base + EXYNOS850_DRD_LINKCTRL);
+
+	/* Set PHY POR High */
+	reg = readl(regs_base + EXYNOS850_DRD_CLKRST);
+	reg |= CLKRST_PHY_SW_RST;
+	writel(reg, regs_base + EXYNOS850_DRD_CLKRST);
+
+	reg = readl(regs_base + EXYNOS850_DRD_UTMI);
+	reg &= ~UTMI_FORCE_SUSPEND;
+	reg &= ~UTMI_FORCE_SLEEP;
+	reg &= ~UTMI_DP_PULLDOWN;
+	reg &= ~UTMI_DM_PULLDOWN;
+	writel(reg, regs_base + EXYNOS850_DRD_UTMI);
+
+	/* Set phy clock & control HS phy */
+	reg = readl(regs_base + EXYNOS850_DRD_HSP);
+	reg |= HSP_EN_UTMISUSPEND;
+	reg |= HSP_COMMONONN;
+	writel(reg, regs_base + EXYNOS850_DRD_HSP);
+
+	/*
+	 * Follow setting sequence for USB Link
+	 * 1. Set VBUS Valid and DP-Pull up control by VBUS pad usage
+	 */
+	reg = readl(regs_base + EXYNOS850_DRD_LINKCTRL);
+	reg |= LINKCTRL_BUS_FILTER_BYPASS(0xf);
+	writel(reg, regs_base + EXYNOS850_DRD_LINKCTRL);
+
+	reg = readl(regs_base + EXYNOS850_DRD_UTMI);
+	reg_hsp = readl(regs_base + EXYNOS850_DRD_HSP);
+	reg |= UTMI_FORCE_BVALID;
+	reg |= UTMI_FORCE_VBUSVALID;
+	reg_hsp |= HSP_VBUSVLDEXTSEL;
+	reg_hsp |= HSP_VBUSVLDEXT;
+	writel(reg, regs_base + EXYNOS850_DRD_UTMI);
+	writel(reg_hsp, regs_base + EXYNOS850_DRD_HSP);
+
+	/* Enable PHY Power Mode */
+	reg = readl(regs_base + EXYNOS850_DRD_HSP_TEST);
+	reg &= ~HSP_TEST_SIDDQ;
+	writel(reg, regs_base + EXYNOS850_DRD_HSP_TEST);
+
+	/* Before POR low, 10us delay is needed. */
+	udelay(10);
+
+	/* Set PHY POR Low */
+	reg = readl(regs_base + EXYNOS850_DRD_CLKRST);
+	reg &= ~CLKRST_PHY_SW_RST;
+	reg &= ~CLKRST_PORT_RST;
+	writel(reg, regs_base + EXYNOS850_DRD_CLKRST);
+
+	/* After POR low and delay 75us, PHYCLOCK is guaranteed. */
+	udelay(75);
+
+	/* Disable UART/JTAG over USB */
+	reg = readl(regs_base + EXYNOS850_DRD_HSP);
+	reg &= ~HSP_FSV_OUT_EN;
+	writel(reg, regs_base + EXYNOS850_DRD_HSP);
+}
+
+
+static int exynos850_usbdrd_phy_init(struct phy *phy)
+{
+	struct phy_usb_instance *inst = phy_get_drvdata(phy);
+	struct exynos5_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
+	int ret;
+
+	ret = clk_prepare_enable(phy_drd->clk);
+	if (ret)
+		return ret;
+
+	/* UTMI or PIPE3 specific init */
+	inst->phy_cfg->phy_init(phy_drd);
+
+	clk_disable_unprepare(phy_drd->clk);
+
+	return 0;
+}
+
+static int exynos850_usbdrd_phy_exit(struct phy *phy)
+{
+	struct phy_usb_instance *inst = phy_get_drvdata(phy);
+	struct exynos5_usbdrd_phy *phy_drd = to_usbdrd_phy(inst);
+	void __iomem *regs_base = phy_drd->reg_phy;
+	u32 reg;
+	int ret;
+
+	ret = clk_prepare_enable(phy_drd->clk);
+	if (ret)
+		return ret;
+
+	/* Set phy clock & control HS phy */
+	reg = readl(regs_base + EXYNOS850_DRD_UTMI);
+	reg &= ~UTMI_DP_PULLDOWN;
+	reg &= ~UTMI_DM_PULLDOWN;
+	reg |= UTMI_FORCE_SUSPEND;
+	reg |= UTMI_FORCE_SLEEP;
+	writel(reg, regs_base + EXYNOS850_DRD_UTMI);
+
+	/* Power down analog blocks */
+	reg = readl(regs_base + EXYNOS850_DRD_HSP_TEST);
+	reg |= HSP_TEST_SIDDQ;
+	writel(reg, regs_base + EXYNOS850_DRD_HSP_TEST);
+
+	/* Link reset */
+	reg = readl(regs_base + EXYNOS850_DRD_CLKRST);
+	reg |= CLKRST_LINK_SW_RST;
+	writel(reg, regs_base + EXYNOS850_DRD_CLKRST);
+	udelay(10);
+	reg &= ~CLKRST_LINK_SW_RST;
+	writel(reg, regs_base + EXYNOS850_DRD_CLKRST);
+
+	clk_disable_unprepare(phy_drd->clk);
+
+	return 0;
+}
+
+static struct phy_ops exynos850_usbdrd_phy_ops = {
+	.init		= exynos850_usbdrd_phy_init,
+	.exit		= exynos850_usbdrd_phy_exit,
+	.power_on	= exynos5_usbdrd_phy_power_on,
+	.power_off	= exynos5_usbdrd_phy_power_off,
+	.owner		= THIS_MODULE,
+};
+
 static int exynos5_usbdrd_phy_clk_handle(struct exynos5_usbdrd_phy *phy_drd)
 {
 	unsigned long ref_rate;
@@ -784,6 +945,14 @@ static const struct exynos5_usbdrd_phy_config phy_cfg_exynos5[] = {
 	},
 };
 
+static const struct exynos5_usbdrd_phy_config phy_cfg_exynos850[] = {
+	{
+		.id		= EXYNOS5_DRDPHY_UTMI,
+		.phy_isol	= exynos5_usbdrd_phy_isol,
+		.phy_init	= exynos850_usbdrd_utmi_init,
+	},
+};
+
 static const struct exynos5_usbdrd_phy_drvdata exynos5420_usbdrd_phy = {
 	.phy_cfg		= phy_cfg_exynos5,
 	.phy_ops		= &exynos5_usbdrd_phy_ops,
@@ -814,6 +983,13 @@ static const struct exynos5_usbdrd_phy_drvdata exynos7_usbdrd_phy = {
 	.has_common_clk_gate	= false,
 };
 
+static const struct exynos5_usbdrd_phy_drvdata exynos850_usbdrd_phy = {
+	.phy_cfg		= phy_cfg_exynos850,
+	.phy_ops		= &exynos850_usbdrd_phy_ops,
+	.pmu_offset_usbdrd0_phy	= EXYNOS5_USBDRD_PHY_CONTROL,
+	.has_common_clk_gate	= true,
+};
+
 static const struct of_device_id exynos5_usbdrd_phy_of_match[] = {
 	{
 		.compatible = "samsung,exynos5250-usbdrd-phy",
@@ -827,6 +1003,9 @@ static const struct of_device_id exynos5_usbdrd_phy_of_match[] = {
 	}, {
 		.compatible = "samsung,exynos7-usbdrd-phy",
 		.data = &exynos7_usbdrd_phy
+	}, {
+		.compatible = "samsung,exynos850-usbdrd-phy",
+		.data = &exynos850_usbdrd_phy
 	},
 	{ },
 };
